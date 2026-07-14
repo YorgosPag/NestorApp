@@ -130,8 +130,13 @@ export function getImageGrips(entity: ImageEntity): GripInfo[] {
  *   - rotation → swept angle· hot-grip (επιλεγμένο κέντρο) → orbit (position + rotation),
  *                αλλιώς περιστροφή γύρω από το ίδιο το `position` → μόνο `rotation`.
  *   - corner   → resize με την ΑΝΤΙΘΕΤΗ γωνία σταθερή (`applyRectCornerDrag`) → νέο
- *                `position`/`width`/`height` (το aspect δεν κλειδώνεται· η εικόνα ζωγραφίζεται
- *                contain-fit μέσα στο κουτί, άρα ΠΟΤΕ δεν παραμορφώνεται).
+ *                `position`/`width`/`height`.
+ *
+ * ΛΟΓΟΣ ΠΛΕΥΡΩΝ (Giorgio 2026-07-14, Figma/Illustrator/PowerPoint parity): η γωνιακή λαβή
+ * **ΚΛΕΙΔΩΝΕΙ** τον λόγο πλευρών (uniform scale — καμία παραμόρφωση, κανένα letterbox μέσα
+ * στο πλαίσιο). Το **Shift τον ελευθερώνει** για ελεύθερο stretch. Το `shiftHeld` το περνούν
+ * ΚΑΙ οι δύο caller (commit + live ghost) διαβάζοντας το ΙΔΙΟ `ShiftKeyTracker` SSoT, οπότε
+ * preview ≡ commit· η fn μένει ΚΑΘΑΡΗ (μηδέν DOM/store deps → testable ως γεωμετρία).
  */
 export function applyImageGripDrag(
   kind: ImageGripKind,
@@ -139,6 +144,7 @@ export function applyImageGripDrag(
   gripWorldPos: Point2D,
   delta: Point2D,
   rotate?: { readonly pivot: Point2D; readonly anchor: Point2D },
+  shiftHeld?: boolean,
 ): Partial<ImageEntity> {
   if (kind === IMAGE_MOVE_KIND) {
     return { position: translatePoint(entity.position, delta) };
@@ -160,6 +166,8 @@ export function applyImageGripDrag(
     corner,
     delta,
     { minHalfWidth: MIN_HALF, minHalfLength: MIN_HALF },
+    undefined,          // ortho: η εικόνα δεν δεσμεύεται σε άξονα από το F8
+    !shiftHeld,         // lockAspect: κλειδωμένος λόγος πλευρών ΕΚΤΟΣ αν κρατιέται Shift
   );
   return frameToImageParams(next);
 }

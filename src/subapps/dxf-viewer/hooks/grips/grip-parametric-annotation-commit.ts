@@ -16,6 +16,7 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { UnifiedGripInfo, DxfCommitDeps } from './unified-grip-types';
 import { BimRotateHotGripStore } from '../../bim/grips/bim-rotate-hotgrip-store';
+import { ShiftKeyTracker } from '../../keyboard/ShiftKeyTracker';
 import { UpdateEntityCommand, type EntityPatch } from '../../core/commands/entity-commands/UpdateEntityCommand';
 import { createSceneManagerAdapter } from './grip-commit-adapters';
 
@@ -40,6 +41,7 @@ export function commitParametricAnnotationGripDrag<K extends string, E extends o
       gripWorldPos: Point2D,
       delta: Point2D,
       rotate?: { readonly pivot: Point2D; readonly anchor: Point2D },
+      shiftHeld?: boolean,
     ) => Partial<E>;
     readonly label: string;
   },
@@ -57,9 +59,14 @@ export function commitParametricAnnotationGripDrag<K extends string, E extends o
   const rotateCtx = BimRotateHotGripStore.getSnapshot();
   const useRotatePivot =
     kind === spec.rotationKind && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
+  // ADR-654 — ο ΖΩΝΤΑΝΟΣ Shift modifier, προωθημένος στον καθαρό transform (η εικόνα τον
+  // χρησιμοποιεί για ελευθέρωση του λόγου πλευρών στη γωνιακή λαβή). ΤΟ ΙΔΙΟ SSoT διαβάζει
+  // και το live ghost (`apply-parametric-annotation-preview`) → preview ≡ commit. Το native
+  // event δεν φτάνει ως εδώ by design (βλ. ShiftKeyTracker) — γι' αυτό ο tracker.
   const patch = spec.apply(
     kind, entity, grip.position, delta,
     useRotatePivot ? { pivot: rotateCtx.pivot!, anchor: rotateCtx.anchor! } : undefined,
+    ShiftKeyTracker.getSnapshot(),
   );
   const command = new UpdateEntityCommand(
     grip.entityId,

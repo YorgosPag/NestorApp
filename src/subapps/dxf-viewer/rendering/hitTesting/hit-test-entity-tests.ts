@@ -6,6 +6,7 @@
 
 import type { Point2D } from '../types/Types';
 import type { Entity, DimensionEntity } from '../../types/entities';
+import type { EntityType } from '../../types/base-entity';
 import { closedRingFromEdges, projectPointTo2D, projectVerticesTo2D } from '../../bim/geometry/shared/polygon-utils';
 import {
   isOpeningEntity,
@@ -43,72 +44,112 @@ import { hitTestText, hitTestAngleMeasurement, hitTestDimension } from './hit-te
 // ADR-362 Phase I3 hotfix (2026-05-19) — SSoT for dim foot points / text anchor.
 import { HINGE_ARC_SUBDIVISIONS } from '../../bim/geometry/opening-geometry';
 
-/** Dispatch hit test to the correct entity-type handler */
+/** Ένας narrow-phase (ακριβής) hit test. Το `null` σημαίνει **αστοχία**, όχι «δεν ξέρω». */
+export type NarrowHitTest = (
+  entity: Entity, point: Point2D, tolerance: number,
+) => Partial<HitTestResult> | null;
+
+/**
+ * ADR-583 Φ2 — graphic scale-bar: precise distance-to-axis-segment within the live
+ * annotative half-thickness (SSoT shared with ScaleBarRenderer.hitTest). Tighter than
+ * the bbox fallback, which would highlight the empty corners of a rotated bar's bbox.
+ */
+const hitTestScaleBar: NarrowHitTest = (entity, point, tolerance) =>
+  isScaleBarEntity(entity) && hitTestScaleBarAxis(entity, point, tolerance)
+    ? { hitType: 'entity', hitPoint: point }
+    : null;
+
+/**
+ * ADR-612 — opening info tag: precise rotated point-in-box pick (SSoT shared with
+ * the renderer / inline cell editor). Tighter than the bbox fallback, which would
+ * highlight the empty corners of a rotated tag's bbox.
+ */
+const hitTestOpeningInfoTagEntity: NarrowHitTest = (entity, point, tolerance) =>
+  isOpeningInfoTagEntity(entity) && hitTestOpeningInfoTag(entity, point, tolerance)
+    ? { hitType: 'entity', hitPoint: point }
+    : null;
+
+/**
+ * 🎯 NARROW-PHASE REGISTRY (ADR-587 Φ10) — per-type ακριβές hit test.
+ *
+ * Απόν κλειδί ⇒ ο τύπος πέφτει στο **permissive bbox fallback** του
+ * {@link performDetailedHitTest}: το broad phase (spatial index) έχει ήδη επιβεβαιώσει
+ * ότι το σημείο είναι μέσα στο AABB, οπότε δεχόμαστε το pick με ακρίβεια-bbox.
+ *
+ * ⚠️ **Συνειδητή ασυμμετρία** με τα άλλα δύο seams της Φ10 (Bounds / entity-model), όπου
+ * το `default` γύριζε `null` (= σιωπηλή εξαφάνιση). Εδώ το fallback είναι **γενναιόδωρο**:
+ * ο τύπος παραμένει επιλέξιμος — απλώς λιγότερο ακριβώς (π.χ. σκάλα: bbox αντί για
+ * treads/stringers). ΔΕΝ το «διορθώνουμε» σε `null` — αυτό θα έκανε ΜΗ-επιλέξιμους τους
+ * τύπους που σήμερα δουλεύουν. Το coverage test καρφώνει ρητά ΠΟΙΟΙ τύποι είναι bbox-only
+ * και γιατί, ώστε η επιλογή να μένει συνειδητή αντί για ατύχημα.
+ */
+export const NARROW_HIT_TEST_HANDLERS: Partial<Record<EntityType, NarrowHitTest>> = {
+  // ── CAD primitives ──
+  line: hitTestLine,
+  circle: hitTestCircle,
+  arc: hitTestArc,
+  polyline: hitTestPolyline,
+  lwpolyline: hitTestPolyline,
+  rectangle: hitTestRectangle,
+  rect: hitTestRectangle,
+  text: hitTestText,
+  mtext: hitTestText,
+  'angle-measurement': hitTestAngleMeasurement,
+  dimension: (entity, point, tolerance) => hitTestDimension(entity as DimensionEntity, point, tolerance),
+  // ADR-359 Phase 11 — precise hit-test for construction lines.
+  xline: hitTestXLine,
+  ray: hitTestRay,
+  // ADR-507 — hatch even-odd polygon containment (outer ring minus island rings), mirror of
+  // HatchRenderer.hitTest. Χωρίς αυτό έπεφτε σε AABB-only → over-select σε μη-κυρτά hatch.
+  hatch: hitTestHatch,
+
+  // ── Annotations ──
+  // ADR-583 — round annotation symbol (North arrow): distance-to-centre within the annotative
+  // glyph radius (tighter than the AABB, which over-selects the corners of a circular mark).
+  'annotation-symbol': hitTestAnnotationSymbol,
+  'scale-bar': hitTestScaleBar,
+  'opening-info-tag': hitTestOpeningInfoTagEntity,
+  // ADR-651 Φάση Ε — standalone raster image: rotation-aware point-in-rect (fill hit-test,
+  // SSoT shared with ImageRenderer.hitTest — click anywhere inside the picture selects it).
+  image: hitTestImage,
+
+  // ── BIM (ADR-363 Bug 1 — polygon containment) ──
+  // Cached outline vertices στο `geometry`/`params` δίνουν τα 4-vertex (opening/slab-opening)
+  // ή N-vertex (slab/column/beam) world-coord polygons. Ο τοίχος χρησιμοποιεί outerEdge +
+  // innerEdge reversed ένωση για το cross-section footprint.
+  opening: hitTestOpening,
+  'slab-opening': hitTestSlabOpening,
+  slab: hitTestSlab,
+  wall: hitTestWall,
+  column: hitTestColumn,
+  beam: hitTestBeam,
+  // ADR-436 Slice 1b — foundation footprint polygon containment (mirror column).
+  foundation: hitTestFoundation,
+  // ADR-419 — floor-finish polygon containment (same as slab/slab-opening).
+  'floor-finish': hitTestFloorFinish,
+  // ADR-511 — wall-covering strip containment (cached outline from host wall).
+  'wall-covering': hitTestWallCovering,
+  // ADR-437 — space separator: point-to-segment distance (a thin line needs a tolerance
+  // corridor, NOT bbox-only — else the diagonal-line bbox over-selects).
+  'space-separator': hitTestSpaceSeparator,
+};
+
+/** Οι τύποι με ΑΚΡΙΒΕΣ narrow-phase test (runtime mirror του registry — ποτέ stale). */
+export const NARROW_HIT_TEST_SUPPORTED_TYPES: readonly EntityType[] =
+  Object.keys(NARROW_HIT_TEST_HANDLERS) as EntityType[];
+
+/**
+ * Dispatch hit test to the correct entity-type handler. Χωρίς handler → permissive
+ * bbox-accuracy pick (βλ. {@link NARROW_HIT_TEST_HANDLERS} — τεκμηριωμένο fallback, ΟΧΙ
+ * σιωπηλό null).
+ */
 export function performDetailedHitTest(
   entity: Entity, point: Point2D, tolerance: number
 ): Partial<HitTestResult> | null {
-  switch (entity.type) {
-    case 'line': return hitTestLine(entity, point, tolerance);
-    case 'circle': return hitTestCircle(entity, point, tolerance);
-    case 'polyline':
-    case 'lwpolyline': return hitTestPolyline(entity, point, tolerance);
-    case 'rectangle':
-    case 'rect': return hitTestRectangle(entity, point, tolerance);
-    case 'text':
-    case 'mtext': return hitTestText(entity, point, tolerance);
-    case 'arc': return hitTestArc(entity, point, tolerance);
-    case 'angle-measurement': return hitTestAngleMeasurement(entity, point, tolerance);
-    case 'dimension': return hitTestDimension(entity as DimensionEntity, point, tolerance);
-    // ADR-359 Phase 11 — precise hit-test for construction lines.
-    case 'xline': return hitTestXLine(entity, point, tolerance);
-    case 'ray': return hitTestRay(entity, point, tolerance);
-    // ADR-363 Bug 1 fix — polygon containment για BIM entities. Cached outline
-    // vertices στο `geometry`/`params` δίνουν τα 4-vertex (opening/slab-opening)
-    // ή N-vertex (slab/column/beam) world-coord polygons. Wall uses outerEdge +
-    // innerEdge reversed ένωση για το cross-section footprint. Stair πέφτει στο
-    // default bbox-only — detailed treads/stringers hit-test = separate ratchet.
-    case 'opening': return hitTestOpening(entity, point, tolerance);
-    case 'slab-opening': return hitTestSlabOpening(entity, point);
-    case 'slab': return hitTestSlab(entity, point);
-    case 'wall': return hitTestWall(entity, point);
-    case 'column': return hitTestColumn(entity, point);
-    case 'beam': return hitTestBeam(entity, point);
-    // ADR-436 Slice 1b — foundation footprint polygon containment (mirror column).
-    case 'foundation': return hitTestFoundation(entity, point);
-    // ADR-419 — floor-finish polygon containment (same as slab/slab-opening).
-    case 'floor-finish': return hitTestFloorFinish(entity, point);
-    // ADR-511 — wall-covering strip containment (cached outline from host wall).
-    case 'wall-covering': return hitTestWallCovering(entity, point);
-    // ADR-437 — space separator: point-to-segment distance (a thin line needs a
-    // tolerance corridor, NOT bbox-only — else the diagonal-line bbox over-selects).
-    case 'space-separator': return hitTestSpaceSeparator(entity, point, tolerance);
-    // ADR-507 — hatch even-odd polygon containment (outer ring minus island rings),
-    // mirror of HatchRenderer.hitTest. Without this it fell to `default` = AABB-only
-    // (over-selects non-convex hatches + the gaps between islands).
-    case 'hatch': return hitTestHatch(entity, point);
-    // ADR-583 — round annotation symbol (North arrow): distance-to-centre within the
-    // annotative glyph radius (tighter than the default AABB, which over-selects the
-    // bbox corners of a circular mark).
-    case 'annotation-symbol': return hitTestAnnotationSymbol(entity, point, tolerance);
-    // ADR-583 Φ2 — graphic scale-bar: precise distance-to-axis-segment within the live
-    // annotative half-thickness (SSoT shared with ScaleBarRenderer.hitTest). Tighter than
-    // the default AABB, which would highlight the empty corners of a rotated bar's bbox.
-    case 'scale-bar':
-      return isScaleBarEntity(entity)
-        ? (hitTestScaleBarAxis(entity, point, tolerance) ? { hitType: 'entity', hitPoint: point } : null)
-        : null;
-    // ADR-612 — opening info tag: precise rotated point-in-box pick (SSoT shared with
-    // the renderer / inline cell editor). Tighter than the default AABB, which would
-    // highlight the empty corners of a rotated tag's bbox.
-    case 'opening-info-tag':
-      return isOpeningInfoTagEntity(entity)
-        ? (hitTestOpeningInfoTag(entity, point, tolerance) ? { hitType: 'entity', hitPoint: point } : null)
-        : null;
-    // ADR-651 Φάση Ε — standalone raster image: rotation-aware point-in-rect (fill hit-test,
-    // SSoT shared with ImageRenderer.hitTest — click anywhere inside the picture selects it).
-    case 'image': return hitTestImage(entity, point);
-    default: return { hitType: 'entity', hitPoint: point };
-  }
+  const narrow = NARROW_HIT_TEST_HANDLERS[entity.type as EntityType];
+  return narrow
+    ? narrow(entity, point, tolerance)
+    : { hitType: 'entity', hitPoint: point };
 }
 
 function hitTestImage(entity: Entity, point: Point2D): Partial<HitTestResult> | null {

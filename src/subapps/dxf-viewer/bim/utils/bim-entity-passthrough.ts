@@ -26,11 +26,19 @@ type BimLike = {
 };
 
 /**
+ * Ο τύπος-στόχος του passthrough. ADR-511 — το `wall-covering` ΕΙΝΑΙ BIM στοιχείο
+ * (kind + params + geometry, `computeWallCoveringGeometry`) αλλά ΔΕΝ ανήκει στο
+ * `BimElementType` (ιστορικό κενό: δεν έχει δικό του kind union στο `BimElementKind`).
+ * Το δεχόμαστε ΡΗΤΑ εδώ αντί να το περάσουμε με cast — ο κώδικας λέει την αλήθεια.
+ */
+export type BimPassthroughType = BimElementType | 'wall-covering';
+
+/**
  * Build an EntityModel for any BIM element type by spreading the four
  * parametric fields on top of the resolved base model.
  */
 export function buildBimEntityModel(
-  type: BimElementType,
+  type: BimPassthroughType,
   entity: unknown,
   base: BaseModel,
 ): EntityModel {

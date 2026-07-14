@@ -26,6 +26,7 @@ import { applyOpeningInfoTagGripDrag } from '../../bim/opening-info-tag/opening-
 import type { OpeningInfoTagEntity } from '../../types/opening-info-tag';
 import { applyImageGripDrag } from '../../bim/image/image-grips';
 import type { ImageEntity } from '../../types/image';
+import { ShiftKeyTracker } from '../../keyboard/ShiftKeyTracker';
 
 /** Ο hot-grip κύκλος περιστροφής (επιλεγμένο κέντρο + άγκυρα στο mousedown). */
 type RotateCtx = { readonly pivot: Point2D; readonly anchor: Point2D };
@@ -45,6 +46,7 @@ function parametricGhost<K extends keyof GripKindByEntity, E extends { position:
     gripWorldPos: Point2D,
     delta: Point2D,
     rotate?: RotateCtx,
+    shiftHeld?: boolean,
   ) => Partial<E>,
 ): DxfEntityUnion | null {
   const kind = gripKindOf(preview, on);
@@ -55,7 +57,10 @@ function parametricGhost<K extends keyof GripKindByEntity, E extends { position:
     kind === rotationKind && rotatePivot && anchorPos
       ? { pivot: rotatePivot, anchor: anchorPos }
       : undefined;
-  const patch = apply(kind, target, anchorPos ?? target.position, delta, rotate);
+  // ADR-654 — ο ΙΔΙΟΣ ζωντανός Shift που διαβάζει και το commit
+  // (`commitParametricAnnotationGripDrag`). Ίδιο input → ίδιο patch → preview ≡ commit:
+  // το φάντασμα δείχνει ΑΚΡΙΒΩΣ ό,τι θα γραφτεί (κλειδωμένος ή ελεύθερος λόγος πλευρών).
+  const patch = apply(kind, target, anchorPos ?? target.position, delta, rotate, ShiftKeyTracker.getSnapshot());
   return { ...(entity as object), ...patch } as unknown as DxfEntityUnion;
 }
 

@@ -1,33 +1,55 @@
 /**
- * BOUNDS UTILITIES - Bounding box calculations για spatial indexing
- * ✅ ΦΑΣΗ 5: Core utilities για hit-testing και spatial queries
+ * BOUNDS — spatial-index bounding boxes (Twin C: hit-test / hover / click).
+ *
+ * ADR-587 Φ10 — «σιωπηλό» seam κλεισμένο. ΠΡΙΝ: ένα `switch (entity.type)` με
+ * `default → console.warn + null`. Ένας renderable τύπος που ξεχνιόταν εδώ έβγαινε
+ * ΣΙΩΠΗΛΑ εκτός spatial index → μηδέν hover, μηδέν κλικ (ADR-654: η εικόνα· και
+ * πριν από αυτήν το scale-bar, το opening-info-tag, το thermal-space…).
+ *
+ * ΤΩΡΑ: type-keyed registry ({@link HIT_TEST_BOUNDS_HANDLERS}) με introspectable
+ * mirror ({@link HIT_TEST_BOUNDS_SUPPORTED_TYPES} = `Object.keys`, άρα ΠΟΤΕ stale) που
+ * το `__tests__/bounds-calculator-coverage.test.ts` δένει με το `RENDERABLE_ENTITY_TYPES`:
+ * renderable τύπος χωρίς handler ⇒ **κόκκινο test**, όχι σιωπηλή εξαφάνιση.
+ *
+ * Big-player idiom: κανένας (Revit `get_BoundingBox` / AutoCAD `getGeomExtents` /
+ * C4D `GetRad` / Figma node bbox) δεν αφήνει per-type switch να αποφασίζει αν μια
+ * οντότητα υπάρχει — υπάρχει ΕΝΑΣ πίνακας ικανοτήτων ανά τύπο, και τα υποσυστήματα
+ * τον ρωτούν.
+ *
+ * @see ./bounds-primitives — τα per-type μαθηματικά (N.7.1 split)
+ * @see ./entity-bounds-ssot — ο canonical resolver (Twin B) που delegate-άρει εδώ
+ * @see docs/centralized-systems/reference/adrs/ADR-587-entity-type-descriptor-registry-ssot.md
  */
 
 import type { EntityModel } from '../types/Types';
-import type { DxfText } from '../../canvas-v2/dxf-canvas/dxf-types';
-// ADR-557 (multi-line) — the attachment/rotation/multi-line-aware text-box AABB SSoT (em box),
-// the generous superset the spatial-index broad phase uses so it always encloses every line.
-import { textBoxAABB } from '../../bim/text/text-box';
+import type { EntityType } from '../../types/base-entity';
 import { calculateXLineBounds, calculateRayBounds } from './bounds-parametric-line';
-// ADR-583/612 follow-up — annotation-family (annotation-symbol/scale-bar/opening-info-tag)
-// bounds extracted to sibling module to keep this file within the 500-line budget (N.7.1).
+// ADR-583/612 follow-up — annotation-family (annotation-symbol/scale-bar/opening-info-tag/image)
+// bounds live in a sibling module to keep this file within the 500-line budget (N.7.1).
 import {
   calculateAnnotationSymbolBounds,
   calculateScaleBarBounds,
   calculateOpeningInfoTagBounds,
   calculateImageBounds,
 } from './bounds-annotation';
-import type {
-  EntityWithLine,
-  EntityWithCircle,
-  EntityWithPolyline,
-  EntityWithEllipse,
-  EntityWithText,
-  EntityWithSpline,
-  EntityWithPoint,
-  EntityWithAngleMeasurement,
-  PolylineEntityProperties,
-} from './bounds-entity-types';
+// ADR-587 Φ10 — τα per-type μαθηματικά (πρώην private statics του BoundsCalculator).
+import {
+  type EntityBoundsHandler,
+  calculateLineBounds,
+  calculateCircleBounds,
+  calculateArcBounds,
+  calculatePolylineBounds,
+  calculateRectangleBounds,
+  calculateEllipseBounds,
+  calculateTextBounds,
+  calculateSplineBounds,
+  calculatePointBounds,
+  calculateAngleMeasurementBounds,
+  calculateHatchBounds,
+  calculateDimensionBounds,
+  calculateStairBounds,
+  calculateBimEntityBounds,
+} from './bounds-primitives';
 
 export interface BoundingBox {
   minX: number;
@@ -41,421 +63,9 @@ export interface BoundingBox {
 }
 
 /**
- * 🔺 BOUNDING BOX CALCULATOR
- * Υπολογίζει bounding boxes για όλους τους τύπους entities
- */
-export class BoundsCalculator {
-  /**
-   * 🔺 MAIN ENTITY BOUNDS CALCULATION
-   * Υπολογίζει το bounding box ενός entity με μικρό tolerance
-   */
-  static calculateEntityBounds(entity: EntityModel, tolerance = 0): BoundingBox | null {
-    switch (entity.type) {
-      case 'line':
-        return this.calculateLineBounds(entity, tolerance);
-      case 'circle':
-        return this.calculateCircleBounds(entity, tolerance);
-      case 'arc':
-        return this.calculateArcBounds(entity, tolerance);
-      case 'polyline':
-      case 'lwpolyline':
-        return this.calculatePolylineBounds(entity, tolerance);
-      // ADR-507 S2 — hatch bounds = AABB πάνω σε όλα τα boundaryPaths (spatial index/hit-test).
-      case 'hatch':
-        return this.calculateHatchBounds(entity, tolerance);
-      case 'rectangle':
-      case 'rect':
-        return this.calculateRectangleBounds(entity, tolerance);
-      case 'ellipse':
-        return this.calculateEllipseBounds(entity, tolerance);
-      case 'text':
-      case 'mtext':
-        return this.calculateTextBounds(entity, tolerance);
-      case 'spline':
-        return this.calculateSplineBounds(entity, tolerance);
-      case 'point':
-        return this.calculatePointBounds(entity, tolerance);
-      // ADR-583 — annotation symbol (North arrow): annotative square footprint around
-      // the insertion point (no geometry.bbox — lightweight). Without this case it fell
-      // to `default` → null → excluded from the spatial index → unselectable on canvas.
-      case 'annotation-symbol':
-        return calculateAnnotationSymbolBounds(entity, tolerance);
-      // ADR-583 Φ2 — graphic scale-bar: the scale-invariant axis-extent bbox
-      // (computeScaleBarGeometry) padded by the live annotative half-thickness so the
-      // broad phase encloses the ±half-thickness pick corridor (else the narrow phase
-      // never runs when hovering the drawn band above the axis). Mirror annotation-symbol.
-      case 'scale-bar':
-        return calculateScaleBarBounds(entity, tolerance);
-      // ADR-612 — opening info tag: the rotation-aware world-mm box AABB
-      // (`computeOpeningInfoTagGeometry`), padded by `tolerance`. No annotative
-      // half-thickness term (unlike scale-bar) — the whole box is world-space.
-      case 'opening-info-tag':
-        return calculateOpeningInfoTagBounds(entity, tolerance);
-      // ADR-654 — standalone raster image (entourage / furniture-plan sprite): το AABB των
-      // 4 rotated κορυφών. Χωρίς αυτό το `default` γύριζε null → εκτός spatial index →
-      // ούτε hover ούτε click (mirror scale-bar / opening-info-tag).
-      case 'image':
-        return calculateImageBounds(entity, tolerance);
-      case 'angle-measurement':
-        return this.calculateAngleMeasurementBounds(entity, tolerance);
-      case 'stair':
-        return this.calculateStairBounds(entity, tolerance);
-      // ADR-362 Phase I3 — dimension spatial-index bounds via defPoints + textMidpoint.
-      case 'dimension':
-        return this.calculateDimensionBounds(entity, tolerance);
-      // BIM parametric entities all project their pre-computed `geometry.bbox`
-      // to 2D (XY plane) via the shared `calculateBimEntityBounds` SSoT. Added
-      // by: ADR-363 (wall/opening/slab/slab-opening/column/beam), ADR-406
-      // (mep-fixture), ADR-408 Φ3 (electrical-panel), ADR-407 (railing),
-      // ADR-410 (furniture), ADR-408 Φ8 (mep-segment), ADR-408 Φ11 (mep-fitting),
-      // ADR-415 (floorplan-symbol), ADR-417 (roof), ADR-408 Φ12 (mep-manifold),
-      // ADR-408 Εύρος Β (mep-radiator).
-      case 'wall':
-      case 'opening':
-      case 'slab':
-      case 'slab-opening':
-      case 'column':
-      case 'beam':
-      // ADR-436 Slice 1b — foundation pad/strip/tie-beam; geometry.bbox from computeFoundationGeometry().
-      case 'foundation':
-      case 'mep-fixture':
-      case 'electrical-panel':
-      case 'railing':
-      case 'furniture':
-      case 'mep-segment':
-      case 'mep-fitting':
-      case 'floorplan-symbol':
-      case 'roof':
-      // ADR-419 — floor-finish polygon covering; geometry.bbox computed by computeFloorFinishGeometry().
-      case 'floor-finish':
-      case 'mep-manifold':
-      case 'mep-radiator':
-      // ADR-408 Εύρος Β #2 (mep-boiler).
-      case 'mep-boiler':
-      // ADR-408 DHW — domestic hot water heater; geometry.bbox from computeMepWaterHeaterGeometry().
-      case 'mep-water-heater':
-      // ADR-408 Εύρος Β #3 — underfloor heating loop; geometry.bbox from computeMepUnderfloorGeometry().
-      case 'mep-underfloor':
-      // ADR-422 L0 — thermal space (analytical IfcSpace); geometry.bbox from computeThermalSpaceGeometry().
-      case 'thermal-space':
-      // ADR-437 — space separator (IfcVirtualElement); geometry.bbox from computeSpaceSeparatorGeometry().
-      case 'space-separator':
-        return this.calculateBimEntityBounds(entity, tolerance);
-      // ADR-359 Phase 11 follow-up — XLINE/RAY bounds extracted to sibling module.
-      case 'xline':
-        return calculateXLineBounds(entity, tolerance);
-      case 'ray':
-        return calculateRayBounds(entity, tolerance);
-      default:
-        console.warn(`BoundsCalculator: Unknown entity type: ${entity.type}`);
-        return null;
-    }
-  }
-
-  /**
-   * Κοινό SSoT: pre-computed 2D-projected `bbox {min,max}` → `BoundingBox` με
-   * tolerance. Absent/partial bbox (legacy / partially-serialized) → `null` →
-   * ο caller πέφτει gracefully εκτός spatial index. Μοιράζεται από stair/BIM.
-   */
-  private static bboxToBounds(
-    bbox: { min?: { x: number; y: number }; max?: { x: number; y: number } } | undefined,
-    tolerance: number,
-  ): BoundingBox | null {
-    if (!bbox || !bbox.min || !bbox.max) return null;
-    return this.createBoundingBox(
-      bbox.min.x - tolerance,
-      bbox.min.y - tolerance,
-      bbox.max.x + tolerance,
-      bbox.max.y + tolerance,
-    );
-  }
-
-  /**
-   * Κοινό SSoT: AABB πάνω σε ροή σημείων → `BoundingBox` με tolerance. Άδειο/
-   * μη-πεπερασμένο σύνολο → `null`. Μοιράζεται από hatch (boundary paths) και
-   * dimension (defPoints + textMidpoint).
-   */
-  private static pointsToBounds(
-    points: Iterable<{ x: number; y: number }>,
-    tolerance: number,
-  ): BoundingBox | null {
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    for (const p of points) {
-      if (p.x < minX) minX = p.x;
-      if (p.y < minY) minY = p.y;
-      if (p.x > maxX) maxX = p.x;
-      if (p.y > maxY) maxY = p.y;
-    }
-    if (!Number.isFinite(minX)) return null;
-    return this.createBoundingBox(minX - tolerance, minY - tolerance, maxX + tolerance, maxY + tolerance);
-  }
-
-  /**
-   * 🪜 ADR-358 Phase 8 — StairEntity bounds via pre-computed `geometry.bbox`.
-   * `computeStairGeometry()` populates an axis-aligned 3D bbox at construction
-   * time; we project to 2D (XY plane) for hit testing here. Without this case
-   * the stair fell through to the `default:` branch and was excluded from the
-   * hit-test pre-filter → unselectable on canvas.
-   */
-  private static calculateStairBounds(entity: EntityModel, tolerance: number): BoundingBox | null {
-    // The stair flows through TWO entity shapes:
-    //   - `DxfStair` wrapper (canvas pipeline): `entity.stairEntity.geometry.bbox`
-    //   - flat `StairEntity` (hit-test pipeline post-convertToEntityModel):
-    //     `entity.geometry.bbox`
-    // Resolve from either shape so both code paths populate the spatial index.
-    type StairLike = {
-      id?: string;
-      geometry?: { bbox?: { min?: { x: number; y: number }; max?: { x: number; y: number } } };
-      stairEntity?: {
-        geometry?: { bbox?: { min?: { x: number; y: number }; max?: { x: number; y: number } } };
-      };
-    };
-    const stair = entity as StairLike;
-    return this.bboxToBounds(stair.geometry?.bbox ?? stair.stairEntity?.geometry?.bbox, tolerance);
-  }
-
-  /** ADR-507 S2 — Hatch bounds: AABB over all boundary path vertices. */
-  private static calculateHatchBounds(entity: EntityModel, tolerance: number): BoundingBox | null {
-    const h = entity as { boundaryPaths?: ReadonlyArray<ReadonlyArray<{ x: number; y: number }>> };
-    return this.pointsToBounds((h.boundaryPaths ?? []).flat(), tolerance);
-  }
-
-  /**
-   * 📐 ADR-362 Phase I3 — Dimension entity bounds from defPoints + textMidpoint.
-   * defPoints cover extension-line origins + dim-line reference for all 10 variants.
-   * The resulting AABB is used for spatial broad-phase (not final hit accept).
-   */
-  private static calculateDimensionBounds(entity: EntityModel, tolerance: number): BoundingBox | null {
-    type DimLike = {
-      defPoints?: readonly { x: number; y: number }[];
-      textMidpoint?: { x: number; y: number };
-    };
-    const dim = entity as DimLike;
-    const pts: { x: number; y: number }[] = [...(dim.defPoints ?? [])];
-    if (dim.textMidpoint) pts.push(dim.textMidpoint);
-    return this.pointsToBounds(pts, tolerance);
-  }
-
-  /**
-   * 🧱 ADR-363 Phase 1B — BIM parametric entity bounds via pre-computed
-   * `geometry.bbox` (BoundingBox3D, populated by per-type `compute*Geometry()`).
-   * Projects to 2D plan view (XY). Same fallback contract as stair: if `geometry`
-   * is missing (legacy / partially-serialized), returns null → caller drops
-   * from spatial index gracefully.
-   */
-  private static calculateBimEntityBounds(entity: EntityModel, tolerance: number): BoundingBox | null {
-    type BimLike = {
-      geometry?: { bbox?: { min?: { x: number; y: number }; max?: { x: number; y: number } } };
-    };
-    const bim = entity as BimLike;
-    return this.bboxToBounds(bim.geometry?.bbox, tolerance);
-  }
-
-  /**
-   * 🔺 LINE BOUNDS
-   */
-  private static calculateLineBounds(entity: EntityModel, tolerance: number): BoundingBox {
-    // 🏢 ENTERPRISE: Type-safe casting for LineEntity properties
-    const lineEntity = entity as EntityWithLine;
-    const start = lineEntity.start;
-    const end = lineEntity.end;
-
-    const minX = Math.min(start.x, end.x) - tolerance;
-    const minY = Math.min(start.y, end.y) - tolerance;
-    const maxX = Math.max(start.x, end.x) + tolerance;
-    const maxY = Math.max(start.y, end.y) + tolerance;
-
-    return this.createBoundingBox(minX, minY, maxX, maxY);
-  }
-
-  /**
-   * 🔺 CIRCLE BOUNDS
-   */
-  private static calculateCircleBounds(entity: EntityModel, tolerance: number): BoundingBox {
-    // 🏢 ENTERPRISE: Type-safe casting for CircleEntity properties
-    const circleEntity = entity as EntityWithCircle;
-    const center = circleEntity.center;
-    const radius = circleEntity.radius + tolerance;
-
-    return this.createBoundingBox(
-      center.x - radius,
-      center.y - radius,
-      center.x + radius,
-      center.y + radius
-    );
-  }
-
-  /**
-   * 🔺 ARC BOUNDS
-   * Simplified - θα μπορούσε να βελτιωθεί με ακριβή υπολογισμό των endpoints
-   */
-  private static calculateArcBounds(entity: EntityModel, tolerance: number): BoundingBox {
-    // Για τώρα χρησιμοποιούμε circle bounds (conservative approach)
-    return this.calculateCircleBounds(entity, tolerance);
-  }
-
-  /**
-   * 🔺 POLYLINE BOUNDS
-   */
-  private static calculatePolylineBounds(entity: EntityModel, tolerance: number): BoundingBox {
-    // 🏢 ENTERPRISE: Type-safe casting for PolylineEntity properties
-    const polylineEntity = entity as EntityWithPolyline;
-    const vertices = polylineEntity.vertices;
-    if (!vertices || vertices.length === 0) {
-      return this.createBoundingBox(0, 0, 0, 0);
-    }
-
-    let minX = vertices[0].x;
-    let minY = vertices[0].y;
-    let maxX = vertices[0].x;
-    let maxY = vertices[0].y;
-
-    for (const vertex of vertices) {
-      minX = Math.min(minX, vertex.x);
-      minY = Math.min(minY, vertex.y);
-      maxX = Math.max(maxX, vertex.x);
-      maxY = Math.max(maxY, vertex.y);
-    }
-
-    return this.createBoundingBox(
-      minX - tolerance,
-      minY - tolerance,
-      maxX + tolerance,
-      maxY + tolerance
-    );
-  }
-
-  /**
-   * 🔺 RECTANGLE BOUNDS
-   */
-  private static calculateRectangleBounds(entity: EntityModel, tolerance: number): BoundingBox {
-    // Rectangle είναι polyline με 4 vertices
-    return this.calculatePolylineBounds(entity, tolerance);
-  }
-
-  /**
-   * 🔺 ELLIPSE BOUNDS
-   * Simplified - χρησιμοποιεί το bounding rectangle
-   */
-  private static calculateEllipseBounds(entity: EntityModel, tolerance: number): BoundingBox {
-    // 🏢 ENTERPRISE: Type-safe casting for EllipseEntity properties
-    const ellipseEntity = entity as EntityWithEllipse;
-    const center = ellipseEntity.center;
-    const radiusX = ellipseEntity.radiusX + tolerance;
-    const radiusY = ellipseEntity.radiusY + tolerance;
-
-    return this.createBoundingBox(
-      center.x - radiusX,
-      center.y - radiusY,
-      center.x + radiusX,
-      center.y + radiusY
-    );
-  }
-
-  /**
-   * 🔺 TEXT BOUNDS
-   * Rotation-aware bounding box for text entities.
-   *
-   * 🏢 FIX (2026-02-20): Use entity.height (DXF standard) with proper fallback chain.
-   * BEFORE: Used entity.fontSize || DEFAULT_FONT_SIZE (12) — but DXF entities have
-   * `height` (e.g. 2.5), NOT `fontSize` → bounds were ~5x inflated → spatial index
-   * returned text candidates from huge distances.
-   *
-   * AFTER: height || fontSize || 2.5 (AutoCAD Standard DIMTXT default)
-   * Matches TextRenderer.extractTextHeight() priority chain.
-   *
-   * Also handles rotation: for rotated text (e.g. vertical dimension text at 90°),
-   * the AABB is computed from the rotated corners of the text rectangle.
-   */
-  private static calculateTextBounds(entity: EntityModel, tolerance: number): BoundingBox {
-    // ADR-557 (multi-line, Giorgio 2026-07-07) — the spatial-index broad phase now uses the
-    // attachment / rotation / MULTI-LINE-aware em-box AABB SSoT (`textBoxAABB`), the generous
-    // superset of the VISUAL hover/hit box (`resolveTextBox`). Was: a hardcoded single-line box
-    // (`estimatedHeight = textHeight`, monospace width, baseline-top-left) → for multi-line text
-    // lines 2..N sat BELOW the bbox, so the entity was never returned as a candidate and the
-    // narrow-phase `hitTestText` never ran → πολυγραμμικά κείμενα δεν φωτίζονταν στο hover. The
-    // em box is multi-line-aware (Σ γραμμών) + honours attachment / widthFactor / rotation, so it
-    // always encloses every drawn line. Height / fontSize / 2.5 fallback preserved.
-    const textEntity = entity as EntityWithText;
-    const dxfText = {
-      ...(textEntity as unknown as DxfText),
-      height: textEntity.height || textEntity.fontSize || 2.5,
-    };
-    const aabb = textBoxAABB(dxfText);
-    return this.createBoundingBox(
-      aabb.minX - tolerance,
-      aabb.minY - tolerance,
-      aabb.maxX + tolerance,
-      aabb.maxY + tolerance,
-    );
-  }
-
-  /**
-   * 🔺 SPLINE BOUNDS
-   * Simplified - χρησιμοποιεί τα control points
-   */
-  private static calculateSplineBounds(entity: EntityModel, tolerance: number): BoundingBox {
-    // 🏢 ENTERPRISE: Type-safe casting for SplineEntity properties
-    const splineEntity = entity as EntityWithSpline;
-    const controlPoints = splineEntity.controlPoints || splineEntity.vertices;
-    if (!controlPoints || controlPoints.length === 0) {
-      return this.createBoundingBox(0, 0, 0, 0);
-    }
-
-    // Use control points bounds (conservative) - create temporary polyline entity
-    const polylineEntity: EntityModel & PolylineEntityProperties = {
-      ...entity,
-      vertices: controlPoints
-    };
-    return this.calculatePolylineBounds(polylineEntity, tolerance);
-  }
-
-  /**
-   * 🔺 POINT BOUNDS
-   */
-  private static calculatePointBounds(entity: EntityModel, tolerance: number): BoundingBox {
-    // 🏢 ENTERPRISE: Type-safe casting for PointEntity properties
-    const pointEntity = entity as EntityWithPoint;
-    const position = pointEntity.position;
-    const pointSize = tolerance || 1; // Minimum size for selection
-
-    return this.createBoundingBox(
-      position.x - pointSize,
-      position.y - pointSize,
-      position.x + pointSize,
-      position.y + pointSize
-    );
-  }
-
-  /**
-   * 🔺 ANGLE MEASUREMENT BOUNDS
-   * Bounding box from vertex + 2 arm endpoints (point1, point2)
-   */
-  private static calculateAngleMeasurementBounds(entity: EntityModel, tolerance: number): BoundingBox {
-    const angleMeasurement = entity as EntityWithAngleMeasurement;
-    const { vertex, point1, point2 } = angleMeasurement;
-
-    const minX = Math.min(vertex.x, point1.x, point2.x) - tolerance;
-    const minY = Math.min(vertex.y, point1.y, point2.y) - tolerance;
-    const maxX = Math.max(vertex.x, point1.x, point2.x) + tolerance;
-    const maxY = Math.max(vertex.y, point1.y, point2.y) + tolerance;
-
-    return this.createBoundingBox(minX, minY, maxX, maxY);
-  }
-
-  /**
-   * 🔺 BOUNDING BOX FACTORY
-   * Δημιουργεί BoundingBox object με όλες τις computed properties
-   * Delegates to the exported standalone function for use by other modules.
-   */
-  private static createBoundingBox(minX: number, minY: number, maxX: number, maxY: number): BoundingBox {
-    return createBoundingBox(minX, minY, maxX, maxY);
-  }
-}
-
-/**
  * 🔺 BOUNDING BOX FACTORY — Standalone exported function
- * Χρησιμοποιείται από BoundsCalculator, BoundsOperations, και ViewportBounds.
+ * Χρησιμοποιείται από BoundsCalculator, BoundsOperations, ViewportBounds και τα
+ * sibling bounds modules (`bounds-primitives` / `bounds-annotation` / `bounds-parametric-line`).
  */
 export function createBoundingBox(minX: number, minY: number, maxX: number, maxY: number): BoundingBox {
   return {
@@ -468,6 +78,113 @@ export function createBoundingBox(minX: number, minY: number, maxX: number, maxY
     centerX: (minX + maxX) / 2,
     centerY: (minY + maxY) / 2
   };
+}
+
+/**
+ * 🔺 PER-TYPE BOUNDS REGISTRY (ADR-587 Φ10) — ΕΝΑΣ πίνακας ικανοτήτων, keyed σε
+ * `EntityType`. Απόν κλειδί ⇒ ο τύπος ΔΕΝ μπαίνει στο spatial index (ούτε hover ούτε
+ * κλικ) — γι' αυτό το coverage test απαιτεί `RENDERABLE_ENTITY_TYPES ⊆ keys`.
+ */
+export const HIT_TEST_BOUNDS_HANDLERS: Partial<Record<EntityType, EntityBoundsHandler>> = {
+  // ── DXF primitives ──
+  line: calculateLineBounds,
+  circle: calculateCircleBounds,
+  arc: calculateArcBounds,
+  polyline: calculatePolylineBounds,
+  lwpolyline: calculatePolylineBounds,
+  rectangle: calculateRectangleBounds,
+  rect: calculateRectangleBounds,
+  ellipse: calculateEllipseBounds,
+  text: calculateTextBounds,
+  mtext: calculateTextBounds,
+  spline: calculateSplineBounds,
+  point: calculatePointBounds,
+  'angle-measurement': calculateAngleMeasurementBounds,
+  // ADR-507 S2 — hatch bounds = AABB πάνω σε όλα τα boundaryPaths.
+  hatch: calculateHatchBounds,
+  // ADR-362 Phase I3 — dimension spatial-index bounds via defPoints + textMidpoint.
+  dimension: calculateDimensionBounds,
+  // ADR-359 Phase 11 — XLINE/RAY (infinite/semi-infinite) στο sibling module.
+  xline: calculateXLineBounds,
+  ray: calculateRayBounds,
+
+  // ── Annotation family (paper-space decorations, sibling module) ──
+  // ADR-583 — annotation symbol (North arrow): annotative square footprint γύρω από το
+  // insertion point (χωρίς geometry.bbox — lightweight).
+  'annotation-symbol': calculateAnnotationSymbolBounds,
+  // ADR-583 Φ2 — graphic scale-bar: axis-extent bbox padded με το live annotative
+  // half-thickness, ώστε το broad phase να εγκλείει τον ±half-thickness διάδρομο pick.
+  'scale-bar': calculateScaleBarBounds,
+  // ADR-612 — opening info tag: rotation-aware world-mm box AABB (χωρίς annotative όρο).
+  'opening-info-tag': calculateOpeningInfoTagBounds,
+  // ADR-654 — standalone raster image (entourage / furniture-plan sprite): AABB των 4
+  // περιστραμμένων κορυφών. Ο τύπος που έλειπε και γέννησε ΟΛΗ τη Φ10.
+  image: calculateImageBounds,
+
+  // ── BIM parametric: όλα προβάλλουν το pre-computed `geometry.bbox` στο XY. Added by:
+  // ADR-363 (wall/opening/slab/slab-opening/column/beam), ADR-358 (stair), ADR-436
+  // (foundation), ADR-406 (mep-fixture), ADR-408 Φ3 (electrical-panel), ADR-407 (railing),
+  // ADR-410 (furniture), ADR-408 Φ8/Φ11/Φ12 (mep-segment/fitting/manifold), ADR-415
+  // (floorplan-symbol), ADR-417 (roof), ADR-419 (floor-finish), ADR-422 L0 (thermal-space),
+  // ADR-437 (space-separator), ADR-408 Εύρος Β (mep-radiator/boiler/water-heater/underfloor).
+  wall: calculateBimEntityBounds,
+  opening: calculateBimEntityBounds,
+  slab: calculateBimEntityBounds,
+  'slab-opening': calculateBimEntityBounds,
+  column: calculateBimEntityBounds,
+  beam: calculateBimEntityBounds,
+  foundation: calculateBimEntityBounds,
+  stair: calculateStairBounds,
+  railing: calculateBimEntityBounds,
+  roof: calculateBimEntityBounds,
+  'floor-finish': calculateBimEntityBounds,
+  // ADR-511 / ADR-587 Φ10 — GAP FIX: το wall-covering ΕΛΕΙΠΕ από το switch → `default` →
+  // `null` → ΠΟΤΕ δεν έμπαινε στο spatial index → η επένδυση τοίχου δεν φωτιζόταν στο hover
+  // ούτε επιλεγόταν με κλικ (μόνο marquee, που περνά από άλλο bounds SSoT — η ΙΔΙΑ ασυμμετρία
+  // που έκρυβε το ADR-654 bug της εικόνας). Έχει `geometry.bbox` (computeWallCoveringGeometry).
+  'wall-covering': calculateBimEntityBounds,
+  'thermal-space': calculateBimEntityBounds,
+  'space-separator': calculateBimEntityBounds,
+  furniture: calculateBimEntityBounds,
+  'floorplan-symbol': calculateBimEntityBounds,
+  'mep-fixture': calculateBimEntityBounds,
+  'electrical-panel': calculateBimEntityBounds,
+  'mep-segment': calculateBimEntityBounds,
+  'mep-fitting': calculateBimEntityBounds,
+  'mep-manifold': calculateBimEntityBounds,
+  'mep-radiator': calculateBimEntityBounds,
+  'mep-boiler': calculateBimEntityBounds,
+  'mep-water-heater': calculateBimEntityBounds,
+  'mep-underfloor': calculateBimEntityBounds,
+};
+
+/**
+ * Κάθε entity type με bounds handler (runtime mirror του registry — `Object.keys`, άρα
+ * ΠΟΤΕ stale). Το δένει με το `RENDERABLE_ENTITY_TYPES` το coverage test.
+ */
+export const HIT_TEST_BOUNDS_SUPPORTED_TYPES: readonly EntityType[] =
+  Object.keys(HIT_TEST_BOUNDS_HANDLERS) as EntityType[];
+
+/**
+ * 🔺 BOUNDING BOX CALCULATOR
+ * Υπολογίζει bounding boxes για όλους τους τύπους entities (thin resolver πάνω στο
+ * {@link HIT_TEST_BOUNDS_HANDLERS}).
+ */
+export class BoundsCalculator {
+  /**
+   * 🔺 MAIN ENTITY BOUNDS CALCULATION
+   * Υπολογίζει το bounding box ενός entity με μικρό tolerance. Άγνωστος τύπος → `warn`
+   * + `null` (ίδιο συμβόλαιο με το πρώην `default:` του switch — ο caller τον αφήνει
+   * gracefully εκτός spatial index).
+   */
+  static calculateEntityBounds(entity: EntityModel, tolerance = 0): BoundingBox | null {
+    const handler = HIT_TEST_BOUNDS_HANDLERS[entity.type as EntityType];
+    if (!handler) {
+      console.warn(`BoundsCalculator: Unknown entity type: ${entity.type}`);
+      return null;
+    }
+    return handler(entity, tolerance);
+  }
 }
 
 export { BoundsOperations, ViewportBounds } from './bounds-operations';

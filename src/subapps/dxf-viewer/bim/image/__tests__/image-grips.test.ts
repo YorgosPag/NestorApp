@@ -98,6 +98,8 @@ describe('applyImageGripDrag', () => {
 
   it('corner (NE) → resize με την ΑΝΤΙΘΕΤΗ (SW) γωνία σταθερή', () => {
     const e = makeImage(); // BL (10,20), 100×50 → NE (110,70), SW (10,20)
+    // Το drag είναι ΗΔΗ αναλογικό (+20 / +10 σε 100×50), οπότε κλειδωμένος και ελεύθερος
+    // λόγος πλευρών δίνουν το ίδιο — το test απομονώνει το «αντίθετη γωνία σταθερή».
     const patch = applyImageGripDrag('image-corner-ne', e, { x: 110, y: 70 }, { x: 20, y: 10 });
     near(patch.width as number, 120);
     near(patch.height as number, 60);
@@ -106,9 +108,9 @@ describe('applyImageGripDrag', () => {
     near(patch.position!.y, 20);
   });
 
-  it('corner (SW) → το position ακολουθεί τον κέρσορα, η NE μένει καρφωμένη', () => {
+  it('corner (SW) με Shift → το position ακολουθεί τον κέρσορα, η NE μένει καρφωμένη', () => {
     const e = makeImage();
-    const patch = applyImageGripDrag('image-corner-sw', e, { x: 10, y: 20 }, { x: 10, y: 10 });
+    const patch = applyImageGripDrag('image-corner-sw', e, { x: 10, y: 20 }, { x: 10, y: 10 }, undefined, true);
     near(patch.width as number, 90);
     near(patch.height as number, 40);
     near(patch.position!.x, 20);
@@ -118,12 +120,53 @@ describe('applyImageGripDrag', () => {
     near(patch.position!.y + (patch.height as number), 70);
   });
 
-  it('corner σε ΠΕΡΙΣΤΡΑΜΜΕΝΗ εικόνα → το resize γίνεται στους ΤΟΠΙΚΟΥΣ άξονες (rotation αμετάβλητη)', () => {
+  it('corner σε ΠΕΡΙΣΤΡΑΜΜΕΝΗ εικόνα (Shift) → resize στους ΤΟΠΙΚΟΥΣ άξονες (rotation αμετάβλητη)', () => {
     const e = makeImage({ position: { x: 0, y: 0 }, width: 100, height: 50, rotation: 90 });
     // Στις 90° ο τοπικός +X δείχνει world +Y: drag κατά +10 στο world Y → +10 πλάτος.
-    const patch = applyImageGripDrag('image-corner-ne', e, { x: -50, y: 100 }, { x: 0, y: 10 });
+    const patch = applyImageGripDrag('image-corner-ne', e, { x: -50, y: 100 }, { x: 0, y: 10 }, undefined, true);
     near(patch.width as number, 110);
     near(patch.height as number, 50);
     expect((patch as { rotation?: number }).rotation).toBeUndefined();
+  });
+});
+
+/**
+ * ADR-654 (Giorgio 2026-07-14) — λόγος πλευρών στις γωνιακές λαβές: **κλειδωμένος**, με το
+ * **Shift να τον ελευθερώνει** (Figma/Illustrator/PowerPoint parity). Ο κλειδωμένος λόγος
+ * είναι το DEFAULT γιατί μια εικόνα σπάνια θέλει παραμόρφωση.
+ */
+describe('applyImageGripDrag — aspect lock γωνιακών λαβών', () => {
+  const ASPECT = 100 / 50; // 2:1
+
+  it('ΧΩΡΙΣ Shift → uniform scale: ο λόγος πλευρών ΔΙΑΤΗΡΕΙΤΑΙ ακόμη κι όταν το drag είναι μονοαξονικό', () => {
+    const e = makeImage(); // 100×50 στο (10,20)
+    // Καθαρά οριζόντιο drag: το ελεύθερο resize θα έδινε 120×50 (λόγος 2.4 → ΠΑΡΑΜΟΡΦΩΣΗ).
+    const patch = applyImageGripDrag('image-corner-ne', e, { x: 110, y: 70 }, { x: 20, y: 0 });
+    near(patch.width as number, 120);
+    near(patch.height as number, 60); // το ύψος ακολουθεί → καμία παραμόρφωση
+    near((patch.width as number) / (patch.height as number), ASPECT);
+    // Η αντίθετη (SW) γωνία μένει καρφωμένη ΚΑΙ με κλειδωμένο λόγο.
+    near(patch.position!.x, 10);
+    near(patch.position!.y, 20);
+  });
+
+  it('ΜΕ Shift → ελεύθερο stretch: ο λόγος πλευρών αλλάζει (παραμόρφωση επιτρεπτή)', () => {
+    const e = makeImage();
+    const patch = applyImageGripDrag('image-corner-ne', e, { x: 110, y: 70 }, { x: 20, y: 0 }, undefined, true);
+    near(patch.width as number, 120);
+    near(patch.height as number, 50); // αμετάβλητο → ο λόγος γίνεται 2.4
+    expect((patch.width as number) / (patch.height as number)).not.toBeCloseTo(ASPECT, 6);
+  });
+
+  it('ο κυρίαρχος άξονας οδηγεί το uniform scale (η μεγαλύτερη αναλογική μεταβολή κερδίζει)', () => {
+    const e = makeImage(); // 100×50
+    // SW drag (+10,+10): πλάτος −10% (90/100), ύψος −20% (40/50) → κυρίαρχο το ύψος (0.8).
+    const patch = applyImageGripDrag('image-corner-sw', e, { x: 10, y: 20 }, { x: 10, y: 10 });
+    near(patch.width as number, 80);
+    near(patch.height as number, 40);
+    near((patch.width as number) / (patch.height as number), ASPECT);
+    // Η αντίθετη (NE) γωνία μένει στο (110, 70).
+    near(patch.position!.x + (patch.width as number), 110);
+    near(patch.position!.y + (patch.height as number), 70);
   });
 });
