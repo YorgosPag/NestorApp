@@ -4,7 +4,7 @@
  * Offline, εφάπαξ (ξανατρέχει όποτε αλλάξει η ταξινόμηση). ΓΕΝΙΚΟΣ: ένα script, πολλά packs
  * (N.18: καμία αντιγραφή ανά οικογένεια — αλλάζει μόνο το config). Διαβάζει:
  *   • public/<pack>-2d/manifest.json — id + aspect (γεωμετρία, από τον asset builder)
- *   • scripts/entourage-classification/<pack>.classification.json — id → category (+ secondary)
+ *   • scripts/entourage-classification/<pack>.classification.json — id → category (+ 0..N facets)
  * και γράφει το ΝΤΕΤΕΡΜΙΝΙΣΤΙΚΟ data file (AUTO-GENERATED — ΜΗΝ το επεξεργάζεσαι με το χέρι).
  *
  * Η κλίμακα ΔΕΝ βγαίνει από pixels· ορίζεται από την κατηγορία (βλ. <PACK>_LONG_SIDE_MM στο
@@ -24,7 +24,11 @@ const path = require('node:path');
 
 const REPO_ROOT = path.resolve(__dirname, '..');
 
-/** Το controlled config κάθε pack — ΠΡΕΠΕΙ να ταιριάζει με τους τύπους στο *-plan-catalog.ts. */
+/**
+ * Το controlled config κάθε pack — ΠΡΕΠΕΙ να ταιριάζει με τους τύπους στο *-plan-catalog.ts.
+ * `facets` = 0..N προαιρετικά facets (ΓΕΝΙΚΟ): κάθε ένα `{ key, values }`, όπου `key` = το πεδίο
+ * στο classification entry + το i18n namespace, `values` = οι επιτρεπτές τιμές (allowlist).
+ */
 const PACKS = {
   people: {
     manifest: 'public/people-2d/manifest.json',
@@ -34,8 +38,7 @@ const PACKS = {
     typeModule: './people-plan-catalog',
     constName: 'PEOPLE_PLAN_CATALOG_DATA',
     categories: ['person', 'lying', 'group', 'stroller', 'wheelchair', 'child'],
-    secondaryField: null, // οι άνθρωποι έχουν μόνο category (top-view πόζα αναξιόπιστη)
-    secondaryValues: null,
+    facets: [], // οι άνθρωποι έχουν μόνο category (top-view πόζα αναξιόπιστη)
   },
   vehicles: {
     manifest: 'public/vehicles-2d/manifest.json',
@@ -45,13 +48,28 @@ const PACKS = {
     typeModule: './vehicles-plan-catalog',
     constName: 'VEHICLE_PLAN_CATALOG_DATA',
     categories: ['car', 'motorcycle', 'scooter', 'pickup', 'van', 'truck', 'boat', 'construction', 'tractor', 'airplane'],
-    secondaryField: 'color',
-    secondaryValues: ['red', 'white', 'black', 'silver', 'grey', 'blue', 'green', 'yellow', 'orange', 'brown', 'other'],
+    facets: [
+      { key: 'color', values: ['red', 'white', 'black', 'silver', 'grey', 'blue', 'green', 'yellow', 'orange', 'brown', 'other'] },
+    ],
+  },
+  plants: {
+    manifest: 'public/plants-2d/manifest.json',
+    classification: 'scripts/entourage-classification/plants-plan.classification.json',
+    out: 'src/subapps/dxf-viewer/data/plants-plan-catalog.data.ts',
+    typeImport: 'PlantsPlanDef',
+    typeModule: './plants-plan-catalog',
+    constName: 'PLANTS_PLAN_CATALOG_DATA',
+    categories: ['tree', 'largeTree', 'shrub', 'hedge', 'palm', 'flower', 'grass'],
+    facets: [], // τα φυτά έχουν μόνο category (top-view δεν δίνει αξιόπιστο δεύτερο facet)
   },
 };
 
 const loadJson = (p) => JSON.parse(fs.readFileSync(path.join(REPO_ROOT, p), 'utf8'));
-const sqlLit = (v) => (v === null ? 'null' : `'${v}'`);
+/** Literal ενός facets object, π.χ. `{}` ή `{ color: 'red' }` (ντετερμινιστική σειρά = config). */
+const facetsLit = (facets, entry) =>
+  facets.length === 0
+    ? '{}'
+    : `{ ${facets.map((f) => `${f.key}: '${entry[f.key]}'`).join(', ')} }`;
 
 function main() {
   const packName = process.argv[2];
@@ -68,7 +86,8 @@ function main() {
   const aspectById = new Map(manifest.map((m) => [m.id, m.aspect]));
   const classById = new Map(classification.map((c) => [c.id, c]));
   const categories = new Set(cfg.categories);
-  const secondaries = cfg.secondaryValues ? new Set(cfg.secondaryValues) : null;
+  const facets = cfg.facets ?? [];
+  const facetValueSets = new Map(facets.map((f) => [f.key, new Set(f.values)]));
 
   // Έλεγχος πληρότητας + εγκυρότητας πριν γράψουμε οτιδήποτε (fail-fast).
   const errors = [];
@@ -76,9 +95,10 @@ function main() {
     const c = classById.get(m.id);
     if (!c) { errors.push(`${m.id}: χωρίς ταξινόμηση`); continue; }
     if (!categories.has(c.category)) errors.push(`${m.id}: άγνωστη κατηγορία "${c.category}"`);
-    if (secondaries) {
-      const sec = c[cfg.secondaryField];
-      if (!secondaries.has(sec)) errors.push(`${m.id}: άγνωστο ${cfg.secondaryField} "${sec}"`);
+    for (const f of facets) {
+      if (!facetValueSets.get(f.key).has(c[f.key])) {
+        errors.push(`${m.id}: άγνωστο ${f.key} "${c[f.key]}"`);
+      }
     }
   }
   if (errors.length) {
@@ -93,14 +113,15 @@ function main() {
     .sort()
     .map((id) => {
       const c = classById.get(id);
-      const secondary = cfg.secondaryField ? c[cfg.secondaryField] : null;
-      return { id, category: c.category, secondary, aspect: aspectById.get(id) };
+      const facetValues = facets.map((f) => c[f.key]);
+      return { id, category: c.category, entry: c, facetValues, aspect: aspectById.get(id) };
     });
 
-  // series ανά ζεύγος facets (category [+ secondary]), κατά σειρά id.
+  // series ανά συνδυασμό facets (category [+ facet values κατά σειρά config]), κατά σειρά id.
+  // Το key κρατά την ίδια μορφή `category/…` ⇒ ίδιες σειρές με πριν (0 facets → `category/`).
   const counters = new Map();
   for (const r of rows) {
-    const key = `${r.category}/${r.secondary ?? ''}`;
+    const key = `${r.category}/${r.facetValues.join('|')}`;
     const next = (counters.get(key) ?? 0) + 1;
     counters.set(key, next);
     r.series = next;
@@ -109,7 +130,7 @@ function main() {
   const body = rows
     .map(
       (r) =>
-        `  { id: '${r.id}', category: '${r.category}', secondary: ${sqlLit(r.secondary)}, series: ${r.series}, aspect: ${r.aspect} },`,
+        `  { id: '${r.id}', category: '${r.category}', facets: ${facetsLit(facets, r.entry)}, series: ${r.series}, aspect: ${r.aspect} },`,
     )
     .join('\n');
 

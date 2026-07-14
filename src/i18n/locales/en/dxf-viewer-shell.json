@@ -1274,6 +1274,12 @@
       "statusPosition": "Click to place the vehicle",
       "errorNoSelection": "No vehicle selected",
       "errorUnknownItem": "Unknown vehicle"
+    },
+    "plantsPlan": {
+      "label": "Plants",
+      "statusPosition": "Click to place the plant",
+      "errorNoSelection": "No plant selected",
+      "errorUnknownItem": "Unknown plant"
     }
   },
   "blockLibrary": {
@@ -1925,7 +1931,8 @@
       "export": "Export",
       "structural": "Structural",
       "peoplePlan": "People",
-      "vehiclePlan": "Vehicles"
+      "vehiclePlan": "Vehicles",
+      "plantsPlan": "Plants"
     },
     "minimizeStates": {
       "full": "Full Ribbon",
@@ -4909,7 +4916,8 @@
       "titleBlockLibrary": "Library",
       "titleBlockLibraryTooltip": "Office/project title-block templates — save, publish, variants",
       "peoplePlan": "People",
-      "vehiclePlan": "Vehicles"
+      "vehiclePlan": "Vehicles",
+      "plantsPlan": "Plants"
     },
     "tooltips": {
       "bimSchedule": "Open BIM Schedule — export structural elements",
@@ -6475,6 +6483,9 @@
     },
     "vehiclePlan2d": {
       "title": "2D Plan Vehicles"
+    },
+    "plantsPlan2d": {
+      "title": "2D Plan Plants"
     }
   },
   "peoplePlan": {
@@ -6494,14 +6505,32 @@
     "loading": "Checking permissions…",
     "locked": "The people library is not available on your account."
   },
+  "plantsPlan": {
+    "title": "Plan Plants",
+    "hint": "Pick a plant and click on the canvas to place it.",
+    "empty": "No plan plants found.",
+    "noMatch": "No plant matches the filter.",
+    "allCategories": "All",
+    "categories": {
+      "tree": "Tree",
+      "largeTree": "Large tree",
+      "shrub": "Shrub",
+      "hedge": "Hedge",
+      "palm": "Palm",
+      "flower": "Flowering plant",
+      "grass": "Grass"
+    },
+    "loading": "Checking permissions…",
+    "locked": "The plants library is not available on your account."
+  },
   "vehiclePlan": {
     "title": "Plan Vehicles",
     "hint": "Pick a vehicle and click on the canvas to place it.",
     "empty": "No plan vehicles found.",
     "noMatch": "No vehicle matches the filter.",
     "allCategories": "All",
-    "allSecondary": "All",
-    "secondaryFilterLabel": "Color",
+    "colorFilterAll": "All",
+    "colorFilterLabel": "Color",
     "categories": {
       "car": "Car",
       "motorcycle": "Motorcycle",
@@ -6514,7 +6543,7 @@
       "tractor": "Tractor",
       "airplane": "Airplane"
     },
-    "secondary": {
+    "color": {
       "red": "Red",
       "white": "White",
       "black": "Black",

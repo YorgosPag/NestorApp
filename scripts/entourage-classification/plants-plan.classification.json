@@ -1,0 +1,414 @@
+[
+  {
+    "id": "pl-obj-001-1",
+    "category": "tree"
+  },
+  {
+    "id": "pl-obj-002-1",
+    "category": "shrub"
+  },
+  {
+    "id": "pl-obj-003-1",
+    "category": "tree"
+  },
+  {
+    "id": "pl-obj-004-1",
+    "category": "shrub"
+  },
+  {
+    "id": "pl-obj-005-1",
+    "category": "largeTree"
+  },
+  {
+    "id": "pl-obj-006-1",
+    "category": "shrub"
+  },
+  {
+    "id": "pl-obj-007-1",
+    "category": "shrub"
+  },
+  {
+    "id": "pl-obj-008-1",
+    "category": "shrub"
+  },
+  {
+    "id": "pl-obj-009-1",
+    "category": "shrub"
+  },
+  {
+    "id": "pl-obj-010-1",
+    "category": "palm"
+  },
+  {
+    "id": "pl-obj-011-1",
+    "category": "shrub"
+  },
+  {
+    "id": "pl-obj-012-1",
+    "category": "palm"
+  },
+  {
+    "id": "pl-obj-013-1",
+    "category": "tree"
+  },
+  {
+    "id": "pl-obj-014-1",
+    "category": "tree"
+  },
+  {
+    "id": "pl-obj-014-2",
+    "category": "tree"
+  },
+  {
+    "id": "pl-obj-014-3",
+    "category": "tree"
+  },
+  {
+    "id": "pl-obj-015-1",
+    "category": "tree"
+  },
+  {
+    "id": "pl-obj-016-1",
+    "category": "tree"
+  },
+  {
+    "id": "pl-obj-017-1",
+    "category": "tree"
+  },
+  {
+    "id": "pl-obj-018-1",
+    "category": "shrub"
+  },
+  {
+    "id": "pl-obj-019-1",
+    "category": "tree"
+  },
+  {
+    "id": "pl-obj-020-1",
+    "category": "largeTree"
+  },
+  {
+    "id": "pl-obj-021-1",
+    "category": "tree"
+  },
+  {
+    "id": "pl-obj-022-1",
+    "category": "shrub"
+  },
+  {
+    "id": "pl-obj-023-1",
+    "category": "tree"
+  },
+  {
+    "id": "pl-obj-024-1",
+    "category": "tree"
+  },
+  {
+    "id": "pl-obj-025-1",
+    "category": "tree"
+  },
+  {
+    "id": "pl-obj-026-1",
+    "category": "tree"
+  },
+  {
+    "id": "pl-obj-027-1",
+    "category": "tree"
+  },
+  {
+    "id": "pl-obj-028-1",
+    "category": "tree"
+  },
+  {
+    "id": "pl-obj-029-1",
+    "category": "tree"
+  },
+  {
+    "id": "pl-obj-030-1",
+    "category": "tree"
+  },
+  {
+    "id": "pl-obj-031-1",
+    "category": "tree"
+  },
+  {
+    "id": "pl-obj-032-1",
+    "category": "tree"
+  },
+  {
+    "id": "pl-obj-033-1",
+    "category": "tree"
+  },
+  {
+    "id": "pl-obj-034-1",
+    "category": "palm"
+  },
+  {
+    "id": "pl-obj-035-1",
+    "category": "largeTree"
+  },
+  {
+    "id": "pl-obj-036-1",
+    "category": "largeTree"
+  },
+  {
+    "id": "pl-obj-037-1",
+    "category": "tree"
+  },
+  {
+    "id": "pl-obj-038-1",
+    "category": "tree"
+  },
+  {
+    "id": "pl-obj-044-1",
+    "category": "tree"
+  },
+  {
+    "id": "pl-obj-045-1",
+    "category": "palm"
+  },
+  {
+    "id": "pl-obj-046-1",
+    "category": "palm"
+  },
+  {
+    "id": "pl-obj-047-1",
+    "category": "palm"
+  },
+  {
+    "id": "pl-obj-048-1",
+    "category": "tree"
+  },
+  {
+    "id": "pl-obj-049-1",
+    "category": "shrub"
+  },
+  {
+    "id": "pl-obj-050-1",
+    "category": "shrub"
+  },
+  {
+    "id": "pl-obj-051-1",
+    "category": "shrub"
+  },
+  {
+    "id": "pl-obj-052-1",
+    "category": "shrub"
+  },
+  {
+    "id": "pl-obj-053-1",
+    "category": "palm"
+  },
+  {
+    "id": "pl-obj-054-1",
+    "category": "shrub"
+  },
+  {
+    "id": "pl-obj-055-1",
+    "category": "shrub"
+  },
+  {
+    "id": "pl-obj-056-1",
+    "category": "shrub"
+  },
+  {
+    "id": "pl-obj-057-1",
+    "category": "grass"
+  },
+  {
+    "id": "pl-obj-058-1",
+    "category": "shrub"
+  },
+  {
+    "id": "pl-obj-059-1",
+    "category": "shrub"
+  },
+  {
+    "id": "pl-obj-060-1",
+    "category": "shrub"
+  },
+  {
+    "id": "pl-obj-061-1",
+    "category": "palm"
+  },
+  {
+    "id": "pl-obj-062-1",
+    "category": "shrub"
+  },
+  {
+    "id": "pl-obj-063-1",
+    "category": "palm"
+  },
+  {
+    "id": "pl-obj-064-1",
+    "category": "shrub"
+  },
+  {
+    "id": "pl-obj-065-1",
+    "category": "flower"
+  },
+  {
+    "id": "pl-obj-066-1",
+    "category": "flower"
+  },
+  {
+    "id": "pl-obj-067-1",
+    "category": "shrub"
+  },
+  {
+    "id": "pl-obj-068-1",
+    "category": "hedge"
+  },
+  {
+    "id": "pl-obj-069-1",
+    "category": "flower"
+  },
+  {
+    "id": "pl-obj-070-1",
+    "category": "flower"
+  },
+  {
+    "id": "pl-obj-071-1",
+    "category": "shrub"
+  },
+  {
+    "id": "pl-obj-072-1",
+    "category": "flower"
+  },
+  {
+    "id": "pl-obj-073-1",
+    "category": "hedge"
+  },
+  {
+    "id": "pl-obj-074-1",
+    "category": "shrub"
+  },
+  {
+    "id": "pl-obj-075-1",
+    "category": "flower"
+  },
+  {
+    "id": "pl-obj-076-1",
+    "category": "flower"
+  },
+  {
+    "id": "pl-obj-077-1",
+    "category": "shrub"
+  },
+  {
+    "id": "pl-obj-078-1",
+    "category": "shrub"
+  },
+  {
+    "id": "pl-obj-079-1",
+    "category": "palm"
+  },
+  {
+    "id": "pl-obj-080-1",
+    "category": "shrub"
+  },
+  {
+    "id": "pl-obj-081-1",
+    "category": "flower"
+  },
+  {
+    "id": "pl-obj-082-1",
+    "category": "flower"
+  },
+  {
+    "id": "pl-obj-083-1",
+    "category": "shrub"
+  },
+  {
+    "id": "pl-obj-084-1",
+    "category": "shrub"
+  },
+  {
+    "id": "pl-obj-085-1",
+    "category": "palm"
+  },
+  {
+    "id": "pl-obj-086-1",
+    "category": "shrub"
+  },
+  {
+    "id": "pl-obj-087-1",
+    "category": "flower"
+  },
+  {
+    "id": "pl-obj-088-1",
+    "category": "shrub"
+  },
+  {
+    "id": "pl-obj-088-2",
+    "category": "shrub"
+  },
+  {
+    "id": "pl-obj-088-3",
+    "category": "shrub"
+  },
+  {
+    "id": "pl-obj-088-4",
+    "category": "shrub"
+  },
+  {
+    "id": "pl-obj-089-1",
+    "category": "flower"
+  },
+  {
+    "id": "pl-obj-090-1",
+    "category": "flower"
+  },
+  {
+    "id": "pl-obj-091-1",
+    "category": "shrub"
+  },
+  {
+    "id": "pl-obj-092-1",
+    "category": "flower"
+  },
+  {
+    "id": "pl-obj-093-1",
+    "category": "grass"
+  },
+  {
+    "id": "pl-obj-094-1",
+    "category": "flower"
+  },
+  {
+    "id": "pl-obj-095-1",
+    "category": "palm"
+  },
+  {
+    "id": "pl-obj-096-1",
+    "category": "shrub"
+  },
+  {
+    "id": "pl-obj-097-1",
+    "category": "shrub"
+  },
+  {
+    "id": "pl-obj-098-1",
+    "category": "shrub"
+  },
+  {
+    "id": "pl-obj-099-1",
+    "category": "flower"
+  },
+  {
+    "id": "pl-obj-100-1",
+    "category": "flower"
+  },
+  {
+    "id": "pl-obj-101-1",
+    "category": "palm"
+  },
+  {
+    "id": "pl-obj-102-1",
+    "category": "palm"
+  },
+  {
+    "id": "pl-obj-103-1",
+    "category": "shrub"
+  }
+]

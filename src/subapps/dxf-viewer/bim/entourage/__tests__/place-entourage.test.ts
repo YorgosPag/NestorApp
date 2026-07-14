@@ -11,14 +11,18 @@
 import {
   peoplePlanPlacer,
   vehiclesPlanPlacer,
+  plantsPlanPlacer,
   PEOPLE_PLAN_LAYER_ID,
   VEHICLES_PLAN_LAYER_ID,
+  PLANTS_PLAN_LAYER_ID,
 } from '../entourage-placers';
 
 // ppl-obj-001-1: category 'person' (650mm), aspect 0.4973 (<1 → μεγάλη πλευρά = ύψος)
 const PERSON = 'ppl-obj-001-1';
 // veh-obj-010-1: category 'car' (4500mm), aspect 1.9156 (>1 → μεγάλη πλευρά = πλάτος)
 const CAR = 'veh-obj-010-1';
+// pl-obj-001-1: category 'tree' (6000mm), aspect 0.9987 (~τετράγωνο)
+const TREE = 'pl-obj-001-1';
 const URL = 'https://example.test/sprite.webp';
 
 describe('peoplePlanPlacer.resolveSceneSize — μεγάλη πλευρά = ύψος (aspect < 1)', () => {
@@ -43,6 +47,18 @@ describe('vehiclesPlanPlacer.resolveSceneSize — μεγάλη πλευρά = π
     const size = vehiclesPlanPlacer.resolveSceneSize(CAR, 'mm')!;
     expect(size.width).toBeCloseTo(4500, 0);
     expect(size.height).toBeCloseTo(4500 / 1.9156, 0);
+  });
+});
+
+describe('plantsPlanPlacer.resolveSceneSize — μεγάλη πλευρά = μήκος κατηγορίας (tree 6000mm)', () => {
+  it('σκηνή σε mm: μεγάλη πλευρά 6000', () => {
+    const size = plantsPlanPlacer.resolveSceneSize(TREE, 'mm')!;
+    expect(Math.max(size.width, size.height)).toBeCloseTo(6000, 0);
+  });
+
+  it('τα φυτά προσγειώνονται στο δικό τους layer', () => {
+    const entity = plantsPlanPlacer.buildEntity({ position: { x: 0, y: 0 }, itemId: TREE, url: URL })!;
+    expect(entity.layerId).toBe(PLANTS_PLAN_LAYER_ID);
   });
 });
 

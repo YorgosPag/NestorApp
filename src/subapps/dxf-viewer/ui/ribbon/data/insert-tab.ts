@@ -174,6 +174,30 @@ export const INSERT_TAB: RibbonTab = {
       ],
     },
     {
+      // ADR-654 M7 — «Φυτά Κάτοψης»: browsable palette of top-view plant entourage
+      // cut-outs (action· η επιλογή κάρτας ενεργοποιεί το placement tool 'plants-plan').
+      id: 'plantsPlan',
+      labelKey: 'ribbon.panels.plantsPlan',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'simple',
+              size: 'large',
+              command: {
+                id: 'insert.plants-plan',
+                labelKey: 'ribbon.commands.plantsPlan',
+                icon: 'plants-plan',
+                commandKey: 'plants-plan',
+                action: 'toggle-plants-plan-panel',
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
       // ADR-651 Φάση Β — «Πινακίδα»: single-click placement tool (commandKey = ToolType
       // 'title-block'). Το πρότυπο λύνεται με τα στοιχεία του ενεργού έργου (zero-config
       // auto-fill) και μπαίνει στη σκηνή ως BlockEntity — καμία επιλογή πριν το κλικ.

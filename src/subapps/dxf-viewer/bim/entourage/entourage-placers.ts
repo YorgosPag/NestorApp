@@ -11,11 +11,14 @@
 import { createEntouragePlacer, type EntouragePlacer } from './place-entourage';
 import { getPeoplePlanSizeMm } from '../../data/people-plan-catalog';
 import { getVehiclePlanSizeMm } from '../../data/vehicles-plan-catalog';
+import { getPlantsPlanSizeMm } from '../../data/plants-plan-catalog';
 
 /** Το layer όπου προσγειώνονται ΟΛΟΙ οι άνθρωποι κάτοψης. */
 export const PEOPLE_PLAN_LAYER_ID = 'PEOPLE-2D';
 /** Το layer όπου προσγειώνονται ΟΛΑ τα οχήματα κάτοψης. */
 export const VEHICLES_PLAN_LAYER_ID = 'VEHICLES-2D';
+/** Το layer όπου προσγειώνονται ΟΛΑ τα φυτά κάτοψης. */
+export const PLANTS_PLAN_LAYER_ID = 'PLANTS-2D';
 
 /** Placer ανθρώπων: μεγέθη από τον people catalog, layer PEOPLE-2D. */
 export const peoplePlanPlacer: EntouragePlacer = createEntouragePlacer({
@@ -27,4 +30,10 @@ export const peoplePlanPlacer: EntouragePlacer = createEntouragePlacer({
 export const vehiclesPlanPlacer: EntouragePlacer = createEntouragePlacer({
   getSizeMm: getVehiclePlanSizeMm,
   layerId: VEHICLES_PLAN_LAYER_ID,
+});
+
+/** Placer φυτών: μεγέθη από τον plants catalog, layer PLANTS-2D. */
+export const plantsPlanPlacer: EntouragePlacer = createEntouragePlacer({
+  getSizeMm: getPlantsPlanSizeMm,
+  layerId: PLANTS_PLAN_LAYER_ID,
 });

@@ -72,6 +72,15 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-07-14 — Entourage pack «plants-plan»: click-routing μέσω του ΙΔΙΟΥ συμβολαίου (ADR-654 M6)
+**Τι:** τρίτο entourage pack (φυτά) στο **ίδιο** single-click dispatch pipeline — καμία νέα διαδρομή. **MOD**
+`canvas-click-types.ts` (προαιρετικό `plantsPlanTool?: EntouragePlacementToolLike` — επαναχρησιμοποίηση του
+κοινού routing συμβολαίου, όχι νέο interface ανά pack) + `canvas-click-bim-dispatch.ts` (ίδιο RAW free-point
+placement branch) + `CanvasSection.tsx` (destructure + pass-through στα dispatch params).
+**Συμμόρφωση ADR-040:** καμία νέα `useSyncExternalStore` σε orchestrator/shell (CHECK 6C ασφαλές)· click-time
+consumer με getter-based reads· μηδέν άγγιγμα σε bitmap cache key / high-freq stores / micro-leaf hot-path.
+CHECK 6B touch → co-staged ADR-040 + ADR-654.
+
 ### 2026-07-14 — Entourage packs: click-routing των «people-plan» / «vehicles-plan» tools (ADR-654 M6)
 **Τι:** wiring δύο νέων single-click entourage tools στο **ίδιο** dispatch pipeline του furniture-plan. **MOD**
 `hooks/canvas/canvas-click-tool-types.ts` (`EntouragePlacementToolLike` — **ένα** κοινό routing συμβόλαιο για όλα

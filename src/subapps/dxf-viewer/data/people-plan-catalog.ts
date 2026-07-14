@@ -33,10 +33,9 @@ export type PeoplePlanCategory =
   | 'wheelchair'
   | 'child';
 
-/** Οι άνθρωποι δεν έχουν δευτερεύον facet ⇒ `secondary` πάντα `null`. */
+/** Οι άνθρωποι δεν έχουν facets ⇒ `facets` πάντα `{}` (μόνο category). */
 export interface PeoplePlanDef extends EntourageDef {
   readonly category: PeoplePlanCategory;
-  readonly secondary: null;
 }
 
 /**

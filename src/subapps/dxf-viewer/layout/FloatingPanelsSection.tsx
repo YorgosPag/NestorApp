@@ -33,6 +33,7 @@ import {
   EntouragePalette,
   PEOPLE_PALETTE_DESCRIPTOR,
   VEHICLES_PALETTE_DESCRIPTOR,
+  PLANTS_PALETTE_DESCRIPTOR,
 } from '../ui/panels/entourage';
 // ADR-189: Guide Analysis Panel (10 services → 4 tabs)
 import { GuideAnalysisPanel } from '../ui/panels/guide-analysis-panel';
@@ -71,9 +72,10 @@ interface FloatingPanelsSectionProps {
   showBlockLibraryPanel: boolean;
   /** ADR-654 — «Έπιπλα Κάτοψης» palette visibility (mirror of showBlockLibraryPanel). */
   showFurniturePlanPanel: boolean;
-  /** ADR-654 M6 — «Άνθρωποι/Οχήματα Κάτοψης» entourage palettes visibility. */
+  /** ADR-654 M6/M7 — «Άνθρωποι/Οχήματα/Φυτά Κάτοψης» entourage palettes visibility. */
   showPeoplePlanPanel: boolean;
   showVehiclesPlanPanel: boolean;
+  showPlantsPlanPanel: boolean;
   /** ADR-652 M3 — ενεργό έργο· χωρίς αυτό δεν προσφέρεται δημοσίευση block σε scope «έργου». */
   projectId?: string;
   handleAction: (action: string) => void;
@@ -128,6 +130,7 @@ export const FloatingPanelsSection = React.memo<FloatingPanelsSectionProps>(({
   showFurniturePlanPanel,
   showPeoplePlanPanel,
   showVehiclesPlanPanel,
+  showPlantsPlanPanel,
   projectId,
   handleAction,
   activeTool,
@@ -273,6 +276,14 @@ export const FloatingPanelsSection = React.memo<FloatingPanelsSectionProps>(({
           isVisible={showVehiclesPlanPanel}
           onClose={() => handleAction('toggle-vehicles-plan-panel')}
           onSelect={() => handleToolChange('vehicles-plan')}
+        />
+      )}
+      {showPlantsPlanPanel && (
+        <EntouragePalette
+          descriptor={PLANTS_PALETTE_DESCRIPTOR}
+          isVisible={showPlantsPlanPanel}
+          onClose={() => handleAction('toggle-plants-plan-panel')}
+          onSelect={() => handleToolChange('plants-plan')}
         />
       )}
 

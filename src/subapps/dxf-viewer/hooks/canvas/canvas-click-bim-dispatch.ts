@@ -50,6 +50,7 @@ export function dispatchBimToolClick(
     furniturePlanTool,
     peoplePlanTool,
     vehiclesPlanTool,
+    plantsPlanTool,
     universalSelection,
   } = params;
 
@@ -235,6 +236,10 @@ export function dispatchBimToolClick(
   }
   if (activeTool === 'vehicles-plan' && vehiclesPlanTool?.isActive) {
     vehiclesPlanTool.onCanvasClick(worldPoint);
+    return true;
+  }
+  if (activeTool === 'plants-plan' && plantsPlanTool?.isActive) {
+    plantsPlanTool.onCanvasClick(worldPoint);
     return true;
   }
   // PRIORITIES 4.92–4.93: MEP fixture / riser / furniture / floorplan-symbol /

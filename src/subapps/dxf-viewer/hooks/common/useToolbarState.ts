@@ -27,9 +27,10 @@ export function useToolbarState() {
   const [showBlockLibraryPanel, setShowBlockLibraryPanel] = useState(false);
   // ADR-654: «Έπιπλα Κάτοψης» palette visibility (mirror of Block Library panel)
   const [showFurniturePlanPanel, setShowFurniturePlanPanel] = useState(false);
-  // ADR-654 M6: «Άνθρωποι/Οχήματα Κάτοψης» entourage palettes visibility
+  // ADR-654 M6/M7: «Άνθρωποι/Οχήματα/Φυτά Κάτοψης» entourage palettes visibility
   const [showPeoplePlanPanel, setShowPeoplePlanPanel] = useState(false);
   const [showVehiclesPlanPanel, setShowVehiclesPlanPanel] = useState(false);
+  const [showPlantsPlanPanel, setShowPlantsPlanPanel] = useState(false);
 
   // Tool change handler
   const handleToolChange = useCallback((
@@ -93,6 +94,7 @@ export function useToolbarState() {
   // ADR-654 M6: «Άνθρωποι/Οχήματα Κάτοψης» palette toggles (mirror του furniture toggle).
   const togglePeoplePlanPanel = useCallback(() => setShowPeoplePlanPanel(p => !p), []);
   const toggleVehiclesPlanPanel = useCallback(() => setShowVehiclesPlanPanel(p => !p), []);
+  const togglePlantsPlanPanel = useCallback(() => setShowPlantsPlanPanel(p => !p), []);
   const toggleGuideAnalysisPanel = useCallback(() => setShowGuideAnalysisPanel(p => !p), []);
 
   return {
@@ -107,6 +109,7 @@ export function useToolbarState() {
     showFurniturePlanPanel,
     showPeoplePlanPanel,
     showVehiclesPlanPanel,
+    showPlantsPlanPanel,
 
     // Actions - setActiveTool removed, now managed by parent
     handleToolChange,
@@ -121,6 +124,7 @@ export function useToolbarState() {
     openBlockLibraryPanel,
     toggleFurniturePlanPanel,
     togglePeoplePlanPanel,
-    toggleVehiclesPlanPanel
+    toggleVehiclesPlanPanel,
+    togglePlantsPlanPanel
   };
 }

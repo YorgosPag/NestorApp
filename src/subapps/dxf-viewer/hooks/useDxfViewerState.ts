@@ -422,6 +422,9 @@ export function useDxfViewerState() {
       case 'toggle-vehicles-plan-panel':
         toolbarState.toggleVehiclesPlanPanel();
         break;
+      case 'toggle-plants-plan-panel':
+        toolbarState.togglePlantsPlanPanel();
+        break;
       // ADR-363 R1 / ADR-577: unified Copy tool activation (C+O chord → AutoCAD COPY pattern, all entity types)
       case 'copy-selected':
         handleToolChange('copy');

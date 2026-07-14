@@ -5,22 +5,24 @@
  * @description ADR-654 M6 — generic palette για κάθε οικογένεια entourage (top-view raster cut-outs).
  *
  * Γενίκευση του `FurniturePlanPanel`: grid από κάρτες + faceted φίλτρα, οδηγούμενο 100% από τον
- * {@link EntouragePackDescriptor}. Δύο facet rows: **category** (πάντα) + **secondary** (ΜΟΝΟ όταν
- * η οικογένεια έχει secondary — τα οχήματα έχουν χρώμα, οι άνθρωποι όχι). Το εμφανιζόμενο όνομα
- * ΣΥΝΤΙΘΕΤΑΙ από τα facets (`descriptor.getLabelParts` → i18n) — μηδέν per-item strings.
+ * {@link EntouragePackDescriptor}. **N facet rows**: **category** (πάντα) + **μία σειρά ανά
+ * facetKey** του descriptor (0..N — άνθρωποι/φυτά 0, οχήματα `color`, έπιπλα `kind`+`style`). Το
+ * εμφανιζόμενο όνομα ΣΥΝΤΙΘΕΤΑΙ από τα facets (`composeEntourageDisplayName`) — μηδέν per-item strings.
  *
  * Container only: ο κύκλος ζωής (thumbnails + select) ζει στο `useEntouragePalette`, η κάρτα στο
- * `EntourageCard`. Μία μηχανή ⇒ People + Vehicles (N.18: μηδέν sibling clone).
+ * `EntourageCard`. Μία μηχανή ⇒ People + Vehicles + Plants + Furniture (N.18: μηδέν sibling clone).
  *
  * @see ./use-entourage-palette.ts — thumbnails + resolve-then-select
- * @see ./entourage-pack-descriptor.ts — τι δίνει η κάθε οικογένεια
+ * @see ./entourage-pack-descriptor.ts — τι δίνει η κάθε οικογένεια (incl. `facetKeys`)
+ * @see ../../../data/entourage-display-name.ts — σύνθεση ονόματος (κοινή)
  * @see ../shared/library-filter.ts — LIBRARY_FILTER_ALL (κοινό «όλα» sentinel)
  */
 
 import React, { useCallback, useMemo, useState } from 'react';
 import { FloatingPanel } from '@/components/ui/floating';
 import { useTranslation } from '@/i18n';
-import type { EntourageDef } from '../../../data/entourage-catalog-core';
+import { entourageLabelParts, type EntourageDef } from '../../../data/entourage-catalog-core';
+import { composeEntourageDisplayName } from '../../../data/entourage-display-name';
 import { LIBRARY_FILTER_ALL } from '../shared/library-filter';
 import { EntourageCard } from './EntourageCard';
 import { useEntouragePalette } from './use-entourage-palette';
@@ -67,7 +69,7 @@ const FilterChip: React.FC<{
   </li>
 );
 
-/** Μία σειρά chips («Όλα» + οι επιλογές) — κοινή για category & secondary ⇒ μηδέν διπλασιασμός. */
+/** Μία σειρά chips («Όλα» + οι επιλογές) — κοινή για category & κάθε facet ⇒ μηδέν διπλασιασμός. */
 function ChipFilterRow({
   ariaLabel,
   allLabel,
@@ -108,42 +110,53 @@ export const EntouragePalette: React.FC<EntouragePaletteProps> = ({
   onSelect,
 }) => {
   const { t } = useTranslation('dxf-viewer-shell');
-  const { i18nPrefix, icon, selection } = descriptor;
+  const { i18nPrefix, icon, selection, facetKeys } = descriptor;
   const { defs, thumbnails, loading, locked, selectItem } = useEntouragePalette(descriptor);
   const active = selection.use();
   const [category, setCategory] = useState<FacetFilter>(LIBRARY_FILTER_ALL);
-  const [secondary, setSecondary] = useState<FacetFilter>(LIBRARY_FILTER_ALL);
-
-  // Ίδιο μοτίβο κλειδιών με τον core `getLabelParts` (category · secondary; series στο τέλος).
-  const displayNameOf = useCallback(
-    (def: EntourageDef): string => {
-      const label = def.secondary
-        ? `${t(`${i18nPrefix}.categories.${def.category}`)} · ${t(`${i18nPrefix}.secondary.${def.secondary}`)}`
-        : t(`${i18nPrefix}.categories.${def.category}`);
-      return `${label} ${def.series}`;
-    },
-    [t, i18nPrefix],
+  const [facetFilters, setFacetFilters] = useState<Record<string, FacetFilter>>(() =>
+    Object.fromEntries(facetKeys.map((key) => [key, LIBRARY_FILTER_ALL])),
   );
 
-  /** Chips ΜΟΝΟ για facets που πραγματικά υπάρχουν στον κατάλογο. */
+  const setFacet = useCallback((key: string, value: FacetFilter) => {
+    setFacetFilters((prev) => ({ ...prev, [key]: value }));
+  }, []);
+
+  // Κοινή σύνθεση ονόματος (category · facets… · series) — μηδέν αντιγραφή (N.18).
+  const displayNameOf = useCallback(
+    (def: EntourageDef): string =>
+      composeEntourageDisplayName(t, entourageLabelParts(def, i18nPrefix), facetKeys),
+    [t, i18nPrefix, facetKeys],
+  );
+
+  /** Chips ΜΟΝΟ για κατηγορίες που πραγματικά υπάρχουν στον κατάλογο. */
   const categoryOptions = useMemo<ChipOption[]>(() => {
     const present = [...new Set(defs.map((d) => d.category))];
     return present.map((c) => ({ value: c, label: t(`${i18nPrefix}.categories.${c}`) }));
   }, [defs, t, i18nPrefix]);
 
-  const secondaryOptions = useMemo<ChipOption[]>(() => {
-    const present = [...new Set(defs.map((d) => d.secondary).filter((s): s is string => s !== null))];
-    return present.map((s) => ({ value: s, label: t(`${i18nPrefix}.secondary.${s}`) }));
-  }, [defs, t, i18nPrefix]);
+  /** Options ανά facetKey — μία σειρά chips ανά facet, ΜΟΝΟ για τιμές που υπάρχουν. */
+  const facetOptions = useMemo<Record<string, ChipOption[]>>(() => {
+    const result: Record<string, ChipOption[]> = {};
+    for (const key of facetKeys) {
+      const present = [...new Set(defs.map((d) => d.facets[key]).filter((v): v is string => Boolean(v)))];
+      result[key] = present.map((v) => ({ value: v, label: t(`${i18nPrefix}.${key}.${v}`) }));
+    }
+    return result;
+  }, [defs, facetKeys, t, i18nPrefix]);
 
   const visibleDefs = useMemo(
     () =>
       defs.filter(
         (d) =>
           (category === LIBRARY_FILTER_ALL || d.category === category) &&
-          (secondary === LIBRARY_FILTER_ALL || d.secondary === secondary),
+          facetKeys.every(
+            (key) =>
+              (facetFilters[key] ?? LIBRARY_FILTER_ALL) === LIBRARY_FILTER_ALL ||
+              d.facets[key] === facetFilters[key],
+          ),
       ),
-    [defs, category, secondary],
+    [defs, category, facetFilters, facetKeys],
   );
 
   const handleSelect = useCallback(
@@ -176,13 +189,16 @@ export const EntouragePalette: React.FC<EntouragePaletteProps> = ({
           active={category}
           onSelect={setCategory}
         />
-        <ChipFilterRow
-          ariaLabel={t(`${i18nPrefix}.secondaryFilterLabel`)}
-          allLabel={t(`${i18nPrefix}.allSecondary`)}
-          options={secondaryOptions}
-          active={secondary}
-          onSelect={setSecondary}
-        />
+        {facetKeys.map((key) => (
+          <ChipFilterRow
+            key={key}
+            ariaLabel={t(`${i18nPrefix}.${key}FilterLabel`)}
+            allLabel={t(`${i18nPrefix}.${key}FilterAll`)}
+            options={facetOptions[key] ?? []}
+            active={facetFilters[key] ?? LIBRARY_FILTER_ALL}
+            onSelect={(value) => setFacet(key, value)}
+          />
+        ))}
 
         {/* ADR-655 — «κλειδωμένο» ≠ «άδειο»: ο μη δικαιούχος πρέπει να καταλάβει ΓΙΑΤΙ δεν βλέπει τίποτα. */}
         {locked && (

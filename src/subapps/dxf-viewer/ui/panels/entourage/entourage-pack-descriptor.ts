@@ -22,10 +22,16 @@ export interface EntouragePackDescriptor {
   readonly packId: AssetPackId;
   /**
    * i18n namespace-prefix των facets + labels, π.χ. `'peoplePlan'`. Απ' αυτό συντίθενται ΟΛΑ τα
-   * κλειδιά (`<prefix>.categories.<cat>`, `<prefix>.secondary.<sec>`, `<prefix>.title`…) — ίδιο
-   * μοτίβο με τον core `getLabelParts`, οπότε δεν χρειάζεται per-pack label fn εδώ.
+   * κλειδιά (`<prefix>.categories.<cat>`, `<prefix>.<facet>.<value>`, `<prefix>.title`…) — ίδιο
+   * μοτίβο με τον core `entourageLabelParts`, οπότε δεν χρειάζεται per-pack label fn εδώ.
    */
   readonly i18nPrefix: string;
+  /**
+   * Τα ονόματα των facets, ΜΕ ΣΕΙΡΑ — καθορίζει τη σειρά των chip-rows στην παλέτα ΚΑΙ τη σειρά
+   * σύνθεσης του ονόματος. `[]` = μόνο κατηγορία (π.χ. άνθρωποι/φυτά). Έπιπλα: `['kind','style']`
+   * (το «Μεμονωμένα ⇄ Συνθέσεις» πρώτο). Οχήματα: `['color']`.
+   */
+  readonly facetKeys: readonly string[];
   /** Το εικονίδιο της κεφαλίδας του panel. */
   readonly icon: ReactNode;
   /** Ο κατάλογος της οικογένειας (curated, σταθερός). */

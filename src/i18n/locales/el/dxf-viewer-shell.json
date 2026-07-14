@@ -1274,6 +1274,12 @@
       "statusPosition": "Κάντε κλικ για να τοποθετήσετε το όχημα",
       "errorNoSelection": "Δεν έχει επιλεγεί όχημα",
       "errorUnknownItem": "Άγνωστο όχημα"
+    },
+    "plantsPlan": {
+      "label": "Φυτά",
+      "statusPosition": "Κάντε κλικ για να τοποθετήσετε το φυτό",
+      "errorNoSelection": "Δεν έχει επιλεγεί φυτό",
+      "errorUnknownItem": "Άγνωστο φυτό"
     }
   },
   "blockLibrary": {
@@ -1925,7 +1931,8 @@
       "export": "Εξαγωγή",
       "structural": "Στατικά",
       "peoplePlan": "Άνθρωποι",
-      "vehiclePlan": "Οχήματα"
+      "vehiclePlan": "Οχήματα",
+      "plantsPlan": "Φυτά"
     },
     "minimizeStates": {
       "full": "Πλήρης Προβολή",
@@ -4909,7 +4916,8 @@
       "titleBlockLibrary": "Βιβλιοθήκη",
       "titleBlockLibraryTooltip": "Πρότυπα πινακίδας γραφείου/έργου — αποθήκευση, δημοσίευση, παραλλαγές",
       "peoplePlan": "Άνθρωποι",
-      "vehiclePlan": "Οχήματα"
+      "vehiclePlan": "Οχήματα",
+      "plantsPlan": "Φυτά"
     },
     "tooltips": {
       "bimSchedule": "Άνοιγμα Πίνακα BIM — εξαγωγή δομικών στοιχείων",
@@ -6475,6 +6483,9 @@
     },
     "vehiclePlan2d": {
       "title": "Οχήματα Κάτοψης 2D"
+    },
+    "plantsPlan2d": {
+      "title": "Φυτά Κάτοψης 2D"
     }
   },
   "peoplePlan": {
@@ -6494,14 +6505,32 @@
     "loading": "Έλεγχος δικαιωμάτων…",
     "locked": "Η βιβλιοθήκη ανθρώπων δεν είναι διαθέσιμη στον λογαριασμό σου."
   },
+  "plantsPlan": {
+    "title": "Φυτά Κάτοψης",
+    "hint": "Επίλεξε ένα φυτό και κάνε κλικ στον καμβά για τοποθέτηση.",
+    "empty": "Δεν βρέθηκαν φυτά κάτοψης.",
+    "noMatch": "Κανένα φυτό δεν ταιριάζει με το φίλτρο.",
+    "allCategories": "Όλα",
+    "categories": {
+      "tree": "Δέντρο",
+      "largeTree": "Μεγάλο δέντρο",
+      "shrub": "Θάμνος",
+      "hedge": "Φράχτης",
+      "palm": "Φοίνικας",
+      "flower": "Ανθισμένο φυτό",
+      "grass": "Γρασίδι"
+    },
+    "loading": "Έλεγχος δικαιωμάτων…",
+    "locked": "Η βιβλιοθήκη φυτών δεν είναι διαθέσιμη στον λογαριασμό σου."
+  },
   "vehiclePlan": {
     "title": "Οχήματα Κάτοψης",
     "hint": "Επίλεξε ένα όχημα και κάνε κλικ στον καμβά για τοποθέτηση.",
     "empty": "Δεν βρέθηκαν οχήματα κάτοψης.",
     "noMatch": "Κανένα όχημα δεν ταιριάζει με το φίλτρο.",
     "allCategories": "Όλα",
-    "allSecondary": "Όλα",
-    "secondaryFilterLabel": "Χρώμα",
+    "colorFilterAll": "Όλα",
+    "colorFilterLabel": "Χρώμα",
     "categories": {
       "car": "Αυτοκίνητο",
       "motorcycle": "Μηχανή",
@@ -6514,7 +6543,7 @@
       "tractor": "Τρακτέρ",
       "airplane": "Αεροπλάνο"
     },
-    "secondary": {
+    "color": {
       "red": "Κόκκινο",
       "white": "Λευκό",
       "black": "Μαύρο",

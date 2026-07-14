@@ -147,6 +147,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
     showFurniturePlanPanel,
     showPeoplePlanPanel,
     showVehiclesPlanPanel,
+    showPlantsPlanPanel,
     handleFileImport, currentScene,
     handleSceneChange, handleCalibrationToggle,
     drawingState, onMeasurementPoint, onMeasurementHover, onMeasurementCancel,
@@ -440,6 +441,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
           showFurniturePlanPanel={showFurniturePlanPanel}
           showPeoplePlanPanel={showPeoplePlanPanel}
           showVehiclesPlanPanel={showVehiclesPlanPanel}
+          showPlantsPlanPanel={showPlantsPlanPanel}
           projectId={levelManager.saveContext?.projectId ?? undefined}
           handleAction={wrappedHandleAction}
           activeTool={activeTool}

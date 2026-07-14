@@ -7,7 +7,7 @@
  */
 
 import React, { useSyncExternalStore } from 'react';
-import { Undo, Redo, Trash2, PanelRight, Eye, BarChart3, Grid3X3, Crop, Scissors, Lasso, Pentagon, FileImage, Upload, FolderUp, Wand2, Download, Crosshair, FlaskConical, Activity, Sparkles, Layers, Maximize2, Bold, Italic, Underline, Strikethrough, Ruler, MoveHorizontal, MoveDiagonal2, Triangle, CircleDot, Diameter, Spline, CircleSlash, MoveUpRight, Rows3, Equal, Palette, Check, Pencil, RotateCcw, RefreshCw, Settings, Type, Construction, DoorOpen, Columns3, SquareDashed, RectangleHorizontal, TableProperties, Boxes, FileDown, Thermometer, Flame, Droplet, ArrowUpToLine, ArrowDownToLine, Unlink2, Lightbulb, Fence, Server, Armchair, Users, Car, Split, Info, Plug, Printer, Frame, Merge, Group, Ungroup, Syringe, Stamp, History, LibraryBig } from 'lucide-react';
+import { Undo, Redo, Trash2, PanelRight, Eye, BarChart3, Grid3X3, Crop, Scissors, Lasso, Pentagon, FileImage, Upload, FolderUp, Wand2, Download, Crosshair, FlaskConical, Activity, Sparkles, Layers, Maximize2, Bold, Italic, Underline, Strikethrough, Ruler, MoveHorizontal, MoveDiagonal2, Triangle, CircleDot, Diameter, Spline, CircleSlash, MoveUpRight, Rows3, Equal, Palette, Check, Pencil, RotateCcw, RefreshCw, Settings, Type, Construction, DoorOpen, Columns3, SquareDashed, RectangleHorizontal, TableProperties, Boxes, FileDown, Thermometer, Flame, Droplet, ArrowUpToLine, ArrowDownToLine, Unlink2, Lightbulb, Fence, Server, Armchair, Users, Car, Trees, Split, Info, Plug, Printer, Frame, Merge, Group, Ungroup, Syringe, Stamp, History, LibraryBig } from 'lucide-react';
 // ADR-581 Φ6 — reactive 2-state σύριγγα icon (empty ⇄ full) driven by the brush store.
 // Direct module import (ΟΧΙ barrel) → ο ribbon icon chunk δεν τραβά command classes.
 import { subscribeMatchBrush, hasMatchBrushSource } from '../../../../systems/match-properties/match-brush-store';
@@ -231,6 +231,7 @@ export const RibbonButtonIcon: React.FC<RibbonButtonIconProps> = ({ icon, size }
     // ADR-654 M6 — «Άνθρωποι/Οχήματα Κάτοψης»: entourage palettes (mirror του furniture-plan icon).
     case 'people-plan': return <Users width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'vehicles-plan': return <Car width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'plants-plan': return <Trees width={sizePx[size]} height={sizePx[size]} className={className} />;
     // ADR-651 Φάση Β — πινακίδα σχεδίου (κορνίζα με πεδία).
     case 'title-block': return <Frame width={sizePx[size]} height={sizePx[size]} className={className} />;
     // ADR-651 Φάση Ε — σφραγίδα/υπογραφή μηχανικού.

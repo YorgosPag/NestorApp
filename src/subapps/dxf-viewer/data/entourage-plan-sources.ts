@@ -14,6 +14,8 @@ import { resolveEntourageUrl, type EntourageAssetVariant } from './entourage-sou
 export const PEOPLE_PLAN_PACK_ID = 'people-plan-2d' as const;
 /** Το pack των οχημάτων κάτοψης. */
 export const VEHICLES_PLAN_PACK_ID = 'vehicles-plan-2d' as const;
+/** Το pack των φυτών κάτοψης. */
+export const PLANTS_PLAN_PACK_ID = 'plants-plan-2d' as const;
 
 /** id → URL ενός sprite ανθρώπου (σύγχρονο, asset-pack proxy). */
 export function resolvePeoplePlanUrl(id: string, variant: EntourageAssetVariant = 'full'): string {
@@ -23,4 +25,9 @@ export function resolvePeoplePlanUrl(id: string, variant: EntourageAssetVariant 
 /** id → URL ενός sprite οχήματος (σύγχρονο, asset-pack proxy). */
 export function resolveVehiclesPlanUrl(id: string, variant: EntourageAssetVariant = 'full'): string {
   return resolveEntourageUrl(VEHICLES_PLAN_PACK_ID, id, variant);
+}
+
+/** id → URL ενός sprite φυτού (σύγχρονο, asset-pack proxy). */
+export function resolvePlantsPlanUrl(id: string, variant: EntourageAssetVariant = 'full'): string {
+  return resolveEntourageUrl(PLANTS_PLAN_PACK_ID, id, variant);
 }

@@ -193,6 +193,7 @@ firestore.rules.compiled
 /images_3/
 /images_4/
 /images_5/
+/images_6/
 
 # Generated clone-detection report (jscpd· βλ. N.18 / ADR-584)
 /report/
@@ -203,3 +204,4 @@ firestore.rules.compiled
 /public/furniture-2d/
 /public/people-2d/
 /public/vehicles-2d/
+/public/plants-2d/

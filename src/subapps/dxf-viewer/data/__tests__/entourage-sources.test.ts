@@ -8,8 +8,10 @@
 import {
   PEOPLE_PLAN_PACK_ID,
   VEHICLES_PLAN_PACK_ID,
+  PLANTS_PLAN_PACK_ID,
   resolvePeoplePlanUrl,
   resolveVehiclesPlanUrl,
+  resolvePlantsPlanUrl,
 } from '../entourage-plan-sources';
 import { resolveEntourageUrl } from '../entourage-source';
 
@@ -35,9 +37,19 @@ describe('entourage source resolvers — proxy URL shape', () => {
     );
   });
 
+  it('φυτό: full/thumb με το δικό του pack id', () => {
+    expect(resolvePlantsPlanUrl('pl-obj-001-1')).toBe(
+      '/api/asset-packs/plants-plan-2d/v1/pl-obj-001-1.webp',
+    );
+    expect(resolvePlantsPlanUrl('pl-obj-001-1', 'thumb')).toBe(
+      '/api/asset-packs/plants-plan-2d/v1/pl-obj-001-1.thumb.webp',
+    );
+  });
+
   it('τα per-pack ids ταιριάζουν με το registry', () => {
     expect(PEOPLE_PLAN_PACK_ID).toBe('people-plan-2d');
     expect(VEHICLES_PLAN_PACK_ID).toBe('vehicles-plan-2d');
+    expect(PLANTS_PLAN_PACK_ID).toBe('plants-plan-2d');
   });
 
   it('άγνωστο pack id → hard error (ποτέ σιωπηλό κενό URL)', () => {

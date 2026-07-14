@@ -33,6 +33,7 @@ const PACK_SOURCE_DIRS = {
   'furniture-plan-2d': path.join(__dirname, '..', 'public', 'furniture-2d'),
   'people-plan-2d': path.join(__dirname, '..', 'public', 'people-2d'),
   'vehicles-plan-2d': path.join(__dirname, '..', 'public', 'vehicles-2d'),
+  'plants-plan-2d': path.join(__dirname, '..', 'public', 'plants-2d'),
 };
 
 /**

@@ -26,11 +26,16 @@
 import { listFurniturePlanDefs } from '@/subapps/dxf-viewer/data/furniture-plan-catalog';
 import { listPeoplePlanDefs } from '@/subapps/dxf-viewer/data/people-plan-catalog';
 import { listVehiclePlanDefs } from '@/subapps/dxf-viewer/data/vehicles-plan-catalog';
+import { listPlantsPlanDefs } from '@/subapps/dxf-viewer/data/plants-plan-catalog';
 
 // ─── Ταυτότητα ────────────────────────────────────────────────────────────────
 
 /** Κάθε νέο πακέτο προσθέτει ΜΙΑ τιμή εδώ + ΜΙΑ εγγραφή στο {@link ASSET_PACKS}. */
-export type AssetPackId = 'furniture-plan-2d' | 'people-plan-2d' | 'vehicles-plan-2d';
+export type AssetPackId =
+  | 'furniture-plan-2d'
+  | 'people-plan-2d'
+  | 'vehicles-plan-2d'
+  | 'plants-plan-2d';
 
 /**
  * Πολιτική διανομής ενός πακέτου.
@@ -115,6 +120,19 @@ export const ASSET_PACKS: Readonly<Record<AssetPackId, AssetPackDefinition>> = {
     },
     defaultStatus: 'entitled',
     listAssetIds: () => listVehiclePlanDefs().map((def) => def.id),
+  },
+  'plants-plan-2d': {
+    id: 'plants-plan-2d',
+    version: 'v1',
+    titleKey: 'assetPacks.plantsPlan2d.title',
+    license: {
+      holder: 'Nestor Pagonis',
+      grantedBy: 'creator',
+      grantedAt: '2007-01-01',
+      redistributable: false,
+    },
+    defaultStatus: 'entitled',
+    listAssetIds: () => listPlantsPlanDefs().map((def) => def.id),
   },
 };
 

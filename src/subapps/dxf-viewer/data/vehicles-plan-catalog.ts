@@ -3,8 +3,8 @@
  *
  * Faceted βιβλιοθήκη raster οχημάτων σε ΚΑΤΟΨΗ (cut-outs με alpha) πάνω στη μηχανή
  * `entourage-catalog-core`. `category` = τύπος οχήματος (ΚΡΙΣΙΜΟΣ για το μέγεθος — ένα φορτηγό
- * είναι 4× ένα αυτοκίνητο) + δευτερεύον facet `secondary` = **χρώμα** (φίλτρο/όνομα, δεν επηρεάζει
- * μέγεθος). Το pack περιλαμβάνει και σκάφη, χωματουργικά, τρακτέρ, αεροπλάνα (ADR-654 M6 Φάση 2).
+ * είναι 4× ένα αυτοκίνητο) + facet `color` = **χρώμα** (φίλτρο/όνομα, δεν επηρεάζει μέγεθος). Το
+ * pack περιλαμβάνει και σκάφη, χωματουργικά, τρακτέρ, αεροπλάνα (ADR-654 M6 Φάση 2).
  *
  * Prefix `veh-*` = curated builtins (σταθερά ids, ντετερμινιστικά από τον builder).
  *
@@ -50,9 +50,9 @@ export type VehiclePlanColor =
   | 'brown'
   | 'other';
 
+/** Τα οχήματα έχουν ένα facet `color` ⇒ `facets: { color: VehiclePlanColor }`. */
 export interface VehiclePlanDef extends EntourageDef {
   readonly category: VehiclePlanCategory;
-  readonly secondary: VehiclePlanColor;
 }
 
 /**

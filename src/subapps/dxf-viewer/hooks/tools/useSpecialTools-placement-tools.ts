@@ -19,7 +19,7 @@ import { useFurnitureTool } from '../drawing/useFurnitureTool';
 import { useBlockLibraryTool } from '../drawing/useBlockLibraryTool';
 import { useTitleBlockTool } from '../drawing/useTitleBlockTool';
 import { useFurniturePlanTool } from '../drawing/useFurniturePlanTool';
-import { usePeoplePlanTool, useVehiclesPlanTool } from '../drawing/entourage-tools';
+import { usePeoplePlanTool, useVehiclesPlanTool, usePlantsPlanTool } from '../drawing/entourage-tools';
 import { useFloorplanSymbolTool } from '../drawing/useFloorplanSymbolTool';
 import { useElectricalPanelTool } from '../drawing/useElectricalPanelTool';
 import { useMepManifoldTool } from '../drawing/useMepManifoldTool';
@@ -74,6 +74,7 @@ export interface PlacementToolsReturn {
   furniturePlanTool: ReturnType<typeof useFurniturePlanTool>; // ADR-654
   peoplePlanTool: ReturnType<typeof usePeoplePlanTool>; // ADR-654 M6
   vehiclesPlanTool: ReturnType<typeof useVehiclesPlanTool>; // ADR-654 M6
+  plantsPlanTool: ReturnType<typeof usePlantsPlanTool>; // ADR-654 M7
 
   floorplanSymbolTool: ReturnType<typeof useFloorplanSymbolTool>; // ADR-415
   electricalPanelTool: ReturnType<typeof useElectricalPanelTool>; // ADR-408 Φ3
@@ -243,6 +244,17 @@ export function useSpecialToolsPlacementTools(
     },
   });
   useToolLifecycle(activeTool === 'vehicles-plan', vehiclesPlanTool.activate, vehiclesPlanTool.deactivate);
+
+  // ADR-654 M7 — «Φυτά κάτοψης» (entourage): shared engine, tag 'plants-plan'.
+  const plantsPlanTool = usePlantsPlanTool({
+    currentLevelId: levelManager.currentLevelId || '0',
+    onEntourageCreated: (entity) => addEntourageToScene(entity, levelManager, 'plants-plan'),
+    getSceneUnits: () => {
+      const lid = levelManager.currentLevelId;
+      return lid ? resolveSceneUnits(levelManager.getLevelScene(lid)) : 'mm';
+    },
+  });
+  useToolLifecycle(activeTool === 'plants-plan', plantsPlanTool.activate, plantsPlanTool.deactivate);
 
   // ADR-415 — FLOORPLAN SYMBOL TOOL: single-click placement; entity appended+broadcast.
   const floorplanSymbolTool = useFloorplanSymbolTool({
@@ -415,6 +427,7 @@ export function useSpecialToolsPlacementTools(
     furniturePlanTool,
     peoplePlanTool,
     vehiclesPlanTool,
+    plantsPlanTool,
     floorplanSymbolTool,
     electricalPanelTool,
     mepManifoldTool,
