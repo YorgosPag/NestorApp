@@ -28,4 +28,4 @@ export type { AutoAlignResult } from './geo-auto-align';
 export { autoAlignByRobustCenters } from './geo-auto-align';
 
 export { getGeoReference, setGeoReference, subscribeGeoReference } from './geo-reference-store';
-export { loadProjectGeoReference, persistProjectGeoReference } from './geo-reference-persistence';
+export { loadProjectGeoReference, persistProjectGeoReference, clearProjectGeoReference } from './geo-reference-persistence';

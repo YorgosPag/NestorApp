@@ -985,82 +985,31 @@ service cloud.firestore {
     // 🏢 ENTERPRISE: Floorplans for projects with tenant isolation
     // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1C)
     // ⚠️ NOTE: Requires companyId migration - derive from projectId
+    // ADR-657 PRESENTATION tier (legacy container) — read tenant-wide + projectId-company fallback
+    // (kept as an extra OR-leg, this block only); write internal-only, no ownership grant.
     match /project_floorplans/{floorplanId} {
-      // 📖 READ: Tenant-scoped via companyId or projectId lookup
       allow read: if isAuthenticated()
                   && (
-                       isSuperAdminOnly()
-                       || (resource.data.keys().hasAny(['companyId'])
-                           && belongsToCompany(resource.data.companyId))
-                       // Fallback via projectId lookup
+                       canReadLegacyFloorplan()
                        || (resource.data.keys().hasAny(['projectId'])
                            && resource.data.projectId is string
                            && belongsToProjectCompany(resource.data.projectId))
-                       // Legacy: creator-only
-                       || (!resource.data.keys().hasAny(['companyId', 'projectId'])
-                           && resource.data.createdBy == request.auth.uid)
                      );
-
-      // ✍️ CREATE: companyId required
-      allow create: if isAuthenticated()
-                    && request.resource.data.companyId == getUserCompanyId();
-
-      // 📝 UPDATE: Creator or company admin
-      allow update: if isAuthenticated()
-                    && (
-                         resource.data.createdBy == request.auth.uid
-                         || isCompanyAdminOfCompany(resource.data.companyId)
-                         || isSuperAdminOnly()
-                       )
-                    && (!resource.data.keys().hasAny(['companyId'])
-                        || request.resource.data.companyId == resource.data.companyId);
-
-      // 🗑️ DELETE: Creator or company admin
-      allow delete: if isAuthenticated()
-                    && (
-                         resource.data.createdBy == request.auth.uid
-                         || isCompanyAdminOfCompany(resource.data.companyId)
-                         || isSuperAdminOnly()
-                       );
+      allow create: if isAuthenticated() && canCreateLegacyFloorplan();
+      allow update: if isAuthenticated() && canWriteLegacyFloorplan();
+      allow delete: if isAuthenticated() && isBimWriter(resource.data.companyId);
     }
 
     // =========================================================================
     // 📐 BUILDING_FLOORPLANS COLLECTION - ENTERPRISE TENANT ISOLATION (PR-1C)
     // =========================================================================
     // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1C)
+    // ADR-657 PRESENTATION tier (legacy container) — read tenant-wide; write internal-only, no ownership grant.
     match /building_floorplans/{floorplanId} {
-      // 📖 READ: Tenant-scoped via companyId or buildingId lookup
-      allow read: if isAuthenticated()
-                  && (
-                       isSuperAdminOnly()
-                       || (resource.data.keys().hasAny(['companyId'])
-                           && belongsToCompany(resource.data.companyId))
-                       // Legacy: creator-only
-                       || (!resource.data.keys().hasAny(['companyId'])
-                           && resource.data.createdBy == request.auth.uid)
-                     );
-
-      // ✍️ CREATE: companyId required
-      allow create: if isAuthenticated()
-                    && request.resource.data.companyId == getUserCompanyId();
-
-      // 📝 UPDATE: Creator or company admin
-      allow update: if isAuthenticated()
-                    && (
-                         resource.data.createdBy == request.auth.uid
-                         || isCompanyAdminOfCompany(resource.data.companyId)
-                         || isSuperAdminOnly()
-                       )
-                    && (!resource.data.keys().hasAny(['companyId'])
-                        || request.resource.data.companyId == resource.data.companyId);
-
-      // 🗑️ DELETE: Creator or company admin
-      allow delete: if isAuthenticated()
-                    && (
-                         resource.data.createdBy == request.auth.uid
-                         || isCompanyAdminOfCompany(resource.data.companyId)
-                         || isSuperAdminOnly()
-                       );
+      allow read:   if isAuthenticated() && canReadLegacyFloorplan();
+      allow create: if isAuthenticated() && canCreateLegacyFloorplan();
+      allow update: if isAuthenticated() && canWriteLegacyFloorplan();
+      allow delete: if isAuthenticated() && isBimWriter(resource.data.companyId);
     }
 
     // =========================================================================
@@ -1068,83 +1017,27 @@ service cloud.firestore {
     // =========================================================================
     // 📅 Added: 2026-02-01 (Floor-level floorplan storage)
     // 🏢 ENTERPRISE: Floor-level floorplans with tenant isolation
+    // ADR-657 PRESENTATION tier (legacy container). SECURITY FIX: removed the cross-tenant
+    // dev-fallback read leg (`!keys().hasAny(['companyId','createdBy'])`) that let ANY authed
+    // user of ANY company read docs missing both fields. canReadLegacyFloorplan() replaces it —
+    // its no-companyId leg requires createdBy == uid. Write internal-only, no ownership grant.
     match /floor_floorplans/{floorplanId} {
-      // 📖 READ: Tenant-scoped via companyId or buildingId lookup
-      allow read: if isAuthenticated()
-                  && (
-                       isSuperAdminOnly()
-                       || (resource.data.keys().hasAny(['companyId'])
-                           && belongsToCompany(resource.data.companyId))
-                       // Legacy: creator-only
-                       || (!resource.data.keys().hasAny(['companyId'])
-                           && resource.data.createdBy == request.auth.uid)
-                       // Fallback: Any authenticated user (development)
-                       || !resource.data.keys().hasAny(['companyId', 'createdBy'])
-                     );
-
-      // ✍️ CREATE: companyId required
-      allow create: if isAuthenticated()
-                    && request.resource.data.companyId == getUserCompanyId();
-
-      // 📝 UPDATE: Creator or company admin
-      allow update: if isAuthenticated()
-                    && (
-                         resource.data.createdBy == request.auth.uid
-                         || isCompanyAdminOfCompany(resource.data.companyId)
-                         || isSuperAdminOnly()
-                       )
-                    && (!resource.data.keys().hasAny(['companyId'])
-                        || request.resource.data.companyId == resource.data.companyId);
-
-      // 🗑️ DELETE: Creator or company admin
-      allow delete: if isAuthenticated()
-                    && (
-                         resource.data.createdBy == request.auth.uid
-                         || isCompanyAdminOfCompany(resource.data.companyId)
-                         || isSuperAdminOnly()
-                       );
+      allow read:   if isAuthenticated() && canReadLegacyFloorplan();
+      allow create: if isAuthenticated() && canCreateLegacyFloorplan();
+      allow update: if isAuthenticated() && canWriteLegacyFloorplan();
+      allow delete: if isAuthenticated() && isBimWriter(resource.data.companyId);
     }
 
     // =========================================================================
     // 📐 UNIT_FLOORPLANS COLLECTION - ENTERPRISE TENANT ISOLATION (PR-1C)
     // =========================================================================
     // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1C)
+    // ADR-657 PRESENTATION tier (legacy container) — read tenant-wide; write internal-only, no ownership grant.
     match /unit_floorplans/{floorplanId} {
-      // 📖 READ: Tenant-scoped via companyId
-      allow read: if isAuthenticated()
-                  && (
-                       isSuperAdminOnly()
-                       || (resource.data.keys().hasAny(['companyId'])
-                           && belongsToCompany(resource.data.companyId))
-                       // Legacy: creator-only
-                       || (!resource.data.keys().hasAny(['companyId'])
-                           && resource.data.createdBy == request.auth.uid)
-                     );
-
-      // ✍️ CREATE: companyId required (super_admin can create for any company)
-      allow create: if isAuthenticated()
-                    && (
-                         request.resource.data.companyId == getUserCompanyId()
-                         || isSuperAdminOnly()
-                       );
-
-      // 📝 UPDATE: Creator or company admin
-      allow update: if isAuthenticated()
-                    && (
-                         resource.data.createdBy == request.auth.uid
-                         || isCompanyAdminOfCompany(resource.data.companyId)
-                         || isSuperAdminOnly()
-                       )
-                    && (!resource.data.keys().hasAny(['companyId'])
-                        || request.resource.data.companyId == resource.data.companyId);
-
-      // 🗑️ DELETE: Creator or company admin
-      allow delete: if isAuthenticated()
-                    && (
-                         resource.data.createdBy == request.auth.uid
-                         || isCompanyAdminOfCompany(resource.data.companyId)
-                         || isSuperAdminOnly()
-                       );
+      allow read:   if isAuthenticated() && canReadLegacyFloorplan();
+      allow create: if isAuthenticated() && canCreateLegacyFloorplan();
+      allow update: if isAuthenticated() && canWriteLegacyFloorplan();
+      allow delete: if isAuthenticated() && isBimWriter(resource.data.companyId);
     }
 
     // =========================================================================
@@ -1215,12 +1108,10 @@ service cloud.firestore {
     // RBAC: super_admin / company_admin / internal_user can write/delete.
     // Read: any authenticated user belonging to the document's company.
     // Immutables (D6): companyId, floorId, fileId, providerId, providerMetadata, naturalBounds.
+    // ADR-657 PRESENTATION tier — read tenant-wide; write internal-only (ADR-340 semantics, shared vocabulary).
+    // Bespoke D6 immutables + scale validator kept verbatim — we share role gates, not field guards.
     match /floorplan_backgrounds/{rbgId} {
-      allow read: if isAuthenticated()
-                  && (
-                       isSuperAdminOnly()
-                       || belongsToCompany(resource.data.companyId)
-                     );
+      allow read: if isAuthenticated() && canReadBimPresentation(resource.data.companyId);
 
       allow create: if isAuthenticated()
                     && (
@@ -1233,7 +1124,7 @@ service cloud.firestore {
                        );
 
       allow update: if isAuthenticated()
-                    && isInternalUserOfCompany(resource.data.companyId)
+                    && isBimWriter(resource.data.companyId)
                     // Immutable fields (ADR-340 D6)
                     && request.resource.data.id == resource.data.id
                     && request.resource.data.companyId == resource.data.companyId
@@ -1258,7 +1149,7 @@ service cloud.firestore {
                        );
 
       allow delete: if isAuthenticated()
-                    && isInternalUserOfCompany(resource.data.companyId);
+                    && isBimWriter(resource.data.companyId);
     }
 
     // =========================================================================
@@ -1329,11 +1220,9 @@ service cloud.firestore {
             && _linkedConsistent();
       }
 
-      allow read: if isAuthenticated()
-                  && (
-                       isSuperAdminOnly()
-                       || belongsToCompany(resource.data.companyId)
-                     );
+      // ADR-657 PRESENTATION tier — read tenant-wide; write internal-only (shared vocabulary).
+      // Bespoke geometry/role discriminated-union guard (_overlayWriteValid) kept verbatim.
+      allow read: if isAuthenticated() && canReadBimPresentation(resource.data.companyId);
 
       allow create: if isAuthenticated()
                     && (
@@ -1346,7 +1235,7 @@ service cloud.firestore {
                        );
 
       allow update: if isAuthenticated()
-                    && isInternalUserOfCompany(resource.data.companyId)
+                    && isBimWriter(resource.data.companyId)
                     && request.resource.data.id == resource.data.id
                     && request.resource.data.companyId == resource.data.companyId
                     && request.resource.data.backgroundId == resource.data.backgroundId
@@ -1354,7 +1243,7 @@ service cloud.firestore {
                     && _overlayWriteValid();
 
       allow delete: if isAuthenticated()
-                    && isInternalUserOfCompany(resource.data.companyId);
+                    && isBimWriter(resource.data.companyId);
     }
 
     // =========================================================================
@@ -2552,38 +2441,12 @@ service cloud.firestore {
     // =========================================================================
     // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1C)
     // 🏢 ENTERPRISE: Floor plan storage with tenant isolation
+    // ADR-657 PRESENTATION tier (legacy container) — read tenant-wide; write internal-only, no ownership grant.
     match /floorplans/{floorplanId} {
-      // 📖 READ: Tenant-scoped
-      allow read: if isAuthenticated()
-                  && (
-                       isSuperAdminOnly()
-                       || (resource.data.keys().hasAny(['companyId'])
-                           && belongsToCompany(resource.data.companyId))
-                       || (!resource.data.keys().hasAny(['companyId'])
-                           && resource.data.createdBy == request.auth.uid)
-                     );
-
-      // ✍️ CREATE: companyId required
-      allow create: if isAuthenticated()
-                    && request.resource.data.companyId == getUserCompanyId();
-
-      // 📝 UPDATE: Creator or company admin
-      allow update: if isAuthenticated()
-                    && (
-                         resource.data.createdBy == request.auth.uid
-                         || isCompanyAdminOfCompany(resource.data.companyId)
-                         || isSuperAdminOnly()
-                       )
-                    && (!resource.data.keys().hasAny(['companyId'])
-                        || request.resource.data.companyId == resource.data.companyId);
-
-      // 🗑️ DELETE: Creator or company admin
-      allow delete: if isAuthenticated()
-                    && (
-                         resource.data.createdBy == request.auth.uid
-                         || isCompanyAdminOfCompany(resource.data.companyId)
-                         || isSuperAdminOnly()
-                       );
+      allow read:   if isAuthenticated() && canReadLegacyFloorplan();
+      allow create: if isAuthenticated() && canCreateLegacyFloorplan();
+      allow update: if isAuthenticated() && canWriteLegacyFloorplan();
+      allow delete: if isAuthenticated() && isBimWriter(resource.data.companyId);
     }
 
     // =========================================================================

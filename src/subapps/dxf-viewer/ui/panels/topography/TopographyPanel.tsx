@@ -37,6 +37,7 @@ import { useContourDisplay } from '../../../systems/topography/useContourDisplay
 import { TopoImportWizard } from './TopoImportWizard';
 import { TopoPointLabelsSection } from './TopoPointLabelsSection';
 import { TopoGridSection } from './TopoGridSection';
+import { TopoGeoReferenceSection } from './TopoGeoReferenceSection';
 import { TopoCutFillSection } from './TopoCutFillSection';
 import { TopoDeliverablesSection } from './TopoDeliverablesSection';
 import { TopoQaSection } from './TopoQaSection';
@@ -226,6 +227,11 @@ export function TopographyPanel(): React.JSX.Element {
           Ξεχωριστός από το βοηθητικό F7 grid — γεωδαιτικός κάναβος συντεταγμένων (crosses στις
           στρογγυλές τιμές + περιμετρική αρίθμηση Easting/Northing). */}
       <TopoGridSection />
+
+      {/* ADR-650 M10 — «Γεωαναφορά»: κούμπωμα του DXF πάνω στο τοπογραφικό (Revit Shared
+          Coordinates). Auto-align (robust center) + χειροκίνητο κοινό σημείο (1=μετατόπιση,
+          2=στροφή). Per-project transform στο Project (surveyPoint/basePoint/northRotation). */}
+      <TopoGeoReferenceSection />
 
       {/* ADR-650 M4 — η ίδια επιφάνεια που κόβει τις ισοϋψείς, ως στερεό στην 3Δ όψη.
           Το «υψομετρικό» είναι analysis style (Civil 3D Elevation Banding): χρωματίζει τα

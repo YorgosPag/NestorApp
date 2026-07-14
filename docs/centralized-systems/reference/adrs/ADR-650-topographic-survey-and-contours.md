@@ -1569,3 +1569,61 @@ technologismiki (Ν.4495/2017), xyz.gr/geodimetro.gr/greenbuilding.gr/cityengine
   **ΕΚΚΡΕΜΕΙ (ζωντανός έλεγχος Giorgio):** θεμελίωση + ισόγειο + άλλοι όροφοι → ισοϋψείς παντού· refresh → επιβίωση.
 
   **Status: M9 SITE-scoped — IMPLEMENTED.**
+- **2026-07-15 (v22)** — **M10 ΥΛΟΠΟΙΗΘΗΚΕ — GEO-REFERENCING (κούμπωμα του DXF πάνω στο τοπογραφικό)**
+  (Phase 1–3, N.0.1). Πρόβλημα (ζωντανά, Giorgio): το αρχιτεκτονικό DXF ζει σε **τοπικές** συντεταγμένες
+  γύρω στο (0,0)· το τοπογραφικό σε **πραγματικές ΕΓΣΑ'87** (~384,5 km / 4.201 km) → οι ισοϋψείς έπεφταν
+  ~4.200 km μακριά από την κάτοψη.
+
+  **Big-player mandate (εντολή Giorgio):** υλοποίηση όπως **Revit Shared Coordinates (Survey Point +
+  Project Base Point + Angle to True North)** / ArchiCAD Survey Point / Civil 3D real-world coords. Αποφάσεις
+  Giorgio: **per-project** (ένα site)· **χειροκίνητο κοινό σημείο ΚΑΙ auto-align**· **μετατόπιση + στροφή
+  ΧΩΡΙΣ κλίμακα** (rigid — και τα δύο σε πραγματικά μέτρα, 1:1· scale θα παραμόρφωνε το κτίριο).
+
+  **SSoT AUDIT (grep ΠΡΙΝ κώδικα, εντολή Giorgio) — ΤΟ ΜΟΝΤΕΛΟ ΥΠΗΡΧΕ ΗΔΗ:** το **ADR-369** ορίζει ήδη
+  3-tier Revit reference στο `Project` (`surveyPoint`/`basePoint`/`northRotation`, `project-elevation.schemas.ts`)
+  — χρησιμοποιούνταν μόνο το `z` (IFC elevation)· τα planar x/y ήταν «deferred until a separate ADR»
+  (`ifc-spatial-hierarchy.ts`). **Το M10 ΕΙΝΑΙ αυτό το ADR** → extend, ΟΧΙ νέο μοντέλο.
+
+  **ΤΟ ΜΟΝΤΕΛΟ (minimal Revit-canonical):** ένα rigid transform ανά έργο = `{originWorld, rotationDeg}`,
+  όπου `originWorld` = οι ΕΓΣΑ (canonical mm) συντεταγμένες του project **local origin** (Revit Project
+  Base Point σε shared coords) και `rotationDeg` = `northRotation`. `world = R(rot)·local + originWorld`.
+  Αποθηκεύεται στο `Project.basePoint.x/y` (ΜΕΤΡΑ) + `northRotation`· `basePoint.z` (elevation datum)
+  διατηρείται πάντα. Το runtime δουλεύει σε **canonical mm** (συνθέτει με topo+DXF)· μετατροπή metres↔mm
+  ΜΟΝΟ στο schema boundary.
+
+  **ΥΛΟΠΟΙΗΣΗ (extend όχι duplicate):**
+  - **Νέο SSoT `systems/geo-referencing/`:** `geo-transform.ts` (pure rigid local↔world· 1-point=μετατόπιση
+    `fromOnePointPair`, 2-point=+στροφή `fromTwoPointPairs`· `pointPairScaleRatio` guard για unit mismatch)·
+    `geo-reference-schema.ts` (Project metres ↔ runtime mm)· `geo-auto-align.ts`· `geo-reference-store.ts`
+    (runtime SSoT, `createExternalStore` ADR-040)· `geo-reference-persistence.ts` (load/persist/clear στο
+    Project, διατηρεί `basePoint.z`)· `geo-ref-pick-store.ts` (manual-pick session)· `geo-ref-scene-points.ts`.
+  - **Apply-at-render:** `regenerate-topo.ts` προβάλλει τις ισοϋψείς **world(ΕΓΣΑ)→building-local** (`worldToLocal`)
+    πριν το `buildContourEntities` → το DXF μένει κοντά στο 0 (κανένα ADR-635 culling blowup), το έδαφος
+    «κάθεται» πάνω του. Identity/unset ⇒ no-op (backward compatible). `useTopoPersistence` subscribe στο
+    geo-reference store → οι ισοϋψείς κουμπώνουν **live**.
+  - **UI:** `TopoGeoReferenceSection` (νέο section στο TopographyPanel): «Αυτόματο κούμπωμα» + χειροκίνητο
+    κοινό σημείο (tool `geo-ref-anchor` → 1 κλικ σε γνωστό σημείο πιάνει την τοπική συντεταγμένη, snapped·
+    ο χρήστης δίνει ΕΓΣΑ). i18n el+en (`topography.geoRef.*`, `geoRef.status.*`).
+  - **Hydration:** `GeoReferenceHost` (always-on στο DxfViewerTopBar) φορτώνει το transform από το Project
+    στο load → το έδαφος κάθεται σωστά σε **κάθε όροφο** μετά από refresh.
+  - **Projects API (minimal):** `surveyPoint`/`basePoint`/`northRotation` προστέθηκαν στο `ProjectUpdateSchema`
+    (validated) + `ProjectUpdatePayload` (client type)· ο server ήταν ήδη `.passthrough()`.
+
+  **ROBUST BOUNDS (Εύρημα #1) — μπαίνει στο ADR:** το auto-align ΔΕΝ χρησιμοποιεί το naive
+  `processedData.bounds` (κολλάει σε μακρινό cluster). Νέα `computeRobustCenter` (median + MAD trimming) στο
+  υπάρχον `zoom/utils/robust-bounds.ts` (extend SSoT): median 50% breakdown → κέντρο μέσα στο κτίριο, ο
+  ~17 km stamp cluster + outliers κόβονται. Big-CAD «Audit» pattern.
+
+  **Εύρημα #2 — SCOPE BUG FIX (durable projectId):** ειδικοί όροφοι (Θεμελίωση) δημιουργούνται ΧΩΡΙΣ δικό
+  τους `projectId` → `saveContext?.projectId ?? currentLevel?.projectId` = undefined → το SITE-scope topo
+  persistence δεν instantiate-άρονταν εκεί (`hasScope:FALSE`) → survey ΔΕΝ σωζόταν. Νέα
+  `resolveActiveProjectId(levels)` (mirror του `resolveActiveBuildingId`) + 3ο fallback στο `DxfViewerTopBar`
+  → σταθερό projectId από αδελφό όροφο (ADR-309), από το load, χωρίς `null→value` flip (που προκαλούσε reset).
+
+  **Tests:** νέα geo-referencing suite (transform/schema/robust-center/auto-align/pick/scene) + `regenerate-topo`
+  geo-projection case + `resolveActiveProjectId` — **όλα πράσινα** (topography 270+, geo 16). `jscpd:diff` καθαρό.
+
+  **ΕΚΚΡΕΜΕΙ (ζωντανός έλεγχος Giorgio):** import terrain σε ΕΓΣΑ → auto-align/κοινό σημείο → κτίριο κάθεται
+  στο έδαφος σε ΚΑΘΕ όροφο· refresh → επιβίωση. Μετά τον έλεγχο: αφαίρεση των TEMP DIAGNOSTICS `[TOPO-DIAG]`.
+
+  **Status: M10 geo-referencing — IMPLEMENTED.**
