@@ -1042,6 +1042,18 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     rulesRange: [4461, 4488],
     matrix: blockLibraryMatrix(),
   },
+  {
+    // ADR-655 — ο διακόπτης διανομής των asset packs: `asset_pack_config/{packId}.status`.
+    // Pattern E (deny_all): ούτε ΑΝΑΓΝΩΣΗ από client. Δεν είναι υπερβολή — αν ο client
+    // διάβαζε την κατάσταση, θα μάθαινε ποια πακέτα υπάρχουν και πώς διανέμονται, και θα
+    // μπορούσε να ανιχνεύσει πότε γυρίζει ο διακόπτης. Η πύλη το διαβάζει με Admin SDK.
+    // Το suite κλειδώνει ότι ΚΑΙ ο super_admin παίρνει deny από client context.
+    collection: 'asset_pack_config',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/asset-pack-config.rules.test.ts',
+    rulesRange: [2952, 2955],
+    matrix: denyAllMatrix(),
+  },
 ] as const;
 
 /**

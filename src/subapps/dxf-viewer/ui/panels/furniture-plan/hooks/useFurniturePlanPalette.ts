@@ -1,91 +1,68 @@
 'use client';
 
 /**
- * ADR-654 — ο κύκλος ζωής του palette «Έπιπλα Κάτοψης».
+ * ADR-654 + ADR-655 — ο κύκλος ζωής του palette «Έπιπλα Κάτοψης».
  *
- * Mirror του `useBlockLibraryPalette` (ADR-652 M2), απλοποιημένο: εδώ δεν υπάρχει
- * session/cloud merge ούτε save/promote/delete — μόνο ένας σταθερός curated κατάλογος
- * (`listFurniturePlanDefs`) και ΔΥΟ ενέργειες:
+ * ⚠️ ΔΡΑΣΤΙΚΑ ΑΠΛΟΥΣΤΕΡΟ ΑΠΟ ΤΟ ADR-654: τα URLs των sprites παράγονται πλέον **σύγχρονα** από το
+ * asset-pack registry (`resolveFurniturePlanUrl` — καμία δικτύωση, κανένα `await`). Άρα
+ * ΕΞΑΦΑΝΙΣΤΗΚΑΝ:
+ *   • το per-card fire-and-forget resolve των thumbnails (+ το `useState` map του),
+ *   • το `busyId` (δεν υπάρχει «απασχολημένη» κάρτα όταν δεν υπάρχει αναμονή),
+ *   • το proactive prefetch ΠΡΙΝ το selection store (δεν υπάρχει race χωρίς αναμονή).
  *
- *  - **thumbnails**: resolve μία φορά, στο mount, το `variant: 'thumb'` URL κάθε ορισμού
- *    (fire-and-forget ανά κάρτα — μία αργή/αποτυχημένη κάρτα δεν μπλοκάρει τις άλλες).
- *  - **selectFurniture**: resolve το `variant: 'full'` URL ΠΡΙΝ γράψει στο selection store
- *    (proactive prefetch — το placement tool διαβάζει το url σε event-time, βλ.
- *    `furniture-plan-selection-store.ts`). Ο καλών (panel) ενεργοποιεί το εργαλείο ΜΟΝΟ
- *    αν αυτό γυρίσει `true` — ίδιο σχήμα με `selectEntry` → `onSelectBlock`.
+ * Ό,τι απομένει είναι μία **πραγματική** ασύγχρονη ερώτηση: «δικαιούμαι αυτό το pack;» — και την
+ * απαντά ο server (`useAssetPackAccess`), ποτέ ο client.
  *
- * @see ../../../../data/furniture-plan-catalog.ts — τα defs (id/category/aspect)
- * @see ../../../../data/furniture-plan-source.ts — ο async resolver (thumb/full)
- * @see ../../../../bim/furniture-plan/furniture-plan-selection-store.ts — «ποιο έπιπλο» SSoT
+ * @see ../../../../data/furniture-plan-source.ts — sync URL builder
+ * @see ../../../../systems/asset-packs/use-asset-pack-access.ts — η πύλη (server-decided)
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import {
   listFurniturePlanDefs,
   type FurniturePlanDef,
 } from '../../../../data/furniture-plan-catalog';
-import { resolveFurniturePlanUrl } from '../../../../data/furniture-plan-source';
+import {
+  FURNITURE_PLAN_PACK_ID,
+  resolveFurniturePlanUrl,
+} from '../../../../data/furniture-plan-source';
+import { useAssetPackAccess } from '../../../../systems/asset-packs/use-asset-pack-access';
 import { setSelectedFurniturePlan } from '../../../../bim/furniture-plan/furniture-plan-selection-store';
 
 export interface UseFurniturePlanPaletteResult {
+  /** Κενό όσο φορτώνει ή όταν ο χρήστης δεν δικαιούται το pack. */
   readonly defs: readonly FurniturePlanDef[];
-  /** id → resolved thumbnail url, ή `null` αν απέτυχε το resolve. Απόν ⇒ ακόμα φορτώνει. */
+  /** id → thumbnail url (σύγχρονο· ποτέ κενό για γνωστό id). */
   readonly thumbnails: ReadonlyMap<string, string>;
-  /** Το id της κάρτας που κάνει resolve του FULL url αυτή τη στιγμή. */
-  readonly busyId: string | null;
-  readonly error: string | null;
-  /** Resolve FULL url + set selection store. `true` ⇒ ο καλών ενεργοποιεί το εργαλείο. */
-  readonly selectFurniture: (def: FurniturePlanDef) => Promise<boolean>;
-}
-
-/** Φορτώνει τα thumbnails ΟΛΩΝ των defs, μία φορά· fire-and-forget ανά κάρτα (N.7.2 §6). */
-function useFurnitureThumbnails(
-  defs: readonly FurniturePlanDef[],
-): ReadonlyMap<string, string> {
-  const [thumbnails, setThumbnails] = useState<ReadonlyMap<string, string>>(new Map());
-
-  useEffect(() => {
-    let cancelled = false;
-    for (const def of defs) {
-      resolveFurniturePlanUrl(def.id, 'thumb').then((url) => {
-        if (cancelled || !url) return;
-        setThumbnails((prev) => {
-          const next = new Map(prev);
-          next.set(def.id, url);
-          return next;
-        });
-      });
-    }
-    return () => {
-      cancelled = true;
-    };
-  }, [defs]);
-
-  return thumbnails;
+  /** `true` όσο ο server δεν έχει απαντήσει για τα δικαιώματα. */
+  readonly loading: boolean;
+  /** `true` όταν ο χρήστης ΔΕΝ δικαιούται το pack ⇒ το panel δείχνει «κλειδωμένο». */
+  readonly locked: boolean;
+  /** Θέτει το προς-τοποθέτηση έπιπλο. `true` ⇒ ο καλών ενεργοποιεί το εργαλείο. */
+  readonly selectFurniture: (def: FurniturePlanDef) => boolean;
 }
 
 export function useFurniturePlanPalette(): UseFurniturePlanPaletteResult {
-  const defs = useMemo(() => listFurniturePlanDefs(), []);
-  const thumbnails = useFurnitureThumbnails(defs);
+  const { loading, accessible } = useAssetPackAccess(FURNITURE_PLAN_PACK_ID);
 
-  const [busyId, setBusyId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  // Χωρίς πρόσβαση δεν εκτίθεται ΤΙΠΟΤΑ στο UI — ούτε ονόματα, ούτε thumbnails.
+  const defs = useMemo(() => (accessible ? listFurniturePlanDefs() : []), [accessible]);
 
-  const selectFurniture = useCallback(async (def: FurniturePlanDef): Promise<boolean> => {
-    setError(null);
-    setBusyId(def.id);
-    try {
-      const url = await resolveFurniturePlanUrl(def.id, 'full');
-      if (!url) {
-        setError('resolveFailed');
-        return false;
-      }
-      setSelectedFurniturePlan({ id: def.id, url });
-      return true;
-    } finally {
-      setBusyId(null);
-    }
+  const thumbnails = useMemo(
+    () => new Map(defs.map((def) => [def.id, resolveFurniturePlanUrl(def.id, 'thumb')])),
+    [defs],
+  );
+
+  const selectFurniture = useCallback((def: FurniturePlanDef): boolean => {
+    setSelectedFurniturePlan({ id: def.id, url: resolveFurniturePlanUrl(def.id, 'full') });
+    return true;
   }, []);
 
-  return { defs, thumbnails, busyId, error, selectFurniture };
+  return {
+    defs,
+    thumbnails,
+    loading,
+    locked: !loading && !accessible,
+    selectFurniture,
+  };
 }

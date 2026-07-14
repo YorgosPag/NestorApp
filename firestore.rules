@@ -2938,6 +2938,23 @@ service cloud.firestore {
     }
 
     // =========================================================================
+    // 🔒 ASSET_PACK_CONFIG — Ο ΔΙΑΚΟΠΤΗΣ ΔΙΑΝΟΜΗΣ (ADR-655)
+    // =========================================================================
+    // Doc: asset_pack_config/{packId} → { status: 'public'|'entitled'|'disabled' }
+    //
+    // Αυτό είναι το «κόψε τη βρύση» control. Ζει σε δεδομένα (όχι σε κώδικα) ώστε ο διακόπτης
+    // να γυρίζει σε δευτερόλεπτα, χωρίς build/deploy.
+    //
+    // 🚫 ΚΑΜΙΑ πρόσβαση από client — ούτε ΑΝΑΓΝΩΣΗ: αν ο client μπορούσε να το διαβάσει, θα
+    // μπορούσε να διαπιστώσει την κατάσταση κάθε πακέτου· η πύλη διαβάζει server-side με Admin
+    // SDK (που παρακάμπτει τους rules). Το UI μαθαίνει τι δικαιούται ΜΟΝΟ από το /api/asset-packs.
+    // =========================================================================
+    match /asset_pack_config/{packId} {
+      allow read: if false;  // Server-side only (Admin SDK)
+      allow write: if false; // Server-side only (Admin SDK / super-admin tooling)
+    }
+
+    // =========================================================================
     // 📋 AUDIT_LOG COLLECTION - CLOUD FUNCTIONS AUDIT TRAIL
     // =========================================================================
     // 📅 Added: 2026-01-20 (ADR-032 - Enterprise Trash System)

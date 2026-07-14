@@ -2,16 +2,16 @@
  * ADR-654 — «ποιο έπιπλο τοποθετώ» selection SSoT.
  *
  * Ίδιο μοτίβο με το `block-library-selection-store` (palette → tool, event-time read,
- * μηδέν React state στο high-freq path — ADR-040), με ΜΙΑ ουσιώδη διαφορά:
+ * μηδέν React state στο high-freq path — ADR-040).
  *
- * ⚠️ Κρατάμε ΚΑΙ το resolved `url`, όχι μόνο το id. Ο `resolveFurniturePlanUrl` είναι
- * **async** (storage mode → `getDownloadURL`), ενώ το placement γίνεται σε **event-time**
- * μέσα στον click handler, όπου δεν υπάρχει περιθώριο για `await`. Άρα η παλέτα κάνει
- * resolve ΜΙΑ φορά τη στιγμή της επιλογής (proactive) και εδώ αποθηκεύεται έτοιμο· το
- * tool το διαβάζει σύγχρονα. Όσο δεν έχει γίνει resolve, η επιλογή είναι `null` ⇒ το
- * tool απλά δεν τοποθετεί (μηδέν race, μηδέν entity με άδειο url).
+ * Κρατάμε ΚΑΙ το `url`, όχι μόνο το id, ώστε το tool να το διαβάζει σύγχρονα σε event-time.
  *
- * @see ../../data/furniture-plan-source.ts — ο async resolver
+ * ℹ️ ΙΣΤΟΡΙΚΟ (ADR-655): παλιότερα το URL ήταν **async** (`getDownloadURL`) και η παλέτα έκανε
+ * proactive prefetch ΠΡΙΝ γράψει εδώ, για να μην υπάρχει race στον click handler. Πλέον το URL
+ * παράγεται σύγχρονα από το asset-pack registry ⇒ **δεν υπάρχει race να αποφύγεις**. Το πεδίο
+ * `url` παραμένει γιατί είναι το ίδιο πράγμα που τελικά μπαίνει στο `ImageEntity.url`.
+ *
+ * @see ../../data/furniture-plan-source.ts — sync URL builder
  * @see ../../hooks/drawing/useFurniturePlanTool.ts — event-time reader
  */
 

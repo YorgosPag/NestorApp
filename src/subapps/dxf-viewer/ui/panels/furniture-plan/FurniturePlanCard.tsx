@@ -11,16 +11,15 @@
  */
 
 import React from 'react';
-import { Loader2 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { FurniturePlanDef } from '../../../data/furniture-plan-catalog';
 
 export interface FurniturePlanCardProps {
   readonly def: FurniturePlanDef;
   readonly displayName: string;
-  readonly thumbnailUrl: string | undefined;
+  /** ADR-655 — σύγχρονο URL από το registry· ποτέ pending (γι' αυτό έφυγε το busy spinner). */
+  readonly thumbnailUrl: string;
   readonly isActive: boolean;
-  readonly isBusy: boolean;
   readonly onSelect: (def: FurniturePlanDef) => void;
 }
 
@@ -29,7 +28,6 @@ export const FurniturePlanCard: React.FC<FurniturePlanCardProps> = ({
   displayName,
   thumbnailUrl,
   isActive,
-  isBusy,
   onSelect,
 }) => {
   return (
@@ -43,24 +41,19 @@ export const FurniturePlanCard: React.FC<FurniturePlanCardProps> = ({
           <button
             type="button"
             onClick={() => onSelect(def)}
-            disabled={isBusy}
             aria-pressed={isActive}
-            className="flex w-full flex-col items-stretch gap-1 p-2 text-left disabled:opacity-60"
+            className="flex w-full flex-col items-stretch gap-1 p-2 text-left"
           >
             <span className="flex h-16 items-center justify-center rounded bg-muted/40 p-1">
-              {isBusy ? (
-                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-              ) : thumbnailUrl ? (
-                <img
-                  src={thumbnailUrl}
-                  alt=""
-                  aria-hidden="true"
-                  loading="lazy"
-                  className="h-full w-full object-contain"
-                />
-              ) : (
-                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground/50" />
-              )}
+              {/* `loading="lazy"` — μόνο οι ορατές κάρτες χτυπούν τον proxy. Κρίσιμο όταν το
+                  pack μεγαλώσει σε εκατοντάδες sprites. */}
+              <img
+                src={thumbnailUrl}
+                alt=""
+                aria-hidden="true"
+                loading="lazy"
+                className="h-full w-full object-contain"
+              />
             </span>
             <span className="truncate text-xs font-medium">{displayName}</span>
           </button>

@@ -70,7 +70,7 @@ export const FurniturePlanPanel: React.FC<FurniturePlanPanelProps> = ({
   onSelect,
 }) => {
   const { t } = useTranslation('dxf-viewer-shell');
-  const { defs, thumbnails, busyId, error, selectFurniture } = useFurniturePlanPalette();
+  const { defs, thumbnails, loading, locked, selectFurniture } = useFurniturePlanPalette();
   const selection = useSelectedFurniturePlan();
   const [category, setCategory] = useState<CategoryFilter>(LIBRARY_FILTER_ALL);
 
@@ -91,9 +91,8 @@ export const FurniturePlanPanel: React.FC<FurniturePlanPanelProps> = ({
   );
 
   const handleSelect = useCallback(
-    async (def: FurniturePlanDef) => {
-      const ok = await selectFurniture(def);
-      if (ok) onSelect();
+    (def: FurniturePlanDef) => {
+      if (selectFurniture(def)) onSelect();
     },
     [selectFurniture, onSelect],
   );
@@ -135,13 +134,21 @@ export const FurniturePlanPanel: React.FC<FurniturePlanPanelProps> = ({
           </ul>
         )}
 
-        {error && (
-          <p role="alert" className="pt-2 text-xs text-destructive">
-            {t(`furniturePlan.errors.${error}`)}
+        {/* ADR-655 — «κλειδωμένο» ≠ «άδειο». Ο μη δικαιούχος πρέπει να καταλάβει ΓΙΑΤΙ δεν
+            βλέπει τίποτα, αλλιώς μοιάζει με bug. */}
+        {locked && (
+          <p role="status" className="p-4 text-center text-sm text-muted-foreground">
+            {t('furniturePlan.locked')}
           </p>
         )}
 
-        {visibleDefs.length === 0 ? (
+        {loading && (
+          <p role="status" className="p-4 text-center text-sm text-muted-foreground">
+            {t('furniturePlan.loading')}
+          </p>
+        )}
+
+        {!loading && !locked && visibleDefs.length === 0 ? (
           <p className="p-4 text-center text-sm text-muted-foreground">
             {defs.length === 0 ? t('furniturePlan.empty') : t('furniturePlan.noMatch')}
           </p>
@@ -152,9 +159,8 @@ export const FurniturePlanPanel: React.FC<FurniturePlanPanelProps> = ({
                 <FurniturePlanCard
                   def={def}
                   displayName={displayNameOf(def)}
-                  thumbnailUrl={thumbnails.get(def.id)}
+                  thumbnailUrl={thumbnails.get(def.id) ?? ''}
                   isActive={selection?.id === def.id}
-                  isBusy={busyId === def.id}
                   onSelect={handleSelect}
                 />
               </li>

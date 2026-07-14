@@ -1,71 +1,50 @@
 /**
- * ADR-654 — Furniture plan (entourage) asset source.
+ * ADR-655 (ήταν ADR-654) — Πού ζουν τα sprites των επίπλων κάτοψης.
  *
- * Το ΜΟΝΟ module που ξέρει ΠΟΥ ζουν φυσικά τα raster sprites των επίπλων κάτοψης.
- * Ο μηχανισμός (public ↔ storage switch + in-flight de-dup) είναι ο ΚΟΙΝΟΣ
- * `createAssetSourceResolver` — εδώ ορίζεται μόνο η ταυτότητα αυτής της βιβλιοθήκης:
- * roots, path convention (`<id>.webp` / `<id>.thumb.webp`) και env flag.
+ * Η βιβλιοθήκη μετακόμισε σε **asset pack** (`furniture-plan-2d`): αδειοδοτημένο περιεχόμενο που
+ * σερβίρεται ΜΟΝΟ μέσω του authenticated proxy `/api/asset-packs/...`, αφού περάσει η πύλη
+ * (kill switch → company entitlement → RBAC). Το `storage.rules` απαγορεύει κάθε άμεσο client read.
  *
- *   - 'public'  → `public/furniture-2d/<id>.webp` (dev — καμία δικτύωση)
- *   - 'storage' → Firebase Storage `furniture-2d-library/<id>.webp` (production)
+ * ⚠️ ΤΡΕΙΣ ΣΥΝΕΠΕΙΕΣ ΠΟΥ ΑΞΙΖΕΙ ΝΑ ΞΕΡΕΙΣ:
  *
- * Τα sprites παράγονται από το `scripts/build-furniture-plan-assets.js` και ΔΕΝ
- * μπαίνουν στο git (ίδια σύμβαση με το `public/textures/*.jpg` του ADR-413).
+ * 1. **Το URL είναι πλέον ΣΥΓΧΡΟΝΟ.** Παράγεται από το registry (`assetPackAssetUrl`) — καμία
+ *    δικτύωση, κανένα `getDownloadURL`, κανένα `await`. Όλος ο προηγούμενος μηχανισμός
+ *    prefetch/race (async resolve ΠΡΙΝ γράψει το selection store) **εξαφανίστηκε**: δεν υπάρχει
+ *    race όταν δεν υπάρχει αναμονή.
  *
- * @see ../systems/assets/create-asset-source-resolver.ts — ο κοινός μηχανισμός
- * @see ./furniture-plan-catalog.ts — ids + κατηγορίες + aspect
- * @see docs/centralized-systems/reference/adrs/ADR-654-furniture-plan-entourage.md
+ * 2. **ΜΙΑ διαδρομή σε dev ΚΑΙ σε production.** Το παλιό `public` mode έδινε `/furniture-2d/x.webp`
+ *    σε dev και storage URL σε prod ⇒ ένα σχέδιο αποθηκευμένο σε dev **έσπαγε** σε prod (το
+ *    `ImageEntity.url` γράφεται μέσα στην οντότητα). Τώρα και τα δύο περιβάλλοντα παράγουν το ΙΔΙΟ
+ *    same-origin URL ⇒ τα σχέδια είναι φορητά. Τίμημα: το dev θέλει τα assets ανεβασμένα στο
+ *    Storage (`node scripts/upload-asset-pack.js furniture-plan-2d`) — μία φορά.
+ *
+ * 3. **Το URL είναι σταθερό για πάντα** (same-origin, versioned), σε αντίθεση με signed URL που θα
+ *    έληγε και θα έσπαγε κάθε αποθηκευμένο σχέδιο ένα ώρα αργότερα.
+ *
+ * @see @/lib/asset-packs/asset-pack-registry — ο SSoT της ταυτότητας + των URLs
+ * @see src/app/api/asset-packs — ο proxy που επιβάλλει την πύλη
+ * @see docs/centralized-systems/reference/adrs/ADR-655-asset-packs.md
  */
 
 import {
-  createAssetSourceResolver,
-  type AssetSourceMode,
-} from '../systems/assets/create-asset-source-resolver';
+  ASSET_PACKS,
+  assetPackAssetUrl,
+  type AssetPackVariant,
+} from '@/lib/asset-packs/asset-pack-registry';
 
-/** Πού σερβίρονται τα sprites των επίπλων. */
-export type FurniturePlanSourceMode = AssetSourceMode;
+/** Το pack στο οποίο ανήκουν τα έπιπλα κάτοψης. */
+export const FURNITURE_PLAN_PACK_ID = 'furniture-plan-2d' as const;
 
 /** Ποια εκδοχή του asset: πλήρες sprite (καμβάς) ή thumbnail (παλέτα). */
-export type FurniturePlanAssetVariant = 'full' | 'thumb';
-
-/** Root folder στο Firebase Storage (storage mode). */
-export const FURNITURE_PLAN_LIBRARY_ROOT = 'furniture-2d-library';
-
-/** Public-served root για τα bundled sprites (public mode). */
-export const FURNITURE_PLAN_PUBLIC_ROOT = '/furniture-2d';
-
-const _envMode = process.env.NEXT_PUBLIC_FURNITURE_PLAN_SOURCE as
-  | FurniturePlanSourceMode
-  | undefined;
-
-const resolver = createAssetSourceResolver({
-  publicRoot: FURNITURE_PLAN_PUBLIC_ROOT,
-  storageRoot: FURNITURE_PLAN_LIBRARY_ROOT,
-  initialMode: _envMode ?? (process.env.NODE_ENV === 'production' ? 'storage' : 'public'),
-});
-
-/** Αλλάζει το source mode για ΟΛΕΣ τις επόμενες αναλύσεις. */
-export function setFurniturePlanSourceMode(mode: FurniturePlanSourceMode): void {
-  resolver.setMode(mode);
-}
-
-/** Τρέχον source mode (read-only accessor). */
-export function getFurniturePlanSourceMode(): FurniturePlanSourceMode {
-  return resolver.getMode();
-}
-
-/** Relative object path για ένα sprite (κοινό και στα δύο modes). */
-function spritePath(id: string, variant: FurniturePlanAssetVariant): string {
-  return variant === 'thumb' ? `${id}.thumb.webp` : `${id}.webp`;
-}
+export type FurniturePlanAssetVariant = AssetPackVariant;
 
 /**
- * Κατεβατό URL για ένα sprite. `null` όταν δεν αναλύεται (storage error) ⇒ ο καλών
- * κάνει graceful degrade (κενή κάρτα) αντί να σκάσει.
+ * Το URL ενός sprite. **Σύγχρονο** — δεν αποτυγχάνει, δεν περιμένει. Η εξουσιοδότηση
+ * επιβάλλεται στον proxy όταν ο browser ζητήσει τα bytes, όχι εδώ.
  */
 export function resolveFurniturePlanUrl(
   id: string,
   variant: FurniturePlanAssetVariant = 'full',
-): Promise<string | null> {
-  return resolver.resolveUrl(spritePath(id, variant));
+): string {
+  return assetPackAssetUrl(ASSET_PACKS[FURNITURE_PLAN_PACK_ID], id, variant);
 }

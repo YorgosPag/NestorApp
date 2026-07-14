@@ -1,12 +1,5 @@
 /**
- * Asset source resolver factory — SSoT για «πού ζουν φυσικά τα builtin assets» (ADR-654).
- *
- * Εξήχθη από το `bim-3d/materials/texture-source.ts` (ADR-413) όταν η βιβλιοθήκη
- * επίπλων κάτοψης (ADR-654) χρειάστηκε ΤΟΝ ΙΔΙΟ μηχανισμό: builtin assets που σε dev
- * σερβίρονται από το `public/` και σε production από το Firebase Storage, με τον ίδιο
- * mode switch και το ίδιο in-flight de-dup. Δύο αντίγραφα της ίδιας λογικής θα ήταν
- * ακριβώς το token-based sibling clone που απαγορεύει ο κανόνας N.18 (ADR-584) — άρα
- * ο μηχανισμός ζει ΕΔΩ, μία φορά, και οι δύο βιβλιοθήκες τον κάνουν configure.
+ * Asset source resolver factory — «πού ζουν φυσικά τα ΔΩΡΕΑΝ builtin assets».
  *
  * Δύο modes:
  *   - 'public'  → bundled κάτω από το `publicRoot`, σερβίρεται από το site root.
@@ -14,8 +7,17 @@
  *   - 'storage' → Firebase Storage κάτω από το `storageRoot`, μέσω `getDownloadURL`.
  *                 Τα in-flight Promises γίνονται de-dup ανά path.
  *
- * @see ../../bim-3d/materials/texture-source.ts — PBR textures (ADR-413)
- * @see ../../data/furniture-plan-source.ts — entourage sprites (ADR-654)
+ * ⚠️ ΟΡΙΟ ΧΡΗΣΗΣ (ADR-655): ΜΟΝΟ για **μη αδειοδοτημένο** περιεχόμενο (CC0 PBR textures).
+ * Το `getDownloadURL` παράγει token URL που είναι **μόνιμο, μη-λήγον και δημόσιο σε όποιον το
+ * αποκτήσει** — και ο αντίστοιχος storage rule λέει «διαβάζει κάθε συνδεδεμένος». Άρα ΔΕΝ
+ * προσφέρει κανέναν έλεγχο διανομής.
+ *
+ * Για **gated** περιεχόμενο (asset packs: entourage, εμπορικές βιβλιοθήκες) χρησιμοποίησε το
+ * `@/lib/asset-packs/asset-pack-registry` → same-origin proxy `/api/asset-packs/...` με
+ * kill switch + per-company entitlement + RBAC. Η βιβλιοθήκη επίπλων κάτοψης μετακόμισε εκεί.
+ *
+ * @see ../../bim-3d/materials/texture-source.ts — PBR textures (ADR-413) — ο μόνος καταναλωτής
+ * @see @/lib/asset-packs/asset-pack-registry — gated assets (ADR-655)
  */
 
 import { ref, getDownloadURL } from 'firebase/storage';
