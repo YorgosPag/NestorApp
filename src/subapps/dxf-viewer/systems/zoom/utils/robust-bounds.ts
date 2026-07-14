@@ -128,3 +128,77 @@ export function computeRobustBounds(boxes: BoundingBox2D[]): RobustBoundsResult 
 
   return { bounds: robust, dropped };
 }
+
+// ─── Robust CENTER (ADR-650 M10 auto-align, Εύρημα #1) ────────────────────────
+//
+// `computeRobustBounds` above is deliberately conservative — tuned to reject ONLY a
+// lone ~130× flyaway for zoom-extents (≤10 % minority, ≥50× shrink), so it keeps a
+// large secondary cluster. Geo-referencing auto-align needs the OPPOSITE: the robust
+// CENTER of the real content when the drawing has TWO clusters (the building near the
+// origin + a ~17 km legend/stamp cluster in ΕΓΣΑ) plus far outliers. The median has a
+// 50 % breakdown point, so per-axis median lands inside the dominant (building)
+// cluster; a looser MAD gate then trims the far cluster + outliers before the content
+// box is measured. Big-CAD robust estimation (Revit «Audit», Civil 3D) works the same.
+
+/** An entity/point is off the content when > this many MADs from the per-axis median. */
+const ROBUST_CENTER_MAD_K = 6;
+
+export interface RobustCenterResult {
+  /** Median-of-survivors center (the auto-align anchor). */
+  readonly center: Point2D;
+  /** Tight content bounds from the survivors (far cluster + outliers trimmed). */
+  readonly bounds: { min: Point2D; max: Point2D };
+  readonly kept: number;
+  readonly rejected: number;
+}
+
+/**
+ * Robust content center + tight bounds from a raw point set, immune to a minority
+ * secondary cluster and to far outliers (Εύρημα #1). Returns `null` for an empty set.
+ *
+ * @param points raw coordinates (any single mm/world frame)
+ * @param madK   MAD multiplier for the reject gate (default {@link ROBUST_CENTER_MAD_K})
+ */
+export function computeRobustCenter(
+  points: readonly Point2D[],
+  madK = ROBUST_CENTER_MAD_K,
+): RobustCenterResult | null {
+  if (points.length === 0) return null;
+
+  const xs = points.map((p) => p.x);
+  const ys = points.map((p) => p.y);
+  const medX = median([...xs].sort((a, b) => a - b));
+  const medY = median([...ys].sort((a, b) => a - b));
+  const madX = mad(xs, medX);
+  const madY = mad(ys, medY);
+  const thrX = madX > 0 ? madK * madX : Infinity;
+  const thrY = madY > 0 ? madK * madY : Infinity;
+
+  const kept: Point2D[] = [];
+  for (const p of points) {
+    if (Math.abs(p.x - medX) <= thrX && Math.abs(p.y - medY) <= thrY) kept.push(p);
+  }
+  // Degenerate gate (all points coincident, or K too tight) — fall back to all points.
+  const survivors = kept.length > 0 ? kept : [...points];
+
+  let miX = Infinity, miY = Infinity, maX = -Infinity, maY = -Infinity;
+  const kxs: number[] = [];
+  const kys: number[] = [];
+  for (const p of survivors) {
+    kxs.push(p.x); kys.push(p.y);
+    if (p.x < miX) miX = p.x;
+    if (p.y < miY) miY = p.y;
+    if (p.x > maX) maX = p.x;
+    if (p.y > maY) maY = p.y;
+  }
+  const center: Point2D = {
+    x: median(kxs.sort((a, b) => a - b)),
+    y: median(kys.sort((a, b) => a - b)),
+  };
+  return {
+    center,
+    bounds: { min: { x: miX, y: miY }, max: { x: maX, y: maY } },
+    kept: survivors.length,
+    rejected: points.length - survivors.length,
+  };
+}

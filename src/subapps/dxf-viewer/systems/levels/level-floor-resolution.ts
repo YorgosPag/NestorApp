@@ -60,3 +60,21 @@ export async function findOrCreateLevelForFloor(
 export function resolveActiveBuildingId(levels: readonly Level[] | null | undefined): string | null {
   return levels?.find((l) => l.buildingId)?.buildingId ?? null;
 }
+
+/**
+ * SSoT — το **durable projectId** του viewer = το `projectId` του πρώτου level που το
+ * φέρει. Κάθε linked Level παίρνει το ίδιο `projectId` από τον wizard (ADR-309), άρα ο
+ * πρώτος αρκεί.
+ *
+ * 🛡️ ADR-650 M10 (Εύρημα #2) — ΓΙΑΤΙ υπάρχει: ειδικοί όροφοι όπως η **Θεμελίωση**
+ * δημιουργούνται ΧΩΡΙΣ δικό τους `projectId` (δεν περνούν από τον import wizard). Έτσι
+ * το `saveContext?.projectId ?? currentLevel?.projectId` έβγαινε `undefined` εκεί →
+ * το SITE-scope topo persistence δεν instantiate-άρονταν → το survey ΔΕΝ σωζόταν στη
+ * θεμελίωση (`hasScope:FALSE`). Το projectId ενός αδελφού ορόφου (π.χ. ισόγειο) είναι
+ * **σταθερή, διαθέσιμη-από-το-load** πηγή: δίνει ίδιο scope σε ΚΑΘΕ όροφο και δεν κάνει
+ * flip `null→value` (που προκαλούσε per-project reset). Mirror του
+ * {@link resolveActiveBuildingId}.
+ */
+export function resolveActiveProjectId(levels: readonly Level[] | null | undefined): string | null {
+  return levels?.find((l) => l.projectId)?.projectId ?? null;
+}
