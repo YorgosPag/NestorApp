@@ -9,8 +9,10 @@
 import type { PathParams, ItemTransform, SourceBbox } from './types';
 import type { Entity } from '../../types/entities';
 import { pathTotalLength, samplePath } from './path-arc-length-sampler';
+import { createPrng, symmetricJitter, mixSeed } from '../../utils/seeded-prng';
 
 const TWO_PI = Math.PI * 2;
+const DEG_TO_RAD = Math.PI / 180;
 
 function isClosedPathEntity(entity: Entity): boolean {
   if (entity.type === 'circle') return true;
@@ -48,6 +50,13 @@ function buildUValues(params: PathParams, pathEntity: Entity): number[] {
 /**
  * Compute per-item transforms for a path array.
  * Returns empty array if pathEntity is unsupported or count=0.
+ *
+ * Beyond plain tangent-follow, this applies the ADR-353 M1 "magical" extras when present:
+ *   - `alignOffsetDeg` — constant angle added on top of the tangent (AutoCAD "Base angle").
+ *   - seeded scatter — per-item ± rotation / uniform-scale / lateral (path-normal) offset, all
+ *     driven by a deterministic PRNG so the layout is stable across reload + undo.
+ * The `translate` places the source bbox center at the sample point; scatter offset nudges it along
+ * the path normal; `scale` rides on the ItemTransform and is applied downstream by the scaleEntity SSoT.
  */
 export function computePathTransforms(
   params: PathParams,
@@ -60,16 +69,43 @@ export function computePathTransforms(
   const us = buildUValues(params, pathEntity);
   const cx = sourceBbox.center.x;
   const cy = sourceBbox.center.y;
+  const seed = params.seed ?? 0;
 
   const result: ItemTransform[] = [];
-  for (const u of us) {
+  us.forEach((u, i) => {
     const s = samplePath(pathEntity, u, params.reversed);
-    if (!s) continue;
-    result.push({
-      translateX: s.position.x - cx,
-      translateY: s.position.y - cy,
-      rotateDeg: params.alignItems ? s.tangentDeg : 0,
-    });
-  }
+    if (!s) return;
+    result.push(buildItemTransform(params, s, i, seed, cx, cy));
+  });
   return result;
+}
+
+/** Per-item transform: tangent + align-offset + seeded rotation/scale/normal-offset jitter. */
+function buildItemTransform(
+  params: PathParams,
+  sample: { position: { x: number; y: number }; tangentDeg: number },
+  index: number,
+  seed: number,
+  cx: number,
+  cy: number,
+): ItemTransform {
+  const rng = createPrng(mixSeed(seed, index));
+  const baseAngle = params.alignItems ? sample.tangentDeg + (params.alignOffsetDeg ?? 0) : 0;
+  const rotateDeg = baseAngle + symmetricJitter(rng, params.rotationJitterDeg ?? 0);
+
+  // Lateral scatter runs along the path NORMAL (tangent + 90°) so items spread across the path,
+  // not along it (which would just re-space them). Zero amplitude → exact on-path placement.
+  const offset = symmetricJitter(rng, params.offsetJitter ?? 0);
+  const normalRad = (sample.tangentDeg + 90) * DEG_TO_RAD;
+  const dx = offset * Math.cos(normalRad);
+  const dy = offset * Math.sin(normalRad);
+
+  const scale = 1 + symmetricJitter(rng, (params.scaleJitterPct ?? 0) / 100);
+
+  return {
+    translateX: sample.position.x + dx - cx,
+    translateY: sample.position.y + dy - cy,
+    rotateDeg,
+    scale,
+  };
 }

@@ -72,6 +72,15 @@ export class TerrainSceneLayer {
     this.clearMesh();
 
     const { visible, style } = getTerrain3DState();
+    const surface = getTopoSurface();
+    const projector = getActiveWorldToDisplayProjector();
+    // 🔎 TEMP DIAG (2026-07-15 M10b). REMOVE after live fix. Decides: hidden? no triangles? geo-ref
+    // applied? and WHERE the mesh lands in three-world (center ~tens of m = local/OK; ~1e5 m = still ΕΓΣΑ).
+    // eslint-disable-next-line no-console
+    console.info('[TERRAIN-3D-DIAG]', {
+      visible, style, tris: surface.triangles.length,
+      geoRefIdentity: projector.isIdentity,
+    });
     if (!visible) {
       this.markDirty();
       return;
@@ -82,9 +91,11 @@ export class TerrainSceneLayer {
     const reference = style === 'cutfill' ? resolveCutFillReference() : null;
     // Seat the ΕΓΣΑ world surface under the building via the active geo-reference (M10b). Resolved
     // here, in the impure layer, and passed into the pure converter — same pattern as `reference`.
-    const projector = getActiveWorldToDisplayProjector();
-    const geometry = tinToBufferGeometry(getTopoSurface(), style, { reference, projector });
+    const geometry = tinToBufferGeometry(surface, style, { reference, projector });
     if (!geometry) {
+      // 🔎 TEMP DIAG (2026-07-15 M10b). REMOVE after live fix.
+      // eslint-disable-next-line no-console
+      console.info('[TERRAIN-3D-DIAG] NO-GEOMETRY (empty/degenerate surface)');
       this.markDirty(); // nothing to draw (no surface yet, or a degenerate one) — not an error
       return;
     }
@@ -95,6 +106,20 @@ export class TerrainSceneLayer {
     mesh.receiveShadow = true; // the building must cast onto the ground, or it reads as floating
     this.root.add(mesh);
     this.mesh = mesh;
+
+    // 🔎 TEMP DIAG (2026-07-15 M10b). REMOVE after live fix. The mesh's three-world placement.
+    geometry.computeBoundingBox();
+    const box = geometry.boundingBox;
+    if (box) {
+      const cx = (box.min.x + box.max.x) / 2;
+      const cy = (box.min.y + box.max.y) / 2;
+      const cz = (box.min.z + box.max.z) / 2;
+      // eslint-disable-next-line no-console
+      console.info('[TERRAIN-3D-DIAG] mesh three-world', {
+        centerM: { x: cx, y: cy, z: cz },
+        sizeM: { x: box.max.x - box.min.x, y: box.max.y - box.min.y, z: box.max.z - box.min.z },
+      });
+    }
     this.markDirty();
   }
 

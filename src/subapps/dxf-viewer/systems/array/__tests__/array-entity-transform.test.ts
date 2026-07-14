@@ -149,6 +149,47 @@ describe('image', () => {
   });
 });
 
+// ── SCALE (ADR-353 M1 scatter — composed via scaleEntity SSoT) ─────────────────
+
+describe('ItemTransform.scale', () => {
+  const SCALE_2: ItemTransform = { translateX: 0, translateY: 0, rotateDeg: 0, scale: 2 };
+
+  it('scale undefined = no scaling (identity)', () => {
+    const line = { id: 'l', type: 'line', start: { x: 0, y: 0 }, end: { x: 10, y: 0 } } as Entity;
+    const result = applyTransformToEntity(line, NO_ROTATE, PIVOT) as Extract<Entity, { type: 'line' }>;
+    expect(result.end).toEqual({ x: 10, y: 0 });
+  });
+
+  it('scale 1 = no scaling (identity)', () => {
+    const line = { id: 'l', type: 'line', start: { x: 0, y: 0 }, end: { x: 10, y: 0 } } as Entity;
+    const t: ItemTransform = { translateX: 0, translateY: 0, rotateDeg: 0, scale: 1 };
+    const result = applyTransformToEntity(line, t, PIVOT) as Extract<Entity, { type: 'line' }>;
+    expect(result.end).toEqual({ x: 10, y: 0 });
+  });
+
+  it('scale 2 about item center scales geometry (line doubles from origin center)', () => {
+    const line = { id: 'l', type: 'line', start: { x: 0, y: 0 }, end: { x: 10, y: 0 } } as Entity;
+    // pivot (0,0), no translate → itemCenter (0,0)
+    const result = applyTransformToEntity(line, SCALE_2, PIVOT) as Extract<Entity, { type: 'line' }>;
+    expect(result.start).toEqual({ x: 0, y: 0 });
+    expect(result.end.x).toBeCloseTo(20);
+  });
+
+  it('image scale doubles width/height while keeping the visual center fixed', () => {
+    const image = {
+      id: 'img', type: 'image', position: { x: 0, y: 0 }, width: 4, height: 3,
+      url: 'u', rotation: 0,
+    } as Entity;
+    const center = { x: 2, y: 1.5 }; // image bbox center
+    const result = applyTransformToEntity(image, SCALE_2, center) as Extract<Entity, { type: 'image' }>;
+    expect(result.width).toBeCloseTo(8);
+    expect(result.height).toBeCloseTo(6);
+    // center preserved: position + (w/2,h/2) == original center
+    expect(result.position.x + result.width / 2).toBeCloseTo(2);
+    expect(result.position.y + result.height / 2).toBeCloseTo(1.5);
+  });
+});
+
 // ── HATCH ─────────────────────────────────────────────────────────────────────
 
 describe('hatch', () => {

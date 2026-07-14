@@ -190,5 +190,93 @@ describe('computePathTransforms — edge cases', () => {
   });
 });
 
+// ── ADR-353 M1 — align-offset + seeded scatter/jitter ─────────────────────────
+
+describe('computePathTransforms — alignOffsetDeg (AutoCAD Base angle)', () => {
+  const pathLine = line(0, 0, 100, 0) as Entity; // tangent 0°
+
+  it('adds a constant angle on top of the tangent when alignItems=true', () => {
+    const result = computePathTransforms(
+      pathParams({ count: 3, alignItems: true, alignOffsetDeg: 90 }),
+      ZERO_BBOX, pathLine,
+    );
+    for (const t of result) expect(t.rotateDeg).toBeCloseTo(90, 5);
+  });
+
+  it('is a no-op when alignItems=false (offset is meaningless without tangent)', () => {
+    const result = computePathTransforms(
+      pathParams({ count: 3, alignItems: false, alignOffsetDeg: 90 }),
+      ZERO_BBOX, pathLine,
+    );
+    for (const t of result) expect(t.rotateDeg).toBe(0);
+  });
+});
+
+describe('computePathTransforms — seeded scatter', () => {
+  const pathLine = line(0, 0, 100, 0) as Entity; // tangent 0°, normal points +Y
+
+  it('zero jitter amplitudes = exact on-path placement, scale 1', () => {
+    const result = computePathTransforms(
+      pathParams({ count: 4, seed: 7, rotationJitterDeg: 0, offsetJitter: 0, scaleJitterPct: 0 }),
+      ZERO_BBOX, pathLine,
+    );
+    for (const t of result) {
+      expect(t.translateY).toBeCloseTo(0, 6); // no lateral spread
+      expect(t.rotateDeg).toBe(0);
+      expect(t.scale).toBeCloseTo(1, 6);
+    }
+  });
+
+  it('rotation jitter stays within ±amplitude and is non-uniform across items', () => {
+    const amp = 15;
+    const result = computePathTransforms(
+      pathParams({ count: 6, seed: 42, rotationJitterDeg: amp }),
+      ZERO_BBOX, pathLine,
+    );
+    for (const t of result) expect(Math.abs(t.rotateDeg)).toBeLessThanOrEqual(amp + 1e-9);
+    const angles = result.map(t => t.rotateDeg);
+    expect(new Set(angles.map(a => a.toFixed(4))).size).toBeGreaterThan(1);
+  });
+
+  it('lateral offset jitter perturbs the NORMAL axis only (translateY on a horizontal path)', () => {
+    const amp = 3;
+    const result = computePathTransforms(
+      pathParams({ count: 5, seed: 3, offsetJitter: amp }),
+      ZERO_BBOX, pathLine,
+    );
+    // translateX still equidistant (on-path), translateY carries the ±normal jitter.
+    result.forEach((t, i) => {
+      expect(t.translateX).toBeCloseTo(i * 25, 6);
+      expect(Math.abs(t.translateY)).toBeLessThanOrEqual(amp + 1e-9);
+    });
+    expect(result.some(t => Math.abs(t.translateY) > 1e-6)).toBe(true);
+  });
+
+  it('scale jitter stays within ±percent of 1', () => {
+    const pct = 20;
+    const result = computePathTransforms(
+      pathParams({ count: 6, seed: 99, scaleJitterPct: pct }),
+      ZERO_BBOX, pathLine,
+    );
+    for (const t of result) {
+      expect(t.scale ?? 1).toBeGreaterThanOrEqual(1 - pct / 100 - 1e-9);
+      expect(t.scale ?? 1).toBeLessThanOrEqual(1 + pct / 100 + 1e-9);
+    }
+  });
+
+  it('deterministic: same seed → identical layout (undoable/stable)', () => {
+    const p = pathParams({ count: 8, seed: 123, rotationJitterDeg: 20, offsetJitter: 2, scaleJitterPct: 30 });
+    const a = computePathTransforms(p, ZERO_BBOX, pathLine);
+    const b = computePathTransforms(p, ZERO_BBOX, pathLine);
+    expect(a).toEqual(b);
+  });
+
+  it('different seed → different layout', () => {
+    const a = computePathTransforms(pathParams({ count: 8, seed: 1, rotationJitterDeg: 20 }), ZERO_BBOX, pathLine);
+    const b = computePathTransforms(pathParams({ count: 8, seed: 2, rotationJitterDeg: 20 }), ZERO_BBOX, pathLine);
+    expect(a.map(t => t.rotateDeg)).not.toEqual(b.map(t => t.rotateDeg));
+  });
+});
+
 // ── π ────────────────────────────────────────────────────────────────────────
 void PI; // keep import

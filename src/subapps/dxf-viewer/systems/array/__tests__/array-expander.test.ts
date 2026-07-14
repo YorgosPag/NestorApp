@@ -1,11 +1,26 @@
 import { expandArrayEntity } from '../array-expander';
 import type { ArrayEntity, Entity } from '../../../types/entities';
-import type { RectParams, PolarParams } from '../types';
+import type { RectParams, PolarParams, PathParams } from '../types';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function makeLine(id: string, x1: number, y1: number, x2: number, y2: number): Entity {
   return { id, type: 'line', layer: '0', layerId: 'lyr_test_default', visible: true, start: { x: x1, y: y1 }, end: { x: x2, y: y2 } } as Entity;
+}
+
+function makeCircle(id: string, cx: number, cy: number, r: number): Entity {
+  return { id, type: 'circle', layer: '0', layerId: 'lyr_test_default', visible: true, center: { x: cx, y: cy }, radius: r } as Entity;
+}
+
+function makePathArray(id: string, sources: Entity[], overrides: Partial<PathParams> = {}): ArrayEntity {
+  const params: PathParams = {
+    kind: 'path', count: 3, method: 'divide', alignItems: false, pathEntityId: 'path', reversed: false,
+    ...overrides,
+  };
+  return {
+    id, type: 'array', layer: '0', layerId: 'lyr_test_default', visible: true,
+    arrayKind: 'path', hiddenSources: sources, params,
+  } as ArrayEntity;
 }
 
 function makeRectArray(
@@ -150,5 +165,67 @@ describe('expandArrayEntity', () => {
     for (const item of items) {
       expect(item.type).toBe('line');
     }
+  });
+});
+
+// ── ADR-353 M1 — path source distribution (group / sequential / random) ─────────
+
+describe('expandArrayEntity — path source distribution', () => {
+  const pathLine = makeLine('path', 0, 0, 100, 0);
+
+  it("default ('group'): whole source group stamped at every point (N points × M sources)", () => {
+    const s1 = makeLine('s1', 0, 0, 10, 0);
+    const s2 = makeCircle('s2', 5, 0, 3);
+    const arr = makePathArray('arr', [s1, s2], { count: 3 }); // no sourceDistribution
+    const items = expandArrayEntity(arr, pathLine);
+    expect(items).toHaveLength(6); // 3 × 2
+  });
+
+  it("'sequential': ONE source per point, cycling in order (N items)", () => {
+    const s1 = makeLine('s1', 0, 0, 10, 0);
+    const s2 = makeCircle('s2', 5, 0, 3);
+    const arr = makePathArray('arr', [s1, s2], { count: 4, sourceDistribution: 'sequential' });
+    const items = expandArrayEntity(arr, pathLine);
+    expect(items).toHaveLength(4);
+    // cycle order: s1, s2, s1, s2 → line, circle, line, circle
+    expect(items.map(i => i.type)).toEqual(['line', 'circle', 'line', 'circle']);
+    for (const item of items) expect(item.id).toBe('arr');
+  });
+
+  it("'sequential': picked source's OWN center lands on the sample point", () => {
+    // two sources with different centers; group center differs from each → rebase must correct it.
+    const s1 = makeLine('s1', 0, 0, 10, 0);   // center (5,0)
+    const s2 = makeLine('s2', 0, 10, 10, 10); // center (5,10)
+    const arr = makePathArray('arr', [s1, s2], { count: 1, sourceDistribution: 'sequential' });
+    const items = expandArrayEntity(arr, pathLine); // single sample at (0,0), picks s1
+    expect(items).toHaveLength(1);
+    const it = items[0] as Entity & { start: { x: number; y: number }; end: { x: number; y: number } };
+    const cx = (it.start.x + it.end.x) / 2;
+    const cy = (it.start.y + it.end.y) / 2;
+    expect(cx).toBeCloseTo(0, 6); // s1 center placed exactly on sample point (0,0)
+    expect(cy).toBeCloseTo(0, 6);
+  });
+
+  it("'random': ONE source per point (N items), deterministic for a fixed seed", () => {
+    const s1 = makeLine('s1', 0, 0, 10, 0);
+    const s2 = makeCircle('s2', 5, 0, 3);
+    const mk = () => expandArrayEntity(
+      makePathArray('arr', [s1, s2], { count: 6, sourceDistribution: 'random', seed: 55 }),
+      pathLine,
+    );
+    const a = mk();
+    const b = mk();
+    expect(a).toHaveLength(6);
+    expect(a.map(i => i.type)).toEqual(b.map(i => i.type)); // same seed → same picks
+  });
+
+  it("'random': different seeds can produce different pick sequences", () => {
+    const s1 = makeLine('s1', 0, 0, 10, 0);
+    const s2 = makeCircle('s2', 5, 0, 3);
+    const pick = (seed: number) => expandArrayEntity(
+      makePathArray('arr', [s1, s2], { count: 12, sourceDistribution: 'random', seed }),
+      pathLine,
+    ).map(i => i.type).join('');
+    expect(pick(1)).not.toEqual(pick(999));
   });
 });

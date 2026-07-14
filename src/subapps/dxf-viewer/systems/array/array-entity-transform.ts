@@ -15,6 +15,9 @@ import type { Point2D } from '../../rendering/types/Types';
 import { rotatePoint } from '../../utils/rotation-math';
 import { normalizeAngleDeg } from '../../rendering/entities/shared/geometry-utils';
 import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
+// ADR-348 SSoT — the ONE scale transform (handles every entity type incl. image). Composed here for
+// the M1 scatter-scale so array items reuse it instead of re-deriving per-type scale math (N.18).
+import { scaleEntity } from '../../systems/scale/scale-entity-transform';
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
 
@@ -217,6 +220,21 @@ function transformLeader(
  *                    geometrically correct.
  */
 export function applyTransformToEntity(
+  entity: Entity,
+  transform: ItemTransform,
+  pivot: Point2D,
+): Entity {
+  const moved = dispatchTranslateRotate(entity, transform, pivot);
+  // Optional uniform scatter-scale (ADR-353 M1) — composed via the scaleEntity SSoT (ADR-348) about
+  // the item's OWN center (pivot + translate = where translate+rotate anchored it). Uniform ⇒ never
+  // triggers scaleEntity's circle→ellipse type-change, so the clone keeps its type.
+  const s = transform.scale;
+  if (s === undefined || s === 1) return moved;
+  const itemCenter: Point2D = { x: pivot.x + transform.translateX, y: pivot.y + transform.translateY };
+  return { ...moved, ...scaleEntity(moved, itemCenter, s, s) } as Entity;
+}
+
+function dispatchTranslateRotate(
   entity: Entity,
   transform: ItemTransform,
   pivot: Point2D,
