@@ -22,6 +22,7 @@
 
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { createKeyedImageCache } from './title-block-image-cache';
 
 const logger = createModuleLogger('TitleBlockStampImage');
 
@@ -34,9 +35,6 @@ export interface StampImage {
   readonly widthPx: number;
   readonly heightPx: number;
 }
-
-const cache = new Map<string, StampImage>();
-const pending = new Map<string, Promise<StampImage | null>>();
 
 /** Decode + rasterise σε data URL (ό,τι χρειάζεται ο jsPDF· ο καμβάς δεν μολύνεται). */
 async function decodeStamp(url: string): Promise<StampImage> {
@@ -61,42 +59,27 @@ async function decodeStamp(url: string): Promise<StampImage> {
   };
 }
 
+/** Ο keyed cache της σφραγίδας — keyed by download URL (ο μηχανισμός ζει στο SSoT factory). */
+const stampCache = createKeyedImageCache<StampImage>(decodeStamp, (error) =>
+  logger.warn('Stamp image unavailable — printing an empty stamp cell', {
+    error: getErrorMessage(error),
+  }),
+);
+
 /**
  * Προ-φορτώνει τη σφραγίδα (idempotent· in-flight dedupe). Αποτυχία ⇒ `null` + warning, ώστε
  * η πινακίδα να μπαίνει ούτως ή άλλως με κενό κελί σφραγίδας.
  */
-export async function loadStampImage(url: string | undefined): Promise<StampImage | null> {
-  if (!url) return null;
-  const hit = cache.get(url);
-  if (hit) return hit;
-  const inFlight = pending.get(url);
-  if (inFlight) return inFlight;
-
-  const promise = decodeStamp(url)
-    .then((image) => {
-      cache.set(url, image);
-      pending.delete(url);
-      return image;
-    })
-    .catch((error: unknown) => {
-      pending.delete(url);
-      logger.warn('Stamp image unavailable — printing an empty stamp cell', {
-        error: getErrorMessage(error),
-      });
-      return null;
-    });
-
-  pending.set(url, promise);
-  return promise;
+export function loadStampImage(url: string | undefined): Promise<StampImage | null> {
+  return stampCache.load(url);
 }
 
 /** Event-time read (κλικ / ghost / PDF). `null` όσο δεν έχει φορτώσει ή αν απέτυχε. */
 export function getStampImage(url: string | undefined): StampImage | null {
-  return url ? (cache.get(url) ?? null) : null;
+  return stampCache.get(url);
 }
 
 /** Test seam — καθαρίζει το singleton μεταξύ των specs. */
 export function __resetStampImageCacheForTests(): void {
-  cache.clear();
-  pending.clear();
+  stampCache.reset();
 }
