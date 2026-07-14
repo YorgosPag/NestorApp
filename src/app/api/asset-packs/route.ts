@@ -33,9 +33,9 @@ export interface AccessibleAssetPack {
   readonly version: string;
 }
 
-export const GET = defineRoute(
-  { rateLimit: 'standard' },
-  async ({ auth, cache }) => {
+export const GET = defineRoute({
+  rateLimit: 'standard',
+  handler: async ({ auth, cache }) => {
     const accessible = await listAccessibleAssetPacks(auth, listAssetPacks(), cache);
     const packs: readonly AccessibleAssetPack[] = accessible.map((pack) => ({
       id: pack.id,
@@ -43,4 +43,4 @@ export const GET = defineRoute(
     }));
     return ok({ packs });
   },
-);
+});

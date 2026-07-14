@@ -51,9 +51,9 @@ interface AssetParams {
   readonly fileName: string;
 }
 
-export const GET = defineRoute<never, AssetParams>(
-  { rateLimit: 'asset' },
-  async ({ auth, cache, req, params }) => {
+export const GET = defineRoute<never, AssetParams>({
+  rateLimit: 'asset',
+  handler: async ({ auth, cache, req, params }) => {
     const pack = getAssetPack(params.packId);
     // Άγνωστο pack ή λάθος έκδοση → 404. Η έκδοση είναι μέρος της ταυτότητας: ένα παλιό URL
     // ΔΕΝ πρέπει να σερβίρει νέο περιεχόμενο (αλλιώς χαλάει το immutable caching).
@@ -99,4 +99,4 @@ export const GET = defineRoute<never, AssetParams>(
       },
     });
   },
-);
+});

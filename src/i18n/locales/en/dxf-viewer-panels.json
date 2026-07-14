@@ -1070,6 +1070,12 @@
           "mean": "Mean"
         }
       },
+      "unit": {
+        "title": "File units",
+        "hint": "A LAS/LAZ file does not state its unit in the header. Pick the unit that gives a sensible site extent — a wrong unit silently reads the cloud at the wrong scale.",
+        "spanTitle": "Site extent if read as:",
+        "extent": "{width} × {depth} m, height {height} m"
+      },
       "method": {
         "source-classification": "source classification",
         "csf": "CSF filter"
@@ -1105,7 +1111,8 @@
         "skippedLines": "Some lines in the file were skipped (invalid coordinates).",
         "truncatedPointData": "The LAS point data looked incomplete — what was available was read.",
         "recordLengthMismatch": "The LAS record length differs from what its format expects.",
-        "headerBoundsInvalid": "The LAS header bounds were invalid — recomputed from the points themselves."
+        "headerBoundsInvalid": "The LAS header bounds were invalid — recomputed from the points themselves.",
+        "spanImplausible": "The cloud's extent looks unrealistic — check the file unit (feet or millimetres read as metres?) and the columns."
       }
     },
     "cutfill": {

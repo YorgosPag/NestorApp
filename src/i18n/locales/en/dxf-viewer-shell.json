@@ -6406,7 +6406,44 @@
       "publish": "Publish to office",
       "detach": "Detach into this project",
       "pull": "Update from parent",
+      "localize": {
+        "el": "Greek variant",
+        "en": "English variant"
+      },
       "delete": "Delete"
+    }
+  },
+  "titleBlockLocalize": {
+    "title": {
+      "create": "Localize title block",
+      "update": "Update translated title block"
+    },
+    "description": {
+      "create": "A new template “{name}” will be created in {language}. Structure and geometry stay identical — only the labels change. Data fields (project name, scale, date) are never translated.",
+      "update": "The template “{name}” has changed. Its changes will arrive here translated into {language} — review them before applying."
+    },
+    "language": {
+      "el": "Greek",
+      "en": "English"
+    },
+    "name": "Variant name",
+    "variantName": "{name} ({locale})",
+    "terms": "Labels",
+    "translationOf": "Translation of “{term}”",
+    "origin": {
+      "glossary": "Glossary",
+      "ai": "AI",
+      "manual": "Yours",
+      "unknown": "Pending"
+    },
+    "pendingPlaceholder": "Type the translation",
+    "translating": "AI is translating the labels the glossary does not know…",
+    "pending": "{count, plural, one {# label stays untranslated — it will be kept as is} other {# labels stay untranslated — they will be kept as they are}}",
+    "preview": "Preview",
+    "cancel": "Cancel",
+    "confirm": {
+      "create": "Create variant",
+      "update": "Apply update"
     }
   },
   "assetPacks": {
