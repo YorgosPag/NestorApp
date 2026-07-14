@@ -38,6 +38,7 @@ import {
   TEXTURE_RESOLUTION,
   TEXTURE_PROVIDER,
   mapsForTextureSet,
+  isOwnScanTexture,
   type PbrTextureMapName,
   type PbrTextureSlug,
 } from '../src/subapps/dxf-viewer/bim/materials/bim-texture-registry';
@@ -95,15 +96,22 @@ function parseArgs(argv: readonly string[]): Options {
 /** The slugs to process; exits when `--only` names something not in the manifest. */
 function selectSlugs(only: readonly string[]): readonly PbrTextureSlug[] {
   const all = Object.keys(TEXTURE_SET_DEFS) as PbrTextureSlug[];
-  if (only.length === 0) return all;
+  // Τα ιδιόκτητα σκαναρίσματα (images_6) ΔΕΝ κατεβαίνουν από τον provider — η αναπαραγωγή
+  // τους είναι το git-committed public tile + το Storage copy (βλ. isOwnScanTexture).
+  const providerSlugs = all.filter((s) => !isOwnScanTexture(TEXTURE_SET_DEFS[s]));
+  if (only.length === 0) return providerSlugs;
 
   const unknown = only.filter((s) => !all.includes(s as PbrTextureSlug));
   if (unknown.length > 0) {
     console.error(`❌ Άγνωστα slugs: ${unknown.join(', ')}`);
-    console.error(`   Διαθέσιμα: ${all.join(', ')}`);
+    console.error(`   Διαθέσιμα: ${providerSlugs.join(', ')}`);
     process.exit(1);
   }
-  return only as PbrTextureSlug[];
+  const ownScans = only.filter((s) => isOwnScanTexture(TEXTURE_SET_DEFS[s as PbrTextureSlug]));
+  if (ownScans.length > 0) {
+    console.warn(`⚠ Παραλείπονται ιδιόκτητα σκαναρίσματα (δεν είναι στον ${TEXTURE_PROVIDER}): ${ownScans.join(', ')}`);
+  }
+  return only.filter((s) => !isOwnScanTexture(TEXTURE_SET_DEFS[s as PbrTextureSlug])) as PbrTextureSlug[];
 }
 
 // ============================================================================

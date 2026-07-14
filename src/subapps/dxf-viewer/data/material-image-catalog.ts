@@ -38,7 +38,12 @@ export type MaterialImageCategory =
   | 'concrete'
   | 'masonry'
   | 'plaster'
-  | 'metal';
+  | 'metal'
+  // ADR-643 own-scans — ιδιόκτητα σκαναρίσματα (images_6)
+  | 'textile'
+  | 'carpet'
+  | 'wicker'
+  | 'water';
 
 export interface MaterialImageDef {
   /** Σταθερό curated id (= `HatchImageFill.assetId`). */
@@ -74,6 +79,20 @@ const CATALOG: readonly MaterialImageDef[] = [
   { id: 'matimg-smooth-concrete', textureSlug: 'smooth-concrete', category: 'concrete', labelKeySuffix: 'smoothConcrete' },
   { id: 'matimg-cobblestone',     textureSlug: 'cobblestone',     category: 'masonry',  labelKeySuffix: 'cobblestone' },
   { id: 'matimg-parquet',         textureSlug: 'parquet',         category: 'wood',     labelKeySuffix: 'parquet' },
+  // ── ADR-643 own-scans — ιδιόκτητα σκαναρίσματα (images_6). Καλύπτουν κενά: υφάσματα/
+  // μοκέτες/ψάθα/νερό/τερazzo (π.χ. ψάθα για outdoor έπιπλα, νερό πισίνας). ─
+  { id: 'matimg-wicker',           textureSlug: 'wicker',           category: 'wicker',   labelKeySuffix: 'wicker' },
+  { id: 'matimg-carpet-grey',      textureSlug: 'carpet-grey',      category: 'carpet',   labelKeySuffix: 'carpetGrey' },
+  { id: 'matimg-carpet-charcoal',  textureSlug: 'carpet-charcoal',  category: 'carpet',   labelKeySuffix: 'carpetCharcoal' },
+  { id: 'matimg-rug-terracotta',   textureSlug: 'rug-terracotta',   category: 'carpet',   labelKeySuffix: 'rugTerracotta' },
+  { id: 'matimg-felt-green',       textureSlug: 'felt-green',       category: 'textile',  labelKeySuffix: 'feltGreen' },
+  { id: 'matimg-linen',            textureSlug: 'linen',            category: 'textile',  labelKeySuffix: 'linen' },
+  { id: 'matimg-tweed',            textureSlug: 'tweed',            category: 'textile',  labelKeySuffix: 'tweed' },
+  { id: 'matimg-fabric-teal',      textureSlug: 'fabric-teal',      category: 'textile',  labelKeySuffix: 'fabricTeal' },
+  { id: 'matimg-water-pool',       textureSlug: 'water-pool',       category: 'water',    labelKeySuffix: 'waterPool' },
+  { id: 'matimg-water-shallow',    textureSlug: 'water-shallow',    category: 'water',    labelKeySuffix: 'waterShallow' },
+  { id: 'matimg-terrazzo',         textureSlug: 'terrazzo',         category: 'stone',    labelKeySuffix: 'terrazzo' },
+  { id: 'matimg-plaid',            textureSlug: 'plaid',            category: 'textile',  labelKeySuffix: 'plaid' },
 ];
 
 // ─── Lookup map ───────────────────────────────────────────────────────────────

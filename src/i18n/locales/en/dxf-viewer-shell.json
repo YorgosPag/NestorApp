@@ -5240,7 +5240,19 @@
       "woodFloor": "Wood floor",
       "smoothConcrete": "Smooth concrete",
       "cobblestone": "Cobblestone",
-      "parquet": "Parquet"
+      "parquet": "Parquet",
+      "wicker": "Wicker",
+      "carpetGrey": "Grey carpet",
+      "carpetCharcoal": "Charcoal carpet",
+      "rugTerracotta": "Terracotta rug",
+      "feltGreen": "Green felt",
+      "linen": "Linen",
+      "tweed": "Tweed",
+      "fabricTeal": "Teal fabric",
+      "waterPool": "Pool water",
+      "waterShallow": "Shallow water",
+      "terrazzo": "Terrazzo",
+      "plaid": "Plaid"
     },
     "upload": {
       "button": "Upload photo",

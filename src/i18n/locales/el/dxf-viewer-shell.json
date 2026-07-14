@@ -5240,7 +5240,19 @@
       "woodFloor": "Ξύλινο δάπεδο",
       "smoothConcrete": "Λείο σκυρόδεμα",
       "cobblestone": "Λιθόστρωτο",
-      "parquet": "Παρκέ"
+      "parquet": "Παρκέ",
+      "wicker": "Ψάθα",
+      "carpetGrey": "Μοκέτα γκρι",
+      "carpetCharcoal": "Μοκέτα ανθρακί",
+      "rugTerracotta": "Χαλί τερακότα",
+      "feltGreen": "Τσόχα πράσινη",
+      "linen": "Λινό",
+      "tweed": "Τουίντ",
+      "fabricTeal": "Ύφασμα τιρκουάζ",
+      "waterPool": "Νερό πισίνας",
+      "waterShallow": "Νερό ρηχό",
+      "terrazzo": "Τερazzo",
+      "plaid": "Καρό"
     },
     "upload": {
       "button": "Ανέβασμα φωτο",

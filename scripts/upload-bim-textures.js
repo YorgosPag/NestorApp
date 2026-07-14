@@ -11,8 +11,12 @@
  *
  * USAGE (one-time, run as super_admin):
  * ```
- * node scripts/upload-bim-textures.js
+ * node scripts/upload-bim-textures.js                       # όλα τα slugs
+ * node scripts/upload-bim-textures.js --only wicker,linen   # μόνο αυτά (incremental)
  * ```
+ *
+ * `--only <slug,slug…>` = ανεβάζει μόνο αυτά τα slug dirs (incremental add — π.χ. νέα
+ * own-scans χωρίς να ξανα-ανεβαίνουν τα ήδη ανεβασμένα).
  *
  * IDEMPOTENT: αν το αρχείο υπάρχει ήδη στο Storage, αντικαθίσταται (safe re-run).
  *
@@ -42,10 +46,16 @@ async function uploadAll() {
   console.log(`📁 Source: ${TEXTURES_DIR}`);
   console.log('');
 
-  // ── Collect local files ───────────────────────────────────────────────────
-  const slugDirs = fs.readdirSync(TEXTURES_DIR).filter((d) =>
-    fs.statSync(path.join(TEXTURES_DIR, d)).isDirectory(),
-  );
+  // ── Collect local files (optionally filtered with --only slug,slug…) ──────
+  const onlyArg = process.argv.indexOf('--only');
+  const onlySlugs = onlyArg !== -1 && process.argv[onlyArg + 1]
+    ? new Set(process.argv[onlyArg + 1].split(',').map((s) => s.trim()).filter(Boolean))
+    : null;
+  if (onlySlugs) console.log(`🔎 Φίλτρο --only: ${[...onlySlugs].join(', ')}`);
+
+  const slugDirs = fs.readdirSync(TEXTURES_DIR)
+    .filter((d) => fs.statSync(path.join(TEXTURES_DIR, d)).isDirectory())
+    .filter((d) => !onlySlugs || onlySlugs.has(d));
 
   const jobs = [];
   for (const slug of slugDirs) {

@@ -44,7 +44,21 @@ export type PbrTextureSlug =
   | 'wood-floor'
   | 'smooth-concrete'
   | 'cobblestone'
-  | 'parquet';
+  | 'parquet'
+  // ADR-643 own-scans — ιδιόκτητα σκαναρίσματα (images_6, own IP· ΟΧΙ Poly Haven).
+  // Καλύπτουν κενά: υφάσματα/μοκέτες/ψάθα/νερό/τερazzo. albedo-only, license 'owner'.
+  | 'wicker'
+  | 'carpet-grey'
+  | 'carpet-charcoal'
+  | 'rug-terracotta'
+  | 'felt-green'
+  | 'linen'
+  | 'tweed'
+  | 'fabric-teal'
+  | 'water-pool'
+  | 'water-shallow'
+  | 'terrazzo'
+  | 'plaid';
 
 /**
  * PBR texture map channels. The SSoT union — `texture-source.ts` re-exports it as
@@ -80,8 +94,17 @@ export interface PbrTextureSetDef {
   readonly hasAo: boolean;
   /** True when this slug ships a displacement (height) map for 3D relief. */
   readonly hasDisplacement?: boolean;
-  readonly license: 'CC0' | 'CC-BY';
+  readonly license: 'CC0' | 'CC-BY' | 'owner';
   readonly attribution?: string;
+}
+
+/**
+ * True για ιδιόκτητα σκαναρίσματα (images_6) — ΔΕΝ κατεβαίνουν από τον `TEXTURE_PROVIDER`
+ * (Poly Haven). Το `download-bim-textures` τα προσπερνά (η αναπαραγωγιμότητά τους είναι το
+ * git-committed public tile + το Storage copy, όχι το provider API).
+ */
+export function isOwnScanTexture(def: PbrTextureSetDef): boolean {
+  return def.license === 'owner';
 }
 
 /**
@@ -121,6 +144,20 @@ export const TEXTURE_SET_DEFS: Record<PbrTextureSlug, PbrTextureSetDef> = {
   'smooth-concrete': { slug: 'smooth-concrete',  sourceAsset: 'smooth_concrete_floor', tileSizeM: 2.0, hasNormal: false, hasRoughness: false, hasAo: false, license: 'CC0', attribution: 'Poly Haven' },
   cobblestone:       { slug: 'cobblestone',      sourceAsset: 'cobblestone_floor_04',  tileSizeM: 2.0, hasNormal: false, hasRoughness: false, hasAo: false, license: 'CC0', attribution: 'Poly Haven' },
   parquet:           { slug: 'parquet',          sourceAsset: 'diagonal_parquet',      tileSizeM: 1.0, hasNormal: false, hasRoughness: false, hasAo: false, license: 'CC0', attribution: 'Poly Haven' },
+  // ── ADR-643 own-scans — ιδιόκτητα σκαναρίσματα (images_6). albedo-only, license 'owner'
+  // (skip στον downloader). `sourceAsset` = το πηγαίο images_6 stem (provenance, όχι Poly Haven id). ─
+  wicker:           { slug: 'wicker',           sourceAsset: 'images_6/015', tileSizeM: 0.35, hasNormal: false, hasRoughness: false, hasAo: false, license: 'owner', attribution: 'Ιδιόκτητο σκανάρισμα' },
+  'carpet-grey':    { slug: 'carpet-grey',      sourceAsset: 'images_6/040', tileSizeM: 1.0,  hasNormal: false, hasRoughness: false, hasAo: false, license: 'owner', attribution: 'Ιδιόκτητο σκανάρισμα' },
+  'carpet-charcoal':{ slug: 'carpet-charcoal',  sourceAsset: 'images_6/044', tileSizeM: 1.0,  hasNormal: false, hasRoughness: false, hasAo: false, license: 'owner', attribution: 'Ιδιόκτητο σκανάρισμα' },
+  'rug-terracotta': { slug: 'rug-terracotta',   sourceAsset: 'images_6/021', tileSizeM: 1.5,  hasNormal: false, hasRoughness: false, hasAo: false, license: 'owner', attribution: 'Ιδιόκτητο σκανάρισμα' },
+  'felt-green':     { slug: 'felt-green',       sourceAsset: 'images_6/022', tileSizeM: 0.5,  hasNormal: false, hasRoughness: false, hasAo: false, license: 'owner', attribution: 'Ιδιόκτητο σκανάρισμα' },
+  linen:            { slug: 'linen',            sourceAsset: 'images_6/017', tileSizeM: 0.5,  hasNormal: false, hasRoughness: false, hasAo: false, license: 'owner', attribution: 'Ιδιόκτητο σκανάρισμα' },
+  tweed:            { slug: 'tweed',            sourceAsset: 'images_6/070', tileSizeM: 0.5,  hasNormal: false, hasRoughness: false, hasAo: false, license: 'owner', attribution: 'Ιδιόκτητο σκανάρισμα' },
+  'fabric-teal':    { slug: 'fabric-teal',      sourceAsset: 'images_6/075', tileSizeM: 0.5,  hasNormal: false, hasRoughness: false, hasAo: false, license: 'owner', attribution: 'Ιδιόκτητο σκανάρισμα' },
+  'water-pool':     { slug: 'water-pool',       sourceAsset: 'images_6/079', tileSizeM: 2.0,  hasNormal: false, hasRoughness: false, hasAo: false, license: 'owner', attribution: 'Ιδιόκτητο σκανάρισμα' },
+  'water-shallow':  { slug: 'water-shallow',    sourceAsset: 'images_6/078', tileSizeM: 2.0,  hasNormal: false, hasRoughness: false, hasAo: false, license: 'owner', attribution: 'Ιδιόκτητο σκανάρισμα' },
+  terrazzo:         { slug: 'terrazzo',         sourceAsset: 'images_6/041', tileSizeM: 0.6,  hasNormal: false, hasRoughness: false, hasAo: false, license: 'owner', attribution: 'Ιδιόκτητο σκανάρισμα' },
+  plaid:            { slug: 'plaid',            sourceAsset: 'images_6/018', tileSizeM: 0.6,  hasNormal: false, hasRoughness: false, hasAo: false, license: 'owner', attribution: 'Ιδιόκτητο σκανάρισμα' },
 };
 
 /**

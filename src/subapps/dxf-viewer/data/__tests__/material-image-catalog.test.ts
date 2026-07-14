@@ -14,8 +14,19 @@ import { TEXTURE_SET_DEFS } from '../../bim/materials/bim-texture-registry';
 
 describe('Material image catalog (ADR-643 Φ2)', () => {
   describe('listMaterialImages()', () => {
-    it('returns the 18 curated materials (8 starter + 10 ADR-653 Φ7 photographic)', () => {
-      expect(listMaterialImages()).toHaveLength(18);
+    it('returns the 30 curated materials (8 starter + 10 ADR-653 Φ7 + 12 ADR-643 own scans)', () => {
+      expect(listMaterialImages()).toHaveLength(30);
+    });
+
+    it('the 12 own-scan textures (images_6) are present in the catalog', () => {
+      const ownSlugs = [
+        'wicker', 'carpet-grey', 'carpet-charcoal', 'rug-terracotta', 'felt-green', 'linen',
+        'tweed', 'fabric-teal', 'water-pool', 'water-shallow', 'terrazzo', 'plaid',
+      ];
+      const present = new Set<string>(listMaterialImages().map((m) => m.textureSlug));
+      for (const slug of ownSlugs) {
+        expect(present.has(slug)).toBe(true);
+      }
     });
 
     it('every id uses the curated `matimg-` prefix (distinct from bmat_/mat_img_ generated)', () => {
