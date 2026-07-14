@@ -126,6 +126,8 @@ export const UpdateDxfLevelSchema = z.object({
   entityLabel: z.string().max(300).nullable().optional(),
   /** ADR-309 Phase 3: Project ID */
   projectId: z.string().min(1).max(128).nullable().optional(),
+  /** ADR-651 Φάση Ι: χειρόγραφος αριθμός φύλλου· null = αυτόματη αρίθμηση κατά θέση. */
+  sheetNumberOverride: z.string().max(40).nullable().optional(),
   /** ADR-375 Phase B.2 + C.4 + ADR-377: per-view BIM render settings (Revit ViewPlan equivalent). */
   bimRenderSettings: BimRenderSettingsSchema.nullable().optional(),
   /** ADR-375 Phase B.3: FK → dxf_viewer_view_templates. Null = detached. */

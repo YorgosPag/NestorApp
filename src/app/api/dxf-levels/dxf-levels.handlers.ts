@@ -31,6 +31,41 @@ import type {
 
 const logger = createModuleLogger('DxfLevelsRoute');
 
+/**
+ * Φόρτωσε τον όροφο ΚΑΙ βεβαιώσου ότι ανήκει στον καλούντα — η ΜΙΑ πύλη πριν από κάθε
+ * τροποποίηση/διαγραφή. Ήταν αντιγραμμένη λέξη-προς-λέξη σε update + delete (N.0.2): δύο
+ * αντίγραφα του ίδιου ελέγχου tenant isolation σημαίνει ότι μια μελλοντική διόρθωση μπορεί
+ * να μπει στο ένα και να ξεχαστεί στο άλλο — και το ξεχασμένο είναι διαρροή δεδομένων.
+ *
+ * Επιστρέφει είτε το `ref` (πέρασε) είτε έτοιμο `response` 404/403 (κόπηκε).
+ */
+async function loadOwnedLevelRef(
+  levelId: string,
+  ctx: AuthContext,
+): Promise<
+  | { readonly ref: FirebaseFirestore.DocumentReference; readonly response?: undefined }
+  | { readonly ref?: undefined; readonly response: NextResponse<{ success: false; error: string }> }
+> {
+  const db = getAdminFirestore();
+  const levelRef = db.collection(COLLECTIONS.DXF_VIEWER_LEVELS).doc(levelId);
+  const levelDoc = await levelRef.get();
+
+  if (!levelDoc.exists) {
+    return {
+      response: NextResponse.json({ success: false, error: 'DXF level not found' }, { status: 404 }),
+    };
+  }
+
+  const levelData = levelDoc.data();
+  if (levelData?.companyId !== ctx.companyId && ctx.globalRole !== 'super_admin') {
+    return {
+      response: NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 }),
+    };
+  }
+
+  return { ref: levelRef };
+}
+
 export async function handleListDxfLevels(
   request: NextRequest,
   ctx: AuthContext
@@ -154,18 +189,11 @@ export async function handleUpdateDxfLevel(
     }
     const { _v: expectedVersion, levelId, ...body } = parsed.data;
 
-    const db = getAdminFirestore();
-    const levelRef = db.collection(COLLECTIONS.DXF_VIEWER_LEVELS).doc(levelId);
-    const levelDoc = await levelRef.get();
-
-    if (!levelDoc.exists) {
-      return NextResponse.json({ success: false, error: 'DXF level not found' }, { status: 404 });
+    const owned = await loadOwnedLevelRef(levelId, ctx);
+    if (owned.response) {
+      return owned.response as NextResponse<DxfLevelUpdateResponse>;
     }
-
-    const levelData = levelDoc.data();
-    if (levelData?.companyId !== ctx.companyId && ctx.globalRole !== 'super_admin') {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
-    }
+    const levelRef = owned.ref;
 
     const updates: Record<string, unknown> = {};
     if (body.name !== undefined) updates.name = body.name;
@@ -180,6 +208,10 @@ export async function handleUpdateDxfLevel(
     if (body.floorplanType !== undefined) updates.floorplanType = body.floorplanType ?? null;
     if (body.entityLabel !== undefined) updates.entityLabel = body.entityLabel ?? null;
     if (body.projectId !== undefined) updates.projectId = body.projectId ?? null;
+    // ADR-651 Φάση Ι: χειρόγραφος αριθμός φύλλου (null = πίσω στην αυτόματη αρίθμηση θέσης)
+    if (body.sheetNumberOverride !== undefined) {
+      updates.sheetNumberOverride = body.sheetNumberOverride ?? null;
+    }
     // ADR-375 Phase B.2: per-view BIM render settings
     if (body.bimRenderSettings !== undefined) updates.bimRenderSettings = body.bimRenderSettings ?? null;
     // ADR-375 Phase B.3: FK → dxf_viewer_view_templates (or null = detached)
@@ -235,20 +267,12 @@ export async function handleDeleteDxfLevel(
       return NextResponse.json({ success: false, error: 'Level ID is required' }, { status: 400 });
     }
 
-    const db = getAdminFirestore();
-    const levelRef = db.collection(COLLECTIONS.DXF_VIEWER_LEVELS).doc(levelId);
-    const levelDoc = await levelRef.get();
-
-    if (!levelDoc.exists) {
-      return NextResponse.json({ success: false, error: 'DXF level not found' }, { status: 404 });
+    const owned = await loadOwnedLevelRef(levelId, ctx);
+    if (owned.response) {
+      return owned.response as NextResponse<DxfLevelDeleteResponse>;
     }
 
-    const levelData = levelDoc.data();
-    if (levelData?.companyId !== ctx.companyId && ctx.globalRole !== 'super_admin') {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
-    }
-
-    await levelRef.delete();
+    await owned.ref.delete();
     logger.info('[DxfLevels/Delete] Level deleted', { levelId, userId: ctx.uid });
 
     return NextResponse.json({ success: true, message: `DXF level "${levelId}" deleted` });

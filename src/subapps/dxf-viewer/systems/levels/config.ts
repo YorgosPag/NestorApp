@@ -27,6 +27,16 @@ export interface Level {
   floorplanType?: FloorplanType;
   /** 🏢 ADR-309 Phase 3: Human-readable entity label (e.g. "Κτίριο Α", "1ος Όροφος") */
   entityLabel?: string;
+  /**
+   * ADR-651 Φάση Ι — ο **χειρόγραφος αριθμός φύλλου** αυτού του ορόφου στο σετ εκτύπωσης
+   * (π.χ. «Α-05», «ΑΡΧ-2»). Κενό/απόν ⇒ **αυτόματη** αρίθμηση από τη ΘΕΣΗ στο σετ (Α-1, Α-2…).
+   *
+   * Πρακτική ηγετών: ο αριθμός φύλλου είναι **ιδιότητα του φύλλου** (Revit Sheet Number,
+   * AutoCAD SSM «Rename & Renumber»), με ρητή επιλογή «αυτόματο κατά θέση ή δικό μου ID»
+   * (ArchiCAD Layout ID). Το φύλλο μας **ΕΙΝΑΙ** ο όροφος (§5.5) ⇒ εδώ είναι η θέση του,
+   * και μηδέν δεύτερη πηγή αλήθειας.
+   */
+  sheetNumberOverride?: string | null;
   /** 🏢 ADR-309 Phase 3: Project ID — set by wizard on import */
   projectId?: string;
   /** ADR-375 Phase B.2: per-view BIM render settings (Revit ViewPlan equivalent). */

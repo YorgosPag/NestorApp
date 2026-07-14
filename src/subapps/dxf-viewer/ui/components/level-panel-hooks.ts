@@ -10,6 +10,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import type { EntityType } from '@/config/domain-constants';
 import type { Level, FloorplanType } from '../../systems/levels/config';
+import type { LevelContextUpdate } from '../../systems/levels/hooks/useLevelOperations';
 import type { LevelFloorResolver } from '../../systems/levels/level-floor-resolution';
 import { findOrCreateLevelForFloor } from '../../systems/levels/level-floor-resolution';
 import { ensureLevelsForBuilding } from '../../systems/levels/ensure-levels-for-building';
@@ -76,7 +77,7 @@ export interface FloorplanImportCompleteDeps {
   readonly setCurrentLevel: (levelId: string) => void;
   readonly updateLevelContext: (
     levelId: string,
-    context: { floorplanType?: FloorplanType; entityLabel?: string; projectId?: string; floorId?: string; buildingId?: string },
+    context: LevelContextUpdate,
   ) => Promise<void> | void;
   readonly entityTypeToFloorplanType: (entityType: EntityType) => FloorplanType | undefined;
   readonly triggerAllFloorsBackfill: TriggerAllFloorsBackfill;

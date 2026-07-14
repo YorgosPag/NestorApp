@@ -30,10 +30,13 @@ interface UseLevelOperationsParams {
 
 export interface LevelContextUpdate {
   floorplanType?: FloorplanType;
-  entityLabel?: string;
+  /** Ανθρώπινη ετικέτα ορόφου — ΚΑΙ ο τίτλος του φύλλου στο σετ εκτύπωσης (ADR-651 §5.5). */
+  entityLabel?: string | null;
   projectId?: string;
   floorId?: string;
   buildingId?: string;
+  /** ADR-651 Φάση Ι: χειρόγραφος αριθμός φύλλου· `null` ⇒ αυτόματη αρίθμηση κατά θέση. */
+  sheetNumberOverride?: string | null;
 }
 
 export interface UseLevelOperationsResult {

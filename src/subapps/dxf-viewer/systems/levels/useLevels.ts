@@ -13,8 +13,8 @@ import type {
   CalibrationData,
   LevelSystemSettings,
   ImportWizardActions,
-  FloorplanType,
 } from './config';
+import type { UseLevelOperationsResult } from './hooks/useLevelOperations';
 import type { SceneModel } from '../../types/scene';
 import type { SceneWriteOrigin } from '../../hooks/scene/scene-write-origin';
 
@@ -30,22 +30,16 @@ export interface LevelSystemState {
   error: string | null;
 }
 
-export interface LevelSystemActions extends ImportWizardActions {
-  // Level operations
-  addLevel: (name: string, setAsDefault?: boolean, floorId?: string) => Promise<string | null>;
-  removeLevel: (levelId: string) => Promise<void>;
-  deleteLevel: (levelId: string) => Promise<void>;
-  clearAllLevels: () => Promise<void>;
-  reorderLevels: (levelIds: string[]) => Promise<void>;
-  renameLevel: (levelId: string, name: string) => Promise<void>;
-  setCurrentLevel: (levelId: string) => void;
-  toggleLevelVisibility: (levelId: string) => Promise<void>;
-  setDefaultLevel: (levelId: string) => Promise<void>;
-  duplicateLevel: (levelId: string, newName?: string) => Promise<string | null>;
-  linkLevelToFloor: (levelId: string, floorId: string | null, buildingId?: string | null) => Promise<void>;
-  /** ADR-309 Phase 3: Store wizard context on a level (floorplanType, entityLabel, projectId, floorId, buildingId) */
-  updateLevelContext: (levelId: string, context: { floorplanType?: FloorplanType; entityLabel?: string; projectId?: string; floorId?: string; buildingId?: string }) => Promise<void>;
-
+/**
+ * Οι ενέργειες του συστήματος ορόφων.
+ *
+ * Οι **λειτουργίες ορόφου** (add/remove/rename/updateLevelContext…) ΔΕΝ ξαναδηλώνονται εδώ:
+ * κληρονομούνται αυτούσιες από το {@link UseLevelOperationsResult}, που είναι το συμβόλαιο του
+ * hook που τις υλοποιεί. Ήταν αντιγραμμένη λίστα 11 υπογραφών (N.0.2/N.18) — δύο δηλώσεις του
+ * ίδιου συμβολαίου αποκλίνουν σιωπηλά (ακριβώς αυτό έγινε στο `updateLevelContext`, όπου το ένα
+ * αντίγραφο δεν ήξερε το `sheetNumberOverride`).
+ */
+export interface LevelSystemActions extends ImportWizardActions, UseLevelOperationsResult {
   // Floorplan operations
   addFloorplan: (floorplan: Omit<FloorplanDoc, 'id' | 'importedAt'>) => string;
   removeFloorplan: (floorplanId: string) => void;
