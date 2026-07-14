@@ -15,13 +15,15 @@
  * ```
  *
  * IDEMPOTENT: αν το αρχείο υπάρχει ήδη στο Storage, αντικαθίσταται (safe re-run).
+ *
+ * ⚠️ Ο μηχανισμός (init → upload loop → σύνοψη) ζει στο κοινό `_shared/storage-uploader.js`
+ * (ADR-655) — ΜΗΝ τον αντιγράψεις εδώ.
  * =============================================================================
  */
 
-const admin = require('firebase-admin');
 const fs = require('fs');
 const path = require('path');
-const { loadEnvLocal } = require('./_shared/loadEnvLocal');
+const { initAdminBucket, uploadJobs, reportAndExit } = require('./_shared/storage-uploader');
 
 const TEXTURES_DIR = path.join(__dirname, '..', 'public', 'textures');
 const STORAGE_PREFIX = 'bim-texture-library';
@@ -35,17 +37,7 @@ async function uploadAll() {
   console.log('═══════════════════════════════════════════════════════════════════');
   console.log('');
 
-  // ── Init ──────────────────────────────────────────────────────────────────
-  const envVars = loadEnvLocal();
-  const serviceAccount = JSON.parse(envVars.FIREBASE_SERVICE_ACCOUNT_KEY);
-  const storageBucket = envVars.FIREBASE_STORAGE_BUCKET ?? envVars.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
-
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-    storageBucket,
-  });
-
-  const bucket = admin.storage().bucket();
+  const { bucket, storageBucket } = initAdminBucket();
   console.log(`📡 Bucket: ${storageBucket}`);
   console.log(`📁 Source: ${TEXTURES_DIR}`);
   console.log('');
@@ -67,35 +59,12 @@ async function uploadAll() {
   console.log(`📋 Files to upload: ${jobs.length}`);
   console.log('');
 
-  // ── Upload ────────────────────────────────────────────────────────────────
-  let ok = 0;
-  let fail = 0;
-  for (const { localPath, remotePath } of jobs) {
-    try {
-      await bucket.upload(localPath, {
-        destination: remotePath,
-        metadata: { contentType: CONTENT_TYPE, cacheControl: 'public, max-age=31536000' },
-      });
-      console.log(`   ✅ ${remotePath}`);
-      ok++;
-    } catch (err) {
-      console.error(`   ❌ ${remotePath} — ${err.message}`);
-      fail++;
-    }
-  }
-
-  console.log('');
-  console.log('═══════════════════════════════════════════════════════════════════');
-  console.log(`  ✅ Επιτυχία: ${ok}  |  ❌ Αποτυχία: ${fail}  |  Σύνολο: ${jobs.length}`);
-  console.log('═══════════════════════════════════════════════════════════════════');
-  console.log('');
-
-  if (fail === 0) {
-    console.log('🚀 Όλα τα textures ανέβηκαν. Κάνε push + deploy για να φανούν στο production.');
-  } else {
-    console.log('⚠️  Μερικά αρχεία απέτυχαν — δες τα errors παραπάνω.');
-    process.exit(1);
-  }
+  const result = await uploadJobs(bucket, jobs, CONTENT_TYPE);
+  reportAndExit(
+    result,
+    jobs.length,
+    '🚀 Όλα τα textures ανέβηκαν. Κάνε push + deploy για να φανούν στο production.',
+  );
 }
 
 uploadAll().catch((err) => {
