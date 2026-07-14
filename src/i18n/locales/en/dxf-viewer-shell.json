@@ -4822,6 +4822,11 @@
           "sheet": "Full sheet (ISO 5457)",
           "box": "Title block only"
         },
+        "qrMode": "QR code",
+        "qrModeOptions": {
+          "on": "With QR (link + version)",
+          "off": "Without QR"
+        },
         "rotation": "Rotation",
         "scale": "Scale"
       },
