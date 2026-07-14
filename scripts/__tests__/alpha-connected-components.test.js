@@ -7,7 +7,7 @@
  * ανάμεσα». Ο έλεγχος γίνεται εδώ, σε συνθετικό alpha, χωρίς αρχεία/sharp.
  */
 
-const { findAlphaComponents } = require('../lib/alpha-connected-components');
+const { findAlphaComponents, unionBox } = require('../lib/alpha-connected-components');
 
 /** Ζωγραφίζει γεμάτο ορθογώνιο αδιαφάνειας σε έναν κενό alpha καμβά. */
 function paintRect(alpha, W, x0, y0, w, h, value = 255) {
@@ -89,5 +89,41 @@ describe('findAlphaComponents', () => {
 
   it('πετά σε ασυνεπές μέγεθος buffer (αντί για σιωπηλά σκουπίδια)', () => {
     expect(() => findAlphaComponents(new Uint8Array(10), W, H)).toThrow(/alpha buffer/);
+  });
+});
+
+describe('unionBox', () => {
+  // Το «ολόκληρο» sprite μιας σύνθεσης = η ένωση όλων των νησίδων (τραπέζι + καρέκλες
+  // ως ένα σετ). Ίδιο σχήμα ComponentBox ώστε ο builder να το κόβει με τον ίδιο κώδικα.
+  it('ενώνει πολλά bbox στο περικλείον ορθογώνιο', () => {
+    const boxes = [
+      { x0: 10, y0: 20, x1: 30, y1: 40, width: 21, height: 21, area: 100 },
+      { x0: 50, y0: 5, x1: 70, y1: 25, width: 21, height: 21, area: 80 },
+    ];
+    expect(unionBox(boxes)).toEqual({
+      x0: 10, y0: 5, x1: 70, y1: 40, width: 61, height: 36, area: 180,
+    });
+  });
+
+  it('ένα component → ταυτόσημο bbox (σύνθεση χωρίς εσωτερικό κενό)', () => {
+    const box = { x0: 3, y0: 4, x1: 9, y1: 8, width: 7, height: 5, area: 35 };
+    expect(unionBox([box])).toEqual(box);
+  });
+
+  it('συμφωνεί με το πραγματικό εύρος των components του splitter', () => {
+    const W2 = 100;
+    const H2 = 60;
+    const alpha = new Uint8Array(W2 * H2);
+    paintRect(alpha, W2, 5, 5, 20, 20);
+    paintRect(alpha, W2, 60, 10, 30, 30);
+    const u = unionBox(findAlphaComponents(alpha, W2, H2));
+    expect(u.x0).toBe(5);
+    expect(u.y0).toBe(5);
+    expect(u.x1).toBe(89); // 60 + 30 - 1
+    expect(u.y1).toBe(39); // 10 + 30 - 1
+  });
+
+  it('πετά σε κενό πίνακα (αντί για Infinity bbox)', () => {
+    expect(() => unionBox([])).toThrow(/μη-κενός/);
   });
 });

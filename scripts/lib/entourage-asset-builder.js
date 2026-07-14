@@ -20,7 +20,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const sharp = require('sharp');
 
-const { findAlphaComponents } = require('./alpha-connected-components');
+const { findAlphaComponents, unionBox } = require('./alpha-connected-components');
 
 /** Μέγιστη πλευρά του full-size sprite. Πάνω από αυτό δεν κερδίζει τίποτα στην κάτοψη. */
 const MAX_FULL_PX = 1024;
@@ -43,11 +43,48 @@ function listTifs(dir, filterStems) {
     .sort();
 }
 
-async function processFile({ prefix, group, dir, file, outRoot, repoRoot, manifest, logger }) {
+/** Κόβει ένα bbox σε full + thumb WebP και καταχωρεί την εγγραφή manifest. Ένα σημείο εγγραφής. */
+async function emitSprite({ abs, box, id, group, index, outRoot, repoRoot, manifest }) {
+  const region = { left: box.x0, top: box.y0, width: box.width, height: box.height };
+
+  await sharp(abs)
+    .extract(region)
+    .resize({ width: MAX_FULL_PX, height: MAX_FULL_PX, fit: 'inside', withoutEnlargement: true })
+    .webp({ quality: WEBP_QUALITY, alphaQuality: 100 })
+    .toFile(path.join(outRoot, `${id}.webp`));
+
+  await sharp(abs)
+    .extract(region)
+    .resize({ width: MAX_THUMB_PX, height: MAX_THUMB_PX, fit: 'inside', withoutEnlargement: true })
+    .webp({ quality: WEBP_THUMB_QUALITY, alphaQuality: 100 })
+    .toFile(path.join(outRoot, `${id}.thumb.webp`));
+
+  manifest.push({
+    id,
+    group,
+    srcFile: path.relative(repoRoot, abs).replace(/\\/g, '/'),
+    index,
+    widthPx: box.width,
+    heightPx: box.height,
+    aspect: Number((box.width / box.height).toFixed(4)),
+  });
+}
+
+async function processFile({ prefix, group, dir, file, outRoot, repoRoot, manifest, modeByStem, logger }) {
   const stem = path.basename(file, path.extname(file));
   const abs = path.join(dir, file);
-  const image = sharp(abs);
-  const meta = await image.metadata();
+
+  // Μερικά TIF έχουν εξωτικά channels (layered/spot, >4 samples/pixel) που το libvips ΔΕΝ
+  // αποκωδικοποιεί. Τα προσπερνάμε αντί να κρασάρει όλο το build (belt-and-suspenders).
+  let image;
+  let meta;
+  try {
+    image = sharp(abs);
+    meta = await image.metadata();
+  } catch (err) {
+    logger.warn(`  ⚠ ${file}: μη αναγνώσιμο (${err.message}) — παραλείπεται`);
+    return 0;
+  }
 
   if (!meta.hasAlpha) {
     logger.warn(`  ⚠ ${file}: χωρίς alpha — παραλείπεται (δεν είναι cut-out)`);
@@ -56,35 +93,31 @@ async function processFile({ prefix, group, dir, file, outRoot, repoRoot, manife
 
   const alpha = await image.clone().extractChannel(3).raw().toBuffer();
   const boxes = findAlphaComponents(alpha, meta.width, meta.height);
-
-  for (let i = 0; i < boxes.length; i++) {
-    const box = boxes[i];
-    const id = spriteId(prefix, group, stem, i);
-    const region = { left: box.x0, top: box.y0, width: box.width, height: box.height };
-
-    await sharp(abs)
-      .extract(region)
-      .resize({ width: MAX_FULL_PX, height: MAX_FULL_PX, fit: 'inside', withoutEnlargement: true })
-      .webp({ quality: WEBP_QUALITY, alphaQuality: 100 })
-      .toFile(path.join(outRoot, `${id}.webp`));
-
-    await sharp(abs)
-      .extract(region)
-      .resize({ width: MAX_THUMB_PX, height: MAX_THUMB_PX, fit: 'inside', withoutEnlargement: true })
-      .webp({ quality: WEBP_THUMB_QUALITY, alphaQuality: 100 })
-      .toFile(path.join(outRoot, `${id}.thumb.webp`));
-
-    manifest.push({
-      id,
-      group,
-      srcFile: path.relative(repoRoot, abs).replace(/\\/g, '/'),
-      index: i + 1,
-      widthPx: box.width,
-      heightPx: box.height,
-      aspect: Number((box.width / box.height).toFixed(4)),
-    });
+  if (boxes.length === 0) {
+    logger.warn(`  ⚠ ${file}: καμία νησίδα πάνω από το κατώφλι — παραλείπεται`);
+    return 0;
   }
 
+  // Σύνθεση: εκπέμπει ΚΑΙ το ολόκληρο σετ (id `…-0`, kind⇒composition) ΚΑΙ, αν υπάρχουν
+  // πολλές νησίδες, τα μεμονωμένα μέρη του (`…-1..N`, kind⇒individual). Μία νησίδα = το σετ
+  // δεν έχει εσωτερικό alpha κενό ⇒ μόνο το ολόκληρο (το μέρος ταυτίζεται· κανένα διπλότυπο).
+  if (modeByStem?.[stem] === 'composition') {
+    // spriteId(…, -1) → `…-0` = το ολόκληρο. Τα μέρη κρατούν index 1..N.
+    await emitSprite({ abs, box: unionBox(boxes), id: spriteId(prefix, group, stem, -1), group, index: 0, outRoot, repoRoot, manifest });
+    if (boxes.length >= 2) {
+      for (let i = 0; i < boxes.length; i++) {
+        await emitSprite({ abs, box: boxes[i], id: spriteId(prefix, group, stem, i), group, index: i + 1, outRoot, repoRoot, manifest });
+      }
+    }
+    const emitted = boxes.length >= 2 ? boxes.length + 1 : 1;
+    logger.log(`  ${file} → σύνθεση: ${emitted} sprite(s) (1 ολόκληρο${boxes.length >= 2 ? ` + ${boxes.length} μέρη` : ''})`);
+    return emitted;
+  }
+
+  // variant-sheet / single / (χωρίς mode): μόνο τα components.
+  for (let i = 0; i < boxes.length; i++) {
+    await emitSprite({ abs, box: boxes[i], id: spriteId(prefix, group, stem, i), group, index: i + 1, outRoot, repoRoot, manifest });
+  }
   logger.log(`  ${file} → ${boxes.length} sprite(s)`);
   return boxes.length;
 }
@@ -98,6 +131,10 @@ async function processFile({ prefix, group, dir, file, outRoot, repoRoot, manife
  * @param {string} config.idPrefix  prefix των ids ('furn' | 'ppl' | 'veh' | …)
  * @param {string} config.repoRoot  για relative `srcFile` στο manifest
  * @param {string[]} [config.filterStems]  αν δοθεί, μόνο αυτά τα stems (pilot mode)
+ * @param {Record<string,'composition'|'variant-sheet'|'single'>} [config.modeByStem]
+ *        ανά stem· `composition` ⇒ εκπομπή ολόκληρου σετ (`…-0`) + μερών. Αλλιώς μόνο μέρη.
+ * @param {boolean} [config.mergeManifest]  αν true, συγχωνεύει με το υπάρχον manifest του
+ *        outRoot (join by id) αντί να το αντικαταστήσει — για incremental προσθήκη ids.
  * @param {Console} [config.logger]
  * @returns {Promise<{files: number, manifest: object[]}>}
  */
@@ -107,11 +144,13 @@ async function buildEntouragePack({
   idPrefix,
   repoRoot,
   filterStems,
+  modeByStem,
+  mergeManifest = false,
   logger = console,
 }) {
   fs.mkdirSync(outRoot, { recursive: true });
 
-  const manifest = [];
+  const fresh = [];
   let files = 0;
 
   for (const { group, dir } of sources) {
@@ -119,17 +158,26 @@ async function buildEntouragePack({
     if (tifs.length === 0) continue;
     logger.log(`\n[${group}] ${tifs.length} αρχεία — ${path.relative(repoRoot, dir)}`);
     for (const file of tifs) {
-      await processFile({ prefix: idPrefix, group, dir, file, outRoot, repoRoot, manifest, logger });
+      await processFile({ prefix: idPrefix, group, dir, file, outRoot, repoRoot, manifest: fresh, modeByStem, logger });
       files++;
     }
   }
 
-  manifest.sort((a, b) => a.id.localeCompare(b.id));
   const manifestPath = path.join(outRoot, 'manifest.json');
+  let manifest = fresh;
+  if (mergeManifest && fs.existsSync(manifestPath)) {
+    const existing = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    const freshIds = new Set(fresh.map((m) => m.id));
+    const kept = existing.filter((m) => !freshIds.has(m.id));
+    manifest = kept.concat(fresh);
+    logger.log(`\n   merge: ${kept.length} υπάρχοντα + ${fresh.length} νέα/ανανεωμένα`);
+  }
+
+  manifest.sort((a, b) => a.id.localeCompare(b.id));
   fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
 
   logger.log(
-    `\n✅ ${files} αρχεία → ${manifest.length} sprites → ${path.relative(repoRoot, outRoot)}`,
+    `\n✅ ${files} αρχεία → ${fresh.length} νέα sprites → ${path.relative(repoRoot, outRoot)} (manifest: ${manifest.length})`,
   );
   logger.log(`   manifest: ${path.relative(repoRoot, manifestPath)}`);
 

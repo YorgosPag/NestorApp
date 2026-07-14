@@ -8,7 +8,11 @@
  * USAGE (super_admin, one-time ανά έκδοση πακέτου):
  * ```
  * node scripts/upload-asset-pack.js furniture-plan-2d
+ * node scripts/upload-asset-pack.js furniture-plan-2d --only furn-set-   # ΜΟΝΟ νέα ids
  * ```
+ *
+ * `--only <prefix>` = ανεβάζει μόνο τα .webp που ξεκινούν με το prefix (incremental add:
+ * τα ήδη ανεβασμένα assets μένουν άθικτα στο Storage, δεν ξανα-ανεβαίνουν).
  *
  * ⚠️ Η ΕΚΔΟΣΗ ΔΕΝ ΔΙΝΕΤΑΙ ΑΠΟ CLI — διαβάζεται από το `asset-pack-registry.ts`. Αν την
  * περνούσαμε χειροκίνητα, θα μπορούσε να αποκλίνει από το registry και τα αρχεία θα ανέβαιναν σε
@@ -51,8 +55,21 @@ function readPackVersion(packId) {
   return entry[1];
 }
 
+/** `--only <prefix>` → μόνο τα .webp με αυτό το prefix (incremental)· αλλιώς όλα. */
+function parseOnlyPrefix(argv) {
+  const i = argv.indexOf('--only');
+  if (i === -1) return null;
+  const prefix = argv[i + 1];
+  if (!prefix || prefix.startsWith('--')) {
+    console.error('❌ Το --only χρειάζεται prefix, π.χ. --only furn-set-');
+    process.exit(1);
+  }
+  return prefix;
+}
+
 async function main() {
   const packId = process.argv[2];
+  const onlyPrefix = parseOnlyPrefix(process.argv.slice(2));
 
   console.log('');
   console.log('═══════════════════════════════════════════════════════════════════');
@@ -82,6 +99,7 @@ async function main() {
   const jobs = fs
     .readdirSync(sourceDir)
     .filter((file) => file.endsWith('.webp'))
+    .filter((file) => !onlyPrefix || file.startsWith(onlyPrefix))
     .map((file) => ({
       localPath: path.join(sourceDir, file),
       remotePath: `${remotePrefix}/${file}`,
@@ -91,6 +109,7 @@ async function main() {
   console.log(`📦 Pack:    ${packId} @ ${version}`);
   console.log(`📁 Source:  ${sourceDir}`);
   console.log(`🎯 Target:  ${remotePrefix}/`);
+  console.log(`🔎 Φίλτρο:  ${onlyPrefix ? `--only ${onlyPrefix}` : '(όλα τα .webp)'}`);
   console.log(`📋 Αρχεία:  ${jobs.length}`);
   console.log('');
 

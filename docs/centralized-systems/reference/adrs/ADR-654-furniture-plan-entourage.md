@@ -125,8 +125,22 @@ unit-tested). TIF → split → crop → WebP (alpha, max 1024px) + thumb 256px 
 - commit + live ghost τρέχουν το **ίδιο** `applyImageGripDrag` (preview ≡ commit εξ ορισμού), μέσω
   `commitParametricAnnotationGripDrag` → `UpdateEntityCommand` (flat params, χωρίς geometry cache).
 
+**Λόγος πλευρών (απόφαση Giorgio, 2026-07-14)**: η γωνιακή λαβή **κλειδώνει** τον λόγο πλευρών
+(uniform scale — καμία παραμόρφωση)· το **Shift τον ελευθερώνει** για ελεύθερο stretch
+(Figma/Illustrator/PowerPoint parity — μια εικόνα σπάνια θέλει παραμόρφωση, άρα το ασφαλές είναι το
+default). Η αναλογική συστολή ζει στο **κοινό** `rect-grip-engine` (`lockAspect`, κυρίαρχος άξονας),
+όχι ιδιωτικά στην εικόνα· ο ζωντανός Shift διαβάζεται από το `ShiftKeyTracker` **και** στο commit
+**και** στο ghost → preview ≡ commit.
+
 Ισχύει **ταυτόχρονα** για entourage, furniture-plan sprites και τη σφραγίδα πινακίδας (ADR-651) —
 μοιράζονται 100% τον ίδιο renderer/hit-test/grip κώδικα.
+
+> **Επακόλουθο — ADR-587 Φ10 (2026-07-14).** Η ρίζα #2 δεν ήταν ατύχημα της εικόνας: τα τρία seams
+> που την έκρυψαν (`Bounds` / `hit-test-entity-model` / `performDetailedHitTest`) **δεν είχαν
+> coverage test**, σε αντίθεση με 16 άλλα seams του repo. Η Φ10 τα έκανε introspectable registries
+> δεμένα στο `RENDERABLE_ENTITY_TYPES` → πλέον **σπάνε στο build**. Στην πορεία αποκάλυψε **δύο
+> ακόμη ζωντανά θύματα του ίδιου μοτίβου**: `wall-covering` και `railing` ζωγραφίζονταν αλλά **δεν
+> επιλέγονταν με κλικ**. Βλ. ADR-587 §5 Φ10.
 
 ## 10. Εκκρεμεί
 

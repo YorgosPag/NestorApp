@@ -110,8 +110,36 @@ function findAlphaComponents(alpha, width, height, options = {}) {
     .sort((a, b) => a.y0 - b.y0 || a.x0 - b.x0);
 }
 
+/**
+ * Το bbox που περικλείει ΟΛΕΣ τις νησίδες — το «ολόκληρο» sprite μιας σύνθεσης
+ * (τραπεζαρία + καρέκλες ως ένα σετ). Καθαρή ένωση min/max πάνω στα ήδη υπολογισμένα
+ * components· δεν ξανα-σκανάρει alpha. `area` = άθροισμα των αδιαφανών pixels.
+ *
+ * @param {ComponentBox[]} boxes μη-κενός πίνακας από `findAlphaComponents`
+ * @returns {ComponentBox}
+ */
+function unionBox(boxes) {
+  if (!Array.isArray(boxes) || boxes.length === 0) {
+    throw new Error('unionBox: απαιτείται μη-κενός πίνακας από components');
+  }
+  let x0 = Infinity;
+  let y0 = Infinity;
+  let x1 = -Infinity;
+  let y1 = -Infinity;
+  let area = 0;
+  for (const b of boxes) {
+    if (b.x0 < x0) x0 = b.x0;
+    if (b.y0 < y0) y0 = b.y0;
+    if (b.x1 > x1) x1 = b.x1;
+    if (b.y1 > y1) y1 = b.y1;
+    area += b.area;
+  }
+  return { x0, y0, x1, y1, width: x1 - x0 + 1, height: y1 - y0 + 1, area };
+}
+
 module.exports = {
   findAlphaComponents,
+  unionBox,
   DEFAULT_ALPHA_THRESHOLD,
   DEFAULT_MIN_AREA_FRACTION,
 };
