@@ -73,6 +73,9 @@ export function buildEntityModelFromDxf(
         ...(entity.bulges && { bulges: entity.bulges }),
         ...(entity.startWidths && { startWidths: entity.startWidths }),
         ...(entity.endWidths && { endWidths: entity.endWidths }),
+        // ADR-650 M3 — non-destructive smooth-display flag (topographic contours).
+        // Absent/false ⇒ omitted (exact chords); PolylineRenderer checks `=== true`.
+        ...(entity.smoothDisplay && { smoothDisplay: entity.smoothDisplay }),
       };
     case 'arc':
       return {

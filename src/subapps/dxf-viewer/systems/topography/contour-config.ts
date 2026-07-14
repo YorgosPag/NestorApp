@@ -10,6 +10,8 @@
  * formatted in metres for the surveyor (÷1000), the field convention.
  */
 
+import type { LineweightMm } from '../../types/scene-types';
+
 /** Canonical contour-generation parameters. */
 export interface ContourConfig {
   /** Minor contour interval in canonical mm (e.g. 500 = 0.5 m). Must be > 0. */
@@ -60,6 +62,16 @@ export const TOPO_LABEL_LAYER_NAME = 'TOPO-CONTOUR-LABEL' as const;
 export const TOPO_MINOR_COLOR = '#B5651D' as const; // light brown
 export const TOPO_MAJOR_COLOR = '#8B4513' as const; // saddle brown (heavier)
 export const TOPO_LABEL_COLOR = '#8B4513' as const;
+
+/**
+ * ADR-656 M9 — index/intermediate lineweights (mm). The universal cartographic
+ * rule (Civil 3D / USGS / ΤΕΕ): MAJOR (index) contours are drawn ~2.5–3× heavier
+ * than the MINOR (intermediate) ones so the reader can count elevation quickly.
+ * ISO catalog values (`LineweightMm`). Applied ByLayer — the contour entities
+ * stay lineweight-free and inherit these via the `resolveEntityStyle` cascade.
+ */
+export const TOPO_MAJOR_LINEWEIGHT_MM: LineweightMm = 0.5; // index — heavy
+export const TOPO_MINOR_LINEWEIGHT_MM: LineweightMm = 0.18; // intermediate — hairline (~2.8×)
 
 /** Default text height (mm) for elevation labels. */
 export const TOPO_LABEL_HEIGHT_MM = 300 as const;

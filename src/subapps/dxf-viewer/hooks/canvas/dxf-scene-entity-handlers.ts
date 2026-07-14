@@ -108,9 +108,10 @@ export const TO_DXF_HANDLERS: Partial<Record<EntityType, ToDxfHandler>> = {
     // ADR-510 Φ3b/Φ3c — carry the per-segment arc/width parallel arrays through
     // to the canvas/grip path (index-aligned with vertices) so arcs render and
     // arc-midpoint grips appear. Absent ⇒ all-straight (back-compat).
+    // ADR-650 M3 — `smoothDisplay` (τοπογραφικές ισοϋψείς) περνά μέσω του `e` στο toPolylineUnion.
     const e = entity as typeof entity & {
       vertices: Point2D[]; closed: boolean;
-      bulges?: number[]; startWidths?: number[]; endWidths?: number[];
+      bulges?: number[]; startWidths?: number[]; endWidths?: number[]; smoothDisplay?: boolean;
     };
     return toPolylineUnion(base, e.vertices, e.closed, e);
   },
@@ -128,9 +129,10 @@ export const TO_DXF_HANDLERS: Partial<Record<EntityType, ToDxfHandler>> = {
   lwpolyline: (entity, base) => {
     // ADR-186: LWPolyline → render as standard polyline.
     // ADR-510 Φ3b/Φ3c — carry bulge/width parallel arrays (see 'polyline' case).
+    // ADR-650 M3 — `smoothDisplay` (τοπογραφικές ισοϋψείς) περνά μέσω του `e` στο toPolylineUnion.
     const e = entity as typeof entity & {
       vertices: Point2D[]; closed?: boolean;
-      bulges?: number[]; startWidths?: number[]; endWidths?: number[];
+      bulges?: number[]; startWidths?: number[]; endWidths?: number[]; smoothDisplay?: boolean;
     };
     return toPolylineUnion(base, e.vertices, e.closed ?? false, e);
   },

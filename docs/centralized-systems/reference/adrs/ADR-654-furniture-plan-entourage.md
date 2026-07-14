@@ -154,6 +154,40 @@ default). Η αναλογική συστολή ζει στο **κοινό** `rec
 
 ## Changelog
 
+### 2026-07-14 — Λαβές entourage = wall parity: +3 μεσοπλευρικές (E/S/W)
+
+Ο Giorgio ζήτησε οι λαβές των entourage (έπιπλα-κάτοψης / άνθρωποι / δέντρα / οχήματα — **όλα
+`ImageEntity`**) να γίνουν parity με τον τοίχο (γωνίες + μέσα-πλευρών + move + rotation). Επειδή ΟΛΑ
+είναι `ImageEntity`, η αλλαγή έγινε **ΜΙΑ φορά** στο `getImageGrips` → κάλυψε ταυτόχρονα κάθε οικογένεια.
+
+- **SSoT audit (grep) — απόφαση**: το handoff πρότεινε `centred-box-grips`, αλλά το audit έδειξε ότι
+  **ΔΕΝ βγάζει mid-edges** (μόνο rotation+4γωνίες), έχει αφαιρέσει το MOVE, είναι mm-scaled + centre-anchored
+  και θα χαλούσε το aspect-lock (ADR-654). Το σωστό SSoT υπάρχει ήδη: η εικόνα κάθεται **στον ίδιο**
+  βαθύτερο πυρήνα `rect-frame` + `rect-grip-engine` με τοίχο/block. Precedent: **BLOCK (ADR-641)** πρόσθεσε
+  `block-edge-{n,e,s,w}` ακριβώς έτσι. → reuse του **ίδιου** `applyRectEdgeDrag` + `rectEdgeWorld`,
+  **μηδέν νέα γεωμετρία, μηδέν διπλότυπο** (jscpd:diff καθαρό).
+- **Θέση rotation (Giorgio 2026-07-14)**: το `image-rotation` grip **μένει στο μέσο της πάνω ακμής** —
+  άρα το `image-edge-n` **δεν** προστίθεται (θα συνέπιπτε). Μεσοπλευρικές = **3** (E/S/W), όχι 4.
+- **Αλλαγές (μόνο image path)**: `ImageGripKind` += `image-edge-{e,s,w}` (`grip-kinds-primitives.ts`)·
+  `getImageGrips` εκπέμπει 3 midpoint grips (index 6-8, `type:'midpoint'` → gated «Midpoints», wall parity)·
+  `applyImageGripDrag` δρομολογεί edge kinds → `applyRectEdgeDrag` (1-άξονα stretch, αντίθετη ακμή σταθερή,
+  μη-ομοιόμορφο — καμία aspect-lock). Το commit (`grip-image-commit.ts`) + preview + glyph registry **αμετάβλητα**
+  (kind-agnostic dispatch· edges → default 'square' glyph, όπως block/corners).
+- **Bugfix render (Giorgio 2026-07-14: «δεν εμφανίζονται τα σημάδια περιστροφής & μετακίνησης»)**: ο
+  `ImageRenderer.getGrips` γύρναγε σκέτο `getImageGrips` **χωρίς `shape`** → το `GripPhaseRenderer`
+  (`grip.shape ?? 'square'`) ζωγράφιζε ΟΛΕΣ τις λαβές ως τετράγωνα, οπότε τα `image-move`/`image-rotation`
+  δεν έδειχναν σταυρό/καμπύλο σήμα. Fix: ανάθεση `shape` μέσω του κοινού `gripGlyphShape(gripKindOf(g,'image'))`
+  — **ίδιο pattern με ScaleBar/OpeningInfoTag/Line/Text renderers** (spread → διατηρεί `gripKind`/`movesEntity`).
+- **Tests**: `image-grips.test.ts` (6→9 λαβές + 4 edge-drag: opposite-edge-fixed / non-uniform / rotated) +
+  `ImageRenderer.test.ts` (render ≡ interaction: 9 λαβές + **glyph shapes** move/rotation/7×square). **28/28** πράσινα.
+- **Hot-grip περιστροφή (Giorgio 2026-07-14: «να μένει κόκκινο, να ορίζω κέντρο, τόξα πράσινο/κόκκινο όπως ο τοίχος»)**:
+  το `image-rotation` έλειπε από το `HOT_GRIP_OP_REGISTRY` (`wall-hot-grip-fsm.ts`) → έμενε press-drag.
+  Μία γραμμή `'image-rotation': 'rotate'` (ίδιο opt-in με scale-bar/opening-info-tag) → click → armed/κόκκινο →
+  όρισε κέντρο → free spin + τόξα αναφοράς. Το commit (`commitParametricAnnotationGripDrag`) + το ghost
+  (`apply-parametric-annotation-preview`) **ήδη** διάβαζαν το `BimRotateHotGripStore` pivot και το περνούσαν
+  στο pivot-aware `applyImageGripDrag` — **καμία άλλη σύνδεση**. FSM test +1 describe (56 πράσινα).
+- **Boy-Scout**: διόρθωση stale `@see` (`ADR-654-entourage-library.md` → `-furniture-plan-entourage.md`).
+
 ### 2026-07-14 — M7 Φάση Γ2: συνθέσεις & νέα έπιπλα (images_4)
 
 Το `images_4` (μεικτή συλλογή entourage, ~580 TIF) αξιοποιήθηκε ΜΕΣΑ στο **ίδιο** pack

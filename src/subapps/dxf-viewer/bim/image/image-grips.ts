@@ -16,6 +16,10 @@
  *   2..5 → SIZE λαβές στις 4 γωνίες (σειρά `RECT_CORNERS` = NE/NW/SW/SE). Το drag κρατά την
  *          ΑΝΤΙΘΕΤΗ γωνία σταθερή (κοινός `rect-grip-engine`, ίδια σημασιολογία με τοίχο/
  *          κολόνα/block) → πατάει `position` + `width` + `height`.
+ *   6..8 → SIZE μεσοπλευρικές λαβές (E/S/W — ΟΧΙ πάνω, όπου κάθεται το ROTATION grip). 1-άξονα
+ *          stretch με την ΑΝΤΙΘΕΤΗ ακμή σταθερή (κοινός `rect-grip-engine` `applyRectEdgeDrag`,
+ *          ΙΔΙΟ code με τοίχο/block) → `position` + `width`/`height`. `type:'midpoint'` → gated
+ *          από το «Midpoints» preference (wall parity)· μη-ομοιόμορφο scale εξ ορισμού.
  *
  * ΜΗΔΕΝ νέα γεωμετρία: το ορθογώνιο περιγράφεται με το κοινό `RectFrame` (`rect-frame.ts`),
  * το resize τρέχει στον κοινό `rect-grip-engine`, η περιστροφή στο κοινό `rotateEntityGripDragDeg`.
@@ -26,15 +30,15 @@
  * @see bim/grips/rect-frame.ts — RectFrame + corner/edge world readers (shared)
  * @see bim/grips/rect-grip-engine.ts — opposite-corner-fixed resize (shared)
  * @see rendering/entities/shared/image-rect-vertices.ts — το vertex SSoT του render/hit-test
- * @see docs/centralized-systems/reference/adrs/ADR-654-entourage-library.md
+ * @see docs/centralized-systems/reference/adrs/ADR-654-furniture-plan-entourage.md
  */
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { GripInfo, ImageGripKind } from '../../hooks/grip-types';
 import type { ImageEntity } from '../../types/image';
 import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
-import { RECT_CORNERS, rectCornerWorld, rectEdgeWorld, type RectCorner, type RectFrame } from '../grips/rect-frame';
-import { applyRectCornerDrag } from '../grips/rect-grip-engine';
+import { RECT_CORNERS, rectCornerWorld, rectEdgeWorld, type RectCorner, type RectEdge, type RectFrame } from '../grips/rect-frame';
+import { applyRectCornerDrag, applyRectEdgeDrag } from '../grips/rect-grip-engine';
 import { rotateVector, rotateEntityGripDragDeg } from '../grips/grip-math';
 
 /** Τα grip kinds της εικόνας (δρομολογούνται από το `PARAMETRIC_COMMIT_HANDLERS`). */
@@ -52,6 +56,22 @@ const IMAGE_CORNER_KINDS: readonly ImageGripKind[] = [
 const CORNER_BY_KIND: Readonly<Partial<Record<ImageGripKind, RectCorner>>> = Object.fromEntries(
   IMAGE_CORNER_KINDS.map((kind, i) => [kind, RECT_CORNERS[i]]),
 );
+
+/**
+ * Μεσοπλευρικά kinds — 3 πλευρές (E/S/W)· ΟΧΙ πάνω (Ν), όπου κάθεται το `image-rotation` grip
+ * (Giorgio 2026-07-14). Σταθερή σειρά → grip indices 6..8.
+ */
+const IMAGE_EDGE_KINDS: readonly ImageGripKind[] = ['image-edge-e', 'image-edge-s', 'image-edge-w'];
+
+/**
+ * kind → `RectEdge` (τοπικός άξονας + πρόσημο): local +X = πλάτος, +Y = ύψος. E=+X, W=−X, S=−Y.
+ * Το +Y (πάνω) παραλείπεται σκόπιμα — εκεί είναι η λαβή περιστροφής.
+ */
+const EDGE_BY_KIND: Readonly<Partial<Record<ImageGripKind, RectEdge>>> = {
+  'image-edge-e': { axis: 'x', sign: 1 },
+  'image-edge-s': { axis: 'y', sign: -1 },
+  'image-edge-w': { axis: 'x', sign: -1 },
+};
 
 /** Ελάχιστη ημι-διάσταση (μονάδες σχεδίου) — απλώς εμποδίζει το κουτί να μηδενιστεί/αναποδογυρίσει. */
 const MIN_HALF = 1e-6;
@@ -119,6 +139,15 @@ export function getImageGrips(entity: ImageEntity): GripInfo[] {
       gripKind: { on: 'image', kind: IMAGE_CORNER_KINDS[i] },
     });
   });
+  // Μεσοπλευρικές λαβές (3: E/S/W — ΟΧΙ πάνω): `type:'midpoint'` → helper, gated από το
+  // «Midpoints» grip-type preference (wall/block parity)· επιβιώνει τα toggles ως midpoint.
+  IMAGE_EDGE_KINDS.forEach((kind, i) => {
+    grips.push({
+      entityId: entity.id, gripIndex: 6 + i, type: 'midpoint',
+      position: rectEdgeWorld(frame, EDGE_BY_KIND[kind]!), movesEntity: false,
+      gripKind: { on: 'image', kind },
+    });
+  });
   return grips;
 }
 
@@ -158,6 +187,19 @@ export function applyImageGripDrag(
       ...(patch.position ? { position: patch.position } : {}),
       ...(patch.rotationDeg !== undefined ? { rotation: patch.rotationDeg } : {}),
     };
+  }
+  const edge = EDGE_BY_KIND[kind];
+  if (edge) {
+    // Μεσοπλευρική: 1-άξονα stretch με την ΑΝΤΙΘΕΤΗ ακμή σταθερή (κοινός `rect-grip-engine`).
+    // Καμία aspect-lock — η μεσοπλευρική λαβή είναι εξ ορισμού μη-ομοιόμορφη (Figma/Illustrator
+    // edge handle: τεντώνει ΜΟΝΟ πλάτος Ή ΜΟΝΟ ύψος). Δεν δεσμεύεται σε άξονα από το F8.
+    const nextEdge = applyRectEdgeDrag(
+      imageRectFrame(entity),
+      edge,
+      delta,
+      { minHalfWidth: MIN_HALF, minHalfLength: MIN_HALF },
+    );
+    return frameToImageParams(nextEdge);
   }
   const corner = CORNER_BY_KIND[kind];
   if (!corner) return {};

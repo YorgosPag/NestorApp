@@ -287,6 +287,7 @@ export const generateColumnId = () => enterpriseIdService.generateColumnId();
 export const generateBeamId = () => enterpriseIdService.generateBeamId();
 export const generateFoundationId = () => enterpriseIdService.generateFoundationId();
 export const generateGridGuideDocId = () => enterpriseIdService.generateGridGuideDocId();
+export const generateTopoSurfaceId = () => enterpriseIdService.generateTopoSurfaceId();
 export const generateMepFixtureId = () => enterpriseIdService.generateMepFixtureId();
 export const generateMepSystemId = () => enterpriseIdService.generateMepSystemId();
 export const generateElectricalPanelId = () => enterpriseIdService.generateElectricalPanelId();

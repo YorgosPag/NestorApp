@@ -34,8 +34,11 @@ import type { Entity } from '../../types/entities';
 import type { ImageEntity } from '../../types/image';
 import { isImageEntity } from '../../types/image';
 import { createRectangleVertices } from './shared/geometry-utils';
-// ADR-654 — ΕΝΑ grip SSoT για render + interaction (move / rotation / 4 γωνιακές).
+// ADR-654 — ΕΝΑ grip SSoT για render + interaction (move / rotation / 4 γωνιακές + 3 μεσοπλευρικές).
 import { getImageGrips } from '../../bim/image/image-grips';
+// ADR-397 — glyph shape registry (move cross / rotation arc), ίδιο pattern με κάθε άλλο renderer.
+import { gripGlyphShape } from '../../bim/grips/grip-glyph-registry';
+import { gripKindOf } from '../../hooks/grip-kinds';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { HatchImageCache } from './shared/hatch-image-cache';
 import { imageIntrinsicSize } from './shared/image-intrinsic-size';
@@ -127,10 +130,19 @@ export class ImageRenderer extends BaseEntityRenderer {
    * (`getImageGrips`), κοινό με το `GRIP_PRODUCERS['image']` του interaction registry.
    * Πριν: εδώ ζωγραφίζονταν 8 άτυπες (4 corner + 4 edge) λαβές χωρίς `gripKind`, ενώ το
    * registry δεν είχε producer → `[]` → οι λαβές φαίνονταν αλλά ΔΕΝ μετακινούσαν την εικόνα.
+   *
+   * Το `shape` ανατίθεται ΕΔΩ μέσω του κοινού `gripGlyphShape` registry (ίδιο pattern με
+   * ScaleBar/OpeningInfoTag/Line/Text renderers): `image-move` → σταυρός 4-βελών, `image-rotation`
+   * → καμπύλο βέλος· γωνίες/μεσοπλευρικές → default 'square'. Χωρίς αυτό, το `GripPhaseRenderer`
+   * (`grip.shape ?? 'square'`) ζωγράφιζε ΟΛΕΣ τις λαβές ως τετράγωνα → τα σήματα μετακίνησης/
+   * περιστροφής ΔΕΝ φαίνονταν (Giorgio 2026-07-14).
    */
   getGrips(entity: EntityModel): GripInfo[] {
     if (!isImageEntity(entity as Entity)) return [];
-    return getImageGrips(entity as unknown as ImageEntity);
+    return getImageGrips(entity as unknown as ImageEntity).map((g) => ({
+      ...g,
+      shape: gripGlyphShape(gripKindOf(g, 'image')),
+    }));
   }
 
   /** Fill hit-test (point-in-polygon) — κλικ οπουδήποτε μέσα στην εικόνα την επιλέγει (mirror hatch). */

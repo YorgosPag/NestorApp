@@ -46,11 +46,12 @@ describe('imageRectFrame — corner-anchored → centre-anchored', () => {
 });
 
 describe('getImageGrips', () => {
-  it('6 λαβές: MOVE (κέντρο) + ROTATION (μέσο πάνω ακμής) + 4 γωνιακές', () => {
+  it('9 λαβές: MOVE + ROTATION + 4 γωνιακές + 3 μεσοπλευρικές (E/S/W — ΟΧΙ Ν)', () => {
     const grips = getImageGrips(makeImage());
     expect(grips.map((g) => g.gripKind?.kind)).toEqual([
       'image-move', 'image-rotation',
       'image-corner-ne', 'image-corner-nw', 'image-corner-sw', 'image-corner-se',
+      'image-edge-e', 'image-edge-s', 'image-edge-w',
     ]);
     // MOVE = κέντρο, movesEntity· ROTATION = μέσο πάνω ακμής (x=κέντρο, y=πάνω).
     near(grips[0].position.x, 60);
@@ -59,10 +60,20 @@ describe('getImageGrips', () => {
     near(grips[1].position.x, 60);
     near(grips[1].position.y, 70);
     // Γωνιακές = οι πραγματικές γωνίες του ορθογωνίου (NE, NW, SW, SE).
-    expect(grips.slice(2).map((g) => [g.position.x, g.position.y])).toEqual([
+    expect(grips.slice(2, 6).map((g) => [g.position.x, g.position.y])).toEqual([
       [110, 70], [10, 70], [10, 20], [110, 20],
     ]);
+    // Μεσοπλευρικές = μέσα των πλευρών E (δεξιά), S (κάτω), W (αριστερά)· ΟΧΙ πάνω.
+    expect(grips.slice(6).map((g) => [g.position.x, g.position.y])).toEqual([
+      [110, 45], [60, 20], [10, 45],
+    ]);
     expect(grips.every((g) => g.entityId === 'img_test')).toBe(true);
+  });
+
+  it('οι γωνιακές είναι structural (`corner`), οι μεσοπλευρικές helper (`midpoint`, gated Midpoints)', () => {
+    const grips = getImageGrips(makeImage());
+    expect(grips.slice(2, 6).every((g) => g.type === 'corner')).toBe(true);
+    expect(grips.slice(6).every((g) => g.type === 'midpoint')).toBe(true);
   });
 
   it('όλες οι λαβές είναι tagged με `on: "image"` (αλλιώς δεν δρομολογούνται στο commit)', () => {
@@ -124,6 +135,50 @@ describe('applyImageGripDrag', () => {
     const e = makeImage({ position: { x: 0, y: 0 }, width: 100, height: 50, rotation: 90 });
     // Στις 90° ο τοπικός +X δείχνει world +Y: drag κατά +10 στο world Y → +10 πλάτος.
     const patch = applyImageGripDrag('image-corner-ne', e, { x: -50, y: 100 }, { x: 0, y: 10 }, undefined, true);
+    near(patch.width as number, 110);
+    near(patch.height as number, 50);
+    expect((patch as { rotation?: number }).rotation).toBeUndefined();
+  });
+});
+
+/**
+ * ADR-654 (Giorgio 2026-07-14) — 3 μεσοπλευρικές λαβές (E/S/W). Μη-ομοιόμορφο stretch: τεντώνει
+ * ΜΟΝΟ τη μία διάσταση, με την ΑΝΤΙΘΕΤΗ ακμή σταθερή (κοινός `rect-grip-engine` `applyRectEdgeDrag`,
+ * ίδιο code με τοίχο/block). Καμία aspect-lock — edge handle = εξ ορισμού μη-ομοιόμορφη.
+ */
+describe('applyImageGripDrag — μεσοπλευρικές λαβές (E/S/W)', () => {
+  it('edge-E → μόνο πλάτος μεγαλώνει, η ΑΡΙΣΤΕΡΗ (W) ακμή μένει καρφωμένη', () => {
+    const e = makeImage(); // BL (10,20), 100×50 → κέντρο (60,45)
+    const patch = applyImageGripDrag('image-edge-e', e, { x: 110, y: 45 }, { x: 20, y: 0 });
+    near(patch.width as number, 120);
+    near(patch.height as number, 50); // ΥΨΟΣ αμετάβλητο (μη-ομοιόμορφο)
+    near(patch.position!.x, 10); // αριστερή ακμή στο x=10 → σταθερή
+    near(patch.position!.y, 20);
+  });
+
+  it('edge-S → μόνο ύψος μεγαλώνει, η ΠΑΝΩ (N) ακμή μένει καρφωμένη', () => {
+    const e = makeImage();
+    const patch = applyImageGripDrag('image-edge-s', e, { x: 60, y: 20 }, { x: 0, y: -10 });
+    near(patch.width as number, 100); // ΠΛΑΤΟΣ αμετάβλητο
+    near(patch.height as number, 60);
+    // Πάνω ακμή (N) = position.y + height → σταθερή στο 70.
+    near(patch.position!.y + (patch.height as number), 70);
+    near(patch.position!.x, 10);
+  });
+
+  it('edge-W → μόνο πλάτος μεγαλώνει, η ΔΕΞΙΑ (E) ακμή μένει καρφωμένη', () => {
+    const e = makeImage();
+    const patch = applyImageGripDrag('image-edge-w', e, { x: 10, y: 45 }, { x: -10, y: 0 });
+    near(patch.width as number, 110);
+    near(patch.height as number, 50);
+    // Δεξιά ακμή (E) = position.x + width → σταθερή στο 110.
+    near(patch.position!.x + (patch.width as number), 110);
+  });
+
+  it('edge-E σε ΠΕΡΙΣΤΡΑΜΜΕΝΗ εικόνα → stretch στον ΤΟΠΙΚΟ άξονα (rotation αμετάβλητη)', () => {
+    const e = makeImage({ position: { x: 0, y: 0 }, width: 100, height: 50, rotation: 90 });
+    // Στις 90° ο τοπικός +X (πλάτος) δείχνει world +Y: drag +10 στο world Y → +10 πλάτος.
+    const patch = applyImageGripDrag('image-edge-e', e, { x: -25, y: 50 }, { x: 0, y: 10 });
     near(patch.width as number, 110);
     near(patch.height as number, 50);
     expect((patch as { rotation?: number }).rotation).toBeUndefined();

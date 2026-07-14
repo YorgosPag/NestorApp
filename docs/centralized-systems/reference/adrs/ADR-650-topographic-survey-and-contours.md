@@ -5,7 +5,8 @@
 - **Category**: DXF Viewer / Topography / Research
 - **Σχετικά**: ADR-635 (culling gap σε geo-referenced συντεταγμένες ±1e6), ADR-462 (canonical mm),
   ADR-057 (`completeEntity` pipeline), ADR-034 (License policy — MIT/Apache/BSD/ISC only),
-  ADR-639 (WebGL line layer), ADR-366 (3D BIM viewer scope), SPEC-3D-004B/C/D (GenArc topographic EXCLUDED)
+  ADR-639 (WebGL line layer), ADR-366 (3D BIM viewer scope), SPEC-3D-004B/C/D (GenArc topographic EXCLUDED),
+  **ADR-656** (presentation & compliance layer: πάχος κύριων ισοϋψών · labels σημείων Χ/Υ/Ζ · κάναβος ΕΓΣΑ87 — M9/M10/M11)
 
 > **Ιστορικό ερευνας**
 > - **Round 1** (2026-07-13): αρχική έρευνα αγοράς + κλαδική ροή + ελληνικό πλαίσιο (§1–§4 παρακάτω).
@@ -1440,6 +1441,44 @@ technologismiki (Ν.4495/2017), xyz.gr/geodimetro.gr/greenbuilding.gr/cityengine
   ένα span-sanity check (SSoT στο `buildReadResult`, όλες οι μορφές), deterministic **ορατή απόδειξη**
   αντί για σιωπηλή μαντεψιά, και **zero regression by construction**: default `m` αμετάβλητο· το `unit`
   ταξίδευε ήδη σωστά — άλλαξε **μόνο** ότι έγινε ορατό & επεξεργάσιμο για κάθε μορφή.
+
+  **Status: M1 + M2 + M3 + M4 + M5 (α+β) + M6 + M7 + M8α + M8β (Α+Β+Γ+Δ+Ε) IMPLEMENTED — M8 ΠΛΗΡΕΣ·
+  moonshots (multiplayer, Gaussian-Splat, COPC streaming) προγραμματισμένα (§12.2).**
+
+- **2026-07-14 (v19)** — **M3 BUGFIX — ο διακόπτης «ακριβείς↔όμορφες» δεν έδειχνε ΚΑΜΙΑ διαφορά**
+  (Phase 2, N.0.1). Ο Giorgio το επιβεβαίωσε ζωντανά: πάτημα «Όμορφες»/«Ακριβείς» → μηδέν ορατή αλλαγή
+  στην κάτοψη, **ούτε** σε πυκνό (`01_simple_xyz`) **ούτε** σε αραιό/γωνιώδες (`05_sparse_terrain`)
+  δείγμα, ούτε μετά από zoom.
+
+  **ΤΟ BUG (whitelist drift — ίδια κλάση με το ADR-557 text-fields):** η καλωδίωση panel → hook →
+  `SetContourDisplayStyleCommand` → `sceneManager.updateEntity({ smoothDisplay })` ήταν **σωστή** — το
+  `smoothDisplay` γραφόταν σωστά στο **SceneModel** entity. Αλλά η **προβολή** SceneModel → `DxfScene` →
+  `EntityModel` γίνεται σε **δύο διαδοχικά whitelist στάδια** που αντιγράφουν ρητά πεδία (`vertices`,
+  `closed`, `bulges`, `startWidths`, `endWidths`) — και **κανένα** δεν προωθούσε το `smoothDisplay`:
+  - **Στάδιο 1** (SceneModel → DxfScene): `toPolylineUnion` (`dxf-scene-entity-projections.ts`) — κοινό
+    SSoT και για τα δύο arms (`polyline` + `lwpolyline`→polyline κατά ADR-186). **Πρώτο σημείο απώλειας.**
+  - **Στάδιο 2** (DxfScene → EntityModel): `buildEntityModelFromDxf` polyline case
+    (`dxf-renderer-entity-model.ts`).
+
+  Ο `PolylineRenderer.render` διαβάζει `smoothDisplay === true` (`:102`, μέσω cast) — αλλά επειδή κανένα
+  upstream στάδιο δεν το προωθούσε, ο κλάδος `getSmoothedDisplayPath(...)` ήταν **de facto νεκρός** σε
+  ΟΛΑ τα canvas paths (normal-state bitmap **και** interactive overlay). Γι' αυτό «καμία διαφορά, πάντα».
+  **Δεν** ήταν το bitmap cache (ADR-040) — το `updateEntity` παράγει νέο scene reference, ο κάμβας
+  ξαναζωγραφίζει σωστά — **ούτε** ο αριθμός κορυφών (το πυκνό δείγμα θα έδειχνε καμπύλες αν έφτανε το flag).
+
+  **Η ΔΙΟΡΘΩΣΗ (3 σημεία, όλα whitelist SSoT — falsy ⇒ omitted, «exact»):**
+  - `toPolylineUnion` (`dxf-scene-entity-projections.ts`) — `arrays` param + return προωθούν
+    `smoothDisplay` (mirror του `bulges`/`startWidths` pattern)· τα δύο handler arms
+    (`dxf-scene-entity-handlers.ts`) εκθέτουν το πεδίο στο cast τους.
+  - `DxfPolyline` (`dxf-types.ts`) — νέο προαιρετικό `smoothDisplay?: boolean` (ώστε το στάδιο 2 να το
+    βλέπει type-safe).
+  - `buildEntityModelFromDxf` polyline case (`dxf-renderer-entity-model.ts`) — προώθηση στο `EntityModel`.
+
+  **SSoT — τι ΔΕΝ ξαναγράφτηκε:** ο curve builder (`geometry-smooth-display.ts`), το command, το hook, το
+  `collectSmoothableContourIds`, ο `BaseEntity.smoothDisplay` ορισμός — όλα σωστά, αμετάβλητα. Το πρόβλημα
+  ήταν **αποκλειστικά** τα δύο projection whitelists που ξεχνούσαν ένα πεδίο. **Καμία αλλαγή στο bitmap
+  cache key** (το `smoothDisplay` είναι content που ήδη invalidate-άρει μέσω νέου scene reference —
+  ADR-040 cardinal rule #3 ανέγγιχτο).
 
   **Status: M1 + M2 + M3 + M4 + M5 (α+β) + M6 + M7 + M8α + M8β (Α+Β+Γ+Δ+Ε) IMPLEMENTED — M8 ΠΛΗΡΕΣ·
   moonshots (multiplayer, Gaussian-Splat, COPC streaming) προγραμματισμένα (§12.2).**

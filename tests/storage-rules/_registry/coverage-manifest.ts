@@ -164,13 +164,31 @@ export const STORAGE_RULES_COVERAGE: readonly StorageCoverageEntry[] = [
   },
 
   // -------------------------------------------------------------------------
-  // Path 3: CAD files (ownership-based, super_admin can read/delete but not write)
-  // storage.rules lines 390-401
+  // Path 3: Topographic survey blobs — ADR-650
+  // storage.rules lines 394-401
+  //
+  // Ο ορισμός μιας τοπογραφικής επιφάνειας όταν το point cloud ξεπερνά το όριο
+  // του Firestore doc (1 MB) → offload σε JSON blob. Company-scoped, ίδια πύλη
+  // με τα υπόλοιπα company paths — γι' αυτό ξαναχρησιμοποιεί το companyScopedMatrix().
+  // Το write έχει δύο επιπλέον σκέλη (contentType == application/json, size < 100 MB)
+  // που δεν είναι persona-dependent: τα φυλάει το hardening block του suite.
+  // -------------------------------------------------------------------------
+  {
+    pathId: 'topo_surfaces',
+    pattern: 'company_scoped_no_project',
+    rulesRange: [394, 401],
+    testFile: 'tests/storage-rules/suites/topo-surfaces.storage.test.ts',
+    matrix: companyScopedMatrix(),
+  },
+
+  // -------------------------------------------------------------------------
+  // Path 4: CAD files (ownership-based, super_admin can read/delete but not write)
+  // storage.rules lines 409-420
   // -------------------------------------------------------------------------
   {
     pathId: 'cad',
     pattern: 'owner_based',
-    rulesRange: [390, 401],
+    rulesRange: [409, 420],
     testFile: 'tests/storage-rules/suites/cad-files.storage.test.ts',
     matrix: [
       // owner (same_tenant_user uid == path userId)
@@ -193,8 +211,8 @@ export const STORAGE_RULES_COVERAGE: readonly StorageCoverageEntry[] = [
   },
 
   // -------------------------------------------------------------------------
-  // Path 4: Temp uploads (owner-only, NO super_admin bypass on any operation)
-  // storage.rules lines 410-417
+  // Path 5: Temp uploads (owner-only, NO super_admin bypass on any operation)
+  // storage.rules lines 429-436
   //
   // NOTE: The `allow read, write` rule uses `isValidFileSize()` which checks
   // `request.resource.size`. For read operations, `request.resource` is null
@@ -205,7 +223,7 @@ export const STORAGE_RULES_COVERAGE: readonly StorageCoverageEntry[] = [
   {
     pathId: 'temp',
     pattern: 'owner_based_no_superadmin',
-    rulesRange: [410, 417],
+    rulesRange: [429, 436],
     testFile: 'tests/storage-rules/suites/temp-uploads.storage.test.ts',
     matrix: [
       // owner (same_tenant_user uid == path userId)
@@ -228,8 +246,8 @@ export const STORAGE_RULES_COVERAGE: readonly StorageCoverageEntry[] = [
   },
 
   // -------------------------------------------------------------------------
-  // Path 5: Asset packs — ADR-655 gated content libraries
-  // storage.rules lines 495-503
+  // Path 6: Asset packs — ADR-655 gated content libraries
+  // storage.rules lines 514-522
   //
   // Το συμβόλαιο που φυλάει αυτό το suite: **καμία διαδρομή ανάγνωσης από client**.
   // Αν κάποιος «χαλαρώσει» το `allow read: if false` (π.χ. σε `isAuthenticated()`),
@@ -239,7 +257,7 @@ export const STORAGE_RULES_COVERAGE: readonly StorageCoverageEntry[] = [
   {
     pathId: 'asset_packs',
     pattern: 'server_only_read_superadmin_curation',
-    rulesRange: [495, 503],
+    rulesRange: [514, 522],
     testFile: 'tests/storage-rules/suites/asset-packs.storage.test.ts',
     matrix: [
       // super_admin: curation write/delete allowed — read STILL denied (server-only proxy).

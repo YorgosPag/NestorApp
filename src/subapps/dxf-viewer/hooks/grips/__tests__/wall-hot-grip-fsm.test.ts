@@ -303,6 +303,32 @@ describe('ADR-557 — text/mtext hot-grip kinds (rect-box column parity)', () =>
   });
 });
 
+describe('ADR-654 — raster image / entourage rotation hot-grip (wall parity)', () => {
+  it("image-rotation → 'rotate' (opts into the click-armed centre-pick + reference flow)", () => {
+    expect(hotGripOpForKind('image-rotation')).toBe('rotate');
+    expect(isWallHotGripKind('image-rotation')).toBe(true);
+  });
+
+  it('image move / corners / mid-edges stay press-drag (null op)', () => {
+    for (const k of [
+      'image-move',
+      'image-corner-ne', 'image-corner-nw', 'image-corner-sw', 'image-corner-se',
+      'image-edge-e', 'image-edge-s', 'image-edge-w',
+    ]) {
+      expect(hotGripOpForKind(k)).toBeNull();
+      expect(isWallHotGripKind(k)).toBe(false);
+    }
+  });
+
+  // Regression: hotGripKindOf MUST surface the image gripKind, else the rotation never arms the
+  // 6-click FSM → falls back to press-drag WITHOUT the pivot pick + reference arcs (this ADR closes it).
+  it('image-rotation enters hot-grip on mousedown + hotGripKindOf reads the discriminator', () => {
+    const rot = { gripKind: { on: 'image', kind: 'image-rotation' } } as unknown as UnifiedGripInfo;
+    expect(hotGripKindOf(rot)).toBe('image-rotation');
+    expect(resolveHotGripMouseDown('warm', 'image-rotation')).toBe('enter');
+  });
+});
+
 describe('resolveHotGripMouseDown', () => {
   const NON_HOT: UnifiedGripPhase[] = ['idle', 'hovering', 'warm', 'dragging'];
 

@@ -635,6 +635,7 @@
 | **ADR-650** | Τοπογραφικές Αποτυπώσεις & Ισοϋψείς Γραμμές (Έρευνα Αγοράς + Αρχιτεκτονικό Blueprint) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-650-topographic-survey-and-contours.md) |
 | **ADR-651** | Σύστημα Αυτόματης Δημιουργίας Πινακίδων Σχεδίου (Auto Title Block Generator — Έρευνα Αγοράς + Blueprint) | 🔵 PROPOSED | 2026-07-13 | DXF Viewer / Sheets | [📄](./adrs/ADR-651-auto-title-block-generator.md) |
 | **ADR-652** | Block Library (βιβλιοθήκη DXF blocks: έπιπλα/είδη υγιεινής) — M1: τοποθέτηση + in-session «Τα Blocks μου» | 🔵 PROPOSED | 2026-07-13 | DXF Viewer / Content Library | [📄](./adrs/ADR-652-block-library.md) |
+| **ADR-656** | Ελληνικό Τοπογραφικό: Παρουσίαση & Compliance (Ισοϋψείς πάχος · Labels σημείων · Κάναβος ΕΓΣΑ87) — Blueprint M9/M10/M11 | 🟡 BLUEPRINT | 2026-07-14 | DXF Viewer / Topography | [📄](./adrs/ADR-656-greek-topo-presentation-compliance.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -1249,6 +1250,7 @@
 | **ADR-650** | Τοπογραφικές Αποτυπώσεις & Ισοϋψείς Γραμμές (Έρευνα Αγοράς + Αρχιτεκτονικό Blueprint) | ✅ APPROVED | [View](./adrs/ADR-650-topographic-survey-and-contours.md) |
 | **ADR-651** | Σύστημα Αυτόματης Δημιουργίας Πινακίδων Σχεδίου (Auto Title Block Generator — Έρευνα + Blueprint) | 🔵 PROPOSED | [View](./adrs/ADR-651-auto-title-block-generator.md) |
 | **ADR-652** | Block Library — M1: τοποθέτηση + in-session «Τα Blocks μου» | 🔵 PROPOSED | [View](./adrs/ADR-652-block-library.md) |
+| **ADR-656** | Ελληνικό Τοπογραφικό: Παρουσίαση & Compliance (Ισοϋψείς · Labels σημείων · Κάναβος ΕΓΣΑ87) | 🟡 BLUEPRINT | [View](./adrs/ADR-656-greek-topo-presentation-compliance.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

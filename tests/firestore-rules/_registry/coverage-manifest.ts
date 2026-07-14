@@ -59,6 +59,7 @@ import {
   fileTenantFullMatrix,
   floorplanBackgroundsMatrix,
   floorplanOverlaysMatrix,
+  floorplanScopeOwnerOrAdminMatrix,
   photoSharesMatrix,
   textTemplateMatrix,
 } from './coverage-matrices-dxf';
@@ -994,6 +995,19 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     testFile: 'tests/firestore-rules/suites/floorplan-overlays.rules.test.ts',
     rulesRange: [1145, 1170],
     matrix: floorplanOverlaysMatrix(),
+  },
+  {
+    // ADR-650 — per-floor topographic survey definition (1 doc/floorplan).
+    // Read: any same-tenant authenticated user. Create: any tenant member, stamping
+    // their own uid. Update/delete: the creator OR a company admin. Immutables:
+    // companyId, projectId, floorplanId, createdBy, createdAt.
+    // Same rule body as floorplan_grid_guides / floorplan_foundations — those two
+    // graduate from FIRESTORE_RULES_PENDING onto this matrix, not onto a copy.
+    collection: 'floorplan_topo_surfaces',
+    pattern: 'ownership',
+    testFile: 'tests/firestore-rules/suites/floorplan-topo-surfaces.rules.test.ts',
+    rulesRange: [3974, 3994],
+    matrix: floorplanScopeOwnerOrAdminMatrix(),
   },
   {
     // ADR-344 Phase 7.E — DXF Text Engine user-authored text templates.

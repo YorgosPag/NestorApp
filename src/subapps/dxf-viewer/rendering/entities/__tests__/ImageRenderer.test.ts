@@ -159,16 +159,24 @@ describe('ImageRenderer — render smoke', () => {
 
 describe('ImageRenderer — getGrips', () => {
   // ADR-654 — ο renderer ζωγραφίζει ΑΚΡΙΒΩΣ τις λαβές που πιάνει το interaction registry
-  // (κοινό `getImageGrips` SSoT): MOVE (κέντρο) + ROTATION (μέσο πάνω ακμής) + 4 γωνιακές.
-  it('returns the SAME 6 tagged grips as the interaction registry (move + rotation + 4 corners)', () => {
+  // (κοινό `getImageGrips` SSoT): MOVE + ROTATION + 4 γωνιακές + 3 μεσοπλευρικές (E/S/W).
+  it('returns the SAME 9 tagged grips as the interaction registry (move + rotation + 4 corners + 3 edges)', () => {
     const { renderer } = makeRenderer();
     const grips = renderer.getGrips(makeImage({ rotation: 30 }));
-    expect(grips).toHaveLength(6);
+    expect(grips).toHaveLength(9);
     expect(grips.map((g) => g.gripKind?.kind)).toEqual([
       'image-move', 'image-rotation',
       'image-corner-ne', 'image-corner-nw', 'image-corner-sw', 'image-corner-se',
+      'image-edge-e', 'image-edge-s', 'image-edge-w',
     ]);
     expect(grips[0].movesEntity).toBe(true);
+    // ADR-654 — τα glyph shapes ΠΡΕΠΕΙ να ανατίθενται (αλλιώς move/rotation φαίνονται ως τετράγωνα):
+    // move → σταυρός 4-βελών, rotation → καμπύλο βέλος, γωνίες + μεσοπλευρικές → default 'square'.
+    expect(grips.map((g) => g.shape)).toEqual([
+      'move', 'rotation',
+      'square', 'square', 'square', 'square',
+      'square', 'square', 'square',
+    ]);
   });
 
   it('returns [] for non-image entities', () => {

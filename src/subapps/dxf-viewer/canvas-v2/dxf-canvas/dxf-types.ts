@@ -144,6 +144,12 @@ export interface DxfPolyline extends DxfEntity {
   bulges?: number[];
   startWidths?: number[];
   endWidths?: number[];
+  /**
+   * ADR-650 M3 — non-destructive «fitted curve» display flag (topographic contours,
+   * «ακριβείς↔όμορφες»). `vertices` stay EXACT; only the STROKE is a Catmull-Rom curve.
+   * Carried from the SceneModel entity so PolylineRenderer's smooth branch is reachable.
+   */
+  smoothDisplay?: boolean;
 }
 
 export interface DxfArc extends DxfEntity {

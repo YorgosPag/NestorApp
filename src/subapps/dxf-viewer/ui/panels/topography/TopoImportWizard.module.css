@@ -19,7 +19,10 @@
   max-height: 86vh;
   padding: 14px;
   border-radius: 8px;
-  background: var(--background, #1e1e1e);
+  /* --background is stored as raw HSL channels ("220 20% 11%"), so it MUST be wrapped in hsl():
+     bare `var(--background)` yields an invalid value and the dialog renders transparent. Fallback
+     is the dark-theme channel set — this wizard is dark-surfaced (white-alpha borders throughout). */
+  background: hsl(var(--background, 220 20% 11%));
   color: inherit;
   box-shadow: 0 12px 40px rgb(0 0 0 / 45%);
 }

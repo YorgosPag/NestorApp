@@ -250,6 +250,7 @@ export const ENTERPRISE_ID_PREFIXES = {
   BEAM: 'beam',                // floorplan_beams collection — straight/curved/cantilever (3 kinds)
   FOUNDATION: 'fnd',           // floorplan_foundations collection — pad/strip/tie-beam footings (3 kinds) (ADR-436)
   GRID_GUIDE: 'grd',           // floorplan_grid_guides collection — per-floor construction grid doc (ADR-441/189)
+  TOPO_SURFACE: 'topo',        // floorplan_topo_surfaces collection — per-floor topographic surface DEFINITION doc (ADR-650)
   MEP_FIXTURE: 'mepfix',       // floorplan_mep_fixtures collection — point-based MEP fixture (ADR-406, light fixture first)
   MEP_SYSTEM: 'mepsys',        // floorplan_mep_systems collection — logical MEP network (ADR-408, electrical circuit first)
   ELECTRICAL_PANEL: 'elecpnl', // floorplan_electrical_panels collection — point-based electrical panel / circuit source (ADR-408 Φ3)

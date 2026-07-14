@@ -27,7 +27,12 @@ import {
   setTerrain3DStyle,
   subscribeTerrain3D,
 } from '../../../systems/topography/terrain-3d-store';
-import { DEFAULT_CONTOUR_CONFIG } from '../../../systems/topography/contour-config';
+import {
+  getContourConfig,
+  setContourIntervalMm,
+  setContourMajorEvery,
+  subscribeContourConfig,
+} from '../../../systems/topography/contour-config-store';
 import { useContourDisplay } from '../../../systems/topography/useContourDisplay';
 import { TopoImportWizard } from './TopoImportWizard';
 import { TopoCutFillSection } from './TopoCutFillSection';
@@ -76,8 +81,12 @@ export function TopographyPanel(): React.JSX.Element {
   const contourDisplay = useContourDisplay();
   const contourSmooth = contourDisplay.style === 'smooth';
 
-  const [intervalM, setIntervalM] = React.useState(DEFAULT_CONTOUR_CONFIG.intervalMm / 1000);
-  const [majorEvery, setMajorEvery] = React.useState(DEFAULT_CONTOUR_CONFIG.majorEvery);
+  // ADR-650 — contour params live in a persistable SSoT store (contour-config-store),
+  // so the interval/index survive reload and drive the load-time regenerate. LOW-freq
+  // consumer (panel), same contract as the display/terrain stores above.
+  const contourConfig = React.useSyncExternalStore(subscribeContourConfig, getContourConfig, getContourConfig);
+  const intervalM = contourConfig.intervalMm / 1000;
+  const majorEvery = contourConfig.majorEvery;
   const [load, setLoad] = React.useState<LoadInfo | null>(null);
   const [status, setStatus] = React.useState<{ text: string; error: boolean } | null>(null);
   const [wizardOpen, setWizardOpen] = React.useState(false);
@@ -102,18 +111,13 @@ export function TopographyPanel(): React.JSX.Element {
   }, [t]);
 
   const onGenerate = React.useCallback(() => {
-    const config = {
-      ...DEFAULT_CONTOUR_CONFIG,
-      intervalMm: Math.max(1, intervalM * 1000),
-      majorEvery: Math.max(1, Math.round(majorEvery)),
-    };
-    const r = generate(config);
+    const r = generate(getContourConfig());
     if (r.ok) {
       setStatus({ text: t('topography.status.generated', { contours: r.contourCount, entities: r.entityCount }), error: false });
     } else {
       setStatus({ text: t(`topography.error.${r.reason ?? 'no-contours'}`), error: true });
     }
-  }, [generate, intervalM, majorEvery, t]);
+  }, [generate, t]);
 
   return (
     <section className={styles.panel}>
@@ -142,14 +146,14 @@ export function TopographyPanel(): React.JSX.Element {
           <label className={styles.label} htmlFor="topo-interval">{t('topography.intervalLabel')}</label>
           <input
             id="topo-interval" className={styles.input} type="number" min={0.01} step={0.05}
-            value={intervalM} onChange={(e) => setIntervalM(Number(e.target.value))}
+            value={intervalM} onChange={(e) => setContourIntervalMm(Number(e.target.value) * 1000)}
           />
         </div>
         <div className={styles.field}>
           <label className={styles.label} htmlFor="topo-major">{t('topography.majorEveryLabel')}</label>
           <input
             id="topo-major" className={styles.input} type="number" min={1} step={1}
-            value={majorEvery} onChange={(e) => setMajorEvery(Number(e.target.value))}
+            value={majorEvery} onChange={(e) => setContourMajorEvery(Number(e.target.value))}
           />
         </div>
       </div>

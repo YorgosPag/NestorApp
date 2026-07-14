@@ -540,3 +540,52 @@ export async function seedBlockLibraryItem(
     });
   });
 }
+
+// ---------------------------------------------------------------------------
+// Topographic surface seeder (ADR-650 — floorplanScopeOwnerOrAdminMatrix)
+// ---------------------------------------------------------------------------
+
+/**
+ * Seed one `floorplan_topo_surfaces` document — the per-floor topographic
+ * survey definition (ADR-650).
+ *
+ * `createdBy` defaults to `same_tenant_user` so the rule's ownership leg
+ * (`createdBy == uid || isCompanyAdminOfCompany`) is observable: that persona
+ * updates/deletes as the owner, while `external_user` — same tenant, no
+ * ownership, no admin role — is denied. Seeding an unrelated `createdBy` would
+ * silently collapse those two rows into the same outcome.
+ *
+ * The survey payload is seeded **inline** (`surfaces`); the Storage-offload
+ * variant (`pointsStoragePath`, used when the point cloud exceeds the 1 MB doc
+ * limit) is only a field swap and changes no rule leg — create requires the
+ * scope keys, not a specific payload field.
+ */
+export async function seedFloorplanTopoSurface(
+  env: RulesTestEnvironment,
+  docId: string,
+  opts?: SeedOptions,
+): Promise<void> {
+  await withSeedContext(env, async (ctx) => {
+    await ctx.firestore().collection('floorplan_topo_surfaces').doc(docId).set({
+      id: docId,
+      companyId: opts?.companyId ?? SAME_TENANT_COMPANY_ID,
+      projectId: 'proj-test',
+      floorplanId: 'floorplan-test',
+      surfaces: [
+        {
+          id: 'surf-1',
+          points: [
+            { x: 0, y: 0, z: 12.5 },
+            { x: 10, y: 0, z: 13.0 },
+            { x: 10, y: 10, z: 13.4 },
+          ],
+        },
+      ],
+      contourInterval: 0.5,
+      createdBy: opts?.createdBy ?? PERSONA_CLAIMS.same_tenant_user.uid,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      ...opts?.overrides,
+    });
+  });
+}

@@ -170,7 +170,13 @@ export type OpeningInfoTagGripKind =
  *                        σταθερή (κοινός `rect-grip-engine`, ίδια σημασιολογία με
  *                        τοίχο/κολόνα/block) → patch `{position, width, height}`. Render
  *                        default 'square' glyph.
- * Και τα έξι δρομολογούνται στο `commitImageGripDrag` (PARAMETRIC_COMMIT_HANDLERS, key
+ *   - `image-edge-*`   → 3 μεσοπλευρικές λαβές (e/s/w — ΟΧΙ πάνω, όπου κάθεται το `image-rotation`):
+ *                        1-άξονα stretch με την ΑΝΤΙΘΕΤΗ ακμή σταθερή (κοινός `rect-grip-engine`
+ *                        `applyRectEdgeDrag`, ΙΔΙΟ code με block/wall) → patch `{position, width,
+ *                        height}`. Μη-ομοιόμορφο scale εξ ορισμού (Figma/Illustrator edge handle —
+ *                        καμία aspect-lock). `type:'midpoint'` → gated από το «Midpoints» grip-type
+ *                        preference (wall/block parity). Render default 'square' glyph.
+ * Και τα εννέα δρομολογούνται στο `commitImageGripDrag` (PARAMETRIC_COMMIT_HANDLERS, key
  * `gripKind.on === 'image'`) μέσω του shared `applyImageGripDrag`.
  */
 export type ImageGripKind =
@@ -179,7 +185,11 @@ export type ImageGripKind =
   | 'image-corner-ne'
   | 'image-corner-nw'
   | 'image-corner-sw'
-  | 'image-corner-se';
+  | 'image-corner-se'
+  // ADR-654 (Giorgio 2026-07-14) — 3 μεσοπλευρικές (E/S/W)· ΟΧΙ Ν (rotation στην πάνω ακμή).
+  | 'image-edge-e'
+  | 'image-edge-s'
+  | 'image-edge-w';
 
 /**
  * ADR-575 §8 — GROUP gizmo grip kind (composite `type:'group'` container, ΟΧΙ

@@ -554,3 +554,74 @@ export function blockLibraryMatrix(): readonly CoverageCell[] {
     cell('anonymous', 'delete', 'deny', 'missing_claim'),
   ];
 }
+
+// ---------------------------------------------------------------------------
+// ADR-650 — per-floor floorplan scope docs (creator-or-admin writes)
+// ---------------------------------------------------------------------------
+
+/**
+ * Matrix for the per-floor floorplan scope docs whose rule body is
+ * `read: belongsToCompany` + `create: companyId == claim && createdBy == uid`
+ * + `update/delete: createdBy == uid || isCompanyAdminOfCompany`.
+ *
+ * Canonical for `floorplan_topo_surfaces` (ADR-650). The identical rule body is
+ * used by `floorplan_grid_guides` (ADR-441) and `floorplan_foundations`, which
+ * still sit in `FIRESTORE_RULES_PENDING` — they graduate onto **this** matrix
+ * rather than growing a copy of it.
+ *
+ * The delta from `floorplanBackgroundsMatrix()` is the **external_user** row.
+ * `belongsToCompany()` reads only the `companyId` claim — it does not look at
+ * `globalRole` — so an external user of the same tenant genuinely passes read,
+ * list and create (they own what they create). They are blocked on update and
+ * delete of *someone else's* doc, and the reason is `not_owner`, not
+ * `insufficient_role`: the rule has no role floor, only an ownership leg.
+ * The suite seeds the fixture with `createdBy = same_tenant_user.uid`, which is
+ * what makes that ownership leg observable.
+ */
+export function floorplanScopeOwnerOrAdminMatrix(): readonly CoverageCell[] {
+  return [
+    // super_admin — isSuperAdminOnly() short-circuits every leg.
+    cell('super_admin', 'read', 'allow'),
+    cell('super_admin', 'list', 'allow'),
+    cell('super_admin', 'create', 'allow'),
+    cell('super_admin', 'update', 'allow'),
+    cell('super_admin', 'delete', 'allow'),
+    // same_tenant_admin — isCompanyAdminOfCompany() covers update/delete of
+    // docs it does not own.
+    cell('same_tenant_admin', 'read', 'allow'),
+    cell('same_tenant_admin', 'list', 'allow'),
+    cell('same_tenant_admin', 'create', 'allow'),
+    cell('same_tenant_admin', 'update', 'allow'),
+    cell('same_tenant_admin', 'delete', 'allow'),
+    // same_tenant_user — the seeded doc's owner (createdBy == uid).
+    cell('same_tenant_user', 'read', 'allow'),
+    cell('same_tenant_user', 'list', 'allow'),
+    cell('same_tenant_user', 'create', 'allow'),
+    cell('same_tenant_user', 'update', 'allow'),
+    cell('same_tenant_user', 'delete', 'allow'),
+    // cross_tenant_* — companyId claim mismatch kills every leg.
+    cell('cross_tenant_admin', 'read', 'deny', 'cross_tenant'),
+    cell('cross_tenant_admin', 'list', 'deny', 'cross_tenant'),
+    cell('cross_tenant_admin', 'create', 'deny', 'cross_tenant'),
+    cell('cross_tenant_admin', 'update', 'deny', 'cross_tenant'),
+    cell('cross_tenant_admin', 'delete', 'deny', 'cross_tenant'),
+    cell('cross_tenant_user', 'read', 'deny', 'cross_tenant'),
+    cell('cross_tenant_user', 'list', 'deny', 'cross_tenant'),
+    cell('cross_tenant_user', 'create', 'deny', 'cross_tenant'),
+    cell('cross_tenant_user', 'update', 'deny', 'cross_tenant'),
+    cell('cross_tenant_user', 'delete', 'deny', 'cross_tenant'),
+    // external_user — same tenant claim, so read/list/create pass (see docblock).
+    // Blocked only on the ownership leg of update/delete.
+    cell('external_user', 'read', 'allow'),
+    cell('external_user', 'list', 'allow'),
+    cell('external_user', 'create', 'allow'),
+    cell('external_user', 'update', 'deny', 'not_owner'),
+    cell('external_user', 'delete', 'deny', 'not_owner'),
+    // anonymous — isAuthenticated() floor.
+    cell('anonymous', 'read', 'deny', 'missing_claim'),
+    cell('anonymous', 'list', 'deny', 'missing_claim'),
+    cell('anonymous', 'create', 'deny', 'missing_claim'),
+    cell('anonymous', 'update', 'deny', 'missing_claim'),
+    cell('anonymous', 'delete', 'deny', 'missing_claim'),
+  ];
+}

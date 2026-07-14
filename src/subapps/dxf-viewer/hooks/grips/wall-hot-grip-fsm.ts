@@ -179,6 +179,11 @@ export const HOT_GRIP_OP_REGISTRY: Readonly<Record<string, WallHotGripOp>> = {
   // press-drag). The box orbits the picked centre (position + angleRad) via the pivot-aware
   // `applyOpeningInfoTagGripDrag`. The move/size handles stay press-drag (absent here).
   'opening-info-tag-rotation': 'rotate',
+  // Raster image / entourage (ADR-654, Giorgio 2026-07-14 «όπως ο τοίχος») — η λαβή περιστροφής opt-in
+  // στο ΙΔΙΟ click-armed hot-grip rotate flow (click → armed/κόκκινο → όρισε κέντρο → free spin + τόξα
+  // αναφοράς πράσινο/κόκκινο, ΟΧΙ press-drag). Η εικόνα κάνει orbit το picked centre (position +
+  // rotation) μέσω του pivot-aware `applyImageGripDrag`. Move / 4 γωνίες / 3 μεσοπλευρικές = press-drag.
+  'image-rotation': 'rotate',
 } as const;
 
 /** Map any grip kind to its hot-grip operation, or null if it stays drag. */

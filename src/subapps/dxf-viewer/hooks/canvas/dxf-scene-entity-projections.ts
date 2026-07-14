@@ -29,17 +29,22 @@ export function rectangleToVertices(e: {
  * ADR-510 Φ3b/Φ3c — κοινό polyline projection (SSoT polyline/lwpolyline): base +
  * vertices + closed, με optional per-segment bulge/width parallel arrays
  * (index-aligned) όταν υπάρχουν· absent ⇒ all-straight (back-compat).
+ *
+ * ADR-650 M3 — carry the non-destructive `smoothDisplay` flag through to the canvas
+ * (topographic «ακριβείς↔όμορφες»). Whitelist projection ⇒ ΠΡΕΠΕΙ να προωθηθεί ρητά,
+ * αλλιώς ο PolylineRenderer smooth-branch (:102) είναι νεκρός. Falsy ⇒ omitted (exact).
  */
 export function toPolylineUnion(
   base: DxfBaseFields,
   vertices: Point2D[],
   closed: boolean,
-  arrays: { bulges?: number[]; startWidths?: number[]; endWidths?: number[] },
+  arrays: { bulges?: number[]; startWidths?: number[]; endWidths?: number[]; smoothDisplay?: boolean },
 ): DxfEntityUnion {
   return {
     ...base, type: 'polyline' as const, vertices, closed,
     ...(arrays.bulges ? { bulges: arrays.bulges } : {}),
     ...(arrays.startWidths ? { startWidths: arrays.startWidths } : {}),
     ...(arrays.endWidths ? { endWidths: arrays.endWidths } : {}),
+    ...(arrays.smoothDisplay ? { smoothDisplay: true } : {}),
   } as DxfEntityUnion;
 }

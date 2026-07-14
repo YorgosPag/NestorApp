@@ -8,22 +8,26 @@
  */
 
 import type { SceneModel } from '../../types/scene';
-import type { SceneLayer } from '../../types/scene-types';
+import type { LineweightMm, SceneLayer } from '../../types/scene-types';
 import { createSceneLayer } from '../../types/scene-types';
+import { isConcreteLineweight } from '../../config/lineweight-iso-catalog';
 import type { ContourLayerIds } from './topo-to-entities';
 import {
   TOPO_MAJOR_LAYER_NAME, TOPO_MINOR_LAYER_NAME, TOPO_LABEL_LAYER_NAME,
   TOPO_MAJOR_COLOR, TOPO_MINOR_COLOR, TOPO_LABEL_COLOR,
+  TOPO_MAJOR_LINEWEIGHT_MM, TOPO_MINOR_LINEWEIGHT_MM,
 } from './contour-config';
 
 interface LayerSpec {
   readonly name: string;
   readonly color: string;
+  /** ADR-656 M9 — index/intermediate lineweight (mm); labels stay default. */
+  readonly lineweight?: LineweightMm;
 }
 
 const LAYER_SPECS: readonly LayerSpec[] = [
-  { name: TOPO_MAJOR_LAYER_NAME, color: TOPO_MAJOR_COLOR },
-  { name: TOPO_MINOR_LAYER_NAME, color: TOPO_MINOR_COLOR },
+  { name: TOPO_MAJOR_LAYER_NAME, color: TOPO_MAJOR_COLOR, lineweight: TOPO_MAJOR_LINEWEIGHT_MM },
+  { name: TOPO_MINOR_LAYER_NAME, color: TOPO_MINOR_COLOR, lineweight: TOPO_MINOR_LINEWEIGHT_MM },
   { name: TOPO_LABEL_LAYER_NAME, color: TOPO_LABEL_COLOR },
 ];
 
@@ -33,6 +37,19 @@ function findByName(scene: SceneModel, name: string): SceneLayer | undefined {
     if (layer.name === name) return layer;
   }
   return undefined;
+}
+
+/**
+ * ADR-656 M9 — bring an EXISTING contour layer up to the current spec lineweight
+ * WITHOUT clobbering a user's manual override: a concrete (user-set) weight is
+ * left untouched; only a sentinel (undefined / DEFAULT / ByLayer / ByBlock) is
+ * upgraded to the spec value. Idempotent — returns the same reference unchanged.
+ */
+function reconcileLineweight(layer: SceneLayer, spec: LayerSpec): SceneLayer {
+  if (spec.lineweight === undefined) return layer;
+  if (isConcreteLineweight(layer.lineweight)) return layer; // respect user override
+  if (layer.lineweight === spec.lineweight) return layer;
+  return { ...layer, lineweight: spec.lineweight };
 }
 
 /**
@@ -49,21 +66,28 @@ export function ensureContourLayers(
 
   const layersById = { ...scene.layersById };
   const idByName: Record<string, string> = {};
-  let created = false;
+  let changed = false;
 
   for (const spec of LAYER_SPECS) {
     const existing = findByName(scene, spec.name);
     if (existing) {
+      const upgraded = reconcileLineweight(existing, spec);
+      if (upgraded !== existing) {
+        layersById[upgraded.id] = upgraded;
+        changed = true;
+      }
       idByName[spec.name] = existing.id;
       continue;
     }
-    const layer = createSceneLayer({ name: spec.name, color: spec.color, visible: true, locked: false });
+    const layer = createSceneLayer({
+      name: spec.name, color: spec.color, lineweight: spec.lineweight, visible: true, locked: false,
+    });
     layersById[layer.id] = layer;
     idByName[spec.name] = layer.id;
-    created = true;
+    changed = true;
   }
 
-  if (created) setScene(levelId, { ...scene, layersById });
+  if (changed) setScene(levelId, { ...scene, layersById });
 
   return {
     major: idByName[TOPO_MAJOR_LAYER_NAME],

@@ -37,6 +37,7 @@ import { SlabPersistenceHost } from './SlabPersistenceHost';
 import { ColumnPersistenceHost } from './ColumnPersistenceHost';
 import { FoundationPersistenceHost } from './FoundationPersistenceHost';
 import { GridGuidePersistenceHost } from './GridGuidePersistenceHost';
+import { TopoPersistenceHost } from './TopoPersistenceHost';
 import { HostingReconcilerHost } from './HostingReconcilerHost';
 import { MepFixturePersistenceHost } from './MepFixturePersistenceHost';
 import { FurniturePersistenceHost } from './FurniturePersistenceHost';
@@ -211,6 +212,12 @@ export function DxfViewerTopBar({
         floorId={floorId}
       />
       <GridGuidePersistenceHost
+        projectId={projectId}
+        floorplanId={levelManager.fileRecordId ?? undefined}
+        floorId={floorId}
+      />
+      {/* ADR-650 — τοπογραφικός ορισμός (survey + ρυθμίσεις) per-floor· οι ισοϋψείς regenerate στο load. */}
+      <TopoPersistenceHost
         projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
         floorId={floorId}

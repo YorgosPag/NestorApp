@@ -130,6 +130,8 @@ export const DXF_TIMING = {
     SETTINGS: 500,
     /** Grid-guide persistence debounce. */
     GRID_GUIDE: 1000,
+    /** Topographic surface-definition persistence debounce (ADR-650). */
+    TOPO_SURFACE: 1000,
     /** LocalStorage periodic autosave interval. */
     LOCALSTORAGE_INTERVAL: 5000,
     /** Periodic full auto-save interval (30s). */
