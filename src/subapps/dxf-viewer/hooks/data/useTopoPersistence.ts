@@ -40,6 +40,7 @@ import {
 import { collectTopoState, applyTopoState } from '../../systems/topography/persistence/topo-state-io';
 import { regenerateTopoContours } from '../../systems/topography/persistence/regenerate-topo';
 import { subscribeTopo, getTopoState } from '../../systems/topography/TopoPointStore';
+import { subscribeGeoReference } from '../../systems/geo-referencing/geo-reference-store';
 import { subscribeContourConfig } from '../../systems/topography/contour-config-store';
 import { subscribeContourDisplay } from '../../systems/topography/contour-display-store';
 import { subscribeTerrain3D } from '../../systems/topography/terrain-3d-store';
@@ -204,6 +205,17 @@ export function useTopoPersistence(params: UseTopoPersistenceParams): UseTopoPer
     // eslint-disable-next-line no-console
     console.info('[TOPO-DIAG] effectC RAN', { levelId, pts, contours: n });
   }, [levelId, sceneLoading, scopeKey, getLevelScene, commitScene]);
+
+  // ADR-650 M10 geo-referencing — when the active geo-reference changes (auto-align or
+  // manual common-point pick), re-project the terrain onto the current level so the
+  // contours «κουμπώνουν» live on the plan. Silent (`system-reconcile`) + idempotent
+  // (regenerate clears stale contours first), same as the level-switch effect above.
+  useEffect(() => {
+    return subscribeGeoReference(() => {
+      if (sceneLoading) return;
+      regenerateTopoContours({ getScene: getLevelScene, commitScene, levelId: levelIdRef.current });
+    });
+  }, [sceneLoading, getLevelScene, commitScene]);
 
   // Persist current store state (debounced caller).
   const doSave = useCallback(async () => {

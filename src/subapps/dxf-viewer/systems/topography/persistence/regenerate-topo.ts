@@ -30,6 +30,9 @@ import { generateContoursFromSurface } from '../contour-generator';
 import { buildContourEntities, type ContourLayerIds } from '../topo-to-entities';
 import { getContourConfig } from '../contour-config-store';
 import { getContourDisplayStyle } from '../contour-display-store';
+import { getGeoReference } from '../../geo-referencing/geo-reference-store';
+import { worldToLocal, isIdentityGeoReference } from '../../geo-referencing/geo-transform';
+import type { ContourLine } from '../topo-types';
 import {
   TOPO_MAJOR_LAYER_NAME, TOPO_MINOR_LAYER_NAME, TOPO_LABEL_LAYER_NAME,
   TOPO_MAJOR_COLOR, TOPO_MINOR_COLOR, TOPO_LABEL_COLOR,
@@ -72,6 +75,21 @@ function ensureLayers(scene: SceneModel): { layersById: Record<string, SceneLaye
 }
 
 /**
+ * ADR-650 M10 — project generated contours from ΕΓΣΑ WORLD coords into the building's
+ * LOCAL frame via the active geo-reference (Revit Shared Coordinates). Returns the
+ * contours unchanged when the project is not geo-referenced (identity/unset), so a
+ * non-referenced survey keeps rendering exactly as before.
+ */
+function projectContoursToLocal(contours: readonly ContourLine[]): ContourLine[] {
+  const geoRef = getGeoReference();
+  if (isIdentityGeoReference(geoRef)) return contours as ContourLine[];
+  return contours.map((c) => ({
+    ...c,
+    vertices: c.vertices.map((v) => worldToLocal(v, geoRef!)),
+  }));
+}
+
+/**
  * Rebuild the plan-view contours for `levelId` from the (already restored) survey stores.
  * Returns the number of contour entities written. A survey with no triangulable ground
  * still runs — it just clears any stale contours (idempotent cleanup) and writes none.
@@ -97,7 +115,11 @@ export function regenerateTopoContours(deps: RegenerateTopoDeps): number {
   const surface = getTopoSurface('existing');
   let fresh: Entity[] = [];
   if (surface.triangles.length > 0) {
-    const { contours } = generateContoursFromSurface(surface, getContourConfig());
+    const generated = generateContoursFromSurface(surface, getContourConfig());
+    // ADR-650 M10 geo-referencing — the survey lives in ΕΓΣΑ WORLD coords; project it
+    // into the building's LOCAL frame so the terrain «κάθεται» on the plan near the
+    // origin (no ADR-635 culling blowup). Identity/unset → no-op (backward compatible).
+    const contours = projectContoursToLocal(generated.contours);
     fresh = buildContourEntities(
       contours, getContourConfig(), ids, getContourDisplayStyle() === 'smooth',
     ) as Entity[];

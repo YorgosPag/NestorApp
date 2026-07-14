@@ -28,6 +28,7 @@ import type { DxfViewerCallbacksReturn } from './useDxfViewerCallbacks';
 // longer re-renders on click-selection).
 import { useUniversalSelectionStable, usePrimarySelectedId } from '../systems/selection';
 import { useDxfViewerRibbon } from './useDxfViewerRibbon';
+import { resolveActiveProjectId } from '../systems/levels/level-floor-resolution';
 import { RibbonRoot } from '../ui/ribbon/components/RibbonRoot';
 import { RibbonContextualTabScope } from './RibbonContextualTabScope';
 import { WallPersistenceHost } from './WallPersistenceHost';
@@ -141,7 +142,18 @@ export function DxfViewerTopBar({
   // on that floor were never saved. The `Level` doc carries a durable `projectId`
   // (wizard-set, ADR-309), so a floor whose own DXF file is missing/cross-linked keeps
   // a valid persistence scope. Pairs with the SSoT gate `resolveBimPersistenceScope`.
-  const projectId = levelManager.saveContext?.projectId ?? currentLevel?.projectId ?? undefined;
+  // 🛡️ ADR-650 M10 (Εύρημα #2) — 3rd fallback: a SIBLING level's durable projectId.
+  // Special storeys (Θεμελίωση) are created without their own `projectId` (they skip
+  // the import wizard) → the first two sources are undefined there, so the SITE-scope
+  // topo persistence never instantiated on the foundation (`hasScope:FALSE`) and the
+  // survey was never saved. Any linked sibling level (e.g. the ground floor) carries
+  // the same wizard-set projectId (ADR-309), available from load — a stable scope on
+  // EVERY storey with no `null→value` flip (which used to trigger a per-project reset).
+  const projectId =
+    levelManager.saveContext?.projectId
+    ?? currentLevel?.projectId
+    ?? resolveActiveProjectId(levelManager.levels)
+    ?? undefined;
   const floorMeta = useFloorMetadata(floorId ?? null);
   const buildingId =
     levelManager.saveContext?.buildingId
