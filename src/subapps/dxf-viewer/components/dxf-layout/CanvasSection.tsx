@@ -197,7 +197,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const { draftPolygon, setDraftPolygon, draftPolygonRef, isSavingPolygon, setIsSavingPolygon, finishDrawingWithPolygonRef, finishDrawing } = usePolygonCompletion({
     levelManager, overlayStore, eventBus, currentStatus, currentKind, activeTool, overlayMode,
   });
-  const { circleTTT, lineParallel, angleEntityMeasurement, stairTool, stairRegionTool, wallTool, slabTool, roofTool, floorFinishTool, wallCoveringTool, columnTool, foundationTool, mepFixtureTool, furnitureTool, blockLibraryTool, titleBlockTool, furniturePlanTool, floorplanSymbolTool, electricalPanelTool, mepManifoldTool, mepRadiatorTool, mepBoilerTool, mepWaterHeaterTool, mepUnderfloorTool, thermalSpaceTool, bathroomAutoArrangeTool, spaceSeparatorTool, mepSegmentTool, mepRiserTool, railingTool, beamTool, beamBetweenMembersTool, slabOpeningTool, openingTool, selfOpeningTool } = useSpecialTools({ activeTool, levelManager });
+  const { circleTTT, lineParallel, angleEntityMeasurement, stairTool, stairRegionTool, wallTool, slabTool, roofTool, floorFinishTool, wallCoveringTool, columnTool, foundationTool, mepFixtureTool, furnitureTool, blockLibraryTool, titleBlockTool, furniturePlanTool, peoplePlanTool, vehiclesPlanTool, floorplanSymbolTool, electricalPanelTool, mepManifoldTool, mepRadiatorTool, mepBoilerTool, mepWaterHeaterTool, mepUnderfloorTool, thermalSpaceTool, bathroomAutoArrangeTool, spaceSeparatorTool, mepSegmentTool, mepRiserTool, railingTool, beamTool, beamBetweenMembersTool, slabOpeningTool, openingTool, selfOpeningTool } = useSpecialTools({ activeTool, levelManager });
   // === Cursor + touch gestures ===
   const { updatePosition, setActive } = useCursorActions();
   const { layoutMode: canvasLayoutMode } = useResponsiveLayoutForCanvas();
@@ -316,7 +316,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     columnTool,
     foundationTool,
     mepFixtureTool,
-    furnitureTool, blockLibraryTool, titleBlockTool, furniturePlanTool,
+    furnitureTool, blockLibraryTool, titleBlockTool, furniturePlanTool, peoplePlanTool, vehiclesPlanTool,
     floorplanSymbolTool,
     electricalPanelTool,
     mepManifoldTool,

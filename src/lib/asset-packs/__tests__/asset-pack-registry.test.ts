@@ -43,6 +43,28 @@ describe('ταυτότητα του furniture-plan-2d', () => {
   });
 });
 
+describe('ADR-654 M6 — entourage packs (people + vehicles)', () => {
+  it('και τα δύο νέα packs υπάρχουν και είναι entitled (fail-closed)', () => {
+    for (const id of ['people-plan-2d', 'vehicles-plan-2d'] as const) {
+      const p = getAssetPack(id);
+      expect(p?.id).toBe(id);
+      expect(p?.defaultStatus).toBe('entitled');
+      expect(p?.license.redistributable).toBe(false);
+    }
+  });
+
+  it('το allowlist κάθε pack γεμίζει από τον δικό του κατάλογο', () => {
+    const people = ASSET_PACKS['people-plan-2d'].listAssetIds();
+    const vehicles = ASSET_PACKS['vehicles-plan-2d'].listAssetIds();
+    expect(people.length).toBeGreaterThan(0);
+    expect(people).toContain('ppl-obj-001-1');
+    expect(vehicles.length).toBeGreaterThan(0);
+    expect(vehicles).toContain('veh-obj-010-1');
+    // Δεν μπερδεύονται τα allowlists των δύο packs.
+    expect(vehicles).not.toContain('ppl-obj-001-1');
+  });
+});
+
 describe('URL + storage path', () => {
   it('το URL είναι same-origin και περιέχει την έκδοση', () => {
     expect(assetPackAssetUrl(pack, 'furn-obj-001-1')).toBe(

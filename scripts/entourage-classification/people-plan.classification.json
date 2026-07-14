@@ -1,0 +1,498 @@
+[
+  {
+    "id": "ppl-obj-001-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-002-1",
+    "category": "lying"
+  },
+  {
+    "id": "ppl-obj-003-1",
+    "category": "lying"
+  },
+  {
+    "id": "ppl-obj-004-1",
+    "category": "lying"
+  },
+  {
+    "id": "ppl-obj-005-1",
+    "category": "lying"
+  },
+  {
+    "id": "ppl-obj-006-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-007-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-008-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-009-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-010-1",
+    "category": "lying"
+  },
+  {
+    "id": "ppl-obj-011-1",
+    "category": "lying"
+  },
+  {
+    "id": "ppl-obj-012-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-013-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-014-1",
+    "category": "lying"
+  },
+  {
+    "id": "ppl-obj-015-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-016-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-017-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-018-1",
+    "category": "group"
+  },
+  {
+    "id": "ppl-obj-019-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-020-1",
+    "category": "group"
+  },
+  {
+    "id": "ppl-obj-021-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-022-1",
+    "category": "group"
+  },
+  {
+    "id": "ppl-obj-023-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-024-1",
+    "category": "lying"
+  },
+  {
+    "id": "ppl-obj-025-1",
+    "category": "group"
+  },
+  {
+    "id": "ppl-obj-026-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-027-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-028-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-029-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-030-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-031-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-032-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-033-1",
+    "category": "group"
+  },
+  {
+    "id": "ppl-obj-034-1",
+    "category": "lying"
+  },
+  {
+    "id": "ppl-obj-035-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-036-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-037-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-038-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-039-1",
+    "category": "stroller"
+  },
+  {
+    "id": "ppl-obj-040-1",
+    "category": "stroller"
+  },
+  {
+    "id": "ppl-obj-041-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-043-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-044-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-045-1",
+    "category": "wheelchair"
+  },
+  {
+    "id": "ppl-obj-046-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-047-1",
+    "category": "lying"
+  },
+  {
+    "id": "ppl-obj-048-1",
+    "category": "lying"
+  },
+  {
+    "id": "ppl-obj-050-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-051-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-053-1",
+    "category": "lying"
+  },
+  {
+    "id": "ppl-obj-054-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-055-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-056-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-057-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-058-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-059-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-060-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-061-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-062-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-063-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-064-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-065-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-066-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-067-1",
+    "category": "lying"
+  },
+  {
+    "id": "ppl-obj-068-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-069-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-070-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-071-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-072-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-073-1",
+    "category": "group"
+  },
+  {
+    "id": "ppl-obj-074-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-075-1",
+    "category": "lying"
+  },
+  {
+    "id": "ppl-obj-076-1",
+    "category": "lying"
+  },
+  {
+    "id": "ppl-obj-077-1",
+    "category": "lying"
+  },
+  {
+    "id": "ppl-obj-078-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-079-1",
+    "category": "group"
+  },
+  {
+    "id": "ppl-obj-080-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-081-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-082-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-083-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-084-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-085-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-086-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-087-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-088-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-089-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-090-1",
+    "category": "group"
+  },
+  {
+    "id": "ppl-obj-091-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-092-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-093-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-093-2",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-094-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-094-2",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-095-1",
+    "category": "stroller"
+  },
+  {
+    "id": "ppl-obj-096-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-097-1",
+    "category": "group"
+  },
+  {
+    "id": "ppl-obj-098-1",
+    "category": "group"
+  },
+  {
+    "id": "ppl-obj-099-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-100-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-101-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-102-1",
+    "category": "group"
+  },
+  {
+    "id": "ppl-obj-103-1",
+    "category": "group"
+  },
+  {
+    "id": "ppl-obj-104-1",
+    "category": "lying"
+  },
+  {
+    "id": "ppl-obj-105-1",
+    "category": "lying"
+  },
+  {
+    "id": "ppl-obj-106-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-107-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-108-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-109-1",
+    "category": "stroller"
+  },
+  {
+    "id": "ppl-obj-110-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-111-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-112-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-114-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-115-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-116-1",
+    "category": "stroller"
+  },
+  {
+    "id": "ppl-obj-117-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-118-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-119-1",
+    "category": "lying"
+  },
+  {
+    "id": "ppl-obj-120-1",
+    "category": "group"
+  },
+  {
+    "id": "ppl-obj-121-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-122-1",
+    "category": "lying"
+  },
+  {
+    "id": "ppl-obj-123-1",
+    "category": "person"
+  },
+  {
+    "id": "ppl-obj-124-1",
+    "category": "stroller"
+  },
+  {
+    "id": "ppl-obj-125-1",
+    "category": "lying"
+  },
+  {
+    "id": "ppl-obj-126-1",
+    "category": "child"
+  }
+]

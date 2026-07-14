@@ -16,7 +16,11 @@
  */
 
 import type { RibbonComboboxOption, RibbonTab } from '../types/ribbon-types';
-import { TITLE_BLOCK_RIBBON_KEYS, TITLE_BLOCK_FRAME_MODES } from '../hooks/bridge/title-block-command-keys';
+import {
+  TITLE_BLOCK_RIBBON_KEYS,
+  TITLE_BLOCK_FRAME_MODES,
+  TITLE_BLOCK_QR_MODES,
+} from '../hooks/bridge/title-block-command-keys';
 import { TITLE_BLOCK_PRESETS } from '../../../text-engine/title-block/title-block-presets';
 import { PAPER_SIZE_ORDER } from '../../../print/config/paper-constants';
 import { literalNumberOptions } from './ribbon-numeric-options';
@@ -56,6 +60,12 @@ const ORIENTATION_OPTIONS: readonly RibbonComboboxOption[] = [
 const FRAME_MODE_OPTIONS: readonly RibbonComboboxOption[] = TITLE_BLOCK_FRAME_MODES.map((mode) => ({
   value: mode,
   labelKey: `${CMD}.frameModeOptions.${mode}`,
+  isLiteralLabel: false,
+}));
+
+const QR_MODE_OPTIONS: readonly RibbonComboboxOption[] = TITLE_BLOCK_QR_MODES.map((mode) => ({
+  value: mode,
+  labelKey: `${CMD}.qrModeOptions.${mode}`,
   isLiteralLabel: false,
 }));
 
@@ -155,6 +165,18 @@ export const CONTEXTUAL_TITLE_BLOCK_TAB: RibbonTab = {
                 commandKey: TITLE_BLOCK_RIBBON_KEYS.stringParams.frameMode,
                 comboboxWidthPx: 170,
                 options: FRAME_MODE_OPTIONS,
+              },
+            },
+            {
+              // ADR-651 Φάση Λ — QR: σύνδεσμος έργου + αποτύπωμα έκδοσης (§8 #8). Off by default.
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'titleBlock.qrMode',
+                labelKey: `${CMD}.qrMode`,
+                commandKey: TITLE_BLOCK_RIBBON_KEYS.stringParams.qrMode,
+                comboboxWidthPx: 170,
+                options: QR_MODE_OPTIONS,
               },
             },
           ],

@@ -415,6 +415,13 @@ export function useDxfViewerState() {
       case 'toggle-furniture-plan-panel':
         toolbarState.toggleFurniturePlanPanel();
         break;
+      // ADR-654 M6: Toggle «Άνθρωποι/Οχήματα Κάτοψης» entourage palettes (Insert-tab buttons).
+      case 'toggle-people-plan-panel':
+        toolbarState.togglePeoplePlanPanel();
+        break;
+      case 'toggle-vehicles-plan-panel':
+        toolbarState.toggleVehiclesPlanPanel();
+        break;
       // ADR-363 R1 / ADR-577: unified Copy tool activation (C+O chord → AutoCAD COPY pattern, all entity types)
       case 'copy-selected':
         handleToolChange('copy');

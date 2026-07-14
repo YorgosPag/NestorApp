@@ -174,6 +174,15 @@ export interface FurniturePlanToolLike {
 }
 
 /**
+ * ADR-654 M6 — Minimal entourage placement tool interface for click routing (single-click).
+ * Shared by people-plan + vehicles-plan (ίδιο συμβόλαιο· ένα interface, δύο tools — N.18).
+ */
+export interface EntouragePlacementToolLike {
+  readonly isActive: boolean;
+  onCanvasClick: (point: Point2D) => boolean;
+}
+
+/**
  * ADR-651 Φάση Β — η πινακίδα σχεδίου δρομολογείται ΑΚΡΙΒΩΣ όπως ένα block (single-click,
  * παράγει `BlockEntity`), οπότε μοιράζεται το ίδιο routing συμβόλαιο — alias, όχι δίδυμο
  * interface (N.18).

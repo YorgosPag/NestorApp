@@ -126,6 +126,54 @@ export const INSERT_TAB: RibbonTab = {
       ],
     },
     {
+      // ADR-654 M6 — «Άνθρωποι Κάτοψης»: browsable palette of top-view people entourage
+      // cut-outs (action· η επιλογή κάρτας ενεργοποιεί το placement tool 'people-plan').
+      id: 'peoplePlan',
+      labelKey: 'ribbon.panels.peoplePlan',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'simple',
+              size: 'large',
+              command: {
+                id: 'insert.people-plan',
+                labelKey: 'ribbon.commands.peoplePlan',
+                icon: 'people-plan',
+                commandKey: 'people-plan',
+                action: 'toggle-people-plan-panel',
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      // ADR-654 M6 — «Οχήματα Κάτοψης»: browsable palette of top-view vehicle entourage
+      // cut-outs (action· η επιλογή κάρτας ενεργοποιεί το placement tool 'vehicles-plan').
+      id: 'vehiclePlan',
+      labelKey: 'ribbon.panels.vehiclePlan',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'simple',
+              size: 'large',
+              command: {
+                id: 'insert.vehicles-plan',
+                labelKey: 'ribbon.commands.vehiclePlan',
+                icon: 'vehicles-plan',
+                commandKey: 'vehicles-plan',
+                action: 'toggle-vehicles-plan-panel',
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
       // ADR-651 Φάση Β — «Πινακίδα»: single-click placement tool (commandKey = ToolType
       // 'title-block'). Το πρότυπο λύνεται με τα στοιχεία του ενεργού έργου (zero-config
       // auto-fill) και μπαίνει στη σκηνή ως BlockEntity — καμία επιλογή πριν το κλικ.

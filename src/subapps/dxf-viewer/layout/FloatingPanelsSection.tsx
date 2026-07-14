@@ -28,6 +28,12 @@ import { setSelectedBlockName } from '../bim/block-library/block-library-selecti
 // stored inside the panel itself (furniture-plan-selection-store), so it only needs a
 // post-selection callback to activate the placement tool.
 import { FurniturePlanPanel } from '../ui/panels/furniture-plan';
+// ADR-654 M6 — generic entourage palette (People + Vehicles), οδηγούμενη από descriptors.
+import {
+  EntouragePalette,
+  PEOPLE_PALETTE_DESCRIPTOR,
+  VEHICLES_PALETTE_DESCRIPTOR,
+} from '../ui/panels/entourage';
 // ADR-189: Guide Analysis Panel (10 services → 4 tabs)
 import { GuideAnalysisPanel } from '../ui/panels/guide-analysis-panel';
 import CoordinateCalibrationOverlay from '../ui/CoordinateCalibrationOverlay';
@@ -65,6 +71,9 @@ interface FloatingPanelsSectionProps {
   showBlockLibraryPanel: boolean;
   /** ADR-654 — «Έπιπλα Κάτοψης» palette visibility (mirror of showBlockLibraryPanel). */
   showFurniturePlanPanel: boolean;
+  /** ADR-654 M6 — «Άνθρωποι/Οχήματα Κάτοψης» entourage palettes visibility. */
+  showPeoplePlanPanel: boolean;
+  showVehiclesPlanPanel: boolean;
   /** ADR-652 M3 — ενεργό έργο· χωρίς αυτό δεν προσφέρεται δημοσίευση block σε scope «έργου». */
   projectId?: string;
   handleAction: (action: string) => void;
@@ -117,6 +126,8 @@ export const FloatingPanelsSection = React.memo<FloatingPanelsSectionProps>(({
   showGuideAnalysisPanel,
   showBlockLibraryPanel,
   showFurniturePlanPanel,
+  showPeoplePlanPanel,
+  showVehiclesPlanPanel,
   projectId,
   handleAction,
   activeTool,
@@ -242,6 +253,26 @@ export const FloatingPanelsSection = React.memo<FloatingPanelsSectionProps>(({
           isVisible={showFurniturePlanPanel}
           onClose={() => handleAction('toggle-furniture-plan-panel')}
           onSelect={() => handleToolChange('furniture-plan')}
+        />
+      )}
+
+      {/* ADR-654 M6: PEOPLE + VEHICLES ENTOURAGE PALETTES — generic palette, per-family
+          descriptor. Selection store lives inside the descriptor; onSelect activates the
+          matching placement tool once a card is chosen. */}
+      {showPeoplePlanPanel && (
+        <EntouragePalette
+          descriptor={PEOPLE_PALETTE_DESCRIPTOR}
+          isVisible={showPeoplePlanPanel}
+          onClose={() => handleAction('toggle-people-plan-panel')}
+          onSelect={() => handleToolChange('people-plan')}
+        />
+      )}
+      {showVehiclesPlanPanel && (
+        <EntouragePalette
+          descriptor={VEHICLES_PALETTE_DESCRIPTOR}
+          isVisible={showVehiclesPlanPanel}
+          onClose={() => handleAction('toggle-vehicles-plan-panel')}
+          onSelect={() => handleToolChange('vehicles-plan')}
         />
       )}
 

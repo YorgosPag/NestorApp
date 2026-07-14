@@ -23,8 +23,10 @@ import {
   buildActiveTitleBlockScope,
   buildActiveTitleBlockSheetOptions,
   titleBlockTemplateForLocale,
+  warmActiveTitleBlockQr,
   type TitleBlockScopeOverrides,
 } from '../text-engine/title-block/active-title-block';
+import { useTitleBlockOptionsStore } from '../state/title-block-options-store';
 import { buildPrintSheet, type PrintSheet } from '../text-engine/title-block/print-sheet';
 import type { SheetSetItem } from '../text-engine/title-block/sheet-set';
 import type { TitleBlockLocale } from '../text-engine/title-block/title-block-presets';
@@ -84,16 +86,18 @@ function buildSheet(
   const scaleName = formatScaleText(
     resolveAppliedScaleDenominator(request.fitMode, request.scaleDenominator),
   );
+  const scopeOverrides = { scaleName, ...overrides };
   const content = resolveTitleBlockContent(
     titleBlockTemplateForLocale(locale),
-    buildActiveTitleBlockScope(locale, { scaleName, ...overrides }),
+    buildActiveTitleBlockScope(locale, scopeOverrides),
   );
   return buildPrintSheet({
     paper: request.paper,
     content,
     // ADR-651 Φάση Ε: το PDF θέλει τη σφραγίδα ως **data URL** (ο jsPDF `addImage` δεν
     // δέχεται remote URL) — η ίδια εικόνα, άλλη μορφή· ίδιο layout model με την οθόνη.
-    options: buildActiveTitleBlockSheetOptions(locale, 'data-url'),
+    // Φάση Λ: τα ίδια overrides περνούν στο QR ⇒ σωστό αποτύπωμα ανά φύλλο (per-sheet sheetNumber).
+    options: buildActiveTitleBlockSheetOptions(locale, 'data-url', scopeOverrides),
   });
 }
 
@@ -197,6 +201,17 @@ export async function runPrintSet(
   sheets: readonly SheetSetItem[],
 ): Promise<void> {
   if (sheets.length === 0) throw new Error('Sheet set is empty');
+
+  // Φάση Λ — κάθε φύλλο έχει δικό του QR (per-sheet αριθμός φύλλου). Το QR γεννιέται ασύγχρονα,
+  // αλλά ο βρόχος συναρμολόγησης είναι σύγχρονος (ADR-040) ⇒ προ-φορτώνουμε ΟΛΑ τα QR εδώ, πριν.
+  // Gated: μόνο όταν ο χρήστης θέλει QR (αλλιώς μηδέν περιττή γέννηση για σετ πολλών φύλλων).
+  if (deps.titleBlockLocale && useTitleBlockOptionsStore.getState().withQr) {
+    await Promise.all(
+      sheets.map((sheet) =>
+        warmActiveTitleBlockQr({ title: sheet.title, sheetNumber: sheet.sheetNumber }),
+      ),
+    );
+  }
 
   const pages: PrintPage[] = [];
   for (const sheet of sheets) {

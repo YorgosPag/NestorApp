@@ -19,6 +19,7 @@ import { useFurnitureTool } from '../drawing/useFurnitureTool';
 import { useBlockLibraryTool } from '../drawing/useBlockLibraryTool';
 import { useTitleBlockTool } from '../drawing/useTitleBlockTool';
 import { useFurniturePlanTool } from '../drawing/useFurniturePlanTool';
+import { usePeoplePlanTool, useVehiclesPlanTool } from '../drawing/entourage-tools';
 import { useFloorplanSymbolTool } from '../drawing/useFloorplanSymbolTool';
 import { useElectricalPanelTool } from '../drawing/useElectricalPanelTool';
 import { useMepManifoldTool } from '../drawing/useMepManifoldTool';
@@ -36,6 +37,7 @@ import { addMepFixtureToScene } from '../../bim/mep-fixtures/add-mep-fixture-to-
 import { addFurnitureToScene } from '../../bim/furniture/add-furniture-to-scene';
 import { addBlockToScene } from '../../bim/block-library/add-block-to-scene';
 import { addFurniturePlanToScene } from '../../bim/furniture-plan/add-furniture-plan-to-scene';
+import { addEntourageToScene } from '../../bim/entourage/add-entourage-to-scene';
 import { useProjectHierarchyOptional } from '../../contexts/ProjectHierarchyContext';
 import { addFloorplanSymbolToScene } from '../../bim/floorplan-symbols/add-floorplan-symbol-to-scene';
 import { addElectricalPanelToScene } from '../../bim/electrical-panels/add-electrical-panel-to-scene';
@@ -70,6 +72,8 @@ export interface PlacementToolsReturn {
   blockLibraryTool: ReturnType<typeof useBlockLibraryTool>; // Block Library M1
   titleBlockTool: ReturnType<typeof useTitleBlockTool>; // ADR-651 Φάση Β
   furniturePlanTool: ReturnType<typeof useFurniturePlanTool>; // ADR-654
+  peoplePlanTool: ReturnType<typeof usePeoplePlanTool>; // ADR-654 M6
+  vehiclesPlanTool: ReturnType<typeof useVehiclesPlanTool>; // ADR-654 M6
 
   floorplanSymbolTool: ReturnType<typeof useFloorplanSymbolTool>; // ADR-415
   electricalPanelTool: ReturnType<typeof useElectricalPanelTool>; // ADR-408 Φ3
@@ -216,6 +220,29 @@ export function useSpecialToolsPlacementTools(
     },
   });
   useToolLifecycle(activeTool === 'furniture-plan', furniturePlanTool.activate, furniturePlanTool.deactivate);
+
+  // ADR-654 M6 — «Άνθρωποι κάτοψης» (entourage): shared engine, tag 'people-plan'. Το «ποιος
+  // άνθρωπος» το ορίζει η παλέτα στο peoplePlanSelection· εδώ μόνο activate/commit.
+  const peoplePlanTool = usePeoplePlanTool({
+    currentLevelId: levelManager.currentLevelId || '0',
+    onEntourageCreated: (entity) => addEntourageToScene(entity, levelManager, 'people-plan'),
+    getSceneUnits: () => {
+      const lid = levelManager.currentLevelId;
+      return lid ? resolveSceneUnits(levelManager.getLevelScene(lid)) : 'mm';
+    },
+  });
+  useToolLifecycle(activeTool === 'people-plan', peoplePlanTool.activate, peoplePlanTool.deactivate);
+
+  // ADR-654 M6 — «Οχήματα κάτοψης» (entourage): shared engine, tag 'vehicles-plan'.
+  const vehiclesPlanTool = useVehiclesPlanTool({
+    currentLevelId: levelManager.currentLevelId || '0',
+    onEntourageCreated: (entity) => addEntourageToScene(entity, levelManager, 'vehicles-plan'),
+    getSceneUnits: () => {
+      const lid = levelManager.currentLevelId;
+      return lid ? resolveSceneUnits(levelManager.getLevelScene(lid)) : 'mm';
+    },
+  });
+  useToolLifecycle(activeTool === 'vehicles-plan', vehiclesPlanTool.activate, vehiclesPlanTool.deactivate);
 
   // ADR-415 — FLOORPLAN SYMBOL TOOL: single-click placement; entity appended+broadcast.
   const floorplanSymbolTool = useFloorplanSymbolTool({
@@ -386,6 +413,8 @@ export function useSpecialToolsPlacementTools(
     blockLibraryTool,
     titleBlockTool,
     furniturePlanTool,
+    peoplePlanTool,
+    vehiclesPlanTool,
     floorplanSymbolTool,
     electricalPanelTool,
     mepManifoldTool,

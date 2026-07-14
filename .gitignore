@@ -186,14 +186,20 @@ firestore.rules.compiled
 .claude-rules/fleet/*.tmp
 .claude-rules/fleet/fleet-board.md
 
-# Local scratch — πηγαία TIFF σκίτσα επίπλων (316MB· input στο scripts/build-furniture-plan-assets.js)
-# SSoT για το runtime = τα παραγόμενα public/furniture-2d/*.webp
+# Local scratch — πηγαία TIFF σκίτσα entourage (input στους builders)
+# SSoT για το runtime = τα παραγόμενα public/<pack>-2d/*.webp
 /images/
+/images_2/
+/images_3/
+/images_4/
+/images_5/
 
 # Generated clone-detection report (jscpd· βλ. N.18 / ADR-584)
 /report/
 
-# Παραγόμενα entourage sprites (ADR-654 M1) — ίδια σύμβαση με το public/textures του
-# ADR-413: τα binaries ζουν στο Firebase Storage (furniture-2d-library/), όχι στο repo.
-# Αναπαράγονται με: node scripts/build-furniture-plan-assets.js
+# Παραγόμενα entourage sprites (ADR-654) — ίδια σύμβαση με το public/textures του
+# ADR-413: τα binaries ζουν στο Firebase Storage (asset-packs/), όχι στο repo.
+# Αναπαράγονται με: node scripts/build-entourage-assets.js (ή build-furniture-plan-assets.js)
 /public/furniture-2d/
+/public/people-2d/
+/public/vehicles-2d/

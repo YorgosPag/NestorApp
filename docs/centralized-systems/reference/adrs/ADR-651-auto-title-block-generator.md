@@ -729,6 +729,49 @@ pending edit (ο χρήστης άγγιξε το πεδίο)  →  persisted (L
 σιωπηλά (αγγλικό κείμενο + **ελληνική** σφραγίδα) ⇒ ενοποιήθηκαν σε **έναν** resolver
 (`resolveActiveTitleBlock`, N.7.2 #5).
 
+### 5.11 Τι κωδικοποιεί το QR & γιατί ντετερμινιστικό αποτύπωμα (αρχιτεκτονικές αποφάσεις Φάσης Λ, 2026-07-14)
+
+Τρία ερωτήματα, τρεις αποφάσεις — με βάση τον **κώδικα** (Phase 1 recognition) και την **πρακτική
+των ηγετών**:
+
+**(α) Τι κωδικοποιεί το QR;** **Δρόμος Γ — σύνδεσμος ΚΑΙ έκδοση** (απόφαση Giorgio· η πρακτική του
+**Autodesk ACC**): το QR κωδικοποιεί ένα deep-link προς το έργο στο cloud **με** το αποτύπωμα της
+έκδοσης στο query — `{{baseUrl}}/projects/{projectId}?v={fingerprint}`. Ο σκανάρων στο εργοτάξιο
+ανοίγει το **ζωντανό** έγγραφο (πάντα η τελευταία έκδοση, όπως Bluebeam Studio / PlanGrid) **και**
+ξέρει **ποια** έκδοση κρατά στο χέρι ο άλλος (audit «τυπωμένο == κατατεθειμένο;», όπως Newforma /
+document control). Οι δύο σχολές (live-link vs version-hash) ενώνονται σε μία — ό,τι ακριβώς κάνει
+το ACC (link + version στο query).
+
+> ⚠️ **Τίμιος περιορισμός (καταγράφηκε)**: το route `/dxf/viewer` δεν κάνει ακόμη deep-link σε
+> συγκεκριμένο σχέδιο από URL· ο σύνδεσμος σήμερα ανοίγει τη **σελίδα του έργου** (`/projects/{id}`,
+> υπαρκτό route). Όταν προστεθεί deep-link viewer, αλλάζει **μόνο** το `buildTitleBlockQrPayload`
+> (μία καθαρή συνάρτηση) — τίποτε άλλο. Χωρίς ενεργό έργο, το payload υποβαθμίζεται χαριτωμένα σε
+> «μόνο αποτύπωμα» (audit χωρίς σύνδεσμο).
+
+**(β) Γιατί ντετερμινιστικό αποτύπωμα;** Ίδια έκδοση ⇒ **ίδιο** QR: δύο εκτυπώσεις του ίδιου φύλλου
+δεν επιτρέπεται να βγάζουν άλλο κωδικό (αλλιώς το «αποτύπωμα» δεν αποτυπώνει τίποτα). Το
+`buildTitleBlockFingerprint` είναι **καθαρή συνάρτηση** των raw facts (**projectId + αριθμός φύλλου +
+ακέραιη αναθεώρηση**) → αναγνώσιμο πρόθεμα (`r3-Α2`) + σταθερό FNV-1a hash. **Μηδέν `Date.now()` /
+τυχαιότητα** μέσα στο hash. Κρίσιμο: χρησιμοποιεί την **ακέραιη** αναθεώρηση (`getCurrentRevision().number`),
+**όχι** τη locale-μορφή (`getActiveRevisionFacts` → «3η»/«3») — αλλιώς η ίδια έκδοση θα έβγαζε άλλο
+αποτύπωμα στα EL και άλλο στα EN. Σε **σετ** κάθε φύλλο έχει δικό του αριθμό ⇒ δικό του QR (τα ίδια
+`TitleBlockScopeOverrides` της Φάσης Ζ τροφοδοτούν και το αποτύπωμα).
+
+**(γ) Πώς μπαίνει το QR στην πινακίδα;** Ως **«άλλη μια εικόνα κελιού»**, **ακριβώς** όπως η
+σφραγίδα (Φάση Ε) — **κανένα** δεύτερο image pipeline (N.18):
+- **Γέννηση**: το υπάρχον `qrcode@1.5.4` (MIT, ήδη στο repo· μοτίβο `api/attendance/qr/generate`) →
+  `QRCode.toDataURL(payload)` → PNG data URL. **Τοπικά, μηδέν δίκτυο, ντετερμινιστικό.**
+- **Cache**: ένας **γενικός** `createKeyedImageCache` (SSoT μηχανισμός) εξυπηρετεί **και** τη
+  σφραγίδα (fetch+decode) **και** το QR (τοπική γέννηση) — η μόνη διαφορά είναι το `decode`. Έτσι
+  αποφεύχθηκε το κλασικό sibling-clone (κεντρικοποιείς το Α, γράφεις Β ως δίδυμο· ο `stamp-image-client`
+  refactored να το χρησιμοποιεί, ίδιο public API). Προ-φόρτωση εκ των προτέρων, σύγχρονο read στο
+  render path (ADR-040: μηδέν `await` στο κλικ/ghost/PDF).
+- **Τοποθέτηση**: `RasterPrimitive` (ADR-622) σε **κελί που σκάβεται από τη ΔΕΞΙΑ ακμή** της πινακίδας
+  — **συμμετρικά** με τη σφραγίδα (αριστερά)· ο **ίδιος** ζωγράφος κελιού (`cellImagePrimitives`) και
+  για τα δύο. Τα τρία backends (canvas / PDF / in-scene `ImageEntity`) το ζωγραφίζουν **δωρεάν**.
+- **Off by default** (`title-block-options-store.withQr`): μόνο όποιος το ζητά ρητά αλλάζει την
+  πινακίδα του ⇒ **μηδέν** αλλαγή γεωμετρίας/συμπεριφοράς για τους υπόλοιπους (metrics πανομοιότυπα).
+
 ---
 
 ## 6. Roadmap (6 Φάσεις — υλοποίηση αργότερα, 1 φάση/session)
@@ -811,6 +854,14 @@ pending edit (ο χρήστης άγγιξε το πεδίο)  →  persisted (L
   γλωσσική παραλλαγή** (απόσπαση με `parentId` — Revit family / ArchiCAD Master Layout), με **λεξικό
   παραγμένο από τα δίγλωσσα presets** + **AI fallback** για τα άγνωστα + **ρητή έγκριση**. Μηδέν νέο
   service, μηδέν νέο data path. Αρχιτεκτονική: **§5.10**.
+- **Φάση Λ — QR / version fingerprint** *(προαιρετικό AI-magic §8 #8)* — **✅ ΥΛΟΠΟΙΗΘΗΚΕ 2026-07-14**
+  (βλ. changelog): κελί **QR** δεξιά στην πινακίδα που κωδικοποιεί **σύνδεσμο έργου + αποτύπωμα
+  έκδοσης** (**Δρόμος Γ = Autodesk ACC**, απόφαση Giorgio). Το αποτύπωμα είναι **ντετερμινιστικό**
+  (καθαρή συνάρτηση των raw facts: projectId + αριθμός φύλλου + ακέραιη αναθεώρηση· μηδέν `Date.now()`,
+  locale-independent). Το QR μπαίνει ως **εικόνα κελιού** μέσα από τον **ίδιο** δρόμο της σφραγίδας
+  (γενικός `createKeyedImageCache` + `RasterPrimitive` → 3 backends· `qrcode@1.5.4` MIT, ήδη στο repo).
+  **Off by default.** Μηδέν νέο image pipeline, μηδέν νέο data path. Αρχιτεκτονική: **§5.11**.
+  *Εκτός φάσης*: AI batch-δημιουργία σετ (§8 #4 — το τελευταίο προαιρετικό), deep-link viewer route.
 
 ---
 
@@ -868,6 +919,11 @@ pending edit (ο χρήστης άγγιξε το πεδίο)  →  persisted (L
    title-block family / ArchiCAD Master Layout), με **λεξικό παραγμένο από τα presets** + **AI
    fallback** για τα άγνωστα + **ρητή έγκριση** του χρήστη. Μηδέν νέο data path. **§5.10**.
 8. **QR/version fingerprint** που συνδέει το τυπωμένο σχέδιο με το ζωντανό cloud μοντέλο.
+   — **✅ ΠΑΡΑΔΟΘΗΚΕ (Φάση Λ, 2026-07-14)**: κελί QR (off by default) που κωδικοποιεί **σύνδεσμο
+   έργου + αποτύπωμα έκδοσης** — **Δρόμος Γ** (η πρακτική του Autodesk ACC: link + version στο query,
+   απόφαση Giorgio). Αποτύπωμα **ντετερμινιστικό** (καθαρή συνάρτηση projectId + φύλλο + ακέραιη
+   αναθεώρηση· μηδέν τυχαιότητα/timestamp). Το QR είναι «άλλη μια εικόνα κελιού» μέσα από τον **ίδιο**
+   δρόμο της σφραγίδας — μηδέν νέο image pipeline (N.18). **§5.11**.
 9. **Έξυπνη πρόταση κλίμακας/χαρτιού** βάσει bbox αντικειμένου + κανόνων ISO 5457.
    — **✅ ΠΑΡΑΔΟΘΗΚΕ (Φάση Γ: in-scene· 2026-07-14: ΚΑΙ στην εκτύπωση)**: η **ίδια** καθαρή
    `suggestPaperSpec` έχει πλέον **δύο** καταναλωτές (N.18 — καμία δεύτερη υλοποίηση): το εργαλείο
@@ -1039,6 +1095,40 @@ pending edit (ο χρήστης άγγιξε το πεδίο)  →  persisted (L
 
 ## Changelog
 
+- **2026-07-14 (Φάση Λ — QR / version fingerprint, §8 #8, ΥΛΟΠΟΙΗΣΗ)**: το **2ο** από τα προαιρετικά
+  AI-magic (μένει μόνο το **§8 #4**, AI batch-δημιουργία σετ). Αρχιτεκτονική: **§5.11**.
+  - **SSoT audit ΠΡΩΤΑ (ο κώδικας η αλήθεια)**: διόρθωση του προηγούμενου handoff — **κανένα** νέο
+    πακέτο· το `qrcode@1.5.4` (**MIT**) υπάρχει ήδη (μοτίβο `api/attendance/qr/generate`). Το QR είναι
+    **το ίδιο** πρόβλημα με τη σφραγίδα (Φάση Ε): μια εικόνα σε κελί πινακίδας ⇒ ξαναχρησιμοποιήθηκε
+    ο **ίδιος** δρόμος (`RasterPrimitive` → 3 backends), **κανένα** δεύτερο image pipeline.
+  - **Απόφαση (§5.11α), έγκριση Giorgio**: **Δρόμος Γ** — το QR κωδικοποιεί **σύνδεσμο έργου + αποτύπωμα
+    έκδοσης** (`/projects/{id}?v={fingerprint}`), η πρακτική του **Autodesk ACC** (link + version στο
+    query). Ενώνει live-link (Bluebeam/PlanGrid) + version-audit (Newforma) σε ένα.
+  - **Ντετερμινισμός (§5.11β)**: `buildTitleBlockFingerprint` = καθαρή συνάρτηση των raw facts (projectId
+    + αριθμός φύλλου + **ακέραιη** αναθεώρηση) → πρόθεμα `r3-Α2` + FNV-1a hash. **Μηδέν `Date.now()`**,
+    locale-independent (ακέραιη αναθεώρηση, όχι «3η»/«3») ⇒ ίδια έκδοση ⇒ ίδιο QR σε EL & EN. Σε σετ,
+    κάθε φύλλο = δικό του QR (μέσω των `TitleBlockScopeOverrides` της Φάσης Ζ).
+  - **Boy Scout / N.18 (§5.11γ)**: ο μηχανισμός cache της σφραγίδας εξήχθη σε **γενικό**
+    `createKeyedImageCache` (φόρτωσε-μία-φορά/διάβασε-σύγχρονα) που εξυπηρετεί **και** σφραγίδα **και**
+    QR — η μόνη διαφορά το `decode` (fetch vs `QRCode.toDataURL`). Απέτρεψε το sibling-clone· ο
+    `stamp-image-client` refactored με **ίδιο** public API. Ο ζωγράφος κελιού γενικεύτηκε
+    (`stampPrimitives` → `cellImagePrimitives`) — ένας για σφραγίδα (αριστερά) **και** QR (δεξιά).
+  - **Γεωμετρία**: νέο κελί QR σκάβεται από τη **δεξιά** ακμή (συμμετρικά με τη σφραγίδα)· **off by
+    default** ⇒ metrics **πανομοιότυπα** με πριν όταν κλειστό (κλειδώθηκε με test: όλα τα υπάρχοντα
+    stamp/print tests ανέπαφα).
+  - **projectId event-time**: εκτέθηκε `getActiveScopeProjectId()` (ο `cachedKey` του
+    `placeholder-scope-client` **ΕΙΝΑΙ** το projectId) — **μηδέν** νέο fetch/wire change.
+  - **Προ-φόρτωση**: το QR γεννιέται στο `loadTitleBlockAssets` (μετά το revision load, ίδιος ιδιοκτήτης
+    lifecycle) + per-sheet στο `runPrintSet` (gated στο `withQr`) ⇒ σύγχρονο read στο render path (ADR-040).
+  - **UI**: combobox «QR κωδικός» (Με/Χωρίς) στο contextual ribbon tab, δίπλα στην «Κορνίζα» (ίδιο μοτίβο
+    string-param). i18n keys EL+EN **πρώτα** (N.11).
+  - **Αρχεία (όλα ≤500 γρ., συναρτήσεις ≤40)**: νέα — `title-block-fingerprint.ts`, `qr-image-client.ts`,
+    `title-block-image-cache.ts` + tests (`title-block-fingerprint.test.ts`, `title-block-qr.test.ts`).
+    Άλλαξαν — `sheet-frame.ts`, `title-block-layout.ts`, `active-title-block.ts`, `stamp-image-client.ts`,
+    `print-service.ts`, `title-block-options-store.ts`, `placeholder-scope-client.ts` + 3 ribbon αρχεία.
+  - **Έλεγχοι**: 255/255 title-block+print tests PASS· `jscpd:diff` καθαρό (μηδέν clone)· **ΟΧΙ** `tsc`
+    (N.17). **Τίμιος περιορισμός** που καταγράφηκε: το `/dxf/viewer` δεν κάνει ακόμη deep-link σε σχέδιο —
+    ο σύνδεσμος ανοίγει τη σελίδα έργου· αλλάζει **μόνο** το `buildTitleBlockQrPayload` όταν προστεθεί.
 - **2026-07-14 (Φάση Κ — Auto-localization EL↔EN, §8 #7, ΥΛΟΠΟΙΗΣΗ)**: το **1ο** από τα τρία
   προαιρετικά AI-magic. Αρχιτεκτονική: **§5.10**.
   - **SSoT audit ΠΡΩΤΑ (ο κώδικας η αλήθεια)**: τα ¾ του «auto-localization» υπήρχαν ήδη —

@@ -31,6 +31,8 @@ const REGISTRY_PATH = path.join(__dirname, '..', 'src', 'lib', 'asset-packs', 'a
 /** Πού ζουν τοπικά τα παραγόμενα assets κάθε πακέτου (input του upload). */
 const PACK_SOURCE_DIRS = {
   'furniture-plan-2d': path.join(__dirname, '..', 'public', 'furniture-2d'),
+  'people-plan-2d': path.join(__dirname, '..', 'public', 'people-2d'),
+  'vehicles-plan-2d': path.join(__dirname, '..', 'public', 'vehicles-2d'),
 };
 
 /**

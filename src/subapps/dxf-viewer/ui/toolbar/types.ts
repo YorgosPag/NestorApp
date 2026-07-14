@@ -246,6 +246,10 @@ export type ToolType =
   | 'title-block'
   // ADR-654: single-click placement of a floorplan-entourage furniture image (ImageEntity)
   | 'furniture-plan'
+  // ADR-654 M6: single-click placement of a top-view people entourage image (ImageEntity)
+  | 'people-plan'
+  // ADR-654 M6: single-click placement of a top-view vehicle entourage image (ImageEntity)
+  | 'vehicles-plan'
   // ADR-415: pure-vector 2D floorplan symbol drawing tool (single-click placement)
   | 'floorplan-symbol'
   // ADR-408 Φ8: linear MEP segment tools (duct/pipe, 2-click; one entity, two tools like Revit)

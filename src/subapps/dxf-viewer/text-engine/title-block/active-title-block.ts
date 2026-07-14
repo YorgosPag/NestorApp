@@ -24,11 +24,23 @@ import {
   useTitleBlockOptionsStore,
 } from '../../state/title-block-options-store';
 import {
+  getActiveScopeProjectId,
   getPlaceholderScopeSources,
   loadPlaceholderScope,
 } from '../templates/resolver/placeholder-scope-client';
 import type { PlaceholderScope, PlaceholderScopeRevision } from '../templates/resolver/scope.types';
-import { getActiveRevisionFacts, loadProjectRevisions } from './revisions/revision-client';
+import {
+  getActiveRevisionFacts,
+  getCurrentRevision,
+  loadProjectRevisions,
+} from './revisions/revision-client';
+import {
+  buildTitleBlockFingerprint,
+  buildTitleBlockQrPayload,
+  resolveTitleBlockQrBaseUrl,
+  type TitleBlockVersionFacts,
+} from './title-block-fingerprint';
+import { getTitleBlockQr, loadTitleBlockQr } from './qr-image-client';
 import type { TextTemplate, TextTemplateTitleBlockMeta } from '../templates/template.types';
 import type { TitleBlockSheetOptions } from './print-sheet';
 import { getStampImage, loadStampImage } from './stamp-image-client';
@@ -203,6 +215,9 @@ export async function loadTitleBlockAssets(projectId?: string): Promise<void> {
     // του lifecycle): ό,τι φορτώνει η πινακίδα, φορτώνεται εδώ και διαβάζεται σύγχρονα μετά.
     loadProjectRevisions(projectId),
   ]);
+  // Φάση Λ — το QR χτίζεται από projectId + τρέχουσα αναθεώρηση: γεννιέται ΜΕΤΑ το revision load,
+  // εδώ (ίδιος ιδιοκτήτης lifecycle), ώστε το render path να το διαβάζει σύγχρονα (ADR-040).
+  await warmActiveTitleBlockQr();
 }
 
 /** Η σφραγίδα του ενεργού μηχανικού, στη μορφή που ζητά ο καλών (event-time read). */
@@ -216,18 +231,74 @@ export function buildActiveStampImage(form: StampImageForm): TitleBlockStampImag
   };
 }
 
-/** Οι γεωμετρικές επιλογές του ενεργού preset **χωρίς** το χαρτί (event-time read). */
+/**
+ * ADR-651 Φάση Λ — τα **raw** facts έκδοσης του ενεργού φύλλου (event-time read). Locale-INDEPENDENT
+ * (ακέραιη αναθεώρηση, όχι «3η»/«3») ⇒ ίδια έκδοση ⇒ ίδιο αποτύπωμα σε EL και EN. Ο αριθμός φύλλου
+ * έρχεται από τα `overrides` (διαφέρει ανά φύλλο σε σετ)· in-scene μένει κενός.
+ */
+function collectTitleBlockVersionFacts(overrides?: TitleBlockScopeOverrides): TitleBlockVersionFacts {
+  return {
+    projectId: getActiveScopeProjectId(),
+    sheetNumber: overrides?.sheetNumber,
+    revisionNumber: getCurrentRevision()?.number,
+  };
+}
+
+/** Το κείμενο που κωδικοποιεί το QR (σύνδεσμος έργου + αποτύπωμα έκδοσης — Δρόμος Γ). `''` ⇒ κανένα. */
+function buildActiveQrPayload(overrides?: TitleBlockScopeOverrides): string {
+  const facts = collectTitleBlockVersionFacts(overrides);
+  return buildTitleBlockQrPayload({
+    baseUrl: resolveTitleBlockQrBaseUrl(),
+    projectId: facts.projectId,
+    fingerprint: buildTitleBlockFingerprint(facts),
+  });
+}
+
+/**
+ * Το QR ως εικόνα κελιού (event-time read) — `null` όταν ο χρήστης δεν το θέλει, δεν υπάρχουν
+ * facts έκδοσης, ή δεν έχει προ-φορτωθεί (ίδια χαριτωμένη υποβάθμιση με τη σφραγίδα).
+ */
+export function buildActiveTitleBlockQrImage(
+  overrides?: TitleBlockScopeOverrides,
+): TitleBlockStampImage | null {
+  if (!useTitleBlockOptionsStore.getState().withQr) return null;
+  const payload = buildActiveQrPayload(overrides);
+  if (!payload) return null;
+  const qr = getTitleBlockQr(payload);
+  if (!qr) return null;
+  return { src: qr.dataUrl, widthPx: qr.sizePx, heightPx: qr.sizePx };
+}
+
+/**
+ * Προ-φορτώνει (γεννά+cache-άρει) το QR του τρέχοντος context — μία φορά, εκ των προτέρων, ώστε το
+ * render path να μένει σύγχρονο (ADR-040). Ασυνθήκευτο (γεννιέται ακόμη κι όταν το toggle είναι off
+ * ⇒ εμφανίζεται **αμέσως** μόλις ο χρήστης το ανάψει, χωρίς νέο όπλισμα). Idempotent.
+ */
+export async function warmActiveTitleBlockQr(overrides?: TitleBlockScopeOverrides): Promise<void> {
+  const payload = buildActiveQrPayload(overrides);
+  if (payload) await loadTitleBlockQr(payload);
+}
+
+/**
+ * Οι γεωμετρικές επιλογές του ενεργού preset **χωρίς** το χαρτί (event-time read).
+ *
+ * ADR-651 Φάση Λ — τα `overrides` περνούν στο QR ώστε το αποτύπωμα να φέρει τον σωστό αριθμό
+ * φύλλου σε **σετ** (κάθε φύλλο = δικό του QR)· in-scene/single δεν χρειάζονται overrides.
+ */
 export function buildActiveTitleBlockSheetOptions(
   locale: TitleBlockLocale,
   stampForm: StampImageForm = 'url',
+  overrides?: TitleBlockScopeOverrides,
 ): TitleBlockSheetOptions {
-  const { withFrame } = useTitleBlockOptionsStore.getState();
+  const { withFrame, withQr } = useTitleBlockOptionsStore.getState();
   const stamp = activeStampMeta(locale);
   return {
     withFrame,
     withStampBox: stamp.withStampBox,
     stampLabel: stamp.stampLabel,
     stampImage: buildActiveStampImage(stampForm),
+    withQr,
+    qrImage: buildActiveTitleBlockQrImage(overrides),
   };
 }
 

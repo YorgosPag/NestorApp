@@ -62,6 +62,7 @@ export function useRibbonTitleBlockBridge(): RibbonTitleBlockBridge {
   const paperSize = useTitleBlockOptionsStore((s) => s.paperSize);
   const orientation = useTitleBlockOptionsStore((s) => s.orientation);
   const withFrame = useTitleBlockOptionsStore((s) => s.withFrame);
+  const withQr = useTitleBlockOptionsStore((s) => s.withQr);
   // Συνδρομή στο tool handle ώστε το ribbon να δείχνει τα τρέχοντα rotation/scale.
   const toolHandle = titleBlockToolBridgeStore.use();
 
@@ -102,6 +103,8 @@ export function useRibbonTitleBlockBridge(): RibbonTitleBlockBridge {
           return { value: orientation, options: [] };
         case TITLE_BLOCK_RIBBON_KEYS.stringParams.frameMode:
           return { value: withFrame ? 'sheet' : 'box', options: [] };
+        case TITLE_BLOCK_RIBBON_KEYS.stringParams.qrMode:
+          return { value: withQr ? 'on' : 'off', options: [] };
         default:
           break;
       }
@@ -110,7 +113,7 @@ export function useRibbonTitleBlockBridge(): RibbonTitleBlockBridge {
         toolHandle, commandKey, NUMBER_KEY_TO_OVERRIDE, NUMBER_KEY_DEFAULT,
       );
     },
-    [presetId, presetOptions, paperSize, orientation, withFrame, toolHandle],
+    [presetId, presetOptions, paperSize, orientation, withFrame, withQr, toolHandle],
   );
 
   const onComboboxChange = useCallback((commandKey: string, value: string): void => {
@@ -130,6 +133,9 @@ export function useRibbonTitleBlockBridge(): RibbonTitleBlockBridge {
         return;
       case TITLE_BLOCK_RIBBON_KEYS.stringParams.frameMode:
         store.setWithFrame(value === 'sheet');
+        return;
+      case TITLE_BLOCK_RIBBON_KEYS.stringParams.qrMode:
+        store.setWithQr(value === 'on');
         return;
       default:
         break;

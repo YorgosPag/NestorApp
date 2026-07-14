@@ -72,6 +72,17 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-07-14 — Entourage packs: click-routing των «people-plan» / «vehicles-plan» tools (ADR-654 M6)
+**Τι:** wiring δύο νέων single-click entourage tools στο **ίδιο** dispatch pipeline του furniture-plan. **MOD**
+`hooks/canvas/canvas-click-tool-types.ts` (`EntouragePlacementToolLike` — **ένα** κοινό routing συμβόλαιο για όλα
+τα entourage packs, όχι δίδυμα interfaces ανά pack) + `canvas-click-types.ts` (προαιρετικά `peoplePlanTool?` /
+`vehiclesPlanTool?`) + `canvas-click-bim-dispatch.ts` (ίδιο RAW free-point placement branch) + `CanvasSection.tsx`
+(destructure + pass-through στα dispatch params — καθαρό pass-through, καμία νέα λογική στον orchestrator).
+**Συμμόρφωση ADR-040:** καμία νέα `useSyncExternalStore` σε orchestrator/shell (CHECK 6C ασφαλές)· τα tools είναι
+click-time consumers (getter-based reads, μηδέν snapshot στα event handlers)· μηδέν άγγιγμα σε bitmap cache key /
+high-freq stores / micro-leaf hot-path — το ghost παραμένει pure projection. CHECK 6B touch → co-staged ADR-040 +
+ADR-654.
+
 ### 2026-07-13 — Πινακίδα σχεδίου: click-routing του «title-block» placement tool (ADR-651 Φάση Β)
 **Τι:** wiring του single-click «title-block» tool στο ίδιο dispatch pipeline. **MOD**
 `hooks/canvas/canvas-click-tool-types.ts` (`TitleBlockToolLike` = **alias** του `BlockLibraryToolLike` — ίδιο

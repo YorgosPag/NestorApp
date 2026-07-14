@@ -113,6 +113,34 @@ function resolveTitleBlockHeightMm(
 }
 
 /**
+ * Χωρίζει το κουτί της πινακίδας σε **σφραγίδα** (αριστερά) + **QR** (δεξιά) + **πεδία** (κέντρο).
+ * Τα δύο κελιά σκάβονται από τις αντικριστές ακμές ⇒ η ζώνη πεδίων στενεύει και από τις δύο,
+ * μένοντας κεντραρισμένη. Off ⇒ μηδέν πλάτος ⇒ πανομοιότυπη γεωμετρία με πριν.
+ */
+function splitTitleBlockCells(
+  titleBlock: RectMm,
+  withStampBox: boolean,
+  withQr: boolean,
+): { stamp: RectMm | null; qr: RectMm | null; fields: RectMm } {
+  const stampWidthMm = withStampBox ? Math.min(ISO_5457.stampWidthMm, titleBlock.w * 0.35) : 0;
+  const qrWidthMm = withQr ? Math.min(ISO_5457.qrCellWidthMm, titleBlock.w * 0.25) : 0;
+  return {
+    stamp: withStampBox
+      ? { x: titleBlock.x, y: titleBlock.y, w: stampWidthMm, h: titleBlock.h }
+      : null,
+    qr: withQr
+      ? { x: titleBlock.x + titleBlock.w - qrWidthMm, y: titleBlock.y, w: qrWidthMm, h: titleBlock.h }
+      : null,
+    fields: {
+      x: titleBlock.x + stampWidthMm,
+      y: titleBlock.y,
+      w: titleBlock.w - stampWidthMm - qrWidthMm,
+      h: titleBlock.h,
+    },
+  };
+}
+
+/**
  * Τα ορθογώνια του φύλλου για το δοσμένο χαρτί. Καθαρή συνάρτηση: ίδιο input ⇒ ίδιο output
  * (το ghost και το commit ΠΡΕΠΕΙ να συμφωνούν — N.7.2).
  */
@@ -134,35 +162,16 @@ export function computeSheetFrameMetrics(input: SheetFrameInput): SheetFrameMetr
     h: tbHeightMm,
   };
 
-  const stampWidthMm = input.withStampBox
-    ? Math.min(ISO_5457.stampWidthMm, titleBlock.w * 0.35)
-    : 0;
-  const stamp: RectMm | null = input.withStampBox
-    ? { x: titleBlock.x, y: titleBlock.y, w: stampWidthMm, h: titleBlock.h }
-    : null;
-
-  // ADR-651 Φάση Λ — το κελί QR σκάβεται από τη ΔΕΞΙΑ ακμή (η σφραγίδα από την αριστερή), ώστε
-  // οι γραμμές πεδίων να μένουν στο κέντρο. Off ⇒ μηδέν πλάτος ⇒ πανομοιότυπη γεωμετρία με πριν.
-  const qrWidthMm = input.withQr ? Math.min(ISO_5457.qrCellWidthMm, titleBlock.w * 0.25) : 0;
-  const qr: RectMm | null = input.withQr
-    ? { x: titleBlock.x + titleBlock.w - qrWidthMm, y: titleBlock.y, w: qrWidthMm, h: titleBlock.h }
-    : null;
-
-  const fields: RectMm = {
-    x: titleBlock.x + stampWidthMm,
-    y: titleBlock.y,
-    w: titleBlock.w - stampWidthMm - qrWidthMm,
-    h: titleBlock.h,
-  };
+  const cells = splitTitleBlockCells(titleBlock, input.withStampBox, Boolean(input.withQr));
 
   return {
     sheetWidthMm: dims.widthMm,
     sheetHeightMm: dims.heightMm,
     frame,
     titleBlock,
-    stamp,
-    qr,
-    fields,
+    stamp: cells.stamp,
+    qr: cells.qr,
+    fields: cells.fields,
   };
 }
 

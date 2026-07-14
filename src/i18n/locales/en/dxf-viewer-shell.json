@@ -1262,6 +1262,18 @@
       "statusPosition": "Click to place the furniture",
       "errorNoSelection": "No furniture selected",
       "errorUnknownItem": "Unknown furniture item"
+    },
+    "peoplePlan": {
+      "label": "People",
+      "statusPosition": "Click to place the person",
+      "errorNoSelection": "No person selected",
+      "errorUnknownItem": "Unknown person"
+    },
+    "vehiclePlan": {
+      "label": "Vehicles",
+      "statusPosition": "Click to place the vehicle",
+      "errorNoSelection": "No vehicle selected",
+      "errorUnknownItem": "Unknown vehicle"
     }
   },
   "blockLibrary": {
@@ -1911,7 +1923,9 @@
       "mepRiser": "Stack",
       "print": "Print",
       "export": "Export",
-      "structural": "Structural"
+      "structural": "Structural",
+      "peoplePlan": "People",
+      "vehiclePlan": "Vehicles"
     },
     "minimizeStates": {
       "full": "Full Ribbon",
@@ -4893,7 +4907,9 @@
         "detachTooltip": "Detach the selected columns (or all columns of the selected footing) from the footing"
       },
       "titleBlockLibrary": "Library",
-      "titleBlockLibraryTooltip": "Office/project title-block templates — save, publish, variants"
+      "titleBlockLibraryTooltip": "Office/project title-block templates — save, publish, variants",
+      "peoplePlan": "People",
+      "vehiclePlan": "Vehicles"
     },
     "tooltips": {
       "bimSchedule": "Open BIM Schedule — export structural elements",
@@ -6453,6 +6469,65 @@
   "assetPacks": {
     "furniturePlan2d": {
       "title": "2D Plan Furniture"
+    },
+    "peoplePlan2d": {
+      "title": "2D Plan People"
+    },
+    "vehiclePlan2d": {
+      "title": "2D Plan Vehicles"
     }
+  },
+  "peoplePlan": {
+    "title": "Plan People",
+    "hint": "Pick a person and click on the canvas to place it.",
+    "empty": "No plan people found.",
+    "noMatch": "No person matches the filter.",
+    "allCategories": "All",
+    "categories": {
+      "person": "Person",
+      "lying": "Lying",
+      "group": "Group",
+      "stroller": "Stroller",
+      "wheelchair": "Wheelchair",
+      "child": "Child"
+    },
+    "loading": "Checking permissions…",
+    "locked": "The people library is not available on your account."
+  },
+  "vehiclePlan": {
+    "title": "Plan Vehicles",
+    "hint": "Pick a vehicle and click on the canvas to place it.",
+    "empty": "No plan vehicles found.",
+    "noMatch": "No vehicle matches the filter.",
+    "allCategories": "All",
+    "allSecondary": "All",
+    "secondaryFilterLabel": "Color",
+    "categories": {
+      "car": "Car",
+      "motorcycle": "Motorcycle",
+      "scooter": "Scooter",
+      "pickup": "Pickup",
+      "van": "Van",
+      "truck": "Truck",
+      "boat": "Boat",
+      "construction": "Construction vehicle",
+      "tractor": "Tractor",
+      "airplane": "Airplane"
+    },
+    "secondary": {
+      "red": "Red",
+      "white": "White",
+      "black": "Black",
+      "silver": "Silver",
+      "grey": "Grey",
+      "blue": "Blue",
+      "green": "Green",
+      "yellow": "Yellow",
+      "orange": "Orange",
+      "brown": "Brown",
+      "other": "Other"
+    },
+    "loading": "Checking permissions…",
+    "locked": "The vehicle library is not available on your account."
   }
 }
