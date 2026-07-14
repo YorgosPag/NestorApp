@@ -174,7 +174,8 @@ describe('SSoT convergence', () => {
  */
 describe('runPrintSet — multi-page sheet set', () => {
   function sheet(scene: SceneModel, sheetNumber: string, title: string): SheetSetItem {
-    return { scene, sheetNumber, title };
+    // ADR-651 Φάση Ι — το φύλλο κουβαλά το levelId του (ταυτότητα για το write-back).
+    return { levelId: `lvl-${sheetNumber}`, scene, sheetNumber, title };
   }
   const SCENE_A = { entities: [] } as unknown as SceneModel;
   const SCENE_B = { entities: [] } as unknown as SceneModel;

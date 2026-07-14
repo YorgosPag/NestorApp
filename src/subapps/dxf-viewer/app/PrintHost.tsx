@@ -31,8 +31,16 @@ import { useCurrentSceneModel } from '../ui/text-toolbar/hooks/useCurrentSceneMo
 import { nowISO } from '@/lib/date-local';
 import { runPrint, runPrintSet, type PrintDeps, type PrintRequest } from '../print';
 import { loadTitleBlockAssets } from '../text-engine/title-block/active-title-block';
-import { buildSheetSet, type SheetSetSource } from '../text-engine/title-block/sheet-set';
+import { sheetLevelUpdates } from '../text-engine/title-block/sheet-edits';
+import {
+  buildSheetRows,
+  buildSheetSet,
+  type SheetIdentityEdits,
+  type SheetSetSource,
+} from '../text-engine/title-block/sheet-set';
+import { drawingExtentMmOf } from '../text-engine/title-block/suggest-paper';
 import { hasTitleBlockEntity } from '../text-engine/title-block/title-block-def';
+import { resolveSceneUnits } from '../utils/scene-units';
 import { toTitleBlockLocale } from '../text-engine/title-block/title-block-presets';
 import { getActiveSceneManager } from '../bim-3d/scene/active-scene-manager-registry';
 import { captureCurrent3dView } from '../print/capture/capture-3d';
@@ -52,7 +60,7 @@ export function PrintHost(): React.ReactElement | null {
 function PrintBody({ onClose }: { readonly onClose: () => void }): React.JSX.Element {
   const { i18n } = useTranslation();
   const scene = useCurrentSceneModel();
-  const { currentLevelId, levels, getLevelScene } = useLevels();
+  const { currentLevelId, levels, getLevelScene, updateLevelContext } = useLevels();
   const hierarchy = useProjectHierarchyOptional();
   const projectId = hierarchy?.selectedProject?.id;
 
@@ -85,10 +93,44 @@ function PrintBody({ onClose }: { readonly onClose: () => void }): React.JSX.Ele
 
   // Απόφαση #10β — «λείπει πινακίδα»: ο διάλογος το λέει και την προσθέτει (checkbox ναι).
   const titleBlockMissing = !hasTitleBlockEntity(scene?.entities ?? []);
+
+  // ADR-651 §8 #9 — «ποιο φύλλο χρειάζεται αυτό το σχέδιο;»: το bbox σε **mm μοντέλου** (το scene
+  // μπορεί να είναι σε μέτρα — ADR-368/462), ώστε ο διάλογος να προτείνει χαρτί με την ΙΔΙΑ καθαρή
+  // συνάρτηση που χρησιμοποιεί ήδη το in-scene εργαλείο πινακίδας. Μία φορά ανά άνοιγμα διαλόγου.
+  const drawingExtentMm = React.useMemo(
+    () => (scene ? drawingExtentMmOf(scene.entities ?? [], resolveSceneUnits(scene)) : null),
+    [scene],
+  );
   const titleBlockLocale = toTitleBlockLocale(i18n.language);
 
+  // ADR-651 Φάση Ι — οι γραμμές του πίνακα φύλλων (αριθμός/τίτλος ανά όροφο). Ίδια πηγή,
+  // ίδια σειρά με το σετ που θα τυπωθεί ⇒ ό,τι βλέπει ο χρήστης είναι ό,τι τυπώνεται.
+  const sheetRows = React.useMemo(
+    () => buildSheetRows(sheetSources, { locale: titleBlockLocale }),
+    [sheetSources, titleBlockLocale],
+  );
+
+  /**
+   * ADR-651 Φάση Ι — οι αλλαγές ταυτότητας φύλλων **persist-άρουν στους ορόφους** (ο τίτλος στο
+   * `entityLabel`, ο αριθμός στο `sheetNumberOverride`) μέσω του ΥΠΑΡΧΟΝΤΟΣ `updateLevelContext`
+   * (ADR-286 gateway· ένα write ανά **όντως** αλλαγμένο όροφο ⇒ idempotent). `await` ΠΡΙΝ την
+   * εκτύπωση: το PDF τυπώνεται με τα edits ρητά περασμένα, οπότε δεν εξαρτάται ποτέ από το
+   * πότε θα γυρίσει το Firestore snapshot (N.7.2 #2 — μηδέν race).
+   */
+  const persistSheetEdits = React.useCallback(
+    async (edits: SheetIdentityEdits): Promise<void> => {
+      const updates = sheetLevelUpdates(sheetRows, edits);
+      await Promise.all(
+        updates.map(({ levelId, entityLabel, sheetNumberOverride }) =>
+          updateLevelContext(levelId, { entityLabel, sheetNumberOverride }),
+        ),
+      );
+    },
+    [sheetRows, updateLevelContext],
+  );
+
   const handleSubmit = React.useCallback(
-    async (request: PrintRequest) => {
+    async (request: PrintRequest, edits: SheetIdentityEdits) => {
       const manager = getActiveSceneManager();
       const deps: PrintDeps = {
         scene,
@@ -100,15 +142,16 @@ function PrintBody({ onClose }: { readonly onClose: () => void }): React.JSX.Ele
         titleBlockLocale,
       };
       // ADR-651 Φάση Ζ — «όλο το σετ»: ένα πολυσέλιδο PDF, ένα φύλλο ανά όροφο, με
-      // αυτόματη αρίθμηση + ίδια πινακίδα (2Δ μόνο· ο διάλογος δεν το προσφέρει για 3Δ).
+      // αρίθμηση + ίδια πινακίδα (2Δ μόνο· ο διάλογος δεν το προσφέρει για 3Δ).
       if (request.wholeSet && sheetSources.length >= 2) {
-        const set = buildSheetSet(sheetSources, { locale: titleBlockLocale });
+        await persistSheetEdits(edits);
+        const set = buildSheetSet(sheetSources, { locale: titleBlockLocale, edits });
         await runPrintSet(request, deps, set.sheets);
         return;
       }
       await runPrint(request, deps);
     },
-    [scene, projectName, titleBlockLocale, sheetSources],
+    [scene, projectName, titleBlockLocale, sheetSources, persistSheetEdits],
   );
 
   const handleOpenChange = React.useCallback(
@@ -123,6 +166,8 @@ function PrintBody({ onClose }: { readonly onClose: () => void }): React.JSX.Ele
       canPrint3d={canPrint3d}
       titleBlockMissing={titleBlockMissing}
       sheetCount={sheetSources.length}
+      sheetRows={sheetRows}
+      drawingExtentMm={drawingExtentMm}
       onSubmit={handleSubmit}
     />
   );
