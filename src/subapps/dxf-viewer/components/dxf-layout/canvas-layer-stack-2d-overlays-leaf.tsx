@@ -17,6 +17,7 @@
 import { AutoAreaPreviewOverlay } from './AutoAreaPreviewOverlay';
 import { RegionPerimeterPreviewOverlay } from './RegionPerimeterPreviewOverlay';
 import { RegionGapMarkersOverlay } from './RegionGapMarkersOverlay';
+import { TopoAutoBreaklinePreviewOverlay } from './TopoAutoBreaklinePreviewOverlay';
 import { AnalyticalDispatchCanvas } from './analytical-overlays/AnalyticalDispatchCanvas';
 import type { ViewTransform, Viewport } from '../../rendering/types/Types';
 
@@ -38,6 +39,10 @@ export function CanvasLayerStack2DOverlays({ transform, viewport }: CanvasLayerS
           pick δεν κλείνει βρόχο (AutoCAD BOUNDARY red-circles). Self-subscribes στο
           RegionGapMarkersStore· read-only, pointer-events-none. STAGE ADR-040 + ADR-419. */}
       <RegionGapMarkersOverlay transform={transform} viewport={viewport} />
+      {/* ADR-650 M8β/Γ — προτεινόμενες γραμμές ασυνέχειας (auto-breaklines) υπό έγκριση:
+          πράσινο = τσεκαρισμένη, γκρι διακεκομμένο = απορριφθείσα. Self-subscribes στο
+          LOW-freq auto-breakline store· read-only, pointer-events-none. STAGE ADR-650. */}
+      <TopoAutoBreaklinePreviewOverlay transform={transform} viewport={viewport} />
       {/* ADR-552 — ΕΝΑΣ analytical dispatch canvas αντικαθιστά τα 7 ξεχωριστά
           analytical overlays (riser-through ADR-408 Φ15 · heat-load ADR-422 L1 ·
           pipe-sizing ADR-422 L3 · hydraulic-balancing ADR-422 L4 · utilization

@@ -177,3 +177,33 @@
 .qaHigh .qaDot { background: #dc2626; }
 .qaMedium .qaDot { background: #f59e0b; }
 .qaLow .qaDot { background: #eab308; }
+
+/* ADR-650 M8β/Γ — λίστα προτεινόμενων γραμμών ασυνέχειας (auto-breaklines) υπό έγκριση.
+   Κάθε γραμμή = checkbox + μετρικές· το κλικ στο κείμενο εστιάζει στην υποψήφια. */
+.abItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 4px 6px;
+  font-size: 11px;
+  border-left: 3px solid #22c55e;
+}
+
+.abItem:hover {
+  background: color-mix(in srgb, currentColor 8%, transparent);
+}
+
+/* Ξετσεκαρισμένη = θα αγνοηθεί (ίδιο γκρι με το overlay). */
+.abRejected { border-left-color: #94a3b8; }
+
+.abFocus {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  font-size: 11px;
+  color: inherit;
+}

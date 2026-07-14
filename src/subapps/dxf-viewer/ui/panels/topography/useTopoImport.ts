@@ -22,6 +22,7 @@
 
 import * as React from 'react';
 import { setTopoPoints } from '../../../systems/topography/TopoPointStore';
+import { setPointCloud3D } from '../../../systems/topography/pointcloud-3d-store';
 import { readDelimitedText } from '../../../systems/topography/topo-delimited-reader';
 import { readExcelToTable } from '../../../systems/topography/topo-excel-reader';
 import { extractTopoPointsFromDxf } from '../../../systems/topography/topo-dxf-points';
@@ -236,8 +237,13 @@ export function useTopoImport(surface: TopoSurfaceId = 'existing'): UseTopoImpor
 
   const commit = React.useCallback(() => {
     setTopoPoints(mapped.points, surface);
+    // ADR-650 M8β/Β — η ΜΟΝΗ στιγμή που το νέφος επιβιώνει του wizard: ο μηχανικός ενέκρινε.
+    // Γράφεται ΠΑΝΤΑ (και ως `null` στους δρόμους CSV/DXF): ένα νέφος περιγράφει ΜΙΑ αποτύπωση —
+    // αν το επόμενο import είναι από άλλο δρόμο, το παλιό νέφος θα έδειχνε άλλο εργοτάξιο.
+    // Καθαρά display state (§6) — δεν αγγίζει τον `TopoPointStore` που μόλις γράφτηκε από πάνω.
+    setPointCloud3D(cloudResult?.preview ?? null);
     return mapped.points.length;
-  }, [mapped, surface]);
+  }, [mapped, surface, cloudResult]);
 
   return {
     step, fileName, table, mapping, unit,

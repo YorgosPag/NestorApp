@@ -1,6 +1,6 @@
 # ADR-650 — Τοπογραφικές Αποτυπώσεις & Ισοϋψείς Γραμμές (Έρευνα Αγοράς + Αρχιτεκτονικό Blueprint)
 
-- **Status**: 🟡 IN PROGRESS — **M1 IMPLEMENTED** (πυρήνας σημεία→CDT/TIN→ισοϋψείς· v4) · **M2 IMPLEMENTED** (μέρος Α import wizard· v5 — μέρος Β breakline picking· v6) · **M4 IMPLEMENTED** (3Δ όψη εδάφους: μοναδικό derived TIN → `BufferGeometry` mesh + hypsometric· v7) · **M6 IMPLEMENTED** (όγκοι cut/fill: prisms + daylight split + στάθμη/επιφάνεια/όριο + cross-check + 3Δ cut/fill style· v8, §12.4) · **M7 IMPLEMENTED** (ελληνικό export «ένα κουμπί → φάκελος»: πίνακες στο σχέδιο + ZIP με DXF/PDF/CSV/XLSX + auto tolerance-check §10· v9, §12.5) · **M3 IMPLEMENTED** (ισοϋψείς ακριβείς↔όμορφες + LOD· v10) · **M5α IMPLEMENTED** (AI «καμπανάκι» = deterministic QA rules engine + inline flags, χωρίς LLM· v11) · **M5β IMPLEMENTED** («μίλα στο σχέδιο» = NL editing με LLM tool-calling πάνω στα υπάρχοντα topo commands· 8 tools + destructive spike-removal με confirm· v12 — **M5 ΠΛΗΡΕΣ**) · **M8α IMPLEMENTED** (point-cloud ingestion: LAS + bulk ASCII → in-house CSF bare-earth filter → voxel decimation → ΥΠΑΡΧΟΝ `TopoPointStore`· μηδέν νέα dependency· v13) · **M8β/Α IMPLEMENTED** (**LAZ decode** — ο δρόμος των drones: `laz-perf` **Apache-2.0** (επαληθευμένο, εγκεκριμένο) → ασυμπίεστα records → **ο ΙΔΙΟΣ** `decodeLasRecords` του LAS· lazy WASM πίσω από dynamic import· v14). **Εκκρεμεί**: M8β/Β (3Δ cloud layer), M8β/Γ (auto-breaklines), M8β/Δ (id-aware ASCII), multiplayer, Gaussian-Splat. Έρευνα §1–§11 & roadmap §12.2 παραμένουν το blueprint.
+- **Status**: 🟡 IN PROGRESS — **M1 IMPLEMENTED** (πυρήνας σημεία→CDT/TIN→ισοϋψείς· v4) · **M2 IMPLEMENTED** (μέρος Α import wizard· v5 — μέρος Β breakline picking· v6) · **M4 IMPLEMENTED** (3Δ όψη εδάφους: μοναδικό derived TIN → `BufferGeometry` mesh + hypsometric· v7) · **M6 IMPLEMENTED** (όγκοι cut/fill: prisms + daylight split + στάθμη/επιφάνεια/όριο + cross-check + 3Δ cut/fill style· v8, §12.4) · **M7 IMPLEMENTED** (ελληνικό export «ένα κουμπί → φάκελος»: πίνακες στο σχέδιο + ZIP με DXF/PDF/CSV/XLSX + auto tolerance-check §10· v9, §12.5) · **M3 IMPLEMENTED** (ισοϋψείς ακριβείς↔όμορφες + LOD· v10) · **M5α IMPLEMENTED** (AI «καμπανάκι» = deterministic QA rules engine + inline flags, χωρίς LLM· v11) · **M5β IMPLEMENTED** («μίλα στο σχέδιο» = NL editing με LLM tool-calling πάνω στα υπάρχοντα topo commands· 8 tools + destructive spike-removal με confirm· v12 — **M5 ΠΛΗΡΕΣ**) · **M8α IMPLEMENTED** (point-cloud ingestion: LAS + bulk ASCII → in-house CSF bare-earth filter → voxel decimation → ΥΠΑΡΧΟΝ `TopoPointStore`· μηδέν νέα dependency· v13) · **M8β/Α IMPLEMENTED** (**LAZ decode** — ο δρόμος των drones: `laz-perf` **Apache-2.0** (επαληθευμένο, εγκεκριμένο) → ασυμπίεστα records → **ο ΙΔΙΟΣ** `decodeLasRecords` του LAS· lazy WASM πίσω από dynamic import· v14) · **M8β/Γ IMPLEMENTED** (**auto-breakline detection** — differentiator §9 #3: ο ΥΠΑΡΧΩΝ M5α ανιχνευτής dihedral fold εξήχθη σε SSoT· το νέο είναι το **chaining** ακμών σε ordered πολυγραμμές με **stop-at-junction** + φίλτρα θορύβου· preview στον καμβά + **ρητό confirm** πριν το `addBreakline` — καμία αυτόματη εγγραφή· deterministic, μηδέν LLM· v15) · **M8β/Β IMPLEMENTED** (**3Δ point-cloud layer** — το νέφος ζει ως `THREE.Points` πάνω από το έδαφος αντί να πεθαίνει με τον wizard· ο builder υπήρχε ήδη από το M8α, γράφτηκε **μόνο ο καταναλωτής**· κοινό `writeDxfPlanToWorld` με το TIN· **§6 επιβεβλημένο στον κώδικα**: `raycast = () => {}` → ΟΨΗ, ποτέ γεωμετρία μέτρησης· 48 MB μετρημένα + ρητό «Αφαίρεση νέφους»· καμία νέα dependency· v16). **Εκκρεμεί**: M8β/Δ (id-aware ASCII), multiplayer, Gaussian-Splat. Έρευνα §1–§11 & roadmap §12.2 παραμένουν το blueprint.
 - **Date**: 2026-07-13
 - **Category**: DXF Viewer / Topography / Research
 - **Σχετικά**: ADR-635 (culling gap σε geo-referenced συντεταγμένες ±1e6), ADR-462 (canonical mm),
@@ -361,7 +361,9 @@ false-flat handling) → **d3-tricontour** contours (major/minor) → **native P
 | **M7** ✅ | **Ελληνικό export → «ένα κουμπί → φάκελος»** (Q1, Q7 #3) | Πίνακας συντεταγμένων ΕΓΣΑ'87 + εμβαδομέτρηση οικοπέδου + πίνακας όγκων + **auto tolerance-check** (§10) — **ΚΑΙ** ως entities μέσα στο σχέδιο **ΚΑΙ** ως ZIP (DXF+PDF+CSV+XLSX). **DONE, changelog v9** (§12.5). **ΔΕΝ** μπήκαν: proj4/pdf-lib (**καμία μετρημένη ανάγκη** — βλ. §12.5), ψηφιακή υπογραφή (eIDAS — ο μηχανικός, εκτός εφαρμογής), DXF layer schema Κτηματολογίου (**open gap §10** — λείπει το primary source). | CASS cadastral output· Civil 3D «coordinate table in drawing + report files» | `bim/schedule` exporters (CSV/XLSX/PDF)· `buildScheduleTable`+`detailPrimitivesToEntities` (ADR-622)· `zip-pack` (ADR-505)· DXF export (ADR-648)· `polygon-utils`· `scene-units` | **καμία νέα** |
 | **M8α** ✅ | **Point-cloud ingestion + bare-earth** | Point cloud (LAS 1.0–1.4 / bulk ASCII XYZ) → **CSF ground filter (in-house, Zhang 2016)** → voxel decimation → **ΥΠΑΡΧΟΝ `TopoPointStore`** → `getTopoSurface()` δίνει ισοϋψείς/3Δ/QA/όγκους δωρεάν. **4ος δρόμος του υπάρχοντος `TopoImportWizard`, ΟΧΙ δεύτερο pipeline.** Τιμά την ταξινόμηση της πηγής (ASPRS class 2), preview πριν την έγκριση (human-certifier). **DONE, changelog v13.** | Autodesk ReCap / Civil 3D «Point Cloud to Surface»· CloudCompare CSF plugin· PDAL `filters.csf` | `TopoImportWizard`/`useTopoImport` (extend)· `TopoPointStore`· `io/dxf-import` worker pattern (ADR-639)· `topo-local-origin` | **καμία νέα** (CSF in-house· LAZ decode ΔΕΝ μπήκε — θα ήθελε `laz-perf`) |
 | **M8β/Α** ✅ | **LAZ decode** (ο δρόμος των drones) | `.laz` (DJI Terra / Pix4D / Terrasolid — **κανένα drone δεν βγάζει `.las`**) → **laz-perf WASM** → ασυμπίεστα LAS records → **ο ΙΔΙΟΣ** `decodeLasRecords` που ήδη διαβάζει το `.las`. **Μηδέν δεύτερος reader/pipeline.** Stride κατά την αποσυμπίεση (τα LAZ chunks δεν παραλείπονται)· lazy WASM singleton πίσω από dynamic import (τα 214 KB δεν χρεώνονται σε όποιον δεν ανοίγει `.laz`). **DONE, changelog v14.** | LAStools/laszip· CloudCompare· potree/copc.js (ίδιο laz-perf) | `las-reader.ts` (εξήγαγε τον decoder)· `pointcloud-read` dispatcher· `pointcloud.worker` | **`laz-perf@0.0.7` — Apache-2.0 ✅** (επαληθευμένο σε 3 επίπεδα· **ΟΧΙ** το LGPL LASzip)· `@types/emscripten` (MIT, dev) |
-| **M8β/Β…Δ +** | **Point clouds / moonshots** | 3Δ point-cloud layer (three.js `Points`)· auto-breakline detection· id-aware ASCII· closed-loop drone→CAD· multiplayer (CRDT)· Gaussian-Splat visualization layer (**ΠΟΤΕ** ως γεωμετρία μέτρησης, §6)· server-GPU KPConv· COPC/EPT octree streaming. | §6, §9 differentiators | worker split (client/server)· Potree· `bim-3d` engine (ADR-366/645) | Potree (BSD-2 ✅) — server-GPU για heavy ML |
+| **M8β/Γ** ✅ | **Auto-breakline detection** (§9 #3) | Το σύστημα διαβάζει την **ΙΔΙΑ** επιφάνεια και **προτείνει** τις γραμμές ασυνέχειας που λείπουν. Ο ανιχνευτής **υπήρχε ήδη** (M5α dihedral fold) → εξήχθη σε SSoT (`detect-feature-edges`) που **καλούν και οι δύο**. Το νέο = **chaining**: ακμές → ordered πολυγραμμές, **stop-at-junction** (3 σπασίματα = 3 γραμμές, όχι μαντεψιά) + φίλτρα θορύβου (≥3 ακμές, ≥5 μ). **Preview στον καμβά + ρητό confirm** → `addBreakline`· **καμία αυτόματη εγγραφή** (§9 human-certifier). Deterministic, **μηδέν LLM**. **DONE, changelog v15.** RDP simplification **ΔΕΝ** μπήκε (ο υπάρχων `simplifyPolyline` είναι 2Δ → θα πετούσε το Ζ). | Civil 3D «Extract feature lines from surface»· CloudCompare/PDAL ridge-valley extraction (**πάντα** ανθρώπινη έγκριση) | `check-missing-breaklines` (M5α — εξαγωγή του fold)· `topo-qa-topology`· **`contour-chainer` (M1) → γενικεύτηκε σε `graph-chain` SSoT**· `calculatePolylineLength`· `TopoPointStore.addBreakline`· `RegionPerimeterPreviewOverlay` pattern | **καμία νέα** (in-house, μηδέν LLM) |
+| **M8β/Β** ✅ | **3Δ point-cloud layer** | Το νέφος ζει ως **`THREE.Points` layer** στην 3Δ όψη (καφέ έδαφος / γκρι απόρριψη) αντί να πεθαίνει με τον wizard. Ο builder **υπήρχε ήδη** (M8α `buildCloudPreview` — interleaved θέσεις + ASPRS χρώματα, ήδη stride-sampled): γράφτηκε **μόνο ο καταναλωτής** (store που επιβιώνει του React + pure converter + scene layer + panel toggle). Τα plan→three-world μαθηματικά **δεν** αντιγράφηκαν — καλείται το υπάρχον `writeDxfPlanToWorld`. **§6 επιβεβλημένο στον κώδικα:** `raycast = () => {}` → ποτέ pickable/snappable. **DONE, changelog v16.** Potree/COPC/EDL **ΔΕΝ** μπήκαν: καμία μετρημένη ανάγκη (2M σημεία = ένα draw call). | Autodesk ReCap· CloudCompare· Potree (ίδιο 1-draw-call `Points` για αυτό το μέγεθος) | `buildCloudPreview` + `PointCloudPreview` (M8α)· `writeDxfPlanToWorld`· `TerrainSceneLayer` (owner pattern)· `terrain-3d-store` (store pattern)· `disposeObjectTree` | **καμία νέα** — υπάρχον `three` |
+| **M8β/Δ +** | **Moonshots** | id-aware ASCII· closed-loop drone→CAD· multiplayer (CRDT)· Gaussian-Splat visualization layer (**ΠΟΤΕ** ως γεωμετρία μέτρησης, §6)· server-GPU KPConv· COPC/EPT octree streaming. | §6, §9 differentiators | worker split (client/server)· Potree· `bim-3d` engine (ADR-366/645) | Potree (BSD-2 ✅) — server-GPU για heavy ML |
 
 **Εξαρτήσεις/σειρά:** M2 (input) → M3 (display) → M4 (3D) είναι ανεξάρτητα-παράλληλα δυνατά μετά το M1.
 M5 (AI) θέλει ώριμο core. M6 (όγκοι) θέλει μόνο το TIN (M1) → μπορεί νωρίς. M7 (export) θέλει M1+M6 για
@@ -1143,3 +1145,143 @@ technologismiki (Ν.4495/2017), xyz.gr/geodimetro.gr/greenbuilding.gr/cityengine
 
   **Status: M1 + M2 + M3 + M4 + M5 (α+β) + M6 + M7 + M8α + M8β/Α IMPLEMENTED· M8β/Β (3Δ layer), M8β/Γ
   (auto-breaklines), M8β/Δ (μικρά) προγραμματισμένα (§12.2).**
+- **2026-07-14 (v15)** — **M8β/Γ ΥΛΟΠΟΙΗΘΗΚΕ — auto-breakline detection** (Phase 3, N.0.1). Ο
+  **differentiator #3** του §9: σήμερα ο μηχανικός δείχνει τις γραμμές ασυνέχειας μία-μία με το χέρι
+  (M2-Β)· τώρα το σύστημα διαβάζει την **ΙΔΙΑ** επιφάνεια που ήδη βλέπει και **του τις προτείνει**.
+
+  **🔑 Η κρίσιμη διαπίστωση του SSoT audit: ο ανιχνευτής ΥΠΗΡΧΕ ΗΔΗ.** Το `check-missing-breaklines.ts`
+  (M5α) ήδη μετρούσε τη dihedral fold κάθε εσωτερικής ακμής και πετούσε τις ήδη constrained. Δεύτερος
+  ανιχνευτής **δεν** γράφτηκε: η μέτρηση **εξήχθη** στο `auto-breaklines/detect-feature-edges.ts`
+  (`findSteepUnconstrainedEdges`) και **την καλούν και οι δύο** — ο QA check την διαβάζει ως advisory flag,
+  ο extractor την αλυσιδώνει. Ένα `foldDeg` / ένα `triangleNormal` σε όλο το subsystem.
+
+  **Το πραγματικά νέο = το CHAINING.** Μια breakline δεν είναι ακμή, είναι **πολυγραμμή**: η άκρη ενός
+  δρόμου = ~200 συνεχόμενες απότομες ακμές που πρέπει να γυρίσουν **ΜΙΑ** ordered polyline. Και εδώ το audit
+  βρήκε **δεύτερο** SSoT: ο **`contour-chainer` (M1)** έκανε ήδη ακριβώς αυτό (loose segments → πολυγραμμές)
+  για τις ισοϋψείς. Αντί για δίδυμο walk (που θα το έκοβε το jscpd — N.18), ο walk **γενικεύτηκε** σε
+  `systems/topography/graph-chain.ts` (`chainUndirectedEdges`) και **τον μοιράζονται και οι δύο**· ο
+  `contour-chainer` ξαναγράφτηκε πάνω του με **bit-for-bit ίδια συμπεριφορά** (τα 167 tests του M1–M8α
+  πράσινα, αμετάβλητα).
+
+  **Η μία ουσιαστική διαφορά των δύο καταναλωτών — και είναι κανόνας, όχι λεπτομέρεια:** στο **junction**
+  (κόμβος με ≥3 ακμές) οι ισοϋψείς **συνεχίζουν** (ιστορική M1 συμπεριφορά), οι breaklines **ΣΤΑΜΑΤΟΥΝ**
+  (`stopAtJunction`). Όπου μια άκρη δρόμου συναντά μια τάφρο, το Civil 3D δίνει **ΤΡΕΙΣ** feature lines και
+  αφήνει τον μηχανικό να αποφασίσει — δεν μαντεύει ποιο σκέλος «συνεχίζει». Ούτε εμείς.
+
+  **Νέα αρχεία** (`systems/topography/`): `graph-chain.ts` (SSoT walk· `stopAtJunction`) ·
+  `auto-breaklines/detect-feature-edges.ts` (ο κοινός ανιχνευτής fold) · `auto-breaklines/chain-feature-edges.ts`
+  (ακμές → υποψήφιες· φίλτρα· ταξινόμηση κατά μήκος· cap) · `auto-breaklines/auto-breakline-config.ts`
+  (**κάθε** κατώφλι — το `MIN_FOLD_ANGLE_DEG` **παράγεται** από το `TOPO_QA_CONFIG.MISSING_BREAKLINE_ANGLE_DEG`,
+  ώστε QA και extractor να μη διαφωνήσουν ΠΟΤΕ για το τι είναι «απότομο») · `auto-breakline-types.ts` ·
+  `auto-breakline-store.ts` (LOW-freq review store: report + τσεκαρισμένες· ADR-040-safe) · `index.ts`
+  (`detectAutoBreaklines` = **pure**, `acceptAutoBreaklines` = **ο μόνος γράφων**). UI:
+  `ui/panels/topography/TopoAutoBreaklineSection.tsx` (pattern του `TopoQaSection`: τρέξε → δες → δράσε) +
+  `components/dxf-layout/TopoAutoBreaklinePreviewOverlay.tsx` (SVG leaf, mirror του
+  `RegionPerimeterPreviewOverlay`· πράσινο = θα μπει, γκρι διακεκομμένο = απορρίφθηκε).
+
+  **§9 human-certifier — ΤΗΡΕΙΤΑΙ ΚΑΤΑ ΓΡΑΜΜΑ:** ο `detectAutoBreaklines` **δεν γράφει τίποτα**. Η μόνη
+  διαδρομή προς τον store είναι το κουμπί «Προσθήκη επιλεγμένων» → `acceptAutoBreaklines(τσεκαρισμένες)` →
+  `addBreakline` (εκεί κόβεται και το enterprise id, N.6). Ούτε το Civil 3D ούτε το CloudCompare γράφουν
+  feature lines μόνα τους· ούτε εμείς. **Idempotent by construction:** ό,τι εγκριθεί γίνεται constrained, και
+  οι constrained ακμές **δεν** είναι υποψήφιες → δεύτερο πέρασμα δεν ξαναπροτείνει το ίδιο.
+
+  **Tests:** `__tests__/auto-breaklines.test.ts` — analytic surfaces με **γνωστή απάντηση**: στέγη 5×3
+  (η κορυφογραμμή = ακριβώς 4 ακμές, fold 53.13° = 2·atan(0.5) — επαληθεύεται αριθμητικά· επιστρέφεται **μία**
+  υποψήφια, 5 κορυφές, monotonic, σε WORLD συντεταγμένες)· ήδη constrained κορυφογραμμή → **0** ευρήματα·
+  **Y-junction → 3 αλυσίδες** (ποτέ μαντεμένη διαδρομή)· θόρυβος <3 ακμών και μήκος <5 μ → απορρίπτονται·
+  κλειστός δακτύλιος → `closed: true` **χωρίς** επαναλαμβανόμενη πρώτη κορυφή. **20 suites / 180 tests
+  πράσινα** (baseline 19/167 → +1 suite / +13 tests, **κανένα σπασμένο**). **jscpd (N.18): 0 clones.**
+
+  **Ρητά ΔΕΝ μπήκαν (ΟΧΙ μαντεμένα):**
+  - **Douglas-Peucker weeding** των υποψηφίων: ο υπάρχων `simplifyPolyline` είναι **2Δ** (`Point2D`) — θα
+    πετούσε κορυφές κρίνοντας μόνο από κάτοψη και θα **κατέστρεφε το Ζ** μιας feature line. Μια 3Δ RDP είναι
+    δουλειά δική της, όχι παρελκόμενο· ο Civil 3D επίσης το έχει **ξεχωριστή** εντολή («Weed vertices»).
+  - **Ταξινόμηση τύπου** (ράχη vs τάφρος vs τοίχος): θα ήθελε πρόσημο της καμπυλότητας ανά αλυσίδα — χρήσιμο,
+    αλλά δεν το ζήτησε ο §9 #3 και δεν το δείχνει ούτε το Civil 3D στο extract.
+  - **Auto-run** σε κάθε αλλαγή της επιφάνειας: το πέρασμα είναι O(ακμές) αλλά η **έγκριση** είναι ανθρώπινη·
+    ένα καμπανάκι που χτυπά μόνο του σε κάθε import είναι θόρυβος, όχι feature.
+
+  ✅ **Google-level: ΝΑΙ** — ο ανιχνευτής είναι **ένας** (QA + extractor διαβάζουν το ίδιο fold), ο walk είναι
+  **ένας** (ισοϋψείς + breaklines μοιράζονται τον ίδιο chainer), κάθε κατώφλι ζει στο config (μηδέν inline
+  magic number), η ροή είναι **idempotent** και **καμία** γραμμή δεν φτάνει στον store χωρίς ρητή ανθρώπινη
+  έγκριση.
+
+  **Status: M1 + M2 + M3 + M4 + M5 (α+β) + M6 + M7 + M8α + M8β/Α + M8β/Γ IMPLEMENTED· M8β/Β (3Δ layer),
+  M8β/Δ (μικρά) προγραμματισμένα (§12.2).**
+
+- **2026-07-14 (v16)** — **M8β/Β ΥΛΟΠΟΙΗΘΗΚΕ — 3Δ point-cloud layer** (Phase 3, N.0.1). Το νέφος
+  (LAS/LAZ) έπαυε να υπάρχει μόλις έκλεινε ο wizard: φαινόταν **μόνο** ως 2Δ top-down scatter μέσα του,
+  και μετά έμεναν μόνο τα αραιωμένα survey σημεία. Τώρα ζει ως **`THREE.Points` layer** στην 3Δ όψη,
+  πάνω από το έδαφος — ο μηχανικός γυρίζει τον λόφο και **βλέπει** τι κράτησε (καφέ) και τι πέταξε
+  (γκρι) το φίλτρο εδάφους. Αυτό είναι το ReCap/CloudCompare/Potree parity και ο **human-certifier**
+  έλεγχος του §9: βλέπει **πριν** εμπιστευτεί την επιφάνεια που βγήκε από το φίλτρο.
+
+  **Το 90% υπήρχε ήδη — γράφτηκε μόνο ο καταναλωτής.** Το `buildCloudPreview` (M8α) ήδη παρήγαγε
+  `PointCloudPreview` (interleaved Float32 θέσεις + ASPRS χρώματα, ήδη stride-sampled στα
+  `PREVIEW_MAX_POINTS`) και το docstring του το έλεγε ρητά: *«for the three.js Points layer»*. **Μηδέν**
+  δεύτερος builder / stride / παλέτα.
+
+  **Τι μπήκε (4 νέα αρχεία + 4 wirings):**
+  - `systems/topography/pointcloud-3d-store.ts` — ο **δίδυμος** του `terrain-3d-store`, με μία διαφορά:
+    κρατά **δεδομένα** (`PointCloudPreview | null`), όχι μόνο flags. Είναι το «κάπου έξω από το React»
+    όπου το preview επιβιώνει του wizard. Φρέσκο νέφος → **ορατό αμέσως** (αλλιώς ο μηχανικός τρέχει το
+    φίλτρο και δεν βλέπει τίποτα)· import από άλλο δρόμο (CSV/DXF) → το παλιό νέφος **σβήνει** (ένα
+    νέφος ανά αποτύπωση — αλλιώς κοιτάς άλλο εργοτάξιο).
+  - `bim-3d/converters/cloud-to-three.ts` — pure `PointCloudPreview → BufferGeometry`, ο αδελφός του
+    `tin-to-three`. Τα plan→three-world μαθηματικά **ΔΕΝ** αντιγράφηκαν: καλεί το **υπάρχον**
+    `writeDxfPlanToWorld` (η ίδια συνάρτηση που χρησιμοποιούν TIN/grips/ghosts/snap) — αλλιώς το έδαφος
+    και το νέφος θα «κάθονταν» με δύο διαφορετικά μαθηματικά και η απόκλιση θα φαινόταν μόνο σε
+    geo-referenced ΕΓΣΑ'87. **Διαφορά από το TIN:** ένα μη-πεπερασμένο σημείο **παραλείπεται** αντί να
+    ακυρώσει το build (το TIN δεν έχει αυτή την πολυτέλεια — κάθε κορυφή του ανήκει σε τρίγωνα· σε ένα
+    νέφος 2M σημείων ένα κακό record από decoder δεν είναι λόγος να χαθεί το νέφος). NaN ⇒ NaN bbox ⇒
+    μαύρη 3Δ σκηνή (ADR-537) — γι' αυτό φιλτράρεται, δεν αγνοείται.
+  - `bim-3d/scene/terrain/PointCloudSceneLayer.ts` — standalone scene layer, **ΟΧΙ** BIM entity: το §12.3
+    επιχείρημα του εδάφους ισχύει αυτούσιο (ο ορισμός δεν ζει πάνω σε element· entity που τυλίγει store =
+    δεύτερη πηγή αλήθειας). Ίδιος owner pattern με το `TerrainSceneLayer` (construct στο
+    `scene-manager-construct`, `dispose()` από τον `ThreeJsSceneManager`), imperative, μηδέν React state
+    (ADR-040). Ιδιόκτητο `PointsMaterial` (**όχι** singleton του `MaterialCatalog3D` — εκείνος δίνει
+    `MeshStandardMaterial` για στερεά) με `sizeAttenuation: false`: ένα νέφος με προοπτική εξασθένηση
+    εξαφανίζεται στο βάθος και μοιάζει με «λείπουν δεδομένα» — ReCap/CloudCompare κρατούν σταθερό splat.
+  - `ui/panels/topography/TopoCloud3DSection.tsx` — εμφάνιση/απόκρυψη + **ρητή αφαίρεση** + μετρητής
+    σημείων/MB. Δεν εμφανίζεται καθόλου όσο δεν υπάρχει νέφος.
+
+  🚨 **§6 — VISUALIZATION, ΠΟΤΕ ΓΕΩΜΕΤΡΙΑ ΜΕΤΡΗΣΗΣ, και επιβάλλεται στον κώδικα:** το `Points` βγαίνει
+  **ρητά** από κάθε raycast (`points.raycast = () => {}`). Δεν είναι διακοσμητικό: το three κάνει raycast
+  σε `Points` by default **και** ο 2Δ section picker (`2d-section/section-renderer.ts`) σαρώνει
+  `scene.children` ολόκληρα — χωρίς αυτή τη γραμμή ο μηχανικός θα «έπιανε» σημεία νέφους σαν μετρημένη
+  γεωμετρία. Το νέφος δεν αγγίζει `TopoPointStore`, δεν μπαίνει στο TIN, δεν γίνεται snap. Το clipping
+  ήταν ήδη ασφαλές: το `PointsMaterial` είναι εκτός `CLIPPABLE_MATERIAL_TYPES` (ADR-452).
+
+  ⚠️ **ΜΝΗΜΗ — μετρημένη, όχι αγνοημένη:** `PREVIEW_MAX_POINTS` (2M) × (3 θέσεις + 3 χρώματα) × 4 B =
+  **48 MB** heap στο χειρότερο σενάριο (24 MB θέσεις + 24 MB χρώματα), και άλλα τόσα ως GPU buffers όσο
+  το layer είναι **ορατό**. Bounded και γνωστό — αλλά **δεν** κρατιέται σιωπηλά για πάντα: (α) το layer
+  κάνει πρώιμη έξοδο όταν είναι κρυμμένο και ελευθερώνει αμέσως τα GPU buffers, (β) ο μηχανικός έχει
+  ρητό «**Αφαίρεση νέφους**» που πετά και τη heap, (γ) ένα νέο import αντικαθιστά πάντα το προηγούμενο
+  (δεν συσσωρεύεται). Το panel του δείχνει τα MB — η μνήμη είναι ορατή απόφαση, όχι κρυφό κόστος.
+
+  **Tests:** `cloud-to-three.test.ts` (ground truth χειρόγραφο: LOCAL→WORLD μόνο σε x/y, **ποτέ** στο Z·
+  άξονες `(x, elev, −y)`· χρώματα per-vertex συγχρονισμένα με τις θέσεις που **επέζησαν** του NaN
+  φίλτρου· fallback γκρι όταν λείπει ταξινόμηση· `null` σε άδειο/όλο-NaN) + `pointcloud-3d-store.test.ts`
+  (φρέσκο→ορατό· CSV import→σβήνει το παλιό· hide κρατά δεδομένα / remove τα πετά· unsubscribe σιωπή).
+  **22 suites / 190 tests PASS** (από 20/180 — τίποτα δεν έσπασε).
+
+  **ΔΕΝ μπήκαν — και γιατί:**
+  - **Potree / COPC / EPT octree streaming**: **καμία μετρημένη ανάγκη.** Το `PREVIEW_MAX_POINTS` = 2M
+    είναι ένα draw call που τρέχει άνετα σε integrated graphics· το octree LOD αρχίζει να πληρώνει στα
+    δεκάδες εκατομμύρια **ορατά** σημεία, που εδώ δεν φτάνουν ποτέ (το raw cloud μένει στον worker και
+    ό,τι βλέπεις είναι ήδη αραιωμένο). Νέα dependency μόνο όταν το μετρήσουμε, όχι όταν το φανταστούμε.
+  - **EDL / eye-dome lighting shading**: θέλει custom `ShaderMaterial` + depth pass. Ομορφαίνει, δεν
+    προσθέτει πληροφορία που να μην τη δίνει ήδη ο χρωματισμός ground/non-ground.
+  - **Χρωματισμός ανά RGB της πηγής / intensity**: το `PointCloudPreview` κουβαλά ταξινόμηση, όχι RGB —
+    θα ήθελε αλλαγή στον reader (M8α). Ο χρωματισμός ΤΗΣ ΑΠΟΦΑΣΗΣ (τι κράτησε το φίλτρο) είναι αυτό που
+    ζητά το §9, όχι φωτορεαλισμός.
+  - **Persistence του νέφους** (Firestore/blob): 48 MB ανά αποτύπωση για ένα **display-only** τεκμήριο.
+    Το ξαναφτιάχνεις σε δευτερόλεπτα από το αρχείο· η μετρήσιμη αποτύπωση (τα σημεία) **ήδη** persist-άρει.
+
+  ✅ **Google-level: ΝΑΙ** — ένας builder νέφους (M8α, επαναχρησιμοποιήθηκε), **ένας** μετασχηματισμός
+  plan→three-world (`writeDxfPlanToWorld`, κοινός με το TIN), ένα layer με ρητό owner + unregister-πριν-
+  dispose, το §6 όριο επιβεβλημένο **στον κώδικα** (`raycast = () => {}`) και όχι μόνο στο ADR, και η
+  μνήμη μετρημένη με έξοδο διαφυγής στα χέρια του χρήστη.
+
+  **Status: M1 + M2 + M3 + M4 + M5 (α+β) + M6 + M7 + M8α + M8β/Α + M8β/Β + M8β/Γ IMPLEMENTED·
+  M8β/Δ (id-aware ASCII) + moonshots προγραμματισμένα (§12.2).**

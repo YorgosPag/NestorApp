@@ -982,6 +982,14 @@
       "hide": "Hide terrain",
       "hypsometric": "Elevation colouring"
     },
+    "cloud3d": {
+      "title": "Point cloud in 3D",
+      "hint": "The last imported cloud, over the terrain: brown = ground, grey = what the filter discarded. It is a view only — never measured, never snapped to.",
+      "stats": "{count} points · ~{megabytes} MB memory",
+      "show": "Show cloud",
+      "hide": "Hide cloud",
+      "remove": "Remove cloud"
+    },
     "import": {
       "open": "Import points…",
       "title": "Import survey points",
@@ -1145,6 +1153,23 @@
         "degenerateBreakline": "Closed breakline #{ring} is degenerate (area {area}m²).",
         "missingBreakline": "Steep {angle}° fold with no constraint — a ridge/ditch breakline may be missing."
       }
+    },
+    "autoBreakline": {
+      "title": "Automatic breaklines",
+      "hint": "The system reads the surface and finds where the ground breaks (road edges, ditches, retaining walls). It PROPOSES them — none is added without your approval.",
+      "run": "Detect",
+      "clear": "Clear",
+      "selectAll": "Select all",
+      "selectNone": "None",
+      "add": "Add selected ({count})",
+      "added": "{count, plural, one {# breakline added} other {# breaklines added}}",
+      "found": "{count, plural, one {# candidate — shown green on the drawing} other {# candidates — shown green on the drawing}}",
+      "none": "No candidates — the surface breaks nowhere sharply without a constraint.",
+      "notEnoughData": "No surface — at least 3 points are required.",
+      "candidate": "{length} m · fold {angle}° · {edges, plural, one {# edge} other {# edges}}",
+      "candidateClosed": "(closed)",
+      "focusHint": "Zoom to candidate",
+      "dropped": "{count, plural, one {# more candidate not shown (report cap)} other {# more candidates not shown (report cap)}}"
     },
     "deliverables": {
       "title": "Export deliverables folder",

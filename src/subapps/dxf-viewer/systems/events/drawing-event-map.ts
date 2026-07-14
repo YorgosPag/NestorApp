@@ -277,6 +277,8 @@ export interface DrawingEventMap extends MepAutoDesignEventMap, BimEventMap {
   // ADR-651 Φάση Η — Open the revisions dialog (RevisionsHost listens). Emitted by the
   // contextual «Πινακίδα Σχεδίου» tab → «Αναθεωρήσεις…» action via wrappedHandleAction.
   'dxf:revisions-dialog-requested': Record<string, never>;
+  /** ADR-651 Φάση Θ — «Βιβλιοθήκη προτύπων πινακίδας» (γραφείου / έργου / δικά μου). */
+  'dxf:title-block-library-dialog-requested': Record<string, never>;
   // ADR-526 — Open the native file picker for Tekton .tek import (DxfViewerDialogs
   // listens). Emitted by the ribbon Insert → «Εισαγωγή Τέκτονα» action.
   'dxf:import-tek-requested': Record<string, never>;

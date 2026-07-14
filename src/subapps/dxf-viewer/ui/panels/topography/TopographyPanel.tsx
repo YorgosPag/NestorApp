@@ -33,6 +33,8 @@ import { TopoImportWizard } from './TopoImportWizard';
 import { TopoCutFillSection } from './TopoCutFillSection';
 import { TopoDeliverablesSection } from './TopoDeliverablesSection';
 import { TopoQaSection } from './TopoQaSection';
+import { TopoAutoBreaklineSection } from './TopoAutoBreaklineSection';
+import { TopoCloud3DSection } from './TopoCloud3DSection';
 import styles from './TopographyPanel.module.css';
 
 /** Load state after a file has been parsed. */
@@ -237,11 +239,19 @@ export function TopographyPanel(): React.JSX.Element {
         </div>
       </section>
 
+      {/* ADR-650 M8β/Β — το νέφος του import ως 3Δ layer πάνω από το έδαφος. Εμφανίζεται μόνο
+          αν έχει εισαχθεί νέφος. ΟΨΗ, ποτέ γεωμετρία μέτρησης (§6). */}
+      <TopoCloud3DSection />
+
       {/* ADR-650 M6 — όγκοι εκσκαφών/επιχώσεων πάνω στην ΙΔΙΑ επιφάνεια (τρίτο style: cut/fill). */}
       <TopoCutFillSection />
 
       {/* ADR-650 M5α — «καμπανάκι» ποιότητας: deterministic έλεγχοι + inline flags (χωρίς LLM). */}
       <TopoQaSection />
+
+      {/* ADR-650 M8β/Γ — το σύστημα διαβάζει την επιφάνεια και ΠΡΟΤΕΙΝΕΙ τις γραμμές ασυνέχειας
+          που λείπουν (Civil 3D «Extract feature lines»). Ο μηχανικός εγκρίνει — §9. */}
+      <TopoAutoBreaklineSection />
 
       {/* ADR-650 M7 — «ένα κουμπί → φάκελος»: πίνακες μέσα στο σχέδιο + ZIP παραδοτέων. */}
       <TopoDeliverablesSection />
