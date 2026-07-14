@@ -29,6 +29,7 @@
 
 const admin = require('firebase-admin');
 const { loadEnvLocal } = require('./_shared/loadEnvLocal');
+const { maskEmail } = require('./_shared/mask-email');
 
 // =============================================================================
 // CONFIGURATION
@@ -56,53 +57,7 @@ if (!CONFIRM_DIAGNOSTICS) {
   process.exit(1);
 }
 
-// =============================================================================
-// PII MASKING: SECURE EMAIL DISPLAY
-// =============================================================================
-
-/**
- * Masks email for secure logging
- * Example: "user@example.com" → "u***@e***.com"
- *
- * @param {string|null|undefined} email - Email to mask
- * @returns {string} Masked email or placeholder
- */
-function maskEmail(email) {
-  // Guard: null, undefined, or non-string
-  if (!email || typeof email !== 'string') {
-    return '(none)';
-  }
-
-  // Guard: no @ symbol
-  const atIndex = email.indexOf('@');
-  if (atIndex < 1) {
-    return '***';
-  }
-
-  const local = email.substring(0, atIndex);
-  const domain = email.substring(atIndex + 1);
-
-  // Guard: no domain
-  if (!domain || domain.length < 1) {
-    return `${local[0]}***@***`;
-  }
-
-  // Guard: no TLD
-  const dotIndex = domain.lastIndexOf('.');
-  if (dotIndex < 1) {
-    return `${local[0]}***@***`;
-  }
-
-  const domainName = domain.substring(0, dotIndex);
-  const tld = domain.substring(dotIndex + 1);
-
-  // Guard: invalid domain parts
-  if (!domainName || !tld) {
-    return `${local[0]}***@***`;
-  }
-
-  return `${local[0]}***@${domainName[0]}***.${tld}`;
-}
+// PII masking (maskEmail) is the SSoT helper in scripts/_shared/mask-email.js.
 
 // =============================================================================
 // INPUT VALIDATION
