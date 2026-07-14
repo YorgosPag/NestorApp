@@ -85,6 +85,15 @@ export function getPlaceholderScopeSources(): PlaceholderScopeSources {
 }
 
 /**
+ * ADR-651 Φάση Λ — το Firestore doc id του **ενεργού έργου** (αυτό που σκόπευσε το τελευταίο
+ * `loadPlaceholderScope`). Είναι ο στόχος του QR deep-link (`/projects/{id}`) — event-time read,
+ * μηδέν νέο fetch/wire (το κλειδί του cache ΕΙΝΑΙ το projectId). `undefined` όταν δεν υπάρχει έργο.
+ */
+export function getActiveScopeProjectId(): string | undefined {
+  return cachedKey || undefined;
+}
+
+/**
  * ADR-651 Φάση Ε — η μόλις ανεβασμένη σφραγίδα μπαίνει **αμέσως** στο cached scope, ώστε η
  * επόμενη πινακίδα (ghost ή commit) να τη δείξει χωρίς να περιμένει νέο fetch. Ίδιο μοτίβο
  * με το `registerUserMaterialImage` (ADR-643 Φ4): ο server παραμένει η πηγή αλήθειας — αυτό
