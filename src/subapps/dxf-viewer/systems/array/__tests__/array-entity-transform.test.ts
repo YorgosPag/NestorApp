@@ -107,6 +107,48 @@ describe('text', () => {
   });
 });
 
+// ── IMAGE (entourage — ADR-654 · array path tangent-follow) ────────────────────
+
+describe('image', () => {
+  const image: Entity = {
+    id: 'img1', type: 'image',
+    position: { x: 0, y: 0 }, width: 4, height: 3,
+    url: 'https://assets.example/tree.png',
+    intrinsicWidth: 4, intrinsicHeight: 3, rotation: 0,
+  } as Entity;
+
+  it('translation moves position, preserves url/size/intrinsic', () => {
+    const result = applyTransformToEntity(image, TRANSLATE_10, PIVOT) as Extract<Entity, { type: 'image' }>;
+    expect(result.type).toBe('image');
+    expect(result.position).toEqual({ x: 10, y: 5 });
+    expect(result.width).toBe(4);
+    expect(result.height).toBe(3);
+    expect(result.url).toBe('https://assets.example/tree.png');
+    expect(result.intrinsicWidth).toBe(4);
+    expect(result.intrinsicHeight).toBe(3);
+  });
+
+  it('accumulates rotation — tangent-follow on curved paths (the ADR-353 §3 gap)', () => {
+    const result = applyTransformToEntity(image, ROTATE_90, PIVOT) as Extract<Entity, { type: 'image' }>;
+    expect(result.rotation).toBeCloseTo(90);
+  });
+
+  it('rotates position around (pivot + translate), like text/rectangle', () => {
+    // position at (2,0), pivot origin, pure 90° CCW → (0,2)
+    const img2 = { ...image, position: { x: 2, y: 0 } } as Entity;
+    const result = applyTransformToEntity(img2, ROTATE_90, PIVOT) as Extract<Entity, { type: 'image' }>;
+    expect(result.position.x).toBeCloseTo(0);
+    expect(result.position.y).toBeCloseTo(2);
+    expect(result.rotation).toBeCloseTo(90);
+  });
+
+  it('zero transform = identity clone (no rotation drift)', () => {
+    const result = applyTransformToEntity(image, NO_ROTATE, PIVOT) as Extract<Entity, { type: 'image' }>;
+    expect(result.position).toEqual(image.position);
+    expect(result.rotation).toBe(0);
+  });
+});
+
 // ── HATCH ─────────────────────────────────────────────────────────────────────
 
 describe('hatch', () => {

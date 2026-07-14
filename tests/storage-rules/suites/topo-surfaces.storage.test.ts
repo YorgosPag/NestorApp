@@ -1,14 +1,20 @@
 /**
- * Storage Rules — topographic survey blobs (ADR-650)
+ * Storage Rules — topographic survey blobs (ADR-650, re-tiered by ADR-657)
  *
- * Pattern: company_scoped_no_project
+ * Pattern: company_scoped_authoring
  *
  * Path: /topo-surfaces/{companyId}/{topoFile=**}
  *
- * Rule: read   — isAuthenticated() && (belongsToCompany(companyId) || isSuperAdmin())
- *       write  — (belongsToCompany(companyId) || isSuperAdmin())
+ * Rule: read   — isInternalUserOfCompany(companyId)
+ *       write  — isInternalUserOfCompany(companyId)
  *                && size < 100 MB && contentType == 'application/json'
- *       delete — belongsToCompany(companyId) || isSuperAdmin()
+ *       delete — isInternalUserOfCompany(companyId)
+ *
+ * ADR-657: a topo surface is authoring geometry, so all three legs go through
+ * `isInternalUserOfCompany` — a same-tenant `external_user` (valid companyId
+ * claim, non-internal role) is denied all three (insufficient_role), while
+ * cross-tenant is cross_tenant and anonymous is missing_claim. The matrix that
+ * encodes this lives in the coverage manifest (topoSurfacesAuthoringMatrix).
  *
  * The blob holds the point cloud when it outgrows the 1 MB Firestore doc limit;
  * the metadata + `pointsStoragePath` stay in `floorplan_topo_surfaces`. Tenant
@@ -16,6 +22,7 @@
  * hold for the offload path to be safe.
  *
  * @since 2026-07-14 (ADR-650 — topo persistence)
+ * @since 2026-07-15 (ADR-657 — authoring tier: external_user denied)
  */
 
 import {

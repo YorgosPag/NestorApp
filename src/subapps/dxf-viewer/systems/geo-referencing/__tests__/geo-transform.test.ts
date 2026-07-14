@@ -8,6 +8,7 @@ import {
   isIdentityGeoReference,
   localToWorld,
   worldToLocal,
+  makeWorldToDisplayProjector,
   fromOnePointPair,
   fromTwoPointPairs,
   pointPairScaleRatio,
@@ -39,6 +40,27 @@ describe('geo-transform — rigid local↔world', () => {
     const back = worldToLocal(w, geo);
     expect(near(back.x, p.x)).toBe(true);
     expect(near(back.y, p.y)).toBe(true);
+  });
+
+  it('makeWorldToDisplayProjector: identity/unset is a flagged no-op (backward-compatible fast path)', () => {
+    for (const geo of [null, undefined, IDENTITY_GEO_REFERENCE]) {
+      const projector = makeWorldToDisplayProjector(geo);
+      expect(projector.isIdentity).toBe(true);
+      // A no-op still returns the world coords verbatim if a caller ignores the isIdentity guard.
+      expect(projector.project(384_500_000, 4_201_200_000)).toEqual({ x: 384_500_000, y: 4_201_200_000 });
+    }
+  });
+
+  it('makeWorldToDisplayProjector: matches worldToLocal exactly (ONE formula home — 3D seats like 2D)', () => {
+    const geo: GeoReference = { originWorld: { x: 384_500_000, y: 4_201_200_000 }, rotationDeg: 37 };
+    const projector = makeWorldToDisplayProjector(geo);
+    expect(projector.isIdentity).toBe(false);
+    for (const w of [{ x: 384_512_345, y: 4_201_193_211 }, { x: 384_500_000, y: 4_201_200_000 }]) {
+      const viaProjector = projector.project(w.x, w.y);
+      const viaWorldToLocal = worldToLocal(w, geo);
+      expect(near(viaProjector.x, viaWorldToLocal.x, 1e-6)).toBe(true);
+      expect(near(viaProjector.y, viaWorldToLocal.y, 1e-6)).toBe(true);
+    }
   });
 
   it('fromOnePointPair produces a pure translation (Εγσα anchor, no rotation)', () => {

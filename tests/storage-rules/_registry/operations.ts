@@ -31,6 +31,7 @@ export type Outcome = 'allow' | 'deny';
 export type StorageReason =
   | 'missing_claim'    // unauthenticated or no companyId claim
   | 'cross_tenant'     // authed but wrong companyId custom claim
+  | 'insufficient_role' // ADR-657: same-tenant but non-internal role (external_user) on an authoring path
   | 'not_owner'        // authed but uid does not match path userId
   | 'file_too_large'   // file exceeds 50 MB (isValidFileSize gate)
   | 'invalid_type'     // contentType rejected by isAllowedContentType

@@ -9,6 +9,7 @@
  */
 
 import { tinToBufferGeometry } from '../tin-to-three';
+import { makeWorldToDisplayProjector } from '../../../systems/geo-referencing/geo-transform';
 import type { TinSurface } from '../../../systems/topography/topo-types';
 
 const ORIGIN = { x: 500_000, y: 4_200_000 } as const; // ΕΓΣΑ'87 magnitudes (~1e5..1e6 mm)
@@ -77,6 +78,27 @@ describe('tinToBufferGeometry', () => {
   it('refuses to build a surface carrying a non-finite coordinate (would blank the scene)', () => {
     const poisoned = inclinedPlaneTin({ elevations: [0, NaN, 500, 0] });
     expect(tinToBufferGeometry(poisoned, 'shaded')).toBeNull();
+  });
+
+  it('ADR-650 M10b — a geo-ref projector seats the surface in the building-DISPLAY frame (near the origin, not at ΕΓΣΑ)', () => {
+    // A translation-only projector whose originWorld == the TIN origin makes DISPLAY == TIN-local, so
+    // every vertex must land at small (0..1000 mm) coords near 0 — proof the hill left the ~1e6 ΕΓΣΑ
+    // world and now sits under the building. The plane equation (elev = SLOPE·localX) must still hold.
+    const projector = makeWorldToDisplayProjector({ originWorld: { x: ORIGIN.x, y: ORIGIN.y }, rotationDeg: 0 });
+    const geo = tinToBufferGeometry(inclinedPlaneTin(), 'shaded', { projector });
+    expect(geo).not.toBeNull();
+
+    const pos = geo!.getAttribute('position');
+    for (let i = 0; i < pos.count; i++) {
+      // three world (m, Y-up) → DISPLAY mm (== TIN-local here). No ORIGIN offset — that is the point.
+      const displayXMm = pos.getX(i) * M_TO_MM;
+      const displayYMm = -pos.getZ(i) * M_TO_MM;
+      const elevMm = pos.getY(i) * M_TO_MM;
+
+      expect(elevMm).toBeCloseTo(SLOPE * displayXMm, 6); // plane still holds in the display frame
+      expect(Math.abs(displayXMm)).toBeLessThanOrEqual(1000 + 1e-6); // NOT at ΕΓΣΑ magnitude anymore
+      expect(Math.abs(displayYMm)).toBeLessThanOrEqual(1000 + 1e-6);
+    }
   });
 
   it('bakes per-vertex colours only for the hypsometric style', () => {

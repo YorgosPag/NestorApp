@@ -23,7 +23,7 @@ export const COVERAGE = FIRESTORE_RULES_COVERAGE.find(
   (c) => c.collection === 'floor_floorplans',
 )!;
 
-describe('floor_floorplans.rules — tenant_direct (crmDirectMatrix)', () => {
+describe('floor_floorplans.rules — PRESENTATION legacy container (ADR-657)', () => {
   let env: RulesTestEnvironment;
 
   beforeAll(async () => { env = await initEmulator(); });

@@ -23,6 +23,7 @@
 import * as THREE from 'three';
 import type { PointCloudPreview } from '../../systems/topography/pointcloud/pointcloud-types';
 import { PREVIEW_COLOR_FALLBACK } from '../../systems/topography/pointcloud/asprs-las-spec';
+import type { WorldToDisplayProjector } from '../../systems/geo-referencing/geo-transform';
 import { writeDxfPlanToWorld } from '../viewport/coordinate-transforms';
 
 /**
@@ -33,12 +34,15 @@ import { writeDxfPlanToWorld } from '../viewport/coordinate-transforms';
  * σημείο παίρνει το `PREVIEW_COLOR_FALLBACK` (το ΙΔΙΟ γκρι που δίνει και το 2Δ preview του
  * wizard, SSoT `asprs-las-spec.ts`). Έτσι το layer έχει ΕΝΑ υλικό αντί για δύο παραλλαγές.
  */
-export function cloudPreviewToBufferGeometry(preview: PointCloudPreview): THREE.BufferGeometry | null {
+export function cloudPreviewToBufferGeometry(
+  preview: PointCloudPreview,
+  projector?: WorldToDisplayProjector | null,
+): THREE.BufferGeometry | null {
   if (preview.count === 0) return null;
 
   const positions = new Float32Array(preview.count * 3);
   const colors = new Float32Array(preview.count * 3);
-  const kept = fillCloudBuffers(preview, positions, colors);
+  const kept = fillCloudBuffers(preview, positions, colors, projector ?? null);
   if (kept === 0) return null;
 
   const geometry = new THREE.BufferGeometry();
@@ -51,22 +55,30 @@ export function cloudPreviewToBufferGeometry(preview: PointCloudPreview): THREE.
  * Γράψε τα πεπερασμένα σημεία του `preview` στους προ-διαστασιολογημένους buffers, συμπυκνωμένα.
  * Επιστρέφει πόσα σημεία επέζησαν (≤ `preview.count`).
  */
-function fillCloudBuffers(preview: PointCloudPreview, positions: Float32Array, colors: Float32Array): number {
+function fillCloudBuffers(
+  preview: PointCloudPreview,
+  positions: Float32Array,
+  colors: Float32Array,
+  projector: WorldToDisplayProjector | null,
+): number {
   const { origin, colors: source } = preview;
+  const project = projector && !projector.isIdentity ? projector : null; // fast path when unset/identity
   let kept = 0;
 
   for (let i = 0; i < preview.count; i++) {
     const base = i * 3;
-    const worldXMm = preview.positions[base]! + origin.x; // LOCAL → WORLD (οριζοντιογραφικά)
+    const worldXMm = preview.positions[base]! + origin.x; // CLOUD-LOCAL → ΕΓΣΑ WORLD (οριζοντιογραφικά)
     const worldYMm = preview.positions[base + 1]! + origin.y;
-    const elevMm = preview.positions[base + 2]!; // ήδη WORLD Z — ποτέ offset
+    const elevMm = preview.positions[base + 2]!; // ήδη WORLD Z — geo-ref είναι planar, ποτέ offset
 
     if (!Number.isFinite(worldXMm) || !Number.isFinite(worldYMm) || !Number.isFinite(elevMm)) {
       continue; // κακό record → το πετάς, δεν χάνεις το νέφος
     }
 
     const out = kept * 3;
-    writeDxfPlanToWorld(positions, out, worldXMm, worldYMm, elevMm);
+    // ADR-650 M10b: ΕΓΣΑ WORLD → building-DISPLAY, ώστε το νέφος να κάθεται κάτω από το κτίριο (mirror 2D/TIN).
+    const plan = project ? project.project(worldXMm, worldYMm) : null;
+    writeDxfPlanToWorld(positions, out, plan ? plan.x : worldXMm, plan ? plan.y : worldYMm, elevMm);
     colors[out] = source ? source[base]! : PREVIEW_COLOR_FALLBACK[0];
     colors[out + 1] = source ? source[base + 1]! : PREVIEW_COLOR_FALLBACK[1];
     colors[out + 2] = source ? source[base + 2]! : PREVIEW_COLOR_FALLBACK[2];

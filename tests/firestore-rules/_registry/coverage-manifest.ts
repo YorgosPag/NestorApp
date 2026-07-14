@@ -50,6 +50,8 @@ import {
   tasksMatrix,
 } from './coverage-matrices-system';
 import {
+  bimAuthoringMatrix,
+  bimPresentationMatrix,
   blockLibraryMatrix,
   cadFilesMatrix,
   fileApprovalsMatrix,
@@ -57,9 +59,7 @@ import {
   fileCommentsMatrix,
   fileSharesMatrix,
   fileTenantFullMatrix,
-  floorplanBackgroundsMatrix,
-  floorplanOverlaysMatrix,
-  floorplanScopeOwnerOrAdminMatrix,
+  legacyFloorplanMatrix,
   photoSharesMatrix,
   textTemplateMatrix,
 } from './coverage-matrices-dxf';
@@ -100,7 +100,9 @@ export type RulesPattern =
   | 'role_dual'            // user-created vs system-generated split
   | 'field_allowlist'      // update restricted to a set of allowed fields
   | 'deny_all'             // allow read,write: if false — no client access (Admin SDK only)
-  | 'tenant_admin_write';  // tenant-scoped reads, writes restricted to company_admin / super_admin
+  | 'tenant_admin_write'   // tenant-scoped reads, writes restricted to company_admin / super_admin
+  | 'bim_authoring'        // ADR-657 AUTHORING tier — read+write = internal-user-of-company; external_user denied all
+  | 'bim_presentation';    // ADR-657 PRESENTATION tier — read tenant-wide (incl. external_user); write = internal-user-of-company
 
 /** One (persona × operation) cell of a collection's coverage matrix. */
 export interface CoverageCell {
@@ -592,45 +594,47 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     matrix: tasksMatrix(),
   },
   // ── ADR-298 Phase C.2 — DXF / CAD / Floorplan collections (2026-04-14) ──────
+  // ── ADR-657 — legacy floorplan containers → PRESENTATION tier ─────────────
+  // All 5 now use the legacy helper trio (canReadLegacyFloorplan /
+  // canCreateLegacyFloorplan / canWriteLegacyFloorplan) + delete gated on
+  // isBimWriter(). Read tenant-wide (incl. external_user); write internal-only,
+  // NO ownership grant. Same canonical cells as bimPresentationMatrix().
   {
     collection: 'project_floorplans',
-    pattern: 'tenant_direct',
+    pattern: 'bim_presentation',
     testFile: 'tests/firestore-rules/suites/project-floorplans.rules.test.ts',
-    rulesRange: [875, 913],
-    // Create: companyId==getUserCompanyId() only — no isSuperAdminOnly() → super_admin denied.
-    // Update/delete: createdBy==uid || isCompanyAdminOfCompany || isSuperAdminOnly.
-    matrix: crmDirectMatrix(),
+    rulesRange: [990, 1002],
+    matrix: legacyFloorplanMatrix(),
   },
   {
     collection: 'building_floorplans',
-    pattern: 'tenant_direct',
+    pattern: 'bim_presentation',
     testFile: 'tests/firestore-rules/suites/building-floorplans.rules.test.ts',
-    rulesRange: [918, 952],
-    matrix: crmDirectMatrix(),
+    rulesRange: [1008, 1014],
+    matrix: legacyFloorplanMatrix(),
   },
   {
     collection: 'floor_floorplans',
-    pattern: 'tenant_direct',
+    pattern: 'bim_presentation',
     testFile: 'tests/firestore-rules/suites/floor-floorplans.rules.test.ts',
-    rulesRange: [958, 994],
-    // Has extra dev fallback leg on read (!companyId && !createdBy) — does not affect
-    // canonical matrix (seed doc always carries companyId).
-    matrix: crmDirectMatrix(),
+    rulesRange: [1024, 1030],
+    // ADR-657 removed the cross-tenant dev-fallback read leg; canReadLegacyFloorplan()
+    // no-companyId leg now requires createdBy == uid. Canonical seed carries companyId.
+    matrix: legacyFloorplanMatrix(),
   },
   {
     collection: 'unit_floorplans',
-    pattern: 'tenant_direct',
+    pattern: 'bim_presentation',
     testFile: 'tests/firestore-rules/suites/unit-floorplans.rules.test.ts',
-    rulesRange: [999, 1036],
-    // Delta from project_floorplans: create has isSuperAdminOnly() OR-leg → super_admin allowed.
-    matrix: fileTenantFullMatrix(),
+    rulesRange: [1036, 1042],
+    matrix: legacyFloorplanMatrix(),
   },
   {
     collection: 'floorplans',
-    pattern: 'tenant_direct',
+    pattern: 'bim_presentation',
     testFile: 'tests/firestore-rules/suites/floorplans.rules.test.ts',
-    rulesRange: [2342, 2375],
-    matrix: crmDirectMatrix(),
+    rulesRange: [2445, 2451],
+    matrix: legacyFloorplanMatrix(),
   },
   {
     collection: 'dxf_overlay_levels',
@@ -981,33 +985,96 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     // Reads: any same-tenant authenticated user. Writes: super_admin / company_admin
     // / internal_user (Q9). Immutables enforced (D6): companyId, floorId, fileId,
     // providerId, naturalBounds, createdBy.
+    // ADR-657 PRESENTATION tier — role gate shared with the BIM entity blocks
+    // (read tenant-wide incl. external_user; write internal-only). The bespoke
+    // payload validators (_overlayWriteValid, naturalBounds/scale) stay in the
+    // rule body; only the role gate is expressed by the matrix.
     collection: 'floorplan_backgrounds',
-    pattern: 'role_dual',
+    pattern: 'bim_presentation',
     testFile: 'tests/firestore-rules/suites/floorplan-backgrounds.rules.test.ts',
     rulesRange: [1108, 1138],
-    matrix: floorplanBackgroundsMatrix(),
+    matrix: bimPresentationMatrix(),
   },
   {
     // ADR-340 Phase 7 — polygon overlays FK→floorplan_backgrounds.
-    // Same RBAC matrix as floorplan_backgrounds.
+    // ADR-657 PRESENTATION tier — same role gate as floorplan_backgrounds.
     collection: 'floorplan_overlays',
-    pattern: 'role_dual',
+    pattern: 'bim_presentation',
     testFile: 'tests/firestore-rules/suites/floorplan-overlays.rules.test.ts',
     rulesRange: [1145, 1170],
-    matrix: floorplanOverlaysMatrix(),
+    matrix: bimPresentationMatrix(),
   },
   {
-    // ADR-650 — per-floor topographic survey definition (1 doc/floorplan).
-    // Read: any same-tenant authenticated user. Create: any tenant member, stamping
-    // their own uid. Update/delete: the creator OR a company admin. Immutables:
-    // companyId, projectId, floorplanId, createdBy, createdAt.
-    // Same rule body as floorplan_grid_guides / floorplan_foundations — those two
-    // graduate from FIRESTORE_RULES_PENDING onto this matrix, not onto a copy.
+    // ADR-650/657 — per-floor topographic survey definition (1 doc/floorplan).
+    // ADR-657 moved this from PRESENTATION-shaped (external_user read ALLOW, the
+    // old bug) to AUTHORING: read+write require internal-user-of-company, so
+    // external_user is denied ALL FIVE ops. Same rule body (canReadBimAuthoring /
+    // canCreateBimEntity / canUpdateBimEntity / canDeleteBimEntity) as
+    // floorplan_grid_guides / floorplan_foundations, which graduate onto the
+    // shared bimAuthoringMatrix() below.
     collection: 'floorplan_topo_surfaces',
-    pattern: 'ownership',
+    pattern: 'bim_authoring',
     testFile: 'tests/firestore-rules/suites/floorplan-topo-surfaces.rules.test.ts',
-    rulesRange: [3974, 3994],
-    matrix: floorplanScopeOwnerOrAdminMatrix(),
+    rulesRange: [3653, 3660],
+    matrix: bimAuthoringMatrix(),
+  },
+  // ── ADR-657 — BIM tier canary suites (one per rule-shape variant) ─────────
+  {
+    // PRESENTATION — read client-side on /properties (ADR-370). Canary that
+    // proves external_user × read = ALLOW (the /properties render path).
+    collection: 'floorplan_walls',
+    pattern: 'bim_presentation',
+    testFile: 'tests/firestore-rules/suites/floorplan-walls.rules.test.ts',
+    rulesRange: [3569, 3575],
+    matrix: bimPresentationMatrix(),
+  },
+  {
+    // PRESENTATION — kind+params create variant + G24 soft-lock anti-spoof.
+    collection: 'floorplan_stairs',
+    pattern: 'bim_presentation',
+    testFile: 'tests/firestore-rules/suites/floorplan-stairs.rules.test.ts',
+    rulesRange: [3555, 3561],
+    matrix: bimPresentationMatrix(),
+  },
+  {
+    // AUTHORING — 'guides' create variant (grid_guides). Graduated off PENDING.
+    collection: 'floorplan_grid_guides',
+    pattern: 'bim_authoring',
+    testFile: 'tests/firestore-rules/suites/floorplan-grid-guides.rules.test.ts',
+    rulesRange: [3641, 3648],
+    matrix: bimAuthoringMatrix(),
+  },
+  {
+    // AUTHORING — 'kind+params' create variant (foundations). Graduated off PENDING.
+    collection: 'floorplan_foundations',
+    pattern: 'bim_authoring',
+    testFile: 'tests/firestore-rules/suites/floorplan-foundations.rules.test.ts',
+    rulesRange: [3631, 3638],
+    matrix: bimAuthoringMatrix(),
+  },
+  {
+    // AUTHORING — 'data' create variant (flat DXF hatch fills).
+    collection: 'floorplan_hatches',
+    pattern: 'bim_authoring',
+    testFile: 'tests/firestore-rules/suites/floorplan-hatches.rules.test.ts',
+    rulesRange: [3813, 3820],
+    matrix: bimAuthoringMatrix(),
+  },
+  {
+    // AUTHORING — 'category+kind+params' create variant (2D symbol library).
+    collection: 'floorplan_symbols',
+    pattern: 'bim_authoring',
+    testFile: 'tests/firestore-rules/suites/floorplan-symbols.rules.test.ts',
+    rulesRange: [3694, 3701],
+    matrix: bimAuthoringMatrix(),
+  },
+  {
+    // AUTHORING — 'params'-only create variant (geometry-less MEP system).
+    collection: 'floorplan_mep_systems',
+    pattern: 'bim_authoring',
+    testFile: 'tests/firestore-rules/suites/floorplan-mep-systems.rules.test.ts',
+    rulesRange: [3785, 3792],
+    matrix: bimAuthoringMatrix(),
   },
   {
     // ADR-344 Phase 7.E — DXF Text Engine user-authored text templates.
@@ -1204,29 +1271,29 @@ export const FIRESTORE_RULES_PENDING: readonly string[] = [
   // company_fonts  → moved to COVERAGE (ADR-344 Phase 6.F, 2026-05-11)
   // text_templates → moved to COVERAGE (ADR-344 Phase 7.E, 2026-05-11)
   // — DXF Stair Tool (ADR-358 Phase 8, 2026-05-17) —
-  'floorplan_stairs',       // lines 3479-3528 — tenant-scoped + G24 soft-lock anti-spoof, full matrix in Phase 8.X
+  // floorplan_stairs → moved to COVERAGE (ADR-657 canary, bim_presentation, 2026-07-15)
   // — DXF Layer State Templates (ADR-358 §5.9 Q12 Phase 13B, 2026-05-17) —
   'dxf_layer_state_templates',  // lines 4154-4192 — tenant-scoped CRUD; full matrix in Phase 13B.X
   'dxf_template_categories',    // lines 4209-4236 — tenant-scoped read + admin write; full matrix in Phase 13B.X
   // — BIM Drawing Mode (ADR-363 Phase 0, 2026-05-17) —
-  'floorplan_walls',            // lines 3536-3558 — tenant-scoped CRUD; full matrix in ADR-363 Phase 1.X
+  // floorplan_walls → moved to COVERAGE (ADR-657 canary, bim_presentation, 2026-07-15)
   'floorplan_openings',         // lines 3560-3582 — tenant-scoped CRUD; full matrix in ADR-363 Phase 1.X
   'floorplan_slabs',            // lines 3584-3606 — tenant-scoped CRUD; full matrix in ADR-363 Phase 1.X
   'floorplan_slab_openings',    // lines 3608-3630 — tenant-scoped CRUD; full matrix in ADR-363 Phase 1.X
   'floorplan_columns',          // lines 3632-3654 — tenant-scoped CRUD; full matrix in ADR-363 Phase 1.X
   'floorplan_beams',            // lines 3656-3678 — tenant-scoped CRUD; full matrix in ADR-363 Phase 1.X
-  'floorplan_foundations',      // ADR-436 — tenant-scoped CRUD (pad/strip/tie-beam footings, mirror floorplan_columns); full matrix with the BIM batch
-  'floorplan_grid_guides',      // ADR-441 — tenant-scoped CRUD (per-floor construction grid, mirror floorplan_foundations); full matrix with the BIM batch
+  // floorplan_foundations → moved to COVERAGE (ADR-657 canary, bim_authoring 'kind+params', 2026-07-15)
+  // floorplan_grid_guides → moved to COVERAGE (ADR-657 canary, bim_authoring 'guides', 2026-07-15)
   'floorplan_mep_fixtures',     // ADR-406 — tenant-scoped CRUD (mirror columns/beams); full matrix with the BIM batch
   'floorplan_railings',         // ADR-407 — tenant-scoped CRUD (mirror mep_fixtures); full matrix with the BIM batch
-  'floorplan_mep_systems',      // ADR-408 — tenant-scoped CRUD (mirror mep_fixtures, geometry-less); full matrix with the BIM batch
+  // floorplan_mep_systems → moved to COVERAGE (ADR-657 canary, bim_authoring 'params', 2026-07-15)
   'floorplan_electrical_panels', // ADR-408 Φ3 — tenant-scoped CRUD (mirror mep_fixtures); full matrix with the BIM batch
   'floorplan_furniture',        // ADR-410 — tenant-scoped CRUD (mirror mep_fixtures); full matrix with the BIM batch
   'floorplan_mep_segments',     // ADR-408 Φ8 — tenant-scoped CRUD (duct/pipe linear element, mirror mep_fixtures); full matrix with the BIM batch
   'floorplan_mep_fittings',     // ADR-408 Φ11 — tenant-scoped CRUD (auto pipe fittings, mirror mep_segments); full matrix with the BIM batch
   'floorplan_mep_manifolds',    // ADR-408 Φ12 — tenant-scoped CRUD (plumbing manifold / συλλέκτης, mirror electrical_panels); full matrix with the BIM batch
   'floorplan_mep_radiators',    // ADR-408 Εύρος Β — tenant-scoped CRUD (heating radiator / καλοριφέρ, mirror mep_manifolds); full matrix with the BIM batch
-  'floorplan_symbols',          // ADR-415 — tenant-scoped CRUD (2D floorplan symbol library, category-driven, mirror mep_fixtures); full matrix with the BIM batch
+  // floorplan_symbols → moved to COVERAGE (ADR-657 canary, bim_authoring 'category+kind+params', 2026-07-15)
   'bim_presets',                // lines 3680-3702 — tenant-scoped CRUD; full matrix in ADR-363 Phase 1.X
   'bim_materials',              // lines 3704-3723 — tenant-scoped CRUD; full matrix in ADR-363 Phase 1.X
   'bim_settings',               // lines 3725-3737 — tenant-scoped CRUD; full matrix in ADR-363 Phase 1.X
@@ -1260,7 +1327,7 @@ export const FIRESTORE_RULES_PENDING: readonly string[] = [
   // — BIM MEP Water Heater / DHW (ADR-408, 2026-06-08) —
   'floorplan_mep_water_heaters', // lines 4025-4047 — tenant-scoped CRUD (DHW water heater / θερμοσίφωνας, mirror mep_boilers); full matrix with the BIM batch
   // — BIM Hatch Fills (ADR-507, 2026-06-21) —
-  'floorplan_hatches',          // flat DXF hatch fills (Revit Filled-Region, mirror floorplan_floor_finishes; payload is `data` not `params`); full matrix with the BIM batch
+  // floorplan_hatches → moved to COVERAGE (ADR-657 canary, bim_authoring 'data', 2026-07-15)
   // — BIM Wall Finish per Room/Face (ADR-511, 2026-06-21) —
   'floorplan_wall_coverings',   // lines 4226-4246 — tenant-scoped CRUD (IfcCovering wall finish per room/face, mirror floorplan_floor_finishes; payload is `params`); full matrix with the BIM batch
   // — BIM Roof Persistence (ADR-417, 2026-06-22) —

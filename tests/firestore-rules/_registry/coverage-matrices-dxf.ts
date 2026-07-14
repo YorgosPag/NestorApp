@@ -22,7 +22,7 @@
  */
 
 import type { CoverageCell } from './coverage-manifest';
-import { cell } from './coverage-matrices';
+import { cell, overrideCells } from './coverage-matrices';
 
 // ---------------------------------------------------------------------------
 // ADR-298 Phase C.2 — DXF / CAD / Floorplan collections
@@ -369,56 +369,119 @@ export function fileApprovalsMatrix(): readonly CoverageCell[] {
 
 
 /**
- * Matrix for `floorplan_backgrounds` (ADR-340 Phase 7 Q9 RBAC).
+ * ADR-657 PRESENTATION-tier matrix — the shared RBAC shape for every BIM /
+ * floorplan collection whose reads stay tenant-wide while writes require an
+ * internal user of the tenant.
  *
- * Reads: any same-tenant authenticated user (super_admin / company_admin /
- * internal_user). Writes: super_admin + company_admin + internal_user only.
- * external_user denied entirely. cross-tenant denied.
+ * Read/list gate → `canReadBimPresentation(cid)` = `isSuperAdminOnly() ||
+ *   belongsToCompany(cid)`. So `external_user` of the SAME tenant is ALLOWED to
+ *   read/list — `belongsToCompany()` matches on the companyId claim and never
+ *   inspects the role. That is the whole reason the presentation tier exists:
+ *   /properties and the Buildings/Projects floorplan tabs (ADR-370) render for
+ *   the client, whose default self-registration role is `external_user`.
+ * Write gate → `isBimWriter(cid)` / `canCreateBimEntity()` — internal user of
+ *   the tenant only. `external_user` is DENIED create/update/delete with
+ *   `insufficient_role` (authed + tenant OK, but role below the writer floor).
+ *
+ * Cross-tenant personas fail the companyId leg on every op (`cross_tenant`);
+ * `anonymous` fails the `isAuthenticated()` floor (`missing_claim`).
+ *
+ * Used by `floorplan_backgrounds`, `floorplan_overlays`, `floorplan_walls`,
+ * `floorplan_stairs`, and — via `legacyFloorplanMatrix()` — the 5 legacy
+ * containers. `bimAuthoringMatrix()` derives from it with a 2-cell delta.
  */
-export function floorplanBackgroundsMatrix(): readonly CoverageCell[] {
+export function bimPresentationMatrix(): readonly CoverageCell[] {
   return [
-    // super_admin: allow all
+    // super_admin — isSuperAdminOnly() short-circuits every op.
     cell('super_admin', 'read', 'allow'),
     cell('super_admin', 'list', 'allow'),
     cell('super_admin', 'create', 'allow'),
     cell('super_admin', 'update', 'allow'),
     cell('super_admin', 'delete', 'allow'),
-    // same_tenant_admin: allow all
+    // same_tenant_admin — internal user of the tenant: full CRUD.
     cell('same_tenant_admin', 'read', 'allow'),
     cell('same_tenant_admin', 'list', 'allow'),
     cell('same_tenant_admin', 'create', 'allow'),
     cell('same_tenant_admin', 'update', 'allow'),
     cell('same_tenant_admin', 'delete', 'allow'),
-    // same_tenant_user (internal_user): allow all incl. write/delete (Q9)
+    // same_tenant_user — internal user of the tenant: full CRUD.
     cell('same_tenant_user', 'read', 'allow'),
     cell('same_tenant_user', 'list', 'allow'),
     cell('same_tenant_user', 'create', 'allow'),
     cell('same_tenant_user', 'update', 'allow'),
     cell('same_tenant_user', 'delete', 'allow'),
-    // cross_tenant_admin: deny all
+    // cross_tenant_admin — companyId claim mismatch kills every op.
     cell('cross_tenant_admin', 'read', 'deny', 'cross_tenant'),
     cell('cross_tenant_admin', 'list', 'deny', 'cross_tenant'),
     cell('cross_tenant_admin', 'create', 'deny', 'cross_tenant'),
     cell('cross_tenant_admin', 'update', 'deny', 'cross_tenant'),
     cell('cross_tenant_admin', 'delete', 'deny', 'cross_tenant'),
-    // external_user: deny all (insufficient role)
+    // cross_tenant_user — companyId claim mismatch kills every op.
+    cell('cross_tenant_user', 'read', 'deny', 'cross_tenant'),
+    cell('cross_tenant_user', 'list', 'deny', 'cross_tenant'),
+    cell('cross_tenant_user', 'create', 'deny', 'cross_tenant'),
+    cell('cross_tenant_user', 'update', 'deny', 'cross_tenant'),
+    cell('cross_tenant_user', 'delete', 'deny', 'cross_tenant'),
+    // external_user — same tenant, so read/list PASS (belongsToCompany leg);
+    // writes fail the internal-user floor.
     cell('external_user', 'read', 'allow'),
     cell('external_user', 'list', 'allow'),
     cell('external_user', 'create', 'deny', 'insufficient_role'),
     cell('external_user', 'update', 'deny', 'insufficient_role'),
     cell('external_user', 'delete', 'deny', 'insufficient_role'),
-    // anonymous: deny all
+    // anonymous — no claims: isAuthenticated() floor denies every op.
     cell('anonymous', 'read', 'deny', 'missing_claim'),
     cell('anonymous', 'list', 'deny', 'missing_claim'),
     cell('anonymous', 'create', 'deny', 'missing_claim'),
+    cell('anonymous', 'update', 'deny', 'missing_claim'),
+    cell('anonymous', 'delete', 'deny', 'missing_claim'),
   ];
 }
 
 /**
- * Matrix for `floorplan_overlays` — same RBAC as floorplan_backgrounds.
+ * ADR-657 AUTHORING-tier matrix — identical to `bimPresentationMatrix()`
+ * EXCEPT read + list flip `external_user` to DENY `insufficient_role`.
+ *
+ * Read/list gate → `canReadBimAuthoring(cid)` = `isInternalUserOfCompany(cid)`.
+ * The hole ADR-657 closed: authoring data (roofs, foundations, topo, all MEP,
+ * furniture, symbols, hatches, grid guides, …) lives inside /dxf/viewer behind
+ * AdminGuard and must never be reachable by `external_user`. So `external_user`
+ * is denied ALL FIVE ops.
+ *
+ * The two overridden cells are the entire security delta between the tiers —
+ * declaring them as a delta over the presentation base keeps that one-line
+ * difference auditable from this file alone (no 35-cell clone).
  */
-export function floorplanOverlaysMatrix(): readonly CoverageCell[] {
-  return floorplanBackgroundsMatrix();
+export function bimAuthoringMatrix(): readonly CoverageCell[] {
+  return overrideCells(bimPresentationMatrix(), [
+    cell('external_user', 'read', 'deny', 'insufficient_role'),
+    cell('external_user', 'list', 'deny', 'insufficient_role'),
+  ]);
+}
+
+/**
+ * ADR-657 legacy-container matrix — the 5 pre-tier floorplan containers
+ * (`floorplans` + `project_`/`building_`/`floor_`/`unit_floorplans`). They sit
+ * in the PRESENTATION tier and, for the canonical fixture (a doc that DOES
+ * carry `companyId`, owned by `same_tenant_user`), every cell coincides with
+ * `bimPresentationMatrix()` — so this delegates rather than clone 35 cells.
+ *
+ * The legacy rule bodies differ from the entity blocks in two ways that only
+ * surface OUTSIDE the canonical matrix (exercised by suite hardening blocks,
+ * not by cells):
+ *   - create uses `canCreateLegacyFloorplan()` — NO `createdBy == uid` leg (the
+ *     containers predate the scope-key contract), so a member may create a
+ *     container without stamping their own uid.
+ *   - read uses `canReadLegacyFloorplan()` — which has a creator-only fallback
+ *     leg for docs missing `companyId` entirely (`belongsToCompany` can't gate
+ *     a field that isn't there).
+ * Neither changes the outcome for a well-formed, companyId-bearing document,
+ * which is what the shared matrix asserts. Delete of legacy containers is gated
+ * by `isBimWriter(resource.data.companyId)` — same internal-user floor as the
+ * presentation write gate.
+ */
+export function legacyFloorplanMatrix(): readonly CoverageCell[] {
+  return bimPresentationMatrix();
 }
 
 // ---------------------------------------------------------------------------
@@ -556,72 +619,10 @@ export function blockLibraryMatrix(): readonly CoverageCell[] {
 }
 
 // ---------------------------------------------------------------------------
-// ADR-650 — per-floor floorplan scope docs (creator-or-admin writes)
+// ADR-657 — BIM tier matrices (bimPresentationMatrix / bimAuthoringMatrix /
+// legacyFloorplanMatrix) live above. The former ADR-650
+// floorplanScopeOwnerOrAdminMatrix() (creator-or-admin, external_user read
+// ALLOW) was DELETED: it encoded the pre-ADR-657 bug where external_user could
+// read/create authoring data. floorplan_topo_surfaces is now AUTHORING and
+// points at bimAuthoringMatrix().
 // ---------------------------------------------------------------------------
-
-/**
- * Matrix for the per-floor floorplan scope docs whose rule body is
- * `read: belongsToCompany` + `create: companyId == claim && createdBy == uid`
- * + `update/delete: createdBy == uid || isCompanyAdminOfCompany`.
- *
- * Canonical for `floorplan_topo_surfaces` (ADR-650). The identical rule body is
- * used by `floorplan_grid_guides` (ADR-441) and `floorplan_foundations`, which
- * still sit in `FIRESTORE_RULES_PENDING` — they graduate onto **this** matrix
- * rather than growing a copy of it.
- *
- * The delta from `floorplanBackgroundsMatrix()` is the **external_user** row.
- * `belongsToCompany()` reads only the `companyId` claim — it does not look at
- * `globalRole` — so an external user of the same tenant genuinely passes read,
- * list and create (they own what they create). They are blocked on update and
- * delete of *someone else's* doc, and the reason is `not_owner`, not
- * `insufficient_role`: the rule has no role floor, only an ownership leg.
- * The suite seeds the fixture with `createdBy = same_tenant_user.uid`, which is
- * what makes that ownership leg observable.
- */
-export function floorplanScopeOwnerOrAdminMatrix(): readonly CoverageCell[] {
-  return [
-    // super_admin — isSuperAdminOnly() short-circuits every leg.
-    cell('super_admin', 'read', 'allow'),
-    cell('super_admin', 'list', 'allow'),
-    cell('super_admin', 'create', 'allow'),
-    cell('super_admin', 'update', 'allow'),
-    cell('super_admin', 'delete', 'allow'),
-    // same_tenant_admin — isCompanyAdminOfCompany() covers update/delete of
-    // docs it does not own.
-    cell('same_tenant_admin', 'read', 'allow'),
-    cell('same_tenant_admin', 'list', 'allow'),
-    cell('same_tenant_admin', 'create', 'allow'),
-    cell('same_tenant_admin', 'update', 'allow'),
-    cell('same_tenant_admin', 'delete', 'allow'),
-    // same_tenant_user — the seeded doc's owner (createdBy == uid).
-    cell('same_tenant_user', 'read', 'allow'),
-    cell('same_tenant_user', 'list', 'allow'),
-    cell('same_tenant_user', 'create', 'allow'),
-    cell('same_tenant_user', 'update', 'allow'),
-    cell('same_tenant_user', 'delete', 'allow'),
-    // cross_tenant_* — companyId claim mismatch kills every leg.
-    cell('cross_tenant_admin', 'read', 'deny', 'cross_tenant'),
-    cell('cross_tenant_admin', 'list', 'deny', 'cross_tenant'),
-    cell('cross_tenant_admin', 'create', 'deny', 'cross_tenant'),
-    cell('cross_tenant_admin', 'update', 'deny', 'cross_tenant'),
-    cell('cross_tenant_admin', 'delete', 'deny', 'cross_tenant'),
-    cell('cross_tenant_user', 'read', 'deny', 'cross_tenant'),
-    cell('cross_tenant_user', 'list', 'deny', 'cross_tenant'),
-    cell('cross_tenant_user', 'create', 'deny', 'cross_tenant'),
-    cell('cross_tenant_user', 'update', 'deny', 'cross_tenant'),
-    cell('cross_tenant_user', 'delete', 'deny', 'cross_tenant'),
-    // external_user — same tenant claim, so read/list/create pass (see docblock).
-    // Blocked only on the ownership leg of update/delete.
-    cell('external_user', 'read', 'allow'),
-    cell('external_user', 'list', 'allow'),
-    cell('external_user', 'create', 'allow'),
-    cell('external_user', 'update', 'deny', 'not_owner'),
-    cell('external_user', 'delete', 'deny', 'not_owner'),
-    // anonymous — isAuthenticated() floor.
-    cell('anonymous', 'read', 'deny', 'missing_claim'),
-    cell('anonymous', 'list', 'deny', 'missing_claim'),
-    cell('anonymous', 'create', 'deny', 'missing_claim'),
-    cell('anonymous', 'update', 'deny', 'missing_claim'),
-    cell('anonymous', 'delete', 'deny', 'missing_claim'),
-  ];
-}

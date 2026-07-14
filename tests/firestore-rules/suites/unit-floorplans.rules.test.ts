@@ -24,7 +24,7 @@ export const COVERAGE = FIRESTORE_RULES_COVERAGE.find(
   (c) => c.collection === 'unit_floorplans',
 )!;
 
-describe('unit_floorplans.rules — tenant_direct (fileTenantFullMatrix, super_admin create allowed)', () => {
+describe('unit_floorplans.rules — PRESENTATION legacy container (ADR-657)', () => {
   let env: RulesTestEnvironment;
 
   beforeAll(async () => { env = await initEmulator(); });

@@ -117,31 +117,28 @@ function transformSpline(
   };
 }
 
-function transformText(
-  e: Extract<Entity, { type: 'text' }>,
-  t: ItemTransform,
-  pivot: Point2D,
-): Entity {
-  return {
-    ...e,
-    position: transformPoint(e.position, t, pivot),
-    rotation: t.rotateDeg !== 0
-      ? normalizeAngleDeg((e.rotation ?? 0) + t.rotateDeg)
-      : (e.rotation ?? 0),
-  };
+/** Accumulate a rotation delta onto an existing (optional) angle, normalized. Identity when
+ *  delta is 0 so a translate-only array item keeps its exact source angle. */
+function accumulateRotationDeg(current: number | undefined, deltaDeg: number): number {
+  return deltaDeg !== 0 ? normalizeAngleDeg((current ?? 0) + deltaDeg) : (current ?? 0);
 }
 
-function transformMText(
-  e: Extract<Entity, { type: 'mtext' }>,
+/**
+ * Position-anchored, rotatable entities (text, mtext, image) share ONE transform: move the
+ * `position` anchor and accumulate `rotation`. SSoT — replaces the per-type sibling twins
+ * (N.18 anti-clone). ImageEntity `position` = bottom-left corner (y-up, DXF INSERT); its
+ * `rotation` is CCW around that anchor — identical shape to text — so the array clone stays a
+ * valid ImageEntity (url + intrinsic size + dxfImageExport ride along via `...e`). ADR-651/654.
+ */
+function transformPositioned(
+  e: Extract<Entity, { type: 'text' | 'mtext' | 'image' }>,
   t: ItemTransform,
   pivot: Point2D,
 ): Entity {
   return {
     ...e,
     position: transformPoint(e.position, t, pivot),
-    rotation: t.rotateDeg !== 0
-      ? normalizeAngleDeg((e.rotation ?? 0) + t.rotateDeg)
-      : (e.rotation ?? 0),
+    rotation: accumulateRotationDeg(e.rotation, t.rotateDeg),
   };
 }
 
@@ -156,8 +153,12 @@ function transformHatch(
   };
 }
 
-function transformRectangle(
-  e: Extract<Entity, { type: 'rectangle' }>,
+/**
+ * Corner-anchored rectangles (`rectangle`, `rect`) share ONE transform: move the `x,y` origin +
+ * optional `corner1/corner2` and accumulate `rotation`. SSoT — replaces the two identical twins.
+ */
+function transformBoxRect(
+  e: Extract<Entity, { type: 'rectangle' | 'rect' }>,
   t: ItemTransform,
   pivot: Point2D,
 ): Entity {
@@ -166,27 +167,7 @@ function transformRectangle(
     ...e,
     x: origin.x,
     y: origin.y,
-    rotation: t.rotateDeg !== 0
-      ? normalizeAngleDeg((e.rotation ?? 0) + t.rotateDeg)
-      : (e.rotation ?? 0),
-    corner1: e.corner1 ? transformPoint(e.corner1, t, pivot) : undefined,
-    corner2: e.corner2 ? transformPoint(e.corner2, t, pivot) : undefined,
-  };
-}
-
-function transformRect(
-  e: Extract<Entity, { type: 'rect' }>,
-  t: ItemTransform,
-  pivot: Point2D,
-): Entity {
-  const origin = transformPoint({ x: e.x, y: e.y }, t, pivot);
-  return {
-    ...e,
-    x: origin.x,
-    y: origin.y,
-    rotation: t.rotateDeg !== 0
-      ? normalizeAngleDeg((e.rotation ?? 0) + t.rotateDeg)
-      : (e.rotation ?? 0),
+    rotation: accumulateRotationDeg(e.rotation, t.rotateDeg),
     corner1: e.corner1 ? transformPoint(e.corner1, t, pivot) : undefined,
     corner2: e.corner2 ? transformPoint(e.corner2, t, pivot) : undefined,
   };
@@ -248,11 +229,12 @@ export function applyTransformToEntity(
     case 'lwpolyline':return transformLWPolyline(entity, transform, pivot);
     case 'ellipse':   return transformEllipse(entity, transform, pivot);
     case 'spline':    return transformSpline(entity, transform, pivot);
-    case 'text':      return transformText(entity, transform, pivot);
-    case 'mtext':     return transformMText(entity, transform, pivot);
+    case 'text':      return transformPositioned(entity, transform, pivot);
+    case 'mtext':     return transformPositioned(entity, transform, pivot);
+    case 'image':     return transformPositioned(entity, transform, pivot);
     case 'hatch':     return transformHatch(entity, transform, pivot);
-    case 'rectangle': return transformRectangle(entity, transform, pivot);
-    case 'rect':      return transformRect(entity, transform, pivot);
+    case 'rectangle': return transformBoxRect(entity, transform, pivot);
+    case 'rect':      return transformBoxRect(entity, transform, pivot);
     case 'dimension': return transformDimension(entity, transform, pivot);
     case 'leader':    return transformLeader(entity, transform, pivot);
     default:

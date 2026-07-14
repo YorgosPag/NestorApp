@@ -1,17 +1,19 @@
 /**
- * Firestore Rules — `floorplan_topo_surfaces` collection (ADR-650)
+ * Firestore Rules — `floorplan_topo_surfaces` collection (ADR-650/657)
  *
- * Pattern: creator-or-admin writes on a company-scoped, per-floor doc.
- *   read   — isSuperAdminOnly() || belongsToCompany(companyId)
- *   create — companyId == claim && createdBy == uid && hasAll(scope keys)
- *   update — (createdBy == uid || isCompanyAdminOfCompany) && immutables preserved
- *   delete — createdBy == uid || isCompanyAdminOfCompany
+ * ADR-657 AUTHORING tier — the canary that proves the closed hole:
+ * `external_user × read = DENY`. Topo survey data lives inside /dxf/viewer
+ * behind AdminGuard; the client (external_user) must never read it.
+ *   read   — canReadBimAuthoring(companyId) = isInternalUserOfCompany(companyId)
+ *   create — canCreateBimEntity(['companyId','projectId','floorplanId'])
+ *   update — canUpdateBimEntity() (isBimWriter + immutables + soft-lock)
+ *   delete — canDeleteBimEntity() (isBimWriter — NO ownership grant)
  *
- * The fixture is owned by `same_tenant_user` (see `seedFloorplanTopoSurface`),
- * which is what separates the owner row from the `external_user` row — same
- * tenant, but not the creator and not an admin.
+ * The fixture is a well-formed, tenant-owned doc (createdBy = same_tenant_user);
+ * `external_user` — same tenant but role below the internal-user floor — is
+ * denied every op (see `bimAuthoringMatrix()`).
  *
- * @since 2026-07-14 (ADR-650 — topo persistence)
+ * @since 2026-07-14 (ADR-650) — 2026-07-15 (ADR-657 → AUTHORING tier)
  */
 
 import { initEmulator, teardownEmulator, resetData } from '../_harness/emulator';
@@ -46,7 +48,7 @@ function createdByFor(persona: Persona): string {
   return isAuthenticatedPersona(persona) ? PERSONA_CLAIMS[persona].uid : 'anonymous-uid';
 }
 
-describe('floorplan_topo_surfaces.rules — creator-or-admin (ADR-650)', () => {
+describe('floorplan_topo_surfaces.rules — AUTHORING tier (ADR-657)', () => {
   let env: RulesTestEnvironment;
 
   beforeAll(async () => { env = await initEmulator(); });
@@ -92,7 +94,7 @@ describe('floorplan_topo_surfaces.rules — creator-or-admin (ADR-650)', () => {
   }
 });
 
-describe('floorplan_topo_surfaces.rules — hardening (ADR-650)', () => {
+describe('floorplan_topo_surfaces.rules — hardening (ADR-650/657)', () => {
   let env: RulesTestEnvironment;
 
   beforeAll(async () => { env = await initEmulator(); });

@@ -6,12 +6,13 @@
  * @see ./geo-auto-align.ts       — robust-center translation first guess
  */
 
-export type { GeoReference } from './geo-transform';
+export type { GeoReference, WorldToDisplayProjector } from './geo-transform';
 export {
   IDENTITY_GEO_REFERENCE,
   isIdentityGeoReference,
   localToWorld,
   worldToLocal,
+  makeWorldToDisplayProjector,
   fromOnePointPair,
   fromTwoPointPairs,
   pointPairScaleRatio,
@@ -27,5 +28,10 @@ export {
 export type { AutoAlignResult } from './geo-auto-align';
 export { autoAlignByRobustCenters } from './geo-auto-align';
 
-export { getGeoReference, setGeoReference, subscribeGeoReference } from './geo-reference-store';
+export {
+  getGeoReference,
+  setGeoReference,
+  subscribeGeoReference,
+  getActiveWorldToDisplayProjector,
+} from './geo-reference-store';
 export { loadProjectGeoReference, persistProjectGeoReference, clearProjectGeoReference } from './geo-reference-persistence';

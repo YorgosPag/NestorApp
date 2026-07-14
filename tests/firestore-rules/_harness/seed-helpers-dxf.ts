@@ -542,35 +542,64 @@ export async function seedBlockLibraryItem(
 }
 
 // ---------------------------------------------------------------------------
-// Topographic surface seeder (ADR-650 — floorplanScopeOwnerOrAdminMatrix)
+// ADR-657 — shared BIM entity seeder (one factory, all 29 entity collections)
 // ---------------------------------------------------------------------------
 
 /**
- * Seed one `floorplan_topo_surfaces` document — the per-floor topographic
- * survey definition (ADR-650).
+ * Seed ONE BIM/floorplan entity document into `collection` (ADR-657).
  *
- * `createdBy` defaults to `same_tenant_user` so the rule's ownership leg
- * (`createdBy == uid || isCompanyAdminOfCompany`) is observable: that persona
- * updates/deletes as the owner, while `external_user` — same tenant, no
- * ownership, no admin role — is denied. Seeding an unrelated `createdBy` would
- * silently collapse those two rows into the same outcome.
+ * A single factory rather than 29 near-identical per-collection seeders
+ * (rule N.18): the seed context bypasses rules (Admin SDK), so the *content*
+ * of the document is irrelevant to what the rules decide — only the identity/
+ * scope fields the rule reads matter (`companyId`, `projectId`, `floorplanId`,
+ * `createdBy`, `createdAt`). Those are the immutables `bimImmutablesUnchanged()`
+ * pins and the fields `canReadBim*`/`isBimWriter` gate on.
+ *
+ * `createdBy` defaults to `same_tenant_user` and `companyId` to the same-tenant
+ * bucket so the owner/tenant rows are observable and distinct from the
+ * cross-tenant / external / anonymous rows. Per-collection scope payloads
+ * (e.g. `guides` for grid_guides, `data` for hatches, `category` for symbols,
+ * `surfaces` for topo) are supplied through `opts.overrides` — they change no
+ * rule leg, since create validates key *presence*, not a specific field.
+ */
+export async function seedBimEntity(
+  env: RulesTestEnvironment,
+  collection: string,
+  docId: string,
+  opts?: SeedOptions,
+): Promise<void> {
+  await withSeedContext(env, async (ctx) => {
+    await ctx.firestore().collection(collection).doc(docId).set({
+      id: docId,
+      companyId: opts?.companyId ?? SAME_TENANT_COMPANY_ID,
+      projectId: 'proj-test',
+      floorplanId: 'floorplan-test',
+      createdBy: opts?.createdBy ?? PERSONA_CLAIMS.same_tenant_user.uid,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      ...opts?.overrides,
+    });
+  });
+}
+
+/**
+ * Seed one `floorplan_topo_surfaces` document — the per-floor topographic
+ * survey definition (ADR-650). Delegates to `seedBimEntity()` and only adds the
+ * inline survey payload. Topo is AUTHORING tier (ADR-657): `external_user` is
+ * denied all ops; the `same_tenant_user` default `createdBy` keeps the doc a
+ * well-formed, tenant-owned fixture.
  *
  * The survey payload is seeded **inline** (`surfaces`); the Storage-offload
- * variant (`pointsStoragePath`, used when the point cloud exceeds the 1 MB doc
- * limit) is only a field swap and changes no rule leg — create requires the
- * scope keys, not a specific payload field.
+ * variant (`pointsStoragePath`) is only a field swap and changes no rule leg.
  */
 export async function seedFloorplanTopoSurface(
   env: RulesTestEnvironment,
   docId: string,
   opts?: SeedOptions,
 ): Promise<void> {
-  await withSeedContext(env, async (ctx) => {
-    await ctx.firestore().collection('floorplan_topo_surfaces').doc(docId).set({
-      id: docId,
-      companyId: opts?.companyId ?? SAME_TENANT_COMPANY_ID,
-      projectId: 'proj-test',
-      floorplanId: 'floorplan-test',
+  await seedBimEntity(env, 'floorplan_topo_surfaces', docId, {
+    ...opts,
+    overrides: {
       surfaces: [
         {
           id: 'surf-1',
@@ -582,10 +611,7 @@ export async function seedFloorplanTopoSurface(
         },
       ],
       contourInterval: 0.5,
-      createdBy: opts?.createdBy ?? PERSONA_CLAIMS.same_tenant_user.uid,
-      createdAt: new Date(),
-      updatedAt: new Date(),
       ...opts?.overrides,
-    });
+    },
   });
 }

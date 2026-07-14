@@ -30,8 +30,7 @@ import { generateContoursFromSurface } from '../contour-generator';
 import { buildContourEntities, type ContourLayerIds } from '../topo-to-entities';
 import { getContourConfig } from '../contour-config-store';
 import { getContourDisplayStyle } from '../contour-display-store';
-import { getGeoReference } from '../../geo-referencing/geo-reference-store';
-import { worldToLocal, isIdentityGeoReference } from '../../geo-referencing/geo-transform';
+import { getActiveWorldToDisplayProjector } from '../../geo-referencing/geo-reference-store';
 import type { ContourLine } from '../topo-types';
 import {
   TOPO_MAJOR_LAYER_NAME, TOPO_MINOR_LAYER_NAME, TOPO_LABEL_LAYER_NAME,
@@ -81,11 +80,13 @@ function ensureLayers(scene: SceneModel): { layersById: Record<string, SceneLaye
  * non-referenced survey keeps rendering exactly as before.
  */
 function projectContoursToLocal(contours: readonly ContourLine[]): ContourLine[] {
-  const geoRef = getGeoReference();
-  if (isIdentityGeoReference(geoRef)) return contours as ContourLine[];
+  // ADR-650 M10b: the SAME projector the 3D TIN / point-cloud layers use (SSoT) — one model change
+  // moves the 2D contours and the 3D terrain together. Identity/unset → no-op (backward compatible).
+  const projector = getActiveWorldToDisplayProjector();
+  if (projector.isIdentity) return contours as ContourLine[];
   return contours.map((c) => ({
     ...c,
-    vertices: c.vertices.map((v) => worldToLocal(v, geoRef!)),
+    vertices: c.vertices.map((v) => projector.project(v.x, v.y)),
   }));
 }
 

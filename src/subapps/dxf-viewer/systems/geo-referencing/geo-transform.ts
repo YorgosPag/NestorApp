@@ -76,18 +76,58 @@ export function localToWorld(p: Point2D, geo: GeoReference): Point2D {
   };
 }
 
+/**
+ * The SOLE inverse-rigid kernel (WORLD → LOCAL) with the trig PRE-COMPUTED: `c=cos(rot)`,
+ * `s=sin(rot)`, `(ox,oy)=originWorld`. Both `worldToLocal` and {@link makeWorldToDisplayProjector}
+ * delegate here, so the `R⁻¹·(p−origin)` formula lives in exactly ONE place (no structural clone —
+ * N.18/jscpd). Split out so a hot per-vertex loop can compute the trig once and reuse it.
+ */
+function worldToLocalCore(worldX: number, worldY: number, c: number, s: number, ox: number, oy: number): Point2D {
+  const dx = worldX - ox;
+  const dy = worldY - oy;
+  // Inverse rotation is the transpose: [c s; -s c].
+  return { x: dx * c + dy * s, y: -dx * s + dy * c };
+}
+
 /** WORLD (ΕΓΣΑ) → LOCAL (DXF): `R(rot)⁻¹·(p − originWorld)`. */
 export function worldToLocal(p: Point2D, geo: GeoReference): Point2D {
   const rad = geo.rotationDeg * DEG_TO_RAD;
+  return worldToLocalCore(p.x, p.y, Math.cos(rad), Math.sin(rad), geo.originWorld.x, geo.originWorld.y);
+}
+
+/**
+ * ADR-650 M10b — a PREPARED «WORLD (ΕΓΣΑ) → building-DISPLAY (DXF local)» projector, the SSoT the
+ * survey→3D pipeline uses to seat the terrain under the building (mirror of the 2D contour path).
+ *
+ * Prepared, not point-by-point, for two reasons the callers rely on:
+ *   - `isIdentity` lets a hot per-vertex loop (TIN vertices, a 2M-point cloud) skip the transform
+ *     ENTIRELY when the project is not geo-referenced — byte-for-byte the previous behaviour, zero
+ *     added allocation. Backward compatible: an unset/identity reference renders exactly as before.
+ *   - the trig is computed ONCE here, not per vertex — `project()` then only does the shared
+ *     {@link worldToLocalCore} arithmetic. One formula home, no re-inlined rotation.
+ *
+ * Deliberately takes the reference as an argument (does NOT read the store): the pure 3D converters
+ * (`tin-to-three`, `cloud-to-three`) receive the projector so they stay store-free and unit-testable.
+ * The single store-reading entry is `getActiveWorldToDisplayProjector()` in `geo-reference-store`.
+ */
+export interface WorldToDisplayProjector {
+  /** `true` when the project is not geo-referenced — callers short-circuit to the world coords. */
+  readonly isIdentity: boolean;
+  /** Planimetric WORLD (ΕΓΣΑ, mm) → building-DISPLAY (DXF local, mm). Z/elevation is never touched. */
+  readonly project: (worldX: number, worldY: number) => Point2D;
+}
+
+/** Build a {@link WorldToDisplayProjector} for `geo` (`null`/identity → a no-op projector). */
+export function makeWorldToDisplayProjector(geo: GeoReference | null | undefined): WorldToDisplayProjector {
+  if (isIdentityGeoReference(geo)) {
+    return { isIdentity: true, project: (worldX, worldY) => ({ x: worldX, y: worldY }) };
+  }
+  const rad = geo!.rotationDeg * DEG_TO_RAD;
   const c = Math.cos(rad);
   const s = Math.sin(rad);
-  const dx = p.x - geo.originWorld.x;
-  const dy = p.y - geo.originWorld.y;
-  // Inverse rotation is the transpose: [c s; -s c].
-  return {
-    x: dx * c + dy * s,
-    y: -dx * s + dy * c,
-  };
+  const ox = geo!.originWorld.x;
+  const oy = geo!.originWorld.y;
+  return { isIdentity: false, project: (worldX, worldY) => worldToLocalCore(worldX, worldY, c, s, ox, oy) };
 }
 
 /**

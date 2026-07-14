@@ -10,6 +10,7 @@
 
 import { cloudPreviewToBufferGeometry } from '../cloud-to-three';
 import { PREVIEW_COLOR_FALLBACK } from '../../../systems/topography/pointcloud/asprs-las-spec';
+import { makeWorldToDisplayProjector } from '../../../systems/geo-referencing/geo-transform';
 import type { PointCloudPreview } from '../../../systems/topography/pointcloud/pointcloud-types';
 
 function preview(positions: number[], colors: number[] | null): PointCloudPreview {
@@ -62,5 +63,26 @@ describe('cloudPreviewToBufferGeometry (ADR-650 M8β/Β)', () => {
   it('επιστρέφει null όταν δεν υπάρχει τίποτα να ζωγραφιστεί (άδειο ή όλο NaN)', () => {
     expect(cloudPreviewToBufferGeometry(preview([], []))).toBeNull();
     expect(cloudPreviewToBufferGeometry(preview([NaN, NaN, NaN], [1, 1, 1]))).toBeNull();
+  });
+
+  it('ADR-650 M10b — ένας ΜΗ-identity projector κάθεται το νέφος στο building-DISPLAY frame (κάτω από το κτίριο)', () => {
+    // Ground truth: origin (1000,2000)· projector = καθαρή μετατόπιση με originWorld = (1000,2000),
+    // άρα ΕΓΣΑ world → display = world − (1000,2000).
+    //   local (0,1000,0)      → world (1000,3000,0)    → display (0,1000)    → three (0, 0, -1)
+    //   local (1000,2000,3000)→ world (2000,4000,3000) → display (1000,2000) → three (1, 3, -2)
+    const projector = makeWorldToDisplayProjector({ originWorld: { x: 1000, y: 2000 }, rotationDeg: 0 });
+    const geometry = cloudPreviewToBufferGeometry(preview([0, 1000, 0, 1000, 2000, 3000], [1, 0, 0, 0, 1, 0]), projector);
+
+    expect(Array.from(geometry!.getAttribute('position').array)).toEqual([0, 0, -1, 1, 3, -2]);
+  });
+
+  it('ADR-650 M10b — identity/unset projector είναι byte-for-byte το προηγούμενο (ΕΓΣΑ world)', () => {
+    const identity = makeWorldToDisplayProjector(null);
+    const withIdentity = cloudPreviewToBufferGeometry(preview([0, 0, 0, 1000, 2000, 3000], [1, 0, 0, 0, 1, 0]), identity);
+    const without = cloudPreviewToBufferGeometry(preview([0, 0, 0, 1000, 2000, 3000], [1, 0, 0, 0, 1, 0]));
+
+    expect(Array.from(withIdentity!.getAttribute('position').array)).toEqual(
+      Array.from(without!.getAttribute('position').array),
+    );
   });
 });

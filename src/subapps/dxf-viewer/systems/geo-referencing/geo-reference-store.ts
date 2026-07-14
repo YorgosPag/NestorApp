@@ -18,7 +18,8 @@
  */
 
 import { createExternalStore } from '../../stores/createExternalStore';
-import type { GeoReference } from './geo-transform';
+import type { GeoReference, WorldToDisplayProjector } from './geo-transform';
+import { makeWorldToDisplayProjector } from './geo-transform';
 
 const store = createExternalStore<GeoReference | null>(null);
 
@@ -35,4 +36,15 @@ export function setGeoReference(geo: GeoReference | null): void {
 /** Subscribe to reference changes; returns unsubscribe (useSyncExternalStore-compatible). */
 export function subscribeGeoReference(listener: () => void): () => void {
   return store.subscribe(listener);
+}
+
+/**
+ * ADR-650 M10b — the ACTIVE «WORLD (ΕΓΣΑ) → building-DISPLAY» projector, prepared from the current
+ * reference. This is the ONE store-reading entry that the survey→render consumers share: the 2D
+ * contour re-projection (`regenerate-topo`) and the 3D terrain / point-cloud layers all seat the
+ * survey on the building through the same projection, so a single model change moves all three.
+ * The pure converters never read the store — they receive this projector as an argument.
+ */
+export function getActiveWorldToDisplayProjector(): WorldToDisplayProjector {
+  return makeWorldToDisplayProjector(store.get());
 }

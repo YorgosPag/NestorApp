@@ -1627,3 +1627,48 @@ technologismiki (Ν.4495/2017), xyz.gr/geodimetro.gr/greenbuilding.gr/cityengine
   στο έδαφος σε ΚΑΘΕ όροφο· refresh → επιβίωση. Μετά τον έλεγχο: αφαίρεση των TEMP DIAGNOSTICS `[TOPO-DIAG]`.
 
   **Status: M10 geo-referencing — IMPLEMENTED.**
+
+- **2026-07-15 (v23)** — **M10b ΥΛΟΠΟΙΗΘΗΚΕ — GEO-REFERENCING στην 3D όψη + point cloud** (Phase 1–3, N.0.1).
+
+  **Πρόβλημα (ζωντανά, Giorgio):** στο 3D panel «Απόκρυψη εδάφους» + «Υψομετρικός χρωματισμός» **έδειχναν
+  σαν να μη λειτουργούν**. **ΔΙΑΓΝΩΣΗ (grep):** ΔΕΝ ήταν bug του toggle — το `TerrainSceneLayer.rebuild()`
+  ήταν σωστά συνδεδεμένο. Το M10 (v22) γεωαναφέρει **μόνο** την 2D κάτοψη (`regenerate-topo`)· η **3D όψη +
+  το νέφος** χτίζονταν ακόμη στα ΕΓΣΑ world (~384 km) → εκτός κάμερας → «τίποτα ορατό να κρύψεις/χρωματίσεις».
+
+  **SSoT AUDIT (grep ΠΡΙΝ κώδικα) — reuse, ΟΧΙ διπλότυπο:** το geo-referencing SSoT (`geo-transform.ts`
+  `worldToLocal`/`isIdentityGeoReference`, `geo-reference-store.ts` `getGeoReference`) υπήρχε ήδη. Οι converters
+  `tin-to-three.ts` / `cloud-to-three.ts` είναι **ρητά PURE** (no store) → η γεωαναφορά περνά ως **param**, όχι
+  store-read μέσα τους (ίδιο μοτίβο με το υπάρχον `options.reference` του cut-fill).
+
+  **ΥΛΟΠΟΙΗΣΗ (mirror του 2D, FULL SSOT):**
+  - **Κοινό SSoT primitive:** `makeWorldToDisplayProjector(geo)` (νέο, στο `geo-transform.ts`) → prepared
+    `{ isIdentity, project(worldX, worldY) }`, trig **μία φορά**. Εξήχθη kernel `worldToLocalCore(x,y,c,s,ox,oy)`
+    που καλούν **και** το `worldToLocal` **και** ο projector → η φόρμουλα `R⁻¹·(p−origin)` ζει σε **ΕΝΑ** σημείο
+    (κανένα structural clone, N.18/jscpd καθαρό). `getActiveWorldToDisplayProjector()` (`geo-reference-store.ts`)
+    = ο **μόνος** impure entry που διαβάζει το store.
+  - **3 consumers του ίδιου projector (de-dup):** (1) `tin-to-three.buildPositions` — projector param πριν το
+    `writeDxfPlanToWorld`· (2) `cloud-to-three.fillCloudBuffers` — ίδιο· (3) `regenerate-topo.projectContoursToLocal`
+    — αντικατέστησε το inline `worldToLocal` με τον projector. Μία αλλαγή μοντέλου κινεί 2D+3D+νέφος μαζί.
+  - **Fast path (backward compatible):** `isIdentity` (unset/identity geo-ref) ⇒ zero-alloc no-op στα hot
+    per-vertex loops (TIN, νέφος 2M σημείων) — byte-for-byte το προηγούμενο ΕΓΣΑ-world behaviour.
+  - **Live re-project:** `TerrainSceneLayer` + `PointCloudSceneLayer` προστέθηκε `subscribeGeoReference(() → rebuild)`
+    (πριν δεν άκουγαν τη γεωαναφορά) → όταν ο χρήστης «κουμπώνει» ζωντανά, το 3D έδαφος/νέφος ξανα-προβάλλεται
+    μαζί με τις 2D ισοϋψείς — δεν καθυστερεί μέχρι το επόμενο topo edit. Το toggle wiring **δεν** αγγίχτηκε.
+
+  **Ρητή απόφαση — το cut/fill χρώμα ΜΕΝΕΙ σε WORLD frame (ΔΕΝ προβάλλεται):** το `buildCutFillColors`
+  (`tin-to-three.ts` γρ. ~146-147) καλεί `reference.zAtMm(worldX, worldY)`. Το `ElevationReference.zAtMm` είναι
+  τεκμηριωμένο **WORLD mm**· ground TIN + proposed TIN + datum ζουν στο ίδιο world frame → το Δz είναι σύγκριση
+  world-vs-world, **ανεξάρτητη** από το πού ζωγραφίζεται το mesh. Άρα αλλάζει **ΜΟΝΟ** το `buildPositions`· το
+  χρώμα (per-vertex attribute) μένει ως έχει, αλλιώς θα ρωτούσε το reference σε λάθος σημείο.
+
+  **Z/elevation δεν αλλάζει** — planar geo-ref (μόνο x/y), ίδιο με το 2D.
+
+  **Tests:** `geo-transform` (+projector: identity no-op· ισότητα με `worldToLocal`)· `tin-to-three` (+projected
+  case: seats στο display frame, plane equation holds, ΟΧΙ ΕΓΣΑ magnitude)· `cloud-to-three` (+projected +identity
+  byte-for-byte)· `regenerate-topo` — **40/40 πράσινα**. `jscpd:diff` καθαρό (7 αρχεία).
+
+  **ΕΚΚΡΕΜΕΙ (ζωντανός έλεγχος Giorgio):** import ΕΓΣΑ terrain → κούμπωμα → 3D όψη → έδαφος κάθεται **κάτω από
+  το κτίριο**· «Εμφάνιση/Απόκρυψη εδάφους» + «Υψομετρικός χρωματισμός» **λειτουργούν**. Μετά: Βήμα 2 (ΕΓΣΑ
+  κάναβος/labels/export με `localToWorld` — έλεγχος πρώτα) + Βήμα 3 (αφαίρεση `[TOPO-DIAG]`).
+
+  **Status: M10b 3D geo-referencing — IMPLEMENTED (εκκρεμεί ζωντανός έλεγχος).**

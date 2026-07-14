@@ -48,6 +48,14 @@ import type { StoragePersona } from './personas';
 export type StoragePathPattern =
   | 'company_scoped_with_project'
   | 'company_scoped_no_project'
+  /**
+   * `company_scoped_authoring` (ADR-657) — companyId in path, gated on the
+   * authoring tier `isInternalUserOfCompany(companyId)`. Same-tenant *internal*
+   * roles (+ super_admin) get read/write/delete; a same-tenant `external_user`
+   * is DENIED all three (insufficient_role) despite a valid companyId claim;
+   * cross-tenant is denied (cross_tenant); anonymous is denied (missing_claim).
+   */
+  | 'company_scoped_authoring'
   | 'owner_based'
   | 'owner_based_no_superadmin'
   /**
@@ -104,6 +112,37 @@ function cell(
 }
 
 // ---------------------------------------------------------------------------
+// Row factories — the SSoT building blocks every matrix composes.
+//
+// A "row" = the three operations (read/write/delete) for one persona. Every
+// coverage matrix is a spread of these, so an identical (persona × outcome)
+// triple is authored exactly once. This is what keeps the token-based clone
+// detector (CHECK 3.28) quiet: no matrix re-types another matrix's literal
+// rows — they call the same factory. See ADR-584 / ADR-301 §3.2.
+// ---------------------------------------------------------------------------
+
+/** All three operations `allow` for one persona. */
+function allowAll(persona: StoragePersona): readonly StorageCoverageCell[] {
+  return [
+    cell(persona, 'read',   'allow'),
+    cell(persona, 'write',  'allow'),
+    cell(persona, 'delete', 'allow'),
+  ] as const;
+}
+
+/** All three operations `deny` for one persona, tagged with a single reason. */
+function denyAll(
+  persona: StoragePersona,
+  reason: StorageReason,
+): readonly StorageCoverageCell[] {
+  return [
+    cell(persona, 'read',   'deny', reason),
+    cell(persona, 'write',  'deny', reason),
+    cell(persona, 'delete', 'deny', reason),
+  ] as const;
+}
+
+// ---------------------------------------------------------------------------
 // Company-scoped matrix builders (reused for with-project + no-project)
 // ---------------------------------------------------------------------------
 
@@ -114,18 +153,36 @@ function cell(
  */
 function companyScopedMatrix(): readonly StorageCoverageCell[] {
   return [
-    cell('super_admin',       'read',   'allow'),
-    cell('super_admin',       'write',  'allow'),
-    cell('super_admin',       'delete', 'allow'),
-    cell('same_tenant_user',  'read',   'allow'),
-    cell('same_tenant_user',  'write',  'allow'),
-    cell('same_tenant_user',  'delete', 'allow'),
-    cell('cross_tenant_user', 'read',   'deny',  'cross_tenant'),
-    cell('cross_tenant_user', 'write',  'deny',  'cross_tenant'),
-    cell('cross_tenant_user', 'delete', 'deny',  'cross_tenant'),
-    cell('anonymous',         'read',   'deny',  'missing_claim'),
-    cell('anonymous',         'write',  'deny',  'missing_claim'),
-    cell('anonymous',         'delete', 'deny',  'missing_claim'),
+    ...allowAll('super_admin'),
+    ...allowAll('same_tenant_user'),
+    ...denyAll('cross_tenant_user', 'cross_tenant'),
+    ...denyAll('anonymous', 'missing_claim'),
+  ] as const;
+}
+
+// ---------------------------------------------------------------------------
+// Authoring-tier matrix builder (ADR-657)
+// ---------------------------------------------------------------------------
+
+/**
+ * Authoring company-scoped matrix.
+ * Gate: `isInternalUserOfCompany(companyId)` = `isSuperAdmin() ||
+ *        (isInternalUser() && belongsToCompany(companyId))`.
+ *
+ * Key difference from `companyScopedMatrix()`: a same-tenant `external_user`
+ * (valid companyId claim, but a non-internal globalRole) is DENIED all three
+ * operations with `insufficient_role`. That single row is the entire point of
+ * the ADR-657 authoring/presentation split at the storage layer.
+ */
+function topoSurfacesAuthoringMatrix(): readonly StorageCoverageCell[] {
+  return [
+    ...allowAll('super_admin'),
+    ...allowAll('same_tenant_admin'),
+    ...allowAll('same_tenant_user'),
+    // same tenant, but non-internal role → authoring tier denies all three.
+    ...denyAll('external_user', 'insufficient_role'),
+    ...denyAll('cross_tenant_user', 'cross_tenant'),
+    ...denyAll('anonymous', 'missing_claim'),
   ] as const;
 }
 
@@ -164,21 +221,24 @@ export const STORAGE_RULES_COVERAGE: readonly StorageCoverageEntry[] = [
   },
 
   // -------------------------------------------------------------------------
-  // Path 3: Topographic survey blobs — ADR-650
-  // storage.rules lines 394-401
+  // Path 3: Topographic survey blobs — ADR-650, re-tiered by ADR-657
+  // storage.rules lines 417-424
   //
   // Ο ορισμός μιας τοπογραφικής επιφάνειας όταν το point cloud ξεπερνά το όριο
-  // του Firestore doc (1 MB) → offload σε JSON blob. Company-scoped, ίδια πύλη
-  // με τα υπόλοιπα company paths — γι' αυτό ξαναχρησιμοποιεί το companyScopedMatrix().
+  // του Firestore doc (1 MB) → offload σε JSON blob. ADR-657: η τοπογραφική
+  // επιφάνεια είναι authoring geometry — και τα τρία σκέλη περνούν από
+  // isInternalUserOfCompany(companyId), οπότε ο same-tenant external_user
+  // απορρίπτεται (insufficient_role). Γι' αυτό χρησιμοποιεί το
+  // topoSurfacesAuthoringMatrix() αντί για το companyScopedMatrix().
   // Το write έχει δύο επιπλέον σκέλη (contentType == application/json, size < 100 MB)
   // που δεν είναι persona-dependent: τα φυλάει το hardening block του suite.
   // -------------------------------------------------------------------------
   {
     pathId: 'topo_surfaces',
-    pattern: 'company_scoped_no_project',
-    rulesRange: [394, 401],
+    pattern: 'company_scoped_authoring',
+    rulesRange: [417, 424],
     testFile: 'tests/storage-rules/suites/topo-surfaces.storage.test.ts',
-    matrix: companyScopedMatrix(),
+    matrix: topoSurfacesAuthoringMatrix(),
   },
 
   // -------------------------------------------------------------------------
@@ -192,21 +252,15 @@ export const STORAGE_RULES_COVERAGE: readonly StorageCoverageEntry[] = [
     testFile: 'tests/storage-rules/suites/cad-files.storage.test.ts',
     matrix: [
       // owner (same_tenant_user uid == path userId)
-      cell('same_tenant_user',  'read',   'allow'),
-      cell('same_tenant_user',  'write',  'allow'),
-      cell('same_tenant_user',  'delete', 'allow'),
+      ...allowAll('same_tenant_user'),
       // super_admin: read+delete bypass, write DENIED (isOwner only)
       cell('super_admin',       'read',   'allow'),
       cell('super_admin',       'write',  'deny',  'not_owner'),
       cell('super_admin',       'delete', 'allow'),
       // non-owner, non-superadmin
-      cell('same_tenant_admin', 'read',   'deny',  'not_owner'),
-      cell('same_tenant_admin', 'write',  'deny',  'not_owner'),
-      cell('same_tenant_admin', 'delete', 'deny',  'not_owner'),
+      ...denyAll('same_tenant_admin', 'not_owner'),
       // unauthenticated
-      cell('anonymous',         'read',   'deny',  'missing_claim'),
-      cell('anonymous',         'write',  'deny',  'missing_claim'),
-      cell('anonymous',         'delete', 'deny',  'missing_claim'),
+      ...denyAll('anonymous', 'missing_claim'),
     ] as const,
   },
 
@@ -227,21 +281,13 @@ export const STORAGE_RULES_COVERAGE: readonly StorageCoverageEntry[] = [
     testFile: 'tests/storage-rules/suites/temp-uploads.storage.test.ts',
     matrix: [
       // owner (same_tenant_user uid == path userId)
-      cell('same_tenant_user',  'read',   'allow'),
-      cell('same_tenant_user',  'write',  'allow'),
-      cell('same_tenant_user',  'delete', 'allow'),
+      ...allowAll('same_tenant_user'),
       // super_admin: NO bypass — isOwner only, uid does not match path
-      cell('super_admin',       'read',   'deny',  'not_owner'),
-      cell('super_admin',       'write',  'deny',  'not_owner'),
-      cell('super_admin',       'delete', 'deny',  'not_owner'),
+      ...denyAll('super_admin', 'not_owner'),
       // non-owner authenticated
-      cell('same_tenant_admin', 'read',   'deny',  'not_owner'),
-      cell('same_tenant_admin', 'write',  'deny',  'not_owner'),
-      cell('same_tenant_admin', 'delete', 'deny',  'not_owner'),
+      ...denyAll('same_tenant_admin', 'not_owner'),
       // unauthenticated
-      cell('anonymous',         'read',   'deny',  'missing_claim'),
-      cell('anonymous',         'write',  'deny',  'missing_claim'),
-      cell('anonymous',         'delete', 'deny',  'missing_claim'),
+      ...denyAll('anonymous', 'missing_claim'),
     ] as const,
   },
 

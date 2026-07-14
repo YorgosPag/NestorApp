@@ -20,17 +20,26 @@
 import * as THREE from 'three';
 import type { TinSurface, TerrainSurfaceStyle } from '../../systems/topography/topo-types';
 import type { ElevationReference } from '../../systems/topography/cut-fill';
+import type { WorldToDisplayProjector } from '../../systems/geo-referencing/geo-transform';
 import { writeDxfPlanToWorld } from '../viewport/coordinate-transforms';
 import { writeTerrainRampColor, writeTerrainCutFillColor } from './terrain-elevation-ramp';
 
 /**
- * ADR-650 M6 — what the `cutfill` style needs to colour by, passed IN rather than read from a
- * store: the converter stays pure (a store import here would drag the survey stores into every
- * 3D unit test and break the «promote to Toposolid without a geometry rewrite» property).
+ * ADR-650 M6/M10b — the per-build inputs the converter needs but must NOT read from a store: the
+ * converter stays pure (a store import here would drag the survey/geo stores into every 3D unit
+ * test and break the «promote to Toposolid without a geometry rewrite» property). Both are resolved
+ * by the impure caller (`TerrainSceneLayer`) and passed IN.
  */
 export interface TinShadingOptions {
   /** The volume reference (design level / proposed ground). Required by the `cutfill` style. */
   readonly reference?: ElevationReference | null;
+  /**
+   * ADR-650 M10b — the active WORLD (ΕΓΣΑ) → building-DISPLAY projector. Seats the terrain UNDER
+   * the building in 3D (mirror of the 2D contour re-projection). Omitted/identity → the mesh keeps
+   * rendering in ΕΓΣΑ world exactly as before (backward compatible). The cut/fill COLOURS are never
+   * projected — they compare Z against the reference in WORLD coords (see `buildCutFillColors`).
+   */
+  readonly projector?: WorldToDisplayProjector | null;
 }
 
 /**
@@ -48,7 +57,7 @@ export function tinToBufferGeometry(
 ): THREE.BufferGeometry | null {
   if (tin.triangles.length === 0) return null;
 
-  const positions = buildPositions(tin);
+  const positions = buildPositions(tin, options?.projector ?? null);
   if (!positions) return null;
 
   const indexed = new THREE.BufferGeometry();
@@ -67,20 +76,23 @@ export function tinToBufferGeometry(
 }
 
 /** Vertex XYZ in three-world metres, or `null` if any coordinate is non-finite. */
-function buildPositions(tin: TinSurface): Float32Array | null {
+function buildPositions(tin: TinSurface, projector: WorldToDisplayProjector | null): Float32Array | null {
   const count = tin.positions.length;
   const out = new Float32Array(count * 3);
+  const project = projector && !projector.isIdentity ? projector : null; // fast path when unset/identity
 
   for (let i = 0; i < count; i++) {
     const local = tin.positions[i]!;
-    const worldXMm = local[0] + tin.origin.x; // LOCAL → WORLD (planimetric only)
+    const worldXMm = local[0] + tin.origin.x; // TIN-LOCAL → ΕΓΣΑ WORLD (planimetric only)
     const worldYMm = local[1] + tin.origin.y;
-    const elevMm = tin.elevations[i] ?? 0; // already WORLD Z
+    const elevMm = tin.elevations[i] ?? 0; // already WORLD Z — geo-ref is planar, never offsets Z
 
     if (!Number.isFinite(worldXMm) || !Number.isFinite(worldYMm) || !Number.isFinite(elevMm)) {
       return null;
     }
-    writeDxfPlanToWorld(out, i * 3, worldXMm, worldYMm, elevMm);
+    // ADR-650 M10b: ΕΓΣΑ WORLD → building-DISPLAY so the hill seats under the building (mirror 2D).
+    const plan = project ? project.project(worldXMm, worldYMm) : null;
+    writeDxfPlanToWorld(out, i * 3, plan ? plan.x : worldXMm, plan ? plan.y : worldYMm, elevMm);
   }
   return out;
 }

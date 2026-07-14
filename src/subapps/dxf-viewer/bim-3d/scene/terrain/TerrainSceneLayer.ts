@@ -25,6 +25,10 @@ import { subscribeTopo } from '../../../systems/topography/TopoPointStore';
 import { getTopoSurface } from '../../../systems/topography/topo-surface';
 import { getTerrain3DState, subscribeTerrain3D } from '../../../systems/topography/terrain-3d-store';
 import { resolveCutFillReference, subscribeCutFill } from '../../../systems/topography/cut-fill-store';
+import {
+  getActiveWorldToDisplayProjector,
+  subscribeGeoReference,
+} from '../../../systems/geo-referencing/geo-reference-store';
 import { tinToBufferGeometry } from '../../converters/tin-to-three';
 import { getTerrainMaterial3D } from '../../materials/MaterialCatalog3D';
 import { disposeObjectTree } from '../dispose-object-tree';
@@ -47,6 +51,10 @@ export class TerrainSceneLayer {
       // ADR-650 M6: the design level / reference IS what the `cutfill` style paints. Move it and
       // the hill must re-colour, or the user reads last question's answer on this question's ground.
       subscribeCutFill(() => this.rebuild()),
+      // ADR-650 M10b: the geo-reference is what seats the hill UNDER the building. When the user
+      // «κουμπώνει» (aligns) live, the terrain must re-project with the plan — otherwise 3D lags
+      // the 2D contours until the next survey edit. Mirror of `useTopoPersistence`'s 2D subscription.
+      subscribeGeoReference(() => this.rebuild()),
     ];
     this.rebuild();
   }
@@ -72,7 +80,10 @@ export class TerrainSceneLayer {
     // The reference is resolved ONCE, here, from the same SSoT the volume table reads — so the
     // colours on the hill and the numbers in the table always answer the same question.
     const reference = style === 'cutfill' ? resolveCutFillReference() : null;
-    const geometry = tinToBufferGeometry(getTopoSurface(), style, { reference });
+    // Seat the ΕΓΣΑ world surface under the building via the active geo-reference (M10b). Resolved
+    // here, in the impure layer, and passed into the pure converter — same pattern as `reference`.
+    const projector = getActiveWorldToDisplayProjector();
+    const geometry = tinToBufferGeometry(getTopoSurface(), style, { reference, projector });
     if (!geometry) {
       this.markDirty(); // nothing to draw (no surface yet, or a degenerate one) — not an error
       return;

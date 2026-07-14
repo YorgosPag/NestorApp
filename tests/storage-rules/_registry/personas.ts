@@ -18,13 +18,18 @@ export type StoragePersona =
   | 'same_tenant_user'
   | 'same_tenant_admin'
   | 'cross_tenant_user'
+  | 'external_user'
   | 'anonymous';
 
 /** Auth claims attached to an authenticated storage context. */
 export interface PersonaClaims {
   readonly uid: string;
   readonly companyId: string;
-  readonly globalRole: 'super_admin' | 'company_admin' | 'internal_user';
+  readonly globalRole:
+    | 'super_admin'
+    | 'company_admin'
+    | 'internal_user'
+    | 'external_user';
 }
 
 /**
@@ -72,6 +77,14 @@ export const PERSONA_CLAIMS: Readonly<
     uid: 'persona-cross-user',
     companyId: CROSS_TENANT_COMPANY_ID,
     globalRole: 'internal_user',
+  },
+  // ADR-657 — self-registration default role. Carries a *valid* companyId claim
+  // for SAME_TENANT_COMPANY_ID but the non-internal `external_user` globalRole,
+  // so authoring paths (isInternalUserOfCompany) DENY it despite same-tenant.
+  external_user: {
+    uid: 'persona-external-user',
+    companyId: SAME_TENANT_COMPANY_ID,
+    globalRole: 'external_user',
   },
 } as const;
 

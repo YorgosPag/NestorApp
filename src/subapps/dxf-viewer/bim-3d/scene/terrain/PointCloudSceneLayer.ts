@@ -24,12 +24,16 @@ import {
   subscribePointCloud3D,
 } from '../../../systems/topography/pointcloud-3d-store';
 import { PREVIEW_POINT_SIZE_PX } from '../../../systems/topography/pointcloud/pointcloud-defaults';
+import {
+  getActiveWorldToDisplayProjector,
+  subscribeGeoReference,
+} from '../../../systems/geo-referencing/geo-reference-store';
 import { cloudPreviewToBufferGeometry } from '../../converters/cloud-to-three';
 import { disposeObjectTree } from '../dispose-object-tree';
 
 export class PointCloudSceneLayer {
   private readonly root = new THREE.Group();
-  private readonly unsubscribe: () => void;
+  private readonly unsubscribes: readonly (() => void)[];
   /**
    * Ιδιόκτητο υλικό (ΟΧΙ singleton του `MaterialCatalog3D` — εκείνος δίνει `MeshStandardMaterial`
    * για στερεά BIM). Σταθερό μέγεθος σε pixel (`sizeAttenuation: false`): ένα νέφος με προοπτική
@@ -51,7 +55,12 @@ export class PointCloudSceneLayer {
   ) {
     this.root.name = 'topo-pointcloud';
     scene.add(this.root);
-    this.unsubscribe = subscribePointCloud3D(() => this.rebuild());
+    this.unsubscribes = [
+      subscribePointCloud3D(() => this.rebuild()),
+      // ADR-650 M10b: re-project the cloud UNDER the building when the geo-reference changes (the
+      // user «κουμπώνει» live). Same reason the TIN layer subscribes — 3D must not lag the 2D plan.
+      subscribeGeoReference(() => this.rebuild()),
+    ];
     this.rebuild();
   }
 
@@ -72,7 +81,7 @@ export class PointCloudSceneLayer {
       return;
     }
 
-    const geometry = cloudPreviewToBufferGeometry(preview);
+    const geometry = cloudPreviewToBufferGeometry(preview, getActiveWorldToDisplayProjector());
     if (!geometry) {
       this.markDirty(); // άδειο ή εξ ολοκλήρου μη-πεπερασμένο νέφος — δεν είναι σφάλμα
       return;
@@ -97,7 +106,7 @@ export class PointCloudSceneLayer {
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
-    this.unsubscribe(); // unregister ΠΡΙΝ το dispose — κανένα in-flight rebuild πάνω σε νεκρό layer
+    for (const unsubscribe of this.unsubscribes) unsubscribe(); // unregister ΠΡΙΝ το dispose — κανένα in-flight rebuild πάνω σε νεκρό layer
     this.clearPoints();
     this.material.dispose(); // ιδιόκτητο, όχι singleton catalog → το ελευθερώνουμε εμείς
     this.root.removeFromParent();

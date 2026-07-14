@@ -71,6 +71,13 @@ const MANIFEST_FILE = path.join(
   '_registry',
   'coverage-manifest.ts',
 );
+const BIM_TIERS_FILE = path.join(
+  PROJECT_ROOT,
+  'tests',
+  'firestore-rules',
+  '_registry',
+  'bim-tiers.ts',
+);
 
 // ---------------------------------------------------------------------------
 // CLI parsing
@@ -203,6 +210,91 @@ function unwrapAsConst(expr) {
 }
 
 // ---------------------------------------------------------------------------
+// BIM tier SSoT parser — bim-tiers.ts (ADR-657, CHECK 3.16 tier conformance)
+// ---------------------------------------------------------------------------
+
+/**
+ * @typedef {{ collection: string, requiredKeys: string[] | null }} BimTierEntry
+ * @typedef {{ authoring: BimTierEntry[], presentation: BimTierEntry[], legacy: string[] }} BimTiers
+ */
+
+/**
+ * Parse `bim-tiers.ts` via the TypeScript AST — the same approach as
+ * {@link parseManifest}. Extracts the two tier arrays (each a list of
+ * `{ collection, requiredKeys }` object literals, `requiredKeys` being either
+ * an array of string literals or the `null` keyword) plus the flat
+ * `LEGACY_FLOORPLAN_CONTAINERS` string array.
+ *
+ * @returns {BimTiers}
+ */
+function parseBimTiers() {
+  const source = fs.readFileSync(BIM_TIERS_FILE, 'utf8');
+  const sourceFile = ts.createSourceFile(
+    BIM_TIERS_FILE,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+  );
+
+  /** @type {BimTierEntry[]} */
+  const authoring = [];
+  /** @type {BimTierEntry[]} */
+  const presentation = [];
+  /** @type {string[]} */
+  const legacy = [];
+
+  ts.forEachChild(sourceFile, (node) => {
+    if (!ts.isVariableStatement(node)) return;
+    for (const decl of node.declarationList.declarations) {
+      if (!ts.isIdentifier(decl.name)) continue;
+      const name = decl.name.text;
+      if (name === 'BIM_AUTHORING_COLLECTIONS') {
+        extractTierEntries(decl.initializer, authoring);
+      } else if (name === 'BIM_PRESENTATION_COLLECTIONS') {
+        extractTierEntries(decl.initializer, presentation);
+      } else if (name === 'LEGACY_FLOORPLAN_CONTAINERS') {
+        // Same shape as FIRESTORE_RULES_PENDING (a `[...] as const` string array).
+        extractPendingArray(decl.initializer, legacy);
+      }
+    }
+  });
+
+  return { authoring, presentation, legacy };
+}
+
+/**
+ * Walk a `[{ collection, requiredKeys }, ...] as const` array literal.
+ *
+ * @param {ts.Expression | undefined} init
+ * @param {BimTierEntry[]} out
+ */
+function extractTierEntries(init, out) {
+  if (!init) return;
+  const arr = unwrapAsConst(init);
+  if (!arr || !ts.isArrayLiteralExpression(arr)) return;
+
+  for (const el of arr.elements) {
+    if (!ts.isObjectLiteralExpression(el)) continue;
+    let collection = '';
+    /** @type {string[] | null} */
+    let requiredKeys = null;
+    for (const prop of el.properties) {
+      if (!ts.isPropertyAssignment(prop) || !ts.isIdentifier(prop.name)) continue;
+      const key = prop.name.text;
+      if (key === 'collection' && ts.isStringLiteral(prop.initializer)) {
+        collection = prop.initializer.text;
+      } else if (key === 'requiredKeys') {
+        // Either an array of string literals, or the `null` keyword (legacy/raster).
+        requiredKeys = ts.isArrayLiteralExpression(prop.initializer)
+          ? prop.initializer.elements.filter(ts.isStringLiteral).map((s) => s.text)
+          : null;
+      }
+    }
+    if (collection) out.push({ collection, requiredKeys });
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Validators
 // ---------------------------------------------------------------------------
 
@@ -332,6 +424,313 @@ function validateRuleShape(manifest, blocks) {
 }
 
 // ---------------------------------------------------------------------------
+// BIM tier conformance (ADR-657) — the RATCHET
+// ---------------------------------------------------------------------------
+//
+// Because firestore.rules is LIVE, this validator continuously re-proves the
+// deployed rule text against the tier SSoT (bim-tiers.ts). For every match
+// block whose collection is a floorplan_* / *floorplans, it asserts:
+//   (a) it is in EXACTLY ONE tier list                         (untiered/double)
+//   (b) allow-read calls the helper its tier mandates          (wrong_read_helper)
+//   (c) allow-create keys match bim-tiers.ts requiredKeys       (drift/wrong helper)
+//   (d) allow-update / allow-delete grant NO ownership OR-leg   (ownership_write_leg)
+//   (e) allow-update / allow-delete call the tier write helper  (wrong_write_helper)
+
+/** The three tier-specific read helpers — a block must call exactly one. */
+const BIM_READ_HELPERS = [
+  'canReadBimAuthoring',
+  'canReadBimPresentation',
+  'canReadLegacyFloorplan',
+];
+
+/**
+ * @param {string} collection
+ * @returns {boolean} whether the block is a BIM/floorplan block the ratchet owns.
+ */
+function isBimFloorplanBlock(collection) {
+  return /^floorplan_/.test(collection) || /floorplans$/.test(collection);
+}
+
+/**
+ * Strip `//` and block comments so allow-expressions extract cleanly.
+ *
+ * @param {string} s
+ * @returns {string}
+ */
+function stripRuleComments(s) {
+  return s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+}
+
+/**
+ * Extract the body of an `allow <op>: if ...;` expression from a match block,
+ * with comments stripped and whitespace collapsed. Mirrors the shared parser's
+ * `extractFirstAllowRead` but is parameterised by operation.
+ *
+ * @param {string} blockBody
+ * @param {'create' | 'update' | 'delete'} op
+ * @returns {string | null}
+ */
+function extractAllowExpr(blockBody, op) {
+  const stripped = stripRuleComments(blockBody);
+  const re = new RegExp(`allow\\s+${op}\\s*:\\s*if\\s+`);
+  const m = re.exec(stripped);
+  if (!m) return null;
+  const after = stripped.slice(m.index + m[0].length);
+  const semicolonIdx = after.indexOf(';');
+  if (semicolonIdx < 0) return null;
+  return after.slice(0, semicolonIdx).replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Extract the string-literal keys passed to `canCreateBimEntity([...])`.
+ * Returns null if the call is absent (a wrong-helper condition).
+ *
+ * @param {string} createExpr
+ * @returns {string[] | null}
+ */
+function extractCreateKeys(createExpr) {
+  const marker = 'canCreateBimEntity(';
+  const idx = createExpr.indexOf(marker);
+  if (idx < 0) return null;
+  let depth = 1;
+  let i = idx + marker.length;
+  const start = i;
+  for (; i < createExpr.length && depth > 0; i++) {
+    if (createExpr[i] === '(') depth++;
+    else if (createExpr[i] === ')') depth--;
+  }
+  const inner = createExpr.slice(start, i - 1);
+  return [...inner.matchAll(/['"]([^'"]+)['"]/g)].map((mm) => mm[1]);
+}
+
+/**
+ * Order-insensitive set equality on two key lists.
+ *
+ * @param {readonly string[]} a
+ * @param {readonly string[]} b
+ * @returns {boolean}
+ */
+function keyListsEqual(a, b) {
+  if (a.length !== b.length) return false;
+  const sb = new Set(b);
+  return a.every((k) => sb.has(k));
+}
+
+/**
+ * @param {string} collection
+ * @param {BimTiers} tiers
+ * @returns {'authoring' | 'presentation' | null}
+ */
+function tierOf(collection, tiers) {
+  if (tiers.authoring.some((e) => e.collection === collection)) return 'authoring';
+  if (tiers.presentation.some((e) => e.collection === collection)) return 'presentation';
+  return null;
+}
+
+/**
+ * The core ratchet. Returns one Violation per failed assertion (each tagged
+ * with `.collection` so the verbose report can group by block).
+ *
+ * @param {import('./_shared/firestore-rules-parser').RuleBlock[]} blocks
+ * @param {BimTiers} tiers
+ * @param {string[]} rulesLines
+ * @returns {Violation[]}
+ */
+function validateBimTierConformance(blocks, tiers, rulesLines) {
+  /** @type {Violation[]} */
+  const violations = [];
+  const authoringMap = new Map(tiers.authoring.map((e) => [e.collection, e.requiredKeys]));
+  const presentationMap = new Map(tiers.presentation.map((e) => [e.collection, e.requiredKeys]));
+  const legacySet = new Set(tiers.legacy);
+
+  for (const block of blocks) {
+    const c = block.collection;
+    if (!isBimFloorplanBlock(c)) continue;
+
+    const loc = `firestore.rules:${block.lineStart} (${c})`;
+    const inAuthoring = authoringMap.has(c);
+    const inPresentation = presentationMap.has(c);
+
+    // (a) TIER MEMBERSHIP — exactly one list.
+    if (!inAuthoring && !inPresentation) {
+      violations.push({
+        kind: 'untiered_bim_block',
+        collection: c,
+        message: `match /${c}/ is untiered — in neither BIM tier list`,
+        location: loc,
+        hint: '  → add to bim-tiers.ts (BIM_AUTHORING_COLLECTIONS or BIM_PRESENTATION_COLLECTIONS) and pick a tier',
+      });
+      continue;
+    }
+    if (inAuthoring && inPresentation) {
+      violations.push({
+        kind: 'double_tiered_bim_block',
+        collection: c,
+        message: `match /${c}/ appears in BOTH tier lists`,
+        location: loc,
+        hint: '  → remove it from one of the two lists in bim-tiers.ts',
+      });
+      continue;
+    }
+
+    const tier = inAuthoring ? 'authoring' : 'presentation';
+    const requiredKeys = inAuthoring ? authoringMap.get(c) : presentationMap.get(c);
+    const isLegacy = legacySet.has(c);
+    // entity  → 29 collections with requiredKeys; canCreate/Update/DeleteBimEntity
+    // legacy  → 5 containers; canCreate/WriteLegacyFloorplan + isBimWriter
+    // raster  → backgrounds/overlays; bespoke create, isBimWriter writes
+    const category = isLegacy ? 'legacy' : requiredKeys === null ? 'raster' : 'entity';
+
+    const body = rulesLines.slice(block.lineStart - 1, block.lineEnd).join('\n');
+    const readExpr = block.firstAllowReadExpression || '';
+    const createExpr = extractAllowExpr(body, 'create') || '';
+    const updateExpr = extractAllowExpr(body, 'update') || '';
+    const deleteExpr = extractAllowExpr(body, 'delete') || '';
+
+    // (b) READ HELPER — exactly the tier's helper, none of the others.
+    const expectedRead =
+      tier === 'authoring'
+        ? 'canReadBimAuthoring'
+        : isLegacy
+          ? 'canReadLegacyFloorplan'
+          : 'canReadBimPresentation';
+    if (!readExpr.includes(`${expectedRead}(`)) {
+      violations.push({
+        kind: 'wrong_read_helper',
+        collection: c,
+        message: `${tier} block '${c}' allow-read must call ${expectedRead}() (found: ${readExpr || '<none>'})`,
+        location: loc,
+        hint: `  → allow read: if isAuthenticated() && ${expectedRead}(resource.data.companyId);`,
+      });
+    } else {
+      for (const other of BIM_READ_HELPERS) {
+        if (other !== expectedRead && readExpr.includes(`${other}(`)) {
+          violations.push({
+            kind: 'wrong_read_helper',
+            collection: c,
+            message: `${tier} block '${c}' allow-read also calls wrong-tier helper ${other}()`,
+            location: loc,
+            hint: `  → it must call only ${expectedRead}()`,
+          });
+        }
+      }
+    }
+
+    // (c) CREATE KEYS — entities match requiredKeys; legacy call legacy helper.
+    if (category === 'entity') {
+      const actualKeys = extractCreateKeys(createExpr);
+      if (actualKeys === null) {
+        violations.push({
+          kind: 'wrong_create_helper',
+          collection: c,
+          message: `entity block '${c}' allow-create must call canCreateBimEntity([...])`,
+          location: loc,
+          hint: `  → allow create: if isAuthenticated() && canCreateBimEntity([${requiredKeys.map((k) => `'${k}'`).join(', ')}]);`,
+        });
+      } else if (!keyListsEqual(actualKeys, requiredKeys)) {
+        violations.push({
+          kind: 'drifted_create_keys',
+          collection: c,
+          message: `'${c}' canCreateBimEntity keys [${actualKeys.join(', ')}] ≠ bim-tiers.ts requiredKeys [${requiredKeys.join(', ')}]`,
+          location: loc,
+          hint: '  → sync the hasAll([...]) list in firestore.rules with bim-tiers.ts requiredKeys',
+        });
+      }
+    } else if (category === 'legacy') {
+      if (!createExpr.includes('canCreateLegacyFloorplan(')) {
+        violations.push({
+          kind: 'wrong_create_helper',
+          collection: c,
+          message: `legacy container '${c}' allow-create must call canCreateLegacyFloorplan()`,
+          location: loc,
+          hint: '  → allow create: if isAuthenticated() && canCreateLegacyFloorplan();',
+        });
+      }
+    }
+    // raster (backgrounds/overlays): create is a bespoke inline gate — not tiered.
+
+    // (d) NO OWNERSHIP WRITE LEG — flag createdBy == request.auth.uid in
+    //     UPDATE/DELETE only. Deliberately does NOT match the legitimate
+    //     immutability form (createdBy == resource.data.createdBy) nor the
+    //     create self-attribution (which lives in the create body we skip).
+    const OWNERSHIP_LEG = /createdBy\s*==\s*request\.auth\.uid/;
+    for (const [op, expr] of [
+      ['update', updateExpr],
+      ['delete', deleteExpr],
+    ]) {
+      if (OWNERSHIP_LEG.test(expr)) {
+        violations.push({
+          kind: 'ownership_write_leg',
+          collection: c,
+          message: `'${c}' allow-${op} grants on ownership (createdBy == request.auth.uid) — forbidden by ADR-657`,
+          location: loc,
+          hint: '  → delegate to the tier write helper; remove the createdBy==uid OR-leg',
+        });
+      }
+    }
+
+    // (e) WRITE HELPER — update per-category; delete accepts canDelete/isBimWriter.
+    const expectedUpdate =
+      category === 'entity'
+        ? 'canUpdateBimEntity'
+        : category === 'raster'
+          ? 'isBimWriter'
+          : 'canWriteLegacyFloorplan';
+    if (!updateExpr.includes(`${expectedUpdate}(`)) {
+      violations.push({
+        kind: 'wrong_write_helper',
+        collection: c,
+        message: `${category} block '${c}' allow-update must call ${expectedUpdate}()`,
+        location: loc,
+        hint: `  → allow update: if isAuthenticated() && ${expectedUpdate}(...);`,
+      });
+    }
+    const deleteOk =
+      category === 'entity'
+        ? deleteExpr.includes('canDeleteBimEntity(')
+        : deleteExpr.includes('isBimWriter(') || deleteExpr.includes('canDeleteBimEntity(');
+    if (!deleteOk) {
+      const expectedDelete = category === 'entity' ? 'canDeleteBimEntity' : 'isBimWriter';
+      violations.push({
+        kind: 'wrong_write_helper',
+        collection: c,
+        message: `${category} block '${c}' allow-delete must call ${expectedDelete}()`,
+        location: loc,
+        hint: `  → allow delete: if isAuthenticated() && ${expectedDelete}(resource.data.companyId);`,
+      });
+    }
+  }
+
+  return violations;
+}
+
+/**
+ * `--all --verbose` per-collection tier + PASS/FAIL grid.
+ *
+ * @param {import('./_shared/firestore-rules-parser').RuleBlock[]} blocks
+ * @param {BimTiers} tiers
+ * @param {Violation[]} bimViolations
+ */
+function printBimTierReport(blocks, tiers, bimViolations) {
+  const failed = new Set(bimViolations.map((v) => v.collection).filter(Boolean));
+  log('');
+  log(`${C.cyan}── BIM tier conformance (ADR-657) ──${C.reset}`);
+  let pass = 0;
+  let total = 0;
+  for (const block of blocks) {
+    const c = block.collection;
+    if (!isBimFloorplanBlock(c)) continue;
+    total += 1;
+    const tier = tierOf(c, tiers) ?? 'UNTIERED';
+    const ok = !failed.has(c);
+    if (ok) pass += 1;
+    const status = ok ? `${C.green}PASS${C.reset}` : `${C.red}FAIL${C.reset}`;
+    log(`  ${status}  ${C.dim}${tier.padEnd(12)}${C.reset} ${c}`);
+  }
+  log(`  ${C.dim}${pass}/${total} BIM blocks tier-conformant${C.reset}`);
+}
+
+// ---------------------------------------------------------------------------
 // Reporting
 // ---------------------------------------------------------------------------
 
@@ -377,6 +776,10 @@ function main() {
     log(`${C.red}✖ coverage-manifest.ts not found at ${MANIFEST_FILE}${C.reset}`);
     process.exit(1);
   }
+  if (!fs.existsSync(BIM_TIERS_FILE)) {
+    log(`${C.red}✖ bim-tiers.ts not found at ${BIM_TIERS_FILE}${C.reset}`);
+    process.exit(1);
+  }
 
   // When invoked by the pre-commit hook, `targets` is the list of staged
   // files routed through the CHECK 3.16 trigger. If none of them touch the
@@ -391,15 +794,22 @@ function main() {
   }
 
   const rulesContent = fs.readFileSync(RULES_FILE, 'utf8');
+  const rulesLines = rulesContent.split('\n');
   const blocks = parseFirestoreRules(rulesContent);
   const manifest = parseManifest();
+  const tiers = parseBimTiers();
 
   if (VERBOSE) {
     log(`${C.dim}  parsed ${blocks.length} top-level match blocks${C.reset}`);
     log(
       `${C.dim}  manifest: ${manifest.coverage.length} covered, ${manifest.pending.length} pending${C.reset}`,
     );
+    log(
+      `${C.dim}  bim-tiers: ${tiers.authoring.length} authoring, ${tiers.presentation.length} presentation, ${tiers.legacy.length} legacy${C.reset}`,
+    );
   }
+
+  const bimViolations = validateBimTierConformance(blocks, tiers, rulesLines);
 
   /** @type {Violation[]} */
   const violations = [
@@ -407,10 +817,30 @@ function main() {
     ...validateTestFilesExist(manifest),
     ...validateTestFileContract(manifest),
     ...validateRuleShape(manifest, blocks),
+    ...bimViolations,
   ];
+
+  if (VERBOSE && MODE_ALL) {
+    printBimTierReport(blocks, tiers, bimViolations);
+  }
 
   reportViolations(violations);
   process.exit(violations.length === 0 ? 0 : 1);
 }
 
-main();
+module.exports = {
+  parseManifest,
+  parseBimTiers,
+  extractTierEntries,
+  validateBimTierConformance,
+  extractAllowExpr,
+  extractCreateKeys,
+  keyListsEqual,
+  isBimFloorplanBlock,
+  tierOf,
+  main,
+};
+
+if (require.main === module) {
+  main();
+}
