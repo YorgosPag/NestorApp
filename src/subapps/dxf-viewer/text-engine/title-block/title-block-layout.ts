@@ -92,6 +92,16 @@ export interface TitleBlockLayoutOptions {
    */
   readonly stampImage?: TitleBlockStampImage | null;
   /**
+   * ADR-651 Φάση Λ — κελί QR δεξιά μέσα στην πινακίδα (§8 #8). Off by default ⇒ μηδέν αλλαγή
+   * γεωμετρίας/συμπεριφοράς για ό,τι δεν το ζητά ρητά.
+   */
+  readonly withQr?: boolean;
+  /**
+   * ADR-651 Φάση Λ — το QR ως εικόνα (data URL, ίδια σύμβαση με τη σφραγίδα). `null`/απόν ⇒
+   * κενό κελί (π.χ. όσο δεν έχει προ-φορτωθεί ή αν λείπουν facts έκδοσης).
+   */
+  readonly qrImage?: TitleBlockStampImage | null;
+  /**
    * Πού πέφτει η αρχή των συντεταγμένων. Default = ό,τι **τοποθετείται**: με κορνίζα η γωνία
    * του φύλλου, χωρίς κορνίζα η γωνία της πινακίδας (η συμπεριφορά της Φάσης Β/Γ — ο χρήστης
    * πιάνει αυτό που βλέπει).
@@ -131,40 +141,42 @@ function headingPrimitive(fields: RectMm, heading: string): DetailPrimitive {
 }
 
 /**
- * Η περιοχή της **εικόνας** μέσα στο κελί σφραγίδας: το κελί μείον τη ζώνη του υπότιτλου
- * (ώστε η εικόνα να μην πατά πάνω στη λέξη «ΣΦΡΑΓΙΔΑ») και μείον το περιθώριο του κελιού.
+ * Η περιοχή της **εικόνας** μέσα σε ένα κελί εικόνας (σφραγίδα ή QR): το κελί μείον τη ζώνη του
+ * υπότιτλου (ώστε η εικόνα να μην πατά πάνω στη λέξη «ΣΦΡΑΓΙΔΑ») και μείον το περιθώριο.
  */
-function stampImageRect(stamp: RectMm, hasLabel: boolean): RectMm {
+function cellImageRect(cell: RectMm, hasLabel: boolean): RectMm {
   const pad = FIELD_BLOCK_METRICS.sidePadMm;
   const labelBandMm = hasLabel ? STAMP_TEXT_MM + pad : 0;
   return {
-    x: stamp.x + pad,
-    y: stamp.y + pad + labelBandMm,
-    w: stamp.w - pad * 2,
-    h: stamp.h - pad * 2 - labelBandMm,
+    x: cell.x + pad,
+    y: cell.y + pad + labelBandMm,
+    w: cell.w - pad * 2,
+    h: cell.h - pad * 2 - labelBandMm,
   };
 }
 
 /**
- * Το κελί σφραγίδας: περίγραμμα + υπότιτλος + (προαιρετικά) η **εικόνα** της σφραγίδας
- * (Απόφαση #6 — και τα τρία: εικόνα / κείμενο / κενό κουτί, ΕΝΑ κελί).
+ * **Κελί εικόνας**: περίγραμμα + (προαιρετικά) υπότιτλος + (προαιρετικά) η **εικόνα** — ΕΝΑΣ
+ * ζωγράφος για δύο κελιά (N.18): τη **σφραγίδα** (Φάση Ε — εικόνα / κείμενο / κενό κουτί) και το
+ * **QR** (Φάση Λ — εικόνα χωρίς υπότιτλο). Χωρίς εικόνα ⇒ κενό κουτί (ίδια σύμβαση: το κελί
+ * υπάρχει, απλώς είναι άδειο).
  *
  * Η εικόνα μπαίνει ως `RasterPrimitive` (ADR-622) ⇒ τα backends τη ζωγραφίζουν **δωρεάν**:
  * PDF (`drawRaster` + contain-fit) και canvas ήδη το υποστηρίζουν, το in-scene backend το
  * μετατρέπει σε `ImageEntity` (`detail-primitives-to-entities`).
  */
-function stampPrimitives(
-  stamp: RectMm,
+function cellImagePrimitives(
+  cell: RectMm,
   label: string,
   image: TitleBlockStampImage | null | undefined,
 ): DetailPrimitive[] {
-  const out: DetailPrimitive[] = [rectOutline(stamp, DIVIDER_STROKE)];
+  const out: DetailPrimitive[] = [rectOutline(cell, DIVIDER_STROKE)];
   if (label) {
     out.push({
       kind: 'text',
       position: {
-        x: stamp.x + stamp.w / 2,
-        y: stamp.y + FIELD_BLOCK_METRICS.sidePadMm + STAMP_TEXT_MM,
+        x: cell.x + cell.w / 2,
+        y: cell.y + FIELD_BLOCK_METRICS.sidePadMm + STAMP_TEXT_MM,
       },
       text: label,
       heightMm: STAMP_TEXT_MM,
@@ -173,7 +185,7 @@ function stampPrimitives(
     });
   }
   if (image) {
-    const rect = stampImageRect(stamp, Boolean(label));
+    const rect = cellImageRect(cell, Boolean(label));
     if (rect.w > 0 && rect.h > 0) {
       out.push({
         kind: 'raster',
@@ -196,6 +208,7 @@ function anchorMetrics(metrics: SheetFrameMetrics, origin: TitleBlockOrigin) {
     titleBlock: translateRect(metrics.titleBlock, dx, dy),
     fields: translateRect(metrics.fields, dx, dy),
     stamp: metrics.stamp ? translateRect(metrics.stamp, dx, dy) : null,
+    qr: metrics.qr ? translateRect(metrics.qr, dx, dy) : null,
   };
 }
 
