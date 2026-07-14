@@ -72,6 +72,10 @@ const PACKS = {
     categories: [
       'sofa3', 'sofa2', 'sofaCorner', 'armchair', 'recliner', 'chair', 'officeChair',
       'stool', 'bench', 'pouf', 'bedDouble', 'bedSingle', 'washbasin', 'coffeeTable', 'rug',
+      // M7 Φάση Γ2 (images_4) — νέες κατηγορίες από τις συνθέσεις
+      'diningSet', 'diningTable', 'desk', 'tvUnit', 'loungeSet', 'sideTable', 'umbrella',
+      'bathtub', 'sunLounger', 'cooktop', 'tray', 'piano', 'toilet', 'kitchenSink', 'shower', 'stove',
+      'centerpiece', // διακοσμητικός δίσκος τραπεζιού με floral σύνθεση (images_4· ήταν «plants»)
     ],
     // kind ΠΡΩΤΟ (top-level φίλτρο «Μεμονωμένα ⇄ Συνθέσεις»), μετά style.
     facets: [

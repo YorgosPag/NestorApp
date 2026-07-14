@@ -109,7 +109,7 @@ describe('composeEntourageDisplayName — σύνθεση με σειρά facets'
 
 describe.each([
   ['people', listPeoplePlanDefs, getPeoplePlanSizeMm, PEOPLE_PLAN_LONG_SIDE_MM, 124],
-  ['vehicles', listVehiclePlanDefs, getVehiclePlanSizeMm, VEHICLE_PLAN_LONG_SIDE_MM, 87],
+  ['vehicles', listVehiclePlanDefs, getVehiclePlanSizeMm, VEHICLE_PLAN_LONG_SIDE_MM, 93],
   ['plants', listPlantsPlanDefs, getPlantsPlanSizeMm, PLANTS_PLAN_LONG_SIDE_MM, 103],
 ] as const)('%s pack — ακεραιότητα + κλίμακα', (_name, list, getSize, longSideMm, expectedCount) => {
   it(`έχει ${expectedCount} sprites με μοναδικά ids`, () => {

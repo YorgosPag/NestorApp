@@ -130,3 +130,34 @@ describe('faceted taxonomy — category + kind + style + series (M7 Φάση Γ)
     expect(parts.series).toBe(def.series);
   });
 });
+
+describe('M7 Φάση Γ2 (images_4) — συνθέσεις + νέες κατηγορίες', () => {
+  it('τα 379 αρχικά furn-obj/furn-rug παραμένουν στο catalog (μηδέν regression)', () => {
+    const originals = listFurniturePlanDefs().filter(
+      (d) => d.id.startsWith('furn-obj-') || d.id.startsWith('furn-rug-'),
+    );
+    expect(originals).toHaveLength(379);
+    // όλα individual (τα σετ ήρθαν με το furn-set- prefix)
+    expect(originals.every((d) => d.facets.kind === 'individual')).toBe(true);
+  });
+
+  it('υπάρχει ≥1 σύνθεση (composition) — Revit «Furniture Systems»', () => {
+    const compositions = listFurniturePlanDefs().filter((d) => d.facets.kind === 'composition');
+    expect(compositions.length).toBeGreaterThan(0);
+    // κάθε composition ανήκει στα furn-set- (images_4)
+    expect(compositions.every((d) => d.id.startsWith('furn-set-'))).toBe(true);
+  });
+
+  it('οι 17 νέες κατηγορίες images_4 έχουν ορισμένο μήκος + τουλάχιστον ένα sprite', () => {
+    const newCats = [
+      'diningSet', 'diningTable', 'desk', 'tvUnit', 'loungeSet', 'sideTable', 'umbrella',
+      'bathtub', 'sunLounger', 'cooktop', 'tray', 'piano', 'toilet', 'kitchenSink', 'shower', 'stove',
+      'centerpiece', // 9 floral-tray centerpieces (ήταν «plants», διακοσμητικά)
+    ] as const;
+    const present = new Set(listFurniturePlanDefs().map((d) => d.category));
+    for (const cat of newCats) {
+      expect(FURNITURE_PLAN_LONG_SIDE_MM[cat]).toBeGreaterThan(0);
+      expect(present.has(cat)).toBe(true);
+    }
+  });
+});

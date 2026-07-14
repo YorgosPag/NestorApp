@@ -433,5 +433,35 @@
     "id": "veh-obj-087-1",
     "category": "boat",
     "color": "white"
+  },
+  {
+    "id": "veh-obj-254-1",
+    "category": "car",
+    "color": "red"
+  },
+  {
+    "id": "veh-obj-255-1",
+    "category": "car",
+    "color": "white"
+  },
+  {
+    "id": "veh-obj-256-1",
+    "category": "car",
+    "color": "other"
+  },
+  {
+    "id": "veh-obj-257-1",
+    "category": "car",
+    "color": "blue"
+  },
+  {
+    "id": "veh-obj-258-1",
+    "category": "car",
+    "color": "yellow"
+  },
+  {
+    "id": "veh-obj-259-1",
+    "category": "car",
+    "color": "green"
   }
 ]

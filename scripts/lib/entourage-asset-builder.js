@@ -34,12 +34,13 @@ function spriteId(prefix, group, stem, index) {
   return `${prefix}-${group}-${stem}-${index + 1}`;
 }
 
-function listTifs(dir, filterStems) {
+function listTifs(dir, filterStems, excludeStems) {
   if (!fs.existsSync(dir)) return [];
   return fs
     .readdirSync(dir)
     .filter((f) => f.toLowerCase().endsWith('.tif'))
     .filter((f) => !filterStems || filterStems.includes(path.basename(f, path.extname(f))))
+    .filter((f) => !excludeStems || !excludeStems.includes(path.basename(f, path.extname(f))))
     .sort();
 }
 
@@ -131,6 +132,8 @@ async function processFile({ prefix, group, dir, file, outRoot, repoRoot, manife
  * @param {string} config.idPrefix  prefix των ids ('furn' | 'ppl' | 'veh' | …)
  * @param {string} config.repoRoot  για relative `srcFile` στο manifest
  * @param {string[]} [config.filterStems]  αν δοθεί, μόνο αυτά τα stems (pilot mode)
+ * @param {string[]} [config.excludeStems]  αν δοθεί, ΠΑΡΑΛΕΙΠΟΝΤΑΙ αυτά τα stems (π.χ.
+ *        πηγές με degenerate alpha / μη-έπιπλα που δρομολογούνται σε άλλο pack)
  * @param {Record<string,'composition'|'variant-sheet'|'single'>} [config.modeByStem]
  *        ανά stem· `composition` ⇒ εκπομπή ολόκληρου σετ (`…-0`) + μερών. Αλλιώς μόνο μέρη.
  * @param {boolean} [config.mergeManifest]  αν true, συγχωνεύει με το υπάρχον manifest του
@@ -144,6 +147,7 @@ async function buildEntouragePack({
   idPrefix,
   repoRoot,
   filterStems,
+  excludeStems,
   modeByStem,
   mergeManifest = false,
   logger = console,
@@ -154,7 +158,7 @@ async function buildEntouragePack({
   let files = 0;
 
   for (const { group, dir } of sources) {
-    const tifs = listTifs(dir, filterStems);
+    const tifs = listTifs(dir, filterStems, excludeStems);
     if (tifs.length === 0) continue;
     logger.log(`\n[${group}] ${tifs.length} αρχεία — ${path.relative(repoRoot, dir)}`);
     for (const file of tifs) {

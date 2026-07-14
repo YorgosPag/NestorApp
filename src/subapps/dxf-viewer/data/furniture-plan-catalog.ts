@@ -49,7 +49,25 @@ export type FurniturePlanCategory =
   | 'bedSingle'
   | 'washbasin'
   | 'coffeeTable'
-  | 'rug';
+  | 'rug'
+  // M7 Φάση Γ2 (images_4) — νέες κατηγορίες από τις συνθέσεις
+  | 'diningSet'
+  | 'diningTable'
+  | 'desk'
+  | 'tvUnit'
+  | 'loungeSet'
+  | 'sideTable'
+  | 'umbrella'
+  | 'bathtub'
+  | 'sunLounger'
+  | 'cooktop'
+  | 'tray'
+  | 'piano'
+  | 'toilet'
+  | 'kitchenSink'
+  | 'shower'
+  | 'stove'
+  | 'centerpiece';
 
 /**
  * Μεμονωμένο έπιπλο ⇄ ολόκληρη σύνθεση/σετ (Revit «Furniture» vs «Furniture Systems»). Το πρώτο,
@@ -90,6 +108,24 @@ export const FURNITURE_PLAN_LONG_SIDE_MM: Readonly<Record<FurniturePlanCategory,
   washbasin: 600,
   coffeeTable: 1100,
   rug: 2400,
+  // M7 Φάση Γ2 (images_4) — μεγάλη πλευρά σε mm (Revit-grade τυπικές διαστάσεις)
+  diningSet: 3000, // ολόκληρο σετ τραπεζαρίας (τραπέζι + καρέκλες)
+  diningTable: 1600,
+  desk: 1400,
+  tvUnit: 1800,
+  loungeSet: 3000, // ολόκληρη σύνθεση σαλονιού
+  sideTable: 500,
+  umbrella: 2500,
+  bathtub: 1700,
+  sunLounger: 2000,
+  cooktop: 600,
+  tray: 500,
+  piano: 1500,
+  toilet: 700,
+  kitchenSink: 800,
+  shower: 900,
+  stove: 600,
+  centerpiece: 500, // διακοσμητικός δίσκος/σουπλά τραπεζιού με floral σύνθεση
 };
 
 // ─── Catalog entry ────────────────────────────────────────────────────────────

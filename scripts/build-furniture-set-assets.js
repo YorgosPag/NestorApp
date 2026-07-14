@@ -27,6 +27,7 @@ const REPO_ROOT = path.resolve(__dirname, '..');
 const SRC_ROOT = path.join(REPO_ROOT, 'images_4');
 const OUT_ROOT = path.join(REPO_ROOT, 'public', 'furniture-2d');
 const MODES_PATH = path.join(REPO_ROOT, 'scripts', 'entourage-classification', 'furniture-set.modes.json');
+const EXCLUDE_PATH = path.join(REPO_ROOT, 'scripts', 'entourage-classification', 'furniture-set.exclude.json');
 
 /** Διαβάζει το vision-A mode map (stem → mode). Απόν αρχείο = όλα split-only (προ-vision). */
 function loadModes() {
@@ -35,6 +36,18 @@ function loadModes() {
     return undefined;
   }
   return JSON.parse(fs.readFileSync(MODES_PATH, 'utf8'));
+}
+
+/**
+ * Διαβάζει τα stems που ΕΞΑΙΡΟΥΝΤΑΙ από το furniture pack: degenerate alpha (broken) +
+ * φυτά→plants-2d + οχήματα→vehicles pack. Απόν αρχείο = καμία εξαίρεση.
+ * @returns {string[]} ένωση broken ∪ plants ∪ vehicles
+ */
+function loadExcludeStems() {
+  if (!fs.existsSync(EXCLUDE_PATH)) return undefined;
+  const j = JSON.parse(fs.readFileSync(EXCLUDE_PATH, 'utf8'));
+  const stems = [...(j.broken || []), ...(j.plants || []), ...(j.vehicles || [])];
+  return stems.length ? stems : undefined;
 }
 
 /** `--pilot 001,005,015` → ['001','005','015']· χωρίς λίστα = όλο το pack. */
@@ -53,8 +66,10 @@ async function main() {
   const argv = process.argv.slice(2);
   const filterStems = parsePilotStems(argv);
   const modeByStem = loadModes();
+  const excludeStems = loadExcludeStems();
 
   console.log(`Entourage asset build — έπιπλα SET (images_4) — ${filterStems ? `PILOT [${filterStems.join(', ')}]` : 'ΠΛΗΡΕΣ'}`);
+  if (excludeStems) console.log(`   εξαιρέσεις: ${excludeStems.length} stems (degenerate alpha + φυτά→plants)`);
 
   await buildEntouragePack({
     sources: [{ group: 'set', dir: SRC_ROOT }],
@@ -62,6 +77,7 @@ async function main() {
     idPrefix: 'furn',
     repoRoot: REPO_ROOT,
     filterStems,
+    excludeStems,
     modeByStem,
     mergeManifest: true, // κρατά τα 379 furn-obj-* του υπάρχοντος manifest
   });

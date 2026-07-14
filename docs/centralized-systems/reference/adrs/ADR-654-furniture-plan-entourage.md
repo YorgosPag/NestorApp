@@ -154,6 +154,35 @@ default). Η αναλογική συστολή ζει στο **κοινό** `rec
 
 ## Changelog
 
+### 2026-07-14 — M7 Φάση Γ2: συνθέσεις & νέα έπιπλα (images_4)
+
+Το `images_4` (μεικτή συλλογή entourage, ~580 TIF) αξιοποιήθηκε ΜΕΣΑ στο **ίδιο** pack
+`furniture-plan-2d` (group `set` ⇒ ids `furn-set-<stem>-N`, μηδέν σύγκρουση με τα 379 `furn-obj/rug-*`).
+
+- **Assets**: manifest **904** = 379 original + **525 furn-set** (516 συνθέσεις/έπιπλα + 9 centerpieces).
+  Από τις 525, **230 συνθέσεις** (`…-0`, kind⇒composition) + 295 μεμονωμένα (kind⇒individual).
+- **Vision (2 passes)**: A = `furniture-set.modes.json` (577 stems: composition/variant-sheet/single —
+  ορίζει αν ένα TIF εκπέμπει ολόκληρο σετ + μέρη)· B = `furniture-set.visionB.json` (516 entries
+  `{id,category,style,kind}` — human-verified). Και τα δύο persisted ως SSoT στο `entourage-classification/`.
+- **Εξαιρέσεις από το furniture build** (`furniture-set.exclude.json`, 83 stems):
+  **77 broken** = degenerate source alpha (κενό περίγραμμα λευκό-σε-λευκό + ασπρόμαυρες μάσκες
+  δέντρων/θάμνων 260-265 που το alpha-split έσπασε σε σκουπίδια-θραύσματα + λάθος σκαναρίσματα
+  224 πάγκος/457 σιφώνι) — **μη ανακτήσιμα, follow-up re-export από την πηγή**. **6 vehicles** (254-259).
+- **17 νέες κατηγορίες** (0 νέα styles): diningSet, diningTable, desk, tvUnit, loungeSet, sideTable,
+  umbrella, bathtub, sunLounger, cooktop, tray, piano, toilet, kitchenSink, shower, stove, **centerpiece**.
+  Κάθε μία → 4 SSoT σημεία (union `FurniturePlanCategory` + `FURNITURE_PLAN_LONG_SIDE_MM` +
+  generator allowlist + i18n `furniturePlan.categories.*` el/en).
+- **Routing μη-επίπλων**: τα 9 floral-tray sprites (405-407/458-460/512-513/565) ήταν **διακοσμητικά
+  τραπεζιού** (ξύλινος δίσκος + floral σύνθεση), όχι φυτά κηποτεχνίας → μπήκαν στο furniture ως
+  `centerpiece` (`style:floral`). Τα 6 αυτοκίνητα (254-259, top-view) → pack **`vehicles-2d`** (87→**93**,
+  category `car` + color facet). Το `plants-2d` έμεινε **αμετάβλητο** (τα 17 αρχικά «plants» δεν ήταν φυτά).
+- **Guard**: `git diff furniture-plan-catalog.data.ts` — τα 379 obj/rug rows **IDENTICAL** (μηδέν διαγραφή,
+  μόνο 525 προσθήκες furn-set)· ομοίως vehicles (87 IDENTICAL + 6). Regen ντετερμινιστικό.
+- **Tests**: furniture suite 14→**17** (+≥1 composition, +17 νέες cats έχουν μήκος+sprite, +379 obj/rug
+  μηδέν regression)· entourage-catalog vehicles count 87→93. **102/102** πράσινα. **jscpd:diff** καθαρό (N.18).
+- **Εκκρεμεί (μετά «ναι» Giorgio)**: upload furniture (`--only furn-set-`) + vehicles asset packs.
+
+
 ### 2026-07-14 — Ιθαγένεια καμβά: redraw · hover · grips (§9)
 
 Το entourage/furniture-plan sprite έγινε **πολίτης πρώτης κατηγορίας**: φαίνεται αμέσως μετά την

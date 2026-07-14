@@ -2,7 +2,7 @@
 /**
  * AUTO-GENERATED — ΜΗΝ ΕΠΕΞΕΡΓΑΖΕΣΑΙ ΜΕ ΤΟ ΧΕΡΙ.
  * Παράγεται από: scripts/generate-entourage-catalog.js vehicles (manifest + vision classification).
- * 87 sprites. Ξανατρέξε το script αν αλλάξει η ταξινόμηση.
+ * 93 sprites. Ξανατρέξε το script αν αλλάξει η ταξινόμηση.
  */
 import type { VehiclePlanDef } from './vehicles-plan-catalog';
 
@@ -94,4 +94,10 @@ export const VEHICLE_PLAN_CATALOG_DATA: readonly VehiclePlanDef[] = [
   { id: 'veh-obj-085-1', category: 'boat', facets: { color: 'white' }, series: 2, aspect: 3.1895 },
   { id: 'veh-obj-086-1', category: 'boat', facets: { color: 'white' }, series: 3, aspect: 3.4112 },
   { id: 'veh-obj-087-1', category: 'boat', facets: { color: 'white' }, series: 4, aspect: 3.4615 },
+  { id: 'veh-obj-254-1', category: 'car', facets: { color: 'red' }, series: 8, aspect: 0.4456 },
+  { id: 'veh-obj-255-1', category: 'car', facets: { color: 'white' }, series: 5, aspect: 0.4994 },
+  { id: 'veh-obj-256-1', category: 'car', facets: { color: 'other' }, series: 6, aspect: 0.4954 },
+  { id: 'veh-obj-257-1', category: 'car', facets: { color: 'blue' }, series: 8, aspect: 0.4299 },
+  { id: 'veh-obj-258-1', category: 'car', facets: { color: 'yellow' }, series: 5, aspect: 0.451 },
+  { id: 'veh-obj-259-1', category: 'car', facets: { color: 'green' }, series: 8, aspect: 0.4506 },
 ];
