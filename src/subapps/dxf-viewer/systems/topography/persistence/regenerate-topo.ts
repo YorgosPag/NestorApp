@@ -78,7 +78,12 @@ function ensureLayers(scene: SceneModel): { layersById: Record<string, SceneLaye
  */
 export function regenerateTopoContours(deps: RegenerateTopoDeps): number {
   const scene = deps.getScene(deps.levelId);
-  if (!scene) return 0;
+  if (!scene) {
+    // 🔎 TEMP DIAG (2026-07-15). REMOVE after fix.
+    // eslint-disable-next-line no-console
+    console.info('[TOPO-DIAG] regen NO-SCENE', { levelId: deps.levelId });
+    return 0;
+  }
 
   const { layersById, ids } = ensureLayers(scene);
   const contourLayerIds = new Set<string>([ids.major, ids.minor, ids.label]);
@@ -97,6 +102,13 @@ export function regenerateTopoContours(deps: RegenerateTopoDeps): number {
       contours, getContourConfig(), ids, getContourDisplayStyle() === 'smooth',
     ) as Entity[];
   }
+
+  // 🔎 TEMP DIAG (2026-07-15). REMOVE after fix.
+  // eslint-disable-next-line no-console
+  console.info('[TOPO-DIAG] regen', {
+    levelId: deps.levelId, sceneEntities: scene.entities.length,
+    tris: surface.triangles.length, kept: kept.length, fresh: fresh.length,
+  });
 
   deps.commitScene({
     ...scene,

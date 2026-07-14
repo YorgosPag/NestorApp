@@ -50,6 +50,7 @@ import { DimGripGhostPreviewMount } from '../../hooks/dimensions/useDimGripGhost
 // ADR-557 — live «Ύψος»/«Πλάτος» ribbon sync while dragging a TEXT/MTEXT resize grip
 // (pure data-sync leaf, no canvas — writes the live values to the text-toolbar store).
 import { TextGripRibbonSyncMount } from '../../hooks/grips/useTextGripRibbonSync';
+import { ImagePropsGripSyncMount } from '../../hooks/grips/useImagePropsGripSync';
 import { TrimPreviewMount } from './TrimPreviewMount';
 import { OffsetPreviewMount } from './OffsetPreviewMount';
 import { FilletPreviewMount } from './FilletPreviewMount';
@@ -241,6 +242,11 @@ export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
           applyTextGripDrag SSoT, pushing the live height/widthFactor to the text-toolbar
           store's preview channel (command bridge suppressed via isPreviewing). */}
       <TextGripRibbonSyncMount dragPreview={gripDragPreview} levelManager={levelManager} />
+      {/* ADR-654 — live «Ιδιότητες» panel sync during an entourage IMAGE move/resize/rotate drag.
+          Pure data-sync (no canvas): runs the SAME applyImageGripDrag SSoT the commit/ghost run,
+          pushing the live position/width/height/rotation to EntityPropsLivePreviewStore so the
+          left object inspector tracks the drag (sibling of TextGripRibbonSyncMount, ADR-557). */}
+      <ImagePropsGripSyncMount dragPreview={gripDragPreview} levelManager={levelManager} />
       {/* ADR-581 Φ6 — «σύριγγα» live hover ghost: self-subscribes to hover / brush /
           activeTool; paints the WYSIWYG preview (style + reshaped geometry) of the
           hovered target BEFORE the click. Store-driven → no payload prop. */}

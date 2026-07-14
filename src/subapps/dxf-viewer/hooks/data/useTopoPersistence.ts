@@ -39,7 +39,7 @@ import {
 } from '../../systems/topography/persistence/topo-persistence-types';
 import { collectTopoState, applyTopoState } from '../../systems/topography/persistence/topo-state-io';
 import { regenerateTopoContours } from '../../systems/topography/persistence/regenerate-topo';
-import { subscribeTopo } from '../../systems/topography/TopoPointStore';
+import { subscribeTopo, getTopoState } from '../../systems/topography/TopoPointStore';
 import { subscribeContourConfig } from '../../systems/topography/contour-config-store';
 import { subscribeContourDisplay } from '../../systems/topography/contour-display-store';
 import { subscribeTerrain3D } from '../../systems/topography/terrain-3d-store';
@@ -193,8 +193,16 @@ export function useTopoPersistence(params: UseTopoPersistenceParams): UseTopoPer
   // → no save echo). The write touches neither `levelId` nor `sceneLoading`, so it
   // never re-triggers this effect (no loop).
   useEffect(() => {
-    if (!scopeKey || sceneLoading) return;
-    regenerateTopoContours({ getScene: getLevelScene, commitScene, levelId });
+    // 🔎 TEMP DIAG (2026-07-15 — cross-floor topo not showing on DXF floors). REMOVE after fix.
+    const pts = getTopoState().surfaces.existing.points.length;
+    if (!scopeKey || sceneLoading) {
+      // eslint-disable-next-line no-console
+      console.info('[TOPO-DIAG] effectC SKIP', { levelId, hasScope: !!scopeKey, sceneLoading, pts });
+      return;
+    }
+    const n = regenerateTopoContours({ getScene: getLevelScene, commitScene, levelId });
+    // eslint-disable-next-line no-console
+    console.info('[TOPO-DIAG] effectC RAN', { levelId, pts, contours: n });
   }, [levelId, sceneLoading, scopeKey, getLevelScene, commitScene]);
 
   // Persist current store state (debounced caller).
