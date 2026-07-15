@@ -3,23 +3,20 @@
  * όταν επιλέγεται ένα block (INSERT) entity.
  *
  * Big-player split (Revit «Modify | Block Reference» / ArchiCAD / C4D / Figma· Giorgio
- * 2026-07-13): το contextual tab κρατά ΜΟΝΟ ενέργειες — Επιλογή + Επεξεργασία Μπλοκ
+ * 2026-07-13/16): το contextual tab κρατά ΜΟΝΟ ενέργειες Μπλοκ — Επεξεργασία Μπλοκ
  * (BEDIT) + Διάλυση (Explode). ΟΛΕΣ οι ιδιότητες (Επίπεδο/Χρώμα/Διαφάνεια + γεωμετρία)
  * ζουν στο αριστερό Properties palette (`BlockPropertiesTab`), όπως στα μεγάλα CAD.
  *
- * Zero-wiring για δύο από τα τρία κουμπιά: το «Επιλογή» reuse-άρει το SSoT
- * `buildSelectPanel` (commandKey 'select', ήδη δρομολογημένο)· το «Διάλυση» reuse-άρει
- * το γενικό `action:'explode'` (ίδιο με Home → Τροποποίηση, `useExplodeRibbonAction`).
- * Μόνο το «Επεξεργασία Μπλοκ» έχει νέο route (`action:'block-edit'` →
- * `useBlockEditRibbonAction` → enterBlockEdit, το ΙΔΙΟ SSoT με το double-click).
+ * Zero-wiring: το «Διάλυση» reuse-άρει το γενικό `action:'explode'` (ίδιο με Home →
+ * Τροποποίηση, `useExplodeRibbonAction`). Μόνο το «Επεξεργασία Μπλοκ» έχει νέο route
+ * (`action:'block-edit'` → `useBlockEditRibbonAction` → enterBlockEdit, το ΙΔΙΟ SSoT με
+ * το double-click).
  *
  * @see docs/centralized-systems/reference/adrs/ADR-641-block-editor-bedit.md
  * @see ../hooks/useBlockEditRibbonAction.ts (block-edit action interceptor)
  */
 
 import type { RibbonTab } from '../types/ribbon-types';
-// SSoT leading «Επιλογή» panel (Revit «Modify | …» opens with Select).
-import { buildSelectPanel } from './contextual-select-panel';
 // SSoT LARGE button factories (Revit «Modify» flat buttons).
 import { actionBtn } from './ribbon-large-button-helpers';
 
@@ -31,8 +28,6 @@ export const CONTEXTUAL_BLOCK_TAB: RibbonTab = {
   isContextual: true,
   contextualTrigger: BLOCK_CONTEXTUAL_TRIGGER,
   panels: [
-    // ── Επιλογή (Revit «Modify | …» leftmost panel) ───────────────────────────
-    buildSelectPanel('block'),
     // ── Μπλοκ (actions — Revit «Modify | Block Reference») ─────────────────────
     {
       id: 'block-actions',

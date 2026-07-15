@@ -15,7 +15,8 @@
  *   view(member) = Scale · (member − C)          // scale def→world magnitude, recenter on the origin
  *   def(view)    = C + Scale⁻¹ · view            // the exact inverse, applied on write-back
  *
- * where `Scale` is the instance's own `block.scale` and `C` is the definition's bounds-centre, FIXED at
+ * where `Scale` is the instance's own `|block.scale|` MAGNITUDE (mirror/rotation of the instance is
+ * deliberately NOT applied — the editor shows the canonical definition) and `C` is the bounds-centre, FIXED at
  * enter time (never recomputed from the live — edited — members, or the view would drift under the
  * cursor mid-edit). The canonical `block.entities` stay untouched (def space) so multi-instance sync
  * (Φ5) and DXF INSERT round-trip are preserved; only the editor's VIEW is transformed, and every edit
@@ -48,10 +49,17 @@ export interface BlockEditViewTransform {
  * Derive the view transform for `block` from its `scale` + the centre of its members' definition
  * bounds. Call ONCE at enter (the result is stored) so the recenter `C` is fixed for the session and
  * the view does not swim as members are edited. A zero/absent scale axis degrades to 1 (identity axis).
+ *
+ * ABSOLUTE scale magnitude (`Math.abs`): a mirrored/rotated INSTANCE (`scale.x < 0`, `rotation ≠ 0`)
+ * must NOT flip or spin the editor — the big players (AutoCAD BEDIT / Revit «Edit Family» / Figma «edit
+ * component») always present the DEFINITION in its canonical, un-mirrored, un-rotated form. The signed
+ * scale + rotation live only on the instance (`expandBlockInstance`), so the world drawing stays correct
+ * while the editor is canonical. Dropping the sign here keeps `defFromView` (`1/sx`) an exact positive
+ * inverse of `viewFromDef`, so the write-back round-trip is unchanged.
  */
 export function computeBlockEditViewTransform(block: BlockEntity): BlockEditViewTransform {
-  const sx = block.scale?.x || 1;
-  const sy = block.scale?.y || 1;
+  const sx = Math.abs(block.scale?.x || 1);
+  const sy = Math.abs(block.scale?.y || 1);
   const b = computeEntityArrayBounds(block.entities as AnySceneEntity[]);
   // Degenerate/empty bounds (createInfinityBounds untouched) → centre on origin (no recenter).
   const cx = Number.isFinite(b.min.x) && Number.isFinite(b.max.x) ? (b.min.x + b.max.x) / 2 : 0;

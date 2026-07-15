@@ -143,6 +143,22 @@ SSoT (no parallel scene subscription left reading the world). Full feature PARTI
   synchronous read-after-write guarantee.
 
 ## Changelog
+- **2026-07-16** — **(C) Κατοπτρισμένο/περιστραμμένο instance δεν καθρεφτίζει πλέον τον editor + (B) αφαίρεση
+  «Επιλογή» από το contextual tab «Μπλοκ».**
+  - **(C) BEDIT canonical view (ΚΥΡΙΟ).** Symptom (Giorgio, 2 screenshots): block `NEKKKW_BLOCK` με
+    `scale.x = −1000` (καθρέφτης), `scale.y = 1000`, `rotation = 180°` έδειχνε το μαξιλάρι **νότια** μέσα στον
+    Block Editor ενώ στην κάτοψη (instance) είναι **βόρεια**. **Root cause:** το `computeBlockEditViewTransform`
+    (`systems/block/block-edit-view-transform.ts`) κρατούσε το **signed** scale (`block.scale?.x || 1` = −1000) →
+    το `viewFromDef` εφάρμοζε καθρέφτη, αλλά ΑΓΝΟΟΥΣΕ την περιστροφή (`angleDeg=0`) → μια όψη που δεν αντιστοιχεί
+    ΟΥΤΕ στο canonical definition ΟΥΤΕ στο instance. **Fix (Option A — AutoCAD BEDIT / Revit «Edit Family» /
+    Figma «edit component»):** `Math.abs()` στο scale (`sx = Math.abs(block.scale?.x || 1)`, ομοίως `sy`) → ο
+    editor δείχνει το DEFINITION στην κανονική, μη-κατοπτρισμένη, μη-περιστραμμένη μορφή. Το signed scale +
+    rotation ζουν ΜΟΝΟ στο instance (`expandBlockInstance`), οπότε η κάτοψη μένει σωστή. Write-back συνεπές:
+    `defFromView` (`1/sx`) παραμένει ακριβές θετικό inverse → το round-trip αμετάβλητο. Regression tests (+2) στο
+    `block-edit-view-transform.test.ts` (negative scale → sx θετικό· mirrored round-trip = identity). 9/9 pass.
+  - **(B) Contextual tab «Μπλοκ» — αφαίρεση «Επιλογή».** Giorgio 2026-07-16: το κουμπί «Επιλογή» αφαιρέθηκε από
+    το `contextual-block-tab.ts` (μένει: Επεξεργασία Μπλοκ | Διάλυση). Το κοινό SSoT `buildSelectPanel`
+    (`contextual-select-panel.ts`) ΔΕΝ αγγίχτηκε — παραμένει σε χρήση από το `contextual-image-tab.ts`.
 - **2026-07-13** — **Single-click selection surface: contextual ribbon tab «Μπλοκ» + Properties palette
   object inspector.** Symptom (Giorgio, screenshot): single-click σε ένα block (`NEC32_BLOCK`) δεν άνοιγε
   ΤΙΠΟΤΑ — ούτε contextual tab, ούτε καρτέλα ιδιοτήτων (έπεφτε στο generic «Επίλεξε έναν τοίχο…»), σε

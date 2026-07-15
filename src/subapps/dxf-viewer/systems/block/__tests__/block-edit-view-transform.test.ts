@@ -41,6 +41,25 @@ describe('computeBlockEditViewTransform', () => {
     expect(computeBlockEditViewTransform(b).sx).toBe(1);
   });
 
+  // ADR-641 mirror fix (Giorgio 2026-07-16) — a mirrored INSTANCE (`scale.x < 0`) must NOT flip the
+  // editor: AutoCAD BEDIT / Revit «Edit Family» / Figma present the DEFINITION in canonical (un-mirrored)
+  // form. Magnitude is taken via Math.abs so the sofa's pillow keeps its definition orientation.
+  it('drops the sign of a mirrored (negative) scale axis → canonical, un-mirrored view', () => {
+    const t = computeBlockEditViewTransform(block(-1000, 1000, [line('l1', 18170, 3504, 18171, 3506)]));
+    expect(t.sx).toBe(1000); // NOT −1000 — no mirror
+    expect(t.sy).toBe(1000);
+  });
+
+  it('mirrored scale still round-trips (viewFromDef → defFromView is identity)', () => {
+    const t = computeBlockEditViewTransform(block(-1000, 1000, [line('l1', 18170, 3504, 18171, 3506)]));
+    const def = line('l1', 18170.1, 3504.0, 18170.9, 3506.1);
+    const round = defFromView(viewFromDef(def, t), t) as LineEntity;
+    expect(round.start.x).toBeCloseTo(def.start.x, 6);
+    expect(round.start.y).toBeCloseTo(def.start.y, 6);
+    expect(round.end.x).toBeCloseTo(def.end.x, 6);
+    expect(round.end.y).toBeCloseTo(def.end.y, 6);
+  });
+
   it('centres on the origin for an empty member set', () => {
     const t = computeBlockEditViewTransform(block(1000, 1000, []));
     expect(t.cx).toBe(0);
