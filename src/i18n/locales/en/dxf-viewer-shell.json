@@ -1687,9 +1687,16 @@
       "drainage": "Drainage",
       "heating": "Heating",
       "hvac": "HVAC",
-      "fireGas": "Fire & Gas"
+      "fireGas": "Fire & Gas",
+      "topography": "Topography"
     },
     "panels": {
+      "topoData": "Data",
+      "topoSurface": "Surface",
+      "topoGeoRef": "Geo-referencing",
+      "topoPresentation": "Presentation",
+      "topoAnalysis": "Analysis",
+      "topoDeliverables": "Deliverables",
       "draw": "Draw",
       "multiSelectionMatch": "Match Properties",
       "modify": "Modify",
@@ -4519,6 +4526,36 @@
         "tooltipHide": "Hide all structural BIM elements — only the imported DXF entities remain visible",
         "tooltipShow": "Restore visibility of structural BIM elements"
       },
+      "topo": {
+        "import": { "label": "Import points" },
+        "breakline": { "label": "Breaklines" },
+        "generate": { "label": "Generate contours" },
+        "autoBreakline": { "label": "Auto breaklines" },
+        "geoRef": { "label": "Geo-referencing…", "dialogTitle": "Geo-referencing" },
+        "gridToggle": { "label": "EGSA87 grid" },
+        "gridBake": { "label": "Bake grid" },
+        "northToggle": { "label": "North arrow" },
+        "northBake": { "label": "Bake north" },
+        "pointLabels": { "label": "Point labels" },
+        "boundary": { "label": "Excavation boundary" },
+        "cutFill": { "label": "Cut/Fill volumes" },
+        "qaRun": { "label": "Quality check" },
+        "qaClear": { "label": "Clear check" },
+        "cloudToggle": { "label": "Show point cloud" },
+        "cloudRemove": { "label": "Remove point cloud" },
+        "deliverables": { "label": "Export folder", "dialogTitle": "Survey Deliverables" },
+        "notify": {
+          "contoursGenerated": "Generated {count} contours ({entities} entities)",
+          "gridBaked": "Grid baked ({count} entities)",
+          "northBaked": "North arrow baked",
+          "labelsGenerated": "Generated {count} labels",
+          "autoBreaklineDone": "Breakline detection complete",
+          "cutFillDone": "Cut/Fill volumes computed",
+          "cutFillEmpty": "No data to compute volumes",
+          "qaDone": "Quality check complete",
+          "failed": "The action did not complete"
+        }
+      },
       "planLines": {
         "label": "Plan Lines",
         "lines": "Lines Only",
@@ -6311,7 +6348,17 @@
       "prefix": "Prefix",
       "start": "Start at",
       "renumber": "Renumber ({count, plural, one {# sheet} other {# sheets}})",
-      "autoNumber": "Automatic numbering"
+      "autoNumber": "Automatic numbering",
+      "ai": {
+        "label": "Create set with AI",
+        "hint": "Describe the set you want in plain language — the AI proposes which floors to include and the numbering. You review and adjust it before printing.",
+        "placeholder": "e.g. permit set — all floors except the basement, numbering from A-1",
+        "button": "AI suggestion",
+        "loading": "Preparing suggestion…",
+        "applied": "The AI selected {count, plural, one {# sheet} other {# sheets}}. Review it below.",
+        "dropped": "Ignored {count, plural, one {# floor} other {# floors}} that do not match an existing sheet.",
+        "error": "The AI suggestion failed. Select the floors manually."
+      }
     }
   },
   "titleBlockStamp": {

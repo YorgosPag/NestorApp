@@ -17,6 +17,7 @@ import {
   mergeSheetEdits,
   renumberSheets,
   sheetEditValues,
+  type RenumberOptions,
 } from '../../../text-engine/title-block/sheet-edits';
 import type { SheetIdentityEdits, SheetRow } from '../../../text-engine/title-block/sheet-set';
 
@@ -33,6 +34,12 @@ export interface UseSheetSetEditsResult {
   readonly setTitle: (levelId: string, text: string) => void;
   readonly renumber: (prefix: string, start: number) => void;
   readonly resetNumbers: () => void;
+  /**
+   * ADR-651 Φάση Μ — εφαρμόζει ένα (reconciled) AI σχέδιο σετ: **επιλέγει** ακριβώς τους ορόφους
+   * του σχεδίου (αγνοώντας άγνωστα ids) και **επαναριθμεί** τους επιλεγμένους ντετερμινιστικά. Ο
+   * χρήστης βλέπει το αποτέλεσμα στον πίνακα και το διορθώνει πριν τυπώσει (πρόταση, όχι αυτόματο).
+   */
+  readonly applyPlan: (levelIds: readonly string[], numbering: RenumberOptions) => void;
   /** Η τιμή που δείχνει το πεδίο μιας γραμμής (pending ⇒ αλλιώς το persisted κείμενο). */
   readonly valuesFor: (row: SheetRow) => { readonly sheetNumber: string; readonly title: string };
 }
@@ -79,6 +86,18 @@ export function useSheetSetEdits(rows: readonly SheetRow[]): UseSheetSetEditsRes
     setEdits((prev) => mergeSheetEdits(prev, autoNumberSheets(rows, selected)));
   }, [rows, selected]);
 
+  // Το AI plan οδηγεί το ΙΔΙΟ state: η νέα επιλογή = τα ids του σχεδίου που είναι πραγματικές
+  // γραμμές (μηδέν άγνωστο), και η επαναρίθμηση τρέχει πάνω σε ΑΥΤΗ (όχι στην παλιά επιλογή).
+  const applyPlan = React.useCallback(
+    (levelIds: readonly string[], numbering: RenumberOptions) => {
+      const wanted = new Set(levelIds);
+      const nextSelected = new Set(rows.filter((row) => wanted.has(row.levelId)).map((row) => row.levelId));
+      setSelected(nextSelected);
+      setEdits((prev) => mergeSheetEdits(prev, renumberSheets(rows, nextSelected, numbering)));
+    },
+    [rows],
+  );
+
   const valuesFor = React.useCallback((row: SheetRow) => sheetEditValues(row, edits), [edits]);
 
   return {
@@ -92,6 +111,7 @@ export function useSheetSetEdits(rows: readonly SheetRow[]): UseSheetSetEditsRes
     setTitle,
     renumber,
     resetNumbers,
+    applyPlan,
     valuesFor,
   };
 }

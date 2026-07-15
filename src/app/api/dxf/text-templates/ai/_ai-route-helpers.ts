@@ -36,6 +36,13 @@ export interface AiTranslateBody {
   readonly to?: unknown;
 }
 
+/** ADR-651 Φάση Μ — η πρόθεση + οι υπάρχοντες όροφοι για το AI σετ φύλλων (§8 #4). */
+export interface AiSheetSetPlanBody {
+  readonly intent?: unknown;
+  readonly levels?: unknown;
+  readonly locale?: unknown;
+}
+
 export interface AiValidateBody {
   readonly content?: unknown;
   readonly locale?: unknown;

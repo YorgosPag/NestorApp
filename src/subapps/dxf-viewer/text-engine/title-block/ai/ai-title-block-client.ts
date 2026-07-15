@@ -13,6 +13,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import type { AiComplianceWarning } from './ai-title-block-schema';
 import type { AiTitleBlockResult } from './ai-title-block-reconcile';
+import type { SheetSetPlan, SheetSetPlanLevel } from './ai-sheet-set-reconcile';
 import type { TitleBlockLocale } from '../title-block-presets';
 
 const logger = createModuleLogger('AiTitleBlockClient');
@@ -21,6 +22,7 @@ const FROM_IMAGE_ENDPOINT = '/api/dxf/text-templates/ai/from-image';
 const FROM_TEXT_ENDPOINT = '/api/dxf/text-templates/ai/from-text';
 const VALIDATE_ENDPOINT = '/api/dxf/text-templates/ai/validate';
 const TRANSLATE_ENDPOINT = '/api/dxf/text-templates/ai/translate';
+const SHEET_SET_PLAN_ENDPOINT = '/api/dxf/text-templates/ai/sheet-set-plan';
 
 interface GenerateResponse {
   readonly success?: boolean;
@@ -66,6 +68,34 @@ export async function requestTitleBlockFromText(
     return payload?.result ?? null;
   } catch (error) {
     logger.warn('AI title-block from text request failed', { error: getErrorMessage(error) });
+    return null;
+  }
+}
+
+interface SheetSetPlanResponse {
+  readonly success?: boolean;
+  readonly plan?: SheetSetPlan;
+}
+
+/**
+ * ADR-651 Φάση Μ — φυσική-γλώσσα πρόθεση + υπάρχοντες όροφοι → **έτοιμο** (reconciled) σχέδιο σετ,
+ * ή `null` σε αποτυχία (ο χρήστης δεν χάνει επιλογή — συνεχίζει χειροκίνητα). Το AI **προτείνει**·
+ * ο χρήστης εγκρίνει/διορθώνει στον `SheetSetEditor` πριν το print (ποτέ αυτόματη παραγωγή).
+ */
+export async function requestSheetSetPlan(
+  intent: string,
+  levels: readonly SheetSetPlanLevel[],
+  locale: TitleBlockLocale,
+): Promise<SheetSetPlan | null> {
+  try {
+    const payload = await postJson<SheetSetPlanResponse>(SHEET_SET_PLAN_ENDPOINT, {
+      intent,
+      levels,
+      locale,
+    });
+    return payload?.plan ?? null;
+  } catch (error) {
+    logger.warn('AI sheet-set plan request failed', { error: getErrorMessage(error) });
     return null;
   }
 }

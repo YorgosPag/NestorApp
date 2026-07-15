@@ -772,6 +772,39 @@ document control). Οι δύο σχολές (live-link vs version-hash) ενών
 - **Off by default** (`title-block-options-store.withQr`): μόνο όποιος το ζητά ρητά αλλάζει την
   πινακίδα του ⇒ **μηδέν** αλλαγή γεωμετρίας/συμπεριφοράς για τους υπόλοιπους (metrics πανομοιότυπα).
 
+### 5.12 Τι περιέχει το AI σετ φύλλων & γιατί πρόταση+review, όχι αυτόματη παραγωγή (αρχιτεκτονικές αποφάσεις Φάσης Μ, 2026-07-15)
+
+**(α) Τι μπορεί να περιέχει το AI σετ — SSoT audit (ο κώδικας = αλήθεια, έγκριση Giorgio 2026-07-15).**
+Το grep (§2γ του handoff) για τομές/όψεις ως **capturable views** (`SectionView`/`ElevationView`/
+`DrawingView`/`SavedView`/`namedViews`/`viewType`) ήρθε **κενό**: το μοντέλο **δεν** έχει σήμερα
+τομές/όψεις ως έτοιμα φύλλα — **μόνο κατόψεις ορόφων** (`buildSheetSet`: κάθε `Level` = ένα scene =
+ένα φύλλο, §5.5). Άρα το §8 #4 υλοποιείται ως το **ρεαλιστικό MVP**: **AI πρόθεση → επιλογή/σειρά
+ΚΑΤΟΨΕΩΝ επιλεγμένων ορόφων + σωστοί τίτλοι/αρίθμηση**. Το AI **δεν εφευρίσκει γεωμετρία** — μόνο
+**επιλέγει & οργανώνει** υπάρχοντα φύλλα (πρακτική Revit «Sheet Set from Views»). *Εκτός φάσης
+(μεγάλο ξεχωριστό έργο, επόμενη συνεδρία — απόφαση Giorgio)*: παραγωγή **νέας** γεωμετρίας τομών/
+όψεων ως capturable views ώστε να μπουν κι αυτές στο AI σετ — βλ. §8 #4 (deferred κομμάτι).
+
+**(β) Πρόταση → review → build, ΠΟΤΕ αυτόματη παραγωγή (πρακτική ηγετών).**
+Το AI **προτείνει** σχέδιο (ποιοι όροφοι, τι αρίθμηση) → ο χρήστης το βλέπει/**διορθώνει** στον
+**υπάρχοντα** `SheetSetEditor` → μετά `buildSheetSet` + `runPrintSet`. Ίδιο μοτίβο με τη Φάση Η
+(auto-changelog) και τη Φάση Δ (AI preview): ο άνθρωπος **πάντα** στο review. Το σχέδιο οδηγεί το
+**ίδιο** `useSheetSetEdits` state (νέα action `applyPlan`: επιλογή + επαναρίθμηση) — **μηδέν**
+παράλληλο μονοπάτι, μηδέν δεύτερη μηχανή σετ.
+
+**(γ) Ντετερμινισμός: το AI = πρόθεση, η αρίθμηση = καθαρή συνάρτηση.**
+Το AI βγάζει μόνο **ποιοι όροφοι** + (προαιρετικά) πρόθεμα/αρχικό αριθμό αν η πρόθεση τα αναφέρει.
+Οι **αριθμοί** (Α-1, Α-2…) παράγονται **ντετερμινιστικά** από `sheet-numbering.ts` μέσω
+`renumberSheets`, στη **σειρά των ορόφων** (όχι στη σειρά του AI) — δύο κλήσεις με το ίδιο input
+δίνουν την **ίδια** αρίθμηση. Το `reconcileSheetSetPlan` (καθαρή, testable) **δεν εμπιστεύεται το
+LLM**: φιλτράρει ids που δεν αντιστοιχούν σε πραγματικό όροφο (anti-hallucination, `droppedLevelIds`),
+ακριβώς όπως το `reconcileAiTitleBlock` πετά άγνωστα placeholder paths.
+
+**(δ) Μηδέν δεύτερος AI stack (N.18).** Η server ροή επαναχρησιμοποιεί αυτούσιο το **generic**
+`runTitleBlockAi` της Φάσης Δ (provider SSoT + `generateObject` + usage tracking + graceful null)·
+το route μοιράζεται το **ίδιο** κέλυφος `aiTitleBlockRoutePOST` (rate-limit + auth)· ο client το
+**ίδιο** `postJson`. Το reconcile τρέχει **server-side** (όπως στη Φάση Δ) ώστε ο client να λαμβάνει
+**έτοιμο** σχέδιο. Αποτυχία AI ⇒ `null` ⇒ ο χρήστης επιλέγει χειροκίνητα (καμία αλλαγή επιλογής).
+
 ---
 
 ## 6. Roadmap (6 Φάσεις — υλοποίηση αργότερα, 1 φάση/session)
@@ -862,6 +895,17 @@ document control). Οι δύο σχολές (live-link vs version-hash) ενών
   (γενικός `createKeyedImageCache` + `RasterPrimitive` → 3 backends· `qrcode@1.5.4` MIT, ήδη στο repo).
   **Off by default.** Μηδέν νέο image pipeline, μηδέν νέο data path. Αρχιτεκτονική: **§5.11**.
   *Εκτός φάσης*: AI batch-δημιουργία σετ (§8 #4 — το τελευταίο προαιρετικό), deep-link viewer route.
+- **Φάση Μ — AI batch-δημιουργία σετ φύλλων από πρόθεση** *(προαιρετικό AI-magic §8 #4 — **το τελευταίο ανοιχτό**)* — **✅ ΥΛΟΠΟΙΗΘΗΚΕ 2026-07-15**
+  (βλ. changelog): φυσική-γλώσσα πρόθεση («σετ αδείας — όλοι οι όροφοι εκτός υπογείου, αρίθμηση από
+  Α-1») → το AI **προτείνει** ποιες **κατόψεις ορόφων** μπαίνουν + υπόδειξη αρίθμησης → ο χρήστης
+  **εγκρίνει/διορθώνει** στον **υπάρχοντα** `SheetSetEditor` → `buildSheetSet` + `runPrintSet`.
+  **SSoT audit (έγκριση Giorgio)**: δεν υπάρχουν τομές/όψεις ως capturable views → το σετ =
+  **κατόψεις-only** (τομές/όψεις = ξεχωριστό μελλοντικό έργο). Επαναχρησιμοποιεί το **generic**
+  `runTitleBlockAi` + `aiTitleBlockRoutePOST` + `postJson` της Φάσης Δ (μηδέν δεύτερος AI stack) και
+  οδηγεί το **ίδιο** `useSheetSetEdits` (`applyPlan`). Ντετερμινισμός: AI = πρόθεση, αρίθμηση =
+  `sheet-numbering.ts`. Αρχιτεκτονική: **§5.12**. **Κλείνει το τελευταίο ανοιχτό του ADR-651.**
+  *Εκτός φάσης (επόμενη συνεδρία, απόφαση Giorgio)*: παραγωγή **νέας** γεωμετρίας τομών/όψεων ως
+  capturable views ώστε να μπουν κι αυτές στο AI σετ (§8 #4 — deferred κομμάτι).
 
 ---
 
@@ -905,6 +949,16 @@ document control). Οι δύο σχολές (live-link vs version-hash) ενών
 **Μελλοντικές (καταγραφή για roadmap, όχι δέσμευση):**
 4. **Auto batch-δημιουργία σετ φύλλων από πρόθεση** — «σετ αδείας: κατόψεις όλων ορόφων + 2 τομές +
    4 όψεις» → auto sheets με σωστή αρίθμηση/τίτλους (κατεύθυνση Revit 2027).
+   — **✅ ΠΑΡΑΔΟΘΗΚΕ (Φάση Μ, 2026-07-15) — το τελευταίο ανοιχτό του ADR-651**: φυσική-γλώσσα πρόθεση
+   → το AI **προτείνει** ποιες **κατόψεις ορόφων** μπαίνουν στο σετ + υπόδειξη αρίθμησης → ο χρήστης
+   εγκρίνει/διορθώνει στον `SheetSetEditor` → build+print. **Πρόταση+review, ποτέ αυτόματα**·
+   ντετερμινιστική αρίθμηση από `sheet-numbering.ts`· επαναχρήση του generic AI stack της Φάσης Δ
+   (μηδέν δεύτερη μηχανή). Βλ. **§5.12**.
+   ⏳ **DEFERRED (επόμενη συνεδρία, απόφαση Giorgio 2026-07-15)**: το **«2 τομές + 4 όψεις»** μέρος
+   απαιτεί **πρώτα** μηχανή παραγωγής γεωμετρίας τομών/όψεων ως **capturable views** — δεν υπάρχουν
+   σήμερα (SSoT audit §5.12α). Τεράστιο ξεχωριστό έργο → **νέο ADR**. Μόλις υπάρξουν views, το AI σετ
+   τα συμπεριλαμβάνει **χωρίς** αλλαγή του παρόντος μηχανισμού (το `reconcileSheetSetPlan` απλώς θα
+   δέχεται και view ids εκτός από level ids).
 5. **AI compliance validation** — ✅ **ΠΑΡΑΔΟΘΗΚΕ (Φάση Δ)**: semantic έλεγχος πάνω από τον
    rule-based της Φάσης Ε (ο rule-based τρέχει πρώτος και δίνεται ως context, ώστε το AI να μην τον
    επαναλαμβάνει). Προειδοποίηση, ποτέ φραγή.
@@ -1094,6 +1148,36 @@ document control). Οι δύο σχολές (live-link vs version-hash) ενών
 ---
 
 ## Changelog
+
+- **2026-07-15 (Φάση Μ — AI batch-δημιουργία σετ φύλλων από πρόθεση, §8 #4, ΥΛΟΠΟΙΗΣΗ)**: **το τελευταίο
+  ανοιχτό του ADR-651** — μετά από αυτό όλα τα must-have + AI-magic έχουν κλείσει. Αρχιτεκτονική: **§5.12**.
+  - **SSoT audit ΠΡΩΤΑ (ο κώδικας η αλήθεια, έγκριση Giorgio)**: grep για τομές/όψεις ως capturable views
+    (`SectionView`/`ElevationView`/`DrawingView`/`SavedView`/`namedViews`/`viewType`) → **κενό**. Το σετ
+    σήμερα = **μόνο κατόψεις ορόφων** (`buildSheetSet`, §5.5). Άρα η φάση υλοποιεί το ρεαλιστικό MVP:
+    **AI πρόθεση → επιλογή κατόψεων + ντετερμινιστική αρίθμηση**. Το «2 τομές + 4 όψεις» του §8 #4 =
+    **DEFERRED σε νέο ADR** (χρειάζεται πρώτα μηχανή γεωμετρίας τομών/όψεων — επόμενη συνεδρία).
+  - **Απόφαση (§5.12β), πρακτική ηγετών**: το AI **προτείνει** σχέδιο → ο χρήστης **εγκρίνει/διορθώνει**
+    στον **υπάρχοντα** `SheetSetEditor` → build+print. **Ποτέ** αυτόματη παραγωγή (ίδιο μοτίβο Φάσης Η/Δ).
+  - **Ντετερμινισμός (§5.12γ)**: το AI = **πρόθεση** (ποιοι όροφοι + προαιρετικό πρόθεμα/αρχικός αριθμός)·
+    η **αρίθμηση** παράγεται από `sheet-numbering.ts` (`renumberSheets`, σειρά ορόφων). Το
+    `reconcileSheetSetPlan` (καθαρή, 9 tests) **δεν εμπιστεύεται το LLM**: πετά ids που δεν αντιστοιχούν
+    σε πραγματικό όροφο (anti-hallucination, `droppedLevelIds`).
+  - **Μηδέν δεύτερος AI stack (§5.12δ, N.18)**: επαναχρήση αυτούσιου του **generic** `runTitleBlockAi`
+    (provider SSoT + `generateObject` + usage) + `aiTitleBlockRoutePOST` (rate-limit+auth) + `postJson`.
+    Το reconcile τρέχει **server-side** (όπως Φάση Δ) ⇒ ο client λαμβάνει **έτοιμο** σχέδιο.
+  - **Το σχέδιο οδηγεί το ΙΔΙΟ state**: νέα action `useSheetSetEdits.applyPlan` (επιλογή ορόφων +
+    επαναρίθμηση) — μηδέν παράλληλο μονοπάτι, μηδέν δεύτερη μηχανή σετ.
+  - **Αρχεία**: **NEW** `ai/ai-sheet-set-schema.ts` (Zod), `ai/ai-sheet-set-reconcile.ts` (καθαρή +
+    `__tests__/ai-sheet-set-reconcile.test.ts`, 9 tests), `ai/ai-sheet-set-generator.ts` (server-only,
+    reuse `runTitleBlockAi`), `api/dxf/text-templates/ai/sheet-set-plan/route.ts` +
+    `sheet-set-plan/sheet-set-plan-body.ts` (καθαρό untrusted-body parsing +
+    `__tests__/sheet-set-plan-body.test.ts`, 6 tests), `ui/components/print/SheetSetAiPlanner.tsx`.
+    **MOD** `ai/ai-title-block-client.ts` (+`requestSheetSetPlan`), `ai/_ai-route-helpers.ts`
+    (+`AiSheetSetPlanBody`), `ui/components/print/useSheetSetEdits.ts` (+`applyPlan` +
+    `__tests__/useSheetSetEdits.test.tsx`, 5 tests), `ui/components/print/SheetSetEditor.tsx` (render
+    planner), i18n `el/en dxf-viewer-shell.json` (`print.sheets.ai.*`).
+  - **Tests**: title-block suite πράσινο (18 suites / 192 tests) + **20 νέα** (reconcile 9 · route-body
+    parsing 6 · `applyPlan` hook 5)· jscpd:diff καθαρό (N.18).
 
 - **2026-07-14 (Φάση Λ — QR / version fingerprint, §8 #8, ΥΛΟΠΟΙΗΣΗ)**: το **2ο** από τα προαιρετικά
   AI-magic (μένει μόνο το **§8 #4**, AI batch-δημιουργία σετ). Αρχιτεκτονική: **§5.11**.

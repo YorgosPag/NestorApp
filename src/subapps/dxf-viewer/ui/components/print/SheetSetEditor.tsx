@@ -29,6 +29,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { sheetNumberPrefixForLocale } from '../../../text-engine/title-block/sheet-numbering';
 import { toTitleBlockLocale } from '../../../text-engine/title-block/title-block-presets';
 import type { SheetRow } from '../../../text-engine/title-block/sheet-set';
+import { SheetSetAiPlanner } from './SheetSetAiPlanner';
 import type { UseSheetSetEditsResult } from './useSheetSetEdits';
 
 export interface SheetSetEditorProps {
@@ -106,6 +107,9 @@ export function SheetSetEditor({
         <h3 className="text-sm font-medium">{t('print.sheets.title')}</h3>
         <p className="text-xs text-muted-foreground">{t('print.sheets.hint')}</p>
       </header>
+
+      {/* ADR-651 Φάση Μ — «AI σετ από πρόθεση»: προτείνει επιλογή+αρίθμηση στο ΙΔΙΟ state κάτω. */}
+      <SheetSetAiPlanner rows={rows} state={state} disabled={disabled} />
 
       <div className="max-h-56 overflow-y-auto rounded border border-border">
         <table className="w-full">
