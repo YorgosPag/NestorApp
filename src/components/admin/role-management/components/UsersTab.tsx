@@ -39,6 +39,7 @@ import { UserTable } from './UserTable';
 import { RoleChangeDialog } from './RoleChangeDialog';
 import { PermissionSetManager } from './PermissionSetManager';
 import { UserDetailPanel } from './UserDetailPanel';
+import { ApproveUserDialog } from './ApproveUserDialog';
 
 import type {
   CompanyUser,
@@ -246,13 +247,14 @@ export function UsersTab({ canEdit }: UsersTabProps) {
 
         <Select
           value={filters.status}
-          onValueChange={(value) => updateFilter('status', value as 'all' | 'active' | 'suspended')}
+          onValueChange={(value) => updateFilter('status', value as 'all' | 'active' | 'suspended' | 'pending')}
         >
           <SelectTrigger className="w-[160px]">
             <SelectValue placeholder={t('roleManagement.usersTab.filterStatus')} />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">{t('roleManagement.usersTab.allStatuses')}</SelectItem>
+            <SelectItem value="pending">{t('roleManagement.statusLabels.pending')}</SelectItem>
             <SelectItem value="active">{t('roleManagement.statusLabels.active')}</SelectItem>
             <SelectItem value="suspended">{t('roleManagement.statusLabels.suspended')}</SelectItem>
           </SelectContent>
@@ -279,6 +281,7 @@ export function UsersTab({ canEdit }: UsersTabProps) {
         onManagePermissions={(u) => handleOpenDialog('permissions', u)}
         onSuspend={(u) => handleOpenDialog('suspend', u)}
         onViewDetails={(u) => handleOpenDialog('detail', u)}
+        onApprove={(u) => handleOpenDialog('approve', u)}
       />
 
       {/* Role change dialog */}
@@ -286,6 +289,16 @@ export function UsersTab({ canEdit }: UsersTabProps) {
         <RoleChangeDialog
           user={selectedUser}
           currentUserId={user?.uid ?? ''}
+          open
+          onClose={handleCloseDialog}
+          onSuccess={handleDialogSuccess}
+        />
+      )}
+
+      {/* Approve pending / unassigned user (ADR-660) */}
+      {dialogMode === 'approve' && selectedUser && (
+        <ApproveUserDialog
+          user={selectedUser}
           open
           onClose={handleCloseDialog}
           onSuccess={handleDialogSuccess}

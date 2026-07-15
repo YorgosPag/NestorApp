@@ -713,7 +713,17 @@
     "statusLabels": {
       "active": "Active",
       "suspended": "Suspended",
-      "inactive": "Inactive"
+      "inactive": "Inactive",
+      "pending": "Pending approval"
+    },
+    "approve": {
+      "title": "Approve user",
+      "description": "This user self-registered and is awaiting approval. Choose a role to grant them access to the company.",
+      "assignRole": "Access role",
+      "note": "After approval, the user must sign in again for their access to take effect.",
+      "confirm": "Approve & Assign Role",
+      "success": "User approved successfully.",
+      "error": "Failed to approve user."
     },
     "mfa": {
       "enabled": "MFA Enabled",
@@ -730,7 +740,8 @@
       "viewDetails": "View Details",
       "permissions": "Permissions",
       "activate": "Activate",
-      "details": "Details"
+      "details": "Details",
+      "approve": "Approve"
     },
     "table": {
       "user": "User",

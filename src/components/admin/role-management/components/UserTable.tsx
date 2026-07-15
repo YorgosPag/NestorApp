@@ -46,6 +46,7 @@ interface UserTableProps {
   onManagePermissions: (user: CompanyUser) => void;
   onSuspend: (user: CompanyUser) => void;
   onViewDetails: (user: CompanyUser) => void;
+  onApprove: (user: CompanyUser) => void;
 }
 
 // =============================================================================
@@ -107,6 +108,7 @@ export function UserTable({
   onManagePermissions,
   onSuspend,
   onViewDetails,
+  onApprove,
 }: UserTableProps) {
   const { t } = useTranslation('admin');
   const colors = useSemanticColors();
@@ -178,6 +180,8 @@ export function UserTable({
         <TableBody>
           {users.map((companyUser) => {
             const isSelf = companyUser.uid === currentUserId;
+            // ADR-660: χρήστης χωρίς tenant = αυτο-εγγραφή που εκκρεμεί έγκριση.
+            const needsApproval = companyUser.companyId === null;
             const initials = getInitials(companyUser.displayName, companyUser.email);
             const avatarColor = getAvatarColor(companyUser.uid);
 
@@ -264,7 +268,19 @@ export function UserTable({
                 {/* Actions */}
                 <TableCell>
                   <nav className="flex items-center justify-end gap-1" aria-label="User actions">
-                    {canEdit && (
+                    {canEdit && needsApproval && (
+                      // ADR-660: unassigned/pending → Έγκριση (set-user-claims).
+                      // Οι υπόλοιπες ενέργειες (role/perms/suspend) απαιτούν member
+                      // doc που ακόμη δεν υπάρχει, οπότε εδώ δείχνουμε μόνο Έγκριση.
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => onApprove(companyUser)}
+                      >
+                        {t('roleManagement.actions.approve')}
+                      </Button>
+                    )}
+                    {canEdit && !needsApproval && (
                       <>
                         <Button
                           variant="ghost"

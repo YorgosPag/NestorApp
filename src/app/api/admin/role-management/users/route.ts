@@ -35,7 +35,7 @@ const logger = createModuleLogger('RoleManagement:Users');
 interface MemberDoc {
   uid: string;
   globalRole: GlobalRole;
-  status: 'active' | 'suspended';
+  status: 'active' | 'suspended' | 'pending';
   joinedAt: FirebaseFirestore.Timestamp | null;
   permissionSetIds: string[];
   addedBy: string | null;
@@ -54,7 +54,7 @@ interface CompanyUser {
   displayName: string | null;
   photoURL: string | null;
   globalRole: GlobalRole;
-  status: 'active' | 'suspended';
+  status: 'active' | 'suspended' | 'pending';
   joinedAt: string | null;
   permissionSetIds: string[];
   lastSignIn: string | null;
@@ -87,7 +87,7 @@ export const GET = withSensitiveRateLimit(
           return {
             uid: doc.id,
             globalRole: (d.globalRole as GlobalRole) ?? 'internal_user',
-            status: (d.status as 'active' | 'suspended') ?? 'active',
+            status: (d.status as 'active' | 'suspended' | 'pending') ?? 'active',
             joinedAt: d.joinedAt ?? null,
             permissionSetIds: Array.isArray(d.permissionSetIds) ? d.permissionSetIds as string[] : [],
             addedBy: (d.addedBy as string) ?? null,
@@ -202,7 +202,8 @@ export const GET = withSensitiveRateLimit(
               displayName: (data.displayName as string | null) ?? null,
               photoURL: (data.photoURL as string | null) ?? null,
               globalRole: (data.globalRole as GlobalRole) ?? 'external_user',
-              status: (data.status as 'active' | 'suspended') ?? 'active',
+              // ADR-660: unassigned = αυτο-εγγραφή που εκκρεμεί έγκριση → 'pending'.
+              status: (data.status as 'active' | 'suspended' | 'pending') ?? 'pending',
               joinedAt: data.createdAt
                 ? (data.createdAt as FirebaseFirestore.Timestamp).toDate?.()?.toISOString() ?? null
                 : null,

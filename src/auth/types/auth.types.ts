@@ -177,8 +177,8 @@ export interface UserProfileDocument {
   companyId: string | null;
   /** Global role from custom claims */
   globalRole: string | null;
-  /** Account status */
-  status: 'active' | 'inactive' | 'suspended';
+  /** Account status. `pending` = αυτο-εγγραφή που εκκρεμεί έγκριση admin (ADR-660). */
+  status: 'active' | 'inactive' | 'suspended' | 'pending';
   /** Email verification status */
   emailVerified: boolean;
   /** Login counter (incremented on each sign-in) */

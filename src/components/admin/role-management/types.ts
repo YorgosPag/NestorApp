@@ -16,7 +16,7 @@ export interface CompanyUser {
   displayName: string | null;
   photoURL: string | null;
   globalRole: GlobalRole;
-  status: 'active' | 'suspended';
+  status: 'active' | 'suspended' | 'pending';
   mfaEnrolled: boolean;
   lastSignIn: string | null;
   projectCount: number;
@@ -39,7 +39,7 @@ export interface ProjectMembership {
 export interface UserListFilters {
   search: string;
   globalRole: GlobalRole | 'all';
-  status: 'all' | 'active' | 'suspended';
+  status: 'all' | 'active' | 'suspended' | 'pending';
   sortBy: 'name' | 'email' | 'lastSignIn' | 'globalRole';
   sortOrder: 'asc' | 'desc';
 }
@@ -99,16 +99,17 @@ export const ROLE_BADGE_VARIANT: Record<GlobalRole, BadgeVariant> = {
   external_user: 'secondary',
 } as const;
 
-export const STATUS_BADGE_VARIANT: Record<'active' | 'suspended', BadgeVariant> = {
+export const STATUS_BADGE_VARIANT: Record<'active' | 'suspended' | 'pending', BadgeVariant> = {
   active: 'success',
   suspended: 'warning',
+  pending: 'secondary',
 } as const;
 
 // =============================================================================
 // DIALOG MODES
 // =============================================================================
 
-export type DialogMode = 'role' | 'permissions' | 'detail' | 'suspend' | null;
+export type DialogMode = 'role' | 'permissions' | 'detail' | 'suspend' | 'approve' | null;
 
 // =============================================================================
 // TAB TYPES

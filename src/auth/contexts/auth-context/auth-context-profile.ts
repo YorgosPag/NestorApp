@@ -20,6 +20,10 @@ export async function syncUserProfileToFirestore(
     const authProvider = firebaseUser.providerData[0]?.providerId ?? 'unknown';
 
     if (!userSnapshot.exists()) {
+      // ADR-660: νέος χρήστης χωρίς tenant claim → 'pending' (εκκρεμεί έγκριση
+      // admin), όχι 'active'. Το server SSoT (ensurePendingRegistration) είναι ο
+      // authoritative writer· εδώ κρατάμε το client JIT profile συνεπές.
+      const hasTenant = typeof customClaims.companyId === 'string' && customClaims.companyId.length > 0;
       const newProfile: UserProfileDocument = {
         uid: firebaseUser.uid,
         email: firebaseUser.email ?? '',
@@ -29,7 +33,7 @@ export async function syncUserProfileToFirestore(
         photoURL: firebaseUser.photoURL ?? null,
         companyId: typeof customClaims.companyId === 'string' ? customClaims.companyId : null,
         globalRole: typeof customClaims.globalRole === 'string' ? customClaims.globalRole : null,
-        status: 'active',
+        status: hasTenant ? 'active' : 'pending',
         emailVerified: firebaseUser.emailVerified,
         loginCount: 1,
         lastLoginAt: now,

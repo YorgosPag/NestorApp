@@ -28,6 +28,13 @@ export default function MainPage() {
     }
     if (!loading && !user) {
       router.replace('/login');
+      return;
+    }
+    // ADR-660: αυθεντικοποιημένος χρήστης χωρίς tenant (εκκρεμεί έγκριση admin)
+    // → οθόνη «εκκρεμεί έγκριση» αντί για σπασμένο dashboard (fail-closed κόβει
+    // ούτως ή άλλως κάθε data call).
+    if (!loading && user && !user.companyId) {
+      router.replace('/pending-approval');
     }
   }, [user, loading, router]);
 
@@ -38,6 +45,11 @@ export default function MainPage() {
   }
 
   if (!loading && !user) {
+    return null;
+  }
+
+  // Χρήστης χωρίς tenant → redirect σε /pending-approval (μην κάνεις flash το dashboard).
+  if (!loading && user && !user.companyId) {
     return null;
   }
 

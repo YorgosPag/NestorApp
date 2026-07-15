@@ -163,18 +163,11 @@ export function useAuthActions(params: UseAuthActionsParams) {
         safeSetItem(`${STORAGE_KEYS.AUTH_PROFILE_COMPLETE_PREFIX}${result.user.uid}`, 'true');
         await sendEmailVerification(result.user);
 
-        // Non-blocking post-signup onboarding: assign to default company
-        await fetch('/api/auth/complete-registration', { method: 'POST' })
-          .catch(() => {
-            logger.warn('[AuthContext] Complete registration API call failed', {});
-          });
-
-        // Force-refresh token to load new claims from complete-registration
-        try {
-          await result.user.getIdToken(true);
-        } catch (err) {
-          logger.warn('[AuthContext] Token refresh after registration failed', {});
-        }
+        // ADR-660: ΔΕΝ καλούμε πλέον το complete-registration εδώ. Το provisioning
+        // (pending record + ειδοποίηση admin) γίνεται server-side από το universal
+        // login chokepoint `POST /api/auth/session`, το οποίο πυροδοτεί το
+        // onAuthStateChanged μετά το createUserWithEmailAndPassword. Ο χρήστης μένει
+        // pending μέχρι έγκριση admin — δεν παίρνει claims/tenant αυτόματα.
 
         setUser({
           uid: result.user.uid,
@@ -231,44 +224,47 @@ export function useAuthActions(params: UseAuthActionsParams) {
     }
   }, [auth, handleError, setError]);
 
-  const updateUserProfile = useCallback(async (givenName: string, familyName: string): Promise<void> => {
-    try {
+  // Shared core for updateUserProfile / completeProfile — persist the display name +
+  // given/family name on the Firebase user and local storage. Callers add their own
+  // post-step (profile-complete flag, user-state shape) so no logic is duplicated.
+  const applyProfileNames = useCallback(
+    async (givenName: string, familyName: string): Promise<{ displayName: string; uid: string }> => {
       if (!auth.currentUser) {
         throw new Error('No authenticated user');
       }
-
       setError(null);
+      const { uid } = auth.currentUser;
       const displayName = `${givenName} ${familyName}`.trim();
       await updateProfile(auth.currentUser, { displayName });
-      safeSetItem(`${STORAGE_KEYS.AUTH_GIVEN_NAME_PREFIX}${auth.currentUser.uid}`, givenName);
-      safeSetItem(`${STORAGE_KEYS.AUTH_FAMILY_NAME_PREFIX}${auth.currentUser.uid}`, familyName);
+      safeSetItem(`${STORAGE_KEYS.AUTH_GIVEN_NAME_PREFIX}${uid}`, givenName);
+      safeSetItem(`${STORAGE_KEYS.AUTH_FAMILY_NAME_PREFIX}${uid}`, familyName);
+      return { displayName, uid };
+    },
+    [auth, setError],
+  );
+
+  const updateUserProfile = useCallback(async (givenName: string, familyName: string): Promise<void> => {
+    try {
+      const { displayName } = await applyProfileNames(givenName, familyName);
       setUser((prev) => prev ? { ...prev, displayName, givenName, familyName } : null);
       logger.info('[AuthContext] Profile updated:', { displayName });
     } catch (error) {
       handleError(error);
       throw error;
     }
-  }, [auth, handleError, setError, setUser]);
+  }, [applyProfileNames, handleError, setUser]);
 
   const completeProfile = useCallback(async (givenName: string, familyName: string): Promise<void> => {
     try {
-      if (!auth.currentUser) {
-        throw new Error('No authenticated user');
-      }
-
-      setError(null);
-      const displayName = `${givenName} ${familyName}`.trim();
-      await updateProfile(auth.currentUser, { displayName });
-      safeSetItem(`${STORAGE_KEYS.AUTH_GIVEN_NAME_PREFIX}${auth.currentUser.uid}`, givenName);
-      safeSetItem(`${STORAGE_KEYS.AUTH_FAMILY_NAME_PREFIX}${auth.currentUser.uid}`, familyName);
-      safeSetItem(`${STORAGE_KEYS.AUTH_PROFILE_COMPLETE_PREFIX}${auth.currentUser.uid}`, 'true');
+      const { displayName, uid } = await applyProfileNames(givenName, familyName);
+      safeSetItem(`${STORAGE_KEYS.AUTH_PROFILE_COMPLETE_PREFIX}${uid}`, 'true');
       setUser((prev) => prev ? { ...prev, displayName, givenName, familyName, profileIncomplete: false } : null);
       logger.info('[AuthContext] Profile completed for Google user:', { displayName });
     } catch (error) {
       handleError(error);
       throw error;
     }
-  }, [auth, handleError, setError, setUser]);
+  }, [applyProfileNames, handleError, setUser]);
 
   const sendVerificationEmailAction = useCallback(async (): Promise<void> => {
     try {

@@ -20,6 +20,7 @@ import { SESSION_COOKIE_CONFIG, getSessionCookieDurationMs } from '@/lib/auth/se
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getErrorMessage } from '@/lib/error-utils';
 import { ensureCompanyDocument } from '@/services/company-document.service';
+import { ensurePendingRegistration } from '@/server/auth/pending-registration';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('AuthSession');
@@ -125,6 +126,22 @@ const postHandler = async (request: NextRequest): Promise<NextResponse<SessionRe
         logger.warn('[Session] Workspace bootstrap failed (non-blocking)', {
           uid,
           companyId,
+          error: getErrorMessage(err),
+        });
+      });
+    } else if (uid) {
+      // ADR-660: αυθεντικοποιημένος χρήστης ΧΩΡΙΣ tenant → universal login
+      // chokepoint. Δημιουργεί pending record + ειδοποιεί (μία φορά) τους admin.
+      // Fire-and-forget: δεν μπλοκάρει το session cookie. Το fail-closed
+      // (ADR-657 §3.5) κρατά τον χρήστη έξω μέχρι την έγκριση.
+      ensurePendingRegistration({
+        uid,
+        email: (decodedToken.email as string | undefined) ?? '',
+        displayName: (decodedToken.name as string | undefined) ?? null,
+        authProvider: decodedToken.firebase?.sign_in_provider ?? null,
+      }).catch((err: unknown) => {
+        logger.warn('[Session] Pending registration handling failed (non-blocking)', {
+          uid,
           error: getErrorMessage(err),
         });
       });
