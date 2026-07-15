@@ -85,6 +85,9 @@ transform/world **event-time** μέσω getters (ADR-040 Phase XXII.A)· το co
 (`freehand-preview-projection.ts`) — ο lasso subscriber refactored να το χρησιμοποιεί (jscpd de-dup).
 Λεπτομέρειες: ADR-658 §8. jest 9/9 GREEN· jscpd:diff καθαρό. ΟΧΙ tsc (N.17). 🟡 UNCOMMITTED.
 
+### 2026-07-15 — 🐛 FIX: το εργαλείο `array-path` δεν ενεργοποιούσε entity-hover → «κλικ στη διαδρομή» no-op (ADR-353 Φάση C wiring gap)
+**Σύμπτωμα (Giorgio):** επιλογή source → «Πίνακας → Κατά διαδρομή» → hover+click πάνω στην polyline **δεν έκανε τίποτα** (δεν δημιουργούνταν array). **Ρίζα:** το `useArrayPathTool.handleArrayPathClick` διαβάζει την οντότητα-στόχο από το native `HoverStore` (`getHoveredEntity()`), αλλά το hover hit-test τρέχει μόνο όταν `activeTool === 'select' || entityPickingActive` (`mouse-handler-move.ts:276`). Το `array-path` **έλειπε** από την OR-έκφραση `entityPickingActive` στο `CanvasSection.tsx` → `getHoveredEntity()` έμενε `null` → `if (!hoveredId) return;` σιωπηλό. Ίδια κλάση με τα υπάρχοντα picking tools (dim/match-properties/wall-on-entity). **Fix (1 όρος, additive):** `|| activeTool === 'array-path'` στο `entityPickingActive`. **Συμμόρφωση ADR-040:** καθαρός boolean όρος σε ήδη-υπολογιζόμενο prop — **καμία** νέα `useSyncExternalStore`/high-freq subscription στον orchestrator (cardinal rule 1 + CHECK 6C ασφαλές)· bitmap cache / cache key / high-freq stores αμετάβλητα. Το `array-polar` δεν χρειάζεται (διαλέγει κέντρο-σημείο `worldPoint`, όχι οντότητα μέσω hover). CHECK 6B touch → co-staged ADR-040 + ADR-353. ΟΧΙ tsc (N.17). 🟡 UNCOMMITTED.
+
 ### 2026-07-15 — ➕ ADR-656 M12: NorthArrowLeaf (βέλος Βορρά HUD micro-leaf, z30)
 **Τι:** νέο **SVG** micro-leaf `NorthArrowLeaf` — screen-anchored βέλος Βορρά (top-right corner), όπως
 title-block north arrow. **ΟΧΙ** transform-dependent: ο viewer δεν έχει στροφή όψης, άρα ο Βορράς μένει
