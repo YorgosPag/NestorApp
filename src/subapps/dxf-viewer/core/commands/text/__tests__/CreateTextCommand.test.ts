@@ -248,7 +248,7 @@ describe('CreateTextCommand — validate / serialize / affectedIds', () => {
       { position: POS, layer: '0', textNode: makeSimpleNode('x') },
       scene,
     );
-    expect(cmd.canMergeWith()).toBe(false);
+    expect(cmd.canMergeWith(cmd)).toBe(false);
   });
 });
 

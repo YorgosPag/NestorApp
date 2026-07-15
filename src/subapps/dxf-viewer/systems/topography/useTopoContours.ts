@@ -3,8 +3,10 @@
  *
  * Wires the deterministic core to the live drawing surface: read the survey points from
  * `TopoPointStore`, run the CDT → marching → chain pipeline, ensure the contour layers,
- * and commit the resulting entities through the `completeEntities` SSoT (ADR-057) — so the
- * contours land on the current level with undo, persistence, render and selection for free.
+ * and commit the resulting entities through the ADR-057 `completeEntities` SSoT — then seat
+ * the whole set at the BACK of the render list (behind the κάτοψη) via ONE atomic
+ * `BatchReorderEntityCommand` (ADR-661), so the contours land with undo/persistence/render/
+ * selection for free AND read as topographic background context on top of which the plan sits.
  *
  * "Auto path" (Q4): one call generates everything; the guided/manual+AI modes are later.
  */
@@ -12,6 +14,9 @@
 import { useCallback } from 'react';
 import { useLevels } from '../levels';
 import { completeEntities } from '../../hooks/drawing/completeEntity';
+import { BatchReorderEntityCommand } from '../../core/commands/entity-commands';
+import { getGlobalCommandHistory } from '../../core/commands/CommandHistory';
+import { createLevelSceneManagerAdapter } from '../entity-creation/LevelSceneManagerAdapter';
 import { getTopoPoints } from './TopoPointStore';
 import { getTopoSurface } from './topo-surface';
 import { generateContoursFromSurface } from './contour-generator';
@@ -57,12 +62,20 @@ export function useTopoContours(): UseTopoContours {
       // their vertices are the EXACT surveyed crossings either way.
       const smoothDisplay = getContourDisplayStyle() === 'smooth';
       const entities = buildContourEntities(contours, config, layers, smoothDisplay);
+      // ADR-661 — create through the ADR-057 SSoT (ids preserved via `existingId`), THEN seat the
+      // whole contour set at the BACK in ONE atomic reorder so the κάτοψη reads on top. Reuses
+      // `completeEntities` (no create-logic clone — N.18); the DURABLE back-seat for every
+      // load/level-switch/geo-ref lives in `regenerate-topo` (`[...fresh, ...kept]`).
       completeEntities(entities as Entity[], {
         tool: 'topo-contours',
         levelId,
         getScene: getLevelScene,
         setScene: setLevelScene,
       });
+      const adapter = createLevelSceneManagerAdapter(getLevelScene, setLevelScene, levelId);
+      getGlobalCommandHistory().execute(
+        new BatchReorderEntityCommand(entities.map((e) => e.id), 'back', adapter),
+      );
 
       return { ok: true, entityCount: entities.length, contourCount: contours.length };
     },

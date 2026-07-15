@@ -73,33 +73,36 @@ export function FitIcon({ className, color }: IconProps) {
   );
 }
 
-/**
- * Zoom in icon (magnifying glass with plus)
- * Used in: RulerCornerBox zoom menu
- */
-export function ZoomInIcon({ className, color }: IconProps) {
+/** Shared magnifier body (circle + handle + horizontal «−» bar) for the zoom icons. */
+function MagnifierIcon({ className, color, children }: IconProps & { children?: React.ReactNode }) {
   return (
     <SvgWrapper className={className} color={color}>
       <circle cx="11" cy="11" r="8" />
       <line x1="21" y1="21" x2="16.65" y2="16.65" />
-      <line x1="11" y1="8" x2="11" y2="14" />
       <line x1="8" y1="11" x2="14" y2="11" />
+      {children}
     </SvgWrapper>
   );
 }
 
 /**
- * Zoom out icon (magnifying glass with minus)
+ * Zoom in icon (magnifying glass with plus) — the shared magnifier + the vertical stroke of the «+».
+ * Used in: RulerCornerBox zoom menu
+ */
+export function ZoomInIcon({ className, color }: IconProps) {
+  return (
+    <MagnifierIcon className={className} color={color}>
+      <line x1="11" y1="8" x2="11" y2="14" />
+    </MagnifierIcon>
+  );
+}
+
+/**
+ * Zoom out icon (magnifying glass with minus) — the shared magnifier body alone.
  * Used in: RulerCornerBox zoom menu
  */
 export function ZoomOutIcon({ className, color }: IconProps) {
-  return (
-    <SvgWrapper className={className} color={color}>
-      <circle cx="11" cy="11" r="8" />
-      <line x1="21" y1="21" x2="16.65" y2="16.65" />
-      <line x1="8" y1="11" x2="14" y2="11" />
-    </SvgWrapper>
-  );
+  return <MagnifierIcon className={className} color={color} />;
 }
 
 /**
@@ -284,6 +287,34 @@ export function FlipArcIcon({ className, color }: IconProps) {
       <path d="M5 12 A 7 7 0 0 0 19 12" strokeDasharray="3,2" opacity="0.6" />
       <polyline points="8 9 5 12 8 15" opacity="0.6" />
     </svg>
+  );
+}
+
+/**
+ * Bring-to-front icon — a solid front square offset above a dashed back
+ * square (AutoCAD "Bring to Front" / Revit "Bring to Front"). Used in:
+ * EntityContextMenu (ADR-661 multi-select Z-order).
+ */
+export function BringToFrontIcon({ className, color }: IconProps) {
+  return (
+    <SvgWrapper className={className} color={color}>
+      <rect x="3" y="3" width="12" height="12" rx="1" strokeDasharray="2,2" opacity="0.5" />
+      <rect x="9" y="9" width="12" height="12" rx="1" fill={color || 'currentColor'} fillOpacity="0.15" />
+    </SvgWrapper>
+  );
+}
+
+/**
+ * Send-to-back icon — a solid back square offset below a dashed front
+ * square (AutoCAD "Send to Back" / Revit "Send to Back"). Used in:
+ * EntityContextMenu (ADR-661 multi-select Z-order).
+ */
+export function SendToBackIcon({ className, color }: IconProps) {
+  return (
+    <SvgWrapper className={className} color={color}>
+      <rect x="9" y="9" width="12" height="12" rx="1" strokeDasharray="2,2" opacity="0.5" />
+      <rect x="3" y="3" width="12" height="12" rx="1" fill={color || 'currentColor'} fillOpacity="0.15" />
+    </SvgWrapper>
   );
 }
 

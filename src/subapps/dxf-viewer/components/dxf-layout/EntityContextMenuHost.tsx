@@ -30,6 +30,8 @@ export interface EntityContextMenuHostProps {
   dxfScene: DxfScene | null;
   entityJoinHook: ReturnType<typeof useEntityJoin>;
   handleSmartDelete: () => void;
+  /** ADR-661 — Z-order «Μεταφορά μπροστά/πίσω» (N≥1, BatchReorderEntityCommand). */
+  handleReorderEntity: (direction: 'front' | 'back') => void;
   onToolChange: ((tool: string) => void) | undefined;
   replaceEntitySelection: (ids: string[]) => void;
   executeCommand: (command: ICommand) => void;
@@ -37,7 +39,7 @@ export interface EntityContextMenuHostProps {
 }
 
 const EntityContextMenuHostInner: React.FC<EntityContextMenuHostProps> = ({
-  entityMenuRef, currentScene, dxfScene, entityJoinHook, handleSmartDelete,
+  entityMenuRef, currentScene, dxfScene, entityJoinHook, handleSmartDelete, handleReorderEntity,
   onToolChange, replaceEntitySelection, executeCommand, t,
 }) => {
   // ADR-532 B4 — selection-set leaf subscription (reference-stable per dxf change).
@@ -52,10 +54,10 @@ const EntityContextMenuHostInner: React.FC<EntityContextMenuHostProps> = ({
   // parent re-render (incl. the now-fixed cursor cascade). Now only on a real selection/scene change.
   const entityMenuProps = useMemo(() => buildEntityContextMenuProps({
     selectedEntityIds, currentScene, dxfScene, entityJoinState, entityJoinHook,
-    handleSmartDelete, entityMenuRef, onToolChange, replaceEntitySelection,
+    handleSmartDelete, handleReorderEntity, entityMenuRef, onToolChange, replaceEntitySelection,
     executeCommand, t, entityLayerCommands,
   }), [selectedEntityIds, currentScene, dxfScene, entityJoinState, entityJoinHook,
-    handleSmartDelete, entityMenuRef, onToolChange, replaceEntitySelection, executeCommand, t, entityLayerCommands]);
+    handleSmartDelete, handleReorderEntity, entityMenuRef, onToolChange, replaceEntitySelection, executeCommand, t, entityLayerCommands]);
   return <EntityContextMenu ref={entityMenuRef as React.Ref<EntityContextMenuHandle>} {...entityMenuProps} />;
 };
 

@@ -86,6 +86,7 @@ describe('SetFinishFaceOverrideCommand', () => {
 
   it('δεν κάνει merge (κάθε βαφή = δικό της undo step)', () => {
     const sm = createMockSceneManager([seed(SPEC)]);
-    expect(new SetFinishFaceOverrideCommand('col-1', 'side:0', null, sm).canMergeWith()).toBe(false);
+    const cmd = new SetFinishFaceOverrideCommand('col-1', 'side:0', null, sm);
+    expect(cmd.canMergeWith(cmd)).toBe(false);
   });
 });

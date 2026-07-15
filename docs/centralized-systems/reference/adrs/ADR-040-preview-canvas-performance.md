@@ -72,6 +72,40 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-07-15 — ➕ ADR-661: `DxfRenderer.render` ξαναγράφτηκε σε single array-order πέρασμα (DRAWORDER SSoT)
+**Τι:** ο πυρήνας render loop του `DxfRenderer` (`canvas-v2/dxf-canvas/DxfRenderer.ts`) ξαναγράφτηκε
+από το παλιό δύο-περασμάτων μοντέλο («**όλες** οι συμπαγείς γραμμές πρώτα, σε ένα batched πέρασμα,
+κάτω από **κάθε** μη-γραμμή entity» → μετά `renderMatching` για ό,τι απομένει) σε ΕΝΑ πέρασμα με τη
+σειρά του πίνακα `scene.entities` (τελευταίο index = πιο πάνω· AutoCAD DRAWORDER μοντέλο,
+**ADR-661**). Συνεχόμενες συμπαγείς `LINE` οντότητες συσσωρεύονται σε ένα style-keyed «run» (νέο
+private `tryLineBatchEntry`) και ζωγραφίζονται σε ένα `stroke()` per style όταν ένα μη-batchable
+entity «σπάσει» το run — έτσι το **ADR-040 Phase X** line-batching διατηρείται **μέσα σε κάθε run**,
+ενώ το global z-order τηρείται πλέον και για γραμμές, όχι μόνο για non-lines.
+
+**Γιατί:** το παλιό μοντέλο έκανε τη θέση ενός entity στον πίνακα ψευδή z-σειρά για γραμμές (πάντα
+κάτω, ανεξάρτητα από array position) — αυτό ήταν η ρίζα ενός ζωντανά αναφερθέντος bug όπου οι
+ADR-650 τοπογραφικές ισοϋψείς (γραμμές) ζωγραφίζονταν πάνω από την κάτοψη παρά το ειδικό «topo
+background pass» του ADR-650 M10d #Γ (v27) — εκείνο το pass **αφαιρέθηκε**, superseded από αυτή τη
+γενική λύση (βλ. ADR-661 για το πλήρες context/decision).
+
+**Invariants διατηρημένα (αμετάβλητα):** **ADR-040 Phase IX** viewport culling (υπολογίζεται μία
+φορά/frame, εφαρμόζεται ανά entity όπως πριν)· **ADR-640** TYPE-gated batched-line suppression
+(container members που μοιράζονται id με batched γραμμή συνεχίζουν να ζωγραφίζονται)· **ADR-639**
+Στάδιο 5 WebGL line-layer suppression + selected/hovered exception· **ADR-642** complex-linetype
+exclusion από το batching· **ADR-358** §5.6.bis layer/isolate/cut-plane skip. Το **ADR-363** §11.Q3
+slab-opening two-pass (deferred τελικό sub-pass ΜΕΤΑ όλα τα slabs, ώστε το `destination-out` punch
+να μη σβήνει ήδη-ζωγραφισμένο άνοιγμα) **διατηρήθηκε ρητά ως εξαίρεση** από το array-order μοντέλο
+— είναι ζήτημα ζωγραφικής σειράς εντός ενός punch, όχι σχεδιαστικού z-order.
+
+**Perf tradeoff (ειλικρινές):** το run-based batching συσσωρεύει **συνεχόμενες** γραμμές του ίδιου
+style· αν γραμμές εναλλάσσονται πυκνά με non-lines στον πίνακα, προκύπτουν περισσότερα/μικρότερα
+flushes απ' ό,τι το παλιό global batch. Στην πράξη τα DXF entities ομαδοποιούνται κατά τύπο/layer,
+οπότε τα runs μένουν μακριά — αμελητέα επίπτωση σε τυπικά σχέδια. Sub-order μέσα σε ένα run
+(διαφορετικά styled, επικαλυπτόμενες γειτονικές γραμμές) παραμένει grouped-by-style, όχι αυστηρά
+total-ordered ανά μεμονωμένη γραμμή. Λεπτομέρειες πλήρους αρχιτεκτονικής, (A) topo auto-send-to-back
+και (B) γενικό multi-select reorder command/UI → **ADR-661** (νέο, πλήρες ADR). CHECK 6B/6D touch →
+co-staged ADR-040 + ADR-650 + ADR-661. ΟΧΙ tsc (N.17).
+
 ### 2026-07-15 — ➕ ADR-659: overlap-badge micro-leaf mounted σε `CanvasSectionOverlays`
 **Τι:** το `CanvasSectionOverlays.tsx` (portal-overlay layer του καμβά) mount-άρει πλέον το νέο
 `OverlapCountBadge` micro-leaf (ADR-659 D4). Το leaf είναι πλήρως συμβατό με το ADR-040 micro-leaf
@@ -4288,3 +4322,15 @@ world-anchored). Το `CanvasLayerStack` παραμένει subscription-free σ
 ασφαλές· ο leaf κάνει το δικό του `useSyncExternalStore`), μηδέν αλλαγή στο bitmap-cache key. Το
 «ψήσιμο» σε DXF entities γίνεται ξεχωριστά μέσα από το TopographyPanel (`north-arrow-entities` →
 undoable append), όχι από αυτό το HUD render path.
+
+### 2026-07-15 (b): ADR-650 M10d — topo ισοϋψείς ως BACKGROUND pass (`DxfRenderer`, CHECK 6B/6D stage)
+
+Οι τοπογραφικές ισοϋψείς (`lwpolyline` + elevation `text` στα `TOPO-CONTOUR-*` layers) ζωγραφίζονται
+πλέον σε ένα **background pass** στην αρχή του `DxfRenderer.render` — ΠΡΙΝ το line-batch και το per-entity
+`renderMatching` — ώστε η κάτοψη του κτιρίου να διαβάζεται καθαρά ΠΑΝΩ («κάτοψη πάνω, ισοϋψείς πίσω»,
+Giorgio 2026-07-15). Πριν, ως τελευταία entities του πίνακα (append μέσω `completeEntities`), σχεδιάζονταν
+**τελευταίες → πάνω** από την κάτοψη. Το pass χτίζει ένα `topoContourIds` Set· το `renderMatching` το χρησιμοποιεί
+για να **παρακάμψει** την κανονική in-order σχεδίασή τους (μηδέν διπλό draw). Predicate = `isTopoContourEntity`
+(η ΙΔΙΑ SSoT με το 3D overlay skip). Οι ισοϋψείς είναι `lwpolyline`/`text` → **ποτέ** WebGL-owned (ADR-639
+Στάδιο 5 παίρνει μόνο `line`/plain `polyline`), οπότε κανένα GPU double-draw. Μηδέν αλλαγή στο bitmap-cache key
+(ντετερμινιστικό ως προς τη σκηνή). Co-staged με ADR-650 changelog v27. ΟΧΙ tsc (N.17).

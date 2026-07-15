@@ -188,51 +188,8 @@ export interface ITransaction {
 // AUDIT TRAIL types moved to ./types/audit-types.ts (ADR-031 file-size split)
 export type { AuditLogEntry, IAuditTrail, AuditLogFilter } from './types/audit-types';
 
-// ============================================================================
-// PERSISTENCE
-// ============================================================================
-
-/**
- * 🏢 ENTERPRISE: Persistence interface for session restore
- */
-export interface ICommandPersistence {
-  /** Save command history to storage */
-  save(undoStack: SerializedCommand[], redoStack: SerializedCommand[]): Promise<void>;
-
-  /** Load command history from storage */
-  load(): Promise<{ undoStack: SerializedCommand[]; redoStack: SerializedCommand[] } | null>;
-
-  /** Clear stored history */
-  clear(): Promise<void>;
-
-  /** Check if storage is available */
-  isAvailable(): boolean;
-}
-
-/**
- * Storage type for persistence
- */
-export type PersistenceStorage = 'localStorage' | 'indexedDB' | 'memory';
-
-/**
- * Persistence configuration
- */
-export interface PersistenceConfig {
-  /** Storage type */
-  storage: PersistenceStorage;
-
-  /** Storage key prefix */
-  keyPrefix: string;
-
-  /** Auto-save on each command */
-  autoSave: boolean;
-
-  /** Auto-save debounce (ms) */
-  autoSaveDebounce: number;
-
-  /** Max commands to persist */
-  maxPersisted: number;
-}
+// PERSISTENCE (extracted to ./types/persistence-types.ts — SRP / N.7.1)
+export type { ICommandPersistence, PersistenceStorage, PersistenceConfig } from './types/persistence-types';
 
 // ============================================================================
 // COMMAND HISTORY INTERFACE
@@ -360,6 +317,19 @@ export interface ISceneManager {
 
   /** Restore entity to an exact index position — used by ReorderEntityCommand.undo(). */
   moveEntityToIndex(entityId: string, targetIndex: number): void;
+
+  /**
+   * ADR-661 — atomically move a SET of entities to the back (array front) or front (array end) as a
+   * contiguous block, preserving the moved set's relative order. One scene commit (no per-id jank).
+   * Used by BatchReorderEntityCommand (multi-select reorder + topo contour auto-send-to-back).
+   */
+  reorderEntities(ids: readonly string[], direction: 'front' | 'back'): void;
+
+  /** ADR-661 — current render order as an id list (undo snapshot for BatchReorderEntityCommand). */
+  getEntityOrder(): readonly string[];
+
+  /** ADR-661 — restore the render order to an exact id list (BatchReorderEntityCommand.undo). */
+  setEntityOrder(orderedIds: readonly string[]): void;
 }
 
 /**

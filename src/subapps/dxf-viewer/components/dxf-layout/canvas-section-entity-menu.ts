@@ -29,6 +29,8 @@ interface EntityContextMenuPropsDeps {
   entityJoinState: { canJoin: boolean; joinResultLabel?: string };
   entityJoinHook: { joinEntities: (ids: string[]) => void };
   handleSmartDelete: () => void;
+  /** ADR-661 — Z-order «Μεταφορά μπροστά/πίσω» (N≥1, BatchReorderEntityCommand). */
+  handleReorderEntity: (direction: 'front' | 'back') => void;
   entityMenuRef: React.RefObject<EntityContextMenuHandle | null>;
   onToolChange: ((tool: string) => void) | undefined;
   replaceEntitySelection: (ids: string[]) => void;
@@ -45,7 +47,7 @@ interface EntityContextMenuPropsDeps {
 export function buildEntityContextMenuProps(deps: EntityContextMenuPropsDeps) {
   const {
     selectedEntityIds, currentScene, dxfScene, entityJoinState, entityJoinHook,
-    handleSmartDelete, entityMenuRef, onToolChange, replaceEntitySelection,
+    handleSmartDelete, handleReorderEntity, entityMenuRef, onToolChange, replaceEntitySelection,
     executeCommand, t, entityLayerCommands,
   } = deps;
   return {
@@ -77,6 +79,10 @@ export function buildEntityContextMenuProps(deps: EntityContextMenuPropsDeps) {
       if (cats.length === 0) return;
       executeCommand(new CategoryIsolateCommand({ targetCategories: cats, category: t('layer.isolate.statusBadge.categoryCount', { count: cats.length }) }));
     },
+    // ADR-661 — multi-select Z-order (N≥1, mirrors PageUp/PageDown).
+    canReorder: selectedEntityIds.length >= 1,
+    onBringToFront: () => { entityMenuRef.current?.close(); handleReorderEntity('front'); },
+    onSendToBack: () => { entityMenuRef.current?.close(); handleReorderEntity('back'); },
     ...entityLayerCommands,
   };
 }

@@ -54,8 +54,14 @@ export abstract class BaseCommand implements ICommand {
     this.execute();
   }
 
-  /** Default: commands do not merge. Override for drag-style coalescing. */
-  canMergeWith(): boolean {
+  /**
+   * Default: commands do not merge. Override for drag-style coalescing.
+   *
+   * Η παράμετρος δηλώνεται (αν και αχρησιμοποίητη εδώ) ώστε η υπογραφή να ταυτίζεται
+   * με το `ICommand.canMergeWith?(other)` — αλλιώς κάθε subclass που ΔΙΑΒΑΖΕΙ το `other`
+   * σπάει το override (TS2416: «target signature provides too few arguments»).
+   */
+  canMergeWith(_other: ICommand): boolean {
     return false;
   }
 

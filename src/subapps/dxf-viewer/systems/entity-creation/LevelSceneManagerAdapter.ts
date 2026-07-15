@@ -54,7 +54,7 @@ import {
   getEntityVertices,
 } from './level-scene-vertex-ops';
 // Z-order render-list reordering SSoT (shared with the grip adapter — no per-adapter twin).
-import { moveEntityInList, frontBackTargetIndex } from './entity-zorder-ops';
+import { moveEntityInList, moveEntitiesInList, entityIdOrder, reorderEntitiesToIdList, frontBackTargetIndex } from './entity-zorder-ops';
 
 /**
  * Type for getLevelScene function from useLevels hook
@@ -389,6 +389,29 @@ export class LevelSceneManagerAdapter implements ISceneManager {
     const scene = this.getLatestScene();
     if (!scene) return;
     const entities = moveEntityInList(scene.entities, entityId, targetIndex);
+    if (entities) this.commitScene({ ...scene, entities });
+  }
+
+  /** ADR-661 — atomic batch send-to-back / bring-to-front (ONE commit). Shared SSoT (N.0.2). */
+  reorderEntities(ids: readonly string[], direction: 'front' | 'back'): void {
+    const scene = this.getLatestScene();
+    if (!scene) return;
+    const entities = moveEntitiesInList(scene.entities, new Set(ids), direction);
+    if (entities) this.commitScene({ ...scene, entities });
+  }
+
+  /** ADR-661 — current render order as an id list (undo snapshot for BatchReorderEntityCommand). */
+  getEntityOrder(): readonly string[] {
+    const scene = this.getLatestScene();
+    return scene ? entityIdOrder(scene.entities) : [];
+  }
+
+  /** ADR-661 — restore render order to an exact id list (BatchReorderEntityCommand.undo). */
+  setEntityOrder(orderedIds: readonly string[]): void {
+    const scene = this.getLatestScene();
+    if (!scene) return;
+    // full-coverage guard lives in the SSoT helper (null → no-op on a stale snapshot).
+    const entities = reorderEntitiesToIdList(scene.entities, orderedIds);
     if (entities) this.commitScene({ ...scene, entities });
   }
 

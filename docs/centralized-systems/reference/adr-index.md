@@ -638,6 +638,7 @@
 | **ADR-656** | Ελληνικό Τοπογραφικό: Παρουσίαση & Compliance (Ισοϋψείς πάχος · Labels σημείων · Κάναβος ΕΓΣΑ87) — Blueprint M9/M10/M11 | 🟡 BLUEPRINT | 2026-07-14 | DXF Viewer / Topography | [📄](./adrs/ADR-656-greek-topo-presentation-compliance.md) |
 | **ADR-659** | Ασφαλής επιλογή οντοτήτων σε αλληλοεπικάλυψη (Overlap Selection Disambiguation — repeated-click + canvas pre-highlight + badge· επεκτείνει ADR-357 Φ15) | 🟡 IN PROGRESS | 2026-07-15 | DXF Viewer / Selection | [📄](./adrs/ADR-659-overlap-selection-disambiguation.md) |
 | **ADR-660** | Self-registration hardening (pending / admin-approval — κλείνει την ανοιχτή αυτο-εγγραφή που αποκάλυψε το ADR-657) | ✅ ACCEPTED | 2026-07-15 | Auth / Provisioning | [📄](./adrs/ADR-660-self-registration-hardening.md) |
+| **ADR-661** | 2D DRAWORDER: Array-Order Render SSoT + Per-Entity & Topo Send-to-Back (single-pass DxfRenderer· αντικαθιστά το ADR-650 M10d #Γ topo pass) | 🟢 IMPLEMENTED | 2026-07-15 | DXF Viewer / 2D Rendering / Z-Order | [📄](./adrs/ADR-661-2d-draworder-array-order-ssot.md) |
 | **ADR-662** | Μετάβαση Τοπογραφικού από αριστερό panel → Ribbon (μόνιμο tab + Properties + contextual· research-first, big-player evidence, reuse ADR-444/345/587) | 🔵 PROPOSED | 2026-07-15 | DXF Viewer / Ribbon · Topography | [📄](./adrs/ADR-662-topography-ribbon-migration.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 

@@ -30,7 +30,7 @@ import {
   DxfMenuLabel,
   DxfMenuShortcut,
 } from './dxf-context-menu';
-import { JoinIcon, DeleteIcon, CancelIcon, SplitWallIcon, SelectSimilarColorIcon, IsolateEntityIcon, IsolateCategoryIcon } from '../icons/MenuIcons';
+import { JoinIcon, DeleteIcon, CancelIcon, SplitWallIcon, SelectSimilarColorIcon, IsolateEntityIcon, IsolateCategoryIcon, BringToFrontIcon, SendToBackIcon } from '../icons/MenuIcons';
 
 // ===== TYPES =====
 
@@ -86,6 +86,15 @@ interface EntityContextMenuProps {
    */
   canIsolateCategory?: boolean;
   onIsolateCategory?: () => void;
+  /**
+   * ADR-661 — Z-order «Μεταφορά μπροστά / πίσω» (AutoCAD Bring to Front / Send
+   * to Back). Shown when at least one entity is selected; N≥1 reorders the
+   * whole selected set atomically (BatchReorderEntityCommand), preserving
+   * relative order. Mirrors the PageUp/PageDown keyboard shortcut.
+   */
+  canReorder?: boolean;
+  onBringToFront?: () => void;
+  onSendToBack?: () => void;
 }
 
 // ===== MAIN COMPONENT =====
@@ -110,6 +119,9 @@ const EntityContextMenuInner = forwardRef<EntityContextMenuHandle, EntityContext
   onIsolateEntity,
   canIsolateCategory,
   onIsolateCategory,
+  canReorder,
+  onBringToFront,
+  onSendToBack,
 }, ref) => {
   const { t } = useTranslation('dxf-viewer');
   const triggerRef = useRef<HTMLSpanElement>(null);
@@ -137,6 +149,8 @@ const EntityContextMenuInner = forwardRef<EntityContextMenuHandle, EntityContext
   const handleSelectSimilar = useCallback(() => { onSelectSimilar?.(); setIsOpen(false); }, [onSelectSimilar]);
   const handleIsolateEntity = useCallback(() => { onIsolateEntity?.(); setIsOpen(false); }, [onIsolateEntity]);
   const handleIsolateCategory = useCallback(() => { onIsolateCategory?.(); setIsOpen(false); }, [onIsolateCategory]);
+  const handleBringToFront = useCallback(() => { onBringToFront?.(); setIsOpen(false); }, [onBringToFront]);
+  const handleSendToBack = useCallback(() => { onSendToBack?.(); setIsOpen(false); }, [onSendToBack]);
 
   const showLayerCommands = !!(canApplyLayerCommands && (onLayerOff || onLayerFreeze || onLayerLock));
   const layerCommandsDisabled = !!isSystemLayer;
@@ -184,6 +198,26 @@ const EntityContextMenuInner = forwardRef<EntityContextMenuHandle, EntityContext
               <DxfMenuItem onClick={handleIsolateCategory}>
                 <DxfMenuIcon><IsolateCategoryIcon /></DxfMenuIcon>
                 <DxfMenuLabel>{t('layer.isolate.contextMenu.isolateCategory')}</DxfMenuLabel>
+              </DxfMenuItem>
+            )}
+          </>
+        )}
+
+        {canReorder && (onBringToFront || onSendToBack) && (
+          <>
+            <DxfMenuSeparator />
+            {onBringToFront && (
+              <DxfMenuItem onClick={handleBringToFront}>
+                <DxfMenuIcon><BringToFrontIcon /></DxfMenuIcon>
+                <DxfMenuLabel>{t('contextMenu.entity.bringToFront')}</DxfMenuLabel>
+                <DxfMenuShortcut>PgUp</DxfMenuShortcut>
+              </DxfMenuItem>
+            )}
+            {onSendToBack && (
+              <DxfMenuItem onClick={handleSendToBack}>
+                <DxfMenuIcon><SendToBackIcon /></DxfMenuIcon>
+                <DxfMenuLabel>{t('contextMenu.entity.sendToBack')}</DxfMenuLabel>
+                <DxfMenuShortcut>PgDn</DxfMenuShortcut>
               </DxfMenuItem>
             )}
           </>

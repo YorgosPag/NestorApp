@@ -16,7 +16,7 @@ import { useEntityJoin } from '../useEntityJoin';
 // ADR-532 B4 — event-time selection read (CanvasSection no longer re-renders on selection).
 import { SelectedEntitiesStore } from '../../systems/selection/SelectedEntitiesStore';
 import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
-import { ReorderEntityCommand } from '../../core/commands/entity-commands';
+import { BatchReorderEntityCommand } from '../../core/commands/entity-commands';
 // ADR-344 Phase 13 — feed active scene units into ribbon text creation so 2.5
 // paper-mm default lands in world units regardless of DXF unit system.
 import { resolveSceneUnits } from '../../utils/scene-units';
@@ -75,10 +75,12 @@ export function useCanvasEditActions({
   }, [overlayMode, setOverlayMode]);
   const handleReorderEntity = useCallback((direction: 'front' | 'back') => {
     // ADR-532 B4 — read the selection at event time (no stale render snapshot).
+    // ADR-661 — N≥1: BatchReorderEntityCommand moves the whole selected set in one
+    // atomic commit, preserving relative order (do NOT sort `ids` here).
     const ids = SelectedEntitiesStore.getSelectedEntityIds();
-    if (ids.length !== 1 || !levelManager.currentLevelId) return;
+    if (ids.length === 0 || !levelManager.currentLevelId) return;
     const adapter = createLevelSceneManagerAdapter(levelManager.getLevelScene, levelManager.setLevelScene, levelManager.currentLevelId);
-    executeCommand(new ReorderEntityCommand(ids[0], direction, adapter));
+    executeCommand(new BatchReorderEntityCommand(ids, direction, adapter));
   }, [levelManager, executeCommand]);
   return { textCreation, handleArrayPolarCenterRepick, handleArrayPathEntityRepick, handleSmartDelete, entityJoinHook, handleExitDrawMode, handleReorderEntity };
 }

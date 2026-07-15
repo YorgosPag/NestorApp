@@ -239,7 +239,8 @@ export function useCanvasKeyboardShortcuts({
       // Εδώ κρατάμε ΜΟΝΟ local shortcuts για drawing mode (Escape, Enter)
 
       // Z-order: PageUp = bring to front, PageDown = send to back
-      if ((e.key === 'PageUp' || e.key === 'PageDown') && SelectedEntitiesStore.getSelectedEntityIds().length === 1 && handleReorderEntity) {
+      // ADR-661 — N≥1 (multi-select reorders the whole set atomically via BatchReorderEntityCommand).
+      if ((e.key === 'PageUp' || e.key === 'PageDown') && SelectedEntitiesStore.getSelectedEntityIds().length >= 1 && handleReorderEntity) {
         e.preventDefault();
         handleReorderEntity(e.key === 'PageUp' ? 'front' : 'back');
         return;

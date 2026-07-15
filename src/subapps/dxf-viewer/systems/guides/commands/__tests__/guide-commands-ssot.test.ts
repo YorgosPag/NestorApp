@@ -29,7 +29,7 @@ describe('ADR-613 guide command SSoT', () => {
       expect(typeof cmd.id).toBe('string');
       expect(cmd.id.length).toBeGreaterThan(0);
       expect(typeof cmd.timestamp).toBe('number');
-      expect(cmd.canMergeWith()).toBe(false);
+      expect(cmd.canMergeWith(cmd)).toBe(false);
 
       const s = cmd.serialize();
       expect(s).toMatchObject({

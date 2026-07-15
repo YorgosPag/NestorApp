@@ -62,7 +62,8 @@ describe('SetFaceAppearanceCommand', () => {
 
   it('never merges (each paint is its own undo step)', () => {
     const sm = createMockSceneManager([seed()]);
-    expect(new SetFaceAppearanceCommand('slab-1', 'top', null, sm).canMergeWith()).toBe(false);
+    const cmd = new SetFaceAppearanceCommand('slab-1', 'top', null, sm);
+    expect(cmd.canMergeWith(cmd)).toBe(false);
   });
 
   it('validates required fields', () => {

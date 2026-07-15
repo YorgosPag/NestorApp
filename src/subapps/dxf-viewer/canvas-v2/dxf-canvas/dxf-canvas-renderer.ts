@@ -223,11 +223,6 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
           activeTool === 'wall-on-entity' ||
           isBimRegionOrPerimeterTool(activeTool);
         const selectedSet = new Set(curRenderOptions.selectedEntityIds);
-        // 🔬 TEMP DEBUG (ADR-402 cross-mode selection) — remove after diagnosis.
-        if (selectedSet.size > 0) {
-          const missing = [...selectedSet].filter((id) => !curEntityMap.has(id));
-          console.log('[SEL3D-2D] selected=', [...selectedSet], '| missing from 2D scene=', missing, '| scene entities=', curEntityMap.size);
-        }
 
         const hoveredId = curRenderOptions.hoveredEntityId;
         if (hoveredId) {

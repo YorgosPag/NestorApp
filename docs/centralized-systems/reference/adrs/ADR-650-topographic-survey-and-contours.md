@@ -1736,3 +1736,46 @@ technologismiki (Ν.4495/2017), xyz.gr/geodimetro.gr/greenbuilding.gr/cityengine
   **Tests:** `terrain-3d-store.test.ts` (4 — per-style memory, contour separate, clamp, no-op identity). Topography suite **293/293 PASS**. ΟΧΙ tsc (N.17). MaterialCatalog3D στα 499 γρ. (οριακά· υποψήφιο για μελλοντικό split των terrain materials).
 
   **Status: M10d #B — IMPLEMENTED (εκκρεμεί ζωντανός έλεγχος). Το M10d (#A+#B) ολοκληρώθηκε ως προς κώδικα.**
+
+- **2026-07-15 (v27)** — **M10d #Γ — ισοϋψείς ως BACKGROUND στη 2D κάτοψη («κάτοψη πάνω»)** (Phase 1–3, N.0.1). **Εκκρεμεί ζωντανός έλεγχος Giorgio.**
+
+  **ΠΡΟΒΛΗΜΑ (ζωντανός έλεγχος Giorgio, screenshot 20:04):** στη **2D** κάτοψη οι ισοϋψείς ζωγραφίζονταν ΠΑΝΩ από την κάτοψη του κτιρίου. Ρίζα (grep, επιβεβαιωμένη): το `DxfRenderer` σχεδιάζει τα entities με **σειρά πίνακα** `scene.entities`· οι ισοϋψείς μπαίνουν **τελευταίες** (append μέσω `completeEntities`) → σχεδιάζονται τελευταίες → πάνω. **Άσχετο με #A/#B** (που ήταν 3D-only) — ξεχωριστό 2D draw-order θέμα.
+
+  **ΑΠΟΦΑΣΗ (Giorgio):** «κάτοψη πάνω, ισοϋψείς πίσω» — οι ισοϋψείς = τοπογραφικό context (background), το κτίριο = foreground (AutoCAD «send to back» των topo layers).
+
+  **ΛΥΣΗ:** νέο **background pass** στην αρχή του `DxfRenderer.render` — ζωγραφίζει τα topo contour entities (γραμμές + labels) ΠΡΙΝ το line-batch + `renderMatching`, χτίζοντας `topoContourIds` Set· το `renderMatching` παρακάμπτει αυτά τα ids (μηδέν διπλό draw). Reuse του **ίδιου** `isTopoContourEntity` predicate (SSoT με το 3D overlay skip). Οι ισοϋψείς είναι `lwpolyline`/`text` → ποτέ WebGL-owned (ADR-639 Στάδιο 5), οπότε κανένα GPU double-draw. Μηδέν αλλαγή bitmap-cache key.
+
+  **⚠️ GOTCHA (fix 2, μετά από 1ο αποτυχημένο ζωντανό έλεγχο):** το predicate πρέπει να διαβάζει `options.layersById` (RAW), **ΟΧΙ** `effectiveOptions.layersById` — το `skipInteractive` branch (bitmap-cache normal-state render, **αυτό που εμφανίζεται**) ξαναχτίζει το `effectiveOptions` **ΧΩΡΙΣ** `layersById` → το predicate έπαιρνε `undefined` → ποτέ match → οι ισοϋψείς έμεναν μπροστά. Οι contour entities έχουν explicit color, οπότε ζωγραφίζονταν καφέ κανονικά μα στη λάθος σειρά. Το raw `options.layersById` περνιέται και στα δύο paths (`dxf-canvas-renderer.ts:202`).
+
+  **Αρχεία:** `DxfRenderer.ts` (background pass + skip + `options.layersById` source), `ADR-040` changelog (CHECK 6B/6D stage). ΟΧΙ tsc (N.17)· jscpd:diff καθαρό.
+
+  **Status: M10d #Γ — IMPLEMENTED (εκκρεμεί ζωντανός έλεγχος #2).**
+
+- **2026-07-15 (v28)** — **M10d #Γ SUPERSEDED — draw-order περνά σε γενικό array-order SSoT (ADR-661).**
+  **Πρόβλημα (ίδιο σύμπτωμα, βαθύτερη ρίζα):** το M10d #Γ background pass (v27) διόρθωσε το
+  `layersById` gotcha, αλλά το υποκείμενο πρόβλημα ήταν δομικό — ο `DxfRenderer` ζωγράφιζε **όλες**
+  τις γραμμές σε ένα ενιαίο batched πέρασμα **κάτω** από κάθε μη-γραμμή entity, ανεξάρτητα από τη
+  σειρά του πίνακα `scene.entities` — άρα η θέση στον πίνακα δεν ήταν πραγματική z-σειρά για
+  γραμμές. Ένα ειδικό «topo background pass» θα ήταν πάντα ένα ακόμη ειδικό-case patch πάνω σε ένα
+  μη-γενικό μοντέλο.
+
+  **Απόφαση (Giorgio):** η σειρά του πίνακα `scene.entities` γίνεται η ΜΙΑ SSoT για 2D draw-order,
+  για ΟΛΟΥΣ τους τύπους entity (AutoCAD DRAWORDER μοντέλο) — βλ. **ADR-661** (νέο, πλήρες ADR).
+  Το `DxfRenderer.render` ξαναγράφτηκε σε single array-order πέρασμα με per-style consecutive-line
+  run-batching (αντικαθιστά το line-batch-first + `renderMatching`)· το M10d #Γ background
+  pass/predicate **αφαιρέθηκε**. Οι ισοϋψείς πλέον κάθονται στο ΠΙΣΩ μέρος του πίνακα **στην πηγή**
+  (`regenerate-topo.ts`: `entities: [...fresh, ...kept]`, fresh contours πρώτες = πίσω) αντί για
+  ειδική μεταχείριση στον renderer — durable, γιατί οι ισοϋψείς ξαναχτίζονται από το survey SSoT σε
+  κάθε load/level-switch/geo-ref-change (M9/M10) και όχι το `regenerate-topo` seat-at-back θα
+  ακυρωνόταν σε κάθε rebuild. Το interactive «Δημιουργία ισοϋψών» (`useTopoContours`) κάνει το ίδιο
+  με ένα undo step (`CompoundCommand` + νέο `BatchReorderEntityCommand`).
+
+  Το ADR-661 προσθέτει επίσης ένα γενικό per-entity/multi-select «Αποστολή πίσω / Μεταφορά μπροστά»
+  (πληκτρολόγιο `PageUp`/`PageDown` + δεξί-κλικ context menu), πάνω από το προϋπάρχον single-entity
+  `ReorderEntityCommand` (ADR-507). Λεπτομέρειες αρχιτεκτονικής, invariants διατηρημένα (ADR-040
+  Phase X/IX, ADR-640, ADR-639, ADR-642, ADR-358, ADR-363 §11.Q3 slab-opening two-pass) και το
+  perf tradeoff (run-local αντί για global line-batching) → **ADR-661** (ξεχωριστό, πλήρες ADR).
+
+  **Status: M10d #Γ topo-only background pass SUPERSEDED από ADR-661 (γενικό array-order SSoT).
+  Draw-order concerns για τις ισοϋψείς ζουν πλέον στο ADR-661· αυτό το ADR-650 κρατά μόνο το
+  «contours seat at back at generation» detail (§ regenerate-topo, βλ. ADR-661 §3).**

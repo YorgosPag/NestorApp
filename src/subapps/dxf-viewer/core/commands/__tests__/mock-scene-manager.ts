@@ -22,6 +22,11 @@
  * ```
  */
 import type { ISceneManager, SceneEntity } from '../interfaces';
+import {
+  frontBackTargetIndex,
+  moveEntityInList,
+  moveEntitiesInList,
+} from '../../../systems/entity-creation/entity-zorder-ops';
 
 /** ISceneManager mock that also exposes its backing `store` for assertions. */
 export type MockSceneManager = ISceneManager & { store: Map<string, SceneEntity> };
@@ -57,9 +62,43 @@ export function createMockSceneManager(
     removeVertex: () => {},
     getVertices: () => undefined,
     getEntityIndex: (id) => [...store.keys()].indexOf(id),
-    reorderEntity: () => {},
-    moveEntityToIndex: () => {},
+    reorderEntity: (id, direction) => {
+      const ordered = [...store.values()];
+      const next = moveEntityInList(ordered, id, frontBackTargetIndex(direction, ordered.length));
+      if (next) rebuildStore(next);
+    },
+    moveEntityToIndex: (id, targetIndex) => {
+      const ordered = [...store.values()];
+      const next = moveEntityInList(ordered, id, targetIndex);
+      if (next) rebuildStore(next);
+    },
+    reorderEntities: (ids, direction) => {
+      const ordered = [...store.values()];
+      const next = moveEntitiesInList(ordered, new Set(ids), direction);
+      if (next) rebuildStore(next);
+    },
+    getEntityOrder: () => [...store.keys()],
+    setEntityOrder: (orderedIds) => {
+      const known = new Map(store);
+      const next: SceneEntity[] = [];
+      for (const id of orderedIds) {
+        const entity = known.get(id);
+        if (entity) next.push(entity);
+      }
+      // Defensive: keep any entity not present in `orderedIds` (should not happen for a
+      // faithful undo snapshot, but never silently drop scene state).
+      for (const entity of known.values()) {
+        if (!orderedIds.includes(entity.id)) next.push(entity);
+      }
+      rebuildStore(next);
+    },
   };
+
+  /** Rebuild `store` in-place so it iterates (keys/values) in exactly `ordered`'s order. */
+  function rebuildStore(ordered: readonly SceneEntity[]): void {
+    store.clear();
+    for (const entity of ordered) store.set(entity.id, entity);
+  }
 
   return Object.assign(base, overrides, { store });
 }

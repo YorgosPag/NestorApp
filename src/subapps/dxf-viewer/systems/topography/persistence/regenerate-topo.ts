@@ -133,10 +133,16 @@ export function regenerateTopoContours(deps: RegenerateTopoDeps): number {
     tris: surface.triangles.length, kept: kept.length, fresh: fresh.length,
   });
 
+  // ADR-661 — contours are BACKGROUND context: prepend `fresh` (array front = index 0 = drawn
+  // FIRST = behind everything), NOT append. This is the DURABLE send-to-back: the survey is the SSoT
+  // and contours are rebuilt here on every load / level-switch / geo-ref change, so any reorder done
+  // on the interactive path would be undone here unless this construction site also seats them at the
+  // back. `fresh`'s and `kept`'s internal relative order are each preserved. With the array-order
+  // render SSoT (ADR-661 DxfRenderer), array position alone puts the κάτοψη on top — no background pass.
   deps.commitScene({
     ...scene,
     layersById,
-    entities: [...kept, ...(fresh as unknown as AnySceneEntity[])],
+    entities: [...(fresh as unknown as AnySceneEntity[]), ...kept],
   });
   return fresh.length;
 }

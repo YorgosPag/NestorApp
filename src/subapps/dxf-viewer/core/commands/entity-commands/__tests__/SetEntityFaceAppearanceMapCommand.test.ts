@@ -59,7 +59,8 @@ describe('SetEntityFaceAppearanceMapCommand', () => {
 
   it('never merges (each paste is its own undo step)', () => {
     const sm = createMockSceneManager([seed()]);
-    expect(new SetEntityFaceAppearanceMapCommand('slab-1', {}, sm).canMergeWith()).toBe(false);
+    const cmd = new SetEntityFaceAppearanceMapCommand('slab-1', {}, sm);
+    expect(cmd.canMergeWith(cmd)).toBe(false);
   });
 
   it('validates the entity id', () => {

@@ -4,7 +4,7 @@ import { GHOST_DEFAULTS } from '../../rendering/ghost';
 // objects than the limit. Read at render time (event-time getter, no subscription).
 import { isGripObjLimitExceeded } from '../../hooks/grips/grip-obj-limit';
 import { gripStyleStore } from '../../stores/GripStyleStore';
-import type { DxfScene, DxfEntityUnion, DxfRenderOptions } from './dxf-types';
+import type { DxfScene, DxfEntityUnion, DxfLine, DxfRenderOptions } from './dxf-types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { canvasBoundsService } from '../../services/CanvasBoundsService';
 import { EntityRendererComposite } from '../../rendering/core/EntityRendererComposite';
@@ -154,109 +154,108 @@ export class DxfRenderer {
     // intersect the screen-space viewport. Computed once per frame.
     const worldViewport = viewportToWorldBBox(transform, actualViewport);
 
-    // ADR-040 Phase X: LINE batch rendering.
-    // Normal-state solid LINE entities are grouped by (strokeColor × lineWidth) and
-    // rendered as single paths — one ctx.stroke() per group instead of per entity.
-    // Excludes: selected, hovered, measurement, non-solid line types.
-    // ADR-510 Φ2 — dashMm per batch so linetype dashes (Dashed/Hidden/Center…) survive batching.
+    // ADR-661 — SINGLE array-order render pass (DRAWORDER SSoT). Entities paint in `scene.entities`
+    // order (last index = topmost, AutoCAD DRAWORDER / «Send to Back» — ADR-661). Consecutive solid
+    // LINE entities are accumulated into a style-keyed «run» (a Map of per-style batches) and stroked
+    // in ONE pass when a non-batchable entity breaks the run — so ADR-040 Phase X line batching is
+    // preserved WITHIN each run while global z-order is honoured for lines too. This replaces the old
+    // «all lines first (batch) → renderMatching for everything else» form, which forced EVERY line
+    // under EVERY non-line regardless of array position (the DRAWORDER violation ADR-661 fixes).
+    //
+    // Two entity classes stay position-independent BY DESIGN (not array-order):
+    //   • slab-opening — deferred to a final sub-pass (ADR-363 §11.Q3): a slab's `destination-out`
+    //     punch erases already-painted opening artwork if the slab draws AFTER the opening (openings
+    //     can precede their host slab in a Firestore snapshot merge — incident 2026-05-25).
+    //   • topo contours — no longer a special background pass: they are seated at the BACK of the
+    //     array at generation time (ADR-650 M10d / regenerate-topo `[...fresh, ...kept]`), so array
+    //     order alone now puts the κάτοψη on top. Removing the pass is the whole point of ADR-661.
     type LineBatch = { starts: Point2D[]; ends: Point2D[]; lw: number; alpha: number; dashMm: ReadonlyArray<number>; celtscale: number };
-    const lineBatches = new Map<string, LineBatch>();
-    const batchedIds = new Set<string>();
-    // ADR-639 Στάδιο 5 — event-time read (once/frame, never stale): when the GPU line
-    // layer is live, the ids in `webglOwnedIds` are drawn by it, so their Canvas2D
-    // normal-state stroke is suppressed below. Null when the layer is off → today's path.
+    // ADR-639 Στάδιο 5 — event-time read (once/frame, never stale): when the GPU line layer is live,
+    // the ids in `webglOwnedIds` are drawn by it, so their Canvas2D stroke is suppressed below.
     const webglLineActive = isWebglLineLayerActive();
     const webglOwnedIds = webglLineActive ? getWebglOwnedEntityIds() : null;
+    const batchedIds = new Set<string>();
+    // ADR-363 §11.Q3 — slab-openings collected here, drawn LAST (after every slab).
+    const deferredSlabOpenings: DxfEntityUnion[] = [];
+    // The current consecutive-line run (null = no open run). Flushed on any run-breaking entity.
+    let run: Map<string, LineBatch> | null = null;
+
+    const flushRun = (): void => {
+      if (!run) return;
+      for (const [key, batch] of run) {
+        const color = key.split('\0')[0];
+        this.ctx.save();
+        this.ctx.strokeStyle = color;
+        this.ctx.lineWidth = batch.lw;
+        // ADR-510 Φ2 — metric dash → screen px (zoom × LTSCALE × CELTSCALE); [] for solid.
+        this.ctx.setLineDash(dashMmToScreenPx(batch.dashMm, transform.scale, getEffectiveLinetypeScale(), batch.celtscale));
+        this.ctx.globalAlpha = batch.alpha;
+        this.ctx.lineCap = 'butt';
+        this.ctx.beginPath();
+        for (let i = 0; i < batch.starts.length; i++) {
+          this.ctx.moveTo(batch.starts[i].x, batch.starts[i].y);
+          this.ctx.lineTo(batch.ends[i].x, batch.ends[i].y);
+        }
+        this.ctx.stroke();
+        this.ctx.restore();
+      }
+      run = null;
+    };
+
+    // Per-entity draw with all skip gates (mirror of the former `renderMatching` body).
+    const drawInOrder = (entity: DxfEntityUnion): void => {
+      if (!entity.visible) return;
+      if (!isEntityInViewport(entity, worldViewport)) return;
+      // ADR-358 §5.6.bis Phase 10 — frozen/invisible/isolate/cut-plane skip.
+      if (this.isEntityLayerSkipped(entity, effectiveOptions.layersById)) return;
+      // ADR-640 arc-fix — TYPE-gated: only a batched LINE is suppressed; a non-line container
+      // member sharing the id (block/group/array) must still draw.
+      if (isDrawnByBatchedLineLayer(entity, batchedIds)) return;
+      // ADR-639 Στάδιο 5 — GPU owns this normal-state line/polyline: skip its Canvas2D draw,
+      // EXCEPT when selected/hovered (the highlight overlay must paint over the GPU line — rule 3).
+      if (isDrawnByWebglLineLayer(entity, webglOwnedIds)
+          && !this._selectionSet.has(entity.id)
+          && effectiveOptions.hoveredEntityId !== entity.id) return;
+      this.renderEntityUnified(entity, transform, actualViewport, effectiveOptions);
+    };
 
     for (const entity of scene.entities) {
-      if (entity.type !== 'line') continue;
-      if (!entity.visible) continue;
-      if (!isEntityInViewport(entity, worldViewport)) continue;
-      // ADR-358 §5.6.bis Phase 10 — skip frozen/invisible layers (perf parity AutoCAD).
-      if (this.isEntityLayerSkipped(entity, effectiveOptions.layersById)) continue;
-      if (this._selectionSet.has(entity.id)) continue;
-      if (effectiveOptions.hoveredEntityId === entity.id) continue;
-      const meta = entity as typeof entity & { measurement?: boolean; lineType?: string };
-      if (meta.measurement) continue;
-      if (meta.lineType && meta.lineType !== 'solid') continue;
-      // ADR-639 Στάδιο 5 — the GPU layer owns this normal-state line: skip its Canvas2D
-      // stroke (selected/hovered lines already `continue`d above → still drawn with
-      // highlight by the per-entity overlay). `batchedIds` also skips the per-entity pass.
-      if (webglOwnedIds && webglOwnedIds.has(entity.id)) { batchedIds.add(entity.id); continue; }
+      // ADR-363 §11.Q3 — never draw a slab-opening in array position; defer to the final sub-pass.
+      // Do NOT flush the run: the opening paints nothing here, so surrounding lines may still batch.
+      if (entity.type === 'slab-opening') { deferredSlabOpenings.push(entity); continue; }
 
-      const resolved = this.resolveStyleForRender(entity, effectiveOptions.layersById);
-      // ADR-642 Φ2-B — a complex linetype (embedded `──GAS──` text) cannot be expressed by a
-      // single batched `setLineDash` stroke. Exclude it from the solid LINE batch (and do NOT
-      // add it to `batchedIds`) so it falls through to the per-entity pass, where LineRenderer
-      // routes it through `strokeStyledEntityPolyline` and the text is drawn along the geometry.
-      if (resolved.complex && !isSimpleExpressible(resolved.complex)) continue;
-      const color = resolved.colorHex;
-      const lw = resolved.lineWidthPx;
-      const alpha = resolved.alpha;
-      const dashMm = resolved.dashMm;
-      // ADR-510 Φ2 — CELTSCALE (per-object, DXF grp 48) participates in the batch key
-      // so entities with the same pattern but different ltscale batch separately.
-      const celtscale = (entity as { ltscale?: number }).ltscale ?? 1;
-      // ADR-510 Φ2 — dash signature in the key so solid + each linetype batch separately.
-      const dashKey = dashMm.length > 0 ? `${dashMm.join(',')}@${celtscale}` : '';
-      const key = `${color}\0${lw}\0${alpha.toFixed(3)}\0${dashKey}`;
-      let batch = lineBatches.get(key);
-      if (!batch) { batch = { starts: [], ends: [], lw, alpha, dashMm, celtscale }; lineBatches.set(key, batch); }
-      batch.starts.push(CoordinateTransforms.worldToScreen(entity.start, transform, actualViewport));
-      batch.ends.push(CoordinateTransforms.worldToScreen(entity.end, transform, actualViewport));
-      batchedIds.add(entity.id);
-    }
+      // Eligible solid LINE → extend the current run (ADR-040 Phase X batching, preserved per-run).
+      const entry = entity.type === 'line'
+        ? this.tryLineBatchEntry(entity, effectiveOptions, worldViewport, transform, actualViewport, webglOwnedIds)
+        : null;
+      if (entry) {
+        if (!run) run = new Map<string, LineBatch>();
+        let batch = run.get(entry.key);
+        if (!batch) { batch = { starts: [], ends: [], lw: entry.lw, alpha: entry.alpha, dashMm: entry.dashMm, celtscale: entry.celtscale }; run.set(entry.key, batch); }
+        batch.starts.push(entry.start);
+        batch.ends.push(entry.end);
+        batchedIds.add(entity.id);
+        continue;
+      }
 
-    for (const [key, batch] of lineBatches) {
-      const color = key.split('\0')[0];
-      this.ctx.save();
-      this.ctx.strokeStyle = color;
-      this.ctx.lineWidth = batch.lw;
-      // ADR-510 Φ2 — metric dash → screen px (zoom × LTSCALE × CELTSCALE); [] for solid.
-      this.ctx.setLineDash(dashMmToScreenPx(batch.dashMm, transform.scale, getEffectiveLinetypeScale(), batch.celtscale));
-      this.ctx.globalAlpha = batch.alpha;
-      this.ctx.lineCap = 'butt';
-      this.ctx.beginPath();
-      for (let i = 0; i < batch.starts.length; i++) {
-        this.ctx.moveTo(batch.starts[i].x, batch.starts[i].y);
-        this.ctx.lineTo(batch.ends[i].x, batch.ends[i].y);
+      // ADR-639 Στάδιο 5 — a GPU-owned line that is NOT selected/hovered is drawn by the GPU: suppress
+      // its Canvas2D draw WITHOUT breaking the run (it paints nothing here). `batchedIds` also gates the
+      // per-entity pass (preserved dual meaning: «already handled», not literally «in a stroke batch»).
+      if (entity.type === 'line' && webglOwnedIds && webglOwnedIds.has(entity.id)
+          && !this._selectionSet.has(entity.id) && effectiveOptions.hoveredEntityId !== entity.id) {
+        batchedIds.add(entity.id);
+        continue;
       }
-      this.ctx.stroke();
-      this.ctx.restore();
+
+      // Any other entity (non-line, or a line excluded from batching — selected/hovered/measurement/
+      // non-solid/complex-linetype) breaks the run: flush accumulated lines, then draw in array order.
+      flushRun();
+      drawInOrder(entity);
     }
-    // ADR-363 Phase 3.7 / ADR-040 — two-pass rendering για cutout entities.
-    // Pass A: όλα τα entities ΕΚΤΟΣ slab-opening. Slab fills +
-    //         `punchHostedSlabOpenings` (destination-out) clear το cutout area
-    //         στο slab fill.
-    // Pass B: slab-openings ζωγραφίζονται ΠΑΝΩ από τα slabs ώστε το dashed
-    //         outline + kind-fill να φαίνεται. Χωρίς αυτό, persisted slabs που
-    //         έρχονται από Firestore snapshot ΜΕΤΑ τα persisted openings στο
-    //         `scene.entities` array, σκεπάζουν τα openings (alpha-blend) και
-    //         η οπή γίνεται αόρατη (incident 2026-05-25, ADR-363 §11.Q3).
-    const renderMatching = (accept: (type: string) => boolean): void => {
-      for (const entity of scene.entities) {
-        if (!accept(entity.type)) continue;
-        if (!entity.visible) continue;
-        if (!isEntityInViewport(entity, worldViewport)) continue;
-        if (this.isEntityLayerSkipped(entity, effectiveOptions.layersById)) continue;
-        // ADR-640 arc-fix — TYPE-gated skip: only a LINE that was batch-drawn is suppressed here.
-        // Container members share the container id (block/group/array), so an arc/circle/text member
-        // must NOT be skipped just because a batched line sibling put that id in `batchedIds`.
-        if (isDrawnByBatchedLineLayer(entity, batchedIds)) continue;
-        // ADR-639 Στάδιο 5 — GPU owns owned normal-state entities (plain polylines here):
-        // suppress their Canvas2D per-entity draw. Selected/hovered stay drawn so their
-        // highlight overlay paints on top of the GPU line (interaction independence, rule 3).
-        // ADR-640 arc-fix — likewise gated by type (line/plain-polyline only), not a shared id.
-        if (isDrawnByWebglLineLayer(entity, webglOwnedIds)
-            && !this._selectionSet.has(entity.id)
-            && effectiveOptions.hoveredEntityId !== entity.id) continue;
-        this.renderEntityUnified(entity, transform, actualViewport, effectiveOptions);
-      }
-    };
-    // Pass A: όλα ΕΚΤΟΣ slab-opening.
-    renderMatching((type) => type !== 'slab-opening');
-    // Pass B: slab-openings ΠΑΝΩ από τα slabs (ADR-363 §11.Q3).
-    renderMatching((type) => type === 'slab-opening');
+    flushRun();
+
+    // ADR-363 §11.Q3 — slab-openings ΠΑΝΩ από τα slabs (dashed outline + kind-fill survive the punch).
+    for (const entity of deferredSlabOpenings) drawInOrder(entity);
     // ADR-449 Slice X2 μέρος Β — ΕΝΑ scene-level pass για τον ΕΝΙΑΙΟ σοβά (mirror του 3Δ
     // `syncStructuralFinishSkin`): μετά τα entities, ζωγραφίζει το merged-silhouette outline
     // από την ΙΔΙΑ SSoT με το 3Δ → ίδιες γωνίες/συμβολές, μηδέν διπλή γραμμή.
@@ -424,6 +423,53 @@ export class DxfRenderer {
       };
     }
     return style;
+  }
+
+  /**
+   * ADR-661 — line batch eligibility (mirror of the former inline batch scan). Returns the batch
+   * entry (style key + screen-space endpoints + stroke params) for a solid LINE that may join a
+   * consecutive-line run, or `null` when the line is NOT batchable and must fall through to the
+   * per-entity draw (selected / hovered / measurement / non-solid / genuine complex linetype).
+   *
+   * WebGL-owned lines are intentionally NOT handled here (caller suppresses them without breaking the
+   * run). The gates + key composition are byte-for-byte the pre-ADR-661 logic: ADR-510 Φ2 dash+CELTSCALE
+   * in the key, ADR-642 complex-linetype exclusion, ADR-358 layer skip, ADR-040 Phase IX viewport cull.
+   */
+  private tryLineBatchEntry(
+    entity: DxfLine,
+    options: DxfRenderOptions,
+    worldViewport: ReturnType<typeof viewportToWorldBBox>,
+    transform: ViewTransform,
+    viewport: Viewport,
+    webglOwnedIds: ReadonlySet<string> | null,
+  ): { key: string; start: Point2D; end: Point2D; lw: number; alpha: number; dashMm: ReadonlyArray<number>; celtscale: number } | null {
+    if (!entity.visible) return null;
+    if (!isEntityInViewport(entity, worldViewport)) return null;
+    if (this.isEntityLayerSkipped(entity, options.layersById)) return null;
+    if (this._selectionSet.has(entity.id)) return null;
+    if (options.hoveredEntityId === entity.id) return null;
+    const meta = entity as typeof entity & { measurement?: boolean; lineType?: string };
+    if (meta.measurement) return null;
+    if (meta.lineType && meta.lineType !== 'solid') return null;
+    // WebGL-owned lines are suppressed by the caller (drawn by the GPU), never batched here.
+    if (webglOwnedIds && webglOwnedIds.has(entity.id)) return null;
+    const resolved = this.resolveStyleForRender(entity, options.layersById);
+    // ADR-642 Φ2-B — a genuine complex linetype (embedded `──GAS──` text) cannot be a single batched
+    // `setLineDash` stroke; exclude it (and do NOT mark it batched) so LineRenderer draws the text.
+    if (resolved.complex && !isSimpleExpressible(resolved.complex)) return null;
+    // ADR-510 Φ2 — CELTSCALE (per-object, DXF grp 48) + dash signature in the key so entities with
+    // the same colour/width but different linetype/ltscale never merge into one path.
+    const celtscale = (entity as { ltscale?: number }).ltscale ?? 1;
+    const dashKey = resolved.dashMm.length > 0 ? `${resolved.dashMm.join(',')}@${celtscale}` : '';
+    return {
+      key: `${resolved.colorHex}\0${resolved.lineWidthPx}\0${resolved.alpha.toFixed(3)}\0${dashKey}`,
+      start: CoordinateTransforms.worldToScreen(entity.start, transform, viewport),
+      end: CoordinateTransforms.worldToScreen(entity.end, transform, viewport),
+      lw: resolved.lineWidthPx,
+      alpha: resolved.alpha,
+      dashMm: resolved.dashMm,
+      celtscale,
+    };
   }
 
   /**

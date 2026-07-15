@@ -33,3 +33,54 @@ export function moveEntityInList<T extends { id: string }>(
   next.splice(clamped, 0, entity);
   return next;
 }
+
+/**
+ * ADR-661 — batch send-to-back / bring-to-front for a SET of ids in ONE atomic reorder.
+ *
+ * Moves every entity whose id is in `ids` to the back (array front, index 0 = drawn first) or the
+ * front (array end = drawn last), as a CONTIGUOUS block, preserving BOTH the moved entities' original
+ * relative order AND the order of everyone else. Looping the single-id `moveEntityInList` per id would
+ * scramble the moved set's internal order (each 'back' re-inserts at 0, reversing the group) — this
+ * splits once and re-concatenates, so the group's z-order is stable. Returns a NEW array, or `null`
+ * when NONE of the ids are present (caller no-ops).
+ *
+ * Shared by (A) topo contour auto-send-to-back at generation and (B) the multi-select reorder command.
+ */
+export function moveEntitiesInList<T extends { id: string }>(
+  entities: readonly T[],
+  ids: ReadonlySet<string>,
+  direction: 'front' | 'back',
+): T[] | null {
+  if (ids.size === 0) return null;
+  const moved: T[] = [];
+  const rest: T[] = [];
+  for (const entity of entities) {
+    if (ids.has(entity.id)) moved.push(entity);
+    else rest.push(entity);
+  }
+  if (moved.length === 0) return null;
+  return direction === 'back' ? [...moved, ...rest] : [...rest, ...moved];
+}
+
+/** ADR-661 — the render order as an id list (undo snapshot for BatchReorderEntityCommand). */
+export function entityIdOrder<T extends { id: string }>(entities: readonly T[]): string[] {
+  return entities.map((e) => e.id);
+}
+
+/**
+ * ADR-661 — rebuild the list to match an exact id order (BatchReorderEntityCommand.undo snapshot).
+ * Returns a NEW array, or `null` when `orderedIds` is not a full-coverage permutation of `entities`
+ * (a stale snapshot) — the caller then no-ops rather than silently dropping entities.
+ */
+export function reorderEntitiesToIdList<T extends { id: string }>(
+  entities: readonly T[],
+  orderedIds: readonly string[],
+): T[] | null {
+  const byId = new Map(entities.map((e) => [e.id, e] as const));
+  const next: T[] = [];
+  for (const id of orderedIds) {
+    const e = byId.get(id);
+    if (e) next.push(e);
+  }
+  return next.length === entities.length ? next : null;
+}

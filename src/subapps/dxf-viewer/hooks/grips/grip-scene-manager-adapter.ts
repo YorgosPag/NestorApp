@@ -41,7 +41,7 @@ import {
   removeEntityOrBlockMember,
 } from '../../systems/block/block-member-scene-access';
 // Z-order render-list reordering SSoT (shared with LevelSceneManagerAdapter — no per-adapter twin).
-import { moveEntityInList, frontBackTargetIndex } from '../../systems/entity-creation/entity-zorder-ops';
+import { buildClosureZOrderMethods } from '../../systems/entity-creation/closure-zorder-adapter';
 import type { DxfCommitDeps } from './unified-grip-types';
 
 // ============================================================================
@@ -284,26 +284,8 @@ export function createSceneManagerAdapter(deps: DxfCommitDeps): ISceneManager | 
         entities: writeBackMany(scene.entities as readonly Entity[], patchFns) as unknown as AnySceneEntity[],
       });
     },
-    getEntityIndex: (entityId: string): number => {
-      const scene = getLevelScene(currentLevelId);
-      if (!scene) return -1;
-      return scene.entities.findIndex((e) => e.id === entityId);
-    },
-    reorderEntity: (entityId: string, direction: 'front' | 'back') => {
-      const scene = getLevelScene(currentLevelId);
-      if (!scene) return;
-      const entities = moveEntityInList(
-        scene.entities,
-        entityId,
-        frontBackTargetIndex(direction, scene.entities.length),
-      );
-      if (entities) setLevelScene(currentLevelId, { ...scene, entities });
-    },
-    moveEntityToIndex: (entityId: string, targetIndex: number) => {
-      const scene = getLevelScene(currentLevelId);
-      if (!scene) return;
-      const entities = moveEntityInList(scene.entities, entityId, targetIndex);
-      if (entities) setLevelScene(currentLevelId, { ...scene, entities });
-    },
+    // Z-order slice (index lookup + single/batch reorder + order snapshot) — shared SSoT; the whole
+    // set was byte-identical with useGripMovement's adapter → extracted to buildClosureZOrderMethods (N.18).
+    ...buildClosureZOrderMethods(getLevelScene, setLevelScene, currentLevelId),
   };
 }

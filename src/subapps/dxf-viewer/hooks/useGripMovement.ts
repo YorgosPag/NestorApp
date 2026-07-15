@@ -43,6 +43,8 @@ import type { ISceneManager, SceneEntity } from '../core/commands/interfaces';
 import type { AnySceneEntity } from '../types/scene';
 import { useCommandHistory, MoveVertexCommand } from '../core/commands';
 import { useLevels } from '../systems/levels';
+// ADR-661 — z-order batch methods SSoT (shared with grip-scene-manager-adapter).
+import { buildClosureZOrderMethods } from '../systems/entity-creation/closure-zorder-adapter';
 // 🏢 ADR-065: Centralized Distance Calculation
 import { calculateDistance } from '../rendering/entities/shared/geometry-rendering-utils';
 // 🏢 ADR-118: Centralized Zero Point Pattern
@@ -103,18 +105,6 @@ function mapEntityVertices(
   });
 }
 
-/** Splice the entity matching `entityId` out of `entities`, returning the remaining
- *  array plus the detached entity (or `null` when absent). */
-function detachEntity(
-  entities: readonly AnySceneEntity[],
-  entityId: string,
-): { rest: AnySceneEntity[]; entity: AnySceneEntity } | null {
-  const idx = entities.findIndex((e) => e.id === entityId);
-  if (idx === -1) return null;
-  const rest = [...entities];
-  const [entity] = rest.splice(idx, 1);
-  return { rest, entity };
-}
 /**
  * Options for useGripMovement hook
  */
@@ -301,30 +291,9 @@ export function useGripMovement({
           }),
         });
       },
-      getEntityIndex: (entityId: string): number => {
-        const scene = getLevelScene(currentLevelId);
-        if (!scene) return -1;
-        return scene.entities.findIndex((e) => e.id === entityId);
-      },
-      reorderEntity: (entityId: string, direction: 'front' | 'back') => {
-        const scene = getLevelScene(currentLevelId);
-        if (!scene) return;
-        const detached = detachEntity(scene.entities, entityId);
-        if (!detached) return;
-        const { rest, entity } = detached;
-        if (direction === 'front') rest.push(entity);
-        else rest.unshift(entity);
-        setLevelScene(currentLevelId, { ...scene, entities: rest });
-      },
-      moveEntityToIndex: (entityId: string, targetIndex: number) => {
-        const scene = getLevelScene(currentLevelId);
-        if (!scene) return;
-        const detached = detachEntity(scene.entities, entityId);
-        if (!detached) return;
-        const { rest, entity } = detached;
-        rest.splice(targetIndex, 0, entity);
-        setLevelScene(currentLevelId, { ...scene, entities: rest });
-      },
+      // Z-order slice (index lookup + single/batch reorder + order snapshot) — shared SSoT; the whole
+      // set was byte-identical with grip-scene-manager-adapter → extracted to buildClosureZOrderMethods (N.18).
+      ...buildClosureZOrderMethods(getLevelScene, setLevelScene, currentLevelId),
     };
   }, [currentLevelId, getLevelScene, setLevelScene]);
   /**

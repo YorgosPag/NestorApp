@@ -25,3 +25,5 @@ export type { WallSplitCommandParams } from './WallSplitCommand';
 export { WallMergeCommand } from './WallMergeCommand';
 export type { WallMergeCommandParams } from './WallMergeCommand';
 export { ReorderEntityCommand } from './ReorderEntityCommand';
+// ADR-661 — atomic multi-entity send-to-back / bring-to-front (multi-select + topo auto-send-to-back).
+export { BatchReorderEntityCommand } from './BatchReorderEntityCommand';
