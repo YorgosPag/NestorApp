@@ -51,6 +51,8 @@ import type { ScaleBarEntity } from '../../types/scale-bar';
 import type { OpeningInfoTagEntity } from '../../types/opening-info-tag';
 // ADR-651 Φάση Ε — standalone raster image lightweight entity for DXF render pipeline.
 import type { ImageEntity } from '../../types/image';
+// ADR-662 Φάση 2β (Δρόμος Γ) — thin/derived topo surface entity for DXF render pipeline.
+import type { TopoSurfaceEntity } from '../../types/topo-surface';
 // ADR-408 Φ12 — plumbing manifold direct entity for DXF render pipeline.
 import type { MepManifoldEntity } from '../../bim/types/mep-manifold-types';
 // ADR-408 Εύρος Β — heating radiator direct entity for DXF render pipeline.
@@ -646,7 +648,22 @@ export interface DxfRay extends DxfEntity {
   rayEntity: RayEntity;
 }
 
-export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair | DxfDimension | DxfSlab | DxfSlabOpening | DxfOpening | DxfWall | DxfColumn | DxfFoundation | DxfMepFixture | DxfElectricalPanel | DxfRailing | DxfFurniture | DxfMepSegment | DxfMepFitting | DxfFloorplanSymbol | DxfAnnotationSymbol | DxfScaleBar | DxfOpeningInfoTag | DxfMepManifold | DxfMepRadiator | DxfMepBoiler | DxfMepWaterHeater | DxfMepUnderfloor | DxfRoof | DxfFloorFinish | DxfWallCovering | DxfThermalSpace | DxfSpaceSeparator | DxfBeam | DxfHatch | DxfXLine | DxfRay | DxfImage;
+/**
+ * ADR-662 Φάση 2β (Δρόμος Γ) — DxfTopoSurface thin/derived direct entity (non-BIM,
+ * sibling of DxfImage). Carries the flat topo-surface params (surfaceId + footprint)
+ * at top level; `TopoSurfaceRenderer` draws the footprint outline. No
+ * geometry/params/validation quartet — the TIN geometry lives in `getTopoSurface`,
+ * this variant only carries the clickable footprint. Without this variant + its
+ * TO_DXF handler the surface entity would fall to `convertEntity`'s `null` default →
+ * invisible + un-selectable (the ADR-583/612/651 trap).
+ */
+export interface DxfTopoSurface extends DxfEntity {
+  type: 'topo-surface';
+  surfaceId: TopoSurfaceEntity['surfaceId'];
+  footprint: TopoSurfaceEntity['footprint'];
+}
+
+export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair | DxfDimension | DxfSlab | DxfSlabOpening | DxfOpening | DxfWall | DxfColumn | DxfFoundation | DxfMepFixture | DxfElectricalPanel | DxfRailing | DxfFurniture | DxfMepSegment | DxfMepFitting | DxfFloorplanSymbol | DxfAnnotationSymbol | DxfScaleBar | DxfOpeningInfoTag | DxfMepManifold | DxfMepRadiator | DxfMepBoiler | DxfMepWaterHeater | DxfMepUnderfloor | DxfRoof | DxfFloorFinish | DxfWallCovering | DxfThermalSpace | DxfSpaceSeparator | DxfBeam | DxfHatch | DxfXLine | DxfRay | DxfImage | DxfTopoSurface;
 
 // === WRAPPED (SUB-ENTITY) VARIANTS — SSoT ===
 /**

@@ -98,6 +98,12 @@ export function calculateHatchBounds(entity: EntityModel, tolerance: number): Bo
   return pointsToBounds((h.boundaryPaths ?? []).flat(), tolerance);
 }
 
+/** ADR-662 Φάση 2β (Δρόμος Γ) — Topo surface bounds: AABB over all footprint ring vertices. */
+export function calculateTopoSurfaceBounds(entity: EntityModel, tolerance: number): BoundingBox | null {
+  const t = entity as { footprint?: ReadonlyArray<ReadonlyArray<{ x: number; y: number }>> };
+  return pointsToBounds((t.footprint ?? []).flat(), tolerance);
+}
+
 /**
  * 📐 ADR-362 Phase I3 — Dimension entity bounds from defPoints + textMidpoint.
  * defPoints cover extension-line origins + dim-line reference for all 10 variants.

@@ -226,6 +226,11 @@ export const ENTITY_BOUNDS_PROVIDERS: Partial<Record<EntityType, (entity: Entity
   // marquee ΚΑΙ hover/click να διαβάζουν ΤΗΝ ΙΔΙΑ συνάρτηση — ήταν δύο ξεχωριστές
   // υλοποιήσεις και η μία (C) απλά έλειπε, γι' αυτό το marquee δούλευε και το hover όχι.
   image: viaBoundsCalculator,
+  // ── ADR-662 Φάση 2β (Δρόμος Γ) — thin/derived topo surface: footprint-ring AABB.
+  // Delegates to `BoundsCalculator` (`case 'topo-surface'` → `calculateTopoSurfaceBounds`)
+  // ώστε marquee ΚΑΙ hover/click να διαβάζουν ΤΗΝ ΙΔΙΑ συνάρτηση (η συμμετρία που έλειπε
+  // στην εικόνα και έκρυβε το ADR-654 bug). ──
+  'topo-surface': viaBoundsCalculator,
   // ── BIM parametric (via calculateBimEntity2DBounds) ──
   wall: bimBounds,
   opening: bimBounds,

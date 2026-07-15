@@ -210,6 +210,13 @@ export function buildEntityModelFromDxf(
         position: entity.position, width: entity.width, height: entity.height,
         url: entity.url, rotation: entity.rotation,
       } as unknown as Entity;
+    case 'topo-surface':
+      // ADR-662 Φάση 2β (Δρόμος Γ) — thin/derived non-BIM topo surface (sibling of image).
+      // Flat params forwarded (surfaceId + footprint); TopoSurfaceRenderer draws the outline.
+      return {
+        ...base, type: 'topo-surface',
+        surfaceId: entity.surfaceId, footprint: entity.footprint,
+      } as unknown as Entity;
     case 'xline':
       return { ...base, type: 'xline', basePoint: entity.xlineEntity.basePoint, direction: entity.xlineEntity.direction } as unknown as Entity;
     case 'ray':
@@ -272,7 +279,7 @@ export const TO_ENTITY_MODEL_SUPPORTED_TYPES = [
   'electrical-panel', 'railing', 'furniture', 'roof', 'floor-finish', 'thermal-space',
   'wall-covering', 'space-separator', 'mep-segment', 'mep-fitting', 'floorplan-symbol',
   'annotation-symbol', 'scale-bar', 'opening-info-tag', 'mep-manifold', 'mep-radiator', 'mep-boiler', 'mep-water-heater',
-  'mep-underfloor', 'xline', 'ray', 'hatch', 'image',
+  'mep-underfloor', 'xline', 'ray', 'hatch', 'image', 'topo-surface',
 ] as const;
 
 // Bridge 1 — every listed token IS a real `DxfEntityUnion` discriminant (typo/stale ⇒ tsc breaks).

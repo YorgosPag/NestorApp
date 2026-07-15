@@ -62,6 +62,8 @@ const GEOMETRY_BY_TYPE: Readonly<Record<string, Record<string, unknown>>> = {
   },
   // ADR-654 — η εικόνα: flat rectangle + rotation, χωρίς geometry cache.
   image: { position: { x: 0, y: 0 }, width: 100, height: 50, url: 'blob:x', rotation: 0 },
+  // ADR-662 Φάση 2β (Δρόμος Γ) — thin/derived topo surface: surfaceId + footprint rings (world-2D).
+  'topo-surface': { surfaceId: 'existing', footprint: [SQUARE] },
 };
 
 /** Τα BIM entities δίνουν bounds μέσω του pre-computed `geometry.bbox` — ένα κοινό fixture. */

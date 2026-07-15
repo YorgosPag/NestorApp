@@ -46,6 +46,7 @@ import {
   calculatePointBounds,
   calculateAngleMeasurementBounds,
   calculateHatchBounds,
+  calculateTopoSurfaceBounds,
   calculateDimensionBounds,
   calculateStairBounds,
   calculateBimEntityBounds,
@@ -120,6 +121,8 @@ export const HIT_TEST_BOUNDS_HANDLERS: Partial<Record<EntityType, EntityBoundsHa
   // ADR-654 — standalone raster image (entourage / furniture-plan sprite): AABB των 4
   // περιστραμμένων κορυφών. Ο τύπος που έλειπε και γέννησε ΟΛΗ τη Φ10.
   image: calculateImageBounds,
+  // ADR-662 Φάση 2β (Δρόμος Γ) — topo surface: AABB πάνω σε όλες τις κορυφές του footprint.
+  'topo-surface': calculateTopoSurfaceBounds,
 
   // ── BIM parametric: όλα προβάλλουν το pre-computed `geometry.bbox` στο XY. Added by:
   // ADR-363 (wall/opening/slab/slab-opening/column/beam), ADR-358 (stair), ADR-436

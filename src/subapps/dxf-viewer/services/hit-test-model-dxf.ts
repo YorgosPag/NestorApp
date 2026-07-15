@@ -101,4 +101,8 @@ export const HIT_TEST_MODEL_DXF_HANDLERS = {
   // ADR-654 — standalone raster image (entourage / furniture-plan sprite). Ο τύπος που
   // έλειπε από ΟΛΟ αυτό το seam και γέννησε τη Φ10.
   image: flatFields('image', ['position', 'width', 'height', 'url', 'rotation']),
+  // ADR-662 Φάση 2β (Δρόμος Γ) — thin/derived topo surface· το `footprint` τροφοδοτεί ΚΑΙ
+  // το AABB (broad phase) ΚΑΙ το point-in-polygon containment (narrow phase). Χωρίς αυτό το
+  // seam η επιφάνεια βγαίνει σιωπηλά εκτός spatial index (μηδέν hover/κλικ — ο Φ10 μηχανισμός).
+  'topo-surface': flatFields('topo-surface', ['surfaceId', 'footprint']),
 } as const satisfies Record<string, HitTestModelHandler>;

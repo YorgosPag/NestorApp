@@ -23,6 +23,7 @@ import {
   isAnnotationSymbolEntity,
   isScaleBarEntity,
   isOpeningInfoTagEntity,
+  isTopoSurfaceEntity,
 } from '../../types/entities';
 // ADR-583 — annotative model-size SSoT for the North-arrow annotation symbol.
 import { annotationSymbolModelSizeLive } from '../../bim/annotation-symbols/annotation-symbol-model-size';
@@ -112,6 +113,9 @@ export const NARROW_HIT_TEST_HANDLERS: Partial<Record<EntityType, NarrowHitTest>
   // ADR-651 Φάση Ε — standalone raster image: rotation-aware point-in-rect (fill hit-test,
   // SSoT shared with ImageRenderer.hitTest — click anywhere inside the picture selects it).
   image: hitTestImage,
+  // ADR-662 Φάση 2β (Δρόμος Γ) — thin/derived topo surface: point-in-polygon footprint
+  // containment (SSoT shared with TopoSurfaceRenderer.hitTest — click inside selects it).
+  'topo-surface': hitTestTopoSurface,
 
   // ── BIM (ADR-363 Bug 1 — polygon containment) ──
   // Cached outline vertices στο `geometry`/`params` δίνουν τα 4-vertex (opening/slab-opening)
@@ -156,6 +160,17 @@ function hitTestImage(entity: Entity, point: Point2D): Partial<HitTestResult> | 
   const vertices = imageEntityRectVertices(entity as unknown as ImageRectShape);
   if (!vertices) return null;
   return isPointInPolygon(point, vertices) ? { hitType: 'entity', hitPoint: point } : null;
+}
+
+// ADR-662 Φάση 2β (Δρόμος Γ) — thin/derived topo surface: point-in-polygon σε ΟΠΟΙΟΔΗΠΟΤΕ
+// footprint ring (mirror TopoSurfaceRenderer.hitTest — κλικ μέσα στην επιφάνεια την επιλέγει).
+// `.some` (ΟΧΙ even-odd σαν το hatch): τα rings είναι διακριτές συμπαγείς περιοχές (TIN
+// perimeter/islands), όχι outer-minus-holes. Το footprint είναι ήδη world-2D (καμία projection).
+function hitTestTopoSurface(entity: Entity, point: Point2D): Partial<HitTestResult> | null {
+  if (!isTopoSurfaceEntity(entity)) return null;
+  return entity.footprint.some((ring) => ring.length >= 3 && isPointInPolygon(point, ring))
+    ? { hitType: 'entity', hitPoint: point }
+    : null;
 }
 
 function hitTestAnnotationSymbol(
