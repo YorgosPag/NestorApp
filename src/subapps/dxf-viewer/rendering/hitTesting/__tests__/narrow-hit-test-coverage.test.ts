@@ -43,6 +43,9 @@ const PRECISE = [
   // κέρδιζε πάντα το άνοιγμα, γιατί και τα δύο δέχονταν το ίδιο bbox pick).
   'opening', 'slab-opening', 'slab', 'wall', 'column', 'beam', 'foundation',
   'floor-finish', 'wall-covering', 'space-separator',
+  // ADR-662 Φάση 2β (Δρόμος Γ) — topo surface: point-in-polygon footprint containment
+  // (σφιχτότερο από το AABB — κλικ έξω από το μη-κυρτό περίγραμμα δεν επιλέγει).
+  'topo-surface',
 ] as const;
 
 /**
