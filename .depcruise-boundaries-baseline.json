@@ -3,10 +3,10 @@
   "generatedBy": "scripts/check-depcruise-ratchet.js --gate boundaries --write-baseline",
   "adr": "ADR-598 G10",
   "gate": "boundaries",
-  "total": 327,
+  "total": 361,
   "perRule": {
     "no-test-utils-in-prod": 6,
-    "not-to-dxf-internals": 301,
+    "not-to-dxf-internals": 335,
     "services-not-to-components": 20
   }
 }

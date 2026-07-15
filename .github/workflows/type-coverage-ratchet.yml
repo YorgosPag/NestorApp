@@ -43,8 +43,8 @@ on:
         default: false
 
 concurrency:
-  group: type-coverage-ratchet-${{ github.ref }}
-  cancel-in-progress: true
+  group: type-coverage-ratchet-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   type-coverage-ratchet:

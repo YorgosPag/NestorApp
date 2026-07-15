@@ -44,8 +44,8 @@ on:
         default: false
 
 concurrency:
-  group: type-complexity-ratchet-${{ github.ref }}
-  cancel-in-progress: true
+  group: type-complexity-ratchet-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   type-complexity-ratchet:

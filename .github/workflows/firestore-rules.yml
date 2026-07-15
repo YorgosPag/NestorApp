@@ -53,8 +53,8 @@ on:
       - '.github/workflows/firestore-rules.yml'
 
 concurrency:
-  group: firestore-rules-${{ github.ref }}
-  cancel-in-progress: true
+  group: firestore-rules-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   # ---------------------------------------------------------------------------

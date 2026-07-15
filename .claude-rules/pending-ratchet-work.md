@@ -2,6 +2,8 @@
 
 **STATUS: ACTIVE**
 
+**🆕 ADR-598 G9 cycles debt — dxf-viewer barrel over-coupling (2026-07-16, discovered during the catch-up reseed after 204 commits):** το `depcruise` cycles baseline reseed-άρθηκε **421 → 1299** (accepted growth, ADR-598 changelog 2026-07-16). Το VERIFY έδειξε ότι **~91% (~1.190) των κύκλων είναι μέσα στο `dxf-viewer`**, διάχυτοι σε 15+ subfolders (bim 567 / core 164 / systems 123 / rendering 75 / hooks 64 / utils 63 …), με cycle-length **15–25 modules** = κλασικό αποτύπωμα **barrel-file (`index.ts`) re-export over-coupling**. **Down-only ratchet debt** (ΟΧΙ regression — legit BIM growth). Σταδιακή μείωση όταν αγγίζεις τα σχετικά subsystems: σπάσε τα fat public barrels σε στοχευμένα imports (ή διαχώρισε type-only barrels), ξεκινώντας από `bim/` (567 edges, το μεγαλύτερο cluster). Reproduce: `NODE_OPTIONS=--max-old-space-size=8192 npx depcruise src --config .dependency-cruiser.cjs --output-type json` → φίλτραρε `no-circular`, group ανά `from` prefix. Κάθε πραγματική μείωση → CI seed dispatch reseed **προς τα κάτω** (`gh workflow run depcruise-ratchet.yml -f seed=true`).
+
 **🆕 CHECK 3.28 cross-file clone — polygon/footprint grip resize (2026-07-08, discovered while batch-committing ADR-602 grip field-bag files):** `jscpd --diff` found **15 clone pairs** between 4 files that all emit resize/edge grips for polygon-footprint BIM entities:
 - `src/subapps/dxf-viewer/bim/mep-underfloor/mep-underfloor-grips.ts`
 - `src/subapps/dxf-viewer/bim/roofs/roof-grips.ts`

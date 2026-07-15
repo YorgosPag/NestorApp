@@ -2,8 +2,8 @@
   "description": "ADR-598 G6 — bundle-size ratchet baseline. totalSize = static JS+CSS bytes under .next/static (via scripts/bundle-analyzer.js analyzeNextBuild()). Ratchet DOWN only: a rise above totalSize*(1+tolerancePct/100) blocks the PR. Reseed via CI seed dispatch after a legitimate build-size change.",
   "generatedBy": "scripts/check-bundle-size-ratchet.js --write-baseline",
   "adr": "ADR-598 G6",
-  "totalSize": 43647287,
-  "chunksCount": 1365,
-  "cssSize": 375470,
+  "totalSize": 44867887,
+  "chunksCount": 1395,
+  "cssSize": 384292,
   "tolerancePct": 2
 }

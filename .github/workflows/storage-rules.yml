@@ -56,8 +56,8 @@ on:
       - 'firebase.json'
 
 concurrency:
-  group: storage-rules-${{ github.ref }}
-  cancel-in-progress: true
+  group: storage-rules-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   # ---------------------------------------------------------------------------

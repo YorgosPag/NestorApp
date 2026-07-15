@@ -47,8 +47,8 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: eslint-ratchet-${{ github.ref }}
-  cancel-in-progress: true
+  group: eslint-ratchet-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   eslint-ratchet:

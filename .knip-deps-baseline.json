@@ -2,12 +2,12 @@
   "description": "ADR-598 G15 — knip dependency-hygiene ratchet baseline. total = unused dependencies/devDependencies + unlisted + binaries + unresolved (knip --dependencies --reporter json). Ratchet DOWN only: a rise blocks the PR. File-level dead-code scope is unchanged (dxf-viewer stays knip-ignored — see G15 note). Reseed via CI dispatch.",
   "generatedBy": "scripts/check-knip-deps-ratchet.js --write-baseline",
   "adr": "ADR-598 G15",
-  "total": 450,
+  "total": 456,
   "perCat": {
     "dependencies": 9,
-    "devDependencies": 27,
+    "devDependencies": 29,
     "binaries": 5,
     "unresolved": 6,
-    "unlisted": 403
+    "unlisted": 407
   }
 }

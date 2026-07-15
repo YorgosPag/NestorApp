@@ -40,8 +40,8 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: dependency-audit-${{ github.ref }}
-  cancel-in-progress: true
+  group: dependency-audit-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   dependency-audit:

@@ -43,8 +43,8 @@ on:
         default: false
 
 concurrency:
-  group: knip-deps-ratchet-${{ github.ref }}
-  cancel-in-progress: true
+  group: knip-deps-ratchet-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   knip-deps-ratchet:
