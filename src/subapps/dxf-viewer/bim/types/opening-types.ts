@@ -224,6 +224,20 @@ export function isSelfHostedOpening(
   return !params.wallId && !!params.selfHost;
 }
 
+/**
+ * ADR-615 — the wall-hosted counterpart of `isSelfHostedOpening`, written as a type
+ * predicate so callers that genuinely need the host wall (envelope insulation cuts,
+ * section intersection) NARROW `params.wallId` to `string` instead of asserting it.
+ *
+ * Takes the whole opening rather than its params because the narrowing has to land on
+ * the entity the caller goes on to use.
+ */
+export function isWallHostedOpening<T extends { readonly params: Pick<OpeningParams, 'wallId'> }>(
+  opening: T,
+): opening is T & { readonly params: { readonly wallId: string } } {
+  return !!opening.params.wallId;
+}
+
 // ─── Geometry cache (derivable from params + host wall; SSoT = params) ──────
 
 /**

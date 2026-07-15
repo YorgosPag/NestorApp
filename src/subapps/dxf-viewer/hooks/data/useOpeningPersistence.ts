@@ -95,6 +95,15 @@ interface OpeningExtra {
 // FACTORY CONFIG
 // ============================================================================
 
+/**
+ * ADR-395 G6 / ADR-615 — re-feed the host wall BOQ (its net area depends on its openings) ONLY when
+ * the opening is wall-hosted. A self-hosted opening (ADR-615) has no host wall, so there is nothing
+ * to re-feed. SSoT for the guard shared by onPersisted / onDeleted / onRestored.
+ */
+function emitOpeningPersistedIfHosted(wallId: string | undefined | null): void {
+  if (wallId) EventBus.emit('bim:opening-persisted', { wallId });
+}
+
 const useOpeningPersistenceBase = createBimEntityPersistenceHook<
   OpeningFirestoreService,
   OpeningDoc,
@@ -186,8 +195,7 @@ const useOpeningPersistenceBase = createBimEntityPersistenceHook<
         { companyId, projectId, buildingId, floorplanId, floorId: extra.live.floorId ?? undefined },
       );
     }
-    // ADR-395 G6 — host wall net area depends on its openings; re-feed the wall BOQ.
-    EventBus.emit('bim:opening-persisted', { wallId: entity.params.wallId });
+    emitOpeningPersistedIfHosted(entity.params.wallId);
   },
   onDeleted: (id, deleted, { scope, extra, lastSavedComparable }) => {
     const lastKnownParams = lastSavedComparable ?? deleted?.params ?? null;
@@ -203,9 +211,7 @@ const useOpeningPersistenceBase = createBimEntityPersistenceHook<
         companyId, projectId, buildingId, floorplanId, floorId: extra.live.floorId ?? undefined,
       });
     }
-    if (lastKnownParams?.wallId) {
-      EventBus.emit('bim:opening-persisted', { wallId: lastKnownParams.wallId });
-    }
+    emitOpeningPersistedIfHosted(lastKnownParams?.wallId);
   },
   onDeleteCleanup: (id, extra) => {
     extra.lastSavedLink.delete(id);
@@ -224,7 +230,7 @@ const useOpeningPersistenceBase = createBimEntityPersistenceHook<
         { companyId, projectId, buildingId, floorplanId, floorId: extra.live.floorId ?? undefined },
       );
     }
-    EventBus.emit('bim:opening-persisted', { wallId: entity.params.wallId });
+    emitOpeningPersistedIfHosted(entity.params.wallId);
   },
   useExtra: (ctx) => useOpeningExtra(ctx),
 });

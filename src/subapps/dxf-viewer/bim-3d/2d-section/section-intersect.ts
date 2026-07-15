@@ -248,13 +248,18 @@ export function toSlabPlan(slab: SlabEntity): SlabPlan {
 /**
  * Convert OpeningEntity → plan-space input. Needs host wall για να ξέρει το
  * baseY (floor) reference για το sill height.
+ *
+ * `wallId` comes from `hostWall.id`, not `opening.params.wallId`: the caller has already
+ * resolved the host wall to get here, and since ADR-615 made `params.wallId` optional
+ * (self-hosted openings) that field is no longer a guaranteed string. The resolved host
+ * is the truthful source either way.
  */
 export function toOpeningPlan(opening: OpeningEntity, hostWall: WallPlan): OpeningPlan {
   const dx = hostWall.ex - hostWall.sx;
   const dy = hostWall.ey - hostWall.sy;
   const len = Math.sqrt(dx * dx + dy * dy);
   if (len < 1e-9) {
-    return { id: opening.id, wallId: opening.params.wallId, quad: [], sillY: 0, headY: 0 };
+    return { id: opening.id, wallId: hostWall.id, quad: [], sillY: 0, headY: 0 };
   }
   const ux = dx / len;
   const uy = dy / len;
@@ -268,7 +273,7 @@ export function toOpeningPlan(opening: OpeningEntity, hostWall: WallPlan): Openi
   const headY = sillY + opening.params.height * MM_TO_M;
   return {
     id: opening.id,
-    wallId: opening.params.wallId,
+    wallId: hostWall.id,
     quad: quadCorners(s0x, s0y, s1x, s1y, hostWall.thicknessM / 2),
     sillY,
     headY,
