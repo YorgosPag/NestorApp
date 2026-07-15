@@ -1,10 +1,14 @@
 /**
  * ADR-650 Milestone 1 — Topography panel (thinnest visible slice).
  *
- * "Load survey points → see contours" (Q10). A basic file load (X Y Z per line), an
- * interval + index-every field, and a Generate button that runs the deterministic core
- * and drops native contour entities onto the current level. The full import wizard,
- * smoothing switch and 3D view are Milestone 2 — this panel is intentionally minimal.
+ * "Load survey points → see contours" (Q10). A basic file load (X Y Z per line) and a
+ * Generate button that runs the deterministic core and drops native contour entities onto
+ * the current level. The full import wizard, smoothing switch and 3D view are Milestone 2.
+ *
+ * ADR-662 Φάση 2 — τα display/param διπλά (ισοδιάσταση/index, στυλ ισοϋψών, κάναβος ΕΓΣΑ87,
+ * βέλος Βορρά) μετακινήθηκαν ΑΠΟΚΛΕΙΣΤΙΚΑ στο ribbon «Τοπογραφικό»· εδώ μένουν μόνο εντολές/
+ * ροές που δεν έχουν ribbon-ισοδύναμο ή έχουν μοναδικά controls (import, breaklines, generate,
+ * ετικέτες, γεωαναφορά, έδαφος 3Δ, νέφος, cut/fill, QA, auto-breaklines, παραδοτέα).
  *
  * All copy via i18n (N.11, `dxf-viewer-panels` namespace, `topography.*` keys); no inline
  * styles (N.3); semantic structure (section/header/label) (N.4).
@@ -21,17 +25,9 @@ import {
 import { toolStateStore, useActiveTool } from '../../../stores/ToolStateStore';
 import { parseTopoPoints } from '../../../systems/topography/parse-topo-points';
 import { useTopoContours } from '../../../systems/topography/useTopoContours';
-import {
-  getContourConfig,
-  setContourIntervalMm,
-  setContourMajorEvery,
-  subscribeContourConfig,
-} from '../../../systems/topography/contour-config-store';
-import { useContourDisplay } from '../../../systems/topography/useContourDisplay';
+import { getContourConfig } from '../../../systems/topography/contour-config-store';
 import { TopoImportWizard } from './TopoImportWizard';
 import { TopoPointLabelsSection } from './TopoPointLabelsSection';
-import { TopoGridSection } from './TopoGridSection';
-import { NorthArrowSection } from './NorthArrowSection';
 import { TopoGeoReferenceSection } from './TopoGeoReferenceSection';
 import { Terrain3DSection } from './Terrain3DSection';
 import { TopoCutFillSection } from './TopoCutFillSection';
@@ -62,17 +58,11 @@ export function TopographyPanel(): React.JSX.Element {
     else toolStateStore.selectTool('topo-breakline');
   }, [breaklineToolActive]);
 
-  // ADR-650 M3 — plan-view contour display style (exact ↔ smooth). Non-destructive:
-  // the surveyed vertices stay exact, so legal export is always the accurate line.
-  const contourDisplay = useContourDisplay();
-  const contourSmooth = contourDisplay.style === 'smooth';
-
-  // ADR-650 — contour params live in a persistable SSoT store (contour-config-store),
-  // so the interval/index survive reload and drive the load-time regenerate. LOW-freq
-  // consumer (panel), same contract as the display/terrain stores above.
-  const contourConfig = React.useSyncExternalStore(subscribeContourConfig, getContourConfig, getContourConfig);
-  const intervalM = contourConfig.intervalMm / 1000;
-  const majorEvery = contourConfig.majorEvery;
+  // ADR-662 Φάση 2 — contour interval/index + display style (exact ↔ smooth) πλέον ζουν
+  // ΑΠΟΚΛΕΙΣΤΙΚΑ στο ribbon «Τοπογραφικό» (Φ1b widgets: contour-interval / contour-index /
+  // contour-style πάνω στα ΙΔΙΑ persisted stores). Αφαιρέθηκαν από εδώ ως διπλά — big-player
+  // (Revit/Civil 3D): μία θέση για τις παραμέτρους, όχι mega-panel. Το `generate` διαβάζει
+  // την τρέχουσα τιμή απευθείας από το store (`getContourConfig()`).
   const [load, setLoad] = React.useState<LoadInfo | null>(null);
   const [status, setStatus] = React.useState<{ text: string; error: boolean } | null>(null);
   const [wizardOpen, setWizardOpen] = React.useState(false);
@@ -127,23 +117,6 @@ export function TopographyPanel(): React.JSX.Element {
         )}
       </div>
 
-      <div className={styles.row}>
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor="topo-interval">{t('topography.intervalLabel')}</label>
-          <input
-            id="topo-interval" className={styles.input} type="number" min={0.01} step={0.05}
-            value={intervalM} onChange={(e) => setContourIntervalMm(Number(e.target.value) * 1000)}
-          />
-        </div>
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor="topo-major">{t('topography.majorEveryLabel')}</label>
-          <input
-            id="topo-major" className={styles.input} type="number" min={1} step={1}
-            value={majorEvery} onChange={(e) => setContourMajorEvery(Number(e.target.value))}
-          />
-        </div>
-      </div>
-
       {/* ADR-650 M2-Β — breaklines: μαρκάρεις υπάρχουσες γραμμές του σχεδίου ως constraints
           (η επιφάνεια κρατά το κοφτό σκαλί αντί να το εξομαλύνει). */}
       <section className={styles.field}>
@@ -175,45 +148,15 @@ export function TopographyPanel(): React.JSX.Element {
         {t('topography.generate')}
       </button>
 
-      {/* ADR-650 M3 — «Ακριβείς ↔ Όμορφες»: display style over the SAME contours
-          (Civil 3D «Contour Smoothing»). Το «όμορφο» είναι μόνο παρουσίαση — το
-          νόμιμο export βγαίνει πάντα με τις ακριβείς κορυφές. */}
-      <section className={styles.field}>
-        <h3 className={styles.label}>{t('topography.contourStyle.title')}</h3>
-        <p className={styles.subtitle}>{t('topography.contourStyle.hint')}</p>
-        <div className={styles.row}>
-          <button
-            type="button"
-            className={`${styles.generateButton} ${!contourSmooth ? styles.toolActive : ''}`}
-            onClick={() => contourDisplay.setStyle('exact')}
-            aria-pressed={!contourSmooth}
-          >
-            {t('topography.contourStyle.exact')}
-          </button>
-          <button
-            type="button"
-            className={`${styles.generateButton} ${contourSmooth ? styles.toolActive : ''}`}
-            onClick={() => contourDisplay.setStyle('smooth')}
-            aria-pressed={contourSmooth}
-          >
-            {t('topography.contourStyle.smooth')}
-          </button>
-        </div>
-        <p className={styles.status}>{t('topography.contourStyle.exportNote')}</p>
-      </section>
-
       {/* ADR-656 M10 — «Ετικέτες σημείων»: spot Ζ / αρ.·κωδικός / Χ,Υ ΜΟΝΟ στις κορυφές ορίου.
           Επιλεκτικό label ανά τύπο σημείου (Civil 3D COGO point-label style)· ποτέ X,Y στα σημεία. */}
       <TopoPointLabelsSection />
 
-      {/* ADR-656 M11 — «Κάναβος ΕΓΣΑ87»: live graticule toggle + «Αποτύπωση στο σχέδιο» (bake).
-          Ξεχωριστός από το βοηθητικό F7 grid — γεωδαιτικός κάναβος συντεταγμένων (crosses στις
-          στρογγυλές τιμές + περιμετρική αρίθμηση Easting/Northing). */}
-      <TopoGridSection />
-
-      {/* ADR-656 M12 — «Βέλος Βορρά»: live HUD toggle (Κανάβου / Πραγματικός) + «Αποτύπωση στο
-          σχέδιο». Ο Πραγματικός εφαρμόζει σύγκλιση μεσημβρινών ΕΓΣΑ87 (γεωδαιτικά σωστός Βορράς). */}
-      <NorthArrowSection />
+      {/* ADR-662 Φάση 2 — «Κάναβος ΕΓΣΑ87» + «Βέλος Βορρά»: αφαιρέθηκαν από εδώ ως πλήρως διπλά
+          με το ribbon «Τοπογραφικό» → «Παρουσίαση» (Φ1b widgets grid-visible/grid-step/north-
+          visible/north-mode + Φάση-1 actions grid-bake/north-bake). Κάθε control τους ζει ήδη
+          στο ribbon· τα orphaned TopoGridSection/NorthArrowSection component files deprecate στη
+          Φάση 4 (ADR-662 §6.5). */}
 
       {/* ADR-650 M10 — «Γεωαναφορά»: κούμπωμα του DXF πάνω στο τοπογραφικό (Revit Shared
           Coordinates). Auto-align (robust center) + χειροκίνητο κοινό σημείο (1=μετατόπιση,
