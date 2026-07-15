@@ -114,12 +114,26 @@ export function createBimBoqAuditLifecycle<TEntity extends BimBoqAuditEntity>(
       }
     },
     onDeleted: (id, deleted, { scope }) => {
-      config.recordChange(
-        'deleted',
-        deleted
-          ? { id: deleted.id, kind: deleted.kind, layerId: deleted.layerId, params: deleted.params }
-          : { id, kind: config.deletedFallbackKind },
-      );
+      // The four fields are listed deliberately: this PRUNES the entity down to the
+      // audit-relevant subset (`geometry` must not enter the snapshot — pinned by
+      // create-bim-boq-audit-lifecycle.test.ts), so it cannot be `deleted` passed through.
+      // The assertion restores what the projection loses: reading a property off a type
+      // parameter yields the CONSTRAINT's type (`kind: string`, `params: unknown`), not
+      // `TEntity['kind']` / `TEntity['params']` — so the rebuilt literal no longer matched
+      // the recorder's snapshot alternative. Every field below is copied straight off
+      // `deleted`, so the asserted type is the one the values already have.
+      const snapshot = deleted
+        ? ({
+            id: deleted.id,
+            kind: deleted.kind,
+            layerId: deleted.layerId,
+            params: deleted.params,
+          } as Pick<TEntity, 'id' | 'kind'> & {
+            readonly layerId: string;
+            readonly params: TEntity['params'];
+          })
+        : { id, kind: config.deletedFallbackKind };
+      config.recordChange('deleted', snapshot);
       // ADR-408 — remove the auto-fed Η-Μ BOQ row (skips user-detached rows).
       if (scope.companyId) void bimToBoqBridge.deleteBoqItemForBim(id, scope.companyId);
     },

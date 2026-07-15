@@ -29,6 +29,7 @@ import type { MutableRefObject } from 'react';
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
 import type { LevelSceneWriter } from '../../systems/levels/level-scene-accessor';
 import type { BimEventMap } from '../../systems/events/drawing-event-map-bim';
+import type { ResolvedBimPersistenceScope } from '../../bim/persistence/bim-floor-scope';
 import type {
   DocsMergeConfig,
   DocsMergeLevelManager,
@@ -235,11 +236,15 @@ export type BimMergeStrategy<
  * service methods.
  */
 export interface BimEntityServiceAdapter<TService, TEntity extends AnySceneEntity> {
+  // The factory awaits each of these purely for ordering and never reads the resolved
+  // value, so the contract is `Promise<unknown>`: the underlying services legitimately
+  // resolve to the written doc (`saveBeam` → `BeamDoc`), and demanding `Promise<void>`
+  // rejected those adapters for a value nobody consumes.
   /** First-write path (setDoc). Owns `entityToSaveInput`. */
-  readonly save: (svc: TService, entity: TEntity) => Promise<void>;
+  readonly save: (svc: TService, entity: TEntity) => Promise<unknown>;
   /** Re-edit path (updateDoc). Owns the per-entity update patch. */
-  readonly update: (svc: TService, entity: TEntity) => Promise<void>;
-  readonly remove: (svc: TService, id: string) => Promise<void>;
+  readonly update: (svc: TService, entity: TEntity) => Promise<unknown>;
+  readonly remove: (svc: TService, id: string) => Promise<unknown>;
   /** Subscribe to docs; returns the unsubscribe fn. */
   readonly subscribe: (
     svc: TService,
@@ -265,13 +270,18 @@ export interface DeleteTrigger {
 // SCOPE-KEYED SERVICE FACTORY
 // ============================================================================
 
-export interface ResolvedBimScope {
-  readonly companyId: string;
-  readonly projectId: string;
-  readonly floorplanId: string | null;
-  readonly floorId: string | null;
-  readonly userId: string;
-}
+/**
+ * The scope `createService` receives — re-exported from the resolver that produces it
+ * (`resolveBimPersistenceScope`), NOT re-declared here.
+ *
+ * This was a hand-written twin that had drifted: it typed `floorplanId`/`floorId` as
+ * `string | null`, while the resolver guarantees `floorplanId: string` (it mirrors
+ * `floorId` for a file-less floor) and omits `floorId` rather than nulling it. Every
+ * consumer passes the scope straight into a `*FirestoreServiceConfig` (`floorplanId:
+ * string`, `floorId?: string`) — which is exactly the shape the resolver's own type
+ * documents, and which the twin silently contradicted.
+ */
+export type ResolvedBimScope = ResolvedBimPersistenceScope;
 
 // ============================================================================
 // THE CONFIG

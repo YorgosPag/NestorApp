@@ -159,13 +159,10 @@ export function createBimEntityPersistenceHook<
         serviceRef.current = null;
         return;
       }
-      serviceRef.current = config.createService({
-        companyId: scope.companyId,
-        projectId: scope.projectId,
-        floorplanId: scope.floorplanId,
-        floorId: scope.floorId,
-        userId: scope.userId,
-      });
+      // Pass the resolved scope through as-is: it is already shaped for the service
+      // configs (`floorplanId` guaranteed, `floorId` omitted rather than nulled).
+      // Re-spreading it field-by-field re-introduced a `floorId: undefined` key.
+      serviceRef.current = config.createService(scope);
 
       // ADR-635 Φ C.15 — service is now ready: flush first-saves that arrived before it
       // existed (fresh-import race). Their ids are already in `pending` (merge-drop
