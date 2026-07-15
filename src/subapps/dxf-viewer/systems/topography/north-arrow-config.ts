@@ -33,13 +33,15 @@ export const NORTH_ARROW_UNIT_OUTLINE: readonly { readonly x: number; readonly y
   { x: -0.2, y: -0.5 },  // left base
 ] as const;
 
-// ── Screen HUD sizing (px) ────────────────────────────────────────────────────
-/** Arrow height on screen (px). */
-export const TOPO_NORTH_SCREEN_HEIGHT_PX = 46 as const;
-/** Inset of the HUD arrow from the top-right viewport corner (px). */
-export const TOPO_NORTH_SCREEN_INSET_PX = 28 as const;
-/** Glyph font on screen. */
-export const TOPO_NORTH_SCREEN_FONT = 'bold 14px sans-serif' as const;
+// ── Screen HUD sizing ─────────────────────────────────────────────────────────
+/** On-screen box side (px) of the HUD arrow (a square SVG at the top-right corner). */
+export const TOPO_NORTH_SCREEN_BOX_PX = 56 as const;
+/** SVG viewBox side — the arrow/glyph geometry below is expressed in these units. */
+export const TOPO_NORTH_SVG_VIEWBOX = 100 as const;
+/** Arrow height in viewBox units (spans the unit outline's y∈[-0.5,0.5]). */
+export const TOPO_NORTH_SVG_ARROW_SIZE = 62 as const;
+/** «Β» glyph size in viewBox units. */
+export const TOPO_NORTH_SVG_GLYPH_SIZE = 22 as const;
 
 // ── Baked drawing sizing (canonical mm) ───────────────────────────────────────
 /** Arrow height in the drawing (mm) — the baked export entity size. */
