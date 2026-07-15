@@ -17,6 +17,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { ExtendedSceneEntity, PreviewPoint } from './drawing-types';
+import type { PlacementGhostEntity } from '../../bim/placement/placement-overlay-fields';
 import type { Point3D } from '../../bim/types/bim-base';
 import { foundationPreviewStore } from '../../bim/foundations/foundation-preview-store';
 import { buildDefaultFoundationParams, buildFoundationEntity, type FoundationParamOverrides, type SceneUnits } from './foundation-completion';
@@ -95,7 +96,7 @@ export function generateFoundationPreview(
  * πλάτος/βάθος ανά παρειά + ∠ γωνία + βάθος κατά την τοποθέτηση (parity με κολόνα). Τα δεδομένα ζουν
  * ΗΔΗ στο ghost (FoundationEntity) — απλή αναφορά, μηδέν αντιγραφή γεωμετρίας. No-op σε degenerate ghost.
  */
-function attachFoundationPadHud(ghost: ExtendedSceneEntity | null): ExtendedSceneEntity | null {
+function attachFoundationPadHud(ghost: ExtendedSceneEntity | null): PlacementGhostEntity | null {
   if (!ghost) return ghost;
   const fe = ghost as unknown as {
     geometry?: { footprint?: { vertices?: readonly Point2D[] } };
@@ -106,7 +107,9 @@ function attachFoundationPadHud(ghost: ExtendedSceneEntity | null): ExtendedScen
   if (!footprint || footprint.length === 0 || !params || params.kind !== 'pad') return ghost;
   const descriptor: FootprintHudDescriptor = { kind: 'rectangular', rotationDeg: params.rotation };
   const heightSpecLabel = buildFoundationPadHudSpecLabel(params.thicknessMm);
-  return { ...ghost, footprintHud: { footprint, descriptor, heightSpecLabel } } as ExtendedSceneEntity;
+  // ADR-663 §4 part 4 — mirror του `attachColumnHud`: το `footprintHud` ζει στον SSoT
+  // (`PlacementOverlayFields`) → μηδέν cast (ADR-544 ολοκληρωμένο).
+  return { ...ghost, footprintHud: { footprint, descriptor, heightSpecLabel } };
 }
 
 export function generateFoundationPadPreview(

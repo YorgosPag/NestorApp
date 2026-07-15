@@ -29,6 +29,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { WallEntity } from '../../bim/types/wall-types';
 import type { SceneUnits } from '../../utils/scene-units';
 import type { WallHudMeta } from '../../canvas-v2/preview-canvas/wall-hud-paint';
+import type { PlacementOverlayFields } from '../../bim/placement/placement-overlay-fields';
 import { generateWallPreview } from '../../hooks/drawing/wall-preview-helpers';
 import { wallPreviewStore } from '../../bim/walls/wall-preview-store';
 import { wallToMesh } from '../converters/BimToThreeConverter';
@@ -78,7 +79,9 @@ export class WallPlacementGhost {
     // ADR-543 — the SAME `wallHud` meta the 2D canvas attaches (length/angle/thickness·height),
     // surfaced so the 3D HUD overlay paints it with the shared `paintWallHudCore`. Only present
     // in awaitingEnd (wantHud), so the before-click ghost returns null (no HUD), mirror of 2D.
-    const hudMeta = (preview as { wallHud?: WallHudMeta }).wallHud ?? null;
+    // ADR-663 §4 part 4 — ΕΝΑ structural read μέσω του canonical τύπου (ADR-544 ολοκληρωμένο):
+    // το `wallHud` δηλώνεται στο `PlacementOverlayFields`, όχι inline εδώ.
+    const hudMeta = (preview as PlacementOverlayFields).wallHud ?? null;
     // Same converter as every committed wall; building datum in metres so the ghost
     // lands on the same work-plane the cursor was raycast against.
     const mesh = wallToMesh(

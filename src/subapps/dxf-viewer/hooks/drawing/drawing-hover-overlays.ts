@@ -24,8 +24,6 @@ import type { PlacementOverlayFields } from '../../bim/placement/placement-overl
 import type { WallHudMeta } from '../../canvas-v2/preview-canvas/wall-hud-paint';
 import { buildWallHudSpecLabel } from './wall-hud-spec-label';
 import { buildColumnHudSpecLabel } from './column-hud-spec-label';
-import type { ColumnParams } from '../../bim/types/column-types';
-import type { FootprintHudDescriptor } from '../../canvas-v2/preview-canvas/column-hud-paint';
 import { getColumnRotationLock } from '../../systems/cursor/ColumnRotationStore';
 import { resolveColumnRotationDeg } from '../../bim/columns/column-rotation';
 import { worldPerPixel } from '../../rendering/utils/viewport-scale';
@@ -78,22 +76,19 @@ export function paintDrawingHoverOverlays(
   }
   // ADR-508 §wall-hud — ζωντανή ταυτότητα τοίχου: aligned διάσταση μήκους + γωνία + πάχος·ύψος.
   // Τα νούμερα/μετάφραση εδώ (i18n + display units)· το paint είναι pure (numbers in).
-  const wallHud = (previewEntity as { wallHud?: WallHudMeta }).wallHud;
+  const wallHud = overlay.wallHud;
   if (wallHud) {
     // ADR-508 §wall-hud — ΚΟΙΝΗ πηγή της ετικέτας «πάχος·ύψος» (ίδια με το grip-drag HUD).
     // ADR-564 §linear-hud — το ghost μπορεί να φέρει προ-μεταφρασμένη ετικέτα ανά μέλος (π.χ.
     // δοκάρι «b·h»)· όταν λείπει (τοίχος) → fallback στην ετικέτα τοίχου (μηδέν αλλαγή τοίχου).
-    const specLabel = (previewEntity as { hudSpecLabel?: string }).hudSpecLabel
-      ?? buildWallHudSpecLabel(wallHud);
+    const specLabel = overlay.hudSpecLabel ?? buildWallHudSpecLabel(wallHud);
     canvas.drawWallHud(wallHud, specLabel);
   }
   // ADR-564 §footprint-hud — κολόνα/πέδιλο (footprint μέλος): live πλάτος/βάθος ανά παρειά + ∠
   // γωνία + ύψος, ΙΔΙΟΣ pure painter με το grip-drag (`paintColumnHud`). Το ghost φέρει
   // footprint+params ως `columnHud` meta (ADR-398 assembly)· ο handler ζωγραφίζει + μεταφράζει
   // την ετικέτα ύψους (i18n, N.11). Δουλεύει σε ΟΛΕΣ τις φάσεις (awaitingPosition/Rotation/Lean).
-  const columnHud = (previewEntity as {
-    columnHud?: { footprint: readonly Point2D[]; params: ColumnParams };
-  }).columnHud;
+  const columnHud = overlay.columnHud;
   if (columnHud) {
     canvas.drawColumnHud(
       columnHud.footprint,
@@ -105,9 +100,7 @@ export function paintDrawingHoverOverlays(
   // (`paintFootprintHud`) αλλά μέσω ελάχιστου `FootprintHudDescriptor` + προ-μεταφρασμένης
   // ετικέτας βάθους (το πέδιλο έχει `FoundationParams`, όχι `ColumnParams` → entity-agnostic
   // seam, μηδέν type-lie). Το ghost φέρει footprint+descriptor+label ως `footprintHud` meta.
-  const footprintHud = (previewEntity as {
-    footprintHud?: { footprint: readonly Point2D[]; descriptor: FootprintHudDescriptor; heightSpecLabel: string };
-  }).footprintHud;
+  const footprintHud = overlay.footprintHud;
   if (footprintHud) {
     canvas.drawFootprintHud(
       footprintHud.footprint,
@@ -172,7 +165,7 @@ export function paintDrawingHoverOverlays(
   }
   // ADR-508 §opening-conflict — 🔴 tooltip: ο κάθετος τοίχος κόβει άνοιγμα host σε εύρος ύψους
   // (3D έλεγχος αόρατος στην κάτοψη). Reuse `formatLengthForDisplay` (display units) + i18n key.
-  const openingConflict = (previewEntity as { openingConflict?: { bandMm: readonly [number, number] } }).openingConflict;
+  const openingConflict = overlay.openingConflict;
   if (openingConflict) {
     const [lo, hi] = openingConflict.bandMm;
     const range = `${formatLengthForDisplay(lo, { withUnit: false })}–${formatLengthForDisplay(hi)}`;

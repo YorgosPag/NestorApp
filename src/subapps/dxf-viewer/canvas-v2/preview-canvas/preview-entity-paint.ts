@@ -20,7 +20,7 @@ import { renderDistanceLabelFromWorld, renderInfoLabel } from './preview-render-
 import { dispatchPreviewEntityRender } from './preview-entity-dispatch';
 import { BimPreviewRenderer } from './bim-preview-render';
 import { drawEntityStatusSchematic } from '../../bim/ghosts/ghost-status-polygon-draw';
-import type { GhostStatusColor } from '../../bim/ghosts/ghost-status-color';
+import type { PlacementOverlayFields } from '../../bim/placement/placement-overlay-fields';
 
 /** Grip painter injected from the renderer (keeps ownership of the `UnifiedGripRenderer`). */
 export type PreviewGripPainter = (
@@ -48,10 +48,9 @@ export function paintPreviewEntity(
   // BIM entity (`.params` + `.geometry`, flagged `wysiwygPreview`), render it
   // through the SAME real renderers as the committed scene so the rubber-band
   // IS the final element (fill / hatch / lineweight), not a green outline.
-  const bimMeta = entity as {
-    wysiwygPreview?: boolean;
-    ghostStatusColor?: GhostStatusColor | null;
-  };
+  // ADR-663 §4 part 4 — ΕΝΑ structural read μέσω του canonical τύπου (ADR-544 ολοκληρωμένο):
+  // τα ghost-meta πεδία δηλώνονται στο `PlacementOverlayFields`, όχι inline εδώ.
+  const bimMeta = entity as PlacementOverlayFields;
   if (bimMeta.wysiwygPreview && bimPreview) {
     // ADR-398 §beam-to-beam framing — όταν η σύνδεση είναι παράλογη (🔴), ζωγράφισε
     // κόκκινο schematic (outline + 30% fill) αντί WYSIWYG amber, μέσω του κοινού

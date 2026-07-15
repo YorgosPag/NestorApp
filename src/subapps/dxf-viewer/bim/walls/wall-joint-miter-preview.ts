@@ -28,6 +28,7 @@ import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 import { toWysiwygPreviewEntity } from '../../hooks/drawing/wysiwyg-preview-shared';
 import { computeWallGeometry } from '../geometry/wall-geometry';
 import { computeWallTrims, applyTrimPatches, JOIN_THRESHOLD_MM } from './wall-trims';
+import type { PlacementOverlayFields } from '../placement/placement-overlay-fields';
 
 /** Extra metadata carried on the wall ghost so the PreviewRenderer paints the
  *  affected neighbours' updated miter live (read via cast, mirror `wallHud`). */
@@ -136,7 +137,8 @@ export function applyJointMiterPreview(
 ): ExtendedSceneEntity | null {
   if (!ghost) return ghost;
   // 🔴 overlap ghost renders as red schematic → no join to show.
-  if ((ghost as { ghostStatusColor?: unknown }).ghostStatusColor) return ghost;
+  // ADR-663 §4 part 4 — canonical read (ADR-544 ολοκληρωμένο), όχι inline δήλωση σχήματος.
+  if ((ghost as PlacementOverlayFields).ghostStatusColor) return ghost;
   if ((ghost as { type?: string }).type !== 'wall') return ghost;
   const g = ghost as unknown as WallEntity;
   if (g.kind !== 'straight') return ghost;

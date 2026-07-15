@@ -31,6 +31,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { ExtendedSceneEntity } from './drawing-types';
+import type { PlacementGhostEntity } from '../../bim/placement/placement-overlay-fields';
 import { DEFAULT_COLUMN_HEIGHT_MM, type ColumnParams } from '../../bim/types/column-types';
 import {
   buildColumnEntity,
@@ -97,7 +98,7 @@ function autoSizeGhostColumnParams(
  * κατά την τοποθέτηση (parity με τον τοίχο). Τα δεδομένα ζουν ΗΔΗ στο ghost (ColumnEntity) — απλή
  * αναφορά, μηδέν αντιγραφή γεωμετρίας. No-op σε degenerate ghost.
  */
-function attachColumnHud(ghost: ExtendedSceneEntity | null): ExtendedSceneEntity | null {
+function attachColumnHud(ghost: ExtendedSceneEntity | null): PlacementGhostEntity | null {
   if (!ghost) return ghost;
   const ce = ghost as unknown as {
     geometry?: { footprint?: { vertices?: readonly Point2D[] } };
@@ -106,7 +107,9 @@ function attachColumnHud(ghost: ExtendedSceneEntity | null): ExtendedSceneEntity
   const footprint = ce.geometry?.footprint?.vertices;
   const params = ce.params;
   if (!footprint || footprint.length === 0 || !params) return ghost;
-  return { ...ghost, columnHud: { footprint, params } } as ExtendedSceneEntity;
+  // ADR-663 §4 part 4 — το `columnHud` δηλώνεται πλέον στον SSoT (`PlacementOverlayFields`), οπότε
+  // το augmented ghost τυπώνεται κανονικά· μηδέν cast (ADR-544 ολοκληρωμένο).
+  return { ...ghost, columnHud: { footprint, params } };
 }
 
 /**
