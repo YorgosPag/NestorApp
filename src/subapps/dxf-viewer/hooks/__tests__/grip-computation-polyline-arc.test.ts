@@ -7,7 +7,19 @@ import { computeDxfEntityGrips } from '../grip-computation';
 import { gripKindOf } from '../grip-kinds';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { bulgeApexPoint } from '../../rendering/entities/shared/geometry-bulge-utils';
-import { calculateMidpoint } from '../../rendering/entities/shared/geometry-utils';
+import { calculateMidpoint, getNearestPointOnLine } from '../../rendering/entities/shared/geometry-utils';
+import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
+import { buildSmoothedDisplayPath } from '../../rendering/entities/shared/geometry-smooth-display';
+import type { Point2D } from '../../rendering/types/Types';
+
+/** Min distance from `p` to an (open) polyline path — 0 ⇒ p lies on the curve. */
+function distanceToPath(p: Point2D, path: readonly Point2D[]): number {
+  let best = Infinity;
+  for (let i = 0; i < path.length - 1; i += 1) {
+    best = Math.min(best, calculateDistance(p, getNearestPointOnLine(p, path[i], path[i + 1], true)));
+  }
+  return best;
+}
 
 // Closed square; segment 0 (bottom edge) is an arc (bulge 0.5), the rest straight.
 function makeArcedSquare(): DxfEntityUnion {
@@ -53,5 +65,42 @@ describe('computeDxfEntityGrips — polyline multifunctional grip tagging', () =
     expect(arcGrips).toHaveLength(0);
     const segGrips = straight.filter((g) => gripKindOf(g, 'polyline')?.startsWith('polyline-segment-midpoint-'));
     expect(segGrips).toHaveLength(2); // open polyline: 2 edges
+  });
+
+  // ADR-658 M3 — a smoothDisplay «Καμπύλη» (fitted curve) suppresses edge-midpoint grips
+  // (they would float off the visible curve); only fit-point (vertex) grips remain, on the curve.
+  it('a smoothDisplay «Καμπύλη» exposes vertex grips but NO edge-midpoint grips', () => {
+    const curve = computeDxfEntityGrips({
+      id: 'curve-1', type: 'polyline', closed: false, smoothDisplay: true,
+      vertices: [{ x: 0, y: 0 }, { x: 10, y: 10 }, { x: 20, y: 0 }, { x: 30, y: 10 }],
+    } as unknown as DxfEntityUnion);
+    const vertexGrips = curve.filter((g) => gripKindOf(g, 'polyline')?.startsWith('polyline-vertex-'));
+    expect(vertexGrips).toHaveLength(4);
+    const edgeGrips = curve.filter((g) => {
+      const k = gripKindOf(g, 'polyline');
+      return k?.startsWith('polyline-segment-midpoint-') || k?.startsWith('polyline-arc-midpoint-');
+    });
+    expect(edgeGrips).toHaveLength(0);
+    // The whole-entity MOVE + ROTATION handles still follow (indices right after the vertices).
+    const moveRotate = curve.filter((g) => {
+      const k = gripKindOf(g, 'polyline');
+      return k === 'polyline-move' || k === 'polyline-rotation';
+    });
+    expect(moveRotate).toHaveLength(2);
+  });
+
+  // ADR-658 M3 — the MOVE cross + ROTATION handle must sit ON the fitted curve, not on the
+  // straight longest-chord (Giorgio 2026-07-15).
+  it('MOVE + ROTATION handles land ON the smoothDisplay curve (not the chord)', () => {
+    const verts = [{ x: 0, y: 0 }, { x: 10, y: 40 }, { x: 40, y: 40 }, { x: 60, y: 0 }, { x: 90, y: 30 }];
+    const curveGrips = computeDxfEntityGrips({
+      id: 'curve-2', type: 'polyline', closed: false, smoothDisplay: true, vertices: verts,
+    } as unknown as DxfEntityUnion);
+    const path = buildSmoothedDisplayPath(verts, false);
+    for (const kind of ['polyline-move', 'polyline-rotation']) {
+      const handle = curveGrips.find((g) => gripKindOf(g, 'polyline') === kind);
+      expect(handle).toBeDefined();
+      expect(distanceToPath(handle!.position, path)).toBeLessThan(1e-6);
+    }
   });
 });

@@ -260,17 +260,22 @@ export class PolylineRenderer extends BaseEntityRenderer {
       });
     });
     
-    // Use shared utility for edge grips
+    // Use shared utility for edge grips — EXCEPT a smoothDisplay «Καμπύλη» (fitted curve),
+    // whose chord-midpoint grips would float off the visible curve (ADR-658 M3: fit-point
+    // grips only, AutoCAD spline UX). Mirrors `buildPolylineGrips` so paint ≡ interaction.
     const closed = ('closed' in entity) ? entity.closed as boolean : false;
-    const edgeGrips = createEdgeGrips(entity.id, vertices, closed, vertices.length);
-    grips.push(...edgeGrips);
+    const hasEdgeGrips = (entity as unknown as { smoothDisplay?: boolean }).smoothDisplay !== true;
+    if (hasEdgeGrips) {
+      grips.push(...createEdgeGrips(entity.id, vertices, closed, vertices.length));
+    }
 
     // ADR-561 — render the SAME whole-polyline handles the interaction path emits
     // (`getPolylineMoveRotateGrips`): centre → 4-arrow MOVE glyph, rotation → curved
     // ROTATION glyph via the shared `gripGlyphShape` registry. Indices match the
     // interaction path (`polylineMoveRotateStartIndex`) so paint ≡ hit-test.
     const moveRotate = getPolylineMoveRotateGrips(
-      entity.id, vertices, closed, polylineMoveRotateStartIndex(vertices.length, closed),
+      entity.id, vertices, closed, polylineMoveRotateStartIndex(vertices.length, closed, hasEdgeGrips),
+      !hasEdgeGrips, // smoothDisplay «Καμπύλη» → snap handles onto the fitted curve (paint ≡ interaction)
     );
     grips.push(...toMoveRotateGlyphGrips(moveRotate, 'polyline'));
 

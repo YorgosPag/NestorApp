@@ -132,7 +132,10 @@ function buildPolylineGrips(entity: PolylineDxf): GripInfo[] {
     });
   });
   const vLen = entity.vertices.length;
-  const edgeCount = entity.closed ? vLen : vLen - 1;
+  // ADR-658 M3 — a smoothDisplay «Καμπύλη» (fitted curve) shows fit-point (vertex) grips
+  // only: chord-midpoint edge grips would float off the visible curve (AutoCAD spline UX).
+  const hasEdgeGrips = entity.smoothDisplay !== true;
+  const edgeCount = hasEdgeGrips ? (entity.closed ? vLen : vLen - 1) : 0;
   for (let i = 0; i < edgeCount; i++) {
     const next = (i + 1) % vLen;
     const p0 = entity.vertices[i];
@@ -153,7 +156,8 @@ function buildPolylineGrips(entity: PolylineDxf): GripInfo[] {
   }
   grips.push(...getPolylineMoveRotateGrips(
     entity.id, entity.vertices, entity.closed,
-    polylineMoveRotateStartIndex(vLen, entity.closed),
+    polylineMoveRotateStartIndex(vLen, entity.closed, hasEdgeGrips),
+    !hasEdgeGrips, // smoothDisplay «Καμπύλη» → snap handles onto the fitted curve
   ));
   return grips;
 }

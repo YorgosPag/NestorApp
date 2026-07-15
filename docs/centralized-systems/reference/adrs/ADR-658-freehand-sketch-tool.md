@@ -212,6 +212,11 @@ Esc → store.cancel()
     `buildPolylineGrips`) + smoothDisplay-aware `polylineMoveRotateStartIndex(…, hasEdgeGrips)` ώστε
     οι move/rotate δείκτες να μένουν σε συγχρονισμό (paint ≡ hit-test). Ισχύει και για τις ισοϋψείς
     (ADR-650) — ήταν λανθασμένο και εκεί. Βλ. memory `reference_spline_entity_not_renderable_use_smoothdisplay`.
+  - **Handles-on-curve (Giorgio 2026-07-15):** ο σταυρός MOVE + το σημάδι ROTATION έπεφταν στη
+    μεγαλύτερη ευθεία **χορδή** (εκτός καμπύλης). Για smoothDisplay, το `getPolylineMoveRotateGrips`
+    δέχεται `smoothDisplay` flag και **προβάλλει** και τις δύο λαβές στο fitted curve
+    (`buildSmoothedDisplayPath` + `closestPointOnPolyline`, reuse `getNearestPointOnLine` primitive —
+    μηδέν νέα projection math, N.18). Ίδιος υπολογισμός σε paint + interaction → paint ≡ hit-test.
   - jest: sketch-freehand-store.test.ts 19/19 + grip-computation-polyline-arc (+«Καμπύλη» no-edge-grips)
     + polyline-grips + grip-computation-coverage GREEN. dispatch 36 routes + tool-creates-entity
     coverage GREEN. `jscpd:diff` καθαρό.

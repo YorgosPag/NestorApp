@@ -46,6 +46,11 @@ import { axisToRectFrame, axisQuarterRotationHandleWorld, axisQuarterMoveHandleW
 import { asOrientedRect, polylineBboxCenter, longestPolylineSegment } from './rectangle-detect';
 import { projectVerticesTo2D } from '../../bim/geometry/shared/polygon-utils';
 import { isStraightSegment } from '../../rendering/entities/shared/geometry-bulge-utils';
+// ADR-658 M3 — snap the whole-entity handles onto a smoothDisplay «Καμπύλη»: the fitted
+// display curve (SSoT) + the shared per-segment nearest-point primitive (no new projection math, N.18).
+import { buildSmoothedDisplayPath } from '../../rendering/entities/shared/geometry-smooth-display';
+import { getNearestPointOnLine } from '../../rendering/entities/shared/geometry-utils';
+import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 
 /** The polyline whole-entity grip kinds (mirror `wall-midpoint` / `wall-rotation`). */
 export const POLYLINE_MOVE_KIND: PolylineGripKind = 'polyline-move';
@@ -56,9 +61,18 @@ export const POLYLINE_ROTATION_KIND: PolylineGripKind = 'polyline-rotation';
  * per-vertex grips (`0..n-1`) + the per-edge grips (`n..n+edgeCount-1`). Shared so
  * interaction + render assign the SAME indices (a mismatch would break hit-test ↔
  * paint correspondence). `edgeCount = closed ? n : n-1` (AutoCAD outgoing segments).
+ *
+ * ADR-658 M3 — a `smoothDisplay` «Καμπύλη» (fitted curve) emits NO edge-midpoint grips
+ * (they would float off the curve on the straight chord; AutoCAD spline shows fit-point
+ * grips only), so `hasEdgeGrips=false` collapses `edgeCount` to 0 and the handles follow
+ * straight after the vertices. Both grip paths pass the SAME flag → indices stay in sync.
  */
-export function polylineMoveRotateStartIndex(vertexCount: number, closed: boolean): number {
-  const edgeCount = closed ? vertexCount : Math.max(0, vertexCount - 1);
+export function polylineMoveRotateStartIndex(
+  vertexCount: number,
+  closed: boolean,
+  hasEdgeGrips: boolean = true,
+): number {
+  const edgeCount = hasEdgeGrips ? (closed ? vertexCount : Math.max(0, vertexCount - 1)) : 0;
   return vertexCount + edgeCount;
 }
 
@@ -107,30 +121,58 @@ export function resolveMoveRotateHandleWorld(
   return { move: center, rotation: center };
 }
 
+/** Nearest point ON an (open) polyline path — projects onto every segment, keeps the closest. */
+function closestPointOnPolyline(target: Point2D, path: readonly Point2D[]): Point2D {
+  if (path.length === 0) return { ...target };
+  if (path.length === 1) return { ...path[0] };
+  let best = path[0];
+  let bestDist = Infinity;
+  for (let i = 0; i < path.length - 1; i += 1) {
+    const p = getNearestPointOnLine(target, path[i], path[i + 1], true);
+    const d = calculateDistance(target, p);
+    if (d < bestDist) { bestDist = d; best = p; }
+  }
+  return best;
+}
+
 /**
  * The 2 whole-polyline handles (MOVE cross + rotation), placed via the shared
  * {@link resolveMoveRotateHandleWorld} placement SSoT (rect-box parity for a rectangle,
  * longest-segment ¼-points for a generic polyline). Returns the hooks `GripInfo`; the 2D
  * renderer maps each to its render `GripInfo` (+`shape`). Degenerate rings (<2 vertices)
  * get no handles.
+ *
+ * ADR-658 M3 — for a `smoothDisplay` «Καμπύλη» BOTH handles are snapped onto the visible
+ * fitted curve (they'd otherwise sit on the straight longest-chord, off the curve — Giorgio
+ * 2026-07-15 «ο σταυρός και το σημάδι περιστροφής να πέφτουν πάνω στον άξονα της καμπύλης»).
  */
 export function getPolylineMoveRotateGrips(
   entityId: string,
   vertices: readonly Point2D[],
   closed: boolean,
   startIndex: number,
+  smoothDisplay: boolean = false,
 ): GripInfo[] {
   const pos = resolveMoveRotateHandleWorld(vertices, closed);
   if (!pos) return [];
+  let move = pos.move;
+  let rotation = pos.rotation;
+  if (smoothDisplay) {
+    const curve = buildSmoothedDisplayPath(vertices, closed);
+    if (curve.length >= 2) {
+      move = closestPointOnPolyline(move, curve);
+      rotation = closestPointOnPolyline(rotation, curve);
+    }
+  }
   return [
     {
       entityId, gripIndex: startIndex, type: 'center',
-      position: pos.move, movesEntity: true,
+      position: move, movesEntity: true,
       gripKind: { on: 'polyline', kind: POLYLINE_MOVE_KIND },
     },
     {
       entityId, gripIndex: startIndex + 1, type: 'vertex',
-      position: pos.rotation, movesEntity: false,
+      position: rotation, movesEntity: false,
       gripKind: { on: 'polyline', kind: POLYLINE_ROTATION_KIND },
     },
   ];
