@@ -264,3 +264,30 @@ const project: OverlayProjector = makeGripPlanToCanvas(camera, canvas, () => ele
     `PlacementOverlayFields` (`bim/placement/placement-overlay-fields.ts`)· και οι δύο readers το κάνουν
     `entity as PlacementOverlayFields` (2D: 4 casts → 1). Μηδέν διπλή γνώση πεδίων.
   - 43/43 jest GREEN μετά το dedup. Pre-commit CHECK 6D → ADR-544 staged.
+
+- **2026-07-16 — το `PlacementOverlayFields` ΟΛΟΚΛΗΡΩΘΗΚΕ** (ADR-663 §4 part 4b· εντολή Giorgio).
+  Το αρχικό audit (πάνω) κάλυψε **μόνο 4 πεδία** — πλέγμα/διαστάσεις/οδηγός. Τα υπόλοιπα ghost-meta
+  πεδία **έμειναν εκτός**, κι έτσι το ίδιο ακριβώς αντι-μοτίβο **επέζησε σε ό,τι δεν μεταφέρθηκε**:
+  - **Readers**: `drawing-hover-overlays` (×4), `WallPlacementGhost`, `wall-joint-miter-preview`,
+    `preview-entity-paint` διάβαζαν με inline cast που **ξανα-δήλωνε το σχήμα** — το
+    `drawing-hover-overlays:168` έγραφε στο χέρι `{ bandMm: readonly [number, number] }` ενώ το
+    `OpeningConflictMeta` **εξάγεται** ήδη δίπλα του.
+  - **Writers**: τα δίδυμα `attachColumnHud`/`attachFoundationPadHud` έκαναν
+    `{ ...ghost, xHud } as ExtendedSceneEntity` — cast που **το TS απέρριπτε** (2× TS2352), γιατί το
+    `ExtendedSceneEntity` **δεν δηλώνει κανένα** ghost-meta πεδίο.
+  - **Τώρα δηλώνονται όλα εδώ, μία φορά**: `wallHud`, `hudSpecLabel`, `columnHud` (+`ColumnHudMeta`),
+    `footprintHud` (+`FootprintHudMeta`), `wysiwygPreview`, `ghostStatusColor`, `openingConflict`,
+    + `PlacementGhostEntity = ExtendedSceneEntity & PlacementOverlayFields` για τους writers (οι δύο
+    twins πλέον **χωρίς κανένα cast**). Grep: **μηδέν** inline cast αυτών των πεδίων απομένει.
+  - **Σκόπιμα ΕΚΤΟΣ**: το `liveDimHud` — σε αντίθεση με το `columnHud`, το **δηλώνει ο παραγωγός του**
+    (`ExtendedLineEntity`/`ExtendedPolylineEntity`)· το cast του reader απλώς στενεύει το union σε μέλος
+    που ήδη κατέχει το πεδίο, δεν είναι διπλή γνώση. Μεταφορά του θα δημιουργούσε **δεύτερη** δήλωση —
+    ακριβώς αυτό που απαγορεύει το ADR-544. **Ο κανόνας**: το `PlacementOverlayFields` κατέχει meta που
+    προσαρτώνται σε **πραγματικά entity ghosts** (που δεν μπορούν να τα δηλώσουν)· τα `Extended*`
+    interfaces κατέχουν τα **δικά τους** preview πεδία.
+  - **Εκκρεμεί (όχι regression)**: το `toWysiwygPreviewEntity` κρατά `as unknown as ExtendedSceneEntity`
+    + **7 positional params** — τώρα που τα πεδία δηλώνονται, υποψήφιο για options object τυπωμένο με
+    `PlacementOverlayFields` αντί για 8ο param. Ξεχωριστή αλλαγή.
+  - **Δίδαγμα**: ένας **μερικώς** εφαρμοσμένος SSoT δεν μικραίνει το πρόβλημα — το **κρύβει στο υπόλοιπο**.
+  - Verification: **1239/1239 tests** (125/126 suites· το 1 fail = προϋπάρχον circular-import στο
+    `hooks/grips/`, άσχετο). `jscpd:diff` καθαρό (7 αρχεία). tsc: 62 → **60**.
