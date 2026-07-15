@@ -45,6 +45,7 @@ export type {
   DrawingState,
 } from './drawing-types';
 import type { DrawingTool, ExtendedSceneEntity, DrawingState } from './drawing-types';
+import type { Entity } from '../../types/entities';
 import { useLevels, useCurrentLevelScene } from '../../systems/levels';
 import { usePreviewMode } from '../usePreviewMode';
 import { useLineStyles } from '../../settings-provider';
@@ -132,7 +133,7 @@ export function useUnifiedDrawing() {
     applyPreviewSettingsToEntity(entity, linePreviewStyles);
   }, [linePreviewStyles]);
 
-  const createEntityFromTool = useCallback((tool: DrawingTool, points: Point2D[]): ExtendedSceneEntity | null => {
+  const createEntityFromTool = useCallback((tool: DrawingTool, points: Point2D[]): Entity | null => {
     // ADR-578 — crypto-unique id from the enterprise SSoT (ADR-065), minted here so
     // the id is known before `completeEntity`/`CreateEntityCommand` execute (preserves
     // the ADR-507 §5δ.9 post-create compound-command contract that needs a stable id
@@ -171,7 +172,9 @@ export function useUnifiedDrawing() {
 
       const nextPreview = createEntityFromTool(currentTool, [newTempPoints[newTempPoints.length - 1]]);
       if (nextPreview) {
-        previewEntityRef.current = nextPreview as ExtendedSceneEntity;
+        // ADR-663 §4 part 4 — ο builder επιστρέφει πλέον `Entity`, που ΕΙΝΑΙ μέλος του
+        // `ExtendedSceneEntity` union → η ανάθεση στέκει χωρίς cast.
+        previewEntityRef.current = nextPreview;
       }
       return false;
     }

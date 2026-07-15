@@ -9,6 +9,7 @@
  */
 import type { Point2D } from '../../rendering/types/Types';
 import type { PolylineEntity } from '../../types/scene';
+import type { Entity } from '../../types/entities';
 import type {
   DrawingTool,
   ExtendedSceneEntity,
@@ -67,8 +68,15 @@ import { getDefaultLayerId } from '../../stores/LayerStore';
 import { generateXLinePreview, generateRayPreview } from './xline-ray-preview-helpers';
 // ADR-358 Phase 9D-5a: id-only WRITE — legacy `layer` field dropped (schema flip deferred to 9D-5b).
 // ─── Callback types for dependency injection ───────────────────────────────
-/** Creates an entity from tool + points. Injected to avoid circular dependency. */
-export type CreateEntityFn = (tool: DrawingTool, points: Point2D[]) => ExtendedSceneEntity | null;
+/**
+ * Creates an entity from tool + points. Injected to avoid circular dependency.
+ *
+ * ADR-663 §4 part 4 — `Entity`, ΟΧΙ `ExtendedSceneEntity`: η ΜΟΝΗ υλοποίηση είναι ο commit builder
+ * (`createEntityFromTool`), που ποτέ δεν παράγει preview-only ψευδο-entities. Τα `PreviewPoint`/
+ * `PreviewText` γεννιούνται ΜΟΝΟ εδώ, στον preview δρόμο (βλ. `generatePreviewEntity` → π.χ.
+ * foundation start-marker), όχι από τον injected builder.
+ */
+export type CreateEntityFn = (tool: DrawingTool, points: Point2D[]) => Entity | null;
 /** Applies ColorPalettePanel preview settings to an entity. Injected because it depends on hook state. */
 export type ApplySettingsFn = (entity: Record<string, unknown>) => void;
 // ─── Helper: create a rubber-band polyline preview ─────────────────────────

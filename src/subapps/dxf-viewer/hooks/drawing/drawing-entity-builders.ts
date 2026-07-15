@@ -16,7 +16,7 @@ import type {
   AngleMeasurementEntity,
   ArcEntity,
 } from '../../types/scene';
-import type { XLineEntity, RayEntity } from '../../types/entities';
+import type { Entity, XLineEntity, RayEntity } from '../../types/entities';
 import { getXLineModeState } from '../../systems/tools/xline-mode-store';
 // ADR-658 M3 (D1) — «Μολύβι» output-type SSoT: «Τεθλασμένη» (plain polyline) vs «Καμπύλη»
 // (polyline + ADR-650 smoothDisplay fitted-curve). Read at build time (mirror του xline mode).
@@ -33,7 +33,6 @@ import { buildScaleBarEntityFromLiveOptions } from '../../state/scale-bar-option
 import { buildOpeningInfoTagEntityFromLiveOptions } from '../../state/opening-info-tag-options-store';
 import type {
   DrawingTool,
-  ExtendedSceneEntity,
   ExtendedPolylineEntity,
 } from './drawing-types';
 import {
@@ -91,13 +90,15 @@ function buildArcEntity(
  * @param entityId - Unique entity identifier (e.g. "entity_42")
  * @param arcFlipped - Whether the arc direction has been flipped by the user (X key)
  * @returns The created entity, or null if not enough points / calculation failed
+ *
+ * ADR-663 §4 part 4 — commit builder ⇒ `Entity`, ΟΧΙ η preview ένωση `ExtendedSceneEntity` (βλ. ADR-663 §4).
  */
 export function createEntityFromTool(
   tool: DrawingTool,
   points: Point2D[],
   entityId: string,
   arcFlipped: boolean
-): ExtendedSceneEntity | null {
+): Entity | null {
   const id = entityId;
   // ADR-358 Phase 9D-5a: id-only WRITE — legacy `layer` field dropped (schema flip deferred to 9D-5b).
   const defaultLayerId = getDefaultLayerId();
