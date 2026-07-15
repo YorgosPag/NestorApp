@@ -20,6 +20,8 @@ const ALL_EXPECTED_KEYS = [
   // water (incl. plumbing fixtures + appliances)
   'mep-manifold', 'mep-pipe', 'mepCircuit.actions.deriveNetworks',
   'mep-wc', 'mep-washbasin', 'mep-shower', 'mep-bathtub', 'mep-bidet', 'mep-washing-machine',
+  // ADR-638 Στάδιο 2b — generative bathroom auto-arrange tool (water fixtures panel).
+  'bathroom-auto-arrange',
   'waterSupply.actions.generate', 'waterSupply.actions.accept', 'waterSupply.actions.reject',
   // drainage
   'mep-drainage-collector', 'mep-drain-pipe', 'mep-floor-drain', 'mep-drain-riser',
