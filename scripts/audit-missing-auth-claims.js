@@ -127,25 +127,35 @@ async function auditMissingClaims() {
     process.exit(1);
   }
 
+  // A disabled user cannot authenticate at all — Firebase blocks it before
+  // extractCustomClaims() runs — so a claim-less DISABLED user is already
+  // locked out and the fail-closed patch changes nothing for them. Only
+  // ENABLED users missing claims are a shipping blocker.
+  const blocking = offenders.filter((o) => !o.disabled);
+
   console.log(`  Scanned users            : ${total}`);
   console.log(`  Users missing claim(s)   : ${offenders.length}`);
-  console.log(`    ↳ of which disabled    : ${disabledCount}`);
+  console.log(`    ↳ disabled (safe)      : ${disabledCount}`);
+  console.log(`    ↳ enabled (BLOCKING)   : ${blocking.length}`);
   console.log('');
 
-  if (offenders.length === 0) {
-    console.log('✅ SAFE TO SHIP — every user has both companyId and globalRole claims.');
+  if (blocking.length === 0) {
+    console.log('✅ SAFE TO SHIP — every user who can still log in has both claims.');
     console.log('   The ADR-657 fail-closed patch will not lock anyone out.');
+    if (offenders.length > 0) {
+      console.log(`   (${offenders.length} disabled account(s) lack claims but cannot authenticate.)`);
+    }
     console.log('');
     console.log('═══════════════════════════════════════════════════════════════');
     process.exit(0);
   }
 
-  console.log('⚠️  DO NOT SHIP the fail-closed patch yet — these users would 401:');
+  console.log('⚠️  DO NOT SHIP the fail-closed patch yet — these ENABLED users would 401:');
   console.log('');
   console.log('┌────────────┬──────────────────────┬──────────┬──────────────────────');
   console.log('│ UID        │ Email (masked)       │ Disabled │ Missing');
   console.log('├────────────┼──────────────────────┼──────────┼──────────────────────');
-  for (const o of offenders) {
+  for (const o of blocking) {
     console.log(
       `│ ${o.uidPrefix.padEnd(10)} │ ${String(o.email).padEnd(20)} │ ` +
         `${(o.disabled ? '⚠️ yes' : 'no').padEnd(8)} │ ${o.missing.join(', ')}`,

@@ -169,22 +169,22 @@ async function verifySessionCookie(sessionCookie: string): Promise<DecodedIdToke
  * @returns CustomClaims or null if invalid
  */
 function extractCustomClaims(token: DecodedIdToken): CustomClaims | null {
-  // Extract companyId (required for multi-tenant)
-  // Fallback: NEXT_PUBLIC_DEFAULT_COMPANY_ID for single-tenant deployments
-  // where custom claims haven't been set yet
-  const companyId = (token.companyId as string | undefined)
-    || process.env.NEXT_PUBLIC_DEFAULT_COMPANY_ID;
-  if (!companyId || typeof companyId !== 'string') {
-    logger.info('[AUTH_CONTEXT] Missing companyId claim and no DEFAULT_COMPANY_ID env var');
+  // ADR-657 §3.5 — FAIL CLOSED. A token without RFC-v6 claims is not an identity
+  // we can authorize. The previous env-var / 'company_admin' fallbacks silently
+  // granted a default tenant + ADMIN rights to any user whose claims-provisioning
+  // had failed (see scripts/audit-missing-auth-claims.js).
+  const companyId = token.companyId as string | undefined;
+  if (typeof companyId !== 'string' || companyId.length === 0) {
+    logger.warn('[AUTH_CONTEXT] DENY — missing companyId claim', { uid: token.uid });
     return null;
   }
 
-  // Extract globalRole (required)
-  // Fallback: 'company_admin' for single-tenant deployments
-  // where custom claims haven't been set yet
-  const globalRoleRaw = (token.globalRole as string | undefined) || 'company_admin';
-  if (!isValidGlobalRole(globalRoleRaw)) {
-    logger.info('[AUTH_CONTEXT] Invalid globalRole claim:', { globalRole: globalRoleRaw });
+  const globalRoleRaw = token.globalRole as string | undefined;
+  if (typeof globalRoleRaw !== 'string' || !isValidGlobalRole(globalRoleRaw)) {
+    logger.warn('[AUTH_CONTEXT] DENY — missing/invalid globalRole claim', {
+      uid: token.uid,
+      globalRole: globalRoleRaw,
+    });
     return null;
   }
 
@@ -205,6 +205,40 @@ function extractCustomClaims(token: DecodedIdToken): CustomClaims | null {
 // =============================================================================
 // MAIN CONTEXT BUILDER
 // =============================================================================
+
+/**
+ * Turn an already-decoded token (from a Bearer ID token OR a __session cookie)
+ * into a RequestContext. Both credential paths share this — decode differs, the
+ * claims→context steps are identical, so they live here once (N.18 anti-clone).
+ *
+ * @param decodedToken - the verified token, or null if verification failed
+ * @param request - the incoming request (for super-admin company override)
+ * @returns AuthContext on valid claims, else the matching UnauthenticatedContext
+ */
+function contextFromDecodedToken(
+  decodedToken: DecodedIdToken | null,
+  request: NextRequest,
+): RequestContext {
+  if (!decodedToken) {
+    return createUnauthenticatedContext('invalid_token');
+  }
+
+  const claims = extractCustomClaims(decodedToken);
+  if (!claims) {
+    return createUnauthenticatedContext('missing_claims');
+  }
+
+  const effective = resolveEffectiveCompanyId(request, claims, decodedToken.uid);
+  return {
+    uid: decodedToken.uid,
+    email: decodedToken.email || '',
+    companyId: effective.companyId,
+    globalRole: claims.globalRole,
+    mfaEnrolled: claims.mfaEnrolled ?? false,
+    isAuthenticated: true,
+    superAdminOverride: effective.overridden,
+  };
+}
 
 /**
  * Build request context from NextRequest.
@@ -235,54 +269,15 @@ export async function buildRequestContext(
   const token = extractBearerToken(request);
 
   if (token) {
-    // Verify ID token
-    const decodedToken = await verifyIdToken(token);
-    if (!decodedToken) {
-      return createUnauthenticatedContext('invalid_token');
-    }
-
-    // Extract RFC v6 claims
-    const claims = extractCustomClaims(decodedToken);
-    if (!claims) {
-      return createUnauthenticatedContext('missing_claims');
-    }
-
-    const effective = resolveEffectiveCompanyId(request, claims, decodedToken.uid);
-    return {
-      uid: decodedToken.uid,
-      email: decodedToken.email || '',
-      companyId: effective.companyId,
-      globalRole: claims.globalRole,
-      mfaEnrolled: claims.mfaEnrolled ?? false,
-      isAuthenticated: true,
-      superAdminOverride: effective.overridden,
-    };
+    // Verify ID token, then run the shared claims→context path.
+    return contextFromDecodedToken(await verifyIdToken(token), request);
   }
 
   // Step 2: Try session cookie (__session) — browser clients use credentials: 'include'
   const sessionCookie = extractSessionCookie(request);
 
   if (sessionCookie) {
-    const decodedToken = await verifySessionCookie(sessionCookie);
-    if (!decodedToken) {
-      return createUnauthenticatedContext('invalid_token');
-    }
-
-    const claims = extractCustomClaims(decodedToken);
-    if (!claims) {
-      return createUnauthenticatedContext('missing_claims');
-    }
-
-    const effective = resolveEffectiveCompanyId(request, claims, decodedToken.uid);
-    return {
-      uid: decodedToken.uid,
-      email: decodedToken.email || '',
-      companyId: effective.companyId,
-      globalRole: claims.globalRole,
-      mfaEnrolled: claims.mfaEnrolled ?? false,
-      isAuthenticated: true,
-      superAdminOverride: effective.overridden,
-    };
+    return contextFromDecodedToken(await verifySessionCookie(sessionCookie), request);
   }
 
   // Step 3: No credentials found — development bypass or reject

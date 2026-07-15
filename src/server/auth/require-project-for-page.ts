@@ -59,14 +59,19 @@ export async function requireProjectForPage(
       throw new TenantIsolationError('Invalid or expired session', 403, 'FORBIDDEN');
     }
 
-    const companyId = (decoded.companyId as string | undefined)
-      || process.env.NEXT_PUBLIC_DEFAULT_COMPANY_ID;
-    if (!companyId) {
+    // ADR-657 §3.5 — FAIL CLOSED. No env-var companyId fallback, no default
+    // 'company_admin' role: a session cookie without RFC-v6 claims is denied,
+    // not silently promoted to a default tenant + admin.
+    const companyId = decoded.companyId as string | undefined;
+    if (typeof companyId !== 'string' || companyId.length === 0) {
       throw new TenantIsolationError('Missing companyId claim', 403, 'FORBIDDEN');
     }
 
-    const globalRoleRaw = (decoded.globalRole as string | undefined) || 'company_admin';
-    const globalRole: GlobalRole = isValidGlobalRole(globalRoleRaw) ? globalRoleRaw : 'company_admin';
+    const globalRoleRaw = decoded.globalRole as string | undefined;
+    if (typeof globalRoleRaw !== 'string' || !isValidGlobalRole(globalRoleRaw)) {
+      throw new TenantIsolationError('Missing or invalid globalRole claim', 403, 'FORBIDDEN');
+    }
+    const globalRole: GlobalRole = globalRoleRaw;
 
     ctx = {
       uid: decoded.uid,
