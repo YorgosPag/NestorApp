@@ -19,7 +19,7 @@
 import { dequal } from 'dequal';
 
 import type { SceneModel } from '../../types/entities';
-import type { OpeningEntity, OpeningParams } from '../types/opening-types';
+import { isWallHostedOpening, type OpeningEntity, type OpeningParams } from '../types/opening-types';
 import type { OpeningTypeParams } from '../types/bim-family-type';
 import type { WallEntity } from '../types/wall-types';
 import { computeOpeningGeometry } from '../geometry/opening-geometry';
@@ -139,7 +139,8 @@ export function reresolveSceneOpenings(
     if ((e as { type?: string }).type !== 'opening') return e;
     const opening = e as unknown as OpeningEntity;
     if (!opening.typeId || dirtyIds.has(opening.id)) return e;
-    const host = wallsById.get(opening.params.wallId) ?? null;
+    // ADR-615 — a self-hosted opening carries no `wallId`; `null` host is normal.
+    const host = isWallHostedOpening(opening) ? wallsById.get(opening.params.wallId) ?? null : null;
     const next = reresolveOpeningEntity(opening, host);
     if (next !== opening) mutated = true;
     return next;
