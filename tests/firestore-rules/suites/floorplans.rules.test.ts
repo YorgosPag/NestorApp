@@ -1,8 +1,11 @@
 /**
  * Firestore Rules — `floorplans` collection
  *
- * Pattern: tenant_direct (crmDirectMatrix) — same shape as project_floorplans.
- * No `isSuperAdminOnly()` on create → super_admin denied.
+ * Pattern: bim_presentation legacy container (ADR-657) — legacyFloorplanMatrix,
+ * same shape as project_floorplans (without the projectId read leg).
+ * Read via canReadLegacyFloorplan(); create via canCreateLegacyFloorplan()
+ * (super_admin allowed); update/delete via canWriteLegacyFloorplan()/isBimWriter()
+ * — role-gated, NO ownership grant.
  *
  * See ADR-298 §4 Phase C.2 (2026-04-14).
  *

@@ -1001,7 +1001,7 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'floorplan_overlays',
     pattern: 'bim_presentation',
     testFile: 'tests/firestore-rules/suites/floorplan-overlays.rules.test.ts',
-    rulesRange: [1145, 1170],
+    rulesRange: [1162, 1247],
     matrix: bimPresentationMatrix(),
   },
   {

@@ -1,12 +1,16 @@
 /**
  * Firestore Rules — `project_floorplans` collection
  *
- * Pattern: tenant_direct (crmDirectMatrix) — companyId tenant isolation,
- * no `isSuperAdminOnly()` on create (→ super_admin denied), full CRUD for
- * same-tenant members via companyId (create) and createdBy match (update/delete).
+ * Pattern: bim_presentation legacy container (ADR-657) — legacyFloorplanMatrix.
+ * Read is tenant-wide via canReadLegacyFloorplan() (docs missing companyId fall
+ * back to creator-only); read also has an extra belongsToProjectCompany(projectId)
+ * OR-leg unique to this collection. Create via canCreateLegacyFloorplan()
+ * (super_admin allowed; otherwise internal_user+ of the tenant). Update/delete via
+ * canWriteLegacyFloorplan()/isBimWriter() — role-gated, NO ownership grant
+ * (ADR-657 removed the createdBy==uid write leg).
  *
- * Seed doc: createdBy = same_tenant_user.uid so the `createdBy==uid`
- * update/delete leg is exercised for same_tenant_user.
+ * Seed doc: createdBy = same_tenant_user.uid (an internal_user), so same_tenant_user
+ * passes writes via the role gate, not via ownership.
  *
  * See ADR-298 §4 Phase C.2 (2026-04-14).
  *
