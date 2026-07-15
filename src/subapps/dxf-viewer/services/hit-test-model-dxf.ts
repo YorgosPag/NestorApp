@@ -105,4 +105,8 @@ export const HIT_TEST_MODEL_DXF_HANDLERS = {
   // το AABB (broad phase) ΚΑΙ το point-in-polygon containment (narrow phase). Χωρίς αυτό το
   // seam η επιφάνεια βγαίνει σιωπηλά εκτός spatial index (μηδέν hover/κλικ — ο Φ10 μηχανισμός).
   'topo-surface': flatFields('topo-surface', ['surfaceId', 'footprint']),
+  // ADR-635 Φάση B — leader callout· τα `vertices` τροφοδοτούν ΚΑΙ το AABB (broad phase) ΚΑΙ
+  // το point-to-segment narrow test (open path, όπως το polyline). Χωρίς αυτό ο leader βγαίνει
+  // σιωπηλά εκτός spatial index (μηδέν hover/κλικ) — ο ίδιος Φ10 μηχανισμός με τα υπόλοιπα.
+  leader: flatFields('leader', ['vertices', 'arrowHead', 'annotationText', 'annotationPosition', 'hookLineLength', 'hasHookLine']),
 } as const satisfies Record<string, HitTestModelHandler>;

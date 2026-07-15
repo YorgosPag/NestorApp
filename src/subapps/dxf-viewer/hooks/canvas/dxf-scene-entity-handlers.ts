@@ -33,12 +33,9 @@ import type { AnnotationSymbolEntity } from '../../types/annotation-symbol';
 import type { ScaleBarEntity } from '../../types/scale-bar';
 // ADR-612 — opening info tag lightweight entity for DXF render pipeline.
 import type { OpeningInfoTagEntity } from '../../types/opening-info-tag';
-// ADR-651 Φάση Ε — standalone raster image lightweight entity for DXF render pipeline.
-import type { ImageEntity } from '../../types/image';
-import { isImageEntity } from '../../types/image';
-// ADR-662 Φάση 2β (Δρόμος Γ) — thin/derived topo surface entity for DXF render pipeline.
-import type { TopoSurfaceEntity } from '../../types/topo-surface';
-import { isTopoSurfaceEntity } from '../../types/topo-surface';
+// ADR-587 Φ5 / N.7.1 — flat non-BIM handlers (image / topo-surface / leader) extracted to a
+// sibling module so this file stays ≤500 LOC; spread into TO_DXF_HANDLERS below.
+import { FLAT_NONBIM_TO_DXF_HANDLERS } from './dxf-scene-entity-flat-handlers';
 import type { XLineEntity, RayEntity } from '../../types/entities';
 // ADR-363 Phase 1B — wall wrapper for DXF render pipeline.
 import type { WallEntity } from '../../bim/types/wall-types';
@@ -448,37 +445,16 @@ export const TO_DXF_HANDLERS: Partial<Record<EntityType, ToDxfHandler>> = {
       ? { ...base, type: 'xline' as const, xlineEntity: entity as XLineEntity } as DxfEntityUnion
       : null;
   },
-  image: (entity, base) => {
-    // ADR-651 Φάση Ε — lightweight non-BIM raster image (sibling of scale-bar/opening-info-tag).
-    // Flat params spread at top level; ImageRenderer reads them + the shared HatchImageCache.
-    // Without this case the freshly-placed image would fall to `default` → null → invisible +
-    // un-grippable (the same drop trap as the BIM entities above).
-    if (!isImageEntity(entity)) return null;
-    const img = entity as ImageEntity;
-    return {
-      ...base, type: 'image' as const,
-      position: img.position, width: img.width, height: img.height, url: img.url,
-      ...(img.rotation !== undefined ? { rotation: img.rotation } : {}),
-    } as DxfEntityUnion;
-  },
   ray: (entity, base) => {
     // ADR-359 Phase 11 — wrap RayEntity for grip computation pipeline.
     return isRayEntity(entity)
       ? { ...base, type: 'ray' as const, rayEntity: entity as RayEntity } as DxfEntityUnion
       : null;
   },
-  'topo-surface': (entity, base) => {
-    // ADR-662 Φάση 2β (Δρόμος Γ) — thin/derived non-BIM topo surface (sibling of image).
-    // Flat params spread at top level (surfaceId + footprint); TopoSurfaceRenderer draws
-    // the footprint outline. Without this case the surface entity would fall to `default`
-    // → null → invisible + un-selectable (the same drop trap as the entities above).
-    if (!isTopoSurfaceEntity(entity)) return null;
-    const ts = entity as TopoSurfaceEntity;
-    return {
-      ...base, type: 'topo-surface' as const,
-      surfaceId: ts.surfaceId, footprint: ts.footprint,
-    } as DxfEntityUnion;
-  },
+  // ADR-587 Φ5 / N.7.1 — flat non-BIM handlers (image / topo-surface / leader) live in a
+  // sibling module so this file stays ≤500 LOC; spread keeps them in the SAME registry (same
+  // coverage test, same keys).
+  ...FLAT_NONBIM_TO_DXF_HANDLERS,
 };
 
 /**

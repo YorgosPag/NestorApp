@@ -53,6 +53,8 @@ import type { OpeningInfoTagEntity } from '../../types/opening-info-tag';
 import type { ImageEntity } from '../../types/image';
 // ADR-662 Φάση 2β (Δρόμος Γ) — thin/derived topo surface entity for DXF render pipeline.
 import type { TopoSurfaceEntity } from '../../types/topo-surface';
+// ADR-635 Φάση B — leader callout annotation entity for DXF render pipeline.
+import type { LeaderEntity } from '../../types/entities';
 // ADR-408 Φ12 — plumbing manifold direct entity for DXF render pipeline.
 import type { MepManifoldEntity } from '../../bim/types/mep-manifold-types';
 // ADR-408 Εύρος Β — heating radiator direct entity for DXF render pipeline.
@@ -663,7 +665,25 @@ export interface DxfTopoSurface extends DxfEntity {
   footprint: TopoSurfaceEntity['footprint'];
 }
 
-export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair | DxfDimension | DxfSlab | DxfSlabOpening | DxfOpening | DxfWall | DxfColumn | DxfFoundation | DxfMepFixture | DxfElectricalPanel | DxfRailing | DxfFurniture | DxfMepSegment | DxfMepFitting | DxfFloorplanSymbol | DxfAnnotationSymbol | DxfScaleBar | DxfOpeningInfoTag | DxfMepManifold | DxfMepRadiator | DxfMepBoiler | DxfMepWaterHeater | DxfMepUnderfloor | DxfRoof | DxfFloorFinish | DxfWallCovering | DxfThermalSpace | DxfSpaceSeparator | DxfBeam | DxfHatch | DxfXLine | DxfRay | DxfImage | DxfTopoSurface;
+/**
+ * ADR-635 Φάση B — DxfLeader direct entity (non-BIM annotation callout). Carries the flat
+ * leader fields (vertices path + arrowHead + optional annotation text/hook) at top level;
+ * `LeaderRenderer` strokes the path + stamps the tip arrowhead. Without this variant + its
+ * TO_DXF handler an imported DXF LEADER (`convertLeader` → scene) would fall to
+ * `convertEntity`'s `null` default → invisible on the 2D canvas even though the renderer is
+ * registered (the ADR-583/612/651 trap — the gap the render-coverage orphan surfaced).
+ */
+export interface DxfLeader extends DxfEntity {
+  type: 'leader';
+  vertices: LeaderEntity['vertices'];
+  arrowHead?: LeaderEntity['arrowHead'];
+  annotationText?: LeaderEntity['annotationText'];
+  annotationPosition?: LeaderEntity['annotationPosition'];
+  hookLineLength?: LeaderEntity['hookLineLength'];
+  hasHookLine?: LeaderEntity['hasHookLine'];
+}
+
+export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair | DxfDimension | DxfSlab | DxfSlabOpening | DxfOpening | DxfWall | DxfColumn | DxfFoundation | DxfMepFixture | DxfElectricalPanel | DxfRailing | DxfFurniture | DxfMepSegment | DxfMepFitting | DxfFloorplanSymbol | DxfAnnotationSymbol | DxfScaleBar | DxfOpeningInfoTag | DxfMepManifold | DxfMepRadiator | DxfMepBoiler | DxfMepWaterHeater | DxfMepUnderfloor | DxfRoof | DxfFloorFinish | DxfWallCovering | DxfThermalSpace | DxfSpaceSeparator | DxfBeam | DxfHatch | DxfXLine | DxfRay | DxfImage | DxfTopoSurface | DxfLeader;
 
 // === WRAPPED (SUB-ENTITY) VARIANTS — SSoT ===
 /**

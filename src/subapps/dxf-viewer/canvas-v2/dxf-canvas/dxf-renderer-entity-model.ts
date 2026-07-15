@@ -217,6 +217,15 @@ export function buildEntityModelFromDxf(
         ...base, type: 'topo-surface',
         surfaceId: entity.surfaceId, footprint: entity.footprint,
       } as unknown as Entity;
+    case 'leader':
+      // ADR-635 Φάση B — non-BIM leader callout. Flat fields forwarded (vertices path +
+      // arrowHead + optional annotation text/hook); LeaderRenderer strokes path + tip arrow.
+      return {
+        ...base, type: 'leader',
+        vertices: entity.vertices, arrowHead: entity.arrowHead,
+        annotationText: entity.annotationText, annotationPosition: entity.annotationPosition,
+        hookLineLength: entity.hookLineLength, hasHookLine: entity.hasHookLine,
+      } as unknown as Entity;
     case 'xline':
       return { ...base, type: 'xline', basePoint: entity.xlineEntity.basePoint, direction: entity.xlineEntity.direction } as unknown as Entity;
     case 'ray':
@@ -279,7 +288,7 @@ export const TO_ENTITY_MODEL_SUPPORTED_TYPES = [
   'electrical-panel', 'railing', 'furniture', 'roof', 'floor-finish', 'thermal-space',
   'wall-covering', 'space-separator', 'mep-segment', 'mep-fitting', 'floorplan-symbol',
   'annotation-symbol', 'scale-bar', 'opening-info-tag', 'mep-manifold', 'mep-radiator', 'mep-boiler', 'mep-water-heater',
-  'mep-underfloor', 'xline', 'ray', 'hatch', 'image', 'topo-surface',
+  'mep-underfloor', 'xline', 'ray', 'hatch', 'image', 'topo-surface', 'leader',
 ] as const;
 
 // Bridge 1 — every listed token IS a real `DxfEntityUnion` discriminant (typo/stale ⇒ tsc breaks).

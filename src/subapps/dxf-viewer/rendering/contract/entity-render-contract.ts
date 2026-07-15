@@ -93,6 +93,8 @@ export const ENTITY_RENDER_CONTRACTS: Readonly<
   hatch: dxf('hatch'),
   xline: dxf('xline'),
   ray: dxf('ray'),
+  // ADR-635 Φάση B — leader callout (annotation path + tip arrowhead), 2D canvas only.
+  leader: dxf('leader'),
   // ADR-583 — annotation symbol (North arrow): lightweight non-BIM paper decoration,
   // 2D canvas only (no per-type 3D mesh).
   'annotation-symbol': dxf('annotation-symbol'),

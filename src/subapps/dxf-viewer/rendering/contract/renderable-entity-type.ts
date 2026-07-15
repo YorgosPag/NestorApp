@@ -37,6 +37,9 @@ export const DXF_RENDERABLE_TYPES = [
   'hatch',
   'xline',
   'ray',
+  // ADR-635 Φάση B — leader callout (annotation path + tip arrowhead): DXF R13 LEADER,
+  // lightweight non-BIM annotation rendered on the 2D canvas only (no per-type 3D mesh).
+  'leader',
   // ADR-583 — annotation symbol (North arrow): lightweight non-BIM paper decoration,
   // rendered on the 2D canvas only (no per-type 3D mesh).
   'annotation-symbol',
