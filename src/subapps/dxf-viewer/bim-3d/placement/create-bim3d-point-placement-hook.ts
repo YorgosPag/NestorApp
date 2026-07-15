@@ -34,8 +34,9 @@ import type { ToolType } from '../../ui/toolbar/types';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 import {
   PLACEMENT_GHOST_3D_FACTORIES,
-  type GhostBimType,
+  type PointGhostBimType,
 } from './placement-ghost-3d-contracts';
+import type { PlacementGhost } from './create-placement-ghost';
 import { planMmToScenePoint } from './world-to-scene-point';
 import { usePlacementInteractionEffect, type PlacementInteractionContext } from './use-placement-interaction-effect';
 import { createSnapMarkerPlacementController } from './snap-marker-placement-controller';
@@ -61,7 +62,12 @@ export type Bim3DPlacePointEvent =
  * assignable here.
  */
 export interface PointPlacementBridgeHandle {
-  readonly overrides: { readonly mountingElevationMm: number };
+  /**
+   * `mountingElevationMm` είναι optional επειδή έτσι το δηλώνουν τα
+   * `BodyPlacementParamOverrides` κάθε tool bridge handle — ο hook πέφτει πίσω στο
+   * `defaultMountingElevationMm` όταν λείπει.
+   */
+  readonly overrides: { readonly mountingElevationMm?: number };
   getSceneUnits(): SceneUnits;
 }
 
@@ -70,8 +76,8 @@ export interface PointPlacementBridgeStore {
 }
 
 export interface Bim3DPointPlacementConfig {
-  /** Ghost kind key into `PLACEMENT_GHOST_3D_FACTORIES`. */
-  readonly ghostKind: GhostBimType;
+  /** Ghost kind key into `PLACEMENT_GHOST_3D_FACTORIES` — μόνο point ghosts. */
+  readonly ghostKind: PointGhostBimType;
   /** Tool id(s) that arm this placement (usually one; some share an FSM). */
   readonly tools: readonly ToolType[];
   /** The tool bridge store published by the 2D tool hook. */
@@ -102,7 +108,7 @@ export function createBim3DPointPlacementHook(
       canvasEl,
       tools,
       createController: (ctx: PlacementInteractionContext) => {
-        const ghost = PLACEMENT_GHOST_3D_FACTORIES[ghostKind](ctx.manager.scene);
+        const ghost: PlacementGhost = PLACEMENT_GHOST_3D_FACTORIES[ghostKind](ctx.manager.scene);
         const unitsNow = (): SceneUnits => bridgeStore.get()?.getSceneUnits() ?? 'mm';
         // The box is centred on `mountingElevationMm`, so the cursor projects onto that
         // work-plane. The SAME elevation feeds the raycast and `*ToMesh` (FFL + mounting)

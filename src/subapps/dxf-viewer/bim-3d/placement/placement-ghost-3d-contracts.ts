@@ -30,6 +30,7 @@
 
 import type * as THREE from 'three';
 import type { BimRenderableType } from '../../rendering/contract/renderable-entity-type';
+import type { PlacementGhost } from './create-placement-ghost';
 import { ColumnPlacementGhost } from './ColumnPlacementGhost';
 import { WallPlacementGhost } from './WallPlacementGhost';
 import { BeamFromWallGhost } from './BeamFromWallGhost';
@@ -56,7 +57,7 @@ export interface PlacementGhost3D {
  * Οι `BimRenderableType` που έχουν 3D placement ghost (literal union → η παράλειψη
  * key στο registry παρακάτω γίνεται tsc-error μέσω του `Record<GhostBimType, …>`).
  */
-type GhostBimType =
+export type GhostBimType =
   | 'column'
   | 'wall'
   | 'beam'
@@ -87,6 +88,22 @@ export const PLACEMENT_GHOST_3D_FACTORIES = {
   'mep-boiler': (s: THREE.Scene) => new MepBoilerPlacementGhost(s),
   'mep-water-heater': (s: THREE.Scene) => new MepWaterHeaterPlacementGhost(s),
 } satisfies Record<GhostBimType, (scene: THREE.Scene) => PlacementGhost3D>;
+
+/**
+ * Το υποσύνολο των ghost keys που υλοποιούν το κοινό {@link PlacementGhost} API
+ * (`update(scenePoint, floorElevationMm, levelId)` + `setVisible` + `dispose`) — δηλαδή
+ * όσα παράγονται από το `createPlacementGhostClass`. Τα `wall`/`mep-segment` (two-point
+ * `update`) και ο `beam` (`showForWall`/`hide`) ΔΕΝ ανήκουν εδώ.
+ *
+ * Παράγεται ΑΠΟ το registry (conditional-type filter), ώστε ένα νέο point ghost να
+ * μπαίνει αυτόματα και μια αλλαγή API να το βγάζει — χωρίς δεύτερη χειροκίνητη λίστα
+ * που θα «σάπιζε».
+ */
+export type PointGhostBimType = {
+  [K in GhostBimType]: ReturnType<(typeof PLACEMENT_GHOST_3D_FACTORIES)[K]> extends PlacementGhost
+    ? K
+    : never;
+}[GhostBimType];
 
 /** Οι renderable types του registry (για το coverage test binding). */
 export const PLACEMENT_GHOST_3D_TYPES: readonly BimRenderableType[] =

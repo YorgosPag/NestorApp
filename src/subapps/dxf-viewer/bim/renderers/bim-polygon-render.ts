@@ -11,6 +11,7 @@
  * own compositing/clip state.
  */
 import type { Point2D, GripInfo } from '../../rendering/types/Types';
+import type { GripInfo as ParametricGripInfo } from '../../hooks/grip-types';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
@@ -104,10 +105,16 @@ export function polygonBboxHitTest(
  * isVisible/gripIndex). Center/midpoint kinds are preserved, everything else
  * becomes a plain 'vertex'. Pass `resolveShape` to attach a per-grip glyph
  * (move/rotation handles) — the caller keeps its own `gripKindOf`/glyph SSoT.
+ *
+ * Δύο ΔΙΑΦΟΡΕΤΙΚΑ `GripInfo` παίζουν εδώ: το input είναι το parametric/data-model
+ * grip (`hooks/grip-types` — φέρει `movesEntity`/`gripKind`) που επιστρέφουν τα
+ * `getXxxGrips()`, ενώ το output είναι το render grip (`rendering/types/Types` —
+ * φέρει `id`/`isVisible`/`shape`). Αυτή η συνάρτηση ΕΙΝΑΙ η μετατροπή, οπότε οι δύο
+ * τύποι πρέπει να δηλώνονται ξεχωριστά.
  */
 export function mapBimGrips(
-  grips: readonly GripInfo[],
-  resolveShape?: (g: GripInfo) => GripInfo['shape'],
+  grips: readonly ParametricGripInfo[],
+  resolveShape?: (g: ParametricGripInfo) => GripInfo['shape'],
 ): GripInfo[] {
   return grips.map((g) => {
     const mapped: GripInfo = {

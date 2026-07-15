@@ -12,7 +12,6 @@
 import type { Point3D } from '../../../rendering/types/Types';
 import type {
   Polygon3D,
-  Polyline3D,
   StairGeometry,
   StairParams,
   StairVariantLShape,
@@ -156,7 +155,7 @@ function buildLShapeWalkline(
   width: number,
   n1: number,
   n2: number,
-): Polyline3D {
+): Point3D[] {
   // 4 vertices, single sharp 90° turn at v3 (the L corner inside the landing).
   // v2 is collinear with v1→v3 (along u1) — keeps stringer count at 4 while
   // ensuring the miter at the only real corner equals d·√2 (perp dot = 0).

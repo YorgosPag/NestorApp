@@ -52,8 +52,8 @@ import type { BimFamilyType, BimTypeParamsByCategory } from '../../../bim/types/
 /** Family-type categories that expose a ribbon controller. */
 export type FamilyTypeCategory = keyof BimTypeParamsByCategory;
 
-/** Type-governed catalog lookup (the store's stable `getType`). */
-type GetType = (id: string) => BimFamilyType | undefined;
+/** Type-governed catalog lookup (the store's stable `getType` — misses resolve to `null`). */
+type GetType = (id: string) => BimFamilyType | null;
 
 /** Minimal shape every family-typed scene entity satisfies. */
 export interface FamilyTypedEntity<P> {
@@ -68,7 +68,9 @@ export interface FamilyTypedEntity<P> {
  */
 export interface FamilyTypeControllerConfig<
   C extends FamilyTypeCategory,
-  E extends FamilyTypedEntity<BimTypeParamsByCategory[C]>,
+  // `& Entity`: `isEntity` below is a type predicate over `Entity`, so its narrowed type
+  // must be a scene entity — not merely something with `id`/`typeId`/`typeOverrides`.
+  E extends Entity & FamilyTypedEntity<BimTypeParamsByCategory[C]>,
   P = BimTypeParamsByCategory[C],
 > {
   /** Persisted category literal (`'wall' | 'slab' | 'roof' | 'opening'`). */
@@ -78,7 +80,7 @@ export interface FamilyTypeControllerConfig<
   /** Category slice of the live catalog (built-in + user), e.g. `listWallTypes`. */
   readonly listTypes: (all: readonly BimFamilyType[]) => readonly BimFamilyType<C>[];
   /** Narrow a catalog entry to this category, or `null` (e.g. `asWallFamilyType`). */
-  readonly asFamilyType: (type: BimFamilyType | undefined) => BimFamilyType<C> | null;
+  readonly asFamilyType: (type: BimFamilyType | null | undefined) => BimFamilyType<C> | null;
   /** Param keys the instance currently overrides (e.g. `getOverriddenParamKeys`). */
   readonly getOverriddenParamKeys: (overrides: Partial<P> | undefined) => readonly (keyof P)[];
   /** Drop empty/default overrides to `undefined` (e.g. `normaliseOverrides`). */
@@ -143,7 +145,7 @@ export interface FamilyTypeControllerCore<
  */
 export function useFamilyTypeController<
   C extends FamilyTypeCategory,
-  E extends FamilyTypedEntity<BimTypeParamsByCategory[C]>,
+  E extends Entity & FamilyTypedEntity<BimTypeParamsByCategory[C]>,
 >(config: FamilyTypeControllerConfig<C, E>): FamilyTypeControllerCore<C, E> {
   type P = BimTypeParamsByCategory[C];
 

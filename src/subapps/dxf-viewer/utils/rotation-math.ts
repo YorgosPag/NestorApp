@@ -14,7 +14,7 @@
  */
 
 import type { Point2D } from '../rendering/types/Types';
-import type { Entity } from '../types/entities';
+import type { Entity, RectangleEntity } from '../types/entities';
 import type { EntityType } from '../types/base-entity';
 // 🏢 ADR-067: Centralized angle conversion
 import { degToRad, normalizeAngleDeg } from '../rendering/entities/shared/geometry-utils';
@@ -69,7 +69,9 @@ const rotatePolylineLike: RotateHandler = (entity, pivot, angleDeg) => {
 const rotateRectangleLike: RotateHandler = (entity, pivot, angleDeg) => {
   const e = entity as Extract<Entity, { type: 'rectangle' | 'rect' }>;
   const currentRotation = e.rotation ?? 0;
-  const updates: Partial<Entity> = {
+  // `Partial<Entity>` distributes over the union, so the accumulator is typed against the
+  // rectangle member (RectEntity is structurally identical for these fields).
+  const updates: Partial<RectangleEntity> = {
     rotation: normalizeAngleDeg(currentRotation + angleDeg),
   };
   if (e.corner1 && e.corner2) {

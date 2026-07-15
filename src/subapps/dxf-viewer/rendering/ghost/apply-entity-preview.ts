@@ -85,6 +85,19 @@ import { applyOpeningPreview } from './apply-opening-preview';
 
 export type { EntityPreviewTransform, ApplyEntityPreviewContext };
 
+/**
+ * Read the discriminator of a RAW scene entity widened to `string`.
+ *
+ * This pipeline is handed the RAW scene entity (`useGripGhostPreview` → `getEntity`), whose
+ * tag can be one `DxfEntityUnion` does not model — `'lwpolyline'` (joined polyline),
+ * `'mtext'` (un-normalised text), `'group'` / `'block'` (containers). Each is handled below
+ * behind an explicit cast to its real type; this accessor is what makes the guards themselves
+ * type-legal instead of comparing against a tag the union has narrowed away.
+ */
+function rawTypeOf(entity: DxfEntityUnion): string {
+  return (entity as { readonly type: string }).type;
+}
+
 // ── Public API ───────────────────────────────────────────────────────────────
 
 /**
@@ -100,7 +113,7 @@ export type { EntityPreviewTransform, ApplyEntityPreviewContext };
  * every preview consumer (grip drag / body-drag / Move tool), so they can never diverge.
  */
 export function normalizePreviewEntity(entity: DxfEntityUnion): DxfEntityUnion {
-  return entity.type === 'lwpolyline'
+  return rawTypeOf(entity) === 'lwpolyline'
     ? ({ ...(entity as object), type: 'polyline' } as DxfEntityUnion)
     : entity;
 }
@@ -283,7 +296,7 @@ export function applyEntityPreview(
   // the guard MUST accept both, else the live ghost vanishes ("το κείμενο δεν ανταποκρίνεται",
   // Giorgio 2026-06-30). Regression re-fix of ba33b0c2 (reverted by 0878ed54 on a wrong
   // premise). Guarded by `apply-entity-preview-text.test.ts`.
-  if ((entity.type === 'text' || entity.type === 'mtext') && (textGripKind || movesEntity)) {
+  if ((entity.type === 'text' || rawTypeOf(entity) === 'mtext') && (textGripKind || movesEntity)) {
     // The ghost pipeline hands us the RAW scene entity (textNode-based): its flat
     // `text`/`height`/`textStyle` are absent for in-app text, so previously (a)
     // `resolveBoxHeight` fell back to the 2.5 DIMTXT default → a ~1.5×2.5 box (garbage
@@ -379,10 +392,10 @@ export function applyEntityPreview(
     return { ...(entity as object), ...patch } as unknown as DxfEntityUnion;
   }
   // ADR-575 §8 — GROUP gizmo: pivot = bbox centre (`rotateEntity` case 'group' recurses members).
-  if (groupGripKind === 'group-rotation' && anchorPos && entity.type === 'group') {
+  if (groupGripKind === 'group-rotation' && anchorPos && rawTypeOf(entity) === 'group') {
     return rotationGhost(entity, anchorPos, delta, rotatePivot ?? computeGroupSelectionBounds(entity as unknown as GroupEntity)?.center);
   }
-  if (movesEntity && entity.type === 'group') {
+  if (movesEntity && rawTypeOf(entity) === 'group') {
     // Whole-group translate (gizmo move cross OR any whole-group move) — the SAME
     // `calculateMovedGeometry` case 'group' the commit runs (recurse members). Returns
     // `{ members }`; folded onto the cloned group so the render expands + ghosts each.
@@ -392,10 +405,10 @@ export function applyEntityPreview(
   // ADR-640 — BLOCK gizmo live ghost: pivot = bbox centre (`rotateEntity` case 'block'
   // rotates the insertion point, INSERT semantics). The transformed `type:'block'`
   // container is expanded + ghosted by `drawGroupGhost` (container-agnostic).
-  if (blockGripKind === 'block-rotation' && anchorPos && entity.type === 'block') {
+  if (blockGripKind === 'block-rotation' && anchorPos && rawTypeOf(entity) === 'block') {
     return rotationGhost(entity, anchorPos, delta, rotatePivot ?? computeBlockSelectionBounds(entity as unknown as BlockEntity)?.center);
   }
-  if (movesEntity && entity.type === 'block') {
+  if (movesEntity && rawTypeOf(entity) === 'block') {
     // Whole-block translate (gizmo move cross) — the SAME `calculateMovedGeometry` case
     // 'block' the commit runs (translate `position`). Returns `{ position }`; folded onto
     // the cloned block so the render re-expands + ghosts each member at the new placement.
@@ -407,7 +420,7 @@ export function applyEntityPreview(
   // the commit runs (preview ≡ commit by identity). The `{ position, scale }` INSERT patch is
   // folded onto the cloned block so `drawGroupGhost` re-expands + ghosts every member at the
   // new placement/scale.
-  if (entity.type === 'block') {
+  if (rawTypeOf(entity) === 'block') {
     const boxRole = blockBoxRoleFromKind(blockGripKind);
     if (boxRole) {
       const patch = applyBlockBoxGripDrag(boxRole, entity as unknown as BlockEntity, delta);

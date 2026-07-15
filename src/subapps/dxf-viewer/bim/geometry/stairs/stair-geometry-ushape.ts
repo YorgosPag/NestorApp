@@ -31,7 +31,6 @@
 import type { Point3D } from '../../../rendering/types/Types';
 import type {
   Polygon3D,
-  Polyline3D,
   StairGeometry,
   StairParams,
   StairVariantUShape,
@@ -161,7 +160,7 @@ function buildUShapeWalkline(
   width: number,
   n1: number,
   n2: number,
-): Polyline3D {
+): Point3D[] {
   // 4-vertex pattern with TWO sharp 90° turns at the landing entry/exit.
   // p1: basePoint.
   // p2: u1 · (n1·tread + halfW), v1·0  — landing-entry L corner (90° turn into v1·turnSign).

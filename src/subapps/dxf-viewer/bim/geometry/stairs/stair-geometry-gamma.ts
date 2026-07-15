@@ -30,7 +30,6 @@
 
 import type { Point3D } from '../../../rendering/types/Types';
 import type {
-  Polyline3D,
   StairGeometry,
   StairParams,
   StairTurnDirectionLR,
@@ -175,7 +174,7 @@ function buildGammaWalkline(
   n1: number,
   n2: number,
   n3: number,
-): Polyline3D {
+): Point3D[] {
   // 6-vertex pattern. Sharp 90° turns occur at p3 (landing 1) and p5 (landing
   // 2). p2 and p4 are collinear with their successors so each stringer offset
   // produces 6 vertices with two miter corners (outer/inner miter = halfW·√2).
