@@ -92,6 +92,7 @@ Source errors only (tests tracked separately, see §"Tests are ratcheted too").
 |---|---|---|---|
 | 2026-07-15 | 205 | — | Starting measurement (469 total incl. tests) |
 | 2026-07-16 | 117 | −88 | Root-cause batches, below |
+| 2026-07-16 | 84 | −33 | Long-tail batches, below (also −11 test errors, un-touched: two roots lived in shared guards) |
 
 ### 2026-07-16 batches
 
@@ -108,7 +109,25 @@ Each was a **shared root cause**, not a per-site patch — which is why 88 error
 
 **Verification:** all touched domains ran green — `hooks/data` + `bim/persistence` (188 tests), `ui/ribbon/hooks` (530), `bim-3d`/`bim/geometry`/`bim/types`/`hooks/data` (1947), `rendering/ghost` + `bim/family-types` + `utils`. Three pre-existing failures (`systems-discipline-tabs`, `dxf-linetype-compound-roundtrip`, `dxf-attrib-attdef`) were confirmed failing on a stashed tree beforehand — unrelated to these changes and still open.
 
-**Remaining 117 source errors** are a long tail of one-offs across ~110 files — no further shared root causes of size. The ratchet is what holds the line while they are burned down opportunistically (Boy Scout rule, N.0.2).
+### 2026-07-16 batches, part 2 (117 → 84)
+
+The "long tail" turned out to still hold **small shared roots** — 33 source errors fell out of 9 edits. The pattern in almost every case: a **consumer re-declaring what its producer already knew**, and the re-declaration being wrong.
+
+1. **`TextRun | TextStack` narrowing (−4, 3 files).** The union has no discriminant, so `'text' in run` was copy-pasted across the text engine — and three title-block sites had simply forgotten it, reading `run.text` off a stack. That yields `undefined`, which `Array.join` renders as `''`: a stacked fraction vanished from the glossary/preview **silently**. New SSoT `text-engine/types/text-ast.guards.ts` (`isTextRun` / `isTextStack`); the local twin in `InsertTextTokenCommand` now imports it (N.0.2). Stacks pass through the localizer unchanged — the file's own contract is that translation changes *words*, not drawing.
+2. **`gripKindOf` producer/consumer seam (−3, 3 files).** `commitParametricAnnotationGripDrag` declared `kind: K | null`, but its documented sole producer `gripKindOf` returns `K | undefined` (and is the ecosystem-wide producer, ~120 files). Aligned the SSoT to the producer. Runtime was already fine (`if (!kind)` catches both) — the seam was type-only.
+3. **`pushStyledGuide` producer/consumer seam (−4).** Identical shape: consumer said `Guide | null`, `addGuideRaw` / `addDiagonalGuideRaw` — its only feeders — return `Guide | undefined`.
+4. **ESC never registered for wall-merge / wall-gap-opening (−4). A real bug, not type noise.** `useCanvasEscapeRegistrations` registered both tools, but its params interface never declared them, and `useCanvasKeyboardShortcuts` — which *does* declare them (`.types.ts:130-137`) and receives them from `CanvasSection` — never destructured or forwarded them. So `p.handleWallMergeEscape` was always `undefined`, and `buildModifyHandler`'s `if (!callback) return null` **dropped the handler**: pressing ESC during a wall-merge or wall-gap-opening flow cancelled nothing. Declared + destructured + forwarded, mirroring the working `stairAddTurn` wiring.
+5. **`ParseResult` non-discriminating flag (−3, 2 files).** `{ valid: boolean; color?: ColorValue }` cannot narrow, so `if (parsed.valid) parsed.color` stayed possibly-undefined and callers double-checked a field the flag already promised. Now a discriminated union on `valid`.
+6. **`isValidPoint` discarded the caller's fields (−2).** `point is Point2D` narrows a `{x?, y?, bulge?}` vertex down to a bare `Point2D` — so the DXF **bulge could not be read after validating the very vertex carrying it**. Now generic: `isValidPoint<T>(point: T): point is T & Point2D`. Backwards-compatible (`unknown & Point2D` = `Point2D`).
+7. **`InheritedStyle.lineweightMm` widened by hand (−5, one file).** Re-declared as `number`; `LineweightMm` is the ISO plot-width literal union, copied straight off `Entity`. Every `make*` primitive failed on it. Imported the real type.
+8. **`beginDistanceLabel` dropped `Required<>` (−4).** It merges over `Required<DistanceLabelOptions>` defaults, so every field *is* present — but the signature typed both the defaults and the result as the optional `DistanceLabelOptions`, re-introducing the `undefined` it had just eliminated.
+9. **`interfaces.ts` split leftover (−2).** `export type { … } from './types/persistence-types'` is a **re-export**: it serves importers, but does not bring the names into the file's own scope, so its two local uses were unresolved. The same file already handles this correctly for `audit-types` (import + re-export) — followed that.
+
+Roots 1, 5 and 6 lived in shared guards/types, so they also removed **11 test-file errors** without a single test file being touched.
+
+**Verification:** touched domains green — text-engine + core/commands/text (701), ui/color + rendering/entities (400), guides + grips + core/commands (864), hooks/canvas (48), export (436), utils + zoom + rendering/entities/shared (762). `jscpd:diff` clean on all 15 files (N.18). Pre-existing failures unchanged and unrelated: `dxf-linetype-compound-roundtrip`, `dxf-attrib-attdef` (both listed in the previous session's handoff) and `move-entity-geometry-coverage` — the last one is **new since that handoff and is a live gap, not noise**: `floorplan-symbol` was added to `RENDERABLE_ENTITY_TYPES` without a MOVES/NO-OP classification, which is exactly what that completeness anchor exists to catch. Untouched here — it is outside this task and sits in a file Giorgio is committing to live.
+
+**Remaining 84 source errors.** The remaining large-ish item, `procurement/services/framework-agreement-service.ts` (7), is **outside the dxf-viewer** and is one root: `firebase-admin`'s `Timestamp` vs the client `@firebase/firestore` `Timestamp` (missing `toJSON`). The rest is a genuine long tail. The ratchet holds the line while they are burned down opportunistically (Boy Scout rule, N.0.2).
 
 ---
 
@@ -117,3 +136,4 @@ Each was a **shared root cause**, not a per-site patch — which is why 88 error
 | Date | Change |
 |---|---|
 | 2026-07-16 | ADR created. CHECK 3.29 live: engine + 39 Jest tests + per-file baseline (381 errors) + CI Layer 2 + pre-commit Layer 1 smoke. Source errors burned 205 → 117 in the same session (§4). |
+| 2026-07-16 | Burn-down part 2: source 117 → 84 (−33), total 381 → 337 (−44 across 15 files; test errors 264 → 253 as a side effect of three shared-guard roots). Fixed a **live ESC bug** found via the type errors (wall-merge / wall-gap-opening ESC handlers were never registered — §4 batch 4). Baseline **not** re-locked: the fixes are uncommitted, and an un-paired baseline would over-tighten CI. Run `npm run dxf:tsc:baseline` after committing. |

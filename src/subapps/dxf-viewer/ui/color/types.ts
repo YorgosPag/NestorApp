@@ -332,18 +332,24 @@ export interface ModeChangeEvent {
 // ===== UTILITY TYPES =====
 
 /**
- * Color parser result
+ * Color parser result — a discriminated union on `valid`, so that checking the flag
+ * narrows the payload: `if (res.valid)` gives you `res.color` with no optional chain
+ * and no assertion (a plain `valid: boolean` + `color?:` cannot narrow, which is what
+ * forced callers to re-check `color` after already testing `valid`).
  */
-export interface ParseResult {
-  /** Whether parsing was successful */
-  valid: boolean;
-
-  /** Parsed color value (if valid) */
-  color?: ColorValue;
-
-  /** Error message (if invalid) */
-  error?: string;
-}
+export type ParseResult =
+  | {
+      readonly valid: true;
+      /** Parsed color value — always present on the success arm. */
+      readonly color: ColorValue;
+      readonly error?: undefined;
+    }
+  | {
+      readonly valid: false;
+      readonly color?: undefined;
+      /** Why parsing failed. */
+      readonly error: string;
+    };
 
 /**
  * Color format options

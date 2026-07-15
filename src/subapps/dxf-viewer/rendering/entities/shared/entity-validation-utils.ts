@@ -151,9 +151,15 @@ export function validateEntityType(entity: Entity, expectedType: string | string
 }
 
 /**
- * Check if point is valid (has numeric x and y coordinates)
+ * Check if point is valid (has numeric x and y coordinates).
+ *
+ * Narrows to `T & Point2D`, not to a bare `Point2D`: the caller's own fields survive the
+ * guard. A plain `point is Point2D` silently DISCARDS them — narrowing a
+ * `{x?, y?, bulge?}` vertex through it left a `Point2D` with no `bulge`, so the DXF
+ * bulge could not be read after validating the very vertex that carries it. For a caller
+ * passing `unknown`, `unknown & Point2D` is just `Point2D` — unchanged.
  */
-export function isValidPoint(point: unknown): point is Point2D {
+export function isValidPoint<T>(point: T): point is T & Point2D {
   // ✅ ENTERPRISE: Proper type guard with explicit boolean return and object type check
   if (!point || typeof point !== 'object' || point === null) return false;
   if (!('x' in point) || !('y' in point)) return false;

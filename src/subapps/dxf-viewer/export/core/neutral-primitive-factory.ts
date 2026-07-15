@@ -29,6 +29,7 @@ import type {
   ArcEntity,
   HatchEntity,
   TextEntity,
+  LineweightMm,
 } from '../../types/entities';
 
 /**
@@ -49,7 +50,8 @@ interface InheritedStyle {
   readonly layerId: string;
   readonly color?: string;
   readonly colorAci?: number;
-  readonly lineweightMm?: number;
+  /** The ISO plot-width union, NOT a free number — it is copied straight off `Entity`. */
+  readonly lineweightMm?: LineweightMm;
   readonly visible: boolean;
   /**
    * ADR-608 — grouping provenance: the SOURCE annotation/scale-bar id. Every

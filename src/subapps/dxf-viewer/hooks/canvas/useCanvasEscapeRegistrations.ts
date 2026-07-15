@@ -82,6 +82,12 @@ export interface UseCanvasEscapeRegistrationsParams {
   /** ADR-633 1b-ii: Stair Add-Turn ESC handler */
   readonly handleStairAddTurnEscape?: () => void;
   readonly stairAddTurnIsActive: boolean;
+  /** ADR-566: Wall Merge ESC handler */
+  readonly handleWallMergeEscape?: () => void;
+  readonly wallMergeIsActive: boolean;
+  /** ADR-568: Wall gap-bridge + opening ESC handler */
+  readonly handleWallGapOpeningEscape?: () => void;
+  readonly wallGapOpeningIsActive: boolean;
   /** ADR-363 R1 / ADR-577: unified Copy ESC handler */
   readonly handleCopyEscape?: () => void;
   readonly copyIsActive: boolean;
