@@ -15,7 +15,10 @@ import { getEnvelopeFloorSlabs } from '../../bim/stores/envelope-floor-slabs-sto
 import { resolveEntityBuilding } from '../../bim/utils/bim-floor-utils';
 import { resolveIsEntityVisible } from '../../bim/visibility/visibility-resolver';
 import { getLayer } from '../../stores/LayerStore';
-import type { OpeningEntity } from '../../bim/types/opening-types';
+import { isWallHostedOpening, type OpeningEntity } from '../../bim/types/opening-types';
+
+/** An opening whose `wallId` has been narrowed to `string` (ADR-615 wall-hosted). */
+type WallHostedOpening = OpeningEntity & { readonly params: { readonly wallId: string } };
 import type { SyncContext, ShouldRenderFn } from './bim-scene-context';
 
 /**
@@ -149,56 +152,66 @@ function addEnvelopeShell(
   }
 }
 
+/** Plan-space endpoint (mutable literal fed to the wall-host context builders). */
+type WallRefEndpoint = { x: number; y: number };
+
 /**
- * ADR-401 B3b — `WallTopRef` (άξονας + προφίλ) ανά `attached` τοίχο του ορόφου,
- * για τη μεταβλητή κορυφή του Z1 κελύφους. Κενό map όταν κανένας attached
- * (κοινό case → μηδέν κόστος). Host inputs (beams+slabs) μέσω του SSoT
- * `buildWallHostInputs` (ίδιο plan space με τα chains = `*.params`).
+ * ADR-401 / ADR-583 — κοινός σκελετός των Z1-envelope wall-ref builders (top & base):
+ * φιλτράρει τους `attached` τοίχους για το δοσμένο binding, φτιάχνει τα host inputs μία
+ * φορά, και χτίζει το ref ανά τοίχο. Ο caller δίνει μόνο το binding key + τον per-wall
+ * ref builder, ώστε top/base να μη διπλασιάζουν τον ίδιο σκελετό (ήταν jscpd clone).
+ * Κενό map όταν κανένας attached (κοινό case → μηδέν κόστος).
  */
-function buildEnvelopeWallTopRefs(
+function buildEnvelopeWallRefs<TRef>(
   entities: Bim3DEntities,
-  floorElevationMm: number,
-): Map<string, WallTopRef> {
-  const refs = new Map<string, WallTopRef>();
-  const attached = entities.walls.filter((w) => w.params?.topBinding === 'attached');
+  binding: 'topBinding' | 'baseBinding',
+  buildRef: (
+    params: Bim3DEntities['walls'][number]['params'],
+    start: WallRefEndpoint,
+    end: WallRefEndpoint,
+    hostInputs: ReturnType<typeof buildWallHostInputs>,
+  ) => TRef,
+): Map<string, TRef> {
+  const refs = new Map<string, TRef>();
+  const attached = entities.walls.filter((w) => w.params?.[binding] === 'attached');
   if (attached.length === 0) return refs;
   const hostInputs = buildWallHostInputs(entities.beams, entities.slabs, entities.roofs);
   for (const w of attached) {
     const start = { x: w.params.start.x, y: w.params.start.y };
     const end = { x: w.params.end.x, y: w.params.end.y };
-    const profile = resolveWallTopProfile(
-      w.params,
-      makeWallTopContext(start, end, hostInputs, { floorElevationMm }),
-    );
-    refs.set(w.id, { start, end, profile });
+    refs.set(w.id, buildRef(w.params, start, end, hostInputs));
   }
   return refs;
 }
 
 /**
- * ADR-401 (γ) — `WallBaseRef` (άξονας + προφίλ βάσης) ανά `base-attached` τοίχο
- * του ορόφου, για τη μεταβλητή βάση του Z1 κελύφους (dual-band). Κενό map όταν
- * κανένας base-attached (κοινό case → μηδέν κόστος). Host inputs (beams+slabs)
- * μέσω του SSoT `buildWallHostInputs` (ίδιο plan space με τα chains = `*.params`).
+ * ADR-401 B3b — `WallTopRef` (άξονας + προφίλ) ανά `attached` τοίχο του ορόφου, για τη
+ * μεταβλητή κορυφή του Z1 κελύφους. Thin wrapper του κοινού `buildEnvelopeWallRefs`.
+ */
+function buildEnvelopeWallTopRefs(
+  entities: Bim3DEntities,
+  floorElevationMm: number,
+): Map<string, WallTopRef> {
+  return buildEnvelopeWallRefs<WallTopRef>(entities, 'topBinding', (params, start, end, hostInputs) => ({
+    start,
+    end,
+    profile: resolveWallTopProfile(params, makeWallTopContext(start, end, hostInputs, { floorElevationMm })),
+  }));
+}
+
+/**
+ * ADR-401 (γ) — `WallBaseRef` (άξονας + προφίλ βάσης) ανά `base-attached` τοίχο του ορόφου,
+ * για τη μεταβλητή βάση του Z1 κελύφους (dual-band). Thin wrapper του `buildEnvelopeWallRefs`.
  */
 function buildEnvelopeWallBaseRefs(
   entities: Bim3DEntities,
   floorElevationMm: number,
 ): Map<string, WallBaseRef> {
-  const refs = new Map<string, WallBaseRef>();
-  const attached = entities.walls.filter((w) => w.params?.baseBinding === 'attached');
-  if (attached.length === 0) return refs;
-  const hostInputs = buildWallHostInputs(entities.beams, entities.slabs, entities.roofs);
-  for (const w of attached) {
-    const start = { x: w.params.start.x, y: w.params.start.y };
-    const end = { x: w.params.end.x, y: w.params.end.y };
-    const profile = resolveWallBaseProfile(
-      w.params,
-      makeWallBaseContext(start, end, hostInputs, { floorElevationMm }),
-    );
-    refs.set(w.id, { start, end, profile });
-  }
-  return refs;
+  return buildEnvelopeWallRefs<WallBaseRef>(entities, 'baseBinding', (params, start, end, hostInputs) => ({
+    start,
+    end,
+    profile: resolveWallBaseProfile(params, makeWallBaseContext(start, end, hostInputs, { floorElevationMm })),
+  }));
 }
 
 /**
@@ -210,10 +223,13 @@ function filterEnvelopeOpenings(
   openings: readonly OpeningEntity[],
   wallIds: readonly string[],
   ctx: SyncContext,
-): readonly OpeningEntity[] {
+): readonly WallHostedOpening[] {
   const wallSet = new Set(wallIds);
-  return openings.filter((o) =>
-    wallSet.has(o.params.wallId) && resolveIsEntityVisible(
+  // ADR-615 — a self-hosted opening sits on no wall chain, so it can never be one of
+  // this chain's cuts. The guard both excludes it and narrows `wallId` to the `string`
+  // that `computeEnvelopeOpeningCuts` requires.
+  return openings.filter((o): o is WallHostedOpening =>
+    isWallHostedOpening(o) && wallSet.has(o.params.wallId) && resolveIsEntityVisible(
       { category: 'opening', layerId: o.layerId, discipline: o.discipline },
       {
         objectStyles: ctx.objectStyles,
@@ -262,7 +278,9 @@ function addRevealLinings(
   for (const op of entities.openings) {
     const reveal = op.params?.revealInsulation;
     const outline = op.geometry?.outline?.vertices;
-    if (!reveal || !outline) continue;
+    // ADR-615 — reveal lining is a wall-reveal detail: a self-hosted opening has no host
+    // wall to resolve the building from, so it is skipped like any other unresolvable one.
+    if (!reveal || !outline || !isWallHostedOpening(op)) continue;
     const r = resolveEnvelopeBuilding(wallById.get(op.params.wallId), ctx, shouldRender);
     if (!r) continue;
 

@@ -21,7 +21,15 @@ import {
 
 /** The minimal tool-handle surface the numeric override helpers need. */
 export interface ToolNumericOverrideHandle {
-  readonly overrides: Readonly<Record<string, unknown>>;
+  /**
+   * The tool's param overrides bag. Typed as a plain `object`, NOT
+   * `Readonly<Record<string, unknown>>`: every bridge declares its overrides as a precise
+   * interface (`FurnitureParamOverrides`, `FoundationParamOverrides`, …), and an interface
+   * gets no implicit index signature — so none of them ever satisfied the `Record` form.
+   * The single dynamic lookup lives in `readToolOverrideNumber`, which narrows the value
+   * itself, so nothing is lost by not spelling the index signature here.
+   */
+  readonly overrides: object;
   setParamOverrides(patch: Record<string, number>): void;
 }
 
@@ -38,7 +46,7 @@ export function readToolOverrideNumber(
   keyDefault?: Readonly<Record<string, number>>,
 ): RibbonComboboxState {
   const field = keyToField[commandKey];
-  const raw = handle.overrides[field];
+  const raw = (handle.overrides as Readonly<Record<string, unknown>>)[field];
   const val = typeof raw === 'number' ? raw : keyDefault?.[commandKey] ?? 0;
   return { value: String(val), options: [] };
 }
