@@ -27,6 +27,7 @@ import type { ViewTransform, Viewport } from '../../rendering/types/Types';
 import { CanvasUtils } from '../../rendering/canvas/utils/CanvasUtils';
 import { computeEnvelopeShell, collectEnvelopeOverrides } from '../../bim/geometry/envelope-shell';
 import { computeEnvelopeOpeningCuts } from '../../bim/geometry/envelope-opening-cuts';
+import { isWallHostedOpening } from '../../bim/types/opening-types';
 import {
   EnvelopeRenderer,
   buildEnvelopeRenderPlan,
@@ -173,9 +174,12 @@ export function EnvelopeOverlay({
       .filter((e): e is Extract<DxfEntityUnion, { type: 'beam' }> => e.type === 'beam')
       .map((b) => ({ id: b.id, params: b.params }));
     // ADR-396 — ανοίγματα για cutouts στο band μόνωσης (η Z1 δεν σκεπάζει κουφώματα).
+    // ADR-615 — μόνο τα wall-hosted: ένα self-hosted κούφωμα δεν κρέμεται σε τοίχο
+    // του κελύφους, άρα δεν τρυπά κανένα band.
     const openings = scene.entities
       .filter((e): e is Extract<DxfEntityUnion, { type: 'opening' }> => e.type === 'opening')
-      .map((o) => o.openingEntity);
+      .map((o) => o.openingEntity)
+      .filter(isWallHostedOpening);
 
     const renderer = new EnvelopeRenderer(ctx);
     // Hatch spacing (mm) → scene units· σε meter scenes 80mm θα γινόταν 80m
