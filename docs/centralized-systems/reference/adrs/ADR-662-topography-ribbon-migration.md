@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Κατάσταση** | 🟢 Φάσεις 1 + 1b + 2 (trim-first) ΥΛΟΠΟΙΗΘΗΚΑΝ (μόνιμο ribbon tab + bridge Host + live toggles/numeric fields + αφαίρεση διπλών display/param sections από το αριστερό panel) · 🟡 Φάση 2β **(Δρόμος Γ — επιφάνεια = first-class selectable entity)** ΞΕΚΙΝΗΣΕ: type foundation (Stage A μερικό)· εκκρεμεί το plumbing (renderer + hit-test + contextual + Properties) · Φάση 4 PROPOSED |
+| **Κατάσταση** | 🟢 Φάσεις 1 + 1b + 2 (trim-first) ΥΛΟΠΟΙΗΘΗΚΑΝ (μόνιμο ribbon tab + bridge Host + live toggles/numeric fields + αφαίρεση διπλών display/param sections από το αριστερό panel) · 🟡 Φάση 2β **(Δρόμος Γ — επιφάνεια = first-class selectable entity)** ΣΕ ΕΞΕΛΙΞΗ: **Stage A ΟΛΟΚΛΗΡΩΘΗΚΕ** (type foundation + render/hit-test plumbing — η επιφάνεια είναι πλέον renderable + επιλέξιμη hover/click/marquee, 6/7 coverage jest πράσινα· το 7ο κόκκινο = pre-existing `leader` orphan ADR-635, άσχετο)· εκκρεμεί **Stage B** (γέννηση/regenerate του footprint από `getTopoSurface`) + **Stage C** (object-bound Properties + «Τοπογραφική Επιφάνεια» contextual tab) · Φάση 4 PROPOSED |
 | **Ημερομηνία** | 2026-07-15 |
 | **Κατηγορία** | DXF Viewer / Ribbon · Topography |
 | **Σχετικά ADR** | **ADR-444** (μόνιμα MEP discipline ribbon tabs — ΤΟ ΠΡΟΤΥΠΟ) · **ADR-345** (contextual ribbon tabs infra) · **ADR-587** (entity-keyed trigger SSoT) · **ADR-532** (contextual trigger = leaf subscription) · **ADR-650/656** (τοπογραφικό — TIN/ισοϋψείς/γεωαναφορά/relief) · **ADR-583** (annotation-symbol = North arrow contextual tab) · **ADR-040** (canvas perf) |
