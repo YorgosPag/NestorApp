@@ -474,6 +474,17 @@ user-import → `unknown` / `redistributable:false`. Promote σε shared/system 
 - **Anonymous blocks**: αποθηκεύονται μόνο named/πραγματικά (`shouldPreserveBlockName`), όχι `*X`/`*D`.
 
 ## Changelog
+- **2026-07-16** — 🔴 **Live layout bug** — και τα **3** dialogs της βιβλιοθήκης (`BlockEditDialog`,
+  `BlockPromoteDialog`, `BlockSaveToLibraryDialog`) περνούσαν `<DialogContent size="md">`. Το **`md` ΔΕΝ
+  υπάρχει** στην CVA κλίμακα του `@/components/ui/dialog` (ADR-241): `sm | default | lg | xl | 2xl |
+  fullscreen` — το μεσαίο σκαλί λέγεται **`default`** (`max-w-lg`), γιατί είναι η τιμή των
+  `defaultVariants`. **Δεν ήταν καλλωπιστικό:** το base class list του `DialogContent` έχει `w-full` και
+  **κανένα `max-w-*`** — το max-width το δίνει **μόνο** το size variant. Επαληθεύτηκε στο εγκατεστημένο
+  `class-variance-authority`: άκυρη τιμή variant → εκπέμπει `""`, και τα `defaultVariants` **ΔΕΝ** τη
+  σώζουν (πιάνουν μόνο `undefined`). Άρα και τα 3 dialogs ζωγραφίζονταν **σε όλο το πλάτος του
+  viewport**. Διόρθωση → `size="default"` (υπάρχον ρητό precedent στο repo). **Γιατί πέρασε:** το root
+  `tsconfig.json` **εξαιρεί** το `src/subapps/dxf-viewer/**` → το σφάλμα τύπου ήταν αόρατο σε
+  `npm run typecheck` **και** στο pre-commit hook· το έπιασε το **CHECK 3.29** (ADR-663 §4 part 4).
 - **2026-07-14** — **Deferred SSoT ratchet migrations** ΟΛΟΚΛΗΡΩΘΗΚΑΝ (και τα 3· ΟΧΙ νέο milestone —
   pure internal SSoT dedup, μηδέν αλλαγή συμπεριφοράς). **SSoT audit (grep, όχι μνήμη)**: ο
   `ScopedLibraryService` ΔΕΝ εξέφραζε subcollection topology (κάρφωνε top-level `collection(db, name)`)·
