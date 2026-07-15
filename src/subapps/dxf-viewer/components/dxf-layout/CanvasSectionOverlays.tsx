@@ -31,6 +31,8 @@ import { TextEditorOverlay } from '../../ui/text-toolbar/TextEditorOverlay';
 // its own store, dispatches UpdateEntityCommand via useCommandHistory). No props.
 import { OpeningInfoTagEditorOverlay } from '../../ui/opening-info-tag/OpeningInfoTagEditorOverlay';
 import { SelectionCyclingPopover } from '../../systems/selection/SelectionCyclingPopover';
+// ADR-659 — overlap «⧉ N» badge (store-driven leaf, no props).
+import { OverlapCountBadge } from '../../systems/selection/OverlapCountBadge';
 
 type QuickHoverProps = React.ComponentProps<typeof QuickPropertiesHoverPopover>;
 type QuickMiniProps = React.ComponentProps<typeof QuickPropertiesMiniPanel>;
@@ -84,6 +86,8 @@ export const CanvasSectionOverlays: React.FC<CanvasSectionOverlaysProps> = (p) =
       <OpeningInfoTagEditorOverlay />
       {/* ADR-357 Phase 15 — G13 Selection Cycling popover (portal, micro-leaf, ADR-040) */}
       <SelectionCyclingPopover {...p.selectionCycling} />
+      {/* ADR-659 — overlap «⧉ N» badge (portal, micro-leaf, ADR-040) */}
+      <OverlapCountBadge />
     </>
   );
 };

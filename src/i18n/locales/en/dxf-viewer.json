@@ -136,7 +136,9 @@
     "flipArc": "Reverse",
     "entity": {
       "splitWall": "Split Wall",
-      "selectSimilarColor": "Select Similar (Same Color)"
+      "selectSimilarColor": "Select Similar (Same Color)",
+      "bringToFront": "Bring to Front",
+      "sendToBack": "Send to Back"
     },
     "snapOverride": {
       "title": "Snap Override",
@@ -412,7 +414,9 @@
     }
   },
   "selectionCycling": {
-    "label": "Select entity"
+    "label": "Select entity",
+    "overlapBadge": "{count, plural, one {# entity here} other {# entities here}}",
+    "overlapBadgeHint": "Multiple entities here — click again on the same spot or Shift+Space to cycle"
   },
   "groupSelection": {
     "label": "Group · {count, plural, one {# object} other {# objects}}",

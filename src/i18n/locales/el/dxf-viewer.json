@@ -136,7 +136,9 @@
     "flipArc": "Αντιστροφή",
     "entity": {
       "splitWall": "Χωρισμός Τοίχου",
-      "selectSimilarColor": "Επιλογή όμοιων (ίδιο χρώμα)"
+      "selectSimilarColor": "Επιλογή όμοιων (ίδιο χρώμα)",
+      "bringToFront": "Μεταφορά μπροστά",
+      "sendToBack": "Μεταφορά πίσω"
     },
     "snapOverride": {
       "title": "Προσωρινή Εστίαση Snap",
@@ -412,7 +414,9 @@
     }
   },
   "selectionCycling": {
-    "label": "Επιλογή οντότητας"
+    "label": "Επιλογή οντότητας",
+    "overlapBadge": "{count, plural, one {# οντότητα εδώ} other {# οντότητες εδώ}}",
+    "overlapBadgeHint": "Πολλαπλές οντότητες εδώ — ξανακλικ στο ίδιο σημείο ή Shift+Space για εναλλαγή"
   },
   "groupSelection": {
     "label": "Ομάδα · {count, plural, one {# αντικείμενο} other {# αντικείμενα}}",

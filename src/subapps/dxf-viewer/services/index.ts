@@ -55,7 +55,8 @@ export {
 
 // ===== INDIVIDUAL SERVICES (Legacy compatibility) =====
 export { FitToViewService } from './FitToViewService';
-export { HitTestingService, hitTestingService } from './HitTestingService';
+// ADR-659 SSoT — no `hitTestingService` singleton export; use serviceRegistry.get('hit-testing').
+export { HitTestingService } from './HitTestingService';
 export { canvasBoundsService, type CanvasBoundsCache } from './CanvasBoundsService';
 export { LayerOperationsService } from './LayerOperationsService';
 export { EntityMergeService } from './EntityMergeService';

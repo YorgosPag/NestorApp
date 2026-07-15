@@ -24,6 +24,12 @@ import { setSnapDrawingMode } from './SnapDrawingModeStore';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
 import { projectPointOntoGuide, isGuideEditTool, GUIDE_HIT_TOLERANCE_PX } from '../../systems/guides/guide-types';
 import { setHoveredEntity, setHoveredOverlay } from '../hover/HoverStore';
+// ADR-659 — overlap «⧉ N» badge: count the stack under the cursor at hover time.
+// Uses the LIVE registry hit-testing instance (fed by the render loop's updateScene),
+// the SAME one the top-1 `hitTestCallback` uses — NOT the zombie exported singleton.
+import { serviceRegistry } from '../../services/ServiceRegistry';
+import { buildCandidatesFromHits } from '../selection/SelectionCyclingStore';
+import { setOverlapBadge, clearOverlapBadge } from '../selection/OverlapBadgeStore';
 // ADR-358 Q19 Φ3c — per-tread hover pre-highlight while a stair is sole-selected
 // (component mode). Shares the Φ3b click-into gate; clears itself otherwise.
 import { updateStairSubElementHover2D } from '../../bim/stairs/stair-sub-element-hover-2d';
@@ -273,6 +279,7 @@ export function useMouseMoveHandler({
       setHoveredEntity(null);
       setHoveredOverlay(null);
       setStairSubElementHover(null);
+      clearOverlapBadge(); // ADR-659 — no overlap badge while a grip is being manipulated.
     } else if ((activeTool === 'select' || entityPickingActive) && !refs.panStateRef.current.isPanning && !cursor.isSelecting) {
       const hoverNow = performance.now();
       if (hoverNow - refs.hoverThrottleRef.current >= PANEL_LAYOUT.TIMING.HOVER_THROTTLE_MS) {
@@ -285,6 +292,14 @@ export function useMouseMoveHandler({
           );
           // Write to HoverStore (zero-React-state update). Backward-compat callback kept.
           setHoveredEntity(hitEntityId);
+          // ADR-659 — overlap badge: count the full stack ONLY when the top-1 hit found an
+          // entity (zero extra hit-test over empty space); throttled by the enclosing gate.
+          if (hitEntityId) {
+            const allHits = serviceRegistry.get('hit-testing').hitTestAll(screenPos, transform, freshViewport);
+            setOverlapBadge(buildCandidatesFromHits(allHits).length, e.clientX, e.clientY);
+          } else {
+            clearOverlapBadge();
+          }
           // ADR-358 Q19 Φ3c — resolve the per-tread pre-highlight (no-op unless the
           // hovered entity is the sole-selected stair; skip-if-unchanged inside).
           updateStairSubElementHover2D(hitEntityId, worldPos, scene?.entities as readonly Entity[] | undefined);

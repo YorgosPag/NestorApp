@@ -72,6 +72,17 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-07-15 — ➕ ADR-659: overlap-badge micro-leaf mounted σε `CanvasSectionOverlays`
+**Τι:** το `CanvasSectionOverlays.tsx` (portal-overlay layer του καμβά) mount-άρει πλέον το νέο
+`OverlapCountBadge` micro-leaf (ADR-659 D4). Το leaf είναι πλήρως συμβατό με το ADR-040 micro-leaf
+pattern: subscribe **ΜΟΝΟ** στο low-freq `OverlapBadgeStore` (`useSyncExternalStore`), portal στο
+`document.body`, `pointer-events-none`. Το `CanvasSectionOverlays` παραμένει subscription-free
+wrapper — δεν καλεί κανένα high-freq store· η προσθήκη είναι ένα ακόμη ανεξάρτητο leaf, όχι νέα
+subscription στον orchestrator.
+
+**Γιατί CHECK 6B:** το `CanvasSectionOverlays` είναι στη λίστα micro-leaf αρχιτεκτονικής → κάθε
+τροποποίηση co-stage-άρει ADR-040. Μηδέν αλλαγή σε bitmap-cache key / transform path. ΟΧΙ tsc (N.17).
+
 ### 2026-07-15 — 🔬 TEMP diagnostic στο `dxf-canvas-renderer` hot path (ADR-402 cross-mode selection browser-verify)
 **Τι:** προσωρινό `console.log('[SEL3D-2D]…')` στο `dxf-canvas-renderer.ts` (bitmap-cache render loop) που τυπώνει
 τα selected ids που **λείπουν** από το 2D scene map — διαγνωστικό για τον ζωντανό έλεγχο της 2D↔3D επιλογής

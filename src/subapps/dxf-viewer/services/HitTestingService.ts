@@ -74,6 +74,44 @@ export class HitTestingService {
   }
 
   /**
+   * SSoT core — screen→world + pixel→world tolerance + spatial query.
+   * De-dupes `hitTest` (top-1) and `hitTestAll` (cycling) so they never drift apart (N.18).
+   *
+   * 🏢 AutoCAD/MicroStation standard: pixel tolerance → world units, scaling inversely with
+   * zoom (high zoom → tighter world tolerance, always pixel-consistent).
+   */
+  private queryHitsAt(
+    screenPos: Point2D,
+    transform: ViewTransform,
+    viewport: Viewport,
+    options: HitTestOptions,
+    defaultMaxResults: number,
+  ): ReturnType<HitTester['hitTestPoint']> {
+    const worldPos = CoordinateTransforms.screenToWorld(screenPos, transform, viewport);
+    const pixelTolerance = options.tolerance || TOLERANCE_CONFIG.ENTITY_HOVER_PIXELS;
+    const worldTolerance = pixelTolerance / transform.scale;
+    return this.hitTester.hitTestPoint(worldPos, {
+      tolerance: worldTolerance,
+      maxResults: options.maxResults || defaultMaxResults,
+      useSpatialIndex: true,
+      layerFilter: options.layerFilter,
+      typeFilter: options.typeFilter,
+      includeInvisible: options.includeInvisible || false,
+    });
+  }
+
+  /** Map a spatial-query hit → the service's public HitTestResult shape. */
+  private toHitResult(hit: ReturnType<HitTester['hitTestPoint']>[number]): HitTestResult {
+    return {
+      entityId: hit.data?.id || null, // ✅ ENTERPRISE FIX: Use data.id from SpatialQueryResult
+      entityType: hit.data?.type || 'unknown', // ✅ Use data.type
+      // ADR-358 Phase 9D-5b-i: id-only resolver SSoT (HitTester.layer is already resolver-populated).
+      layer: hit.layer,
+      distance: hit.distance,
+    };
+  }
+
+  /**
    * ✅ ΚΕΝΤΡΙΚΗ HIT TEST METHOD
    * Μοναδικό σημείο για όλα τα hit testing needs
    */
@@ -86,41 +124,9 @@ export class HitTestingService {
     if (!this.currentScene || !this.currentScene.entities.length) {
       return { entityId: null };
     }
-
     try {
-      // Convert screen position to world position
-      const worldPos = CoordinateTransforms.screenToWorld(screenPos, transform, viewport);
-
-      // 🏢 AutoCAD/MicroStation standard: Convert pixel tolerance → world units
-      // Tolerance is defined in pixels and scales inversely with zoom.
-      // At high zoom (large scale), world tolerance shrinks → more precise.
-      // At low zoom (small scale), world tolerance grows — but stays pixel-consistent.
-      const pixelTolerance = options.tolerance || TOLERANCE_CONFIG.ENTITY_HOVER_PIXELS;
-      const worldTolerance = pixelTolerance / transform.scale;
-
-      // Perform hit test using centralized HitTester
-      const hits = this.hitTester.hitTestPoint(worldPos, {
-        tolerance: worldTolerance,
-        maxResults: options.maxResults || 1,
-        useSpatialIndex: true,
-        layerFilter: options.layerFilter,
-        typeFilter: options.typeFilter,
-        includeInvisible: options.includeInvisible || false
-      });
-
-      // Return the first hit
-      if (hits.length > 0) {
-        const hit = hits[0];
-        return {
-          entityId: hit.data?.id || null, // ✅ ENTERPRISE FIX: Use data.id from SpatialQueryResult
-          entityType: hit.data?.type || 'unknown', // ✅ Use data.type
-          // ADR-358 Phase 9D-5b-i: id-only resolver SSoT (HitTester.layer is already resolver-populated).
-          layer: hit.layer,
-          distance: hit.distance
-        };
-      }
-
-      return { entityId: null };
+      const hits = this.queryHitsAt(screenPos, transform, viewport, options, 1);
+      return hits.length > 0 ? this.toHitResult(hits[0]) : { entityId: null };
     } catch (error) {
       console.error('🔥 HitTestingService: Hit testing failed:', error);
       return { entityId: null };
@@ -139,23 +145,8 @@ export class HitTestingService {
   ): HitTestResult[] {
     if (!this.currentScene || !this.currentScene.entities.length) return [];
     try {
-      const worldPos = CoordinateTransforms.screenToWorld(screenPos, transform, viewport);
-      const pixelTolerance = options.tolerance || TOLERANCE_CONFIG.ENTITY_HOVER_PIXELS;
-      const worldTolerance = pixelTolerance / transform.scale;
-      const hits = this.hitTester.hitTestPoint(worldPos, {
-        tolerance: worldTolerance,
-        maxResults: options.maxResults || 50,
-        useSpatialIndex: true,
-        layerFilter: options.layerFilter,
-        typeFilter: options.typeFilter,
-        includeInvisible: options.includeInvisible || false,
-      });
-      return hits.map((hit) => ({
-        entityId: hit.data?.id || null,
-        entityType: hit.data?.type || 'unknown',
-        layer: hit.layer,
-        distance: hit.distance,
-      }));
+      return this.queryHitsAt(screenPos, transform, viewport, options, 50)
+        .map((hit) => this.toHitResult(hit));
     } catch {
       return [];
     }
@@ -209,7 +200,12 @@ export class HitTestingService {
 }
 
 /**
- * ✅ SINGLETON INSTANCE
- * Κεντρική instance για όλη την εφαρμογή
+ * ⚠️ NO module-level singleton export (ADR-659 SSoT).
+ *
+ * Hit-testing is accessed ONLY through the DI container: `serviceRegistry.get('hit-testing')`.
+ * The registry owns the ONE instance; the render loop feeds it the scene via `updateScene()`
+ * on every dirty frame. A second `export const hitTestingService = new HitTestingService()`
+ * here used to create a parallel, scene-less "zombie" that silently returned [] — the
+ * root-cause bug behind selection-cycling never working. Do not reintroduce it. Big-player /
+ * enterprise DI practice: one container, one access path, zero parallel globals.
  */
-export const hitTestingService = new HitTestingService();

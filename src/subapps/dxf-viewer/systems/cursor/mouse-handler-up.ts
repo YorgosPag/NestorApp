@@ -64,6 +64,8 @@ import { applyOrthoToDelta } from '../../bim/grips/grip-move-constraints';
 import { applyGripStepSnap, isGripStepActive } from '../../bim/grips/grip-step-quantize';
 // ADR-358 Q19 Φ3b — 2D «click-into»: 2nd click on the sole-selected stair → tread sub-select.
 import { handleStairClickInto2D } from '../../bim/stairs/stair-click-into-2d';
+// ADR-659 — ArchiCAD repeated-click overlap disambiguation (2nd click same point → cycle).
+import { resolveRepeatedClickCycle } from '../selection/resolve-repeated-click-cycle';
 
 /** Min pointer travel (px) before a body-drag counts as a drag (else it's a click). */
 const BODY_DRAG_MIN_PX = 3;
@@ -461,6 +463,22 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
         const worldClick = screenToWorldWithSnapshot(getScreenPosFromEvent(e, hitSnap), transform, hitSnap);
         if (handleStairClickInto2D(hitResult, additive, worldClick, scene?.entities as unknown as readonly Entity[] | undefined)) {
           return;
+        }
+        // ADR-659 — repeated-click overlap disambiguation: when the click lands on a stack
+        // (≥2 under cursor), a 2nd click on the SAME point cycles to the next candidate (opens
+        // the popover + canvas pre-highlight). The 1st click just arms and falls through to the
+        // normal top-1 selection below (fast path untouched). Skipped on empty space / additive.
+        if (hitResult?.entityId && !additive && onEntitiesSelected) {
+          const consumed = resolveRepeatedClickCycle({
+            screenPos: cursor.position,
+            clientX: e.clientX,
+            clientY: e.clientY,
+            transform,
+            viewport: hitSnap.viewport,
+            additive,
+            selectEntityById: (id) => onEntitiesSelected([id]),
+          });
+          if (consumed) return;
         }
         if (onEntitySelect) onEntitySelect(hitResult, additive);
         // No entity + select tool + clean left-click → start two-click selection (AutoCAD: click→move→click)

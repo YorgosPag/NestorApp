@@ -25,7 +25,7 @@ jest.mock('../FitToViewService', () => ({
   }
 }));
 
-// Mock HitTestingService
+// Mock HitTestingService (registry factory creates the instance via `new`).
 jest.mock('../HitTestingService', () => ({
   HitTestingService: jest.fn().mockImplementation(() => ({
     hitTest: jest.fn().mockReturnValue(null)

@@ -26,7 +26,9 @@ import { UI_COLORS } from '../../config/color-config';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 // 🏢 ADR-151: Centralized grip tolerance
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
-import { hitTestingService } from '../../services/HitTestingService';
+// ADR-659 SSoT — hit-testing is accessed ONLY through the ServiceRegistry (the DI container).
+// The scene-fed instance lives there; there is no standalone exported singleton anymore.
+import { serviceRegistry } from '../../services/ServiceRegistry';
 // 🏢 ADR-344 Phase 11: Annotative scaling resolver — upstream of TextRenderer
 import { resolveAnnotativeEntity } from '../entities/annotative-resolver';
 
@@ -238,7 +240,7 @@ export class EntityRendererComposite {
     try {
       const viewport = this.getCssViewport();
 
-      const result = hitTestingService.hitTest(point, this.transform, viewport, {
+      const result = serviceRegistry.get('hit-testing').hitTest(point, this.transform, viewport, {
         tolerance,
         maxResults: 1
       });
@@ -255,7 +257,7 @@ export class EntityRendererComposite {
     try {
       const viewport = this.getCssViewport();
 
-      const result = hitTestingService.hitTest(point, this.transform, viewport, {
+      const result = serviceRegistry.get('hit-testing').hitTest(point, this.transform, viewport, {
         tolerance,
         maxResults: 1
       });

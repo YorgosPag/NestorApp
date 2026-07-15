@@ -17,6 +17,8 @@ import React, { useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { SelectionCyclingStore } from './SelectionCyclingStore';
+// ADR-659 — canvas pre-highlight of the hovered/cycled candidate (zero-React, ADR-040).
+import { setHoveredEntity } from '../hover/HoverStore';
 
 interface SelectionCyclingPopoverProps {
   onSelectEntity: (entityId: string) => void;
@@ -33,12 +35,17 @@ export function SelectionCyclingPopover({ onSelectEntity }: SelectionCyclingPopo
   if (!state.active || state.candidates.length === 0) return null;
   if (typeof document === 'undefined') return null;
 
+  // ADR-659 — the candidate that Enter/repeated-click would confirm; canvas falls back to it
+  // when the pointer leaves the list, so the pre-highlight never goes stale.
+  const currentId = state.candidates[state.currentIndex]?.id ?? null;
+
   return createPortal(
     <ul
       role="listbox"
       aria-label={t('selectionCycling.label')}
       style={{ left: state.clientX + 14, top: state.clientY + 14 }}
       className="fixed z-[2500] min-w-[180px] max-h-56 overflow-y-auto rounded border border-border bg-popover shadow-lg text-xs py-0.5"
+      onMouseLeave={() => setHoveredEntity(currentId)}
     >
       {state.candidates.map((candidate, idx) => (
         <li
@@ -49,9 +56,14 @@ export function SelectionCyclingPopover({ onSelectEntity }: SelectionCyclingPopo
             // preventDefault keeps input focus; selection happens on click.
             e.preventDefault();
           }}
+          // ADR-659 — hovering a row pre-highlights that entity ON THE CANVAS (Revit/AutoCAD),
+          // so the user sees exactly WHAT they will select before committing.
+          onMouseEnter={() => setHoveredEntity(candidate.id)}
           onClick={() => {
             onSelectEntity(candidate.id);
             SelectionCyclingStore.cancel();
+            SelectionCyclingStore.clearArmed();
+            setHoveredEntity(null);
           }}
           className={`flex items-center gap-2 px-2 py-1.5 cursor-pointer select-none ${
             idx === state.currentIndex

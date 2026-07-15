@@ -15,10 +15,15 @@
  */
 
 import { useCallback, useEffect, useRef } from 'react';
-import { SelectionCyclingStore, type CyclingCandidate } from './SelectionCyclingStore';
-import { hitTestingService } from '../../services/HitTestingService';
+import { SelectionCyclingStore, buildCandidatesFromHits } from './SelectionCyclingStore';
+// ADR-659 fix — the LIVE hit-testing instance (the one the render loop feeds via
+// updateScene) lives in the ServiceRegistry. The exported `hitTestingService` singleton
+// never gets a scene → hitTestAll returns [] (this is why Shift+Space cycling never worked).
+import { serviceRegistry } from '../../services/ServiceRegistry';
 import { getImmediatePosition, getClientPosition } from '../cursor/ImmediatePositionStore';
 import { getImmediateTransform } from '../cursor/ImmediateTransformStore';
+// ADR-659 — canvas pre-highlight of the currently-cycled candidate (zero-React, ADR-040).
+import { setHoveredEntity } from '../hover/HoverStore';
 // ADR-364 — Escape Command Bus SSoT
 import { useEscapeHandler, ESC_PRIORITY } from '../escape-bus';
 
@@ -46,25 +51,16 @@ export function useSelectionCycling({ activeTool, onSelectEntity }: UseSelection
     const rect = canvas.getBoundingClientRect();
     const viewport = { width: rect.width, height: rect.height };
 
-    const hits = hitTestingService.hitTestAll(screenPos, transform, viewport);
+    const hits = serviceRegistry.get('hit-testing').hitTestAll(screenPos, transform, viewport);
 
-    // Deduplicate by entity ID and build candidate list.
-    const seen = new Set<string>();
-    const candidates: CyclingCandidate[] = [];
-    for (const hit of hits) {
-      if (hit.entityId && !seen.has(hit.entityId)) {
-        seen.add(hit.entityId);
-        candidates.push({
-          id: hit.entityId,
-          entityType: hit.entityType ?? 'entity',
-          layer: hit.layer ?? '0',
-        });
-      }
-    }
+    // ADR-659 — shared dedup SSoT (no clone of the loop, N.18).
+    const candidates = buildCandidatesFromHits(hits);
 
     if (candidates.length >= 2) {
       const { x, y } = getClientPosition();
       SelectionCyclingStore.startCycling(candidates, x, y);
+      // Pre-highlight the top candidate on the canvas the moment cycling opens.
+      setHoveredEntity(candidates[0]?.id ?? null);
     }
   }, []);
 
@@ -82,6 +78,8 @@ export function useSelectionCycling({ activeTool, onSelectEntity }: UseSelection
         e.preventDefault();
         if (SelectionCyclingStore.isActive()) {
           SelectionCyclingStore.cycleNext();
+          // ADR-659 — keep the canvas pre-highlight in sync with the cycled candidate.
+          setHoveredEntity(SelectionCyclingStore.getCurrentId());
         } else if (activeTool === 'select') {
           triggerCycling();
         }
@@ -98,6 +96,8 @@ export function useSelectionCycling({ activeTool, onSelectEntity }: UseSelection
         const id = SelectionCyclingStore.getCurrentId();
         if (id) onSelectRef.current(id);
         SelectionCyclingStore.cancel();
+        // ADR-659 — selection now owns the highlight; drop the transient pre-highlight.
+        setHoveredEntity(null);
         return;
       }
 
@@ -113,6 +113,6 @@ export function useSelectionCycling({ activeTool, onSelectEntity }: UseSelection
     id: 'selection-cycling/cancel',
     priority: ESC_PRIORITY.SELECTION_CYCLING,
     canHandle: () => SelectionCyclingStore.isActive(),
-    handle: () => { SelectionCyclingStore.cancel(); return true; },
+    handle: () => { SelectionCyclingStore.cancel(); setHoveredEntity(null); return true; },
   });
 }

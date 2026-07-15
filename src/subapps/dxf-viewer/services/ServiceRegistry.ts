@@ -101,6 +101,11 @@ export class ServiceRegistry {
     this.registerSingleton('dxf-firestore', DxfFirestoreService as typeof DxfFirestoreService);
 
     // Instance-based services (lazy initialization)
+    // ADR-659 SSoT — the registry OWNS the single hit-testing instance (created lazily, then
+    // cached by `get()`). There is deliberately NO exported `hitTestingService` singleton:
+    // every consumer (hover, cycling, badge, EntityRendererComposite) resolves the SAME object
+    // via `serviceRegistry.get('hit-testing')`, and the render loop feeds it `updateScene()`.
+    // One container, one instance, one scene — no parallel scene-less fork (the root-cause bug).
     this.registerFactory('hit-testing', () => new HitTestingService());
     this.registerFactory('layer-operations', () => new LayerOperationsService());
     this.registerFactory('entity-merge', () => new EntityMergeService());
