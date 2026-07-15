@@ -618,6 +618,12 @@ import type { ImageEntity } from './image';
 export type { ImageEntity } from './image';
 export { isImageEntity } from './image';
 
+// ADR-662 Φ2β (Δρόμος Γ): τοπογραφική επιφάνεια ως first-class selectable entity
+// (thin/derived — δείκτης στο TopoSurfaceDoc + footprint· non-BIM, mirror image).
+import type { TopoSurfaceEntity } from './topo-surface';
+export type { TopoSurfaceEntity } from './topo-surface';
+export { isTopoSurfaceEntity } from './topo-surface';
+
 // ADR-612 Φ1: standalone Opening Info Tag (πινακίδα ανοίγματος — 3 editable numeric cells).
 import type { OpeningInfoTagEntity } from './opening-info-tag';
 export type {
@@ -929,6 +935,7 @@ export type Entity = (
   | ScaleBarEntity           // ADR-583 Φ2: standalone graphic scale-bar
   | OpeningInfoTagEntity     // ADR-612: standalone opening info tag (3 editable numeric cells)
   | ImageEntity              // ADR-651 Φάση Ε: standalone raster image (rectangle + rotation)
+  | TopoSurfaceEntity        // ADR-662 Φ2β: τοπογραφική επιφάνεια (first-class selectable, thin/derived)
   // ADR-363 BIM Drawing Mode (Phase 0 — renderers/tools Phase 1+):
   | WallEntity
   | OpeningEntity

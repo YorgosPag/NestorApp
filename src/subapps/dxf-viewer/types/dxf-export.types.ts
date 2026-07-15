@@ -349,6 +349,9 @@ export const ENTITY_TYPE_MAPPING: Record<EntityType, EzdxfEntityType | null> = {
   'space-separator': null, // ADR-437 space separator — not exported
   // ADR-651 Φάση Ε — raster image: native IMAGE/IMAGEDEF (export pre-pass owns the marker).
   'image': 'IMAGE',
+  // ADR-662 Φ2β — τοπογραφική επιφάνεια: thin/derived δείκτης, δεν εξάγεται native
+  // (τα ορατά παράγωγα — ισοϋψείς/κάναβος/ετικέτες — εξάγονται ως δικές τους οντότητες).
+  'topo-surface': null,
 } as const;
 
 /**

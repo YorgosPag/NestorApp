@@ -93,7 +93,10 @@ export type EntityType =
   // ADR-612 — non-BIM opening info tag (πινακίδα ανοίγματος: 3 editable numeric cells).
   | 'opening-info-tag'
   // ADR-651 Φάση Ε — non-BIM raster image (εικόνα σε ορθογώνιο πλαίσιο).
-  | 'image';
+  | 'image'
+  // ADR-662 Φ2β (Δρόμος Γ) — τοπογραφική επιφάνεια ως first-class selectable
+  // αντικείμενο (thin/derived· δείκτης στο TopoSurfaceDoc + footprint για hit-test).
+  | 'topo-surface';
 
 export interface BaseEntity {
   id: string;
