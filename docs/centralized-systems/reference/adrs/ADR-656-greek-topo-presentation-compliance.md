@@ -209,6 +209,37 @@
 ---
 
 ## Changelog
+- **v5** (2026-07-15): **M12 ΥΛΟΠΟΙΗΘΗΚΕ — Βέλος Βορρά (Κανάβου / Πραγματικός, επιλογή UI).** Απάντηση στο
+  ερώτημα «ξέρουμε τον Βορρά από τις συντεταγμένες;» → **ναι**: Βορράς Κανάβου = +Northing (γνωστός με βεβαιότητα
+  σε ΕΓΣΑ87)· Πραγματικός = + **σύγκλιση μεσημβρινών γ** (υπολογίσιμη). Απόφαση Giorgio: **και τα δύο, default
+  Πραγματικός** (Civil 3D style). Οθόνη = ζωντανό HUD (top-right)· export = «Αποτύπωση στο σχέδιο» (entities).
+  - **Νέο γεωδαιτικό SSoT (systems/geo-referencing):** `egsa87-projection.ts` — ΕΓΣΑ87 (GGRS87) Transverse
+    Mercator σε GRS80 (λ₀=24°, k₀=0.9996, FE=500000): `geographicToGrid`/`gridToGeographic` (Snyder forward/inverse)
+    + `meridianConvergenceDeg(E,N)`. Δεν υπήρχε proj lib (audit) → πρώτη φορά προβολή στο repo· round-trip testable.
+  - **Νέα (topography, mirror M11):** `north-arrow-config.ts` (layer `TOPO-NORTH`, unit arrow outline, `NorthMode`,
+    SVG/mm μεγέθη)· `north-arrow-model.ts` (`surveyCentroidEN`· `northAngleDeg(mode,geo,centroid)` = Κανάβου από
+    `geo-transform.rotationDeg`, Πραγματικός += σύγκλιση· `svgRotationDeg`)· `north-arrow-entities.ts`
+    (`buildNorthArrowEntities` → lwpolyline βέλος + «Β»)· `ensure-north-layer.ts`· `north-arrow-store.ts`
+    (visible+mode)· `useNorthArrow.ts` (bake → `completeEntities`, anchor projected via `getActiveWorldToDisplayProjector`).
+  - **Νέα (canvas, ADR-040):** `NorthArrowLeaf.tsx` — **SVG** HUD micro-leaf, screen-anchored (ΟΧΙ transform-dependent),
+    self-subscribes low-freq stores μόνο (CHECK 6C).
+  - **SSoT extraction (N.0.2/N.18):** νέο `ensure-topo-layer.ts` (`ensureTopoLayer` single-layer mint) — **και το
+    M11 `ensure-grid-layers` και το M12 `ensure-north-layer` delegate** (αφαιρέθηκε το structural δίδυμο· τα M9/M10
+    multi-layer ensurers μένουν ως έχουν).
+  - **Τροποποιήσεις:** `CanvasLayerStack.tsx` (mount `NorthArrowLeaf` z-30 top-right → CHECK 6B, co-staged ADR-040)·
+    `ui/toolbar/types.ts` + `tool-definitions.ts` (`topo-north` ToolType, εκτός `TOOL_CREATES_ENTITY`)·
+    `TopographyPanel.tsx` (mount `NorthArrowSection`)· i18n `el/en dxf-viewer-panels.json` (`topography.north.*`).
+  - **Frame:** ο displayed χάρτης είναι ΕΓΣΑ world (χωρίς γεωαναφορά) ή building-local (στραμμένος κατά
+    `rotationDeg`)· η γωνία συνθέτει **rotationDeg + σύγκλιση γ** — μία αλήθεια, reuse `geo-transform` (καμία νέα
+    rotation math). γ υπολογίζεται στο centroid σε ΕΓΣΑ world (`getTopoPoints`, mm→m μέσω `lengthMmToM`).
+  - **Tests:** `egsa87-projection.test.ts` (5 — forward↔inverse round-trip· γ=0 στον κεντρικό μεσημβρινό· sign Α/Δ·
+    magnitude ~Δλ·sinφ) + `north-arrow-model.test.ts` (8) + `north-arrow-entities.test.ts` (5) + `ensure-north-layer.test.ts`
+    (4). ✅ 22/22 (+ ensure-grid regression 4/4 μετά το refactor). **N.18 jscpd:diff καθαρό.**
+  - **Future (τεκμηρίωση):** lat/lon readout (το `gridToGeographic` έτοιμο)· τυπωμένη τιμή σύγκλισης· 4 north modes
+    (magnetic θέλει μοντέλο απόκλισης — εκτός).
+  - **N.7.2:** ✅ Proactive · χωρίς race (pure model + `completeEntities`) · idempotent mint · SSoT (ένα
+    `north-arrow-model`, ένα `egsa87-projection`, ένα `ensure-topo-layer`) · await bake · lifecycle σε hook/leaf.
+    **✅ Google-level: YES** — γεωδαιτικά σωστός Πραγματικός Βορράς, reuse geo-transform, μηδέν διπλή rotation/projection math.
 - **v4** (2026-07-14): **M11 ΥΛΟΠΟΙΗΘΗΚΕ** — κάναβος συντεταγμένων ΕΓΣΑ87 (TOPO-GRID) ως **ΕΝΑ pure model +
   δύο καταναλωτές** (οθόνη + export), χωρίς διπλή αλήθεια. Big-player (Civil 3D «Coordinate Grid» / ΤΕΕ-ΕΓΣΑ87):
   crosses στις **στρογγυλές** τιμές (adaptive 50/100/200/500/1000 m) + περιμετρική αρίθμηση Easting/Northing.
