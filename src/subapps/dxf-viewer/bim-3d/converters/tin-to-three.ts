@@ -40,6 +40,15 @@ export interface TinShadingOptions {
    * projected — they compare Z against the reference in WORLD coords (see `buildCutFillColors`).
    */
   readonly projector?: WorldToDisplayProjector | null;
+  /**
+   * ADR-650 M10c — the project VERTICAL datum (WORLD canonical mm): the survey elevation that maps
+   * to internal z=0, subtracted from every vertex so the terrain seats vertically ON the building
+   * instead of floating at its real altitude. Omitted/0 → the mesh keeps rendering at real survey Z
+   * (backward compatible). Like `projector`, this is a DISPLAY transform only: the elevation / cut-
+   * fill COLOURS keep comparing REAL world Z, so the analysis reads the true ground (see the colour
+   * builders below).
+   */
+  readonly datumMm?: number;
 }
 
 /**
@@ -57,7 +66,7 @@ export function tinToBufferGeometry(
 ): THREE.BufferGeometry | null {
   if (tin.triangles.length === 0) return null;
 
-  const positions = buildPositions(tin, options?.projector ?? null);
+  const positions = buildPositions(tin, options?.projector ?? null, options?.datumMm ?? 0);
   if (!positions) return null;
 
   const indexed = new THREE.BufferGeometry();
@@ -76,7 +85,11 @@ export function tinToBufferGeometry(
 }
 
 /** Vertex XYZ in three-world metres, or `null` if any coordinate is non-finite. */
-function buildPositions(tin: TinSurface, projector: WorldToDisplayProjector | null): Float32Array | null {
+function buildPositions(
+  tin: TinSurface,
+  projector: WorldToDisplayProjector | null,
+  datumMm: number,
+): Float32Array | null {
   const count = tin.positions.length;
   const out = new Float32Array(count * 3);
   const project = projector && !projector.isIdentity ? projector : null; // fast path when unset/identity
@@ -85,7 +98,9 @@ function buildPositions(tin: TinSurface, projector: WorldToDisplayProjector | nu
     const local = tin.positions[i]!;
     const worldXMm = local[0] + tin.origin.x; // TIN-LOCAL → ΕΓΣΑ WORLD (planimetric only)
     const worldYMm = local[1] + tin.origin.y;
-    const elevMm = tin.elevations[i] ?? 0; // already WORLD Z — geo-ref is planar, never offsets Z
+    // ADR-650 M10c: real WORLD Z minus the project vertical datum → the hill seats ON the building
+    // instead of floating at its real altitude. A pure DISPLAY offset (mirror of the planar project).
+    const elevMm = (tin.elevations[i] ?? 0) - datumMm;
 
     if (!Number.isFinite(worldXMm) || !Number.isFinite(worldYMm) || !Number.isFinite(elevMm)) {
       return null;

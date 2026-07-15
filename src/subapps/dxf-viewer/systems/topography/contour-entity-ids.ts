@@ -11,7 +11,35 @@
  */
 
 import type { SceneModel } from '../../types/scene';
-import { TOPO_MAJOR_LAYER_NAME, TOPO_MINOR_LAYER_NAME } from './contour-config';
+import type { SceneLayer } from '../../types/entities';
+import { TOPO_MAJOR_LAYER_NAME, TOPO_MINOR_LAYER_NAME, TOPO_LABEL_LAYER_NAME } from './contour-config';
+
+/**
+ * ADR-650 M10d — the three canonical layer names a plan-view contour (line OR label) lives on.
+ * The single membership test both the 2D `collectSmoothableContourIds` (lines only) and the 3D
+ * overlay skip (`isTopoContourEntity`, lines + labels) derive from — so «what is a contour» has
+ * one home, not two drifting name lists.
+ */
+const TOPO_CONTOUR_LAYER_NAMES: ReadonlySet<string> = new Set([
+  TOPO_MAJOR_LAYER_NAME, TOPO_MINOR_LAYER_NAME, TOPO_LABEL_LAYER_NAME,
+]);
+
+/**
+ * ADR-650 M10d — is this entity a plan-view topo contour (polyline OR elevation label)?
+ *
+ * Used to keep the contours OUT of the per-floor 3D DXF overlay: they must render exactly ONCE,
+ * draped on the surface at their real (datum-shifted) elevation via `TerrainContourLayer`, not
+ * re-stamped flat at every floor's elevation (which stacked identical contours per storey). The
+ * 2D plan keeps them as ordinary CAD entities — this predicate only gates the 3D overlay.
+ */
+export function isTopoContourEntity(
+  entity: { readonly layerId?: string },
+  layersById: Record<string, SceneLayer> | undefined,
+): boolean {
+  if (!entity.layerId || !layersById) return false;
+  const layer = layersById[entity.layerId];
+  return !!layer && TOPO_CONTOUR_LAYER_NAMES.has(layer.name);
+}
 
 /** Entity ids of the major+minor contour lwpolylines in a scene (labels excluded). */
 export function collectSmoothableContourIds(scene: SceneModel): string[] {

@@ -1,0 +1,153 @@
+/**
+ * TerrainContourLayer — the topographic CONTOUR lines in the 3D viewport (ADR-650 M10d).
+ *
+ * The line sibling of {@link TerrainSceneLayer}: that layer renders the surface as a solid mesh,
+ * this one renders the SAME derived surface's contours as draped lines. Both read the ONE memoised
+ * `getTopoSurface()` and seat by the SAME geo-reference projector + vertical datum, so the hill,
+ * its contours in 3D, and its contours in 2D plan are three views of one triangulation — they can
+ * never silently disagree.
+ *
+ * Why a dedicated layer and not the per-floor DXF overlay (the bug this fixes): the contours are
+ * plain `lwpolyline` CAD entities of the survey drawing. The 3D DXF overlay stamps every floor's
+ * plan flat at that floor's elevation, so the SAME contours were re-drawn at every storey and
+ * stacked into a ladder. A contour is a survey product at a FIXED ground elevation, not a
+ * floor-scoped annotation — so, exactly like Civil 3D / Revit, it belongs to the surface and
+ * renders ONCE at its real (datum-shifted) elevation, regardless of the active floor scope.
+ *
+ * Owner pattern + reactivity: identical to `TerrainSceneLayer` — `ThreeJsSceneManager` constructs
+ * it once and calls `dispose()` on teardown; it reacts imperatively to the survey, display,
+ * contour-config and geo-reference stores with zero React state (ADR-040).
+ *
+ * @module bim-3d/scene/terrain/TerrainContourLayer
+ */
+
+import * as THREE from 'three';
+import { getTopoSurface } from '../../../systems/topography/topo-surface';
+import { getTerrain3DState } from '../../../systems/topography/terrain-3d-store';
+import { getContourConfig, subscribeContourConfig } from '../../../systems/topography/contour-config-store';
+import type { ContourConfig } from '../../../systems/topography/contour-config';
+import { generateContoursFromSurface } from '../../../systems/topography/contour-generator';
+import {
+  getActiveWorldToDisplayProjector,
+  getGeoReference,
+} from '../../../systems/geo-referencing/geo-reference-store';
+import { getActiveVerticalDatumMm } from '../../../systems/topography/vertical-datum';
+import { seatTopoLayerRoot, subscribeTopoLayer } from './topo-scene-layer-support';
+import type { TinSurface } from '../../../systems/topography/topo-types';
+import type { GeoReference } from '../../../systems/geo-referencing/geo-transform';
+import { contourLinesToGeometries } from '../../converters/contour-to-three';
+import { getTopoContourMaterial3D } from '../../materials/MaterialCatalog3D';
+import { disposeObjectTree } from '../dispose-object-tree';
+
+/** ADR-650 M10d — geometry inputs that force a re-derivation (opacity is NOT one of them). */
+interface ContourGeoInputs {
+  readonly surface: TinSurface;
+  readonly config: ContourConfig;
+  readonly datumMm: number;
+  readonly geoRef: GeoReference | null;
+}
+
+export class TerrainContourLayer {
+  private readonly root = new THREE.Group();
+  private readonly unsubscribes: readonly (() => void)[];
+  /** ADR-650 M10d — inputs the current lines were built from; lets an opacity-only change skip rebuild. */
+  private lastInputs: ContourGeoInputs | null = null;
+  private disposed = false;
+
+  constructor(
+    scene: THREE.Object3D,
+    private readonly markDirty: () => void,
+  ) {
+    // ADR-650 M10d — drop with the terrain mesh by the SAME margin so the contours stay ON the
+    // surface (both sit a hair below z=0 → the ground-floor plan wins from above).
+    seatTopoLayerRoot(this.root, scene, 'topo-contours');
+    // Shared topo-layer subscriptions (survey → rebuild, 3D visibility, geo-ref «κούμπωμα») + the
+    // contour interval/index config: a different interval derives different levels → rebuild.
+    this.unsubscribes = subscribeTopoLayer(() => this.rebuild(), [subscribeContourConfig]);
+    this.rebuild();
+  }
+
+  /**
+   * Drop the old lines and rebuild from the current surface + display state. Rebuild-all (like
+   * `TerrainSceneLayer`): the CDT re-triangulates globally when a point moves, so contours have no
+   * stable per-line identity to diff. Cheap when hidden — the early return means invisible contours
+   * cost nothing on every survey edit, and `getTopoSurface()` is memoised.
+   */
+  private rebuild(): void {
+    if (this.disposed) return;
+
+    const state = getTerrain3DState();
+    // Contours belong to the surface: shown with it, hidden with it (Revit Toposurface parity).
+    if (!state.visible) {
+      this.clearLines();
+      this.lastInputs = null;
+      this.markDirty();
+      return;
+    }
+
+    const opacity = state.contourOpacity;
+    const inputs: ContourGeoInputs = {
+      surface: getTopoSurface(),
+      config: getContourConfig(),
+      datumMm: getActiveVerticalDatumMm(),
+      geoRef: getGeoReference(),
+    };
+
+    // ADR-650 M10d — an opacity-only change leaves every geometry input untouched → mutate the two
+    // (shared) contour materials the existing lines already reference; NO re-run of marching triangles.
+    if (this.root.children.length > 0 && this.sameInputs(inputs)) {
+      getTopoContourMaterial3D(true, opacity);
+      getTopoContourMaterial3D(false, opacity);
+      this.markDirty();
+      return;
+    }
+
+    this.clearLines();
+    // The SAME derivation the 2D plan uses (`useTopoContours`) over the SAME memoised TIN — no
+    // second contour algorithm, no second triangulation.
+    const { contours } = generateContoursFromSurface(inputs.surface, inputs.config);
+    if (contours.length === 0) {
+      this.lastInputs = null;
+      this.markDirty();
+      return;
+    }
+
+    // Seat under the building (projector, M10b) and drop onto it (datum, M10c) — resolved here in
+    // the impure layer and passed into the pure converter, exactly as `TerrainSceneLayer` does.
+    const projector = getActiveWorldToDisplayProjector();
+    const { major, minor } = contourLinesToGeometries(contours, { projector, datumMm: inputs.datumMm });
+
+    if (minor) this.addLines(minor, false, opacity); // draw minors first so the heavier majors read on top
+    if (major) this.addLines(major, true, opacity);
+    this.lastInputs = inputs;
+    this.markDirty();
+  }
+
+  /** Add one LineSegments set with its shared (catalog singleton) major/minor material. */
+  private addLines(geometry: THREE.BufferGeometry, isMajor: boolean, opacity: number): void {
+    const lines = new THREE.LineSegments(geometry, getTopoContourMaterial3D(isMajor, opacity));
+    lines.name = isMajor ? 'topo-contours-major' : 'topo-contours-minor';
+    this.root.add(lines);
+  }
+
+  /** True when every geometry input is identity-equal to the last build (opacity is NOT compared). */
+  private sameInputs(next: ContourGeoInputs): boolean {
+    const p = this.lastInputs;
+    return !!p && p.surface === next.surface && p.config === next.config
+      && p.datumMm === next.datumMm && p.geoRef === next.geoRef;
+  }
+
+  /** Remove + free the current line geometries. Geometry only — materials are catalog singletons. */
+  private clearLines(): void {
+    disposeObjectTree(this.root); // geometry-only (materials shared) — walks every child LineSegments
+    this.root.clear();
+  }
+
+  dispose(): void {
+    if (this.disposed) return;
+    this.disposed = true;
+    for (const unsubscribe of this.unsubscribes) unsubscribe();
+    this.clearLines();
+    this.root.removeFromParent();
+  }
+}

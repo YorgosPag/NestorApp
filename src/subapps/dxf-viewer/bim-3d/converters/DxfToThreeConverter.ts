@@ -47,6 +47,8 @@ import {
   type DxfOverlaySyncKey,
   type DxfOverlayFloorKey,
 } from './dxf-overlay-sync-guard';
+// ADR-650 M10d — topo contours are drawn once (draped) by TerrainContourLayer, never per-floor here.
+import { isTopoContourEntity } from '../../systems/topography/contour-entity-ids';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const DEFAULT_COLOR = 0xffffff;
@@ -316,6 +318,11 @@ export class DxfToThreeConverter {
 
     for (const entity of dxfScene.entities) {
       if (!entity.visible) continue;
+      // ADR-650 M10d — topo contours (lines + elevation labels) are NOT drawn by the per-floor
+      // overlay: that stamped them flat at every storey's elevation → identical contours stacked
+      // per floor. They render exactly once, draped at their real (datum-shifted) elevation, via
+      // `TerrainContourLayer`. Skipped here (before the text/line split) so both are excluded.
+      if (isTopoContourEntity(entity, layersById)) continue;
       // ADR-645 Φάση A — text is deferred to the streamed pass (the §2.2 freeze hotspot).
       if (entity.type === 'text') { textEntities.push(entity); continue; }
       const color = resolveEntityColor(entity, layersById);

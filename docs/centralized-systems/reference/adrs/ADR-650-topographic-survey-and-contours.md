@@ -1672,3 +1672,50 @@ technologismiki (Ν.4495/2017), xyz.gr/geodimetro.gr/greenbuilding.gr/cityengine
   κάναβος/labels/export με `localToWorld` — έλεγχος πρώτα) + Βήμα 3 (αφαίρεση `[TOPO-DIAG]`).
 
   **Status: M10b 3D geo-referencing — IMPLEMENTED (εκκρεμεί ζωντανός έλεγχος).**
+
+- **2026-07-15 (v24)** — **M10c ΥΛΟΠΟΙΗΘΗΚΕ — (1) analysis terrain UNLIT fix + (2) vertical datum** (Phase 1–3, N.0.1). **Επιβεβαιωμένο ζωντανά από Giorgio.**
+
+  **Πρόβλημα #1 (ζωντανά):** ο «Υψομετρικός χρωματισμός» (hypsometric) **εξαφανιζόταν** — αρχικά φαινόταν «μόνο στο ισόγειο», τελικά **σε κάθε live toggle** shaded→hypso (επανερχόταν μόνο με αλλαγή επιπέδου).
+
+  **ΔΙΑΓΝΩΣΗ (ντετερμινιστικά, live diagnostics — ΟΧΙ υποθέσεις):** αποκλείστηκαν με τη σειρά: (α) **path tracer** (κανένα `[IDLE-DIAG]` → ο idle κλάδος δεν έτρεχε)· (β) **on-demand/shader-compile** (orbit πολλών frames δεν το έφερνε πίσω)· (γ) **frustum/NaN bbox** (`bsFinite:true`, `meshInRoot:true`, `matVisible:true` — το mesh έφτανε στο draw). Το σπασμένο (toggle) vs σωστό (level-change) rebuild ήταν **πανομοιότυπα** σε geometry/material → η αιτία **δεν** ήταν ιδιότητα του mesh αλλά το **render**. **Απόδειξη (πείραμα unlit):** αλλαγή του υλικού των analysis styles σε `MeshBasicMaterial` → εμφανίστηκε **παντού**. **Ρίζα:** τα analysis styles χρησιμοποιούσαν **lit `MeshStandardMaterial`** (λευκή βάση + per-vertex colours + `receiveShadow`)· με το ανάγλυφο να «πλέει» στα ~106 m (εκτός shadow/light frustum), η λευκή PBR επιφάνεια γινόταν **μαύρη → αόρατη**.
+
+  **ΛΥΣΗ #1 (big-player, SSoT):** `getTerrainMaterial3D` (`MaterialCatalog3D.ts`) — `shaded` **μένει lit PBR** (ο φωτισμός ΕΙΝΑΙ η ανάγνωση, hillshade μορφή)· τα analysis styles (`hypsometric`/`cutfill`) → **cached UNLIT `MeshBasicMaterial`** (vertex colours, DoubleSide· **ΟΧΙ** polygonOffset — προκαλούσε regression εξαφάνισης στο floating far-distance depth slope). Return type → `THREE.Material`. Big-player parity: Civil 3D/Revit analysis styles = display-only, ποτέ lit/σκιασμένα — τα χρώματα διαβάζονται αληθινά ανεξάρτητα φωτισμού. `TerrainSceneLayer`: analysis mesh `castShadow/receiveShadow=false` (unlit overlay), `shaded` όπως πριν.
+
+  **Πρόβλημα #2 (vertical datum):** το ανάγλυφο κάθονταν στα **απόλυτα survey Z** (~106 m), το κτίριο σε **floor-local z≈0** → «έπλεε» ~100 m ψηλά· στο ισόγειο (κάμερα fit στο κτίριο) έβγαινε εκτός οθόνης.
+
+  **SSoT AUDIT (grep ΠΡΙΝ κώδικα):** το κατακόρυφο datum των BIM solids = ο όρος **`buildingBaseElevationM`** (`bim-three-shape-helpers` `hangDownMeshY`/`floorBaseMeshY`/`centeredMeshY`, default 0 → κτίριο τοπικό). Το geo-ref είναι **planar** (`{originWorld, rotationDeg}`, χωρίς Z)· το `basePoint.z` (ADR-369) διατηρείται στο persistence αλλά **δεν εφαρμοζόταν**. Υπάρχων SSoT sampler: `tin-sampler.ts` (`createTinSampler(tin).zAtMm`, barycentric).
+
+  **ΛΥΣΗ #2 (big-player = ArchiCAD «Project Zero» / Revit «acquire elevation at base point»· κατακόρυφο mirror του M10b projector):**
+  - **Νέο SSoT:** `systems/topography/vertical-datum.ts` — pure `resolveVerticalDatumMm(tin, originWorldX, originWorldY)` (= έδαφος κάτω από το σημείο βάσης κτιρίου μέσω `createTinSampler`· fallback = μέσο ύψος όταν το origin πέφτει εκτός survey) + impure `getActiveVerticalDatumMm()` (διαβάζει `getGeoReference().originWorld` + `getTopoSurface`, mirror του `getActiveWorldToDisplayProjector`). **Reuse, κανένα διπλότυπο.**
+  - **Εφαρμογή ΜΟΝΟ στο render:** `tin-to-three` νέο option `datumMm` → `buildPositions` αφαιρεί `datumMm` από κάθε `elevMm` (`displayZ = surveyZ − datum`). Καθαρός διαχωρισμός δεδομένων/display: τα **χρώματα** (hypso/cutfill) μένουν σε **πραγματικά** υψόμετρα (mirror της M10b απόφασης για το cut/fill). Fast path: `datumMm=0` → byte-for-byte το προηγούμενο.
+  - **Το κτίριο ΔΕΝ μετακινείται** (μένει τοπικό z=0) → κανένα grip/snap regression (ADR-040).
+
+  **Tests:** `vertical-datum` (flat/sloping barycentric datum· outside→mid-height· empty→0 — 4)· `tin-to-three` (+datum drop Y· +datum δεν αγγίζει χρώματα — 8 σύνολο)· `MaterialCatalog3D`/`scene-idle-handlers` πράσινα — **47/47** στα θιγμένα. `jscpd:diff` (εκκρεμεί στο commit).
+
+  **Temp diagnostics αφαιρέθηκαν** (`[PT-DIAG]`, `[IDLE-DIAG]`, `[TERRAIN-BUILD]`, πείραμα unlit). **Κρατήθηκε** (μόνιμο, καθαρό σχόλιο) ο guard στο `scene-idle-handlers`: όσο topo visible → **όχι** path tracer (survey ≠ photoreal subject· + belt-and-braces για το BVH merge με το `color` attribute). Τα παλιά `[TOPO-DIAG]` (M10 προηγούμενης συνεδρίας) **δεν** αγγίχτηκαν.
+
+  **ΕΠΙΒΕΒΑΙΩΘΗΚΕ ΖΩΝΤΑΝΑ:** hypso/cutfill φαίνονται σε όλα τα επίπεδα + από κάθε γωνία· το ανάγλυφο κάθεται **κάτω από το κτίριο** αντί να πλέει.
+
+  **ΑΝΟΙΧΤΑ FOLLOW-ONS (νέα, ξεχωριστά — για επόμενο milestone):**
+  - **A — Ισοϋψείς ανά όροφο:** οι ισοϋψείς (CAD entities του σχεδίου) τοποθετούνται στο `floorElevationMm` κάθε ορόφου (`DxfToThreeConverter.ts:291` `group.position.y = floorElevationMm·MM_TO_M`) → **στοιβάζονται** αντί να είναι μία φορά. **Σωστό (big-player):** οι ισοϋψείς = σταθερά υψόμετρα εδάφους (survey product), «ντραπαρισμένες» στην 3D επιφάνεια στο πραγματικό (datum-shifted) ύψος, **μία** φορά.
+  - **B — Χρώματα κρύβονται από πάνω (μόνο ισόγειο):** το datum-seated ανάγλυφο (z≈0) **συμπίπτει** με το 2D περιεχόμενο του ισογείου (κάτοψη DXF + εικόνες στο z≈0) → occlusion από πάνω. Όχι bug υλικού (DoubleSide δείχνει και τις δύο όψεις).
+
+  **Status: M10c — IMPLEMENTED + επιβεβαιωμένο ζωντανά. Ανοιχτά A/B (contours placement + datum/2D occlusion) σε επόμενο milestone.**
+
+- **2026-07-15 (v25)** — **M10d #A ΥΛΟΠΟΙΗΘΗΚΕ — ισοϋψείς ΜΙΑ φορά, draped στο πραγματικό υψόμετρο (όχι ανά όροφο)** (Phase 1–3, N.0.1). **Εκκρεμεί ζωντανός έλεγχος Giorgio.**
+
+  **ΠΡΟΒΛΗΜΑ (M10c follow-on #A):** οι ισοϋψείς ζουν ως `lwpolyline` CAD entities του σχεδίου κάθε ορόφου. Το 3D DXF overlay (`DxfToThreeConverter`) ζωγραφίζει κάθε entity **επίπεδο** μέσα στο group του ορόφου και ανεβάζει όλο το group στο `floorElevationMm` (γρ. 291) → οι **ίδιες** ισοϋψείς ξανασχεδιάζονταν σε **κάθε** όροφο, στοιβαγμένες σαν σκάλα.
+
+  **ΑΠΟΦΑΣΗ (Giorgio):** big-player practice (Revit Toposurface / Civil 3D / ArchiCAD). Οι ισοϋψείς είναι **ιδιότητα της επιφάνειας** (σταθερό ground elevation, survey product), όχι floor-scoped annotation → ζωγραφίζονται **μία** φορά στο πραγματικό (datum-shifted) υψόμετρο, ανεξάρτητα από το floor scope.
+
+  **ΛΥΣΗ (FULL SSOT):**
+  - **Νέος pure converter `contour-to-three.ts`** — plan-view αδελφός του `tin-to-three`: `ContourLine[] → { major, minor }` `BufferGeometry` line segments. Ίδιο pattern (projector M10b + datum M10c περνιούνται IN από impure caller, NaN-guard ADR-537, reuse `writeDxfPlanToWorld`). Μια ισοϋψής = τομή επιφάνειας με οριζόντιο επίπεδο στο `level` → flat ring στο `z = level − datum` κάθεται **ακριβώς** πάνω στο mesh (implicit drape, χωρίς per-vertex TIN sample). Major/minor split → δικό τους layer χρώμα.
+  - **Νέο `TerrainContourLayer`** (scene/terrain/) — αδελφός του `TerrainSceneLayer`. Ίδια ιθαγένεια/reactivity (zero React state, ADR-040): subscribes topo + terrain-3d (visibility) + contour-config (interval) + geo-reference. Rebuild-all· derive contours από την **ΙΔΙΑ** `generateContoursFromSurface(getTopoSurface(), getContourConfig())` που χρησιμοποιεί το 2D (`useTopoContours`) — κανένας δεύτερος αλγόριθμος/τριγωνοποίηση. Ορατό μαζί με το έδαφος (Revit Toposurface parity). Constructed/disposed από `ThreeJsSceneManager` (scene-manager-construct).
+  - **Νέο SSoT predicate `isTopoContourEntity`** (contour-entity-ids.ts, reuse `TOPO_*_LAYER_NAME`) → το `DxfToThreeConverter.buildLineGroup` **εξαιρεί** contours (γραμμές + labels) από το per-floor overlay. Το 2D κάτοψη μένει ανέγγιχτο (CAD entities ως έχει).
+  - **Νέο contour material** `getTopoContourMaterial3D(isMajor)` (MaterialCatalog3D) — unlit `LineBasicMaterial`, ίδια brown palette με το 2D (`contour-config`), cached per class. **Boy Scout:** προστέθηκε disposal για `TERRAIN_ANALYSIS_CACHE` (M10c gap) + το νέο `TERRAIN_CONTOUR_CACHE` στο `disposeMaterialCatalog3D`.
+
+  **Tests:** `contour-to-three.test.ts` (6 — major/minor split, z=level−datum, projector, closed ring wrap, NaN drop, empty→null) + `contour-entity-ids.test.ts` (5). Επηρεαζόμενα converter tests 33/33 PASS. `jscpd:diff` **καθαρό** (incl. έναντι `tin-to-three`/`TerrainSceneLayer` sibling clones).
+
+  - **Commit-gate addendum (N.18):** στο staging το CHECK 3.28 (jscpd) εντόπισε 2 sibling clones μεταξύ `TerrainContourLayer` και `TerrainSceneLayer` (root-seating + shared subscriptions, ~27 γρ.). **Κεντρικοποιήθηκαν** σε νέο SSoT `scene/terrain/topo-scene-layer-support.ts` (`seatTopoLayerRoot` + `subscribeTopoLayer(rebuild, extra[])`)· και οι δύο layers το καλούν (η κάθε μία περνά τον δικό της extra subscriber — cut-fill / contour-config). `jscpd:diff` πλέον **πραγματικά** καθαρό.
+
+  **Status: M10d #A — IMPLEMENTED (εκκρεμεί ζωντανός έλεγχος). Ανοιχτό #B (datum/2D occlusion + έλεγχος διαφάνειας ανάγλυφου/ισοϋψών) — επόμενο βήμα ίδιου milestone.**

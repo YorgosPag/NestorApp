@@ -101,6 +101,30 @@ describe('tinToBufferGeometry', () => {
     }
   });
 
+  it('ADR-650 M10c — the vertical datum drops every vertex Y by datumMm, seating the hill on the building', () => {
+    const datumMm = 200_000; // e.g. a survey ~200 m up: internal z=0 IS this real elevation
+    const seated = tinToBufferGeometry(inclinedPlaneTin(), 'shaded', { datumMm })!;
+    const bare = tinToBufferGeometry(inclinedPlaneTin(), 'shaded')!;
+
+    const seatedY = seated.getAttribute('position');
+    const bareY = bare.getAttribute('position');
+    for (let i = 0; i < seatedY.count; i++) {
+      // Y is metres → the drop is datumMm·mm→m; X/Z (plan) are untouched by a vertical datum.
+      expect(seatedY.getY(i)).toBeCloseTo(bareY.getY(i) - datumMm / M_TO_MM, 6);
+      expect(seatedY.getX(i)).toBeCloseTo(bareY.getX(i), 6);
+      expect(seatedY.getZ(i)).toBeCloseTo(bareY.getZ(i), 6);
+    }
+  });
+
+  it('ADR-650 M10c — the datum is a DISPLAY offset: hypsometric colours are unchanged (real elevations)', () => {
+    const tin = inclinedPlaneTin();
+    const bare = tinToBufferGeometry(tin, 'hypsometric', { datumMm: 0 })!.getAttribute('color');
+    const seated = tinToBufferGeometry(tin, 'hypsometric', { datumMm: 200_000 })!.getAttribute('color');
+    for (let i = 0; i < bare.count; i++) {
+      expect(seated.getX(i)).toBeCloseTo(bare.getX(i), 6); // colour reads REAL ground, not the shifted one
+    }
+  });
+
   it('bakes per-vertex colours only for the hypsometric style', () => {
     const tin = inclinedPlaneTin();
 

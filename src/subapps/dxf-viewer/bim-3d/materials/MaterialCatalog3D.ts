@@ -24,6 +24,9 @@ import {
 } from './user-material-registry';
 import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
 import type { TerrainSurfaceStyle } from '../../systems/topography/topo-types'; // ADR-650 M4 (types only)
+import { TOPO_MAJOR_COLOR, TOPO_MINOR_COLOR } from '../../systems/topography/contour-config'; // ADR-650 M10d
+// N.7.1 size split — coplanar-face depth-bias SSoT (ADR-375 offsets + ADR-366 §B.5 per-category priority).
+import { FACE_POLYGON_OFFSET_FACTOR, FACE_POLYGON_OFFSET_UNITS, withDepthPriority } from './material-depth-priority';
 
 /** ADR-363 — prefix of `bim_materials` library document ids (enterprise id). */
 const USER_MATERIAL_ID_PREFIX = 'bmat_';
@@ -44,65 +47,6 @@ const CACHE = new Map<string, THREE.MeshStandardMaterial>();
  */
 const SYSTEM_TINT_MIN_ROUGHNESS = 0.6;
 const SYSTEM_TINT_MAX_METALNESS = 0.1;
-
-/**
- * ADR-375 Phase C.7 — "Shaded with Edges" depth bias (Revit-grade visual style).
- *
- * The BIM 3D edge overlays (`bim-3d-edge-overlay-builder.ts`) are `LineSegments2`
- * geometrically COPLANAR with the solid faces at every hard corner, rendered with
- * `depthTest:true`. Without a face-side depth bias the coplanar faces win the depth
- * test and the dark "pencil" edges disappear (z-fighting) → flat-shaded look.
- *
- * Revit / ArchiCAD "Shaded with Edges" pushes the SHADED FACES slightly back in the
- * depth buffer so the depth-tested edges always win. A tiny positive offset is
- * uniform across all faces → the face-to-face relationship is untouched; only the
- * face-vs-edge contest changes. SSoT: applied here, in the SOLE face-material
- * factory — every material path (flat, textured, system-tinted, user, relief)
- * routes through `buildMat`, so all solids inherit it.
- */
-const FACE_POLYGON_OFFSET_FACTOR = 1;
-const FACE_POLYGON_OFFSET_UNITS = 1;
-
-/**
- * Per-category DEPTH PRIORITY (polygonOffsetUnits) — coplanar-face z-fighting SSoT.
- *
- * Structural elements are modelled FLUSH: a beam embedded in a slab, a column
- * stopping at the floor level — their top faces are geometrically COPLANAR at the
- * storey elevation. With a single uniform `polygonOffsetUnits` (1) on every solid,
- * those coplanar faces share the exact same depth → the depth test has no
- * tie-breaker → they flicker between materials as the camera orbits (Giorgio:
- * «μίξη χρωμάτων στις πάνω παρειές που κινείται με το orbit», 2026-06-19).
- *
- * Fix: a deterministic per-category bias. LOWER units = nearer the camera = WINS.
- * The visually-dominant surface gets the smallest bias:
- *   - finish/plaster skin (1, default) → wins over its own structural core,
- *   - slab (floor/roof surface, 2) → wins over the beams/columns embedded in it,
- *   - beam (3), column (4), foundations (5-7, each distinct so coplanar footing
- *     tops don't fight each other either).
- * Edge overlays (`LineSegments2`, polygonOffset 0) stay nearest of all → still win
- * against every face, so the ADR-375 "Shaded with Edges" contract is preserved
- * (all biases are ≥ 1, i.e. still pushed back relative to the edges).
- */
-const STRUCTURAL_DEPTH_OFFSET_UNITS: Readonly<Record<string, number>> = {
-  'elem-slab': 2,
-  'elem-beam': 3,
-  'elem-column': 4,
-  'elem-foundation': 5,
-  'elem-foundation-pad': 5,
-  'elem-foundation-strip': 6,
-  'elem-foundation-tie-beam': 7,
-};
-
-/** Depth-priority bias for a resolved material key (default = finish/skin tier). */
-function depthOffsetUnitsForKey(key: string): number {
-  return STRUCTURAL_DEPTH_OFFSET_UNITS[key] ?? FACE_POLYGON_OFFSET_UNITS;
-}
-
-/** Apply the per-category depth bias to a resolved (cached) material. Idempotent. */
-function withDepthPriority(mat: THREE.MeshStandardMaterial, key: string): THREE.MeshStandardMaterial {
-  mat.polygonOffsetUnits = depthOffsetUnitsForKey(key);
-  return mat;
-}
 
 function buildMat(def: PbrMaterialDef): THREE.MeshStandardMaterial {
   return new THREE.MeshStandardMaterial({
@@ -380,37 +324,100 @@ export function getElementMaterial3D(
   return withFaceMode(withDepthPriority(resolveTexturedMaterial(key), key));
 }
 
+/** ADR-650 M10c — unlit analysis-style terrain materials (hypsometric / cut-fill), cached per style. */
+const TERRAIN_ANALYSIS_CACHE = new Map<string, THREE.MeshBasicMaterial>();
+
 /**
- * ADR-650 M4 — topographic terrain surface material.
- *
- * The ONE justified deviation from the `FrontSide` contract documented in `buildMat` above:
- * every other BIM solid is a CLOSED extrusion whose inner faces are unreachable, but a TIN is
- * an OPEN surface. A camera that drops below the hill (or inside a cut) would look straight
- * through a back-face-culled terrain and see the void — so it renders `DoubleSide`, exactly as
- * Civil 3D 3D-faces and a Revit Toposolid do. The cost is bounded: one surface, not the whole
- * model, so the ADR-366 §B.5 overdraw argument does not apply.
- *
- * `hypsometric` reads the per-vertex elevation colours the converter baked in (Civil 3D
- * «Elevation Banding»); its base colour is white so the vertex colours pass through
- * unmodulated instead of being tinted by the earth base. Cached per style — the shared
- * `shaded` singleton is never mutated into a vertex-colour material.
+ * ADR-650 M10d — apply a 0..1 transparency to a terrain-exclusive material IN PLACE (Civil 3D
+ * «Surface Style transparency»). A transparent surface also stops writing depth so the BIM / ground
+ * behind it shows through (standard see-through compositing). Mutating in place is safe: these
+ * materials belong to the single terrain / contour layer and are never shared with a BIM entity.
  */
-export function getTerrainMaterial3D(style: TerrainSurfaceStyle): THREE.MeshStandardMaterial {
+function applyTerrainOpacity(mat: THREE.Material, opacity: number): void {
+  const transparent = opacity < 1;
+  if (mat.opacity === opacity && mat.transparent === transparent) return;
+  mat.opacity = opacity;
+  mat.transparent = transparent;
+  mat.depthWrite = !transparent;
+  mat.needsUpdate = true;
+}
+
+/**
+ * ADR-650 M4/M10c — topographic terrain surface material.
+ *
+ * DoubleSide for every style: every other BIM solid is a CLOSED extrusion whose inner faces are
+ * unreachable, but a TIN is an OPEN surface. A camera that drops below the hill (or inside a cut)
+ * would look straight through a back-face-culled terrain and see the void — so it renders
+ * `DoubleSide`, exactly as Civil 3D 3D-faces and a Revit Toposolid do. The cost is bounded: one
+ * surface, not the whole model, so the ADR-366 §B.5 overdraw argument does not apply.
+ *
+ * `shaded` (earth) is LIT: there the lighting IS the read — hillshade gives the surface its 3D
+ * form — so it belongs in the PBR pipeline like every other solid, and honours the Visual Style
+ * FACES axis via `withFaceMode`.
+ *
+ * The ANALYSIS styles (`hypsometric` elevation banding, `cutfill`, ADR-650 M6) are UNLIT
+ * (`MeshBasicMaterial` + per-vertex colours). Civil 3D / Revit render an analysis style as a DATA
+ * visualisation, never a lit surface: the banding colours must read TRUE regardless of scene
+ * lighting or shadow. Crucially this is also the M10c FIX — a lit `MeshStandardMaterial` (white
+ * base + vertex colours + `receiveShadow`) rendered fully BLACK, hence invisible, whenever the
+ * survey surface fell outside the directional light's shadow/light frustum (it floats at the real
+ * survey elevation, far above the building). An unlit material cannot be darkened into oblivion.
+ * Cached per style; the `shaded` PBR singleton is never mutated into a vertex-colour material.
+ */
+export function getTerrainMaterial3D(style: TerrainSurfaceStyle, opacity = 1): THREE.Material {
+  if (style !== 'shaded') {
+    let analysis = TERRAIN_ANALYSIS_CACHE.get(style);
+    if (!analysis) {
+      // No polygonOffset: an isolated survey surface has no coplanar geometry to z-fight, and a
+      // positive offset at the surface's floating far-distance depth slope pushed it out of the
+      // depth range → invisible (M10c regression). Kept identical to the verified live-fix config.
+      analysis = new THREE.MeshBasicMaterial({
+        vertexColors: true, // the per-vertex banding / cut-fill colours the converter baked in
+        side: THREE.DoubleSide,
+      });
+      TERRAIN_ANALYSIS_CACHE.set(style, analysis);
+    }
+    applyTerrainOpacity(analysis, opacity); // ADR-650 M10d — per-style surface transparency
+    return analysis;
+  }
+
   const cacheKey = `elem-terrain:${style}`;
   let mat = CACHE.get(cacheKey);
   if (!mat) {
     mat = buildMat(MATERIAL_DEFS['elem-terrain']!);
     mat.side = THREE.DoubleSide;
-    // Every ANALYSIS style (hypsometric elevation banding, ADR-650 M6 cut/fill) paints per-vertex
-    // colours in the converter; only `shaded` keeps the earth base colour. Testing "not shaded"
-    // rather than listing the styles means a future analysis style cannot silently render brown.
-    if (style !== 'shaded') {
-      mat.vertexColors = true;
-      mat.color.setHex(0xffffff); // white base → the vertex colours pass through unmodulated
-    }
     CACHE.set(cacheKey, mat);
   }
+  // ADR-650 M10d — applied to the terrain-exclusive base before `withFaceMode`; the shaded/realistic
+  // default returns that base, so the transparency shows (the none/hidden-line BIM face modes swap in
+  // SHARED singletons and deliberately do not carry terrain opacity — a data surface, not a solid).
+  applyTerrainOpacity(mat, opacity);
   return withFaceMode(mat);
+}
+
+/** ADR-650 M10d — unlit contour-line materials (major / minor), cached per class. */
+const TERRAIN_CONTOUR_CACHE = new Map<string, THREE.LineBasicMaterial>();
+
+/**
+ * ADR-650 M10d — the 3D topographic CONTOUR line material (major index vs minor intermediate).
+ *
+ * Unlit `LineBasicMaterial` in the AutoCAD/Civil 3D brown family (the SAME palette the 2D plan
+ * contours use, `contour-config`), so the hill you orbit and the lines in plan read as one product.
+ * Lit shading is meaningless for a 1-px line and would let the survey surface's floating far-depth
+ * darken them into oblivion (the same trap that made the analysis mesh vanish, M10c). Cached per
+ * class for the app lifetime — the geometry is rebuilt on every survey edit, the material is not.
+ */
+export function getTopoContourMaterial3D(isMajor: boolean, opacity = 1): THREE.LineBasicMaterial {
+  const key = isMajor ? 'major' : 'minor';
+  let mat = TERRAIN_CONTOUR_CACHE.get(key);
+  if (!mat) {
+    mat = new THREE.LineBasicMaterial({
+      color: new THREE.Color(isMajor ? TOPO_MAJOR_COLOR : TOPO_MINOR_COLOR).getHex(),
+    });
+    TERRAIN_CONTOUR_CACHE.set(key, mat);
+  }
+  applyTerrainOpacity(mat, opacity); // ADR-650 M10d — contour-line transparency
+  return mat;
 }
 
 /**
@@ -480,6 +487,11 @@ export function disposeMaterialCatalog3D(): void {
   // ADR-446 — Visual Style FACES variants (consistent clones + mode singletons).
   for (const mat of CONSISTENT_CACHE.values()) mat.dispose();
   CONSISTENT_CACHE.clear();
+  // ADR-650 M10c/M10d — terrain analysis (hypsometric/cutfill) + contour-line singletons.
+  for (const mat of TERRAIN_ANALYSIS_CACHE.values()) mat.dispose();
+  TERRAIN_ANALYSIS_CACHE.clear();
+  for (const mat of TERRAIN_CONTOUR_CACHE.values()) mat.dispose();
+  TERRAIN_CONTOUR_CACHE.clear();
   INVISIBLE_FACE_MATERIAL?.dispose();
   INVISIBLE_FACE_MATERIAL = null;
   HIDDEN_LINE_FACE_MATERIAL?.dispose();

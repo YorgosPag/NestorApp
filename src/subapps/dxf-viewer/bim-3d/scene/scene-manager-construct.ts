@@ -36,6 +36,7 @@ import { initViewCube } from './scene-setup';
 import { initBackgroundModeSubscription } from './scene-manager-actions';
 import { WaypointDragHandleRenderer } from '../animation/WaypointDragHandle';
 import { TerrainSceneLayer } from './terrain/TerrainSceneLayer'; // ADR-650 M4 — topographic surface
+import { TerrainContourLayer } from './terrain/TerrainContourLayer'; // ADR-650 M10d — draped 3D contours
 import { PointCloudSceneLayer } from './terrain/PointCloudSceneLayer'; // ADR-650 M8β/Β — point cloud (display-only)
 
 export interface SceneManagerConstructDeps {
@@ -70,6 +71,7 @@ export interface SceneManagerParts {
   readonly poi: ReturnType<typeof createPoi>;
   readonly gridFloor: Cinema4DGridFloor;
   readonly terrainLayer: TerrainSceneLayer; // ADR-650 M4 — topographic surface (TIN → mesh)
+  readonly terrainContourLayer: TerrainContourLayer; // ADR-650 M10d — draped contour lines (once, real z)
   readonly pointCloudLayer: PointCloudSceneLayer; // ADR-650 M8β/Β — display-only cloud (never geometry)
   readonly animationManager: AnimationManager;
   readonly canonicalViewService: CanonicalViewService;
@@ -130,6 +132,11 @@ export function buildSceneManagerParts(deps: SceneManagerConstructDeps): SceneMa
   // rebuilds its mesh from the ONE derived TIN (the same one the 2D contours are cut from).
   const terrainLayer = new TerrainSceneLayer(scene, markDirty);
 
+  // ADR-650 M10d — οι ισοϋψείς της ΙΔΙΑΣ επιφάνειας ως draped γραμμές στο πραγματικό υψόμετρο (μία
+  // φορά, όχι ανά όροφο). Ξεχωριστό layer από το mesh: εμφανίζεται/κρύβεται μαζί με το έδαφος, αλλά
+  // είναι γραμμές (Revit Toposurface contours), ανεξάρτητο από το floor scope.
+  const terrainContourLayer = new TerrainContourLayer(scene, markDirty);
+
   // ADR-650 M8β/Β — το νέφος σημείων του τελευταίου import. Ξεχωριστό layer από το έδαφος: το
   // έδαφος είναι η ΜΕΤΡΗΜΕΝΗ επιφάνεια, το νέφος είναι display-only τεκμήριο (§6) — μπαίνουν και
   // βγαίνουν ανεξάρτητα, και το νέφος δεν συμμετέχει ποτέ σε raycast/snap.
@@ -187,7 +194,7 @@ export function buildSceneManagerParts(deps: SceneManagerConstructDeps): SceneMa
   return {
     selectionHighlighter, hoverHighlighter, faceHighlighter, faceHoverHighlighter,
     stairSubElementHighlighter, stairSubUnsub,
-    poi, gridFloor, terrainLayer, pointCloudLayer, animationManager, canonicalViewService,
+    poi, gridFloor, terrainLayer, terrainContourLayer, pointCloudLayer, animationManager, canonicalViewService,
     keyboardFocusManager, focusOutlineRenderer, focusUnsub, viewCube,
     envStoreUnsub, bgModeUnsub, sectionController, waypointDragHandleRenderer,
     dxfBackdrop, frameContext,

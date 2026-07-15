@@ -18,9 +18,28 @@ export interface Terrain3DState {
   /** Is the terrain mesh drawn in the 3D viewport? Off by default — the user opts in. */
   readonly visible: boolean;
   readonly style: TerrainSurfaceStyle;
+  /**
+   * ADR-650 M10d — surface transparency (0..1), remembered PER style (Civil 3D keeps transparency
+   * on the Surface Style, not globally): so the μονόχρωμο (shaded), υψομετρικό (hypsometric) and
+   * cut/fill surfaces each keep the opacity the user last gave them when switched between.
+   */
+  readonly surfaceOpacity: Readonly<Record<TerrainSurfaceStyle, number>>;
+  /** ADR-650 M10d — contour-line transparency (0..1), one value for major+minor together. */
+  readonly contourOpacity: number;
 }
 
-const INITIAL: Terrain3DState = { visible: false, style: 'shaded' };
+const INITIAL: Terrain3DState = {
+  visible: false,
+  style: 'shaded',
+  surfaceOpacity: { shaded: 1, hypsometric: 1, cutfill: 1 },
+  contourOpacity: 1,
+};
+
+/** Clamp any user/stored input into the valid opacity range; non-finite → fully opaque. */
+function clampOpacity(value: number): number {
+  if (!Number.isFinite(value)) return 1;
+  return Math.min(1, Math.max(0, value));
+}
 
 const store = createExternalStore<Terrain3DState>(INITIAL);
 
@@ -41,6 +60,27 @@ export function setTerrain3DStyle(style: TerrainSurfaceStyle): void {
   const current = store.get();
   if (current.style === style) return;
   store.set({ ...current, style });
+}
+
+/** ADR-650 M10d — the active surface's opacity for a given style (0..1). */
+export function getTerrainSurfaceOpacity(style: TerrainSurfaceStyle): number {
+  return store.get().surfaceOpacity[style] ?? 1;
+}
+
+/** ADR-650 M10d — set the transparency (0..1) of ONE surface style. No-op if unchanged. */
+export function setTerrainSurfaceOpacity(style: TerrainSurfaceStyle, opacity: number): void {
+  const next = clampOpacity(opacity);
+  const current = store.get();
+  if (current.surfaceOpacity[style] === next) return;
+  store.set({ ...current, surfaceOpacity: { ...current.surfaceOpacity, [style]: next } });
+}
+
+/** ADR-650 M10d — set the transparency (0..1) of the contour lines. No-op if unchanged. */
+export function setTerrainContourOpacity(opacity: number): void {
+  const next = clampOpacity(opacity);
+  const current = store.get();
+  if (current.contourOpacity === next) return;
+  store.set({ ...current, contourOpacity: next });
 }
 
 /** Subscribe to display-state changes; returns unsubscribe. */

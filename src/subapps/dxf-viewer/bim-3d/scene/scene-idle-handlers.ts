@@ -5,6 +5,8 @@ import type { BimSceneLayer } from './BimSceneLayer';
 import type { PathTracerRenderer } from '../render/PathTracerRenderer';
 import { useViewMode3DStore } from '../stores/ViewMode3DStore';
 import { useEnvironmentStore } from '../stores/EnvironmentStore';
+import { getTerrain3DState } from '../../systems/topography/terrain-3d-store';
+import { getPointCloud3DState } from '../../systems/topography/pointcloud-3d-store';
 import { DXF_TIMING } from '../../config/dxf-timing';
 
 export function createSceneIdleDetector(deps: {
@@ -32,6 +34,16 @@ export function createSceneIdleDetector(deps: {
       // grinds on a camera pause during ordinary editing.
       if (!useViewMode3DStore.getState().autoPreviewEnabled) return;
       deps.ssaoModulator.onCameraIdle();
+
+      // ADR-650 M10c — the survey terrain / point cloud are a SURVEY-analysis workflow, not a
+      // photoreal subject, so the idle path tracer must NOT engage while they are shown: (1) an
+      // analysis colour ramp is not a BSDF — path tracing it is meaningless (Revit/Civil 3D analysis
+      // styles are display-only and never appear in a rendered/ray-traced view); (2) belt-and-braces,
+      // the path tracer's three-mesh-bvh MERGE wants a uniform attribute set across every scene mesh,
+      // and the analysis terrain carries a per-vertex `color` attribute no BIM solid has. So while
+      // topo is visible we stay in refined raster (SSAO already applied above).
+      if (getTerrain3DState().visible || getPointCloud3DState().visible) return;
+
       const hasBimMesh = deps.bimLayer.hasMesh;
       const hdriLoaded = useEnvironmentStore.getState().hdriUrl !== null;
       if (hasBimMesh && hdriLoaded) deps.pathTracerRenderer.start();
