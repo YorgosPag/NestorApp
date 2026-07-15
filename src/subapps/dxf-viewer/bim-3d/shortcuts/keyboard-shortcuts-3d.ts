@@ -273,6 +273,19 @@ export const VIEW_3D_FIT_SHORTCUT: ShortcutDefinition = {
   mode: 'mode-aware',
 } as const;
 
+// "Z" — Giorgio 2026-07-15: SECOND key for selection-aware frame (alias of F's 3D branch,
+// `ACTION_FIT_FRAME_3D` → frame selection keeping the camera angle, else fit extents). Tagged
+// `3D-only` so it is silently ignored in 2D and never shadows a bare 2D "Z" (undo is Ctrl+Z, a
+// different modifier). `none` modifier → Ctrl/Shift+Z never match this. F stays unchanged.
+export const VIEW_3D_FRAME_SELECTION_SHORTCUT: ShortcutDefinition = {
+  key: 'Z',
+  modifier: 'none',
+  descriptionKey: 'shortcuts.view3d.fitFrame',
+  action: ACTION_FIT_FRAME_3D,
+  category: 'view3d',
+  mode: '3D-only',
+} as const;
+
 // Home key in 3D mode → snap to HOME view (NE iso, ViewCube parity).
 // In 2D, the same key is `fitToViewHome` (mode-aware) → 2D fit-to-extents.
 export const VIEW_3D_HOME_SHORTCUT: ShortcutDefinition = {
@@ -423,6 +436,7 @@ export const ALL_VIEW_3D_SHORTCUTS = {
   ...DIM3D_SHORTCUTS,
   ...CROP_3D_SHORTCUTS,
   fitFrame: VIEW_3D_FIT_SHORTCUT,
+  frameSelection: VIEW_3D_FRAME_SELECTION_SHORTCUT,
   homeKey: VIEW_3D_HOME_SHORTCUT,
 } as const;
 

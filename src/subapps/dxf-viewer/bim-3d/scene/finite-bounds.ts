@@ -19,11 +19,20 @@ import * as THREE from 'three';
 /** localStorage flag (mirrors `dxf-no-shadows`) that arms the dev NaN-geometry locator. */
 const NAN_LOCATE_FLAG = 'dxf-nan-locate';
 
-/** True when every component of the box's min & max is finite (no NaN / Infinity). */
-export function isFiniteBox3(box: THREE.Box3): boolean {
-  const { min, max } = box;
+/**
+ * True when every component of the given min & max corner is finite (no NaN / Infinity).
+ * SSoT for the ADR-537 "never tween the camera toward a non-finite target" guard — shared by
+ * `isFiniteBox3` and every `frameBounds`/`frameHome`-style camera framing entry point so the
+ * check can never drift between call sites.
+ */
+export function areFiniteBounds(min: THREE.Vector3, max: THREE.Vector3): boolean {
   return Number.isFinite(min.x) && Number.isFinite(min.y) && Number.isFinite(min.z)
     && Number.isFinite(max.x) && Number.isFinite(max.y) && Number.isFinite(max.z);
+}
+
+/** True when every component of the box's min & max is finite (no NaN / Infinity). */
+export function isFiniteBox3(box: THREE.Box3): boolean {
+  return areFiniteBounds(box.min, box.max);
 }
 
 /**

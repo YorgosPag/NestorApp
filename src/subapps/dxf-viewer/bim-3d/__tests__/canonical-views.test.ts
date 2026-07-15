@@ -123,6 +123,7 @@ describe('CanonicalViewService', () => {
       update: jest.fn(),
       dispose: jest.fn(),
       frameBounds: jest.fn(),
+      frameHome: jest.fn(),
       cancelAnimation: jest.fn(),
       setSpeedModifier: jest.fn(),
       goHome: jest.fn(),

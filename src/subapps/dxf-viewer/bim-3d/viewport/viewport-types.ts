@@ -58,6 +58,12 @@ export interface ViewportCamera {
   readonly update: () => void;
   readonly dispose: () => void;
   readonly frameBounds: (min: THREE.Vector3, max: THREE.Vector3) => void;
+  /**
+   * ViewCube HOME button — reset to the home isometric view AND zoom-to-fit the
+   * given bounds in one animation, so the drawing is always visible on screen
+   * (AutoCAD/Revit "Home" = home orientation + fit extents).
+   */
+  readonly frameHome: (min: THREE.Vector3, max: THREE.Vector3) => void;
   readonly cancelAnimation: () => void;
   readonly isAnimating: boolean;
   readonly setSpeedModifier: (modifier: SpeedModifier) => void;

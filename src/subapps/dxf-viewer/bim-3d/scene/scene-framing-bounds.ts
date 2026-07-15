@@ -44,13 +44,12 @@ export function computeSceneFramingBounds(
 }
 
 /**
- * Selection-aware framing: tries the selection first, falls back to scene extents.
- * ADR-402 Phase C — frames the union bounds of the whole multi-selection.
- * Returns null when nothing is framable (caller should no-op).
+ * Union bounds of the whole BIM multi-selection (ADR-402 Phase C), or null when NONE of the ids
+ * resolve to a framable mesh. Selection-only — no scene-extents fallback, so a caller can union it
+ * with a raw-DXF selection box (ADR-366 A.6.Q4 / ADR-537) before deciding whether to fall back.
  */
-export function computeFramingTargetBounds(
+export function computeBimSelectionUnionBounds(
   bimGroup: THREE.Object3D,
-  dxfBounds: THREE.Box3 | null,
   selectedBimIds: readonly string[],
 ): THREE.Box3 | null {
   let sel: THREE.Box3 | null = null;
@@ -60,6 +59,19 @@ export function computeFramingTargetBounds(
     if (sel) sel.union(b);
     else sel = b;
   }
-  if (sel && !sel.isEmpty()) return sel;
-  return computeSceneFramingBounds(bimGroup, dxfBounds);
+  return sel && !sel.isEmpty() ? sel : null;
+}
+
+/**
+ * Selection-aware framing: tries the BIM selection first, falls back to scene extents.
+ * ADR-402 Phase C — frames the union bounds of the whole multi-selection.
+ * Returns null when nothing is framable (caller should no-op).
+ */
+export function computeFramingTargetBounds(
+  bimGroup: THREE.Object3D,
+  dxfBounds: THREE.Box3 | null,
+  selectedBimIds: readonly string[],
+): THREE.Box3 | null {
+  return computeBimSelectionUnionBounds(bimGroup, selectedBimIds)
+    ?? computeSceneFramingBounds(bimGroup, dxfBounds);
 }

@@ -58,6 +58,11 @@ export interface InitViewCubeDeps {
   readonly onRenderNeeded: () => void;
   readonly viewport: ViewportCamera;
   readonly canonicalViewService: CanonicalViewService;
+  /**
+   * Combined BIM∪DXF scene bounds (null when nothing framable yet). The HOME button
+   * zoom-to-fits these so the whole drawing is always visible on screen.
+   */
+  readonly getSceneFramingBounds: () => THREE.Box3 | null;
   readonly onContextMenuRequest: (x: number, y: number) => void;
 }
 
@@ -73,7 +78,13 @@ export function initViewCube(deps: InitViewCubeDeps): ViewCubeEngine {
     onDirSnap: (dir) => viewport.snapToViewDirection(dir),
     onRoll: (dirSign) => viewport.rollView(dirSign),
     onSnapToView: (id: CanonicalViewId) => canonicalViewService.snapTo(id),
-    onHome: () => canonicalViewService.snapHome(),
+    // HOME — home isometric orientation + zoom-to-fit the whole drawing (Giorgio 2026-07-15).
+    // Falls back to a plain re-orient when there is no framable geometry yet.
+    onHome: () => {
+      const bounds = deps.getSceneFramingBounds();
+      if (bounds && !bounds.isEmpty()) viewport.frameHome(bounds.min, bounds.max);
+      else canonicalViewService.snapHome();
+    },
     onDragRotate: (dx, dy) => viewport.applyTumble(dx, dy),
     onContextMenuRequest: deps.onContextMenuRequest,
   });

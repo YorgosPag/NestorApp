@@ -33,6 +33,7 @@ import { createAnimationManager, type AnimationManager } from '../viewport/anima
 import { createKeyboardFocusManager, type KeyboardFocusManagerApi } from '../accessibility/KeyboardFocusManager';
 import { FocusOutlineRenderer } from '../accessibility/FocusOutlineRenderer';
 import { initViewCube } from './scene-setup';
+import { computeSceneFramingBounds } from './scene-framing-bounds';
 import { initBackgroundModeSubscription } from './scene-manager-actions';
 import { WaypointDragHandleRenderer } from '../animation/WaypointDragHandle';
 import { TerrainSceneLayer } from './terrain/TerrainSceneLayer'; // ADR-650 M4 — topographic surface
@@ -159,6 +160,8 @@ export function buildSceneManagerParts(deps: SceneManagerConstructDeps): SceneMa
     onRenderNeeded: markDirty,
     viewport,
     canonicalViewService,
+    // ADR-366 §C.1.b — combined BIM∪DXF bounds so HOME can zoom-to-fit the whole drawing.
+    getSceneFramingBounds: () => computeSceneFramingBounds(bimLayer.group, dxfConverter.getBounds()),
     onContextMenuRequest: onViewCubeContextMenu,
   });
 

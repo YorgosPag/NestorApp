@@ -8,7 +8,9 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import type { ViewportCamera, ProjectionMode, SpeedModifier, ViewportCameraOptions } from './viewport-types';
 import { createViewportAnimation } from './viewport-animation';
-import { computePerspectiveFraming, computeOrthoFraming } from './viewport-framing';
+import { computePerspectiveFraming, computeOrthoFraming, computeFramingForView } from './viewport-framing';
+import { HOME_CANONICAL_VIEW_ID } from './canonical-views';
+import { areFiniteBounds } from '../scene/finite-bounds';
 import { createTumbleRotation } from './tumble-rotation';
 import {
   DEFAULT_PERSPECTIVE_FOV, DEFAULT_CAMERA_DISTANCE, DEFAULT_ORTHO_SIZE,
@@ -120,7 +122,7 @@ export function createViewportCamera(
     // + orbit target → NaN view/projection matrix → the ENTIRE scene (BIM + DXF) blanks. Bailing
     // keeps the camera at its last valid pose. Sole guard for EVERY framing caller (DXF auto-fit,
     // frame-selection/extents, animation), so no upstream path can ever blank the viewport again.
-    if (![min.x, min.y, min.z, max.x, max.y, max.z].every(Number.isFinite)) return;
+    if (!areFiniteBounds(min, max)) return;
     animation.cancel();
     const viewDir = _direction.subVectors(controls.target, activeCamera.position).normalize();
     if (activeCamera instanceof THREE.PerspectiveCamera) {
@@ -270,6 +272,43 @@ export function createViewportCamera(
     onRenderNeeded();
   }
 
+  /**
+   * Make the perspective camera the ACTIVE camera WITHOUT moving it — copies the
+   * current (possibly ortho) pose into perspCamera first, so the ortho→perspective
+   * handoff is visually seamless. Shared by every "return to a perspective view"
+   * action (iso snap, home, home-fit) so the switch rule lives in ONE place (N.18).
+   */
+  function ensurePerspectiveActive(): void {
+    if (currentMode === 'perspective') return;
+    perspCamera.position.copy(activeCamera.position);
+    perspCamera.lookAt(controls.target);
+    activeCamera = perspCamera;
+    swapControlsCamera(perspCamera);
+    tumble.setEnabled(true);
+    controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE;
+    currentMode = 'perspective';
+  }
+
+  /**
+   * Animate the (now perspective) camera from its CURRENT pose to `(toPos, toTarget)`.
+   * The shared tween behind iso-snap / home / home-fit — identical tick + end callbacks,
+   * only the destination pose + duration differ, so the animation wiring lives once (N.18).
+   * Caller must have run {@link ensurePerspectiveActive} first. Perspective zoom is implicit
+   * in the camera→target distance, so `zoom` is held constant (the tick ignores it).
+   */
+  function animatePerspectiveTo(toPos: THREE.Vector3, toTarget: THREE.Vector3, durationMs: number): void {
+    onInteractionStart();
+    animation.start(
+      { position: perspCamera.position.clone(), target: controls.target.clone(), zoom: getZoom() },
+      { position: toPos, target: toTarget, zoom: getZoom() },
+      getAnimationDuration('camera', rm(), durationMs),
+      (pos, tgt) => { perspCamera.position.copy(pos); controls.target.copy(tgt); perspCamera.lookAt(tgt); onRenderNeeded(); },
+      () => { controls.enabled = true; onInteractionEnd(); },
+    );
+    controls.enabled = false;
+    onRenderNeeded();
+  }
+
   function snapToViewDirection(dir: THREE.Vector3): void {
     animation.cancel();
     const target = controls.target.clone();
@@ -277,25 +316,8 @@ export function createViewportCamera(
     _snapDir.copy(dir).normalize();
     if (_snapDir.lengthSq() < 0.001) return;
     const toPos = target.clone().addScaledVector(_snapDir, dist > 0 ? dist : DEFAULT_CAMERA_DISTANCE);
-    if (currentMode !== 'perspective') {
-      perspCamera.position.copy(activeCamera.position);
-      perspCamera.lookAt(target);
-      activeCamera = perspCamera;
-      swapControlsCamera(perspCamera);
-      tumble.setEnabled(true);
-      controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE;
-      currentMode = 'perspective';
-    }
-    onInteractionStart();
-    animation.start(
-      { position: perspCamera.position.clone(), target: target.clone(), zoom: getZoom() },
-      { position: toPos, target, zoom: getZoom() },
-      getAnimationDuration('camera', rm(), PROJECTION_SWITCH_DURATION_MS),
-      (pos, tgt) => { perspCamera.position.copy(pos); controls.target.copy(tgt); perspCamera.lookAt(tgt); onRenderNeeded(); },
-      () => { controls.enabled = true; onInteractionEnd(); },
-    );
-    controls.enabled = false;
-    onRenderNeeded();
+    ensurePerspectiveActive();
+    animatePerspectiveTo(toPos, target, PROJECTION_SWITCH_DURATION_MS);
   }
 
   /**
@@ -371,26 +393,24 @@ export function createViewportCamera(
 
   function goHome(): void {
     animation.cancel();
-    const target = controls.target.clone();
-    if (currentMode !== 'perspective') {
-      perspCamera.position.copy(activeCamera.position);
-      perspCamera.lookAt(target);
-      activeCamera = perspCamera;
-      swapControlsCamera(perspCamera);
-      tumble.setEnabled(true);
-      controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE;
-      currentMode = 'perspective';
-    }
-    onInteractionStart();
-    animation.start(
-      { position: perspCamera.position.clone(), target: target.clone(), zoom: getZoom() },
-      { position: initialPosition.clone(), target: initialTarget.clone(), zoom: 1.0 },
-      getAnimationDuration('camera', rm(), FRAME_SCENE_DURATION_MS),
-      (pos, tgt) => { perspCamera.position.copy(pos); controls.target.copy(tgt); perspCamera.lookAt(tgt); onRenderNeeded(); },
-      () => { controls.enabled = true; onInteractionEnd(); },
-    );
-    controls.enabled = false;
-    onRenderNeeded();
+    ensurePerspectiveActive();
+    animatePerspectiveTo(initialPosition.clone(), initialTarget.clone(), FRAME_SCENE_DURATION_MS);
+  }
+
+  /**
+   * ViewCube HOME button — reset to the home isometric view AND zoom-to-fit the whole drawing in
+   * ONE animation, so the model is ALWAYS visible on screen (AutoCAD/Revit "Home" = home
+   * orientation + fit extents). `min`/`max` = combined BIM∪DXF bounds (caller no-ops on empty).
+   * Reuses the `computeFramingForView` SSoT (HOME iso lookDir) + the shared ortho→perspective
+   * handoff — no new camera math (N.18). Rationale: ADR-366 A.6.Q4 changelog 2026-07-15.
+   */
+  function frameHome(min: THREE.Vector3, max: THREE.Vector3): void {
+    // Defense-in-depth (ADR-537) — never tween toward a non-finite target.
+    if (!areFiniteBounds(min, max)) return;
+    animation.cancel();
+    ensurePerspectiveActive();
+    const { position, target } = computeFramingForView(HOME_CANONICAL_VIEW_ID, { min, max }, perspCamera.aspect, DEFAULT_PERSPECTIVE_FOV);
+    animatePerspectiveTo(position, target, FRAME_SCENE_DURATION_MS);
   }
 
   /**
@@ -469,7 +489,7 @@ export function createViewportCamera(
     get isAnimating() { return animation.isAnimating; },
     setProjection, setPose, getZoom, setZoom, setZoomPreset,
     updateAspect, update, dispose,
-    frameBounds, cancelAnimation, setSpeedModifier,
+    frameBounds, frameHome, cancelAnimation, setSpeedModifier,
     snapToViewDirection, rollView, goHome,
     applyTumble: (dx: number, dy: number) => tumble.applyExternalRotation(dx, dy),
     pan,

@@ -33,7 +33,9 @@ import { startFinalRender as runFinalRender } from './start-final-render';
 import type { CanonicalViewService } from '../viewport/CanonicalViewService';
 import type { CanonicalViewId, ProjectionMode } from '../viewport/viewport-types';
 import type { AnimationManager } from '../viewport/animation-manager';
-import { computeFramingTargetBounds, computeSceneFramingBounds } from './scene-framing-bounds';
+import { computeSceneFramingBounds } from './scene-framing-bounds';
+// ADR-537 / ADR-366 A.6.Q4 — BIM (Selection3DStore) ∪ raw-DXF (universal SelectedEntitiesStore) framing.
+import { computeFrameSelectionBounds } from './dxf-selection-framing-bounds';
 import { createBimRenderer, createBimLights, createBimScene, initViewportCamera, getRendererViewportSize } from './scene-setup';
 import { applyViewportResize, applyDevicePixelRatioSync, buildSceneResizeDeps, type SceneResizeDeps } from './scene-manager-resize';
 import type { KeyboardFocusManagerApi } from '../accessibility/KeyboardFocusManager';
@@ -197,10 +199,17 @@ export class ThreeJsSceneManager {
   // Phase 4.4 keyboard-shortcut façade (use3DShortcuts → manager → viewport).
   snapToCanonicalView(view: CanonicalViewId): void { if (!this.disposed) this.canonicalViewService.snapTo(view); }
   snapToHomeView(): void { if (!this.disposed) this.canonicalViewService.snapHome(); }
-  /** ADR-366 A.6.Q4 selection-aware F — bounds math in `scene-framing-bounds.ts`. */
+  /**
+   * ADR-366 A.6.Q4 selection-aware F / Z — frame the selection keeping the camera angle, else fit
+   * extents. BIM ∪ raw-DXF union in `computeFrameSelectionBounds` (dxf-selection-framing-bounds.ts).
+   */
   frameSelectionOrFitExtents(): void {
     if (this.disposed) return;
-    const bounds = computeFramingTargetBounds(this.bimLayer.group, this.dxfConverter.getBounds(), useSelection3DStore.getState().selectedBimIds);
+    const bounds = computeFrameSelectionBounds(
+      this.bimLayer.group,
+      useSelection3DStore.getState().selectedBimIds,
+      this.dxfConverter.getBounds(),
+    );
     if (bounds && !bounds.isEmpty()) this.viewport.frameBounds(bounds.min, bounds.max);
   }
 
