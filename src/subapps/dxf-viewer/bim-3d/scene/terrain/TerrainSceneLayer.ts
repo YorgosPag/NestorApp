@@ -31,6 +31,7 @@ import {
 } from '../../../systems/geo-referencing/geo-reference-store';
 import { tinToBufferGeometry } from '../../converters/tin-to-three';
 import { getTerrainMaterial3D } from '../../materials/MaterialCatalog3D';
+import { useBimRenderSettingsStore } from '../../../state/bim-render-settings-store'; // 🔎 TEMP DIAG (M10b) — REMOVE after live fix
 import { disposeObjectTree } from '../dispose-object-tree';
 
 export class TerrainSceneLayer {
@@ -75,11 +76,14 @@ export class TerrainSceneLayer {
     const surface = getTopoSurface();
     const projector = getActiveWorldToDisplayProjector();
     // 🔎 TEMP DIAG (2026-07-15 M10b). REMOVE after live fix. Decides: hidden? no triangles? geo-ref
-    // applied? and WHERE the mesh lands in three-world (center ~tens of m = local/OK; ~1e5 m = still ΕΓΣΑ).
+    // applied? WHERE the mesh lands? AND — faceMode 'none'/'hidden-line' → withFaceMode() swaps the
+    // terrain material for an INVISIBLE one (the DXF underlay does not, so it stays visible → the
+    // mesh silently vanishes while the plan still shows).
     // eslint-disable-next-line no-console
     console.info('[TERRAIN-3D-DIAG]', {
       visible, style, tris: surface.triangles.length,
       geoRefIdentity: projector.isIdentity,
+      faceMode: useBimRenderSettingsStore.getState().faceMode,
     });
     if (!visible) {
       this.markDirty();
