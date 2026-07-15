@@ -84,7 +84,7 @@ export const BlockSaveToLibraryDialog: React.FC<BlockSaveToLibraryDialogProps> =
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent size="md">
+      <DialogContent size="default">
         <DialogHeader>
           <DialogTitle className="text-sm font-semibold">
             {t('blockLibrary.save.title')}

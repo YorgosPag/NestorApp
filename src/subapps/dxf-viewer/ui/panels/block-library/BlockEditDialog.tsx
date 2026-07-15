@@ -95,7 +95,7 @@ export const BlockEditDialog: React.FC<BlockEditDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent size="md">
+      <DialogContent size="default">
         <DialogHeader>
           <DialogTitle className="text-sm font-semibold">
             {t('blockLibrary.edit.title')}

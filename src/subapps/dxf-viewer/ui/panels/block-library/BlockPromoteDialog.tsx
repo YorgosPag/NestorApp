@@ -93,7 +93,7 @@ export const BlockPromoteDialog: React.FC<BlockPromoteDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent size="md">
+      <DialogContent size="default">
         <DialogHeader>
           <DialogTitle className="text-sm font-semibold">
             {t('blockLibrary.promote.title', { name: blockName })}
