@@ -1057,7 +1057,9 @@
       "hint": "The same surface the contours are cut from, as solid relief in the 3D view.",
       "show": "Show terrain",
       "hide": "Hide terrain",
-      "hypsometric": "Elevation colouring"
+      "hypsometric": "Elevation colouring",
+      "surfaceOpacity": "Surface opacity",
+      "contourOpacity": "Contour opacity"
     },
     "cloud3d": {
       "title": "Point cloud in 3D",

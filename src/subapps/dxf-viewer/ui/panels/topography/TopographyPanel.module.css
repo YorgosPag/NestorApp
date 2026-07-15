@@ -75,6 +75,26 @@
   flex: 1;
 }
 
+/* ADR-650 M10d — διαφάνεια εδάφους/ισοϋψών: label+τιμή σε μία γραμμή, slider από κάτω. */
+.sliderRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.sliderHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 11px;
+}
+
+.sliderValue {
+  opacity: 0.7;
+  font-variant-numeric: tabular-nums;
+}
+
 .status {
   font-size: 11px;
   margin: 0;

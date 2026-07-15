@@ -1719,3 +1719,20 @@ technologismiki (Ν.4495/2017), xyz.gr/geodimetro.gr/greenbuilding.gr/cityengine
   - **Commit-gate addendum (N.18):** στο staging το CHECK 3.28 (jscpd) εντόπισε 2 sibling clones μεταξύ `TerrainContourLayer` και `TerrainSceneLayer` (root-seating + shared subscriptions, ~27 γρ.). **Κεντρικοποιήθηκαν** σε νέο SSoT `scene/terrain/topo-scene-layer-support.ts` (`seatTopoLayerRoot` + `subscribeTopoLayer(rebuild, extra[])`)· και οι δύο layers το καλούν (η κάθε μία περνά τον δικό της extra subscriber — cut-fill / contour-config). `jscpd:diff` πλέον **πραγματικά** καθαρό.
 
   **Status: M10d #A — IMPLEMENTED (εκκρεμεί ζωντανός έλεγχος). Ανοιχτό #B (datum/2D occlusion + έλεγχος διαφάνειας ανάγλυφου/ισοϋψών) — επόμενο βήμα ίδιου milestone.**
+
+- **2026-07-15 (v26)** — **M10d #B ΥΛΟΠΟΙΗΘΗΚΕ — occlusion ισογείου («κάτοψη πάνω, έδαφος κάτω») + έλεγχος διαφάνειας** (Phase 1–3, N.0.1). **Εκκρεμεί ζωντανός έλεγχος Giorgio.**
+
+  **ΠΡΟΒΛΗΜΑ (M10c follow-on #B):** το datum-seated ανάγλυφο κάθισε στο z≈0, όπου ζει και το 2D περιεχόμενο του ισογείου (κάτοψη DXF + εικόνες στο `floorElevationMm=0`). Δύο αδιαφανή πράγματα στο ίδιο depth → η κάτοψη κρύβει το ανάγλυφο από πάνω («από τον ισημερινό και πάνω»).
+
+  **ΑΠΟΦΑΣΗ (Giorgio):** (1) «κάτοψη πάνω, έδαφος κάτω» — το σχεδιαστικό φύλλο μένει από πάνω, το φυσικό έδαφος = context λίγο πιο κάτω. (2) Δυνατότητα ρύθμισης **διαφάνειας** για τα ΤΡΙΑ overlays ξεχωριστά: ισοϋψείς, μονόχρωμο (shaded), έγχρωμο (hypsometric) — Civil 3D «Surface Style transparency».
+
+  **ΛΥΣΗ:**
+  - **Occlusion:** νέα σταθερά `TERRAIN_DISPLAY_DROP_MM=50` (vertical-datum.ts) → και τα δύο terrain layers (mesh + contours) κατεβαίνουν `root.position.y = −drop` (world-space translation, ΟΧΙ `polygonOffset` — αυτό προκάλεσε το M10c regression). Αμελητέο σε building scale, σπάει το depth tie ώστε η κάτοψη να κερδίζει από πάνω.
+  - **Διαφάνεια (per-style memory):** `terrain-3d-store` επεκτάθηκε με `surfaceOpacity: Record<style, number>` (shaded/hypsometric/cutfill, το καθένα θυμάται τη δική του) + `contourOpacity`, clamped 0..1, identity-guarded. `getTerrainMaterial3D(style, opacity)` / `getTopoContourMaterial3D(isMajor, opacity)` εφαρμόζουν `applyTerrainOpacity` (transparent + `depthWrite=!transparent`) στα **terrain-exclusive** materials (κανένα shared BIM singleton· οι none/hidden-line face modes σκόπιμα δεν φέρουν terrain opacity — data surface, όχι solid).
+  - **Perf (ADR-040):** opacity-only αλλαγή = fast path — τα layers κρατούν `lastInputs` (surface/style/datum/geoRef ± config) και σε αμετάβλητα geometry inputs **επαναχρωματίζουν** το υπάρχον mesh/lines χωρίς re-triangulation / re-marching. Slider drag = μηδέν CDT.
+  - **UI:** νέο `Terrain3DSection.tsx` (extract από `TopographyPanel`, N.7.1 SRP) — show/hide + υψομετρικό toggle + 2 sliders (`@/components/ui/slider`): «Διαφάνεια επιφάνειας» (δένει στο active style → per-style memory) + «Διαφάνεια ισοϋψών». i18n keys `terrain3d.surfaceOpacity`/`contourOpacity` (el+en).
+  - **N.18 de-dup:** τα δύο layers μοιράζονταν constructor/lifecycle → εξήχθη `topo-scene-layer-support.ts` (`seatTopoLayerRoot` + `subscribeTopoLayer`, μία θέση για το drop margin + το κοινό subscription set). `jscpd:diff` **καθαρό** (8 αρχεία).
+
+  **Tests:** `terrain-3d-store.test.ts` (4 — per-style memory, contour separate, clamp, no-op identity). Topography suite **293/293 PASS**. ΟΧΙ tsc (N.17). MaterialCatalog3D στα 499 γρ. (οριακά· υποψήφιο για μελλοντικό split των terrain materials).
+
+  **Status: M10d #B — IMPLEMENTED (εκκρεμεί ζωντανός έλεγχος). Το M10d (#A+#B) ολοκληρώθηκε ως προς κώδικα.**

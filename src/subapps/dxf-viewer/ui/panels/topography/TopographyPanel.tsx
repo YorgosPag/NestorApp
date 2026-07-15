@@ -22,12 +22,6 @@ import { toolStateStore, useActiveTool } from '../../../stores/ToolStateStore';
 import { parseTopoPoints } from '../../../systems/topography/parse-topo-points';
 import { useTopoContours } from '../../../systems/topography/useTopoContours';
 import {
-  getTerrain3DState,
-  setTerrain3DVisible,
-  setTerrain3DStyle,
-  subscribeTerrain3D,
-} from '../../../systems/topography/terrain-3d-store';
-import {
   getContourConfig,
   setContourIntervalMm,
   setContourMajorEvery,
@@ -39,6 +33,7 @@ import { TopoPointLabelsSection } from './TopoPointLabelsSection';
 import { TopoGridSection } from './TopoGridSection';
 import { NorthArrowSection } from './NorthArrowSection';
 import { TopoGeoReferenceSection } from './TopoGeoReferenceSection';
+import { Terrain3DSection } from './Terrain3DSection';
 import { TopoCutFillSection } from './TopoCutFillSection';
 import { TopoDeliverablesSection } from './TopoDeliverablesSection';
 import { TopoQaSection } from './TopoQaSection';
@@ -66,19 +61,6 @@ export function TopographyPanel(): React.JSX.Element {
     if (breaklineToolActive) toolStateStore.deselectTool();
     else toolStateStore.selectTool('topo-breakline');
   }, [breaklineToolActive]);
-
-  // ADR-650 M4 — 3D terrain display state (Civil 3D «Surface Style»: the survey is untouched,
-  // only how the derived surface is drawn). LOW-freq consumer — same contract as `breaklines`.
-  const terrain3d = React.useSyncExternalStore(subscribeTerrain3D, getTerrain3DState, getTerrain3DState);
-  const hypsometric = terrain3d.style === 'hypsometric';
-
-  const onToggleTerrain = React.useCallback(() => {
-    setTerrain3DVisible(!getTerrain3DState().visible);
-  }, []);
-
-  const onToggleHypsometric = React.useCallback(() => {
-    setTerrain3DStyle(getTerrain3DState().style === 'hypsometric' ? 'shaded' : 'hypsometric');
-  }, []);
 
   // ADR-650 M3 — plan-view contour display style (exact ↔ smooth). Non-destructive:
   // the surveyed vertices stay exact, so legal export is always the accurate line.
@@ -238,32 +220,10 @@ export function TopographyPanel(): React.JSX.Element {
           2=στροφή). Per-project transform στο Project (surveyPoint/basePoint/northRotation). */}
       <TopoGeoReferenceSection />
 
-      {/* ADR-650 M4 — η ίδια επιφάνεια που κόβει τις ισοϋψείς, ως στερεό στην 3Δ όψη.
-          Το «υψομετρικό» είναι analysis style (Civil 3D Elevation Banding): χρωματίζει τα
-          υψόμετρα, ΔΕΝ αλλάζει την τριγωνοποίηση. */}
-      <section className={styles.field}>
-        <h3 className={styles.label}>{t('topography.terrain3d.title')}</h3>
-        <p className={styles.subtitle}>{t('topography.terrain3d.hint')}</p>
-        <div className={styles.row}>
-          <button
-            type="button"
-            className={`${styles.generateButton} ${terrain3d.visible ? styles.toolActive : ''}`}
-            onClick={onToggleTerrain}
-            aria-pressed={terrain3d.visible}
-          >
-            {t(terrain3d.visible ? 'topography.terrain3d.hide' : 'topography.terrain3d.show')}
-          </button>
-          <button
-            type="button"
-            className={`${styles.generateButton} ${hypsometric ? styles.toolActive : ''}`}
-            onClick={onToggleHypsometric}
-            aria-pressed={hypsometric}
-            disabled={!terrain3d.visible}
-          >
-            {t('topography.terrain3d.hypsometric')}
-          </button>
-        </div>
-      </section>
+      {/* ADR-650 M4/M10d — η ίδια επιφάνεια που κόβει τις ισοϋψείς, ως στερεό στην 3Δ όψη
+          (Civil 3D «Surface Style»: υψομετρικό = analysis style, ΔΕΝ αλλάζει την τριγωνοποίηση),
+          + έλεγχος διαφάνειας (επιφάνεια ανά style + ισοϋψείς). */}
+      <Terrain3DSection />
 
       {/* ADR-650 M8β/Β — το νέφος του import ως 3Δ layer πάνω από το έδαφος. Εμφανίζεται μόνο
           αν έχει εισαχθεί νέφος. ΟΨΗ, ποτέ γεωμετρία μέτρησης (§6). */}
