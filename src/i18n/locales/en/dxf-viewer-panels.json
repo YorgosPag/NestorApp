@@ -989,6 +989,21 @@
         "empty-grid": "Step too large for the extent — no grid produced."
       }
     },
+    "north": {
+      "title": "North arrow",
+      "hint": "Shows North on the drawing. «True» = with ΕΓΣΑ87 meridian-convergence correction; «Grid» = parallel to the coordinate grid lines.",
+      "show": "Show north arrow",
+      "modeTrue": "True",
+      "modeGrid": "Grid",
+      "bake": "Bake to drawing",
+      "status": {
+        "baked": "{count, plural, one {# arrow entity created} other {# arrow entities created}}."
+      },
+      "error": {
+        "no-points": "No survey points.",
+        "no-layers": "Could not create the north-arrow layer."
+      }
+    },
     "status": {
       "readError": "Could not read the file.",
       "loaded": "{count, plural, one {# point loaded} other {# points loaded}}",
