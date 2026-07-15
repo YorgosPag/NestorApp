@@ -82,6 +82,7 @@ export function useRibbonCommands({
   lineToolBridge,
   dimBridge,
   xlineModeBridge,
+  sketchFidelityBridge,
   scaleToolBridge,
 }: UseRibbonCommandsProps): RibbonCommandsApi {
   // ADR-366 §C.1.b snap-to-grid — subscribe so ribbon re-renders on snap change.
@@ -108,7 +109,7 @@ export function useRibbonCommands({
     electricalPanelBridge, mepRadiatorBridge, mepBoilerBridge, mepWaterHeaterBridge,
     mepUnderfloorBridge, mepSegmentBridge, furnitureBridge, blockLibraryBridge, titleBlockBridge, floorplanSymbolBridge,
     annotationSymbolBridge, scaleBarBridge, mepFixtureLibraryBridge, mepRiserBridge, arrayBridge,
-    lineToolBridge, dimBridge, xlineModeBridge, scaleToolBridge,
+    lineToolBridge, dimBridge, xlineModeBridge, sketchFidelityBridge, scaleToolBridge,
   };
   const routeTables = React.useMemo(
     () => ({

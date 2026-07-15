@@ -44,6 +44,7 @@ import {
   SLAB_OPENING_CONTEXTUAL_TRIGGER,
   LINE_TOOL_CONTEXTUAL_TRIGGER,
   XLINE_MODE_CONTEXTUAL_TRIGGER,
+  SKETCH_CONTEXTUAL_TRIGGER,
   MEP_SEGMENT_CONTEXTUAL_TRIGGER,
   FLOOR_FINISH_CONTEXTUAL_TRIGGER,
   WALL_COVERING_CONTEXTUAL_TRIGGER,
@@ -124,6 +125,8 @@ export const TOOL_ACTIVE_TRIGGER: ReadonlyMap<string, string> = new Map<string, 
   ['slab-opening', SLAB_OPENING_CONTEXTUAL_TRIGGER],
   // ADR-359 Φ10.b — xline active → mode selection panel.
   ['xline', XLINE_MODE_CONTEXTUAL_TRIGGER],
+  // ADR-658 M2 (D3) — «Μολύβι» active → fidelity selection panel.
+  ['sketch', SKETCH_CONTEXTUAL_TRIGGER],
   // ADR-357 Φ17 — 2D drawing tools show the Quick Style override panel.
   ['line', LINE_TOOL_CONTEXTUAL_TRIGGER],
   ['line-perpendicular', LINE_TOOL_CONTEXTUAL_TRIGGER],

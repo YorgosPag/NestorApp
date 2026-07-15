@@ -11,6 +11,9 @@ import { MOVEMENT_DETECTION } from '../../config/tolerance-config';
 import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
 import { getImmediateWorldPosition } from '../../systems/cursor/ImmediatePositionStore';
 import { LassoFreehandStore } from '../../systems/lasso/LassoFreehandStore';
+// ADR-658 M1 — «Μολύβι» freehand: same container-pointer seam as the lasso trace.
+import { SketchFreehandStore } from '../../systems/sketch/SketchFreehandStore';
+import { passesTraceThrottle } from '../../systems/freehand/pointer-trace-throttle';
 // ADR-040 Phase XXII.A — transform reads from SSoT, not React prop (orchestrator-decoupling).
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import type { GridAxis } from '../../systems/guides/guide-types';
@@ -101,6 +104,17 @@ export function useCanvasContainerHandlers(
   // Screen-space refs for lasso throttle + snap-to-close
   const _lastLassoScreen = useRef<{ x: number; y: number } | null>(null);
   const _startLassoScreen = useRef<{ x: number; y: number } | null>(null);
+  // ADR-658 M1 — screen-space throttle ref for the «Μολύβι» freehand trace.
+  const _lastSketchScreen = useRef<{ x: number; y: number } | null>(null);
+  // ADR-658 M2 (D5) — start-point screen ref for the auto-close («near start») affordance.
+  const _startSketchScreen = useRef<{ x: number; y: number } | null>(null);
+
+  // ADR-658 M2 (D4) — endpoint OSNAP: the «Μολύβι» stroke snaps only at its first & last
+  // point (endpoint/midpoint per the active OSNAP config); the middle stays freehand.
+  const readSnappedWorld = useCallback((): Point2D => {
+    const snap = getImmediateSnap();
+    return snap?.found ? snap.point : (getImmediateWorldPosition() ?? { x: 0, y: 0 });
+  }, []);
 
   // Freehand lasso: pointermove → addPoint when distance ≥ 3px screen.
   // Snap-to-close: when cursor is within 20px of start, grow the dot and skip adding points.
@@ -140,8 +154,47 @@ export function useCanvasContainerHandlers(
     return () => el.removeEventListener('pointermove', onMove);
   }, [activeTool, containerRef]);
 
+  // ADR-658 M1 — «Μολύβι» freehand: pointermove → addPoint when moved ≥ 3px screen.
+  // No snap-to-close here (D5 auto-close lands in M2); the raw trace streams to the store.
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || activeTool !== 'sketch') return;
+    const onMove = (e: PointerEvent) => {
+      if (!SketchFreehandStore.isActive()) return;
+      const rect = getCachedClientRect(el); // Φ5 cache — no per-move reflow (ADR-040 Φ10)
+      const sx = e.clientX - rect.left;
+      const sy = e.clientY - rect.top;
+      // D5 — near-close affordance once the loop is large enough to enclose an area (≥ 3 pts).
+      const start = _startSketchScreen.current;
+      if (start && SketchFreehandStore.getPoints().length >= 3) {
+        const cdx = sx - start.x;
+        const cdy = sy - start.y;
+        SketchFreehandStore.setNearClose(cdx * cdx + cdy * cdy < 400); // < 20px radius
+      }
+      if (!passesTraceThrottle(sx, sy, _lastSketchScreen)) return;
+      const worldPos = getImmediateWorldPosition();
+      if (!worldPos) return;
+      SketchFreehandStore.addPoint(worldPos.x, worldPos.y);
+    };
+    el.addEventListener('pointermove', onMove);
+    return () => el.removeEventListener('pointermove', onMove);
+  }, [activeTool, containerRef]);
+
   const handleContainerMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (e.button !== 0) return;
+
+    // ADR-658 M1/M2 — «Μολύβι» freehand: mousedown seeds the trace (drag streams via pointermove).
+    // D4: the first point snaps to the active OSNAP target. D5: capture start screen for near-close.
+    if (activeTool === 'sketch') {
+      const worldPos = readSnappedWorld();
+      _lastSketchScreen.current = null;
+      const rect = containerRef.current?.getBoundingClientRect();
+      _startSketchScreen.current = rect
+        ? { x: e.clientX - rect.left, y: e.clientY - rect.top }
+        : null;
+      SketchFreehandStore.startAt(worldPos.x, worldPos.y);
+      return;
+    }
 
     // Freehand lasso-crop: mousedown starts the lasso trace
     if (activeTool === 'lasso-crop') {
@@ -196,9 +249,20 @@ export function useCanvasContainerHandlers(
       e.stopPropagation();
       return;
     }
-  }, [unified, activeTool, containerRef, setDraggingGuide]);
+  }, [unified, activeTool, containerRef, setDraggingGuide, readSnappedWorld]);
 
   const handleContainerMouseUp = useCallback(async (e: React.MouseEvent<HTMLDivElement>) => {
+    // ADR-658 M1/M2 — «Μολύβι» freehand: mouseup appends the snapped endpoint (D4) then
+    // finishes → sketch:freehand-complete (closed iff released near the start, D5).
+    if (SketchFreehandStore.isActive()) {
+      const end = readSnappedWorld();
+      SketchFreehandStore.addPoint(end.x, end.y);
+      _lastSketchScreen.current = null;
+      _startSketchScreen.current = null;
+      SketchFreehandStore.finish();
+      return;
+    }
+
     // Freehand lasso-crop: mouseup finishes the trace and emits crop:lasso-polygon
     if (LassoFreehandStore.isActive()) {
       _lastLassoScreen.current = null;
@@ -265,7 +329,7 @@ export function useCanvasContainerHandlers(
     }
     const consumed = await unified.handleMouseUp(worldPos);
     if (consumed) return;
-  }, [unified, draggingGuide, containerRef, setDraggingGuide, handleGuideDragComplete]);
+  }, [unified, draggingGuide, containerRef, setDraggingGuide, handleGuideDragComplete, readSnappedWorld]);
 
   return {
     draggingGuide,

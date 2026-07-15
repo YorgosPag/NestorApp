@@ -46,6 +46,7 @@ import { useDxfBimBridges } from './useDxfBimBridges';
 import { useRibbonLineToolBridge } from '../ui/ribbon/hooks/useRibbonLineToolBridge';
 import { useRibbonDimBridge } from '../ui/ribbon/hooks/useRibbonDimBridge';
 import { useRibbonXlineModeBridge } from '../ui/ribbon/hooks/useRibbonXlineModeBridge';
+import { useRibbonSketchFidelityBridge } from '../ui/ribbon/hooks/useRibbonSketchFidelityBridge';
 import { useRibbonScaleToolBridge } from '../ui/ribbon/hooks/useRibbonScaleToolBridge';
 // 📐 ADR-345 Fase 5.5: bridge text-engine ↔ ribbon contextual tab (toggles + comboboxes)
 import { useRibbonTextEditorBridge } from '../ui/ribbon/hooks/useRibbonTextEditorBridge';
@@ -139,6 +140,8 @@ export function useDxfViewerRibbon(params: DxfViewerRibbonParams): DxfViewerRibb
   // ADR-562 Φ3 — per-part dimension style overrides on the selected dimension.
   const dimBridge = useRibbonDimBridge({ levelManager, universalSelection });
   const xlineModeBridge = useRibbonXlineModeBridge();
+  // ADR-658 M2 (D3) — «Μολύβι» fidelity contextual tab ↔ sketch-fidelity-store (self-contained).
+  const sketchFidelityBridge = useRibbonSketchFidelityBridge();
   // ADR-646 Φ4 #6 — Scale tool contextual tab ↔ ScaleToolStore (self-contained).
   const scaleToolBridge = useRibbonScaleToolBridge();
 
@@ -158,7 +161,7 @@ export function useDxfViewerRibbon(params: DxfViewerRibbonParams): DxfViewerRibb
     closeContextualTab,
     canUndo, canRedo,
     textEditorBridge, arrayBridge, stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge, wallCoveringBridge, hatchBridge, thermalSpaceBridge, columnBridge, beamBridge, foundationBridge,
-    slabOpeningBridge, mepCircuitBridge, mepPipeNetworkBridge, mepFixtureBridge, mepManifoldBridge, electricalPanelBridge, mepRadiatorBridge, mepBoilerBridge, mepWaterHeaterBridge, mepUnderfloorBridge, mepSegmentBridge, waterAutoSupplyBridge, drainageAutoBridge, heatingAutoBridge, electricalAutoBridge, electricalWeakAutoBridge, hvacAutoBridge, fireAutoBridge, gasAutoBridge, clashDetectionBridge, furnitureBridge, blockLibraryBridge, titleBlockBridge, floorplanSymbolBridge, annotationSymbolBridge, scaleBarBridge, mepFixtureLibraryBridge, mepRiserBridge, lineToolBridge, dimBridge, xlineModeBridge, scaleToolBridge,
+    slabOpeningBridge, mepCircuitBridge, mepPipeNetworkBridge, mepFixtureBridge, mepManifoldBridge, electricalPanelBridge, mepRadiatorBridge, mepBoilerBridge, mepWaterHeaterBridge, mepUnderfloorBridge, mepSegmentBridge, waterAutoSupplyBridge, drainageAutoBridge, heatingAutoBridge, electricalAutoBridge, electricalWeakAutoBridge, hvacAutoBridge, fireAutoBridge, gasAutoBridge, clashDetectionBridge, furnitureBridge, blockLibraryBridge, titleBlockBridge, floorplanSymbolBridge, annotationSymbolBridge, scaleBarBridge, mepFixtureLibraryBridge, mepRiserBridge, lineToolBridge, dimBridge, xlineModeBridge, sketchFidelityBridge, scaleToolBridge,
   });
 
   return { ribbonCommands, ribbonContextualTabs };

@@ -53,6 +53,18 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
           },
         },
         {
+          // ADR-658 M1 — «Μολύβι»: freehand drag-to-draw (pointerdown→drag→pointerup → polyline).
+          type: 'simple',
+          size: 'large',
+          command: {
+            id: 'draw.sketch',
+            labelKey: 'ribbon.commands.sketch',
+            icon: 'pencil',
+            commandKey: 'sketch',
+            shortcut: 'FH',
+          },
+        },
+        {
           type: 'split',
           size: 'large',
           command: {

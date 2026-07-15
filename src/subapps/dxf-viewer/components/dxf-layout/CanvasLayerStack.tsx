@@ -38,9 +38,9 @@ import {
   type LayerCanvasPassthroughProps,
 } from './canvas-layer-stack-leaves';
 import { PolygonCropPreviewSubscriber } from './LassoCropPreviewSubscriber'; import { LassoFreehandPreviewSubscriber } from './LassoFreehandPreviewSubscriber';
+import { SketchFreehandPreviewSubscriber } from './SketchFreehandPreviewSubscriber'; // ADR-658 M1 — «Μολύβι» freehand live-stroke leaf (micro-leaf subscriber, ADR-040)
 import { ZoomWindowSubscriber } from './leaves/ZoomWindowSubscriber';
-import { AutoAreaResultPanel } from './AutoAreaResultPanel'; import { AutoAreaPreviewOverlay } from './AutoAreaPreviewOverlay';
-import { ClashReportPanel } from './ClashReportPanel';
+import { AutoAreaResultPanel } from './AutoAreaResultPanel'; import { AutoAreaPreviewOverlay } from './AutoAreaPreviewOverlay'; import { ClashReportPanel } from './ClashReportPanel';
 // ADR-449 PART B Slice C — «Βαφή σοβά» 2D paintbrush material palette (leaf, gate σε activeTool).
 import { FinishPaint2DPanel } from './FinishPaint2DPanel';
 import { RegionPerimeterPreviewOverlay } from './RegionPerimeterPreviewOverlay';
@@ -460,6 +460,7 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
           <CanvasLayerStack2DOverlays transform={transform} viewport={viewport} />
           <PolygonCropPreviewSubscriber transform={transform} viewport={viewport} className={`absolute inset-0 w-full h-full pointer-events-none ${PANEL_LAYOUT.Z_INDEX['20']}`} />
           <LassoFreehandPreviewSubscriber transform={transform} viewport={viewport} className={`absolute inset-0 w-full h-full pointer-events-none ${PANEL_LAYOUT.Z_INDEX['20']}`} />
+          <SketchFreehandPreviewSubscriber transform={transform} viewport={viewport} className={`absolute inset-0 w-full h-full pointer-events-none ${PANEL_LAYOUT.Z_INDEX['20']}`} />
           <ZoomWindowSubscriber className={`absolute ${PANEL_LAYOUT.INSET['0']} w-full h-full ${PANEL_LAYOUT.POINTER_EVENTS.NONE} ${PANEL_LAYOUT.Z_INDEX['20']}`} />
           <CanvasNumericInputOverlay />
           <DynamicInputSubscriber

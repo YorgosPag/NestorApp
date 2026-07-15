@@ -108,6 +108,8 @@ export const RibbonButtonIcon: React.FC<RibbonButtonIconProps> = ({ icon, size }
     case 'arc-cse': return <ArcIcon variant="center-start-end" className={className} />;
     case 'arc-sce': return <ArcIcon variant="start-center-end" className={className} />;
     case 'polyline': return inlineSvg(size, POLYLINE_PATH);
+    // ADR-658 M1 — «Μολύβι» freehand tool (lucide Pencil).
+    case 'pencil': return <Pencil width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'polygon': return inlineSvg(size, POLYGON_PATH);
     case 'rectangle': return inlineSvg(size, RECTANGLE_PATH);
     case 'ellipse': return inlineSvg(size, ELLIPSE_PATH);

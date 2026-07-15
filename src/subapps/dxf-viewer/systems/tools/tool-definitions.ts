@@ -48,6 +48,8 @@ export const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   'circle-ttt': { id: 'circle-ttt', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'polyline': { id: 'polyline', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'polygon': { id: 'polygon', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  // ADR-658 M1 — «Μολύβι»: freehand drag-to-draw. Stays active for consecutive strokes.
+  'sketch': { id: 'sketch', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   // ADR-507 S2 — γραμμοσκίαση: polygon N-click + Enter (κλειστό όριο → HatchEntity).
   'hatch': { id: 'hatch', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'ellipse': { id: 'ellipse', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
@@ -377,6 +379,8 @@ export const TOOL_CREATES_ENTITY: Partial<Record<ToolType, RenderableEntityType>
   'circle-3p': 'circle', 'circle-chord-sagitta': 'circle', 'circle-2p-radius': 'circle',
   'circle-best-fit': 'circle', 'circle-ttt': 'circle',
   'polyline': 'polyline', 'polygon': 'polyline',
+  // ADR-658 M1 — freehand «Μολύβι» emits a genuine PolylineEntity (indistinguishable from click-polyline).
+  'sketch': 'polyline',
   'arc-3p': 'arc', 'arc-cse': 'arc', 'arc-sce': 'arc',
   'hatch': 'hatch',
   'text': 'text', 'mtext': 'mtext',

@@ -29,6 +29,8 @@ export type ToolType =
   | 'line-parallel'        // Parallel line with offset
   | 'polyline'
   | 'polygon'
+  // ADR-658 M1: «Μολύβι» — freehand drag-to-draw (pointerdown→drag→pointerup → PolylineEntity)
+  | 'sketch'
   // ADR-507 S2: Hatch (γραμμοσκίαση) — closed-boundary fill tool (AutoCAD HATCH)
   | 'hatch'
   | 'ellipse'

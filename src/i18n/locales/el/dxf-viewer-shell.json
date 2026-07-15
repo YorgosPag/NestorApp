@@ -1233,6 +1233,18 @@
         "finishChain": "Τέλος αλυσίδας"
       }
     },
+    "sketch": {
+      "fidelity": {
+        "accurate": "Ακριβές",
+        "balanced": "Ισορροπημένο",
+        "smooth": "Ομαλό",
+        "verysmooth": "Πολύ ομαλό"
+      },
+      "outputType": {
+        "polyline": "Τεθλασμένη",
+        "spline": "Καμπύλη"
+      }
+    },
     "ray": {
       "name": "Ακτίνα",
       "tooltip": "Ημι-άπειρη γραμμή από αρχή προς κατεύθυνση",
@@ -1652,6 +1664,7 @@
       "blockTools": "Μπλοκ",
       "imageTools": "Εικόνα",
       "xlineMode": "Γραμμή Κατασκευής",
+      "sketch": "Μολύβι",
       "scaleTool": "Κλιμάκωση",
       "analyze": "Ανάλυση",
       "furnitureProperties": "Ιδιότητες Επίπλου",
@@ -1937,6 +1950,8 @@
       "lineFilletOptions": "Επιλογές Συναρμογής",
       "lineChamferOptions": "Επιλογές Λοξοτομής",
       "xlineMode": "Λειτουργία",
+      "sketchFidelity": "Πιστότητα",
+      "sketchType": "Τύπος",
       "scaleToolOptions": "Επιλογές",
       "scaleToolFactor": "Συντελεστής",
       "bimSchedule": "Πίνακας BIM",
@@ -2050,6 +2065,9 @@
         "parallel": "Παράλληλη Γραμμή"
       },
       "polyline": "Πολυγραμμή",
+      "sketch": "Μολύβι",
+      "sketchFidelitySelector": "Πιστότητα",
+      "sketchTypeSelector": "Τύπος",
       "circle": "Κύκλος",
       "arc": "Τόξο",
       "rectangle": "Ορθογώνιο",

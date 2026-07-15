@@ -257,6 +257,10 @@ export interface DrawingEventMap extends MepAutoDesignEventMap, BimEventMap {
   // Lasso-crop: freehand polygon drawn by user → clip scene
   'crop:lasso-polygon': { polygon: Array<[number, number]> };
 
+  // ADR-658 M1 — «Μολύβι» freehand: emitted on pointerup with the world-space trace.
+  // `useSketchFreehandCommit` RDP-simplifies + commits a PolylineEntity (undoable).
+  'sketch:freehand-complete': { points: Array<[number, number]>; closed: boolean };
+
   // ADR-374 — ZOOM Window tool: final world rect to fit-to-view, viewport for scale calc.
   'zoom-window:apply': {
     worldBounds: { min: { x: number; y: number }; max: { x: number; y: number } };

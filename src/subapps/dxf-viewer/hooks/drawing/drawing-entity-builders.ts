@@ -18,6 +18,9 @@ import type {
 } from '../../types/scene';
 import type { XLineEntity, RayEntity } from '../../types/entities';
 import { getXLineModeState } from '../../systems/tools/xline-mode-store';
+// ADR-658 M3 (D1) — «Μολύβι» output-type SSoT: «Τεθλασμένη» (plain polyline) vs «Καμπύλη»
+// (polyline + ADR-650 smoothDisplay fitted-curve). Read at build time (mirror του xline mode).
+import { getSketchOutputType } from '../../systems/sketch/sketch-output-store';
 import { buildRectangleCornersFromLock } from '../../systems/dynamic-input/rect-lock';
 // ADR-507 S2 — γραμμοσκίαση: boundary points → HatchEntity (με τα draw-defaults).
 import { buildHatchEntityFromBoundary } from '../../bim/hatch/hatch-completion';
@@ -279,6 +282,28 @@ export function createEntityFromTool(
         }
       }
       break;
+    // ADR-658 M3 (D1) — «Μολύβι» «Καμπύλη» output: a PolylineEntity carrying the ADR-650
+    // `smoothDisplay` flag. The SAME RDP-simplified points become the control vertices; the
+    // PolylineRenderer strokes a Catmull-Rom fitted curve through them (AutoCAD spline-fit /
+    // Civil 3D contour smoothing) — fidelity controls CV density, not straightening. This
+    // REUSES the fully-wired smooth-display SSoT (preview/hit-test/grips/export/undo all stay
+    // on the polyline path); a raw SplineEntity is NOT renderable in the canvas-v2 scene path
+    // (spline is import-only → tessellated, absent from DxfEntityUnion). Output type read live
+    // from the sketch-output SSoT (mirror του xline mode). «Τεθλασμένη» falls through below.
+    case 'sketch':
+      if (points.length >= 2 && getSketchOutputType() === 'spline') {
+        return {
+          id,
+          type: 'polyline',
+          vertices: [...points],
+          closed: false,
+          smoothDisplay: true,
+          visible: true,
+          layerId: defaultLayerId,
+        } as PolylineEntity;
+      }
+    // falls through — «Τεθλασμένη» reuses the plain polyline branch below (zero duplication, N.18).
+    // eslint-disable-next-line no-fallthrough
     case 'polyline':
       if (points.length >= 2) {
         return {

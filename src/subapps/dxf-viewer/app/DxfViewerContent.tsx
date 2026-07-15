@@ -80,6 +80,8 @@ import { DxfViewerTopBar } from './DxfViewerTopBar';
 // bridge (useTextToolbarSelectionSync) moved to SelectionSideEffectsHost (ADR-532
 // Stage 5) — it was selection-reactive and re-rendered this orchestrator on click.
 import { useTextToolbarCommandBridge } from '../ui/text-toolbar/hooks/useTextToolbarCommandBridge';
+// ADR-658 M1 — «Μολύβι» freehand commit host (event → RDP-simplify → PolylineEntity, undoable).
+import { useSketchFreehandCommit } from '../hooks/drawing/useSketchFreehandCommit';
 import { use3DSelectionUniversalBridge } from '../bim-3d/systems/selection/use-3d-selection-universal-bridge';
 // ✅ N.7.1 size split — extracted UI-state + ribbon assembly + dialogs modules
 import { useDxfViewerUiState } from './useDxfViewerUiState';
@@ -122,6 +124,8 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   // ADR-344 Phase 6.E — toolbar→CommandHistory (L2); always-on orchestrator.
   // L1 (selection→toolbar) moved to SelectionSideEffectsHost (ADR-532 Stage 5).
   useTextToolbarCommandBridge();
+  // ADR-658 M1 — always-on host: commits finished «Μολύβι» freehand strokes.
+  useSketchFreehandCommit();
   useDxfViewerNotifications(); // ADR-401 Phase C — decoupled host-missing warning toast bridge
   const eventBus = useEventBus();
   const colors = useSemanticColors();

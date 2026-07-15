@@ -56,6 +56,7 @@ import type { RibbonWallCoveringBridge } from './useRibbonWallCoveringBridge';
 import type { RibbonHatchBridge } from './useRibbonHatchBridge';
 import type { RibbonThermalSpaceBridge } from './useRibbonThermalSpaceBridge';
 import type { RibbonXlineModeBridge } from './useRibbonXlineModeBridge';
+import type { RibbonSketchFidelityBridge } from './useRibbonSketchFidelityBridge';
 import type { RibbonScaleToolBridge } from './useRibbonScaleToolBridge';
 
 export interface UseRibbonCommandsProps {
@@ -116,5 +117,6 @@ export interface UseRibbonCommandsProps {
   lineToolBridge: RibbonLineToolBridge;
   dimBridge: RibbonDimBridge;
   xlineModeBridge: RibbonXlineModeBridge;
+  sketchFidelityBridge: RibbonSketchFidelityBridge;
   scaleToolBridge: RibbonScaleToolBridge;
 }

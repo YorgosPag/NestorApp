@@ -32,6 +32,7 @@ import { useOverlayStore } from '../overlays/overlay-store';
 import { useLevels } from '../systems/levels';
 import { PolygonCropStore } from '../systems/lasso/LassoCropStore';
 import { LassoFreehandStore } from '../systems/lasso/LassoFreehandStore';
+import { SketchFreehandStore } from '../systems/sketch/SketchFreehandStore';
 // 🏢 ADR-418: real view-scale (1:N) → pixel-scale conversion SSoT
 import { ratioToScale } from '../utils/view-scale';
 import { resolveSceneUnits } from '../utils/scene-units';
@@ -207,6 +208,12 @@ export function useDxfViewerState() {
   // Cancel lasso-freehand store when tool changes away
   useEffect(() => {
     if (activeTool !== 'lasso-crop') LassoFreehandStore.cancel();
+  }, [activeTool]);
+
+  // ADR-658 M1 — cancel «Μολύβι» freehand trace when tool changes away (or on Escape,
+  // which switches to 'select'), so a half-drawn stroke never lingers.
+  useEffect(() => {
+    if (activeTool !== 'sketch') SketchFreehandStore.cancel();
   }, [activeTool]);
 
   // Canvas actions through new API

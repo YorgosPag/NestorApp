@@ -72,6 +72,19 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-07-15 — ➕ ADR-658 M1: SketchFreehandPreviewSubscriber (live «Μολύβι» stroke micro-leaf, z20)
+**Τι:** νέο micro-leaf `SketchFreehandPreviewSubscriber` για το εργαλείο **«Μολύβι»** (freehand
+drag-to-draw). Self-subscribes **μόνο** το `SketchFreehandStore` (module-level pub/sub, zero React
+state — κατ' εικόνα του `LassoFreehandStore`) μέσω `useSyncExternalStore`· ζωγραφίζει τη ζωντανή
+γραμμή σε SVG. **Συμμόρφωση ADR-040:** η high-freq συνδρομή ζει **μόνο** στο leaf — **καμία** σε
+`CanvasSection`/`CanvasLayerStack` (CHECK 6C ασφαλές). Mount στο `CanvasLayerStack.tsx` σε **z-20**
+(pointer-events-none) δίπλα στο `LassoFreehandPreviewSubscriber` → **CHECK 6B touch, co-staged
+ADR-040 + ADR-658**. Το wiring pointer (down/move/up) στο `useCanvasContainerHandlers` διαβάζει
+transform/world **event-time** μέσω getters (ADR-040 Phase XXII.A)· το commit γίνεται εκτός hot-path
+μέσω `completeEntity`/`CreateEntityCommand` (undoable). Κοινό world→screen projection SSoT
+(`freehand-preview-projection.ts`) — ο lasso subscriber refactored να το χρησιμοποιεί (jscpd de-dup).
+Λεπτομέρειες: ADR-658 §8. jest 9/9 GREEN· jscpd:diff καθαρό. ΟΧΙ tsc (N.17). 🟡 UNCOMMITTED.
+
 ### 2026-07-15 — ➕ ADR-656 M12: NorthArrowLeaf (βέλος Βορρά HUD micro-leaf, z30)
 **Τι:** νέο **SVG** micro-leaf `NorthArrowLeaf` — screen-anchored βέλος Βορρά (top-right corner), όπως
 title-block north arrow. **ΟΧΙ** transform-dependent: ο viewer δεν έχει στροφή όψης, άρα ο Βορράς μένει

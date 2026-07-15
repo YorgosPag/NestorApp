@@ -1233,6 +1233,18 @@
         "finishChain": "Finish Chain"
       }
     },
+    "sketch": {
+      "fidelity": {
+        "accurate": "Accurate",
+        "balanced": "Balanced",
+        "smooth": "Smooth",
+        "verysmooth": "Very smooth"
+      },
+      "outputType": {
+        "polyline": "Polyline",
+        "spline": "Spline"
+      }
+    },
     "ray": {
       "name": "Ray",
       "tooltip": "Semi-infinite line from origin in a direction",
@@ -1652,6 +1664,7 @@
       "blockTools": "Block",
       "imageTools": "Image",
       "xlineMode": "Construction Line",
+      "sketch": "Pencil",
       "scaleTool": "Scale",
       "analyze": "Analyze",
       "furnitureProperties": "Furniture Properties",
@@ -1937,6 +1950,8 @@
       "lineFilletOptions": "Fillet Options",
       "lineChamferOptions": "Chamfer Options",
       "xlineMode": "Mode",
+      "sketchFidelity": "Fidelity",
+      "sketchType": "Type",
       "scaleToolOptions": "Options",
       "scaleToolFactor": "Factor",
       "bimSchedule": "BIM Schedule",
@@ -2050,6 +2065,9 @@
         "parallel": "Parallel Line"
       },
       "polyline": "Polyline",
+      "sketch": "Pencil",
+      "sketchFidelitySelector": "Fidelity",
+      "sketchTypeSelector": "Type",
       "circle": "Circle",
       "arc": "Arc",
       "rectangle": "Rectangle",

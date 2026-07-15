@@ -59,6 +59,7 @@ import { isArrayRibbonKey, isArrayRibbonStringKey } from './bridge/array-command
 import { isLineToolRibbonKey, isLineToolPanelVisibilityKey } from './bridge/line-tool-command-keys';
 import { isDimRibbonKey } from './bridge/dim-command-keys';
 import { isXlineRibbonKey } from './bridge/xline-command-keys';
+import { isSketchRibbonKey } from './bridge/sketch-fidelity-command-keys';
 import { isScaleToolRibbonKey } from './bridge/scale-tool-command-keys';
 import { isBlockLibraryRibbonKey } from './bridge/block-library-command-keys';
 import {
@@ -146,6 +147,7 @@ export interface ComboboxRouteDeps {
   readonly lineToolBridge: ComboboxCapable;
   readonly dimBridge: ComboboxCapable;
   readonly xlineModeBridge: ComboboxCapable;
+  readonly sketchFidelityBridge: ComboboxCapable;
   readonly scaleToolBridge: ComboboxCapable;
   readonly blockLibraryBridge: ComboboxCapable;
   readonly titleBlockBridge: ComboboxCapable;
@@ -267,6 +269,7 @@ export function buildComboboxRoutes(d: ComboboxRouteDeps): readonly ComboboxRout
     { ...both(isLineToolRibbonKey), ...boundCombobox(d.lineToolBridge) },
     { ...both(isDimRibbonKey), ...boundCombobox(d.dimBridge) },
     { ...both(isXlineRibbonKey), ...boundCombobox(d.xlineModeBridge) },
+    { ...both(isSketchRibbonKey), ...boundCombobox(d.sketchFidelityBridge) },
     { ...both(isScaleToolRibbonKey), ...boundCombobox(d.scaleToolBridge) },
     // ADR-652 M1.5 — numeric-only (rotation/scale): κανένα string/asset key, άρα σκέτο `both`.
     { ...both(isBlockLibraryRibbonKey), ...boundCombobox(d.blockLibraryBridge) },

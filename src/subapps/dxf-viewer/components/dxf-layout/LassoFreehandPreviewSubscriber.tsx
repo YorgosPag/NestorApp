@@ -8,8 +8,9 @@
 
 import React, { useSyncExternalStore } from 'react';
 import { LassoFreehandStore } from '../../systems/lasso/LassoFreehandStore';
-import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
-import type { ViewTransform, Point2D } from '../../rendering/types/Types';
+// ADR-658 — shared freehand trace→screen projection SSoT (no parallel twins, N.18).
+import { freehandScreenGeometry } from './freehand-preview-projection';
+import type { ViewTransform } from '../../rendering/types/Types';
 // 🏢 ADR-571: lasso dark-cyan stroke SSoT
 import { LASSO_STROKE_CYAN } from '../../config/color-config';
 
@@ -33,15 +34,10 @@ export const LassoFreehandPreviewSubscriber = React.memo(function LassoFreehandP
 }: LassoFreehandPreviewSubscriberProps) {
   const { points, nearClose } = useSyncExternalStore(_subscribe, _getSnapshot);
 
-  if (points.length < 2) return null;
+  const geo = freehandScreenGeometry(points, transform, viewport);
+  if (!geo) return null;
 
-  const toScreen = (wx: number, wy: number): Point2D =>
-    CoordinateTransforms.worldToScreen({ x: wx, y: wy }, transform, viewport);
-
-  const screenPts = points.map(([wx, wy]) => toScreen(wx, wy));
-  const polylineStr = screenPts.map(p => `${p.x},${p.y}`).join(' ');
-  const first = screenPts[0];
-  const last = screenPts[screenPts.length - 1];
+  const { polylineStr, first, last } = geo;
 
   return (
     <svg className={className} overflow="visible">

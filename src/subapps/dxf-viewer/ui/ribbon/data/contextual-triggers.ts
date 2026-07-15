@@ -50,6 +50,7 @@ export { ELECTRICAL_PANEL_CONTEXTUAL_TRIGGER } from './contextual-electrical-pan
 export { ANNOTATION_SYMBOL_CONTEXTUAL_TRIGGER } from './contextual-annotation-symbol-tab';
 export { SCALE_BAR_CONTEXTUAL_TRIGGER } from './contextual-scale-bar-tab';
 export { XLINE_MODE_CONTEXTUAL_TRIGGER } from './contextual-xline-mode-tab';
+export { SKETCH_CONTEXTUAL_TRIGGER } from './contextual-sketch-tab';
 export { SCALE_TOOL_CONTEXTUAL_TRIGGER } from './contextual-scale-tool-tab';
 export { FURNITURE_CONTEXTUAL_TRIGGER } from './contextual-furniture-tab';
 export { BLOCK_LIBRARY_CONTEXTUAL_TRIGGER } from './contextual-block-library-tab';
