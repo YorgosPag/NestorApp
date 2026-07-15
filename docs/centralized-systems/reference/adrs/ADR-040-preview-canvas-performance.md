@@ -72,6 +72,17 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-07-15 — ➕ ADR-656 M12: NorthArrowLeaf (βέλος Βορρά HUD micro-leaf, z30)
+**Τι:** νέο **SVG** micro-leaf `NorthArrowLeaf` — screen-anchored βέλος Βορρά (top-right corner), όπως
+title-block north arrow. **ΟΧΙ** transform-dependent: ο viewer δεν έχει στροφή όψης, άρα ο Βορράς μένει
+σταθερός σε pan/zoom· το βέλος στρέφεται μόνο όταν αλλάξει mode (Κανάβου/Πραγματικός), geo-reference ή η
+αποτύπωση. **Συμμόρφωση ADR-040:** self-subscribes **μόνο** low-freq stores (`north-arrow-store`,
+`geo-reference-store`, `topo`) — **καμία** high-freq `useSyncExternalStore`, **καμία** σε Shell (CHECK 6C
+ασφαλές). Δεν δέχεται `transform` (screen-anchored HUD). Mount στο `CanvasLayerStack.tsx` σε **z-30** (top-right,
+pointer-events-none) → **CHECK 6B touch, co-staged ADR-040 + ADR-656**. Η γωνία = pure `north-arrow-model`
+(reuse `geo-transform` rotationDeg + `egsa87-projection` σύγκλιση)· το export («Bake») είναι εκτός hot-path
+(entities via `completeEntities`, ADR-057). Λεπτομέρειες: ADR-656 §Changelog v5. 🟡 UNCOMMITTED.
+
 ### 2026-07-14 — ➕ ADR-656 M11: TopoGridUnderlayLeaf (ΕΓΣΑ87 graticule micro-leaf, z20)
 **Τι:** νέο micro-leaf `TopoGridUnderlayLeaf` + presentational `TopoGridUnderlayCanvas` για τον **ζωντανό
 κάναβο συντεταγμένων ΕΓΣΑ87** (crosses στις στρογγυλές τιμές + περιμετρική αρίθμηση Easting/Northing στις

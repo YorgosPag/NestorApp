@@ -1,9 +1,9 @@
 # ADR-656 — Ελληνικό Τοπογραφικό: Παρουσίαση & Compliance (Ισοϋψείς · Labels Σημείων · Κάναβος ΕΓΣΑ87)
 
-- **Status**: 🟢 M9 DONE · 🟢 M10 DONE · 🟢 M11 DONE — και τα τρία presentation milestones υλοποιήθηκαν
-  (M9 πάχος ισοϋψών Changelog v2· M10 labels σημείων Changelog v3· M11 κάναβος ΕΓΣΑ87 Changelog v4). Ο ADR-656
-  είναι πλήρης· μελλοντικά μόνο τα title-block στοιχεία (κλίμακα-bar / βέλος Βορρά / υπόμνημα) σε συνέργεια ADR-651.
-- **Date**: 2026-07-14
+- **Status**: 🟢 M9 DONE · 🟢 M10 DONE · 🟢 M11 DONE · 🟢 M12 (βέλος Βορρά) DONE — M9 πάχος ισοϋψών (v2)·
+  M10 labels σημείων (v3)· M11 κάναβος ΕΓΣΑ87 (v4)· M12 βέλος Βορρά Κανάβου/Πραγματικός με σύγκλιση ΕΓΣΑ87 (v5).
+  Μελλοντικά title-block: κλίμακα-bar / υπόμνημα (ADR-651)· 4-edge grid numbering· lat/lon readout.
+- **Date**: 2026-07-15
 - **Category**: DXF Viewer / Topography / Presentation & Compliance
 - **Σχετικά**:
   - **ADR-650** (Τοπογραφικές Αποτυπώσεις & Ισοϋψείς — ο πυρήνας pipeline points→TIN→contours→export). Το παρόν
