@@ -83,6 +83,9 @@ const NO_SELECTION_TAB_TYPES = [
   // αλλά ΧΩΡΙΣ contextual tab ακόμα. Στο Stage C μετακινείται στο ENTITY_CONTEXTUAL_TRIGGER
   // map (object-bound Properties + «Τοπογραφική Επιφάνεια» tab) και βγαίνει από εδώ.
   'topo-surface',
+  // ADR-635 Φάση B — leader callout: annotation επεξεργάζεται μέσω grips (path vertices), ΟΧΙ
+  // per-selection ribbon tab → null στην επιλογή (όπως point/xline/furniture).
+  'leader',
 ];
 
 describe('Selection contextual-trigger coverage — map ↔ resolver ↔ descriptor domain (ADR-587 Φ3a)', () => {

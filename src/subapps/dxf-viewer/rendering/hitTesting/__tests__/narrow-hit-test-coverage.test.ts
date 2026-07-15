@@ -36,6 +36,8 @@ const PRECISE = [
   // CAD: απόσταση-από-γεωμετρία ή polygon containment.
   'line', 'circle', 'arc', 'polyline', 'lwpolyline', 'rectangle', 'rect',
   'text', 'mtext', 'angle-measurement', 'dimension', 'xline', 'ray', 'hatch',
+  // ADR-635 Φάση B — leader callout: point-to-segment στα path vertices (open path, reuse hitTestPolyline).
+  'leader',
   // Annotations: το AABB τους έχει άδειες γωνίες (κυκλικό σύμβολο / περιστραμμένη μπάρα ή
   // ταμπέλα / περιστραμμένη εικόνα) — χωρίς ακριβές test θα φωτίζονταν από το πουθενά.
   'annotation-symbol', 'scale-bar', 'opening-info-tag', 'image',

@@ -91,6 +91,10 @@ export const NARROW_HIT_TEST_HANDLERS: Partial<Record<EntityType, NarrowHitTest>
   arc: hitTestArc,
   polyline: hitTestPolyline,
   lwpolyline: hitTestPolyline,
+  // ADR-635 Φάση B — leader callout: point-to-segment στα path vertices (open path). Το
+  // `hitTestPolyline` διαβάζει `'vertices' in entity` + `closed` (undefined → open, n-1 edges),
+  // άρα καλύπτει τον leader αυτούσιο — SSoT με `LeaderRenderer.hitTest` (hitTestLineSegments).
+  leader: hitTestPolyline,
   rectangle: hitTestRectangle,
   rect: hitTestRectangle,
   text: hitTestText,

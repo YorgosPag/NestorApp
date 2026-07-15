@@ -123,6 +123,8 @@ export const HIT_TEST_BOUNDS_HANDLERS: Partial<Record<EntityType, EntityBoundsHa
   image: calculateImageBounds,
   // ADR-662 Φάση 2β (Δρόμος Γ) — topo surface: AABB πάνω σε όλες τις κορυφές του footprint.
   'topo-surface': calculateTopoSurfaceBounds,
+  // ADR-635 Φάση B — leader callout: AABB πάνω στα path vertices (reuse polyline SSoT).
+  leader: calculatePolylineBounds,
 
   // ── BIM parametric: όλα προβάλλουν το pre-computed `geometry.bbox` στο XY. Added by:
   // ADR-363 (wall/opening/slab/slab-opening/column/beam), ADR-358 (stair), ADR-436

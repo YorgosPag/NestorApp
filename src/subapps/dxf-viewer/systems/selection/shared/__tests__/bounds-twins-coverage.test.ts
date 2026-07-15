@@ -70,6 +70,8 @@ const A_HANDLED = [
   'line', 'polyline', 'lwpolyline', 'circle', 'arc', 'ellipse', 'rectangle', 'rect', 'point',
   'annotation-symbol', 'scale-bar', 'opening-info-tag', 'text', 'mtext', 'spline', 'hatch', 'xline', 'ray',
   'dimension', 'angle-measurement',
+  // ADR-635 Φάση B — leader callout: resolver provider `verticesBounds` (path AABB).
+  'leader',
   // ADR-651 Φάση Ε — standalone image: resolver provider (rotation-aware rectangle bbox).
   'image',
   // ADR-662 Φάση 2β (Δρόμος Γ) — thin/derived topo surface: resolver provider (footprint-ring AABB).
@@ -106,6 +108,8 @@ const B_HANDLED = [
   'line', 'polyline', 'lwpolyline', 'circle', 'arc', 'ellipse', 'text', 'mtext', 'spline',
   'rectangle', 'rect', 'point', 'dimension', 'angle-measurement', 'hatch', 'xline', 'ray',
   'annotation-symbol', 'scale-bar', 'opening-info-tag',
+  // ADR-635 Φάση B — leader callout: resolver provider `verticesBounds` (path AABB).
+  'leader',
   // ADR-651 Φάση Ε — standalone image: resolver provider (rotation-aware rectangle bbox).
   'image',
   // ADR-662 Φάση 2β (Δρόμος Γ) — thin/derived topo surface: resolver provider (footprint-ring AABB).

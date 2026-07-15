@@ -202,6 +202,8 @@ export const ENTITY_BOUNDS_PROVIDERS: Partial<Record<EntityType, (entity: Entity
   circle: circleBounds,
   polyline: verticesBounds,
   lwpolyline: verticesBounds,
+  // ADR-635 Φάση B — leader callout: AABB πάνω στα path vertices (open path, reuse SSoT).
+  leader: verticesBounds,
   arc: arcBounds,
   rect: rectBounds,
   rectangle: rectBounds,
