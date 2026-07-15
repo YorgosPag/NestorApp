@@ -10,12 +10,13 @@ import type { AnySceneEntity, SceneModel } from '../../types/scene';
 import type { GridGuide, GridGroup } from '../../ai-assistant/grid-types';
 import type { MepAutoDesignEventMap } from './drawing-event-map-mep-autodesign';
 import type { BimEventMap } from './drawing-event-map-bim';
+import type { TopoEventMap } from './drawing-event-map-topo';
 
 // Event type definitions - centralized and type-safe.
 // MEP auto-design feedback events live in `MepAutoDesignEventMap` (SRP split, N.7.1).
 // BIM entity events (params/delete, grid-generation, attach, 3D placement, IFC) live
 // in `BimEventMap` (SRP split, N.7.1).
-export interface DrawingEventMap extends MepAutoDesignEventMap, BimEventMap {
+export interface DrawingEventMap extends MepAutoDesignEventMap, BimEventMap, TopoEventMap {
   // ADR-466 — Entity clipboard (Revit Ctrl+C / Ctrl+V, cross-floor paste-in-place).
   // Emitted by the keyboard-shortcut → onAction pipeline; consumed by
   // useEntityClipboard (so the shortcut SSoT stays the single binding source).

@@ -639,6 +639,7 @@
 | **ADR-659** | Ασφαλής επιλογή οντοτήτων σε αλληλοεπικάλυψη (Overlap Selection Disambiguation — repeated-click + canvas pre-highlight + badge· επεκτείνει ADR-357 Φ15) | 🟡 IN PROGRESS | 2026-07-15 | DXF Viewer / Selection | [📄](./adrs/ADR-659-overlap-selection-disambiguation.md) |
 | **ADR-660** | Self-registration hardening (pending / admin-approval — κλείνει την ανοιχτή αυτο-εγγραφή που αποκάλυψε το ADR-657) | ✅ ACCEPTED | 2026-07-15 | Auth / Provisioning | [📄](./adrs/ADR-660-self-registration-hardening.md) |
 | **ADR-661** | 2D DRAWORDER: Array-Order Render SSoT + Per-Entity & Topo Send-to-Back (single-pass DxfRenderer· αντικαθιστά το ADR-650 M10d #Γ topo pass) | 🟢 IMPLEMENTED | 2026-07-15 | DXF Viewer / 2D Rendering / Z-Order | [📄](./adrs/ADR-661-2d-draworder-array-order-ssot.md) |
+| **ADR-662** | Μετάβαση Τοπογραφικού από αριστερό panel → Ribbon (μόνιμο tab + Properties + contextual· research-first, big-player evidence, reuse ADR-444/345/587) | 🔵 PROPOSED | 2026-07-15 | DXF Viewer / Ribbon · Topography | [📄](./adrs/ADR-662-topography-ribbon-migration.md) |
 | **ADR-663** | DXF Viewer TypeScript Error Ratchet — CHECK 3.29 (το root tsconfig ΕΞΑΙΡΕΙ το dxf-viewer → κανένα gate δεν το έβλεπε· per-file baseline + CI Layer 2· reuse ADR-584 engine) | ✅ ACTIVE | 2026-07-16 | Uncategorized | [📄](./adrs/ADR-663-dxf-viewer-tsc-error-ratchet.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
@@ -1256,6 +1257,7 @@
 | **ADR-652** | Block Library — M1: τοποθέτηση + in-session «Τα Blocks μου» | 🔵 PROPOSED | [View](./adrs/ADR-652-block-library.md) |
 | **ADR-656** | Ελληνικό Τοπογραφικό: Παρουσίαση & Compliance (Ισοϋψείς · Labels σημείων · Κάναβος ΕΓΣΑ87) | 🟡 BLUEPRINT | [View](./adrs/ADR-656-greek-topo-presentation-compliance.md) |
 | **ADR-659** | Overlap Selection Disambiguation (repeated-click + canvas pre-highlight + badge· επεκτείνει ADR-357 Φ15) | 🟡 IN PROGRESS | [View](./adrs/ADR-659-overlap-selection-disambiguation.md) |
+| **ADR-662** | Μετάβαση Τοπογραφικού → Ribbon (μόνιμο tab + Properties + contextual· research-first) | 🔵 PROPOSED | [View](./adrs/ADR-662-topography-ribbon-migration.md) |
 | **ADR-663** | DXF Viewer TypeScript Error Ratchet — CHECK 3.29 (per-file baseline· CI Layer 2· το root tsconfig εξαιρεί το dxf-viewer) | ✅ ACTIVE | [View](./adrs/ADR-663-dxf-viewer-tsc-error-ratchet.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 

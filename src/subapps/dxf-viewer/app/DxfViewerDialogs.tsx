@@ -31,7 +31,7 @@ import {
   TestsModal, CreditsDialog, FloorplanBackgroundPanel, ReplaceConfirmDialog, CalibrationDialog,
   DxfImportModal, SimpleProjectDialog, FloorplanImportWizard, ConstructionLayerScaffoldDialog,
   DxfFindReplaceHost, DxfSymbolPickerHost, RenumberOpeningsHost, OpeningTagStyleHost,
-  OpeningSchedulePdfHost, ThermalEnvelopeHost, BimScheduleHost, AdminLayerManagerDialogHost,
+  OpeningSchedulePdfHost, ThermalEnvelopeHost, BimScheduleHost, TopoRibbonHost, AdminLayerManagerDialogHost,
   DxfAiChatPanel, ColumnPerimeterConfirmDialog, GapCloseConfirmDialog, ColumnAdoptSizeDialog, ColumnBecomesWallDialog, ShearWallExtentDialog, SectionRelationshipDialog, ColumnBatchFillConfirmDialog, AutoDimensionOptionsDialog, DxfSymbolDetectConfirmDialog, ColumnPromoteConfirmDialog, HatchOverlapConfirmDialog, PrintHost, ExportHost, StampHost, AiTitleBlockHost, RevisionsHost, TitleBlockLibraryDialogHost, ColumnDetailHost, FoundationDetailHost, BeamDetailHost,
   SlabDetailHost, FloorManagementDialogHost, MatchPropertiesDialogHost,
 } from './dxf-viewer-lazy-components';
@@ -225,6 +225,8 @@ export function DxfViewerDialogs(props: DxfViewerDialogsProps): React.JSX.Elemen
       <React.Suspense fallback={hiddenFallback}><BimScheduleHostLeaf /></React.Suspense>
       {/* ADR-453 — Print/Export («Εκτύπωση») dialog (opened via Analyze → Εκτύπωση). */}
       <React.Suspense fallback={hiddenFallback}><PrintHost /></React.Suspense>
+      {/* ADR-662 Φάση 1 — «Τοπογραφικό» ribbon bridge (mounts topo hooks + section-in-dialog). */}
+      <React.Suspense fallback={hiddenFallback}><TopoRibbonHost /></React.Suspense>
       {/* ADR-505 — Export («Εξαγωγή») dialog (opened via Analyze → Εξαγωγή). */}
       <React.Suspense fallback={hiddenFallback}><ExportHost projectId={projectId} buildingId={buildingId ?? undefined} /></React.Suspense>
       {/* ADR-651 Φάση Ε — engineer-stamp dialog (opened via «Πινακίδα Σχεδίου» → «Σφραγίδα…»). */}

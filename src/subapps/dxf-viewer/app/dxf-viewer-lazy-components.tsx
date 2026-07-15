@@ -26,6 +26,8 @@ export const ThermalEnvelopeHost = React.lazy(() => import('../ui/components/bim
 export const BimScheduleHost = React.lazy(() => import('./BimScheduleHost').then(mod => ({ default: mod.BimScheduleHost })));
 // ADR-453 — Print/Export («Εκτύπωση») dialog host
 export const PrintHost = React.lazy(() => import('./PrintHost').then(mod => ({ default: mod.PrintHost })));
+// ADR-662 Φάση 1 — «Τοπογραφικό» ribbon bridge host (mounts topo hooks + section-in-dialog)
+export const TopoRibbonHost = React.lazy(() => import('./TopoRibbonHost').then(mod => ({ default: mod.TopoRibbonHost })));
 // ADR-505 — Export («Εξαγωγή») dialog host (DXF/IFC/PDF, scope-filtered, multi-floor)
 export const ExportHost = React.lazy(() => import('./ExportHost').then(mod => ({ default: mod.ExportHost })));
 // ADR-651 Φάση Ε — διάλογος σφραγίδας μηχανικού (ανοίγει από το «Πινακίδα Σχεδίου» tab).

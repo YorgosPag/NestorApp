@@ -70,6 +70,15 @@ export function dispatchDxfSpecialAction(action: string, deps: DxfSpecialActionD
     setShowEnhancedImport, setShowImportWizard, setShowLegacyImport,
   } = deps;
 
+  // ADR-662 Φάση 1 — «Τοπογραφικό» ribbon commands. One thin emit forwards the raw
+  // `topo.*` action to `TopoRibbonHost`, which mounts the existing topo hooks/stores and
+  // routes it to the ready call (μηδέν νέα λογική — ο host είναι thin trigger). Kept as a
+  // prefix check so this dispatcher stays a pure emitter (mirror schedule/print/export).
+  if (action.startsWith('topo.')) {
+    EventBus.emit('topo:ribbon-action', { action });
+    return true;
+  }
+
   if (action === 'run-tests') {
     setTestsModalOpen(true);
     return true;

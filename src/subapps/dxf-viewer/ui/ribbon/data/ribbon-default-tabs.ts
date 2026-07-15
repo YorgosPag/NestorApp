@@ -28,6 +28,9 @@ import { ANALYZE_TAB } from './analyze-tab';
 import { STRUCTURAL_TAB } from './structural-tab';
 import { ARCHITECTURE_TAB } from './architecture-tab';
 import { MEP_DISCIPLINE_TABS } from './systems-discipline-tabs';
+// ADR-662 Φάση 1 — permanent «Τοπογραφικό» discipline tab (topography moves off the
+// left floating panel onto the ribbon, like every other μελέτη).
+import { TOPOGRAPHY_TAB } from './topography-tab';
 
 export const DEFAULT_RIBBON_TAB_ORDER: readonly string[] = [
   'home',
@@ -40,6 +43,8 @@ export const DEFAULT_RIBBON_TAB_ORDER: readonly string[] = [
   'heating',
   'hvac',
   'fire-gas',
+  // ADR-662 — «Τοπογραφικό» δίπλα στις άλλες μελέτες, μετά τα ΗΛΜ tabs.
+  'topography',
   'insert',
   'analyze',
   'view',
@@ -70,6 +75,8 @@ export const DEFAULT_RIBBON_TABS: readonly RibbonTab[] = [
   STRUCTURAL_TAB,
   ARCHITECTURE_TAB,
   ...MEP_DISCIPLINE_TABS,
+  // ADR-662 Φάση 1 — permanent «Τοπογραφικό» tab (authoring εντολές εδάφους).
+  TOPOGRAPHY_TAB,
   INSERT_TAB,
   ANALYZE_TAB,
   {
