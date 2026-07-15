@@ -216,8 +216,6 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
       // fire `replaceEntitySelection([])` and wipe the 2D selection (raw DXF/BIM) on the round-trip.
       // Timing-independent (does not rely on the bridge's mode-guard reading mode==='2d' in time).
       withSuppressed3DToUniversalSync(() => useSelection3DStore.getState().clearSelection());
-      // 🔬 TEMP DEBUG (ADR-402 cross-mode selection) — remove after diagnosis.
-      console.log('[SEL3D-EXIT] leaving 3D | scope=', useViewMode3DStore.getState().floor3DScope, '| universal=', SelectedEntitiesStore.getSelectedEntityIds());
       clearSceneBboxGetter();
       setActiveSceneManager(null); // ADR-453 — print engine can no longer snapshot 3D.
       // ADR-040 Phase XXIII — unregister from scheduler BEFORE disposing the manager

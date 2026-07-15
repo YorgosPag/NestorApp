@@ -75,6 +75,16 @@ export function useBim3DPointerHandlers(
 
   const handleClick = useCallback((e: ReactMouseEvent) => {
     e.stopPropagation();
+    // ADR-402 — only genuine clicks on the 3D scene canvas drive selection/pivot. The ← 2D exit
+    // button, the ViewCube, and the floating panels/toggles are DOM chrome layered INSIDE the
+    // viewport div that owns this `onClick`; a click on any of them bubbles here, its raycast
+    // misses the scene, and the empty-space branch below would `clearByType('dxf-entity')` +
+    // `selectBimEntity(null)` — wiping the universal selection right before `toggle2D3D()` unmounts
+    // the viewport (the cross-mode-selection wipe: returning to 2D via the button deselected
+    // everything, for DXF *and* BIM). The camera-projected overlays are `pointer-events-none`, so
+    // genuine scene AND grip clicks still land on the renderer canvas — only true chrome is filtered.
+    const rendererCanvas = managerRef.current?.getRendererCanvas();
+    if (rendererCanvas && e.target !== rendererCanvas) return;
     // ADR-408 — while a 3D edit gizmo is mounted, Ctrl+click is reserved for relocating
     // its base point / rotation centre (handled by the edit interaction); never let it
     // change the selection. No gizmo → Ctrl is free (left for future use).
@@ -165,8 +175,6 @@ export function useBim3DPointerHandlers(
         isSelected: (id) => SelectedEntitiesStore.isSelected(id),
         selectedDxfCount: () => SelectedEntitiesStore.countByType('dxf-entity'),
       });
-      // 🔬 TEMP DEBUG (ADR-402 cross-mode selection) — remove after diagnosis.
-      console.log('[SEL3D-PICK] dxfId=', dxfId, '| universal now=', SelectedEntitiesStore.getSelectedEntityIds());
       return;
     }
     // Empty space → clear both selections (+ any stair sub-selection).
