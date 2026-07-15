@@ -15,6 +15,7 @@ import type { UseTopoContours } from '../systems/topography/useTopoContours';
 import type { UseTopoGrid } from '../systems/topography/useTopoGrid';
 import type { UseNorthArrow } from '../systems/topography/useNorthArrow';
 import type { UseTopoPointLabels } from '../systems/topography/useTopoPointLabels';
+import type { UseTopoSurfaceEntity } from '../systems/topography/useTopoSurfaceEntity';
 import { getContourConfig } from '../systems/topography/contour-config-store';
 import { getGridDisplayOptions, setTopoGridVisible } from '../systems/topography/topo-grid-store';
 import { getNorthArrowOptions, setNorthArrowVisible } from '../systems/topography/north-arrow-store';
@@ -33,6 +34,7 @@ export interface TopoRibbonDeps {
   readonly grid: UseTopoGrid;
   readonly north: UseNorthArrow;
   readonly pointLabels: UseTopoPointLabels;
+  readonly surface: UseTopoSurfaceEntity;
   readonly notify: { success: (msg: string) => void; error: (msg: string) => void };
   readonly t: TFunction;
   readonly openImport: () => void;
@@ -65,6 +67,10 @@ export function runTopoRibbonAction(action: string, deps: TopoRibbonDeps): void 
     // ── Επιφάνεια ─────────────────────────────────────────────────────────────
     case 'topo.contours.generate': {
       const r = deps.contours.generate(getContourConfig());
+      // ADR-662 Φ2β — same trigger (re)builds the selectable surface footprint from the SAME
+      // TIN. Self-guards on an empty survey (no triangles → no entity), so it is safe to call
+      // unconditionally; no separate toast (the contour message is the user-facing signal).
+      deps.surface.generate();
       if (r.ok) deps.notify.success(deps.t(`${N}.contoursGenerated`, { count: r.contourCount, entities: r.entityCount }));
       else deps.notify.error(deps.t(`${N}.failed`));
       return;

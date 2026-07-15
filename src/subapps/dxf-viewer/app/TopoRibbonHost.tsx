@@ -29,6 +29,7 @@ import { useTopoContours } from '../systems/topography/useTopoContours';
 import { useTopoGrid } from '../systems/topography/useTopoGrid';
 import { useNorthArrow } from '../systems/topography/useNorthArrow';
 import { useTopoPointLabels } from '../systems/topography/useTopoPointLabels';
+import { useTopoSurfaceEntity } from '../systems/topography/useTopoSurfaceEntity';
 import { TopoGeoReferenceSection } from '../ui/panels/topography/TopoGeoReferenceSection';
 import { TopoDeliverablesSection } from '../ui/panels/topography/TopoDeliverablesSection';
 import { TopoImportWizard } from '../ui/panels/topography/TopoImportWizard';
@@ -41,6 +42,7 @@ export function TopoRibbonHost(): React.JSX.Element {
   const grid = useTopoGrid();
   const north = useNorthArrow();
   const pointLabels = useTopoPointLabels();
+  const surface = useTopoSurfaceEntity();
 
   const [importOpen, setImportOpen] = React.useState(false);
   const [geoRefOpen, setGeoRefOpen] = React.useState(false);
@@ -50,7 +52,7 @@ export function TopoRibbonHost(): React.JSX.Element {
   // reads the latest hook callbacks / dialog openers (useEventCallback identity pattern).
   const depsRef = React.useRef<TopoRibbonDeps>();
   depsRef.current = {
-    contours, grid, north, pointLabels,
+    contours, grid, north, pointLabels, surface,
     notify: { success: (m) => notifications.success(m), error: (m) => notifications.error(m) },
     t,
     openImport: () => setImportOpen(true),

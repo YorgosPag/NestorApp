@@ -28,6 +28,9 @@ import type { Entity } from '../../../types/entities';
 import { getTopoSurface } from '../topo-surface';
 import { generateContoursFromSurface } from '../contour-generator';
 import { buildContourEntities, type ContourLayerIds } from '../topo-to-entities';
+import {
+  buildTopoSurfaceEntity, TOPO_SURFACE_LAYER_NAME, TOPO_SURFACE_COLOR,
+} from '../topo-surface-entity';
 import { getContourConfig } from '../contour-config-store';
 import { getContourDisplayStyle } from '../contour-display-store';
 import { getActiveWorldToDisplayProjector } from '../../geo-referencing/geo-reference-store';
@@ -50,10 +53,14 @@ const LAYER_SPECS: readonly LayerSpec[] = [
   { name: TOPO_MAJOR_LAYER_NAME, color: TOPO_MAJOR_COLOR },
   { name: TOPO_MINOR_LAYER_NAME, color: TOPO_MINOR_COLOR },
   { name: TOPO_LABEL_LAYER_NAME, color: TOPO_LABEL_COLOR },
+  // ADR-662 Φ2β — the topo surface footprint sits on its own structural layer.
+  { name: TOPO_SURFACE_LAYER_NAME, color: TOPO_SURFACE_COLOR },
 ];
 
-/** Resolve (creating if absent) the three contour layer ids in a mutable layersById copy. */
-function ensureLayers(scene: SceneModel): { layersById: Record<string, SceneLayer>; ids: ContourLayerIds } {
+/** Resolve (creating if absent) the topo-derived layer ids in a mutable layersById copy. */
+function ensureLayers(
+  scene: SceneModel,
+): { layersById: Record<string, SceneLayer>; ids: ContourLayerIds; surfaceLayerId: string } {
   const layersById = { ...scene.layersById } as Record<string, SceneLayer>;
   const idByName: Record<string, string> = {};
   for (const spec of LAYER_SPECS) {
@@ -70,6 +77,7 @@ function ensureLayers(scene: SceneModel): { layersById: Record<string, SceneLaye
       minor: idByName[TOPO_MINOR_LAYER_NAME],
       label: idByName[TOPO_LABEL_LAYER_NAME],
     },
+    surfaceLayerId: idByName[TOPO_SURFACE_LAYER_NAME],
   };
 }
 
@@ -104,15 +112,16 @@ export function regenerateTopoContours(deps: RegenerateTopoDeps): number {
     return 0;
   }
 
-  const { layersById, ids } = ensureLayers(scene);
-  const contourLayerIds = new Set<string>([ids.major, ids.minor, ids.label]);
+  const { layersById, ids, surfaceLayerId } = ensureLayers(scene);
+  const topoDerivedLayerIds = new Set<string>([ids.major, ids.minor, ids.label, surfaceLayerId]);
 
-  // Idempotent: drop every existing entity sitting on a contour layer before rebuilding.
+  // Idempotent: drop every existing entity sitting on a topo-derived layer (contours + surface
+  // footprint) before rebuilding, so repeated loads / level switches never duplicate them.
   const kept = scene.entities.filter(
-    (e) => !(e.layerId !== undefined && contourLayerIds.has(e.layerId)),
+    (e) => !(e.layerId !== undefined && topoDerivedLayerIds.has(e.layerId)),
   );
 
-  // Regenerate from the restored survey (Civil 3D: contours are a style over the TIN).
+  // Regenerate from the restored survey (Civil 3D: contours + surface are styles over the TIN).
   const surface = getTopoSurface('existing');
   let fresh: Entity[] = [];
   if (surface.triangles.length > 0) {
@@ -121,9 +130,16 @@ export function regenerateTopoContours(deps: RegenerateTopoDeps): number {
     // into the building's LOCAL frame so the terrain «κάθεται» on the plan near the
     // origin (no ADR-635 culling blowup). Identity/unset → no-op (backward compatible).
     const contours = projectContoursToLocal(generated.contours);
-    fresh = buildContourEntities(
+    const contourEntities = buildContourEntities(
       contours, getContourConfig(), ids, getContourDisplayStyle() === 'smooth',
     ) as Entity[];
+    // ADR-662 Φ2β — the selectable surface footprint (SAME builder as the interactive
+    // producer; already display-frame projected). Seat it FIRST (backmost) so the outline
+    // reads BEHIND the contours, which in turn read behind the κάτοψη.
+    const surfaceEntity = buildTopoSurfaceEntity('existing', surfaceLayerId);
+    fresh = surfaceEntity
+      ? [surfaceEntity as unknown as Entity, ...contourEntities]
+      : contourEntities;
   }
 
   // 🔎 TEMP DIAG (2026-07-15). REMOVE after fix.
