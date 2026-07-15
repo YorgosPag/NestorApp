@@ -35,6 +35,8 @@ import { OpeningInfoTagRenderer } from '../entities/OpeningInfoTagRenderer';
 import { LeaderRenderer } from '../entities/LeaderRenderer';
 // ADR-651 Φάση Ε — standalone raster image leaf (non-BIM, rectangle + rotation + contain-fit).
 import { ImageRenderer } from '../entities/ImageRenderer';
+// ADR-662 Φάση 2β (Δρόμος Γ) — topo surface leaf (thin/derived non-BIM; footprint outline).
+import { TopoSurfaceRenderer } from '../entities/TopoSurfaceRenderer';
 // ADR-363 Phase 1B — parametric wall leaf (2D plan view).
 import { WallRenderer } from '../../bim/renderers/WallRenderer';
 // ADR-363 Phase 2 — opening leaf (door/window/sliding-door/french-door/fixed).
@@ -164,6 +166,8 @@ export function createEntityRenderers(
   const leaderRenderer = new LeaderRenderer(ctx); // ADR-635 — leader callout path + tip arrowhead
   // ADR-651 Φάση Ε — raster image renderer (contain-fit εικόνας μέσα σε rotated ορθογώνιο).
   const imageRenderer = new ImageRenderer(ctx);
+  // ADR-662 Φάση 2β (Δρόμος Γ) — topo surface renderer (footprint outline της TIN).
+  const topoSurfaceRenderer = new TopoSurfaceRenderer(ctx);
 
   // Register renderers by entity type
   renderers.set('line', lineRenderer);
@@ -213,6 +217,7 @@ export function createEntityRenderers(
   renderers.set('opening-info-tag', openingInfoTagRenderer);
   renderers.set('leader', leaderRenderer);
   renderers.set('image', imageRenderer);
+  renderers.set('topo-surface', topoSurfaceRenderer);
 
   return renderers;
 }

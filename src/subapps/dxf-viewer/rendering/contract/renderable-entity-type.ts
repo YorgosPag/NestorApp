@@ -49,6 +49,10 @@ export const DXF_RENDERABLE_TYPES = [
   // ADR-651 Φάση Ε — standalone raster image (rectangle + rotation), 2D canvas only
   // (no per-type 3D mesh).
   'image',
+  // ADR-662 Φάση 2β (Δρόμος Γ) — topo surface: thin/derived non-BIM entity, το
+  // footprint outline της TIN αποδίδεται στην 2D κάτοψη (το 3D mesh το κρατά ο
+  // imperative TerrainSceneLayer, όχι per-type render).
+  'topo-surface',
 ] as const;
 
 /** BIM (parametric model) renderable types — 2D κάτοψη ± 3D solid. */

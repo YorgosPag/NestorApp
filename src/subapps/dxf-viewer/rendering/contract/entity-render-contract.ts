@@ -102,6 +102,9 @@ export const ENTITY_RENDER_CONTRACTS: Readonly<
   'opening-info-tag': dxf('opening-info-tag'),
   // ADR-651 Φάση Ε — standalone raster image, 2D canvas only (no per-type 3D mesh).
   image: dxf('image'),
+  // ADR-662 Φάση 2β (Δρόμος Γ) — topo surface: thin/derived non-BIM entity,
+  // footprint outline στην 2D κάτοψη (3D mesh = imperative TerrainSceneLayer).
+  'topo-surface': dxf('topo-surface'),
 
   // ── BIM — bespoke 3D (cross-entity host context) ──
   wall: bespoke('wall', true), // 3D placement ghost: WallPlacementGhost
