@@ -72,6 +72,8 @@ const A_HANDLED = [
   'dimension', 'angle-measurement',
   // ADR-651 Φάση Ε — standalone image: resolver provider (rotation-aware rectangle bbox).
   'image',
+  // ADR-662 Φάση 2β (Δρόμος Γ) — thin/derived topo surface: resolver provider (footprint-ring AABB).
+  'topo-surface',
   // BIM via resolver `calculateBimEntity2DBounds` (24 — incl. railing/wall-covering/thermal-space/
   // space-separator/mep-boiler/mep-water-heater/mep-underfloor, Φ9 Slice 2 GAIN)
   'wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'foundation', 'stair', 'roof',
@@ -106,6 +108,8 @@ const B_HANDLED = [
   'annotation-symbol', 'scale-bar', 'opening-info-tag',
   // ADR-651 Φάση Ε — standalone image: resolver provider (rotation-aware rectangle bbox).
   'image',
+  // ADR-662 Φάση 2β (Δρόμος Γ) — thin/derived topo surface: resolver provider (footprint-ring AABB).
+  'topo-surface',
   // BIM via calculateBimEntity2DBounds (24 — incl. railing/thermal-space/space-separator, Φ9 routing fix)
   'wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'foundation', 'stair', 'roof',
   'floor-finish', 'wall-covering', 'furniture', 'mep-fixture', 'electrical-panel', 'mep-manifold',
