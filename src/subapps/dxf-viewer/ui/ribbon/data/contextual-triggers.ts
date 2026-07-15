@@ -60,3 +60,4 @@ export { MEP_FIXTURE_LIBRARY_CONTEXTUAL_TRIGGER } from './contextual-mep-fixture
 export { MEP_RISER_CONTEXTUAL_TRIGGER } from './contextual-mep-riser-tab';
 export { GUIDES_CONTEXTUAL_TRIGGER } from './contextual-guides-tab';
 export { DIMENSIONS_CONTEXTUAL_TRIGGER } from './contextual-dimensions-tab';
+export { TOPO_SURFACE_CONTEXTUAL_TRIGGER } from './contextual-topo-surface-tab';

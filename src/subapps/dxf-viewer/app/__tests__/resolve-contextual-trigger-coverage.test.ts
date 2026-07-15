@@ -79,10 +79,8 @@ const NO_SELECTION_TAB_TYPES = [
   // ADR-612 — η πινακίδα ανοίγματος επεξεργάζεται μέσω double-click editor overlay
   // (`OpeningInfoTagEditorOverlay`) + grips, ΟΧΙ per-selection ribbon tab → null στην επιλογή.
   'opening-info-tag',
-  // ADR-662 Φάση 2β (Δρόμος Γ) — προσωρινά no-tab· το Stage A κάνει την επιφάνεια selectable
-  // αλλά ΧΩΡΙΣ contextual tab ακόμα. Στο Stage C μετακινείται στο ENTITY_CONTEXTUAL_TRIGGER
-  // map (object-bound Properties + «Τοπογραφική Επιφάνεια» tab) και βγαίνει από εδώ.
-  'topo-surface',
+  // ADR-662 Φ2β Stage C — το `topo-surface` ΜΕΤΑΚΙΝΗΘΗΚΕ στο `ENTITY_CONTEXTUAL_TRIGGER`
+  // map (object-bound «Τοπογραφική Επιφάνεια» tab + Properties)· δεν είναι πλέον no-tab.
   // ADR-635 Φάση B — leader callout: annotation επεξεργάζεται μέσω grips (path vertices), ΟΧΙ
   // per-selection ribbon tab → null στην επιλογή (όπως point/xline/furniture).
   'leader',

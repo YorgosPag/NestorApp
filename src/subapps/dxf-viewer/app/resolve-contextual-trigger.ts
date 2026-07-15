@@ -64,6 +64,7 @@ import {
   ELECTRICAL_PANEL_CONTEXTUAL_TRIGGER,
   ANNOTATION_SYMBOL_CONTEXTUAL_TRIGGER,
   SCALE_BAR_CONTEXTUAL_TRIGGER,
+  TOPO_SURFACE_CONTEXTUAL_TRIGGER,
 } from '../ui/ribbon/data/contextual-triggers';
 import { isSanitaryKind } from '../bim/sanitary/sanitary-symbol-spec';
 import { isApplianceKind } from '../bim/appliances/appliance-symbol-spec';
@@ -141,6 +142,10 @@ export const ENTITY_CONTEXTUAL_TRIGGER: Partial<Record<EntityType, string>> = {
   // ADR-583 Φ3e — a selected graphic scale-bar surfaces the «Γραφική Κλίμακα» tab
   // (dual mode: edit selected live ↔ placement defaults), mirror annotation-symbol.
   'scale-bar': SCALE_BAR_CONTEXTUAL_TRIGGER,
+  // ADR-662 Φ2β Stage C — μια επιλεγμένη τοπογραφική επιφάνεια (`topo-surface`, non-BIM
+  // sibling του image) → «Τοπογραφική Επιφάνεια» tab (ενέργειες)· ΟΛΕΣ οι ιδιότητες
+  // εμφάνισης στο αριστερό Properties palette (TopoSurfacePropertiesTab, object-bound).
+  'topo-surface': TOPO_SURFACE_CONTEXTUAL_TRIGGER,
 };
 
 /**

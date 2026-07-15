@@ -52,6 +52,7 @@ import { CONTEXTUAL_MEP_RISER_TAB } from '../ui/ribbon/data/contextual-mep-riser
 import { ANIMATION_CONTEXTUAL_TAB, ANIMATION_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-animation-tab';
 import { CONTEXTUAL_GUIDES_TAB } from '../ui/ribbon/data/contextual-guides-tab';
 import { CONTEXTUAL_DIMENSIONS_TAB, DIMENSIONS_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-dimensions-tab';
+import { CONTEXTUAL_TOPO_SURFACE_TAB } from '../ui/ribbon/data/contextual-topo-surface-tab';
 import { selectAnimationToolActive, useAnimationStore } from '../bim-3d/animation/AnimationStore';
 import { useMepSystemStore } from '../bim/mep-systems/mep-system-store';
 import { useMepCircuitEditorStore } from '../bim/mep-systems/mep-circuit-editor-store';
@@ -128,6 +129,8 @@ const RAW_RIBBON_CONTEXTUAL_TABS = [
   ANIMATION_CONTEXTUAL_TAB,
   CONTEXTUAL_GUIDES_TAB,
   CONTEXTUAL_DIMENSIONS_TAB,
+  // ADR-662 Φ2β Stage C — επιλεγμένη τοπογραφική επιφάνεια → «Τοπογραφική Επιφάνεια» tab.
+  CONTEXTUAL_TOPO_SURFACE_TAB,
 ];
 
 // ADR-363 / ADR-510 Φ4j — every contextual tab opens with the SAME leading «Κλείσιμο»
