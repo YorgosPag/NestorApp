@@ -32,11 +32,11 @@ These abbreviations can appear anywhere in a prompt (standalone, inline, in task
 ## 🚨🚨🚨 SOS. SOS. N.(-1) — TERMINAL PROHIBITION: NEVER GIT COMMIT OR PUSH WITHOUT ORDER
 **ABSOLUTELY FORBIDDEN** to `git commit` or `git push` without EXPLICIT order from Giorgio.
 - **COMMIT** happens ONLY if Giorgio says: "commit", "κάνε commit", "commit it".
-- **PUSH** happens ONLY if Giorgio says: "push", "send it", "upload", "go Vercel" (in Greek: "push", "στείλε", "ανέβασε", "πήγαινε Vercel").
+- **PUSH** happens ONLY if Giorgio says: "push", "send it", "upload" (in Greek: "push", "στείλε", "ανέβασε").
 - DO NOT commit automatically, DO NOT commit "because it's done", DO NOT commit "for convenience".
 - DO NOT push automatically, DO NOT push "for convenience", DO NOT push "because it built".
 - **WHY commit:** Giorgio decides when work is ready to be committed — not the agent.
-- **WHY push:** Each push = Vercel build = credits consumption ($). Giorgio pays.
+- **WHY push:** Each push to GitHub triggers the deploy pipeline (GitHub → **Netcup** → published on **nestorconstruct.gr**). Giorgio decides when production changes. NOTE: this is NOT Vercel and there are NO paid build credits — Vercel is FROZEN/paused (since 2026-05-09); production hosting is Netcup on the FREE tier. Do NOT mention "Vercel build" or "credits" as a push consequence.
 - **ZERO EXCEPTIONS.** This rule overrides ALL other rules.
 - 📘 Full git/push/backup protocol: `docs/deployment/git-workflow.md`
 
@@ -632,13 +632,15 @@ export function myFunction(value: string | number): Result {
 
 ---
 
-## 🔄 GIT / VERCEL / BACKUP — Quick reference
+## 🔄 GIT / DEPLOY (Netcup) / BACKUP — Quick reference
 
 **Core rule (aggiornata 2026-05-16)**: **Giorgio fa i commit. Giorgio fa i push.** L'agente NON committa MAI e NON pusha MAI autonomamente — neanche "dopo successo", neanche "per comodità", neanche se il task è finito. L'agente prepara il lavoro (`git add`, `git status`, `git diff` per verifica), poi **si ferma** e aspetta l'ordine esplicito di Giorgio. Vedi N.(-1) per zero-tolerance enforcement.
 
 **Commit/push happen ONLY when Giorgio says** (greco/italiano/inglese):
 - Commit: "commit", "κάνε commit", "fai commit", "commit it"
-- Push: "push", "στείλε", "ανέβασε", "πήγαινε Vercel", "send it", "upload"
+- Push: "push", "στείλε", "ανέβασε", "send it", "upload"
+
+**Deploy pipeline**: push → GitHub → **Netcup** → published on **nestorconstruct.gr**. This is the ONLY active hosting. **Vercel is FROZEN/paused (since 2026-05-09) — free tier, no build credits, no cost per push.** Never say "push = Vercel build = credits ($)"; never propose Vercel actions/env vars/deploys. CI failures (GitHub Actions) do NOT block the Netcup deploy (separate systems).
 
 **"Safety checkpoint"** = commit + push ONLY when Giorgio explicitly asks (does not mean BACKUP_SUMMARY.json or ZIP).
 
@@ -647,7 +649,7 @@ export function myFunction(value: string | number): Result {
 powershell.exe -ExecutionPolicy Bypass -File "C:\Nestor_Pagonis\enterprise-backup.ps1"
 ```
 
-**Production**: https://nestor-app.vercel.app
+**Production**: https://nestorconstruct.gr (Netcup). ⚠️ NOT Vercel — the old `nestor-app.vercel.app` URL is dead/legacy.
 
 📘 **Full protocols**:
 - Git workflow & commit/push: `docs/deployment/git-workflow.md`
