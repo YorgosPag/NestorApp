@@ -468,7 +468,9 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
         // (≥2 under cursor), a 2nd click on the SAME point cycles to the next candidate (opens
         // the popover + canvas pre-highlight). The 1st click just arms and falls through to the
         // normal top-1 selection below (fast path untouched). Skipped on empty space / additive.
-        if (hitResult?.entityId && !additive && onEntitiesSelected) {
+        // hitResult is the top-1 entity id (string) or null — NOT an object. A truthy id means
+        // an entity sits under the cursor; the resolver re-runs hitTestAll to read the full stack.
+        if (hitResult && !additive && onEntitiesSelected) {
           const consumed = resolveRepeatedClickCycle({
             screenPos: cursor.position,
             clientX: e.clientX,
