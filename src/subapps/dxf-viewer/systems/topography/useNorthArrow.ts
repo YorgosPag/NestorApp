@@ -25,7 +25,7 @@ import type { TopoPoint } from './topo-types';
 export interface BakeNorthOutcome {
   readonly ok: boolean;
   readonly entityCount: number;
-  readonly reason?: 'no-points' | 'no-layers';
+  readonly reason?: 'no-points' | 'no-layers' | 'already-exists';
 }
 
 const EMPTY: BakeNorthOutcome = { ok: false, entityCount: 0 };
@@ -61,6 +61,14 @@ export function useNorthArrow(): UseNorthArrow {
 
       const layerId = ensureNorthLayer(getLevelScene, setLevelScene, levelId);
       if (!layerId) return { ...EMPTY, reason: 'no-layers' };
+
+      // Idempotent: the north arrow is a SINGLETON symbol (one per drawing). If a baked arrow
+      // already lives on TOPO-NORTH, do NOT create a duplicate — even after the user has MOVED
+      // it (the presence check is layer-based, not position-based, so a relocated arrow survives).
+      // To re-place, the user deletes the existing arrow (the layer empties) and bakes again.
+      if (getLevelScene(levelId)?.entities.some((e) => e.layerId === layerId)) {
+        return { ...EMPTY, reason: 'already-exists' };
+      }
 
       const entities = buildNorthArrowEntities(anchor, angle, layerId);
       completeEntities(entities as Entity[], {

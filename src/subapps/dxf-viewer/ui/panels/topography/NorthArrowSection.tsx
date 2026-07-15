@@ -46,6 +46,9 @@ export function NorthArrowSection(): React.JSX.Element {
     const r = bake();
     if (r.ok) {
       setStatus({ text: t('topography.north.status.baked', { count: r.entityCount }), error: false });
+    } else if (r.reason === 'already-exists') {
+      // Not an error — the singleton arrow is already on the sheet (idempotent bake).
+      setStatus({ text: t('topography.north.status.exists'), error: false });
     } else {
       setStatus({ text: t(`topography.north.error.${r.reason ?? 'no-points'}`), error: true });
     }

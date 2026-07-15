@@ -997,7 +997,8 @@
       "modeGrid": "Grid",
       "bake": "Bake to drawing",
       "status": {
-        "baked": "{count, plural, one {# arrow entity created} other {# arrow entities created}}."
+        "baked": "{count, plural, one {# arrow entity created} other {# arrow entities created}}.",
+        "exists": "The north arrow already exists in the drawing."
       },
       "error": {
         "no-points": "No survey points.",

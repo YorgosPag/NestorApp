@@ -10,14 +10,33 @@
  * North (Βορράς). Units: screen sizes in px (HUD), drawing sizes in canonical mm (ADR-462).
  */
 
+import { UI_COLORS_BASE } from '../../config/color-config';
+
 /** DXF layer name for the baked north-arrow entities — structural id, not UI copy. */
 export const TOPO_NORTH_LAYER_NAME = 'TOPO-NORTH' as const;
 
 /** Which north the arrow points to. */
 export type NorthMode = 'grid' | 'true';
 
-/** Arrow + glyph colour (near-black — the readable sheet default). */
+/**
+ * Arrow + glyph colour for the BAKED export (near-black — the readable default on white sheet
+ * paper / PDF). SEPARATE from the on-screen HUD colour below: the export target is white paper,
+ * the HUD target is the (typically dark) live canvas — one colour cannot serve both (ADR-656 v5).
+ */
 export const TOPO_NORTH_COLOR = '#1A1A1A' as const;
+
+// ── Screen HUD colours (double-contrast, theme-robust) ─────────────────────────
+// The HUD sits on the live 2D canvas, whose theme can be dark (AutoCAD black, default) OR light
+// (print-preview theme). Big-player gizmos (Revit/Navisworks ViewCube) stay legible on ANY
+// background via a fill + contrasting outline halo (`paint-order: stroke`), not a single flat
+// colour. Reuse SSoT: WHITE canvas-foreground as the fill (visible on the dark canvas), and the
+// export near-black reused as the dark outline half (visible if the theme flips to light).
+/** HUD fill — the canvas-foreground SSoT (white); dominant on the dark canvas. */
+export const TOPO_NORTH_SCREEN_FILL = UI_COLORS_BASE.WHITE;
+/** HUD outline — the export near-black reused as the dark contrast half (light-theme legibility). */
+export const TOPO_NORTH_SCREEN_OUTLINE = TOPO_NORTH_COLOR;
+/** HUD outline width in SVG viewBox units (painted behind the fill via `paint-order: stroke`). */
+export const TOPO_NORTH_SCREEN_OUTLINE_W = 5 as const;
 
 /** The North glyph — Greek survey convention (Βορράς). */
 export const TOPO_NORTH_GLYPH = 'Β' as const;

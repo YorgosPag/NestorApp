@@ -223,6 +223,21 @@
     (visible+mode)· `useNorthArrow.ts` (bake → `completeEntities`, anchor projected via `getActiveWorldToDisplayProjector`).
   - **Νέα (canvas, ADR-040):** `NorthArrowLeaf.tsx` — **SVG** HUD micro-leaf, screen-anchored (ΟΧΙ transform-dependent),
     self-subscribes low-freq stores μόνο (CHECK 6C).
+  - **v5 addendum (2026-07-15) — screen HUD αόρατο → contrast fix:** το HUD ζωγράφιζε με το `TOPO_NORTH_COLOR`
+    (`#1A1A1A`, near-black· σωστό μόνο για export σε λευκό χαρτί) → **αόρατο** πάνω στο μαύρο 2D canvas
+    (`--canvas-background-dxf` `#000000`). Big-player λύση (Revit/Navisworks ViewCube): **fill + outline
+    double-contrast** με `paint-order: stroke` → ευδιάκριτο σε dark **και** light canvas theme (print-preview).
+    Νέες config σταθερές (SSoT reuse, **μηδέν νέο hex**): `TOPO_NORTH_SCREEN_FILL` = `UI_COLORS_BASE.WHITE`
+    (canvas-foreground)· `TOPO_NORTH_SCREEN_OUTLINE` = `TOPO_NORTH_COLOR` (το export near-black επαναχρησιμοποιείται
+    ως το σκούρο μισό)· `TOPO_NORTH_SCREEN_OUTLINE_W`. Το **export (`north-arrow-entities.ts`) κρατά αμετάβλητο το
+    near-black** — screen vs export χρώμα πλέον ξεχωριστά. Αρχεία: `north-arrow-config.ts` + `NorthArrowLeaf.tsx`.
+  - **v5 addendum (2026-07-15) — bake idempotent (singleton βέλος):** το «Αποτύπωση στο σχέδιο» πρόσθετε **νέο
+    διπλότυπο** βέλος σε κάθε πάτημα (add-only, με φρέσκα ids). Ο Βορράς είναι **singleton σύμβολο** (ένα ανά σχέδιο),
+    σε αντίθεση με τον M11 κάναβο (σκόπιμα add-only). Fix (`useNorthArrow.bake`): πριν το `completeEntities`, αν το
+    `TOPO-NORTH` layer έχει **ήδη** entities → **no-op** (`reason:'already-exists'`). Ο έλεγχος είναι **presence-based
+    (ανά layerId), ΟΧΙ position-based** → ένα βέλος που ο χρήστης **μετακίνησε** επιβιώνει (δεν ξαναδημιουργείται/
+    επαναφέρεται). Re-place = ο χρήστης σβήνει το υπάρχον (αδειάζει το layer) και ξανακάνει bake. UI (`NorthArrowSection`)
+    δείχνει ενημερωτικό (μη-error) `topography.north.status.exists` (νέο i18n key el/en). Ο M11 grid **δεν** αγγίχτηκε.
   - **SSoT extraction (N.0.2/N.18):** νέο `ensure-topo-layer.ts` (`ensureTopoLayer` single-layer mint) — **και το
     M11 `ensure-grid-layers` και το M12 `ensure-north-layer` delegate** (αφαιρέθηκε το structural δίδυμο· τα M9/M10
     multi-layer ensurers μένουν ως έχουν).

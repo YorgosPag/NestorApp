@@ -21,7 +21,8 @@ import { getGeoReference, subscribeGeoReference } from '../../systems/geo-refere
 import { northAngleDeg, surveyCentroidEN, svgRotationDeg } from '../../systems/topography/north-arrow-model';
 import { getNorthArrowOptions, subscribeNorthArrow } from '../../systems/topography/north-arrow-store';
 import {
-  NORTH_ARROW_UNIT_OUTLINE, TOPO_NORTH_COLOR, TOPO_NORTH_GLYPH,
+  NORTH_ARROW_UNIT_OUTLINE, TOPO_NORTH_GLYPH,
+  TOPO_NORTH_SCREEN_FILL, TOPO_NORTH_SCREEN_OUTLINE, TOPO_NORTH_SCREEN_OUTLINE_W,
   TOPO_NORTH_SCREEN_BOX_PX, TOPO_NORTH_SVG_VIEWBOX, TOPO_NORTH_SVG_ARROW_SIZE, TOPO_NORTH_SVG_GLYPH_SIZE,
 } from '../../systems/topography/north-arrow-config';
 
@@ -57,13 +58,21 @@ export function NorthArrowLeaf({ className }: NorthArrowLeafProps) {
         viewBox={`0 0 ${TOPO_NORTH_SVG_VIEWBOX} ${TOPO_NORTH_SVG_VIEWBOX}`}
         aria-hidden
       >
-        <g transform={`rotate(${rotate} ${CENTER} ${CENTER})`}>
-          <path d={ARROW_PATH} fill={TOPO_NORTH_COLOR} />
+        {/* Double-contrast halo (ADR-656 v5): outline painted BEHIND the fill so the gizmo stays
+            legible on a dark OR light canvas theme (Revit/Navisworks ViewCube convention). */}
+        <g
+          transform={`rotate(${rotate} ${CENTER} ${CENTER})`}
+          fill={TOPO_NORTH_SCREEN_FILL}
+          stroke={TOPO_NORTH_SCREEN_OUTLINE}
+          strokeWidth={TOPO_NORTH_SCREEN_OUTLINE_W}
+          strokeLinejoin="round"
+          paintOrder="stroke"
+        >
+          <path d={ARROW_PATH} />
           <text
             x={CENTER} y={TOPO_NORTH_SVG_GLYPH_SIZE * 0.6}
             textAnchor="middle" dominantBaseline="middle"
             fontSize={TOPO_NORTH_SVG_GLYPH_SIZE} fontFamily="sans-serif" fontWeight="bold"
-            fill={TOPO_NORTH_COLOR}
           >
             {TOPO_NORTH_GLYPH}
           </text>
