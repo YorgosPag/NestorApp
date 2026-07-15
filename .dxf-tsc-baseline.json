@@ -1,6 +1,6 @@
 {
   "description": "CHECK 3.29 — DXF Viewer TypeScript error ratchet baseline (ADR-663). The root tsconfig EXCLUDES src/subapps/dxf-viewer, so these errors are invisible to `npm run typecheck`. Per-file counts ratchet DOWN only: a file rising above its entry — or any file with errors absent from the map — blocks the PR. Refresh via `npm run dxf:tsc:baseline` after a legitimate burn-down.",
-  "generatedAt": "2026-07-15T21:11:50.340Z",
+  "generatedAt": "2026-07-15T21:34:35.711Z",
   "generatedBy": "scripts/check-dxf-tsc-ratchet.js --write-baseline",
   "adr": "ADR-663",
   "check": "CHECK 3.29",

@@ -64,6 +64,20 @@ import { RibbonMepCircuitWireStyleWidget } from './RibbonMepCircuitWireStyleWidg
 import { RibbonMepCircuitConductorsWidget } from './RibbonMepCircuitConductorsWidget';
 import { RibbonMepNetworkClassificationWidget } from './RibbonMepNetworkClassificationWidget';
 import { RibbonHatchListWidget } from './RibbonHatchListWidget';
+// ADR-662 Φάση 1b — «Τοπογραφικό» live toggles + numeric fields.
+import {
+  TopoGridVisibleToggle,
+  NorthArrowVisibleToggle,
+  PointCloud3DVisibleToggle,
+  ContourStyleToggle,
+  NorthModeToggle,
+  CutFillModeToggle,
+} from './TopoRibbonToggleWidgets';
+import {
+  ContourIntervalField,
+  ContourIndexField,
+  GridStepField,
+} from './TopoRibbonNumericWidgets';
 // ADR-362 Round 35 — «Λαβές Μετακίνησης Σειρών» toggle widget.
 import { DimRowHandlesToggle } from './DimRowHandlesToggle';
 import { DimNewLinePatternWidget } from './DimNewLinePatternWidget';
@@ -272,6 +286,34 @@ function renderButton(button: RibbonButton): React.ReactNode {
     }
     if (button.widgetId === 'hatch-list') {
       return <RibbonHatchListWidget key="hatch-list-widget" />;
+    }
+    // ADR-662 Φάση 1b — «Τοπογραφικό» live toggles + numeric fields.
+    if (button.widgetId === 'topo-grid-visible') {
+      return <TopoGridVisibleToggle key="topo-grid-visible-widget" />;
+    }
+    if (button.widgetId === 'topo-north-visible') {
+      return <NorthArrowVisibleToggle key="topo-north-visible-widget" />;
+    }
+    if (button.widgetId === 'topo-cloud-visible') {
+      return <PointCloud3DVisibleToggle key="topo-cloud-visible-widget" />;
+    }
+    if (button.widgetId === 'topo-contour-style') {
+      return <ContourStyleToggle key="topo-contour-style-widget" />;
+    }
+    if (button.widgetId === 'topo-north-mode') {
+      return <NorthModeToggle key="topo-north-mode-widget" />;
+    }
+    if (button.widgetId === 'topo-cutfill-mode') {
+      return <CutFillModeToggle key="topo-cutfill-mode-widget" />;
+    }
+    if (button.widgetId === 'topo-contour-interval') {
+      return <ContourIntervalField key="topo-contour-interval-widget" />;
+    }
+    if (button.widgetId === 'topo-contour-index') {
+      return <ContourIndexField key="topo-contour-index-widget" />;
+    }
+    if (button.widgetId === 'topo-grid-step') {
+      return <GridStepField key="topo-grid-step-widget" />;
     }
     return null;
   }

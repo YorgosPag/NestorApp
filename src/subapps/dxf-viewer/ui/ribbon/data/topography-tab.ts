@@ -15,16 +15,21 @@
  *     stores + section-in-dialog). Τα topo actions/hooks/stores μένουν ΑΘΙΚΤΑ.
  *
  * Φάση 1 scope: authoring εντολές (import / generate / bake / compute / QA / deliverables /
- * geo-reference) + tools. Οι numeric παράμετροι (ισοδιάσταση/index/βήμα κανάβου) + τα live
- * pressed-state toggles μένουν προς το παρόν στο αριστερό `TopographyPanel` (dual access,
- * μηδέν regression) — τα ribbon commands διαβάζουν τις τρέχουσες τιμές των persisted stores.
- * Οι numeric ribbon widgets + τα contextual/Properties είναι Φάσεις 1b/2/3 (ADR-662 §6.5).
+ * geo-reference) + tools.
+ *
+ * Φάση 1b (ADR-662 §6.5): τα Φάσης-1 άχρωμα toggle actions (grid/north/cloud) γίνονται live
+ * pressed-state `widget` toggles (ON/OFF όπως Revit/ArchiCAD) + προστίθενται mode toggles
+ * (στυλ ισοϋψών, mode Βορρά, αναφορά Cut/Fill) και editable numeric fields (ισοδιάσταση/index/
+ * βήμα κανάβου). Τα widgets subscribe-άρουν ΑΠΕΥΘΕΙΑΣ τα persisted topo stores (self-contained,
+ * μηδέν bridge) — reuse `RibbonToggleWidget`/`RibbonNumericFieldWidget`, ΚΑΜΙΑ νέα λογική. Το
+ * αριστερό `TopographyPanel` μένει (dual access· καταργείται Φάση 4).
  *
  * @see docs/centralized-systems/reference/adrs/ADR-662-topography-ribbon-migration.md
  * @see ./systems-discipline-tabs.ts (ADR-444 — το πρότυπο MEP discipline tabs)
+ * @see ../components/TopoRibbonToggleWidgets.tsx · ../components/TopoRibbonNumericWidgets.tsx
  */
 
-import type { RibbonTab } from '../types/ribbon-types';
+import type { RibbonTab, RibbonButton } from '../types/ribbon-types';
 import { toolBtn, actionBtn } from './ribbon-large-button-helpers';
 
 const K = 'ribbon.commands.topo';
@@ -32,6 +37,20 @@ const K = 'ribbon.commands.topo';
 /** action helper: topo command whose `commandKey` mirrors the `action` (dialog/one-shot). */
 function topoAction(id: string, labelKey: string, icon: string, action: string) {
   return actionBtn(id, labelKey, icon, action, action);
+}
+
+/**
+ * ADR-662 Φάση 1b — inline `widget` button (live toggle / numeric field). The
+ * real icon + state live in the widget component (RibbonPanel `widgetId` map);
+ * `command.icon` stays empty like every other ribbon widget button.
+ */
+function topoWidget(id: string, labelKey: string, widgetId: string): RibbonButton {
+  return {
+    type: 'widget',
+    size: 'small',
+    widgetId,
+    command: { id, labelKey, icon: '', commandKey: widgetId },
+  };
 }
 
 export const TOPOGRAPHY_TAB: RibbonTab = {
@@ -46,7 +65,7 @@ export const TOPOGRAPHY_TAB: RibbonTab = {
           isInFlyout: false,
           buttons: [
             topoAction('topoTab.import', `${K}.import.label`, 'import-wizard', 'topo.import.open'),
-            topoAction('topoTab.cloudToggle', `${K}.cloudToggle.label`, 'topo-cloud', 'topo.cloud.toggle'),
+            topoWidget('topoTab.cloudVisible', `${K}.cloudVisible.label`, 'topo-cloud-visible'),
             topoAction('topoTab.cloudRemove', `${K}.cloudRemove.label`, 'delete', 'topo.cloud.remove'),
           ],
         },
@@ -60,6 +79,9 @@ export const TOPOGRAPHY_TAB: RibbonTab = {
           isInFlyout: false,
           buttons: [
             toolBtn('topoTab.breakline', `${K}.breakline.label`, 'topo-breakline', 'topo-breakline'),
+            topoWidget('topoTab.contourInterval', `${K}.intervalField.label`, 'topo-contour-interval'),
+            topoWidget('topoTab.contourIndex', `${K}.indexField.label`, 'topo-contour-index'),
+            topoWidget('topoTab.contourStyle', `${K}.contourStyle.label`, 'topo-contour-style'),
             topoAction('topoTab.generate', `${K}.generate.label`, 'topo-contours', 'topo.contours.generate'),
             topoAction('topoTab.autoBreakline', `${K}.autoBreakline.label`, 'topo-auto-breakline', 'topo.autoBreakline.detect'),
           ],
@@ -85,9 +107,11 @@ export const TOPOGRAPHY_TAB: RibbonTab = {
         {
           isInFlyout: false,
           buttons: [
-            topoAction('topoTab.gridToggle', `${K}.gridToggle.label`, 'display-grid', 'topo.grid.toggle'),
+            topoWidget('topoTab.gridVisible', `${K}.gridVisible.label`, 'topo-grid-visible'),
+            topoWidget('topoTab.gridStep', `${K}.gridStepField.label`, 'topo-grid-step'),
             topoAction('topoTab.gridBake', `${K}.gridBake.label`, 'display-grid', 'topo.grid.bake'),
-            topoAction('topoTab.northToggle', `${K}.northToggle.label`, 'north-arrow', 'topo.north.toggle'),
+            topoWidget('topoTab.northVisible', `${K}.northVisible.label`, 'topo-north-visible'),
+            topoWidget('topoTab.northMode', `${K}.northMode.label`, 'topo-north-mode'),
             topoAction('topoTab.northBake', `${K}.northBake.label`, 'north-arrow', 'topo.north.bake'),
             topoAction('topoTab.pointLabels', `${K}.pointLabels.label`, 'topo-labels', 'topo.pointLabels.generate'),
           ],
@@ -102,6 +126,7 @@ export const TOPOGRAPHY_TAB: RibbonTab = {
           isInFlyout: false,
           buttons: [
             toolBtn('topoTab.boundary', `${K}.boundary.label`, 'topo-boundary', 'topo-boundary'),
+            topoWidget('topoTab.cutFillMode', `${K}.cutFillMode.label`, 'topo-cutfill-mode'),
             topoAction('topoTab.cutFill', `${K}.cutFill.label`, 'topo-cutfill', 'topo.cutFill.compute'),
             topoAction('topoTab.qaRun', `${K}.qaRun.label`, 'topo-qa', 'topo.qa.run'),
             topoAction('topoTab.qaClear', `${K}.qaClear.label`, 'delete', 'topo.qa.clear'),

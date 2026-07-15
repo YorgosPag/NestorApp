@@ -1,9 +1,10 @@
 /**
- * ADR-662 Φάση 1 — structural guards για το μόνιμο «Τοπογραφικό» ribbon tab.
+ * ADR-662 Φάση 1 + 1b — structural guards για το μόνιμο «Τοπογραφικό» ribbon tab.
  *
- * Robust invariants (ΟΧΙ hardcoded key list που παλιώνει): κάθε button είναι LARGE
- * simple, κάθε action key είναι `topo.*` με `action === commandKey`, τα tools είναι τα
- * ζωντανά ToolStateStore keys, και το tab είναι εγγεγραμμένο στα defaults + order.
+ * Robust invariants (ΟΧΙ hardcoded key list που παλιώνει): κάθε button είναι είτε
+ * LARGE simple (authoring action `topo.*` με `action === commandKey`, ή ζωντανό tool),
+ * είτε (Φάση 1b) SMALL `widget` με έγκυρο `widgetId` (live toggle / numeric field), και
+ * το tab είναι εγγεγραμμένο στα defaults + order.
  */
 
 import { TOPOGRAPHY_TAB } from '../topography-tab';
@@ -13,11 +14,20 @@ import type { RibbonButton } from '../../types/ribbon-types';
 /** Live ToolStateStore tools reused by the tab (toolBtn → onToolChange, no action). */
 const TOOL_KEYS = new Set(['topo-breakline', 'topo-boundary']);
 
+/** ADR-662 Φάση 1b — widgetIds wired in RibbonPanel.renderButton (6 toggles + 3 numeric). */
+const WIDGET_IDS = new Set([
+  'topo-grid-visible', 'topo-north-visible', 'topo-cloud-visible',
+  'topo-contour-style', 'topo-north-mode', 'topo-cutfill-mode',
+  'topo-contour-interval', 'topo-contour-index', 'topo-grid-step',
+]);
+
 function allButtons(): RibbonButton[] {
   return TOPOGRAPHY_TAB.panels.flatMap((p) => p.rows.flatMap((r) => r.buttons));
 }
 
-describe('TOPOGRAPHY_TAB (ADR-662 Φάση 1)', () => {
+const isWidget = (b: RibbonButton): boolean => b.type === 'widget';
+
+describe('TOPOGRAPHY_TAB (ADR-662 Φάση 1 + 1b)', () => {
   it('έχει το σωστό id + labelKey', () => {
     expect(TOPOGRAPHY_TAB.id).toBe('topography');
     expect(TOPOGRAPHY_TAB.labelKey).toBe('ribbon.tabs.topography');
@@ -32,10 +42,14 @@ describe('TOPOGRAPHY_TAB (ADR-662 Φάση 1)', () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it('κάθε button είναι LARGE simple (κανένα flyout/dropdown)', () => {
+  it('κάθε button είναι LARGE simple (authoring) Ή SMALL widget (Φάση 1b)', () => {
     for (const b of allButtons()) {
-      expect(b.type).toBe('simple');
-      expect(b.size).toBe('large');
+      if (isWidget(b)) {
+        expect(b.size).toBe('small');
+      } else {
+        expect(b.type).toBe('simple');
+        expect(b.size).toBe('large');
+      }
     }
     for (const p of TOPOGRAPHY_TAB.panels)
       for (const r of p.rows) expect(r.isInFlyout).toBe(false);
@@ -43,6 +57,7 @@ describe('TOPOGRAPHY_TAB (ADR-662 Φάση 1)', () => {
 
   it('τα action buttons είναι `topo.*` με action === commandKey· τα tools είναι ζωντανά keys', () => {
     for (const b of allButtons()) {
+      if (isWidget(b)) continue;
       const { commandKey, action } = b.command;
       if (action !== undefined) {
         expect(action).toBe(commandKey);
@@ -51,6 +66,21 @@ describe('TOPOGRAPHY_TAB (ADR-662 Φάση 1)', () => {
         expect(TOOL_KEYS.has(commandKey)).toBe(true);
       }
     }
+  });
+
+  it('τα widget buttons (Φάση 1b) έχουν έγκυρο widgetId, χωρίς action', () => {
+    const widgets = allButtons().filter(isWidget);
+    // 6 toggles + 3 numeric fields.
+    expect(widgets).toHaveLength(9);
+    for (const b of widgets) {
+      expect(b.widgetId).toBeDefined();
+      expect(WIDGET_IDS.has(b.widgetId as string)).toBe(true);
+      expect(b.command.action).toBeUndefined();
+    }
+    // Κάθε καταχωρημένο widgetId χρησιμοποιείται ακριβώς μία φορά.
+    const used = widgets.map((b) => b.widgetId);
+    expect(new Set(used).size).toBe(used.length);
+    expect(new Set(used)).toEqual(WIDGET_IDS);
   });
 
   it('όλα τα command ids είναι μοναδικά', () => {
