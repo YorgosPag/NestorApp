@@ -40,6 +40,7 @@ import {
   isColumnEntity,
   isStairEntity,
 } from '../../types/entities';
+import { isWallHostedOpening } from '../types/opening-types';
 import {
   attachSideReferencesAny,
   type AttachBindingParams,
@@ -63,6 +64,8 @@ export function findHostedOpenings(
   for (const e of entities) {
     if (!isOpeningEntity(e)) continue;
     if (exclude.has(e.id)) continue;
+    // ADR-615 — a self-hosted opening is hosted by no wall, so it never cascades.
+    if (!isWallHostedOpening(e)) continue;
     if (wallIds.has(e.params.wallId)) out.push(e.id);
   }
   return out;

@@ -15,7 +15,7 @@ import type { Entity } from '../../../types/entities';
 import {
   isWallEntity, isOpeningEntity, isFurnitureEntity, isRoofEntity, isStairEntity,
 } from '../../../types/entities';
-import { isWindowKind } from '../../../bim/types/opening-types';
+import { isWindowKind, isWallHostedOpening } from '../../../bim/types/opening-types';
 import type { OpeningEntity } from '../../../bim/types/opening-types';
 import type { WallEntity } from '../../../bim/types/wall-types';
 import type { SceneUnits } from '../../../utils/scene-units';
@@ -117,6 +117,8 @@ export function collectTekWalls(entities: readonly Entity[]): TekCollectResult {
   const openingsByWall = new Map<string, OpeningEntity[]>();
   for (const e of entities) {
     if (!isOpeningEntity(e)) continue;
+    // ADR-615 — self-hosted κούφωμα δεν κρέμεται σε τοίχο· δεν ομαδοποιείται εδώ.
+    if (!isWallHostedOpening(e)) continue;
     const list = openingsByWall.get(e.params.wallId);
     if (list) list.push(e);
     else openingsByWall.set(e.params.wallId, [e]);

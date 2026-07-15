@@ -16,7 +16,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { DimensionEntity } from '../../types/dimension';
 import type { DimensionLookup } from '../../systems/dimensions/dim-geometry-builder';
 import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
-import type { OpeningEntity } from '../../bim/types/opening-types';
+import { isWallHostedOpening, type OpeningEntity } from '../../bim/types/opening-types';
 import type { OpeningsByWall } from '../../bim/renderers/WallRenderer';
 import type { WallCoveringHost } from '../../bim/wall-coverings/wall-covering-strip-geometry';
 import type { SceneUnits } from '../../utils/scene-units';
@@ -63,6 +63,8 @@ export function buildOpeningsByWall(entities: readonly DxfEntityUnion[]): Openin
   for (const e of entities) {
     if (e.type !== 'opening') continue;
     const o = (e as DxfOpening).openingEntity;
+    // ADR-615 — a self-hosted opening has no host wall to cut, so it joins no bucket.
+    if (!isWallHostedOpening(o)) continue;
     const arr = m.get(o.params.wallId) ?? [];
     arr.push(o);
     m.set(o.params.wallId, arr);

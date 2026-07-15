@@ -40,6 +40,7 @@ import {
   isSlabEntity,
   isOpeningEntity,
 } from '../../types/entities';
+import { isWallHostedOpening } from '../types/opening-types';
 import type { SceneUnits } from '../../utils/scene-units';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import type { StoreyRef } from '../utils/bim-floor-utils';
@@ -216,6 +217,8 @@ export function computeEnvelopeZoneAreas(
   if (spec.zones.Z4) {
     const thicknessById = new Map(walls.map((w) => [w.id, (w.params.thickness ?? 0) / MM_PER_M]));
     for (const op of entities.filter(isOpeningEntity)) {
+      // ADR-615 — a self-hosted opening has no host wall, so it cuts no reveal.
+      if (!isWallHostedOpening(op)) continue;
       if (!exteriorWallIds.has(op.params.wallId)) continue;
       const t = thicknessById.get(op.params.wallId) ?? 0;
       z4 += computeRevealContributionArea(

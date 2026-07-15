@@ -38,7 +38,7 @@ import type { SlabEntity } from '@/subapps/dxf-viewer/bim/types/slab-types';
 import type { BeamEntity } from '@/subapps/dxf-viewer/bim/types/beam-types';
 import type { ColumnEntity } from '@/subapps/dxf-viewer/bim/types/column-types';
 import type { OpeningEntity, OpeningKind } from '@/subapps/dxf-viewer/bim/types/opening-types';
-import { isWindowKind } from '@/subapps/dxf-viewer/bim/types/opening-types';
+import { isWindowKind, isWallHostedOpening } from '@/subapps/dxf-viewer/bim/types/opening-types';
 import type { SceneModel, AnySceneEntity } from '@/subapps/dxf-viewer/types/scene';
 import type { FloorDocument } from '@/app/api/floors/floors.types';
 
@@ -143,7 +143,9 @@ export async function loadBimScenesForProject(
   const beams = beamsRes.documents.map(patchBeam);
   const columns = columnsRes.documents.map(patchColumn);
   const openings = openingsRes.documents
-    .map((d) => patchOpening(d, wallById.get(d.params.wallId) ?? null))
+    // ADR-615 — a self-hosted opening carries no `wallId`; `null` host is its
+    // normal state, not a missing-wall error.
+    .map((d) => patchOpening(d, isWallHostedOpening(d) ? wallById.get(d.params.wallId) ?? null : null))
     .filter((o): o is OpeningEntity => o !== null);
 
   return groupByFloor(floors, walls, slabs, beams, columns, openings);

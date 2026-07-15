@@ -30,6 +30,7 @@ import {
   isSlabEntity,
   isOpeningEntity,
 } from '../../types/entities';
+import { isWallHostedOpening } from '../types/opening-types';
 import type {
   EnvelopeLayer,
   EnvelopeZoneId,
@@ -163,7 +164,9 @@ export function computeEnvelopeAssignments(
   }
 
   for (const op of entities.filter(isOpeningEntity)) {
-    const want = spec.zones.Z4 && ctx.exteriorWallIds.has(op.params.wallId);
+    // ADR-615 — a self-hosted opening has no host wall, so no Z4 reveal applies.
+    const want =
+      !!spec.zones.Z4 && isWallHostedOpening(op) && ctx.exteriorWallIds.has(op.params.wallId);
     out.push({
       entityId: op.id,
       entityType: 'opening',

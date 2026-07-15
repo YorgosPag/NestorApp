@@ -18,7 +18,11 @@
  * floor lookup.
  */
 
-import type { OpeningEntity, OpeningKind } from '@/subapps/dxf-viewer/bim/types/opening-types';
+import {
+  isWallHostedOpening,
+  type OpeningEntity,
+  type OpeningKind,
+} from '@/subapps/dxf-viewer/bim/types/opening-types';
 import type { WallEntity } from '@/subapps/dxf-viewer/bim/types/wall-types';
 import { isOpeningEntity, isWallEntity } from '@/subapps/dxf-viewer/types/entities';
 import { generateIfcGuid } from '@/services/enterprise-id-convenience';
@@ -62,6 +66,9 @@ export function serializeOpenings(
     const storeyZ = readFloorElevationM(floors.byId.get(floorId));
     for (const entity of scene.entities) {
       if (!isOpeningEntity(entity)) continue;
+      // ADR-615 — a self-hosted opening voids no wall, so there is no
+      // IfcRelVoidsElement to write for it.
+      if (!isWallHostedOpening(entity)) continue;
       const wall = walls.get(entity.params.wallId);
       if (!wall) continue;
       writeOpening(graph, entity, wall, {

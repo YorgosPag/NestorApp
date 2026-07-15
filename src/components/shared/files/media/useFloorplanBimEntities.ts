@@ -41,7 +41,10 @@ import type { WallEntity } from '@/subapps/dxf-viewer/bim/types/wall-types';
 import type { SlabEntity } from '@/subapps/dxf-viewer/bim/types/slab-types';
 import type { BeamEntity } from '@/subapps/dxf-viewer/bim/types/beam-types';
 import type { ColumnEntity } from '@/subapps/dxf-viewer/bim/types/column-types';
-import type { OpeningEntity } from '@/subapps/dxf-viewer/bim/types/opening-types';
+import {
+  isWallHostedOpening,
+  type OpeningEntity,
+} from '@/subapps/dxf-viewer/bim/types/opening-types';
 import type { SlabOpeningEntity } from '@/subapps/dxf-viewer/bim/types/slab-opening-types';
 import type { StairDoc, StairEntity } from '@/subapps/dxf-viewer/bim/types/stair-types';
 
@@ -156,7 +159,9 @@ export function useFloorplanBimEntities(
 
     const openings: OpeningEntity[] = [];
     for (const od of openingsRes.docs) {
-      const host = wallById.get(od.params.wallId) ?? null;
+      // ADR-615 — a self-hosted opening carries no `wallId`; a `null` host is its
+      // normal state and hydration synthesizes the host from `selfHost`.
+      const host = isWallHostedOpening(od) ? wallById.get(od.params.wallId) ?? null : null;
       const hydrated = hydrateOpening(od, host);
       if (hydrated) openings.push(hydrated);
     }

@@ -36,6 +36,7 @@ import {
   isFloorFinishEntity,
   type AnySceneEntity,
 } from '@/subapps/dxf-viewer/types/entities';
+import { isWallHostedOpening } from '@/subapps/dxf-viewer/bim/types/opening-types';
 import {
   getEnvelopeLayer,
   getOpeningRevealInsulation,
@@ -60,9 +61,38 @@ import {
 } from '../ifc-entity-graph';
 import type { SpatialHierarchyOutput } from '../ifc-spatial-hierarchy';
 import type { IfcExportParams } from '../ifc-exporter.service';
+import type { SceneModel } from '@/subapps/dxf-viewer/types/scene';
 
 import type { SerializerContext } from './serializer-context';
 import { pushElementForStorey } from './serializer-context';
+
+// ─── Scene iteration SSoT ────────────────────────────────────────────────────
+
+/**
+ * Το κοινό preamble κάθε covering serializer: guard `params.scenes`, υπολογισμός
+ * `includePsets`, iteration ανά (floor, scene) με resolved `storeyID` (skip
+ * floors χωρίς storey). Ο caller περνά ό,τι ειδικό μέσω closure — έτσι ο
+ * `serializeEnvelopeCoverings` και ο `serializeFloorFinishCoverings` δεν κρατούν
+ * αντιγραμμένο boilerplate (ADR-583/N.18 anti-duplication).
+ */
+function forEachSceneStorey(
+  spatial: SpatialHierarchyOutput,
+  params: IfcExportParams,
+  visit: (args: {
+    floorId: string;
+    scene: SceneModel;
+    storeyID: number;
+    includePsets: boolean;
+  }) => void,
+): void {
+  if (!params.scenes) return;
+  const includePsets = params.includePsets ?? true;
+  for (const [floorId, scene] of params.scenes) {
+    const storeyID = spatial.storeyIDs.get(floorId);
+    if (storeyID == null) continue;
+    visit({ floorId, scene, storeyID, includePsets });
+  }
+}
 
 // ─── Public entry point ─────────────────────────────────────────────────────
 
@@ -72,16 +102,11 @@ export function serializeEnvelopeCoverings(
   params: IfcExportParams,
   ctx: SerializerContext,
 ): void {
-  if (!params.scenes) return;
-  const includePsets = params.includePsets ?? true;
-
-  for (const [floorId, scene] of params.scenes) {
-    const storeyID = spatial.storeyIDs.get(floorId);
-    if (storeyID == null) continue;
+  forEachSceneStorey(spatial, params, ({ floorId, scene, storeyID, includePsets }) => {
     const w: CoveringWriteContext = { storeyID, includePsets, ctx };
     writeWallCoverings(graph, scene.entities, floorId, params, w);
     writeElementCoverings(graph, scene.entities, w);
-  }
+  });
 }
 
 // ─── Write context ──────────────────────────────────────────────────────────
@@ -143,6 +168,8 @@ function writeElementCoverings(
       if (!reveal) continue;
       // Z4 reveal lines the host wall around the opening — relate to the wall
       // (IfcOpeningElement is not an IfcBuildingElement, cannot be covered).
+      // ADR-615 — a self-hosted opening has no host wall to line.
+      if (!isWallHostedOpening(e)) continue;
       const coveredID = w.ctx.wallIDs.get(e.params.wallId);
       if (coveredID != null) writeCovering(graph, coveredID, reveal, w);
     }
@@ -248,13 +275,7 @@ export function serializeFloorFinishCoverings(
   params: IfcExportParams,
   ctx: SerializerContext,
 ): void {
-  if (!params.scenes) return;
-  const includePsets = params.includePsets ?? true;
-
-  for (const [floorId, scene] of params.scenes) {
-    const storeyID = spatial.storeyIDs.get(floorId);
-    if (storeyID == null) continue;
-
+  forEachSceneStorey(spatial, params, ({ scene, storeyID, includePsets }) => {
     for (const entity of scene.entities) {
       if (!isFloorFinishEntity(entity)) continue;
 
@@ -276,7 +297,7 @@ export function serializeFloorFinishCoverings(
 
       pushElementForStorey(ctx, storeyID, coveringID);
     }
-  }
+  });
 }
 
 function appendFloorFinishPset(

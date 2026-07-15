@@ -26,7 +26,10 @@ import { OpeningRenderer } from '@/subapps/dxf-viewer/bim/renderers/OpeningRende
 import { SlabOpeningRenderer } from '@/subapps/dxf-viewer/bim/renderers/SlabOpeningRenderer';
 import { StairRenderer } from '@/subapps/dxf-viewer/bim/renderers/StairRenderer';
 
-import type { OpeningEntity } from '@/subapps/dxf-viewer/bim/types/opening-types';
+import {
+  isWallHostedOpening,
+  type OpeningEntity,
+} from '@/subapps/dxf-viewer/bim/types/opening-types';
 import type { SlabOpeningEntity } from '@/subapps/dxf-viewer/bim/types/slab-opening-types';
 import type { RenderOptions } from '@/subapps/dxf-viewer/rendering/types/Types';
 
@@ -41,6 +44,8 @@ const READONLY_OPTIONS: RenderOptions = { grips: false, hovered: false };
 function buildOpeningsByWall(openings: ReadonlyArray<OpeningEntity>): OpeningsByWall {
   const map = new Map<string, OpeningEntity[]>();
   for (const o of openings) {
+    // ADR-615 — a self-hosted opening has no host wall, so it belongs to no bucket.
+    if (!isWallHostedOpening(o)) continue;
     const wid = o.params.wallId;
     const bucket = map.get(wid);
     if (bucket) bucket.push(o);
