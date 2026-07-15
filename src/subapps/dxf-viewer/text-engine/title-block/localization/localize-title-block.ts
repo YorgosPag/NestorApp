@@ -20,7 +20,8 @@
  * @see ./title-block-glossary.ts — από πού βγαίνουν οι όροι (παράγονται από τα presets)
  */
 
-import type { DxfTextNode, TextParagraph, TextRun } from '../../types/text-ast.types';
+import { isTextRun } from '../../types/text-ast.guards';
+import type { DxfTextNode, TextParagraph, TextRun, TextStack } from '../../types/text-ast.types';
 import type { TitleBlockLocale } from '../title-block-presets';
 import { lookupTitleBlockTerm, splitTitleBlockTerm, titleBlockTermKey } from './title-block-glossary';
 
@@ -41,7 +42,9 @@ function transformTitleBlockText(
   transform: (core: string) => string,
 ): DxfTextNode {
   const paragraphs: TextParagraph[] = content.paragraphs.map((paragraph) => {
-    const runs: TextRun[] = paragraph.runs.map((run) => {
+    const runs: (TextRun | TextStack)[] = paragraph.runs.map((run) => {
+      // Ένα stack (`\S`) είναι κλάσμα/ανοχή — αριθμός, όχι λέξη ⇒ ταξιδεύει αυτούσιο.
+      if (!isTextRun(run)) return run;
       const text = run.text
         .split(PLACEHOLDER_SPLIT)
         .map((segment) => {

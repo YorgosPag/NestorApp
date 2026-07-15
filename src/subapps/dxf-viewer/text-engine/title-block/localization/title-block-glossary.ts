@@ -23,6 +23,7 @@
  */
 
 import { TITLE_BLOCK_PRESETS, type TitleBlockLocale } from '../title-block-presets';
+import { isTextRun } from '../../types/text-ast.guards';
 import type { DxfTextNode } from '../../types/text-ast.types';
 
 /** Ό,τι είναι μέσα σε `{{…}}` είναι **δεδομένο**, όχι κείμενο — δεν μεταφράζεται ΠΟΤΕ. */
@@ -67,7 +68,8 @@ function literalSegments(text: string): readonly string[] {
 function paragraphText(node: DxfTextNode, index: number): string | null {
   const paragraph = node.paragraphs[index];
   if (!paragraph) return null;
-  return paragraph.runs.map((run) => run.text).join('');
+  // Μόνο τα text runs: ένα stack (`\S`) είναι κλάσμα, όχι όρος προς ζευγάρωμα.
+  return paragraph.runs.filter(isTextRun).map((run) => run.text).join('');
 }
 
 type MutableGlossary = Map<string, string>;

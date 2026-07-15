@@ -21,6 +21,7 @@ import {
   collectTitleBlockTerms,
 } from '../../../text-engine/title-block/localization/localize-title-block';
 import { lookupTitleBlockTerm } from '../../../text-engine/title-block/localization/title-block-glossary';
+import { isTextRun } from '../../../text-engine/types/text-ast.guards';
 import { titleBlockTemplateLocale } from '../../../text-engine/title-block/localization/title-block-variant';
 import type { TemplateVariantOverrides } from '../../../text-engine/templates/template-inheritance';
 import type { TextTemplate } from '../../../text-engine/templates/template.types';
@@ -141,7 +142,7 @@ export function useTitleBlockLocalize(
   const preview = React.useMemo(() => {
     const content = applyTitleBlockTranslation(template.content, translations);
     return content.paragraphs.map((paragraph) =>
-      paragraph.runs.map((run) => run.text).join(''),
+      paragraph.runs.filter(isTextRun).map((run) => run.text).join(''),
     );
   }, [template.content, translations]);
 

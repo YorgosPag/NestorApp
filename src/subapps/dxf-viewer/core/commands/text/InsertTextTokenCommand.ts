@@ -11,7 +11,8 @@
  * mirror requires a richer snapshot, so execute/undo are bespoke here.
  */
 
-import type { DxfTextNode, TextParagraph, TextRun, TextStack } from '../../../text-engine/types';
+import { isTextRun } from '../../../text-engine/types';
+import type { DxfTextNode, TextParagraph, TextRun } from '../../../text-engine/types';
 import { ensureTextNode } from '../../../text-engine/edit/ensure-text-node';
 import { DxfTextCommandBase } from './dxf-text-command-base';
 
@@ -33,10 +34,6 @@ function resolveToken(token: string): string | undefined {
   // Accept raw Unicode codepoints (e.g. from SymbolPickerDialog).
   if ([...token].length === 1) return token;
   return undefined;
-}
-
-function isTextRun(run: TextRun | TextStack): run is TextRun {
-  return 'text' in run;
 }
 
 function appendToFirstRun(node: DxfTextNode, char: string): DxfTextNode {

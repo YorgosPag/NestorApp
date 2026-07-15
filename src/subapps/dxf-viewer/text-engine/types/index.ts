@@ -10,6 +10,8 @@ export type {
   DxfStyleTableEntry,
 } from './text-ast.types';
 
+export { isTextRun, isTextStack } from './text-ast.guards';
+
 export type { DxfColor, MixedValue } from './text-toolbar.types';
 export {
   DxfDocumentVersion,
