@@ -24,21 +24,36 @@
 import type { Point2D } from '../types/Types';
 import type { Entity } from '../../types/entities';
 import { performDetailedHitTest } from './hit-test-entity-tests';
+import { isPointInsideClosedEntity } from './enclosure-hit';
+
+/** Opt-in εκτροπές του pick (default = big-player stroke-only). */
+export interface PickTopOptions {
+  /**
+   * Δέξου ΕΠΙΠΛΕΟΝ «κλικ ΜΕΣΑ» σε κλειστή περιοχή (`enclosure-hit`) — ρητή δυνατότητα για εργαλεία
+   * που τη θέλουν (π.χ. επιλογή ορίου οικοπέδου, ADR-650 M6: κλικ οπουδήποτε μέσα στο οικόπεδο
+   * επιλέγει το κλειστό όριο). Η ΓΕΝΙΚΗ επιλογή/hover την αφήνει `false` → stroke-only, ώστε
+   * ομόκεντρα κλειστά σχήματα (π.χ. ισοϋψείς) να μην «καταπίνονται» από τον εξωτερικό δακτύλιο.
+   */
+  readonly includeEnclosure?: boolean;
+}
 
 /**
- * Id της κορυφαίας οντότητας που περνά το `predicate` ΚΑΙ δέχεται hit στο `worldPoint`,
- * ή `null`. Topmost-first (αντίστροφη σάρωση = z-order της σκηνής).
+ * Id της κορυφαίας οντότητας που περνά το `predicate` ΚΑΙ δέχεται hit στο `worldPoint`, ή `null`.
+ * Topmost-first (αντίστροφη σάρωση = z-order). Default = **stroke-only** (big-player: τα κλειστά
+ * wireframe επιλέγονται από το περίγραμμα)· `includeEnclosure` προσθέτει το opt-in inside-hit.
  */
 export function pickTopEntityAt(
   worldPoint: Point2D,
   entities: readonly Entity[],
   predicate: (entity: Entity) => boolean,
   tolerance = 0,
+  opts: PickTopOptions = {},
 ): string | null {
   for (let i = entities.length - 1; i >= 0; i--) {
     const entity = entities[i];
     if (!predicate(entity)) continue;
-    if (performDetailedHitTest(entity, worldPoint, tolerance)) return entity.id;
+    if (performDetailedHitTest(entity, worldPoint, tolerance) !== null) return entity.id;
+    if (opts.includeEnclosure && isPointInsideClosedEntity(entity, worldPoint)) return entity.id;
   }
   return null;
 }

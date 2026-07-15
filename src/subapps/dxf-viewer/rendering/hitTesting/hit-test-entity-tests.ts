@@ -368,16 +368,13 @@ function hitTestPolyline(entity: Entity, point: Point2D, tolerance: number): Par
   const vertices = polylineEntity.vertices;
   if (!vertices || vertices.length < 2) return null;
 
+  // STROKE-ONLY (Revit / ArchiCAD / Figma / AutoCAD): ένα wireframe κλειστό polyline επιλέγεται
+  // από το ΠΕΡΙΓΡΑΜΜΑ, όχι από το γέμισμα — αλλιώς σε ομόκεντρα σχήματα (π.χ. ισοϋψείς) ο
+  // εξωτερικός δακτύλιος «καταπίνει» με το fill του όλους τους εσωτερικούς. Ίδιο συμβόλαιο με
+  // rect/circle (ήδη stroke-only). Το «κλικ ΜΕΣΑ» είναι πλέον ρητή δυνατότητα → `enclosure-hit.ts`
+  // + `pickTopEntityAt(..., { includeEnclosure })` (μόνο όποιο εργαλείο τη ζητά, π.χ. όριο οικοπέδου).
   const edgeCount = polylineEntity.closed ? vertices.length : vertices.length - 1;
-  const edgeHit = hitTestEdges(point, vertices, edgeCount, tolerance);
-  if (edgeHit) return edgeHit;
-
-  // Closed polylines: also detect cursor inside polygon body
-  if (polylineEntity.closed && vertices.length >= 3 && isPointInPolygon(point, vertices)) {
-    return { hitType: 'entity', hitPoint: point };
-  }
-
-  return null;
+  return hitTestEdges(point, vertices, edgeCount, tolerance);
 }
 
 // ===== RECTANGLE =====

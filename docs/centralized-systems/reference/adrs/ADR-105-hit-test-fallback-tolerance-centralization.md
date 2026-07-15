@@ -52,3 +52,27 @@
 > Το AutoCAD-style Window/Crossing selection (μπλε window + πράσινο crossing) είναι **ΠΛΗΡΩΣ ΛΕΙΤΟΥΡΓΙΚΟ** (2026-02-13).
 > Υποστηρίζει: line, circle, arc, polyline, lwpolyline, rect, rectangle, angle-measurement, text.
 > Αλλαγή tolerance μπορεί να επηρεάσει την ακρίβεια marquee selection.
+
+---
+
+## Addendum (2026-07-15) — Big-player selection model: stroke vs fill (ADR-656 M12 surface)
+
+**Πρόβλημα (Giorgio):** hover πάνω σε **ομόκεντρες ισοϋψείς** τοπογραφικού αναγνώριζε **μόνο τον
+εξωτερικό** δακτύλιο. **Ρίζα:** το `hitTestPolyline` (`rendering/hitTesting/hit-test-entity-tests.ts`)
+έκανε **fill fallback** (`isPointInPolygon`) για **κάθε** κλειστή πολυγραμμή → ο εξωτερικός κύκλος
+«κέρδιζε» σε **κάθε** εσωτερικό σημείο (hit≠paint: τα `PolylineEntity`/`LWPolylineEntity` δεν έχουν καν
+`fillColor`, ποτέ δεν ζωγραφίζονται γεμάτα).
+
+**Απόφαση (big-player: Revit / ArchiCAD / Figma / AutoCAD):** τα **wireframe κλειστά σχήματα
+επιλέγονται από το ΠΕΡΙΓΡΑΜΜΑ** (stroke-only)· το «κλικ ΜΕΣΑ» είναι **ρητή, opt-in** δυνατότητα.
+
+- `hitTestPolyline` → **stroke-only** (αφαιρέθηκε το fill fallback· ευθυγράμμιση με `hitTestRectangle`/
+  `hitTestCircle` που ήδη ήταν stroke-only). Τα γνήσια filled entities (hatch / image / BIM solids)
+  κρατούν τα δικά τους fill hit-tests.
+- **Νέο SSoT** `rendering/hitTesting/enclosure-hit.ts` → `isPointInsideClosedEntity(entity, point)`
+  («μέσα σε κλειστή περιοχή;», χωριστό ερώτημα από τον stroke hit-test).
+- `pickTopEntityAt(..., opts?: { includeEnclosure })` → **ΕΝΑ** pick SSoT· default stroke-only (γενική
+  επιλογή/hover), `includeEnclosure:true` προσθέτει το inside-hit. Καταναλωτής: `canvas-click-topo-boundary`
+  (επιλογή ορίου οικοπέδου — κρατά «κλικ μέσα στο οικόπεδο», ADR-650 M6).
+- **Tests:** `__tests__/stroke-vs-enclosure-hit.test.ts` (11 — stroke-only· ομόκεντρα δεν καταπίνονται·
+  enclosure opt-in· εκτός/μέσα). Πλήρες hitTesting suite 120/120 πράσινο· jscpd:diff καθαρό.

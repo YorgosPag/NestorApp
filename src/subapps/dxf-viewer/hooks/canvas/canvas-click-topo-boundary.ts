@@ -48,7 +48,9 @@ export function handleTopoBoundaryClick(
 
   // ADR-040 XXII.A: live SSoT scale read at click time (ίδια ανοχή με τα υπόλοιπα picks).
   const tolerance = TOLERANCE_CONFIG.SNAP_DEFAULT / getImmediateTransform().scale;
-  const entityId = pickTopEntityAt(worldPoint, entities, isBoundaryCandidate, tolerance);
+  // Opt-in enclosure pick (ADR-650 M6): κλικ ΠΑΝΩ στη γραμμή Ή ΜΕΣΑ στο κλειστό όριο το επιλέγει.
+  // Η γενική επιλογή/hover μένει stroke-only (big-player· ισοϋψείς δεν καταπίνονται).
+  const entityId = pickTopEntityAt(worldPoint, entities, isBoundaryCandidate, tolerance, { includeEnclosure: true });
   if (!entityId) {
     setTopoBoundaryHint('awaitingEntity');
     return true;
