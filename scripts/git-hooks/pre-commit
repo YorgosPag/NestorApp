@@ -132,6 +132,30 @@ if [[ -z "${SKIP_JSCPD_DIFF:-}" ]] && [[ -f "scripts/check-jscpd-ratchet.js" ]] 
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 0.7: SYNC — CHECK 3.29 DXF Viewer tsc ratchet, SMOKE only (ADR-663)
+# The root tsconfig EXCLUDES src/subapps/dxf-viewer/**, so `npm run typecheck`
+# never sees the subapp. This asserts only that the baseline file exists and is
+# parseable — it does NOT type-check. A full type-check of that project costs
+# 60-90s, which is exactly what CLAUDE.md N.17 keeps off the per-commit path.
+# The authoritative per-file gate is Layer 2 in CI (dxf-tsc-ratchet.yml).
+# Local full run (opt-in): npm run dxf:tsc:check
+# ═══════════════════════════════════════════════════════════════════════════════
+
+if [[ -z "${SKIP_DXF_TSC_SMOKE:-}" ]] && [[ -f "scripts/check-dxf-tsc-ratchet.js" ]]; then
+    DXF_TSC_FILES=$(echo "$SRC_TS_FILES" | grep '^src/subapps/dxf-viewer/' || true)
+    if [[ -n "$DXF_TSC_FILES" ]]; then
+        node scripts/check-dxf-tsc-ratchet.js
+        if [[ $? -ne 0 ]]; then
+            echo ""
+            echo -e "${YELLOW}  CHECK 3.29 — the DXF Viewer tsc baseline is missing or invalid (ADR-663).${NC}"
+            echo -e "${YELLOW}  Regenerate it: npm run dxf:tsc:baseline${NC}"
+            echo -e "${YELLOW}  Emergency skip (justify to Giorgio): SKIP_DXF_TSC_SMOKE=1 git commit ...${NC}"
+            exit 1
+        fi
+    fi
+fi
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # PHASE 1: Node.js worker_threads orchestrator
 # — one node process, all checks run in parallel threads (JS) or processes (.sh)
 # ═══════════════════════════════════════════════════════════════════════════════

@@ -1,0 +1,79 @@
+name: 🧊 DXF Viewer TS Error Ratchet (CHECK 3.29)
+
+# =============================================================================
+# Layer 2 of Defense in Depth — CI-authoritative type-check gate for the DXF
+# Viewer subapp.
+#
+# Why this exists
+# ---------------
+# The root tsconfig.json EXCLUDES src/subapps/dxf-viewer/**. That means
+# `npm run typecheck` — and therefore every local gate — is structurally BLIND
+# to type errors in the entire subapp. They accumulate unseen until someone
+# runs the subapp's own project by hand.
+#
+# The local pre-commit hook (Layer 1) only smoke-checks that the baseline file
+# is present and parseable: a full type-check of this project takes 60-90s on
+# Giorgio's machine, and CLAUDE.md N.17 exists precisely to keep that off the
+# per-commit path. So CI owns the real gate — it re-runs the FULL type-check on
+# every PR / push to main and ratchets per-file error counts against
+# .dxf-tsc-baseline.json. Errors may only ever decrease.
+#
+# Pattern mirrors .github/workflows/jscpd-ratchet.yml (CHECK 3.28) and
+# .github/workflows/deadcode-ratchet.yml (CHECK 3.22).
+# =============================================================================
+
+on:
+  pull_request:
+    paths:
+      - 'src/**/*.ts'
+      - 'src/**/*.tsx'
+      - 'src/subapps/dxf-viewer/tsconfig.json'
+      - 'scripts/check-dxf-tsc-ratchet.js'
+      - '.dxf-tsc-baseline.json'
+      - '.github/workflows/dxf-tsc-ratchet.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/**/*.ts'
+      - 'src/**/*.tsx'
+      - 'src/subapps/dxf-viewer/tsconfig.json'
+      - 'scripts/check-dxf-tsc-ratchet.js'
+      - '.dxf-tsc-baseline.json'
+      - '.github/workflows/dxf-tsc-ratchet.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: dxf-tsc-ratchet-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dxf-tsc:
+    name: 🔒 DXF Viewer TS Error Ratchet (CHECK 3.29)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: 📦 Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: 🧊 CHECK 3.29 — DXF Viewer tsc error ratchet (full project type-check)
+        run: node scripts/check-dxf-tsc-ratchet.js --full
+
+      - name: ✅ Summary
+        if: success()
+        run: |
+          echo "::notice title=DXF Viewer TS Error Ratchet::Per-file tsc error counts did not rise vs .dxf-tsc-baseline.json"

@@ -318,6 +318,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 | **3.17** | Entity Audit Coverage — writers call `EntityAuditService.recordChange()` | RATCHET | `.entity-audit-coverage-baseline.json` (70) |
 | **3.22** | Dead-code Ratchet (knip + smart-skip + Layer 2 CI) | RATCHET | `.deadcode-baseline.json` (8 files) |
 | **3.23** | Native HTML Tooltip — `title=` on HTML JSX elements (AST-based) | RATCHET | `.native-tooltip-baseline.json` (63 violations / 48 files) |
+| **3.29** | DXF Viewer tsc errors (ADR-663) — hook = baseline smoke only· **CI** = full per-file ratchet | RATCHET | `.dxf-tsc-baseline.json` (381 errors: 117 source / 264 test) |
 
 **📘 Full details (incidents, why, commands, relationships)**: `docs/centralized-systems/reference/precommit-checks.md`
 
@@ -504,6 +505,7 @@ Giorgio κάνει commits μέσω agent (ποτέ χειροκίνητα). Hai
 ### ΠΟΙΟΣ ΚΑΝΕΙ ΤΟΝ ΕΛΕΓΧΟ:
 - **Ο Giorgio** τρέχει τον έλεγχο TypeScript **ο ίδιος, ανά τακτά χρονικά διαστήματα** — όχι κάθε φορά που γράφεται κώδικας.
 - Η type-safety επικυρώνεται επίσης από το **pre-commit hook** την ώρα του commit (που κάνει ο Giorgio).
+- ⚠️ **DXF Viewer**: το root `tsconfig.json` **ΕΞΑΙΡΕΙ** το `src/subapps/dxf-viewer/**` — ούτε το `npm run typecheck` ούτε το hook το έβλεπαν ΠΟΤΕ. Αυτό το κενό το καλύπτει πλέον το **CHECK 3.29 στο CI** (ADR-663, per-file ratchet vs `.dxf-tsc-baseline.json`). Άρα ο N.17 ισχύει ακέραιος και για το subapp: ο πράκτορας ΔΕΝ τρέχει tsc — το CI το κάνει.
 
 ### WHY:
 Κάθε `tsc --noEmit` είναι βαρύς (full type-check, 60-90s, υψηλό CPU/RAM σε αδύναμο PC) και τρέχει σε **κάθε** μικρή αλλαγή → **χάνεται τεράστιος χρόνος**. Τα σφάλματα τύπου που προκύπτουν είναι **πολύ λίγα** και πιάνονται είτε στον περιοδικό έλεγχο του Giorgio είτε στο pre-commit hook. Άρα ο ανά-εργασία έλεγχος από πράκτορα είναι **καθαρή σπατάλη χρόνου**.
