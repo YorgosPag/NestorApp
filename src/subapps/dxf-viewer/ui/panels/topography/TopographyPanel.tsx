@@ -37,6 +37,7 @@ import { useContourDisplay } from '../../../systems/topography/useContourDisplay
 import { TopoImportWizard } from './TopoImportWizard';
 import { TopoPointLabelsSection } from './TopoPointLabelsSection';
 import { TopoGridSection } from './TopoGridSection';
+import { NorthArrowSection } from './NorthArrowSection';
 import { TopoGeoReferenceSection } from './TopoGeoReferenceSection';
 import { TopoCutFillSection } from './TopoCutFillSection';
 import { TopoDeliverablesSection } from './TopoDeliverablesSection';
@@ -227,6 +228,10 @@ export function TopographyPanel(): React.JSX.Element {
           Ξεχωριστός από το βοηθητικό F7 grid — γεωδαιτικός κάναβος συντεταγμένων (crosses στις
           στρογγυλές τιμές + περιμετρική αρίθμηση Easting/Northing). */}
       <TopoGridSection />
+
+      {/* ADR-656 M12 — «Βέλος Βορρά»: live HUD toggle (Κανάβου / Πραγματικός) + «Αποτύπωση στο
+          σχέδιο». Ο Πραγματικός εφαρμόζει σύγκλιση μεσημβρινών ΕΓΣΑ87 (γεωδαιτικά σωστός Βορράς). */}
+      <NorthArrowSection />
 
       {/* ADR-650 M10 — «Γεωαναφορά»: κούμπωμα του DXF πάνω στο τοπογραφικό (Revit Shared
           Coordinates). Auto-align (robust center) + χειροκίνητο κοινό σημείο (1=μετατόπιση,

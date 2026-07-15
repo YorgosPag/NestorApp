@@ -12,6 +12,7 @@ import { FloorplanBackgroundCanvas } from '../../floorplan-background';
 // 🏢 Grid as the BOTTOM-MOST layer (beneath the floorplan κάτοψη). ADR-040 (2026-06-05).
 import { GridUnderlayCanvas } from './GridUnderlayCanvas';
 import { TopoGridUnderlayLeaf } from './TopoGridUnderlayLeaf';
+import { NorthArrowLeaf } from './NorthArrowLeaf';
 import { COORDINATE_LAYOUT } from '../../rendering/core/CoordinateTransforms';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { RULERS_GRID_CONFIG } from '../../systems/rulers-grid/config';
@@ -379,6 +380,12 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
             transform={transform}
             viewport={viewport}
             className={`absolute ${PANEL_LAYOUT.INSET['0']} w-full h-full ${PANEL_LAYOUT.Z_INDEX['20']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}
+          />
+          {/* ADR-656 M12 — North-arrow HUD (top-right corner, z30). Screen-anchored SVG micro-leaf:
+              self-subscribes low-freq stores only (CHECK 6C), no transform dependency (North stays
+              put on pan/zoom). Bakes to entities separately via the panel. */}
+          <NorthArrowLeaf
+            className={`absolute top-2 right-2 ${PANEL_LAYOUT.Z_INDEX['30']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}
           />
           <PreviewCanvas
             ref={previewCanvasRef as React.RefObject<PreviewCanvasHandle>}
