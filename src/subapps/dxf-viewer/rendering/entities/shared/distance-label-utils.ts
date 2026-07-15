@@ -341,8 +341,8 @@ function beginDistanceLabel(
   screenP1: Point2D,
   screenP2: Point2D,
   options: DistanceLabelOptions,
-  defaults: DistanceLabelOptions
-): { opts: DistanceLabelOptions; text: string } {
+  defaults: Required<DistanceLabelOptions>
+): { opts: Required<DistanceLabelOptions>; text: string } {
   const opts = { ...defaults, ...options };
   // ADR-462: distance is a canonical-mm world length → display-unit SSoT owns the
   // unit + locale + label (replaces the raw `formatDistance`). Follows the selector.
