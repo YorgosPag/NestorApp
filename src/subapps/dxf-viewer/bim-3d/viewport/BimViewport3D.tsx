@@ -14,16 +14,17 @@ import { LIGHT_PRESETS } from '../lighting/lighting-presets';
 import { useBim3DEntitiesStore, type Bim3DEntities } from '../stores/Bim3DEntitiesStore';
 import { useQuickProperties3DStore } from '../stores/QuickProperties3DStore';
 import { useSelection3DStore } from '../stores/Selection3DStore';
+// ADR-402/532 — cross-mode selection: read the universal 2D selection to hydrate 3D on entry,
+// and suppress the 3D→universal push while resetting local 3D state on exit.
+import { SelectedEntitiesStore } from '../../systems/selection/SelectedEntitiesStore';
+import { withSuppressed3DToUniversalSync } from '../systems/selection/use-3d-selection-universal-bridge';
 // ADR-539 — Cinema 4D «Polygon Mode»: per-face χρώμα/υλικό toggle + material library (leaf).
 import { PolygonModeToggle3D } from './PolygonModeToggle3D';
 import { clearSceneBboxGetter, setSceneBboxGetter } from '../stores/SceneBboxProvider';
 import { useBuildingFloors3DSync } from '../../components/dxf-layout/useBuildingFloors3DSync';
 import { CutPlaneSlider3DLeaf } from './CutPlaneSlider3DLeaf';
 import { Section2DPanel } from '../panels/Section2DPanel';
-import { RenderFinalDialog } from '../render/RenderFinalDialog';
-import { RenderProgressOverlay } from '../render/RenderProgressOverlay';
-// ADR-645 Φάση A — Forge-style «loading %» overlay for the incremental 3D DXF text streaming build.
-import { Dxf3dStreamProgressLeaf } from './Dxf3dStreamProgressLeaf';
+import { BimViewport3DRenderPanel } from './BimViewport3DRenderPanel';
 import { ViewCubeContextMenu } from './view-cube/view-cube-context-menu';
 import { Grip3DVertexContextMenu } from './grips/Grip3DVertexContextMenu';
 import { FaceContextMenu } from './grips/FaceContextMenu';
@@ -174,6 +175,13 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
     // for floor-mode toggles between rebuilds. Hide is handled pre-mesh in sync().
     if (initialFloorModes.size > 0) managerRef.current.applyFloorVisibility(initialFloorModes);
 
+    // ADR-402/532 — cross-mode selection persistence: mirror the universal 2D selection into 3D
+    // now that the meshes exist, so entities picked in 2D stay selected (and outlined) in 3D.
+    // Skipped for the read-only Properties pipeline (its own isolated context, ADR-371).
+    if (!externalEntitiesMode) {
+      managerRef.current.hydrateSelectionFromUniversal(SelectedEntitiesStore.getSelectedEntityIds());
+    }
+
     // Apply current lighting preset immediately.
     const { sunPreset } = useViewMode3DStore.getState();
     managerRef.current.applyLightPreset(LIGHT_PRESETS[sunPreset]);
@@ -203,7 +211,13 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
       }
       setCanvasEl(null);
       useQuickProperties3DStore.getState().clearHover();
-      useSelection3DStore.getState().clearSelection();
+      // ADR-402/532 — reset the LOCAL 3D selection state on leaving 3D, but NEVER let it propagate
+      // to the universal truth: wrapped in the suppress guard so the 3D→universal bridge does not
+      // fire `replaceEntitySelection([])` and wipe the 2D selection (raw DXF/BIM) on the round-trip.
+      // Timing-independent (does not rely on the bridge's mode-guard reading mode==='2d' in time).
+      withSuppressed3DToUniversalSync(() => useSelection3DStore.getState().clearSelection());
+      // 🔬 TEMP DEBUG (ADR-402 cross-mode selection) — remove after diagnosis.
+      console.log('[SEL3D-EXIT] leaving 3D | scope=', useViewMode3DStore.getState().floor3DScope, '| universal=', SelectedEntitiesStore.getSelectedEntityIds());
       clearSceneBboxGetter();
       setActiveSceneManager(null); // ADR-453 — print engine can no longer snapshot 3D.
       // ADR-040 Phase XXIII — unregister from scheduler BEFORE disposing the manager
@@ -433,42 +447,18 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
         />
       )}
 
-      {/* Floating Render button — bottom-right, above Performance HUD (ADR-366 §B.4 Phase 6).
-          ADR-371: hidden in readOnly mode (Properties pipeline). */}
-      {!isRendering && !readOnly && (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              onClick={() => setRenderDialogOpen(true)}
-              aria-label={t('render.button.triggerLabel')}
-              className="absolute bottom-14 right-3 z-[70] flex select-none items-center gap-1.5 rounded-md border border-white/20 bg-black/60 px-3 py-1.5 text-xs font-semibold text-primary backdrop-blur-sm transition-colors hover:bg-black/80 hover:text-primary/80"
-            >
-              ✦ {t('render.button.render')}
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="left">{t('render.button.triggerLabel')}</TooltipContent>
-        </Tooltip>
-      )}
-
-      {/* Render progress overlay — visible only during final render. Suppressed in readOnly. */}
-      {isRendering && !readOnly && (
-        <RenderProgressOverlay onCancel={handleRenderCancel} />
-      )}
-
-      {/* ADR-645 Φάση A — incremental 3D DXF text streaming «loading %» (self-hides when idle).
-          Shown in readOnly too — the streamed build runs there as well. */}
-      <Dxf3dStreamProgressLeaf />
-
-      {/* Render dialog — Radix (ADR-001). Suppressed in readOnly. */}
-      {!readOnly && (
-        <RenderFinalDialog
-          open={renderDialogOpen}
-          onOpenChange={setRenderDialogOpen}
-          onConfirm={handleRenderConfirm}
-          rendererCanvas={canvasEl}
-          onCalibrateSample={handleCalibrateSample}
-        />
-      )}
+      {/* ADR-366 §B.4/§B.6 — render trigger button, progress overlay, DXF-stream progress,
+          and final-render dialog (extracted leaf, N.7.1). Suppressed pieces per readOnly. */}
+      <BimViewport3DRenderPanel
+        isRendering={isRendering}
+        readOnly={readOnly}
+        renderDialogOpen={renderDialogOpen}
+        setRenderDialogOpen={setRenderDialogOpen}
+        handleRenderConfirm={handleRenderConfirm}
+        handleRenderCancel={handleRenderCancel}
+        handleCalibrateSample={handleCalibrateSample}
+        canvasEl={canvasEl}
+      />
 
       {/* Performance HUD — ADR-366 §B.5.U: now mounted ONCE by UnifiedPerformanceHudLeaf
           (sibling of CanvasLayerStack3dLeaf) so the SAME HUD serves 2D and 3D. */}

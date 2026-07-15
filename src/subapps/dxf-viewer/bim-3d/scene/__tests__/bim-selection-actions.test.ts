@@ -5,7 +5,7 @@
  */
 
 import * as THREE from 'three';
-import { applyBimSelection } from '../scene-manager-actions';
+import { applyBimSelection, hydrateBimSelectionFromUniversal } from '../scene-manager-actions';
 import { useSelection3DStore } from '../../stores/Selection3DStore';
 import { BimSelectionHighlighter } from '../../systems/selection/BimSelectionHighlighter';
 import { SelectionOutlinePass } from '../../systems/selection/SelectionOutlinePass';
@@ -93,6 +93,48 @@ describe('applyBimSelection', () => {
 
     expect(useSelection3DStore.getState().selectedBimIds).toEqual([]);
     expect(meshes.a.material).toBe(origA); // ADR-536 — body material never mutated
+    expect(outline.hasSelection()).toBe(false);
+  });
+});
+
+// ADR-402/532 — cross-mode hydration (universal 2D → 3D on entry).
+describe('hydrateBimSelectionFromUniversal', () => {
+  it('mirrors only the universal ids that have 3D geometry, skipping the rest', () => {
+    const { group, meshes } = makeGroup(); // a=wall, b=column
+    const outline = makeOutline();
+    const h = new BimSelectionHighlighter(group, outline);
+
+    // 'rawline1' has no mesh in the group (raw DXF, no 3D geometry) → must be skipped.
+    hydrateBimSelectionFromUniversal({ bimGroup: group, selectionHighlighter: h }, ['a', 'rawline1', 'b']);
+
+    expect(useSelection3DStore.getState().selectedBimIds).toEqual(['a', 'b']);
+    expect(useSelection3DStore.getState().selectedBimTypes).toEqual({ a: 'wall', b: 'column' });
+    expect(highlighted(outline, meshes.a)).toBe(true);
+    expect(highlighted(outline, meshes.b)).toBe(true);
+  });
+
+  it('replaces any prior 3D selection (authoritative load from the universal set)', () => {
+    const { group, meshes } = makeGroup();
+    const outline = makeOutline();
+    const h = new BimSelectionHighlighter(group, outline);
+
+    applyBimSelection({ bimGroup: group, selectionHighlighter: h }, 'a', 'replace'); // prior 3D selection
+    hydrateBimSelectionFromUniversal({ bimGroup: group, selectionHighlighter: h }, ['b']);
+
+    expect(useSelection3DStore.getState().selectedBimIds).toEqual(['b']);
+    expect(highlighted(outline, meshes.a)).toBe(false);
+    expect(highlighted(outline, meshes.b)).toBe(true);
+  });
+
+  it('clears the 3D selection when no universal id has 3D geometry', () => {
+    const { group } = makeGroup();
+    const outline = makeOutline();
+    const h = new BimSelectionHighlighter(group, outline);
+
+    applyBimSelection({ bimGroup: group, selectionHighlighter: h }, 'a', 'replace');
+    hydrateBimSelectionFromUniversal({ bimGroup: group, selectionHighlighter: h }, ['rawline1', 'rawline2']);
+
+    expect(useSelection3DStore.getState().selectedBimIds).toEqual([]);
     expect(outline.hasSelection()).toBe(false);
   });
 });

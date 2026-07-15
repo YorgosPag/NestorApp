@@ -72,6 +72,13 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-07-15 — 🔬 TEMP diagnostic στο `dxf-canvas-renderer` hot path (ADR-402 cross-mode selection browser-verify)
+**Τι:** προσωρινό `console.log('[SEL3D-2D]…')` στο `dxf-canvas-renderer.ts` (bitmap-cache render loop) που τυπώνει
+τα selected ids που **λείπουν** από το 2D scene map — διαγνωστικό για τον ζωντανό έλεγχο της 2D↔3D επιλογής
+(ADR-402). **Gate:** τρέχει μόνο όταν `selectedSet.size > 0` (όχι σε κάθε frame). **ΠΡΟΣΩΡΙΝΟ — να αφαιρεθεί
+μετά το browser-verify** (ρητό σχόλιο «remove after diagnosis»). Καμία αλλαγή σε cache key / high-freq
+subscription / micro-leaf δομή (cardinal rules ανέπαφοι). CHECK 6B touch → co-staged ADR-040 + ADR-402. 🟡 UNCOMMITTED.
+
 ### 2026-07-15 — ➕ ADR-658 M1: SketchFreehandPreviewSubscriber (live «Μολύβι» stroke micro-leaf, z20)
 **Τι:** νέο micro-leaf `SketchFreehandPreviewSubscriber` για το εργαλείο **«Μολύβι»** (freehand
 drag-to-draw). Self-subscribes **μόνο** το `SketchFreehandStore` (module-level pub/sub, zero React

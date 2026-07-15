@@ -26,6 +26,7 @@ import type { ViewportCamera } from '../viewport/viewport-types';
 import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { raycastWorldPointOrPlane } from '../systems/raycaster/BimEntityRaycaster';
 import { markBvhDirty } from '../systems/raycaster/bvh-setup';
+import { withSuppressed3DToUniversalSync } from '../systems/selection/use-3d-selection-universal-bridge';
 
 export interface SyncBimEntitiesDeps {
   readonly bimLayer: BimSceneLayer;
@@ -271,6 +272,35 @@ export function applyBimSelection(
     store.toggleEntity(bimId, resolveBimEntityType(deps.bimGroup, bimId));
   }
   const ids = useSelection3DStore.getState().selectedBimIds;
+  if (ids.length === 0) deps.selectionHighlighter.onClear();
+  else deps.selectionHighlighter.onSelect(new Set(ids));
+}
+
+/**
+ * ADR-402 / ADR-532 — cross-mode selection hydration (universal 2D → 3D).
+ *
+ * Entering 3D, mirror the universal selection into the 3D store + highlighter so entities picked
+ * in 2D STAY selected in 3D. Only ids that have 3D geometry (a resolvable `bimType`) can be
+ * outlined here; every other selected entity (raw DXF, overlays…) remains untouched in the
+ * universal truth — it simply has no mesh to highlight in this view.
+ *
+ * The 3D-store write is wrapped in {@link withSuppressed3DToUniversalSync}: without it the write
+ * would echo through the 3D→universal bridge and `replaceEntitySelection([3D-subset])` would DROP
+ * those non-3D entities from the universal selection. Hydration is strictly one-way (universal → 3D).
+ */
+export function hydrateBimSelectionFromUniversal(
+  deps: BimSelectionDeps,
+  universalIds: readonly string[],
+): void {
+  const ids: string[] = [];
+  const types: Record<string, string> = {};
+  for (const id of universalIds) {
+    const bimType = resolveBimEntityType(deps.bimGroup, id);
+    if (!bimType) continue; // no 3D geometry → nothing to outline in this view
+    ids.push(id);
+    types[id] = bimType;
+  }
+  withSuppressed3DToUniversalSync(() => useSelection3DStore.getState().setSelection(ids, types));
   if (ids.length === 0) deps.selectionHighlighter.onClear();
   else deps.selectionHighlighter.onSelect(new Set(ids));
 }

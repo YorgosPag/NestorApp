@@ -52,6 +52,21 @@ describe('Selection3DStore — multi-select', () => {
     expect(st.selectedBimType).toBeNull();
   });
 
+  it('setSelection replaces with an explicit multi-set and derives the primary (ADR-402/532 hydration)', () => {
+    const s = useSelection3DStore.getState();
+    s.selectEntity('x', 'slab'); // prior selection is fully replaced
+    s.setSelection(['a', 'b'], { a: 'wall', b: 'column' });
+    const st = useSelection3DStore.getState();
+    expect(st.selectedBimIds).toEqual(['a', 'b']);
+    expect(st.selectedBimTypes).toEqual({ a: 'wall', b: 'column' });
+    expect(st.selectedBimId).toBe('a');
+    expect(st.selectedBimType).toBe('wall');
+    // Empty set clears back to null primary.
+    s.setSelection([], {});
+    expect(useSelection3DStore.getState().selectedBimIds).toEqual([]);
+    expect(useSelection3DStore.getState().selectedBimId).toBeNull();
+  });
+
   it('clearSelection empties everything', () => {
     const s = useSelection3DStore.getState();
     s.selectEntity('a', 'wall');

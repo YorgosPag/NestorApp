@@ -7,6 +7,7 @@ import { DxfBackdropCache } from './dxf-backdrop-cache';
 import { BimSceneLayer } from './BimSceneLayer';
 import { Cinema4DGridFloor } from './grid/cinema4d-grid-floor'; // ADR-558 — Cinema-4D-style ground grid
 import type { TerrainSceneLayer } from './terrain/TerrainSceneLayer'; // ADR-650 M4 — topographic surface
+import type { TerrainContourLayer } from './terrain/TerrainContourLayer'; // ADR-650 M10d — draped 3D contours
 import type { PointCloudSceneLayer } from './terrain/PointCloudSceneLayer'; // ADR-650 M8β/Β — point cloud
 import type { PerformanceCollector } from '../performance/PerformanceCollector'; import type { IdleDetector } from '../lighting/idle-detector';
 import type { QualityModulator } from '../lighting/quality-modulator'; import type { SSAOModulator } from '../lighting/ssao-modulator';
@@ -39,6 +40,7 @@ import type { KeyboardFocusManagerApi } from '../accessibility/KeyboardFocusMana
 import { FocusOutlineRenderer } from '../accessibility/FocusOutlineRenderer'; import type { FocusEntityLabelData } from '../accessibility/FocusIndicator3D';
 import { computeFocusOrder, findFocusedEntityData } from '../accessibility/focus-order';
 import { cycleKeyboardFocus as a11yCycleFocus, selectFocusedEntity as a11ySelectFocused } from './scene-manager-a11y';
+import { ensureInitialCameraFit as runEnsureInitialCameraFit, computeDxfGroundY } from './scene-manager-framing';
 import { applyLightPresetToScene, updateSunDirection } from '../lighting/apply-light-preset';
 import { type ReducedMotionOverride } from '../accessibility/use-reduced-motion';
 import { WaypointDragHandleRenderer } from '../animation/WaypointDragHandle';
@@ -51,6 +53,7 @@ import { buildSceneManagerParts } from './scene-manager-construct';
 import {
   setBimOrbitPivot,
   applyBimSelection,
+  hydrateBimSelectionFromUniversal,
   loadHdriIntoStore,
   EMPTY_FLOOR_VIS_SCOPE,
   type SyncDxfOverlayDeps,
@@ -70,6 +73,7 @@ export class ThreeJsSceneManager {
   readonly bimLayer: BimSceneLayer;
   private readonly gridFloor: Cinema4DGridFloor; // ADR-558 — Cinema-4D-style ground grid (post-FX underlay)
   private readonly terrainLayer: TerrainSceneLayer; // ADR-650 M4 — topographic surface (TIN → mesh)
+  private readonly terrainContourLayer: TerrainContourLayer; // ADR-650 M10d — draped 3D contour lines
   private readonly pointCloudLayer: PointCloudSceneLayer; // ADR-650 M8β/Β — display-only point cloud
   readonly dxfConverter: DxfToThreeConverter;
   readonly selectionHighlighter: BimSelectionHighlighter;
@@ -177,6 +181,7 @@ export class ThreeJsSceneManager {
     this.faceHighlighter = parts.faceHighlighter; this.faceHoverHighlighter = parts.faceHoverHighlighter;
     this.stairSubElementHighlighter = parts.stairSubElementHighlighter; this.stairSubUnsub = parts.stairSubUnsub;
     this.poi = parts.poi; this.gridFloor = parts.gridFloor; this.terrainLayer = parts.terrainLayer;
+    this.terrainContourLayer = parts.terrainContourLayer;
     this.pointCloudLayer = parts.pointCloudLayer;
     this.animationManager = parts.animationManager; this.canonicalViewService = parts.canonicalViewService;
     this.keyboardFocusManager = parts.keyboardFocusManager; this.focusOutlineRenderer = parts.focusOutlineRenderer;
@@ -348,24 +353,16 @@ export class ThreeJsSceneManager {
   /** First-frame camera-fit latch (read + set `initialCameraFitDone`). */
   private dxfFitState(): DxfOverlayFitState { return { done: this.initialCameraFitDone, markDone: () => { this.initialCameraFitDone = true; } }; }
 
-  /**
-   * ADR-537 — one-shot initial camera-fit FALLBACK. The primary initial fit rides on the DXF overlay
-   * bounds (`applyDxfOverlayFraming`); a BIM-only scene, or one whose DXF overlay yields null bounds
-   * (degenerate NaN entity / not yet loaded), would otherwise never auto-frame → the user had to
-   * press F. When (and only when) there are NO DXF bounds, this frames the combined BIM∪DXF scene
-   * bounds instead, sharing the SAME `initialCameraFitDone` latch so it fires at most once and never
-   * fights the DXF path or a restored camera pose (ADR-400). The `getBounds()` guard keeps the DXF
-   * path strictly primary — the normal DXF-present flow is byte-for-byte unchanged. Reuses the
-   * blessed `viewport.frameBounds` (keeps the ViewCube synced — no repeat of the reverted 3D
-   * camera-fit regression, mem `camera_fit_3d_regression`).
-   */
+  /** ADR-537 — one-shot initial camera-fit FALLBACK (logic in scene-manager-framing). */
   private ensureInitialCameraFit(): void {
-    if (this.disposed || this.initialCameraFitDone) return;
-    if (this.dxfConverter.getBounds()) return; // DXF present → let applyDxfOverlayFraming own the fit
-    const bounds = this.getSceneFramingBounds(); // BIM (∪ DXF=null) — NaN-safe (finiteBox3FromObject)
-    if (!bounds || bounds.isEmpty()) return; // no framable geometry yet → retry on the next sync
-    this.viewport.frameBounds(bounds.min, bounds.max);
-    this.initialCameraFitDone = true;
+    const didFit = runEnsureInitialCameraFit({
+      disposed: this.disposed,
+      initialCameraFitDone: this.initialCameraFitDone,
+      getDxfBounds: () => this.dxfConverter.getBounds(),
+      getSceneBounds: () => this.getSceneFramingBounds(),
+      frameBounds: (min, max) => this.viewport.frameBounds(min, max),
+    });
+    if (didFit) this.initialCameraFitDone = true;
   }
 
   /** Replace (plain click) or toggle (ADR-402 Φ-C Shift+click) one entity in the selection; null clears. */
@@ -373,6 +370,11 @@ export class ThreeJsSceneManager {
   toggleBimEntity(bimId: string | null): void { this.applyBimSelectionMode(bimId, 'toggle'); }
   private applyBimSelectionMode(bimId: string | null, mode: 'replace' | 'toggle'): void {
     if (!this.disposed) { this.markSceneDirty(); applyBimSelection({ bimGroup: this.bimLayer.group, selectionHighlighter: this.selectionHighlighter }, bimId, mode); }
+  }
+
+  /** ADR-402/532 — cross-mode hydration: mirror the universal 2D selection into 3D on entry (called after the scene is built). */
+  hydrateSelectionFromUniversal(universalIds: readonly string[]): void {
+    if (!this.disposed) { this.markSceneDirty(); hydrateBimSelectionFromUniversal({ bimGroup: this.bimLayer.group, selectionHighlighter: this.selectionHighlighter }, universalIds); }
   }
 
   raycastBimEntities(clientX: number, clientY: number): RaycastHit | null { return this.disposed ? null : raycastBimGroup(this.bimLayer.group, this.viewport.camera, this.renderer.domElement, clientX, clientY); }
@@ -392,16 +394,8 @@ export class ThreeJsSceneManager {
   /** ADR-358 Q19 — number of tagged tread/riser meshes of a stair (Tab-cycle wraparound). */
   countStairSubElements(stairId: string, part: StairSubPart): number { return this.disposed ? 0 : countStairSubElementMeshes(this.bimLayer.group, stairId, part); }
 
-  /**
-   * DXF overlay floor elevation (Y, metres) or null when no DXF is loaded — the horizontal
-   * plane where the DXF wireframe lives. SSoT for both the wheel-zoom anchor (`resolveSurfacePoint`)
-   * and the Alt+drag orbit pivot (`setOrbitPivotAt`), so a BIM-miss over the floor plan resolves the
-   * real cursor point at floor depth (not a wrong-depth fallback). ADR-363 §empty-dxf / ADR-366 §A.6.Q5.
-   */
-  private dxfGroundY(): number | null {
-    const dxfBounds = this.dxfConverter.getBounds();
-    return dxfBounds ? dxfBounds.min.y : null;
-  }
+  /** DXF overlay floor-elevation SSoT for wheel-zoom + Alt-drag orbit pivot (logic in scene-manager-framing). */
+  private dxfGroundY(): number | null { return computeDxfGroundY(this.dxfConverter.getBounds()); }
 
   /** ADR-366 §A.6.Q5 — Alt+click orbit-pivot picking (delegates to `setBimOrbitPivot`). */
   setOrbitPivotAt(clientX: number, clientY: number): boolean {
@@ -471,6 +465,7 @@ export class ThreeJsSceneManager {
     this.stairSubUnsub(); this.stairSubElementHighlighter.dispose(); // ADR-358 Q19 — drop store subs + release the sub-element overlay.
     this.gridFloor.dispose(); // ADR-558 — unregister overlay + free grid geometry/material.
     this.terrainLayer.dispose(); // ADR-650 M4 — drop store subs + free the terrain mesh geometry.
+    this.terrainContourLayer.dispose(); // ADR-650 M10d — drop store subs + free the contour line geometry.
     this.pointCloudLayer.dispose(); // ADR-650 M8β/Β — drop store sub + free the cloud buffers + material.
     // ADR-040 Phase XXIII — no rafHandle: scheduler unregister happens in BimViewport3D
     // BEFORE dispose() is invoked, guaranteeing no in-flight tick can race with teardown.

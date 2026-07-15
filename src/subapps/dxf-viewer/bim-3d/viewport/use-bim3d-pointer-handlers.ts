@@ -165,6 +165,8 @@ export function useBim3DPointerHandlers(
         isSelected: (id) => SelectedEntitiesStore.isSelected(id),
         selectedDxfCount: () => SelectedEntitiesStore.countByType('dxf-entity'),
       });
+      // 🔬 TEMP DEBUG (ADR-402 cross-mode selection) — remove after diagnosis.
+      console.log('[SEL3D-PICK] dxfId=', dxfId, '| universal now=', SelectedEntitiesStore.getSelectedEntityIds());
       return;
     }
     // Empty space → clear both selections (+ any stair sub-selection).

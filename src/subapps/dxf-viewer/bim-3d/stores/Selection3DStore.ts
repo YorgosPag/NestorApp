@@ -31,6 +31,12 @@ interface Selection3DActions {
   selectEntity(bimId: string, bimType: string): void;
   /** Add/remove an entity from the selection (Shift+click). */
   toggleEntity(bimId: string, bimType: string): void;
+  /**
+   * Replace the whole selection with an explicit set (cross-mode hydration, ADR-402/532):
+   * entering 3D, the universal 2D selection is mirrored in one atomic set so the subscribe
+   * fires once. `bimTypes` maps each id → its resolved bimType.
+   */
+  setSelection(bimIds: readonly string[], bimTypes: Record<string, string>): void;
   clearSelection(): void;
 }
 
@@ -72,6 +78,12 @@ export const useSelection3DStore = create<Selection3DStoreType>()(
         else types[bimId] = bimType;
         return { selectedBimIds: ids, selectedBimTypes: types, ...derivePrimary(ids, types) };
       }),
+
+    setSelection: (bimIds, bimTypes) => {
+      const ids = [...bimIds];
+      const types = { ...bimTypes };
+      set({ selectedBimIds: ids, selectedBimTypes: types, ...derivePrimary(ids, types) });
+    },
 
     clearSelection: () =>
       set({ selectedBimIds: [], selectedBimTypes: {}, selectedBimId: null, selectedBimType: null }),
