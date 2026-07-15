@@ -32,7 +32,7 @@ export function commitParametricAnnotationGripDrag<K extends string, E extends o
   delta: Point2D,
   deps: DxfCommitDeps,
   spec: {
-    readonly kind: K | null;
+    readonly kind: K | undefined;
     readonly entityType: string;
     readonly rotationKind: K;
     readonly apply: (

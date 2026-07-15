@@ -45,10 +45,12 @@ export function unitDirection(from: Point2D, to: Point2D): Point2D | null {
 
 /**
  * Push `created` onto `target`, first copying the source guide's style (if any).
- * No-op when `created` is null (store rejected the guide). Shared by the mirror
- * and copy-pattern commands, which clone a source guide's visual style.
+ * No-op when `created` is undefined (the store rejected the guide — that is what
+ * `addGuideRaw` / `addDiagonalGuideRaw` return on rejection, and they are the only
+ * producers here). Shared by the mirror and copy-pattern commands, which clone a
+ * source guide's visual style.
  */
-export function pushStyledGuide(target: Guide[], created: Guide | null, source: Guide): void {
+export function pushStyledGuide(target: Guide[], created: Guide | undefined, source: Guide): void {
   if (!created) return;
   if (source.style) created.style = { ...source.style };
   target.push(created);
