@@ -1388,15 +1388,16 @@
     "hint": "Pick a furniture item and click on the canvas to place it.",
     "empty": "No plan furniture found.",
     "noMatch": "No furniture matches the filter.",
-    "allCategories": "All",
+    "categoryFilterLabel": "Category",
+    "allCategories": "All categories",
     "kind": {
       "individual": "Individual",
       "composition": "Set"
     },
     "kindFilterLabel": "Type",
-    "kindFilterAll": "All",
+    "kindFilterAll": "All types",
     "styleFilterLabel": "Style",
-    "styleFilterAll": "All",
+    "styleFilterAll": "All styles",
     "categories": {
       "sofa3": "3-seat sofa",
       "sofa2": "2-seat sofa",
@@ -6636,6 +6637,7 @@
     "hint": "Pick a person and click on the canvas to place it.",
     "empty": "No plan people found.",
     "noMatch": "No person matches the filter.",
+    "categoryFilterLabel": "Category",
     "allCategories": "All",
     "categories": {
       "person": "Person",
@@ -6653,7 +6655,8 @@
     "hint": "Pick a plant and click on the canvas to place it.",
     "empty": "No plan plants found.",
     "noMatch": "No plant matches the filter.",
-    "allCategories": "All",
+    "categoryFilterLabel": "Category",
+    "allCategories": "All categories",
     "categories": {
       "tree": "Tree",
       "largeTree": "Large tree",
@@ -6671,8 +6674,9 @@
     "hint": "Pick a vehicle and click on the canvas to place it.",
     "empty": "No plan vehicles found.",
     "noMatch": "No vehicle matches the filter.",
-    "allCategories": "All",
-    "colorFilterAll": "All",
+    "categoryFilterLabel": "Category",
+    "allCategories": "All categories",
+    "colorFilterAll": "All colors",
     "colorFilterLabel": "Color",
     "categories": {
       "car": "Car",

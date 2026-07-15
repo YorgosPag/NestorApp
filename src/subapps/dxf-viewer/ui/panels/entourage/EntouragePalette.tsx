@@ -5,8 +5,10 @@
  * @description ADR-654 M6 — generic palette για κάθε οικογένεια entourage (top-view raster cut-outs).
  *
  * Γενίκευση του `FurniturePlanPanel`: grid από κάρτες + faceted φίλτρα, οδηγούμενο 100% από τον
- * {@link EntouragePackDescriptor}. **N facet rows**: **category** (πάντα) + **μία σειρά ανά
- * facetKey** του descriptor (0..N — άνθρωποι/φυτά 0, οχήματα `color`, έπιπλα `kind`+`style`). Το
+ * {@link EntouragePackDescriptor}. Τα φίλτρα είναι compact **dropdowns** (Radix Select, ADR-001) σε
+ * μία flex-wrap σειρά — **category** (πάντα) + **ένα dropdown ανά facetKey** του descriptor (0..N —
+ * άνθρωποι/φυτά 0, οχήματα `color`, έπιπλα `kind`+`style`). Επιλέχθηκαν έναντι chips γιατί με δεκάδες
+ * κατηγορίες τα chips τύλιγαν σε ~8 σειρές κι έπνιγαν τα thumbnails· το dropdown κρατά σταθερό ύψος. Το
  * εμφανιζόμενο όνομα ΣΥΝΤΙΘΕΤΑΙ από τα facets (`composeEntourageDisplayName`) — μηδέν per-item strings.
  *
  * Container only: ο κύκλος ζωής (thumbnails + select) ζει στο `useEntouragePalette`, η κάρτα στο
@@ -20,6 +22,13 @@
 
 import React, { useCallback, useMemo, useState } from 'react';
 import { FloatingPanel } from '@/components/ui/floating';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useTranslation } from '@/i18n';
 import { entourageLabelParts, type EntourageDef } from '../../../data/entourage-catalog-core';
 import { composeEntourageDisplayName } from '../../../data/entourage-display-name';
@@ -41,67 +50,42 @@ interface EntouragePaletteProps {
   readonly onSelect: () => void;
 }
 
-interface ChipOption {
+interface FilterOption {
   readonly value: string;
   readonly label: string;
 }
 
-/** Ένα chip φίλτρου — ίδιο στυλ με τα scope chips του `LibraryFilterBar`. */
-const FilterChip: React.FC<{
-  readonly label: string;
-  readonly isActive: boolean;
-  readonly onClick: () => void;
-}> = ({ label, isActive, onClick }) => (
-  <li>
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={isActive}
-      className={[
-        'rounded px-1.5 py-0.5 text-[10px] transition-colors',
-        isActive
-          ? 'bg-primary text-primary-foreground'
-          : 'bg-muted text-muted-foreground hover:bg-accent',
-      ].join(' ')}
-    >
-      {label}
-    </button>
-  </li>
-);
-
-/** Μία σειρά chips («Όλα» + οι επιλογές) — κοινή για category & κάθε facet ⇒ μηδέν διπλασιασμός. */
-function ChipFilterRow({
-  ariaLabel,
-  allLabel,
-  options,
-  active,
-  onSelect,
-}: {
+/**
+ * Ένα compact dropdown φίλτρου — canonical Radix Select (ADR-001). Αντικαθιστά τη σειρά chips:
+ * με δεκάδες κατηγορίες τα chips τύλιγαν σε ~8 σειρές κι έπνιγαν τα thumbnails· ένα dropdown
+ * κρατά σταθερό ύψος. «Όλα» = πρώτη επιλογή (value `LIBRARY_FILTER_ALL`, default επιλεγμένη).
+ */
+const SelectFilterField: React.FC<{
   readonly ariaLabel: string;
   readonly allLabel: string;
-  readonly options: readonly ChipOption[];
+  readonly options: readonly FilterOption[];
   readonly active: FacetFilter;
   readonly onSelect: (value: FacetFilter) => void;
-}): React.ReactElement | null {
+}> = ({ ariaLabel, allLabel, options, active, onSelect }) => {
   if (options.length === 0) return null;
   return (
-    <ul className="flex flex-shrink-0 flex-wrap gap-0.5 py-1" aria-label={ariaLabel}>
-      <FilterChip
-        label={allLabel}
-        isActive={active === LIBRARY_FILTER_ALL}
-        onClick={() => onSelect(LIBRARY_FILTER_ALL)}
-      />
-      {options.map((o) => (
-        <FilterChip
-          key={o.value}
-          label={o.label}
-          isActive={active === o.value}
-          onClick={() => onSelect(o.value)}
-        />
-      ))}
-    </ul>
+    <Select value={active} onValueChange={onSelect}>
+      <SelectTrigger size="sm" aria-label={ariaLabel} className="min-w-[88px] flex-1 text-[11px]">
+        <SelectValue />
+      </SelectTrigger>
+      {/* Το canonical content κλειδώνει πλάτος = trigger· εδώ ξεκλειδώνουμε ώστε τα μακριά
+          ελληνικά labels να χωρούν πλήρως (fit-content, με min = trigger & λογικό max). */}
+      <SelectContent className="w-auto min-w-[var(--radix-select-trigger-width)] max-w-[260px]">
+        <SelectItem value={LIBRARY_FILTER_ALL}>{allLabel}</SelectItem>
+        {options.map((o) => (
+          <SelectItem key={o.value} value={o.value} className="whitespace-nowrap">
+            {o.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
-}
+};
 
 export const EntouragePalette: React.FC<EntouragePaletteProps> = ({
   descriptor,
@@ -129,15 +113,15 @@ export const EntouragePalette: React.FC<EntouragePaletteProps> = ({
     [t, i18nPrefix, facetKeys],
   );
 
-  /** Chips ΜΟΝΟ για κατηγορίες που πραγματικά υπάρχουν στον κατάλογο. */
-  const categoryOptions = useMemo<ChipOption[]>(() => {
+  /** Επιλογές dropdown ΜΟΝΟ για κατηγορίες που πραγματικά υπάρχουν στον κατάλογο. */
+  const categoryOptions = useMemo<FilterOption[]>(() => {
     const present = [...new Set(defs.map((d) => d.category))];
     return present.map((c) => ({ value: c, label: t(`${i18nPrefix}.categories.${c}`) }));
   }, [defs, t, i18nPrefix]);
 
-  /** Options ανά facetKey — μία σειρά chips ανά facet, ΜΟΝΟ για τιμές που υπάρχουν. */
-  const facetOptions = useMemo<Record<string, ChipOption[]>>(() => {
-    const result: Record<string, ChipOption[]> = {};
+  /** Options ανά facetKey — ένα dropdown ανά facet, ΜΟΝΟ για τιμές που υπάρχουν. */
+  const facetOptions = useMemo<Record<string, FilterOption[]>>(() => {
+    const result: Record<string, FilterOption[]> = {};
     for (const key of facetKeys) {
       const present = [...new Set(defs.map((d) => d.facets[key]).filter((v): v is string => Boolean(v)))];
       result[key] = present.map((v) => ({ value: v, label: t(`${i18nPrefix}.${key}.${v}`) }));
@@ -182,23 +166,25 @@ export const EntouragePalette: React.FC<EntouragePaletteProps> = ({
           {t(`${i18nPrefix}.hint`)}
         </p>
 
-        <ChipFilterRow
-          ariaLabel={t(`${i18nPrefix}.title`)}
-          allLabel={t(`${i18nPrefix}.allCategories`)}
-          options={categoryOptions}
-          active={category}
-          onSelect={setCategory}
-        />
-        {facetKeys.map((key) => (
-          <ChipFilterRow
-            key={key}
-            ariaLabel={t(`${i18nPrefix}.${key}FilterLabel`)}
-            allLabel={t(`${i18nPrefix}.${key}FilterAll`)}
-            options={facetOptions[key] ?? []}
-            active={facetFilters[key] ?? LIBRARY_FILTER_ALL}
-            onSelect={(value) => setFacet(key, value)}
+        <div className="flex flex-shrink-0 flex-wrap items-center gap-1.5 py-2">
+          <SelectFilterField
+            ariaLabel={t(`${i18nPrefix}.categoryFilterLabel`)}
+            allLabel={t(`${i18nPrefix}.allCategories`)}
+            options={categoryOptions}
+            active={category}
+            onSelect={setCategory}
           />
-        ))}
+          {facetKeys.map((key) => (
+            <SelectFilterField
+              key={key}
+              ariaLabel={t(`${i18nPrefix}.${key}FilterLabel`)}
+              allLabel={t(`${i18nPrefix}.${key}FilterAll`)}
+              options={facetOptions[key] ?? []}
+              active={facetFilters[key] ?? LIBRARY_FILTER_ALL}
+              onSelect={(value) => setFacet(key, value)}
+            />
+          ))}
+        </div>
 
         {/* ADR-655 — «κλειδωμένο» ≠ «άδειο»: ο μη δικαιούχος πρέπει να καταλάβει ΓΙΑΤΙ δεν βλέπει τίποτα. */}
         {locked && (

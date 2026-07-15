@@ -154,6 +154,35 @@ default). Η αναλογική συστολή ζει στο **κοινό** `rec
 
 ## Changelog
 
+### 2026-07-16 — Φίλτρα παλέτας: chips → **dropdowns** (Radix Select, ADR-001) ώστε να αναπνέουν τα thumbnails
+
+**Πρόβλημα (report Giorgio + screenshot):** στο panel «Έπιπλα Κάτοψης» τα φίλτρα ήταν σειρές από
+chips. Οι κατηγορίες επίπλου (~32) τύλιγαν σε ~8 σειρές, κι έπνιγαν την προεπισκόπηση εικόνων —
+έμεναν ορατές μόνο ~2 σειρές thumbnails μέσα στο fixed 300×600 panel. Οχήματα (`color`) το ίδιο σε
+μικρότερο βαθμό· άνθρωποι/φυτά (0 facets, λίγες κατηγορίες) δεν πονούσαν.
+
+**Απόφαση:** το `ChipFilterRow`/`FilterChip` του `EntouragePalette` αντικαταστάθηκε από ένα
+`SelectFilterField` — compact **canonical Radix Select** (`@/components/ui/select`, size `sm`) σε μία
+flex-wrap σειρά. Κάθε φίλτρο (category + N facets) = ένα dropdown σταθερού ύψους· «Όλα» = πρώτη
+επιλογή (value `LIBRARY_FILTER_ALL='all'`, non-empty → ασφαλές για Radix `SelectItem`). Κερδίζουμε
+~7-8 σειρές κατακόρυφου χώρου. **Μία μηχανή ⇒ ισχύει σε Έπιπλα/Οχήματα/Άνθρωποι/Φυτά** (N.18).
+
+**i18n (`dxf-viewer-shell.json`, el+en):** νέο `<prefix>.categoryFilterLabel` (aria-label του
+dropdown κατηγορίας) και περιγραφικά «Όλα» ώστε το trigger να λέει τι φιλτράρει με value πάντα
+παρόν: `allCategories`→«Όλες οι κατηγορίες», `kindFilterAll`→«Όλοι οι τύποι», `styleFilterAll`→«Όλα
+τα στυλ», `colorFilterAll`→«Όλα τα χρώματα». (Άνθρωποι: `allCategories` έμεινε «Όλοι».)
+
+**Gotcha (2ο screenshot):** το canonical `SelectContent` κλειδώνει `width = trigger-width` — με
+στενό trigger (~88px) τα μακριά ελληνικά labels («Ανακλινόμενη πολυθρόνα») κόβονταν στη λίστα.
+Fix: στο συγκεκριμένο content `className="w-auto min-w-[var(--radix-select-trigger-width)]
+max-w-[260px]"` + `whitespace-nowrap` στα items ⇒ το dropdown γίνεται fit-content (φαρδύτερο από το
+trigger) και δείχνει ολόκληρο το όνομα. Το trigger value μένει `line-clamp-1` (αναμενόμενο σε στενό
+300px panel· η πλήρης λίστα φαίνεται στο άνοιγμα).
+
+**Files:** `ui/panels/entourage/EntouragePalette.tsx` (chips→Select), `entourage-pack-descriptor.ts`
+(doc), `i18n/locales/{el,en}/dxf-viewer-shell.json` (4 prefixes). Καμία αλλαγή στη λογική
+φιλτραρίσματος/`useEntouragePalette`.
+
 ### 2026-07-14 — Grip-drag feedback εικόνας = wall parity (5 ενδείξεις, opt-in σε shared SSoT)
 
 Ο Giorgio ζήτησε κατά το grip-drag (περιστροφή / resize / μετακίνηση) της εικόνας να ενεργοποιούνται ΟΛΕΣ
