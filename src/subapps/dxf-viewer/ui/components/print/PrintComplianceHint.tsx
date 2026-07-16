@@ -23,7 +23,7 @@ import {
   formatScaleText,
   resolveAppliedScaleDenominator,
 } from '../../../print/config/paper-math';
-import type { PrintFitMode } from '../../../print/config/paper-types';
+import type { FitMode } from '../../../print/config/paper-types';
 import { validateActiveTitleBlock } from '../../../text-engine/title-block/active-title-block';
 import { issueLabelKeys } from '../../../text-engine/title-block/title-block-compliance';
 import { toTitleBlockLocale } from '../../../text-engine/title-block/title-block-presets';
@@ -31,7 +31,7 @@ import { toTitleBlockLocale } from '../../../text-engine/title-block/title-block
 export interface PrintComplianceHintProps {
   /** Χωρίς πινακίδα στο φύλλο δεν υπάρχει τίποτα να ελεγχθεί. */
   readonly includeTitleBlock: boolean;
-  readonly fitMode: PrintFitMode;
+  readonly fitMode: FitMode;
   readonly scaleDenominator: number;
 }
 

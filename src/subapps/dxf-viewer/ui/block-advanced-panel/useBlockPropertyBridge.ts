@@ -59,7 +59,7 @@ export function useBlockPropertyBridge(
     (oldName: string, nextName: string): void => {
       const sm = getSceneManager();
       if (!sm) return;
-      const targets = (sm.getEntities() as unknown as Entity[]).filter(
+      const targets = ((sm.getEntities?.() ?? []) as unknown as Entity[]).filter(
         (e) => isBlockEntity(e) && e.name === oldName,
       );
       const cmds = targets.map(

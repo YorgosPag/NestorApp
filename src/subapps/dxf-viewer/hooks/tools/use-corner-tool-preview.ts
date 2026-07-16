@@ -29,7 +29,7 @@ import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
 import { distanceToEntity } from '../../utils/entity-distance';
 import { resolveSharedPolylineCorner } from '../../systems/corner/corner-math';
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
-import type { Entity } from '../../types/entities';
+import type { Entity, PolylineEntity, LWPolylineEntity } from '../../types/entities';
 import type { SceneModel } from '../../types/scene';
 import { useActiveTool } from '../../stores/ToolStateStore';
 import type { ToolType } from '../../ui/toolbar/types';
@@ -186,7 +186,7 @@ export function nearestEntityMatching<T extends Entity>(
  * Returns the strokes when a polyline branch applies (possibly empty), or `null`
  * to fall through to the caller's bespoke two-line dispatch.
  */
-export function buildCornerPolylineStrokes<Poly extends Entity>(
+export function buildCornerPolylineStrokes<Poly extends PolylineEntity | LWPolylineEntity>(
   s: CornerPolyState,
   scene: SceneModel,
   cursor: Point2D,
@@ -219,7 +219,7 @@ export function buildCornerPolylineStrokes<Poly extends Entity>(
  * two-line `picking-second` case, delegate to the caller's bespoke `twoLines`
  * (bevel vs tangent-arc/curve). Keeps the identical dispatch in ONE place.
  */
-export function resolveCornerStrokes<S extends CornerPolyState, Poly extends Entity>(
+export function resolveCornerStrokes<S extends CornerPolyState, Poly extends PolylineEntity | LWPolylineEntity>(
   s: S,
   scene: SceneModel,
   cursor: Point2D,

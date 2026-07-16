@@ -41,7 +41,9 @@ export interface CentralizedMouseHandlersProps {
   onLayerSelected?: (layerId: string, position: Point2D) => void;
   onMultiLayerSelected?: (layerIds: string[]) => void;
   canvasRef?: React.RefObject<HTMLCanvasElement>;
-  onCanvasClick?: (point: Point2D, shiftKey?: boolean) => void;
+  // ADR-581 — altKey/ctrlKey carry the «Αντιγραφή Ιδιοτήτων» brush gesture (eyedropper/syringe)
+  // down to `handleMatchBrushClick`; the signature was never widened when they were added.
+  onCanvasClick?: (point: Point2D, shiftKey?: boolean, altKey?: boolean, ctrlKey?: boolean) => void;
   isGripDragging?: boolean;
   onDrawingHover?: (worldPos: Point2D) => void;
   onEntitiesSelected?: (entityIds: string[]) => void;

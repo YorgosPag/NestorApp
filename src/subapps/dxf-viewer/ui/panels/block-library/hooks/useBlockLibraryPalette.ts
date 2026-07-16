@@ -175,13 +175,20 @@ export function useBlockLibraryPalette(projectId?: string): UseBlockLibraryPalet
         return false;
       }
 
+      const boundsMm = def.boundsMm ?? computeBlockLocalBoundsMm(def.localMembers);
+      if (!boundsMm) {
+        // No stored bounds and no computable geometry (empty members) → nothing to save.
+        setError('saveFailed');
+        return false;
+      }
+
       return runEntryAction(entry, 'saveFailed', (svc) =>
         svc
           .saveBlock({
             scope: 'user',
             name: values.name,
             category: values.category,
-            boundsMm: def.boundsMm ?? computeBlockLocalBoundsMm(def.localMembers),
+            boundsMm,
             localMembers: def.localMembers,
             provenance: {
               sourceType: 'user-import',

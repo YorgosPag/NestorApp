@@ -82,6 +82,7 @@ function filletTwoLines(
     return out;
   }
 
+  if (!isFilletCurveEntity(first)) return []; // the tool only picks fillet-curve entities; narrows Entity → FilletCurveEntity
   const res = computeFilletCurve(first, s.firstPick ?? cursor, hovered, cursor, s.radius, s.trim, 'fillet-ghost');
   if (!res) return [];
   return [{ entity: res.arc, close: false }, ...res.trims.map((tr) => ({ entity: tr.newGeom, close: false }))];

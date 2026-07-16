@@ -136,7 +136,7 @@ export function useBeamBetweenMembersTool(
         setPhase('awaitingNext');
         return true;
       }
-      if (picked.entity.id === first.id) return false; // ίδιο μέλος → αγνόησε
+      if (picked.entity.id === first.entity.id) return false; // ίδιο μέλος → αγνόησε
       commitBetween(first, picked);
       firstRef.current = picked; // αλυσίδα: το 2ο μέλος γίνεται 1ο του επόμενου δοκαριού
       publishAnchor(picked);
