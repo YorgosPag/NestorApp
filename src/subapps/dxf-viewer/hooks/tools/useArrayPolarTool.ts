@@ -5,9 +5,9 @@
  *
  * Flow (pre-select sources → activate → pick center → create):
  *   1. User pre-selects N source entities → activates 'array-polar'.
- *   2. On activation we validate the selection. Empty / nested-array
+ *   2. On activation the selection is validated. Empty / nested-array
  *      selection → hint + revert to 'select'.
- *   3. Otherwise we enter "awaiting center pick" state and surface the
+ *   3. Otherwise the tool enters "awaiting center pick" and surfaces the
  *      `arrayTool.pickCenter` status-bar prompt. The next snap-aware
  *      canvas click lands the polar centre.
  *   4. Click → CreateArrayCommand('polar', { count:6, fillAngle:360,
@@ -20,31 +20,28 @@
  * Live parameter editing (count/angles/radius/rotate/grip drag) is owned
  * by `useRibbonArrayBridge` + `array-grip-handlers.ts`. This hook only
  * owns activation + initial creation (single-shot).
+ *
+ * Arming, hint plumbing and the command tail are shared with the rect/path
+ * array tools — see `array-tool-core.ts`.
  */
 
 'use client';
 
-import { useCallback, useRef } from 'react';
-import i18next from 'i18next';
-import type { ICommand } from '../../core/commands/interfaces';
+import { useCallback } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
-import { CreateArrayCommand } from '../../core/commands/entity-commands/CreateArrayCommand';
-import { useSceneManagerAdapter, type SceneAdapterLevelManager } from '../../systems/entity-creation/useSceneManagerAdapter';
-import { toolHintOverrideStore } from '../toolHintOverrideStore';
+import { useSceneManagerAdapter } from '../../systems/entity-creation/useSceneManagerAdapter';
 import { validateArrayParams } from '../../systems/array/array-validation';
 import type { PolarParams } from '../../systems/array/types';
-import type { Entity, EntityType } from '../../types/entities';
-import { isArrayEntity } from '../../types/entities';
-import { useEdgeTriggeredLifecycle } from './useEdgeTriggeredLifecycle';
+import {
+  ARRAY_HINT_NEEDS_SELECTION,
+  commitArrayCommand,
+  resolvePendingArraySources,
+  showArrayHint,
+  useArraySourcePick,
+  type ArrayToolProps,
+} from './array-tool-core';
 
-export interface UseArrayPolarToolProps {
-  activeTool: string;
-  selectedEntityIds: string[];
-  levelManager: SceneAdapterLevelManager;
-  executeCommand: (cmd: ICommand) => void;
-  setSelectedEntityIds: (ids: string[]) => void;
-  onToolChange?: (tool: string) => void;
-}
+export type UseArrayPolarToolProps = ArrayToolProps;
 
 export interface UseArrayPolarToolReturn {
   /** True while 'array-polar' is the active tool. */
@@ -60,117 +57,19 @@ const DEFAULT_FILL_ANGLE = 360;
 const DEFAULT_START_ANGLE = 0;
 const DEFAULT_ROTATE_ITEMS = true;
 
-export function useArrayPolarTool(
-  props: UseArrayPolarToolProps,
-): UseArrayPolarToolReturn {
-  const {
-    activeTool,
-    selectedEntityIds,
-    levelManager,
-    executeCommand,
-    setSelectedEntityIds,
-    onToolChange,
-  } = props;
+export function useArrayPolarTool(props: UseArrayPolarToolProps): UseArrayPolarToolReturn {
+  const { activeTool, levelManager, executeCommand, setSelectedEntityIds } = props;
 
-  const getSceneManager = useSceneManagerAdapter(levelManager);
-  const pendingSourceIdsRef = useRef<string[]>([]);
-  const awaitingCenterRef = useRef(false);
   const isActive = activeTool === 'array-polar';
-
-  const showHint = useCallback((key: string) => {
-    toolHintOverrideStore.setOverride(i18next.t(`tool-hints:${key}`));
-  }, []);
-
-  const exitToSelect = useCallback(() => {
-    pendingSourceIdsRef.current = [];
-    awaitingCenterRef.current = false;
-    toolHintOverrideStore.setOverride(null);
-    onToolChange?.('select');
-  }, [onToolChange]);
-
-  // Activation edge — validate pre-selection and enter awaiting-center state.
-  // (ADR-589 edge-triggered SSoT)
-  useEdgeTriggeredLifecycle(
-    isActive,
-    () => {
-      armPickFromSelection();
-    },
-    () => {
-      pendingSourceIdsRef.current = [];
-      awaitingCenterRef.current = false;
-      toolHintOverrideStore.setOverride(null);
-    },
-  );
-
-  function armPickFromSelection(): void {
-    const levelId = levelManager.currentLevelId;
-    if (!levelId) {
-      onToolChange?.('select');
-      return;
-    }
-    const scene = levelManager.getLevelScene(levelId);
-    if (!scene) {
-      onToolChange?.('select');
-      return;
-    }
-
-    if (selectedEntityIds.length === 0) {
-      showHint('arrayTool.needsSelection');
-      onToolChange?.('select');
-      return;
-    }
-
-    const sources: Entity[] = [];
-    const sourceTypes: EntityType[] = [];
-    for (const id of selectedEntityIds) {
-      const e = scene.entities.find((x) => x.id === id) as Entity | undefined;
-      if (!e) continue;
-      if (isArrayEntity(e)) {
-        showHint('arrayTool.nestedForbidden');
-        onToolChange?.('select');
-        return;
-      }
-      sources.push(e);
-      sourceTypes.push(e.type);
-    }
-
-    if (sources.length === 0) {
-      showHint('arrayTool.needsSelection');
-      onToolChange?.('select');
-      return;
-    }
-
-    pendingSourceIdsRef.current = selectedEntityIds.slice();
-    awaitingCenterRef.current = true;
-    showHint('arrayTool.pickCenter');
-  }
+  const getSceneManager = useSceneManagerAdapter(levelManager);
+  const pick = useArraySourcePick(props, isActive, 'arrayTool.pickCenter');
 
   const handleArrayPolarClick = useCallback(
     (worldPoint: Point2D): void => {
-      if (!isActive) return;
-      if (!awaitingCenterRef.current) return;
-      const levelId = levelManager.currentLevelId;
-      if (!levelId) {
-        exitToSelect();
-        return;
-      }
-      const scene = levelManager.getLevelScene(levelId);
-      if (!scene) {
-        exitToSelect();
-        return;
-      }
+      if (!isActive || !pick.isAwaiting()) return;
 
-      const sourceIds = pendingSourceIdsRef.current;
-      const sourceTypes: EntityType[] = [];
-      for (const id of sourceIds) {
-        const e = scene.entities.find((x) => x.id === id) as Entity | undefined;
-        if (e) sourceTypes.push(e.type);
-      }
-      if (sourceTypes.length === 0) {
-        showHint('arrayTool.needsSelection');
-        exitToSelect();
-        return;
-      }
+      const ctx = resolvePendingArraySources(levelManager, pick);
+      if (!ctx) return;
 
       const params: PolarParams = {
         kind: 'polar',
@@ -182,31 +81,32 @@ export function useArrayPolarTool(
         radius: 0,
       };
 
-      const validation = validateArrayParams(params, sourceTypes);
+      const validation = validateArrayParams(params, ctx.sourceTypes);
       if (validation.severity === 'error') {
-        showHint('arrayTool.needsSelection');
-        exitToSelect();
+        showArrayHint(ARRAY_HINT_NEEDS_SELECTION);
+        pick.exitToSelect();
         return;
       }
 
-      const sm = getSceneManager();
-      if (!sm) return;
+      const committed = commitArrayCommand(
+        getSceneManager,
+        ctx.sourceIds,
+        'polar',
+        params,
+        executeCommand,
+        setSelectedEntityIds,
+      );
+      if (!committed) return;
 
-      const cmd = new CreateArrayCommand(sourceIds, 'polar', params, sm);
-      executeCommand(cmd);
-
-      const newArrayId = cmd.getAffectedEntityIds()[0];
-      if (newArrayId) setSelectedEntityIds([newArrayId]);
-
-      exitToSelect();
+      pick.exitToSelect();
     },
-    [isActive, levelManager, executeCommand, setSelectedEntityIds, exitToSelect, showHint, getSceneManager],
+    [isActive, pick, levelManager, executeCommand, setSelectedEntityIds, getSceneManager],
   );
 
   const handleArrayPolarEscape = useCallback((): void => {
     if (!isActive) return;
-    exitToSelect();
-  }, [isActive, exitToSelect]);
+    pick.exitToSelect();
+  }, [isActive, pick]);
 
   return { isActive, handleArrayPolarClick, handleArrayPolarEscape };
 }

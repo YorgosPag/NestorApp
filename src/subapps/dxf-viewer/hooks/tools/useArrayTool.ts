@@ -9,12 +9,16 @@
  *
  * Flow (Q4 — both selection orders supported):
  *   1. User pre-selects N source entities → activates 'array-rect'.
- *   2. On activation we validate the selection. If empty, surface a
- *      tool hint asking for sources and revert to 'select' immediately.
- *   3. Otherwise we issue CreateArrayCommand, switch back to 'select',
- *      and replace the selection with the new ArrayEntity id so the
- *      ribbon contextual tab auto-opens (DxfViewerContent watches
+ *   2. On activation the selection is validated. If empty, a tool hint asks
+ *      for sources and the tool reverts to 'select' immediately.
+ *   3. Otherwise CreateArrayCommand is issued, the tool switches back to
+ *      'select', and the selection is replaced with the new ArrayEntity id
+ *      so the ribbon contextual tab auto-opens (DxfViewerContent watches
  *      `primarySelectedId` to flip `activeContextualTrigger`).
+ *
+ * Unlike the polar/path siblings this tool is SINGLE-SHOT: it creates on the
+ * activation edge and never waits for a pick. Shared guards + command tail
+ * live in `array-tool-core.ts`.
  *
  * Live parameter editing (rows/cols/spacing/angle/grip drag) is owned
  * by `useRibbonArrayBridge` + `array-grip-handlers.ts`. This hook only
@@ -23,27 +27,22 @@
 
 'use client';
 
-import { useCallback } from 'react';
-import i18next from 'i18next';
-import type { ICommand } from '../../core/commands/interfaces';
-import { CreateArrayCommand } from '../../core/commands/entity-commands/CreateArrayCommand';
-import { useSceneManagerAdapter, type SceneAdapterLevelManager } from '../../systems/entity-creation/useSceneManagerAdapter';
-import { toolHintOverrideStore } from '../toolHintOverrideStore';
+import { useSceneManagerAdapter } from '../../systems/entity-creation/useSceneManagerAdapter';
 import { useEdgeTriggeredLifecycle } from './useEdgeTriggeredLifecycle';
 import { computeSourceGroupBbox, defaultRectSpacing } from '../../systems/array/array-bbox';
 import { validateArrayParams } from '../../systems/array/array-validation';
 import type { RectParams } from '../../systems/array/types';
-import type { Entity, EntityType } from '../../types/entities';
-import { isArrayEntity } from '../../types/entities';
+import {
+  ARRAY_HINT_NEEDS_SELECTION,
+  clearArrayHint,
+  collectArraySources,
+  commitArrayCommand,
+  resolveArrayScene,
+  showArrayHint,
+  type ArrayToolProps,
+} from './array-tool-core';
 
-export interface UseArrayToolProps {
-  activeTool: string;
-  selectedEntityIds: string[];
-  levelManager: SceneAdapterLevelManager;
-  executeCommand: (cmd: ICommand) => void;
-  setSelectedEntityIds: (ids: string[]) => void;
-  onToolChange?: (tool: string) => void;
-}
+export type UseArrayToolProps = ArrayToolProps;
 
 export interface UseArrayToolReturn {
   /** True while 'array-rect' is the active tool. */
@@ -54,73 +53,27 @@ const DEFAULT_ROWS = 3;
 const DEFAULT_COLS = 4;
 
 export function useArrayTool(props: UseArrayToolProps): UseArrayToolReturn {
-  const {
-    activeTool,
-    selectedEntityIds,
-    levelManager,
-    executeCommand,
-    setSelectedEntityIds,
-    onToolChange,
-  } = props;
+  const { activeTool, selectedEntityIds, levelManager, executeCommand, setSelectedEntityIds, onToolChange } = props;
 
   const isActive = activeTool === 'array-rect';
-
   const getSceneManager = useSceneManagerAdapter(levelManager);
 
-  const showHint = useCallback((key: string) => {
-    toolHintOverrideStore.setOverride(i18next.t(`tool-hints:${key}`));
-  }, []);
-
-  // Activation / deactivation lifecycle (ADR-589 edge-triggered SSoT)
-  useEdgeTriggeredLifecycle(
-    isActive,
-    () => {
-      // Activation edge — try to create the array from the current selection.
-      tryCreateFromSelection();
-    },
-    () => {
-      toolHintOverrideStore.setOverride(null);
-    },
-  );
-
   function tryCreateFromSelection(): void {
-    const levelId = levelManager.currentLevelId;
-    if (!levelId) return;
-    const scene = levelManager.getLevelScene(levelId);
+    const scene = resolveArrayScene(levelManager);
     if (!scene) return;
 
     // Phase A handoff to 'select' — even on early exit we never linger on
     // 'array-rect' (it is a single-shot activation, not a stateful tool).
     const exitToSelect = () => onToolChange?.('select');
 
-    if (selectedEntityIds.length === 0) {
-      showHint('arrayTool.needsSelection');
+    const result = collectArraySources(scene, selectedEntityIds);
+    if (!result.ok) {
+      showArrayHint(result.hintKey);
       exitToSelect();
       return;
     }
 
-    const sources: Entity[] = [];
-    const sourceTypes: EntityType[] = [];
-    for (const id of selectedEntityIds) {
-      const e = scene.entities.find((x) => x.id === id) as Entity | undefined;
-      if (!e) continue;
-      if (isArrayEntity(e)) {
-        // Q19 nested-array guard surfaced as a hint and abort.
-        showHint('arrayTool.nestedForbidden');
-        exitToSelect();
-        return;
-      }
-      sources.push(e);
-      sourceTypes.push(e.type);
-    }
-
-    if (sources.length === 0) {
-      showHint('arrayTool.needsSelection');
-      exitToSelect();
-      return;
-    }
-
-    const bbox = computeSourceGroupBbox(sources);
+    const bbox = computeSourceGroupBbox(result.sources);
     const { rowSpacing, colSpacing } = defaultRectSpacing(bbox);
     const params: RectParams = {
       kind: 'rect',
@@ -131,39 +84,40 @@ export function useArrayTool(props: UseArrayToolProps): UseArrayToolReturn {
       angle: 0,
     };
 
-    const validation = validateArrayParams(params, sourceTypes);
+    // Surface the generic "needs selection" hint — validation errors at
+    // creation time mean the user picked unsupported entities. The full
+    // i18n hint catalog for each validation.messageKey lives under
+    // `dxf-viewer-shell:array.validation.*` (used by future toast wiring).
+    const validation = validateArrayParams(params, result.sourceTypes);
     if (validation.severity === 'error') {
-      // Surface the generic "needs selection" hint — validation errors at
-      // creation time mean the user picked unsupported entities. The full
-      // i18n hint catalog for each validation.messageKey lives under
-      // `dxf-viewer-shell:array.validation.*` (used by future toast wiring).
-      showHint('arrayTool.needsSelection');
+      showArrayHint(ARRAY_HINT_NEEDS_SELECTION);
       exitToSelect();
       return;
     }
 
-    const sm = getSceneManager();
-    if (!sm) {
-      exitToSelect();
-      return;
-    }
-
-    const cmd = new CreateArrayCommand(
+    const committed = commitArrayCommand(
+      getSceneManager,
       selectedEntityIds.slice(),
       'rect',
       params,
-      sm,
+      executeCommand,
+      setSelectedEntityIds,
     );
-    executeCommand(cmd);
-
-    // Replace selection with the new ArrayEntity so the contextual ribbon
-    // tab opens (DxfViewerContent watches primarySelectedId.type === 'array').
-    const newArrayId = cmd.getAffectedEntityIds()[0];
-    if (newArrayId) setSelectedEntityIds([newArrayId]);
-
-    toolHintOverrideStore.setOverride(null);
+    if (committed) clearArrayHint();
     exitToSelect();
   }
+
+  // Activation / deactivation lifecycle (ADR-589 edge-triggered SSoT)
+  useEdgeTriggeredLifecycle(
+    isActive,
+    () => {
+      // Activation edge — try to create the array from the current selection.
+      tryCreateFromSelection();
+    },
+    () => {
+      clearArrayHint();
+    },
+  );
 
   return { isActive };
 }

@@ -7,7 +7,7 @@
  *
  * Flow (pre-select sources → activate → click path entity → create):
  *   1. User pre-selects N source entities → activates 'array-path'.
- *   2. On activation: validate selection. Empty / nested-array → hint + revert.
+ *   2. On activation the selection is validated. Empty / nested-array → hint + revert.
  *   3. Enter "awaiting path pick" state — show `arrayTool.pickPath` status hint.
  *      The next canvas click is intercepted by `handleArrayPathClick`.
  *   4. Click → read `HoverStore.hoveredEntityId` (entity under cursor).
@@ -18,29 +18,27 @@
  *   5. ESC → exit without creating.
  *
  * Default params: count=4, method='divide', alignItems=false, reversed=false.
+ *
+ * Arming, hint plumbing and the command tail are shared with the rect/polar
+ * array tools — see `array-tool-core.ts`.
  */
 
-import { useCallback, useRef } from 'react';
-import i18next from 'i18next';
-import type { ICommand } from '../../core/commands/interfaces';
-import { CreateArrayCommand } from '../../core/commands/entity-commands/CreateArrayCommand';
-import { useSceneManagerAdapter, type SceneAdapterLevelManager } from '../../systems/entity-creation/useSceneManagerAdapter';
-import { toolHintOverrideStore } from '../toolHintOverrideStore';
+import { useCallback } from 'react';
+import { useSceneManagerAdapter } from '../../systems/entity-creation/useSceneManagerAdapter';
 import type { PathParams } from '../../systems/array/types';
-import type { Entity, EntityType } from '../../types/entities';
-import { isArrayEntity } from '../../types/entities';
 import { getHoveredEntity } from '../../systems/hover/HoverStore';
 import { PATH_ENTITY_TYPES } from '../../systems/array/path-pick-controller';
-import { useEdgeTriggeredLifecycle } from './useEdgeTriggeredLifecycle';
+import {
+  commitArrayCommand,
+  findArrayEntity,
+  resolveArrayScene,
+  resolvePendingSourcesInScene,
+  showArrayHint,
+  useArraySourcePick,
+  type ArrayToolProps,
+} from './array-tool-core';
 
-export interface UseArrayPathToolProps {
-  activeTool: string;
-  selectedEntityIds: string[];
-  levelManager: SceneAdapterLevelManager;
-  executeCommand: (cmd: ICommand) => void;
-  setSelectedEntityIds: (ids: string[]) => void;
-  onToolChange?: (tool: string) => void;
-}
+export type UseArrayPathToolProps = ArrayToolProps;
 
 export interface UseArrayPathToolReturn {
   readonly isActive: boolean;
@@ -52,102 +50,33 @@ const DEFAULT_COUNT = 4;
 const DEFAULT_METHOD: PathParams['method'] = 'divide';
 
 export function useArrayPathTool(props: UseArrayPathToolProps): UseArrayPathToolReturn {
-  const { activeTool, selectedEntityIds, levelManager, executeCommand, setSelectedEntityIds, onToolChange } = props;
+  const { activeTool, levelManager, executeCommand, setSelectedEntityIds } = props;
 
-  const getSceneManager = useSceneManagerAdapter(levelManager);
-  const pendingSourceIdsRef = useRef<string[]>([]);
-  const awaitingPathRef = useRef(false);
   const isActive = activeTool === 'array-path';
-
-  const showHint = useCallback((key: string) => {
-    toolHintOverrideStore.setOverride(i18next.t(`tool-hints:${key}`));
-  }, []);
-
-  const exitToSelect = useCallback(() => {
-    pendingSourceIdsRef.current = [];
-    awaitingPathRef.current = false;
-    toolHintOverrideStore.setOverride(null);
-    onToolChange?.('select');
-  }, [onToolChange]);
-
-  // Activation / deactivation lifecycle (ADR-589 edge-triggered SSoT)
-  useEdgeTriggeredLifecycle(
-    isActive,
-    () => {
-      armPickFromSelection();
-    },
-    () => {
-      pendingSourceIdsRef.current = [];
-      awaitingPathRef.current = false;
-      toolHintOverrideStore.setOverride(null);
-    },
-  );
-
-  function armPickFromSelection(): void {
-    const levelId = levelManager.currentLevelId;
-    if (!levelId) { onToolChange?.('select'); return; }
-    const scene = levelManager.getLevelScene(levelId);
-    if (!scene) { onToolChange?.('select'); return; }
-
-    if (selectedEntityIds.length === 0) {
-      showHint('arrayTool.needsSelection');
-      onToolChange?.('select');
-      return;
-    }
-
-    const sources: Entity[] = [];
-    const sourceTypes: EntityType[] = [];
-    for (const id of selectedEntityIds) {
-      const e = scene.entities.find((x) => x.id === id) as Entity | undefined;
-      if (!e) continue;
-      if (isArrayEntity(e)) {
-        showHint('arrayTool.nestedForbidden');
-        onToolChange?.('select');
-        return;
-      }
-      sources.push(e);
-      sourceTypes.push(e.type);
-    }
-
-    if (sources.length === 0) {
-      showHint('arrayTool.needsSelection');
-      onToolChange?.('select');
-      return;
-    }
-
-    pendingSourceIdsRef.current = selectedEntityIds.slice();
-    awaitingPathRef.current = true;
-    showHint('arrayTool.pickPath');
-  }
+  const getSceneManager = useSceneManagerAdapter(levelManager);
+  const pick = useArraySourcePick(props, isActive, 'arrayTool.pickPath');
 
   const handleArrayPathClick = useCallback((): void => {
-    if (!isActive || !awaitingPathRef.current) return;
+    if (!isActive || !pick.isAwaiting()) return;
 
     const hoveredId = getHoveredEntity();
     if (!hoveredId) return;
 
-    const levelId = levelManager.currentLevelId;
-    if (!levelId) { exitToSelect(); return; }
-    const scene = levelManager.getLevelScene(levelId);
-    if (!scene) { exitToSelect(); return; }
+    const scene = resolveArrayScene(levelManager);
+    if (!scene) {
+      pick.exitToSelect();
+      return;
+    }
 
-    const pathEntity = scene.entities.find((e) => e.id === hoveredId) as Entity | undefined;
+    // A non-curve pick leaves the tool armed, so the user can click a valid path next.
+    const pathEntity = findArrayEntity(scene, hoveredId);
     if (!pathEntity || !PATH_ENTITY_TYPES.has(pathEntity.type)) {
-      showHint('arrayTool.invalidPathType');
+      showArrayHint('arrayTool.invalidPathType');
       return;
     }
 
-    const sourceIds = pendingSourceIdsRef.current;
-    const sourceTypes: EntityType[] = [];
-    for (const id of sourceIds) {
-      const e = scene.entities.find((x) => x.id === id) as Entity | undefined;
-      if (e) sourceTypes.push(e.type);
-    }
-    if (sourceTypes.length === 0) {
-      showHint('arrayTool.needsSelection');
-      exitToSelect();
-      return;
-    }
+    const ctx = resolvePendingSourcesInScene(scene, pick);
+    if (!ctx) return;
 
     const params: PathParams = {
       kind: 'path',
@@ -158,22 +87,24 @@ export function useArrayPathTool(props: UseArrayPathToolProps): UseArrayPathTool
       pathEntityId: hoveredId,
     };
 
-    const sm = getSceneManager();
-    if (!sm) return;
+    const committed = commitArrayCommand(
+      getSceneManager,
+      ctx.sourceIds,
+      'path',
+      params,
+      executeCommand,
+      setSelectedEntityIds,
+      hoveredId,
+    );
+    if (!committed) return;
 
-    const cmd = new CreateArrayCommand(sourceIds, 'path', params, sm, hoveredId);
-    executeCommand(cmd);
-
-    const newArrayId = cmd.getAffectedEntityIds()[0];
-    if (newArrayId) setSelectedEntityIds([newArrayId]);
-
-    exitToSelect();
-  }, [isActive, levelManager, executeCommand, setSelectedEntityIds, exitToSelect, showHint, getSceneManager]);
+    pick.exitToSelect();
+  }, [isActive, pick, levelManager, executeCommand, setSelectedEntityIds, getSceneManager]);
 
   const handleArrayPathEscape = useCallback((): void => {
     if (!isActive) return;
-    exitToSelect();
-  }, [isActive, exitToSelect]);
+    pick.exitToSelect();
+  }, [isActive, pick]);
 
   return { isActive, handleArrayPathClick, handleArrayPathEscape };
 }
