@@ -36,25 +36,6 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 TYPES
 // =============================================================================
 
-/**
- * i18n namespaces the auxiliary-space sales sidebars load. Shared so the parking
- * and storage sidebars restate ONE list instead of the same 10-namespace array
- * each (CHECK 3.28). Every `t()` call stays a literal at its call-site, so the
- * i18n key checks (3.8 / 3.13) still resolve them — only the namespace list moved.
- */
-export const SALES_SPACE_SIDEBAR_NAMESPACES = [
-  'common',
-  'common-account',
-  'common-actions',
-  'common-empty-states',
-  'common-navigation',
-  'common-photos',
-  'common-sales',
-  'common-shared',
-  'common-status',
-  'common-validation',
-] as const;
-
 /** Sentinel id passed to `onSelectItem` to clear the selection. */
 const CLEAR_SELECTION_ID = '__none__';
 
