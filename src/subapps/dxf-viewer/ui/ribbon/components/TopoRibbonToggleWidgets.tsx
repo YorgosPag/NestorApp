@@ -27,6 +27,7 @@ import {
   Mountain,
   Layers,
   Palette,
+  Scissors,
   type LucideIcon,
 } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -59,6 +60,7 @@ import {
   getTerrain3DState,
   setTerrain3DVisible,
   setTerrain3DStyle,
+  setTerrainAutoClipAtActiveLevel,
   subscribeTerrain3D,
 } from '../../../systems/topography/terrain-3d-store';
 import { useContourDisplay } from '../../../systems/topography/useContourDisplay';
@@ -186,6 +188,22 @@ const TERRAIN_STYLE = toggleConfig(
   Palette, Mountain, keys('terrainStyle'),
 );
 
+// ADR-665 — cut the hill at the active storey's FFL (the building is never cut by it). Greyed out
+// while the terrain is hidden, with a reason — same big-player pattern as CLOUD_VISIBLE.
+const TERRAIN_AUTOCLIP = toggleConfig(
+  () => {
+    const st = React.useSyncExternalStore(subscribeTerrain3D, getTerrain3DState, getTerrain3DState);
+    return {
+      value: st.autoClipAtActiveLevel,
+      // Read fresh in the callback to dodge a stale-closure toggle (mirror TERRAIN_VISIBLE).
+      toggle: () => setTerrainAutoClipAtActiveLevel(!getTerrain3DState().autoClipAtActiveLevel),
+      disabled: !st.visible,
+      disabledReasonKey: st.visible ? undefined : `${K}.terrainAutoClip.hiddenTip`,
+    };
+  },
+  Scissors, Layers, keys('terrainAutoClip'),
+);
+
 export const TopoGridVisibleToggle: React.FC = () => <RibbonToggleWidget config={GRID_VISIBLE} />;
 export const NorthArrowVisibleToggle: React.FC = () => <RibbonToggleWidget config={NORTH_VISIBLE} />;
 export const PointCloud3DVisibleToggle: React.FC = () => <RibbonToggleWidget config={CLOUD_VISIBLE} />;
@@ -194,6 +212,7 @@ export const NorthModeToggle: React.FC = () => <RibbonToggleWidget config={NORTH
 export const CutFillModeToggle: React.FC = () => <RibbonToggleWidget config={CUTFILL_MODE} />;
 export const TerrainVisibleToggle: React.FC = () => <RibbonToggleWidget config={TERRAIN_VISIBLE} />;
 export const TerrainStyleToggle: React.FC = () => <RibbonToggleWidget config={TERRAIN_STYLE} />;
+export const TerrainAutoClipToggle: React.FC = () => <RibbonToggleWidget config={TERRAIN_AUTOCLIP} />;
 
 /**
  * ADR-662 Φ4 — «Νέφος σημείων…» manage button (ανοίγει τον cloud manager dialog με

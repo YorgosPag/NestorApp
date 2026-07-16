@@ -22,6 +22,7 @@ import {
   setTerrain3DStyle,
   setTerrainSurfaceOpacity,
   setTerrainContourOpacity,
+  setTerrainAutoClipAtActiveLevel,
 } from '../../../systems/topography/terrain-3d-store';
 import styles from './TopographyPanel.module.css';
 
@@ -68,6 +69,12 @@ export function Terrain3DSection(): React.JSX.Element {
     [],
   );
   const onContourOpacity = React.useCallback((value: number) => setTerrainContourOpacity(value), []);
+  // ADR-665 — cut the hill at the active storey's FFL so the building is not buried. The building
+  // itself is never cut by this plane.
+  const onToggleAutoClip = React.useCallback(
+    () => setTerrainAutoClipAtActiveLevel(!getTerrain3DState().autoClipAtActiveLevel),
+    [],
+  );
 
   return (
     <section className={styles.field}>
@@ -90,6 +97,15 @@ export function Terrain3DSection(): React.JSX.Element {
           disabled={!terrain3d.visible}
         >
           {t('topography.terrain3d.hypsometric')}
+        </button>
+        <button
+          type="button"
+          className={`${styles.generateButton} ${terrain3d.autoClipAtActiveLevel ? styles.toolActive : ''}`}
+          onClick={onToggleAutoClip}
+          aria-pressed={terrain3d.autoClipAtActiveLevel}
+          disabled={!terrain3d.visible}
+        >
+          {t('topography.terrain3d.autoClip')}
         </button>
       </div>
       <OpacityRow

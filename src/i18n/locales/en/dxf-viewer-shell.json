@@ -4530,141 +4530,36 @@
         "tooltipShow": "Restore visibility of structural BIM elements"
       },
       "topo": {
-        "import": {
-          "label": "Import points"
-        },
-        "breakline": {
-          "label": "Breaklines",
-          "clear": "Clear breaklines"
-        },
-        "generate": {
-          "label": "Generate contours"
-        },
-        "autoBreakline": {
-          "label": "Auto breaklines",
-          "dialogTitle": "Automatic Breaklines"
-        },
-        "geoRef": {
-          "label": "Geo-referencing…",
-          "dialogTitle": "Geo-referencing"
-        },
-        "gridToggle": {
-          "label": "EGSA87 grid"
-        },
-        "gridBake": {
-          "label": "Bake grid"
-        },
-        "northToggle": {
-          "label": "North arrow"
-        },
-        "northBake": {
-          "label": "Bake north"
-        },
-        "pointLabels": {
-          "label": "Point labels"
-        },
-        "boundary": {
-          "label": "Excavation boundary"
-        },
-        "cutFill": {
-          "label": "Cut/Fill volumes",
-          "dialogTitle": "Earthwork Volumes"
-        },
-        "qaRun": {
-          "label": "Quality check",
-          "dialogTitle": "Survey Quality Check"
-        },
-        "qaClear": {
-          "label": "Clear check"
-        },
-        "cloudToggle": {
-          "label": "Show point cloud"
-        },
-        "cloudRemove": {
-          "label": "Remove point cloud"
-        },
-        "cloud": {
-          "label": "Point cloud…",
-          "dialogTitle": "3D Point Cloud",
-          "emptyTip": "No point cloud imported — use “Import points”"
-        },
-        "deliverables": {
-          "label": "Export folder",
-          "dialogTitle": "Survey Deliverables"
-        },
-        "gridVisible": {
-          "label": "Grid",
-          "on": "Hide",
-          "off": "Show",
-          "tooltipOn": "Hide EGSA87 grid",
-          "tooltipOff": "Show EGSA87 grid"
-        },
-        "northVisible": {
-          "label": "North",
-          "on": "Hide",
-          "off": "Show",
-          "tooltipOn": "Hide north arrow",
-          "tooltipOff": "Show north arrow"
-        },
-        "cloudVisible": {
-          "label": "Cloud",
-          "on": "Hide",
-          "off": "Show",
-          "tooltipOn": "Hide 3D point cloud",
-          "tooltipOff": "Show 3D point cloud"
-        },
-        "contourStyle": {
-          "label": "Contours",
-          "on": "Smooth",
-          "off": "Exact",
-          "tooltipOn": "Smoothed contours — click for exact",
-          "tooltipOff": "Exact contours (true triangulation) — click for smooth"
-        },
-        "northMode": {
-          "label": "North",
-          "on": "Grid",
-          "off": "True",
-          "tooltipOn": "Grid north — click for true north",
-          "tooltipOff": "True north — click for grid north"
-        },
-        "cutFillMode": {
-          "label": "Reference",
-          "on": "Surface",
-          "off": "Datum",
-          "tooltipOn": "Reference volumes to a comparison surface — click for datum",
-          "tooltipOff": "Reference volumes to a horizontal datum — click for surface"
-        },
-        "terrainVisible": {
-          "label": "Relief",
-          "on": "Hide",
-          "off": "Show",
-          "tooltipOn": "Hide the 3D terrain relief",
-          "tooltipOff": "Show the 3D terrain relief"
-        },
-        "terrainStyle": {
-          "label": "Colouring",
-          "on": "Hypsometric",
-          "off": "Monochrome",
-          "tooltipOn": "Hypsometric (colour) shading — click for monochrome",
-          "tooltipOff": "Monochrome (shaded) terrain — click for hypsometric (colour)"
-        },
-        "terrainAutoClip": {
-          "label": "Level cut",
-          "on": "No cut",
-          "off": "Cut at level",
-          "tooltipOn": "The terrain is cut at the active level's elevation — click to disable",
-          "tooltipOff": "Cut the terrain at the active level's elevation (the building stays whole)",
-          "hiddenTip": "Show the terrain first"
-        },
-        "intervalField": {
-          "label": "Interval (m)"
-        },
-        "indexField": {
-          "label": "Index every"
-        },
-        "gridStepField": {
-          "label": "Step (m)"
-        },
+        "import": { "label": "Import points" },
+        "breakline": { "label": "Breaklines", "clear": "Clear breaklines" },
+        "generate": { "label": "Generate contours" },
+        "autoBreakline": { "label": "Auto breaklines", "dialogTitle": "Automatic Breaklines" },
+        "geoRef": { "label": "Geo-referencing…", "dialogTitle": "Geo-referencing" },
+        "gridToggle": { "label": "EGSA87 grid" },
+        "gridBake": { "label": "Bake grid" },
+        "northToggle": { "label": "North arrow" },
+        "northBake": { "label": "Bake north" },
+        "pointLabels": { "label": "Point labels" },
+        "boundary": { "label": "Excavation boundary" },
+        "cutFill": { "label": "Cut/Fill volumes", "dialogTitle": "Earthwork Volumes" },
+        "qaRun": { "label": "Quality check", "dialogTitle": "Survey Quality Check" },
+        "qaClear": { "label": "Clear check" },
+        "cloudToggle": { "label": "Show point cloud" },
+        "cloudRemove": { "label": "Remove point cloud" },
+        "cloud": { "label": "Point cloud…", "dialogTitle": "3D Point Cloud", "emptyTip": "No point cloud imported — use “Import points”" },
+        "deliverables": { "label": "Export folder", "dialogTitle": "Survey Deliverables" },
+        "gridVisible": { "label": "Grid", "on": "Hide", "off": "Show", "tooltipOn": "Hide EGSA87 grid", "tooltipOff": "Show EGSA87 grid" },
+        "northVisible": { "label": "North", "on": "Hide", "off": "Show", "tooltipOn": "Hide north arrow", "tooltipOff": "Show north arrow" },
+        "cloudVisible": { "label": "Cloud", "on": "Hide", "off": "Show", "tooltipOn": "Hide 3D point cloud", "tooltipOff": "Show 3D point cloud" },
+        "contourStyle": { "label": "Contours", "on": "Smooth", "off": "Exact", "tooltipOn": "Smoothed contours — click for exact", "tooltipOff": "Exact contours (true triangulation) — click for smooth" },
+        "northMode": { "label": "North", "on": "Grid", "off": "True", "tooltipOn": "Grid north — click for true north", "tooltipOff": "True north — click for grid north" },
+        "cutFillMode": { "label": "Reference", "on": "Surface", "off": "Datum", "tooltipOn": "Reference volumes to a comparison surface — click for datum", "tooltipOff": "Reference volumes to a horizontal datum — click for surface" },
+        "terrainVisible": { "label": "Relief", "on": "Hide", "off": "Show", "tooltipOn": "Hide the 3D terrain relief", "tooltipOff": "Show the 3D terrain relief" },
+        "terrainStyle": { "label": "Colouring", "on": "Hypsometric", "off": "Monochrome", "tooltipOn": "Hypsometric (colour) shading — click for monochrome", "tooltipOff": "Monochrome (shaded) terrain — click for hypsometric (colour)" },
+        "terrainAutoClip": { "label": "Level cut", "on": "No cut", "off": "Cut at level", "tooltipOn": "The terrain is cut at the active level's elevation — click to disable", "tooltipOff": "Cut the terrain at the active level's elevation (the building stays whole)", "hiddenTip": "Show the terrain first" },
+        "intervalField": { "label": "Interval (m)" },
+        "indexField": { "label": "Index every" },
+        "gridStepField": { "label": "Step (m)" },
         "notify": {
           "contoursGenerated": "Generated {count} contours ({entities} entities)",
           "gridBaked": "Grid baked ({count} entities)",

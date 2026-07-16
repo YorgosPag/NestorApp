@@ -75,6 +75,7 @@ import {
   CutFillModeToggle,
   TerrainVisibleToggle,
   TerrainStyleToggle,
+  TerrainAutoClipToggle,
 } from './TopoRibbonToggleWidgets';
 import {
   ContourIntervalField,
@@ -315,6 +316,9 @@ function renderButton(button: RibbonButton): React.ReactNode {
     // ADR-662 Φ4 — contextual «Τοπογραφική Επιφάνεια»: quick ανάγλυφο + χρωματισμός.
     if (button.widgetId === 'topo-terrain-visible') {
       return <TerrainVisibleToggle key="topo-terrain-visible-widget" />;
+    }
+    if (button.widgetId === 'topo-terrain-autoclip') {
+      return <TerrainAutoClipToggle key="topo-terrain-autoclip-widget" />;
     }
     if (button.widgetId === 'topo-terrain-style') {
       return <TerrainStyleToggle key="topo-terrain-style-widget" />;
