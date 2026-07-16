@@ -6,10 +6,11 @@
  * @lazy ADR-294 Batch 3 — Extracted for dynamic import
  */
 
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 
 import { ParkingsHeader } from '@/components/space-management/ParkingPage/ParkingsHeader';
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
+import { DistributionCard } from '@/components/property-management/dashboard/DistributionCard';
 import { ParkingsList } from '@/components/space-management/ParkingPage/ParkingsList';
 import { ParkingDetails } from '@/components/space-management/ParkingPage/ParkingDetails';
 import { ParkingGridView } from '@/components/space-management/ParkingPage/ParkingGridView';
@@ -42,7 +43,6 @@ import {
 // ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrencyCompact } from '@/lib/intl-utils';
-import { DeleteConfirmDialog, SoftDeleteConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
@@ -50,7 +50,10 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { toggleSelect } from '@/lib/toggle-select';
 import type { ParkingSpot } from '@/types/parking';
 import { useParkingTrashState } from '@/hooks/useParkingTrashState';
+import { useEntityCreateForm } from '@/hooks/useEntityCreateForm';
+import { useListPageHeaderState } from '@/hooks/useListPageHeaderState';
 import { TrashActionsBar } from '@/components/shared/trash/TrashActionsBar';
+import { EntityTrashDialogs } from '@/components/shared/trash/EntityTrashDialogs';
 import '@/lib/design-system';
 
 const logger = createModuleLogger('ParkingPage');
@@ -113,35 +116,35 @@ export function ParkingPageContent() {
     trashCount,
     trashedParkingSpots,
     loadingTrash,
-    showPermanentDeleteDialog,
-    pendingPermanentDeleteIds,
+    permanentDelete,
     handleToggleTrash,
     handleRestoreParkingSpots,
     handlePermanentDeleteParkingSpots,
-    handleConfirmPermanentDelete,
-    handleCancelPermanentDelete,
   } = useParkingTrashState({
     forceDataRefresh: refetch,
     clearSelection: () => setSelectedParking(null),
   });
 
-  // Search state (for header search)
-  const [searchTerm, setSearchTerm] = React.useState('');
-  const [showMobileFilters, setShowMobileFilters] = React.useState(false);
+  // Header owns its own search + mobile-filter state; the page supplies what it owns.
+  const { headerProps, showFilters: showMobileFilters, setShowFilters: setShowMobileFilters } =
+    useListPageHeaderState({
+      viewMode,
+      setViewMode,
+      showDashboard,
+      setShowDashboard,
+      showTrash,
+      onToggleTrash: handleToggleTrash,
+      trashCount,
+    });
 
   // Delete parking state
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   // Create form state — reuses ParkingGeneralTab in create mode (single source of truth)
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const createSaveRef = useRef<(() => Promise<boolean>) | null>(null);
+  const { showCreateForm, openCreateForm, resetCreateForm, createSaveRef } = useEntityCreateForm();
 
   const { t: tParking } = useTranslation('parking');
-
-  const resetCreateForm = useCallback(() => {
-    setShowCreateForm(false);
-  }, []);
 
   const handleDeleteParking = useCallback(async () => {
     if (!selectedParking) return;
@@ -229,19 +232,7 @@ export function ParkingPageContent() {
   return (
     <PageContainer ariaLabel={t('pages.parking.pageLabel')}>
         {/* Header */}
-        <ParkingsHeader
-            viewMode={viewMode}
-            setViewMode={setViewMode}
-            showDashboard={showDashboard}
-            setShowDashboard={setShowDashboard}
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-            showFilters={showMobileFilters}
-            setShowFilters={setShowMobileFilters}
-            showTrash={showTrash}
-            onToggleTrash={handleToggleTrash}
-            trashCount={trashCount}
-          />
+        <ParkingsHeader {...headerProps} />
 
         {/* Dashboard */}
         {showDashboard && (
@@ -251,34 +242,22 @@ export function ParkingPageContent() {
               columns={6}
               additionalContainers={
                 <>
-                  <div className="bg-card rounded-lg border p-4">
-                    <h3 className="font-medium mb-3 flex items-center gap-2">
-                      <BarChart3 className={iconSizes.sm} />
-                      {t('pages.parking.dashboard.statusDistribution')}
-                    </h3>
-                    <div className="space-y-2">
-                      {Object.entries(stats.parkingByStatus).map(([status, count]) => (
-                        <div key={status} className="flex justify-between text-sm">
-                          <span>{PARKING_STATUS_LABELS[status as keyof typeof PARKING_STATUS_LABELS] || status}</span>
-                          <span className="font-medium">{count}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="bg-card rounded-lg border p-4">
-                    <h3 className="font-medium mb-3 flex items-center gap-2">
-                      <Car className={iconSizes.sm} />
-                      {t('pages.parking.dashboard.typeDistribution')}
-                    </h3>
-                    <div className="space-y-2">
-                      {Object.entries(stats.parkingByType).map(([type, count]) => (
-                        <div key={type} className="flex justify-between text-sm">
-                          <span>{PARKING_TYPE_LABELS[type as keyof typeof PARKING_TYPE_LABELS] || type}</span>
-                          <span className="font-medium">{count}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                  <DistributionCard
+                    title={t('pages.parking.dashboard.statusDistribution')}
+                    icon={BarChart3}
+                    distribution={stats.parkingByStatus}
+                    labelFor={(status) =>
+                      PARKING_STATUS_LABELS[status as keyof typeof PARKING_STATUS_LABELS] || status
+                    }
+                  />
+                  <DistributionCard
+                    title={t('pages.parking.dashboard.typeDistribution')}
+                    icon={Car}
+                    distribution={stats.parkingByType}
+                    labelFor={(type) =>
+                      PARKING_TYPE_LABELS[type as keyof typeof PARKING_TYPE_LABELS] || type
+                    }
+                  />
                 </>
               }
             />
@@ -314,7 +293,7 @@ export function ParkingPageContent() {
               selectedParking={selectedParking}
               onSelectParking={(p) => {
                 setSelectedParking(toggleSelect(selectedParking, p));
-                setShowCreateForm(false);
+                resetCreateForm();
               }}
             />
           ) : (
@@ -325,10 +304,10 @@ export function ParkingPageContent() {
                 selectedParking={selectedParking}
                 onSelectParking={(p) => {
                   setSelectedParking(toggleSelect(selectedParking, p));
-                  setShowCreateForm(false);
+                  resetCreateForm();
                 }}
                 onNewItem={showTrash ? undefined : () => {
-                  setShowCreateForm(true);
+                  openCreateForm();
                   setSelectedParking(null);
                 }}
               />
@@ -362,7 +341,7 @@ export function ParkingPageContent() {
                 <ParkingDetails
                   parking={selectedParking}
                   onNewParking={showTrash ? undefined : () => {
-                    setShowCreateForm(true);
+                    openCreateForm();
                     setSelectedParking(null);
                   }}
                   onDelete={showTrash ? undefined : () => setShowDeleteDialog(true)}
@@ -385,25 +364,17 @@ export function ParkingPageContent() {
           />
         </MobileDetailsSlideIn>
 
-        {/* Delete Parking Confirmation (move to trash) */}
-        <SoftDeleteConfirmDialog
-          open={showDeleteDialog}
-          onOpenChange={setShowDeleteDialog}
-          title={t('pages.parking.deleteDialog.title')}
-          description={t('pages.parking.deleteDialog.description', { number: selectedParking?.number ?? '' })}
-          onConfirm={handleDeleteParking}
-          loading={isDeleting}
-        />
-
-        {/* 🗑️ ADR-281: Permanent delete confirmation */}
-        <DeleteConfirmDialog
-          open={showPermanentDeleteDialog}
-          onOpenChange={(open) => { if (!open) handleCancelPermanentDelete(); }}
-          title={t('permanentDeleteDialog.title', { ns: 'trash' })}
-          description={t('permanentDeleteDialog.body', { ns: 'trash' })}
-          onConfirm={handleConfirmPermanentDelete}
-          loading={false}
-          disabled={pendingPermanentDeleteIds.length === 0}
+        {/* 🗑️ ADR-281: Soft-delete (move to trash) + permanent-delete confirmations */}
+        <EntityTrashDialogs
+          softDelete={{
+            open: showDeleteDialog,
+            title: t('pages.parking.deleteDialog.title'),
+            description: t('pages.parking.deleteDialog.description', { number: selectedParking?.number ?? '' }),
+            onConfirm: handleDeleteParking,
+            onCancel: () => setShowDeleteDialog(false),
+            deleting: isDeleting,
+          }}
+          permanentDelete={permanentDelete}
         />
       </PageContainer>
   );

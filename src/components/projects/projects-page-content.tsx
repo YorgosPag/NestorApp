@@ -30,10 +30,11 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { deleteProject } from '@/services/projects-client.service';
-import { DeleteConfirmDialog, SoftDeleteConfirmDialog } from '@/components/ui/ConfirmDialog';
+
 import { useDeletionGuard } from '@/hooks/useDeletionGuard';
 import { useProjectsTrashState } from '@/hooks/useProjectsTrashState';
 import { TrashActionsBar } from '@/components/shared/trash/TrashActionsBar';
+import { EntityTrashDialogs } from '@/components/shared/trash/EntityTrashDialogs';
 import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
 import { nowISO } from '@/lib/date-local';
@@ -156,13 +157,10 @@ export function ProjectsPageContent() {
     trashCount,
     trashedProjects,
     loadingTrash,
-    showPermanentDeleteDialog,
-    pendingPermanentDeleteIds,
+    permanentDelete,
     handleToggleTrash,
     handleRestoreProjects,
     handlePermanentDeleteProjects,
-    handleConfirmPermanentDelete,
-    handleCancelPermanentDelete,
     fetchTrashedProjects,
   } = useProjectsTrashState({
     forceDataRefresh: refetchProjects,
@@ -432,25 +430,17 @@ export function ProjectsPageContent() {
         {BlockedDialog}
 
         {/* 🏢 ENTERPRISE: Soft-delete confirmation (move to trash) */}
-        <SoftDeleteConfirmDialog
-          open={!!projectToDelete}
-          onOpenChange={(open) => { if (!open) setProjectToDelete(null); }}
-          title={t('moveToTrash', { ns: 'trash' })}
-          description={t('softDeleteDialog.description', { ns: 'trash' })}
-          onConfirm={handleConfirmDelete}
-          loading={isDeleting}
-          disabled={checkingDeletion}
-        />
-
-        {/* 🗑️ ADR-308: Permanent delete confirmation */}
-        <DeleteConfirmDialog
-          open={showPermanentDeleteDialog}
-          onOpenChange={(open) => { if (!open) handleCancelPermanentDelete(); }}
-          title={t('permanentDeleteDialog.title', { ns: 'trash' })}
-          description={t('permanentDeleteDialog.body', { ns: 'trash' })}
-          onConfirm={handleConfirmPermanentDelete}
-          loading={false}
-          disabled={pendingPermanentDeleteIds.length === 0}
+        <EntityTrashDialogs
+          softDelete={{
+            open: !!projectToDelete,
+            title: t('moveToTrash', { ns: 'trash' }),
+            description: t('softDeleteDialog.description', { ns: 'trash' }),
+            onConfirm: handleConfirmDelete,
+            onCancel: () => setProjectToDelete(null),
+            deleting: isDeleting,
+            checking: checkingDeletion,
+          }}
+          permanentDelete={permanentDelete}
         />
       </PageContainer>
   );

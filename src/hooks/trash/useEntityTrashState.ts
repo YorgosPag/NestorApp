@@ -19,7 +19,7 @@
  * @enterprise ADR-281 — SSOT Soft-Delete System · ADR-584 — Anti-Duplication
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { TrashService } from '@/services/trash.service';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -66,6 +66,21 @@ export interface EntityTrashOptions {
   notifyPermanentlyDeleted?: (count: number) => void;
 }
 
+/**
+ * The permanent-delete confirmation's whole state, ready to hand to `<EntityTrashDialogs>`.
+ *
+ * Exposed as one object rather than four loose fields on purpose: every page assembled the exact
+ * same `{ open, pendingIds, onConfirm, onCancel }` literal from them, which is boilerplate that
+ * reads as four independent decisions when it is really one. The engine owns the state, so the
+ * engine hands it over shaped.
+ */
+export interface PermanentDeleteDialogState {
+  open: boolean;
+  pendingIds: readonly string[];
+  onConfirm: () => Promise<void>;
+  onCancel: () => void;
+}
+
 export interface EntityTrashState<TItem> {
   showTrash: boolean;
   items: TItem[];
@@ -73,6 +88,8 @@ export interface EntityTrashState<TItem> {
   loadingTrash: boolean;
   showPermanentDeleteDialog: boolean;
   pendingPermanentDeleteIds: string[];
+  /** Ready-shaped for `<EntityTrashDialogs permanentDelete={…}>`. */
+  permanentDelete: PermanentDeleteDialogState;
   fetchTrashedItems: () => Promise<void>;
   handleToggleTrash: () => Promise<void>;
   handleTrashActionComplete: () => void;
@@ -189,6 +206,18 @@ export function useEntityTrashState<TItem extends { id?: string }>(
     });
   }, [refreshOn, fetchTrashedItems]);
 
+  const permanentDelete = useMemo<PermanentDeleteDialogState>(() => ({
+    open: showPermanentDeleteDialog,
+    pendingIds: pendingPermanentDeleteIds,
+    onConfirm: handleConfirmPermanentDelete,
+    onCancel: handleCancelPermanentDelete,
+  }), [
+    showPermanentDeleteDialog,
+    pendingPermanentDeleteIds,
+    handleConfirmPermanentDelete,
+    handleCancelPermanentDelete,
+  ]);
+
   return {
     showTrash,
     items,
@@ -196,6 +225,7 @@ export function useEntityTrashState<TItem extends { id?: string }>(
     loadingTrash,
     showPermanentDeleteDialog,
     pendingPermanentDeleteIds,
+    permanentDelete,
     fetchTrashedItems,
     handleToggleTrash,
     handleTrashActionComplete,

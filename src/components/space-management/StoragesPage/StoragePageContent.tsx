@@ -4,10 +4,11 @@
  * @lazy ADR-294 Batch 3 — Extracted for dynamic import
  */
 
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 
 import { StoragesHeader } from '@/components/space-management/StoragesPage/StoragesHeader';
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
+import { DistributionCard } from '@/components/property-management/dashboard/DistributionCard';
 import { StoragesList } from '@/components/space-management/StoragesPage/StoragesList';
 import { StorageDetails } from '@/components/space-management/StoragesPage/StorageDetails';
 import { StorageGridView } from '@/components/space-management/StoragesPage/StorageGridView';
@@ -35,14 +36,16 @@ import { ListContainer, PageContainer, DetailsContainer } from '@/core/container
 import { EntityDetailsHeader, createEntityAction } from '@/core/entity-headers';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { DeleteConfirmDialog, SoftDeleteConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
 import { createModuleLogger } from '@/lib/telemetry';
 import { toggleSelect } from '@/lib/toggle-select';
 import { useStoragesTrashState } from '@/hooks/useStoragesTrashState';
+import { useEntityCreateForm } from '@/hooks/useEntityCreateForm';
+import { useListPageHeaderState } from '@/hooks/useListPageHeaderState';
 import { TrashActionsBar } from '@/components/shared/trash/TrashActionsBar';
+import { EntityTrashDialogs } from '@/components/shared/trash/EntityTrashDialogs';
 import { useNotifications } from '@/providers/NotificationProvider';
 import '@/lib/design-system';
 
@@ -95,13 +98,10 @@ export function StoragePageContent() {
     trashCount,
     trashedStorages,
     loadingTrash,
-    showPermanentDeleteDialog,
-    pendingPermanentDeleteIds,
+    permanentDelete,
     handleToggleTrash,
     handleRestoreStorages,
     handlePermanentDeleteStorages,
-    handleConfirmPermanentDelete,
-    handleCancelPermanentDelete,
   } = useStoragesTrashState({
     forceDataRefresh: refetch,
     clearSelection: () => setSelectedStorage(null),
@@ -112,14 +112,9 @@ export function StoragePageContent() {
   const [isDeleting, setIsDeleting] = useState(false);
 
   // Create form state — reuses StorageGeneralTab in create mode (single source of truth)
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const createSaveRef = useRef<(() => Promise<boolean>) | null>(null);
+  const { showCreateForm, openCreateForm, resetCreateForm, createSaveRef } = useEntityCreateForm();
 
   const { t: tStorage } = useTranslation('storage');
-
-  const resetCreateForm = useCallback(() => {
-    setShowCreateForm(false);
-  }, []);
 
   const handleDeleteStorage = useCallback(async () => {
     if (!selectedStorage) return;
@@ -158,9 +153,17 @@ export function StoragePageContent() {
     { buildings }
   );
 
-  // Search state (for header search)
-  const [searchTerm, setSearchTerm] = React.useState('');
-  const [showMobileFilters, setShowMobileFilters] = React.useState(false);
+  // Header owns its own search + mobile-filter state; the page supplies what it owns.
+  const { headerProps, showFilters: showMobileFilters, setShowFilters: setShowMobileFilters } =
+    useListPageHeaderState({
+      viewMode,
+      setViewMode,
+      showDashboard,
+      setShowDashboard,
+      showTrash,
+      onToggleTrash: handleToggleTrash,
+      trashCount,
+    });
 
   // Dashboard stats from real data
   const dashboardStats: DashboardStat[] = [
@@ -226,19 +229,7 @@ export function StoragePageContent() {
   return (
     <PageContainer ariaLabel={t('pages.storage.pageLabel')}>
         {/* Header */}
-        <StoragesHeader
-            viewMode={viewMode}
-            setViewMode={setViewMode}
-            showDashboard={showDashboard}
-            setShowDashboard={setShowDashboard}
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-            showFilters={showMobileFilters}
-            setShowFilters={setShowMobileFilters}
-            showTrash={showTrash}
-            onToggleTrash={handleToggleTrash}
-            trashCount={trashCount}
-          />
+        <StoragesHeader {...headerProps} />
 
         {/* Dashboard */}
         {showDashboard && (
@@ -248,34 +239,18 @@ export function StoragePageContent() {
               columns={6}
               additionalContainers={
                 <>
-                  <div className="bg-card rounded-lg border p-4">
-                    <h3 className="font-medium mb-3 flex items-center gap-2">
-                      <BarChart3 className={iconSizes.sm} />
-                      {t('pages.storage.dashboard.statusDistribution')}
-                    </h3>
-                    <div className="space-y-2">
-                      {Object.entries(stats.storagesByStatus).map(([status, count]) => (
-                        <div key={status} className="flex justify-between text-sm">
-                          <span>{t(`pages.storage.statusLabels.${status}`)}</span>
-                          <span className="font-medium">{count}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="bg-card rounded-lg border p-4">
-                    <h3 className="font-medium mb-3 flex items-center gap-2">
-                      <MapPin className={iconSizes.sm} />
-                      {t('pages.storage.dashboard.typeDistribution')}
-                    </h3>
-                    <div className="space-y-2">
-                      {Object.entries(stats.storagesByType).map(([type, count]) => (
-                        <div key={type} className="flex justify-between text-sm">
-                          <span>{t(`pages.storage.typeLabels.${type}`)}</span>
-                          <span className="font-medium">{count}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                  <DistributionCard
+                    title={t('pages.storage.dashboard.statusDistribution')}
+                    icon={BarChart3}
+                    distribution={stats.storagesByStatus}
+                    labelFor={(status) => t(`pages.storage.statusLabels.${status}`)}
+                  />
+                  <DistributionCard
+                    title={t('pages.storage.dashboard.typeDistribution')}
+                    icon={MapPin}
+                    distribution={stats.storagesByType}
+                    labelFor={(type) => t(`pages.storage.typeLabels.${type}`)}
+                  />
                 </>
               }
             />
@@ -311,7 +286,7 @@ export function StoragePageContent() {
               selectedStorage={selectedStorage}
               onSelectStorage={(s) => {
                 setSelectedStorage(toggleSelect(selectedStorage, s));
-                setShowCreateForm(false);
+                resetCreateForm();
               }}
             />
           ) : (
@@ -322,10 +297,10 @@ export function StoragePageContent() {
                 selectedStorage={selectedStorage}
                 onSelectStorage={(s) => {
                   setSelectedStorage(toggleSelect(selectedStorage, s));
-                  setShowCreateForm(false);
+                  resetCreateForm();
                 }}
                 onNewItem={showTrash ? undefined : () => {
-                  setShowCreateForm(true);
+                  openCreateForm();
                   setSelectedStorage(null);
                 }}
               />
@@ -359,7 +334,7 @@ export function StoragePageContent() {
                 <StorageDetails
                   storage={selectedStorage}
                   onNewStorage={showTrash ? undefined : () => {
-                    setShowCreateForm(true);
+                    openCreateForm();
                     setSelectedStorage(null);
                   }}
                   onDelete={showTrash ? undefined : () => setShowDeleteDialog(true)}
@@ -383,25 +358,17 @@ export function StoragePageContent() {
           />
         </MobileDetailsSlideIn>
 
-        {/* Delete Storage Confirmation (move to trash) */}
-        <SoftDeleteConfirmDialog
-          open={showDeleteDialog}
-          onOpenChange={setShowDeleteDialog}
-          title={tStorage('pages.storage.deleteDialog.title')}
-          description={tStorage('pages.storage.deleteDialog.description', { name: selectedStorage?.name ?? '' })}
-          onConfirm={handleDeleteStorage}
-          loading={isDeleting}
-        />
-
-        {/* 🗑️ ADR-281: Permanent delete confirmation */}
-        <DeleteConfirmDialog
-          open={showPermanentDeleteDialog}
-          onOpenChange={(open) => { if (!open) handleCancelPermanentDelete(); }}
-          title={t('permanentDeleteDialog.title', { ns: 'trash' })}
-          description={t('permanentDeleteDialog.body', { ns: 'trash' })}
-          onConfirm={handleConfirmPermanentDelete}
-          loading={false}
-          disabled={pendingPermanentDeleteIds.length === 0}
+        {/* 🗑️ ADR-281: Soft-delete (move to trash) + permanent-delete confirmations */}
+        <EntityTrashDialogs
+          softDelete={{
+            open: showDeleteDialog,
+            title: tStorage('pages.storage.deleteDialog.title'),
+            description: tStorage('pages.storage.deleteDialog.description', { name: selectedStorage?.name ?? '' }),
+            onConfirm: handleDeleteStorage,
+            onCancel: () => setShowDeleteDialog(false),
+            deleting: isDeleting,
+          }}
+          permanentDelete={permanentDelete}
         />
       </PageContainer>
   );

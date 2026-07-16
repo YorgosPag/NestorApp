@@ -35,11 +35,12 @@ import { AdvancedFiltersPanel, buildingFiltersConfig } from '@/components/core/A
 import { ListContainer, PageContainer } from '@/core/containers';
 // [ENTERPRISE] i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { DeleteConfirmDialog, SoftDeleteConfirmDialog } from '@/components/ui/ConfirmDialog';
+
 import type { Building as BuildingType } from '@/types/building/contracts';
 import { useDeletionGuard } from '@/hooks/useDeletionGuard';
 import { useBuildingsTrashState } from '@/hooks/useBuildingsTrashState';
 import { TrashActionsBar } from '@/components/shared/trash/TrashActionsBar';
+import { EntityTrashDialogs } from '@/components/shared/trash/EntityTrashDialogs';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
@@ -150,14 +151,11 @@ export function BuildingsPageContent() {
     trashCount,
     trashedBuildings,
     loadingTrash,
-    showPermanentDeleteDialog,
-    pendingPermanentDeleteIds,
+    permanentDelete,
     handleToggleTrash,
     handleTrashActionComplete,
     handleRestoreBuildings,
     handlePermanentDeleteBuildings,
-    handleConfirmPermanentDelete,
-    handleCancelPermanentDelete,
     fetchTrashedBuildings,
     onBuildingMovedToTrash,
   } = useBuildingsTrashState({
@@ -310,6 +308,25 @@ export function BuildingsPageContent() {
     );
   }
 
+  // The desktop split layout and the mobile list render the SAME list, with the same props — only
+  // their surrounding <section> differs (breakpoint + aria-label). Built once so the two can never
+  // drift into passing different props for what the user reads as one list.
+  const buildingsList = (
+    <BuildingsList
+      buildings={showTrash ? trashedBuildings : baseFilteredBuildings}
+      selectedBuilding={selectedBuilding!}
+      onSelectBuilding={(building) => {
+        startTransition(() => {
+          setSelectedBuilding(toggleSelect(selectedBuilding, building));
+          setStartInEditMode(false);
+        });
+      }}
+      onNewBuilding={showTrash ? undefined : handleNewBuilding}
+      onEditBuilding={selectedBuilding && !showTrash ? handleEditBuilding : undefined}
+      onDeleteBuilding={selectedBuilding && !showTrash ? handleDeleteBuilding : undefined}
+    />
+  );
+
   return (
       <PageContainer ariaLabel={t('pages.buildings.pageLabel')}>
         <BuildingsHeader
@@ -368,19 +385,7 @@ export function BuildingsPageContent() {
             <>
               {/* [DESKTOP] Standard split layout */}
               <section className="hidden md:flex flex-1 gap-2 min-h-0 min-w-0 overflow-hidden" role="region" aria-label={t('pages.buildings.views.desktopView')}>
-                <BuildingsList
-                  buildings={showTrash ? trashedBuildings : baseFilteredBuildings}
-                  selectedBuilding={selectedBuilding!}
-                  onSelectBuilding={(building) => {
-                    startTransition(() => {
-                      setSelectedBuilding(toggleSelect(selectedBuilding, building));
-                      setStartInEditMode(false);
-                    });
-                  }}
-                  onNewBuilding={showTrash ? undefined : handleNewBuilding}
-                  onEditBuilding={selectedBuilding && !showTrash ? handleEditBuilding : undefined}
-                  onDeleteBuilding={selectedBuilding && !showTrash ? handleDeleteBuilding : undefined}
-                />
+                {buildingsList}
                 <BuildingDetails
                   building={selectedBuilding!}
                   onNewBuilding={showTrash ? undefined : handleNewBuilding}
@@ -398,19 +403,7 @@ export function BuildingsPageContent() {
 
               {/* [MOBILE] Show only BuildingsList when no building is selected */}
               <section className={`md:hidden w-full ${selectedBuilding ? 'hidden' : 'block'}`} role="region" aria-label={t('pages.buildings.views.mobileList')}>
-                <BuildingsList
-                  buildings={showTrash ? trashedBuildings : baseFilteredBuildings}
-                  selectedBuilding={selectedBuilding!}
-                  onSelectBuilding={(building) => {
-                    startTransition(() => {
-                      setSelectedBuilding(toggleSelect(selectedBuilding, building));
-                      setStartInEditMode(false);
-                    });
-                  }}
-                  onNewBuilding={showTrash ? undefined : handleNewBuilding}
-                  onEditBuilding={selectedBuilding && !showTrash ? handleEditBuilding : undefined}
-                  onDeleteBuilding={selectedBuilding && !showTrash ? handleDeleteBuilding : undefined}
-                />
+                {buildingsList}
               </section>
 
               {/* [MOBILE] Slide-in BuildingDetails when building is selected */}
@@ -463,26 +456,18 @@ export function BuildingsPageContent() {
         {/* 🛡️ ADR-226 Phase 3: Deletion Guard — blocked dialog */}
         {BlockedDialog}
 
-        {/* 🏢 ENTERPRISE: Delete confirmation (shown only when guard allows) */}
-        <SoftDeleteConfirmDialog
-          open={!!buildingToDelete}
-          onOpenChange={(open) => { if (!open) setBuildingToDelete(null); }}
-          title={t('details.deleteBuilding')}
-          description={t('details.confirmDelete', { name: buildingToDelete?.name ?? '' })}
-          onConfirm={handleConfirmDelete}
-          loading={isDeleting}
-          disabled={checkingDeletion}
-        />
-
-        {/* 🗑️ ADR-308: Permanent delete confirmation */}
-        <DeleteConfirmDialog
-          open={showPermanentDeleteDialog}
-          onOpenChange={(open) => { if (!open) handleCancelPermanentDelete(); }}
-          title={t('permanentDeleteDialog.title', { ns: 'trash' })}
-          description={t('permanentDeleteDialog.body', { ns: 'trash' })}
-          onConfirm={handleConfirmPermanentDelete}
-          loading={false}
-          disabled={pendingPermanentDeleteIds.length === 0}
+        {/* 🗑️ ADR-281/308: Soft-delete (guard-gated) + permanent-delete confirmations */}
+        <EntityTrashDialogs
+          softDelete={{
+            open: !!buildingToDelete,
+            title: t('details.deleteBuilding'),
+            description: t('details.confirmDelete', { name: buildingToDelete?.name ?? '' }),
+            onConfirm: handleConfirmDelete,
+            onCancel: () => setBuildingToDelete(null),
+            deleting: isDeleting,
+            checking: checkingDeletion,
+          }}
+          permanentDelete={permanentDelete}
         />
       </PageContainer>
   );

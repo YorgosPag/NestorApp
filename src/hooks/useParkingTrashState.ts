@@ -35,6 +35,7 @@ export function useParkingTrashState({
       trashCount: trash.trashCount,
       trashedParkingSpots: trash.items,
       loadingTrash: trash.loadingTrash,
+      permanentDelete: trash.permanentDelete,
       showPermanentDeleteDialog: trash.showPermanentDeleteDialog,
       pendingPermanentDeleteIds: trash.pendingPermanentDeleteIds,
       handleToggleTrash: trash.handleToggleTrash,
