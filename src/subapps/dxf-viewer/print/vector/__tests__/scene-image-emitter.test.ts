@@ -9,14 +9,24 @@
  */
 
 import type { Point2D } from '../../../rendering/types/Types';
-import { emitResolvedImage } from '../scene-image-emitter';
+import { emitResolvedImage, emitClippedImage } from '../scene-image-emitter';
 import type { ResolvedImagePlacement, ResolvedSceneImage } from '../scene-image-resolver';
 
-interface Call { args: readonly unknown[]; }
+interface Call { fn: string; args: readonly unknown[]; }
 
 function mockPdf(): { pdf: Record<string, unknown>; calls: Call[] } {
   const calls: Call[] = [];
-  const pdf = { addImage: (...args: unknown[]) => { calls.push({ args }); } };
+  const rec = (fn: string) => (...args: unknown[]) => { calls.push({ fn, args }); };
+  const pdf = {
+    addImage: rec('addImage'),
+    saveGraphicsState: rec('saveGraphicsState'),
+    restoreGraphicsState: rec('restoreGraphicsState'),
+    moveTo: rec('moveTo'),
+    lineTo: rec('lineTo'),
+    close: rec('close'),
+    clipEvenOdd: rec('clipEvenOdd'),
+    discardPath: rec('discardPath'),
+  };
   return { pdf, calls };
 }
 
@@ -85,5 +95,44 @@ describe('scene-image-emitter — placement math', () => {
     ]), identity);
     expect(calls).toHaveLength(3);
     expect(calls.every((c) => c.args[6] === 'a1')).toBe(true);
+  });
+});
+
+describe('scene-image-emitter — clip to hatch boundary', () => {
+  const tile: ResolvedImagePlacement = { bl: { x: 0, y: 0 }, br: { x: 2, y: 0 }, tl: { x: 0, y: 2 }, wWorld: 2, hWorld: 2 };
+
+  it('builds an even-odd clip path around the images, inside save/restore', () => {
+    const { pdf, calls } = mockPdf();
+    const boundary = [[{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 2 }, { x: 0, y: 2 }]];
+    emitClippedImage(pdf as never, boundary, resolved([tile]), identity);
+
+    const seq = calls.map((c) => c.fn);
+    expect(seq[0]).toBe('saveGraphicsState');
+    expect(seq[seq.length - 1]).toBe('restoreGraphicsState');
+    // outer loop → 1 moveTo + 3 lineTo + close, then clipEvenOdd + discardPath, then addImage.
+    expect(calls.filter((c) => c.fn === 'moveTo')).toHaveLength(1);
+    expect(calls.filter((c) => c.fn === 'lineTo')).toHaveLength(3);
+    expect(calls.filter((c) => c.fn === 'clipEvenOdd')).toHaveLength(1);
+    expect(seq.indexOf('clipEvenOdd')).toBeLessThan(seq.indexOf('addImage'));
+  });
+
+  it('islands (holes) → one subpath per loop, single even-odd clip', () => {
+    const { pdf, calls } = mockPdf();
+    const boundary = [
+      [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 10 }, { x: 0, y: 10 }], // outer
+      [{ x: 3, y: 3 }, { x: 6, y: 3 }, { x: 6, y: 6 }, { x: 3, y: 6 }],     // island
+    ];
+    emitClippedImage(pdf as never, boundary, resolved([tile]), identity);
+    expect(calls.filter((c) => c.fn === 'moveTo')).toHaveLength(2); // one per loop
+    expect(calls.filter((c) => c.fn === 'clipEvenOdd')).toHaveLength(1);
+  });
+
+  it('degenerate boundary (no valid loop) → no clip, still balanced save/restore', () => {
+    const { pdf, calls } = mockPdf();
+    emitClippedImage(pdf as never, [[{ x: 0, y: 0 }]], resolved([tile]), identity);
+    expect(calls.filter((c) => c.fn === 'clipEvenOdd')).toHaveLength(0);
+    expect(calls.filter((c) => c.fn === 'saveGraphicsState')).toHaveLength(1);
+    expect(calls.filter((c) => c.fn === 'restoreGraphicsState')).toHaveLength(1);
+    expect(calls.filter((c) => c.fn === 'addImage')).toHaveLength(1); // still drawn (unclipped)
   });
 });

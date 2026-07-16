@@ -59,23 +59,31 @@ export interface ImageTileGrid {
   readonly overflow: boolean;
 }
 
+/** Κοινό local frame (origin+angle+toWorld) + tile-index bbox range — SSoT για τα δύο grids. */
+interface TileFrame {
+  readonly toWorld: (lx: number, ly: number) => Point2D;
+  readonly k0: number;
+  readonly k1: number;
+  readonly m0: number;
+  readonly m1: number;
+  readonly tileW: number;
+  readonly tileH: number;
+}
+
 /**
- * Pure: πλέγμα τοποθέτησης tiles σε **πραγματική διάσταση** (Revit/ArchiCAD). Χτίζει local frame
- * στο `origin` (SSoT `resolveImageFillOrigin`) περιστραμμένο κατά `angle`, σαρώνει το bbox του
- * boundary σε δείκτες tile, και κρατά όσα tiles το κέντρο τους είναι ΜΕΣΑ στο boundary (even-odd
- * PIP → νησίδες = τρύπες). Degenerate tile/origin → κενό· grid πάνω από τα caps → `overflow`
- * (ο caller πέφτει σε solid). Χωρίς DOM → unit-testable.
+ * Χτίζει το local (rotated) frame στο `origin` (SSoT `resolveImageFillOrigin`) + το tile-index bbox
+ * του boundary. `frame:null` σε degenerate tile/origin/range· `overflow` όταν το grid ξεπερνά το scan
+ * cap (ο caller πέφτει σε solid). Χωρίς DOM → unit-testable. Κοινό από PIP-culled ΚΑΙ full grid.
  */
-export function buildImageTilePlacements(
+function buildTileFrame(
   paths: ReadonlyArray<ReadonlyArray<Point2D>>,
   imageFill: HatchImageFill,
-  cap: number = IMAGE_TILE_CAP,
-): ImageTileGrid {
+): { frame: TileFrame | null; overflow: boolean } {
   const tileW = imageFill.tileWidth;
   const tileH = imageFill.tileHeight || imageFill.tileWidth;
-  if (!(tileW > 0) || !(tileH > 0)) return { inserts: [], overflow: false };
+  if (!(tileW > 0) || !(tileH > 0)) return { frame: null, overflow: false };
   const origin = resolveImageFillOrigin(paths, imageFill);
-  if (!origin) return { inserts: [], overflow: false };
+  if (!origin) return { frame: null, overflow: false };
 
   const rad = ((imageFill.angle ?? 0) * Math.PI) / 180;
   const cos = Math.cos(rad);
@@ -86,26 +94,84 @@ export function buildImageTilePlacements(
   });
 
   const range = localTileRange(paths, origin, cos, sin, tileW, tileH);
-  if (!range) return { inserts: [], overflow: false };
-  const { k0, k1, m0, m1 } = range;
-  if ((k1 - k0) * (m1 - m0) > IMAGE_GRID_SCAN_CAP) return { inserts: [], overflow: true };
+  if (!range) return { frame: null, overflow: false };
+  if ((range.k1 - range.k0) * (range.m1 - range.m0) > IMAGE_GRID_SCAN_CAP) {
+    return { frame: null, overflow: true };
+  }
+  return { frame: { toWorld, ...range, tileW, tileH }, overflow: false };
+}
 
-  const rings = paths.map((p) => p.map((pt) => ({ x: pt.x, y: pt.y, z: 0 })));
-  const inside = (w: Point2D): boolean => {
-    let c = false;
-    for (const r of rings) if (pointInPolygon(w, r)) c = !c;
-    return c;
-  };
+/**
+ * Pure: πλέγμα τοποθέτησης tiles σε **πραγματική διάσταση** (Revit/ArchiCAD) — κρατά όσα tiles το
+ * κέντρο τους είναι ΜΕΣΑ στο boundary (even-odd PIP → νησίδες = τρύπες). Για το **DXF** export, όπου
+ * ΔΕΝ υπάρχει clip: τα whole tiles προσεγγίζουν το σχήμα. Degenerate → κενό· grid > cap → `overflow`.
+ */
+/** Predicate που κρατά ΟΛΑ τα tiles (full grid — το clip κόβει downstream). */
+const TILE_KEEP_ALL = (): boolean => true;
 
+/**
+ * Σαρώνει το tile-index bbox του `frame`· κρατά όσα tiles `keep(center)` = true (κάτω-αριστερή γωνία
+ * ανά κρατημένο). `overflow` όταν ξεπεραστεί το `cap`. ΕΝΑ loop SSoT για PIP-culled ΚΑΙ full grid.
+ */
+function collectTiles(
+  frame: TileFrame, cap: number, keep: (center: Point2D) => boolean,
+): ImageTileGrid {
+  const { toWorld, k0, k1, m0, m1, tileW, tileH } = frame;
   const inserts: Point2D[] = [];
   for (let k = k0; k < k1; k += 1) {
     for (let m = m0; m < m1; m += 1) {
-      if (!inside(toWorld((k + 0.5) * tileW, (m + 0.5) * tileH))) continue;
+      if (!keep(toWorld((k + 0.5) * tileW, (m + 0.5) * tileH))) continue;
       inserts.push(toWorld(k * tileW, m * tileH));
       if (inserts.length > cap) return { inserts: [], overflow: true };
     }
   }
   return { inserts, overflow: false };
+}
+
+/** Κοινό frame-setup + tile scan (SSoT). `cull` → even-odd PIP (DXF)· αλλιώς full grid (clipped PDF). */
+function buildTiles(
+  paths: ReadonlyArray<ReadonlyArray<Point2D>>,
+  imageFill: HatchImageFill,
+  cap: number,
+  cull: boolean,
+): ImageTileGrid {
+  const { frame, overflow } = buildTileFrame(paths, imageFill);
+  if (!frame) return { inserts: [], overflow };
+  return collectTiles(frame, cap, cull ? makeInsideBoundary(paths) : TILE_KEEP_ALL);
+}
+
+/** Even-odd point-in-polygon predicate πάνω σε ΟΛΑ τα boundary loops (νησίδες = τρύπες). */
+function makeInsideBoundary(
+  paths: ReadonlyArray<ReadonlyArray<Point2D>>,
+): (w: Point2D) => boolean {
+  const rings = paths.map((p) => p.map((pt) => ({ x: pt.x, y: pt.y, z: 0 })));
+  return (w: Point2D): boolean => {
+    let c = false;
+    for (const r of rings) if (pointInPolygon(w, r)) c = !c;
+    return c;
+  };
+}
+
+/** DXF export (no clip): whole tiles με κέντρο ΜΕΣΑ στο boundary προσεγγίζουν το σχήμα. */
+export function buildImageTilePlacements(
+  paths: ReadonlyArray<ReadonlyArray<Point2D>>,
+  imageFill: HatchImageFill,
+  cap: number = IMAGE_TILE_CAP,
+): ImageTileGrid {
+  return buildTiles(paths, imageFill, cap, true);
+}
+
+/**
+ * Πλέγμα ΟΛΩΝ των tiles που καλύπτουν το bbox — **ΧΩΡΙΣ** PIP culling. Για το **vector PDF** (ADR-608)
+ * όπου το tiling κόβεται με `clip` στο boundary: εκεί πρέπει να μπουν ΚΑΙ τα οριακά tiles (κέντρο εκτός
+ * boundary αλλά μερική επικάλυψη μέσα), αλλιώς μένουν τριγωνικά **κενά** στις ακμές.
+ */
+export function buildImageTileFullGrid(
+  paths: ReadonlyArray<ReadonlyArray<Point2D>>,
+  imageFill: HatchImageFill,
+  cap: number = IMAGE_TILE_CAP,
+): ImageTileGrid {
+  return buildTiles(paths, imageFill, cap, false);
 }
 
 /** Εύρος δεικτών tile (στήλες k, σειρές m) που καλύπτει το boundary στο local (origin+angle) frame. */
@@ -198,7 +264,7 @@ export async function resolveImageFillsForDxf(
 }
 
 /** Ανάλυση πηγής εικόνας για export: source + intrinsic dims + πώς παίρνουμε το raster. */
-interface PreparedExportSource {
+export interface PreparedExportSource {
   readonly source: CanvasImageSource;
   readonly pixelW: number;
   readonly pixelH: number;
@@ -211,9 +277,10 @@ interface PreparedExportSource {
 /**
  * ADR-653 — resolve την πηγή για export: procedural (Φ9, γεννημένο canvas· μηδέν URL/decode),
  * raster+tint (Φ8, duotone canvas) ή σκέτο raster (ADR-643). `null` σε αποτυχία decode/γέννησης
- * (ο caller πέφτει σε solid). Ίδιες γεννήτριες/tint με την οθόνη → πιστό export.
+ * (ο caller πέφτει σε solid). Ίδιες γεννήτριες/tint με την οθόνη → πιστό export. Κοινό SSoT με το
+ * PDF resolver (`scene-image-resolver.ts`) ώστε DXF & PDF να αποδίδουν το ΙΔΙΟ υλικό (N.18).
  */
-async function prepareExportSource(fill: HatchImageFill): Promise<PreparedExportSource | null> {
+export async function prepareExportSource(fill: HatchImageFill): Promise<PreparedExportSource | null> {
   if (fill.procedural) {
     const canvas = renderProceduralTile(fill.procedural, fill.tileWidth, fill.tileHeight || fill.tileWidth);
     if (!canvas) return null;
@@ -231,8 +298,8 @@ async function prepareExportSource(fill: HatchImageFill): Promise<PreparedExport
   };
 }
 
-/** Narrow σε image-fill hatch (fillType==='image' + imageFill)· αλλιώς `null`. */
-function asImageHatch(e: Entity): HatchEntity | null {
+/** Narrow σε image-fill hatch (fillType==='image' + imageFill)· αλλιώς `null`. Κοινό SSoT (N.18). */
+export function asImageHatch(e: Entity): HatchEntity | null {
   if (e.type !== 'hatch') return null;
   const h = e as HatchEntity;
   return h.fillType === 'image' && h.imageFill ? h : null;
@@ -244,7 +311,7 @@ function downgradeToSolid(hatch: HatchEntity, hex: string): HatchEntity {
 }
 
 /** Reuse `averageImageColor` (→ `rgb(r,g,b)`) + μετατροπή σε hex (για το ACI cascade). `null` σε αποτυχία. */
-function averageImageColorHex(img: CanvasImageSource): string | null {
+export function averageImageColorHex(img: CanvasImageSource): string | null {
   const rgb = averageImageColor(img);
   const m = rgb ? /rgb\((\d+),\s*(\d+),\s*(\d+)\)/.exec(rgb) : null;
   if (!m) return null;

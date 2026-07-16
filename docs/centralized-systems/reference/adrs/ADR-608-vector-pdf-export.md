@@ -166,17 +166,28 @@ Import pipeline (καθρέφτης του export, additive πάνω στους 
   - **Sync compositor** `print/vector/scene-image-emitter.ts` (`emitResolvedImage`): world corners →
     `pdf.addImage(x, y, w, h, alias, 'FAST', rotationDeg)`. Placement math = ο ΙΔΙΟΣ eu/ev μηχανισμός
     του on-screen `ImageRenderer`, εκφρασμένος στο built-in rotation του jsPDF (pivot=κάτω-αριστερά,
-    `r = atan2(−rightY, rightX)`). Κοινό `alias` ⇒ ο jsPDF ενσωματώνει τα bytes ΜΙΑ φορά (N tiles → 1 embed).
+    `r = normalizeAngleDeg(atan2(−rightY, rightX))`). Κοινό `alias` ⇒ bytes ΜΙΑ φορά (N tiles → 1 embed).
+  - **Boundary clip + full grid** (`emitClippedImage`, follow-up Giorgio — «η υφή κόβεται βίαια/οδοντωτά,
+    δεν ακολουθεί το περίγραμμα» → μετά «αφήνει κενά»): τα image-fill tiles κόβονται στο πολύγωνο του
+    hatch με `moveTo/lineTo/close` (ίδιο paper-mm Y-down space με το `addImage`) + `clipEvenOdd` (νησίδες
+    → τρύπες) + `discardPath`, μέσα σε `saveGraphicsState/restoreGraphicsState`. Parity με τον on-screen
+    `HatchRenderer.ctx.clip()`. **Κρίσιμο:** ο resolver χρησιμοποιεί `buildImageTileFullGrid` (ΟΛΟ το
+    bbox, **ΧΩΡΙΣ** PIP culling, cap 4000) — αλλιώς τα οριακά tiles (κέντρο εκτός boundary) πέφτουν και
+    μένουν τριγωνικά **κενά** στις ακμές· το clip κόβει το ξεχείλισμα. Το DXF export κρατά το PIP grid
+    (`buildImageTilePlacements`, no clip). `ImageEntity` δεν κόβεται (είναι το ίδιο rect).
+    **SSoT (N.18):** το grid (`buildTileFrame`/`collectTiles`), η ανάλυση πηγής (`prepareExportSource`),
+    το μέσο-χρώμα (`averageImageColorHex`) και το `asImageHatch` ΕΞΑΧΘΗΚΑΝ από το `image-fill-export.ts`
+    και μοιράζονται DXF+PDF (jscpd:diff clean, μηδέν δίδυμα).
   - **Emitter** (`scene-vector-emitter.ts`): `SceneVectorEmitParams` += `images`· νέο `case 'image'`·
-    το `emitHatch` προτιμά resolved tiles / solid fallback (decode-fail/overflow → μέσο ή hatch χρώμα,
-    γεμίζει το boundary) πριν το faces/outline. **Inline compositing** στη σειρά array ⇒ z-order σωστό
-    (ADR-661) με τις γραμμές. `captureCurrent2dViewVector` → **async** (τρέχει τον resolver)·
-    `print-service.capture2dScene`/`runPrintSet` await.
+    το `emitHatch` προτιμά resolved tiles (clipped) / solid fallback (decode-fail/overflow → μέσο ή
+    hatch χρώμα, γεμίζει το boundary) πριν το faces/outline. **Inline compositing** στη σειρά array ⇒
+    z-order σωστό (ADR-661) με τις γραμμές. `captureCurrent2dViewVector` → **async** (τρέχει τον
+    resolver)· `print-service.capture2dScene`/`runPrintSet` await.
   - **Fallbacks (mirror ADR-643/651 DXF):** image-fill decode-fail/tile-overflow → solid downgrade·
-    `ImageEntity` decode-fail → σιωπηλή παράλειψη. **Εκτός v1 (DEFER):** boundary-clip των tiles
-    (`pdf.clip()` — αν φαίνεται edge bleed), grout, mono-plot desaturation εικόνας.
-  - **Tests:** +7 `scene-image-emitter` (placement/rotation/wrap/degenerate) +5 `scene-vector-emitter`
-    (image/tiles/solid-fallback/z-order/skip) +1 `capture-2d-vector` (async pre-pass) = **46 GREEN**.
+    `ImageEntity` decode-fail → σιωπηλή παράλειψη. **Εκτός (DEFER):** grout, mono-plot desaturation εικόνας.
+  - **Tests:** +10 `scene-image-emitter` (placement/rotation/wrap/degenerate + clip/islands/balanced)
+    +5 `scene-vector-emitter` (image/tiles-clipped/solid-fallback/z-order/skip) +1 `capture-2d-vector`
+    (async pre-pass) — **88 GREEN** στο print suite. jscpd:diff clean.
   - Αγγίζει ΜΟΝΟ το vector print path — μηδέν αλλαγή σε on-screen renderer / raster capture / DXF export.
 - **2026-07-13** — **Καμία αλλαγή στο συμβόλαιο** του vector backend, μία στη σημασία της `area`
   (ADR-651 Φάση ΣΤ / ADR-453): όταν το φύλλο φέρει πινακίδα, το `draw(pdf, area)` καλείται με την

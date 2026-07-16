@@ -22,6 +22,7 @@ jest.mock('../../../rendering/entities/shared/material-image-resolver', () => ({
 
 import {
   buildImageTilePlacements,
+  buildImageTileFullGrid,
   resolveImageFillsForDxf,
   IMAGE_TILE_CAP,
 } from '../image-fill-export';
@@ -90,6 +91,44 @@ describe('buildImageTilePlacements — pure tile-grid (real tile size)', () => {
 
   it('IMAGE_TILE_CAP = 400 (σταθερό όριο ασφαλείας)', () => {
     expect(IMAGE_TILE_CAP).toBe(400);
+  });
+});
+
+// ─── 1b. buildImageTileFullGrid — full bbox grid (no PIP, για το clipped PDF) ──
+
+describe('buildImageTileFullGrid — full bbox grid (no PIP culling)', () => {
+  const fill = (over: Partial<HatchImageFill> = {}): HatchImageFill => ({
+    assetId: 'a', tileWidth: 600, tileHeight: 600, ...over,
+  });
+
+  it('τετράγωνο 1200 / tile 600 → 4 tiles (ίδιο με PIP όταν όλα τα κέντρα μέσα)', () => {
+    const g = buildImageTileFullGrid([square(1200)], fill());
+    expect(g.overflow).toBe(false);
+    expect(g.inserts).toHaveLength(4);
+  });
+
+  it('νησίδα → ΚΡΑΤΑ και το tile με κέντρο στην τρύπα (το clip θα το κόψει): 4, όχι 3', () => {
+    const outer = square(1200);
+    const hole: Point2D[] = [
+      { x: 150, y: 150 }, { x: 450, y: 150 }, { x: 450, y: 450 }, { x: 150, y: 450 },
+    ];
+    const full = buildImageTileFullGrid([outer, hole], fill());
+    const pip = buildImageTilePlacements([outer, hole], fill());
+    expect(full.inserts).toHaveLength(4); // όλα τα bbox tiles
+    expect(pip.inserts).toHaveLength(3);  // PIP πετά το «hole» tile
+    expect(full.inserts).toContainEqual({ x: 0, y: 0 }); // το οριακό tile ΜΕΝΕΙ
+  });
+
+  it('degenerate tile (tileWidth=0) → κενό, όχι overflow', () => {
+    expect(buildImageTileFullGrid([square(1200)], fill({ tileWidth: 0 }))).toEqual(
+      { inserts: [], overflow: false },
+    );
+  });
+
+  it('πλήθος tiles πάνω από το cap → overflow', () => {
+    const g = buildImageTileFullGrid([square(1800)], fill(), 4); // 3×3=9 tiles, cap 4
+    expect(g.overflow).toBe(true);
+    expect(g.inserts).toHaveLength(0);
   });
 });
 

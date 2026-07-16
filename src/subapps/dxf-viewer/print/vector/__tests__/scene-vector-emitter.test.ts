@@ -29,6 +29,13 @@ function mockPdf(): { pdf: Record<string, unknown>; calls: Call[] } {
     lines: rec('lines'),
     text: rec('text'),
     addImage: rec('addImage'),
+    saveGraphicsState: rec('saveGraphicsState'),
+    restoreGraphicsState: rec('restoreGraphicsState'),
+    moveTo: rec('moveTo'),
+    lineTo: rec('lineTo'),
+    close: rec('close'),
+    clipEvenOdd: rec('clipEvenOdd'),
+    discardPath: rec('discardPath'),
   };
   return { pdf, calls };
 }
@@ -219,8 +226,11 @@ describe('scene-vector-emitter — hybrid image compositing (ADR-608)', () => {
     expect([x, y, w, h, rot]).toEqual([0, 96, 10, 4, 0]);
   });
 
-  it('image-fill hatch (resolved) → one addImage per tile sharing the alias', () => {
-    const e = { id: 'h1', type: 'hatch', layerId: '0', fillType: 'image', boundaryPaths: [[{ x: 0, y: 0 }]] };
+  it('image-fill hatch (resolved) → tiles clipped to the boundary, sharing the alias', () => {
+    const e = {
+      id: 'h1', type: 'hatch', layerId: '0', fillType: 'image',
+      boundaryPaths: [[{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 2 }, { x: 0, y: 2 }]],
+    };
     const twoTiles = {
       dataUrl: 'data:tile', alias: 'mat-x',
       placements: [
@@ -229,9 +239,19 @@ describe('scene-vector-emitter — hybrid image compositing (ADR-608)', () => {
       ],
     };
     const images = { images: new Map([['h1', twoTiles]]), solidFallbacks: new Map(), warnings: [] };
-    const calls = only(emit([e as unknown as Entity], baseParams.colorPolicy, images), 'addImage');
-    expect(calls).toHaveLength(2);
-    expect(calls.every((c) => c.args[6] === 'mat-x')).toBe(true); // shared alias → 1 embed
+    const all = emit([e as unknown as Entity], baseParams.colorPolicy, images);
+    const imgs = only(all, 'addImage');
+    expect(imgs).toHaveLength(2);
+    expect(imgs.every((c) => c.args[6] === 'mat-x')).toBe(true); // shared alias → 1 embed
+    // The tiles are clipped to the boundary polygon (mirror on-screen ctx.clip).
+    expect(only(all, 'clipEvenOdd')).toHaveLength(1);
+    expect(only(all, 'moveTo')).toHaveLength(1); // one subpath (outer loop)
+    expect(only(all, 'lineTo')).toHaveLength(3); // 4-vertex loop → 3 lineTo after moveTo
+    // clip is set BEFORE the images, and the graphics state is saved/restored around it.
+    const seq = all.map((c) => c.fn);
+    expect(seq.indexOf('saveGraphicsState')).toBeLessThan(seq.indexOf('clipEvenOdd'));
+    expect(seq.indexOf('clipEvenOdd')).toBeLessThan(seq.indexOf('addImage'));
+    expect(seq.lastIndexOf('addImage')).toBeLessThan(seq.indexOf('restoreGraphicsState'));
   });
 
   it('image-fill hatch (solid fallback) → filled boundary (pdf.lines style F), no addImage', () => {

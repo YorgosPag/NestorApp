@@ -28,19 +28,23 @@ import type { Entity, HatchEntity, HatchImageFill } from '../../types/entities';
 import type { ImageEntity } from '../../types/image';
 import { isImageEntity } from '../../types/image';
 import type { Point2D } from '../../rendering/types/Types';
-import { buildImageTilePlacements } from '../../export/core/image-fill-export';
+// SSoT reuse (N.18) — το tile grid, η ανάλυση πηγής (procedural/tint/raster) και το μέσο-χρώμα-hex
+// ΕΙΝΑΙ τα ίδια με το DXF image-fill export· τα εισάγουμε αντί να τα κλωνοποιήσουμε.
 import {
-  decodeImageWithTimeout, withTimeout, IMAGE_OP_TIMEOUT_MS,
-} from '../../export/core/image-export-shared';
-import { resolveMaterialImageSrc } from '../../rendering/entities/shared/material-image-resolver';
-import { renderProceduralTile } from '../../rendering/entities/shared/procedural-tile-render';
-import { applyDuotoneTint } from '../../rendering/entities/shared/hatch-image-tint';
+  buildImageTileFullGrid, prepareExportSource, averageImageColorHex, asImageHatch,
+} from '../../export/core/image-fill-export';
+import { decodeImageWithTimeout } from '../../export/core/image-export-shared';
 import { imageFillVariantKey } from '../../rendering/entities/shared/hatch-image-variant-key';
-import { averageImageColor } from '../../rendering/entities/shared/hatch-image-paint';
 import { createRectangleVertices } from '../../rendering/entities/shared/geometry-utils';
 
 /** Ουδέτερο γκρι όταν λείπει κάθε άλλη πληροφορία χρώματος. */
 const DEFAULT_SOLID_HEX = '#808080';
+/**
+ * Cap tiles για το clipped PDF full grid. Ψηλότερο από το DXF default (400) γιατί το full grid
+ * καλύπτει ΟΛΟ το bbox (και τα οριακά) και το clip τα κόβει — θέλουμε να μη πέφτουμε σε solid για
+ * μεγάλες textured επιφάνειες. Φράχτης ώστε το content-stream να μη φουσκώνει ανεξέλεγκτα.
+ */
+const PDF_TILE_CAP = 4000;
 
 /** Ένα rect placement σε **world** συντεταγμένες (ο emitter το mappάρει σε paper mm). */
 export interface ResolvedImagePlacement {
@@ -125,19 +129,21 @@ async function resolveImageFillHatch(
   warnings: string[],
 ): Promise<void> {
   const fill = hatch.imageFill as HatchImageFill;
-  const prepared = await prepareFillSource(fill);
+  // Κοινή ανάλυση πηγής με το DXF export (procedural/tint/raster) — ίδιο υλικό, ίδια απόδοση.
+  const prepared = await prepareExportSource(fill);
   if (!prepared) { solids.set(hatch.id, fallbackHex(hatch)); warnings.push('image-fill:decode-failed'); return; }
 
-  const grid = buildImageTilePlacements(hatch.boundaryPaths, fill);
+  // Full grid (ΧΩΡΙΣ PIP) — το clip στον emitter κόβει τα οριακά tiles στο boundary (μηδέν κενά).
+  const grid = buildImageTileFullGrid(hatch.boundaryPaths, fill, PDF_TILE_CAP);
   if (grid.overflow || grid.inserts.length === 0) {
-    solids.set(hatch.id, averageHex(prepared.source) ?? fallbackHex(hatch));
+    solids.set(hatch.id, averageImageColorHex(prepared.source) ?? fallbackHex(hatch));
     if (grid.overflow) warnings.push('image-fill:tile-overflow');
     return;
   }
 
   const dataUrl = sourceToPngDataUrl(prepared.source, prepared.pixelW, prepared.pixelH);
   if (!dataUrl) {
-    solids.set(hatch.id, averageHex(prepared.source) ?? fallbackHex(hatch));
+    solids.set(hatch.id, averageImageColorHex(prepared.source) ?? fallbackHex(hatch));
     warnings.push('image-fill:encode-failed');
     return;
   }
@@ -151,30 +157,6 @@ async function resolveImageFillHatch(
   });
 }
 
-/** Πηγή για το tile: procedural (γεννημένο canvas) / duotone-tinted / σκέτο decoded raster. */
-async function prepareFillSource(
-  fill: HatchImageFill,
-): Promise<{ source: CanvasImageSource; pixelW: number; pixelH: number } | null> {
-  if (fill.procedural) {
-    const c = renderProceduralTile(fill.procedural, fill.tileWidth, fill.tileHeight || fill.tileWidth);
-    return c ? { source: c, pixelW: c.width, pixelH: c.height } : null;
-  }
-  const img = await decodeFillImage(fill.assetId);
-  if (!img) return null;
-  const tinted = fill.tint ? applyDuotoneTint(img, fill.tint) : null;
-  return { source: tinted ?? img, pixelW: img.naturalWidth, pixelH: img.naturalHeight };
-}
-
-/** assetId → URL (asset catalog / user upload) → decode-with-timeout. `null` σε αποτυχία. */
-async function decodeFillImage(assetId: string): Promise<HTMLImageElement | null> {
-  try {
-    const src = (await withTimeout(resolveMaterialImageSrc(assetId), IMAGE_OP_TIMEOUT_MS)) ?? assetId;
-    return await decodeImageWithTimeout(src);
-  } catch {
-    return null;
-  }
-}
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /** Rect placement από κάτω-αριστερή γωνία + διαστάσεις + γωνία (pivot=corner1, ίδιο SSoT). */
@@ -184,25 +166,9 @@ function rectPlacement(bl: Point2D, w: number, h: number, angleDeg: number): Res
   return { bl: corners[0], br: corners[1], tl: corners[3], wWorld: w, hWorld: h };
 }
 
-/** Narrow σε image-fill hatch (`type:'hatch'` + `fillType:'image'` + `imageFill`)· αλλιώς `null`. */
-function asImageHatch(e: Entity): HatchEntity | null {
-  if (e.type !== 'hatch') return null;
-  const h = e as HatchEntity;
-  return h.fillType === 'image' && h.imageFill ? h : null;
-}
-
 /** Solid-fallback χρώμα ενός hatch όταν λείπει decoded source (hatch χρώμα ή ουδέτερο). */
 function fallbackHex(hatch: HatchEntity): string {
   return hatch.color ?? hatch.fillColor ?? DEFAULT_SOLID_HEX;
-}
-
-/** Μέσο χρώμα εικόνας → hex (reuse `averageImageColor` → `rgb(...)`). `null` σε αποτυχία/taint. */
-function averageHex(source: CanvasImageSource): string | null {
-  const rgb = averageImageColor(source);
-  const m = rgb ? /rgb\((\d+),\s*(\d+),\s*(\d+)\)/.exec(rgb) : null;
-  if (!m) return null;
-  const toHex = (n: string): string => Number(n).toString(16).padStart(2, '0');
-  return `#${toHex(m[1])}${toHex(m[2])}${toHex(m[3])}`;
 }
 
 /**

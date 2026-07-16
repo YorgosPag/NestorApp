@@ -42,7 +42,7 @@ import type { DimensionLookup } from '../../systems/dimensions/dim-geometry-buil
 import { getDimStyleRegistry } from '../../systems/dimensions/dim-style-registry';
 import { projectSceneTextToDxf, type TextSceneShape } from '../../bim/text/project-scene-text';
 import type { SceneImageResolution } from './scene-image-resolver';
-import { emitResolvedImage } from './scene-image-emitter';
+import { emitResolvedImage, emitClippedImage } from './scene-image-emitter';
 
 /** mm → typographic points (jsPDF `setFontSize` unit). 1pt = 1/72 in = 25.4/72 mm. */
 const PT_PER_MM = 72 / 25.4;
@@ -187,9 +187,11 @@ function emitHatch(
   pdf: jsPDF, e: HatchEntity, params: SceneVectorEmitParams, toPaper: (p: Point2D) => Point2D,
 ): void {
   // ADR-608 hybrid — image-fill («Εικόνα»): προ-resolved raster tiles ή solid downgrade
-  // (decode-fail / tile-overflow) από το pre-pass. Προηγείται των faces/outline.
+  // (decode-fail / tile-overflow) από το pre-pass. Προηγείται των faces/outline. Τα tiles
+  // κόβονται στο boundary του hatch (parity με τον on-screen `ctx.clip()`) → η υφή ακολουθεί
+  // το περίγραμμα αντί να σχηματίζει οδοντωτή ορθογώνια σκάλα.
   const resolved = params.images.images.get(e.id);
-  if (resolved) { emitResolvedImage(pdf, resolved, toPaper); return; }
+  if (resolved) { emitClippedImage(pdf, e.boundaryPaths ?? [], resolved, toPaper); return; }
   const solidHex = params.images.solidFallbacks.get(e.id);
   if (solidHex) { fillHatchSolid(pdf, e, solidHex, toPaper); return; }
 
