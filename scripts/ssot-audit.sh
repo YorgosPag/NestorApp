@@ -27,11 +27,12 @@ if [[ ! -f "$BASELINE_FILE" ]]; then
     exit 1
 fi
 
-if [[ ! -f "$FLAT_FILE" ]]; then
-    echo -e "${YELLOW}⚠️  Flat registry not found. Regenerating...${NC}"
-    bash scripts/generate-ssot-baseline.sh
-    exit 0
-fi
+# Always regenerate: the flat file is a derived, gitignored cache of
+# .ssot-registry.json and this report is the only thing left that reads it.
+# It used to be rebuilt only `if [[ ! -f ]]` — and via generate-ssot-baseline.sh,
+# which writes the *baseline*, not this file. So it never got rebuilt at all and
+# drifted by hand for 3 days (ADR-294, 2026-07-16). Regenerating is ~10ms.
+node scripts/generate-ssot-flat-registry.js > /dev/null
 
 # ── Parse flat file ──
 EXEMPT_REGEX=""

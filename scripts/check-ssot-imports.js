@@ -20,6 +20,8 @@
 const fs   = require('node:fs');
 const path = require('node:path');
 
+const { renderFlatRegistry } = require('./generate-ssot-flat-registry');
+
 // ---------------------------------------------------------------------------
 // ANSI (matches bash original)
 // ---------------------------------------------------------------------------
@@ -32,7 +34,14 @@ const NC     = '\x1b[0m';
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
-const FLAT_FILE     = '.ssot-registry-flat.txt';
+/**
+ * The registry is read straight from the tracked JSON — never from the derived
+ * `.ssot-registry-flat.txt`. That file is gitignored and was hand-maintained, so
+ * for 3 days it silently under-reported the registry and 10 modules enforced
+ * nothing (found 2026-07-16, ADR-294). A gate must not read a derived artifact
+ * that can drift; the flat file now exists only for `ssot-audit.sh` (bash).
+ */
+const REGISTRY_FILE = '.ssot-registry.json';
 const BASELINE_FILE = '.ssot-violations-baseline.json';
 
 /** Lines starting with these are comment lines (excluded from violation count). */
@@ -95,6 +104,26 @@ function _compileModule(cur) {
     }
   }
   return { name: cur.name, re, allowlist: cur.allowlist };
+}
+
+// ---------------------------------------------------------------------------
+// Pure: registry loading
+// ---------------------------------------------------------------------------
+
+/**
+ * Load `.ssot-registry.json` and compile it into the structured modules the
+ * checker runs on.
+ *
+ * Routes through `renderFlatRegistry` + `parseFlatRegistry` deliberately: that
+ * is byte-for-byte the pipeline that produced the flat file the checker used to
+ * read, so behaviour is identical — only the staleness window is gone.
+ *
+ * @param {string} filePath
+ * @returns {{ exemptRe: RegExp|null, modules: Module[] }}
+ */
+function loadRegistry(filePath) {
+  const registry = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  return parseFlatRegistry(renderFlatRegistry(registry));
 }
 
 // ---------------------------------------------------------------------------
@@ -286,16 +315,25 @@ function main() {
   const files = process.argv.slice(2);
   if (files.length === 0) process.exit(0);
 
-  if (!fs.existsSync(FLAT_FILE)) {
-    console.log(`${YELLOW}  ⚠️  SSoT flat registry not found. Run: npm run ssot:baseline${NC}`);
-    process.exit(0);
-  }
-  if (!fs.existsSync(BASELINE_FILE)) {
-    console.log(`${YELLOW}  ⚠️  SSoT baseline not found. Run: npm run ssot:baseline${NC}`);
-    process.exit(0);
+  // Fail CLOSED: both inputs are tracked files. Absent = broken checkout or
+  // wrong cwd, never a legitimate "nothing to enforce". The old code warned and
+  // exited 0 here, which silently disabled all 62+ modules.
+  for (const [file, label] of [[REGISTRY_FILE, 'registry'], [BASELINE_FILE, 'baseline']]) {
+    if (!fs.existsSync(file)) {
+      console.log(`${RED}  ❌ CHECK 3.7 cannot run — SSoT ${label} not found: ${file}${NC}`);
+      console.log(`${YELLOW}     It is tracked in git; restore it rather than bypassing this check.${NC}`);
+      process.exit(1);
+    }
   }
 
-  const { exemptRe, modules } = parseFlatRegistry(fs.readFileSync(FLAT_FILE, 'utf8'));
+  let exemptRe, modules;
+  try {
+    ({ exemptRe, modules } = loadRegistry(REGISTRY_FILE));
+  } catch (err) {
+    console.log(`${RED}  ❌ CHECK 3.7 cannot run — ${REGISTRY_FILE} is unreadable: ${err.message}${NC}`);
+    process.exit(1);
+  }
+
   const { files: baselineFiles } = loadBaseline(BASELINE_FILE);
 
   const results = files
@@ -313,6 +351,7 @@ function main() {
 // ---------------------------------------------------------------------------
 module.exports = {
   parseFlatRegistry,
+  loadRegistry,
   loadBaseline,
   normalizePath,
   isAllowlisted,
@@ -320,7 +359,7 @@ module.exports = {
   collectViolationDetails,
   checkFile,
   renderOutput,
-  FLAT_FILE,
+  REGISTRY_FILE,
   BASELINE_FILE,
   COMMENT_RE,
   TS_EXT_RE,

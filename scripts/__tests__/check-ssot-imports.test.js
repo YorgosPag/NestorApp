@@ -437,31 +437,77 @@ describe('CLI integration', () => {
     return spawnSync('node', [SCRIPT, ...args], { cwd, encoding: 'utf8' });
   }
 
+  /** Write a `.ssot-registry.json` — the file the CLI actually reads. */
+  function writeRegistry(dir, modules, exemptPatterns = '__tests__') {
+    return write(dir, '.ssot-registry.json', JSON.stringify({ exemptPatterns, modules }));
+  }
+
+  const ENTERPRISE_ID = {
+    'enterprise-id': { forbiddenPatterns: ['crypto\\.randomUUID\\(\\)'] },
+  };
+
   test('no args → exit 0', () => {
     const result = spawnSync('node', [SCRIPT], { encoding: 'utf8' });
     expect(result.status).toBe(0);
   });
 
-  test('missing flat file → exit 0 with warning', () => {
+  test('missing registry → exit 1 (fails CLOSED, never silently disabled)', () => {
     const dir = tmpDir();
     const f = write(dir, 'foo.ts', 'const x = 1;');
     const result = runCLI([f], dir);
-    expect(result.status).toBe(0);
-    expect(stripAnsi(result.stdout)).toContain('SSoT flat registry not found');
+    expect(result.status).toBe(1);
+    expect(stripAnsi(result.stdout)).toContain('SSoT registry not found');
   });
 
-  test('missing baseline → exit 0 with warning', () => {
+  test('missing baseline → exit 1 (fails CLOSED)', () => {
     const dir = tmpDir();
-    write(dir, '.ssot-registry-flat.txt', 'EXEMPT:__tests__\nMODULE:m\nPATTERN:x\n');
+    writeRegistry(dir, { m: { forbiddenPatterns: ['x'] } });
     const f = write(dir, 'foo.ts', 'const x = 1;');
     const result = runCLI([f], dir);
-    expect(result.status).toBe(0);
+    expect(result.status).toBe(1);
     expect(stripAnsi(result.stdout)).toContain('SSoT baseline not found');
+  });
+
+  test('unparseable registry → exit 1, names the file', () => {
+    const dir = tmpDir();
+    write(dir, '.ssot-registry.json', '{ not json');
+    write(dir, '.ssot-violations-baseline.json', JSON.stringify({ files: {} }));
+    const f = write(dir, 'foo.ts', 'const x = 1;');
+    const result = runCLI([f], dir);
+    expect(result.status).toBe(1);
+    expect(stripAnsi(result.stdout)).toContain('.ssot-registry.json is unreadable');
+  });
+
+  // The regression that started all this: the gate read a gitignored, hand-kept
+  // flat file. It must now enforce with that file absent — and must ignore a
+  // stale one entirely rather than trusting it (ADR-294, 2026-07-16).
+  test('no flat file on disk → still enforces from the JSON registry', () => {
+    const dir = tmpDir();
+    writeRegistry(dir, ENTERPRISE_ID);
+    write(dir, '.ssot-violations-baseline.json', JSON.stringify({ files: {} }));
+    const f = write(dir, 'bad.ts', 'const id = crypto.randomUUID();');
+    expect(fs.existsSync(path.join(dir, '.ssot-registry-flat.txt'))).toBe(false);
+    const result = runCLI([f], dir);
+    expect(result.status).toBe(1);
+    expect(stripAnsi(result.stdout)).toContain('COMMIT BLOCKED');
+  });
+
+  test('stale flat file is ignored — JSON registry wins', () => {
+    const dir = tmpDir();
+    writeRegistry(dir, ENTERPRISE_ID);
+    // A flat file that knows about no patterns at all — the exact stale state
+    // that let 10 registered modules enforce nothing.
+    write(dir, '.ssot-registry-flat.txt', 'EXEMPT:__tests__\n');
+    write(dir, '.ssot-violations-baseline.json', JSON.stringify({ files: {} }));
+    const f = write(dir, 'bad.ts', 'const id = crypto.randomUUID();');
+    const result = runCLI([f], dir);
+    expect(result.status).toBe(1);
+    expect(stripAnsi(result.stdout)).toContain('COMMIT BLOCKED');
   });
 
   test('clean file → exit 0, no output', () => {
     const dir = tmpDir();
-    write(dir, '.ssot-registry-flat.txt', 'EXEMPT:__tests__\nMODULE:enterprise-id\nPATTERN:crypto\\.randomUUID\\(\\)\n');
+    writeRegistry(dir, ENTERPRISE_ID);
     write(dir, '.ssot-violations-baseline.json', JSON.stringify({ files: {} }));
     const f = write(dir, 'clean.ts', 'const x = 1;');
     const result = runCLI([f], dir);
@@ -471,7 +517,7 @@ describe('CLI integration', () => {
 
   test('new file with violation → exit 1, BLOCKED message', () => {
     const dir = tmpDir();
-    write(dir, '.ssot-registry-flat.txt', 'EXEMPT:__tests__\nMODULE:enterprise-id\nPATTERN:crypto\\.randomUUID\\(\\)\n');
+    writeRegistry(dir, ENTERPRISE_ID);
     write(dir, '.ssot-violations-baseline.json', JSON.stringify({ files: {} }));
     const f = write(dir, 'bad.ts', 'const id = crypto.randomUUID();');
     const result = runCLI([f], dir);
@@ -480,9 +526,23 @@ describe('CLI integration', () => {
     expect(stripAnsi(result.stdout)).toContain('NEW FILE');
   });
 
+  test('allowlisted file → exit 0 (allowlist survives the JSON path)', () => {
+    const dir = tmpDir();
+    writeRegistry(dir, {
+      'enterprise-id': {
+        forbiddenPatterns: ['crypto\\.randomUUID\\(\\)'],
+        allowlist: [normalizePath(path.join(dir, 'allowed.ts'))],
+      },
+    });
+    write(dir, '.ssot-violations-baseline.json', JSON.stringify({ files: {} }));
+    const f = write(dir, 'allowed.ts', 'const id = crypto.randomUUID();');
+    const result = runCLI([f], dir);
+    expect(result.status).toBe(0);
+  });
+
   test('ratchet-down → exit 0, shows progress', () => {
     const dir = tmpDir();
-    write(dir, '.ssot-registry-flat.txt', 'EXEMPT:__tests__\nMODULE:enterprise-id\nPATTERN:crypto\\.randomUUID\\(\\)\n');
+    writeRegistry(dir, ENTERPRISE_ID);
     const f = write(dir, 'improved.ts', 'const x = 1;'); // 0 violations
     const normalized = normalizePath(f);
     write(dir, '.ssot-violations-baseline.json', JSON.stringify({ files: { [normalized]: 3 } }));
