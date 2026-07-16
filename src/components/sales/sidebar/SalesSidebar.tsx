@@ -6,6 +6,7 @@
  * @pattern Mirrors UnitsSidebar with commercial context
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { useState, useCallback } from 'react';
 import { ShoppingBag, ExternalLink } from 'lucide-react';
 import { EntityListColumn, DetailsContainer } from '@/core/containers';
@@ -155,7 +156,7 @@ export function SalesSidebar({
   hideCommercialStatusFilter = false,
 }: SalesSidebarProps) {
   const colors = useSemanticColors();
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const isMobile = useIsMobile();
   const iconSizes = useIconSizes();
 

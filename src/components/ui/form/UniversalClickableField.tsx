@@ -1,5 +1,6 @@
 'use client';
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from 'react';
 import { Input } from '@/components/ui/input';
 import { HOVER_TEXT_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
@@ -83,7 +84,7 @@ export function UniversalClickableField({
   onBlur,
   error
 }: UniversalClickableFieldProps) {
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
 

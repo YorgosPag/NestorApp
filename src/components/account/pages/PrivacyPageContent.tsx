@@ -13,6 +13,7 @@
  * @performance ADR-294 Batch 4 — lazy-loaded via LazyRoutes
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from 'react';
 import { Lock, Eye, Database, Shield } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,7 +27,7 @@ import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 export function PrivacyPageContent() {
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const colors = useSemanticColors();
   const borders = useBorderTokens();
   const layout = useLayoutClasses();

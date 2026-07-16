@@ -12,6 +12,7 @@
  * @enterprise ADR-030 - Zero Hardcoded Values
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { formatDateShort } from '@/lib/intl-utils';
 import { ChevronDown, Search, Mail, Phone, Building2, X, UserPlus } from 'lucide-react';
@@ -98,7 +99,7 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
   readonly = false,
   onCreateNew,
 }) => {
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const iconSizes = useIconSizes();
   const dropdown = useDropdownTokens();
   const { quick } = useBorderTokens();

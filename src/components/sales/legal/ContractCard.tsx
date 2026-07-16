@@ -6,6 +6,7 @@
  * @enterprise ADR-230 (SPEC-230D Task E)
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { useState, useCallback } from 'react';
 import {
   FileSignature,
@@ -89,7 +90,7 @@ function formatPriceOrDash(amount: number | null): string {
 
 export function ContractCard({ contract, onTransition, associations = [] }: ContractCardProps) {
   const colors = useSemanticColors();
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const { success, error: notifyError } = useNotifications();
   const [expanded, setExpanded] = useState(false);
   const [transitioning, setTransitioning] = useState(false);

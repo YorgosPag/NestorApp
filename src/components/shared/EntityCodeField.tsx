@@ -9,6 +9,7 @@
  * @module components/shared/EntityCodeField
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Info } from 'lucide-react';
@@ -72,7 +73,7 @@ interface EntityCodeFieldProps {
    * for use in save payloads (e.g. as a fallback when formData.code is empty).
    */
   onSuggestionChange?: (suggestion: string | null) => void;
-  /** @deprecated No longer needed — component uses its own useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']) */
+  /** @deprecated No longer needed — component uses its own useTranslation(COMMON_NAMESPACES) */
   t?: TranslationFn;
 }
 
@@ -105,7 +106,7 @@ export function EntityCodeField({
   onSuggestionChange,
   t: _t,
 }: EntityCodeFieldProps): React.JSX.Element {
-  const { t: tc } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t: tc } = useTranslation(COMMON_NAMESPACES);
   const colors = useSemanticColors();
   const [codeOverridden, setCodeOverridden] = useState(!!value);
 
@@ -238,7 +239,7 @@ function CodeInfoPopover({
   infoExample?: string;
   infoContent?: React.ReactNode;
 }) {
-  const { t: tc } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t: tc } = useTranslation(COMMON_NAMESPACES);
   const colors = useSemanticColors();
 
   return (

@@ -9,6 +9,7 @@
  * @enterprise ADR-230 (SPEC-230D Task D)
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from 'react';
 import { Check, Circle, Minus } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -57,7 +58,7 @@ function getStepState(
 
 export function ContractTimeline({ contracts }: ContractTimelineProps) {
   const colors = useSemanticColors();
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
 
   return (
     <nav aria-label="Contract phases" className="flex items-center gap-2 py-3">

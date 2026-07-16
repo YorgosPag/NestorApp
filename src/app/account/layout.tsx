@@ -18,6 +18,7 @@
  * @enterprise ADR-024 - Account Hub Centralization
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -68,7 +69,7 @@ export default function AccountLayout({
 }) {
   const pathname = usePathname();
   const { user } = useAuth();
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const colors = useSemanticColors();
   const borders = useBorderTokens();
   const layout = useLayoutClasses();

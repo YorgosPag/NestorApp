@@ -11,6 +11,7 @@
  * @version 1.0.0
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { useMemo } from 'react';
 import { createModuleLogger } from '@/lib/telemetry';
 import Link from 'next/link';
@@ -89,7 +90,7 @@ export function CustomerActionButtons({
 }: CustomerActionButtonsProps) {
   const iconSizes = useIconSizes();
   // 🏢 ENTERPRISE: i18n support
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
 
   // ========================================================================
   // ACTION DEFINITIONS (inside component for i18n access)

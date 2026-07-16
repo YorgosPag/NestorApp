@@ -1,6 +1,7 @@
 // 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 'use client';
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from 'react';
 import { Users, Plus } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -27,7 +28,7 @@ function DefaultEmptyState({
 }: EmptyStateProps) {
   const iconSizes = useIconSizes();
   const spacing = useSpacingTokens();
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const colors = useSemanticColors();
 
   // 🏢 ENTERPRISE: i18n-enabled default values

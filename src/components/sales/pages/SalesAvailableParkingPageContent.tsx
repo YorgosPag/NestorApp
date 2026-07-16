@@ -6,6 +6,7 @@
  * @pattern Mirrors /sales/available-properties with parking-specific data
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { Suspense } from 'react';
 import { useSalesParkingViewerState } from '@/hooks/sales/useSalesParkingViewerState';
 import { SalesAvailableHeader } from '@/components/sales/page/SalesAvailableHeader';
@@ -26,7 +27,7 @@ import { SalesGridCard, SalesGridEmpty } from '@/components/sales/shared/SalesGr
 import '@/lib/design-system';
 
 function SalesParkingContent() {
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
 
   const {
     filteredItems,

@@ -29,7 +29,7 @@ function resolveAllNamespaces(namespaces: string[]): string[] {
  * @param namespace - Translation namespace (e.g., 'dxf-viewer', 'forms')
  * @returns Translation function and i18n utilities
  */
-export const useTranslation = (namespace?: string | string[]) => {
+export const useTranslation = (namespace?: string | readonly string[]) => {
   const namespaceKey = Array.isArray(namespace)
     ? namespace.join('|')
     : namespace || '';

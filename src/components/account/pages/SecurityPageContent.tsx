@@ -13,6 +13,7 @@
  * @performance ADR-294 Batch 4 — lazy-loaded via LazyRoutes
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { useState } from 'react';
 import { Key, AlertTriangle, Mail, RefreshCw } from 'lucide-react';
 import { SessionsList } from '@/components/account/SessionsList';
@@ -33,7 +34,7 @@ const logger = createModuleLogger('ACCOUNT_SECURITY_PAGE');
 
 export function SecurityPageContent() {
   const { user, resetPassword, refreshToken } = useAuth();
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const colors = useSemanticColors();
   const borders = useBorderTokens();
   const layout = useLayoutClasses();

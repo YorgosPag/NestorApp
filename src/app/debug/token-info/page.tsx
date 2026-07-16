@@ -9,6 +9,7 @@
  * @route /debug/token-info
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import { useAuth } from '@/auth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -19,7 +20,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 export default function TokenInfoPage() {
   const { user, loading } = useAuth();
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const spacing = useSpacingTokens();
   const borders = useBorderTokens();
   const colors = useSemanticColors();

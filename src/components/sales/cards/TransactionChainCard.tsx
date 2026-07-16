@@ -6,6 +6,7 @@
  * @pattern Enterprise card with Firestore invoice list
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { useEffect, useState } from 'react';
 import { Receipt, FileText, CreditCard } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -84,7 +85,7 @@ function getPaymentBadgeClass(status: string): string {
 
 export function TransactionChainCard({ propertyId }: TransactionChainCardProps) {
   const colors = useSemanticColors();
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const iconSizes = useIconSizes();
   const [invoices, setInvoices] = useState<InvoiceSummary[]>(
     propertyTransactionChainCache.get(propertyId) ?? []

@@ -6,6 +6,7 @@
  * @pattern Same as SalesPropertyListCard but with storage-specific data
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { useMemo } from 'react';
 import { DollarSign, Calculator, Layers } from 'lucide-react';
 import { ListCard } from '@/design-system/components/ListCard/ListCard';
@@ -52,7 +53,7 @@ export function SalesStorageCard({
   compact = true,
   className,
 }: SalesStorageCardProps) {
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
 
   const status = storage.status ?? 'available';
   const badgeConfig = STATUS_BADGE[status] ?? STATUS_BADGE.available;

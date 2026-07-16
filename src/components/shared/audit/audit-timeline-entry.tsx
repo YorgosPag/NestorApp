@@ -11,6 +11,7 @@
 
 "use client";
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from "react";
 import Link from "next/link";
 import { ExternalLink } from "lucide-react";
@@ -154,7 +155,7 @@ export function AuditTimelineEntry({
   showEntityLink,
 }: AuditTimelineEntryProps) {
   const entry = sanitizeEntry(rawEntry);
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const colors = useSemanticColors();
   const config = ACTION_MAP[entry.action] ?? ACTION_MAP.updated;
   const Icon = config.icon;

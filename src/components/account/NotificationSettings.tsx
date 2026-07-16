@@ -12,6 +12,7 @@
  * @enterprise ADR-025 - Notification Settings Centralization
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { useState, useEffect, useCallback } from 'react';
 import { createStaleCache } from '@/lib/stale-cache';
 import {
@@ -66,7 +67,7 @@ export type { NotificationSettingsProps, CategoryConfig };
 // ============================================================================
 
 export function NotificationSettings({ userId, onSettingsChange }: NotificationSettingsProps) {
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const colors = useSemanticColors();
   const borders = useBorderTokens();
   const layout = useLayoutClasses();

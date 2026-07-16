@@ -15,6 +15,7 @@
 
 'use client';
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { useCallback, useEffect, useState } from 'react';
 import { AlertTriangle, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -130,7 +131,7 @@ export function UserAuthPermissionPanel({
   extraQuickActions,
   onSubViewChange,
 }: UserAuthPermissionPanelProps): React.ReactElement {
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const notifications = useNotifications();
 
   const [showEmailForm, setShowEmailForm] = useState(false);

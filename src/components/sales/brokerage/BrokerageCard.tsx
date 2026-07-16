@@ -6,6 +6,7 @@
  * @enterprise ADR-230 (SPEC-230B Task E)
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from 'react';
 import { Building2, Percent, Banknote, Shield } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -30,7 +31,7 @@ interface BrokerageCardProps {
 
 export function BrokerageCard({ agreements }: BrokerageCardProps) {
   const colors = useSemanticColors();
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
 
   if (agreements.length === 0) {
     return (

@@ -1,5 +1,6 @@
 "use client"
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import * as React from "react"
 import * as SheetPrimitive from "@radix-ui/react-dialog"
 import { cva, type VariantProps } from "class-variance-authority"
@@ -26,7 +27,7 @@ const SheetClose = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof SheetPrimitive.Close>
 >(({ className, ...props }, ref) => {
   const iconSizes = useIconSizes();
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   return (
     <SheetPrimitive.Close
       ref={ref}

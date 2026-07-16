@@ -11,6 +11,7 @@
  * @version 1.0.0
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from 'react';
 import { Phone, Mail, Eye, User } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
@@ -57,7 +58,7 @@ export function CustomerInfoCompact({
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n support
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const {
     customerInfo,
     loading,

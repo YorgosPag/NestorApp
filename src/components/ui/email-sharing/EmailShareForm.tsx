@@ -5,6 +5,7 @@
  * Uses centralized email API via ShareModal's handleEmailShare.
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { useState, useCallback } from 'react';
 import { ArrowLeft, Send, Home, Briefcase, Crown } from 'lucide-react';
 import { PhotoPickerGrid } from '@/components/ui/social-sharing/PhotoPickerGrid';
@@ -52,7 +53,7 @@ export const EmailShareForm: React.FC<EmailShareFormProps> = ({
   loading = false,
   initialPersonalMessage,
 }) => {
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
 
   const [recipients, setRecipients] = useState<string[]>([]);
   const [personalMessage, setPersonalMessage] = useState(

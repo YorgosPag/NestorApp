@@ -6,6 +6,7 @@
  * @pattern Salesforce/HubSpot dual segmentation — AND logic between rows
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from 'react';
 import {
   LayoutGrid,
@@ -72,7 +73,7 @@ export function SalesQuickFilters({
   className,
   hideCommercialStatus = false,
 }: SalesQuickFiltersProps) {
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
 
   // Convert single selection to array format expected by TypeQuickFilters
   const handleStatusChange = (types: string[]) => {

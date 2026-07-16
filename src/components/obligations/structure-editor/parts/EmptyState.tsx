@@ -1,5 +1,6 @@
 "use client";
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import { FileText } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { EmptyState as SharedEmptyState } from '@/components/shared/EmptyState';
@@ -11,7 +12,7 @@ interface EmptyStateProps {
 }
 
 export function EmptyState({ readOnly, onAddSection }: EmptyStateProps) {
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const colors = useSemanticColors();
   return (
     <SharedEmptyState

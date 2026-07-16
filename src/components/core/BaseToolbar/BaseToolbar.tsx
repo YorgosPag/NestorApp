@@ -1,5 +1,6 @@
 'use client';
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -261,7 +262,7 @@ export function BaseToolbar({
 // Search component
 function ToolbarSearchComponent({ search, compact }: { search: ToolbarSearch; compact?: boolean }) {
   const colors = useSemanticColors();
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const iconSizes = useIconSizes();
   return (
     <div className="relative">
@@ -302,7 +303,7 @@ function ToolbarFiltersComponent({
 }) {
   const iconSizes = useIconSizes();
   // 🏢 ENTERPRISE: i18n hook for clear all button
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   return (
     <div className="flex items-center gap-2">
       {filters.map((filter) => (

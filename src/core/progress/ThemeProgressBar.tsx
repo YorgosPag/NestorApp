@@ -1,6 +1,7 @@
 // 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 'use client';
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { getDynamicWidthClass } from '@/components/ui/utils/dynamic-styles';
@@ -28,7 +29,7 @@ export function ThemeProgressBar({
   size = 'md',
   showPercentage = true
 }: ThemeProgressBarProps) {
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const displayLabel = label ?? t('progress.label');
   const colors = useSemanticColors();
   const progressWidth = layoutUtilities.percentage(Math.min(100, Math.max(0, progress)));

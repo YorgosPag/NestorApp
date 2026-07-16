@@ -1,5 +1,6 @@
 'use client';
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from 'react';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -64,7 +65,7 @@ export function GenericPeriodSelector({
   theme: _theme = 'compact',
   disabled = false,
 }: GenericPeriodSelectorProps) {
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   // Φιλτράρισμα enabled periods
   const enabledPeriods = periods.filter(period => period.enabled !== false);
 

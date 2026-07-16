@@ -1,6 +1,7 @@
 // components/NotificationBell.enterprise.tsx
 'use client';
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import { Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNotificationDrawer } from './NotificationDrawer.enterprise';
@@ -11,7 +12,7 @@ import '@/lib/design-system';
 
 export function NotificationBell() {
   const iconSizes = useIconSizes();
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const open = useNotificationDrawer(s => s.open);
   const isOpen = useNotificationDrawer(s => s.isOpen);
   const unread = useNotificationCenter(s => s.unread);

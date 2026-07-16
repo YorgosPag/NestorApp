@@ -10,6 +10,7 @@
 
 'use client';
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from 'react';
 import { Label } from '@/components/ui/label';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -47,7 +48,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
   disabled = false,
   show = true
 }) => {
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const iconSizes = useIconSizes();
   const { quick, radius, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();

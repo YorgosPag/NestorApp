@@ -7,6 +7,7 @@
 
 'use client';
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -33,7 +34,7 @@ export const MobileHeaderViewToggle: React.FC<HeaderViewToggleProps> = ({
 }) => {
   const iconSizes = useIconSizes();
   const spacing = useSpacingTokens();
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
 
   const getViewIcon = (mode: ViewMode) => {
     const iconMap = {

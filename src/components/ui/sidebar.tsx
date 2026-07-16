@@ -1,5 +1,6 @@
 "use client"
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { PanelLeft } from "lucide-react"
@@ -142,7 +143,7 @@ const SidebarTrigger = React.forwardRef<
 >(({ className, onClick, ...props }, ref) => {
   const { toggleSidebar } = useSidebar()
   const iconSizes = useIconSizes()
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation'])
+  const { t } = useTranslation(COMMON_NAMESPACES)
 
   return (
     <Button
@@ -169,7 +170,7 @@ const SidebarRail = React.forwardRef<
   React.ComponentProps<"button">
 >(({ className, ...props }, ref) => {
   const { toggleSidebar } = useSidebar()
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation'])
+  const { t } = useTranslation(COMMON_NAMESPACES)
 
   return (
     <button

@@ -11,6 +11,7 @@
 // SRP-compliant: UI only, service handles data fetching (ADR N.7.1)
 // ============================================================================
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { useState, useEffect, useRef } from 'react';
 import { useClickOutside } from '@/hooks/useClickOutside';
 import { formatDateShort } from '@/lib/intl-utils';
@@ -83,7 +84,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
   className = '',
   maxResults = 50
 }) => {
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();

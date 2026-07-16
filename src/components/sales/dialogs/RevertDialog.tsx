@@ -5,6 +5,7 @@
  * @description Dialog for cancelling a sale/reservation and reverting to "for sale"
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { useState, useCallback } from 'react';
 import { formatCurrency } from '@/lib/intl-utils';
 import {
@@ -42,7 +43,7 @@ const logger = createModuleLogger('RevertDialog');
 
 export function RevertDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogProps) {
   const colors = useSemanticColors();
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const iconSizes = useIconSizes();
   const { success, error: notifyError } = useNotifications();
   const [saving, setSaving] = useState(false);

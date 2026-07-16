@@ -1,5 +1,6 @@
 'use client';
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
 import { useInterval } from '@/hooks/useInterval';
 import { toast, Toaster } from 'sonner';
@@ -41,7 +42,7 @@ export function NotificationProvider({
   defaultDuration = 4000,
   enableSounds = false
 }: NotificationProviderProps) {
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const iconSizes = useIconSizes();
   const [notifications, setNotifications] = useState<NotificationData[]>([]);
   const [settings, setSettings] = useState<{

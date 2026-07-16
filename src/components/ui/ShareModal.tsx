@@ -16,6 +16,7 @@
 
 'use client';
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { ShareSurfaceShell } from '@/components/ui/sharing';
@@ -44,7 +45,7 @@ export function ShareModal({
   onShareSuccess,
   onShareError,
 }: ShareModalProps): React.ReactElement {
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const { t: tShell } = useTranslation('common-shared');
   const [loading, setLoading] = useState(false);
 

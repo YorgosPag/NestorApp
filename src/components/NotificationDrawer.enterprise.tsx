@@ -3,6 +3,7 @@
 
 'use client';
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import { create } from 'zustand';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
@@ -97,7 +98,7 @@ export function NotificationDrawer() {
     }
   }, [dismissLocal]);
 
-  const { t, i18n } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t, i18n } = useTranslation(COMMON_NAMESPACES);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const { getStatusBorder } = useBorderTokens();

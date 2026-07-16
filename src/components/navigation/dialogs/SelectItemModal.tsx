@@ -1,6 +1,7 @@
 // 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 'use client';
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { useState, useEffect } from 'react';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
@@ -79,7 +80,7 @@ export function SelectItemModal({
   itemType,
   isLoading = false,
 }: SelectItemModalProps) {
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const colors = useSemanticColors();
   const [filteredItems, setFilteredItems] = useState<Item[]>([]);
   const [searchTerm, setSearchTerm] = useState('');

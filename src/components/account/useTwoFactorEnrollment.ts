@@ -9,6 +9,7 @@
  * @enterprise ADR-025 - Two-Factor Authentication
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import { useState, useCallback, useEffect } from 'react';
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -30,7 +31,7 @@ interface UseTwoFactorEnrollmentParams {
 }
 
 export function useTwoFactorEnrollment({ userId, onStatusChange }: UseTwoFactorEnrollmentParams) {
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
 
   // State
   const [step, setStep] = useState<EnrollmentStep>('initial');

@@ -12,6 +12,7 @@
  * @compliance CLAUDE.md — Κεντρικοποίηση, Radix (ADR-001), zero any, semantic HTML
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import { useMemo, useState, useCallback } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Plus } from 'lucide-react';
@@ -68,7 +69,7 @@ export function DoyPicker({
   className,
   showAddNew = true,
 }: DoyPickerProps) {
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
 
   // State for add-new dialog
   const [addDialogOpen, setAddDialogOpen] = useState(false);

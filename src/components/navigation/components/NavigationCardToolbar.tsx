@@ -10,6 +10,7 @@
  * Helper functions and config extracted to NavigationCardToolbar.config.ts (ADR-261)
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from 'react';
 import { CompactToolbar } from '@/components/core/CompactToolbar/CompactToolbar';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
@@ -69,7 +70,7 @@ export function NavigationCardToolbar({
 }: NavigationCardToolbarProps) {
   // 🏢 ENTERPRISE: i18n hooks - navigation for entity-specific labels, common for shared buttons
   const { t } = useTranslation('navigation');
-  const { t: tCommon } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t: tCommon } = useTranslation(COMMON_NAMESPACES);
 
   // Get config with i18n translations
   const config = getToolbarConfig(level, t, tCommon);

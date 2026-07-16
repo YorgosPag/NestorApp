@@ -7,6 +7,7 @@
  * @see ADR-199 Sales Appurtenances
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -47,7 +48,7 @@ export function AppurtenancesSection({
 }: AppurtenancesSectionProps) {
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
 
   if (spaces.length === 0) return null;
 

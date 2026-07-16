@@ -5,6 +5,7 @@
  * ZERO HARDCODED STRINGS - All labels from centralized translations
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { useEffect } from 'react';
 import { Camera, AlertCircle, CheckCircle } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
@@ -134,7 +135,7 @@ export function EnterprisePhotoUpload({
   // ========================================================================
 
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
 

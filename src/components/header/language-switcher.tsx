@@ -1,6 +1,7 @@
 'use client';
 /* eslint-disable custom/no-hardcoded-strings */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import { useState, useEffect } from 'react';
 import { Globe } from 'lucide-react';
 import {
@@ -30,7 +31,7 @@ const languages = [
 export function LanguageSwitcher() {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
-  const { i18n, t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { i18n, t } = useTranslation(COMMON_NAMESPACES);
   const [isChanging, setIsChanging] = useState(false);
   const [currentLanguage, setCurrentLanguage] = useState(languages[0]);
 

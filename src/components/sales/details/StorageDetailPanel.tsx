@@ -6,6 +6,7 @@
  * @pattern Mirrors SaleInfoContent with storage-specific fields
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from 'react';
 import {
   DollarSign,
@@ -40,7 +41,7 @@ interface StorageDetailPanelProps {
 
 export function StorageDetailPanel({ data }: StorageDetailPanelProps) {
   const colors = useSemanticColors();
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const iconSizes = useIconSizes();
 
   if (!data) {

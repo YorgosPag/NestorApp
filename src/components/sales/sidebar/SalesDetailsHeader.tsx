@@ -6,6 +6,7 @@
  * @pattern Uses centralized EntityDetailsHeader + createEntityAction
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { useMemo } from 'react';
 import { ShoppingBag, DollarSign, UserCheck, CheckCircle, Undo2 } from 'lucide-react';
 import { EntityDetailsHeader, createEntityAction } from '@/core/entity-headers';
@@ -36,7 +37,7 @@ export function SalesDetailsHeader({
   onSell,
   onRevert,
 }: SalesDetailsHeaderProps) {
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
 
   const status = unit.commercialStatus;
   const isReserved = status === 'reserved';

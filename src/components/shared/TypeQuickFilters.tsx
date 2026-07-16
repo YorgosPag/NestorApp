@@ -15,6 +15,7 @@
 
 'use client';
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -158,7 +159,7 @@ export function TypeQuickFilters({
   ariaLabel
 }: TypeQuickFiltersProps) {
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const colors = useSemanticColors();
 
   // Use translations as defaults if props not provided
@@ -270,7 +271,7 @@ export function TypeQuickFilters({
  */
 export function UnitTypeQuickFilters(props: Omit<TypeQuickFiltersProps, 'options'>) {
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   return (
     <TypeQuickFilters
       {...props}
@@ -285,7 +286,7 @@ export function UnitTypeQuickFilters(props: Omit<TypeQuickFiltersProps, 'options
  */
 export function ContactTypeQuickFilters(props: Omit<TypeQuickFiltersProps, 'options'>) {
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   return (
     <TypeQuickFilters
       {...props}
@@ -300,7 +301,7 @@ export function ContactTypeQuickFilters(props: Omit<TypeQuickFiltersProps, 'opti
  */
 export function ChannelQuickFilters(props: Omit<TypeQuickFiltersProps, 'options'>) {
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   return (
     <TypeQuickFilters
       {...props}

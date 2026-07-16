@@ -11,6 +11,7 @@
 
 'use client';
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import '@/lib/design-system';
 import {
   AlertDialog,
@@ -45,7 +46,7 @@ export function BranchDeleteConfirmDialog({
   onOpenChange,
   onConfirm,
 }: BranchDeleteConfirmDialogProps) {
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const iconSizes = useIconSizes();
 
   const bd = (key: string) => t(`contacts.addressImpact.branchDelete.${key}`);

@@ -11,6 +11,7 @@
  * @enterprise ADR-230 (SPEC-230D Task C)
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { useState, useCallback } from 'react';
 import Link from 'next/link';
 import { User, Scale, Briefcase, Pencil, X, Loader2, UserPlus } from 'lucide-react';
@@ -138,7 +139,7 @@ export function ProfessionalsCard({
   onOverrideProfessional,
 }: ProfessionalsCardProps) {
   const colors = useSemanticColors();
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const { success, error: notifyError } = useNotifications();
   const [editingRole, setEditingRole] = useState<LegalProfessionalRole | null>(null);
   const [saving, setSaving] = useState(false);

@@ -10,6 +10,7 @@
 
 'use client';
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Copy, ExternalLink, Check, AlertCircle } from 'lucide-react';
@@ -80,7 +81,7 @@ export const CopyActionsSection: React.FC<CopyActionsProps> = ({
   className
 }) => {
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const iconSizes = useIconSizes();
 
   // ============================================================================

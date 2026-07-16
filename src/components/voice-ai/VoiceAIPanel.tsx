@@ -19,6 +19,7 @@
  * @enterprise ADR-164 - In-App Voice AI Pipeline
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import * as React from 'react';
 import { Mic, Bot, Trash2, MessageSquare } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
@@ -151,7 +152,7 @@ function ErrorBubble({ message }: { message: string }) {
 
 /** Renders a single command + response pair */
 function ConversationEntry({ commandId }: { commandId: string }) {
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const entry = useVoiceCommandStore((s) =>
     s.commandHistory.find((c) => c.commandId === commandId)
   );
@@ -187,7 +188,7 @@ function ConversationEntry({ commandId }: { commandId: string }) {
 // =============================================================================
 
 export function VoiceAIPanel() {
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
   const scrollRef = React.useRef<HTMLDivElement>(null);

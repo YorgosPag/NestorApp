@@ -13,6 +13,7 @@
  * @performance ADR-294 Batch 4 — lazy-loaded via LazyRoutes
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from 'react';
 import { Settings, Globe, Palette } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -35,7 +36,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { SUPPORTED_LANGUAGES, type Language } from '@/i18n/lazy-config';
 
 export function PreferencesPageContent() {
-  const { t, i18n, changeLanguage } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t, i18n, changeLanguage } = useTranslation(COMMON_NAMESPACES);
   const { theme, setTheme } = useTheme();
   const colors = useSemanticColors();
   const borders = useBorderTokens();

@@ -1,5 +1,6 @@
 "use client"
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import * as React from "react"
 import dynamic from "next/dynamic"
 import { Search } from "lucide-react"
@@ -33,7 +34,7 @@ const GlobalSearchDialog = dynamic(
 export function AppHeader() {
   // 🔐 Get authenticated user
   const { user } = useAuth();
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
 
   // 🔍 Global Search Dialog state
   const [searchOpen, setSearchOpen] = React.useState(false);

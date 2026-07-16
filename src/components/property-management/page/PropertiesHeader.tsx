@@ -10,6 +10,7 @@
  * @compliance Fortune 500 standards - CLAUDE.md compliant
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from 'react';
 import { Filter } from 'lucide-react';
 import { PageHeader } from '@/core/headers';
@@ -59,7 +60,7 @@ export function PropertiesHeader({
   setShowFilters,
 }: PropertiesHeaderProps) {
   const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
-  const { t: tCommon } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t: tCommon } = useTranslation(COMMON_NAMESPACES);
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();

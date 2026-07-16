@@ -6,6 +6,7 @@
  * @pattern Reuses centralized PageHeader (same as UnitsHeader)
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from 'react';
 import { Filter, ShoppingBag } from 'lucide-react';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
@@ -53,7 +54,7 @@ export function SalesAvailableHeader({
   subtitleOverride,
   searchPlaceholderOverride,
 }: SalesAvailableHeaderProps) {
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();

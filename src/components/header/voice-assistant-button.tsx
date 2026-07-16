@@ -18,6 +18,7 @@
  * @enterprise ADR-161 - Global Voice Assistant
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import * as React from 'react';
 import { Mic, MicOff, Square, Copy, Check, Send } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
@@ -48,7 +49,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 export function VoiceAssistantButton() {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const { user } = useAuth();
 
   const [dialogOpen, setDialogOpen] = React.useState(false);

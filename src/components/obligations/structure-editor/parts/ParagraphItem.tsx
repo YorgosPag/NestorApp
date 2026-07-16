@@ -1,6 +1,7 @@
 // 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 "use client";
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -40,7 +41,7 @@ export function ParagraphItem({
   handlers,
 }: ParagraphItemProps) {
   const { t } = useTranslation('obligations');
-  const { t: tCommon } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t: tCommon } = useTranslation(COMMON_NAMESPACES);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
 

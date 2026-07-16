@@ -12,6 +12,7 @@
  * @enterprise Phase 2 — Multi-Channel Sharing
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { useState, useCallback } from 'react';
 import { ArrowLeft, Send, Info, Link as LinkIcon, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -76,7 +77,7 @@ export function ChannelShareForm({
   onBack,
   loading = false,
 }: ChannelShareFormProps) {
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
 
   // Photo selection — `shareData.url` is a share-token page URL (HTML), not
   // an image URL; falling back to it would turn `photoUrls` into a link to a

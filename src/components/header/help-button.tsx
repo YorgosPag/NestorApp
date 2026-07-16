@@ -18,6 +18,7 @@
  * @enterprise ADR-023 - Help Hub Centralization
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import {
@@ -45,7 +46,7 @@ import '@/lib/design-system';
 export function HelpButton() {
   const iconSizes = useIconSizes();
   const router = useRouter();
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
 
   // 🏢 ENTERPRISE: SSR-safe platform detection
   const [isMac, setIsMac] = React.useState(false);

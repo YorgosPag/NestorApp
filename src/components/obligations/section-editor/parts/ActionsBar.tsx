@@ -1,5 +1,6 @@
 "use client";
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Save, X, Trash2 } from 'lucide-react';
@@ -27,7 +28,7 @@ export function ActionsBar({
 }: ActionsBarProps) {
   const iconSizes = useIconSizes();
   // 🏢 ENTERPRISE: i18n support
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
 
   if (isEditing) {
     return (

@@ -6,6 +6,7 @@
 
 'use client';
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { useEffect, useRef } from 'react';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { createPortal } from 'react-dom';
@@ -65,7 +66,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
   zIndex = 9998
 }) => {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const { getStatusBorder, getDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();
   const modalRef = useRef<HTMLDivElement>(null);
@@ -215,7 +216,7 @@ export const ConfirmModal: React.FC<{
   variant = 'info'
 }) => {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const colors = useSemanticColors();
   const confirmVariant = variant === 'danger' ? 'primary' : 'secondary';
 
@@ -255,7 +256,7 @@ export const LoadingModal: React.FC<{
   message
 }) => {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
 

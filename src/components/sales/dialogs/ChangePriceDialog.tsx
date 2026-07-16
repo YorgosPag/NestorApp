@@ -5,6 +5,7 @@
  * @description Dialog for updating the asking price of a unit
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { useState, useCallback, useEffect } from 'react';
 import {
   Dialog,
@@ -33,7 +34,7 @@ import { nowISO } from '@/lib/date-local';
 
 export function ChangePriceDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogProps) {
   const colors = useSemanticColors();
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const iconSizes = useIconSizes();
   const { success, error: notifyError } = useNotifications();
   const [askingPrice, setAskingPrice] = useState<string>(

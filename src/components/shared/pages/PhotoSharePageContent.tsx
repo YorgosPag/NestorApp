@@ -8,6 +8,7 @@
  * @enterprise ADR-294 Batch 7 — extracted from app/share/photo/[id]/page.tsx
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
@@ -33,7 +34,7 @@ export function PhotoSharePageContent() {
   const [photoData, setPhotoData] = useState<PhotoData | null>(null);
   const [loading, setLoading] = useState(true);
   const colors = useSemanticColors();
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
 
   useEffect(() => {
     const dataParam = searchParams.get('data');

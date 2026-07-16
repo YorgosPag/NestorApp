@@ -16,6 +16,7 @@
  * @enterprise Phase 2 — Multi-Channel Sharing
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Search, ArrowLeft, User, Building2, Wrench, Mail, CheckCircle, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -91,7 +92,7 @@ const CHANNEL_COLORS: Record<ChannelProvider, string> = {
 // ============================================================================
 
 export function ContactChannelPicker({ onChannelSelect, onBack }: ContactChannelPickerProps) {
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
 
   // Contact search state
   const [searchQuery, setSearchQuery] = useState('');

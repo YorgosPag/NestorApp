@@ -20,6 +20,7 @@
 /* eslint-disable design-system/enforce-semantic-colors */
 'use client';
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { useMemo } from 'react';
 import { CheckCircle2, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -99,7 +100,7 @@ export function AutoSaveStatusIndicator({
   onRetry,
   className,
 }: AutoSaveStatusIndicatorProps) {
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
 
   const config = STATUS_CONFIG[status];
   const Icon = config.icon;

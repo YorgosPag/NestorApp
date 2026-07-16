@@ -1,4 +1,5 @@
 'use client';
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -13,7 +14,7 @@ export const CarouselNext = React.forwardRef<
   React.ComponentProps<typeof Button>
 >(({ className, variant = "outline", size = "icon", ...props }, ref) => {
   const iconSizes = useIconSizes();
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const { orientation, scrollNext, canScrollNext } = useCarousel();
   return (
     <Button

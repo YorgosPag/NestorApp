@@ -5,6 +5,7 @@
  */
 'use client';
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageContainer } from '@/core/containers';
@@ -15,7 +16,7 @@ import { useSemanticColors } from '@/hooks/useSemanticColors';
 import { cn, getSpacingClass } from '@/lib/design-system';
 
 export default function DebugHubPage() {
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const layout = useLayoutClasses();
   const typography = useTypography();
   const colors = useSemanticColors();

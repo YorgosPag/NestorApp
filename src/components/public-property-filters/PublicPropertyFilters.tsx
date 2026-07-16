@@ -1,5 +1,6 @@
 "use client";
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from "react";
 import { Euro, Ruler } from "lucide-react";
 import type { PublicPropertyFiltersProps } from "./types";
@@ -13,7 +14,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import '@/lib/design-system';
 
 export function PublicPropertyFilters({ filters, onFiltersChange }: PublicPropertyFiltersProps) {
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const { onSearch, onTypeToggle, onStatusToggle, onPriceRange, onAreaRange } =
     usePublicPropertyFilters(filters, onFiltersChange);
 

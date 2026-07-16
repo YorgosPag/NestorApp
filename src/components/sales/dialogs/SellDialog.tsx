@@ -5,6 +5,7 @@
  * @description Dialog for confirming a unit sale with final price and broker selection
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { useState, useCallback, useEffect } from 'react';
 import { formatCurrency } from '@/lib/intl-utils';
 import {
@@ -57,7 +58,7 @@ const logger = createModuleLogger('SellDialog');
 
 export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogProps) {
   const colors = useSemanticColors();
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const { success, error: notifyError } = useNotifications();
   const iconSizes = useIconSizes();
   const [finalPrice, setFinalPrice] = useState<string>(

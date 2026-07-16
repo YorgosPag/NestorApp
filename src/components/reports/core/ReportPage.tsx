@@ -11,6 +11,7 @@
  * Responsive (Decision 12.26): Works on desktop, tablet, and mobile.
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import '@/lib/design-system';
 import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -124,7 +125,7 @@ export function ReportPage({
   const colors = useSemanticColors();
   const typography = useTypography();
 
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
 
   // Internal date range state (uncontrolled mode)
   const [internalDateRange, setInternalDateRange] = useState<DateRangeValue>(

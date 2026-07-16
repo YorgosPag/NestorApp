@@ -1,6 +1,7 @@
 // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 'use client';
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from 'react';
 import { CheckCircle, X } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -74,7 +75,7 @@ export function PhotoPreview({
   hideRemoveButton = false,
   className = ''
 }: PhotoPreviewProps) {
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
 

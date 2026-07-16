@@ -15,6 +15,7 @@
 
 "use client";
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { useState, useRef } from "react";
 import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -48,7 +49,7 @@ export function HeaderSearch({
   shortcutKey = "k"
 }: HeaderSearchProps) {
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const defaultPlaceholder = `${t('placeholders.searchContacts')} (⌘K)`;
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();

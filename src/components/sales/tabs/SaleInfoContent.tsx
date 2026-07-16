@@ -6,6 +6,7 @@
  * @pattern Enterprise card layout with semantic sections
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { ENTITY_ROUTES } from '@/lib/routes';
@@ -78,7 +79,7 @@ function computeDiscount(asking: number | null | undefined, final: number | null
 // =============================================================================
 
 export function SaleInfoContent({ data: unit }: SaleInfoContentProps) {
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
   const router = useRouter();

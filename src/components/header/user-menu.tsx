@@ -14,6 +14,7 @@
  * @enterprise ADR-022 - Optimistic Auth Operations
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 // 🏢 ENTERPRISE: Centralized auth (NO direct Firebase imports!)
@@ -51,7 +52,7 @@ const logger = createModuleLogger('UserMenu');
 
 export function UserMenu() {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
   const layout = useLayoutClasses();

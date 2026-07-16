@@ -14,9 +14,9 @@ import { StorageQuickFilters } from '@/components/sales/filters/StorageQuickFilt
 import { StorageDetailPanel } from '@/components/sales/details/StorageDetailPanel';
 import {
   SalesSpaceSidebar,
-  SALES_SPACE_SIDEBAR_NAMESPACES,
   type SalesSpaceRedirectTab,
 } from '@/components/sales/shared/SalesSpaceSidebar';
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Storage } from '@/types/storage/contracts';
 import '@/lib/design-system';
@@ -66,7 +66,7 @@ export function SalesStorageSidebar({
   selectedType,
   onTypeChange,
 }: SalesStorageSidebarProps) {
-  const { t } = useTranslation(SALES_SPACE_SIDEBAR_NAMESPACES);
+  const { t } = useTranslation(COMMON_NAMESPACES);
 
   const redirectTabs = React.useMemo<readonly SalesSpaceRedirectTab[]>(
     () => [

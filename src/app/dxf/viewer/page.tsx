@@ -1,6 +1,7 @@
 // ?? i18n: All labels converted to i18n keys - 2026-01-19
 'use client';
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import { useUserRole } from '@/auth';
 import dynamic from 'next/dynamic';
 import { Suspense } from 'react';
@@ -31,7 +32,7 @@ function DxfViewerLoadingFallback() {
 
 function AdminGuard({ children }: { children: React.ReactNode }) {
   const { isAdmin, isLoading } = useUserRole();
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const spacing = useSpacingTokens();
   const typography = useTypography();
   const colors = useSemanticColors();
@@ -72,7 +73,7 @@ function AdminGuard({ children }: { children: React.ReactNode }) {
 }
 
 export default function DxfViewerPage() {
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const _spacing = useSpacingTokens();
   const _typography = useTypography();
   const _colors = useSemanticColors();

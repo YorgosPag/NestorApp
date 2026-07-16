@@ -12,6 +12,7 @@
  * @enterprise ADR-230 / SPEC-230B
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { TabbedAddNewContactDialog } from '@/components/contacts/dialogs/TabbedAddNewContactDialog';
@@ -48,7 +49,7 @@ export function ProjectBrokersTab({ project, data }: ProjectBrokersTabProps) {
   const projectName = (projectData?.name as string) ?? '';
 
   const { user } = useAuth();
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const typography = useTypography();
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();

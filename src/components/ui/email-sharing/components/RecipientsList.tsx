@@ -10,6 +10,7 @@
 
 'use client';
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -53,7 +54,7 @@ export const RecipientsList: React.FC<RecipientsListProps> = ({
   showValidation = true
 }) => {
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
@@ -356,7 +357,7 @@ export const CompactRecipientsList: React.FC<RecipientsListProps & {
   showSummary = true
 }) => {
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const iconSizes = useIconSizes();
   const validCount = recipients.filter(email => email.trim() && isValidEmail(email)).length;
 

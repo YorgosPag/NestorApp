@@ -36,6 +36,7 @@
  * ============================================================================
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import { useMemo } from 'react';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
@@ -160,7 +161,7 @@ export interface UseEnterpriseMessagesReturn {
  * με optimized performance και consistent API
  */
 export function useEnterpriseMessages(): UseEnterpriseMessagesReturn {
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
 
   // ============================================================================
   // 🚀 MEMOIZED MESSAGE ACCESS - i18n ENABLED

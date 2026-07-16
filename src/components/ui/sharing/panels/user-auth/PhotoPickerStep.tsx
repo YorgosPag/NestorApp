@@ -13,6 +13,7 @@
 
 'use client';
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { PhotoPickerGrid } from '@/components/ui/social-sharing/PhotoPickerGrid';
@@ -33,7 +34,7 @@ export function PhotoPickerStep({
   onCancel,
   onConfirm,
 }: PhotoPickerStepProps): React.ReactElement {
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
 
   return (
     <section className="space-y-4">

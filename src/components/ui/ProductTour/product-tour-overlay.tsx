@@ -8,6 +8,7 @@
  * @see ProductTour.tsx for the main component and TourRenderer
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import {
   useRef,
   useMemo,
@@ -172,7 +173,7 @@ export const TourTooltip: FC<TourTooltipInternalProps> = ({
   onClose,
   onDontShowAgainChange,
 }) => {
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const { quick, radiusClass } = useBorderTokens();
   const spacing = useSpacingTokens();
   const iconSizes = useIconSizes();

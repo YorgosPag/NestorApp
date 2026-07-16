@@ -1,6 +1,7 @@
 // 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 "use client";
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import { Button } from "@/components/ui/button";
 import { Eye, Download } from "lucide-react";
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -15,7 +16,7 @@ interface ActionsBarProps {
 }
 
 export function ActionsBar({ onPreview, onDownload, onCancel }: ActionsBarProps) {
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const iconSizes = useIconSizes();
   return (
     <div className="flex items-center gap-3 pt-4 border-t">

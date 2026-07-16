@@ -1,5 +1,6 @@
 'use client';
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from 'react';
 import type { FieldConfig, SectionConfig } from '@/config/company-gemi';
 import { getIconComponent } from './utils/IconMapping';
@@ -282,7 +283,7 @@ export function GenericTabRenderer({
   valueFormatters
 }: GenericTabRendererProps) {
   const colors = useSemanticColors();
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
 
   const formatLabels: FormatLabels = {
     notSet: t('notSet'),

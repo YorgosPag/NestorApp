@@ -12,6 +12,7 @@
  * @enterprise Phase 1 — Contact Email Sharing
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { useState, useCallback, useRef } from 'react';
 import { Plus, X, Search, User, Building2, Wrench } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -87,7 +88,7 @@ export function ContactEmailPicker({
   loading,
   onContactSelected,
 }: ContactEmailPickerProps) {
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const colors = useSemanticColors();
 
   // Mode state

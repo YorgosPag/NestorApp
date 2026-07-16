@@ -5,6 +5,7 @@
  * Used by EmailShareForm (multi-select) and ShareModal/Telegram (single-select).
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from 'react';
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -41,7 +42,7 @@ export function PhotoPickerGrid({
   disabled = false,
   label,
 }: PhotoPickerGridProps) {
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
 
   const handleClick = (url: string) => {
     if (disabled) return;

@@ -16,6 +16,7 @@
 
 "use client";
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { useMemo, useState } from "react";
 import { History } from "lucide-react";
 import { useEntityAudit } from "@/hooks/useEntityAudit";
@@ -44,7 +45,7 @@ export function ActivityTab({
     ((data as Record<string, unknown> | undefined)?.id as string | undefined);
 
   const resolvedEntityType = entityType ?? "property";
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const colors = useSemanticColors();
   const [activeFilter, setActiveFilter] = useState<AuditAction | "all">("all");
 

@@ -12,6 +12,7 @@
  * @enterprise ADR-025 - Two-Factor Authentication
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from 'react';
 import {
   Smartphone,
@@ -65,7 +66,7 @@ interface TwoFactorEnrollmentProps {
 // =============================================================================
 
 export function TwoFactorEnrollment({ userId, onStatusChange }: TwoFactorEnrollmentProps) {
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const colors = useSemanticColors();
   const borders = useBorderTokens();
   const layout = useLayoutClasses();

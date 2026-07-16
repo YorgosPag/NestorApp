@@ -31,6 +31,7 @@
 
 'use client';
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from 'react';
 import {
   AlertDialog,
@@ -126,7 +127,7 @@ export function ConfirmDialog({
   children,
   contentClassName,
 }: ConfirmDialogProps) {
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
 
   const resolvedConfirmText = confirmText || t('buttons.confirm');
   const resolvedCancelText = cancelText || t('buttons.cancel');
@@ -198,7 +199,7 @@ export function ConfirmDialog({
 export function DeleteConfirmDialog(
   props: Omit<ConfirmDialogProps, 'variant'> & { variant?: ConfirmDialogVariant }
 ) {
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
 
   return (
     <ConfirmDialog

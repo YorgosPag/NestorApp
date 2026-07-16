@@ -1,5 +1,6 @@
 'use client';
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from 'react';
 import Link from 'next/link';
 import { ShieldX, LogIn } from 'lucide-react';
@@ -17,7 +18,7 @@ interface AIInboxUnauthorizedProps {
 }
 
 export function AIInboxUnauthorized({ error }: AIInboxUnauthorizedProps) {
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const iconSizes = useIconSizes();
   const layout = useLayoutClasses();
   const colors = useSemanticColors();

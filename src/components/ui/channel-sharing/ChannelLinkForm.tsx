@@ -14,6 +14,7 @@
  * @module components/ui/channel-sharing/ChannelLinkForm
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { useCallback, useState } from 'react';
 import { Link2, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -64,7 +65,7 @@ export function ChannelLinkForm({
   onLinked,
   onCancel,
 }: ChannelLinkFormProps): React.ReactElement {
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const notifications = useNotifications();
 
   const [provider, setProvider] = useState<ChannelProvider | ''>('');

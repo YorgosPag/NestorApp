@@ -6,6 +6,7 @@
  * @lazy ADR-294 Batch 3 — Extracted for dynamic import
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from 'react';
 import Link from 'next/link';
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
@@ -30,7 +31,7 @@ export function SpacesHubPageContent() {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
 
   const { properties, isLoading: propertiesLoading } = useSharedProperties();
   const { storages, loading: storagesLoading } = useFirestoreStorages();

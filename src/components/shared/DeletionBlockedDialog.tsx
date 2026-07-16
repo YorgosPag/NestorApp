@@ -10,6 +10,7 @@
 
 'use client';
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -50,7 +51,7 @@ export function DeletionBlockedDialog({
   message,
   entitySubtype,
 }: DeletionBlockedDialogProps) {
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
 

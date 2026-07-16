@@ -11,6 +11,7 @@
  * @enterprise ADR-244 / SPEC-244A
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -115,7 +116,7 @@ export function ProjectLandownersTab({ project, data }: ProjectLandownersTabProp
   const projectData = project ?? data;
   const projectId = projectData?.id;
 
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const { t: tProjects } = useTranslation(['projects', 'projects-data', 'projects-ika']);
   const { success: showSuccess, error: showError } = useNotifications();
   const typography = useTypography();

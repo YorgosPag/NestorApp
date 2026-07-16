@@ -6,6 +6,7 @@
  * @pattern Enterprise card with semantic hierarchy display
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { useEffect, useState } from 'react';
 import {
   Building2,
@@ -44,7 +45,7 @@ interface PropertyHierarchyCardProps {
 
 export function PropertyHierarchyCard({ propertyId }: PropertyHierarchyCardProps) {
   const colors = useSemanticColors();
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const iconSizes = useIconSizes();
   const [hierarchy, setHierarchy] = useState<PropertyHierarchyResponse | null>(
     propertyHierarchyCache.get(propertyId) ?? null

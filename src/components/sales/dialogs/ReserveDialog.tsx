@@ -5,6 +5,7 @@
  * @description Dialog for reserving a unit with buyer assignment and deposit
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { useState, useCallback } from 'react';
 import {
   Dialog,
@@ -47,7 +48,7 @@ const logger = createModuleLogger('ReserveDialog');
 
 export function ReserveDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogProps) {
   const colors = useSemanticColors();
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const { success, error: notifyError } = useNotifications();
   const iconSizes = useIconSizes();
   const [deposit, setDeposit] = useState<string>('');

@@ -14,9 +14,9 @@ import { ParkingQuickFilters } from '@/components/sales/filters/ParkingQuickFilt
 import { ParkingDetailPanel } from '@/components/sales/details/ParkingDetailPanel';
 import {
   SalesSpaceSidebar,
-  SALES_SPACE_SIDEBAR_NAMESPACES,
   type SalesSpaceRedirectTab,
 } from '@/components/sales/shared/SalesSpaceSidebar';
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { ParkingSpot } from '@/types/parking';
 import '@/lib/design-system';
@@ -62,7 +62,7 @@ export function SalesParkingSidebar({
   selectedType,
   onTypeChange,
 }: SalesParkingSidebarProps) {
-  const { t } = useTranslation(SALES_SPACE_SIDEBAR_NAMESPACES);
+  const { t } = useTranslation(COMMON_NAMESPACES);
 
   const redirectTabs = React.useMemo<readonly SalesSpaceRedirectTab[]>(
     () => [

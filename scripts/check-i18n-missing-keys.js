@@ -24,9 +24,18 @@
  */
 const fs = require('fs');
 const path = require('path');
+const {
+  loadNamespaceBundles,
+  extractNamespaces,
+} = require('./lib/i18n-namespace-extract');
 
-const LOCALE_DIR = path.join(__dirname, '..', 'src', 'i18n', 'locales', 'el');
-const BASELINE_FILE = path.join(__dirname, '..', '.i18n-missing-keys-baseline.json');
+const REPO_ROOT = path.join(__dirname, '..');
+const LOCALE_DIR = path.join(REPO_ROOT, 'src', 'i18n', 'locales', 'el');
+const BASELINE_FILE = path.join(REPO_ROOT, '.i18n-missing-keys-baseline.json');
+
+// Resolve shared namespace bundles (e.g. COMMON_NAMESPACES) once, so
+// useTranslation(<CONST>) call sites are checked, not silently skipped.
+const NAMESPACE_BUNDLES = loadNamespaceBundles(REPO_ROOT);
 
 // Colors
 const RED = '\x1b[0;31m';
@@ -83,29 +92,6 @@ function keyExists(obj, dottedKey) {
 }
 
 /**
- * Extract namespace from useTranslation calls
- * Supports: useTranslation('ns'), useTranslation(['ns1', 'ns2'])
- */
-function extractNamespaces(content) {
-  const namespaces = [];
-  // Single namespace: useTranslation('files')
-  const singleMatch = content.matchAll(/useTranslation\(\s*['"]([a-zA-Z0-9_-]+)['"]\s*\)/g);
-  for (const m of singleMatch) {
-    namespaces.push(m[1]);
-  }
-  // Array namespace: useTranslation(['files', 'common'])
-  const arrayMatch = content.matchAll(/useTranslation\(\s*\[([^\]]+)\]\s*\)/g);
-  for (const m of arrayMatch) {
-    const inner = m[1];
-    const items = inner.matchAll(/['"]([a-zA-Z0-9_-]+)['"]/g);
-    for (const item of items) {
-      namespaces.push(item[1]);
-    }
-  }
-  return [...new Set(namespaces)];
-}
-
-/**
  * Extract all t('key') calls — only static string keys
  */
 function extractTCalls(content) {
@@ -153,7 +139,7 @@ for (const file of files) {
   if (/(__tests__|\.test\.|\.spec\.|\.stories\.|scripts\/|\.config\.)/.test(file)) continue;
 
   const content = fs.readFileSync(file, 'utf8');
-  const namespaces = extractNamespaces(content);
+  const namespaces = extractNamespaces(content, NAMESPACE_BUNDLES);
 
   if (namespaces.length === 0) continue;
 

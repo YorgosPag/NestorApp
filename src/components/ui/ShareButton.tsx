@@ -5,6 +5,7 @@
  * ZERO HARDCODED STRINGS - All labels from centralized translations
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { useState } from 'react';
 import { Share2, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -49,7 +50,7 @@ export function ShareButton({
   onShareError,
 }: ShareButtonProps) {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const { quick } = useBorderTokens();

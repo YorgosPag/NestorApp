@@ -6,6 +6,7 @@
  * @enterprise ADR-230 (SPEC-230D Task B)
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { useCallback, useState } from 'react';
 import { Plus, Scale, Loader2 } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -65,7 +66,7 @@ const CREATABLE_PHASES: { value: ContractPhase; label: string }[] = [
 
 export function LegalTabContent({ unit }: LegalTabContentProps) {
   const colors = useSemanticColors();
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const { success, error: notifyError } = useNotifications();
   // 🏢 SSoT hierarchy via server endpoint (Admin SDK, rule-bypass).
   // Falls back to unit.project only if API fails entirely.

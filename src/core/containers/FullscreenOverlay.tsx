@@ -1,5 +1,6 @@
 'use client';
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Maximize2, Minimize2 } from 'lucide-react';
@@ -39,7 +40,7 @@ interface ToggleButtonProps {
 
 export function FullscreenToggleButton({ isFullscreen, onToggle }: ToggleButtonProps) {
   const iconSizes = useIconSizes();
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
 
   return (
     <Tooltip>

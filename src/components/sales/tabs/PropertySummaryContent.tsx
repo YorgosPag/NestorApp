@@ -6,6 +6,7 @@
  * @pattern Enterprise card layout, read-only mode
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from 'react';
 import {
   Home,
@@ -69,7 +70,7 @@ function SummaryField({
 
 export function PropertySummaryContent({ data: unit }: PropertySummaryContentProps) {
   const _colors = useSemanticColors();
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const { t: tProps } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const iconSizes = useIconSizes();
 

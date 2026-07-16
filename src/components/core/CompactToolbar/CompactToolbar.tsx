@@ -1,5 +1,6 @@
 'use client';
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from 'react';
 import { SearchInput } from '@/components/ui/search';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -19,7 +20,7 @@ const logger = createModuleLogger('CompactToolbar');
 // ============================================================================
 
 function useToolbarTranslation() {
-  const { t, isNamespaceReady } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t, isNamespaceReady } = useTranslation(COMMON_NAMESPACES);
 
   /** Translate search placeholder (handles i18n keys with dots) */
   const getTranslatedPlaceholder = (placeholder?: string): string => {

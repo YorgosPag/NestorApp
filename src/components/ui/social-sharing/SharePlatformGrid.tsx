@@ -10,6 +10,7 @@
 
 'use client';
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from 'react';
 import { designSystem } from '@/lib/design-system';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -80,7 +81,7 @@ export const SharePlatformGrid: React.FC<SharePlatformGridProps> = ({
   analytics = {}
 }) => {
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const colors = useSemanticColors();
 
   // ============================================================================

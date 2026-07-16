@@ -1,5 +1,6 @@
 'use client';
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Building2, User, Camera } from 'lucide-react';
@@ -87,7 +88,7 @@ function IndividualPhotoManager({
   disabled?: boolean;
   iconSizes: ReturnType<typeof useIconSizes>;
 }) {
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   // 🏢 ENTERPRISE: Global PhotoPreviewModal για gallery functionality
   const photoPreviewModal = useGlobalPhotoPreview();
 
@@ -175,7 +176,7 @@ function CompanyPhotoManager({
   disabled?: boolean;
   iconSizes: ReturnType<typeof useIconSizes>;
 }) {
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const handleLogoChange = handlers.handleLogoChange ?? (() => {});
 
   // 🏢 ADR-292: Resolve canonical fields for tenant-isolated upload
@@ -312,7 +313,7 @@ function ServicePhotoManager({
   disabled?: boolean;
   iconSizes: ReturnType<typeof useIconSizes>;
 }) {
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
 
   // 🏢 ADR-292: Resolve canonical fields for tenant-isolated upload
   const companyIdResult = useCompanyId();

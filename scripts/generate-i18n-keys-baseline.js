@@ -5,10 +5,19 @@
  */
 const fs = require('fs');
 const path = require('path');
+const {
+  loadNamespaceBundles,
+  extractNamespaces,
+} = require('./lib/i18n-namespace-extract');
 
-const SRC_DIR = path.join(__dirname, '..', 'src');
+const REPO_ROOT = path.join(__dirname, '..');
+const SRC_DIR = path.join(REPO_ROOT, 'src');
 const LOCALE_DIR = path.join(SRC_DIR, 'i18n', 'locales', 'el');
-const BASELINE_FILE = path.join(__dirname, '..', '.i18n-missing-keys-baseline.json');
+const BASELINE_FILE = path.join(REPO_ROOT, '.i18n-missing-keys-baseline.json');
+
+// Resolve shared namespace bundles (e.g. COMMON_NAMESPACES) once, so
+// useTranslation(<CONST>) call sites are scanned, not silently skipped.
+const NAMESPACE_BUNDLES = loadNamespaceBundles(REPO_ROOT);
 
 const jsonCache = new Map();
 
@@ -32,19 +41,6 @@ function keyExists(obj, dottedKey) {
     current = current[part];
   }
   return true;
-}
-
-function extractNamespaces(content) {
-  const namespaces = [];
-  for (const m of content.matchAll(/useTranslation\(\s*['"]([a-zA-Z0-9_-]+)['"]\s*\)/g)) {
-    namespaces.push(m[1]);
-  }
-  for (const m of content.matchAll(/useTranslation\(\s*\[([^\]]+)\]\s*\)/g)) {
-    for (const item of m[1].matchAll(/['"]([a-zA-Z0-9_-]+)['"]/g)) {
-      namespaces.push(item[1]);
-    }
-  }
-  return [...new Set(namespaces)];
 }
 
 function extractTCalls(content) {
@@ -78,7 +74,7 @@ let total = 0;
 
 for (const file of files) {
   const content = fs.readFileSync(file, 'utf8');
-  const namespaces = extractNamespaces(content);
+  const namespaces = extractNamespaces(content, NAMESPACE_BUNDLES);
   if (namespaces.length === 0) continue;
 
   const tCalls = extractTCalls(content);

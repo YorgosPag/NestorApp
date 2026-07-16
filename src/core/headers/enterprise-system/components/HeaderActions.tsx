@@ -7,6 +7,7 @@
 
 'use client';
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -52,7 +53,7 @@ export const HeaderActions: React.FC<UnifiedHeaderActionsProps> = ({
 }) => {
   const iconSizes = useIconSizes();
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
   const actionsClasses = cn(
     HEADER_THEME.components.actions.default,
     className

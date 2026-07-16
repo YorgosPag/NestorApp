@@ -10,6 +10,7 @@
  * @module components/core/CompactToolbar/CompactToolbarActions
  */
 
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import '@/lib/design-system';
 import React from 'react';
 import { Button } from '@/components/ui/button';
@@ -53,7 +54,7 @@ export function CompactToolbarActions({
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const spacing = useSpacingTokens();
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
+  const { t } = useTranslation(COMMON_NAMESPACES);
 
   const handleFilterChange = (filter: string, checked: boolean) => {
     if (checked) {
