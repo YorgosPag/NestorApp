@@ -16,8 +16,12 @@
 import 'server-only';
 
 import { safeJsonParse } from '@/lib/json-utils';
-import { isRecord } from '@/lib/type-guards';
 import { createModuleLogger } from '@/lib/telemetry';
+import {
+  executeResponsesRequest,
+  extractOutputText,
+  ResponsesApiError,
+} from '@/services/ai/openai-responses';
 import type { RelationshipCategory } from '@/types/contacts/relationships/core/relationship-metadata';
 
 const logger = createModuleLogger('RELATIONSHIP_TYPE_AI');
@@ -78,28 +82,6 @@ const SYSTEM_PROMPT = `Είσαι AI σύστημα ταξινόμησης σχ�
 
 Επέστρεψε ΜΟΝΟ JSON σύμφωνα με το schema.`;
 
-interface OpenAIErrorPayload {
-  error?: { message?: string };
-}
-
-function extractOutputText(payload: unknown): string | null {
-  if (!isRecord(payload)) return null;
-  const direct = payload.output_text;
-  if (typeof direct === 'string' && direct.trim().length > 0) return direct.trim();
-  const output = payload.output;
-  if (!Array.isArray(output)) return null;
-  for (const item of output) {
-    if (!isRecord(item) || item.type !== 'message') continue;
-    const content = item.content;
-    if (!Array.isArray(content)) continue;
-    for (const entry of content) {
-      if (!isRecord(entry) || entry.type !== 'output_text') continue;
-      const text = entry.text;
-      if (typeof text === 'string' && text.trim().length > 0) return text.trim();
-    }
-  }
-  return null;
-}
 
 function buildFallback(input: RelationshipInferenceInput): RelationshipInferenceResult {
   const labelEl = input.labelEl.trim();
@@ -133,15 +115,11 @@ export async function inferRelationshipTypeAttributes(
   const userPrompt = userPromptParts.join('\n');
 
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), timeoutMs);
-    const response = await fetch(`${baseUrl}/responses`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+    // maxRetries: 0 — this call site has never retried; the SSoT's retry loop
+    // is opt-in, not inherited.
+    const payload = await executeResponsesRequest(
+      { apiKey, baseUrl, timeoutMs, maxRetries: 0 },
+      {
         model,
         input: [
           { role: 'system', content: [{ type: 'input_text', text: SYSTEM_PROMPT }] },
@@ -156,20 +134,9 @@ export async function inferRelationshipTypeAttributes(
             schema: RELATIONSHIP_INFER_SCHEMA.schema as Record<string, unknown>,
           },
         },
-      }),
-      signal: controller.signal,
-    });
-    clearTimeout(timeout);
+      },
+    );
 
-    if (!response.ok) {
-      const err = (await response.json().catch(() => ({}))) as OpenAIErrorPayload;
-      logger.warn('OpenAI relationship-type inference failed — using fallback', {
-        status: response.status,
-        message: err.error?.message,
-      });
-      return buildFallback(input);
-    }
-    const payload = await response.json();
     const text = extractOutputText(payload);
     if (!text) return buildFallback(input);
     const parsed = safeJsonParse<{
@@ -189,6 +156,14 @@ export async function inferRelationshipTypeAttributes(
       aiBacked: true,
     };
   } catch (error) {
+    if (error instanceof ResponsesApiError) {
+      logger.warn('OpenAI relationship-type inference failed — using fallback', {
+        status: error.status,
+        message: error.message,
+      });
+      return buildFallback(input);
+    }
+
     logger.warn('OpenAI relationship-type inference threw — using fallback', { error });
     return buildFallback(input);
   }
