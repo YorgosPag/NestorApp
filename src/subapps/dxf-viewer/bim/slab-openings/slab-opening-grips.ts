@@ -17,6 +17,10 @@
  * (`|dx| ≥ |dy|` → keep dx, dy=0; otherwise keep dy, dx=0). Mirrors AutoCAD
  * "Ortho" + Revit Shift-constrained vertex drag.
  *
+ * The emit loop + vertex/edge/remove math live in the shared polygon-outline SSoT
+ * (`bim/grips/polygon-outline-grip-core`) — this file owns only the managed-opening
+ * lock guard, the `outline.vertices` container and geometry re-compute wiring.
+ *
  * SSoT:
  *   - Geometry math via `computeSlabOpeningGeometry()` (called by
  *     `UpdateSlabOpeningParamsCommand` at commit time — this module returns
@@ -24,14 +28,11 @@
  *   - Grip wire-up via the unified grip system (`SlabOpeningRenderer.getGrips`).
  *
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.5 §6 Phase 3.7a
+ * @see bim/grips/polygon-outline-grip-core.ts — shared emit + edit SSoT
  */
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { GripInfo, SlabOpeningGripKind } from '../../hooks/useGripMovement';
-import { constrainDeltaToDominantAxis } from '../grips/ortho-delta';
-import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
-import { parseGripKindIndex } from '../../systems/grip/grip-kind-index';
-import type { Point3D } from '../types/bim-base';
 import type {
   SlabOpeningEntity,
   SlabOpeningParams,
@@ -39,6 +40,11 @@ import type {
 import type { Entity } from '../../types/entities';
 import { getBimEntityKeyPoints2D } from '../utils/bim-entity-points';
 import { isManagedOpeningParams } from '../stairs/managed-slab-opening-lock';
+import {
+  buildPolygonOutlineGrips,
+  applyPolygonOutlineGripDrag,
+  removeOutlineVertexInList,
+} from '../grips/polygon-outline-grip-core';
 
 // ─── Grip position computation (ADR-363 §6 Phase 3.7a) ───────────────────────
 
@@ -59,33 +65,7 @@ export function getSlabOpeningGrips(entity: Readonly<SlabOpeningEntity>): GripIn
   if (isManagedOpeningParams(entity.params)) return [];
   const verts = getBimEntityKeyPoints2D(entity as Entity);
   if (verts.length < 3) return [];
-  const grips: GripInfo[] = [];
-  for (let i = 0; i < verts.length; i++) {
-    const v = verts[i];
-    grips.push({
-      entityId: entity.id,
-      gripIndex: i,
-      type: 'vertex',
-      position: { x: v.x, y: v.y },
-      movesEntity: false,
-      gripKind: { on: 'slab-opening', kind: `slab-opening-vertex-${i}` },
-    });
-  }
-  const offset = verts.length;
-  for (let i = 0; i < verts.length; i++) {
-    const a = verts[i];
-    const b = verts[(i + 1) % verts.length];
-    grips.push({
-      entityId: entity.id,
-      gripIndex: offset + i,
-      type: 'midpoint',
-      position: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 },
-      movesEntity: false,
-      edgeVertexIndices: [i, (i + 1) % verts.length],
-      gripKind: { on: 'slab-opening', kind: `slab-opening-edge-midpoint-${i}` },
-    });
-  }
-  return grips;
+  return buildPolygonOutlineGrips(entity.id, verts, 'slab-opening');
 }
 
 // ─── Drag transforms ─────────────────────────────────────────────────────────
@@ -103,78 +83,23 @@ export interface SlabOpeningGripDragInput {
 }
 
 /**
- * Pure transform: slab-opening grip kind + drag input → new `SlabOpeningParams`.
- * Geometry δεν recomputed εδώ — caller (`UpdateSlabOpeningParamsCommand.execute`)
- * καλεί `computeSlabOpeningGeometry()` ώστε math SSoT μένει σε ένα σημείο
- * και command merging preserves το original delta semantics.
- *
- * Για `slab-opening-vertex-N` ο numeric index `N` parsed από το discriminator
- * suffix· out-of-range index γυρνά `originalParams` αναλλοίωτο ώστε ο caller
- * να short-circuit το commit (no-op). Για `slab-opening-edge-midpoint-N`
- * φρέσκο vertex εισάγεται στο `midpoint(verts[N], verts[(N+1) mod len]) +
- * delta`, splitting την edge.
+ * Pure transform: slab-opening grip kind + drag input → new `SlabOpeningParams`
+ * (`slab-opening-vertex-N` → move, `slab-opening-edge-midpoint-N` → insert), via the
+ * shared polygon-outline dispatch. Geometry δεν recomputed εδώ — ο caller
+ * (`UpdateSlabOpeningParamsCommand.execute`) καλεί `computeSlabOpeningGeometry()`.
+ * No-op → `originalParams` αναλλοίωτο (commit-merge short-circuit).
  */
 export function applySlabOpeningGripDrag(
   gripKind: SlabOpeningGripKind,
   input: Readonly<SlabOpeningGripDragInput>,
 ): SlabOpeningParams {
-  const delta = input.rectilinear ? constrainDeltaToDominantAxis(input.delta) : input.delta;
-  if (gripKind.startsWith('slab-opening-vertex-')) {
-    const idx = parseGripKindIndex(gripKind);
-    if (idx === null) return input.originalParams;
-    return moveOutlineVertex(input.originalParams, delta, idx);
-  }
-  if (gripKind.startsWith('slab-opening-edge-midpoint-')) {
-    const idx = parseGripKindIndex(gripKind);
-    if (idx === null) return input.originalParams;
-    return insertVertexOnEdge(input.originalParams, delta, idx);
-  }
-  return input.originalParams;
-}
-
-
-function moveOutlineVertex(
-  originalParams: SlabOpeningParams,
-  delta: Point2D,
-  index: number,
-): SlabOpeningParams {
-  const verts = originalParams.outline.vertices;
-  if (index >= verts.length) return originalParams;
-  if (delta.x === 0 && delta.y === 0) return originalParams;
-  const next: Point3D[] = verts.map((v, i) =>
-    i === index ? translatePoint(v, delta) : cloneVertex(v),
+  return applyPolygonOutlineGripDrag(
+    gripKind,
+    'slab-opening',
+    input,
+    (p) => p.outline.vertices,
+    (p, vertices) => ({ ...p, outline: { vertices } }),
   );
-  return {
-    ...originalParams,
-    outline: { vertices: next },
-  };
-}
-
-function insertVertexOnEdge(
-  originalParams: SlabOpeningParams,
-  delta: Point2D,
-  edgeIndex: number,
-): SlabOpeningParams {
-  const verts = originalParams.outline.vertices;
-  if (edgeIndex >= verts.length) return originalParams;
-  const a = verts[edgeIndex];
-  const b = verts[(edgeIndex + 1) % verts.length];
-  const inserted: Point3D = {
-    x: (a.x + b.x) / 2 + delta.x,
-    y: (a.y + b.y) / 2 + delta.y,
-    ...(a.z !== undefined || b.z !== undefined
-      ? { z: ((a.z ?? 0) + (b.z ?? 0)) / 2 }
-      : {}),
-  };
-  const next: Point3D[] = [];
-  for (let i = 0; i < verts.length; i++) {
-    next.push(cloneVertex(verts[i]));
-    if (i === edgeIndex) next.push(inserted);
-  }
-  return {
-    ...originalParams,
-    outline: { vertices: next },
-  };
 }
 
 /**
@@ -189,15 +114,6 @@ export function removeVertexFromSlabOpening(
   originalParams: SlabOpeningParams,
   vertexIndex: number,
 ): SlabOpeningParams {
-  const verts = originalParams.outline.vertices;
-  if (verts.length <= 3) return originalParams;
-  if (vertexIndex < 0 || vertexIndex >= verts.length) return originalParams;
-  return {
-    ...originalParams,
-    outline: { vertices: verts.filter((_, i) => i !== vertexIndex) },
-  };
-}
-
-function cloneVertex(v: Point3D): Point3D {
-  return v.z !== undefined ? { x: v.x, y: v.y, z: v.z } : { x: v.x, y: v.y };
+  const next = removeOutlineVertexInList(originalParams.outline.vertices, vertexIndex);
+  return next ? { ...originalParams, outline: { vertices: next } } : originalParams;
 }

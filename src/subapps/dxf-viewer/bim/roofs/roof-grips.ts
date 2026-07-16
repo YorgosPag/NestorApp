@@ -17,12 +17,13 @@
  *   `RoofParams.edges` is PARALLEL to `outline.vertices` (one `RoofEdgeSlope`
  *   per footprint edge). `UpdateRoofParamsCommand.validate()` hard-requires
  *   `edges.length === outline.vertices.length` — any mismatch rejects the
- *   command. Therefore every grip op keeps the two arrays in lockstep:
- *     - move vertex   → `edges` unchanged (count preserved).
- *     - insert vertex → splice a COPY of `edges[N]` at index `N+1` (the new sub-
- *                       edge inherits the split edge's slope / definesSlope /
- *                       overhang — Revit «split keeps the parent slope»).
- *     - delete vertex → filter BOTH `outline.vertices[i]` AND `edges[i]`.
+ *   command. Therefore roof does NOT use the shared insert/remove helpers wholesale:
+ *     - move vertex   → shared `moveOutlineVertexInList` (`edges` count unchanged).
+ *     - insert vertex → local edges-aware loop (splice a COPY of `edges[N]` at `N+1`,
+ *                       the new sub-edge inherits the split edge's slope — Revit rule),
+ *                       reusing the shared `outlineEdgeInsertedVertex` + `cloneOutlineVertex`.
+ *     - delete vertex → shared `removeOutlineVertexInList` for the guard + vertices,
+ *                       then filter `edges` at the SAME index to stay in lockstep.
  *
  * Rectilinear constraint: when `input.rectilinear` is true the caller's `delta`
  * is quantized to the dominant world axis before mutation (mirror slab Phase 3.6
@@ -35,16 +36,20 @@
  *     the derived solid.
  *
  * @see docs/centralized-systems/reference/adrs/ADR-417-bim-roof-element.md §10
- * @see bim/slabs/slab-grips.ts — το πρότυπο (clone)
+ * @see bim/grips/polygon-outline-grip-core.ts — shared emit + edit SSoT
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import { constrainDeltaToDominantAxis } from '../grips/ortho-delta'; // ORTHO/F8 SSoT
-import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
-import { parseGripKindIndex } from '../../systems/grip/grip-kind-index';
 import type { GripInfo, RoofGripKind } from '../../hooks/useGripMovement';
 import type { Point3D } from '../types/bim-base';
 import type { RoofEntity, RoofParams, RoofEdgeSlope } from '../types/roof-types';
+import {
+  buildPolygonOutlineGrips,
+  applyPolygonOutlineGripDrag,
+  removeOutlineVertexInList,
+  outlineEdgeInsertedVertex,
+  cloneOutlineVertex,
+} from '../grips/polygon-outline-grip-core';
 
 // ─── Grip position computation ───────────────────────────────────────────────
 
@@ -63,33 +68,7 @@ import type { RoofEntity, RoofParams, RoofEdgeSlope } from '../types/roof-types'
 export function getRoofGrips(entity: Readonly<RoofEntity>): GripInfo[] {
   const verts = entity.params?.outline?.vertices ?? [];
   if (verts.length < 3) return [];
-  const grips: GripInfo[] = [];
-  for (let i = 0; i < verts.length; i++) {
-    const v = verts[i];
-    grips.push({
-      entityId: entity.id,
-      gripIndex: i,
-      type: 'vertex',
-      position: { x: v.x, y: v.y },
-      movesEntity: false,
-      gripKind: { on: 'roof', kind: `roof-vertex-${i}` },
-    });
-  }
-  const offset = verts.length;
-  for (let i = 0; i < verts.length; i++) {
-    const a = verts[i];
-    const b = verts[(i + 1) % verts.length];
-    grips.push({
-      entityId: entity.id,
-      gripIndex: offset + i,
-      type: 'midpoint',
-      position: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 },
-      movesEntity: false,
-      edgeVertexIndices: [i, (i + 1) % verts.length],
-      gripKind: { on: 'roof', kind: `roof-edge-midpoint-${i}` },
-    });
-  }
-  return grips;
+  return buildPolygonOutlineGrips(entity.id, verts, 'roof');
 }
 
 // ─── Drag transforms ─────────────────────────────────────────────────────────
@@ -118,64 +97,43 @@ export function applyRoofGripDrag(
   gripKind: RoofGripKind,
   input: Readonly<RoofGripDragInput>,
 ): RoofParams {
-  const delta = input.rectilinear ? constrainDeltaToDominantAxis(input.delta) : input.delta;
-  if (gripKind.startsWith('roof-vertex-')) {
-    const idx = parseGripKindIndex(gripKind);
-    if (idx === null) return input.originalParams;
-    return moveOutlineVertex(input.originalParams, delta, idx);
-  }
-  if (gripKind.startsWith('roof-edge-midpoint-')) {
-    const idx = parseGripKindIndex(gripKind);
-    if (idx === null) return input.originalParams;
-    return insertVertexOnEdge(input.originalParams, delta, idx);
-  }
-  return input.originalParams;
-}
-
-function moveOutlineVertex(
-  originalParams: RoofParams,
-  delta: Point2D,
-  index: number,
-): RoofParams {
-  const verts = originalParams.outline.vertices;
-  if (index >= verts.length) return originalParams;
-  if (delta.x === 0 && delta.y === 0) return originalParams;
-  const next: Point3D[] = verts.map((v, i) =>
-    i === index ? translatePoint(v, delta) : cloneVertex(v),
+  // Move keeps the same edge topology (default helper); insert overrides the default
+  // to splice `edges` in lockstep with the new vertex — the roof-specific variance.
+  return applyPolygonOutlineGripDrag(
+    gripKind,
+    'roof',
+    input,
+    (p) => p.outline.vertices,
+    (p, vertices) => ({ ...p, outline: { vertices } }),
+    insertRoofVertexOnEdge,
   );
-  // edges count is preserved — a moved vertex keeps the same edge topology.
-  return {
-    ...originalParams,
-    outline: { vertices: next },
-  };
 }
 
-function insertVertexOnEdge(
+/**
+ * Insert a fresh vertex after edge `edgeIndex`, keeping `edges` in lockstep: the new
+ * sub-edge inherits a COPY of the split edge's slope (Revit «split keeps the parent
+ * slope»), so `edges.length === vertices.length` holds for `validate()`.
+ */
+function insertRoofVertexOnEdge(
   originalParams: RoofParams,
-  delta: Point2D,
   edgeIndex: number,
+  delta: Point2D,
 ): RoofParams {
   const verts = originalParams.outline.vertices;
   const edges = originalParams.edges;
   if (edgeIndex >= verts.length) return originalParams;
-  const a = verts[edgeIndex];
-  const b = verts[(edgeIndex + 1) % verts.length];
-  const inserted: Point3D = {
-    x: (a.x + b.x) / 2 + delta.x,
-    y: (a.y + b.y) / 2 + delta.y,
-    ...(a.z !== undefined || b.z !== undefined
-      ? { z: ((a.z ?? 0) + (b.z ?? 0)) / 2 }
-      : {}),
-  };
+  const inserted = outlineEdgeInsertedVertex(
+    verts[edgeIndex],
+    verts[(edgeIndex + 1) % verts.length],
+    delta,
+  );
   const nextVerts: Point3D[] = [];
   const nextEdges: RoofEdgeSlope[] = [];
   for (let i = 0; i < verts.length; i++) {
-    nextVerts.push(cloneVertex(verts[i]));
+    nextVerts.push(cloneOutlineVertex(verts[i]));
     nextEdges.push(cloneEdge(edges[i]));
     if (i === edgeIndex) {
       nextVerts.push(inserted);
-      // The new sub-edge inherits the split edge's slope (Revit «split keeps
-      // the parent slope»). Keeps `edges.length === vertices.length`.
       nextEdges.push(cloneEdge(edges[edgeIndex]));
     }
   }
@@ -198,18 +156,13 @@ export function removeVertexFromRoof(
   originalParams: RoofParams,
   vertexIndex: number,
 ): RoofParams {
-  const verts = originalParams.outline.vertices;
-  if (verts.length <= 3) return originalParams;
-  if (vertexIndex < 0 || vertexIndex >= verts.length) return originalParams;
+  const nextVerts = removeOutlineVertexInList(originalParams.outline.vertices, vertexIndex);
+  if (!nextVerts) return originalParams;
   return {
     ...originalParams,
-    outline: { vertices: verts.filter((_, i) => i !== vertexIndex) },
+    outline: { vertices: nextVerts },
     edges: originalParams.edges.filter((_, i) => i !== vertexIndex),
   };
-}
-
-function cloneVertex(v: Point3D): Point3D {
-  return v.z !== undefined ? { x: v.x, y: v.y, z: v.z } : { x: v.x, y: v.y };
 }
 
 function cloneEdge(e: RoofEdgeSlope): RoofEdgeSlope {
