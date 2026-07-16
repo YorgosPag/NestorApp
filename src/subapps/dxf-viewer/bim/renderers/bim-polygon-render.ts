@@ -64,22 +64,56 @@ export function strokePolygonOutline(
   ctx.restore();
 }
 
-/** Hover-halo glow outline — no-op unless `highlighted`. Self-contained save/restore. */
+/**
+ * Hover-halo glow — no-op unless `highlighted`. Self-contained save/restore.
+ *
+ * SSoT for the glow STYLE (colour/width/alpha/dashless) + stroke; the caller's
+ * `trace` supplies the path, so this serves every halo shape, not just closed
+ * polygons: a multi-subpath body (a beam cut back by columns — ADR-458) or an
+ * OPEN polyline (a railing centreline) trace themselves and get the identical
+ * glow. `trace` must only build the path — `paintHoverHalo` owns the stroke.
+ *
+ * The halo is DERIVED, not independent: `bodyLineWidth + glowExtraWidth`, i.e. the
+ * glow always extends the same margin beyond whatever the entity's own outline is.
+ * Pass `bodyLineWidth` when the body is not the default `NORMAL` — the BIM
+ * finish/analytical overlays stroke themselves at `BIM_FINISH_BOUNDARY` and used to
+ * hand-approximate this sum with a magic `+ 1.5` that silently drifted from the body
+ * it was tracking (ADR-584 · N.18).
+ *
+ * Renderers whose halo outlines a plain closed footprint want the
+ * `paintPolygonHoverHalo` wrapper below instead.
+ */
+export function paintHoverHalo(
+  ctx: CanvasRenderingContext2D,
+  highlighted: boolean,
+  trace: () => void,
+  bodyLineWidth: number = RENDER_LINE_WIDTHS.NORMAL,
+): void {
+  if (!highlighted) return;
+  ctx.save();
+  ctx.strokeStyle = HOVER_HIGHLIGHT.ENTITY.glowColor;
+  ctx.lineWidth = bodyLineWidth + HOVER_HIGHLIGHT.ENTITY.glowExtraWidth;
+  ctx.globalAlpha = HOVER_HIGHLIGHT.ENTITY.glowOpacity;
+  ctx.setLineDash([]);
+  trace();
+  ctx.stroke();
+  ctx.restore();
+}
+
+/** Hover-halo glow outline around a closed polygon — no-op unless `highlighted`. */
 export function paintPolygonHoverHalo(
   ctx: CanvasRenderingContext2D,
   toScreen: ToScreen,
   vertices: Vertices,
   highlighted: boolean,
+  bodyLineWidth: number = RENDER_LINE_WIDTHS.NORMAL,
 ): void {
-  if (!highlighted) return;
-  ctx.save();
-  ctx.strokeStyle = HOVER_HIGHLIGHT.ENTITY.glowColor;
-  ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL + HOVER_HIGHLIGHT.ENTITY.glowExtraWidth;
-  ctx.globalAlpha = HOVER_HIGHLIGHT.ENTITY.glowOpacity;
-  ctx.setLineDash([]);
-  tracePolygonScreenPath(ctx, toScreen, vertices);
-  ctx.stroke();
-  ctx.restore();
+  paintHoverHalo(
+    ctx,
+    highlighted,
+    () => tracePolygonScreenPath(ctx, toScreen, vertices),
+    bodyLineWidth,
+  );
 }
 
 /**

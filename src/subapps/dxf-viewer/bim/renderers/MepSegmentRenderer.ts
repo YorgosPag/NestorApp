@@ -39,7 +39,7 @@ import {
   resolveSegmentBimCategory,
 } from '../types/mep-segment-types';
 import { buildRiserSymbol, drawRiserSymbol, RISER_SYMBOL_RADIUS_PX } from '../mep-segments/mep-riser-symbol';
-import { polygonBboxHitTest } from './bim-polygon-render';
+import { paintPolygonHoverHalo, polygonBboxHitTest, tracePolygonScreenPath, strokePolylinePaths } from './bim-polygon-render';
 import { computeTrimmedSegmentGeometry } from '../geometry/mep-segment-geometry';
 import { useMepSegmentTrimStore } from '../mep-fittings/mep-segment-trim-store';
 import { buildSegmentSymbol, buildPipeTickScreen } from '../mep-segments/mep-segment-symbol';
@@ -150,16 +150,7 @@ export class MepSegmentRenderer extends BaseEntityRenderer {
     const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
 
     // Hover halo via outline thicker glow (mirror BeamRenderer / MepFixtureRenderer).
-    if (phaseState.phase === 'highlighted') {
-      this.ctx.save();
-      this.ctx.strokeStyle = HOVER_HIGHLIGHT.ENTITY.glowColor;
-      this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL + HOVER_HIGHLIGHT.ENTITY.glowExtraWidth;
-      this.ctx.globalAlpha = HOVER_HIGHLIGHT.ENTITY.glowOpacity;
-      this.ctx.setLineDash([]);
-      this.drawPolygonPath(verts);
-      this.ctx.stroke();
-      this.ctx.restore();
-    }
+    paintPolygonHoverHalo(this.ctx, (p) => this.worldToScreen(p), verts, phaseState.phase === 'highlighted');
 
     this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
     this.ctx.save();
@@ -167,14 +158,14 @@ export class MepSegmentRenderer extends BaseEntityRenderer {
     // 1. Translucent fill — communicates the footprint extent in plan.
     // FULL SSoT (bim-body-fill) — κοινό adaptive layer με όλα τα BIM body fills.
     this.ctx.fillStyle = adaptFillTintForCanvas(fillColor);
-    this.drawPolygonPath(verts);
+    tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), verts);
     this.ctx.fill();
 
     // 2. Dashed outline (industry convention: linear run hidden above cut plane).
     this.ctx.strokeStyle = strokeColor;
     this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
     this.ctx.setLineDash(OUTLINE_DASH as unknown as number[]);
-    this.drawPolygonPath(verts);
+    tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), verts);
     this.ctx.stroke();
 
     // 3. Axis centerline — thinner dashed stroke along the run centreline.
@@ -182,7 +173,7 @@ export class MepSegmentRenderer extends BaseEntityRenderer {
     if (axisPoints.length >= 2) {
       this.ctx.setLineDash(AXIS_DASH as unknown as number[]);
       this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN;
-      this.drawPolyline(axisPoints);
+      strokePolylinePaths(this.ctx, (p) => this.worldToScreen(p), [axisPoints]);
     }
 
     // 4. Domain symbol — centerline (world-space) from buildSegmentSymbol SSoT.
@@ -320,17 +311,6 @@ export class MepSegmentRenderer extends BaseEntityRenderer {
     this.finalizeRender(segment, options);
   }
 
-  private drawPolygonPath(vertices: ReadonlyArray<{ x: number; y: number }>): void {
-    if (vertices.length < 3) return;
-    this.ctx.beginPath();
-    const first = this.worldToScreen({ x: vertices[0].x, y: vertices[0].y });
-    this.ctx.moveTo(first.x, first.y);
-    for (let i = 1; i < vertices.length; i++) {
-      const s = this.worldToScreen({ x: vertices[i].x, y: vertices[i].y });
-      this.ctx.lineTo(s.x, s.y);
-    }
-    this.ctx.closePath();
-  }
 
   /**
    * ADR-408 Φ14 #2 — draw the slope (fall) indicator in SCREEN space: a midpoint
@@ -389,15 +369,5 @@ export class MepSegmentRenderer extends BaseEntityRenderer {
     this.ctx.restore();
   }
 
-  private drawPolyline(points: ReadonlyArray<{ x: number; y: number }>): void {
-    if (points.length < 2) return;
-    this.ctx.beginPath();
-    const first = this.worldToScreen({ x: points[0].x, y: points[0].y });
-    this.ctx.moveTo(first.x, first.y);
-    for (let i = 1; i < points.length; i++) {
-      const s = this.worldToScreen({ x: points[i].x, y: points[i].y });
-      this.ctx.lineTo(s.x, s.y);
-    }
-    this.ctx.stroke();
-  }
+
 }

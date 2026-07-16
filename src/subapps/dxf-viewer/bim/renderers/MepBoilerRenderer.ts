@@ -22,14 +22,13 @@ import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../render
 import type { Entity } from '../../types/entities';
 import { isMepBoilerEntity } from '../../types/entities';
 import type { MepBoilerEntity } from '../types/mep-boiler-types';
-import { polygonBboxHitTest } from './bim-polygon-render';
+import { paintPolygonHoverHalo, polygonBboxHitTest, tracePolygonScreenPath, strokePolylinePaths } from './bim-polygon-render';
 import { buildMepBoilerSymbol } from '../mep-boilers/mep-boiler-symbol';
 import { resolveBoilerTagLines } from '../mep-boilers/mep-boiler-tag';
 import { resolveSegmentClassificationColor } from '../mep-systems/mep-system-color';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
-import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getLayer } from '../../stores/LayerStore';
 
 /**
@@ -80,16 +79,7 @@ export class MepBoilerRenderer extends BaseEntityRenderer {
 
     const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
 
-    if (phaseState.phase === 'highlighted') {
-      this.ctx.save();
-      this.ctx.strokeStyle = HOVER_HIGHLIGHT.ENTITY.glowColor;
-      this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL + HOVER_HIGHLIGHT.ENTITY.glowExtraWidth;
-      this.ctx.globalAlpha = HOVER_HIGHLIGHT.ENTITY.glowOpacity;
-      this.ctx.setLineDash([]);
-      this.drawPolygonPath(verts);
-      this.ctx.stroke();
-      this.ctx.restore();
-    }
+    paintPolygonHoverHalo(this.ctx, (p) => this.worldToScreen(p), verts, phaseState.phase === 'highlighted');
 
     this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
     this.ctx.save();
@@ -98,11 +88,11 @@ export class MepBoilerRenderer extends BaseEntityRenderer {
     // Fill + outline — warm-red heating equipment (boiler = hydronic source).
     // FULL SSoT (bim-body-fill) — κοινό adaptive layer με όλα τα BIM body fills.
     this.ctx.fillStyle = adaptFillTintForCanvas(BOILER_FILL);
-    this.drawPolygonPath(verts);
+    tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), verts);
     this.ctx.fill();
     this.ctx.strokeStyle = BOILER_STROKE;
     this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
-    this.drawPolygonPath(verts);
+    tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), verts);
     this.ctx.stroke();
 
     // Boiler symbol — connector-driven pipe stubs + flue vent + fuel-cock glyph + divider/flame.
@@ -113,24 +103,20 @@ export class MepBoilerRenderer extends BaseEntityRenderer {
     const symbol = buildMepBoilerSymbol(boiler.params, boiler.geometry);
     for (const { line, classification } of symbol.strokes) {
       this.ctx.strokeStyle = resolveSegmentClassificationColor(classification) ?? BOILER_STROKE;
-      this.drawStroke(line);
+      strokePolylinePaths(this.ctx, (p) => this.worldToScreen(p), [line]);
     }
     // Combustion flue (καπναγωγός) vent glyph — coloured exhaust grey via the classification
     // SSoT; its chevron arrowhead also distinguishes it from the pipe stubs.
     for (const { line, classification } of symbol.ventStrokes) {
       this.ctx.strokeStyle = resolveSegmentClassificationColor(classification) ?? BOILER_STROKE;
-      this.drawStroke(line);
+      strokePolylinePaths(this.ctx, (p) => this.worldToScreen(p), [line]);
     }
     // Fuel inlet (τροφοδοσία καυσίμου) gas-cock glyph — warm-red default (fuel domain not in the
     // colour SSoT); its bow-tie isolation valve distinguishes the piped fuel line from pipes/flue.
     this.ctx.strokeStyle = BOILER_STROKE;
-    for (const stroke of symbol.fuelStrokes) {
-      this.drawStroke(stroke);
-    }
+    strokePolylinePaths(this.ctx, (p) => this.worldToScreen(p), symbol.fuelStrokes);
     this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN;
-    for (const stroke of symbol.glyphStrokes) {
-      this.drawStroke(stroke);
-    }
+    strokePolylinePaths(this.ctx, (p) => this.worldToScreen(p), symbol.glyphStrokes);
 
     this.ctx.restore();
 
@@ -174,22 +160,9 @@ export class MepBoilerRenderer extends BaseEntityRenderer {
     this.ctx.globalAlpha = CLEARANCE_ALPHA;
     this.ctx.strokeStyle = BOILER_STROKE;
     this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN;
-    this.drawPolygonPath(outline);
+    tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), outline);
     this.ctx.stroke();
     this.ctx.restore();
-  }
-
-  /** Stroke a world-space polyline (symbol stub / glyph) at the current style. */
-  private drawStroke(stroke: ReadonlyArray<{ x: number; y: number }>): void {
-    if (stroke.length < 2) return;
-    this.ctx.beginPath();
-    const start = this.worldToScreen({ x: stroke[0].x, y: stroke[0].y });
-    this.ctx.moveTo(start.x, start.y);
-    for (let i = 1; i < stroke.length; i++) {
-      const s = this.worldToScreen({ x: stroke[i].x, y: stroke[i].y });
-      this.ctx.lineTo(s.x, s.y);
-    }
-    this.ctx.stroke();
   }
 
   /**
@@ -247,15 +220,5 @@ export class MepBoilerRenderer extends BaseEntityRenderer {
     this.ctx.restore();
   }
 
-  private drawPolygonPath(vertices: ReadonlyArray<{ x: number; y: number }>): void {
-    if (vertices.length < 3) return;
-    this.ctx.beginPath();
-    const first = this.worldToScreen({ x: vertices[0].x, y: vertices[0].y });
-    this.ctx.moveTo(first.x, first.y);
-    for (let i = 1; i < vertices.length; i++) {
-      const s = this.worldToScreen({ x: vertices[i].x, y: vertices[i].y });
-      this.ctx.lineTo(s.x, s.y);
-    }
-    this.ctx.closePath();
-  }
+
 }

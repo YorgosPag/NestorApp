@@ -33,15 +33,13 @@ import type {
   SlabOpeningEntity,
   SlabOpeningKind,
 } from '../types/slab-opening-types';
-import { polygonBboxHitTest } from './bim-polygon-render';
-import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
+import { paintPolygonHoverHalo, polygonBboxHitTest, tracePolygonScreenPath, mapBimGrips } from './bim-polygon-render';
 import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
 import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
 import { resolveBimBodyFill } from '../utils/bim-body-fill';
 import { bimDashPx } from '../../config/bim-dash-resolver';
 import { resolveCutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
-import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getSlabOpeningGrips } from '../slab-openings/slab-opening-grips';
 import { getLayer } from '../../stores/LayerStore';
 import { isConcreteLineweight } from '../../config/lineweight-iso-catalog';
@@ -94,16 +92,7 @@ export class SlabOpeningRenderer extends BaseEntityRenderer {
     const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
 
     // Hover halo via outline thicker glow.
-    if (phaseState.phase === 'highlighted') {
-      this.ctx.save();
-      this.ctx.strokeStyle = HOVER_HIGHLIGHT.ENTITY.glowColor;
-      this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL + HOVER_HIGHLIGHT.ENTITY.glowExtraWidth;
-      this.ctx.globalAlpha = HOVER_HIGHLIGHT.ENTITY.glowOpacity;
-      this.ctx.setLineDash([]);
-      this.drawPolygonPath(verts);
-      this.ctx.stroke();
-      this.ctx.restore();
-    }
+    paintPolygonHoverHalo(this.ctx, (p) => this.worldToScreen(p), verts, phaseState.phase === 'highlighted');
 
     this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
     this.ctx.save();
@@ -118,7 +107,7 @@ export class SlabOpeningRenderer extends BaseEntityRenderer {
     // FULL SSoT (bim-body-fill) — ίδιος κώδικας body-fill με όλα τα BIM (V/G tint ??
     // παλέτα → background-adaptive boost ⇒ ΙΔΙΑ διαφάνεια σε κάθε φόντο).
     this.ctx.fillStyle = resolveBimBodyFill('slab-opening', _soCutState, _soStyles, KIND_FILL[opening.kind]);
-    this.drawPolygonPath(verts);
+    tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), verts);
     this.ctx.fill();
 
     const _soLayerOverride = _soLayer ? {
@@ -137,7 +126,7 @@ export class SlabOpeningRenderer extends BaseEntityRenderer {
       : KIND_DASH[opening.kind];
     this.ctx.setLineDash(_soDash as number[]);
     this.ctx.strokeStyle = _soColor ?? KIND_STROKE[opening.kind];
-    this.drawPolygonPath(verts);
+    tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), verts);
     this.ctx.stroke();
     this.ctx.restore();
 
@@ -151,14 +140,7 @@ export class SlabOpeningRenderer extends BaseEntityRenderer {
     // `commitSlabOpeningGripDrag` (grip-commit-adapter), with Shift driving
     // rectilinear quantization.
     if (!isSlabOpeningEntity(entity)) return [];
-    return getSlabOpeningGrips(entity as SlabOpeningEntity).map((g) => ({
-      id: `${g.entityId}-grip-${g.gripIndex}`,
-      position: g.position,
-      type: g.type === 'midpoint' ? ('midpoint' as const) : ('vertex' as const),
-      entityId: g.entityId,
-      isVisible: true,
-      gripIndex: g.gripIndex,
-    }));
+    return mapBimGrips(getSlabOpeningGrips(entity as SlabOpeningEntity));
   }
 
   hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {
@@ -169,17 +151,4 @@ export class SlabOpeningRenderer extends BaseEntityRenderer {
     return polygonBboxHitTest(bb, opening.geometry.polygon.vertices, point, tolerance);
   }
 
-  // ─── Internal helpers ────────────────────────────────────────────────────
-
-  private drawPolygonPath(vertices: ReadonlyArray<{ x: number; y: number }>): void {
-    if (vertices.length < 3) return;
-    this.ctx.beginPath();
-    const first = this.worldToScreen({ x: vertices[0].x, y: vertices[0].y });
-    this.ctx.moveTo(first.x, first.y);
-    for (let i = 1; i < vertices.length; i++) {
-      const s = this.worldToScreen({ x: vertices[i].x, y: vertices[i].y });
-      this.ctx.lineTo(s.x, s.y);
-    }
-    this.ctx.closePath();
-  }
 }

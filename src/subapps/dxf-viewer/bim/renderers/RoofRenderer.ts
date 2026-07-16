@@ -32,7 +32,7 @@ import type { RoofEntity } from '../types/roof-types';
 import type { Point3D } from '../types/bim-base';
 import { getRoofGrips } from '../roofs/roof-grips';
 import { getSelectedRoofEdge } from '../roofs/roof-edge-selection-store';
-import { polygonBboxHitTest } from './bim-polygon-render';
+import { paintPolygonHoverHalo, polygonBboxHitTest, tracePolygonScreenPath, mapBimGrips } from './bim-polygon-render';
 import { buildRoofEaveDetail } from '../geometry/roof-eave-detail';
 import {
   DEFAULT_EAVE_MATERIAL_ID,
@@ -41,7 +41,7 @@ import {
 } from '../types/roof-types';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
-import { HOVER_HIGHLIGHT, UI_COLORS_BASE } from '../../config/color-config';
+import { UI_COLORS_BASE } from '../../config/color-config';
 import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
 import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
 import { getLayer } from '../../stores/LayerStore';
@@ -97,16 +97,7 @@ export class RoofRenderer extends BaseEntityRenderer {
     const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
 
     // Hover halo: glow stroke around footprint polygon outline.
-    if (phaseState.phase === 'highlighted') {
-      this.ctx.save();
-      this.ctx.strokeStyle = HOVER_HIGHLIGHT.ENTITY.glowColor;
-      this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL + HOVER_HIGHLIGHT.ENTITY.glowExtraWidth;
-      this.ctx.globalAlpha = HOVER_HIGHLIGHT.ENTITY.glowOpacity;
-      this.ctx.setLineDash([]);
-      this.drawPolygonPath(footprintVerts);
-      this.ctx.stroke();
-      this.ctx.restore();
-    }
+    paintPolygonHoverHalo(this.ctx, (p) => this.worldToScreen(p), footprintVerts, phaseState.phase === 'highlighted');
 
     this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
     this.ctx.save();
@@ -145,14 +136,7 @@ export class RoofRenderer extends BaseEntityRenderer {
     // `commitRoofGripDrag` (grip-commit-adapter), with Shift driving rectilinear
     // quantization. Mirror of `SlabRenderer.getGrips`.
     if (!isRoofEntity(entity)) return [];
-    return getRoofGrips(entity as RoofEntity).map((g) => ({
-      id: `${g.entityId}-grip-${g.gripIndex}`,
-      position: g.position,
-      type: g.type === 'midpoint' ? ('midpoint' as const) : ('vertex' as const),
-      entityId: g.entityId,
-      isVisible: true,
-      gripIndex: g.gripIndex,
-    }));
+    return mapBimGrips(getRoofGrips(entity as RoofEntity));
   }
 
   hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {
@@ -170,7 +154,7 @@ export class RoofRenderer extends BaseEntityRenderer {
    * Vertices are Point3D (canvas-unit xy, mm z) — only xy used for 2D.
    */
   private drawFace(vertices: readonly Point3D[]): void {
-    this.drawPolygonPath(vertices);
+    tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), vertices);
     // FULL SSoT (bim-body-fill) — κοινό adaptive layer με όλα τα BIM body fills.
     this.ctx.fillStyle = adaptFillTintForCanvas(ROOF_FACE_FILL);
     this.ctx.fill();
@@ -279,19 +263,4 @@ export class RoofRenderer extends BaseEntityRenderer {
     this.ctx.restore();
   }
 
-  /**
-   * Builds a closed canvas path from a vertex array (xy only — z ignored for 2D).
-   * Mirror of SlabRenderer.drawPolygonPath.
-   */
-  private drawPolygonPath(vertices: ReadonlyArray<{ x: number; y: number }>): void {
-    if (vertices.length < 3) return;
-    this.ctx.beginPath();
-    const first = this.worldToScreen({ x: vertices[0].x, y: vertices[0].y });
-    this.ctx.moveTo(first.x, first.y);
-    for (let i = 1; i < vertices.length; i++) {
-      const s = this.worldToScreen({ x: vertices[i].x, y: vertices[i].y });
-      this.ctx.lineTo(s.x, s.y);
-    }
-    this.ctx.closePath();
-  }
 }

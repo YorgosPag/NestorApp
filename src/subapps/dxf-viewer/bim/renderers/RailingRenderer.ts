@@ -27,9 +27,8 @@ import { clamp01 } from '../../utils/scalar-math';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
-import { bboxRejectsPoint } from './bim-polygon-render';
+import { bboxRejectsPoint, paintHoverHalo } from './bim-polygon-render';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
-import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getLayer } from '../../stores/LayerStore';
 
 // ADR-445 — κιγκλίδωμα = ψυχρό steel-grey (#607080), ευθυγραμμισμένο με
@@ -56,15 +55,9 @@ export class RailingRenderer extends BaseEntityRenderer {
 
     const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
 
-    if (phaseState.phase === 'highlighted') {
-      this.ctx.save();
-      this.ctx.strokeStyle = HOVER_HIGHLIGHT.ENTITY.glowColor;
-      this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL + HOVER_HIGHLIGHT.ENTITY.glowExtraWidth;
-      this.ctx.globalAlpha = HOVER_HIGHLIGHT.ENTITY.glowOpacity;
-      this.ctx.setLineDash([]);
-      this.strokePolyline(symbol.pathStroke);
-      this.ctx.restore();
-    }
+    // A railing halo follows the OPEN centreline, so it traces (never closes) the
+    // path — `paintPolygonHoverHalo` would draw a phantom closing leg end→start.
+    paintHoverHalo(this.ctx, phaseState.phase === 'highlighted', () => this.tracePolyline(symbol.pathStroke));
 
     this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
     this.ctx.save();

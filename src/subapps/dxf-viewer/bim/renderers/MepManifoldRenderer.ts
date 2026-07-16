@@ -22,7 +22,7 @@ import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../render
 import type { Entity } from '../../types/entities';
 import { isMepManifoldEntity } from '../../types/entities';
 import type { MepManifoldEntity } from '../types/mep-manifold-types';
-import { polygonBboxHitTest, mapBimGrips } from './bim-polygon-render';
+import { paintPolygonHoverHalo, polygonBboxHitTest, mapBimGrips, tracePolygonScreenPath, strokePolylinePaths } from './bim-polygon-render';
 import { buildMepManifoldSymbol, resolveManifoldPalette } from '../mep-manifolds/mep-manifold-symbol';
 // 🏢 ADR-571: hexToRgba SSoT (fill derived from strokeHex — μηδέν rgb tuple)
 import { hexToRgba } from '../../config/color-math';
@@ -32,7 +32,6 @@ import { gripKindOf } from '../../hooks/grip-kinds';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
-import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getLayer } from '../../stores/LayerStore';
 
 /**
@@ -58,16 +57,7 @@ export class MepManifoldRenderer extends BaseEntityRenderer {
 
     const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
 
-    if (phaseState.phase === 'highlighted') {
-      this.ctx.save();
-      this.ctx.strokeStyle = HOVER_HIGHLIGHT.ENTITY.glowColor;
-      this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL + HOVER_HIGHLIGHT.ENTITY.glowExtraWidth;
-      this.ctx.globalAlpha = HOVER_HIGHLIGHT.ENTITY.glowOpacity;
-      this.ctx.setLineDash([]);
-      this.drawPolygonPath(verts);
-      this.ctx.stroke();
-      this.ctx.restore();
-    }
+    paintPolygonHoverHalo(this.ctx, (p) => this.worldToScreen(p), verts, phaseState.phase === 'highlighted');
 
     this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
     this.ctx.save();
@@ -78,26 +68,22 @@ export class MepManifoldRenderer extends BaseEntityRenderer {
     const palette = resolveManifoldPalette(manifold.params.kind);
     // FULL SSoT (bim-body-fill) — κοινό adaptive layer με όλα τα BIM body fills.
     this.ctx.fillStyle = adaptFillTintForCanvas(hexToRgba(palette.strokeHex, MANIFOLD_FILL_ALPHA));
-    this.drawPolygonPath(verts);
+    tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), verts);
     this.ctx.fill();
     this.ctx.strokeStyle = palette.strokeHex;
     this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
-    this.drawPolygonPath(verts);
+    tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), verts);
     this.ctx.stroke();
 
     // Manifold symbol strokes (inlet stub + outlet stubs).
     const symbol = buildMepManifoldSymbol(manifold.params, manifold.geometry);
-    for (const stroke of symbol.strokes) {
-      this.drawStroke(stroke);
-    }
+    strokePolylinePaths(this.ctx, (p) => this.worldToScreen(p), symbol.strokes);
 
     // ADR-408 Φ14 — drainage collector (φρεάτιο) grating: parallel bars inside the
     // footprint, thinner than the stubs so the catch-basin reads at a glance.
     if (symbol.gratingStrokes) {
       this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN;
-      for (const stroke of symbol.gratingStrokes) {
-        this.drawStroke(stroke);
-      }
+      strokePolylinePaths(this.ctx, (p) => this.worldToScreen(p), symbol.gratingStrokes);
     }
 
     this.ctx.restore();
@@ -125,30 +111,4 @@ export class MepManifoldRenderer extends BaseEntityRenderer {
     return polygonBboxHitTest(bb, manifold.geometry.footprint.vertices, point, tolerance);
   }
 
-  // ─── Internal helpers ──────────────────────────────────────────────────────
-
-  /** Stroke a world-space polyline (symbol stub / grating bar) at the current style. */
-  private drawStroke(stroke: ReadonlyArray<{ x: number; y: number }>): void {
-    if (stroke.length < 2) return;
-    this.ctx.beginPath();
-    const start = this.worldToScreen({ x: stroke[0].x, y: stroke[0].y });
-    this.ctx.moveTo(start.x, start.y);
-    for (let i = 1; i < stroke.length; i++) {
-      const s = this.worldToScreen({ x: stroke[i].x, y: stroke[i].y });
-      this.ctx.lineTo(s.x, s.y);
-    }
-    this.ctx.stroke();
-  }
-
-  private drawPolygonPath(vertices: ReadonlyArray<{ x: number; y: number }>): void {
-    if (vertices.length < 3) return;
-    this.ctx.beginPath();
-    const first = this.worldToScreen({ x: vertices[0].x, y: vertices[0].y });
-    this.ctx.moveTo(first.x, first.y);
-    for (let i = 1; i < vertices.length; i++) {
-      const s = this.worldToScreen({ x: vertices[i].x, y: vertices[i].y });
-      this.ctx.lineTo(s.x, s.y);
-    }
-    this.ctx.closePath();
-  }
 }

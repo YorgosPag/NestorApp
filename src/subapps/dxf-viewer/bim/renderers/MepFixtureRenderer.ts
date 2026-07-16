@@ -25,7 +25,7 @@ import type { MepFixtureEntity } from '../types/mep-fixture-types';
 import { resolveFixtureBimCategory, resolveFixtureMeshCategory } from '../types/mep-fixture-types';
 import { isSanitaryKind } from '../sanitary/sanitary-symbol-spec';
 import { resolveSegmentClassificationColor } from '../mep-systems/mep-system-color';
-import { polygonBboxHitTest, mapBimGrips } from './bim-polygon-render';
+import { paintPolygonHoverHalo, polygonBboxHitTest, mapBimGrips, tracePolygonScreenPath } from './bim-polygon-render';
 import { buildFixtureSymbol } from '../mep-fixtures/mep-fixture-symbol';
 import { getMepFixtureGrips } from '../mep-fixtures/mep-fixture-grips';
 import { bimMeshCache } from '../../bim-3d/library/bim-mesh-library/bim-mesh-cache';
@@ -35,7 +35,6 @@ import { gripKindOf } from '../../hooks/grip-kinds';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
-import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getLayer } from '../../stores/LayerStore';
 import { useMepSystemStore } from '../mep-systems/mep-system-store';
 import {
@@ -90,16 +89,7 @@ export class MepFixtureRenderer extends BaseEntityRenderer {
 
     const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
 
-    if (phaseState.phase === 'highlighted') {
-      this.ctx.save();
-      this.ctx.strokeStyle = HOVER_HIGHLIGHT.ENTITY.glowColor;
-      this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL + HOVER_HIGHLIGHT.ENTITY.glowExtraWidth;
-      this.ctx.globalAlpha = HOVER_HIGHLIGHT.ENTITY.glowOpacity;
-      this.ctx.setLineDash([]);
-      this.drawPolygonPath(verts);
-      this.ctx.stroke();
-      this.ctx.restore();
-    }
+    paintPolygonHoverHalo(this.ctx, (p) => this.worldToScreen(p), verts, phaseState.phase === 'highlighted');
 
     this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
     this.ctx.save();
@@ -139,11 +129,11 @@ export class MepFixtureRenderer extends BaseEntityRenderer {
       // Fill + outline (colour-by-system override, ADR-408 Φ5).
       // FULL SSoT (bim-body-fill) — κοινό adaptive layer με όλα τα BIM body fills.
       this.ctx.fillStyle = adaptFillTintForCanvas(fillColor);
-      this.drawPolygonPath(verts);
+      tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), verts);
       this.ctx.fill();
       this.ctx.strokeStyle = strokeColor;
       this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
-      this.drawPolygonPath(verts);
+      tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), verts);
       this.ctx.stroke();
 
       // Family symbol strokes (the luminaire "X").
@@ -188,15 +178,5 @@ export class MepFixtureRenderer extends BaseEntityRenderer {
 
   // ─── Internal helpers ────────────────────────────────────────────────────
 
-  private drawPolygonPath(vertices: ReadonlyArray<{ x: number; y: number }>): void {
-    if (vertices.length < 3) return;
-    this.ctx.beginPath();
-    const first = this.worldToScreen({ x: vertices[0].x, y: vertices[0].y });
-    this.ctx.moveTo(first.x, first.y);
-    for (let i = 1; i < vertices.length; i++) {
-      const s = this.worldToScreen({ x: vertices[i].x, y: vertices[i].y });
-      this.ctx.lineTo(s.x, s.y);
-    }
-    this.ctx.closePath();
-  }
+
 }

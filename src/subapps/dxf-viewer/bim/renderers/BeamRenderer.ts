@@ -32,7 +32,7 @@ import type { Entity } from '../../types/entities';
 import { isBeamEntity } from '../../types/entities';
 import type { BeamEntity, BeamKind } from '../types/beam-types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
-import { bboxRejectsPoint, mapBimGrips } from './bim-polygon-render';
+import { bboxRejectsPoint, mapBimGrips, paintHoverHalo, strokePolylinePaths } from './bim-polygon-render';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
 import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
@@ -41,7 +41,6 @@ import { resolveBimBodyFill } from '../utils/bim-body-fill';
 import { bimDashPx } from '../../config/bim-dash-resolver';
 import { resolveCutState, type CutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
-import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getLayer } from '../../stores/LayerStore';
 import { isConcreteLineweight } from '../../config/lineweight-iso-catalog';
 import { getBeamGrips, beamDepthHandlePosition } from '../beams/beam-grips';
@@ -122,17 +121,9 @@ export class BeamRenderer extends BaseEntityRenderer {
 
     const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
 
-    // Hover halo via outline thicker glow.
-    if (phaseState.phase === 'highlighted') {
-      this.ctx.save();
-      this.ctx.strokeStyle = HOVER_HIGHLIGHT.ENTITY.glowColor;
-      this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL + HOVER_HIGHLIGHT.ENTITY.glowExtraWidth;
-      this.ctx.globalAlpha = HOVER_HIGHLIGHT.ENTITY.glowOpacity;
-      this.ctx.setLineDash([]);
-      this.buildPiecesPath(drawable);
-      this.ctx.stroke();
-      this.ctx.restore();
-    }
+    // Hover halo via outline thicker glow. ADR-458 — the halo traces the cut-back
+    // pieces, so it takes the multi-subpath `trace` overload of the glow SSoT.
+    paintHoverHalo(this.ctx, phaseState.phase === 'highlighted', () => this.buildPiecesPath(drawable));
 
     this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
     this.ctx.save();
@@ -184,7 +175,7 @@ export class BeamRenderer extends BaseEntityRenderer {
     if (axis.length >= 2) {
       this.ctx.setLineDash(AXIS_DASH as unknown as number[]);
       this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN;
-      this.drawPolyline(axis);
+      strokePolylinePaths(this.ctx, (p) => this.worldToScreen(p), [axis]);
     }
 
     this.ctx.restore();
@@ -344,15 +335,5 @@ export class BeamRenderer extends BaseEntityRenderer {
     }
   }
 
-  private drawPolyline(points: ReadonlyArray<{ x: number; y: number }>): void {
-    if (points.length < 2) return;
-    this.ctx.beginPath();
-    const first = this.worldToScreen({ x: points[0].x, y: points[0].y });
-    this.ctx.moveTo(first.x, first.y);
-    for (let i = 1; i < points.length; i++) {
-      const s = this.worldToScreen({ x: points[i].x, y: points[i].y });
-      this.ctx.lineTo(s.x, s.y);
-    }
-    this.ctx.stroke();
-  }
+
 }

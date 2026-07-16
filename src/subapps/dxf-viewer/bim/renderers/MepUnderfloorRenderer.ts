@@ -31,12 +31,11 @@ import {
   buildFilletedUnderfloorPath,
   resolveUnderfloorBendRadiusScene,
 } from '../mep-underfloor/mep-underfloor-geometry';
-import { polygonBboxHitTest } from './bim-polygon-render';
+import { paintPolygonHoverHalo, polygonBboxHitTest, tracePolygonScreenPath, mapBimGrips } from './bim-polygon-render';
 import { getMepUnderfloorGrips } from '../mep-underfloor/mep-underfloor-grips';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
-import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getLayer } from '../../stores/LayerStore';
 
 /**
@@ -69,16 +68,7 @@ export class MepUnderfloorRenderer extends BaseEntityRenderer {
     const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
 
     // Hover halo — outline the footprint polygon.
-    if (phaseState.phase === 'highlighted') {
-      this.ctx.save();
-      this.ctx.strokeStyle = HOVER_HIGHLIGHT.ENTITY.glowColor;
-      this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL + HOVER_HIGHLIGHT.ENTITY.glowExtraWidth;
-      this.ctx.globalAlpha = HOVER_HIGHLIGHT.ENTITY.glowOpacity;
-      this.ctx.setLineDash([]);
-      this.drawPolygonPath(verts);
-      this.ctx.stroke();
-      this.ctx.restore();
-    }
+    paintPolygonHoverHalo(this.ctx, (p) => this.worldToScreen(p), verts, phaseState.phase === 'highlighted');
 
     this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
     this.ctx.save();
@@ -86,14 +76,14 @@ export class MepUnderfloorRenderer extends BaseEntityRenderer {
     // 1. Translucent warm-red fill for the heating area.
     // FULL SSoT (bim-body-fill) — κοινό adaptive layer με όλα τα BIM body fills.
     this.ctx.fillStyle = adaptFillTintForCanvas(UF_FILL);
-    this.drawPolygonPath(verts);
+    tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), verts);
     this.ctx.fill();
 
     // 2. Dashed footprint outline (visual boundary of the heated zone).
     this.ctx.strokeStyle = UF_STROKE;
     this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN;
     this.ctx.setLineDash([6, 4]);
-    this.drawPolygonPath(verts);
+    tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), verts);
     this.ctx.stroke();
 
     // 3. Serpentine pipe loopPath — continuous polyline at 2px solid, with the same
@@ -115,14 +105,7 @@ export class MepUnderfloorRenderer extends BaseEntityRenderer {
   getGrips(entity: EntityModel): GripInfo[] {
     if (!isMepUnderfloorEntity(entity)) return [];
     const uf = entity as MepUnderfloorEntity;
-    return getMepUnderfloorGrips(uf).map((g) => ({
-      id: `${g.entityId}-grip-${g.gripIndex}`,
-      position: g.position,
-      type: g.type === 'midpoint' ? ('midpoint' as const) : ('vertex' as const),
-      entityId: g.entityId,
-      isVisible: true,
-      gripIndex: g.gripIndex,
-    }));
+    return mapBimGrips(getMepUnderfloorGrips(uf));
   }
 
   hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {
@@ -134,19 +117,6 @@ export class MepUnderfloorRenderer extends BaseEntityRenderer {
   }
 
   // ─── Internal helpers ──────────────────────────────────────────────────────
-
-  /** Draw the footprint polygon as a closed path (does not stroke/fill). */
-  private drawPolygonPath(vertices: ReadonlyArray<{ x: number; y: number }>): void {
-    if (vertices.length < 3) return;
-    this.ctx.beginPath();
-    const first = this.worldToScreen({ x: vertices[0].x, y: vertices[0].y });
-    this.ctx.moveTo(first.x, first.y);
-    for (let i = 1; i < vertices.length; i++) {
-      const s = this.worldToScreen({ x: vertices[i].x, y: vertices[i].y });
-      this.ctx.lineTo(s.x, s.y);
-    }
-    this.ctx.closePath();
-  }
 
   /** Stroke the serpentine loopPath as a continuous polyline. */
   private drawLoopPath(path: ReadonlyArray<{ x: number; y: number }>): void {

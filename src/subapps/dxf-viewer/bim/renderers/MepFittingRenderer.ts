@@ -34,11 +34,10 @@ import type { Entity } from '../../types/entities';
 import type { MepFittingEntity, MepFittingDomain } from '../types/mep-fitting-types';
 import { incidentEntityId, resolveFittingBimCategory } from '../types/mep-fitting-types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
-import { bboxRejectsPoint } from './bim-polygon-render';
+import { bboxRejectsPoint, paintPolygonHoverHalo, tracePolygonScreenPath } from './bim-polygon-render';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
-import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getLayer } from '../../stores/LayerStore';
 import { useMepSystemStore } from '../mep-systems/mep-system-store';
 import {
@@ -119,16 +118,7 @@ export class MepFittingRenderer extends BaseEntityRenderer {
     const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
 
     // Hover halo via outline thicker glow (mirror segment / fixture renderer).
-    if (phaseState.phase === 'highlighted') {
-      this.ctx.save();
-      this.ctx.strokeStyle = HOVER_HIGHLIGHT.ENTITY.glowColor;
-      this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL + HOVER_HIGHLIGHT.ENTITY.glowExtraWidth;
-      this.ctx.globalAlpha = HOVER_HIGHLIGHT.ENTITY.glowOpacity;
-      this.ctx.setLineDash([]);
-      this.drawPolygonPath(verts);
-      this.ctx.stroke();
-      this.ctx.restore();
-    }
+    paintPolygonHoverHalo(this.ctx, (p) => this.worldToScreen(p), verts, phaseState.phase === 'highlighted');
 
     this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
     this.ctx.save();
@@ -136,14 +126,14 @@ export class MepFittingRenderer extends BaseEntityRenderer {
     // 1. Translucent footprint fill — the real body in plan.
     // FULL SSoT (bim-body-fill) — κοινό adaptive layer με όλα τα BIM body fills.
     this.ctx.fillStyle = adaptFillTintForCanvas(fillColor);
-    this.drawPolygonPath(verts);
+    tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), verts);
     this.ctx.fill();
 
     // 2. Dashed outline (linear-run-above-cut-plane convention, segment mirror).
     this.ctx.strokeStyle = strokeColor;
     this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN;
     this.ctx.setLineDash(OUTLINE_DASH as unknown as number[]);
-    this.drawPolygonPath(verts);
+    tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), verts);
     this.ctx.stroke();
 
     this.ctx.restore();
@@ -168,15 +158,5 @@ export class MepFittingRenderer extends BaseEntityRenderer {
 
   // ─── Internal helpers ────────────────────────────────────────────────────────
 
-  private drawPolygonPath(vertices: ReadonlyArray<{ x: number; y: number }>): void {
-    if (vertices.length < 3) return;
-    this.ctx.beginPath();
-    const first = this.worldToScreen({ x: vertices[0].x, y: vertices[0].y });
-    this.ctx.moveTo(first.x, first.y);
-    for (let i = 1; i < vertices.length; i++) {
-      const s = this.worldToScreen({ x: vertices[i].x, y: vertices[i].y });
-      this.ctx.lineTo(s.x, s.y);
-    }
-    this.ctx.closePath();
-  }
+
 }
