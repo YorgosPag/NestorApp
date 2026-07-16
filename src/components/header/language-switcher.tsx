@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/i18n';
-import { changeLanguage, preloadCriticalNamespaces } from '@/i18n/lazy-config';
+import { changeLanguage, preloadCriticalNamespaces, type Language } from '@/i18n/lazy-config';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { createModuleLogger } from '@/lib/telemetry';
 import { safeSetItem, STORAGE_KEYS } from '@/lib/storage';
@@ -22,10 +22,15 @@ import { cn } from '@/lib/utils';
 
 const logger = createModuleLogger('LanguageSwitcher');
 
+// 🧪 ADR-666: το pseudo είναι εργαλείο localization testing (runtime transform του el).
+// Μένει πίσω από dev gate — όπως το pseudolocalization project setting του Godot.
+// Ο PreferencesPageContent το έκρυβε ήδη ρητά· εδώ διαρρέει σε production χρήστες.
+const IS_DEV = process.env.NODE_ENV !== 'production';
+
 const languages = [
   { code: 'el', name: 'Ελληνικά', flag: '🇬🇷' },
   { code: 'en', name: 'English', flag: '🇺🇸' },
-  { code: 'pseudo', name: 'Pseudo (Dev)', flag: '🧪' },
+  ...(IS_DEV ? [{ code: 'pseudo', name: 'Pseudo (Dev)', flag: '🧪' }] : []),
 ];
 
 export function LanguageSwitcher() {
@@ -46,8 +51,6 @@ export function LanguageSwitcher() {
     setIsChanging(true);
     
     try {
-      // Import type from lazy-config
-      type Language = 'el' | 'en' | 'pseudo';
       const nextLanguage = languageCode as Language;
 
       // Preload critical namespaces for the new language (non-blocking on failures)

@@ -5,8 +5,7 @@
   "policy": {
     "requiredLocales": [
       "el",
-      "en",
-      "pseudo"
+      "en"
     ],
     "requiredFields": [
       "namespace",

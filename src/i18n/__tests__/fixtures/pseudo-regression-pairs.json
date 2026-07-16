@@ -1,0 +1,254 @@
+[
+  {
+    "ns": "accounting-setup",
+    "key": "setup.businessName",
+    "el": "Επωνυμία",
+    "pseudo": "[[~~ Επωνυμία ~~]]",
+    "covers": "floor στα 2 (πολύ κοντό)"
+  },
+  {
+    "ns": "accounting-setup",
+    "key": "setup.profession",
+    "el": "Επάγγελμα",
+    "pseudo": "[[~~ Επάγγελμα ~~]]",
+    "covers": "floor στα 2 (πολύ κοντό)"
+  },
+  {
+    "ns": "accounting-setup",
+    "key": "setup.vatNumber",
+    "el": "ΑΦΜ",
+    "pseudo": "[[~~ ΑΦΜ ~~]]",
+    "covers": "floor στα 2 (πολύ κοντό)"
+  },
+  {
+    "ns": "accounting-setup",
+    "key": "setup.taxOffice",
+    "el": "ΔΟΥ",
+    "pseudo": "[[~~ ΔΟΥ ~~]]",
+    "covers": "floor στα 2 (πολύ κοντό)"
+  },
+  {
+    "ns": "accounting",
+    "key": "servicePresets.description",
+    "el": "Διαχείριση προκαθορισμένων περιγραφών υπηρεσιών για γρήγορη συμπλήρωση γραμμών τιμολογίου",
+    "pseudo": "[[~~~~~~~~~~~~ Διαχείριση προκαθορισμένων περιγραφών υπηρεσιών για γρήγορη συμπλήρωση γραμμών τιμολογίου ~~~~~~~~~~~~]]",
+    "covers": "cap στα 12 (πολύ μακρύ)"
+  },
+  {
+    "ns": "accounting",
+    "key": "servicePresets.noPresets",
+    "el": "Δεν υπάρχουν προκαθορισμένες υπηρεσίες. Πατήστε «Φόρτωση Προεπιλογών» για να ξεκινήσετε.",
+    "pseudo": "[[~~~~~~~~~~~~ Δεν υπάρχουν προκαθορισμένες υπηρεσίες. Πατήστε «Φόρτωση Προεπιλογών» για να ξεκινήσετε. ~~~~~~~~~~~~]]",
+    "covers": "cap στα 12 (πολύ μακρύ)"
+  },
+  {
+    "ns": "accounting",
+    "key": "cancelDialog.warningVoid",
+    "el": "Αυτή η ενέργεια είναι τελεσίδικη. Το τιμολόγιο θα ακυρωθεί και η λογιστική εγγραφή θα αντιστραφεί.",
+    "pseudo": "[[~~~~~~~~~~~~ Αυτή η ενέργεια είναι τελεσίδικη. Το τιμολόγιο θα ακυρωθεί και η λογιστική εγγραφή θα αντιστραφεί. ~~~~~~~~~~~~]]",
+    "covers": "cap στα 12 (πολύ μακρύ)"
+  },
+  {
+    "ns": "accounting",
+    "key": "cancelDialog.warningCreditNote",
+    "el": "Θα δημιουργηθεί πιστωτικό τιμολόγιο σύμφωνα με την ελληνική νομοθεσία (Ν. 4308/2014). Αυτή η ενέργεια είναι τελεσίδικη.",
+    "pseudo": "[[~~~~~~~~~~~~ Θα δημιουργηθεί πιστωτικό τιμολόγιο σύμφωνα με την ελληνική νομοθεσία (Ν. 4308/2014). Αυτή η ενέργεια είναι τελεσίδικη. ~~~~~~~~~~~~]]",
+    "covers": "cap στα 12 (πολύ μακρύ)"
+  },
+  {
+    "ns": "addresses",
+    "key": "list.total",
+    "el": "Σύνολο: {count} {count, plural, one {διεύθυνση} other {διευθύνσεις}}",
+    "pseudo": "[[~~~~~~~~~~~~ Σύνολο: {count} {count, plural, one {διεύθυνση} other {διευθύνσεις}} ~~~~~~~~~~~~]]",
+    "covers": "ICU plural"
+  },
+  {
+    "ns": "building-tabs",
+    "key": "tabs.floorplan.filesCount",
+    "el": "{count, plural, =1 {# αρχείο} other {# αρχεία}}",
+    "pseudo": "[[~~~~~~~~ {count, plural, =1 {# αρχείο} other {# αρχεία}} ~~~~~~~~]]",
+    "covers": "ICU plural"
+  },
+  {
+    "ns": "common-shared",
+    "key": "contacts.nameCascade.count",
+    "el": "{count, plural, one {# εγγραφή} other {# εγγραφές}}",
+    "pseudo": "[[~~~~~~~~~ {count, plural, one {# εγγραφή} other {# εγγραφές}} ~~~~~~~~~]]",
+    "covers": "ICU plural"
+  },
+  {
+    "ns": "common-shared",
+    "key": "ownership.messages.propertiesWithoutArea",
+    "el": "{count} ακίνητ{count, plural, one {ο} other {α}} χωρίς εμβαδόν — ο υπολογισμός χιλιοστών θα είναι λανθασμένος.",
+    "pseudo": "[[~~~~~~~~~~~~ {count} ακίνητ{count, plural, one {ο} other {α}} χωρίς εμβαδόν — ο υπολογισμός χιλιοστών θα είναι λανθασμένος. ~~~~~~~~~~~~]]",
+    "covers": "ICU plural"
+  },
+  {
+    "ns": "accounting-setup",
+    "key": "setup.efkaCategoryLabel",
+    "el": "{number}η Κατηγορία",
+    "pseudo": "[[~~~~ {number}η Κατηγορία ~~~~]]",
+    "covers": "placeholder {var}"
+  },
+  {
+    "ns": "accounting-setup",
+    "key": "setup.partners.partnerLabel",
+    "el": "Εταίρος {number}",
+    "pseudo": "[[~~~ Εταίρος {number} ~~~]]",
+    "covers": "placeholder {var}"
+  },
+  {
+    "ns": "accounting-setup",
+    "key": "setup.partners.shareSum",
+    "el": "Σύνολο ποσοστών: {sum}%",
+    "pseudo": "[[~~~~~ Σύνολο ποσοστών: {sum}% ~~~~~]]",
+    "covers": "placeholder {var}"
+  },
+  {
+    "ns": "accounting-setup",
+    "key": "setup.members.memberLabel",
+    "el": "Μέλος {number}",
+    "pseudo": "[[~~~ Μέλος {number} ~~~]]",
+    "covers": "placeholder {var}"
+  },
+  {
+    "ns": "accounting-setup",
+    "key": "setup.description",
+    "el": "Βασικά στοιχεία, φορολογικές ρυθμίσεις και σειρές τιμολογίων",
+    "pseudo": "[[~~~~~~~~~~~ Βασικά στοιχεία, φορολογικές ρυθμίσεις και σειρές τιμολογίων ~~~~~~~~~~~]]",
+    "covers": "πολλές λέξεις"
+  },
+  {
+    "ns": "accounting-setup",
+    "key": "setup.entityType.hint",
+    "el": "Η νομική μορφή καθορίζει τον τρόπο φορολόγησης και τις εισφορές ΕΦΚΑ",
+    "pseudo": "[[~~~~~~~~~~~~ Η νομική μορφή καθορίζει τον τρόπο φορολόγησης και τις εισφορές ΕΦΚΑ ~~~~~~~~~~~~]]",
+    "covers": "πολλές λέξεις"
+  },
+  {
+    "ns": "accounting-setup",
+    "key": "setup.members.gemiRequired",
+    "el": "Ο αριθμός ΓΕΜΗ είναι υποχρεωτικός για ΕΠΕ",
+    "pseudo": "[[~~~~~~~ Ο αριθμός ΓΕΜΗ είναι υποχρεωτικός για ΕΠΕ ~~~~~~~]]",
+    "covers": "πολλές λέξεις"
+  },
+  {
+    "ns": "accounting-setup",
+    "key": "setup.members.doubleEntryNotice",
+    "el": "Η ΕΠΕ τηρεί ΥΠΟΧΡΕΩΤΙΚΑ Γ' κατηγορίας βιβλία (Διπλογραφικά)",
+    "pseudo": "[[~~~~~~~~~~~ Η ΕΠΕ τηρεί ΥΠΟΧΡΕΩΤΙΚΑ Γ' κατηγορίας βιβλία (Διπλογραφικά) ~~~~~~~~~~~]]",
+    "covers": "πολλές λέξεις"
+  },
+  {
+    "ns": "accounting-setup",
+    "key": "setup.vatRegimes.exempt",
+    "el": "Απαλλαγμένο",
+    "pseudo": "[[~~~ Απαλλαγμένο ~~~]]",
+    "covers": "μία λέξη"
+  },
+  {
+    "ns": "accounting-setup",
+    "key": "setup.partners.fullName",
+    "el": "Ονοματεπώνυμο",
+    "pseudo": "[[~~~ Ονοματεπώνυμο ~~~]]",
+    "covers": "μία λέξη"
+  },
+  {
+    "ns": "accounting-setup",
+    "key": "setup.shareholders.efkaModes.self_employed",
+    "el": "Αυτοαπασχολούμενος",
+    "pseudo": "[[~~~~ Αυτοαπασχολούμενος ~~~~]]",
+    "covers": "μία λέξη"
+  },
+  {
+    "ns": "accounting-setup",
+    "key": "reconciliation.matchAction",
+    "el": "Αντιστοίχιση",
+    "pseudo": "[[~~~ Αντιστοίχιση ~~~]]",
+    "covers": "μία λέξη"
+  },
+  {
+    "ns": "accounting-setup",
+    "key": "setup.shareholders.efkaEmployeeExplain",
+    "el": "Μισθωτός: μετοχές <3% του συνόλου → 33,60% επί αμοιβής",
+    "pseudo": "[[~~~~~~~~~~ Μισθωτός: μετοχές <3% του συνόλου → 33,60% επί αμοιβής ~~~~~~~~~~]]",
+    "covers": "σημεία στίξης"
+  },
+  {
+    "ns": "accounting-setup",
+    "key": "setup.shareholders.efkaSelfEmployedExplain",
+    "el": "Αυτοαπ.: μετοχές ≥3% → κατηγορίες ΕΦΚΑ αυτοαπασχολούμενου",
+    "pseudo": "[[~~~~~~~~~~~ Αυτοαπ.: μετοχές ≥3% → κατηγορίες ΕΦΚΑ αυτοαπασχολούμενου ~~~~~~~~~~~]]",
+    "covers": "σημεία στίξης"
+  },
+  {
+    "ns": "accounting-setup",
+    "key": "reconciliation.batchConfirm",
+    "el": "Αποδοχή {count} αυτόματων αντιστοιχίσεων;",
+    "pseudo": "[[~~~~~~~~ Αποδοχή {count} αυτόματων αντιστοιχίσεων; ~~~~~~~~]]",
+    "covers": "σημεία στίξης"
+  },
+  {
+    "ns": "accounting",
+    "key": "invoices.editNotAllowed",
+    "el": "Αυτό το τιμολόγιο δεν μπορεί να επεξεργαστεί (κατάσταση: {status}).",
+    "pseudo": "[[~~~~~~~~~~~~ Αυτό το τιμολόγιο δεν μπορεί να επεξεργαστεί (κατάσταση: {status}). ~~~~~~~~~~~~]]",
+    "covers": "σημεία στίξης"
+  },
+  {
+    "ns": "accounting-setup",
+    "key": "setup.validation.vatNumberInvalid",
+    "el": "Μη έγκυρο ΑΦΜ (9 ψηφία)",
+    "pseudo": "[[~~~~ Μη έγκυρο ΑΦΜ (9 ψηφία) ~~~~]]",
+    "covers": "αριθμοί"
+  },
+  {
+    "ns": "accounting-setup",
+    "key": "setup.gemiNumberPlaceholder",
+    "el": "π.χ. 123456789000",
+    "pseudo": "[[~~~~ π.χ. 123456789000 ~~~~]]",
+    "covers": "αριθμοί"
+  },
+  {
+    "ns": "accounting-setup",
+    "key": "setup.partners.isFirstFiveYears",
+    "el": "Πρώτα 5 χρόνια (μειωμένη προκαταβολή)",
+    "pseudo": "[[~~~~~~~ Πρώτα 5 χρόνια (μειωμένη προκαταβολή) ~~~~~~~]]",
+    "covers": "αριθμοί"
+  },
+  {
+    "ns": "accounting-setup",
+    "key": "setup.partners.shareSumInvalid",
+    "el": "Πρέπει να ισούται με 100%",
+    "pseudo": "[[~~~~~ Πρέπει να ισούται με 100% ~~~~~]]",
+    "covers": "αριθμοί"
+  },
+  {
+    "ns": "accounting-setup",
+    "key": "setup.shareholders.shareholderLabel",
+    "el": "Μέτοχος {number}",
+    "pseudo": "[[~~~ Μέτοχος {number} ~~~]]",
+    "covers": "λατινικά+ελληνικά"
+  },
+  {
+    "ns": "accounting-setup",
+    "key": "setup.shareholders.boardRoles.ceo",
+    "el": "Διευθύνων Σύμβουλος (CEO)",
+    "pseudo": "[[~~~~~ Διευθύνων Σύμβουλος (CEO) ~~~~~]]",
+    "covers": "λατινικά+ελληνικά"
+  },
+  {
+    "ns": "accounting-setup",
+    "key": "reconciliation.groupMatch",
+    "el": "Ομαδική Αντιστοίχιση ({count} στοιχεία)",
+    "pseudo": "[[~~~~~~~~ Ομαδική Αντιστοίχιση ({count} στοιχεία) ~~~~~~~~]]",
+    "covers": "λατινικά+ελληνικά"
+  },
+  {
+    "ns": "accounting",
+    "key": "pages.documents",
+    "el": "Παραστατικά AI",
+    "pseudo": "[[~~~ Παραστατικά AI ~~~]]",
+    "covers": "λατινικά+ελληνικά"
+  }
+]

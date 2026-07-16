@@ -8,6 +8,7 @@ import { initReactI18next } from 'react-i18next';
 import ICU from 'i18next-icu';
 import { loadNamespace, type Namespace, type Language, SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE } from './lazy-config';
 import { remapLegacyTranslationKey } from './namespace-compat';
+import { pseudoPostProcessor, PSEUDO_LANGUAGE } from './pseudo-post-processor';
 
 import { createModuleLogger } from '@/lib/telemetry';
 import { safeGetItem, STORAGE_KEYS } from '@/lib/storage';
@@ -16,40 +17,30 @@ const logger = createModuleLogger('i18n-config');
 // Load essential translations for initial boot
 import commonEl from './locales/el/common.json';
 import commonEn from './locales/en/common.json';
-import commonPseudo from './locales/pseudo/common.json';
 import commonActionsEl from './locales/el/common-actions.json';
 import commonActionsEn from './locales/en/common-actions.json';
-import commonActionsPseudo from './locales/pseudo/common-actions.json';
 import commonNavigationEl from './locales/el/common-navigation.json';
 import commonNavigationEn from './locales/en/common-navigation.json';
-import commonNavigationPseudo from './locales/pseudo/common-navigation.json';
 import commonStatusEl from './locales/el/common-status.json';
 import commonStatusEn from './locales/en/common-status.json';
-import commonStatusPseudo from './locales/pseudo/common-status.json';
 import commonValidationEl from './locales/el/common-validation.json';
 import commonValidationEn from './locales/en/common-validation.json';
-import commonValidationPseudo from './locales/pseudo/common-validation.json';
 import commonEmptyStatesEl from './locales/el/common-empty-states.json';
 import commonEmptyStatesEn from './locales/en/common-empty-states.json';
-import commonEmptyStatesPseudo from './locales/pseudo/common-empty-states.json';
 // Pre-load landing for homepage
 import landingEl from './locales/el/landing.json';
 import landingEn from './locales/en/landing.json';
-import landingPseudo from './locales/pseudo/landing.json';
 // 🏢 ENTERPRISE: Pre-load navigation (used on every page - prevents race condition warnings)
 import navigationEl from './locales/el/navigation.json';
 import navigationEn from './locales/en/navigation.json';
-import navigationPseudo from './locales/pseudo/navigation.json';
 // 🏢 ENTERPRISE: Pre-load admin (used on admin pages - prevents hydration mismatch)
 import adminEl from './locales/el/admin.json';
 import adminEn from './locales/en/admin.json';
-import adminPseudo from './locales/pseudo/admin.json';
 
 // Initial resources - common, landing, and navigation for immediate availability
 const resources = {
   el: { common: commonEl, 'common-actions': commonActionsEl, 'common-navigation': commonNavigationEl, 'common-status': commonStatusEl, 'common-validation': commonValidationEl, 'common-empty-states': commonEmptyStatesEl, landing: landingEl, navigation: navigationEl, admin: adminEl },
   en: { common: commonEn, 'common-actions': commonActionsEn, 'common-navigation': commonNavigationEn, 'common-status': commonStatusEn, 'common-validation': commonValidationEn, 'common-empty-states': commonEmptyStatesEn, landing: landingEn, navigation: navigationEn, admin: adminEn },
-  pseudo: { common: commonPseudo, 'common-actions': commonActionsPseudo, 'common-navigation': commonNavigationPseudo, 'common-status': commonStatusPseudo, 'common-validation': commonValidationPseudo, 'common-empty-states': commonEmptyStatesPseudo, landing: landingPseudo, navigation: navigationPseudo, admin: adminPseudo },
 };
 
 // Detect preferred language
@@ -61,17 +52,21 @@ const getInitialLanguage = (): Language => {
 // Initialize i18n with minimal resources
 i18n
   .use(ICU)
+  .use(pseudoPostProcessor)
   .use(initReactI18next)
   .init({
     resources,
     lng: getInitialLanguage(),
     fallbackLng: DEFAULT_LANGUAGE,
     debug: false, // Disabled to reduce console noise
-    
+
+    // 🧪 ADR-666: το pseudo παράγεται runtime από το el — δεν έχει resource αρχεία
+    postProcess: [PSEUDO_LANGUAGE],
+
     interpolation: {
       escapeValue: false, // React already escapes values
     },
-    
+
     // 🏢 ENTERPRISE: Start with common + navigation (both pre-loaded sync)
     defaultNS: 'common',
     ns: ['common', 'common-actions', 'common-navigation', 'common-status', 'common-validation', 'common-empty-states', 'navigation', 'obligations'],

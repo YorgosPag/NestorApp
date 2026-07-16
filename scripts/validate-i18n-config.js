@@ -5,6 +5,7 @@ const path = require('path');
 const {
   LOCALES_DIR,
   SUPPORTED_LOCALES,
+  SUPPORTED_LANGUAGES,
   getNamespacesForLocale,
   parseConstArray,
   parseTranslationNamespaceUnion,
@@ -40,7 +41,9 @@ function main() {
   const generatedNamespaces = parseTranslationNamespaceUnion(generatedTypesPath);
   const runtimeConfig = readText(runtimeConfigPath);
 
-  const languageDiff = compareSets(SUPPORTED_LOCALES, configuredLanguages);
+  // ADR-666: το lazy-config δηλώνει ΓΛΩΣΣΕΣ (incl. pseudo = runtime transform),
+  // όχι locales-με-αρχεία. Σύγκριση με SUPPORTED_LANGUAGES, όχι SUPPORTED_LOCALES.
+  const languageDiff = compareSets(SUPPORTED_LANGUAGES, configuredLanguages);
   if (languageDiff.missing.length > 0 || languageDiff.extra.length > 0) {
     errors.push(
       `SUPPORTED_LANGUAGES drift. Missing: ${languageDiff.missing.join(', ') || '-'} | Extra: ${languageDiff.extra.join(', ') || '-'}`
@@ -61,20 +64,19 @@ function main() {
     );
   }
 
-  if (runtimeConfig.includes('pseudo: { common: commonPseudo, landing: landingPseudo, navigation: navigationEl, admin: adminEl }')) {
-    errors.push('Runtime config still falls back to non-pseudo preload resources for pseudo language.');
+  // ADR-666: το pseudo παράγεται runtime από το el μέσω postProcessor.
+  // Δεν επιτρέπονται pseudo resource αρχεία ή static imports τους — θα ξανα-τύλιγαν
+  // ήδη τυλιγμένο κείμενο και θα ξανάφερναν το drift που κατάργησε το ADR-666.
+  if (/locales\/pseudo\//.test(runtimeConfig)) {
+    errors.push(
+      'Runtime config imports pseudo locale files. ADR-666: pseudo is a runtime transform ' +
+        '(src/i18n/pseudo-post-processor.ts) — it must have no resource files.'
+    );
   }
 
-  const requiredPseudoImports = [
-    "import navigationPseudo from './locales/pseudo/navigation.json';",
-    "import adminPseudo from './locales/pseudo/admin.json';",
-  ];
-
-  requiredPseudoImports.forEach((statement) => {
-    if (!runtimeConfig.includes(statement)) {
-      warnings.push(`Runtime preload import missing: ${statement}`);
-    }
-  });
+  if (!runtimeConfig.includes('pseudoPostProcessor')) {
+    errors.push('Runtime config no longer registers the pseudo postProcessor (ADR-666).');
+  }
 
   SUPPORTED_LOCALES.forEach((locale) => {
     const namespaces = getNamespacesForLocale(locale);

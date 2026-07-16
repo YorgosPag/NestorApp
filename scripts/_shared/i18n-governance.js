@@ -5,7 +5,12 @@ const ROOT_DIR = path.join(__dirname, '..', '..');
 const I18N_DIR = path.join(ROOT_DIR, 'src', 'i18n');
 const LOCALES_DIR = path.join(I18N_DIR, 'locales');
 const PRIMARY_LOCALE = 'el';
-const SUPPORTED_LOCALES = ['el', 'en', 'pseudo'];
+// ADR-666: «locale με αρχεία» ≠ «επιλέξιμη γλώσσα».
+// Το pseudo είναι runtime transform του el (src/i18n/pseudo-post-processor.ts):
+// επιλέγεται ως γλώσσα, αλλά δεν έχει —και δεν επιτρέπεται να αποκτήσει— resource αρχεία.
+const SUPPORTED_LOCALES = ['el', 'en'];
+const RUNTIME_ONLY_LANGUAGES = ['pseudo'];
+const SUPPORTED_LANGUAGES = [...SUPPORTED_LOCALES, ...RUNTIME_ONLY_LANGUAGES];
 const SOURCE_GLOBS = ['src', 'app', 'subapps'].map((segment) => path.join(ROOT_DIR, segment));
 
 function readText(filePath) {
@@ -228,6 +233,8 @@ module.exports = {
   LOCALES_DIR,
   PRIMARY_LOCALE,
   SUPPORTED_LOCALES,
+  RUNTIME_ONLY_LANGUAGES,
+  SUPPORTED_LANGUAGES,
   compareSchemas,
   ensureDir,
   flattenSchema,

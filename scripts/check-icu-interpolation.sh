@@ -62,9 +62,6 @@ for file in $FILES; do
     # Only locale JSON files
     echo "$file" | grep -qE 'src/i18n/locales/.*\.json$' || continue
 
-    # Skip pseudo locale (generated)
-    echo "$file" | grep -qE '/pseudo/' && continue
-
     CURRENT=$(count_violations "$file")
     BASELINE=$(get_baseline_count "$file")
     CURRENT=${CURRENT:-0}
