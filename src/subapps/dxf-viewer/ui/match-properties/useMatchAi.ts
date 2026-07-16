@@ -52,7 +52,7 @@ export function useMatchAi(): UseMatchAiResult {
       try {
         const payload: MatchAiRequest = {
           message: trimmed,
-          offeredRoles: ctx.offeredRoles as string[],
+          offeredRoles: ctx.offeredRoles,
           sourceType: ctx.sourceType,
           targetTypes: ctx.targetTypes,
         };
@@ -69,7 +69,7 @@ export function useMatchAi(): UseMatchAiResult {
         // Defence in depth: the route already validated, but never trust the wire.
         const parsed = matchIntentSchema.safeParse(data.intent);
         if (!parsed.success) throw new Error('Invalid AI plan');
-        return computeSelectedRolesFromIntent(ctx.offeredRoles as string[], parsed.data);
+        return computeSelectedRolesFromIntent(ctx.offeredRoles, parsed.data);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'AI request failed');
         return null;

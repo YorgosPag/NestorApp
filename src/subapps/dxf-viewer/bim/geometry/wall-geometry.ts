@@ -330,10 +330,10 @@ function applyMiterAxisJoin(
 ): readonly Point3D[] {
   if (pts.length < 1 || (!startMiter && !endMiter)) return pts;
   const result = [...pts];
-  if (startMiter) result[0] = miterAxisPoint(startMiter, result[0].z);
+  if (startMiter) result[0] = miterAxisPoint(startMiter, result[0].z ?? 0);
   if (endMiter) {
     const last = result.length - 1;
-    result[last] = miterAxisPoint(endMiter, result[last].z);
+    result[last] = miterAxisPoint(endMiter, result[last].z ?? 0);
   }
   return result;
 }
