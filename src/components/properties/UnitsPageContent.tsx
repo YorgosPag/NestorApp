@@ -8,7 +8,7 @@ import { usePropertiesTrashState } from '@/hooks/usePropertiesTrashState';
 import { PropertiesHeader } from '@/components/properties/page/PropertiesHeader';
 import { PropertyTrashActionsBar } from '@/components/properties/trash/PropertyTrashActionsBar';
 import { PropertyTrashDialogs } from '@/components/properties/trash/PropertyTrashDialogs';
-import { PropertyPageFilters } from '@/components/properties/page/PropertyPageFilters';
+import { ResponsiveFiltersPanel } from '@/components/core/AdvancedFilters';
 import { PropertyPageDashboard } from '@/components/properties/page/PropertyPageDashboard';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { TrendingUp, Package } from 'lucide-react';
@@ -408,7 +408,7 @@ export function PropertiesManagementContent() {
           />
         )}
 
-        <PropertyPageFilters
+        <ResponsiveFiltersPanel
           config={dynamicFilterConfig}
           filters={filters as unknown as UnitFilterState}
           onFiltersChange={handleFiltersChange}
