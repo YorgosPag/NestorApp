@@ -5,7 +5,7 @@
  * Used by usePOFrameworkAgreement to resolve and compute discounts.
  */
 
-import type { FrameworkAgreement } from '../types/framework-agreement';
+import type { FrameworkAgreementLike } from '../types/framework-agreement';
 import { normalizeToDate } from '@/lib/date-local';
 
 export interface FADiscountResult {
@@ -24,10 +24,10 @@ function toMs(ts: unknown): number {
  * Validates: status=active, date range, project scope, not deleted.
  */
 export function resolveActiveFa(
-  agreements: FrameworkAgreement[],
+  agreements: readonly FrameworkAgreementLike[],
   supplierId: string,
   projectId: string,
-): FrameworkAgreement | null {
+): FrameworkAgreementLike | null {
   if (!supplierId || !projectId) return null;
 
   const now = Date.now();
@@ -61,7 +61,7 @@ export function resolveActiveFa(
  * Volume breakpoints: finds the highest applicable threshold.
  */
 export function computeFaDiscount(
-  fa: FrameworkAgreement,
+  fa: FrameworkAgreementLike,
   grossTotal: number,
 ): FADiscountResult {
   let discountPercent = 0;

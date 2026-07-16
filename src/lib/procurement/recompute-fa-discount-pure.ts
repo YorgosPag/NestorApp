@@ -16,7 +16,7 @@ import {
   resolveActiveFa,
   computeFaDiscount,
 } from '@/subapps/procurement/utils/framework-agreement-discount';
-import type { FrameworkAgreement } from '@/subapps/procurement/types/framework-agreement';
+import type { FrameworkAgreementLike } from '@/subapps/procurement/types/framework-agreement';
 
 export interface FaDiscountFields {
   appliedFaId: string | null;
@@ -58,7 +58,7 @@ export function computeGrossTotal(
  * `loadAndComputeFaDiscount()` which fetches the agreements list itself.
  */
 export function computeFaDiscountFields(
-  agreements: FrameworkAgreement[],
+  agreements: readonly FrameworkAgreementLike[],
   supplierId: string | null | undefined,
   projectId: string | null | undefined,
   grossTotal: number,

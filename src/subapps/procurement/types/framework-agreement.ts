@@ -103,6 +103,19 @@ export type FrameworkAgreementWire =
   Omit<FrameworkAgreement, FrameworkAgreementTimestampField> &
   Record<FrameworkAgreementTimestampField, string>;
 
+/**
+ * A Framework Agreement whose instants may be in **any** of the three representations.
+ *
+ * For code that reads instants through the ADR-218 SSoT (`normalizeToDate` accepts a
+ * Timestamp of either SDK, a Date, ISO, epoch, or a JSON-serialised Timestamp), the
+ * representation is genuinely irrelevant — such code must not force its callers to pick
+ * one. The discount resolver is exactly this: it runs on the server over stored docs AND
+ * in the browser over subscription output.
+ */
+export type FrameworkAgreementLike =
+  Omit<FrameworkAgreement, FrameworkAgreementTimestampField> &
+  Record<FrameworkAgreementTimestampField, unknown>;
+
 export interface CreateFrameworkAgreementDTO {
   agreementNumber: string;
   title: string;
