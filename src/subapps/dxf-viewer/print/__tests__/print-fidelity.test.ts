@@ -18,15 +18,15 @@ describe('summarizePrintFidelity (ADR-667 Φ1)', () => {
     expect(summarizePrintFidelity([])).toEqual([]);
   });
 
-  it('tile-overflow — ΤΟ ΠΕΡΙΣΤΑΤΙΚΟ: η επιφάνεια που έβγαινε γκρι, τώρα αναφέρεται', () => {
-    expect(summarizePrintFidelity(['image-fill:tile-overflow'])).toEqual([
+  it('pattern-cap — ΤΟ ΠΕΡΙΣΤΑΤΙΚΟ: η επιφάνεια που έβγαινε γκρι, τώρα αναφέρεται', () => {
+    expect(summarizePrintFidelity(['image-fill:pattern-cap'])).toEqual([
       { code: 'hatch-image-solid', count: 1 },
     ]);
   });
 
   it('και οι τρεις αιτίες image-fill πέφτουν στο ΙΔΙΟ είδος, με άθροισμα πλήθους', () => {
     const notes = summarizePrintFidelity([
-      'image-fill:tile-overflow',
+      'image-fill:pattern-cap',
       'image-fill:decode-failed',
       'image-fill:encode-failed',
     ]);
@@ -42,9 +42,9 @@ describe('summarizePrintFidelity (ADR-667 Φ1)', () => {
 
   it('ανάμεικτα είδη → ένα entry ανά είδος, με σωστά πλήθη', () => {
     const notes = summarizePrintFidelity([
-      'image-fill:tile-overflow',
+      'image-fill:pattern-cap',
       'image-entity:decode-failed',
-      'image-fill:tile-overflow',
+      'image-fill:pattern-cap',
     ]);
     expect(notes).toHaveLength(2);
     expect(notes).toEqual(
@@ -60,7 +60,7 @@ describe('summarizePrintFidelity (ADR-667 Φ1)', () => {
   });
 
   it('άγνωστοι κωδικοί ΔΕΝ κρύβουν τους γνωστούς που τους συνοδεύουν', () => {
-    expect(summarizePrintFidelity(['nonsense:code', 'image-fill:tile-overflow'])).toEqual([
+    expect(summarizePrintFidelity(['nonsense:code', 'image-fill:pattern-cap'])).toEqual([
       { code: 'hatch-image-solid', count: 1 },
     ]);
   });
