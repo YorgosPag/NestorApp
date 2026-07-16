@@ -727,6 +727,7 @@ export const isStairKind = (value: unknown): value is StairKind =>
       'l-shape',
       'u-shape',
       'gamma',
+      'multi-flight',
       'spiral',
       'helical',
       'elliptical',
@@ -735,5 +736,5 @@ export const isStairKind = (value: unknown): value is StairKind =>
       'triangular-outline',
       'sketch',
       'v-shape',
-    ] as const
+    ] as const satisfies readonly StairKind[]
   ).includes(value as StairKind);

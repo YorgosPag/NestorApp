@@ -137,7 +137,7 @@ export function useTitleBlockLibrary(projectId?: string): UseTitleBlockLibraryRe
         toTitleBlockLocale(i18n.language),
       );
       await run(() =>
-        service.save({ name: name.trim(), category: 'title-block', content, titleBlock }),
+        service.save({ name: name.trim(), category: 'title-block', content, titleBlock, scope }),
       );
     },
     [service, run, i18n.language],

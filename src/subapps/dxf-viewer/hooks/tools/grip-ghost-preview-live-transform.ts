@@ -72,7 +72,7 @@ export function resolveLiveGripDragPreview(
         ...dragPreview,
         delta: resolveGripTranslateDelta(
           dragPreview.anchorPos,
-          effectiveCursor,
+          sweepCursor, // === effectiveCursor in this branch, but narrowed non-null by the `if (sweepCursor)` guard
           dragPreview.movesEntity === true || dragPreview.hotGrip === true,
         ),
       };
