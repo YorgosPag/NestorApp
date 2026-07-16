@@ -25,7 +25,7 @@ import type { MepFixtureEntity } from '../types/mep-fixture-types';
 import { resolveFixtureBimCategory, resolveFixtureMeshCategory } from '../types/mep-fixture-types';
 import { isSanitaryKind } from '../sanitary/sanitary-symbol-spec';
 import { resolveSegmentClassificationColor } from '../mep-systems/mep-system-color';
-import { pointInPolygon } from '../geometry/shared/polygon-utils';
+import { polygonBboxHitTest, mapBimGrips } from './bim-polygon-render';
 import { buildFixtureSymbol } from '../mep-fixtures/mep-fixture-symbol';
 import { getMepFixtureGrips } from '../mep-fixtures/mep-fixture-grips';
 import { bimMeshCache } from '../../bim-3d/library/bim-mesh-library/bim-mesh-cache';
@@ -173,15 +173,9 @@ export class MepFixtureRenderer extends BaseEntityRenderer {
     // Drag is routed through `applyMepFixtureGripDrag()` + `UpdateMepFixtureParamsCommand`
     // by `commitMepFixtureGripDrag` (grip-parametric-commits).
     if (!isMepFixtureEntity(entity)) return [];
-    return getMepFixtureGrips(entity as MepFixtureEntity).map((g) => ({
-      id: `${g.entityId}-grip-${g.gripIndex}`,
-      position: g.position,
-      type: g.type === 'center' ? ('center' as const) : ('vertex' as const),
-      entityId: g.entityId,
-      isVisible: true,
-      gripIndex: g.gripIndex,
-      shape: gripGlyphShape(gripKindOf(g, 'mep-fixture')),
-    }));
+    return mapBimGrips(getMepFixtureGrips(entity as MepFixtureEntity), (g) =>
+      gripGlyphShape(gripKindOf(g, 'mep-fixture')),
+    );
   }
 
   hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {
@@ -189,15 +183,7 @@ export class MepFixtureRenderer extends BaseEntityRenderer {
     const fixture = entity as MepFixtureEntity;
     const bb = fixture.geometry?.bbox;
     if (!bb) return false;
-    if (
-      point.x < bb.min.x - tolerance ||
-      point.x > bb.max.x + tolerance ||
-      point.y < bb.min.y - tolerance ||
-      point.y > bb.max.y + tolerance
-    ) {
-      return false;
-    }
-    return pointInPolygon(point, fixture.geometry.footprint.vertices);
+    return polygonBboxHitTest(bb, fixture.geometry.footprint.vertices, point, tolerance);
   }
 
   // ─── Internal helpers ────────────────────────────────────────────────────

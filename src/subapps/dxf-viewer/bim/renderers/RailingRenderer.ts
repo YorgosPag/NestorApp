@@ -27,6 +27,7 @@ import { clamp01 } from '../../utils/scalar-math';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
+import { bboxRejectsPoint } from './bim-polygon-render';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getLayer } from '../../stores/LayerStore';
@@ -121,14 +122,7 @@ export class RailingRenderer extends BaseEntityRenderer {
     const bb = railing.geometry?.bbox;
     const path = railing.geometry?.resolvedPath;
     if (!bb || !path || path.length < 2) return false;
-    if (
-      point.x < bb.min.x - tolerance ||
-      point.x > bb.max.x + tolerance ||
-      point.y < bb.min.y - tolerance ||
-      point.y > bb.max.y + tolerance
-    ) {
-      return false;
-    }
+    if (bboxRejectsPoint(bb, point, tolerance)) return false;
     for (let i = 1; i < path.length; i++) {
       if (distanceToSegment(point, path[i - 1], path[i]) <= tolerance) return true;
     }

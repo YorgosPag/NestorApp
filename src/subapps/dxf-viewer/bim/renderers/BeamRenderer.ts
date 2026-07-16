@@ -32,6 +32,7 @@ import type { Entity } from '../../types/entities';
 import { isBeamEntity } from '../../types/entities';
 import type { BeamEntity, BeamKind } from '../types/beam-types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
+import { bboxRejectsPoint, mapBimGrips } from './bim-polygon-render';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
 import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
@@ -276,18 +277,12 @@ export class BeamRenderer extends BaseEntityRenderer {
     // `center` → 'center' (midpoint translate), όλα τα υπόλοιπα
     // ('vertex' / 'edge') → 'vertex' στο canvas renderer.
     if (!isBeamEntity(entity)) return [];
-    return getBeamGrips(entity as BeamEntity).map((g) => ({
-      id: `${g.entityId}-grip-${g.gripIndex}`,
-      position: g.position,
-      type: g.type === 'center' ? ('center' as const) : ('vertex' as const),
-      entityId: g.entityId,
-      isVisible: true,
-      gripIndex: g.gripIndex,
-      // ADR-363 Phase 5.5d / ADR-397 — move (midpoint) + rotation handles get
-      // their icon glyph from the shared `gripGlyphShape` registry SSoT; all
-      // other beam grips render the default 'square' (mirror MepFixtureRenderer).
-      shape: gripGlyphShape(gripKindOf(g, 'beam')),
-    }));
+    // ADR-363 Phase 5.5d / ADR-397 — move (midpoint) + rotation handles get their
+    // icon glyph from the shared `gripGlyphShape` registry SSoT; all other beam
+    // grips render the default 'square' (mirror MepFixtureRenderer).
+    return mapBimGrips(getBeamGrips(entity as BeamEntity), (g) =>
+      gripGlyphShape(gripKindOf(g, 'beam')),
+    );
   }
 
   hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {
@@ -295,15 +290,7 @@ export class BeamRenderer extends BaseEntityRenderer {
     const beam = entity as BeamEntity;
     const bb = beam.geometry?.bbox;
     if (!bb) return false;
-    // Bbox quick-reject με tolerance.
-    if (
-      point.x < bb.min.x - tolerance ||
-      point.x > bb.max.x + tolerance ||
-      point.y < bb.min.y - tolerance ||
-      point.y > bb.max.y + tolerance
-    ) {
-      return false;
-    }
+    if (bboxRejectsPoint(bb, point, tolerance)) return false;
     // Detailed point-in-polygon test (ray casting). ADR-458 — όταν υπάρχει cutback,
     // ελέγχουμε τα κομμένα κομμάτια (το δοκάρι επιλέγεται μόνο στο σώμα που απομένει).
     const pieces = resolveBeamOutlinePieces(beam);

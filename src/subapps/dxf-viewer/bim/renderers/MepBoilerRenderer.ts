@@ -22,7 +22,7 @@ import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../render
 import type { Entity } from '../../types/entities';
 import { isMepBoilerEntity } from '../../types/entities';
 import type { MepBoilerEntity } from '../types/mep-boiler-types';
-import { pointInPolygon } from '../geometry/shared/polygon-utils';
+import { polygonBboxHitTest } from './bim-polygon-render';
 import { buildMepBoilerSymbol } from '../mep-boilers/mep-boiler-symbol';
 import { resolveBoilerTagLines } from '../mep-boilers/mep-boiler-tag';
 import { resolveSegmentClassificationColor } from '../mep-systems/mep-system-color';
@@ -157,15 +157,7 @@ export class MepBoilerRenderer extends BaseEntityRenderer {
     const boiler = entity as MepBoilerEntity;
     const bb = boiler.geometry?.bbox;
     if (!bb) return false;
-    if (
-      point.x < bb.min.x - tolerance ||
-      point.x > bb.max.x + tolerance ||
-      point.y < bb.min.y - tolerance ||
-      point.y > bb.max.y + tolerance
-    ) {
-      return false;
-    }
-    return pointInPolygon(point, boiler.geometry.footprint.vertices);
+    return polygonBboxHitTest(bb, boiler.geometry.footprint.vertices, point, tolerance);
   }
 
   // ─── Internal helpers ──────────────────────────────────────────────────────

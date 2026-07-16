@@ -22,7 +22,7 @@ import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../render
 import type { Entity } from '../../types/entities';
 import { isMepManifoldEntity } from '../../types/entities';
 import type { MepManifoldEntity } from '../types/mep-manifold-types';
-import { pointInPolygon } from '../geometry/shared/polygon-utils';
+import { polygonBboxHitTest, mapBimGrips } from './bim-polygon-render';
 import { buildMepManifoldSymbol, resolveManifoldPalette } from '../mep-manifolds/mep-manifold-symbol';
 // 🏢 ADR-571: hexToRgba SSoT (fill derived from strokeHex — μηδέν rgb tuple)
 import { hexToRgba } from '../../config/color-math';
@@ -112,15 +112,9 @@ export class MepManifoldRenderer extends BaseEntityRenderer {
     // `applyMepManifoldGripDrag()` + `UpdateMepManifoldParamsCommand` by
     // `commitMepManifoldGripDrag` (grip-parametric-commits).
     if (!isMepManifoldEntity(entity)) return [];
-    return getMepManifoldGrips(entity as MepManifoldEntity).map((g) => ({
-      id: `${g.entityId}-grip-${g.gripIndex}`,
-      position: g.position,
-      type: g.type === 'center' ? ('center' as const) : ('vertex' as const),
-      entityId: g.entityId,
-      isVisible: true,
-      gripIndex: g.gripIndex,
-      shape: gripGlyphShape(gripKindOf(g, 'mep-manifold')),
-    }));
+    return mapBimGrips(getMepManifoldGrips(entity as MepManifoldEntity), (g) =>
+      gripGlyphShape(gripKindOf(g, 'mep-manifold')),
+    );
   }
 
   hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {
@@ -128,15 +122,7 @@ export class MepManifoldRenderer extends BaseEntityRenderer {
     const manifold = entity as MepManifoldEntity;
     const bb = manifold.geometry?.bbox;
     if (!bb) return false;
-    if (
-      point.x < bb.min.x - tolerance ||
-      point.x > bb.max.x + tolerance ||
-      point.y < bb.min.y - tolerance ||
-      point.y > bb.max.y + tolerance
-    ) {
-      return false;
-    }
-    return pointInPolygon(point, manifold.geometry.footprint.vertices);
+    return polygonBboxHitTest(bb, manifold.geometry.footprint.vertices, point, tolerance);
   }
 
   // ─── Internal helpers ──────────────────────────────────────────────────────

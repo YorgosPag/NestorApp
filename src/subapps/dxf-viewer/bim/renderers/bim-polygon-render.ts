@@ -107,6 +107,28 @@ export function strokePolylinePaths(
   }
 }
 
+/**
+ * Tolerance-padded bbox quick-reject (world space, XY only — a bbox `z` is metres
+ * and irrelevant to a plan hit test). `true` = the point is outside, so the caller
+ * bails before any expensive detailed test.
+ *
+ * Renderers whose detailed test is a plain footprint polygon want
+ * `polygonBboxHitTest` instead; this primitive is for the ones whose tail is
+ * entity-specific (cut-back pieces, polyline distance, degenerate footprints).
+ */
+export function bboxRejectsPoint(
+  bbox: { min: Point2D; max: Point2D },
+  point: Point2D,
+  tolerance: number,
+): boolean {
+  return (
+    point.x < bbox.min.x - tolerance ||
+    point.x > bbox.max.x + tolerance ||
+    point.y < bbox.min.y - tolerance ||
+    point.y > bbox.max.y + tolerance
+  );
+}
+
 /** Bbox quick-reject (tolerance-padded) then ray-cast point-in-polygon (world space). */
 export function polygonBboxHitTest(
   bbox: { min: Point2D; max: Point2D },
@@ -114,14 +136,7 @@ export function polygonBboxHitTest(
   point: Point2D,
   tolerance: number,
 ): boolean {
-  if (
-    point.x < bbox.min.x - tolerance ||
-    point.x > bbox.max.x + tolerance ||
-    point.y < bbox.min.y - tolerance ||
-    point.y > bbox.max.y + tolerance
-  ) {
-    return false;
-  }
+  if (bboxRejectsPoint(bbox, point, tolerance)) return false;
   return pointInPolygon(point, vertices);
 }
 

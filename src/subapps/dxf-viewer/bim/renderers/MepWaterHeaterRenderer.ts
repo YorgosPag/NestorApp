@@ -23,7 +23,7 @@ import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
 import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import type { MepWaterHeaterEntity } from '../types/mep-water-heater-types';
-import { pointInPolygon } from '../geometry/shared/polygon-utils';
+import { polygonBboxHitTest } from './bim-polygon-render';
 import { buildMepWaterHeaterSymbol } from '../mep-water-heaters/mep-water-heater-symbol';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
@@ -112,15 +112,7 @@ export class MepWaterHeaterRenderer extends BaseEntityRenderer {
     const waterHeater = entity as MepWaterHeaterEntity;
     const bb = waterHeater.geometry?.bbox;
     if (!bb) return false;
-    if (
-      point.x < bb.min.x - tolerance ||
-      point.x > bb.max.x + tolerance ||
-      point.y < bb.min.y - tolerance ||
-      point.y > bb.max.y + tolerance
-    ) {
-      return false;
-    }
-    return pointInPolygon(point, waterHeater.geometry.footprint.vertices);
+    return polygonBboxHitTest(bb, waterHeater.geometry.footprint.vertices, point, tolerance);
   }
 
   // ─── Internal helpers ──────────────────────────────────────────────────────

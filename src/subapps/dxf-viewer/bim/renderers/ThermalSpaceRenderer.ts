@@ -27,7 +27,7 @@ import { isThermalSpaceEntity } from '../../types/entities';
 import type { ThermalSpaceEntity } from '../types/thermal-space-types';
 import { resolveThermalSpaceSetpointC } from '../thermal/thermal-space-use-catalog';
 import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
-import { pointInPolygon } from '../geometry/shared/polygon-utils';
+import { polygonBboxHitTest } from './bim-polygon-render';
 // 🏢 ADR-571: teal analytical accent SSoT + hexToRgba SSoT (color-math.ts)
 import { HOVER_HIGHLIGHT, MEP_TEAL_COLOR } from '../../config/color-config';
 import { hexToRgba } from '../../config/color-math';
@@ -106,13 +106,7 @@ export class ThermalSpaceRenderer extends BaseEntityRenderer {
     const ts = entity as ThermalSpaceEntity;
     const bb = ts.geometry?.bbox;
     if (!bb) return false;
-    if (
-      point.x < bb.min.x - tolerance ||
-      point.x > bb.max.x + tolerance ||
-      point.y < bb.min.y - tolerance ||
-      point.y > bb.max.y + tolerance
-    ) return false;
-    return pointInPolygon(point, ts.params.footprint.vertices);
+    return polygonBboxHitTest(bb, ts.params.footprint.vertices, point, tolerance);
   }
 
   // ─── Internal helpers ──────────────────────────────────────────────────────

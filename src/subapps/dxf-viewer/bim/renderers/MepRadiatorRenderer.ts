@@ -22,7 +22,7 @@ import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../render
 import type { Entity } from '../../types/entities';
 import { isMepRadiatorEntity } from '../../types/entities';
 import type { MepRadiatorEntity } from '../types/mep-radiator-types';
-import { pointInPolygon } from '../geometry/shared/polygon-utils';
+import { polygonBboxHitTest, mapBimGrips } from './bim-polygon-render';
 import { buildMepRadiatorSymbol } from '../mep-radiators/mep-radiator-symbol';
 import { getMepRadiatorGrips } from '../mep-radiators/mep-radiator-grips';
 import { gripGlyphShape } from '../grips/grip-glyph-registry';
@@ -102,15 +102,9 @@ export class MepRadiatorRenderer extends BaseEntityRenderer {
     // corner resize. Mirror of `MepManifoldRenderer.getGrips`; routed through
     // `applyMepRadiatorGripDrag()` + `UpdateMepRadiatorParamsCommand`.
     if (!isMepRadiatorEntity(entity)) return [];
-    return getMepRadiatorGrips(entity as MepRadiatorEntity).map((g) => ({
-      id: `${g.entityId}-grip-${g.gripIndex}`,
-      position: g.position,
-      type: g.type === 'center' ? ('center' as const) : ('vertex' as const),
-      entityId: g.entityId,
-      isVisible: true,
-      gripIndex: g.gripIndex,
-      shape: gripGlyphShape(gripKindOf(g, 'mep-radiator')),
-    }));
+    return mapBimGrips(getMepRadiatorGrips(entity as MepRadiatorEntity), (g) =>
+      gripGlyphShape(gripKindOf(g, 'mep-radiator')),
+    );
   }
 
   hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {
@@ -118,15 +112,7 @@ export class MepRadiatorRenderer extends BaseEntityRenderer {
     const radiator = entity as MepRadiatorEntity;
     const bb = radiator.geometry?.bbox;
     if (!bb) return false;
-    if (
-      point.x < bb.min.x - tolerance ||
-      point.x > bb.max.x + tolerance ||
-      point.y < bb.min.y - tolerance ||
-      point.y > bb.max.y + tolerance
-    ) {
-      return false;
-    }
-    return pointInPolygon(point, radiator.geometry.footprint.vertices);
+    return polygonBboxHitTest(bb, radiator.geometry.footprint.vertices, point, tolerance);
   }
 
   // ─── Internal helpers ──────────────────────────────────────────────────────

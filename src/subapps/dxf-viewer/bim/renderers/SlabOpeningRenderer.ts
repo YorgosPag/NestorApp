@@ -33,7 +33,7 @@ import type {
   SlabOpeningEntity,
   SlabOpeningKind,
 } from '../types/slab-opening-types';
-import { pointInPolygon } from '../geometry/shared/polygon-utils';
+import { polygonBboxHitTest } from './bim-polygon-render';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
 import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
@@ -166,16 +166,7 @@ export class SlabOpeningRenderer extends BaseEntityRenderer {
     const opening = entity as SlabOpeningEntity;
     const bb = opening.geometry?.bbox;
     if (!bb) return false;
-    if (
-      point.x < bb.min.x - tolerance ||
-      point.x > bb.max.x + tolerance ||
-      point.y < bb.min.y - tolerance ||
-      point.y > bb.max.y + tolerance
-    ) {
-      return false;
-    }
-    const verts = opening.geometry.polygon.vertices;
-    return pointInPolygon(point, verts);
+    return polygonBboxHitTest(bb, opening.geometry.polygon.vertices, point, tolerance);
   }
 
   // ─── Internal helpers ────────────────────────────────────────────────────

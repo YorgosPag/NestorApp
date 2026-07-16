@@ -31,7 +31,7 @@ import {
   buildFilletedUnderfloorPath,
   resolveUnderfloorBendRadiusScene,
 } from '../mep-underfloor/mep-underfloor-geometry';
-import { pointInPolygon } from '../geometry/shared/polygon-utils';
+import { polygonBboxHitTest } from './bim-polygon-render';
 import { getMepUnderfloorGrips } from '../mep-underfloor/mep-underfloor-grips';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
@@ -130,13 +130,7 @@ export class MepUnderfloorRenderer extends BaseEntityRenderer {
     const uf = entity as MepUnderfloorEntity;
     const bb = uf.geometry?.bbox;
     if (!bb) return false;
-    if (
-      point.x < bb.min.x - tolerance ||
-      point.x > bb.max.x + tolerance ||
-      point.y < bb.min.y - tolerance ||
-      point.y > bb.max.y + tolerance
-    ) return false;
-    return pointInPolygon(point, uf.params.footprint.vertices);
+    return polygonBboxHitTest(bb, uf.params.footprint.vertices, point, tolerance);
   }
 
   // ─── Internal helpers ──────────────────────────────────────────────────────

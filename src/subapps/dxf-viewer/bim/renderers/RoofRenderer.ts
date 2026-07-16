@@ -32,7 +32,7 @@ import type { RoofEntity } from '../types/roof-types';
 import type { Point3D } from '../types/bim-base';
 import { getRoofGrips } from '../roofs/roof-grips';
 import { getSelectedRoofEdge } from '../roofs/roof-edge-selection-store';
-import { pointInPolygon } from '../geometry/shared/polygon-utils';
+import { polygonBboxHitTest } from './bim-polygon-render';
 import { buildRoofEaveDetail } from '../geometry/roof-eave-detail';
 import {
   DEFAULT_EAVE_MATERIAL_ID,
@@ -160,19 +160,7 @@ export class RoofRenderer extends BaseEntityRenderer {
     const roof = entity as RoofEntity;
     const bb = roof.geometry?.bbox;
     if (!bb) return false;
-
-    // Bbox quick-reject (xy only — z in bbox is metres, irrelevant for 2D).
-    if (
-      point.x < bb.min.x - tolerance ||
-      point.x > bb.max.x + tolerance ||
-      point.y < bb.min.y - tolerance ||
-      point.y > bb.max.y + tolerance
-    ) {
-      return false;
-    }
-
-    // Detailed point-in-polygon test on footprint (ray casting).
-    return pointInPolygon(point, roof.geometry.footprint.vertices);
+    return polygonBboxHitTest(bb, roof.geometry.footprint.vertices, point, tolerance);
   }
 
   // ─── Internal helpers ────────────────────────────────────────────────────

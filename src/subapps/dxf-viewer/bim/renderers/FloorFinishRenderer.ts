@@ -19,7 +19,7 @@ import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../render
 import type { Entity } from '../../types/entities';
 import { isFloorFinishEntity } from '../../types/entities';
 import type { FloorFinishEntity } from '../types/floor-finish-types';
-import { pointInPolygon } from '../geometry/shared/polygon-utils';
+import { polygonBboxHitTest } from './bim-polygon-render';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getFloorFinishGrips } from '../floor-finishes/floor-finish-grips';
 import {
@@ -108,13 +108,7 @@ export class FloorFinishRenderer extends BaseEntityRenderer {
     const ff = entity as FloorFinishEntity;
     const bb = ff.geometry?.bbox;
     if (!bb) return false;
-    if (
-      point.x < bb.min.x - tolerance ||
-      point.x > bb.max.x + tolerance ||
-      point.y < bb.min.y - tolerance ||
-      point.y > bb.max.y + tolerance
-    ) return false;
-    return pointInPolygon(point, ff.params.footprint.vertices);
+    return polygonBboxHitTest(bb, ff.params.footprint.vertices, point, tolerance);
   }
 
   // ─── Internal helpers ──────────────────────────────────────────────────────

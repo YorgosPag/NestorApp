@@ -39,7 +39,7 @@ import {
   resolveSegmentBimCategory,
 } from '../types/mep-segment-types';
 import { buildRiserSymbol, drawRiserSymbol, RISER_SYMBOL_RADIUS_PX } from '../mep-segments/mep-riser-symbol';
-import { pointInPolygon } from '../geometry/shared/polygon-utils';
+import { polygonBboxHitTest } from './bim-polygon-render';
 import { computeTrimmedSegmentGeometry } from '../geometry/mep-segment-geometry';
 import { useMepSegmentTrimStore } from '../mep-fittings/mep-segment-trim-store';
 import { buildSegmentSymbol, buildPipeTickScreen } from '../mep-segments/mep-segment-symbol';
@@ -263,17 +263,7 @@ export class MepSegmentRenderer extends BaseEntityRenderer {
     }
     const bb = segment.geometry?.bbox;
     if (!bb) return false;
-    // Bbox quick-reject with tolerance (mirror BeamRenderer).
-    if (
-      point.x < bb.min.x - tolerance ||
-      point.x > bb.max.x + tolerance ||
-      point.y < bb.min.y - tolerance ||
-      point.y > bb.max.y + tolerance
-    ) {
-      return false;
-    }
-    // Detailed point-in-polygon test on outline.
-    return pointInPolygon(point, segment.geometry.outline.vertices);
+    return polygonBboxHitTest(bb, segment.geometry.outline.vertices, point, tolerance);
   }
 
   // ─── Internal helpers ────────────────────────────────────────────────────────

@@ -34,6 +34,7 @@ import type { Entity } from '../../types/entities';
 import type { MepFittingEntity, MepFittingDomain } from '../types/mep-fitting-types';
 import { incidentEntityId, resolveFittingBimCategory } from '../types/mep-fitting-types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
+import { bboxRejectsPoint } from './bim-polygon-render';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
@@ -159,15 +160,7 @@ export class MepFittingRenderer extends BaseEntityRenderer {
     const fitting = entity as MepFittingEntity;
     const bb = fitting.geometry?.bbox;
     if (!bb) return false;
-    // Bbox quick-reject with tolerance (mirror segment renderer).
-    if (
-      point.x < bb.min.x - tolerance ||
-      point.x > bb.max.x + tolerance ||
-      point.y < bb.min.y - tolerance ||
-      point.y > bb.max.y + tolerance
-    ) {
-      return false;
-    }
+    if (bboxRejectsPoint(bb, point, tolerance)) return false;
     const verts = fitting.geometry.footprint.vertices;
     if (verts.length < 3) return true; // degenerate footprint → bbox is the target.
     return pointInPolygon(point, verts);
