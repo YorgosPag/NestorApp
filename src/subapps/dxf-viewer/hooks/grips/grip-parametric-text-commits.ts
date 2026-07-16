@@ -34,7 +34,7 @@ import { BimRotateHotGripStore } from '../../bim/grips/bim-rotate-hotgrip-store'
 import { gripKindOf } from '../grip-kinds';
 // ADR-557 Φ-attachment — durable height write: the run-height SSoT `resolveTextHeight` reads.
 import { scaleTextNodeRunHeights } from '../../utils/text-node-utils';
-import { createSceneManagerAdapter } from './grip-commit-adapters';
+import { createSceneManagerAdapter } from './grip-scene-manager-adapter';
 
 /** Current full transform state of the projected text (the undo target). */
 function textTransformStateOf(t: DxfText): TextTransformState {

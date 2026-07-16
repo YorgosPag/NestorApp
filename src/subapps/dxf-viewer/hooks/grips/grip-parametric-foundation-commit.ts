@@ -18,7 +18,7 @@ import { EventBus } from '../../systems/events/EventBus';
 import type { Entity } from '../../types/entities';
 import { buildPadSizingInput, resolvePadSectionLock } from '../../bim/structural/sizing/pad-size-patch';
 import { useStructuralSettingsStore } from '../../state/structural-settings-store';
-import { createSceneManagerAdapter } from './grip-commit-adapters';
+import { createSceneManagerAdapter } from './grip-scene-manager-adapter';
 
 /**
  * ADR-436 Slice 1b — parametric foundation pad grip commit via

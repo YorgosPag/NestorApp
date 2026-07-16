@@ -12,7 +12,8 @@
  */
 import type { Point2D } from '../../rendering/types/Types';
 import { resolveHotGripMouseUp } from './wall-hot-grip-fsm';
-import { commitDxfGripDragModeAware, createSceneManagerAdapter } from './grip-commit-adapters';
+import { commitDxfGripDragModeAware } from './grip-commit-adapters';
+import { createSceneManagerAdapter } from './grip-scene-manager-adapter';
 // ADR-513 §grip-parity — πληκτρολογημένο Μήκος/Γωνία (Δαχτυλίδι) στην ΕΠΕΚΤΑΣΗ ΑΚΡΟΥ γραμμής.
 import { resolveLineEndpointLockedDelta } from '../../systems/dynamic-input/grip-endpoint-lock';
 import { resolveEndpointReshapePolarLock } from './grip-endpoint-polar-lock';

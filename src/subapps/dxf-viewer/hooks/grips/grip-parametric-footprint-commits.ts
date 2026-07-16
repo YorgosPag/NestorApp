@@ -37,7 +37,8 @@ import {
 import { withGradientPatch, DEFAULT_GRADIENT_DEFAULTS } from '../../bim/hatch/hatch-gradient-build';
 import { emitBimEntityParamsUpdated } from '../../systems/events/emit-bim-entity-params-updated';
 import { ShiftKeyTracker } from '../../keyboard/ShiftKeyTracker';
-import { createSceneManagerAdapter, commitWholeEntityMove } from './grip-commit-adapters';
+import { commitWholeEntityMove } from './grip-whole-entity-move';
+import { createSceneManagerAdapter } from './grip-scene-manager-adapter';
 import { gripKindOf } from '../grip-kinds';
 // ADR-627 — whole-hatch ROTATION reuses the SHARED pivot/anchor/swept-angle resolver + the
 // canonical RotateEntityCommand (rotateEntity case 'hatch'), exactly like the polyline/area outline.

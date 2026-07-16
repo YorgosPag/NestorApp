@@ -18,7 +18,7 @@ import {
   resolveHotGripMouseDown, isWallHotGripKind,
   hotGripOpForKind, initialHotGripStep, hotGripKindOf,
 } from './wall-hot-grip-fsm';
-import { createSceneManagerAdapter } from './grip-commit-adapters';
+import { createSceneManagerAdapter } from './grip-scene-manager-adapter';
 import { gripKindOf } from '../grip-kinds';
 // ADR-397/363 — mouse-down helpers extracted for the 500-line limit (SOS N.7.1).
 import { runDirectionalMove, beginHotGripSession } from './grip-mouse-down-helpers';

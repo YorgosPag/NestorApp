@@ -18,7 +18,7 @@ import { applyXLineGripDrag } from '../../systems/xline/xline-grips';
 import { applyRayGripDrag } from '../../systems/ray/ray-grips';
 import { applyDimensionGripDrag, diffDimEntity } from '../dimensions/useDimensionGrips';
 import { UpdateDimGripCommand } from '../../core/commands/entity-commands/UpdateDimGripCommand';
-import { createSceneManagerAdapter } from './grip-commit-adapters';
+import { createSceneManagerAdapter } from './grip-scene-manager-adapter';
 import { gripKindOf } from '../grip-kinds';
 // ADR-363 Slice F — line rotation commit reuses the canonical rotate SSoT.
 import { BimRotateHotGripStore } from '../../bim/grips/bim-rotate-hotgrip-store';

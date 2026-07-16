@@ -42,7 +42,7 @@ import { runGripMouseUp } from './grip-mouseup-handler';
 import { runGripMouseMove } from './grip-mouse-move-handler';
 import type { DxfCommitDeps, OverlayCommitDeps } from './grip-commit-adapters';
 // ADR-363 Slice G.6 — free-rotate reference baseline along the entity's major axis.
-import { createSceneManagerAdapter } from './grip-commit-adapters';
+import { createSceneManagerAdapter } from './grip-scene-manager-adapter';
 import { resolveRotateReferenceAnchor } from '../../bim/grips/rotate-reference-axis';
 import type { Entity } from '../../types/entities';
 import { GripBasePointStore } from '../../systems/grip/GripBasePointStore';

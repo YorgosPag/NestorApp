@@ -20,7 +20,7 @@ import type { UnifiedGripInfo, DxfCommitDeps } from './unified-grip-types';
 import { SetBulgeCommand } from '../../core/commands/entity-commands/SetBulgeCommand';
 import { bulgeFromApexPoint } from '../../rendering/entities/shared/geometry-bulge-utils';
 import { parsePolylineSegIndex } from '../../systems/grip/polyline-grip-ops';
-import { createSceneManagerAdapter } from './grip-commit-adapters';
+import { createSceneManagerAdapter } from './grip-scene-manager-adapter';
 import { gripKindOf } from '../grip-kinds';
 // SSoT polyline shape (same canonical type PolylineVertexCommand uses — no ad-hoc duplicate).
 import type { PolylineEntity, LWPolylineEntity } from '../../types/entities';

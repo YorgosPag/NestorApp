@@ -28,7 +28,7 @@ import {
   isAnnotationSymbolCornerKind,
 } from '../../bim/annotation-symbols/annotation-symbol-grips';
 import { UpdateEntityCommand, type EntityPatch } from '../../core/commands/entity-commands/UpdateEntityCommand';
-import { createSceneManagerAdapter } from './grip-commit-adapters';
+import { createSceneManagerAdapter } from './grip-scene-manager-adapter';
 
 /**
  * ADR-583 Φ3 — annotation-symbol corner UNIFORM-resize commit. Routes the corner drag through

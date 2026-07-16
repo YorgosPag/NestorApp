@@ -44,7 +44,7 @@ import {
 } from '../../bim/structural/active-reinforcement';
 import { resolveStructuralCode } from '../../bim/structural/codes';
 import { useStructuralSettingsStore } from '../../state/structural-settings-store';
-import { createSceneManagerAdapter } from './grip-commit-adapters';
+import { createSceneManagerAdapter } from './grip-scene-manager-adapter';
 
 // ADR-363 Phase 2.5 / Φ1G.5 — parametric opening grip commits (drag-along-wall +
 // Alt-move re-host) live in grip-parametric-opening-commits.ts (N.7.1 file-size

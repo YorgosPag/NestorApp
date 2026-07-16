@@ -27,13 +27,15 @@ import { CopyEntityCommand, type CopyEntityParams } from '../../core/commands/en
 import { GripCopyModeStore } from '../../systems/grip/GripCopyModeStore';
 import { isGripCopyIntent } from '../../systems/grip/grip-copy-intent';
 import { isActiveGripAltMove } from '../../systems/cursor/GripDragStore';
-import { executeWholeEntityConnectivityMove } from '../../bim/mep-segments/build-whole-entity-connectivity-move';
 import type { Entity } from '../../types/entities';
 export type { DxfCommitDeps, OverlayCommitDeps } from './unified-grip-types';
 import type { DxfCommitDeps, OverlayCommitDeps } from './unified-grip-types';
 // ISceneManager adapter extracted to sibling module (N.7.1 file-size compliance)
 export { createSceneManagerAdapter } from './grip-scene-manager-adapter';
 import { createSceneManagerAdapter } from './grip-scene-manager-adapter';
+// Whole-entity move extracted to a sibling leaf module — see ADR-663 §4 part 5 (import cycle).
+export { commitWholeEntityMove } from './grip-whole-entity-move';
+import { commitWholeEntityMove } from './grip-whole-entity-move';
 // ============================================================================
 // DXF GRIP COMMIT
 // ============================================================================
@@ -108,55 +110,6 @@ import {
 import { isBlockBoxGripKind } from '../../systems/block/block-box-grips';
 import { tryCommitParametricGripDrag } from './grip-parametric-dispatch';
 import { gripKindOf } from '../grip-kinds';
-/**
- * ADR-363 Phase 1G.5 — whole-entity "move from characteristic point" (AutoCAD
- * base-point move). Translates the ENTIRE entity by `delta` via
- * `deps.moveEntities` (→ MoveEntityCommand → `calculateBimMovedGeometry`), or
- * clones it with the same displacement when `copy` is set (CopyEntityCommand,
- * copy-with-base-point). Shared SSoT for the `mode === 'move'` branch AND the
- * Alt-modifier bypass so both routes stay byte-identical.
- *
- * ADR-627 — exported so the hatch MOVE cross (`commitHatchGripDrag`) reuses the EXACT
- * same whole-entity translate + copy-with-base-point path (the hatch grip is intercepted
- * by `tryCommitParametricGripDrag` on `on:'hatch'` before this file's own move gate runs,
- * so it cannot fall through here — it calls this SSoT directly instead of duplicating it).
- */
-export function commitWholeEntityMove(
-  grip: UnifiedGripInfo,
-  delta: Point2D,
-  deps: DxfCommitDeps,
-  copy: boolean,
-): void {
-  if (!grip.entityId) return;
-  if (copy) {
-    const sceneManager = createSceneManagerAdapter(deps);
-    if (!sceneManager) return;
-    const params: CopyEntityParams = { vertexMoves: [], anchorMoves: [grip.entityId], displacement: delta };
-    const command = new CopyEntityCommand(params, sceneManager);
-    if (command.validate() !== null) return;
-    deps.execute(command);
-    GripCopyModeStore.bumpCount();
-    return;
-  }
-  // ADR-408 Φ-C (move-from-point side) — when the moved entity is a plumbing
-  // connector host (sink / manifold / boiler / radiator / water-heater), its
-  // connected pipe ends must FOLLOW it (Revit "host moves, connectors move with
-  // it"). The parametric grip path already does this via
-  // `executeHostMoveWithConnectedPipes`; this whole-entity / Alt move-from-point
-  // path historically used a bare `MoveEntityCommand` (connectivity-blind), so the
-  // run tore off the network. Route plumbing hosts through the SAME shared executor
-  // (one CompoundCommand = single undo). Returns false for non-plumbing entities →
-  // fall back to the standard move (walls / furniture / panels stay byte-identical).
-  const sceneManager = createSceneManagerAdapter(deps);
-  if (
-    sceneManager &&
-    executeWholeEntityConnectivityMove({ entityId: grip.entityId, delta, sceneManager, execute: deps.execute })
-  ) {
-    return;
-  }
-  deps.moveEntities([grip.entityId], delta, { isDragging: false });
-}
-
 /** ADR-349 Phase 1c-A/B2/B3 — mode-aware DXF grip commit (stretch/move/rotate/scale/mirror). */
 export function commitDxfGripDragModeAware(
   grip: UnifiedGripInfo,

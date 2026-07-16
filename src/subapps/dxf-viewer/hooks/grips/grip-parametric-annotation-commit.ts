@@ -18,7 +18,7 @@ import type { UnifiedGripInfo, DxfCommitDeps } from './unified-grip-types';
 import { BimRotateHotGripStore } from '../../bim/grips/bim-rotate-hotgrip-store';
 import { ShiftKeyTracker } from '../../keyboard/ShiftKeyTracker';
 import { UpdateEntityCommand, type EntityPatch } from '../../core/commands/entity-commands/UpdateEntityCommand';
-import { createSceneManagerAdapter } from './grip-commit-adapters';
+import { createSceneManagerAdapter } from './grip-scene-manager-adapter';
 
 /**
  * Commit a parametric-annotation grip drag. `spec.kind` is the already-resolved grip kind (from

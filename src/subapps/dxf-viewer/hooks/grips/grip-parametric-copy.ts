@@ -61,7 +61,7 @@ import type { FloorplanSymbolEntity } from '../../bim/types/floorplan-symbol-typ
 import { applyFloorplanSymbolGripDrag } from '../../bim/floorplan-symbols/floorplan-symbol-grips';
 import { buildFloorplanSymbolEntity } from '../drawing/floorplan-symbol-completion';
 import { addFloorplanSymbolToScene } from '../../bim/floorplan-symbols/add-floorplan-symbol-to-scene';
-import { createSceneManagerAdapter } from './grip-commit-adapters';
+import { createSceneManagerAdapter } from './grip-scene-manager-adapter';
 
 /**
  * ADR-363 Phase 1G.4 — Ctrl-COPY at the terminal click of a wall MOVE hot-grip

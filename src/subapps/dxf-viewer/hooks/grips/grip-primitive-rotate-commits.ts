@@ -37,7 +37,7 @@ import { UpdateEntityCommand } from '../../core/commands/entity-commands/UpdateE
 import { CreateEntityCommand } from '../../core/commands/entity-commands/CreateEntityCommand';
 import type { SceneEntity } from '../../core/commands/interfaces';
 import { polylineBboxCenter, rectOrPolylineVertices } from '../../systems/polyline/rectangle-detect';
-import { createSceneManagerAdapter } from './grip-commit-adapters';
+import { createSceneManagerAdapter } from './grip-scene-manager-adapter';
 import { gripKindOf } from '../grip-kinds';
 // ADR-561 EXT (Ctrl-rotate-copy) — copy intent SSoT (the right-click «Copy» toggle OR live
 // Ctrl/⌘), the SAME predicate the move-copy + line rotate-copy commits use.

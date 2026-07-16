@@ -33,7 +33,7 @@ import {
 } from '../../bim/walls/opening-grips';
 import { isWallEntity, type Entity } from '../../types/entities';
 import { emitBimEntityParamsUpdated } from '../../systems/events/emit-bim-entity-params-updated';
-import { createSceneManagerAdapter } from './grip-commit-adapters';
+import { createSceneManagerAdapter } from './grip-scene-manager-adapter';
 import { gripKindOf } from '../grip-kinds';
 import type { ISceneManager } from '../../core/commands/interfaces';
 import type { SceneUnits } from '../../utils/scene-units';

@@ -23,7 +23,7 @@ import type { BlockEntity } from '../../types/entities';
 import { gripKindOf } from '../grip-kinds';
 import { applyBlockBoxGripDrag, blockBoxRoleFromKind } from '../../systems/block/block-box-grips';
 import { UpdateEntityCommand, type EntityPatch } from '../../core/commands/entity-commands/UpdateEntityCommand';
-import { createSceneManagerAdapter } from './grip-commit-adapters';
+import { createSceneManagerAdapter } from './grip-scene-manager-adapter';
 
 /**
  * ADR-641 — block box (corner/edge) SCALE commit. Routes the drag through `applyBlockBoxGripDrag`

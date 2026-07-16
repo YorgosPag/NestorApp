@@ -31,7 +31,7 @@ import { executeHostMoveWithConnectedPipes } from '../../bim/mep-segments/build-
 import { BimRotateHotGripStore } from '../../bim/grips/bim-rotate-hotgrip-store';
 import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
 import { emitBimEntityParamsUpdated } from '../../systems/events/emit-bim-entity-params-updated';
-import { createSceneManagerAdapter } from './grip-commit-adapters';
+import { createSceneManagerAdapter } from './grip-scene-manager-adapter';
 import { gripKindOf } from '../grip-kinds';
 
 /**
