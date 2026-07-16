@@ -37,7 +37,7 @@ import {
   makeParagraph,
   makeRun,
 } from '../../../../text-engine/templates/defaults/template-helpers';
-import type { TextJustification } from '../../../../text-engine/types/text-ast.types';
+import type { TextJustification, TextParagraph } from '../../../../text-engine/types/text-ast.types';
 import type {
   DetailPrimitive,
   LinePrimitive,
@@ -58,8 +58,10 @@ export interface SheetToSceneOptions {
   readonly sheetHeightMm: number;
 }
 
-/** Παράγραφος στοιχισμένη όπως το primitive (0=αριστερά, 1=κέντρο, 2=δεξιά). */
-const JUSTIFICATION_BY_ALIGN: Readonly<Record<TextAlign, number>> = {
+/** Παράγραφος στοιχισμένη όπως το primitive (0=αριστερά, 1=κέντρο, 2=δεξιά). Τιμές από
+ *  το SSoT `TextParagraph['justification']` (`0|1|2|3`) — όχι γυμνό `number` — ώστε το
+ *  lookup να ταιριάζει άμεσα με το `justification` πεδίο του `makeParagraph`. */
+const JUSTIFICATION_BY_ALIGN: Readonly<Record<TextAlign, TextParagraph['justification']>> = {
   left: 0,
   center: 1,
   right: 2,

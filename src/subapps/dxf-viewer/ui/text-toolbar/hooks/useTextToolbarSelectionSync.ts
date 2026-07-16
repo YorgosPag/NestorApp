@@ -49,6 +49,9 @@ import type { DxfTextNode } from '../../../text-engine/types';
 // ADR-557 read-side flat-SSoT — the SAME height / run-style extractors the render
 // pipeline (dxf-scene-entity-converter) uses, so the toolbar geometry ≡ the canvas.
 import { resolveTextHeight, extractFirstRunStyle } from '../../../hooks/canvas/dxf-text-style-extractor';
+// Non-null default font SSoT (text-engine) — the toolbar default is `MixedValue<string>`
+// (nullable = «Μεικτή»), so the final fallback coalesces its type-level `null` away.
+import { DEFAULT_RUN_STYLE } from '../../../text-engine/templates/defaults/template-helpers';
 
 interface ResolvedTextEntity {
   readonly id: string;
@@ -77,7 +80,7 @@ function resolveFlatGeometry(entity: AnySceneEntity): TextFlatGeometry {
   const fontFamily =
     extractFirstRunStyle(entity as unknown as Parameters<typeof extractFirstRunStyle>[0])?.fontFamily ||
     (flat.fontFamily?.trim() ? flat.fontFamily : '') ||
-    DEFAULT_TOOLBAR_VALUES.fontFamily;
+    (DEFAULT_TOOLBAR_VALUES.fontFamily ?? DEFAULT_RUN_STYLE.fontFamily);
   return {
     rotation: flat.rotation ?? 0,
     // Simple TEXT carries `widthFactor`; MTEXT uses a `width` frame → factor 1.

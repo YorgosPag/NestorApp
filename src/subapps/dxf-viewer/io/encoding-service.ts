@@ -314,7 +314,7 @@ export class EncodingService {
    * dropped** and Nestor's own MTEXT importer (`text-engine/parser/mtext-tokenizer`) round-trips
    * them back. Code points > 0xFFFF fall back to `?` (0x3F) since `\U+XXXX` is 4-hex only.
    */
-  encodeWindows1253(text: string): Uint8Array {
+  encodeWindows1253(text: string): Uint8Array<ArrayBuffer> {
     const map = unicodeToWindows1253();
     const bytes: number[] = [];
     for (const ch of text) {
