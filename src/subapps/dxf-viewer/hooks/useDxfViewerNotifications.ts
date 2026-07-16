@@ -19,6 +19,7 @@ import { registerGridBuildNotifications } from './notifications/grid-build-notif
 import { registerPerimeterBuildNotifications } from './notifications/perimeter-build-notifications';
 import { registerMepCircuitNotifications } from './notifications/mep-circuit-notifications';
 import { registerMepAutoDesignNotifications } from './notifications/mep-autodesign-notifications';
+import { registerPrintFidelityNotifications } from './notifications/print-fidelity-notifications';
 
 export function useDxfViewerNotifications(): void {
   const { t } = useTranslation('dxf-viewer-shell');
@@ -30,6 +31,7 @@ export function useDxfViewerNotifications(): void {
       ...registerPerimeterBuildNotifications(t),
       ...registerMepCircuitNotifications(t),
       ...registerMepAutoDesignNotifications(t),
+      ...registerPrintFidelityNotifications(t),
     ];
 
     return () => unsubs.forEach((u) => u());
