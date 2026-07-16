@@ -1,6 +1,12 @@
 /**
  * Types and interfaces for useCanvasMouse hook
  * Extracted per ADR-065 (file size limit: max 500 lines)
+ *
+ * SSoT (ADR-183/584): οι overlay grip types (hover/select/drag) **ΔΕΝ** δηλώνονται
+ * εδώ — ζουν στο `hooks/grips/unified-grip-types.ts`, που είναι ο αυτο-ανακηρυγμένος
+ * canonical SSoT τους. Αυτό το module τους **re-export-άρει** ώστε τα υπάρχοντα
+ * `import { ... } from './canvas-mouse-types'` call-sites να μένουν αμετάβλητα
+ * (ίδιο μοτίβο με το `grip-kinds.ts`). Type-only → μηδέν runtime coupling.
  */
 
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
@@ -8,65 +14,31 @@ import type { ICommand } from '../../core/commands/interfaces';
 import type { useOverlayStore } from '../../overlays/overlay-store';
 import type { UniversalSelectionHook } from '../../systems/selection';
 import type { GridAxis } from '../../ai-assistant/grid-types';
+import type {
+  VertexHoverInfo,
+  EdgeHoverInfo,
+  SelectedGrip,
+  DraggingVertexState,
+  DraggingEdgeMidpointState,
+  DraggingOverlayBodyState,
+} from '../grips/unified-grip-types';
 
 // ============================================================================
-// TYPES & INTERFACES
+// OVERLAY GRIP TYPES — re-exported from the canonical SSoT (ADR-183)
 // ============================================================================
 
-/**
- * Hover information for vertex grips
- */
-export interface VertexHoverInfo {
-  overlayId: string;
-  vertexIndex: number;
-}
+export type {
+  VertexHoverInfo,
+  EdgeHoverInfo,
+  SelectedGrip,
+  DraggingVertexState,
+  DraggingEdgeMidpointState,
+  DraggingOverlayBodyState,
+} from '../grips/unified-grip-types';
 
-/**
- * Hover information for edge midpoint grips
- */
-export interface EdgeHoverInfo {
-  overlayId: string;
-  edgeIndex: number;
-}
-
-/**
- * Selected grip state
- */
-export interface SelectedGrip {
-  type: 'vertex' | 'edge-midpoint';
-  overlayId: string;
-  index: number; // vertexIndex for vertex, edgeIndex for edge-midpoint
-}
-
-/**
- * Dragging vertex state
- */
-export interface DraggingVertexState {
-  overlayId: string;
-  vertexIndex: number;
-  startPoint: Point2D;
-  originalPosition: Point2D; // Original vertex position for delta calculation
-}
-
-/**
- * Dragging edge midpoint state
- */
-export interface DraggingEdgeMidpointState {
-  overlayId: string;
-  edgeIndex: number;
-  insertIndex: number;
-  startPoint: Point2D;
-  newVertexCreated: boolean; // True after vertex has been inserted
-}
-
-/**
- * Dragging overlay body state (for move tool)
- */
-export interface DraggingOverlayBodyState {
-  overlayId: string;
-  startPoint: Point2D;    // Mouse start position in world coordinates
-  startPolygon: Array<[number, number]>; // Original polygon for delta calculation
-}
+// ============================================================================
+// TYPES & INTERFACES — canvas-mouse specific
+// ============================================================================
 
 /**
  * Dragging guide state (for guide-move tool) — ADR-189 B5

@@ -9,8 +9,14 @@
  *
  * This module owns the ONE definition of that shape + the pure helpers
  * (`computeBuildupTotalThickness`, `buildupBoundaryFractions`). Per-entity
- * modules (`wall-dna-types.ts`, `slab-dna-types.ts`) parametrise it with their
- * own zone vocabulary (`WallLayerSide` vs `SlabLayerZone`) and preset factories.
+ * modules add their own zone vocabulary and preset factories on top.
+ *
+ * **Adoption status** (ADR-584 — κρατήσου ειλικρινής εδώ):
+ * - `slab-dna-types.ts` + `roof-buildup.ts` → πλήρως παραμετροποιημένα
+ *   (`SlabDna = LayeredBuildup<SlabLayerZone>`).
+ * - `wall-dna-types.ts` → **μερικώς**: δηλώνει δικά του `WallDna`/`WallDnaLayer`
+ *   (persisted `side`, όχι `zone` — βλ. την τεκμηριωμένη απόκλιση εκεί), αλλά
+ *   delegate-άρει ΟΛΗ την αριθμητική εδώ μέσω του `BuildupThicknessSource`.
  *
  * Pure — no THREE, no store reads, no I/O. Each fn ≤40 lines.
  *

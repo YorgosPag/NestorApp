@@ -14,6 +14,31 @@ import {
   computeTotalThickness,
   type WallDna,
 } from '../wall-dna-types';
+import {
+  buildupBoundaryFractions,
+  computeBuildupTotalThickness,
+  type BuildupThicknessSource,
+} from '../layered-buildup';
+
+describe('ADR-584 — wall DNA κάθεται στο LayeredBuildup SSoT', () => {
+  it('computeTotalThickness delegates to the generic — δεν ξαναγράφει την αριθμητική', () => {
+    for (const seed of WALL_TYPE_SEEDS) {
+      expect(computeTotalThickness(seed.dna.layers)).toBe(
+        computeBuildupTotalThickness(seed.dna.layers),
+      );
+    }
+  });
+
+  it('WallDna ικανοποιεί δομικά το BuildupThicknessSource — οι generic helpers δουλεύουν', () => {
+    const dna = getDefaultDnaForCategory('exterior');
+    const src: BuildupThicknessSource = dna; // compile-time proof of the structural fit
+    const fractions = buildupBoundaryFractions(src);
+
+    expect(fractions).toHaveLength(dna.layers.length + 1);
+    expect(fractions[0]).toBe(0);
+    expect(fractions[fractions.length - 1]).toBeCloseTo(1);
+  });
+});
 
 describe('ADR-447 — WALL_TYPE_SEEDS catalog', () => {
   it('exposes the 7 Revit wall types (3 exterior + interior/partition/parapet/fence)', () => {

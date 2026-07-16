@@ -8,9 +8,29 @@
  * SSoT: `WallParams.thickness` derived from `WallDna.totalThickness` όταν dna
  * παρέχεται — το πάχος ΔΕΝ διπλο-καταχωρείται.
  *
+ * ## Σχέση με το `LayeredBuildup<Z>` SSoT (ADR-584)
+ *
+ * Η αριθμητική του build-up ζει **αποκλειστικά** στο `layered-buildup.ts` — αυτό
+ * το module δεν την ξαναγράφει, τη delegate-άρει (`computeTotalThickness` →
+ * `computeBuildupTotalThickness`, όπως ο slab). Το `WallDna` ικανοποιεί δομικά
+ * το `BuildupThicknessSource`, άρα **όλοι** οι generic helpers δουλεύουν πάνω του.
+ *
+ * ⚠️ **Τεκμηριωμένη απόκλιση**: ο τοίχος **ΔΕΝ** δηλώνεται ως
+ * `LayeredBuildup<WallLayerSide>` (ενώ ο slab ναι), γιατί τα layers του κουβαλάνε
+ * `side` και όχι `zone`. Το πεδίο είναι **persisted** σε δύο επίπεδα —
+ * `WallParams.dna` (entity docs) και `WallTypeParams.dna` (`typeParams`, ADR-412)
+ * — οπότε το `side`→`zone` είναι **migration υπαρχόντων εγγράφων**, όχι rename.
+ * Η πρακτική Revit/IFC: ενιαίο compound-structure concept, αλλά **καμία** schema
+ * migration για κοσμητική μετονομασία πεδίου — versioned reader αντ' αυτού.
+ * Αν ποτέ γίνει, θέλει ADR + reader-tolerant migration (δέχεται `side` ΚΑΙ
+ * `zone` στο load, γράφει πάντα `zone`) — ΟΧΙ big-bang backfill.
+ *
+ * @see bim/types/layered-buildup.ts — το entity-agnostic SSoT
+ * @see bim/types/slab-dna-types.ts — το sibling που ΕΙΝΑΙ `LayeredBuildup<Z>`
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.3
  */
 
+import { computeBuildupTotalThickness } from './layered-buildup';
 import { isInsulationMaterial } from '../walls/wall-material-catalog';
 
 /** Side of the wall this layer belongs to. */
@@ -34,9 +54,9 @@ export interface WallDna {
   readonly totalThickness: number;
 }
 
-/** Total thickness from layers (SSoT helper). */
+/** Total thickness from wall layers (SSoT helper — delegates to the generic). */
 export function computeTotalThickness(layers: readonly WallDnaLayer[]): number {
-  return layers.reduce((sum, layer) => sum + layer.thickness, 0);
+  return computeBuildupTotalThickness(layers);
 }
 
 // ─── Default DNA presets (mm) ───────────────────────────────────────────────
