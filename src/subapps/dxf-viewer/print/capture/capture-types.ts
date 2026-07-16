@@ -17,6 +17,7 @@
 
 import type { jsPDF } from 'jspdf';
 import type { PrintableAreaMm } from '../config/paper-types';
+import type { PrintFidelityNote } from '../print-fidelity';
 
 /** Fields shared by every capture flavour. */
 interface CaptureBase {
@@ -25,6 +26,15 @@ interface CaptureBase {
    * rendered in `drawing-scale` mode, else `null` (fit-to-page / 3D).
    */
   appliedScaleDenominator: number | null;
+  /**
+   * ADR-667 Φ1 — ό,τι **έχασε** αυτό το capture έναντι της οθόνης (π.χ. γέμισμα εικόνας που
+   * υποβαθμίστηκε σε συμπαγές χρώμα). Ο `runPrint` τα εκπέμπει → ο χρήστης τα βλέπει.
+   *
+   * ⚠️ Πρέπει να είναι **resolved τη στιγμή που επιστρέφει το capture**: το `runPrint` το
+   * διαβάζει ΑΦΟΥ γυρίσει το `captureSource` και ΠΡΙΝ τρέξει το `draw` closure. Ό,τι
+   * υπολογίζεται μέσα στο `draw` δεν μπορεί ποτέ να αναφερθεί. Απόν/κενό ⇒ πιστό.
+   */
+  fidelity?: readonly PrintFidelityNote[];
 }
 
 /** Rendered PNG snapshot (offscreen 2D canvas or 3D WebGL). */

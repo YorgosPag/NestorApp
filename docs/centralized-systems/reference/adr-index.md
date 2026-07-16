@@ -644,6 +644,7 @@
 | **ADR-664** | Mutation Impact Guard **Hook** SSoT — `useProjectImpactGuard` (6 δίδυμα hooks → shared state machine + per-instance binding· client-side κάτοπτρο του ADR-591· N.18/ADR-584) | ✅ ACTIVE | 2026-07-16 | Hooks / Mutation Guards | [📄](./adrs/ADR-664-impact-guard-hook-ssot.md) |
 | **ADR-665** | Κοπή Αναγλύφου στη Στάθμη Ενεργού Ορόφου — per-scope clipping planes (`'default'`\|`'topo'`· το κτίριο ΔΕΝ κόβεται· terrain-exclusive materials· fix: οι ισοϋψείς δεν κόβονταν ποτέ· reuse ADR-452/455 composer) | 🔵 PROPOSED | 2026-07-16 | DXF Viewer / 3Δ · Topography | [📄](./adrs/ADR-665-terrain-clip-at-active-level.md) |
 | **ADR-666** | Pseudo Locale = Runtime Transform — 80 committed αρχεία (22.620 γρ.) → postProcessor 35 γρ.· το `el` μόνη πηγή· `validate:i18n` EXIT 1→0· κάλυψη 9/100→100/100 namespaces· 0 drift δομικά· ίδιο archetype με ADR-663 (νεκρό gate) | ✅ ACTIVE | 2026-07-17 | i18n / Localization Testing | [📄](./adrs/ADR-666-pseudo-locale-runtime-transform.md) |
+| **ADR-667** | Native PDF Tiling Patterns για γεμίσματα γραμμοσκίασης — το vector PDF έστρωνε N raster tiles + **σιωπηλό** solid downgrade (τοπογραφική επιφάνεια → συμπαγές γκρι)· ένα κελί/`XStep`/`YStep` αντί για πλακάκια (κόστος σταθερό ως προς το εμβαδόν)· `patternMatrixFor` SSoT (το flip του jsPDF είναι mm-vs-pt buggy → ~74mm εκτός θέσης)· budget guard reuse ADR-647 (χωρίς αυτόν: browser freeze 164s/OOM 4GB)· `CaptureResult.fidelity` = μηδέν σιωπηλή αλλοίωση | 🔵 PROPOSED | 2026-07-17 | DXF Viewer / Print · Vector PDF | [📄](./adrs/ADR-667-pdf-native-tiling-patterns.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -1265,6 +1266,7 @@
 | **ADR-664** | Mutation Impact Guard Hook SSoT — `useProjectImpactGuard` (6 δίδυμα hooks → ένα state machine· κάτοπτρο του ADR-591) | ✅ ACTIVE | [View](./adrs/ADR-664-impact-guard-hook-ssot.md) |
 | **ADR-665** | Κοπή Αναγλύφου στη Στάθμη Ενεργού Ορόφου — per-scope clipping planes· το κτίριο δεν κόβεται· fix ισοϋψών | 🔵 PROPOSED | [View](./adrs/ADR-665-terrain-clip-at-active-level.md) |
 | **ADR-666** | Pseudo Locale = Runtime Transform — postProcessor αντί για 80 committed αρχεία· `validate:i18n` ξαναγίνεται gate | ✅ ACTIVE | [View](./adrs/ADR-666-pseudo-locale-runtime-transform.md) |
+| **ADR-667** | Native PDF Tiling Patterns για hatch fills — ένα κελί αντί για N raster tiles· τέλος στο σιωπηλό solid downgrade· `patternMatrixFor` SSoT· `CaptureResult.fidelity` | 🔵 PROPOSED | [View](./adrs/ADR-667-pdf-native-tiling-patterns.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

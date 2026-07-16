@@ -33,6 +33,7 @@ import type { PrintColorPolicy } from '../../config/print-color-policy';
 import { pxToMm, resolveAppliedScaleDenominator } from '../config/paper-math';
 import { emitSceneToPdf } from '../vector/scene-vector-emitter';
 import { resolveSceneImages } from '../vector/scene-image-resolver';
+import { summarizePrintFidelity } from '../print-fidelity';
 import type { Capture2dInput } from './capture-2d';
 import { resolvePrintTransform, prepareScene2dCapture } from './capture-2d';
 import type { CaptureResult } from './capture-types';
@@ -106,6 +107,9 @@ export async function captureCurrent2dViewVector(input: Capture2dInput): Promise
   return {
     kind: 'vector',
     appliedScaleDenominator: resolveAppliedScaleDenominator(input.fitMode, input.scaleDenominator),
+    // ADR-667 Φ1 — τα warnings του pre-pass ΔΕΝ πετιούνται πια: κάθε σιωπηλή υποβάθμιση
+    // (γέμισμα εικόνας → συμπαγές γκρι) γίνεται εδώ μετρήσιμη και ο `runPrint` την εμφανίζει.
+    fidelity: summarizePrintFidelity(images.warnings),
     draw: (pdf, area) => {
       emitSceneToPdf(pdf, {
         entities,

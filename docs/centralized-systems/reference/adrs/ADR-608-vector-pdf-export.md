@@ -168,9 +168,18 @@ Import pipeline (καθρέφτης του export, additive πάνω στους 
 - ✅ Tests: 10 emitter (Φ1) + 4 capture-2d-vector + updated assembler/print-service = 26 GREEN.
   jscpd:diff clean. Files <500 lines, functions <40 lines; no `any`/inline-styles/hardcoded strings.
 - ⚠️ **Known limitations (DEFER):** (a) hatch v1 = solid-fill faces + boundary outline (pattern lines →
-  raster fallback); (b) multi-line text collapsed to one run; (c) font substitution to the registered
-  Greek font (minor metric drift vs SHX); (d) 3D has no vector representation → always raster;
-  (e) heavy hatched drawings → large/slow vector PDF → keep raster fallback.
+  raster fallback) — **→ ADR-667 (PROPOSED) αίρει το (a) και το (e)**· (b) multi-line text collapsed to
+  one run; (c) font substitution to the registered Greek font (minor metric drift vs SHX); (d) 3D has no
+  vector representation → always raster; (e) heavy hatched drawings → large/slow vector PDF → keep raster
+  fallback.
+- 🔴 **ADR-667 (PROPOSED, 2026-07-17) — το image-fill μονοπάτι αλλοίωνε ΣΙΩΠΗΛΑ το σχέδιο.** Το
+  `scene-image-resolver.ts:137-142` στρώνει N raster tiles και πάνω από `PDF_TILE_CAP` υποβαθμίζει σε
+  `averageImageColorHex()` **χωρίς καμία ειδοποίηση** (τα `warnings` του resolver πετιούνται εδώ:
+  `capture-2d-vector.ts:104`) ⇒ μεγάλη τοπογραφική επιφάνεια → **συμπαγές γκρι**. Το ADR-667 αντικαθιστά
+  τα πλακάκια με **native PDF Tiling Patterns** (κόστος σταθερό ως προς το εμβαδόν) και επεκτείνει το
+  **συμβόλαιο του `CaptureResult`** με `fidelity` (κάθε υποβάθμιση → ορατή). `emitClippedImage` /
+  `clipToBoundary` / `buildImageTileFullGrid` γίνονται **νεκρός κώδικας** (Φ2 — αφαίρεση με το χέρι· το
+  knip **δεν** βλέπει το dxf-viewer). **Διάβασε το ADR-667 πριν αγγίξεις hatch emission εδώ.**
 - ⏳ **Φ3 (future):** Export-dialog PDF slot (`export/formats/pdf-export-adapter.ts` + paper controls,
   remove the `export-service.ts` `EXPORT_FORMAT_NOT_READY:pdf` throw), reusing the same emitter.
 - ✅ **Annotation symbols + scale-bars now export as vector** (previously dropped): the same neutral

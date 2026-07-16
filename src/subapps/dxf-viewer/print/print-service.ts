@@ -43,6 +43,8 @@ import type { CaptureResult } from './capture/capture-types';
 import { captureCurrent2dView } from './capture/capture-2d';
 import { captureCurrent2dViewVector } from './capture/capture-2d-vector';
 import { assemblePrintPdf, assemblePrintPdfPages, type PrintPage } from './assemble/pdf-assembler';
+import { mergePrintFidelity, type PrintFidelityNote } from './print-fidelity';
+import { EventBus } from '../systems/events/EventBus';
 import { buildPrintFilename } from './print-filename';
 
 const logger = createModuleLogger('DXF_PRINT');
@@ -141,6 +143,17 @@ async function captureSource(
   return capture2dScene(request, deps.scene, deps.userDrawingUnits, raster);
 }
 
+/**
+ * ADR-667 Φ1 — ανακοίνωσε κάθε απόκλιση του PDF από την οθόνη. Καμία απώλεια ⇒ **καμία
+ * εκπομπή** (πιστό PDF δεν ενοχλεί τον χρήστη). Fire-and-forget: η ειδοποίηση είναι
+ * παρενέργεια, δεν μπλοκάρει το κατέβασμα (N.7.2 #6).
+ */
+function reportFidelity(notes: readonly PrintFidelityNote[]): void {
+  if (notes.length === 0) return;
+  EventBus.emit('dxf:print-fidelity-degraded', { notes });
+  logger.warn('Print fidelity degraded', { notes });
+}
+
 /** Route the assembled blob to download or OS print dialog. */
 function routeOutput(blob: Blob, request: PrintRequest, deps: PrintDeps): void {
   if (request.target === 'open-print') {
@@ -176,6 +189,7 @@ export async function runPrint(request: PrintRequest, deps: PrintDeps): Promise<
       : null,
   });
   routeOutput(blob, request, deps);
+  reportFidelity(capture.fidelity ?? []);
   logger.info('Print job completed', {
     source: request.source,
     paper: `${request.paper.size}/${request.paper.orientation}`,
@@ -237,6 +251,8 @@ export async function runPrintSet(
 
   const blob = await assemblePrintPdfPages(pages, request.paper);
   routeOutput(blob, request, deps);
+  // Ένα PDF ⇒ μία σύνοψη: τα φύλλα συγχωνεύονται (όχι ένα toast ανά όροφο).
+  reportFidelity(mergePrintFidelity(pages.map((p) => p.capture.fidelity ?? [])));
   logger.info('Print set completed', {
     sheets: sheets.length,
     paper: `${request.paper.size}/${request.paper.orientation}`,
