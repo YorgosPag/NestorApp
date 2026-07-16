@@ -68,6 +68,14 @@ export interface FileTypeSpec {
   readonly mimeTypes: readonly string[];
   /** Lowercase extensions (no leading dot). */
   readonly extensions: readonly string[];
+  /**
+   * Canonical MIME to emit for each extension, when the spec carries more than
+   * one MIME. Required (and validated at module load) for every multi-MIME
+   * spec — `mimeTypes[0]` is an arbitrary array position, not a per-extension
+   * answer: `.rar` must not resolve to `application/zip`, `.xls` must not
+   * resolve to the OpenXML sheet type. Single-MIME specs omit it.
+   */
+  readonly canonicalMimeByExt?: Readonly<Record<string, string>>;
   /** `true` → the AI classification pipeline accepts this family. */
   readonly classifiable: boolean;
   /** Preview strategy in `FilePreviewRenderer`. */
@@ -137,6 +145,10 @@ export const FILE_TYPE_REGISTRY: readonly FileTypeSpec[] = [
       'application/vnd.ms-excel',
     ],
     extensions: ['xlsx', 'xls'],
+    canonicalMimeByExt: {
+      xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      xls: 'application/vnd.ms-excel',
+    },
     classifiable: true,
     previewType: 'excel',
     category: 'excel',
@@ -157,6 +169,10 @@ export const FILE_TYPE_REGISTRY: readonly FileTypeSpec[] = [
       'application/vnd.ms-powerpoint',
     ],
     extensions: ['pptx', 'ppt'],
+    canonicalMimeByExt: {
+      pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      ppt: 'application/vnd.ms-powerpoint',
+    },
     classifiable: false,
     previewType: 'unsupported',
     category: 'powerpoint',
@@ -173,6 +189,7 @@ export const FILE_TYPE_REGISTRY: readonly FileTypeSpec[] = [
     id: 'xml',
     mimeTypes: ['text/xml', 'application/xml'],
     extensions: ['xml'],
+    canonicalMimeByExt: { xml: 'text/xml' },
     classifiable: true,
     previewType: 'xml',
     category: 'text',
@@ -238,6 +255,7 @@ export const FILE_TYPE_REGISTRY: readonly FileTypeSpec[] = [
     id: 'dxf',
     mimeTypes: ['image/vnd.dxf', 'application/dxf'],
     extensions: ['dxf'],
+    canonicalMimeByExt: { dxf: 'image/vnd.dxf' },
     classifiable: true,
     previewType: 'dxf',
     category: 'unknown',
@@ -253,6 +271,13 @@ export const FILE_TYPE_REGISTRY: readonly FileTypeSpec[] = [
       'application/gzip',
     ],
     extensions: ['zip', 'rar', '7z', 'tar', 'gz'],
+    canonicalMimeByExt: {
+      zip: 'application/zip',
+      rar: 'application/x-rar-compressed',
+      '7z': 'application/x-7z-compressed',
+      tar: 'application/x-tar',
+      gz: 'application/gzip',
+    },
     classifiable: false,
     previewType: 'unsupported',
     category: 'archive',
@@ -288,6 +313,33 @@ export const MIME_PREFIX_SPECS: readonly MimePrefixSpec[] = [
 
 const MIME_INDEX: Map<string, FileTypeSpec> = new Map();
 const EXT_INDEX: Map<string, FileTypeSpec> = new Map();
+/** extension → canonical MIME. Resolved once, validated against each spec. */
+const EXT_MIME_INDEX: Map<string, string> = new Map();
+
+/**
+ * Canonical MIME for one extension of a spec. Single-MIME specs answer with
+ * their only MIME; multi-MIME specs MUST spell out `canonicalMimeByExt`, and
+ * the value has to be one the spec actually claims.
+ */
+function resolveCanonicalMime(spec: FileTypeSpec, ext: string): string {
+  if (spec.mimeTypes.length === 1) return spec.mimeTypes[0];
+
+  const explicit = spec.canonicalMimeByExt?.[ext];
+  if (!explicit) {
+    throw new Error(
+      `[classification-registry] spec "${spec.id}" declares ${spec.mimeTypes.length} MIME types ` +
+        `but no canonicalMimeByExt entry for ".${ext}" — the canonical MIME cannot be inferred ` +
+        `from array order`,
+    );
+  }
+  if (!spec.mimeTypes.includes(explicit)) {
+    throw new Error(
+      `[classification-registry] spec "${spec.id}" maps ".${ext}" to "${explicit}", ` +
+        `which is not among its mimeTypes`,
+    );
+  }
+  return explicit;
+}
 
 for (const spec of FILE_TYPE_REGISTRY) {
   for (const mime of spec.mimeTypes) {
@@ -307,6 +359,16 @@ for (const spec of FILE_TYPE_REGISTRY) {
       );
     }
     EXT_INDEX.set(ext, spec);
+    EXT_MIME_INDEX.set(ext, resolveCanonicalMime(spec, ext));
+  }
+
+  for (const ext of Object.keys(spec.canonicalMimeByExt ?? {})) {
+    if (!spec.extensions.includes(ext)) {
+      throw new Error(
+        `[classification-registry] spec "${spec.id}" has a canonicalMimeByExt entry for ".${ext}", ` +
+          `which is not among its extensions`,
+      );
+    }
   }
 }
 
@@ -320,6 +382,50 @@ export function extractExtension(filename: string | undefined): string {
   const dot = filename.lastIndexOf('.');
   if (dot < 0 || dot === filename.length - 1) return '';
   return filename.slice(dot + 1).toLowerCase();
+}
+
+/** Emitted when no spec claims the extension. */
+export const UNKNOWN_MIME_TYPE = 'application/octet-stream';
+
+/**
+ * Filename from a URL — query string and fragment stripped, percent-escapes
+ * decoded. Returns `''` when no trailing path segment exists.
+ *
+ * Stripping the query first is what makes `canonicalMimeForUrl` safe on signed
+ * storage URLs: `…/x.pdf?alt=media&token=a.b.c` must resolve on `.pdf`, not on
+ * the `.c` that ends the token.
+ */
+export function filenameFromUrl(url: string): string {
+  const path = url.split('#')[0].split('?')[0];
+  const segment = path.slice(path.lastIndexOf('/') + 1);
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return segment;
+  }
+}
+
+/**
+ * Canonical MIME for a filename, resolved through the registry.
+ *
+ * Matches on the LAST extension only — `report.png.pdf` is a PDF. Substring
+ * probing (`url.includes('.png')`) answers by check order instead, which is
+ * both wrong for double extensions and blind to query strings.
+ */
+export function canonicalMimeForFilename(
+  filename: string | undefined,
+  fallback: string = UNKNOWN_MIME_TYPE,
+): string {
+  return EXT_MIME_INDEX.get(extractExtension(filename)) ?? fallback;
+}
+
+/** Canonical MIME for a URL. See `canonicalMimeForFilename`. */
+export function canonicalMimeForUrl(
+  url: string | undefined,
+  fallback: string = UNKNOWN_MIME_TYPE,
+): string {
+  if (!url) return fallback;
+  return canonicalMimeForFilename(filenameFromUrl(url), fallback);
 }
 
 /** Spec lookup by exact MIME (case-insensitive). */

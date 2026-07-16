@@ -28,6 +28,10 @@ import {
   specByMime,
   specByExt,
   specForFile,
+  filenameFromUrl,
+  canonicalMimeForFilename,
+  canonicalMimeForUrl,
+  UNKNOWN_MIME_TYPE,
 } from '../classification-registry';
 
 // ============================================================================
@@ -403,5 +407,82 @@ describe('specByMime / specByExt / specForFile', () => {
   it('specForFile falls through to filename extension when MIME is missing', () => {
     const spec = specForFile(undefined, 'drawing.dxf');
     expect(spec?.id).toBe('dxf');
+  });
+});
+
+// ============================================================================
+// Canonical MIME resolution (extension → MIME)
+// ============================================================================
+//
+// The trap this guards: `mimeTypes[0]` is an array position, not a per-extension
+// answer. A spec listing several MIMEs must say which one each extension means,
+// or `.rar` silently resolves to `application/zip`.
+
+describe('canonicalMimeByExt invariants', () => {
+  it('every multi-MIME spec maps EVERY one of its extensions explicitly', () => {
+    for (const spec of FILE_TYPE_REGISTRY) {
+      if (spec.mimeTypes.length <= 1) continue;
+      for (const ext of spec.extensions) {
+        expect(spec.canonicalMimeByExt?.[ext]).toBeDefined();
+      }
+    }
+  });
+
+  it('every mapped MIME is one the spec actually claims', () => {
+    for (const spec of FILE_TYPE_REGISTRY) {
+      for (const [, mime] of Object.entries(spec.canonicalMimeByExt ?? {})) {
+        expect(spec.mimeTypes).toContain(mime);
+      }
+    }
+  });
+
+  it('every canonical MIME round-trips back to its own spec', () => {
+    for (const spec of FILE_TYPE_REGISTRY) {
+      for (const ext of spec.extensions) {
+        expect(specByMime(canonicalMimeForFilename(`file.${ext}`))?.id).toBe(spec.id);
+      }
+    }
+  });
+
+  it('resolves the sibling extensions that array order would get wrong', () => {
+    expect(canonicalMimeForFilename('archive.rar')).toBe('application/x-rar-compressed');
+    expect(canonicalMimeForFilename('book.xls')).toBe('application/vnd.ms-excel');
+    expect(canonicalMimeForFilename('deck.ppt')).toBe('application/vnd.ms-powerpoint');
+  });
+});
+
+describe('filenameFromUrl', () => {
+  it.each([
+    ['https://x/invoices/doc.pdf', 'doc.pdf'],
+    ['https://x/doc.pdf?alt=media&token=a.b.c', 'doc.pdf'],
+    ['https://x/doc.pdf#page=2', 'doc.pdf'],
+    ['https://x/%CE%A4%CE%99%CE%9C%CE%9F%CE%9B%CE%9F%CE%93%CE%99%CE%9F.pdf', 'ΤΙΜΟΛΟΓΙΟ.pdf'],
+    ['https://x/', ''],
+  ])('%s → "%s"', (url, expected) => {
+    expect(filenameFromUrl(url)).toBe(expected);
+  });
+
+  it('returns the raw segment when percent-decoding fails', () => {
+    expect(filenameFromUrl('https://x/bad%ZZ.pdf')).toBe('bad%ZZ.pdf');
+  });
+});
+
+describe('canonicalMimeForUrl', () => {
+  it('resolves a double extension by the LAST one', () => {
+    expect(canonicalMimeForUrl('https://x/report.png.pdf')).toBe('application/pdf');
+  });
+
+  it('ignores the query string', () => {
+    expect(canonicalMimeForUrl('https://x/scan.png?alt=media&token=a.b.c')).toBe('image/png');
+  });
+
+  it('falls back for unknown or absent extensions', () => {
+    expect(canonicalMimeForUrl('https://x/scan.tiff')).toBe(UNKNOWN_MIME_TYPE);
+    expect(canonicalMimeForUrl('https://x/noext')).toBe(UNKNOWN_MIME_TYPE);
+    expect(canonicalMimeForUrl(undefined)).toBe(UNKNOWN_MIME_TYPE);
+  });
+
+  it('honours a caller-supplied fallback', () => {
+    expect(canonicalMimeForUrl('https://x/scan.tiff', 'image/tiff')).toBe('image/tiff');
   });
 });
