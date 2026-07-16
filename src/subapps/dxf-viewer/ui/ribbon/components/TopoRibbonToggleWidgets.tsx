@@ -26,6 +26,7 @@ import {
   Navigation,
   Mountain,
   Layers,
+  Palette,
   type LucideIcon,
 } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -54,6 +55,12 @@ import {
   setCutFillMode,
   subscribeCutFill,
 } from '../../../systems/topography/cut-fill-store';
+import {
+  getTerrain3DState,
+  setTerrain3DVisible,
+  setTerrain3DStyle,
+  subscribeTerrain3D,
+} from '../../../systems/topography/terrain-3d-store';
 import { useContourDisplay } from '../../../systems/topography/useContourDisplay';
 
 /** i18n key group + on/off/tooltip suffixes for one toggle. */
@@ -146,12 +153,38 @@ const CUTFILL_MODE = toggleConfig(
   Mountain, Layers, keys('cutFillMode'),
 );
 
+// ── Terrain-3D display (contextual «Τοπογραφική Επιφάνεια» tab — Civil 3D quick style) ──
+// Object-bound quick toggles: ζωντανό ανάγλυφο (εμφάνιση/απόκρυψη εδάφους 3Δ) + χρωματισμός
+// (υψομετρικό/έγχρωμο ↔ shaded/μονόχρωμο). ΙΔΙΟ `terrain-3d-store` SSoT με το πλήρες
+// `Terrain3DSection` στο Properties palette (dual access: quick στο ribbon, full + opacity στο tab).
+const TERRAIN_VISIBLE = toggleConfig(
+  () => {
+    const st = React.useSyncExternalStore(subscribeTerrain3D, getTerrain3DState, getTerrain3DState);
+    return { value: st.visible, toggle: () => setTerrain3DVisible(!getTerrain3DState().visible) };
+  },
+  Mountain, EyeOff, keys('terrainVisible'),
+);
+
+const TERRAIN_STYLE = toggleConfig(
+  () => {
+    const st = React.useSyncExternalStore(subscribeTerrain3D, getTerrain3DState, getTerrain3DState);
+    // Mirror του `Terrain3DSection` toggle: υψομετρικό ↔ shaded (το 'cutfill' style → υψομετρικό).
+    return {
+      value: st.style === 'hypsometric',
+      toggle: () => setTerrain3DStyle(getTerrain3DState().style === 'hypsometric' ? 'shaded' : 'hypsometric'),
+    };
+  },
+  Palette, Mountain, keys('terrainStyle'),
+);
+
 export const TopoGridVisibleToggle: React.FC = () => <RibbonToggleWidget config={GRID_VISIBLE} />;
 export const NorthArrowVisibleToggle: React.FC = () => <RibbonToggleWidget config={NORTH_VISIBLE} />;
 export const PointCloud3DVisibleToggle: React.FC = () => <RibbonToggleWidget config={CLOUD_VISIBLE} />;
 export const ContourStyleToggle: React.FC = () => <RibbonToggleWidget config={CONTOUR_STYLE} />;
 export const NorthModeToggle: React.FC = () => <RibbonToggleWidget config={NORTH_MODE} />;
 export const CutFillModeToggle: React.FC = () => <RibbonToggleWidget config={CUTFILL_MODE} />;
+export const TerrainVisibleToggle: React.FC = () => <RibbonToggleWidget config={TERRAIN_VISIBLE} />;
+export const TerrainStyleToggle: React.FC = () => <RibbonToggleWidget config={TERRAIN_STYLE} />;
 
 /**
  * ADR-662 Φ4 — «Νέφος σημείων…» manage button (ανοίγει τον cloud manager dialog με

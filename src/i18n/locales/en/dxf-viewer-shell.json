@@ -1695,6 +1695,7 @@
     "panels": {
       "topoData": "Data",
       "topoSurface": "Surface",
+      "topoSurfaceDisplay": "Display",
       "topoGeoRef": "Geo-referencing",
       "topoPresentation": "Presentation",
       "topoAnalysis": "Analysis",
@@ -4553,6 +4554,8 @@
         "contourStyle": { "label": "Contours", "on": "Smooth", "off": "Exact", "tooltipOn": "Smoothed contours — click for exact", "tooltipOff": "Exact contours (true triangulation) — click for smooth" },
         "northMode": { "label": "North", "on": "Grid", "off": "True", "tooltipOn": "Grid north — click for true north", "tooltipOff": "True north — click for grid north" },
         "cutFillMode": { "label": "Reference", "on": "Surface", "off": "Datum", "tooltipOn": "Reference volumes to a comparison surface — click for datum", "tooltipOff": "Reference volumes to a horizontal datum — click for surface" },
+        "terrainVisible": { "label": "Relief", "on": "Hide", "off": "Show", "tooltipOn": "Hide the 3D terrain relief", "tooltipOff": "Show the 3D terrain relief" },
+        "terrainStyle": { "label": "Colouring", "on": "Hypsometric", "off": "Monochrome", "tooltipOn": "Hypsometric (colour) shading — click for monochrome", "tooltipOff": "Monochrome (shaded) terrain — click for hypsometric (colour)" },
         "intervalField": { "label": "Interval (m)" },
         "indexField": { "label": "Index every" },
         "gridStepField": { "label": "Step (m)" },

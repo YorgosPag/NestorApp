@@ -73,6 +73,8 @@ import {
   ContourStyleToggle,
   NorthModeToggle,
   CutFillModeToggle,
+  TerrainVisibleToggle,
+  TerrainStyleToggle,
 } from './TopoRibbonToggleWidgets';
 import {
   ContourIntervalField,
@@ -309,6 +311,13 @@ function renderButton(button: RibbonButton): React.ReactNode {
     }
     if (button.widgetId === 'topo-cutfill-mode') {
       return <CutFillModeToggle key="topo-cutfill-mode-widget" />;
+    }
+    // ADR-662 Φ4 — contextual «Τοπογραφική Επιφάνεια»: quick ανάγλυφο + χρωματισμός.
+    if (button.widgetId === 'topo-terrain-visible') {
+      return <TerrainVisibleToggle key="topo-terrain-visible-widget" />;
+    }
+    if (button.widgetId === 'topo-terrain-style') {
+      return <TerrainStyleToggle key="topo-terrain-style-widget" />;
     }
     if (button.widgetId === 'topo-contour-interval') {
       return <ContourIntervalField key="topo-contour-interval-widget" />;
