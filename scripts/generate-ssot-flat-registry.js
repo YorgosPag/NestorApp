@@ -6,25 +6,26 @@
  *
  * Renders `.ssot-registry.json` → `.ssot-registry-flat.txt`.
  *
- * WHY THIS EXISTS: the flat file is what the ratchet actually reads —
- * `scripts/check-ssot-imports.{js,sh}` (CHECK 3.7, the pre-commit gate) and
- * `scripts/ssot-audit.sh` all parse it, never the JSON. Yet nothing regenerated
- * it: `ssot-audit.sh` rebuilds it only `if [[ ! -f ]]`, and the script it calls
- * (`generate-ssot-baseline.sh` → `ssot-baseline-engine.js`) writes the
- * *baseline*, not the flat file. So the flat file drifted by hand, and every
- * pattern added to the JSON after its last manual refresh was **dormant** —
- * present in the registry, green in the golden tests, and never executed.
+ * WHY THIS EXISTS: the flat file was once what the ratchet read, and nothing
+ * regenerated it. `ssot-audit.sh` rebuilt it only `if [[ ! -f ]]`, and the script
+ * it called (`generate-ssot-baseline.sh` → `ssot-baseline-engine.js`) writes the
+ * *baseline*, not this file. So it drifted by hand, and every pattern added to
+ * the JSON after its last manual refresh was **dormant** — present in the
+ * registry, green in the golden tests, and never executed. Found 2026-07-16:
+ * 3 days stale, 10 modules enforcing nothing.
  *
- * Found 2026-07-16: the flat file was 3 days stale and the new `openai-provider`
- * raw-fetch pattern was silently enforcing nothing. Same failure class as the
- * v3.0 `(?:...)`-matches-nothing bug and the dormant `gcs-buckets` ratchet — an
- * enforcement tool that reads a derived artifact fails open, quietly.
+ * THE GATE NO LONGER READS THIS FILE. `check-ssot-imports.js` (CHECK 3.7) now
+ * loads `.ssot-registry.json` directly and renders it in memory via
+ * `renderFlatRegistry` below, so staleness cannot disable enforcement. This file
+ * survives only for `ssot-audit.sh`, which is bash and needs a parseable form —
+ * and which regenerates it on every run.
  *
- * Run after ANY edit to `.ssot-registry.json`:
+ * ⚠️ Do NOT wire `--check` into CI. The flat file is gitignored, so CI must
+ * generate it first, which makes verifying it a tautology. It is a developer
+ * convenience for spotting local drift, not a gate. The gate is the JSON.
+ *
+ * Run after ANY edit to `.ssot-registry.json` (or just run `npm run ssot:audit`):
  *   npm run ssot:flat
- *
- * Verify without writing (CI / pre-commit):
- *   npm run ssot:flat -- --check   → exit 1 if the flat file is out of date
  *
  * @see ADR-294 — SSoT Ratchet Enforcement
  */
