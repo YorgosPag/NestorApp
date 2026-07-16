@@ -12,11 +12,12 @@
  */
 
 import { createExternalStore } from '../../stores/createExternalStore';
+import type { EntityType } from '../../types/base-entity';
 
 /** Η φορτωμένη πηγή του πινέλου (id + τύπος οντότητας). */
 export interface MatchBrushSource {
   readonly id: string;
-  readonly type: string;
+  readonly type: EntityType;
 }
 
 const store = createExternalStore<MatchBrushSource | null>(null);
