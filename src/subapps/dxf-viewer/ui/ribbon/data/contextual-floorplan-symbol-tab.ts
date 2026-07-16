@@ -12,6 +12,7 @@
 import type { RibbonTab } from '../types/ribbon-types';
 import { FLOORPLAN_SYMBOL_RIBBON_KEYS } from '../hooks/bridge/floorplan-symbol-command-keys';
 import { FLOORPLAN_SYMBOL_CATALOG } from '../../../bim/floorplan-symbols/floorplan-symbol-catalog';
+import { catalogOptions, literalNumberOptions } from './ribbon-numeric-options';
 
 export const FLOORPLAN_SYMBOL_CONTEXTUAL_TRIGGER = 'floorplan-symbol-tool-active';
 
@@ -21,24 +22,9 @@ export const FLOORPLAN_SYMBOL_CONTEXTUAL_TRIGGER = 'floorplan-symbol-tool-active
  * kinds (ribbon «Είδη Υγιεινής»), so they are filtered OUT of this 2D-only picker —
  * one canonical sanitary representation (Revit). Kitchen/furniture remain.
  */
-const CATALOG_OPTIONS = FLOORPLAN_SYMBOL_CATALOG
-  .filter((p) => p.category !== 'sanitary')
-  .map((p) => ({
-    value: p.id,
-    labelKey: p.labelKey,
-    isLiteralLabel: false,
-  }));
+const CATALOG_OPTIONS = catalogOptions(FLOORPLAN_SYMBOL_CATALOG.filter((p) => p.category !== 'sanitary'));
 
-const ROTATION_DEG_OPTIONS = [
-  { value: '0', labelKey: '0', isLiteralLabel: true },
-  { value: '45', labelKey: '45', isLiteralLabel: true },
-  { value: '90', labelKey: '90', isLiteralLabel: true },
-  { value: '135', labelKey: '135', isLiteralLabel: true },
-  { value: '180', labelKey: '180', isLiteralLabel: true },
-  { value: '225', labelKey: '225', isLiteralLabel: true },
-  { value: '270', labelKey: '270', isLiteralLabel: true },
-  { value: '315', labelKey: '315', isLiteralLabel: true },
-] as const;
+const ROTATION_DEG_OPTIONS = literalNumberOptions([0, 45, 90, 135, 180, 225, 270, 315]);
 
 export const CONTEXTUAL_FLOORPLAN_SYMBOL_TAB: RibbonTab = {
   id: 'floorplan-symbol-editor',

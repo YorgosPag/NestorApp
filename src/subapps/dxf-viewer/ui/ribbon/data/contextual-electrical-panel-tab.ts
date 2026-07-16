@@ -31,6 +31,7 @@ import {
   ELECTRICAL_PANEL_RIBBON_VISIBILITY_KEYS,
 } from '../hooks/bridge/electrical-panel-command-keys';
 import { MEP_CIRCUIT_RIBBON_ACTIONS } from '../hooks/bridge/mep-circuit-command-keys';
+import { literalNumberOptions } from './ribbon-numeric-options';
 
 export const ELECTRICAL_PANEL_CONTEXTUAL_TRIGGER = 'electrical-panel-selected';
 
@@ -53,16 +54,7 @@ const LENGTH_MM_OPTIONS = [
   { value: '250', labelKey: '250', isLiteralLabel: true },
 ] as const;
 
-const ROTATION_DEG_OPTIONS = [
-  { value: '0', labelKey: '0', isLiteralLabel: true },
-  { value: '45', labelKey: '45', isLiteralLabel: true },
-  { value: '90', labelKey: '90', isLiteralLabel: true },
-  { value: '135', labelKey: '135', isLiteralLabel: true },
-  { value: '180', labelKey: '180', isLiteralLabel: true },
-  { value: '225', labelKey: '225', isLiteralLabel: true },
-  { value: '270', labelKey: '270', isLiteralLabel: true },
-  { value: '315', labelKey: '315', isLiteralLabel: true },
-] as const;
+const ROTATION_DEG_OPTIONS = literalNumberOptions([0, 45, 90, 135, 180, 225, 270, 315]);
 
 // Panel box vertical height (mm).
 const BODY_HEIGHT_MM_OPTIONS = [

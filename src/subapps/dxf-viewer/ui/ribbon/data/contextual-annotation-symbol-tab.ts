@@ -12,6 +12,7 @@
 import type { RibbonTab } from '../types/ribbon-types';
 import { ANNOTATION_SYMBOL_RIBBON_KEYS } from '../hooks/bridge/annotation-symbol-command-keys';
 import { listAnnotationSymbolsByKind } from '../../../config/annotation-symbol-catalog';
+import { literalNumberOptions } from './ribbon-numeric-options';
 
 export const ANNOTATION_SYMBOL_CONTEXTUAL_TRIGGER = 'annotation-symbol-tool-active';
 
@@ -31,16 +32,7 @@ const SIZE_MM_OPTIONS = [
   { value: '30', labelKey: '30', isLiteralLabel: true },
 ] as const;
 
-const ROTATION_DEG_OPTIONS = [
-  { value: '0', labelKey: '0', isLiteralLabel: true },
-  { value: '45', labelKey: '45', isLiteralLabel: true },
-  { value: '90', labelKey: '90', isLiteralLabel: true },
-  { value: '135', labelKey: '135', isLiteralLabel: true },
-  { value: '180', labelKey: '180', isLiteralLabel: true },
-  { value: '225', labelKey: '225', isLiteralLabel: true },
-  { value: '270', labelKey: '270', isLiteralLabel: true },
-  { value: '315', labelKey: '315', isLiteralLabel: true },
-] as const;
+const ROTATION_DEG_OPTIONS = literalNumberOptions([0, 45, 90, 135, 180, 225, 270, 315]);
 
 export const CONTEXTUAL_ANNOTATION_SYMBOL_TAB: RibbonTab = {
   id: 'annotation-symbol-editor',
