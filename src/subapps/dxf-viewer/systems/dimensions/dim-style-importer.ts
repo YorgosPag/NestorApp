@@ -149,6 +149,10 @@ function translateToDimStyle(
     dimdli: entry.dimdli,
     suppressDimLine1: entry.suppressDimLine1,
     suppressDimLine2: entry.suppressDimLine2,
+    // DIMSAH/arrowhead suppression is not parsed from DXF yet (see round-trip note above) →
+    // seed `false` like the other no-DXF-equivalent fields (arrows shown, matches the templates).
+    suppressArrow1: false,
+    suppressArrow2: false,
     suppressExtLine1: entry.suppressExtLine1,
     suppressExtLine2: entry.suppressExtLine2,
 

@@ -207,7 +207,7 @@ function resolveEntityAtoeMapping(
   const sectionKind = typeof rawSectionKind === 'string' ? rawSectionKind : undefined;
   const rawClassification = entity.params?.['classification'];
   const classification = typeof rawClassification === 'string' ? rawClassification : undefined;
-  return resolveAtoeMapping(entityType, entity.kind, category, sectionKind, classification);
+  return resolveAtoeMapping(entityType, entity.kind, category, sectionKind, classification) ?? undefined;
 }
 
 /**

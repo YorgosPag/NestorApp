@@ -47,8 +47,9 @@ import { hotGripKindOf, isWallHotGripKind } from '../../hooks/grips/wall-hot-gri
 interface GripRegistryPublisherProps {
   /** Active level id — the reactive scene slice this leaf subscribes to (ADR-040). */
   sceneLevelId: string | null;
-  /** Cached SceneModel → DxfScene converter (shares the orchestrator's WeakMap). */
-  convertScene: (scene: SceneModel | null) => DxfScene;
+  /** Cached SceneModel → DxfScene converter (shares the orchestrator's WeakMap). ADR-575 §8 —
+   *  the `activeGroupId` arg lets the converter collapse a selected GROUP's member grips. */
+  convertScene: (scene: SceneModel | null, activeGroupId?: string | null) => DxfScene;
   /** Orchestrator scene snapshot — fallback before the store has the level (first paint). */
   dxfScene: DxfScene | null;
   currentOverlays: Overlay[];
