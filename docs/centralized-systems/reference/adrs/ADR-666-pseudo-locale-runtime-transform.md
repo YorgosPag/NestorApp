@@ -98,6 +98,8 @@ export function toPseudo(value: string): string {
 - `SUPPORTED_LOCALES = ['el','en']` — locales **με αρχεία**
 - `RUNTIME_ONLY_LANGUAGES = ['pseudo']` → `SUPPORTED_LANGUAGES` — **επιλέξιμες γλώσσες**
 
+**CI gate (2026-07-17):** το `validate:i18n` τρέχει πλέον ως step του `i18n-governance.yml` (Layer 2), δίπλα στα CHECK 3.13/3.14. PR που προσθέτει ελληνικό κλειδί χωρίς το αγγλικό **μπλοκάρεται**. Zero-tolerance, χωρίς baseline — η ισοτιμία EL/EN είναι ήδη 100%, άρα δεν υπάρχει χρέος να απορροφηθεί. Δύο περιορισμοί που **δεν** πρέπει να «βελτιωθούν» βιαστικά: (α) το step καλεί κατευθείαν `node scripts/validate-translations.js`, **όχι** το `i18n:check` npm script (πακετάρει 5 προϋπάρχοντα errors άλλων validators)· (β) κάθε step του workflow οφείλει να μένει dependency-free pure Node.js — αυτό είναι που του επιτρέπει να παρακάμπτει το `pnpm install` και να μένει <30s.
+
 ### Dev-only gate
 Το `🧪 Pseudo (Dev)` διέρρεε σε **production χρήστες** από το `language-switcher.tsx` (ενώ το `PreferencesPageContent.tsx:78` το έκρυβε ρητά — ασυνέπεια). Πλέον πίσω από `NODE_ENV !== 'production'`, όπως το project setting του Godot.
 
