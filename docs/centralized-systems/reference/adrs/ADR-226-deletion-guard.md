@@ -451,7 +451,8 @@ async function executeDeletion(
 
 **Implementation Notes (Phase 3)**:
 - `DeletionBlockedDialog`: AlertDialog (Radix) with ShieldAlert icon, dependency list (label + count), single "Κατάλαβα" button
-- `useDeletionGuard(entityType)`: Returns `{ checking, blocked, checkBeforeDelete, resetCheck, BlockedDialog }` — encapsulates entire pre-check flow
+- `useDeletionGuard(entityType)`: Returns `{ checking, blocked, **checkResult**, checkBeforeDelete, resetCheck, BlockedDialog }` — encapsulates entire pre-check flow. ⚠️ Το `checkResult` **λείπε** από αυτή τη γραμμή μέχρι τις 2026-07-17 ενώ ο κώδικας το επέστρεφε από την αρχή· ο `PermanentDeleteDialog` το καταναλώνει (φτιάχνει δικό του `DeletionBlockedDialog` αντί για το έτοιμο). Το αρχείο είναι `.tsx`, όχι `.ts` όπως λέει ο πίνακας 3.2.
+- **Από 2026-07-17 (ADR-584 / N.18)**: η μηχανή δεν ζει πια εδώ — το `useDeletionGuard` είναι **binding** του `src/hooks/guards/useDependencyGuard.tsx` (SSoT). Δες «Client guard SSoT» παρακάτω.
 - Buildings/Projects: **REMOVED** entire cascade preview flow (states, useEffect, useMemo cascadeDescription) — replaced with single hook call
 - Units/Parking/Storage/Floors: Pre-check added before delete confirmation dialog
 - Contacts (SmartDialog): Wrapper runs pre-check on dialog open; if blocked → closes SmartDialog, shows BlockedDialog
@@ -568,8 +569,50 @@ async function executeDeletion(
 | 2026-04-01 | **Phase 8 — Company Identity Field Guard (ADR-278)**: Extension του guard pattern σε company master-data field edits (companyName, vatNumber, gemiNumber, taxOffice, legalForm, tradeName, gemiStatus). Κατηγοριοποίηση πεδίων σε A (identity-critical), B (accounting/compliance), C (display). Block unsafe clears, impact preview dialog πριν αλλαγές σε Cat A/B fields. Νέο `company-identity-impact-preview.service.ts` (5 parallel Firestore queries), API route, `CompanyIdentityImpactDialog`, utility `company-identity-guard.ts`. Guard #3 στο `useContactSubmission` (μετά Name Cascade + Address Impact). Βλ. [ADR-278](./ADR-278-company-identity-field-guard.md). | Claude Code |
 | 2026-04-01 | **Phase 9 — Communication Field Impact Detection (ADR-280)**: Extension του guard pattern σε primary communication field edits (email, phone, website). Ανίχνευση: primary email/phone αλλαγή, corporate website αλλαγή, unsafe removal (τελευταίο email/phone). Block αν αφαιρεθούν ΟΛΑ emails/phones εταιρείας. Impact preview dialog πριν αλλαγή primary fields. Array validation στο submit path: format, duplicates, primary enforcement. Νέα: `communication-impact-guard.ts`, `communication-array-validation.ts`, `communication-impact-preview.service.ts` (4+subcollection parallel Firestore queries), API route, `CommunicationImpactDialog`. Guard #4 στο `useContactSubmission` (μετά Identity Impact). Μόνο company contacts. i18n el/en. | Claude Code |
 | 2026-04-20 | **Phase 10 — Property Cascade Completion + Storage Cleanup**: `deletion-registry.ts` extended με `useCollectionGroup?: boolean` (στο `CascadeDependencyDef`) και νέο `StorageCleanupDef` + `storageCleanup?` στο `EntityDeletionConfig`. `property.cascadeDependencies` καλύπτει πλέον `files`, `shares`, και DXF overlay polygons (`collectionGroup('items')` με `linked.propertyId`). Νέα `storageCleanup` entry για `property`: prefix `companies/{companyId}/entities/property/{entityId}/` (φωτογραφίες, κατόψεις, share PDFs). Νέα modules: `deletion-storage-cleanup.ts` (best-effort prefix purge μέσω `bucket.deleteFiles`, pattern από `files/purge/route.ts`), `deletion-link-guard.ts` (SRP split: link-removal metadata out of core guard), `deletion-common.ts` (shared `MAX_PREVIEW_IDS` + `getDefaultRemediation`). Audit trail τώρα περιέχει `_storage_cleanup` change entry. **Policy**: `entity_audit_trail` παραμένει εκτός cascade — διατηρείται ως permanent audit log (Google pattern). | Γιώργος Παγώνης + Claude Code |
+| 2026-07-17 | **Client guard SSoT (N.18 / ADR-584)**: η μηχανή pre-check ήταν γραμμένη **δύο φορές** (`useDeletionGuard` ↔ `useLinkRemovalGuard`, 3 clones / ~46 διπλές γρ.) — ίδια state machine, ίδιο dialog wiring, ίδιο fail-closed catch· διέφεραν μόνο route/μήνυμα/log prefix. Νέο SSoT `src/hooks/guards/useDependencyGuard.tsx` (`DependencyGuardSpec` = τα 3 σημεία που διαφέρουν)· τα δύο hooks έγιναν bindings με **αυτούσιο** public API → **κανένας από τους 10 καταναλωτές δεν άγγιξε**. Registry module `dependency-guard` (pattern grep-verified: χτυπά **μόνο** το SSoT → **0 προϋπάρχουσες παραβιάσεις, κανένα `ssot:baseline`**· golden 90/90). ⛔ `useLandownerUnlinkGuard` (ADR-244) **ΕΞΩ** — άλλος τύπος, χωρίς dialog, **fail-OPEN κατά ρητή απόφαση**· merge θα αντέστρεφε την πολιτική ασφαλείας του. **ΟΛΑ ήταν ΑΤΕΣΤΩΤΑ** → 22 characterization tests (ΠΡΙΝ το refactor, GREEN πριν ΚΑΙ μετά, ίδιες assertions), mutation-verified ×2 (λάθος route σε binding → 1 κόκκινο· fail-open στη μηχανή → **4 κόκκινα**). Διορθώθηκαν 2 ανακρίβειες του ADR: το `checkResult` έλειπε από το documented return, και το αρχείο είναι `.tsx` όχι `.ts`. | Γιώργος Παγώνης + Claude Code |
 
 ---
+
+---
+
+## Client guard SSoT — `useDependencyGuard` (2026-07-17)
+
+**Κανόνας: κάθε client-side dependency pre-check περνά από `src/hooks/guards/useDependencyGuard.tsx`.**
+Registry module: `dependency-guard` (CHECK 3.7).
+
+Η ροή «ρώτα τον server πριν την καταστροφική ενέργεια» ήταν γραμμένη **δύο φορές** — 3 clones /
+~46 διπλές γραμμές μεταξύ `useDeletionGuard` και `useLinkRemovalGuard`. Ίδια state machine, ίδιο
+dialog wiring, ίδιο fail-closed catch· διέφεραν **μόνο** route, μήνυμα και log prefix.
+
+| Hook | Route | Επιφάνεια |
+|---|---|---|
+| `useDeletionGuard(entityType)` | `/api/deletion-guard/{entityType}/{id}` | `checking, blocked, checkResult, checkBeforeDelete, resetCheck, BlockedDialog` |
+| `useLinkRemovalGuard()` | `/api/link-removal-guard/{linkId}` | `checking, blocked, checkBeforeRemove, BlockedDialog` — σκόπιμα στενότερη |
+
+Ό,τι διαφέρει ζει στο `DependencyGuardSpec` (`checkRoute` / `unavailableMessage` / `logName`) —
+**τίποτε άλλο**. Τα δύο μηνύματα («η **διαγραφή** μπλοκαρίστηκε…» vs «η **αποσύνδεση**
+μπλοκαρίστηκε…») είναι **spec, όχι drift**: περιγράφουν την ενέργεια στον χρήστη. Τα public APIs
+έμειναν **αυτούσια** → κανένας από τους 10 καταναλωτές δεν άγγιξε.
+
+### 🔴 Το συμβόλαιο που προστατεύει το SSoT: **FAIL-CLOSED**
+
+Αν ο **ίδιος ο έλεγχος** σκάσει (network/500), και τα δύο guards **μπλοκάρουν** — δεν λένε
+«προχώρα». Ο server-side 409 guard είναι το **τελευταίο** δίχτυ, όχι το πρώτο. Αυτό είναι ακριβώς
+το είδος απόφασης που χάνεται σε τρίτη αντιγραφή: τίποτα στο happy path δεν την αποκαλύπτει.
+Κλειδωμένο με tests (mutation-verified: fail-open → 4 κόκκινα).
+
+### ⛔ `useLandownerUnlinkGuard` ΔΕΝ είναι μέλος — και δεν πρέπει να γίνει
+
+Μοιάζει αδελφό (ίδιο `apiClient`, ίδιο `[hook] Pre-check failed` log) και το grep το φέρνει, αλλά
+είναι **άλλη μηχανή**: **ADR-244**, τύπος `LandownerUnlinkResult` (`variant: confirm|warning|blocked`
++ `blockingDeps`/`warningDeps`, **όχι** `DependencyCheckResult`), **δεν αποδίδει dialog** (ο γονιός
+ελέγχει το 3-variant σενάριο), δύο ορίσματα, επιστρέφει το **πλήρες result** αντί για boolean — και,
+κρίσιμα, **fail-OPEN κατά ρητή τεκμηριωμένη απόφαση** («better to allow removal than to silently
+block the user»). Merge θα **αντέστρεφε τη σκόπιμη πολιτική ασφαλείας του** σε fail-closed.
+Το `forbiddenPattern` (`apiClient\.get<DependencyCheckResult>`) είναι γι' αυτό διαλεγμένο ώστε **να
+μην το πιάνει**: ούτε αυτό ούτε οι server-side guards (`deletion-guard.ts` / `deletion-link-guard.ts`,
+που **φτιάχνουν** τον τύπο αντί να τον κατεβάζουν) ματσάρουν ποτέ.
+
 
 *ADR Format based on: Michael Nygard's Architecture Decision Records*
 *Enterprise standards inspired by: PostgreSQL referential integrity, Autodesk Vault deletion policies*

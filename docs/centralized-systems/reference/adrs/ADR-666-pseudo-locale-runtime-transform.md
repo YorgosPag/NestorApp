@@ -117,6 +117,29 @@ Switch σε 🧪 Pseudo → **κάθε** οθόνη τυλιγμένη, ειδι
 
 ---
 
+## Πρώτο εύρημα του ξαναζωντανεμένου εργαλείου (2026-07-17)
+
+Στο **πρώτο** browser verify, η οθόνη Επαφών έδειξε `[[~~ Επιλέξτε ~~]] [[~~~ νομική μορφή ~~~]]` — **δύο ξεχωριστά wrappers δίπλα-δίπλα = concatenation**. Ακριβώς το σενάριο που η Microsoft ονομάζει ρητά: *«Concatenations will also be revealed by paired delimiters embedded in the displayed text.»* Το εργαλείο δούλεψε όπως έπρεπε, την πρώτη μέρα.
+
+**Αιτία** — `GenericFormRenderer.tsx:89-94` + `IndividualFormRenderer.tsx:81-82` (δύο αντίγραφα):
+```ts
+`${resolveI18nKeyLabel('common.select', t)} ${resolveI18nKeyLabel(field.label, t).toLowerCase()}`
+```
+Δύο ανεξάρτητα `t()` κολλημένα με κενό: **κλείδωνε τη σειρά «ρήμα → ουσιαστικό» μέσα στον κώδικα** — καμία γλώσσα με άλλη σύνταξη δεν μπορούσε να τη διορθώσει. Το `.toLowerCase()` **κατέστρεφε ελληνικά ακρωνύμια**: «Κατάσταση ΓΕΜΗ» → «κατάσταση γεμη» (ορατό στο screenshot).
+
+**Το σωστό κλειδί υπήρχε ήδη και κανείς δεν το χρησιμοποιούσε**: `common:forms.selectPlaceholder` = `"Επιλέξτε {label}"` / `"Select {label}"` — με ICU placeholder, δηλαδή η σειρά ανήκει στον μεταφραστή. Κλασικό N.0: το SSoT υπήρχε, ο κώδικας το παρέκαμπτε.
+
+**Fix** — νέο pure SSoT `src/components/generic/i18n/select-placeholder.ts` (`buildSelectPlaceholder`), και οι δύο renderers δείχνουν σε αυτό. Η λογική βγήκε **έξω** από τα components: το import του `GenericFormRenderer` σε test τραβούσε την αλυσίδα μέχρι το `@firebase/auth` και έσκαγε — σήμα ότι το pure κομμάτι δεν ανήκε εκεί (ίδιο μοτίβο με το `band-stack-fit.ts` του ADR-584).
+
+**Verification:** **7 νέα tests** με **πραγματικό i18next + ICU + τα πραγματικά locale αρχεία** (όχι mocks — αν λείψει/αλλάξει το κλειδί, πέφτουν). **118/118 GREEN** (`src/components/generic` + `src/i18n`). **Mutation-verified ×2**: επαναφορά `.toLowerCase()` → **3 fails**· επαναφορά concatenation → **3 fails**· revert → πράσινο. `jscpd:diff` 4 αρχεία → **0 clones**.
+
+⚠️ **Καταγραφή, όχι σιωπή** — δύο εκκρεμότητες που εντοπίστηκαν και **δεν** διορθώθηκαν εδώ:
+- **Διπλότυπο κλειδί**: το `common.select` = «Επιλέξτε» υπάρχει **και** στο `forms` **και** στο `contacts-core`. Μετά το fix κανένα από τα δύο δεν χρησιμοποιείται από τους renderers — υποψήφια για dead-key sweep, αλλά μπορεί να έχει άλλους καταναλωτές (θέλει grep πριν διαγραφή).
+- **`ServiceFormRenderer.tsx:100`**: `selectPlaceholder: (field) => field.placeholder || field.label` — **δεν καλεί καθόλου `t()`**. Δεν είναι concatenation, είναι πιθανό untranslated placeholder. Διαφορετικό θέμα, δεν αγγίχθηκε.
+
+---
+
 ## Changelog
 
+- **2026-07-17** — Πρώτο browser verify → το pseudo αποκάλυψε concatenation στα select placeholders (2 renderers). Fix: νέο SSoT `i18n/select-placeholder.ts` + χρήση του υπάρχοντος `common:forms.selectPlaceholder` με ICU placeholder· αφαίρεση `.toLowerCase()` που κατέστρεφε ακρωνύμια. 7 νέα tests (πραγματικό i18next+ICU), 118/118 GREEN, mutation-verified ×2, jscpd 0 clones.
 - **2026-07-17** — ADR-666 δημιουργήθηκε. Pseudo locale: 80 committed αρχεία (22.620 γρ.) → runtime postProcessor 35 γρ. `validate:i18n` EXIT 1 → 0. Κάλυψη 9/100 → 100/100 namespaces. Enforcement αντιστράφηκε στο `validate-i18n-config.js`. Dev-only gate στο language switcher. 48/48 tests, mutation-verified ×3. Καταγραφή 144 mismatches + 539 stale + 10.549 missing keys ως τεκμήριο σαπίλας.

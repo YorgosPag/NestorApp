@@ -4350,6 +4350,16 @@
       "allowlist": [
         "src/lib/mutations/gateway-action.ts"
       ]
+    },
+    "dependency-guard": {
+      "ssotFile": "src/hooks/guards/useDependencyGuard.tsx",
+      "description": "Client-side dependency pre-checks must go through useDependencyGuard (ADR-226/ADR-584). The flow — GET the guard route, map allowed/blocked onto a boolean, render DeletionBlockedDialog, and FAIL-CLOSED when the check itself throws — was written twice (useDeletionGuard, useLinkRemovalGuard); a third copy is where a fail-open regression silently ships, because nothing about the happy path reveals it. The pattern targets the client fetch of a DependencyCheckResult specifically, so it fires only on a re-implementation: the server-side guards (deletion-guard.ts, deletion-link-guard.ts) build that type rather than fetch it, and useLandownerUnlinkGuard (ADR-244) fetches its own LandownerUnlinkResult and fails OPEN by an explicit documented decision — neither ever matches.",
+      "forbiddenPatterns": [
+        "apiClient\\.get<DependencyCheckResult>"
+      ],
+      "allowlist": [
+        "src/hooks/guards/useDependencyGuard.tsx"
+      ]
     }
   }
 }
