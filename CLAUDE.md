@@ -308,25 +308,33 @@ Suggestion: Do /clear and give me the command again cleanly.
 
 | CHECK | Goal | Mode | Baseline |
 |-------|--------|------|----------|
-| **3.8** | Missing i18n keys (`t('key')` without match in locales) | RATCHET | `.i18n-missing-keys-baseline.json` (4762) |
+| **3.8** | Missing i18n keys (`t('key')` without match in locales) | RATCHET | `.i18n-missing-keys-baseline.json` (11 violations / 4 files, 2026-05-18) |
 | **3.9** | ICU interpolation — `{variable}` not `{{variable}}` in locale JSONs | RATCHET | 0 (fully cleaned) |
-| **3.10** | Firestore `query()` with `where()` MUST include `companyId` | RATCHET | `.firestore-companyid-baseline.json` (48) |
+| **3.10** | Firestore `query()` with `where()` MUST include `companyId` | RATCHET | `.firestore-companyid-baseline.json` (0 — fully cleaned, 2026-04-11) |
 | **3.13** | i18n Runtime Resolver Reachability (ADR-279/280) | RATCHET | 378 violations / 13 files |
 | **3.14** | Audit Value Catalogs SSoT (ADR-195) | ZERO TOL | no baseline |
 | **3.15** | Firestore Index Coverage (super-admin variant) | ZERO TOL on touch | no baseline |
 | **3.16** | Firestore Rules Test Coverage (ADR-298) | ZERO TOL on touch | no baseline |
-| **3.17** | Entity Audit Coverage — writers call `EntityAuditService.recordChange()` | RATCHET | `.entity-audit-coverage-baseline.json` (70) |
-| **3.22** | Dead-code Ratchet (knip + smart-skip + Layer 2 CI) | RATCHET | `.deadcode-baseline.json` (8 files) |
-| **3.23** | Native HTML Tooltip — `title=` on HTML JSX elements (AST-based) | RATCHET | `.native-tooltip-baseline.json` (63 violations / 48 files) |
+| **3.17** | Entity Audit Coverage — writers call `EntityAuditService.recordChange()` | RATCHET | `.entity-audit-coverage-baseline.json` (1 file, 2026-05-18) |
+| **3.22** | Dead-code Ratchet (knip + smart-skip + Layer 2 CI) | RATCHET | `.deadcode-baseline.json` (10 files, 2026-07-08) |
+| **3.23** | Native HTML Tooltip — `title=` on HTML JSX elements (AST-based) | RATCHET | `.native-tooltip-baseline.json` (39 violations / 28 files, 2026-04-28) |
 | **3.29** | DXF Viewer tsc errors (ADR-663) — hook = baseline smoke only· **CI** = full per-file ratchet | RATCHET | `.dxf-tsc-baseline.json` (381 errors: 117 source / 264 test) |
 
 **📘 Full details (incidents, why, commands, relationships)**: `docs/centralized-systems/reference/precommit-checks.md`
 
 ### Hardcoded strings baseline
-- **Baseline file**: `.i18n-violations-baseline.json` (473 violations / 94 files, 2026-04-05)
+- **Baseline file**: `.i18n-violations-baseline.json` (**0 violations / 0 files** — fully cleaned, 2026-04-30)
 - New file with violations → BLOCK (zero tolerance)
 - Existing file with more than baseline → BLOCK
 - Commands: `npm run i18n:audit`, `npm run i18n:baseline`
+
+⚠️ **Τι ΔΕΝ καλύπτει (μετρημένο 2026-07-17, ADR-666)**: ο scanner (`scanHardcodedStringPatterns` στο
+`scripts/_shared/i18n-governance.js`) ψάχνει **ακριβώς δύο patterns**: `defaultValue: '...'` και `toast('...')`.
+**Καμία ανίχνευση για ωμά ελληνικά μέσα σε JSX** — `<Button>Αποθήκευση</Button>`, `placeholder="Επιλέξτε"`,
+`aria-label="Κλείσιμο"` περνούν αόρατα από ΟΛΟ το static tooling (3.8, i18n:audit, extract:hardcoded).
+Άρα **`0` σημαίνει «κανείς δεν κοίταξε», όχι «καθαρό»**. Ο άγνωστος αριθμός τους είναι το πραγματικό
+i18n χρέος του έργου. Το **μόνο** όργανο που τα βλέπει είναι το pseudo locale (ADR-666): 🧪 Pseudo →
+ό,τι μένει ελληνικό στην οθόνη = hardcoded. Απαιτεί περπάτημα οθονών· δεν αυτοματοποιείται.
 
 ### Boy Scout Rule
 When you touch a legacy file → clean up as many violations as you can. **ZERO TOLERANCE for new violations.**

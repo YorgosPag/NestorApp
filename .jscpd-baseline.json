@@ -1,11 +1,11 @@
 {
   "description": "CHECK 3.28 — jscpd Clone Ratchet baseline (ADR-584). Tracks the total token-based clone count over src/. Ratchet down only: a rise blocks the commit/PR. Refresh via `npm run jscpd:baseline` after legitimate de-duplication.",
-  "generatedAt": "2026-07-16T20:18:05.764Z",
+  "generatedAt": "2026-07-16T22:47:28.934Z",
   "generatedBy": "scripts/check-jscpd-ratchet.js --write-baseline",
   "adr": "ADR-584",
   "check": "CHECK 3.28",
-  "clones": 2857,
-  "duplicatedLines": 32517,
-  "percentage": 2.0816,
-  "sources": 9694
+  "clones": 2793,
+  "duplicatedLines": 31633,
+  "percentage": 2.0234,
+  "sources": 9717
 }
