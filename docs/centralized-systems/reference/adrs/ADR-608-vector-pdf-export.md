@@ -151,6 +151,33 @@ Import pipeline (καθρέφτης του export, additive πάνω στους 
 
 ## Changelog
 
+- **2026-07-16** — **Φ-images (hybrid vector+raster): εικόνες στο vector PDF** (Opus, αίτημα Giorgio —
+  «λείπουν έπιπλα/textured επιφάνειες/δέντρα/ταπετσαρίες από το PDF»). Ο vector emitter αγνοούσε
+  σιωπηλά (`default: return`) κάθε raster οντότητα: **image-fill hatch** (`fillType:'image'`) →
+  μόνο περίγραμμα· **`ImageEntity`** (δέντρα/ταπετσαρίες) → εξαφάνιση. Πλέον, όπως το AutoCAD/Revit
+  PDF export, οι γραμμές/κείμενο μένουν vector και οι εικόνες συνθέτονται ως raster στη σωστή
+  world→paper θέση/κλίμακα/γωνία.
+  - **Async pre-pass** `print/vector/scene-image-resolver.ts` (`resolveSceneImages`): decode ΟΛΩΝ των
+    εικόνων → PNG data URL + world placements (rect κορυφές) ΠΡΙΝ το sync `draw` closure (ADR-040
+    «βαρύ eager, μόνο emission deferred»). Fidelity SSoT reuse (N.12/N.18): `buildImageTilePlacements`
+    (ADR-643 tile-grid+PIP), `renderProceduralTile` (Φ9), `applyDuotoneTint` (Φ8), `resolveMaterialImageSrc`
+    + `decodeImageWithTimeout`, `imageFillVariantKey` (dedup alias), `createRectangleVertices`,
+    `averageImageColor` (solid fallback). **jscpd:diff clean** (0 clones).
+  - **Sync compositor** `print/vector/scene-image-emitter.ts` (`emitResolvedImage`): world corners →
+    `pdf.addImage(x, y, w, h, alias, 'FAST', rotationDeg)`. Placement math = ο ΙΔΙΟΣ eu/ev μηχανισμός
+    του on-screen `ImageRenderer`, εκφρασμένος στο built-in rotation του jsPDF (pivot=κάτω-αριστερά,
+    `r = atan2(−rightY, rightX)`). Κοινό `alias` ⇒ ο jsPDF ενσωματώνει τα bytes ΜΙΑ φορά (N tiles → 1 embed).
+  - **Emitter** (`scene-vector-emitter.ts`): `SceneVectorEmitParams` += `images`· νέο `case 'image'`·
+    το `emitHatch` προτιμά resolved tiles / solid fallback (decode-fail/overflow → μέσο ή hatch χρώμα,
+    γεμίζει το boundary) πριν το faces/outline. **Inline compositing** στη σειρά array ⇒ z-order σωστό
+    (ADR-661) με τις γραμμές. `captureCurrent2dViewVector` → **async** (τρέχει τον resolver)·
+    `print-service.capture2dScene`/`runPrintSet` await.
+  - **Fallbacks (mirror ADR-643/651 DXF):** image-fill decode-fail/tile-overflow → solid downgrade·
+    `ImageEntity` decode-fail → σιωπηλή παράλειψη. **Εκτός v1 (DEFER):** boundary-clip των tiles
+    (`pdf.clip()` — αν φαίνεται edge bleed), grout, mono-plot desaturation εικόνας.
+  - **Tests:** +7 `scene-image-emitter` (placement/rotation/wrap/degenerate) +5 `scene-vector-emitter`
+    (image/tiles/solid-fallback/z-order/skip) +1 `capture-2d-vector` (async pre-pass) = **46 GREEN**.
+  - Αγγίζει ΜΟΝΟ το vector print path — μηδέν αλλαγή σε on-screen renderer / raster capture / DXF export.
 - **2026-07-13** — **Καμία αλλαγή στο συμβόλαιο** του vector backend, μία στη σημασία της `area`
   (ADR-651 Φάση ΣΤ / ADR-453): όταν το φύλλο φέρει πινακίδα, το `draw(pdf, area)` καλείται με την
   **ωφέλιμη** περιοχή της κορνίζας ISO 5457 (κορνίζα μείον πινακίδα) αντί για τη συμμετρική περιοχή

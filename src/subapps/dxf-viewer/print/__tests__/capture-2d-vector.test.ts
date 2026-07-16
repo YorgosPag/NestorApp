@@ -17,6 +17,7 @@ import { flattenSceneEntitiesForDxf } from '../../export/core/bim-to-dxf-primiti
 import { expandAnnotationsToPrimitives } from '../../export/core/annotation-to-primitives';
 import { stampRenderedColors } from '../../export/formats/dxf-export-adapter';
 import { emitSceneToPdf } from '../vector/scene-vector-emitter';
+import { resolveSceneImages } from '../vector/scene-image-resolver';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import type { PrintableAreaMm } from '../config/paper-types';
@@ -35,6 +36,7 @@ jest.mock('../../export/formats/dxf-export-adapter', () => ({
   stampRenderedColors: jest.fn(),
 }));
 jest.mock('../vector/scene-vector-emitter', () => ({ emitSceneToPdf: jest.fn() }));
+jest.mock('../vector/scene-image-resolver', () => ({ resolveSceneImages: jest.fn() }));
 jest.mock('../../state/drawing-scale-store', () => ({
   useDrawingScaleStore: { getState: jest.fn() },
 }));
@@ -44,6 +46,7 @@ jest.mock('../../rendering/core/CoordinateTransforms', () => ({
 
 const FLAT_ENTITIES = [{ type: 'line' }];
 const EXPANDED_ENTITIES = [{ type: 'line' }, { type: 'lwpolyline' }];
+const IMAGE_RESOLUTION = { images: new Map(), solidFallbacks: new Map(), warnings: [] };
 // effectiveDpi = 25.4 makes pxToMm(px) === px (px / 25.4 * 25.4) → identity, so the
 // coordinate assertions read directly.
 const RASTER = { widthPx: 100, heightPx: 100, effectiveDpi: 25.4 };
@@ -69,6 +72,7 @@ beforeEach(() => {
   (flattenSceneEntitiesForDxf as jest.Mock).mockReturnValue({ entities: FLAT_ENTITIES, warnings: [] });
   (expandAnnotationsToPrimitives as jest.Mock).mockReturnValue(EXPANDED_ENTITIES);
   (useDrawingScaleStore.getState as jest.Mock).mockReturnValue({ drawingScale: 100 });
+  (resolveSceneImages as jest.Mock).mockResolvedValue(IMAGE_RESOLUTION);
   // Identity screen transform so toPaper reduces to +area offset.
   (CoordinateTransforms.worldToScreen as jest.Mock).mockImplementation(
     (p: { x: number; y: number }) => ({ x: p.x, y: p.y }),
@@ -76,32 +80,42 @@ beforeEach(() => {
 });
 
 describe('captureCurrent2dViewVector', () => {
-  it('returns a vector capture and hydrates the scene once', () => {
-    const result = captureCurrent2dViewVector(input());
+  it('returns a vector capture and hydrates the scene once', async () => {
+    const result = await captureCurrent2dViewVector(input());
     expect(result.kind).toBe('vector');
     expect(prepareScene2dCapture).toHaveBeenCalledTimes(1);
     // Emission is deferred — nothing drawn until the assembler calls draw().
     expect(emitSceneToPdf).not.toHaveBeenCalled();
   });
 
-  it('reports appliedScaleDenominator only in drawing-scale mode', () => {
-    expect(captureCurrent2dViewVector(input()).appliedScaleDenominator).toBeNull();
-    const scaled = captureCurrent2dViewVector(
+  it('reports appliedScaleDenominator only in drawing-scale mode', async () => {
+    expect((await captureCurrent2dViewVector(input())).appliedScaleDenominator).toBeNull();
+    const scaled = await captureCurrent2dViewVector(
       input({ fitMode: 'drawing-scale', scaleDenominator: 50 }),
     );
     expect(scaled.appliedScaleDenominator).toBe(50);
   });
 
-  it('explodes annotations (flat entities + drawing scale + scene units) before emit', () => {
-    captureCurrent2dViewVector(input());
+  it('explodes annotations (flat entities + drawing scale + scene units) before emit', async () => {
+    await captureCurrent2dViewVector(input());
     expect(expandAnnotationsToPrimitives).toHaveBeenCalledTimes(1);
     const [entities, ctx] = (expandAnnotationsToPrimitives as jest.Mock).mock.calls[0];
     expect(entities).toBe(FLAT_ENTITIES);
     expect(ctx).toEqual({ drawingScale: 100, sceneUnits: 'mm' });
   });
 
-  it('draw() folds world→paper and feeds the EXPANDED entities to the emitter', () => {
-    const result = captureCurrent2dViewVector(input());
+  it('pre-resolves scene images (async) and passes them to the emitter', async () => {
+    const result = await captureCurrent2dViewVector(input());
+    if (result.kind !== 'vector') throw new Error('expected vector capture');
+    expect(resolveSceneImages).toHaveBeenCalledTimes(1);
+    // The resolver runs over the EXPANDED entities (final draw-order array).
+    expect((resolveSceneImages as jest.Mock).mock.calls[0][0]).toBe(EXPANDED_ENTITIES);
+    result.draw({} as never, AREA);
+    expect((emitSceneToPdf as jest.Mock).mock.calls[0][1].images).toBe(IMAGE_RESOLUTION);
+  });
+
+  it('draw() folds world→paper and feeds the EXPANDED entities to the emitter', async () => {
+    const result = await captureCurrent2dViewVector(input());
     if (result.kind !== 'vector') throw new Error('expected vector capture');
 
     const pdf = {} as never;
@@ -119,8 +133,8 @@ describe('captureCurrent2dViewVector', () => {
     expect(params.toPaper({ x: 10, y: 20 })).toEqual({ x: 15, y: 27 });
   });
 
-  it('honours an explicit plotStyle in the colour policy', () => {
-    const result = captureCurrent2dViewVector(input({ plotStyle: 'monochrome' }));
+  it('honours an explicit plotStyle in the colour policy', async () => {
+    const result = await captureCurrent2dViewVector(input({ plotStyle: 'monochrome' }));
     if (result.kind !== 'vector') throw new Error('expected vector capture');
     result.draw({} as never, AREA);
     expect((emitSceneToPdf as jest.Mock).mock.calls[0][1].colorPolicy.style).toBe('monochrome');

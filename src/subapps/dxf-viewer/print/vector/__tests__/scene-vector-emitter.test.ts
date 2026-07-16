@@ -28,17 +28,24 @@ function mockPdf(): { pdf: Record<string, unknown>; calls: Call[] } {
     circle: rec('circle'),
     lines: rec('lines'),
     text: rec('text'),
+    addImage: rec('addImage'),
   };
   return { pdf, calls };
 }
 
 // Simple Y-flip placement so transformed coords are assertable.
 const toPaper = (p: Point2D): Point2D => ({ x: p.x, y: 100 - p.y });
-const baseParams = { toPaper, worldToPaperScale: 1, colorPolicy: { style: 'colour' as const, dpi: 150 } };
+const EMPTY_IMAGES = { images: new Map(), solidFallbacks: new Map(), warnings: [] };
+const baseParams = {
+  toPaper, worldToPaperScale: 1, colorPolicy: { style: 'colour' as const, dpi: 150 },
+  images: EMPTY_IMAGES,
+};
 
-function emit(entities: Entity[], policy = baseParams.colorPolicy) {
+function emit(
+  entities: Entity[], policy = baseParams.colorPolicy, images = EMPTY_IMAGES,
+) {
   const { pdf, calls } = mockPdf();
-  emitSceneToPdf(pdf as never, { ...baseParams, colorPolicy: policy, entities });
+  emitSceneToPdf(pdf as never, { ...baseParams, colorPolicy: policy, entities, images });
   return calls;
 }
 
@@ -190,5 +197,71 @@ describe('scene-vector-emitter — annotation label + solid fill (ADR-608)', () 
     const primitives = decomposeAnnotationEntity(arrow as Entity, { drawingScale: 100, sceneUnits: 'mm' }) ?? [];
     const fills = only(emit(primitives), 'lines').filter((c) => c.args[4] === 'F');
     expect(fills.length).toBeGreaterThanOrEqual(1); // the filled arrowhead
+  });
+});
+
+describe('scene-vector-emitter — hybrid image compositing (ADR-608)', () => {
+  // A resolved image whose axis-aligned placement makes the addImage args assertable.
+  // World rect BL(0,0) BR(10,0) TL(0,4) → toPaper Y-flip → BL(0,100) BR(10,100) TL(0,96).
+  const axisAlignedImage = {
+    dataUrl: 'data:img', alias: 'tex-a',
+    placements: [{ bl: { x: 0, y: 0 }, br: { x: 10, y: 0 }, tl: { x: 0, y: 4 }, wWorld: 10, hWorld: 4 }],
+  };
+
+  it('ImageEntity → pdf.addImage at the placed rect (top-left, w, h, rotation 0)', () => {
+    const e = { id: 'img1', type: 'image', layerId: '0' };
+    const images = { images: new Map([['img1', axisAlignedImage]]), solidFallbacks: new Map(), warnings: [] };
+    const calls = only(emit([e as unknown as Entity], baseParams.colorPolicy, images), 'addImage');
+    expect(calls).toHaveLength(1);
+    const [data, fmt, x, y, w, h, alias, comp, rot] = calls[0].args;
+    expect([data, fmt, alias, comp]).toEqual(['data:img', 'PNG', 'tex-a', 'FAST']);
+    // BL paper = (0,100), hMm = 4 → y = 100 - 4 = 96 (top-left). w=10, h=4, rotation 0.
+    expect([x, y, w, h, rot]).toEqual([0, 96, 10, 4, 0]);
+  });
+
+  it('image-fill hatch (resolved) → one addImage per tile sharing the alias', () => {
+    const e = { id: 'h1', type: 'hatch', layerId: '0', fillType: 'image', boundaryPaths: [[{ x: 0, y: 0 }]] };
+    const twoTiles = {
+      dataUrl: 'data:tile', alias: 'mat-x',
+      placements: [
+        { bl: { x: 0, y: 0 }, br: { x: 2, y: 0 }, tl: { x: 0, y: 2 }, wWorld: 2, hWorld: 2 },
+        { bl: { x: 2, y: 0 }, br: { x: 4, y: 0 }, tl: { x: 2, y: 2 }, wWorld: 2, hWorld: 2 },
+      ],
+    };
+    const images = { images: new Map([['h1', twoTiles]]), solidFallbacks: new Map(), warnings: [] };
+    const calls = only(emit([e as unknown as Entity], baseParams.colorPolicy, images), 'addImage');
+    expect(calls).toHaveLength(2);
+    expect(calls.every((c) => c.args[6] === 'mat-x')).toBe(true); // shared alias → 1 embed
+  });
+
+  it('image-fill hatch (solid fallback) → filled boundary (pdf.lines style F), no addImage', () => {
+    const e = {
+      id: 'h2', type: 'hatch', layerId: '0', fillType: 'image',
+      boundaryPaths: [[{ x: 0, y: 0 }, { x: 5, y: 0 }, { x: 5, y: 5 }]],
+    };
+    const images = { images: new Map(), solidFallbacks: new Map([['h2', '#804020']]), warnings: [] };
+    const calls = emit([e as unknown as Entity], baseParams.colorPolicy, images);
+    expect(only(calls, 'addImage')).toHaveLength(0);
+    const fills = only(calls, 'lines').filter((c) => c.args[4] === 'F');
+    expect(fills).toHaveLength(1);
+    // fallback colour applied (last setFillColor — after the base applyEntityStyle one).
+    const fillColors = only(calls, 'setFillColor');
+    expect(fillColors[fillColors.length - 1].args).toEqual([128, 64, 32]);
+  });
+
+  it('composites images INLINE in array order (z-order preserved with linework)', () => {
+    const line = { id: 'l1', type: 'line', layerId: '0', start: { x: 0, y: 0 }, end: { x: 1, y: 1 } };
+    const img = { id: 'img1', type: 'image', layerId: '0' };
+    const images = { images: new Map([['img1', axisAlignedImage]]), solidFallbacks: new Map(), warnings: [] };
+    // Image BEFORE line in the array → addImage must be recorded before pdf.line.
+    const calls = emit([img as unknown as Entity, line as unknown as Entity], baseParams.colorPolicy, images);
+    const order = calls.filter((c) => c.fn === 'addImage' || c.fn === 'line').map((c) => c.fn);
+    expect(order).toEqual(['addImage', 'line']);
+  });
+
+  it('ImageEntity with no resolved entry → skipped (no addImage)', () => {
+    const e = { id: 'ghost', type: 'image', layerId: '0' };
+    const calls = only(emit([e as unknown as Entity]), 'addImage');
+    expect(calls).toHaveLength(0);
   });
 });

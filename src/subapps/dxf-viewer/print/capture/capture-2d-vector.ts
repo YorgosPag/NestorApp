@@ -32,6 +32,7 @@ import { resolveSceneUnits } from '../../utils/scene-units';
 import type { PrintColorPolicy } from '../../config/print-color-policy';
 import { pxToMm, resolveAppliedScaleDenominator } from '../config/paper-math';
 import { emitSceneToPdf } from '../vector/scene-vector-emitter';
+import { resolveSceneImages } from '../vector/scene-image-resolver';
 import type { Capture2dInput } from './capture-2d';
 import { resolvePrintTransform, prepareScene2dCapture } from './capture-2d';
 import type { CaptureResult } from './capture-types';
@@ -63,11 +64,15 @@ function makeToPaper(
 
 /**
  * Capture the current 2D scene as a VECTOR `CaptureResult`. The heavy scene
- * conversion + flatten runs eagerly (so failures surface before assembly); only
- * the jsPDF emission is deferred into the `draw` closure the assembler invokes
- * with the final printable area.
+ * conversion + flatten + async image decode runs eagerly (so failures surface
+ * before assembly); only the jsPDF emission is deferred into the `draw` closure
+ * the assembler invokes with the final printable area.
+ *
+ * ADR-608 hybrid — `resolveSceneImages` προ-αποκωδικοποιεί κάθε image-fill hatch /
+ * `ImageEntity` σε data URL + world placements ΠΡΙΝ το sync closure, ώστε ο emitter να
+ * τις συνθέτει inline (raster μέσα σε vector σχέδιο, όπως AutoCAD PDF export).
  */
-export function captureCurrent2dViewVector(input: Capture2dInput): CaptureResult {
+export async function captureCurrent2dViewVector(input: Capture2dInput): Promise<CaptureResult> {
   const { dxfScene, viewport } = prepareScene2dCapture(input);
   const transform = resolvePrintTransform(dxfScene, viewport, input);
   const effectiveDpi = input.raster.effectiveDpi;
@@ -94,6 +99,10 @@ export function captureCurrent2dViewVector(input: Capture2dInput): CaptureResult
   // px/world-unit → mm/world-unit (radii + text height are drawn in paper mm).
   const worldToPaperScale = pxToMm(transform.scale, effectiveDpi);
 
+  // ADR-608 hybrid — async decode ΟΛΩΝ των εικόνων εδώ (πριν το sync closure): data URLs +
+  // world placements. Το closure μετά μόνο συνθέτει (μηδέν await στο render path, ADR-040).
+  const images = await resolveSceneImages(entities);
+
   return {
     kind: 'vector',
     appliedScaleDenominator: resolveAppliedScaleDenominator(input.fitMode, input.scaleDenominator),
@@ -103,6 +112,7 @@ export function captureCurrent2dViewVector(input: Capture2dInput): CaptureResult
         toPaper: makeToPaper(transform, viewport, effectiveDpi, area),
         worldToPaperScale,
         colorPolicy,
+        images,
       });
     },
   };

@@ -41,6 +41,8 @@ import {
 import type { DimensionLookup } from '../../systems/dimensions/dim-geometry-builder';
 import { getDimStyleRegistry } from '../../systems/dimensions/dim-style-registry';
 import { projectSceneTextToDxf, type TextSceneShape } from '../../bim/text/project-scene-text';
+import type { SceneImageResolution } from './scene-image-resolver';
+import { emitResolvedImage } from './scene-image-emitter';
 
 /** mm → typographic points (jsPDF `setFontSize` unit). 1pt = 1/72 in = 25.4/72 mm. */
 const PT_PER_MM = 72 / 25.4;
@@ -62,6 +64,12 @@ export interface SceneVectorEmitParams {
   readonly worldToPaperScale: number;
   /** Active plot-style policy (white-safe / mono / grayscale) — same SSoT as raster. */
   readonly colorPolicy: PrintColorPolicy;
+  /**
+   * ADR-608 hybrid — προ-resolved raster εικόνες (image-fill hatch tiles + `ImageEntity`),
+   * κλειδωμένες ανά entity id από το async `scene-image-resolver`. Ο emitter τις συνθέτει
+   * inline (array-order → σωστό z-order με τις γραμμές). Κενό map → μόνο vector (ως πριν).
+   */
+  readonly images: SceneImageResolution;
 }
 
 /**
@@ -113,8 +121,14 @@ function emitEntity(
       emitText(pdf, e, toPaper, scale);
       return;
     case 'hatch':
-      emitHatch(pdf, e as HatchEntity, toPaper);
+      emitHatch(pdf, e as HatchEntity, params, toPaper);
       return;
+    case 'image': {
+      // ADR-608 hybrid — «γυμνή» εικόνα (δέντρα / ταπετσαρίες): προ-resolved στο pre-pass.
+      const resolved = params.images.images.get(e.id);
+      if (resolved) emitResolvedImage(pdf, resolved, toPaper);
+      return;
+    }
     case 'dimension':
       emitDimension(pdf, e as unknown as DimensionEntity, toPaper, scale, dimLookup);
       return;
@@ -167,9 +181,18 @@ function mapHAlign(alignment: TextEntity['alignment']): 'left' | 'center' | 'rig
   return alignment === 'center' ? 'center' : alignment === 'right' ? 'right' : 'left';
 }
 
-// ─── Hatch (v1: solid-fill faces + boundary outline; pattern lines deferred) ──
+// ─── Hatch (solid faces + image fill + boundary outline; pattern lines deferred) ──
 
-function emitHatch(pdf: jsPDF, e: HatchEntity, toPaper: (p: Point2D) => Point2D): void {
+function emitHatch(
+  pdf: jsPDF, e: HatchEntity, params: SceneVectorEmitParams, toPaper: (p: Point2D) => Point2D,
+): void {
+  // ADR-608 hybrid — image-fill («Εικόνα»): προ-resolved raster tiles ή solid downgrade
+  // (decode-fail / tile-overflow) από το pre-pass. Προηγείται των faces/outline.
+  const resolved = params.images.images.get(e.id);
+  if (resolved) { emitResolvedImage(pdf, resolved, toPaper); return; }
+  const solidHex = params.images.solidFallbacks.get(e.id);
+  if (solidHex) { fillHatchSolid(pdf, e, solidHex, toPaper); return; }
+
   // ADR-505 §C solid fill → pre-computed faces (SOLID / poché). Emit each as a filled polygon.
   const faces = (e as { dxfFaces?: ReadonlyArray<ReadonlyArray<Point2D>> }).dxfFaces;
   if (faces) {
@@ -179,6 +202,17 @@ function emitHatch(pdf: jsPDF, e: HatchEntity, toPaper: (p: Point2D) => Point2D)
   // Pattern/plain hatch → stroke the boundary loops (outline). Pattern lines: raster fallback.
   for (const loop of e.boundaryPaths ?? []) {
     if (loop.length >= 2) strokePolyline(pdf, loop, true, toPaper);
+  }
+}
+
+/** Solid downgrade ενός image-fill hatch: γεμίζει τα boundary loops με το fallback χρώμα. */
+function fillHatchSolid(
+  pdf: jsPDF, e: HatchEntity, hex: string, toPaper: (p: Point2D) => Point2D,
+): void {
+  const rgb = parseHex(hex) ?? BLACK;
+  pdf.setFillColor(rgb.r, rgb.g, rgb.b);
+  for (const loop of e.boundaryPaths ?? []) {
+    if (loop.length >= 3) fillPolygon(pdf, loop, toPaper);
   }
 }
 

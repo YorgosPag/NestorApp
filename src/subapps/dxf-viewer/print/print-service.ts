@@ -105,12 +105,12 @@ function buildSheet(
  * Capture ενός συγκεκριμένου 2D scene (SSoT — μοιράζεται από single print + σετ φύλλων).
  * ADR-608 — vector είναι το 2D default (επιλέξιμες οντότητες, zoom-safe)· raster fallback.
  */
-function capture2dScene(
+async function capture2dScene(
   request: PrintRequest,
   scene: SceneModel | null,
   userDrawingUnits: SceneUnits | undefined,
   raster: RasterTargetPx,
-): CaptureResult {
+): Promise<CaptureResult> {
   const capture2dInput = {
     scene,
     userDrawingUnits,
@@ -119,6 +119,7 @@ function capture2dScene(
     scaleDenominator: request.scaleDenominator,
     plotStyle: request.plotStyle,
   };
+  // ADR-608 hybrid — το vector path είναι πλέον async (προ-decode εικόνων)· raster μένει sync.
   return request.outputMode === 'raster'
     ? captureCurrent2dView(capture2dInput)
     : captureCurrent2dViewVector(capture2dInput);
@@ -222,7 +223,8 @@ export async function runPrintSet(
     const area =
       built?.drawingAreaMm ?? resolvePrintableAreaMm(request.paper, DEFAULT_PAGE_MARGIN_MM);
     const raster = computeRasterPxForArea(area, EXPORT_DPI);
-    const capture = capture2dScene(request, sheet.scene, sheet.userDrawingUnits, raster);
+    // eslint-disable-next-line no-await-in-loop — φύλλα σειριακά (per-scene layer hydration δεν διαρρέει)
+    const capture = await capture2dScene(request, sheet.scene, sheet.userDrawingUnits, raster);
     pages.push({
       capture,
       area,
