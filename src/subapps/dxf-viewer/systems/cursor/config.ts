@@ -17,10 +17,33 @@ import { markSystemsDirty } from '../../rendering/core/frame-scheduler-api';
 // across devices, schema-validated. localStorage is used only as boot-time
 // cache (instant first paint) and for one-shot legacy migration.
 import { userSettingsRepository } from '../../../../services/user-settings';
-import type { CursorSettingsSlice } from '../../../../services/user-settings';
 import { DXF_TIMING } from '../../config/dxf-timing';
 
 // ===== TYPES =====
+
+/**
+ * Marquee selection mode.
+ *
+ * `window`   — μπλε κουτί, αριστερά προς δεξιά (πιάνει μόνο ό,τι περικλείεται)
+ * `crossing` — πράσινο κουτί, δεξιά προς αριστερά (πιάνει ό,τι τέμνεται)
+ *
+ * NOTE: `LassoStore.LassoMode` is the same union at the store level. The two are
+ * deliberately NOT merged — importing this config module (Firestore repo,
+ * storage utils) into the ADR-040 lasso hot path would drag its dependencies
+ * along for a type alias.
+ */
+export type SelectionMode = 'window' | 'crossing';
+
+/** Appearance of one marquee selection box. Identical shape for both modes. */
+export interface SelectionBoxSettings {
+  fillColor: string;
+  fillOpacity: number;      // διαφάνεια γεμίσματος
+  borderColor: string;
+  borderOpacity: number;    // διαφάνεια περιγράμματος
+  borderStyle: 'solid' | 'dashed' | 'dotted' | 'dash-dot';
+  borderWidth: number;      // πάχος γραμμής σε pixels
+}
+
 export interface CursorSettings {
   // Crosshair appearance
   crosshair: {
@@ -47,27 +70,8 @@ export interface CursorSettings {
     opacity: number;                // διαφάνεια (0.1 - 1.0)
   };
   
-  // Selection colors
-  selection: {
-    // Window Selection (μπλε κουτί - αριστερά προς δεξιά)
-    window: {
-      fillColor: string;
-      fillOpacity: number;      // διαφάνεια γεμίσματος
-      borderColor: string;
-      borderOpacity: number;    // διαφάνεια περιγράμματος
-      borderStyle: 'solid' | 'dashed' | 'dotted' | 'dash-dot';
-      borderWidth: number;      // πάχος γραμμής σε pixels
-    };
-    // Crossing Selection (πράσινο κουτί - δεξιά προς αριστερά)
-    crossing: {
-      fillColor: string;
-      fillOpacity: number;      // διαφάνεια γεμίσματος
-      borderColor: string;
-      borderOpacity: number;    // διαφάνεια περιγράμματος
-      borderStyle: 'solid' | 'dashed' | 'dotted' | 'dash-dot';
-      borderWidth: number;      // πάχος γραμμής σε pixels
-    };
-  };
+  // Selection colors — one box per SelectionMode
+  selection: Record<SelectionMode, SelectionBoxSettings>;
   
   // AutoCAD-style cursor behavior
   behavior: {
@@ -166,6 +170,34 @@ export const DEFAULT_CURSOR_SETTINGS: CursorSettings = {
 
 // ===== STORAGE MANAGEMENT =====
 // 🏢 ADR-092: Using centralized STORAGE_KEYS registry
+
+/**
+ * Bring one persisted selection box up to the current schema.
+ *
+ * Applied identically to both modes — the fields, the defaults and the legacy
+ * `opacity` → `fillOpacity` rename are the same for `window` and `crossing`.
+ *
+ * @param mode      which box is being migrated (selects the defaults)
+ * @param parsedBox the persisted box; may be absent or pre-schema
+ */
+export function migrateSelectionBox(
+  mode: SelectionMode,
+  parsedBox: SelectionBoxSettings | undefined,
+): SelectionBoxSettings {
+  const fallback = DEFAULT_CURSOR_SETTINGS.selection[mode];
+  return {
+    ...fallback,
+    ...parsedBox,
+    // Migration για νέα fields (cast to access legacy 'opacity' property)
+    fillOpacity:
+      parsedBox?.fillOpacity ??
+      (parsedBox as { opacity?: number } | undefined)?.opacity ??
+      fallback.fillOpacity,
+    borderOpacity: parsedBox?.borderOpacity ?? fallback.borderOpacity,
+    borderStyle: parsedBox?.borderStyle || fallback.borderStyle,
+    borderWidth: parsedBox?.borderWidth ?? fallback.borderWidth,
+  };
+}
 
 export class CursorConfiguration extends BaseConfigurationManager<CursorSettings> {
   private static instance: CursorConfiguration;
@@ -338,24 +370,8 @@ export class CursorConfiguration extends BaseConfigurationManager<CursorSettings
             line_width: parsed.cursor?.line_width ?? DEFAULT_CURSOR_SETTINGS.cursor.line_width
           },
           selection: {
-            window: {
-              ...DEFAULT_CURSOR_SETTINGS.selection.window,
-              ...parsed.selection?.window,
-              // Migration για νέα fields (cast to access legacy 'opacity' property)
-              fillOpacity: parsed.selection?.window?.fillOpacity ?? (parsed.selection?.window as { opacity?: number } | undefined)?.opacity ?? DEFAULT_CURSOR_SETTINGS.selection.window.fillOpacity,
-              borderOpacity: parsed.selection?.window?.borderOpacity ?? DEFAULT_CURSOR_SETTINGS.selection.window.borderOpacity,
-              borderStyle: parsed.selection?.window?.borderStyle || DEFAULT_CURSOR_SETTINGS.selection.window.borderStyle,
-              borderWidth: parsed.selection?.window?.borderWidth ?? DEFAULT_CURSOR_SETTINGS.selection.window.borderWidth
-            },
-            crossing: {
-              ...DEFAULT_CURSOR_SETTINGS.selection.crossing,
-              ...parsed.selection?.crossing,
-              // Migration για νέα fields (cast to access legacy 'opacity' property)
-              fillOpacity: parsed.selection?.crossing?.fillOpacity ?? (parsed.selection?.crossing as { opacity?: number } | undefined)?.opacity ?? DEFAULT_CURSOR_SETTINGS.selection.crossing.fillOpacity,
-              borderOpacity: parsed.selection?.crossing?.borderOpacity ?? DEFAULT_CURSOR_SETTINGS.selection.crossing.borderOpacity,
-              borderStyle: parsed.selection?.crossing?.borderStyle || DEFAULT_CURSOR_SETTINGS.selection.crossing.borderStyle,
-              borderWidth: parsed.selection?.crossing?.borderWidth ?? DEFAULT_CURSOR_SETTINGS.selection.crossing.borderWidth
-            }
+            window: migrateSelectionBox('window', parsed.selection?.window),
+            crossing: migrateSelectionBox('crossing', parsed.selection?.crossing)
           },
           behavior: { ...DEFAULT_CURSOR_SETTINGS.behavior, ...parsed.behavior },
           performance: { ...DEFAULT_CURSOR_SETTINGS.performance, ...parsed.performance }

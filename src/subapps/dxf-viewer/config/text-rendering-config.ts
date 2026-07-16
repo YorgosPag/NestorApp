@@ -298,6 +298,16 @@ export const RENDER_LINE_WIDTHS = {
   /** 3px - Emphasis: borders, highlights, layer name backgrounds */
   THICK: 3,
 
+  /**
+   * 1.2px - BIM finish/analytical boundary: floor finish, wall covering, thermal
+   * space, space separator. Deliberately BELOW `THIN` so these non-structural
+   * overlays never compete with the structural plan lines they sit on top of.
+   *
+   * Their hover halo is derived from it (`body + glowExtraWidth`), so this token
+   * is the ONE place that moves both — see `paintHoverHalo` (bim-polygon-render).
+   */
+  BIM_FINISH_BOUNDARY: 1.2,
+
   // ────────────────────────────────────────────
   // SPECIAL PURPOSE
   // ────────────────────────────────────────────

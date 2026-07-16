@@ -303,25 +303,12 @@ export function useCanvasSettings(props: UseCanvasSettingsProps): UseCanvasSetti
 
   /**
    * 🔺 SELECTION SETTINGS INTEGRATION - Connect selection boxes with floating panel
+   *
+   * `SelectionSettings` is now the cursor system's own selection shape, so this
+   * is a pass-through — the field-by-field copy it replaces produced an object
+   * identical to its source on every change.
    */
-  const selectionSettings: SelectionSettings = useMemo(() => ({
-    window: {
-      fillColor: cursorSettings.selection.window.fillColor,
-      fillOpacity: cursorSettings.selection.window.fillOpacity,
-      borderColor: cursorSettings.selection.window.borderColor,
-      borderOpacity: cursorSettings.selection.window.borderOpacity,
-      borderStyle: cursorSettings.selection.window.borderStyle,
-      borderWidth: cursorSettings.selection.window.borderWidth
-    },
-    crossing: {
-      fillColor: cursorSettings.selection.crossing.fillColor,
-      fillOpacity: cursorSettings.selection.crossing.fillOpacity,
-      borderColor: cursorSettings.selection.crossing.borderColor,
-      borderOpacity: cursorSettings.selection.crossing.borderOpacity,
-      borderStyle: cursorSettings.selection.crossing.borderStyle,
-      borderWidth: cursorSettings.selection.crossing.borderWidth
-    }
-  }), [cursorSettings.selection]);
+  const selectionSettings: SelectionSettings = cursorSettings.selection;
 
   // ============================================================================
   // RETURN
