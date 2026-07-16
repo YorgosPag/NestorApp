@@ -2,11 +2,16 @@
 
 ## Status
 
-🔵 **PROPOSED — 2026-07-17** — Το vector PDF export παύει να «στρώνει πλακάκια» (N raster tiles ανά
-γραμμοσκίαση) και εκπέμπει **native PDF Tiling Patterns** (PDF spec §8.7.3, Pattern Type 1) — ένα
-κελί, ορισμένο μία φορά, που ο viewer επαναλαμβάνει επ' άπειρον. Παράλληλα κλείνει το **σιωπηλό**
-μονοπάτι υποβάθμισης που παρήγαγε το περιστατικό: μεγάλη κεκλιμένη τοπογραφική επιφάνεια →
-**συμπαγές γκρι** αντί για μοτίβο, **χωρίς καμία ειδοποίηση**.
+🟢 **ACCEPTED — 2026-07-17** — **Φ1 + Φ2 υλοποιημένες** (Φ3/Φ4 εκκρεμούν). Το vector PDF export
+έπαψε να «στρώνει πλακάκια» (N raster tiles ανά γραμμοσκίαση) και εκπέμπει **native PDF Tiling
+Patterns** (PDF spec §8.7.3, Pattern Type 1) — ένα κελί, ορισμένο μία φορά, που ο viewer
+επαναλαμβάνει επ' άπειρον. Παράλληλα έκλεισε το **σιωπηλό** μονοπάτι υποβάθμισης που παρήγαγε το
+περιστατικό: μεγάλη κεκλιμένη τοπογραφική επιφάνεια → **συμπαγές γκρι** αντί για μοτίβο, **χωρίς
+καμία ειδοποίηση**.
+
+> 🔒 **Εκκρεμεί η μόνη επαλήθευση που μετράει:** ο χρήστης βρήκε το bug **κοιτάζοντας PDF**. Τα
+> 127/127 πράσινα tests **δεν** είναι απόδειξη ότι το γκρι πέθανε — το είναι ένα **πραγματικό
+> εξαγόμενο PDF, ιδωμένο από τον Giorgio**.
 
 **Owner:** DXF Viewer · Print/Export
 
@@ -118,7 +123,13 @@ spec απαιτεί το pattern `/Matrix` να δείχνει σε **default us
 | Ισχυρισμός spike 1 | Μέτρηση | Πραγματικότητα |
 |---|---|---|
 | «DEDUP και PLACEMENT είναι **αμοιβαία αποκλειόμενα**» | 16 fills → **1 clone** | ❌ **ΛΑΘΟΣ** |
-| «Κάθε fill **διπλασιάζει το raster** — size bomb» | 16 fills → **1** image XObject | ❌ **ΛΑΘΟΣ** |
+| «Κάθε fill **διπλασιάζει το raster** — size bomb» | 1/16/64 fills → **σταθερό** πλήθος image XObjects | ❌ **ΛΑΘΟΣ** |
+
+> 🔬 **Διόρθωση Φ2 (μετρημένη):** το «→ **1** image XObject» ήταν **κακομετρημένο**. Ένα RGBA PNG
+> παράγει **2** αντικείμενα `/Subtype /Image` (η εικόνα **+** το `/SMask` του καναλιού άλφα). Το
+> **ουσιώδες** ισχύει ακέραιο και επαληθεύτηκε ξανά: ο αριθμός είναι **σταθερός** σε 1, 16 και 64
+> fills ⇒ **μηδέν εξάρτηση από το πλήθος των fills**, καμία size bomb. Ο ισχυρισμός καταγράφεται
+> σωστά ως «σταθερό», όχι «1».
 
 **Γιατί το spike 1 έπεσε έξω:** δοκίμασε μόνο «παράλειψε το matrix → ξαναχρησιμοποίησε το **αρχικό**
 pattern» (που όντως χάνει κάθε έλεγχο θέσης: pattern space → points, Y-up). **Δεν** δοκίμασε το
@@ -364,10 +375,14 @@ lazy**. Το `pageHeightMm` διαβάζεται **ΠΡΙΝ** μπούμε σε 
 
 | Φ | Περιεχόμενο | Εξαρτάται από patterns; |
 |---|---|---|
-| **Φ1** | **Fidelity report + warnings surfacing.** `CaptureResult.fidelity` + `print-fidelity.ts` + event + registrar + i18n (el/en). **Σταματά ΑΜΕΣΩΣ τη σιωπηλή αλλοίωση** | ❌ **Ανεξάρτητη** |
-| **Φ2** | **Pattern core**: `pdf-tiling-pattern.ts` (`patternMatrixFor` + per-draw registry + ένα advancedAPI block) + image/procedural fills. Καθαρισμός νεκρού κώδικα **με το χέρι** | ✅ |
-| **Φ3** | `patternSpace:'screen'` (vector stripe cell) + `predefined`/`user-defined` explode (budget-guarded, pre-pass) + `backgroundColor` | ✅ |
-| **Φ4** | ⏳ `gradient` → PDF axial/radial shading patterns (Type 2/3) | ✅ |
+| **Φ1** ✅ | **Fidelity report + warnings surfacing.** `CaptureResult.fidelity` + `print-fidelity.ts` + event + registrar + i18n (el/en). **Σταματά ΑΜΕΣΩΣ τη σιωπηλή αλλοίωση** | ❌ **Ανεξάρτητη** |
+| **Φ2** ✅ | **Pattern core**: `pdf-tiling-pattern.ts` (`patternMatrixFor` + per-draw registry + ένα advancedAPI block) + image/procedural fills. Καθαρισμός νεκρού κώδικα **με το χέρι** | ✅ |
+| **Φ3** ⏳ | `patternSpace:'screen'` (vector stripe cell) + `predefined`/`user-defined` explode (budget-guarded, pre-pass) + `backgroundColor` | ✅ |
+| **Φ4** ⏳ | `gradient` → PDF axial/radial shading patterns (Type 2/3) | ✅ |
+
+> ⚠️ **Μετά τη Φ2 ο default τύπος κάθε νέου hatch (`user-defined`) εξακολουθεί να βγαίνει μόνο ως
+> περίγραμμα** — αυτό είναι η **Φ3**, όχι παράλειψη. Η Φ2 σκότωσε το γκρι της **εικόνας/procedural**
+> (το περιστατικό), όχι κάθε κενό γέμισμα.
 
 **Νεκρός κώδικας (Φ2) — αφαίρεση ΜΕ ΤΟ ΧΕΡΙ:**
 > ⚠️ **Το `knip.json` `ignore` περιέχει `src/subapps/dxf-viewer/**`. Το knip ΔΕΝ βλέπει τίποτα εδώ.**
@@ -415,6 +430,30 @@ lazy**. Το `pageHeightMm` διαβάζεται **ΠΡΙΝ** μπούμε σε 
 
 ## Changelog
 
+- **2026-07-17** — **Φ2 ΥΛΟΠΟΙΗΘΗΚΕ — ΤΟ ΓΚΡΙ ΠΕΘΑΝΕ.** `print/vector/pdf-tiling-pattern.ts` (**ΝΕΟ
+  SSoT**: `patternMatrixFor` = ο **μόνος** κάτοχος της ακύρωσης του `F` · `createPdfPatternRegistry`
+  = registry **ανά `draw()`** με clone-key memoise · `MAX_PDF_PATTERNS_PER_PAGE`) ·
+  `scene-image-resolver` → **ΕΝΑ `ResolvedPatternCell`** αντί για N tiles (anchor από το **screen
+  SSoT** `resolveImageFillOrigin`) · `emitHatch` → **κλειδωμένη σειρά dispatch** (Απόφαση 5:
+  `dxfFaces` → `isSolidHatch` → pattern → solid fallback → **δάπεδο** outline).
+  **Νεκρός κώδικας (με το χέρι — το knip αγνοεί όλο το `dxf-viewer`):** `emitClippedImage` +
+  `clipToBoundary` + `buildImageTileFullGrid` + `PDF_TILE_CAP` + `TILE_KEEP_ALL`/`buildTiles`,
+  **μαζί με τα ζωντανά tests τους**. **DXF μονοπάτι: μηδέν αλλαγή** (Απόφαση 13).
+  **Tests:** **127/127 GREEN** (`print/` + `image-fill-export`), από τα οποία **11 νέα με
+  ΑΛΗΘΙΝΟ jsPDF** — mock θα περνούσε πράσινο με λάθος μαθηματικά. `jscpd:diff` καθαρό, ESLint
+  καθαρό, όλα τα αρχεία <500 γρ.
+  **Δύο διορθώσεις έναντι του σχεδίου** (μετρημένες, όχι υποθετικές):
+  1. Ο **cap μετακινήθηκε στο pre-pass**. Το σχέδιο τον τοποθετούσε στο registry «με fidelity note
+     από τη Φ1» — **αδύνατο**: το `capture.fidelity` διαβάζεται **ΠΡΙΝ** τρέξει το `draw`, άρα
+     υπέρβαση μέσα στο `draw` **δεν μπορεί ποτέ να αναφερθεί** (ακριβώς το σκεπτικό της Απόφασης 7).
+     Το πλήθος των κελιών φράσσει άνω το πλήθος των patterns ⇒ ο cap είναι **υπολογίσιμος** στο
+     pre-pass. Ο cap του registry μένει ως **αμυντική** δεύτερη γραμμή (N.7.2 #4).
+  2. Ο κωδικός `image-fill:tile-overflow` **αντικαταστάθηκε** από `image-fill:pattern-cap` +
+     `image-fill:degenerate-cell`: το μοντέλο «N πλακάκια ανά γραμμοσκίαση» **έπαψε να υπάρχει**,
+     άρα ο κωδικός του ήταν πλέον **νεκρός**.
+  **Ανοιχτό (εκτός scope, καταγραφή):** το `entity-export-coverage` αστοχεί για `leader` /
+  `topo-surface` — **ξένη in-flight δουλειά** (ADR-662 πρόσθεσε renderable types χωρίς να ενημερώσει
+  το coverage SSoT), **όχι** της Φ2· δεν αγγίχτηκε (κοινό working tree).
 - **2026-07-17** — **Φ1 ΥΛΟΠΟΙΗΘΗΚΕ** (uncommitted): `print/print-fidelity.ts` (SSoT: κωδικοί +
   `summarizePrintFidelity` + `mergePrintFidelity`) · `CaptureResult.fidelity` · `capture-2d-vector`
   σταματά να πετά τα warnings · `runPrint`/`runPrintSet` → `dxf:print-fidelity-degraded` (το σετ
