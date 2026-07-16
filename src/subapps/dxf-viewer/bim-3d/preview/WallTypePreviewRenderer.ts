@@ -36,7 +36,8 @@ const STUB_HEIGHT_M = 1.0;
  */
 const VIEW_DIR = new THREE.Vector3(1.5, 1.05, 0.85).normalize();
 
-const WALL_PREVIEW_SPEC: BandStackPreviewSpec<WallDna, WallPreviewBand> = {
+/** Exported for tests — this spec IS the wall-specific behaviour, so it is the contract. */
+export const WALL_PREVIEW_SPEC: BandStackPreviewSpec<WallDna, WallPreviewBand> = {
   viewDir: VIEW_DIR,
   fallbackThicknessM: 0.25,
   buildBands: (dna) => buildWallTypePreviewBands(dna),

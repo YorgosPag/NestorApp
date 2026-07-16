@@ -28,6 +28,7 @@ import { setBoxWorldUvs } from '../converters/bim-uv-helpers';
 import { createBimLights } from '../scene/scene-setup';
 import { PreviewOrbitControls } from './preview-orbit-controls';
 import { resolvePreviewPivot, PreviewPivotMarker } from './preview-pivot';
+import { solveFitDistance } from './band-stack-fit';
 
 const HIGHLIGHT_COLOR = 0x38bdf8; // sky-400 — bright outline on the active band.
 const BG_COLOR = 0x1a1a1a;
@@ -249,27 +250,18 @@ export class BandStackPreviewRenderer<
   }
 
   /**
-   * Fit the whole stub in view, fully centered. Solves the exact camera distance
-   * so all 8 box corners sit inside the frustum (both H and V FOV) — a tight fit
-   * that fills the panel WITHOUT clipping any corner (the bounding-sphere
-   * approximation over-zoomed an asymmetric view and clipped the near corner).
+   * Fit the whole stub in view, fully centered. The exact 8-corner solve lives in
+   * `band-stack-fit` (pure, unit-tested); this only applies it to the camera.
    */
   private fitCamera(): void {
     const totalM = this.dna ? this.dna.totalThickness / 1000 : this.spec.fallbackThicknessM;
-    const [hx, hy, hz] = this.spec.halfExtents(totalM);
-    const dir = this.spec.viewDir; // unit, origin → camera
-    const right = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), dir).normalize();
-    const up = new THREE.Vector3().crossVectors(dir, right);
-    const tanV = Math.tan((this.camera.fov * Math.PI) / 180 / 2);
-    const tanH = tanV * this.camera.aspect;
-    let dist = 0;
-    for (const sx of [-1, 1]) for (const sy of [-1, 1]) for (const sz of [-1, 1]) {
-      const p = new THREE.Vector3(sx * hx, sy * hy, sz * hz);
-      const depthAt = p.dot(dir); // corner's offset toward the camera
-      dist = Math.max(dist, depthAt + Math.abs(p.dot(right)) / tanH, depthAt + Math.abs(p.dot(up)) / tanV);
-    }
-    dist *= 1.04; // small breathing margin
-    this.camera.position.copy(dir).multiplyScalar(dist);
+    const dist = solveFitDistance(
+      this.spec.halfExtents(totalM),
+      this.spec.viewDir,
+      this.camera.fov,
+      this.camera.aspect,
+    );
+    this.camera.position.copy(this.spec.viewDir).multiplyScalar(dist);
     this.camera.lookAt(0, 0, 0);
     this.camera.updateProjectionMatrix();
   }

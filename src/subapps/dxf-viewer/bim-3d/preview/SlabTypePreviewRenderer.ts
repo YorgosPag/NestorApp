@@ -35,7 +35,8 @@ const STUB_DEPTH_M = 0.9; // Z
  */
 const VIEW_DIR = new THREE.Vector3(0.85, 1.05, 1.5).normalize();
 
-const SLAB_PREVIEW_SPEC: BandStackPreviewSpec<SlabDna, SlabPreviewBand> = {
+/** Exported for tests — this spec IS the slab-specific behaviour, so it is the contract. */
+export const SLAB_PREVIEW_SPEC: BandStackPreviewSpec<SlabDna, SlabPreviewBand> = {
   viewDir: VIEW_DIR,
   fallbackThicknessM: 0.2,
   buildBands: (dna) => buildSlabTypePreviewBands(dna),
