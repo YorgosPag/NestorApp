@@ -20,18 +20,15 @@
  * @see docs/centralized-systems/reference/adrs/ADR-436-bim-foundation-discipline.md §4
  */
 
-import { BaseEntityRenderer } from '../../rendering/entities/BaseEntityRenderer';
+import { BimFootprintRenderer } from './bim-footprint-renderer';
+import { polygonBboxHitTest } from './bim-polygon-render';
 import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../rendering/types/Types';
-import type { Entity } from '../../types/entities';
 import { isFoundationEntity } from '../../types/entities';
 import type { FoundationEntity } from '../types/foundation-types';
-import { pointInPolygon } from '../geometry/shared/polygon-utils';
-import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
 import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
 import { isStructuralComponentVisible } from '../visibility/structural-component-visibility';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
-import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getLayer } from '../../stores/LayerStore';
 import { isConcreteLineweight } from '../../config/lineweight-iso-catalog';
 import { FOUNDATION_KIND_FILL, FOUNDATION_KIND_STROKE } from '../foundations/foundation-render-palette';
@@ -54,7 +51,7 @@ const CENTERLINE_DASH_DOT: readonly number[] = [12, 3, 3, 3];
 /** Κεντρικός σταυρός (column footprint indicator) μισό-μήκος σε CSS px. */
 const CENTER_CROSS_HALF_PX = 7;
 
-export class FoundationRenderer extends BaseEntityRenderer {
+export class FoundationRenderer extends BimFootprintRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
     if (!isFoundationEntity(entity)) return;
     const foundation = entity as FoundationEntity;
@@ -81,26 +78,10 @@ export class FoundationRenderer extends BaseEntityRenderer {
       return;
     }
 
-    const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
-
-    // Hover halo via outline thicker glow (solid — δεν διακεκομμένο για ευκρίνεια).
-    if (phaseState.phase === 'highlighted') {
-      this.ctx.save();
-      this.ctx.strokeStyle = HOVER_HIGHLIGHT.ENTITY.glowColor;
-      this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL + HOVER_HIGHLIGHT.ENTITY.glowExtraWidth;
-      this.ctx.globalAlpha = HOVER_HIGHLIGHT.ENTITY.glowOpacity;
-      this.ctx.setLineDash([]);
-      this.drawPolygonPath(verts);
-      this.ctx.stroke();
-      this.ctx.restore();
-    }
-
-    this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
-    this.ctx.save();
+    const phaseState = this.beginPhasedBodyRender(entity, verts, options);
 
     // Fill first, hatch clipped inside, dashed stroke on top.
     const _styles = useDrawingScaleStore.getState().objectStyles;
-    this.ctx.setLineDash([]);
     // ADR-445 — per-kind fill (pad/strip/tie-beam ΔΙΑΚΡΙΤΑ). NOTE: the category
     // V/G tint is intentionally NOT consulted here — it returns ONE sienna for the
     // whole category (frozen in persisted objectStyles) and would erase the per-kind
@@ -241,18 +222,10 @@ export class FoundationRenderer extends BaseEntityRenderer {
 
   hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {
     if (!isFoundationEntity(entity)) return false;
-    const foundation = entity as FoundationEntity;
-    const bb = foundation.geometry?.bbox;
+    const bb = (entity as FoundationEntity).geometry?.bbox;
     if (!bb) return false;
-    if (
-      point.x < bb.min.x - tolerance ||
-      point.x > bb.max.x + tolerance ||
-      point.y < bb.min.y - tolerance ||
-      point.y > bb.max.y + tolerance
-    ) {
-      return false;
-    }
-    return pointInPolygon(point, foundation.geometry.footprint.vertices);
+    // Bbox quick-reject (tolerance) + ray-cast point-in-polygon — shared SSoT.
+    return polygonBboxHitTest(bb, (entity as FoundationEntity).geometry.footprint.vertices, point, tolerance);
   }
 
   // ─── Internal helpers ────────────────────────────────────────────────────
@@ -270,17 +243,5 @@ export class FoundationRenderer extends BaseEntityRenderer {
     return foundation.styleOverride?.color
       ?? layer?.color
       ?? FOUNDATION_KIND_STROKE[foundation.kind];
-  }
-
-  private drawPolygonPath(vertices: ReadonlyArray<{ x: number; y: number }>): void {
-    if (vertices.length < 3) return;
-    this.ctx.beginPath();
-    const first = this.worldToScreen({ x: vertices[0].x, y: vertices[0].y });
-    this.ctx.moveTo(first.x, first.y);
-    for (let i = 1; i < vertices.length; i++) {
-      const s = this.worldToScreen({ x: vertices[i].x, y: vertices[i].y });
-      this.ctx.lineTo(s.x, s.y);
-    }
-    this.ctx.closePath();
   }
 }

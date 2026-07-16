@@ -14,17 +14,16 @@
  * @see docs/centralized-systems/reference/adrs/ADR-040-preview-canvas-performance.md
  */
 
-import { BaseEntityRenderer } from '../../rendering/entities/BaseEntityRenderer';
+import { BimFootprintRenderer } from './bim-footprint-renderer';
+import { polygonBboxHitTest, mapBimGrips } from './bim-polygon-render';
 import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
 import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../rendering/types/Types';
-import type { Entity } from '../../types/entities';
 import { isFurnitureEntity } from '../../types/entities';
 import type { FurnitureEntity } from '../types/furniture-types';
-import { pointInPolygon, projectPointTo2D } from '../geometry/shared/polygon-utils';
+import { projectPointTo2D } from '../geometry/shared/polygon-utils';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
-import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getLayer } from '../../stores/LayerStore';
 import { bimMeshCache } from '../../bim-3d/library/bim-mesh-library/bim-mesh-cache';
 import { drawMeshSilhouette } from './mesh-silhouette-draw';
@@ -42,7 +41,7 @@ const FURNITURE_PALETTE = {
   edge: 'rgba(139, 94, 52, 0.55)',
 } as const;
 
-export class FurnitureRenderer extends BaseEntityRenderer {
+export class FurnitureRenderer extends BimFootprintRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
     if (!isFurnitureEntity(entity)) return;
     const furniture = entity as FurnitureEntity;
@@ -63,22 +62,7 @@ export class FurnitureRenderer extends BaseEntityRenderer {
     const verts = furniture.geometry.footprint.vertices;
     if (verts.length < 3) return;
 
-    const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
-
-    if (phaseState.phase === 'highlighted') {
-      this.ctx.save();
-      this.ctx.strokeStyle = HOVER_HIGHLIGHT.ENTITY.glowColor;
-      this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL + HOVER_HIGHLIGHT.ENTITY.glowExtraWidth;
-      this.ctx.globalAlpha = HOVER_HIGHLIGHT.ENTITY.glowOpacity;
-      this.ctx.setLineDash([]);
-      this.drawPolygonPath(verts);
-      this.ctx.stroke();
-      this.ctx.restore();
-    }
-
-    this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
-    this.ctx.save();
-    this.ctx.setLineDash([]);
+    this.beginPhasedBodyRender(entity, verts, options);
 
     // ADR-411 — prefer the per-asset top-view silhouette + interior detail lines
     // (shared SSoT). Falls back to the authored rectangle + glyph until loaded.
@@ -117,46 +101,19 @@ export class FurnitureRenderer extends BaseEntityRenderer {
     // square. Drag is routed through `applyFurnitureGripDrag()` +
     // `UpdateFurnitureParamsCommand` by `commitFurnitureGripDrag`.
     if (!isFurnitureEntity(entity)) return [];
-    return getFurnitureGrips(entity as FurnitureEntity).map((g) => ({
-      id: `${g.entityId}-grip-${g.gripIndex}`,
-      position: g.position,
-      type: g.type === 'center' ? ('center' as const) : ('vertex' as const),
-      entityId: g.entityId,
-      isVisible: true,
-      gripIndex: g.gripIndex,
-      shape: gripGlyphShape(gripKindOf(g, 'furniture')),
-    }));
+    // Mapping itself is the shared BIM SSoT (mapBimGrips) — center kept, corners→vertex.
+    return mapBimGrips(getFurnitureGrips(entity as FurnitureEntity), (g) => gripGlyphShape(gripKindOf(g, 'furniture')));
   }
 
   hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {
     if (!isFurnitureEntity(entity)) return false;
-    const furniture = entity as FurnitureEntity;
-    const bb = furniture.geometry?.bbox;
+    const bb = (entity as FurnitureEntity).geometry?.bbox;
     if (!bb) return false;
-    if (
-      point.x < bb.min.x - tolerance ||
-      point.x > bb.max.x + tolerance ||
-      point.y < bb.min.y - tolerance ||
-      point.y > bb.max.y + tolerance
-    ) {
-      return false;
-    }
-    return pointInPolygon(point, furniture.geometry.footprint.vertices);
+    // Bbox quick-reject (tolerance) + ray-cast point-in-polygon — shared SSoT.
+    return polygonBboxHitTest(bb, (entity as FurnitureEntity).geometry.footprint.vertices, point, tolerance);
   }
 
   // ─── Internal helpers ────────────────────────────────────────────────────
-
-  private drawPolygonPath(vertices: ReadonlyArray<{ x: number; y: number }>): void {
-    if (vertices.length < 3) return;
-    this.ctx.beginPath();
-    const first = this.worldToScreen(projectPointTo2D(vertices[0]));
-    this.ctx.moveTo(first.x, first.y);
-    for (let i = 1; i < vertices.length; i++) {
-      const s = this.worldToScreen(projectPointTo2D(vertices[i]));
-      this.ctx.lineTo(s.x, s.y);
-    }
-    this.ctx.closePath();
-  }
 
   /** Two corner-to-corner diagonals (generic furniture plan glyph). */
   private drawDiagonals(vertices: ReadonlyArray<{ x: number; y: number }>): void {

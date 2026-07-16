@@ -16,22 +16,20 @@
  * @see docs/centralized-systems/reference/adrs/ADR-040-preview-canvas-performance.md
  */
 
-import { BaseEntityRenderer } from '../../rendering/entities/BaseEntityRenderer';
+import { BimFootprintRenderer } from './bim-footprint-renderer';
+import { polygonBboxHitTest, mapBimGrips, strokePolylinePaths } from './bim-polygon-render';
 import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
 import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../rendering/types/Types';
-import type { Entity } from '../../types/entities';
 import { isElectricalPanelEntity } from '../../types/entities';
 import type { ElectricalPanelEntity } from '../types/electrical-panel-types';
-import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { buildPanelSymbol } from '../electrical-panels/electrical-panel-symbol';
 import { getElectricalPanelGrips } from '../electrical-panels/electrical-panel-grips';
 import { gripGlyphShape } from '../grips/grip-glyph-registry';
 import { gripKindOf } from '../../hooks/grip-kinds';
-import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 // 🏢 ADR-571: electrical-panel teal SSoT + hexToRgba SSoT (color-math.ts)
-import { HOVER_HIGHLIGHT, MEP_TEAL_COLOR } from '../../config/color-config';
+import { MEP_TEAL_COLOR } from '../../config/color-config';
 import { hexToRgba } from '../../config/color-math';
 import { getLayer } from '../../stores/LayerStore';
 // ADR-375 Φ D — content stroke (πάχος + pattern + χρώμα) από το κεντρικό pen-table SSoT.
@@ -45,7 +43,7 @@ import { applyBimContentStroke } from './shared/bim-entity-stroke';
  */
 const PANEL_FILL = hexToRgba(MEP_TEAL_COLOR, 0.18);
 
-export class ElectricalPanelRenderer extends BaseEntityRenderer {
+export class ElectricalPanelRenderer extends BimFootprintRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
     if (!isElectricalPanelEntity(entity)) return;
     const panel = entity as ElectricalPanelEntity;
@@ -66,22 +64,7 @@ export class ElectricalPanelRenderer extends BaseEntityRenderer {
     const verts = panel.geometry.footprint.vertices;
     if (verts.length < 3) return;
 
-    const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
-
-    if (phaseState.phase === 'highlighted') {
-      this.ctx.save();
-      this.ctx.strokeStyle = HOVER_HIGHLIGHT.ENTITY.glowColor;
-      this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL + HOVER_HIGHLIGHT.ENTITY.glowExtraWidth;
-      this.ctx.globalAlpha = HOVER_HIGHLIGHT.ENTITY.glowOpacity;
-      this.ctx.setLineDash([]);
-      this.drawPolygonPath(verts);
-      this.ctx.stroke();
-      this.ctx.restore();
-    }
-
-    this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
-    this.ctx.save();
-    this.ctx.setLineDash([]);
+    this.beginPhasedBodyRender(entity, verts, options);
 
     // Fill + outline (equipment teal — panels are not coloured by circuit).
     // FULL SSoT (bim-body-fill) — κοινό adaptive layer με όλα τα BIM body fills.
@@ -98,19 +81,9 @@ export class ElectricalPanelRenderer extends BaseEntityRenderer {
     this.drawPolygonPath(verts);
     this.ctx.stroke();
 
-    // Panel symbol strokes (breaker-row dividers).
+    // Panel symbol strokes (breaker-row dividers) — shared SSoT (bim-polygon-render).
     const symbol = buildPanelSymbol(panel.params, panel.geometry);
-    for (const stroke of symbol.strokes) {
-      if (stroke.length < 2) continue;
-      this.ctx.beginPath();
-      const start = this.worldToScreen({ x: stroke[0].x, y: stroke[0].y });
-      this.ctx.moveTo(start.x, start.y);
-      for (let i = 1; i < stroke.length; i++) {
-        const s = this.worldToScreen({ x: stroke[i].x, y: stroke[i].y });
-        this.ctx.lineTo(s.x, s.y);
-      }
-      this.ctx.stroke();
-    }
+    strokePolylinePaths(this.ctx, (p) => this.worldToScreen(p), symbol.strokes);
 
     this.ctx.restore();
     this.finalizeRender(entity, options);
@@ -124,44 +97,15 @@ export class ElectricalPanelRenderer extends BaseEntityRenderer {
     // `applyElectricalPanelGripDrag()` + `UpdateElectricalPanelParamsCommand` by
     // `commitElectricalPanelGripDrag` (grip-parametric-commits).
     if (!isElectricalPanelEntity(entity)) return [];
-    return getElectricalPanelGrips(entity as ElectricalPanelEntity).map((g) => ({
-      id: `${g.entityId}-grip-${g.gripIndex}`,
-      position: g.position,
-      type: g.type === 'center' ? ('center' as const) : ('vertex' as const),
-      entityId: g.entityId,
-      isVisible: true,
-      gripIndex: g.gripIndex,
-      shape: gripGlyphShape(gripKindOf(g, 'electrical-panel')),
-    }));
+    // Mapping itself is the shared BIM SSoT (mapBimGrips) — center kept, corners→vertex.
+    return mapBimGrips(getElectricalPanelGrips(entity as ElectricalPanelEntity), (g) => gripGlyphShape(gripKindOf(g, 'electrical-panel')));
   }
 
   hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {
     if (!isElectricalPanelEntity(entity)) return false;
-    const panel = entity as ElectricalPanelEntity;
-    const bb = panel.geometry?.bbox;
+    const bb = (entity as ElectricalPanelEntity).geometry?.bbox;
     if (!bb) return false;
-    if (
-      point.x < bb.min.x - tolerance ||
-      point.x > bb.max.x + tolerance ||
-      point.y < bb.min.y - tolerance ||
-      point.y > bb.max.y + tolerance
-    ) {
-      return false;
-    }
-    return pointInPolygon(point, panel.geometry.footprint.vertices);
-  }
-
-  // ─── Internal helpers ──────────────────────────────────────────────────────
-
-  private drawPolygonPath(vertices: ReadonlyArray<{ x: number; y: number }>): void {
-    if (vertices.length < 3) return;
-    this.ctx.beginPath();
-    const first = this.worldToScreen({ x: vertices[0].x, y: vertices[0].y });
-    this.ctx.moveTo(first.x, first.y);
-    for (let i = 1; i < vertices.length; i++) {
-      const s = this.worldToScreen({ x: vertices[i].x, y: vertices[i].y });
-      this.ctx.lineTo(s.x, s.y);
-    }
-    this.ctx.closePath();
+    // Bbox quick-reject (tolerance) + ray-cast point-in-polygon — shared SSoT.
+    return polygonBboxHitTest(bb, (entity as ElectricalPanelEntity).geometry.footprint.vertices, point, tolerance);
   }
 }
