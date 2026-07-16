@@ -1689,7 +1689,8 @@
       "heating": "Heating",
       "hvac": "HVAC",
       "fireGas": "Fire & Gas",
-      "topography": "Topography"
+      "topography": "Topography",
+      "topoSurfaceProperties": "Topographic Surface"
     },
     "panels": {
       "topoData": "Data",
@@ -5264,6 +5265,10 @@
       "rotation": "Rotation",
       "renameAction": "Rename"
     }
+  },
+  "topoSurfaceAdvancedPanel": {
+    "title": "Topographic Surface Properties",
+    "emptyState": "Select a topographic surface to see its properties."
   },
   "imageAdvancedPanel": {
     "title": "Image Properties",

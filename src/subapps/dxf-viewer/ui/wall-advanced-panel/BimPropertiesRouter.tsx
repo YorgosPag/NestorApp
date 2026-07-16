@@ -18,7 +18,7 @@
 
 import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { isWallEntity, isStairEntity, isColumnEntity, isBeamEntity, isFoundationEntity, isSlabEntity, isSlabOpeningEntity, isHatchEntity, isBlockEntity, isImageEntity } from '../../types/entities';
+import { isWallEntity, isStairEntity, isColumnEntity, isBeamEntity, isFoundationEntity, isSlabEntity, isSlabOpeningEntity, isHatchEntity, isBlockEntity, isImageEntity, isTopoSurfaceEntity } from '../../types/entities';
 import { isWallDrawingTool } from '../../systems/tools/region-tool-ids';
 import { useResolvedSelectedEntity } from '../../hooks/selection/useResolvedSelectedEntity';
 import { StairPropertiesTab } from '../stair-advanced-panel/StairPropertiesTab';
@@ -39,6 +39,8 @@ import { HatchPropertiesTab } from '../hatch-advanced-panel/HatchPropertiesTab';
 import { BlockPropertiesTab } from '../block-advanced-panel/BlockPropertiesTab';
 // ADR-654 — selected entourage image (έπιπλο/άνθρωπος/όχημα/φυτό) → object inspector.
 import { ImagePropertiesTab } from '../image-advanced-panel/ImagePropertiesTab';
+// ADR-662 Φ2β Stage C — selected topographic surface → object-bound display Properties.
+import { TopoSurfacePropertiesTab } from './TopoSurfacePropertiesTab';
 import type { SceneModel } from '../../types/scene';
 
 export interface BimPropertiesRouterProps {
@@ -140,6 +142,13 @@ export function BimPropertiesRouter(
   // inspector (πηγή/επίπεδο + γεωμετρία). Non-BIM standalone raster, mirror του block.
   if (selected && isImageEntity(selected)) {
     return <ImagePropertiesTab {...props} />;
+  }
+
+  // ADR-662 Φ2β Stage C — a selected topographic surface gets its object-bound display
+  // Properties (ανάγλυφο/διαφάνεια/στυλ + ετικέτες σημείων). Non-BIM sibling του image·
+  // reuse των Terrain3DSection + TopoPointLabelsSection πάνω στα ίδια persisted stores.
+  if (selected && isTopoSurfaceEntity(selected)) {
+    return <TopoSurfacePropertiesTab {...props} />;
   }
 
   // No BIM selection — render the stair tab's empty state (legacy path).

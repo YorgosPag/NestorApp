@@ -1689,7 +1689,8 @@
       "heating": "Θέρμανση",
       "hvac": "Κλιματισμός",
       "fireGas": "Πυρόσβεση & Αέριο",
-      "topography": "Τοπογραφικό"
+      "topography": "Τοπογραφικό",
+      "topoSurfaceProperties": "Τοπογραφική Επιφάνεια"
     },
     "panels": {
       "topoData": "Δεδομένα",
@@ -5264,6 +5265,10 @@
       "rotation": "Γωνία",
       "renameAction": "Μετονομασία"
     }
+  },
+  "topoSurfaceAdvancedPanel": {
+    "title": "Ιδιότητες Τοπογραφικής Επιφάνειας",
+    "emptyState": "Επίλεξε μια τοπογραφική επιφάνεια για να δεις τις ιδιότητες."
   },
   "imageAdvancedPanel": {
     "title": "Ιδιότητες Εικόνας",
