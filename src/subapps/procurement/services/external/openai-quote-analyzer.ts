@@ -13,8 +13,14 @@
 import 'server-only';
 
 import { safeJsonParse } from '@/lib/json-utils';
-import { isRecord } from '@/lib/type-guards';
-import { getAdminBucket } from '@/lib/firebaseAdmin';
+import { downloadAdminObjectByPublicUrl } from '@/lib/firebaseAdmin-storage';
+import {
+  beginVisionContent,
+  executeResponsesRequest,
+  extractOutputText,
+  type ResponsesContent,
+  type ResponsesRequestBody,
+} from '@/services/ai/openai-responses';
 import { rasterizePdfPages, RasterizeUnavailableError } from '@/services/pdf/pdf-rasterize.service';
 import type { IQuoteAnalyzer, QuoteClassification } from '../../types/quote-analyzer';
 import type { ExtractedQuoteData } from '../../types/quote';
@@ -47,71 +53,6 @@ interface OpenAIQuoteConfig {
   rasterDpi: number;
 }
 
-type OpenAIRequestContent =
-  | { type: 'input_text'; text: string }
-  | { type: 'input_image'; image_url: string }
-  | { type: 'input_file'; filename: string; file_data: string };
-
-interface OpenAIRequestMessage {
-  role: 'system' | 'user';
-  content: OpenAIRequestContent[];
-}
-
-interface OpenAIResponsesFormat {
-  type: 'json_schema';
-  name: string;
-  description?: string;
-  strict?: boolean;
-  schema: Record<string, unknown>;
-}
-
-interface OpenAIRequestBody {
-  model: string;
-  input: OpenAIRequestMessage[];
-  text?: { format?: OpenAIResponsesFormat };
-}
-
-interface OpenAIErrorPayload {
-  error?: { message?: string; type?: string };
-}
-
-// ============================================================================
-// HELPERS
-// ============================================================================
-
-function extractOutputText(payload: unknown): string | null {
-  if (!isRecord(payload)) return null;
-
-  const outputText = payload.output_text;
-  if (typeof outputText === 'string' && outputText.trim().length > 0) {
-    return outputText.trim();
-  }
-
-  const output = payload.output;
-  if (!Array.isArray(output)) return null;
-
-  for (const item of output) {
-    if (!isRecord(item)) continue;
-    if (item.type !== 'message') continue;
-    const content = item.content;
-    if (!Array.isArray(content)) continue;
-
-    for (const entry of content) {
-      if (!isRecord(entry)) continue;
-      if (entry.type !== 'output_text') continue;
-      const text = entry.text;
-      if (typeof text === 'string' && text.trim().length > 0) {
-        return text.trim();
-      }
-    }
-  }
-  return null;
-}
-
-function detectImageMime(mimeType: string): boolean {
-  return mimeType.startsWith('image/');
-}
-
 function buildFallbackClassification(): QuoteClassification {
   return { isQuote: false, confidence: 0, detectedLanguage: 'unknown' };
 }
@@ -130,7 +71,7 @@ export class OpenAIQuoteAnalyzer implements IQuoteAnalyzer {
   async classifyQuote(fileUrl: string, mimeType: string, fileBuffer?: Buffer): Promise<QuoteClassification> {
     try {
       const content = await this.buildVisionContent(fileUrl, mimeType, 'Είναι αυτό το αρχείο προσφορά προμηθευτή;', fileBuffer);
-      const request: OpenAIRequestBody = {
+      const request: ResponsesRequestBody = {
         model: this.config.visionModel,
         input: [
           { role: 'system', content: [{ type: 'input_text', text: QUOTE_CLASSIFY_PROMPT }] },
@@ -176,7 +117,7 @@ export class OpenAIQuoteAnalyzer implements IQuoteAnalyzer {
           ? this.config.visionModel
           : (this.config.escalateModel || this.config.visionModel);
         const content = await this.buildVisionContent(fileUrl, mimeType, promptText, fileBuffer);
-        const request: OpenAIRequestBody = {
+        const request: ResponsesRequestBody = {
           model: visionModel,
           input: [
             { role: 'system', content: [{ type: 'input_text', text: QUOTE_EXTRACT_PROMPT }] },
@@ -227,11 +168,9 @@ export class OpenAIQuoteAnalyzer implements IQuoteAnalyzer {
     mimeType: string,
     promptText: string,
     fileBuffer?: Buffer,
-  ): Promise<OpenAIRequestContent[]> {
-    const content: OpenAIRequestContent[] = [{ type: 'input_text', text: promptText }];
-    if (detectImageMime(mimeType)) {
-      content.push({ type: 'input_image', image_url: fileUrl });
-    } else if (mimeType === 'application/pdf') {
+  ): Promise<ResponsesContent[]> {
+    const { content, pdfAttachmentPending } = beginVisionContent(promptText, fileUrl, mimeType);
+    if (pdfAttachmentPending) {
       const buffer = fileBuffer ?? await this.fetchFileAsBuffer(fileUrl);
       let usedRaster = false;
       if (this.config.rasterizePdf) {
@@ -259,46 +198,11 @@ export class OpenAIQuoteAnalyzer implements IQuoteAnalyzer {
   }
 
   private async fetchFileAsBuffer(url: string): Promise<Buffer> {
-    const bucket = getAdminBucket();
-    const prefix = `https://storage.googleapis.com/${bucket.name}/`;
-    if (!url.startsWith(prefix)) throw new Error(`Unexpected storage URL: ${url}`);
-    const storagePath = decodeURIComponent(url.slice(prefix.length));
-    const [buffer] = await bucket.file(storagePath).download();
-    return buffer;
+    return downloadAdminObjectByPublicUrl(url);
   }
 
-  private async executeRequest(request: OpenAIRequestBody): Promise<unknown> {
-    let attempt = 0;
-    while (attempt <= this.config.maxRetries) {
-      try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), this.config.timeoutMs);
-
-        const response = await fetch(`${this.config.baseUrl}/responses`, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${this.config.apiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(request),
-          signal: controller.signal,
-        });
-
-        clearTimeout(timeout);
-
-        if (!response.ok) {
-          const errorPayload = (await response.json().catch(() => ({}))) as OpenAIErrorPayload;
-          const message = errorPayload.error?.message || `OpenAI error (${response.status})`;
-          throw new Error(message);
-        }
-
-        return await response.json();
-      } catch (error) {
-        if (attempt >= this.config.maxRetries) throw error;
-        attempt += 1;
-      }
-    }
-    throw new Error('OpenAI quote analyzer request failed');
+  private async executeRequest(request: ResponsesRequestBody): Promise<unknown> {
+    return executeResponsesRequest(this.config, request);
   }
 }
 

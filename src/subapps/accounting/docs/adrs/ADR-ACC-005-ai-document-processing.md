@@ -699,4 +699,12 @@ interface AIAccuracyMetrics {
 
 ---
 
+## Changelog
+
+| Date | Change |
+|------|--------|
+| 2026-07-16 | **`openai-document-analyzer.ts` μετακόμισε στον Responses-API SSoT — ο αρχικός σχεδιασμός αποκαταστάθηκε (ADR-294/373). UNCOMMITTED.** **Αυτό το ADR ήδη έλεγε** *«AI Pipeline (ADR-080) \| EXTENDS \| Uses existing OpenAI provider»*, αλλά το Decision Log (2026-02-10) κατέγραφε ότι η υλοποίηση **απέκλινε σκόπιμα** και έγραψε δικό της client. Πέντε μήνες μετά, το κόστος της απόκλισης μετρήθηκε: ο analyzer ξανάγραφε τους 5 wire-protocol τύπους, το `extractOutputText`, τον βρόχο fetch+retry και το κατέβασμα από το admin bucket — **ταυτόσημα** με τον `openai-quote-analyzer` του procurement (ADR-584 jscpd: 664 tokens / 5 clones) **και** με το `vision-helpers.ts` που ήδη αυτοδηλωνόταν SSoT. Η κεντρικοποίηση **επαναφέρει τον σχεδιασμό αυτού του ADR** — δεν τον αλλάζει. **Τι άλλαξε:** καταναλώνει `executeResponsesRequest` / `extractOutputText` / `beginVisionContent` από `@/services/ai/openai-responses` + `downloadAdminObjectByPublicUrl` από `@/lib/firebaseAdmin-storage`. **386 → ~275 γραμμές.** **Τι έμεινε (domain, όχι μηχανική):** prompts/schemas, τα fallback αντικείμενα, `normalizeExtractedData`, `guessMimeFromUrl`, `categorizeExpense`, το factory (`OPENAI_VISION_MODEL` → `gpt-4o-mini`, 30s, 2 retries). **Δημόσιο API `IDocumentAnalyzer` αμετάβλητο** → κανένας καταναλωτής δεν άγγιξε. **ΜΗΔΕΝ αλλαγή συμπεριφοράς — αποδεδειγμένη:** το αρχείο είχε **μηδέν** direct tests· γράφτηκαν **39 characterization tests ΠΡΙΝ** το refactor (94% κάλυψη: wire protocol, retry, vision content, bucket prefix validation, fallbacks) και έμειναν **39 GREEN ΑΜΕΤΑΒΛΗΤΑ** μετά. **🔴 Δύο quirks που κλειδώθηκαν ΩΣ ΕΧΟΥΝ (ΔΕΝ διορθώθηκαν):** (1) `guessMimeFromUrl` χρησιμοποιεί `includes('.ext')` αντί `endsWith` → σε URL τύπου `report.png.pdf` κερδίζει το `.png` επειδή ελέγχεται πρώτο, ενώ το αρχείο είναι PDF· (2) το `filename` στο `input_file` είναι πάντα hardcoded `'document.pdf'`, ανεξάρτητα από το πραγματικό όνομα. Και τα δύο έχουν test που τα τεκμηριώνει· θέλουν απόφαση Giorgio. **Verification (❌ όχι tsc, N.17):** 39/39 GREEN · `jscpd:diff` καθαρό. |
+
+---
+
 *ADR Format based on: Michael Nygard's Architecture Decision Records*

@@ -12,8 +12,14 @@
 import 'server-only';
 
 import { safeJsonParse } from '@/lib/json-utils';
-import { isRecord } from '@/lib/type-guards';
-import { getAdminBucket } from '@/lib/firebaseAdmin';
+import { downloadAdminObjectByPublicUrl } from '@/lib/firebaseAdmin-storage';
+import {
+  beginVisionContent,
+  executeResponsesRequest,
+  extractOutputText,
+  type ResponsesContent,
+  type ResponsesRequestBody,
+} from '@/services/ai/openai-responses';
 import type { IDocumentAnalyzer } from '../../types/interfaces';
 import type {
   DocumentClassification,
@@ -39,77 +45,6 @@ interface OpenAIDocumentConfig {
   visionModel: string;
   timeoutMs: number;
   maxRetries: number;
-}
-
-type OpenAIRequestContent =
-  | { type: 'input_text'; text: string }
-  | { type: 'input_image'; image_url: string }
-  | { type: 'input_file'; filename: string; file_data: string };
-
-interface OpenAIRequestMessage {
-  role: 'system' | 'user';
-  content: OpenAIRequestContent[];
-}
-
-interface OpenAIResponsesFormat {
-  type: 'json_schema';
-  name: string;
-  description?: string;
-  strict?: boolean;
-  schema: Record<string, unknown>;
-}
-
-interface OpenAIRequestBody {
-  model: string;
-  input: OpenAIRequestMessage[];
-  text?: {
-    format?: OpenAIResponsesFormat;
-  };
-}
-
-interface OpenAIErrorPayload {
-  error?: {
-    message?: string;
-    type?: string;
-  };
-}
-
-// ============================================================================
-// HELPERS
-// ============================================================================
-
-function extractOutputText(payload: unknown): string | null {
-  if (!isRecord(payload)) return null;
-
-  const outputText = payload.output_text;
-  if (typeof outputText === 'string' && outputText.trim().length > 0) {
-    return outputText.trim();
-  }
-
-  const output = payload.output;
-  if (!Array.isArray(output)) return null;
-
-  for (const item of output) {
-    if (!isRecord(item)) continue;
-    if (item.type !== 'message') continue;
-    const content = item.content;
-    if (!Array.isArray(content)) continue;
-
-    for (const entry of content) {
-      if (!isRecord(entry)) continue;
-      if (entry.type !== 'output_text') continue;
-      const text = entry.text;
-      if (typeof text === 'string' && text.trim().length > 0) {
-        return text.trim();
-      }
-    }
-  }
-
-  return null;
-}
-
-function detectImageMime(mimeType: string): boolean {
-  return mimeType.startsWith('image/');
 }
 
 // ============================================================================
@@ -163,7 +98,7 @@ export class OpenAIDocumentAnalyzer implements IDocumentAnalyzer {
     try {
       const content = await this.buildVisionContent(fileUrl, mimeType, 'Ταξινόμησε αυτό το παραστατικό.');
 
-      const request: OpenAIRequestBody = {
+      const request: ResponsesRequestBody = {
         model: this.config.visionModel,
         input: [
           { role: 'system', content: [{ type: 'input_text', text: CLASSIFY_SYSTEM_PROMPT }] },
@@ -215,7 +150,7 @@ export class OpenAIDocumentAnalyzer implements IDocumentAnalyzer {
       const promptText = `Εξάγαγε δεδομένα από αυτό το ${documentType}. Τύπος εγγράφου: ${documentType}`;
       const content = await this.buildVisionContent(fileUrl, mimeType, promptText);
 
-      const request: OpenAIRequestBody = {
+      const request: ResponsesRequestBody = {
         model: this.config.visionModel,
         input: [
           { role: 'system', content: [{ type: 'input_text', text: EXTRACT_SYSTEM_PROMPT }] },
@@ -267,11 +202,9 @@ export class OpenAIDocumentAnalyzer implements IDocumentAnalyzer {
     fileUrl: string,
     mimeType: string,
     promptText: string,
-  ): Promise<OpenAIRequestContent[]> {
-    const content: OpenAIRequestContent[] = [{ type: 'input_text', text: promptText }];
-    if (detectImageMime(mimeType)) {
-      content.push({ type: 'input_image', image_url: fileUrl });
-    } else if (mimeType === 'application/pdf') {
+  ): Promise<ResponsesContent[]> {
+    const { content, pdfAttachmentPending } = beginVisionContent(promptText, fileUrl, mimeType);
+    if (pdfAttachmentPending) {
       const b64 = await this.fetchFileAsBase64(fileUrl);
       content.push({ type: 'input_file', filename: 'document.pdf', file_data: `data:application/pdf;base64,${b64}` });
     }
@@ -279,11 +212,7 @@ export class OpenAIDocumentAnalyzer implements IDocumentAnalyzer {
   }
 
   private async fetchFileAsBase64(url: string): Promise<string> {
-    const bucket = getAdminBucket();
-    const prefix = `https://storage.googleapis.com/${bucket.name}/`;
-    if (!url.startsWith(prefix)) throw new Error(`Unexpected storage URL: ${url}`);
-    const storagePath = decodeURIComponent(url.slice(prefix.length));
-    const [buffer] = await bucket.file(storagePath).download();
+    const buffer = await downloadAdminObjectByPublicUrl(url);
     return buffer.toString('base64');
   }
 
@@ -323,42 +252,8 @@ export class OpenAIDocumentAnalyzer implements IDocumentAnalyzer {
     };
   }
 
-  private async executeRequest(request: OpenAIRequestBody): Promise<unknown> {
-    let attempt = 0;
-
-    while (attempt <= this.config.maxRetries) {
-      try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), this.config.timeoutMs);
-
-        const response = await fetch(`${this.config.baseUrl}/responses`, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${this.config.apiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(request),
-          signal: controller.signal,
-        });
-
-        clearTimeout(timeout);
-
-        if (!response.ok) {
-          const errorPayload = (await response.json().catch(() => ({}))) as OpenAIErrorPayload;
-          const message = errorPayload.error?.message || `OpenAI error (${response.status})`;
-          throw new Error(message);
-        }
-
-        return await response.json();
-      } catch (error) {
-        if (attempt >= this.config.maxRetries) {
-          throw error;
-        }
-        attempt += 1;
-      }
-    }
-
-    throw new Error('OpenAI document analyzer request failed');
+  private async executeRequest(request: ResponsesRequestBody): Promise<unknown> {
+    return executeResponsesRequest(this.config, request);
   }
 }
 
