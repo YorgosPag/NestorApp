@@ -142,3 +142,22 @@ export function makeText(source: Entity, id: string, opts: NeutralTextOptions): 
     vBaseline: opts.vBaseline,
   };
 }
+
+/** Δειγματοληψία κλειστού κύκλου σε ring πολυγώνου (world space) — για solid-fill glyphs. */
+const SOLID_CIRCLE_SEGMENTS = 32;
+
+/**
+ * Full-circle polygon (world space) — το ring που γεμίζει ένας solid κύκλος στα flat
+ * backends (μέσω `makeSolidFill`). SSoT: το χρησιμοποιούν και τα annotation-symbol και τα
+ * svg-glyph decomposers (N.18 — καμία δεύτερη υλοποίηση κύκλου-σε-πολύγωνο).
+ */
+export function circlePolygon(
+  center: Point2D, radius: number, segments: number = SOLID_CIRCLE_SEGMENTS,
+): Point2D[] {
+  const pts: Point2D[] = [];
+  for (let i = 0; i < segments; i++) {
+    const a = (i / segments) * Math.PI * 2;
+    pts.push({ x: center.x + radius * Math.cos(a), y: center.y + radius * Math.sin(a) });
+  }
+  return pts;
+}

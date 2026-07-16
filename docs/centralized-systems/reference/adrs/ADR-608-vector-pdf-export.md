@@ -107,6 +107,34 @@ annotation symbols into vector geometry on export; we do the same, mirroring the
   scale-bar numerals) are dropped from `.tek` (geometry — arrows/bubbles/ticks — exports fine); PDF/DXF
   keep the text.
 
+### SVG glyph explosion — export (Φ-import-svg)
+
+Ο τρίτος τύπος του `AnnotationSymbolPrimitive` union είναι το **`svg`** (`kind: 'svg'` —
+Bézier `<path>` + `<circle>` + `<line>` σε viewBox-space· π.χ. το glyph «Οικογένεια»), που
+προστέθηκε για πλούσια, ιδιόκτητα σχέδια χρήστη που το line/polyline/circle/arc λεξιλόγιο
+δεν εκφράζει. Ο on-screen renderer το ζωγράφιζε με `Path2D` (`stampSvgGlyph`), αλλά ο export
+decomposer δεν είχε `case 'svg'` → το glyph έβγαινε ως `never` (tsc gate, ADR-663) και θα
+έπεφτε σιωπηλά από `.dxf`/PDF-vector. Οι μεγάλοι παίκτες (Revit / ArchiCAD / AutoCAD) **σπάνε
+(explode) την καμπύλη γεωμετρία σε πολυγραμμές** κατά την εξαγωγή σε flat backends — κάνουμε
+το ίδιο:
+
+- **NEW `utils/geometry/svg-path-flatten.ts`** — καθαρός SSoT parser+flattener του path `d`
+  string: πλήρες grammar (`M/L/H/V/C/S/Q/T/A/Z`, absolute **και** relative, smooth-curve
+  reflection, implicit-repeat) → subpaths μέσω **adaptive de Casteljau** (Bézier) + endpoint→
+  center παραμετροποίησης (ελλειπτικά τόξα), με έλεγχο **chord-tolerance**. Καμία γεωμετρική
+  εξάρτηση — δουλεύει σε οποιοδήποτε coord space.
+- **NEW `export/core/svg-glyph-to-entities.ts`** — `svgGlyphToEntities(prim, source, toWorld,
+  modelSize, idFor)` εφαρμόζει το **ΙΔΙΟ** viewBox→unit→world affine με τον `stampSvgGlyph`
+  (`u = [(px−cx)/h, −(py−cy)/h]`, μήκη `× (1/h)·modelSize`) στα flattened σημεία → neutral
+  `Entity[]` (paths→lwpolyline, fill→solid-fill+outline, circles/lines→circle/line) μέσω των
+  υπαρχόντων builders. Η εξαγωγή κάθεται ακριβώς εκεί που τη βλέπει ο χρήστης.
+- **`export/core/neutral-primitive-factory.ts`** — το `circlePolygon` (fill-ring κύκλου)
+  **κεντρικοποιήθηκε** εδώ (SSoT) από το ιδιωτικό αντίγραφο του `annotation-to-primitives.ts`,
+  ώστε και οι δύο decomposers να το μοιράζονται (N.18 — καμία δεύτερη υλοποίηση).
+- **`export/core/annotation-to-primitives.ts`** — `case 'svg'` → `svgGlyphToEntities`.
+- **TEK:** τα svg glyphs που έχουν native αντιστοίχιση (`personFamily → type_res 52`) βγαίνουν
+  native στο `.tek` (δεν χρειάζονται explode εκεί)· το explode καλύπτει `.dxf`/PDF-vector.
+
 ### Tekton symbol identification — IMPORT round-trip (Φ-import)
 
 Ο export χάρτης (πάνω) είναι μονόδρομος (δικό μας σύμβολο → `type_res`). Για **πλήρη
@@ -151,6 +179,16 @@ Import pipeline (καθρέφτης του export, additive πάνω στους 
 
 ## Changelog
 
+- **2026-07-16** — **Φ-import-svg (export): SVG glyphs → vector explode** (Opus, ADR-663 tsc burn-down
+  → αίτημα Giorgio για big-player-level υλοποίηση). Το `svg` μέλος του `AnnotationSymbolPrimitive`
+  union (Bézier paths + circles + lines· π.χ. glyph «Οικογένεια») δεν είχε `case` στον export
+  decomposer → `never` (tsc) + σιωπηλή απώλεια από `.dxf`/PDF. Πλέον «σπάει» σε flat γεωμετρία όπως
+  Revit/ArchiCAD/AutoCAD: **NEW `utils/geometry/svg-path-flatten.ts`** (SSoT path-`d` parser +
+  adaptive de Casteljau / arc-sampler, chord-tolerance, πλήρες grammar abs+rel), **NEW
+  `export/core/svg-glyph-to-entities.ts`** (viewBox→unit→world mirror του `stampSvgGlyph` →
+  lwpolyline/circle/hatch/line), `circlePolygon` **κεντρικοποιήθηκε** στο `neutral-primitive-factory`
+  (N.18), `case 'svg'` στο `annotation-to-primitives`. Tests: `svg-path-flatten` (13) +
+  `svg-glyph-to-entities` (4). Βλ. §«SVG glyph explosion».
 - **2026-07-16** — **Φ-images (hybrid vector+raster): εικόνες στο vector PDF** (Opus, αίτημα Giorgio —
   «λείπουν έπιπλα/textured επιφάνειες/δέντρα/ταπετσαρίες από το PDF»). Ο vector emitter αγνοούσε
   σιωπηλά (`default: return`) κάθε raster οντότητα: **image-fill hatch** (`fillType:'image'`) →

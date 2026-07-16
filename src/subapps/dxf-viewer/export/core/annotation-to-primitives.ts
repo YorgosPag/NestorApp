@@ -54,11 +54,11 @@ import {
   makeArc,
   makeSolidFill,
   makeText,
+  circlePolygon,
 } from './neutral-primitive-factory';
+import { svgGlyphToEntities } from './svg-glyph-to-entities';
 
 const DEG_TO_RAD = Math.PI / 180;
-/** Vertices used to fill a (rare) solid circle glyph as a hatch face. */
-const SOLID_CIRCLE_SEGMENTS = 32;
 
 /** Drawing-scale + scene-units context the annotative decomposition needs. */
 export interface AnnotationDecomposeContext {
@@ -177,6 +177,9 @@ function mapSymbolPrimitive(
         rotationDeg: (prim.uprightOnRotate ?? true) ? 0 : rotationDeg,
         vBaseline: mapBaseline(prim.baseline),
       })];
+    case 'svg':
+      // ADR-608 — Bézier-based glyph → explode σε flat γεωμετρία (Revit/ArchiCAD πρακτική).
+      return svgGlyphToEntities(prim, source, toWorld, modelSize, idFor);
     default: {
       const _exhaustive: never = prim;
       void _exhaustive;
@@ -245,16 +248,6 @@ function mapFramePrimitive(
 function idSequence(sourceId: string): () => string {
   let n = 0;
   return () => `${sourceId}__ann_${n++}`;
-}
-
-/** Full-circle polygon (world space) used to fill a solid circle glyph. */
-function circlePolygon(center: Point2D, radius: number): Point2D[] {
-  const pts: Point2D[] = [];
-  for (let i = 0; i < SOLID_CIRCLE_SEGMENTS; i++) {
-    const a = (i / SOLID_CIRCLE_SEGMENTS) * Math.PI * 2;
-    pts.push({ x: center.x + radius * Math.cos(a), y: center.y + radius * Math.sin(a) });
-  }
-  return pts;
 }
 
 /** Canvas text-align → neutral horizontal alignment (renderer default = center). */
