@@ -9,8 +9,16 @@
 import 'server-only';
 
 import { safeJsonParse } from '@/lib/json-utils';
-import { isRecord, isNonEmptyTrimmedString } from '@/lib/type-guards';
+import { isRecord } from '@/lib/type-guards';
 import { stripNullValues } from '@/utils/firestore-sanitize';
+import {
+  executeResponsesRequest,
+  extractOutputText,
+  isImageMime,
+  toBase64DataUri,
+  type ResponsesContent,
+  type ResponsesRequestBody,
+} from '@/services/ai/openai-responses';
 import {
   AI_ANALYSIS_DEFAULTS,
   AI_MULTI_INTENT_SCHEMA,
@@ -35,40 +43,6 @@ import type {
 } from './IAIAnalysisProvider';
 import { nowISO } from '@/lib/date-local';
 
-type OpenAIRequestContent =
-  | { type: 'input_text'; text: string }
-  | { type: 'input_image'; image_url: string }
-  | { type: 'input_file'; filename: string; file_data: string };
-
-type OpenAIRequestMessage = {
-  role: 'system' | 'user';
-  content: OpenAIRequestContent[];
-};
-
-interface OpenAIResponsesFormat {
-  type: 'json_schema';
-  name: string;
-  description?: string;
-  strict?: boolean;
-  schema: Record<string, unknown>;
-}
-
-interface OpenAIRequestBody {
-  model: string;
-  input: OpenAIRequestMessage[];
-  text?: {
-    format?: OpenAIResponsesFormat;
-  };
-  tools?: ReadonlyArray<{
-    type: 'function';
-    name: string;
-    description: string;
-    parameters: Record<string, unknown>;
-    strict: boolean;
-  }>;
-  tool_choice?: 'auto' | 'none' | 'required';
-}
-
 interface OpenAIProviderConfig {
   apiKey: string;
   baseUrl: string;
@@ -76,43 +50,6 @@ interface OpenAIProviderConfig {
   visionModel: string;
   timeoutMs: number;
   maxRetries: number;
-}
-
-interface OpenAIErrorPayload {
-  error?: {
-    message?: string;
-    type?: string;
-  };
-}
-
-function extractOutputText(payload: unknown): string | null {
-  if (!isRecord(payload)) return null;
-
-  const outputText = payload.output_text;
-  if (isNonEmptyTrimmedString(outputText)) {
-    return outputText.trim();
-  }
-
-  const output = payload.output;
-  if (!Array.isArray(output)) return null;
-
-  for (const item of output) {
-    if (!isRecord(item)) continue;
-    if (item.type !== 'message') continue;
-    const content = item.content;
-    if (!Array.isArray(content)) continue;
-
-    for (const entry of content) {
-      if (!isRecord(entry)) continue;
-      if (entry.type !== 'output_text') continue;
-      const text = entry.text;
-      if (isNonEmptyTrimmedString(text)) {
-        return text.trim();
-      }
-    }
-  }
-
-  return null;
 }
 
 function buildFallbackResult(input: AnalysisInput, model: string): AIAnalysisResult {
@@ -184,18 +121,6 @@ function buildDocumentPrompt(input: AnalysisInput): string {
   ].join('\n');
 }
 
-function detectImageMime(mimeType?: string): boolean {
-  return Boolean(mimeType && mimeType.startsWith('image/'));
-}
-
-function buildFileDataBuffer(buffer: Buffer, mimeType?: string): string {
-  const base64 = buffer.toString('base64');
-  if (!mimeType) {
-    return base64;
-  }
-  return `data:${mimeType};base64,${base64}`;
-}
-
 function shouldRetryWithoutStructuredOutput(error: unknown): boolean {
   if (!(error instanceof Error)) return false;
   const message = error.message.toLowerCase();
@@ -232,15 +157,15 @@ export class OpenAIAnalysisProvider implements IAIAnalysisProvider {
       ? AI_ANALYSIS_PROMPTS.DOCUMENT_CLASSIFY_SYSTEM
       : AI_ANALYSIS_PROMPTS.MULTI_INTENT_SYSTEM;
 
-    const content: OpenAIRequestContent[] = [
+    const content: ResponsesContent[] = [
       { type: 'input_text', text: prompt },
     ];
 
     if (input.kind === 'document_classify' && Buffer.isBuffer(input.content)) {
-      if (detectImageMime(input.mimeType)) {
+      if (isImageMime(input.mimeType)) {
         content.push({
           type: 'input_image',
-          image_url: buildFileDataBuffer(input.content, input.mimeType),
+          image_url: toBase64DataUri(input.content, input.mimeType),
         });
       } else if (
         input.mimeType === 'text/plain' ||
@@ -257,7 +182,7 @@ export class OpenAIAnalysisProvider implements IAIAnalysisProvider {
         content.push({
           type: 'input_file',
           filename: input.filename || 'document',
-          file_data: buildFileDataBuffer(input.content, input.mimeType),
+          file_data: toBase64DataUri(input.content, input.mimeType),
         });
       }
     }
@@ -266,7 +191,7 @@ export class OpenAIAnalysisProvider implements IAIAnalysisProvider {
     // AI selects the appropriate tool and extracts ALL params semantically.
     // Conversational replies come as plain text (no tool call → no 2nd API call).
     if (isAdminCommand) {
-      const toolRequest: OpenAIRequestBody = {
+      const toolRequest: ResponsesRequestBody = {
         model,
         input: [
           {
@@ -327,7 +252,7 @@ export class OpenAIAnalysisProvider implements IAIAnalysisProvider {
       : AI_MULTI_INTENT_SCHEMA;
 
     // Responses API: name/strict/schema go directly in format (NOT nested in json_schema)
-    const request: OpenAIRequestBody = {
+    const request: ResponsesRequestBody = {
       model,
       input: [
         {
@@ -359,7 +284,7 @@ export class OpenAIAnalysisProvider implements IAIAnalysisProvider {
         throw error;
       }
 
-      const fallbackRequest: OpenAIRequestBody = {
+      const fallbackRequest: ResponsesRequestBody = {
         ...request,
         text: undefined,
       };
@@ -397,47 +322,20 @@ export class OpenAIAnalysisProvider implements IAIAnalysisProvider {
     }
   }
 
+  /** Per-call `options` override the provider's configured transport defaults. */
   private async executeRequest(
-    request: OpenAIRequestBody,
+    request: ResponsesRequestBody,
     options?: ProviderOptions
   ): Promise<unknown> {
-    const timeoutMs = options?.timeoutMs ?? this.config.timeoutMs;
-    const maxRetries = options?.maxRetries ?? this.config.maxRetries;
-    let attempt = 0;
-
-    while (attempt <= maxRetries) {
-      try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), timeoutMs);
-
-        const response = await fetch(`${this.config.baseUrl}/responses`, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${this.config.apiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(request),
-          signal: controller.signal,
-        });
-
-        clearTimeout(timeout);
-
-        if (!response.ok) {
-          const errorPayload = (await response.json().catch(() => ({}))) as OpenAIErrorPayload;
-          const message = errorPayload.error?.message || `OpenAI error (${response.status})`;
-          throw new Error(message);
-        }
-
-        return await response.json();
-      } catch (error) {
-        if (attempt >= maxRetries) {
-          throw error;
-        }
-        attempt += 1;
-      }
-    }
-
-    throw new Error('OpenAI request failed');
+    return executeResponsesRequest(
+      {
+        apiKey: this.config.apiKey,
+        baseUrl: this.config.baseUrl,
+        timeoutMs: options?.timeoutMs ?? this.config.timeoutMs,
+        maxRetries: options?.maxRetries ?? this.config.maxRetries,
+      },
+      request,
+    );
   }
 }
 
