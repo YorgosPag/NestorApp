@@ -15,6 +15,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
+import type { EntityType } from '../../types/base-entity';
 import type { UseCanvasClickHandlerParams } from './canvas-click-types';
 import { getHoveredEntity } from '../../systems/hover/HoverStore';
 import {
@@ -26,7 +27,7 @@ import {
 import { applyMatchTransfer } from './apply-match-transfer';
 
 /** Ο τύπος της οντότητας κάτω από τον κέρσορα (event-time), ή `null`. */
-function hoveredEntityType(params: UseCanvasClickHandlerParams, id: string): string | null {
+function hoveredEntityType(params: UseCanvasClickHandlerParams, id: string): EntityType | null {
   const levelId = params.levelManager.currentLevelId;
   const scene = levelId ? params.levelManager.getLevelScene(levelId) : null;
   const entity = scene?.entities.find((e) => e.id === id);
