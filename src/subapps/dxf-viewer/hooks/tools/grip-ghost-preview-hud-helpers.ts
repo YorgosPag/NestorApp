@@ -160,7 +160,7 @@ export function drawMemberGripHud(
     // στις κινούμενες κορυφές (το ίδιο + οι 2 γείτονες). Σύρσιμο ΚΟΡΥΦΗΣ → τα incident σκέλη της.
     // Επιλογή σκελών μέσω του ΚΟΙΝΟΥ 2D↔3D SSoT· η μέτρηση μήκους/γωνίας από ΤΟ reshaped `transformed`.
     const role: GripAlignmentRole = {
-      movesEntity: dp.movesEntity === true,
+      movesEntity: false, // in the `!dp.movesEntity` branch above → always false (dead `=== true`)
       isRotation: dp.rotatePivot != null,
       gripIndex: dp.gripIndex,
       anchorPos: dp.anchorPos ?? null,
@@ -182,7 +182,7 @@ export function drawMemberGripHud(
   // ghost (WYSIWYG). Move/rotation/gradient/edge-midpoint → null → κανένα HUD (δικό τους overlay).
   if (type === 'hatch' && !dp.movesEntity && !dp.rotatePivot) {
     const role: GripAlignmentRole = {
-      movesEntity: dp.movesEntity === true,
+      movesEntity: false, // in the `!dp.movesEntity` branch above → always false (dead `=== true`)
       isRotation: dp.rotatePivot != null,
       gripIndex: dp.gripIndex,
       anchorPos: dp.anchorPos ?? null,
