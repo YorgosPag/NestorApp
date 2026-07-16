@@ -5,12 +5,28 @@
  * ribbon widgets (Type Selector + Type Properties / override editor). Kept React-
  * free so it is unit-testable and the widgets stay thin (N.7.1).
  *
- *   - `listWallTypes`            — wall-only slice of the loaded catalog.
- *   - `isBuiltInType`            — read-only built-in vs editable user type.
- *   - `resolveTypeDisplayName`   — built-in name = i18n key, user name = literal.
- *   - `getOverriddenParamKeys`   — which type-governed params an instance overrides.
- *   - `resolveWallTypeAssignment`— builds the next/prev `WallTypeAssignment` for
- *     `AssignWallTypeCommand` («type always wins» effective-param resolution).
+ * ## Shape (ADR-584)
+ *
+ * Every category (wall / slab / roof / opening) needs the SAME four helpers, and
+ * they differ in exactly three places: the category discriminator, the
+ * overridable-key list, and the effective-param resolver. So the bodies live
+ * ONCE in {@link makeFamilyTypeHelpers} and each category is a few lines of
+ * config plus thin named re-exports — mirroring the sibling
+ * `resolve-effective-params.ts` (generic core + named wrappers), which is the
+ * established shape in this folder.
+ *
+ * Adding a 5th category (`stair` already has `StairTypeParams`) = one config
+ * block, not another 80-line copy.
+ *
+ *   - `list{X}Types`               — category-only slice of the loaded catalog.
+ *   - `as{X}FamilyType`            — narrows a catalog entry to the category.
+ *   - `getOverridden{X}ParamKeys`  — which type-governed params an instance overrides.
+ *   - `resolve{X}TypeAssignment`   — builds the next/prev `{X}TypeAssignment` for
+ *     `Assign{X}TypeCommand` («type always wins» effective-param resolution).
+ *   - `normalise{X}Overrides`      — empty override patch → `undefined`.
+ *
+ * Category-agnostic by nature (no per-category twin): `isBuiltInType`,
+ * `isAutoType`, `resolveTypeDisplayName`.
  *
  * @see ./resolve-effective-params.ts            — effective-param SSoT
  * @see ../../core/commands/entity-commands/AssignWallTypeCommand.ts
@@ -19,6 +35,7 @@
 
 import type {
   BimFamilyType,
+  BimTypeParamsByCategory,
   OpeningTypeParams,
   RoofTypeParams,
   SlabTypeParams,
@@ -35,13 +52,11 @@ import {
   resolveEffectiveWallParams,
 } from './resolve-effective-params';
 import { AUTO_WALL_TYPE_NAME_KEY } from './auto-wall-type';
-import type { WallTypeAssignment } from '../../core/commands/entity-commands/AssignWallTypeCommand';
-import type { SlabTypeAssignment } from '../../core/commands/entity-commands/AssignSlabTypeCommand';
-import type { RoofTypeAssignment } from '../../core/commands/entity-commands/AssignRoofTypeCommand';
-import type { OpeningTypeAssignment } from '../../core/commands/entity-commands/AssignOpeningTypeCommand';
 
 /** i18n namespace prefix for every family-type label (mirror the locale block). */
 const I18N_PREFIX = 'ribbon.commands.bimFamilyType';
+
+// ─── Overridable-key SSoT (one of the three per-category divergence points) ──
 
 /**
  * Type-governed wall params that the per-instance override editor exposes.
@@ -73,23 +88,21 @@ export const ROOF_OVERRIDABLE_KEYS: readonly (keyof RoofTypeParams)[] = [
   'material',
 ] as const;
 
-/** Narrows a category-agnostic family type to a wall type (null when not a wall). */
-export function asWallFamilyType(
-  type: BimFamilyType | null | undefined,
-): BimFamilyType<'wall'> | null {
-  return type && type.category === 'wall'
-    ? (type as BimFamilyType<'wall'>)
-    : null;
-}
+/**
+ * Type-governed opening params the per-instance override editor exposes.
+ * `kind` is deliberately NOT per-instance overridable — switching the family
+ * means switching the Type (Revit). `fireRating` is a type-only spec. SSoT for
+ * the override badges.
+ */
+export const OPENING_OVERRIDABLE_KEYS: readonly (keyof OpeningTypeParams)[] = [
+  'width',
+  'height',
+  'frameWidth',
+  'material',
+  'glazingPanes',
+] as const;
 
-/** The wall-only slice of the loaded catalog, in catalog order. */
-export function listWallTypes(
-  types: readonly BimFamilyType[],
-): readonly BimFamilyType<'wall'>[] {
-  return types
-    .map(asWallFamilyType)
-    .filter((t): t is BimFamilyType<'wall'> => t !== null);
-}
+// ─── Category-agnostic helpers (no per-category variant) ─────────────────────
 
 /** Built-in (read-only, clone-to-edit) vs user (editable) provenance. */
 export function isBuiltInType(type: BimFamilyType): boolean {
@@ -128,16 +141,148 @@ export function resolveTypeDisplayName(
   return type.name;
 }
 
-/** The type-governed param keys an instance currently overrides (badge source). */
-export function getOverriddenParamKeys(
-  typeOverrides: Partial<WallTypeParams> | undefined,
-): readonly (keyof WallTypeParams)[] {
-  if (!typeOverrides) return [];
-  return WALL_OVERRIDABLE_KEYS.filter((k) => typeOverrides[k] !== undefined);
+/**
+ * Normalises a `typeOverrides` patch: returns `undefined` when the patch has no
+ * own enumerable keys (so the entity field is cleared rather than persisted as an
+ * empty object). Category-agnostic — the per-category exports below are named
+ * instantiations of this one function, not copies.
+ */
+function normaliseTypeOverrides<TP>(overrides: Partial<TP>): Partial<TP> | undefined {
+  return Object.keys(overrides).length === 0 ? undefined : overrides;
+}
+
+// ─── Generic core (ADR-584: the four bodies, written once) ───────────────────
+
+/** A BIM category that has family-type support. */
+type FamilyCategory = keyof BimTypeParamsByCategory;
+
+/** The type-level param payload of a category (`'wall'` → `WallTypeParams`). */
+type TypeParamsOf<C extends FamilyCategory> = BimTypeParamsByCategory[C];
+
+/**
+ * The shape every `{X}TypeAssignment` has (see `AssignWallTypeCommand.ts` et al).
+ * Structural, so an instantiation IS assignable to the named interface — the
+ * command contracts stay untouched and no cast is needed.
+ */
+interface TypeAssignment<P, TP> {
+  readonly typeId: string | undefined;
+  readonly typeOverrides: Partial<TP> | undefined;
+  readonly params: P;
+}
+
+/** An instance carrying cached params plus its optional type binding. */
+interface TypedInstance<C extends FamilyCategory, P> {
+  params: P;
+  typeId?: string;
+  typeOverrides?: Partial<TypeParamsOf<C>>;
+}
+
+/** The four per-category helpers {@link makeFamilyTypeHelpers} produces. */
+interface FamilyTypeHelpers<C extends FamilyCategory, P> {
+  asFamilyType(type: BimFamilyType | null | undefined): BimFamilyType<C> | null;
+  listTypes(types: readonly BimFamilyType[]): readonly BimFamilyType<C>[];
+  getOverriddenParamKeys(
+    typeOverrides: Partial<TypeParamsOf<C>> | undefined,
+  ): readonly (keyof TypeParamsOf<C>)[];
+  resolveTypeAssignment(
+    instance: TypedInstance<C, P>,
+    nextTypeId: string | undefined,
+    nextTypeOverrides: Partial<TypeParamsOf<C>> | undefined,
+    getType: (id: string) => BimFamilyType | null,
+  ): {
+    next: TypeAssignment<P, TypeParamsOf<C>>;
+    previous: TypeAssignment<P, TypeParamsOf<C>>;
+  };
 }
 
 /**
- * Builds the `next` + `previous` {@link WallTypeAssignment} pair an
+ * Builds the family-type UI helpers for ONE category. The three arguments are the
+ * only things that differ between wall / slab / roof / opening.
+ *
+ * `C` also derives the type-param payload via {@link BimTypeParamsByCategory}, so
+ * the compiler rejects a mismatched pairing (e.g. `'slab'` with
+ * {@link WALL_OVERRIDABLE_KEYS}) — an error the hand-copied blocks could not catch.
+ *
+ * @typeParam C Family-type category discriminator (`'wall'`, `'slab'`, …).
+ * @typeParam P Instance param payload (e.g. `WallParams`).
+ * @param category        The discriminator this instance narrows on.
+ * @param overridableKeys Type-governed keys the override editor exposes.
+ * @param resolveEffective The category's «type always wins» resolver.
+ */
+function makeFamilyTypeHelpers<C extends FamilyCategory, P>(
+  category: C,
+  overridableKeys: readonly (keyof TypeParamsOf<C>)[],
+  resolveEffective: (
+    instance: TypedInstance<C, P>,
+    type: BimFamilyType<C> | null,
+  ) => P,
+): FamilyTypeHelpers<C, P> {
+  const asFamilyType = (
+    type: BimFamilyType | null | undefined,
+  ): BimFamilyType<C> | null =>
+    // `category` is a generic value, so TS cannot narrow the union by comparison;
+    // the assertion is guarded by the very check above it (as in the pre-ADR-584
+    // hand-written `type as BimFamilyType<'wall'>`).
+    type && type.category === category ? (type as BimFamilyType<C>) : null;
+
+  return {
+    asFamilyType,
+
+    listTypes: (types) =>
+      types
+        .map(asFamilyType)
+        .filter((t): t is BimFamilyType<C> => t !== null),
+
+    getOverriddenParamKeys: (typeOverrides) =>
+      typeOverrides
+        ? overridableKeys.filter((k) => typeOverrides[k] !== undefined)
+        : [],
+
+    resolveTypeAssignment: (instance, nextTypeId, nextTypeOverrides, getType) => {
+      const previous: TypeAssignment<P, TypeParamsOf<C>> = {
+        typeId: instance.typeId,
+        typeOverrides: instance.typeOverrides,
+        params: instance.params,
+      };
+      const nextType = nextTypeId ? asFamilyType(getType(nextTypeId)) : null;
+      const nextParams = resolveEffective(
+        { params: instance.params, typeId: nextTypeId, typeOverrides: nextTypeOverrides },
+        nextType,
+      );
+      return {
+        next: { typeId: nextTypeId, typeOverrides: nextTypeOverrides, params: nextParams },
+        previous,
+      };
+    },
+  };
+}
+
+// ─── Per-category instantiations (public API — signatures unchanged) ─────────
+//
+// The exported names are deliberately ASYMMETRIC: wall carries no infix
+// (`getOverriddenParamKeys` / `normaliseOverrides`) while the other three do.
+// That is the pre-existing contract of 14 consumer files — renaming would be an
+// API break for zero gain, so the names stay exactly as they were.
+
+// ─── Wall ────────────────────────────────────────────────────────────────────
+
+const wallHelpers = makeFamilyTypeHelpers<'wall', WallParams>(
+  'wall',
+  WALL_OVERRIDABLE_KEYS,
+  resolveEffectiveWallParams,
+);
+
+/** Narrows a category-agnostic family type to a wall type (null when not a wall). */
+export const asWallFamilyType = wallHelpers.asFamilyType;
+
+/** The wall-only slice of the loaded catalog, in catalog order. */
+export const listWallTypes = wallHelpers.listTypes;
+
+/** The type-governed param keys an instance currently overrides (badge source). */
+export const getOverriddenParamKeys = wallHelpers.getOverriddenParamKeys;
+
+/**
+ * Builds the `next` + `previous` `WallTypeAssignment` pair an
  * `AssignWallTypeCommand` needs. Resolves the next EFFECTIVE params from the
  * desired type + overrides («type always wins»); clearing the type
  * (`nextTypeId === undefined`) keeps the wall's current params unchanged
@@ -146,251 +291,88 @@ export function getOverriddenParamKeys(
  * Pure: the live type is supplied via `getType` (the store lookup) so this stays
  * React-free and unit-testable.
  */
-export function resolveWallTypeAssignment(
-  wall: {
-    params: WallParams;
-    typeId?: string;
-    typeOverrides?: Partial<WallTypeParams>;
-  },
-  nextTypeId: string | undefined,
-  nextTypeOverrides: Partial<WallTypeParams> | undefined,
-  getType: (id: string) => BimFamilyType | null,
-): { next: WallTypeAssignment; previous: WallTypeAssignment } {
-  const previous: WallTypeAssignment = {
-    typeId: wall.typeId,
-    typeOverrides: wall.typeOverrides,
-    params: wall.params,
-  };
-  const nextType = nextTypeId ? asWallFamilyType(getType(nextTypeId)) : null;
-  const nextParams = resolveEffectiveWallParams(
-    { params: wall.params, typeId: nextTypeId, typeOverrides: nextTypeOverrides },
-    nextType,
-  );
-  return {
-    next: { typeId: nextTypeId, typeOverrides: nextTypeOverrides, params: nextParams },
-    previous,
-  };
-}
+export const resolveWallTypeAssignment = wallHelpers.resolveTypeAssignment;
 
-/**
- * Normalises a `typeOverrides` patch: returns `undefined` when the patch has no
- * own enumerable keys (so the entity field is cleared rather than persisted as an
- * empty object). Keeps `resolveWallTypeAssignment` callers terse.
- */
-export function normaliseOverrides(
-  overrides: Partial<WallTypeParams>,
-): Partial<WallTypeParams> | undefined {
-  return Object.keys(overrides).length === 0 ? undefined : overrides;
-}
+/** Normalises a wall `typeOverrides` patch — `undefined` when empty. */
+export const normaliseOverrides = normaliseTypeOverrides<WallTypeParams>;
 
-// ─── Slab helpers (analogue of the wall helpers above) ───────────────────────
+// ─── Slab ────────────────────────────────────────────────────────────────────
+
+const slabHelpers = makeFamilyTypeHelpers<'slab', SlabParams>(
+  'slab',
+  SLAB_OVERRIDABLE_KEYS,
+  resolveEffectiveSlabParams,
+);
 
 /** Narrows a category-agnostic family type to a slab type (null when not a slab). */
-export function asSlabFamilyType(
-  type: BimFamilyType | null | undefined,
-): BimFamilyType<'slab'> | null {
-  return type && type.category === 'slab'
-    ? (type as BimFamilyType<'slab'>)
-    : null;
-}
+export const asSlabFamilyType = slabHelpers.asFamilyType;
 
 /** The slab-only slice of the loaded catalog, in catalog order. */
-export function listSlabTypes(
-  types: readonly BimFamilyType[],
-): readonly BimFamilyType<'slab'>[] {
-  return types
-    .map(asSlabFamilyType)
-    .filter((t): t is BimFamilyType<'slab'> => t !== null);
-}
+export const listSlabTypes = slabHelpers.listTypes;
 
 /** The type-governed param keys a slab instance currently overrides (badge source). */
-export function getOverriddenSlabParamKeys(
-  typeOverrides: Partial<SlabTypeParams> | undefined,
-): readonly (keyof SlabTypeParams)[] {
-  if (!typeOverrides) return [];
-  return SLAB_OVERRIDABLE_KEYS.filter((k) => typeOverrides[k] !== undefined);
-}
+export const getOverriddenSlabParamKeys = slabHelpers.getOverriddenParamKeys;
 
 /**
- * Builds the `next` + `previous` {@link SlabTypeAssignment} pair an
+ * Builds the `next` + `previous` `SlabTypeAssignment` pair an
  * `AssignSlabTypeCommand` needs. Mirror of {@link resolveWallTypeAssignment}.
  */
-export function resolveSlabTypeAssignment(
-  slab: {
-    params: SlabParams;
-    typeId?: string;
-    typeOverrides?: Partial<SlabTypeParams>;
-  },
-  nextTypeId: string | undefined,
-  nextTypeOverrides: Partial<SlabTypeParams> | undefined,
-  getType: (id: string) => BimFamilyType | null,
-): { next: SlabTypeAssignment; previous: SlabTypeAssignment } {
-  const previous: SlabTypeAssignment = {
-    typeId: slab.typeId,
-    typeOverrides: slab.typeOverrides,
-    params: slab.params,
-  };
-  const nextType = nextTypeId ? asSlabFamilyType(getType(nextTypeId)) : null;
-  const nextParams = resolveEffectiveSlabParams(
-    { params: slab.params, typeId: nextTypeId, typeOverrides: nextTypeOverrides },
-    nextType,
-  );
-  return {
-    next: { typeId: nextTypeId, typeOverrides: nextTypeOverrides, params: nextParams },
-    previous,
-  };
-}
+export const resolveSlabTypeAssignment = slabHelpers.resolveTypeAssignment;
 
 /** Normalises a slab `typeOverrides` patch — `undefined` when empty. */
-export function normaliseSlabOverrides(
-  overrides: Partial<SlabTypeParams>,
-): Partial<SlabTypeParams> | undefined {
-  return Object.keys(overrides).length === 0 ? undefined : overrides;
-}
+export const normaliseSlabOverrides = normaliseTypeOverrides<SlabTypeParams>;
 
-// ─── Roof helpers (analogue of the slab helpers above, ADR-417 §10 #3) ───────
+// ─── Roof (ADR-417 §10 #3) ───────────────────────────────────────────────────
+
+const roofHelpers = makeFamilyTypeHelpers<'roof', RoofParams>(
+  'roof',
+  ROOF_OVERRIDABLE_KEYS,
+  resolveEffectiveRoofParams,
+);
 
 /** Narrows a category-agnostic family type to a roof type (null when not a roof). */
-export function asRoofFamilyType(
-  type: BimFamilyType | null | undefined,
-): BimFamilyType<'roof'> | null {
-  return type && type.category === 'roof'
-    ? (type as BimFamilyType<'roof'>)
-    : null;
-}
+export const asRoofFamilyType = roofHelpers.asFamilyType;
 
 /** The roof-only slice of the loaded catalog, in catalog order. */
-export function listRoofTypes(
-  types: readonly BimFamilyType[],
-): readonly BimFamilyType<'roof'>[] {
-  return types
-    .map(asRoofFamilyType)
-    .filter((t): t is BimFamilyType<'roof'> => t !== null);
-}
+export const listRoofTypes = roofHelpers.listTypes;
 
 /** The type-governed param keys a roof instance currently overrides (badge source). */
-export function getOverriddenRoofParamKeys(
-  typeOverrides: Partial<RoofTypeParams> | undefined,
-): readonly (keyof RoofTypeParams)[] {
-  if (!typeOverrides) return [];
-  return ROOF_OVERRIDABLE_KEYS.filter((k) => typeOverrides[k] !== undefined);
-}
+export const getOverriddenRoofParamKeys = roofHelpers.getOverriddenParamKeys;
 
 /**
- * Builds the `next` + `previous` {@link RoofTypeAssignment} pair an
- * `AssignRoofTypeCommand` needs. Mirror of {@link resolveSlabTypeAssignment}.
+ * Builds the `next` + `previous` `RoofTypeAssignment` pair an
+ * `AssignRoofTypeCommand` needs. Mirror of {@link resolveWallTypeAssignment}.
  */
-export function resolveRoofTypeAssignment(
-  roof: {
-    params: RoofParams;
-    typeId?: string;
-    typeOverrides?: Partial<RoofTypeParams>;
-  },
-  nextTypeId: string | undefined,
-  nextTypeOverrides: Partial<RoofTypeParams> | undefined,
-  getType: (id: string) => BimFamilyType | null,
-): { next: RoofTypeAssignment; previous: RoofTypeAssignment } {
-  const previous: RoofTypeAssignment = {
-    typeId: roof.typeId,
-    typeOverrides: roof.typeOverrides,
-    params: roof.params,
-  };
-  const nextType = nextTypeId ? asRoofFamilyType(getType(nextTypeId)) : null;
-  const nextParams = resolveEffectiveRoofParams(
-    { params: roof.params, typeId: nextTypeId, typeOverrides: nextTypeOverrides },
-    nextType,
-  );
-  return {
-    next: { typeId: nextTypeId, typeOverrides: nextTypeOverrides, params: nextParams },
-    previous,
-  };
-}
+export const resolveRoofTypeAssignment = roofHelpers.resolveTypeAssignment;
 
 /** Normalises a roof `typeOverrides` patch — `undefined` when empty. */
-export function normaliseRoofOverrides(
-  overrides: Partial<RoofTypeParams>,
-): Partial<RoofTypeParams> | undefined {
-  return Object.keys(overrides).length === 0 ? undefined : overrides;
-}
+export const normaliseRoofOverrides = normaliseTypeOverrides<RoofTypeParams>;
 
-// ─── Opening helpers (analogue of the slab helpers above, ADR-421 SLICE C) ───
+// ─── Opening (ADR-421 SLICE C) ───────────────────────────────────────────────
 
-/**
- * Type-governed opening params the per-instance override editor exposes.
- * `kind` is deliberately NOT per-instance overridable — switching the family
- * means switching the Type (Revit). `fireRating` is a type-only spec. SSoT for
- * the override badges.
- */
-export const OPENING_OVERRIDABLE_KEYS: readonly (keyof OpeningTypeParams)[] = [
-  'width',
-  'height',
-  'frameWidth',
-  'material',
-  'glazingPanes',
-] as const;
+const openingHelpers = makeFamilyTypeHelpers<'opening', OpeningParams>(
+  'opening',
+  OPENING_OVERRIDABLE_KEYS,
+  resolveEffectiveOpeningParams,
+);
 
 /** Narrows a category-agnostic family type to an opening type (null otherwise). */
-export function asOpeningFamilyType(
-  type: BimFamilyType | null | undefined,
-): BimFamilyType<'opening'> | null {
-  return type && type.category === 'opening'
-    ? (type as BimFamilyType<'opening'>)
-    : null;
-}
+export const asOpeningFamilyType = openingHelpers.asFamilyType;
 
 /** The opening-only slice of the loaded catalog, in catalog order. */
-export function listOpeningTypes(
-  types: readonly BimFamilyType[],
-): readonly BimFamilyType<'opening'>[] {
-  return types
-    .map(asOpeningFamilyType)
-    .filter((t): t is BimFamilyType<'opening'> => t !== null);
-}
+export const listOpeningTypes = openingHelpers.listTypes;
 
 /** The type-governed param keys an opening instance overrides (badge source). */
-export function getOverriddenOpeningParamKeys(
-  typeOverrides: Partial<OpeningTypeParams> | undefined,
-): readonly (keyof OpeningTypeParams)[] {
-  if (!typeOverrides) return [];
-  return OPENING_OVERRIDABLE_KEYS.filter((k) => typeOverrides[k] !== undefined);
-}
+export const getOverriddenOpeningParamKeys = openingHelpers.getOverriddenParamKeys;
 
 /**
- * Builds the `next` + `previous` {@link OpeningTypeAssignment} pair an
+ * Builds the `next` + `previous` `OpeningTypeAssignment` pair an
  * `AssignOpeningTypeCommand` needs. Mirror of {@link resolveWallTypeAssignment}.
  * Resolves the next EFFECTIVE params from the desired type + overrides («type
  * always wins»); clearing the type keeps the opening's current params unchanged
  * (non-destructive detach). `operationType` is re-derived by the command.
  */
-export function resolveOpeningTypeAssignment(
-  opening: {
-    params: OpeningParams;
-    typeId?: string;
-    typeOverrides?: Partial<OpeningTypeParams>;
-  },
-  nextTypeId: string | undefined,
-  nextTypeOverrides: Partial<OpeningTypeParams> | undefined,
-  getType: (id: string) => BimFamilyType | null,
-): { next: OpeningTypeAssignment; previous: OpeningTypeAssignment } {
-  const previous: OpeningTypeAssignment = {
-    typeId: opening.typeId,
-    typeOverrides: opening.typeOverrides,
-    params: opening.params,
-  };
-  const nextType = nextTypeId ? asOpeningFamilyType(getType(nextTypeId)) : null;
-  const nextParams = resolveEffectiveOpeningParams(
-    { params: opening.params, typeId: nextTypeId, typeOverrides: nextTypeOverrides },
-    nextType,
-  );
-  return {
-    next: { typeId: nextTypeId, typeOverrides: nextTypeOverrides, params: nextParams },
-    previous,
-  };
-}
+export const resolveOpeningTypeAssignment = openingHelpers.resolveTypeAssignment;
 
 /** Normalises an opening `typeOverrides` patch — `undefined` when empty. */
-export function normaliseOpeningOverrides(
-  overrides: Partial<OpeningTypeParams>,
-): Partial<OpeningTypeParams> | undefined {
-  return Object.keys(overrides).length === 0 ? undefined : overrides;
-}
+export const normaliseOpeningOverrides = normaliseTypeOverrides<OpeningTypeParams>;

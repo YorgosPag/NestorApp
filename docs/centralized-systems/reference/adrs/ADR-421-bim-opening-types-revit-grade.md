@@ -373,3 +373,21 @@ integration, ribbon, mark/schedule/BOQ}) είναι **πολλαπλά domains &
   - **ΜΗΔΕΝ writes** σε opening/audit collections (μόνο BOQ rows). **CHECK 6D**: host = 1 EventBus listener, μηδέν
     high-freq subs → **χωρίς ADR-040 staging**. 🔴 ΕΚΚΡΕΜΕΙ: browser-verify (κτίριο με κουφώματα ίδιου τύπου σε ≥2
     ορόφους → Edit Type πλάτος/kind → BOQ κάθε ορόφου ενημερωμένο ΧΩΡΙΣ άνοιγμα non-active ορόφου) + commit (Giorgio· κοινό tree).
+- **2026-07-16** — **SSoT extraction: `useFamilyTypeEditor` + `family-type-properties-parts`**
+  (ADR-584 / N.18 clone ratchet, κοινό με ADR-412 Φ4). Το CHECK 3.28 σήμανε το
+  `RibbonOpeningTypePropertiesWidget` ↔ `RibbonWallTypePropertiesWidget` ως sibling clones (107
+  διπλές γραμμές): **ολόκληρο** το header (label + inline rename input + built-in badge + «Reset to
+  type»), **ολόκληρο** το footer («Edit type…»/«Duplicate & edit» + «Delete») και τα rename callbacks
+  ήταν identical — διέφερε **μόνο** ποιο Edit-Type store ανοίγει. Εξήχθησαν: `useFamilyTypeEditor`
+  (rename draft + Escape revert + clone-then-open flow· δέχεται τον category-agnostic
+  `FamilyTypeEditorController` — κάθε `useXFamilyTypeController` είναι structurally assignable) και τα
+  presentational `FamilyTypePropertiesHeader` / `FamilyTypeParamRow` / `FamilyTypeOverrideBadge` /
+  `FamilyTypeActions`. Το opening widget **231→100** γραμμές· κράτησε μόνο τα δικά του params
+  (width/height/frame/glazing/material/fireRating). Το `ParamRow` του έγινε shared και έχασε τα
+  `overrideLabel`/`overrideTooltip` props (τα διαβάζει μόνο του από i18n) → −2 γραμμές ανά call site.
+  Συμπεριφορά αμετάβλητη. NEW `__tests__/useFamilyTypeEditor.test.ts` — 18 tests (built-in read-only,
+  blank/unchanged/trim rename guards, Enter/Escape, clone-then-open + clone-fails). Επαλήθευση: CHECK
+  3.28 diff καθαρό, full scan 2978→2926 clones (−52), 18/18 GREEN. tsc skip βάσει N.17.
+  ⚠️ Το `RibbonRoofTypePropertiesWidget` **ΔΕΝ** μπήκε — αποκλίνει (δικό του `roofFamilyType.*` i18n
+  namespace, χωρίς Tooltip, `commitRename` συγκρίνει `currentType.name` αντί για το display name με
+  `typeName` εκτός deps → πιθανό bug). Χρειάζεται δική του απόφαση, όχι τυφλό merge.

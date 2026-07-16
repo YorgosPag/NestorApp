@@ -11,15 +11,21 @@
  * Overridden material carries a badge; «Reset to type» clears every override.
  * User types are renamable inline; built-ins are read-only.
  *
- * All mutations route through `useRoofFamilyTypeController` (SSoT). Edit/Delete
- * live in the sibling `RibbonRoofFamilyTypeWidget`. Self-hides for untyped roofs.
+ * All mutations route through `useRoofFamilyTypeController` (SSoT). The shared chrome
+ * (header / rename / badges) comes from `family-type-properties-parts` + the
+ * `useFamilyTypeEditor` hook — this widget owns ONLY the roof params.
+ *
+ * ⚠️ NO `FamilyTypeActions` here, unlike the wall sibling: Edit/Delete for roofs live
+ * in `RibbonRoofFamilyTypeWidget` (the selector). Adding them would double the buttons.
+ * `openEditRoofType` is still handed to the editor so «clone-to-edit» stays wired if a
+ * future footer needs it.
  *
  * @see ../hooks/useRoofFamilyTypeController.ts
  * @see ./RibbonWallTypePropertiesWidget.tsx — the wall sibling
  * @see ./RibbonRoofFamilyTypeWidget.tsx — sibling selector (edit/delete)
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React from 'react';
 import {
   Select,
   SelectContent,
@@ -30,7 +36,13 @@ import {
 import { SELECT_CLEAR_VALUE } from '@/config/domain-constants';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useRoofFamilyTypeController } from '../hooks/useRoofFamilyTypeController';
-import { isBuiltInType, resolveTypeDisplayName } from '../../../bim/family-types/family-type-ui-helpers';
+import { useFamilyTypeEditor } from '../hooks/useFamilyTypeEditor';
+import { openEditRoofType } from '../../../bim/family-types/edit-roof-type-store';
+import {
+  FamilyTypeOverrideBadge,
+  FamilyTypePropertiesHeader,
+  FamilyTypeThicknessRow,
+} from './family-type-properties-parts';
 
 /** Roof-level material value → i18n key suffix (mirror the Edit dialog list). */
 const MATERIAL_OPTIONS: readonly { value: string; key: string }[] = [
@@ -42,77 +54,20 @@ const MATERIAL_OPTIONS: readonly { value: string; key: string }[] = [
 export function RibbonRoofTypePropertiesWidget(): React.JSX.Element | null {
   const { t } = useTranslation('dxf-viewer-shell');
   const ctrl = useRoofFamilyTypeController();
-  const { roof, currentType, overriddenKeys, canWrite } = ctrl;
-
-  const typeName = currentType ? resolveTypeDisplayName(currentType, t) : '';
-  const [draft, setDraft] = useState(typeName);
-  // Re-sync the rename draft when the selected type changes (not mid-edit).
-  useEffect(() => setDraft(typeName), [typeName]);
-
-  const commitRename = useCallback(() => {
-    if (!currentType || isBuiltInType(currentType)) return;
-    const next = draft.trim();
-    if (!next || next === currentType.name) return;
-    void ctrl.renameType(currentType.id, next);
-  }, [ctrl, currentType, draft]);
-
-  const onNameKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement>) => {
-      switch (e.key) {
-        case 'Enter':
-          e.currentTarget.blur();
-          break;
-        case 'Escape':
-          setDraft(typeName);
-          e.currentTarget.blur();
-          break;
-        default:
-          break;
-      }
-    },
-    [typeName],
-  );
+  const { roof, currentType, overriddenKeys } = ctrl;
+  const editor = useFamilyTypeEditor(ctrl, openEditRoofType);
 
   if (!roof || !currentType) return null;
 
-  const editable = !isBuiltInType(currentType) && canWrite;
   const materialOverridden = overriddenKeys.includes('material');
 
   return (
     <span className="dxf-ribbon-combobox-row flex-col items-start gap-1">
-      <span className="flex items-center gap-1">
-        <span className="dxf-ribbon-combobox-label">
-          {t('ribbon.commands.roofFamilyType.properties')}
-        </span>
-        {editable ? (
-          <input
-            className="text-xs px-1 py-0.5 rounded border border-black/20 bg-transparent"
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onBlur={commitRename}
-            onKeyDown={onNameKeyDown}
-            aria-label={t('ribbon.commands.roofFamilyType.rename')}
-          />
-        ) : (
-          <span className="dxf-ribbon-wall-length-value">
-            {typeName} · {t('ribbon.commands.roofFamilyType.builtinBadge')}
-          </span>
-        )}
-        {overriddenKeys.length > 0 && (
-          <button
-            type="button"
-            className="text-xs px-1.5 py-0.5 rounded border border-black/20 hover:bg-black/5 whitespace-nowrap"
-            aria-label={t('ribbon.commands.roofFamilyType.resetToTypeTooltip')}
-            onClick={ctrl.resetOverrides}
-          >
-            {t('ribbon.commands.roofFamilyType.resetToType')}
-          </button>
-        )}
-      </span>
+      <FamilyTypePropertiesHeader ctrl={ctrl} editor={editor} />
 
       <span className="flex items-center gap-1">
         <span className="dxf-ribbon-combobox-label">
-          {t('ribbon.commands.roofFamilyType.paramMaterial')}
+          {t('ribbon.commands.bimFamilyType.paramMaterial')}
         </span>
         <Select
           value={roof.params.material ?? SELECT_CLEAR_VALUE}
@@ -120,12 +75,12 @@ export function RibbonRoofTypePropertiesWidget(): React.JSX.Element | null {
             ctrl.setOverride('material', v === SELECT_CLEAR_VALUE ? undefined : v)
           }
         >
-          <SelectTrigger size="sm" aria-label={t('ribbon.commands.roofFamilyType.paramMaterial')}>
-            <SelectValue placeholder={t('ribbon.commands.roofFamilyType.materialNone')} />
+          <SelectTrigger size="sm" aria-label={t('ribbon.commands.bimFamilyType.paramMaterial')}>
+            <SelectValue placeholder={t('ribbon.commands.bimFamilyType.materialNone')} />
           </SelectTrigger>
           <SelectContent className="w-auto min-w-[9rem]">
             <SelectItem value={SELECT_CLEAR_VALUE}>
-              {t('ribbon.commands.roofFamilyType.materialNone')}
+              {t('ribbon.commands.bimFamilyType.materialNone')}
             </SelectItem>
             {MATERIAL_OPTIONS.map((m) => (
               <SelectItem key={m.value} value={m.value} className="whitespace-nowrap">
@@ -135,25 +90,11 @@ export function RibbonRoofTypePropertiesWidget(): React.JSX.Element | null {
           </SelectContent>
         </Select>
         {materialOverridden && (
-          <button
-            type="button"
-            className="text-xs px-1 py-0.5 rounded bg-accent text-accent-foreground border border-border whitespace-nowrap"
-            aria-label={t('ribbon.commands.roofFamilyType.overrideTooltip')}
-            onClick={() => ctrl.clearOverride('material')}
-          >
-            {t('ribbon.commands.roofFamilyType.override')} ✕
-          </button>
+          <FamilyTypeOverrideBadge onClear={() => ctrl.clearOverride('material')} />
         )}
       </span>
 
-      <span className="flex items-center gap-2 text-xs">
-        <span className="dxf-ribbon-combobox-label">
-          {t('ribbon.commands.roofFamilyType.paramThickness')}
-        </span>
-        <span className="dxf-ribbon-wall-length-value">
-          {Math.round(roof.params.thickness)} {t('ribbon.commands.roofFamilyType.thicknessUnit')}
-        </span>
-      </span>
+      <FamilyTypeThicknessRow thicknessMm={roof.params.thickness} />
     </span>
   );
 }

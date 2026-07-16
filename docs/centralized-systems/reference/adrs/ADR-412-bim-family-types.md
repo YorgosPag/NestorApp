@@ -277,6 +277,49 @@ New `.ssot-registry.json` Tier 3 module `bim-family-types`:
 
 ## 9. Changelog
 
+- **v0.15 (2026-07-16)** — **`family-type-ui-helpers.ts`: μία generic factory αντί για 4 αντίγραφα**
+  (ADR-584 / N.18, Plan Mode μετά από N.8 gate). Η πεντάδα helpers των §3.3/§3.4 ήταν γραμμένη **4
+  φορές** (wall/slab/roof/opening). Πλέον τα σώματα ζουν **μία φορά** στη module-private
+  `makeFamilyTypeHelpers<C, P>(category, overridableKeys, resolveEffective)` και κάθε κατηγορία είναι
+  ~5 γρ. config + thin named re-exports — **ίδιο σχήμα με το αδελφό `resolve-effective-params.ts`**
+  (generic core + named wrappers), που είναι η καθιερωμένη πρακτική του φακέλου.
+  - **Public API αμετάβλητο**: και οι 20 εξαγωγές κρατούν τις υπογραφές τους → **οι 14 καταναλωτές
+    (widgets / dialogs / controllers / stores) δεν αγγίχτηκαν**. Μηδέν cast — τα 4 `*TypeAssignment`
+    είναι δομικά ταυτόσημα, άρα structural assignability προς τα named interfaces των commands.
+  - **Νέα εγγύηση**: το `C` παράγει το type-param payload μέσω `BimTypeParamsByCategory[C]`, οπότε ο
+    compiler απορρίπτει λάθος ζευγάρωμα category/keys/resolver. **Νέα κατηγορία** (`stair`: έχει ήδη
+    `StairTypeParams` χωρίς helpers) = ένα config block, όχι 5ο αντίγραφο ~80 γρ.
+  - **Κάλυψη**: slab/roof/opening ήταν **ατέστωτα** (μόνο wall είχε δίχτυ). ΝΕΟ
+    `__tests__/family-type-helpers-parity.test.ts` (26 tests) πινώνει το per-category wiring· τα 10 wall
+    tests **αμετάβλητα**. Σύνολο 205/205. Λεπτομέρειες + mutation-verify: ADR-584 changelog 2026-07-16.
+
+- **v0.14 (2026-07-16)** — **SSoT extraction: `useFamilyTypeEditor` + `family-type-properties-parts`**
+  (ADR-584 / N.18 clone ratchet, κοινό με ADR-421 SLICE C). Το CHECK 3.28 σήμανε το
+  `RibbonWallTypePropertiesWidget` ↔ `RibbonOpeningTypePropertiesWidget` ως sibling clones (107 διπλές
+  γραμμές): **ολόκληρο** το header (label + inline rename input + built-in badge + «Reset to type»),
+  **ολόκληρο** το footer («Edit type…»/«Duplicate & edit» + «Delete») και τα rename callbacks ήταν
+  identical — διέφερε **μόνο** ποιο Edit-Type store ανοίγει (`openEditWallType` vs
+  `openEditOpeningType`). Εξήχθησαν:
+  - `ui/ribbon/hooks/useFamilyTypeEditor.ts` — rename draft + re-sync στην αλλαγή τύπου + commit
+    guards (built-in read-only / trim / unchanged) + Enter-blur/Escape-revert + το clone-then-open
+    flow του «Edit type…». Δέχεται τον category-agnostic `FamilyTypeEditorController` (currentType /
+    overriddenKeys / canWrite / resetOverrides / duplicateCurrent / renameType / deleteType) — **κάθε**
+    `useXFamilyTypeController` είναι structurally assignable χωρίς αλλαγή· τα category-specific μέλη
+    (`wall`/`opening`, `setOverride`, …) μένουν στο δικό τους widget.
+  - `ui/ribbon/components/family-type-properties-parts.tsx` — `FamilyTypePropertiesHeader`,
+    `FamilyTypeParamRow`, `FamilyTypeOverrideBadge`, `FamilyTypeActions` (pure render).
+
+  Wall widget **240→129** γραμμές — κράτησε μόνο τα δικά του (category Select, thickness/material
+  read-only, U-value). Συμπεριφορά αμετάβλητη· το `editable` σφίχτηκε σε `currentType !== null &&
+  !isBuiltIn && canWrite` (τα widgets self-hide πριν, αλλά το default ήταν λάθος εκτός context).
+  NEW `hooks/__tests__/useFamilyTypeEditor.test.ts` — 18 tests. Επαλήθευση: CHECK 3.28 diff καθαρό,
+  full scan 2978→2926 clones (−52), 18/18 GREEN. tsc skip βάσει N.17 (Giorgio / CI CHECK 3.29).
+  ⚠️ **Εκκρεμεί απόφαση:** το `RibbonRoofTypePropertiesWidget` (ADR-417 §10 #3) **δεν** μπήκε στο SSoT —
+  αποκλίνει σε τρία σημεία (δικό του `roofFamilyType.*` i18n namespace αντί για το κοινό
+  `bimFamilyType.*`· χωρίς Tooltip + άλλο input styling· `commitRename` συγκρίνει `currentType.name`
+  αντί για το **display** name, με το `typeName` εκτός deps → auto/renamed τύπος δεν συγκρίνεται σωστά).
+  Επίσης δείχνει το built-in badge **πάντα**, ακόμα και για user types. Πιθανά bugs, όχι clone —
+  χρειάζεται δική του απόφαση, όχι τυφλό merge.
 - **v0.13 (2026-06-23)** — **Edit-time auto-type re-flow (fix «το πάχος τοίχου δεν σώζεται»).** **Root cause:** ένας
   default τοίχος είναι auto-linked σε read-only built-in type· ο `UpdateWallParamsCommand.applyPatch` ενημέρωνε
   `params/geometry/validation` αλλά **όχι** το `typeId`, οπότε στο reload ο `docToEntity` ξανα-resolve-άρει params από
