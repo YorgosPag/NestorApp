@@ -12,10 +12,13 @@
  * consumed directly by `connectorWorldPosition` (which translates without
  * re-scaling).
  *
+ * The footprint builder, world transform, geometry orchestration, and the
+ * validation skeleton are the shared `rectangular-body-geometry.ts` SSoT
+ * (ADR-584 dedup) — this file supplies only the radiator's own connector layout.
+ *
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md
  */
 
-import { nowTimestamp } from '@/lib/firestore-now';
 import type { BimValidation, Point3D } from '../types/bim-base';
 import type {
   MepRadiatorGeometry,
@@ -27,11 +30,11 @@ import {
   buildRadiatorSupplyConnector,
   buildRadiatorReturnConnector,
 } from '../types/mep-connector-types';
-import { polygonArea, polygonBbox } from '../geometry/shared/polygon-utils';
 import { mmToSceneUnits } from '../../utils/scene-units';
-
-const MM_TO_M = 1 / 1000;
-const DEG_TO_RAD = Math.PI / 180;
+import {
+  computeRectangularBodyGeometry,
+  validateRectangularBodyDimensions,
+} from '../geometry/shared/rectangular-body-geometry';
 
 /**
  * Compute `MepRadiatorGeometry` from `MepRadiatorParams`. Pure SSoT.
@@ -40,52 +43,7 @@ const DEG_TO_RAD = Math.PI / 180;
 export function computeMepRadiatorGeometry(
   params: MepRadiatorParams,
 ): MepRadiatorGeometry {
-  const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
-  const local = buildRectangularLocal(params.width, params.length, s);
-  const transformed = transformFootprint(local, params);
-
-  const bbox = polygonBbox(transformed);
-  const areaCanvas2 = polygonArea(transformed);
-  const canvasToM = (1 / s) * MM_TO_M;
-  const areaM2 = areaCanvas2 * canvasToM * canvasToM;
-
-  return {
-    footprint: { vertices: transformed },
-    bbox,
-    area: areaM2,
-    height: Math.max(0, params.bodyHeightMm),
-  };
-}
-
-// ─── Local footprint builder ───────────────────────────────────────────────────
-
-function buildRectangularLocal(width: number, length: number, s: number): Point3D[] {
-  const hw = (width * s) / 2;
-  const hl = (length * s) / 2;
-  return [
-    { x: -hw, y: -hl, z: 0 },
-    { x:  hw, y: -hl, z: 0 },
-    { x:  hw, y:  hl, z: 0 },
-    { x: -hw, y:  hl, z: 0 },
-  ];
-}
-
-/**
- * Translate local-frame vertices to world coords (anchor = centre on `position`)
- * and rotate around `position`.
- */
-function transformFootprint(
-  local: readonly Point3D[],
-  params: MepRadiatorParams,
-): Point3D[] {
-  const { position } = params;
-  const cos = Math.cos(params.rotation * DEG_TO_RAD);
-  const sin = Math.sin(params.rotation * DEG_TO_RAD);
-  return local.map((v) => {
-    const rx = v.x * cos - v.y * sin;
-    const ry = v.x * sin + v.y * cos;
-    return { x: position.x + rx, y: position.y + ry, z: 0 };
-  });
+  return computeRectangularBodyGeometry(params);
 }
 
 // ─── Connector layout (pure SSoT) ──────────────────────────────────────────────
@@ -130,30 +88,9 @@ export interface MepRadiatorValidationResult {
 export function validateMepRadiatorParams(
   params: MepRadiatorParams,
 ): MepRadiatorValidationResult {
-  const hardErrors: string[] = [];
-  const codeViolations: string[] = [];
-
-  if (params.width <= 0) {
-    hardErrors.push('mepRadiator.validation.hardErrors.nonPositiveWidth');
-  } else if (params.width < MIN_RADIATOR_DIMENSION_MM) {
-    hardErrors.push('mepRadiator.validation.hardErrors.dimensionTooSmall');
-  }
-
-  if (params.length <= 0) {
-    hardErrors.push('mepRadiator.validation.hardErrors.nonPositiveLength');
-  } else if (params.length < MIN_RADIATOR_DIMENSION_MM) {
-    hardErrors.push('mepRadiator.validation.hardErrors.dimensionTooSmall');
-  }
-
-  if (params.bodyHeightMm <= 0) {
-    hardErrors.push('mepRadiator.validation.hardErrors.nonPositiveBodyHeight');
-  }
-
-  const bimValidation: BimValidation = {
-    hasCodeViolations: codeViolations.length > 0,
-    violationKeys: [...codeViolations],
-    lastValidatedAt: nowTimestamp(),
-  };
-
-  return { hardErrors, codeViolations, bimValidation };
+  return validateRectangularBodyDimensions(
+    { width: params.width, length: params.length, bodyHeightMm: params.bodyHeightMm },
+    'mepRadiator',
+    MIN_RADIATOR_DIMENSION_MM,
+  );
 }

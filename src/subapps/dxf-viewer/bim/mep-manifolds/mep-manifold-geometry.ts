@@ -12,12 +12,15 @@
  * panel / fixture geometry. Connector `localPosition` is therefore consumed
  * directly by `connectorWorldPosition` (which translates without re-scaling).
  *
+ * The footprint builder, world transform, geometry orchestration, and the
+ * validation skeleton are the shared `rectangular-body-geometry.ts` SSoT
+ * (ADR-584 dedup) — this file supplies only the manifold's own connector
+ * layout + the extra outlet-count hard error.
+ *
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md
  */
 
-import { nowTimestamp } from '@/lib/firestore-now';
-import type { Point3D } from '../types/bim-base';
-import type { BimValidation } from '../types/bim-base';
+import type { BimValidation, Point3D } from '../types/bim-base';
 import type {
   MepManifoldGeometry,
   MepManifoldParams,
@@ -34,11 +37,11 @@ import {
   buildManifoldBranchInletConnector,
 } from '../types/mep-connector-types';
 import { isDrainageCollectorKind } from '../types/mep-manifold-types';
-import { polygonArea, polygonBbox } from '../geometry/shared/polygon-utils';
 import { mmToSceneUnits } from '../../utils/scene-units';
-
-const MM_TO_M = 1 / 1000;
-const DEG_TO_RAD = Math.PI / 180;
+import {
+  computeRectangularBodyGeometry,
+  validateRectangularBodyDimensions,
+} from '../geometry/shared/rectangular-body-geometry';
 
 /**
  * Compute `MepManifoldGeometry` from `MepManifoldParams`. Pure SSoT.
@@ -47,52 +50,7 @@ const DEG_TO_RAD = Math.PI / 180;
 export function computeMepManifoldGeometry(
   params: MepManifoldParams,
 ): MepManifoldGeometry {
-  const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
-  const local = buildRectangularLocal(params.width, params.length, s);
-  const transformed = transformFootprint(local, params);
-
-  const bbox = polygonBbox(transformed);
-  const areaCanvas2 = polygonArea(transformed);
-  const canvasToM = (1 / s) * MM_TO_M;
-  const areaM2 = areaCanvas2 * canvasToM * canvasToM;
-
-  return {
-    footprint: { vertices: transformed },
-    bbox,
-    area: areaM2,
-    height: Math.max(0, params.bodyHeightMm),
-  };
-}
-
-// ─── Local footprint builder ───────────────────────────────────────────────────
-
-function buildRectangularLocal(width: number, length: number, s: number): Point3D[] {
-  const hw = (width * s) / 2;
-  const hl = (length * s) / 2;
-  return [
-    { x: -hw, y: -hl, z: 0 },
-    { x:  hw, y: -hl, z: 0 },
-    { x:  hw, y:  hl, z: 0 },
-    { x: -hw, y:  hl, z: 0 },
-  ];
-}
-
-/**
- * Translate local-frame vertices to world coords (anchor = centre on
- * `position`) and rotate around `position`.
- */
-function transformFootprint(
-  local: readonly Point3D[],
-  params: MepManifoldParams,
-): Point3D[] {
-  const { position } = params;
-  const cos = Math.cos(params.rotation * DEG_TO_RAD);
-  const sin = Math.sin(params.rotation * DEG_TO_RAD);
-  return local.map((v) => {
-    const rx = v.x * cos - v.y * sin;
-    const ry = v.x * sin + v.y * cos;
-    return { x: position.x + rx, y: position.y + ry, z: 0 };
-  });
+  return computeRectangularBodyGeometry(params);
 }
 
 // ─── Connector layout (pure SSoT) ──────────────────────────────────────────────
@@ -180,34 +138,15 @@ export interface MepManifoldValidationResult {
 export function validateMepManifoldParams(
   params: MepManifoldParams,
 ): MepManifoldValidationResult {
-  const hardErrors: string[] = [];
-  const codeViolations: string[] = [];
-
-  if (params.width <= 0) {
-    hardErrors.push('mepManifold.validation.hardErrors.nonPositiveWidth');
-  } else if (params.width < MIN_MANIFOLD_DIMENSION_MM) {
-    hardErrors.push('mepManifold.validation.hardErrors.dimensionTooSmall');
-  }
-
-  if (params.length <= 0) {
-    hardErrors.push('mepManifold.validation.hardErrors.nonPositiveLength');
-  } else if (params.length < MIN_MANIFOLD_DIMENSION_MM) {
-    hardErrors.push('mepManifold.validation.hardErrors.dimensionTooSmall');
-  }
-
-  if (params.bodyHeightMm <= 0) {
-    hardErrors.push('mepManifold.validation.hardErrors.nonPositiveBodyHeight');
-  }
+  const { hardErrors, codeViolations, bimValidation } = validateRectangularBodyDimensions(
+    { width: params.width, length: params.length, bodyHeightMm: params.bodyHeightMm },
+    'mepManifold',
+    MIN_MANIFOLD_DIMENSION_MM,
+  );
 
   if (clampOutletCount(params.outletCount) < MIN_MANIFOLD_OUTLET_COUNT) {
     hardErrors.push('mepManifold.validation.hardErrors.noOutlets');
   }
-
-  const bimValidation: BimValidation = {
-    hasCodeViolations: codeViolations.length > 0,
-    violationKeys: [...codeViolations],
-    lastValidatedAt: nowTimestamp(),
-  };
 
   return { hardErrors, codeViolations, bimValidation };
 }

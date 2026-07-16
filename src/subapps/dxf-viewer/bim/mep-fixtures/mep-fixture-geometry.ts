@@ -10,20 +10,26 @@
  * space as `params.position` (canvas units from the user click) — identical to
  * `computeColumnGeometry`.
  *
+ * The rectangular-branch local footprint, world transform, bbox/area/height tail,
+ * and the width/bodyHeight validation skeleton are the shared
+ * `rectangular-body-geometry.ts` SSoT (ADR-584 dedup) — this file supplies only
+ * the fixture's genuinely distinct circular-footprint branch.
+ *
  * @see docs/centralized-systems/reference/adrs/ADR-406-point-based-mep-fixture.md
  */
 
-import { nowTimestamp } from '@/lib/firestore-now';
 import type { Point3D } from '../types/bim-base';
 import type { BimValidation } from '../types/bim-base';
 import type { MepFixtureGeometry, MepFixtureParams } from '../types/mep-fixture-types';
 import { MIN_FIXTURE_DIMENSION_MM } from '../types/mep-fixture-types';
-import { polygonArea, polygonBbox } from '../geometry/shared/polygon-utils';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
-
-const MM_TO_M = 1 / 1000;
-const DEG_TO_RAD = Math.PI / 180;
+import {
+  buildRectangularLocalFootprint,
+  computeFootprintBodyGeometry,
+  transformFootprintToWorld,
+  validateRectangularBodyDimensions,
+} from '../geometry/shared/rectangular-body-geometry';
 
 /** Segments used to tessellate a circular fixture footprint. */
 export const CIRCULAR_FIXTURE_SEGMENTS = 32;
@@ -36,34 +42,12 @@ export function computeMepFixtureGeometry(params: MepFixtureParams): MepFixtureG
   const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
   const local = params.shape === 'circular'
     ? buildCircularLocal(params.width, s)
-    : buildRectangularLocal(params.width, params.length, s);
-  const transformed = transformFootprint(local, params, s);
-
-  const bbox = polygonBbox(transformed);
-  const areaCanvas2 = polygonArea(transformed);
-  const canvasToM = (1 / s) * MM_TO_M;
-  const areaM2 = areaCanvas2 * canvasToM * canvasToM;
-
-  return {
-    footprint: { vertices: transformed },
-    bbox,
-    area: areaM2,
-    height: Math.max(0, params.bodyHeightMm),
-  };
+    : buildRectangularLocalFootprint(params.width, params.length, s);
+  const transformed = transformFootprint(local, params);
+  return computeFootprintBodyGeometry(transformed, params.bodyHeightMm, s);
 }
 
-// ─── Local footprint builders ───────────────────────────────────────────────
-
-function buildRectangularLocal(width: number, length: number, s: number): Point3D[] {
-  const hw = (width * s) / 2;
-  const hl = (length * s) / 2;
-  return [
-    { x: -hw, y: -hl, z: 0 },
-    { x:  hw, y: -hl, z: 0 },
-    { x:  hw, y:  hl, z: 0 },
-    { x: -hw, y:  hl, z: 0 },
-  ];
-}
+// ─── Local footprint builder (circular — the fixture's genuine difference) ──
 
 function buildCircularLocal(diameter: number, s: number): Point3D[] {
   const r = (diameter * s) / 2;
@@ -79,24 +63,18 @@ function buildCircularLocal(diameter: number, s: number): Point3D[] {
 /**
  * Translate local-frame vertices to world coords (anchor = centre on
  * `position`) and rotate around `position`. Circular skips rotation (rotation
- * is meaningless for a circle).
+ * is meaningless for a circle) — the rectangular branch delegates to the
+ * shared `transformFootprintToWorld`.
  */
 function transformFootprint(
   local: readonly Point3D[],
   params: MepFixtureParams,
-  _s: number,
 ): Point3D[] {
   const { position } = params;
   if (params.shape === 'circular') {
     return local.map((v) => translatePoint(position, v));
   }
-  const cos = Math.cos(params.rotation * DEG_TO_RAD);
-  const sin = Math.sin(params.rotation * DEG_TO_RAD);
-  return local.map((v) => {
-    const rx = v.x * cos - v.y * sin;
-    const ry = v.x * sin + v.y * cos;
-    return translatePoint(position, { x: rx, y: ry });
-  });
+  return transformFootprintToWorld(local, position, params.rotation);
 }
 
 // ─── Validation ───────────────────────────────────────────────────────────────
@@ -115,34 +93,16 @@ export interface MepFixtureValidationResult {
  * Validate `MepFixtureParams`. Operates purely on params — geometry re-derivable.
  * Hard errors: non-positive width / length (rectangular) / body height, or a
  * footprint dimension below `MIN_FIXTURE_DIMENSION_MM` (degenerate placement).
+ * Length is only checked for the rectangular shape — a circle has no `length`.
  */
 export function validateMepFixtureParams(params: MepFixtureParams): MepFixtureValidationResult {
-  const hardErrors: string[] = [];
-  const codeViolations: string[] = [];
-
-  if (params.width <= 0) {
-    hardErrors.push('mepFixture.validation.hardErrors.nonPositiveWidth');
-  } else if (params.width < MIN_FIXTURE_DIMENSION_MM) {
-    hardErrors.push('mepFixture.validation.hardErrors.dimensionTooSmall');
-  }
-
-  if (params.shape === 'rectangular') {
-    if (params.length <= 0) {
-      hardErrors.push('mepFixture.validation.hardErrors.nonPositiveLength');
-    } else if (params.length < MIN_FIXTURE_DIMENSION_MM) {
-      hardErrors.push('mepFixture.validation.hardErrors.dimensionTooSmall');
-    }
-  }
-
-  if (params.bodyHeightMm <= 0) {
-    hardErrors.push('mepFixture.validation.hardErrors.nonPositiveBodyHeight');
-  }
-
-  const bimValidation: BimValidation = {
-    hasCodeViolations: codeViolations.length > 0,
-    violationKeys: [...codeViolations],
-    lastValidatedAt: nowTimestamp(),
-  };
-
-  return { hardErrors, codeViolations, bimValidation };
+  return validateRectangularBodyDimensions(
+    {
+      width: params.width,
+      length: params.shape === 'rectangular' ? params.length : null,
+      bodyHeightMm: params.bodyHeightMm,
+    },
+    'mepFixture',
+    MIN_FIXTURE_DIMENSION_MM,
+  );
 }
