@@ -3,7 +3,14 @@
 **Status**: Phase 1+2+3 OPERATIONAL (WhatsApp + Messenger + Instagram all live)
 **Date**: 2026-02-11
 **Author**: Claude Code (Anthropic AI) + Γιώργος Παγώνης
-**Extends**: ADR-029 (Omnichannel Conversation Model), ADR-031 (Safe Document ID Generation)
+**Extends**: ADR-031 (Safe Document ID Generation)
+**Owns**: το omnichannel conversation model + το channel-agnostic CRM write path (`src/server/comms/crm/`)
+
+> ⚠️ Ιστορικά, ο κώδικας του comms αναφερόταν σε «ADR-029 — Omnichannel Conversation Model».
+> **Δεν υπάρχει τέτοιο ADR**: ο αριθμός 029 είναι ήδη πιασμένος δύο φορές (Canvas V2 Migration,
+> Global Search System v1). Το conversation model τεκμηριώνεται εδώ. Οι λανθασμένες αναφορές
+> αφαιρέθηκαν από τα `crm-adapter.ts` (2026-07-16)· όσες απομένουν σε άλλα comms αρχεία
+> καθαρίζονται on-touch (Boy Scout).
 
 ---
 
@@ -76,6 +83,32 @@ AI Pipeline (via after())
   ↓
 Operator Inbox (Unified UI)
 ```
+
+### CRM Write Path — SSoT (2026-07-16)
+
+Μέχρι τις 2026-07-16 κάθε Meta κανάλι είχε **δικό του πλήρες αντίγραφο** του CRM write
+path (`crm-adapter.ts` × 3, 923 γραμμές συνολικά, ~284 γραμμές κυριολεκτικά διπλότυπες).
+Πλέον το channel-agnostic κομμάτι ζει **μία φορά**:
+
+```
+webhooks/{whatsapp,messenger,instagram}/crm-adapter.ts   ← per-channel: ΜΟΝΟ payload parsing + text extraction
+  ↓ storeChannelMessage({ channel, externalUserId, providerMessageId, senderName, text, direction })
+server/comms/crm/channel-crm-store.ts                    ← SSoT: idempotency, upserts, Firestore writes
+  ├─ channel-bindings.ts    → channel ⇒ provider + platform (registry)
+  └─ attachment-labels.ts   → κοινά media placeholders ([Image]/[Audio]/[Video]/[File])
+```
+
+**Γιατί το binding registry**: `channel`, `provider` και `platform` είναι τρία παράλληλα
+enums που πρέπει πάντα να συμφωνούν. Όσο κάθε adapter τα δήλωνε χειροκίνητα, τίποτα δεν
+εμπόδιζε ένα Instagram μήνυμα να γραφτεί με `provider: messenger` — και το Firestore θα το
+αποθήκευε αδιαμαρτύρητα. Τώρα ο caller δίνει **μόνο** `channel`· τα υπόλοιπα παράγονται.
+Νέο κανάλι = μία εγγραφή στο `CRM_CHANNEL_BINDINGS`.
+
+**Εκτός SSoT — Telegram**: το `webhooks/telegram/crm/store.ts` παραμένει ξεχωριστό. Χρησιμοποιεί
+άλλο Firestore access layer (lazy helpers + `safeDbOperation`) και μοντελοποιεί attachments/
+`username`/`isVoiceTranscription` που ο shared store δεν καλύπτει ακόμη. Έχει επίσης δύο γνωστές
+αποκλίσεις (non-atomic `messageCount` increment· `senderId` = raw userId αντί για identityId).
+Καταγεγραμμένο στο `.claude-rules/pending-ratchet-work.md`.
 
 ### Types Already Declared
 
@@ -498,3 +531,4 @@ function verifyWebhookSignature(payload: string, signature: string, appSecret: s
 | 2026-02-11 | **Instagram Quick Replies**: `sendInstagramQuickReplies()` added. Instagram now supports suggestions + feedback (👍/👎) — same format as Messenger. Handler updated with quick_reply callback processing (sug_*, fb_*) | Claude + Γιώργος |
 | 2026-02-11 | **Negative Feedback Categories on ALL Meta channels**: After 👎 tap, users see 4 category buttons (❌ Λάθος απάντηση, 📊 Λάθος δεδομένα, ❓ Δεν κατάλαβε, 🐢 Αργό). `fbc_` callback prefix. Records `negativeCategory` in Firestore `ai_agent_feedback`. Parity with Telegram (ADR-173). WhatsApp: 2 button messages (max 3/msg). Messenger + Instagram: 4 Quick Replies in 1 message | Claude + Γιώργος |
 | 2026-02-11 | **Instagram: Quick Replies DON'T WORK** — API silently ignores `quick_replies` field (buttons never render). Replaced with **text-based feedback**: orchestrator sends "Απάντησε 👍 ή 👎" prompt, handler detects emoji + numbered responses via `getLatestFeedbackForChannel()` (Firestore query by channelSenderId, 30-min window). Removed `sendInstagramQuickReplies()` + `InstagramQuickReplyButton` type. Added composite Firestore index on `(channelSenderId, createdAt)` for `ai_agent_feedback` | Claude + Γιώργος |
+| 2026-07-16 | **CRM write path κεντρικοποιήθηκε (CHECK 3.28 / ADR-584)**: νέο SSoT `src/server/comms/crm/` — `channel-crm-store.ts` (idempotency + conversation/identity upsert + Firestore writes), `channel-bindings.ts` (channel ⇒ provider + platform registry), `attachment-labels.ts` (κοινά media placeholders). Τα 3 `crm-adapter.ts` έγιναν thin: **923 → 321 γραμμές**, κρατούν μόνο payload parsing + text extraction. Public exports **αμετάβλητα** → μηδέν αλλαγές στους handlers. jscpd clones **3174 → 3161**. Νέα tests: 13 (`channel-bindings` + `attachment-labels`). Καθαρίστηκε stale `@enterprise ADR-029` reference (το 029 είναι canvas-v2 / global-search — το omnichannel model ζει σε αυτό το ADR). Telegram store ΕΚΤΟΣ scope → `.claude-rules/pending-ratchet-work.md` | Claude + Γιώργος |
