@@ -8,19 +8,27 @@
  * δέχεται data URL· ίδιο idiom με `decodeStamp`/`capture-2d`) και υπολογίζει τα **world-space
  * placements** (rect κορυφές). Ο sync emitter μετά τα συνθέτει inline (σωστό z-order).
  *
- * Fidelity/SSoT reuse (μηδέν clone, N.12/N.18) — ΙΔΙΕΣ γεννήτριες/tint/tile-grid με την οθόνη:
- *   • `buildImageTilePlacements` — tile-grid + PIP culling (ADR-643, `image-fill-export.ts`).
+ * **ADR-667 Φ2 — το «πλακάκι» πέθανε.** Μια γραμμοσκίαση με γέμισμα «Εικόνα»/«Διαδικαστικά» δεν
+ * παράγει πλέον **N raster tiles** (που πάνω από cap υποβαθμίζονταν **σιωπηλά** σε συμπαγές γκρι),
+ * αλλά **ΕΝΑ κελί** ({@link ResolvedPatternCell}) που ο emitter το εκπέμπει ως **native PDF Tiling
+ * Pattern**. Το κόστος γίνεται **σταθερό ως προς το εμβαδόν** ⇒ ο `PDF_TILE_CAP` δεν έχει πια λόγο
+ * ύπαρξης. Οι `ImageEntity` («γυμνές» εικόνες) μένουν στο μονοπάτι placement — δεν είναι μοτίβα.
+ *
+ * Fidelity/SSoT reuse (μηδέν clone, N.12/N.18) — ΙΔΙΕΣ γεννήτριες/tint/anchor με την οθόνη:
+ *   • `resolveImageFillOrigin` — anchor (phase) του tiling· **ίδιο SSoT με την οθόνη** (ADR-643).
  *   • `renderProceduralTile` / `applyDuotoneTint` — procedural (Φ9) / duotone (Φ8) υλικά.
  *   • `resolveMaterialImageSrc` + `decodeImageWithTimeout` — assetId→URL + decode-with-timeout.
- *   • `imageFillVariantKey` — dedup alias («τι ζωγραφίζεται», όχι «ποιο αρχείο»).
+ *   • `imageFillVariantKey` — ταυτότητα υλικού («τι ζωγραφίζεται», όχι «ποιο αρχείο»).
  *   • `createRectangleVertices` — rotated-rect κορυφές (pivot=corner1, ίδιο με `ImageRenderer`).
  *   • `averageImageColor` — μέσο χρώμα για solid fallback (mirror DXF export).
  *
- * Fallbacks (mirror ADR-643/651 DXF pre-pass): image-fill decode-fail/overflow → **solid
- * downgrade** (μέσο ή hatch χρώμα, ο emitter γεμίζει το boundary)· `ImageEntity` decode-fail →
- * **σιωπηλή παράλειψη** (μια «γυμνή» εικόνα δεν έχει fill-χρώμα να υποβαθμιστεί).
+ * Fallbacks (mirror ADR-643/651 DXF pre-pass): image-fill decode-fail/εκφυλισμένο κελί → **solid
+ * downgrade** (μέσο ή hatch χρώμα, ο emitter γεμίζει το boundary) **+ warning** ⇒ ο χρήστης το
+ * μαθαίνει (Φ1)· `ImageEntity` decode-fail → **σιωπηλή παράλειψη** (μια «γυμνή» εικόνα δεν έχει
+ * fill-χρώμα να υποβαθμιστεί).
  *
  * @module subapps/dxf-viewer/print/vector/scene-image-resolver
+ * @see docs/centralized-systems/reference/adrs/ADR-667-pdf-native-tiling-patterns.md
  * @see docs/centralized-systems/reference/adrs/ADR-608-vector-pdf-export.md
  */
 
@@ -28,23 +36,20 @@ import type { Entity, HatchEntity, HatchImageFill } from '../../types/entities';
 import type { ImageEntity } from '../../types/image';
 import { isImageEntity } from '../../types/image';
 import type { Point2D } from '../../rendering/types/Types';
-// SSoT reuse (N.18) — το tile grid, η ανάλυση πηγής (procedural/tint/raster) και το μέσο-χρώμα-hex
-// ΕΙΝΑΙ τα ίδια με το DXF image-fill export· τα εισάγουμε αντί να τα κλωνοποιήσουμε.
+// SSoT reuse (N.18) — η ανάλυση πηγής (procedural/tint/raster) και το μέσο-χρώμα-hex ΕΙΝΑΙ τα ίδια
+// με το DXF image-fill export· τα εισάγουμε αντί να τα κλωνοποιήσουμε.
 import {
-  buildImageTileFullGrid, prepareExportSource, averageImageColorHex, asImageHatch,
+  prepareExportSource, averageImageColorHex, asImageHatch,
 } from '../../export/core/image-fill-export';
 import { decodeImageWithTimeout } from '../../export/core/image-export-shared';
 import { imageFillVariantKey } from '../../rendering/entities/shared/hatch-image-variant-key';
+// ADR-643 SSoT — το anchor (phase) του tiling ΕΙΝΑΙ αυτό που χρησιμοποιεί η οθόνη· μηδέν δεύτερη math.
+import { resolveImageFillOrigin } from '../../rendering/entities/shared/hatch-image-paint';
 import { createRectangleVertices } from '../../rendering/entities/shared/geometry-utils';
+import { MAX_PDF_PATTERNS_PER_PAGE } from './pdf-tiling-pattern';
 
 /** Ουδέτερο γκρι όταν λείπει κάθε άλλη πληροφορία χρώματος. */
 const DEFAULT_SOLID_HEX = '#808080';
-/**
- * Cap tiles για το clipped PDF full grid. Ψηλότερο από το DXF default (400) γιατί το full grid
- * καλύπτει ΟΛΟ το bbox (και τα οριακά) και το clip τα κόβει — θέλουμε να μη πέφτουμε σε solid για
- * μεγάλες textured επιφάνειες. Φράχτης ώστε το content-stream να μη φουσκώνει ανεξέλεγκτα.
- */
-const PDF_TILE_CAP = 4000;
 
 /** Ένα rect placement σε **world** συντεταγμένες (ο emitter το mappάρει σε paper mm). */
 export interface ResolvedImagePlacement {
@@ -59,46 +64,82 @@ export interface ResolvedImagePlacement {
   readonly hWorld: number;
 }
 
-/** Μία resolved εικόνα: ΕΝΑ data URL + alias (dedup) + Ν placements (tiles ή ένα). */
+/** Μία resolved «γυμνή» εικόνα (`ImageEntity`): ΕΝΑ data URL + alias (dedup) + το placement της. */
 export interface ResolvedSceneImage {
   readonly dataUrl: string;
-  /** Σταθερό κλειδί ώστε ο jsPDF να ενσωματώσει τα bytes ΜΙΑ φορά (N tiles → 1 embed). */
+  /** Σταθερό κλειδί ώστε ο jsPDF να ενσωματώσει τα bytes ΜΙΑ φορά (N placements → 1 embed). */
   readonly alias: string;
   readonly placements: readonly ResolvedImagePlacement[];
 }
 
-/** Αποτέλεσμα του pre-pass: resolved εικόνες + solid fallbacks (ανά entity id) + warnings. */
+/**
+ * ADR-667 Φ2 — **ΕΝΑ κελί μοτίβου** για μια γραμμοσκίαση με γέμισμα «Εικόνα»/«Διαδικαστικά».
+ * Ο emitter το μεταφράζει σε native PDF Tiling Pattern: το κελί ορίζεται μία φορά και ο viewer
+ * το επαναλαμβάνει ⇒ **μηδέν εξάρτηση από το εμβαδόν** (τέλος στο συμπαγές γκρι).
+ */
+export interface ResolvedPatternCell {
+  /** Το raster **ενός** κελιού (PNG data URL). */
+  readonly dataUrl: string;
+  /** Ταυτότητα υλικού (`imageFillVariantKey`) — `addImage` alias ⇒ τα bytes μπαίνουν ΜΙΑ φορά. */
+  readonly alias: string;
+  /**
+   * Διαστάσεις κελιού σε **μονάδες σχεδίου** (world). Ο emitter τις κλιμακώνει σε paper mm.
+   *
+   * ⚠️ **Περιορισμός (ρητός, όχι ψημένο αξίωμα):** το `tileWidth/tileHeight` του `HatchImageFill`
+   * τεκμηριώνεται ως mm ενώ καταναλώνεται ως **world units** — ισοδύναμα **μόνο** αν
+   * 1 world unit == 1 mm. **Η οθόνη έχει την ΙΔΙΑ παραδοχή** (`hatch-image-paint.ts:63-64`)
+   * ⇒ preview === commit, **καμία** regression· η άρση της παραδοχής ανήκει στο ADR-643.
+   */
+  readonly tileWWorld: number;
+  readonly tileHWorld: number;
+  /** Γωνία μοτίβου, **visual clockwise** — σύμβαση **οθόνης** (ADR-667 Απόφαση 12). */
+  readonly angleDeg: number;
+  /** Σημείο αγκύρωσης (phase) σε **world** — SSoT `resolveImageFillOrigin`, ίδιο με την οθόνη. */
+  readonly anchorWorld: Point2D;
+}
+
+/** Αποτέλεσμα του pre-pass: κελιά μοτίβου + resolved εικόνες + solid fallbacks + warnings. */
 export interface SceneImageResolution {
-  /** entity id → resolved raster (image-fill hatch tiles ή ImageEntity). */
+  /** entity id → resolved raster. **Μόνο** `ImageEntity` (τα hatch πάνε από `patternCells`). */
   readonly images: ReadonlyMap<string, ResolvedSceneImage>;
-  /** entity id → hex, για image-fill hatch που υποβαθμίστηκε σε solid (decode-fail/overflow). */
+  /** hatch id → κελί μοτίβου (ADR-667 Φ2). */
+  readonly patternCells: ReadonlyMap<string, ResolvedPatternCell>;
+  /** entity id → hex, για image-fill hatch που υποβαθμίστηκε σε solid (decode-fail/cap/εκφυλισμό). */
   readonly solidFallbacks: ReadonlyMap<string, string>;
   /** Διαγνωστικοί κωδικοί (ASCII, logs only — δεν περνούν i18n). */
   readonly warnings: string[];
 }
 
+/** Μεταβλητή κατάσταση του pre-pass — ένα αντικείμενο αντί για 4 παράλληλες παραμέτρους. */
+interface ResolveSink {
+  readonly images: Map<string, ResolvedSceneImage>;
+  readonly patternCells: Map<string, ResolvedPatternCell>;
+  readonly solidFallbacks: Map<string, string>;
+  readonly warnings: string[];
+}
+
 /**
- * Async pre-pass: walk τα (flattened) entities και resolve κάθε εικόνα σε data URL + placements.
- * Σειριακό await (mirror DXF pre-pass) — μηδέν παραλληλισμός για απλότητα/σταθερότητα. Μη-image
- * entities αγνοούνται (δεν μπαίνουν σε κανένα map). Idempotent-safe: αποτυχία → solid ή skip.
+ * Async pre-pass: walk τα (flattened) entities και resolve κάθε εικόνα. Σειριακό await (mirror DXF
+ * pre-pass) — μηδέν παραλληλισμός για απλότητα/σταθερότητα. Μη-image entities αγνοούνται (δεν
+ * μπαίνουν σε κανένα map). Idempotent-safe: αποτυχία → solid ή skip, **πάντα με warning**.
  */
 export async function resolveSceneImages(
   entities: readonly Entity[],
 ): Promise<SceneImageResolution> {
-  const images = new Map<string, ResolvedSceneImage>();
-  const solidFallbacks = new Map<string, string>();
-  const warnings: string[] = [];
+  const sink: ResolveSink = {
+    images: new Map(), patternCells: new Map(), solidFallbacks: new Map(), warnings: [],
+  };
 
   for (const e of entities) {
     if (isImageEntity(e)) {
-      await resolveImageEntity(e, images, warnings);
+      await resolveImageEntity(e, sink.images, sink.warnings);
       continue;
     }
     const hatch = asImageHatch(e);
-    if (hatch) await resolveImageFillHatch(hatch, images, solidFallbacks, warnings);
+    if (hatch) await resolveImageFillHatch(hatch, sink);
   }
 
-  return { images, solidFallbacks, warnings };
+  return sink;
 }
 
 // ─── ImageEntity («γυμνή» εικόνα: δέντρα / ταπετσαρίες) ────────────────────────
@@ -121,40 +162,58 @@ async function resolveImageEntity(
 
 // ─── image-fill hatch (επιφάνειες με γέμισμα «Εικόνα») ─────────────────────────
 
-/** Resolve ΕΝΟΣ image-fill hatch → tiled placements ή solid fallback. */
-async function resolveImageFillHatch(
-  hatch: HatchEntity,
-  out: Map<string, ResolvedSceneImage>,
-  solids: Map<string, string>,
-  warnings: string[],
-): Promise<void> {
+/**
+ * Resolve ΕΝΟΣ image-fill hatch → **κελί μοτίβου** (ADR-667 Φ2) ή solid fallback + warning.
+ *
+ * ⚠️ **Γιατί ο cap κρίνεται ΕΔΩ και όχι στο `draw`:** το `capture.fidelity` το διαβάζει ο
+ * `runPrint` **ΑΦΟΥ** επιστρέψει το capture και **ΠΡΙΝ** τρέξει το `draw` closure ⇒ ό,τι
+ * αποφασιστεί μέσα στο `draw` **δεν μπορεί ποτέ να αναφερθεί**. Το pre-pass δεν είναι στυλιστική
+ * προτίμηση — είναι η **μόνη** θέση όπου υποβάθμιση **και** ειδοποίηση λειτουργούν μαζί.
+ */
+async function resolveImageFillHatch(hatch: HatchEntity, sink: ResolveSink): Promise<void> {
   const fill = hatch.imageFill as HatchImageFill;
   // Κοινή ανάλυση πηγής με το DXF export (procedural/tint/raster) — ίδιο υλικό, ίδια απόδοση.
   const prepared = await prepareExportSource(fill);
-  if (!prepared) { solids.set(hatch.id, fallbackHex(hatch)); warnings.push('image-fill:decode-failed'); return; }
+  if (!prepared) {
+    downgrade(sink, hatch, fallbackHex(hatch), 'image-fill:decode-failed');
+    return;
+  }
+  const avgHex = averageImageColorHex(prepared.source) ?? fallbackHex(hatch);
 
-  // Full grid (ΧΩΡΙΣ PIP) — το clip στον emitter κόβει τα οριακά tiles στο boundary (μηδέν κενά).
-  const grid = buildImageTileFullGrid(hatch.boundaryPaths, fill, PDF_TILE_CAP);
-  if (grid.overflow || grid.inserts.length === 0) {
-    solids.set(hatch.id, averageImageColorHex(prepared.source) ?? fallbackHex(hatch));
-    if (grid.overflow) warnings.push('image-fill:tile-overflow');
+  // Ο cap είναι **φράχτης, όχι λειτουργικό όριο**: η πραγματική περίπτωση είναι 1 pattern. Κάθε
+  // hatch γεμίζει ΜΙΑ φορά ⇒ το πλήθος των κελιών φράσσει άνω το πλήθος των patterns της σελίδας.
+  if (sink.patternCells.size >= MAX_PDF_PATTERNS_PER_PAGE) {
+    downgrade(sink, hatch, avgHex, 'image-fill:pattern-cap');
+    return;
+  }
+
+  const tileWWorld = fill.tileWidth;
+  const tileHWorld = fill.tileHeight || fill.tileWidth;
+  const anchorWorld = resolveImageFillOrigin(hatch.boundaryPaths, fill);
+  if (!(tileWWorld > 0) || !(tileHWorld > 0) || !anchorWorld) {
+    downgrade(sink, hatch, avgHex, 'image-fill:degenerate-cell');
     return;
   }
 
   const dataUrl = sourceToPngDataUrl(prepared.source, prepared.pixelW, prepared.pixelH);
   if (!dataUrl) {
-    solids.set(hatch.id, averageImageColorHex(prepared.source) ?? fallbackHex(hatch));
-    warnings.push('image-fill:encode-failed');
+    downgrade(sink, hatch, avgHex, 'image-fill:encode-failed');
     return;
   }
-  const tileW = fill.tileWidth;
-  const tileH = fill.tileHeight || fill.tileWidth;
-  const angle = fill.angle ?? 0;
-  out.set(hatch.id, {
+  sink.patternCells.set(hatch.id, {
     dataUrl,
     alias: imageFillVariantKey(fill),
-    placements: grid.inserts.map((insert) => rectPlacement(insert, tileW, tileH, angle)),
+    tileWWorld,
+    tileHWorld,
+    angleDeg: fill.angle ?? 0,
+    anchorWorld,
   });
+}
+
+/** Υποβάθμιση σε συμπαγές + **ορατή** σημείωση (μηδέν σιωπηλή αλλοίωση — ADR-667 Απόφαση 11). */
+function downgrade(sink: ResolveSink, hatch: HatchEntity, hex: string, code: string): void {
+  sink.solidFallbacks.set(hatch.id, hex);
+  sink.warnings.push(code);
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

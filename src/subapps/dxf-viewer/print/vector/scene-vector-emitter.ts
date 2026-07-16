@@ -41,8 +41,14 @@ import {
 import type { DimensionLookup } from '../../systems/dimensions/dim-geometry-builder';
 import { getDimStyleRegistry } from '../../systems/dimensions/dim-style-registry';
 import { projectSceneTextToDxf, type TextSceneShape } from '../../bim/text/project-scene-text';
-import type { SceneImageResolution } from './scene-image-resolver';
-import { emitResolvedImage, emitClippedImage } from './scene-image-emitter';
+// ADR-667 Απόφαση 5 — dispatch #2. Χειρίζεται `fillType === undefined` μέσω `patternType`/
+// `patternName` (οι παραγωγοί `dxfFaces` ΔΕΝ θέτουν `fillType`) → μηδέν δεύτερη «είναι solid;» math.
+import { isSolidHatch } from '../../bim/hatch/hatch-properties';
+import type { ResolvedPatternCell, SceneImageResolution } from './scene-image-resolver';
+import { emitResolvedImage } from './scene-image-emitter';
+import {
+  createPdfPatternRegistry, type PdfPatternCell, type PdfPatternRegistry,
+} from './pdf-tiling-pattern';
 
 /** mm → typographic points (jsPDF `setFontSize` unit). 1pt = 1/72 in = 25.4/72 mm. */
 const PT_PER_MM = 72 / 25.4;
@@ -83,13 +89,33 @@ export function emitSceneToPdf(pdf: jsPDF, params: SceneVectorEmitParams): void 
   pdf.setLineCap('round');
   pdf.setLineJoin('round');
   const dimLookup = buildDimensionLookup(params.entities);
-  for (const e of params.entities) emitEntity(pdf, e, params, dimLookup);
+  const patterns = definePatterns(pdf, params);
+  for (const e of params.entities) emitEntity(pdf, e, params, dimLookup, patterns);
+}
+
+/**
+ * ADR-667 Απόφαση 10 — **ΟΛΑ** τα κελιά μοτίβου ορίζονται **ΕΔΩ**: ένα `advancedAPI()` block στην
+ * **αρχή** του `draw()`, πριν εκπεμφθεί η πρώτη οντότητα. Τα specs είναι **ήδη resolved** από το
+ * async pre-pass ⇒ **τίποτα δεν επιβάλλει lazy ορισμό**.
+ *
+ * 🔴 **Γιατί όχι lazy:** το `beginTilingPattern` κάνει `beginNewRenderTarget`· **μόνο** το
+ * `endTilingPattern` κάνει pop. Ορισμός στη μέση της εκπομπής ⇒ αν κάτι σκάσει, το υπόλοιπο
+ * περιεχόμενο της σελίδας γράφεται **μέσα στο pattern** ⇒ **λευκή σελίδα, κανένα σφάλμα**.
+ */
+function definePatterns(pdf: jsPDF, params: SceneVectorEmitParams): PdfPatternRegistry {
+  const registry = createPdfPatternRegistry(pdf);
+  for (const cell of params.images.patternCells.values()) {
+    registry.register(toPdfPatternCell(cell, params.worldToPaperScale));
+  }
+  registry.defineAll();
+  return registry;
 }
 
 // ─── Per-entity dispatch ──────────────────────────────────────────────────────
 
 function emitEntity(
   pdf: jsPDF, e: Entity, params: SceneVectorEmitParams, dimLookup: DimensionLookup,
+  patterns: PdfPatternRegistry,
 ): void {
   const { toPaper, worldToPaperScale: scale, colorPolicy } = params;
   applyEntityStyle(pdf, e, colorPolicy);
@@ -121,7 +147,7 @@ function emitEntity(
       emitText(pdf, e, toPaper, scale);
       return;
     case 'hatch':
-      emitHatch(pdf, e as HatchEntity, params, toPaper);
+      emitHatch(pdf, e as HatchEntity, params, toPaper, patterns);
       return;
     case 'image': {
       // ADR-608 hybrid — «γυμνή» εικόνα (δέντρα / ταπετσαρίες): προ-resolved στο pre-pass.

@@ -1,0 +1,3236 @@
+[
+ {
+  "ns": "accounting-setup",
+  "k": "reconciliation.batchAcceptAll",
+  "el": "Αυτόματη Αποδοχή Όλων",
+  "pseudoInner": "Αποδοχή Όλων Auto"
+ },
+ {
+  "ns": "accounting",
+  "k": "reports.taxDashboard",
+  "el": "Πίνακας Ελέγχου Φόρου",
+  "pseudoInner": "Dashboard Φόρου"
+ },
+ {
+  "ns": "accounting",
+  "k": "forms.sendEmailDialog.toPlaceholder",
+  "el": "email@παράδειγμα.com",
+  "pseudoInner": "email@example.com"
+ },
+ {
+  "ns": "accounting",
+  "k": "categories.income.construction_res_income",
+  "el": "Πωλήσεις Ακινήτων",
+  "pseudoInner": "Κατασκευαστικά (Οικιστικά)"
+ },
+ {
+  "ns": "accounting",
+  "k": "categories.expense.rent",
+  "el": "Ενοίκιο Γραφείου",
+  "pseudoInner": "Ενοίκια"
+ },
+ {
+  "ns": "accounting",
+  "k": "categories.expense.utilities",
+  "el": "ΔΕΗ / Νερό / Θέρμανση",
+  "pseudoInner": "Κοινόχρηστα/ΔΕΗ"
+ },
+ {
+  "ns": "accounting",
+  "k": "categories.expense.telecom",
+  "el": "Τηλεφωνία / Internet",
+  "pseudoInner": "Τηλεπικοινωνίες"
+ },
+ {
+  "ns": "accounting",
+  "k": "categories.expense.software",
+  "el": "Λογισμικό / Subscriptions",
+  "pseudoInner": "Λογισμικό/Συνδρομές"
+ },
+ {
+  "ns": "accounting",
+  "k": "categories.expense.equipment",
+  "el": "Εξοπλισμός (<1.500€)",
+  "pseudoInner": "Εξοπλισμός"
+ },
+ {
+  "ns": "accounting",
+  "k": "categories.expense.travel",
+  "el": "Ταξίδια / Μετακινήσεις",
+  "pseudoInner": "Μετακινήσεις/Ταξίδια"
+ },
+ {
+  "ns": "accounting",
+  "k": "categories.expense.training",
+  "el": "Εκπαίδευση / Σεμινάρια",
+  "pseudoInner": "Εκπαίδευση"
+ },
+ {
+  "ns": "accounting",
+  "k": "categories.expense.advertising",
+  "el": "Διαφήμιση / Marketing",
+  "pseudoInner": "Διαφήμιση"
+ },
+ {
+  "ns": "accounting",
+  "k": "categories.expense.efka",
+  "el": "Εισφορές ΕΦΚΑ",
+  "pseudoInner": "ΕΦΚΑ Εισφορές"
+ },
+ {
+  "ns": "accounting",
+  "k": "dashboard.title",
+  "el": "Πίνακας Ελέγχου Λογιστικού",
+  "pseudoInner": "Dashboard Λογιστικού"
+ },
+ {
+  "ns": "admin",
+  "k": "units.total",
+  "el": "Σύνολο Μονάδων",
+  "pseudoInner": "Σύνολο Units"
+ },
+ {
+  "ns": "admin",
+  "k": "units.soldNoCustomer",
+  "el": "Πωλημένα χωρίς Πελάτη",
+  "pseudoInner": "Sold χωρίς Customer"
+ },
+ {
+  "ns": "admin",
+  "k": "units.soldWithCustomer",
+  "el": "Πωλημένα με Πελάτη",
+  "pseudoInner": "Sold με Customer"
+ },
+ {
+  "ns": "admin",
+  "k": "units.overview",
+  "el": "Επισκόπηση Μονάδων",
+  "pseudoInner": "Units Overview"
+ },
+ {
+  "ns": "admin",
+  "k": "units.loading",
+  "el": "Φόρτωση μονάδων...",
+  "pseudoInner": "Φόρτωση units..."
+ },
+ {
+  "ns": "admin",
+  "k": "units.notFound",
+  "el": "Δεν βρέθηκαν μονάδες",
+  "pseudoInner": "Δεν βρέθηκαν units"
+ },
+ {
+  "ns": "admin",
+  "k": "units.noCustomer",
+  "el": "Χωρίς Πελάτη",
+  "pseudoInner": "Χωρίς Customer"
+ },
+ {
+  "ns": "admin",
+  "k": "units.displaying",
+  "el": "Εμφανίζονται {displayed} από {total} συνολικά μονάδες",
+  "pseudoInner": "Εμφανίζονται {displayed} από {total} συνολικά units"
+ },
+ {
+  "ns": "admin",
+  "k": "units.table.customer",
+  "el": "Πελάτης",
+  "pseudoInner": "Πελάτης (soldTo)"
+ },
+ {
+  "ns": "admin",
+  "k": "aiInbox.title",
+  "el": "Εισερχόμενα AI",
+  "pseudoInner": "AI Inbox"
+ },
+ {
+  "ns": "admin",
+  "k": "aiInbox.howItWorksStep2",
+  "el": "Μηνύματα με χαμηλή βεβαιότητα ή ανάγκη διαλογής εμφανίζονται εδώ.",
+  "pseudoInner": "Μηνύματα με χαμηλή βεβαιότητα ή needsTriage=true εμφανίζονται εδώ."
+ },
+ {
+  "ns": "admin",
+  "k": "claimsRepair.title",
+  "el": "Διόρθωση Ιδιοτήτων Χρήστη — Μόνο Υπερ-Διαχειριστής",
+  "pseudoInner": "Διόρθωση Claims - Μόνο Super Admin"
+ },
+ {
+  "ns": "admin",
+  "k": "claimsRepair.description",
+  "el": "Ορισμός ιδιοτήτων χρήστη για λογαριασμούς με ελλιπή αναγνωριστικά εταιρείας ή καθολικό ρόλο.",
+  "pseudoInner": "Ορισμός custom claims για χρήστες με ελλιπή companyId ή globalRole."
+ },
+ {
+  "ns": "admin",
+  "k": "claimsRepair.fields.uid.label",
+  "el": "UID Χρήστη",
+  "pseudoInner": "User UID"
+ },
+ {
+  "ns": "admin",
+  "k": "claimsRepair.fields.uid.placeholder",
+  "el": "UID Πιστοποίησης Firebase",
+  "pseudoInner": "Firebase Auth UID"
+ },
+ {
+  "ns": "admin",
+  "k": "claimsRepair.fields.email.placeholder",
+  "el": "χρήστης@παράδειγμα.com",
+  "pseudoInner": "user@example.com"
+ },
+ {
+  "ns": "admin",
+  "k": "claimsRepair.fields.companyId.label",
+  "el": "ID Εταιρείας",
+  "pseudoInner": "Company ID"
+ },
+ {
+  "ns": "admin",
+  "k": "claimsRepair.fields.globalRole.label",
+  "el": "Παγκόσμιος Ρόλος",
+  "pseudoInner": "Global Role"
+ },
+ {
+  "ns": "admin",
+  "k": "claimsRepair.actions.submit",
+  "el": "Ορισμός Ιδιοτήτων",
+  "pseudoInner": "Ορισμός Claims"
+ },
+ {
+  "ns": "admin",
+  "k": "claimsRepair.actions.submitting",
+  "el": "Ορισμός Ιδιοτήτων...",
+  "pseudoInner": "Ορισμός Claims..."
+ },
+ {
+  "ns": "admin",
+  "k": "claimsRepair.help.step4",
+  "el": "Επιλέξτε τον κατάλληλο Παγκόσμιο Ρόλο",
+  "pseudoInner": "Επιλέξτε το κατάλληλο Global Role"
+ },
+ {
+  "ns": "admin",
+  "k": "claimsRepair.help.step5",
+  "el": "Κάντε κλικ στο «Ορισμός Ιδιοτήτων»",
+  "pseudoInner": "Κάντε κλικ στο \"Ορισμός Claims\""
+ },
+ {
+  "ns": "admin",
+  "k": "claimsRepair.security.feature4",
+  "el": "Πρόσβαση μόνο από Υπερ-Διαχειριστή",
+  "pseudoInner": "Πρόσβαση μόνο από Super Admin"
+ },
+ {
+  "ns": "admin",
+  "k": "claimsRepair.notice.body",
+  "el": "Η ανανέωση διαπιστευτηρίων επηρεάζει μόνο ΤΗ ΔΙΚΗ ΣΑΣ συνεδρία. Ο επηρεασμένος χρήστης πρέπει να αποσυνδεθεί/συνδεθεί ξεχωριστά για φόρτωση των νέων ιδιοτήτων.",
+  "pseudoInner": "Η refreshToken() επηρεάζει μόνο ΤΗ ΔΙΚΗ ΣΑΣ (super_admin) session. Ο επηρεασμένος χρήστης πρέπει να αποσυνδεθεί/συνδεθεί ξεχωριστά για φόρτωση των νέων claims."
+ },
+ {
+  "ns": "admin",
+  "k": "operatorInbox.description",
+  "el": "Έλεγχος και έγκριση προτάσεων AI ροής πριν την εκτέλεση.",
+  "pseudoInner": "Έλεγχος και έγκριση προτάσεων AI pipeline πριν την εκτέλεση."
+ },
+ {
+  "ns": "admin",
+  "k": "operatorInbox.empty.description",
+  "el": "Όλα τα στοιχεία ροής έχουν επεξεργαστεί ή εγκριθεί αυτόματα.",
+  "pseudoInner": "Όλα τα στοιχεία pipeline έχουν επεξεργαστεί ή εγκριθεί αυτόματα."
+ },
+ {
+  "ns": "admin",
+  "k": "operatorInbox.multiIntent.detected",
+  "el": "προθέσεις εντοπίστηκαν",
+  "pseudoInner": "intents εντοπίστηκαν"
+ },
+ {
+  "ns": "admin",
+  "k": "superAdmin.projectStatus.unitsLabel",
+  "el": "Μονάδες",
+  "pseudoInner": "Units"
+ },
+ {
+  "ns": "admin",
+  "k": "superAdmin.fallback.statsHint",
+  "el": "\"Πόσα ακίνητα έχουμε;\" — Στατιστικά μονάδων",
+  "pseudoInner": "\"Πόσα ακίνητα έχουμε;\" — Στατιστικά units"
+ },
+ {
+  "ns": "admin",
+  "k": "databaseUpdate.cards.newStatuses",
+  "el": "Νέες Καταστάσεις",
+  "pseudoInner": "Νέα Statuses"
+ },
+ {
+  "ns": "admin",
+  "k": "databaseUpdate.executionLogs",
+  "el": "Αρχείο Εκτέλεσης",
+  "pseudoInner": "Logs Εκτέλεσης"
+ },
+ {
+  "ns": "admin",
+  "k": "databaseUpdate.logs.contactUpdated",
+  "el": "Ενημερώθηκε επαφή {id}: {role}",
+  "pseudoInner": "Ενημερώθηκε contact {id}: {role}"
+ },
+ {
+  "ns": "admin",
+  "k": "databaseUpdate.logs.updatingUnits",
+  "el": "Ενημερώνοντας μονάδες με νέες καταστάσεις...",
+  "pseudoInner": "Ενημερώνοντας μονάδες με νέα statuses..."
+ },
+ {
+  "ns": "admin",
+  "k": "databaseUpdate.logs.unitUpdated",
+  "el": "Μονάδα {id}: {status} ← Επαφή {contactId}",
+  "pseudoInner": "Μονάδα {id}: {status} ← Contact {contactId}"
+ },
+ {
+  "ns": "admin",
+  "k": "setup.loginRequiredDescription",
+  "el": "Πρέπει να συνδεθείς για να αποκτήσεις πρόσβαση στις ρυθμίσεις διαχειριστή.",
+  "pseudoInner": "Πρέπει να συνδεθείς για να αποκτήσεις πρόσβαση στις ρυθμίσεις admin."
+ },
+ {
+  "ns": "admin",
+  "k": "setup.title",
+  "el": "Ρύθμιση Διαχειριστή",
+  "pseudoInner": "Ρύθμιση Admin"
+ },
+ {
+  "ns": "admin",
+  "k": "setup.primaryAdmin",
+  "el": "Κύριος Διαχειριστής:",
+  "pseudoInner": "Primary Admin:"
+ },
+ {
+  "ns": "admin",
+  "k": "setup.errorReporting",
+  "el": "Αναφορά Σφαλμάτων:",
+  "pseudoInner": "Error Reporting:"
+ },
+ {
+  "ns": "admin",
+  "k": "setup.additionalAdmins",
+  "el": "Επιπλέον Διαχειριστές:",
+  "pseudoInner": "Επιπλέον Admins:"
+ },
+ {
+  "ns": "admin",
+  "k": "setup.youArePrimaryAdmin",
+  "el": "Είσαι ο κύριος διαχειριστής. Θα λαμβάνεις ειδοποιήσεις σφαλμάτων!",
+  "pseudoInner": "Είσαι ο κύριος διαχειριστής. Θα λαμβάνεις τα error notifications!"
+ },
+ {
+  "ns": "admin",
+  "k": "setup.notConfiguredDescription",
+  "el": "Οι ρυθμίσεις διαχειριστή δεν έχουν διαμορφωθεί ακόμα. Πατήστε το κουμπί παρακάτω για να οριστείτε ως ο κύριος διαχειριστής.",
+  "pseudoInner": "Οι ρυθμίσεις admin δεν έχουν διαμορφωθεί ακόμα. Κάνε click στο κουμπί παρακάτω για να οριστείς ως ο κύριος διαχειριστής."
+ },
+ {
+  "ns": "admin",
+  "k": "setup.uidSaveNote",
+  "el": "Αυτή η ενέργεια θα αποθηκεύσει το UID σου ({uid}) ως τον κύριο διαχειριστή για ειδοποιήσεις σφαλμάτων.",
+  "pseudoInner": "Αυτή η ενέργεια θα αποθηκεύσει το UID σου ({uid}) ως τον κύριο διαχειριστή για error notifications."
+ },
+ {
+  "ns": "admin",
+  "k": "setup.successMessage",
+  "el": "Οι ρυθμίσεις αποθηκεύτηκαν επιτυχώς! Θα λαμβάνεις ειδοποιήσεις σφαλμάτων στο εικονίδιο κουδουνιού.",
+  "pseudoInner": "Οι ρυθμίσεις αποθηκεύτηκαν επιτυχώς! Θα λαμβάνεις τα error notifications στο bell icon."
+ },
+ {
+  "ns": "admin",
+  "k": "setup.step3",
+  "el": "3. Το Mailgun webhook δημιουργεί ειδοποίηση εντός εφαρμογής",
+  "pseudoInner": "3. Το Mailgun webhook δημιουργεί in-app notification"
+ },
+ {
+  "ns": "admin",
+  "k": "setup.step4",
+  "el": "4. Βλέπεις την ειδοποίηση στο εικονίδιο κουδουνιού",
+  "pseudoInner": "4. Βλέπεις το notification στο bell icon"
+ },
+ {
+  "ns": "admin",
+  "k": "propertyStatusDemo.title",
+  "el": "Εταιρικό Σύστημα Κατάστασης Ακινήτων",
+  "pseudoInner": "Enterprise Property Status System"
+ },
+ {
+  "ns": "admin",
+  "k": "propertyStatusDemo.subtitle",
+  "el": "Ζωντανή επίδειξη του νέου κεντρικοποιημένου συστήματος διαχείρισης καταστάσεων ακινήτων",
+  "pseudoInner": "Live demonstration του νέου κεντρικοποιημένου συστήματος διαχείρισης καταστάσεων ακινήτων"
+ },
+ {
+  "ns": "admin",
+  "k": "propertyStatusDemo.productionReady",
+  "el": "Εταιρικής κλάσης • Έτοιμο για παραγωγή • Πλήρης τυποποίηση",
+  "pseudoInner": "Enterprise-class • Production Ready • Fully Typed"
+ },
+ {
+  "ns": "admin",
+  "k": "propertyStatusDemo.cards.totalStatuses",
+  "el": "Συνολικές Καταστάσεις",
+  "pseudoInner": "Συνολικά Status"
+ },
+ {
+  "ns": "admin",
+  "k": "propertyStatusDemo.cards.statusOptions",
+  "el": "Επιλογές Κατάστασης",
+  "pseudoInner": "Status options"
+ },
+ {
+  "ns": "admin",
+  "k": "propertyStatusDemo.cards.enhancedStatuses",
+  "el": "Ενισχυμένες καταστάσεις",
+  "pseudoInner": "Enhanced statuses"
+ },
+ {
+  "ns": "admin",
+  "k": "propertyStatusDemo.statusCategories",
+  "el": "Κατηγορίες Κατάστασης",
+  "pseudoInner": "Κατηγορίες Status"
+ },
+ {
+  "ns": "admin",
+  "k": "propertyStatusDemo.demoProperties",
+  "el": "Δείγματα Ακινήτων",
+  "pseudoInner": "Demo Ακίνητα"
+ },
+ {
+  "ns": "admin",
+  "k": "propertyStatusDemo.statusDetails",
+  "el": "Λεπτομέρειες Κατάστασης",
+  "pseudoInner": "Λεπτομέρειες Status"
+ },
+ {
+  "ns": "admin",
+  "k": "propertyStatusDemo.instruction1",
+  "el": "Κλικ στις ετικέτες κατάστασης για να δεις λεπτομέρειες",
+  "pseudoInner": "Κλικ στα status badges για να δεις λεπτομέρειες"
+ },
+ {
+  "ns": "admin",
+  "k": "propertyStatusDemo.instruction4",
+  "el": "Πλήρης υποστήριξη TypeScript με ασφάλεια τύπων",
+  "pseudoInner": "Πλήρης TypeScript support με type safety"
+ },
+ {
+  "ns": "admin",
+  "k": "roleManagement.roleChange.warning",
+  "el": "Ο χρήστης πρέπει να επανασυνδεθεί για να εφαρμοστούν οι αλλαγές",
+  "pseudoInner": "Ο χρήστης πρέπει να κάνει re-login για να εφαρμοστούν οι αλλαγές"
+ },
+ {
+  "ns": "admin",
+  "k": "roleManagement.permissionSets.title",
+  "el": "Διαχείριση Συνόλων Δικαιωμάτων",
+  "pseudoInner": "Διαχείριση Σετ Δικαιωμάτων"
+ },
+ {
+  "ns": "admin",
+  "k": "roleManagement.permissionSets.orgLevel",
+  "el": "Σύνολα Δικαιωμάτων Επιπέδου Οργανισμού",
+  "pseudoInner": "Σετ Δικαιωμάτων Επιπέδου Οργανισμού"
+ },
+ {
+  "ns": "admin",
+  "k": "roleManagement.permissionSets.description",
+  "el": "Αυτά τα σύνολα ισχύουν σε ΟΛΑ τα έργα",
+  "pseudoInner": "Αυτά τα σετ ισχύουν σε ΟΛΑ τα έργα"
+ },
+ {
+  "ns": "admin",
+  "k": "roleManagement.permissionSets.reason",
+  "el": "Αιτιολογία",
+  "pseudoInner": "Αιτιολογία αλλαγής"
+ },
+ {
+  "ns": "admin",
+  "k": "roleManagement.permissionSets.reasonPlaceholder",
+  "el": "Εισάγετε αιτιολογία...",
+  "pseudoInner": "Εξηγήστε γιατί (min 10 χαρ.)..."
+ },
+ {
+  "ns": "admin",
+  "k": "roleManagement.permissionSets.save",
+  "el": "Αποθήκευση συνόλων δικαιωμάτων",
+  "pseudoInner": "Αποθήκευση"
+ },
+ {
+  "ns": "admin",
+  "k": "roleManagement.permissionSets.success",
+  "el": "Τα σύνολα δικαιωμάτων ενημερώθηκαν",
+  "pseudoInner": "Τα σετ δικαιωμάτων ενημερώθηκαν"
+ },
+ {
+  "ns": "admin",
+  "k": "roleManagement.permissionSets.error",
+  "el": "Αποτυχία ενημέρωσης",
+  "pseudoInner": "Αποτυχία ενημέρωσης σετ δικαιωμάτων"
+ },
+ {
+  "ns": "attendance",
+  "k": "capturedPhotoAlt",
+  "el": "Φωτογραφία",
+  "pseudoInner": "Captured photo"
+ },
+ {
+  "ns": "auth",
+  "k": "brand.footer",
+  "el": "(c) 2026 Nestor Pagonis | Σύστημα Διαχείρισης Ακινήτων",
+  "pseudoInner": "(c) 2026 Nestor Pagonis | Property Management System"
+ },
+ {
+  "ns": "banking",
+  "k": "bank.groups.other",
+  "el": "Άλλες Ελληνικές Τράπεζες",
+  "pseudoInner": "Άλλες Τράπεζες"
+ },
+ {
+  "ns": "building-address",
+  "k": "associations.entityLinks.title",
+  "el": "Συνδέσεις με Οντότητες",
+  "pseudoInner": "Συνδέσεις με Entities"
+ },
+ {
+  "ns": "building-storage",
+  "k": "storage.card.actions.delete",
+  "el": "Μεταφορά στον κάδο",
+  "pseudoInner": "Διαγραφή"
+ },
+ {
+  "ns": "building-storage",
+  "k": "storageActions.delete",
+  "el": "Μεταφορά στον κάδο",
+  "pseudoInner": "Διαγραφή"
+ },
+ {
+  "ns": "building-storage",
+  "k": "spaceActions.delete",
+  "el": "Μεταφορά στον κάδο",
+  "pseudoInner": "Διαγραφή"
+ },
+ {
+  "ns": "building-storage",
+  "k": "spaceConfirm.irreversible",
+  "el": "Μπορείτε να επαναφέρετε το αντικείμενο από τον κάδο.",
+  "pseudoInner": "Αυτή η ενέργεια δεν μπορεί να αναιρεθεί."
+ },
+ {
+  "ns": "building-storage",
+  "k": "spaceConfirm.deleteProperty",
+  "el": "Μεταφορά Ακινήτου στον κάδο",
+  "pseudoInner": "Διαγραφή Ακινήτου"
+ },
+ {
+  "ns": "building-storage",
+  "k": "spaceConfirm.deletePropertyDesc",
+  "el": "Θέλετε να μεταφέρετε το ακίνητο στον κάδο;",
+  "pseudoInner": "Είστε σίγουροι ότι θέλετε να διαγράψετε το ακίνητο"
+ },
+ {
+  "ns": "building-storage",
+  "k": "spaceConfirm.deleteParking",
+  "el": "Μεταφορά Θέσης Στάθμευσης στον κάδο",
+  "pseudoInner": "Διαγραφή Θέσης Στάθμευσης"
+ },
+ {
+  "ns": "building-storage",
+  "k": "spaceConfirm.deleteParkingDesc",
+  "el": "Θέλετε να μεταφέρετε τη θέση στάθμευσης στον κάδο;",
+  "pseudoInner": "Είστε σίγουροι ότι θέλετε να διαγράψετε τη θέση στάθμευσης"
+ },
+ {
+  "ns": "building-storage",
+  "k": "spaceConfirm.deleteStorage",
+  "el": "Μεταφορά Αποθήκης στον κάδο",
+  "pseudoInner": "Διαγραφή Αποθήκης"
+ },
+ {
+  "ns": "building-storage",
+  "k": "spaceConfirm.deleteStorageDesc",
+  "el": "Θέλετε να μεταφέρετε την αποθήκη στον κάδο;",
+  "pseudoInner": "Είστε σίγουροι ότι θέλετε να διαγράψετε την αποθήκη"
+ },
+ {
+  "ns": "building-storage",
+  "k": "storageListHeader.deleteSelected",
+  "el": "Μεταφορά επιλεγμένων στον κάδο",
+  "pseudoInner": "Διαγραφή επιλεγμένων"
+ },
+ {
+  "ns": "building-storage",
+  "k": "storageNotifications.deleted",
+  "el": "Η αποθήκη μεταφέρθηκε στον κάδο",
+  "pseudoInner": "Η αποθήκη διαγράφηκε"
+ },
+ {
+  "ns": "building-storage",
+  "k": "unitStats.deleted",
+  "el": "Η μονάδα μεταφέρθηκε στον κάδο",
+  "pseudoInner": "Η μονάδα διαγράφηκε"
+ },
+ {
+  "ns": "building-storage",
+  "k": "storageForm.features.building.foodCourt800Seats",
+  "el": "Χώρος Εστίασης 800 θέσεων",
+  "pseudoInner": "Food Court 800 θέσεων"
+ },
+ {
+  "ns": "building-tabs",
+  "k": "tabs.labels.dashboard",
+  "el": "Πίνακας Ελέγχου",
+  "pseudoInner": "Dashboard"
+ },
+ {
+  "ns": "building-tabs",
+  "k": "tabs.labels.leads",
+  "el": "Ενδιαφερόμενοι",
+  "pseudoInner": "Leads"
+ },
+ {
+  "ns": "building-tabs",
+  "k": "tabs.floors.createSuccess",
+  "el": "Ο όροφος δημιουργήθηκε επιτυχώς!",
+  "pseudoInner": "Ο όροφος δημιουργήθηκε"
+ },
+ {
+  "ns": "building-tabs",
+  "k": "tabs.measurements.actions.newItem",
+  "el": "Νέο Στοιχείο",
+  "pseudoInner": "Νέο Item"
+ },
+ {
+  "ns": "building-timeline",
+  "k": "tabs.timeline.criticalPath.viewAll",
+  "el": "Προβολή όλων στον Πίνακα Ελέγχου",
+  "pseudoInner": "Προβολή όλων στο Dashboard"
+ },
+ {
+  "ns": "building-timeline",
+  "k": "tabs.timeline.dashboard.criticalPath.colFloat",
+  "el": "Περιθώριο",
+  "pseudoInner": "Float"
+ },
+ {
+  "ns": "building-timeline",
+  "k": "tabs.analytics.title",
+  "el": "Προχωρημένη Ανάλυση",
+  "pseudoInner": "Advanced Analytics"
+ },
+ {
+  "ns": "building",
+  "k": "connections.internet",
+  "el": "Ίντερνετ",
+  "pseudoInner": "Internet"
+ },
+ {
+  "ns": "building",
+  "k": "toolbar.actions.delete",
+  "el": "Μεταφορά στον κάδο",
+  "pseudoInner": "Διαγραφή"
+ },
+ {
+  "ns": "building",
+  "k": "toolbar.tooltips.deleteCount",
+  "el": "Μεταφορά {count} κτιρίου/ων στον κάδο",
+  "pseudoInner": "Διαγραφή {count} κτιρίου/ων"
+ },
+ {
+  "ns": "building",
+  "k": "toolbar.export.statsDashboard",
+  "el": "Στατιστικά Πίνακα Ελέγχου",
+  "pseudoInner": "Στατιστικά Dashboard"
+ },
+ {
+  "ns": "building",
+  "k": "details.deleteBuilding",
+  "el": "Μεταφορά στον κάδο",
+  "pseudoInner": "Διαγραφή"
+ },
+ {
+  "ns": "building",
+  "k": "details.confirmDelete",
+  "el": "Θέλετε να μεταφέρετε το κτίριο «{name}» στον κάδο;",
+  "pseudoInner": "Είστε σίγουροι ότι θέλετε να διαγράψετε το κτίριο «{name}»;"
+ },
+ {
+  "ns": "building",
+  "k": "details.cascadeWarning",
+  "el": "Το κτίριο θα αφαιρεθεί από τις ενεργές λίστες αλλά μπορεί να επαναφερθεί από τον κάδο.",
+  "pseudoInner": "Η διαγραφή του κτιρίου θα διαγράψει ΟΡΙΣΤΙΚΑ και τα ακόλουθα:"
+ },
+ {
+  "ns": "building",
+  "k": "details.cascadeTotal",
+  "el": "Σχετιζόμενες εγγραφές: {count}",
+  "pseudoInner": "Σύνολο εγγραφών προς διαγραφή: {count}"
+ },
+ {
+  "ns": "building",
+  "k": "pages.buildings.details.deleteBuilding",
+  "el": "Μεταφορά Κτιρίου στον κάδο",
+  "pseudoInner": "Διαγραφή Κτιρίου"
+ },
+ {
+  "ns": "building",
+  "k": "pages.parking.toolbar.deleteSelected",
+  "el": "Μεταφορά Επιλεγμένων στον κάδο",
+  "pseudoInner": "Διαγραφή Επιλεγμένων"
+ },
+ {
+  "ns": "building",
+  "k": "pages.parking.deleteDialog.title",
+  "el": "Μεταφορά Θέσης Στάθμευσης στον κάδο",
+  "pseudoInner": "Διαγραφή Θέσης Στάθμευσης"
+ },
+ {
+  "ns": "building",
+  "k": "pages.parking.deleteDialog.description",
+  "el": "Θέλετε να μεταφέρετε τη θέση «{number}» στον κάδο; Μπορεί να επαναφερθεί αργότερα.",
+  "pseudoInner": "Είστε σίγουροι ότι θέλετε να διαγράψετε τη θέση «{number}»; Η ενέργεια δεν αναιρείται."
+ },
+ {
+  "ns": "building",
+  "k": "dialog.fields.name",
+  "el": "Περιγραφή Κτηρίου",
+  "pseudoInner": "Όνομα Κτιρίου"
+ },
+ {
+  "ns": "building",
+  "k": "dialog.fields.namePlaceholder",
+  "el": "π.χ. Γραφεία Νότου",
+  "pseudoInner": "Εισάγετε όνομα κτιρίου..."
+ },
+ {
+  "ns": "buildingCode",
+  "k": "form.empty",
+  "el": "Δεν έχουν οριστεί όροι δόμησης. Συμπληρώστε τη φόρμα για να ξεκινήσετε.",
+  "pseudoInner": "Δεν έχουν οριστεί όροι δόμησης."
+ },
+ {
+  "ns": "buildingCode",
+  "k": "zone.placeholder",
+  "el": "Επιλέξτε ζώνη (προαιρετικό)",
+  "pseudoInner": "Επιλέξτε ζώνη"
+ },
+ {
+  "ns": "buildingCode",
+  "k": "reset.tooltip",
+  "el": "Επαναφορά στην προεπιλογή Ζώνης {zoneId}",
+  "pseudoInner": "Επαναφορά στην τιμή της ζώνης"
+ },
+ {
+  "ns": "buildingCode",
+  "k": "reset.aria",
+  "el": "Επαναφορά στην τιμή της ζώνης για το πεδίο {field}",
+  "pseudoInner": "Επαναφορά για το πεδίο {field}"
+ },
+ {
+  "ns": "buildingCode",
+  "k": "validation.sd.softMax",
+  "el": "Ασυνήθιστα μεγάλος ΣΔ — συνήθως μεταξύ 0,4 και 5",
+  "pseudoInner": "Ασυνήθιστα μεγάλος ΣΔ"
+ },
+ {
+  "ns": "buildingCode",
+  "k": "validation.sd.softMin",
+  "el": "Ασυνήθιστα μικρός ΣΔ — συνήθως μεταξύ 0,4 και 5",
+  "pseudoInner": "Ασυνήθιστα μικρός ΣΔ"
+ },
+ {
+  "ns": "buildingCode",
+  "k": "validation.coverage.softMax",
+  "el": "Ασυνήθιστα μεγάλη κάλυψη — συνήθως έως 85%",
+  "pseudoInner": "Ασυνήθιστα μεγάλη κάλυψη"
+ },
+ {
+  "ns": "buildingCode",
+  "k": "validation.maxHeight.softMax",
+  "el": "Ασυνήθιστα ψηλό κτίριο — συνήθως έως 30 μέτρα",
+  "pseudoInner": "Ασυνήθιστα ψηλό κτίριο"
+ },
+ {
+  "ns": "common-account",
+  "k": "account.notificationSettings.categories.crm.description",
+  "el": "Ειδοποιήσεις για ενδιαφερόμενους και επαφές",
+  "pseudoInner": "Ειδοποιήσεις για leads και επαφές"
+ },
+ {
+  "ns": "common-account",
+  "k": "account.security.refreshTitle",
+  "el": "Ανανέωση δικαιωμάτων",
+  "pseudoInner": "Refresh permissions"
+ },
+ {
+  "ns": "common-account",
+  "k": "account.security.refreshDescription",
+  "el": "Αναγκαστική ανανέωση του διαπιστευτηρίου μετά από αλλαγές διαχειριστή",
+  "pseudoInner": "Force refresh your ID token after admin changes"
+ },
+ {
+  "ns": "common-account",
+  "k": "account.security.refreshBody",
+  "el": "Χρησιμοποιήστε μετά από ενημερώσεις ρόλων/δικαιωμάτων για επαναφόρτωση.",
+  "pseudoInner": "Use this after role/permission updates to reload your access token."
+ },
+ {
+  "ns": "common-account",
+  "k": "account.security.refreshButton",
+  "el": "Ανανέωση δικαιωμάτων",
+  "pseudoInner": "Refresh permissions"
+ },
+ {
+  "ns": "common-account",
+  "k": "account.security.refreshing",
+  "el": "Ανανέωση...",
+  "pseudoInner": "Refreshing..."
+ },
+ {
+  "ns": "common-account",
+  "k": "account.security.refreshSuccess",
+  "el": "Τα δικαιώματα ανανεώθηκαν επιτυχώς! Επαναφόρτωση σελίδας...",
+  "pseudoInner": "Permissions refreshed successfully! Reloading page..."
+ },
+ {
+  "ns": "common-account",
+  "k": "account.security.refreshError",
+  "el": "Αποτυχία ανανέωσης δικαιωμάτων. Δοκιμάστε ξανά.",
+  "pseudoInner": "Failed to refresh permissions. Please try again."
+ },
+ {
+  "ns": "common-photos",
+  "k": "photoPreview.zoom.label",
+  "el": "Μεγέθυνση:",
+  "pseudoInner": "Zoom:"
+ },
+ {
+  "ns": "common-sales",
+  "k": "sales.sold.title",
+  "el": "Πωληθέντα Ακίνητα",
+  "pseudoInner": "Πωλημένα Ακίνητα"
+ },
+ {
+  "ns": "common-sales",
+  "k": "sales.sold.overview",
+  "el": "Πωληθέντα Ακίνητα - Επισκόπηση",
+  "pseudoInner": "Πωλημένα Ακίνητα - Επισκόπηση"
+ },
+ {
+  "ns": "common-sales",
+  "k": "sales.sold.marketInsights.title",
+  "el": "Αναλύσεις Αγοράς",
+  "pseudoInner": "Market Insights"
+ },
+ {
+  "ns": "common-sales",
+  "k": "sales.sold.marketInsights.performanceMetrics",
+  "el": "Δείκτες Απόδοσης",
+  "pseudoInner": "Performance Metrics"
+ },
+ {
+  "ns": "common-sales",
+  "k": "sales.sold.marketInsights.successRate",
+  "el": "Ποσοστό Επιτυχίας (λιστάρισμα → πώληση)",
+  "pseudoInner": "Success Rate (λιστάρισμα → πώληση)"
+ },
+ {
+  "ns": "common-sales",
+  "k": "sales.available.activity.hotProperties",
+  "el": "Δημοφιλή Ακίνητα (>{count} προβολές/εβδομάδα)",
+  "pseudoInner": "Hot Properties (>{count} προβολές/εβδομάδα)"
+ },
+ {
+  "ns": "common-sales",
+  "k": "salesStorage.gridLabel",
+  "el": "Πλέγμα αποθηκών",
+  "pseudoInner": "Grid αποθηκών"
+ },
+ {
+  "ns": "common-sales",
+  "k": "salesParking.gridLabel",
+  "el": "Πλέγμα θέσεων στάθμευσης",
+  "pseudoInner": "Grid θέσεων στάθμευσης"
+ },
+ {
+  "ns": "common-shared",
+  "k": "recipients.compactLabel",
+  "el": "Συμπαγής Διαχείριση Παραληπτών",
+  "pseudoInner": "Compact Recipients Management"
+ },
+ {
+  "ns": "common-shared",
+  "k": "recipients.compactEmailLabel",
+  "el": "Συμπαγές Email {number}",
+  "pseudoInner": "Compact Email {number}"
+ },
+ {
+  "ns": "common-shared",
+  "k": "recipients.compactInputsLabel",
+  "el": "Συμπαγή Πεδία Email",
+  "pseudoInner": "Compact Email Inputs"
+ },
+ {
+  "ns": "common-shared",
+  "k": "email.template",
+  "el": "Πρότυπο Email",
+  "pseudoInner": "Email Template"
+ },
+ {
+  "ns": "common-shared",
+  "k": "email.selectTemplate",
+  "el": "Επιλογή Προτύπου Email",
+  "pseudoInner": "Επιλογή Template Email"
+ },
+ {
+  "ns": "common-shared",
+  "k": "email.availableTemplates",
+  "el": "Διαθέσιμα Πρότυπα",
+  "pseudoInner": "Διαθέσιμα Templates"
+ },
+ {
+  "ns": "common-shared",
+  "k": "email.selectAppropriate",
+  "el": "Επιλέξτε το κατάλληλο πρότυπο για την αποστολή",
+  "pseudoInner": "Επιλέξτε το κατάλληλο template για την αποστολή"
+ },
+ {
+  "ns": "common",
+  "k": "storage.clearConfirm",
+  "el": "Θέλετε να καθαρίσετε τα αποθηκευμένα δεδομένα;\n\nΑυτό θα διαγράψει:\n• Αποθηκευμένα αρχεία DXF\n• Προσωρινά δεδομένα\n• Προσωρινή μνήμη φυλλομετρητή\n\nΤα αποθηκευμένα έργα δεν θα επηρεαστούν.",
+  "pseudoInner": "Θέλετε να καθαρίσετε το cached storage data?\n\nΑυτό θα διαγράψει:\n• Cached DXF files\n• Temporary data\n• Browser cache\n\nΤα αποθηκευμένα projects δεν θα επηρεαστούν."
+ },
+ {
+  "ns": "common",
+  "k": "storage.clearedSuccess",
+  "el": "Ο αποθηκευτικός χώρος καθαρίστηκε! Ανανεώνω τη σελίδα...",
+  "pseudoInner": "Storage καθαρίστηκε! Ανανεώνω τη σελίδα..."
+ },
+ {
+  "ns": "common",
+  "k": "storage.clearError",
+  "el": "Σφάλμα κατά τον καθαρισμό αποθηκευτικού χώρου.",
+  "pseudoInner": "Σφάλμα κατά τον καθαρισμό storage."
+ },
+ {
+  "ns": "common",
+  "k": "storage.clearing",
+  "el": "Καθαρισμός...",
+  "pseudoInner": "Clearing..."
+ },
+ {
+  "ns": "common",
+  "k": "storage.clear",
+  "el": "Καθαρισμός",
+  "pseudoInner": "Clear"
+ },
+ {
+  "ns": "common",
+  "k": "storage.criticalWarning",
+  "el": "Ο αποθηκευτικός χώρος είναι σχεδόν γεμάτος! Καθαρίστε τον για να αποφύγετε σφάλματα.",
+  "pseudoInner": "Storage σχεδόν γεμάτο! Καθαρίστε το για να αποφύγετε errors."
+ },
+ {
+  "ns": "common",
+  "k": "storage.lowWarning",
+  "el": "Ο αποθηκευτικός χώρος είναι σε χαμηλά επίπεδα. Σκεφτείτε καθαρισμό.",
+  "pseudoInner": "Storage σε χαμηλά επίπεδα. Σκεφτείτε καθαρισμό."
+ },
+ {
+  "ns": "common",
+  "k": "modal.closeModal",
+  "el": "Κλείσιμο παραθύρου",
+  "pseudoInner": "Κλείσιμο modal"
+ },
+ {
+  "ns": "common",
+  "k": "layerManager.title",
+  "el": "Διαχείριση Επιπέδων",
+  "pseudoInner": "Layers Διαχείρισης"
+ },
+ {
+  "ns": "common",
+  "k": "layerManager.searchPlaceholder",
+  "el": "Αναζήτηση επιπέδου...",
+  "pseudoInner": "Αναζήτηση layer..."
+ },
+ {
+  "ns": "common",
+  "k": "layerManager.searchAriaLabel",
+  "el": "Αναζήτηση Επιπέδου",
+  "pseudoInner": "Αναζήτηση Layer"
+ },
+ {
+  "ns": "common",
+  "k": "layerManager.noLayersFound",
+  "el": "Δεν βρέθηκαν επίπεδα",
+  "pseudoInner": "Δεν βρέθηκαν layers"
+ },
+ {
+  "ns": "common",
+  "k": "copy.copyLink",
+  "el": "Αντιγραφή Συνδέσμου",
+  "pseudoInner": "Αντιγραφή Link"
+ },
+ {
+  "ns": "common",
+  "k": "spaces.commonSpaces.sections.indoor.businessCenters",
+  "el": "Επιχειρηματικά κέντρα",
+  "pseudoInner": "Business centers"
+ },
+ {
+  "ns": "common",
+  "k": "headerActions.dashboard",
+  "el": "Πίνακας Ελέγχου",
+  "pseudoInner": "Dashboard"
+ },
+ {
+  "ns": "common",
+  "k": "headerActions.toggleDashboard",
+  "el": "Εμφάνιση/Απόκρυψη Πίνακα Ελέγχου",
+  "pseudoInner": "Εμφάνιση/Απόκρυψη Dashboard"
+ },
+ {
+  "ns": "common",
+  "k": "headerActions.hideDashboard",
+  "el": "Απόκρυψη Πίνακα Ελέγχου",
+  "pseudoInner": "Απόκρυψη Dashboard"
+ },
+ {
+  "ns": "common",
+  "k": "headerActions.showDashboard",
+  "el": "Εμφάνιση Πίνακα Ελέγχου",
+  "pseudoInner": "Εμφάνιση Dashboard"
+ },
+ {
+  "ns": "common",
+  "k": "debug.title",
+  "el": "Εργαλεία Ανάπτυξης",
+  "pseudoInner": "Debug"
+ },
+ {
+  "ns": "common",
+  "k": "debug.description",
+  "el": "Διαγνωστικά εργαλεία και εσωτερικές βοηθητικές λειτουργίες",
+  "pseudoInner": "Diagnostic tools and internal utilities"
+ },
+ {
+  "ns": "common",
+  "k": "debug.note",
+  "el": "Αυτά τα εργαλεία προορίζονται για ανάπτυξη και υποστήριξη.",
+  "pseudoInner": "These tools are intended for development and support."
+ },
+ {
+  "ns": "common",
+  "k": "debug.links.tokenInfo",
+  "el": "Πληροφορίες Διαπιστευτηρίου",
+  "pseudoInner": "Token Info"
+ },
+ {
+  "ns": "common",
+  "k": "debug.tokenInfo.loading",
+  "el": "Φόρτωση πληροφοριών διαπιστευτηρίου...",
+  "pseudoInner": "Loading token info..."
+ },
+ {
+  "ns": "common",
+  "k": "debug.tokenInfo.notAuthenticated",
+  "el": "Μη πιστοποιημένος",
+  "pseudoInner": "Not authenticated"
+ },
+ {
+  "ns": "common",
+  "k": "debug.tokenInfo.loginPrompt",
+  "el": "Συνδεθείτε για να δείτε πληροφορίες διαπιστευτηρίου.",
+  "pseudoInner": "Please log in to view token information."
+ },
+ {
+  "ns": "common",
+  "k": "debug.tokenInfo.title",
+  "el": "Πληροφορίες Διαπιστευτηρίου - Ιδιότητες Χρήστη",
+  "pseudoInner": "Token Info - Custom Claims"
+ },
+ {
+  "ns": "common",
+  "k": "debug.tokenInfo.userObject",
+  "el": "Αντικείμενο Χρήστη",
+  "pseudoInner": "User Object"
+ },
+ {
+  "ns": "common",
+  "k": "debug.tokenInfo.fullUserObject",
+  "el": "Πλήρες Αντικείμενο Χρήστη (Ακατέργαστο)",
+  "pseudoInner": "Full User Object (Raw)"
+ },
+ {
+  "ns": "common",
+  "k": "debug.tokenInfo.keyInfo",
+  "el": "Βασικές Πληροφορίες",
+  "pseudoInner": "Key Debug Info"
+ },
+ {
+  "ns": "common",
+  "k": "debug.tokenInfo.globalRole",
+  "el": "Παγκόσμιος Ρόλος",
+  "pseudoInner": "Global Role"
+ },
+ {
+  "ns": "common",
+  "k": "debug.tokenInfo.companyId",
+  "el": "Αναγνωριστικό Εταιρείας",
+  "pseudoInner": "Company ID"
+ },
+ {
+  "ns": "common",
+  "k": "debug.tokenInfo.permissionsCount",
+  "el": "Αριθμός Δικαιωμάτων",
+  "pseudoInner": "Permissions Count"
+ },
+ {
+  "ns": "common",
+  "k": "debug.tokenInfo.missing",
+  "el": "ΛΕΙΠΕΙ",
+  "pseudoInner": "MISSING"
+ },
+ {
+  "ns": "communications",
+  "k": "telegram.title",
+  "el": "Μηνύματα Telegram",
+  "pseudoInner": "Telegram Messages"
+ },
+ {
+  "ns": "communications",
+  "k": "center.title",
+  "el": "Κέντρο Επικοινωνιών",
+  "pseudoInner": "Communications Center"
+ },
+ {
+  "ns": "communications",
+  "k": "center.initSuccess",
+  "el": "Το σύστημα επικοινωνιών αρχικοποιήθηκε επιτυχώς",
+  "pseudoInner": "Communications system αρχικοποιήθηκε επιτυχώς"
+ },
+ {
+  "ns": "communications",
+  "k": "center.initError",
+  "el": "Σφάλμα κατά την αρχικοποίηση του συστήματος επικοινωνιών",
+  "pseudoInner": "Σφάλμα κατά την αρχικοποίηση του communications system"
+ },
+ {
+  "ns": "communications",
+  "k": "center.initLoading",
+  "el": "Αρχικοποίηση Συστήματος Επικοινωνιών...",
+  "pseudoInner": "Αρχικοποίηση Communications System..."
+ },
+ {
+  "ns": "communications",
+  "k": "center.unavailable",
+  "el": "Σύστημα Επικοινωνιών μη διαθέσιμο",
+  "pseudoInner": "Communications System μη διαθέσιμο"
+ },
+ {
+  "ns": "communications",
+  "k": "center.refresh",
+  "el": "Ανανέωση",
+  "pseudoInner": "Refresh"
+ },
+ {
+  "ns": "communications",
+  "k": "center.testChannels",
+  "el": "Δοκιμή Καναλιών",
+  "pseudoInner": "Test Channels"
+ },
+ {
+  "ns": "communications",
+  "k": "center.tabs.inbox",
+  "el": "Εισερχόμενα",
+  "pseudoInner": "Inbox"
+ },
+ {
+  "ns": "communications",
+  "k": "center.tabs.channels",
+  "el": "Κανάλια",
+  "pseudoInner": "Channels"
+ },
+ {
+  "ns": "communications",
+  "k": "center.tabs.analytics",
+  "el": "Αναλυτικά",
+  "pseudoInner": "Analytics"
+ },
+ {
+  "ns": "communications",
+  "k": "center.channelsTab.title",
+  "el": "Κατάσταση Καναλιών",
+  "pseudoInner": "Κατάσταση Channels"
+ },
+ {
+  "ns": "compositions",
+  "k": "description",
+  "el": "Σύνθετα στοιχεία και επίδειξη",
+  "pseudoInner": "Σύνθετα components και showcase"
+ },
+ {
+  "ns": "compositions",
+  "k": "showcase.title",
+  "el": "Επίδειξη Σύνθεσης Στοιχείων",
+  "pseudoInner": "Component Composition Showcase"
+ },
+ {
+  "ns": "compositions",
+  "k": "showcase.subtitle",
+  "el": "Παρουσίαση των νέων σύνθετων στοιχείων που χρησιμοποιούν το σύστημα BaseCard",
+  "pseudoInner": "Demonstration των νέων composition components που χρησιμοποιούν το BaseCard system"
+ },
+ {
+  "ns": "compositions",
+  "k": "showcase.sections.cards",
+  "el": "Στοιχεία Καρτών",
+  "pseudoInner": "Card Components"
+ },
+ {
+  "ns": "compositions",
+  "k": "showcase.sections.toolbars",
+  "el": "Στοιχεία Γραμμών Εργαλείων",
+  "pseudoInner": "Toolbar Components"
+ },
+ {
+  "ns": "compositions",
+  "k": "showcase.sections.integration",
+  "el": "Επίδειξη Ενσωμάτωσης",
+  "pseudoInner": "Integration Demo"
+ },
+ {
+  "ns": "compositions",
+  "k": "showcase.sections.benefits",
+  "el": "Οφέλη Συστήματος Σχεδίασης",
+  "pseudoInner": "Design System Benefits"
+ },
+ {
+  "ns": "compositions",
+  "k": "cards.task.title",
+  "el": "Κάρτα Εργασίας",
+  "pseudoInner": "TaskCard"
+ },
+ {
+  "ns": "compositions",
+  "k": "cards.user.title",
+  "el": "Κάρτα Χρήστη",
+  "pseudoInner": "UserCard"
+ },
+ {
+  "ns": "compositions",
+  "k": "cards.building.title",
+  "el": "Κάρτα Κτιρίου",
+  "pseudoInner": "BuildingCard"
+ },
+ {
+  "ns": "compositions",
+  "k": "cards.project.title",
+  "el": "Κάρτα Έργου",
+  "pseudoInner": "ProjectCard"
+ },
+ {
+  "ns": "compositions",
+  "k": "cards.contact.title",
+  "el": "Κάρτα Επαφής",
+  "pseudoInner": "ContactCard"
+ },
+ {
+  "ns": "compositions",
+  "k": "cards.storage.title",
+  "el": "Κάρτα Αποθήκευσης",
+  "pseudoInner": "StorageCard"
+ },
+ {
+  "ns": "compositions",
+  "k": "cards.property.title",
+  "el": "Κάρτα Ακινήτου",
+  "pseudoInner": "PropertyCard"
+ },
+ {
+  "ns": "compositions",
+  "k": "cards.notification.title",
+  "el": "Κάρτα Ειδοποίησης",
+  "pseudoInner": "NotificationCard"
+ },
+ {
+  "ns": "compositions",
+  "k": "toolbars.building.title",
+  "el": "Γραμμή Εργαλείων Κτιρίων",
+  "pseudoInner": "BuildingToolbar"
+ },
+ {
+  "ns": "compositions",
+  "k": "toolbars.project.title",
+  "el": "Γραμμή Εργαλείων Έργων",
+  "pseudoInner": "ProjectToolbar"
+ },
+ {
+  "ns": "compositions",
+  "k": "toolbars.contacts.title",
+  "el": "Γραμμή Εργαλείων Επαφών",
+  "pseudoInner": "ContactsToolbar"
+ },
+ {
+  "ns": "compositions",
+  "k": "demo.state",
+  "el": "Κατάσταση Επίδειξης",
+  "pseudoInner": "Demo State"
+ },
+ {
+  "ns": "compositions",
+  "k": "demo.selected",
+  "el": "Επιλεγμένα",
+  "pseudoInner": "Selected"
+ },
+ {
+  "ns": "compositions",
+  "k": "demo.search",
+  "el": "Αναζήτηση",
+  "pseudoInner": "Search"
+ },
+ {
+  "ns": "compositions",
+  "k": "demo.filters",
+  "el": "Φίλτρα",
+  "pseudoInner": "Filters"
+ },
+ {
+  "ns": "compositions",
+  "k": "demo.none",
+  "el": "Κανένα",
+  "pseudoInner": "None"
+ },
+ {
+  "ns": "compositions",
+  "k": "demo.simulate",
+  "el": "Προσομοίωση Επιλογής",
+  "pseudoInner": "Simulate Selection"
+ },
+ {
+  "ns": "compositions",
+  "k": "demo.items",
+  "el": "στοιχεία",
+  "pseudoInner": "items"
+ },
+ {
+  "ns": "compositions",
+  "k": "integration.title",
+  "el": "Επίδειξη Ενσωμάτωσης",
+  "pseudoInner": "Integration Demo"
+ },
+ {
+  "ns": "compositions",
+  "k": "integration.examples.buildings",
+  "el": "Σελίδα διαχείρισης κτιρίων",
+  "pseudoInner": "Building management page"
+ },
+ {
+  "ns": "compositions",
+  "k": "integration.examples.projects",
+  "el": "Σελίδα έργων",
+  "pseudoInner": "Projects page"
+ },
+ {
+  "ns": "compositions",
+  "k": "integration.examples.contacts",
+  "el": "Σελίδα επαφών",
+  "pseudoInner": "Contacts page"
+ },
+ {
+  "ns": "compositions",
+  "k": "benefits.title",
+  "el": "Οφέλη Συστήματος Σχεδίασης",
+  "pseudoInner": "Design System Benefits"
+ },
+ {
+  "ns": "compositions",
+  "k": "benefits.consistency.title",
+  "el": "Συνέπεια",
+  "pseudoInner": "Consistency"
+ },
+ {
+  "ns": "compositions",
+  "k": "benefits.consistency.description",
+  "el": "Όλες οι κάρτες χρησιμοποιούν το ίδιο σύστημα βασικής κάρτας για ενιαία εμφάνιση",
+  "pseudoInner": "Όλα τα cards χρησιμοποιούν το ίδιο BaseCard system για unified look & feel"
+ },
+ {
+  "ns": "compositions",
+  "k": "benefits.modularity.title",
+  "el": "Αρθρωτότητα",
+  "pseudoInner": "Modularity"
+ },
+ {
+  "ns": "compositions",
+  "k": "benefits.modularity.description",
+  "el": "Το πρότυπο σύνθεσης επιτρέπει εύκολη προσαρμογή και επαναχρησιμοποίηση",
+  "pseudoInner": "Composition pattern επιτρέπει εύκολη customization και reusability"
+ },
+ {
+  "ns": "compositions",
+  "k": "benefits.typeSafety.title",
+  "el": "Ασφάλεια Τύπων",
+  "pseudoInner": "Type Safety"
+ },
+ {
+  "ns": "compositions",
+  "k": "benefits.typeSafety.description",
+  "el": "Πλήρης υποστήριξη TypeScript με επικυρωμένες ιδιότητες και ενσωμάτωση συστήματος σχεδίασης",
+  "pseudoInner": "Full TypeScript support με validated props και design system integration"
+ },
+ {
+  "ns": "compositions",
+  "k": "benefits.performance.title",
+  "el": "Απόδοση",
+  "pseudoInner": "Performance"
+ },
+ {
+  "ns": "compositions",
+  "k": "benefits.performance.description",
+  "el": "Βελτιστοποιημένη απόδοση και σημασιολογικό σύστημα χρωμάτων χωρίς επιβάρυνση εκτέλεσης",
+  "pseudoInner": "Optimized rendering και semantic color system με zero runtime overhead"
+ },
+ {
+  "ns": "compositions",
+  "k": "benefits.unifiedInterface.title",
+  "el": "Ενοποιημένη Διεπαφή",
+  "pseudoInner": "Unified Interface"
+ },
+ {
+  "ns": "compositions",
+  "k": "benefits.unifiedInterface.description",
+  "el": "Όλες οι γραμμές εργαλείων χρησιμοποιούν το ίδιο σύστημα BaseToolbar για συνεπή συμπεριφορά και στυλ",
+  "pseudoInner": "Όλα τα toolbars χρησιμοποιούν το ίδιο BaseToolbar system για consistent behavior και styling"
+ },
+ {
+  "ns": "compositions",
+  "k": "benefits.configurable.title",
+  "el": "Παραμετροποιήσιμο",
+  "pseudoInner": "Configurable"
+ },
+ {
+  "ns": "compositions",
+  "k": "benefits.configurable.description",
+  "el": "Ευέλικτη παραμετροποίηση με ενέργειες, φίλτρα, αναζήτηση και προσαρμοσμένες ενότητες περιεχομένου",
+  "pseudoInner": "Flexible configuration με actions, filters, search και custom content sections"
+ },
+ {
+  "ns": "compositions",
+  "k": "benefits.accessible.title",
+  "el": "Προσβάσιμο",
+  "pseudoInner": "Accessible"
+ },
+ {
+  "ns": "compositions",
+  "k": "benefits.accessible.description",
+  "el": "Ενσωματωμένη προσβασιμότητα με συντομεύσεις πληκτρολογίου, επεξηγήσεις και υποστήριξη ARIA",
+  "pseudoInner": "Built-in accessibility με keyboard shortcuts, tooltips και ARIA support"
+ },
+ {
+  "ns": "contacts-core",
+  "k": "toolbar.shortcutActions.delete",
+  "el": "Διαγραφή Επιλεγμένης",
+  "pseudoInner": "Διαγραφή Επιλεγμένης (Delete)"
+ },
+ {
+  "ns": "contacts-core",
+  "k": "toolbar.tabs.filters.filterHint",
+  "el": "Χρησιμοποιήστε τα φίλτρα στην κεφαλίδα για περισσότερες επιλογές",
+  "pseudoInner": "Χρησιμοποιήστε τα φίλτρα στο header για περισσότερες επιλογές"
+ },
+ {
+  "ns": "contacts-core",
+  "k": "placeholderTab.comingSoon",
+  "el": "- Σύντομα Διαθέσιμο",
+  "pseudoInner": "- Coming Soon"
+ },
+ {
+  "ns": "contacts-core",
+  "k": "placeholderTab.contactIdLabel",
+  "el": "Αναγνωριστικό Επαφής:",
+  "pseudoInner": "Contact ID:"
+ },
+ {
+  "ns": "contacts-core",
+  "k": "placeholderTab.typeLabel",
+  "el": "| Τύπος:",
+  "pseudoInner": "| Type:"
+ },
+ {
+  "ns": "contacts-form",
+  "k": "validation.vatInvalid",
+  "el": "Μη έγκυρο ΑΦΜ — ελέγξτε ότι τα 9 ψηφία είναι σωστά",
+  "pseudoInner": "Το ΑΦΜ πρέπει να αποτελείται από ακριβώς 9 ψηφία"
+ },
+ {
+  "ns": "contacts-lifecycle",
+  "k": "identityImpact.affectedDomains.searchAndReporting.description",
+  "el": "Η νέα τιμή θα εμφανίζεται σε αναζητήσεις, εξαγωγές δεδομένων και αναφορές που διαβάζουν δεδομένα επαφής σε πραγματικό χρόνο.",
+  "pseudoInner": "Η νέα τιμή θα εμφανίζεται σε αναζητήσεις, exports και report builder views που διαβάζουν live δεδομένα επαφής."
+ },
+ {
+  "ns": "contacts-lifecycle",
+  "k": "identityImpact.affectedDomains.ikaAttendance.label",
+  "el": "ΙΚΑ παρουσίες",
+  "pseudoInner": "ΙΚΑ παρουσίες / worker resolution"
+ },
+ {
+  "ns": "contacts-lifecycle",
+  "k": "identityImpact.affectedDomains.ikaAttendance.description",
+  "el": "Το ΑΜΚΑ χρησιμοποιείται για εντοπισμό εργατοτεχνίτη σε ροές παρουσιών και ελέγχους QR.",
+  "pseudoInner": "Το ΑΜΚΑ χρησιμοποιείται για εντοπισμό εργατοτεχνίτη σε attendance flows και QR check-ins."
+ },
+ {
+  "ns": "contacts-lifecycle",
+  "k": "identityImpact.affectedDomains.relationshipViews.description",
+  "el": "Οι νέες τιμές θα εμφανιστούν σε κάρτες σχέσεων, οργανωτικά δέντρα και επιλογείς.",
+  "pseudoInner": "Οι νέες τιμές θα εμφανιστούν σε κάρτες σχέσεων, οργανωτικά δέντρα και selectors."
+ },
+ {
+  "ns": "contacts-relationships",
+  "k": "communication.sections.socialMedia",
+  "el": "Κοινωνικά Δίκτυα",
+  "pseudoInner": "Social Media"
+ },
+ {
+  "ns": "contacts-relationships",
+  "k": "communication.companySocialMediaTypes.marketing",
+  "el": "Μάρκετινγκ",
+  "pseudoInner": "Marketing"
+ },
+ {
+  "ns": "contacts-relationships",
+  "k": "communication.buttons.addSocial",
+  "el": "Προσθήκη Κοινωνικού Δικτύου",
+  "pseudoInner": "Προσθήκη Social Media"
+ },
+ {
+  "ns": "contacts-relationships",
+  "k": "communication.tableHeaders.username",
+  "el": "Όνομα Χρήστη",
+  "pseudoInner": "Username"
+ },
+ {
+  "ns": "contacts-relationships",
+  "k": "individual.sections.address.title",
+  "el": "Διευθύνσεις",
+  "pseudoInner": "Διεύθυνση Κατοικίας"
+ },
+ {
+  "ns": "crm",
+  "k": "overview.stats.newLeads",
+  "el": "Νέοι Ενδιαφερόμενοι",
+  "pseudoInner": "Νέα Leads"
+ },
+ {
+  "ns": "crm",
+  "k": "page.subtitle",
+  "el": "Διαχείριση πελατειακών σχέσεων και ροής πωλήσεων",
+  "pseudoInner": "Διαχείριση πελατειακών σχέσεων και pipeline πωλήσεων"
+ },
+ {
+  "ns": "crm",
+  "k": "tabs.pipeline.label",
+  "el": "Ροή Πωλήσεων",
+  "pseudoInner": "Pipeline"
+ },
+ {
+  "ns": "crm",
+  "k": "tabs.pipeline.description",
+  "el": "Διαχείριση ροής πωλήσεων και ευκαιριών",
+  "pseudoInner": "Διαχείριση pipeline και ευκαιριών"
+ },
+ {
+  "ns": "crm",
+  "k": "tabs.tasks.label",
+  "el": "Δραστηριότητες",
+  "pseudoInner": "Εργασίες"
+ },
+ {
+  "ns": "crm",
+  "k": "tabs.tasks.description",
+  "el": "Εργασίες, υπενθυμίσεις και παρακολουθήσεις",
+  "pseudoInner": "Εργασίες, υπενθυμίσεις και follow-ups"
+ },
+ {
+  "ns": "crm",
+  "k": "dashboard.tabs.pipeline",
+  "el": "Ροή Πωλήσεων",
+  "pseudoInner": "Pipeline"
+ },
+ {
+  "ns": "crm",
+  "k": "dashboard.teamPerformance.columns.leadsWeek",
+  "el": "Ενδιαφερόμενοι (Εβδομάδα)",
+  "pseudoInner": "Leads (Εβδομάδα)"
+ },
+ {
+  "ns": "crm",
+  "k": "tasks.title",
+  "el": "Δραστηριότητες",
+  "pseudoInner": "Εργασίες & Ραντεβού"
+ },
+ {
+  "ns": "crm",
+  "k": "tasks.loading",
+  "el": "Φόρτωση εργασιών...",
+  "pseudoInner": "Φόρτωση..."
+ },
+ {
+  "ns": "crm",
+  "k": "leads.title",
+  "el": "Ενδιαφερόμενοι",
+  "pseudoInner": "Leads"
+ },
+ {
+  "ns": "crm",
+  "k": "leads.description",
+  "el": "Διαχείριση ενδιαφερομένων και ευκαιριών πωλήσεων",
+  "pseudoInner": "Διαχείριση leads και ευκαιριών πωλήσεων"
+ },
+ {
+  "ns": "crm",
+  "k": "leads.stats.totalLeads",
+  "el": "Σύνολο Ενδιαφερομένων",
+  "pseudoInner": "Σύνολο Leads"
+ },
+ {
+  "ns": "crm",
+  "k": "leads.stats.activeLeads",
+  "el": "Ενεργοί Ενδιαφερόμενοι",
+  "pseudoInner": "Ενεργά Leads"
+ },
+ {
+  "ns": "crm",
+  "k": "leads.loading",
+  "el": "Φόρτωση ενδιαφερομένων...",
+  "pseudoInner": "Φόρτωση leads..."
+ },
+ {
+  "ns": "crm",
+  "k": "leads.empty.title",
+  "el": "Δεν υπάρχουν ενδιαφερόμενοι",
+  "pseudoInner": "Δεν υπάρχουν leads"
+ },
+ {
+  "ns": "crm",
+  "k": "leads.errors.loadFailed",
+  "el": "Αποτυχία φόρτωσης ενδιαφερομένων",
+  "pseudoInner": "Αποτυχία φόρτωσης leads"
+ },
+ {
+  "ns": "crm",
+  "k": "pipeline.title",
+  "el": "Ροή Πωλήσεων",
+  "pseudoInner": "Sales Pipeline"
+ },
+ {
+  "ns": "crm",
+  "k": "pipeline.viewPipeline",
+  "el": "Προβολή Ροής",
+  "pseudoInner": "Προβολή Pipeline"
+ },
+ {
+  "ns": "crm",
+  "k": "pipeline.loading",
+  "el": "Φόρτωση ροής...",
+  "pseudoInner": "Φόρτωση pipeline..."
+ },
+ {
+  "ns": "crm",
+  "k": "email.templates.followup.name",
+  "el": "Παρακολούθηση",
+  "pseudoInner": "Follow-up"
+ },
+ {
+  "ns": "crm",
+  "k": "email.templates.followup.subject",
+  "el": "Παρακολούθηση για τη συνεργασία μας",
+  "pseudoInner": "Follow-up για τη συνεργασία μας"
+ },
+ {
+  "ns": "crm",
+  "k": "sendMessage.noTemplate",
+  "el": "Χωρίς πρότυπο",
+  "pseudoInner": "Χωρίς template"
+ },
+ {
+  "ns": "crm",
+  "k": "sections.leads.title",
+  "el": "Ενδιαφερόμενοι & Ευκαιρίες",
+  "pseudoInner": "Leads & Ευκαιρίες"
+ },
+ {
+  "ns": "crm",
+  "k": "sections.tasks.title",
+  "el": "Δραστηριότητες",
+  "pseudoInner": "Εργασίες & Ραντεβού"
+ },
+ {
+  "ns": "crm",
+  "k": "sections.pipeline.title",
+  "el": "Ροή Πωλήσεων",
+  "pseudoInner": "Pipeline Πωλήσεων"
+ },
+ {
+  "ns": "crm",
+  "k": "sections.pipeline.description",
+  "el": "Οπτικοποίηση και διαχείριση ροής πωλήσεων",
+  "pseudoInner": "Οπτικοποίηση και διαχείριση pipeline πωλήσεων"
+ },
+ {
+  "ns": "crm",
+  "k": "leadDetails.backToLeads",
+  "el": "Πίσω στους Ενδιαφερόμενους",
+  "pseudoInner": "Πίσω στα Leads"
+ },
+ {
+  "ns": "dashboard",
+  "k": "aria.statsSection",
+  "el": "Στατιστικά Πίνακα Ελέγχου",
+  "pseudoInner": "Στατιστικά Dashboard"
+ },
+ {
+  "ns": "dashboard",
+  "k": "home.modules.crm.description",
+  "el": "Πελάτες, ενδιαφερόμενοι, ροή",
+  "pseudoInner": "Πελάτες, leads, pipeline"
+ },
+ {
+  "ns": "dxf-viewer-guides",
+  "k": "guidePanel.snapToGuides",
+  "el": "Πρόσδεση σε Οδηγούς",
+  "pseudoInner": "Snap σε Οδηγούς"
+ },
+ {
+  "ns": "dxf-viewer-guides",
+  "k": "guideAnalysis.sustainability.greenDeal",
+  "el": "Ευρωπαϊκή Πράσινη Συμφωνία",
+  "pseudoInner": "EU Green Deal"
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "panels.properties.description",
+  "el": "{selectedCount} επιλεγμένα στοιχεία{{layerCount, plural, =0 {} other { | {layerCount} DXF επίπεδα}}",
+  "pseudoInner": "{selectedCount} επιλεγμένα στοιχεία{{layerCount, plural, =0 {} other { | {layerCount} DXF layers}}"
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "panels.overlay.title",
+  "el": "Επικάλυψη",
+  "pseudoInner": "Overlay"
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "panels.overlay.description",
+  "el": "{{regionCount, plural, =0 {} other {{regionCount} περιοχές επικάλυψης}}",
+  "pseudoInner": "{{regionCount, plural, =0 {} other {{regionCount} overlay regions}}"
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "panels.hierarchy.description",
+  "el": "Ιεραρχία Έργων & Προορισμοί",
+  "pseudoInner": "Project Hierarchy & Destinations"
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "panels.layers.title",
+  "el": "Επίπεδα",
+  "pseudoInner": "Layers"
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "panels.layers.description",
+  "el": "Σχεδίαση Επιπέδων & Διαχείριση Κατάστασης",
+  "pseudoInner": "Layer Drawing & Status Management"
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "layerActions.rename",
+  "el": "Μετονομασία επιπέδου",
+  "pseudoInner": "Μετονομασία layer"
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "layerActions.changeColorEntity",
+  "el": "Αλλαγή χρώματος οντότητας",
+  "pseudoInner": "Αλλαγή χρώματος entity"
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "layerActions.renameEntity",
+  "el": "Μετονομασία οντότητας",
+  "pseudoInner": "Μετονομασία entity"
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "layerActions.changeColorGroup",
+  "el": "Αλλαγή χρώματος Ομάδας Χρωμάτων",
+  "pseudoInner": "Αλλαγή χρώματος Color Group"
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "layerActions.renameGroup",
+  "el": "Μετονομασία Ομάδας Χρωμάτων",
+  "pseudoInner": "Μετονομασία Color Group"
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "layerActions.deleteGroup",
+  "el": "Διαγραφή Ομάδας Χρωμάτων",
+  "pseudoInner": "Διαγραφή Color Group"
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "layerActions.toggleVisibility",
+  "el": "Εναλλαγή ορατότητας",
+  "pseudoInner": "Toggle ορατότητας"
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "layerActions.mergeEntities",
+  "el": "Συγχώνευση επιλεγμένων οντοτήτων",
+  "pseudoInner": "Συγχώνευση επιλεγμένων entities"
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "layerActions.mergeLayers",
+  "el": "Συγχώνευση επιλεγμένων επιπέδων",
+  "pseudoInner": "Συγχώνευση επιλεγμένων layers"
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "layerActions.mergeColorGroups",
+  "el": "Συγχώνευση επιλεγμένων ομάδων χρωμάτων",
+  "pseudoInner": "Συγχώνευση επιλεγμένων color groups"
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "layerActions.selectAllEntities",
+  "el": "Κλικ για επιλογή όλων των οντοτήτων, Ctrl+Κλικ για πολλαπλή επιλογή",
+  "pseudoInner": "Κλικ για επιλογή όλων των entities, Ctrl+Κλικ για multi-selection"
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "layerActions.doubleClickToRename",
+  "el": "Διπλό κλικ για μετονομασία",
+  "pseudoInner": "Double-click για μετονομασία"
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "search.layersAndEntities",
+  "el": "Αναζήτηση επιπέδων και οντοτήτων...",
+  "pseudoInner": "Αναζήτηση layers και entities..."
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "mergePanel.entitiesSelected",
+  "el": "{count} οντότητες επιλεγμένες",
+  "pseudoInner": "{count} entities επιλεγμένες"
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "mergePanel.layersSelected",
+  "el": "{count} επίπεδα επιλεγμένα",
+  "pseudoInner": "{count} layers επιλεγμένα"
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "mergePanel.colorGroupsSelected",
+  "el": "{count} ομάδες χρωμάτων επιλεγμένες",
+  "pseudoInner": "{count} color groups επιλεγμένα"
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "mergePanel.mergeEntitiesButton",
+  "el": "Συγχώνευση Οντοτήτων",
+  "pseudoInner": "Συγχώνευση Entities"
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "mergePanel.mergeLayersButton",
+  "el": "Συγχώνευση Επιπέδων",
+  "pseudoInner": "Συγχώνευση Layers"
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "mergePanel.mergeColorGroupsButton",
+  "el": "Συγχώνευση Ομάδων Χρωμάτων",
+  "pseudoInner": "Συγχώνευση Color Groups"
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "mergePanel.tip",
+  "el": "Συμβουλή: Ctrl+Κλικ για πολλαπλή επιλογή",
+  "pseudoInner": "Συμβουλή: Ctrl+Click για πολλαπλή επιλογή"
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "sceneInfo.entityTypes.block",
+  "el": "Μπλοκ",
+  "pseudoInner": "Blocks"
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "overlayProperties.title",
+  "el": "Ιδιότητες Επικάλυψης",
+  "pseudoInner": "Ιδιότητες Overlay"
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "overlayProperties.selectOverlay",
+  "el": "Επιλέξτε μια επικάλυψη για να δείτε τις ιδιότητές του.",
+  "pseudoInner": "Επιλέξτε ένα overlay για να δείτε τις ιδιότητές του."
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "overlayProperties.transferDescription",
+  "el": "Αυτή η οντότητα είναι ήδη συνδεδεμένη σε άλλο πολύγωνο. Μεταφορά στο τρέχον;",
+  "pseudoInner": "Αυτή η οντότητα είναι ήδη συνδεδεμένη σε άλλο polygon. Μεταφορά στο τρέχον;"
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "overlayList.deleteConfirm",
+  "el": "Διαγραφή επικάλυψης;",
+  "pseudoInner": "Διαγραφή overlay;"
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "overlayList.notFound",
+  "el": "Δεν βρέθηκαν επικαλύψεις",
+  "pseudoInner": "Δεν βρέθηκαν overlays"
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "overlayList.empty",
+  "el": "Καμία επικάλυψη",
+  "pseudoInner": "Κανένα overlay"
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "cadDock.history.commands.zoomWindow",
+  "el": "Εντολή: ZOOM Παράθυρο",
+  "pseudoInner": "Εντολή: ZOOM Window"
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "layerManager.title",
+  "el": "Διαχείριση Επιπέδων",
+  "pseudoInner": "Διαχείριση Layers"
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "layerManager.loading",
+  "el": "Φόρτωση επιπέδων...",
+  "pseudoInner": "Φόρτωση layers..."
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "layerManager.createDialog.title",
+  "el": "Δημιουργία νέου Επιπέδου",
+  "pseudoInner": "Δημιουργία νέου Layer"
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "layerManager.createDialog.nameLabel",
+  "el": "Όνομα Επιπέδου",
+  "pseudoInner": "Όνομα Layer"
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "layerManager.createDialog.descriptionPlaceholder",
+  "el": "Περιγραφή του επιπέδου...",
+  "pseudoInner": "Περιγραφή του layer..."
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "layerManager.actions.exportLayer",
+  "el": "Εξαγωγή Επιπέδου",
+  "pseudoInner": "Export Layer"
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "layerManager.actions.exportAll",
+  "el": "Εξαγωγή όλων των Επιπέδων",
+  "pseudoInner": "Export όλα τα Layers"
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "layerManager.actions.importLayers",
+  "el": "Εισαγωγή Επιπέδων",
+  "pseudoInner": "Import Layers"
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "layerManager.actions.hideSystemLayers",
+  "el": "Απόκρυψη Επιπέδων Συστήματος",
+  "pseudoInner": "Απόκρυψη System Layers"
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "layerManager.actions.showSystemLayers",
+  "el": "Εμφάνιση Επιπέδων Συστήματος",
+  "pseudoInner": "Εμφάνιση System Layers"
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "layerManager.labels.noLayersFound",
+  "el": "Δεν βρέθηκαν επίπεδα",
+  "pseudoInner": "Δεν βρέθηκαν layers"
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "layerManager.labels.createNewOrChangeFilters",
+  "el": "Δημιουργήστε ένα νέο επίπεδο ή αλλάξτε τα φίλτρα",
+  "pseudoInner": "Δημιουργήστε ένα νέο layer ή αλλάξτε τα φίλτρα"
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "layerManager.labels.searchLayers",
+  "el": "Αναζήτηση επιπέδων...",
+  "pseudoInner": "Αναζήτηση layers..."
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "layerManager.sync.status",
+  "el": "Κατάσταση Συγχρονισμού:",
+  "pseudoInner": "Κατάσταση Sync:"
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "layerManager.sync.lastSync",
+  "el": "Τελευταίος Συγχρονισμός:",
+  "pseudoInner": "Τελευταία Sync:"
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "layerManager.sync.connectedTooltip",
+  "el": "Συνδεδεμένο - Συγχρονισμός σε πραγματικό χρόνο",
+  "pseudoInner": "Συνδεδεμένο - Real-time sync ενεργό"
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "layerManager.readOnly.title",
+  "el": "Επίπεδα",
+  "pseudoInner": "Layers"
+ },
+ {
+  "ns": "dxf-viewer-panels",
+  "k": "layerManager.readOnly.waitForAdmins",
+  "el": "Περιμένετε να δημιουργηθούν επίπεδα από τους διαχειριστές",
+  "pseudoInner": "Περιμένετε να δημιουργηθούν layers από τους διαχειριστές"
+ },
+ {
+  "ns": "dxf-viewer-settings",
+  "k": "settings.grip.title",
+  "el": "Ρυθμίσεις Χερουλιών",
+  "pseudoInner": "Ρυθμίσεις Grips"
+ },
+ {
+  "ns": "dxf-viewer-settings",
+  "k": "settings.grip.actionsAriaLabel",
+  "el": "Ενέργειες ρυθμίσεων χερουλιών",
+  "pseudoInner": "Ενέργειες ρυθμίσεων grips"
+ },
+ {
+  "ns": "dxf-viewer-settings",
+  "k": "settings.grip.enabled",
+  "el": "Εμφάνιση Χερουλιών",
+  "pseudoInner": "Εμφάνιση Grips"
+ },
+ {
+  "ns": "dxf-viewer-settings",
+  "k": "settings.grip.disabledWarning",
+  "el": "Τα χερούλια είναι απενεργοποιημένα και δεν θα εμφανίζονται",
+  "pseudoInner": "Τα grips είναι απενεργοποιημένα και δεν θα εμφανίζονται"
+ },
+ {
+  "ns": "dxf-viewer-settings",
+  "k": "settings.grip.sections.colors",
+  "el": "Χρώματα Χερουλιών",
+  "pseudoInner": "Χρώματα Grips"
+ },
+ {
+  "ns": "dxf-viewer-settings",
+  "k": "settings.grip.sections.types",
+  "el": "Τύποι Χερουλιών",
+  "pseudoInner": "Τύποι Grips"
+ },
+ {
+  "ns": "dxf-viewer-settings",
+  "k": "settings.grip.labels.size",
+  "el": "Μέγεθος Χερουλιών",
+  "pseudoInner": "Μέγεθος Grips"
+ },
+ {
+  "ns": "dxf-viewer-settings",
+  "k": "settings.grip.labels.pickBoxSize",
+  "el": "Μέγεθος Πλαισίου Επιλογής",
+  "pseudoInner": "Μέγεθος Pick Box"
+ },
+ {
+  "ns": "dxf-viewer-settings",
+  "k": "settings.grip.labels.maxGrips",
+  "el": "Μέγιστα Χερούλια ανά Οντότητα",
+  "pseudoInner": "Μέγιστα Grips ανά Οντότητα"
+ },
+ {
+  "ns": "dxf-viewer-settings",
+  "k": "settings.grip.labels.gripObjLimit",
+  "el": "Όριο Πλήθους για Λαβές (0 = χωρίς όριο)",
+  "pseudoInner": "Όριο Πλήθους για Λαβές"
+ },
+ {
+  "ns": "dxf-viewer-settings",
+  "k": "settings.grip.checkboxes.snapToGrips",
+  "el": "Πρόσδεση σε Χερούλια",
+  "pseudoInner": "Snap σε Grips"
+ },
+ {
+  "ns": "dxf-viewer-settings",
+  "k": "settings.grip.factoryReset.lossList.customSettings",
+  "el": "Όλες τις προσαρμοσμένες ρυθμίσεις χερουλιών",
+  "pseudoInner": "Όλες τις προσαρμοσμένες ρυθμίσεις grips"
+ },
+ {
+  "ns": "dxf-viewer-settings",
+  "k": "settings.grip.factoryReset.successMessage",
+  "el": "Εργοστασιακές ρυθμίσεις επαναφέρθηκαν! Όλες οι ρυθμίσεις χερουλιών επέστρεψαν στα πρότυπα CAD.",
+  "pseudoInner": "Εργοστασιακές ρυθμίσεις επαναφέρθηκαν! Όλες οι ρυθμίσεις grips επέστρεψαν στα πρότυπα CAD."
+ },
+ {
+  "ns": "dxf-viewer-settings",
+  "k": "settings.grip.ariaLabel",
+  "el": "Ρυθμίσεις Χερουλιών",
+  "pseudoInner": "Ρυθμίσεις Grips"
+ },
+ {
+  "ns": "dxf-viewer-settings",
+  "k": "settings.tabs.hover",
+  "el": "Αιώρηση",
+  "pseudoInner": "Hover"
+ },
+ {
+  "ns": "dxf-viewer-settings",
+  "k": "settings.generalTabs.grips",
+  "el": "Χερούλια",
+  "pseudoInner": "Grips"
+ },
+ {
+  "ns": "dxf-viewer-settings",
+  "k": "settings.subTabs.gripsAria",
+  "el": "Ρυθμίσεις Χερουλιών {label}",
+  "pseudoInner": "Ρυθμίσεις Grips {label}"
+ },
+ {
+  "ns": "dxf-viewer-settings",
+  "k": "selectionSettings.tabs.window",
+  "el": "Επιλογή Παραθύρου",
+  "pseudoInner": "Window Selection"
+ },
+ {
+  "ns": "dxf-viewer-settings",
+  "k": "selectionSettings.tabs.crossing",
+  "el": "Επιλογή Διασταύρωσης",
+  "pseudoInner": "Crossing Selection"
+ },
+ {
+  "ns": "dxf-viewer-settings",
+  "k": "selectionSettings.resetButton",
+  "el": "Επαναφορά Ρυθμίσεων Επιλογής (DEBUG)",
+  "pseudoInner": "Reset Selection Settings (DEBUG)"
+ },
+ {
+  "ns": "dxf-viewer-settings",
+  "k": "selectionSettings.resetDescription",
+  "el": "Επαναφέρει όλες τις ρυθμίσεις για να λειτουργήσουν τα νέα borderStyle",
+  "pseudoInner": "Κάνει reset όλες τις ρυθμίσεις για να λειτουργήσουν τα νέα borderStyle"
+ },
+ {
+  "ns": "dxf-viewer-settings",
+  "k": "selectionSettings.window.title",
+  "el": "Ρυθμίσεις Επιλογής Παραθύρου",
+  "pseudoInner": "Window Selection Settings"
+ },
+ {
+  "ns": "dxf-viewer-settings",
+  "k": "selectionSettings.window.fillColor",
+  "el": "Επιλογή Χρώματος Γεμίσματος Παραθύρου",
+  "pseudoInner": "Επιλογή Χρώματος Γεμίσματος Window"
+ },
+ {
+  "ns": "dxf-viewer-settings",
+  "k": "selectionSettings.window.borderColor",
+  "el": "Επιλογή Χρώματος Περιγράμματος Παραθύρου",
+  "pseudoInner": "Επιλογή Χρώματος Περιγράμματος Window"
+ },
+ {
+  "ns": "dxf-viewer-settings",
+  "k": "selectionSettings.crossing.title",
+  "el": "Ρυθμίσεις Επιλογής Διασταύρωσης",
+  "pseudoInner": "Crossing Selection Settings"
+ },
+ {
+  "ns": "dxf-viewer-settings",
+  "k": "selectionSettings.crossing.fillColor",
+  "el": "Επιλογή Χρώματος Γεμίσματος Διασταύρωσης",
+  "pseudoInner": "Επιλογή Χρώματος Γεμίσματος Crossing"
+ },
+ {
+  "ns": "dxf-viewer-settings",
+  "k": "selectionSettings.crossing.borderColor",
+  "el": "Επιλογή Χρώματος Περιγράμματος Διασταύρωσης",
+  "pseudoInner": "Επιλογή Χρώματος Περιγράμματος Crossing"
+ },
+ {
+  "ns": "dxf-viewer-settings",
+  "k": "crosshairSettings.colorPicker",
+  "el": "Επιλογή Χρώματος Σταυρονήματος",
+  "pseudoInner": "Επιλογή Χρώματος Crosshair"
+ },
+ {
+  "ns": "dxf-viewer-settings",
+  "k": "crosshairSettings.behavior.cursorGapTitle",
+  "el": "Κενό Δρομέα",
+  "pseudoInner": "Cursor Gap"
+ },
+ {
+  "ns": "dxf-viewer-settings",
+  "k": "layersSettings.title",
+  "el": "Ρυθμίσεις Επιπέδων",
+  "pseudoInner": "Ρυθμίσεις Layers"
+ },
+ {
+  "ns": "dxf-viewer-settings",
+  "k": "layersSettings.preview.title",
+  "el": "Προεπισκόπηση Επιπέδου",
+  "pseudoInner": "Προεπισκόπηση Layer"
+ },
+ {
+  "ns": "dxf-viewer-settings",
+  "k": "layersSettings.preview.description",
+  "el": "Δείτε πώς θα φαίνονται τα επίπεδα",
+  "pseudoInner": "Δείτε πώς θα φαίνονται τα layers"
+ },
+ {
+  "ns": "dxf-viewer-settings",
+  "k": "layersSettings.reset.button",
+  "el": "Επαναφορά Ρυθμίσεων Επιπέδων",
+  "pseudoInner": "Επαναφορά Ρυθμίσεων Layers"
+ },
+ {
+  "ns": "dxf-viewer-settings",
+  "k": "layersSettings.comingSoon.items.fillColors",
+  "el": "Χρώματα γεμίσματος επιπέδων",
+  "pseudoInner": "Χρώματα γεμίσματος layers"
+ },
+ {
+  "ns": "dxf-viewer-settings",
+  "k": "layersSettings.comingSoon.items.importExport",
+  "el": "Εισαγωγή/Εξαγωγή προφίλ χρωμάτων",
+  "pseudoInner": "Import/Export προφίλ χρωμάτων"
+ },
+ {
+  "ns": "dxf-viewer-settings",
+  "k": "entitiesSettings.overrideDescriptions.gripsDraft",
+  "el": "Χρήση ειδικών ρυθμίσεων χερουλιών για προσχεδίαση",
+  "pseudoInner": "Χρήση ειδικών ρυθμίσεων grips για προσχεδίαση"
+ },
+ {
+  "ns": "dxf-viewer-settings",
+  "k": "currentSettings.grips",
+  "el": "Χερούλια",
+  "pseudoInner": "Grips"
+ },
+ {
+  "ns": "dxf-viewer-settings",
+  "k": "currentSettings.selectTab",
+  "el": "Επιλέξτε μια καρτέλα (Γραμμές, Κείμενο ή Χερούλια) για να δείτε τις τρέχουσες ρυθμίσεις",
+  "pseudoInner": "Επιλέξτε μια καρτέλα (Γραμμές, Κείμενο ή Grips) για να δείτε τις τρέχουσες ρυθμίσεις"
+ },
+ {
+  "ns": "dxf-viewer-settings",
+  "k": "specificSettings.categories.cursor.title",
+  "el": "Κέρσορας",
+  "pseudoInner": "Κέρσορας (Cursor)"
+ },
+ {
+  "ns": "dxf-viewer-settings",
+  "k": "specificSettings.categories.grid.title",
+  "el": "Πλέγμα & Χάρακες",
+  "pseudoInner": "Πλέγμα & Χάρακες (Grid & Rulers)"
+ },
+ {
+  "ns": "dxf-viewer-settings",
+  "k": "specificSettings.categories.layers.title",
+  "el": "Επίπεδα",
+  "pseudoInner": "Επίπεδα (Layers)"
+ },
+ {
+  "ns": "dxf-viewer-settings",
+  "k": "specificSettings.categories.grips.title",
+  "el": "Χερούλια",
+  "pseudoInner": "Grips"
+ },
+ {
+  "ns": "dxf-viewer-settings",
+  "k": "specificSettings.categories.grips.description",
+  "el": "Ρυθμίσεις χερουλιών (σύντομα)",
+  "pseudoInner": "Ρυθμίσεις grips (σύντομα)"
+ },
+ {
+  "ns": "dxf-viewer-shell",
+  "k": "toolbarStatus.zoom",
+  "el": "Μεγέθυνση",
+  "pseudoInner": "Ζουμ"
+ },
+ {
+  "ns": "dxf-viewer-shell",
+  "k": "toolbarStatus.snap",
+  "el": "Πρόσδεση",
+  "pseudoInner": "Snap"
+ },
+ {
+  "ns": "dxf-viewer-shell",
+  "k": "toolbarStatus.shortcutsFallback",
+  "el": "D=Χάρακας | W=Παράθυρο Μεγέθυνσης | +/-=Μεγέθυνση | F9=Πλέγμα | ESC=Άκυρο",
+  "pseudoInner": "D=Χάρακας | W=Παράθυρο Ζουμ | +/-=Ζουμ | F9=Πλέγμα | ESC=Άκυρο"
+ },
+ {
+  "ns": "dxf-viewer-shell",
+  "k": "actionButtons.autoCropOn",
+  "el": "Αυτόματη Περικοπή ΕΝ",
+  "pseudoInner": "Auto-Crop ΟΝ"
+ },
+ {
+  "ns": "dxf-viewer-shell",
+  "k": "actionButtons.autoCropOff",
+  "el": "Αυτόματη Περικοπή ΕΞ",
+  "pseudoInner": "Auto-Crop OFF"
+ },
+ {
+  "ns": "dxf-viewer-shell",
+  "k": "confirmations.delete.layer.title",
+  "el": "Διαγραφή Επιπέδου",
+  "pseudoInner": "Διαγραφή Layer"
+ },
+ {
+  "ns": "dxf-viewer-shell",
+  "k": "confirmations.delete.layer.message",
+  "el": "Πρόκειται να διαγράψετε το επίπεδο \"{name}\".\n\n{count, plural, =0 {Το επίπεδο είναι κενό.} one {Θα διαγραφεί # οντότητα.} other {Θα διαγραφούν # οντότητες.}}\n\nΌλες οι οντότητες αυτού του επιπέδου θα χαθούν οριστικά.",
+  "pseudoInner": "Πρόκειται να διαγράψετε το layer \"{name}\".\n\n{count, plural, =0 {Το layer είναι κενό.} one {Θα διαγραφεί # οντότητα.} other {Θα διαγραφούν # οντότητες.}}\n\nΌλες οι οντότητες αυτού του layer θα χαθούν οριστικά."
+ },
+ {
+  "ns": "dxf-viewer-shell",
+  "k": "confirmations.delete.colorGroup.title",
+  "el": "Διαγραφή Ομάδας Χρωμάτων",
+  "pseudoInner": "Διαγραφή Color Group"
+ },
+ {
+  "ns": "dxf-viewer-shell",
+  "k": "confirmations.delete.colorGroup.message",
+  "el": "Πρόκειται να διαγράψετε την ομάδα χρωμάτων \"{name}\".\n\n{count, plural, =0 {Δεν υπάρχουν επίπεδα σε αυτή την ομάδα.} one {Θα διαγραφεί # επίπεδο.} other {Θα διαγραφούν # επίπεδα.}}\n\nΌλα τα επίπεδα και οι οντότητες αυτής της ομάδας χρωμάτων θα χαθούν οριστικά.",
+  "pseudoInner": "Πρόκειται να διαγράψετε το color group \"{name}\".\n\n{count, plural, =0 {Δεν υπάρχουν layers σε αυτό το group.} one {Θα διαγραφεί # layer.} other {Θα διαγραφούν # layers.}}\n\nΌλα τα layers και οι οντότητες αυτού του color group θα χαθούν οριστικά."
+ },
+ {
+  "ns": "dxf-viewer-shell",
+  "k": "confirmations.merge.layers.title",
+  "el": "Συγχώνευση Επιπέδων",
+  "pseudoInner": "Συγχώνευση Layers"
+ },
+ {
+  "ns": "dxf-viewer-shell",
+  "k": "confirmations.merge.layers.message",
+  "el": "Πρόκειται να συγχωνεύσετε {count} επίπεδα στο \"{target}\".\n\nΠηγές για συγχώνευση: {sources}\n\nΌλες οι οντότητες από τα πηγαία επίπεδα θα μεταφερθούν στο επίπεδο-στόχο και τα πηγαία επίπεδα θα διαγραφούν.",
+  "pseudoInner": "Πρόκειται να συγχωνεύσετε {count} layers στο \"{target}\".\n\nΠηγές για συγχώνευση: {sources}\n\nΌλες οι οντότητες από τα πηγαία layers θα μεταφερθούν στο layer-στόχο και τα πηγαία layers θα διαγραφούν."
+ },
+ {
+  "ns": "dxf-viewer-shell",
+  "k": "confirmations.merge.colorGroups.title",
+  "el": "Ιεραρχική Συγχώνευση Ομάδων Χρωμάτων",
+  "pseudoInner": "Ιεραρχική Συγχώνευση Color Groups"
+ },
+ {
+  "ns": "dxf-viewer-shell",
+  "k": "confirmations.merge.colorGroups.message",
+  "el": "Πρόκειται να συγχωνεύσετε {count} ομάδες χρωμάτων στο \"{target}\".\n\nΠηγές για συγχώνευση: {sources}\n\nΌλα τα επίπεδα από τις πηγαίες ομάδες χρωμάτων θα μεταφερθούν στην ομάδα-στόχο. Οι πηγαίες ομάδες χρωμάτων θα εξαφανιστούν αλλά τα επίπεδα και οι οντότητες θα διατηρηθούν.",
+  "pseudoInner": "Πρόκειται να συγχωνεύσετε {count} color groups στο \"{target}\".\n\nΠηγές για συγχώνευση: {sources}\n\nΌλα τα layers από τα πηγαία color groups θα μεταφερθούν στο color group-στόχο. Τα πηγαία color groups θα εξαφανιστούν αλλά τα layers και οι οντότητες θα διατηρηθούν."
+ },
+ {
+  "ns": "dxf-viewer-shell",
+  "k": "zoomControls.inputTitle",
+  "el": "Ποσοστό μεγέθυνσης (1-99999%, δεκαδικά με . ή ,) - Πατήστε Enter ή κλικ εκτός για εφαρμογή",
+  "pseudoInner": "Ποσοστό zoom (1-99999%, δεκαδικά με . ή ,) - Πατήστε Enter ή κλικ εκτός για εφαρμογή"
+ },
+ {
+  "ns": "dxf-viewer-shell",
+  "k": "zoomControls.invalidInput",
+  "el": "Μη έγκυρη είσοδος μεγέθυνσης: \"{value}\". Επαναφορά σε {percentage}%",
+  "pseudoInner": "Μη έγκυρη είσοδος zoom: \"{value}\". Επαναφορά σε {percentage}%"
+ },
+ {
+  "ns": "dxf-viewer-shell",
+  "k": "overlayToolbar.objectSnap",
+  "el": "Ενεργοποίηση/Απενεργοποίηση Πρόσδεσης Αντικειμένου (F3)",
+  "pseudoInner": "Ενεργοποίηση/Απενεργοποίηση Object Snap (F3)"
+ },
+ {
+  "ns": "dxf-viewer-shell",
+  "k": "toolLabels.zoomWindow",
+  "el": "Παράθυρο Μεγέθυνσης",
+  "pseudoInner": "Παράθυρο Zoom"
+ },
+ {
+  "ns": "dxf-viewer-shell",
+  "k": "tools.measureAngleMeasuregeom",
+  "el": "Μέτρηση Γεωμετρίας",
+  "pseudoInner": "MeasureGeom"
+ },
+ {
+  "ns": "dxf-viewer-shell",
+  "k": "tools.zoomWindow",
+  "el": "Παράθυρο Μεγέθυνσης",
+  "pseudoInner": "Παράθυρο Zoom"
+ },
+ {
+  "ns": "dxf-viewer-shell",
+  "k": "tools.guidePerpendicular",
+  "el": "Κάθετος σε Υφιστάμενο",
+  "pseudoInner": "Κάθετος Οδηγός"
+ },
+ {
+  "ns": "dxf-viewer-shell",
+  "k": "autoArea.noPolygon",
+  "el": "Δεν βρέθηκε κλειστό πολύγωνο σε αυτό το σημείο",
+  "pseudoInner": "Δεν βρέθηκε κλειστό πολύγωνο"
+ },
+ {
+  "ns": "dxf-viewer-wizard",
+  "k": "wizard.title",
+  "el": "Βελτιωμένη Εισαγωγή DXF",
+  "pseudoInner": "Enhanced DXF Import"
+ },
+ {
+  "ns": "dxf-viewer-wizard",
+  "k": "wizard.screenReaderDescription",
+  "el": "Οδηγός εισαγωγής DXF αρχείων. Επιλέξτε εταιρεία, έργο, κτίριο ή μονάδα για να εισάγετε το αρχείο.",
+  "pseudoInner": "Wizard εισαγωγής DXF αρχείων. Επιλέξτε εταιρεία, έργο, κτίριο ή μονάδα για να εισάγετε το αρχείο."
+ },
+ {
+  "ns": "dxf-viewer-wizard",
+  "k": "wizard.replace.layerWarning",
+  "el": "Η νέα κάτοψη που θα φορτώσετε ενδέχεται να μην ταιριάζει με τα υπάρχοντα επίπεδα που έχουν σχεδιαστεί πάνω στην προηγούμενη κάτοψη.",
+  "pseudoInner": "Η νέα κάτοψη που θα φορτώσετε ενδέχεται να μην ταιριάζει με τα υπάρχοντα layers που έχουν σχεδιαστεί πάνω στην προηγούμενη κάτοψη."
+ },
+ {
+  "ns": "dxf-viewer-wizard",
+  "k": "import.mode.enhancedTitle",
+  "el": "Σύγχρονη Ροή (Προτείνεται)",
+  "pseudoInner": "Σύγχρονο Pipeline (Προτείνεται)"
+ },
+ {
+  "ns": "dxf-viewer-wizard",
+  "k": "import.mode.enhancedDesc",
+  "el": "Αυτόματη διανομή σε έργα/κτίρια/ορόφους με διαχείριση επιπέδων.",
+  "pseudoInner": "Αυτόματη διανομή σε έργα/κτίρια/ορόφους με διαχείριση layer."
+ },
+ {
+  "ns": "dxf-viewer-wizard",
+  "k": "dxfViewer.settings.tabs.hover",
+  "el": "Αιώρηση",
+  "pseudoInner": "Hover"
+ },
+ {
+  "ns": "dxf-viewer-wizard",
+  "k": "calibration.coordinates.zoom",
+  "el": "Μεγέθυνση",
+  "pseudoInner": "Zoom"
+ },
+ {
+  "ns": "dxf-viewer",
+  "k": "layers.title",
+  "el": "Επίπεδα DXF ({count})",
+  "pseudoInner": "DXF Layers ({count})"
+ },
+ {
+  "ns": "dxf-viewer",
+  "k": "layers.delete.confirm",
+  "el": "{count, plural, =0 {Διαγραφή επιπέδου \"{name}\"} one {Διαγραφή # στοιχείου από το επίπεδο \"{name}\"} other {Διαγραφή # στοιχείων από το επίπεδο \"{name}\"}}",
+  "pseudoInner": "{count, plural, =0 {Διαγραφή layer \"{name}\"} one {Διαγραφή # στοιχείου από το layer \"{name}\"} other {Διαγραφή # στοιχείων από το layer \"{name}\"}}"
+ },
+ {
+  "ns": "dxf-viewer",
+  "k": "layers.delete.success",
+  "el": "Το επίπεδο διαγράφηκε επιτυχώς!",
+  "pseudoInner": "Layer διαγράφηκε επιτυχώς!"
+ },
+ {
+  "ns": "dxf-viewer",
+  "k": "layers.delete.error",
+  "el": "Σφάλμα κατά τη διαγραφή του επιπέδου",
+  "pseudoInner": "Σφάλμα κατά τη διαγραφή του layer"
+ },
+ {
+  "ns": "dxf-viewer",
+  "k": "layers.delete.tooltip",
+  "el": "Διαγραφή επιπέδου \"{name}\" ({count, plural, =0 {κενό} one {# στοιχείο} other {# στοιχεία}})",
+  "pseudoInner": "Διαγραφή layer \"{name}\" ({count, plural, =0 {κενό} one {# στοιχείο} other {# στοιχεία}})"
+ },
+ {
+  "ns": "dxf-viewer",
+  "k": "layers.info.layer",
+  "el": "Επίπεδο",
+  "pseudoInner": "Layer"
+ },
+ {
+  "ns": "errors",
+  "k": "boundary.errorStack",
+  "el": "Στοίβα Σφαλμάτων",
+  "pseudoInner": "Error Stack"
+ },
+ {
+  "ns": "errors",
+  "k": "boundary.componentStack",
+  "el": "Στοίβα Στοιχείων",
+  "pseudoInner": "Component Stack"
+ },
+ {
+  "ns": "files-media",
+  "k": "floorplan.resetZoom",
+  "el": "Επαναφορά μεγέθυνσης",
+  "pseudoInner": "Επαναφορά zoom"
+ },
+ {
+  "ns": "files",
+  "k": "validation.fileLargeWarning",
+  "el": "Το αρχείο είναι μεγάλο και μπορεί να χρειαστεί περισσότερος χρόνος για μεταφόρτωση",
+  "pseudoInner": "Το αρχείο είναι μεγάλο και μπορεί να χρειαστεί περισσότερος χρόνος για upload"
+ },
+ {
+  "ns": "files",
+  "k": "manager.enterTitleToContinue",
+  "el": "Εισάγετε τίτλο για να συνεχίσετε με τη μεταφόρτωση",
+  "pseudoInner": "Εισάγετε τίτλο για να συνεχίσετε με το upload"
+ },
+ {
+  "ns": "filters",
+  "k": "aiInboxTitle",
+  "el": "Φίλτρα Εισερχομένων AI",
+  "pseudoInner": "Φίλτρα AI Inbox"
+ },
+ {
+  "ns": "forms",
+  "k": "helpTexts.announcementFile",
+  "el": "Σύνδεσμος ή διαδρομή αρχείου ανακοίνωσης",
+  "pseudoInner": "Link ή path αρχείου ανακοίνωσης"
+ },
+ {
+  "ns": "geo-canvas-drawing",
+  "k": "drawingInterfaces.technical.ultraPrecision",
+  "el": " Λειτουργία υπερ-ακρίβειας: Κάντε κλικ για σημεία με ακρίβεια χιλιοστού",
+  "pseudoInner": " Ultra-precision mode: Κάντε κλικ για σημεία με ακρίβεια χιλιοστού"
+ },
+ {
+  "ns": "geo-canvas-drawing",
+  "k": "drawingInterfaces.professional.marketDashboard",
+  "el": "Πίνακας Ελέγχου για παρακολούθηση αγοράς ακινήτων και αναλυτικά στοιχεία",
+  "pseudoInner": " Πίνακας ελέγχου για παρακολούθηση αγοράς ακινήτων και αναλυτικά στοιχεία"
+ },
+ {
+  "ns": "geo-canvas",
+  "k": "georeferencing.transformation.methods.tps",
+  "el": "Λεπτή Πλάκα Spline",
+  "pseudoInner": "Thin Plate Spline"
+ },
+ {
+  "ns": "geo-canvas",
+  "k": "errorBoundary.stackTrace",
+  "el": "Ίχνος Στοίβας:",
+  "pseudoInner": "Stack Trace:"
+ },
+ {
+  "ns": "geo-canvas",
+  "k": "errorBoundary.componentStack",
+  "el": "Στοίβα Στοιχείων:",
+  "pseudoInner": "Component Stack:"
+ },
+ {
+  "ns": "geo-canvas",
+  "k": "map.status.avgAccuracy",
+  "el": "Μέση Ακρίβεια:",
+  "pseudoInner": "Avg Accuracy:"
+ },
+ {
+  "ns": "geo-canvas",
+  "k": "map.status.best",
+  "el": "Καλύτερη:",
+  "pseudoInner": "Best:"
+ },
+ {
+  "ns": "geo-canvas",
+  "k": "floorPlanControlPoints.dragHandle",
+  "el": "Σύρσιμο",
+  "pseudoInner": "Drag"
+ },
+ {
+  "ns": "geo-canvas",
+  "k": "floorPlanControlPoints.tabs.visualPicking",
+  "el": "Οπτική Επιλογή",
+  "pseudoInner": "Visual Picking"
+ },
+ {
+  "ns": "geo-canvas",
+  "k": "floorPlanControlPoints.tabs.manualInput",
+  "el": "Χειροκίνητη Εισαγωγή",
+  "pseudoInner": "Manual Input"
+ },
+ {
+  "ns": "geo-canvas",
+  "k": "floorPlanControlPoints.status.points",
+  "el": "Σημεία:",
+  "pseudoInner": "Points:"
+ },
+ {
+  "ns": "geo-canvas",
+  "k": "floorPlanControlPoints.status.readyForGeoreferencing",
+  "el": "Έτοιμο για γεωαναφορά",
+  "pseudoInner": "Ready for georeferencing"
+ },
+ {
+  "ns": "geo-canvas",
+  "k": "floorPlanControlPoints.status.needMorePoints",
+  "el": "Χρειάζονται {count} ακόμα σημεία",
+  "pseudoInner": "Need {count} more point{plural}"
+ },
+ {
+  "ns": "geo-canvas",
+  "k": "floorPlanControlPoints.status.transformationQuality",
+  "el": "Ποιότητα Μετασχηματισμού:",
+  "pseudoInner": "Transformation Quality:"
+ },
+ {
+  "ns": "navigation",
+  "k": "reports.crm",
+  "el": "CRM & Ροή",
+  "pseudoInner": "CRM & Pipeline"
+ },
+ {
+  "ns": "navigation",
+  "k": "pages.properties",
+  "el": "Ευρετήριο Ακινήτων",
+  "pseudoInner": "Ακίνητα"
+ },
+ {
+  "ns": "navigation",
+  "k": "pages.login",
+  "el": "Σύνδεση",
+  "pseudoInner": "Login"
+ },
+ {
+  "ns": "navigation",
+  "k": "crm.dashboard",
+  "el": "Πίνακας Ελέγχου",
+  "pseudoInner": "Dashboard"
+ },
+ {
+  "ns": "navigation",
+  "k": "crm.leads",
+  "el": "Ενδιαφερόμενοι & Ευκαιρίες",
+  "pseudoInner": "Leads & Ευκαιρίες"
+ },
+ {
+  "ns": "navigation",
+  "k": "crm.pipeline",
+  "el": "Ροή Πωλήσεων",
+  "pseudoInner": "Πωλήσεις Pipeline"
+ },
+ {
+  "ns": "navigation",
+  "k": "tools.dxf",
+  "el": "Πίνακας DXF",
+  "pseudoInner": "DXF Panel"
+ },
+ {
+  "ns": "navigation",
+  "k": "tools.geoCanvas",
+  "el": "Σύστημα Geo-Canvas",
+  "pseudoInner": "Geo-Canvas System"
+ },
+ {
+  "ns": "navigation",
+  "k": "module.crmDashboard",
+  "el": "Πίνακας Ελέγχου",
+  "pseudoInner": "Dashboard"
+ },
+ {
+  "ns": "navigation",
+  "k": "module.leads",
+  "el": "Ενδιαφερόμενοι",
+  "pseudoInner": "Leads"
+ },
+ {
+  "ns": "navigation",
+  "k": "module.pipeline",
+  "el": "Ροή Πωλήσεων",
+  "pseudoInner": "Pipeline"
+ },
+ {
+  "ns": "navigation",
+  "k": "module.emailAnalytics",
+  "el": "Αναλυτικά Email",
+  "pseudoInner": "Email Analytics"
+ },
+ {
+  "ns": "navigation",
+  "k": "module.aiInbox",
+  "el": "Εισερχόμενα AI",
+  "pseudoInner": "AI Inbox"
+ },
+ {
+  "ns": "navigation",
+  "k": "module.operatorInbox",
+  "el": "Εισερχόμενα Χειριστή",
+  "pseudoInner": "Operator Inbox"
+ },
+ {
+  "ns": "obligations",
+  "k": "newPage.subtitle",
+  "el": "Δημιουργήστε μια νέα συγγραφή υποχρεώσεων με ζωντανή προεπισκόπηση",
+  "pseudoInner": "Δημιουργήστε μια νέα συγγραφή υποχρεώσεων με live preview"
+ },
+ {
+  "ns": "obligations",
+  "k": "newPage.splitView",
+  "el": "Διαχωρισμένη Προβολή",
+  "pseudoInner": "Split View"
+ },
+ {
+  "ns": "obligations",
+  "k": "preview.description",
+  "el": "Ζωντανή προεπισκόπηση του εγγράφου",
+  "pseudoInner": "Live preview του εγγράφου"
+ },
+ {
+  "ns": "obligations",
+  "k": "exportOptions.content.pageNumbers.description",
+  "el": "Υποσέλιδο με αριθμούς σελίδων και στοιχεία",
+  "pseudoInner": "Footer με αριθμούς σελίδων και στοιχεία"
+ },
+ {
+  "ns": "obligations",
+  "k": "exportOptions.content.logo.description",
+  "el": "Προσθήκη λογοτύπου στην κεφαλίδα",
+  "pseudoInner": "Προσθήκη λογοτύπου στο header"
+ },
+ {
+  "ns": "obligations",
+  "k": "footer.zoom",
+  "el": "Μεγέθυνση",
+  "pseudoInner": "Ζουμ"
+ },
+ {
+  "ns": "obligations",
+  "k": "workspace.register.subtitle",
+  "el": "Εταιρικός χώρος εργασίας για ροές, εγκρίσεις και αναθεωρήσεις.",
+  "pseudoInner": "Enterprise χώρος εργασίας για ροές, εγκρίσεις και αναθεωρήσεις."
+ },
+ {
+  "ns": "obligations",
+  "k": "workspace.edit.subtitle",
+  "el": "Εταιρικός χώρος εργασίας για ροή εργασίας, αναθεωρήσεις και συμμόρφωση.",
+  "pseudoInner": "Enterprise χώρος εργασίας για workflow, αναθεωρήσεις και συμμόρφωση."
+ },
+ {
+  "ns": "parking",
+  "k": "general.fields.spotCode",
+  "el": "Όνομα Θέσης",
+  "pseudoInner": "Κωδικός Θέσης"
+ },
+ {
+  "ns": "parking",
+  "k": "general.fields.code",
+  "el": "Κωδικός",
+  "pseudoInner": "Κωδικός Θέσης (ADR-233)"
+ },
+ {
+  "ns": "parking",
+  "k": "header.delete",
+  "el": "Μεταφορά στον κάδο",
+  "pseudoInner": "Διαγραφή"
+ },
+ {
+  "ns": "payments-cost-calc",
+  "k": "costCalculator.tabs.cashFlow",
+  "el": "Ταμειακές Ροές",
+  "pseudoInner": "Cash Flow"
+ },
+ {
+  "ns": "payments-cost-calc",
+  "k": "costCalculator.forwardCurve.spotLine",
+  "el": "Τρέχουσα Τιμή",
+  "pseudoInner": "Spot Rate"
+ },
+ {
+  "ns": "payments-cost-calc",
+  "k": "costCalculator.forwardCurve.forwardLine",
+  "el": "Προθεσμιακή Τιμή",
+  "pseudoInner": "Forward Rate"
+ },
+ {
+  "ns": "payments-cost-calc",
+  "k": "costCalculator.waterfall.title",
+  "el": "Καταρράκτης Κεφαλαίου",
+  "pseudoInner": "Equity Waterfall"
+ },
+ {
+  "ns": "payments-loans",
+  "k": "loanTracking.milestone",
+  "el": "Ορόσημο",
+  "pseudoInner": "Milestone"
+ },
+ {
+  "ns": "procurement",
+  "k": "form.deliveryPlaceholder",
+  "el": "Επίλεξε τύπο ή πληκτρολόγησε",
+  "pseudoInner": "Auto-fill από έργο"
+ },
+ {
+  "ns": "projects-data",
+  "k": "permitsTab.title",
+  "el": "Άδειες",
+  "pseudoInner": "Άδειες & Κατάσταση"
+ },
+ {
+  "ns": "projects-data",
+  "k": "permitsTab.description",
+  "el": "Στοιχεία οικοδομικής άδειας του έργου",
+  "pseudoInner": "Στοιχεία αδειών και τρέχουσα κατάσταση του έργου"
+ },
+ {
+  "ns": "projects-ika",
+  "k": "ika.workers",
+  "el": "Εργαζόμενοι",
+  "pseudoInner": "Εργατοτεχνίτες"
+ },
+ {
+  "ns": "projects",
+  "k": "projectHeader.technicalIdLabel",
+  "el": "Τεχνικό ID (για υποστήριξη):",
+  "pseudoInner": "Technical ID (για support):"
+ },
+ {
+  "ns": "properties-enums",
+  "k": "types.loft",
+  "el": "Σοφίτα",
+  "pseudoInner": "Loft"
+ },
+ {
+  "ns": "properties-enums",
+  "k": "systems.cooling.split-units",
+  "el": "Διαιρούμενες μονάδες",
+  "pseudoInner": "Split units"
+ },
+ {
+  "ns": "properties-enums",
+  "k": "systems.cooling.fan-coil",
+  "el": "Ανεμιστήρας κλιματισμού",
+  "pseudoInner": "Fan coil"
+ },
+ {
+  "ns": "properties-enums",
+  "k": "features.interior.smart-home",
+  "el": "Έξυπνο σπίτι",
+  "pseudoInner": "Smart home"
+ },
+ {
+  "ns": "properties-enums",
+  "k": "operationalStatus.underConstruction",
+  "el": "Υπό κατασκευή",
+  "pseudoInner": "Υπό ολοκλήρωση"
+ },
+ {
+  "ns": "properties-enums",
+  "k": "operationalStatus.draft",
+  "el": "Ημιτελές",
+  "pseudoInner": "Πρόχειρο"
+ },
+ {
+  "ns": "properties-viewer",
+  "k": "viewer.actions.deleteSelected",
+  "el": "Μεταφορά στον κάδο",
+  "pseudoInner": "Διαγραφή επιλεγμένου"
+ },
+ {
+  "ns": "properties-viewer",
+  "k": "viewer.confirm.deleteProperty",
+  "el": "Θέλετε να μεταφέρετε το επιλεγμένο ακίνητο στον κάδο;",
+  "pseudoInner": "Είστε σίγουροι ότι θέλετε να διαγράψετε το επιλεγμένο ακίνητο;"
+ },
+ {
+  "ns": "properties-viewer",
+  "k": "viewer.info.zoom",
+  "el": "Μεγέθυνση:",
+  "pseudoInner": "Zoom:"
+ },
+ {
+  "ns": "properties-viewer",
+  "k": "viewer.info.visibleLayers",
+  "el": "Ορατά Επίπεδα:",
+  "pseudoInner": "Ορατά Layers:"
+ },
+ {
+  "ns": "properties-viewer",
+  "k": "viewer.statusBar.layers",
+  "el": "Επίπεδα:",
+  "pseudoInner": "Layers:"
+ },
+ {
+  "ns": "properties-viewer",
+  "k": "floorPlan.canvas.debugTitle",
+  "el": "ΠΛΗΡΟΦΟΡΙΕΣ ΕΝΤΟΠΙΣΜΟΥ ΣΦΑΛΜΑΤΩΝ PDF",
+  "pseudoInner": "ΠΛΗΡΟΦΟΡΙΕΣ DEBUG PDF"
+ },
+ {
+  "ns": "properties-viewer",
+  "k": "floorPlanToolbar.layers.hideGrid",
+  "el": "Απόκρυψη Πλέγματος",
+  "pseudoInner": "Απόκρυψη Grid"
+ },
+ {
+  "ns": "properties-viewer",
+  "k": "floorPlanToolbar.layers.showGrid",
+  "el": "Εμφάνιση Πλέγματος",
+  "pseudoInner": "Εμφάνιση Grid"
+ },
+ {
+  "ns": "properties-viewer",
+  "k": "floorPlanToolbar.layers.hideLayers",
+  "el": "Απόκρυψη Επιπέδων",
+  "pseudoInner": "Απόκρυψη Layers"
+ },
+ {
+  "ns": "properties-viewer",
+  "k": "floorPlanToolbar.layers.showLayers",
+  "el": "Εμφάνιση Επιπέδων",
+  "pseudoInner": "Εμφάνιση Layers"
+ },
+ {
+  "ns": "properties-viewer",
+  "k": "floorPlanToolbar.zoom.resetView",
+  "el": "Επαναφορά Προβολής",
+  "pseudoInner": "Επαναφορά View"
+ },
+ {
+  "ns": "properties-viewer",
+  "k": "floorPlanToolbar.status.pdfActive",
+  "el": "PDF Ενεργό",
+  "pseudoInner": "PDF Active"
+ },
+ {
+  "ns": "properties",
+  "k": "building.toolbar.actions.delete",
+  "el": "Μεταφορά Επιλεγμένου στον κάδο (Διαγραφή)",
+  "pseudoInner": "Διαγραφή Επιλεγμένου (Delete)"
+ },
+ {
+  "ns": "properties",
+  "k": "building.dialog.addUnit.statusOptions.draft",
+  "el": "Ημιτελές",
+  "pseudoInner": "Πρόχειρο"
+ },
+ {
+  "ns": "properties",
+  "k": "building.dialog.deleteConfirmation.title",
+  "el": "Μεταφορά στον κάδο",
+  "pseudoInner": "Επιβεβαίωση Διαγραφής"
+ },
+ {
+  "ns": "properties",
+  "k": "building.dialog.deleteConfirmation.message",
+  "el": "Θέλετε να μεταφέρετε {count} κτίριο/α στον κάδο;",
+  "pseudoInner": "Είστε σίγουροι ότι θέλετε να διαγράψετε {count} κτίριο/α;"
+ },
+ {
+  "ns": "properties",
+  "k": "building.dialog.deleteConfirmation.warning",
+  "el": "Μπορείτε να επαναφέρετε αργότερα από τον κάδο.",
+  "pseudoInner": "Αυτή η ενέργεια δεν μπορεί να αναιρεθεί."
+ },
+ {
+  "ns": "properties",
+  "k": "building.dialog.delete",
+  "el": "Μεταφορά στον κάδο",
+  "pseudoInner": "Διαγραφή"
+ },
+ {
+  "ns": "properties",
+  "k": "building.storage.form.auto",
+  "el": "Αυτόματο",
+  "pseudoInner": "Auto"
+ },
+ {
+  "ns": "properties",
+  "k": "deletionGuard.confirm.title",
+  "el": "Μεταφορά ακινήτου στον κάδο",
+  "pseudoInner": "Delete property"
+ },
+ {
+  "ns": "properties",
+  "k": "deletionGuard.confirm.description",
+  "el": "Μεταφορά \"{name}\" στον κάδο; Μπορεί να επαναφερθεί αργότερα.",
+  "pseudoInner": "Delete \"{name}\"? This action permanently removes the property record and cannot be undone."
+ },
+ {
+  "ns": "properties",
+  "k": "deletionGuard.confirm.descriptionWithDependencies",
+  "el": "Μεταφορά \"{name}\" στον κάδο; Ο έλεγχος εντόπισε {count} συνδεδεμένες εγγραφές που μπορεί να επηρεαστούν.",
+  "pseudoInner": "Delete \"{name}\"? The guard check found {count} linked records that will be affected."
+ },
+ {
+  "ns": "properties",
+  "k": "deletionGuard.confirm.action",
+  "el": "Μεταφορά στον κάδο",
+  "pseudoInner": "Delete property"
+ },
+ {
+  "ns": "properties",
+  "k": "deletionGuard.confirm.unnamedProperty",
+  "el": "αυτό το ακίνητο",
+  "pseudoInner": "this property"
+ },
+ {
+  "ns": "properties",
+  "k": "impactGuard.actions.cancel",
+  "el": "Ακύρωση",
+  "pseudoInner": "Cancel"
+ },
+ {
+  "ns": "properties",
+  "k": "fieldWarnings.basementResidential.title",
+  "el": "Κατοικία σε υπόγειο;",
+  "pseudoInner": "Residential unit in basement?"
+ },
+ {
+  "ns": "properties",
+  "k": "fieldWarnings.basementResidential.description",
+  "el": "Επιλέξατε υπόγειο όροφο για μονάδα τύπου κατοικίας. Αυτό είναι ασυνήθιστο — είστε σίγουροι ότι η θέση είναι σωστή;",
+  "pseudoInner": "You selected a basement floor for a residential unit. This is unusual — are you sure the location is correct?"
+ },
+ {
+  "ns": "properties",
+  "k": "fieldWarnings.confirm",
+  "el": "Ναι, είναι σωστό",
+  "pseudoInner": "Yes, it's correct"
+ },
+ {
+  "ns": "properties",
+  "k": "fieldWarnings.cancel",
+  "el": "Ακύρωση",
+  "pseudoInner": "Cancel"
+ },
+ {
+  "ns": "report-builder-domains",
+  "k": "domains.opportunities.description",
+  "el": "Ροή πωλήσεων — συμφωνίες, ενδιαφερόμενοι, υποψήφιοι με σταθμισμένες αξίες και ταχύτητα",
+  "pseudoInner": "Pipeline πωλήσεων — deals, leads, prospects με σταθμισμένες αξίες και ταχύτητα"
+ },
+ {
+  "ns": "report-builder-domains",
+  "k": "domains.opportunities.enums.source.social",
+  "el": "Κοινωνικά Δίκτυα",
+  "pseudoInner": "Social Media"
+ },
+ {
+  "ns": "report-builder-domains",
+  "k": "domains.opportunities.enums.source.walkin",
+  "el": "Χωρίς ραντεβού",
+  "pseudoInner": "Walk-in"
+ },
+ {
+  "ns": "report-builder-domains",
+  "k": "domains.crmTasks.description",
+  "el": "Εργασίες πωλήσεων & παρακολούθησης — παρακολούθηση εκπρόθεσμων, κατηγορίες ηλικίας",
+  "pseudoInner": "Εργασίες πωλήσεων & follow-up — παρακολούθηση εκπρόθεσμων, κατηγορίες ηλικίας"
+ },
+ {
+  "ns": "report-builder-domains",
+  "k": "domains.crmTasks.enums.type.follow_up",
+  "el": "Παρακολούθηση",
+  "pseudoInner": "Follow-up"
+ },
+ {
+  "ns": "report-builder-domains",
+  "k": "domains.communications.fields.requiresFollowUp",
+  "el": "Απαιτεί Παρακολούθηση",
+  "pseudoInner": "Απαιτεί Follow-up"
+ },
+ {
+  "ns": "report-builder-domains",
+  "k": "domains.communications.fields.followUpDate",
+  "el": "Ημ. Παρακολούθησης",
+  "pseudoInner": "Ημ. Follow-up"
+ },
+ {
+  "ns": "reports-extended",
+  "k": "crm.description",
+  "el": "Ροή CRM, διαχείριση εργασιών, επικοινωνίες και απόδοση ομάδας",
+  "pseudoInner": "Pipeline CRM, διαχείριση εργασιών, επικοινωνίες και απόδοση ομάδας"
+ },
+ {
+  "ns": "reports-extended",
+  "k": "crm.pipeline.title",
+  "el": "Ροή ανά Στάδιο",
+  "pseudoInner": "Pipeline ανά Στάδιο"
+ },
+ {
+  "ns": "reports-extended",
+  "k": "crm.pipeline.description",
+  "el": "Πλήθος και αξία ευκαιριών ανά στάδιο ροής",
+  "pseudoInner": "Πλήθος και αξία ευκαιριών ανά στάδιο pipeline"
+ },
+ {
+  "ns": "reports-extended",
+  "k": "crm.leads.title",
+  "el": "Ενδιαφερόμενοι ανά Πηγή",
+  "pseudoInner": "Leads ανά Πηγή"
+ },
+ {
+  "ns": "reports-extended",
+  "k": "crm.sources.cold_call",
+  "el": "Ψυχρή Κλήση",
+  "pseudoInner": "Cold Call"
+ },
+ {
+  "ns": "reports",
+  "k": "sales.kpis.pipelineValue",
+  "el": "Αξία Ροής",
+  "pseudoInner": "Αξία Pipeline"
+ },
+ {
+  "ns": "reports",
+  "k": "executive.kpis.pipelineValue",
+  "el": "Αξία Ροής",
+  "pseudoInner": "Αξία Pipeline"
+ },
+ {
+  "ns": "reports",
+  "k": "executive.pipeline.title",
+  "el": "Ροή Πωλήσεων",
+  "pseudoInner": "Pipeline Πωλήσεων"
+ },
+ {
+  "ns": "reports",
+  "k": "nav.crm",
+  "el": "CRM & Ροή",
+  "pseudoInner": "CRM & Pipeline"
+ },
+ {
+  "ns": "storage",
+  "k": "card.actions.delete",
+  "el": "Μεταφορά στον κάδο",
+  "pseudoInner": "Διαγραφή"
+ },
+ {
+  "ns": "tasks",
+  "k": "detail.loadingPlaceholder",
+  "el": "Φόρτωση...",
+  "pseudoInner": "Loading..."
+ },
+ {
+  "ns": "tool-hints",
+  "k": "tools.pan.shortcuts",
+  "el": "Πλήκτρο Διαστήματος+Σύρσιμο | Μεσαίο Πλήκτρο Ποντικιού",
+  "pseudoInner": "Spacebar+Drag | Middle Mouse"
+ },
+ {
+  "ns": "tool-hints",
+  "k": "tools.zoom-window.name",
+  "el": "Παράθυρο Μεγέθυνσης",
+  "pseudoInner": "Zoom Παράθυρο"
+ },
+ {
+  "ns": "tool-hints",
+  "k": "tools.zoom-window.description",
+  "el": "Μεγέθυνση σε περιοχή",
+  "pseudoInner": "Zoom σε περιοχή"
+ },
+ {
+  "ns": "tool-hints",
+  "k": "tools.zoom-extents.name",
+  "el": "Μεγέθυνση Περιεχομένου",
+  "pseudoInner": "Zoom Extents"
+ },
+ {
+  "ns": "tool-hints",
+  "k": "tools.layering.name",
+  "el": "Επίπεδα",
+  "pseudoInner": "Layers"
+ },
+ {
+  "ns": "tool-hints",
+  "k": "tools.layering.steps[0]",
+  "el": "Ανοίξτε τον πίνακα Επιπέδων",
+  "pseudoInner": "Ανοίξτε τον πίνακα Layers"
+ },
+ {
+  "ns": "tool-hints",
+  "k": "tools.guide-parallel.steps[0]",
+  "el": "Κάντε κλικ στον οδηγό — πληκτρολογήστε απόσταση + Enter",
+  "pseudoInner": "Κάντε κλικ στον οδηγό αναφοράς"
+ },
+ {
+  "ns": "toolbars",
+  "k": "common.actions.delete",
+  "el": "Μεταφορά στον κάδο",
+  "pseudoInner": "Διαγραφή"
+ },
+ {
+  "ns": "toolbars",
+  "k": "common.actions.delete_loading",
+  "el": "Μεταφορά...",
+  "pseudoInner": "Διαγραφή..."
+ },
+ {
+  "ns": "toolbars",
+  "k": "common.shortcuts.deleteItem",
+  "el": "(Διαγραφή)",
+  "pseudoInner": "(Delete)"
+ },
+ {
+  "ns": "toolbars",
+  "k": "buildings.actions.deleteBuilding",
+  "el": "Μεταφορά Κτιρίου στον κάδο",
+  "pseudoInner": "Διαγραφή Κτιρίου"
+ },
+ {
+  "ns": "trash",
+  "k": "moveToTrash",
+  "el": "Μεταφορά στον κάδο",
+  "pseudoInner": "Μ��ταφορά στον κάδο"
+ },
+ {
+  "ns": "trash",
+  "k": "undoSuccess",
+  "el": "Επαναφέρθηκε",
+  "pseudoInner": "Επαναφέρ��ηκε"
+ },
+ {
+  "ns": "trash",
+  "k": "permanentDeleteConfirm",
+  "el": "Αυτή η ενέργεια δεν μπορεί να αναιρεθεί.",
+  "pseudoInner": "Αυτή η ενέργεια δ��ν μπορεί να αναιρεθεί."
+ },
+ {
+  "ns": "trash",
+  "k": "softDeleteDialog.body",
+  "el": "Αυτό δεν διαγράφει οριστικά το αντικείμενο. Όλα τα δεδομένα παραμένουν διαθέσιμα για ανάκτηση.",
+  "pseudoInner": "Αυτό δεν διαγράφει οριστικά το αντικείμενο."
+ }
+]

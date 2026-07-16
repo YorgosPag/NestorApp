@@ -1,0 +1,1010 @@
+[
+ {
+  "ns": "accounting-setup",
+  "k": "setup.vatDuplicateWarning",
+  "el": "Το ΑΦΜ υπάρχει ήδη στις επαφές: {contactName}",
+  "got": 9,
+  "want": 8
+ },
+ {
+  "ns": "accounting-setup",
+  "k": "reconciliation.batchProgress",
+  "el": "Επεξεργασία {completed}/{total}...",
+  "got": 8,
+  "want": 7
+ },
+ {
+  "ns": "accounting-setup",
+  "k": "reconciliation.batchComplete",
+  "el": "{matched} από {total} αντιστοιχίστηκαν επιτυχώς",
+  "got": 10,
+  "want": 9
+ },
+ {
+  "ns": "admin",
+  "k": "aiInbox.newEmailSingle",
+  "el": "Νέο email ελήφθη!",
+  "got": 4,
+  "want": 3
+ },
+ {
+  "ns": "admin",
+  "k": "aiInbox.newEmailMultiple",
+  "el": "{count} νέα emails ελήφθησαν!",
+  "got": 5,
+  "want": 6
+ },
+ {
+  "ns": "auth",
+  "k": "brand.name",
+  "el": "Nestor App",
+  "got": 3,
+  "want": 2
+ },
+ {
+  "ns": "building-address",
+  "k": "associations.description",
+  "el": "Σύνδεση επαφών με ρόλο",
+  "got": 5,
+  "want": 4
+ },
+ {
+  "ns": "building-address",
+  "k": "associations.roles.structural_engineer",
+  "el": "Πολιτικός Μηχανικός",
+  "got": 6,
+  "want": 4
+ },
+ {
+  "ns": "building-address",
+  "k": "associations.roles.electrical_engineer",
+  "el": "Ηλεκτρολόγος Μηχανικός",
+  "got": 6,
+  "want": 5
+ },
+ {
+  "ns": "building-address",
+  "k": "associations.roles.mechanical_engineer",
+  "el": "Μηχανολόγος Μηχανικός",
+  "got": 6,
+  "want": 4
+ },
+ {
+  "ns": "building-address",
+  "k": "associations.roles.surveyor",
+  "el": "Τοπογράφος",
+  "got": 3,
+  "want": 2
+ },
+ {
+  "ns": "building-address",
+  "k": "associations.roles.energy_inspector",
+  "el": "Ενεργειακός Επιθεωρητής",
+  "got": 6,
+  "want": 5
+ },
+ {
+  "ns": "building-address",
+  "k": "associations.roles.supervising_engineer",
+  "el": "Επιβλέπων Μηχανικός",
+  "got": 6,
+  "want": 4
+ },
+ {
+  "ns": "building-tabs",
+  "k": "tabs.labels.projectEngineers",
+  "el": "Μηχανικοί Έργου",
+  "got": 4,
+  "want": 3
+ },
+ {
+  "ns": "building-tabs",
+  "k": "tabs.descriptions.projectEngineers",
+  "el": "Μηχανικοί και τεχνικοί σύμβουλοι του έργου",
+  "got": 9,
+  "want": 8
+ },
+ {
+  "ns": "building-timeline",
+  "k": "tabs.timeline.dashboard.variance.expandPhase",
+  "el": "Ανάπτυξη {name}",
+  "got": 4,
+  "want": 3
+ },
+ {
+  "ns": "building-timeline",
+  "k": "tabs.timeline.dashboard.variance.collapsePhase",
+  "el": "Σύμπτυξη {name}",
+  "got": 4,
+  "want": 3
+ },
+ {
+  "ns": "building-timeline",
+  "k": "tabs.timeline.dashboard.baseline.list.version",
+  "el": "v{version}",
+  "got": 3,
+  "want": 2
+ },
+ {
+  "ns": "building-timeline",
+  "k": "tabs.timeline.dashboard.baseline.list.tasks",
+  "el": "{count} εργασίες",
+  "got": 4,
+  "want": 3
+ },
+ {
+  "ns": "buildingCode",
+  "k": "tab.label",
+  "el": "Όροι Δόμησης (ΝΟΚ)",
+  "got": 2,
+  "want": 4
+ },
+ {
+  "ns": "buildingCode",
+  "k": "tab.description",
+  "el": "Συντελεστής δόμησης, κάλυψη, ύψος και ζώνη ΝΟΚ ανά έργο",
+  "got": 2,
+  "want": 10
+ },
+ {
+  "ns": "buildingCode",
+  "k": "form.title",
+  "el": "Όροι Δόμησης (ΝΟΚ)",
+  "got": 2,
+  "want": 4
+ },
+ {
+  "ns": "buildingCode",
+  "k": "form.subtitle",
+  "el": "Στοιχεία οικοπέδου και επιτρεπόμενοι όροι",
+  "got": 2,
+  "want": 8
+ },
+ {
+  "ns": "buildingCode",
+  "k": "form.saving",
+  "el": "Αποθήκευση...",
+  "got": 2,
+  "want": 3
+ },
+ {
+  "ns": "buildingCode",
+  "k": "form.saved",
+  "el": "Αποθηκεύτηκε",
+  "got": 2,
+  "want": 3
+ },
+ {
+  "ns": "buildingCode",
+  "k": "form.savedAt",
+  "el": "Τελευταία αποθήκευση: {date}",
+  "got": 2,
+  "want": 6
+ },
+ {
+  "ns": "buildingCode",
+  "k": "plotType.label",
+  "el": "Τύπος οικοπέδου",
+  "got": 2,
+  "want": 3
+ },
+ {
+  "ns": "buildingCode",
+  "k": "plotType.placeholder",
+  "el": "Επιλέξτε τύπο",
+  "got": 2,
+  "want": 3
+ },
+ {
+  "ns": "buildingCode",
+  "k": "plotType.options.fourSided",
+  "el": "Τεσσάρων πλευρών",
+  "got": 2,
+  "want": 3
+ },
+ {
+  "ns": "buildingCode",
+  "k": "plotType.options.custom",
+  "el": "Προσαρμοσμένο",
+  "got": 2,
+  "want": 3
+ },
+ {
+  "ns": "buildingCode",
+  "k": "frontagesCount.label",
+  "el": "Αριθμός προσώπων",
+  "got": 2,
+  "want": 3
+ },
+ {
+  "ns": "buildingCode",
+  "k": "frontagesCount.increment",
+  "el": "Προσθήκη προσώπου",
+  "got": 2,
+  "want": 4
+ },
+ {
+  "ns": "buildingCode",
+  "k": "frontagesCount.decrement",
+  "el": "Αφαίρεση προσώπου",
+  "got": 2,
+  "want": 4
+ },
+ {
+  "ns": "buildingCode",
+  "k": "zone.none",
+  "el": "— (Χωρίς ζώνη)",
+  "got": 2,
+  "want": 3
+ },
+ {
+  "ns": "buildingCode",
+  "k": "zone.displayName",
+  "el": "{id} — {name}",
+  "got": 2,
+  "want": 3
+ },
+ {
+  "ns": "buildingCode",
+  "k": "sd.label",
+  "el": "Συντελεστής Δόμησης (ΣΔ)",
+  "got": 2,
+  "want": 5
+ },
+ {
+  "ns": "buildingCode",
+  "k": "sd.hint",
+  "el": "Λόγος μέγιστης δομήσιμης επιφάνειας προς εμβαδόν οικοπέδου",
+  "got": 2,
+  "want": 11
+ },
+ {
+  "ns": "buildingCode",
+  "k": "coverage.hint",
+  "el": "Ποσοστό κάλυψης οικοπέδου",
+  "got": 2,
+  "want": 5
+ },
+ {
+  "ns": "buildingCode",
+  "k": "maxHeight.label",
+  "el": "Μέγιστο ύψος (m)",
+  "got": 2,
+  "want": 3
+ },
+ {
+  "ns": "buildingCode",
+  "k": "maxHeight.hint",
+  "el": "Μέγιστο επιτρεπόμενο ύψος κτιρίου σε μέτρα",
+  "got": 2,
+  "want": 8
+ },
+ {
+  "ns": "buildingCode",
+  "k": "provenance.fromZone",
+  "el": "Από ζώνη {zoneId}",
+  "got": 2,
+  "want": 3
+ },
+ {
+  "ns": "buildingCode",
+  "k": "provenance.userOverride",
+  "el": "Χειροκίνητη αλλαγή",
+  "got": 2,
+  "want": 4
+ },
+ {
+  "ns": "buildingCode",
+  "k": "validation.sd.hardMin",
+  "el": "Ο ΣΔ πρέπει να είναι μεγαλύτερος ή ίσος του μηδενός",
+  "got": 2,
+  "want": 9
+ },
+ {
+  "ns": "buildingCode",
+  "k": "validation.sd.hardMax",
+  "el": "Ο ΣΔ δεν μπορεί να ξεπερνά το 10",
+  "got": 2,
+  "want": 5
+ },
+ {
+  "ns": "buildingCode",
+  "k": "validation.coverage.hardMin",
+  "el": "Η κάλυψη πρέπει να είναι μεγαλύτερη ή ίση του μηδενός",
+  "got": 2,
+  "want": 9
+ },
+ {
+  "ns": "buildingCode",
+  "k": "validation.coverage.hardMax",
+  "el": "Η κάλυψη δεν μπορεί να ξεπερνά το 100%",
+  "got": 2,
+  "want": 7
+ },
+ {
+  "ns": "buildingCode",
+  "k": "validation.coverage.softMin",
+  "el": "Ασυνήθιστα μικρή κάλυψη",
+  "got": 2,
+  "want": 5
+ },
+ {
+  "ns": "buildingCode",
+  "k": "validation.maxHeight.hardMin",
+  "el": "Το ύψος πρέπει να είναι μεγαλύτερο ή ίσο του μηδενός",
+  "got": 2,
+  "want": 9
+ },
+ {
+  "ns": "buildingCode",
+  "k": "validation.maxHeight.hardMax",
+  "el": "Το ύψος δεν μπορεί να ξεπερνά τα 100 μέτρα",
+  "got": 2,
+  "want": 7
+ },
+ {
+  "ns": "buildingCode",
+  "k": "validation.maxHeight.softMin",
+  "el": "Ασυνήθιστα χαμηλό ύψος",
+  "got": 2,
+  "want": 4
+ },
+ {
+  "ns": "buildingCode",
+  "k": "validation.frontages.hard",
+  "el": "Ο αριθμός προσώπων πρέπει να είναι από 1 έως 4",
+  "got": 2,
+  "want": 8
+ },
+ {
+  "ns": "buildingCode",
+  "k": "validation.frontages.mismatch",
+  "el": "Ο αριθμός προσώπων δεν ταιριάζει με τον τύπο οικοπέδου",
+  "got": 2,
+  "want": 10
+ },
+ {
+  "ns": "buildingCode",
+  "k": "validation.summary.errors",
+  "el": "{count} σφάλμα|{count} σφάλματα",
+  "got": 2,
+  "want": 6
+ },
+ {
+  "ns": "buildingCode",
+  "k": "validation.summary.warnings",
+  "el": "{count} προειδοποίηση|{count} προειδοποιήσεις",
+  "got": 2,
+  "want": 9
+ },
+ {
+  "ns": "buildingCode",
+  "k": "validation.summary.blocked",
+  "el": "Διορθώστε τα σφάλματα για να αποθηκεύσετε",
+  "got": 2,
+  "want": 8
+ },
+ {
+  "ns": "buildingCode",
+  "k": "audit.changeReason",
+  "el": "Ενημέρωση όρων δόμησης ΝΟΚ",
+  "got": 2,
+  "want": 5
+ },
+ {
+  "ns": "buildingCode",
+  "k": "audit.softWarningNote",
+  "el": "Αποθήκευση με προειδοποίηση: {threshold}",
+  "got": 2,
+  "want": 8
+ },
+ {
+  "ns": "buildingCode",
+  "k": "toast.saveSuccess",
+  "el": "Οι όροι δόμησης αποθηκεύτηκαν",
+  "got": 2,
+  "want": 6
+ },
+ {
+  "ns": "buildingCode",
+  "k": "toast.saveError",
+  "el": "Αποτυχία αποθήκευσης όρων δόμησης",
+  "got": 2,
+  "want": 6
+ },
+ {
+  "ns": "buildingCode",
+  "k": "toast.loadError",
+  "el": "Αποτυχία φόρτωσης όρων δόμησης",
+  "got": 2,
+  "want": 6
+ },
+ {
+  "ns": "cash-flow",
+  "k": "kpi.lowestBalanceMonth",
+  "el": "σε {month}",
+  "got": 3,
+  "want": 2
+ },
+ {
+  "ns": "common-empty-states",
+  "k": "emptyState.unit.title",
+  "el": "Δημιουργία Μονάδας",
+  "got": 3,
+  "want": 4
+ },
+ {
+  "ns": "common-sales",
+  "k": "sales.legal.exclusivityConflictProjectExclusive",
+  "el": "Υπάρχει ήδη αποκλειστική σε επίπεδο έργου ({agentName})",
+  "got": 11,
+  "want": 10
+ },
+ {
+  "ns": "common-sales",
+  "k": "sales.legal.exclusivityWarningExcludedProperties",
+  "el": "Εξαιρούνται ακίνητα με υπάρχουσες συμβάσεις: {propertyNames}",
+  "got": 12,
+  "want": 11
+ },
+ {
+  "ns": "common",
+  "k": "entityCode.suggested",
+  "el": "Προτεινόμενος: {code}",
+  "got": 5,
+  "want": 4
+ },
+ {
+  "ns": "contacts-lifecycle",
+  "k": "trash.trashCount",
+  "el": "{count} στον κάδο",
+  "got": 4,
+  "want": 3
+ },
+ {
+  "ns": "crm-inbox",
+  "k": "calendarPage.dialog.voiceInput.startRecording",
+  "el": "Έναρξη ηχογράφησης",
+  "got": 5,
+  "want": 4
+ },
+ {
+  "ns": "crm-inbox",
+  "k": "calendarPage.dialog.voiceInput.stopRecording",
+  "el": "Διακοπή ηχογράφησης",
+  "got": 5,
+  "want": 4
+ },
+ {
+  "ns": "crm-inbox",
+  "k": "calendarPage.recurrence.afterCount",
+  "el": "Μετά από {count} επαναλήψεις",
+  "got": 6,
+  "want": 5
+ },
+ {
+  "ns": "crm",
+  "k": "leadDetails.errors.loadTasksError",
+  "el": "Σφάλμα κατά τη φόρτωση των εργασιών",
+  "got": 7,
+  "want": 6
+ },
+ {
+  "ns": "dxf-viewer-shell",
+  "k": "autoArea.area",
+  "el": "Εμβαδόν",
+  "got": 1,
+  "want": 2
+ },
+ {
+  "ns": "dxf-viewer-shell",
+  "k": "autoArea.perimeter",
+  "el": "Περίμετρος",
+  "got": 3,
+  "want": 2
+ },
+ {
+  "ns": "dxf-viewer-shell",
+  "k": "autoArea.layer",
+  "el": "Στρώση",
+  "got": 1,
+  "want": 2
+ },
+ {
+  "ns": "dxf-viewer-shell",
+  "k": "autoArea.sourceDxf",
+  "el": "Πολυγραμμή DXF",
+  "got": 4,
+  "want": 3
+ },
+ {
+  "ns": "dxf-viewer-shell",
+  "k": "autoArea.sourceOverlay",
+  "el": "Επικάλυψη",
+  "got": 3,
+  "want": 2
+ },
+ {
+  "ns": "files-media",
+  "k": "floorplanImport.acceptedTypes",
+  "el": "DXF, PDF, Τέκτων (.tek), Εικόνες (μέχρι 50MB)",
+  "got": 6,
+  "want": 8
+ },
+ {
+  "ns": "files",
+  "k": "list.linkFile",
+  "el": "Σύνδεση αρχείου σε {entity}",
+  "got": 6,
+  "want": 5
+ },
+ {
+  "ns": "files",
+  "k": "list.openInNewTab",
+  "el": "Άνοιγμα σε νέα καρτέλα",
+  "got": 5,
+  "want": 4
+ },
+ {
+  "ns": "files",
+  "k": "share.expiresIn",
+  "el": "Λήγει σε {label}",
+  "got": 4,
+  "want": 3
+ },
+ {
+  "ns": "files",
+  "k": "versions.previousCount",
+  "el": "{count} προηγούμενες",
+  "got": 5,
+  "want": 4
+ },
+ {
+  "ns": "navigation",
+  "k": "user.name",
+  "el": "Nestor App",
+  "got": 3,
+  "want": 2
+ },
+ {
+  "ns": "payments-cost-calc",
+  "k": "costCalculator.counterproposal.slider.upfrontLabel",
+  "el": "Προκαταβολή: {value}%",
+  "got": 5,
+  "want": 4
+ },
+ {
+  "ns": "procurement",
+  "k": "share.expires",
+  "el": "Λήγει σε {days} ημέρες",
+  "got": 5,
+  "want": 4
+ },
+ {
+  "ns": "procurement",
+  "k": "pdf.page",
+  "el": "Σελίδα {current} από {total}",
+  "got": 6,
+  "want": 5
+ },
+ {
+  "ns": "projects",
+  "k": "createValidation.nameRequired",
+  "el": "Ο τίτλος του έργου είναι υποχρεωτικός.",
+  "got": 4,
+  "want": 7
+ },
+ {
+  "ns": "projects",
+  "k": "createValidation.statusRequired",
+  "el": "Η κατάσταση του έργου είναι υποχρεωτική.",
+  "got": 4,
+  "want": 7
+ },
+ {
+  "ns": "properties-detail",
+  "k": "fields.location.noFloorHint",
+  "el": "Συνδέστε πρώτα κτίριο",
+  "got": 2,
+  "want": 4
+ },
+ {
+  "ns": "report-builder",
+  "k": "crossFilter.filtered",
+  "el": "Φίλτρο: {field} = {value}",
+  "got": 6,
+  "want": 5
+ },
+ {
+  "ns": "report-builder",
+  "k": "export.crossFilterActive",
+  "el": "Ενεργό φίλτρο: {field} = {value}",
+  "got": 7,
+  "want": 6
+ },
+ {
+  "ns": "showcase",
+  "k": "header.subtitle",
+  "el": "Παρουσίαση ακινήτου",
+  "got": "no-wrap",
+  "want": "-"
+ },
+ {
+  "ns": "showcase",
+  "k": "property.code",
+  "el": "Κωδικός",
+  "got": "no-wrap",
+  "want": "-"
+ },
+ {
+  "ns": "showcase",
+  "k": "specs.title",
+  "el": "Χαρακτηριστικά",
+  "got": "no-wrap",
+  "want": "-"
+ },
+ {
+  "ns": "showcase",
+  "k": "specs.areaUnit",
+  "el": "τ.μ.",
+  "got": "no-wrap",
+  "want": "-"
+ },
+ {
+  "ns": "showcase",
+  "k": "specs.type",
+  "el": "Τύπος",
+  "got": "no-wrap",
+  "want": "-"
+ },
+ {
+  "ns": "showcase",
+  "k": "specs.code",
+  "el": "Κωδικός",
+  "got": "no-wrap",
+  "want": "-"
+ },
+ {
+  "ns": "showcase",
+  "k": "specs.building",
+  "el": "Κτίριο",
+  "got": "no-wrap",
+  "want": "-"
+ },
+ {
+  "ns": "showcase",
+  "k": "specs.floor",
+  "el": "Όροφος",
+  "got": "no-wrap",
+  "want": "-"
+ },
+ {
+  "ns": "showcase",
+  "k": "specs.grossArea",
+  "el": "Μικτή επιφάνεια",
+  "got": "no-wrap",
+  "want": "-"
+ },
+ {
+  "ns": "showcase",
+  "k": "specs.netArea",
+  "el": "Καθαρή επιφάνεια",
+  "got": "no-wrap",
+  "want": "-"
+ },
+ {
+  "ns": "showcase",
+  "k": "specs.balcony",
+  "el": "Μπαλκόνι",
+  "got": "no-wrap",
+  "want": "-"
+ },
+ {
+  "ns": "showcase",
+  "k": "specs.terrace",
+  "el": "Βεράντα",
+  "got": "no-wrap",
+  "want": "-"
+ },
+ {
+  "ns": "showcase",
+  "k": "specs.bedrooms",
+  "el": "Υπνοδωμάτια",
+  "got": "no-wrap",
+  "want": "-"
+ },
+ {
+  "ns": "showcase",
+  "k": "specs.bathrooms",
+  "el": "Μπάνια",
+  "got": "no-wrap",
+  "want": "-"
+ },
+ {
+  "ns": "showcase",
+  "k": "specs.wc",
+  "el": "Τουαλέτες",
+  "got": "no-wrap",
+  "want": "-"
+ },
+ {
+  "ns": "showcase",
+  "k": "specs.orientation",
+  "el": "Προσανατολισμός",
+  "got": "no-wrap",
+  "want": "-"
+ },
+ {
+  "ns": "showcase",
+  "k": "specs.energyClass",
+  "el": "Ενεργειακή κλάση",
+  "got": "no-wrap",
+  "want": "-"
+ },
+ {
+  "ns": "showcase",
+  "k": "specs.condition",
+  "el": "Κατάσταση διατήρησης",
+  "got": "no-wrap",
+  "want": "-"
+ },
+ {
+  "ns": "showcase",
+  "k": "photos.title",
+  "el": "Φωτογραφίες",
+  "got": "no-wrap",
+  "want": "-"
+ },
+ {
+  "ns": "showcase",
+  "k": "photos.defaultAlt",
+  "el": "Φωτογραφία ακινήτου",
+  "got": "no-wrap",
+  "want": "-"
+ },
+ {
+  "ns": "showcase",
+  "k": "floorplans.title",
+  "el": "Κατόψεις",
+  "got": "no-wrap",
+  "want": "-"
+ },
+ {
+  "ns": "showcase",
+  "k": "floorplans.defaultName",
+  "el": "Κάτοψη",
+  "got": "no-wrap",
+  "want": "-"
+ },
+ {
+  "ns": "showcase",
+  "k": "video.title",
+  "el": "Βίντεο",
+  "got": "no-wrap",
+  "want": "-"
+ },
+ {
+  "ns": "showcase",
+  "k": "video.openLink",
+  "el": "Άνοιγμα συνδέσμου",
+  "got": "no-wrap",
+  "want": "-"
+ },
+ {
+  "ns": "showcase",
+  "k": "actions.downloadPdf",
+  "el": "Λήψη PDF",
+  "got": "no-wrap",
+  "want": "-"
+ },
+ {
+  "ns": "showcase",
+  "k": "states.expiredTitle",
+  "el": "Ο σύνδεσμος έληξε",
+  "got": "no-wrap",
+  "want": "-"
+ },
+ {
+  "ns": "showcase",
+  "k": "states.expiredDescription",
+  "el": "Η παρουσίαση δεν είναι πλέον διαθέσιμη. Παρακαλούμε επικοινωνήστε με τον αποστολέα.",
+  "got": "no-wrap",
+  "want": "-"
+ },
+ {
+  "ns": "showcase",
+  "k": "states.notFoundTitle",
+  "el": "Ο σύνδεσμος δεν βρέθηκε",
+  "got": "no-wrap",
+  "want": "-"
+ },
+ {
+  "ns": "showcase",
+  "k": "states.notFoundDescription",
+  "el": "Η παρουσίαση δεν είναι διαθέσιμη ή έχει ανακληθεί.",
+  "got": "no-wrap",
+  "want": "-"
+ },
+ {
+  "ns": "showcase",
+  "k": "states.errorTitle",
+  "el": "Πρόβλημα φόρτωσης",
+  "got": "no-wrap",
+  "want": "-"
+ },
+ {
+  "ns": "telegram",
+  "k": "search.results.showing",
+  "el": "Εμφάνιση {shown} από {total}",
+  "got": 6,
+  "want": 5
+ },
+ {
+  "ns": "telegram",
+  "k": "search.results.criteria",
+  "el": "Κριτήρια: {criteria}",
+  "got": 5,
+  "want": 4
+ },
+ {
+  "ns": "telegram",
+  "k": "search.tooManyResults.title",
+  "el": "Βρέθηκαν πολλά αποτελέσματα ({count})",
+  "got": 8,
+  "want": 7
+ },
+ {
+  "ns": "trash",
+  "k": "backToList",
+  "el": "Πίσω στη λίστα",
+  "got": 2,
+  "want": 3
+ },
+ {
+  "ns": "trash",
+  "k": "trashCount",
+  "el": "{count} στον κάδο",
+  "got": 2,
+  "want": 3
+ },
+ {
+  "ns": "trash",
+  "k": "deleteSuccess",
+  "el": "Μεταφέρθηκε στον κάδο",
+  "got": 2,
+  "want": 4
+ },
+ {
+  "ns": "trash",
+  "k": "deleteSuccessMultiple",
+  "el": "{count} αντικείμενα μεταφέρθηκαν στον κάδο",
+  "got": 2,
+  "want": 8
+ },
+ {
+  "ns": "trash",
+  "k": "undoFailed",
+  "el": "Αποτυχία αναίρεσης",
+  "got": 2,
+  "want": 4
+ },
+ {
+  "ns": "trash",
+  "k": "restoreSelected",
+  "el": "Επαναφορά επιλεγμένων",
+  "got": 2,
+  "want": 4
+ },
+ {
+  "ns": "trash",
+  "k": "restoreSuccess",
+  "el": "{count} αντικείμενα επαναφέρθηκαν",
+  "got": 2,
+  "want": 7
+ },
+ {
+  "ns": "trash",
+  "k": "restoreSuccess_one",
+  "el": "Το αντικείμενο επαναφέρθηκε",
+  "got": 2,
+  "want": 5
+ },
+ {
+  "ns": "trash",
+  "k": "restoreFailed",
+  "el": "Αποτυχία επαναφοράς",
+  "got": 2,
+  "want": 4
+ },
+ {
+  "ns": "trash",
+  "k": "permanentDelete",
+  "el": "Οριστική διαγραφή",
+  "got": 2,
+  "want": 4
+ },
+ {
+  "ns": "trash",
+  "k": "permanentDeleteSuccess",
+  "el": "{count} αντικείμενα διαγράφηκαν οριστικά",
+  "got": 2,
+  "want": 8
+ },
+ {
+  "ns": "trash",
+  "k": "permanentDeleteSuccess_one",
+  "el": "Διαγράφηκε οριστικά",
+  "got": 2,
+  "want": 4
+ },
+ {
+  "ns": "trash",
+  "k": "permanentDeleteFailed",
+  "el": "Αποτυχία οριστικής διαγραφής",
+  "got": 2,
+  "want": 6
+ },
+ {
+  "ns": "trash",
+  "k": "permanentDeletePartial",
+  "el": "{succeeded} διαγράφηκαν, {failed} απέτυχαν",
+  "got": 2,
+  "want": 8
+ },
+ {
+  "ns": "trash",
+  "k": "autoDeleteWarning",
+  "el": "Όσα έχουν διαγραφεί πριν από 30 ημέρες διαγράφονται οριστικά αυτόματα.",
+  "got": 2,
+  "want": 12
+ },
+ {
+  "ns": "trash",
+  "k": "softDeleteDialog.title",
+  "el": "Μεταφορά στον Κάδο",
+  "got": 2,
+  "want": 4
+ },
+ {
+  "ns": "trash",
+  "k": "softDeleteDialog.description",
+  "el": "Το αντικείμενο θα αφαιρεθεί από τις ενεργές λίστες αλλά μπορεί να επαναφερθεί από τον κάδο.",
+  "got": 2,
+  "want": 12
+ },
+ {
+  "ns": "trash",
+  "k": "softDeleteDialog.confirm",
+  "el": "Μεταφορά στον Κάδο",
+  "got": 2,
+  "want": 4
+ },
+ {
+  "ns": "trash",
+  "k": "permanentDeleteDialog.title",
+  "el": "Οριστική Διαγραφή",
+  "got": 2,
+  "want": 4
+ },
+ {
+  "ns": "trash",
+  "k": "permanentDeleteDialog.description",
+  "el": "Το αντικείμενο θα αφαιρεθεί οριστικά αν δεν έχει εξαρτήσεις.",
+  "got": 2,
+  "want": 11
+ },
+ {
+  "ns": "trash",
+  "k": "permanentDeleteDialog.body",
+  "el": "Η οριστική διαγραφή δεν αναιρείται.",
+  "got": 2,
+  "want": 7
+ },
+ {
+  "ns": "trash",
+  "k": "permanentDeleteDialog.confirm",
+  "el": "Οριστική Διαγραφή",
+  "got": 2,
+  "want": 4
+ }
+]

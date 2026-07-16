@@ -45,7 +45,12 @@ export interface PrintFidelityNote {
 const RESOLVER_CODE_TO_FIDELITY: Readonly<Record<string, PrintFidelityCode>> = {
   'image-fill:decode-failed': 'hatch-image-solid',
   'image-fill:encode-failed': 'hatch-image-solid',
-  'image-fill:tile-overflow': 'hatch-image-solid',
+  // ADR-667 Φ2 — εκφυλισμένο κελί (μηδενικό tile / degenerate boundary ⇒ κανένα anchor).
+  'image-fill:degenerate-cell': 'hatch-image-solid',
+  // ADR-667 Φ2 — υπέρβαση `MAX_PDF_PATTERNS_PER_PAGE`. Αντικατέστησε το `image-fill:tile-overflow`
+  // της Φ1: το μοντέλο «N πλακάκια ανά γραμμοσκίαση» (και ο cap του) **έπαψε να υπάρχει** — το
+  // κόστος ενός μοτίβου είναι πλέον σταθερό ως προς το εμβαδόν, όχι γραμμικό.
+  'image-fill:pattern-cap': 'hatch-image-solid',
   'image-entity:decode-failed': 'image-dropped',
   'image-entity:encode-failed': 'image-dropped',
 };

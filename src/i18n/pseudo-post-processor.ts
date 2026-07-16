@@ -35,7 +35,7 @@ const NESTED_PSEUDO = /\[\[~+ ([\s\S]*?) ~+\]\]/g;
 export function toPseudo(value: string): string {
   if (!value) return value;
 
-  const inner = value;
+  const inner = value.replace(NESTED_PSEUDO, '$1');
   if (!inner) return inner;
 
   const width = inner.replace(/ /g, '').length;
