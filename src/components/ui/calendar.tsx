@@ -3,16 +3,13 @@
 import * as React from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { DayPicker } from "react-day-picker"
-import { el, enUS } from "date-fns/locale"
 
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
-import { useTranslation } from "@/i18n/hooks/useTranslation"
+import { useDateFnsLocale } from "@/i18n/date-fns-locale"
 import '@/lib/design-system';
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker>
-
-const DATE_FNS_LOCALE_MAP: Record<string, typeof el> = { el, en: enUS };
 
 function Calendar({
   className,
@@ -21,8 +18,8 @@ function Calendar({
   locale,
   ...props
 }: CalendarProps) {
-  const { currentLanguage } = useTranslation();
-  const resolvedLocale = locale ?? DATE_FNS_LOCALE_MAP[currentLanguage] ?? el;
+  const currentLocale = useDateFnsLocale();
+  const resolvedLocale = locale ?? currentLocale;
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}

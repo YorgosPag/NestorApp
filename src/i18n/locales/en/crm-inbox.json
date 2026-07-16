@@ -35,6 +35,7 @@
       "follow_up": "Follow Up",
       "email": "Email",
       "document": "Document",
+      "complaint": "Complaint",
       "other": "Other"
     },
     "source": {

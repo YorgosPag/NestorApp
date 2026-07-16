@@ -10,10 +10,9 @@
 
 import { useMemo, useCallback, useRef } from 'react';
 import { isSameDay, addMonths, subMonths, parseISO } from 'date-fns';
-import { el as elLocale, enGB as enLocale } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
 import { Calendar } from '@/components/ui/calendar';
+import { useDateFnsLocale } from '@/i18n/date-fns-locale';
 import { Button } from '@/components/ui/button';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import type { CalendarEvent } from '@/types/calendar-event';
@@ -38,11 +37,10 @@ export function CalendarSidebar({
   displayMonth,
   onMonthChange,
 }: CalendarSidebarProps) {
-  const { i18n } = useTranslation();
   const iconSizes = useIconSizes();
   const lastHoveredIsoRef = useRef<string | null>(null);
 
-  const locale = i18n.language === 'el' ? elLocale : enLocale;
+  const locale = useDateFnsLocale();
   const secondMonth = useMemo(() => addMonths(displayMonth, 1), [displayMonth]);
 
   const eventDates = useMemo(() => {

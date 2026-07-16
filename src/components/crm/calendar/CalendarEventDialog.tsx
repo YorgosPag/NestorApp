@@ -13,7 +13,6 @@
 'use client';
 
 import { format } from 'date-fns';
-import { el, enUS } from 'date-fns/locale';
 import { Calendar, Clock, User, FileText, Tag, ArrowRight, Edit3 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import Link from 'next/link';
@@ -56,14 +55,14 @@ interface CalendarEventDialogProps {
 // ============================================================================
 
 export function CalendarEventDialog({ event, open, onOpenChange, onEditTask }: CalendarEventDialogProps) {
-  const { t, i18n } = useTranslation(['crm', 'crm-inbox']);
+  const { t } = useTranslation(['crm', 'crm-inbox']);
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
   const sp = useSpacingTokens();
   const typo = useTypography();
   const borders = useBorderTokens();
   const layout = useLayoutClasses();
-  const locale = i18n.language === 'el' ? el : enUS;
+  const locale = useDateFnsLocale();
 
   if (!event) return null;
 

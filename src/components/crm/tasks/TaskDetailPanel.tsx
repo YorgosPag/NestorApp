@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Clock, Calendar, User, MapPin, CalendarIcon, Plus, type LucideIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { el } from 'date-fns/locale';
@@ -12,9 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Calendar as CalendarPicker } from '@/components/ui/calendar';
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover';
 import { TimePickerPopover } from './TimePickerPopover';
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select';
+import { EnumSelect } from '@/components/ui/enum-select';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -29,17 +27,21 @@ import {
   TASK_TYPE_ICONS,
   type ActivityItem,
 } from '@/components/crm/dashboard/TasksTab';
+import { combineDateAndTime, splitDateAndTime } from '@/lib/date-local';
+import {
+  CRM_TASK_TYPES,
+  CRM_TASK_TYPE_VALUES,
+  CRM_TASK_STATUSES,
+  CRM_TASK_STATUS_VALUES,
+  CRM_TASK_PRIORITIES,
+  CRM_TASK_PRIORITY_VALUES,
+  type CrmTaskType,
+  type CrmTaskStatus,
+  type CrmTaskPriority,
+} from '@/constants/crm-task-enums';
 import type { Opportunity, CrmTask } from '@/types/crm';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
-
-type TaskType = CrmTask['type'];
-type TaskStatus = CrmTask['status'];
-type TaskPriority = CrmTask['priority'];
-
-const TASK_TYPES: TaskType[] = ['meeting', 'call', 'viewing', 'follow_up', 'email', 'document', 'other'];
-const TASK_STATUSES: TaskStatus[] = ['pending', 'in_progress', 'completed', 'cancelled'];
-const TASK_PRIORITIES: TaskPriority[] = ['low', 'medium', 'high', 'urgent'];
 
 function parseFlexibleDate(raw: string): Date | undefined {
   const s = raw.trim();
@@ -57,19 +59,6 @@ function parseFlexibleDate(raw: string): Date | undefined {
   const d = new Date(year, month - 1, day);
   if (d.getDate() !== day || d.getMonth() !== month - 1) return undefined;
   return d;
-}
-
-function parseDueDate(dueDate: CrmTask['dueDate']): { date: Date; time: string } {
-  if (!dueDate) return { date: new Date(), time: '09:00' };
-  let d: Date;
-  if (dueDate instanceof Date) { d = dueDate; }
-  else if (typeof dueDate === 'string') { d = new Date(dueDate); }
-  else if (typeof dueDate === 'object' && 'toDate' in dueDate && typeof dueDate.toDate === 'function') {
-    d = (dueDate as { toDate: () => Date }).toDate();
-  } else { d = new Date(); }
-  const hh = String(d.getHours()).padStart(2, '0');
-  const mm = String(d.getMinutes()).padStart(2, '0');
-  return { date: d, time: `${hh}:${mm}` };
 }
 
 // ── Props ──────────────────────────────────────────────────────────────────────
@@ -99,9 +88,9 @@ export function TaskDetailPanel({
   const [isEditing, setIsEditing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [editTitle, setEditTitle] = useState('');
-  const [editType, setEditType] = useState<TaskType>('meeting');
-  const [editStatus, setEditStatus] = useState<TaskStatus>('pending');
-  const [editPriority, setEditPriority] = useState<TaskPriority>('medium');
+  const [editType, setEditType] = useState<CrmTaskType>(CRM_TASK_TYPES.MEETING);
+  const [editStatus, setEditStatus] = useState<CrmTaskStatus>(CRM_TASK_STATUSES.PENDING);
+  const [editPriority, setEditPriority] = useState<CrmTaskPriority>(CRM_TASK_PRIORITIES.MEDIUM);
   const [editDate, setEditDate] = useState<Date | undefined>(new Date());
   const [editTime, setEditTime] = useState('09:00');
   const [editDescription, setEditDescription] = useState('');
@@ -111,7 +100,7 @@ export function TaskDetailPanel({
   const dateAnchorRef = React.useRef<HTMLDivElement>(null);
 
   const populateFromTask = useCallback((task: CrmTask) => {
-    const parsed = parseDueDate(task.dueDate);
+    const parsed = splitDateAndTime(task.dueDate);
     setEditTitle(task.title);
     setEditType(task.type);
     setEditStatus(task.status);
@@ -127,9 +116,9 @@ export function TaskDetailPanel({
     if (!isCreating) return;
     const now = new Date();
     setEditTitle('');
-    setEditType('meeting');
-    setEditStatus('pending');
-    setEditPriority('medium');
+    setEditType(CRM_TASK_TYPES.MEETING);
+    setEditStatus(CRM_TASK_STATUSES.PENDING);
+    setEditPriority(CRM_TASK_PRIORITIES.MEDIUM);
     setEditDate(now);
     setEditTime('09:00');
     setEditDescription('');
@@ -144,12 +133,6 @@ export function TaskDetailPanel({
     setIsEditing(false);
     if (activity?.kind === 'task') populateFromTask(activity.task);
   }, [activity, populateFromTask, isCreating]);
-
-  const typeLabels = useMemo<Partial<Record<string, string>>>(() => ({
-    call: t('tasks.type.call'), meeting: t('tasks.type.meeting'), viewing: t('tasks.type.viewing'),
-    follow_up: t('tasks.type.follow_up'), email: t('tasks.type.email'),
-    document: t('tasks.type.document'), other: t('tasks.type.other'),
-  }), [t]);
 
   const getLeadName = useCallback(
     (leadId?: string) => leads.find(l => l.id === leadId)?.fullName ?? null,
@@ -193,9 +176,7 @@ export function TaskDetailPanel({
     if (!editTitle.trim() || !editDate) return;
     setSubmitting(true);
     try {
-      const [hours, minutes] = editTime.split(':').map(Number);
-      const due = new Date(editDate);
-      due.setHours(hours, minutes, 0, 0);
+      const due = combineDateAndTime(editDate, editTime);
       await updateTaskWithPolicy({
         taskId,
         updates: {
@@ -216,9 +197,7 @@ export function TaskDetailPanel({
     if (!editTitle.trim() || !editDate) return;
     setSubmitting(true);
     try {
-      const [hours, minutes] = editTime.split(':').map(Number);
-      const due = new Date(editDate);
-      due.setHours(hours, minutes, 0, 0);
+      const due = combineDateAndTime(editDate, editTime);
       await createTaskWithPolicy({
         data: {
           title: editTitle.trim(), type: editType, status: editStatus,
@@ -247,32 +226,38 @@ export function TaskDetailPanel({
       </fieldset>
       <div className="grid grid-cols-2 gap-3">
         <fieldset className="space-y-1">
-          <Label>{t('tasks.form.fields.type')}</Label>
-          <Select value={editType} onValueChange={(v) => setEditType(v as TaskType)} disabled={disabled}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {TASK_TYPES.map((tt) => <SelectItem key={tt} value={tt}>{typeLabels[tt] ?? tt}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <Label htmlFor="task-type">{t('tasks.form.fields.type')}</Label>
+          <EnumSelect
+            id="task-type"
+            value={editType}
+            onValueChange={setEditType}
+            values={CRM_TASK_TYPE_VALUES}
+            getLabel={(tt) => t(`tasks.type.${tt}`)}
+            disabled={disabled}
+          />
         </fieldset>
         <fieldset className="space-y-1">
-          <Label>{t('tasks.status.label')}</Label>
-          <Select value={editStatus} onValueChange={(v) => setEditStatus(v as TaskStatus)} disabled={disabled}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {TASK_STATUSES.map((s) => <SelectItem key={s} value={s}>{t(`tasks.status.${s}`)}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <Label htmlFor="task-status">{t('tasks.status.label')}</Label>
+          <EnumSelect
+            id="task-status"
+            value={editStatus}
+            onValueChange={setEditStatus}
+            values={CRM_TASK_STATUS_VALUES}
+            getLabel={(s) => t(`tasks.status.${s}`)}
+            disabled={disabled}
+          />
         </fieldset>
       </div>
       <fieldset className="space-y-1">
-        <Label>{t('tasks.priority.label')}</Label>
-        <Select value={editPriority} onValueChange={(v) => setEditPriority(v as TaskPriority)} disabled={disabled}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {TASK_PRIORITIES.map((p) => <SelectItem key={p} value={p}>{t(`tasks.priority.${p}`)}</SelectItem>)}
-          </SelectContent>
-        </Select>
+        <Label htmlFor="task-priority">{t('tasks.priority.label')}</Label>
+        <EnumSelect
+          id="task-priority"
+          value={editPriority}
+          onValueChange={setEditPriority}
+          values={CRM_TASK_PRIORITY_VALUES}
+          getLabel={(p) => t(`tasks.priority.${p}`)}
+          disabled={disabled}
+        />
       </fieldset>
       <div className="grid grid-cols-2 gap-3">
         <fieldset className="space-y-1">

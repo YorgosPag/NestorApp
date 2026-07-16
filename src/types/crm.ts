@@ -113,13 +113,35 @@ export interface Communication {
 // Pattern: Google Cloud, AWS, Microsoft Azure - Isomorphic constants
 export { TRIAGE_STATUSES, TRIAGE_STATUS_VALUES, type TriageStatus } from '@/constants/triage-statuses';
 
+// Task enums (SSoT)
+// 🏢 ENTERPRISE: Re-export από centralized constants (Single Source of Truth)
+// Τα unions του CrmTask παράγονται ΑΠΟ αυτούς τους πίνακες → μηδενικό drift.
+export {
+  CRM_TASK_TYPES,
+  CRM_TASK_TYPE_VALUES,
+  CRM_TASK_TYPE_CREATABLE_VALUES,
+  CRM_TASK_STATUSES,
+  CRM_TASK_STATUS_VALUES,
+  CRM_TASK_PRIORITIES,
+  CRM_TASK_PRIORITY_VALUES,
+  type CrmTaskType,
+  type CrmTaskStatus,
+  type CrmTaskPriority,
+} from '@/constants/crm-task-enums';
+
+import type {
+  CrmTaskType,
+  CrmTaskStatus,
+  CrmTaskPriority,
+} from '@/constants/crm-task-enums';
+
 // Tasks
 export interface CrmTask {
   id?: string;
   companyId?: string; // 🏢 ENTERPRISE: Tenant isolation
   title: string;
   description?: string | null;
-  type: 'call' | 'email' | 'meeting' | 'viewing' | 'document' | 'follow_up' | 'complaint' | 'other';
+  type: CrmTaskType;
   leadId?: string;
   opportunityId?: string;
   contactId?: string | null;
@@ -130,8 +152,8 @@ export interface CrmTask {
   dueDate?: FirestoreishTimestamp | null;
   reminderDate?: FirestoreishTimestamp | null;
   completedAt?: FirestoreishTimestamp;
-  status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
-  priority: 'low' | 'medium' | 'high' | 'urgent';
+  status: CrmTaskStatus;
+  priority: CrmTaskPriority;
   viewingDetails?: {
     location: string;
     units: string[];

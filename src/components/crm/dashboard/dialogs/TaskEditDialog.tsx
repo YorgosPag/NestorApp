@@ -12,66 +12,35 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
-import { Calendar as CalendarIcon, Edit3 } from 'lucide-react';
+import { Edit3 } from 'lucide-react';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('TaskEditDialog');
 
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Calendar } from '@/components/ui/calendar';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-
-import { useIconSizes } from '@/hooks/useIconSizes';
-import { useSpacingTokens } from '@/hooks/useSpacingTokens';
-import { useLayoutClasses } from '@/hooks/useLayoutClasses';
+import { DatePickerField } from '@/components/ui/date-picker-field';
+import { EnumSelect } from '@/components/ui/enum-select';
+import { TaskDialogShell } from '@/components/crm/shared/TaskDialogShell';
+import { TaskFormField } from '@/components/crm/shared/TaskFormField';
 
 import { updateTaskWithPolicy } from '@/services/crm/crm-mutation-gateway';
+import { combineDateAndTime, splitDateAndTime } from '@/lib/date-local';
+import {
+  CRM_TASK_TYPES,
+  CRM_TASK_TYPE_VALUES,
+  CRM_TASK_STATUSES,
+  CRM_TASK_STATUS_VALUES,
+  CRM_TASK_PRIORITIES,
+  CRM_TASK_PRIORITY_VALUES,
+  type CrmTaskType,
+  type CrmTaskStatus,
+  type CrmTaskPriority,
+} from '@/constants/crm-task-enums';
 import type { CrmTask } from '@/types/crm';
 import '@/lib/design-system';
-
-// ============================================================================
-// TYPES
-// ============================================================================
-
-type TaskType = CrmTask['type'];
-type TaskStatus = CrmTask['status'];
-type TaskPriority = CrmTask['priority'];
-
-const TASK_TYPES: TaskType[] = [
-  'meeting', 'call', 'viewing', 'follow_up', 'email', 'document', 'other',
-];
-
-const TASK_STATUSES: TaskStatus[] = [
-  'pending', 'in_progress', 'completed', 'cancelled',
-];
-
-const TASK_PRIORITIES: TaskPriority[] = [
-  'low', 'medium', 'high', 'urgent',
-];
 
 // ============================================================================
 // PROPS
@@ -82,29 +51,6 @@ interface TaskEditDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onUpdated?: () => void;
-}
-
-// ============================================================================
-// HELPERS
-// ============================================================================
-
-function parseDueDate(dueDate: CrmTask['dueDate']): { date: Date; time: string } {
-  if (!dueDate) return { date: new Date(), time: '09:00' };
-
-  let d: Date;
-  if (dueDate instanceof Date) {
-    d = dueDate;
-  } else if (typeof dueDate === 'string') {
-    d = new Date(dueDate);
-  } else if (typeof dueDate === 'object' && 'toDate' in dueDate && typeof dueDate.toDate === 'function') {
-    d = dueDate.toDate();
-  } else {
-    d = new Date();
-  }
-
-  const hh = String(d.getHours()).padStart(2, '0');
-  const mm = String(d.getMinutes()).padStart(2, '0');
-  return { date: d, time: `${hh}:${mm}` };
 }
 
 // ============================================================================
@@ -119,14 +65,11 @@ export function TaskEditDialog({
 }: TaskEditDialogProps) {
   const { t } = useTranslation(['crm', 'crm-inbox']);
   const { success, error: notifyError } = useNotifications();
-  const iconSizes = useIconSizes();
-  const sp = useSpacingTokens();
-  const layout = useLayoutClasses();
 
   const [title, setTitle] = useState('');
-  const [type, setType] = useState<TaskType>('meeting');
-  const [status, setStatus] = useState<TaskStatus>('pending');
-  const [priority, setPriority] = useState<TaskPriority>('medium');
+  const [type, setType] = useState<CrmTaskType>(CRM_TASK_TYPES.MEETING);
+  const [status, setStatus] = useState<CrmTaskStatus>(CRM_TASK_STATUSES.PENDING);
+  const [priority, setPriority] = useState<CrmTaskPriority>(CRM_TASK_PRIORITIES.MEDIUM);
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [time, setTime] = useState('09:00');
   const [description, setDescription] = useState('');
@@ -140,7 +83,7 @@ export function TaskEditDialog({
     setStatus(task.status);
     setPriority(task.priority);
     setDescription(task.description ?? '');
-    const parsed = parseDueDate(task.dueDate);
+    const parsed = splitDateAndTime(task.dueDate);
     setDate(parsed.date);
     setTime(parsed.time);
   }, [task]);
@@ -151,9 +94,7 @@ export function TaskEditDialog({
     setSubmitting(true);
 
     try {
-      const [hours, minutes] = time.split(':').map(Number);
-      const dueDate = new Date(date);
-      dueDate.setHours(hours, minutes, 0, 0);
+      const dueDate = combineDateAndTime(date, time);
 
       await updateTaskWithPolicy({
         taskId: task.id,
@@ -179,154 +120,90 @@ export function TaskEditDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className={layout.flexCenterGap2}>
-            <Edit3 className={iconSizes.md} />
-            {t('tasks.actions.edit')}
-          </DialogTitle>
-          <DialogDescription className="sr-only">
-            {t('tasks.actions.edit')}
-          </DialogDescription>
-        </DialogHeader>
+    <TaskDialogShell
+      open={open}
+      onOpenChange={onOpenChange}
+      icon={Edit3}
+      title={t('tasks.actions.edit')}
+      onSubmit={handleSubmit}
+      submitting={submitting}
+      submitDisabled={!title.trim()}
+    >
+      <TaskFormField
+        htmlFor="edit-task-title"
+        label={t('calendarPage.dialog.fields.title')}
+        required
+      >
+        <Input
+          id="edit-task-title"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          required
+          autoFocus
+        />
+      </TaskFormField>
 
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleSubmit();
-          }}
-          className={sp.spaceBetween.md}
-        >
-          {/* Title */}
-          <fieldset className={sp.spaceBetween.sm}>
-            <Label htmlFor="edit-task-title">
-              {t('calendarPage.dialog.fields.title')} *
-            </Label>
-            <Input
-              id="edit-task-title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              required
-              autoFocus
-            />
-          </fieldset>
+      {/* Type — το πλήρες set, ώστε ένα system-generated task (π.χ. complaint)
+          να ανοίγει με τον τύπο του ορατό αντί για κενό dropdown. */}
+      <TaskFormField htmlFor="edit-task-type" label={t('calendarPage.dialog.fields.type')}>
+        <EnumSelect
+          id="edit-task-type"
+          value={type}
+          onValueChange={setType}
+          values={CRM_TASK_TYPE_VALUES}
+          getLabel={(tt) => t(`calendarPage.eventTypes.${tt}`)}
+        />
+      </TaskFormField>
 
-          {/* Type */}
-          <fieldset className={sp.spaceBetween.sm}>
-            <Label>{t('calendarPage.dialog.fields.type')}</Label>
-            <Select value={type} onValueChange={(v) => setType(v as TaskType)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {TASK_TYPES.map((tt) => (
-                  <SelectItem key={tt} value={tt}>
-                    {t(`calendarPage.eventTypes.${tt}`)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </fieldset>
+      <TaskFormField htmlFor="edit-task-status" label={t('tasks.status.label')}>
+        <EnumSelect
+          id="edit-task-status"
+          value={status}
+          onValueChange={setStatus}
+          values={CRM_TASK_STATUS_VALUES}
+          getLabel={(s) => t(`tasks.status.${s}`)}
+        />
+      </TaskFormField>
 
-          {/* Status */}
-          <fieldset className={sp.spaceBetween.sm}>
-            <Label>{t('tasks.status.label')}</Label>
-            <Select value={status} onValueChange={(v) => setStatus(v as TaskStatus)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {TASK_STATUSES.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {t(`tasks.status.${s}`)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </fieldset>
+      <TaskFormField htmlFor="edit-task-priority" label={t('tasks.priority.label')}>
+        <EnumSelect
+          id="edit-task-priority"
+          value={priority}
+          onValueChange={setPriority}
+          values={CRM_TASK_PRIORITY_VALUES}
+          getLabel={(p) => t(`tasks.priority.${p}`)}
+        />
+      </TaskFormField>
 
-          {/* Priority */}
-          <fieldset className={sp.spaceBetween.sm}>
-            <Label>{t('tasks.priority.label')}</Label>
-            <Select value={priority} onValueChange={(v) => setPriority(v as TaskPriority)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {TASK_PRIORITIES.map((p) => (
-                  <SelectItem key={p} value={p}>
-                    {t(`tasks.priority.${p}`)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </fieldset>
+      <TaskFormField htmlFor="edit-task-date" label={t('calendarPage.dialog.fields.date')}>
+        <DatePickerField
+          id="edit-task-date"
+          value={date}
+          onSelect={setDate}
+          placeholder={t('calendarPage.dialog.fields.date')}
+        />
+      </TaskFormField>
 
-          {/* Date */}
-          <fieldset className={sp.spaceBetween.sm}>
-            <Label>{t('calendarPage.dialog.fields.date')}</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full justify-start text-left font-normal">
-                  <CalendarIcon className={`${sp.margin.right.sm} ${iconSizes.sm}`} />
-                  {date ? format(date, 'PPP') : t('calendarPage.dialog.fields.date')}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className={`w-auto ${sp.padding.none}`}>
-                <Calendar
-                  mode="single"
-                  selected={date}
-                  onSelect={setDate}
-                />
-              </PopoverContent>
-            </Popover>
-          </fieldset>
+      <TaskFormField htmlFor="edit-task-time" label={t('calendarPage.dialog.fields.time')}>
+        <Input
+          id="edit-task-time"
+          type="time"
+          value={time}
+          onChange={(e) => setTime(e.target.value)}
+        />
+      </TaskFormField>
 
-          {/* Time */}
-          <fieldset className={sp.spaceBetween.sm}>
-            <Label htmlFor="edit-task-time">
-              {t('calendarPage.dialog.fields.time')}
-            </Label>
-            <Input
-              id="edit-task-time"
-              type="time"
-              value={time}
-              onChange={(e) => setTime(e.target.value)}
-            />
-          </fieldset>
-
-          {/* Description */}
-          <fieldset className={sp.spaceBetween.sm}>
-            <Label htmlFor="edit-task-description">
-              {t('calendarPage.dialog.fields.description')}
-            </Label>
-            <Textarea
-              id="edit-task-description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-            />
-          </fieldset>
-
-          {/* Actions */}
-          <footer className={`flex justify-end ${sp.gap.sm} ${sp.padding.top.sm}`}>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => onOpenChange(false)}
-              disabled={submitting}
-            >
-              {t('calendarPage.dialog.actions.cancel')}
-            </Button>
-            <Button type="submit" disabled={submitting || !title.trim()}>
-              {submitting
-                ? t('calendarPage.dialog.submitting')
-                : t('calendarPage.dialog.actions.save')}
-            </Button>
-          </footer>
-        </form>
-      </DialogContent>
-    </Dialog>
+      <TaskFormField
+        htmlFor="edit-task-description"
+        label={t('calendarPage.dialog.fields.description')}
+      >
+        <Textarea
+          id="edit-task-description"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          rows={3}
+        />
+      </TaskFormField>
+    </TaskDialogShell>
   );
 }

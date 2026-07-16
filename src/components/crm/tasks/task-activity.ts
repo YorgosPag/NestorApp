@@ -7,9 +7,8 @@
 import { Phone, Users, Calendar, Mail, FileText, AlertCircle, Clock } from 'lucide-react';
 import { format, parse, isValid } from 'date-fns';
 import type React from 'react';
-import type { CrmTaskType, CrmTaskPriority, CrmTaskStatus } from '@/types/crm-extra';
 import type { AppointmentDocument } from '@/types/appointment';
-import type { CrmTask } from '@/types/crm';
+import type { CrmTask, CrmTaskType, CrmTaskPriority, CrmTaskStatus } from '@/types/crm';
 
 export const TASK_TYPE_ICONS: Record<CrmTaskType, React.ElementType> = {
   call: Phone,
