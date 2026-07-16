@@ -1,0 +1,177 @@
+{
+  "architecture": "## Αρχιτεκτονική — Native PDF patterns για hatch fills (ADR-666)\n\n### 0. Η κεντρική διόρθωση σκεπτικού (ΔΙΑΒΑΣΕ ΠΡΩΤΑ)\n\nΗ εντολή ζητά «native tiling patterns για ΟΛΑ τα fills». **Αυτό είναι λάθος για τις γραμμές** και το λέω ρητά αντί να το εκτελέσω τυφλά:\n\n- Ένα PDF tiling cell είναι **ορθογώνιο** με `xStep`/`yStep`. Μια οικογένεια παράλληλων γραμμών σε γωνία α εκφράζεται μια χαρά (άξονο-ευθυγραμμισμένο cell `spacing × spacing` + περιστροφή μέσω `/Matrix`). Το **cross-hatch** (δύο ορθογώνιες οικογένειες) επίσης.\n- Αλλά ένα **predefined PAT** (ANSI31 κ.λπ.) έχει **N οικογένειες σε αυθαίρετες γωνίες με dash spans**. Κοινό ορθογώνιο πλέγμα επανάληψης για δύο οικογένειες με άρρητο λόγο γωνιών **δεν υπάρχει**. Θα έβγαινε είτε λάθος pattern, είτε ένα τεράστιο cell.\n- Και το κρίσιμο: **υπάρχει ήδη ακριβής SSoT** — `buildHatchEntitySegments` επιστρέφει segments **κομμένα ακριβώς στο boundary polygon** (με islands). Το να τα εκπέμψουμε ως `pdf.lines` είναι **πιο σωστό, πιο απλό και πιο χρήσιμο** από pattern: το AutoCAD PDFIMPORT βλέπει **πραγματικές γραμμές** στο `PDF_Geometry`, όχι ένα αδιαφανές pattern.\n\n**Άρα η αρχιτεκτονική είναι διπλή, ανά φύση του fill — όχι ένα σφυρί για όλα:**\n\n| fillType | Στρατηγική PDF | Γιατί |\n|---|---|---|\n| `image` (raster/tint/procedural) | **Native TilingPattern** | Εδώ είναι το πραγματικό κέρδος· εξαφανίζει tiles+cap (root cause) |\n| `user-defined` | **Vector segments** (`buildHatchEntitySegments`) | Ακριβές clip ήδη υπάρχει· AutoCAD-importable γραμμές |\n| `predefined` (PAT) | **Vector segments** (ίδιο SSoT) | Pattern cell αδύνατο για N οικογένειες/dashes |\n| `solid` | **`fillPolygon` even-odd** στα boundaryPaths | Δεν θέλει pattern· τετριμμένο |\n| `gradient` | **ShadingPattern** (axial/radial) | Native PDF, 1:1 με το canvas gradient |\n\nΤο «ONE pattern object per distinct material variant» υλοποιείται **ακέραιο για τα image fills** (εκεί που ζητήθηκε ουσιαστικά), με τον περιορισμό που εξηγώ στο §2.\n\n---\n\n### 1. Τι φεύγει (root-cause removal)\n\nΣτο **PDF path μόνο**:\n- `PDF_TILE_CAP = 4000` (`scene-image-resolver.ts:47`) → **διαγράφεται**.\n- `buildImageTileFullGrid` (`image-fill-export.ts:169`) → **διαγράφεται** (ήταν PDF-only· μετά τη Φ3 γίνεται dead code, το knip θα το πιάσει).\n- Ο σιωπηλός downgrade `image-fill:tile-overflow` → **παύει να υπάρχει ως έννοια**: ένα pattern δεν έχει πλήθος tiles, άρα δεν υπερχειλίζει. Ο μεγάλος λοξός τοπογραφικός hatch **δεν μπορεί πλέον να βγει γκρι**.\n- `emitClippedImage` **παραμένει** — αλλά **μόνο για `ImageEntity`** (γυμνές εικόνες: δέντρα/ταπετσαρίες). Δεν το αγγίζουμε.\n\nΣτο **DXF path — ΜΗΔΕΝ αλλαγές** (το DXF format δεν έχει patterns): `buildImageTilePlacements`, `IMAGE_TILE_CAP=400`, `resolveImageFillsForDxf`, το PIP culling — **άθικτα**. Ο κοινός `buildTileFrame`/`collectTiles` SSoT μένει, με έναν μόνο μικρό bugfix (§6).\n\n---\n\n### 2. Ο μηχανισμός των patterns — και η μία εξυπνάδα που τα κάνει να δουλέψουν\n\nΤο spike απέδειξε ότι ο «προφανής» δρόμος (πέρασε `patternData.matrix` στο `fillEvenOdd`) έχει **δύο κακά**:\n1. Το `fillWithPattern` χτίζει flip `F = Matrix(1,0,0,-1,0,getPageHeight())` σε **mm** ενώ το PDF spec απαιτεί **points** → πρέπει να ακυρώνεις το F χειροκίνητα (`F.multiply(M_final)`), αλλιώς το pattern πέφτει ~74mm λάθος.\n2. Κάθε fill με matrix **κλωνοποιεί** το pattern (`cloneTilingPattern`) και **αντιγράφει ΟΛΟ το cell stream** — για image cell = **το raster ανά fill**. Size bomb.\n\n**Η λύση: μη δίνεις ποτέ `patternData.matrix`.** Ο `TilingPattern(boundingBox, xStep, yStep, gState, matrix)` δέχεται matrix **στον constructor** (jspdf.node.js:974-988), και το `putTilingPattern` (3029-3034) γράφει `/Matrix` από το `pattern.matrix`. Άρα:\n\n```\nensurePattern(pdf, spec) →\n  αν δεν υπάρχει: new TilingPattern(bbox, xStep, yStep, null, M_final)   ← matrix ΜΕΣΑ\n                  advancedAPI(() => { begin…; <cell content>; endTilingPattern(key, tp) })\n  return key\n…\npdf.fillEvenOdd({ key, boundingBox, xStep, yStep })   ← ΧΩΡΙΣ matrix\n```\n→ το `if (patternData.matrix)` guard (5156-5167) **δεν μπαίνει** → **μηδέν clones**, το original id αναφέρεται, το `/Matrix` βγαίνει **αυτούσιο**, **χωρίς ανάγκη F-cancellation**.\n\n⚠️ **Ειλικρίνεια**: αυτό είναι **code-verified, όχι execution-verified**. Το spike απέδειξε ότι «matrix=null στον constructor + κανένα patternData.matrix → points space»· δεν δοκίμασε «matrix ΣΤΟΝ constructor + κανένα patternData.matrix». Γι' αυτό η **Φ0 είναι micro-spike**, όχι παραδοχή. Αν διαψευστεί → πέφτουμε στον **αποδεδειγμένο** clone path + δικό μας memo cache (§ Fallback A).\n\n**Το dedup που ζητήθηκε:** το κλειδί registry είναι `patternKey = imageFillVariantKey(fill) + '|' + placementKey`, όπου `placementKey = round(anchor.x,y) + angle + tileW×tileH`. Άρα:\n- Δύο hatches **ίδιου υλικού & ίδιας τοποθέτησης** (π.χ. poché σε 40 όψεις τοίχου με ρητό κοινό `origin`) → **ΕΝΑ pattern object, ένα raster embed**.\n- Δύο hatches ίδιου υλικού με **διαφορετικό anchor** (default = bbox-BL, άρα per-hatch) → **δύο objects** — αναπόφευκτο, γιατί το anchor είναι μέρος του `/Matrix` και το `/Matrix` ζει στο pattern dict. Το εναλλακτικό (κοινό anchor) θα **άλλαζε την εικόνα σε σχέση με την οθόνη** → απορρίπτεται (preview===commit).\n- Το **cell stream** ωστόσο παράγεται **μία φορά ανά variantKey** και επαναχρησιμοποιείται στο authoring (ίδιο decoded raster/procedural canvas), οπότε το κόστος CPU είναι O(variants), όχι O(hatches).\n\n---\n\n### 3. Ροή δεδομένων (τι αλλάζει στο pipeline)\n\n**Σήμερα:**\n```\ncapture-2d-vector.ts\n  → resolveSceneImages(entities)            [async: decode + N tiles + cap → overflow → σιωπηλό solid]\n  → draw(pdf, area) → emitSceneToPdf → emitHatch\n        A: images.get(id)        → emitClippedImage → N × addImage\n        B: solidFallbacks.get(id)→ fillHatchSolid          ← ΕΔΩ γεννιέται το γκρι\n        C: dxfFaces              → fillPolygon\n        D: default               → ΜΟΝΟ boundary outline   ← ΕΔΩ χάνονται οι γραμμές\n  images.warnings → ΠΟΥΘΕΝΑ (νεκρό πεδίο, μηδέν consumers)\n```\n\n**Στόχος:**\n```\ncapture-2d-vector.ts\n  → resolveSceneImages(entities)            [ΜΟΝΟ ImageEntity πλέον — τα hatch φεύγουν από δω]\n  → resolveHatchPatterns(entities)          [ΝΕΟ async: variant → cell source, ΧΩΡΙΣ tiles/cap]\n  → draw(pdf, area) → emitSceneToPdf → emitHatch  (dispatch by fillType, ΟΧΙ by map-lookup)\n        image/procedural → ensurePattern(registry) → path(ΧΩΡΙΣ paint op) → fillEvenOdd({key,…})\n        user-defined     → buildHatchEntitySegments → strokePolyline × N     [ΝΕΟ, λύνει το (a)]\n        predefined       → buildHatchEntitySegments → strokePolyline × N     [ΝΕΟ, λύνει το (a)]\n        solid            → fillPolygon(boundaryPaths, even-odd)              [ΝΕΟ]\n        gradient         → ensureShadingPattern → fillEvenOdd({key,matrix})  [Φ4]\n        dxfFaces         → fillPolygon                            [ΑΜΕΤΑΒΛΗΤΟ]\n        αδύνατο          → boundary outline + **FidelityReport entry**\n  → PrintFidelityReport → EventBus('print:fidelity-report') → toast (i18n)\n```\n\nΤο `draw` παραμένει **σύγχρονο** (ADR-040: «βαρύ eager, μόνο jsPDF emission deferred») — όλο το decode/procedural render γίνεται στον async pre-pass, το `ensurePattern` στο draw είναι καθαρά συνθετικό (canvas ήδη έτοιμο).\n\n---\n\n### 4. Συμβόλαια (contracts)\n\n```ts\n// print/vector/hatch-pattern/hatch-pattern-spec.ts  (pure, sync, zero jsPDF)\n/** Τι πρέπει να ζωγραφιστεί μέσα στο cell — ΟΧΙ πώς μπαίνει στο PDF. */\nexport type HatchCellSource =\n  | { readonly kind: 'image'; readonly canvas: HTMLCanvasElement }; // procedural/tint/raster ενοποιημένα\n\nexport interface HatchPatternSpec {\n  readonly variantKey: string;      // imageFillVariantKey(fill) — SSoT ταυτότητας\n  readonly cell: HatchCellSource;\n  readonly anchorWorld: Point2D;    // resolveImageFillOrigin(paths, fill) — SSoT\n  readonly angleDeg: number;        // fill.angle ?? 0\n  readonly tileWmm: number;         // fill.tileWidth\n  readonly tileHmm: number;         // fill.tileHeight || tileWidth\n}\n\n// print/vector/hatch-pattern/hatch-pattern-registry.ts  (stateful ανά jsPDF doc)\nexport interface PdfPatternRegistry {\n  /** Idempotent. Ίδιο variant+placement → ίδιο key, μηδέν διπλό embed. */\n  ensure(spec: HatchPatternSpec, toPaper: ToPaper): string;\n  /** Guard για το σιωπηλό no-op του jsPDF σε άγνωστο key. */\n  has(key: string): boolean;\n  readonly size: number;            // για το volume test\n}\nexport function createPdfPatternRegistry(pdf: jsPDF): PdfPatternRegistry;\n\n// print/vector/hatch-pattern/pdf-pattern-matrix.ts  (pure, load-bearing — ΕΝΑ call site)\n/** cell-space → PDF default user space (points, Y-up). Anchor σε world, γωνία «οπτικά δεξιόστροφα». */\nexport function buildPatternMatrix(input: {\n  readonly anchorPaperMm: Point2D;   // toPaper(anchorWorld)\n  readonly angleDeg: number;\n  readonly cellPaperMm: number;      // πλευρά cell σε mm χαρτιού (= tileWmm * worldToPaperScale)\n  readonly pageHeightMm: number;     // pdf.internal.pageSize.getHeight() — ΠΟΤΕ hardcoded 210\n  readonly scaleFactor: number;      // pdf.internal.scaleFactor\n}): Matrix;\n\n// print/vector/print-fidelity-report.ts  (pure types + builder)\nexport type HatchFidelityReason =\n  | 'image-decode-failed' | 'image-encode-failed'\n  | 'pattern-unsupported' | 'gradient-unsupported'\n  | 'segment-count-high';            // ΔΕΝ είναι downgrade — προειδοποίηση μεγέθους\nexport interface PrintFidelityReport {\n  readonly entries: readonly { reason: HatchFidelityReason; entityId: string }[];\n}\n```\n\n**Κανόνας μονάδων (γράψ' τον στο header κάθε αρχείου):** *world = mm σχεδίου· paper = mm χαρτιού· PDF default user space = points.* Το `buildPatternMatrix` είναι **το μοναδικό σημείο** που περνά από mm σε points. Κανένα call site δεν ξαναγράφει matrix μαθηματικά (το spike το απέδειξε non-obvious: λάθος → ~74mm μετατόπιση, σιωπηλή).\n\n---\n\n### 5. Cell authoring — μηδέν clone (N.12/N.18)\n\nΤο cell είναι **πάντα** ένα `HTMLCanvasElement` ήδη έτοιμο από τον pre-pass, μέσω των **υπαρχόντων** SSoT:\n- `prepareExportSource(fill)` (`image-fill-export.ts:283`) — ενοποιεί ήδη procedural (`renderProceduralTile`) / duotone (`applyDuotoneTint`) / raster. **Δεν το ξαναγράφουμε, δεν κάνουμε δικό μας switch στο `fill.procedural`.**\n- `imageFillVariantKey(fill)` — ταυτότητα «τι ζωγραφίζεται».\n- `resolveImageFillOrigin(paths, fill)` — anchor.\n- `sourceToPngDataUrl` — μετακινείται από τον resolver σε shared helper (χρησιμοποιείται και από τα δύο).\n\nΜέσα στο cell (ADVANCED mode, raw units, Y-up):\n```\npdf.addImage(dataUrl, 'PNG', 0, 0, CELL, CELL, alias, 'NONE')\n```\nΤο jsPDF εκπέμπει μόνο του `1 0 0 -1 0 0 cm` → το bitmap βγαίνει όρθιο· το `/XObject` μπαίνει αυτόματα στο `/Resources` του pattern (spike-proved). Το `alias = variantKey` → **τα bytes ενσωματώνονται μία φορά** ακόμη κι αν δύο patterns (διαφορετικό anchor) μοιράζονται υλικό.\n\n---\n\n### 6. Δύο υπαρκτά bugs που καθαρίζονται στην πορεία (Boy Scout, N.0.2)\n\n1. **`IMAGE_GRID_SCAN_CAP = 4000` αγνοεί το όρισμα cap** (`image-fill-export.ts:98`) — πραγματικό bug. Μετά τη Φ3 δεν αγγίζει το PDF, αλλά **μένει bug για το DXF**. Διόρθωση: να γίνει παραμετρικό (`scanCap = cap * SCAN_HEADROOM`). Χαμηλού ρίσκου, ξεχωριστό commit.\n2. **`usePrintDialogState.ts:57` λέει «ADR-604»** — stale, το ισχύον είναι ADR-608. Μονόγραμμη διόρθωση σχολίου.\n\n---\n\n### 7. Συμμόρφωση κανόνων\n\n- **N.7.1**: κάθε νέο αρχείο <500· κάθε function <40. Ο `scene-vector-emitter.ts` είναι **348** γραμμές — προσθέτοντας 5 branches θα ξεπεράσει· γι' αυτό ο hatch dispatch **εξάγεται** σε `scene-hatch-emitter.ts` (EXTRACT, ποτέ trim).\n- **N.12**: μηδέν νέος μηχανισμός όπου υπάρχει SSoT — reuse `prepareExportSource`, `renderProceduralTile` (έμμεσα), `imageFillVariantKey`, `resolveImageFillOrigin`, `buildHatchEntitySegments`, `isSolidHatch`, `traceHatchBoundary` semantics, `EventBus` + `hooks/notifications/*` registrar pattern.\n- **N.18**: `npm run jscpd:diff` πριν από κάθε «done» — ο κίνδυνος sibling clone είναι **υψηλός** εδώ (τα `hatch-cell-*` και το `scene-image-resolver` μοιάζουν δομικά).\n- **N.11**: μηδέν hardcoded strings· κλειδιά `print.fidelity.*` σε **el ΚΑΙ en**.\n- **N.17**: κανένα tsc από πράκτορα.",
+  "fileplan": [
+    {
+      "path": "docs/centralized-systems/reference/adrs/ADR-666-native-pdf-hatch-patterns.md",
+      "action": "create",
+      "why": "Ο ADR που διέπει όλη τη δουλειά. Status PROPOSED. Επαληθεύτηκε ότι το 666 είναι το επόμενο ελεύθερο (υψηλότερο υπαρκτό = ADR-665-terrain-clip-at-active-level.md)."
+    },
+    {
+      "path": "docs/centralized-systems/reference/adrs/ADR-608-vector-pdf-export.md",
+      "action": "edit",
+      "why": "Phase 3 (N.0.1): το Known Limitation (a) «hatch v1 = solid faces + boundary outline (pattern lines → raster fallback)» και το (e) «heavy hatched → keep raster fallback» παύουν να ισχύουν. Pointer → ADR-666 + changelog entry. ΜΗΝ διαγράψεις το ιστορικό — μόνο σήμανε το ως superseded ανά σημείο."
+    },
+    {
+      "path": "src/subapps/dxf-viewer/print/vector/hatch-pattern/pdf-pattern-matrix.ts",
+      "action": "create",
+      "why": "Φ0/Φ3. Το load-bearing SSoT: cell-space → PDF user space (points). ΕΝΑ σημείο μετατροπής mm→points. Το spike απέδειξε ότι open-coding ανά call site δίνει σιωπηλή ~74mm μετατόπιση. Δέχεται pageHeightMm/scaleFactor ως ορίσματα (καθαρή συνάρτηση, testable χωρίς jsPDF)."
+    },
+    {
+      "path": "src/subapps/dxf-viewer/print/vector/hatch-pattern/hatch-pattern-spec.ts",
+      "action": "create",
+      "why": "Φ3. Pure types + `buildHatchPatternSpec(hatch, preparedSource)`. Ταξινομεί fillType και παράγει variantKey/anchor/angle/tile μέσω των ΥΠΑΡΧΟΝΤΩΝ SSoT (imageFillVariantKey, resolveImageFillOrigin). Zero jsPDF import → μηδέν coupling."
+    },
+    {
+      "path": "src/subapps/dxf-viewer/print/vector/hatch-pattern/hatch-pattern-registry.ts",
+      "action": "create",
+      "why": "Φ3. Το dedup που ζητήθηκε: Map<variantKey|placementKey, jsPdfKey>. Ένα TilingPattern ανά (υλικό+τοποθέτηση), matrix ΜΕΣΑ στον constructor → μηδέν cloneTilingPattern → μηδέν διπλασιασμός cell stream. `has()` guard κατά του σιωπηλού no-op του jsPDF σε άγνωστο key."
+    },
+    {
+      "path": "src/subapps/dxf-viewer/print/vector/hatch-pattern/hatch-cell-image.ts",
+      "action": "create",
+      "why": "Φ3. Authoring ΕΝΟΣ image cell μέσα σε advancedAPI(): addImage(dataUrl,'PNG',0,0,CELL,CELL,alias,'NONE'). Το alias = variantKey → bytes embedded μία φορά. ΔΕΝ ξαναγράφει procedural/tint λογική — καταναλώνει prepareExportSource."
+    },
+    {
+      "path": "src/subapps/dxf-viewer/print/vector/hatch-pattern/scene-hatch-pattern-resolver.ts",
+      "action": "create",
+      "why": "Φ3. Ο async pre-pass που ΑΝΤΙΚΑΘΙΣΤΑ το hatch μισό του scene-image-resolver: variantKey → prepareExportSource ΜΙΑ φορά ανά variant (Map cache), ΧΩΡΙΣ tile grid, ΧΩΡΙΣ cap. Επιστρέφει specs + FidelityReport entries."
+    },
+    {
+      "path": "src/subapps/dxf-viewer/print/vector/scene-hatch-emitter.ts",
+      "action": "create",
+      "why": "Φ2. EXTRACT (N.7.1, ποτέ trim): ο scene-vector-emitter είναι ήδη 348 γραμμές και ο hatch dispatch αποκτά 5 branches. Εδώ ζει το emitHatch: solid / user-defined / predefined (segments) / image (pattern) / gradient / dxfFaces / unsupported."
+    },
+    {
+      "path": "src/subapps/dxf-viewer/print/vector/scene-vector-emitter.ts",
+      "action": "edit",
+      "why": "Φ2/Φ3. Το `case 'hatch'` delegάρει στο scene-hatch-emitter. Οι params αποκτούν `patterns: PdfPatternRegistry` + `hatchSpecs`. Το emitHatch (186-208) μεταναστεύει — αφαιρείται από δω."
+    },
+    {
+      "path": "src/subapps/dxf-viewer/print/vector/scene-image-resolver.ts",
+      "action": "edit",
+      "why": "Φ3. Αφαιρούνται resolveImageFillHatch + PDF_TILE_CAP + η buildImageTileFullGrid κλήση + το νεκρό `warnings: string[]`. Μένει ΜΟΝΟ το ImageEntity σκέλος (γυμνές εικόνες — δεν παίρνουν pattern). Το sourceToPngDataUrl εξάγεται σε shared."
+    },
+    {
+      "path": "src/subapps/dxf-viewer/print/vector/scene-image-emitter.ts",
+      "action": "keep",
+      "why": "ΑΜΕΤΑΒΛΗΤΟ. Το emitClippedImage/clipToBoundary εξυπηρετεί πλέον μόνο ImageEntity. Το clipToBoundary είναι ήδη generic «clip ό,τι ζωγραφιστεί μετά» — δεν χρειάζεται αλλαγή."
+    },
+    {
+      "path": "src/subapps/dxf-viewer/print/vector/print-fidelity-report.ts",
+      "action": "create",
+      "why": "Φ1. Το τυπωμένο συμβόλαιο που ΑΝΤΙΚΑΘΙΣΤΑ το νεκρό warnings:string[]. Pure types + aggregate builder (reason → count). Αυτό είναι το «ποτέ σιωπηλά» με τη μορφή κώδικα."
+    },
+    {
+      "path": "src/subapps/dxf-viewer/print/capture/capture-2d-vector.ts",
+      "action": "edit",
+      "why": "Φ1/Φ3. Καλεί resolveHatchPatterns δίπλα στο resolveSceneImages· συνενώνει τα FidelityReport· τα επιστρέφει στο CaptureResult (νέο πεδίο `fidelity`) ώστε να ταξιδέψουν ΠΑΝΩ στο runPrint — αυτό είναι το κανάλι που σήμερα λείπει."
+    },
+    {
+      "path": "src/subapps/dxf-viewer/print/paper-types.ts",
+      "action": "edit",
+      "why": "Φ1. `VectorCaptureResult` + `RasterCaptureResult` αποκτούν `fidelity?: PrintFidelityReport`. Discriminated union — μένει type-safe, μηδέν any."
+    },
+    {
+      "path": "src/subapps/dxf-viewer/print/print-service.ts",
+      "action": "edit",
+      "why": "Φ1. Στο τέλος του runPrint: αν capture.fidelity έχει entries → EventBus.emit('print:fidelity-report', aggregate). ΕΝΑ event ανά εργασία εκτύπωσης (aggregated counts), όχι N toasts."
+    },
+    {
+      "path": "src/subapps/dxf-viewer/systems/events/drawing-event-map.ts",
+      "action": "edit",
+      "why": "Φ1. Νέο typed event `'print:fidelity-report': { counts: Readonly<Record<HatchFidelityReason, number>> }`. Ακολουθεί το υπάρχον pattern (bim:foundations-from-grid κ.λπ.)."
+    },
+    {
+      "path": "src/subapps/dxf-viewer/hooks/notifications/print-notifications.ts",
+      "action": "create",
+      "why": "Φ1. registerPrintNotifications(t) — mirror του grid-build-notifications.ts. EventBus.on('print:fidelity-report') → toast.warning ανά reason με count (ICU πληθυντικός). ΑΥΤΟ είναι το notification SSoT· δεν φτιάχνουμε νέο κανάλι."
+    },
+    {
+      "path": "src/subapps/dxf-viewer/hooks/useDxfViewerNotifications.ts",
+      "action": "edit",
+      "why": "Φ1. Μία γραμμή: ...registerPrintNotifications(t) στον unsubs πίνακα. Ο registrar χωρίς wiring = νεκρός κώδικας."
+    },
+    {
+      "path": "src/i18n/locales/el/dxf-viewer-shell.json",
+      "action": "edit",
+      "why": "Φ1. Κλειδιά print.fidelity.* (imageDecodeFailed/imageEncodeFailed/patternUnsupported/gradientUnsupported/segmentCountHigh) με ICU πληθυντικό. N.11: ΠΡΩΤΑ τα κλειδιά, ΜΕΤΑ ο κώδικας."
+    },
+    {
+      "path": "src/i18n/locales/en/dxf-viewer-shell.json",
+      "action": "edit",
+      "why": "Φ1. Τα ΙΔΙΑ κλειδιά, EN. Λείπει το en → CHECK 3.8 μπλοκάρει το commit."
+    },
+    {
+      "path": "src/subapps/dxf-viewer/export/core/image-fill-export.ts",
+      "action": "edit",
+      "why": "Φ3 (ΠΡΟΣΟΧΗ — DXF-critical αρχείο). ΜΟΝΟ: (1) διαγραφή buildImageTileFullGrid αφού χάσει τον τελευταίο καταναλωτή, (2) το IMAGE_GRID_SCAN_CAP:98 να σέβεται το cap όρισμα (υπαρκτό bug). ΑΠΑΓΟΡΕΥΕΤΑΙ: buildImageTilePlacements / IMAGE_TILE_CAP=400 / resolveImageFillsForDxf / PIP culling — άθικτα."
+    },
+    {
+      "path": "src/subapps/dxf-viewer/print/vector/hatch-pattern/hatch-gradient-shading.ts",
+      "action": "create",
+      "why": "Φ4. ShadingPattern για fillType='gradient'. Reuse resolveGradientStops + η ίδια anchor/angle λογική με το hatch-gradient-paint (preview===commit). ΠΡΟΣΟΧΗ: το jsPDF πετά TypeError αν λείπει το matrix στο shading branch (5148, χωρίς fallback) — υποχρεωτικό matrix."
+    },
+    {
+      "path": "src/subapps/dxf-viewer/print/vector/__tests__/pdf-pattern-matrix.test.ts",
+      "action": "create",
+      "why": "Φ0/Φ3. Καθαρά μαθηματικά, μηδέν jsPDF: το analytic /Matrix ταιριάζει με την αναμενόμενη τιμή (το spike έδωσε ground truth: anchor 20,20 deg 0 → [2.8346,0,0,-2.8346,56.6929,538.5871])."
+    },
+    {
+      "path": "src/subapps/dxf-viewer/print/vector/__tests__/hatch-pattern-registry.test.ts",
+      "action": "create",
+      "why": "Φ3. Το dedup ΕΙΝΑΙ η απαίτηση, άρα θέλει test: ίδιο variant+placement ×2 → ένα beginTilingPattern· διαφορετικό anchor → δύο· fillEvenOdd καλείται ΠΑΝΤΑ χωρίς matrix (regression guard κατά της επιστροφής των clones)."
+    },
+    {
+      "path": "src/subapps/dxf-viewer/print/vector/__tests__/scene-hatch-emitter.test.ts",
+      "action": "create",
+      "why": "Φ2/Φ3. Ανά fillType: solid→lines 'F'· user-defined→N stroked segments (ΟΧΙ μόνο outline — αυτό είναι το regression guard για το Known Limitation (a))· image→fillEvenOdd με registered key· unsupported→outline + fidelity entry."
+    },
+    {
+      "path": "src/subapps/dxf-viewer/print/vector/__tests__/scene-vector-emitter.test.ts",
+      "action": "edit",
+      "why": "Φ2/Φ3. Το υπάρχον test στη γραμμή ~123 απαιτεί «hatch χωρίς dxfFaces/image → stroked outline». Αυτό ΘΑ σπάσει σκόπιμα: πλέον βγάζει pattern segments. Ενημέρωσε το — μην το σβήσεις."
+    },
+    {
+      "path": "src/subapps/dxf-viewer/print/vector/__tests__/scene-hatch-pattern-resolver.test.ts",
+      "action": "create",
+      "why": "Φ3. Δεν υπάρχει test για τον scene-image-resolver σήμερα (κενό που εντοπίστηκε στην έρευνα). Ο νέος resolver ΔΕΝ θα έχει το ίδιο κενό: decode-fail→fidelity entry· ίδιο variant ×2→ένα prepareExportSource call."
+    },
+    {
+      "path": "src/subapps/dxf-viewer/print/__tests__/print-service.test.ts",
+      "action": "edit",
+      "why": "Φ1. Νέο test: capture με fidelity entries → EventBus.emit('print:fidelity-report') μία φορά με σωστά aggregated counts· κενό fidelity → μηδέν emit (χωρίς toast-θόρυβο σε καθαρή εκτύπωση)."
+    },
+    {
+      "path": "src/subapps/dxf-viewer/ui/components/print/usePrintDialogState.ts",
+      "action": "edit",
+      "why": "Boy Scout (N.0.2): το σχόλιο στη γραμμή 57 λέει «ADR-604» — stale από πριν την αρίθμηση. Μονόγραμμη διόρθωση σε ADR-608."
+    }
+  ],
+  "fallbackPolicy": "ΑΡΧΗ: Καμία υποβάθμιση χωρίς ειδοποίηση. Το σημερινό σφάλμα ΔΕΝ είναι μόνο ότι ο hatch βγήκε γκρι — είναι ότι βγήκε γκρι ΚΑΙ ο χρήστης δεν το έμαθε ποτέ. Το `warnings: string[]` του `scene-image-resolver.ts:78` έχει ΜΗΔΕΝ καταναλωτές (εξαντλητικό grep σε όλο το print/), ούτε καν logger. Αυτό είναι το πραγματικό ελάττωμα και διορθώνεται ΠΡΩΤΟ (Φ1), πριν αγγίξουμε rendering — ώστε καμία επόμενη φάση να μην μπορεί να στείλει σιωπηλή υποβάθμιση.\n\nΜΗΧΑΝΙΣΜΟΣ (μηδέν νέο κανάλι — N.12):\n`PrintFidelityReport` (typed, αντικαθιστά το string[]) → επιστρέφεται από τους resolvers → πεδίο `fidelity` στο `CaptureResult` → `runPrint` εκπέμπει ΕΝΑ aggregated `EventBus.emit('print:fidelity-report', {counts})` ανά εργασία → `hooks/notifications/print-notifications.ts` (ακριβές mirror του `grid-build-notifications.ts`) → `toast.warning(t('print.fidelity.<reason>', {count}))` → wired στο `useDxfViewerNotifications`.\nΕΝΑ toast ανά reason με count — ΟΧΙ N toasts. Καθαρή εκτύπωση → μηδέν entries → μηδέν emit → μηδέν θόρυβος.\n\nΣΚΑΛΑ (κάθε σκαλί ειδοποιεί):\n1. Πλήρης πιστότητα → native pattern / vector segments / solid fill → καμία ειδοποίηση.\n2. Image decode fail → solid = averageImageColorHex (μέσο χρώμα, mirror DXF) → ⚠️ print.fidelity.imageDecodeFailed\n3. Encode fail (cross-origin taint / χωρίς 2D context) → solid → ⚠️ print.fidelity.imageEncodeFailed\n4. Άγνωστο/μελλοντικό fillType → boundary outline (σημερινή συμπεριφορά) → ⚠️ print.fidelity.patternUnsupported\n5. Gradient πριν τη Φ4 → solid = μεσαίο stop → ⚠️ print.fidelity.gradientUnsupported\n6. Segments > HATCH_SEGMENT_WARN (50k) → ΣΩΣΤΟ ΚΑΙ ΠΛΗΡΕΣ, τίποτα δεν κόβεται → ℹ️ print.fidelity.segmentCountHigh («μεγάλο αρχείο· σκεφτείτε raster»)\n\nΡΗΤΑ ΑΠΟΡΡΙΠΤΟΝΤΑΙ:\n- Cap που κόβει segments/pattern → ορθότητα πρώτα, ενημέρωση για μέγεθος μετά. Το cap ΕΙΝΑΙ το σφάλμα που διορθώνουμε· δεν το ανακυκλώνουμε αλλού.\n- `tile-overflow` ως κατάσταση → παύει να υπάρχει ως έννοια (ένα pattern δεν έχει πλήθος tiles).\n- Επιβολή κοινού anchor για καλύτερο dedup → θα άλλαζε την εικόνα σε σχέση με την οθόνη (preview===commit). Προτιμούμε δύο pattern objects.\n- Σιωπηλή παράλειψη `ImageEntity` σε decode-fail (σημερινή συμπεριφορά, γραμμή 112) → μπαίνει κι αυτή στο report.\n\nΥΠΟΧΡΕΩΤΙΚΟ GUARD: το `fillWithPattern` κάνει σιωπηλό no-op σε άγνωστο key (5140-5151: `patterns[undefined]` δεν ταιριάζει σε κανένα instanceof branch — μηδέν throw, μηδέν operator). Αόρατο σχήμα χωρίς κανένα σήμα = ακριβώς ο τύπος σφάλματος που διορθώνουμε. Το registry ΥΠΟΧΡΕΩΤΙΚΑ κάνει assert `has(key)` πριν από κάθε fill.\n\ni18n (N.11): κλειδιά print.fidelity.* ΠΡΩΤΑ σε el ΚΑΙ en dxf-viewer-shell.json, ICU πληθυντικός, ΜΕΤΑ ο κώδικας. Μηδέν defaultValue με literal κείμενο.",
+  "testPlan": [
+    "Φ0 (spike, ΟΧΙ jest): αποδεικτικό ότι matrix-στον-constructor + fill χωρίς patternData.matrix → μηδέν clones ΚΑΙ σωστό /Matrix. Έλεγχος: grep «/PatternType 1» στο ασυμπίεστο PDF = 1 για 2 fills ίδιου spec· το εκπεμπόμενο /Matrix ταιριάζει με το αναλυτικό M_final ΧΩΡΙΣ ακύρωση F. Παραδοτέο = ναι/όχι + πραγματικές τιμές. Αν όχι → Fallback A.",
+    "pdf-pattern-matrix.test.ts (καθαρή μαθηματική, μηδέν jsPDF): με τα ground-truth νούμερα του spike — anchor(20,20) 0° → [2.8346456692913389, 0, 0, -2.8346456692913389, 56.6929133858267775, 538.5870866141732449]· 30° → [2.4548751603338421, -1.4173228346456692, -1.4173228346456692, -2.4548751603338421, 396.8503937007874356, 538.5870866141732449]. Ρητό test ότι η ορίζουσα του block περιστροφής είναι ΑΡΝΗΤΙΚΗ (το Y-flip είναι ψημένο μέσα → θετική deg = οπτικά δεξιόστροφα, όπως στην οθόνη). Test ότι το pageHeightMm περνιέται ως όρισμα και ΔΕΝ είναι hardcoded 210 (πέρασε 210.0015555 → ακριβές αποτέλεσμα).",
+    "hatch-pattern-registry.test.ts (ΤΟ dedup ΕΙΝΑΙ Η ΑΠΑΙΤΗΣΗ, άρα θέλει test): ίδιο variantKey+placement ×2 → beginTilingPattern καλείται ΜΙΑ φορά, ίδιο key επιστρέφεται· ίδιο variant + ΔΙΑΦΟΡΕΤΙΚΟ anchor → δύο ορισμοί (τεκμηριωμένος περιορισμός, όχι bug)· fillEvenOdd καλείται ΠΑΝΤΑ ΧΩΡΙΣ πεδίο matrix (regression guard κατά της επιστροφής των clones)· ensure() σε καθαρό registry → advancedAPI καλείται· has() false → το fill ΔΕΝ εκπέμπεται (guard κατά του σιωπηλού no-op).",
+    "scene-hatch-emitter.test.ts (ένα test ανά branch): solid → pdf.lines style 'F' στα boundaryPaths, μηδέν pattern· user-defined → N stroked segments ΟΧΙ μόνο outline (ΤΟ regression guard για το Known Limitation (a) — αυτό ήταν το σφάλμα)· predefined με inlinePattern → segments από το inline, όχι από τον catalog (προτεραιότητα ADR-644 #7d)· image → path χωρίς paint op ΜΕΤΑ fillEvenOdd με registered key· dxfFaces → αμετάβλητο 'F' (μη-παλινδρόμηση)· άγνωστο fillType → outline + ΑΚΡΙΒΩΣ ΕΝΑ fidelity entry.",
+    "scene-hatch-pattern-resolver.test.ts (καλύπτει το κενό: δεν υπάρχει test για τον σημερινό scene-image-resolver): δύο hatches ίδιου variantKey → prepareExportSource καλείται ΜΙΑ φορά (cache ανά variant)· decode fail → μηδέν spec + fidelity entry 'image-decode-failed' + solid hex = μέσο χρώμα· procedural fill → περνά από prepareExportSource, ΟΧΙ από δικό μας switch στο fill.procedural (SSoT guard)· ΚΑΝΕΝΑ tile grid δεν χτίζεται (buildImageTileFullGrid mocked → αναμένεται μηδέν κλήσεις — root-cause guard).",
+    "print-service.test.ts (edit): capture με fidelity entries → EventBus.emit('print:fidelity-report') ΜΙΑ φορά με σωστά aggregated counts ανά reason· κενό fidelity → ΜΗΔΕΝ emit (καμία εκτύπωση χωρίς πρόβλημα δεν βγάζει toast)· πολλαπλά entries ίδιου reason → ένα event, count=N (όχι N events).",
+    "print-notifications.test.ts (νέο, mirror του υπάρχοντος notification test pattern): register → EventBus.emit('print:fidelity-report') → toast.warning με το σωστό κλειδί ανά reason· ο unsubscribe καθαρίζει (μηδέν διαρροή handler ανάμεσα σε mounts).",
+    "scene-vector-emitter.test.ts (edit — ΕΝΗΜΕΡΩΣΕ, ΜΗΝ ΣΒΗΣΕΙΣ): το υπάρχον «hatch χωρίς dxfFaces/image → stroked outline» (~γραμμή 123) σπάει ΚΑΤΑ ΠΡΟΘΕΣΗ. Ξαναγράψ' το σε «→ pattern segments». Τα υπόλοιπα (z-order ADR-661, plot colour policy, ImageEntity → addImage, deferred draw closure) ΠΡΕΠΕΙ να μείνουν πράσινα αμετάβλητα.",
+    "ΜΗ-ΠΑΛΙΝΔΡΟΜΗΣΗ DXF (μη-διαπραγματεύσιμο): ΟΛΑ τα υπάρχοντα tests του image-fill-export ΠΡΕΠΕΙ να περάσουν ΧΩΡΙΣ καμία τροποποίηση. Αν χρειαστεί να πειράξεις DXF test για να περάσει δουλειά του PDF → ΣΤΑΜΑΤΑ, χάλασες το DXF export.",
+    "Φ5 volume test (ΟΧΙ jest — χειροκίνητο, gate για τη Φ3): πραγματικός τοπογραφικός χάρτης με τον μεγάλο λοξό hatch που ξεκίνησε το πρόβλημα. Μέτρησε: μέγεθος PDF (bytes), πλήθος pattern objects (registry.size), μέγεθος resource dicts, χρόνο εξαγωγής. Σύγκρινε με raster baseline. Αυτό είναι το ΜΟΝΟ σημείο όπου το O(n²) των resource dicts γίνεται μετρήσιμο — το spike το άφησε ρητά αδοκίμαστο.",
+    "🔴 Browser-verify (Giorgio, μετά από κάθε φάση): Φ1 → hatch με σπασμένο asset εκτυπώνεται και ΒΓΑΙΝΕΙ TOAST (σήμερα: σιωπή)· Φ2 → user-defined 45° hatch έχει ΓΡΑΜΜΕΣ στο PDF, ίδια γωνία/βήμα με την οθόνη, PDFIMPORT στο AutoCAD → πραγματικές γραμμές στο PDF_Geometry· Φ3 → ο μεγάλος λοξός τοπογραφικός ΔΕΝ είναι γκρι, το pattern αγκυρώνει ίδια με την οθόνη σε zoom· Φ4 → gradient όπως στην οθόνη. Το ζητούμενο σε ΚΑΘΕ φάση: preview===commit."
+  ],
+  "risks": [
+    "Φ0 ΑΝΟΙΧΤΟ (ΤΟ ΚΥΡΙΟ): Το §3.3 (matrix στον TilingPattern constructor + fill χωρίς patternData.matrix → μηδέν clones + σωστό /Matrix χωρίς ακύρωση του F) είναι CODE-VERIFIED, ΟΧΙ EXECUTION-VERIFIED. Επαληθεύτηκε ότι ο ctor δέχεται matrix (974-988) και ότι το putTilingPattern το γράφει (3029-3034), αλλά το spike δοκίμασε matrix=null στον ctor — ΟΧΙ αυτόν τον συνδυασμό. Μετριασμός: Φ0 micro-spike ΠΡΙΝ από κάθε product code· Fallback A (αποδεδειγμένος clone path + δικό μας memo cache) έτοιμος, με αμετάβλητο registry API.",
+    "RESOURCE DICTS O(n²) — ΑΜΕΤΡΗΤΟ: Το jsPDF δίνει σε κάθε pattern δικό του /Resources που περιλαμβάνει και τα 14 standard fonts, όλα τα XObjects, ΚΑΙ κάθε pattern που ορίστηκε ως τότε (spike: το obj 27 απαριθμεί P1,P2,P3,P4). Με N patterns → N dicts × έως N patterns. Στα 5 ασήμαντο. Σε πραγματικό τοπογραφικό χάρτη με εκατοντάδες hatches ΔΕΝ ΕΧΕΙ ΜΕΤΡΗΘΕΙ ΠΟΤΕ. Το spike το δηλώνει ρητά ως το μοναδικό αδοκίμαστο. Μετριασμός: Φ5 volume test με πραγματικό αρχείο ΠΡΙΝ κλείσει η Φ3· αν σκάσει, το registry μπορεί να επιβάλλει όριο patterns → solid + ΔΥΝΑΤΗ ειδοποίηση (ποτέ σιωπηλά).",
+    "ΤΟ MATRIX HELPER ΕΙΝΑΙ LOAD-BEARING ΚΑΙ ΜΗ-ΠΡΟΦΑΝΕΣ: λάθος → pattern ~74mm εκτός, ΣΙΩΠΗΛΑ (φαίνεται σωστό στη μικρογραφία, λάθος στην εκτύπωση). Μετριασμός: ΕΝΑ αρχείο, καθαρή συνάρτηση, unit test με τα ground-truth νούμερα του spike ([2.8346,0,0,-2.8346,56.6929,538.5871]), ρητή απαγόρευση open-coding στο header. ΠΟΤΕ hardcoded 210 — το getPageHeight() δίνει 210.0015555… και η ακύρωση παύει να είναι ακριβής.",
+    "ΜΟΛΥΝΣΗ ΤΟΥ DXF PATH: το image-fill-export.ts εξυπηρετεί ΚΑΙ τα δύο backends μέσω κοινού buildTileFrame/collectTiles. Η διαγραφή του buildImageTileFullGrid αγγίζει αρχείο DXF-critical. Αν πειραχτεί κατά λάθος το IMAGE_TILE_CAP (400) ή το PIP culling → σιωπηλή αλλοίωση της πιστότητας του DXF export, χωρίς κανένα PDF test να το πιάσει. Μετριασμός: ξεχωριστό commit· μόνο διαγραφή της PDF-only συνάρτησης· τα υπάρχοντα DXF tests πρέπει να μείνουν πράσινα αμετάβλητα.",
+    "ΤΟ ΣΙΩΠΗΛΟ NO-OP ΤΟΥ jsPDF ΣΕ ΑΓΝΩΣΤΟ KEY (5140-5151): typo στο key → αόρατο άγεμιστο σχήμα, μηδέν throw, μηδέν operator. Ακριβώς ο τύπος σφάλματος που διορθώνουμε — θα ήταν ειρωνικό να τον ξαναεισάγουμε. Μετριασμός: υποχρεωτικό assert has(key) στο registry· test που το επιβεβαιώνει.",
+    "ΣΠΑΣΙΜΟ ΥΠΑΡΧΟΝΤΩΝ TESTS ΚΑΤΑ ΠΡΟΘΕΣΗ: το scene-vector-emitter.test.ts (~γραμμή 123) απαιτεί «hatch χωρίς dxfFaces/image → stroked outline». Η Φ2 το αλλάζει σκόπιμα. ΚΙΝΔΥΝΟΣ: κάποιος να το σβήσει αντί να το ενημερώσει, χάνοντας το regression guard. Μετριασμός: το ADR το ονομάζει ρητά· το test ενημερώνεται σε «→ N pattern segments».",
+    "ΠΥΚΝΟΣ HATCH → ΔΕΚΑΔΕΣ ΧΙΛΙΑΔΕΣ SEGMENTS: το buildHatchEntitySegments δεν έχει density-LOD για PDF (το screen LOD στο HatchRenderer είναι zoom-dependent, άσχετο εδώ). Σωστό αλλά αργό/μεγάλο. Μετριασμός: segmentCountHigh ειδοποίηση, ΟΧΙ cap (ορθότητα πρώτα). Επιβεβαιώθηκε ότι το buildHatchEntitySegments κάνει ήδη cache ανά entity στο HatchRenderer — ο emitter όμως τρέχει σε καθαρό context, άρα πληρώνει το πλήρες κόστος υπολογισμού· μετρήσιμο στη Φ5.",
+    "SIBLING CLONES (N.18, ΥΨΗΛΟΣ ΚΙΝΔΥΝΟΣ ΕΔΩ): τα hatch-cell-image / scene-hatch-pattern-resolver / scene-image-resolver μοιάζουν δομικά (decode → πηγή → placement). Ακριβώς το μοτίβο που το ssot:discover (name/regex-based) ΔΕΝ πιάνει. Μετριασμός: `npm run jscpd:diff` στα staged αρχεία ΠΡΙΝ από κάθε «done»· το sourceToPngDataUrl εξάγεται σε shared αντί να αντιγραφεί.",
+    "ΟΡΙΟ CI (γνωστό, όχι blocker): το pdfjs πετά «InvalidArg» σε pattern fills στον Node χωρίς custom canvasFactory (@napi-rs/canvas). Είναι όριο του pdfjs/Node, ΟΧΙ ελάττωμα του PDF. Ένα CI raster assertion θα χτυπήσει τον ίδιο τοίχο. Μετριασμός: τα tests να ελέγχουν operator/matrix (καθαρά), όχι pixels· το pixel probe μένει στο spike.",
+    "ΚΑΘΑΡΙΣΜΟΣ SPIKE: τα spike-tiling.mjs / spike-out.pdf / spike-out.png είναι untracked scratch στο repo root. Πρέπει να σβηστούν ή να μετακινηθούν ΠΡΙΝ από οποιοδήποτε commit — αλλιώς θα μπουν κατά λάθος σε ένα git add.",
+    "ΚΟΙΝΟ TREE (ο Giorgio κάνει commit/deploy σε real-time): το scene-vector-emitter.ts και το image-fill-export.ts μπορεί να αγγίζονται ταυτόχρονα από άλλον agent. Ποτέ bulk reset, ποτέ checkout ξένων αρχείων, `git commit -o <paths>` για grouped commit. Κάθε φάση πρέπει να αφήνει το tree deployable."
+  ]
+}
