@@ -2,6 +2,23 @@
 
 **STATUS: ACTIVE**
 
+- ✅ **CHECK 3.28 — «Edit … Type» preview twins (Slab/Wall): DONE (2026-07-16, Opus 4.8, N.18 + ADR-584· UNCOMMITTED).** Βρέθηκε με **full `jscpd:check`** (όχι diff): το **μεγαλύτερο clone ΟΛΟΥ του repo** (101 γρ./627 tokens) ήταν `SlabTypePreviewRenderer` ↔ `WallTypePreviewRenderer`, + 45L/425T (`fitCamera`) + 60L/370T (τα δύο panels) — το slab preview ήταν **αντιγραφή** του wall preview. **2 νέα SSoT**: `bim-3d/preview/band-stack-preview-renderer.ts` (`BandStackPreviewRenderer<TDna,TBand>` = όλο το mini THREE viewport) + `ui/ribbon/components/BandStackPreviewPanel.tsx` (όλο το React shell). **ΟΧΙ god-shell** — ό,τι διαφέρει πραγματικά ζει σε ένα `BandStackPreviewSpec` 4 σημείων (`viewDir`, `fallbackThicknessM`, `buildBands`, `boxOf`, `halfExtents`). Η γενίκευση βγήκε φθηνή επειδή τα δύο band types έχουν **ίδια ονόματα πεδίων** (`layerId`/`materialId`) και τα δύο DNA ικανοποιούν δομικά `{layers:[{id,materialId}], totalThickness}` → μόνο structural bounds, **καμία** αλλαγή στους converters. **Public API αμετάβλητο** (κλάσεις + props contract) → **κανένα από τα 3 dialogs δεν άγγιξε** (`EditWallType`/`EditSlabType`/`EditRoofType`· το roof ήδη ξαναχρησιμοποιούσε το slab panel). **Verification: `jscpd:diff` 6 αρχεία = 3 pairs→0 (ΧΩΡΙΣ `SKIP_JSCPD_DIFF`)· `jscpd:check` 3041→3035· `wall-type-preview-geometry` 5/5 GREEN· i18n keys επαληθευμένα στο `el` locale.** **ΟΧΙ tsc (N.17).** ⚠️ **browser-verify pending** — οι WebGL renderers **δεν έχουν tests**· η διατήρηση συμπεριφοράς στηρίζεται σε line-by-line έλεγχο των 4 σημείων απόκλισης, **όχι** σε εκτελεσμένο assertion. 🔴 Giorgio commit: band-stack-preview-renderer.ts NEW + BandStackPreviewPanel.tsx NEW + 2 renderers + 2 panels + ADR-584 + ADR-414 + αυτό το αρχείο.
+
+**🆕 Backlog από το full `jscpd:check` σάρωμα (2026-07-16, Opus 4.8) — τα επόμενα clusters, κατά σειρά αξίας.** Σύνολο repo: **3035 clones / 35.9k διπλές γραμμές (2.30%)**. Δεν είναι όλα κεντρικοποιήσιμα — αυτά είναι τα πραγματικά:
+
+| Cluster | Μέγεθος | Σημείωση |
+|---|---|---|
+| `hooks/` ↔ `hooks/` | **1331 γρ. / 82 clones / 32 αρχεία** | Το μεγαλύτερο cluster του repo. Θέλει δικό του σάρωμα — μάλλον impact-guard hooks (`useProjectBrokerTerminateImpactGuard` 282 γρ., `useIkaLaborComplianceSaveImpactGuard` 185 γρ.). |
+| `useGuideActions` ↔ `useGuideState` | 157 γρ. (66+47+44) | ⚠️ **ADR-040 files** — ο διαχωρισμός mutations-only vs reactive είναι **σκόπιμος**. Πιθανό κοινό pure core, ΟΧΙ merge. Θέλει ADR-040 staging (CHECK 6B). |
+| `WallDna` δεν χρησιμοποιεί `LayeredBuildup` | εννοιολογικό | Το `SlabDna` = `LayeredBuildup<SlabLayerZone>` (generic SSoT σε `layered-buildup.ts`)· το `WallDna` δηλώνει **δικό του** ταυτόσημο interface + δικό του `computeTotalThickness`. jscpd-αόρατο (κάτω από min-tokens). |
+| `ExtendToolStore` ↔ `TrimToolStore` | 51 γρ. / 206 tokens | Δίδυμα tool stores. |
+| `contextual-mep-{data-outlet,socket}-tab` | 58 γρ. / 366 tokens | **SSoT υπάρχει ήδη** (`ribbon-mep-auto-bridge`) — αναδοχή, όχι νέο module. |
+| `canvas-mouse-types` ↔ `unified-grip-types` | 65 γρ. | Δίδυμοι type blocks. |
+| `openai-document-analyzer` ↔ `openai-quote-analyzer` | 46 γρ. / 217 tokens | ⚠️ **2 domains** (accounting/procurement) → N.8: θέλει έγκριση Giorgio. |
+| `BuildingPhotosTab` ↔ `BuildingVideosTab` | 44 γρ. / 233 tokens | Media-tab δίδυμα. |
+| `SpaceFloorplanInline` ↔ `FloorFloorplanInline` | 44 γρ. / 193 tokens | |
+| `floorplan-dxf-renderer` ↔ `thumbnail-generator` | 53 γρ. / 323 tokens | ⚠️ 2 domains. |
+
 **🆕 BIM renderer render()-preamble + polyline clones — το ΥΠΟΛΟΙΠΟ του BIM cluster (2026-07-16, Opus 4.8, N.18 + ADR-584· βρέθηκε τρέχοντας `jscpd:diff` στο ADR-382 visibility diff).** Το **hitTest + getGrips** ρεύμα **ΕΓΙΝΕ** (βλ. παρακάτω)· απομένουν **40 clones** σε 2 οικογένειες που **ΔΕΝ** είναι μηχανικό de-dup:
 
 1. **`render()` preamble** (determinePhase → hover halo → applyPhaseStyle → save) — inline σε `FloorFinishRenderer` / `ThermalSpaceRenderer` / `MepBoilerRenderer` / `SlabOpeningRenderer` / `BeamRenderer`. **SSoT υπάρχει ήδη**: `BimFootprintRenderer.beginPhasedBodyRender()`.
