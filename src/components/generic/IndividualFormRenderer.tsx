@@ -15,6 +15,7 @@ import type { IndividualFieldConfig, IndividualSectionConfig } from '@/config/in
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import '@/lib/design-system';
+import { buildSelectPlaceholder } from './i18n/select-placeholder';
 
 // ============================================================================
 // 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
@@ -73,13 +74,14 @@ export interface IndividualFormRendererProps {
 // dispatcher (ADR-595). Only the Individual-specific i18n behaviour lives here:
 // placeholder + option labels are translated inline via `t`.
 
-function buildIndividualFieldStrategy(
+/** Exported for testing — το placeholder contract είναι η επιφάνεια ρίσκου (ADR-666). */
+export function buildIndividualFieldStrategy(
   t: TFunction,
 ): FieldRenderStrategy<IndividualFieldConfig> {
   return {
     inputPlaceholder: (field) => (field.placeholder ? t(field.placeholder) : undefined),
     selectPlaceholder: (field) =>
-      field.placeholder ? t(field.placeholder) : `${t('common.select')} ${t(field.label)}`,
+      field.placeholder ? t(field.placeholder) : buildSelectPlaceholder(t(field.label), t),
     optionLabel: (label) => t(label),
     selectFallbackValue: (field) => field.defaultValue,
   };

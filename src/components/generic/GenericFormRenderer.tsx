@@ -21,6 +21,7 @@ import { getIconComponent } from './utils/IconMapping';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
+import { buildSelectPlaceholder } from './i18n/select-placeholder';
 
 const logger = createModuleLogger('GenericFormRenderer');
 
@@ -82,16 +83,13 @@ export interface GenericFormRendererProps {
 // dispatcher (ADR-595). Only the GEMI-specific i18n behaviour lives here:
 // placeholders/labels are resolved via the "dot → t() → last-segment" helper.
 
-function buildGenericFieldStrategy(
-  t: (key: string) => string,
+/** Exported for testing — το placeholder contract είναι η επιφάνεια ρίσκου (ADR-666). */
+export function buildGenericFieldStrategy(
+  t: (key: string, options?: { label: string }) => string,
 ): FieldRenderStrategy<FieldConfig> {
   return {
-    selectPlaceholder: (field) => {
-      const placeholder = field.placeholder
-        ? resolveI18nKeyLabel(field.placeholder, t)
-        : resolveI18nKeyLabel(field.label, t).toLowerCase();
-      return `${resolveI18nKeyLabel('common.select', t)} ${placeholder}`;
-    },
+    selectPlaceholder: (field) =>
+      buildSelectPlaceholder(resolveI18nKeyLabel(field.placeholder ?? field.label, t), t),
     optionLabel: (label) => resolveI18nKeyLabel(label, t),
     selectFallbackValue: (field) => field.initialValue,
     textareaRows: 3,
