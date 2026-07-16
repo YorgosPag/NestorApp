@@ -27,8 +27,8 @@ import type { LucideIcon } from 'lucide-react';
 import { NavigationBreadcrumb } from '@/components/navigation/components/NavigationBreadcrumb';
 // Απευθείας relative imports — μέσω του barrel (`@/core/headers`) θα γινόταν κύκλος.
 import { PageHeader } from './enterprise-system';
-import type { ViewMode } from './enterprise-system';
 import { buildHeaderCustomActions } from './header-custom-actions';
+import { LIST_PAGE_VIEW_MODES } from './list-page-header-props';
 import type { ListPageHeaderProps } from './list-page-header-props';
 
 /** Τα έτοιμα (ήδη μεταφρασμένα) κείμενα του header. */
@@ -38,14 +38,14 @@ export interface ListPageHeaderLabels {
   searchPlaceholder: string;
   filtersAriaLabel: string;
   trashAriaLabel: string;
+  /** Προαιρετικό — default το `trashAriaLabel`. Βλ. `HeaderCustomActionsOptions`. */
+  trashTooltip?: string;
 }
 
 export interface ListPageHeaderComponentProps extends ListPageHeaderProps {
   icon: LucideIcon;
   labels: ListPageHeaderLabels;
 }
-
-const LIST_PAGE_VIEW_MODES: ViewMode[] = ['list', 'grid', 'byType', 'byStatus'];
 
 export function ListPageHeader({
   icon,
@@ -88,6 +88,7 @@ export function ListPageHeader({
           onToggleTrash,
           trashCount,
           trashAriaLabel: labels.trashAriaLabel,
+          trashTooltip: labels.trashTooltip,
         }),
       }}
     />

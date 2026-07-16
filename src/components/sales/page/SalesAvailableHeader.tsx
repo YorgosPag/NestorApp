@@ -4,33 +4,22 @@
  * @fileoverview Sales Available Units Header — ADR-197
  * @description PageHeader for "Διαθέσιμες Μονάδες" sales page
  * @pattern Reuses centralized PageHeader (same as UnitsHeader)
+ *
+ * Το κουμπί φίλτρων έρχεται από το `buildHeaderCustomActions`
+ * (SSoT, ADR-584 / N.18) — ΜΗΝ το ξαναγράψεις inline εδώ.
  */
 
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from 'react';
-import { Filter, ShoppingBag } from 'lucide-react';
-import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
-import { PageHeader } from '@/core/headers';
+import { ShoppingBag } from 'lucide-react';
+import { PageHeader, buildHeaderCustomActions, LIST_GRID_VIEW_MODES } from '@/core/headers';
+import type { ListGridHeaderProps, ListGridViewMode } from '@/core/headers';
 import { NavigationBreadcrumb } from '@/components/navigation/components/NavigationBreadcrumb';
-import { useIconSizes } from '@/hooks/useIconSizes';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { useSpacingTokens } from '@/hooks/useSpacingTokens';
-import type { ViewMode as CoreViewMode } from '@/core/headers';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import '@/lib/design-system';
 
-export type SalesViewMode = 'list' | 'grid';
-
-interface SalesAvailableHeaderProps {
-  viewMode: SalesViewMode;
-  setViewMode: (mode: SalesViewMode) => void;
-  showDashboard: boolean;
-  setShowDashboard: (show: boolean) => void;
-  searchTerm: string;
-  setSearchTerm: (term: string) => void;
-  showFilters?: boolean;
-  setShowFilters?: (show: boolean) => void;
+/** Λίστα/πλέγμα χωρίς κάδο + τα overrides αυτής της σελίδας. */
+interface SalesAvailableHeaderProps extends ListGridHeaderProps {
   onAddToMarket?: () => void;
   /** Override the default "Διαθέσιμες Μονάδες" title */
   titleOverride?: string;
@@ -55,31 +44,13 @@ export function SalesAvailableHeader({
   searchPlaceholderOverride,
 }: SalesAvailableHeaderProps) {
   const { t } = useTranslation(COMMON_NAMESPACES);
-  const iconSizes = useIconSizes();
-  const { quick } = useBorderTokens();
-  const colors = useSemanticColors();
-  const spacing = useSpacingTokens();
 
-  // Build custom actions: mobile filter + add to market
-  const customActions: React.ReactNode[] = [];
-
-  // Mobile filter toggle
-  if (setShowFilters) {
-    customActions.push(
-      <button
-        key="mobile-filter"
-        onClick={() => setShowFilters(!showFilters)}
-        className={`md:hidden ${spacing.padding.sm} rounded-md ${TRANSITION_PRESETS.STANDARD_COLORS} ${
-          showFilters
-            ? `bg-primary text-primary-foreground ${quick.focus}`
-            : `${colors.bg.primary} ${quick.input} ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE}`
-        }`}
-        aria-label={t('sales.available.filters.toggle')}
-      >
-        <Filter className={iconSizes.sm} />
-      </button>
-    );
-  }
+  const customActions = buildHeaderCustomActions({
+    showFilters,
+    setShowFilters,
+    filtersAriaLabel: t('sales.available.filters.toggle'),
+    // Αυτή η σελίδα δεν έχει κάδο — χωρίς `onToggleTrash` το κουμπί δεν αποδίδεται.
+  });
 
   return (
     <PageHeader
@@ -100,9 +71,9 @@ export function SalesAvailableHeader({
       actions={{
         showDashboard,
         onDashboardToggle: () => setShowDashboard(!showDashboard),
-        viewMode: viewMode as CoreViewMode,
-        onViewModeChange: (mode) => setViewMode(mode as SalesViewMode),
-        viewModes: ['list', 'grid'] as CoreViewMode[],
+        viewMode,
+        onViewModeChange: (mode) => setViewMode(mode as ListGridViewMode),
+        viewModes: LIST_GRID_VIEW_MODES,
         addButton: onAddToMarket
           ? { label: t('sales.available.addToMarket'), onClick: onAddToMarket }
           : undefined,

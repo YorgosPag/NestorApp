@@ -14,6 +14,7 @@
     "export": "Export",
     "import": "Import",
     "refresh": "Refresh",
+    "toggleFilters": "Toggle filters",
     "newBuilding": "New Building",
     "newProject": "New Project",
     "newContact": "New Contact",
