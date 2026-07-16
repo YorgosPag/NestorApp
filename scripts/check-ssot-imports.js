@@ -2,8 +2,10 @@
 /**
  * CHECK 3.7 — SSoT Import Violations (Centralized Module Ratchet)
  *
- * Node.js rewrite of check-ssot-imports.sh.
  * Zero subprocess spawning → 5-10× faster on Windows (no MSYS2 overhead).
+ * Sole enforcer: the bash original was deleted 2026-07-16 once it had been
+ * dead for months (nothing invoked it) — two implementations of one gate is how
+ * gates silently diverge.
  *
  * Google-style ratchet: counts can only decrease. New files = zero tolerance.
  *

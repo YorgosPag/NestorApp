@@ -5,8 +5,13 @@
  *
  *   1. **ERE syntax validity** — every `forbiddenPatterns[*]` entry in
  *      `.ssot-registry.json` must compile under POSIX ERE (bash `grep -E`),
- *      because that's what CHECK 3.7 (`scripts/check-ssot-imports.sh`)
- *      actually runs. Prior incident: ADR-294 v3.0 discovered that v2.0
+ *      because `scripts/ssot-audit.sh` runs `grep -rE` on them (line ~120).
+ *      ⚠️ CHECK 3.7 itself (`scripts/check-ssot-imports.js`) compiles with JS
+ *      `new RegExp()`, a *superset* of ERE — so a JS-only construct like
+ *      `(?:...)` would pass the gate while making the audit report silently
+ *      mis-count. Keep patterns in the ERE intersection: it is the narrower of
+ *      the two engines, and green-in-JS is not proof.
+ *      Prior incident: ADR-294 v3.0 discovered that v2.0
  *      patterns used `(?:...)` non-capturing groups, which GNU grep 3.0 ERE
  *      silently ignores — 139 "violations" in v2.0 baseline were false
  *      positives because the patterns matched nothing at all.

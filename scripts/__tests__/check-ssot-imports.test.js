@@ -1,7 +1,6 @@
 /**
  * CHECK 3.7 — SSoT Imports Ratchet: Jest test suite.
  *
- * Tests the Node.js rewrite of check-ssot-imports.sh.
  * All pure functions are unit-tested against synthetic fixtures.
  * Integration: CLI is smoke-tested via spawnSync.
  *

@@ -108,7 +108,7 @@ Added under `file-type-classification` in `.ssot-registry.json`:
 }
 ```
 
-Any new file that re-declares those constants blocks the commit. Picked up automatically by the existing `check-ssot-imports.sh` hook (ADR-294) — no wrapper script needed.
+Any new file that re-declares those constants blocks the commit. Picked up automatically by the existing `check-ssot-imports.js` hook (CHECK 3.7, ADR-294) — no wrapper script needed.
 
 ### 3.2 CHECK 3.20 — Extractor registry invariants
 
