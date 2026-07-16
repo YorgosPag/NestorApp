@@ -8,14 +8,17 @@
  * Fetches cheques for a unit. Exposes actions for creating, updating,
  * transitioning, endorsing, and bouncing cheques.
  *
+ * Mutations run through `runGatewayAction` (ADR-584) — the guard/refetch/result
+ * mapping is not re-implemented here.
+ *
  * @module hooks/useChequeRegistry
  * @enterprise ADR-234 Phase 3 — SPEC-234A
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
 import { API_ROUTES } from '@/config/domain-constants';
-import { getErrorMessage } from '@/lib/error-utils';
-import { clientSafeFireAndForget } from '@/lib/safe-fire-and-forget';
+import { useApiList } from '@/hooks/api/useApiList';
+import { runGatewayAction, type ActionResult } from '@/lib/mutations/gateway-action';
 import {
   bouncePropertyChequeWithPolicy,
   createPropertyChequeWithPolicy,
@@ -36,11 +39,6 @@ import type {
 // TYPES
 // ============================================================================
 
-interface ActionResult {
-  success: boolean;
-  error?: string;
-}
-
 interface UseChequeRegistryReturn {
   cheques: ChequeRecord[];
   isLoading: boolean;
@@ -53,124 +51,57 @@ interface UseChequeRegistryReturn {
   bounceCheque: (chequeId: string, input: BounceInput) => Promise<ActionResult>;
 }
 
-// ============================================================================
-// API HELPER
-// ============================================================================
-
-async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(url, options);
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({ error: 'Unknown error' }));
-    throw new Error(body.error || `HTTP ${res.status}`);
-  }
-  return res.json();
-}
+const NO_PROPERTY = 'No property selected';
 
 // ============================================================================
 // HOOK
 // ============================================================================
 
 export function useChequeRegistry(propertyId: string | null): UseChequeRegistryReturn {
-  const [cheques, setCheques] = useState<ChequeRecord[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
   const basePath = propertyId ? API_ROUTES.PROPERTIES.CHEQUES(propertyId) : null;
+  const blocked = basePath ? null : NO_PROPERTY;
 
-  // Fetch cheques
-  const fetchData = useCallback(async () => {
-    if (!basePath) return;
+  const { items: cheques, isLoading, error, refetch: fetchData } = useApiList<ChequeRecord>(basePath);
 
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const res = await fetchJson<{ success: boolean; data: ChequeRecord[] }>(basePath);
-      setCheques(res.data ?? []);
-    } catch (err) {
-      setError(getErrorMessage(err));
-    } finally {
-      setIsLoading(false);
-    }
-  }, [basePath]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  // Create cheque
+  // Create cheque — refetch fired off so a slow reload cannot hold up the dialog
   const createCheque = useCallback(
-    async (input: CreateChequeInput): Promise<ActionResult> => {
-      if (!basePath) return { success: false, error: 'No property selected' };
-      try {
-        const res = await createPropertyChequeWithPolicy(propertyId!, input);
-        if (res.success) clientSafeFireAndForget(fetchData(), 'ChequeRegistry.refetch');
-        return { success: res.success, error: res.error };
-      } catch (err) {
-        return { success: false, error: getErrorMessage(err) };
-      }
-    },
-    [basePath, fetchData]
+    (input: CreateChequeInput) =>
+      runGatewayAction(() => createPropertyChequeWithPolicy(propertyId!, input), {
+        run: fetchData, blocked, background: 'ChequeRegistry.refetch',
+      }),
+    [propertyId, fetchData, blocked]
   );
 
-  // Update cheque
   const updateCheque = useCallback(
-    async (chequeId: string, input: UpdateChequeInput): Promise<ActionResult> => {
-      if (!basePath) return { success: false, error: 'No property selected' };
-      try {
-        const res = await updatePropertyChequeWithPolicy(propertyId!, chequeId, input);
-        if (res.success) await fetchData();
-        return { success: res.success, error: res.error };
-      } catch (err) {
-        return { success: false, error: getErrorMessage(err) };
-      }
-    },
-    [basePath, fetchData]
+    (chequeId: string, input: UpdateChequeInput) =>
+      runGatewayAction(() => updatePropertyChequeWithPolicy(propertyId!, chequeId, input), {
+        run: fetchData, blocked,
+      }),
+    [propertyId, fetchData, blocked]
   );
 
-  // Transition status
   const transitionStatus = useCallback(
-    async (chequeId: string, input: ChequeTransitionInput): Promise<ActionResult> => {
-      if (!basePath) return { success: false, error: 'No property selected' };
-      try {
-        const res = await transitionPropertyChequeWithPolicy(propertyId!, chequeId, input);
-        if (res.success) await fetchData();
-        return { success: res.success, error: res.error };
-      } catch (err) {
-        return { success: false, error: getErrorMessage(err) };
-      }
-    },
-    [basePath, fetchData]
+    (chequeId: string, input: ChequeTransitionInput) =>
+      runGatewayAction(() => transitionPropertyChequeWithPolicy(propertyId!, chequeId, input), {
+        run: fetchData, blocked,
+      }),
+    [propertyId, fetchData, blocked]
   );
 
-  // Endorse cheque
   const endorseCheque = useCallback(
-    async (chequeId: string, input: EndorseInput): Promise<ActionResult> => {
-      if (!basePath) return { success: false, error: 'No property selected' };
-      try {
-        const res = await endorsePropertyChequeWithPolicy(propertyId!, chequeId, input);
-        if (res.success) await fetchData();
-        return { success: res.success, error: res.error };
-      } catch (err) {
-        return { success: false, error: getErrorMessage(err) };
-      }
-    },
-    [basePath, fetchData]
+    (chequeId: string, input: EndorseInput) =>
+      runGatewayAction(() => endorsePropertyChequeWithPolicy(propertyId!, chequeId, input), {
+        run: fetchData, blocked,
+      }),
+    [propertyId, fetchData, blocked]
   );
 
-  // Bounce cheque
   const bounceCheque = useCallback(
-    async (chequeId: string, input: BounceInput): Promise<ActionResult> => {
-      if (!basePath) return { success: false, error: 'No property selected' };
-      try {
-        const res = await bouncePropertyChequeWithPolicy(propertyId!, chequeId, input);
-        if (res.success) await fetchData();
-        return { success: res.success, error: res.error };
-      } catch (err) {
-        return { success: false, error: getErrorMessage(err) };
-      }
-    },
-    [basePath, fetchData]
+    (chequeId: string, input: BounceInput) =>
+      runGatewayAction(() => bouncePropertyChequeWithPolicy(propertyId!, chequeId, input), {
+        run: fetchData, blocked,
+      }),
+    [propertyId, fetchData, blocked]
   );
 
   return {

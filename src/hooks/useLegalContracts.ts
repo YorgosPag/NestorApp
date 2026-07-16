@@ -24,7 +24,8 @@ import type {
 import { computeLegalPhase, CONTRACT_PHASE_ORDER } from '@/types/legal-contracts';
 import type { BrokerageAgreement } from '@/types/brokerage';
 import { getErrorMessage } from '@/lib/error-utils';
-import { clientSafeFireAndForget } from '@/lib/safe-fire-and-forget';
+import { fetchJson } from '@/lib/api/fetch-json';
+import { runGatewayAction, type ActionResult } from '@/lib/mutations/gateway-action';
 import {
   createLegalContractWithPolicy,
   overrideLegalProfessionalWithPolicy,
@@ -46,23 +47,10 @@ interface UseLegalContractsReturn {
   isLoading: boolean;
   error: string | null;
   refetch: () => void;
-  createContract: (input: CreateContractInput) => Promise<{ success: boolean; error?: string }>;
-  transitionStatus: (contractId: string, targetStatus: ContractStatus) => Promise<{ success: boolean; error?: string }>;
-  updateContract: (contractId: string, updates: Record<string, unknown>) => Promise<{ success: boolean; error?: string }>;
-  overrideProfessional: (contractId: string, role: LegalProfessionalRole, contactId: string | null) => Promise<{ success: boolean; error?: string }>;
-}
-
-// ============================================================================
-// API HELPERS
-// ============================================================================
-
-async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(url, options);
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({ error: 'Unknown error' }));
-    throw new Error(body.error || `HTTP ${res.status}`);
-  }
-  return res.json();
+  createContract: (input: CreateContractInput) => Promise<ActionResult>;
+  transitionStatus: (contractId: string, targetStatus: ContractStatus) => Promise<ActionResult>;
+  updateContract: (contractId: string, updates: Record<string, unknown>) => Promise<ActionResult>;
+  overrideProfessional: (contractId: string, role: LegalProfessionalRole, contactId: string | null) => Promise<ActionResult>;
 }
 
 // ============================================================================
@@ -145,59 +133,38 @@ export function useLegalContracts(propertyId: string | null, projectId?: string)
     return unsubscribe;
   }, [projectId, companyId]);
 
-  // Actions
-  const createContract = useCallback(async (input: CreateContractInput) => {
-    try {
-      const data = await createLegalContractWithPolicy(input);
-      if (data.success) {
-        // Refetch contracts — don't let refetch failure mask successful creation
-        clientSafeFireAndForget(fetchContracts(), 'LegalContracts.refetch');
-      }
-      return { success: data.success, error: data.error };
-    } catch (err) {
-      return { success: false, error: getErrorMessage(err) };
-    }
-  }, [fetchContracts]);
+  // Actions — scoped by contractId, so no propertyId guard (unlike the finance hooks)
+  const createContract = useCallback(
+    (input: CreateContractInput) =>
+      runGatewayAction(() => createLegalContractWithPolicy(input), {
+        run: fetchContracts, background: 'LegalContracts.refetch',
+      }),
+    [fetchContracts]
+  );
 
-  const transitionStatus = useCallback(async (contractId: string, targetStatus: ContractStatus) => {
-    try {
-      const data = await transitionLegalContractStatusWithPolicy(contractId, targetStatus);
-      if (data.success) {
-        await fetchContracts();
-      }
-      return { success: data.success, error: data.error };
-    } catch (err) {
-      return { success: false, error: getErrorMessage(err) };
-    }
-  }, [fetchContracts]);
+  const transitionStatus = useCallback(
+    (contractId: string, targetStatus: ContractStatus) =>
+      runGatewayAction(() => transitionLegalContractStatusWithPolicy(contractId, targetStatus), {
+        run: fetchContracts,
+      }),
+    [fetchContracts]
+  );
 
-  const updateContract = useCallback(async (contractId: string, updates: Record<string, unknown>) => {
-    try {
-      const data = await updateLegalContractWithPolicy(contractId, updates);
-      if (data.success) {
-        await fetchContracts();
-      }
-      return { success: data.success, error: data.error };
-    } catch (err) {
-      return { success: false, error: getErrorMessage(err) };
-    }
-  }, [fetchContracts]);
+  const updateContract = useCallback(
+    (contractId: string, updates: Record<string, unknown>) =>
+      runGatewayAction(() => updateLegalContractWithPolicy(contractId, updates), {
+        run: fetchContracts,
+      }),
+    [fetchContracts]
+  );
 
-  const overrideProfessional = useCallback(async (
-    contractId: string,
-    role: LegalProfessionalRole,
-    contactId: string | null
-  ) => {
-    try {
-      const data = await overrideLegalProfessionalWithPolicy(contractId, role, contactId);
-      if (data.success) {
-        await fetchContracts();
-      }
-      return { success: data.success, error: data.error };
-    } catch (err) {
-      return { success: false, error: getErrorMessage(err) };
-    }
-  }, [fetchContracts]);
+  const overrideProfessional = useCallback(
+    (contractId: string, role: LegalProfessionalRole, contactId: string | null) =>
+      runGatewayAction(() => overrideLegalProfessionalWithPolicy(contractId, role, contactId), {
+        run: fetchContracts,
+      }),
+    [fetchContracts]
+  );
 
   return {
     contracts,

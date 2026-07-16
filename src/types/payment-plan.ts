@@ -216,6 +216,26 @@ export interface SplitAllocation {
   amount: number;
 }
 
+/**
+ * ADR-244: Input for creating split plans — the `owners` array is what tells the
+ * server to split one plan per owner instead of writing a joint plan.
+ *
+ * Lives here rather than beside either caller: the hook and the mutation gateway
+ * both need it, and declared it separately until ADR-584 caught the twins.
+ */
+export interface CreateSplitPlansInput {
+  owners: Array<{ contactId: string; name: string; ownershipPct: number }>;
+  ownerContactId: string;
+  ownerName: string;
+  buildingId: string;
+  projectId: string;
+  totalAmount: number;
+  installments: CreateInstallmentInput[];
+  taxRegime?: string;
+  taxRate?: number;
+  planType: 'individual';
+}
+
 // =============================================================================
 // 🏦 LOAN TRACKING (Παρακολούθηση Δανείου)
 // =============================================================================

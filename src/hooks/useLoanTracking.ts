@@ -8,14 +8,17 @@
  * Fetches loans for a unit's active payment plan. Exposes actions for creating,
  * updating, transitioning, disbursing, and logging communications.
  *
+ * Mutations run through `runGatewayAction` (ADR-584) — the guard/refetch/result
+ * mapping is not re-implemented here.
+ *
  * @module hooks/useLoanTracking
  * @enterprise ADR-234 Phase 2 — SPEC-234C
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
 import { API_ROUTES } from '@/config/domain-constants';
-import { getErrorMessage } from '@/lib/error-utils';
-import { clientSafeFireAndForget } from '@/lib/safe-fire-and-forget';
+import { useApiList } from '@/hooks/api/useApiList';
+import { runGatewayAction, type ActionResult } from '@/lib/mutations/gateway-action';
 import {
   addLoanCommunicationLogWithPolicy,
   createPropertyLoanWithPolicy,
@@ -36,11 +39,6 @@ import type {
 // TYPES
 // ============================================================================
 
-interface ActionResult {
-  success: boolean;
-  error?: string;
-}
-
 interface UseLoanTrackingReturn {
   loans: LoanTracking[];
   primaryLoan: LoanTracking | null;
@@ -54,124 +52,57 @@ interface UseLoanTrackingReturn {
   addCommLog: (loanId: string, input: AddCommunicationLogInput) => Promise<ActionResult>;
 }
 
-// ============================================================================
-// API HELPER
-// ============================================================================
-
-async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(url, options);
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({ error: 'Unknown error' }));
-    throw new Error(body.error || `HTTP ${res.status}`);
-  }
-  return res.json();
-}
+const NO_UNIT = 'No unit selected';
 
 // ============================================================================
 // HOOK
 // ============================================================================
 
 export function useLoanTracking(propertyId: string | null): UseLoanTrackingReturn {
-  const [loans, setLoans] = useState<LoanTracking[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
   const basePath = propertyId ? API_ROUTES.PROPERTIES.LOANS(propertyId) : null;
+  const blocked = basePath ? null : NO_UNIT;
 
-  // Fetch loans
-  const fetchData = useCallback(async () => {
-    if (!basePath) return;
+  const { items: loans, isLoading, error, refetch: fetchData } = useApiList<LoanTracking>(basePath);
 
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const res = await fetchJson<{ success: boolean; data: LoanTracking[] }>(basePath);
-      setLoans(res.data ?? []);
-    } catch (err) {
-      setError(getErrorMessage(err));
-    } finally {
-      setIsLoading(false);
-    }
-  }, [basePath]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  // Add loan
+  // Add loan — refetch fired off so a slow reload cannot hold up the dialog
   const addLoan = useCallback(
-    async (input: CreateLoanInput): Promise<ActionResult> => {
-      if (!basePath) return { success: false, error: 'No unit selected' };
-      try {
-        const res = await createPropertyLoanWithPolicy(propertyId!, input);
-        if (res.success) clientSafeFireAndForget(fetchData(), 'LoanTracking.refetch');
-        return { success: res.success, error: res.error };
-      } catch (err) {
-        return { success: false, error: getErrorMessage(err) };
-      }
-    },
-    [basePath, fetchData]
+    (input: CreateLoanInput) =>
+      runGatewayAction(() => createPropertyLoanWithPolicy(propertyId!, input), {
+        run: fetchData, blocked, background: 'LoanTracking.refetch',
+      }),
+    [propertyId, fetchData, blocked]
   );
 
-  // Update loan
   const updateLoan = useCallback(
-    async (loanId: string, input: UpdateLoanInput): Promise<ActionResult> => {
-      if (!basePath) return { success: false, error: 'No unit selected' };
-      try {
-        const res = await updatePropertyLoanWithPolicy(propertyId!, loanId, input);
-        if (res.success) await fetchData();
-        return { success: res.success, error: res.error };
-      } catch (err) {
-        return { success: false, error: getErrorMessage(err) };
-      }
-    },
-    [basePath, fetchData]
+    (loanId: string, input: UpdateLoanInput) =>
+      runGatewayAction(() => updatePropertyLoanWithPolicy(propertyId!, loanId, input), {
+        run: fetchData, blocked,
+      }),
+    [propertyId, fetchData, blocked]
   );
 
-  // Transition status
   const transitionStatus = useCallback(
-    async (loanId: string, input: LoanTransitionInput): Promise<ActionResult> => {
-      if (!basePath) return { success: false, error: 'No unit selected' };
-      try {
-        const res = await transitionPropertyLoanWithPolicy(propertyId!, loanId, input);
-        if (res.success) await fetchData();
-        return { success: res.success, error: res.error };
-      } catch (err) {
-        return { success: false, error: getErrorMessage(err) };
-      }
-    },
-    [basePath, fetchData]
+    (loanId: string, input: LoanTransitionInput) =>
+      runGatewayAction(() => transitionPropertyLoanWithPolicy(propertyId!, loanId, input), {
+        run: fetchData, blocked,
+      }),
+    [propertyId, fetchData, blocked]
   );
 
-  // Record disbursement
   const recordDisbursement = useCallback(
-    async (loanId: string, input: RecordDisbursementInput): Promise<ActionResult> => {
-      if (!basePath) return { success: false, error: 'No unit selected' };
-      try {
-        const res = await recordLoanDisbursementWithPolicy(propertyId!, loanId, input);
-        if (res.success) await fetchData();
-        return { success: res.success, error: res.error };
-      } catch (err) {
-        return { success: false, error: getErrorMessage(err) };
-      }
-    },
-    [basePath, fetchData]
+    (loanId: string, input: RecordDisbursementInput) =>
+      runGatewayAction(() => recordLoanDisbursementWithPolicy(propertyId!, loanId, input), {
+        run: fetchData, blocked,
+      }),
+    [propertyId, fetchData, blocked]
   );
 
-  // Add communication log
   const addCommLog = useCallback(
-    async (loanId: string, input: AddCommunicationLogInput): Promise<ActionResult> => {
-      if (!basePath) return { success: false, error: 'No unit selected' };
-      try {
-        const res = await addLoanCommunicationLogWithPolicy(propertyId!, loanId, input);
-        if (res.success) await fetchData();
-        return { success: res.success, error: res.error };
-      } catch (err) {
-        return { success: false, error: getErrorMessage(err) };
-      }
-    },
-    [basePath, fetchData]
+    (loanId: string, input: AddCommunicationLogInput) =>
+      runGatewayAction(() => addLoanCommunicationLogWithPolicy(propertyId!, loanId, input), {
+        run: fetchData, blocked,
+      }),
+    [propertyId, fetchData, blocked]
   );
 
   const primaryLoan = loans.find(l => l.isPrimary) ?? loans[0] ?? null;

@@ -8,14 +8,18 @@
  * Fetches payment plan + payments for a unit. Exposes actions for creating
  * plans, recording payments, and managing installments.
  *
+ * Mutations run through `runGatewayAction` (ADR-584) — the guard/refetch/result
+ * mapping is not re-implemented here.
+ *
  * @module hooks/usePaymentPlan
  * @enterprise ADR-234 - Payment Plan & Installment Tracking
  */
 
 import { useState, useEffect, useCallback } from 'react';
 import { API_ROUTES } from '@/config/domain-constants';
+import { fetchJson } from '@/lib/api/fetch-json';
 import { getErrorMessage } from '@/lib/error-utils';
-import { clientSafeFireAndForget } from '@/lib/safe-fire-and-forget';
+import { runGatewayAction, type ActionResult } from '@/lib/mutations/gateway-action';
 import {
   addPaymentInstallmentWithPolicy,
   createPaymentPlanWithPolicy,
@@ -32,6 +36,7 @@ import type {
   PaymentRecord,
   CreatePaymentPlanInput,
   CreatePaymentInput,
+  CreateSplitPlansInput,
   UpdatePaymentPlanInput,
   CreateInstallmentInput,
   UpdateInstallmentInput,
@@ -41,20 +46,6 @@ import type {
 // ============================================================================
 // TYPES
 // ============================================================================
-
-/** ADR-244: Input for creating split plans — owners array triggers server-side split */
-interface CreateSplitPlansInput {
-  owners: Array<{ contactId: string; name: string; ownershipPct: number }>;
-  ownerContactId: string;
-  ownerName: string;
-  buildingId: string;
-  projectId: string;
-  totalAmount: number;
-  installments: CreateInstallmentInput[];
-  taxRegime?: string;
-  taxRate?: number;
-  planType: 'individual';
-}
 
 interface UsePaymentPlanReturn {
   /** @deprecated Use plans[] for multi-owner support (ADR-244) */
@@ -67,31 +58,20 @@ interface UsePaymentPlanReturn {
   isLoading: boolean;
   error: string | null;
   /** ADR-244: Create split plans (1 per owner) */
-  createSplitPlans: (input: CreateSplitPlansInput) => Promise<{ success: boolean; error?: string }>;
+  createSplitPlans: (input: CreateSplitPlansInput) => Promise<ActionResult>;
   refetch: () => void;
-  createPlan: (input: Omit<CreatePaymentPlanInput, 'propertyId'>) => Promise<{ success: boolean; error?: string }>;
-  updatePlan: (planId: string, updates: UpdatePaymentPlanInput) => Promise<{ success: boolean; error?: string }>;
-  recordPayment: (input: CreatePaymentInput) => Promise<{ success: boolean; error?: string }>;
-  addInstallment: (planId: string, input: CreateInstallmentInput, insertAtIndex?: number) => Promise<{ success: boolean; error?: string }>;
-  updateInstallment: (planId: string, index: number, updates: UpdateInstallmentInput) => Promise<{ success: boolean; error?: string }>;
-  removeInstallment: (planId: string, index: number) => Promise<{ success: boolean; error?: string }>;
-  deletePlan: (planId: string) => Promise<{ success: boolean; error?: string }>;
+  createPlan: (input: Omit<CreatePaymentPlanInput, 'propertyId'>) => Promise<ActionResult>;
+  updatePlan: (planId: string, updates: UpdatePaymentPlanInput) => Promise<ActionResult>;
+  recordPayment: (input: CreatePaymentInput) => Promise<ActionResult>;
+  addInstallment: (planId: string, input: CreateInstallmentInput, insertAtIndex?: number) => Promise<ActionResult>;
+  updateInstallment: (planId: string, index: number, updates: UpdateInstallmentInput) => Promise<ActionResult>;
+  removeInstallment: (planId: string, index: number) => Promise<ActionResult>;
+  deletePlan: (planId: string) => Promise<ActionResult>;
   /** @deprecated Use useLoanTracking hook instead */
-  updateLoan: (planId: string, loan: Partial<LoanInfo>) => Promise<{ success: boolean; error?: string }>;
+  updateLoan: (planId: string, loan: Partial<LoanInfo>) => Promise<ActionResult>;
 }
 
-// ============================================================================
-// API HELPERS
-// ============================================================================
-
-async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(url, options);
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({ error: 'Unknown error' }));
-    throw new Error(body.error || `HTTP ${res.status}`);
-  }
-  return res.json();
-}
+const NO_PROPERTY = 'No property selected';
 
 // ============================================================================
 // HOOK
@@ -102,6 +82,8 @@ export function usePaymentPlan(propertyId: string | null): UsePaymentPlanReturn 
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const blocked = propertyId ? null : NO_PROPERTY;
 
   // Backward compat: plan = first plan, planGroup = derived
   const plan = plans[0] ?? null;
@@ -146,137 +128,80 @@ export function usePaymentPlan(propertyId: string | null): UsePaymentPlanReturn 
     fetchData();
   }, [fetchData]);
 
-  // Create payment plan
+  // Create payment plan — refetch fired off so a slow reload cannot hold up the wizard
   const createPlan = useCallback(
-    async (input: Omit<CreatePaymentPlanInput, 'propertyId'>) => {
-      if (!propertyId) return { success: false, error: 'No property selected' };
-      try {
-        const data = await createPaymentPlanWithPolicy(propertyId, input);
-        if (data.success) clientSafeFireAndForget(fetchData(), 'PaymentPlan.refetch');
-        return { success: data.success, error: data.error };
-      } catch (err) {
-        return { success: false, error: getErrorMessage(err) };
-      }
-    },
-    [propertyId, fetchData]
+    (input: Omit<CreatePaymentPlanInput, 'propertyId'>) =>
+      runGatewayAction(() => createPaymentPlanWithPolicy(propertyId!, input), {
+        run: fetchData, blocked, background: 'PaymentPlan.refetch',
+      }),
+    [propertyId, fetchData, blocked]
   );
 
   // ADR-244: Create split plans (1 per owner)
   const createSplitPlans = useCallback(
-    async (input: CreateSplitPlansInput) => {
-      if (!propertyId) return { success: false, error: 'No property selected' };
-      try {
-        const data = await createSplitPaymentPlansWithPolicy(propertyId, input);
-        if (data.success) clientSafeFireAndForget(fetchData(), 'PaymentPlan.refetchAfterSplit');
-        return { success: data.success, error: data.error };
-      } catch (err) {
-        return { success: false, error: getErrorMessage(err) };
-      }
-    },
-    [propertyId, fetchData]
+    (input: CreateSplitPlansInput) =>
+      runGatewayAction(() => createSplitPaymentPlansWithPolicy(propertyId!, input), {
+        run: fetchData, blocked, background: 'PaymentPlan.refetchAfterSplit',
+      }),
+    [propertyId, fetchData, blocked]
   );
 
-  // Update payment plan
   const updatePlan = useCallback(
-    async (planId: string, updates: UpdatePaymentPlanInput) => {
-      if (!propertyId) return { success: false, error: 'No property selected' };
-      try {
-        const data = await updatePaymentPlanWithPolicy(propertyId, planId, updates);
-        if (data.success) await fetchData();
-        return { success: data.success, error: data.error };
-      } catch (err) {
-        return { success: false, error: getErrorMessage(err) };
-      }
-    },
-    [propertyId, fetchData]
+    (planId: string, updates: UpdatePaymentPlanInput) =>
+      runGatewayAction(() => updatePaymentPlanWithPolicy(propertyId!, planId, updates), {
+        run: fetchData, blocked,
+      }),
+    [propertyId, fetchData, blocked]
   );
 
-  // Record payment
   const recordPayment = useCallback(
-    async (input: CreatePaymentInput) => {
-      if (!propertyId) return { success: false, error: 'No property selected' };
-      try {
-        const data = await recordPropertyPaymentWithPolicy(propertyId, input);
-        if (data.success) await fetchData();
-        return { success: data.success, error: data.error };
-      } catch (err) {
-        return { success: false, error: getErrorMessage(err) };
-      }
-    },
-    [propertyId, fetchData]
+    (input: CreatePaymentInput) =>
+      runGatewayAction(() => recordPropertyPaymentWithPolicy(propertyId!, input), {
+        run: fetchData, blocked,
+      }),
+    [propertyId, fetchData, blocked]
   );
 
-  // Add installment
   const addInstallment = useCallback(
-    async (planId: string, input: CreateInstallmentInput, insertAtIndex?: number) => {
-      if (!propertyId) return { success: false, error: 'No property selected' };
-      try {
-        const data = await addPaymentInstallmentWithPolicy(propertyId, planId, input, insertAtIndex);
-        if (data.success) await fetchData();
-        return { success: data.success, error: data.error };
-      } catch (err) {
-        return { success: false, error: getErrorMessage(err) };
-      }
-    },
-    [propertyId, fetchData]
+    (planId: string, input: CreateInstallmentInput, insertAtIndex?: number) =>
+      runGatewayAction(
+        () => addPaymentInstallmentWithPolicy(propertyId!, planId, input, insertAtIndex),
+        { run: fetchData, blocked }
+      ),
+    [propertyId, fetchData, blocked]
   );
 
-  // Update installment
   const updateInstallment = useCallback(
-    async (planId: string, index: number, updates: UpdateInstallmentInput) => {
-      if (!propertyId) return { success: false, error: 'No property selected' };
-      try {
-        const data = await updatePaymentInstallmentWithPolicy(propertyId, planId, index, updates);
-        if (data.success) await fetchData();
-        return { success: data.success, error: data.error };
-      } catch (err) {
-        return { success: false, error: getErrorMessage(err) };
-      }
-    },
-    [propertyId, fetchData]
+    (planId: string, index: number, updates: UpdateInstallmentInput) =>
+      runGatewayAction(
+        () => updatePaymentInstallmentWithPolicy(propertyId!, planId, index, updates),
+        { run: fetchData, blocked }
+      ),
+    [propertyId, fetchData, blocked]
   );
 
-  // Remove installment
   const removeInstallment = useCallback(
-    async (planId: string, index: number) => {
-      if (!propertyId) return { success: false, error: 'No property selected' };
-      try {
-        const data = await removePaymentInstallmentWithPolicy(propertyId, planId, index);
-        if (data.success) await fetchData();
-        return { success: data.success, error: data.error };
-      } catch (err) {
-        return { success: false, error: getErrorMessage(err) };
-      }
-    },
-    [propertyId, fetchData]
+    (planId: string, index: number) =>
+      runGatewayAction(() => removePaymentInstallmentWithPolicy(propertyId!, planId, index), {
+        run: fetchData, blocked,
+      }),
+    [propertyId, fetchData, blocked]
   );
 
-  // Update loan info
   const updateLoan = useCallback(
-    async (planId: string, loan: Partial<LoanInfo>) => {
-      if (!propertyId) return { success: false, error: 'No property selected' };
-      try {
-        const data = await updatePaymentPlanLoanInfoWithPolicy(propertyId, planId, loan);
-        if (data.success) await fetchData();
-        return { success: data.success, error: data.error };
-      } catch (err) {
-        return { success: false, error: getErrorMessage(err) };
-      }
-    },
-    [propertyId, fetchData]
+    (planId: string, loan: Partial<LoanInfo>) =>
+      runGatewayAction(() => updatePaymentPlanLoanInfoWithPolicy(propertyId!, planId, loan), {
+        run: fetchData, blocked,
+      }),
+    [propertyId, fetchData, blocked]
   );
 
   const deletePlan = useCallback(
-    async (planId: string) => {
-      try {
-        const data = await deletePaymentPlanWithPolicy(propertyId!, planId);
-        if (data.success) await fetchData();
-        return { success: data.success, error: data.error };
-      } catch (err) {
-        return { success: false, error: getErrorMessage(err) };
-      }
-    },
-    [propertyId, fetchData]
+    (planId: string) =>
+      runGatewayAction(() => deletePaymentPlanWithPolicy(propertyId!, planId), {
+        run: fetchData, blocked,
+      }),
+    [propertyId, fetchData, blocked]
   );
 
   return {

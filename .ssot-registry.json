@@ -481,10 +481,12 @@
     },
     "file-type-classification": {
       "ssotFile": "src/config/file-types/classification-registry.ts",
-      "description": "AI classification + preview + body-text extraction decisions for file types must go through classification-registry.ts (ADR-296). Before ADR-296 the same MIME list lived hand-synchronised in three places (route.ts, useFileClassification.ts, preview-registry.ts) and drift caused ~10 fix commits on 2026-04-21. Forbidden patterns (below): (1) re-declaring CLASSIFIABLE_TYPES / CLASSIFIABLE_EXTS / IMAGE_MIME_TYPES / TEXT_MIME_TYPES / DXF_EXTENSIONS outside the registry — every consumer must import `isAIClassifiable`, `getPreviewType`, `getFileCategory`, `getMediaDocumentType`, or `getExtractorKind`. (2) re-declaring the DOCX_MIME / XLSX_MIME / DXF_MIMES / SVG_MIME constants that used to drive the extractor switch — dispatch goes through `getExtractorKind` + `runExtractor`.",
+      "description": "AI classification + preview + body-text extraction decisions for file types must go through classification-registry.ts (ADR-296). Before ADR-296 the same MIME list lived hand-synchronised in three places (route.ts, useFileClassification.ts, preview-registry.ts) and drift caused ~10 fix commits on 2026-04-21. Forbidden patterns (below): (1) re-declaring CLASSIFIABLE_TYPES / CLASSIFIABLE_EXTS / IMAGE_MIME_TYPES / TEXT_MIME_TYPES / DXF_EXTENSIONS outside the registry — every consumer must import `isAIClassifiable`, `getPreviewType`, `getFileCategory`, `getMediaDocumentType`, or `getExtractorKind`. (2) re-declaring the DOCX_MIME / XLSX_MIME / DXF_MIMES / SVG_MIME constants that used to drive the extractor switch — dispatch goes through `getExtractorKind` + `runExtractor`. (3) hand-rolled URL→MIME guessers (`guessMimeFromUrl` / `guessMimeType` + a local `MIME_TYPES: Record` table) — added 2026-07-16 after two copies (openai-document-analyzer.ts, UploadDocumentDialog.tsx) both resolved MIME by substring `includes('.png')`, so `report.png.pdf` was sent to OpenAI as a PNG. Extension→MIME goes through `canonicalMimeForUrl` / `canonicalMimeForFilename`, which match the LAST extension and strip the query string; per-extension canonical MIMEs are declared via `canonicalMimeByExt` (validated at module load — `mimeTypes[0]` is array order, not an answer: `.rar` ≠ application/zip).",
       "forbiddenPatterns": [
         "(CLASSIFIABLE_TYPES|CLASSIFIABLE_EXTS|IMAGE_MIME_TYPES|TEXT_MIME_TYPES|DXF_EXTENSIONS)\\s*=\\s*new\\s+Set",
-        "const\\s+(DOCX_MIME|XLSX_MIME|DXF_MIMES|SVG_MIME)\\s*="
+        "const\\s+(DOCX_MIME|XLSX_MIME|DXF_MIMES|SVG_MIME)\\s*=",
+        "function\\s+guessMime[A-Za-z]*\\s*\\(",
+        "const\\s+MIME_TYPES\\s*:\\s*Record"
       ],
       "allowlist": [
         "src/config/file-types/classification-registry.ts",
@@ -4327,6 +4329,27 @@
       "addedDate": "2026-07-13",
       "addedByAdr": "ADR-652",
       "tier": 3
+    },
+    "entity-trash-state": {
+      "ssotFile": "src/hooks/trash/useEntityTrashState.ts",
+      "description": "Entity trash views must bind useEntityTrashState (ADR-281/ADR-584). ADR-281 mandated one centralised soft-delete mechanism, not copy-paste per entity; the server and TrashService complied, the hooks did not. Only the SSoT owns the staged permanent-delete state machine (fetch/toggle/restore/confirm/cancel); bindings supply an EntityTrashSpec (kind, route, response key) and re-export under domain names. usePropertiesTrashState is allowlisted: it is a genuinely different machine (Promise.allSettled partial-failure reporting + ADR-226 deletion guard + no auto-fetch), not a copy.",
+      "forbiddenPatterns": [
+        "setPendingPermanentDeleteIds"
+      ],
+      "allowlist": [
+        "src/hooks/trash/useEntityTrashState.ts",
+        "src/hooks/usePropertiesTrashState.ts"
+      ]
+    },
+    "gateway-action": {
+      "ssotFile": "src/lib/mutations/gateway-action.ts",
+      "description": "Client actions over a *WithPolicy mutation gateway must call runGatewayAction (ADR-230/ADR-234/ADR-584). The four decisions — scope guard, invoke, refetch (awaited or backgrounded via clientSafeFireAndForget), and mapping the outcome onto ActionResult so a throw never escapes into a click handler — were retyped 23 times across usePaymentPlan, useChequeRegistry, useLoanTracking and useLegalContracts, which is how deletePlan lost its propertyId guard without anyone noticing. The pattern targets the copied result mapping specifically, so it fires only on a re-implementation: hooks that legitimately map a gateway result differently (useInterestCalculator adds its own fallback text) never match it.",
+      "forbiddenPatterns": [
+        "success: (data|res)\\.success, error: (data|res)\\.error"
+      ],
+      "allowlist": [
+        "src/lib/mutations/gateway-action.ts"
+      ]
     }
   }
 }

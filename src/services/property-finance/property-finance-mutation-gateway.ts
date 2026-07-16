@@ -1,6 +1,8 @@
 import { API_ROUTES } from '@/config/domain-constants';
+import { fetchJson, jsonRequest } from '@/lib/api/fetch-json';
 import type {
   CreatePaymentPlanInput,
+  CreateSplitPlansInput,
   UpdatePaymentPlanInput,
   CreatePaymentInput,
   CreateInstallmentInput,
@@ -27,42 +29,11 @@ interface GatewayActionResult {
   error?: string;
 }
 
-interface CreateSplitPlansInput {
-  owners: Array<{ contactId: string; name: string; ownershipPct: number }>;
-  ownerContactId: string;
-  ownerName: string;
-  buildingId: string;
-  projectId: string;
-  totalAmount: number;
-  installments: CreateInstallmentInput[];
-  taxRegime?: string;
-  taxRate?: number;
-  planType: 'individual';
-}
-
-async function mutateJson<T>(url: string, options: RequestInit): Promise<T> {
-  const response = await fetch(url, options);
-  if (!response.ok) {
-    const body = await response.json().catch(() => ({ error: 'Unknown error' }));
-    throw new Error(body.error || `HTTP ${response.status}`);
-  }
-
-  return response.json();
-}
-
-function jsonRequest(method: 'POST' | 'PATCH' | 'DELETE', body?: unknown): RequestInit {
-  return {
-    method,
-    headers: { 'Content-Type': 'application/json' },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  };
-}
-
 export async function createPaymentPlanWithPolicy(
   propertyId: string,
   input: Omit<CreatePaymentPlanInput, 'propertyId'>,
 ): Promise<GatewayActionResult> {
-  return mutateJson<GatewayActionResult>(
+  return fetchJson<GatewayActionResult>(
     API_ROUTES.PROPERTIES.PAYMENT_PLAN(propertyId),
     jsonRequest('POST', input),
   );
@@ -72,7 +43,7 @@ export async function createSplitPaymentPlansWithPolicy(
   propertyId: string,
   input: CreateSplitPlansInput,
 ): Promise<GatewayActionResult> {
-  return mutateJson<GatewayActionResult>(
+  return fetchJson<GatewayActionResult>(
     API_ROUTES.PROPERTIES.PAYMENT_PLAN(propertyId),
     jsonRequest('POST', input),
   );
@@ -83,7 +54,7 @@ export async function updatePaymentPlanWithPolicy(
   planId: string,
   updates: UpdatePaymentPlanInput,
 ): Promise<GatewayActionResult> {
-  return mutateJson<GatewayActionResult>(
+  return fetchJson<GatewayActionResult>(
     API_ROUTES.PROPERTIES.PAYMENT_PLAN(propertyId),
     jsonRequest('PATCH', { planId, ...updates }),
   );
@@ -93,7 +64,7 @@ export async function deletePaymentPlanWithPolicy(
   propertyId: string,
   planId: string,
 ): Promise<GatewayActionResult> {
-  return mutateJson<GatewayActionResult>(
+  return fetchJson<GatewayActionResult>(
     `${API_ROUTES.PROPERTIES.PAYMENT_PLAN(propertyId)}?planId=${encodeURIComponent(planId)}`,
     { method: 'DELETE' },
   );
@@ -103,7 +74,7 @@ export async function recordPropertyPaymentWithPolicy(
   propertyId: string,
   input: CreatePaymentInput,
 ): Promise<GatewayActionResult> {
-  return mutateJson<GatewayActionResult>(
+  return fetchJson<GatewayActionResult>(
     API_ROUTES.PROPERTIES.PAYMENTS(propertyId),
     jsonRequest('POST', input),
   );
@@ -115,7 +86,7 @@ export async function addPaymentInstallmentWithPolicy(
   installment: CreateInstallmentInput,
   insertAtIndex?: number,
 ): Promise<GatewayActionResult> {
-  return mutateJson<GatewayActionResult>(
+  return fetchJson<GatewayActionResult>(
     API_ROUTES.PROPERTIES.INSTALLMENTS(propertyId),
     jsonRequest('POST', { planId, installment, insertAtIndex }),
   );
@@ -127,7 +98,7 @@ export async function updatePaymentInstallmentWithPolicy(
   index: number,
   updates: UpdateInstallmentInput,
 ): Promise<GatewayActionResult> {
-  return mutateJson<GatewayActionResult>(
+  return fetchJson<GatewayActionResult>(
     API_ROUTES.PROPERTIES.INSTALLMENTS(propertyId),
     jsonRequest('PATCH', { planId, index, updates }),
   );
@@ -138,7 +109,7 @@ export async function removePaymentInstallmentWithPolicy(
   planId: string,
   index: number,
 ): Promise<GatewayActionResult> {
-  return mutateJson<GatewayActionResult>(
+  return fetchJson<GatewayActionResult>(
     API_ROUTES.PROPERTIES.INSTALLMENTS(propertyId),
     jsonRequest('DELETE', { planId, index }),
   );
@@ -149,7 +120,7 @@ export async function updatePaymentPlanLoanInfoWithPolicy(
   planId: string,
   loan: Partial<LoanInfo>,
 ): Promise<GatewayActionResult> {
-  return mutateJson<GatewayActionResult>(
+  return fetchJson<GatewayActionResult>(
     API_ROUTES.PROPERTIES.LOAN(propertyId),
     jsonRequest('PATCH', { planId, ...loan }),
   );
@@ -159,7 +130,7 @@ export async function createPropertyLoanWithPolicy(
   propertyId: string,
   input: CreateLoanInput,
 ): Promise<GatewayActionResult> {
-  return mutateJson<GatewayActionResult>(
+  return fetchJson<GatewayActionResult>(
     API_ROUTES.PROPERTIES.LOANS(propertyId),
     jsonRequest('POST', input),
   );
@@ -170,7 +141,7 @@ export async function updatePropertyLoanWithPolicy(
   loanId: string,
   input: UpdateLoanInput,
 ): Promise<GatewayActionResult> {
-  return mutateJson<GatewayActionResult>(
+  return fetchJson<GatewayActionResult>(
     `${API_ROUTES.PROPERTIES.LOANS(propertyId)}/${loanId}`,
     jsonRequest('PATCH', input),
   );
@@ -181,7 +152,7 @@ export async function transitionPropertyLoanWithPolicy(
   loanId: string,
   input: LoanTransitionInput,
 ): Promise<GatewayActionResult> {
-  return mutateJson<GatewayActionResult>(
+  return fetchJson<GatewayActionResult>(
     `${API_ROUTES.PROPERTIES.LOANS(propertyId)}/${loanId}/transition`,
     jsonRequest('POST', input),
   );
@@ -192,7 +163,7 @@ export async function recordLoanDisbursementWithPolicy(
   loanId: string,
   input: RecordDisbursementInput,
 ): Promise<GatewayActionResult> {
-  return mutateJson<GatewayActionResult>(
+  return fetchJson<GatewayActionResult>(
     `${API_ROUTES.PROPERTIES.LOANS(propertyId)}/${loanId}/disburse`,
     jsonRequest('POST', input),
   );
@@ -203,7 +174,7 @@ export async function addLoanCommunicationLogWithPolicy(
   loanId: string,
   input: AddCommunicationLogInput,
 ): Promise<GatewayActionResult> {
-  return mutateJson<GatewayActionResult>(
+  return fetchJson<GatewayActionResult>(
     `${API_ROUTES.PROPERTIES.LOANS(propertyId)}/${loanId}/comm-log`,
     jsonRequest('POST', input),
   );
@@ -213,7 +184,7 @@ export async function createPropertyChequeWithPolicy(
   propertyId: string,
   input: CreateChequeInput,
 ): Promise<GatewayActionResult> {
-  return mutateJson<GatewayActionResult>(
+  return fetchJson<GatewayActionResult>(
     API_ROUTES.PROPERTIES.CHEQUES(propertyId),
     jsonRequest('POST', input),
   );
@@ -224,7 +195,7 @@ export async function updatePropertyChequeWithPolicy(
   chequeId: string,
   input: UpdateChequeInput,
 ): Promise<GatewayActionResult> {
-  return mutateJson<GatewayActionResult>(
+  return fetchJson<GatewayActionResult>(
     `${API_ROUTES.PROPERTIES.CHEQUES(propertyId)}/${chequeId}`,
     jsonRequest('PATCH', input),
   );
@@ -235,7 +206,7 @@ export async function transitionPropertyChequeWithPolicy(
   chequeId: string,
   input: ChequeTransitionInput,
 ): Promise<GatewayActionResult> {
-  return mutateJson<GatewayActionResult>(
+  return fetchJson<GatewayActionResult>(
     `${API_ROUTES.PROPERTIES.CHEQUES(propertyId)}/${chequeId}/transition`,
     jsonRequest('POST', input),
   );
@@ -246,7 +217,7 @@ export async function endorsePropertyChequeWithPolicy(
   chequeId: string,
   input: EndorseInput,
 ): Promise<GatewayActionResult> {
-  return mutateJson<GatewayActionResult>(
+  return fetchJson<GatewayActionResult>(
     `${API_ROUTES.PROPERTIES.CHEQUES(propertyId)}/${chequeId}/endorse`,
     jsonRequest('POST', input),
   );
@@ -257,7 +228,7 @@ export async function bouncePropertyChequeWithPolicy(
   chequeId: string,
   input: BounceInput,
 ): Promise<GatewayActionResult> {
-  return mutateJson<GatewayActionResult>(
+  return fetchJson<GatewayActionResult>(
     `${API_ROUTES.PROPERTIES.CHEQUES(propertyId)}/${chequeId}/bounce`,
     jsonRequest('POST', input),
   );
