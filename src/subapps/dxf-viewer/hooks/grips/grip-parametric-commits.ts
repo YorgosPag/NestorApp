@@ -9,7 +9,6 @@
  * slab so a continuous drag collapses into a single undo entry.
  */
 import type { Point2D } from '../../rendering/types/Types';
-import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import type { UnifiedGripInfo } from './unified-grip-types';
 import type { DxfCommitDeps } from './unified-grip-types';
 import { gripKindOf } from '../grip-kinds';
@@ -25,7 +24,6 @@ import { UpdateColumnParamsCommand } from '../../core/commands/entity-commands/U
 import { UpdateMepSegmentParamsCommand } from '../../core/commands/entity-commands/UpdateMepSegmentParamsCommand';
 import { applyStairGripDrag } from '../../bim/stairs/stair-grips';
 import { applyWallGripDrag } from '../../bim/walls/wall-grips';
-import { BimRotateHotGripStore } from '../../bim/grips/bim-rotate-hotgrip-store';
 import { applyBeamGripDrag } from '../../bim/beams/beam-grips';
 import { applyColumnGripDrag } from '../../bim/columns/column-grips';
 import { runColumnEditGuards } from '../../bim/columns/column-edit-guard-flow';
@@ -44,7 +42,7 @@ import {
 } from '../../bim/structural/active-reinforcement';
 import { resolveStructuralCode } from '../../bim/structural/codes';
 import { useStructuralSettingsStore } from '../../state/structural-settings-store';
-import { createSceneManagerAdapter } from './grip-scene-manager-adapter';
+import { resolveParametricGripEntity, resolveGripCommitAnchor } from './grip-commit-resolve';
 
 // ADR-363 Phase 2.5 / Φ1G.5 — parametric opening grip commits (drag-along-wall +
 // Alt-move re-host) live in grip-parametric-opening-commits.ts (N.7.1 file-size
@@ -162,24 +160,20 @@ export function commitStairGripDrag(
 ): void {
   const stairKind = gripKindOf(grip, 'stair');
   if (!grip.entityId || !stairKind) return;
-  const sceneManager = createSceneManagerAdapter(deps);
-  if (!sceneManager) return;
-  const raw = sceneManager.getEntity(grip.entityId);
-  if (!raw) return;
-  const candidate = raw as unknown as Partial<StairEntity>;
-  if (candidate.type !== 'stair' || !candidate.params) return;
-  const stair = candidate as StairEntity;
+  const resolved = resolveParametricGripEntity<StairEntity>(deps, grip.entityId, 'stair');
+  if (!resolved) return;
+  const { sceneManager, entity: stair } = resolved;
   const originalParams = stair.params;
   // ADR-393 Phase C — the `stair-direction` 6-click hot-grip rotates around a picked
   // centre. The hook publishes {pivot, anchor} in BimRotateHotGripStore; the delta
   // passed here is `cursor − anchor`, so `currentPos = anchor + delta` is the live
   // cursor and `pivot` is the rotation centre (mirror commitWallGripDrag). All other
   // stair grips (and the legacy rotation drag) use the grip position as the anchor.
-  const rotateCtx = BimRotateHotGripStore.getSnapshot();
-  const useRotatePivot =
-    stairKind === 'stair-direction' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
-  const anchor: Point2D = useRotatePivot ? rotateCtx.anchor! : grip.position;
-  const currentPos: Point2D = translatePoint(anchor, delta);
+  const { currentPos, pivotPatch } = resolveGripCommitAnchor(
+    stairKind === 'stair-direction',
+    grip.position,
+    delta,
+  );
   const newParams = applyStairGripDrag(stairKind, {
     originalParams,
     delta,
@@ -189,7 +183,7 @@ export function commitStairGripDrag(
     geometry: stair.geometry,
     // ADR-637 Phase 4-A — target rest-landing id for the stair-rest-landing-* grips.
     ...(grip.landingId ? { landingId: grip.landingId } : {}),
-    ...(useRotatePivot ? { pivot: rotateCtx.pivot! } : {}),
+    ...pivotPatch,
   });
   const command = new UpdateStairParamsCommand(
     grip.entityId,
@@ -217,29 +211,25 @@ export function commitWallGripDrag(
 ): void {
   const wallKind = gripKindOf(grip, 'wall');
   if (!grip.entityId || !wallKind) return;
-  const sceneManager = createSceneManagerAdapter(deps);
-  if (!sceneManager) return;
-  const raw = sceneManager.getEntity(grip.entityId);
-  if (!raw) return;
-  const candidate = raw as unknown as Partial<WallEntity>;
-  if (candidate.type !== 'wall' || !candidate.params) return;
-  const wall = candidate as WallEntity;
+  const resolved = resolveParametricGripEntity<WallEntity>(deps, grip.entityId, 'wall');
+  if (!resolved) return;
+  const { sceneManager, entity: wall } = resolved;
   const originalParams = wall.params;
   // ADR-363 Phase 1G — the wall-rotation 3-click hot-grip rotates around a picked
   // centre. The hook publishes {pivot, anchor} in WallRotateHotGripStore; the
   // delta passed here is `cursor − anchor`, so `currentPos = anchor + delta` is
   // the live cursor and `pivot` is the rotation centre. All other wall grips (and
   // the legacy rotation drag) use the grip position as the anchor.
-  const rotateCtx = BimRotateHotGripStore.getSnapshot();
-  const useRotatePivot =
-    wallKind === 'wall-rotation' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
-  const anchor: Point2D = useRotatePivot ? rotateCtx.anchor! : grip.position;
-  const currentPos: Point2D = translatePoint(anchor, delta);
+  const { currentPos, pivotPatch } = resolveGripCommitAnchor(
+    wallKind === 'wall-rotation',
+    grip.position,
+    delta,
+  );
   const newParams = applyWallGripDrag(wallKind, {
     originalParams,
     delta,
     currentPos,
-    ...(useRotatePivot ? { pivot: rotateCtx.pivot! } : {}),
+    ...pivotPatch,
   });
   const kind: WallKind = wall.kind ?? 'straight';
   const wallCmd = new UpdateWallParamsCommand(
@@ -274,29 +264,25 @@ export function commitBeamGripDrag(
 ): void {
   const beamKind = gripKindOf(grip, 'beam');
   if (!grip.entityId || !beamKind) return;
-  const sceneManager = createSceneManagerAdapter(deps);
-  if (!sceneManager) return;
-  const raw = sceneManager.getEntity(grip.entityId);
-  if (!raw) return;
-  const candidate = raw as unknown as Partial<BeamEntity>;
-  if (candidate.type !== 'beam' || !candidate.params) return;
-  const beam = candidate as BeamEntity;
+  const resolved = resolveParametricGripEntity<BeamEntity>(deps, grip.entityId, 'beam');
+  if (!resolved) return;
+  const { sceneManager, entity: beam } = resolved;
   const originalParams = beam.params;
   // ADR-363 Phase 5.5d — the `beam-rotation` 6-click hot-grip rotates around a
   // picked centre. The hook publishes {pivot, anchor} in BimRotateHotGripStore;
   // delta is `alignDir − refDir`, so `currentPos = anchor + delta` is the live
   // align point and `pivot` is the rotation centre (mirror commitWallGripDrag /
   // commitColumnGripDrag). All other beam grips use the grip position as anchor.
-  const rotateCtx = BimRotateHotGripStore.getSnapshot();
-  const useRotatePivot =
-    beamKind === 'beam-rotation' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
-  const anchor: Point2D = useRotatePivot ? rotateCtx.anchor! : grip.position;
-  const currentPos: Point2D = translatePoint(anchor, delta);
+  const { currentPos, pivotPatch } = resolveGripCommitAnchor(
+    beamKind === 'beam-rotation',
+    grip.position,
+    delta,
+  );
   const newParams = applyBeamGripDrag(beamKind, {
     originalParams,
     delta,
     currentPos,
-    ...(useRotatePivot ? { pivot: rotateCtx.pivot! } : {}),
+    ...pivotPatch,
   });
   if (newParams === originalParams) return;
   // ADR-503 Slice 3 — grip resize ΔΙΑΤΟΜΗΣ (depth/width) = χειροκίνητη διατομή → safety-gated lock
@@ -344,29 +330,23 @@ export function commitMepSegmentGripDrag(
 ): void {
   const mepSegmentKind = gripKindOf(grip, 'mep-segment');
   if (!grip.entityId || !mepSegmentKind) return;
-  const sceneManager = createSceneManagerAdapter(deps);
-  if (!sceneManager) return;
-  const raw = sceneManager.getEntity(grip.entityId);
-  if (!raw) return;
-  const candidate = raw as unknown as Partial<MepSegmentEntity>;
-  if (candidate.type !== 'mep-segment' || !candidate.params) return;
-  const segment = candidate as MepSegmentEntity;
+  const resolved = resolveParametricGripEntity<MepSegmentEntity>(deps, grip.entityId, 'mep-segment');
+  if (!resolved) return;
+  const { sceneManager, entity: segment } = resolved;
   const originalParams = segment.params;
   // `mep-segment-rotation` 6-click hot-grip rotates around a picked centre — the
   // hook publishes {pivot, anchor} in BimRotateHotGripStore (mirror beam). All
   // other segment grips use the grip position as anchor.
-  const rotateCtx = BimRotateHotGripStore.getSnapshot();
-  const useRotatePivot =
-    mepSegmentKind === 'mep-segment-rotation' &&
-    rotateCtx.pivot !== null &&
-    rotateCtx.anchor !== null;
-  const anchor: Point2D = useRotatePivot ? rotateCtx.anchor! : grip.position;
-  const currentPos: Point2D = translatePoint(anchor, delta);
+  const { currentPos, pivotPatch } = resolveGripCommitAnchor(
+    mepSegmentKind === 'mep-segment-rotation',
+    grip.position,
+    delta,
+  );
   const newParams = applyMepSegmentGripDrag(mepSegmentKind, {
     originalParams,
     delta,
     currentPos,
-    ...(useRotatePivot ? { pivot: rotateCtx.pivot! } : {}),
+    ...pivotPatch,
   });
   if (newParams === originalParams) return;
   const segmentCommand = new UpdateMepSegmentParamsCommand(
@@ -396,29 +376,25 @@ export function commitColumnGripDrag(
 ): void {
   const columnKind = gripKindOf(grip, 'column');
   if (!grip.entityId || !columnKind) return;
-  const sceneManager = createSceneManagerAdapter(deps);
-  if (!sceneManager) return;
-  const raw = sceneManager.getEntity(grip.entityId);
-  if (!raw) return;
-  const candidate = raw as unknown as Partial<ColumnEntity>;
-  if (candidate.type !== 'column' || !candidate.params) return;
-  const column = candidate as ColumnEntity;
+  const resolved = resolveParametricGripEntity<ColumnEntity>(deps, grip.entityId, 'column');
+  if (!resolved) return;
+  const { sceneManager, entity: column } = resolved;
   const originalParams = column.params;
   // ADR-397 — the column-rotation 6-click hot-grip rotates around a picked
   // centre. The hook publishes {pivot, anchor} in BimRotateHotGripStore; delta
   // is `cursor − anchor`, so `currentPos = anchor + delta` is the live cursor and
   // `pivot` is the rotation centre. Mirror of commitWallGripDrag. All other
   // column grips use the grip position as the anchor.
-  const rotateCtx = BimRotateHotGripStore.getSnapshot();
-  const useRotatePivot =
-    columnKind === 'column-rotation' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
-  const anchor: Point2D = useRotatePivot ? rotateCtx.anchor! : grip.position;
-  const currentPos: Point2D = translatePoint(anchor, delta);
+  const { currentPos, pivotPatch } = resolveGripCommitAnchor(
+    columnKind === 'column-rotation',
+    grip.position,
+    delta,
+  );
   const newParams = applyColumnGripDrag(columnKind, {
     originalParams,
     delta,
     currentPos,
-    ...(useRotatePivot ? { pivot: rotateCtx.pivot! } : {}),
+    ...pivotPatch,
   });
   if (newParams === originalParams) return;
   const entityId = grip.entityId;

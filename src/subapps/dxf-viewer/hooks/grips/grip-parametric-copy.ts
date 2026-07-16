@@ -61,7 +61,7 @@ import type { FloorplanSymbolEntity } from '../../bim/types/floorplan-symbol-typ
 import { applyFloorplanSymbolGripDrag } from '../../bim/floorplan-symbols/floorplan-symbol-grips';
 import { buildFloorplanSymbolEntity } from '../drawing/floorplan-symbol-completion';
 import { addFloorplanSymbolToScene } from '../../bim/floorplan-symbols/add-floorplan-symbol-to-scene';
-import { createSceneManagerAdapter } from './grip-scene-manager-adapter';
+import { resolveParametricGripEntity } from './grip-commit-resolve';
 
 /**
  * ADR-363 Phase 1G.4 — Ctrl-COPY at the terminal click of a wall MOVE hot-grip
@@ -79,13 +79,9 @@ export function commitWallCopy(
   deps: DxfCommitDeps,
 ): void {
   if (!grip.entityId || gripKindOf(grip, 'wall') !== 'wall-midpoint') return;
-  const sceneManager = createSceneManagerAdapter(deps);
-  if (!sceneManager) return;
-  const raw = sceneManager.getEntity(grip.entityId);
-  if (!raw) return;
-  const candidate = raw as unknown as Partial<WallEntity>;
-  if (candidate.type !== 'wall' || !candidate.params) return;
-  const wall = candidate as WallEntity;
+  const resolved = resolveParametricGripEntity<WallEntity>(deps, grip.entityId, 'wall');
+  if (!resolved) return;
+  const wall = resolved.entity;
   const originalParams = wall.params;
   const currentPos: Point2D = translatePoint(grip.position, delta);
   const translated = applyWallGripDrag('wall-midpoint', { originalParams, delta, currentPos });
@@ -110,13 +106,9 @@ export function commitColumnCopy(
   deps: DxfCommitDeps,
 ): void {
   if (!grip.entityId || gripKindOf(grip, 'column') !== 'column-center') return;
-  const sceneManager = createSceneManagerAdapter(deps);
-  if (!sceneManager) return;
-  const raw = sceneManager.getEntity(grip.entityId);
-  if (!raw) return;
-  const candidate = raw as unknown as Partial<ColumnEntity>;
-  if (candidate.type !== 'column' || !candidate.params) return;
-  const column = candidate as ColumnEntity;
+  const resolved = resolveParametricGripEntity<ColumnEntity>(deps, grip.entityId, 'column');
+  if (!resolved) return;
+  const column = resolved.entity;
   const originalParams = column.params;
   const translated = applyColumnGripDrag('column-center', { originalParams, delta });
   const sceneUnits = originalParams.sceneUnits ?? 'mm';
@@ -140,13 +132,9 @@ export function commitBeamCopy(
   deps: DxfCommitDeps,
 ): void {
   if (!grip.entityId || gripKindOf(grip, 'beam') !== 'beam-midpoint') return;
-  const sceneManager = createSceneManagerAdapter(deps);
-  if (!sceneManager) return;
-  const raw = sceneManager.getEntity(grip.entityId);
-  if (!raw) return;
-  const candidate = raw as unknown as Partial<BeamEntity>;
-  if (candidate.type !== 'beam' || !candidate.params) return;
-  const beam = candidate as BeamEntity;
+  const resolved = resolveParametricGripEntity<BeamEntity>(deps, grip.entityId, 'beam');
+  if (!resolved) return;
+  const beam = resolved.entity;
   const originalParams = beam.params;
   const translated = applyBeamGripDrag('beam-midpoint', { originalParams, delta });
   const sceneUnits = originalParams.sceneUnits ?? 'mm';
@@ -170,13 +158,9 @@ export function commitMepFixtureCopy(
   deps: DxfCommitDeps,
 ): void {
   if (!grip.entityId || gripKindOf(grip, 'mep-fixture') !== 'mep-fixture-move') return;
-  const sceneManager = createSceneManagerAdapter(deps);
-  if (!sceneManager) return;
-  const raw = sceneManager.getEntity(grip.entityId);
-  if (!raw) return;
-  const candidate = raw as unknown as Partial<MepFixtureEntity>;
-  if (candidate.type !== 'mep-fixture' || !candidate.params) return;
-  const fixture = candidate as MepFixtureEntity;
+  const resolved = resolveParametricGripEntity<MepFixtureEntity>(deps, grip.entityId, 'mep-fixture');
+  if (!resolved) return;
+  const fixture = resolved.entity;
   const translated = applyMepFixtureGripDrag('mep-fixture-move', { originalParams: fixture.params, delta });
   const built = buildMepFixtureEntity(translated, fixture.layerId);
   if (!built.ok) return;
@@ -199,13 +183,9 @@ export function commitElectricalPanelCopy(
   deps: DxfCommitDeps,
 ): void {
   if (!grip.entityId || gripKindOf(grip, 'electrical-panel') !== 'electrical-panel-move') return;
-  const sceneManager = createSceneManagerAdapter(deps);
-  if (!sceneManager) return;
-  const raw = sceneManager.getEntity(grip.entityId);
-  if (!raw) return;
-  const candidate = raw as unknown as Partial<ElectricalPanelEntity>;
-  if (candidate.type !== 'electrical-panel' || !candidate.params) return;
-  const panel = candidate as ElectricalPanelEntity;
+  const resolved = resolveParametricGripEntity<ElectricalPanelEntity>(deps, grip.entityId, 'electrical-panel');
+  if (!resolved) return;
+  const panel = resolved.entity;
   const translated = applyElectricalPanelGripDrag('electrical-panel-move', { originalParams: panel.params, delta });
   const built = buildElectricalPanelEntity(translated, panel.layerId);
   if (!built.ok) return;
@@ -228,13 +208,9 @@ export function commitMepManifoldCopy(
   deps: DxfCommitDeps,
 ): void {
   if (!grip.entityId || gripKindOf(grip, 'mep-manifold') !== 'mep-manifold-move') return;
-  const sceneManager = createSceneManagerAdapter(deps);
-  if (!sceneManager) return;
-  const raw = sceneManager.getEntity(grip.entityId);
-  if (!raw) return;
-  const candidate = raw as unknown as Partial<MepManifoldEntity>;
-  if (candidate.type !== 'mep-manifold' || !candidate.params) return;
-  const manifold = candidate as MepManifoldEntity;
+  const resolved = resolveParametricGripEntity<MepManifoldEntity>(deps, grip.entityId, 'mep-manifold');
+  if (!resolved) return;
+  const manifold = resolved.entity;
   const translated = applyMepManifoldGripDrag('mep-manifold-move', { originalParams: manifold.params, delta });
   const built = buildMepManifoldEntity(translated, manifold.layerId);
   if (!built.ok) return;
@@ -256,13 +232,9 @@ export function commitMepRadiatorCopy(
   deps: DxfCommitDeps,
 ): void {
   if (!grip.entityId || gripKindOf(grip, 'mep-radiator') !== 'mep-radiator-move') return;
-  const sceneManager = createSceneManagerAdapter(deps);
-  if (!sceneManager) return;
-  const raw = sceneManager.getEntity(grip.entityId);
-  if (!raw) return;
-  const candidate = raw as unknown as Partial<MepRadiatorEntity>;
-  if (candidate.type !== 'mep-radiator' || !candidate.params) return;
-  const radiator = candidate as MepRadiatorEntity;
+  const resolved = resolveParametricGripEntity<MepRadiatorEntity>(deps, grip.entityId, 'mep-radiator');
+  if (!resolved) return;
+  const radiator = resolved.entity;
   const translated = applyMepRadiatorGripDrag('mep-radiator-move', { originalParams: radiator.params, delta });
   const built = buildMepRadiatorEntity(translated, radiator.layerId);
   if (!built.ok) return;
@@ -284,13 +256,9 @@ export function commitMepBoilerCopy(
   deps: DxfCommitDeps,
 ): void {
   if (!grip.entityId || gripKindOf(grip, 'mep-boiler') !== 'mep-boiler-move') return;
-  const sceneManager = createSceneManagerAdapter(deps);
-  if (!sceneManager) return;
-  const raw = sceneManager.getEntity(grip.entityId);
-  if (!raw) return;
-  const candidate = raw as unknown as Partial<MepBoilerEntity>;
-  if (candidate.type !== 'mep-boiler' || !candidate.params) return;
-  const boiler = candidate as MepBoilerEntity;
+  const resolved = resolveParametricGripEntity<MepBoilerEntity>(deps, grip.entityId, 'mep-boiler');
+  if (!resolved) return;
+  const boiler = resolved.entity;
   const translated = applyMepBoilerGripDrag('mep-boiler-move', { originalParams: boiler.params, delta });
   const built = buildMepBoilerEntity(translated, boiler.layerId);
   if (!built.ok) return;
@@ -312,13 +280,9 @@ export function commitMepWaterHeaterCopy(
   deps: DxfCommitDeps,
 ): void {
   if (!grip.entityId || gripKindOf(grip, 'mep-water-heater') !== 'mep-water-heater-move') return;
-  const sceneManager = createSceneManagerAdapter(deps);
-  if (!sceneManager) return;
-  const raw = sceneManager.getEntity(grip.entityId);
-  if (!raw) return;
-  const candidate = raw as unknown as Partial<MepWaterHeaterEntity>;
-  if (candidate.type !== 'mep-water-heater' || !candidate.params) return;
-  const waterHeater = candidate as MepWaterHeaterEntity;
+  const resolved = resolveParametricGripEntity<MepWaterHeaterEntity>(deps, grip.entityId, 'mep-water-heater');
+  if (!resolved) return;
+  const waterHeater = resolved.entity;
   const translated = applyMepWaterHeaterGripDrag('mep-water-heater-move', { originalParams: waterHeater.params, delta });
   const built = buildMepWaterHeaterEntity(translated, waterHeater.layerId);
   if (!built.ok) return;
@@ -340,13 +304,9 @@ export function commitFurnitureCopy(
   deps: DxfCommitDeps,
 ): void {
   if (!grip.entityId || gripKindOf(grip, 'furniture') !== 'furniture-move') return;
-  const sceneManager = createSceneManagerAdapter(deps);
-  if (!sceneManager) return;
-  const raw = sceneManager.getEntity(grip.entityId);
-  if (!raw) return;
-  const candidate = raw as unknown as Partial<FurnitureEntity>;
-  if (candidate.type !== 'furniture' || !candidate.params) return;
-  const furniture = candidate as FurnitureEntity;
+  const resolved = resolveParametricGripEntity<FurnitureEntity>(deps, grip.entityId, 'furniture');
+  if (!resolved) return;
+  const furniture = resolved.entity;
   const translated = applyFurnitureGripDrag('furniture-move', { originalParams: furniture.params, delta });
   const built = buildFurnitureEntity(translated, furniture.layerId);
   if (!built.ok) return;
@@ -368,13 +328,9 @@ export function commitFloorplanSymbolCopy(
   deps: DxfCommitDeps,
 ): void {
   if (!grip.entityId || gripKindOf(grip, 'floorplan-symbol') !== 'floorplan-symbol-move') return;
-  const sceneManager = createSceneManagerAdapter(deps);
-  if (!sceneManager) return;
-  const raw = sceneManager.getEntity(grip.entityId);
-  if (!raw) return;
-  const candidate = raw as unknown as Partial<FloorplanSymbolEntity>;
-  if (candidate.type !== 'floorplan-symbol' || !candidate.params) return;
-  const symbol = candidate as FloorplanSymbolEntity;
+  const resolved = resolveParametricGripEntity<FloorplanSymbolEntity>(deps, grip.entityId, 'floorplan-symbol');
+  if (!resolved) return;
+  const symbol = resolved.entity;
   const translated = applyFloorplanSymbolGripDrag('floorplan-symbol-move', { originalParams: symbol.params, delta });
   const built = buildFloorplanSymbolEntity(translated, symbol.layerId);
   if (!built.ok) return;
