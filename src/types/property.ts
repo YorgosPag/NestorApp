@@ -665,3 +665,27 @@ export interface PropertyStats {
   soldStorageUnits?: number;
   reserved?: number;
 }
+
+/**
+ * 🏢 SSoT: τα μηδενικά `PropertyStats` — η zero value του τύπου, δίπλα στον τύπο.
+ *
+ * 🎯 DOMAIN SEPARATION: χωρίς τα deprecated sales metrics — τα Properties είναι
+ * physical truth· τα sales metrics ζουν στο sales domain.
+ */
+export const DEFAULT_PROPERTY_STATS: PropertyStats = {
+  totalProperties: 0,
+  availableProperties: 0,
+  totalValue: 0,
+  totalArea: 0,
+  averagePrice: 0,
+  propertiesByStatus: {},
+  propertiesByType: {},
+  propertiesByFloor: {},
+  totalStorageUnits: 0,
+  availableStorageUnits: 0,
+  uniqueBuildings: 0,
+  underConstructionProperties: 0,
+  maintenanceProperties: 0,
+  inspectionProperties: 0,
+  draftProperties: 0,
+};

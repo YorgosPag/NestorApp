@@ -5,7 +5,7 @@ import { useState } from 'react';
 import type { Suggestion } from '@/types/suggestions';
 import type { Connection, PropertyGroup } from '@/types/connections';
 import type { FilterState, Property } from '@/types/property-viewer';
-import { DEFAULT_FILTERS } from './usePropertyViewer';
+import { DEFAULT_FILTERS } from '@/types/property-viewer';
 
 // 🏢 ENTERPRISE: Tool type for property editor
 type EditorTool = string | null;

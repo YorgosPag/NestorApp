@@ -5,6 +5,7 @@ import { useSharedProperties } from '@/contexts/SharedPropertiesProvider';
 import { usePublicProperties } from '@/services/realtime/hooks/usePublicProperties';
 import type { Property } from '@/types/property-viewer';
 import type { FilterState } from '@/types/property-viewer';
+import { DEFAULT_FILTERS } from '@/types/property-viewer';
 import { tallyBy } from '@/utils/collection-utils';
 import {
   isDisplayableInSalesDashboard,
@@ -23,19 +24,6 @@ import {
 // Coerent με το UX contract του SalesDashboardRequirementsAlert: όταν
 // εμφανίζεται ο alert, το property δεν εμφανίζεται στις public λίστες.
 // ============================================================================
-
-// 🏢 ADR-051: Use undefined for empty ranges (enterprise-grade type consistency)
-const DEFAULT_PUBLIC_FILTERS: FilterState = {
-  searchTerm: '',
-  project: [],
-  building: [],
-  floor: [],
-  propertyType: [],
-  status: [],
-  priceRange: { min: undefined, max: undefined },
-  areaRange: { min: undefined, max: undefined },
-  features: [],
-};
 
 /**
  * Hook για το public Properties page - read-only mirror του Units page
@@ -57,7 +45,7 @@ export function usePublicPropertyViewer() {
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [showDashboard, setShowDashboard] = useState(false);
   const [scale, setScale] = useState(1);
-  const [filters, setFilters] = useState<FilterState>(DEFAULT_PUBLIC_FILTERS);
+  const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
 
   // Φιλτράρουμε properties για public view μέσω SSoT gate.
   // ADR-287 Batch 18: ενιαίος κανόνας εμφάνισης σε public vetrina & sales dashboards.

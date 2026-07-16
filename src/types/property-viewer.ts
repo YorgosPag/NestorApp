@@ -250,3 +250,20 @@ export interface FilterState extends GenericFilterState {
     missingDocuments?: boolean;
   };
 }
+
+/**
+ * 🏢 SSoT: το κενό `FilterState` — η zero value του τύπου, δίπλα στον τύπο.
+ *
+ * 🏢 ADR-051: Use undefined for empty ranges (enterprise-grade type consistency)
+ */
+export const DEFAULT_FILTERS: FilterState = {
+  searchTerm: '',
+  project: [],
+  building: [],
+  floor: [],
+  propertyType: [],
+  status: [],
+  priceRange: { min: undefined, max: undefined },
+  areaRange: { min: undefined, max: undefined },
+  features: [],
+};

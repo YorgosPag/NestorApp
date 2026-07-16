@@ -2,13 +2,14 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { usePropertyViewer, DEFAULT_FILTERS } from '@/hooks/usePropertyViewer';
+import { usePropertyViewer } from '@/hooks/usePropertyViewer';
 import { useAuth } from '@/hooks/useAuth';
 import { ContactsService } from '@/services/contacts.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import { tallyBy } from '@/utils/collection-utils';
 import type { Connection } from '@/types/connections';
 import type { FilterState, Property } from '@/types/property-viewer';
+import { DEFAULT_FILTERS } from '@/types/property-viewer';
 
 const logger = createModuleLogger('usePropertiesViewerState');
 

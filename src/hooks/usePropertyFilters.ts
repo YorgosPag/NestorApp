@@ -4,6 +4,7 @@
 import { useMemo } from 'react';
 import type { Property, FilterState } from '@/types/property-viewer';
 import type { PropertyStats } from '@/types/property';
+import { DEFAULT_PROPERTY_STATS } from '@/types/property';
 // 🏢 ADR-051: Use centralized filter utilities
 import {
   matchesSearchTerm,
@@ -39,19 +40,7 @@ export function usePropertyFilters(
 ) {
   const { filteredProperties, stats } = useMemo(() => {
     if (!properties || !filters) {
-      // 🎯 DOMAIN SEPARATION: Default stats without deprecated sales metrics
-      const emptyStats: PropertyStats = {
-        totalProperties: 0, availableProperties: 0, totalValue: 0, totalArea: 0, averagePrice: 0,
-        propertiesByStatus: {}, propertiesByType: {}, propertiesByFloor: {},
-        totalStorageUnits: 0, availableStorageUnits: 0,
-        uniqueBuildings: 0,
-        // Operational status metrics
-        underConstructionProperties: 0,
-        maintenanceProperties: 0,
-        inspectionProperties: 0,
-        draftProperties: 0,
-      };
-      return { filteredProperties: [], stats: emptyStats };
+      return { filteredProperties: [], stats: DEFAULT_PROPERTY_STATS };
     }
 
     // 🏢 ENTERPRISE (local_4.log): Pre-filter to exclude storage units

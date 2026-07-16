@@ -6,8 +6,9 @@ import { usePropertyState } from './usePropertyState';
 import { usePropertyEditor } from './usePropertyEditor';
 import { usePropertyFilters } from './usePropertyFilters';
 import { usePolygonHandlers } from './usePolygonHandlers';
-import type { FilterState, PropertyStats } from '@/types/property-viewer';
+import { DEFAULT_FILTERS } from '@/types/property-viewer';
 import type { Property } from '@/types/property-viewer';
+import { DEFAULT_PROPERTY_STATS } from '@/types/property';
 import { useGuardedPropertyMutation } from '@/hooks/useGuardedPropertyMutation';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -70,32 +71,6 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
  */
 const FALLBACK_FLOOR_ID = process.env.NEXT_PUBLIC_DEFAULT_FLOOR_ID || 'floor-1' as const;
 
-// 🏢 ADR-051: Use undefined for empty ranges (enterprise-grade type consistency)
-export const DEFAULT_FILTERS: FilterState = {
-  searchTerm: '',
-  project: [],
-  building: [],
-  floor: [],
-  propertyType: [],
-  status: [],
-  priceRange: { min: undefined, max: undefined },
-  areaRange: { min: undefined, max: undefined },
-  features: []
-};
-
-// 🎯 DOMAIN SEPARATION: Default stats without sales metrics
-export const DEFAULT_STATS: PropertyStats = {
-  totalProperties: 0, availableProperties: 0, totalValue: 0, totalArea: 0, averagePrice: 0,
-  propertiesByStatus: {}, propertiesByType: {}, propertiesByFloor: {},
-  totalStorageUnits: 0, availableStorageUnits: 0,
-  uniqueBuildings: 0,
-  // Optional operational status metrics
-  underConstructionProperties: 0,
-  maintenanceProperties: 0,
-  inspectionProperties: 0,
-  draftProperties: 0,
-};
-
 
 /**
  * 🏢 ENTERPRISE PROPERTY VIEWER HOOK
@@ -142,26 +117,13 @@ export function usePropertyViewer() {
   } = usePropertyState();
 
   // 2. Editor Tools & UI State Management
-  const {
-    activeTool, setActiveTool,
-    showGrid, setShowGrid,
-    snapToGrid, setSnapToGrid,
-    gridSize, setGridSize,
-    showMeasurements, setShowMeasurements,
-    scale, setScale,
-    showHistoryPanel, setShowHistoryPanel,
-    suggestionToDisplay, setSuggestionToDisplay,
-    connections, setConnections,
-    groups, setGroups,
-    isConnecting, setIsConnecting,
-    firstConnectionPoint, setFirstConnectionPoint,
-    viewMode, setViewMode,
-    showDashboard, setShowDashboard,
-    filters, setFilters,
-  } = usePropertyEditor();
+  // 🏢 SSoT: το `editor` προωθείται ΟΛΟΚΛΗΡΟ με spread στο return — η λίστα των
+  // πεδίων του ζει ΜΟΝΟ στο `usePropertyEditor`. Destructure + re-export εδώ θα
+  // την ξανάγραφε 2 ακόμη φορές (και κάθε νέο πεδίο θα ήθελε 3 edits αντί για 1).
+  const editor = usePropertyEditor();
 
   // 3. Filtering Logic
-  const { filteredProperties, stats } = usePropertyFilters(properties, filters);
+  const { filteredProperties, stats } = usePropertyFilters(properties, editor.filters);
 
   // 4. Polygon Action Handlers
   const {
@@ -176,11 +138,11 @@ export function usePropertyViewer() {
     floors,
     setProperties,
     setSelectedProperties,
-    selectedFloorId: selectedFloorId || process.env.NEXT_PUBLIC_DEFAULT_FLOOR_ID || 'floor-1',
-    isConnecting,
-    firstConnectionPoint,
-    setIsConnecting,
-    setFirstConnectionPoint,
+    selectedFloorId: selectedFloorId || FALLBACK_FLOOR_ID,
+    isConnecting: editor.isConnecting,
+    firstConnectionPoint: editor.firstConnectionPoint,
+    setIsConnecting: editor.setIsConnecting,
+    setFirstConnectionPoint: editor.setFirstConnectionPoint,
     forceDataRefresh,
   });
 
@@ -240,41 +202,13 @@ export function usePropertyViewer() {
     canRedo,
     forceDataRefresh,
 
-    // from usePropertyEditor
-    activeTool,
-    setActiveTool,
-    showGrid,
-    setShowGrid,
-    snapToGrid,
-    setSnapToGrid,
-    gridSize,
-    setGridSize,
-    showMeasurements,
-    setShowMeasurements,
-    scale,
-    setScale,
-    showHistoryPanel,
-    setShowHistoryPanel,
-    suggestionToDisplay,
-    setSuggestionToDisplay,
-    connections,
-    setConnections,
-    groups,
-    setGroups,
-    isConnecting,
-    setIsConnecting,
-    firstConnectionPoint,
-    setFirstConnectionPoint,
-    viewMode,
-    setViewMode,
-    showDashboard,
-    setShowDashboard,
-    filters: filters || DEFAULT_FILTERS,
-    setFilters,
+    // from usePropertyEditor (ΟΛΑ τα πεδία του — η λίστα ζει εκεί, όχι εδώ)
+    ...editor,
+    filters: editor.filters || DEFAULT_FILTERS,
 
     // from usePropertyFilters
     filteredProperties: filteredProperties || [],
-    stats: stats || DEFAULT_STATS,
+    stats: stats || DEFAULT_PROPERTY_STATS,
 
     // from usePolygonHandlers
     handlePolygonCreated,
