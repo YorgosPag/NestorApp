@@ -572,3 +572,14 @@ faces), and the cut elevation is unified to a single FFL-relative frame across 2
   polygonOffset). Section/cut suites **287/287 GREEN**. tsc SKIP (N.17). UNCOMMITTED — 🔴 browser-verify σε βαριά
   γεωαναφερμένη κάτοψη (✅ Giorgio: «λύθηκε, συμπαγή») + commit=Giorgio. (σχετικό: ADR-366 §A.3 stencil, ADR-455
   axis cuts, ADR-040.)
+
+- **v2.20 (2026-07-16) — ⚠️ ΑΛΛΑΓΗ ΣΥΜΒΟΛΑΙΟΥ: τα clip planes είναι πλέον PER-SCOPE → ADR-665.**
+  Το `applyClippingPlanes(scene, planes)` έγινε `applyClippingPlanes(root, planes: ScopeClipPlanes)` —
+  ένα `Record<'default'|'topo', Plane[]|null>` αντί για ένα ενιαίο array. Ο `SectionSceneController`
+  παραμένει ο **μοναδικός ιδιοκτήτης** των planes· απλώς δίνει πλέον διαφορετικό set στο τοπογραφικό
+  ανάγλυφο (κοπή στη στάθμη ενεργού ορόφου) απ' ό,τι στο κτίριο (**το κτίριο δεν κόβεται από αυτήν**).
+  Το `CUT_PLANE_KEEP_EPSILON_M` (§`cut-plane-3d.ts`) έγινε `export` για να το μοιραστεί ο νέος
+  resolver — **όχι** δεύτερη σταθερά 1mm. Το `isStencilActive()` μένει ΑΜΕΤΑΒΛΗΤΟ (διαβάζει
+  `combinedPlanes`) ⇒ terrain-only τομή **δεν** ανοίγει το ακριβό stencil path. Το fast path
+  (composition key) μεταλλάσσει πλέον και τα `terrainCuts` constants ⇒ **η αλλαγή ορόφου είναι δωρεάν**.
+  Πλήρες σκεπτικό + ρίσκα: **ADR-665**. (σχετικό: ADR-455 composer reuse, ADR-650 terrain layers.)

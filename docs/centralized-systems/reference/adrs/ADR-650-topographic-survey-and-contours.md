@@ -1779,3 +1779,25 @@ technologismiki (Ν.4495/2017), xyz.gr/geodimetro.gr/greenbuilding.gr/cityengine
   **Status: M10d #Γ topo-only background pass SUPERSEDED από ADR-661 (γενικό array-order SSoT).
   Draw-order concerns για τις ισοϋψείς ζουν πλέον στο ADR-661· αυτό το ADR-650 κρατά μόνο το
   «contours seat at back at generation» detail (§ regenerate-topo, βλ. ADR-661 §3).**
+
+---
+
+- **v-pointer (2026-07-16) — Το ανάγλυφο κόβεται πλέον στη στάθμη ενεργού ορόφου → ADR-665.**
+  Το M4 (3Δ terrain) + M10d (draped ισοϋψείς) έφεραν το ανάγλυφο στο 3Δ **χωρίς κοπή**: ο μηχανικός
+  στον 1ο όροφο έβλεπε μόνο χώμα, με το κτίριο θαμμένο (στιγμιότυπα Giorgio 2026-07-16). Το
+  **ADR-665** προσθέτει αυτόματη οριζόντια κοπή στο FFL του ενεργού ορόφου (το κτίριο μένει ακέραιο).
+
+  **Τι αλλάζει σε ΑΥΤΟ το ADR — τίποτα στο pipeline δεδομένων.** Το `getTopoSurface()` παραμένει το
+  ένα SSoT TIN· η τριγωνοποίηση, οι ισοϋψείς και το `TopoPointStore` δεν αγγίζονται. Αλλάζει μόνο η
+  **προβολή**: νέο πεδίο `autoClipAtActiveLevel` στο `terrain-3d-store` (default `true`· το `visible`
+  είναι ήδη `false` by default ⇒ η default σκηνή μένει byte-identical), και τα
+  `getTerrainMaterial3D` / `getTopoContourMaterial3D` μετακινούνται σε `terrain-materials-3d.ts`
+  (ο `MaterialCatalog3D` ήταν 499/500 γραμμές, N.7.1).
+
+  **⚠️ Bug που διορθώθηκε εκεί:** οι ισοϋψείς (`LineSegments`) **δεν κόβονταν ΠΟΤΕ** από καμία τομή —
+  ο applicator ξεκινούσε με `if (!(obj as THREE.Mesh).isMesh) return;`. Με ενεργό section box/axis cut
+  οι πορτοκαλί γραμμές αιωρούνταν άκοπες πάνω από το κομμένο χώμα. Ορατή αλλαγή σε κάθε υπάρχουσα
+  άποψη με ενεργή τομή + ορατό ανάγλυφο.
+
+  **«Όλοι οι όροφοι» → καμία κοπή** (καμία ενεργή στάθμη· ακολουθεί το ADR-399). **Point cloud
+  άκοπο** (δεν καλεί `seatTopoLayerRoot`, `PointsMaterial` εκτός allowlist) — σκόπιμο, §6.
