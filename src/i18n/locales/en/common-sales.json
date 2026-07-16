@@ -180,7 +180,7 @@
         "description": "Here you see all units that are actively for sale. Includes prices, buyer interest and sales statistics."
       },
       "filters": {
-        "toggle": "Toggle"
+        "toggle": "Toggle filters"
       },
       "loading": "Loading...",
       "gridLabel": "Grid label",

@@ -963,3 +963,11 @@ Public API αμετάβλητο → μηδέν αλλαγές στους callers
 - `src/components/projects/BasicProjectInfoTab.tsx` — removed company selection UI + unused imports/state
 - `src/components/projects/general-tab/GeneralProjectTab.tsx` — added EntityLinkCard for company at top
 - `src/components/building-management/tabs/GeneralTabContent.tsx` — moved EntityLinkCard above BasicInfoCard
+
+---
+
+## Changelog (συνέχεια)
+
+- **2026-07-16 (ADR-584 / N.18 — sales page-content SSoT)**: Οι σελίδες `SalesAvailableParkingPageContent` / `SalesAvailableStoragePageContent` περνούν στον κοινό σκελετό των σελίδων πωλήσεων (`sales-list-page-shell.tsx`) — βλ. πλήρη καταγραφή στο changelog του **ADR-197**. Δεν τις είχε σημάνει το jscpd (διαφορετικά ονόματα πεδίων από το ζεύγος properties↔sold), αλλά κουβαλούσαν το ίδιο μοτίβο· κεντρικοποιήθηκαν στον ίδιο γύρο ώστε να μη μείνουν δίδυμα (ακριβώς η παγίδα που προειδοποιεί ο N.18).
+  - Νέο `src/components/sales/shared/sales-space-page.ts` — τα κοινά των βοηθητικών χώρων: `salesSpaceSidebarProps()` (τα `SalesParkingSidebar`/`SalesStorageSidebar` έχουν ήδη ταυτόσημο props contract πάνω στο `SalesSpaceSidebar`, οπότε το πέρασμα κατάστασης→sidebar ορίζεται μία φορά), `salesSpaceCardPricing()` (η εμπορική τιμή κατισχύει της βασικής· τιμή/τ.μ. μόνο όταν υπάρχει θετικό εμβαδόν — ήταν αντιγραμμένο και στις δύο σελίδες), `mapCommonSpaceFilters()` (searchTerm/building/floor/type· η στάθμευση προσθέτει `status`, η αποθήκη `areaRange`).
+  - Ό,τι ανήκει σε έναν χώρο μένει στη σελίδα του: η ζώνη θέσης (`locationZone`) στη στάθμευση, το εμβαδόν στην αποθήκη, τα στατιστικά και τα εικονίδια του καθενός.
