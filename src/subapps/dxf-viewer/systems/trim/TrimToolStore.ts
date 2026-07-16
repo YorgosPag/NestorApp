@@ -1,224 +1,64 @@
 /**
  * TRIM TOOL STORE — ADR-350
  *
- * Module-level pub/sub store for the Trim command state machine.
- * Zero React state — mirrors StretchToolStore / ScaleToolStore pattern (ADR-040).
+ * Module-level pub/sub store για το Trim command state machine. Zero React state.
+ *
+ * Το state machine, τα mode/edgeMode/projectMode toggles, το fence-drag preview, το
+ * warning aggregation και τα closure registries ζουν ΟΛΑ στο κοινό `createEdgeToolStore`
+ * SSoT — αυτό το αρχείο κρατά ΜΟΝΟ ό,τι είναι πραγματικά trim-specific: τα preview/
+ * warning types του και το `eraseArmed` (eRase keyword — δεν έχει αντίστοιχο στο EXTEND).
  *
  * State machine (Q1/Q2 defaults: quick mode, no extend, UCS project):
  *   IDLE → PICKING                              (quick mode)
  *   IDLE → SELECTING_EDGES → PICKING             (standard mode)
  *   PICKING ↔ FENCE / CROSSING                   (drag selection sub-modes)
  *
+ * @see ../../stores/createEdgeToolStore.ts — το κοινό edge-tool SSoT
+ * @see ../extend/ExtendToolStore.ts — το αντίστροφο sibling
  * @see docs/centralized-systems/reference/adrs/ADR-350-trim-command.md §State Machine
  */
 
-import type { Point2D } from '../../rendering/types/Types';
-import { pointsEqual } from '../../rendering/entities/shared/geometry-vector-utils';
-import { createExternalStore } from '../../stores/createExternalStore';
+import {
+  createEdgeToolStore,
+  type EdgeToolBaseState,
+} from '../../stores/createEdgeToolStore';
 import {
   EMPTY_TRIM_WARNINGS,
-  type TrimEdgeMode,
-  type TrimMode,
   type TrimMultiPreview,
-  type TrimPhase,
   type TrimPreviewGeom,
-  type TrimProjectMode,
   type TrimWarningAggregator,
 } from './trim-types';
 
-// ── State ─────────────────────────────────────────────────────────────────────
-
-export interface TrimToolState {
-  readonly phase: TrimPhase;
-  readonly mode: TrimMode;
-  readonly edgeMode: TrimEdgeMode;
-  readonly projectMode: TrimProjectMode;
-  /** Empty array in Quick mode = "all visible entities". Populated in Standard mode. */
-  readonly cuttingEdgeIds: ReadonlyArray<string>;
-  /** Cursor world position last sampled by the mouse-move pipeline. */
-  readonly hoverPoint: Point2D | null;
-  /** Single-pick preview (under the cursor pickbox). */
-  readonly hoverPreview: TrimPreviewGeom | null;
-  /** Multi-pick preview (fence/crossing drag). */
-  readonly dragPreview: TrimMultiPreview | null;
-  /** SHIFT held → preview becomes green (EXTEND inverse, Q9 + G4). */
-  readonly inverseMode: boolean;
-  /** Next click deletes target instead of trimming (eRase keyword armed). */
+/** TRIM-only state — δεν υπάρχει eRase keyword στο EXTEND. */
+interface TrimExtraState {
+  /** Το επόμενο κλικ διαγράφει το target αντί να το κόψει (eRase keyword armed). */
   readonly eraseArmed: boolean;
-  /** Counters flushed to a single toast on reset (G9). */
-  readonly warnings: TrimWarningAggregator;
-  /** Fence/crossing drag start point (set on mousedown when drag begins). */
-  readonly dragStart: Point2D | null;
-  /** Fence/crossing drag current point (60fps mousemove). */
-  readonly dragCurrent: Point2D | null;
 }
 
-const INITIAL: TrimToolState = {
-  phase: 'idle',
-  mode: 'quick',
-  edgeMode: 'noExtend',
-  projectMode: 'ucs',
-  cuttingEdgeIds: [],
-  hoverPoint: null,
-  hoverPreview: null,
-  dragPreview: null,
-  inverseMode: false,
-  eraseArmed: false,
-  warnings: EMPTY_TRIM_WARNINGS,
-  dragStart: null,
-  dragCurrent: null,
-};
+/**
+ * `edgeIds` = τα cutting edges. Empty array σε Quick mode = «όλες οι ορατές οντότητες».
+ */
+export type TrimToolState = EdgeToolBaseState<
+  TrimPreviewGeom,
+  TrimMultiPreview,
+  TrimWarningAggregator
+> &
+  TrimExtraState;
 
-// ── Pick function registry (avoids prop-threading through orchestrators) ──────
-
-type PickFn = (worldPoint: Point2D, shiftKey: boolean) => void;
-let _pickFn: PickFn | null = null;
-
-// ── Fence function registry ────────────────────────────────────────────────────
-
-type FenceFn = (fenceStart: Point2D, fenceEnd: Point2D, shiftKey: boolean) => void;
-let _fenceFn: FenceFn | null = null;
-
-// ── Fence preview function registry (Phase 5 — G5 live drag preview) ──────────
-
-type FencePreviewFn = (fenceStart: Point2D, fenceEnd: Point2D) => void;
-let _fencePreviewFn: FencePreviewFn | null = null;
-
-type HoverMoveFn = (worldPoint: Point2D, shiftKey: boolean) => void;
-let _hoverMoveFn: HoverMoveFn | null = null;
-
-// ── Store ─────────────────────────────────────────────────────────────────────
-
-const store = createExternalStore<TrimToolState>(INITIAL, { equals: Object.is });
-
-function _patch(partial: Partial<TrimToolState>): void {
-  store.set({ ...store.get(), ...partial });
-}
+const base = createEdgeToolStore<
+  TrimPreviewGeom,
+  TrimMultiPreview,
+  TrimWarningAggregator,
+  TrimExtraState
+>({
+  emptyWarnings: EMPTY_TRIM_WARNINGS,
+  extraInitial: { eraseArmed: false },
+});
 
 export const TrimToolStore = {
-  getState(): TrimToolState {
-    return store.get();
-  },
-
-  subscribe(listener: () => void): () => void {
-    return store.subscribe(listener);
-  },
-
-  setPhase(phase: TrimPhase): void {
-    _patch({ phase });
-  },
-
-  setMode(mode: TrimMode): void {
-    _patch({ mode });
-  },
-
-  toggleMode(): void {
-    _patch({ mode: store.get().mode === 'quick' ? 'standard' : 'quick' });
-  },
-
-  setEdgeMode(edgeMode: TrimEdgeMode): void {
-    _patch({ edgeMode });
-  },
-
-  toggleEdgeMode(): void {
-    _patch({ edgeMode: store.get().edgeMode === 'noExtend' ? 'extend' : 'noExtend' });
-  },
-
-  setProjectMode(projectMode: TrimProjectMode): void {
-    _patch({ projectMode });
-  },
-
-  setCuttingEdgeIds(ids: ReadonlyArray<string>): void {
-    _patch({ cuttingEdgeIds: ids });
-  },
-
-  setHoverPoint(pt: Point2D | null): void {
-    if (pointsEqual(store.get().hoverPoint, pt)) return;
-    _patch({ hoverPoint: pt });
-  },
-
-  setHoverPreview(preview: TrimPreviewGeom | null): void {
-    _patch({ hoverPreview: preview });
-  },
-
-  setDragPreview(preview: TrimMultiPreview | null): void {
-    _patch({ dragPreview: preview });
-  },
-
-  setInverseMode(inverse: boolean): void {
-    if (store.get().inverseMode === inverse) return;
-    _patch({ inverseMode: inverse });
-  },
+  ...base,
 
   setEraseArmed(armed: boolean): void {
-    _patch({ eraseArmed: armed });
-  },
-
-  setDrag(start: Point2D | null, current: Point2D | null): void {
-    _patch({ dragStart: start, dragCurrent: current });
-  },
-
-  incrementWarning(key: keyof TrimWarningAggregator, by = 1): void {
-    const state = store.get();
-    const next: TrimWarningAggregator = { ...state.warnings, [key]: state.warnings[key] + by };
-    _patch({ warnings: next });
-  },
-
-  clearWarnings(): void {
-    _patch({ warnings: EMPTY_TRIM_WARNINGS });
-  },
-
-  /**
-   * Register the performTrimPick closure from useTrimTool.
-   * Called on tool activate (with fn) and deactivate (with null).
-   */
-  registerPickFn(fn: PickFn | null): void {
-    _pickFn = fn;
-  },
-
-  /** Invoke the registered pick function (used by drag-capture leaf). */
-  execPick(worldPoint: Point2D, shiftKey: boolean): void {
-    _pickFn?.(worldPoint, shiftKey);
-  },
-
-  /**
-   * Register the performFenceTrim closure from useTrimTool.
-   * Called on tool activate (with fn) and deactivate (with null).
-   */
-  registerFenceFn(fn: FenceFn | null): void {
-    _fenceFn = fn;
-  },
-
-  /** Invoke the registered fence function after a fence drag ends. */
-  execFence(fenceStart: Point2D, fenceEnd: Point2D, shiftKey: boolean): void {
-    _fenceFn?.(fenceStart, fenceEnd, shiftKey);
-  },
-
-  /** Register the computeFencePreview closure from useTrimTool (Phase 5). */
-  registerFencePreviewFn(fn: FencePreviewFn | null): void {
-    _fencePreviewFn = fn;
-  },
-
-  /** Invoke the preview fn during fence drag mousemove (throttled by caller). */
-  execFencePreview(fenceStart: Point2D, fenceEnd: Point2D): void {
-    _fencePreviewFn?.(fenceStart, fenceEnd);
-  },
-
-  /** Register the handleTrimMouseMove closure from useTrimTool (Phase 6 fix). */
-  registerHoverMoveFn(fn: HoverMoveFn | null): void {
-    _hoverMoveFn = fn;
-  },
-
-  /** Invoke the hover move fn on each pointermove while in picking phase. */
-  execHoverMove(worldPoint: Point2D, shiftKey: boolean): void {
-    _hoverMoveFn?.(worldPoint, shiftKey);
-  },
-
-  reset(): void {
-    _pickFn = null;
-    _fenceFn = null;
-    _fencePreviewFn = null;
-    _hoverMoveFn = null;
-    store.set(INITIAL);
+    base.patch({ eraseArmed: armed });
   },
 } as const;

@@ -27,7 +27,8 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { DetectedRectangle } from './wall-in-region';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
-import { normalize } from './perimeter-polygon-math';
+import type { LocalRect } from './perimeter-polygon-math';
+import { rotate, rectCorners, toLocalFrame, uniqueSorted } from './perimeter-polygon-math';
 
 /** Προσανατολισμός τοίχου στον οποίο ανατέθηκε ένα κελί καννάβου. */
 type Orient = 'H' | 'V' | 'none';
@@ -40,74 +41,11 @@ interface Grid {
   readonly assign: Orient[][];
 }
 
-/** Ορθογώνιο σκέλος σε τοπικό (axis-aligned) πλαίσιο. */
-interface LocalRect {
-  xa: number;
-  xb: number;
-  y0: number;
-  y1: number;
-}
-
 /** Λωρίδα προς συγχώνευση: `primary` = δείκτης σάρωσης, `[lo,hi]` = κάθετο run. */
 interface Strip {
   primary: number;
   lo: number;
   hi: number;
-}
-
-const COS_RIGHT = 0.08; // ~±4.6° ανοχή ορθής γωνίας (όπως wall-in-region / perimeter-math)
-
-// ─── Local axis-aligned frame helpers ────────────────────────────────────────
-
-function rotate(p: Point2D, ang: number): Point2D {
-  const c = Math.cos(ang);
-  const s = Math.sin(ang);
-  return { x: p.x * c - p.y * s, y: p.x * s + p.y * c };
-}
-
-function unit(dx: number, dy: number): Point2D {
-  const l = Math.hypot(dx, dy) || 1;
-  return { x: dx / l, y: dy / l };
-}
-
-/** Όλες οι γωνίες ~90°; (γινόμενο μοναδιαίων ακμών ~0). */
-function allRightAngles(poly: readonly Point2D[]): boolean {
-  const n = poly.length;
-  for (let i = 0; i < n; i++) {
-    const prev = poly[(i - 1 + n) % n];
-    const cur = poly[i];
-    const next = poly[(i + 1) % n];
-    const u = unit(prev.x - cur.x, prev.y - cur.y);
-    const v = unit(next.x - cur.x, next.y - cur.y);
-    if (Math.abs(u.x * v.x + u.y * v.y) > COS_RIGHT) return false;
-  }
-  return true;
-}
-
-/** Γωνία της μεγαλύτερης ακμής (τοπικό πλαίσιο → άξονας X). */
-function dominantEdgeAngle(poly: readonly Point2D[]): number {
-  let best = 0;
-  let bestLen = -1;
-  for (let i = 0; i < poly.length; i++) {
-    const a = poly[i];
-    const b = poly[(i + 1) % poly.length];
-    const len = Math.hypot(b.x - a.x, b.y - a.y);
-    if (len > bestLen) {
-      bestLen = len;
-      best = Math.atan2(b.y - a.y, b.x - a.x);
-    }
-  }
-  return best;
-}
-
-/** Ταξινομημένες μοναδικές τιμές (συγχώνευση εντός tol). */
-function uniqueSorted(values: readonly number[], tol: number): number[] {
-  const sorted = [...values].sort((a, b) => a - b);
-  const out: number[] = [];
-  for (const v of sorted) {
-    if (out.length === 0 || v - out[out.length - 1] > tol) out.push(v);
-  }
-  return out;
 }
 
 // ─── Grid construction ───────────────────────────────────────────────────────
@@ -264,14 +202,6 @@ function mergeStrips(
 // ─── LocalRect → DetectedRectangle ───────────────────────────────────────────
 
 function toDetectedRect(r: LocalRect, ang: number, orient: 'H' | 'V'): DetectedRectangle {
-  const corners: [Point2D, Point2D, Point2D, Point2D] = [
-    rotate({ x: r.xa, y: r.y0 }, ang),
-    rotate({ x: r.xb, y: r.y0 }, ang),
-    rotate({ x: r.xb, y: r.y1 }, ang),
-    rotate({ x: r.xa, y: r.y1 }, ang),
-  ];
-  const w = r.xb - r.xa;
-  const h = r.y1 - r.y0;
   // ADR-419 §T-junction — ΡΗΤΟΣ άξονας από τον γνωστό προσανατολισμό: H → κατά X (μεσοκάθετο
   // στο y-κέντρο), V → κατά Y (στο x-κέντρο). Κρίσιμο για κοντό-χοντρό stub (μήκος < πάχος):
   // ο άξονας μένει ΚΑΘΕΤΟΣ στον γείτονα ανεξάρτητα ποια πλευρά είναι μεγαλύτερη.
@@ -281,13 +211,7 @@ function toDetectedRect(r: LocalRect, ang: number, orient: 'H' | 'V'): DetectedR
     orient === 'H'
       ? [rotate({ x: r.xa, y: yc }, ang), rotate({ x: r.xb, y: yc }, ang)]
       : [rotate({ x: xc, y: r.y0 }, ang), rotate({ x: xc, y: r.y1 }, ang)];
-  return {
-    polygon: corners,
-    longSide: Math.max(w, h),
-    shortSide: Math.min(w, h),
-    area: w * h,
-    axis,
-  };
+  return { ...rectCorners(r, ang), axis };
 }
 
 // ─── Public API ──────────────────────────────────────────────────────────────
@@ -303,10 +227,9 @@ export function decomposeWallsFromFootprint(
   polygon: readonly Point2D[],
   tol: number,
 ): DetectedRectangle[] {
-  const poly = normalize(polygon, tol);
-  if (poly.length < 4 || !allRightAngles(poly)) return [];
-  const ang = dominantEdgeAngle(poly);
-  const local = poly.map((p) => rotate(p, -ang));
+  const frame = toLocalFrame(polygon, tol);
+  if (!frame) return [];
+  const { local, ang } = frame;
   const grid = buildGrid(local, tol);
   assignOrientations(grid);
   const { xs, ys } = grid;

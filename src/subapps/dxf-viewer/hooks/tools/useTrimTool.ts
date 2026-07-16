@@ -32,6 +32,11 @@ import type { TrimOperation } from '../../systems/trim/trim-types';
 import type { Entity } from '../../types/entities';
 import { useEdgeTriggeredLifecycle } from './useEdgeTriggeredLifecycle';
 import { useToolHintPrompt } from './useToolHintPrompt';
+import {
+  EDGE_TOOL_KEYWORDS,
+  resolveEdgePickTarget,
+  undoLastEdgeToolCommand,
+} from './edge-tool-shared';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -53,12 +58,9 @@ export interface UseTrimToolReturn {
 }
 
 // ── Keyword routing ──────────────────────────────────────────────────────────
+// Τα κοινά με το EXTEND ζουν στο edge-tool-shared· το eRase είναι TRIM-only.
 
-const KEYWORDS_BOUNDARY = new Set(['o', 'O', 'Ο', 'ο', 'b', 'B']);
 const KEYWORDS_ERASE = new Set(['d', 'D', 'Δ', 'δ', 'r', 'R']);
-const KEYWORDS_UNDO = new Set(['a', 'A', 'Α', 'α', 'u', 'U']);
-const KEYWORDS_MODE = new Set(['l', 'L', 'Λ', 'λ', 'm', 'M']);
-const KEYWORDS_EDGE = new Set(['e', 'E', 'Ε', 'ε']);
 
 // ── Hook ──────────────────────────────────────────────────────────────────────
 
@@ -101,16 +103,11 @@ export function useTrimTool(props: UseTrimToolProps): UseTrimToolReturn {
 
   const performTrimPick = useCallback(
     (worldPoint: Point2D, shiftKey: boolean): void => {
-      const sm = getSceneManager();
-      if (!sm || !levelManager.currentLevelId) return;
-      const scene = levelManager.getLevelScene(levelManager.currentLevelId);
-      if (!scene) return;
+      const picked = resolveEdgePickTarget(getSceneManager, levelManager, hitTestEntity, worldPoint);
+      if (!picked) return;
+      const { sm, scene, target } = picked;
 
       const state = TrimToolStore.getState();
-      const hitId = hitTestEntity(worldPoint);
-      if (!hitId) return;
-      const target = scene.entities.find((e) => e.id === hitId) as Entity | undefined;
-      if (!target) return;
 
       // HATCH → toast + skip (Q6)
       if (target.type === 'hatch') {
@@ -145,7 +142,7 @@ export function useTrimTool(props: UseTrimToolProps): UseTrimToolReturn {
       const edges = resolveCuttingEdges({
         mode: state.mode,
         scene,
-        selectedEdgeIds: state.cuttingEdgeIds,
+        selectedEdgeIds: state.edgeIds,
         edgeMode: state.edgeMode,
       });
       const intersections = computeIntersectionPoints(target, edges);
@@ -195,7 +192,7 @@ export function useTrimTool(props: UseTrimToolProps): UseTrimToolReturn {
       const state = TrimToolStore.getState();
       const hits = detectFenceHits({
         fenceStart, fenceEnd, scene,
-        mode: state.mode, cuttingEdgeIds: state.cuttingEdgeIds,
+        mode: state.mode, cuttingEdgeIds: state.edgeIds,
       });
       return { scene, state, hits };
     },
@@ -213,7 +210,7 @@ export function useTrimTool(props: UseTrimToolProps): UseTrimToolReturn {
 
       const edges = resolveCuttingEdges({
         mode: state.mode, scene,
-        selectedEdgeIds: state.cuttingEdgeIds, edgeMode: state.edgeMode,
+        selectedEdgeIds: state.edgeIds, edgeMode: state.edgeMode,
       });
 
       const fenceLayers = scene.layersById ?? {};
@@ -326,13 +323,13 @@ export function useTrimTool(props: UseTrimToolProps): UseTrimToolReturn {
         handleTrimEscape();
         return true;
       }
-      if (KEYWORDS_BOUNDARY.has(key)) {
+      if (EDGE_TOOL_KEYWORDS.BOUNDARY.has(key)) {
         TrimToolStore.toggleMode();
         const next = TrimToolStore.getState().mode;
         TrimToolStore.setPhase(next === 'standard' ? 'selectingEdges' : 'picking');
         return true;
       }
-      if (KEYWORDS_MODE.has(key)) {
+      if (EDGE_TOOL_KEYWORDS.MODE.has(key)) {
         TrimToolStore.toggleMode();
         return true;
       }
@@ -341,17 +338,11 @@ export function useTrimTool(props: UseTrimToolProps): UseTrimToolReturn {
         toolHintOverrideStore.setOverride(i18next.t('tool-hints:trimTool.eraseArmed'));
         return true;
       }
-      if (KEYWORDS_UNDO.has(key)) {
-        const last = lastCommandRef.current;
-        if (last) {
-          last.undo();
-          lastCommandRef.current = null;
-        } else {
-          toolHintOverrideStore.setOverride(i18next.t('tool-hints:trimTool.undoEmpty'));
-        }
+      if (EDGE_TOOL_KEYWORDS.UNDO.has(key)) {
+        undoLastEdgeToolCommand(lastCommandRef, 'tool-hints:trimTool.undoEmpty');
         return true;
       }
-      if (KEYWORDS_EDGE.has(key) && !shiftKey) {
+      if (EDGE_TOOL_KEYWORDS.EDGE.has(key) && !shiftKey) {
         TrimToolStore.toggleEdgeMode();
         return true;
       }
@@ -384,7 +375,7 @@ export function useTrimTool(props: UseTrimToolProps): UseTrimToolReturn {
       if (!target || !isTrimmable(target)) { TrimToolStore.setHoverPreview(null); return; }
 
       const edges = resolveCuttingEdges({
-        mode: state.mode, scene, selectedEdgeIds: state.cuttingEdgeIds, edgeMode: state.edgeMode,
+        mode: state.mode, scene, selectedEdgeIds: state.edgeIds, edgeMode: state.edgeMode,
       });
       const intersections = computeIntersectionPoints(target, edges);
       const path = computeHoverPreviewPath(target, intersections, worldPoint);

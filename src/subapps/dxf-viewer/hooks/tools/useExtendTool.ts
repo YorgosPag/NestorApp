@@ -28,10 +28,14 @@ import { computeIntersectionPoints } from '../../systems/trim/trim-intersection-
 import { trimEntity } from '../../systems/trim/trim-entity-cutter';
 import { castExtendIntersection, isExtendable } from '../../systems/extend/extend-intersection-caster';
 import type { ExtendOperation } from '../../systems/extend/extend-types';
-import type { Entity } from '../../types/entities';
 import { generateEntityId } from '@/services/enterprise-id.service';
 import { useEdgeTriggeredLifecycle } from './useEdgeTriggeredLifecycle';
 import { useToolHintPrompt } from './useToolHintPrompt';
+import {
+  EDGE_TOOL_KEYWORDS,
+  resolveEdgePickTarget,
+  undoLastEdgeToolCommand,
+} from './edge-tool-shared';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -50,13 +54,6 @@ export interface UseExtendToolReturn {
   handleExtendKeyDown: (key: string, shiftKey: boolean) => boolean;
   handleExtendMouseMove: (worldPoint: Point2D, shiftKey: boolean) => void;
 }
-
-// ── Keyword routing ──────────────────────────────────────────────────────────
-
-const KEYWORDS_BOUNDARY = new Set(['o', 'O', 'Ο', 'ο', 'b', 'B']);
-const KEYWORDS_UNDO = new Set(['a', 'A', 'Α', 'α', 'u', 'U']);
-const KEYWORDS_MODE = new Set(['l', 'L', 'Λ', 'λ', 'm', 'M']);
-const KEYWORDS_EDGE = new Set(['e', 'E', 'Ε', 'ε']);
 
 // ── Hook ──────────────────────────────────────────────────────────────────────
 
@@ -111,15 +108,9 @@ export function useExtendTool(props: UseExtendToolProps): UseExtendToolReturn {
 
   const performExtendPick = useCallback(
     (worldPoint: Point2D, shiftKey: boolean): void => {
-      const sm = getSceneManager();
-      if (!sm || !levelManager.currentLevelId) return;
-      const scene = levelManager.getLevelScene(levelManager.currentLevelId);
-      if (!scene) return;
-
-      const hitId = hitTestEntity(worldPoint);
-      if (!hitId) return;
-      const target = scene.entities.find((e) => e.id === hitId) as Entity | undefined;
-      if (!target) return;
+      const picked = resolveEdgePickTarget(getSceneManager, levelManager, hitTestEntity, worldPoint);
+      if (!picked) return;
+      const { sm, scene, target } = picked;
 
       const layers = scene.layersById ?? {};
       const layer = target.layerId ? layers[target.layerId] : undefined;
@@ -132,7 +123,7 @@ export function useExtendTool(props: UseExtendToolProps): UseExtendToolReturn {
       const boundaries = resolveCuttingEdges({
         mode: state.mode,
         scene,
-        selectedEdgeIds: state.boundaryEdgeIds,
+        selectedEdgeIds: state.edgeIds,
         edgeMode: state.edgeMode,
       });
 
@@ -220,27 +211,21 @@ export function useExtendTool(props: UseExtendToolProps): UseExtendToolReturn {
         handleExtendEscape();
         return true;
       }
-      if (KEYWORDS_BOUNDARY.has(key)) {
+      if (EDGE_TOOL_KEYWORDS.BOUNDARY.has(key)) {
         ExtendToolStore.toggleMode();
         const next = ExtendToolStore.getState().mode;
         ExtendToolStore.setPhase(next === 'standard' ? 'selectingEdges' : 'picking');
         return true;
       }
-      if (KEYWORDS_MODE.has(key)) {
+      if (EDGE_TOOL_KEYWORDS.MODE.has(key)) {
         ExtendToolStore.toggleMode();
         return true;
       }
-      if (KEYWORDS_UNDO.has(key)) {
-        const last = lastCommandRef.current;
-        if (last) {
-          last.undo();
-          lastCommandRef.current = null;
-        } else {
-          toolHintOverrideStore.setOverride(i18next.t('tool-hints:extendTool.undoEmpty'));
-        }
+      if (EDGE_TOOL_KEYWORDS.UNDO.has(key)) {
+        undoLastEdgeToolCommand(lastCommandRef, 'tool-hints:extendTool.undoEmpty');
         return true;
       }
-      if (KEYWORDS_EDGE.has(key) && !shiftKey) {
+      if (EDGE_TOOL_KEYWORDS.EDGE.has(key) && !shiftKey) {
         ExtendToolStore.toggleEdgeMode();
         return true;
       }
@@ -273,7 +258,7 @@ export function useExtendTool(props: UseExtendToolProps): UseExtendToolReturn {
 
       const boundaries = resolveCuttingEdges({
         mode: state.mode, scene,
-        selectedEdgeIds: state.boundaryEdgeIds, edgeMode: state.edgeMode,
+        selectedEdgeIds: state.edgeIds, edgeMode: state.edgeMode,
       });
       const op = castExtendIntersection(target, worldPoint, boundaries);
       if (!op || op.kind !== 'extend') { ExtendToolStore.setHoverPreview(null); return; }

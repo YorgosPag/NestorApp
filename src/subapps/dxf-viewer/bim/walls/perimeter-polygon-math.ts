@@ -35,9 +35,23 @@ function crossZ(o: Point2D, a: Point2D, b: Point2D): number {
   return (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
 }
 
-function unit(dx: number, dy: number): Point2D {
+export function unit(dx: number, dy: number): Point2D {
   const l = Math.hypot(dx, dy) || 1;
   return { x: dx / l, y: dy / l };
+}
+
+/**
+ * Τριάδες (prev, cur, next) με κυκλική περιτύλιξη — SSoT για κάθε σάρωση γωνιών
+ * κορυφής (συγγραμμικά / ορθές γωνίες / ανακλαστικές). Χωρίς αυτό, η ίδια τριπλή
+ * modular indexing επαναλαμβανόταν σε 4 συναρτήσεις.
+ */
+function* vertexTriples(
+  poly: readonly Point2D[],
+): Generator<{ prev: Point2D; cur: Point2D; next: Point2D; i: number }> {
+  const n = poly.length;
+  for (let i = 0; i < n; i++) {
+    yield { prev: poly[(i - 1 + n) % n], cur: poly[i], next: poly[(i + 1) % n], i };
+  }
 }
 
 // ─── Polygon normalization ───────────────────────────────────────────────────
@@ -51,13 +65,9 @@ function dedupeClosing(poly: readonly Point2D[]): Point2D[] {
 
 /** Διώχνει συγγραμμικές κορυφές (κάθετη απόσταση από prev→next < tol). */
 function removeCollinear(poly: readonly Point2D[], tol: number): Point2D[] {
-  const n = poly.length;
-  if (n < 3) return projectVerticesTo2D(poly);
+  if (poly.length < 3) return projectVerticesTo2D(poly);
   const out: Point2D[] = [];
-  for (let i = 0; i < n; i++) {
-    const prev = poly[(i - 1 + n) % n];
-    const cur = poly[i];
-    const next = poly[(i + 1) % n];
+  for (const { prev, cur, next } of vertexTriples(poly)) {
     const base = dist(prev, next);
     const height = base > EPS ? Math.abs(crossZ(prev, cur, next)) / base : 0;
     if (height >= tol) out.push(projectPointTo2D(cur));
@@ -133,12 +143,8 @@ export function normalize(poly: readonly Point2D[], tol: number): Point2D[] {
 // ─── Angle analysis ──────────────────────────────────────────────────────────
 
 /** Όλες οι γωνίες ~90°; (γινόμενο μοναδιαίων ακμών ~0). */
-function allRightAngles(poly: readonly Point2D[]): boolean {
-  const n = poly.length;
-  for (let i = 0; i < n; i++) {
-    const prev = poly[(i - 1 + n) % n];
-    const cur = poly[i];
-    const next = poly[(i + 1) % n];
+export function allRightAngles(poly: readonly Point2D[]): boolean {
+  for (const { prev, cur, next } of vertexTriples(poly)) {
     const u = unit(prev.x - cur.x, prev.y - cur.y);
     const v = unit(next.x - cur.x, next.y - cur.y);
     if (Math.abs(u.x * v.x + u.y * v.y) > COS_RIGHT) return false;
@@ -148,13 +154,9 @@ function allRightAngles(poly: readonly Point2D[]): boolean {
 
 /** Πλήθος ανακλαστικών (reflex, >180°) κορυφών σε CCW πολύγωνο. */
 function countReflex(ccwPoly: readonly Point2D[]): number {
-  const n = ccwPoly.length;
   let r = 0;
-  for (let i = 0; i < n; i++) {
-    const prev = ccwPoly[(i - 1 + n) % n];
-    const cur = ccwPoly[i];
-    const next = ccwPoly[(i + 1) % n];
-    // CCW polygon: θετικό cross = κυρτή κορυφή, αρνητικό = ανακλαστική (reflex).
+  // CCW polygon: θετικό cross = κυρτή κορυφή, αρνητικό = ανακλαστική (reflex).
+  for (const { prev, cur, next } of vertexTriples(ccwPoly)) {
     if (crossZ(prev, cur, next) < -EPS) r++;
   }
   return r;
@@ -169,10 +171,8 @@ function countReflex(ccwPoly: readonly Point2D[]): number {
 function classifyTU(ccwPoly: readonly Point2D[]): 'T' | 'U' {
   const n = ccwPoly.length;
   const reflex: number[] = [];
-  for (let i = 0; i < n; i++) {
-    const prev = ccwPoly[(i - 1 + n) % n];
-    const next = ccwPoly[(i + 1) % n];
-    if (crossZ(prev, ccwPoly[i], next) < -EPS) reflex.push(i);
+  for (const { prev, cur, next, i } of vertexTriples(ccwPoly)) {
+    if (crossZ(prev, cur, next) < -EPS) reflex.push(i);
   }
   if (reflex.length < 2) return 'U';
   const raw = Math.abs(reflex[0] - reflex[1]);
@@ -193,14 +193,14 @@ export function classifyPerimeter(polygon: readonly Point2D[], tol: number): Per
 
 // ─── Rectilinear decomposition (slab sweep) ──────────────────────────────────
 
-function rotate(p: Point2D, ang: number): Point2D {
+export function rotate(p: Point2D, ang: number): Point2D {
   const c = Math.cos(ang);
   const s = Math.sin(ang);
   return { x: p.x * c - p.y * s, y: p.x * s + p.y * c };
 }
 
 /** Γωνία της μεγαλύτερης ακμής (τοπικό πλαίσιο → άξονας X). */
-function dominantEdgeAngle(poly: readonly Point2D[]): number {
+export function dominantEdgeAngle(poly: readonly Point2D[]): number {
   let best = 0;
   let bestLen = -1;
   for (let i = 0; i < poly.length; i++) {
@@ -216,7 +216,7 @@ function dominantEdgeAngle(poly: readonly Point2D[]): number {
 }
 
 /** Ταξινομημένες μοναδικές τιμές (συγχώνευση εντός tol). */
-function uniqueSorted(values: number[], tol: number): number[] {
+export function uniqueSorted(values: readonly number[], tol: number): number[] {
   const sorted = [...values].sort((a, b) => a - b);
   const out: number[] = [];
   for (const v of sorted) {
@@ -239,7 +239,7 @@ function horizontalCrossings(poly: readonly Point2D[], y: number): number[] {
   return xs.sort((p, q) => p - q);
 }
 
-interface LocalRect {
+export interface LocalRect {
   xa: number;
   xb: number;
   y0: number;
@@ -284,8 +284,11 @@ function slabDecompose(local: readonly Point2D[], tol: number): LocalRect[] {
   return mergeVertical(rects, tol);
 }
 
-/** LocalRect → DetectedRectangle (στροφή πίσω στο world πλαίσιο). */
-function toDetectedRect(r: LocalRect, ang: number): DetectedRectangle {
+/**
+ * LocalRect → DetectedRectangle (στροφή πίσω στο world πλαίσιο). SSoT — το
+ * `wall-footprint-decompose` το καταναλώνει και προσθέτει από πάνω τον `axis` του.
+ */
+export function rectCorners(r: LocalRect, ang: number): DetectedRectangle {
   const corners: [Point2D, Point2D, Point2D, Point2D] = [
     rotate({ x: r.xa, y: r.y0 }, ang),
     rotate({ x: r.xb, y: r.y0 }, ang),
@@ -303,14 +306,27 @@ function toDetectedRect(r: LocalRect, ang: number): DetectedRectangle {
 }
 
 /**
+ * Κανονικοποίηση + στροφή στο τοπικό axis-aligned πλαίσιο (μεγαλύτερη ακμή → άξονας X).
+ * `null` αν το πολύγωνο δεν είναι ορθογωνικό (γωνίες ≠ 90°) — κοινή είσοδος και για τα
+ * δύο decomposition περάσματα (slab sweep εδώ, grid/run στο `wall-footprint-decompose`).
+ */
+export function toLocalFrame(
+  polygon: readonly Point2D[],
+  tol: number,
+): { local: Point2D[]; ang: number } | null {
+  const poly = normalize(polygon, tol);
+  if (poly.length < 4 || !allRightAngles(poly)) return null;
+  const ang = dominantEdgeAngle(poly);
+  return { local: poly.map((p) => rotate(p, -ang)), ang };
+}
+
+/**
  * Αποσύνθεση ορθογωνικού πολυγώνου σε ορθογώνια σκέλη (slab sweep σε τοπικό πλαίσιο
  * ευθυγραμμισμένο με τη μεγαλύτερη ακμή). Επιστρέφει `[]` αν δεν είναι ορθογωνικό
  * (γωνίες ≠ 90° → 'composite').
  */
 export function decomposeRectilinear(polygon: readonly Point2D[], tol: number): DetectedRectangle[] {
-  const poly = normalize(polygon, tol);
-  if (poly.length < 4 || !allRightAngles(poly)) return [];
-  const ang = dominantEdgeAngle(poly);
-  const local = poly.map((p) => rotate(p, -ang));
-  return slabDecompose(local, tol).map((r) => toDetectedRect(r, ang));
+  const frame = toLocalFrame(polygon, tol);
+  if (!frame) return [];
+  return slabDecompose(frame.local, tol).map((r) => rectCorners(r, frame.ang));
 }
