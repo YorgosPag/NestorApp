@@ -197,6 +197,8 @@ firestore.rules.compiled
 
 # Generated clone-detection report (jscpd· βλ. N.18 / ADR-584)
 /report/
+# Ενδιάμεσο json report του ratchet runner (scripts/check-jscpd-ratchet.js)
+/.jscpd-tmp/
 
 # Παραγόμενα entourage sprites (ADR-654) — ίδια σύμβαση με το public/textures του
 # ADR-413: τα binaries ζουν στο Firebase Storage (asset-packs/), όχι στο repo.

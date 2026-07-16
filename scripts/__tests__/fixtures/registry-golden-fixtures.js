@@ -13,6 +13,7 @@
  *   Core: firestore-collections, enterprise-id, domain-constants,
  *         addDoc-prohibition, intent-badge-utils
  *   Tier 1: tenant-company-id, soft-delete-config, gcs-buckets
+ *   Tier 2: openai-provider
  *   Tier 3: intl-formatting, date-local, notification-events
  *   Tier 5: storage-path-construction, entity-creation-manual
  *
@@ -111,6 +112,25 @@ const storage = FIREBASE_STORAGE_BUCKET;
 const authDomain = 'pagonis-87766.firebaseapp.com';
 const storageHost = 'pagonis-87766.firebasestorage.app';
 const backupsLiteral = 'pagonis-87766-backups';`,
+  },
+
+  'openai-provider': {
+    shouldMatch: `// Scanner must catch every hand-rolled OpenAI client:
+const provider = createOpenAI({ apiKey, baseURL });
+const response = await fetch(\`\${this.config.baseUrl}/responses\`, { method: 'POST', body });
+const reply = await fetch(\`\${baseUrl}/chat/completions\`, { method: 'POST', body });
+const direct = await fetch('https://api.openai.com/v1/responses', { method: 'POST' });`,
+    shouldSkip: `// Scanner must pass SSoT-routed access + known false-positive traps:
+import { getOpenAIProvider } from '@/services/ai/openai-provider';
+import { executeResponsesRequest, extractOutputText } from '@/services/ai/openai-responses';
+const payload = await executeResponsesRequest(config, request);
+const text = extractOutputText(payload);
+const model = getOpenAIProvider()('gpt-4o-mini');
+// Unrelated Telegram reply-builder modules that merely end in "/responses":
+import { createSearchMenuResponse } from './responses';
+const { createDatabaseUnavailableResponse } = await import('./message/responses');
+// Health check hits a different endpoint:
+const health = await fetch(\`\${baseUrl}/models\`, { headers });`,
   },
 
   'intl-formatting': {

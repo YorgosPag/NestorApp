@@ -286,7 +286,7 @@
     },
     "storage-public-upload": {
       "ssotFile": "src/services/storage-admin/public-upload.service.ts",
-      "description": "Server-side publicly-accessible uploads must go through uploadPublicFile(). Three failure modes blocked: (1) makePublic() silently no-ops on UBLA-enabled buckets making storage.googleapis.com URLs return 403; (2) hardcoded storage.googleapis.com URL templates assume public ACL; (3) bucket.file().save() without prior FILES/{fileId} pre-claim races against onStorageFinalize orphan-cleanup which deletes the file hundreds of ms after upload (ADR-327 incident 2026-04-27). The pre-claim must be written BEFORE save() — uploadPublicFile() does this atomically.",
+      "description": "Server-side publicly-accessible uploads must go through uploadPublicFile(). Three failure modes blocked: (1) makePublic() silently no-ops on UBLA-enabled buckets making storage.googleapis.com URLs return 403; (2) hardcoded storage.googleapis.com URL templates assume public ACL; (3) bucket.file().save() without prior FILES/{fileId} pre-claim races against onStorageFinalize orphan-cleanup which deletes the file hundreds of ms after upload (ADR-327 incident 2026-04-27). The pre-claim must be written BEFORE save() — uploadPublicFile() does this atomically. Reading legacy storage.googleapis.com URLs already persisted on documents is the download twin's job (src/lib/firebaseAdmin-storage.ts, allowlisted) — it strips the prefix, it never mints a public URL.",
       "forbiddenPatterns": [
         "\\.makePublic\\(\\)",
         "https://storage\\.googleapis\\.com/\\$\\{",
@@ -294,6 +294,7 @@
       ],
       "allowlist": [
         "src/services/storage-admin/public-upload.service.ts",
+        "src/lib/firebaseAdmin-storage.ts",
         "src/app/api/upload/photo/route.ts",
         "src/app/api/communications/webhooks/telegram/telegram/media-download-storage.ts",
         "src/app/api/vendor/quote/[token]/upload.ts",
@@ -436,12 +437,14 @@
     "_comment_tier2": "=== TIER 2: SECURITY (bypass = vulnerability) ===",
     "openai-provider": {
       "ssotFile": "src/services/ai/openai-provider.ts",
-      "description": "OpenAI provider creation must use getOpenAIProvider() — no inline createOpenAI() calls outside the SSoT module",
+      "description": "OpenAI access must go through an SSoT — no hand-rolled clients. (1) Vercel AI SDK: getOpenAIProvider() — no inline createOpenAI(). (2) Responses API: executeResponsesRequest() + extractOutputText() from @/services/ai/openai-responses — no raw fetch to /responses. (3) Chat Completions: raw fetch to /chat/completions is forbidden — use the AI SDK provider (vercel-ai-engine.ts). The createOpenAI-only pattern was blind to raw fetch, which is how 11 hand-rolled Responses clients and 4 Chat Completions clients grew unchallenged (ADR-584 jscpd audit 2026-07-16); dxf-openai-call.ts documented the loophole in a comment. Pre-existing call sites are tracked in the ratchet baseline and only decrease.",
       "forbiddenPatterns": [
-        "createOpenAI\\s*\\("
+        "createOpenAI\\s*\\(",
+        "fetch\\([^)]*(/responses|/chat/completions)"
       ],
       "allowlist": [
-        "src/services/ai/openai-provider.ts"
+        "src/services/ai/openai-provider.ts",
+        "src/services/ai/openai-responses/"
       ]
     },
     "ai-role-access-matrix": {
@@ -581,6 +584,28 @@
       ],
       "allowlist": [
         "src/config/project-mutation-impact.ts"
+      ]
+    },
+    "impact-guard-hook": {
+      "ssotFile": "src/hooks/impact-guard/useProjectImpactGuard.tsx",
+      "description": "Guards over ProjectMutationImpactPreview must bind useProjectImpactGuard (ADR-664). Only the SSoT renders ProjectMutationImpactDialog or declares the fail-safe preview; siblings supply scope+endpoint only. Client mirror of ADR-591 (server primitives).",
+      "forbiddenPatterns": [
+        "<ProjectMutationImpactDialog",
+        "buildUnavailableProjectImpactPreview\\s*\\(\\s*\\)\\s*:"
+      ],
+      "allowlist": [
+        "src/hooks/impact-guard/useProjectImpactGuard.tsx"
+      ]
+    },
+    "media-stream-session": {
+      "ssotFile": "src/hooks/media/useMediaStreamSession.ts",
+      "description": "Camera hooks (useCameraCapture, useVideoRecorder) must bind useMediaStreamSession (ADR-584). Only the SSoT opens the getUserMedia video session, binds the stream to the <video> element, maps the browser's error names to a stable code and stops the tracks on teardown; bindings supply audio/logger/onStreamReady/onStopped only. The pattern targets 'OverconstrainedError' because it appears nowhere but a copied getUserMedia error mapper — a re-implementation is exactly how the mapErrorToCode clone arose. Not aimed at useVoiceRecorder (audio-only, no preview, no session) nor at getDisplayMedia screen capture.",
+      "forbiddenPatterns": [
+        "OverconstrainedError"
+      ],
+      "allowlist": [
+        "src/hooks/media/useMediaStreamSession.ts",
+        "src/hooks/media/__tests__/useMediaStreamSession.test.tsx"
       ]
     },
     "ai-pipeline-config": {
