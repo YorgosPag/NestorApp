@@ -28,7 +28,11 @@ import {
   Layers,
   type LucideIcon,
 } from 'lucide-react';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { RibbonToggleWidget, type RibbonToggleConfig } from './RibbonToggleWidget';
+import { RibbonButtonIcon } from './buttons/RibbonButtonIcon';
+import { Tooltip, TooltipContent, TooltipTrigger } from './RibbonTooltip';
+import { useRibbonDispatch } from '../context/RibbonCommandContext';
 import {
   getGridDisplayOptions,
   setTopoGridVisible,
@@ -148,3 +152,38 @@ export const PointCloud3DVisibleToggle: React.FC = () => <RibbonToggleWidget con
 export const ContourStyleToggle: React.FC = () => <RibbonToggleWidget config={CONTOUR_STYLE} />;
 export const NorthModeToggle: React.FC = () => <RibbonToggleWidget config={NORTH_MODE} />;
 export const CutFillModeToggle: React.FC = () => <RibbonToggleWidget config={CUTFILL_MODE} />;
+
+/**
+ * ADR-662 Φ4 — «Νέφος σημείων…» manage button (ανοίγει τον cloud manager dialog με
+ * stats + show/hide + remove). Big-player (Revit/Figma): εντολή με ανεκπλήρωτη προϋπόθεση
+ * = **disabled + tooltip «γιατί»**, ΠΟΤΕ κενό dialog. Χωρίς εισαγμένο νέφος → greyed
+ * (`aria-disabled`, ώστε το tooltip να δείχνει τον λόγο)· με νέφος → `topo.cloud.open`.
+ *
+ * Store-subscribed widget (ίδιο SSoT με τα toggles πάνω — LOW-freq `pointcloud-3d-store`,
+ * ADR-040-safe)· τα visuals reuse τα SSoT `.dxf-ribbon-btn` classes (N.3, όχι inline).
+ */
+const PointCloud3DManageButtonInner: React.FC = () => {
+  const { t } = useTranslation('dxf-viewer-shell');
+  const { onAction } = useRibbonDispatch();
+  const st = React.useSyncExternalStore(subscribePointCloud3D, getPointCloud3DState, getPointCloud3DState);
+  const hasCloud = !!st.preview;
+  const label = t('ribbon.commands.topo.cloud.label');
+  const tooltip = hasCloud ? label : t('ribbon.commands.topo.cloud.emptyTip');
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          className="dxf-ribbon-btn dxf-ribbon-btn-small"
+          aria-disabled={!hasCloud}
+          onClick={() => { if (hasCloud) onAction('topo.cloud.open'); }}
+        >
+          <RibbonButtonIcon icon="topo-cloud" size="small" />
+          <span className="dxf-ribbon-btn-label-inline">{label}</span>
+        </button>
+      </TooltipTrigger>
+      <TooltipContent>{tooltip}</TooltipContent>
+    </Tooltip>
+  );
+};
+export const PointCloud3DManageButton = React.memo(PointCloud3DManageButtonInner);

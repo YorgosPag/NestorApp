@@ -36,7 +36,6 @@ import { MaterialsLibraryPanel } from '../panels/materials/MaterialsLibraryPanel
 // ADR-366 Group B — 3D scene controls mirrored in sidebar.
 import { Bim3DFloatingTab } from '../panels/bim3d/Bim3DFloatingTab';
 // ADR-650 Milestone 1 — Topographic contours panel (load points → contours).
-import { TopographyPanel } from '../panels/topography/TopographyPanel';
 
 interface UsePanelContentRendererParams {
   activePanel: PanelType;
@@ -131,9 +130,6 @@ export function usePanelContentRenderer({
 
       case 'bim3d':
         return <Bim3DFloatingTab />;
-
-      case 'topography':
-        return <TopographyPanel />;
 
       default:
         return (

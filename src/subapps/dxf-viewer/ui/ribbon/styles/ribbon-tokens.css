@@ -419,6 +419,18 @@ html[data-dxf-header-hidden="true"] header.sticky.top-0 {
   background: var(--ribbon-btn-hover);
 }
 
+/* ADR-662 Φ4 — big-player (Revit/ArchiCAD/Figma): εντολή με ανεκπλήρωτη προϋπόθεση =
+   greyed. Χρησιμοποιεί `aria-disabled` (ΟΧΙ native `disabled`) ώστε το tooltip «γιατί»
+   να συνεχίζει να εμφανίζεται στο hover (Radix pattern). SSoT για ΟΛΑ τα ribbon buttons. */
+.dxf-ribbon-btn[aria-disabled="true"] {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.dxf-ribbon-btn[aria-disabled="true"]:hover {
+  background: transparent;
+}
+
 /* ADR-345 Fase 5.6 — Active tool highlight (Large + Small buttons).
    Matches when `commandKey === activeTool`. Mirrors status-bar `data-on`
    and toggle-button `data-pressed` for visual consistency. */

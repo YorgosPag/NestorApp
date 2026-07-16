@@ -33,6 +33,12 @@ import { useTopoSurfaceEntity } from '../systems/topography/useTopoSurfaceEntity
 import { TopoGeoReferenceSection } from '../ui/panels/topography/TopoGeoReferenceSection';
 import { TopoDeliverablesSection } from '../ui/panels/topography/TopoDeliverablesSection';
 import { TopoImportWizard } from '../ui/panels/topography/TopoImportWizard';
+// ADR-662 Φ4 — τα review sections αποσύρθηκαν από το αριστερό panel → section-in-dialog εδώ
+// (mirror γεωαναφορά/παραδοτέα). Τα ΙΔΙΑ components, χωρίς καμία αλλαγή (κρατούν τα δικά τους controls).
+import { TopoQaSection } from '../ui/panels/topography/TopoQaSection';
+import { TopoAutoBreaklineSection } from '../ui/panels/topography/TopoAutoBreaklineSection';
+import { TopoCutFillSection } from '../ui/panels/topography/TopoCutFillSection';
+import { TopoCloud3DSection } from '../ui/panels/topography/TopoCloud3DSection';
 import { runTopoRibbonAction, type TopoRibbonDeps } from './topo-ribbon-actions';
 
 export function TopoRibbonHost(): React.JSX.Element {
@@ -47,6 +53,11 @@ export function TopoRibbonHost(): React.JSX.Element {
   const [importOpen, setImportOpen] = React.useState(false);
   const [geoRefOpen, setGeoRefOpen] = React.useState(false);
   const [deliverablesOpen, setDeliverablesOpen] = React.useState(false);
+  // ADR-662 Φ4 — review dialogs (QA / auto-breakline / cut-fill / cloud).
+  const [qaOpen, setQaOpen] = React.useState(false);
+  const [autoBreaklineOpen, setAutoBreaklineOpen] = React.useState(false);
+  const [cutFillOpen, setCutFillOpen] = React.useState(false);
+  const [cloudOpen, setCloudOpen] = React.useState(false);
 
   // Fresh deps snapshot every render → the once-registered EventBus listener always
   // reads the latest hook callbacks / dialog openers (useEventCallback identity pattern).
@@ -58,6 +69,10 @@ export function TopoRibbonHost(): React.JSX.Element {
     openImport: () => setImportOpen(true),
     openGeoRef: () => setGeoRefOpen(true),
     openDeliverables: () => setDeliverablesOpen(true),
+    openQa: () => setQaOpen(true),
+    openAutoBreakline: () => setAutoBreaklineOpen(true),
+    openCutFill: () => setCutFillOpen(true),
+    openCloud: () => setCloudOpen(true),
   };
 
   React.useEffect(() => EventBus.on('topo:ribbon-action', ({ action }) => {
@@ -83,6 +98,38 @@ export function TopoRibbonHost(): React.JSX.Element {
             <DialogTitle>{t('ribbon.commands.topo.deliverables.dialogTitle')}</DialogTitle>
           </DialogHeader>
           <TopoDeliverablesSection />
+        </DialogContent>
+      </Dialog>
+      <Dialog open={qaOpen} onOpenChange={setQaOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('ribbon.commands.topo.qaRun.dialogTitle')}</DialogTitle>
+          </DialogHeader>
+          <TopoQaSection />
+        </DialogContent>
+      </Dialog>
+      <Dialog open={autoBreaklineOpen} onOpenChange={setAutoBreaklineOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('ribbon.commands.topo.autoBreakline.dialogTitle')}</DialogTitle>
+          </DialogHeader>
+          <TopoAutoBreaklineSection />
+        </DialogContent>
+      </Dialog>
+      <Dialog open={cutFillOpen} onOpenChange={setCutFillOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('ribbon.commands.topo.cutFill.dialogTitle')}</DialogTitle>
+          </DialogHeader>
+          <TopoCutFillSection />
+        </DialogContent>
+      </Dialog>
+      <Dialog open={cloudOpen} onOpenChange={setCloudOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('ribbon.commands.topo.cloud.dialogTitle')}</DialogTitle>
+          </DialogHeader>
+          <TopoCloud3DSection />
         </DialogContent>
       </Dialog>
     </>

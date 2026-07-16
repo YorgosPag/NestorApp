@@ -2,7 +2,7 @@
 'use client';
 
 import React from 'react';
-import { BarChart, Box, Mountain, Palette, Ruler, Settings, Sliders } from 'lucide-react';
+import { BarChart, Box, Palette, Ruler, Settings, Sliders } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Use centralized TabsOnlyTriggers (same as Contacts, ΓΕΜΗ tabs)
 import { TabsOnlyTriggers, type TabDefinition } from '@/components/ui/navigation/TabsComponents';
@@ -78,14 +78,9 @@ export function PanelTabs({ activePanel, onTabClick, disabledPanels, isCollapsed
       content: null,
       disabled: disabledPanels['bim3d'],
     },
-    // ADR-650 Milestone 1 — Topographic contours tab.
-    {
-      id: 'topography',
-      label: isCollapsed ? '' : t('panels.topography.title'),
-      icon: Mountain,
-      content: null,
-      disabled: disabledPanels['topography'],
-    },
+    // ADR-662 Φ4 — το «Τοπογραφικό» tab αποσύρθηκε: όλες οι λειτουργίες ζουν πλέον στο μόνιμο
+    // ribbon «Τοπογραφικό» (authoring + section-in-dialog reviews) + στο Properties palette
+    // (object-bound επιφάνεια). Δες ADR-662 §6.5 / changelog Φάση 4.
   ];
 
   // 🏢 ENTERPRISE: Handle tab change - convert string to FloatingPanelType

@@ -37,7 +37,8 @@
  * const [activePanel, setActivePanel] = useState<FloatingPanelType>('levels');
  * ```
  */
-export type FloatingPanelType = 'levels' | 'colors' | 'properties' | 'dimensions' | 'materials' | 'bim3d' | 'topography';
+// ADR-662 Φ4 — το 'topography' αποσύρθηκε (πλέον ribbon + Properties, ΟΧΙ αριστερό tab).
+export type FloatingPanelType = 'levels' | 'colors' | 'properties' | 'dimensions' | 'materials' | 'bim3d';
 
 /**
  * 🏢 ENTERPRISE: All Panel Types (including future/hidden)
@@ -84,7 +85,7 @@ export type PanelType = FloatingPanelType;
 export function isFloatingPanelType(value: unknown): value is FloatingPanelType {
   return (
     typeof value === 'string' &&
-    ['levels', 'colors', 'properties', 'dimensions', 'materials', 'bim3d', 'topography'].includes(value)
+    ['levels', 'colors', 'properties', 'dimensions', 'materials', 'bim3d'].includes(value)
   );
 }
 
@@ -100,7 +101,6 @@ export const FLOATING_PANEL_TYPES: readonly FloatingPanelType[] = [
   'dimensions',
   'materials',
   'bim3d',
-  'topography',
 ] as const;
 
 // ============================================================================
@@ -118,7 +118,7 @@ export interface PanelMetadata {
   /** Fallback label (Greek) */
   fallbackLabel: string;
   /** Lucide icon name */
-  iconName: 'BarChart' | 'Settings' | 'Sliders' | 'Ruler' | 'Palette' | 'Box' | 'Mountain';
+  iconName: 'BarChart' | 'Settings' | 'Sliders' | 'Ruler' | 'Palette' | 'Box';
   /** Whether panel can be disabled */
   canBeDisabled: boolean;
 }
@@ -171,14 +171,7 @@ export const PANEL_METADATA: Record<FloatingPanelType, PanelMetadata> = {
     iconName: 'Box',
     canBeDisabled: false,
   },
-  // ADR-650 Milestone 1 — Topographic contours panel (load points → contours).
-  topography: {
-    type: 'topography',
-    labelKey: 'panels.topography.title',
-    fallbackLabel: 'Τοπογραφικό',
-    iconName: 'Mountain',
-    canBeDisabled: false,
-  },
+  // ADR-662 Φ4 — το topography panel entry αφαιρέθηκε (πλέον ribbon + Properties).
 } as const;
 
 // ============================================================================
@@ -192,7 +185,7 @@ export const PANEL_METADATA: Record<FloatingPanelType, PanelMetadata> = {
  */
 export const PANEL_LAYOUT = {
   /** Top row panels (ADR-309: 2 tabs + Phase 8 ADR-358 Properties tab + ADR-362 F1 Dimensions tab + ADR-650 Topography) */
-  topRow: ['levels', 'colors', 'properties', 'dimensions', 'materials', 'bim3d', 'topography'] as const satisfies readonly FloatingPanelType[],
+  topRow: ['levels', 'colors', 'properties', 'dimensions', 'materials', 'bim3d'] as const satisfies readonly FloatingPanelType[],
   /** Bottom row panels — empty after ADR-309 Phase 1 */
   bottomRow: [] as const satisfies readonly FloatingPanelType[],
 } as const;

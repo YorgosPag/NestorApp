@@ -69,6 +69,7 @@ import {
   TopoGridVisibleToggle,
   NorthArrowVisibleToggle,
   PointCloud3DVisibleToggle,
+  PointCloud3DManageButton,
   ContourStyleToggle,
   NorthModeToggle,
   CutFillModeToggle,
@@ -296,6 +297,9 @@ function renderButton(button: RibbonButton): React.ReactNode {
     }
     if (button.widgetId === 'topo-cloud-visible') {
       return <PointCloud3DVisibleToggle key="topo-cloud-visible-widget" />;
+    }
+    if (button.widgetId === 'topo-cloud-manage') {
+      return <PointCloud3DManageButton key="topo-cloud-manage-widget" />;
     }
     if (button.widgetId === 'topo-contour-style') {
       return <ContourStyleToggle key="topo-contour-style-widget" />;

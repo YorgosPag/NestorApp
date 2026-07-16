@@ -20,13 +20,8 @@ import { getContourConfig } from '../systems/topography/contour-config-store';
 import { getGridDisplayOptions, setTopoGridVisible } from '../systems/topography/topo-grid-store';
 import { getNorthArrowOptions, setNorthArrowVisible } from '../systems/topography/north-arrow-store';
 import { getPointLabelOptions } from '../systems/topography/topo-point-label-store';
-import { getPointCloud3DState, setPointCloud3DVisible, clearPointCloud3D } from '../systems/topography/pointcloud-3d-store';
-import { runCutFill } from '../systems/topography/cut-fill-store';
-import { setTerrain3DStyle, setTerrain3DVisible } from '../systems/topography/terrain-3d-store';
-import { runTopoQa } from '../systems/topography/qa/run-topo-qa';
-import { topoQaStore } from '../systems/topography/qa/topo-qa-store';
-import { detectAutoBreaklines } from '../systems/topography/auto-breaklines';
-import { autoBreaklineStore } from '../systems/topography/auto-breaklines/auto-breakline-store';
+import { getPointCloud3DState, setPointCloud3DVisible } from '../systems/topography/pointcloud-3d-store';
+import { setTopoBreaklines } from '../systems/topography/TopoPointStore';
 
 /** Everything the runner needs: the mount-time hooks, notifications, i18n, dialog opens. */
 export interface TopoRibbonDeps {
@@ -40,6 +35,13 @@ export interface TopoRibbonDeps {
   readonly openImport: () => void;
   readonly openGeoRef: () => void;
   readonly openDeliverables: () => void;
+  // ADR-662 Φ4 — section-in-dialog openers για τα review sections (mirror geoRef/deliverables):
+  // το ribbon action ΑΝΟΙΓΕΙ dialog με το ΥΠΑΡΧΟΝ section (που κρατά τα δικά του run/review/act
+  // controls), αντί να τρέχει την ανάλυση fire-and-forget χωρίς επιφάνεια αποτελέσματος.
+  readonly openQa: () => void;
+  readonly openAutoBreakline: () => void;
+  readonly openCutFill: () => void;
+  readonly openCloud: () => void;
 }
 
 /** i18n key prefix for the topo ribbon toast messages (dxf-viewer-shell namespace). */
@@ -63,7 +65,8 @@ export function runTopoRibbonAction(action: string, deps: TopoRibbonDeps): void 
     // ── Δεδομένα ──────────────────────────────────────────────────────────────
     case 'topo.import.open': return deps.openImport();
     case 'topo.cloud.toggle': return setPointCloud3DVisible(!getPointCloud3DState().visible);
-    case 'topo.cloud.remove': return clearPointCloud3D();
+    // ADR-662 Φ4 — «Νέφος σημείων…»: dialog με stats + show/hide + remove (το section owns τα).
+    case 'topo.cloud.open': return deps.openCloud();
     // ── Επιφάνεια ─────────────────────────────────────────────────────────────
     case 'topo.contours.generate': {
       const r = deps.contours.generate(getContourConfig());
@@ -75,9 +78,12 @@ export function runTopoRibbonAction(action: string, deps: TopoRibbonDeps): void 
       else deps.notify.error(deps.t(`${N}.failed`));
       return;
     }
-    case 'topo.autoBreakline.detect': {
-      autoBreaklineStore.setReport(detectAutoBreaklines('existing'));
-      deps.notify.success(deps.t(`${N}.autoBreaklineDone`));
+    // ADR-662 Φ4 — «Αυτόματες ασυνέχειες»: dialog με detect → review υποψηφίων → approve (§9).
+    case 'topo.autoBreakline.open': return deps.openAutoBreakline();
+    // ADR-662 Φ4 — καθαρισμός breaklines (ήταν στο αριστερό panel· ο tool μένει στο ribbon).
+    case 'topo.breakline.clear': {
+      setTopoBreaklines([]);
+      deps.notify.success(deps.t(`${N}.breaklinesCleared`));
       return;
     }
     // ── Γεωαναφορά ────────────────────────────────────────────────────────────
@@ -95,21 +101,10 @@ export function runTopoRibbonAction(action: string, deps: TopoRibbonDeps): void 
     }
     case 'topo.pointLabels.generate': return notifyBake(deps.pointLabels.generate(getPointLabelOptions()), 'labelsGenerated', deps);
     // ── Ανάλυση ───────────────────────────────────────────────────────────────
-    case 'topo.cutFill.compute': {
-      const r = runCutFill();
-      if (r.result) {
-        setTerrain3DStyle('cutfill');
-        setTerrain3DVisible(true);
-        deps.notify.success(deps.t(`${N}.cutFillDone`));
-      } else deps.notify.error(deps.t(`${N}.cutFillEmpty`));
-      return;
-    }
-    case 'topo.qa.run': {
-      topoQaStore.set(runTopoQa('existing'));
-      deps.notify.success(deps.t(`${N}.qaDone`));
-      return;
-    }
-    case 'topo.qa.clear': return topoQaStore.reset();
+    // ADR-662 Φ4 — «Όγκοι εκσκαφών»: dialog με mode/datum/boundary/compute + πίνακας όγκων.
+    case 'topo.cutFill.open': return deps.openCutFill();
+    // ADR-662 Φ4 — «Έλεγχος ποιότητας»: dialog με run/clear + severity-sorted λίστα (click→zoom).
+    case 'topo.qa.open': return deps.openQa();
     // ── Παραδοτέα ─────────────────────────────────────────────────────────────
     case 'topo.deliverables.open': return deps.openDeliverables();
     default: return;

@@ -22,7 +22,9 @@
  * (στυλ ισοϋψών, mode Βορρά, αναφορά Cut/Fill) και editable numeric fields (ισοδιάσταση/index/
  * βήμα κανάβου). Τα widgets subscribe-άρουν ΑΠΕΥΘΕΙΑΣ τα persisted topo stores (self-contained,
  * μηδέν bridge) — reuse `RibbonToggleWidget`/`RibbonNumericFieldWidget`, ΚΑΜΙΑ νέα λογική. Το
- * αριστερό `TopographyPanel` μένει (dual access· καταργείται Φάση 4).
+ * αριστερό `TopographyPanel` **αποσύρθηκε** (ADR-662 Φάση 4)· τα review sections (QA/auto-
+ * breakline/cut-fill/cloud) ζουν πλέον ως section-in-dialog μέσω `TopoRibbonHost` (`.open`
+ * actions), τα object-bound displays στο Properties palette (Φ2β Δρόμος Γ).
  *
  * @see docs/centralized-systems/reference/adrs/ADR-662-topography-ribbon-migration.md
  * @see ./systems-discipline-tabs.ts (ADR-444 — το πρότυπο MEP discipline tabs)
@@ -66,7 +68,11 @@ export const TOPOGRAPHY_TAB: RibbonTab = {
           buttons: [
             topoAction('topoTab.import', `${K}.import.label`, 'import-wizard', 'topo.import.open'),
             topoWidget('topoTab.cloudVisible', `${K}.cloudVisible.label`, 'topo-cloud-visible'),
-            topoAction('topoTab.cloudRemove', `${K}.cloudRemove.label`, 'delete', 'topo.cloud.remove'),
+            // ADR-662 Φ4 — «Νέφος σημείων…»: store-subscribed widget που ανοίγει τον cloud
+            // manager dialog (stats + show/hide + remove)· **disabled + tooltip** όταν δεν
+            // υπάρχει νέφος (big-player: εντολή με ανεκπλήρωτη προϋπόθεση = greyed, ΟΧΙ κενό
+            // dialog). Ο quick-toggle widget μένει δίπλα για γρήγορο on/off (Revit-style).
+            topoWidget('topoTab.cloud', `${K}.cloud.label`, 'topo-cloud-manage'),
           ],
         },
       ],
@@ -79,11 +85,14 @@ export const TOPOGRAPHY_TAB: RibbonTab = {
           isInFlyout: false,
           buttons: [
             toolBtn('topoTab.breakline', `${K}.breakline.label`, 'topo-breakline', 'topo-breakline'),
+            // ADR-662 Φ4 — καθαρισμός breaklines (ήταν στο αριστερό panel· ο tool δίπλα το γεννά).
+            topoAction('topoTab.breaklineClear', `${K}.breakline.clear`, 'delete', 'topo.breakline.clear'),
             topoWidget('topoTab.contourInterval', `${K}.intervalField.label`, 'topo-contour-interval'),
             topoWidget('topoTab.contourIndex', `${K}.indexField.label`, 'topo-contour-index'),
             topoWidget('topoTab.contourStyle', `${K}.contourStyle.label`, 'topo-contour-style'),
             topoAction('topoTab.generate', `${K}.generate.label`, 'topo-contours', 'topo.contours.generate'),
-            topoAction('topoTab.autoBreakline', `${K}.autoBreakline.label`, 'topo-auto-breakline', 'topo.autoBreakline.detect'),
+            // ADR-662 Φ4 — «Αυτόματες ασυνέχειες»: ανοίγει dialog (detect → review → approve, §9).
+            topoAction('topoTab.autoBreakline', `${K}.autoBreakline.label`, 'topo-auto-breakline', 'topo.autoBreakline.open'),
           ],
         },
       ],
@@ -127,9 +136,10 @@ export const TOPOGRAPHY_TAB: RibbonTab = {
           buttons: [
             toolBtn('topoTab.boundary', `${K}.boundary.label`, 'topo-boundary', 'topo-boundary'),
             topoWidget('topoTab.cutFillMode', `${K}.cutFillMode.label`, 'topo-cutfill-mode'),
-            topoAction('topoTab.cutFill', `${K}.cutFill.label`, 'topo-cutfill', 'topo.cutFill.compute'),
-            topoAction('topoTab.qaRun', `${K}.qaRun.label`, 'topo-qa', 'topo.qa.run'),
-            topoAction('topoTab.qaClear', `${K}.qaClear.label`, 'delete', 'topo.qa.clear'),
+            // ADR-662 Φ4 — «Όγκοι εκσκαφών»/«Έλεγχος ποιότητας»: ανοίγουν dialog με πλήρη ροή
+            // (mode/όγκοι· run/review/zoom-to-flag). Το mode quick-toggle widget μένει δίπλα.
+            topoAction('topoTab.cutFill', `${K}.cutFill.label`, 'topo-cutfill', 'topo.cutFill.open'),
+            topoAction('topoTab.qaRun', `${K}.qaRun.label`, 'topo-qa', 'topo.qa.open'),
           ],
         },
       ],
