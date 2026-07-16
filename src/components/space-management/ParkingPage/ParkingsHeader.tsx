@@ -1,125 +1,42 @@
 'use client';
 
 /**
- * 🅿️ ENTERPRISE PARKINGS HEADER COMPONENT
+ * 🅿️ PARKINGS HEADER
  *
- * Header για τη σελίδα θέσεων στάθμευσης
- * Ακολουθεί το exact pattern από StoragesHeader.tsx
+ * Λεπτό wrapper του `ListPageHeader` SSoT: δίνει το εικονίδιο και κάνει το
+ * i18n resolve για την οντότητα «θέσεις στάθμευσης». Η δομή του header ζει
+ * στο SSoT.
  *
  * ΑΡΧΙΤΕΚΤΟΝΙΚΗ (REAL_ESTATE_HIERARCHY_DOCUMENTATION.md):
  * - Parking είναι παράλληλη κατηγορία με Units/Storage μέσα στο Building
  * - ΟΧΙ children των Units
  * - Ισότιμη οντότητα στην πλοήγηση
+ *
+ * @see @/core/headers/ListPageHeader — το κοινό header σελίδας-λίστας
  */
 
 import React from 'react';
-import { Car, Filter, Trash2 } from 'lucide-react';
-import { PageHeader } from '@/core/headers';
-import type { ViewMode } from '@/core/headers';
-import { TRANSITION_PRESETS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
-import { useIconSizes } from '@/hooks/useIconSizes';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-// 🏢 ENTERPRISE: Breadcrumb navigation
-import { NavigationBreadcrumb } from '@/components/navigation/components/NavigationBreadcrumb';
+import { Car } from 'lucide-react';
+import { ListPageHeader } from '@/core/headers';
+import type { ListPageHeaderProps } from '@/core/headers';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import '@/lib/design-system';
-// 🏢 ENTERPRISE: Type for Parkings view modes (avoids `as any`)
-type ParkingsViewMode = 'list' | 'grid' | 'byType' | 'byStatus';
 
-interface ParkingsHeaderProps {
-  viewMode: 'list' | 'grid' | 'byType' | 'byStatus';
-  setViewMode: (mode: 'list' | 'grid' | 'byType' | 'byStatus') => void;
-  showDashboard: boolean;
-  setShowDashboard: (show: boolean) => void;
-  searchTerm: string;
-  setSearchTerm: (term: string) => void;
-  showFilters?: boolean;
-  setShowFilters?: (show: boolean) => void;
-  // Trash view toggle (ADR-281)
-  showTrash?: boolean;
-  onToggleTrash?: () => void;
-  trashCount?: number;
-}
-
-export function ParkingsHeader({
-  viewMode,
-  setViewMode,
-  showDashboard,
-  setShowDashboard,
-  searchTerm,
-  setSearchTerm,
-  showFilters,
-  setShowFilters,
-  showTrash,
-  onToggleTrash,
-  trashCount = 0,
-}: ParkingsHeaderProps) {
+export function ParkingsHeader(props: ListPageHeaderProps) {
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline', 'trash']);
-  const iconSizes = useIconSizes();
-  const { quick, radius, getStatusBorder } = useBorderTokens();
-  const colors = useSemanticColors();
 
   return (
-    <PageHeader
-      variant="sticky-rounded"
-      layout="compact"
-      spacing="compact"
-      title={{
-        icon: Car,
+    <ListPageHeader
+      {...props}
+      icon={Car}
+      labels={{
         title: t('parkings.header.title'),
-        subtitle: t('parkings.header.subtitle')
-      }}
-      breadcrumb={<NavigationBreadcrumb />}
-      search={{
-        value: searchTerm,
-        onChange: setSearchTerm,
-        placeholder: t('parkings.header.searchPlaceholder')
-      }}
-      actions={{
-        showDashboard,
-        onDashboardToggle: () => setShowDashboard(!showDashboard),
-        viewMode: viewMode as ViewMode,
-        onViewModeChange: (mode) => setViewMode(mode as ParkingsViewMode),
-        viewModes: ['list', 'grid', 'byType', 'byStatus'] as ViewMode[],
-        customActions: [
-          ...(setShowFilters ? [
-            <button
-              key="mobile-filter"
-              onClick={() => setShowFilters(!showFilters)}
-              className={`md:hidden p-2 ${radius.md} ${TRANSITION_PRESETS.STANDARD_COLORS} ${
-                showFilters
-                  ? `bg-primary text-primary-foreground ${quick.focus}`
-                  : `${colors.bg.primary} ${quick.input} ${INTERACTIVE_PATTERNS.ACCENT_HOVER}`
-              }`}
-              aria-label={t('parkings.accessibility.toggleFilters')}
-            >
-              <Filter className={iconSizes.sm} />
-            </button>
-          ] : []),
-          ...(onToggleTrash ? [
-            <button
-              key="trash-toggle"
-              onClick={onToggleTrash}
-              className={`relative p-2 ${quick.button} transition-colors ${
-                showTrash
-                  ? `bg-destructive/10 text-destructive ${getStatusBorder('default')}`
-                  : `${colors.bg.primary} ${quick.card} ${INTERACTIVE_PATTERNS.ACCENT_HOVER}`
-              }`}
-              aria-label={t('trashView', { ns: 'trash' })}
-              aria-pressed={showTrash}
-            >
-              <Trash2 className={iconSizes.sm} />
-              {trashCount > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground leading-none">
-                  {trashCount > 99 ? '99+' : trashCount}
-                </span>
-              )}
-            </button>
-          ] : []),
-        ].filter(Boolean)
+        subtitle: t('parkings.header.subtitle'),
+        searchPlaceholder: t('parkings.header.searchPlaceholder'),
+        filtersAriaLabel: t('parkings.accessibility.toggleFilters'),
+        trashAriaLabel: t('trashView', { ns: 'trash' }),
       }}
     />
   );

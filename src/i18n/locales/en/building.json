@@ -188,7 +188,8 @@
     "planning": "Planning"
   },
   "accessibility": {
-    "buildingCard": "Building {name}"
+    "buildingCard": "Building {name}",
+    "toggleFilters": "Toggle filters"
   },
   "units": {
     "pricePerSqm": "€/sq.m",

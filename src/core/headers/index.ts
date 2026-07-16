@@ -24,6 +24,17 @@ export {
   // SectionHeader is now its own component με count support
 } from './enterprise-system';
 
+// Custom actions SSoT — filter/trash toggles για το actions.customActions slot
+export { buildHeaderCustomActions } from './header-custom-actions';
+export type { HeaderCustomActionsOptions } from './header-custom-actions';
+
+// Props contract SSoT για σελίδες-λίστες οντοτήτων
+export type { ListPageHeaderProps } from './list-page-header-props';
+
+// Πλήρες header σελίδας-λίστας — SSoT για Parkings/Storages
+export { ListPageHeader } from './ListPageHeader';
+export type { ListPageHeaderLabels, ListPageHeaderComponentProps } from './ListPageHeader';
+
 // Types & Interfaces - Enterprise System
 export type {
   ViewMode,

@@ -188,7 +188,8 @@
     "planning": "Σχεδιασμός"
   },
   "accessibility": {
-    "buildingCard": "Κτίριο {name}"
+    "buildingCard": "Κτίριο {name}",
+    "toggleFilters": "Εναλλαγή φίλτρων"
   },
   "units": {
     "pricePerSqm": "€/τμ",
