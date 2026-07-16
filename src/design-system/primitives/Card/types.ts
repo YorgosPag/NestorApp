@@ -11,8 +11,10 @@
  * @since 2026-01-08
  */
 
+import type { ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import type { NavigationEntityType } from '@/components/navigation/config/navigation-entities';
+import type { BadgeVariantProps } from '@/components/ui/badge';
 
 // =============================================================================
 // 🏢 CARD ICON TYPES
@@ -98,48 +100,168 @@ export interface CardStatsProps {
 }
 
 // =============================================================================
-// 🏢 LIST CARD TYPES (for future ListCard component)
+// 🏢 CARD BADGE TYPES
 // =============================================================================
 
 /**
- * Selection state for list cards
+ * Badge variants a card may render.
+ *
+ * Derived from the centralized Badge component — the Badge owns the vocabulary,
+ * cards merely speak it. Each card shell narrows this union to the subset it
+ * supports (see `GridCardBadgeVariant` / `ListCardBadgeVariant`); because those
+ * subsets are assignable to this type, no cast is needed at the render boundary.
  */
-export interface ListCardSelectionState {
-  isSelected: boolean;
-  onSelect?: (selected: boolean) => void;
-}
+export type CardBadgeVariant = NonNullable<BadgeVariantProps['variant']>;
 
 /**
- * Status badge configuration
+ * Badge configuration for a card.
+ *
+ * @typeParam TVariant - The variant subset the owning card shell supports.
  */
-export interface ListCardBadge {
+export interface CardBadge<TVariant extends CardBadgeVariant = CardBadgeVariant> {
+  /** Badge text */
   label: string;
-  variant?: 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning';
-  className?: string;
-}
-
-/**
- * Common props for all list card implementations
- */
-export interface ListCardBaseProps {
-  /** Card title */
-  title: string;
-  /** Optional subtitle */
-  subtitle?: string;
-  /** Entity type for icon */
-  entityType?: NavigationEntityType;
-  /** Stats to display */
-  stats?: StatItem[];
-  /** Status badges */
-  badges?: ListCardBadge[];
-  /** Selection state */
-  selection?: ListCardSelectionState;
-  /** Click handler */
-  onClick?: () => void;
+  /** Visual variant */
+  variant?: TVariant;
   /** Additional className */
   className?: string;
-  /** Compact mode */
+}
+
+// =============================================================================
+// 🏢 CARD ACTION TYPES
+// =============================================================================
+
+/**
+ * Action configuration for a card's hover toolbar.
+ */
+export interface CardAction {
+  /** Unique action ID */
+  id: string;
+  /** Action label — used as the accessible name and tooltip text */
+  label: string;
+  /** Action icon */
+  icon: LucideIcon;
+  /** Click handler */
+  onClick: (event: React.MouseEvent) => void;
+  /** Whether action is disabled */
+  disabled?: boolean;
+  /** Custom className */
+  className?: string;
+}
+
+// =============================================================================
+// 🏢 CARD IDENTITY PROPS
+// =============================================================================
+
+/**
+ * What a card is: its icon, its name, and how densely to draw them.
+ *
+ * Every shell forwards this set to its header verbatim — see `pickCardIdentity`,
+ * which is the one place that knows the set, so adding a field here reaches both
+ * shells without either being edited.
+ */
+export interface CardIdentityProps {
+  /** Entity type - determines icon and color from NAVIGATION_ENTITIES */
+  entityType?: NavigationEntityType;
+
+  /** Custom icon override (when not using entityType) */
+  customIcon?: LucideIcon;
+
+  /** Custom icon color override */
+  customIconColor?: string;
+
+  /** Card title */
+  title: string;
+
+  /** Card subtitle (e.g., type, category) */
+  subtitle?: string;
+
+  /** Compact mode - smaller padding and text */
   compact?: boolean;
+
+  /** Hide the entity icon */
+  hideIcon?: boolean;
+}
+
+// =============================================================================
+// 🏢 CARD SHELL BASE PROPS
+// =============================================================================
+
+/**
+ * Props shared by every card shell (GridCard, ListCard).
+ *
+ * A shell extends this with the props its own layout genuinely needs — grid and
+ * list are different layouts, not one component with a `variant` flag.
+ *
+ * @typeParam TBadgeVariant - The badge variant subset the shell supports.
+ */
+export interface CardBaseProps<TBadgeVariant extends CardBadgeVariant = CardBadgeVariant>
+  extends CardIdentityProps {
+  // ==========================================================================
+  // CONTENT
+  // ==========================================================================
+
+  /** Badges to display (max 2 recommended per Enterprise spec) */
+  badges?: CardBadge<TBadgeVariant>[];
+
+  /** Stats to display using CardStats primitive */
+  stats?: StatItem[];
+
+  /** Additional content below stats */
+  children?: ReactNode;
+
+  // ==========================================================================
+  // SELECTION & INTERACTION
+  // ==========================================================================
+
+  /** Whether card is selected */
+  isSelected?: boolean;
+
+  /** Click handler */
+  onClick?: () => void;
+
+  /** Keyboard handler for accessibility */
+  onKeyDown?: (event: React.KeyboardEvent) => void;
+
+  // ==========================================================================
+  // FAVORITES
+  // ==========================================================================
+
+  /** Whether item is favorite */
+  isFavorite?: boolean;
+
+  /** Favorite toggle handler */
+  onToggleFavorite?: () => void;
+
+  // ==========================================================================
+  // ACTIONS
+  // ==========================================================================
+
+  /** Additional actions shown on hover */
+  actions?: CardAction[];
+
+  // ==========================================================================
+  // VISUAL OPTIONS
+  // ==========================================================================
+
+  /** Hide stats section */
+  hideStats?: boolean;
+
+  /** Additional className */
+  className?: string;
+
+  // ==========================================================================
+  // ACCESSIBILITY
+  // ==========================================================================
+
+  /** Aria label for accessibility */
+  'aria-label'?: string;
+
+  /** Aria description */
+  'aria-describedby'?: string;
+
+  /** Tab index */
+  tabIndex?: number;
 }
 
 // =============================================================================

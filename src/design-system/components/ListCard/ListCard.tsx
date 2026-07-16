@@ -8,46 +8,45 @@
  *
  * @fileoverview Reusable list card molecule that composes primitives.
  * @enterprise Fortune 500 compliant
- * @see CardIcon, CardStats for primitive components
- * @see NAVIGATION_ENTITIES for entity icons/colors
+ * @see GridCard for vertical grid/tile view equivalent
+ * @see CardHeaderBlock, CardBody, CardActionsToolbar for the shared primitives
  * @see INTERACTIVE_PATTERNS for hover effects
  * @author Enterprise Architecture Team
  * @since 2026-01-08
  */
 
-import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { forwardRef } from 'react';
 import { cn } from '@/lib/utils';
-import { Star } from 'lucide-react';
-// 🏢 ENTERPRISE: i18n for accessibility labels
-import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-
-// 🏢 CENTRALIZED HOOKS
-import { useIconSizes } from '@/hooks/useIconSizes';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useTypography } from '@/hooks/useTypography';
-// 🏢 ENTERPRISE: Centralized spacing tokens
-import { useSpacingTokens } from '@/hooks/useSpacingTokens';
-// 🏢 ENTERPRISE: Centralized positioning tokens (2026-01-22)
-import { usePositioningTokens } from '@/hooks/usePositioningTokens';
 
 // 🏢 CENTRALIZED UI PATTERNS
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
-// 🏢 ENTERPRISE: Centralized Badge component (single source of truth for all badges)
-import { Badge } from '@/components/ui/badge';
-
-// 🏢 CENTRALIZED ENTITY CONFIG
-import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 
 // 🏢 DESIGN SYSTEM PRIMITIVES
-import { CardIcon } from '../../primitives/Card/CardIcon';
-import { CardStats } from '../../primitives/Card/CardStats';
+import { CardActionsToolbar } from '../../primitives/Card/CardActionsToolbar';
+import { CardHeaderBlock } from '../../primitives/Card/CardHeaderBlock';
+import { CardBody } from '../../primitives/Card/CardBody';
+import { CardSelectionIndicator } from '../../primitives/Card/CardSelectionIndicator';
+import { useCardShell } from '../../primitives/Card/useCardShell';
+import { pickCardIdentity } from '../../primitives/Card/card-identity';
 
 // 🏢 TYPES
-import type { ListCardProps, ListCardAction } from './ListCard.types';
+import type { ListCardProps } from './ListCard.types';
 import '@/lib/design-system';
+
+/**
+ * 🏢 ENTERPRISE: Hover variant patterns
+ * Pattern used by: VS Code, Salesforce, SAP Fiori, Microsoft Fluent
+ */
+const HOVER_VARIANT_CLASSES: Record<NonNullable<ListCardProps['hoverVariant']>, string> = {
+  // Command palette/dropdown style: background only, no scale
+  // Used in: VS Code Cmd+K, Salesforce Global Search, Slack search
+  subtle: 'transition-colors duration-150 hover:bg-accent/50',
+  // No hover effect - for embedded cards in other interactive elements
+  none: '',
+  // Full card hover with scale and shadow
+  // Used in: Standalone lists like ParkingsList, BuildingsList
+  standard: INTERACTIVE_PATTERNS.CARD_STANDARD,
+};
 
 /**
  * 🏢 ListCard Component
@@ -71,113 +70,28 @@ import '@/lib/design-system';
  * />
  * ```
  */
-export const ListCard = forwardRef<HTMLElement, ListCardProps>(function ListCard({
-  // Identity
-  entityType,
-  customIcon,
-  customIconColor,
-  title,
-  subtitle,
-  // Content
-  badges = [],
-  stats = [],
-  children,
-  // Selection
-  isSelected = false,
-  onClick,
-  onKeyDown,
-  onMouseEnter,
-  onMouseLeave,
-  isHovered = false,
-  // Favorites
-  isFavorite,
-  onToggleFavorite,
-  // Actions
-  actions = [],
-  // Visual
-  compact = false,
-  hideIcon = false,
-  hideStats = false,
-  inlineBadges = false,
-  allowOverflow = false,
-  hoverVariant = 'standard',
-  className,
-  // Accessibility
-  'aria-label': ariaLabel,
-  'aria-describedby': ariaDescribedBy,
-  tabIndex = 0,
-  role,
-}, ref) {
+export const ListCard = forwardRef<HTMLElement, ListCardProps>(function ListCard(props, ref) {
+  // Only what this shell's own element renders is unpacked here; every other
+  // prop travels to the primitive that owns it, defaults and all.
+  const {
+    title,
+    isSelected = false,
+    compact = false,
+    isHovered = false,
+    allowOverflow = false,
+    hoverVariant = 'standard',
+    className,
+    'aria-label': ariaLabel,
+    'aria-describedby': ariaDescribedBy,
+    tabIndex = 0,
+    role,
+  } = props;
+
   // ==========================================================================
   // 🏢 CENTRALIZED HOOKS
   // ==========================================================================
-  const { t } = useTranslation(COMMON_NAMESPACES);
-  const iconSizes = useIconSizes();
-  const colors = useSemanticColors();
-  const { quick, getStatusBorder } = useBorderTokens();
-  const typography = useTypography();
-  const spacing = useSpacingTokens();
-  const positioning = usePositioningTokens();
-
-  // ==========================================================================
-  // 🏢 COMPUTED VALUES FROM CENTRALIZED SYSTEMS
-  // ==========================================================================
-  const entityConfig = entityType ? NAVIGATION_ENTITIES[entityType] : null;
-
-  // ==========================================================================
-  // 🏢 ENTERPRISE: Hover variant patterns
-  // Pattern used by: VS Code, Salesforce, SAP Fiori, Microsoft Fluent
-  // ==========================================================================
-  const getHoverClasses = () => {
-    switch (hoverVariant) {
-      case 'subtle':
-        // Command palette/dropdown style: background only, no scale
-        // Used in: VS Code Cmd+K, Salesforce Global Search, Slack search
-        return 'transition-colors duration-150 hover:bg-accent/50';
-      case 'none':
-        // No hover effect - for embedded cards in other interactive elements
-        return '';
-      case 'standard':
-      default:
-        // Full card hover with scale and shadow
-        // Used in: Standalone lists like ParkingsList, BuildingsList
-        return INTERACTIVE_PATTERNS.CARD_STANDARD;
-    }
-  };
-
-  // ==========================================================================
-  // 🏢 EVENT HANDLERS
-  // ==========================================================================
-  const handleClick = () => {
-    onClick?.();
-  };
-
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
-    // Accessibility: Enter or Space to select
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      onClick?.();
-    }
-    onKeyDown?.(event);
-  };
-
-  const handleFavoriteClick = (event: React.MouseEvent) => {
-    event.stopPropagation();
-    onToggleFavorite?.();
-  };
-
-  const handleActionClick = (
-    event: React.MouseEvent,
-    action: ListCardAction
-  ) => {
-    event.stopPropagation();
-    action.onClick(event);
-  };
-
-  // ==========================================================================
-  // 🏢 BADGE: Now using centralized Badge component (single source of truth)
-  // Removed local getBadgeClasses() - all badges use @/components/ui/badge
-  // ==========================================================================
+  const { colors, quick, getStatusBorder, spacing, handleClick, handleKeyDown } =
+    useCardShell(props);
 
   // ==========================================================================
   // 🏢 RENDER - SEMANTIC HTML STRUCTURE
@@ -196,7 +110,7 @@ export const ListCard = forwardRef<HTMLElement, ListCardProps>(function ListCard
         // Spacing based on compact mode - 🏢 ENTERPRISE: Centralized spacing
         spacing.padding.sm,
         // 🏢 ENTERPRISE: Hover variant from prop (standard/subtle/none)
-        getHoverClasses(),
+        HOVER_VARIANT_CLASSES[hoverVariant],
         // SPEC-237C: External hover highlight (bidirectional sync from canvas)
         isHovered && !isSelected && 'ring-2 ring-primary/40 bg-accent/50',
         // Selection state using centralized colors
@@ -207,8 +121,8 @@ export const ListCard = forwardRef<HTMLElement, ListCardProps>(function ListCard
       )}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
+      onMouseEnter={props.onMouseEnter}
+      onMouseLeave={props.onMouseLeave}
       role={role}
       tabIndex={tabIndex}
       aria-label={ariaLabel || title}
@@ -218,166 +132,39 @@ export const ListCard = forwardRef<HTMLElement, ListCardProps>(function ListCard
       {/* ================================================================== */}
       {/* 🏢 HOVER ACTIONS */}
       {/* ================================================================== */}
-      {(onToggleFavorite || actions.length > 0) && (
-        <div
-          role="toolbar"
-          className={cn(
-            `absolute ${positioning.top.sm} ${positioning.right.sm} flex ${spacing.gap.sm}`,
-            'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity'
-          )}
-          aria-label={t('a11y.cardActions')}
-        >
-          {/* Favorite button */}
-          {onToggleFavorite && (
-            <button
-              type="button"
-              onClick={handleFavoriteClick}
-              className={cn(
-                `${spacing.padding.sm} rounded-md transition-colors`,
-                isFavorite
-                  ? colors.text.warning
-                  : cn(colors.text.muted, 'hover:text-[hsl(var(--text-warning))]')
-              )}
-              aria-label={isFavorite ? t('a11y.removeFavorite') : t('a11y.addFavorite')}
-              aria-pressed={isFavorite}
-            >
-              <Star className={cn(iconSizes.sm, isFavorite && 'fill-current')} />
-            </button>
-          )}
-
-          {/* Additional actions */}
-          {actions.map((action) => (
-            <Tooltip key={action.id}>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  onClick={(e) => handleActionClick(e, action)}
-                  disabled={action.disabled}
-                  className={cn(
-                    `${spacing.padding.sm} rounded-md transition-colors`,
-                    colors.text.muted,
-                    'hover:text-primary',
-                    action.disabled && 'opacity-50 cursor-not-allowed',
-                    action.className
-                  )}
-                  aria-label={action.label}
-                >
-                  <action.icon className={iconSizes.sm} />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>{action.label}</TooltipContent>
-            </Tooltip>
-          ))}
-        </div>
-      )}
+      <CardActionsToolbar
+        isFavorite={props.isFavorite}
+        onToggleFavorite={props.onToggleFavorite}
+        actions={props.actions}
+        withTooltips
+      />
 
       {/* ================================================================== */}
       {/* 🏢 HEADER: Icon + Title + Badges */}
       {/* ================================================================== */}
-      <header className={cn('overflow-hidden', spacing.margin.bottom.sm)}>
-        {/* Row 1: Icon + Title (+ inline badges if enabled) */}
-        <div className={`flex items-center ${spacing.gap.sm}`}>
-          {/* Entity Icon */}
-          {!hideIcon && (entityType || customIcon) && (
-            <CardIcon
-              entityType={entityType}
-              icon={customIcon}
-              color={customIconColor}
-              size={compact ? 'sm' : 'md'}
-            />
-          )}
-
-          {/* Title & Subtitle - 🏢 ENTERPRISE: Using centralized typography */}
-          <div className="flex-1 min-w-0 overflow-hidden">
-            {/* 🏢 PR1.2: Inline badges support - Title + Badge on same row */}
-            <div className={cn('flex items-center', spacing.gap.sm)}>
-              <h3
-                className={cn(
-                  'truncate',
-                  compact ? typography.card.titleCompact : typography.card.title,
-                  colors.text.primary,
-                  inlineBadges ? 'flex-shrink' : ''
-                )}
-              >
-                {title}
-              </h3>
-
-              {/* Inline badges (when inlineBadges=true) - 🏢 ENTERPRISE: Using centralized Badge */}
-              {inlineBadges && badges.length > 0 && (
-                <>
-                  {badges.slice(0, 1).map((badge, index) => (
-                    <Badge
-                      key={`inline-${badge.label}-${index}`}
-                      variant={badge.variant as 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' | 'info' | 'error'}
-                      className={cn('whitespace-nowrap flex-shrink-0', badge.className)}
-                    >
-                      {badge.label}
-                    </Badge>
-                  ))}
-                </>
-              )}
-            </div>
-
-            {subtitle && (
-              <p
-                className={cn(
-                  'truncate',
-                  compact ? typography.card.subtitleCompact : typography.card.subtitle,
-                  colors.text.muted
-                )}
-              >
-                {subtitle}
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Row 2: Badges (separate row when NOT inline) - 🏢 ENTERPRISE: Using centralized Badge */}
-        {!inlineBadges && badges.length > 0 && (
-          <div className={cn(`flex items-center ${spacing.gap.sm} ${spacing.margin.top.sm} overflow-hidden`)}>
-            {badges.slice(0, 2).map((badge, index) => (
-              <Badge
-                key={`${badge.label}-${index}`}
-                variant={badge.variant as 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' | 'info' | 'error'}
-                className={cn('whitespace-nowrap', badge.className)}
-              >
-                {badge.label}
-              </Badge>
-            ))}
-          </div>
-        )}
-      </header>
+      {/* Badges clip rather than wrap - a list row must keep its height */}
+      <CardHeaderBlock
+        {...pickCardIdentity(props)}
+        badges={props.badges}
+        inlineBadges={props.inlineBadges}
+        badgeRowClassName="overflow-hidden"
+      />
 
       {/* ================================================================== */}
-      {/* 🏢 STATS SECTION */}
+      {/* 🏢 STATS + CUSTOM CONTENT */}
       {/* ================================================================== */}
-      {!hideStats && stats.length > 0 && (
-        <CardStats
-          stats={stats}
-          layout="horizontal"
-          compact={compact}
-          className={spacing.margin.top.sm}
-        />
-      )}
-
-      {/* ================================================================== */}
-      {/* 🏢 CUSTOM CONTENT */}
-      {/* ================================================================== */}
-      {children && (
-        <div className={spacing.margin.top.sm}>
-          {children}
-        </div>
-      )}
+      <CardBody
+        stats={props.hideStats ? undefined : props.stats}
+        statsLayout="horizontal"
+        compact={compact}
+      >
+        {props.children}
+      </CardBody>
 
       {/* ================================================================== */}
       {/* 🏢 SELECTION INDICATOR */}
       {/* ================================================================== */}
-      {isSelected && (
-        <div
-          className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full"
-          aria-hidden="true"
-        />
-      )}
+      <CardSelectionIndicator isSelected={isSelected} />
     </article>
   );
 });

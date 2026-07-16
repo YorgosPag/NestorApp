@@ -9,40 +9,27 @@
  * @fileoverview Reusable grid card molecule for tile-based layouts.
  * @enterprise Fortune 500 compliant - SAP/Salesforce pattern
  * @see ListCard for horizontal list view equivalent
- * @see CardIcon, CardStats for primitive components
+ * @see CardHeaderBlock, CardBody, CardActionsToolbar for the shared primitives
  * @author Enterprise Architecture Team
  * @since 2026-01-24
  */
 
-import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { Star } from 'lucide-react';
-// 🏢 ENTERPRISE: i18n for accessibility labels
-import { useTranslation } from '@/i18n/hooks/useTranslation';
-
-// 🏢 CENTRALIZED HOOKS
-import { useIconSizes } from '@/hooks/useIconSizes';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useTypography } from '@/hooks/useTypography';
-import { useSpacingTokens } from '@/hooks/useSpacingTokens';
-import { usePositioningTokens } from '@/hooks/usePositioningTokens';
 
 // 🏢 CENTRALIZED UI PATTERNS
 import { INTERACTIVE_PATTERNS, COMPLEX_HOVER_EFFECTS } from '@/components/ui/effects';
-// 🏢 ENTERPRISE: Centralized Badge component
-import { Badge } from '@/components/ui/badge';
-
-// 🏢 CENTRALIZED ENTITY CONFIG
-import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 
 // 🏢 DESIGN SYSTEM PRIMITIVES
-import { CardIcon } from '../../primitives/Card/CardIcon';
-import { CardStats } from '../../primitives/Card/CardStats';
+import { CardActionsToolbar } from '../../primitives/Card/CardActionsToolbar';
+import { CardHeaderBlock } from '../../primitives/Card/CardHeaderBlock';
+import { CardBody } from '../../primitives/Card/CardBody';
+import { CardSelectionIndicator } from '../../primitives/Card/CardSelectionIndicator';
+import { useCardShell } from '../../primitives/Card/useCardShell';
+import { pickCardIdentity } from '../../primitives/Card/card-identity';
 
 // 🏢 TYPES
-import type { GridCardProps, GridCardAction } from './GridCard.types';
+import type { GridCardProps } from './GridCard.types';
 import '@/lib/design-system';
 
 /**
@@ -72,80 +59,24 @@ import '@/lib/design-system';
  * />
  * ```
  */
-export function GridCard({
-  // Identity
-  entityType,
-  customIcon,
-  customIconColor,
-  title,
-  subtitle,
-  // Content
-  badges = [],
-  stats = [],
-  children,
-  // Selection
-  isSelected = false,
-  onClick,
-  onKeyDown,
-  // Favorites
-  isFavorite,
-  onToggleFavorite,
-  // Actions
-  actions = [],
-  // Visual
-  compact = false,
-  hideIcon = false,
-  hideStats = false,
-  className,
-  // Accessibility
-  'aria-label': ariaLabel,
-  'aria-describedby': ariaDescribedBy,
-  tabIndex = 0,
-}: GridCardProps) {
+export function GridCard(props: GridCardProps) {
+  // Only what this shell's own element renders is unpacked here; every other
+  // prop travels to the primitive that owns it, defaults and all.
+  const {
+    title,
+    isSelected = false,
+    compact = false,
+    className,
+    'aria-label': ariaLabel,
+    'aria-describedby': ariaDescribedBy,
+    tabIndex = 0,
+  } = props;
+
   // ==========================================================================
   // 🏢 CENTRALIZED HOOKS
   // ==========================================================================
-  const { t } = useTranslation(COMMON_NAMESPACES);
-  const iconSizes = useIconSizes();
-  const colors = useSemanticColors();
-  const { quick, getStatusBorder } = useBorderTokens();
-  const typography = useTypography();
-  const spacing = useSpacingTokens();
-  const positioning = usePositioningTokens();
-
-  // ==========================================================================
-  // 🏢 COMPUTED VALUES FROM CENTRALIZED SYSTEMS
-  // ==========================================================================
-  const entityConfig = entityType ? NAVIGATION_ENTITIES[entityType] : null;
-
-  // ==========================================================================
-  // 🏢 EVENT HANDLERS
-  // ==========================================================================
-  const handleClick = () => {
-    onClick?.();
-  };
-
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
-    // Accessibility: Enter or Space to select
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      onClick?.();
-    }
-    onKeyDown?.(event);
-  };
-
-  const handleFavoriteClick = (event: React.MouseEvent) => {
-    event.stopPropagation();
-    onToggleFavorite?.();
-  };
-
-  const handleActionClick = (
-    event: React.MouseEvent,
-    action: GridCardAction
-  ) => {
-    event.stopPropagation();
-    action.onClick(event);
-  };
+  const { colors, quick, getStatusBorder, spacing, handleClick, handleKeyDown } =
+    useCardShell(props);
 
   // ==========================================================================
   // 🏢 RENDER - SEMANTIC HTML STRUCTURE (Vertical Layout)
@@ -177,144 +108,39 @@ export function GridCard({
       {/* ================================================================== */}
       {/* 🏢 HOVER ACTIONS (Top Right) */}
       {/* ================================================================== */}
-      {(onToggleFavorite || actions.length > 0) && (
-        <div
-          role="toolbar"
-          className={cn(
-            `absolute ${positioning.top.sm} ${positioning.right.sm} flex ${spacing.gap.sm}`,
-            'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity z-10'
-          )}
-          aria-label={t('a11y.cardActions')}
-        >
-          {/* Favorite button */}
-          {onToggleFavorite && (
-            <button
-              type="button"
-              onClick={handleFavoriteClick}
-              className={cn(
-                `${spacing.padding.xs} rounded-md transition-colors`,
-                colors.bg.card,
-                isFavorite
-                  ? colors.text.warning
-                  : cn(colors.text.muted, 'hover:text-[hsl(var(--text-warning))]')
-              )}
-              aria-label={isFavorite ? t('a11y.removeFavorite') : t('a11y.addFavorite')}
-              aria-pressed={isFavorite}
-            >
-              <Star className={cn(iconSizes.sm, isFavorite && 'fill-current')} />
-            </button>
-          )}
-
-          {/* Additional actions */}
-          {actions.map((action) => (
-            <button
-              key={action.id}
-              type="button"
-              onClick={(e) => handleActionClick(e, action)}
-              disabled={action.disabled}
-              className={cn(
-                `${spacing.padding.xs} rounded-md transition-colors`,
-                colors.bg.card,
-                colors.text.muted,
-                'hover:text-primary',
-                action.disabled && 'opacity-50 cursor-not-allowed',
-                action.className
-              )}
-              aria-label={action.label}
-            >
-              <action.icon className={iconSizes.sm} />
-            </button>
-          ))}
-        </div>
-      )}
+      <CardActionsToolbar
+        isFavorite={props.isFavorite}
+        onToggleFavorite={props.onToggleFavorite}
+        actions={props.actions}
+        density="compact"
+        overlay
+      />
 
       {/* ================================================================== */}
       {/* 🏢 HEADER: Icon + Title + Subtitle (Vertical Layout) */}
       {/* ================================================================== */}
-      <header className={cn('overflow-hidden', spacing.margin.bottom.sm)}>
-        {/* Row 1: Icon + Title */}
-        <div className={`flex items-center ${spacing.gap.sm}`}>
-          {/* Entity Icon */}
-          {!hideIcon && (entityType || customIcon) && (
-            <CardIcon
-              entityType={entityType}
-              icon={customIcon}
-              color={customIconColor}
-              size={compact ? 'sm' : 'md'}
-            />
-          )}
-
-          {/* Title & Subtitle */}
-          <div className="flex-1 min-w-0 overflow-hidden">
-            <h3
-              className={cn(
-                'truncate',
-                compact ? typography.card.titleCompact : typography.card.title,
-                colors.text.primary
-              )}
-            >
-              {title}
-            </h3>
-            {subtitle && (
-              <p
-                className={cn(
-                  'truncate',
-                  compact ? typography.card.subtitleCompact : typography.card.subtitle,
-                  colors.text.muted
-                )}
-              >
-                {subtitle}
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Row 2: Badges */}
-        {badges.length > 0 && (
-          <div className={cn(`flex items-center flex-wrap ${spacing.gap.sm} ${spacing.margin.top.sm}`)}>
-            {badges.slice(0, 2).map((badge, index) => (
-              <Badge
-                key={`${badge.label}-${index}`}
-                variant={badge.variant as 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' | 'info' | 'error'}
-                className={cn('whitespace-nowrap', badge.className)}
-              >
-                {badge.label}
-              </Badge>
-            ))}
-          </div>
-        )}
-      </header>
+      {/* Badges wrap onto further lines - a tile has the vertical room */}
+      <CardHeaderBlock
+        {...pickCardIdentity(props)}
+        badges={props.badges}
+        badgeRowClassName="flex-wrap"
+      />
 
       {/* ================================================================== */}
-      {/* 🏢 STATS SECTION (Vertical Layout - Stacked) */}
+      {/* 🏢 STATS (Stacked) + CUSTOM CONTENT */}
       {/* ================================================================== */}
-      {!hideStats && stats.length > 0 && (
-        <CardStats
-          stats={stats}
-          layout="vertical"
-          compact={compact}
-          className={spacing.margin.top.sm}
-        />
-      )}
-
-      {/* ================================================================== */}
-      {/* 🏢 CUSTOM CONTENT */}
-      {/* ================================================================== */}
-      {children && (
-        <div className={spacing.margin.top.sm}>
-          {children}
-        </div>
-      )}
+      <CardBody
+        stats={props.hideStats ? undefined : props.stats}
+        statsLayout="vertical"
+        compact={compact}
+      >
+        {props.children}
+      </CardBody>
 
       {/* ================================================================== */}
       {/* 🏢 SELECTION INDICATOR (Left Border) */}
       {/* ================================================================== */}
-      {isSelected && (
-        <div
-          className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full"
-          aria-hidden="true"
-        />
-      )}
+      <CardSelectionIndicator isSelected={isSelected} />
     </article>
   );
 }

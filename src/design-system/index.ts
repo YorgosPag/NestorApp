@@ -13,24 +13,10 @@
 // 🏢 PRIMITIVES (Atoms)
 // =============================================================================
 
-export {
-  // Card Primitives
-  CardIcon,
-  CardStats,
-  // Types
-  type CardIconProps,
-  type CardIconVariant,
-  type CardIconSize,
-  type CardStatsProps,
-  type StatItem,
-  type StatsLayout,
-  type ListCardBaseProps,
-  type ListCardSelectionState,
-  type ListCardBadge,
-  // Constants
-  CARD_SIZES,
-  CARD_ROUNDED,
-} from './primitives';
+// Card primitives (CardIcon, CardStats, CardHeaderBlock, …), the shared card
+// vocabulary (CardBadge, CardAction, CardBaseProps, …) and the card constants.
+// Re-listing them here would be a second copy to keep in sync.
+export * from './primitives';
 
 // =============================================================================
 // 🏢 TOKENS

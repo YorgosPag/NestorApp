@@ -13,21 +13,6 @@
 // 🏢 CARD PRIMITIVES
 // =============================================================================
 
-export {
-  // Components
-  CardIcon,
-  CardStats,
-  // Types
-  type CardIconProps,
-  type CardIconVariant,
-  type CardIconSize,
-  type CardStatsProps,
-  type StatItem,
-  type StatsLayout,
-  type ListCardBaseProps,
-  type ListCardSelectionState,
-  type ListCardBadge,
-  // Constants
-  CARD_SIZES,
-  CARD_ROUNDED,
-} from './Card';
+// The Card barrel is the single explicit export list; re-listing it here would
+// be a second copy to keep in sync.
+export * from './Card';

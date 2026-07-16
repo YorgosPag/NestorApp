@@ -7,22 +7,24 @@
  * @fileoverview Type definitions for GridCard molecule component.
  * @enterprise Fortune 500 compliant - Uses existing centralized systems
  * @see ListCard for horizontal list view equivalent
+ * @see primitives/Card/types for the shared card vocabulary (CardBadge, CardAction, CardBaseProps)
  * @see NAVIGATION_ENTITIES for entity types
  * @author Enterprise Architecture Team
  * @since 2026-01-24
  */
 
-import type { ReactNode } from 'react';
-import type { LucideIcon } from 'lucide-react';
-import type { NavigationEntityType } from '@/components/navigation/config/navigation-entities';
-import type { StatItem } from '../../primitives/Card/types';
+import type { CardBadge, CardAction, CardBaseProps } from '../../primitives/Card/types';
 
 // =============================================================================
-// 🏢 GRID CARD BADGE TYPES (Shared with ListCard)
+// 🏢 GRID CARD BADGE TYPES
 // =============================================================================
 
 /**
- * Badge variant options - maps to existing badge system variants
+ * Badge variant options - the subset of the Badge vocabulary GridCard supports.
+ *
+ * ⚠️ Load-bearing invariant: `GridCardBadgeVariant ⊂ ListCardBadgeVariant`.
+ * Domain card models (`src/domain/cards/**`) type their badges as `GridCardBadge[]`
+ * precisely so one array can feed both shells. Widening this union breaks that.
  */
 export type GridCardBadgeVariant =
   | 'default'
@@ -36,14 +38,7 @@ export type GridCardBadgeVariant =
 /**
  * Badge configuration for GridCard
  */
-export interface GridCardBadge {
-  /** Badge text */
-  label: string;
-  /** Visual variant */
-  variant?: GridCardBadgeVariant;
-  /** Additional className */
-  className?: string;
-}
+export type GridCardBadge = CardBadge<GridCardBadgeVariant>;
 
 // =============================================================================
 // 🏢 GRID CARD ACTION TYPES
@@ -52,20 +47,7 @@ export interface GridCardBadge {
 /**
  * Action configuration for GridCard
  */
-export interface GridCardAction {
-  /** Unique action ID */
-  id: string;
-  /** Action label for tooltip */
-  label: string;
-  /** Action icon */
-  icon: LucideIcon;
-  /** Click handler */
-  onClick: (event: React.MouseEvent) => void;
-  /** Whether action is disabled */
-  disabled?: boolean;
-  /** Custom className */
-  className?: string;
-}
+export type GridCardAction = CardAction;
 
 // =============================================================================
 // 🏢 GRID CARD PROPS
@@ -79,6 +61,9 @@ export interface GridCardAction {
  * - More visual hierarchy than ListCard
  * - Optimized for 2-4 column grids
  * - Mobile-responsive (1 column on small screens)
+ *
+ * GridCard adds no props of its own to the shared card contract — the grid and
+ * list shells differ in layout, not in what the caller may configure.
  *
  * @example
  * ```tsx
@@ -96,95 +81,4 @@ export interface GridCardAction {
  * />
  * ```
  */
-export interface GridCardProps {
-  // ==========================================================================
-  // IDENTITY
-  // ==========================================================================
-
-  /** Entity type - determines icon and color from NAVIGATION_ENTITIES */
-  entityType?: NavigationEntityType;
-
-  /** Custom icon override (when not using entityType) */
-  customIcon?: LucideIcon;
-
-  /** Custom icon color override */
-  customIconColor?: string;
-
-  /** Card title */
-  title: string;
-
-  /** Card subtitle (e.g., type, category) */
-  subtitle?: string;
-
-  // ==========================================================================
-  // CONTENT
-  // ==========================================================================
-
-  /** Badges to display (max 2 recommended per Enterprise spec) */
-  badges?: GridCardBadge[];
-
-  /** Stats to display using CardStats primitive */
-  stats?: StatItem[];
-
-  /** Additional content below stats */
-  children?: ReactNode;
-
-  // ==========================================================================
-  // SELECTION & INTERACTION
-  // ==========================================================================
-
-  /** Whether card is selected */
-  isSelected?: boolean;
-
-  /** Click handler */
-  onClick?: () => void;
-
-  /** Keyboard handler for accessibility */
-  onKeyDown?: (event: React.KeyboardEvent) => void;
-
-  // ==========================================================================
-  // FAVORITES
-  // ==========================================================================
-
-  /** Whether item is favorite */
-  isFavorite?: boolean;
-
-  /** Favorite toggle handler */
-  onToggleFavorite?: () => void;
-
-  // ==========================================================================
-  // ACTIONS
-  // ==========================================================================
-
-  /** Additional actions shown on hover */
-  actions?: GridCardAction[];
-
-  // ==========================================================================
-  // VISUAL OPTIONS
-  // ==========================================================================
-
-  /** Compact mode - smaller padding and text */
-  compact?: boolean;
-
-  /** Hide the entity icon */
-  hideIcon?: boolean;
-
-  /** Hide stats section */
-  hideStats?: boolean;
-
-  /** Additional className */
-  className?: string;
-
-  // ==========================================================================
-  // ACCESSIBILITY
-  // ==========================================================================
-
-  /** Aria label for accessibility */
-  'aria-label'?: string;
-
-  /** Aria description */
-  'aria-describedby'?: string;
-
-  /** Tab index */
-  tabIndex?: number;
-}
+export type GridCardProps = CardBaseProps<GridCardBadgeVariant>;
