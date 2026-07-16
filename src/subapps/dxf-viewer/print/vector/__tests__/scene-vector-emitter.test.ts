@@ -235,7 +235,7 @@ describe('scene-vector-emitter — hybrid image compositing (ADR-608)', () => {
 
   it('ImageEntity → pdf.addImage at the placed rect (top-left, w, h, rotation 0)', () => {
     const e = { id: 'img1', type: 'image', layerId: '0' };
-    const images = { images: new Map([['img1', axisAlignedImage]]), solidFallbacks: new Map(), warnings: [] };
+    const images = { ...EMPTY_IMAGES, images: new Map([['img1', axisAlignedImage]]) };
     const calls = only(emit([e as unknown as Entity], baseParams.colorPolicy, images), 'addImage');
     expect(calls).toHaveLength(1);
     const [data, fmt, x, y, w, h, alias, comp, rot] = calls[0].args;
