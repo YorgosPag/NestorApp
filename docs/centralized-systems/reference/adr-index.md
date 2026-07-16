@@ -642,6 +642,7 @@
 | **ADR-662** | Μετάβαση Τοπογραφικού από αριστερό panel → Ribbon (μόνιμο tab + Properties + contextual· research-first, big-player evidence, reuse ADR-444/345/587) | 🔵 PROPOSED | 2026-07-15 | DXF Viewer / Ribbon · Topography | [📄](./adrs/ADR-662-topography-ribbon-migration.md) |
 | **ADR-663** | DXF Viewer TypeScript Error Ratchet — CHECK 3.29 (το root tsconfig ΕΞΑΙΡΕΙ το dxf-viewer → κανένα gate δεν το έβλεπε· per-file baseline + CI Layer 2· reuse ADR-584 engine) | ✅ ACTIVE | 2026-07-16 | Uncategorized | [📄](./adrs/ADR-663-dxf-viewer-tsc-error-ratchet.md) |
 | **ADR-664** | Mutation Impact Guard **Hook** SSoT — `useProjectImpactGuard` (6 δίδυμα hooks → shared state machine + per-instance binding· client-side κάτοπτρο του ADR-591· N.18/ADR-584) | ✅ ACTIVE | 2026-07-16 | Hooks / Mutation Guards | [📄](./adrs/ADR-664-impact-guard-hook-ssot.md) |
+| **ADR-665** | Κοπή Αναγλύφου στη Στάθμη Ενεργού Ορόφου — per-scope clipping planes (`'default'`\|`'topo'`· το κτίριο ΔΕΝ κόβεται· terrain-exclusive materials· fix: οι ισοϋψείς δεν κόβονταν ποτέ· reuse ADR-452/455 composer) | 🔵 PROPOSED | 2026-07-16 | DXF Viewer / 3Δ · Topography | [📄](./adrs/ADR-665-terrain-clip-at-active-level.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -1261,6 +1262,7 @@
 | **ADR-662** | Μετάβαση Τοπογραφικού → Ribbon (μόνιμο tab + Properties + contextual· research-first) | 🔵 PROPOSED | [View](./adrs/ADR-662-topography-ribbon-migration.md) |
 | **ADR-663** | DXF Viewer TypeScript Error Ratchet — CHECK 3.29 (per-file baseline· CI Layer 2· το root tsconfig εξαιρεί το dxf-viewer) | ✅ ACTIVE | [View](./adrs/ADR-663-dxf-viewer-tsc-error-ratchet.md) |
 | **ADR-664** | Mutation Impact Guard Hook SSoT — `useProjectImpactGuard` (6 δίδυμα hooks → ένα state machine· κάτοπτρο του ADR-591) | ✅ ACTIVE | [View](./adrs/ADR-664-impact-guard-hook-ssot.md) |
+| **ADR-665** | Κοπή Αναγλύφου στη Στάθμη Ενεργού Ορόφου — per-scope clipping planes· το κτίριο δεν κόβεται· fix ισοϋψών | 🔵 PROPOSED | [View](./adrs/ADR-665-terrain-clip-at-active-level.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---
