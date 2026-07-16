@@ -175,7 +175,7 @@ function makeBeamGhostBeforeClick(
   const faceDimensions = (rect && snap && !isOverlap)
     ? { sceneUnits, dims: resolveRectCartesianDims(rect, snap.start) }
     : resolveGhostFaceDimensionsMeta(snap?.faceFrame, isOverlap, sceneUnits, wpp);
-  const ghost = toWysiwygPreviewEntity(built.entity, 'preview_beam_ghost', ghostStatusColor, faceDimensions);
+  const ghost = toWysiwygPreviewEntity(built.entity, 'preview_beam_ghost', { ghostStatusColor, faceDimensions });
   // ADR-398 §3.13/§3.15 (Giorgio 2026-06-24) — attach το πλέγμα (πολικό ή καρτεσιανό) ως ghost metadata
   // (ΚΟΙΝΟ SSoT helper με την κολόνα)· ο `drawing-hover-handler` το ζωγραφίζει ως overlay.
   const grid = buildPlacementGridMeta(effectiveCursor, targets, sceneUnits, magnetOpts);
@@ -255,8 +255,12 @@ function makeBeamWysiwygGhost(
           ...(display.displayAxisPolyline ? { displayAxisPolyline: display.displayAxisPolyline } : {}),
         },
       };
-      return toWysiwygPreviewEntity(displayEntity, id, ghostStatusColor, endDims, null, hudMeta, hudSpecLabel);
+      return toWysiwygPreviewEntity(displayEntity, id, {
+        ghostStatusColor, faceDimensions: endDims, wallHud: hudMeta, hudSpecLabel,
+      });
     }
   }
-  return toWysiwygPreviewEntity(entity, id, ghostStatusColor, endDims, null, hudMeta, hudSpecLabel);
+  return toWysiwygPreviewEntity(entity, id, {
+    ghostStatusColor, faceDimensions: endDims, wallHud: hudMeta, hudSpecLabel,
+  });
 }

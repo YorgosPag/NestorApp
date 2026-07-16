@@ -192,5 +192,5 @@ function makeFoundationBandGhost(
   // έρχεται προ-μεταφρασμένη ως `hudSpecLabel`). Το τόξο φοράς το ζωγραφίζει ο handler (gate χαλαρωμένο).
   const hudMeta = buildSegmentHudMeta(startPt, endPt, sceneUnits, params.width, params.thicknessMm);
   const hudSpecLabel = buildFoundationHudSpecLabel(params.width, params.thicknessMm);
-  return toWysiwygPreviewEntity(built.entity, id, null, null, null, hudMeta, hudSpecLabel);
+  return toWysiwygPreviewEntity(built.entity, id, { wallHud: hudMeta, hudSpecLabel });
 }

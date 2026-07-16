@@ -32,6 +32,7 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { SceneUnits } from '../../utils/scene-units';
 import type { ExtendedSceneEntity } from '../../hooks/drawing/drawing-types';
+import type { AnySceneEntity } from '../../types/scene';
 import type { ColumnAnchor } from '../types/column-types';
 import type { ColumnFaceSnap } from '../columns/column-face-snap';
 import type { LCornerSizing } from '../columns/column-beam-corner-snap';
@@ -78,12 +79,17 @@ import { translatePoint } from '../../rendering/entities/shared/geometry-vector-
  * ADR-525 — `sizing` (4ο, optional): auto-διαστασιολόγηση L-κολόνας (corner-gap junction) ως one-shot
  * override· `null`/absent = κρατά τις διαστάσεις του ribbon (μηδέν αλλαγή· ο pad builder το αγνοεί).
  */
+// ADR-663 §4 part 5 — declared `object | null` until the WYSIWYG wrapper was typed honestly.
+// Both real implementations (`buildColumnGhostEntity` / `buildPadGhostEntity`) return
+// `built.entity` from `buildColumnEntity` / `buildFoundationEntity`, i.e. a real scene
+// entity — never a bare `object`. Same class of lie as `createEntityFromTool` in part 4:
+// the producer under-declared, and every consumer inherited the widened type.
 export type PlacementGhostEntityBuilder = (
   position: Readonly<Point2D>,
   anchor: ColumnAnchor,
   rotation: number | null,
   sizing?: LCornerSizing | null,
-) => object | null;
+) => AnySceneEntity | null;
 
 /** Είσοδος του awaitingPosition assembly. */
 export interface PlacementGhostArgs {
@@ -173,7 +179,7 @@ export function assemblePlacementGhost(args: PlacementGhostArgs): ExtendedSceneE
     }
   }
 
-  const ghost = toWysiwygPreviewEntity(entity, ghostId, ghostStatusColor, faceDimensions);
+  const ghost = toWysiwygPreviewEntity(entity, ghostId, { ghostStatusColor, faceDimensions });
   // polar/rect grid overlay (ΙΔΙΟΣ resolver με το snap → μηδέν απόκλιση πλέγματος↔snap).
   const extra = buildPlacementGridMeta(effectiveCursor, targets, sceneUnits, polarOpts);
   // ADR-398 §3.20 — γραμμή-οδηγός ευθυγράμμισης (τεταρτημόριο κυκλικής ↔ άκρο/μέσον παρειάς), preview-only.
@@ -192,7 +198,7 @@ export function assemblePlacementRotationGhost(args: PlacementRotationGhostArgs)
   const rotationDeg = resolveColumnRotationDeg(origin, cursor, worldPerPixel(getImmediateTransform().scale));
   const entity = buildEntity(origin, anchor, rotationDeg);
   if (!entity) return null;
-  const ghost = toWysiwygPreviewEntity(entity, ghostId, null);
+  const ghost = toWysiwygPreviewEntity(entity, ghostId);
   const grid = buildPlacementGridMeta(origin, targets, sceneUnits, polarOpts);
   return Object.keys(grid).length ? ({ ...ghost, ...grid } as typeof ghost) : ghost;
 }

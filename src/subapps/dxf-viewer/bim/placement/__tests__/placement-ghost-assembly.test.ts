@@ -14,6 +14,7 @@ import type { BimCursorSnap } from '../bim-cursor-snap';
 import type { ColumnFaceSnap } from '../../columns/column-face-snap';
 import type { SceneSnapTargets } from '../../framing/scene-snap-targets';
 import type { PolarDiskSnapOptions } from '../../columns/polar-disk-snap';
+import type { LineEntity } from '../../../types/entities';
 
 // Pure dims/grid helpers → inert (δικά τους suites). Απομονώνει το assembly wiring.
 jest.mock('../placement-grid-meta', () => ({ buildPlacementGridMeta: () => ({}) }));
@@ -26,7 +27,31 @@ jest.mock('../../../hooks/drawing/wysiwyg-preview-shared', () => {
   return { ...actual, resolveGhostFaceDimensionsMeta: () => null };
 });
 
-const TARGETS = { footprints: [], diskTargets: [], rectTargets: [] } as unknown as SceneSnapTargets;
+/**
+ * A real scene entity. `PlacementGhostEntityBuilder` returns `AnySceneEntity | null`
+ * because both production builders return `built.entity` from `buildColumnEntity` /
+ * `buildFoundationEntity`; a bare `{ type: 'column' }` was only ever accepted while the
+ * builder was mis-declared `object | null` (ADR-663 §4 part 5). The assembly treats the
+ * entity as opaque — it only spreads it — so any entity exercises the same paths.
+ */
+const stubEntity = (): LineEntity => ({
+  id: 'src_ghost', type: 'line', layerId: 'lyr_test',
+  start: { x: 0, y: 0 }, end: { x: 1, y: 0 },
+});
+
+/**
+ * Every `SceneSnapTargets` collection, empty — "no neighbours in the scene".
+ *
+ * It listed only three until the stub entity became real: the old fake `{ type: 'column' }`
+ * yielded no footprint, so the neighbour-clearance branch — which iterates the rest — was
+ * unreachable and the gaps in this fixture stayed invisible. (ADR-663 §4 part 5)
+ */
+const TARGETS = {
+  footprints: [], circularFootprints: [], beamTargets: [], wallTargets: [],
+  slabTargets: [], footprintEdgeTargets: [], lineTargets: [], diskTargets: [],
+  rectTargets: [], wallEntities: [], openings: [], structuralEntities: [],
+} as unknown as SceneSnapTargets;
+
 const OPTS = {} as PolarDiskSnapOptions;
 
 function pointSnap(x: number, y: number): BimCursorSnap {
@@ -50,7 +75,7 @@ function columnSnap(over: Partial<ColumnFaceSnap> = {}): BimCursorSnap {
 
 describe('assemblePlacementGhost (awaitingPosition)', () => {
   it('point snap → builder στον effectiveCursor + fallbackAnchor + rotation null', () => {
-    const buildEntity = jest.fn(() => ({ type: 'column' }));
+    const buildEntity = jest.fn(() => stubEntity());
     const ghost = assemblePlacementGhost({
       snap: pointSnap(5, 7),
       effectiveCursor: { x: 5, y: 7 },
@@ -66,7 +91,7 @@ describe('assemblePlacementGhost (awaitingPosition)', () => {
   });
 
   it('column-placement → builder στη faceSnap θέση/λαβή/flush-γωνία', () => {
-    const buildEntity = jest.fn(() => ({ type: 'column' }));
+    const buildEntity = jest.fn(() => stubEntity());
     assemblePlacementGhost({
       snap: columnSnap({ position: { x: 10, y: 20 }, anchor: 'ne', rotation: 42 }),
       effectiveCursor: { x: 9, y: 19 },
@@ -77,7 +102,7 @@ describe('assemblePlacementGhost (awaitingPosition)', () => {
   });
 
   it('ADR-525 — L corner-gap sizing περνά αυτούσιο στον builder (4ο arg)', () => {
-    const buildEntity = jest.fn(() => ({ type: 'column' }));
+    const buildEntity = jest.fn(() => stubEntity());
     const sizing = { widthMm: 400, depthMm: 425, armWidthMm: 250, armLengthMm: 300, flipY: false };
     assemblePlacementGhost({
       snap: columnSnap({ position: { x: 1, y: 2 }, anchor: 'center', rotation: 0, sizing }),
@@ -94,7 +119,7 @@ describe('assemblePlacementGhost (awaitingPosition)', () => {
       effectiveCursor: { x: 0, y: 0 },
       targets: TARGETS, sceneUnits: 'mm', polarOpts: OPTS,
       fallbackAnchor: 'center', ghostId: 'preview_x',
-      buildEntity: () => ({ type: 'column' }),
+      buildEntity: () => stubEntity(),
     });
     expect((ghost as { ghostStatusColor?: unknown }).ghostStatusColor).toBeDefined();
   });
@@ -113,7 +138,7 @@ describe('assemblePlacementGhost (awaitingPosition)', () => {
 
 describe('assemblePlacementRotationGhost (awaitingRotation)', () => {
   it('builder στο locked origin + anchor + αριθμητική γωνία', () => {
-    const buildEntity = jest.fn(() => ({ type: 'foundation' }));
+    const buildEntity = jest.fn(() => stubEntity());
     const ghost = assemblePlacementRotationGhost({
       origin: { x: 100, y: 200 }, anchor: 'center', cursor: { x: 150, y: 200 },
       targets: TARGETS, sceneUnits: 'mm', polarOpts: OPTS,

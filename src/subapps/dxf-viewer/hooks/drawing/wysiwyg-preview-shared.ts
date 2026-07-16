@@ -12,10 +12,14 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { ExtendedSceneEntity } from './drawing-types';
-import type { GhostStatusColor } from '../../bim/ghosts/ghost-status-color';
+import type { AnySceneEntity } from '../../types/scene';
+// Type-only, ώστε ο κύκλος με το `placement-overlay-fields` (που εισάγει από εδώ το
+// `OpeningConflictMeta`) να σβήνει στο compile — μηδέν runtime import, μηδέν TDZ.
+import type {
+  PlacementOverlayFields,
+  PlacementGhostEntity,
+} from '../../bim/placement/placement-overlay-fields';
 import type { GhostFaceFrame } from '../../bim/framing/linear-member-face-snap';
-import type { WallHudMeta } from '../../canvas-v2/preview-canvas/wall-hud-paint';
 import {
   resolveGhostFaceDimensions,
   type GhostFaceDimensionsMeta,
@@ -78,22 +82,41 @@ export function resolveEffectivePreviewCursor(cursorPoint: Readonly<Point2D>): P
 }
 
 /**
+ * Τα overlay-meta που μπορεί να συνοδεύουν ένα WYSIWYG ghost.
+ *
+ * **Δεν ξανα-δηλώνονται εδώ**: είναι ακριβώς το υποσύνολο του `PlacementOverlayFields`
+ * (ADR-544 SSoT) που προσαρτά αυτό το wrapper — ο τύπος του κάθε πεδίου έχει ΕΝΑΝ ιδιοκτήτη.
+ * Τα `null` επιτρέπονται γιατί οι καλούντες περνούν ρητό `null` για «δεν ισχύει» (το ίδιο
+ * νόημα με το `undefined` εδώ: το πεδίο απλώς δεν προσαρτάται).
+ */
+export type WysiwygGhostOverlays = {
+  readonly [K in keyof Pick<
+    PlacementOverlayFields,
+    'ghostStatusColor' | 'faceDimensions' | 'openingConflict' | 'wallHud' | 'hudSpecLabel'
+  >]?: PlacementOverlayFields[K] | null;
+};
+
+/**
  * Flag μια φρεσκο-χτισμένη BIM εντότητα ως **WYSIWYG placement ghost**: ο PreviewCanvas
  * (`BimPreviewRenderer`) τη ρεντάρει μέσω του ΠΡΑΓΜΑΤΙΚΟΥ renderer (full fidelity).
- * Optional `ghostStatusColor` (🔴 overlap) → ο `PreviewRenderer` ζωγραφίζει status schematic
- * αντί WYSIWYG (ADR-398 §3.6 red-only). Optional `faceDimensions` (ADR-508 §dim) → listening
- * dimensions που ζωγραφίζει ο handler ως overlay πάνω από το ghost. Generic ώστε να δέχεται
- * κάθε `*Entity` + display-modified παραλλαγές (π.χ. beam cutback) χωρίς `any`.
+ *
+ * Τα overlays έρχονται ως **ένα options object** αντί για ουρά θέσεων: μεγάλωνε κατά ένα
+ * param ανά ADR (7 στην ADR-564), κι έτσι κάθε caller που ήθελε το τελευταίο έπρεπε να
+ * περάσει `null` για όλα τα ενδιάμεσα (`toWysiwygPreviewEntity(e, id, null, null, null, hud, label)`).
+ *
+ * Το `T` δεσμεύεται σε `AnySceneEntity` — αυτό που **όντως** περνούν όλοι οι καλούντες
+ * (μαζί με τις display-modified παραλλαγές, π.χ. beam cutback: είναι κι αυτές κανονικές
+ * οντότητες με επιπλέον `geometry.displayOutline`). Χωρίς τη δέσμευση η επιστροφή ήταν
+ * `as unknown as ExtendedSceneEntity` — type-lie, αφού ένα σκέτο `object` δεν είναι ghost.
+ *
+ * @see ADR-663 §4 part 5 — γιατί έφυγε το `as unknown as`
  */
-export function toWysiwygPreviewEntity<T extends object>(
+export function toWysiwygPreviewEntity<T extends AnySceneEntity>(
   entity: T,
   id: string,
-  ghostStatusColor?: GhostStatusColor | null,
-  faceDimensions?: GhostFaceDimensionsMeta | null,
-  openingConflict?: OpeningConflictMeta | null,
-  wallHud?: WallHudMeta | null,
-  hudSpecLabel?: string | null,
-): ExtendedSceneEntity {
+  overlays: WysiwygGhostOverlays = {},
+): PlacementGhostEntity {
+  const { ghostStatusColor, faceDimensions, openingConflict, wallHud, hudSpecLabel } = overlays;
   return {
     ...entity,
     id,
@@ -107,5 +130,5 @@ export function toWysiwygPreviewEntity<T extends object>(
     // απουσιάζει, ο handler πέφτει πίσω στην ετικέτα τοίχου (`buildWallHudSpecLabel`) — μηδέν
     // αλλαγή στον τοίχο.
     ...(hudSpecLabel ? { hudSpecLabel } : {}),
-  } as unknown as ExtendedSceneEntity;
+  };
 }

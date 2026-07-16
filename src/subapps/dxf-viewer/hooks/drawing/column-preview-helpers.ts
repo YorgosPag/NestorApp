@@ -196,7 +196,7 @@ export function generateColumnPreview(
     // ADR-503 — ίδιο auto-size με τους υπόλοιπους κλάδους (κεκλιμένη ορθογώνια κολόνα).
     const sized = autoSizeGhostColumnParams(params, sizingProvider);
     const built = buildColumnEntity(sized, getDefaultLayerId(), sceneUnits);
-    return built.ok ? attachColumnHud(toWysiwygPreviewEntity(built.entity, 'preview_column_ghost', null)) : null;
+    return built.ok ? attachColumnHud(toWysiwygPreviewEntity(built.entity, 'preview_column_ghost')) : null;
   }
 
   // ADR-398 §3.10 — awaitingPosition: sync-in-preview face-snap (ΕΝΑΣ εγκέφαλος, ΙΔΙΑ opts/targets/cursor

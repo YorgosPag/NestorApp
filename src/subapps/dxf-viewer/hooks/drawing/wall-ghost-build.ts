@@ -127,9 +127,10 @@ export function buildWallGhostEntity(
   const dims = overlap ? null : faceDimensions;
   // ADR-508 §wall-hud — ζωντανή ταυτότητα (μήκος/γωνία/πάχος/ύψος) μόνο σε ευθύ τοίχο που σχεδιάζεται.
   const wallHud = wantHud && kind === 'straight' ? buildWallHudMeta(built.entity, sceneUnits) : null;
-  return toWysiwygPreviewEntity(
-    built.entity, id, ghostStatusColor, dims,
-    conflict ? { bandMm: conflict.bandMm } : null,
+  return toWysiwygPreviewEntity(built.entity, id, {
+    ghostStatusColor,
+    faceDimensions: dims,
+    openingConflict: conflict ? { bandMm: conflict.bandMm } : null,
     wallHud,
-  );
+  });
 }
