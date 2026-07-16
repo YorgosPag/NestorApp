@@ -77,11 +77,37 @@ export function validateExtraction(raw: RawExtractedQuote): ValidationResult {
   return { valid: issues.length === 0, issues, warnings };
 }
 
-export function buildRetryFeedback(issues: string[]): string {
+/** Why the previous attempt is being retried — selects the feedback wording. */
+export type RetryReason = 'numeric' | 'parse';
+
+/** The response was empty — no text at all came back. */
+export const EMPTY_OUTPUT_ISSUE = 'Η προηγούμενη απάντηση ήταν εντελώς κενή.';
+
+/** The response had text, but it was not parseable JSON. */
+export const UNPARSEABLE_ISSUE = 'Η προηγούμενη απάντηση δεν ήταν έγκυρο JSON.';
+
+const RETRY_HEADLINE: Readonly<Record<RetryReason, string>> = {
+  numeric: 'Η προηγούμενη εξαγωγή είχε αριθμητικές ασυνέπειες. Διόρθωσε:',
+  parse: 'Η προηγούμενη απάντηση δεν ήταν αξιοποιήσιμη. Πρόβλημα:',
+};
+
+const RETRY_CLOSING: Readonly<Record<RetryReason, string>> = {
+  numeric:
+    'Ξανακοίταξε ΠΡΟΣΕΚΤΙΚΑ την οριζόντια ευθυγράμμιση των στηλών στην tabella. Κάθε αριθμός πρέπει να αντιστοιχεί στη ΣΩΣΤΗ σειρά. Επιστρέψε ΞΑΝΑ ολόκληρο το JSON σύμφωνα με το schema.',
+  parse:
+    'Επιστρέψε ΜΟΝΟ έγκυρο JSON σύμφωνα με το schema — χωρίς επεξηγήσεις, χωρίς markdown code fences, χωρίς κείμενο πριν ή μετά.',
+};
+
+/**
+ * Feedback prompt for the next attempt. `reason` picks the framing: telling the
+ * model it made "numeric inconsistencies" when it actually returned unparseable
+ * text would send it chasing the wrong problem.
+ */
+export function buildRetryFeedback(issues: string[], reason: RetryReason = 'numeric'): string {
   return [
-    'Η προηγούμενη εξαγωγή είχε αριθμητικές ασυνέπειες. Διόρθωσε:',
+    RETRY_HEADLINE[reason],
     ...issues.slice(0, 8).map((i) => `• ${i}`),
     '',
-    'Ξανακοίταξε ΠΡΟΣΕΚΤΙΚΑ την οριζόντια ευθυγράμμιση των στηλών στην tabella. Κάθε αριθμός πρέπει να αντιστοιχεί στη ΣΩΣΤΗ σειρά. Επιστρέψε ΞΑΝΑ ολόκληρο το JSON σύμφωνα με το schema.',
+    RETRY_CLOSING[reason],
   ].join('\n');
 }

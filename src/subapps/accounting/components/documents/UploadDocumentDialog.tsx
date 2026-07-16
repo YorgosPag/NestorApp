@@ -32,6 +32,7 @@ import {
 import { Spinner } from '@/components/ui/spinner';
 import { useAuth } from '@/hooks/useAuth';
 import { API_ROUTES } from '@/config/domain-constants';
+import { canonicalMimeForUrl, filenameFromUrl } from '@/config/file-types/classification-registry';
 import type { DocumentType } from '@/subapps/accounting/types';
 
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -58,35 +59,8 @@ const DOCUMENT_TYPE_CODES: DocumentType[] = [
   'fuel_receipt', 'bank_statement', 'other',
 ];
 
-const MIME_TYPES: Record<string, string> = {
-  pdf: 'application/pdf',
-  jpg: 'image/jpeg',
-  jpeg: 'image/jpeg',
-  png: 'image/png',
-  webp: 'image/webp',
-};
-
-// ============================================================================
-// HELPERS
-// ============================================================================
-
-function guessFileName(url: string): string {
-  try {
-    const pathname = new URL(url).pathname;
-    const segments = pathname.split('/');
-    return segments[segments.length - 1] || 'document';
-  } catch {
-    return 'document';
-  }
-}
-
-function guessMimeType(url: string): string {
-  const lower = url.toLowerCase();
-  for (const [ext, mime] of Object.entries(MIME_TYPES)) {
-    if (lower.includes(`.${ext}`)) return mime;
-  }
-  return 'application/octet-stream';
-}
+/** Used only when the URL carries no usable filename segment. */
+const FALLBACK_FILE_NAME = 'document';
 
 // ============================================================================
 // COMPONENT
@@ -115,8 +89,8 @@ export function UploadDocumentDialog({
       setError(null);
 
       const token = await user.getIdToken();
-      const fileName = guessFileName(fileUrl);
-      const mimeType = guessMimeType(fileUrl);
+      const fileName = filenameFromUrl(fileUrl) || FALLBACK_FILE_NAME;
+      const mimeType = canonicalMimeForUrl(fileUrl);
 
       const response = await fetch(API_ROUTES.ACCOUNTING.DOCUMENTS.LIST, {
         method: 'POST',

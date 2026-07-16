@@ -35,7 +35,12 @@ import {
   buildFallbackExtractedData,
   normalizeExtracted,
 } from './quote-analyzer.normalizers';
-import { validateExtraction, buildRetryFeedback } from './quote-analyzer.validation';
+import {
+  validateExtraction,
+  buildRetryFeedback,
+  EMPTY_OUTPUT_ISSUE,
+  UNPARSEABLE_ISSUE,
+} from './quote-analyzer.validation';
 
 // ============================================================================
 // TYPES
@@ -136,10 +141,21 @@ export class OpenAIQuoteAnalyzer implements IQuoteAnalyzer {
 
         const responsePayload = await this.executeRequest(request);
         const outputText = extractOutputText(responsePayload);
-        if (!outputText) break;
 
-        const parsed = safeJsonParse<RawExtractedQuote>(outputText, null as unknown as RawExtractedQuote);
-        if (parsed === null) break;
+        // An empty or unparseable response is a transient model failure — the
+        // same class of problem as inconsistent numbers, so it takes the same
+        // road: retry with feedback, escalating the model on attempt 1+.
+        // Bailing out here instead would spend the LEAST effort on the most
+        // recoverable failure.
+        const parsed = outputText
+          ? safeJsonParse<RawExtractedQuote>(outputText, null as unknown as RawExtractedQuote)
+          : null;
+        if (parsed === null) {
+          lastIssues = [outputText ? UNPARSEABLE_ISSUE : EMPTY_OUTPUT_ISSUE];
+          console.warn(`[OpenAIQuoteAnalyzer] no usable JSON on attempt ${attempt + 1}:`, lastIssues);
+          promptText = buildRetryFeedback(lastIssues, 'parse');
+          continue;
+        }
         lastParsed = parsed;
 
         const validation = validateExtraction(parsed);

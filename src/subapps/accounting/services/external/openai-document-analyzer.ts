@@ -12,6 +12,7 @@
 import 'server-only';
 
 import { safeJsonParse } from '@/lib/json-utils';
+import { canonicalMimeForUrl, filenameFromUrl } from '@/config/file-types/classification-registry';
 import { downloadAdminObjectByPublicUrl } from '@/lib/firebaseAdmin-storage';
 import {
   beginVisionContent,
@@ -34,6 +35,13 @@ import {
   CLASSIFY_SYSTEM_PROMPT,
   EXTRACT_SYSTEM_PROMPT,
 } from './document-analyzer.schemas';
+
+// ============================================================================
+// CONSTANTS
+// ============================================================================
+
+/** Used only when the URL carries no usable filename segment. */
+const FALLBACK_PDF_FILENAME = 'document.pdf';
 
 // ============================================================================
 // TYPES
@@ -146,7 +154,7 @@ export class OpenAIDocumentAnalyzer implements IDocumentAnalyzer {
     documentType: DocumentType
   ): Promise<ExtractedDocumentData> {
     try {
-      const mimeType = this.guessMimeFromUrl(fileUrl);
+      const mimeType = canonicalMimeForUrl(fileUrl);
       const promptText = `Εξάγαγε δεδομένα από αυτό το ${documentType}. Τύπος εγγράφου: ${documentType}`;
       const content = await this.buildVisionContent(fileUrl, mimeType, promptText);
 
@@ -206,7 +214,10 @@ export class OpenAIDocumentAnalyzer implements IDocumentAnalyzer {
     const { content, pdfAttachmentPending } = beginVisionContent(promptText, fileUrl, mimeType);
     if (pdfAttachmentPending) {
       const b64 = await this.fetchFileAsBase64(fileUrl);
-      content.push({ type: 'input_file', filename: 'document.pdf', file_data: `data:application/pdf;base64,${b64}` });
+      // The real filename is a signal the model reads ("ΤΙΜΟΛΟΓΙΟ_2026.pdf");
+      // the generic fallback only applies to URLs with no usable segment.
+      const filename = filenameFromUrl(fileUrl) || FALLBACK_PDF_FILENAME;
+      content.push({ type: 'input_file', filename, file_data: `data:application/pdf;base64,${b64}` });
     }
     return content;
   }
@@ -214,15 +225,6 @@ export class OpenAIDocumentAnalyzer implements IDocumentAnalyzer {
   private async fetchFileAsBase64(url: string): Promise<string> {
     const buffer = await downloadAdminObjectByPublicUrl(url);
     return buffer.toString('base64');
-  }
-
-  private guessMimeFromUrl(url: string): string {
-    const lower = url.toLowerCase();
-    if (lower.includes('.jpg') || lower.includes('.jpeg')) return 'image/jpeg';
-    if (lower.includes('.png')) return 'image/png';
-    if (lower.includes('.webp')) return 'image/webp';
-    if (lower.includes('.pdf')) return 'application/pdf';
-    return 'application/octet-stream';
   }
 
   private normalizeExtractedData(raw: ExtractedDocumentData): ExtractedDocumentData {

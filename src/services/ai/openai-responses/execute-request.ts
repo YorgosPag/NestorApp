@@ -33,9 +33,10 @@ async function postResponsesOnce(
   config: ResponsesRequestConfig,
   request: ResponsesRequestBody,
 ): Promise<unknown> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), config.timeoutMs);
-
+  // `AbortSignal.timeout` owns its own timer and clears it when the signal is
+  // garbage-collected. A hand-rolled `AbortController` + `setTimeout` leaks the
+  // timer whenever `fetch` throws before the matching `clearTimeout` runs,
+  // holding the event loop open for the full `timeoutMs`.
   const response = await fetch(`${config.baseUrl}/responses`, {
     method: 'POST',
     headers: {
@@ -43,10 +44,8 @@ async function postResponsesOnce(
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(request),
-    signal: controller.signal,
+    signal: AbortSignal.timeout(config.timeoutMs),
   });
-
-  clearTimeout(timeout);
 
   if (!response.ok) {
     const errorPayload = (await response.json().catch(() => ({}))) as ResponsesErrorPayload;

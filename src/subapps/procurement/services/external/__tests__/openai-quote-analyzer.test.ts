@@ -37,6 +37,9 @@ jest.mock('@/services/pdf/pdf-rasterize.service', () => {
 const mockValidateExtraction = jest.fn();
 const mockBuildRetryFeedback = jest.fn();
 jest.mock('../quote-analyzer.validation', () => ({
+  // Real issue-string constants (pure strings, no deps) — only the two
+  // functions are stubbed, so assertions can name the real constants.
+  ...jest.requireActual('../quote-analyzer.validation'),
   validateExtraction: (...args: unknown[]) => mockValidateExtraction(...args),
   buildRetryFeedback: (...args: unknown[]) => mockBuildRetryFeedback(...args),
 }));
@@ -49,6 +52,7 @@ jest.mock('../quote-analyzer.normalizers', () => ({
 }));
 
 import { OpenAIQuoteAnalyzer, createOpenAIQuoteAnalyzer } from '../openai-quote-analyzer';
+import { EMPTY_OUTPUT_ISSUE, UNPARSEABLE_ISSUE } from '../quote-analyzer.validation';
 import {
   QUOTE_CLASSIFY_SCHEMA,
   QUOTE_EXTRACT_SCHEMA,
@@ -590,29 +594,60 @@ describe('extractQuote — validation retry loop', () => {
     expect(result).toBe(sentinel);
   });
 
-  it('JSON never parses → breaks on attempt 0 (single fetch) → buildFallbackExtractedData()', async () => {
+  // Unparseable/empty output used to `break` on attempt 0 — the most
+  // recoverable failure got the LEAST effort, while wrong numbers got an
+  // escalation retry. Both now take the same retry road (Giorgio, 2026-07-16).
+
+  it('JSON never parses → retries the full budget with parse feedback → buildFallbackExtractedData()', async () => {
     const analyzer = makeAnalyzer({ maxValidationRetries: 2 });
-    mockFetch.mockResolvedValueOnce(jsonResponse({ output_text: 'not json at all {{{' }));
+    mockFetch.mockResolvedValue(jsonResponse({ output_text: 'not json at all {{{' }));
+    mockBuildRetryFeedback.mockReturnValue('parse retry text');
     const fallback = { fallback: 'unparseable' };
     mockBuildFallbackExtractedData.mockReturnValueOnce(fallback);
 
     const result = await analyzer.extractQuote('https://x', 'image/png');
 
-    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockFetch).toHaveBeenCalledTimes(3); // attempts 0,1,2 — no early bail
     expect(mockValidateExtraction).not.toHaveBeenCalled();
+    expect(mockBuildRetryFeedback).toHaveBeenCalledWith(
+      [UNPARSEABLE_ISSUE],
+      'parse', // not the numeric-inconsistency wording
+    );
     expect(result).toBe(fallback);
   });
 
-  it('empty outputText → breaks the loop immediately → buildFallbackExtractedData()', async () => {
+  it('escalates the model on the retry after an unparseable response', async () => {
+    const analyzer = makeAnalyzer({
+      maxValidationRetries: 1,
+      visionModel: 'gpt-4o',
+      escalateModel: 'gpt-4.1',
+    });
+    mockFetch
+      .mockResolvedValueOnce(jsonResponse({ output_text: 'garbage {{{' }))
+      .mockResolvedValueOnce(jsonResponse({ output_text: JSON.stringify({ a: 1 }) }));
+    mockValidateExtraction.mockReturnValueOnce({ valid: true, issues: [], warnings: [] });
+    mockNormalizeExtracted.mockReturnValueOnce({});
+
+    await analyzer.extractQuote('https://x', 'image/png');
+
+    expect(parseBody(mockFetch.mock.calls[1]).model).toBe('gpt-4.1');
+  });
+
+  it('empty outputText → retries with the empty-output issue, recovers if the retry parses', async () => {
     const analyzer = makeAnalyzer({ maxValidationRetries: 2 });
-    mockFetch.mockResolvedValueOnce(jsonResponse({ output_text: '   ' }));
-    const fallback = { fallback: 'empty' };
-    mockBuildFallbackExtractedData.mockReturnValueOnce(fallback);
+    const parsed = { recovered: true };
+    mockFetch
+      .mockResolvedValueOnce(jsonResponse({ output_text: '   ' }))
+      .mockResolvedValueOnce(jsonResponse({ output_text: JSON.stringify(parsed) }));
+    mockValidateExtraction.mockReturnValueOnce({ valid: true, issues: [], warnings: [] });
+    const recovered = { sentinel: 'recovered' };
+    mockNormalizeExtracted.mockReturnValueOnce(recovered);
 
     const result = await analyzer.extractQuote('https://x', 'image/png');
 
-    expect(mockFetch).toHaveBeenCalledTimes(1);
-    expect(result).toBe(fallback);
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    expect(mockBuildRetryFeedback).toHaveBeenCalledWith([EMPTY_OUTPUT_ISSUE], 'parse');
+    expect(result).toBe(recovered);
   });
 
   it('request throws (network failure) → returns buildFallbackExtractedData(), never throws', async () => {

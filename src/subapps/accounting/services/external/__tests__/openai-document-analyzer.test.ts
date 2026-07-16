@@ -376,13 +376,26 @@ describe('buildVisionContent', () => {
     const { options } = lastFetchCall();
     const content = JSON.parse(options.body).input[1].content;
     const expectedB64 = Buffer.from('PDF-BYTES').toString('base64');
-    // NOTE: filename is hardcoded to 'document.pdf' regardless of the real
-    // file name — characterized as-is.
+    // The real filename is forwarded — it is a signal the model reads. Was
+    // hardcoded to 'document.pdf'; changed deliberately (Giorgio, 2026-07-16).
     expect(content).toContainEqual({
       type: 'input_file',
-      filename: 'document.pdf',
+      filename: 'doc.pdf',
       file_data: `data:application/pdf;base64,${expectedB64}`,
     });
+  });
+
+  it('falls back to "document.pdf" when the URL carries no filename segment', async () => {
+    mockBucket('my-bucket', async () => [Buffer.from('PDF-BYTES')]);
+    mockFetchOk({ output_text: JSON.stringify(SAMPLE_CLASSIFICATION) });
+
+    await makeAnalyzer().classifyDocument('https://storage.googleapis.com/my-bucket/', 'application/pdf');
+
+    const { options } = lastFetchCall();
+    const content = JSON.parse(options.body).input[1].content;
+    expect(content).toContainEqual(
+      expect.objectContaining({ type: 'input_file', filename: 'document.pdf' }),
+    );
   });
 
   it('adds no image/file entry for other mime types — only the prompt text', async () => {
@@ -426,20 +439,31 @@ describe('guessMimeFromUrl (via extractData)', () => {
     expect(content[0].type).toBe('input_text');
   });
 
-  it('SUSPICIOUS (characterized as-is): a URL matching two extension substrings resolves by check order, not by the real trailing extension', async () => {
-    // guessMimeFromUrl checks jpg/jpeg, then png, then webp, then pdf — via
-    // substring `includes`, not `endsWith`. A URL containing an earlier
-    // substring anywhere (e.g. ".png" inside the path) wins even if the file
-    // actually ends in ".pdf". This looks like a latent bug; locking in the
-    // current (first-match-wins-by-check-order) behaviour.
+  it('resolves a double extension by the LAST one — report.png.pdf is a PDF', async () => {
+    // Was the reverse: substring `includes('.png')` matched first and won.
+    // MIME resolution now goes through the ADR-296 registry, which reads the
+    // trailing extension only. Fixed deliberately (Giorgio, 2026-07-16).
+    mockBucket('my-bucket', async () => [Buffer.from('PDF-BYTES')]);
     mockFetchOk({ output_text: JSON.stringify(SAMPLE_EXTRACTED) });
-    await makeAnalyzer().extractData('https://x/report.png.pdf', 'receipt');
+
+    await makeAnalyzer().extractData('https://storage.googleapis.com/my-bucket/report.png.pdf', 'receipt');
+
     const { options } = lastFetchCall();
     const content = JSON.parse(options.body).input[1].content;
-    // Resolved as image/png (input_image), NOT application/pdf, even though
-    // the URL really ends in ".pdf".
+    expect(content.some((entry: { type: string }) => entry.type === 'input_file')).toBe(true);
+    expect(content.some((entry: { type: string }) => entry.type === 'input_image')).toBe(false);
+  });
+
+  it('ignores the query string when resolving the extension (signed storage URLs)', async () => {
+    // A token like `?alt=media&token=a.b.c` ends in ".c" — substring probing
+    // never saw it, but any trailing-extension parser must strip it first.
+    mockFetchOk({ output_text: JSON.stringify(SAMPLE_EXTRACTED) });
+
+    await makeAnalyzer().extractData('https://x/receipt.png?alt=media&token=a.b.c', 'receipt');
+
+    const { options } = lastFetchCall();
+    const content = JSON.parse(options.body).input[1].content;
     expect(content.some((entry: { type: string }) => entry.type === 'input_image')).toBe(true);
-    expect(content.some((entry: { type: string }) => entry.type === 'input_file')).toBe(false);
   });
 });
 
