@@ -161,16 +161,23 @@ describe('ImageRenderer — render smoke', () => {
 describe('ImageRenderer — getGrips', () => {
   // ADR-654 — ο renderer ζωγραφίζει ΑΚΡΙΒΩΣ τις λαβές που πιάνει το interaction registry
   // (κοινό `getImageGrips` SSoT): MOVE + ROTATION + 4 γωνιακές + 3 μεσοπλευρικές (E/S/W).
-  it('returns the SAME 9 tagged grips as the interaction registry (move + rotation + 4 corners + 3 edges)', () => {
+  it('returns the SAME 9 grips as the interaction registry — render-shaped (id + isVisible + shape)', () => {
     const { renderer } = makeRenderer();
     const grips = renderer.getGrips(makeImage({ rotation: 30 }));
     expect(grips).toHaveLength(9);
-    expect(grips.map((g) => g.gripKind?.kind)).toEqual([
-      'image-move', 'image-rotation',
-      'image-corner-ne', 'image-corner-nw', 'image-corner-sw', 'image-corner-se',
-      'image-edge-e', 'image-edge-s', 'image-edge-w',
+    // `getGrips` returns the RENDER `GripInfo` (rendering/types). The interaction tags
+    // (`gripKind`, `movesEntity`) live on the grip-types SSoT `getImageGrips` and are
+    // asserted in image-grips.test.ts — the render output must NOT be judged by them.
+    // The shared `toRenderGripInfo` adapter (same as ScaleBar/Line/etc.) supplies the
+    // render-only `id` + `isVisible` the phase renderer needs; the old inline spread
+    // dropped both, which is exactly the type error CHECK 3.29 surfaced.
+    expect(grips.every((g) => g.isVisible)).toBe(true);
+    expect(grips.every((g) => typeof g.id === 'string' && g.id.length > 0)).toBe(true);
+    expect(grips.map((g) => g.type)).toEqual([
+      'center', 'vertex',
+      'corner', 'corner', 'corner', 'corner',
+      'midpoint', 'midpoint', 'midpoint',
     ]);
-    expect(grips[0].movesEntity).toBe(true);
     // ADR-654 — τα glyph shapes ΠΡΕΠΕΙ να ανατίθενται (αλλιώς move/rotation φαίνονται ως τετράγωνα):
     // move → σταυρός 4-βελών, rotation → καμπύλο βέλος, γωνίες + μεσοπλευρικές → default 'square'.
     expect(grips.map((g) => g.shape)).toEqual([

@@ -239,14 +239,24 @@ function getLineFoundationGrips(
   entity: Readonly<FoundationEntity>,
   params: LineFoundationParams,
 ): GripInfo[] {
-  return getAxisBoxGrips(lineAxisBoxParams(params)).map((g, i) => ({
-    entityId: entity.id,
-    gripIndex: i,
-    type: g.type,
-    position: g.position,
-    movesEntity: false,
-    gripKind: { on: 'foundation', kind: FOUNDATION_LINE_ROLE_TO_KIND[g.role] },
-  }));
+  // `getAxisBoxGrips` is called WITHOUT `extraMidEdges`, so it only ever emits the 7
+  // core roles — every one of which `FOUNDATION_LINE_ROLE_TO_KIND` maps. The `Partial`
+  // lookup is therefore total in practice; the guard exists only to narrow the map's
+  // optional value (`FoundationGripKind | undefined`) to the required `kind`, and never
+  // drops a grip at runtime. `flatMap`'s index is the SOURCE-array index, so `gripIndex`
+  // stays identical to the previous `.map((g, i) => …)`.
+  return getAxisBoxGrips(lineAxisBoxParams(params)).flatMap<GripInfo>((g, i) => {
+    const kind = FOUNDATION_LINE_ROLE_TO_KIND[g.role];
+    if (!kind) return [];
+    return [{
+      entityId: entity.id,
+      gripIndex: i,
+      type: g.type,
+      position: g.position,
+      movesEntity: false,
+      gripKind: { on: 'foundation', kind },
+    }];
+  });
 }
 
 // ─── Drag transforms ─────────────────────────────────────────────────────────

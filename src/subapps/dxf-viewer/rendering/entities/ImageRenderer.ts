@@ -43,6 +43,7 @@ import { getImageGrips } from '../../bim/image/image-grips';
 import { gripGlyphShape } from '../../bim/grips/grip-glyph-registry';
 import { gripKindOf } from '../../hooks/grip-kinds';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
+import { toRenderGripInfo } from './shared/grip-utils';
 import { HatchImageCache } from './shared/hatch-image-cache';
 import { imageIntrinsicSize } from './shared/image-intrinsic-size';
 // ADR-040 — async asset load «σπρώχνει» ένα dirty-frame (ο renderer δεν subscribe-άρει).
@@ -140,10 +141,9 @@ export class ImageRenderer extends BaseEntityRenderer {
    */
   getGrips(entity: EntityModel): GripInfo[] {
     if (!isImageEntity(entity as Entity)) return [];
-    return getImageGrips(entity as unknown as ImageEntity).map((g) => ({
-      ...g,
-      shape: gripGlyphShape(gripKindOf(g, 'image')),
-    }));
+    return getImageGrips(entity as unknown as ImageEntity).map((g) =>
+      toRenderGripInfo(g, gripGlyphShape(gripKindOf(g, 'image'))),
+    );
   }
 
   /** Fill hit-test (point-in-polygon) — κλικ οπουδήποτε μέσα στην εικόνα την επιλέγει (mirror hatch). */
