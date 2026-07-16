@@ -17,14 +17,14 @@
 
 import 'server-only';
 
-import { AI_ANALYSIS_DEFAULTS } from '@/config/ai-analysis-config';
 import { isRecord } from '@/lib/type-guards';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import {
-  isImageMime,
   extractOutputText,
-  type VisionContent,
-} from './tools/handlers/vision-helpers';
+  buildBufferVisionContent,
+  type ResponsesContent,
+} from '@/services/ai/openai-responses';
+import { requestVisionJson, logVisionFailure } from './shared/vision-json-request';
 
 const logger = createModuleLogger('INVOICE_EXTRACT');
 
@@ -182,80 +182,35 @@ function buildVisionContent(
   buffer: Buffer,
   filename: string,
   contentType: string
-): VisionContent[] {
+): ResponsesContent[] {
   const userPrompt =
     'Εξήγαγε τα στοιχεία ΕΚΔΟΤΗ και ΣΥΝΑΛΛΑΣΣΟΜΕΝΟΥ από αυτό το παραστατικό.\n' +
     `Filename: ${filename}\nMIME: ${contentType}`;
 
-  const content: VisionContent[] = [
-    { type: 'input_text', text: userPrompt },
-  ];
-
-  const base64 = buffer.toString('base64');
-
-  if (isImageMime(contentType)) {
-    content.push({
-      type: 'input_image',
-      image_url: `data:${contentType};base64,${base64}`,
-    });
-  } else {
-    content.push({
-      type: 'input_file',
-      filename,
-      file_data: `data:${contentType};base64,${base64}`,
-    });
-  }
-
-  return content;
+  return buildBufferVisionContent(userPrompt, buffer, filename, contentType);
 }
 
 async function callExtractionAPI(
-  content: VisionContent[],
+  content: ResponsesContent[],
   apiKey: string,
   fileRecordId: string
 ): Promise<InvoiceEntityResult | null> {
-  const baseUrl = AI_ANALYSIS_DEFAULTS.OPENAI.BASE_URL;
-  const model = AI_ANALYSIS_DEFAULTS.OPENAI.VISION_MODEL;
-
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), EXTRACTION_TIMEOUT_MS);
-
-    const response = await fetch(`${baseUrl}/responses`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model,
-        input: [
-          { role: 'system', content: [{ type: 'input_text', text: SYSTEM_PROMPT }] },
-          { role: 'user', content },
-        ],
-        text: { format: { type: 'json_schema', ...INVOICE_EXTRACTION_SCHEMA } },
-      }),
-      signal: controller.signal,
+    const payload = await requestVisionJson({
+      apiKey,
+      timeoutMs: EXTRACTION_TIMEOUT_MS,
+      systemPrompt: SYSTEM_PROMPT,
+      content,
+      format: { type: 'json_schema', ...INVOICE_EXTRACTION_SCHEMA },
     });
-
-    clearTimeout(timeout);
-
-    if (!response.ok) {
-      const errorBody = await response.text().catch(() => 'no body');
-      logger.warn('Invoice extraction API non-OK', {
-        status: response.status,
-        fileRecordId,
-        error: errorBody.substring(0, 500),
-      });
-      return null;
-    }
-
-    const payload: unknown = await response.json();
     return parseExtractionResponse(payload, fileRecordId);
   } catch (error) {
-    const msg = error instanceof Error ? error.message : 'unknown';
-    logger.warn('Invoice extraction API error', { error: msg, fileRecordId });
-    return null;
+    return logVisionFailure(
+      logger,
+      { nonOk: 'Invoice extraction API non-OK', generic: 'Invoice extraction API error' },
+      error,
+      fileRecordId,
+    );
   }
 }
 
@@ -288,9 +243,8 @@ function parseExtractionResponse(
   }
 }
 
-function parseIssuer(raw: unknown): InvoiceIssuer | null {
-  if (!isRecord(raw)) return null;
-  const r = raw as Record<string, unknown>;
+/** The fields every invoice party carries. An issuer adds `registrationNumber`. */
+function parseEntityFields(r: Record<string, unknown>): InvoiceEntity {
   return {
     name: asNullableString(r.name),
     profession: asNullableString(r.profession),
@@ -301,26 +255,22 @@ function parseIssuer(raw: unknown): InvoiceIssuer | null {
     phone: asNullableString(r.phone),
     vatNumber: asNullableString(r.vatNumber),
     taxOffice: asNullableString(r.taxOffice),
-    registrationNumber: asNullableString(r.registrationNumber),
     email: asNullableString(r.email),
+  };
+}
+
+function parseIssuer(raw: unknown): InvoiceIssuer | null {
+  if (!isRecord(raw)) return null;
+  const r = raw as Record<string, unknown>;
+  return {
+    ...parseEntityFields(r),
+    registrationNumber: asNullableString(r.registrationNumber),
   };
 }
 
 function parseCustomer(raw: unknown): InvoiceEntity | null {
   if (!isRecord(raw)) return null;
-  const r = raw as Record<string, unknown>;
-  return {
-    name: asNullableString(r.name),
-    profession: asNullableString(r.profession),
-    street: asNullableString(r.street),
-    streetNumber: asNullableString(r.streetNumber),
-    postalCode: asNullableString(r.postalCode),
-    city: asNullableString(r.city),
-    phone: asNullableString(r.phone),
-    vatNumber: asNullableString(r.vatNumber),
-    taxOffice: asNullableString(r.taxOffice),
-    email: asNullableString(r.email),
-  };
+  return parseEntityFields(raw as Record<string, unknown>);
 }
 
 function parseInvoiceDetails(raw: unknown): InvoiceDetails | null {

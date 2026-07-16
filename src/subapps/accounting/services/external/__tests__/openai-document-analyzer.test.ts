@@ -112,11 +112,24 @@ function mockFetchOk(payload: unknown): void {
   });
 }
 
+/**
+ * A non-OK response. `text()` serves the raw body the way a real `Response`
+ * does — the SSoT reads the error body as text so that non-JSON payloads
+ * survive onto `ResponsesApiError.body`. A `jsonImpl` that rejects models a
+ * body that is not JSON at all, so `text()` yields a non-JSON string.
+ */
 function mockFetchError(status: number, jsonImpl: () => Promise<unknown>): void {
   (global.fetch as jest.Mock).mockResolvedValueOnce({
     ok: false,
     status,
     json: jsonImpl,
+    text: async () => {
+      try {
+        return JSON.stringify(await jsonImpl());
+      } catch {
+        return '<html>upstream failure</html>';
+      }
+    },
   });
 }
 

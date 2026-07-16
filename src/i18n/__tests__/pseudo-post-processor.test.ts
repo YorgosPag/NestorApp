@@ -72,6 +72,29 @@ describe('toPseudo — edge cases', () => {
   });
 });
 
+describe('toPseudo — nested wrapping (interpolation)', () => {
+  it('ξετυλίγει εσωτερικά wrappers αντί να διπλο-τυλίγει', () => {
+    // Ο caller κάνει t(field.label) → το label φτάνει ήδη τυλιγμένο ως {label}.
+    expect(toPseudo('Επιλέξτε [[~~~ Νομική Μορφή ~~~]]')).toBe('[[~~~~ Επιλέξτε Νομική Μορφή ~~~~]]');
+  });
+
+  it('ξετυλίγει πολλαπλά εσωτερικά wrappers στο ίδιο string', () => {
+    expect(toPseudo('[[~~ Α ~~]] και [[~~ Β ~~]]')).toBe('[[~~ Α και Β ~~]]');
+  });
+
+  it('τα tildes υπολογίζονται από το ξετυλιγμένο κείμενο, όχι από τον θόρυβο', () => {
+    // Χωρίς unwrap το wrapper θα μετρούσε και τα ~ και τις αγκύλες → λάθος πλάτος.
+    expect(toPseudo('[[~~ ΑΦΜ ~~]]')).toBe(toPseudo('ΑΦΜ'));
+  });
+
+  it('το concatenation ΠΑΡΑΜΕΝΕΙ ορατό (δύο αδελφά wrappers δεν ενώνονται)', () => {
+    // Το `t('a') + ' ' + t('b')` γίνεται σε JS ΜΕΤΑ τα t() — ο postProcessor δεν
+    // ξαναπερνά ποτέ από πάνω του, άρα το σήμα του λάθους επιβιώνει. Είναι feature.
+    const concat = `${toPseudo('Επιλέξτε')} ${toPseudo('Νομική Μορφή')}`;
+    expect(concat).toBe('[[~~ Επιλέξτε ~~]] [[~~~ Νομική Μορφή ~~~]]');
+  });
+});
+
 describe('pseudoPostProcessor — gating', () => {
   it('τυλίγει μόνο όταν η γλώσσα είναι pseudo', () => {
     expect(process('Αποθήκευση', PSEUDO_LANGUAGE)).toBe('[[~~ Αποθήκευση ~~]]');

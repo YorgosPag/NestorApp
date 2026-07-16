@@ -16,15 +16,15 @@
 
 import 'server-only';
 
-import { AI_ANALYSIS_DEFAULTS } from '@/config/ai-analysis-config';
 import { isRecord } from '@/lib/type-guards';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import {
   downloadFile,
-  isImageMime,
   extractOutputText,
-  type VisionContent,
-} from './tools/handlers/vision-helpers';
+  buildBufferVisionContent,
+  type ResponsesContent,
+} from '@/services/ai/openai-responses';
+import { requestVisionJson, logVisionFailure } from './shared/vision-json-request';
 
 const logger = createModuleLogger('DOC_PREVIEW');
 
@@ -192,82 +192,37 @@ function buildVisionContent(
   buffer: Buffer,
   filename: string,
   contentType: string
-): VisionContent[] {
+): ResponsesContent[] {
   const userPrompt = [
     'Ανάλυσε αυτό το αρχείο. Τι τύπος εγγράφου είναι; Τι πληροφορίες περιέχει;',
     `Filename: ${filename}`,
     `MIME: ${contentType}`,
   ].join('\n');
 
-  const content: VisionContent[] = [
-    { type: 'input_text', text: userPrompt },
-  ];
-
-  const base64 = buffer.toString('base64');
-
-  if (isImageMime(contentType)) {
-    content.push({
-      type: 'input_image',
-      image_url: `data:${contentType};base64,${base64}`,
-    });
-  } else {
-    content.push({
-      type: 'input_file',
-      filename,
-      file_data: `data:${contentType};base64,${base64}`,
-    });
-  }
-
-  return content;
+  return buildBufferVisionContent(userPrompt, buffer, filename, contentType);
 }
 
 async function callVisionAPI(
-  content: VisionContent[],
+  content: ResponsesContent[],
   apiKey: string,
   fileRecordId: string
 ): Promise<DocumentPreviewResult | null> {
-  const baseUrl = AI_ANALYSIS_DEFAULTS.OPENAI.BASE_URL;
-  const model = AI_ANALYSIS_DEFAULTS.OPENAI.VISION_MODEL;
-
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), PREVIEW_TIMEOUT_MS);
-
-    const response = await fetch(`${baseUrl}/responses`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model,
-        input: [
-          { role: 'system', content: [{ type: 'input_text', text: SYSTEM_PROMPT }] },
-          { role: 'user', content },
-        ],
-        text: { format: { type: 'json_schema', ...PREVIEW_SCHEMA } },
-      }),
-      signal: controller.signal,
+    const payload = await requestVisionJson({
+      apiKey,
+      timeoutMs: PREVIEW_TIMEOUT_MS,
+      systemPrompt: SYSTEM_PROMPT,
+      content,
+      format: { type: 'json_schema', ...PREVIEW_SCHEMA },
     });
-
-    clearTimeout(timeout);
-
-    if (!response.ok) {
-      const errorBody = await response.text().catch(() => 'no body');
-      logger.warn('Vision API non-OK', {
-        status: response.status,
-        fileRecordId,
-        error: errorBody.substring(0, 500),
-      });
-      return null;
-    }
-
-    const payload: unknown = await response.json();
     return parsePreviewResponse(payload, fileRecordId);
   } catch (error) {
-    const msg = error instanceof Error ? error.message : 'unknown';
-    logger.warn('Vision API error', { error: msg, fileRecordId });
-    return null;
+    return logVisionFailure(
+      logger,
+      { nonOk: 'Vision API non-OK', generic: 'Vision API error' },
+      error,
+      fileRecordId,
+    );
   }
 }
 

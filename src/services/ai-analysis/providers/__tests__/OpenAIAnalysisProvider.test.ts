@@ -65,8 +65,18 @@ function okResponse(body: unknown) {
   return { ok: true, status: 200, json: async () => body };
 }
 
+/**
+ * A non-OK response. `text()` serves the raw body the way a real `Response`
+ * does — the SSoT reads the error body as text so that non-JSON payloads
+ * (gateway HTML, truncated bodies) survive onto `ResponsesApiError.body`.
+ */
 function errResponse(status: number, body: unknown) {
-  return { ok: false, status, json: async () => body };
+  return {
+    ok: false,
+    status,
+    json: async () => body,
+    text: async () => JSON.stringify(body),
+  };
 }
 
 /** Valid multi_intent payload — satisfies AIAnalysisResultSchema. */
@@ -435,9 +445,7 @@ describe('OpenAIAnalysisProvider', () => {
       fetchMock().mockResolvedValue({
         ok: false,
         status: 503,
-        json: async () => {
-          throw new Error('not json');
-        },
+        text: async () => '<html>503 Service Unavailable</html>',
       });
 
       await expect(provider.analyze(messageIntentInput())).rejects.toThrow('OpenAI error (503)');

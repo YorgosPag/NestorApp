@@ -97,11 +97,17 @@ function getConfig(analyzer: OpenAIQuoteAnalyzer): AnalyzerConfigShape {
   return (analyzer as unknown as { config: AnalyzerConfigShape }).config;
 }
 
+/**
+ * `text()` serves the raw body the way a real `Response` does — the SSoT reads
+ * error bodies as text so non-JSON payloads survive onto
+ * `ResponsesApiError.body`.
+ */
 function jsonResponse(body: unknown, ok = true, status = 200): Response {
   return {
     ok,
     status,
     json: jest.fn().mockResolvedValue(body),
+    text: jest.fn().mockResolvedValue(JSON.stringify(body)),
   } as unknown as Response;
 }
 
@@ -384,7 +390,7 @@ describe('executeRequest error handling & retries (via classifyQuote)', () => {
     mockFetch.mockResolvedValueOnce({
       ok: false,
       status: 503,
-      json: jest.fn().mockRejectedValue(new Error('not json')),
+      text: jest.fn().mockResolvedValue('<html>503 Service Unavailable</html>'),
     } as unknown as Response);
 
     const result = await analyzer.classifyQuote('https://x/img.png', 'image/png');

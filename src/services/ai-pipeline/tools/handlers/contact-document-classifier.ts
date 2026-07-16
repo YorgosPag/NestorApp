@@ -20,9 +20,9 @@ import { isRecord } from '@/lib/type-guards';
 import {
   downloadFile,
   extractOutputText,
-  isImageMime,
-  type VisionContent,
-} from './vision-helpers';
+  buildBufferVisionContent,
+} from '@/services/ai/openai-responses';
+import { requestVisionJson } from '../../shared/vision-json-request';
 
 // ============================================================================
 // TYPES
@@ -177,68 +177,20 @@ export async function classifyContactDocument(params: {
     `MIME: ${contentType}`,
   ].join('\n');
 
-  const content: VisionContent[] = [
-    { type: 'input_text', text: userPrompt },
-  ];
-
-  const base64 = fileBuffer.toString('base64');
-
-  if (isImageMime(contentType)) {
-    content.push({
-      type: 'input_image',
-      image_url: `data:${contentType};base64,${base64}`,
-    });
-  } else {
-    content.push({
-      type: 'input_file',
-      filename,
-      file_data: `data:${contentType};base64,${base64}`,
-    });
-  }
+  const content = buildBufferVisionContent(userPrompt, fileBuffer, filename, contentType);
 
   // Call OpenAI Responses API
   const schema = buildClassificationSchema();
-  const baseUrl = AI_ANALYSIS_DEFAULTS.OPENAI.BASE_URL;
-  const model = AI_ANALYSIS_DEFAULTS.OPENAI.VISION_MODEL;
-  const timeoutMs = AI_ANALYSIS_DEFAULTS.OPENAI.TIMEOUT_MS;
 
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), timeoutMs);
-
-    const response = await fetch(`${baseUrl}/responses`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model,
-        input: [
-          {
-            role: 'system',
-            content: [{ type: 'input_text', text: SYSTEM_PROMPT }],
-          },
-          {
-            role: 'user',
-            content,
-          },
-        ],
-        text: {
-          format: {
-            type: 'json_schema',
-            ...schema,
-          },
-        },
-      }),
-      signal: controller.signal,
+    const payload = await requestVisionJson({
+      apiKey,
+      timeoutMs: AI_ANALYSIS_DEFAULTS.OPENAI.TIMEOUT_MS,
+      systemPrompt: SYSTEM_PROMPT,
+      content,
+      format: { type: 'json_schema', ...schema },
     });
 
-    clearTimeout(timeout);
-
-    if (!response.ok) return FALLBACK_RESULT;
-
-    const payload: unknown = await response.json();
     const outputText = extractOutputText(payload);
     if (!outputText) return FALLBACK_RESULT;
 

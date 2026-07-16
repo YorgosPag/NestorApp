@@ -31,11 +31,18 @@ export type {
 
 export { extractOutputText } from './extract-output-text';
 
+export { ResponsesApiError } from './responses-error';
+
 export {
   executeResponsesRequest,
   type ResponsesRequestConfig,
 } from './execute-request';
 
-export { isImageMime, toBase64DataUri, beginVisionContent } from './vision-content';
+export {
+  isImageMime,
+  toBase64DataUri,
+  beginVisionContent,
+  buildBufferVisionContent,
+} from './vision-content';
 
 export { downloadFile, DEFAULT_MAX_FILE_SIZE_BYTES } from './download-file';

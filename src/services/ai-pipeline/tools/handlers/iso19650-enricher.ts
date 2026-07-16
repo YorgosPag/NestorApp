@@ -58,12 +58,17 @@ import {
   validateRevisionCode,
 } from '@/services/iso19650/validators';
 import { isRecord } from '@/lib/type-guards';
+// Imported via the `vision-helpers` re-export shim (not the canonical barrel
+// directly) because this module's tests `jest.mock` that shim wholesale. The
+// shim re-exports `@/services/ai/openai-responses` verbatim, so this is the
+// same SSoT, reached through the seam the tests already own.
 import {
   downloadFile,
   extractOutputText,
   isImageMime,
   type VisionContent,
 } from '@/services/ai-pipeline/tools/handlers/vision-helpers';
+import { requestVisionJson } from '@/services/ai-pipeline/shared/vision-json-request';
 
 // ============================================================================
 // PUBLIC TYPES
@@ -299,34 +304,14 @@ async function callOpenAiVisionEnricher(params: {
   apiKey: string;
   content: VisionContent[];
 }): Promise<unknown | null> {
-  const baseUrl = AI_ANALYSIS_DEFAULTS.OPENAI.BASE_URL;
-  const model = AI_ANALYSIS_DEFAULTS.OPENAI.VISION_MODEL;
-  const timeoutMs = AI_ANALYSIS_DEFAULTS.OPENAI.TIMEOUT_MS;
-
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), timeoutMs);
-
-    const response = await fetch(`${baseUrl}/responses`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${params.apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model,
-        input: [
-          { role: 'system', content: [{ type: 'input_text', text: SYSTEM_PROMPT }] },
-          { role: 'user', content: params.content },
-        ],
-        text: { format: { type: 'json_schema', ...ENRICHMENT_SCHEMA } },
-      }),
-      signal: controller.signal,
+    return await requestVisionJson({
+      apiKey: params.apiKey,
+      timeoutMs: AI_ANALYSIS_DEFAULTS.OPENAI.TIMEOUT_MS,
+      systemPrompt: SYSTEM_PROMPT,
+      content: params.content,
+      format: { type: 'json_schema', ...ENRICHMENT_SCHEMA },
     });
-
-    clearTimeout(timeout);
-    if (!response.ok) return null;
-    return await response.json();
   } catch {
     return null;
   }

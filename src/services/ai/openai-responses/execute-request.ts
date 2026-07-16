@@ -14,7 +14,30 @@
  * @see ADR-294 — SSoT Ratchet (module `openai-provider`)
  */
 
+import { ResponsesApiError } from './responses-error';
 import type { ResponsesErrorPayload, ResponsesRequestBody } from './wire-types';
+
+/**
+ * Read the error body once, as text, and recover the API's own message from it.
+ *
+ * Text-first (not `response.json()`) so the raw payload survives onto
+ * `ResponsesApiError.body` even when it is not JSON at all — a gateway's HTML
+ * 502 page is exactly the case you most want to see in the log, and it is the
+ * case `.json()` throws away.
+ */
+async function readErrorBody(response: Response): Promise<{ body: string; message: string }> {
+  const body = await response.text().catch(() => '');
+
+  let message = '';
+  try {
+    const payload = JSON.parse(body) as ResponsesErrorPayload;
+    message = payload.error?.message ?? '';
+  } catch {
+    // Non-JSON body — fall through to the status-based message.
+  }
+
+  return { body, message: message || `OpenAI error (${response.status})` };
+}
 
 /** Fully-resolved per-call transport config. No env reads happen here. */
 export interface ResponsesRequestConfig {
@@ -26,8 +49,11 @@ export interface ResponsesRequestConfig {
 
 /**
  * One round-trip. Throws on timeout, network error, or non-OK status.
- * The thrown message prefers the API's own `error.message`, falling back to
- * `OpenAI error (<status>)`.
+ *
+ * A non-OK status throws `ResponsesApiError` (carrying `status` + raw `body`);
+ * its `message` prefers the API's own `error.message`, falling back to
+ * `OpenAI error (<status>)`. Timeouts and network faults throw the platform's
+ * own error untouched.
  */
 async function postResponsesOnce(
   config: ResponsesRequestConfig,
@@ -48,8 +74,8 @@ async function postResponsesOnce(
   });
 
   if (!response.ok) {
-    const errorPayload = (await response.json().catch(() => ({}))) as ResponsesErrorPayload;
-    throw new Error(errorPayload.error?.message || `OpenAI error (${response.status})`);
+    const { body, message } = await readErrorBody(response);
+    throw new ResponsesApiError(response.status, body, message);
   }
 
   return await response.json();

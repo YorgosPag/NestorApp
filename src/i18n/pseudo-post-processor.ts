@@ -17,7 +17,16 @@ const MIN_TILDES = 2;
 const MAX_TILDES = 12;
 const CHARS_PER_TILDE = 5;
 
-const ALREADY_PSEUDO = /^\[\[~+ [\s\S]* ~+\]\]$/;
+/**
+ * Ήδη τυλιγμένα κομμάτια — φτάνουν όταν ο caller κάνει `t(label)` και περνά το
+ * αποτέλεσμα ως interpolation value σε άλλο `t()`. Χωρίς ξετύλιγμα το string
+ * τυλίγεται δεύτερη φορά: `[[~~ Επιλέξτε [[~~ Νομική Μορφή ~~]] ~~]]`.
+ *
+ * Δεν επηρεάζει την ανίχνευση concatenation: το `t('a') + t('b')` ενώνεται σε JS
+ * ΜΕΤΑ τα t(), οπότε δεν ξαναπερνά ποτέ από εδώ — τα δύο αδελφά wrappers μένουν
+ * ορατά, που είναι ακριβώς το ζητούμενο.
+ */
+const NESTED_PSEUDO = /\[\[~+ ([\s\S]*?) ~+\]\]/g;
 
 /**
  * Τυλίγει ένα string σε pseudo μορφή: `[[~~ κείμενο ~~]]`.
@@ -25,13 +34,15 @@ const ALREADY_PSEUDO = /^\[\[~+ [\s\S]* ~+\]\]$/;
  */
 export function toPseudo(value: string): string {
   if (!value) return value;
-  if (ALREADY_PSEUDO.test(value)) return value;
 
-  const width = value.replace(/ /g, '').length;
+  const inner = value;
+  if (!inner) return inner;
+
+  const width = inner.replace(/ /g, '').length;
   const tildeCount = Math.min(MAX_TILDES, Math.max(MIN_TILDES, Math.ceil(width / CHARS_PER_TILDE)));
   const tildes = '~'.repeat(tildeCount);
 
-  return `[[${tildes} ${value} ${tildes}]]`;
+  return `[[${tildes} ${inner} ${tildes}]]`;
 }
 
 interface PseudoTranslator {

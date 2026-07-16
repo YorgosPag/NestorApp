@@ -62,3 +62,30 @@ export function toBase64DataUri(buffer: Buffer, mimeType?: string): string {
   }
   return `data:${mimeType};base64,${base64}`;
 }
+
+/**
+ * Prompt + one wholly-inlined file, as `[input_text, input_image | input_file]`.
+ *
+ * The counterpart to `beginVisionContent`: that one hands the API a URL to
+ * fetch and defers the PDF question to the caller, whereas this one already
+ * holds the bytes and inlines everything as base64 — so there is no pending
+ * attachment and nothing left for the caller to decide.
+ *
+ * Images ride in `input_image`; everything else (PDF, DOCX, XLSX) rides in
+ * `input_file`, which is the part that carries a filename.
+ */
+export function buildBufferVisionContent(
+  promptText: string,
+  buffer: Buffer,
+  filename: string,
+  mimeType: string,
+): ResponsesContent[] {
+  const dataUri = toBase64DataUri(buffer, mimeType);
+
+  return [
+    { type: 'input_text', text: promptText },
+    isImageMime(mimeType)
+      ? { type: 'input_image', image_url: dataUri }
+      : { type: 'input_file', filename, file_data: dataUri },
+  ];
+}
