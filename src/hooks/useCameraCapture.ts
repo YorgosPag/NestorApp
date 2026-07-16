@@ -19,6 +19,11 @@
  * - Canvas frame grab → JPEG File (quality 0.9)
  * - Cleanup tracks on stop/unmount/error
  *
+ * The stream session (permission, constraints, error mapping, teardown) is
+ * shared with `useVideoRecorder` via `useMediaStreamSession` (ADR-584). This
+ * hook owns only what is specific to grabbing stills: the device list and the
+ * canvas capture.
+ *
  * @module hooks/useCameraCapture
  * @enterprise ADR-311 - Desktop Camera Capture via WebRTC
  * @see ADR-031 - Canonical File Storage System
@@ -26,9 +31,16 @@
  * @see ADR-170 - usePhotoCapture (mobile-only predecessor)
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { createModuleLogger } from '@/lib/telemetry';
+import { useCallback, useState } from 'react';
+
 import { getErrorMessage } from '@/lib/error-utils';
+import { createModuleLogger } from '@/lib/telemetry';
+
+import type {
+  MediaSessionErrorCode,
+  MediaSessionStatus,
+} from './media/useMediaStreamSession';
+import { useMediaStreamSession } from './media/useMediaStreamSession';
 
 const logger = createModuleLogger('useCameraCapture');
 
@@ -36,19 +48,9 @@ const logger = createModuleLogger('useCameraCapture');
 // TYPES
 // =============================================================================
 
-export type CameraCaptureStatus =
-  | 'idle'
-  | 'requesting'
-  | 'ready'
-  | 'capturing'
-  | 'error';
+export type CameraCaptureStatus = MediaSessionStatus | 'capturing';
 
-export type CameraCaptureErrorCode =
-  | 'PERMISSION_DENIED'
-  | 'NO_DEVICE'
-  | 'NOT_SUPPORTED'
-  | 'DEVICE_BUSY'
-  | 'UNKNOWN';
+export type CameraCaptureErrorCode = MediaSessionErrorCode;
 
 export interface CameraDevice {
   deviceId: string;
@@ -80,16 +82,6 @@ const JPEG_MIME = 'image/jpeg';
 // HELPERS
 // =============================================================================
 
-function mapErrorToCode(error: unknown): CameraCaptureErrorCode {
-  if (!(error instanceof Error)) return 'UNKNOWN';
-  const name = error.name;
-  if (name === 'NotAllowedError' || name === 'SecurityError') return 'PERMISSION_DENIED';
-  if (name === 'NotFoundError' || name === 'OverconstrainedError') return 'NO_DEVICE';
-  if (name === 'NotReadableError' || name === 'AbortError') return 'DEVICE_BUSY';
-  if (name === 'TypeError') return 'NOT_SUPPORTED';
-  return 'UNKNOWN';
-}
-
 async function enumerateCameraDevices(): Promise<CameraDevice[]> {
   if (!navigator.mediaDevices?.enumerateDevices) return [];
   const all = await navigator.mediaDevices.enumerateDevices();
@@ -106,102 +98,43 @@ async function enumerateCameraDevices(): Promise<CameraDevice[]> {
 // =============================================================================
 
 export function useCameraCapture(): UseCameraCaptureReturn {
-  const [status, setStatus] = useState<CameraCaptureStatus>('idle');
-  const [errorCode, setErrorCode] = useState<CameraCaptureErrorCode | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [stream, setStream] = useState<MediaStream | null>(null);
   const [devices, setDevices] = useState<CameraDevice[]>([]);
   const [activeDeviceId, setActiveDeviceId] = useState<string | null>(null);
 
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
+  const session = useMediaStreamSession<'capturing'>({
+    audio: false,
+    logger,
 
-  const stopCamera = useCallback(() => {
-    const current = streamRef.current;
-    if (current) {
-      current.getTracks().forEach((t) => t.stop());
-      streamRef.current = null;
-    }
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-    }
-    setStream(null);
-    setActiveDeviceId(null);
-    setStatus('idle');
-  }, []);
+    onStreamReady: async (stream, requestedDeviceId) => {
+      // The browser may hand back a different device than requested (or pick
+      // one for us when we asked by facingMode) — trust the track, not the ask.
+      const track = stream.getVideoTracks()[0];
+      const settings = track?.getSettings();
+      setActiveDeviceId(settings?.deviceId ?? requestedDeviceId ?? null);
 
-  const startCamera = useCallback(
-    async (deviceId?: string) => {
-      if (!navigator.mediaDevices?.getUserMedia) {
-        setStatus('error');
-        setErrorCode('NOT_SUPPORTED');
-        setErrorMessage('MediaDevices API not available');
-        return;
-      }
-
-      try {
-        setStatus('requesting');
-        setErrorCode(null);
-        setErrorMessage(null);
-
-        const previous = streamRef.current;
-        if (previous) {
-          previous.getTracks().forEach((t) => t.stop());
-          streamRef.current = null;
-        }
-
-        const constraints: MediaStreamConstraints = {
-          video: deviceId
-            ? { deviceId: { exact: deviceId } }
-            : { facingMode: 'environment' },
-          audio: false,
-        };
-
-        const next = await navigator.mediaDevices.getUserMedia(constraints);
-        streamRef.current = next;
-        setStream(next);
-
-        const track = next.getVideoTracks()[0];
-        const settings = track?.getSettings();
-        const resolvedDeviceId = settings?.deviceId ?? deviceId ?? null;
-        setActiveDeviceId(resolvedDeviceId);
-
-        if (videoRef.current) {
-          videoRef.current.srcObject = next;
-        }
-
-        const list = await enumerateCameraDevices();
-        setDevices(list);
-
-        setStatus('ready');
-      } catch (err) {
-        const code = mapErrorToCode(err);
-        const message = getErrorMessage(err, 'Camera access failed');
-        if (code === 'PERMISSION_DENIED') {
-          logger.warn('startCamera blocked by user', { code });
-        } else {
-          logger.error('startCamera failed', { code, message });
-        }
-        setErrorCode(code);
-        setErrorMessage(message);
-        setStatus('error');
-      }
+      // Labels are only populated once permission has been granted, so the
+      // list is enumerated here rather than on mount.
+      setDevices(await enumerateCameraDevices());
     },
-    []
-  );
+
+    onStopped: () => setActiveDeviceId(null),
+  });
+
+  const { videoRef, streamRef, setStatus, fail } = session;
 
   const switchDevice = useCallback(
     async (deviceId: string) => {
-      await startCamera(deviceId);
+      await session.startCamera(deviceId);
     },
-    [startCamera]
+    [session]
   );
 
   const capturePhoto = useCallback(
     async (filename?: string): Promise<File | null> => {
       const video = videoRef.current;
-      const currentStream = streamRef.current;
-      if (!video || !currentStream) return null;
+      if (!video || !streamRef.current) return null;
+      // Dimensions are 0 until the first frame decodes; capturing now would
+      // yield a blank canvas.
       if (video.videoWidth === 0 || video.videoHeight === 0) return null;
 
       try {
@@ -228,35 +161,23 @@ export function useCameraCapture(): UseCameraCaptureReturn {
       } catch (err) {
         const message = getErrorMessage(err, 'Capture failed');
         logger.error('capturePhoto failed', { message });
-        setErrorCode('UNKNOWN');
-        setErrorMessage(message);
-        setStatus('error');
+        fail('UNKNOWN', message);
         return null;
       }
     },
-    []
+    [videoRef, streamRef, setStatus, fail]
   );
 
-  useEffect(() => {
-    return () => {
-      const current = streamRef.current;
-      if (current) {
-        current.getTracks().forEach((t) => t.stop());
-        streamRef.current = null;
-      }
-    };
-  }, []);
-
   return {
-    status,
-    errorCode,
-    errorMessage,
-    videoRef,
-    stream,
+    status: session.status,
+    errorCode: session.errorCode,
+    errorMessage: session.errorMessage,
+    videoRef: session.videoRef,
+    stream: session.stream,
     devices,
     activeDeviceId,
-    startCamera,
-    stopCamera,
+    startCamera: session.startCamera,
+    stopCamera: session.stopCamera,
     capturePhoto,
     switchDevice,
   };

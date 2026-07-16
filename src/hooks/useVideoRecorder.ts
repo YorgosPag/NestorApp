@@ -12,14 +12,27 @@
  * - Chrome/Edge/Firefox: video/webm;codecs=vp9,opus
  * - Safari: video/mp4
  *
+ * The stream session (permission, constraints, error mapping, teardown) is
+ * shared with `useCameraCapture` via `useMediaStreamSession` (ADR-584). This
+ * hook owns only the recording: the MediaRecorder, the chunk buffer and the
+ * duration tick.
+ *
  * @module hooks/useVideoRecorder
  * @enterprise ADR-311 - Desktop Camera Capture via WebRTC
  * @see ADR-161 - useVoiceRecorder (parallel pattern for audio)
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { createModuleLogger } from '@/lib/telemetry';
+
 import { getErrorMessage } from '@/lib/error-utils';
+import { getExtensionFromMime, pickSupportedMime } from '@/lib/media/media-mime';
+import { createModuleLogger } from '@/lib/telemetry';
+
+import type {
+  MediaSessionErrorCode,
+  MediaSessionStatus,
+} from './media/useMediaStreamSession';
+import { useMediaStreamSession } from './media/useMediaStreamSession';
 
 const logger = createModuleLogger('useVideoRecorder');
 
@@ -28,19 +41,11 @@ const logger = createModuleLogger('useVideoRecorder');
 // =============================================================================
 
 export type VideoRecorderStatus =
-  | 'idle'
-  | 'requesting'
-  | 'ready'
+  | MediaSessionStatus
   | 'recording'
-  | 'finalizing'
-  | 'error';
+  | 'finalizing';
 
-export type VideoRecorderErrorCode =
-  | 'PERMISSION_DENIED'
-  | 'NO_DEVICE'
-  | 'NOT_SUPPORTED'
-  | 'DEVICE_BUSY'
-  | 'UNKNOWN';
+export type VideoRecorderErrorCode = MediaSessionErrorCode;
 
 export interface UseVideoRecorderReturn {
   status: VideoRecorderStatus;
@@ -56,36 +61,27 @@ export interface UseVideoRecorderReturn {
 }
 
 // =============================================================================
-// MIME TYPE DETECTION
+// CONSTANTS
 // =============================================================================
 
+/** Preferred containers, best first. Probed against the running browser. */
+const VIDEO_MIME_CANDIDATES = [
+  'video/webm;codecs=vp9,opus',
+  'video/webm;codecs=vp8,opus',
+  'video/webm',
+  'video/mp4',
+] as const;
+
+const VIDEO_MIME_FALLBACK = 'video/webm';
+
+/** How often MediaRecorder flushes a chunk. */
+const CHUNK_INTERVAL_MS = 500;
+
+/** How often the elapsed-time readout updates. */
+const TICK_INTERVAL_MS = 250;
+
 function getSupportedVideoMime(): string {
-  if (typeof MediaRecorder === 'undefined') return 'video/webm';
-  const candidates = [
-    'video/webm;codecs=vp9,opus',
-    'video/webm;codecs=vp8,opus',
-    'video/webm',
-    'video/mp4',
-  ];
-  for (const mime of candidates) {
-    if (MediaRecorder.isTypeSupported(mime)) return mime;
-  }
-  return 'video/webm';
-}
-
-function getExtensionFromMime(mime: string): string {
-  if (mime.includes('mp4')) return 'mp4';
-  return 'webm';
-}
-
-function mapErrorToCode(error: unknown): VideoRecorderErrorCode {
-  if (!(error instanceof Error)) return 'UNKNOWN';
-  const name = error.name;
-  if (name === 'NotAllowedError' || name === 'SecurityError') return 'PERMISSION_DENIED';
-  if (name === 'NotFoundError' || name === 'OverconstrainedError') return 'NO_DEVICE';
-  if (name === 'NotReadableError' || name === 'AbortError') return 'DEVICE_BUSY';
-  if (name === 'TypeError') return 'NOT_SUPPORTED';
-  return 'UNKNOWN';
+  return pickSupportedMime(VIDEO_MIME_CANDIDATES, VIDEO_MIME_FALLBACK);
 }
 
 // =============================================================================
@@ -93,85 +89,24 @@ function mapErrorToCode(error: unknown): VideoRecorderErrorCode {
 // =============================================================================
 
 export function useVideoRecorder(): UseVideoRecorderReturn {
-  const [status, setStatus] = useState<VideoRecorderStatus>('idle');
-  const [errorCode, setErrorCode] = useState<VideoRecorderErrorCode | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [durationMs, setDurationMs] = useState(0);
-  const [stream, setStream] = useState<MediaStream | null>(null);
 
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const startedAtRef = useRef<number>(0);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const session = useMediaStreamSession<'recording' | 'finalizing'>({
+    audio: true,
+    logger,
+  });
+
+  const { streamRef, setStatus, fail } = session;
+
   const clearTick = useCallback(() => {
     if (tickRef.current) {
       clearInterval(tickRef.current);
       tickRef.current = null;
-    }
-  }, []);
-
-  const stopCamera = useCallback(() => {
-    const current = streamRef.current;
-    if (current) {
-      current.getTracks().forEach((t) => t.stop());
-      streamRef.current = null;
-    }
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-    }
-    setStream(null);
-    setStatus('idle');
-  }, []);
-
-  const startCamera = useCallback(async (deviceId?: string) => {
-    if (!navigator.mediaDevices?.getUserMedia) {
-      setStatus('error');
-      setErrorCode('NOT_SUPPORTED');
-      setErrorMessage('MediaDevices API not available');
-      return;
-    }
-
-    try {
-      setStatus('requesting');
-      setErrorCode(null);
-      setErrorMessage(null);
-
-      const previous = streamRef.current;
-      if (previous) {
-        previous.getTracks().forEach((t) => t.stop());
-        streamRef.current = null;
-      }
-
-      const constraints: MediaStreamConstraints = {
-        video: deviceId
-          ? { deviceId: { exact: deviceId } }
-          : { facingMode: 'environment' },
-        audio: true,
-      };
-
-      const next = await navigator.mediaDevices.getUserMedia(constraints);
-      streamRef.current = next;
-      setStream(next);
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = next;
-      }
-
-      setStatus('ready');
-    } catch (err) {
-      const code = mapErrorToCode(err);
-      const message = getErrorMessage(err, 'Camera access failed');
-      if (code === 'PERMISSION_DENIED') {
-        logger.warn('startCamera blocked by user', { code });
-      } else {
-        logger.error('startCamera failed', { code, message });
-      }
-      setErrorCode(code);
-      setErrorMessage(message);
-      setStatus('error');
     }
   }, []);
 
@@ -189,22 +124,20 @@ export function useVideoRecorder(): UseVideoRecorderReturn {
         if (event.data.size > 0) chunksRef.current.push(event.data);
       };
 
-      recorder.start(500);
+      recorder.start(CHUNK_INTERVAL_MS);
       startedAtRef.current = Date.now();
       setDurationMs(0);
       setStatus('recording');
 
       tickRef.current = setInterval(() => {
         setDurationMs(Date.now() - startedAtRef.current);
-      }, 250);
+      }, TICK_INTERVAL_MS);
     } catch (err) {
       const message = getErrorMessage(err, 'Recording failed to start');
       logger.error('startRecording failed', { message });
-      setErrorCode('UNKNOWN');
-      setErrorMessage(message);
-      setStatus('error');
+      fail('UNKNOWN', message);
     }
-  }, []);
+  }, [streamRef, setStatus, fail]);
 
   const stopRecording = useCallback(async (): Promise<File | null> => {
     const recorder = recorderRef.current;
@@ -218,9 +151,7 @@ export function useVideoRecorder(): UseVideoRecorderReturn {
         chunksRef.current = [];
 
         if (blob.size === 0) {
-          setErrorCode('UNKNOWN');
-          setErrorMessage('Empty recording');
-          setStatus('error');
+          fail('UNKNOWN', 'Empty recording');
           resolve(null);
           return;
         }
@@ -234,16 +165,12 @@ export function useVideoRecorder(): UseVideoRecorderReturn {
       setStatus('finalizing');
       recorder.stop();
     });
-  }, [clearTick]);
+  }, [clearTick, setStatus, fail]);
 
+  // The session stops the camera tracks on unmount; the recorder is ours.
   useEffect(() => {
     return () => {
       clearTick();
-      const current = streamRef.current;
-      if (current) {
-        current.getTracks().forEach((t) => t.stop());
-        streamRef.current = null;
-      }
       if (recorderRef.current?.state === 'recording') {
         recorderRef.current.stop();
       }
@@ -251,14 +178,14 @@ export function useVideoRecorder(): UseVideoRecorderReturn {
   }, [clearTick]);
 
   return {
-    status,
-    errorCode,
-    errorMessage,
+    status: session.status,
+    errorCode: session.errorCode,
+    errorMessage: session.errorMessage,
     durationMs,
-    videoRef,
-    stream,
-    startCamera,
-    stopCamera,
+    videoRef: session.videoRef,
+    stream: session.stream,
+    startCamera: session.startCamera,
+    stopCamera: session.stopCamera,
     startRecording,
     stopRecording,
   };

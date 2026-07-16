@@ -18,6 +18,7 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { getErrorMessage } from '@/lib/error-utils';
+import { getExtensionFromMime, pickSupportedMime } from '@/lib/media/media-mime';
 import { transcribeVoiceWithPolicy } from '@/services/voice/voice-mutation-gateway';
 
 // =============================================================================
@@ -46,34 +47,23 @@ export interface UseVoiceRecorderReturn {
 // MIME TYPE DETECTION (Cross-Browser)
 // =============================================================================
 
+/** Preferred audio containers, best first. Chrome/FF → webm/opus, Safari → mp4. */
+const AUDIO_MIME_CANDIDATES = [
+  'audio/webm;codecs=opus',
+  'audio/webm',
+  'audio/mp4',
+  'audio/ogg;codecs=opus',
+] as const;
+
+const AUDIO_MIME_FALLBACK = 'audio/webm';
+
 /**
  * Detect the best supported audio MIME type for MediaRecorder.
- * Chrome/FF → webm/opus, Safari → mp4, fallback → webm
+ * The probe + extension mechanics are shared with `useVideoRecorder`
+ * (ADR-584); only the candidate list is audio-specific.
  */
 function getSupportedMimeType(): string {
-  if (typeof MediaRecorder === 'undefined') return 'audio/webm';
-
-  const candidates = [
-    'audio/webm;codecs=opus',
-    'audio/webm',
-    'audio/mp4',
-    'audio/ogg;codecs=opus',
-  ];
-
-  for (const mime of candidates) {
-    if (MediaRecorder.isTypeSupported(mime)) return mime;
-  }
-
-  return 'audio/webm';
-}
-
-/**
- * Get file extension from MIME type
- */
-function getExtensionFromMime(mime: string): string {
-  if (mime.includes('mp4')) return 'mp4';
-  if (mime.includes('ogg')) return 'ogg';
-  return 'webm';
+  return pickSupportedMime(AUDIO_MIME_CANDIDATES, AUDIO_MIME_FALLBACK);
 }
 
 // =============================================================================
