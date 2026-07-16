@@ -46,7 +46,9 @@ jest.mock('../../rendering/core/CoordinateTransforms', () => ({
 
 const FLAT_ENTITIES = [{ type: 'line' }];
 const EXPANDED_ENTITIES = [{ type: 'line' }, { type: 'lwpolyline' }];
-const IMAGE_RESOLUTION = { images: new Map(), solidFallbacks: new Map(), warnings: [] };
+const IMAGE_RESOLUTION = {
+  images: new Map(), patternCells: new Map(), solidFallbacks: new Map(), warnings: [],
+};
 // effectiveDpi = 25.4 makes pxToMm(px) === px (px / 25.4 * 25.4) → identity, so the
 // coordinate assertions read directly.
 const RASTER = { widthPx: 100, heightPx: 100, effectiveDpi: 25.4 };

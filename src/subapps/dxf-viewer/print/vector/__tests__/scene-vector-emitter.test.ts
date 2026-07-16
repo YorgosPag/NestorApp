@@ -14,9 +14,17 @@ import { decomposeAnnotationEntity } from '../../../export/core/annotation-to-pr
 
 interface Call { fn: string; args: readonly unknown[]; }
 
+/**
+ * Ο emitter χτίζει pattern registry σε ΚΑΘΕ `draw` (ADR-667 Απόφαση 10) ⇒ το mock χρειάζεται την
+ * ελάχιστη επιφάνεια tiling-pattern του jsPDF. Τα ΠΡΑΓΜΑΤΙΚΑ μαθηματικά/κύκλος ζωής επικυρώνονται
+ * με **αληθινό jsPDF** στο `pdf-tiling-pattern.test.ts` — εδώ ελέγχεται μόνο το **dispatch**.
+ */
 function mockPdf(): { pdf: Record<string, unknown>; calls: Call[] } {
   const calls: Call[] = [];
   const rec = (fn: string) => (...args: unknown[]) => { calls.push({ fn, args }); };
+  const matrix = (...m: number[]) => ({
+    multiply: () => matrix(...m), toString: () => m.join(' '),
+  });
   const pdf = {
     setDrawColor: rec('setDrawColor'),
     setFillColor: rec('setFillColor'),
@@ -36,13 +44,23 @@ function mockPdf(): { pdf: Record<string, unknown>; calls: Call[] } {
     close: rec('close'),
     clipEvenOdd: rec('clipEvenOdd'),
     discardPath: rec('discardPath'),
+    // ── tiling patterns (ADR-667 Φ2) ──
+    internal: { scaleFactor: 72 / 25.4, pageSize: { getHeight: () => 210 } },
+    Matrix: (...m: number[]) => matrix(...m),
+    TilingPattern: () => ({ cloneIndex: 0 }),
+    advancedAPI: (body: () => void) => { calls.push({ fn: 'advancedAPI', args: [] }); body(); },
+    beginTilingPattern: rec('beginTilingPattern'),
+    endTilingPattern: rec('endTilingPattern'),
+    fillEvenOdd: rec('fillEvenOdd'),
   };
   return { pdf, calls };
 }
 
 // Simple Y-flip placement so transformed coords are assertable.
 const toPaper = (p: Point2D): Point2D => ({ x: p.x, y: 100 - p.y });
-const EMPTY_IMAGES = { images: new Map(), solidFallbacks: new Map(), warnings: [] };
+const EMPTY_IMAGES = {
+  images: new Map(), patternCells: new Map(), solidFallbacks: new Map(), warnings: [],
+};
 const baseParams = {
   toPaper, worldToPaperScale: 1, colorPolicy: { style: 'colour' as const, dpi: 150 },
   images: EMPTY_IMAGES,
@@ -226,40 +244,12 @@ describe('scene-vector-emitter — hybrid image compositing (ADR-608)', () => {
     expect([x, y, w, h, rot]).toEqual([0, 96, 10, 4, 0]);
   });
 
-  it('image-fill hatch (resolved) → tiles clipped to the boundary, sharing the alias', () => {
-    const e = {
-      id: 'h1', type: 'hatch', layerId: '0', fillType: 'image',
-      boundaryPaths: [[{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 2 }, { x: 0, y: 2 }]],
-    };
-    const twoTiles = {
-      dataUrl: 'data:tile', alias: 'mat-x',
-      placements: [
-        { bl: { x: 0, y: 0 }, br: { x: 2, y: 0 }, tl: { x: 0, y: 2 }, wWorld: 2, hWorld: 2 },
-        { bl: { x: 2, y: 0 }, br: { x: 4, y: 0 }, tl: { x: 2, y: 2 }, wWorld: 2, hWorld: 2 },
-      ],
-    };
-    const images = { images: new Map([['h1', twoTiles]]), solidFallbacks: new Map(), warnings: [] };
-    const all = emit([e as unknown as Entity], baseParams.colorPolicy, images);
-    const imgs = only(all, 'addImage');
-    expect(imgs).toHaveLength(2);
-    expect(imgs.every((c) => c.args[6] === 'mat-x')).toBe(true); // shared alias → 1 embed
-    // The tiles are clipped to the boundary polygon (mirror on-screen ctx.clip).
-    expect(only(all, 'clipEvenOdd')).toHaveLength(1);
-    expect(only(all, 'moveTo')).toHaveLength(1); // one subpath (outer loop)
-    expect(only(all, 'lineTo')).toHaveLength(3); // 4-vertex loop → 3 lineTo after moveTo
-    // clip is set BEFORE the images, and the graphics state is saved/restored around it.
-    const seq = all.map((c) => c.fn);
-    expect(seq.indexOf('saveGraphicsState')).toBeLessThan(seq.indexOf('clipEvenOdd'));
-    expect(seq.indexOf('clipEvenOdd')).toBeLessThan(seq.indexOf('addImage'));
-    expect(seq.lastIndexOf('addImage')).toBeLessThan(seq.indexOf('restoreGraphicsState'));
-  });
-
   it('image-fill hatch (solid fallback) → filled boundary (pdf.lines style F), no addImage', () => {
     const e = {
       id: 'h2', type: 'hatch', layerId: '0', fillType: 'image',
       boundaryPaths: [[{ x: 0, y: 0 }, { x: 5, y: 0 }, { x: 5, y: 5 }]],
     };
-    const images = { images: new Map(), solidFallbacks: new Map([['h2', '#804020']]), warnings: [] };
+    const images = { ...EMPTY_IMAGES, solidFallbacks: new Map([['h2', '#804020']]) };
     const calls = emit([e as unknown as Entity], baseParams.colorPolicy, images);
     expect(only(calls, 'addImage')).toHaveLength(0);
     const fills = only(calls, 'lines').filter((c) => c.args[4] === 'F');
@@ -272,7 +262,7 @@ describe('scene-vector-emitter — hybrid image compositing (ADR-608)', () => {
   it('composites images INLINE in array order (z-order preserved with linework)', () => {
     const line = { id: 'l1', type: 'line', layerId: '0', start: { x: 0, y: 0 }, end: { x: 1, y: 1 } };
     const img = { id: 'img1', type: 'image', layerId: '0' };
-    const images = { images: new Map([['img1', axisAlignedImage]]), solidFallbacks: new Map(), warnings: [] };
+    const images = { ...EMPTY_IMAGES, images: new Map([['img1', axisAlignedImage]]) };
     // Image BEFORE line in the array → addImage must be recorded before pdf.line.
     const calls = emit([img as unknown as Entity, line as unknown as Entity], baseParams.colorPolicy, images);
     const order = calls.filter((c) => c.fn === 'addImage' || c.fn === 'line').map((c) => c.fn);
@@ -283,5 +273,94 @@ describe('scene-vector-emitter — hybrid image compositing (ADR-608)', () => {
     const e = { id: 'ghost', type: 'image', layerId: '0' };
     const calls = only(emit([e as unknown as Entity]), 'addImage');
     expect(calls).toHaveLength(0);
+  });
+});
+
+// ─── ADR-667 Φ2 — native tiling patterns (η φάση που σκοτώνει το γκρι) ────────
+
+describe('scene-vector-emitter — hatch dispatch (ADR-667 Απόφαση 5)', () => {
+  const cell = {
+    dataUrl: 'data:cell', alias: 'mat-stripes',
+    tileWWorld: 4, tileHWorld: 2, angleDeg: 30, anchorWorld: { x: 0, y: 0 },
+  };
+  const imageHatch = (id: string) => ({
+    id, type: 'hatch', layerId: '0', fillType: 'image',
+    boundaryPaths: [[{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 2 }, { x: 0, y: 2 }]],
+  } as unknown as Entity);
+
+  function emitWithCell(entities: Entity[], cells: [string, typeof cell][]) {
+    return emit(entities, baseParams.colorPolicy, { ...EMPTY_IMAGES, patternCells: new Map(cells) });
+  }
+
+  it('ΤΟ ΠΕΡΙΣΤΑΤΙΚΟ: image-fill hatch → ΕΝΑ tiling pattern fill, ΜΗΔΕΝ raster tiles', () => {
+    const calls = emitWithCell([imageHatch('h1')], [['h1', cell]]);
+    // Το γκρι πέθανε: κανένα `addImage` στη σελίδα, κανένα solid — ένα μοτίβο.
+    expect(only(calls, 'addImage').filter((c) => c.args[6] !== 'mat-stripes')).toHaveLength(0);
+    expect(only(calls, 'fillEvenOdd')).toHaveLength(1);
+  });
+
+  it('τα κελιά ορίζονται σε ΕΝΑ advancedAPI block ΠΡΙΝ εκπεμφθεί η πρώτη οντότητα', () => {
+    const line = { id: 'l1', type: 'line', layerId: '0', start: { x: 0, y: 0 }, end: { x: 1, y: 1 } };
+    const calls = emitWithCell([line as unknown as Entity, imageHatch('h1')], [['h1', cell]]);
+    const seq = calls.map((c) => c.fn);
+    expect(only(calls, 'advancedAPI')).toHaveLength(1);
+    // Ορισμός → ΠΡΙΝ από κάθε γεωμετρία (lazy ορισμός ⇒ ξετύλιχτο render-target stack ⇒ λευκή σελίδα).
+    expect(seq.indexOf('endTilingPattern')).toBeLessThan(seq.indexOf('line'));
+    expect(seq.indexOf('beginTilingPattern')).toBeLessThan(seq.indexOf('endTilingPattern'));
+  });
+
+  it('το κελί γράφεται σε paper mm με ΑΝΕΞΑΡΤΗΤΟ πλάτος/ύψος (Απόφαση 9 — όχι scalar)', () => {
+    // worldToPaperScale = 1 ⇒ 4×2 world → 4×2 mm. Ένα scalar `cellPaperMm` θα έριχνε το ύψος.
+    const calls = emitWithCell([imageHatch('h1')], [['h1', cell]]);
+    const [, , x, y, w, h, alias] = only(calls, 'addImage')[0].args;
+    expect([x, y, w, h, alias]).toEqual([0, 0, 4, 2, 'mat-stripes']);
+  });
+
+  it('το path χτίζεται με style === null (αλλιώς ο jsPDF κάνει stroke αντί για pattern fill)', () => {
+    const calls = emitWithCell([imageHatch('h1')], [['h1', cell]]);
+    const path = only(calls, 'lines');
+    expect(path).toHaveLength(1);
+    expect(path[0].args[4]).toBeNull();
+    expect(path[0].args[5]).toBe(true); // κλειστό loop
+  });
+
+  it('ίδιο υλικό σε δύο hatch → ΕΝΑ ορισμένο κελί (dedup), δύο fills', () => {
+    const calls = emitWithCell([imageHatch('h1'), imageHatch('h2')], [['h1', cell], ['h2', cell]]);
+    expect(only(calls, 'beginTilingPattern')).toHaveLength(1);
+    expect(only(calls, 'fillEvenOdd')).toHaveLength(2);
+  });
+
+  it('εκφυλισμένο boundary → ΚΑΝΕΝΑ pattern fill, πέφτει στο δάπεδο (Απόφαση 8)', () => {
+    const degenerate = {
+      id: 'h1', type: 'hatch', layerId: '0', fillType: 'image',
+      boundaryPaths: [[{ x: 0, y: 0 }, { x: 1, y: 1 }]], // 2 σημεία → κανένα πολύγωνο
+    } as unknown as Entity;
+    const calls = emitWithCell([degenerate], [['h1', cell]]);
+    expect(only(calls, 'fillEvenOdd')).toHaveLength(0);
+    expect(only(calls, 'lines').filter((c) => c.args[4] === 'S')).toHaveLength(1); // outline
+  });
+
+  // 🔴 Ο ΛΟΓΟΣ που η σειρά είναι νόμος: το `fillType` είναι optional και οι παραγωγοί `dxfFaces`
+  // ΔΕΝ το θέτουν. Ένα `switch (fillType)` ⇒ κάθε structural/poché solid γίνεται άδειο περίγραμμα.
+  it('dxfFaces ΧΩΡΙΣ fillType → γεμίζει (ΔΕΝ πέφτει σε άδειο περίγραμμα)', () => {
+    const e = {
+      id: 'h1', type: 'hatch', layerId: '0', patternType: 'solid',
+      dxfFaces: [[{ x: 0, y: 0 }, { x: 5, y: 0 }, { x: 5, y: 5 }]],
+      boundaryPaths: [[{ x: 0, y: 0 }, { x: 5, y: 0 }, { x: 5, y: 5 }]],
+    };
+    const fills = only(emit([e as unknown as Entity]), 'lines').filter((c) => c.args[4] === 'F');
+    expect(fills).toHaveLength(1);
+  });
+
+  it('solid hatch ΧΩΡΙΣ dxfFaces → γεμίζει με fillColor (κάτοπτρο HatchRenderer)', () => {
+    const e = {
+      id: 'h1', type: 'hatch', layerId: '0', fillType: 'solid',
+      color: '#ff0000', fillColor: '#00ff00',
+      boundaryPaths: [[{ x: 0, y: 0 }, { x: 5, y: 0 }, { x: 5, y: 5 }]],
+    };
+    const calls = emit([e as unknown as Entity]);
+    expect(only(calls, 'lines').filter((c) => c.args[4] === 'F')).toHaveLength(1);
+    const fillColors = only(calls, 'setFillColor');
+    expect(fillColors[fillColors.length - 1].args).toEqual([0, 255, 0]); // fillColor, όχι color
   });
 });

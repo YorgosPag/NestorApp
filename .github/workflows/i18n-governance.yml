@@ -11,9 +11,12 @@ name: 🌐 i18n Governance (ADR-279)
 # every push / PR so that enforcement is guaranteed regardless of how the
 # commit was authored.
 #
-# It is intentionally narrow: ONLY the i18n governance ratchets run here so
-# that it stays fast (~30s) and does not get disabled under time pressure the
-# way the broader quality-gates.yml / unit.yml workflows have been in the past.
+# It is intentionally narrow: ONLY i18n governance checks run here so that it
+# stays fast (~30s) and does not get disabled under time pressure the way the
+# broader quality-gates.yml / unit.yml workflows have been in the past. Every
+# step must be dependency-free pure Node.js — that is what lets this workflow
+# skip `pnpm install` entirely. Anything needing a build or a typecheck belongs
+# in its own workflow (see ts-error-gate.yml), not here.
 #
 # Regression that motivated this workflow
 # ---------------------------------------
@@ -35,6 +38,8 @@ on:
       - 'src/app/**/individual-config.ts'
       - 'scripts/check-i18n-*.js'
       - 'scripts/check-audit-value-catalogs.js'
+      - 'scripts/validate-translations.js'
+      - 'scripts/_shared/i18n-governance.js'
       - '.i18n-*.json'
       - '.github/workflows/i18n-governance.yml'
   push:
@@ -45,6 +50,8 @@ on:
       - 'src/config/**'
       - 'scripts/check-i18n-*.js'
       - 'scripts/check-audit-value-catalogs.js'
+      - 'scripts/validate-translations.js'
+      - 'scripts/_shared/i18n-governance.js'
       - '.i18n-*.json'
 
 concurrency:
@@ -75,6 +82,19 @@ jobs:
       - name: 🔍 CHECK 3.14 — Audit value catalogs SSoT parity
         run: node scripts/check-audit-value-catalogs.js
 
+      # ADR-666 — EL↔EN completeness. Complementary to CHECK 3.8, not a duplicate:
+      # 3.8 walks code→locale (a t('key') with no matching entry); this walks
+      # locale→locale (a key present in el but missing from en). Neither sees the
+      # other's gap. This became gateable only after ADR-666 deleted the 80
+      # committed pseudo JSON files that kept it at EXIT 1 with 693 lines of rot.
+      #
+      # Scoped deliberately to `validate:i18n` alone. Do NOT swap this for the
+      # `i18n:check` npm script: it bundles validate:i18n-config (2 pre-existing
+      # errors) and validate:i18n-manifest (3), which would red the workflow on
+      # day one for reasons unrelated to translation completeness.
+      - name: 🔍 validate:i18n — EL↔EN translation completeness (ADR-666)
+        run: node scripts/validate-translations.js
+
       # Note: CHECK 3.8 (missing i18n keys) and CHECK 3.12 (option-label
       # integrity) are per-file scanners driven by staged filenames; they do
       # not support a repo-wide --all mode and have legacy baselines that the
@@ -88,3 +108,4 @@ jobs:
           echo "::notice title=i18n Governance::All ratchet checks passed"
           echo "CHECK 3.13 (resolver reachability): PASS"
           echo "CHECK 3.14 (audit catalogs parity): PASS"
+          echo "validate:i18n (EL/EN completeness): PASS"

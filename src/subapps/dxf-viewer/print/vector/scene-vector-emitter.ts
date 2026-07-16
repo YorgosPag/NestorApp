@@ -207,40 +207,110 @@ function mapHAlign(alignment: TextEntity['alignment']): 'left' | 'center' | 'rig
   return alignment === 'center' ? 'center' : alignment === 'right' ? 'right' : 'left';
 }
 
-// ─── Hatch (solid faces + image fill + boundary outline; pattern lines deferred) ──
+// ─── Hatch (ADR-667 Απόφαση 5 — η σειρά dispatch είναι ΝΟΜΟΣ) ─────────────────
 
+/**
+ * 🔴 **Η ΣΕΙΡΑ ΕΙΝΑΙ ΝΟΜΟΣ, ΟΧΙ ΓΟΥΣΤΟ** (ADR-667 Απόφαση 5). Το `fillType` είναι **optional** και
+ * **οι δύο πραγματικοί παραγωγοί `dxfFaces` ΔΕΝ το θέτουν** (`neutral-primitive-factory.ts`,
+ * `overlay-dxf-collector.ts` → μόνο `patternType:'solid'`). Ένα `switch (fillType)` θα τα έριχνε
+ * στο `default` ⇒ **κάθε structural/poché solid fill θα γινόταν άδειο περίγραμμα**.
+ *
+ * Το **outline είναι ΔΑΠΕΔΟ, όχι κλάδος** (Απόφαση 8): καμία διαδρομή δεν καταλήγει σε «τίποτα».
+ */
 function emitHatch(
   pdf: jsPDF, e: HatchEntity, params: SceneVectorEmitParams, toPaper: (p: Point2D) => Point2D,
+  patterns: PdfPatternRegistry,
 ): void {
-  // ADR-608 hybrid — image-fill («Εικόνα»): προ-resolved raster tiles ή solid downgrade
-  // (decode-fail / tile-overflow) από το pre-pass. Προηγείται των faces/outline. Τα tiles
-  // κόβονται στο boundary του hatch (parity με τον on-screen `ctx.clip()`) → η υφή ακολουθεί
-  // το περίγραμμα αντί να σχηματίζει οδοντωτή ορθογώνια σκάλα.
-  const resolved = params.images.images.get(e.id);
-  if (resolved) { emitClippedImage(pdf, e.boundaryPaths ?? [], resolved, toPaper); return; }
-  const solidHex = params.images.solidFallbacks.get(e.id);
-  if (solidHex) { fillHatchSolid(pdf, e, solidHex, toPaper); return; }
-
-  // ADR-505 §C solid fill → pre-computed faces (SOLID / poché). Emit each as a filled polygon.
+  // 1. ADR-505 §C — pre-computed faces (SOLID / poché). **ΚΕΡΔΙΖΕΙ ΤΑ ΠΑΝΤΑ**: είναι η σημερινή
+  //    συμπεριφορά και είναι load-bearing.
   const faces = (e as { dxfFaces?: ReadonlyArray<ReadonlyArray<Point2D>> }).dxfFaces;
   if (faces) {
     for (const f of faces) if (f.length >= 3) fillPolygon(pdf, f, toPaper);
     return;
   }
-  // Pattern/plain hatch → stroke the boundary loops (outline). Pattern lines: raster fallback.
-  for (const loop of e.boundaryPaths ?? []) {
-    if (loop.length >= 2) strokePolyline(pdf, loop, true, toPaper);
+  // 2. Συμπαγής γραμμοσκίαση → γέμισμα. Κάτοπτρο `HatchRenderer.ts:225` (`fillColor ?? color`).
+  if (isSolidHatch(e)) {
+    fillHatchLoops(pdf, e, resolveHatchFillHex(e, params.colorPolicy), toPaper);
+    return;
   }
+  // 3. ADR-667 Φ2 — γέμισμα «Εικόνα»/«Διαδικαστικά» → **native tiling pattern** (μηδέν πλακάκια).
+  const cell = params.images.patternCells.get(e.id);
+  if (cell && fillHatchWithPattern(pdf, e, cell, params, toPaper, patterns)) return;
+  // 4. Solid downgrade από το pre-pass (decode-fail / cap / εκφυλισμό) — **αναφερμένο**, όχι σιωπηλό.
+  const solidHex = params.images.solidFallbacks.get(e.id);
+  if (solidHex) { fillHatchLoops(pdf, e, solidHex, toPaper); return; }
+
+  // ΔΑΠΕΔΟ — boundary outline. (Γραμμές μοτίβου `predefined`/`user-defined` + `patternSpace:'screen'`
+  // + `gradient`: ⏳ Φ3/Φ4. Μέχρι τότε το περίγραμμα είναι ό,τι τυπώνεται ήδη σήμερα.)
+  emitBoundaryOutline(pdf, e, toPaper);
 }
 
-/** Solid downgrade ενός image-fill hatch: γεμίζει τα boundary loops με το fallback χρώμα. */
-function fillHatchSolid(
+/**
+ * ADR-667 Φ2 — γεμίζει το boundary με **ένα** native PDF Tiling Pattern. `false` ⇒ ο caller πέφτει
+ * σε fallback (Απόφαση 8).
+ *
+ * Το path χτίζεται με `style === null` (**υποχρεωτικό** — αλλιώς ο jsPDF κάνει stroke) και το
+ * `fillEvenOdd` το βάφει: even-odd ⇒ **νησίδες = τρύπες**, ίδια σημασιολογία με τον on-screen
+ * `ctx.fill('evenodd')`. Το ίδιο το pattern κόβεται στο path ⇒ **μηδέν clip, μηδέν οδοντωτή σκάλα**.
+ */
+function fillHatchWithPattern(
+  pdf: jsPDF, e: HatchEntity, cell: ResolvedPatternCell, params: SceneVectorEmitParams,
+  toPaper: (p: Point2D) => Point2D, patterns: PdfPatternRegistry,
+): boolean {
+  let hasPath = false;
+  for (const loop of e.boundaryPaths ?? []) {
+    const deltas = loop.length >= 3 ? polylineDeltas(loop, toPaper) : null;
+    if (!deltas) continue;
+    pdf.lines(deltas.segments, deltas.x0, deltas.y0, [1, 1], null, true);
+    hasPath = true;
+  }
+  if (!hasPath) return false;
+  return patterns.fillCurrentPath(toPdfPatternCell(cell, params.worldToPaperScale), {
+    anchorMm: toPaper(cell.anchorWorld),
+    angleDeg: cell.angleDeg,
+  });
+}
+
+/**
+ * Κελί σε **world** → κελί σε **paper mm**. Η αναλογία ζει **στο κελί**, το `/Matrix` μένει
+ * ομοιόμορφο (Απόφαση 9): ένα scalar `cellPaperMm` θα έριχνε το `tileHeight` ⇒ τούβλο/σανίδα με
+ * **λάθος αναλογία**.
+ */
+function toPdfPatternCell(cell: ResolvedPatternCell, worldToPaperScale: number): PdfPatternCell {
+  return {
+    materialKey: cell.alias,
+    dataUrl: cell.dataUrl,
+    cellWMm: cell.tileWWorld * worldToPaperScale,
+    cellHMm: cell.tileHWorld * worldToPaperScale,
+  };
+}
+
+/**
+ * Χρώμα γεμίσματος γραμμοσκίασης — κάτοπτρο του screen SSoT (`HatchRenderer.ts:203`:
+ * `hatch.fillColor ?? entity.color`), περασμένο από το ΙΔΙΟ plot-style policy με τα υπόλοιπα
+ * (mono/grayscale/white-safe) ⇒ vector και raster έξοδος μένουν οπτικά ταυτόσημες.
+ */
+function resolveHatchFillHex(e: HatchEntity, policy: PrintColorPolicy): string {
+  return applyPlotColor(e.fillColor ?? e.color ?? null, e.colorAci ?? null, policy);
+}
+
+/** Γεμίζει τα boundary loops με το δοσμένο hex (κάθε loop χωριστά — ίδιο με το σημερινό solid). */
+function fillHatchLoops(
   pdf: jsPDF, e: HatchEntity, hex: string, toPaper: (p: Point2D) => Point2D,
 ): void {
   const rgb = parseHex(hex) ?? BLACK;
   pdf.setFillColor(rgb.r, rgb.g, rgb.b);
   for (const loop of e.boundaryPaths ?? []) {
     if (loop.length >= 3) fillPolygon(pdf, loop, toPaper);
+  }
+}
+
+/** ΔΑΠΕΔΟ (Απόφαση 8) — stroke τα boundary loops ώστε καμία γραμμοσκίαση να μη χαθεί εντελώς. */
+function emitBoundaryOutline(
+  pdf: jsPDF, e: HatchEntity, toPaper: (p: Point2D) => Point2D,
+): void {
+  for (const loop of e.boundaryPaths ?? []) {
+    if (loop.length >= 2) strokePolyline(pdf, loop, true, toPaper);
   }
 }
 

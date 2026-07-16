@@ -102,16 +102,8 @@ function buildTileFrame(
 }
 
 /**
- * Pure: πλέγμα τοποθέτησης tiles σε **πραγματική διάσταση** (Revit/ArchiCAD) — κρατά όσα tiles το
- * κέντρο τους είναι ΜΕΣΑ στο boundary (even-odd PIP → νησίδες = τρύπες). Για το **DXF** export, όπου
- * ΔΕΝ υπάρχει clip: τα whole tiles προσεγγίζουν το σχήμα. Degenerate → κενό· grid > cap → `overflow`.
- */
-/** Predicate που κρατά ΟΛΑ τα tiles (full grid — το clip κόβει downstream). */
-const TILE_KEEP_ALL = (): boolean => true;
-
-/**
  * Σαρώνει το tile-index bbox του `frame`· κρατά όσα tiles `keep(center)` = true (κάτω-αριστερή γωνία
- * ανά κρατημένο). `overflow` όταν ξεπεραστεί το `cap`. ΕΝΑ loop SSoT για PIP-culled ΚΑΙ full grid.
+ * ανά κρατημένο). `overflow` όταν ξεπεραστεί το `cap`.
  */
 function collectTiles(
   frame: TileFrame, cap: number, keep: (center: Point2D) => boolean,
@@ -128,18 +120,6 @@ function collectTiles(
   return { inserts, overflow: false };
 }
 
-/** Κοινό frame-setup + tile scan (SSoT). `cull` → even-odd PIP (DXF)· αλλιώς full grid (clipped PDF). */
-function buildTiles(
-  paths: ReadonlyArray<ReadonlyArray<Point2D>>,
-  imageFill: HatchImageFill,
-  cap: number,
-  cull: boolean,
-): ImageTileGrid {
-  const { frame, overflow } = buildTileFrame(paths, imageFill);
-  if (!frame) return { inserts: [], overflow };
-  return collectTiles(frame, cap, cull ? makeInsideBoundary(paths) : TILE_KEEP_ALL);
-}
-
 /** Even-odd point-in-polygon predicate πάνω σε ΟΛΑ τα boundary loops (νησίδες = τρύπες). */
 function makeInsideBoundary(
   paths: ReadonlyArray<ReadonlyArray<Point2D>>,
@@ -152,26 +132,28 @@ function makeInsideBoundary(
   };
 }
 
-/** DXF export (no clip): whole tiles με κέντρο ΜΕΣΑ στο boundary προσεγγίζουν το σχήμα. */
+/**
+ * Pure: πλέγμα τοποθέτησης tiles σε **πραγματική διάσταση** (Revit/ArchiCAD) — κρατά όσα tiles το
+ * κέντρο τους είναι ΜΕΣΑ στο boundary (even-odd PIP → νησίδες = τρύπες). Για το **DXF** export, όπου
+ * ΔΕΝ υπάρχει clip: τα whole tiles προσεγγίζουν το σχήμα. Degenerate → κενό· grid > cap → `overflow`.
+ *
+ * ⚠️ **Διβάθμιος φρουρός, ΟΧΙ διπλοτυπία** (ADR-667 Απόφαση 13): `IMAGE_GRID_SCAN_CAP` (4000) =
+ * **φθηνό** pre-check στο bbox grid **πριν** το O(n·edges) PIP loop· `cap` (400) = όριο
+ * **τοποθετήσεων** **μετά** το culling. Η «ενοποίησή» τους σε έναν cap είναι **DXF regression**
+ * (πιστό tiled export → σιωπηλό solid) που τα υπάρχοντα tests **δεν** πιάνουν.
+ *
+ * ⚠️ **ADR-667 Φ2:** ο τελευταίος καταναλωτής που περνούσε δικό του `cap` (`buildImageTileFullGrid`,
+ * για το vector PDF) **έφυγε** — το PDF εκπέμπει πλέον native tiling patterns. Αυτό είναι πλέον
+ * **αποκλειστικά DXF** μονοπάτι.
+ */
 export function buildImageTilePlacements(
   paths: ReadonlyArray<ReadonlyArray<Point2D>>,
   imageFill: HatchImageFill,
   cap: number = IMAGE_TILE_CAP,
 ): ImageTileGrid {
-  return buildTiles(paths, imageFill, cap, true);
-}
-
-/**
- * Πλέγμα ΟΛΩΝ των tiles που καλύπτουν το bbox — **ΧΩΡΙΣ** PIP culling. Για το **vector PDF** (ADR-608)
- * όπου το tiling κόβεται με `clip` στο boundary: εκεί πρέπει να μπουν ΚΑΙ τα οριακά tiles (κέντρο εκτός
- * boundary αλλά μερική επικάλυψη μέσα), αλλιώς μένουν τριγωνικά **κενά** στις ακμές.
- */
-export function buildImageTileFullGrid(
-  paths: ReadonlyArray<ReadonlyArray<Point2D>>,
-  imageFill: HatchImageFill,
-  cap: number = IMAGE_TILE_CAP,
-): ImageTileGrid {
-  return buildTiles(paths, imageFill, cap, false);
+  const { frame, overflow } = buildTileFrame(paths, imageFill);
+  if (!frame) return { inserts: [], overflow };
+  return collectTiles(frame, cap, makeInsideBoundary(paths));
 }
 
 /** Εύρος δεικτών tile (στήλες k, σειρές m) που καλύπτει το boundary στο local (origin+angle) frame. */

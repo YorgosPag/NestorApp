@@ -14,11 +14,18 @@
  *       (cos r, −sin r) στο PDF Y-up, οπότε οι 3 γωνίες προσγειώνονται ακριβώς (μηδέν mirror).
  *
  * Καθαρό coordinate mapping μέσω του injected `toPaper` (ίδιο με τον vector emitter) — καμία
- * υπόθεση για τον print transform εδώ. Πολλαπλά tiles μοιράζονται το `alias` ⇒ ο jsPDF ενσωματώνει
- * τα bytes ΜΙΑ φορά (400 tiles → 1 embed).
+ * υπόθεση για τον print transform εδώ. Πολλαπλά placements μοιράζονται το `alias` ⇒ ο jsPDF
+ * ενσωματώνει τα bytes ΜΙΑ φορά.
+ *
+ * ⚠️ **Πεδίο (ADR-667 Φ2): ΜΟΝΟ «γυμνές» εικόνες** (`ImageEntity` — δέντρα/ταπετσαρίες). Οι
+ * γραμμοσκιάσεις με γέμισμα «Εικόνα» **δεν στρώνουν πλέον πλακάκια**: πάνε από το
+ * `pdf-tiling-pattern.ts` ως **native PDF Tiling Pattern** (κόστος σταθερό ως προς το εμβαδόν).
+ * Μαζί τους έφυγαν και το `emitClippedImage`/`clipToBoundary` — το pattern κόβεται **μόνο του**
+ * στο path, χωρίς clip.
  *
  * @module subapps/dxf-viewer/print/vector/scene-image-emitter
  * @see rendering/entities/ImageRenderer.ts — το on-screen eu/ev SSoT (canvas ctx.transform)
+ * @see docs/centralized-systems/reference/adrs/ADR-667-pdf-native-tiling-patterns.md
  * @see docs/centralized-systems/reference/adrs/ADR-608-vector-pdf-export.md
  */
 
@@ -37,50 +44,6 @@ export function emitResolvedImage(
   for (const pl of resolved.placements) {
     placeOne(pdf, resolved.dataUrl, resolved.alias, pl, toPaper);
   }
-}
-
-/**
- * Όπως το `emitResolvedImage`, αλλά **κόβει** τα tiles στο πολύγωνο του hatch (γραμμοσκίαση) ώστε
- * η υφή να ακολουθεί το πραγματικό περίγραμμα αντί να σχηματίζει οδοντωτή ορθογώνια σκάλα (parity
- * με την οθόνη, όπου ο `HatchRenderer` κάνει `ctx.clip()`). Το `buildImageTilePlacements` κρατά
- * μόνο tiles με κέντρο ΜΕΣΑ στο boundary → το clip καθαρίζει το «ξεχείλισμα» στις ακμές.
- *
- * PDF clip = ίδιο paper-mm Y-down space με το `addImage` (`moveTo/lineTo` → `scale`/`transformScaleY`).
- * Even-odd rule → νησίδες (`boundaryPaths[1..]`) γίνονται τρύπες, ίδια σημασιολογία με το tiling PIP.
- */
-export function emitClippedImage(
-  pdf: jsPDF,
-  boundaryPaths: ReadonlyArray<ReadonlyArray<Point2D>>,
-  resolved: ResolvedSceneImage,
-  toPaper: (p: Point2D) => Point2D,
-): void {
-  // Εκφυλισμένο boundary → κανένα clip, αλλά το save/restore μένει ισοζυγισμένο (μηδέν leak).
-  pdf.saveGraphicsState();
-  clipToBoundary(pdf, boundaryPaths, toPaper);
-  emitResolvedImage(pdf, resolved, toPaper);
-  pdf.restoreGraphicsState();
-}
-
-/** Χτίζει το clip path (paper mm) από τα boundary loops + even-odd clip (no-op αν κανένα έγκυρο). */
-function clipToBoundary(
-  pdf: jsPDF,
-  boundaryPaths: ReadonlyArray<ReadonlyArray<Point2D>>,
-  toPaper: (p: Point2D) => Point2D,
-): void {
-  let hasPath = false;
-  for (const loop of boundaryPaths) {
-    if (loop.length < 3) continue;
-    const start = toPaper(loop[0]);
-    if (!isFinitePoint(start)) continue;
-    pdf.moveTo(start.x, start.y);
-    for (let i = 1; i < loop.length; i += 1) {
-      const p = toPaper(loop[i]);
-      pdf.lineTo(p.x, p.y);
-    }
-    pdf.close();
-    hasPath = true;
-  }
-  if (hasPath) { pdf.clipEvenOdd(); pdf.discardPath(); }
 }
 
 /** Ένα rect placement → `pdf.addImage` με σωστό x/y/w/h/rotation (pivot = κάτω-αριστερά). */
