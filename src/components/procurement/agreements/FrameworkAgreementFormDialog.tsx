@@ -84,9 +84,9 @@ function emptyState(): FormState {
   };
 }
 
-function tsToIso(ts: { seconds?: number } | null): string {
-  if (!ts || typeof ts.seconds !== 'number') return '';
-  return new Date(ts.seconds * 1000).toISOString().slice(0, 10);
+/** → `yyyy-mm-dd`, the value format of `<input type="date">`. */
+function tsToIso(ts: unknown): string {
+  return normalizeToDate(ts)?.toISOString().slice(0, 10) ?? '';
 }
 
 function fromAgreement(a: FrameworkAgreement): FormState {
@@ -96,8 +96,8 @@ function fromAgreement(a: FrameworkAgreement): FormState {
     description: a.description ?? '',
     vendorContactId: a.vendorContactId,
     status: a.status,
-    validFrom: tsToIso(a.validFrom as unknown as { seconds?: number }),
-    validUntil: tsToIso(a.validUntil as unknown as { seconds?: number }),
+    validFrom: tsToIso(a.validFrom),
+    validUntil: tsToIso(a.validUntil),
     totalCommitment: a.totalCommitment !== null ? String(a.totalCommitment) : '',
     currency: a.currency,
     discountType: a.discountType,

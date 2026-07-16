@@ -70,6 +70,39 @@ export interface FrameworkAgreement {
   createdBy: string;
 }
 
+/**
+ * The fields carried as instants. They have three *legitimate* representations,
+ * because three different producers hand them to three different consumers:
+ *
+ *   | Type                     | Instant as              | Producer                                    |
+ *   |--------------------------|-------------------------|---------------------------------------------|
+ *   | `FrameworkAgreement`     | client `Timestamp`      | `firestoreQueryService.subscribe` (client SDK) |
+ *   | `FrameworkAgreementDoc`  | admin `Timestamp`       | `framework-agreement-service` (Admin SDK)   |
+ *   | `FrameworkAgreementWire` | ISO 8601 `string`       | the REST routes (JSON has no Timestamp)     |
+ *
+ * The field list lives here **once**; the other two shapes are derived from it,
+ * so a new instant field cannot be added to one and forgotten in the others.
+ *
+ * @see ADR-663 §4 part 5 — why one type may not pretend to be all three
+ */
+export type FrameworkAgreementTimestampField =
+  | 'validFrom'
+  | 'validUntil'
+  | 'createdAt'
+  | 'updatedAt';
+
+/**
+ * JSON-safe shape of a `FrameworkAgreement` as it crosses the HTTP boundary.
+ *
+ * A Firestore `Timestamp` — client *or* admin — does not survive `JSON.stringify`:
+ * the admin one has no `toJSON()` at all and degrades to `{_seconds,_nanoseconds}`.
+ * So the wire carries ISO 8601, matching this module's own write-side contract
+ * (`CreateFrameworkAgreementDTO.validFrom`) and Google AIP-142.
+ */
+export type FrameworkAgreementWire =
+  Omit<FrameworkAgreement, FrameworkAgreementTimestampField> &
+  Record<FrameworkAgreementTimestampField, string>;
+
 export interface CreateFrameworkAgreementDTO {
   agreementNumber: string;
   title: string;

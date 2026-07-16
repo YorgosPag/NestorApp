@@ -16,6 +16,7 @@ import {
   listFrameworkAgreements,
   createFrameworkAgreement,
 } from '@/subapps/procurement/services/framework-agreement-service';
+import { toFrameworkAgreementWire } from '@/subapps/procurement/services/framework-agreement-doc';
 import {
   FRAMEWORK_AGREEMENT_STATUSES,
   type FrameworkAgreementStatus,
@@ -47,7 +48,7 @@ export const GET = defineRoute({
       vendorContactId: params.get('vendorContactId') ?? undefined,
       ...readCatalogListFilters(req),
     });
-    return ok(items);
+    return ok(items.map(toFrameworkAgreementWire));
   },
 });
 
@@ -63,7 +64,7 @@ export const POST = defineRoute({
       const parsed = safeParseBody(CreateFrameworkAgreementSchema, await req.json());
       if (parsed.error) return parsed.error;
       const agreement = await createFrameworkAgreement(auth, parsed.data);
-      return created(agreement);
+      return created(toFrameworkAgreementWire(agreement));
     } catch (error) {
       const message = getErrorMessage(error, 'Failed to create framework agreement');
       const status = resolveProcurementErrorStatus(error, {

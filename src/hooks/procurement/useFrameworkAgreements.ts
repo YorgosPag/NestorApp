@@ -19,8 +19,10 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { createStaleCache } from '@/lib/stale-cache';
 import { useAuth } from '@/hooks/useAuth';
 import { useCompanyId } from '@/hooks/useCompanyId';
+import { normalizeToMillis } from '@/lib/date-local';
 import type {
   FrameworkAgreement,
+  FrameworkAgreementWire,
   CreateFrameworkAgreementDTO,
   UpdateFrameworkAgreementDTO,
 } from '@/subapps/procurement/types/framework-agreement';
@@ -28,6 +30,27 @@ import type {
 const logger = createModuleLogger('useFrameworkAgreements');
 
 const agreementsCache = createStaleCache<FrameworkAgreement[]>('framework-agreements-list');
+
+/**
+ * One agreements-API round-trip + envelope unwrap. Throws on `!ok`/`!success`.
+ * The three mutations (create/update/delete) differ only in verb, url and body —
+ * SSoT so they cannot drift into parallel twins.
+ */
+async function agreementRequest<T>(
+  url: string,
+  method: 'POST' | 'PATCH' | 'DELETE',
+  body?: unknown,
+): Promise<T> {
+  const res = await fetch(url, {
+    method,
+    ...(body !== undefined
+      ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+      : {}),
+  });
+  const json = await res.json();
+  if (!res.ok || !json.success) throw new Error(json.error || `HTTP ${res.status}`);
+  return json.data as T;
+}
 
 interface UseFrameworkAgreementsReturn {
   agreements: FrameworkAgreement[];
@@ -71,9 +94,7 @@ export function useFrameworkAgreements(): UseFrameworkAgreementsReturn {
           .map((d) => d as unknown as FrameworkAgreement)
           .filter((a) => a.isDeleted === false)
           .sort((a, b) => {
-            const ta = (a.createdAt as unknown as { seconds?: number })?.seconds ?? 0;
-            const tb = (b.createdAt as unknown as { seconds?: number })?.seconds ?? 0;
-            return tb - ta;
+            return normalizeToMillis(b.createdAt) - normalizeToMillis(a.createdAt);
           });
 
         agreementsCache.set(items);
@@ -97,46 +118,22 @@ export function useFrameworkAgreements(): UseFrameworkAgreementsReturn {
   }, [authLoading, user, companyId]);
 
   const createAgreement = useCallback(
-    async (dto: CreateFrameworkAgreementDTO): Promise<FrameworkAgreement> => {
-      const res = await fetch('/api/procurement/agreements', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(dto),
-      });
-      const json = await res.json();
-      if (!res.ok || !json.success) {
-        throw new Error(json.error || `HTTP ${res.status}`);
-      }
-      return json.data as FrameworkAgreement;
-    },
+    (dto: CreateFrameworkAgreementDTO): Promise<FrameworkAgreementWire> =>
+      agreementRequest<FrameworkAgreementWire>('/api/procurement/agreements', 'POST', dto),
     [],
   );
 
   const updateAgreement = useCallback(
-    async (id: string, dto: UpdateFrameworkAgreementDTO): Promise<FrameworkAgreement> => {
-      const res = await fetch(`/api/procurement/agreements/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(dto),
-      });
-      const json = await res.json();
-      if (!res.ok || !json.success) {
-        throw new Error(json.error || `HTTP ${res.status}`);
-      }
-      return json.data as FrameworkAgreement;
-    },
+    (id: string, dto: UpdateFrameworkAgreementDTO): Promise<FrameworkAgreementWire> =>
+      agreementRequest<FrameworkAgreementWire>(`/api/procurement/agreements/${id}`, 'PATCH', dto),
     [],
   );
 
-  const deleteAgreement = useCallback(async (id: string): Promise<void> => {
-    const res = await fetch(`/api/procurement/agreements/${id}`, {
-      method: 'DELETE',
-    });
-    const json = await res.json();
-    if (!res.ok || !json.success) {
-      throw new Error(json.error || `HTTP ${res.status}`);
-    }
-  }, []);
+  const deleteAgreement = useCallback(
+    (id: string): Promise<void> =>
+      agreementRequest<void>(`/api/procurement/agreements/${id}`, 'DELETE'),
+    [],
+  );
 
   return {
     agreements,

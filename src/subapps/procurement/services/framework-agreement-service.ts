@@ -11,8 +11,8 @@ import { EntityAuditService } from '@/services/entity-audit.service';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
 import type { AuthContext } from '@/lib/auth';
+import type { FrameworkAgreementDoc } from './framework-agreement-doc';
 import type {
-  FrameworkAgreement,
   CreateFrameworkAgreementDTO,
   UpdateFrameworkAgreementDTO,
   FrameworkAgreementFilters,
@@ -152,6 +152,26 @@ async function ensureAgreementNumberUnique(
   }
 }
 
+/**
+ * Load an agreement and authorise the caller against it.
+ *
+ * The load + tenant-isolation guard is identical for every mutation, and a
+ * `companyId` check that exists in two hand-copied places is one edit away from
+ * existing in only one of them. Single owner. (N.0.2 / CHECK 3.28)
+ */
+async function loadOwnedAgreement(
+  db: FirebaseFirestore.Firestore,
+  ctx: AuthContext,
+  agreementId: string,
+): Promise<{ ref: FirebaseFirestore.DocumentReference; current: FrameworkAgreementDoc }> {
+  const ref = db.collection(COLLECTIONS.FRAMEWORK_AGREEMENTS).doc(agreementId);
+  const snap = await ref.get();
+  if (!snap.exists) throw new Error(`Framework agreement ${agreementId} not found`);
+  const current = { id: snap.id, ...snap.data() } as FrameworkAgreementDoc;
+  if (current.companyId !== ctx.companyId) throw new Error('Forbidden');
+  return { ref, current };
+}
+
 // ============================================================================
 // CREATE
 // ============================================================================
@@ -159,12 +179,12 @@ async function ensureAgreementNumberUnique(
 export async function createFrameworkAgreement(
   ctx: AuthContext,
   dto: CreateFrameworkAgreementDTO,
-): Promise<FrameworkAgreement> {
+): Promise<FrameworkAgreementDoc> {
   return safeFirestoreOperation(async (db) => {
     const agreementNumber = validateAgreementNumber(dto.agreementNumber);
     const title = validateTitle(dto.title);
-    const status = validateStatus(dto.status) as FrameworkAgreement['status'];
-    const discountType = validateDiscountType(dto.discountType) as FrameworkAgreement['discountType'];
+    const status = validateStatus(dto.status) as FrameworkAgreementDoc['status'];
+    const discountType = validateDiscountType(dto.discountType) as FrameworkAgreementDoc['discountType'];
     const flatDiscountPercent = validateFlatPercent(dto.flatDiscountPercent);
     const breakpoints = validateBreakpoints(dto.volumeBreakpoints);
     const { from, until } = validateValidityRange(dto.validFrom, dto.validUntil);
@@ -177,7 +197,7 @@ export async function createFrameworkAgreement(
 
     const id = generateFrameworkAgreementId();
     const now = admin.firestore.Timestamp.now();
-    const agreement: FrameworkAgreement = {
+    const agreement: FrameworkAgreementDoc = {
       id,
       companyId: ctx.companyId,
       agreementNumber,
@@ -231,11 +251,11 @@ export async function createFrameworkAgreement(
 export async function getFrameworkAgreement(
   ctx: AuthContext,
   agreementId: string,
-): Promise<FrameworkAgreement | null> {
+): Promise<FrameworkAgreementDoc | null> {
   return safeFirestoreOperation(async (db) => {
     const snap = await db.collection(COLLECTIONS.FRAMEWORK_AGREEMENTS).doc(agreementId).get();
     if (!snap.exists) return null;
-    const agreement = { id: snap.id, ...snap.data() } as FrameworkAgreement;
+    const agreement = { id: snap.id, ...snap.data() } as FrameworkAgreementDoc;
     if (agreement.companyId !== ctx.companyId) return null;
     return agreement;
   }, null);
@@ -244,7 +264,7 @@ export async function getFrameworkAgreement(
 export async function listFrameworkAgreements(
   ctx: AuthContext,
   filters: FrameworkAgreementFilters = {},
-): Promise<FrameworkAgreement[]> {
+): Promise<FrameworkAgreementDoc[]> {
   return safeFirestoreOperation(async (db) => {
     let query = db
       .collection(COLLECTIONS.FRAMEWORK_AGREEMENTS)
@@ -261,7 +281,7 @@ export async function listFrameworkAgreements(
     }
 
     const snap = await query.orderBy('createdAt', 'desc').get();
-    let items = snap.docs.map((d) => ({ id: d.id, ...d.data() } as FrameworkAgreement));
+    let items = snap.docs.map((d) => ({ id: d.id, ...d.data() } as FrameworkAgreementDoc));
 
     if (filters.search) {
       const q = filters.search.toLowerCase();
@@ -283,17 +303,12 @@ export async function updateFrameworkAgreement(
   ctx: AuthContext,
   agreementId: string,
   dto: UpdateFrameworkAgreementDTO,
-): Promise<FrameworkAgreement> {
+): Promise<FrameworkAgreementDoc> {
   return safeFirestoreOperation(async (db) => {
-    const ref = db.collection(COLLECTIONS.FRAMEWORK_AGREEMENTS).doc(agreementId);
-    const snap = await ref.get();
-    if (!snap.exists) throw new Error(`Framework agreement ${agreementId} not found`);
-
-    const current = { id: snap.id, ...snap.data() } as FrameworkAgreement;
-    if (current.companyId !== ctx.companyId) throw new Error('Forbidden');
+    const { ref, current } = await loadOwnedAgreement(db, ctx, agreementId);
     if (current.isDeleted) throw new Error('Cannot update a deleted framework agreement');
 
-    const updates: Partial<FrameworkAgreement> = {
+    const updates: Partial<FrameworkAgreementDoc> = {
       updatedAt: admin.firestore.Timestamp.now(),
     };
 
@@ -314,7 +329,7 @@ export async function updateFrameworkAgreement(
       updates.vendorContactId = dto.vendorContactId;
     }
     if (dto.status !== undefined) {
-      updates.status = validateStatus(dto.status) as FrameworkAgreement['status'];
+      updates.status = validateStatus(dto.status) as FrameworkAgreementDoc['status'];
     }
     if (dto.validFrom !== undefined || dto.validUntil !== undefined) {
       const fromIso =
@@ -337,7 +352,7 @@ export async function updateFrameworkAgreement(
     if (dto.currency !== undefined) updates.currency = dto.currency;
     if (dto.totalCommitment !== undefined) updates.totalCommitment = dto.totalCommitment;
     if (dto.discountType !== undefined) {
-      updates.discountType = validateDiscountType(dto.discountType) as FrameworkAgreement['discountType'];
+      updates.discountType = validateDiscountType(dto.discountType) as FrameworkAgreementDoc['discountType'];
     }
     if (dto.flatDiscountPercent !== undefined) {
       updates.flatDiscountPercent = validateFlatPercent(dto.flatDiscountPercent);
@@ -347,7 +362,7 @@ export async function updateFrameworkAgreement(
     }
 
     await ref.update(sanitizeForFirestore(updates));
-    const next = { ...current, ...updates } as FrameworkAgreement;
+    const next = { ...current, ...updates } as FrameworkAgreementDoc;
     safeFireAndForget(
       EntityAuditService.recordChange({
         entityType: ENTITY_TYPES.FRAMEWORK_AGREEMENT,
@@ -378,11 +393,7 @@ export async function softDeleteFrameworkAgreement(
   agreementId: string,
 ): Promise<void> {
   return safeFirestoreOperation(async (db) => {
-    const ref = db.collection(COLLECTIONS.FRAMEWORK_AGREEMENTS).doc(agreementId);
-    const snap = await ref.get();
-    if (!snap.exists) throw new Error(`Framework agreement ${agreementId} not found`);
-    const current = { id: snap.id, ...snap.data() } as FrameworkAgreement;
-    if (current.companyId !== ctx.companyId) throw new Error('Forbidden');
+    const { ref, current } = await loadOwnedAgreement(db, ctx, agreementId);
     if (current.isDeleted) return;
 
     await ref.update(

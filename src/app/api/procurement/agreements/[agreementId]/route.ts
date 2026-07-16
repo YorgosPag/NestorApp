@@ -16,6 +16,7 @@ import {
   updateFrameworkAgreement,
   softDeleteFrameworkAgreement,
 } from '@/subapps/procurement/services/framework-agreement-service';
+import { toFrameworkAgreementWire } from '@/subapps/procurement/services/framework-agreement-doc';
 import { getErrorMessage } from '@/lib/error-utils';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -42,7 +43,7 @@ export const GET = defineRoute({
     if (!agreement) {
       notFound('Framework agreement not found');
     }
-    return ok(agreement);
+    return ok(toFrameworkAgreementWire(agreement));
   },
 });
 
@@ -59,7 +60,7 @@ export const PATCH = defineRoute({
       const parsed = safeParseBody(UpdateFrameworkAgreementSchema, await req.json());
       if (parsed.error) return parsed.error;
       const agreement = await updateFrameworkAgreement(auth, agreementId, parsed.data);
-      return ok(agreement);
+      return ok(toFrameworkAgreementWire(agreement));
     } catch (error) {
       const message = getErrorMessage(error, 'Failed to update framework agreement');
       const status = resolveProcurementErrorStatus(error, { ...AGREEMENT_ERROR_NAMES, mode: 'mutation' });

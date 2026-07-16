@@ -118,6 +118,33 @@ const validAgreement = {
   validFrom: '2026-01-01', validUntil: '2026-12-31', discountType: 'flat',
 };
 
+/**
+ * An Admin-SDK Timestamp, as far as the wire serializer is concerned: an object
+ * carrying toDate(). Deliberately not a client Timestamp — the service returns
+ * `FrameworkAgreementDoc`, and the point of the route mapping is that neither
+ * kind of Timestamp survives JSON. (ADR-663 §4 part 5)
+ */
+const adminTs = (iso: string) => ({ toDate: () => new Date(iso) });
+
+const AGREEMENT_INSTANTS = {
+  validFrom: '2026-01-01T00:00:00.000Z',
+  validUntil: '2026-12-31T00:00:00.000Z',
+  createdAt: '2026-01-01T09:00:00.000Z',
+  updatedAt: '2026-01-02T09:00:00.000Z',
+} as const;
+
+/** What the service hands the route. */
+const storedAgreement = () => ({
+  id: 'a1',
+  validFrom: adminTs(AGREEMENT_INSTANTS.validFrom),
+  validUntil: adminTs(AGREEMENT_INSTANTS.validUntil),
+  createdAt: adminTs(AGREEMENT_INSTANTS.createdAt),
+  updatedAt: adminTs(AGREEMENT_INSTANTS.updatedAt),
+});
+
+/** What the client must receive: same fields, ISO 8601. */
+const wiredAgreement = () => ({ id: 'a1', ...AGREEMENT_INSTANTS });
+
 beforeEach(() => {
   jest.clearAllMocks();
   materialSvc.listMaterials.mockResolvedValue([]);
@@ -234,18 +261,18 @@ describe('materials/[materialId] — GET/PATCH/DELETE', () => {
 // ===========================================================================
 
 describe('agreements — GET/POST', () => {
-  it('GET → 200 data', async () => {
-    agreementSvc.listFrameworkAgreements.mockResolvedValue([{ id: 'a1' }]);
+  it('GET → 200 data, instants serialised to ISO', async () => {
+    agreementSvc.listFrameworkAgreements.mockResolvedValue([storedAgreement()]);
     const res = (await agrGet(req())) as Envelope;
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ success: true, data: [{ id: 'a1' }] });
+    expect(await res.json()).toEqual({ success: true, data: [wiredAgreement()] });
   });
 
-  it('POST valid → 201 created', async () => {
-    agreementSvc.createFrameworkAgreement.mockResolvedValue({ id: 'a1' });
+  it('POST valid → 201 created, instants serialised to ISO', async () => {
+    agreementSvc.createFrameworkAgreement.mockResolvedValue(storedAgreement());
     const res = (await agrPost(req(validAgreement))) as Envelope;
     expect(res.status).toBe(201);
-    expect(await res.json()).toEqual({ success: true, data: { id: 'a1' } });
+    expect(await res.json()).toEqual({ success: true, data: wiredAgreement() });
   });
 
   it('POST conflict → 409', async () => {
