@@ -847,6 +847,38 @@ if (space.commercial?.parentUnitSaleId === unit.id) {
 
 ## Changelog
 
+### 2026-07-16 — Parking/Storage sales UI κεντρικοποιήθηκε (CHECK 3.28 / ADR-584)
+
+Οι σελίδες πωλήσεων για θέσεις στάθμευσης και αποθήκες ήταν **κατοπτρικά αντίγραφα**: ίδιο
+view/filter/stats state, ίδιο sidebar layout, με διαφορές μόνο στα δεδομένα και σε λίγα labels.
+Το κοινό κομμάτι ζει πλέον μία φορά.
+
+**Νέα SSoT:**
+- `src/hooks/sales/useSalesSpaceViewerState.ts` — view state, φίλτρα, dashboard stats, selection.
+  Κάθε χώρος δίνει τα δικά του δεδομένα + `matchesSearch` (τα searchable πεδία διαφέρουν) και
+  προαιρετικό `matchesExtraFilters` (το parking έχει `locationZone`, η αποθήκη όχι).
+- `src/components/sales/shared/SalesSpaceSidebar.tsx` — list + details shell, tab scaffold,
+  mobile slide-in. **Δεν κάνει resolve i18n keys** — οι callers περνούν έτοιμα μεταφρασμένα
+  strings, ώστε κάθε `t()` να μένει literal στο call site και οι έλεγχοι 3.8/3.13 να το βλέπουν.
+  (Τα προηγούμενα `t(\`salesParking.tabs.${'${tabId}'}Hint\`)` ήταν δυναμικά → αόρατα στον checker.
+  Πλέον είναι literals· επαληθεύτηκε ότι **και τα 28 keys** υπάρχουν σε `el` + `en`.)
+- `src/types/sales-shared.ts` — προστέθηκε `SalesSpaceItem` (structural: το ικανοποιούν
+  `ParkingSpot` και `Storage` χωρίς να το δηλώνουν).
+
+**Αποτέλεσμα**: hooks **375 → 127** γραμμές, sidebars **424 → 276** (+ 198/242 shared).
+Public API αμετάβλητο → μηδέν αλλαγές στους callers. jscpd clones **3161 → 3149**.
+
+**Διαφορές που εξομαλύνθηκαν σκόπιμα:**
+- Building filter: το parking έλεγχε μόνο `buildingId`, η αποθήκη `buildingId || building`.
+  Το SSoT κάνει το δεύτερο για όλους. Ασφαλές: το `ParkingSpot` **δεν έχει** `building` field
+  (είναι deprecated legacy name-key της αποθήκης), οπότε δεν ματσάρει ποτέ σε αυτό.
+- Το `actions` useMemo και στα δύο sidebars επέστρεφε **πάντα** κενό array (dead code) —
+  αντικαταστάθηκε από μια σταθερά `NO_ACTIONS`.
+
+**Εκτός scope**: το `useSalesPropertiesViewerState` **δεν** εντάχθηκε — αντλεί από context
+(`SharedPropertiesProvider`) αντί για Firestore hook και έχει διαφορετικό filter domain
+(`commercialStatus`/`propertyType`, `SalesViewScope`). Είναι συγγενές, όχι δίδυμο.
+
 ### 2026-03-12 — Phase 1+2 IMPLEMENTED
 
 **Files changed:**
