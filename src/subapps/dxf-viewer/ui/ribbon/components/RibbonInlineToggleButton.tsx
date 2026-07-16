@@ -35,6 +35,15 @@ interface RibbonInlineToggleButtonProps {
   readonly label: string;
   /** Resolved semantic text-colour class for the current state. */
   readonly colorClass: string;
+  /**
+   * ADR-662 Φ4 — precondition unmet ⇒ big-player "greyed command". When true the
+   * toggle renders `aria-disabled` (NOT native `disabled`, so a hover tooltip can
+   * still explain why — mirrors {@link PointCloud3DManageButton}), guards its
+   * click, and swaps the hover ramp for the SSoT disabled look (opacity +
+   * not-allowed). Optional / default `false` → existing enabled behaviour intact
+   * for the second consumer (`DisciplineVisibilityToggle`).
+   */
+  readonly disabled?: boolean;
 }
 
 export const RibbonInlineToggleButton: React.FC<RibbonInlineToggleButtonProps> = ({
@@ -44,16 +53,24 @@ export const RibbonInlineToggleButton: React.FC<RibbonInlineToggleButtonProps> =
   icon,
   label,
   colorClass,
+  disabled = false,
 }) => {
   const colors = useSemanticColors();
+
+  // Disabled ⇒ SSoT greyed look (opacity-50 + not-allowed, matching
+  // `.dxf-ribbon-btn[aria-disabled]`); enabled ⇒ the normal hover ramp.
+  const stateClass = disabled
+    ? `${PANEL_LAYOUT.OPACITY['50']} ${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}`
+    : HOVER_BACKGROUND_EFFECTS.MUTED;
 
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={() => { if (!disabled) onClick(); }}
       aria-pressed={pressed}
+      aria-disabled={disabled || undefined}
       aria-label={ariaLabel}
-      className={`flex items-center gap-1 ${PANEL_LAYOUT.SPACING.COMPACT} ${colors.bg.backgroundSecondary} ${colorClass} ${PANEL_LAYOUT.TYPOGRAPHY.XS} rounded ${HOVER_BACKGROUND_EFFECTS.MUTED} ${PANEL_LAYOUT.TRANSITION.COLORS} select-none`}
+      className={`flex items-center gap-1 ${PANEL_LAYOUT.SPACING.COMPACT} ${colors.bg.backgroundSecondary} ${colorClass} ${PANEL_LAYOUT.TYPOGRAPHY.XS} rounded ${stateClass} ${PANEL_LAYOUT.TRANSITION.COLORS} select-none`}
     >
       {icon}
       <span>{label}</span>

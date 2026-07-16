@@ -122,8 +122,17 @@ const NORTH_VISIBLE = toggleConfig(
 const CLOUD_VISIBLE = toggleConfig(
   () => {
     const st = React.useSyncExternalStore(subscribePointCloud3D, getPointCloud3DState, getPointCloud3DState);
+    // ADR-662 Φ4 — big-player consistency: show/hide of a non-existent cloud is
+    // meaningless, so greyed out until one is imported (same `!preview` criterion +
+    // same `cloud.emptyTip` reason as PointCloud3DManageButton).
+    const hasCloud = !!st.preview;
     // Read fresh in the callback to dodge a stale-closure toggle (mirror TopoCloud3DSection).
-    return { value: st.visible, toggle: () => setPointCloud3DVisible(!getPointCloud3DState().visible) };
+    return {
+      value: st.visible,
+      toggle: () => setPointCloud3DVisible(!getPointCloud3DState().visible),
+      disabled: !hasCloud,
+      disabledReasonKey: hasCloud ? undefined : `${K}.cloud.emptyTip`,
+    };
   },
   Boxes, EyeOff, keys('cloudVisible'),
 );

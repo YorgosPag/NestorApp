@@ -28,6 +28,7 @@ import type { LucideIcon } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { RibbonInlineToggleButton } from './RibbonInlineToggleButton';
+import { Tooltip, TooltipContent, TooltipTrigger } from './RibbonTooltip';
 
 export interface RibbonToggleConfig {
   /**
@@ -36,7 +37,18 @@ export interface RibbonToggleConfig {
    * invoked unconditionally exactly once per render (rules-of-hooks safe because
    * a config is a stable module constant per call-site).
    */
-  readonly useToggleState: () => { readonly value: boolean; readonly toggle: () => void };
+  readonly useToggleState: () => {
+    readonly value: boolean;
+    readonly toggle: () => void;
+    /**
+     * ADR-662 Φ4 — precondition unmet ⇒ the toggle is greyed (see
+     * {@link RibbonInlineToggleButton.disabled}). Optional; a config that never
+     * returns it stays permanently enabled (backward-compatible).
+     */
+    readonly disabled?: boolean;
+    /** i18n key for the "why disabled" reason (aria-label + hover tooltip). */
+    readonly disabledReasonKey?: string;
+  };
   /** Constant row label key. */
   readonly labelKey: string;
   /** Icon shown when `value` is true (active). */
@@ -60,7 +72,7 @@ interface RibbonToggleWidgetProps {
 export const RibbonToggleWidget: React.FC<RibbonToggleWidgetProps> = ({ config }) => {
   const { t } = useTranslation('dxf-viewer-shell');
   const colors = useSemanticColors();
-  const { value, toggle } = config.useToggleState();
+  const { value, toggle, disabled, disabledReasonKey } = config.useToggleState();
 
   const ActiveIcon = config.activeIcon;
   const InactiveIcon = config.inactiveIcon;
@@ -70,17 +82,33 @@ export const RibbonToggleWidget: React.FC<RibbonToggleWidgetProps> = ({ config }
     <InactiveIcon className="w-3 h-3 opacity-60" />
   );
 
+  // When disabled the "why" reason owns both the aria-label (screen readers) and
+  // the hover tooltip (mirror of PointCloud3DManageButton). Otherwise the normal
+  // active/inactive tooltip text applies.
+  const reason = disabled && disabledReasonKey ? t(disabledReasonKey) : undefined;
+  const button = (
+    <RibbonInlineToggleButton
+      pressed={value}
+      onClick={toggle}
+      disabled={disabled}
+      ariaLabel={reason ?? (value ? t(config.activeTooltipKey) : t(config.inactiveTooltipKey))}
+      icon={icon}
+      label={value ? t(config.activeLabelKey) : t(config.inactiveLabelKey)}
+      colorClass={value ? colors.text.info : colors.text.secondary}
+    />
+  );
+
   return (
     <span className="dxf-ribbon-combobox-row">
       <span className="dxf-ribbon-combobox-label">{t(config.labelKey)}</span>
-      <RibbonInlineToggleButton
-        pressed={value}
-        onClick={toggle}
-        ariaLabel={value ? t(config.activeTooltipKey) : t(config.inactiveTooltipKey)}
-        icon={icon}
-        label={value ? t(config.activeLabelKey) : t(config.inactiveLabelKey)}
-        colorClass={value ? colors.text.info : colors.text.secondary}
-      />
+      {reason ? (
+        <Tooltip>
+          <TooltipTrigger asChild>{button}</TooltipTrigger>
+          <TooltipContent>{reason}</TooltipContent>
+        </Tooltip>
+      ) : (
+        button
+      )}
     </span>
   );
 };
