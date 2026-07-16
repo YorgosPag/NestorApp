@@ -85,6 +85,20 @@ describe('TOPOGRAPHY_TAB (ADR-662 Φάση 1 + 1b)', () => {
     expect(new Set(used)).toEqual(WIDGET_IDS);
   });
 
+  // ADR-662 Φ5 — layout guard. Το `RibbonPanel` στοιβάζει ΚΑΘΕΤΑ μόνο τις all-small
+  // σειρές (`data-row-size="small"` → `flex-direction: column`). Μία mixed σειρά
+  // (large + widget μαζί) πέφτει στο default row-flow → τα widgets απλώνονται
+  // οριζόντια και το tab ξεχειλίζει. Άρα: κάθε σειρά ΟΜΟΙΟΓΕΝΗΣ, καμία κενή.
+  it('κάθε row είναι ομοιογενής (μόνο large Ή μόνο small) — αλλιώς σπάει η κάθετη στοίβα', () => {
+    for (const p of TOPOGRAPHY_TAB.panels) {
+      for (const r of p.rows) {
+        expect(r.buttons.length).toBeGreaterThan(0);
+        const sizes = new Set(r.buttons.map((b) => b.size));
+        expect(sizes.size).toBe(1);
+      }
+    }
+  });
+
   it('όλα τα command ids είναι μοναδικά', () => {
     const ids = allButtons().map((b) => b.command.id);
     expect(new Set(ids).size).toBe(ids.length);

@@ -26,9 +26,19 @@
  * breakline/cut-fill/cloud) ζουν πλέον ως section-in-dialog μέσω `TopoRibbonHost` (`.open`
  * actions), τα object-bound displays στο Properties palette (Φ2β Δρόμος Γ).
  *
+ * ROW_LAYOUT (ADR-662 Φ5) — κάθε `row` είναι ΟΜΟΙΟΓΕΝΗΣ (μόνο large Ή μόνο small).
+ * Δεν είναι κοσμητικό: το `RibbonPanel` γράφει `data-row-size={rowSize(row)}` και το
+ * `ribbon-tokens.css` στοιβάζει ΚΑΘΕΤΑ (`flex-direction: column`) ΜΟΝΟ τις all-small
+ * σειρές· μια mixed σειρά πέφτει στο default row-flow → όλα τα widgets απλώνονται
+ * οριζόντια και το tab ξεχειλίζει (ήταν η κατάσταση πριν το Φ5). Οι σειρές μπαίνουν
+ * η μία δίπλα στην άλλη μέσα στο panel — άρα «large tools | στοίβα ρυθμίσεων | large
+ * actions» = ακριβώς το Revit/Civil 3D panel grammar. **Μην ξαναβάλεις widget σε σειρά
+ * με large button** — φτιάξε νέα σειρά (ο guard στο topography-tab.test.ts το κόβει).
+ *
  * @see docs/centralized-systems/reference/adrs/ADR-662-topography-ribbon-migration.md
  * @see ./systems-discipline-tabs.ts (ADR-444 — το πρότυπο MEP discipline tabs)
  * @see ../components/TopoRibbonToggleWidgets.tsx · ../components/TopoRibbonNumericWidgets.tsx
+ * @see ../components/RibbonPanel.tsx `rowSize()` · ../styles/ribbon-tokens.css `[data-row-size]`
  */
 
 import type { RibbonTab, RibbonButton } from '../types/ribbon-types';
@@ -55,6 +65,11 @@ function topoWidget(id: string, labelKey: string, widgetId: string): RibbonButto
   };
 }
 
+/** Row helper: μία ΟΜΟΙΟΓΕΝΗΣ σειρά (βλ. `ROW_LAYOUT` σχόλιο παραπάνω). */
+function row(buttons: RibbonButton[]) {
+  return { isInFlyout: false, buttons };
+}
+
 export const TOPOGRAPHY_TAB: RibbonTab = {
   id: 'topography',
   labelKey: 'ribbon.tabs.topography',
@@ -63,97 +78,86 @@ export const TOPOGRAPHY_TAB: RibbonTab = {
       id: 'topo-data',
       labelKey: 'ribbon.panels.topoData',
       rows: [
-        {
-          isInFlyout: false,
-          buttons: [
-            topoAction('topoTab.import', `${K}.import.label`, 'import-wizard', 'topo.import.open'),
-            topoWidget('topoTab.cloudVisible', `${K}.cloudVisible.label`, 'topo-cloud-visible'),
-            // ADR-662 Φ4 — «Νέφος σημείων…»: store-subscribed widget που ανοίγει τον cloud
-            // manager dialog (stats + show/hide + remove)· **disabled + tooltip** όταν δεν
-            // υπάρχει νέφος (big-player: εντολή με ανεκπλήρωτη προϋπόθεση = greyed, ΟΧΙ κενό
-            // dialog). Ο quick-toggle widget μένει δίπλα για γρήγορο on/off (Revit-style).
-            topoWidget('topoTab.cloud', `${K}.cloud.label`, 'topo-cloud-manage'),
-          ],
-        },
+        row([topoAction('topoTab.import', `${K}.import.label`, 'import-wizard', 'topo.import.open')]),
+        // ADR-662 Φ4 — «Νέφος σημείων…»: store-subscribed widget που ανοίγει τον cloud
+        // manager dialog (stats + show/hide + remove)· **disabled + tooltip** όταν δεν
+        // υπάρχει νέφος (big-player: εντολή με ανεκπλήρωτη προϋπόθεση = greyed, ΟΧΙ κενό
+        // dialog). Ο quick-toggle widget μένει από πάνω για γρήγορο on/off (Revit-style).
+        row([
+          topoWidget('topoTab.cloudVisible', `${K}.cloudVisible.label`, 'topo-cloud-visible'),
+          topoWidget('topoTab.cloud', `${K}.cloud.label`, 'topo-cloud-manage'),
+        ]),
       ],
     },
     {
       id: 'topo-surface',
       labelKey: 'ribbon.panels.topoSurface',
       rows: [
-        {
-          isInFlyout: false,
-          buttons: [
-            toolBtn('topoTab.breakline', `${K}.breakline.label`, 'topo-breakline', 'topo-breakline'),
-            // ADR-662 Φ4 — καθαρισμός breaklines (ήταν στο αριστερό panel· ο tool δίπλα το γεννά).
-            topoAction('topoTab.breaklineClear', `${K}.breakline.clear`, 'delete', 'topo.breakline.clear'),
-            topoWidget('topoTab.contourInterval', `${K}.intervalField.label`, 'topo-contour-interval'),
-            topoWidget('topoTab.contourIndex', `${K}.indexField.label`, 'topo-contour-index'),
-            topoWidget('topoTab.contourStyle', `${K}.contourStyle.label`, 'topo-contour-style'),
-            topoAction('topoTab.generate', `${K}.generate.label`, 'topo-contours', 'topo.contours.generate'),
-            // ADR-662 Φ4 — «Αυτόματες ασυνέχειες»: ανοίγει dialog (detect → review → approve, §9).
-            topoAction('topoTab.autoBreakline', `${K}.autoBreakline.label`, 'topo-auto-breakline', 'topo.autoBreakline.open'),
-          ],
-        },
+        row([
+          toolBtn('topoTab.breakline', `${K}.breakline.label`, 'topo-breakline', 'topo-breakline'),
+          // ADR-662 Φ4 — καθαρισμός breaklines (ήταν στο αριστερό panel· ο tool δίπλα το γεννά).
+          topoAction('topoTab.breaklineClear', `${K}.breakline.clear`, 'delete', 'topo.breakline.clear'),
+        ]),
+        // Παράμετροι ισοϋψών (ισοδιάσταση / κύριες ανά / στυλ) — στοίβα δίπλα στα εργαλεία.
+        row([
+          topoWidget('topoTab.contourInterval', `${K}.intervalField.label`, 'topo-contour-interval'),
+          topoWidget('topoTab.contourIndex', `${K}.indexField.label`, 'topo-contour-index'),
+          topoWidget('topoTab.contourStyle', `${K}.contourStyle.label`, 'topo-contour-style'),
+        ]),
+        row([
+          topoAction('topoTab.generate', `${K}.generate.label`, 'topo-contours', 'topo.contours.generate'),
+          // ADR-662 Φ4 — «Αυτόματες ασυνέχειες»: ανοίγει dialog (detect → review → approve, §9).
+          topoAction('topoTab.autoBreakline', `${K}.autoBreakline.label`, 'topo-auto-breakline', 'topo.autoBreakline.open'),
+        ]),
       ],
     },
     {
       id: 'topo-georef',
       labelKey: 'ribbon.panels.topoGeoRef',
       rows: [
-        {
-          isInFlyout: false,
-          buttons: [
-            topoAction('topoTab.geoRef', `${K}.geoRef.label`, 'topo-georef', 'topo.geoRef.open'),
-          ],
-        },
+        row([topoAction('topoTab.geoRef', `${K}.geoRef.label`, 'topo-georef', 'topo.geoRef.open')]),
       ],
     },
     {
       id: 'topo-presentation',
       labelKey: 'ribbon.panels.topoPresentation',
       rows: [
-        {
-          isInFlyout: false,
-          buttons: [
-            topoWidget('topoTab.gridVisible', `${K}.gridVisible.label`, 'topo-grid-visible'),
-            topoWidget('topoTab.gridStep', `${K}.gridStepField.label`, 'topo-grid-step'),
-            topoAction('topoTab.gridBake', `${K}.gridBake.label`, 'display-grid', 'topo.grid.bake'),
-            topoWidget('topoTab.northVisible', `${K}.northVisible.label`, 'topo-north-visible'),
-            topoWidget('topoTab.northMode', `${K}.northMode.label`, 'topo-north-mode'),
-            topoAction('topoTab.northBake', `${K}.northBake.label`, 'north-arrow', 'topo.north.bake'),
-            topoAction('topoTab.pointLabels', `${K}.pointLabels.label`, 'topo-labels', 'topo.pointLabels.generate'),
-          ],
-        },
+        // Κάναβος: εμφάνιση + βήμα σε στοίβα, με το «Αποτύπωμα κανάβου» δίπλα.
+        row([
+          topoWidget('topoTab.gridVisible', `${K}.gridVisible.label`, 'topo-grid-visible'),
+          topoWidget('topoTab.gridStep', `${K}.gridStepField.label`, 'topo-grid-step'),
+        ]),
+        row([topoAction('topoTab.gridBake', `${K}.gridBake.label`, 'display-grid', 'topo.grid.bake')]),
+        // Βορράς: εμφάνιση + mode (κάναβου/πραγματικός) σε στοίβα, «Αποτύπωση Βορρά» δίπλα.
+        row([
+          topoWidget('topoTab.northVisible', `${K}.northVisible.label`, 'topo-north-visible'),
+          topoWidget('topoTab.northMode', `${K}.northMode.label`, 'topo-north-mode'),
+        ]),
+        row([
+          topoAction('topoTab.northBake', `${K}.northBake.label`, 'north-arrow', 'topo.north.bake'),
+          topoAction('topoTab.pointLabels', `${K}.pointLabels.label`, 'topo-labels', 'topo.pointLabels.generate'),
+        ]),
       ],
     },
     {
       id: 'topo-analysis',
       labelKey: 'ribbon.panels.topoAnalysis',
       rows: [
-        {
-          isInFlyout: false,
-          buttons: [
-            toolBtn('topoTab.boundary', `${K}.boundary.label`, 'topo-boundary', 'topo-boundary'),
-            topoWidget('topoTab.cutFillMode', `${K}.cutFillMode.label`, 'topo-cutfill-mode'),
-            // ADR-662 Φ4 — «Όγκοι εκσκαφών»/«Έλεγχος ποιότητας»: ανοίγουν dialog με πλήρη ροή
-            // (mode/όγκοι· run/review/zoom-to-flag). Το mode quick-toggle widget μένει δίπλα.
-            topoAction('topoTab.cutFill', `${K}.cutFill.label`, 'topo-cutfill', 'topo.cutFill.open'),
-            topoAction('topoTab.qaRun', `${K}.qaRun.label`, 'topo-qa', 'topo.qa.open'),
-          ],
-        },
+        row([toolBtn('topoTab.boundary', `${K}.boundary.label`, 'topo-boundary', 'topo-boundary')]),
+        row([topoWidget('topoTab.cutFillMode', `${K}.cutFillMode.label`, 'topo-cutfill-mode')]),
+        // ADR-662 Φ4 — «Όγκοι εκσκαφών»/«Έλεγχος ποιότητας»: ανοίγουν dialog με πλήρη ροή
+        // (mode/όγκοι· run/review/zoom-to-flag). Το mode quick-toggle widget μένει δίπλα.
+        row([
+          topoAction('topoTab.cutFill', `${K}.cutFill.label`, 'topo-cutfill', 'topo.cutFill.open'),
+          topoAction('topoTab.qaRun', `${K}.qaRun.label`, 'topo-qa', 'topo.qa.open'),
+        ]),
       ],
     },
     {
       id: 'topo-deliverables',
       labelKey: 'ribbon.panels.topoDeliverables',
       rows: [
-        {
-          isInFlyout: false,
-          buttons: [
-            topoAction('topoTab.deliverables', `${K}.deliverables.label`, 'export-dxf', 'topo.deliverables.open'),
-          ],
-        },
+        row([topoAction('topoTab.deliverables', `${K}.deliverables.label`, 'export-dxf', 'topo.deliverables.open')]),
       ],
     },
   ],
