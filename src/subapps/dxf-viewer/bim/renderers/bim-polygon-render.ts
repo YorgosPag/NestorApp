@@ -20,6 +20,16 @@ type ScreenPt = { x: number; y: number };
 type ToScreen = (p: ScreenPt) => ScreenPt;
 type Vertices = ReadonlyArray<{ x: number; y: number }>;
 
+/**
+ * The «selected» halo sits one notch above the hover glow — see `paintSelectionHalo`.
+ * Nominally the body width it extends, but held here rather than derived from the
+ * caller's body: the point is a FIXED gap over the hover halo, which is what keeps
+ * the two states apart on the thin-bodied overlays that use it.
+ */
+const SELECTION_HALO_BODY_WIDTH = 2;
+/** Near-opaque — «selected» is a committed state, not the transient hover hint. */
+const SELECTION_HALO_OPACITY = 0.9;
+
 /** Trace a closed polygon path in SCREEN space (beginPath..closePath, no paint). */
 export function tracePolygonScreenPath(
   ctx: CanvasRenderingContext2D,
@@ -117,6 +127,32 @@ export function paintPolygonHoverHalo(
 }
 
 /**
+ * Selection-emphasis halo — no-op unless `selected`. Self-contained save/restore.
+ *
+ * The sibling of `paintHoverHalo` for the BIM overlays that emit NO grips
+ * (thermal space is wall-bound — ADR-422 L0; the space separator edits by
+ * re-placement — ADR-437 D-F). With no grips to light up, «selected» has to be
+ * carried by the outline alone, so it is deliberately WIDER and fully opaque
+ * where the hover glow is translucent — the two states stay distinguishable when
+ * both apply. Same `trace`-supplies-the-path contract as `paintHoverHalo`.
+ */
+export function paintSelectionHalo(
+  ctx: CanvasRenderingContext2D,
+  selected: boolean,
+  trace: () => void,
+): void {
+  if (!selected) return;
+  ctx.save();
+  ctx.strokeStyle = HOVER_HIGHLIGHT.ENTITY.glowColor;
+  ctx.lineWidth = SELECTION_HALO_BODY_WIDTH + HOVER_HIGHLIGHT.ENTITY.glowExtraWidth;
+  ctx.globalAlpha = SELECTION_HALO_OPACITY;
+  ctx.setLineDash([]);
+  trace();
+  ctx.stroke();
+  ctx.restore();
+}
+
+/**
  * Stroke a set of OPEN polylines in screen space (the kind-identifying symbol
  * strokes — electrical breaker rows / WC cistern+bowl / …). Each sub-array < 2
  * points is skipped; the caller owns `strokeStyle`/`lineWidth`. SSoT for the
@@ -176,9 +212,18 @@ export function polygonBboxHitTest(
 
 /**
  * Map raw parametric grips → render `GripInfo` (id/position/type/entityId/
- * isVisible/gripIndex). Center/midpoint kinds are preserved, everything else
- * becomes a plain 'vertex'. Pass `resolveShape` to attach a per-grip glyph
+ * isVisible/gripIndex). Pass `resolveShape` to attach a per-grip glyph
  * (move/rotation handles) — the caller keeps its own `gripKindOf`/glyph SSoT.
+ *
+ * The grip `type` is carried over VERBATIM. It is load-bearing, not cosmetic:
+ * `isGripTypeVisible` (hooks/grips/grip-type-visibility) gates centre/midpoint/
+ * quadrant helper grips on the user's «Grip Types» toggles, and `GripColorManager`
+ * paints cold 'edge' grips green. Flattening anything unrecognised to 'vertex'
+ * used to claim «structural endpoint, always shown» for grips that are not, which
+ * is why the toggles did nothing on the BIM entities routed through here (ADR-584).
+ * The cast-free assignment is total: the parametric `GripType` is
+ * `Exclude<GripKind,'control'|'close'>` — a strict subset of the render
+ * `GripInfo['type']` (`Exclude<GripKind,'close'>`).
  *
  * Δύο ΔΙΑΦΟΡΕΤΙΚΑ `GripInfo` παίζουν εδώ: το input είναι το parametric/data-model
  * grip (`hooks/grip-types` — φέρει `movesEntity`/`gripKind`) που επιστρέφουν τα
@@ -194,7 +239,7 @@ export function mapBimGrips(
     const mapped: GripInfo = {
       id: `${g.entityId}-grip-${g.gripIndex}`,
       position: g.position,
-      type: g.type === 'center' ? 'center' : g.type === 'midpoint' ? 'midpoint' : 'vertex',
+      type: g.type,
       entityId: g.entityId,
       isVisible: true,
       gripIndex: g.gripIndex,

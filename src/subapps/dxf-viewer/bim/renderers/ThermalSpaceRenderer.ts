@@ -27,9 +27,15 @@ import { isThermalSpaceEntity } from '../../types/entities';
 import type { ThermalSpaceEntity } from '../types/thermal-space-types';
 import { resolveThermalSpaceSetpointC } from '../thermal/thermal-space-use-catalog';
 import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
-import { polygonBboxHitTest } from './bim-polygon-render';
+import {
+  polygonBboxHitTest,
+  paintPolygonHoverHalo,
+  paintSelectionHalo,
+  tracePolygonScreenPath,
+} from './bim-polygon-render';
+import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 // 🏢 ADR-571: teal analytical accent SSoT + hexToRgba SSoT (color-math.ts)
-import { HOVER_HIGHLIGHT, MEP_TEAL_COLOR } from '../../config/color-config';
+import { MEP_TEAL_COLOR } from '../../config/color-config';
 import { hexToRgba } from '../../config/color-math';
 
 /** Analytical accent colour (teal) — Revit «Space» analytical overlay (ADR-571 SSoT). */
@@ -48,30 +54,19 @@ export class ThermalSpaceRenderer extends BaseEntityRenderer {
     const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
 
     // Hover halo (only when NOT selected — PhaseManager collapses selected→'normal').
-    if (phaseState.phase === 'highlighted') {
-      this.ctx.save();
-      this.ctx.strokeStyle = HOVER_HIGHLIGHT.ENTITY.glowColor;
-      this.ctx.lineWidth = HOVER_HIGHLIGHT.ENTITY.glowExtraWidth + 1.5;
-      this.ctx.globalAlpha = HOVER_HIGHLIGHT.ENTITY.glowOpacity;
-      this.ctx.setLineDash([]);
-      this.drawPolygonPath(verts);
-      this.ctx.stroke();
-      this.ctx.restore();
-    }
+    paintPolygonHoverHalo(
+      this.ctx,
+      (p) => this.worldToScreen(p),
+      verts,
+      phaseState.phase === 'highlighted',
+      RENDER_LINE_WIDTHS.BIM_FINISH_BOUNDARY,
+    );
 
-    // Selection emphasis (solid accent halo). Grips are disabled for wall-bound
-    // spaces (ADR-422 L0), so selection MUST be signalled by this highlight —
-    // reuses the section-panel «selected cap» SSoT (HOVER_HIGHLIGHT.ENTITY.glowColor).
-    if (options.selected) {
-      this.ctx.save();
-      this.ctx.strokeStyle = HOVER_HIGHLIGHT.ENTITY.glowColor;
-      this.ctx.lineWidth = HOVER_HIGHLIGHT.ENTITY.glowExtraWidth + 2;
-      this.ctx.globalAlpha = 0.9;
-      this.ctx.setLineDash([]);
-      this.drawPolygonPath(verts);
-      this.ctx.stroke();
-      this.ctx.restore();
-    }
+    // Selection emphasis. Grips are disabled for wall-bound spaces (ADR-422 L0),
+    // so selection MUST be signalled by this highlight.
+    paintSelectionHalo(this.ctx, options.selected === true, () =>
+      tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), verts),
+    );
 
     this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
     this.ctx.save();
@@ -79,14 +74,14 @@ export class ThermalSpaceRenderer extends BaseEntityRenderer {
     // Translucent analytical fill — stronger when selected so the whole area reads as picked.
     // FULL SSoT (bim-body-fill) — κοινό adaptive layer με όλα τα BIM body fills.
     this.ctx.fillStyle = adaptFillTintForCanvas(hexToRgba(MEP_TEAL_COLOR, options.selected ? 0.24 : 0.12));
-    this.drawPolygonPath(verts);
+    tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), verts);
     this.ctx.fill();
 
     // Dashed analytical outline.
     this.ctx.strokeStyle = THERMAL_SPACE_COLOR;
-    this.ctx.lineWidth = 1.2;
+    this.ctx.lineWidth = RENDER_LINE_WIDTHS.BIM_FINISH_BOUNDARY;
     this.ctx.setLineDash([6, 4]);
-    this.drawPolygonPath(verts);
+    tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), verts);
     this.ctx.stroke();
 
     // Space tag (centred on bbox).
@@ -110,18 +105,6 @@ export class ThermalSpaceRenderer extends BaseEntityRenderer {
   }
 
   // ─── Internal helpers ──────────────────────────────────────────────────────
-
-  private drawPolygonPath(vertices: ReadonlyArray<{ x: number; y: number }>): void {
-    if (vertices.length < 3) return;
-    this.ctx.beginPath();
-    const first = this.worldToScreen({ x: vertices[0].x, y: vertices[0].y });
-    this.ctx.moveTo(first.x, first.y);
-    for (let i = 1; i < vertices.length; i++) {
-      const s = this.worldToScreen({ x: vertices[i].x, y: vertices[i].y });
-      this.ctx.lineTo(s.x, s.y);
-    }
-    this.ctx.closePath();
-  }
 
   private drawTag(ts: ThermalSpaceEntity): void {
     const bb = ts.geometry?.bbox;

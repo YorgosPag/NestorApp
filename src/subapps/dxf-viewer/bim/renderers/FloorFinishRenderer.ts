@@ -19,8 +19,13 @@ import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../render
 import type { Entity } from '../../types/entities';
 import { isFloorFinishEntity } from '../../types/entities';
 import type { FloorFinishEntity } from '../types/floor-finish-types';
-import { polygonBboxHitTest } from './bim-polygon-render';
-import { HOVER_HIGHLIGHT } from '../../config/color-config';
+import {
+  polygonBboxHitTest,
+  paintPolygonHoverHalo,
+  tracePolygonScreenPath,
+  mapBimGrips,
+} from './bim-polygon-render';
+import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { getFloorFinishGrips } from '../floor-finishes/floor-finish-grips';
 import {
   getFloorFinishColor,
@@ -51,16 +56,13 @@ export class FloorFinishRenderer extends BaseEntityRenderer {
     const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
 
     // Hover halo.
-    if (phaseState.phase === 'highlighted') {
-      this.ctx.save();
-      this.ctx.strokeStyle = HOVER_HIGHLIGHT.ENTITY.glowColor;
-      this.ctx.lineWidth = HOVER_HIGHLIGHT.ENTITY.glowExtraWidth + 1.5;
-      this.ctx.globalAlpha = HOVER_HIGHLIGHT.ENTITY.glowOpacity;
-      this.ctx.setLineDash([]);
-      this.drawPolygonPath(verts);
-      this.ctx.stroke();
-      this.ctx.restore();
-    }
+    paintPolygonHoverHalo(
+      this.ctx,
+      (p) => this.worldToScreen(p),
+      verts,
+      phaseState.phase === 'highlighted',
+      RENDER_LINE_WIDTHS.BIM_FINISH_BOUNDARY,
+    );
 
     this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
     this.ctx.save();
@@ -72,7 +74,7 @@ export class FloorFinishRenderer extends BaseEntityRenderer {
     // αφαίρεση inline hex parse· κοινό με WallCoveringRenderer ADR-511).
     // FULL SSoT (bim-body-fill) — κοινό adaptive layer με όλα τα BIM body fills.
     this.ctx.fillStyle = adaptFillTintForCanvas(hexToRgba(color, 0.22) ?? color);
-    this.drawPolygonPath(verts);
+    tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), verts);
     this.ctx.fill();
 
     // Hatch pattern clipped inside polygon.
@@ -82,9 +84,9 @@ export class FloorFinishRenderer extends BaseEntityRenderer {
 
     // Outline stroke.
     this.ctx.strokeStyle = color;
-    this.ctx.lineWidth = 1.2;
+    this.ctx.lineWidth = RENDER_LINE_WIDTHS.BIM_FINISH_BOUNDARY;
     this.ctx.setLineDash([4, 4]);
-    this.drawPolygonPath(verts);
+    tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), verts);
     this.ctx.stroke();
 
     this.ctx.restore();
@@ -93,14 +95,7 @@ export class FloorFinishRenderer extends BaseEntityRenderer {
 
   getGrips(entity: EntityModel): GripInfo[] {
     if (!isFloorFinishEntity(entity)) return [];
-    return getFloorFinishGrips(entity as FloorFinishEntity).map((g) => ({
-      id: `${g.entityId}-grip-${g.gripIndex}`,
-      position: g.position,
-      type: g.type === 'midpoint' ? ('midpoint' as const) : ('vertex' as const),
-      entityId: g.entityId,
-      isVisible: true,
-      gripIndex: g.gripIndex,
-    }));
+    return mapBimGrips(getFloorFinishGrips(entity as FloorFinishEntity));
   }
 
   hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {
@@ -113,18 +108,6 @@ export class FloorFinishRenderer extends BaseEntityRenderer {
 
   // ─── Internal helpers ──────────────────────────────────────────────────────
 
-  private drawPolygonPath(vertices: ReadonlyArray<{ x: number; y: number }>): void {
-    if (vertices.length < 3) return;
-    this.ctx.beginPath();
-    const first = this.worldToScreen({ x: vertices[0].x, y: vertices[0].y });
-    this.ctx.moveTo(first.x, first.y);
-    for (let i = 1; i < vertices.length; i++) {
-      const s = this.worldToScreen({ x: vertices[i].x, y: vertices[i].y });
-      this.ctx.lineTo(s.x, s.y);
-    }
-    this.ctx.closePath();
-  }
-
   private drawHatch(
     ff: FloorFinishEntity,
     hatch: 'wood' | 'tile' | 'dot',
@@ -134,7 +117,7 @@ export class FloorFinishRenderer extends BaseEntityRenderer {
     if (!Number.isFinite(spacingMm) || spacingMm <= 0) return;
 
     this.ctx.save();
-    this.drawPolygonPath(ff.params.footprint.vertices);
+    tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), ff.params.footprint.vertices);
     this.ctx.clip();
     this.ctx.strokeStyle = HATCH_STROKE;
     this.ctx.fillStyle = HATCH_STROKE;

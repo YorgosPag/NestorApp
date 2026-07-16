@@ -21,7 +21,8 @@ import type { Entity } from '../../types/entities';
 import { isSpaceSeparatorEntity } from '../../types/entities';
 import type { SpaceSeparatorEntity } from '../types/space-separator-types';
 import { pointToLineDistance } from '../../rendering/entities/shared/geometry-utils';
-import { HOVER_HIGHLIGHT } from '../../config/color-config';
+import { paintHoverHalo, paintSelectionHalo } from './bim-polygon-render';
+import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 
 /** Room-separator accent colour (violet) — Revit «Room/Space Separation Line». */
 const SPACE_SEPARATOR_COLOR = '#9333ea';
@@ -37,37 +38,26 @@ export class SpaceSeparatorRenderer extends BaseEntityRenderer {
     const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
 
     // Hover halo (only when NOT selected — PhaseManager collapses selected→'normal').
-    if (phaseState.phase === 'highlighted') {
-      this.ctx.save();
-      this.ctx.strokeStyle = HOVER_HIGHLIGHT.ENTITY.glowColor;
-      this.ctx.lineWidth = HOVER_HIGHLIGHT.ENTITY.glowExtraWidth + 1.5;
-      this.ctx.globalAlpha = HOVER_HIGHLIGHT.ENTITY.glowOpacity;
-      this.ctx.setLineDash([]);
-      this.drawLinePath(start, end);
-      this.ctx.stroke();
-      this.ctx.restore();
-    }
+    // An OPEN 2-point path, so it traces itself and uses the bare `paintHoverHalo`.
+    paintHoverHalo(
+      this.ctx,
+      phaseState.phase === 'highlighted',
+      () => this.drawLinePath(start, end),
+      RENDER_LINE_WIDTHS.BIM_FINISH_BOUNDARY,
+    );
 
-    // Selection emphasis (solid accent halo). No grips in v1 (ADR-437 D-F), so
-    // selection MUST be signalled by this highlight — reuses the same «selected»
-    // SSoT as thermal-space (HOVER_HIGHLIGHT.ENTITY.glowColor).
-    if (options.selected) {
-      this.ctx.save();
-      this.ctx.strokeStyle = HOVER_HIGHLIGHT.ENTITY.glowColor;
-      this.ctx.lineWidth = HOVER_HIGHLIGHT.ENTITY.glowExtraWidth + 2;
-      this.ctx.globalAlpha = 0.9;
-      this.ctx.setLineDash([]);
-      this.drawLinePath(start, end);
-      this.ctx.stroke();
-      this.ctx.restore();
-    }
+    // Selection emphasis. No grips in v1 (ADR-437 D-F), so selection MUST be
+    // signalled by this highlight.
+    paintSelectionHalo(this.ctx, options.selected === true, () =>
+      this.drawLinePath(start, end),
+    );
 
     this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
     this.ctx.save();
 
     // Thin dashed violet boundary line.
     this.ctx.strokeStyle = SPACE_SEPARATOR_COLOR;
-    this.ctx.lineWidth = 1.2;
+    this.ctx.lineWidth = RENDER_LINE_WIDTHS.BIM_FINISH_BOUNDARY;
     this.ctx.setLineDash([8, 5]);
     this.drawLinePath(start, end);
     this.ctx.stroke();

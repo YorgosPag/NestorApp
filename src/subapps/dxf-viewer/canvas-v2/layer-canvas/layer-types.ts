@@ -5,6 +5,10 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { RegionStatus } from '../../types/overlay';
+import type {
+  SelectionBoxSettings,
+  SelectionMode,
+} from '../../systems/cursor/config';
 // ✅ REMOVED DUPLICATE: Use main RulerSettings from systems/rulers-grid/config.ts
 
 // === LAYER TYPES ===
@@ -134,24 +138,11 @@ export type RulerSettings = {
 // import type { CursorSettings } from '../../systems/cursor/config';
 
 // === SELECTION TYPES ===
-export interface SelectionSettings {
-  window: {
-    fillColor: string;
-    fillOpacity: number;
-    borderColor: string;
-    borderOpacity: number;
-    borderStyle: 'solid' | 'dashed' | 'dotted' | 'dash-dot';
-    borderWidth: number;
-  };
-  crossing: {
-    fillColor: string;
-    fillOpacity: number;
-    borderColor: string;
-    borderOpacity: number;
-    borderStyle: 'solid' | 'dashed' | 'dotted' | 'dash-dot';
-    borderWidth: number;
-  };
-}
+// ✅ REMOVED DUPLICATE: το shape ζούσε αυτούσιο και εδώ (window+crossing γραμμένα
+// δύο φορές). Καταναλώνουμε τον τύπο από το systems/cursor/config — ίδια
+// μεταχείριση με το CursorSettings παραπάνω. `import type` = σβήνεται στο build,
+// άρα καμία runtime εξάρτηση προς το cursor system.
+export type SelectionSettings = Record<SelectionMode, SelectionBoxSettings>;
 
 export interface SelectionBox {
   startPoint: Point2D;

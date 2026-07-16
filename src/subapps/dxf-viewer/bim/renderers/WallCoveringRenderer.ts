@@ -28,7 +28,8 @@ import type {
   WallCoveringHatchType,
 } from '../types/wall-covering-types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
-import { HOVER_HIGHLIGHT } from '../../config/color-config';
+import { paintPolygonHoverHalo, tracePolygonScreenPath } from './bim-polygon-render';
+import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { getWallCoveringColor, getWallCoveringHatchType } from '../wall-coverings/wall-covering-material-catalog';
 import { resolveVisibleWallCoveringLayer } from '../wall-coverings/wall-covering-layers';
 import { strokeHatchLines, fillHatchDots } from './shared/canvas-hatch-fill';
@@ -71,16 +72,13 @@ export class WallCoveringRenderer extends BaseEntityRenderer {
     const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
 
     // Hover halo.
-    if (phaseState.phase === 'highlighted') {
-      this.ctx.save();
-      this.ctx.strokeStyle = HOVER_HIGHLIGHT.ENTITY.glowColor;
-      this.ctx.lineWidth = HOVER_HIGHLIGHT.ENTITY.glowExtraWidth + 1.5;
-      this.ctx.globalAlpha = HOVER_HIGHLIGHT.ENTITY.glowOpacity;
-      this.ctx.setLineDash([]);
-      this.drawQuadPath(quad);
-      this.ctx.stroke();
-      this.ctx.restore();
-    }
+    paintPolygonHoverHalo(
+      this.ctx,
+      (p) => this.worldToScreen(p),
+      quad,
+      phaseState.phase === 'highlighted',
+      RENDER_LINE_WIDTHS.BIM_FINISH_BOUNDARY,
+    );
 
     this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
     this.ctx.save();
@@ -101,7 +99,7 @@ export class WallCoveringRenderer extends BaseEntityRenderer {
 
     // Outline stroke.
     this.ctx.strokeStyle = color;
-    this.ctx.lineWidth = 1.2;
+    this.ctx.lineWidth = RENDER_LINE_WIDTHS.BIM_FINISH_BOUNDARY;
     this.ctx.setLineDash([]);
     this.drawQuadPath(quad);
     this.ctx.stroke();
@@ -131,15 +129,9 @@ export class WallCoveringRenderer extends BaseEntityRenderer {
     return computeWallCoveringStrip(host, wc.params);
   }
 
+  /** Thin bind of the shared screen-space tracer to this renderer's transform. */
   private drawQuadPath(quad: WallCoveringStrip['quad']): void {
-    this.ctx.beginPath();
-    const first = this.worldToScreen({ x: quad[0].x, y: quad[0].y });
-    this.ctx.moveTo(first.x, first.y);
-    for (let i = 1; i < quad.length; i++) {
-      const s = this.worldToScreen({ x: quad[i].x, y: quad[i].y });
-      this.ctx.lineTo(s.x, s.y);
-    }
-    this.ctx.closePath();
+    tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), quad);
   }
 
   private drawHatch(quad: WallCoveringStrip['quad'], hatch: Exclude<WallCoveringHatchType, 'solid'>): void {

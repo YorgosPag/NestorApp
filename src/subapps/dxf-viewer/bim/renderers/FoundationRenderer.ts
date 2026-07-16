@@ -21,7 +21,7 @@
  */
 
 import { BimFootprintRenderer } from './bim-footprint-renderer';
-import { polygonBboxHitTest } from './bim-polygon-render';
+import { polygonBboxHitTest, mapBimGrips } from './bim-polygon-render';
 import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../rendering/types/Types';
 import { isFoundationEntity } from '../../types/entities';
 import type { FoundationEntity } from '../types/foundation-types';
@@ -195,22 +195,16 @@ export class FoundationRenderer extends BimFootprintRenderer {
   }
 
   getGrips(entity: EntityModel): GripInfo[] {
-    // ADR-436 Slice 1b — parametric foundation pad grips (rotation / width / length).
-    // Commit routed through `applyFoundationGripDrag()` + `UpdateFoundationParamsCommand`
-    // by `commitFoundationGripDrag` (grip-parametric-commits). Declutter: central
-    // MOVE grip not emitted — Alt+drag moves the pad. strip/tie-beam = Slice 2.
+    // ADR-436 Slice 1b — parametric foundation pad grips (rotation / width / length),
+    // plus the central MOVE grip re-added by ADR-517 (foundation-grips.ts). Commit
+    // routed through `applyFoundationGripDrag()` + `UpdateFoundationParamsCommand`
+    // by `commitFoundationGripDrag` (grip-parametric-commits). strip/tie-beam = Slice 2.
     if (!isFoundationEntity(entity)) return [];
-    return getFoundationGrips(entity as FoundationEntity).map((g) => ({
-      id: `${g.entityId}-grip-${g.gripIndex}`,
-      position: g.position,
-      type: 'vertex' as const,
-      entityId: g.entityId,
-      isVisible: true,
-      gripIndex: g.gripIndex,
-      // ADR-397 — rotation handle gets the curved-arrow glyph via the shared
-      // registry SSoT; width/length stay square.
-      shape: gripGlyphShape(gripKindOf(g, 'foundation')),
-    }));
+    // ADR-397 — the rotation handle gets the curved-arrow glyph via the shared
+    // registry SSoT; width/length stay square.
+    return mapBimGrips(getFoundationGrips(entity as FoundationEntity), (g) =>
+      gripGlyphShape(gripKindOf(g, 'foundation')),
+    );
   }
 
   hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {
