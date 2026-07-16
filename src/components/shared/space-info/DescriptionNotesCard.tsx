@@ -1,3 +1,4 @@
+/* eslint-disable design-system/prefer-design-system-imports */
 'use client';
 
 /**
@@ -22,32 +23,40 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
-export interface DescriptionNotesCardLabels {
-  title: string;
+/** The description/notes slice of a space form. */
+export interface DescriptionNotesForm {
   description: string;
   notes: string;
 }
 
 export interface DescriptionNotesCardProps {
-  description: string;
-  notes: string;
+  form: DescriptionNotesForm;
   isEditing: boolean;
-  onDescriptionChange: (value: string) => void;
-  onNotesChange: (value: string) => void;
-  labels: DescriptionNotesCardLabels;
+  /** Write one field back into the owner's form state. */
+  onChange: (key: keyof DescriptionNotesForm, value: string) => void;
+  /**
+   * Namespaced translate function (ADR-280) — the label keys are identical for
+   * every space entity, so the card resolves them itself rather than making each
+   * caller re-declare the same block.
+   */
+  t: (key: string) => string;
 }
 
 export function DescriptionNotesCard({
-  description,
-  notes,
+  form,
   isEditing,
-  onDescriptionChange,
-  onNotesChange,
-  labels,
+  onChange,
+  t,
 }: DescriptionNotesCardProps) {
   const iconSizes = useIconSizes();
   const typography = useTypography();
   const colors = useSemanticColors();
+
+  const labels = {
+    title: t('general.descriptionNotes'),
+    description: t('general.fields.description'),
+    notes: t('general.fields.notes'),
+  };
 
   return (
     <Card>
@@ -61,8 +70,8 @@ export function DescriptionNotesCard({
         <fieldset className="space-y-1.5">
           <Label className={cn('text-xs', colors.text.muted)}>{labels.description}</Label>
           <Textarea
-            value={description}
-            onChange={(e) => onDescriptionChange(e.target.value)}
+            value={form.description}
+            onChange={(e) => onChange('description', e.target.value)}
             className="h-20 text-sm resize-none"
             disabled={!isEditing}
           />
@@ -70,8 +79,8 @@ export function DescriptionNotesCard({
         <fieldset className="space-y-1.5">
           <Label className={cn('text-xs', colors.text.muted)}>{labels.notes}</Label>
           <Textarea
-            value={notes}
-            onChange={(e) => onNotesChange(e.target.value)}
+            value={form.notes}
+            onChange={(e) => onChange('notes', e.target.value)}
             className="h-20 text-sm resize-none"
             disabled={!isEditing}
           />

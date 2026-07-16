@@ -1,3 +1,4 @@
+/* eslint-disable design-system/prefer-design-system-imports */
 /**
  * OptionSelectField — labeled Radix Select over a `{ value, labelKey }[]` list
  *

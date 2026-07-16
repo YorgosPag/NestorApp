@@ -1,22 +1,24 @@
-import type React from 'react';
+/**
+ * storage-general-tab-config — types, option lists and form seeding for
+ * `StorageGeneralTab`.
+ *
+ * Config-only counterpart of `parking-general-tab-config.ts` (same archetype,
+ * different schema — ADR-588 keeps the two forms separate on purpose).
+ *
+ * @module components/space-management/StoragesPage/StorageDetails/tabs/storage-general-tab-config
+ * @see ADR-588 §General tab — space tab de-duplication (Phase 2)
+ */
+
 import type { Storage, StorageType, StorageStatus } from '@/types/storage/contracts';
+import type { SelectOption } from '@/components/shared/space-info/OptionSelectField';
+import type { SpaceGeneralTabProps } from '@/components/shared/space-info/space-general-tab-contracts';
 
 // ============================================================================
 // INTERFACES
 // ============================================================================
 
-export interface StorageGeneralTabProps {
+export interface StorageGeneralTabProps extends SpaceGeneralTabProps {
   storage: Storage;
-  /** Inline editing active (from parent via globalProps) */
-  isEditing?: boolean;
-  /** Notify parent when editing state changes */
-  onEditingChange?: (editing: boolean) => void;
-  /** Ref for save delegation from header button */
-  onSaveRef?: React.MutableRefObject<(() => Promise<boolean>) | null>;
-  /** Create mode: POST new entity instead of PATCH existing */
-  createMode?: boolean;
-  /** Callback when entity is created successfully (create mode only) */
-  onCreated?: (id: string) => void;
 }
 
 export interface StorageFormState {
@@ -33,15 +35,14 @@ export interface StorageFormState {
   notes: string;
 }
 
-export interface StoragePatchResult {
-  id: string;
-}
-
 // ============================================================================
 // CONSTANTS
 // ============================================================================
 
-export const STORAGE_TYPES: { value: StorageType; labelKey: string }[] = [
+export const DEFAULT_STORAGE_TYPE: StorageType = 'storage';
+export const DEFAULT_STORAGE_STATUS: StorageStatus = 'available';
+
+export const STORAGE_TYPES: SelectOption<StorageType>[] = [
   { value: 'large', labelKey: 'general.types.large' },
   { value: 'small', labelKey: 'general.types.small' },
   { value: 'basement', labelKey: 'general.types.basement' },
@@ -52,7 +53,7 @@ export const STORAGE_TYPES: { value: StorageType; labelKey: string }[] = [
   { value: 'warehouse', labelKey: 'general.types.warehouse' },
 ];
 
-export const STORAGE_STATUSES: { value: StorageStatus; labelKey: string }[] = [
+export const STORAGE_STATUSES: SelectOption<StorageStatus>[] = [
   { value: 'available', labelKey: 'general.statuses.available' },
   { value: 'occupied', labelKey: 'general.statuses.occupied' },
   { value: 'maintenance', labelKey: 'general.statuses.maintenance' },
@@ -69,8 +70,8 @@ export function buildFormState(storage: Storage): StorageFormState {
   return {
     name: storage.name || '',
     code: storage.code || '',
-    type: storage.type || 'storage',
-    status: storage.status || 'available',
+    type: storage.type || DEFAULT_STORAGE_TYPE,
+    status: storage.status || DEFAULT_STORAGE_STATUS,
     floor: storage.floor || '',
     floorId: storage.floorId || '',
     area: storage.area !== undefined ? String(storage.area) : '',

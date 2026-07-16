@@ -85,6 +85,11 @@ export interface ParkingSpot {
   createdBy?: string;
   createdAt?: Date;
   updatedAt?: Date;
+  /**
+   * 🏢 SPEC-256A: Optimistic-concurrency version counter. Acquired lazily on
+   * first versioned update — absent on documents never updated since migration.
+   */
+  _v?: number;
 
   // ADR-199: Sales appurtenance fields
   /** Millesimal shares (χιλιοστά) — 0 = common, >0 = independently sellable */

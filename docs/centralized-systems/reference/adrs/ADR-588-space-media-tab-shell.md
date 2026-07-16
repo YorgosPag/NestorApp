@@ -1,7 +1,10 @@
 # ADR-588: Space Media Tab Shell SSoT (`EntityMediaFilesTab`)
 
 ## Status
-✅ **ACTIVE — 2026-07-08** — De-duplication of the copy-pasted Parking ↔ Storage detail tabs under `src/components/space-management/{ParkingPage/ParkingDetails,StoragesPage/StorageDetails}/tabs/`. Two moves: (1) the four **media** tab pairs (Photos / Videos / Documents / Floorplan) collapsed onto one generic shell + per-entity binding + per-tab config; (2) the **general** tab pair de-duplicated conservatively via shared primitives (labelled select, building-link labels, save-ref hook) **without** unifying the divergent form logic. jscpd (both folders + shared): **27 clones / 347 dup lines → 10 clones / 115 dup lines** (−17 clones, −232 lines). The remaining 10 are the `GeneralTab` imports + the entity-specific save flow (see *Out of scope*).
+✅ **ACTIVE — 2026-07-16 (Phase 2)** — De-duplication of the copy-pasted Parking ↔ Storage detail tabs under `src/components/space-management/{ParkingPage/ParkingDetails,StoragesPage/StorageDetails}/tabs/`.
+
+- **Phase 1 (2026-07-08)** — (1) the four **media** tab pairs (Photos / Videos / Documents / Floorplan) collapsed onto one generic shell + per-entity binding + per-tab config; (2) the **general** tab pair de-duplicated conservatively via shared primitives (labelled select, building-link labels, save-ref hook) **without** unifying the divergent form logic. jscpd: **27 clones / 347 dup lines → 10 clones / 115 dup lines**.
+- **Phase 2 (2026-07-16)** — the general-tab follow-up Phase 1 deferred: the two tabs adopt the **`useVersionedSave` SSoT** (SPEC-256A) instead of hand-rolling the 409 retry, and the remaining shared logic moves into `space-info` primitives + hooks. The **God-shell is still refused** — the two forms stay separate, only primitives are shared. jscpd on the pair: **10 clones / 115 dup lines → 0 clones / 0 dup lines** (verified). Repo-wide: **3149 → 3107 clones**.
 
 **Related:**
 - **ADR-031** (Canonical File Storage System) — `EntityFilesManager`, the centralized files engine every media tab already wrapped. Behaviour unchanged.
@@ -64,11 +67,44 @@ The differing tokens (parking↔storage, config const) keep the thin wrappers **
 - Floorplan accepted-types unified to the **superset** (parking's, incl. `application/dxf, image/vnd.dxf`) — harmless widening, both tabs are DXF-intended.
 
 ### Out of scope (deliberate)
-`ParkingGeneralTab` (475) ↔ `StorageGeneralTab` (459) genuinely diverge — different fields (`location` vs `floorId`/`price`/`millesimalShares`), different mutation gateways (`*ParkingWithPolicy` vs `*StorageWithPolicy`) and `RealtimeService` events. A single God-shell over two different schemas is **not** big-player practice (Revit/Figma keep per-type forms, share only primitives). After the primitive extraction **10 clones remain**: the import blocks and the entity-specific save flow (the inline 409 last-write-wins `_v` retry). The retry is the biggest single clone and has an existing SSoT — `hooks/useVersionedSave.ts` (SPEC-256A) — but adopting it rewrites the divergent create/edit save path and needs a render/behaviour verify, so it is left as a separate, opt-in follow-up rather than folded into this refactor.
+`ParkingGeneralTab` ↔ `StorageGeneralTab` genuinely diverge — different fields (`location` vs `floorId`/`price`/`millesimalShares`), different mutation gateways (`*ParkingWithPolicy` vs `*StorageWithPolicy`) and `RealtimeService` events. A single God-shell over two different schemas is **not** big-player practice (Revit/Figma keep per-type forms, share only primitives). **This constraint still holds after Phase 2** — the two tabs remain separate components with separate schemas; only entity-agnostic primitives are shared.
+
+Phase 1 additionally deferred the `useVersionedSave` adoption ("adopting it rewrites the divergent create/edit save path and needs a render/behaviour verify"). **Phase 2 closes that item** — see below.
+
+---
+
+## Decision — Phase 2 (general tab)
+
+A real SSoT audit (grep) found the biggest remaining clone was **not** new duplication to extract but an **existing SSoT the two tabs never adopted**: `hooks/useVersionedSave.ts` (SPEC-256A), already used by `building-management/tabs/GeneralTabContent` and `projects/general-tab/GeneralProjectTab`. Both space tabs hand-rolled the same `versionRef` + `try/catch 409` + retry-without-`_v` block instead.
+
+| SSoT | Owns | Replaces |
+|---|---|---|
+| `hooks/useVersionedSave` *(adopted, pre-existing)* | `_v` injection, forward-only version tracking, silent last-write-wins retry on 409 | The hand-rolled `versionRef` + inline 409 retry in **both** tabs |
+| `hooks/useSpaceGeneralSave` | Create-or-update dispatch + error→`false` + save-ref registration (wraps `useSaveHandlerRef`) | The identical `handleSave` try/catch in both tabs |
+| `hooks/useSpaceNameSuggestion` | ADR-233 createMode auto-naming: seed-on-mount, `nameManuallyChanged` tracking, re-derive on type/area | The 3 hand-rolled handlers + seed effect in both tabs |
+| `space-info/space-payload-builder` | The POST/PATCH payload rules: trim, diff-vs-current, cleared→`null` vs omit, `buildSpaceRealtimeUpdates` | The two hand-rolled payload blocks (the subtle rules had already drifted) |
+| `space-info/SpaceCoreFields` | The three fields every space has — type + status + area — and their label keys | 3 duplicated field blocks per tab |
+| `space-info/SpaceFloorCard` | The `FloorSelectField` card shell (byte-identical in both) | The floor card in both tabs |
+| `space-info/LabeledInputField` | The labelled text/number input — sibling of `OptionSelectField` | name / area / price fields |
+| `space-info/space-general-tab-contracts` | `SpaceGeneralTabProps` — the isEditing/onSaveRef/createMode contract | The identical props block in both configs |
+| `space-info/DescriptionNotesCard` *(API tightened)* | Now takes `form` + `onChange` + `t` and resolves its own labels | The identical 6-prop wiring block in both tabs |
+
+**Canonical form field.** Parking's form state renamed `number` → **`name`** so both forms expose the same suggestible shape; the mapping back to the spot's `number` happens where the payload is built. Internal only — the component's public props are unchanged.
+
+**Per-entity config symmetry.** `parking-general-tab-config.ts` now mirrors `storage-general-tab-config.ts` (props, form state, option lists, defaults, `buildFormState`) — the direction Phase 1 noted Storage had already signalled.
+
+### Google-level normalisations (Phase 2)
+- **`_v` is now declared** on `ParkingSpot` and `Storage` (`_v?: number`, lazy per SPEC-256A) — both tabs previously reached it via an `as unknown as { _v?: number }` double-cast. The API routes already return it.
+- **Parking's type label key drifted**: the createMode seed used a dynamic `` t(`types.${v}`) `` while its option list used `general.types.*` — two parallel i18n blocks. Now both resolve through the option list's `labelKey` (verified: all 24 type/status keys resolve in el + en).
+- **Arbitrary Tailwind colour removed**: both tabs hardcoded `text-[hsl(var(--text-success))]`; `SpaceFloorCard` uses `colors.text.success` (ADR-365 SSoT). Parking's `eslint-disable design-system/enforce-semantic-colors` header is gone.
+- **Telemetry improved**: the save failure now logs under each tab's own module logger rather than a duplicated per-entity message string.
 
 ---
 
 ## Consequences
+- **+** *(Phase 2)* The general tab pair is at **0 clones / 0 duplicated lines**. `ParkingGeneralTab` 429 → 299 lines, `StorageGeneralTab` 413 → 350.
+- **+** *(Phase 2)* The 409 last-write-wins retry now has **one** implementation for all four entity general tabs (parking, storage, building, project) — a divergence here was a correctness risk, not just duplication.
+- **~** *(Phase 2)* The two tabs have **no automated tests** — none existed before either. Verification was jscpd + ESLint + i18n key resolution + line-by-line behaviour diff against the originals. A render/behaviour smoke test of both tabs (create + edit + 409 path) is the honest next step.
 - **+** jscpd across both `tabs/` folders + shared: **27 → 10 clones** (347 → 115 dup lines). Ratchet advances.
 - **+** 4 media-tab pairs → 1 shell + config; general tab pair shares 3 new primitives without merging its divergent logic.
 - **+** `useCompanyDisplayName` / `OptionSelectField` / `buildBuildingLinkLabels` / `useSaveHandlerRef` are reusable SSoTs (the save-ref hook already has 3 consumers; `FloorFloorplanInline` can adopt `useCompanyDisplayName` on next touch).
@@ -79,4 +115,5 @@ The differing tokens (parking↔storage, config const) keep the thin wrappers **
 ---
 
 ## Changelog
+- **2026-07-16 (Phase 2)** — General-tab follow-up closed. Both tabs adopt the pre-existing `useVersionedSave` SSoT (the hand-rolled 409 retry is gone); new SSoTs `useSpaceGeneralSave`, `useSpaceNameSuggestion`, `space-payload-builder`, `SpaceCoreFields`, `SpaceFloorCard`, `LabeledInputField`, `space-general-tab-contracts`; `DescriptionNotesCard` API tightened to `form`/`onChange`/`t`; `parking-general-tab-config.ts` added to mirror Storage. Parking form field `number` → canonical `name` (internal; public props unchanged). `_v?: number` declared on `ParkingSpot` + `Storage` (removes an `as unknown as` double-cast in both). Parking's dynamic `types.*` label key aligned to the option list's `general.types.*`. jscpd on the pair: **10 clones / 115 dup lines → 0 / 0**; repo-wide **3149 → 3107**. N.18 self-check on all 15 touched files: 0 new clones. ESLint clean. No new i18n keys (all 27 + 24 option keys verified in el + en).
 - **2026-07-08** — Created. (1) Media-tab de-dup for Parking/Storage: `EntityMediaFilesTab` shell + `entity-media-binding` + `media-tab-configs` + `useCompanyDisplayName`; 4 i18n keys × 2 namespaces × 2 locales. (2) General-tab conservative de-dup: `OptionSelectField`, `buildBuildingLinkLabels`, `useSaveHandlerRef` (3 consumers). Divergent general save flow left for an opt-in `useVersionedSave` follow-up. Net jscpd: 27 → 10 clones.

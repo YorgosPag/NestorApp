@@ -1,46 +1,99 @@
 /* eslint-disable design-system/prefer-design-system-imports */
 'use client';
 
-/** ADR-193: Storage general tab — inline editing, Cards layout, ADR-233 entity code */
+/**
+ * ADR-193: Storage general tab — inline editing, Cards layout, ADR-233 entity code
+ *
+ * Shape and schema are storage-specific; everything entity-agnostic comes from
+ * the `space-info` primitives (ADR-588 §General tab).
+ *
+ * @see ADR-588 — space tab de-duplication
+ * @see SPEC-256A — optimistic versioning (`useVersionedSave`)
+ */
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import type { StorageType } from '@/types/storage/contracts';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import type { Storage, StorageType } from '@/types/storage/contracts';
 import {
   type StorageGeneralTabProps,
   type StorageFormState,
-  type StoragePatchResult,
   STORAGE_TYPES,
   STORAGE_STATUSES,
+  DEFAULT_STORAGE_TYPE,
+  DEFAULT_STORAGE_STATUS,
   buildFormState,
 } from './storage-general-tab-config';
-import { MapPin, Lock } from 'lucide-react';
+import { Lock } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { ApiClientError } from '@/lib/api/enterprise-api-client';
 import { RealtimeService } from '@/services/realtime/RealtimeService';
-import { createStorageWithPolicy, updateStorageWithPolicy } from '@/services/storage-mutation-gateway';
+import {
+  createStorageWithPolicy,
+  updateStorageWithPolicy,
+  type StorageMutationResult,
+} from '@/services/storage-mutation-gateway';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { OptionSelectField } from '@/components/shared/space-info/OptionSelectField';
+import { LabeledInputField } from '@/components/shared/space-info/LabeledInputField';
+import { SpaceFloorCard } from '@/components/shared/space-info/SpaceFloorCard';
+import { SpaceCoreFields } from '@/components/shared/space-info/SpaceCoreFields';
+import {
+  createSpaceDraft,
+  createSpacePatch,
+  buildSpaceRealtimeUpdates,
+  type SpacePayloadBuilder,
+} from '@/components/shared/space-info/space-payload-builder';
 import { cn } from '@/lib/utils';
 import { createModuleLogger } from '@/lib/telemetry';
 import { EntityLinkCard } from '@/components/shared/EntityLinkCard';
 import { getBuildingsList } from '@/services/properties.service';
-import { FloorSelectField } from '@/components/shared/FloorSelectField';
 import type { FloorChangePayload } from '@/components/shared/FloorSelectField';
 import { useEntityLink } from '@/hooks/useEntityLink';
 import { EntityCodeField } from '@/components/shared/EntityCodeField';
 import { parseFloorLevel } from '@/hooks/useEntityCodeSuggestion';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { useEntityNameSuggestion } from '@/hooks/useEntityNameSuggestion';
-import { useSaveHandlerRef } from '@/hooks/useSaveHandlerRef';
+import { useVersionedSave } from '@/hooks/useVersionedSave';
+import { useSpaceGeneralSave } from '@/hooks/useSpaceGeneralSave';
+import {
+  useSpaceNameSuggestion,
+  type SpaceFormPatchApplier,
+} from '@/hooks/useSpaceNameSuggestion';
 import { DescriptionNotesCard } from '@/components/shared/space-info/DescriptionNotesCard';
 import { buildBuildingLinkLabels } from '@/components/shared/space-info/building-link-labels';
 
 const logger = createModuleLogger('StorageGeneralTab');
+
+// ============================================================================
+// PAYLOAD BUILDERS (module scope — referentially stable)
+// ============================================================================
+
+/** POST body: the shared space fields plus storage's own identity, floor doc and price. */
+function buildStorageDraft(form: StorageFormState, buildingId: string | null): SpacePayloadBuilder {
+  const draft = createSpaceDraft(
+    { name: form.name.trim(), type: form.type, status: form.status },
+    form,
+    buildingId,
+  );
+  draft.optionalText('floorId', form.floorId);
+  draft.optionalNumber('price', form.price);
+  return draft;
+}
+
+/** PATCH body: only the fields that actually changed. */
+function buildStoragePatch(
+  form: StorageFormState,
+  storage: Storage,
+  linkPayload: Record<string, unknown>,
+): SpacePayloadBuilder {
+  const patch = createSpacePatch(form, storage, linkPayload);
+  patch.textChanged('name', form.name, storage.name);
+  patch.valueChanged('type', form.type, storage.type || DEFAULT_STORAGE_TYPE);
+  patch.valueChanged('status', form.status, storage.status || DEFAULT_STORAGE_STATUS);
+  patch.nullableTextChanged('floorId', form.floorId, storage.floorId);
+  patch.nullableNumberChanged('price', form.price, storage.price);
+  return patch;
+}
 
 // ============================================================================
 // COMPONENT
@@ -58,12 +111,8 @@ export function StorageGeneralTab({
   const colors = useSemanticColors();
   const typography = useTypography();
   const { t } = useTranslation('storage');
-  const buildName = useEntityNameSuggestion();
-  const nameManuallyChanged = useRef(false);
 
-  // 🏢 SPEC-256A Phase 2: track _v for optimistic concurrency, but any 409 is
-  // resolved via silent last-write-wins retry below — never a dialog.
-  const versionRef = useRef<number | undefined>((storage as unknown as { _v?: number })._v);
+  /** Guards against a double-submit while the POST is in flight. */
   const submittingRef = useRef(false);
 
   // Create mode error feedback
@@ -75,51 +124,29 @@ export function StorageGeneralTab({
   // Reset form when a DIFFERENT storage is selected (not on edit mode toggle)
   useEffect(() => {
     setForm(buildFormState(storage));
-    versionRef.current = (storage as unknown as { _v?: number })._v;
     if (createMode) setCreateError(null);
   }, [storage.id]);
-
-  // ADR-233: Seed initial name in createMode — runs once on mount
-  useEffect(() => {
-    if (!createMode) return;
-    nameManuallyChanged.current = false;
-    const defaultType = STORAGE_TYPES.find(st => st.value === 'storage') ?? STORAGE_TYPES[0];
-    setForm(prev => ({ ...prev, name: buildName(t(defaultType.labelKey), 0) }));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // intentional — seed once on mount
-
-  // Building link callbacks
-  const loadBuildings = useCallback(() => getBuildingsList(), []);
 
   const updateField = <K extends keyof StorageFormState>(key: K, value: StorageFormState[K]) => {
     setForm(prev => ({ ...prev, [key]: value }));
   };
 
-  // ADR-233: Name suggestion handlers for createMode
-  const handleNameChange = useCallback((value: string) => {
-    nameManuallyChanged.current = true;
-    setForm(prev => ({ ...prev, name: value }));
-  }, []);
+  // ADR-233: createMode name auto-suggestion (SSoT hook)
+  const applyNamePatch = useCallback<SpaceFormPatchApplier<StorageType>>(
+    (patch) => setForm(prev => ({ ...prev, ...patch(prev) })),
+    [],
+  );
 
-  const handleTypeChange = useCallback((v: StorageType) => {
-    if (createMode && !nameManuallyChanged.current) {
-      const typeLabelKey = STORAGE_TYPES.find(st => st.value === v)?.labelKey ?? 'general.types.storage';
-      setForm(prev => ({ ...prev, type: v, name: buildName(t(typeLabelKey), parseFloat(prev.area) || 0) }));
-    } else {
-      updateField('type', v);
-    }
-  }, [buildName, t, createMode]);
+  const { handleNameChange, handleTypeChange, handleAreaChange } = useSpaceNameSuggestion<StorageType>({
+    createMode,
+    typeOptions: STORAGE_TYPES,
+    defaultType: DEFAULT_STORAGE_TYPE,
+    t,
+    applyPatch: applyNamePatch,
+  });
 
-  const handleAreaChange = useCallback((value: string) => {
-    if (createMode && !nameManuallyChanged.current) {
-      setForm(prev => {
-        const typeLabelKey = STORAGE_TYPES.find(st => st.value === prev.type)?.labelKey ?? 'general.types.storage';
-        return { ...prev, area: value, name: buildName(t(typeLabelKey), parseFloat(value) || 0) };
-      });
-    } else {
-      updateField('area', value);
-    }
-  }, [buildName, t, createMode]);
+  // Building link callbacks
+  const loadBuildings = useCallback(() => getBuildingsList(), []);
 
   // ADR-200: Centralized entity linking via useEntityLink
   const buildingLink = useEntityLink({
@@ -136,142 +163,96 @@ export function StorageGeneralTab({
     labels: buildBuildingLinkLabels(t),
   }, isEditing);
 
-  // Register save handler with parent via ref
-  const handleSave = useCallback(async (): Promise<boolean> => {
-    if (createMode) {
-      if (submittingRef.current) return false;
-      submittingRef.current = true;
-      setCreateError(null);
+  // 🏢 SPEC-256A Phase 2: versioning SSoT — injects `_v`, bumps it on success and
+  // silently retries without it on 409 (last-write-wins, never a dialog).
+  const versionedSaveFn = useCallback(
+    async (payload: Record<string, unknown> & { _v?: number }) => {
+      const result = await updateStorageWithPolicy<StorageMutationResult>({
+        storageId: storage.id,
+        payload,
+      });
+      return { success: true, _v: result?._v };
+    },
+    [storage.id],
+  );
 
-      if (!form.name.trim()) {
-        submittingRef.current = false;
-        setCreateError(t('storages.form.nameRequired'));
-        return false;
-      }
+  const versioned = useVersionedSave<Record<string, unknown>>({
+    initialVersion: storage._v,
+    entityId: storage.id,
+    saveFn: versionedSaveFn,
+  });
 
-      const payload: Record<string, unknown> = {
-        name: form.name.trim(),
-        type: form.type,
-        status: form.status,
-      };
-      if (form.code.trim()) payload.code = form.code.trim();
-      if (buildingLink.linkedId) payload.buildingId = buildingLink.linkedId;
-      if (form.floor.trim()) payload.floor = form.floor.trim();
-      if (form.floorId) payload.floorId = form.floorId;
-      if (form.area) payload.area = parseFloat(form.area);
-      if (form.price) payload.price = parseFloat(form.price);
-      if (form.description.trim()) payload.description = form.description.trim();
-      if (form.notes.trim()) payload.notes = form.notes.trim();
+  // CREATE MODE: POST new storage
+  const handleCreate = useCallback(async (): Promise<boolean> => {
+    if (submittingRef.current) return false;
+    submittingRef.current = true;
+    setCreateError(null);
 
-      try {
-        const result = await createStorageWithPolicy<{ storageId: string }>({ payload });
-
-        if (result?.storageId) {
-          RealtimeService.dispatch('STORAGE_CREATED', {
-            storageId: result.storageId,
-            storage: payload,
-            timestamp: Date.now(),
-          });
-          logger.info('Storage created', { id: result.storageId });
-          onCreated?.(result.storageId);
-          return true;
-        }
-
-        setCreateError(t('storages.form.createError'));
-        return false;
-      } catch (err) {
-        logger.error('Failed to create storage', { error: err instanceof Error ? err.message : String(err) });
-        setCreateError(err instanceof Error ? err.message : t('storages.form.createError'));
-        return false;
-      } finally {
-        submittingRef.current = false;
-      }
+    if (!form.name.trim()) {
+      submittingRef.current = false;
+      setCreateError(t('storages.form.nameRequired'));
+      return false;
     }
 
+    const draft = buildStorageDraft(form, buildingLink.linkedId);
+
     try {
+      const result = await createStorageWithPolicy<{ storageId: string }>({
+        payload: draft.payload,
+      });
 
-      // EDIT MODE: PATCH existing storage
-      const payload: Record<string, unknown> = {};
-
-      if (form.name.trim() !== (storage.name || '')) payload.name = form.name.trim();
-      if (form.code.trim() !== (storage.code || '')) payload.code = form.code.trim() || null;
-      if (form.type !== (storage.type || 'storage')) payload.type = form.type;
-      if (form.status !== (storage.status || 'available')) payload.status = form.status;
-      if (form.floor.trim() !== (storage.floor || '')) payload.floor = form.floor.trim();
-      if (form.floorId !== (storage.floorId || '')) payload.floorId = form.floorId || null;
-
-      const newArea = form.area ? parseFloat(form.area) : undefined;
-      if (newArea !== storage.area) payload.area = newArea ?? null;
-
-      const newPrice = form.price ? parseFloat(form.price) : undefined;
-      if (newPrice !== storage.price) payload.price = newPrice ?? null;
-
-      if (form.description.trim() !== (storage.description || '')) payload.description = form.description.trim();
-      if (form.notes.trim() !== (storage.notes || '')) payload.notes = form.notes.trim();
-
-      // ADR-200: Include building link change from centralized hook
-      Object.assign(payload, buildingLink.getPayload());
-
-      // Nothing changed
-      if (Object.keys(payload).length === 0) {
-        onEditingChange?.(false);
+      if (result?.storageId) {
+        RealtimeService.dispatch('STORAGE_CREATED', {
+          storageId: result.storageId,
+          storage: draft.payload,
+          timestamp: Date.now(),
+        });
+        logger.info('Storage created', { id: result.storageId });
+        onCreated?.(result.storageId);
         return true;
       }
 
-      // SPEC-256A Phase 2: Include _v so the server can still audit the
-      // version; on 409 we silently retry without _v (last-write-wins).
-      if (versionRef.current !== undefined) {
-        payload._v = versionRef.current;
-      }
-
-      let result: (StoragePatchResult & { _v?: number }) | undefined;
-      try {
-        result = await updateStorageWithPolicy<StoragePatchResult & { _v?: number }>({
-          storageId: storage.id,
-          payload,
-        });
-      } catch (err) {
-        if (ApiClientError.isApiClientError(err) && err.statusCode === 409) {
-          logger.warn('Storage version conflict — silent retry without _v', { id: storage.id });
-          delete payload._v;
-          result = await updateStorageWithPolicy<StoragePatchResult & { _v?: number }>({
-            storageId: storage.id,
-            payload,
-          });
-        } else {
-          throw err;
-        }
-      }
-
-      if (typeof result?._v === 'number') {
-        versionRef.current = result._v;
-      }
-
-      // Dispatch realtime event for cross-page sync
-      RealtimeService.dispatch('STORAGE_UPDATED', {
-        storageId: storage.id,
-        updates: {
-          name: form.name.trim(),
-          type: form.type,
-          status: form.status,
-          floor: form.floor.trim() || undefined,
-          area: newArea,
-          buildingId: buildingLink.linkedId,
-        },
-        timestamp: Date.now(),
+      setCreateError(t('storages.form.createError'));
+      return false;
+    } catch (err) {
+      logger.error('Failed to create storage', {
+        error: err instanceof Error ? err.message : String(err),
       });
+      setCreateError(err instanceof Error ? err.message : t('storages.form.createError'));
+      return false;
+    } finally {
+      submittingRef.current = false;
+    }
+  }, [form, buildingLink, onCreated, t]);
 
-      logger.info('Storage updated', { id: storage.id });
+  // EDIT MODE: PATCH existing storage
+  const handleUpdate = useCallback(async (): Promise<boolean> => {
+    const patch = buildStoragePatch(form, storage, buildingLink.getPayload());
+
+    // Nothing changed
+    if (patch.isEmpty) {
       onEditingChange?.(false);
       return true;
-    } catch (err) {
-      logger.error('Failed to save storage', { error: err instanceof Error ? err.message : String(err) });
-      return false;
     }
-  }, [form, storage, onEditingChange, buildingLink, createMode, onCreated, t]);
 
-  // Register save ref for header delegation (SSoT hook)
-  useSaveHandlerRef(onSaveRef, handleSave);
+    await versioned.save(patch.payload);
+
+    // Dispatch realtime event for cross-page sync
+    RealtimeService.dispatch('STORAGE_UPDATED', {
+      storageId: storage.id,
+      updates: {
+        name: form.name.trim(),
+        ...buildSpaceRealtimeUpdates(form, buildingLink.linkedId),
+      },
+      timestamp: Date.now(),
+    });
+
+    logger.info('Storage updated', { id: storage.id });
+    onEditingChange?.(false);
+    return true;
+  }, [form, storage, onEditingChange, buildingLink, versioned.save]);
+
+  useSpaceGeneralSave({ createMode, onCreate: handleCreate, onUpdate: handleUpdate, onSaveRef, logger });
 
   return (
     <div className="p-2 space-y-2">
@@ -281,27 +262,17 @@ export function StorageGeneralTab({
       {/* Building Link + Floor — side by side at the top */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
         <EntityLinkCard key={buildingLink.linkCardKey} {...buildingLink.linkCardProps} />
-        <Card>
-          <CardHeader className="p-2">
-            <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
-              <MapPin className={cn(iconSizes.md, 'text-[hsl(var(--text-success))]')} />
-              {t('general.fields.floor')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-2 pt-0">
-            <FloorSelectField
-              buildingId={buildingLink.linkedId}
-              value={form.floorId}
-              onChange={(v: string, payload?: FloorChangePayload) => {
-                updateField('floor', v);
-                updateField('floorId', payload ? payload.floorId : '');
-              }}
-              label={t('general.fields.floor')}
-              noBuildingHint={t('entityLinks.building.noFloorHint')}
-              disabled={!isEditing}
-            />
-          </CardContent>
-        </Card>
+        <SpaceFloorCard
+          buildingId={buildingLink.linkedId}
+          value={form.floorId}
+          onChange={(v: string, payload?: FloorChangePayload) => {
+            updateField('floor', v);
+            updateField('floorId', payload ? payload.floorId : '');
+          }}
+          label={t('general.fields.floor')}
+          noBuildingHint={t('entityLinks.building.noFloorHint')}
+          disabled={!isEditing}
+        />
       </div>
 
       {/* Basic Information Card */}
@@ -328,43 +299,23 @@ export function StorageGeneralTab({
               variant="form"
               t={t}
             />
-            <fieldset className="space-y-1.5">
-              <Label className={cn("text-xs", colors.text.muted)}>{t('general.fields.name')}</Label>
-              <Input
-                value={form.name}
-                onChange={(e) => createMode ? handleNameChange(e.target.value) : updateField('name', e.target.value)}
-                className="h-8 text-sm"
-                disabled={!isEditing}
-              />
-            </fieldset>
-            <OptionSelectField
-              label={t('general.fields.type')}
-              value={form.type}
-              options={STORAGE_TYPES}
-              onValueChange={(v) => createMode ? handleTypeChange(v) : updateField('type', v)}
-              t={t}
+            <LabeledInputField
+              label={t('general.fields.name')}
+              value={form.name}
+              onChange={handleNameChange}
               disabled={!isEditing}
             />
-            <OptionSelectField
-              label={t('general.fields.status')}
-              value={form.status}
-              options={STORAGE_STATUSES}
-              onValueChange={(v) => updateField('status', v)}
+            <SpaceCoreFields
               t={t}
               disabled={!isEditing}
+              type={{ value: form.type, options: STORAGE_TYPES, onChange: handleTypeChange }}
+              status={{
+                value: form.status,
+                options: STORAGE_STATUSES,
+                onChange: (v) => updateField('status', v),
+              }}
+              area={{ value: form.area, onChange: handleAreaChange }}
             />
-            <fieldset className="space-y-1.5">
-              <Label className={cn("text-xs", colors.text.muted)}>{t('general.fields.area')}</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={form.area}
-                onChange={(e) => createMode ? handleAreaChange(e.target.value) : updateField('area', e.target.value)}
-                placeholder="m²"
-                className="h-8 text-sm"
-                disabled={!isEditing}
-              />
-            </fieldset>
             {/* Millesimal shares — read-only, from ownership table */}
             {storage.millesimalShares != null && storage.millesimalShares > 0 && (
               <fieldset className="space-y-1.5">
@@ -375,18 +326,15 @@ export function StorageGeneralTab({
                 <p className="text-sm font-semibold">{storage.millesimalShares}‰</p>
               </fieldset>
             )}
-            <fieldset className="space-y-1.5">
-              <Label className={cn("text-xs", colors.text.muted)}>{t('general.fields.price')}</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={form.price}
-                onChange={(e) => updateField('price', e.target.value)}
-                placeholder="€"
-                className="h-8 text-sm"
-                disabled={!isEditing}
-              />
-            </fieldset>
+            <LabeledInputField
+              label={t('general.fields.price')}
+              value={form.price}
+              onChange={(v) => updateField('price', v)}
+              type="number"
+              step="0.01"
+              placeholder="€"
+              disabled={!isEditing}
+            />
           </div>
         </CardContent>
       </Card>
@@ -394,18 +342,7 @@ export function StorageGeneralTab({
       {/* ADR-193: Financial Card (price, price/m², project) αφαιρέθηκε — εμπορικά πεδία ανήκουν στις Πωλήσεις */}
 
       {/* ADR-194: Description & Notes — SSoT shared card */}
-      <DescriptionNotesCard
-        description={form.description}
-        notes={form.notes}
-        isEditing={isEditing}
-        onDescriptionChange={(v) => updateField('description', v)}
-        onNotesChange={(v) => updateField('notes', v)}
-        labels={{
-          title: t('general.descriptionNotes'),
-          description: t('general.fields.description'),
-          notes: t('general.fields.notes'),
-        }}
-      />
+      <DescriptionNotesCard form={form} isEditing={isEditing} onChange={updateField} t={t} />
 
       {/* ADR-195: Update Information Card αφαιρέθηκε — audit trail θα γίνει κεντρικά (EntityAuditService + ActivityTab) */}
     </div>
