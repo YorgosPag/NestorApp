@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Copy, Link, Mail, Plus, RotateCcw } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { normalizeToDate } from '@/lib/date-local';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import type { BadgeVariantProps } from '@/components/ui/badge';
@@ -16,22 +17,10 @@ import type { RFQ } from '../types/rfq';
 // TIMESTAMP HELPER
 // ============================================================================
 
-interface SerializedTimestamp {
-  seconds?: number;
-  _seconds?: number;
-  nanoseconds?: number;
-}
-
-function tsToMs(ts: SerializedTimestamp | null | undefined): number | null {
-  if (!ts) return null;
-  const secs = ts.seconds ?? ts._seconds;
-  return secs != null ? secs * 1000 : null;
-}
-
-function formatExpiry(ts: SerializedTimestamp | null | undefined): string {
-  const ms = tsToMs(ts);
-  if (!ms) return '—';
-  return new Date(ms).toLocaleDateString('el-GR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+function formatExpiry(ts: unknown): string {
+  const date = normalizeToDate(ts);
+  if (!date) return '—';
+  return date.toLocaleDateString('el-GR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
 // ============================================================================
@@ -110,7 +99,7 @@ function InviteRow({ invite, vendorName, onRevoke, lockState }: InviteRowProps) 
         <StatusBadge status={invite.status} />
       </td>
       <td className="py-2 pr-4 text-sm tabular-nums">
-        {formatExpiry(invite.expiresAt as unknown as SerializedTimestamp)}
+        {formatExpiry(invite.expiresAt)}
       </td>
       <td className="py-2">
         <div className="flex items-center gap-2">

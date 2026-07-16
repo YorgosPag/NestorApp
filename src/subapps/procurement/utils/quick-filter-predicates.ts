@@ -11,6 +11,7 @@
 
 import type { Material } from '@/subapps/procurement/types/material';
 import type { FrameworkAgreement } from '@/subapps/procurement/types/framework-agreement';
+import { normalizeToDate } from '@/lib/date-local';
 import type { VendorCardData } from '@/domain/cards/vendor';
 
 const DAY_MS = 86_400_000;
@@ -22,19 +23,7 @@ const AGREEMENT_EXPIRING_DAYS = 30;
 const VENDOR_PREFERRED_PERCENTILE = 0.2;
 
 function tsToMs(value: unknown): number | null {
-  if (!value) return null;
-  if (typeof value === 'string') {
-    const ms = Date.parse(value);
-    return Number.isNaN(ms) ? null : ms;
-  }
-  if (typeof value === 'object') {
-    const obj = value as { seconds?: number; toDate?: () => Date };
-    if (typeof obj.seconds === 'number') return obj.seconds * 1000;
-    if (typeof obj.toDate === 'function') {
-      try { return obj.toDate().getTime(); } catch { return null; }
-    }
-  }
-  return null;
+  return normalizeToDate(value)?.getTime() ?? null;
 }
 
 function daysSince(ms: number | null): number | null {

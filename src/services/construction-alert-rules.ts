@@ -22,21 +22,9 @@ function formatDateEU(isoDate: string): string {
 
 const MS_PER_DAY = 86_400_000;
 
-/**
- * Converts ISO string OR Admin SDK Firestore Timestamp object to ms-since-epoch.
- * Admin SDK returns Timestamps as { _seconds, _nanoseconds } or { toDate() }.
- */
+/** ms-since-epoch, or NaN when the value is not a readable instant. */
 function toMs(value: unknown): number {
-  if (!value) return NaN;
-  if (typeof value === 'string') return new Date(value).getTime();
-  if (typeof value === 'number') return value;
-  if (typeof value === 'object' && value !== null) {
-    const ts = value as Record<string, unknown>;
-    if (typeof ts['toDate'] === 'function') return (ts['toDate'] as () => Date)().getTime();
-    if (typeof ts['_seconds'] === 'number') return (ts['_seconds'] as number) * 1000;
-    if (typeof ts['seconds'] === 'number') return (ts['seconds'] as number) * 1000;
-  }
-  return NaN;
+  return normalizeToDate(value)?.getTime() ?? NaN;
 }
 
 function daysSince(value: unknown): number {

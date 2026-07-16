@@ -13,11 +13,26 @@ export const nowISO = (): string => new Date().toISOString();
 
 export function normalizeToDate(val: unknown): Date | null {
   if (!val) return null;
-  // Firestore Timestamp
+  // Firestore Timestamp (client or admin SDK) — both expose toDate()
   const timestampCandidate = val as { toDate?: () => Date };
   if (timestampCandidate && typeof timestampCandidate.toDate === 'function') return timestampCandidate.toDate();
   // JS Date
   if (val instanceof Date) return val;
+  // A Timestamp that has been through JSON.stringify. The client SDK serialises
+  // to { seconds, nanoseconds }; the Admin SDK has no toJSON() at all and its
+  // private fields leak out as { _seconds, _nanoseconds }. Both arrive here as
+  // plain objects with no methods, so they must be read structurally.
+  const secondsCandidate = val as { seconds?: unknown; _seconds?: unknown };
+  const seconds =
+    typeof secondsCandidate.seconds === 'number'
+      ? secondsCandidate.seconds
+      : typeof secondsCandidate._seconds === 'number'
+        ? secondsCandidate._seconds
+        : null;
+  if (seconds !== null) {
+    const fromSeconds = new Date(seconds * 1000);
+    return isNaN(fromSeconds.getTime()) ? null : fromSeconds;
+  }
   // ISO string / epoch
   const d = new Date(val as string | number);
   return isNaN(d.getTime()) ? null : d;

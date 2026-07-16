@@ -6,7 +6,7 @@ import { sanitizeForFirestore } from '@/utils/firestore-sanitize';
 import { generateQuoteId, generateOptimisticId } from '@/services/enterprise-id.service';
 import { getNextQuoteNumber } from './quote-counters';
 import { createModuleLogger } from '@/lib/telemetry';
-import { normalizeToDate } from '@/lib/date-local';
+import { normalizeToDate, normalizeToMillis } from '@/lib/date-local';
 import admin from 'firebase-admin';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { ENTITY_TYPES } from '@/config/domain-constants';
@@ -47,6 +47,24 @@ function auditEntry(
     source,
     ip: null,
   };
+}
+
+/**
+ * Load a quote by id and assert tenant ownership. Returns the live `ref` (for a
+ * follow-up write) alongside the hydrated doc. Throws `… not found` / `Forbidden`
+ * — the SSoT guard shared by every mutation (update / applyExtractedData / …).
+ */
+async function loadOwnedQuote(
+  db: admin.firestore.Firestore,
+  ctx: AuthContext,
+  quoteId: string,
+): Promise<{ ref: admin.firestore.DocumentReference; current: Quote }> {
+  const ref = db.collection(COLLECTIONS.QUOTES).doc(quoteId);
+  const snap = await ref.get();
+  if (!snap.exists) throw new Error(`Quote ${quoteId} not found`);
+  const current = { id: snap.id, ...snap.data() } as Quote;
+  if (current.companyId !== ctx.companyId) throw new Error('Forbidden');
+  return { ref, current };
 }
 
 // ============================================================================
@@ -142,9 +160,7 @@ export async function listQuotes(
       .map((d) => ({ id: d.id, ...d.data() } as Quote))
       .filter((q) => filters.status ? q.status === filters.status : q.status !== 'archived')
       .sort((a, b) => {
-        const aTs = (a.createdAt as unknown as { _seconds: number })?._seconds ?? 0;
-        const bTs = (b.createdAt as unknown as { _seconds: number })?._seconds ?? 0;
-        return bTs - aTs;
+        return normalizeToMillis(b.createdAt) - normalizeToMillis(a.createdAt);
       });
     return docs;
   }, []);
@@ -203,12 +219,7 @@ export async function updateQuote(
   dto: UpdateQuoteDTO
 ): Promise<Quote> {
   return safeFirestoreOperation(async (db) => {
-    const ref = db.collection(COLLECTIONS.QUOTES).doc(quoteId);
-    const snap = await ref.get();
-    if (!snap.exists) throw new Error(`Quote ${quoteId} not found`);
-
-    const current = { id: snap.id, ...snap.data() } as Quote;
-    if (current.companyId !== ctx.companyId) throw new Error('Forbidden');
+    const { ref, current } = await loadOwnedQuote(db, ctx, quoteId);
 
     if (dto.status && dto.status !== current.status) {
       if (!isTransitionAllowed(current.status, dto.status)) {
@@ -348,12 +359,7 @@ export async function applyExtractedData(
   options: ApplyExtractedDataOptions = {}
 ): Promise<Quote> {
   return safeFirestoreOperation(async (db) => {
-    const ref = db.collection(COLLECTIONS.QUOTES).doc(quoteId);
-    const snap = await ref.get();
-    if (!snap.exists) throw new Error(`Quote ${quoteId} not found`);
-
-    const current = { id: snap.id, ...snap.data() } as Quote;
-    if (current.companyId !== ctx.companyId) throw new Error('Forbidden');
+    const { ref, current } = await loadOwnedQuote(db, ctx, quoteId);
 
     const source = options.source ?? 'scan';
     const threshold = options.autoAcceptThreshold ?? 1.0;

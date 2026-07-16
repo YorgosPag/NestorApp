@@ -18,15 +18,15 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { QuoteOriginalDocumentPanel } from '@/subapps/procurement/components/QuoteOriginalDocumentPanel';
 import type { Quote } from '@/subapps/procurement/types/quote';
+import { normalizeToDate } from '@/lib/date-local';
 
 interface QuoteDetailSummaryProps {
   quote: Quote;
 }
 
 function formatValidUntil(quote: Quote): string {
-  if (!quote.validUntil) return '—';
-  const ts = quote.validUntil as { seconds: number };
-  return new Date(ts.seconds * 1000).toLocaleDateString('el-GR');
+  const date = normalizeToDate(quote.validUntil);
+  return date ? date.toLocaleDateString('el-GR') : '—';
 }
 
 export function QuoteDetailSummary({ quote }: QuoteDetailSummaryProps) {

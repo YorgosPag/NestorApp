@@ -12,6 +12,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { normalizeToDate } from '@/lib/date-local';
 import {
   Dialog,
   DialogContent,
@@ -80,11 +81,6 @@ function resolveVendorName(quote: Quote): string {
   return quote.extractedData?.vendorName?.value ?? quote.vendorContactId ?? '—';
 }
 
-function tsToDate(ts: { seconds?: number; _seconds?: number } | null | undefined): Date | null {
-  const secs = ts?.seconds ?? ts?._seconds;
-  return secs != null ? new Date(secs * 1000) : null;
-}
-
 // ============================================================================
 // COMPONENT
 // ============================================================================
@@ -113,7 +109,7 @@ export function VendorNotificationDialog({
         const tmpl = detectTemplate(q);
         const email = resolveVendorEmail(q);
         const vendorName = resolveVendorName(q);
-        const lastSentAt = tsToDate(q.lastNotifiedAt as Parameters<typeof tsToDate>[0]);
+        const lastSentAt = normalizeToDate(q.lastNotifiedAt);
         const placeholders = { rfqTitle, rfqNumber, vendorName, quoteNumber: q.displayNumber, senderName, companyName, date: now };
         const content = buildDefaultTemplate(tmpl, placeholders);
         return {

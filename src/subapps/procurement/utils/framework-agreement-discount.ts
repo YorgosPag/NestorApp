@@ -6,6 +6,7 @@
  */
 
 import type { FrameworkAgreement } from '../types/framework-agreement';
+import { normalizeToDate } from '@/lib/date-local';
 
 export interface FADiscountResult {
   discountPercent: number;
@@ -13,13 +14,9 @@ export interface FADiscountResult {
   netTotal: number;
 }
 
-type TimestampLike = { seconds: number } | { toDate(): Date } | string | number;
-
-function toMs(ts: TimestampLike): number {
-  if (typeof ts === 'number') return ts;
-  if (typeof ts === 'string') return new Date(ts).getTime();
-  if ('toDate' in ts) return ts.toDate().getTime();
-  return ts.seconds * 1000;
+/** ms-since-epoch, or NaN when the value is not a readable instant. */
+function toMs(ts: unknown): number {
+  return normalizeToDate(ts)?.getTime() ?? NaN;
 }
 
 /**
@@ -41,8 +38,8 @@ export function resolveActiveFa(
       if (fa.isDeleted) return false;
       if (fa.vendorContactId !== supplierId) return false;
 
-      const from = toMs(fa.validFrom as unknown as TimestampLike);
-      const until = toMs(fa.validUntil as unknown as TimestampLike);
+      const from = toMs(fa.validFrom);
+      const until = toMs(fa.validUntil);
       if (now < from || now > until) return false;
 
       // null = all projects; [] = no projects; list = specific projects

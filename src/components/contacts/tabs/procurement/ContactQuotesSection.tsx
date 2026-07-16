@@ -14,6 +14,7 @@ import {
 import { ArrowRight, Plus } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrency, formatDate } from '@/lib/intl-formatting';
+import { normalizeToDate } from '@/lib/date-local';
 import { QuoteStatusBadge } from '@/subapps/procurement/components/QuoteStatusBadge';
 import type { Quote } from '@/subapps/procurement/types/quote';
 
@@ -26,28 +27,8 @@ interface ContactQuotesSectionProps {
 }
 
 function timestampToDate(ts: unknown): string {
-  if (ts === null || ts === undefined) return '—';
-  if (ts instanceof Date) {
-    return isNaN(ts.getTime()) ? '—' : formatDate(ts);
-  }
-  if (typeof ts === 'string' || typeof ts === 'number') {
-    const d = new Date(ts);
-    return isNaN(d.getTime()) ? '—' : formatDate(d);
-  }
-  if (typeof ts === 'object') {
-    const obj = ts as { seconds?: unknown; _seconds?: unknown; toDate?: () => Date };
-    if (typeof obj.toDate === 'function') {
-      try {
-        const d = obj.toDate();
-        return isNaN(d.getTime()) ? '—' : formatDate(d);
-      } catch {
-        return '—';
-      }
-    }
-    if (typeof obj.seconds === 'number') return formatDate(obj.seconds * 1000);
-    if (typeof obj._seconds === 'number') return formatDate(obj._seconds * 1000);
-  }
-  return '—';
+  const date = normalizeToDate(ts);
+  return date ? formatDate(date) : '—';
 }
 
 export function ContactQuotesSection({

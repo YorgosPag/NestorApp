@@ -37,6 +37,7 @@ import { getAdminBucket, getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { ENTITY_TYPES, type FileCategory } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { normalizeToDate } from '@/lib/date-local';
 
 const logger = createModuleLogger('PropertyMediaService');
 
@@ -97,17 +98,7 @@ const JS_PDF_FORMAT_BY_MIME: Record<string, 'JPEG' | 'PNG'> = {
 };
 
 function normalizeCreatedAtMs(raw: unknown): number | undefined {
-  if (!raw) return undefined;
-  if (typeof raw === 'object' && raw !== null && '_seconds' in raw) {
-    const seconds = (raw as { _seconds?: number })._seconds;
-    return typeof seconds === 'number' ? seconds * 1000 : undefined;
-  }
-  if (typeof raw === 'string') {
-    const parsed = Date.parse(raw);
-    return Number.isFinite(parsed) ? parsed : undefined;
-  }
-  if (typeof raw === 'number') return raw;
-  return undefined;
+  return normalizeToDate(raw)?.getTime() ?? undefined;
 }
 
 function toMediaItem(id: string, data: Record<string, unknown>): PropertyMediaItem | null {
@@ -211,6 +202,10 @@ export async function downloadEntityMedia(
   const limit = opts.limit ?? DEFAULT_DOWNLOAD_LIMIT;
 
   const metas = await listEntityMedia({ ...opts, limit: limit * 2 });
+  // Accept two shapes: (a) native raster (JPEG/PNG) served from `storagePath`,
+  // (b) DXF with a generated PNG preview served from `thumbnailStoragePath`.
+  // Path (b) is what makes Κάτοψη DXFs show up in the showcase PDF — see
+  // `functions/src/storage/dxf-thumbnail-onfinalize.ts` (ADR-312 Phase 3).
   const candidates = metas.filter((m) => {
     if (m.contentType && (allowedMimes as ReadonlyArray<string>).includes(m.contentType)) {
       return true;
@@ -234,6 +229,12 @@ export async function downloadEntityMedia(
           ? 'PNG'
           : JS_PDF_FORMAT_BY_MIME[(meta.contentType ?? '').toLowerCase()];
         if (!format) return;
+        // Copy into a dedicated ArrayBuffer. Node `Buffer` instances (returned
+        // by GCS `download()`) share a pooled backing store; a mere view
+        // (`new Uint8Array(buf.buffer, offset, len)`) exposes the whole pool
+        // to any jsPDF code that reads `.buffer` without honouring byteOffset,
+        // which produced blank images in Phase 2 despite valid buffers on the
+        // wire (incident 2026-04-17). One-shot copy is cheap for ≤6 images.
         const bytes = new Uint8Array(buffer.byteLength);
         bytes.set(buffer);
         buffers.push({
@@ -282,77 +283,16 @@ export async function downloadEntityMedia(
 export async function downloadPropertyMedia(
   opts: DownloadPropertyMediaOptions
 ): Promise<PropertyMediaBuffer[]> {
-  const allowedMimes = opts.mimeTypes ?? (['image/jpeg', 'image/png'] as const);
-  const limit = opts.limit ?? DEFAULT_DOWNLOAD_LIMIT;
-
-  const metas = await listPropertyMedia({ ...opts, limit: limit * 2 });
-  // Accept two shapes: (a) native raster (JPEG/PNG) served from `storagePath`,
-  // (b) DXF with a generated PNG preview served from `thumbnailStoragePath`.
-  // Path (b) is what makes Κάτοψη DXFs show up in the showcase PDF — see
-  // `functions/src/storage/dxf-thumbnail-onfinalize.ts` (ADR-312 Phase 3).
-  const candidates = metas.filter((m) => {
-    if (m.contentType && (allowedMimes as ReadonlyArray<string>).includes(m.contentType)) {
-      return true;
-    }
-    if (m.ext === 'dxf' && m.thumbnailStoragePath) return true;
-    return false;
-  }).slice(0, limit);
-
-  if (candidates.length === 0) return [];
-
-  const bucket = getAdminBucket();
-  const buffers: PropertyMediaBuffer[] = [];
-
-  await Promise.all(
-    candidates.map(async (meta) => {
-      try {
-        const useThumbnail = meta.ext === 'dxf' && !!meta.thumbnailStoragePath;
-        const path = useThumbnail ? (meta.thumbnailStoragePath as string) : meta.storagePath;
-        const [buffer] = await bucket.file(path).download();
-        const format: 'JPEG' | 'PNG' = useThumbnail
-          ? 'PNG'
-          : JS_PDF_FORMAT_BY_MIME[(meta.contentType ?? '').toLowerCase()];
-        if (!format) return;
-        // Copy into a dedicated ArrayBuffer. Node `Buffer` instances (returned
-        // by GCS `download()`) share a pooled backing store; a mere view
-        // (`new Uint8Array(buf.buffer, offset, len)`) exposes the whole pool
-        // to any jsPDF code that reads `.buffer` without honouring byteOffset,
-        // which produced blank images in Phase 2 despite valid buffers on the
-        // wire (incident 2026-04-17). One-shot copy is cheap for ≤6 images.
-        const bytes = new Uint8Array(buffer.byteLength);
-        bytes.set(buffer);
-        buffers.push({
-          ...meta,
-          bytes,
-          jsPdfFormat: format,
-          fromThumbnail: useThumbnail,
-        });
-      } catch (err) {
-        logger.warn('Failed to download property media buffer; skipping', {
-          propertyId: opts.propertyId,
-          mediaId: meta.id,
-          storagePath: meta.storagePath,
-          thumbnailStoragePath: meta.thumbnailStoragePath,
-          error: err instanceof Error ? err.message : String(err),
-        });
-      }
-    })
-  );
-
-  buffers.sort((a, b) => (b.createdAtMs ?? 0) - (a.createdAtMs ?? 0));
-
-  const totalBytes = buffers.reduce((sum, b) => sum + b.bytes.byteLength, 0);
-  logger.info('Property media buffers loaded', {
-    propertyId: opts.propertyId,
+  // Property is just the `entityType: PROPERTY` case of the generic downloader —
+  // delegate (mirror `listPropertyMedia` → `listEntityMedia`), zero clone.
+  return downloadEntityMedia({
+    companyId: opts.companyId,
+    entityType: ENTITY_TYPES.PROPERTY,
+    entityId: opts.propertyId,
     category: opts.category,
-    requested: candidates.length,
-    loaded: buffers.length,
-    totalBytes,
-    formats: buffers.map((b) => b.jsPdfFormat),
-    fromThumbnailCount: buffers.filter((b) => b.fromThumbnail).length,
+    limit: opts.limit,
+    mimeTypes: opts.mimeTypes,
   });
-
-  return buffers;
 }
 
 export const PropertyMediaService = {
