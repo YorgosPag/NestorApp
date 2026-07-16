@@ -27,7 +27,7 @@ import { buildMepBoilerSymbol } from '../mep-boilers/mep-boiler-symbol';
 import { resolveBoilerTagLines } from '../mep-boilers/mep-boiler-tag';
 import { resolveSegmentClassificationColor } from '../mep-systems/mep-system-color';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
-import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
+import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getLayer } from '../../stores/LayerStore';
@@ -72,14 +72,7 @@ export class MepBoilerRenderer extends BaseEntityRenderer {
     // ADR-382/405 — unified visibility check (V/G + Layer + Floor + Building +
     // Discipline). 'mep-boiler' → plumbing via DISCIPLINE_BY_CATEGORY.
     const layer = boiler.layerId ? getLayer(boiler.layerId) : null;
-    if (!resolveIsEntityVisible(
-      { category: 'mep-boiler', layerId: boiler.layerId, discipline: boiler.discipline },
-      {
-        objectStyles: useDrawingScaleStore.getState().objectStyles,
-        disciplineVisibility: useDrawingScaleStore.getState().disciplineVisibility,
-        layer,
-      },
-    )) return;
+    if (!resolveBimPlanVisibility({ category: 'mep-boiler', layerId: boiler.layerId, discipline: boiler.discipline }, layer)) return;
 
     if (!boiler.geometry || !boiler.params) return;
     const verts = boiler.geometry.footprint.vertices;

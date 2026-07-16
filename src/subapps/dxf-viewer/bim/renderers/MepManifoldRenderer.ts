@@ -30,7 +30,7 @@ import { getMepManifoldGrips } from '../mep-manifolds/mep-manifold-grips';
 import { gripGlyphShape } from '../grips/grip-glyph-registry';
 import { gripKindOf } from '../../hooks/grip-kinds';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
-import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
+import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getLayer } from '../../stores/LayerStore';
@@ -50,14 +50,7 @@ export class MepManifoldRenderer extends BaseEntityRenderer {
     // ADR-382/405 — unified visibility check (V/G + Layer + Floor + Building +
     // Discipline). 'mep-manifold' → plumbing via DISCIPLINE_BY_CATEGORY.
     const layer = manifold.layerId ? getLayer(manifold.layerId) : null;
-    if (!resolveIsEntityVisible(
-      { category: 'mep-manifold', layerId: manifold.layerId, discipline: manifold.discipline },
-      {
-        objectStyles: useDrawingScaleStore.getState().objectStyles,
-        disciplineVisibility: useDrawingScaleStore.getState().disciplineVisibility,
-        layer,
-      },
-    )) return;
+    if (!resolveBimPlanVisibility({ category: 'mep-manifold', layerId: manifold.layerId, discipline: manifold.discipline }, layer)) return;
 
     if (!manifold.geometry || !manifold.params) return;
     const verts = manifold.geometry.footprint.vertices;

@@ -26,7 +26,7 @@ import { buildPanelSymbol } from '../electrical-panels/electrical-panel-symbol';
 import { getElectricalPanelGrips } from '../electrical-panels/electrical-panel-grips';
 import { gripGlyphShape } from '../grips/grip-glyph-registry';
 import { gripKindOf } from '../../hooks/grip-kinds';
-import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
+import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 // 🏢 ADR-571: electrical-panel teal SSoT + hexToRgba SSoT (color-math.ts)
 import { MEP_TEAL_COLOR } from '../../config/color-config';
@@ -51,14 +51,7 @@ export class ElectricalPanelRenderer extends BimFootprintRenderer {
     // ADR-382/405 — unified visibility check (V/G + Layer + Floor + Building +
     // Discipline). 'electrical-panel' → electrical via DISCIPLINE_BY_CATEGORY.
     const layer = panel.layerId ? getLayer(panel.layerId) : null;
-    if (!resolveIsEntityVisible(
-      { category: 'electrical-panel', layerId: panel.layerId, discipline: panel.discipline },
-      {
-        objectStyles: useDrawingScaleStore.getState().objectStyles,
-        disciplineVisibility: useDrawingScaleStore.getState().disciplineVisibility,
-        layer,
-      },
-    )) return;
+    if (!resolveBimPlanVisibility({ category: 'electrical-panel', layerId: panel.layerId, discipline: panel.discipline }, layer)) return;
 
     if (!panel.geometry || !panel.params) return;
     const verts = panel.geometry.footprint.vertices;

@@ -37,7 +37,7 @@ import type { Entity } from '../../types/entities';
 import { isColumnEntity } from '../../types/entities';
 import type { ColumnEntity } from '../types/column-types';
 import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
-import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
+import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
 import { isStructuralComponentVisible } from '../visibility/structural-component-visibility';
 import { resolveCutState } from '../../config/bim-view-range';
 import { resolveBimBodyFill } from '../utils/bim-body-fill';
@@ -72,14 +72,7 @@ export class ColumnRenderer extends BimFootprintRenderer {
 
     // ADR-382 — Unified visibility check (V/G + Layer + Floor + Building).
     const _colLayer = column.layerId ? getLayer(column.layerId) : null;
-    if (!resolveIsEntityVisible(
-      { category: 'column', layerId: column.layerId, discipline: column.discipline },
-      {
-        objectStyles: useDrawingScaleStore.getState().objectStyles,
-        disciplineVisibility: useDrawingScaleStore.getState().disciplineVisibility,
-        layer: _colLayer,
-      },
-    )) return;
+    if (!resolveBimPlanVisibility({ category: 'column', layerId: column.layerId, discipline: column.discipline }, _colLayer)) return;
 
     if (!column.geometry || !column.params) return;
     const verts = column.geometry.footprint.vertices;

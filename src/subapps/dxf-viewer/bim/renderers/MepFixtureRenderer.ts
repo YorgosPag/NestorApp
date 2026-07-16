@@ -33,7 +33,7 @@ import { drawMeshSilhouette } from './mesh-silhouette-draw';
 import { gripGlyphShape } from '../grips/grip-glyph-registry';
 import { gripKindOf } from '../../hooks/grip-kinds';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
-import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
+import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getLayer } from '../../stores/LayerStore';
@@ -60,14 +60,7 @@ export class MepFixtureRenderer extends BaseEntityRenderer {
     // 'drain-pipe' category (plumbing), so it hides with the «Αποχέτευση» toggle.
     const category = resolveFixtureBimCategory(fixture.params);
     const layer = fixture.layerId ? getLayer(fixture.layerId) : null;
-    if (!resolveIsEntityVisible(
-      { category, layerId: fixture.layerId, discipline: fixture.discipline },
-      {
-        objectStyles: useDrawingScaleStore.getState().objectStyles,
-        disciplineVisibility: useDrawingScaleStore.getState().disciplineVisibility,
-        layer,
-      },
-    )) return;
+    if (!resolveBimPlanVisibility({ category, layerId: fixture.layerId, discipline: fixture.discipline }, layer)) return;
 
     if (!fixture.geometry || !fixture.params) return;
     const verts = fixture.geometry.footprint.vertices;

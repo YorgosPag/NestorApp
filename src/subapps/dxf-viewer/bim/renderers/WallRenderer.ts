@@ -31,7 +31,7 @@ import type { OpeningEntity } from '../types/opening-types';
 import type { Point3D } from '../types/bim-base';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveSubcategoryStyle, type BimLayerOverride } from '../../config/bim-line-weight-resolver';
-import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
+import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
 import { isStructuralComponentVisible } from '../visibility/structural-component-visibility';
 import { resolveBimBodyFill } from '../utils/bim-body-fill';
 import { bimDashPx } from '../../config/bim-dash-resolver';
@@ -112,14 +112,7 @@ export class WallRenderer extends BaseEntityRenderer {
     // Runs BEFORE the geometry/params guard so V/G + Layer suppression applies
     // uniformly even σε partially-loaded entities (mirror του ADR-375 v2.6 order).
     const _wLayer = wall.layerId ? getLayer(wall.layerId) : null;
-    if (!resolveIsEntityVisible(
-      { category: 'wall', layerId: wall.layerId, discipline: wall.discipline },
-      {
-        objectStyles: useDrawingScaleStore.getState().objectStyles,
-        disciplineVisibility: useDrawingScaleStore.getState().disciplineVisibility,
-        layer: _wLayer,
-      },
-    )) return;
+    if (!resolveBimPlanVisibility({ category: 'wall', layerId: wall.layerId, discipline: wall.discipline }, _wLayer)) return;
 
     if (!wall.geometry || !wall.params) return;
 

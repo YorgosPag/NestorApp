@@ -168,28 +168,27 @@ export function resolveIsEntityVisible(
 
 ### 3.3 Layer hookup pattern (2D renderers)
 
-Κάθε 2D renderer **ήδη** καλεί `getLayer(entity.layerId)` για lineweight/color (`_wLayer`, `_colLayer`, κλπ). Reuse το ίδιο fetch για visibility consultation — zero extra cost:
+Κάθε 2D renderer **ήδη** καλεί `getLayer(entity.layerId)` για lineweight/color (`_wLayer`, `_colLayer`, κλπ). Reuse το ίδιο fetch για visibility consultation — zero extra cost.
+
+> **2026-07-16 SSoT update (ADR-584 cluster B follow-up β):** το store-reading preamble ήταν copy-paste σε **21 renderers**, οπότε συμπυκνώθηκε σε **έναν 2Δ-plan wrapper** `resolveBimPlanVisibility(entity, layer)` στο `bim/visibility/bim-plan-visibility.ts`. Ο wrapper διαβάζει `objectStyles` + `disciplineVisibility` από το render-settings store (event-time, ADR-040) και delegate-άρει στον pure `resolveIsEntityVisible`. **Ξεχωριστό αρχείο** από τον resolver επίτηδες: ο pure resolver μένει store-free/unit-testable. Οι 2Δ renderers καλούν πλέον:
 
 ```ts
-// WallRenderer.ts (after refactor)
+// WallRenderer.ts (2026-07-16 SSoT form)
 render(entity: EntityModel, options: RenderOptions = {}): void {
   if (!isWallEntity(entity)) return;
   const wall = entity as WallEntity;
+
+  // ADR-382 — Unified visibility check (V/G + Layer + discipline) via the
+  // 2Δ-plan SSoT wrapper (reads objectStyles + disciplineVisibility internally).
+  const _wLayer = wall.layerId ? getLayer(wall.layerId) : null;
+  if (!resolveBimPlanVisibility({ category: 'wall', layerId: wall.layerId, discipline: wall.discipline }, _wLayer)) return;
+
   if (!wall.geometry || !wall.params) return;
-
-  // ADR-382 — Unified visibility check (V/G + Layer + future Floor/Building).
-  const layer = wall.layerId ? getLayer(wall.layerId) : null;
-  if (!resolveIsEntityVisible(
-    { category: 'wall', layerId: wall.layerId },
-    {
-      objectStyles: useDrawingScaleStore.getState().objectStyles,
-      layer,
-    },
-  )) return;
-
   // ... rest unchanged, layer already fetched για BimLayerOverride downstream.
 }
 ```
+
+Τα **3Δ / overlay** paths (§3.4) ΔΕΝ χρησιμοποιούν τον wrapper — consult-άρουν επιπλέον floor/building/isolate sources, οπότε καλούν κατευθείαν τον `resolveIsEntityVisible` με πλήρες `VisibilityContext`.
 
 ### 3.4 3D pipeline pattern
 
@@ -352,3 +351,4 @@ Existing tests stay green:
 - **2026-05-27** — **Phase C DONE** (Opus): BimSceneLayer.sync() refactored σε per-entity loop με `resolveEntity()` helper. New 8th argument `floorVisModes: ReadonlyMap<string, FloorVisMode>` propagated through ThreeJsSceneManager.syncBimEntities + scene-manager-actions.syncBimEntitiesIntoScene + 4 BimViewport3D call-sites + use-bim3d-vg-resync. Νέο LayerStore subscriber σε `use-bim3d-store-sync.ts` (version-based dedup) — toggle layer.visible/frozen στο Layer Manager τώρα trigger-άρει 3D rebuild → resolver φιλτράρει pre-mesh (2D⟷3D parity bug closed). Floor mode change subscriber αναβαθμίστηκε από `applyFloorVisibility-only` σε `syncBimEntities + applyFloorVisibility` (defense-in-depth: pre-mesh hide + post-hoc ghost styling). `applyFloorVisibility/applyBuildingVisibility` doc comments updated με role split (primary hide path → BimSceneLayer.sync(), this function → ghost/show styling + defense-in-depth). Per-entity hosted-opening filter (Wall→Opening, Slab→SlabOpening) σέβεται V/G + Layer + Floor + Building για κάθε opening separately — hidden openings δεν punch cutouts. 17 integration tests PASS (BimSceneLayer-visibility-resolver-3d.test.ts) — 4 Layer / 4 Floor / 2 Building / 4 Intersection / 3 Hosted-Openings. Existing BimSceneLayer-vg-visibility regression 10/10 PASS. Function-size compliance: sync() 24 lines, helpers 14-20 lines each (Google ≤40).
 - **2026-05-27** — **Phase D DONE** (Opus): `.ssot-registry.json` `visibility-resolver` Tier 2 module added — forbids direct `objectStyles[cat]?.visible` reads outside resolver internals (1 ERE pattern covers 7 BIM categories). ADR-382 status header 🟡 PLAN APPROVED → 🟢 PHASE A+B+C+D+E COMPLETE. ADR-381 §3 C1 entry marked ✅ DONE με link σε ADR-382. ADR-040 changelog note for the new event-time visibility pattern (pure pre-render guard, zero subscriptions — micro-leaf compliant). `local_ΕΚΚΡΕΜΟΤΗΤΕΣ.txt` C1 entry → ✅ ΥΛΟΠΟΙΗΜΕΝΟ.
 - **2026-05-27** — **Phase E DONE** (Opus): `resolveIsCategoryVisible` παραμένει exported από `bim-line-weight-resolver.ts` για backward compat / unit tests (deprecation σε επόμενη ADR — current callers internal to resolver pipeline + legacy isolated paths). All test suites green. tsc --noEmit background — zero new errors. **ADR-382 fully shipped — production bug closed.**
+- **2026-07-16** — **2Δ-plan wrapper SSoT** (Opus 4.8, ADR-584 CHECK 3.28 cluster B follow-up β): το store-reading visibility preamble ήταν copy-paste σε **21 BIM 2Δ renderers**. NEW `bim/visibility/bim-plan-visibility.ts` → `resolveBimPlanVisibility(entity, layer)` — reads `objectStyles` + `disciplineVisibility` (event-time `useDrawingScaleStore.getState()`, ADR-040-compliant) και delegate-άρει στον pure `resolveIsEntityVisible`. Ξεχωριστό αρχείο από τον resolver επίτηδες (pure resolver = store-free/unit-testable). Και τα 21 renderers migrated (9-γρ preamble → 1-γρ κλήση· βλ. §3.3)· τα 3Δ/overlay paths αμετάβλητα (richer ctx). Public `render()` API byte-identical. **7 NEW jest tests (`bim-plan-visibility.test.ts`) + 248 renderer/visibility tests (23 suites) GREEN.** Δες ADR-584 changelog για jscpd Layer-1/Layer-2 λεπτομέρειες.

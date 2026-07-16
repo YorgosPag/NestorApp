@@ -31,7 +31,7 @@ import { getFloorplanSymbolGrips } from '../floorplan-symbols/floorplan-symbol-g
 import { gripGlyphShape } from '../grips/grip-glyph-registry';
 import { gripKindOf } from '../../hooks/grip-kinds';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
-import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
+import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { getLayer } from '../../stores/LayerStore';
 
@@ -48,14 +48,7 @@ export class FloorplanSymbolRenderer extends BimFootprintRenderer {
     // Discipline). category → BimCategory + discipline + palette via the engine.
     const { bimCategory, stroke: symbolStroke, fill: symbolFill } = resolveSymbolCategoryConfig(symbol.params.category);
     const layer = symbol.layerId ? getLayer(symbol.layerId) : null;
-    if (!resolveIsEntityVisible(
-      { category: bimCategory, layerId: symbol.layerId, discipline: symbol.discipline },
-      {
-        objectStyles: useDrawingScaleStore.getState().objectStyles,
-        disciplineVisibility: useDrawingScaleStore.getState().disciplineVisibility,
-        layer,
-      },
-    )) return;
+    if (!resolveBimPlanVisibility({ category: bimCategory, layerId: symbol.layerId, discipline: symbol.discipline }, layer)) return;
 
     this.beginPhasedBodyRender(entity, verts, options);
 

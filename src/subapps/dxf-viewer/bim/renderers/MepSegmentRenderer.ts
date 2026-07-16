@@ -45,7 +45,7 @@ import { useMepSegmentTrimStore } from '../mep-fittings/mep-segment-trim-store';
 import { buildSegmentSymbol, buildPipeTickScreen } from '../mep-segments/mep-segment-symbol';
 import { getMepSegmentGrips } from '../mep-segments/mep-segment-grips';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
-import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
+import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getLayer } from '../../stores/LayerStore';
@@ -115,14 +115,7 @@ export class MepSegmentRenderer extends BaseEntityRenderer {
     //   'duct' → 'mechanical' discipline
     //   'pipe' → 'plumbing' discipline
     const layer = segment.layerId ? getLayer(segment.layerId) : null;
-    if (!resolveIsEntityVisible(
-      { category: resolveSegmentBimCategory(segment.params), layerId: segment.layerId, discipline: segment.discipline },
-      {
-        objectStyles: useDrawingScaleStore.getState().objectStyles,
-        disciplineVisibility: useDrawingScaleStore.getState().disciplineVisibility,
-        layer,
-      },
-    )) return;
+    if (!resolveBimPlanVisibility({ category: resolveSegmentBimCategory(segment.params), layerId: segment.layerId, discipline: segment.discipline }, layer)) return;
 
     if (!segment.geometry || !segment.params) return;
 

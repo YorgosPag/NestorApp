@@ -34,7 +34,7 @@ import {
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { getMepUnderfloorGrips } from '../mep-underfloor/mep-underfloor-grips';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
-import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
+import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getLayer } from '../../stores/LayerStore';
@@ -57,14 +57,7 @@ export class MepUnderfloorRenderer extends BaseEntityRenderer {
     // ADR-382/405 — unified visibility check (V/G + Layer + Floor + Building + Discipline).
     // 'mep-underfloor' → plumbing via DISCIPLINE_BY_CATEGORY.
     const layer = uf.layerId ? getLayer(uf.layerId) : null;
-    if (!resolveIsEntityVisible(
-      { category: 'mep-underfloor', layerId: uf.layerId, discipline: uf.discipline },
-      {
-        objectStyles: useDrawingScaleStore.getState().objectStyles,
-        disciplineVisibility: useDrawingScaleStore.getState().disciplineVisibility,
-        layer,
-      },
-    )) return;
+    if (!resolveBimPlanVisibility({ category: 'mep-underfloor', layerId: uf.layerId, discipline: uf.discipline }, layer)) return;
 
     if (!uf.params?.footprint) return;
     const verts = uf.params.footprint.vertices;

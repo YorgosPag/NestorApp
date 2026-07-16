@@ -22,7 +22,7 @@ import { isFurnitureEntity } from '../../types/entities';
 import type { FurnitureEntity } from '../types/furniture-types';
 import { projectPointTo2D } from '../geometry/shared/polygon-utils';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
-import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
+import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { getLayer } from '../../stores/LayerStore';
 import { bimMeshCache } from '../../bim-3d/library/bim-mesh-library/bim-mesh-cache';
@@ -49,14 +49,7 @@ export class FurnitureRenderer extends BimFootprintRenderer {
     // ADR-382/405 — unified visibility check (V/G + Layer + Floor + Building +
     // Discipline). 'furniture' → interior via DISCIPLINE_BY_CATEGORY.
     const layer = furniture.layerId ? getLayer(furniture.layerId) : null;
-    if (!resolveIsEntityVisible(
-      { category: 'furniture', layerId: furniture.layerId, discipline: furniture.discipline },
-      {
-        objectStyles: useDrawingScaleStore.getState().objectStyles,
-        disciplineVisibility: useDrawingScaleStore.getState().disciplineVisibility,
-        layer,
-      },
-    )) return;
+    if (!resolveBimPlanVisibility({ category: 'furniture', layerId: furniture.layerId, discipline: furniture.discipline }, layer)) return;
 
     if (!furniture.geometry || !furniture.params) return;
     const verts = furniture.geometry.footprint.vertices;

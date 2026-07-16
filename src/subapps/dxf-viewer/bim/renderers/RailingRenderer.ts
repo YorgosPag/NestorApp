@@ -26,7 +26,7 @@ import { buildRailingSymbol, balusterDotRadiusMm } from '../railings/railing-sym
 import { clamp01 } from '../../utils/scalar-math';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
-import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
+import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getLayer } from '../../stores/LayerStore';
@@ -47,14 +47,7 @@ export class RailingRenderer extends BaseEntityRenderer {
     // ADR-382/405 — unified visibility check (V/G + Layer + Floor + Building +
     // Discipline). 'railing' → architectural via DISCIPLINE_BY_CATEGORY.
     const layer = railing.layerId ? getLayer(railing.layerId) : null;
-    if (!resolveIsEntityVisible(
-      { category: 'railing', layerId: railing.layerId, discipline: railing.discipline },
-      {
-        objectStyles: useDrawingScaleStore.getState().objectStyles,
-        disciplineVisibility: useDrawingScaleStore.getState().disciplineVisibility,
-        layer,
-      },
-    )) return;
+    if (!resolveBimPlanVisibility({ category: 'railing', layerId: railing.layerId, discipline: railing.discipline }, layer)) return;
 
     if (!railing.geometry || !railing.params) return;
     const symbol = buildRailingSymbol(railing.params, railing.geometry);

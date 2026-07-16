@@ -26,7 +26,7 @@ import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../render
 import { isFoundationEntity } from '../../types/entities';
 import type { FoundationEntity } from '../types/foundation-types';
 import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
-import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
+import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
 import { isStructuralComponentVisible } from '../visibility/structural-component-visibility';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { getLayer } from '../../stores/LayerStore';
@@ -58,14 +58,7 @@ export class FoundationRenderer extends BimFootprintRenderer {
 
     // ADR-382 — Unified visibility check (V/G + Layer + Floor + Building).
     const _layer = foundation.layerId ? getLayer(foundation.layerId) : null;
-    if (!resolveIsEntityVisible(
-      { category: 'foundation', layerId: foundation.layerId, discipline: foundation.discipline },
-      {
-        objectStyles: useDrawingScaleStore.getState().objectStyles,
-        disciplineVisibility: useDrawingScaleStore.getState().disciplineVisibility,
-        layer: _layer,
-      },
-    )) return;
+    if (!resolveBimPlanVisibility({ category: 'foundation', layerId: foundation.layerId, discipline: foundation.discipline }, _layer)) return;
 
     if (!foundation.geometry || !foundation.params) return;
     const verts = foundation.geometry.footprint.vertices;

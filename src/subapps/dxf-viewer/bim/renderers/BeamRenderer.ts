@@ -34,7 +34,7 @@ import type { BeamEntity, BeamKind } from '../types/beam-types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
-import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
+import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
 import { isStructuralComponentVisible } from '../visibility/structural-component-visibility';
 import { resolveBimBodyFill } from '../utils/bim-body-fill';
 import { bimDashPx } from '../../config/bim-dash-resolver';
@@ -101,14 +101,7 @@ export class BeamRenderer extends BaseEntityRenderer {
 
     // ADR-382 — Unified visibility check (V/G + Layer + Floor + Building).
     const _beamLayer = beam.layerId ? getLayer(beam.layerId) : null;
-    if (!resolveIsEntityVisible(
-      { category: 'beam', layerId: beam.layerId, discipline: beam.discipline },
-      {
-        objectStyles: useDrawingScaleStore.getState().objectStyles,
-        disciplineVisibility: useDrawingScaleStore.getState().disciplineVisibility,
-        layer: _beamLayer,
-      },
-    )) return;
+    if (!resolveBimPlanVisibility({ category: 'beam', layerId: beam.layerId, discipline: beam.discipline }, _beamLayer)) return;
 
     if (!beam.geometry || !beam.params) return;
     const verts = beam.geometry.outline.vertices;

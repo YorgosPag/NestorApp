@@ -29,7 +29,7 @@ import { isOpeningEntity } from '../../types/entities';
 import type { OpeningEntity, OpeningKind } from '../types/opening-types';
 import { isWindowKind, isSlidingKind } from '../types/opening-types';
 import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
-import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
+import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
 import { bimDashPx } from '../../config/bim-dash-resolver';
 import { resolveCutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
@@ -65,14 +65,7 @@ export class OpeningRenderer extends BaseEntityRenderer {
 
     // ADR-382 — Unified visibility check (V/G + Layer + Floor + Building).
     const _opLayer = opening.layerId ? getLayer(opening.layerId) : null;
-    if (!resolveIsEntityVisible(
-      { category: 'opening', layerId: opening.layerId, discipline: opening.discipline },
-      {
-        objectStyles: useDrawingScaleStore.getState().objectStyles,
-        disciplineVisibility: useDrawingScaleStore.getState().disciplineVisibility,
-        layer: _opLayer,
-      },
-    )) return;
+    if (!resolveBimPlanVisibility({ category: 'opening', layerId: opening.layerId, discipline: opening.discipline }, _opLayer)) return;
 
     if (!opening.geometry || !opening.params) return;
 

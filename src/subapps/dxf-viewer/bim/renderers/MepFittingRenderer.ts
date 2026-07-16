@@ -35,7 +35,7 @@ import type { MepFittingEntity, MepFittingDomain } from '../types/mep-fitting-ty
 import { incidentEntityId, resolveFittingBimCategory } from '../types/mep-fitting-types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
-import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
+import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getLayer } from '../../stores/LayerStore';
@@ -89,14 +89,7 @@ export class MepFittingRenderer extends BaseEntityRenderer {
     // drainage fitting maps to its own 'drain-pipe' bucket so it hides/toggles
     // together with the drainage pipes it joins; every other fitting → its domain.
     const layer = fitting.layerId ? getLayer(fitting.layerId) : null;
-    if (!resolveIsEntityVisible(
-      { category: resolveFittingBimCategory(fitting.params), layerId: fitting.layerId, discipline: fitting.discipline },
-      {
-        objectStyles: useDrawingScaleStore.getState().objectStyles,
-        disciplineVisibility: useDrawingScaleStore.getState().disciplineVisibility,
-        layer,
-      },
-    )) return;
+    if (!resolveBimPlanVisibility({ category: resolveFittingBimCategory(fitting.params), layerId: fitting.layerId, discipline: fitting.discipline }, layer)) return;
 
     if (!fitting.geometry || !fitting.params) return;
     const verts = fitting.geometry.footprint.vertices;

@@ -26,7 +26,7 @@ import type { MepWaterHeaterEntity } from '../types/mep-water-heater-types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { buildMepWaterHeaterSymbol } from '../mep-water-heaters/mep-water-heater-symbol';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
-import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
+import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getLayer } from '../../stores/LayerStore';
@@ -52,14 +52,7 @@ export class MepWaterHeaterRenderer extends BaseEntityRenderer {
     // ADR-382/405 — unified visibility check (V/G + Layer + Floor + Building +
     // Discipline). 'mep-water-heater' → plumbing via DISCIPLINE_BY_CATEGORY.
     const layer = waterHeater.layerId ? getLayer(waterHeater.layerId) : null;
-    if (!resolveIsEntityVisible(
-      { category: 'mep-water-heater', layerId: waterHeater.layerId, discipline: waterHeater.discipline },
-      {
-        objectStyles: useDrawingScaleStore.getState().objectStyles,
-        disciplineVisibility: useDrawingScaleStore.getState().disciplineVisibility,
-        layer,
-      },
-    )) return;
+    if (!resolveBimPlanVisibility({ category: 'mep-water-heater', layerId: waterHeater.layerId, discipline: waterHeater.discipline }, layer)) return;
 
     if (!waterHeater.geometry || !waterHeater.params) return;
     const verts = waterHeater.geometry.footprint.vertices;

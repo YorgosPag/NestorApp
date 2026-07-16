@@ -16,8 +16,9 @@
  * σε high-frequency stores. Called by canvas με entity resolved upstream.
  *
  * Visibility (ADR-382 SSoT, §10 #4): own V/G category `'roof'` resolved via
- * `resolveIsEntityVisible` (V/G + Layer + Floor + Building + discipline), 1:1 με
- * SlabRenderer — plus a cheap per-element `roof.visible === false` short-circuit.
+ * `resolveBimPlanVisibility` (2Δ-plan wrapper over `resolveIsEntityVisible`:
+ * V/G + Layer + discipline), 1:1 με SlabRenderer — plus a cheap per-element
+ * `roof.visible === false` short-circuit.
  *
  * @see docs/centralized-systems/reference/adrs/ADR-417-bim-roof-element.md §Φ1
  * @see docs/centralized-systems/reference/adrs/ADR-040-preview-canvas-performance.md
@@ -42,8 +43,7 @@ import { mmToSceneUnits } from '../../utils/scene-units';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { HOVER_HIGHLIGHT, UI_COLORS_BASE } from '../../config/color-config';
 import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
-import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
-import { useDrawingScaleStore } from '../../state/drawing-scale-store';
+import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
 import { getLayer } from '../../stores/LayerStore';
 
 // ─── Palette constants ────────────────────────────────────────────────────────
@@ -88,14 +88,7 @@ export class RoofRenderer extends BaseEntityRenderer {
 
     // ADR-382 — unified V/G visibility (own 'roof' category + Layer + discipline).
     const _roofLayer = roof.layerId ? getLayer(roof.layerId) : null;
-    if (!resolveIsEntityVisible(
-      { category: 'roof', layerId: roof.layerId, discipline: roof.discipline },
-      {
-        objectStyles: useDrawingScaleStore.getState().objectStyles,
-        disciplineVisibility: useDrawingScaleStore.getState().disciplineVisibility,
-        layer: _roofLayer,
-      },
-    )) return;
+    if (!resolveBimPlanVisibility({ category: 'roof', layerId: roof.layerId, discipline: roof.discipline }, _roofLayer)) return;
 
     if (!roof.geometry || !roof.params) return;
     const footprintVerts = roof.geometry.footprint.vertices;

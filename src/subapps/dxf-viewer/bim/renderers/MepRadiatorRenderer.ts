@@ -28,7 +28,7 @@ import { getMepRadiatorGrips } from '../mep-radiators/mep-radiator-grips';
 import { gripGlyphShape } from '../grips/grip-glyph-registry';
 import { gripKindOf } from '../../hooks/grip-kinds';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
-import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
+import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getLayer } from '../../stores/LayerStore';
@@ -50,14 +50,7 @@ export class MepRadiatorRenderer extends BaseEntityRenderer {
     // ADR-382/405 — unified visibility check (V/G + Layer + Floor + Building +
     // Discipline). 'mep-radiator' → plumbing via DISCIPLINE_BY_CATEGORY.
     const layer = radiator.layerId ? getLayer(radiator.layerId) : null;
-    if (!resolveIsEntityVisible(
-      { category: 'mep-radiator', layerId: radiator.layerId, discipline: radiator.discipline },
-      {
-        objectStyles: useDrawingScaleStore.getState().objectStyles,
-        disciplineVisibility: useDrawingScaleStore.getState().disciplineVisibility,
-        layer,
-      },
-    )) return;
+    if (!resolveBimPlanVisibility({ category: 'mep-radiator', layerId: radiator.layerId, discipline: radiator.discipline }, layer)) return;
 
     if (!radiator.geometry || !radiator.params) return;
     const verts = radiator.geometry.footprint.vertices;

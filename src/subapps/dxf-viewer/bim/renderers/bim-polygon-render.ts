@@ -82,6 +82,31 @@ export function paintPolygonHoverHalo(
   ctx.restore();
 }
 
+/**
+ * Stroke a set of OPEN polylines in screen space (the kind-identifying symbol
+ * strokes — electrical breaker rows / WC cistern+bowl / …). Each sub-array < 2
+ * points is skipped; the caller owns `strokeStyle`/`lineWidth`. SSoT for the
+ * `for (const stroke of …) { beginPath; moveTo; …lineTo; stroke }` loop the
+ * centred-box symbol renderers inlined identically (N.18).
+ */
+export function strokePolylinePaths(
+  ctx: CanvasRenderingContext2D,
+  toScreen: ToScreen,
+  polylines: ReadonlyArray<Vertices>,
+): void {
+  for (const line of polylines) {
+    if (line.length < 2) continue;
+    ctx.beginPath();
+    const start = toScreen(line[0]);
+    ctx.moveTo(start.x, start.y);
+    for (let i = 1; i < line.length; i++) {
+      const s = toScreen(line[i]);
+      ctx.lineTo(s.x, s.y);
+    }
+    ctx.stroke();
+  }
+}
+
 /** Bbox quick-reject (tolerance-padded) then ray-cast point-in-polygon (world space). */
 export function polygonBboxHitTest(
   bbox: { min: Point2D; max: Point2D },

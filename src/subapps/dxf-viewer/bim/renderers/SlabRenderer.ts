@@ -37,7 +37,7 @@ import { isSlabEntity } from '../../types/entities';
 import type { SlabEntity, SlabReinforcement } from '../types/slab-types';
 import type { SlabOpeningEntity } from '../types/slab-opening-types';
 import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
-import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
+import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
 import { isStructuralComponentVisible } from '../visibility/structural-component-visibility';
 import { resolveBimBodyFill } from '../utils/bim-body-fill';
 import { topFacePlanFill } from '../utils/bim-face-plan-fill';
@@ -100,14 +100,7 @@ export class SlabRenderer extends BimFootprintRenderer {
 
     // ADR-382 — Unified visibility check (V/G + Layer + Floor + Building).
     const _slabLayer = slab.layerId ? getLayer(slab.layerId) : null;
-    if (!resolveIsEntityVisible(
-      { category: 'slab', layerId: slab.layerId, discipline: slab.discipline },
-      {
-        objectStyles: useDrawingScaleStore.getState().objectStyles,
-        disciplineVisibility: useDrawingScaleStore.getState().disciplineVisibility,
-        layer: _slabLayer,
-      },
-    )) return;
+    if (!resolveBimPlanVisibility({ category: 'slab', layerId: slab.layerId, discipline: slab.discipline }, _slabLayer)) return;
 
     if (!slab.geometry || !slab.params) return;
     const verts = slab.geometry.polygon.vertices;

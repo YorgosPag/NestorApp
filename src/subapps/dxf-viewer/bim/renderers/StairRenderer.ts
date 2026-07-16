@@ -34,7 +34,7 @@ import { gripKindOf } from '../../hooks/grip-kinds';
 // ADR-637 Φ4-D — fuchsia identity colour for the rest-landing (πλατύσκαλο) grips (Giorgio «φουξ»).
 import { GRIP_REST_LANDING_COLOR } from '../../config/color-config';
 import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
-import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
+import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
 import { isStructuralComponentVisible } from '../visibility/structural-component-visibility';
 import { resolveVgFillTint } from '../utils/bim-vg-fill-tint';
 import { type LinePatternKey } from '../../config/bim-line-patterns';
@@ -83,14 +83,7 @@ export class StairRenderer extends BaseEntityRenderer {
 
     // ADR-382 — Unified visibility check (V/G + Layer + Floor + Building).
     const _stairLayer = stair.layerId ? getLayer(stair.layerId) : null;
-    if (!resolveIsEntityVisible(
-      { category: 'stair', layerId: stair.layerId, discipline: stair.discipline },
-      {
-        objectStyles: useDrawingScaleStore.getState().objectStyles,
-        disciplineVisibility: useDrawingScaleStore.getState().disciplineVisibility,
-        layer: _stairLayer,
-      },
-    )) return;
+    if (!resolveBimPlanVisibility({ category: 'stair', layerId: stair.layerId, discipline: stair.discipline }, _stairLayer)) return;
     // ADR-358 Phase 8 — defensive: legacy / partially-serialized stair entries
     // can arrive without `geometry` (e.g. Storage scene blob saved before the
     // ADR §G6 contract was enforced). Skip render rather than crash so the
