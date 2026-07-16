@@ -15,7 +15,7 @@
  *
  * The per-type math is BYTE-IDENTICAL to what Twin B used before this slice — the
  * SAME helper calls (`calculateVerticesBounds`, `calculateBimEntity2DBounds`,
- * `projectSceneTextToDxf`+`resolveTextBox`+corners, `getDimensionWorldBounds`,
+ * `projectSceneEntityText`+`resolveTextBox`+corners, `getDimensionWorldBounds`,
  * `BoundsCalculator` for ellipse/spline/point/xline/ray), reshaped from `{min,max}`
  * to `{minX,minY,maxX,maxY}`. It ADDS providers for the 6 types Twin B returned
  * `null` for (silently NOT marquee-selectable though rendered + click-selectable):
@@ -35,7 +35,7 @@ import { createRectangleVertices } from '../entities/shared/geometry-utils';
 import { calculateBimEntity2DBounds } from '../../bim/utils/bim-bounds';
 import { BoundsCalculator } from './Bounds';
 import { getDimensionWorldBounds } from '../../systems/dimensions/dimension-cull-bounds';
-import { projectSceneTextToDxf, type TextSceneShape } from '../../bim/text/project-scene-text';
+import { projectSceneEntityText } from '../../bim/text/project-scene-text';
 import { resolveTextBox } from '../../bim/text/text-box';
 import { computeScaleBarGeometry } from '../../bim/geometry/scale-bar-geometry';
 import type { ScaleBarEntity } from '../../types/scale-bar';
@@ -134,10 +134,8 @@ function hatchBounds(entity: Entity): BoundingBox2D | null {
  * RectFrame → AABB via its four world corners.
  */
 function textBounds(entity: Entity): BoundingBox2D | null {
-  const shape = entity as unknown as TextSceneShape;
-  if (!shape.position) return null;
-  const dxfText = projectSceneTextToDxf(shape, (entity as { id?: string }).id ?? '');
-  if (!dxfText.text) return null;
+  const dxfText = projectSceneEntityText(entity, (entity as { id?: string }).id ?? '');
+  if (!dxfText?.text) return null;
   const frame = resolveTextBox(dxfText);
   const corners = RECT_CORNERS.map(corner => rectCornerWorld(frame, corner));
   return box2D(calculateVerticesBounds(corners));

@@ -9,7 +9,7 @@ import { resolveEntityBounds } from '../rendering/hitTesting/entity-bounds-ssot'
 // VISUAL box the pick resolver returns (`resolveTextBox`). Delegating would pop text at the viewport
 // edge + break the 3-site parity contract (`text-bounds-sites-parity.test.ts`).
 import { textBoxAABB } from '../bim/text/text-box';
-import { projectSceneTextToDxf } from '../bim/text/project-scene-text';
+import { projectSceneEntityText } from '../bim/text/project-scene-text';
 
 export type SpatialBounds = { minX: number; minY: number; maxX: number; maxY: number };
 
@@ -67,8 +67,10 @@ function pointRenderBounds(entity: Entity): SpatialBounds {
   return { minX: p.x, minY: p.y, maxX: p.x, maxY: p.y };
 }
 
-const textRenderBounds = (entity: Entity): SpatialBounds =>
-  textBoxAABB(projectSceneTextToDxf(entity, (entity as { id: string }).id));
+const textRenderBounds = (entity: Entity): SpatialBounds => {
+  const dxfText = projectSceneEntityText(entity, (entity as { id: string }).id);
+  return dxfText ? textBoxAABB(dxfText) : EMPTY_SPATIAL_BOUNDS;
+};
 
 /**
  * Culling-specific overrides — the ONLY types whose render/culling bounds intentionally differ

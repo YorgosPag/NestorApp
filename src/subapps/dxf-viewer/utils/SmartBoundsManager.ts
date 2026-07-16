@@ -9,7 +9,7 @@ import { calculateLineBounds } from '../rendering/entities/shared/geometry-rende
 // ADR-557 Φ-attachment (Φάση B) — attachment/rotation/widthFactor-aware text-box SSoT + the
 // scene→flat projection it consumes, so fit-to-view frames text like the canvas draws it.
 import { textBoxAABB } from '../bim/text/text-box';
-import { projectSceneTextToDxf } from '../bim/text/project-scene-text';
+import { projectSceneEntityText } from '../bim/text/project-scene-text';
 import type { Point2D } from '../rendering/types/Types';
 // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Import κεντρικής υπηρεσίας αντί για renderer.fitToView()
 // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Import centralized BoundingBox από rulers-grid system
@@ -197,12 +197,16 @@ export class SmartBoundsManager {
         // null via missing `entity.bounds`), so smart fit-to-view silently EXCLUDED every label
         // from the scene extent. Route through the text-box SSoT (attachment/rotation/widthFactor
         // aware) so fit-to-view frames text exactly like the canvas draws it.
-        const textBounds = textBoxAABB(projectSceneTextToDxf(entity, entity.id));
-        return {
-          ...textBounds,
-          width: textBounds.maxX - textBounds.minX,
-          height: textBounds.maxY - textBounds.minY,
-        };
+        const dxfText = projectSceneEntityText(entity, entity.id);
+        if (dxfText) {
+          const textBounds = textBoxAABB(dxfText);
+          return {
+            ...textBounds,
+            width: textBounds.maxX - textBounds.minX,
+            height: textBounds.maxY - textBounds.minY,
+          };
+        }
+        break;
       }
 
       default:

@@ -77,3 +77,17 @@ export function projectSceneTextToDxf(e: TextSceneShape, id: string): DxfText {
     ...(e.textNode?.lineSpacing ? { lineSpacing: e.textNode.lineSpacing } : {}),
   };
 }
+
+/**
+ * Guarded scene-entity → `DxfText` projection — the SINGLE narrowing point every bounds/
+ * culling consumer routes through. A scene TEXT/MTEXT entity carries `position` only
+ * optionally, so a broad `Entity` (even narrowed to `text`/`mtext`) is NOT structurally a
+ * `TextSceneShape`; each consumer would otherwise repeat the same `as`-cast + position
+ * guard. Returns null when there's no position to project from (non-text / malformed) so
+ * callers degrade to their empty-bounds path instead of producing NaN boxes.
+ */
+export function projectSceneEntityText(entity: unknown, id: string): DxfText | null {
+  const shape = entity as TextSceneShape;
+  if (!shape?.position) return null;
+  return projectSceneTextToDxf(shape, id);
+}
