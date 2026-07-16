@@ -1,10 +1,9 @@
 /**
  * 🛡️ useDeletionGuard — Pre-check hook for entity deletion
  *
- * Encapsulates the full deletion guard flow:
- * 1. Call GET /api/deletion-guard/{entityType}/{entityId}
- * 2. If blocked → render DeletionBlockedDialog
- * 3. If allowed → return true so caller can show confirm dialog
+ * Binding του `useDependencyGuard` (SSoT της ροής pre-check → blocked dialog).
+ * Εδώ ζει μόνο ό,τι είναι ειδικό για τη διαγραφή entity: το route ανά
+ * `entityType` και το μήνυμα «η διαγραφή μπλοκαρίστηκε».
  *
  * @module hooks/useDeletionGuard
  * @enterprise ADR-226 — Deletion Guard (Phase 3)
@@ -12,11 +11,9 @@
 
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
 import type { ReactNode } from 'react';
-import { apiClient, ApiClientError } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
-import { DeletionBlockedDialog } from '@/components/shared/DeletionBlockedDialog';
+import { useDependencyGuard } from '@/hooks/guards/useDependencyGuard';
 import type { EntityType, DependencyCheckResult } from '@/config/deletion-registry';
 
 // ============================================================================
@@ -43,71 +40,18 @@ interface UseDeletionGuardReturn {
 // ============================================================================
 
 export function useDeletionGuard(entityType: EntityType): UseDeletionGuardReturn {
-  const [checking, setChecking] = useState(false);
-  const [blocked, setBlocked] = useState(false);
-  const [checkResult, setCheckResult] = useState<DependencyCheckResult | null>(null);
-
-  const resetCheck = useCallback(() => {
-    setBlocked(false);
-    setCheckResult(null);
-  }, []);
-
-  const buildGuardUnavailableResult = useCallback((): DependencyCheckResult => ({
-    allowed: false,
-    dependencies: [],
-    totalDependents: 0,
-    message: 'Η διαγραφή μπλοκαρίστηκε γιατί ο έλεγχος εξαρτήσεων δεν ολοκληρώθηκε αξιόπιστα. Δοκιμάστε ξανά ή επικοινωνήστε με διαχειριστή.',
-  }), []);
-
-  const checkBeforeDelete = useCallback(async (entityId: string): Promise<boolean> => {
-    setChecking(true);
-    setBlocked(false);
-    setCheckResult(null);
-
-    try {
-      const result = await apiClient.get<DependencyCheckResult>(
-        API_ROUTES.DELETION_GUARD.CHECK(entityType, entityId)
-      );
-
-      setCheckResult(result);
-
-      if (result.allowed) {
-        setChecking(false);
-        return true;
-      }
-
-      // Blocked — show dialog
-      setBlocked(true);
-      setChecking(false);
-      return false;
-    } catch (err) {
-      if (ApiClientError.isApiClientError(err)) {
-        console.error(`[useDeletionGuard] Pre-check failed (${err.statusCode}):`, err.message);
-      } else {
-        console.error('[useDeletionGuard] Pre-check failed:', err);
-      }
-      const fallbackResult = buildGuardUnavailableResult();
-      setCheckResult(fallbackResult);
-      setBlocked(true);
-      setChecking(false);
-      return false;
-    }
-  }, [buildGuardUnavailableResult, entityType]);
-
-  const BlockedDialog = useMemo(() => (
-    <DeletionBlockedDialog
-      open={blocked}
-      onOpenChange={(open) => { if (!open) resetCheck(); }}
-      dependencies={checkResult?.dependencies ?? []}
-      message={checkResult?.message ?? ''}
-    />
-  ), [blocked, checkResult, resetCheck]);
+  const { checking, blocked, checkResult, runCheck, resetCheck, BlockedDialog } = useDependencyGuard({
+    checkRoute: (entityId) => API_ROUTES.DELETION_GUARD.CHECK(entityType, entityId),
+    unavailableMessage:
+      'Η διαγραφή μπλοκαρίστηκε γιατί ο έλεγχος εξαρτήσεων δεν ολοκληρώθηκε αξιόπιστα. Δοκιμάστε ξανά ή επικοινωνήστε με διαχειριστή.',
+    logName: 'useDeletionGuard',
+  });
 
   return {
     checking,
     blocked,
     checkResult,
-    checkBeforeDelete,
+    checkBeforeDelete: runCheck,
     resetCheck,
     BlockedDialog,
   };

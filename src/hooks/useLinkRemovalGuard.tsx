@@ -1,21 +1,23 @@
 /**
  * 🛡️ useLinkRemovalGuard — Pre-check hook for contact link removal
  *
- * Same pattern as useDeletionGuard, but for removing contact links.
- * Checks compound dependencies (contact + scope) via LINK_REMOVAL_REGISTRY.
+ * Binding του `useDependencyGuard` (SSoT της ροής pre-check → blocked dialog).
+ * Εδώ ζει μόνο ό,τι είναι ειδικό για την αποσύνδεση: το compound-dependency
+ * route (contact + scope, μέσω LINK_REMOVAL_REGISTRY) και το μήνυμα
+ * «η αποσύνδεση μπλοκαρίστηκε».
+ *
+ * Η επιφάνειά του είναι σκόπιμα ΣΤΕΝΟΤΕΡΗ από του `useDeletionGuard`: κανένας
+ * caller δεν χρειάζεται `checkResult`/`resetCheck` — το `BlockedDialog` αρκεί.
  *
  * @module hooks/useLinkRemovalGuard
- * @enterprise ADR-226 — Deletion Guard (Phase 2)
+ * @enterprise ADR-226 — Deletion Guard
  */
 
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
 import type { ReactNode } from 'react';
-import { apiClient, ApiClientError } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
-import { DeletionBlockedDialog } from '@/components/shared/DeletionBlockedDialog';
-import type { DependencyCheckResult } from '@/config/deletion-registry';
+import { useDependencyGuard } from '@/hooks/guards/useDependencyGuard';
 
 // ============================================================================
 // TYPES
@@ -37,65 +39,12 @@ interface UseLinkRemovalGuardReturn {
 // ============================================================================
 
 export function useLinkRemovalGuard(): UseLinkRemovalGuardReturn {
-  const [checking, setChecking] = useState(false);
-  const [blocked, setBlocked] = useState(false);
-  const [checkResult, setCheckResult] = useState<DependencyCheckResult | null>(null);
+  const { checking, blocked, runCheck, BlockedDialog } = useDependencyGuard({
+    checkRoute: (linkId) => API_ROUTES.LINK_REMOVAL_GUARD.CHECK(linkId),
+    unavailableMessage:
+      'Η αποσύνδεση μπλοκαρίστηκε γιατί ο έλεγχος εξαρτήσεων δεν ολοκληρώθηκε αξιόπιστα. Δοκιμάστε ξανά ή επικοινωνήστε με διαχειριστή.',
+    logName: 'useLinkRemovalGuard',
+  });
 
-  const resetCheck = useCallback(() => {
-    setBlocked(false);
-    setCheckResult(null);
-  }, []);
-
-  const buildGuardUnavailableResult = useCallback((): DependencyCheckResult => ({
-    allowed: false,
-    dependencies: [],
-    totalDependents: 0,
-    message: 'Η αποσύνδεση μπλοκαρίστηκε γιατί ο έλεγχος εξαρτήσεων δεν ολοκληρώθηκε αξιόπιστα. Δοκιμάστε ξανά ή επικοινωνήστε με διαχειριστή.',
-  }), []);
-
-  const checkBeforeRemove = useCallback(async (linkId: string): Promise<boolean> => {
-    setChecking(true);
-    setBlocked(false);
-    setCheckResult(null);
-
-    try {
-      const result = await apiClient.get<DependencyCheckResult>(
-        API_ROUTES.LINK_REMOVAL_GUARD.CHECK(linkId)
-      );
-
-      setCheckResult(result);
-
-      if (result.allowed) {
-        setChecking(false);
-        return true;
-      }
-
-      setBlocked(true);
-      setChecking(false);
-      return false;
-    } catch (err) {
-      if (ApiClientError.isApiClientError(err)) {
-        console.error(`[useLinkRemovalGuard] Pre-check failed (${err.statusCode}):`, err.message);
-      } else {
-        console.error('[useLinkRemovalGuard] Pre-check failed:', err);
-      }
-
-      const fallbackResult = buildGuardUnavailableResult();
-      setCheckResult(fallbackResult);
-      setBlocked(true);
-      setChecking(false);
-      return false;
-    }
-  }, [buildGuardUnavailableResult]);
-
-  const BlockedDialog = useMemo(() => (
-    <DeletionBlockedDialog
-      open={blocked}
-      onOpenChange={(open) => { if (!open) resetCheck(); }}
-      dependencies={checkResult?.dependencies ?? []}
-      message={checkResult?.message ?? ''}
-    />
-  ), [blocked, checkResult, resetCheck]);
-
-  return { checking, blocked, checkBeforeRemove, BlockedDialog };
+  return { checking, blocked, checkBeforeRemove: runCheck, BlockedDialog };
 }
