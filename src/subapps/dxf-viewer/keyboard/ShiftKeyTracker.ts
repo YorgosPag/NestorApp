@@ -10,74 +10,26 @@
  * receives only worldPos).
  *
  * Pattern mirrors {@link GripCopyModeStore} (vanilla store, low-frequency
- * transitions, no React deps). ADR-040 compliant — listeners are infrequent
- * UI-level keyboard events, not high-frequency render-path subscriptions.
+ * transitions, no React deps). Built on {@link createModifierKeyTracker},
+ * the shared SSoT for the install/uninstall/listener plumbing this tracker
+ * shares with its siblings {@link CtrlKeyTracker} / {@link QKeyTracker}
+ * (ADR-363, jscpd de-dup t258/t241). ADR-040 compliant — listeners are
+ * infrequent UI-level keyboard events, not high-frequency render-path
+ * subscriptions.
  *
  * Why not read `event.shiftKey` directly? The mouseup event that triggers
  * a grip commit travels through `mouse-handler-up` → canvas handler →
  * `useUnifiedGripInteraction.handleMouseUp(worldPos)` → grip-commit-adapter,
  * losing the native event by design. The tracker side-steps the plumbing.
  *
+ * @see keyboard/createModifierKeyTracker.ts — shared lifecycle factory
  * @see hooks/grips/grip-parametric-commits.ts — `commitSlabGripDrag` reader
  * @see bim/slabs/slab-grips.ts — rectilinear quantization consumer
  */
 
-import { createExternalStore } from '../stores/createExternalStore';
+import { createModifierKeyTracker } from './createModifierKeyTracker';
 
-type Listener = () => void;
-
-class ShiftKeyTrackerImpl {
-  private readonly store = createExternalStore<boolean>(false, { equals: Object.is });
-  private installed = false;
-
-  /** Live Shift state. Cheap read for commit-time consumers. */
-  getSnapshot = (): boolean => this.store.get();
-
-  subscribe = (listener: Listener): (() => void) => this.store.subscribe(listener);
-
-  /** Idempotent install — safe to call from multiple module loads. */
-  install(): void {
-    if (this.installed) return;
-    if (typeof window === 'undefined') return;
-    window.addEventListener('keydown', this.onKeyDown, { capture: true });
-    window.addEventListener('keyup', this.onKeyUp, { capture: true });
-    window.addEventListener('blur', this.onBlur);
-    this.installed = true;
-  }
-
-  /** Test-only teardown. Production code should never need this. */
-  uninstall(): void {
-    if (!this.installed) return;
-    if (typeof window === 'undefined') return;
-    window.removeEventListener('keydown', this.onKeyDown, { capture: true });
-    window.removeEventListener('keyup', this.onKeyUp, { capture: true });
-    window.removeEventListener('blur', this.onBlur);
-    this.installed = false;
-    this.setPressed(false);
-  }
-
-  /** Test-only direct setter. */
-  _setForTest(pressed: boolean): void {
-    this.setPressed(pressed);
-  }
-
-  private onKeyDown = (e: KeyboardEvent): void => {
-    if (e.key === 'Shift') this.setPressed(true);
-  };
-
-  private onKeyUp = (e: KeyboardEvent): void => {
-    if (e.key === 'Shift') this.setPressed(false);
-  };
-
-  private onBlur = (): void => {
-    // Lose modifier state if window loses focus (Shift+Alt+Tab etc.).
-    this.setPressed(false);
-  };
-
-  private setPressed(next: boolean): void {
-    this.store.set(next);
-  }
-}
-
-export const ShiftKeyTracker = new ShiftKeyTrackerImpl();
+export const ShiftKeyTracker = createModifierKeyTracker({
+  match: (e) => e.key === 'Shift',
+});
 ShiftKeyTracker.install();

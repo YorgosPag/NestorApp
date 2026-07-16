@@ -6,24 +6,25 @@
  * singleton. Mutations are wrapped in Commands (undo/redo) and fire EventBus
  * events so the rest of the system stays in sync.
  *
+ * ADR-040 (2026-07-16): mutation callbacks are shared with `useGuideActions.ts`
+ * via `useGuideMutations()` — this file owns ONLY the reactive `useSyncExternalStore`
+ * subscriptions below. See useGuideMutations.ts for the shared command dispatchers.
+ *
  * @see ADR-189 (Construction Grid & Guide System)
  * @since 2026-02-19
  */
 
-import { useSyncExternalStore, useCallback, useState } from 'react';
+import { useSyncExternalStore } from 'react';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
 import { getGlobalCommandHistory } from '../../core/commands/CommandHistory';
-import { CreateGuideCommand, DeleteGuideCommand, CreateParallelGuideCommand, CreateDiagonalGuideCommand, RotateGuideCommand, RotateAllGuidesCommand, RotateGuideGroupCommand, EqualizeGuidesCommand, PolarArrayGuidesCommand, ScaleAllGuidesCommand, MirrorGuidesCommand, GuideFromEntityCommand, BatchDeleteGuidesCommand, CopyGuidePatternCommand, GuideOffsetFromEntityCommand, CreateGridFromPresetCommand, BatchGuideFromEntitiesCommand, type EntityGuideParams } from '../../systems/guides/commands';
-import { EventBus } from '../../systems/events/EventBus';
+import { useGuideMutations, type UseGuideMutationsReturn } from './useGuideMutations';
 import type { Guide } from '../../systems/guides/guide-types';
-import type { Point2D } from '../../rendering/types/Types';
-import type { GridAxis } from '../../ai-assistant/grid-types';
 
 // ============================================================================
 // HOOK
 // ============================================================================
 
-export interface UseGuideStateReturn {
+export interface UseGuideStateReturn extends UseGuideMutationsReturn {
   /** All current guides (readonly snapshot) */
   guides: readonly Guide[];
   /** Whether guides are globally visible */
@@ -32,55 +33,6 @@ export interface UseGuideStateReturn {
   snapEnabled: boolean;
   /** Total guide count */
   guideCount: number;
-
-  /** Add a guide on the given axis at a world offset. Returns the command for undo support. */
-  addGuide: (axis: GridAxis, offset: number, label?: string | null) => CreateGuideCommand;
-  /** Delete a guide by ID. Returns the command for undo support. */
-  removeGuide: (guideId: string) => DeleteGuideCommand;
-  /** Add a parallel guide relative to a reference guide. Returns the command. */
-  addParallelGuide: (referenceGuideId: string, offsetDistance: number) => CreateParallelGuideCommand;
-  /** Add a diagonal (XZ) guide from startPoint to endPoint. Returns the command. */
-  addDiagonalGuide: (startPoint: Point2D, endPoint: Point2D, label?: string | null) => CreateDiagonalGuideCommand;
-  /** Toggle global guide visibility */
-  toggleVisibility: () => void;
-  /** Toggle snap-to-guide */
-  toggleSnap: () => void;
-  /** Clear all guides (not undoable) */
-  clearAll: () => void;
-  /** Rotate a guide around a pivot point by a typed angle. Returns the command for undo. */
-  rotateGuide: (guideId: string, pivot: Point2D, angleDeg: number) => RotateGuideCommand;
-  /** Rotate ALL visible, unlocked guides around a pivot point. Returns the command for undo. */
-  rotateAllGuides: (pivot: Point2D, angleDeg: number) => RotateAllGuidesCommand;
-  /** Rotate a selected group of guides around a pivot point. Returns the command for undo. */
-  rotateGuideGroup: (guideIds: readonly string[], pivot: Point2D, angleDeg: number) => RotateGuideGroupCommand;
-  /** Equalize spacing between 3+ same-axis guides. Returns the command for undo. */
-  equalizeGuides: (guideIds: readonly string[]) => EqualizeGuidesCommand;
-  /** Create N guides at equal angular intervals around center. startAngleDeg offsets the first spoke. */
-  createPolarArray: (center: Point2D, count: number, startAngleDeg?: number) => PolarArrayGuidesCommand;
-  /** Scale all visible/unlocked guides from origin by a factor. Returns the command for undo. */
-  scaleAllGuides: (origin: Point2D, scaleFactor: number) => ScaleAllGuidesCommand;
-  /** Mirror all visible/unlocked guides across a selected X/Y axis guide. Returns the command for undo. */
-  mirrorGuides: (axisGuideId: string) => MirrorGuidesCommand;
-  /** B8: Create guide(s) from a DXF entity. Returns the command for undo. */
-  createGuideFromEntity: (params: EntityGuideParams) => GuideFromEntityCommand;
-  /** B14: Batch-delete multiple guides. Skips locked. Returns the command for undo. */
-  batchDeleteGuides: (guideIds: readonly string[]) => BatchDeleteGuidesCommand;
-  /** B17: Copy selected guides with offset and repetitions. Returns the command for undo. */
-  copyGuidePattern: (sourceGuideIds: readonly string[], offsetDistance: number, repetitions: number) => CopyGuidePatternCommand;
-  /** B24: Create guide(s) offset from a DXF entity edge by a perpendicular distance. */
-  createGuideOffsetFromEntity: (params: EntityGuideParams, offsetDistance: number) => GuideOffsetFromEntityCommand;
-  /** B23: Create a structural grid from preset spacings. */
-  createGridFromPreset: (xOffsets: readonly number[], yOffsets: readonly number[], xLabels?: readonly string[] | null, yLabels?: readonly string[] | null, groupName?: string) => CreateGridFromPresetCommand;
-  /** B37: Batch create guides from multiple selected entities. */
-  createGuidesFromSelection: (paramsList: readonly EntityGuideParams[]) => BatchGuideFromEntitiesCommand;
-  /** B35: Whether new guides are created as temporary (auto-removed on drawing completion) */
-  temporaryMode: boolean;
-  /** B35: Toggle temporary guide creation mode */
-  toggleTemporaryMode: () => void;
-  /** B35: Remove all temporary guides (called on drawing completion) */
-  removeTemporaryGuides: () => void;
-  /** Direct access to the GuideStore singleton (for lock/label/advanced ops) */
-  getStore: () => ReturnType<typeof getGlobalGuideStore>;
 }
 
 /**
@@ -100,6 +52,7 @@ export interface UseGuideStateReturn {
  */
 export function useGuideState(): UseGuideStateReturn {
   const store = getGlobalGuideStore();
+  const history = getGlobalCommandHistory();
 
   // Subscribe to store changes via useSyncExternalStore
   const guides = useSyncExternalStore(
@@ -126,220 +79,16 @@ export function useGuideState(): UseGuideStateReturn {
     () => store.count,
   );
 
-  // ── B35: Temporary guide mode ──
-  const [temporaryMode, setTemporaryMode] = useState(false);
-
-  const toggleTemporaryMode = useCallback(() => {
-    setTemporaryMode(prev => !prev);
-  }, []);
-
-  const removeTemporaryGuides = useCallback(() => {
-    store.removeTemporaryGuides();
-  }, [store]);
-
-  // ── Mutations (B20: route through CommandHistory for undo/redo) ──
-
-  const history = getGlobalCommandHistory();
-
-  const addGuide = useCallback((axis: GridAxis, offset: number, label: string | null = null): CreateGuideCommand => {
-    const cmd = new CreateGuideCommand(store, axis, offset, label);
-    history.execute(cmd);
-
-    const createdGuide = cmd.getCreatedGuide();
-    if (createdGuide) {
-      EventBus.emit('grid:guide-added', { guide: createdGuide });
-    }
-
-    return cmd;
-  }, [store, history]);
-
-  const removeGuide = useCallback((guideId: string): DeleteGuideCommand => {
-    const cmd = new DeleteGuideCommand(store, guideId);
-    history.execute(cmd);
-
-    EventBus.emit('grid:guide-removed', { guideId });
-
-    return cmd;
-  }, [store, history]);
-
-  const addParallelGuide = useCallback((referenceGuideId: string, offsetDistance: number): CreateParallelGuideCommand => {
-    const cmd = new CreateParallelGuideCommand(store, referenceGuideId, offsetDistance);
-    history.execute(cmd);
-
-    const createdGuide = cmd.getCreatedGuide();
-    if (createdGuide) {
-      EventBus.emit('grid:guide-added', { guide: createdGuide });
-    }
-
-    return cmd;
-  }, [store, history]);
-
-  const addDiagonalGuide = useCallback((startPoint: Point2D, endPoint: Point2D, label: string | null = null): CreateDiagonalGuideCommand => {
-    const cmd = new CreateDiagonalGuideCommand(store, startPoint, endPoint, label);
-    history.execute(cmd);
-
-    const createdGuide = cmd.getCreatedGuide();
-    if (createdGuide) {
-      EventBus.emit('grid:guide-added', { guide: createdGuide });
-    }
-
-    return cmd;
-  }, [store, history]);
-
-  const toggleVisibility = useCallback(() => {
-    store.setVisible(!store.isVisible());
-  }, [store]);
-
-  const toggleSnap = useCallback(() => {
-    const newValue = !store.isSnapEnabled();
-    store.setSnapEnabled(newValue);
-    EventBus.emit('grid:snap-toggled', { enabled: newValue });
-  }, [store]);
-
-  const clearAll = useCallback(() => {
-    store.clear();
-  }, [store]);
-
-  const rotateGuide = useCallback((guideId: string, pivot: Point2D, angleDeg: number): RotateGuideCommand => {
-    const cmd = new RotateGuideCommand(store, guideId, pivot, angleDeg);
-    history.execute(cmd);
-    EventBus.emit('grid:guide-rotated', { guideId, angleDeg });
-    return cmd;
-  }, [store, history]);
-
-  const rotateAllGuides = useCallback((pivot: Point2D, angleDeg: number): RotateAllGuidesCommand => {
-    const cmd = new RotateAllGuidesCommand(store, pivot, angleDeg);
-    history.execute(cmd);
-    EventBus.emit('grid:all-guides-rotated', { angleDeg, pivot });
-    return cmd;
-  }, [store, history]);
-
-  const rotateGuideGroup = useCallback((guideIds: readonly string[], pivot: Point2D, angleDeg: number): RotateGuideGroupCommand => {
-    const cmd = new RotateGuideGroupCommand(store, guideIds, pivot, angleDeg);
-    history.execute(cmd);
-    EventBus.emit('grid:guide-group-rotated', { guideIds, angleDeg, pivot });
-    return cmd;
-  }, [store, history]);
-
-  const equalizeGuides = useCallback((guideIds: readonly string[]): EqualizeGuidesCommand => {
-    const cmd = new EqualizeGuidesCommand(store, guideIds);
-    if (cmd.isValid) {
-      history.execute(cmd);
-      EventBus.emit('grid:guides-equalized', { guideIds, spacing: cmd.spacing });
-    }
-    return cmd;
-  }, [store, history]);
-
-  const createPolarArray = useCallback((center: Point2D, count: number, startAngleDeg: number = 0): PolarArrayGuidesCommand => {
-    const cmd = new PolarArrayGuidesCommand(store, center, count, startAngleDeg);
-    if (cmd.isValid) {
-      history.execute(cmd);
-      EventBus.emit('grid:polar-array-created', { center, count, angleIncrement: cmd.angleIncrement });
-    }
-    return cmd;
-  }, [store, history]);
-
-  const scaleAllGuides = useCallback((origin: Point2D, scaleFactor: number): ScaleAllGuidesCommand => {
-    const cmd = new ScaleAllGuidesCommand(store, origin, scaleFactor);
-    if (cmd.isValid) {
-      history.execute(cmd);
-      EventBus.emit('grid:all-guides-scaled', { origin, scaleFactor });
-    }
-    return cmd;
-  }, [store, history]);
-
-  const mirrorGuides = useCallback((axisGuideId: string): MirrorGuidesCommand => {
-    const cmd = new MirrorGuidesCommand(store, axisGuideId);
-    if (cmd.isValid) {
-      history.execute(cmd);
-      const axisGuide = store.getGuides().find(g => g.id === axisGuideId);
-      EventBus.emit('grid:guides-mirrored', {
-        axisGuideId,
-        mirrorAxis: axisGuide?.axis === 'Y' ? 'Y' : 'X',
-        createdCount: cmd.getAffectedEntityIds().length,
-      });
-    }
-    return cmd;
-  }, [store, history]);
-
-  const createGuideFromEntity = useCallback((params: EntityGuideParams): GuideFromEntityCommand => {
-    const cmd = new GuideFromEntityCommand(store, params);
-    history.execute(cmd);
-    EventBus.emit('grid:guide-from-entity', { entityType: params.entityType, createdCount: cmd.getAffectedEntityIds().length });
-    return cmd;
-  }, [store, history]);
-
-  const batchDeleteGuides = useCallback((guideIds: readonly string[]): BatchDeleteGuidesCommand => {
-    const cmd = new BatchDeleteGuidesCommand(store, guideIds);
-    history.execute(cmd);
-    EventBus.emit('grid:guides-batch-deleted', { count: cmd.getAffectedEntityIds().length });
-    return cmd;
-  }, [store, history]);
-
-  const copyGuidePattern = useCallback((sourceGuideIds: readonly string[], offsetDistance: number, repetitions: number): CopyGuidePatternCommand => {
-    const cmd = new CopyGuidePatternCommand(store, sourceGuideIds, offsetDistance, repetitions);
-    if (cmd.isValid) {
-      history.execute(cmd);
-      EventBus.emit('grid:guide-pattern-copied', { sourceCount: sourceGuideIds.length, repetitions, offset: offsetDistance });
-    }
-    return cmd;
-  }, [store, history]);
-
-  const createGuideOffsetFromEntity = useCallback((params: EntityGuideParams, offsetDistance: number): GuideOffsetFromEntityCommand => {
-    const cmd = new GuideOffsetFromEntityCommand(store, params, offsetDistance);
-    history.execute(cmd);
-    EventBus.emit('grid:guide-offset-from-entity', { entityType: params.entityType, offset: offsetDistance, createdCount: cmd.getAffectedEntityIds().length });
-    return cmd;
-  }, [store, history]);
-
-  const createGridFromPreset = useCallback((xOffsets: readonly number[], yOffsets: readonly number[], xLabels: readonly string[] | null = null, yLabels: readonly string[] | null = null, groupName = 'Structural Grid'): CreateGridFromPresetCommand => {
-    const cmd = new CreateGridFromPresetCommand(store, xOffsets, yOffsets, xLabels, yLabels, groupName);
-    history.execute(cmd);
-    EventBus.emit('grid:preset-applied', { presetId: groupName, xCount: xOffsets.length, yCount: yOffsets.length });
-    return cmd;
-  }, [store, history]);
-
-  const createGuidesFromSelection = useCallback((paramsList: readonly EntityGuideParams[]): BatchGuideFromEntitiesCommand => {
-    const cmd = new BatchGuideFromEntitiesCommand(store, paramsList);
-    history.execute(cmd);
-    EventBus.emit('grid:guide-from-entity', { entityType: 'BATCH', createdCount: cmd.getAffectedEntityIds().length });
-    return cmd;
-  }, [store, history]);
-
-  const getStore = useCallback(() => store, [store]);
+  const mutations = useGuideMutations(store, history);
 
   return {
     guides,
     guidesVisible,
     snapEnabled,
     guideCount,
-    addGuide,
-    removeGuide,
-    addParallelGuide,
-    addDiagonalGuide,
-    rotateGuide,
-    rotateAllGuides,
-    rotateGuideGroup,
-    equalizeGuides,
-    createPolarArray,
-    scaleAllGuides,
-    mirrorGuides,
-    createGuideFromEntity,
-    batchDeleteGuides,
-    copyGuidePattern,
-    createGuideOffsetFromEntity,
-    createGridFromPreset,
-    createGuidesFromSelection,
-    temporaryMode,
-    toggleTemporaryMode,
-    removeTemporaryGuides,
-    toggleVisibility,
-    toggleSnap,
-    clearAll,
-    getStore,
+    ...mutations,
   };
 }
 
 // useGuideActions() lives in useGuideActions.ts (mutations-only, no subscriptions).
 // Import directly from that file for orchestrators that must not re-render on guide drag.
-

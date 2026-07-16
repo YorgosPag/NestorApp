@@ -8,7 +8,9 @@
  * (`grip-mouse-handlers.runGripMouseUp`) to decide, at the terminal click,
  * whether to MOVE the wall or COPY it (AutoCAD MOVE→COPY): Ctrl held → copy.
  *
- * Direct sibling of {@link ShiftKeyTracker}; identical lifecycle + rationale.
+ * Direct sibling of {@link ShiftKeyTracker}; identical lifecycle + rationale —
+ * both built on {@link createModifierKeyTracker}, the shared SSoT for the
+ * install/uninstall/listener plumbing (ADR-363, jscpd de-dup t258/t241).
  * Tracks `Control` AND `Meta` so the gesture works on Windows/Linux (Ctrl) and
  * macOS (⌘). ADR-040 compliant — infrequent UI-level keyboard events, not a
  * high-frequency render-path subscription.
@@ -19,65 +21,13 @@
  * side-steps the plumbing.
  *
  * @see keyboard/ShiftKeyTracker.ts — sibling (rectilinear constraint)
+ * @see keyboard/createModifierKeyTracker.ts — shared lifecycle factory
  * @see hooks/grips/grip-parametric-commits.ts — `commitWallCopy` consumer
  */
 
-import { createExternalStore } from '../stores/createExternalStore';
+import { createModifierKeyTracker } from './createModifierKeyTracker';
 
-type Listener = () => void;
-
-class CtrlKeyTrackerImpl {
-  private readonly store = createExternalStore<boolean>(false, { equals: Object.is });
-  private installed = false;
-
-  /** Live Ctrl/Meta state. Cheap read for commit-time consumers. */
-  getSnapshot = (): boolean => this.store.get();
-
-  subscribe = (listener: Listener): (() => void) => this.store.subscribe(listener);
-
-  /** Idempotent install — safe to call from multiple module loads. */
-  install(): void {
-    if (this.installed) return;
-    if (typeof window === 'undefined') return;
-    window.addEventListener('keydown', this.onKeyDown, { capture: true });
-    window.addEventListener('keyup', this.onKeyUp, { capture: true });
-    window.addEventListener('blur', this.onBlur);
-    this.installed = true;
-  }
-
-  /** Test-only teardown. Production code should never need this. */
-  uninstall(): void {
-    if (!this.installed) return;
-    if (typeof window === 'undefined') return;
-    window.removeEventListener('keydown', this.onKeyDown, { capture: true });
-    window.removeEventListener('keyup', this.onKeyUp, { capture: true });
-    window.removeEventListener('blur', this.onBlur);
-    this.installed = false;
-    this.setPressed(false);
-  }
-
-  /** Test-only direct setter. */
-  _setForTest(pressed: boolean): void {
-    this.setPressed(pressed);
-  }
-
-  private onKeyDown = (e: KeyboardEvent): void => {
-    if (e.key === 'Control' || e.key === 'Meta') this.setPressed(true);
-  };
-
-  private onKeyUp = (e: KeyboardEvent): void => {
-    if (e.key === 'Control' || e.key === 'Meta') this.setPressed(false);
-  };
-
-  private onBlur = (): void => {
-    // Lose modifier state if window loses focus (Ctrl+Alt+Tab etc.).
-    this.setPressed(false);
-  };
-
-  private setPressed(next: boolean): void {
-    this.store.set(next);
-  }
-}
-
-export const CtrlKeyTracker = new CtrlKeyTrackerImpl();
+export const CtrlKeyTracker = createModifierKeyTracker({
+  match: (e) => e.key === 'Control' || e.key === 'Meta',
+});
 CtrlKeyTracker.install();
