@@ -212,7 +212,9 @@ export function createCentredBoxGripAdapter<
  * (`rotation` / `width` / `length`). Furniture and floorplan-symbol share it 1:1.
  */
 export interface MmSuffixedBoxParams {
-  readonly position: { readonly x: number; readonly y: number; readonly z: number };
+  // `z` optional to match `Point3D` (the shape furniture/floorplan-symbol params carry) and
+  // `CentredBoxParams.position` — a plan symbol's z is 0/derived, never a required authored field.
+  readonly position: { readonly x: number; readonly y: number; readonly z?: number };
   readonly rotationDeg: number;
   readonly widthMm: number;
   readonly depthMm: number;
