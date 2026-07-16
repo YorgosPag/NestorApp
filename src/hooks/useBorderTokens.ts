@@ -9,7 +9,6 @@
 // ============================================================================
 
 import {
-  borders,
   borderWidth,
   borderColors,
   coreBorderRadius,
@@ -18,6 +17,157 @@ import {
   borderUtils,
   responsiveBorders
 } from '../styles/design-tokens';
+
+// ============================================================================
+// 🏢 SHARED MAPS — declared once, consumed by the hook AND the static export
+// ============================================================================
+
+/** Semantic states that resolve to a border colour. */
+type BorderStatus =
+  | 'default'
+  | 'success'
+  | 'warning'
+  | 'error'
+  | 'info'
+  | 'muted'
+  | 'subtle';
+
+/** Sides a border can be drawn on. */
+type BorderDirection = 'top' | 'bottom' | 'left' | 'right';
+
+/**
+ * Colour suffix per status. `border` (rather than a palette shade) yields
+ * `border-border` — the centralized CSS variable.
+ */
+const STATUS_BORDER_COLOR = {
+  default: 'border',
+  success: 'green-500',
+  warning: 'yellow-500',
+  error: 'red-500',
+  info: 'blue-500',
+  muted: 'border',
+  subtle: 'border'
+} as const satisfies Record<BorderStatus, string>;
+
+/** Tailwind side prefix per direction. */
+const BORDER_DIRECTION = {
+  top: 'border-t',
+  bottom: 'border-b',
+  left: 'border-l',
+  right: 'border-r'
+} as const satisfies Record<BorderDirection, string>;
+
+/** Full base border per status, for elements bordered on all four sides. */
+const STATUS_BASE_BORDER = {
+  default: 'border border-border',
+  success: 'border border-green-500',
+  warning: 'border border-yellow-500',
+  error: 'border border-red-500',
+  info: 'border border-blue-500',
+  muted: 'border border-border',
+  subtle: 'border border-border'
+} as const satisfies Record<BorderStatus, string>;
+
+/**
+ * Border on the given sides only, in the caller's order, in the status colour.
+ * The single implementation behind `getDirectionalBorder`,
+ * `getMultiDirectionalBorder` and the directional half of `getCombinedBorder`.
+ */
+function directionalBorder(
+  status: BorderStatus,
+  directions: readonly BorderDirection[]
+): string {
+  const directionClasses = directions
+    .map(dir => BORDER_DIRECTION[dir])
+    .join(' ');
+  return `${directionClasses} border-${STATUS_BORDER_COLOR[status]}`;
+}
+
+/**
+ * 🎯 QUICK BORDER SHORTCUTS
+ * The canonical class strings for common patterns. Exposed both as
+ * `useBorderTokens().quick` (React) and `borderTokens.quick` (non-React) —
+ * one definition, so the two can never drift apart.
+ */
+const QUICK_BORDERS = {
+  /** No border */
+  none: 'border-0',
+
+  /** Default border (same as card) */
+  default: 'border border-border rounded-lg',
+
+  /** Default card border */
+  card: 'border border-border rounded-lg',
+
+  /** Default button border */
+  button: 'border border-border',
+
+  /** Default input border — uses --input variable (darker than --border) for visibility (ADR-190) */
+  input: 'border border-input rounded-md',
+
+  /** Checkbox border */
+  checkbox: 'border border-border rounded-md',
+
+  /** Modal border (typically none + shadow) */
+  modal: 'border-0 rounded-lg shadow-lg',
+
+  /** Container border (typically none) */
+  container: 'border-0',
+
+  /** Horizontal separator */
+  separatorH: 'border-t border-border',
+
+  /** Vertical separator */
+  separatorV: 'border-l border-border',
+
+  /** Success border */
+  success: 'border border-green-500',
+
+  /** Error border */
+  error: 'border border-red-500',
+
+  /** Warning border */
+  warning: 'border border-yellow-500',
+
+  /** Info border */
+  info: 'border border-blue-500',
+
+  /** Muted border για DynamicInput components */
+  muted: 'border border-border',
+
+  /** Focus state border */
+  focus: 'focus:border-blue-500 focus:ring-2 focus:ring-blue-200',
+
+  /** Selected state border */
+  selected: 'border-blue-500 bg-blue-50',
+
+  /** Table border (for dropdown/table items) */
+  table: 'border border-border rounded-lg',
+
+  /** Rounded border shortcut */
+  rounded: 'border border-border rounded-lg',
+
+  /** Dashed border */
+  dashed: 'border-2 border-border border-dashed rounded-lg',
+
+  /** Generic separator */
+  separator: 'border-t border-border',
+
+  /** Bottom border for card sections, headers */
+  borderB: 'border-b border-border',
+
+  /** Top border for footers, separators */
+  borderT: 'border-t border-border',
+
+  /** Left border for sidebars, panels */
+  borderL: 'border-l border-border',
+
+  /** Right border for sidebars, panels */
+  borderR: 'border-r border-border',
+
+  /** Avatar border for UserCard */
+  avatar: 'border-2 border-border rounded-full',
+} as const;
 
 /**
  * 🎯 ENTERPRISE BORDER TOKENS HOOK
@@ -222,85 +372,7 @@ export function useBorderTokens() {
     /**
      * Quick border shortcuts για common patterns
      */
-    quick: {
-      /** No border */
-      none: 'border-0',
-
-      /** Default border (same as card) */
-      default: 'border border-border rounded-lg', // 🏢 ENTERPRISE: Centralized
-
-      /** Default card border */
-      card: 'border border-border rounded-lg', // 🏢 ENTERPRISE: Centralized
-
-      /** Default button border */
-      button: 'border border-border', // 🏢 ENTERPRISE: Centralized
-
-      /** Default input border — uses --input variable (darker than --border) for visibility */
-      input: 'border border-input rounded-md', // 🏢 ENTERPRISE: SSoT (ADR-190)
-
-      /** Checkbox border */
-      checkbox: 'border border-border rounded-md', // 🏢 ENTERPRISE: Centralized
-
-      /** Modal border (typically none + shadow) */
-      modal: 'border-0 rounded-lg shadow-lg',
-
-      /** Container border (typically none) */
-      container: 'border-0',
-
-      /** Horizontal separator */
-      separatorH: 'border-t border-border', // 🏢 ENTERPRISE: Centralized
-
-      /** Vertical separator */
-      separatorV: 'border-l border-border', // 🏢 ENTERPRISE: Centralized
-
-      /** Success border */
-      success: 'border border-green-500',
-
-      /** Error border */
-      error: 'border border-red-500',
-
-      /** Warning border */
-      warning: 'border border-yellow-500',
-
-      /** Info border */
-      info: 'border border-blue-500',
-
-      /** Muted border για DynamicInput components */
-      muted: 'border border-border', // 🏢 ENTERPRISE: Centralized
-
-      /** Focus state border */
-      focus: 'focus:border-blue-500 focus:ring-2 focus:ring-blue-200',
-
-      /** Selected state border */
-      selected: 'border-blue-500 bg-blue-50',
-
-      /** Table border (for dropdown/table items) */
-      table: 'border border-border rounded-lg', // 🏢 ENTERPRISE: Centralized
-
-      /** Rounded border shortcut */
-      rounded: 'border border-border rounded-lg', // 🏢 ENTERPRISE: Centralized
-
-      /** ✅ ENTERPRISE FIX: Dashed border for LevelSelectionStep TS2339 error */
-      dashed: 'border-2 border-border border-dashed rounded-lg', // 🏢 ENTERPRISE: Centralized
-
-      /** ✅ ENTERPRISE FIX: Generic separator for LineSettings.tsx TS2339 error */
-      separator: 'border-t border-border', // 🏢 ENTERPRISE: Centralized
-
-      /** ✅ ENTERPRISE FIX: Bottom border for card sections, headers */
-      borderB: 'border-b border-border', // 🏢 ENTERPRISE: Centralized
-
-      /** ✅ ENTERPRISE FIX: Top border for footers, separators */
-      borderT: 'border-t border-border', // 🏢 ENTERPRISE: Centralized
-
-      /** ✅ ENTERPRISE FIX: Left border for sidebars, panels */
-      borderL: 'border-l border-border', // 🏢 ENTERPRISE: Centralized
-
-      /** ✅ ENTERPRISE FIX: Right border for sidebars, panels */
-      borderR: 'border-r border-border', // 🏢 ENTERPRISE: Centralized
-
-      /** ✅ ENTERPRISE FIX: Avatar border for UserCard */
-      avatar: 'border-2 border-border rounded-full', // 🏢 ENTERPRISE: Centralized
-    },
+    quick: QUICK_BORDERS,
 
     // ========================================================================
     // 🎯 DIRECTIONAL BORDERS - 100% Centralization Support
@@ -312,29 +384,9 @@ export function useBorderTokens() {
      * @param direction - Border direction (top, bottom, left, right)
      */
     getDirectionalBorder: (
-      status: 'default' | 'success' | 'warning' | 'error' | 'info' | 'muted' | 'subtle',
-      direction: 'top' | 'bottom' | 'left' | 'right'
-    ): string => {
-      // 🏢 ENTERPRISE: Centralized border colors
-      const colorMap = {
-        default: 'border',  // 🏢 ENTERPRISE: Centralized (produces border-border)
-        success: 'green-500',
-        warning: 'yellow-500',
-        error: 'red-500',
-        info: 'blue-500',
-        muted: 'border',    // 🏢 ENTERPRISE: Centralized (produces border-border)
-        subtle: 'border'    // 🏢 ENTERPRISE: Centralized (produces border-border)
-      };
-
-      const directionMap = {
-        top: 'border-t',
-        bottom: 'border-b',
-        left: 'border-l',
-        right: 'border-r'
-      };
-
-      return `${directionMap[direction]} border-${colorMap[status]}`;
-    },
+      status: BorderStatus,
+      direction: BorderDirection
+    ): string => directionalBorder(status, [direction]),
 
     /**
      * Get multiple directional borders with status
@@ -342,30 +394,9 @@ export function useBorderTokens() {
      * @param directions - Array of directions to apply border
      */
     getMultiDirectionalBorder: (
-      status: 'default' | 'success' | 'warning' | 'error' | 'info' | 'muted' | 'subtle',
-      directions: ('top' | 'bottom' | 'left' | 'right')[]
-    ): string => {
-      // 🏢 ENTERPRISE: Centralized border colors
-      const colorMap = {
-        default: 'border',  // 🏢 ENTERPRISE: Centralized (produces border-border)
-        success: 'green-500',
-        warning: 'yellow-500',
-        error: 'red-500',
-        info: 'blue-500',
-        muted: 'border',    // 🏢 ENTERPRISE: Centralized (produces border-border)
-        subtle: 'border'    // 🏢 ENTERPRISE: Centralized (produces border-border)
-      };
-
-      const directionMap = {
-        top: 'border-t',
-        bottom: 'border-b',
-        left: 'border-l',
-        right: 'border-r'
-      };
-
-      const directionClasses = directions.map(dir => directionMap[dir]).join(' ');
-      return `${directionClasses} border-${colorMap[status]}`;
-    },
+      status: BorderStatus,
+      directions: BorderDirection[]
+    ): string => directionalBorder(status, directions),
 
     /**
      * Combine centralized border with directional borders (replaces mixed patterns)
@@ -373,48 +404,16 @@ export function useBorderTokens() {
      * @param additionalDirections - Additional directional borders
      */
     getCombinedBorder: (
-      status: 'default' | 'success' | 'warning' | 'error' | 'info' | 'muted' | 'subtle',
-      additionalDirections?: ('top' | 'bottom' | 'left' | 'right')[]
+      status: BorderStatus,
+      additionalDirections?: BorderDirection[]
     ): string => {
-      // 🏢 ENTERPRISE: Get base border with centralized colors
-      const statusBorderMap = {
-        default: 'border border-border', // 🏢 ENTERPRISE: Centralized
-        success: 'border border-green-500',
-        warning: 'border border-yellow-500',
-        error: 'border border-red-500',
-        info: 'border border-blue-500',
-        muted: 'border border-border',   // 🏢 ENTERPRISE: Centralized
-        subtle: 'border border-border'   // 🏢 ENTERPRISE: Centralized
-      };
-
-      const baseBorder = statusBorderMap[status];
+      const baseBorder = STATUS_BASE_BORDER[status];
 
       if (!additionalDirections || additionalDirections.length === 0) {
         return baseBorder;
       }
 
-      // 🏢 ENTERPRISE: Get directional borders with centralized colors
-      const colorMap = {
-        default: 'border',  // 🏢 ENTERPRISE: Centralized (produces border-border)
-        success: 'green-500',
-        warning: 'yellow-500',
-        error: 'red-500',
-        info: 'blue-500',
-        muted: 'border',    // 🏢 ENTERPRISE: Centralized (produces border-border)
-        subtle: 'border'    // 🏢 ENTERPRISE: Centralized (produces border-border)
-      };
-
-      const directionMap = {
-        top: 'border-t',
-        bottom: 'border-b',
-        left: 'border-l',
-        right: 'border-r'
-      };
-
-      const directionClasses = additionalDirections.map(dir => directionMap[dir]).join(' ');
-      const additionalBorder = `${directionClasses} border-${colorMap[status]}`;
-
-      return `${baseBorder} ${additionalBorder}`;
+      return `${baseBorder} ${directionalBorder(status, additionalDirections)}`;
     },
 
     /**
@@ -464,32 +463,5 @@ export default useBorderTokens;
  * but cannot use React hooks
  */
 export const borderTokens = {
-  quick: {
-    none: 'border-0',
-    default: 'border border-border rounded-lg',
-    card: 'border border-border rounded-lg',
-    button: 'border border-border',
-    input: 'border border-input rounded-md',
-    checkbox: 'border border-border rounded-md',
-    modal: 'border-0 rounded-lg shadow-lg',
-    container: 'border-0',
-    separatorH: 'border-t border-border',
-    separatorV: 'border-l border-border',
-    success: 'border border-green-500',
-    error: 'border border-red-500',
-    warning: 'border border-yellow-500',
-    info: 'border border-blue-500',
-    muted: 'border border-border',
-    focus: 'focus:border-blue-500 focus:ring-2 focus:ring-blue-200',
-    selected: 'border-blue-500 bg-blue-50',
-    table: 'border border-border rounded-lg',
-    rounded: 'border border-border rounded-lg',
-    dashed: 'border-2 border-border border-dashed rounded-lg',
-    separator: 'border-t border-border',
-    borderB: 'border-b border-border',
-    borderT: 'border-t border-border',
-    borderL: 'border-l border-border',
-    borderR: 'border-r border-border',
-    avatar: 'border-2 border-border rounded-full',
-  }
+  quick: QUICK_BORDERS
 } as const;
