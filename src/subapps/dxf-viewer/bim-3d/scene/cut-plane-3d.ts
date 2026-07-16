@@ -13,9 +13,22 @@ import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store
 import { useActiveStoreyStore } from '../../systems/levels/active-storey-store';
 import { useBim3DEntitiesStore } from '../stores/Bim3DEntitiesStore';
 import { useViewMode3DStore } from '../stores/ViewMode3DStore';
-import { computeCutPlaneWorldY, buildCutPlane, buildAxisCutPlane, type CutAxis } from './cut-plane-3d-math';
+import {
+  computeCutPlaneWorldY,
+  buildCutPlane,
+  buildAxisCutPlane,
+  CUT_PLANE_KEEP_EPSILON_M,
+  type CutAxis,
+} from './cut-plane-3d-math';
 
-export { computeCutPlaneWorldY, buildCutPlane, buildAxisCutPlane, MM_TO_M, type CutAxis } from './cut-plane-3d-math';
+export {
+  computeCutPlaneWorldY,
+  buildCutPlane,
+  buildAxisCutPlane,
+  MM_TO_M,
+  CUT_PLANE_KEEP_EPSILON_M,
+  type CutAxis,
+} from './cut-plane-3d-math';
 
 /** ADR-455 — a resolved, active axis cut ready to build a clip plane from. */
 export interface ResolvedAxisCut {
@@ -40,18 +53,6 @@ export function resolveActiveBuildingBaseElevationM(): number {
     : s.buildings[0];
   return building?.baseElevation ?? 0;
 }
-
-/**
- * ADR-452 — anti clip-boundary z-fight bias. The horizontal cut keeps `p.y < worldY`.
- * When the user parks the cut AT a storey level (cutPlaneMm = ceiling height), the
- * structural TOP faces sit at EXACTLY `worldY` → `dot == 0` at the boundary →
- * floating-point makes adjacent fragments fall on either side of the plane → the top
- * faces flicker / mix colours (Giorgio 2026-06-19: «μίξη χρωμάτων μόνο όταν το slider
- * της οριζόντιας τομής είναι στην κορυφή»). A tiny upward bias keeps those boundary
- * faces reliably BELOW the plane (kept, not flickering) and lifts the section cap a
- * hair above them so it can't z-fight either. 1 mm is imperceptible at building scale.
- */
-const CUT_PLANE_KEEP_EPSILON_M = 0.001;
 
 /** World-Y (metres) of the cut plane, or `null` when the cut plane is off. */
 export function resolveCutPlaneWorldY(): number | null {

@@ -11,6 +11,22 @@ import * as THREE from 'three';
 export const MM_TO_M = 0.001;
 
 /**
+ * ADR-452 — anti clip-boundary z-fight bias. The horizontal cut keeps `p.y < worldY`.
+ * When the user parks the cut AT a storey level (cutPlaneMm = ceiling height), the
+ * structural TOP faces sit at EXACTLY `worldY` → `dot == 0` at the boundary →
+ * floating-point makes adjacent fragments fall on either side of the plane → the top
+ * faces flicker / mix colours (Giorgio 2026-06-19: «μίξη χρωμάτων μόνο όταν το slider
+ * της οριζόντιας τομής είναι στην κορυφή»). A tiny upward bias keeps those boundary
+ * faces reliably BELOW the plane (kept, not flickering) and lifts the section cap a
+ * hair above them so it can't z-fight either. 1 mm is imperceptible at building scale.
+ *
+ * ADR-665 — lives in this PURE module (not the store-wired `cut-plane-3d`) so the
+ * terrain's level cut can share the ONE constant without dragging stores into its
+ * unit tests. `cut-plane-3d` re-exports it; there is no second 1 mm constant.
+ */
+export const CUT_PLANE_KEEP_EPSILON_M = 0.001;
+
+/**
  * ADR-455 — the three cut axes. `z` = the legacy horizontal cut (ADR-452, Revit
  * View Range); `x`/`y` = the new vertical section cuts along the DXF world axes.
  */

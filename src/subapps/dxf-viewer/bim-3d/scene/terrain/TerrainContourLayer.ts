@@ -14,9 +14,11 @@
  * floor-scoped annotation — so, exactly like Civil 3D / Revit, it belongs to the surface and
  * renders ONCE at its real (datum-shifted) elevation, regardless of the active floor scope.
  *
- * Owner pattern + reactivity: identical to `TerrainSceneLayer` — `ThreeJsSceneManager` constructs
- * it once and calls `dispose()` on teardown; it reacts imperatively to the survey, display,
- * contour-config and geo-reference stores with zero React state (ADR-040).
+ * Owner pattern + reactivity: identical to `TerrainSceneLayer` — literally so, since both extend
+ * {@link TopoSceneLayer}, which owns the seating, the subscriptions, the rebuild/clip-re-assertion
+ * and the teardown. `ThreeJsSceneManager` constructs this once and calls `dispose()` on teardown;
+ * it reacts imperatively to the survey, display, contour-config and geo-reference stores with zero
+ * React state (ADR-040). This class owns only the contour derivation.
  *
  * @module bim-3d/scene/terrain/TerrainContourLayer
  */
@@ -32,11 +34,11 @@ import {
   getGeoReference,
 } from '../../../systems/geo-referencing/geo-reference-store';
 import { getActiveVerticalDatumMm } from '../../../systems/topography/vertical-datum';
-import { seatTopoLayerRoot, subscribeTopoLayer } from './topo-scene-layer-support';
+import { TopoSceneLayer } from './topo-scene-layer-support';
 import type { TinSurface } from '../../../systems/topography/topo-types';
 import type { GeoReference } from '../../../systems/geo-referencing/geo-transform';
 import { contourLinesToGeometries } from '../../converters/contour-to-three';
-import { getTopoContourMaterial3D } from '../../materials/MaterialCatalog3D';
+import { getTopoContourMaterial3D } from '../../materials/terrain-materials-3d';
 import { disposeObjectTree } from '../dispose-object-tree';
 
 /** ADR-650 M10d — geometry inputs that force a re-derivation (opacity is NOT one of them). */
@@ -47,45 +49,26 @@ interface ContourGeoInputs {
   readonly geoRef: GeoReference | null;
 }
 
-export class TerrainContourLayer {
-  private readonly root = new THREE.Group();
-  private readonly unsubscribes: readonly (() => void)[];
-  /** ADR-650 M10d — inputs the current lines were built from; lets an opacity-only change skip rebuild. */
-  private lastInputs: ContourGeoInputs | null = null;
-  private disposed = false;
-
+export class TerrainContourLayer extends TopoSceneLayer<ContourGeoInputs> {
   constructor(
     scene: THREE.Object3D,
-    private readonly markDirty: () => void,
+    markDirty: () => void,
+    onRebuilt: (root: THREE.Object3D) => void = () => {},
   ) {
-    // ADR-650 M10d — drop with the terrain mesh by the SAME margin so the contours stay ON the
-    // surface (both sit a hair below z=0 → the ground-floor plan wins from above).
-    seatTopoLayerRoot(this.root, scene, 'topo-contours');
-    // Shared topo-layer subscriptions (survey → rebuild, 3D visibility, geo-ref «κούμπωμα») + the
-    // contour interval/index config: a different interval derives different levels → rebuild.
-    this.unsubscribes = subscribeTopoLayer(() => this.rebuild(), [subscribeContourConfig]);
-    this.rebuild();
+    // Drops with the terrain mesh by the SAME margin (ADR-650 M10d) so the contours stay ON the
+    // surface, and adds the contour interval/index config to the shared subscriptions: a different
+    // interval derives different levels → rebuild.
+    super(scene, 'topo-contours', markDirty, onRebuilt, [subscribeContourConfig]);
+    this.start();
   }
 
   /**
    * Drop the old lines and rebuild from the current surface + display state. Rebuild-all (like
    * `TerrainSceneLayer`): the CDT re-triangulates globally when a point moves, so contours have no
-   * stable per-line identity to diff. Cheap when hidden — the early return means invisible contours
-   * cost nothing on every survey edit, and `getTopoSurface()` is memoised.
+   * stable per-line identity to diff. `getTopoSurface()` is memoised.
    */
-  private rebuild(): void {
-    if (this.disposed) return;
-
-    const state = getTerrain3DState();
-    // Contours belong to the surface: shown with it, hidden with it (Revit Toposurface parity).
-    if (!state.visible) {
-      this.clearLines();
-      this.lastInputs = null;
-      this.markDirty();
-      return;
-    }
-
-    const opacity = state.contourOpacity;
+  protected rebuildGeometry(): void {
+    const opacity = getTerrain3DState().contourOpacity;
     const inputs: ContourGeoInputs = {
       surface: getTopoSurface(),
       config: getContourConfig(),
@@ -102,7 +85,7 @@ export class TerrainContourLayer {
       return;
     }
 
-    this.clearLines();
+    this.clearContent();
     // The SAME derivation the 2D plan uses (`useTopoContours`) over the SAME memoised TIN — no
     // second contour algorithm, no second triangulation.
     const { contours } = generateContoursFromSurface(inputs.surface, inputs.config);
@@ -130,24 +113,9 @@ export class TerrainContourLayer {
     this.root.add(lines);
   }
 
-  /** True when every geometry input is identity-equal to the last build (opacity is NOT compared). */
-  private sameInputs(next: ContourGeoInputs): boolean {
-    const p = this.lastInputs;
-    return !!p && p.surface === next.surface && p.config === next.config
-      && p.datumMm === next.datumMm && p.geoRef === next.geoRef;
-  }
-
   /** Remove + free the current line geometries. Geometry only — materials are catalog singletons. */
-  private clearLines(): void {
+  protected clearContent(): void {
     disposeObjectTree(this.root); // geometry-only (materials shared) — walks every child LineSegments
     this.root.clear();
-  }
-
-  dispose(): void {
-    if (this.disposed) return;
-    this.disposed = true;
-    for (const unsubscribe of this.unsubscribes) unsubscribe();
-    this.clearLines();
-    this.root.removeFromParent();
   }
 }

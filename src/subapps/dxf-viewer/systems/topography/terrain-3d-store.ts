@@ -26,6 +26,20 @@ export interface Terrain3DState {
   readonly surfaceOpacity: Readonly<Record<TerrainSurfaceStyle, number>>;
   /** ADR-650 M10d — contour-line transparency (0..1), one value for major+minor together. */
   readonly contourOpacity: number;
+  /**
+   * ADR-665 — cut the terrain with a horizontal plane at the ACTIVE LEVEL's elevation. The BUILDING
+   * is never cut by it. Below the plane the soil stays, so on «Θεμελίωση» the footings read inside
+   * the ground; above it the hill is clipped away, so an engineer on the 1st floor is not buried.
+   *
+   * Default ON: `visible` is already `false` by default, so the default RENDERED scene stays
+   * byte-identical to pre-ADR-665 — nothing changes silently. But the moment a user opts into the
+   * relief, burying the building is never what they wanted; opt-out is one click, opt-in-to-a-
+   * broken-view is a support ticket.
+   *
+   * Ignored while `floor3DScope === 'all'` — no single active level, and «Όλοι οι όροφοι» IS the
+   * site view (whole building + whole ground). See `terrain-clip-math`.
+   */
+  readonly autoClipAtActiveLevel: boolean;
 }
 
 const INITIAL: Terrain3DState = {
@@ -33,6 +47,7 @@ const INITIAL: Terrain3DState = {
   style: 'shaded',
   surfaceOpacity: { shaded: 1, hypsometric: 1, cutfill: 1 },
   contourOpacity: 1,
+  autoClipAtActiveLevel: true,
 };
 
 /** Clamp any user/stored input into the valid opacity range; non-finite → fully opaque. */
@@ -81,6 +96,16 @@ export function setTerrainContourOpacity(opacity: number): void {
   const current = store.get();
   if (current.contourOpacity === next) return;
   store.set({ ...current, contourOpacity: next });
+}
+
+/**
+ * ADR-665 — toggle the automatic level cut of the terrain. No-op if unchanged (every notify drives
+ * a scene rebuild + a clip re-apply, so the equality guard is load-bearing, not cosmetic).
+ */
+export function setTerrainAutoClipAtActiveLevel(enabled: boolean): void {
+  const current = store.get();
+  if (current.autoClipAtActiveLevel === enabled) return;
+  store.set({ ...current, autoClipAtActiveLevel: enabled });
 }
 
 /** Subscribe to display-state changes; returns unsubscribe. */

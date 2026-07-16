@@ -104,8 +104,7 @@ export function StoragePageContent() {
     handleCancelPermanentDelete,
   } = useStoragesTrashState({
     forceDataRefresh: refetch,
-    onItemDeleted: () => setSelectedStorage(null),
-    onBeforeToggle: () => setSelectedStorage(null),
+    clearSelection: () => setSelectedStorage(null),
   });
 
   // Delete dialog state

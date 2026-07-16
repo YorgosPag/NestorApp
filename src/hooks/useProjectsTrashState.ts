@@ -1,140 +1,61 @@
 'use client';
 
 /**
- * 🗑️ useProjectsTrashState
+ * 🗑️ useProjectsTrashState — projects binding for the trash engine.
  *
- * Manages the trash view for the projects page.
- * Follows the same pattern as usePropertiesTrashState (ADR-308).
+ * Projects announce through the project notification SSoT rather than the
+ * generic trash toast, so the messages match the rest of the project surface.
  *
  * @module hooks/useProjectsTrashState
- * @enterprise ADR-308 — Projects Soft-Delete Trash
+ * @enterprise ADR-281 — SSOT Soft-Delete System · ADR-584 — Anti-Duplication
  */
 
-import { useState, useCallback, useEffect } from 'react';
-import { apiClient } from '@/lib/api/enterprise-api-client';
+import { useMemo } from 'react';
 import { API_ROUTES } from '@/config/domain-constants';
-import { TrashService } from '@/services/trash.service';
-import { createModuleLogger } from '@/lib/telemetry';
-import { useAuth } from '@/auth/hooks/useAuth';
 import { useProjectNotifications } from '@/hooks/notifications/useProjectNotifications';
+import { useEntityTrashState, type EntityTrashSpec } from '@/hooks/trash/useEntityTrashState';
 import type { Project } from '@/types/project';
-
-const logger = createModuleLogger('useProjectsTrashState');
 
 interface UseProjectsTrashStateParams {
   forceDataRefresh: () => void;
-  setSelectedProject: (project: Project | null) => void;
-  onBeforeToggle?: () => void;
+  clearSelection?: () => void;
 }
 
-interface TrashApiResponse {
-  success: boolean;
-  projects: Project[];
-  count: number;
-}
+const PROJECTS_TRASH_SPEC: EntityTrashSpec<Project> = {
+  entityKind: 'project',
+  trashRoute: API_ROUTES.PROJECTS.TRASH,
+  selectItems: response => response.projects as Project[] | undefined,
+};
 
 export function useProjectsTrashState({
   forceDataRefresh,
-  setSelectedProject,
-  onBeforeToggle,
+  clearSelection,
 }: UseProjectsTrashStateParams) {
-  const { user, loading: authLoading } = useAuth();
   const projectNotifications = useProjectNotifications();
-  const [showTrash, setShowTrash] = useState(false);
-  const [trashedProjects, setTrashedProjects] = useState<Project[]>([]);
-  const [loadingTrash, setLoadingTrash] = useState(false);
-  const [showPermanentDeleteDialog, setShowPermanentDeleteDialog] = useState(false);
-  const [pendingPermanentDeleteIds, setPendingPermanentDeleteIds] = useState<string[]>([]);
 
-  const trashCount = trashedProjects.length;
+  const trash = useEntityTrashState(PROJECTS_TRASH_SPEC, {
+    forceDataRefresh,
+    clearSelection,
+    notifyRestored: () => projectNotifications.restored(),
+    notifyPermanentlyDeleted: () => projectNotifications.permanentlyDeleted(),
+  });
 
-  const fetchTrashedProjects = useCallback(async () => {
-    setLoadingTrash(true);
-    try {
-      const response = await apiClient.get<TrashApiResponse>(API_ROUTES.PROJECTS.TRASH);
-      setTrashedProjects(response.projects ?? []);
-    } catch (error) {
-      logger.error('Failed to fetch deleted projects', { error });
-      setTrashedProjects([]);
-    } finally {
-      setLoadingTrash(false);
-    }
-  }, []);
-
-  const handleToggleTrash = useCallback(async () => {
-    onBeforeToggle?.();
-    const next = !showTrash;
-    setShowTrash(next);
-    setSelectedProject(null);
-    if (next) {
-      await fetchTrashedProjects();
-    }
-  }, [showTrash, setSelectedProject, fetchTrashedProjects, onBeforeToggle]);
-
-  /** Called after restore/permanent-delete to refresh both lists + clear stale selection */
-  const handleTrashActionComplete = useCallback(() => {
-    setSelectedProject(null);
-    forceDataRefresh();
-    void fetchTrashedProjects();
-  }, [setSelectedProject, forceDataRefresh, fetchTrashedProjects]);
-
-  const handleRestoreProjects = useCallback(async (ids: string[]) => {
-    if (ids.length === 0) return;
-    logger.info('Restoring projects from trash', { ids });
-    try {
-      await TrashService.bulkRestore('project', ids);
-      projectNotifications.restored();
-      handleTrashActionComplete();
-    } catch (error) {
-      logger.error('Failed to restore projects', { ids, error });
-    }
-  }, [handleTrashActionComplete, projectNotifications]);
-
-  const handlePermanentDeleteProjects = useCallback((ids: string[]) => {
-    if (ids.length === 0) return;
-    setPendingPermanentDeleteIds(ids);
-    setShowPermanentDeleteDialog(true);
-  }, []);
-
-  const handleConfirmPermanentDelete = useCallback(async () => {
-    if (pendingPermanentDeleteIds.length === 0) return;
-    logger.info('Permanently deleting projects', { ids: pendingPermanentDeleteIds });
-    try {
-      await TrashService.bulkPermanentDelete('project', pendingPermanentDeleteIds);
-      setShowPermanentDeleteDialog(false);
-      setPendingPermanentDeleteIds([]);
-      projectNotifications.permanentlyDeleted();
-      handleTrashActionComplete();
-    } catch (error) {
-      logger.error('Failed to permanently delete projects', { ids: pendingPermanentDeleteIds, error });
-      setShowPermanentDeleteDialog(false);
-      setPendingPermanentDeleteIds([]);
-    }
-  }, [pendingPermanentDeleteIds, handleTrashActionComplete]);
-
-  const handleCancelPermanentDelete = useCallback(() => {
-    setShowPermanentDeleteDialog(false);
-    setPendingPermanentDeleteIds([]);
-  }, []);
-
-  useEffect(() => {
-    if (authLoading || !user) return;
-    void fetchTrashedProjects();
-  }, [fetchTrashedProjects, authLoading, user]);
-
-  return {
-    showTrash,
-    trashCount,
-    trashedProjects,
-    loadingTrash,
-    showPermanentDeleteDialog,
-    pendingPermanentDeleteIds,
-    handleToggleTrash,
-    handleTrashActionComplete,
-    handleRestoreProjects,
-    handlePermanentDeleteProjects,
-    handleConfirmPermanentDelete,
-    handleCancelPermanentDelete,
-    fetchTrashedProjects,
-  } as const;
+  return useMemo(
+    () => ({
+      showTrash: trash.showTrash,
+      trashCount: trash.trashCount,
+      trashedProjects: trash.items,
+      loadingTrash: trash.loadingTrash,
+      showPermanentDeleteDialog: trash.showPermanentDeleteDialog,
+      pendingPermanentDeleteIds: trash.pendingPermanentDeleteIds,
+      handleToggleTrash: trash.handleToggleTrash,
+      handleTrashActionComplete: trash.handleTrashActionComplete,
+      handleRestoreProjects: trash.handleRestore,
+      handlePermanentDeleteProjects: trash.handlePermanentDelete,
+      handleConfirmPermanentDelete: trash.handleConfirmPermanentDelete,
+      handleCancelPermanentDelete: trash.handleCancelPermanentDelete,
+      fetchTrashedProjects: trash.fetchTrashedItems,
+    }),
+    [trash],
+  ) as const;
 }

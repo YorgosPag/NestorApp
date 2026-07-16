@@ -23,10 +23,15 @@ import {
   getUserMaterialSetVersion,
 } from './user-material-registry';
 import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
-import type { TerrainSurfaceStyle } from '../../systems/topography/topo-types'; // ADR-650 M4 (types only)
-import { TOPO_MAJOR_COLOR, TOPO_MINOR_COLOR } from '../../systems/topography/contour-config'; // ADR-650 M10d
 // N.7.1 size split — coplanar-face depth-bias SSoT (ADR-375 offsets + ADR-366 §B.5 per-category priority).
-import { FACE_POLYGON_OFFSET_FACTOR, FACE_POLYGON_OFFSET_UNITS, withDepthPriority } from './material-depth-priority';
+import { withDepthPriority } from './material-depth-priority';
+// N.7.1 size split (ADR-665) — the sole PBR face factory, shared with `terrain-materials-3d`.
+import { buildMat } from './pbr-material-builder';
+// N.7.1 size split (ADR-665) — ADR-446 Visual Style FACES axis.
+import { withFaceMode, disposeFaceModeMaterials } from './face-mode-materials';
+// ADR-665 — terrain materials live in their own module (exclusivity is a load-bearing invariant
+// for per-material clipping). Imported ONLY for teardown; N.18 — do not re-export them from here.
+import { disposeTerrainMaterials3D } from './terrain-materials-3d';
 
 /** ADR-363 — prefix of `bim_materials` library document ids (enterprise id). */
 const USER_MATERIAL_ID_PREFIX = 'bmat_';
@@ -48,28 +53,6 @@ const CACHE = new Map<string, THREE.MeshStandardMaterial>();
 const SYSTEM_TINT_MIN_ROUGHNESS = 0.6;
 const SYSTEM_TINT_MAX_METALNESS = 0.1;
 
-function buildMat(def: PbrMaterialDef): THREE.MeshStandardMaterial {
-  return new THREE.MeshStandardMaterial({
-    color: def.color,
-    roughness: def.roughness,
-    metalness: def.metalness,
-    transparent: def.transparent ?? false,
-    opacity: def.opacity ?? 1,
-    // ADR-366 §B.5 perf — FrontSide (backface culling) on the SOLE face factory. BIM
-    // solids (walls/columns/slabs/beams/roofs/mep) are CLOSED extrusions with outward
-    // CCW winding, so the inner faces are never seen from outside; DoubleSide doubled
-    // the fragment-shader work and disabled culling → ~2× overdraw on a fill-rate-bound
-    // GPU (browser-verified «3D βαρύ»). Section-cut interiors stay solid via the stencil
-    // cap pipeline (section-stencil-renderer), and the hidden-line / occluder variants
-    // keep their explicit DoubleSide where both faces must write depth. Like Revit /
-    // Cinema4D realtime viewports (single-sided shading + caps for cuts).
-    side: THREE.FrontSide,
-    polygonOffset: true,
-    polygonOffsetFactor: FACE_POLYGON_OFFSET_FACTOR,
-    polygonOffsetUnits: FACE_POLYGON_OFFSET_UNITS,
-  });
-}
-
 /** The flat (non-textured) singleton for a resolved key — cached for app lifetime. */
 function getFlatMaterial(key: string): THREE.MeshStandardMaterial {
   let mat = CACHE.get(key);
@@ -78,79 +61,6 @@ function getFlatMaterial(key: string): THREE.MeshStandardMaterial {
     CACHE.set(key, mat);
   }
   return mat;
-}
-
-// ── ADR-446 — Visual Style FACES axis (face mode variants) ───────────────────
-// The realistic↔shaded split is already handled below (textured vs flat, gated by
-// the derived `realisticMaterials`). The THREE extra Revit face modes — consistent
-// (unlit), hidden-line (white occluder), none (faces hidden) — are applied here as
-// a post-transform on the resolved lit/flat material, so EVERY entry point inherits
-// them through `withFaceMode`. SSoT: this is the SOLE place face mode is applied.
-
-/** Faces-hidden singleton (Wireframe) — edges (mesh children) still render. */
-let INVISIBLE_FACE_MATERIAL: THREE.MeshStandardMaterial | null = null;
-function getInvisibleFaceMaterial(): THREE.MeshStandardMaterial {
-  if (!INVISIBLE_FACE_MATERIAL) {
-    INVISIBLE_FACE_MATERIAL = new THREE.MeshStandardMaterial({ visible: false });
-  }
-  return INVISIBLE_FACE_MATERIAL;
-}
-
-/**
- * Hidden-Line singleton — uniform opaque WHITE occluder (Revit «Hidden Line»). The
- * faces write depth so the back edges are hidden, but read as flat white regardless
- * of lighting (emissive white). Keeps the face-side polygonOffset so the depth-tested
- * model edges still win against their own coplanar faces.
- */
-let HIDDEN_LINE_FACE_MATERIAL: THREE.MeshStandardMaterial | null = null;
-function getHiddenLineFaceMaterial(): THREE.MeshStandardMaterial {
-  if (!HIDDEN_LINE_FACE_MATERIAL) {
-    HIDDEN_LINE_FACE_MATERIAL = new THREE.MeshStandardMaterial({
-      color: 0xffffff,
-      emissive: 0xffffff,
-      emissiveIntensity: 1,
-      roughness: 1,
-      metalness: 0,
-      side: THREE.DoubleSide,
-      polygonOffset: true,
-      polygonOffsetFactor: FACE_POLYGON_OFFSET_FACTOR,
-      polygonOffsetUnits: FACE_POLYGON_OFFSET_UNITS,
-    });
-  }
-  return HIDDEN_LINE_FACE_MATERIAL;
-}
-
-/**
- * Consistent-Colors variant (Revit «Consistent Colors») — the SAME base colour
- * rendered UNLIT (emissive=base colour, base colour→black) so it reads uniformly
- * regardless of orientation/lighting. Cached per source-material uuid.
- */
-const CONSISTENT_CACHE = new Map<string, THREE.MeshStandardMaterial>();
-function getConsistentVariant(base: THREE.MeshStandardMaterial): THREE.MeshStandardMaterial {
-  let mat = CONSISTENT_CACHE.get(base.uuid);
-  if (!mat) {
-    mat = base.clone();
-    mat.emissive = base.color.clone();
-    mat.emissiveIntensity = 1;
-    mat.color.set(0x000000);
-    mat.needsUpdate = true;
-    CONSISTENT_CACHE.set(base.uuid, mat);
-  }
-  return mat;
-}
-
-/**
- * ADR-446 — apply the current Visual Style FACES axis to a resolved face material.
- * `realistic`/`shaded` pass through (the textured-vs-flat split already happened via
- * the derived `realisticMaterials` read). Idempotent for the singleton modes.
- */
-function withFaceMode(base: THREE.MeshStandardMaterial): THREE.MeshStandardMaterial {
-  switch (useBimRenderSettingsStore.getState().faceMode) {
-    case 'none': return getInvisibleFaceMaterial();
-    case 'hidden-line': return getHiddenLineFaceMaterial();
-    case 'consistent': return getConsistentVariant(base);
-    default: return base; // 'realistic' | 'shaded'
-  }
 }
 
 /** Attach a loaded PBR texture set onto a flat material def → textured material. */
@@ -324,102 +234,6 @@ export function getElementMaterial3D(
   return withFaceMode(withDepthPriority(resolveTexturedMaterial(key), key));
 }
 
-/** ADR-650 M10c — unlit analysis-style terrain materials (hypsometric / cut-fill), cached per style. */
-const TERRAIN_ANALYSIS_CACHE = new Map<string, THREE.MeshBasicMaterial>();
-
-/**
- * ADR-650 M10d — apply a 0..1 transparency to a terrain-exclusive material IN PLACE (Civil 3D
- * «Surface Style transparency»). A transparent surface also stops writing depth so the BIM / ground
- * behind it shows through (standard see-through compositing). Mutating in place is safe: these
- * materials belong to the single terrain / contour layer and are never shared with a BIM entity.
- */
-function applyTerrainOpacity(mat: THREE.Material, opacity: number): void {
-  const transparent = opacity < 1;
-  if (mat.opacity === opacity && mat.transparent === transparent) return;
-  mat.opacity = opacity;
-  mat.transparent = transparent;
-  mat.depthWrite = !transparent;
-  mat.needsUpdate = true;
-}
-
-/**
- * ADR-650 M4/M10c — topographic terrain surface material.
- *
- * DoubleSide for every style: every other BIM solid is a CLOSED extrusion whose inner faces are
- * unreachable, but a TIN is an OPEN surface. A camera that drops below the hill (or inside a cut)
- * would look straight through a back-face-culled terrain and see the void — so it renders
- * `DoubleSide`, exactly as Civil 3D 3D-faces and a Revit Toposolid do. The cost is bounded: one
- * surface, not the whole model, so the ADR-366 §B.5 overdraw argument does not apply.
- *
- * `shaded` (earth) is LIT: there the lighting IS the read — hillshade gives the surface its 3D
- * form — so it belongs in the PBR pipeline like every other solid, and honours the Visual Style
- * FACES axis via `withFaceMode`.
- *
- * The ANALYSIS styles (`hypsometric` elevation banding, `cutfill`, ADR-650 M6) are UNLIT
- * (`MeshBasicMaterial` + per-vertex colours). Civil 3D / Revit render an analysis style as a DATA
- * visualisation, never a lit surface: the banding colours must read TRUE regardless of scene
- * lighting or shadow. Crucially this is also the M10c FIX — a lit `MeshStandardMaterial` (white
- * base + vertex colours + `receiveShadow`) rendered fully BLACK, hence invisible, whenever the
- * survey surface fell outside the directional light's shadow/light frustum (it floats at the real
- * survey elevation, far above the building). An unlit material cannot be darkened into oblivion.
- * Cached per style; the `shaded` PBR singleton is never mutated into a vertex-colour material.
- */
-export function getTerrainMaterial3D(style: TerrainSurfaceStyle, opacity = 1): THREE.Material {
-  if (style !== 'shaded') {
-    let analysis = TERRAIN_ANALYSIS_CACHE.get(style);
-    if (!analysis) {
-      // No polygonOffset: an isolated survey surface has no coplanar geometry to z-fight, and a
-      // positive offset at the surface's floating far-distance depth slope pushed it out of the
-      // depth range → invisible (M10c regression). Kept identical to the verified live-fix config.
-      analysis = new THREE.MeshBasicMaterial({
-        vertexColors: true, // the per-vertex banding / cut-fill colours the converter baked in
-        side: THREE.DoubleSide,
-      });
-      TERRAIN_ANALYSIS_CACHE.set(style, analysis);
-    }
-    applyTerrainOpacity(analysis, opacity); // ADR-650 M10d — per-style surface transparency
-    return analysis;
-  }
-
-  const cacheKey = `elem-terrain:${style}`;
-  let mat = CACHE.get(cacheKey);
-  if (!mat) {
-    mat = buildMat(MATERIAL_DEFS['elem-terrain']!);
-    mat.side = THREE.DoubleSide;
-    CACHE.set(cacheKey, mat);
-  }
-  // ADR-650 M10d — applied to the terrain-exclusive base before `withFaceMode`; the shaded/realistic
-  // default returns that base, so the transparency shows (the none/hidden-line BIM face modes swap in
-  // SHARED singletons and deliberately do not carry terrain opacity — a data surface, not a solid).
-  applyTerrainOpacity(mat, opacity);
-  return withFaceMode(mat);
-}
-
-/** ADR-650 M10d — unlit contour-line materials (major / minor), cached per class. */
-const TERRAIN_CONTOUR_CACHE = new Map<string, THREE.LineBasicMaterial>();
-
-/**
- * ADR-650 M10d — the 3D topographic CONTOUR line material (major index vs minor intermediate).
- *
- * Unlit `LineBasicMaterial` in the AutoCAD/Civil 3D brown family (the SAME palette the 2D plan
- * contours use, `contour-config`), so the hill you orbit and the lines in plan read as one product.
- * Lit shading is meaningless for a 1-px line and would let the survey surface's floating far-depth
- * darken them into oblivion (the same trap that made the analysis mesh vanish, M10c). Cached per
- * class for the app lifetime — the geometry is rebuilt on every survey edit, the material is not.
- */
-export function getTopoContourMaterial3D(isMajor: boolean, opacity = 1): THREE.LineBasicMaterial {
-  const key = isMajor ? 'major' : 'minor';
-  let mat = TERRAIN_CONTOUR_CACHE.get(key);
-  if (!mat) {
-    mat = new THREE.LineBasicMaterial({
-      color: new THREE.Color(isMajor ? TOPO_MAJOR_COLOR : TOPO_MINOR_COLOR).getHex(),
-    });
-    TERRAIN_CONTOUR_CACHE.set(key, mat);
-  }
-  applyTerrainOpacity(mat, opacity); // ADR-650 M10d — contour-line transparency
-  return mat;
-}
-
 /**
  * ADR-408 Φ5 — colour-by-system material: the System's colour applied as a FLAT
  * schematic surface (Revit "Color by system"). The base PBR's transparency is kept
@@ -485,15 +299,8 @@ export function disposeMaterialCatalog3D(): void {
   for (const mat of RELIEF_CACHE.values()) mat.dispose();
   RELIEF_CACHE.clear();
   // ADR-446 — Visual Style FACES variants (consistent clones + mode singletons).
-  for (const mat of CONSISTENT_CACHE.values()) mat.dispose();
-  CONSISTENT_CACHE.clear();
-  // ADR-650 M10c/M10d — terrain analysis (hypsometric/cutfill) + contour-line singletons.
-  for (const mat of TERRAIN_ANALYSIS_CACHE.values()) mat.dispose();
-  TERRAIN_ANALYSIS_CACHE.clear();
-  for (const mat of TERRAIN_CONTOUR_CACHE.values()) mat.dispose();
-  TERRAIN_CONTOUR_CACHE.clear();
-  INVISIBLE_FACE_MATERIAL?.dispose();
-  INVISIBLE_FACE_MATERIAL = null;
-  HIDDEN_LINE_FACE_MATERIAL?.dispose();
-  HIDDEN_LINE_FACE_MATERIAL = null;
+  disposeFaceModeMaterials();
+  // ADR-650 M10c/M10d + ADR-665 — terrain-exclusive materials (shaded base, analysis styles,
+  // contour lines, terrain face-mode variants).
+  disposeTerrainMaterials3D();
 }

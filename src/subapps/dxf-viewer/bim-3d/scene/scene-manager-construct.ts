@@ -129,14 +129,20 @@ export function buildSceneManagerParts(deps: SceneManagerConstructDeps): SceneMa
   // soft horizon fade (cell step + fade radii scale with the camera distance).
   const gridFloor = new Cinema4DGridFloor(scene, () => viewport.camera, () => viewport.target);
 
+  // ADR-665 — τα topo layers ξαναφτιάχνουν τα materials τους σε κάθε rebuild (ένα φρέσκο material
+  // ξεκινά με `clippingPlanes = null`), οπότε ο ΜΟΝΑΔΙΚΟΣ ιδιοκτήτης των planes πρέπει να τα
+  // ξανα-βεβαιώσει αμέσως μετά. Seeded no-op: τα layers κατασκευάζονται — και καλούν rebuild() —
+  // ΠΡΙΝ υπάρξει ο controller, οπότε σκέτο `() => sectionController.applyState()` θα έριχνε TDZ.
+  let reapplyTopoClip: (root: THREE.Object3D) => void = () => {};
+
   // ADR-650 M4 — topographic surface. Subscribes to the survey + display stores itself and
   // rebuilds its mesh from the ONE derived TIN (the same one the 2D contours are cut from).
-  const terrainLayer = new TerrainSceneLayer(scene, markDirty);
+  const terrainLayer = new TerrainSceneLayer(scene, markDirty, (root) => reapplyTopoClip(root));
 
   // ADR-650 M10d — οι ισοϋψείς της ΙΔΙΑΣ επιφάνειας ως draped γραμμές στο πραγματικό υψόμετρο (μία
   // φορά, όχι ανά όροφο). Ξεχωριστό layer από το mesh: εμφανίζεται/κρύβεται μαζί με το έδαφος, αλλά
   // είναι γραμμές (Revit Toposurface contours), ανεξάρτητο από το floor scope.
-  const terrainContourLayer = new TerrainContourLayer(scene, markDirty);
+  const terrainContourLayer = new TerrainContourLayer(scene, markDirty, (root) => reapplyTopoClip(root));
 
   // ADR-650 M8β/Β — το νέφος σημείων του τελευταίου import. Ξεχωριστό layer από το έδαφος: το
   // έδαφος είναι η ΜΕΤΡΗΜΕΝΗ επιφάνεια, το νέφος είναι display-only τεκμήριο (§6) — μπαίνουν και
@@ -178,6 +184,9 @@ export function buildSceneManagerParts(deps: SceneManagerConstructDeps): SceneMa
     getBimGroup: () => bimLayer.group, getDxfBounds: () => dxfConverter.getBounds(),
     invalidatePathTracer: () => pathTracerRenderer.invalidateScene(), markDirty, // ADR-452 cut-plane drag → repaint
   });
+  // ADR-665 — arm the seeded holder now that the clip owner exists. From here on, every topo layer
+  // rebuild re-asserts the current planes on its own subtree (see the declaration above).
+  reapplyTopoClip = (root) => sectionController.reapplyClipPlanesUnder(root);
   // ADR-366 §C.1.b — waypoint drag-handle sprites. Auto-subscribes σε AnimationStore.
   const waypointDragHandleRenderer = new WaypointDragHandleRenderer(scene);
   // ADR-516 Phase 2 — frozen DXF backdrop. Gated OFF while section-cut / path-trace own the frame.

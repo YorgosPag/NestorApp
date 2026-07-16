@@ -1,131 +1,50 @@
 'use client';
 
 /**
- * 🗑️ useParkingTrashState
- *
- * Manages the trash view for the parking page.
- * Follows the same pattern as useBuildingsTrashState (ADR-281).
+ * 🗑️ useParkingTrashState — parking binding for the trash engine.
  *
  * @module hooks/useParkingTrashState
- * @enterprise ADR-281 — SSOT Soft-Delete System
+ * @enterprise ADR-281 — SSOT Soft-Delete System · ADR-584 — Anti-Duplication
  */
 
-import { useState, useCallback, useEffect } from 'react';
-import { apiClient } from '@/lib/api/enterprise-api-client';
+import { useMemo } from 'react';
 import { API_ROUTES } from '@/config/domain-constants';
-import { TrashService } from '@/services/trash.service';
-import { createModuleLogger } from '@/lib/telemetry';
-import { useAuth } from '@/auth/hooks/useAuth';
+import { useEntityTrashState, type EntityTrashSpec } from '@/hooks/trash/useEntityTrashState';
 import type { ParkingSpot } from '@/types/parking';
-
-const logger = createModuleLogger('useParkingTrashState');
 
 interface UseParkingTrashStateParams {
   forceDataRefresh: () => void;
-  onBeforeToggle?: () => void;
+  clearSelection?: () => void;
 }
 
-interface TrashApiResponse {
-  success: boolean;
-  parkingSpots: ParkingSpot[];
-  count: number;
-}
+const PARKING_TRASH_SPEC: EntityTrashSpec<ParkingSpot> = {
+  entityKind: 'parking',
+  trashRoute: API_ROUTES.PARKING.TRASH,
+  selectItems: response => response.parkingSpots as ParkingSpot[] | undefined,
+};
 
 export function useParkingTrashState({
   forceDataRefresh,
-  onBeforeToggle,
+  clearSelection,
 }: UseParkingTrashStateParams) {
-  const { user, loading: authLoading } = useAuth();
-  const [showTrash, setShowTrash] = useState(false);
-  const [trashedParkingSpots, setTrashedParkingSpots] = useState<ParkingSpot[]>([]);
-  const [loadingTrash, setLoadingTrash] = useState(false);
-  const [showPermanentDeleteDialog, setShowPermanentDeleteDialog] = useState(false);
-  const [pendingPermanentDeleteIds, setPendingPermanentDeleteIds] = useState<string[]>([]);
+  const trash = useEntityTrashState(PARKING_TRASH_SPEC, { forceDataRefresh, clearSelection });
 
-  const trashCount = trashedParkingSpots.length;
-
-  const fetchTrashedParkingSpots = useCallback(async () => {
-    setLoadingTrash(true);
-    try {
-      const response = await apiClient.get<TrashApiResponse>(API_ROUTES.PARKING.TRASH);
-      setTrashedParkingSpots(response.parkingSpots ?? []);
-    } catch (error) {
-      logger.error('Failed to fetch deleted parking spots', { error });
-      setTrashedParkingSpots([]);
-    } finally {
-      setLoadingTrash(false);
-    }
-  }, []);
-
-  const handleToggleTrash = useCallback(async () => {
-    onBeforeToggle?.();
-    const next = !showTrash;
-    setShowTrash(next);
-    if (next) {
-      await fetchTrashedParkingSpots();
-    }
-  }, [showTrash, fetchTrashedParkingSpots, onBeforeToggle]);
-
-  const handleTrashActionComplete = useCallback(() => {
-    forceDataRefresh();
-    void fetchTrashedParkingSpots();
-  }, [forceDataRefresh, fetchTrashedParkingSpots]);
-
-  const handleRestoreParkingSpots = useCallback(async (ids: string[]) => {
-    if (ids.length === 0) return;
-    logger.info('Restoring parking spots from trash', { ids });
-    try {
-      await TrashService.bulkRestore('parking', ids);
-      handleTrashActionComplete();
-    } catch (error) {
-      logger.error('Failed to restore parking spots', { ids, error });
-    }
-  }, [handleTrashActionComplete]);
-
-  const handlePermanentDeleteParkingSpots = useCallback((ids: string[]) => {
-    if (ids.length === 0) return;
-    setPendingPermanentDeleteIds(ids);
-    setShowPermanentDeleteDialog(true);
-  }, []);
-
-  const handleConfirmPermanentDelete = useCallback(async () => {
-    if (pendingPermanentDeleteIds.length === 0) return;
-    logger.info('Permanently deleting parking spots', { ids: pendingPermanentDeleteIds });
-    try {
-      await TrashService.bulkPermanentDelete('parking', pendingPermanentDeleteIds);
-      setShowPermanentDeleteDialog(false);
-      setPendingPermanentDeleteIds([]);
-      handleTrashActionComplete();
-    } catch (error) {
-      logger.error('Failed to permanently delete parking spots', { ids: pendingPermanentDeleteIds, error });
-      setShowPermanentDeleteDialog(false);
-      setPendingPermanentDeleteIds([]);
-    }
-  }, [pendingPermanentDeleteIds, handleTrashActionComplete]);
-
-  const handleCancelPermanentDelete = useCallback(() => {
-    setShowPermanentDeleteDialog(false);
-    setPendingPermanentDeleteIds([]);
-  }, []);
-
-  useEffect(() => {
-    if (authLoading || !user) return;
-    void fetchTrashedParkingSpots();
-  }, [fetchTrashedParkingSpots, authLoading, user]);
-
-  return {
-    showTrash,
-    trashCount,
-    trashedParkingSpots,
-    loadingTrash,
-    showPermanentDeleteDialog,
-    pendingPermanentDeleteIds,
-    handleToggleTrash,
-    handleTrashActionComplete,
-    handleRestoreParkingSpots,
-    handlePermanentDeleteParkingSpots,
-    handleConfirmPermanentDelete,
-    handleCancelPermanentDelete,
-    fetchTrashedParkingSpots,
-  } as const;
+  return useMemo(
+    () => ({
+      showTrash: trash.showTrash,
+      trashCount: trash.trashCount,
+      trashedParkingSpots: trash.items,
+      loadingTrash: trash.loadingTrash,
+      showPermanentDeleteDialog: trash.showPermanentDeleteDialog,
+      pendingPermanentDeleteIds: trash.pendingPermanentDeleteIds,
+      handleToggleTrash: trash.handleToggleTrash,
+      handleTrashActionComplete: trash.handleTrashActionComplete,
+      handleRestoreParkingSpots: trash.handleRestore,
+      handlePermanentDeleteParkingSpots: trash.handlePermanentDelete,
+      handleConfirmPermanentDelete: trash.handleConfirmPermanentDelete,
+      handleCancelPermanentDelete: trash.handleCancelPermanentDelete,
+      fetchTrashedParkingSpots: trash.fetchTrashedItems,
+    }),
+    [trash],
+  ) as const;
 }

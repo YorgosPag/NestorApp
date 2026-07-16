@@ -1059,7 +1059,8 @@
       "hide": "Hide terrain",
       "hypsometric": "Elevation colouring",
       "surfaceOpacity": "Surface opacity",
-      "contourOpacity": "Contour opacity"
+      "contourOpacity": "Contour opacity",
+      "autoClip": "Cut at active level"
     },
     "cloud3d": {
       "title": "Point cloud in 3D",

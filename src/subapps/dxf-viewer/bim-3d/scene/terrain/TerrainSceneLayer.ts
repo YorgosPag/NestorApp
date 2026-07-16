@@ -15,7 +15,9 @@
  *
  * Owner pattern: `ThreeJsSceneManager` constructs it once and calls `dispose()` on teardown
  * (same as `BimSceneLayer` / `Cinema4DGridFloor`). Reacts imperatively to the survey store and
- * the display store — zero React state (ADR-040).
+ * the display store — zero React state (ADR-040). The seating, subscriptions, rebuild/clip-
+ * re-assertion and teardown all live in {@link TopoSceneLayer}, shared with `TerrainContourLayer`;
+ * this class owns only the TIN → mesh derivation.
  *
  * @module bim-3d/scene/terrain/TerrainSceneLayer
  */
@@ -29,12 +31,12 @@ import {
   getGeoReference,
 } from '../../../systems/geo-referencing/geo-reference-store';
 import { getActiveVerticalDatumMm } from '../../../systems/topography/vertical-datum';
-import { seatTopoLayerRoot, subscribeTopoLayer } from './topo-scene-layer-support';
+import { TopoSceneLayer } from './topo-scene-layer-support';
 import type { TinSurface, TerrainSurfaceStyle } from '../../../systems/topography/topo-types';
 import type { GeoReference } from '../../../systems/geo-referencing/geo-transform';
 import type { ElevationReference } from '../../../systems/topography/cut-fill';
 import { tinToBufferGeometry } from '../../converters/tin-to-three';
-import { getTerrainMaterial3D } from '../../materials/MaterialCatalog3D';
+import { getTerrainMaterial3D } from '../../materials/terrain-materials-3d';
 import { disposeObjectTree } from '../dispose-object-tree';
 
 /** ADR-650 M10d — geometry inputs that force a re-triangulation (opacity is NOT one of them). */
@@ -46,24 +48,18 @@ interface TerrainGeoInputs {
   readonly geoRef: GeoReference | null;
 }
 
-export class TerrainSceneLayer {
-  private readonly root = new THREE.Group();
-  private readonly unsubscribes: readonly (() => void)[];
+export class TerrainSceneLayer extends TopoSceneLayer<TerrainGeoInputs> {
   private mesh: THREE.Mesh | null = null;
-  /** ADR-650 M10d — inputs the current mesh was built from; lets an opacity-only change skip rebuild. */
-  private lastInputs: TerrainGeoInputs | null = null;
-  private disposed = false;
 
   constructor(
     scene: THREE.Object3D,
-    private readonly markDirty: () => void,
+    markDirty: () => void,
+    onRebuilt: (root: THREE.Object3D) => void = () => {},
   ) {
-    // ADR-650 M10d — seat a hair below z=0 (ground-floor plan/images at z=0 win from above) + attach.
-    seatTopoLayerRoot(this.root, scene, 'topo-terrain');
-    // Shared topo-layer subscriptions (survey → rebuild, 3D visibility, geo-ref «κούμπωμα») + the
-    // cut-fill reference level: ADR-650 M6 — moving the design level must re-colour the hill (cutfill).
-    this.unsubscribes = subscribeTopoLayer(() => this.rebuild(), [subscribeCutFill]);
-    this.rebuild();
+    // Seats a hair below z=0 (ADR-650 M10d) + wires the shared subscriptions, plus the cut-fill
+    // reference level: ADR-650 M6 — moving the design level must re-colour the hill (cutfill).
+    super(scene, 'topo-terrain', markDirty, onRebuilt, [subscribeCutFill]);
+    this.start();
   }
 
   /**
@@ -71,20 +67,10 @@ export class TerrainSceneLayer {
    *
    * Rebuild-all (like `BimSceneLayer.sync`), not incremental: the CDT re-triangulates globally
    * when a single point moves, so there is no stable per-triangle identity to diff against.
-   * Cheap when hidden — the early return means an invisible terrain costs nothing on every
-   * survey edit, and `getTopoSurface()` is memoised so re-styling never re-triangulates.
+   * `getTopoSurface()` is memoised, so re-styling never re-triangulates.
    */
-  private rebuild(): void {
-    if (this.disposed) return;
-
+  protected rebuildGeometry(): void {
     const state = getTerrain3DState();
-    if (!state.visible) {
-      this.clearMesh();
-      this.lastInputs = null;
-      this.markDirty();
-      return;
-    }
-
     const { style } = state;
     const opacity = state.surfaceOpacity[style] ?? 1;
     // The reference is resolved ONCE, here, from the same SSoT the volume table reads — so the
@@ -105,7 +91,7 @@ export class TerrainSceneLayer {
       return;
     }
 
-    this.clearMesh();
+    this.clearContent();
     // Seat the ΕΓΣΑ world surface under the building via the active geo-reference (M10b), and drop it
     // vertically onto the building via the project datum (M10c). Both resolved here, in the impure
     // layer, and passed into the pure converter — same pattern as `reference`.
@@ -134,26 +120,11 @@ export class TerrainSceneLayer {
     this.markDirty();
   }
 
-  /** True when every geometry input is identity-equal to the last build (opacity is NOT compared). */
-  private sameInputs(next: TerrainGeoInputs): boolean {
-    const p = this.lastInputs;
-    return !!p && p.surface === next.surface && p.style === next.style
-      && p.datumMm === next.datumMm && p.reference === next.reference && p.geoRef === next.geoRef;
-  }
-
   /** Remove + free the current mesh. Geometry only — the material is a catalog singleton. */
-  private clearMesh(): void {
+  protected clearContent(): void {
     if (!this.mesh) return;
     this.root.remove(this.mesh);
     disposeObjectTree(this.mesh);
     this.mesh = null;
-  }
-
-  dispose(): void {
-    if (this.disposed) return;
-    this.disposed = true;
-    for (const unsubscribe of this.unsubscribes) unsubscribe();
-    this.clearMesh();
-    this.root.removeFromParent();
   }
 }

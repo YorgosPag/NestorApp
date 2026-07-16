@@ -164,7 +164,10 @@ export function ProjectsPageContent() {
     handleConfirmPermanentDelete,
     handleCancelPermanentDelete,
     fetchTrashedProjects,
-  } = useProjectsTrashState({ forceDataRefresh: refetchProjects, setSelectedProject });
+  } = useProjectsTrashState({
+    forceDataRefresh: refetchProjects,
+    clearSelection: () => setSelectedProject(null),
+  });
 
   const handleDeleteProject = React.useCallback(async (project: Project) => {
     const allowed = await checkBeforeDelete(project.id);

@@ -17,21 +17,26 @@
 import * as THREE from 'three';
 import { useSectionStore, type SectionBoxBounds } from '../stores/SectionStore';
 import { SectionBox } from '../systems/section/SectionBox';
-import { applyClippingPlanes, clearClippingPlanes } from '../systems/section/section-clip-applicator';
-import { SectionStencilRenderer, type SectionCapQuality } from '../systems/section/section-stencil-renderer';
+import { applyClippingPlanes, clearClippingPlanes, type ScopeClipPlanes } from '../systems/section/section-clip-applicator';
+import { SectionStencilRenderer } from '../systems/section/section-stencil-renderer';
 import { useCropRegionStore } from '../render/crop-region/CropRegionStore';
 import { buildCropPlanes } from '../render/crop-region/crop-frustum-builder';
 // ADR-452/455 — axis cut planes (horizontal Z View Range + vertical X/Y sections)
 // as extra clip sources, composed here so this controller stays the SINGLE owner of
 // the scene's clipping planes.
-import { resolveAllAxisCuts, type ResolvedAxisCut } from './cut-plane-3d';
-import { composeCutEntries, axisCutCompositionKey, detectCutMoving, composeClipPlanes, MAX_CLIP_PLANES, type AxisCutEntry } from './axis-cut-composer';
+import { resolveAllAxisCuts } from './cut-plane-3d';
+// ADR-665 — the terrain's own level cut: a third clip source that applies ONLY to the topo scope.
+import { resolveTerrainCut } from './terrain/terrain-clip-plane';
+import { subscribeTerrain3D } from '../../systems/topography/terrain-3d-store';
+import { useViewMode3DStore } from '../stores/ViewMode3DStore';
+import { clipCompositionKey } from './section-clip-composition';
+import { SectionCapQualityTracker } from './section-cap-quality';
+import { composeCutEntries, composeClipPlanes, MAX_CLIP_PLANES, type AxisCutEntry } from './axis-cut-composer';
 import { applyEdgeCutTrim, restoreEdgeCut } from './edge-cut-applicator';
 import { unionSceneBounds } from './section-scene-bounds';
 import { renderPostFxOverlays } from './post-fx-overlay-pass';
 import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
 import { useActiveStoreyStore } from '../../systems/levels/active-storey-store';
-import { isPointerActive } from '../systems/pointer-activity';
 import { createSectionBoxDragHandlers } from './section-box-drag-handlers';
 import { DXF_TIMING } from '../../config/dxf-timing';
 
@@ -62,6 +67,19 @@ export class SectionSceneController {
   private combinedPlanes: THREE.Plane[] = [];
   /** ADR-452/455 — active axis cut planes (Z horizontal + X/Y vertical), 0–3. Each capped via the single-plane path. */
   private axisCuts: AxisCutEntry[] = [];
+  /**
+   * ADR-665 — the terrain's level cut (0 or 1 entry). Modelled as an `AxisCutEntry` so the fast
+   * path can mutate `plane.constant` in place when the ACTIVE LEVEL changes — the composition is
+   * unchanged, only the elevation moved, so switching floors never triggers a per-mesh
+   * `needsUpdate` storm.
+   */
+  private terrainCuts: AxisCutEntry[] = [];
+  /**
+   * ADR-665 — the plane set for the `'topo'` scope: the terrain's level cut FIRST, then the
+   * building's own planes (so an active section box / axis cut still trims the hill too). Kept
+   * out of {@link combinedPlanes} so the BUILDING is never cut by the terrain's plane.
+   */
+  private terrainPlanes: THREE.Plane[] = [];
   /** ADR-452 — section box / crop planes only (excludes the cut planes). Drives the box stencil-cap loop. */
   private sectionPlanes: THREE.Plane[] = [];
   /** ADR-452 — true when any clip source (section box OR cut plane) is active. */
@@ -75,12 +93,10 @@ export class SectionSceneController {
    * settles (the on-demand scheduler keeps that frame on screen). Mirrors the
    * SSAO "refine-on-idle" pattern already used for the composer path.
    */
-  private lastRenderedCutConstants: number[] = [];
   private refineTimer: ReturnType<typeof setTimeout> | null = null;
   private static readonly REFINE_DELAY_MS = DXF_TIMING.ui.SECTION_REFINE; // ADR-516
-  // ADR-452 — a cursor sweep within this window counts as motion → cheap grey caps. MUST stay
-  // below REFINE_DELAY_MS so the refine frame (fired after the cursor stops) reads as settled.
-  private static readonly POINTER_SETTLE_MS = DXF_TIMING.gesture.POINTER_SETTLE; // ADR-516
+  /** ADR-452 — per-frame motion signals → cap quality tier (N.7.1 split, ADR-665). */
+  private readonly capQuality = new SectionCapQualityTracker();
   /**
    * ADR-452 v2.12 — throttle for the GPU-heavy EXACT edge trim WHILE the slider is
    * actively dragging (`cutMoving`). On a dense floor, re-uploading every crossing edge
@@ -93,16 +109,6 @@ export class SectionSceneController {
    */
   private lastEdgeTrimMs = 0;
   private static readonly EDGE_TRIM_THROTTLE_MS = DXF_TIMING.frame.EDGE_TRIM; // ADR-516
-  /**
-   * ADR-452 v2.7 — last rendered camera pose, to treat ANY camera navigation as a
-   * draft frame. `isInteracting` only flips for orbit/pan/tumble (OrbitControls
-   * `start`/`end`); **wheel-zoom and animated moves call `onRenderNeeded` WITHOUT it**,
-   * so they would otherwise hit the expensive full-quality cap path every frame. NaN
-   * seed → the first frame always counts as moved.
-   */
-  private readonly lastCamPos = new THREE.Vector3(NaN, NaN, NaN);
-  private readonly lastCamQuat = new THREE.Quaternion(NaN, NaN, NaN, NaN);
-  private lastCamZoom = NaN;
   /**
    * ADR-452 v2.11 — clip-plane COMPOSITION key (which sources are active + their
    * geometry, EXCLUDING the cut elevation). An identical key across two applyState
@@ -163,7 +169,11 @@ export class SectionSceneController {
     // sources; they stay active even when the Section Box is off.
     const resolved = resolveAllAxisCuts();
     const cutActive = resolved.length > 0;
-    this.clipActive = enabled || cutActive;
+    // ADR-665 — the terrain's level cut is an independent clip source: it stays active even when
+    // the Section Box and every axis cut are off (that is the whole point — the hill is cut at the
+    // active storey without the user enabling anything).
+    const terrainResolved = resolveTerrainCut();
+    this.clipActive = enabled || cutActive || terrainResolved !== null;
 
     if (!this.clipActive) {
       clearClippingPlanes(this.deps.scene);
@@ -174,6 +184,8 @@ export class SectionSceneController {
       this.combinedPlanes = [];
       this.sectionPlanes = [];
       this.axisCuts = [];
+      this.terrainCuts = [];
+      this.terrainPlanes = [];
       this.lastClipCompositionKey = null;
       this.deps.invalidatePathTracer();
       this.deps.markDirty();
@@ -187,14 +199,24 @@ export class SectionSceneController {
     // `plane.constant` as a uniform every frame, so mutating each persistent cut-plane
     // object — the SAME instances the materials already reference — in place is enough.
     // (resolved order is stable z→x→y, matching this.axisCuts, so index i aligns.)
-    const compositionKey = this.clipCompositionKey(resolved);
+    //
+    // ADR-665 — the TERRAIN cut rides this same path, and that is what makes changing floor free:
+    // switching level moves only `terrainCuts[0].plane.constant` while the composition key is
+    // identical, so the whole re-apply is skipped. The guard therefore has to account for both
+    // lists — an empty `axisCuts` with a live `terrainCuts` is the common case (terrain-only cut).
+    const compositionKey = clipCompositionKey(resolved, terrainResolved);
+    const terrainCount = terrainResolved ? 1 : 0;
     if (
-      this.axisCuts.length > 0 &&
+      this.axisCuts.length + this.terrainCuts.length > 0 &&
       this.axisCuts.length === resolved.length &&
+      this.terrainCuts.length === terrainCount &&
       compositionKey === this.lastClipCompositionKey
     ) {
       for (let i = 0; i < this.axisCuts.length; i++) {
         this.axisCuts[i].plane.constant = resolved[i].sign * resolved[i].worldCoordM;
+      }
+      if (terrainResolved && this.terrainCuts.length === 1) {
+        this.terrainCuts[0].plane.constant = terrainResolved.sign * terrainResolved.worldCoordM;
       }
       this.deps.invalidatePathTracer();
       this.deps.markDirty();
@@ -248,7 +270,19 @@ export class SectionSceneController {
     // single-plane cut cap. A cut plane must not enter the box loop (its depth-parity
     // trick garbles a lone axis plane); it is capped separately per axis.
     this.sectionPlanes = this.combinedPlanes.slice(this.axisCuts.length);
-    applyClippingPlanes(this.deps.scene, this.combinedPlanes);
+
+    // ADR-665 — the terrain's own plane set. Reuses `composeCutEntries` so the persistent plane
+    // instance survives across level changes (fast-path precondition), and puts the terrain cut
+    // FIRST so it always survives the Three.js 6-plane hard limit — even under a full 6-plane
+    // section box. The building's cuts/box/crop follow, so an explicit section still trims the hill.
+    this.terrainCuts = composeCutEntries(terrainResolved ? [terrainResolved] : [], this.terrainCuts);
+    this.terrainPlanes = composeClipPlanes(
+      [...this.terrainCuts.map((e) => e.plane), ...cutPlanes],
+      this.cachedPlanes,
+      cropPlanes,
+    );
+
+    applyClippingPlanes(this.deps.scene, this.scopePlanes());
     // ADR-452 v2.11 — the gradual fat-line edge trim (LineMaterial can't be GPU-clipped
     // on this build) is applied in the render frame for the Z cut: a CHEAP visibility
     // cull while the slider drags, the EXACT trim once it settles.
@@ -256,31 +290,35 @@ export class SectionSceneController {
     this.deps.markDirty();
   }
 
+  /** ADR-665 — the current planes per clip scope: the building vs the terrain. */
+  private scopePlanes(): ScopeClipPlanes {
+    return { default: this.combinedPlanes, topo: this.terrainPlanes };
+  }
+
   /**
-   * ADR-452/455 v2.11 — a cheap string key of the clip-plane COMPOSITION: which sources
-   * are active and their geometry, DELIBERATELY excluding the cut POSITIONS. An identical
-   * key across slider ticks ⇒ only a cut constant moved ⇒ fast path. A flip (sign change),
-   * an axis toggle, box drag / crop / mode / enable change ⇒ new key ⇒ full re-apply.
+   * ADR-665 — re-write the CURRENT clip planes onto one subtree. Called by a topo scene layer
+   * right after it rebuilds: a freshly constructed material starts with `clippingPlanes = null`,
+   * and nothing else would ever put them back (this controller does not subscribe to
+   * `TopoPointStore`, so a survey edit is invisible to it).
+   *
+   * Keeps the ownership rule intact — the layer OWNS its geometry, this controller stays the
+   * SINGLE owner of the planes; the layer only says «I rebuilt, re-assert your state».
+   * Synchronous + subtree-scoped ⇒ no subscription-order race and no scene-wide `needsUpdate`
+   * storm. Idempotent.
    */
-  private clipCompositionKey(resolved: ResolvedAxisCut[]): string {
-    const { enabled, mode, boxBounds, planes } = useSectionStore.getState();
-    const box = enabled && mode === 'box' && boxBounds
-      ? `${boxBounds.min.join(',')}|${boxBounds.max.join(',')}`
-      : '';
-    const pl = enabled && mode !== 'box'
-      ? planes.filter((p) => p.enabled).map((p) => `${p.normal.join(',')}:${p.constant}`).join('/')
-      : '';
-    const crop = useCropRegionStore.getState();
-    const cr = crop.editState === 'committed' && crop.rectangle
-      ? (crop.depthRangeEnabled ? `${crop.nearNorm},${crop.farNorm}` : '-')
-      : '';
-    return `axes:${axisCutCompositionKey(resolved)}|e${enabled ? 1 : 0}|m${mode}|b${box}|p${pl}|r${cr}`;
+  reapplyClipPlanesUnder(root: THREE.Object3D): void {
+    if (this.disposed) return;
+    applyClippingPlanes(root, this.scopePlanes());
   }
 
   /**
    * True αν το section είναι ενεργό ΚΑΙ έχει τουλάχιστον 1 active plane.
    * Καθορίζει αν ο render loop θα κάνει direct render + stencil caps
    * (bypass composer) αντί για την κανονική SSAO pipeline.
+   *
+   * ADR-665 — reads `combinedPlanes`, which EXCLUDES `terrainPlanes` by design: a terrain-only
+   * level cut must NOT flip the whole scene onto the expensive stencil path. The terrain cut ships
+   * without a cap (the TIN is DoubleSide, so it reads as a shell, not a void) — see ADR-665 §cap.
    */
   isStencilActive(): boolean {
     if (this.disposed) return false;
@@ -307,56 +345,14 @@ export class SectionSceneController {
     if (this.disposed) return;
     const renderer = this.deps.renderer;
 
-    // ADR-452 v2.7/v2.9 — pick cap quality from three independent motion signals:
-    //  • cutMoving   — cut-plane constant changed (slider drag fires applyState→markDirty).
-    //  • camMoved    — camera pose changed since last frame: covers wheel-zoom and
-    //                  animated moves, which mark the scene dirty WITHOUT `interacting`.
-    //  • interacting — orbit/pan/tumble (the only gestures that set the flag).
-    //
-    // v2.9 three-tier ladder (Giorgio «κράτα τα χρώματα στην κίνηση»):
-    //  • cut-slider drag             → 'fast'   (grey base only — geometry changes every
-    //                                            frame, the heaviest parity case).
-    //  • camera motion (orbit/zoom)  → 'colors' (grey base + per-material colour caps,
-    //                                            no hatch/emphasis → keeps the coloured
-    //                                            section visible while navigating).
-    //  • settled                     → 'full'   (+ hatch overlays + selection emphasis).
-    // cutMoving wins over camMoved (a slider drag may nudge the camera too).
-    const cutConstants = this.axisCuts.map((e) => e.plane.constant);
-    const cutMoving = detectCutMoving(cutConstants, this.lastRenderedCutConstants);
-    this.lastRenderedCutConstants = cutConstants;
-
-    const camZoom = (camera as THREE.Camera & { zoom?: number }).zoom ?? 1;
-    const camMoved =
-      !camera.position.equals(this.lastCamPos) ||
-      !camera.quaternion.equals(this.lastCamQuat) ||
-      camZoom !== this.lastCamZoom;
-    this.lastCamPos.copy(camera.position);
-    this.lastCamQuat.copy(camera.quaternion);
-    this.lastCamZoom = camZoom;
-
-    // ADR-452 cap-quality tiering:
-    //  • cut-slider drag (cutMoving) → 'colors' — live coloured cut faces while the cut
-    //    constant changes (Giorgio 2026-06-19 «κράτα τα χρώματα στο σύρσιμο»).
-    //  • camera orbit / zoom (interacting || camMoved) → 'fast' — grey base ONLY. The
-    //    coloured poché re-renders the whole BIM scene ~2×(1+N_colours) times/frame; that
-    //    is the section-nav lag. Dropping it to grey during camera motion is the big perf
-    //    win (Giorgio 2026-06-26 «γκρι στην περιστροφή»). The coloured 'full' frame snaps
-    //    back the instant motion settles, via the on-demand refine below (armRefine).
-    //  • settled → 'full' — + hatch overlays + selection emphasis.
-    // ADR-452 (2026-06-28) — a moving cursor (hover sweep) is a motion signal too: the per-hover
-    // markSceneDirty repaints the whole frame, and an active axis-cut would otherwise run the
-    // 2×(1+N) coloured 'full' caps on EVERY hover frame (the «swim»). Treat it like camera motion →
-    // cheap grey 'fast' caps while sweeping; the existing refine-on-settle restores colour the
-    // instant the cursor stops. POINTER_SETTLE_MS < REFINE_DELAY_MS → the refine frame reads settled.
-    const pointerActive = isPointerActive(
-      typeof performance !== 'undefined' ? performance.now() : 0,
-      SectionSceneController.POINTER_SETTLE_MS,
+    // ADR-452 v2.7/v2.9 — cap quality from the frame's motion signals (cut drag / camera / cursor).
+    // ADR-665 — the terrain cut is deliberately NOT a motion input here: it has no cap to refine,
+    // and a level switch must not downgrade the building's caps to grey.
+    const { quality, cutMoving } = this.capQuality.pick(
+      camera,
+      this.axisCuts.map((e) => e.plane.constant),
+      interacting,
     );
-    const quality: SectionCapQuality = cutMoving
-      ? 'colors'
-      : (interacting || camMoved || pointerActive)
-        ? 'fast'
-        : 'full';
 
     // ADR-452 v2.12 — fat-line edge overlays follow the cut HERE, applying the EXACT
     // gradual trim on EVERY frame the cut is live (drag AND settled). The per-overlay
@@ -462,7 +458,14 @@ export class SectionSceneController {
     // is idempotent, so the extra calls are cheap and user-frequency.
     const u5 = useBimRenderSettingsStore.subscribe(cb);
     const u6 = useActiveStoreyStore.subscribe(cb);
-    return () => { u1(); u2(); u3(); u4(); u5(); u6(); };
+    // ADR-665 — the terrain's level cut has two more inputs:
+    //  • floor3DScope — «Όλοι οι όροφοι» suppresses the cut entirely (no single active level).
+    //  • terrain-3d-store — `visible` + `autoClipAtActiveLevel`. This one is a VANILLA
+    //    `createExternalStore`, NOT zustand, so it has its own `subscribe`; without this line the
+    //    toggle would silently do nothing (nobody else was listening to it).
+    const u7 = useViewMode3DStore.subscribe(cb);
+    const u8 = subscribeTerrain3D(cb);
+    return () => { u1(); u2(); u3(); u4(); u5(); u6(); u7(); u8(); };
   }
 
   dispose(): void {

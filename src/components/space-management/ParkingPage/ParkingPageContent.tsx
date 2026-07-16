@@ -122,7 +122,7 @@ export function ParkingPageContent() {
     handleCancelPermanentDelete,
   } = useParkingTrashState({
     forceDataRefresh: refetch,
-    onBeforeToggle: () => setSelectedParking(null),
+    clearSelection: () => setSelectedParking(null),
   });
 
   // Search state (for header search)
