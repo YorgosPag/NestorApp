@@ -16,9 +16,13 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withHeavyRateLimit } from '@/lib/middleware/with-rate-limit';
 import { AI_ANALYSIS_DEFAULTS } from '@/config/ai-analysis-config';
-import { isRecord } from '@/lib/type-guards';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import {
+  executeResponsesRequest,
+  extractOutputText,
+  ResponsesApiError,
+} from '@/services/ai/openai-responses';
 import { TEXT_AI_SYSTEM_PROMPT } from '@/subapps/dxf-viewer/text-engine/ai/system-prompt';
 import { TEXT_AI_INTENT_SCHEMA } from '@/subapps/dxf-viewer/text-engine/ai/intent-schema';
 import type { TextAIIntentFlat } from '@/subapps/dxf-viewer/text-engine/ai/text-ai-types';
@@ -37,80 +41,46 @@ interface CommandResponse {
   readonly error?: string;
 }
 
-function extractOutputText(payload: unknown): string | null {
-  if (!isRecord(payload)) return null;
-  if (typeof payload.output_text === 'string' && payload.output_text.trim()) {
-    return payload.output_text.trim();
-  }
-  const output = payload.output;
-  if (!Array.isArray(output)) return null;
-  for (const item of output) {
-    if (!isRecord(item) || item.type !== 'message') continue;
-    const content = item.content;
-    if (!Array.isArray(content)) continue;
-    for (const entry of content) {
-      if (!isRecord(entry) || entry.type !== 'output_text') continue;
-      if (typeof entry.text === 'string' && entry.text.trim()) return entry.text.trim();
-    }
-  }
-  return null;
-}
-
 async function callOpenAIIntent(
   text: string,
   apiKey: string,
   baseUrl: string,
 ): Promise<TextAIIntentFlat> {
   const { TEXT_MODEL, TIMEOUT_MS } = AI_ANALYSIS_DEFAULTS.OPENAI;
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
-  const body = {
-    model: TEXT_MODEL,
-    input: [
-      { role: 'system', content: [{ type: 'input_text', text: TEXT_AI_SYSTEM_PROMPT }] },
-      { role: 'user', content: [{ type: 'input_text', text }] },
-    ],
-    text: {
-      format: {
-        type: 'json_schema',
-        name: TEXT_AI_INTENT_SCHEMA.name,
-        description: TEXT_AI_INTENT_SCHEMA.description,
-        strict: TEXT_AI_INTENT_SCHEMA.strict,
-        schema: TEXT_AI_INTENT_SCHEMA.schema as Record<string, unknown>,
+  // maxRetries: 0 — this route has never retried; the SSoT's retry loop is
+  // opt-in, not inherited. An AI call already sits behind a 10 req/min gate.
+  const payload = await executeResponsesRequest(
+    { apiKey, baseUrl, timeoutMs: TIMEOUT_MS, maxRetries: 0 },
+    {
+      model: TEXT_MODEL,
+      input: [
+        { role: 'system', content: [{ type: 'input_text', text: TEXT_AI_SYSTEM_PROMPT }] },
+        { role: 'user', content: [{ type: 'input_text', text }] },
+      ],
+      text: {
+        format: {
+          type: 'json_schema',
+          name: TEXT_AI_INTENT_SCHEMA.name,
+          description: TEXT_AI_INTENT_SCHEMA.description,
+          strict: TEXT_AI_INTENT_SCHEMA.strict,
+          schema: TEXT_AI_INTENT_SCHEMA.schema as Record<string, unknown>,
+        },
       },
     },
-  };
+  );
 
+  const rawText = extractOutputText(payload);
+  if (!rawText) throw new Error('Empty OpenAI response');
+
+  let parsed: TextAIIntentFlat | null;
   try {
-    const response = await fetch(`${baseUrl}/responses`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-      signal: controller.signal,
-    });
-    clearTimeout(timeout);
-
-    if (!response.ok) {
-      const err = await response.text();
-      throw new Error(`OpenAI ${response.status}: ${err.slice(0, 200)}`);
-    }
-
-    const payload: unknown = await response.json();
-    const rawText = extractOutputText(payload);
-    if (!rawText) throw new Error('Empty OpenAI response');
-
-    let parsed: TextAIIntentFlat | null;
-    try {
-      parsed = JSON.parse(rawText) as TextAIIntentFlat;
-    } catch {
-      parsed = null;
-    }
-    if (!parsed || typeof parsed.command !== 'string') throw new Error('Invalid intent shape');
-    return parsed;
-  } finally {
-    clearTimeout(timeout);
+    parsed = JSON.parse(rawText) as TextAIIntentFlat;
+  } catch {
+    parsed = null;
   }
+  if (!parsed || typeof parsed.command !== 'string') throw new Error('Invalid intent shape');
+  return parsed;
 }
 
 export const POST = withHeavyRateLimit(
@@ -146,7 +116,18 @@ export const POST = withHeavyRateLimit(
         logger.info(`Intent resolved: ${intent.command} for uid ${authCtx.uid}`);
         return NextResponse.json({ success: true, intent });
       } catch (err) {
-        const message = getErrorMessage(err);
+        // Keeps the historical `OpenAI <status>: <body>` log line: the SSoT now
+        // carries status and raw body as fields instead of pre-formatting them
+        // into the message.
+        const message =
+          err instanceof ResponsesApiError
+            ? `OpenAI ${err.status}: ${err.body.slice(0, 200)}`
+            : getErrorMessage(err);
+
+        // Both timeout flavours contain "abort" — `controller.abort()` yields
+        // "This operation was aborted" (AbortError), `AbortSignal.timeout()`
+        // (now used by the SSoT) yields "The operation was aborted due to
+        // timeout" (TimeoutError). Verified on Node 20; pinned by the 504 tests.
         const isTimeout = message.includes('abort');
         logger.error(`AI command ${isTimeout ? 'timeout' : 'error'}: ${message}`);
         return NextResponse.json(

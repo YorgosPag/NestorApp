@@ -11,6 +11,7 @@ import type { GridGuide, GridGroup } from '../../ai-assistant/grid-types';
 import type { MepAutoDesignEventMap } from './drawing-event-map-mep-autodesign';
 import type { BimEventMap } from './drawing-event-map-bim';
 import type { TopoEventMap } from './drawing-event-map-topo';
+import type { PrintFidelityNote } from '../../print/print-fidelity';
 
 // Event type definitions - centralized and type-safe.
 // MEP auto-design feedback events live in `MepAutoDesignEventMap` (SRP split, N.7.1).
@@ -273,6 +274,10 @@ export interface DrawingEventMap extends MepAutoDesignEventMap, BimEventMap, Top
   // ADR-505 — Open the Export («Εξαγωγή») dialog (ExportHost listens).
   // Emitted by the ribbon Output → «Εξαγωγή» action via wrappedHandleAction.
   'dxf:export-dialog-requested': Record<string, never>;
+  // ADR-667 Φ1 — το τυπωμένο PDF απέκλινε από την οθόνη (π.χ. γέμισμα εικόνας → συμπαγές
+  // χρώμα). Εκπέμπεται από τον `runPrint`/`runPrintSet` ΜΟΝΟ όταν υπάρχει πραγματική απώλεια·
+  // πιστό PDF ⇒ καμία εκπομπή. Πριν από αυτό, η υποβάθμιση ήταν ΕΝΤΕΛΩΣ σιωπηλή.
+  'dxf:print-fidelity-degraded': { notes: readonly PrintFidelityNote[] };
   // ADR-651 Φάση Ε — Open the engineer-stamp dialog (StampHost listens). Emitted by the
   // contextual «Πινακίδα Σχεδίου» tab → «Σφραγίδα…» action via wrappedHandleAction.
   'dxf:stamp-dialog-requested': Record<string, never>;
