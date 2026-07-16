@@ -58,6 +58,27 @@ export interface SalesSpaceDashboardStats {
 
 export type SalesViewMode = 'list' | 'grid';
 
+/**
+ * Minimal shape a space must expose to be driven by `useSalesSpaceViewerState`.
+ *
+ * Structural, not nominal: both `ParkingSpot` and `Storage` satisfy it without
+ * declaring so. Every field is optional because the two differ — `Storage` has a
+ * required legacy `building` name, `ParkingSpot` only has `buildingId`.
+ */
+export interface SalesSpaceItem {
+  id: string;
+  status?: string;
+  type?: string;
+  floor?: string;
+  area?: number | null;
+  price?: number | null;
+  /** Canonical building foreign key. */
+  buildingId?: string | null;
+  /** @deprecated Legacy building name — Storage only. Filtered as a fallback. */
+  building?: string;
+  commercial?: { askingPrice?: number | null } | null;
+}
+
 // =============================================================================
 // 🏢 ADR-199: APPURTENANCE HELPERS
 // =============================================================================

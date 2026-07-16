@@ -4,30 +4,22 @@
 /**
  * @fileoverview Sales Parking Sidebar — ADR-199
  * @description List + Details sidebar for parking sales
- * @pattern Mirrors SalesSidebar with parking-specific components
+ * @pattern Parking-specific components on top of the shared `SalesSpaceSidebar` shell
  */
 
 import React from 'react';
-import { Car, DollarSign, Clock, FileText, Camera, Video, ExternalLink } from 'lucide-react';
-import { EntityListColumn, DetailsContainer } from '@/core/containers';
-import { GenericListHeader } from '@/components/shared/GenericListHeader';
+import { Car, FileText, Camera, Video } from 'lucide-react';
 import { SalesParkingCard } from '@/components/sales/cards/SalesParkingCard';
 import { ParkingQuickFilters } from '@/components/sales/filters/ParkingQuickFilters';
 import { ParkingDetailPanel } from '@/components/sales/details/ParkingDetailPanel';
-import { EntityDetailsHeader } from '@/core/entity-headers';
-import type { EntityHeaderAction } from '@/core/entity-headers';
-import { ActivityTab } from '@/components/shared/audit/ActivityTab';
+import {
+  SalesSpaceSidebar,
+  SALES_SPACE_SIDEBAR_NAMESPACES,
+  type SalesSpaceRedirectTab,
+} from '@/components/sales/shared/SalesSpaceSidebar';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { useIsMobile } from '@/hooks/useMobile';
-import { MobileDetailsSlideIn } from '@/core/layouts';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
-import { useIconSizes } from '@/hooks/useIconSizes';
 import type { ParkingSpot } from '@/types/parking';
 import '@/lib/design-system';
-import { cn } from '@/lib/utils';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // =============================================================================
 // 🏢 TYPES
@@ -45,16 +37,16 @@ interface SalesParkingSidebarProps {
 }
 
 // =============================================================================
-// 🏢 TAB CONFIG
+// 🏢 PARKING-SPECIFIC ACCESSORS
 // =============================================================================
 
-const TABS = [
-  { id: 'info', icon: DollarSign, labelKey: 'salesParking.tabs.info' },
-  { id: 'documents', icon: FileText, labelKey: 'salesParking.tabs.documents' },
-  { id: 'photos', icon: Camera, labelKey: 'salesParking.tabs.photos' },
-  { id: 'videos', icon: Video, labelKey: 'salesParking.tabs.videos' },
-  { id: 'history', icon: Clock, labelKey: 'salesParking.tabs.history' },
-] as const;
+function getParkingTitle(spot: ParkingSpot): string {
+  return spot.number || spot.id;
+}
+
+function parkingSpacesHref(spot: ParkingSpot): string {
+  return `/spaces/parking?parkingId=${spot.id}`;
+}
 
 // =============================================================================
 // 🏢 COMPONENT
@@ -70,141 +62,76 @@ export function SalesParkingSidebar({
   selectedType,
   onTypeChange,
 }: SalesParkingSidebarProps) {
-  const colors = useSemanticColors();
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
-  const isMobile = useIsMobile();
-  const iconSizes = useIconSizes();
+  const { t } = useTranslation(SALES_SPACE_SIDEBAR_NAMESPACES);
 
-  // =========================================================================
-  // Details Header Actions
-  // =========================================================================
-  const actions = React.useMemo<EntityHeaderAction[]>(() => {
-    if (!selectedItem) return [];
-    return [];
-  }, [selectedItem]);
-
-  // =========================================================================
-  // Details Content
-  // =========================================================================
-  const detailsContent = selectedItem ? (
-    <DetailsContainer
-      selectedItem={selectedItem}
-      header={
-        <EntityDetailsHeader
-          icon={Car}
-          title={selectedItem.number || selectedItem.id}
-          subtitle={selectedItem.floor ? `${t('parking:general.fields.floor')}: ${selectedItem.floor}` : undefined}
-          variant="detailed"
-          actions={actions}
-        />
-      }
-      tabsRenderer={
-        <Tabs defaultValue="info" className="flex flex-col">
-          <TabsList className="flex flex-wrap gap-1 w-full h-auto min-h-fit flex-shrink-0">
-            {TABS.map(tab => (
-              <TabsTrigger
-                key={tab.id}
-                value={tab.id}
-                className="flex items-center gap-1 text-xs font-medium"
-              >
-                <tab.icon className={iconSizes.sm} />
-                <span className="hidden sm:inline">
-                  {t(tab.labelKey)}
-                </span>
-              </TabsTrigger>
-            ))}
-          </TabsList>
-
-          <TabsContent value="info" className="flex-1">
-            <ParkingDetailPanel data={selectedItem} />
-          </TabsContent>
-
-          {/* Documents, Photos, Videos → redirect to /spaces/parking */}
-          {(['documents', 'photos', 'videos'] as const).map(tabId => (
-            <TabsContent key={tabId} value={tabId} className="flex-1">
-              <section className="p-4">
-                <p className={cn("text-sm text-center mb-3", colors.text.muted)}>
-                  {t(`salesParking.tabs.${tabId}Hint`)}
-                </p>
-                <div className="pt-2 border-t">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full justify-center gap-2 text-sm"
-                    onClick={() => {
-                      window.location.href = `/spaces/parking?parkingId=${selectedItem.id}`;
-                    }}
-                  >
-                    <ExternalLink className={iconSizes.sm} />
-                    {t('salesParking.tabs.openInSpaces')}
-                  </Button>
-                </div>
-              </section>
-            </TabsContent>
-          ))}
-
-          <TabsContent value="history" className="flex-1">
-            <ActivityTab entityType="parking" entityId={selectedItem.id} />
-          </TabsContent>
-        </Tabs>
-      }
-    />
-  ) : null;
-
-  // =========================================================================
-  // List Column
-  // =========================================================================
-  const listColumn = (
-    <EntityListColumn aria-label={t('salesParking.listLabel')}>
-      <GenericListHeader
-        icon={Car}
-        entityName={t('salesParking.listTitle')}
-        itemCount={items.length}
-      />
-
-      <ParkingQuickFilters
-        selectedStatus={selectedStatus}
-        onStatusChange={onStatusChange}
-        selectedType={selectedType}
-        onTypeChange={onTypeChange}
-      />
-
-      <ScrollArea className="flex-1">
-        <div className="flex flex-col gap-1 p-1 sm:p-2">
-          {items.map(item => (
-            <SalesParkingCard
-              key={item.id}
-              spot={item}
-              isSelected={item.id === selectedItemId}
-              onSelect={onSelectItem}
-            />
-          ))}
-
-          {items.length === 0 && (
-            <div className={cn("p-6 text-center text-sm", colors.text.muted)}>
-              {t('salesParking.noResults')}
-            </div>
-          )}
-        </div>
-      </ScrollArea>
-    </EntityListColumn>
+  const redirectTabs = React.useMemo<readonly SalesSpaceRedirectTab[]>(
+    () => [
+      {
+        id: 'documents',
+        icon: FileText,
+        label: t('salesParking.tabs.documents'),
+        hint: t('salesParking.tabs.documentsHint'),
+      },
+      {
+        id: 'photos',
+        icon: Camera,
+        label: t('salesParking.tabs.photos'),
+        hint: t('salesParking.tabs.photosHint'),
+      },
+      {
+        id: 'videos',
+        icon: Video,
+        label: t('salesParking.tabs.videos'),
+        hint: t('salesParking.tabs.videosHint'),
+      },
+    ],
+    [t]
   );
 
-  // =========================================================================
-  // RENDER
-  // =========================================================================
-  return (
-    <>
-      {listColumn}
-      {!isMobile && detailsContent}
+  const getSubtitle = React.useCallback(
+    (spot: ParkingSpot) =>
+      spot.floor ? `${t('parking:general.fields.floor')}: ${spot.floor}` : undefined,
+    [t]
+  );
 
-      <MobileDetailsSlideIn
-        isOpen={isMobile && !!selectedItem}
-        onClose={() => onSelectItem('__none__')}
-        title={selectedItem?.number || t('salesParking.details.title')}
-      >
-        {isMobile && selectedItem && detailsContent}
-      </MobileDetailsSlideIn>
-    </>
+  const renderCard = React.useCallback(
+    (spot: ParkingSpot, isSelected: boolean) => (
+      <SalesParkingCard spot={spot} isSelected={isSelected} onSelect={onSelectItem} />
+    ),
+    [onSelectItem]
+  );
+
+  return (
+    <SalesSpaceSidebar<ParkingSpot>
+      items={items}
+      selectedItem={selectedItem}
+      selectedItemId={selectedItemId}
+      onSelectItem={onSelectItem}
+      icon={Car}
+      entityType="parking"
+      redirectTabs={redirectTabs}
+      labels={{
+        listLabel: t('salesParking.listLabel'),
+        listTitle: t('salesParking.listTitle'),
+        noResults: t('salesParking.noResults'),
+        detailsTitle: t('salesParking.details.title'),
+        openInSpaces: t('salesParking.tabs.openInSpaces'),
+        infoTab: t('salesParking.tabs.info'),
+        historyTab: t('salesParking.tabs.history'),
+      }}
+      spacesHref={parkingSpacesHref}
+      getTitle={getParkingTitle}
+      getSubtitle={getSubtitle}
+      renderDetailPanel={(spot) => <ParkingDetailPanel data={spot} />}
+      renderCard={renderCard}
+      quickFilters={
+        <ParkingQuickFilters
+          selectedStatus={selectedStatus}
+          onStatusChange={onStatusChange}
+          selectedType={selectedType}
+          onTypeChange={onTypeChange}
+        />
+      }
+    />
   );
 }

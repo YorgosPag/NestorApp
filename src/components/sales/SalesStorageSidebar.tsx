@@ -4,30 +4,22 @@
 /**
  * @fileoverview Sales Storage Sidebar — ADR-199
  * @description List + Details sidebar for storage sales
- * @pattern Mirrors SalesSidebar with storage-specific components
+ * @pattern Storage-specific components on top of the shared `SalesSpaceSidebar` shell
  */
 
 import React from 'react';
-import { Package, DollarSign, Clock, Map, FileText, Camera, Video, ExternalLink } from 'lucide-react';
-import { EntityListColumn, DetailsContainer } from '@/core/containers';
-import { GenericListHeader } from '@/components/shared/GenericListHeader';
+import { Package, Map, FileText, Camera, Video } from 'lucide-react';
 import { SalesStorageCard } from '@/components/sales/cards/SalesStorageCard';
 import { StorageQuickFilters } from '@/components/sales/filters/StorageQuickFilters';
 import { StorageDetailPanel } from '@/components/sales/details/StorageDetailPanel';
-import { EntityDetailsHeader } from '@/core/entity-headers';
-import type { EntityHeaderAction } from '@/core/entity-headers';
-import { ActivityTab } from '@/components/shared/audit/ActivityTab';
+import {
+  SalesSpaceSidebar,
+  SALES_SPACE_SIDEBAR_NAMESPACES,
+  type SalesSpaceRedirectTab,
+} from '@/components/sales/shared/SalesSpaceSidebar';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { useIsMobile } from '@/hooks/useMobile';
-import { MobileDetailsSlideIn } from '@/core/layouts';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
-import { useIconSizes } from '@/hooks/useIconSizes';
 import type { Storage } from '@/types/storage/contracts';
 import '@/lib/design-system';
-import { cn } from '@/lib/utils';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // =============================================================================
 // 🏢 TYPES
@@ -45,17 +37,20 @@ interface SalesStorageSidebarProps {
 }
 
 // =============================================================================
-// 🏢 TAB CONFIG
+// 🏢 STORAGE-SPECIFIC ACCESSORS
 // =============================================================================
 
-const TABS = [
-  { id: 'info', icon: DollarSign, labelKey: 'salesStorage.tabs.info' },
-  { id: 'floor-plan', icon: Map, labelKey: 'salesStorage.tabs.floorPlan' },
-  { id: 'documents', icon: FileText, labelKey: 'salesStorage.tabs.documents' },
-  { id: 'photos', icon: Camera, labelKey: 'salesStorage.tabs.photos' },
-  { id: 'videos', icon: Video, labelKey: 'salesStorage.tabs.videos' },
-  { id: 'history', icon: Clock, labelKey: 'salesStorage.tabs.history' },
-] as const;
+function getStorageTitle(storage: Storage): string {
+  return storage.name || storage.id;
+}
+
+function getStorageSubtitle(storage: Storage): string {
+  return `${storage.building ?? ''} · ${storage.floor ?? ''}`;
+}
+
+function storageSpacesHref(storage: Storage): string {
+  return `/spaces/storage?storageId=${storage.id}`;
+}
 
 // =============================================================================
 // 🏢 COMPONENT
@@ -71,144 +66,76 @@ export function SalesStorageSidebar({
   selectedType,
   onTypeChange,
 }: SalesStorageSidebarProps) {
-  const colors = useSemanticColors();
-  const { t } = useTranslation(['common', 'common-account', 'common-actions', 'common-empty-states', 'common-navigation', 'common-photos', 'common-sales', 'common-shared', 'common-status', 'common-validation']);
-  const isMobile = useIsMobile();
-  const iconSizes = useIconSizes();
+  const { t } = useTranslation(SALES_SPACE_SIDEBAR_NAMESPACES);
 
-  // =========================================================================
-  // Details Header Actions
-  // =========================================================================
-  const actions = React.useMemo<EntityHeaderAction[]>(() => {
-    if (!selectedItem) return [];
-    return [];
-  }, [selectedItem]);
-
-  // =========================================================================
-  // Details Content
-  // =========================================================================
-  const detailsContent = selectedItem ? (
-    <DetailsContainer
-      selectedItem={selectedItem}
-      header={
-        <EntityDetailsHeader
-          icon={Package}
-          title={selectedItem.name || selectedItem.id}
-          subtitle={`${selectedItem.building ?? ''} · ${selectedItem.floor ?? ''}`}
-          variant="detailed"
-          actions={actions}
-        />
-      }
-      tabsRenderer={
-        <Tabs defaultValue="info" className="flex flex-col">
-          <TabsList className="flex flex-wrap gap-1 w-full h-auto min-h-fit flex-shrink-0">
-            {TABS.map(tab => (
-              <TabsTrigger
-                key={tab.id}
-                value={tab.id}
-                className="flex items-center gap-1 text-xs font-medium"
-              >
-                <tab.icon className={iconSizes.sm} />
-                <span className="hidden sm:inline">
-                  {t(tab.labelKey)}
-                </span>
-              </TabsTrigger>
-            ))}
-          </TabsList>
-
-          <TabsContent value="info" className="flex-1">
-            <StorageDetailPanel data={selectedItem} />
-          </TabsContent>
-
-          {/* Floor-plan, Documents, Photos, Videos → redirect to /spaces/storage */}
-          {(['floor-plan', 'documents', 'photos', 'videos'] as const).map(tabId => {
-            const hintKey = tabId === 'floor-plan' ? 'floorPlan' : tabId;
-            return (
-              <TabsContent key={tabId} value={tabId} className="flex-1">
-                <section className="p-4">
-                  <p className={cn("text-sm text-center mb-3", colors.text.muted)}>
-                    {t(`salesStorage.tabs.${hintKey}Hint`)}
-                  </p>
-                  <div className="pt-2 border-t">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full justify-center gap-2 text-sm"
-                      onClick={() => {
-                        window.location.href = `/spaces/storage?storageId=${selectedItem.id}`;
-                      }}
-                    >
-                      <ExternalLink className={iconSizes.sm} />
-                      {t('salesStorage.tabs.openInSpaces')}
-                    </Button>
-                  </div>
-                </section>
-              </TabsContent>
-            );
-          })}
-
-          <TabsContent value="history" className="flex-1">
-            <ActivityTab entityType="storage" entityId={selectedItem.id} />
-          </TabsContent>
-        </Tabs>
-      }
-    />
-  ) : null;
-
-  // =========================================================================
-  // List Column
-  // =========================================================================
-  const listColumn = (
-    <EntityListColumn aria-label={t('salesStorage.listLabel')}>
-      <GenericListHeader
-        icon={Package}
-        entityName={t('salesStorage.listTitle')}
-        itemCount={items.length}
-      />
-
-      <StorageQuickFilters
-        selectedStatus={selectedStatus}
-        onStatusChange={onStatusChange}
-        selectedType={selectedType}
-        onTypeChange={onTypeChange}
-      />
-
-      <ScrollArea className="flex-1">
-        <div className="flex flex-col gap-1 p-1 sm:p-2">
-          {items.map(item => (
-            <SalesStorageCard
-              key={item.id}
-              storage={item}
-              isSelected={item.id === selectedItemId}
-              onSelect={onSelectItem}
-            />
-          ))}
-
-          {items.length === 0 && (
-            <div className={cn("p-6 text-center text-sm", colors.text.muted)}>
-              {t('salesStorage.noResults')}
-            </div>
-          )}
-        </div>
-      </ScrollArea>
-    </EntityListColumn>
+  const redirectTabs = React.useMemo<readonly SalesSpaceRedirectTab[]>(
+    () => [
+      {
+        id: 'floor-plan',
+        icon: Map,
+        label: t('salesStorage.tabs.floorPlan'),
+        hint: t('salesStorage.tabs.floorPlanHint'),
+      },
+      {
+        id: 'documents',
+        icon: FileText,
+        label: t('salesStorage.tabs.documents'),
+        hint: t('salesStorage.tabs.documentsHint'),
+      },
+      {
+        id: 'photos',
+        icon: Camera,
+        label: t('salesStorage.tabs.photos'),
+        hint: t('salesStorage.tabs.photosHint'),
+      },
+      {
+        id: 'videos',
+        icon: Video,
+        label: t('salesStorage.tabs.videos'),
+        hint: t('salesStorage.tabs.videosHint'),
+      },
+    ],
+    [t]
   );
 
-  // =========================================================================
-  // RENDER
-  // =========================================================================
-  return (
-    <>
-      {listColumn}
-      {!isMobile && detailsContent}
+  const renderCard = React.useCallback(
+    (storage: Storage, isSelected: boolean) => (
+      <SalesStorageCard storage={storage} isSelected={isSelected} onSelect={onSelectItem} />
+    ),
+    [onSelectItem]
+  );
 
-      <MobileDetailsSlideIn
-        isOpen={isMobile && !!selectedItem}
-        onClose={() => onSelectItem('__none__')}
-        title={selectedItem?.name || t('salesStorage.details.title')}
-      >
-        {isMobile && selectedItem && detailsContent}
-      </MobileDetailsSlideIn>
-    </>
+  return (
+    <SalesSpaceSidebar<Storage>
+      items={items}
+      selectedItem={selectedItem}
+      selectedItemId={selectedItemId}
+      onSelectItem={onSelectItem}
+      icon={Package}
+      entityType="storage"
+      redirectTabs={redirectTabs}
+      labels={{
+        listLabel: t('salesStorage.listLabel'),
+        listTitle: t('salesStorage.listTitle'),
+        noResults: t('salesStorage.noResults'),
+        detailsTitle: t('salesStorage.details.title'),
+        openInSpaces: t('salesStorage.tabs.openInSpaces'),
+        infoTab: t('salesStorage.tabs.info'),
+        historyTab: t('salesStorage.tabs.history'),
+      }}
+      spacesHref={storageSpacesHref}
+      getTitle={getStorageTitle}
+      getSubtitle={getStorageSubtitle}
+      renderDetailPanel={(storage) => <StorageDetailPanel data={storage} />}
+      renderCard={renderCard}
+      quickFilters={
+        <StorageQuickFilters
+          selectedStatus={selectedStatus}
+          onStatusChange={onStatusChange}
+          selectedType={selectedType}
+          onTypeChange={onTypeChange}
+        />
+      }
+    />
   );
 }
