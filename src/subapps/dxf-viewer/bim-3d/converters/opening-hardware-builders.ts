@@ -31,6 +31,7 @@ import {
   isFoldingKind,
   isWindowKind,
 } from '../../bim/types/opening-types';
+import { openingHasOperableHardware } from '../../bim/family-types/opening-hardware-set';
 import type { BoxSpec, LeafDims } from './opening-mesh-builders';
 import { LEAF_DEPTH_RATIO, openingInnerDims } from './opening-mesh-builders';
 
@@ -86,6 +87,10 @@ export function buildHardwareSpecs(
   dims: LeafDims,
   hardwareMat: THREE.Material,
 ): BoxSpec[] {
+  // SSoT parity guard (ADR-674): the take-off catalog decides which kinds carry
+  // operable hardware — the geometry side draws a handle for EXACTLY those kinds,
+  // so the two sides can never drift (empty for fixed/bay/overhead/revolving).
+  if (!openingHasOperableHardware(opening.kind)) return [];
   const inner = openingInnerDims(dims);
   if (!inner) return [];
   const { innerW, innerH } = inner;
