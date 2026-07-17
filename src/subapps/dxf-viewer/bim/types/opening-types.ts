@@ -107,6 +107,32 @@ export interface OpeningSelfHost {
   readonly hostThicknessMm: number;
 }
 
+/**
+ * Per-part material assignment for an opening — the Revit/ArchiCAD «family
+ * surfaces» model: the frame (κάσα), leaf (φύλλο), glazing (υαλοστάσιο) and
+ * hardware (χειρολαβή/μηχανισμός) each carry their OWN material, never inherited
+ * from the host wall (ADR-669 §6.1 element boundary). Each field is a material
+ * library id resolved by `getMaterial3D` — a catalog key (`mat-*`) or a custom
+ * user-library id (`bmat_*`). Undefined part ⇒ the resolver falls back to that
+ * part's default (frame/leaf = wood, glass = glass, hardware = metal) — identical
+ * to the pre-ADR pipeline (zero regression). Mirrors {@link StairMaterials}.
+ *
+ * Lives on BOTH the family Type ({@link OpeningTypeParams.materials}) and the
+ * instance ({@link OpeningParams.materials}): the Type owns the appearance, the
+ * instance overrides it («type default, instance override»). Resolved via
+ * `resolveOpeningMaterial()`.
+ */
+export interface OpeningMaterials {
+  /** Frame (κάσα) surface material id. Default `mat-wood`. */
+  readonly frame?: string;
+  /** Leaf (φύλλο) surface material id. Default `mat-wood`. */
+  readonly leaf?: string;
+  /** Glazing (υαλοστάσιο) surface material id. Glazed kinds. Default `mat-glass`. */
+  readonly glass?: string;
+  /** Hardware (χειρολαβή/μηχανισμός) surface material id. Default `mat-metal`. */
+  readonly hardware?: string;
+}
+
 export interface OpeningParams {
   readonly kind: OpeningKind;
   /** Foreign key — host wall id. ADR-615: absent ⇒ self-hosted (see `selfHost`). */
@@ -158,8 +184,19 @@ export interface OpeningParams {
   readonly handing?: OpeningHanding;
   /** Door swing direction. Door / french-door only. */
   readonly openDirection?: OpeningSwing;
-  /** Material library ID (Phase 6+). */
+  /**
+   * @deprecated Legacy single material library id (whole opening). Superseded by
+   * per-part `materials` (ADR — editable per-opening surfaces). Kept as a
+   * frame+leaf base layer in `resolveOpeningMaterial` for zero regression.
+   */
   readonly material?: string;
+  /**
+   * Per-part surface materials (κάσα/φύλλο/υαλοστάσιο/χειρολαβή) — Revit family
+   * surfaces. Instance override of the family Type's `materials`; each part
+   * folds independently (LAST wins) in `resolveOpeningMaterial`. Undefined part
+   * ⇒ default → zero regression. @see OpeningMaterials
+   */
+  readonly materials?: OpeningMaterials;
   /** Glazing panes — 1 single / 2 double / 3 triple. Window / french-door / fixed. */
   readonly glazingPanes?: 1 | 2 | 3;
   /**

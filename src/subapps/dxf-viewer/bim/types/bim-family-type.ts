@@ -41,7 +41,7 @@ import type { WallCategory } from './wall-types';
 import type { WallDna } from './wall-dna-types';
 import type { SlabKind } from './slab-types';
 import type { SlabDna } from './slab-dna-types';
-import type { OpeningKind } from './opening-types';
+import type { OpeningKind, OpeningMaterials } from './opening-types';
 // Type-only import (no runtime cycle) — RoofSoffitMode is defined in roof-types,
 // which in turn imports RoofTypeParams from here. TS resolves type-only cycles.
 import type { RoofSoffitMode } from './roof-types';
@@ -271,8 +271,19 @@ export interface OpeningTypeParams {
    * `resolveOpeningFrameProfile()`. Absent → instance / catalog default.
    */
   readonly frameProfileId?: string;
-  /** Material library key for the frame/finish. */
+  /**
+   * @deprecated Legacy single material library key (whole opening). Superseded by
+   * per-part `materials`. Kept as a frame+leaf base layer in
+   * `resolveOpeningMaterial` for zero regression.
+   */
   readonly material?: string;
+  /**
+   * Per-part surface materials (κάσα/φύλλο/υαλοστάσιο/χειρολαβή) owned by the
+   * family Type — Revit «type default», overridden per instance by
+   * `OpeningParams.materials`. Resolved via `resolveOpeningMaterial`.
+   * @see OpeningMaterials
+   */
+  readonly materials?: OpeningMaterials;
   /** Glazing panes — 1 single / 2 double / 3 triple. Glazed kinds only. */
   readonly glazingPanes?: 1 | 2 | 3;
   /** Fire-resistance rating spec for Revit-grade schedules (e.g. «EI30»). */
