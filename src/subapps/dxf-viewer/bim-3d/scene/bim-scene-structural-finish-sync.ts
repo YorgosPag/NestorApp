@@ -119,7 +119,16 @@ export function syncStructuralFinishSkin(
     if (ops.length > 0) openingsByWallId.set(wall.id, ops);
   }
   for (const [buildingId, g] of groups) {
-    const bands = computeStructuralFinishSilhouette(g.columns, g.beams, g.walls, ctx.floorElevationMm, columnExtents, false, beamTopClipById, openingsByWallId, wallTopClipById);
+    const bands = computeStructuralFinishSilhouette({
+      columns: g.columns,
+      beams: g.beams,
+      walls: g.walls,
+      floorElevationMm: ctx.floorElevationMm,
+      columnExtents,
+      beamTopClipById,
+      openingsByWallId,
+      wallTopClipById,
+    });
     const sceneUnits = g.columns[0]?.params.sceneUnits ?? g.beams[0]?.params.sceneUnits ?? g.walls[0]?.params.sceneUnits ?? 'mm';
     const skin = buildStructuralSilhouetteSkin(
       bands, sceneUnits, g.baseElevation, ctx.activeLevelId, `structural-finish-${buildingId}`,

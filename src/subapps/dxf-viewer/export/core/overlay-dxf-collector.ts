@@ -236,7 +236,11 @@ function collectFinishEntities(
 
   // floorElevationMm=0 + legacy extents (params.height): plan-view export path (mirror
   // του unit-test path του silhouette· storey-ceiling band optimization = DEFER).
-  const bands = computeStructuralFinishSilhouette(columns, beams, walls, 0, undefined, true, undefined, openingsByWallId);
+  const bands = computeStructuralFinishSilhouette({
+    columns, beams, walls, floorElevationMm: 0,
+    dropPlanHiddenFaces: true,
+    openingsByWallId,
+  });
   if (bands.length === 0) return;
   const sceneUnits = columns[0]?.params.sceneUnits ?? beams[0]?.params.sceneUnits ?? 'mm';
 

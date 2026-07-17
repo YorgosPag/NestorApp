@@ -150,40 +150,40 @@ describe('wallToSilhouetteMembers (X4 — full footprint, gate σε finish spec)
 
 describe('computeStructuralFinishSilhouette — ο τοίχος ως member (ADR-449 Slice X3/X4)', () => {
   it('όροφος με ΜΟΝΟ νέο τοίχο → παράγει band σοβά', () => {
-    const bands = computeStructuralFinishSilhouette([], [], [wall({ x: 0, y: 0 }, { x: 3000, y: 0 })], 0);
+    const bands = computeStructuralFinishSilhouette({ columns: [], beams: [], walls: [wall({ x: 0, y: 0 }, { x: 3000, y: 0 })], floorElevationMm: 0 });
     expect(bands.length).toBeGreaterThanOrEqual(1);
     expect(bands[0].faces.segments.length).toBeGreaterThan(0);
   });
 
   it('parapet-only όροφος → καμία band (χωρίς finish)', () => {
-    const bands = computeStructuralFinishSilhouette(
-      [],
-      [],
-      [wall({ x: 0, y: 0 }, { x: 3000, y: 0 }, { category: 'parapet', dna: createDefaultParapetDna() })],
-      0,
-    );
+    const bands = computeStructuralFinishSilhouette({
+      columns: [],
+      beams: [],
+      walls: [wall({ x: 0, y: 0 }, { x: 3000, y: 0 }, { category: 'parapet', dna: createDefaultParapetDna() })],
+      floorElevationMm: 0,
+    });
     expect(bands).toHaveLength(0);
   });
 
   it('2 επικαλυπτόμενοι collinear τοίχοι → ενιαία σιλουέτα (σοβάς σβήνει στην επαφή)', () => {
-    const joined = computeStructuralFinishSilhouette(
-      [],
-      [],
-      [
+    const joined = computeStructuralFinishSilhouette({
+      columns: [],
+      beams: [],
+      walls: [
         wall({ x: 0, y: 0 }, { x: 3000, y: 0 }, { id: 'a' }),
         wall({ x: 2900, y: 0 }, { x: 6000, y: 0 }, { id: 'b' }),
       ],
-      0,
-    );
-    const separate = computeStructuralFinishSilhouette(
-      [],
-      [],
-      [
+      floorElevationMm: 0,
+    });
+    const separate = computeStructuralFinishSilhouette({
+      columns: [],
+      beams: [],
+      walls: [
         wall({ x: 0, y: 0 }, { x: 3000, y: 0 }, { id: 'a' }),
         wall({ x: 20000, y: 0 }, { x: 23000, y: 0 }, { id: 'b' }),
       ],
-      0,
-    );
+      floorElevationMm: 0,
+    });
     const joinedLen = joined.reduce((s, b) => s + totalLength(b.faces.segments), 0);
     const separateLen = separate.reduce((s, b) => s + totalLength(b.faces.segments), 0);
     expect(joinedLen).toBeLessThan(separateLen);

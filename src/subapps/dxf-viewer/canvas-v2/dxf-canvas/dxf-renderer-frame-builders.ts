@@ -161,9 +161,11 @@ export function buildStructuralFinishSilhouette2D(
   // `buildOpeningsByWall` που τρέφει τα cutouts του 2Δ πυρήνα (`WallRenderer`) → σοβάς και μπετόν
   // κόβονται στο ίδιο κενό εξ ορισμού (+ ADR-615 self-hosted guard δωρεάν). `beamTopClipById`
   // undefined = ως πριν (το vertical clip δεν αφορά κάτοψη).
-  const bands = computeStructuralFinishSilhouette(
-    columns, beams, walls, floorElevationMm, columnExtents, true, undefined, buildOpeningsByWall(entities),
-  );
+  const bands = computeStructuralFinishSilhouette({
+    columns, beams, walls, floorElevationMm, columnExtents,
+    dropPlanHiddenFaces: true,
+    openingsByWallId: buildOpeningsByWall(entities),
+  });
   if (bands.length === 0) return null;
   const sceneUnits = columns[0]?.params.sceneUnits ?? beams[0]?.params.sceneUnits ?? walls[0]?.params.sceneUnits ?? 'mm';
   return { bands, sceneUnits };

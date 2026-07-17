@@ -257,30 +257,30 @@ export function beamFinishOutline(
 }
 
 /**
- * ADR-449 Slice 7 — SSoT για την ΕΝΙΑΙΑ σιλουέτα σοβά μιας δομικής ομάδας (κολόνες +
- * δοκάρια ενός κτιρίου/ορόφου). Χτίζει `SilhouetteMember[]` (building-relative z) +
- * wall obstacles (finished footprints dilated κατά join-tol ώστε flush διεπαφές να
- * μετράνε ως καλυμμένες — Πρόβλημα Α) + classifier, και delegate-άρει στον pure
- * `computeStructuralSilhouetteBands`. Το διαβάζει ο 3D builder. `[]` όταν κανένα μέλος.
+ * ADR-534 Φ5c — Είσοδος (options-object) της {@link computeStructuralFinishSilhouette}. Mirror του
+ * `HorizontalFinishInput` (αδελφό module `structural-finish-scene-horizontal.ts`): named πεδία αντί
+ * για μακρύ positional σερί 9 params (που ανάγκαζε σειρές `undefined` στους callers). Καθαρά
+ * μηχανική αλλαγή — μηδέν διαφορά συμπεριφοράς από την προηγούμενη positional signature.
  */
-export function computeStructuralFinishSilhouette(
-  columns: readonly SilhouetteColumnSource[],
-  beams: readonly SilhouetteBeamSource[],
-  walls: readonly WallFinishObstacle[],
-  floorElevationMm: number,
-  columnExtents?: ColumnVerticalExtentLookup,
+export interface SilhouetteFinishInput {
+  readonly columns: readonly SilhouetteColumnSource[];
+  readonly beams: readonly SilhouetteBeamSource[];
+  readonly walls: readonly WallFinishObstacle[];
+  readonly floorElevationMm: number;
+  /** ADR-449 — pre-resolved (storey-aware) zExtents κολώνας ανά id, ΙΔΙΑ SSoT με τον πυρήνα. */
+  readonly columnExtents?: ColumnVerticalExtentLookup;
   /**
-   * ADR-449/458 — 2Δ κάτοψη ΜΟΝΟ: αφαιρεί τις κρυμμένες junction-όψεις (όψεις που η
-   * plan-προβολή κρύβει πίσω από member από πάνω). Το 3Δ ΔΕΝ το περνά (false) → οι όψεις
-   * παραμένουν στις δικές τους z-bands.
+   * ADR-449/458 — 2Δ κάτοψη ΜΟΝΟ: αφαιρεί τις κρυμμένες junction-όψεις (όψεις που η plan-προβολή
+   * κρύβει πίσω από member από πάνω). Το 3Δ ΔΕΝ το περνά (false/absent) → οι όψεις παραμένουν στις
+   * δικές τους z-bands. Default `false`.
    */
-  dropPlanHiddenFaces = false,
+  readonly dropPlanHiddenFaces?: boolean;
   /**
    * ADR-534 Φ3c-B3b — pre-resolved soffit top-clip ανά δοκό (building-relative mm), ΙΔΙΑ SSoT με το
    * ορατό στερεό (`resolveMemberTopClipZmm`): όπου μονολιθική πλάκα καλύπτει τη δοκό, η κορυφή του
    * σοβά κόβεται στο soffit. Absent / χωρίς entry → πλήρες ύψος (2Δ plan & DXF export: undefined).
    */
-  beamTopClipById?: ReadonlyMap<string, number>,
+  readonly beamTopClipById?: ReadonlyMap<string, number>;
   /**
    * ADR-449 §opening-bands — τα **ορατά, wall-hosted** ανοίγματα ανά `wallId` (pre-resolved από τον
    * caller· ίδιο pattern με το `beamTopClipById`). Ο σοβάς του τοίχου τρυπιέται στη ζώνη κάθε
@@ -290,7 +290,7 @@ export function computeStructuralFinishSilhouette(
    * guard + το ίδιο φίλτρο που ήδη περνά ο πυρήνας `wallToMesh` → 2Δ⟷3Δ parity) απαιτούν scene ctx →
    * μένουν στους callers· αυτή η συνάρτηση παραμένει pure.
    */
-  openingsByWallId?: ReadonlyMap<string, readonly SilhouetteOpeningSource[]>,
+  readonly openingsByWallId?: ReadonlyMap<string, readonly SilhouetteOpeningSource[]>;
   /**
    * ADR-534 Φ3c-B3b (τοίχοι) — pre-resolved soffit top-clip ανά **τοίχο** (building-relative mm),
    * ΙΔΙΑ SSoT `resolveMemberTopClipZmm` με τα δοκάρια (`beamTopClipById`) και με το ορατό στερεό:
@@ -298,8 +298,28 @@ export function computeStructuralFinishSilhouette(
    * δεν διαπερνά πια την πλάκα (Giorgio 2026-07-17, C4D screenshots). Absent / χωρίς entry →
    * πλήρες ύψος (2Δ plan & DXF export: undefined → byte-for-byte).
    */
-  wallTopClipById?: ReadonlyMap<string, number>,
-): SilhouetteBand[] {
+  readonly wallTopClipById?: ReadonlyMap<string, number>;
+}
+
+/**
+ * ADR-449 Slice 7 — SSoT για την ΕΝΙΑΙΑ σιλουέτα σοβά μιας δομικής ομάδας (κολόνες +
+ * δοκάρια ενός κτιρίου/ορόφου). Χτίζει `SilhouetteMember[]` (building-relative z) +
+ * wall obstacles (finished footprints dilated κατά join-tol ώστε flush διεπαφές να
+ * μετράνε ως καλυμμένες — Πρόβλημα Α) + classifier, και delegate-άρει στον pure
+ * `computeStructuralSilhouetteBands`. Το διαβάζει ο 3D builder. `[]` όταν κανένα μέλος.
+ */
+export function computeStructuralFinishSilhouette(input: SilhouetteFinishInput): SilhouetteBand[] {
+  const {
+    columns,
+    beams,
+    walls,
+    floorElevationMm,
+    columnExtents,
+    dropPlanHiddenFaces = false,
+    beamTopClipById,
+    openingsByWallId,
+    wallTopClipById,
+  } = input;
   const members: SilhouetteMember[] = [];
   for (const c of columns) {
     const m = toMember(c.params.finish, c.geometry?.footprint?.vertices, columnZExtent(c, floorElevationMm, columnExtents));
