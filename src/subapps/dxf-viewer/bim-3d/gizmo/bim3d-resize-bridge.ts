@@ -289,7 +289,10 @@ function computeStairVerticalResize(
  * world handle cannot map 1:1 to one of them. We project the plan slide onto the
  * stair's LOCAL frame and let the DOMINANT component drive a single dimension
  * (predictable: one drag → one dimension):
- *   • perpendicular to the climb direction → `width` (symmetric, ×2 — `resizeWidth`).
+ *   • perpendicular to the climb direction → `width`. ADR-393 Phase C: straight/rect
+ *     stairs route through `applyRectStairGrip` → the shared axis-box engine, i.e.
+ *     OPPOSITE-FACE-FIXED (×1 delta + half-delta base recenter — wall parity), NOT the
+ *     legacy symmetric ×2 `resizeWidth`, which now only survives for non-rect stairs.
  *   • along the climb direction → `totalRun`, SNAPPED to whole steps: `stepCount`
  *     changes while `tread` stays constant (`resizeLength` — the Revit "drag the run
  *     to add / remove risers" behaviour, NOT a free stretch).

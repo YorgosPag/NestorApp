@@ -45,7 +45,7 @@ import { evaluateWallBaseAt, type WallBaseProfile } from '../../bim/geometry/wal
 // ADR-404 P1 — slope/tilt shear helpers (εξήχθησαν από εδώ για file-size, N.7.1).
 import { applyWallTilt } from './mesh-slope-shear';
 // File-private geometry primitives (N.7.1 file-size split, 2026-06-01).
-import { buildShape, extrudeAndRotate, extrudeShapesAndRotate, tagMesh, buildWallShape, buildWallFootprintRing } from './bim-three-shape-helpers';
+import { buildShape, extrudeAndRotate, extrudeShapesAndRotate, tagMesh, buildWallShape, buildWallFootprintRing, stampBimIdentity } from './bim-three-shape-helpers';
 // ADR-458 — wall-to-column cutback (pure generic SSoT, «η κολόνα νικάει»).
 import { computeMemberCutbackOutline } from '../../bim/geometry/member-column-cutback';
 // ADR-539 Φ3c — Cinema 4D «Polygon Mode» per-face appearance (faced multi-material prism).
@@ -88,18 +88,27 @@ const CATEGORY_MAT_ID: Record<WallEntity['params']['category'], string> = {
 // ── ADR-401 Phase B2 — μεταβλητή κορυφή (σκαλωτή/κεκλιμένη) ────────────────────
 
 /**
+ * Τα εσωτερικά segment όρια ενός profile (σημεία αλλαγής κλίσης/σκαλοπάτια), ταξινομημένα:
+ * τα `t0/t1` που πέφτουν αυστηρά μέσα στο [0,1] (τα άκρα 0/1 δεν είναι breakpoints).
+ * Κοινός πυρήνας top/base local-fn (ίδια σύμβαση segments).
+ */
+function innerBreakpoints(segments: readonly { t0: number; t1: number }[]): number[] {
+  const bps = new Set<number>();
+  for (const s of segments) {
+    if (s.t0 > 1e-6 && s.t0 < 1 - 1e-6) bps.add(s.t0);
+    if (s.t1 > 1e-6 && s.t1 < 1 - 1e-6) bps.add(s.t1);
+  }
+  return [...bps].sort((a, b) => a - b);
+}
+
+/**
  * `WallTopProfile` (απόλυτα mm) → `WallTopLocalFn` σε **τοπικά μέτρα** πάνω από το
  * δάπεδο, που καταναλώνουν οι piece builders. `localTop(t) = (top_mm − FFL_mm) · 0.001`.
  * Τα breakpoints είναι τα εσωτερικά segment όρια (σημεία αλλαγής κλίσης).
  */
 export function makeWallTopLocalFn(profile: WallTopProfile, floorElevationMm: number): WallTopLocalFn {
-  const bps = new Set<number>();
-  for (const s of profile.segments) {
-    if (s.t0 > 1e-6 && s.t0 < 1 - 1e-6) bps.add(s.t0);
-    if (s.t1 > 1e-6 && s.t1 < 1 - 1e-6) bps.add(s.t1);
-  }
   return {
-    breakpoints: [...bps].sort((a, b) => a - b),
+    breakpoints: innerBreakpoints(profile.segments),
     at: (f) => (evaluateWallTopAt(profile, f) - floorElevationMm) * MM_TO_M,
   };
 }
@@ -111,13 +120,8 @@ export function makeWallTopLocalFn(profile: WallTopProfile, floorElevationMm: nu
  * τη στάθμη). Τα breakpoints είναι τα εσωτερικά segment όρια (βήματα/αλλαγή κλίσης).
  */
 export function makeWallBaseLocalFn(profile: WallBaseProfile, floorElevationMm: number): WallBaseLocalFn {
-  const bps = new Set<number>();
-  for (const s of profile.segments) {
-    if (s.t0 > 1e-6 && s.t0 < 1 - 1e-6) bps.add(s.t0);
-    if (s.t1 > 1e-6 && s.t1 < 1 - 1e-6) bps.add(s.t1);
-  }
   return {
-    breakpoints: [...bps].sort((a, b) => a - b),
+    breakpoints: innerBreakpoints(profile.segments),
     at: (f) => (evaluateWallBaseAt(profile, f) - floorElevationMm) * MM_TO_M,
   };
 }
@@ -192,8 +196,7 @@ export function buildStraightWallWithOpenings(
     ensureWorldUvs(geo);
     const mesh = new THREE.Mesh(geo, mat);
     mesh.position.y = yOffset;
-    mesh.userData['bimId'] = wall.id;
-    mesh.userData['bimType'] = 'wall';
+    stampBimIdentity(mesh, { bimId: wall.id, bimType: 'wall' });
     if (layerId !== undefined) mesh.userData['layerId'] = layerId;
     mesh.castShadow = true;
     mesh.receiveShadow = true;
@@ -269,8 +272,7 @@ export function buildStraightWallWithOpenings(
     }
   }
   if (group.children.length === 0) return null;
-  group.userData['bimId'] = wall.id;
-  group.userData['bimType'] = 'wall';
+  stampBimIdentity(group, { bimId: wall.id, bimType: 'wall' });
   return group;
 }
 

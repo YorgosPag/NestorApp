@@ -14,7 +14,7 @@ import {
   countStairSubElementMeshes,
 } from '../StairSubElementHighlighter';
 
-/** A tagged mesh mirroring `StairToThreeConverter.tagMesh` output. */
+/** A tagged mesh mirroring `StairToThreeConverter.tagStairMesh` output. */
 function tagged(bimId: string, component: string, index?: number): THREE.Mesh {
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
   mesh.userData['bimId'] = bimId;

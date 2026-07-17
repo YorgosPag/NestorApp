@@ -59,6 +59,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import { wallTopFaceCrossingBreakpoints, type WallTopClipContext } from '../converters/wall-top-clip';
 import { worldToDxfPlan } from '../viewport/coordinate-transforms';
 import { stairToMeshes } from '../converters/StairToThreeConverter';
+import { stampBimIdentity } from '../converters/bim-three-shape-helpers';
 import { computeWallGeometry } from '../../bim/geometry/wall-geometry';
 // ADR-363 Φ1G.5 Slice 2g — live moving wall hole (rebuild the host wall with the dragged opening).
 import { computeOpeningGeometry } from '../../bim/geometry/opening-geometry';
@@ -89,24 +90,67 @@ import { useBim3DEntitiesStore, type Bim3DEntities } from '../stores/Bim3DEntiti
 import { useViewMode3DStore } from '../stores/ViewMode3DStore';
 import { projectPointTo2D, projectVerticesTo2D } from '../../bim/geometry/shared/polygon-utils';
 
-/** Build the live resize-preview object for `entityId`, or null (no-op / unsupported / multi-floor). */
-export function buildResizePreviewObject(entityId: string, drag: ResizeDragMm): THREE.Object3D | null {
+/**
+ * Per-type param patch for ONE drag discipline. Each entry maps an entity to its NEXT
+ * params, or null for a no-op / degenerate drag. An ABSENT type means the discipline
+ * does not support it (stair has no tilt; column/slab have no endpoint handle).
+ */
+interface PreviewPatch {
+  wall?: (wall: Wall) => Wall['params'] | null;
+  column?: (column: Column) => Column['params'] | null;
+  beam?: (beam: Beam) => Beam['params'] | null;
+  slab?: (slab: Slab) => Slab['params'] | null;
+  stair?: (stair: Stair) => Stair['params'] | null;
+}
+
+/** The single-floor preview snapshot, or null on the multi-floor scope (commit-on-release). */
+function previewSnapshot(): { s: Snapshot; levelId: string | undefined } | null {
   // Match the single-floor resync (floorElevationMm = 0). Multi-floor → commit-on-release.
   if (useViewMode3DStore.getState().floor3DScope === 'all') return null;
   const s = useBim3DEntitiesStore.getState();
-  const levelId = s.activeLevelId ?? undefined;
+  return { s, levelId: s.activeLevelId ?? undefined };
+}
 
+/** The preview snapshot plus the wall `wallId` names, or null (multi-floor / unknown wall). */
+function wallPreviewSnapshot(wallId: string): { s: Snapshot; levelId: string | undefined; wall: Wall } | null {
+  const ctx = previewSnapshot();
+  if (!ctx) return null;
+  const wall = ctx.s.walls.find((w) => w.id === wallId);
+  return wall ? { ...ctx, wall } : null;
+}
+
+/**
+ * The ONE preview dispatch: find `entityId` across the supported types and rebuild it
+ * through its converter with the patched params. Every drag discipline (resize / tilt /
+ * endpoint) differs ONLY in the patch function per type — never in the lookup, the
+ * geometry recompute, the attach-profile resolution, or the converter call.
+ */
+function buildPatchedPreview(entityId: string, patch: PreviewPatch): THREE.Object3D | null {
+  const ctx = previewSnapshot();
+  if (!ctx) return null;
+  const { s, levelId } = ctx;
   const wall = s.walls.find((w) => w.id === entityId);
-  if (wall) return rebuildWall(wall, drag, s, levelId);
+  if (wall) return patch.wall ? wallMesh(wall, patch.wall(wall), s, levelId) : null;
   const column = s.columns.find((c) => c.id === entityId);
-  if (column) return rebuildColumn(column, drag, s, levelId);
+  if (column) return patch.column ? columnMesh(column, patch.column(column), s, levelId) : null;
   const beam = s.beams.find((b) => b.id === entityId);
-  if (beam) return rebuildBeam(beam, drag, s, levelId);
+  if (beam) return patch.beam ? beamMesh(beam, patch.beam(beam), s, levelId) : null;
   const slab = s.slabs.find((sl) => sl.id === entityId);
-  if (slab) return rebuildSlab(slab, drag, s, levelId);
+  if (slab) return patch.slab ? slabMesh(slab, patch.slab(slab), s, levelId) : null;
   const stair = s.stairs.find((st) => st.id === entityId);
-  if (stair) return rebuildStair(stair, drag, s, levelId);
+  if (stair) return patch.stair ? stairMesh(stair, patch.stair(stair), s, levelId) : null;
   return null;
+}
+
+/** Build the live resize-preview object for `entityId`, or null (no-op / unsupported / multi-floor). */
+export function buildResizePreviewObject(entityId: string, drag: ResizeDragMm): THREE.Object3D | null {
+  return buildPatchedPreview(entityId, {
+    wall: (w) => computeWallResizeParams(w.params, drag),
+    column: (c) => computeColumnResizeParams(c.params, drag),
+    beam: (b) => computeBeamResizeParams(b.params, drag),
+    slab: (sl) => computeSlabResizeParams(sl.params, drag),
+    stair: (st) => computeStairResizeParams(st, drag),
+  });
 }
 
 /**
@@ -115,47 +159,15 @@ export function buildResizePreviewObject(entityId: string, drag: ResizeDragMm): 
  * apply the per-type tilt patch (`bim3d-tilt-bridge`) → recompute geometry → rebuild
  * through the SAME converter the commit path uses, so the live preview === the
  * committed shear (the converters read `tilt`/`topElevationEnd`/`slope`). Stair has
- * no tilt → null. Flat-path limitation (attached/openings) mirrors resize (ADR-402).
+ * no tilt → absent → null. Flat-path limitation (attached/openings) mirrors resize.
  */
 export function buildTiltPreviewObject(entityId: string, drag: TiltDragDeg): THREE.Object3D | null {
-  if (useViewMode3DStore.getState().floor3DScope === 'all') return null;
-  const s = useBim3DEntitiesStore.getState();
-  const levelId = s.activeLevelId ?? undefined;
-
-  const wall = s.walls.find((w) => w.id === entityId);
-  if (wall) {
-    const next = computeWallTiltParams(wall.params, drag);
-    if (!next) return null;
-    const preview = { ...wall, params: next, geometry: computeWallGeometry(next, wall.kind) };
-    const openings = s.openings.filter((o) => o.params.wallId === wall.id);
-    const { profile, baseProfile } = wallPreviewProfiles(preview, s);
-    const topClip = wallPreviewTopClip(preview, buildWallHostInputs(s.beams, s.slabs, s.roofs), 0);
-    return wallToMesh(preview, openings, 0, levelId, baseElevationOf(wall, s), profile, baseProfile, topClip);
-  }
-  const column = s.columns.find((c) => c.id === entityId);
-  if (column) {
-    const next = computeColumnTiltParams(column.params, drag);
-    if (!next) return null;
-    const preview = { ...column, params: next, geometry: computeColumnGeometry(next) };
-    const { topProfile, baseProfile } = columnPreviewProfiles(preview, s);
-    return columnToMesh(preview, 0, levelId, baseElevationOf(column, s), topProfile, baseProfile);
-  }
-  const beam = s.beams.find((b) => b.id === entityId);
-  if (beam) {
-    const next = computeBeamTiltParams(beam.params, drag);
-    if (!next) return null;
-    const preview = { ...beam, params: next, geometry: computeBeamGeometry(next) };
-    return beamToMesh(preview, levelId, baseElevationOf(beam, s));
-  }
-  const slab = s.slabs.find((sl) => sl.id === entityId);
-  if (slab) {
-    const next = computeSlabTiltParams(slab.params, drag);
-    if (!next) return null;
-    const preview = { ...slab, params: next };
-    const openings = s.slabOpenings.filter((o) => o.params.slabId === slab.id);
-    return slabToMesh(preview, openings, levelId, baseElevationOf(slab, s));
-  }
-  return null;
+  return buildPatchedPreview(entityId, {
+    wall: (w) => computeWallTiltParams(w.params, drag),
+    column: (c) => computeColumnTiltParams(c.params, drag),
+    beam: (b) => computeBeamTiltParams(b.params, drag),
+    slab: (sl) => computeSlabTiltParams(sl.params, drag),
+  });
 }
 
 /**
@@ -173,9 +185,9 @@ export function buildEndpointMovePreviewObject(
   deltaMm: Point2D,
   deltaUpMm: number,
 ): THREE.Object3D | null {
-  if (useViewMode3DStore.getState().floor3DScope === 'all') return null;
-  const s = useBim3DEntitiesStore.getState();
-  const levelId = s.activeLevelId ?? undefined;
+  const ctx = previewSnapshot();
+  if (!ctx) return null;
+  const { s, levelId } = ctx;
   const segment = s.mepSegments.find((seg) => seg.id === entityId);
   if (segment) {
     const deltaCanvas = scaleDeltaToEntity(segment, deltaMm);
@@ -184,11 +196,11 @@ export function buildEndpointMovePreviewObject(
     const baseElevationM = resolveEntityBuilding(segment, s.floors, s.buildings)?.baseElevation ?? 0;
     return mepSegmentToMesh({ ...segment, params: next }, 0, levelId, baseElevationM);
   }
-  const wall = s.walls.find((w) => w.id === entityId);
-  if (wall) return rebuildWallEndpoint(wall, endpoint, scaleDeltaToEntity(wall, deltaMm), s, levelId);
-  const beam = s.beams.find((b) => b.id === entityId);
-  if (beam) return rebuildBeamEndpoint(beam, endpoint, scaleDeltaToEntity(beam, deltaMm), s, levelId);
-  return null;
+  // wall / beam — horizontal length only (`deltaUpMm` ignored, ADR-408 Φ1).
+  return buildPatchedPreview(entityId, {
+    wall: (w) => computeWallEndpointMove(w.params, endpoint, scaleDeltaToEntity(w, deltaMm)),
+    beam: (b) => computeBeamEndpointMove(b.params, endpoint, scaleDeltaToEntity(b, deltaMm)),
+  });
 }
 
 /**
@@ -205,13 +217,11 @@ export function buildOpeningHostWallPreview(
   movedOpeningId: string,
   movedParams: OpeningParams | null,
 ): THREE.Object3D | null {
-  if (useViewMode3DStore.getState().floor3DScope === 'all') return null;
-  const s = useBim3DEntitiesStore.getState();
-  const wall = s.walls.find((w) => w.id === wallId);
-  if (!wall) return null;
-  const levelId = s.activeLevelId ?? undefined;
+  const ctx = wallPreviewSnapshot(wallId);
+  if (!ctx) return null;
+  const { s, levelId, wall } = ctx;
   const others = s.openings.filter((o) => o.params.wallId === wallId && o.id !== movedOpeningId);
-  let openings = others;
+  let openings: readonly Opening[] = others;
   if (movedParams) {
     const base = s.openings.find((o) => o.id === movedOpeningId);
     if (base) {
@@ -219,9 +229,8 @@ export function buildOpeningHostWallPreview(
       openings = [...others, { ...base, params: movedParams, geometry: computeOpeningGeometry(movedParams, wall, units) }];
     }
   }
-  const { profile, baseProfile } = wallPreviewProfiles(wall, s);
-  const topClip = wallPreviewTopClip(wall, buildWallHostInputs(s.beams, s.slabs, s.roofs), 0);
-  return wallToMesh(wall, openings, 0, levelId, baseElevationOf(wall, s), profile, baseProfile, topClip);
+  // The wall itself is unpatched — only its hole set moves.
+  return wallMeshFrom(wall, wall, s, levelId, { openings });
 }
 
 /** DXF-mm gizmo delta → the entity's native canvas units (mirror move/rotate/resize). */
@@ -230,43 +239,13 @@ function scaleDeltaToEntity(entity: Entity, deltaMm: Point2D): Point2D {
   return f === 1 ? deltaMm : { x: deltaMm.x * f, y: deltaMm.y * f };
 }
 
-/** ADR-408 Φ1 — live length-handle preview of a wall (ghost === committed `syncWalls`). */
-function rebuildWallEndpoint(
-  wall: Wall,
-  endpoint: GizmoEndpoint,
-  deltaCanvas: Point2D,
-  s: Snapshot,
-  levelId: string | undefined,
-): THREE.Object3D | null {
-  const next = computeWallEndpointMove(wall.params, endpoint, deltaCanvas);
-  if (!next) return null;
-  const preview = { ...wall, params: next, geometry: computeWallGeometry(next, wall.kind) };
-  const openings = s.openings.filter((o) => o.params.wallId === wall.id);
-  const { profile, baseProfile } = wallPreviewProfiles(preview, s);
-  const topClip = wallPreviewTopClip(preview, buildWallHostInputs(s.beams, s.slabs, s.roofs), 0);
-  return wallToMesh(preview, openings, 0, levelId, baseElevationOf(wall, s), profile, baseProfile, topClip);
-}
-
-/** ADR-408 Φ1 — live length-handle preview of a beam (ghost === committed `syncBeams`). */
-function rebuildBeamEndpoint(
-  beam: Beam,
-  endpoint: GizmoEndpoint,
-  deltaCanvas: Point2D,
-  s: Snapshot,
-  levelId: string | undefined,
-): THREE.Object3D | null {
-  const next = computeBeamEndpointMove(beam.params, endpoint, deltaCanvas);
-  if (!next) return null;
-  const preview = { ...beam, params: next, geometry: computeBeamGeometry(next) };
-  return beamToMesh(preview, levelId, baseElevationOf(beam, s));
-}
-
 type Snapshot = ReturnType<typeof useBim3DEntitiesStore.getState>;
 type Wall = Bim3DEntities['walls'][number];
 type Column = Bim3DEntities['columns'][number];
 type Beam = Bim3DEntities['beams'][number];
 type Slab = Bim3DEntities['slabs'][number];
 type Stair = Bim3DEntities['stairs'][number];
+type Opening = Bim3DEntities['openings'][number];
 
 /** Base elevation for the converter — the entity's building base (mirror of BimSceneLayer). */
 function baseElevationOf(entity: Wall | Column | Beam | Slab | Stair, s: Snapshot): number {
@@ -276,16 +255,21 @@ function baseElevationOf(entity: Wall | Column | Beam | Slab | Stair, s: Snapsho
 /**
  * Attach top/base profiles for the preview wall — mirror of `BimSceneLayer.syncWalls`
  * (`floorElevationMm = 0`). Non-attached → `{}` (fast path, byte-for-byte). Host inputs
- * (beams + slabs) come from the SAME snapshot the resync reads.
+ * (beams + slabs) come from the SAME snapshot the resync reads, unless the caller passes
+ * its own — the live host-move preview shifts the hosts before resolving (ADR-401).
  */
 // ADR-535 Φ8 — exported so the 3D wall reshape-grip preview (bim3d-grip-preview-builders)
 // reuses the SAME attach top/base profile resolution the resize/tilt/endpoint previews use
 // (one SSoT), so a reshaped attached wall previews with its real stepped/sloped top/base.
-export function wallPreviewProfiles(wall: Wall, s: Snapshot): { profile?: WallTopProfile; baseProfile?: WallBaseProfile } {
+export function wallPreviewProfiles(
+  wall: Wall,
+  s: Snapshot,
+  hosts?: readonly HostFootprintInput[],
+): { profile?: WallTopProfile; baseProfile?: WallBaseProfile } {
   const topAttached = wall.params?.topBinding === 'attached';
   const baseAttached = wall.params?.baseBinding === 'attached';
   if (!topAttached && !baseAttached) return {};
-  const hostInputs = buildWallHostInputs(s.beams, s.slabs, s.roofs);
+  const hostInputs = hosts ?? buildWallHostInputs(s.beams, s.slabs, s.roofs);
   const start = projectPointTo2D(wall.params.start);
   const end = projectPointTo2D(wall.params.end);
   return {
@@ -339,16 +323,31 @@ export function columnPreviewProfiles(column: Column, s: Snapshot): { topProfile
   };
 }
 
-function rebuildWall(wall: Wall, drag: ResizeDragMm, s: Snapshot, levelId: string | undefined): THREE.Object3D | null {
-  const next = computeWallResizeParams(wall.params, drag);
-  if (!next) return null;
-  const preview = { ...wall, params: next, geometry: computeWallGeometry(next, wall.kind) };
-  const openings = s.openings.filter((o) => o.params.wallId === wall.id);
-  const { profile, baseProfile } = wallPreviewProfiles(preview, s);
-  // ADR-401 Κενό Β — pass the footprint clip so a resized attached wall previews
-  // with its real angled-crossing top (ghost === commit), not just the axis profile.
-  const topClip = wallPreviewTopClip(preview, buildWallHostInputs(s.beams, s.slabs, s.roofs), 0);
+/**
+ * Wall preview mesh — mirror of `BimSceneLayer.syncWalls` (`floorElevationMm = 0`).
+ * `preview` carries the patched params; `wall` stays the ORIGINAL (its building base
+ * elevation and hole set do not move with the drag). `over` substitutes the hosts (a
+ * live-moving structural host) or the openings (a dragged hole) while keeping ONE
+ * converter call site — ADR-401 Κενό Β: every path passes the footprint clip, so an
+ * attached wall previews with its real angled-crossing top (ghost === commit).
+ */
+function wallMeshFrom(
+  wall: Wall,
+  preview: Wall,
+  s: Snapshot,
+  levelId: string | undefined,
+  over?: { hostInputs?: readonly HostFootprintInput[]; openings?: readonly Opening[] },
+): THREE.Object3D | null {
+  const hosts = over?.hostInputs ?? buildWallHostInputs(s.beams, s.slabs, s.roofs);
+  const openings = over?.openings ?? s.openings.filter((o) => o.params.wallId === wall.id);
+  const { profile, baseProfile } = wallPreviewProfiles(preview, s, hosts);
+  const topClip = wallPreviewTopClip(preview, hosts, 0);
   return wallToMesh(preview, openings, 0, levelId, baseElevationOf(wall, s), profile, baseProfile, topClip);
+}
+
+function wallMesh(wall: Wall, next: Wall['params'] | null, s: Snapshot, levelId: string | undefined): THREE.Object3D | null {
+  if (!next) return null;
+  return wallMeshFrom(wall, { ...wall, params: next, geometry: computeWallGeometry(next, wall.kind) }, s, levelId);
 }
 
 /**
@@ -369,28 +368,15 @@ export function buildDependentWallPreviewObject(
   movedHostIds: ReadonlySet<string>,
   liveTranslation: THREE.Vector3,
 ): THREE.Object3D | null {
-  if (useViewMode3DStore.getState().floor3DScope === 'all') return null;
-  const s = useBim3DEntitiesStore.getState();
-  const wall = s.walls.find((w) => w.id === wallId);
-  if (!wall) return null;
-  const levelId = s.activeLevelId ?? undefined;
+  const ctx = wallPreviewSnapshot(wallId);
+  if (!ctx) return null;
+  const { s, levelId, wall } = ctx;
   const d = worldToDxfPlan(liveTranslation); // world (m) → plan (mm) delta
   const hostInputs = buildWallHostInputs(s.beams, s.slabs, s.roofs).map((h) =>
     movedHostIds.has(h.hostId) ? shiftHost(h, d.x, d.y, d.z) : h,
   );
-  const start = projectPointTo2D(wall.params.start);
-  const end = projectPointTo2D(wall.params.end);
-  const profile =
-    wall.params?.topBinding === 'attached'
-      ? resolveWallTopProfile(wall.params, makeWallTopContext(start, end, hostInputs, { floorElevationMm: 0 }))
-      : undefined;
-  const baseProfile =
-    wall.params?.baseBinding === 'attached'
-      ? resolveWallBaseProfile(wall.params, makeWallBaseContext(start, end, hostInputs, { floorElevationMm: 0 }))
-      : undefined;
-  const topClip = wallPreviewTopClip(wall, hostInputs, 0);
-  const openings = s.openings.filter((o) => o.params.wallId === wall.id);
-  return wallToMesh(wall, openings, 0, levelId, baseElevationOf(wall, s), profile, baseProfile, topClip);
+  // The wall itself is unpatched — only its hosts moved.
+  return wallMeshFrom(wall, wall, s, levelId, { hostInputs });
 }
 
 /**
@@ -412,27 +398,22 @@ function shiftHost(h: HostFootprintInput, dx: number, dy: number, dz: number): H
   };
 }
 
-function rebuildColumn(column: Column, drag: ResizeDragMm, s: Snapshot, levelId: string | undefined): THREE.Object3D | null {
-  const next = computeColumnResizeParams(column.params, drag);
+function columnMesh(column: Column, next: Column['params'] | null, s: Snapshot, levelId: string | undefined): THREE.Object3D | null {
   if (!next) return null;
   const preview = { ...column, params: next, geometry: computeColumnGeometry(next) };
   const { topProfile, baseProfile } = columnPreviewProfiles(preview, s);
   return columnToMesh(preview, 0, levelId, baseElevationOf(column, s), topProfile, baseProfile);
 }
 
-function rebuildBeam(beam: Beam, drag: ResizeDragMm, s: Snapshot, levelId: string | undefined): THREE.Object3D | null {
-  const next = computeBeamResizeParams(beam.params, drag);
+function beamMesh(beam: Beam, next: Beam['params'] | null, s: Snapshot, levelId: string | undefined): THREE.Object3D | null {
   if (!next) return null;
-  const preview = { ...beam, params: next, geometry: computeBeamGeometry(next) };
-  return beamToMesh(preview, levelId, baseElevationOf(beam, s));
+  return beamToMesh({ ...beam, params: next, geometry: computeBeamGeometry(next) }, levelId, baseElevationOf(beam, s));
 }
 
-function rebuildSlab(slab: Slab, drag: ResizeDragMm, s: Snapshot, levelId: string | undefined): THREE.Object3D | null {
-  const next = computeSlabResizeParams(slab.params, drag);
+function slabMesh(slab: Slab, next: Slab['params'] | null, s: Snapshot, levelId: string | undefined): THREE.Object3D | null {
   if (!next) return null;
-  const preview = { ...slab, params: next };
   const openings = s.slabOpenings.filter((o) => o.params.slabId === slab.id);
-  return slabToMesh(preview, openings, levelId, baseElevationOf(slab, s));
+  return slabToMesh({ ...slab, params: next }, openings, levelId, baseElevationOf(slab, s));
 }
 
 /**
@@ -441,15 +422,17 @@ function rebuildSlab(slab: Slab, drag: ResizeDragMm, s: Snapshot, levelId: strin
  * the resize / tilt / endpoint preview machinery.
  */
 
-function rebuildStair(stair: Stair, drag: ResizeDragMm, s: Snapshot, levelId: string | undefined): THREE.Object3D | null {
-  const next = computeStairResizeParams(stair, drag);
+function stairMesh(stair: Stair, next: Stair['params'] | null, s: Snapshot, levelId: string | undefined): THREE.Object3D | null {
   if (!next) return null;
   const preview = { ...stair, params: next, geometry: computeStairGeometry(next) };
   const meshes = stairToMeshes(preview, 0, levelId, baseElevationOf(stair, s));
   if (meshes.length === 0) return null;
-  // applyResize swaps a SINGLE object — wrap the stair's meshes (already bimId-tagged).
+  // applyResize swaps a SINGLE object — wrap the stair's meshes (already identity-tagged).
+  // ADR-669 Φάση Β′ — the wrapper carries the FULL identity, not just `bimId`: a node that
+  // answers "which element" must also answer "which category" (Revit's ElementId always has
+  // one). `matId` stays absent — the stair resolves material per component (ADR-669 §4.1).
   const group = new THREE.Group();
-  group.userData['bimId'] = stair.id;
+  stampBimIdentity(group, { bimId: stair.id, bimType: 'stair' });
   for (const m of meshes) group.add(m);
   return group;
 }

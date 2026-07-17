@@ -27,6 +27,7 @@ import { buildTreadNosingMesh } from './stair-tread-nosing-3d';
 import { inferSceneUnitsFromWidth, sceneUnitsToMeters } from '../../utils/scene-units';
 import { attachEdgesProjection } from './bim-three-edges';
 import { ensureWorldUvs } from './bim-uv-helpers';
+import { stampBimIdentity } from './bim-three-shape-helpers';
 
 // ADR-375 Phase C.7 — stair subcategory wiring (ADR-377 SUBCATEGORY_TAXONOMY).
 // ADR-377 Phase E — unified onto the shared `attachEdgesProjection` SSoT (was a
@@ -84,21 +85,25 @@ function extrudeFlatSlab(
   return mesh;
 }
 
-function tagMesh(
+/**
+ * ADR-669 — the stair's identity superset: `stampBimIdentity` SSoT + the stair-only
+ * component keys. Deliberately passes NO `matId`: a stair mesh has no single material id
+ * (`resolveStairMaterial` resolves per component/tread), and `section-cut-cap-groups`
+ * reads `userData.matId` — so the key must stay absent, not empty.
+ */
+function tagStairMesh(
   mesh: THREE.Mesh,
   stair: StairEntity,
   component: string,
   levelId?: string,
   componentIndex?: number,
 ): THREE.Mesh {
-  mesh.userData['bimId'] = stair.id;
-  mesh.userData['bimType'] = 'stair';
+  stampBimIdentity(mesh, { bimId: stair.id, bimType: 'stair', levelId });
   mesh.userData['stairComponent'] = component;
   // ADR-358 Q19 — per-tread/per-riser sub-element picking (click-into). 0-based index
   // into the component's geometry array; MATCHES `resolveStairMaterial`'s `treadIndex`
   // convention, so a picked tread and its material override read the SAME key.
   if (componentIndex !== undefined) mesh.userData['stairComponentIndex'] = componentIndex;
-  if (levelId !== undefined) mesh.userData['levelId'] = levelId;
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   return mesh;
@@ -131,7 +136,7 @@ function buildTreadMeshes(
         ?? extrudeFlatSlab(allTreads[i]!, sceneToM, thicknessM, mat, baseY)
       : extrudeFlatSlab(allTreads[i]!, sceneToM, thicknessM, mat, baseY);
     if (!mesh) continue;
-    const tagged = tagMesh(mesh, stair, 'tread', levelId, i);
+    const tagged = tagStairMesh(mesh, stair, 'tread', levelId, i);
     attachStairEdges(tagged, 'treads');
     out.push(tagged);
   }
@@ -156,7 +161,7 @@ function buildRiserMeshes(
     const mat = resolveStairMaterial(stair, 'stair-riser', i);
     const mesh = buildRiserBox(risers[i]!, sceneToM, riseM, thicknessM, mat, baseY);
     if (mesh) {
-      const tagged = tagMesh(mesh, stair, 'riser', levelId, i);
+      const tagged = tagStairMesh(mesh, stair, 'riser', levelId, i);
       attachStairEdges(tagged, 'risers');
       out.push(tagged);
     }
@@ -251,7 +256,7 @@ function stringerSegmentsAlong(
     // Orient box length along (a→b) in plan, allowing vertical tilt.
     const dirPlan = Math.atan2(-dyM, dxM); // world rotation around Y
     mesh.rotation.y = dirPlan;
-    const tagged = tagMesh(mesh, stair, 'stringer', levelId);
+    const tagged = tagStairMesh(mesh, stair, 'stringer', levelId);
     attachStairEdges(tagged, 'outlines');
     out.push(tagged);
   }
@@ -275,11 +280,11 @@ function buildHandrailMeshes(
   const mat = resolveStairMaterial(stair, 'stair-handrail');
   if (hr.inner && stair.geometry.handrails.inner) {
     const mesh = handrailTube(stair.geometry.handrails.inner, sceneToM, radiusM, heightOffsetM, mat, baseY);
-    if (mesh) out.push(tagMesh(mesh, stair, 'handrail-inner', levelId));
+    if (mesh) out.push(tagStairMesh(mesh, stair, 'handrail-inner', levelId));
   }
   if (hr.outer && stair.geometry.handrails.outer) {
     const mesh = handrailTube(stair.geometry.handrails.outer, sceneToM, radiusM, heightOffsetM, mat, baseY);
-    if (mesh) out.push(tagMesh(mesh, stair, 'handrail-outer', levelId));
+    if (mesh) out.push(tagStairMesh(mesh, stair, 'handrail-outer', levelId));
   }
   return out;
 }
@@ -325,7 +330,7 @@ function buildLandingMeshes(
     if (!mesh) continue;
     // ADR-637 Φ5 — 0-based index into `geometry.landings` = the `stairComponentIndex`
     // the 2D hit-test, raycaster and sub-element highlighter pick landings by.
-    const tagged = tagMesh(mesh, stair, 'landing', levelId, i);
+    const tagged = tagStairMesh(mesh, stair, 'landing', levelId, i);
     // landing has no canonical subcategory in ADR-377 taxonomy → parent stair style.
     attachStairEdges(tagged);
     out.push(tagged);

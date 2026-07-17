@@ -36,15 +36,25 @@ function drag(
 }
 
 describe('computeStairResizeParams (ADR-402 Sub-Phase 1)', () => {
-  it('perpendicular drag → width grows symmetrically (±2·perp)', () => {
+  it('perpendicular drag → width grows opposite-face-fixed, base recenters by half (ADR-393 Phase C wall parity)', () => {
     const stair = straightStair();
     const w0 = stair.params.width;
+    const base0 = stair.params.basePoint.y;
     // deltaMm perpendicular to the climb axis (y) → dominant perp component → width.
     const next = computeStairResizeParams(stair, drag('z', { x: 0, y: 25 }));
     expect(next).not.toBeNull();
     const scenePerMm = mmToSceneUnits(inferSceneUnitsFromWidth(w0));
-    expect(next!.width).toBeCloseTo(w0 + 2 * 25 * scenePerMm, 6);
+    // A straight (rect) stair's `stair-width` grip is intercepted by the shared
+    // axis-box engine BEFORE it ever reaches the standalone `resizeWidth` (ADR-393
+    // Phase C, `applyRectStairGrip` → `applyRectEdgeDrag`): the far face is held
+    // FIXED and the dragged face moves by the perp delta ×1 — NOT the legacy
+    // symmetric ×2 `resizeWidth` still uses for non-rect variants. Same "wall
+    // parity" contract already locked in by `stair-grips.test.ts` #12 ("opposite-
+    // face-fixed width grow + axis recenter"). The centreline (`basePoint`) shifts
+    // by HALF the width delta toward the dragged face so the far edge stays put.
+    expect(next!.width).toBeCloseTo(w0 + 25 * scenePerMm, 6);
     expect(next!.width).toBeGreaterThan(w0);
+    expect(next!.basePoint.y).toBeCloseTo(base0 + 12.5 * scenePerMm, 6);
     // a width drag must not touch the run.
     expect(next!.stepCount).toBe(stair.params.stepCount);
     expect(next!.totalRun).toBeCloseTo(stair.params.totalRun, 6);

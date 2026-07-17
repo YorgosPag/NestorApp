@@ -690,6 +690,18 @@
       ],
       "tier": 3
     },
+    "bim-mesh-identity-stamp": {
+      "ssotFile": "src/subapps/dxf-viewer/bim-3d/converters/bim-three-shape-helpers.ts",
+      "description": "BIM identity stamping onto three.js userData has exactly ONE writer: stampBimIdentity() (ADR-669 Φάση Α/Β′). Every converter tag helper — tagMesh, tagRoofMesh, tagStairMesh, tagObject, tagComponent — delegates there, so the key names bimId/bimType/matId/levelId live in one place. Φάση Β′ routed the 35 raw write sites across 22 files through it; this gate keeps the count at zero. SCOPE (measured, deliberate): only bimId — the identity ANCHOR — is forbidden outside the allowlist. Raw bimType/matId/levelId writes are NOT forbidden, because legitimate non-identity nodes carry them alone: envelope groups + joint reinforcement stamp bimType with no bimId (EnvelopeToThree, envelope-three-mesh, joint-rebar-3d), and BimToThreeConverter augments matId/levelId onto an already-stamped wall group. Forbidding those would fire on day one and block commits — a gate without signal. WHY NOT A SEAM: a finalizeEntityMesh() seam on BimSceneLayer was proposed and REJECTED with evidence (ADR-669 §5) — openings nest inside walls (blind traverse picks the door as the wall), 11+ consumers read the key off the Mesh without climbing ancestors, and LineSegments2/InstancedMesh extend Mesh so edge overlays and rebar would inherit identity they must not have. The per-node decision is real converter knowledge, not inconsistency. Do not re-propose it. NOTE the regex: it ends in [^=] because 'userData[bimId] *=' also matches the === comparisons in readers (scene-framing-bounds, FaceSelectionHighlighter, StairSubElementHighlighter) — that error once inflated the count from 35 to 39.",
+      "forbiddenPatterns": [
+        "userData\\[['\"]bimId['\"]\\] *= *[^=]",
+        "userData\\.bimId *= *[^=]"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/bim-3d/converters/bim-three-shape-helpers.ts"
+      ],
+      "tier": 3
+    },
     "entity-audit-trail": {
       "ssotFile": "src/services/entity-audit.service.ts",
       "description": "Entity audit trail is a closed SSoT (ADR-195 Phase 10). Server writes go through EntityAuditService.recordChange(). Client reads go through EntityAuditClientService.subscribeGlobal()/subscribeEntity(), which compose firestoreQueryService. The canonical hooks are useEntityAudit + useGlobalAuditTrail. Forbidden (reader-side, enforced by regex below): direct writes to entity_audit_trail, inline collection() queries on ENTITY_AUDIT_TRAIL, re-implementation of either hook, manual RealtimeService event lists like GLOBAL_AUDIT_WATCH_EVENTS/ENTITY_EVENT_MAP, or bypassing firestoreQueryService with raw onSnapshot on the collection. Writer-side coverage (positive requirement — any write to a tracked entity must also call recordChange) is enforced by CHECK 3.17 via scripts/check-entity-audit-coverage.js + .entity-audit-coverage-baseline.json. The two together guarantee the audit trail is both untamperable (reader gate) and complete (writer gate).",

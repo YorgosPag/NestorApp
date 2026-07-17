@@ -32,6 +32,7 @@ import {
   type SlabPlan,
   type OpeningPlan,
 } from './section-intersect';
+import { stampBimIdentity } from '../converters/bim-three-shape-helpers';
 
 /**
  * Returned scene data for the panel renderer.
@@ -90,15 +91,13 @@ function addFilledRect(
   const geo = new THREE.PlaneGeometry(w, h);
   const mesh = new THREE.Mesh(geo, fill);
   mesh.position.set(cx, cy, 0);
-  mesh.userData['bimId'] = elementId;
-  mesh.userData['bimType'] = elementType;
+  stampBimIdentity(mesh, { bimId: elementId, bimType: elementType });
   group.add(mesh);
 
   const edgeGeo = new THREE.EdgesGeometry(geo);
   const outline = new THREE.LineSegments(edgeGeo, outlineMat);
   outline.position.set(cx, cy, 0.001);
-  outline.userData['bimId'] = elementId;
-  outline.userData['bimType'] = elementType;
+  stampBimIdentity(outline, { bimId: elementId, bimType: elementType });
   group.add(outline);
 
   geos.push(geo, edgeGeo);

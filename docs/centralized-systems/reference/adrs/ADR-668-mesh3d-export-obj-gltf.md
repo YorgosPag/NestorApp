@@ -179,7 +179,7 @@ snapshot, V/G `objectStyles`/`disciplineVisibility`, και ορατότητα l
 | Αρχείο | Ρόλος |
 |---|---|
 | `bim-3d/scene/extract-bim3d-entities.ts` | **SSoT** `SceneModel → Bim3DEntities` (μεταφέρθηκε από ιδιωτική συνάρτηση του aggregator) — registry module `extract-bim3d-entities`, tier 3 |
-| `export/core/mesh3d/mesh3d-identity.ts` | `resolveBimMeshIdentity()` — **ανεβαίνει στους προγόνους** (τα meshes κρατούν `userData` άλλοτε στο mesh, άλλοτε στο group) |
+| `export/core/mesh3d/mesh3d-identity.ts` | `resolveBimMeshIdentity()` — **ανεβαίνει στους προγόνους** (τα meshes κρατούν `userData` άλλοτε στο mesh, άλλοτε στο group). Το `matId` λύνεται **φραγμένο στο σύνορο του element** (`readWithinElement`, 2026-07-18) — δεν διαρρέει σε γειτονικό element (§10) |
 | `export/core/mesh3d/mesh3d-naming.ts` | `buildMeshName()`, `HIDDEN_NAME_PREFIX`, charset ανά format |
 | `export/core/mesh3d/mesh3d-materials.ts` | `assignExportMaterials()` (ονοματισμένα **clones**), `writeMtl()` |
 | `export/core/mesh3d/mesh3d-prepare.ts` | `nameMeshesForExport()`, `applyExportUnit()` |
@@ -187,8 +187,13 @@ snapshot, V/G `objectStyles`/`disciplineVisibility`, και ορατότητα l
 | `export/core/mesh3d/build-mesh3d-scene.ts` | **headless** build |
 | `export/formats/mesh3d-export-adapter.ts` | `exportFloorsToMesh3d()` |
 | `export/formats/__tests__/mesh3d-export-adapter.test.ts` | 14 tests — κάθε ένα καρφώνει μια ρίζα/απόφαση |
+| `export/core/mesh3d/__tests__/mesh3d-identity.test.ts` | 4 tests (2026-07-18) — κλειδώνουν το element-boundary του `matId` (§10) |
+| `bim-3d/converters/__tests__/bim-three-wall-opening-attach.test.ts` | 3 tests (2026-07-18) — τα ανοίγματα σφραγίζονται με σημασιολογικό `matId` (§10, απόφαση §2.4) |
 
-**Τροποποιημένα:** `export/export-service.ts` (routing + `zipLabel`), `export/types.ts`,
+**Τροποποιημένα (2026-07-18):** `export/core/mesh3d/mesh3d-identity.ts` (element-boundary `matId`),
+`bim-3d/converters/bim-three-wall-opening-attach.ts` (σημασιολογικό `matId` ανοιγμάτων — §2.4).
+
+**Τροποποιημένα (αρχική):** `export/export-service.ts` (routing + `zipLabel`), `export/types.ts`,
 `app/ExportHost.tsx` (storey elevations), `ui/.../ExportDialog.tsx` (+`UnitField`),
 `ui/.../useExportDialogState.ts`, `bim-3d/scene/BimSceneLayer.ts` (`includeHidden` seam),
 `hooks/data/useFloors3DAggregator.ts` (import από SSoT), `utils/greek-text.ts` (+transliteration),
@@ -226,3 +231,33 @@ OBJ → import στο **C4D R15 με Scale 1**: τοίχοι/κολώνες/πλ
   glTF→ελληνικά**. Boy Scout: `transliterateGreekToLatin` → `@/utils/greek-text` (ADR-217),
   `UnitField` de-duplication, `makeState()` fixture χωρίς `as unknown as`, αφαίρεση περιττού
   `jest.mock('@/utils/greek-text')`.
+- **2026-07-18** — **Bug fix: το `matId` διέρρεε πάνω από σύνορο element** (τεκμηριώθηκε στο
+  ADR-669 §5.6). Το `resolveBimMeshIdentity` έτρεχε `readUp('matId')` ανεξάρτητα ανά κλειδί, οπότε
+  ένα φύλλο πόρτας (`bimId=opening.id`, χωρίς δικό του `matId`) φιλοξενημένο ΜΕΣΑ σε wall group
+  (`matId=σκυρόδεμα`) κληρονομούσε το σκυρόδεμα του τοίχου. Λόγω dedup **με το όνομα** στο
+  `assignExportMaterials`, η πόρτα έπαιρνε κυριολεκτικά το material clone του τοίχου → **λάθος
+  χρώμα στο OBJ/glTF** (και μη-ντετερμινιστικό ως προς τη σειρά `traverse`). **Fix:** νέα
+  `readWithinElement(mesh, 'matId', ownerBimId)` — η αναρρίχηση του `matId` σταματά μόλις συναντήσει
+  κόμβο με **ΔΙΑΦΟΡΕΤΙΚΟ** `bimId` (μοντέλο Revit/ArchiCAD: το υλικό είναι ιδιότητα ΕΝΟΣ element,
+  δεν κληρονομείται από άλλο). Το σύνορο ορίζεται από **αλλαγή** `bimId`, όχι από την παρουσία του,
+  ώστε η νόμιμη αναρρίχηση εντός του ίδιου element (wall body mesh → wall group, ίδιο `bimId`) να
+  συνεχίζει· `ownerBimId === null` (envelope) → κανένα σύνορο, συμπεριφορά `readUp` (μηδέν regression).
+  `bimType`/`bimId`/`levelId` αμετάβλητα (co-located ή αβλαβή). **SSoT:** ένας reader, ένας writer —
+  καμία διπλή υλοποίηση. 4 νέα tests σε πραγματική εμφωλευμένη ιεραρχία (τα adapter tests χτίζουν
+  επίπεδη σκηνή → δεν το έπιαναν). Gates: export **36 suites / 458 ✅**, bim-3d **235 / 2071 ✅**,
+  `jscpd:diff` **καθαρό ✅**. Το e2e (§9) παραμένει στον Giorgio.
+- **2026-07-18 (§2.4 — απόφαση Giorgio: «όπως οι μεγάλοι»)** — **Τα ανοίγματα αποκτούν πραγματικό,
+  σημασιολογικό `matId` αντί για color-hash fallback.** Revit/ArchiCAD δίνουν στην κάσα/φύλλο/
+  υαλοστάσιο μιας πόρτας **δικές τους named surfaces** — ποτέ το υλικό του τοίχου-host. Τα catalog
+  ids **υπήρχαν ήδη** (`mat-wood` κάσα+φύλλο, `mat-glass` υαλοστάσιο· `getMaterial3D` στο
+  `bim-three-wall-opening-attach.ts`) — απλώς δεν σφραγίζονταν ως `userData.matId`. **Υλοποίηση
+  (full SSoT, ένα σημείο):** τα ids δηλώνονται ΜΙΑ φορά ως σταθερές, το `stampOpeningMaterialIds`
+  σφραγίζει σε κάθε sub-mesh το **ίδιο** id που έχτισε το υλικό του (material-singleton → id map).
+  Έτσι ένα id οδηγεί build + export-naming (+ αύριο BOQ). Το `.mtl` βγάζει πλέον `newmtl mat-wood`/
+  `newmtl mat-glass`. Καμία αλλαγή σε `buildOpeningMesh`/`OpeningMeshMaterials` (μηδέν ρίσκο στο
+  υπάρχον opening-mesh suite). Δεν είναι δεύτερος identity writer: το `matId` είναι νόμιμο raw
+  augmentation (ADR-669 §6.1, ίδιο σημείο με το raw `levelId`). 3 νέα tests
+  (`bim-three-wall-opening-attach.test.ts`). Gates: bim-3d+export **272 suites / 2532 ✅**,
+  `jscpd:diff` **καθαρό ✅**. **Μελλοντικό (ξεχωριστό ADR):** editable per-opening-type material DNA
+  (η κάσα/φύλλο να επιλέγονται από τον χρήστη ανά family, όπως τα Revit family surfaces) — σήμερα τα
+  υλικά είναι σταθερά ξύλο/γυαλί.
