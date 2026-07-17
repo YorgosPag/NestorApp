@@ -3060,6 +3060,8 @@
         "materialPresetMetal": "Metal",
         "materialPresetGlass": "Glass",
         "materialPresetCustom": "Custom…",
+        "materialGroupPresets": "Base materials",
+        "materialGroupLibrary": "Material library",
         "editTypeOpeningTitle": "Edit opening type",
         "editTypeOpeningDescription": "Changes apply to every opening of this type, on all floors.",
         "editTypeOpeningBuiltinNotice": "Built-in type (read-only). Duplicate it to edit.",

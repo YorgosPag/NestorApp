@@ -43,6 +43,7 @@ import {
 } from '../../../bim/family-types/edit-opening-type-store';
 import type { OpeningTypeParams } from '../../../bim/types/bim-family-type';
 import { OpeningMaterialSelectCell } from './OpeningMaterialSelectCell';
+import { useOpeningMaterialCatalog } from '../hooks/useOpeningMaterialCatalog';
 
 /** The 4 opening "family surfaces" a Type owns a material for (ADR-421 SLICE C follow-up). */
 const MATERIAL_PARTS = ['frame', 'leaf', 'glass', 'hardware'] as const;
@@ -73,6 +74,7 @@ function EditOpeningTypeDialogContent({ typeId }: { typeId: string }): React.Rea
   const { updateTypeParams, duplicateCurrent, countOpeningsOfType, opening } =
     useOpeningFamilyTypeController();
   const getType = useBimFamilyTypeStore((s) => s.getType);
+  const materialCatalog = useOpeningMaterialCatalog();
   const type = asOpeningFamilyType(getType(typeId));
   const isBuiltIn = type?.origin === 'built-in';
   const affectedCount = countOpeningsOfType(typeId);
@@ -253,24 +255,28 @@ function EditOpeningTypeDialogContent({ typeId }: { typeId: string }): React.Rea
             label={t('ribbon.commands.bimFamilyType.paramFrameMaterial')}
             material={draft.materials?.frame}
             onChange={(v) => setMaterialPart('frame', v)}
+            catalog={materialCatalog}
           />
 
           <OpeningMaterialSelectCell
             label={t('ribbon.commands.bimFamilyType.paramLeafMaterial')}
             material={draft.materials?.leaf}
             onChange={(v) => setMaterialPart('leaf', v)}
+            catalog={materialCatalog}
           />
 
           <OpeningMaterialSelectCell
             label={t('ribbon.commands.bimFamilyType.paramGlassMaterial')}
             material={draft.materials?.glass}
             onChange={(v) => setMaterialPart('glass', v)}
+            catalog={materialCatalog}
           />
 
           <OpeningMaterialSelectCell
             label={t('ribbon.commands.bimFamilyType.paramHardwareMaterial')}
             material={draft.materials?.hardware}
             onChange={(v) => setMaterialPart('hardware', v)}
+            catalog={materialCatalog}
           />
 
           <label className="flex items-center gap-2 text-xs text-foreground">

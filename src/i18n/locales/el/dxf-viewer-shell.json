@@ -3060,6 +3060,8 @@
         "materialPresetMetal": "Μέταλλο",
         "materialPresetGlass": "Γυαλί",
         "materialPresetCustom": "Προσαρμοσμένο…",
+        "materialGroupPresets": "Βασικά υλικά",
+        "materialGroupLibrary": "Βιβλιοθήκη υλικών",
         "editTypeOpeningTitle": "Επεξεργασία τύπου κουφώματος",
         "editTypeOpeningDescription": "Οι αλλαγές εφαρμόζονται σε όλα τα κουφώματα αυτού του τύπου, σε όλους τους ορόφους.",
         "editTypeOpeningBuiltinNotice": "Ενσωματωμένος τύπος (μόνο ανάγνωση). Κάντε Διπλασιασμό για να τον επεξεργαστείτε.",
