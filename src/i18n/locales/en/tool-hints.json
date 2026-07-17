@@ -108,13 +108,17 @@
     "hatch": {
       "name": "Hatch",
       "description": "Fill a closed region with a pattern or color",
-      "steps": ["Click inside a closed region to hatch it"],
+      "steps": [
+        "Click inside a closed region to hatch it"
+      ],
       "shortcuts": "Click inside=Hatch | Select+click=Properties | Shift+Space=Cycle overlapping | ESC=Cancel"
     },
     "stair": {
       "name": "Stair",
       "description": "Draw stair (stub — Phase 0, available from Phase 5a)",
-      "steps": ["Tool under development"],
+      "steps": [
+        "Tool under development"
+      ],
       "shortcuts": "ST | ESC=Cancel",
       "statusBasePoint": "Stair: click for base point",
       "statusDirection": "Stair: click for direction",
@@ -925,5 +929,8 @@
     "cancel": "Cancel",
     "point": "Point",
     "noHint": "Select a tool"
+  },
+  "createBlock": {
+    "selectEntities": "Select objects to create a block"
   }
 }

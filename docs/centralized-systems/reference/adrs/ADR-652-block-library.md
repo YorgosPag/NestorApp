@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | 🔵 PROPOSED (Milestones 1 + 1.5 + 2 + 3 + 4 + 5 υλοποιημένα) |
+| **Status** | 🔵 PROPOSED (Milestones 1 + 1.5 + 2 + 3 + 4 + 5 + 6 υλοποιημένα) |
 | **Date** | 2026-07-13 |
 | **Category** | DXF Viewer / Content Library |
 | **Related** | ADR-410 (CC0 furniture), ADR-411 (BIM mesh library), ADR-600 (single-click placement SSoT), ADR-640 (BlockEntity / INSERT preserve), ADR-397 (append-entity SSoT), ADR-040 (canvas perf), ADR-363 §Phase 6.5 (material library — ο πυρήνας που μοιραζόμαστε), ADR-413 (registry host pattern) |
@@ -474,6 +474,27 @@ user-import → `unknown` / `redistributable:false`. Promote σε shared/system 
 - **Anonymous blocks**: αποθηκεύονται μόνο named/πραγματικά (`shouldPreserveBlockName`), όχι `*X`/`*D`.
 
 ## Changelog
+- **2026-07-18** — **M6** υλοποιημένο — **«Δημιουργία Block» από επιλογή** (AutoCAD BLOCK/BMAKE + WBLOCK).
+  Έκλεισε το κενό στην **αρχή** της αλυσίδας: μέχρι τώρα το palette «Τα Blocks μου» τροφοδοτούνταν
+  **μόνο** από DXF import (`captureSessionBlocksFromScene` στο `useSceneState.handleFileImport`) — δεν
+  υπήρχε τρόπος να οριστεί νέο block από γεωμετρία που σχεδιάζει ο χρήστης. Τώρα: επιλογή → Home→Modify
+  «Δημιουργία Block» → διάλογος (όνομα/κατηγορία/άδεια + toggle «αντικατάσταση με instance») → register
+  στο in-session registry + persist στην **ιδιωτική** βιβλιοθήκη (scope `user`). **SSoT reuse (grep,
+  όχι μνήμη):** το BlockEntity βγαίνει από το υπάρχον `buildBlockEntityFromDef` (ίδιο με library-placement
+  + import· κανένα δεύτερο shape)· το replace είναι thin subclass του `ReplaceEntitiesWithContainerCommand`
+  (ίδια βάση με `CreateGroupCommand`, ADR-575 §7)· η αποθήκευση περνά από το **ίδιο** `saveBlock` με το
+  palette (extracted `buildUserBlockSaveInput` → κοινό `saveEntry` + `saveNewBlockFromDef`, N.18). **Base
+  point** = κάτω-αριστερή γωνία AABB της επιλογής (bake base→origin με το SSoT `translateEntityByAnchor`,
+  ΙΔΙΟ μονοπάτι με `createBlockInstance`)· διαδραστική επιλογή σημείου = ρητό follow-up. Αρχεία (NEW):
+  `systems/block/build-block-def-from-selection.ts` (pure) + `create-block-request-store.ts` (action→host
+  signal, gate-at-mount) · `core/commands/entity-commands/CreateBlockFromSelectionCommand.ts` (undoable) ·
+  `ui/ribbon/hooks/useCreateBlockRibbonAction.ts` (interceptor, mirror `useGroupRibbonAction`) ·
+  `ui/panels/block-library/CreateBlockDialog.tsx` + `CreateBlockDialogHost.tsx` ·
+  `bim/block-library/build-save-block-input.ts` (SSoT save-input). Wiring: `useDxfViewerRibbon` (chain top),
+  `home-tab-modify.ts` (action `create-block`), `DxfViewerDialogs.tsx` (host mount), i18n el+en
+  (`ribbon.commands.createBlock`, `blockLibrary.create.*`, `tool-hints:createBlock.*`). **Jest:** 12
+  (`build-block-def-from-selection` 5 + `CreateBlockFromSelectionCommand` 7)· jscpd καθαρό· 71 υπάρχοντα
+  block-library tests πράσινα μετά το refactor. **Deferred M6:** interactive base-point pick.
 - **2026-07-16** — 🔴 **Live layout bug** — και τα **3** dialogs της βιβλιοθήκης (`BlockEditDialog`,
   `BlockPromoteDialog`, `BlockSaveToLibraryDialog`) περνούσαν `<DialogContent size="md">`. Το **`md` ΔΕΝ
   υπάρχει** στην CVA κλίμακα του `@/components/ui/dialog` (ADR-241): `sm | default | lg | xl | 2xl |
