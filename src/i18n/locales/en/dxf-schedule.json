@@ -8,6 +8,7 @@
     "combined": "All elements",
     "door": "Doors",
     "window": "Windows",
+    "hardware": "Hardware",
     "wall": "Walls",
     "slab": "Slabs",
     "column": "Columns",
@@ -132,6 +133,17 @@
     "tilt-turn-window": "Tilt-turn window",
     "bay-window": "Bay window"
   },
+  "hardwareComponent": {
+    "lever": "Lever handle",
+    "pull-handle": "Sliding pull handle",
+    "knob": "Knob",
+    "window-handle": "Window handle",
+    "lockset": "Lockset",
+    "hinge": "Hinge",
+    "flush-bolt": "Flush bolt",
+    "sliding-track": "Sliding track",
+    "friction-stay": "Friction stay"
+  },
   "col": {
     "mark": "Mark",
     "id": "ID",
@@ -154,6 +166,8 @@
     "leafMaterial": "Leaf Material",
     "glassMaterial": "Glass Material",
     "hardwareMaterial": "Hardware Material",
+    "hardwareSet": "Hardware set",
+    "pieces": "Pieces",
     "category": "Category",
     "wall": "Wall",
     "sill": "Sill height",

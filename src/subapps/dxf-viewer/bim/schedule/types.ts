@@ -18,6 +18,7 @@
 
 import type { BoundingBox3D } from '../types/bim-base';
 import type { BuildingRef } from '../utils/bim-floor-utils';
+import type { OpeningHardwareComponent } from '../family-types/opening-hardware-set';
 
 // ─── Cell + Column primitives ─────────────────────────────────────────────────
 
@@ -65,6 +66,7 @@ export interface ScheduleColumnDef {
 export type ScheduleEntityType =
   | 'door'
   | 'window'
+  | 'hardware'
   | 'wall'
   | 'slab'
   | 'column'
@@ -216,6 +218,8 @@ export interface ScheduleLookups {
   readonly building?: BuildingLookup;
   /** ADR-376 C.3 — Translates raw kind enum (opening/wall/column/…) to display label. Optional. */
   readonly translateKind?: (kind: string) => string;
+  /** ADR-674 Φ Β — translates a hardware component enum to its localised name (hardware schedule breakdown). Optional. */
+  readonly translateHardwareComponent?: (component: OpeningHardwareComponent) => string;
   /** ADR-363 §6 Phase 8 — translates raw entity `type` (wall/opening/…) to a singular Greek label. Optional. */
   readonly translateType?: (type: string) => string;
 }

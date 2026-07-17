@@ -1,10 +1,10 @@
 /**
  * BIM Schedule — Entity-Type Toggle (ADR-363 §6 Phase 8 / M4).
  *
- * RadioGroup με 9 mutually-exclusive options: 8 per-type schedules
- * (door / window / wall / slab / column / beam / stair / slab-opening) +
- * 'combined' (mixed mini-table). Drives `ScheduleConfig.entityType` στον
- * orchestrator (BimScheduleDialog).
+ * RadioGroup με mutually-exclusive options: per-type schedules
+ * (door / window / hardware / wall / slab / column / beam / stair /
+ * slab-opening / foundation) + 'combined' (mixed mini-table). Drives
+ * `ScheduleConfig.entityType` στον orchestrator (BimScheduleDialog).
  *
  * SSoT: type από `bim/schedule/index.ts` (top-level barrel). Labels
  * resolve via `dxf-schedule:entityType.<kind>` (M7 fills locales).
@@ -30,6 +30,7 @@ const ENTITY_TYPES: readonly ScheduleEntityType[] = [
   'combined',
   'door',
   'window',
+  'hardware',
   'wall',
   'slab',
   'column',

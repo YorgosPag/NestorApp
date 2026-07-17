@@ -25,6 +25,7 @@ import type { MepWaterHeaterKind } from '../types/mep-water-heater-types';
 import type { MepManifoldKind } from '../types/mep-manifold-types';
 import type { MepUnderfloorKind } from '../types/mep-underfloor-types';
 import type { PlumbingSystemClassification } from '../types/mep-connector-types';
+import type { OpeningHardwareComponent } from '../family-types/opening-hardware-set';
 
 // ============================================================================
 // TYPES
@@ -56,6 +57,21 @@ export interface AtoeMappingEntry {
  * `resolveStairComponentMapping`.
  */
 export type StairBoqComponent = 'concrete' | 'cladding' | 'handrail';
+
+/**
+ * ADR-674 Φ C — an opening is ALSO not a single-row entity for the priced BOQ:
+ * beyond its one κούφωμα row (OIK-5.01/5.02) it emits N additive «σιδερικά»
+ * (hardware) rows, one per purchasable component (χειρολαβή/κλειδαριά/μεντεσές…),
+ * so the contractor gets each piece as a costable line — exactly the stair
+ * concrete/cladding/handrail multi-row pattern. Keyed by the Phase A hardware
+ * component union (NOT the opening `kind`), so it lives outside the
+ * kind-dispatched `OPENING_MAPPING` table and is resolved via
+ * {@link resolveOpeningHardwareMapping}. Re-exports Phase A's union — one SSoT
+ * for the component set (`opening-hardware-set.ts`), never duplicated here.
+ *
+ * @see ../family-types/opening-hardware-set.ts — the hardware take-off SSoT (Phase A)
+ */
+export type OpeningHardwareBoqComponent = OpeningHardwareComponent;
 
 // ============================================================================
 // MAPPING TABLE
@@ -122,6 +138,33 @@ const STAIR_COMPONENT_MAPPING: Readonly<Record<StairBoqComponent, AtoeMappingEnt
   concrete: { categoryCode: 'OIK-2.05',  unit: 'm3', titleEL: 'Σκάλα σκυρόδεμα (BIM)' },
   cladding: { categoryCode: 'OIK-5.05',  unit: 'm2', titleEL: 'Σκάλα επένδυση πατημάτων (BIM)' },
   handrail: { categoryCode: 'OIK-12.01', unit: 'm',  titleEL: 'Σκάλα κουπαστή (BIM)' },
+};
+
+/**
+ * ⚠️ PLACEHOLDER OIK ARTICLE CODES (ADR-674 Φ C — opening «σιδερικά» BOQ auto-feed).
+ *
+ * Every purchasable opening-hardware component maps to an OIK-5.3x «κιγκαλερία
+ * κουφωμάτων» article, counted per piece (`pcs`, qty = the component's own
+ * count — 3 μεντεσέδες, 1 κλειδαριά…). The `OIK-5.31…5.39` numbers below are
+ * PLACEHOLDERS following the OIK-5 opening group so the priced take-off is
+ * complete TODAY (Revit Door/Window Hardware Schedule → 5D cost parity).
+ * Replace each `categoryCode` with the project's real ΑΤΟΕ κιγκαλερίας article
+ * number in THIS one file when the priced master is available — nothing else
+ * changes.
+ *
+ * EXHAUSTIVE over {@link OpeningHardwareComponent} (compile-time total) — a new
+ * component cannot enter the Phase A union without declaring its OIK article here.
+ */
+const OPENING_HARDWARE_MAPPING: Readonly<Record<OpeningHardwareComponent, AtoeMappingEntry>> = {
+  'lever':         { categoryCode: 'OIK-5.31', unit: 'pcs', titleEL: 'Χειρολαβή μοχλού κουφώματος (BIM)' },
+  'pull-handle':   { categoryCode: 'OIK-5.32', unit: 'pcs', titleEL: 'Χερούλι συρόμενου κουφώματος (BIM)' },
+  'knob':          { categoryCode: 'OIK-5.33', unit: 'pcs', titleEL: 'Πόμολο κουφώματος (BIM)' },
+  'window-handle': { categoryCode: 'OIK-5.34', unit: 'pcs', titleEL: 'Χειρολαβή παραθύρου (BIM)' },
+  'lockset':       { categoryCode: 'OIK-5.35', unit: 'pcs', titleEL: 'Κλειδαριά κουφώματος (BIM)' },
+  'hinge':         { categoryCode: 'OIK-5.36', unit: 'pcs', titleEL: 'Μεντεσές κουφώματος (BIM)' },
+  'flush-bolt':    { categoryCode: 'OIK-5.37', unit: 'pcs', titleEL: 'Σύρτης κουφώματος (BIM)' },
+  'sliding-track': { categoryCode: 'OIK-5.38', unit: 'pcs', titleEL: 'Μηχανισμός/ράγα συρόμενου (BIM)' },
+  'friction-stay': { categoryCode: 'OIK-5.39', unit: 'pcs', titleEL: 'Μηχανισμός ανάκλισης παραθύρου (BIM)' },
 };
 
 const BEAM_MAPPING: Readonly<Record<BeamKind, AtoeMappingEntry>> = {
@@ -356,6 +399,16 @@ function resolveMepSegmentMapping(kind: string, classification?: string): AtoeMa
 /** Resolve the ΑΤΟΕ mapping for a single stair BOQ component (ADR-395 §G1). */
 export function resolveStairComponentMapping(component: StairBoqComponent): AtoeMappingEntry {
   return STAIR_COMPONENT_MAPPING[component];
+}
+
+/**
+ * ADR-674 Φ C — resolve the ΑΤΟΕ mapping for a single opening-hardware BOQ
+ * component (χειρολαβή/κλειδαριά/μεντεσές…). Mirror of
+ * {@link resolveStairComponentMapping}: keyed by the Phase A component union,
+ * never by the opening `kind`. Total over the union → always non-null.
+ */
+export function resolveOpeningHardwareMapping(component: OpeningHardwareBoqComponent): AtoeMappingEntry {
+  return OPENING_HARDWARE_MAPPING[component];
 }
 
 /**

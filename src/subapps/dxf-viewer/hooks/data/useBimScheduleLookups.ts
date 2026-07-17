@@ -35,6 +35,7 @@ import {
 } from '../../bim/materials/construction-materials';
 import type { AnyBimEntity } from '../../bim/schedule/schedule-presets';
 import type { ScheduleLookups } from '../../bim/schedule/types';
+import type { OpeningHardwareComponent } from '../../bim/family-types/opening-hardware-set';
 import type { BuildingRef } from '../../bim/utils/bim-floor-utils';
 import type { FilterOption } from '../../ui/components/bim-schedule/ScheduleFilterBar';
 
@@ -86,6 +87,13 @@ export function useBimScheduleLookups(
     [tSchedule],
   );
 
+  // ADR-674 Φ Β — hardware component enum → localised name για το breakdown του hardware schedule.
+  const translateHardwareComponent = React.useCallback(
+    (component: OpeningHardwareComponent): string =>
+      tSchedule(`hardwareComponent.${component}`, { defaultValue: component }),
+    [tSchedule],
+  );
+
   const lookups = React.useMemo<ScheduleLookups>(
     () => ({
       // Τα entities του τρέχοντος ορόφου συχνά δεν φέρουν floorId → fallback στο τρέχον level
@@ -105,8 +113,9 @@ export function useBimScheduleLookups(
       },
       translateKind,
       translateType,
+      translateHardwareComponent,
     }),
-    [floorNames, currentLevelId, materialLabel, buildings, translateKind, translateType],
+    [floorNames, currentLevelId, materialLabel, buildings, translateKind, translateType, translateHardwareComponent],
   );
 
   const availableFloors = React.useMemo<readonly FilterOption[]>(

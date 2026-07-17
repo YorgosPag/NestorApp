@@ -25,6 +25,7 @@
 
 import { compareByLocale } from '@/lib/intl-formatting';
 import { applyScheduleFilters, asFilterable, type FilterableBimEntity } from './filters';
+import { openingHasOperableHardware } from '../family-types/opening-hardware-set';
 import {
   type AnyBimEntity,
   getPreset,
@@ -54,6 +55,13 @@ function selectCandidates(
   if (entityType === 'door' || entityType === 'window') {
     return entities.filter(
       (e) => e.type === 'opening' && openingKindToScheduleType(e.params.kind) === entityType,
+    );
+  }
+  // ADR-674 Φ Β — hardware schedule: every opening carrying user-operable hardware
+  // (excludes fixed / bay-window / overhead-door / revolving-door → empty catalog set).
+  if (entityType === 'hardware') {
+    return entities.filter(
+      (e) => e.type === 'opening' && openingHasOperableHardware(e.params.kind),
     );
   }
   return entities.filter((e) => e.type === entityType);

@@ -24,6 +24,7 @@ import type { ScheduleEntityType } from './types';
 import {
   DOOR_COLUMNS,
   WINDOW_COLUMNS,
+  HARDWARE_COLUMNS,
   WALL_COLUMNS,
   SLAB_COLUMNS,
   COLUMN_COLUMNS,
@@ -37,6 +38,7 @@ import {
 import {
   mapDoor,
   mapWindow,
+  mapHardware,
   mapWall,
   mapSlab,
   mapColumn,
@@ -61,6 +63,7 @@ export type { AnyBimEntity, SchedulePreset };
 const PRESET_REGISTRY: Readonly<Record<ScheduleEntityType, SchedulePreset>> = {
   'door':         { columns: DOOR_COLUMNS,         map: mapDoor },
   'window':       { columns: WINDOW_COLUMNS,       map: mapWindow },
+  'hardware':     { columns: HARDWARE_COLUMNS,     map: mapHardware },
   'wall':         { columns: WALL_COLUMNS,         map: mapWall },
   'slab':         { columns: SLAB_COLUMNS,         map: mapSlab },
   'column':       { columns: COLUMN_COLUMNS,       map: mapColumn },
