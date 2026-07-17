@@ -28,6 +28,10 @@ import { useBim3DEntitiesStore } from '../bim-3d/stores/Bim3DEntitiesStore';
 // in WallPersistenceHost). The family-type catalog loader + the entity-agnostic
 // delete dialog are already mounted by WallPersistenceHost → reused here.
 import { EditOpeningTypeDialog } from '../ui/ribbon/components/EditOpeningTypeDialog';
+// ADR-674 Φ C — always-on «Edit Opening Hardware» dialog (INSTANCE-level override,
+// sibling of EditOpeningTypeDialog above). Self-gates on its own store + the
+// already-computed `primarySelectedOpening` — zero new subscriptions here.
+import { EditOpeningHardwareDialog } from '../ui/ribbon/components/EditOpeningHardwareDialog';
 
 interface LevelManagerLike
   extends LevelSceneWriter,
@@ -81,7 +85,12 @@ function OpeningPersistenceHostImpl({
     primarySelectedOpening,
   });
 
-  return <EditOpeningTypeDialog />;
+  return (
+    <>
+      <EditOpeningTypeDialog />
+      <EditOpeningHardwareDialog opening={primarySelectedOpening} levelManager={levelManager} />
+    </>
+  );
 }
 
 /**

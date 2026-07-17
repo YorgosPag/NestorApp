@@ -278,6 +278,19 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
                 commandKey: 'opening.familyType.properties',
               },
             },
+            {
+              // ADR-674 Φ C — INSTANCE-level hardware override trigger («this
+              // door: 4 hinges»), sibling of the TYPE-wide properties widget
+              // above. Opens `EditOpeningHardwareDialog` for the selection.
+              type: 'widget',
+              size: 'small',
+              widgetId: 'opening-hardware',
+              command: {
+                id: 'opening.hardware',
+                labelKey: 'ribbon.commands.bimFamilyType.editOpeningHardwareButton',
+                commandKey: 'opening.hardware.edit',
+              },
+            },
           ],
         },
       ],
