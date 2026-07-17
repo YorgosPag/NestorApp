@@ -35,15 +35,6 @@ import type { SlabOpeningEntity } from '../types/slab-opening-types';
 import type { StairEntity } from '../types/stair-types';
 import type { WallEntity } from '../types/wall-types';
 import type { FoundationEntity } from '../types/foundation-types';
-import {
-  resolveAtoeMapping,
-  resolveStairComponentMapping,
-  resolveFoundationMapping,
-  deriveAtoeQuantity,
-  type BimEntityType,
-  type AtoeMappingEntry,
-} from '../config/bim-to-atoe-mapping';
-import { computeStairBoqQuantities } from '../stairs/stair-boq-quantities';
 import { concreteWeightKg, DEFAULT_CONCRETE_GRADE } from '../structural/concrete-grades';
 import {
   computeColumnReinforcementQuantities,
@@ -55,6 +46,7 @@ import { computeFootingReinforcementQuantities } from '../structural/reinforceme
 import { buildFootingSectionContext } from '../structural/section-context';
 import { resolveOpeningMaterial } from '../family-types/resolve-opening-material';
 import type { ResolvedOpeningMaterials } from '../family-types/resolve-opening-material';
+import { resolveOpeningHardwareSet, type ResolvedHardwareItem } from '../family-types/opening-hardware-set';
 import type {
   ScheduleColumnDef,
   ScheduleLookups,
@@ -193,6 +185,45 @@ export const mapWindow = makeOpeningMapper((p, mats, lookups) => ({
   glazing: safeNumber(p.glazingPanes),
   glassMaterial: lookups.material(mats.glass),
 }));
+
+// ─── Hardware preset (ADR-674 Φ Β — Revit "Door Hardware Schedule") ──────────
+
+/**
+ * Human-readable hardware breakdown: each component's localised name + ' ×N',
+ * joined by ' · ' (e.g. "Χειρολαβή ×1 · Κλειδαριά ×1 · Μεντεσές ×3"). The
+ * priced per-component explosion lives in the BOQ (Phase C) — this is the
+ * readable take-off column.
+ */
+function hardwareBreakdown(
+  set: ReadonlyArray<ResolvedHardwareItem>,
+  lookups: ScheduleLookups,
+): string {
+  return set
+    .map((item) => {
+      const label = lookups.translateHardwareComponent
+        ? lookups.translateHardwareComponent(item.component)
+        : item.component;
+      return `${label} ×${item.quantity}`;
+    })
+    .join(' · ');
+}
+
+/**
+ * ONE row per opening (Revit Door Hardware Schedule parity) — NOT one row per
+ * component. Reuses `mapOpeningCommonCells` for the mark/floor/kind/hardwareMaterial
+ * header (N.18) — all hardware items share the one metal material — then appends
+ * the readable `hardwareSet` breakdown + `pieces` total (Σ quantities).
+ */
+export function mapHardware(entity: AnyBimEntity, lookups: ScheduleLookups): ScheduleRow['cells'] {
+  if (entity.type !== 'opening') return {};
+  const mats = resolveOpeningMaterial(entity.params);
+  const set = resolveOpeningHardwareSet(entity.params);
+  return {
+    ...mapOpeningCommonCells(entity, lookups, mats),
+    hardwareSet: hardwareBreakdown(set, lookups),
+    pieces: set.reduce((sum, item) => sum + item.quantity, 0),
+  };
+}
 
 // ─── Wall preset ─────────────────────────────────────────────────────────────
 
@@ -352,109 +383,7 @@ export function mapFoundation(entity: AnyBimEntity, lookups: ScheduleLookups): S
 }
 
 // ─── Combined preset (cross-type geometry-derived roll-up) ───────────────────
+// Split to `schedule-combined-mapper.ts` (N.7.1 file-size); re-exported here so
+// the registry keeps a single mapper import surface.
 
-/** Entity types covered by the kind-dispatched ΑΤΟΕ table (stair + foundation handled separately). */
-const COMBINED_ATOE_TYPES: ReadonlySet<string> = new Set(['wall', 'opening', 'slab', 'column', 'beam', 'railing']);
-
-interface CombinedPrimaryQuantity {
-  readonly quantity: number;
-  readonly unit: string | null;
-  readonly atoeCategory: string | null;
-}
-
-/**
- * Fold an ΑΤΟΕ mapping + the entity's computed geometry into the combined
- * preset's primary quantity. Shared by the foundation branch (own resolver)
- * and the generic entity-type branch so the "no mapping → zero, else derive"
- * tail isn't duplicated (N.18 / jscpd).
- */
-function atoeQuantityFromMapping(
-  mapping: AtoeMappingEntry | null,
-  entity: AnyBimEntity,
-): CombinedPrimaryQuantity {
-  if (!mapping) return { quantity: 0, unit: null, atoeCategory: null };
-  const geometry = entity.geometry as { area?: number; volume?: number; lengthM?: number } | undefined;
-  return { quantity: deriveAtoeQuantity(mapping.unit, geometry), unit: mapping.unit, atoeCategory: mapping.categoryCode };
-}
-
-/**
- * ADR-395 §4.6 (G5) — derive the combined preset's primary quantity from
- * computed geometry + the ΑΤΟΕ SSoT, NOT from the removed `qto` field.
- * Mirrors `BimToBoqBridge` for walls/openings/slabs/columns/beams and, for
- * stairs, the geometry-derived `computeStairBoqQuantities` (concrete volume,
- * falling back to tread cladding area on non-concrete structure types).
- * Slab-openings are subtractive → no positive BOQ quantity.
- */
-function combinedPrimary(entity: AnyBimEntity): CombinedPrimaryQuantity {
-  if (entity.type === 'stair') {
-    const q = computeStairBoqQuantities(entity.params);
-    if (q.concreteVolumeM3 > 0) {
-      return { quantity: q.concreteVolumeM3, unit: 'm3', atoeCategory: resolveStairComponentMapping('concrete').categoryCode };
-    }
-    return { quantity: q.treadCladdingAreaM2, unit: 'm2', atoeCategory: resolveStairComponentMapping('cladding').categoryCode };
-  }
-  // ADR-441 — foundation: ΑΤΟΕ εκτός του BimEntityType table (δικό της resolver).
-  // Όγκος (m³) = NET geometry (μέσω applyFoundationGridNet για grid strips).
-  if (entity.type === 'foundation') {
-    return atoeQuantityFromMapping(resolveFoundationMapping(entity.kind), entity);
-  }
-  if (!COMBINED_ATOE_TYPES.has(entity.type)) {
-    return { quantity: 0, unit: null, atoeCategory: null };
-  }
-  const hasParams =
-    'params' in entity && entity.params !== null && typeof entity.params === 'object';
-  const category =
-    hasParams && 'category' in entity.params
-      ? (entity.params as { category?: string }).category
-      : undefined;
-  // ADR-363 Φ2 — beam steel discriminator.
-  const sectionKind =
-    hasParams && 'sectionKind' in entity.params
-      ? (entity.params as { sectionKind?: string }).sectionKind
-      : undefined;
-  const mapping = resolveAtoeMapping(entity.type as BimEntityType, entity.kind, category, sectionKind);
-  return atoeQuantityFromMapping(mapping, entity);
-}
-
-/**
- * Material summary for an opening row in the heterogeneous `combined` table.
- * The combined roll-up keeps ONE material column (walls/columns/slabs have no
- * leaf/glass/hardware), so per-part openings are summarised: the distinct
- * labels of the two solid surfaces — κάσα (frame) + φύλλο (leaf) — joined by
- * " / ". This surfaces the per-part story ("Ξύλο / Αλουμίνιο") without the
- * default glass/metal noise that would appear on every row, and — critically —
- * reads through `resolveOpeningMaterial` so a per-part opening (whose legacy
- * single `material` field is empty) no longer shows a blank cell. Detailed
- * per-part breakdown lives in the dedicated door/window schedules.
- */
-function openingCombinedMaterial(params: OpeningParams, lookups: ScheduleLookups): string {
-  const mats = resolveOpeningMaterial(params);
-  const distinct = Array.from(
-    new Set([lookups.material(mats.frame), lookups.material(mats.leaf)]),
-  ).filter(Boolean);
-  return distinct.join(' / ');
-}
-
-/** Legacy single-material label for a non-opening combined row. */
-function legacyCombinedMaterial(entity: AnyBimEntity, lookups: ScheduleLookups): string {
-  const material =
-    'params' in entity && entity.params !== null && typeof entity.params === 'object' && 'material' in entity.params
-      ? (entity.params as { material?: string }).material
-      : undefined;
-  return lookups.material(material);
-}
-
-export function mapCombined(entity: AnyBimEntity, lookups: ScheduleLookups): ScheduleRow['cells'] {
-  const primary = combinedPrimary(entity);
-  const material = entity.type === 'opening'
-    ? openingCombinedMaterial(entity.params, lookups)
-    : legacyCombinedMaterial(entity, lookups);
-  return {
-    ...mapBuildingHeaderCells(entity, lookups),
-    type: lookups.translateType ? lookups.translateType(entity.type) : entity.type,
-    primaryQuantity: safeNumber(primary.quantity),
-    primaryUnit: primary.unit,
-    atoeCategory: primary.atoeCategory,
-    material,
-  };
-}
+export { mapCombined } from './schedule-combined-mapper';
