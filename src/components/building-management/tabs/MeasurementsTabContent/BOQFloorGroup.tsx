@@ -31,7 +31,7 @@ import { Pencil, Trash2, Unlink } from 'lucide-react';
 import type { BOQItem, BOQItemStatus } from '@/types/boq';
 import type { MasterBOQCategory } from '@/config/boq-categories';
 import { findSubCategory } from '@/config/boq-subcategories';
-import { computeItemCost, computeVariance } from '@/services/measurements';
+import { computeItemCost, computeVariance, computeBaselineDrift } from '@/services/measurements';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import '@/lib/design-system';
 
@@ -47,14 +47,18 @@ interface CategoryGroup {
   totalCost: number;
 }
 
-interface BOQFloorGroupProps {
-  items: BOQItem[];
-  categories: readonly MasterBOQCategory[];
+/** Shared row-action callbacks + translator for the floor-group tables (SSoT — N.18). */
+interface BOQRowActions {
   onEdit: (item: BOQItem) => void;
   onDelete: (item: BOQItem) => void;
   onStatusChange: (item: BOQItem, status: BOQItemStatus) => void;
   onDetach?: (item: BOQItem) => void;
-  t: (key: string) => string;
+  t: (key: string, options?: Record<string, string>) => string;
+}
+
+interface BOQFloorGroupProps extends BOQRowActions {
+  items: BOQItem[];
+  categories: readonly MasterBOQCategory[];
 }
 
 // ============================================================================
@@ -142,15 +146,10 @@ export function BOQFloorGroup({
 // INNER TABLE COMPONENT
 // ============================================================================
 
-interface CategoryItemsTableProps {
+interface CategoryItemsTableProps extends BOQRowActions {
   items: BOQItem[];
   totalCost: number;
   categoryName: string;
-  onEdit: (item: BOQItem) => void;
-  onDelete: (item: BOQItem) => void;
-  onStatusChange: (item: BOQItem, status: BOQItemStatus) => void;
-  onDetach?: (item: BOQItem) => void;
-  t: (key: string) => string;
 }
 
 function CategoryItemsTable({ items, totalCost, categoryName, onEdit, onDelete, onDetach, t }: CategoryItemsTableProps) {
@@ -173,6 +172,7 @@ function CategoryItemsTable({ items, totalCost, categoryName, onEdit, onDelete, 
         {items.map((item, idx) => {
           const cost = computeItemCost(item);
           const variance = computeVariance(item);
+          const drift = computeBaselineDrift(item);
 
           return (
             <TableRow key={item.id}>
@@ -200,6 +200,15 @@ function CategoryItemsTable({ items, totalCost, categoryName, onEdit, onDelete, 
                 {variance && (
                   <p className={cn('text-xs tabular-nums mt-0.5', getVarianceClass(variance.percent))}>
                     {variance.percent > 0 ? '+' : ''}{formatNumber(variance.percent, { maximumFractionDigits: 1 })}%
+                  </p>
+                )}
+                {drift && (
+                  <p className={cn('text-xs tabular-nums mt-0.5', getVarianceClass(drift.percent))}>
+                    {t('tabs.measurements.drift.summary', {
+                      baseline: formatNumber(drift.baseline, { maximumFractionDigits: 2 }),
+                      live: formatNumber(drift.live, { maximumFractionDigits: 2 }),
+                      delta: `${drift.delta > 0 ? '+' : ''}${formatNumber(drift.delta, { maximumFractionDigits: 2 })}`,
+                    })}
                   </p>
                 )}
               </TableCell>

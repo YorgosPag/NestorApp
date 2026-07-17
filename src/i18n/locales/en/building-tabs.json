@@ -370,6 +370,9 @@
         "bimAuto": "Auto from BIM",
         "bimDetached": "Detached from BIM"
       },
+      "drift": {
+        "summary": "Signed {baseline} · model {live} · Δ {delta}"
+      },
       "floorGroup": {
         "noFloor": "Building-level",
         "totalsByCategory": "Totals by category"

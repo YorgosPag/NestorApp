@@ -370,6 +370,9 @@
         "bimAuto": "Αυτόματο από BIM",
         "bimDetached": "Αποσυνδεδεμένο από BIM"
       },
+      "drift": {
+        "summary": "Υπογεγραμμένο {baseline} · σχέδιο {live} · Δ {delta}"
+      },
       "floorGroup": {
         "noFloor": "Γενικά κτιρίου",
         "totalsByCategory": "Σύνολα ανά κατηγορία"
