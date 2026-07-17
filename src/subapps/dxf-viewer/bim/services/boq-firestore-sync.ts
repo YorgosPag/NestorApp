@@ -27,9 +27,11 @@
  * @see docs/centralized-systems/reference/adrs/ADR-634-boq-base-row-ssot.md
  */
 
-import { deleteDoc, doc, getDoc, setDoc } from 'firebase/firestore';
+import { deleteDoc, doc, getDoc, setDoc, type DocumentReference } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { nowISO } from '@/lib/date-local';
+import { isBoqAutoManagedStatus } from '@/types/boq/units';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('BoqFirestoreSync');
@@ -58,6 +60,45 @@ export interface SyncManagedBoqRowParams {
 }
 
 /**
+ * ADR-674 — SSoT για την καταγραφή απόκλισης live BIM μοντέλου από ΠΑΓΩΜΕΝΟ
+ * υπογεγραμμένο baseline (row status ∉ draft/submitted). Γράφει ΜΟΝΟ drift
+ * metadata (`liveQuantity` / `liveQuantitySyncedAt`) με merge — ΠΟΤΕ δεν αγγίζει
+ * το `estimatedQuantity` (το baseline μένει αμετάβλητο) ούτε διαγράφει row.
+ *
+ * Idempotent (Google-level, χωρίς περιττά writes):
+ *  - live === baseline (re-converged) → καθάρισε το badge αν υπήρχε drift, αλλιώς no-op.
+ *  - live αμετάβλητο από την προηγούμενη καταγραφή → no-op.
+ *  - αλλιώς → merge-write το νέο drift + ISO timestamp.
+ */
+export async function recordBaselineDrift(
+  ref: DocumentReference,
+  existing: Record<string, unknown>,
+  liveQuantity: number,
+  logLabel: string,
+  logContext?: LogContext,
+): Promise<void> {
+  const baseline = typeof existing.estimatedQuantity === 'number' ? existing.estimatedQuantity : null;
+  const prevLive = typeof existing.liveQuantity === 'number' ? existing.liveQuantity : null;
+
+  let update: Record<string, unknown>;
+  if (baseline !== null && liveQuantity === baseline) {
+    // Re-converged με το baseline → καθάρισε το drift badge.
+    if (prevLive === null) return; // already clean, no write
+    update = { liveQuantity: null, liveQuantitySyncedAt: null };
+  } else if (prevLive === liveQuantity) {
+    return; // drift αμετάβλητο, no write
+  } else {
+    update = { liveQuantity, liveQuantitySyncedAt: nowISO() };
+  }
+
+  try {
+    await setDoc(ref, update, { merge: true });
+  } catch (err) {
+    logger.error(`${logLabel}: baseline-drift record failed`, { rowId: ref.id, ...logContext, err });
+  }
+}
+
+/**
  * Upsert-or-cleanup a single managed BOQ row (detach-guarded, createdAt-preserving).
  * Fire-and-forget: never throws, logs I/O failures.
  */
@@ -71,6 +112,15 @@ export async function syncManagedBoqRow(params: SyncManagedBoqRowParams): Promis
   const data = snap.exists() ? (snap.data() as Record<string, unknown>) : undefined;
   // Detach guard: a user-owned row is never auto-touched.
   if (isDetached(data)) return;
+
+  // ADR-674 — frozen-baseline guard: a row που έφυγε από draft/submitted
+  // (approved/certified/locked) είναι υπογεγραμμένο συμβατικό στιγμιότυπο. Ο
+  // auto-sync ΠΟΤΕ δεν αγγίζει `estimatedQuantity` ούτε το διαγράφει — μόνο
+  // καταγράφει την απόκλιση του live μοντέλου ως drift metadata (5D-BIM).
+  if (data && !isBoqAutoManagedStatus(data.status)) {
+    await recordBaselineDrift(ref, data, quantity, logLabel, logContext);
+    return;
+  }
 
   if (quantity <= 0) {
     if (snap.exists()) {

@@ -23,6 +23,7 @@ import { resolveAtoeMapping } from '../config/bim-to-atoe-mapping';
 import type { OpeningKind, OpeningParams } from '../types/opening-types';
 import type { OpeningTypeParams } from '../types/bim-family-type';
 import { resolveOpeningEffective } from '../family-types/opening-type-resolution';
+import { recordBaselineDrift } from './boq-firestore-sync';
 import {
   buildEffectiveSignatureMembers,
   buildOpeningGroupPayload,
@@ -173,13 +174,16 @@ async function writeSignatureGroup(
     const data = existing.data() as Record<string, unknown>;
     // Detach guard: ο χρήστης αποσύνδεσε manually αυτό το BOQ row — μένει ως έχει.
     if (data.detached === true) return;
-    // ADR-673 — frozen-baseline guard: μόλις ένα BOQ row φύγει από draft/submitted
+    // ADR-673/674 — frozen-baseline guard: μόλις ένα BOQ row φύγει από draft/submitted
     // (approved/certified/locked) είναι συμβατικό στιγμιότυπο. Ο BIM auto-sync ΠΟΤΕ δεν
     // το διαγράφει ούτε το ξαναγράφει — καθρεφτίζει τον Firestore delete rule + την 5D-BIM
-    // cost πρακτική (πιστοποιημένη ποσότητα αμετάβλητη· η απόκλιση = variance για άνθρωπο,
-    // όχι αυτόματη μεταβολή). Έτσι αποφεύγεται και το "Missing or insufficient permissions"
-    // delete error ενάντια σε προστατευμένα rows.
-    if (!isBoqAutoManagedStatus(data.status)) return;
+    // cost πρακτική (πιστοποιημένη ποσότητα αμετάβλητη). Αντί για σιωπηλό skip, καταγράφουμε
+    // την απόκλιση του live μοντέλου (member count) ως drift metadata (ADR-674), ώστε ο
+    // άνθρωπος να τη δει για revision — baseline αμετάβλητο, row ΠΟΤΕ delete.
+    if (!isBoqAutoManagedStatus(data.status)) {
+      await recordBaselineDrift(doc(db, COLLECTIONS.BOQ_ITEMS, groupId), data, members.length, 'OpeningBoqSync');
+      return;
+    }
   }
 
   if (members.length === 0) {
@@ -276,7 +280,7 @@ async function fetchOpeningsForSignature(
  * Equality-only query served by the existing companyId+projectId+floorplanId
  * composite index — CHECK 3.10 satisfied (companyId present).
  */
-async function fetchAllOpeningsForFloorplan(
+export async function fetchAllOpeningsForFloorplan(
   context: OpeningBoqContext,
 ): Promise<OpeningDocRow[]> {
   const q = queryFloorplanOpenings(context);

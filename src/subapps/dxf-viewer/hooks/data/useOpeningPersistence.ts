@@ -37,10 +37,7 @@ import {
   deleteOpeningFromGroup,
   upsertOpeningGroupForOpening,
 } from '../../bim/services/opening-boq-sync';
-import {
-  deleteOpeningHardwareBoq,
-  upsertOpeningHardwareBoq,
-} from '../../bim/services/opening-hardware-boq-sync';
+import { recomputeFloorplanHardwareBoq } from '../../bim/services/opening-hardware-boq-sync';
 import { isOpening, mergeOpeningDocsIntoScene } from '../../bim/walls/opening-doc-hydration';
 import {
   allocateMarkAndPatchScene,
@@ -109,21 +106,39 @@ function emitOpeningPersistedIfHosted(wallId: string | undefined | null): void {
 }
 
 /**
- * ADR-674 Φ C — feed the opening's additive priced «σιδερικά» rows (one per
- * hardware component). SSoT for the persist/restore call shared by
- * onPersisted / onRestored (identical shape → extracted, N.18 / jscpd).
+ * ADR-674 Φ C (rev.2) — recompute the floorplan's AGGREGATED priced «σιδερικά»
+ * rows (one line per hardware article, summed over all openings — big-player
+ * ΑΤΟΕ/Revit parity). Any opening save/restore/delete shifts a component total,
+ * so all three callbacks trigger the same full recompute. Fire-and-forget.
  */
-function feedOpeningHardwareBoq(
-  entity: OpeningEntity,
-  scope: { readonly companyId: string; readonly projectId: string; readonly buildingId: string },
+function feedFloorplanHardwareBoq(context: {
+  readonly companyId: string;
+  readonly projectId: string;
+  readonly buildingId: string;
+  readonly floorplanId: string;
+  readonly floorId?: string;
+}): void {
+  void recomputeFloorplanHardwareBoq(context);
+}
+
+/**
+ * SSoT for the opening BOQ feed on save/restore: the signature-group κούφωμα row
+ * (ADR-376) + the floorplan-aggregated «σιδερικά» rows (ADR-674). onPersisted and
+ * onRestored share this identical guarded block — factored into one place so they
+ * are not byte-identical siblings (N.18 / jscpd). Delete uses a different path
+ * (`deleteOpeningFromGroup`) so it stays inline in onDeleted.
+ */
+function feedOpeningBoqIfScoped(
+  scope: { readonly companyId: string; readonly projectId: string; readonly buildingId: string; readonly floorplanId: string },
   floorId: string | undefined,
-  action: 'created' | 'updated',
+  opening: Parameters<typeof upsertOpeningGroupForOpening>[0],
+  prevParams: Parameters<typeof upsertOpeningGroupForOpening>[1],
 ): void {
-  void upsertOpeningHardwareBoq(
-    { id: entity.id, kind: entity.params.kind, params: entity.params },
-    { companyId: scope.companyId, projectId: scope.projectId, buildingId: scope.buildingId, floorId },
-    action,
-  );
+  const { companyId, projectId, buildingId, floorplanId } = scope;
+  if (!(companyId && projectId && buildingId && floorplanId)) return;
+  const ctx = { companyId, projectId, buildingId, floorplanId, floorId };
+  void upsertOpeningGroupForOpening(opening, prevParams, ctx);
+  feedFloorplanHardwareBoq(ctx);
 }
 
 const useOpeningPersistenceBase = createBimEntityPersistenceHook<
@@ -208,17 +223,13 @@ const useOpeningPersistenceBase = createBimEntityPersistenceHook<
       entity,
       { prevParams: prevComparable ?? undefined },
     );
-    // ADR-376 Phase B.2 — signature-group aggregation (recomputes new group + old).
-    const { companyId, projectId, buildingId, floorplanId } = scope;
-    if (companyId && projectId && buildingId && floorplanId) {
-      void upsertOpeningGroupForOpening(
-        { id: entity.id, kind: entity.params.kind, params: entity.params },
-        prevComparable ?? null,
-        { companyId, projectId, buildingId, floorplanId, floorId: extra.live.floorId ?? undefined },
-      );
-      // ADR-674 Φ C — additive priced «σιδερικά» rows (one per hardware component).
-      feedOpeningHardwareBoq(entity, { companyId, projectId, buildingId }, extra.live.floorId ?? undefined, isNew ? 'created' : 'updated');
-    }
+    // ADR-376 B.2 signature-group κούφωμα + ADR-674 aggregated «σιδερικά» — one feed SSoT.
+    feedOpeningBoqIfScoped(
+      scope,
+      extra.live.floorId ?? undefined,
+      { id: entity.id, kind: entity.params.kind, params: entity.params },
+      prevComparable ?? null,
+    );
     emitOpeningPersistedIfHosted(entity.params.wallId);
   },
   onDeleted: (id, deleted, { scope, extra, lastSavedComparable }) => {
@@ -234,8 +245,8 @@ const useOpeningPersistenceBase = createBimEntityPersistenceHook<
       void deleteOpeningFromGroup(lastKnownParams, {
         companyId, projectId, buildingId, floorplanId, floorId: extra.live.floorId ?? undefined,
       });
-      // ADR-674 Φ C — cascade-delete the opening's priced «σιδερικά» rows.
-      void deleteOpeningHardwareBoq(id);
+      // ADR-674 Φ C — recompute floorplan-aggregated «σιδερικά» rows (deleted opening drops out).
+      feedFloorplanHardwareBoq({ companyId, projectId, buildingId, floorplanId, floorId: extra.live.floorId ?? undefined });
     }
     emitOpeningPersistedIfHosted(lastKnownParams?.wallId);
   },
@@ -248,16 +259,13 @@ const useOpeningPersistenceBase = createBimEntityPersistenceHook<
       typeOverrides: entity.typeOverrides,
     });
     void recordOpeningChange('restored', entity);
-    const { companyId, projectId, buildingId, floorplanId } = scope;
-    if (companyId && projectId && buildingId && floorplanId) {
-      void upsertOpeningGroupForOpening(
-        { id: entity.id, kind: entity.kind, params: entity.params },
-        null,
-        { companyId, projectId, buildingId, floorplanId, floorId: extra.live.floorId ?? undefined },
-      );
-      // ADR-674 Φ C — restore the opening's additive priced «σιδερικά» rows.
-      feedOpeningHardwareBoq(entity, { companyId, projectId, buildingId }, extra.live.floorId ?? undefined, 'created');
-    }
+    // ADR-376 B.2 signature-group κούφωμα + ADR-674 aggregated «σιδερικά» — one feed SSoT.
+    feedOpeningBoqIfScoped(
+      scope,
+      extra.live.floorId ?? undefined,
+      { id: entity.id, kind: entity.kind, params: entity.params },
+      null,
+    );
     emitOpeningPersistedIfHosted(entity.params.wallId);
   },
   useExtra: (ctx) => useOpeningExtra(ctx),

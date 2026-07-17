@@ -51,8 +51,9 @@ import {
   hasFinishContribution,
   type FinishBoqContribution,
 } from './structural-finish-boq';
+import { isBoqAutoManagedStatus } from '@/types/boq/units';
 import { buildSingleEntityBoqRow } from './boq-base-row';
-import { deleteManagedBoqRow } from './boq-firestore-sync';
+import { deleteManagedBoqRow, recordBaselineDrift } from './boq-firestore-sync';
 
 const logger = createModuleLogger('BimToBoqBridge');
 
@@ -139,6 +140,8 @@ interface RowFetchResult {
   readonly exists: boolean;
   readonly detached: boolean;
   readonly createdAt: string | null;
+  /** ADR-674 — πλήρες existing doc data (μόνο όταν `exists`), για frozen-baseline drift. */
+  readonly raw?: Record<string, unknown>;
 }
 
 async function fetchRowStates(
@@ -164,6 +167,7 @@ async function fetchRowStates(
       exists: true,
       detached: data.detached === true,
       createdAt: typeof data.createdAt === 'string' ? data.createdAt : null,
+      raw: data,
     });
   }
   return result;
@@ -183,6 +187,13 @@ async function upsertBoqRow(
   action: 'created' | 'updated',
 ): Promise<void> {
   if (action === 'updated' && state.detached) return;
+  // ADR-674 — frozen-baseline guard: υπογεγραμμένο row (status ∉ draft/submitted)
+  // ΠΟΤΕ δεν overwriteάρεται· καταγράφουμε μόνο την απόκλιση του live μοντέλου.
+  if (state.exists && state.raw && !isBoqAutoManagedStatus(state.raw.status)) {
+    const live = typeof row.payload.estimatedQuantity === 'number' ? row.payload.estimatedQuantity : 0;
+    await recordBaselineDrift(doc(db, COLLECTIONS.BOQ_ITEMS, row.id), state.raw, live, 'BimToBoqBridge');
+    return;
+  }
   try {
     await setDoc(doc(db, COLLECTIONS.BOQ_ITEMS, row.id), row.payload);
   } catch (err) {
@@ -325,6 +336,13 @@ class BimToBoqBridgeImpl {
     if (snap.exists()) {
       const existing = snap.data() as Record<string, unknown>;
       if (action === 'updated' && existing.detached === true) return;
+      // ADR-674 — frozen-baseline guard: υπογεγραμμένο row (status ∉ draft/submitted)
+      // ΠΟΤΕ δεν overwriteάρεται· καταγράφουμε μόνο την απόκλιση του live μοντέλου.
+      if (!isBoqAutoManagedStatus(existing.status)) {
+        const live = deriveAtoeQuantity(mapping.unit, entity.geometry);
+        await recordBaselineDrift(ref, existing, live, 'BimToBoqBridge');
+        return;
+      }
     }
 
     const existingCreatedAt = snap.exists()

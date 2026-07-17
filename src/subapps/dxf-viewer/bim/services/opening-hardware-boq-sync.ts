@@ -1,147 +1,82 @@
 'use client';
 
 /**
- * ADR-674 Φ C — Opening hardware → priced BOQ sync (σιδερικά take-off, Firestore I/O).
+ * ADR-674 Φ C (rev.2) — Opening hardware → priced BOQ, AGGREGATED ανά (floorplan × εξάρτημα).
  *
- * An opening is NOT a single priced row: beyond its aggregated κούφωμα row
- * (OIK-5.01/5.02, owned by `opening-boq-sync.ts`) it emits N ADDITIVE «σιδερικά»
- * rows, one per purchasable hardware component, so the contractor gets each
- * piece as a costable line. This mirrors `stair-boq-sync.ts` EXACTLY (Revit
- * Material/Hardware Takeoff pattern): a fixed component universe + a dedicated
- * per-component resolver (`resolveOpeningHardwareMapping`), NOT the kind-table.
+ * Big-player parity (Revit Door Hardware Schedule «itemize every instance = OFF» / ArchiCAD
+ * Interactive Schedule «merge uniform items» / ελληνική ΑΤΟΕ προμέτρηση σιδερικών): η προμέτρηση
+ * κιγκαλερίας ΔΕΝ βγαίνει per-instance — είναι **ΜΙΑ γραμμή ανά άρθρο (εξάρτημα)** με τη ΣΥΝΟΛΙΚΗ
+ * ποσότητα του floorplan («Μεντεσές: 150 τεμ»). Ίδιο aggregation altitude με την signature-group
+ * γραμμή κουφώματος (`opening-boq-sync`) — τα δύο feeds του κουφώματος μιλούν την ίδια γλώσσα.
  *
- * Per-instance (like the stair), NOT signature-aggregated like the κούφωμα row:
- *   - `boq_bim_<openingId>_hw_lever`    — OIK-5.31, pcs
- *   - `boq_bim_<openingId>_hw_lockset`  — OIK-5.35, pcs
- *   - `boq_bim_<openingId>_hw_hinge`    — OIK-5.36, pcs (qty 3 on a single door)
- *   … one row per component the opening's kind carries.
+ * Παράγεται από τα ΙΔΙΑ persisted openings του floorplan (SSoT: reuse `fetchAllOpeningsForFloorplan`):
+ *   total[component] = Σ_openings ( resolveOpeningHardwareSet(params)[component].quantity )
+ *   → row `boq_bim_hw_<floorplanId>_<component>`, estimatedQuantity = total, unit 'pcs'.
+ * Openings χωρίς χειριζόμενη λαβή (fixed/bay-window/overhead-door/revolving-door) δεν συνεισφέρουν.
  *
- * The quantity is the component's OWN count (Phase A `resolveOpeningHardwareSet`),
- * never `deriveAtoeQuantity`'s `pcs = 1` — three hinges are three pieces. The set
- * of components varies by kind, so EVERY sync iterates the full component universe
- * (Phase A SSoT) and lets the shared `syncManagedBoqRow` upsert the present ones
- * and delete-when-zero the absent ones — idempotent across a kind edit
- * (door → sliding-door removes the stale hinge/lockset rows) and correct for
- * hardware-less kinds (fixed/bay-window/overhead-door/revolving-door → all 0 →
- * nothing written).
+ * Κάθε opening save/restore/delete καλεί `recomputeFloorplanHardwareBoq(ctx)` — full recompute (μικρό,
+ * fire-and-forget), mirror του `upsertOpeningGroupForOpening`. Ο κοινός `syncManagedBoqRow` δίνει
+ * detach guard + frozen-baseline drift (5D-BIM) + zero-delete + createdAt preservation.
  *
- * Contract (mirrors `stair-boq-sync`):
- *   - Deterministic IDs (idempotent upsert).
- *   - `source/sourceType: 'bim-auto'`, `sourceEntityType: 'opening'`.
- *   - `detached: true` rows are NEVER touched (user override).
- *   - Zero / absent component → orphan cleanup (delete instead of noise row).
- *   - `createdAt` preserved across updates.
- *   - Callers MUST `void` the returned promise — fire-and-forget.
- *
- * ADR-674 Φ C (no standalone ADR file yet — Phase A/B reference it by number).
- * @see ./stair-boq-sync.ts — the multi-row-per-entity pattern this mirrors
- * @see ../family-types/opening-hardware-set.ts — Phase A take-off SSoT
+ * @see ./opening-boq-sync.ts — η signature-group γραμμή κουφώματος (ίδιο altitude, ίδιος fetch SSoT)
+ * @see ../family-types/opening-hardware-set.ts — Phase A take-off SSoT (ποσότητες ανά εξάρτημα)
  */
 
 import {
   resolveOpeningHardwareMapping,
-  type AtoeMappingEntry,
   type OpeningHardwareBoqComponent,
 } from '../config/bim-to-atoe-mapping';
-import type { OpeningKind, OpeningParams } from '../types/opening-types';
-import type { OpeningTypeParams } from '../types/bim-family-type';
+import type { OpeningParams } from '../types/opening-types';
 import {
   HARDWARE_COMPONENT_LABEL_KEY,
   openingHasOperableHardware,
   resolveOpeningHardwareSet,
 } from '../family-types/opening-hardware-set';
 import { buildSingleEntityBoqRow } from './boq-base-row';
-import { syncManagedBoqRow, deleteManagedBoqRow } from './boq-firestore-sync';
-
-// ============================================================================
-// PUBLIC TYPES
-// ============================================================================
-
-/** Minimal opening snapshot the hardware sync needs (params drive the set). */
-export interface OpeningForHardwareBoq {
-  readonly id: string;
-  readonly kind: OpeningKind;
-  readonly params: OpeningParams;
-  /** Optional Family/Type params — forwarded to the Phase A material resolver. */
-  readonly typeParams?: OpeningTypeParams | null;
-}
-
-export interface OpeningHardwareBoqContext {
-  readonly companyId: string;
-  readonly projectId: string;
-  readonly buildingId: string;
-  /**
-   * ADR-395 Phase 1 (G7) — floor link. Stamped on every row as `linkedFloorId`
-   * + `scope: 'floor'`; falls back to `scope: 'building'` / null when absent.
-   */
-  readonly floorId?: string;
-}
-
-/** One resolved priced hardware row (pure — no Firestore). */
-export interface OpeningHardwareBoqRow {
-  readonly id: string;
-  readonly component: OpeningHardwareBoqComponent;
-  /** The component's own piece count (3 hinges → 3), never a flat pcs=1. */
-  readonly quantity: number;
-  readonly mapping: AtoeMappingEntry;
-}
-
-// ============================================================================
-// CONSTANTS
-// ============================================================================
+import { syncManagedBoqRow } from './boq-firestore-sync';
+import { fetchAllOpeningsForFloorplan, type OpeningBoqContext } from './opening-boq-sync';
 
 /**
- * The full component universe (Phase A SSoT — NOT re-listed here). Every sync
- * iterates ALL of them so a kind change / hardware-less kind deletes stale rows
- * (mirror of the stair's fixed 3-component sweep).
+ * The full 9-component universe (Phase A SSoT — NOT re-listed). Every recompute
+ * sweeps ALL of them so a component that dropped to zero (last carrier opening
+ * deleted / re-kinded) is orphan-deleted, not left stale.
  */
 const ALL_HARDWARE_COMPONENTS: readonly OpeningHardwareBoqComponent[] =
   Object.keys(HARDWARE_COMPONENT_LABEL_KEY) as OpeningHardwareBoqComponent[];
 
-// ============================================================================
-// HELPERS
-// ============================================================================
+/** Minimal opening shape the aggregation reads (`kind` lives in `params`). */
+export interface HardwareBoqOpening {
+  readonly params: OpeningParams;
+}
 
-/** Deterministic BOQ row id for one opening-hardware component. */
-export function openingHardwareBoqId(openingId: string, component: OpeningHardwareBoqComponent): string {
-  return `boq_bim_${openingId}_hw_${component}`;
+/** Deterministic BOQ row id for a floorplan's aggregated hardware component line. */
+export function openingHardwareBoqId(floorplanId: string, component: OpeningHardwareBoqComponent): string {
+  return `boq_bim_hw_${floorplanId}_${component}`;
 }
 
 /**
- * Pure: the priced hardware rows an opening yields — one per component its kind
- * carries (empty for fixed/bay-window/overhead-door/revolving-door). The
- * quantity is the component's own count. This is the take-off the I/O upsert
- * writes; exposed for testing without a Firestore mock.
+ * Pure: sum the hardware pieces of a floorplan's openings PER component. Openings
+ * without operable hardware contribute nothing. Exposed for testing without I/O.
  */
-export function buildOpeningHardwareBoqRows(opening: OpeningForHardwareBoq): readonly OpeningHardwareBoqRow[] {
-  if (!openingHasOperableHardware(opening.kind)) return [];
-  const items = resolveOpeningHardwareSet(opening.params, opening.typeParams);
-  return items.map((item) => ({
-    id: openingHardwareBoqId(opening.id, item.component),
-    component: item.component,
-    quantity: item.quantity,
-    mapping: resolveOpeningHardwareMapping(item.component),
-  }));
-}
-
-/** Quantity per component for THIS opening (absent components → 0 → delete). */
-function hardwareQuantityByComponent(
-  opening: OpeningForHardwareBoq,
+export function sumFloorplanHardware(
+  openings: readonly HardwareBoqOpening[],
 ): ReadonlyMap<OpeningHardwareBoqComponent, number> {
-  const byComponent = new Map<OpeningHardwareBoqComponent, number>();
-  for (const row of buildOpeningHardwareBoqRows(opening)) {
-    byComponent.set(row.component, row.quantity);
+  const totals = new Map<OpeningHardwareBoqComponent, number>();
+  for (const opening of openings) {
+    if (!openingHasOperableHardware(opening.params.kind)) continue;
+    for (const item of resolveOpeningHardwareSet(opening.params)) {
+      totals.set(item.component, (totals.get(item.component) ?? 0) + item.quantity);
+    }
   }
-  return byComponent;
+  return totals;
 }
 
 async function syncHardwareComponentRow(
   component: OpeningHardwareBoqComponent,
   quantity: number,
-  opening: OpeningForHardwareBoq,
-  context: OpeningHardwareBoqContext,
+  context: OpeningBoqContext,
 ): Promise<void> {
-  const id = openingHardwareBoqId(opening.id, component);
+  const id = openingHardwareBoqId(context.floorplanId, component);
   await syncManagedBoqRow({
     id,
     quantity,
@@ -149,51 +84,31 @@ async function syncHardwareComponentRow(
       buildSingleEntityBoqRow(
         id,
         context,
-        opening.id,
+        context.floorplanId,
         'opening',
         resolveOpeningHardwareMapping(component),
         quantity,
         existingCreatedAt,
       ),
     logLabel: 'OpeningHardwareBoqSync',
-    logContext: { component },
+    logContext: { component, floorplanId: context.floorplanId },
   });
 }
 
-// ============================================================================
-// PUBLIC API
-// ============================================================================
-
 /**
- * Upsert the priced hardware rows for an opening save/update. Idempotent: every
- * component in the universe is synced — present ones upserted with their count,
- * absent ones (kind changed / hardware-less) zero-deleted. `action` accepted for
- * caller-symmetry with the wall/opening/stair bridges (detach + createdAt logic
- * is action-agnostic here — same as `upsertStairBoq`).
+ * Recompute the floorplan's aggregated priced «σιδερικά» rows after ANY opening
+ * change (save / restore / delete). Reads the floorplan's persisted openings,
+ * sums each hardware component, upserts one row per component with the total —
+ * components that fell to zero are orphan-deleted by `syncManagedBoqRow`.
+ * Idempotent, detach- + frozen-baseline-guarded. Fire-and-forget (caller `void`s).
  */
-export async function upsertOpeningHardwareBoq(
-  opening: OpeningForHardwareBoq,
-  context: OpeningHardwareBoqContext,
-  _action: 'created' | 'updated',
-): Promise<void> {
-  if (!context.companyId || !context.projectId || !context.buildingId) return;
-
-  const byComponent = hardwareQuantityByComponent(opening);
+export async function recomputeFloorplanHardwareBoq(context: OpeningBoqContext): Promise<void> {
+  if (!context.companyId || !context.projectId || !context.buildingId || !context.floorplanId) return;
+  const openings = await fetchAllOpeningsForFloorplan(context);
+  const totals = sumFloorplanHardware(openings);
   await Promise.all(
     ALL_HARDWARE_COMPONENTS.map((component) =>
-      syncHardwareComponentRow(component, byComponent.get(component) ?? 0, opening, context),
-    ),
-  );
-}
-
-/** Delete every hardware row when an opening is deleted (skip detached). */
-export async function deleteOpeningHardwareBoq(openingId: string): Promise<void> {
-  await Promise.all(
-    ALL_HARDWARE_COMPONENTS.map((component) =>
-      deleteManagedBoqRow(openingHardwareBoqId(openingId, component), 'OpeningHardwareBoqSync', {
-        openingId,
-        component,
-      }),
+      syncHardwareComponentRow(component, totals.get(component) ?? 0, context),
     ),
   );
 }
