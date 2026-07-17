@@ -8,11 +8,14 @@
  * `hardware` material id (`matId`) exactly like the frame/leaf/glass sub-meshes.
  *
  * The hardware material is resolved by `resolveOpeningMaterial().hardware`
- * (default `mat-metal`) — until now it was resolved but had NO geometry (ADR-672
- * §8 open item). This closes that: the handle is a schematic box assembly at the
- * same fidelity as the leaf/frame boxes (Revit symbolic hardware, not a detailed
- * lock body). Latch side follows `params.handing` (door-only); families with no
- * user-operable handle (fixed / bay / overhead sectional / revolving) return [].
+ * (default `mat-metal`). ADR-672 §8 drew a bare rose + lever; the 2026-07-18 3D
+ * follow-up (Giorgio φωτο) upgrades doors/windows to a real espagnolette/mortise
+ * assembly at the same box fidelity as the leaf/frame: a vertical BACKPLATE, a
+ * NECK (λαιμός/άξονας) bridging it to the offset lever, a LOCK cylinder (doors), a
+ * through SPINDLE joining both faces (doors), and edge HINGES (μεντεσέδες) on the
+ * hinge side for every hinged family (SSoT-gated by the take-off catalog). Latch
+ * side follows `params.handing` (door-only); families with no user-operable handle
+ * (fixed / bay / overhead sectional / revolving) return [].
  *
  * Local coords (identical to `opening-mesh-builders.ts`): +X = host axis,
  * +Y = up, +Z = perp/depth. Handles sit on BOTH leaf faces for doors (interior +
@@ -31,7 +34,7 @@ import {
   isFoldingKind,
   isWindowKind,
 } from '../../bim/types/opening-types';
-import { openingHasOperableHardware } from '../../bim/family-types/opening-hardware-set';
+import { OPENING_HARDWARE_CATALOG, openingHasOperableHardware } from '../../bim/family-types/opening-hardware-set';
 import type { BoxSpec, LeafDims } from './opening-mesh-builders';
 import { LEAF_DEPTH_RATIO, openingInnerDims } from './opening-mesh-builders';
 
@@ -44,11 +47,29 @@ const HANDLE_HEIGHT_M = 1050 * MM_TO_M;
 const LEVER_LEN_M = 130 * MM_TO_M;
 const LEVER_THICK_M = 24 * MM_TO_M;
 const LEVER_BAR_DEPTH_M = 26 * MM_TO_M;
-/** Stand-off of the lever bar from the leaf face (the lever's neck length). */
+/** Stand-off of the lever bar from the leaf face (bridged by the neck). */
 const LEVER_STANDOFF_M = 55 * MM_TO_M;
-/** Rose (backplate) square + its thin depth against the leaf face. */
-const ROSE_M = 55 * MM_TO_M;
-const ROSE_DEPTH_M = 12 * MM_TO_M;
+/** Vertical handle backplate (espagnolette/mortise plate) — W × H × depth vs the leaf face. */
+const BACKPLATE_W_M = 36 * MM_TO_M;
+const BACKPLATE_H_M = 110 * MM_TO_M; // «ύψος 10-11cm» (Giorgio 2026-07-18 φωτο)
+const BACKPLATE_DEPTH_M = 10 * MM_TO_M;
+/** Neck (λαιμός/άξονας): square stub bridging the backplate to the offset lever bar. */
+const NECK_M = 20 * MM_TO_M;
+/** Euro-profile lock cylinder (αφαλός) below the lever, on the plate — body + keyway. */
+const LOCK_DROP_M = 46 * MM_TO_M;
+const LOCK_W_M = 30 * MM_TO_M;
+const LOCK_H_M = 32 * MM_TO_M;
+const LOCK_PROJ_M = 8 * MM_TO_M;
+const KEYWAY_W_M = 12 * MM_TO_M;
+const KEYWAY_H_M = 16 * MM_TO_M;
+/** Through spindle (διαμπερής άξονας) square cross-section — joins both leaf faces. */
+const SPINDLE_M = 9 * MM_TO_M;
+/** Hinge (μεντεσές) barrel: edge projection (host axis) × height × depth (perp). */
+const HINGE_W_M = 16 * MM_TO_M;
+const HINGE_H_M = 100 * MM_TO_M;
+const HINGE_DEPTH_M = 42 * MM_TO_M;
+/** Top/bottom hinge offset from the leaf mid-height, as a fraction of the clear height. */
+const HINGE_Y_SPREAD = 0.4;
 /** Inset of the handle centre from the latch edge, inward toward the leaf body. */
 const EDGE_INSET_M = 60 * MM_TO_M;
 /** Double-leaf: handle inset from the central meeting stile (either side). */
@@ -113,59 +134,117 @@ export function buildHardwareSpecs(
   return [];
 }
 
+/** TRUE iff the kind's take-off set carries hinges — the SSoT gate for hinge geometry. */
+function kindHasHinges(kind: OpeningEntity['kind']): boolean {
+  return OPENING_HARDWARE_CATALOG[kind].some((entry) => entry.component === 'hinge');
+}
+
 /**
- * A lever handle (rose backplate + offset lever bar) on ONE face of a leaf.
+ * A full lever handle assembly on ONE face of a leaf — a real espagnolette/mortise
+ * handle (Giorgio 2026-07-18 φωτο): a vertical backplate + a neck (λαιμός/άξονας)
+ * that bridges it to the offset lever bar, + an optional lock cylinder (αφαλός).
  * `faceSign` = +1 (exterior +Z) / -1 (interior -Z). The lever extends from the
- * rose toward the leaf centre (`-latchDir`), like a real door lever at rest.
+ * plate toward the leaf centre (`-latchDir`), like a real lever at rest.
  */
-function leverHandle(
+function handleAssembly(
   roseX: number,
   cy: number,
   latchDir: number,
   faceSign: number,
   ctx: HardwareCtx,
+  withLock: boolean,
+  leverLen: number = LEVER_LEN_M,
 ): BoxSpec[] {
   const facePlane = faceSign * (ctx.leafDepth / 2);
-  const leverX = roseX - latchDir * (LEVER_LEN_M / 2);
-  return [
+  const leverX = roseX - latchDir * (leverLen / 2);
+  const specs: BoxSpec[] = [
+    // Κάθετη πλάκα (backplate) κολλητά στην όψη — «ύψος 10-11cm» (Giorgio).
     {
-      cx: roseX, cy, cz: facePlane + faceSign * (ROSE_DEPTH_M / 2),
-      sx: ROSE_M, sy: ROSE_M, sz: ROSE_DEPTH_M, mat: ctx.mat,
+      cx: roseX, cy, cz: facePlane + faceSign * (BACKPLATE_DEPTH_M / 2),
+      sx: BACKPLATE_W_M, sy: BACKPLATE_H_M, sz: BACKPLATE_DEPTH_M, mat: ctx.mat,
     },
+    // Λαιμός/άξονας: γεμίζει το standoff, γεφυρώνει πλάκα ↔ λαβή (το «ΑΞΟΝΑΣ» βέλος).
+    {
+      cx: roseX, cy, cz: facePlane + faceSign * (LEVER_STANDOFF_M / 2),
+      sx: NECK_M, sy: NECK_M, sz: LEVER_STANDOFF_M, mat: ctx.mat,
+    },
+    // Μπάρα-λαβή, offset από την όψη κατά τον λαιμό.
     {
       cx: leverX, cy, cz: facePlane + faceSign * (LEVER_STANDOFF_M + LEVER_BAR_DEPTH_M / 2),
-      sx: LEVER_LEN_M, sy: LEVER_THICK_M, sz: LEVER_BAR_DEPTH_M, mat: ctx.mat,
+      sx: leverLen, sy: LEVER_THICK_M, sz: LEVER_BAR_DEPTH_M, mat: ctx.mat,
     },
   ];
+  if (withLock) specs.push(...lockCylinder(roseX, cy, faceSign, ctx));
+  return specs;
+}
+
+/** Euro-profile lock cylinder (σώμα + keyway) below the lever, proud of the backplate. */
+function lockCylinder(roseX: number, cy: number, faceSign: number, ctx: HardwareCtx): BoxSpec[] {
+  const ly = cy - LOCK_DROP_M;
+  return [
+    {
+      cx: roseX, cy: ly, cz: faceSign * (BACKPLATE_DEPTH_M + LOCK_PROJ_M / 2),
+      sx: LOCK_W_M, sy: LOCK_H_M, sz: LOCK_PROJ_M, mat: ctx.mat,
+    },
+    {
+      cx: roseX, cy: ly - LOCK_H_M / 2, cz: faceSign * (BACKPLATE_DEPTH_M + LOCK_PROJ_M),
+      sx: KEYWAY_W_M, sy: KEYWAY_H_M, sz: LOCK_PROJ_M, mat: ctx.mat,
+    },
+  ];
+}
+
+/** Through spindle (διαμπερής άξονας) joining the levers of both faces (doors). */
+function spindleBar(roseX: number, cy: number, ctx: HardwareCtx): BoxSpec {
+  return {
+    cx: roseX, cy, cz: 0,
+    sx: SPINDLE_M, sy: SPINDLE_M, sz: ctx.leafDepth + 2 * LEVER_STANDOFF_M, mat: ctx.mat,
+  };
+}
+
+/** `count` hinge barrels (μεντεσέδες) on the edge `hingeX`, spread over the leaf height. */
+function hingesAt(hingeX: number, ctx: HardwareCtx, count: number): BoxSpec[] {
+  const ys = count === 2
+    ? [ctx.cyMid - ctx.innerH * HINGE_Y_SPREAD, ctx.cyMid + ctx.innerH * HINGE_Y_SPREAD]
+    : [ctx.cyMid - ctx.innerH * HINGE_Y_SPREAD, ctx.cyMid, ctx.cyMid + ctx.innerH * HINGE_Y_SPREAD];
+  return ys.map((hy) => ({
+    cx: hingeX, cy: hy, cz: 0,
+    sx: HINGE_W_M, sy: HINGE_H_M, sz: HINGE_DEPTH_M, mat: ctx.mat,
+  }));
 }
 
 /** Clamp the handle height inside the leaf's vertical clear span. */
 function doorHandleY(ctx: HardwareCtx): number {
-  const bottom = ctx.cyMid - ctx.innerH / 2 + ROSE_M / 2;
-  const top = ctx.cyMid + ctx.innerH / 2 - ROSE_M / 2;
+  const bottom = ctx.cyMid - ctx.innerH / 2 + BACKPLATE_H_M / 2;
+  const top = ctx.cyMid + ctx.innerH / 2 - BACKPLATE_H_M / 2;
   return Math.min(Math.max(HANDLE_HEIGHT_M, bottom), top);
 }
 
-/** Single hinged leaf: lever near the latch edge, on both faces. */
+/** Single hinged leaf: handle (both faces) + through spindle + 3 hinges (μεντεσέδες). */
 function singleSwingHardware(ctx: HardwareCtx): BoxSpec[] {
   const cy = doorHandleY(ctx);
   const roseX = ctx.latchSign * (ctx.innerW / 2 - EDGE_INSET_M);
   return [
-    ...leverHandle(roseX, cy, ctx.latchSign, 1, ctx),
-    ...leverHandle(roseX, cy, ctx.latchSign, -1, ctx),
+    ...handleAssembly(roseX, cy, ctx.latchSign, 1, ctx, false),
+    ...handleAssembly(roseX, cy, ctx.latchSign, -1, ctx, true),
+    spindleBar(roseX, cy, ctx),
+    ...hingesAt(-ctx.latchSign * (ctx.innerW / 2), ctx, 3),
   ];
 }
 
-/** Two hinged leaves: a lever near each side of the central meeting stile, both faces. */
+/** Two hinged leaves: handle each side of the meeting stile + spindles + 3 hinges/leaf. */
 function doubleSwingHardware(ctx: HardwareCtx): BoxSpec[] {
   const cy = doorHandleY(ctx);
   const leftX = -MEETING_INSET_M;
   const rightX = MEETING_INSET_M;
   return [
-    ...leverHandle(leftX, cy, -1, 1, ctx),
-    ...leverHandle(leftX, cy, -1, -1, ctx),
-    ...leverHandle(rightX, cy, 1, 1, ctx),
-    ...leverHandle(rightX, cy, 1, -1, ctx),
+    ...handleAssembly(leftX, cy, -1, 1, ctx, false),
+    ...handleAssembly(leftX, cy, -1, -1, ctx, false),
+    ...handleAssembly(rightX, cy, 1, 1, ctx, false),
+    ...handleAssembly(rightX, cy, 1, -1, ctx, true),
+    spindleBar(leftX, cy, ctx),
+    spindleBar(rightX, cy, ctx),
+    ...hingesAt(-ctx.innerW / 2, ctx, 3),
+    ...hingesAt(ctx.innerW / 2, ctx, 3),
   ];
 }
 
@@ -194,24 +273,15 @@ function foldingHardware(ctx: HardwareCtx): BoxSpec[] {
 }
 
 /**
- * Operable windows carry an interior handle; `fixed` and `bay-window` do not
- * (no operable sash). The lever sits low-centre on the interior (-Z) face.
+ * Operable windows carry an interior handle (backplate + neck + shorter lever) plus
+ * a pair of edge hinges for casement/tilt families; `fixed`/`bay-window` do not (no
+ * operable sash). The handle sits low-centre on the interior (-Z) face; no through
+ * spindle (single face). Sliding/double-hung sashes carry no hinge (SSoT: catalog).
  */
 function windowHardware(kind: OpeningEntity['kind'], ctx: HardwareCtx): BoxSpec[] {
   if (kind === 'fixed' || kind === 'bay-window') return [];
   const cy = ctx.cyMid - ctx.innerH * WIN_HANDLE_Y_RATIO;
   const roseX = Math.max(ctx.innerW / 2 - EDGE_INSET_M, 0);
-  // Reuse the lever assembly but with the shorter window lever length.
-  const facePlane = -(ctx.leafDepth / 2);
-  return [
-    {
-      cx: roseX, cy, cz: facePlane - ROSE_DEPTH_M / 2,
-      sx: ROSE_M, sy: ROSE_M, sz: ROSE_DEPTH_M, mat: ctx.mat,
-    },
-    {
-      cx: roseX - WIN_LEVER_LEN_M / 2, cy,
-      cz: facePlane - (LEVER_STANDOFF_M + LEVER_BAR_DEPTH_M / 2),
-      sx: WIN_LEVER_LEN_M, sy: LEVER_THICK_M, sz: LEVER_BAR_DEPTH_M, mat: ctx.mat,
-    },
-  ];
+  const handle = handleAssembly(roseX, cy, 1, -1, ctx, false, WIN_LEVER_LEN_M);
+  return kindHasHinges(kind) ? [...handle, ...hingesAt(-ctx.innerW / 2, ctx, 2)] : handle;
 }
