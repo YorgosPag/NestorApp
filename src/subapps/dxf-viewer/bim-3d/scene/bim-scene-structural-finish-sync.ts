@@ -14,6 +14,7 @@ import type { ColumnEntity } from '../../bim/types/column-types';
 import type { BeamEntity } from '../../bim/types/beam-types';
 import type { WallEntity } from '../../bim/types/wall-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
+import type { SlabEntity } from '../../bim/types/slab-types';
 import { filterHostedOpenings } from './bim-scene-hosted-opening-filters';
 import type { BimCategory } from '../../config/bim-object-styles';
 import type { Discipline } from '../../bim/discipline/bim-discipline';
@@ -21,6 +22,7 @@ import { isStructuralFinishVisible } from '../../bim/finishes/structural-finish-
 import { isColumnTilted } from '../../bim/geometry/column-tilt';
 import { isBeamTilted } from '../../bim/geometry/beam-slope';
 import { isWallTilted } from '../../bim/geometry/wall-tilt';
+import { isSlabTilted } from '../../bim/geometry/slab-tilt';
 import { computeStructuralFinishSilhouette } from '../../bim/finishes/structural-finish-scene';
 import type { ColumnVerticalExtentLookup } from '../../bim/finishes/structural-finish-scene-silhouette';
 import { buildStructuralSilhouetteSkin } from '../converters/structural-finish-silhouette-3d';
@@ -80,10 +82,10 @@ export function syncStructuralFinishSkin(
   // ADR-534 Φ3c-B3b (τοίχοι) — το ίδιο soffit clip για τους ΤΟΙΧΟΥΣ (ο ροζ σοβάς διαπερνούσε την
   // πλάκα· Giorgio 2026-07-17). Τρέφει ΚΑΙ τον κάθετο silhouette ΚΑΙ το οριζόντιο top-cap → ένα z.
   const wallTopClipById = buildWallTopClipById(entities, ctx.floorElevationMm);
-  const groups = new Map<string, { baseElevation: number; columns: ColumnEntity[]; beams: BeamEntity[]; walls: WallEntity[] }>();
+  const groups = new Map<string, { baseElevation: number; columns: ColumnEntity[]; beams: BeamEntity[]; walls: WallEntity[]; slabs: SlabEntity[] }>();
   const groupFor = (buildingId: string, baseElevation: number) => {
     let g = groups.get(buildingId);
-    if (!g) { g = { baseElevation, columns: [], beams: [], walls: [] }; groups.set(buildingId, g); }
+    if (!g) { g = { baseElevation, columns: [], beams: [], walls: [], slabs: [] }; groups.set(buildingId, g); }
     return g;
   };
   // ADR-404 Bug A — τα κεκλιμένα μέλη ΕΞΑΙΡΟΥΝΤΑΙ από το flat merged union: ένας ενιαίος
@@ -118,6 +120,14 @@ export function syncStructuralFinishSkin(
     const ops = filterHostedOpenings(entities.openings, 'wallId', wall.id, r.buildingMode, ctx);
     if (ops.length > 0) openingsByWallId.set(wall.id, ops);
   }
+  // ADR-534 Φ5c — η πλάκα ως finish-member (mirror columns/beams/walls): μπαίνει στο group του
+  // κτιρίου της ώστε η κατακόρυφη περιμετρική «φάσα» να ενωθεί με τα δομικά μέλη στο union (τυλίγει
+  // + σβήνει στις επαφές). Tilted πλάκες εξαιρούνται από το flat union (ADR-404) — per-element σοβάς.
+  for (const slab of entities.slabs) {
+    if (isSlabTilted(slab.params)) continue;
+    const r = resolve(slab, 'slab', ctx);
+    if (r) groupFor(r.buildingId, r.baseElevation).slabs.push(slab);
+  }
   for (const [buildingId, g] of groups) {
     const bands = computeStructuralFinishSilhouette({
       columns: g.columns,
@@ -128,8 +138,9 @@ export function syncStructuralFinishSkin(
       beamTopClipById,
       openingsByWallId,
       wallTopClipById,
+      slabs: g.slabs,
     });
-    const sceneUnits = g.columns[0]?.params.sceneUnits ?? g.beams[0]?.params.sceneUnits ?? g.walls[0]?.params.sceneUnits ?? 'mm';
+    const sceneUnits = g.columns[0]?.params.sceneUnits ?? g.beams[0]?.params.sceneUnits ?? g.walls[0]?.params.sceneUnits ?? g.slabs[0]?.params.sceneUnits ?? 'mm';
     const skin = buildStructuralSilhouetteSkin(
       bands, sceneUnits, g.baseElevation, ctx.activeLevelId, `structural-finish-${buildingId}`,
     );

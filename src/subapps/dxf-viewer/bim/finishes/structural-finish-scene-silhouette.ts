@@ -17,6 +17,9 @@ import {
   type StructuralFinishSpec,
 } from './structural-finish-types';
 import { wallToSilhouetteMembers, wallIsFinishMember, wallFinishZExtent } from './wall-finish-source';
+import { slabIsFinishMember, slabFinishZExtent } from './slab-finish-source';
+import { isSlabTilted } from '../geometry/slab-tilt';
+import type { SlabParams } from '../types/slab-types';
 import type { SilhouetteOpeningSource } from './wall-finish-opening-bands';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import {
@@ -142,6 +145,20 @@ export type ColumnVerticalExtentLookup = ReadonlyMap<string, { readonly zBotMm: 
 export interface SilhouetteBeamSource extends BeamFinishOutlineSource {
   readonly id: string;
   readonly params: Pick<BeamParams, 'finish' | 'sceneUnits' | 'topElevation' | 'zOffset' | 'depth'>;
+}
+
+/**
+ * ADR-534 Φ5c — minimal source μιας πλάκας-finish-member (mirror `SilhouetteColumnSource`/
+ * `SilhouetteBeamSource`, χωρίς cast): ό,τι διαβάζουν τα ΥΠΑΡΧΟΝΤΑ SSoT predicates —
+ * `slabIsFinishMember` (kind/finish/dna), `slabFinishZExtent` (levelElevation/heightOffsetFromLevel/
+ * thickness), `isSlabTilted` (geometryType/slope) — συν το `outline` για το footprint και
+ * `sceneUnits` για το scene-units fallback (Ρίσκο Δ: όροφος με ΜΟΝΟ πλάκα).
+ */
+export interface SlabFinishMemberSource {
+  readonly params: Pick<
+    SlabParams,
+    'kind' | 'finish' | 'dna' | 'outline' | 'levelElevation' | 'heightOffsetFromLevel' | 'thickness' | 'geometryType' | 'slope' | 'sceneUnits'
+  >;
 }
 
 /**
@@ -299,6 +316,14 @@ export interface SilhouetteFinishInput {
    * πλήρες ύψος (2Δ plan & DXF export: undefined → byte-for-byte).
    */
   readonly wallTopClipById?: ReadonlyMap<string, number>;
+  /**
+   * ADR-534 Φ5c — οι πλάκες ως silhouette members (η κατακόρυφη περιμετρική «φάσα»/fascia). Ίδιο
+   * μοτίβο με τον τοίχο: κάθε **flat** finish-member πλάκα μπαίνει με το πλήρες footprint της +
+   * z-band = thickness → το `safeUnion` ανά z-band τυλίγει το περίγραμμα + σβήνει μόνο του στις
+   * επαφές (θαμμένη ακμή ενδιάμεσου δαπέδου) ή αφήνει σοβά στις εκτεθειμένες (μπαλκόνι/δώμα). ΜΗΔΕΝ
+   * νέο math. Tilted → εξαιρείται (flat union μόνο, ADR-404). Absent → καμία πλάκα (byte-for-byte).
+   */
+  readonly slabs?: readonly SlabFinishMemberSource[];
 }
 
 /**
@@ -319,6 +344,7 @@ export function computeStructuralFinishSilhouette(input: SilhouetteFinishInput):
     beamTopClipById,
     openingsByWallId,
     wallTopClipById,
+    slabs = [],
   } = input;
   const members: SilhouetteMember[] = [];
   for (const c of columns) {
@@ -370,10 +396,28 @@ export function computeStructuralFinishSilhouette(input: SilhouetteFinishInput):
     const z = wallFinishZExtent(w, beamUndersideById, floorElevationMm, wallTopClipById?.get(w.id));
     members.push(...wallToSilhouetteMembers(w, z, openingsByWallId?.get(w.id)));
   }
+
+  // ADR-534 Φ5c — Η ΠΛΑΚΑ ως finish-member: η κατακόρυφη περιμετρική «φάσα». Ίδιο μοτίβο με τον
+  // τοίχο — μπαίνει με το πλήρες footprint της + z-band = thickness → το `safeUnion` ανά z-band
+  // τυλίγει το περίγραμμα + σβήνει μόνο του στις επαφές (θαμμένη ακμή σε ενδιάμεσο δάπεδο) ή αφήνει
+  // σοβά στις εκτεθειμένες ακμές (μπαλκόνι/δώμα). ΜΗΔΕΝ νέο math — το `toMember` (`.map(toPt2)` πετά
+  // το z του Polygon3D) + ο πυρήνας κάνουν όλη τη δουλειά. Tilted → εξαιρείται (flat union μόνο,
+  // ADR-404· ο 3Δ caller τα φιλτράρει ήδη — ο έλεγχος εδώ είναι αμυντικός για 2Δ/export/tests).
+  for (const sl of slabs) {
+    if (!slabIsFinishMember(sl) || isSlabTilted(sl.params)) continue;
+    const m = toMember(sl.params.finish, sl.params.outline.vertices, slabFinishZExtent(sl.params));
+    if (m) members.push(m);
+  }
   if (members.length === 0) return [];
 
-  // sceneUnits: fallback σε τοίχο όταν ο όροφος έχει ΜΟΝΟ τοίχους (μηδέν κολόνα/δοκάρι).
-  const sceneUnits = columns[0]?.params.sceneUnits ?? beams[0]?.params.sceneUnits ?? walls[0]?.params.sceneUnits ?? 'mm';
+  // sceneUnits: fallback σε τοίχο/πλάκα όταν ο όροφος δεν έχει κολόνα/δοκάρι (ADR-534 Φ5c Ρίσκο Δ:
+  // όροφος με ΜΟΝΟ πλάκα — π.χ. δώμα χωρίς τοίχους — αλλιώς 'mm' default → λάθος scale σε 'm' scene).
+  const sceneUnits =
+    columns[0]?.params.sceneUnits ??
+    beams[0]?.params.sceneUnits ??
+    walls[0]?.params.sceneUnits ??
+    slabs[0]?.params.sceneUnits ??
+    'mm';
   const s = mmToSceneUnits(sceneUnits);
   const tol = EXTERIOR_EDGE_TOL_MM * s;
   // Classifier από ΟΛΟΥΣ τους τοίχους (building footprint = exterior/interior boundary),
