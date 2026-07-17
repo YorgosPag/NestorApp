@@ -3068,6 +3068,9 @@
         "editTypeOpeningDescription": "Changes apply to every opening of this type, on all floors.",
         "editTypeOpeningBuiltinNotice": "Built-in type (read-only). Duplicate it to edit.",
         "editTypeAffectsCountOpening": "Changes apply to {count} openings of this type.",
+        "editOpeningHardwareTitle": "Opening hardware",
+        "editOpeningHardwareDescription": "Adjust the hardware quantities for this opening only.",
+        "editOpeningHardwareButton": "Hardware…",
         "preview": {
           "title": "Preview",
           "emptyHint": "Load a preset or add layers to see the preview."

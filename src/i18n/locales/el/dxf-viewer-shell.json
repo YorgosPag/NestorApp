@@ -3068,6 +3068,9 @@
         "editTypeOpeningDescription": "Οι αλλαγές εφαρμόζονται σε όλα τα κουφώματα αυτού του τύπου, σε όλους τους ορόφους.",
         "editTypeOpeningBuiltinNotice": "Ενσωματωμένος τύπος (μόνο ανάγνωση). Κάντε Διπλασιασμό για να τον επεξεργαστείτε.",
         "editTypeAffectsCountOpening": "Οι αλλαγές εφαρμόζονται σε {count} κουφώματα αυτού του τύπου.",
+        "editOpeningHardwareTitle": "Σιδερικά κουφώματος",
+        "editOpeningHardwareDescription": "Προσαρμόστε τις ποσότητες σιδερικών μόνο για αυτό το κούφωμα.",
+        "editOpeningHardwareButton": "Σιδερικά…",
         "preview": {
           "title": "Προεπισκόπηση",
           "emptyHint": "Φόρτωσε προεπιλογή ή πρόσθεσε στρώσεις για να δεις την προεπισκόπηση."
