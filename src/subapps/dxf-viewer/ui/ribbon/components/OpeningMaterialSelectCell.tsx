@@ -15,14 +15,13 @@
  * swatch primitive the wall DNA / slab / roof / materials-library pickers use,
  * instead of Stair's plain text-only combobox.
  *
- * No dedicated opening-material catalog SSoT exists yet (mirrors the pattern
- * of `wall-material-catalog.ts` / `stair-material-catalog.ts`, one per domain).
- * The preset list here is intentionally small and local to this file — just
- * the 3 base `mat-*` ids already registered in `material-catalog-defs.ts`
- * that apply to opening surfaces (wood / metal / glass). A `bmat_*` library id
- * or any other free-form id still round-trips correctly through the custom
- * text input (the resolver treats every part as an opaque material id string).
+ * The selectable preset list + custom sentinel come from the domain SSoT
+ * `opening-material-catalog.ts` (mirrors `wall-material-catalog.ts` /
+ * `stair-material-catalog.ts`, one per domain — N.0.2). A `bmat_*` library id
+ * or any other free-form id still round-trips through the custom text input
+ * (the resolver treats every part as an opaque material id string).
  *
+ * @see ../../../bim/family-types/opening-material-catalog.ts — the preset SSoT
  * @see ../../../bim/family-types/resolve-opening-material.ts — the resolver this feeds
  * @see ./EditOpeningTypeDialog.tsx — sole consumer (4 rows: frame/leaf/glass/hardware)
  * @see ../../stair-advanced-panel/sections/StairMaterialSelectCell.tsx — 1:1 precedent
@@ -31,27 +30,11 @@
 import React, { useCallback } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { MaterialSwatch } from '../../components/shared/MaterialSwatch';
-
-/** The base opening-surface `mat-*` ids already registered in `MATERIAL_DEFS`. */
-const OPENING_MATERIAL_PRESET_IDS = ['mat-wood', 'mat-metal', 'mat-glass'] as const;
-type OpeningMaterialPresetId = (typeof OPENING_MATERIAL_PRESET_IDS)[number];
-
-/** Sentinel selected while the free-form custom input is showing. */
-const OPENING_MATERIAL_CUSTOM_ID = 'custom' as const;
-
-/** i18n key suffix (under `ribbon.commands.bimFamilyType.`) per preset id. */
-const PRESET_LABEL_KEY: Readonly<Record<OpeningMaterialPresetId, string>> = {
-  'mat-wood': 'materialPresetWood',
-  'mat-metal': 'materialPresetMetal',
-  'mat-glass': 'materialPresetGlass',
-};
-
-type OpeningMaterialKind = 'preset' | 'custom' | 'empty';
-
-function classifyOpeningMaterial(id: string | undefined): OpeningMaterialKind {
-  if (id === undefined || id === '') return 'empty';
-  return (OPENING_MATERIAL_PRESET_IDS as readonly string[]).includes(id) ? 'preset' : 'custom';
-}
+import {
+  OPENING_MATERIAL_CUSTOM_ID,
+  classifyOpeningMaterial,
+  defaultOpeningMaterialCatalog,
+} from '../../../bim/family-types/opening-material-catalog';
 
 export interface OpeningMaterialSelectCellProps {
   readonly label: string;
@@ -95,14 +78,11 @@ export function OpeningMaterialSelectCell({
         className="flex-1 rounded border border-border bg-background px-1 py-0.5 text-xs text-foreground"
       >
         <option value="">{t('ribbon.commands.bimFamilyType.materialNone')}</option>
-        {OPENING_MATERIAL_PRESET_IDS.map((id) => (
-          <option key={id} value={id}>
-            {t(`ribbon.commands.bimFamilyType.${PRESET_LABEL_KEY[id]}`)}
+        {defaultOpeningMaterialCatalog.listMaterialIds().map((opt) => (
+          <option key={opt.id} value={opt.id}>
+            {t(`ribbon.commands.bimFamilyType.${opt.labelKeySuffix}`)}
           </option>
         ))}
-        <option value={OPENING_MATERIAL_CUSTOM_ID}>
-          {t('ribbon.commands.bimFamilyType.materialPresetCustom')}
-        </option>
       </select>
       {kind === 'custom' && (
         <input
