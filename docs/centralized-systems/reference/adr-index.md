@@ -1275,6 +1275,7 @@
 | **ADR-669** | BIM identity stamping — `stampBimIdentity` = ένας writer· 4 helpers delegate· stair `tagMesh`→`tagStairMesh`· σκάλα ΧΩΡΙΣ `matId` (τομές)· **Φ.Β′: 35 ωμές εγγραφές/22 αρχεία → 0**· registry `bim-mesh-identity-stamp` (tier 3, allowlist=1) → **CHECK 3.7 ενεργό**· seam ΑΠΟΡΡΙΦΘΗΚΕ (§5)· `attachElementComponent` = Mesh↔Group composition SSoT (§10, 4 «Mirror του…» σημεία) | ✅ Α+Β′ | [View](./adrs/ADR-669-bim-mesh-identity-stamping.md) |
 | **ADR-670** | BIM commit `layerId` = `levelId` (bug, 16 sites/12 αρχεία)· preview σωστό, commit λάθος· level-membership αλλού· freeze/hide/color-by-layer νεκρά για BIM· Q1 ποιο layer ΑΝΟΙΧΤΟ | 🔴 ΑΝΟΙΧΤΟ | [View](./adrs/ADR-670-bim-commit-layerid-is-levelid.md) |
 | **ADR-671** | `type:'slab'` = δύο σχήματα (BIM `.params` vs DxfSlab `.slabEntity.params`)· ΟΧΙ διπλοτυπία· 5 wrapped επικίνδυνοι· κανόνας `unwrapDxfSubEntity<T>()`· discriminator-rename ΑΠΟΡΡΙΦΘΗΚΕ | ✅ ΚΑΝΟΝΑΣ | [View](./adrs/ADR-671-dxf-wrapped-entity-discriminator-hazard.md) |
+| **ADR-672** | Επεξεργάσιμο υλικό ανά κούφωμα (Revit family surfaces: κάσα/φύλλο/υαλοστάσιο/χειρολαβή)· `OpeningMaterials` + `resolveOpeningMaterial` (fold ανά μέρος, LAST wins)· `opening-material-catalog` SSoT· 2Δ+3Δ+export· 2Δ bug fix (elementOverride fallback §7)· doc-trail ενοποίηση (ήταν λάθος σε 669/449) | ✅ ACTIVE | [View](./adrs/ADR-672-editable-per-opening-materials.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---
