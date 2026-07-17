@@ -350,7 +350,7 @@ export function mergeSilhouetteBandsToStripGroups(
         rects: cluster.map((e) => toRect(e, anchor.dir)),
       });
       if (strips.length === 0) continue;
-      out.push({ seg: anchor.seg, dir: anchor.dir, perp: outwardPerpOf(strips[0]), strips });
+      out.push({ seg: anchor.seg, dir: anchor.dir, perp: outwardPerpOf(strips[0], anchor.dir), strips });
     }
   }
   return out;
