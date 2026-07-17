@@ -220,13 +220,15 @@ Deterministic IDs: `boq_bim_${id}` / `_finish_int` / `_finish_ext`. Hook στο 
 - ETICS-grade per-element exterior detection (πέρα από outer-ring proximity) = μετέπειτα slice.
 
 ## 6. Changelog
-- **2026-07-18 (Φ7c — ΓΝΗΣΙΟ 45° miter ΕΝΣΩΜΑΤΩΜΕΝΟ στο welded mesh· πλήρες entry → ADR-534 §6 Φ7c)** — Τα Φ7b
-  wedges (ξεχωριστά τριγωνικά prisms) έδιναν coincident face με το square end-cap του body → artifacts στην όψη
-  (Giorgio). FIX (Giorgio: γνήσιο miter, ΟΧΙ hack): αφαιρέθηκε το wedge machinery· NEW `computeFaceMiterDeltas`
-  (pure) → scalar back-cap delta ανά t-άκρο (convex+perp gate, από `aOuter/bOuter`)· `applyMiterShift` μετατοπίζει
-  τα back-cap vertices του `ExtrudeGeometry` στη mitered κορυφή → 45° miter **ΜΕΣΑ** στο ίδιο extrude, μηδέν
-  coincident face. Root fixes: `outwardPerpOf` → καθαρό axis-normal (μηδέν skew)· κανένα `computeVertexNormals`
-  (αλλιώς ανεστραμμένα normals στα ανοίγματα). **263/263 GREEN**, jscpd καθαρό, ΕΚΤΟΣ ADR-040.
+- **2026-07-18 (Φ7c — ΓΝΗΣΙΟ 45° miter ΕΝΣΩΜΑΤΩΜΕΝΟ στο welded mesh + openings· πλήρες entry → ADR-534 §6 Φ7c)** —
+  Τα Φ7b wedges (ξεχωριστά τριγωνικά prisms) έδιναν coincident face με το square end-cap του body → artifacts (Giorgio).
+  FIX (Giorgio: γνήσιο miter, ΟΧΙ hack): αφαιρέθηκε το wedge machinery· NEW `computeFaceMiterShifts` (pure) → **strip-level**
+  scan κάθε convex κάθετης γωνίας → scalar back-cap shift `{tM,deltaM}` (από `aOuter/bOuter`)· `applyMiterShift` μετατοπίζει
+  τα back-cap vertices του `ExtrudeGeometry` στη mitered κορυφή → 45° miter **ΜΕΣΑ** στο ίδιο extrude, μηδέν coincident face.
+  **Openings fix:** το strip-level (mirror του πρώην `collectMiterWedges`) πιάνει ΚΑΙ τα **χείλη ανοιγμάτων** — η πρόσοψη
+  mitered-άρει το χείλος της τρύπας, η λαμπάδα το facade-end της (perp-gate σε ΟΛΑ τα strip-άκρα, `allFaceEnds`) → η γωνία
+  πρόσοψης↔λαμπάδας κλείνει συμπληρωματικά. Root fixes: `outwardPerpOf` → axis-normal (μηδέν skew)· κανένα
+  `computeVertexNormals` (αλλιώς ανεστραμμένα normals στα ανοίγματα). **266/266 GREEN**, jscpd καθαρό, ΕΚΤΟΣ ADR-040.
 - **2026-07-18 (Φ7b — TRUE 45° miter στις γωνίες· πλήρες entry → ADR-534 §6 Φ7b)** — Το Φ7 overlap corner-join
   σοβάτιζε τη γωνία ΔΙΠΛΑ (μετρήθηκε ~312mm² επικάλυψη). FIX (Giorgio: Λ-Β Revit «Miter»): welded body → core-length
   (−`EndExtend/groupEnds/isCornerEnd`), NEW `collectMiterWedges` (pure SSoT) → miter τρίγωνα `[core, core+πάχος·perp,
