@@ -87,3 +87,44 @@ describe('buildHardwareSpecs — no user-operable handle', () => {
     expect(specs).toHaveLength(0);
   });
 });
+
+// ─── 2026-07-18 3D follow-up: backplate + neck + lock + spindle + hinges ──────
+describe('buildHardwareSpecs — espagnolette assembly (ADR-672 §8 3D follow-up)', () => {
+  // DOOR_DIMS: innerW = 0.9 - 2·0.05 = 0.8 → edge ±0.4; leaf depth = 0.25·0.35.
+  const LEAF_DEPTH = 0.25 * 0.35;
+  const HINGE_EDGE = -0.4; // default handing → latch +X, hinges on -X edge.
+
+  it('door → a vertical backplate ~110mm tall bridging to the lever (neck)', () => {
+    const specs = buildHardwareSpecs(op('door'), DOOR_DIMS, HW);
+    // Backplate: the tall vertical plate.
+    expect(specs.some((s) => Math.abs(s.sy - 0.11) < 1e-6)).toBe(true);
+    // Neck: a square stub whose depth equals the lever stand-off (55mm).
+    expect(specs.some((s) => Math.abs(s.sz - 0.055) < 1e-6 && Math.abs(s.sx - 0.02) < 1e-6)).toBe(true);
+  });
+
+  it('door → a through spindle spanning both faces (sz > leaf depth)', () => {
+    const specs = buildHardwareSpecs(op('door'), DOOR_DIMS, HW);
+    expect(specs.some((s) => s.sz > LEAF_DEPTH + 0.05)).toBe(true);
+  });
+
+  it('door → exactly 3 hinge barrels on the hinge-side edge, centred in depth', () => {
+    const specs = buildHardwareSpecs(op('door'), DOOR_DIMS, HW);
+    const hinges = specs.filter(
+      (s) => Math.abs(s.cx - HINGE_EDGE) < 1e-6 && Math.abs(s.cz) < 1e-6,
+    );
+    expect(hinges).toHaveLength(3);
+  });
+
+  it('door → a lock cylinder below the lever on the latch side', () => {
+    const specs = buildHardwareSpecs(op('door'), DOOR_DIMS, HW);
+    // Handle sits at ~1.05m; the lock body/keyway drop below it on the +X (latch) side.
+    expect(specs.some((s) => s.cx > 0 && s.cy < 1.02)).toBe(true);
+  });
+
+  it('casement window (hinged) → 2 edge hinges; sliding-window (no hinge in catalog) → none', () => {
+    const casement = buildHardwareSpecs(op('window'), WIN_DIMS, HW);
+    expect(casement.filter((s) => Math.abs(s.cz) < 1e-6)).toHaveLength(2);
+    const slider = buildHardwareSpecs(op('sliding-window'), WIN_DIMS, HW);
+    expect(slider.filter((s) => Math.abs(s.cz) < 1e-6)).toHaveLength(0);
+  });
+});
