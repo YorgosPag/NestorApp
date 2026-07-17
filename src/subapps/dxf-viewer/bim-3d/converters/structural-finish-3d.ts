@@ -34,8 +34,9 @@ import type { FinishFaceSegment, StructuralFinishFaces } from '../../bim/finishe
 // ADR-449 Slice X6 — `computeBandFinishQuads` = η κοινή offset→miter ακολουθία (μηδέν copy-paste).
 import { computeBandFinishQuads, type BandFinishQuad } from '../../bim/finishes/structural-finish-outline-geometry';
 import type { FinishStrip, FinishStripGroup } from '../../bim/finishes/structural-finish-vertical-merge';
-// ADR-449/534 Φ7 — unified welded δέρμα ανά ομοεπίπεδη όψη (union t×z + τρύπες στα ανοίγματα).
-import { buildFaceProfiles, collectMiterWedges, type FaceProfile, type MiterWedge } from '../../bim/finishes/structural-finish-face-profile';
+// ADR-449/534 Φ7/Φ7c — unified welded δέρμα ανά ομοεπίπεδη όψη (union t×z + τρύπες στα ανοίγματα)·
+// το 45° miter της γωνίας είναι **ενσωματωμένο** στο extrude (back-cap shift), όχι ξεχωριστά wedges.
+import { buildFaceProfiles, type FaceProfile, type FaceMiterDeltas } from '../../bim/finishes/structural-finish-face-profile';
 // ADR-404 / ADR-449 Bug A — ο σοβάς κεκλιμένου μέλους ακολουθεί τον πυρήνα: ΙΔΙΟΣ shear
 // SSoT consumer με τον core (no-op fast-path όταν δεν υπάρχει κλίση). Μηδέν νέα μαθηματικά.
 import { applyColumnTilt, applyBeamSlope } from './mesh-slope-shear';
@@ -183,15 +184,6 @@ function faceProfileWorldMatrix(profile: FaceProfile, sceneToM: number, baseElev
   );
 }
 
-/** ADR-534 Φ7b — ένα γωνιακό miter wedge (plan τρίγωνο) → world-placed τριγωνικό prism geometry. */
-function miterWedgeGeometry(w: MiterWedge, sceneToM: number, baseElevationM: number): THREE.BufferGeometry | null {
-  const tri = scalePoints([w.core, w.mid, w.tip], sceneToM).map((p) => ({ x: p.x, y: p.y, z: 0 }));
-  const geo = stripPrismGeometry(tri, (w.zTopMm - w.zBottomMm) * MM_TO_M);
-  if (!geo) return null;
-  geo.translate(0, baseElevationM + w.zBottomMm * MM_TO_M, 0); // world Y = datum + z-bottom (ίδιο με τα bodies)
-  return geo;
-}
-
 /**
  * ADR-534 Φ7b — merge πολλών **non-indexed** ExtrudeGeometries (ίδια attributes position/normal/uv)
  * σε ΕΝΑ BufferGeometry. Ενώνει όλες τις ομοεπίπεδες όψεις + wedges ΙΔΙΟΥ υλικού σε ΕΝΑ συνεχές mesh
@@ -218,11 +210,33 @@ function mergeNonIndexed(geos: readonly THREE.BufferGeometry[]): THREE.BufferGeo
   return merged;
 }
 
-/** FaceProfile → ΕΝΑ welded BufferGeometry (extrude κατά πάχος + world placement). */
+/**
+ * ADR-534 Φ7c — Ενσωματωμένο 45° miter: μετατοπίζει ΜΟΝΟ τα vertices του **back-cap** (u ≈ thicknessM,
+ * outer παρειά) που κάθονται στα t-άκρα της όψης (`tLoM`/`tHiM`) κατά τα `deltaLoM/deltaHiM` → το outer
+ * t-άκρο φτάνει τη mitered κορυφή ενώ το front (core) μένει → η πλευρική έδρα γίνεται διαγώνια (45°).
+ * Οι τρύπες (ανοίγματα) δεν είναι στα t-άκρα → δεν αγγίζονται. `true` αν έγινε μετατόπιση (→ recompute
+ * normals για τη νέα διαγώνια έδρα). Front-cap (u≈0) αμετάβλητο. Non-indexed ExtrudeGeometry → u ∈ {0, th}.
+ */
+function applyMiterShift(geo: THREE.BufferGeometry, m: FaceMiterDeltas, thicknessM: number): boolean {
+  if (m.deltaLoM === 0 && m.deltaHiM === 0) return false;
+  const pos = geo.getAttribute('position') as THREE.BufferAttribute;
+  const uHalf = thicknessM * 0.5; // διαχωρίζει front-cap (u=0) από back-cap (u=thicknessM)
+  const tTol = Math.max(1e-6, thicknessM * 1e-3); // ταύτιση t-άκρου (m), αρκετά < απόσταση features
+  for (let i = 0; i < pos.count; i++) {
+    if (Math.abs(pos.getZ(i) - thicknessM) > uHalf) continue; // μόνο back cap
+    const x = pos.getX(i);
+    if (m.deltaHiM !== 0 && Math.abs(x - m.tHiM) <= tTol) pos.setX(i, x + m.deltaHiM);
+    else if (m.deltaLoM !== 0 && Math.abs(x - m.tLoM) <= tTol) pos.setX(i, x + m.deltaLoM);
+  }
+  return true;
+}
+
+/** FaceProfile → ΕΝΑ welded BufferGeometry (extrude κατά πάχος + ενσωματωμένο miter + world placement). */
 function faceProfileGeometry(profile: FaceProfile, sceneToM: number, baseElevationM: number): THREE.BufferGeometry | null {
   const shapes = faceProfileShapes(profile);
   if (shapes.length === 0 || profile.thicknessM <= 0) return null;
   const geo = new THREE.ExtrudeGeometry(shapes, { depth: profile.thicknessM, bevelEnabled: false });
+  if (applyMiterShift(geo, profile.miter, profile.thicknessM)) geo.computeVertexNormals();
   geo.applyMatrix4(faceProfileWorldMatrix(profile, sceneToM, baseElevationM));
   return geo;
 }
@@ -233,12 +247,13 @@ function finishMaterialKey(seg: FinishFaceSegment): string {
 }
 
 /**
- * ADR-449/534 Φ7/Φ7b — ΕΝΑ ΣΥΝΕΧΕΣ welded δέρμα ανά **υλικό** (big-player: Revit «join» / C4D weld):
+ * ADR-449/534 Φ7/Φ7c — ΕΝΑ ΣΥΝΕΧΕΣ welded δέρμα ανά **υλικό** (big-player: Revit «join» / C4D weld):
  * τα (t×z) ορθογώνια κάθε `FinishStripGroup` ενώνονται σε profile (τρύπες = ανοίγματα, εξώθηση μία
- * φορά) και οι γωνίες γεμίζουν με miter wedges (Φ7b, διαγώνιος αρμός 45°, μονή κάλυψη). **ΟΛΕΣ** οι
- * γεωμετρίες ΙΔΙΟΥ υλικού κάνουν merge σε ΕΝΑ BufferGeometry → **ένα mesh ανά υλικό** αντί για ένα
- * ανά όψη (Giorgio C4D 234109: το επίπεδο OBJ format έσπαγε το δέρμα σε δεκάδες `Column_structural-
- * finish-_XX` objects). `baseElevationM` = world datum (bakes στο matrix Y). `null` όταν κανένα profile.
+ * φορά) και η γωνία κλείνει με **γνήσιο 45° miter ΕΝΣΩΜΑΤΩΜΕΝΟ** στο ίδιο extrude (back-cap shift,
+ * Φ7c — μηδέν ξεχωριστό wedge, μηδέν coincident face/artifact· αντικατέστησε το Φ7b wedge-hack).
+ * **ΟΛΕΣ** οι γεωμετρίες ΙΔΙΟΥ υλικού κάνουν merge σε ΕΝΑ BufferGeometry → **ένα mesh ανά υλικό** αντί
+ * για ένα ανά όψη (Giorgio C4D 234109: το επίπεδο OBJ format έσπαγε το δέρμα σε δεκάδες `Column_
+ * structural-finish-_XX` objects). `baseElevationM` = world datum (bakes στο matrix Y). `null` όταν κανένα.
  */
 export function buildFinishSkinFromStripGroups(
   groups: readonly FinishStripGroup[],
@@ -257,12 +272,9 @@ export function buildFinishSkinFromStripGroups(
     if (b) b.geos.push(geo);
     else buckets.set(finishMaterialKey(seg), { geos: [geo], seg });
   };
+  // ADR-534 Φ7c — κάθε profile φέρει ήδη το ενσωματωμένο 45° miter του (back-cap shift στο extrude).
   for (const profile of buildFaceProfiles(groups, sceneToM)) {
     addGeo(faceProfileGeometry(profile, sceneToM, baseElevationM), profile.seg);
-  }
-  // ADR-534 Φ7b — γωνιακά miter wedges (διαγώνιος αρμός 45°, μονή κάλυψη) στο ΙΔΙΟ merged δέρμα.
-  for (const w of collectMiterWedges(groups)) {
-    addGeo(miterWedgeGeometry(w, sceneToM, baseElevationM), w.seg);
   }
   const group = new THREE.Group();
   for (const { geos, seg } of buckets.values()) {

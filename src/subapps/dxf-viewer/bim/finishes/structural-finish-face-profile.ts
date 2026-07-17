@@ -160,50 +160,8 @@ export function buildFaceProfiles(groups: readonly FinishStripGroup[], sceneToM:
   return out;
 }
 
-/**
- * ADR-534 Φ7b — Ένα γωνιακό **miter σφηνάκι** (plan τρίγωνο, scene units) που γεμίζει το ΜΙΣΟ του
- * γωνιακού τετραγώνου μιας όψης· η κάθετη γειτονική όψη γεμίζει το άλλο μισό → πλήρης γωνία με
- * **μονή κάλυψη, μηδέν overlap, μηδέν κενό** και **διαγώνιο αρμό 45°** (Revit «Miter»). Το `tip`
- * είναι η κοινή mitered κορυφή που ΚΑΙ οι δύο όψεις ήδη κουβαλούν (`computeMiteredOuter`).
- */
-export interface MiterWedge {
-  /** Γωνιακή κορυφή πυρήνα (scene units). */
-  readonly core: Vec2;
-  /** core + πάχος·perp = το ΜΗ-επεκταμένο outer (scene units). */
-  readonly mid: Vec2;
-  /** Το mitered outer (επεκταμένο κατά τον άξονα ΠΕΡΑ από το core t-span) — η κοινή κορυφή. */
-  readonly tip: Vec2;
-  readonly zBottomMm: number;
-  readonly zTopMm: number;
-  readonly seg: FinishFaceSegment;
-}
-
 /** scene units (mm): outer επέκταση κατά τον άξονα > αυτό = miter (όχι chamfer/uniform-perp). */
 const MITER_EXT_TOL = 1e-3;
-
-/**
- * Ένα strip-άκρο (core P, outer O) παράγει miter wedge ΜΟΝΟ όταν το O προβάλλεται κατά τον άξονα
- * **ΠΕΡΑ** από το core t-span του strip (junction miter tip)· chamfer (O προς τα μέσα) ή uniform
- * (O στο core t) → `null`. Το `mid` = P + perp·(perp-συνιστώσα του O−P) = το μη-επεκταμένο outer.
- *
- * ⚠️ Το outward normal προκύπτει **από το `dir`** (κάθετο μοναδιαίο, στην πλευρά του outer), ΟΧΙ από
- * το `group.perp`: εκείνο (`outwardPerpOf` mid-points) είναι διαγώνιο όταν ΚΑΙ ΤΑ ΔΥΟ άκρα έχουν
- * miter/chamfer → θα κατέρρεε το `mid` στο `tip` (μηδενικό τρίγωνο).
- */
-function endWedge(core: Vec2, outer: Vec2, tLo: number, tHi: number, dir: Vec2, s: FinishStrip): MiterWedge | null {
-  const tCore = dot(core, dir);
-  const tO = dot(outer, dir);
-  const beyondHi = tO > tHi + MITER_EXT_TOL && Math.abs(tCore - tHi) < MITER_EXT_TOL;
-  const beyondLo = tO < tLo - MITER_EXT_TOL && Math.abs(tCore - tLo) < MITER_EXT_TOL;
-  if (!beyondHi && !beyondLo) return null;
-  const d = sub(outer, core);
-  const nRaw: Vec2 = { x: -dir.y, y: dir.x };
-  const perp: Vec2 = dot(d, nRaw) >= 0 ? nRaw : { x: dir.y, y: -dir.x };
-  const perpComp = dot(d, perp);
-  if (Math.abs(perpComp) < MITER_EXT_TOL) return null;
-  const mid: Vec2 = { x: core.x + perp.x * perpComp, y: core.y + perp.y * perpComp };
-  return { core, mid, tip: outer, zBottomMm: s.zBottomMm, zTopMm: s.zTopMm, seg: s.seg };
-}
 
 const cross = (a: Vec2, b: Vec2): number => a.x * b.y - a.y * b.x;
 
@@ -242,25 +200,66 @@ function isPerpCorner(p: Vec2, selfDir: Vec2, ends: readonly GroupEnd[], tol: nu
   return false;
 }
 
-/**
- * ADR-534 Φ7b — SSoT: όλα τα junction miter wedges όλων των groups. Αντλεί την κοινή mitered κορυφή
- * **αυτούσια** από τα `aOuter/bOuter` των strips (τα οποία φέρει ήδη το `computeMiteredOuter`)· μηδέν
- * νέος υπολογισμός miter. Wedge ΜΟΝΟ σε **γνήσια κάθετη γωνία** ({@link isPerpCorner}) — όχι σε
- * collinear εσωτερικά boundaries (window jamb). Ο 3Δ builder τα εξωθεί ως τριγωνικά prisms στο z-range.
- */
-export function collectMiterWedges(groups: readonly FinishStripGroup[]): MiterWedge[] {
-  const ends = groups.flatMap(groupExtremities);
-  const out: MiterWedge[] = [];
-  for (const g of groups) {
-    const tol = Math.max(2 * g.seg.thickness, 1); // scene units (mm): ανοχή ταύτισης γωνιακής κορυφής
-    for (const s of g.strips) {
-      const tLo = Math.min(dot(s.aCore, g.dir), dot(s.bCore, g.dir));
-      const tHi = Math.max(dot(s.aCore, g.dir), dot(s.bCore, g.dir));
-      for (const [core, outer] of [[s.aCore, s.aOuter], [s.bCore, s.bOuter]] as const) {
-        const w = endWedge(core, outer, tLo, tHi, g.dir, s);
-        if (w && isPerpCorner(w.core, g.dir, ends, tol)) out.push(w);
-      }
+/** Ένα t-ακρότατο μιας ομάδας: το core σημείο, το mitered outer του, και το t = dot(core, dir). */
+interface GroupCorner {
+  readonly core: Vec2;
+  readonly outer: Vec2;
+  readonly t: number;
+}
+
+/** Τα δύο t-ακρότατα (min-t, max-t) core σημεία μιας ομάδας + το mitered outer του καθενός. */
+function groupCorners(g: FinishStripGroup): { lo: GroupCorner; hi: GroupCorner } {
+  const first: GroupCorner = { core: g.strips[0].aCore, outer: g.strips[0].aOuter, t: dot(g.strips[0].aCore, g.dir) };
+  let lo = first;
+  let hi = first;
+  for (const s of g.strips) {
+    for (const [core, outer] of [[s.aCore, s.aOuter], [s.bCore, s.bOuter]] as const) {
+      const t = dot(core, g.dir);
+      if (t < lo.t) lo = { core, outer, t };
+      if (t > hi.t) hi = { core, outer, t };
     }
   }
-  return out;
+  return { lo, hi };
+}
+
+/**
+ * Scalar back-cap delta (scene units) ενός t-άκρου: μη-μηδενικό ΜΟΝΟ όταν (α) το mitered outer
+ * προβάλλεται κατά τον άξονα **ΠΕΡΑ** από το core t (convex — `beyondSign>0` για max-t, `<0` για
+ * min-t) ΚΑΙ (β) το core είναι **γνήσια κάθετη γωνία** ({@link isPerpCorner}). Concave (outer εντός),
+ * junction (outer==core), collinear/window-jamb (παράλληλος γείτονας), free/wall-butt → 0 (square).
+ * Επιστρέφει `tOuter − tCore`: max-t → θετικό (έξω)· min-t → αρνητικό (έξω).
+ */
+function endDelta(c: GroupCorner, beyondSign: 1 | -1, dir: Vec2, ends: readonly GroupEnd[], tol: number): number {
+  const tOuter = dot(c.outer, dir);
+  const beyond = beyondSign > 0 ? tOuter > c.t + MITER_EXT_TOL : tOuter < c.t - MITER_EXT_TOL;
+  if (!beyond || !isPerpCorner(c.core, dir, ends, tol)) return 0;
+  return tOuter - c.t;
+}
+
+/**
+ * ADR-534 Φ7c — SSoT: 45° miter deltas ανά group (σε **μέτρα**, τοπικό t από `strips[0].aCore`). Το
+ * back-cap (outer παρειά) κάθε όψης σπρώχνεται στα t-άκρα ώστε να φτάσει τη **κοινή** mitered κορυφή
+ * (`aOuter/bOuter`, από `computeMiteredOuter`) → η γωνία κλείνει **ΜΕΣΑ** στο ενιαίο extrude, μηδέν
+ * ξεχωριστό wedge. Convex + **cross-group** perp gate (window jambs / collinear μένουν square). Ίδια
+ * λογική γωνιακής επιλογής με το πρώην `collectMiterWedges`, αλλά κρατά ΜΟΝΟ το scalar delta.
+ */
+export function computeFaceMiterDeltas(
+  groups: readonly FinishStripGroup[],
+  sceneToM: number,
+): Map<FinishStripGroup, FaceMiterDeltas> {
+  const ends = groups.flatMap(groupExtremities);
+  const map = new Map<FinishStripGroup, FaceMiterDeltas>();
+  for (const g of groups) {
+    if (g.strips.length === 0) { map.set(g, ZERO_MITER); continue; }
+    const tOrigin = dot(g.strips[0].aCore, g.dir);
+    const tol = Math.max(2 * g.seg.thickness, 1); // scene units (mm): ανοχή ταύτισης γωνιακής κορυφής
+    const { lo, hi } = groupCorners(g);
+    map.set(g, {
+      tLoM: (lo.t - tOrigin) * sceneToM,
+      tHiM: (hi.t - tOrigin) * sceneToM,
+      deltaLoM: endDelta(lo, -1, g.dir, ends, tol) * sceneToM,
+      deltaHiM: endDelta(hi, 1, g.dir, ends, tol) * sceneToM,
+    });
+  }
+  return map;
 }
