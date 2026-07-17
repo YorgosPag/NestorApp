@@ -28,6 +28,7 @@ import type { OpeningEntity } from '../../bim/types/opening-types';
 import { sceneUnitsToMeters } from '../../utils/scene-units';
 import { resolveOpeningFrameProfile } from '../../bim/family-types/resolve-opening-frame-profile';
 import { resolveOpeningHost, type OpeningHost } from '../../bim/geometry/opening-host';
+import { stampBimIdentity } from './bim-three-shape-helpers';
 import {
   buildLeafSpecs,
   type BoxSpec,
@@ -109,8 +110,7 @@ export function buildOpeningMesh(
   const group = new THREE.Group();
   for (const s of specs) group.add(makeBoxMesh(s, basis, opening.id));
   group.position.set(pos.x * sceneToM, floorY, -pos.y * sceneToM);
-  group.userData['bimId'] = opening.id;
-  group.userData['bimType'] = 'opening';
+  stampBimIdentity(group, { bimId: opening.id, bimType: 'opening' });
   return group;
 }
 
@@ -131,8 +131,7 @@ function makeBoxMesh(s: BoxSpec, basis: THREE.Matrix4, bimId: string): THREE.Mes
   const mesh = new THREE.Mesh(geo, s.mat);
   mesh.castShadow = true;
   mesh.receiveShadow = true;
-  mesh.userData['bimId'] = bimId;
-  mesh.userData['bimType'] = 'opening';
+  stampBimIdentity(mesh, { bimId, bimType: 'opening' });
   return mesh;
 }
 

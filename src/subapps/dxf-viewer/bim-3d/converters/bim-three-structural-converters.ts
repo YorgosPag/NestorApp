@@ -16,7 +16,7 @@ import type { WallEntity } from '../../bim/types/wall-types';
 import type { BeamEntity } from '../../bim/types/beam-types';
 import type { Point3D } from '../../bim/types/bim-base';
 import { getElementMaterial3D } from '../materials/MaterialCatalog3D';
-import { buildShape, extrudeAndRotate, extrudeShapesAndRotate, tagMesh, hangDownMeshY } from './bim-three-shape-helpers';
+import { buildShape, extrudeAndRotate, extrudeShapesAndRotate, tagMesh, hangDownMeshY, stampBimIdentity, attachElementComponent } from './bim-three-shape-helpers';
 import { scalePoints } from '../../rendering/entities/shared/geometry-vector-utils';
 import { computeBeamCutbackOutline, extendBeamOutlineIntoFramingColumns } from '../../bim/geometry/beam-column-cutback';
 import { ensureWorldUvs } from './bim-uv-helpers';
@@ -231,8 +231,7 @@ function composeColumnWithFinish(
   const composite = new THREE.Group();
   composite.add(core);
   composite.add(finishSkin);
-  composite.userData['bimId'] = column.id;
-  composite.userData['bimType'] = 'column';
+  stampBimIdentity(composite, { bimId: column.id, bimType: 'column' });
   return composite;
 }
 
@@ -240,8 +239,9 @@ function composeColumnWithFinish(
  * ADR-456 Slice 3 — προσθέτει τον κλωβό οπλισμού (διαμήκεις + στεφάνια) στο ήδη
  * συντεθειμένο column result (πυρήνας ή πυρήνας+σοβάς). Επιστρέφει το ίδιο αντικείμενο
  * όταν ο οπλισμός είναι ανενεργός (view gate / μη-ορθογωνική / χωρίς `reinforcement`).
- * `heightMm`/`baseY` = ίδια με τον σοβά → ευθυγράμμιση. Αν το input είναι σκέτο mesh,
- * το τυλίγει σε Group ώστε να κρατήσει το composite tag.
+ * `heightMm`/`baseY` = ίδια με τον σοβά → ευθυγράμμιση. Αν το input είναι σκέτο mesh, το
+ * `attachElementComponent` SSoT (ADR-669 §10) το τυλίγει σε Group ώστε να κρατήσει το
+ * composite tag.
  *
  * ΣΗΜ.: ο οπλισμός είναι **ΑΝΕΞΑΡΤΗΤΟΣ** από το `suppressFinishSkin` — το scene path
  * το θέτει true (ο ΕΝΙΑΙΟΣ silhouette σοβάς αναλαμβάνει το σκιν, ADR-449 Slice X1),
@@ -258,16 +258,7 @@ function attachColumnRebar(
   if (!isStructuralComponentVisible('reinforcement', column)) return composed;
   const cage = buildColumnRebarCage(column, baseY, heightMm, levelId);
   if (!cage) return composed;
-  if (composed instanceof THREE.Group) {
-    composed.add(cage);
-    return composed;
-  }
-  const group = new THREE.Group();
-  group.add(composed);
-  group.add(cage);
-  group.userData['bimId'] = column.id;
-  group.userData['bimType'] = 'column';
-  return group;
+  return attachElementComponent(composed, cage, { bimId: column.id, bimType: 'column' });
 }
 
 /**
@@ -435,8 +426,7 @@ export function beamToMesh(
     const composite = new THREE.Group();
     composite.add(tagged);
     composite.add(finishSkin);
-    composite.userData['bimId'] = beam.id;
-    composite.userData['bimType'] = 'beam';
+    stampBimIdentity(composite, { bimId: beam.id, bimType: 'beam' });
     // ADR-470 — core gate: κρύβει το σώμα δοκαριού αν ανενεργό (κρατά σοβά+οπλισμό).
     return applyStructuralCoreVisibility3D(
       attachBeamRebar(composite, beam, mesh.position.y, levelId, clipTopZmm), tagged, beam,

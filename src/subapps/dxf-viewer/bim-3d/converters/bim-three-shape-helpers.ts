@@ -116,14 +116,68 @@ export function extrudeShapesAndRotate(shapes: readonly THREE.Shape[], depthM: n
   return geo;
 }
 
+/**
+ * ADR-669 — the BIM identity carried by a rendered `Object3D`. Mirrors Revit/ArchiCAD,
+ * where geometry BELONGS to an element (`ElementId`) rather than being stamped ad hoc by
+ * each producer. `matId` is optional because not every producer owns a single material id
+ * (a stair's material is resolved per component by `resolveStairMaterial`), and `undefined`
+ * must stay ABSENT: `section-cut-cap-groups` feeds `userData.matId` to `resolveHatchKey()`,
+ * which distinguishes "no material id" from an empty one.
+ */
+export interface BimMeshIdentity {
+  readonly bimId: string;
+  readonly bimType: string;
+  readonly matId?: string;
+  readonly levelId?: string;
+}
+
+/**
+ * ADR-669 — THE single writer of BIM identity onto `userData`. Every tag helper in the
+ * converters delegates here, so the key names live in exactly one place. Optional fields
+ * are skipped when `undefined` (never written as `undefined`), preserving each caller's
+ * existing key set. Accepts `Object3D` so group/component taggers share it with `tagMesh`.
+ */
+export function stampBimIdentity(obj: THREE.Object3D, identity: BimMeshIdentity): void {
+  obj.userData['bimId'] = identity.bimId;
+  obj.userData['bimType'] = identity.bimType;
+  if (identity.matId !== undefined) obj.userData['matId'] = identity.matId;
+  if (identity.levelId !== undefined) obj.userData['levelId'] = identity.levelId;
+}
+
 export function tagMesh(mesh: THREE.Mesh, id: string, type: string, matId: string, levelId?: string): THREE.Mesh {
-  mesh.userData['bimId'] = id;
-  mesh.userData['bimType'] = type;
-  mesh.userData['matId'] = matId;
-  if (levelId !== undefined) mesh.userData['levelId'] = levelId;
+  stampBimIdentity(mesh, { bimId: id, bimType: type, matId, levelId });
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   return mesh;
+}
+
+/**
+ * ADR-669 §10 — attach an ADDITIVE component (rebar cage, soffit finish, …) to an already
+ * composed element result, mirroring Revit's host + hosted-component model: the element keeps
+ * ONE identity no matter how many components it grows.
+ *
+ * A composed result is a bare `Mesh` while the element has a single body, and a `Group` once it
+ * gained a component. So: already a Group → just add. Bare Mesh → wrap it in a Group that
+ * carries the element identity, because the wrapper becomes the node consumers pick and frame,
+ * and a wrapper without identity would drop the element out of selection/section entirely.
+ *
+ * The CALLER decides whether the component exists at all (view gates, geometry validity) and
+ * builds it — that knowledge is per-component and does not belong here.
+ */
+export function attachElementComponent(
+  composed: THREE.Mesh | THREE.Group,
+  component: THREE.Object3D,
+  identity: BimMeshIdentity,
+): THREE.Mesh | THREE.Group {
+  if (composed instanceof THREE.Group) {
+    composed.add(component);
+    return composed;
+  }
+  const group = new THREE.Group();
+  group.add(composed);
+  group.add(component);
+  stampBimIdentity(group, identity);
+  return group;
 }
 
 // ADR-363 §11.Q3 Phase 3.7d + ADR-370 §6 Phase 7 — slab-opening cutouts.

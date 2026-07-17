@@ -22,7 +22,7 @@
 import * as THREE from 'three';
 import type { SlabEntity } from '../../bim/types/slab-types';
 import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
-import { buildShape, extrudeAndRotate, hangDownMeshY } from './bim-three-shape-helpers';
+import { buildShape, extrudeAndRotate, hangDownMeshY, stampBimIdentity } from './bim-three-shape-helpers';
 import { applySlabSlope } from './mesh-slope-shear';
 import { scalePoints } from '../../rendering/entities/shared/geometry-vector-utils';
 import { sceneUnitsToMeters } from '../../utils/scene-units';
@@ -62,9 +62,7 @@ export function slabOpeningPickMesh(
   );
   const slabTopMm = hostSlab.params.levelElevation + (hostSlab.params.heightOffsetFromLevel ?? 0);
   mesh.position.y = hangDownMeshY(floorElevationMm, slabTopMm, thicknessM, buildingBaseElevationM);
-  mesh.userData['bimId'] = opening.id;
-  mesh.userData['bimType'] = 'slab-opening';
-  if (levelId !== undefined) mesh.userData['levelId'] = levelId;
+  stampBimIdentity(mesh, { bimId: opening.id, bimType: 'slab-opening', levelId });
   mesh.castShadow = false;
   mesh.receiveShadow = false;
   return mesh;

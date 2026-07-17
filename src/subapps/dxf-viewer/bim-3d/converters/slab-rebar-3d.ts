@@ -22,11 +22,11 @@ import type { RebarMesh } from '../../bim/structural/reinforcement/slab-foundati
 import { sceneUnitsToMeters } from '../../utils/scene-units';
 import { scalePoints } from '../../rendering/entities/shared/geometry-vector-utils';
 import { resolveActiveSlabReinforcementForEntity } from '../../bim/structural/active-reinforcement';
+import { stampBimIdentity } from './bim-three-shape-helpers';
 import {
   MM_TO_M,
   MIN_RADIUS,
-  REBAR_MATERIAL,
-  buildRods,
+  addRods,
   toThree,
   type Seg,
 } from './rebar-3d-shared';
@@ -55,39 +55,31 @@ function radiusOf(diameterMm: number): number {
   return Math.max(MIN_RADIUS, (diameterMm / 2) * MM_TO_M);
 }
 
-/** Οριζόντιες ράβδοι // X (constant plan-Y), βήμα `spacingM` κατά Y, inset cover. */
-function barsAlongX(bb: Bbox, yLevel: number, spacingM: number, coverM: number): Seg[] {
+/**
+ * Οριζόντιες ράβδοι σε στάθμη `yLevel` εντός του bbox − cover, βήμα `spacingM`.
+ * `dir='x'`: ράβδοι // X (σταθερό plan-Y), βήμα κατά Y· `dir='y'`: το κατοπτρικό.
+ */
+function bboxBars(bb: Bbox, yLevel: number, spacingM: number, coverM: number, dir: 'x' | 'y'): Seg[] {
   const x0 = bb.minX + coverM, x1 = bb.maxX - coverM;
   const y0 = bb.minY + coverM, y1 = bb.maxY - coverM;
   if (x1 <= x0 || y1 <= y0 || spacingM <= 0) return [];
   const segs: Seg[] = [];
-  for (let y = y0; y <= y1 + 1e-9; y += spacingM) {
-    segs.push({ a: toThree({ x: x0, y }, yLevel), b: toThree({ x: x1, y }, yLevel) });
+  if (dir === 'x') {
+    for (let y = y0; y <= y1 + 1e-9; y += spacingM) {
+      segs.push({ a: toThree({ x: x0, y }, yLevel), b: toThree({ x: x1, y }, yLevel) });
+    }
+  } else {
+    for (let x = x0; x <= x1 + 1e-9; x += spacingM) {
+      segs.push({ a: toThree({ x, y: y0 }, yLevel), b: toThree({ x, y: y1 }, yLevel) });
+    }
   }
   return segs;
-}
-
-/** Οριζόντιες ράβδοι // Y (constant plan-X), βήμα `spacingM` κατά X, inset cover. */
-function barsAlongY(bb: Bbox, yLevel: number, spacingM: number, coverM: number): Seg[] {
-  const x0 = bb.minX + coverM, x1 = bb.maxX - coverM;
-  const y0 = bb.minY + coverM, y1 = bb.maxY - coverM;
-  if (x1 <= x0 || y1 <= y0 || spacingM <= 0) return [];
-  const segs: Seg[] = [];
-  for (let x = x0; x <= x1 + 1e-9; x += spacingM) {
-    segs.push({ a: toThree({ x, y: y0 }, yLevel), b: toThree({ x, y: y1 }, yLevel) });
-  }
-  return segs;
-}
-
-function addRods(group: THREE.Group, segs: readonly Seg[], radius: number): void {
-  const mesh = buildRods(segs, radius, REBAR_MATERIAL);
-  if (mesh) group.add(mesh);
 }
 
 /** Μία δι-διευθυντική σχάρα (X+Y) σε στάθμη `yLevel`. */
 function addMesh(group: THREE.Group, bb: Bbox, yLevel: number, meshX: RebarMesh, meshY: RebarMesh, coverM: number): void {
-  addRods(group, barsAlongX(bb, yLevel, meshX.spacingMm * MM_TO_M, coverM), radiusOf(meshX.diameterMm));
-  addRods(group, barsAlongY(bb, yLevel, meshY.spacingMm * MM_TO_M, coverM), radiusOf(meshY.diameterMm));
+  addRods(group, bboxBars(bb, yLevel, meshX.spacingMm * MM_TO_M, coverM, 'x'), radiusOf(meshX.diameterMm));
+  addRods(group, bboxBars(bb, yLevel, meshY.spacingMm * MM_TO_M, coverM, 'y'), radiusOf(meshY.diameterMm));
 }
 
 /**
@@ -117,9 +109,7 @@ export function buildSlabRebarCage(
   addMesh(group, bb, yTop, r.topMeshX, r.topMeshY, cover);
 
   if (group.children.length === 0) return null;
-  group.userData['bimId'] = slab.id;
-  group.userData['bimType'] = 'slab';
+  stampBimIdentity(group, { bimId: slab.id, bimType: 'slab', levelId });
   group.userData['reinforcement'] = true;
-  if (levelId !== undefined) group.userData['levelId'] = levelId;
   return group;
 }

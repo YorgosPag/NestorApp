@@ -21,7 +21,7 @@ import * as THREE from 'three';
 import type { WallEntity } from '../../bim/types/wall-types';
 import type { Point3D } from '../../bim/types/bim-base';
 import { getMaterial3D } from '../materials/MaterialCatalog3D';
-import { buildWallShape, extrudeAndRotate } from './bim-three-shape-helpers';
+import { buildWallShape, extrudeAndRotate, stampBimIdentity } from './bim-three-shape-helpers';
 import { attachEdgesProjection } from './bim-three-edges';
 import { applyWallTilt } from './mesh-slope-shear';
 import { ensureWorldUvs } from './bim-uv-helpers';
@@ -54,8 +54,7 @@ export function buildMultiLayerSolidWall(
     addLayerBand(group, wall, buildWallShape(lerpEdge(fracs[i]), lerpEdge(fracs[i + 1])), heightM, baseY, dna.layers[i]);
   }
   if (group.children.length === 0) return null;
-  group.userData['bimId'] = wall.id;
-  group.userData['bimType'] = 'wall';
+  stampBimIdentity(group, { bimId: wall.id, bimType: 'wall' });
   return group;
 }
 
@@ -74,8 +73,7 @@ function addLayerBand(
   applyWallTilt(geo, wall.params); // No-op flat (curved walls aren't tilted here).
   const mesh = new THREE.Mesh(geo, getMaterial3D(layer.materialId));
   mesh.position.y = baseY;
-  mesh.userData['bimId'] = wall.id;
-  mesh.userData['bimType'] = 'wall';
+  stampBimIdentity(mesh, { bimId: wall.id, bimType: 'wall' });
   mesh.userData['layerId'] = layer.id;
   mesh.castShadow = true;
   mesh.receiveShadow = true;

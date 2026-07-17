@@ -33,7 +33,7 @@ import type { SlabDnaLayer } from '../../bim/types/slab-dna-types';
 import { isMultiLayerSlab } from '../../bim/types/slab-dna-types';
 import { buildupBoundaryFractions } from '../../bim/types/layered-buildup';
 import { getMaterial3D } from '../materials/MaterialCatalog3D';
-import { buildShape, extrudeAndRotate, tagMesh, pushHoles, hangDownMeshY } from './bim-three-shape-helpers';
+import { buildShape, extrudeAndRotate, tagMesh, pushHoles, hangDownMeshY, stampBimIdentity } from './bim-three-shape-helpers';
 import { scalePoints } from '../../rendering/entities/shared/geometry-vector-utils';
 import { attachEdgesProjection } from './bim-three-edges';
 import { applySlabSlope } from './mesh-slope-shear';
@@ -81,8 +81,7 @@ export function buildMultiLayerSlabSolid(
     addSlabLayerBand(group, slab, openings, layerThicknessM, layerBottomY, dna.layers[i], levelId, sceneToM);
   }
   if (group.children.length === 0) return null;
-  group.userData['bimId'] = slab.id;
-  group.userData['bimType'] = 'slab';
+  stampBimIdentity(group, { bimId: slab.id, bimType: 'slab' });
   return group;
 }
 

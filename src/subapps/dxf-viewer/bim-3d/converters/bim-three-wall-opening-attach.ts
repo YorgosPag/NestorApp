@@ -19,6 +19,34 @@ import { horizontalTiltShearMatrix } from './mesh-slope-shear';
 const MM_TO_M = 0.001;
 
 /**
+ * Catalog material ids των σωμάτων του κουφώματος — SSoT (δηλώνονται ΜΙΑ φορά εδώ). Το ΙΔΙΟ id
+ * που χτίζει το υλικό (`getMaterial3D`) σφραγίζεται και ως `userData.matId` σε κάθε sub-mesh, ώστε
+ * η 3Δ εξαγωγή (ADR-668 §10) να το ονομάζει **σημασιολογικά** (`mat-wood`/`mat-glass`) — όπως το
+ * Revit/ArchiCAD δίνουν στην κάσα/φύλλο/υαλοστάσιο μιας πόρτας δικές τους named surfaces — αντί για
+ * fallback στο χρώμα. Χωρίς αυτό, το `resolveBimMeshIdentity` (ADR-669 §5.6) δεν βρίσκει `matId` στο
+ * άνοιγμα και έπεφτε σε `mat_${color}`.
+ */
+const OPENING_FRAME_MATERIAL_ID = 'mat-wood';   // κάσα + φύλλο (ξύλο)
+const OPENING_GLASS_MATERIAL_ID = 'mat-glass';  // υαλοστάσιο
+
+/**
+ * Σφραγίζει σε κάθε sub-mesh του κουφώματος το catalog id του υλικού του (export naming SSoT).
+ * Το `leaf` μοιράζεται το ΙΔΙΟ singleton με το `frame` (και τα δύο ξύλο), οπότε ο χάρτης
+ * material→id έχει δύο εγγραφές· ό,τι mesh δεν ταιριάζει (θεωρητικά κανένα) μένει ασφράγιστο.
+ */
+function stampOpeningMaterialIds(
+  mesh: THREE.Object3D,
+  matIdByMaterial: ReadonlyMap<THREE.Material, string>,
+): void {
+  mesh.traverse((node) => {
+    const m = node as THREE.Mesh;
+    if (m.isMesh !== true || Array.isArray(m.material)) return;
+    const id = matIdByMaterial.get(m.material);
+    if (id !== undefined) m.userData['matId'] = id;
+  });
+}
+
+/**
  * Build + attach the parametric 3D mesh of each hosted opening into the wall
  * `group`. Materials resolved once (κάσα/φύλλο = ξύλο, υαλοστάσιο = γυαλί· τα
  * glazed kinds επιλέγουν γυαλί στο `buildOpeningMesh`). No-op όταν δεν υπάρχουν
@@ -33,11 +61,14 @@ export function attachOpeningMeshes(
   levelId?: string,
 ): void {
   if (openings.length === 0) return;
-  const materials: OpeningMeshMaterials = {
-    frame: getMaterial3D('mat-wood'),
-    leaf: getMaterial3D('mat-wood'),
-    glass: getMaterial3D('mat-glass'),
-  };
+  const frameMat = getMaterial3D(OPENING_FRAME_MATERIAL_ID);
+  const glassMat = getMaterial3D(OPENING_GLASS_MATERIAL_ID);
+  const materials: OpeningMeshMaterials = { frame: frameMat, leaf: frameMat, glass: glassMat };
+  // material singleton → catalog id, για τη σφράγιση `matId` ανά sub-mesh (ADR-668 §10).
+  const matIdByMaterial = new Map<THREE.Material, string>([
+    [frameMat, OPENING_FRAME_MATERIAL_ID],
+    [glassMat, OPENING_GLASS_MATERIAL_ID],
+  ]);
   // ADR-404 — battered wall: τα σώματα κουφωμάτων ακολουθούν την ΙΔΙΑ κλίση με τον τοίχο
   // (αλλιώς 3Δ === 2Δ σπάει — η πόρτα έμενε κατακόρυφη σε κεκλιμένο τοίχο). World-space
   // οριζόντιος shear γραμμικός στο ύψος (ίδιο SSoT `wallTiltShearAt`), αγκυρωμένος στο FFL.
@@ -48,6 +79,7 @@ export function attachOpeningMeshes(
   for (const opening of openings) {
     const mesh = buildOpeningMesh(opening, wall, materials, floorElevationMm, buildingBaseElevationM);
     if (!mesh) continue;
+    stampOpeningMaterialIds(mesh, matIdByMaterial);
     if (levelId !== undefined) mesh.userData['levelId'] = levelId;
     if (tiltShear) {
       // Wrapper με matrix shear (μη-TRS) → κλίνει όλα τα descendants στο world χωρίς mutation γεωμετρίας.

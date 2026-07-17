@@ -40,6 +40,7 @@ import type { WallTopLocalFn, WallBaseLocalFn } from './wall-opening-pieces';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { resolve3DEdgeStyle } from '../edges/bim-3d-edge-resolver';
 import { buildEdgeOverlay, attachEdgeOverlay } from '../edges/bim-3d-edge-overlay-builder';
+import { stampBimIdentity } from './bim-three-shape-helpers';
 
 const MM_TO_M = 0.001;
 
@@ -181,8 +182,7 @@ export function buildWallMeshWithOpenings(
     segMesh.position.set(a.x, floorY, -a.y);
     segMesh.position.addScaledVector(zAxis, -thicknessM / 2);
 
-    segMesh.userData['bimId'] = wall.id;
-    segMesh.userData['bimType'] = 'wall';
+    stampBimIdentity(segMesh, { bimId: wall.id, bimType: 'wall' });
     segMesh.userData['segmentIndex'] = i;
     segMesh.castShadow = true;
     segMesh.receiveShadow = true;
@@ -201,7 +201,6 @@ export function buildWallMeshWithOpenings(
 
   if (group.children.length === 0) return null;
 
-  group.userData['bimId'] = wall.id;
-  group.userData['bimType'] = 'wall';
+  stampBimIdentity(group, { bimId: wall.id, bimType: 'wall' });
   return group;
 }
