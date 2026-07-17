@@ -29,6 +29,7 @@ import { buildHorizontalFinishSkin } from '../converters/structural-finish-horiz
 import { buildColumnVerticalExtentLookup, makeColumnHostResolver } from '../../bim/geometry/column-vertical-profile';
 import { buildWallHostInputs } from '../../bim/geometry/wall-host-plan-builder';
 import { buildCeilingSlabHosts, resolveMemberTopClipZmm } from './monolithic-slab-clip';
+import { wallFootprintPolygon } from '../../bim/finishes/structural-finish-scene';
 import { projectVerticesTo2D } from '../../bim/geometry/shared/polygon-utils';
 import type { SceneUnits } from '../../utils/scene-units';
 
@@ -76,6 +77,9 @@ export function syncStructuralFinishSkin(
   // ADR-534 Φ3c-B3b — soffit top-clip ανά δοκό (ΙΔΙΑ SSoT με το ορατό στερεό): όπου μονολιθική
   // πλάκα καλύπτει τη δοκό, η κορυφή του σοβά κόβεται στο soffit (μηδέν προεξοχή στην πλάκα).
   const beamTopClipById = buildBeamTopClipById(entities);
+  // ADR-534 Φ3c-B3b (τοίχοι) — το ίδιο soffit clip για τους ΤΟΙΧΟΥΣ (ο ροζ σοβάς διαπερνούσε την
+  // πλάκα· Giorgio 2026-07-17). Τρέφει ΚΑΙ τον κάθετο silhouette ΚΑΙ το οριζόντιο top-cap → ένα z.
+  const wallTopClipById = buildWallTopClipById(entities, ctx.floorElevationMm);
   const groups = new Map<string, { baseElevation: number; columns: ColumnEntity[]; beams: BeamEntity[]; walls: WallEntity[] }>();
   const groupFor = (buildingId: string, baseElevation: number) => {
     let g = groups.get(buildingId);
@@ -115,13 +119,13 @@ export function syncStructuralFinishSkin(
     if (ops.length > 0) openingsByWallId.set(wall.id, ops);
   }
   for (const [buildingId, g] of groups) {
-    const bands = computeStructuralFinishSilhouette(g.columns, g.beams, g.walls, ctx.floorElevationMm, columnExtents, false, beamTopClipById, openingsByWallId);
+    const bands = computeStructuralFinishSilhouette(g.columns, g.beams, g.walls, ctx.floorElevationMm, columnExtents, false, beamTopClipById, openingsByWallId, wallTopClipById);
     const sceneUnits = g.columns[0]?.params.sceneUnits ?? g.beams[0]?.params.sceneUnits ?? g.walls[0]?.params.sceneUnits ?? 'mm';
     const skin = buildStructuralSilhouetteSkin(
       bands, sceneUnits, g.baseElevation, ctx.activeLevelId, `structural-finish-${buildingId}`,
     );
     if (skin) { skin.userData['buildingId'] = buildingId; group.add(skin); }
-    addHorizontalFinish(group, g, entities, ctx, buildingId, sceneUnits, columnExtents);
+    addHorizontalFinish(group, g, entities, ctx, buildingId, sceneUnits, columnExtents, wallTopClipById);
   }
 }
 
@@ -168,6 +172,36 @@ function buildBeamTopClipById(entities: Bim3DEntities): ReadonlyMap<string, numb
 }
 
 /**
+ * ADR-534 Φ3c-B3b (τοίχοι) — `Map<wallId, clipZmm>` (building-relative mm) με το soffit top-clip
+ * κάθε τοίχου που καλύπτεται από μονολιθική πλάκα οροφής. **Αυτολεξεί mirror** του
+ * {@link buildBeamTopClipById}: ΙΔΙΟ `buildCeilingSlabHosts` + `resolveMemberTopClipZmm`, ίδια
+ * σύμβαση «entry μόνο όταν υπάρχει πραγματική κάλυψη (`clip < top`)» → απών = πλήρες ύψος σοβά
+ * (byte-for-byte). Footprint = `wallFootprintPolygon(wall)` — **ήδη 2Δ canvas units** (ίδιο plan
+ * space με τα slab outlines), άρα ΔΕΝ χρειάζεται `projectVerticesTo2D` όπως τα 3Δ beam vertices.
+ *
+ * Γιατί χρειάζεται (Giorgio 2026-07-17, C4D screenshots): το bug των δοκαριών λύθηκε στο Φ3c-B3b
+ * αλλά **ποτέ** για τους τοίχους → ο ροζ σοβάς ανέβαινε στο nominal `baseOffset+height` και
+ * διαπερνούσε την πλάκα. Το `attached` branch ΔΕΝ το κάλυπτε: λύνει μόνο top-attach σε **δοκάρι**·
+ * ένας `storey-ceiling` τοίχος κάτω από **πλάκα** δεν περνά από εκεί.
+ *
+ * ⚠️ Εξαρτάται από το topside guard του `resolveMemberTopClipZmm` (2026-07-17): χωρίς αυτό, η
+ * πλάκα-**δάπεδο** του ίδιου ορόφου (που ο τοίχος πατά πάνω της) θα κέρδιζε το `min()` → clip =
+ * βάση → **ύψος 0 → εξαφανισμένος σοβάς** αντί για κομμένος.
+ */
+function buildWallTopClipById(entities: Bim3DEntities, floorElevationMm: number): ReadonlyMap<string, number> {
+  const map = new Map<string, number>();
+  const slabHosts = buildCeilingSlabHosts(entities.slabs);
+  if (slabHosts.length === 0) return map;
+  for (const wall of entities.walls) {
+    const wallBotMm = floorElevationMm + (wall.params.baseOffset ?? 0);
+    const wallTopMm = wallBotMm + wall.params.height;
+    const clip = resolveMemberTopClipZmm(wallFootprintPolygon(wall), wallTopMm, wallBotMm, slabHosts);
+    if (clip < wallTopMm) map.set(wall.id, clip);
+  }
+  return map;
+}
+
+/**
  * ADR-449 Slice 11 — εκτεθειμένες ΟΡΙΖΟΝΤΙΕΣ όψεις (κολόνα top/base cap, δοκάρι top/soffit)
  * ως λεπτές per-element πλάκες σοβά. Συμπληρωματικό του ενιαίου (κατακόρυφου) silhouette:
  * coverage = γεωμετρική (πλάκα/δοκάρι από πάνω, τοίχος από κάτω) → associative (μπει πλάκα
@@ -182,6 +216,7 @@ function addHorizontalFinish(
   buildingId: string,
   sceneUnits: SceneUnits,
   columnExtents: ColumnVerticalExtentLookup,
+  wallTopClipById: ReadonlyMap<string, number>,
 ): void {
   const finishInput = {
     columns: g.columns,
@@ -191,8 +226,9 @@ function addHorizontalFinish(
     beamObstacles: g.beams,
     floorElevationMm: ctx.floorElevationMm,
     columnExtents,
+    wallTopClipById,
   };
-  const { columnFaces, beamFaces } = computeStructuralHorizontalFinishFaces(finishInput);
+  const { columnFaces, beamFaces, slabFaces } = computeStructuralHorizontalFinishFaces(finishInput);
   const isUp = (f: { direction: string }) => f.direction === 'up';
   // ADR-449 §top-cap-coincidence — ΕΝΙΑΙΟ πάνω-καπάκι από union ΠΥΡΗΝΩΝ + μία διαστολή (mirror
   // του κάθετου silhouette): η ραφή τοίχου↔κολόνας↔δοκαριού στη συμβολή είναι λεία, με τέλεια
@@ -211,4 +247,10 @@ function addHorizontalFinish(
     beamFaces.filter((f) => !isUp(f)), 'beam', g.baseElevation, sceneUnits, ctx.activeLevelId, `structural-finish-hbeam-${buildingId}`,
   );
   if (beamDownSkin) { beamDownSkin.userData['buildingId'] = buildingId; group.add(beamDownSkin); }
+  // ADR-534 Φ5 — soffit (κάτω παρειά) των finish-member πλακών: η οροφή του από-κάτω χώρου. Όλες
+  // `down` (η πάνω παρειά μπήκε στο ενιαίο upSkin). Per-type skin — καμία junction ραφή εδώ.
+  const slabDownSkin = buildHorizontalFinishSkin(
+    slabFaces.filter((f) => !isUp(f)), 'slab', g.baseElevation, sceneUnits, ctx.activeLevelId, `structural-finish-hslab-${buildingId}`,
+  );
+  if (slabDownSkin) { slabDownSkin.userData['buildingId'] = buildingId; group.add(slabDownSkin); }
 }

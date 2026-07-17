@@ -29,12 +29,23 @@ import {
   type HorizontalFinishFace,
   type HorizontalFaceDirection,
 } from './structural-finish-horizontal';
-import { computeFinishedOutline } from './structural-finish-horizontal';
 import type { Pt2 } from '../geometry/shared/segment-polygon-coverage';
-import { dilatePolygonOutward } from '../geometry/shared/polygon-dilate';
-import { toPt2, wallFootprintPolygon, type WallFinishObstacle } from './structural-finish-scene';
-import { wallIsFinishMember } from './wall-finish-source';
-import { beamFinishOutline, type ColumnVerticalExtentLookup } from './structural-finish-scene-silhouette';
+import { wallFootprintPolygon, type WallFinishObstacle } from './structural-finish-scene';
+import { wallIsFinishMember, wallFinishZExtent } from './wall-finish-source';
+import { slabFinishZExtent, slabIsFinishMember } from './slab-finish-source';
+import {
+  bboxOf,
+  coversAtPlane,
+  beamZExtent,
+  toPlanObstacle,
+  coresOf,
+  finishedObstacleOf,
+  plasterEnvelope,
+  type ZExtent,
+  type Bbox,
+  type PlanObstacle,
+} from './structural-finish-horizontal-obstacles';
+import { beamFinishOutline, type BeamFinishOutlineSource, type ColumnVerticalExtentLookup } from './structural-finish-scene-silhouette';
 
 const MM_TO_M = 0.001;
 /** Ανοχή (mm) κατακόρυφης εγγύτητας στο επίπεδο μιας οριζόντιας όψης. */
@@ -52,20 +63,30 @@ export interface HorizontalColumnSource {
   readonly geometry?: { readonly footprint?: { readonly vertices?: readonly { x: number; y: number }[] } };
 }
 
-export interface HorizontalBeamSource {
+/**
+ * N.0.2 boy-scout (2026-07-17): το `geometry` shape ήταν **αυτολεξεί διπλό** με το
+ * {@link BeamFinishOutlineSource} — το ΙΔΙΟ primitive (`beamFinishOutline`) το διαβάζει ΚΑΙ εδώ
+ * (merged top-cap) ΚΑΙ στον κάθετο silhouette. Τώρα το λέει ο τύπος (`extends`) αντί να το
+ * επαναλαμβάνει — ίδια θεραπεία με το {@link SilhouetteBeamSource}.
+ */
+export interface HorizontalBeamSource extends BeamFinishOutlineSource {
   readonly params: Pick<
     BeamParams,
     'finish' | 'sceneUnits' | 'topElevation' | 'zOffset' | 'depth' | 'envelopeFunction' | 'startPoint' | 'endPoint'
   >;
-  readonly geometry?: {
-    readonly outline?: { readonly vertices?: readonly { x: number; y: number }[] };
-    /** ADR-449/493 — άξονας (start/end) για επέκταση του outline μέσα στις πλαισιωμένες κολόνες (merged top-cap). */
-    readonly axisPolyline?: { readonly points?: readonly { x: number; y: number }[] };
-  };
 }
 
 export interface HorizontalSlabObstacle {
-  readonly params: Pick<SlabParams, 'outline' | 'levelElevation' | 'heightOffsetFromLevel' | 'thickness'>;
+  /**
+   * ADR-534 Φ5 Απόφαση Δ — id για self-exclusion ανά επίπεδο. Προαιρετικό: callers/tests που
+   * περνούν την πλάκα **μόνο ως εμπόδιο** το παραλείπουν (δεν είναι ποτέ member → καμία
+   * self-exclusion). **Απαραίτητο** για να γίνει η πλάκα finish-member (βλ. {@link slabObstacleMember}).
+   */
+  readonly id?: string;
+  readonly params: Pick<SlabParams, 'outline' | 'levelElevation' | 'heightOffsetFromLevel' | 'thickness'> &
+    // ADR-534 Φ5 — finish-member fields· optional ώστε ένα σκέτο εμπόδιο (χωρίς kind/finish) να
+    // μένει έγκυρο (pure-obstacle role, byte-for-byte η προ-Φ5 συμπεριφορά).
+    Partial<Pick<SlabParams, 'kind' | 'finish' | 'dna'>>;
 }
 
 /** Δοκάρι ως οριζόντιο εμπόδιο (πάνω από κολόνα). */
@@ -73,96 +94,6 @@ export interface HorizontalBeamObstacle {
   readonly id: string;
   readonly params: Pick<BeamParams, 'topElevation' | 'zOffset' | 'depth'>;
   readonly geometry?: { readonly outline?: { readonly vertices?: readonly { x: number; y: number }[] } };
-}
-
-interface ZExtent {
-  readonly zBotMm: number;
-  readonly zTopMm: number;
-}
-
-interface PlanObstacle extends ZExtent {
-  readonly footprint: readonly Pt2[];
-  readonly bbox: Bbox;
-}
-
-interface Bbox {
-  readonly minX: number;
-  readonly maxX: number;
-  readonly minY: number;
-  readonly maxY: number;
-}
-
-function bboxOf(pts: readonly { x: number; y: number }[]): Bbox {
-  let minX = Infinity;
-  let maxX = -Infinity;
-  let minY = Infinity;
-  let maxY = -Infinity;
-  for (const p of pts) {
-    if (p.x < minX) minX = p.x;
-    if (p.x > maxX) maxX = p.x;
-    if (p.y < minY) minY = p.y;
-    if (p.y > maxY) maxY = p.y;
-  }
-  return { minX, maxX, minY, maxY };
-}
-
-function bboxOverlap(a: Bbox, b: Bbox): boolean {
-  return a.minX <= b.maxX && b.minX <= a.maxX && a.minY <= b.maxY && b.minY <= a.maxY;
-}
-
-/** `true` όταν η κατακόρυφη έκταση [zBot,zTop] φτάνει το επίπεδο `planeZ` (± tol). */
-function spanReachesPlane(ext: ZExtent, planeZmm: number, tolMm: number): boolean {
-  return ext.zBotMm <= planeZmm + tolMm && ext.zTopMm >= planeZmm - tolMm;
-}
-
-/** Footprints obstacles που (α) φτάνουν κατακόρυφα το επίπεδο & (β) bbox-overlap το core. */
-function coversAtPlane(
-  obstacles: readonly PlanObstacle[],
-  planeZmm: number,
-  coreBbox: Bbox,
-  tolMm: number,
-): (readonly Pt2[])[] {
-  const out: (readonly Pt2[])[] = [];
-  for (const o of obstacles) {
-    if (spanReachesPlane(o, planeZmm, tolMm) && bboxOverlap(coreBbox, o.bbox)) out.push(o.footprint);
-  }
-  return out;
-}
-
-function slabZExtent(p: HorizontalSlabObstacle['params']): ZExtent {
-  const zTopMm = p.levelElevation + (p.heightOffsetFromLevel ?? 0);
-  return { zBotMm: zTopMm - p.thickness, zTopMm };
-}
-
-function beamZExtent(p: { topElevation: number; zOffset?: number; depth: number }): ZExtent {
-  const zTopMm = p.topElevation + (p.zOffset ?? 0);
-  return { zBotMm: zTopMm - p.depth, zTopMm };
-}
-
-/**
- * Κατακόρυφη έκταση τοίχου-εμποδίου. **Attached-top** τοίχος-στήριγμα έχει resolved top =
- * κάτω παρειά του δοκαριού που κρατά (Slice 8b) — ώστε να καλύπτει ΑΚΡΙΒΩΣ το soffit του.
- */
-function wallZExtent(
-  wall: WallFinishObstacle,
-  beamUndersideById: ReadonlyMap<string, number>,
-  floorElevationMm: number,
-): ZExtent {
-  const zBotMm = floorElevationMm + (wall.params.baseOffset ?? 0);
-  if (wall.params.topBinding === 'attached' && wall.params.attachTopToIds?.length) {
-    let top = Infinity;
-    for (const id of wall.params.attachTopToIds) {
-      const u = beamUndersideById.get(id);
-      if (u !== undefined && u < top) top = u;
-    }
-    if (Number.isFinite(top)) return { zBotMm, zTopMm: top };
-  }
-  return { zBotMm, zTopMm: zBotMm + wall.params.height };
-}
-
-function toPlanObstacle(footprint: readonly { x: number; y: number }[], ext: ZExtent): PlanObstacle {
-  const fp = footprint.map(toPt2);
-  return { footprint: fp, bbox: bboxOf(fp), ...ext };
 }
 
 interface HorizontalFinishInput {
@@ -175,6 +106,53 @@ interface HorizontalFinishInput {
   readonly floorElevationMm: number;
   /** ADR-449 — pre-resolved (storey-aware) zExtents κολώνας ανά id, ΙΔΙΑ SSoT με τον πυρήνα. */
   readonly columnExtents?: ColumnVerticalExtentLookup;
+  /**
+   * ADR-534 Φ3c-B3b (τοίχοι) — pre-resolved soffit top-clip ανά τοίχο (building-relative mm), ΙΔΙΟ
+   * map με τον κάθετο silhouette. Μετακινεί το **επίπεδο** του top-cap από το nominal top στο soffit
+   * → το καπάκι κάθεται πάνω στον κομμένο σοβά αντί να αιωρείται μέσα/πάνω από την πλάκα. Absent →
+   * πλήρες ύψος (byte-for-byte).
+   */
+  readonly wallTopClipById?: ReadonlyMap<string, number>;
+}
+
+/**
+ * N.0.2 boy-scout (2026-07-17) — SSoT κλίμακας μιας δομικής ομάδας: `sceneUnits` με fallback σε
+ * τοίχο (ADR-449 X4/E: όροφος με ΜΟΝΟ τοίχους· mirror X3.1 silhouette fix) → scale + unitToMeters.
+ * Ήταν αυτολεξεί διπλό σε `computeStructuralHorizontalFinishFaces` + `computeMergedStructuralTopCap`.
+ */
+function finishUnitsOf(input: HorizontalFinishInput): { s: number; unitToMeters: number } {
+  const sceneUnits =
+    input.columns[0]?.params.sceneUnits ?? input.beams[0]?.params.sceneUnits ?? input.walls[0]?.params.sceneUnits ?? 'mm';
+  const s = mmToSceneUnits(sceneUnits);
+  return { s, unitToMeters: (1 / s) * MM_TO_M };
+}
+
+/**
+ * N.0.2 boy-scout (2026-07-17) — SSoT των εμποδίων **γνήσιας κάλυψης άνωθεν**: πλάκες + δοκάρια ως
+ * `PlanObstacle[]` (footprint + z-span). Ήταν αυτολεξεί διπλό στις δύο δημόσιες συναρτήσεις του
+ * module. Εκφυλισμένο outline δοκαριού → παραλείπεται.
+ */
+function buildCoverObstacles(input: HorizontalFinishInput): { slabObs: PlanObstacle[]; beamObs: PlanObstacle[] } {
+  // ADR-534 Φ5 — τα slab obstacles φέρουν `id` ώστε ένα finish-member slab να εξαιρείται από
+  // τα δικά του εμπόδια (self-exclusion ανά επίπεδο, Απόφαση Δ).
+  const slabObs = input.slabs.map((sl) => ({
+    ...toPlanObstacle(sl.params.outline.vertices, slabFinishZExtent(sl.params)),
+    ...(sl.id !== undefined ? { id: sl.id } : {}),
+  }));
+  const beamObs = input.beamObstacles
+    .map((b) => (coresOf(b.geometry?.outline?.vertices) ? toPlanObstacle(b.geometry!.outline!.vertices!, beamZExtent(b.params)) : null))
+    .filter((o): o is PlanObstacle => o !== null);
+  return { slabObs, beamObs };
+}
+
+/**
+ * ADR-534 Φ5 — «η πλάκα-εμπόδιο είναι finish-member;» adapter. Απαιτεί id (για self-exclusion)
+ * + kind (για το gate). Γεφυρώνει το optional shape του {@link HorizontalSlabObstacle} με το
+ * αυστηρό {@link slabIsFinishMember} χωρίς να αδυνατίζει τον τύπο του predicate.
+ */
+function slabObstacleMember(sl: HorizontalSlabObstacle): boolean {
+  if (sl.id === undefined || sl.params.kind === undefined) return false;
+  return slabIsFinishMember({ params: { kind: sl.params.kind, finish: sl.params.finish, dna: sl.params.dna } });
 }
 
 /** envelopeFunction → classification (exterior μόνο όταν ρητά εξωτερική όψη). */
@@ -188,32 +166,12 @@ export interface StructuralHorizontalFinishFaces {
   readonly beamFaces: readonly HorizontalFinishFace[];
   /** ADR-449 Slice X4/E — top-cap **ελεύθερης κορυφής** τοίχου (χωρίς πλάκα/δοκάρι από πάνω). */
   readonly wallFaces: readonly HorizontalFinishFace[];
-}
-
-/** Έγκυρο footprint (≥3 σημεία) ενός μέλους → Pt2[], αλλιώς `null`. */
-function coresOf(verts: readonly { x: number; y: number }[] | undefined): Pt2[] | null {
-  return verts && verts.length >= 3 ? verts.map(toPt2) : null;
-}
-
-/** Finished outline ενός μέλους ως `PlanObstacle` (core + z) — ή `null` αν εκφυλισμένο. */
-function finishedObstacleOf(
-  core: Pt2[] | null,
-  lateralObstacles: readonly (readonly Pt2[])[],
-  spec: StructuralFinishSpec | undefined,
-  s: number,
-  ext: ZExtent,
-): PlanObstacle | null {
-  if (!core) return null;
-  const thick = isFinishActive(spec) ? spec.thickness : 0;
-  const ring = computeFinishedOutline(core, lateralObstacles, thick, s);
-  return { footprint: ring, bbox: bboxOf(ring), ...ext };
-}
-
-/** Plaster envelope ενός γείτονα = core dilated έξω κατά το πάχος του (ΟΧΙ boolean). */
-function plasterEnvelope(core: Pt2[] | null, spec: StructuralFinishSpec | undefined, s: number): Pt2[] | null {
-  if (!core || core.length < 3) return null;
-  const thick = isFinishActive(spec) ? spec.thickness : 0;
-  return thick > 0 ? dilatePolygonOutward(core, thick * s) : core;
+  /**
+   * ADR-534 Φ5 — **soffit** (κάτω παρειά, `down`) των finish-member πλακών. Η κάτω παρειά είναι
+   * η οροφή του από-κάτω χώρου → η κύρια εκτεθειμένη επιφάνεια σοβά της πλάκας. Η **πάνω** παρειά
+   * (`up`) πάει στο ενιαίο {@link computeMergedStructuralTopCap} (mirror τοίχου/κολόνας/δοκαριού).
+   */
+  readonly slabFaces: readonly HorizontalFinishFace[];
 }
 
 /**
@@ -228,11 +186,8 @@ function plasterEnvelope(core: Pt2[] | null, spec: StructuralFinishSpec | undefi
  * ΜΟΝΟ για **γνήσια** οριζόντια κάλυψη (πλάκα από πάνω / τοίχος από κάτω — πραγματικό overlap).
  */
 export function computeStructuralHorizontalFinishFaces(input: HorizontalFinishInput): StructuralHorizontalFinishFaces {
-  const { columns, beams, walls, slabs, beamObstacles, floorElevationMm, columnExtents } = input;
-  // ADR-449 X4/E — sceneUnits fallback σε τοίχο (όροφος με ΜΟΝΟ τοίχους· mirror X3.1 silhouette fix).
-  const sceneUnits = columns[0]?.params.sceneUnits ?? beams[0]?.params.sceneUnits ?? walls[0]?.params.sceneUnits ?? 'mm';
-  const s = mmToSceneUnits(sceneUnits);
-  const unitToMeters = (1 / s) * MM_TO_M;
+  const { columns, beams, walls, beamObstacles, floorElevationMm, columnExtents, wallTopClipById } = input;
+  const { s, unitToMeters } = finishUnitsOf(input);
   const tol = PLANE_TOL_MM;
 
   const wallFps = walls.map((w) => wallFootprintPolygon(w));
@@ -250,13 +205,12 @@ export function computeStructuralHorizontalFinishFaces(input: HorizontalFinishIn
   // z-εμπόδια ΓΝΗΣΙΑΣ κάλυψης. Τοίχοι: attached-top → resolved top = κάτω παρειά δοκαριού (Slice 8b).
   const beamUndersideById = new Map<string, number>();
   for (const b of beamObstacles) beamUndersideById.set(b.id, beamZExtent(b.params).zBotMm);
-  const wallObs = walls.map((w) => toPlanObstacle(wallFootprintPolygon(w), wallZExtent(w, beamUndersideById, floorElevationMm)));
-  const slabObs = slabs.map((sl) => toPlanObstacle(sl.params.outline.vertices, slabZExtent(sl.params)));
-  // ADR-449 Slice X4/E — δοκάρια ως οριζόντια εμπόδια κάλυψης της κορυφής τοίχου (αν δοκάρι
-  // από πάνω → η κορυφή καλύπτεται → κανένα top-cap). Reuse beamZExtent + footprint.
-  const beamObs = beamObstacles
-    .map((b) => (coresOf(b.geometry?.outline?.vertices) ? toPlanObstacle(b.geometry!.outline!.vertices!, beamZExtent(b.params)) : null))
-    .filter((o): o is PlanObstacle => o !== null);
+  // ADR-534 Φ3c-B3b — **ΧΩΡΙΣ** top-clip (σκόπιμα): εδώ ο τοίχος είναι το **δομικό σώμα** που
+  // καλύπτει το soffit ενός δοκαριού από κάτω· το clip αφορά ΜΟΝΟ τον σοβά (render-only).
+  const wallObs = walls.map((w) => toPlanObstacle(wallFootprintPolygon(w), wallFinishZExtent(w, beamUndersideById, floorElevationMm)));
+  // ADR-449 Slice X4/E — τα δοκάρια είναι ΚΑΙ οριζόντια εμπόδια κάλυψης της κορυφής τοίχου (δοκάρι
+  // από πάνω → η κορυφή καλύπτεται → κανένα top-cap). Ίδιο SSoT με το merged cap.
+  const { slabObs, beamObs } = buildCoverObstacles(input);
 
   // Finished outline: lateral obstacles = plaster envelopes του ΑΛΛΟΥ δομικού τύπου + τοίχοι.
   const columnFinished = columns.map((c, i) =>
@@ -268,15 +222,23 @@ export function computeStructuralHorizontalFinishFaces(input: HorizontalFinishIn
 
   // ADR-449 Slice X4/E — finished outlines τοίχων-finish-members (core + σοβάς skin), lateral
   // obstacles = δομικοί γείτονες (κολόνα/δοκάρι envelopes) ώστε το top-cap να σταματά flush.
+  // ADR-534 Φ3c-B3b — το top-cap του ΙΔΙΟΥ του τοίχου = σοβάς → **ΜΕ** clip (το επίπεδο πέφτει στο soffit).
   const wallFinished = walls.map((w, i) =>
     wallIsFinishMember(w)
-      ? finishedObstacleOf(coresOf(wallFps[i]), [...columnEnvelopes, ...beamEnvelopes], w.params.finish, s, wallZExtent(w, beamUndersideById, floorElevationMm))
+      ? finishedObstacleOf(
+          coresOf(wallFps[i]),
+          [...columnEnvelopes, ...beamEnvelopes],
+          w.params.finish,
+          s,
+          wallFinishZExtent(w, beamUndersideById, floorElevationMm, wallTopClipById?.get(w.id)),
+        )
       : null,
   );
 
   const columnFaces: HorizontalFinishFace[] = [];
   const beamFaces: HorizontalFinishFace[] = [];
   const wallFaces: HorizontalFinishFace[] = [];
+  const slabFaces: HorizontalFinishFace[] = [];
   columns.forEach((c, i) => {
     const fin = columnFinished[i];
     if (fin) collectColumnFaces(c, fin, slabObs, unitToMeters, tol, columnFaces);
@@ -289,7 +251,14 @@ export function computeStructuralHorizontalFinishFaces(input: HorizontalFinishIn
     const fin = wallFinished[i];
     if (fin) collectWallFaces(w, fin, [...slabObs, ...beamObs], unitToMeters, tol, wallFaces);
   });
-  return { columnFaces, beamFaces, wallFaces };
+  // ADR-534 Φ5 — soffit (`down`) των finish-member πλακών. Κάλυψη από κάτω = τοίχοι/δοκάρια/άλλες
+  // πλάκες που φτάνουν το soffit-plane (associative επαφές) ΕΞΑΙΡΟΥΜΕΝΗΣ της ίδιας (Απόφαση Δ).
+  const slabSoffitCovers = [...wallObs, ...beamObs, ...slabObs];
+  input.slabs.forEach((sl) => {
+    if (!slabObstacleMember(sl)) return;
+    collectSlabSoffitFace(sl, slabSoffitCovers, unitToMeters, tol, slabFaces);
+  });
+  return { columnFaces, beamFaces, wallFaces, slabFaces };
 }
 
 /**
@@ -304,12 +273,10 @@ export function computeStructuralHorizontalFinishFaces(input: HorizontalFinishIn
  * κέλυφος (mirror silhouette). Κενό όταν κανένα μέλος με ενεργό σοβά.
  */
 export function computeMergedStructuralTopCap(input: HorizontalFinishInput): HorizontalFinishFace[] {
-  const { columns, beams, walls, slabs, beamObstacles, floorElevationMm, columnExtents } = input;
+  const { columns, beams, walls, floorElevationMm, columnExtents, wallTopClipById } = input;
   const spec = createDefaultStructuralFinishSpec();
   if (!isFinishActive(spec)) return [];
-  const sceneUnits = columns[0]?.params.sceneUnits ?? beams[0]?.params.sceneUnits ?? walls[0]?.params.sceneUnits ?? 'mm';
-  const s = mmToSceneUnits(sceneUnits);
-  const unitToMeters = (1 / s) * MM_TO_M;
+  const { s, unitToMeters } = finishUnitsOf(input);
 
   // Δομικά μέλη με ενεργό σοβά + το top-plane z τους (building-relative mm).
   const members: { core: Pt2[]; zTopMm: number }[] = [];
@@ -338,15 +305,30 @@ export function computeMergedStructuralTopCap(input: HorizontalFinishInput): Hor
   for (const w of walls) {
     if (!wallIsFinishMember(w)) continue;
     const core = coresOf(wallFootprintPolygon(w));
-    if (core) members.push({ core, zTopMm: wallZExtent(w, emptyUnderside, floorElevationMm).zTopMm });
+    // ADR-534 Φ3c-B3b — ΜΕ clip: το επίπεδο του ενιαίου καπακιού πέφτει στο soffit της καλύπτουσας
+    // πλάκας, ώστε να κάθεται πάνω στον κομμένο κάθετο σοβά (ΕΝΑ z και για τα δύο). Χωρίς αυτό, ο
+    // σοβάς κοβόταν στα 2800 και το καπάκι έμενε στα 3000 = οι «λεπτές λωρίδες» πάνω στην πλάκα.
+    if (core) members.push({ core, zTopMm: wallFinishZExtent(w, emptyUnderside, floorElevationMm, wallTopClipById?.get(w.id)).zTopMm });
+  }
+  // ADR-534 Φ5 — η **πάνω** παρειά (`up`) των finish-member πλακών μπαίνει στο ΕΝΙΑΙΟ καπάκι
+  // (mirror τοίχου/κολόνας/δοκαριού): ενώνεται με γειτονικά μέλη ίδιου z σε ΕΝΑ λείο περίγραμμα.
+  // Κρατάμε τα ids ανά επίπεδο ώστε η ίδια η πλάκα να μη σβήσει το καπάκι της (Απόφαση Δ).
+  const slabMemberIdsByPlane = new Map<number, Set<string>>();
+  for (const sl of input.slabs) {
+    if (!slabObstacleMember(sl)) continue;
+    const core = coresOf(sl.params.outline.vertices);
+    if (!core) continue;
+    const zTopMm = slabFinishZExtent(sl.params).zTopMm;
+    members.push({ core, zTopMm });
+    const key = Math.round(zTopMm * 1e3);
+    const set = slabMemberIdsByPlane.get(key) ?? new Set<string>();
+    set.add(sl.id!);
+    slabMemberIdsByPlane.set(key, set);
   }
   if (members.length === 0) return [];
 
   // Covers ΓΝΗΣΙΑΣ κάλυψης άνωθεν (πλάκες/δοκάρια): κρύβουν το καπάκι όπου φτάνουν το επίπεδο.
-  const slabObs = slabs.map((sl) => toPlanObstacle(sl.params.outline.vertices, slabZExtent(sl.params)));
-  const beamObs = beamObstacles
-    .map((b) => (coresOf(b.geometry?.outline?.vertices) ? toPlanObstacle(b.geometry!.outline!.vertices!, beamZExtent(b.params)) : null))
-    .filter((o): o is PlanObstacle => o !== null);
+  const { slabObs, beamObs } = buildCoverObstacles(input);
 
   // Ομαδοποίηση ανά top-plane (μέλη ίδιου z ενώνονται σε ΕΝΑ ενιαίο silhouette).
   const byPlane = new Map<number, Pt2[][]>();
@@ -368,10 +350,13 @@ export function computeMergedStructuralTopCap(input: HorizontalFinishInput): Hor
     // 100928). Δοκάρι ΠΑΝΩ από χαμηλότερη κολόνα (top-plane > cap) καλύπτει κανονικά (μηδέν regression).
     const beamCoversAbove = beamObs.filter((o) => o.zTopMm > planeZmm + PLANE_TOL_MM);
     const covers = [...slabObs, ...beamCoversAbove];
+    // ADR-534 Φ5 Απόφαση Δ — id-based (ΟΧΙ z-based): μια finish-member πλάκα αυτού του επιπέδου
+    // εξαιρείται από τα εμπόδια· μια non-member coplanar πλάκα (π.χ. `ground`) εξακολουθεί να καλύπτει.
+    const excludeIds = slabMemberIdsByPlane.get(key);
     for (const ring of mergeCoresToFinishedRings(cores, spec.thickness, s)) {
       const face = computeHorizontalFinishFace({
         coreFootprint: ring,
-        coverFootprints: coversAtPlane(covers, planeZmm, bboxOf(ring), PLANE_TOL_MM),
+        coverFootprints: coversAtPlane(covers, planeZmm, bboxOf(ring), PLANE_TOL_MM, excludeIds),
         zMm: planeZmm, direction: 'up', spec, classification: 'interior', unitToMeters,
       });
       if (face) faces.push(face);
@@ -469,4 +454,26 @@ function collectWallFaces(
   if (!isFinishActive(spec)) return;
   const cls = classifyHorizontal(w.params.envelopeFunction);
   pushHorizontalCap(out, fin, covers, fin.zTopMm, 'up', spec, cls, unitToMeters, tol);
+}
+
+/**
+ * ADR-534 Φ5 — soffit (`down`) μιας finish-member πλάκας: η κάτω παρειά (οροφή του από-κάτω
+ * χώρου). Core = **ωμό** footprint της πλάκας (το περιμετρικό skin είναι Φ4, deferred → μηδέν
+ * outward offset εδώ, ώστε το soffit να μην αιωρείται πέρα από την ακμή χωρίς περιμετρικό σοβά
+ * να το υποδεχθεί). Κάλυψη = δομικά από κάτω που φτάνουν το soffit-plane, **ΕΞΑΙΡΟΥΜΕΝΗΣ της
+ * ίδιας** (Απόφαση Δ: η πλάκα καλύπτει span-wise το δικό της soffit → θα έσβηνε τον εαυτό της).
+ * Μόνο `down` — η κορυφή πάει στο ενιαίο merged top-cap.
+ */
+function collectSlabSoffitFace(
+  sl: HorizontalSlabObstacle,
+  covers: readonly PlanObstacle[],
+  unitToMeters: number,
+  tol: number,
+  out: HorizontalFinishFace[],
+): void {
+  const spec = sl.params.finish;
+  if (!isFinishActive(spec)) return;
+  const fin = toPlanObstacle(sl.params.outline.vertices, slabFinishZExtent(sl.params));
+  const selfCovers = covers.filter((o) => o.id !== sl.id);
+  pushHorizontalCap(out, fin, selfCovers, fin.zBotMm, 'down', spec, 'interior', unitToMeters, tol);
 }

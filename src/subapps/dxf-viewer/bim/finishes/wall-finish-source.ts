@@ -59,6 +59,45 @@ export function wallIsFinishMember(wall: WallFinishObstacle): boolean {
 }
 
 /**
+ * ADR-449 Slice X1 / ADR-534 Φ3c-B3b — **ΤΟ** SSoT κατακόρυφο εύρος (building-relative mm) ενός
+ * τοίχου για τον σοβά. Δύο διαδοχικοί κανόνες πάνω στο nominal `baseOffset + height`:
+ *
+ *  1. **attached-top** (Slice X1/8b): ένας τοίχος-στήριγμα με `topBinding:'attached'` έχει resolved
+ *     top = **κάτω παρειά** του χαμηλότερου δοκαριού που κρατά (`attachTopToIds` → beam underside),
+ *     ΟΧΙ το nominal (που το υπερεκτιμά) → βρίσκεται κάτω από τη ζώνη του δοκαριού.
+ *  2. **soffit top-clip** (ADR-534 Φ3c-B3b, Revit «Join Geometry»): όπου μονολιθική πλάκα καλύπτει
+ *     τον τοίχο, η **κορυφή του σοβά** κόβεται στο soffit της → ο σοβάς δεν προεξέχει μέσα/πάνω από
+ *     την πλάκα. **Render-only** — το δομικό ύψος (`params.height`) μένει άθικτο. Ακριβές mirror του
+ *     `beamZExtent(b, topClipMm)`: `Math.min(resolvedTop, clip)`. `undefined` → πλήρες ύψος
+ *     (byte-for-byte η προ-clip συμπεριφορά).
+ *
+ * Η **κάτω παρειά** μένει ΠΑΝΤΑ ανέγγιχτη (αγκυρωμένη στο `floorElevationMm + baseOffset`).
+ *
+ * N.0.2 boy-scout (2026-07-17): πρώην **αυτολεξεί διπλό** — `wallObstacleZExtent` (κάθετος
+ * silhouette) + `wallZExtent` (οριζόντιο top-cap) υπολόγιζαν το ΙΔΙΟ math σε δύο αρχεία. Το clip
+ * χρειαζόταν **και στα δύο** (αλλιώς ο σοβάς κόβεται στο soffit αλλά το καπάκι μένει να αιωρείται
+ * στο nominal top) → τα ένωσα σε ΕΝΑ σημείο αλήθειας αντί να γράψω το `min()` δύο φορές.
+ */
+export function wallFinishZExtent(
+  wall: WallFinishObstacle,
+  beamUndersideById: ReadonlyMap<string, number>,
+  floorElevationMm: number,
+  topClipMm?: number,
+): { zBotMm: number; zTopMm: number } {
+  const zBotMm = floorElevationMm + (wall.params.baseOffset ?? 0);
+  let topMm = zBotMm + wall.params.height;
+  if (wall.params.topBinding === 'attached' && wall.params.attachTopToIds?.length) {
+    let attachedTop = Infinity;
+    for (const id of wall.params.attachTopToIds) {
+      const underside = beamUndersideById.get(id);
+      if (underside !== undefined && underside < attachedTop) attachedTop = underside;
+    }
+    if (Number.isFinite(attachedTop)) topMm = attachedTop;
+  }
+  return { zBotMm, zTopMm: topClipMm !== undefined ? Math.min(topMm, topClipMm) : topMm };
+}
+
+/**
  * Ο τοίχος → `SilhouetteMember[]` (X4: core = **πλήρες** footprint, χωρίς inset → ο σοβάς
  * προεξέχει). Γίνεται member ΜΟΝΟ όταν {@link wallIsFinishMember}· `[]` αλλιώς (legacy /
  * bare parapet-fence / εκφυλισμένο footprint) → ο caller τον κρατά ως obstacle.

@@ -16,7 +16,7 @@ import {
   createDefaultStructuralFinishSpec,
   type StructuralFinishSpec,
 } from './structural-finish-types';
-import { wallToSilhouetteMembers, wallIsFinishMember } from './wall-finish-source';
+import { wallToSilhouetteMembers, wallIsFinishMember, wallFinishZExtent } from './wall-finish-source';
 import type { SilhouetteOpeningSource } from './wall-finish-opening-bands';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import {
@@ -173,31 +173,6 @@ function beamZExtent(beam: SilhouetteBeamSource, topClipMm?: number): { zBotMm: 
   return { zBotMm: zTopRawMm - beam.params.depth, zTopMm };
 }
 
-/**
- * ADR-449 Slice X1 — κατακόρυφη έκταση ενός τοίχου-εμποδίου (building-relative mm) για
- * height-aware coverage. Ένας **attached-top** τοίχος-στήριγμα έχει resolved top = **κάτω
- * παρειά** του δοκαριού που κρατά (`attachTopToIds` → `beamZExtent(...).zBotMm`), ΟΧΙ το
- * nominal `baseOffset+height` (που το υπερεκτιμά). Έτσι ο τοίχος βρίσκεται κάτω από τη ζώνη
- * του δοκαριού → δεν καλύπτει την πλάγια όψη δοκαριού πάνω του (mirror `wallsOverlappingBeamBand`,
- * Slice 8b — η αιτία του «μία όψη μόνο» στους grid τοίχους που είναι ταυτόσημοι σε κάτοψη με δοκάρια).
- */
-function wallObstacleZExtent(
-  wall: WallFinishObstacle,
-  beamUndersideById: ReadonlyMap<string, number>,
-  floorElevationMm: number,
-): { zBotMm: number; zTopMm: number } {
-  const zBotMm = floorElevationMm + (wall.params.baseOffset ?? 0);
-  if (wall.params.topBinding === 'attached' && wall.params.attachTopToIds?.length) {
-    let top = Infinity;
-    for (const id of wall.params.attachTopToIds) {
-      const u = beamUndersideById.get(id);
-      if (u !== undefined && u < top) top = u;
-    }
-    if (Number.isFinite(top)) return { zBotMm, zTopMm: top };
-  }
-  return { zBotMm, zTopMm: zBotMm + wall.params.height };
-}
-
 /** Δομικό μέλος → `SilhouetteMember` όταν έχει ενεργό σοβά + έγκυρο footprint. */
 function toMember(
   finish: StructuralFinishSpec | undefined,
@@ -316,6 +291,14 @@ export function computeStructuralFinishSilhouette(
    * μένουν στους callers· αυτή η συνάρτηση παραμένει pure.
    */
   openingsByWallId?: ReadonlyMap<string, readonly SilhouetteOpeningSource[]>,
+  /**
+   * ADR-534 Φ3c-B3b (τοίχοι) — pre-resolved soffit top-clip ανά **τοίχο** (building-relative mm),
+   * ΙΔΙΑ SSoT `resolveMemberTopClipZmm` με τα δοκάρια (`beamTopClipById`) και με το ορατό στερεό:
+   * όπου μονολιθική πλάκα καλύπτει τον τοίχο, η κορυφή του σοβά κόβεται στο soffit → ο ροζ σοβάς
+   * δεν διαπερνά πια την πλάκα (Giorgio 2026-07-17, C4D screenshots). Absent / χωρίς entry →
+   * πλήρες ύψος (2Δ plan & DXF export: undefined → byte-for-byte).
+   */
+  wallTopClipById?: ReadonlyMap<string, number>,
 ): SilhouetteBand[] {
   const members: SilhouetteMember[] = [];
   for (const c of columns) {
@@ -363,7 +346,8 @@ export function computeStructuralFinishSilhouette(
       obstacleWalls.push(w);
       continue;
     }
-    const z = wallObstacleZExtent(w, beamUndersideById, floorElevationMm);
+    // ADR-534 Φ3c-B3b — ο **σοβάς** (member) κόβεται στο soffit της καλύπτουσας πλάκας.
+    const z = wallFinishZExtent(w, beamUndersideById, floorElevationMm, wallTopClipById?.get(w.id));
     members.push(...wallToSilhouetteMembers(w, z, openingsByWallId?.get(w.id)));
   }
   if (members.length === 0) return [];
@@ -379,8 +363,12 @@ export function computeStructuralFinishSilhouette(
   // ADR-449 Slice 7/X1/X3 — coverage obstacles = **μόνο** οι τοίχοι ΧΩΡΙΣ σοβά (οι members
   // ενώνονται ήδη στο union· να ήταν ΚΑΙ obstacles θα έκοβαν τον δικό τους σοβά). **ΧΩΡΙΣ
   // dilation** (browser-verified per-element)· height-aware z-extents (attached-top resolved).
+  // ADR-534 Φ3c-B3b — **ΧΩΡΙΣ** top-clip εδώ (σκόπιμα): το clip είναι render-only σύμβαση για τον
+  // ΣΟΒΑ. Ένα obstacle απαντά «καλύπτει το δομικό σώμα του τοίχου την όψη του γείτονα σε αυτή τη
+  // ζώνη;» — το σώμα ΔΕΝ κόβεται στο soffit (T-beam· το δομικό ύψος μένει). Clip εδώ θα «ξεκάλυπτε»
+  // ψευδώς τη ζώνη soffit→nominal top και θα ζωγράφιζε σοβά σε παρειά που ο τοίχος ακουμπά.
   const wallObstacles: WallObstacle[] = obstacleWalls.map((w) => {
-    const z = wallObstacleZExtent(w, beamUndersideById, floorElevationMm);
+    const z = wallFinishZExtent(w, beamUndersideById, floorElevationMm);
     return { footprint: wallFootprintPolygon(w), zBotMm: z.zBotMm, zTopMm: z.zTopMm };
   });
 
