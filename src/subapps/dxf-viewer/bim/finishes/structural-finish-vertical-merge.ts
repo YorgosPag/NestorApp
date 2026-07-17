@@ -62,6 +62,16 @@ const POS_TOL = 1e-3;
 const ANG_TOL = 1e-4;
 /** Ανοχή κατακόρυφης συνέχειας (mm). */
 const Z_TOL_MM = 1e-3;
+/**
+ * ADR-449/534 Φ6a — Perpendicular ανοχή (building-mm) για ομαδοποίηση *near*-coplanar όψεων σοβά
+ * σε ΜΙΑ συνεχή κάθετη λωρίδα (seamless δέρμα). Όψεις των οποίων οι core support lines απέχουν
+ * ≤ αυτό — ΚΑΙ ταιριάζουν σε angle/side/υλικό/κατάταξη/πάχος/χρώμα — ενώνονται χωρίς ραφή· κενό
+ * μεγαλύτερο = **πραγματικό σκαλί** → κρατά ραφή. 25mm = ονομαστικό εξωτερικό πάχος σοβά: πάνω από
+ * τον θόρυβο (few-mm offsets από μεικτές πηγές γεωμετρίας — outline πλάκας vs footprint τοίχου,
+ * σχεδόν-συνευθειακοί γειτονικοί τοίχοι) ~5×, κάτω από το μικρότερο πραγματικό reveal (~50mm) ~2×.
+ * Scene units: `COPLANAR_MERGE_TOL_MM * mmToSceneUnits(units)` στο call site.
+ */
+const COPLANAR_MERGE_TOL_MM = 25;
 
 /** Μία όψη ως ορθογώνιο σε (t, z), με τα αρχικά mitered core/outer σημεία στα δύο t-άκρα. */
 interface FaceRect {
@@ -81,6 +91,27 @@ interface CoplanarGroup {
   sense: number;
   seg: FinishFaceSegment;
   rects: FaceRect[];
+}
+
+/**
+ * ADR-534 Φ6a — Ένα band-quad ΠΡΙΝ την ομαδοποίηση: το **super-key** (όλα τα attributes ΕΚΤΟΣ
+ * του perpOff — αυτό γίνεται πλέον συντεταγμένη clustering, όχι μέρος ταυτότητας) + τα πραγματικά
+ * mitered σημεία + ο δικός του άξονας/sense. Το `FaceRect` χτίζεται αργότερα ({@link toRect}) με
+ * τον **κοινό** άξονα του cluster, ώστε near-coplanar όψεις από διαφορετικές πηγές να δίνουν
+ * συνεπή t (αλλιώς σπάει το `boundaryTs` dedup / z-stack merge).
+ */
+interface QuadEntry {
+  readonly superKey: string;
+  readonly aCore: Vec2;
+  readonly bCore: Vec2;
+  readonly aOuter: Vec2;
+  readonly bOuter: Vec2;
+  /** Δικό του `canonicalDir(aCore,bCore)` — reference άξονας όταν είναι cluster anchor. */
+  readonly dir: Vec2;
+  readonly sense: number;
+  readonly seg: FinishFaceSegment;
+  readonly z0: number;
+  readonly z1: number;
 }
 
 const sub = (a: Vec2, b: Vec2): Vec2 => ({ x: a.x - b.x, y: a.y - b.y });
