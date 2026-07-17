@@ -423,7 +423,8 @@
       "roof": "Roof slab",
       "ground": "Slab-on-grade",
       "foundation": "Foundation slab"
-    }
+    },
+    "heightLabel": "height {value}"
   },
   "groupSelection": {
     "label": "Group · {count, plural, one {# object} other {# objects}}",

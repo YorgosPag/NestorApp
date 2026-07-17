@@ -423,7 +423,8 @@
       "roof": "Πλάκα στέγης",
       "ground": "Πλάκα εδάφους",
       "foundation": "Πλάκα θεμελίωσης"
-    }
+    },
+    "heightLabel": "ύψος {value}"
   },
   "groupSelection": {
     "label": "Ομάδα · {count, plural, one {# αντικείμενο} other {# αντικείμενα}}",
