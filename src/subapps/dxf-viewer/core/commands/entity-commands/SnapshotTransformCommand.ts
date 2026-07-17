@@ -15,11 +15,19 @@
  * (`computeUpdates`) — delta / rotation / scale / mirror. Everything else is the
  * eliminated boilerplate, owned here as template methods.
  *
- * ⚠️ The **copy path** (Rotate/Scale id-clones, Mirror whole-entity clones with
- * BIM persistence broadcasts) genuinely differs per command and is intentionally
- * NOT modelled here — those subclasses override `execute`/`undo`/`redo` and call
- * the `*InPlace` helpers only for the in-place branch. Forcing copy into the base
- * would be a leaky abstraction (ADR-507 §8 decision gate).
+ * ⚠️ The **copy path is not here, and must never be pushed down into this base** —
+ * that remains the ADR-507 §8 decision gate, now satisfied by construction rather
+ * than by per-subclass overrides. Copy left the hierarchy ENTIRELY: it is
+ * `CloneWithTransformCommand`, a sibling that bakes the transform into the clone's
+ * construction (Revit `ElementTransformUtils.CopyElements`), selected by
+ * `transform-command-factory.ts`. In-place and copy share only the per-entity patch
+ * (`transform-patch-builders.ts`), which is all they ever genuinely had in common.
+ *
+ * Copy cannot reuse this spine even in principle: there is nothing to snapshot (the
+ * target does not exist until the command runs), nothing to restore (undo deletes
+ * rather than reverts), and no followers to cascade (a clone has no associative
+ * dependents yet). Subclasses therefore no longer override `execute`/`undo`/`redo` —
+ * they supply `computeUpdates` and nothing else.
  *
  * Undo restores geometry from the snapshot for ALL in-place subclasses — Rotate,
  * Scale, Mirror AND Move (ADR-507 §8 item α: Move migrated from its former
@@ -220,8 +228,8 @@ export abstract class SnapshotTransformCommand implements ICommand {
   }
 
   // --------------------------------------------------------------------------
-  // ICommand defaults — copy-mode subclasses override execute/undo/redo and call
-  // the `*InPlace` helpers only for their in-place branch.
+  // ICommand implementation — every subclass is in-place, so these are final in
+  // practice: no subclass overrides them (copy lives in CloneWithTransformCommand).
   // --------------------------------------------------------------------------
 
   execute(): void {

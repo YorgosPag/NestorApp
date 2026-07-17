@@ -32,7 +32,7 @@ import type { UnifiedGripInfo, DxfCommitDeps } from './unified-grip-types';
 import { BimRotateHotGripStore } from '../../bim/grips/bim-rotate-hotgrip-store';
 import { resolveSweptRotationDeg } from './primitive-rotation-drag';
 import { rotatePoint } from '../../utils/rotation-math';
-import { RotateEntityCommand } from '../../core/commands/entity-commands/RotateEntityCommand';
+import { commitGripRotation } from './grip-rotation-commit';
 import { UpdateEntityCommand } from '../../core/commands/entity-commands/UpdateEntityCommand';
 import { CreateEntityCommand } from '../../core/commands/entity-commands/CreateEntityCommand';
 import type { SceneEntity } from '../../core/commands/interfaces';
@@ -87,9 +87,9 @@ export function resolveRotation(
  * commit (arc → centre, annotation symbol → insertion point). Gated by the caller's
  * own `isThisHandle` (its `*-rotation` discriminator) + `expectedType`; the pivot is
  * read from the raw scene shape via `pivotOf`. Rotates through the canonical
- * `RotateEntityCommand` (Ctrl / «Copy» → rotate a CLONE, `copyMode` owns undo/redo,
- * ADR-357 Φ12). Extracted so the arc + annotation-symbol commits are ONE source, not
- * sibling twins (N.18 — jscpd caught the copy).
+ * `createRotateCommand` (Ctrl / «Copy» → rotate a CLONE via `CloneWithTransformCommand`,
+ * which owns undo/redo — ADR-507 §8). Extracted so the arc + annotation-symbol commits
+ * are ONE source, not sibling twins (N.18 — jscpd caught the copy).
  */
 function commitRotationAboutAnchorPoint(
   grip: UnifiedGripInfo,
@@ -108,9 +108,7 @@ function commitRotationAboutAnchorPoint(
   if (!pivot) return;
   const res = resolveRotation(grip, delta, pivot);
   if (!res) return;
-  const command = new RotateEntityCommand([grip.entityId], res.pivot, res.sweptDeg, sceneManager, false, isGripCopyIntent());
-  if (command.validate() !== null) return;
-  deps.execute(command);
+  commitGripRotation({ entityId: grip.entityId, pivot: res.pivot, angleDeg: res.sweptDeg, sceneManager, execute: deps.execute });
 }
 
 /**
@@ -178,8 +176,8 @@ export function commitPolylineRotationGripDrag(
     const rotated = vertices.map((v) => rotatePoint(v, res.pivot, res.sweptDeg));
     // ADR-561 EXT — for a COPY the source rect must stay put: create a NEW closed polyline
     // (inheriting the rect's layer/style) with the rotated corners instead of exploding
-    // in place. `RotateEntityCommand.copyMode` cannot serve here — the scene rect ignores
-    // its `rotation` field, so a clone would render axis-aligned (see file header).
+    // in place. `createRotateCommand({copy:true})` cannot serve here — the scene rect
+    // ignores its `rotation` field, so a clone would render axis-aligned (see file header).
     if (copy) {
       const { id: _id, ...style } = raw as unknown as SceneEntity;
       const command = new CreateEntityCommand(
@@ -201,7 +199,7 @@ export function commitPolylineRotationGripDrag(
     return;
   }
 
-  const command = new RotateEntityCommand([grip.entityId], res.pivot, res.sweptDeg, sceneManager, false, copy);
-  if (command.validate() !== null) return;
-  deps.execute(command);
+  // `copy` was already resolved above (the rect-explode branch consumed it) — pass it
+  // explicitly rather than re-reading the live intent.
+  commitGripRotation({ entityId: grip.entityId, pivot: res.pivot, angleDeg: res.sweptDeg, sceneManager, execute: deps.execute, copy });
 }

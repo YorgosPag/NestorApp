@@ -105,12 +105,24 @@ export { DeleteEntityCommand, DeleteMultipleEntitiesCommand } from './entity-com
 export { MoveEntityCommand, MoveMultipleEntitiesCommand } from './entity-commands/MoveEntityCommand';
 export { JoinEntityCommand } from './entity-commands/JoinEntityCommand';
 export { ScaleEntityCommand } from './entity-commands/ScaleEntityCommand';
-export type { ScaleParams } from './entity-commands/ScaleEntityCommand';
 // ADR-188 / ADR-402 — transform commands (rotate/mirror). Exported for reuse
 // from the 3D viewport edit gizmos (ADR-402 Phase 1); previously imported
 // directly by the 2D tool hooks only.
 export { RotateEntityCommand } from './entity-commands/RotateEntityCommand';
 export { MirrorEntityCommand } from './entity-commands/MirrorEntityCommand';
+// ADR-507 §8 — the transform family's copy path. `createRotate/Scale/MirrorCommand`
+// is the ONE seam that picks in-place vs copy; prefer it over constructing the
+// commands directly. `CloneWithTransformCommand` bakes the transform into the clone
+// (Revit `ElementTransformUtils.CopyElements`) — the transform commands are in-place
+// only and carry no copy flag.
+export {
+  createRotateCommand,
+  createScaleCommand,
+  createMirrorCommand,
+} from './entity-commands/transform-command-factory';
+export { CloneWithTransformCommand } from './entity-commands/CloneWithTransformCommand';
+export type { CloneTransformKind } from './entity-commands/CloneWithTransformCommand';
+export type { ScaleParams, TransformPatch } from './entity-commands/transform-patch-builders';
 export { StretchEntityCommand } from './entity-commands/StretchEntityCommand';
 export type { StretchParams, StretchVertexMove } from './entity-commands/StretchEntityCommand';
 export { LengthenCommand } from './entity-commands/LengthenCommand';

@@ -20,13 +20,13 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import type { ICommand } from '../../core/commands/interfaces';
 import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas/PreviewCanvas';
-import { RotateEntityCommand } from '../../core/commands/entity-commands/RotateEntityCommand';
+import { createRotateCommand } from '../../core/commands/entity-commands/transform-command-factory';
 import { useSceneManagerAdapter, type SceneAdapterLevelManager } from '../../systems/entity-creation/useSceneManagerAdapter';
 import { useModifyToolActivation } from '../../systems/tools/useModifyToolActivation';
+import { useToolHintPrompt } from './use-tool-hint-prompt';
 import { angleBetweenPointsDeg } from '../../utils/rotation-math';
 import { resolveOrthoPolarStep } from '../drawing/drawing-handler-utils';
 import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
-import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import type { Overlay, UpdateOverlayData } from '../../overlays/types';
 import { rotatePoint } from '../../utils/rotation-math';
 import { GripHandoffStore } from '../../systems/grip/GripHandoffStore';
@@ -118,7 +118,7 @@ export function useRotationTool(props: UseRotationToolProps): UseRotationToolRet
   const isTypingAngle = useCallback(() => angleDdeRef.current.snapshot().status === 'buffering', []);
 
   // ADR-357 Phase 12 — armed when the grip-context-menu "Copy" toggle was on at
-  // handoff. Forwarded to `RotateEntityCommand` so the rotation produces clones
+  // handoff. Routed through `createRotateCommand` so the rotation produces clones
   // and leaves the originals intact. Auto-clears after the first execute.
   const copyModeHandoffRef = useRef(false);
 
@@ -132,6 +132,41 @@ export function useRotationTool(props: UseRotationToolProps): UseRotationToolRet
 
   // Build scene manager adapter on demand
   const getSceneManager = useSceneManagerAdapter(levelManager);
+
+  /**
+   * Commit a rotation — the ONE commit path, shared by the click-to-confirm and the
+   * typed-angle flows (they were byte-identical, overlay dispatch included).
+   *
+   * Two targets: an image overlay (rotate its polygon vertices directly — overlays are
+   * not scene entities and have no command) or the selected DXF entities. ADR-507 §8:
+   * `createRotateCommand` picks in-place vs `CloneWithTransformCommand`; the one-shot
+   * copy handoff is consumed here so either flow clears it exactly once.
+   */
+  const commitRotation = useCallback((pivot: Point2D, angleDeg: number): void => {
+    const overlayId = selectedEntityIds.find((id) => currentOverlays.some((o) => o.id === id));
+    if (overlayId && overlayUpdate) {
+      const overlay = currentOverlays.find((o) => o.id === overlayId);
+      if (overlay?.polygon) {
+        const rotatedPolygon: Array<[number, number]> = overlay.polygon.map(([x, y]) => {
+          const rotated = rotatePoint({ x, y }, pivot, angleDeg);
+          return [rotated.x, rotated.y];
+        });
+        overlayUpdate(overlayId, { polygon: rotatedPolygon });
+      }
+      return;
+    }
+    const sm = getSceneManager();
+    if (!sm) return;
+    const copy = copyModeHandoffRef.current;
+    copyModeHandoffRef.current = false;
+    executeCommand(createRotateCommand({
+      entityIds: selectedEntityIds,
+      pivot,
+      angleDeg,
+      sceneManager: sm,
+      copy,
+    }));
+  }, [getSceneManager, selectedEntityIds, executeCommand, currentOverlays, overlayUpdate]);
 
   // ── State machine transitions (shared FSM SSoT, ADR-577) ──────────────────
   // Every hook-driven phase change clears the ghost + drops stale pivot/ref/angle.
@@ -218,39 +253,7 @@ export function useRotationTool(props: UseRotationToolProps): UseRotationToolRet
 
       if (Math.abs(finalAngle) < 0.001) return; // Skip zero rotation
 
-      // Check if we're rotating an overlay or a DXF entity
-      const overlayId = selectedEntityIds.find(id =>
-        currentOverlays.some(o => o.id === id)
-      );
-
-      if (overlayId && overlayUpdate) {
-        // ── Overlay rotation: rotate all polygon vertices around pivot ──
-        const overlay = currentOverlays.find(o => o.id === overlayId);
-        if (overlay?.polygon) {
-          const rotatedPolygon: Array<[number, number]> = overlay.polygon.map(([x, y]) => {
-            const rotated = rotatePoint({ x, y }, basePoint, finalAngle);
-            return [rotated.x, rotated.y];
-          });
-          overlayUpdate(overlayId, { polygon: rotatedPolygon });
-        }
-      } else {
-        // ── DXF entity rotation: use RotateEntityCommand ──
-        const sm = getSceneManager();
-        if (!sm) return;
-
-        // ADR-357 Phase 12 — honor `copyMode` from the grip handoff (one-shot).
-        const useCopy = copyModeHandoffRef.current;
-        copyModeHandoffRef.current = false;
-        const cmd = new RotateEntityCommand(
-          selectedEntityIds,
-          basePoint,
-          finalAngle,
-          sm,
-          false,
-          useCopy,
-        );
-        executeCommand(cmd);
-      }
+      commitRotation(basePoint, finalAngle);
 
       previewCanvasRef.current?.clear();
 
@@ -261,7 +264,7 @@ export function useRotationTool(props: UseRotationToolProps): UseRotationToolRet
       setCurrentAngle(0);
       return;
     }
-  }, [isCollectingInput, phase, basePoint, currentAngle, getSceneManager, selectedEntityIds, executeCommand, previewCanvasRef, currentOverlays, overlayUpdate, isTypingAngle]);
+  }, [isCollectingInput, phase, basePoint, currentAngle, commitRotation, previewCanvasRef, isTypingAngle]);
 
   /**
    * Handle mouse move — update angle for preview
@@ -307,37 +310,7 @@ export function useRotationTool(props: UseRotationToolProps): UseRotationToolRet
 
     if (Math.abs(angleDeg) < 0.001) return;
 
-    // Check if we're rotating an overlay or a DXF entity
-    const overlayId = selectedEntityIds.find(id =>
-      currentOverlays.some(o => o.id === id)
-    );
-
-    if (overlayId && overlayUpdate) {
-      const overlay = currentOverlays.find(o => o.id === overlayId);
-      if (overlay?.polygon) {
-        const rotatedPolygon: Array<[number, number]> = overlay.polygon.map(([x, y]) => {
-          const rotated = rotatePoint({ x, y }, basePoint, angleDeg);
-          return [rotated.x, rotated.y];
-        });
-        overlayUpdate(overlayId, { polygon: rotatedPolygon });
-      }
-    } else {
-      const sm = getSceneManager();
-      if (!sm) return;
-
-      // ADR-357 Phase 12 — honor `copyMode` from the grip handoff (one-shot).
-      const useCopy = copyModeHandoffRef.current;
-      copyModeHandoffRef.current = false;
-      const cmd = new RotateEntityCommand(
-        selectedEntityIds,
-        basePoint,
-        angleDeg,
-        sm,
-        false,
-        useCopy,
-      );
-      executeCommand(cmd);
-    }
+    commitRotation(basePoint, angleDeg);
 
     previewCanvasRef.current?.clear();
 
@@ -346,7 +319,7 @@ export function useRotationTool(props: UseRotationToolProps): UseRotationToolRet
     setBasePoint(null);
     setReferencePoint(null);
     setCurrentAngle(0);
-  }, [phase, basePoint, getSceneManager, selectedEntityIds, executeCommand, previewCanvasRef, currentOverlays, overlayUpdate]);
+  }, [phase, basePoint, commitRotation, previewCanvasRef]);
 
   /**
    * ADR-397/513 (Giorgio 2026-07-06) — big-player inline typed-angle (Revit / Maxon Cinema-4D / Figma):
@@ -385,14 +358,7 @@ export function useRotationTool(props: UseRotationToolProps): UseRotationToolRet
   else if (phase === 'awaiting-angle') prompt = 'Πληκτρολόγησε γωνία + Enter, ή μετακίνησε + κλικ';
 
   // Sync prompt to toolbar status bar via external store
-  useEffect(() => {
-    if (!isActive || phase === 'idle') {
-      toolHintOverrideStore.setOverride(null);
-      return;
-    }
-    toolHintOverrideStore.setOverride(prompt);
-    return () => { toolHintOverrideStore.setOverride(null); };
-  }, [isActive, phase, prompt]);
+  useToolHintPrompt(isActive && phase !== 'idle', prompt);
 
   return {
     phase,

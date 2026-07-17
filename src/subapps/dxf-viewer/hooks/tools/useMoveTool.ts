@@ -17,7 +17,7 @@
  * @module hooks/tools/useMoveTool
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import i18next from 'i18next';
 import type { Point2D } from '../../rendering/types/Types';
 import type { ICommand } from '../../core/commands/interfaces';
@@ -25,7 +25,7 @@ import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas/Preview
 import { MoveEntityCommand, MoveMultipleEntitiesCommand, CompoundCommand } from '../../core/commands';
 import { useSceneManagerAdapter, type SceneAdapterLevelManager } from '../../systems/entity-creation/useSceneManagerAdapter';
 import { useModifyToolActivation } from '../../systems/tools/useModifyToolActivation';
-import { toolHintOverrideStore } from '../toolHintOverrideStore';
+import { useToolHintPrompt } from './use-tool-hint-prompt';
 // ADR-363 — ORTHO (F8) axis-lock for the AutoCAD MOVE destination (no F9 step here).
 import { applyOrthoToDelta } from '../../bim/grips/grip-move-constraints';
 // ADR-090 — SSoT point+vector add (translate), replaces inline `{x:A.x+B.x,y:A.y+B.y}`.
@@ -207,14 +207,7 @@ export function useMoveTool(props: UseMoveToolProps): UseMoveToolReturn {
     prompt = i18next.t('dxf-viewer-guides:moveTool.selectDestination');
   }
 
-  useEffect(() => {
-    if (!isActive || phase === 'idle') {
-      toolHintOverrideStore.setOverride(null);
-      return;
-    }
-    toolHintOverrideStore.setOverride(prompt);
-    return () => { toolHintOverrideStore.setOverride(null); };
-  }, [isActive, phase, prompt]);
+  useToolHintPrompt(isActive && phase !== 'idle', prompt);
 
   return { phase, basePoint, isActive, isCollectingInput, handleMoveClick, handleMoveEscape, prompt };
 }

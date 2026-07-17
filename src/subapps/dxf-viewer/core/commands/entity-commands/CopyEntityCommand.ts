@@ -13,18 +13,24 @@
  *   - `move` mode    → anchor displacement on clones (rigid translation of
  *                      the entire entity by `delta`)
  *
- * `scale` / `rotate` / `mirror` modes route to their respective tools
- * via {@link GripHandoffStore} with `copyMode: true` and use the native
- * `copyMode` / `keepOriginals` paths in `ScaleEntityCommand` / extended
- * `RotateEntityCommand` / `MirrorEntityCommand` — no CopyEntityCommand wrapper
- * needed there.
+ * `scale` / `rotate` / `mirror` modes route to their respective tools via
+ * {@link GripHandoffStore} with `copyMode: true`, and commit through
+ * `createScale/Rotate/MirrorCommand({copy: true})` → {@link CloneWithTransformCommand}
+ * (ADR-507 §8). No CopyEntityCommand wrapper needed there.
  *
  * Undo semantics: removes every entity created by this command. Redo
  * re-applies the same clones (rebuilt deterministically from the recorded
  * `sourceEntities`).
  *
+ * ⚠️ Unlike {@link CloneWithTransformCommand}, this command's `redo()` MINTS FRESH
+ * IDS (`generateEntityId()` inside `cloneFrom*Move`) rather than re-adding the same
+ * clone objects — the geometry is deterministic, the identity is not. That is safe
+ * only because nothing downstream holds these ids across an undo/redo cycle, and
+ * because the stretch/move copy path is not BIM-persisted. Do not copy this pattern
+ * for a path that persists to Firestore (see bim-clone-persistence.ts).
+ *
  * @see ADR-357 §14 G10 — Phase 12 deliverable
- * @see ScaleEntityCommand — analog `copyMode` pattern (clone in execute(), remove in undo())
+ * @see CloneWithTransformCommand — the transform family's copy path (id-stable, BIM-aware)
  */
 
 import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '../interfaces';

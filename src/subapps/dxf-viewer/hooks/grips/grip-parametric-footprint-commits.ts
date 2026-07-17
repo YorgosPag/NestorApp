@@ -41,9 +41,9 @@ import { commitWholeEntityMove } from './grip-whole-entity-move';
 import { createSceneManagerAdapter } from './grip-scene-manager-adapter';
 import { gripKindOf } from '../grip-kinds';
 // ADR-627 — whole-hatch ROTATION reuses the SHARED pivot/anchor/swept-angle resolver + the
-// canonical RotateEntityCommand (rotateEntity case 'hatch'), exactly like the polyline/area outline.
+// canonical rotate command (rotateEntity case 'hatch'), exactly like the polyline/area outline.
 import { resolveRotation } from './grip-primitive-rotate-commits';
-import { RotateEntityCommand } from '../../core/commands/entity-commands/RotateEntityCommand';
+import { commitGripRotation } from './grip-rotation-commit';
 import { isGripCopyIntent } from '../../systems/grip/grip-copy-intent';
 
 /**
@@ -256,20 +256,17 @@ export function commitHatchGripDrag(
     return;
   }
   // ADR-627 — whole-hatch ROTATION handle → rotate the boundaryPaths about the pivot via the
-  // canonical `RotateEntityCommand` (`rotateEntity` case 'hatch'), exactly like the polyline/
+  // canonical rotate command (`rotateEntity` case 'hatch'), exactly like the polyline/
   // area outline (`commitPolylineRotationGripDrag`). Pivot = the hot-grip picked centre
   // (published in `BimRotateHotGripStore`, resolved by the SHARED `resolveRotation`) or the
-  // boundary bbox centre. Ctrl/«Copy» → rotate a CLONE (`RotateEntityCommand.copyMode`).
+  // boundary bbox centre. Ctrl/«Copy» → rotate a CLONE (ADR-507 §8: the factory routes to
+  // `CloneWithTransformCommand`).
   if (isHatchRotationKind(hatchKind)) {
     const pivotFallback = hatchBoundsCenter(candidate.boundaryPaths);
     if (!pivotFallback) return;
     const res = resolveRotation(grip, delta, pivotFallback);
     if (!res) return;
-    const command = new RotateEntityCommand(
-      [grip.entityId], res.pivot, res.sweptDeg, sceneManager, false, isGripCopyIntent(),
-    );
-    if (command.validate() !== null) return;
-    deps.execute(command);
+    commitGripRotation({ entityId: grip.entityId, pivot: res.pivot, angleDeg: res.sweptDeg, sceneManager, execute: deps.execute });
     return;
   }
   const rectilinear = ShiftKeyTracker.getSnapshot();

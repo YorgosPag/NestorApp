@@ -7,9 +7,10 @@
  * exactly once by the tool hook on activation.
  *
  * ADR-357 Phase 12 — handoff payload extended with two optional modifiers:
- *   - `copyMode`  — when `true`, the downstream tool starts with its native
- *                   copy-mode toggle ON (ScaleEntityCommand.copyMode /
- *                   RotateEntityCommand.copyMode / MirrorEntityCommand.keepOriginals).
+ *   - `copyMode`  — when `true`, the downstream tool arms its copy intent and commits
+ *                   through `createRotate/Scale/MirrorCommand({copy: true})`, which
+ *                   routes to `CloneWithTransformCommand` (ADR-507 §8). This is UI
+ *                   intent only — the transform commands themselves have no copy flag.
  *   - `refStart` / `refEnd` — when both present, the downstream tool fast-forwards
  *                             past its "Pick reference points" phases and lands
  *                             directly on the "Enter new length / angle" input
@@ -31,7 +32,7 @@ import type { Point2D } from '../../rendering/types/Types';
 type HandoffTool = 'rotate' | 'scale' | 'mirror';
 
 export interface GripHandoffOptions {
-  /** Start downstream tool with native copy-mode toggle ON. */
+  /** Start the downstream tool with its copy intent armed (→ `{copy: true}` at commit). */
   readonly copyMode?: boolean;
   /** First reference point (world space) — pre-loaded into the downstream tool's ref state. */
   readonly refStart?: Point2D;

@@ -45,7 +45,7 @@
 
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import i18next from 'i18next';
 
 import type { Point2D } from '../../rendering/types/Types';
@@ -57,8 +57,8 @@ import {
   setRegionPickPhase,
   type RegionPickPhase,
 } from '../../bim/schedule/stores/region-pick-store';
-import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import { useEdgeTriggeredLifecycle } from './useEdgeTriggeredLifecycle';
+import { useToolHintPrompt } from './use-tool-hint-prompt';
 
 // ─── Public tool-name constant ───────────────────────────────────────────────
 
@@ -176,16 +176,8 @@ export function useScheduleRegionPickTool(
     prompt = i18next.t('dxf-schedule:regionPick.awaitingSecond');
   }
 
-  useEffect(() => {
-    if (!isActive) {
-      toolHintOverrideStore.setOverride(null);
-      return;
-    }
-    toolHintOverrideStore.setOverride(prompt);
-    return () => {
-      toolHintOverrideStore.setOverride(null);
-    };
-  }, [isActive, prompt]);
+  // No phase gate here — this tool has no 'idle' phase; `isActive` alone drives it.
+  useToolHintPrompt(isActive, prompt);
 
   return {
     phase,

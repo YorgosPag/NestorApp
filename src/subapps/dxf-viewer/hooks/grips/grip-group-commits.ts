@@ -1,9 +1,9 @@
 /**
  * ADR-575 §8 — GROUP gizmo ROTATION commit (whole-group rotate about the bbox centre).
  *
- * The group rotation handle routes through the CANONICAL `RotateEntityCommand` (the
- * SAME undoable, merge-coalescing command the ROTATE tool + the line/arc/polyline
- * rotation handles use) — NO bespoke transform. `RotateEntityCommand` runs the ONE
+ * The group rotation handle routes through the CANONICAL rotate commit (`commitGripRotation`
+ * → `createRotateCommand`, the SAME undoable, merge-coalescing path the ROTATE tool + the
+ * line/arc/polyline rotation handles use) — NO bespoke transform. It runs the ONE
  * `rotateEntity` engine, whose `case 'group'` recurses every member about the SAME
  * pivot (handles nested groups too), so a group rotation is «just another entity id»
  * to the command.
@@ -27,16 +27,13 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { GroupEntity, BlockEntity } from '../../types/entities';
 import type { UnifiedGripInfo, DxfCommitDeps } from './unified-grip-types';
-import { RotateEntityCommand } from '../../core/commands/entity-commands/RotateEntityCommand';
+import { commitGripRotation } from './grip-rotation-commit';
 import { createSceneManagerAdapter } from './grip-scene-manager-adapter';
 import { gripKindOf } from '../grip-kinds';
 import { computeGroupSelectionBounds } from '../../systems/group/group-selection-bounds';
 import { computeBlockSelectionBounds } from '../../systems/block/block-selection-bounds';
 import type { GroupSelectionBounds } from '../../systems/group/group-selection-bounds';
 import { resolveRotation } from './grip-primitive-rotate-commits';
-// ADR-561 EXT — copy intent SSoT (right-click «Copy» toggle OR live Ctrl/⌘), the SAME
-// predicate the primitive move-copy + rotate-copy commits use.
-import { isGripCopyIntent } from '../../systems/grip/grip-copy-intent';
 
 /** Minimal structural view of the group scene shape read here. */
 interface GroupSceneShape {
@@ -75,9 +72,6 @@ export function commitGroupGizmoRotation(
   if (!bounds) return;
   const res = resolveRotation(grip, delta, bounds.center);
   if (!res) return;
-  // ADR-561 EXT — Ctrl / «Copy» toggle → rotate a CLONE about the pivot. The canonical
-  // `RotateEntityCommand.copyMode` owns the clone + undo/redo (ADR-357 Φ12).
-  const command = new RotateEntityCommand([grip.entityId], res.pivot, res.sweptDeg, sceneManager, false, isGripCopyIntent());
-  if (command.validate() !== null) return;
-  deps.execute(command);
+  // ADR-561 EXT — Ctrl / «Copy» toggle → rotate a CLONE about the pivot. Shared commit tail.
+  commitGripRotation({ entityId: grip.entityId, pivot: res.pivot, angleDeg: res.sweptDeg, sceneManager, execute: deps.execute });
 }

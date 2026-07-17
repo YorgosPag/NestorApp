@@ -11,12 +11,10 @@
  * Routing at commit time:
  *   - `stretch` mode + copy → `CopyEntityCommand` with vertex/anchor displacement
  *   - `move` mode    + copy → `CopyEntityCommand` (anchor displacement, all moves)
- *   - `scale` mode   + copy → `GripHandoffStore.set('scale', anchor, { copyMode })`
- *                              → `ScaleEntityCommand`'s native `copyMode=true`
- *   - `rotate` mode  + copy → `GripHandoffStore.set('rotate', anchor, { copyMode })`
- *                              → `RotateEntityCommand`'s extended `copyMode=true`
- *   - `mirror` mode  + copy → `GripHandoffStore.set('mirror', anchor, { copyMode })`
- *                              → `MirrorEntityCommand`'s `keepOriginals=true`
+ *   - `scale` / `rotate` / `mirror` mode + copy
+ *        → `GripHandoffStore.set(mode, anchor, { copyMode })`
+ *        → the tool hook commits via `createScale/Rotate/MirrorCommand({copy: true})`
+ *        → `CloneWithTransformCommand` (ADR-507 §8 — clone with the transform baked in)
  *
  * Industry reference: AutoCAD `MULTIPLE` grip-extra / `Copy` subcommand —
  * persistent toggle until user explicitly disables or session resets.

@@ -1,5 +1,5 @@
 /**
- * ROTATE ENTITY COMMAND
+ * ROTATE ENTITY COMMAND — in-place rotation about a pivot.
  *
  * 🏢 ADR-188: Entity Rotation System — Command Pattern
  * Supports undo/redo and command merging for smooth drag rotation.
@@ -9,22 +9,22 @@
  *
  * ADR-507 §8 — the in-place transform spine (snapshot/restore/cascade/reframe)
  * lives in `SnapshotTransformCommand`; this command supplies only the per-entity
- * rotation patch, its angle-accumulating merge, and its copy-mode path.
+ * rotation patch and its angle-accumulating merge.
+ *
+ * ⚠️ Rotate-with-COPY is not here. It is `CloneWithTransformCommand` (Revit
+ * `ElementTransformUtils.CopyElements` — clone with the transform baked in), reached
+ * via `createRotateCommand({copy: true})`. This command is in-place only; do not
+ * re-add a `copyMode` flag.
  *
  * @see ADR-188 §6.2 (Entity-specific rotation logic)
+ * @see transform-command-factory.ts — `createRotateCommand` picks in-place vs copy
  * @see SnapshotTransformCommand — shared in-place base
  */
 
 import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '../interfaces';
 import type { Point2D } from '../../../rendering/types/Types';
-import { generateEntityId } from '../../../systems/entity-creation/utils';
-import { deepClone } from '../../../utils/clone-utils';
-import { rotateEntity } from '../../../utils/rotation-math';
-import type { Entity } from '../../../types/entities';
-// ADR-363 Phase 7.2 — BIM-aware rotate (pivot rotation per kind + atomic
-// geometry recompute). Returns null for non-BIM, falls through to the
-// generic rotateEntity() path below.
-import { calculateBimRotatedGeometry } from '../../../bim/transforms/bim-rotate-geometry';
+import { buildRotatePatch, rotateParamError } from './transform-patch-builders';
+import type { TransformPatch } from './transform-patch-builders';
 import { SnapshotTransformCommand } from './SnapshotTransformCommand';
 
 /**
@@ -35,8 +35,8 @@ export class RotateEntityCommand extends SnapshotTransformCommand {
   readonly name = 'RotateEntities';
   readonly type = 'rotate-entities';
 
-  /** ADR-357 Phase 12 — IDs of clones created when `copyMode === true`. */
-  private createdEntityIds: string[] = [];
+  /** Bound once — `computeUpdates` runs per entity, and again per follower. */
+  private readonly patch: TransformPatch;
 
   constructor(
     entityIds: string[],
@@ -44,71 +44,14 @@ export class RotateEntityCommand extends SnapshotTransformCommand {
     private readonly angleDeg: number,
     sceneManager: ISceneManager,
     isDragging: boolean = false,
-    /**
-     * ADR-357 Phase 12 — when `true`, rotate clones of the sources rather than
-     * mutating in place (mirrors `ScaleEntityCommand.copyMode`).
-     */
-    private readonly copyMode: boolean = false,
   ) {
     super(entityIds, sceneManager, isDragging);
+    this.patch = buildRotatePatch(pivot, angleDeg);
   }
 
-  /**
-   * Computes the rotation patch for a single entity. ADR-363 Phase 7.2:
-   * tries BIM-aware rotate first (returns `{params, geometry}` atomic patch
-   * for the 7 BIM kinds); falls through to the generic `rotateEntity()` path.
-   */
+  /** ADR-363 Phase 7.2 BIM-aware rotate, else generic — owned by the patch SSoT. */
   protected computeUpdates(entity: SceneEntity): Partial<SceneEntity> {
-    const bimPatch = calculateBimRotatedGeometry(entity as unknown as Entity, this.pivot, this.angleDeg);
-    if (bimPatch !== null) return bimPatch as Partial<SceneEntity>;
-    return rotateEntity(entity as unknown as Entity, this.pivot, this.angleDeg) as Partial<SceneEntity>;
-  }
-
-  execute(): void {
-    if (!this.copyMode) {
-      this.executeInPlace();
-      return;
-    }
-    this.entitySnapshots.clear();
-    this.createdEntityIds = [];
-    for (const entityId of this.entityIds) {
-      const entity = this.sceneManager.getEntity(entityId);
-      if (!entity) continue;
-      const newId = generateEntityId();
-      this.sceneManager.addEntity({ ...entity, ...this.computeUpdates(entity), id: newId } as SceneEntity);
-      this.createdEntityIds.push(newId);
-    }
-    this.wasExecuted = this.createdEntityIds.length > 0;
-  }
-
-  undo(): void {
-    if (!this.wasExecuted) return;
-    if (this.copyMode) {
-      for (const id of this.createdEntityIds) this.sceneManager.removeEntity(id);
-      return;
-    }
-    this.undoInPlace();
-  }
-
-  redo(): void {
-    if (!this.copyMode) {
-      this.redoInPlace();
-      return;
-    }
-    // Copy mode: re-create clones from snapshots so ids are deterministic across
-    // the undo/redo cycle (and cache the snapshot the first time through).
-    this.createdEntityIds = [];
-    for (const entityId of this.entityIds) {
-      const snapshot = this.entitySnapshots.get(entityId)
-        ?? (this.sceneManager.getEntity(entityId) as SceneEntity | undefined);
-      if (!snapshot) continue;
-      if (!this.entitySnapshots.has(entityId)) {
-        this.entitySnapshots.set(entityId, deepClone(snapshot));
-      }
-      const newId = generateEntityId();
-      this.sceneManager.addEntity({ ...snapshot, ...this.computeUpdates(snapshot), id: newId } as SceneEntity);
-      this.createdEntityIds.push(newId);
-    }
+    return this.patch(entity);
   }
 
   getDescription(): string {
@@ -149,10 +92,7 @@ export class RotateEntityCommand extends SnapshotTransformCommand {
     if (!this.entityIds || this.entityIds.length === 0) {
       return 'At least one entity ID is required';
     }
-    if (this.angleDeg === 0) {
-      return 'Rotation angle must be non-zero';
-    }
-    return null;
+    return rotateParamError(this.angleDeg);
   }
 
   serialize(): SerializedCommand {

@@ -23,10 +23,9 @@ import { gripKindOf } from '../grip-kinds';
 // ADR-363 Slice F — line rotation commit reuses the canonical rotate SSoT.
 import { BimRotateHotGripStore } from '../../bim/grips/bim-rotate-hotgrip-store';
 import { sweptAngleDegAboutPivot } from '../../bim/grips/grip-math';
-import { RotateEntityCommand } from '../../core/commands/entity-commands/RotateEntityCommand';
-// ADR-561 EXT (Ctrl-rotate-copy) — copy intent SSoT (the right-click «Copy» toggle OR live
-// Ctrl/⌘), the SAME predicate the move-copy + primitive rotate-copy commits use.
-import { isGripCopyIntent } from '../../systems/grip/grip-copy-intent';
+// ADR-561 EXT (Ctrl-rotate-copy) — shared commit tail; it reads the copy intent (right-click
+// «Copy» toggle OR live Ctrl/⌘) at commit time and picks in-place vs clone.
+import { commitGripRotation } from './grip-rotation-commit';
 
 /**
  * ADR-359 Phase 11 — XLine grip commit via `applyXLineGripDrag` + direct scene
@@ -76,9 +75,10 @@ export function commitRayGripDrag(
 
 /**
  * ADR-363 Slice F — plain DXF line rotation commit. The line is a primitive
- * (`start`/`end`, no params), so the rotation routes through the CANONICAL
- * `RotateEntityCommand` (the same undoable, merge-coalescing command the rotate
- * tool uses) — NOT a bespoke transform. The hot-grip flow publishes {pivot,anchor}
+ * (`start`/`end`, no params), so the rotation routes through the CANONICAL rotate
+ * commit (`commitGripRotation` → `createRotateCommand`, the same undoable,
+ * merge-coalescing path the rotate tool uses) — NOT a bespoke transform. The
+ * hot-grip flow publishes {pivot,anchor}
  * in `BimRotateHotGripStore` before commit (mirror `commitWallGripDrag`); the
  * swept angle = `angle(anchor+delta) − angle(anchor)` about the pivot. Falls back
  * to the line midpoint + grip position (legacy drag-handle) when no rotate context
@@ -105,11 +105,8 @@ export function commitLineGripDrag(
   const sweptDeg = sweptAngleDegAboutPivot(pivot, anchor, currentPos);
   if (sweptDeg === null || sweptDeg === 0) return;
   // ADR-561 EXT — Ctrl (or the right-click «Copy» toggle) held → rotate a CLONE about the
-  // pivot (AutoCAD ROTATE-Copy / hinge), leaving the original untouched. Same copy predicate
-  // the move-copy uses; `RotateEntityCommand.copyMode` owns the clone + undo/redo (ADR-357 Φ12).
-  const command = new RotateEntityCommand([grip.entityId], pivot, sweptDeg, sceneManager, false, isGripCopyIntent());
-  if (command.validate() !== null) return;
-  deps.execute(command);
+  // pivot (AutoCAD ROTATE-Copy / hinge), leaving the original untouched. Shared commit tail.
+  commitGripRotation({ entityId: grip.entityId, pivot, angleDeg: sweptDeg, sceneManager, execute: deps.execute });
 }
 
 /** ADR-362 Phase I2 — Dimension grip commit via `applyDimensionGripDrag` + scene patch. */

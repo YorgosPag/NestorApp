@@ -44,7 +44,7 @@ describe('MirrorEntityCommand — ADR-363 Phase 7.2 BIM dispatch', () => {
   it('reflects BIM wall params.start + params.end across the axis', () => {
     const wall = makeWall();
     const { scene, sm } = makeMockScene([wall as unknown as SceneEntity]);
-    const cmd = new MirrorEntityCommand([wall.id], Y_AXIS, false, sm);
+    const cmd = new MirrorEntityCommand([wall.id], Y_AXIS, sm);
     cmd.execute();
     const after = scene.get(wall.id) as unknown as WallEntity;
     expect(after.params.start).toEqual({ x: -100, y: 0, z: 0 });
@@ -56,7 +56,7 @@ describe('MirrorEntityCommand — ADR-363 Phase 7.2 BIM dispatch', () => {
   it('undo restores the original BIM wall params', () => {
     const wall = makeWall();
     const { scene, sm } = makeMockScene([wall as unknown as SceneEntity]);
-    const cmd = new MirrorEntityCommand([wall.id], Y_AXIS, false, sm);
+    const cmd = new MirrorEntityCommand([wall.id], Y_AXIS, sm);
     cmd.execute();
     cmd.undo();
     const after = scene.get(wall.id) as unknown as WallEntity;
@@ -67,7 +67,7 @@ describe('MirrorEntityCommand — ADR-363 Phase 7.2 BIM dispatch', () => {
   it('redo re-applies the mirror', () => {
     const wall = makeWall();
     const { scene, sm } = makeMockScene([wall as unknown as SceneEntity]);
-    const cmd = new MirrorEntityCommand([wall.id], Y_AXIS, false, sm);
+    const cmd = new MirrorEntityCommand([wall.id], Y_AXIS, sm);
     cmd.execute();
     cmd.undo();
     cmd.redo();
@@ -76,21 +76,9 @@ describe('MirrorEntityCommand — ADR-363 Phase 7.2 BIM dispatch', () => {
     expect(after.params.end.x).toBe(-500);
   });
 
-  it('keepOriginals=true clones the wall with mirrored params (scene gets 2 entities)', () => {
-    const wall = makeWall();
-    const { scene, sm } = makeMockScene([wall as unknown as SceneEntity]);
-    const cmd = new MirrorEntityCommand([wall.id], Y_AXIS, true, sm);
-    cmd.execute();
-    expect(scene.size).toBe(2);
-    const orig = scene.get(wall.id) as unknown as WallEntity;
-    // Original preserved.
-    expect(orig.params.start.x).toBe(100);
-    // Clone is the other entity with mirrored params.
-    const cloneId = [...scene.keys()].find((id) => id !== wall.id);
-    expect(cloneId).toBeDefined();
-    const clone = scene.get(cloneId!) as unknown as WallEntity;
-    expect(clone.params.start.x).toBe(-100);
-  });
+  // NOTE: mirror-WITH-COPY (the former `keepOriginals=true`) is no longer this
+  // command's job — it moved to `CloneWithTransformCommand` (ADR-507 §8). Its BIM
+  // clone coverage lives in `CloneWithTransformCommand.persistence.test.ts`.
 
   it('falls through to generic mirror for non-BIM entities (line)', () => {
     const line: SceneEntity = {
@@ -100,7 +88,7 @@ describe('MirrorEntityCommand — ADR-363 Phase 7.2 BIM dispatch', () => {
       end: { x: 300, y: 400 },
     } as unknown as SceneEntity;
     const { scene, sm } = makeMockScene([line]);
-    const cmd = new MirrorEntityCommand([line.id], Y_AXIS, false, sm);
+    const cmd = new MirrorEntityCommand([line.id], Y_AXIS, sm);
     cmd.execute();
     const after = scene.get(line.id) as unknown as { start: { x: number; y: number }; end: { x: number; y: number } };
     expect(after.start.x).toBe(-100);

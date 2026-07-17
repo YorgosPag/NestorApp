@@ -19,12 +19,11 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import i18next from 'i18next';
 import { GripHandoffStore } from '../../systems/grip/GripHandoffStore';
 import type { Point2D } from '../../rendering/types/Types';
-import type { ICommand } from '../../core/commands/interfaces';
-import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas/PreviewCanvas';
-import { MirrorEntityCommand } from '../../core/commands/entity-commands/MirrorEntityCommand';
-import { useSceneManagerAdapter, type SceneAdapterLevelManager } from '../../systems/entity-creation/useSceneManagerAdapter';
+import { createMirrorCommand } from '../../core/commands/entity-commands/transform-command-factory';
+import { useSceneManagerAdapter } from '../../systems/entity-creation/useSceneManagerAdapter';
 import { useModifyToolActivation } from '../../systems/tools/useModifyToolActivation';
-import { toolHintOverrideStore } from '../toolHintOverrideStore';
+import type { ModifyToolProps } from './modify-tool-props';
+import { useToolHintPrompt } from './use-tool-hint-prompt';
 import { useCadToggles } from '../common/useCadToggles';
 import { orthoSnap } from '../../utils/mirror-math';
 
@@ -39,14 +38,8 @@ export type MirrorPhase =
   | 'awaiting-second-point'
   | 'awaiting-keep-originals';
 
-export interface UseMirrorToolProps {
-  activeTool: string;
-  selectedEntityIds: string[];
-  levelManager: SceneAdapterLevelManager;
-  executeCommand: (cmd: ICommand) => void;
-  previewCanvasRef: React.RefObject<PreviewCanvasHandle | null>;
-  onToolChange?: (tool: string) => void;
-}
+/** Mirror takes exactly the canonical modify-tool inputs — nothing extra. */
+export type UseMirrorToolProps = ModifyToolProps;
 
 export interface UseMirrorToolReturn {
   phase: MirrorPhase;
@@ -164,12 +157,12 @@ export function useMirrorTool(props: UseMirrorToolProps): UseMirrorToolReturn {
         copyModeHandoffRef.current = false;
         const sm = getSceneManager();
         if (sm) {
-          const cmd = new MirrorEntityCommand(
-            selectedEntityIds,
-            { p1: firstPoint, p2: snapped },
-            true,
-            sm,
-          );
+          const cmd = createMirrorCommand({
+            entityIds: selectedEntityIds,
+            axis: { p1: firstPoint, p2: snapped },
+            sceneManager: sm,
+            copy: true,
+          });
           executeCommand(cmd);
           previewCanvasRef.current?.clear();
           setPhase('awaiting-first-point');
@@ -186,12 +179,15 @@ export function useMirrorTool(props: UseMirrorToolProps): UseMirrorToolReturn {
     const sm = getSceneManager();
     if (!sm) return;
 
-    const cmd = new MirrorEntityCommand(
-      selectedEntityIds,
-      { p1: firstPoint, p2: secondPoint },
-      keepOriginals,
-      sm,
-    );
+    // The Y/N answer IS the copy intent: keep the originals → mirrored clones
+    // (`CloneWithTransformCommand`); drop them → mirror in place. Same polarity as
+    // the former `keepOriginals` flag, now named for what it does (ADR-507 §8).
+    const cmd = createMirrorCommand({
+      entityIds: selectedEntityIds,
+      axis: { p1: firstPoint, p2: secondPoint },
+      sceneManager: sm,
+      copy: keepOriginals,
+    });
     executeCommand(cmd);
 
     previewCanvasRef.current?.clear();
@@ -219,14 +215,7 @@ export function useMirrorTool(props: UseMirrorToolProps): UseMirrorToolReturn {
     prompt = i18next.t('dxf-viewer-guides:mirrorTool.keepOriginals');
   }
 
-  useEffect(() => {
-    if (!isActive || phase === 'idle') {
-      toolHintOverrideStore.setOverride(null);
-      return;
-    }
-    toolHintOverrideStore.setOverride(prompt);
-    return () => { toolHintOverrideStore.setOverride(null); };
-  }, [isActive, phase, prompt]);
+  useToolHintPrompt(isActive && phase !== 'idle', prompt);
 
   return {
     phase,

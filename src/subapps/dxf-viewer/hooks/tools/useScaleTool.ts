@@ -18,11 +18,10 @@
 import { useState, useCallback, useEffect } from 'react';
 import i18next from 'i18next';
 import type { Point2D } from '../../rendering/types/Types';
-import type { ICommand } from '../../core/commands/interfaces';
-import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas/PreviewCanvas';
-import { ScaleEntityCommand } from '../../core/commands/entity-commands/ScaleEntityCommand';
+import { createScaleCommand } from '../../core/commands/entity-commands/transform-command-factory';
 import { useSceneManagerAdapter, type SceneAdapterLevelManager } from '../../systems/entity-creation/useSceneManagerAdapter';
 import { useModifyToolActivation } from '../../systems/tools/useModifyToolActivation';
+import type { ModifyToolProps } from './modify-tool-props';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import { ScaleToolStore } from '../../systems/scale/ScaleToolStore';
 import { computeUniformRef, referenceDistance, computeLiveScale } from '../../systems/scale/scale-reference-calc';
@@ -32,14 +31,8 @@ import { GripHandoffStore } from '../../systems/grip/GripHandoffStore';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-export interface UseScaleToolProps {
-  activeTool: string;
-  selectedEntityIds: string[];
-  levelManager: SceneAdapterLevelManager;
-  executeCommand: (cmd: ICommand) => void;
-  previewCanvasRef: React.RefObject<PreviewCanvasHandle | null>;
-  onToolChange?: (tool: string) => void;
-}
+/** Scale takes exactly the canonical modify-tool inputs — nothing extra. */
+export type UseScaleToolProps = ModifyToolProps;
 
 export interface UseScaleToolReturn {
   isActive: boolean;
@@ -197,7 +190,15 @@ export function useScaleTool(props: UseScaleToolProps): UseScaleToolReturn {
       ? { mode: 'uniform' as const, factor: sx }
       : { mode: 'non-uniform' as const, sx, sy };
 
-    executeCommand(new ScaleEntityCommand(workable, s.basePoint, params, s.copyMode, sm));
+    // ADR-507 §8 — the factory picks in-place vs `CloneWithTransformCommand`; the
+    // ribbon/keyboard `C` toggle lives in `ScaleToolStore` and stays UI intent.
+    executeCommand(createScaleCommand({
+      entityIds: workable,
+      basePoint: s.basePoint,
+      params,
+      sceneManager: sm,
+      copy: s.copyMode,
+    }));
     previewCanvasRef.current?.clear();
     ScaleToolStore.reset();
     onToolChange?.('select');
