@@ -9,7 +9,7 @@
  */
 
 import type { BOQItem, BOQScope, BOQSummary, BOQCategorySummary, CostAllocationMethod } from '@/types/boq';
-import type { CostBreakdown, VarianceResult } from '@/types/boq';
+import type { CostBreakdown, VarianceResult, BaselineDriftResult } from '@/types/boq';
 import type { Property } from '@/types/property';
 import { nowISO } from '@/lib/date-local';
 import { compareByLocale } from '@/lib/intl-formatting';
@@ -100,6 +100,31 @@ export function computeVariance(item: BOQItem): VarianceResult | null {
     actualCost,
     costDelta: actualCost - estimatedCost,
   };
+}
+
+// ============================================================================
+// BASELINE DRIFT (ADR-674) — LIVE BIM MODEL vs FROZEN SIGNED BASELINE
+// ============================================================================
+
+/**
+ * ADR-674 — απόκλιση live BIM μοντέλου από το ΠΑΓΩΜΕΝΟ υπογεγραμμένο baseline.
+ * null όταν δεν υπάρχει liveQuantity ΟΥΤΕ απόκλιση (live === baseline).
+ * Διαφορετικό από computeVariance (estimated vs actual as-built).
+ *
+ * @param item - Το BOQ item
+ * @returns BaselineDriftResult ή null
+ */
+export function computeBaselineDrift(item: BOQItem): BaselineDriftResult | null {
+  const live = item.liveQuantity;
+  if (live === null || live === undefined) return null;
+
+  const baseline = item.estimatedQuantity;
+  if (live === baseline) return null;
+
+  const delta = live - baseline;
+  const percent = baseline !== 0 ? (delta / baseline) * 100 : 0;
+
+  return { baseline, live, delta, percent, syncedAt: item.liveQuantitySyncedAt ?? null };
 }
 
 // ============================================================================

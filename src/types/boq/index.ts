@@ -40,5 +40,6 @@ export type {
   CostBreakdown,
   PriceResolution,
   VarianceResult,
+  BaselineDriftResult,
   BOQCategoryCost,
 } from './cost';

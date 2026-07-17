@@ -95,6 +95,28 @@ export interface VarianceResult {
 }
 
 // ============================================================================
+// BASELINE DRIFT — ADR-674 (frozen BOQ baseline vs live BIM model)
+// ============================================================================
+
+/** Απόκλιση live BIM μοντέλου από το ΠΑΓΩΜΕΝΟ υπογεγραμμένο baseline. */
+export interface BaselineDriftResult {
+  /** Παγωμένο υπογεγραμμένο baseline (estimatedQuantity). */
+  baseline: number;
+
+  /** Τρέχουσα ποσότητα live BIM μοντέλου (liveQuantity). */
+  live: number;
+
+  /** live - baseline. */
+  delta: number;
+
+  /** delta/baseline*100 (0 αν baseline 0). */
+  percent: number;
+
+  /** ISO timestamp τελευταίου live sync (ή null). */
+  syncedAt: string | null;
+}
+
+// ============================================================================
 // CATEGORY COST — ΑΘΡΟΙΣΤΙΚΟ ΑΝΑ ΚΑΤΗΓΟΡΙΑ
 // ============================================================================
 

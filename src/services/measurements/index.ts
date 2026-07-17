@@ -21,6 +21,7 @@ export {
   computeGrossQuantity,
   computeItemCost,
   computeVariance,
+  computeBaselineDrift,
   computeBuildingSummary,
 } from './cost-engine';
 

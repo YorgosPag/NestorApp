@@ -202,6 +202,12 @@ export interface BOQItem {
   /** Αν true: ο χρήστης το αποσύνδεσε από BIM — δεν ενημερώνεται αυτόματα πλέον. */
   detached?: boolean | null;
 
+  /** ADR-674 — Live BIM model quantity mirror για FROZEN baseline row (status ∉ draft/submitted). Ο auto-sync το γράφει (merge, ΠΟΤΕ δεν αγγίζει estimatedQuantity) όταν το live μοντέλο αποκλίνει από το υπογεγραμμένο baseline. null/absent = καμία απόκλιση tracked. */
+  liveQuantity?: number | null;
+
+  /** ADR-674 — ISO timestamp της τελευταίας liveQuantity εγγραφής. */
+  liveQuantitySyncedAt?: string | null;
+
   // --- BIM Multi-Layer DNA (ADR-363 Phase 6.1+) ---
 
   /** Parent BOQ item ID — set σε child rows (per-layer entries). null για standalone ή parent. */
