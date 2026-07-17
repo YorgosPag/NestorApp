@@ -358,3 +358,45 @@ describe('buildCandidateLabel — foundation (dimensions + absolute top elevatio
     expect(label.secondary).toBe('30×40 cm');
   });
 });
+
+// The core of the 2026-07-17 fix (Revit-grade consistency): slab/wall/column/beam store
+// FLOOR-RELATIVE elevations; the 3D converters add the active storey FFL at render time. The
+// popover must add the SAME FFL so a wall/slab on the 3rd storey reads its real elevation
+// (e.g. +6,00), never a per-storey +0,00. Foundation is already absolute → FFL is NOT added.
+describe('buildCandidateSemantics — absolute elevation via storey FFL', () => {
+  const FFL = 6000; // 3rd storey, datum-relative absolute FFL (mm)
+
+  it('slab: FLOOR-RELATIVE levelElevation + storey FFL → absolute top', () => {
+    const floor = makeSlab('floor', 150, 0); // levelElevation 0 = floor sits at its own FFL
+    expect(buildCandidateSemantics(floor, FFL)?.topElevationMm).toBe(6000);
+  });
+
+  it('wall (storey-floor): baseOffset + storey FFL → absolute base (+6,00, not +0,00)', () => {
+    const wall = makeWall(200, 3000, 0);
+    const label = buildCandidateLabel(
+      { entityType: 'wall', layer: 'lvl_x', semantics: buildCandidateSemantics(wall, FFL) },
+      fakeT, fakeT,
+    );
+    expect(numOf(label.tertiary)).toBeCloseTo(6, 2);
+  });
+
+  it('wall (baseBinding:absolute): baseOffset is already world z — storey FFL NOT added', () => {
+    const wall = makeWall(200, 3000, 6000, 'absolute');
+    expect(buildCandidateSemantics(wall, FFL)?.wallBaseElevationMm).toBe(6000); // not 12000
+  });
+
+  it('column: baseOffset + storey FFL → absolute base', () => {
+    const column = makeColumn('rectangular', 400, 400, 3000);
+    expect(buildCandidateSemantics(column, FFL)?.columnBaseElevationMm).toBe(6000);
+  });
+
+  it('beam: FLOOR-RELATIVE topElevation + storey FFL → absolute top', () => {
+    const beam = makeBeam(200, 400, 3000);
+    expect(buildCandidateSemantics(beam, FFL)?.beamTopElevationMm).toBe(9000); // 6000 + 3000
+  });
+
+  it('foundation: topElevationMm is already absolute — storey FFL ignored', () => {
+    const pad = makePadFoundation(1500, 1500, 400, -1000);
+    expect(buildCandidateSemantics(pad, FFL)?.foundationTopElevationMm).toBe(-1000); // not 5000
+  });
+});

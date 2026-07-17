@@ -5,9 +5,20 @@
 
 import { SelectionCyclingStore, buildCandidatesFromHits } from '../SelectionCyclingStore';
 import type { HitTestResult } from '../../../services/HitTestingService';
+import type { Entity } from '../../../types/entities';
+import { buildDefaultWallParams, buildWallEntity } from '../../../hooks/drawing/wall-completion';
+import { useActiveStoreyStore } from '../../levels/active-storey-store';
+import { buildActiveStoreyContext } from '../../levels/active-storey-context';
 
 const hit = (entityId: string, entityType?: string, layer?: string): HitTestResult =>
   ({ entityId, entityType, layer, distance: 0 });
+
+function makeDefaultWall(): Entity {
+  const params = buildDefaultWallParams({ x: 0, y: 0 }, { x: 4000, y: 0 }, { thickness: 200, height: 3000 });
+  const built = buildWallEntity(params, '0');
+  if (!built.ok) throw new Error(`fixture build failed: ${built.hardErrors.join(', ')}`);
+  return built.entity;
+}
 
 describe('buildCandidatesFromHits (ADR-659 SSoT dedup)', () => {
   it('dedups by entity id, keeps first-hit order (priority→distance)', () => {
@@ -36,6 +47,33 @@ describe('buildCandidatesFromHits (ADR-659 SSoT dedup)', () => {
     expect(resolveEntity).toHaveBeenCalledTimes(2);
     expect(resolveEntity).toHaveBeenCalledWith('a');
     expect(resolveEntity).toHaveBeenCalledWith('b');
+  });
+
+  // 2026-07-17 (ADR-448) — absolute popover elevations: buildCandidatesFromHits reads the active
+  // storey FFL from the zustand singleton ONCE and threads it into buildCandidateSemantics.
+  describe('storey FFL threading → absolute elevation', () => {
+    afterEach(() => useActiveStoreyStore.setState({ context: null }));
+
+    it('adds the active storey FFL to a wall base elevation (3rd storey → +6000mm)', () => {
+      useActiveStoreyStore.setState({
+        context: buildActiveStoreyContext(
+          [
+            { id: 'grd', number: 0, elevation: 0, height: 3, kind: 'ground' },
+            { id: 'l3', number: 3, elevation: 6, height: 3, kind: 'standard' },
+          ],
+          'l3',
+        ),
+      });
+      const wall = makeDefaultWall();
+      const [c] = buildCandidatesFromHits([hit('w1', 'wall')], () => wall);
+      expect(c.semantics?.wallBaseElevationMm).toBe(6000); // FFL 6000 + baseOffset 0
+    });
+
+    it('defaults to 0 (floor-relative) when no active storey is linked', () => {
+      const wall = makeDefaultWall();
+      const [c] = buildCandidatesFromHits([hit('w1', 'wall')], () => wall);
+      expect(c.semantics?.wallBaseElevationMm).toBe(0);
+    });
   });
 });
 
