@@ -46,7 +46,6 @@
   },
   "guides": {
     "measureToGuide": "Create guides at measurement points?",
-    "entityToGuide": "Create guides at entity points?",
     "createGuides": "Create Guides",
     "equalizeRequiresSameAxis": "Equalize requires 3+ guides on the same axis (X or Y)"
   },

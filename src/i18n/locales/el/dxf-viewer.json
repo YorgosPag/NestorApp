@@ -416,7 +416,14 @@
   "selectionCycling": {
     "label": "Επιλογή οντότητας",
     "overlapBadge": "{count, plural, one {# οντότητα εδώ} other {# οντότητες εδώ}}",
-    "overlapBadgeHint": "Πολλαπλές οντότητες εδώ — ξανακλικ στο ίδιο σημείο ή Shift+Space για εναλλαγή"
+    "overlapBadgeHint": "Πολλαπλές οντότητες εδώ — ξανακλικ στο ίδιο σημείο ή Shift+Space για εναλλαγή",
+    "slabKind": {
+      "floor": "Πλάκα δαπέδου",
+      "ceiling": "Πλάκα οροφής",
+      "roof": "Πλάκα στέγης",
+      "ground": "Πλάκα εδάφους",
+      "foundation": "Πλάκα θεμελίωσης"
+    }
   },
   "groupSelection": {
     "label": "Ομάδα · {count, plural, one {# αντικείμενο} other {# αντικείμενα}}",

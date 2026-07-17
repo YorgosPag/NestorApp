@@ -416,7 +416,14 @@
   "selectionCycling": {
     "label": "Select entity",
     "overlapBadge": "{count, plural, one {# entity here} other {# entities here}}",
-    "overlapBadgeHint": "Multiple entities here — click again on the same spot or Shift+Space to cycle"
+    "overlapBadgeHint": "Multiple entities here — click again on the same spot or Shift+Space to cycle",
+    "slabKind": {
+      "floor": "Floor slab",
+      "ceiling": "Ceiling slab",
+      "roof": "Roof slab",
+      "ground": "Slab-on-grade",
+      "foundation": "Foundation slab"
+    }
   },
   "groupSelection": {
     "label": "Group · {count, plural, one {# object} other {# objects}}",
