@@ -23,7 +23,7 @@ import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas/Preview
 import { createRotateCommand } from '../../core/commands/entity-commands/transform-command-factory';
 import { useSceneManagerAdapter, type SceneAdapterLevelManager } from '../../systems/entity-creation/useSceneManagerAdapter';
 import { useModifyToolActivation } from '../../systems/tools/useModifyToolActivation';
-import { useToolHintPrompt } from './use-tool-hint-prompt';
+import { useToolHintText } from './useToolHintPrompt';
 import { angleBetweenPointsDeg } from '../../utils/rotation-math';
 import { resolveOrthoPolarStep } from '../drawing/drawing-handler-utils';
 import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
@@ -358,7 +358,7 @@ export function useRotationTool(props: UseRotationToolProps): UseRotationToolRet
   else if (phase === 'awaiting-angle') prompt = 'Πληκτρολόγησε γωνία + Enter, ή μετακίνησε + κλικ';
 
   // Sync prompt to toolbar status bar via external store
-  useToolHintPrompt(isActive && phase !== 'idle', prompt);
+  useToolHintText(isActive && phase !== 'idle', prompt);
 
   return {
     phase,

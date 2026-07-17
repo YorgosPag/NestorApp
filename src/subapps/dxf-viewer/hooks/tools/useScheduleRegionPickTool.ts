@@ -58,7 +58,7 @@ import {
   type RegionPickPhase,
 } from '../../bim/schedule/stores/region-pick-store';
 import { useEdgeTriggeredLifecycle } from './useEdgeTriggeredLifecycle';
-import { useToolHintPrompt } from './use-tool-hint-prompt';
+import { useToolHintText } from './useToolHintPrompt';
 
 // ─── Public tool-name constant ───────────────────────────────────────────────
 
@@ -177,7 +177,7 @@ export function useScheduleRegionPickTool(
   }
 
   // No phase gate here — this tool has no 'idle' phase; `isActive` alone drives it.
-  useToolHintPrompt(isActive, prompt);
+  useToolHintText(isActive, prompt);
 
   return {
     phase,

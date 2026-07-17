@@ -26,18 +26,42 @@ import { toolHintOverrideStore } from '../toolHintOverrideStore';
  * the value you use) — every distinct prompt maps to a distinct key, so this is
  * user-visible-identical to the previous `[isActive, phase]` effects.
  *
+ * Two entry points, ONE effect: `useToolHintPrompt` for callers whose prompt is a
+ * `tool-hints:` key, `useToolHintText` for callers that already hold the resolved
+ * string. The move/mirror/rotate/schedule-pick tools need the latter — they resolve
+ * from OTHER namespaces (`dxf-viewer-guides:`, `dxf-schedule:`), so the hardcoded
+ * `tool-hints:` prefix here cannot serve them. That gap is why the same effect had
+ * survived, byte-copied, in those four hooks after ADR-589 folded the other five.
+ *
  * @param isActive true while the owning tool is the active tool
  * @param key      i18n key suffix under the `tool-hints` namespace, or null to clear
  */
 export function useToolHintPrompt(isActive: boolean, key: string | null): void {
+  useToolHintText(isActive, key === null ? null : i18next.t(`tool-hints:${key}`));
+}
+
+/**
+ * The resolved-text variant — same publish/clear contract, no i18n resolution.
+ *
+ * Use when the prompt comes from a namespace other than `tool-hints`, or is already
+ * interpolated. Pass `null` (or `active: false`) to clear; callers with a phase pass
+ * `isActive && phase !== 'idle'`.
+ *
+ * The clear-on-cleanup is the load-bearing part: without it a tool that unmounts
+ * mid-phase leaves its prompt pinned in the store.
+ *
+ * @param active true while this tool should own the status-bar hint
+ * @param text   the resolved prompt, or null to clear
+ */
+export function useToolHintText(active: boolean, text: string | null): void {
   useEffect(() => {
-    if (!isActive || key === null) {
+    if (!active || text === null) {
       toolHintOverrideStore.setOverride(null);
       return;
     }
-    toolHintOverrideStore.setOverride(i18next.t(`tool-hints:${key}`));
+    toolHintOverrideStore.setOverride(text);
     return () => {
       toolHintOverrideStore.setOverride(null);
     };
-  }, [isActive, key]);
+  }, [active, text]);
 }

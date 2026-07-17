@@ -23,7 +23,7 @@ import { createMirrorCommand } from '../../core/commands/entity-commands/transfo
 import { useSceneManagerAdapter } from '../../systems/entity-creation/useSceneManagerAdapter';
 import { useModifyToolActivation } from '../../systems/tools/useModifyToolActivation';
 import type { ModifyToolProps } from './modify-tool-props';
-import { useToolHintPrompt } from './use-tool-hint-prompt';
+import { useToolHintText } from './useToolHintPrompt';
 import { useCadToggles } from '../common/useCadToggles';
 import { orthoSnap } from '../../utils/mirror-math';
 
@@ -215,7 +215,7 @@ export function useMirrorTool(props: UseMirrorToolProps): UseMirrorToolReturn {
     prompt = i18next.t('dxf-viewer-guides:mirrorTool.keepOriginals');
   }
 
-  useToolHintPrompt(isActive && phase !== 'idle', prompt);
+  useToolHintText(isActive && phase !== 'idle', prompt);
 
   return {
     phase,
