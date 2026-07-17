@@ -37,6 +37,10 @@ import {
   deleteOpeningFromGroup,
   upsertOpeningGroupForOpening,
 } from '../../bim/services/opening-boq-sync';
+import {
+  deleteOpeningHardwareBoq,
+  upsertOpeningHardwareBoq,
+} from '../../bim/services/opening-hardware-boq-sync';
 import { isOpening, mergeOpeningDocsIntoScene } from '../../bim/walls/opening-doc-hydration';
 import {
   allocateMarkAndPatchScene,
@@ -102,6 +106,24 @@ interface OpeningExtra {
  */
 function emitOpeningPersistedIfHosted(wallId: string | undefined | null): void {
   if (wallId) EventBus.emit('bim:opening-persisted', { wallId });
+}
+
+/**
+ * ADR-674 Φ C — feed the opening's additive priced «σιδερικά» rows (one per
+ * hardware component). SSoT for the persist/restore call shared by
+ * onPersisted / onRestored (identical shape → extracted, N.18 / jscpd).
+ */
+function feedOpeningHardwareBoq(
+  entity: OpeningEntity,
+  scope: { readonly companyId: string; readonly projectId: string; readonly buildingId: string },
+  floorId: string | undefined,
+  action: 'created' | 'updated',
+): void {
+  void upsertOpeningHardwareBoq(
+    { id: entity.id, kind: entity.params.kind, params: entity.params },
+    { companyId: scope.companyId, projectId: scope.projectId, buildingId: scope.buildingId, floorId },
+    action,
+  );
 }
 
 const useOpeningPersistenceBase = createBimEntityPersistenceHook<
@@ -194,6 +216,8 @@ const useOpeningPersistenceBase = createBimEntityPersistenceHook<
         prevComparable ?? null,
         { companyId, projectId, buildingId, floorplanId, floorId: extra.live.floorId ?? undefined },
       );
+      // ADR-674 Φ C — additive priced «σιδερικά» rows (one per hardware component).
+      feedOpeningHardwareBoq(entity, { companyId, projectId, buildingId }, extra.live.floorId ?? undefined, isNew ? 'created' : 'updated');
     }
     emitOpeningPersistedIfHosted(entity.params.wallId);
   },
@@ -210,6 +234,8 @@ const useOpeningPersistenceBase = createBimEntityPersistenceHook<
       void deleteOpeningFromGroup(lastKnownParams, {
         companyId, projectId, buildingId, floorplanId, floorId: extra.live.floorId ?? undefined,
       });
+      // ADR-674 Φ C — cascade-delete the opening's priced «σιδερικά» rows.
+      void deleteOpeningHardwareBoq(id);
     }
     emitOpeningPersistedIfHosted(lastKnownParams?.wallId);
   },
@@ -229,6 +255,8 @@ const useOpeningPersistenceBase = createBimEntityPersistenceHook<
         null,
         { companyId, projectId, buildingId, floorplanId, floorId: extra.live.floorId ?? undefined },
       );
+      // ADR-674 Φ C — restore the opening's additive priced «σιδερικά» rows.
+      feedOpeningHardwareBoq(entity, { companyId, projectId, buildingId }, extra.live.floorId ?? undefined, 'created');
     }
     emitOpeningPersistedIfHosted(entity.params.wallId);
   },
