@@ -67,7 +67,7 @@ describe('ADR-449/534 Φ7 — buildStructuralSilhouetteSkin (unified face weld)'
     expect(skin.children).toHaveLength(1);
   });
 
-  it('δύο κάθετες όψεις (Β + Δ) → 2 welded bodies + 2 miter wedges (Φ7b γωνία 45°)', () => {
+  it('δύο κάθετες όψεις (Β + Δ, ΚΟΙΛΗ γωνία) → 2 meshes (πραγματικό όριο· ΚΑΝΕΝΑ miter wedge)', () => {
     const north = mkSeg({ x: 0, y: 50 }, { x: 50, y: 50 });
     const west = mkSeg({ x: 0, y: 0 }, { x: 0, y: 50 });
     const bands: SilhouetteBand[] = [
@@ -75,10 +75,10 @@ describe('ADR-449/534 Φ7 — buildStructuralSilhouetteSkin (unified face weld)'
       mkBand([north, west], 1500, 3000),
     ];
     const skin = buildStructuralSilhouetteSkin(bands, 'mm', 0)!;
-    // 2 welded face bodies (γωνία = πραγματικό όριο, όχι weld) + 1 miter wedge ανά όψη στη γωνία (100→core,
-    // tip = κοινή mitered κορυφή) → true 45° miter, μονή κάλυψη (ADR-534 Φ7b).
-    expect(skin.children).toHaveLength(4);
-    expect(skin.children.every((c) => c instanceof THREE.Mesh)).toBe(true);
+    // Γωνία = πραγματικό όριο (2 ξεχωριστά welded bodies, όχι weld). Αυτή είναι ΚΟΙΛΗ (concave) γωνία:
+    // το mitered outer κόβεται ΠΡΟΣ ΤΑ ΜΕΣΑ (trim), δεν προεξέχει → ΚΑΝΕΝΑ miter wedge (τα wedges Φ7b
+    // αφορούν ΚΥΡΤΕΣ εξωτερικές γωνίες, όπου ήταν το double-coverage). Βλ. corner-overlap-diag για κυρτή.
+    expect(skin.children).toHaveLength(2);
   });
 
   it('baseElevation → κατακόρυφη θέση του δέρματος (bakes στο geometry, όχι position.y)', () => {
