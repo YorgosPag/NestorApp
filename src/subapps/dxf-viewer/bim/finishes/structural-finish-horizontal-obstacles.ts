@@ -124,3 +124,17 @@ export function plasterEnvelope(core: Pt2[] | null, spec: StructuralFinishSpec |
   const thick = isFinishActive(spec) ? spec.thickness : 0;
   return thick > 0 ? dilatePolygonOutward(core, thick * s) : core;
 }
+
+/**
+ * ADR-534 Φ7b — cover διεσταλμένο έξω κατά `margin` (canvas units). Το ενιαίο top-cap χτίζεται στο
+ * **finished** (διεσταλμένο κατά το πάχος) outline των μελών· η καλύπτουσα πλάκα/δοκάρι έχει outline
+ * = ο δομικός **πυρήνας** → η αφαίρεση άφηνε ένα περιμετρικό δαχτυλίδι ~πάχος (το «hup»: plaster
+ * frame πάνω σε κάθε τοίχο/κολόνα κάτω από πλάκα). Διαστέλλοντας τον cover κατά το ίδιο πάχος,
+ * καταπίνει το frame → μηδέν cap όπου υπάρχει κάλυψη άνωθεν (εκτεθειμένα parapets: κανένας cover →
+ * αμετάβλητο πλήρες cap). `margin ≤ 0` ή εκφυλισμένο footprint → ο cover ως έχει.
+ */
+export function dilatedCover(o: PlanObstacle, margin: number): PlanObstacle {
+  if (margin <= 0 || o.footprint.length < 3) return o;
+  const fp = dilatePolygonOutward([...o.footprint], margin);
+  return { ...o, footprint: fp, bbox: bboxOf(fp) };
+}

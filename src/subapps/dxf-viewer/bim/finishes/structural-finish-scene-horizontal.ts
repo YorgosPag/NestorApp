@@ -41,6 +41,7 @@ import {
   coresOf,
   finishedObstacleOf,
   plasterEnvelope,
+  dilatedCover,
   type ZExtent,
   type Bbox,
   type PlanObstacle,
@@ -319,7 +320,12 @@ export function computeMergedStructuralTopCap(input: HorizontalFinishInput): Hor
   if (members.length === 0) return [];
 
   // Covers ΓΝΗΣΙΑΣ κάλυψης άνωθεν (πλάκες/δοκάρια): κρύβουν το καπάκι όπου φτάνουν το επίπεδο.
+  // ADR-534 Φ7b — το cap χτίζεται στο **finished** (διεσταλμένο) outline· διαστέλλουμε τους covers
+  // κατά το ίδιο πάχος ώστε να καταπίνουν το περιμετρικό plaster frame (το «hup»). Βλ. dilatedCover.
   const { slabObs, beamObs } = buildCoverObstacles(input);
+  const capMargin = spec.thickness * s;
+  const slabCovers = slabObs.map((o) => dilatedCover(o, capMargin));
+  const beamCovers = beamObs.map((o) => dilatedCover(o, capMargin));
 
   // Ομαδοποίηση ανά top-plane (μέλη ίδιου z ενώνονται σε ΕΝΑ ενιαίο silhouette).
   const byPlane = new Map<number, Pt2[][]>();
@@ -339,8 +345,8 @@ export function computeMergedStructuralTopCap(input: HorizontalFinishInput): Hor
     // plane ΕΙΝΑΙ το ίδιο μέλος αυτού του καπακιού → δεν καλύπτει τον εαυτό του (αλλιώς αφαιρούσε
     // το footprint του → τρύπα «κανένα ενιαίο καπάκι πάνω στο δοκάρι», Giorgio 2026-07-02 screenshot
     // 100928). Δοκάρι ΠΑΝΩ από χαμηλότερη κολόνα (top-plane > cap) καλύπτει κανονικά (μηδέν regression).
-    const beamCoversAbove = beamObs.filter((o) => o.zTopMm > planeZmm + PLANE_TOL_MM);
-    const covers = [...slabObs, ...beamCoversAbove];
+    const beamCoversAbove = beamCovers.filter((o) => o.zTopMm > planeZmm + PLANE_TOL_MM);
+    const covers = [...slabCovers, ...beamCoversAbove];
     for (const ring of mergeCoresToFinishedRings(cores, spec.thickness, s)) {
       const face = computeHorizontalFinishFace({
         coreFootprint: ring,
