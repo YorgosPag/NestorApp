@@ -9,6 +9,21 @@
  *
  * @module hooks/useLandownerUnlinkGuard
  * @enterprise ADR-244 — Landowner Safety Guard
+ *   ⚠️ Το ADR-244 υπάρχει ΔΥΟ φορές: `ADR-244-multi-buyer-co-ownership.md` (ο σχετικός εδώ) και
+ *   `ADR-244-role-management-admin-console.md` (άσχετο). ΚΑΝΕΝΑ από τα δύο ΔΕΝ τεκμηριώνει την
+ *   απόφαση fail-open παρακάτω — γι' αυτό υπάρχει το @variance-adr.
+ *
+ * @variance fail-OPEN — ΣΚΟΠΙΜΗ απόκλιση από τα αδέλφια guards. ΔΕΝ είναι bug.
+ *   ΤΙ ΔΙΑΦΕΡΕΙ: αν σκάσει το ίδιο το pre-check (network/500), αυτό το hook ΕΠΙΤΡΕΠΕΙ την αφαίρεση
+ *   με απλή επιβεβαίωση (βλ. FALLBACK_RESULT παρακάτω). Τα αδέλφια `useDeletionGuard` και
+ *   `useLinkRemovalGuard` (bindings του SSoT `hooks/guards/useDependencyGuard.tsx`) ΜΠΛΟΚΑΡΟΥΝ —
+ *   fail-closed, κλειδωμένο με tests (mutation-verified: fail-open → 4 κόκκινα).
+ *   ΓΙΑΤΙ ΕΔΩ ΑΝΑΠΟΔΑ: «better to allow removal than to silently block the user».
+ *   ⛔ ΜΗΝ το «ευθυγραμμίσεις» με τα αδέλφια και ΜΗΝ το κάνεις merge στο `useDependencyGuard`:
+ *   θα ΑΝΤΙΣΤΡΕΨΕΙ τη σκόπιμη πολιτική ασφαλείας του. Το grep το φέρνει δίπλα τους (ίδιο
+ *   `apiClient`, ίδιο `[hook] Pre-check failed` log) — είναι παγίδα, όχι ένδειξη.
+ * @variance-adr ADR-226-deletion-guard.md §«Το συμβόλαιο που προστατεύει το SSoT: FAIL-CLOSED»
+ *   + §«⛔ useLandownerUnlinkGuard ΔΕΝ είναι μέλος» (γρ. 597-614)
  */
 
 'use client';

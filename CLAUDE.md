@@ -341,7 +341,24 @@ When you touch a legacy file → clean up as many violations as you can. **ZERO 
 
 ## SOS. SOS. N.12 — SSoT RATCHET ENFORCEMENT (ADR-294)
 - **Pre-commit hook CHECK 3.7** blocks new SSoT violations
-- **Pre-commit hook CHECK 3.18 (ADR-314)** blocks new structural duplicates / anti-patterns / registry gaps. Layer 1 = pre-commit smoke (~0.2s), Layer 2 = `.github/workflows/ssot-discover.yml` full scan on every PR. Baseline: `.ssot-discover-baseline.json` (46 duplicates / 5 anti-patterns / 91 unprotected, 2026-04-19). Local full scan: `SSOT_DISCOVER_FULL=1 git commit …`.
+- **Pre-commit hook CHECK 3.18 (ADR-314)** blocks new structural duplicates / anti-patterns / registry gaps. Layer 1 = pre-commit smoke (~0.2s), Layer 2 = `.github/workflows/ssot-discover.yml` full scan on every PR. Baseline: `.ssot-discover-baseline.json` (**0 duplicateExports / 0 antiPatterns / 0 unprotected**, 118 centralized files, **2026-05-20**). Local full scan: `SSOT_DISCOVER_FULL=1 git commit …`.
+
+  ⚠️ **Το `0` ΔΕΝ σημαίνει «καθαρό» — σημαίνει «κανείς δεν κοίταξε» (μετρημένο 2026-07-17).**
+  Το Phase 1/4 του `scripts/ssot-discover.sh` σαρώνει **ΜΟΝΟ** `src/config` + `src/utils` + `src/lib` σε
+  **`-maxdepth 1`** (118 αρχεία) + 4 ονομαστικά αρχεία — δηλαδή **118 από τα ~12.630** αρχεία του `src/`.
+  Τα 118 είναι ήδη όλα registered → `unprotected: 0` → **μονίμως πράσινο**. Το ίδιο το `.ssot-registry.json`
+  (358 modules) δείχνει σε `src/subapps` (97), `src/services` (27), `src/hooks` (4) — δέντρα που ο scanner
+  **δεν ανοίγει ΠΟΤΕ**. Και τα 7 πραγματικά ευρήματα της εκστρατείας ADR-584 ήταν στο `src/hooks/`,
+  δηλαδή **αόρατα στο 3.18**. Ίδιο σχήμα με το i18n `0` του N.11.
+  **ΜΗΝ «διορθώσεις» τον scanner να σαρώνει όλο το `src/`**: το «unprotected» μετρά «αρχείο με exports
+  εκτός registry» → σε 12.630 αρχεία γίνεται «σχεδόν κάθε αρχείο» = χιλιάδες ευρήματα, μηδέν σήμα
+  (αστοχία στον ≤10% false-positive πήχη της Google για blocking checks). **Το 3.18 δεν είναι χαλασμένο —
+  είναι στενό. Είναι έγκυρο ως regression guard στους 3 πυρηνικούς φακέλους· ΔΕΝ είναι δείκτης υγείας
+  του repo και ΜΗΝ το επικαλείσαι ως τέτοιο.**
+  **ΙΣΤΟΡΙΚΟ:** μέχρι 2026-07-17 αυτή η γραμμή έγραφε «46 duplicates / 5 anti-patterns / 91 unprotected
+  (2026-04-19)» — **μπαγιάτικο κατά 2 μήνες**. Το νούμερο «91» αντιγράφηκε σε handoff → σε ανάλυση agent
+  → σε συμπέρασμα, χωρίς κανείς να ανοίξει το αρχείο. **Άνοιξε το `.ssot-discover-baseline.json` πριν
+  επικαλεστείς αριθμό.**
 - **Test suites (Google presubmit-grade)**:
   - `scripts/__tests__/check-ssot-discover-ratchet.test.js` — CHECK 3.18 wrapper logic (57 tests / 9 groups, coverage 96.82% stmts / 92.30% branches / 100% fns). Run: `npm run test:ssot-discover`.
   - `scripts/__tests__/registry-golden-regex.test.js` — registry golden tests (44 tests / 3 groups): ERE syntax validity on all ~225 `forbiddenPatterns` via real `grep -E -f` + semantic match/skip fixtures on a 13-module cross-tier sample (incl. `gcs-buckets` after 2026-04-19 dormant-ratchet fix). Catches the v3.0-class `(?:...)`/lookahead-silent-match-nothing bug at presubmit. Run: `npm run test:registry-golden`.
