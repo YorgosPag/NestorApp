@@ -62,13 +62,17 @@ function collectMatIds(root: THREE.Object3D): string[] {
 }
 
 describe('attachOpeningMeshes — matId stamping (ADR-668 §10)', () => {
-  it('stamps every door sub-mesh with the wood catalog id', () => {
+  it('stamps a default door: wood body (κάσα/φύλλο) + metal hardware (χειρολαβή)', () => {
     const group = new THREE.Group();
     attachOpeningMeshes(group, makeWall(), [makeOpening()], 0, 0);
 
     const ids = collectMatIds(group);
     expect(ids.length).toBeGreaterThan(0);
-    expect(ids.every((id) => id === 'mat-wood')).toBe(true);
+    // ADR-672 §8 Α — the operable handle now has geometry, stamped the resolved
+    // hardware default (mat-metal); the solid body stays wood. Nothing else.
+    expect(ids).toContain('mat-wood');
+    expect(ids).toContain('mat-metal');
+    expect(ids.every((id) => id === 'mat-wood' || id === 'mat-metal')).toBe(true);
   });
 
   it('stamps the glazing panel with the glass id and the frame with the wood id', () => {
@@ -101,13 +105,17 @@ describe('attachOpeningMeshes — matId stamping (ADR-668 §10)', () => {
     });
   });
 
-  it('zero regression — an opening with no materials override stamps the wood default', () => {
+  it('zero regression — the solid body still defaults to wood (never the wall material)', () => {
     const group = new THREE.Group();
     attachOpeningMeshes(group, makeWall(), [makeOpening()], 0, 0);
 
     const ids = collectMatIds(group);
     expect(ids.length).toBeGreaterThan(0);
-    expect(ids.every((id) => id === 'mat-wood')).toBe(true);
+    // Body = wood default as before; hardware adds mat-metal; the wall's own
+    // material never leaks onto an opening sub-mesh.
+    expect(ids).toContain('mat-wood');
+    expect(ids.every((id) => id === 'mat-wood' || id === 'mat-metal')).toBe(true);
+    expect(ids).not.toContain('mat-concrete-c25');
   });
 
   it('stamps the RESOLVED per-part material id when params.materials overrides frame + leaf', () => {
