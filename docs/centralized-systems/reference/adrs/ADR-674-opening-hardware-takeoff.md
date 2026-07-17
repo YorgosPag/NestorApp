@@ -82,6 +82,41 @@ ADR-376 (opening signature-group BOQ aggregation), ADR-441 (foundation multi-row
   reuse `fetchAllOpeningsForFloorplan` (export από opening-boq-sync) + `syncManagedBoqRow`/`buildSingleEntityBoqRow`·
   idempotent (component σε 0 → zero-delete), detach + frozen-baseline guarded. Γραμμή κουφώματος OIK-5.01/5.02 **αμετάβλητη**.
 
+### Δ. Editable hardware-set — type default + instance override (follow-up 2026-07-18)
+
+**Αφορμή:** οι ποσότητες ήταν κλειδωμένα family defaults (§3). Ζητούμενο Giorgio: «*αυτή* η πόρτα 4 μεντεσέδες
+αντί 3». **Ground-truth:** Revit Hardware Set = type parameter **+** instance override· ArchiCAD accessory qty =
+per-instance object param. Απόφαση (Giorgio 2026-07-18): **type default + per-instance override** — **ΜΙΜΗΣΗ
+ΑΚΡΙΒΩΣ** του ADR-672 editable-materials pattern («family default + per-opening override + resolver fold»),
+όχι νέος μηχανισμός.
+
+- **Μοντέλο (mirror `OpeningMaterials`):** νέος τύπος `OpeningHardwareOverrides = { readonly [K in
+  OpeningHardwareComponent]?: number }` (opening-types.ts) πάνω σε **αμφότερα** `OpeningParams.hardwareOverrides`
+  (instance) + `OpeningTypeParams.hardwareOverrides` (family type). Zod `OpeningHardwareOverridesSchema.strict()`
+  (9 keys, `int().nonnegative()`) wired και στα δύο param schemas.
+- **Resolver fold (καρδιά):** το **υπάρχον** `resolveOpeningHardwareSet(params, typeParams?)` κάνει τώρα fold
+  ποσοτήτων: `catalog[kind]` → `typeParams.hardwareOverrides` → `params.hardwareOverrides` (**LAST wins**, mirror
+  `resolveOpeningMaterial`). `0` → αφαιρεί εξάρτημα· θετικό override σε εξάρτημα εκτός default → **προσθήκη**·
+  un-overridden params = catalog **ακριβώς** (zero regression). Οι δύο consumers (`mapHardware`,
+  `sumFloorplanHardware`) παίρνουν το instance override **δωρεάν** (διαβάζουν effective `params`).
+- **type→BOQ propagation:** το `recomputeFloorplanHardwareBoq` resolve-άρει το effective `OpeningTypeParams` ανά
+  row (imperative `useBimFamilyTypeStore.getState()`, legacy-null fast-path) και το περνά ρητά στον resolver →
+  το type-level override φτάνει στο σιδερικά-BOQ, με **instance να νικά** (fold, όχι shallow spread). **Task 3:**
+  το `refeedOpeningBoqForTypeOnFloorplan` (family-type edit) καλεί πλέον `void recomputeFloorplanHardwareBoq(ctx)`
+  στο τέλος → «όλες οι P1 → 4 μεντεσέδες» ξαναγράφει το BOQ (static import cycle, safe — deferred call).
+- **UI — δύο επίπεδα, ΕΝΑΣ shared editor:**
+  - `OpeningHardwareSetEditor` (+ `OpeningHardwareQtyCell`): reusable block, μία numeric-qty γραμμή ανά operable
+    component του kind (placeholder = catalog default· value=default ⇒ clear override). Scope-agnostic.
+  - **Type-level:** embedded στο `EditOpeningTypeDialog` (bind `draft.hardwareOverrides`, `setHardwareOverride`
+    mirror του `setMaterialPart`) → όλες οι πόρτες του τύπου.
+  - **Instance-level:** νέο `EditOpeningHardwareDialog` (FloatingPanel, `edit-opening-hardware-store` με `openingId`)
+    + trigger `RibbonOpeningHardwareWidget` («Σιδερικά…», δείχνει για **κάθε** operable κούφωμα, typed/untyped).
+    Save μέσω `useOpeningParamsDispatcher` → `UpdateOpeningParamsCommand` (undoable + persist + BOQ re-feed).
+    Persistence = generic `params` spread (opaque round-trip· καμία αλλαγή firestore service).
+- **Γνωστός περιορισμός:** όταν ΚΑΙ type ΚΑΙ instance override-άρουν το **ίδιο** component, το BOQ folds (instance
+  wins) ενώ το schedule διαβάζει το effective `entity.params` (type wins μέσω shallow spread) — σπάνιος συνδυασμός,
+  ίδια συμπεριφορά με τα materials (ADR-672). Το instance cell «default» δείχνει catalog, όχι type-resolved.
+
 ## 5. Το αρχιτεκτονικό εύρημα που διόρθωσε το μοντέλο (κώδικας = SSoT)
 
 Το αρχικό mental model («ο `BimToBoqBridge` επεκτείνει τα κουφώματα σε γραμμές») ήταν **μπαγιάτικο**: το
@@ -132,12 +167,30 @@ Component που έπεσε σε 0 → zero-delete μέσω `syncManagedBoqRow` 
 | `bim/services/opening-hardware-boq-sync.ts` | **Γ — priced BOQ SSoT** (rev.2 aggregated per floorplan×component) | pending commit |
 | `bim/services/opening-boq-sync.ts` | **Γ** — export `fetchAllOpeningsForFloorplan` (SSoT reuse) | pending commit |
 | `hooks/data/useOpeningPersistence.ts` | **Γ** — `feedOpeningBoqIfScoped` SSoT (κούφωμα group + hardware recompute) | pending commit |
+| `bim/types/opening-types.ts` | **Δ** — `OpeningHardwareOverrides` type + `OpeningParams.hardwareOverrides` | committed |
+| `bim/types/bim-family-type.ts` | **Δ** — `OpeningTypeParams.hardwareOverrides` | committed |
+| `bim/types/opening.schemas.ts` | **Δ** — `OpeningHardwareOverridesSchema` (×2 param schemas) | committed |
+| `bim/family-types/opening-hardware-set.ts` | **Δ** — quantity fold (catalog→type→instance) στον resolver | committed |
+| `bim/services/opening-hardware-boq-sync.ts` | **Δ** — effective typeParams ανά row (type→BOQ) | committed |
+| `bim/services/opening-boq-sync.ts` | **Δ (Task 3)** — hardware recompute στο refeed (type propagation) | committed |
+| `ui/ribbon/components/OpeningHardwareQtyCell.tsx` | **Δ** — numeric-qty row (greenfield) | committed |
+| `ui/ribbon/components/OpeningHardwareSetEditor.tsx` | **Δ** — shared editor block (greenfield) | committed |
+| `ui/ribbon/components/EditOpeningTypeDialog.tsx` | **Δ** — embed editor (type-level override) | committed |
+| `ui/ribbon/components/EditOpeningHardwareDialog.tsx` | **Δ** — instance-level dialog (greenfield) | committed |
+| `bim/family-types/edit-opening-hardware-store.ts` | **Δ** — `openingId` open/close store (greenfield) | committed |
+| `ui/ribbon/components/RibbonOpeningHardwareWidget.tsx` | **Δ** — «Σιδερικά…» trigger (greenfield) | committed |
+| `ui/ribbon/data/contextual-opening-tab.ts` + `RibbonPanel.tsx` | **Δ** — widget registration | committed |
+| `app/OpeningPersistenceHost.tsx` | **Δ** — mount instance dialog | committed |
+| `i18n/locales/{el,en}/dxf-viewer-shell.json` | **Δ** — `paramHardwareSet`, `hardwareComponent.*`, `editOpeningHardware*` | committed |
 
 ## 10. Gates
 - Tests: `opening-hardware-set` (20) + `hardware-schedule` (9) + `opening-hardware-boq-sync` + `bim-to-atoe-mapping` +
   `opening-material-schedule` (regression) + `opening-mesh` (3Δ regression) → **140/140 πράσινα, 6 suites**.
 - `jscpd:diff`: Α καθαρό, Γ καθαρό· Β = μόνο προϋπάρχοντα declarative column-table clones (baseline-unaware,
   εκτός diff — δεν εισήχθη νέο clone· `HARDWARE_COLUMNS` reuse `HARDWARE_MATERIAL_COLUMN`).
+- **Δ (editable, rev.3):** +23 tests → targeted sweep **128/128 πράσινα (8 suites)** (model fold + type→BOQ +
+  store + material/atoe/schedule regression)· `jscpd:diff` καθαρό (7 source files, δύο dialogs/δύο cells χωρίς
+  sibling clone).
 - Χωρίς tsc (N.17) — Giorgio / pre-commit hook.
 
 ## 11. Changelog
@@ -151,3 +204,13 @@ Component που έπεσε σε 0 → zero-delete μέσω `syncManagedBoqRow` 
   + `recomputeFloorplanHardwareBoq` (reuse εξαγόμενου `fetchAllOpeningsForFloorplan`). Wiring ενοποιήθηκε σε
   `feedOpeningBoqIfScoped` (N.18 — έλυσε νέο jscpd clone onPersisted/onRestored). Tests rewrite (17)· full sweep
   **172/172 πράσινα (8 suites)**· `jscpd:diff` καθαρό.
+- **2026-07-18 — rev.3 (§4 Δ) — editable hardware-set (type default + instance override).** Follow-up Giorgio «*αυτή*
+  η πόρτα 4 μεντεσέδες»: **ΜΙΜΗΣΗ ΑΚΡΙΒΩΣ** του ADR-672 editable-materials pattern. `OpeningHardwareOverrides` σε
+  `OpeningParams` + `OpeningTypeParams` (+ zod), quantity fold catalog→type→instance στον `resolveOpeningHardwareSet`
+  (LAST wins· 0=remove· add-component· zero regression). type→σιδερικά-BOQ μέσω effective typeParams ανά row +
+  Task 3 (`refeed` καλεί hardware recompute). UI: shared `OpeningHardwareSetEditor` + `OpeningHardwareQtyCell`,
+  embedded στο `EditOpeningTypeDialog` (type) + νέο `EditOpeningHardwareDialog`/store + `RibbonOpeningHardwareWidget`
+  (instance). Orchestrator: Phase A foundation (barrier) → Phase B BOQ ‖ UI-A → Phase C UI-B. Tests: +23
+  (`opening-hardware-overrides` 13, `opening-hardware-boq-typeparams` 5, `edit-opening-hardware-store` 5)· targeted
+  sweep **128/128 πράσινα (8 suites)**· `jscpd:diff` καθαρό· no tsc (N.17)· commits real-time Giorgio (`0b8302fa`
+  type editor, `56366ae0` BOQ, `921329cd` instance dialog, `f9cbb5b6` ribbon).
