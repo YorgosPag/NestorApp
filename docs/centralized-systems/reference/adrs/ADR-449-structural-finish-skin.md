@@ -220,6 +220,11 @@ Deterministic IDs: `boq_bim_${id}` / `_finish_int` / `_finish_ext`. Hook στο 
 - ETICS-grade per-element exterior detection (πέρα από outer-ring proximity) = μετέπειτα slice.
 
 ## 6. Changelog
+- **2026-07-18 (Φ7b — TRUE 45° miter στις γωνίες· πλήρες entry → ADR-534 §6 Φ7b)** — Το Φ7 overlap corner-join
+  σοβάτιζε τη γωνία ΔΙΠΛΑ (μετρήθηκε ~312mm² επικάλυψη). FIX (Giorgio: Λ-Β Revit «Miter»): welded body → core-length
+  (−`EndExtend/groupEnds/isCornerEnd`), NEW `collectMiterWedges` (pure SSoT) → miter τρίγωνα `[core, core+πάχος·perp,
+  tip]` αντλώντας το tip **αυτούσιο** από τα `aOuter/bOuter` (`computeMiteredOuter`)· εξώθηση μέσω του υπάρχοντος
+  `stripPrismGeometry`/`addFinishPrism`. Μονή κάλυψη, διαγώνιος αρμός. **304/304 GREEN**, jscpd καθαρό, ΕΚΤΟΣ ADR-040.
 - **2026-07-18 (Φ7 — UNIFIED welded δέρμα ανά ομοεπίπεδη όψη· πλήρες entry → ADR-534 §6 Φ7)** — Το «ένα prism
   ανά `FinishStrip`» (Slice X6 `buildFinishSkinFromStrips`) άφηνε **εσωτερικές ραφές** στις coplanar προσόψεις
   με ανοίγματα (diagnostic: πρόσοψη+παράθυρο → 4 prisms/4 ραφές· Λ1 αδύνατο να τις σβήσει). ΝΕΟ `FinishStripGroup`
