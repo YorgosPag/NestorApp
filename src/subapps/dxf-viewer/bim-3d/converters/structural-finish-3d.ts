@@ -183,25 +183,39 @@ function faceProfileWorldMatrix(profile: FaceProfile, sceneToM: number, baseElev
   );
 }
 
-/**
- * ADR-534 Φ7b — ένα γωνιακό miter wedge (plan τρίγωνο) → τριγωνικό prism, προσθήκη στο group.
- * Reuse του {@link addFinishPrism} (ίδιο geometry/material/tag SSoT με τα per-strip bands). Το
- * τρίγωνο (core, mid, tip· scene units) → world metres με `scalePoints` (ίδιο scale με τα quads).
- */
-function addMiterWedge(
-  group: THREE.Group,
-  w: MiterWedge,
-  sceneToM: number,
-  baseElevationM: number,
-  id: string,
-  bimType: 'column' | 'beam',
-  levelId: string | undefined,
-): void {
+/** ADR-534 Φ7b — ένα γωνιακό miter wedge (plan τρίγωνο) → world-placed τριγωνικό prism geometry. */
+function miterWedgeGeometry(w: MiterWedge, sceneToM: number, baseElevationM: number): THREE.BufferGeometry | null {
   const tri = scalePoints([w.core, w.mid, w.tip], sceneToM).map((p) => ({ x: p.x, y: p.y, z: 0 }));
-  addFinishPrism(
-    group, tri, (w.zTopMm - w.zBottomMm) * MM_TO_M, baseElevationM + w.zBottomMm * MM_TO_M,
-    id, bimType, w.seg.materialId, w.seg.classification, levelId, undefined, w.seg.colorOverride,
-  );
+  const geo = stripPrismGeometry(tri, (w.zTopMm - w.zBottomMm) * MM_TO_M);
+  if (!geo) return null;
+  geo.translate(0, baseElevationM + w.zBottomMm * MM_TO_M, 0); // world Y = datum + z-bottom (ίδιο με τα bodies)
+  return geo;
+}
+
+/**
+ * ADR-534 Φ7b — merge πολλών **non-indexed** ExtrudeGeometries (ίδια attributes position/normal/uv)
+ * σε ΕΝΑ BufferGeometry. Ενώνει όλες τις ομοεπίπεδες όψεις + wedges ΙΔΙΟΥ υλικού σε ΕΝΑ συνεχές mesh
+ * (Giorgio C4D 234109: «ένα συνεχές δέρμα σοβά» — μηδέν per-face κατακερματισμός στο επίπεδο OBJ
+ * format). Τα `THREE.ExtrudeGeometry` είναι πάντα non-indexed → απλή συνένωση buffers.
+ */
+function mergeNonIndexed(geos: readonly THREE.BufferGeometry[]): THREE.BufferGeometry {
+  const merged = new THREE.BufferGeometry();
+  for (const name of ['position', 'normal', 'uv'] as const) {
+    const first = geos[0].getAttribute(name);
+    if (!first) continue;
+    let total = 0;
+    for (const g of geos) total += g.getAttribute(name)?.array.length ?? 0;
+    const arr = new Float32Array(total);
+    let off = 0;
+    for (const g of geos) {
+      const a = g.getAttribute(name);
+      if (!a) continue;
+      arr.set(a.array, off);
+      off += a.array.length;
+    }
+    merged.setAttribute(name, new THREE.BufferAttribute(arr, first.itemSize));
+  }
+  return merged;
 }
 
 /** FaceProfile → ΕΝΑ welded BufferGeometry (extrude κατά πάχος + world placement). */
@@ -213,13 +227,18 @@ function faceProfileGeometry(profile: FaceProfile, sceneToM: number, baseElevati
   return geo;
 }
 
+/** Κλειδί bucket: όψεις + wedges ΙΔΙΟΥ υλικού/χρώματος/κατάταξης → ΕΝΑ merged mesh. */
+function finishMaterialKey(seg: FinishFaceSegment): string {
+  return `${seg.materialId}|${seg.colorOverride ?? ''}|${seg.classification}`;
+}
+
 /**
- * ADR-449/534 Φ7 — ΕΝΑ welded δέρμα ΑΝΑ ομοεπίπεδη όψη (big-player: Revit «join» / C4D weld):
- * τα (t×z) ορθογώνια κάθε `FinishStripGroup` ενώνονται σε ΕΝΑ profile (τρύπες = ανοίγματα) και
- * εξωθούνται ΜΙΑ φορά → μηδέν εσωτερικό side-face = μηδέν ραφή στη συνεχή coplanar πρόσοψη. Ραφή
- * μόνο σε πραγματικό όριο (γωνία = άλλο group, αλλαγή υλικού = άλλο group, άνοιγμα = τρύπα).
- * Αντικαθιστά το «ένα prism ανά strip» ({@link buildFinishSkinFromStrips}) στο silhouette path.
- * `baseElevationM` = world datum (bakes στο matrix Y). `null` όταν κανένα profile.
+ * ADR-449/534 Φ7/Φ7b — ΕΝΑ ΣΥΝΕΧΕΣ welded δέρμα ανά **υλικό** (big-player: Revit «join» / C4D weld):
+ * τα (t×z) ορθογώνια κάθε `FinishStripGroup` ενώνονται σε profile (τρύπες = ανοίγματα, εξώθηση μία
+ * φορά) και οι γωνίες γεμίζουν με miter wedges (Φ7b, διαγώνιος αρμός 45°, μονή κάλυψη). **ΟΛΕΣ** οι
+ * γεωμετρίες ΙΔΙΟΥ υλικού κάνουν merge σε ΕΝΑ BufferGeometry → **ένα mesh ανά υλικό** αντί για ένα
+ * ανά όψη (Giorgio C4D 234109: το επίπεδο OBJ format έσπαγε το δέρμα σε δεκάδες `Column_structural-
+ * finish-_XX` objects). `baseElevationM` = world datum (bakes στο matrix Y). `null` όταν κανένα profile.
  */
 export function buildFinishSkinFromStripGroups(
   groups: readonly FinishStripGroup[],
@@ -231,19 +250,24 @@ export function buildFinishSkinFromStripGroups(
 ): THREE.Group | null {
   if (groups.length === 0) return null;
   const sceneToM = sceneUnitsToMeters(sceneUnits);
-  const group = new THREE.Group();
+  const buckets = new Map<string, { geos: THREE.BufferGeometry[]; seg: FinishFaceSegment }>();
+  const addGeo = (geo: THREE.BufferGeometry | null, seg: FinishFaceSegment): void => {
+    if (!geo) return;
+    const b = buckets.get(finishMaterialKey(seg));
+    if (b) b.geos.push(geo);
+    else buckets.set(finishMaterialKey(seg), { geos: [geo], seg });
+  };
   for (const profile of buildFaceProfiles(groups, sceneToM)) {
-    const geo = faceProfileGeometry(profile, sceneToM, baseElevationM);
-    if (!geo) continue;
-    finalizeFinishMesh(
-      group, geo, profile.seg.materialId, profile.seg.colorOverride, profile.seg.classification,
-      id, bimType, levelId, 0,
-    );
+    addGeo(faceProfileGeometry(profile, sceneToM, baseElevationM), profile.seg);
   }
-  // ADR-534 Φ7b — γωνιακά miter wedges: γεμίζουν τη γωνία με διαγώνιο αρμό 45° (μονή κάλυψη), αφού
-  // το welded body τελειώνει στο core-length. Big-player «Miter» join· μηδέν double-coverage/κενό.
+  // ADR-534 Φ7b — γωνιακά miter wedges (διαγώνιος αρμός 45°, μονή κάλυψη) στο ΙΔΙΟ merged δέρμα.
   for (const w of collectMiterWedges(groups)) {
-    addMiterWedge(group, w, sceneToM, baseElevationM, id, bimType, levelId);
+    addGeo(miterWedgeGeometry(w, sceneToM, baseElevationM), w.seg);
+  }
+  const group = new THREE.Group();
+  for (const { geos, seg } of buckets.values()) {
+    const geo = geos.length === 1 ? geos[0] : mergeNonIndexed(geos);
+    finalizeFinishMesh(group, geo, seg.materialId, seg.colorOverride, seg.classification, id, bimType, levelId, 0);
   }
   if (group.children.length === 0) return null;
   stampBimIdentity(group, { bimId: id, bimType });
