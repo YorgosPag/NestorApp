@@ -26,6 +26,7 @@ import type { SlabEntity } from '../types/slab-types';
 import type { RoofEntity } from '../types/roof-types';
 import { computeBeamGeometry } from './beam-geometry';
 import { slabUndersideZmmAt, slabTopZmmAt } from './slab-slope';
+import { isSlabTilted } from './slab-tilt';
 import { beamUndersideZmmAt, beamTopZmmAt, isBeamTilted } from './beam-slope';
 import { resolveEavePlanes, roofZmm } from './roof-lower-envelope';
 import { mmScaleFor } from '../../utils/scene-units';
@@ -243,7 +244,7 @@ export function slabHostInput(slab: SlabEntity): HostFootprintInput {
   const topZmm = slab.params.levelElevation + (slab.params.heightOffsetFromLevel ?? 0); // άνω παρειά.
   const undersideZmm = topZmm - slab.params.thickness;
   const hostType: HostUndersidePlan['hostType'] = slab.params.kind === 'roof' ? 'roof' : 'slab';
-  const tilted = slab.params.geometryType === 'tilted' && slab.params.slope !== undefined;
+  const tilted = isSlabTilted(slab.params);
   return {
     hostId: slab.id,
     hostType,
