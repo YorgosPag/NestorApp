@@ -18,17 +18,28 @@
  * covers wall / column / beam / foundation — the other structural disciplines
  * that overlap in a bay (e.g. a column sitting inside a wall run). Each keeps
  * the 3-column `[type] [dimensions] [elevation]` shape:
- *   - Wall:       "Τοίχος   20 cm · ύψος 3,00   +0,00"     (thickness · height, base level)
- *   - Column:     "Στύλος   40×40 cm · ύψος 3,00   +0,00"  (section · height, base level;
+ *   - Wall:       "Τοίχος   20 cm · ύψος 3,00   +6,00"     (thickness · height, base elevation)
+ *   - Column:     "Στύλος   40×40 cm · ύψος 3,00   +6,00"  (section · height, base elevation;
  *                 circular → "Ø40 cm")
- *   - Beam:       "Δοκός    20×40 cm   +3,00"               (section, top elevation — absolute)
+ *   - Beam:       "Δοκός    20×40 cm   +9,00"               (section, top elevation)
  *   - Foundation: "Θεμέλιο  150×150 cm   -1,20"              (pad: width×length footprint;
- *                 strip/tie-beam: width×thickness cross-section; top elevation — absolute)
- * Wall/column have NO absolute base elevation without resolving the storey chain
- * (out of scope for this pure, zero-lookup module) — `baseOffset` (mm from storey
- * FFL, default 0) is the closest self-contained field and matches Giorgio's own
- * "+0,00" example. Beam/foundation carry an explicit absolute `topElevation(Mm)`
- * field (ADR-369 §2.2 / ADR-436), so no such caveat applies there.
+ *                 strip/tie-beam: width×thickness cross-section; top elevation)
+ *
+ * ABSOLUTE ELEVATION (2026-07-17 — Revit-grade consistency, Giorgio-approved): every
+ * row's elevation is the **absolute** (building-datum) height, so a wall/slab/beam on
+ * the 3rd storey reads its real elevation (e.g. "+6,00"), never a per-storey "+0,00".
+ * The code truth (SSoT, N.0.1) is that slab `levelElevation`, wall/column `baseOffset`
+ * and beam `topElevation` are all **FLOOR-RELATIVE**: their converters add the active
+ * storey FFL at render time (`bim-three-slab-converter.ts` §ADR-448 §4.1 / column §165 /
+ * beam §412 «top είναι FLOOR-RELATIVE»). Only foundation `topElevationMm` is already
+ * absolute (`foundation-to-three.ts` deliberately ignores the storey FFL). So the same
+ * `storeyFloorElevationMm` those converters receive (the active storey's datum-relative
+ * FFL, `ActiveStoreyContext.floorElevationMm`, read ONCE at candidate-build time in
+ * `buildCandidatesFromHits`) is added here to slab/wall/column/beam, and the SSoT
+ * `resolveWallBaseZmm` owns the wall/column math (it also honours `baseBinding:'absolute'`,
+ * where `baseOffset` is already world z and no FFL is added). Foundation is passed through
+ * unchanged. `storeyFloorElevationMm` defaults to 0 (no active storey / unit tests) → the
+ * legacy floor-relative value, i.e. zero behavioural change on the ground storey.
  *
  * Two-stage design (ADR-040 perf):
  *   1. `buildCandidateSemantics(entity)` — pure, RAW mm fields only, called
@@ -53,6 +64,7 @@ import type { FoundationEntity, FoundationParams, FoundationKind } from '../../b
 import { unwrapDxfSubEntity } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { entityTypeLabel, type TFn } from '../../bim-3d/accessibility/status-bar-text-generator';
 import { formatLengthForDisplay, formatCoordinateForDisplay } from '../../config/display-length-format';
+import { resolveWallBaseZmm } from '../../bim/geometry/wall-top-profile';
 
 // ─── Stage 1 — raw semantics (built once, at candidate build time) ────────────
 
@@ -65,7 +77,8 @@ export interface CandidateSemantics {
   readonly slabKind?: SlabKind;
   /** mm — `SlabParams.thickness`. */
   readonly thicknessMm?: number;
-  /** mm — `levelElevation + heightOffsetFromLevel` (top face, FFL). ADR-369 §2.1. */
+  /** mm — ABSOLUTE top face: `storeyFloorElevationMm + levelElevation + heightOffsetFromLevel`
+   *  (ADR-369 §2.1; `levelElevation` is FLOOR-RELATIVE per ADR-448 §4.1, so the storey FFL is added). */
   readonly topElevationMm?: number;
 
   /** Set for wall/column/beam/foundation candidates — selects the format branch below. */
@@ -76,8 +89,9 @@ export interface CandidateSemantics {
   readonly wallThicknessMm?: number;
   /** mm — `WallParams.height`. */
   readonly wallHeightMm?: number;
-  /** mm — `WallParams.baseOffset` (offset from storey FFL, default 0; absolute world z when `baseBinding==='absolute'`). Best self-contained proxy for "base level" without a storey-chain lookup. */
-  readonly wallBaseOffsetMm?: number;
+  /** mm — ABSOLUTE base elevation via the `resolveWallBaseZmm` SSoT:
+   *  `baseBinding==='absolute' ? baseOffset : storeyFloorElevationMm + baseOffset`. */
+  readonly wallBaseElevationMm?: number;
 
   // ─── Column ───────────────────────────────────────────────────────────────
   readonly columnShapeKind?: ColumnKind;
@@ -87,15 +101,16 @@ export interface CandidateSemantics {
   readonly columnDepthMm?: number;
   /** mm — `ColumnParams.height`. */
   readonly columnHeightMm?: number;
-  /** mm — `ColumnParams.baseOffset` (same storey-relative caveat as `wallBaseOffsetMm`). */
-  readonly columnBaseOffsetMm?: number;
+  /** mm — ABSOLUTE base elevation via `resolveWallBaseZmm` (mirror of `wallBaseElevationMm`). */
+  readonly columnBaseElevationMm?: number;
 
   // ─── Beam ─────────────────────────────────────────────────────────────────
   /** mm — `BeamParams.width`. */
   readonly beamWidthMm?: number;
   /** mm — `BeamParams.depth`. */
   readonly beamDepthMm?: number;
-  /** mm — `BeamParams.topElevation` (absolute, project origin — ADR-369 §2.2). */
+  /** mm — ABSOLUTE top elevation: `storeyFloorElevationMm + topElevation + (zOffset ?? 0)`
+   *  (`topElevation` is FLOOR-RELATIVE per the converter, `bim-three-structural-converters.ts` §412). */
   readonly beamTopElevationMm?: number;
 
   // ─── Foundation ───────────────────────────────────────────────────────────
@@ -153,29 +168,31 @@ function extractFoundationParams(entity: Entity): FoundationParams | undefined {
   return unwrapDxfSubEntity<FoundationEntity>(entity).params;
 }
 
-function buildSlabSemantics(entity: Entity): CandidateSemantics | undefined {
+function buildSlabSemantics(entity: Entity, storeyFloorElevationMm: number): CandidateSemantics | undefined {
   const params = extractSlabParams(entity);
   if (!params) return undefined;
   const { kind, thickness, levelElevation, heightOffsetFromLevel } = params;
   return {
     slabKind: kind,
     thicknessMm: thickness,
-    topElevationMm: levelElevation + (heightOffsetFromLevel ?? 0),
+    // `levelElevation` is FLOOR-RELATIVE (ADR-448 §4.1); add the storey FFL for the absolute top.
+    topElevationMm: storeyFloorElevationMm + levelElevation + (heightOffsetFromLevel ?? 0),
   };
 }
 
-function buildWallSemantics(entity: Entity): CandidateSemantics | undefined {
+function buildWallSemantics(entity: Entity, storeyFloorElevationMm: number): CandidateSemantics | undefined {
   const params = extractWallParams(entity);
   if (!params) return undefined;
   return {
     structuralKind: 'wall',
     wallThicknessMm: params.thickness,
     wallHeightMm: params.height,
-    wallBaseOffsetMm: params.baseOffset,
+    // SSoT — same resolver the 3D converter uses; honours `baseBinding:'absolute'` (already world z).
+    wallBaseElevationMm: resolveWallBaseZmm(params, { floorElevationMm: storeyFloorElevationMm }),
   };
 }
 
-function buildColumnSemantics(entity: Entity): CandidateSemantics | undefined {
+function buildColumnSemantics(entity: Entity, storeyFloorElevationMm: number): CandidateSemantics | undefined {
   const params = extractColumnParams(entity);
   if (!params) return undefined;
   return {
@@ -184,18 +201,20 @@ function buildColumnSemantics(entity: Entity): CandidateSemantics | undefined {
     columnWidthMm: params.width,
     columnDepthMm: params.depth,
     columnHeightMm: params.height,
-    columnBaseOffsetMm: params.baseOffset,
+    // Mirror of wall — `ColumnParams` satisfies `WallVerticalParams` (shared binding union).
+    columnBaseElevationMm: resolveWallBaseZmm(params, { floorElevationMm: storeyFloorElevationMm }),
   };
 }
 
-function buildBeamSemantics(entity: Entity): CandidateSemantics | undefined {
+function buildBeamSemantics(entity: Entity, storeyFloorElevationMm: number): CandidateSemantics | undefined {
   const params = extractBeamParams(entity);
   if (!params) return undefined;
   return {
     structuralKind: 'beam',
     beamWidthMm: params.width,
     beamDepthMm: params.depth,
-    beamTopElevationMm: params.topElevation,
+    // `topElevation` is FLOOR-RELATIVE (converter §412); add storey FFL + drop-from-ceiling `zOffset`.
+    beamTopElevationMm: storeyFloorElevationMm + params.topElevation + (params.zOffset ?? 0),
   };
 }
 
