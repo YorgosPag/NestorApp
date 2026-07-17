@@ -12,6 +12,16 @@
 
 import type { ScheduleColumnDef } from './types';
 
+// ─── Opening per-part material columns (ADR-672 Φ Γ) ─────────────────────────
+// Shared between DOOR_COLUMNS + WINDOW_COLUMNS — frame + hardware apply to
+// both families identically (only leaf-vs-glass differs by family). Extracted
+// to avoid a byte-identical sibling clone across the two column arrays (N.18).
+
+const FRAME_MATERIAL_COLUMN: ScheduleColumnDef =
+  { key: 'frameMaterial',    i18nKey: 'col.frameMaterial',    valueType: 'text', align: 'left' };
+const HARDWARE_MATERIAL_COLUMN: ScheduleColumnDef =
+  { key: 'hardwareMaterial', i18nKey: 'col.hardwareMaterial', valueType: 'text', align: 'left' };
+
 // ─── Door preset (ADR-363 §6 Phase 8 Q3 + Q4) ────────────────────────────────
 
 export const DOOR_COLUMNS: readonly ScheduleColumnDef[] = [
@@ -24,7 +34,9 @@ export const DOOR_COLUMNS: readonly ScheduleColumnDef[] = [
   { key: 'sill',         i18nKey: 'col.sill',         valueType: 'dimension-mm-to-m', align: 'right'  },
   { key: 'handingText',  i18nKey: 'col.handingText',  valueType: 'text',              align: 'left'   },
   { key: 'handingCode',  i18nKey: 'col.handingCode',  valueType: 'text',              align: 'center' },
-  { key: 'material',     i18nKey: 'col.material',     valueType: 'text',              align: 'left'   },
+  FRAME_MATERIAL_COLUMN,
+  { key: 'leafMaterial',     i18nKey: 'col.leafMaterial',     valueType: 'text', align: 'left' },
+  HARDWARE_MATERIAL_COLUMN,
   { key: 'wall',         i18nKey: 'col.wall',         valueType: 'text',              align: 'left'   },
 ];
 
@@ -39,7 +51,9 @@ export const WINDOW_COLUMNS: readonly ScheduleColumnDef[] = [
   { key: 'height',    i18nKey: 'col.height',    valueType: 'dimension-mm-to-m', align: 'right' },
   { key: 'sill',      i18nKey: 'col.sill',      valueType: 'dimension-mm-to-m', align: 'right' },
   { key: 'glazing',   i18nKey: 'col.glazing',   valueType: 'count',             align: 'right' },
-  { key: 'material',  i18nKey: 'col.material',  valueType: 'text',              align: 'left'  },
+  FRAME_MATERIAL_COLUMN,
+  { key: 'glassMaterial',    i18nKey: 'col.glassMaterial',    valueType: 'text', align: 'left' },
+  HARDWARE_MATERIAL_COLUMN,
   { key: 'wall',      i18nKey: 'col.wall',      valueType: 'text',              align: 'left'  },
 ];
 

@@ -407,7 +407,9 @@ describe('buildSchedule', () => {
     const schedule = buildSchedule(entities, { entityType: 'door', filters: {} }, lookups);
     const row = schedule.rows[0];
     expect(row.cells.floor).toBe('Όροφος floor-1');
-    expect(row.cells.material).toBe('Υλικό:mat-wood');
+    expect(row.cells.frameMaterial).toBe('Υλικό:mat-wood');
+    expect(row.cells.leafMaterial).toBe('Υλικό:mat-wood');
+    expect(row.cells.hardwareMaterial).toBe('Υλικό:mat-metal');
   });
 
   test('slab tosElevation = levelElevation - floorFinish (ADR-369 Q4)', () => {

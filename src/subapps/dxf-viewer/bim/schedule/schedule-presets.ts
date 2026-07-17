@@ -50,6 +50,7 @@ import {
 // ADR-463 — βάρος χάλυβα θεμελίωσης στο BOQ (mirror της κολώνας).
 import { computeFootingReinforcementQuantities } from '../structural/reinforcement/footing-reinforcement-compute';
 import { buildFootingSectionContext } from '../structural/section-context';
+import { resolveOpeningMaterial } from '../family-types/resolve-opening-material';
 import type {
   ScheduleCellValue,
   ScheduleColumnDef,
@@ -155,6 +156,7 @@ function shortId(rawId: string | null | undefined): string {
 function mapDoor(entity: AnyBimEntity, lookups: ScheduleLookups): ScheduleRow['cells'] {
   if (entity.type !== 'opening') return {};
   const p = entity.params;
+  const mats = resolveOpeningMaterial(p);
   return {
     mark: safeText(p.mark),
     id: shortId(entity.id),
@@ -165,7 +167,9 @@ function mapDoor(entity: AnyBimEntity, lookups: ScheduleLookups): ScheduleRow['c
     sill: safeNumber(p.sillHeight),
     handingText: handingToGreek(p.handing, p.openDirection),
     handingCode: handingToDIN(p.handing, p.openDirection),
-    material: lookups.material(p.material),
+    frameMaterial: lookups.material(mats.frame),
+    leafMaterial: lookups.material(mats.leaf),
+    hardwareMaterial: lookups.material(mats.hardware),
     wall: shortId(p.wallId),
   };
 }
@@ -175,6 +179,7 @@ function mapDoor(entity: AnyBimEntity, lookups: ScheduleLookups): ScheduleRow['c
 function mapWindow(entity: AnyBimEntity, lookups: ScheduleLookups): ScheduleRow['cells'] {
   if (entity.type !== 'opening') return {};
   const p = entity.params;
+  const mats = resolveOpeningMaterial(p);
   return {
     mark: safeText(p.mark),
     id: shortId(entity.id),
@@ -184,7 +189,9 @@ function mapWindow(entity: AnyBimEntity, lookups: ScheduleLookups): ScheduleRow[
     height: safeNumber(p.height),
     sill: safeNumber(p.sillHeight),
     glazing: safeNumber(p.glazingPanes),
-    material: lookups.material(p.material),
+    frameMaterial: lookups.material(mats.frame),
+    glassMaterial: lookups.material(mats.glass),
+    hardwareMaterial: lookups.material(mats.hardware),
     wall: shortId(p.wallId),
   };
 }
