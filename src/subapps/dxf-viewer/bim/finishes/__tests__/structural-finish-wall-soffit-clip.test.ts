@@ -39,21 +39,21 @@ const topCap = (w: WallFinishObstacle, wallTopClipById?: ReadonlyMap<string, num
 
 describe('computeStructuralFinishSilhouette — ADR-534 Φ3c-B3b soffit clip (τοίχος)', () => {
   it('χωρίς clip → ο σοβάς φτάνει το πλήρες ύψος του τοίχου (3000mm)', () => {
-    const bands = computeStructuralFinishSilhouette([], [], [wall()], 0);
+    const bands = computeStructuralFinishSilhouette({ columns: [], beams: [], walls: [wall()], floorElevationMm: 0 });
     expect(bands.length).toBeGreaterThan(0);
     expect(maxZTop(bands)).toBeCloseTo(3000, 6);
   });
 
   it('με wallTopClipById=2800 → ο σοβάς κόβεται στο soffit της πλάκας (2800mm)', () => {
     const clip = new Map<string, number>([['w1', 2800]]);
-    const bands = computeStructuralFinishSilhouette([], [], [wall()], 0, undefined, false, undefined, undefined, clip);
+    const bands = computeStructuralFinishSilhouette({ columns: [], beams: [], walls: [wall()], floorElevationMm: 0, wallTopClipById: clip });
     expect(bands.length).toBeGreaterThan(0);
     expect(maxZTop(bands)).toBeCloseTo(2800, 6);
   });
 
   it('clip για άλλο id → no-op (πλήρες ύψος, byte-for-byte)', () => {
     const clip = new Map<string, number>([['other', 2800]]);
-    const bands = computeStructuralFinishSilhouette([], [], [wall()], 0, undefined, false, undefined, undefined, clip);
+    const bands = computeStructuralFinishSilhouette({ columns: [], beams: [], walls: [wall()], floorElevationMm: 0, wallTopClipById: clip });
     expect(maxZTop(bands)).toBeCloseTo(3000, 6);
   });
 
@@ -62,8 +62,8 @@ describe('computeStructuralFinishSilhouette — ADR-534 Φ3c-B3b soffit clip (τ
     // (T-beam — το δομικό ύψος μένει). Clip στο obstacle θα «ξεκάλυπτε» ψευδώς τη ζώνη soffit→top.
     const obstacle = wall({ stripFinish: true });
     const clip = new Map<string, number>([['w1', 2800]]);
-    const withClip = computeStructuralFinishSilhouette([], [], [obstacle], 0, undefined, false, undefined, undefined, clip);
-    const without = computeStructuralFinishSilhouette([], [], [obstacle], 0);
+    const withClip = computeStructuralFinishSilhouette({ columns: [], beams: [], walls: [obstacle], floorElevationMm: 0, wallTopClipById: clip });
+    const without = computeStructuralFinishSilhouette({ columns: [], beams: [], walls: [obstacle], floorElevationMm: 0 });
     expect(withClip).toEqual(without);
   });
 });

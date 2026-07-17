@@ -301,8 +301,8 @@ describe('column free per-corner reshape — σοβάς ακολουθεί (ADR-
       delta: { x: -120, y: -120 }, // επεκτείνει τη γωνία προς τα έξω
     });
     const movedGeom = computeColumnGeometry(moved);
-    const bands = computeStructuralFinishSilhouette(
-      [{
+    const bands = computeStructuralFinishSilhouette({
+      columns: [{
         params: {
           finish: { enabled: true, interiorMaterialId: 'mat-plaster-int', exteriorMaterialId: 'mat-plaster-ext', thickness: 15 },
           sceneUnits: 'mm',
@@ -311,10 +311,10 @@ describe('column free per-corner reshape — σοβάς ακολουθεί (ADR-
         },
         geometry: { footprint: { vertices: movedGeom.footprint.vertices } },
       }],
-      [],
-      [],
-      0,
-    );
+      beams: [],
+      walls: [],
+      floorElevationMm: 0,
+    });
     expect(bands.length).toBeGreaterThan(0);
     expect(bands[0].faces.segments.length).toBeGreaterThan(0);
   });

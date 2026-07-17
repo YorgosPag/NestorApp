@@ -32,21 +32,21 @@ const maxZTop = (bands: readonly { zTopMm: number }[]): number =>
 
 describe('computeStructuralFinishSilhouette — ADR-534 Φ3c-B3b soffit clip', () => {
   it('χωρίς clip → ο σοβάς φτάνει την πλήρη κορυφή της δοκού (3000mm)', () => {
-    const bands = computeStructuralFinishSilhouette([], [beam], [], 0);
+    const bands = computeStructuralFinishSilhouette({ columns: [], beams: [beam], walls: [], floorElevationMm: 0 });
     expect(bands.length).toBeGreaterThan(0);
     expect(maxZTop(bands)).toBeCloseTo(3000, 6);
   });
 
   it('με beamTopClipById=2800 → ο σοβάς κόβεται στο soffit της πλάκας (2800mm)', () => {
     const clip = new Map<string, number>([['b1', 2800]]);
-    const bands = computeStructuralFinishSilhouette([], [beam], [], 0, undefined, false, clip);
+    const bands = computeStructuralFinishSilhouette({ columns: [], beams: [beam], walls: [], floorElevationMm: 0, beamTopClipById: clip });
     expect(bands.length).toBeGreaterThan(0);
     expect(maxZTop(bands)).toBeCloseTo(2800, 6);
   });
 
   it('clip για άλλο id → no-op (πλήρες ύψος, byte-for-byte)', () => {
     const clip = new Map<string, number>([['other', 2800]]);
-    const bands = computeStructuralFinishSilhouette([], [beam], [], 0, undefined, false, clip);
+    const bands = computeStructuralFinishSilhouette({ columns: [], beams: [beam], walls: [], floorElevationMm: 0, beamTopClipById: clip });
     expect(maxZTop(bands)).toBeCloseTo(3000, 6);
   });
 });
