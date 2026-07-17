@@ -130,28 +130,37 @@ function canonicalDir(a: Vec2, b: Vec2): Vec2 | null {
   return { x: ux, y: uy };
 }
 
-/** Ανάλυση ενός band-quad σε {group key, sense, rect} — `null` αν εκφυλισμένο. */
-function analyzeQuad(q: BandFinishQuad, zb: number, zt: number): { key: string; sense: number; rect: FaceRect } | null {
+/**
+ * Ανάλυση band-quad → {@link QuadEntry}: super-key (angle/side/υλικό/κατάταξη/πάχος/χρώμα — ΟΧΙ
+ * perpOff, που γίνεται clustering coordinate) + πραγματικά σημεία + άξονας/sense. `null` αν εκφυλισμένο.
+ */
+function entryOf(q: BandFinishQuad, zb: number, zt: number): QuadEntry | null {
   const dir = canonicalDir(q.aCore, q.bCore);
   if (!dir) return null;
-  const perp: Vec2 = { x: -dir.y, y: dir.x };
   const tA = dot(q.aCore, dir);
   const tB = dot(q.bCore, dir);
   if (Math.abs(tB - tA) < POS_TOL) return null; // μηδενικό μήκος κατά μήκος → skip
-  const perpOff = dot(q.aCore, perp);
+  const perp: Vec2 = { x: -dir.y, y: dir.x };
   const side = Math.sign(dot(sub(mid(q.aOuter, q.bOuter), mid(q.aCore, q.bCore)), perp)) || 1;
   const angle = Math.atan2(dir.y, dir.x);
   const sense = dot(sub(q.bCore, q.aCore), dir) >= 0 ? 1 : -1;
-  const key = [
-    Math.round(perpOff / POS_TOL), Math.round(angle / ANG_TOL), side,
+  const superKey = [
+    Math.round(angle / ANG_TOL), side,
     q.seg.materialId, q.seg.classification, q.seg.thickness, q.seg.colorOverride ?? '',
   ].join('|');
-  const z0 = Math.min(zb, zt);
-  const z1 = Math.max(zb, zt);
-  const rect: FaceRect = tA <= tB
-    ? { t0: tA, t1: tB, z0, z1, coreT0: q.aCore, coreT1: q.bCore, outerT0: q.aOuter, outerT1: q.bOuter }
-    : { t0: tB, t1: tA, z0, z1, coreT0: q.bCore, coreT1: q.aCore, outerT0: q.bOuter, outerT1: q.aOuter };
-  return { key, sense, rect };
+  return {
+    superKey, aCore: q.aCore, bCore: q.bCore, aOuter: q.aOuter, bOuter: q.bOuter,
+    dir, sense, seg: q.seg, z0: Math.min(zb, zt), z1: Math.max(zb, zt),
+  };
+}
+
+/** {@link QuadEntry} → {@link FaceRect} με ΚΟΙΝΟ άξονα (`dir` του cluster anchor) → συνεπή t-values. */
+function toRect(e: QuadEntry, dir: Vec2): FaceRect {
+  const tA = dot(e.aCore, dir);
+  const tB = dot(e.bCore, dir);
+  return tA <= tB
+    ? { t0: tA, t1: tB, z0: e.z0, z1: e.z1, coreT0: e.aCore, coreT1: e.bCore, outerT0: e.aOuter, outerT1: e.bOuter }
+    : { t0: tB, t1: tA, z0: e.z0, z1: e.z1, coreT0: e.bCore, coreT1: e.aCore, outerT0: e.bOuter, outerT1: e.aOuter };
 }
 
 /** Ταξινομημένες μοναδικές τιμές t (dedup με POS_TOL). */
@@ -248,27 +257,63 @@ function decomposeGroup(group: CoplanarGroup): FinishStrip[] {
 }
 
 /**
- * ADR-449 Slice X6 — SSoT: `SilhouetteBand[]` → κάθετα ενοποιημένα `FinishStrip[]`. Ομαδοποιεί
- * ΟΛΕΣ τις όψεις όλων των bands ανά ομοεπίπεδη επιφάνεια (ευθεία-στήριξης + πλευρά + attributes)
- * και αποσυνθέτει καθεμία σε μαξιμαλικά (t × z) ορθογώνια → μηδέν αυθαίρετη οριζόντια ραφή:
- * ραφή μόνο σε πραγματικό όριο (soffit / πλευρά δοκαριού / γωνία / αλλαγή υλικού).
+ * ADR-534 Φ6a — Ομαδοποίηση ενός super-key bucket σε clusters **near-coplanar** όψεων. Η μετρική
+ * είναι **σχετική** ως προς τον άξονα του anchor (`dot(aCore − ref.aCore, refPerp)`) — ΟΧΙ ο απόλυτος
+ * `perpOff`: σε building coords (×10⁴ mm) μια ANG_TOL διαφορά στο `perp` μεγεθύνεται σε ~20mm ≈ TAU →
+ * θόρυβος· η διαφορά ακυρώνει τον απόλυτο όρο (μένει sub-mm). Cluster ανά **anchor-min** (όχι neighbour):
+ * νέο cluster όταν `rel − anchorMin > tau` → span ≤ tau, κανένα chaining (0,20,40 → {0,20}+{40}).
+ */
+function clusterBucket(entries: readonly QuadEntry[], tauScene: number): QuadEntry[][] {
+  const ref = entries[0];
+  const refPerp: Vec2 = { x: -ref.dir.y, y: ref.dir.x };
+  const tagged = entries
+    .map((e) => ({ e, rel: dot(sub(e.aCore, ref.aCore), refPerp) }))
+    .sort((p, q) => p.rel - q.rel);
+  const clusters: QuadEntry[][] = [];
+  let anchor = 0;
+  for (const { e, rel } of tagged) {
+    if (clusters.length === 0 || rel - anchor > tauScene) {
+      clusters.push([]);
+      anchor = rel; // ταξινομημένο αύξουσα → πρώτο στοιχείο cluster = min
+    }
+    clusters[clusters.length - 1].push(e);
+  }
+  return clusters;
+}
+
+/**
+ * ADR-449 Slice X6 (+534 Φ6a) — SSoT: `SilhouetteBand[]` → κάθετα ενοποιημένα `FinishStrip[]`.
+ * Ομαδοποιεί ΟΛΕΣ τις όψεις όλων των bands ανά **near-coplanar** επιφάνεια (angle + πλευρά +
+ * attributes· perpOff εντός {@link COPLANAR_MERGE_TOL_MM}) και αποσυνθέτει καθεμία σε μαξιμαλικά
+ * (t × z) ορθογώνια → μηδέν αυθαίρετη ραφή: ραφή μόνο σε πραγματικό όριο (soffit / πλευρά δοκαριού /
+ * γωνία / **πραγματικό σκαλί** > ανοχή / αλλαγή υλικού-χρώματος). Το clustering (`clusterBucket`)
+ * ενώνει τη φάσα πλάκας με τον ομοεπίπεδο σοβά τοίχου + γειτονικούς σχεδόν-συνευθειακούς τοίχους.
  */
 export function mergeSilhouetteBandsToStrips(
   bands: readonly SilhouetteBand[],
   sceneUnits: SceneUnits,
 ): FinishStrip[] {
   const s = mmToSceneUnits(sceneUnits);
-  const groups = new Map<string, CoplanarGroup>();
+  const tauScene = COPLANAR_MERGE_TOL_MM * s;
+  const buckets = new Map<string, QuadEntry[]>();
   for (const band of bands) {
     for (const quad of computeBandFinishQuads(band.faces.segments, s)) {
-      const a = analyzeQuad(quad, band.zBottomMm, band.zTopMm);
-      if (!a) continue;
-      const g = groups.get(a.key);
-      if (g) g.rects.push(a.rect);
-      else groups.set(a.key, { sense: a.sense, seg: quad.seg, rects: [a.rect] });
+      const e = entryOf(quad, band.zBottomMm, band.zTopMm);
+      if (!e) continue;
+      const bucket = buckets.get(e.superKey);
+      if (bucket) bucket.push(e);
+      else buckets.set(e.superKey, [e]);
     }
   }
   const out: FinishStrip[] = [];
-  for (const g of groups.values()) out.push(...decomposeGroup(g));
+  for (const entries of buckets.values()) {
+    for (const cluster of clusterBucket(entries, tauScene)) {
+      const anchor = cluster[0];
+      out.push(...decomposeGroup({
+        sense: anchor.sense, seg: anchor.seg,
+        rects: cluster.map((e) => toRect(e, anchor.dir)),
+      }));
+    }
+  }
   return out;
 }
