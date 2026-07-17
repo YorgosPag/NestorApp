@@ -156,7 +156,10 @@ function handleAssembly(
   leverLen: number = LEVER_LEN_M,
 ): BoxSpec[] {
   const facePlane = faceSign * (ctx.leafDepth / 2);
-  const leverX = roseX - latchDir * (leverLen / 2);
+  // Ο μοχλός ξεκινά από την ΠΛΕΥΡΑ του άξονα (neck), όχι από το κέντρο του: η άκρη
+  // του κοντά στον άξονα ευθυγραμμίζεται με τη far-side παρειά του (Giorgio 2026-07-18)
+  // ώστε ο άξονας να μη μένει μισο-εκτεθειμένος δίπλα στη λαβή.
+  const leverX = roseX - latchDir * ((leverLen - NECK_M) / 2);
   const specs: BoxSpec[] = [
     // Κάθετη πλάκα (backplate) κολλητά στην όψη — «ύψος 10-11cm» (Giorgio).
     {

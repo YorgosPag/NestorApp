@@ -121,6 +121,18 @@ describe('buildHardwareSpecs — espagnolette assembly (ADR-672 §8 3D follow-up
     expect(specs.some((s) => s.cx > 0 && s.cy < 1.02)).toBe(true);
   });
 
+  it('lever near-axis edge aligns with the neck SIDE, not its centre', () => {
+    const specs = buildHardwareSpecs(op('door'), DOOR_DIMS, HW);
+    // roseX = +1·(0.4 − 0.06) = 0.34 (default handing, latch +X); neck 20mm wide → east side 0.35.
+    const roseX = 0.34;
+    const neckSide = roseX + 0.02 / 2;
+    // Lever bar = the wide/thin horizontal member (130×24mm). Its edge toward the
+    // axis must reach the neck's far side (0.35), NOT stop at the neck centre (0.34).
+    const lever = specs.find((s) => Math.abs(s.sx - 0.13) < 1e-6 && Math.abs(s.sy - 0.024) < 1e-6);
+    expect(lever).toBeDefined();
+    expect(Math.abs((lever!.cx + lever!.sx / 2) - neckSide) < 1e-6).toBe(true);
+  });
+
   it('casement window (hinged) → 2 edge hinges; sliding-window (no hinge in catalog) → none', () => {
     const casement = buildHardwareSpecs(op('window'), WIN_DIMS, HW);
     expect(casement.filter((s) => Math.abs(s.cz) < 1e-6)).toHaveLength(2);
