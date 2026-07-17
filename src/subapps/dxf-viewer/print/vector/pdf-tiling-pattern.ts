@@ -1,5 +1,11 @@
 /**
- * ADR-667 Φ2 — Native PDF Tiling Patterns (SSoT).
+ * ADR-667 Φ2/Φ3 — Native PDF Tiling Patterns (SSoT).
+ *
+ * **Φ3:** το κελί έγινε **discriminated union** ({@link PdfPatternCell}): `raster` (γέμισμα
+ * «Εικόνα»/«Διαδικαστικά», Φ2) **|** `stripe` (το κάτοπτρο χαρτιού του screen-space μοτίβου —
+ * το **πιο κοινό** hatch του συστήματος, βλ. {@link PdfStripePatternCell}). Η ακύρωση του `F`,
+ * το registry και το memoise μένουν **ΕΝΑ** — το είδος του κελιού αλλάζει μόνο **τι βάφεται
+ * μέσα** του, όχι πού προσγειώνεται.
  *
  * **Το πρόβλημα που λύνει:** το vector PDF export **δεν ζωγράφιζε μοτίβο** — έστρωνε **N raster
  * tiles** (`addImage`) ανά γραμμοσκίαση και, πάνω από έναν αυθαίρετο cap, υποβάθμιζε σε **μέσο
@@ -33,6 +39,7 @@
 import type { jsPDF, Matrix, TilingPattern } from 'jspdf';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { Point2D } from '../../rendering/types/Types';
+import type { Rgb } from '../../config/color-math';
 
 const logger = createModuleLogger('DXF_PRINT');
 
@@ -49,20 +56,49 @@ const logger = createModuleLogger('DXF_PRINT');
  */
 export const MAX_PDF_PATTERNS_PER_PAGE = 800;
 
-/** Το **κελί** ενός μοτίβου: τι ζωγραφίζεται μία φορά και επαναλαμβάνεται. */
-export interface PdfPatternCell {
+/** Ό,τι μοιράζονται ΟΛΑ τα κελιά: ταυτότητα + διαστάσεις. */
+interface PdfPatternCellBase {
   /**
-   * Ταυτότητα **υλικού** (`imageFillVariantKey` — «τι ζωγραφίζεται», όχι «ποιο αρχείο»).
-   * Χρησιμεύει ΚΑΙ ως `addImage` alias ⇒ ο jsPDF ενσωματώνει τα bytes **μία** φορά ως XObject και
-   * κάθε κελί/clone το **αναφέρει** (`/I0 Do`), δεν το περιέχει.
+   * Ταυτότητα **υλικού** — «τι ζωγραφίζεται», όχι «ποιο αρχείο». Δύο κελιά με ίδιο `materialKey`
+   * και ίδιες διαστάσεις ορίζονται **μία** φορά (dedup).
    */
   readonly materialKey: string;
-  /** Το raster του κελιού (PNG data URL — ίδιο idiom με `addImage`/`capture-2d`). */
-  readonly dataUrl: string;
   /** Πλάτος/ύψος κελιού σε **paper mm**. Μη-τετράγωνα κελιά: η αναλογία ζει **εδώ** (Απόφαση 9). */
   readonly cellWMm: number;
   readonly cellHMm: number;
 }
+
+/**
+ * **Raster** κελί (ADR-667 Φ2) — γέμισμα «Εικόνα»/«Διαδικαστικά». Το `materialKey`
+ * (`imageFillVariantKey`) χρησιμεύει ΚΑΙ ως `addImage` alias ⇒ ο jsPDF ενσωματώνει τα bytes
+ * **μία** φορά ως XObject και κάθε κελί/clone το **αναφέρει** (`/I0 Do`), δεν το περιέχει.
+ */
+export interface PdfRasterPatternCell extends PdfPatternCellBase {
+  readonly kind: 'raster';
+  /** Το raster του κελιού (PNG data URL — ίδιο idiom με `addImage`/`capture-2d`). */
+  readonly dataUrl: string;
+}
+
+/**
+ * **Ριγέ (vector)** κελί (ADR-667 Φ3) — το κάτοπτρο χαρτιού του screen-space μοτίβου
+ * (`patternSpace:'screen'`, ADR-531 Φ5b.6): **μία** οριζόντια γραμμή στο κάτω μέρος του κελιού,
+ * που η επανάληψη του pattern κάνει παράλληλες ρίγες. Η **γωνία ΔΕΝ ζει εδώ** — μπαίνει στο
+ * `/Matrix` μέσω του {@link PdfPatternPlacement} (ίδιο ακριβώς με την οθόνη, που στρέφει το tile
+ * με `setTransform` αντί να ψήσει τη γωνία μέσα του) ⇒ ένα κελί ανά χρώμα, όχι ανά γωνία.
+ *
+ * **Γιατί vector και όχι το 3px raster tile της οθόνης:** ένα 3-pixel bitmap στα 300+ dpi του
+ * χαρτιού είναι **θολή λάσπη** (ADR-667 Απόφαση 6).
+ */
+export interface PdfStripePatternCell extends PdfPatternCellBase {
+  readonly kind: 'stripe';
+  /** Χρώμα της γραμμής (ήδη περασμένο από το plot-style policy από τον καλούντα). */
+  readonly strokeRgb: Rgb;
+  /** Πάχος γραμμής σε **paper mm** (μετρημένο: 1 cell unit == 1 mm — βλ. {@link patternMatrixFor}). */
+  readonly lineWidthMm: number;
+}
+
+/** Το **κελί** ενός μοτίβου: τι ζωγραφίζεται μία φορά και επαναλαμβάνεται. */
+export type PdfPatternCell = PdfRasterPatternCell | PdfStripePatternCell;
 
 /** Πού «κουμπώνει» (phase) και πώς στρέφεται το μοτίβο πάνω στο χαρτί. */
 export interface PdfPatternPlacement {
@@ -136,15 +172,18 @@ export function patternMatrixFor(
   return f.multiply(t.multiply(a)); // = F · (A·T) → ο jsPDF το κάνει (A·T)·F·F = A·T = M_final
 }
 
-/** Κλειδί **βάσης**: ίδιο υλικό + ίδιες διαστάσεις κελιού ⇒ ΕΝΑ ορισμένο κελί (dedup). */
+/** Κλειδί **βάσης**: ίδιο είδος + υλικό + διαστάσεις ⇒ ΕΝΑ ορισμένο κελί (dedup). */
 function baseKeyOf(cell: PdfPatternCell): string {
-  return `${cell.materialKey}|${cell.cellWMm}x${cell.cellHMm}`;
+  return `${cell.kind}|${cell.materialKey}|${cell.cellWMm}x${cell.cellHMm}`;
 }
 
 /** Εκφυλισμένο κελί (μηδενικό/άπειρο) → μη ζωγραφίσιμο· ο caller πέφτει σε fallback. */
 function isDrawableCell(cell: PdfPatternCell): boolean {
-  return Number.isFinite(cell.cellWMm) && Number.isFinite(cell.cellHMm)
-    && cell.cellWMm > 0 && cell.cellHMm > 0 && cell.dataUrl.length > 0;
+  if (!Number.isFinite(cell.cellWMm) || !Number.isFinite(cell.cellHMm)
+    || cell.cellWMm <= 0 || cell.cellHMm <= 0) return false;
+  return cell.kind === 'raster'
+    ? cell.dataUrl.length > 0
+    : Number.isFinite(cell.lineWidthMm) && cell.lineWidthMm > 0;
 }
 
 /** Εκφυλισμένη τοποθέτηση (NaN anchor/γωνία) → μη ζωγραφίσιμη. */
@@ -168,17 +207,50 @@ function defineCell(
 ): void {
   const box = [0, 0, cell.cellWMm, cell.cellHMm];
   const base = pdf.TilingPattern(box, cell.cellWMm, cell.cellHMm) as ClonableTilingPattern;
-  let embedded = false;
+  let painted = false;
   pdf.beginTilingPattern(base);
   try {
-    // Σταθερό alias ⇒ τα bytes ενσωματώνονται ΜΙΑ φορά ως XObject (μετρημένο: 1/16/64 fills →
-    // ίδιο πλήθος XObjects). 'NONE' = μηδέν επανασυμπίεση ενός ήδη PNG raster.
-    pdf.addImage(cell.dataUrl, 'PNG', 0, 0, cell.cellWMm, cell.cellHMm, cell.materialKey, 'NONE');
-    embedded = true;
+    paintCell(pdf, cell);
+    painted = true;
   } finally {
     pdf.endTilingPattern(key, base);
   }
-  if (embedded) bases.set(key, base);
+  if (painted) bases.set(key, base);
+}
+
+/**
+ * Βάφει το περιεχόμενο **ενός** κελιού. Τρέχει **μέσα** σε render target ⇒ `apiMode = ADVANCED`.
+ *
+ * 🔬 **Μετρημένο (spike, ADR-667 Φ3 — ΟΧΙ υπόθεση):** σε ADVANCED οι συντεταγμένες είναι **RAW**
+ * (`scale(n) === n`, `getVerticalCoordinate(y) === y` ⇒ μηδέν `scaleFactor`, μηδέν Y-flip) και το
+ * ψημένο `/Matrix` έχει κλίμακα **ακριβώς** `scaleFactor` ⇒ **1 cell unit == 1 paper mm**. Άρα
+ * `cellHMm`/`lineWidthMm` γράφονται **αυτούσια** σε mm — καμία μετατροπή.
+ */
+function paintCell(pdf: jsPDF, cell: PdfPatternCell): void {
+  if (cell.kind === 'raster') {
+    // Σταθερό alias ⇒ τα bytes ενσωματώνονται ΜΙΑ φορά ως XObject (μετρημένο: 1/16/64 fills →
+    // ίδιο πλήθος XObjects). 'NONE' = μηδέν επανασυμπίεση ενός ήδη PNG raster.
+    pdf.addImage(cell.dataUrl, 'PNG', 0, 0, cell.cellWMm, cell.cellHMm, cell.materialKey, 'NONE');
+    return;
+  }
+  paintStripeCell(pdf, cell);
+}
+
+/**
+ * **Κάτοπτρο** του `HatchRenderer.screenSpacePattern()`: μία οριζόντια γραμμή στο **κάτω** μέρος
+ * του κελιού (εκεί που η οθόνη βάζει το `moveTo(0, SPACING_PX - 0.5)`), ώστε η επανάληψη να δίνει
+ * παράλληλες ρίγες κάθε `cellHMm`.
+ *
+ * `butt` cap = το **default του canvas** ⇒ ίδιο με την οθόνη, και οι γραμμές ενώνονται καθαρά στα
+ * όρια των κελιών (round cap θα «φούσκωνε» σε κάθε ραφή).
+ */
+function paintStripeCell(pdf: jsPDF, cell: PdfStripePatternCell): void {
+  pdf.setLineWidth(cell.lineWidthMm);
+  pdf.setDrawColor(cell.strokeRgb.r, cell.strokeRgb.g, cell.strokeRgb.b);
+  pdf.setLineCap('butt');
+  // Η γραμμή κεντράρεται μισό πάχος πάνω από τη βάση ⇒ το μελάνι μένει ΜΕΣΑ στο κελί.
+  const y = cell.cellHMm - cell.lineWidthMm / 2;
+  pdf.lines([[cell.cellWMm, 0]], 0, y, [1, 1], 'S', false);
 }
 
 /**

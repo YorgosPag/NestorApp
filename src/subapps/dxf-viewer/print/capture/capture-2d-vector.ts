@@ -33,7 +33,8 @@ import type { PrintColorPolicy } from '../../config/print-color-policy';
 import { pxToMm, resolveAppliedScaleDenominator } from '../config/paper-math';
 import { emitSceneToPdf } from '../vector/scene-vector-emitter';
 import { resolveSceneImages } from '../vector/scene-image-resolver';
-import { summarizePrintFidelity } from '../print-fidelity';
+import { resolveSceneHatchLines } from '../vector/scene-hatch-line-resolver';
+import { mergePrintFidelity, summarizePrintFidelity } from '../print-fidelity';
 import type { Capture2dInput } from './capture-2d';
 import { resolvePrintTransform, prepareScene2dCapture } from './capture-2d';
 import type { CaptureResult } from './capture-types';
@@ -104,12 +105,27 @@ export async function captureCurrent2dViewVector(input: Capture2dInput): Promise
   // world placements. Το closure μετά μόνο συνθέτει (μηδέν await στο render path, ADR-040).
   const images = await resolveSceneImages(entities);
 
+  // ADR-667 Φ3 — sibling pre-pass: γραμμές μοτίβου (`predefined`/`user-defined` explode,
+  // budget-guarded) + ριγέ κελιά (`patternSpace:'screen'`). **Σύγχρονο** (μηδέν decode), αλλά ζει
+  // ΕΔΩ και όχι στο `draw`: το explode χωρίς guard παγώνει τον browser (μετρημένο: 164s / OOM 4GB)
+  // και — κυρίως — το `capture.fidelity` διαβάζεται ΠΡΙΝ τρέξει το `draw`, άρα υποβάθμιση που θα
+  // αποφασιζόταν εκεί μέσα **δεν θα μπορούσε ΠΟΤΕ να αναφερθεί στον χρήστη** (Απόφαση 7).
+  // Το `worldToPaperScale` είναι το ανάλογο χαρτιού του `transform.scale` της οθόνης ⇒ ο
+  // density-LOD ρωτά το ΙΔΙΟ ερώτημα με το μέτρο του χαρτιού (Φ3.1: χωρίς αυτό, το χαρτί δεν
+  // είχε ΚΑΜΙΑ προστασία αναγνωσιμότητας και τύπωνε συμπαγή μαύρη μάζα).
+  const hatchLines = resolveSceneHatchLines(entities, colorPolicy, worldToPaperScale);
+
   return {
     kind: 'vector',
     appliedScaleDenominator: resolveAppliedScaleDenominator(input.fitMode, input.scaleDenominator),
-    // ADR-667 Φ1 — τα warnings του pre-pass ΔΕΝ πετιούνται πια: κάθε σιωπηλή υποβάθμιση
-    // (γέμισμα εικόνας → συμπαγές γκρι) γίνεται εδώ μετρήσιμη και ο `runPrint` την εμφανίζει.
-    fidelity: summarizePrintFidelity(images.warnings),
+    // ADR-667 Φ1/Φ3 — τα warnings των pre-pass ΔΕΝ πετιούνται πια: κάθε σιωπηλή υποβάθμιση
+    // (γέμισμα εικόνας → συμπαγές γκρι· γραμμές μοτίβου πάνω από budget → μόνο περίγραμμα) γίνεται
+    // εδώ μετρήσιμη και ο `runPrint` την εμφανίζει. **Και τα δύο** pre-pass ενώνονται σε ΕΝΑ report
+    // (ο χρήστης θέλει «3 γεμίσματα χάθηκαν», όχι δύο ξεχωριστά toasts).
+    fidelity: mergePrintFidelity([
+      summarizePrintFidelity(images.warnings),
+      summarizePrintFidelity(hatchLines.warnings),
+    ]),
     draw: (pdf, area) => {
       emitSceneToPdf(pdf, {
         entities,
@@ -117,6 +133,7 @@ export async function captureCurrent2dViewVector(input: Capture2dInput): Promise
         worldToPaperScale,
         colorPolicy,
         images,
+        hatchLines,
       });
     },
   };

@@ -28,7 +28,7 @@ import { hatchBoundsCenter, hatchGradientAngleGripPos, getHatchBoundaryGrips, ge
 import { getHatchMoveRotateGrips } from '../../bim/hatch/hatch-move-rotate-grips';
 import { toMoveRotateGlyphGrips } from '../../bim/grips/move-rotate-glyph-grips';
 import { pointInPolygon } from '../../bim/geometry/shared/polygon-utils';
-import { buildHatchEntitySegments, hatchMinWorldSpacing } from '../../bim/geometry/shared/hatch-pattern-geometry';
+import { buildHatchEntitySegments } from '../../bim/geometry/shared/hatch-pattern-geometry';
 import { isSolidHatch, resolveHatchLineWidthPx } from '../../bim/hatch/hatch-properties';
 import type { HatchGradient } from '../../bim/hatch/hatch-gradient';
 // ADR-507 Φ5 / A3 — pure gradient paint SSoT (κοινό με το live grip-drag ghost,
@@ -42,34 +42,25 @@ import {
 import { HatchImageCache } from './shared/hatch-image-cache';
 // ADR-653 Φ8 — variant key SSoT: «τι ζωγραφίζεται» (υλικό + tint), όχι σκέτο assetId.
 import { imageFillVariantKey } from './shared/hatch-image-variant-key';
+// ADR-531 Φ5b.6 / ADR-667 Απόφαση 6 — screen-space μοτίβο: οι σταθερές ΚΑΙ η αντιστοιχία τους στο
+// χαρτί ζουν σε ΕΝΑ SSoT, ώστε το vector PDF export να μη ξαναγράψει `45`/`3` ως σκέτα literals
+// (N.18: το jscpd ΔΕΝ πιάνει σκέτο literal ⇒ η διπλοτυπία θα περνούσε πράσινη και θα ήταν λάθος).
+import {
+  SCREEN_HATCH_SPACING_PX, SCREEN_HATCH_LINE_PX, SCREEN_HATCH_TILE_W,
+  SCREEN_HATCH_DEFAULT_ANGLE_DEG,
+} from './shared/screen-hatch-constants';
+// ADR-667 Φ3.1 — ο density-LOD έγινε SSoT: το ΙΔΙΟ ερώτημα («πολύ πυκνό για να διαβαστεί;») το
+// ρωτά τώρα ΚΑΙ το vector PDF export, με τη δική του κλίμακα (mm/world αντί px/world). Ήταν
+// module-private εδώ ⇒ το χαρτί δεν είχε καμία προστασία και τύπωνε συμπαγή μαύρη μάζα.
+import { HATCH_COLLAPSE_ALPHA, isHatchDensityTooHighOnScreen } from './shared/hatch-density-lod';
 // ADR-040 — async asset load «σπρώχνει» ένα dirty-frame (ο renderer δεν subscribe-άρει).
 import { markAllCanvasDirty } from '../core/frame-scheduler-api';
 import { aabbIntersectsRaw } from '../hitTesting/bounds-operations';
 import { CAD_UI_COLORS, HOVER_HIGHLIGHT } from '../../config/color-config';
-/**
- * Density-LOD: κάτω από αυτή την on-screen απόσταση (px) οι γραμμές μοτίβου γίνονται
- * δυσδιάκριτη μάζα → ο renderer τις αντικαθιστά με ένα ελαφρύ solid tint (industry
- * pattern: AutoCAD δείχνει πυκνό hatch ως «γεμάτο» σε μικρό zoom). Αποφεύγει την
- * παραγωγή/σχεδίαση χιλιάδων γραμμών σε zoom-out — η κύρια αιτία βαρύτητας.
- */
-const HATCH_MIN_LINE_SPACING_PX = 3;
-/** Διαφάνεια του collapsed solid tint (διαβάζεται ως «γεμάτο» χωρίς να βαραίνει). */
-const HATCH_COLLAPSE_ALPHA = 0.45;
 /** Πάνω από τόσα segments ενεργοποιείται το viewport culling (αλλιώς ασύμφορο). */
 const CULL_SEGMENT_THRESHOLD = 200;
 /** Όριο εγγραφών στο segment cache (αποφυγή ανεξέλεγκτης μεγέθυνσης). */
 const SEG_CACHE_MAX = 256;
-
-/**
- * ADR-531 Φ5b.6 — screen-space raster μοτίβο (`patternSpace:'screen'`, Τέκτων raster hatch).
- * Οι γραμμές έχουν σταθερή απόσταση σε **pixels ΟΘΟΝΗΣ**, zoom-independent (ground truth Giorgio:
- * ~1-2px, σταθερό όσο κι αν αλλάζει το ζουμ) — ζωγραφίζεται ως `CanvasPattern` tile αντί για
- * world-space segments. `TILE_W` >1 για φθηνό repeat· `SPACING_PX` = κάθετη απόσταση γραμμών.
- */
-const SCREEN_HATCH_SPACING_PX = 3;
-const SCREEN_HATCH_LINE_PX = 1;
-const SCREEN_HATCH_TILE_W = 8;
-const SCREEN_HATCH_DEFAULT_ANGLE_DEG = 45;
 
 /**
  * ADR-643 Φ1 — density-LOD κατώφλι για image fill: κάτω από αυτό το on-screen μέγεθος
@@ -230,9 +221,10 @@ export class HatchRenderer extends BaseEntityRenderer {
     ) {
       // ADR-531 Φ5b.6 — raster μοτίβο: σταθερή πυκνότητα px (zoom-independent, Τέκτων). Ο έλεγχος
       // ΚΑΙ ζωγραφίζει· `false` (αδύνατο createPattern) → πέφτει στους world-space κλάδους παρακάτω.
-    } else if (this.isLineDensityTooHigh(hatch)) {
-      // Density-LOD: γραμμές sub-pixel → ελαφρύ solid tint (1 op αντί για χιλιάδες
-      // γραμμές). Παραλείπει ΚΑΙ την παραγωγή segments (μηδέν cost σε zoom-out).
+    } else if (isHatchDensityTooHighOnScreen(hatch, this.transform.scale)) {
+      // Density-LOD (SSoT, ADR-667 Φ3.1): γραμμές sub-pixel → ελαφρύ solid tint (1 op αντί για
+      // χιλιάδες γραμμές). Παραλείπει ΚΑΙ την παραγωγή segments (μηδέν cost σε zoom-out).
+      // Το ΙΔΙΟ ερώτημα ρωτά το vector PDF με `isHatchDensityTooHighOnPaper(hatch, mm/world)`.
       this.fillBoundary(paths, color, HATCH_COLLAPSE_ALPHA);
     } else {
       // SSoT: ίδια segments με τον DXF writer· cached (transform-independent, ADR-040).
@@ -319,13 +311,6 @@ export class HatchRenderer extends BaseEntityRenderer {
   }
 
   // ─── Internal helpers ──────────────────────────────────────────────────────
-
-  /** True όταν οι γραμμές μοτίβου είναι sub-pixel πυκνές στο τρέχον zoom (→ LOD tint). */
-  private isLineDensityTooHigh(hatch: HatchEntity): boolean {
-    const worldSpacing = hatchMinWorldSpacing(hatch);
-    if (worldSpacing <= 0) return false;
-    return worldSpacing * this.transform.scale < HATCH_MIN_LINE_SPACING_PX;
-  }
 
   /** Ορατά world bounds (με μικρό margin) για segment culling· null αν άγνωστο μέγεθος. */
   private visibleWorldBounds(): { minX: number; minY: number; maxX: number; maxY: number } | null {

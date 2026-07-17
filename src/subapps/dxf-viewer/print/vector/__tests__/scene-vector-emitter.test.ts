@@ -61,16 +61,24 @@ const toPaper = (p: Point2D): Point2D => ({ x: p.x, y: 100 - p.y });
 const EMPTY_IMAGES = {
   images: new Map(), patternCells: new Map(), solidFallbacks: new Map(), warnings: [],
 };
+/** ADR-667 Φ3 — το sibling pre-pass των γραμμών μοτίβου (κενό = καμία γραμμοσκίαση με γραμμές). */
+const EMPTY_HATCH_LINES = {
+  segments: new Map(), stripeFills: new Map(), collapsedFills: new Set<string>(), warnings: [],
+};
 const baseParams = {
   toPaper, worldToPaperScale: 1, colorPolicy: { style: 'colour' as const, dpi: 150 },
   images: EMPTY_IMAGES,
+  hatchLines: EMPTY_HATCH_LINES,
 };
 
 function emit(
   entities: Entity[], policy = baseParams.colorPolicy, images = EMPTY_IMAGES,
+  hatchLines = EMPTY_HATCH_LINES,
 ) {
   const { pdf, calls } = mockPdf();
-  emitSceneToPdf(pdf as never, { ...baseParams, colorPolicy: policy, entities, images });
+  emitSceneToPdf(pdf as never, {
+    ...baseParams, colorPolicy: policy, entities, images, hatchLines,
+  });
   return calls;
 }
 
@@ -362,5 +370,125 @@ describe('scene-vector-emitter — hatch dispatch (ADR-667 Απόφαση 5)', (
     expect(only(calls, 'lines').filter((c) => c.args[4] === 'F')).toHaveLength(1);
     const fillColors = only(calls, 'setFillColor');
     expect(fillColors[fillColors.length - 1].args).toEqual([0, 255, 0]); // fillColor, όχι color
+  });
+});
+
+// ─── ADR-667 Φ3 — γραμμές μοτίβου + screen-space + backgroundColor ────────────
+
+describe('scene-vector-emitter — Φ3: ο default τύπος κάθε νέου hatch γεμίζει επιτέλους', () => {
+  const SQUARE = [[{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }]];
+  const lineHatch = (over: Record<string, unknown> = {}) => ({
+    id: 'h1', type: 'hatch', layerId: '0', fillType: 'user-defined',
+    boundaryPaths: SQUARE, color: '#00ff00', ...over,
+  } as unknown as Entity);
+
+  const STRIPE_CELL = {
+    kind: 'stripe' as const, materialKey: '0,255,0', cellWMm: 2.1333333, cellHMm: 0.8,
+    strokeRgb: { r: 0, g: 255, b: 0 }, lineWidthMm: 0.2666667,
+  };
+  const withStripe = (id: string, angleDeg = 45) => ({
+    ...EMPTY_HATCH_LINES, stripeFills: new Map([[id, { cell: STRIPE_CELL, angleDeg }]]),
+  });
+  const withSegments = (id: string, segs: { start: Point2D; end: Point2D }[]) => ({
+    ...EMPTY_HATCH_LINES, segments: new Map([[id, segs]]),
+  });
+
+  it('exploded segments → ΜΙΑ pdf.line ανά γραμμή, σε paper mm', () => {
+    const segs = [
+      { start: { x: 0, y: 1 }, end: { x: 4, y: 1 } },
+      { start: { x: 0, y: 3 }, end: { x: 4, y: 3 } },
+    ];
+    const calls = emit([lineHatch()], baseParams.colorPolicy, EMPTY_IMAGES, withSegments('h1', segs));
+    const lines = only(calls, 'line');
+    expect(lines).toHaveLength(2);
+    expect(lines[0].args).toEqual([0, 99, 4, 99]); // toPaper: y → 100 - y
+  });
+
+  it('οι γραμμές μοτίβου παίρνουν το χρώμα της ΓΡΑΜΜΟΣΚΙΑΣΗΣ (fillColor ?? color)', () => {
+    const segs = [{ start: { x: 0, y: 1 }, end: { x: 4, y: 1 } }];
+    const calls = emit(
+      [lineHatch({ fillColor: '#ff0000' })], baseParams.colorPolicy, EMPTY_IMAGES,
+      withSegments('h1', segs),
+    );
+    const draws = only(calls, 'setDrawColor');
+    expect(draws[draws.length - 1].args).toEqual([255, 0, 0]);
+  });
+
+  it('🔴 το ΔΑΠΕΔΟ περίγραμμα βγαίνει ΚΑΙ μαζί με τις γραμμές (κάτοπτρο οθόνης)', () => {
+    // Η οθόνη ζωγραφίζει το περίγραμμα σε ΚΑΘΕ κλάδο. Αν το χάναμε εδώ, η Φ3 θα ΑΦΑΙΡΟΥΣΕ
+    // το περίγραμμα που τυπώνεται ήδη σήμερα ⇒ regression αντί για βελτίωση.
+    const segs = [{ start: { x: 0, y: 1 }, end: { x: 4, y: 1 } }];
+    const calls = emit([lineHatch()], baseParams.colorPolicy, EMPTY_IMAGES, withSegments('h1', segs));
+    expect(only(calls, 'lines').filter((c) => c.args[4] === 'S')).toHaveLength(1);
+  });
+
+  it('χωρίς segments (catalog MISS / πάνω από budget) → ΜΟΝΟ περίγραμμα, καμία γραμμή', () => {
+    const calls = emit([lineHatch()]);
+    expect(only(calls, 'line')).toHaveLength(0);
+    expect(only(calls, 'lines').filter((c) => c.args[4] === 'S')).toHaveLength(1);
+  });
+
+  it('screen-space → ριγέ tiling pattern (fillEvenOdd) + ΔΑΠΕΔΟ περίγραμμα', () => {
+    const calls = emit(
+      [lineHatch({ patternSpace: 'screen' })], baseParams.colorPolicy, EMPTY_IMAGES,
+      withStripe('h1'),
+    );
+    expect(only(calls, 'fillEvenOdd')).toHaveLength(1);
+    // Το κελί ορίστηκε στην ΑΡΧΗ του draw (Απόφαση 10), πριν εκπεμφθεί η πρώτη οντότητα.
+    const order = calls.map((c) => c.fn);
+    expect(order.indexOf('endTilingPattern')).toBeLessThan(order.indexOf('fillEvenOdd'));
+    // ΔΑΠΕΔΟ = το ΚΛΕΙΣΤΟ stroke (η ανοιχτή 'S' γραμμή είναι η ρίγα ΜΕΣΑ στο κελί).
+    expect(only(calls, 'lines').filter((c) => c.args[4] === 'S' && c.args[5] === true))
+      .toHaveLength(1);
+  });
+
+  it('screen-space → ΚΑΜΙΑ world-space γραμμή (Απόφαση 6 — ορθογώνια διάσταση)', () => {
+    const calls = emit(
+      [lineHatch({ patternSpace: 'screen' })], baseParams.colorPolicy, EMPTY_IMAGES,
+      withStripe('h1'),
+    );
+    expect(only(calls, 'line')).toHaveLength(0);
+  });
+});
+
+describe('scene-vector-emitter — Φ3: backgroundColor (AutoCAD DXF 63)', () => {
+  const SQUARE = [[{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }]];
+  const bgHatch = (over: Record<string, unknown> = {}) => ({
+    id: 'h1', type: 'hatch', layerId: '0', fillType: 'user-defined',
+    boundaryPaths: SQUARE, color: '#00ff00', backgroundColor: '#ffffff', ...over,
+  } as unknown as Entity);
+
+  it('🔴 ΛΕΥΚΟ φόντο μένει ΛΕΥΚΟ — το white-safe policy ΔΕΝ εφαρμόζεται σε υπόστρωμα', () => {
+    // Ο Τέκτων δίνει λευκό `raster_bgcolor` σε κάθε imported hatch. Το `applyPlotColor` θα το
+    // έκανε ΜΑΥΡΟ (λευκό ΜΕΛΑΝΙ = αόρατο σε λευκό χαρτί) ⇒ μαύρο ορθογώνιο πάνω από το σχέδιο.
+    // Το raster μονοπάτι το εκπέμπει αυτούσιο ⇒ το vector πρέπει να συμφωνεί.
+    const calls = emit([bgHatch()]);
+    const fills = only(calls, 'setFillColor');
+    expect(fills.map((c) => c.args)).toContainEqual([255, 255, 255]);
+    expect(fills.map((c) => c.args)).not.toContainEqual([0, 0, 0]);
+  });
+
+  it('το υπόστρωμα μπαίνει ΠΙΣΩ από τις γραμμές (γέμισμα πριν το stroke)', () => {
+    const segs = [{ start: { x: 0, y: 1 }, end: { x: 4, y: 1 } }];
+    const calls = emit(
+      [bgHatch()], baseParams.colorPolicy, EMPTY_IMAGES,
+      { ...EMPTY_HATCH_LINES, segments: new Map([['h1', segs]]) },
+    );
+    const order = calls.filter((c) => (c.fn === 'lines' && c.args[4] === 'F') || c.fn === 'line')
+      .map((c) => c.fn);
+    expect(order).toEqual(['lines', 'line']); // πρώτα το φόντο, μετά οι γραμμές
+  });
+
+  it.each([['image'], ['gradient']])(
+    '%s → ΚΑΝΕΝΑ υπόστρωμα (γεμίζουν πλήρως, θα το έκρυβαν)',
+    (fillType) => {
+      const calls = emit([bgHatch({ fillType })]);
+      expect(only(calls, 'lines').filter((c) => c.args[4] === 'F')).toHaveLength(0);
+    },
+  );
+
+  it('χωρίς backgroundColor → κανένα υπόστρωμα', () => {
+    const calls = emit([bgHatch({ backgroundColor: undefined })]);
+    expect(only(calls, 'lines').filter((c) => c.args[4] === 'F')).toHaveLength(0);
   });
 });

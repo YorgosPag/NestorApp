@@ -6293,6 +6293,8 @@
     "fidelity": {
       "title": "The PDF differs from the screen",
       "hatchImageSolid": "{count, plural, one {# hatch fill printed as a solid colour instead of a pattern.} other {# hatch fills printed as a solid colour instead of a pattern.}}",
+      "hatchLinesDropped": "{count, plural, one {# hatch was too complex (far too many lines): only its outline was printed, without the pattern lines.} other {# hatches were too complex (far too many lines): only their outlines were printed, without the pattern lines.}}",
+      "hatchDensityCollapsed": "{count, plural, one {# hatch was too dense for paper and printed as a tint — its lines would have merged into each other. Increase the pattern scale to make them visible.} other {# hatches were too dense for paper and printed as a tint — their lines would have merged into each other. Increase the pattern scale to make them visible.}}",
       "imageDropped": "{count, plural, one {# image was dropped from the PDF.} other {# images were dropped from the PDF.}}",
       "rasterHint": "For a faithful result, print again with «Output: Image (raster)»."
     },

@@ -25,6 +25,8 @@ import type { PrintFidelityCode } from '../../print/print-fidelity';
  */
 const FIDELITY_MESSAGE_KEY: Readonly<Record<PrintFidelityCode, string>> = {
   'hatch-image-solid': 'print.fidelity.hatchImageSolid',
+  'hatch-lines-dropped': 'print.fidelity.hatchLinesDropped',
+  'hatch-density-collapsed': 'print.fidelity.hatchDensityCollapsed',
   'image-dropped': 'print.fidelity.imageDropped',
 };
 
