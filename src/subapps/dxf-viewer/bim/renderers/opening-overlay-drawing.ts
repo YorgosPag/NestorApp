@@ -26,6 +26,10 @@ const HINGE_DASH: readonly number[] = [4, 3];
 const SLIDING_DASH: readonly number[] = [10, 4];
 const POCKET_DASH: readonly number[] = [5, 4];
 const GLAZING_INSET_RATIO = 0.25;
+/** Handle glyph: fraction of leaf length from hinge at which the handle sits. */
+const HANDLE_LEAF_FRACTION = 0.86;
+/** Handle tick half-length as a fraction of leaf length (Revit-discreet). */
+const HANDLE_TICK_RATIO = 0.08;
 /** Bay projection depth ως κλάσμα του πλάτους (parametric· editable depth → SLICE C). */
 const BAY_PROJECTION_RATIO = 0.4;
 const BAY_PROJECTION_MAX_RATIO = 1.2; // cap vs thickness-half
@@ -139,17 +143,41 @@ function drawSwing(opening: OpeningEntity, dc: OverlayDrawContext): void {
   const hinge = opening.geometry?.hingeAnchor;
   if (!arc || arc.points.length < 2 || !hinge) return;
   const { ctx } = dc;
+  const hinge2 = opening.geometry?.hingeAnchor2;
   ctx.save();
   ctx.setLineDash(HINGE_DASH as number[]);
   ctx.lineWidth = dc.lineWidth;
   worldPolyline(dc, arc.points);
   ctx.setLineDash([]);
   worldLine(dc, hinge, arc.points[HINGE_ARC_SUBDIVISIONS]);
-  const hinge2 = opening.geometry?.hingeAnchor2;
   if (hinge2 && arc.points.length > HINGE_ARC_SUBDIVISIONS + 1) {
     worldLine(dc, hinge2, arc.points[HINGE_ARC_SUBDIVISIONS + 1]);
   }
+  drawHandleGlyph(dc, hinge, arc.points[HINGE_ARC_SUBDIVISIONS]);
+  if (hinge2 && arc.points.length > HINGE_ARC_SUBDIVISIONS + 1) {
+    drawHandleGlyph(dc, hinge2, arc.points[HINGE_ARC_SUBDIVISIONS + 1]);
+  }
   ctx.restore();
+}
+
+/**
+ * Draw a small handle tick near a swing leaf's latch (free) end. `hinge`→`tip`
+ * is the leaf line (world coords); the tick is a short segment perpendicular to
+ * the leaf, centred at HANDLE_LEAF_FRACTION along it. Latch side is inherent in
+ * the geometry (tip = free end), matching the 3D hardware convention
+ * (`latchSign` in the hardware builder) — no handing re-derivation here.
+ */
+function drawHandleGlyph(dc: OverlayDrawContext, hinge: Pt, tip: Pt): void {
+  const lx = tip.x - hinge.x, ly = tip.y - hinge.y;
+  const len = Math.hypot(lx, ly);
+  if (len < 1e-6) return;
+  const ux = lx / len, uy = ly / len;      // leaf unit vector
+  const nx = -uy, ny = ux;                  // perpendicular
+  const cx = hinge.x + ux * (len * HANDLE_LEAF_FRACTION);
+  const cy = hinge.y + uy * (len * HANDLE_LEAF_FRACTION);
+  const h = len * HANDLE_TICK_RATIO;
+  dc.ctx.setLineDash([]);
+  worldLine(dc, { x: cx - nx * h, y: cy - ny * h }, { x: cx + nx * h, y: cy + ny * h });
 }
 
 // ─── Sliding family (sliding / double-sliding / pocket) ───────────────────────
