@@ -17,7 +17,7 @@
 import { collection, deleteDoc, doc, getDoc, getDocs, query, setDoc, where, type QueryConstraint } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { isBoqAutoManagedStatus } from '@/types/boq/units';
+import { isFrozenBaselineStatus } from '@/types/boq/units';
 import { createModuleLogger } from '@/lib/telemetry';
 import { resolveAtoeMapping } from '../config/bim-to-atoe-mapping';
 import type { OpeningKind, OpeningParams } from '../types/opening-types';
@@ -180,7 +180,7 @@ async function writeSignatureGroup(
     // cost πρακτική (πιστοποιημένη ποσότητα αμετάβλητη). Αντί για σιωπηλό skip, καταγράφουμε
     // την απόκλιση του live μοντέλου (member count) ως drift metadata (ADR-674), ώστε ο
     // άνθρωπος να τη δει για revision — baseline αμετάβλητο, row ΠΟΤΕ delete.
-    if (!isBoqAutoManagedStatus(data.status)) {
+    if (isFrozenBaselineStatus(data.status)) {
       await recordBaselineDrift(doc(db, COLLECTIONS.BOQ_ITEMS, groupId), data, members.length, 'OpeningBoqSync');
       return;
     }

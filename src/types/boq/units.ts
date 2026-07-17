@@ -92,6 +92,21 @@ export function isBoqAutoManagedStatus(status: unknown): status is 'draft' | 'su
   return status === 'draft' || status === 'submitted';
 }
 
+/**
+ * ADR-675 — οι τρεις «παγωμένες» καταστάσεις: υπογεγραμμένα συμβατικά baselines που ο BIM auto-sync
+ * ΠΟΤΕ δεν overwriteάρει/διαγράφει (μόνο καταγράφει drift — βλ. `recordBaselineDrift`).
+ */
+export const BOQ_FROZEN_BASELINE_STATUSES: readonly BOQItemStatus[] = ['approved', 'certified', 'locked'];
+
+/**
+ * True ΜΟΝΟ όταν το status είναι ρητά ένα υπογεγραμμένο baseline (approved/certified/locked).
+ * ΣΚΟΠΙΜΑ ΟΧΙ `!isBoqAutoManagedStatus`: ένα row χωρίς/άγνωστο status ΔΕΝ είναι signed baseline —
+ * παραμένει auto-managed (ώστε normal upsert + orphan-cleanup να μη μπλοκάρονται από απόν πεδίο).
+ */
+export function isFrozenBaselineStatus(status: unknown): status is 'approved' | 'certified' | 'locked' {
+  return status === 'approved' || status === 'certified' || status === 'locked';
+}
+
 /** Μέθοδος μέτρησης */
 export type MeasurementMethod =
   | 'manual'       // Χειρωνακτική εισαγωγή

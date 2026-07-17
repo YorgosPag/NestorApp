@@ -31,7 +31,7 @@ import { deleteDoc, doc, getDoc, setDoc, type DocumentReference } from 'firebase
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { nowISO } from '@/lib/date-local';
-import { isBoqAutoManagedStatus } from '@/types/boq/units';
+import { isFrozenBaselineStatus } from '@/types/boq/units';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('BoqFirestoreSync');
@@ -117,7 +117,7 @@ export async function syncManagedBoqRow(params: SyncManagedBoqRowParams): Promis
   // (approved/certified/locked) είναι υπογεγραμμένο συμβατικό στιγμιότυπο. Ο
   // auto-sync ΠΟΤΕ δεν αγγίζει `estimatedQuantity` ούτε το διαγράφει — μόνο
   // καταγράφει την απόκλιση του live μοντέλου ως drift metadata (5D-BIM).
-  if (data && !isBoqAutoManagedStatus(data.status)) {
+  if (data && isFrozenBaselineStatus(data.status)) {
     await recordBaselineDrift(ref, data, quantity, logLabel, logContext);
     return;
   }

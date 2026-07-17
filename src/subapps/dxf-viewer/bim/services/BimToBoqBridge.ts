@@ -51,7 +51,7 @@ import {
   hasFinishContribution,
   type FinishBoqContribution,
 } from './structural-finish-boq';
-import { isBoqAutoManagedStatus } from '@/types/boq/units';
+import { isFrozenBaselineStatus } from '@/types/boq/units';
 import { buildSingleEntityBoqRow } from './boq-base-row';
 import { deleteManagedBoqRow, recordBaselineDrift } from './boq-firestore-sync';
 
@@ -189,7 +189,7 @@ async function upsertBoqRow(
   if (action === 'updated' && state.detached) return;
   // ADR-674 — frozen-baseline guard: υπογεγραμμένο row (status ∉ draft/submitted)
   // ΠΟΤΕ δεν overwriteάρεται· καταγράφουμε μόνο την απόκλιση του live μοντέλου.
-  if (state.exists && state.raw && !isBoqAutoManagedStatus(state.raw.status)) {
+  if (state.exists && state.raw && isFrozenBaselineStatus(state.raw.status)) {
     const live = typeof row.payload.estimatedQuantity === 'number' ? row.payload.estimatedQuantity : 0;
     await recordBaselineDrift(doc(db, COLLECTIONS.BOQ_ITEMS, row.id), state.raw, live, 'BimToBoqBridge');
     return;
@@ -338,7 +338,7 @@ class BimToBoqBridgeImpl {
       if (action === 'updated' && existing.detached === true) return;
       // ADR-674 — frozen-baseline guard: υπογεγραμμένο row (status ∉ draft/submitted)
       // ΠΟΤΕ δεν overwriteάρεται· καταγράφουμε μόνο την απόκλιση του live μοντέλου.
-      if (!isBoqAutoManagedStatus(existing.status)) {
+      if (isFrozenBaselineStatus(existing.status)) {
         const live = deriveAtoeQuantity(mapping.unit, entity.geometry);
         await recordBaselineDrift(ref, existing, live, 'BimToBoqBridge');
         return;
