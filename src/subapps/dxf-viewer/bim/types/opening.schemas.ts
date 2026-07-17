@@ -69,6 +69,21 @@ export const OpeningIfcTypeSchema = z.union([
 
 // ─── Params schema ──────────────────────────────────────────────────────────
 
+/**
+ * Per-part surface materials (κάσα/φύλλο/υαλοστάσιο/χειρολαβή) — Revit family
+ * surfaces. Each field is a material-library id (`mat-*` catalog or `bmat_*`
+ * user). Mirrors `OpeningMaterials` (opening-types.ts). Shared by the instance
+ * (`OpeningParamsSchema`) and the family Type (`OpeningTypeParamsSchema`).
+ */
+export const OpeningMaterialsSchema = z
+  .object({
+    frame: z.string().min(1).optional(),
+    leaf: z.string().min(1).optional(),
+    glass: z.string().min(1).optional(),
+    hardware: z.string().min(1).optional(),
+  })
+  .strict();
+
 export const OpeningParamsSchema = z
   .object({
     kind: OpeningKindSchema,
@@ -92,6 +107,7 @@ export const OpeningParamsSchema = z
     handing: OpeningHandingSchema.optional(),
     openDirection: OpeningSwingSchema.optional(),
     material: z.string().min(1).optional(),
+    materials: OpeningMaterialsSchema.optional(),
     glazingPanes: OpeningGlazingPanesSchema.optional(),
     // ─── ADR-421 §A2 — explicit IFC operation (optional/non-breaking) ────────
     operationType: OpeningOperationTypeSchema.optional(),
@@ -120,6 +136,7 @@ export const OpeningTypeParamsSchema = z
     // ─── ADR-611 — type-default frame profile ID ─────────────────────────────
     frameProfileId: z.string().min(1).optional(),
     material: z.string().min(1).optional(),
+    materials: OpeningMaterialsSchema.optional(),
     glazingPanes: OpeningGlazingPanesSchema.optional(),
     fireRating: z.string().min(1).optional(),
   })
