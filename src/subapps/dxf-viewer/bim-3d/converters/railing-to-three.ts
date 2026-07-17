@@ -23,6 +23,7 @@ import type { RailingEntity, RailMemberSolid, RailProfile, RailSweep } from '../
 import type { Point3D } from '../../bim/types/bim-base';
 import { getElementMaterial3D } from '../materials/MaterialCatalog3D';
 import { sceneUnitsToMeters } from '../../utils/scene-units';
+import { stampBimIdentity } from './bim-three-shape-helpers';
 
 const MM_TO_M = 0.001;
 const DEG_TO_RAD = Math.PI / 180;
@@ -197,18 +198,20 @@ function buildRailTube(
   return out;
 }
 
-/** Tag a railing sub-mesh so picking / sync resolves it back to the entity. */
+/**
+ * Tag a railing sub-mesh so picking / sync resolves it back to the entity.
+ * ADR-669 — stamps via the `stampBimIdentity` SSoT, then adds the railing-only component
+ * key. Takes an `Object3D` (groups + instanced meshes are tagged too) and sets no shadow
+ * flags: each member already sets its own where it is built.
+ */
 function tagComponent(
   obj: THREE.Object3D,
   id: string,
   component: 'post' | 'baluster' | 'rail',
   levelId?: string,
 ): void {
-  obj.userData['bimId'] = id;
-  obj.userData['bimType'] = 'railing';
+  stampBimIdentity(obj, { bimId: id, bimType: 'railing', matId: 'elem-railing', levelId });
   obj.userData['railingComponent'] = component;
-  obj.userData['matId'] = 'elem-railing';
-  if (levelId !== undefined) obj.userData['levelId'] = levelId;
 }
 
 /**
@@ -236,8 +239,6 @@ export function railingToMesh(
     if (tube) group.add(tube);
   }
   if (group.children.length === 0) return null;
-  group.userData['bimId'] = railing.id;
-  group.userData['bimType'] = 'railing';
-  if (levelId !== undefined) group.userData['levelId'] = levelId;
+  stampBimIdentity(group, { bimId: railing.id, bimType: 'railing', levelId });
   return group;
 }

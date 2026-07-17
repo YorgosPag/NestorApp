@@ -32,13 +32,13 @@ import { scalePoints } from '../../rendering/entities/shared/geometry-vector-uti
 import { resolveActiveFootingReinforcementForParams } from '../../bim/structural/active-footing-reinforcement';
 // ADR-477 Slice 2 — η συνδετήρια δοκός τροφοδοτεί το ΙΔΙΟ beam rebar cage core (EC8 ζώνες).
 import { buildLinearMemberRebarCage } from './linear-member-rebar-3d';
+import { stampBimIdentity } from './bim-three-shape-helpers';
 import { tieBeamRebarLayout, tieBeamAxisPoints } from '../../bim/structural/reinforcement/tie-beam-linear-member';
 import type { Point2D } from '../../rendering/types/Types';
 import {
   MM_TO_M,
   MIN_RADIUS,
-  REBAR_MATERIAL,
-  buildRods,
+  addRods,
   toThree,
   type Seg,
 } from './rebar-3d-shared';
@@ -78,31 +78,33 @@ function radiusOf(diameterMm: number): number {
   return Math.max(MIN_RADIUS, (diameterMm / 2) * MM_TO_M);
 }
 
-/** Οριζόντιες ράβδοι // along (μήκος lenAlong−2cover), βήμα `spacingM` κατά across. */
-function matSegs(f: Frame, yLevel: number, spacingM: number, coverM: number): Seg[] {
-  const usable = f.lenAcross - 2 * coverM;
-  if (usable < 0 || spacingM <= 0) return [];
-  const n = Math.max(1, Math.floor(usable / spacingM) + 1);
-  const a0 = coverM, a1 = f.lenAlong - coverM;
-  const segs: Seg[] = [];
-  for (let i = 0; i < n; i++) {
-    const c = coverM + (n === 1 ? usable / 2 : (i * usable) / (n - 1));
-    segs.push({ a: toThree(planAt(f, a0, c), yLevel), b: toThree(planAt(f, a1, c), yLevel) });
-  }
-  return segs;
-}
-
-/** `count` οριζόντιες ράβδοι // along, ισοκατανεμημένες κατά across (inset cover). */
-function distributedSegs(f: Frame, yLevel: number, count: number, coverM: number): Seg[] {
+/**
+ * `count` ράβδοι που τρέχουν // along (a0→a1), ισοκατανεμημένες κατά across εντός
+ * `usable` (μία στο κέντρο αν count===1, αλλιώς inset cover στα άκρα). Ο κοινός πυρήνας
+ * των `matSegs` (βήμα→count) και `distributedSegs` (ρητό count).
+ */
+function acrossBars(f: Frame, yLevel: number, a0: number, a1: number, count: number, usable: number, coverM: number): Seg[] {
   if (count <= 0) return [];
-  const usable = Math.max(0, f.lenAcross - 2 * coverM);
-  const a0 = coverM, a1 = f.lenAlong - coverM;
   const segs: Seg[] = [];
   for (let i = 0; i < count; i++) {
     const c = coverM + (count === 1 ? usable / 2 : (i * usable) / (count - 1));
     segs.push({ a: toThree(planAt(f, a0, c), yLevel), b: toThree(planAt(f, a1, c), yLevel) });
   }
   return segs;
+}
+
+/** Οριζόντιες ράβδοι // along (μήκος lenAlong−2cover), βήμα `spacingM` κατά across. */
+function matSegs(f: Frame, yLevel: number, spacingM: number, coverM: number): Seg[] {
+  const usable = f.lenAcross - 2 * coverM;
+  if (usable < 0 || spacingM <= 0) return [];
+  const n = Math.max(1, Math.floor(usable / spacingM) + 1);
+  return acrossBars(f, yLevel, coverM, f.lenAlong - coverM, n, usable, coverM);
+}
+
+/** `count` οριζόντιες ράβδοι // along, ισοκατανεμημένες κατά across (inset cover). */
+function distributedSegs(f: Frame, yLevel: number, count: number, coverM: number): Seg[] {
+  const usable = Math.max(0, f.lenAcross - 2 * coverM);
+  return acrossBars(f, yLevel, coverM, f.lenAlong - coverM, count, usable, coverM);
 }
 
 /** Κάθετοι κλειστοί συνδετήρες (ορθογ. δαχτυλίδια στη διατομή) ανά βήμα κατά τον άξονα. */
@@ -128,11 +130,6 @@ function stirrupRingSegs(
     segs.push({ a: p0, b: p1 }, { a: p1, b: p2 }, { a: p2, b: p3 }, { a: p3, b: p0 });
   }
   return segs;
-}
-
-function addRods(group: THREE.Group, segs: readonly Seg[], radius: number): void {
-  const mesh = buildRods(segs, radius, REBAR_MATERIAL);
-  if (mesh) group.add(mesh);
 }
 
 function buildPadCage(group: THREE.Group, f: Frame, r: PadReinforcement, bottomY: number, topY: number): void {
@@ -209,9 +206,7 @@ export function buildFootingRebarCage(
   else if (p.kind === 'tie-beam' && r.kind === 'tie-beam') buildTieBeamCage(group, p, r, bottomY);
 
   if (group.children.length === 0) return null;
-  group.userData['bimId'] = foundation.id;
-  group.userData['bimType'] = 'foundation';
+  stampBimIdentity(group, { bimId: foundation.id, bimType: 'foundation', levelId });
   group.userData['reinforcement'] = true;
-  if (levelId !== undefined) group.userData['levelId'] = levelId;
   return group;
 }

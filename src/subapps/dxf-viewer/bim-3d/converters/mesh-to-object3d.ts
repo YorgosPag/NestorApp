@@ -33,6 +33,7 @@ import { finiteBox3FromObject } from '../scene/finite-bounds';
 import { sceneUnitsToMeters, type SceneUnits } from '../../utils/scene-units';
 import { getMaterial3D } from '../materials/MaterialCatalog3D';
 import { bimMeshCache } from '../library/bim-mesh-library/bim-mesh-cache';
+import { stampBimIdentity } from './bim-three-shape-helpers';
 
 const MM_TO_M = 0.001;
 const DEG_TO_RAD = Math.PI / 180;
@@ -128,15 +129,17 @@ function buildPlaceholder(
   return mesh;
 }
 
-/** Tag the object + all descendant meshes so raycast/selection resolves the entity. */
+/**
+ * Tag the object + all descendant meshes so raycast/selection resolves the entity.
+ * ADR-669 — an `Object3D` (library meshes arrive as arbitrary sub-trees), so it stamps via
+ * the `stampBimIdentity` SSoT rather than `tagMesh`. Descendants carry the entity keys only:
+ * `matId`/`levelId` stay on the root, and the SSoT skips `undefined` so the root's own
+ * values survive its pass through `traverse` (which visits `obj` itself first).
+ */
 function tagObject(obj: THREE.Object3D, p: MeshPlacement): void {
-  obj.userData['bimId'] = p.bimId;
-  obj.userData['bimType'] = p.bimType;
-  obj.userData['matId'] = p.matId;
-  if (p.levelId !== undefined) obj.userData['levelId'] = p.levelId;
+  stampBimIdentity(obj, { bimId: p.bimId, bimType: p.bimType, matId: p.matId, levelId: p.levelId });
   obj.traverse((child) => {
-    child.userData['bimId'] = p.bimId;
-    child.userData['bimType'] = p.bimType;
+    stampBimIdentity(child, { bimId: p.bimId, bimType: p.bimType });
     if (child instanceof THREE.Mesh) {
       child.castShadow = true;
       child.receiveShadow = true;

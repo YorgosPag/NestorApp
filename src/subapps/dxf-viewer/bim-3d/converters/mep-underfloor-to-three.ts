@@ -42,7 +42,7 @@ import {
 import { sceneUnitsToMeters } from '../../utils/scene-units';
 import type { SceneUnits } from '../../utils/scene-units';
 import { getMaterial3D } from '../materials/MaterialCatalog3D';
-import { buildShape, extrudeAndRotate, tagMesh } from './bim-three-shape-helpers';
+import { buildShape, extrudeAndRotate, tagMesh, stampBimIdentity } from './bim-three-shape-helpers';
 
 const MM_TO_M = 0.001;
 
@@ -220,8 +220,6 @@ export function underfloorToObject3D(
   if (group.children.length === 0) return null;
 
   // Tag the group itself so picking / V-G resolution on the container works too.
-  group.userData['bimId'] = entity.id;
-  group.userData['bimType'] = 'mep-underfloor';
-  if (levelId !== undefined) group.userData['levelId'] = levelId;
+  stampBimIdentity(group, { bimId: entity.id, bimType: 'mep-underfloor', levelId });
   return group;
 }

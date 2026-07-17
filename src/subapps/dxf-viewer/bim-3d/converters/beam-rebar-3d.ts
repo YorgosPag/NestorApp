@@ -29,6 +29,7 @@ import type { BeamEntity } from '../../bim/types/beam-types';
 import { resolveActiveBeamRebarLayout } from '../../bim/structural/active-reinforcement';
 import { DEFAULT_STIRRUP_TYPE } from '../../bim/structural/reinforcement/beam-reinforcement-types';
 import { buildLinearMemberRebarCage } from './linear-member-rebar-3d';
+import { stampBimIdentity } from './bim-three-shape-helpers';
 
 /** Beam που χρειάζεται ο κλωβός (geometry-is-SSoT· full `BeamEntity` ικανοποιεί το Pick). */
 type RebarBeam = Pick<BeamEntity, 'id' | 'params' | 'geometry'>;
@@ -64,9 +65,7 @@ export function buildBeamRebarCage(
   });
   if (!group) return null;
 
-  group.userData['bimId'] = beam.id;
-  group.userData['bimType'] = 'beam';
+  stampBimIdentity(group, { bimId: beam.id, bimType: 'beam', levelId });
   group.userData['reinforcement'] = true;
-  if (levelId !== undefined) group.userData['levelId'] = levelId;
   return group;
 }

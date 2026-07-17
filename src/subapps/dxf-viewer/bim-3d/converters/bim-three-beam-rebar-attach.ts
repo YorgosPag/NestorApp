@@ -10,6 +10,7 @@ import * as THREE from 'three';
 import type { BeamEntity } from '../../bim/types/beam-types';
 import { isStructuralComponentVisible } from '../../bim/visibility/structural-component-visibility';
 import { buildBeamRebarCage } from './beam-rebar-3d';
+import { attachElementComponent } from './bim-three-shape-helpers';
 
 const MM_TO_M = 0.001;
 
@@ -32,9 +33,10 @@ function beamRebarTopClipY(
 
 /**
  * ADR-471 Slice 3 — προσθέτει τον κλωβό οπλισμού (διαμήκεις + συνδετήρες) στο ήδη
- * συντεθειμένο beam result (πυρήνας ή πυρήνας+σοβάς). Mirror του `attachColumnRebar`:
- * επιστρέφει το ίδιο αντικείμενο όταν ο οπλισμός είναι ανενεργός (view gate / χωρίς
- * `reinforcement`). `bottomFaceY` = κάτω παρειά πυρήνα (ίδιο datum → ευθυγράμμιση).
+ * συντεθειμένο beam result (πυρήνας ή πυρήνας+σοβάς). Επιστρέφει το ίδιο αντικείμενο όταν ο
+ * οπλισμός είναι ανενεργός (view gate / χωρίς `reinforcement`)· αλλιώς το Mesh↔Group
+ * composition το κάνει το `attachElementComponent` SSoT (ADR-669 §10 — ήταν copy-paste σε 4
+ * σημεία). `bottomFaceY` = κάτω παρειά πυρήνα (ίδιο datum → ευθυγράμμιση).
  * Gate μόνο στον δικό του διακόπτη `showReinforcement` — ΑΝΕΞΑΡΤΗΤΟΣ από `suppressFinishSkin`.
  */
 export function attachBeamRebar(
@@ -48,14 +50,5 @@ export function attachBeamRebar(
   if (!isStructuralComponentVisible('reinforcement', beam)) return composed;
   const cage = buildBeamRebarCage(beam, bottomFaceY, levelId, beamRebarTopClipY(beam, bottomFaceY, clipTopZmm));
   if (!cage) return composed;
-  if (composed instanceof THREE.Group) {
-    composed.add(cage);
-    return composed;
-  }
-  const group = new THREE.Group();
-  group.add(composed);
-  group.add(cage);
-  group.userData['bimId'] = beam.id;
-  group.userData['bimType'] = 'beam';
-  return group;
+  return attachElementComponent(composed, cage, { bimId: beam.id, bimType: 'beam' });
 }

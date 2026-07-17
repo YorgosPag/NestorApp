@@ -20,7 +20,7 @@
 import * as THREE from 'three';
 import type { FoundationEntity } from '../../bim/types/foundation-types';
 import { getElementMaterial3D } from '../materials/MaterialCatalog3D';
-import { buildShape, extrudeAndRotate, tagMesh } from './bim-three-shape-helpers';
+import { buildShape, extrudeAndRotate, tagMesh, stampBimIdentity } from './bim-three-shape-helpers';
 import { scalePoints } from '../../rendering/entities/shared/geometry-vector-utils';
 import { ensureWorldUvs } from './bim-uv-helpers';
 import { attachEdgesProjection } from './bim-three-edges';
@@ -53,9 +53,7 @@ function attachFoundationRebar(
   const group = new THREE.Group();
   group.add(mesh);
   group.add(cage);
-  group.userData['bimId'] = foundation.id;
-  group.userData['bimType'] = 'foundation';
-  if (levelId !== undefined) group.userData['levelId'] = levelId;
+  stampBimIdentity(group, { bimId: foundation.id, bimType: 'foundation', levelId });
   return group;
 }
 

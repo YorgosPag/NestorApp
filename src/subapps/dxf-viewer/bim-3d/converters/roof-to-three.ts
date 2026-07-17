@@ -35,6 +35,7 @@ import { tileSizeMForMaterialId } from '../../bim/materials/bim-texture-registry
 import { mmToSceneUnits, sceneUnitsToMeters } from '../../utils/scene-units';
 import { getElementMaterial3D, getMaterial3D, getRoofTileMaterial3D } from '../materials/MaterialCatalog3D';
 import { setSlopeAlignedTileUvs, type SlopeTileUvOptions } from './bim-uv-helpers';
+import { tagMesh, stampBimIdentity } from './bim-three-shape-helpers';
 import { toWorld } from './roof-world-transform';
 import { tessellateRoofTopCap } from './roof-tile-tessellation';
 import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
@@ -242,18 +243,14 @@ function resolveRoofSurfaceMaterialId(roof: RoofEntity): string | null {
 
 // ─── Tag helper ──────────────────────────────────────────────────────────────
 
+/** ADR-669 — thin `'roof'`-bound arity adapter over the `tagMesh` SSoT. No own stamping. */
 function tagRoofMesh(
   mesh: THREE.Mesh,
   id: string,
   matId: string,
   levelId?: string,
 ): void {
-  mesh.userData['bimId'] = id;
-  mesh.userData['bimType'] = 'roof';
-  mesh.userData['matId'] = matId;
-  if (levelId !== undefined) mesh.userData['levelId'] = levelId;
-  mesh.castShadow = true;
-  mesh.receiveShadow = true;
+  tagMesh(mesh, id, 'roof', matId, levelId);
 }
 
 // ─── Per-face emission ──────────────────────────────────────────────────────────
@@ -489,8 +486,6 @@ export function roofToMesh(
 
   if (group.children.length === 0) return null;
 
-  group.userData['bimId'] = roof.id;
-  group.userData['bimType'] = 'roof';
-  if (levelId !== undefined) group.userData['levelId'] = levelId;
+  stampBimIdentity(group, { bimId: roof.id, bimType: 'roof', levelId });
   return group;
 }

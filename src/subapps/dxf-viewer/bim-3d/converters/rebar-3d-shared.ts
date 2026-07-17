@@ -74,3 +74,13 @@ export function buildRods(
 export function toThree(p: Point2D, y: number): THREE.Vector3 {
   return new THREE.Vector3(p.x, y, -p.y);
 }
+
+/**
+ * Χτίζει τον InstancedMesh των ράβδων από `segs` (`REBAR_MATERIAL` singleton) και τον
+ * προσθέτει στο `group` — no-op αν δεν προκύπτει geometry (κενά segs / μηδενική ακτίνα).
+ * ΕΝΑ SSoT για footing + slab cages (ταυτόσημο add-rods pattern, N.0.2).
+ */
+export function addRods(group: THREE.Group, segs: readonly Seg[], radius: number): void {
+  const mesh = buildRods(segs, radius, REBAR_MATERIAL);
+  if (mesh) group.add(mesh);
+}

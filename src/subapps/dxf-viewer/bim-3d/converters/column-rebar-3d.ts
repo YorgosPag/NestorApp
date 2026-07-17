@@ -40,6 +40,7 @@ import { DEFAULT_STIRRUP_TYPE } from '../../bim/structural/reinforcement/column-
 import type { Point2D } from '../../rendering/types/Types';
 // ADR-463 — shared 3Δ rebar primitives (SSoT κολώνα+θεμελίωση· pure, μηδέν store import).
 import { MM_TO_M, MIN_RADIUS, REBAR_MATERIAL, buildRods, toThree, type Seg } from './rebar-3d-shared';
+import { stampBimIdentity } from './bim-three-shape-helpers';
 
 /**
  * ADR-404 Bug A — κεκλιμένη κολώνα: shear ΟΛΩΝ των rebar segment endpoints ΙΔΙΑ με τον
@@ -221,9 +222,7 @@ export function buildColumnRebarCage(
   }
 
   if (group.children.length === 0) return null;
-  group.userData['bimId'] = column.id;
-  group.userData['bimType'] = 'column';
+  stampBimIdentity(group, { bimId: column.id, bimType: 'column', levelId });
   group.userData['reinforcement'] = true;
-  if (levelId !== undefined) group.userData['levelId'] = levelId;
   return group;
 }
