@@ -3274,7 +3274,17 @@
           "depth": "Depth",
           "custom": "Custom",
           "faceWidthTooltip": "Visible frame width across the elevation face (mm) — constant, independent of the opening size.",
-          "depthTooltip": "Frame depth through the wall thickness (mm) — constant, independent of the wall thickness."
+          "depthTooltip": "Frame depth through the wall thickness (mm) — constant, independent of the wall thickness.",
+          "saveAsMine": "Save as mine",
+          "duplicateAndEdit": "Duplicate & edit",
+          "nameLabel": "Name",
+          "namePlaceholder": "Profile name",
+          "scopeLabel": "Scope",
+          "scopeUser": "Personal",
+          "scopeCompany": "Company",
+          "scopeProject": "Project",
+          "save": "Save",
+          "cancel": "Cancel"
         },
         "close": "Close",
         "delete": "Delete",

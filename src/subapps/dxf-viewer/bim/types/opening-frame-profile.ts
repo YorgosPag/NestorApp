@@ -25,6 +25,7 @@
  */
 
 import { CATALOG_CUSTOM_SENTINEL } from '../columns/section-catalog';
+import type { ScopedLibraryDoc } from '../services/scoped-library-service';
 
 // Re-export the single sentinel SSoT so frame-profile consumers import it from
 // the domain-local module without reaching into the column catalog directly.
@@ -72,3 +73,47 @@ export const DEFAULT_FRAME_PROFILE_FACE_MM = 50;
 
 /** Default frame member depth (mm) when no profile resolves. */
 export const DEFAULT_FRAME_PROFILE_DEPTH_MM = 50;
+
+// ─── User library persisted doc (ADR-676 Phase 3 PILOT) ───────────────────────
+
+/**
+ * Firestore-persisted user/company/project-scoped frame profile preset.
+ * Lives in `companies/{companyId}/opening_frame_presets/{id}` (mirrors the
+ * `BimFamilyType` / `StairPresetDoc` 3-scope subcollection convention — see
+ * `bim/family-types/opening-frame-profile-library-service.ts`). `origin`
+ * distinguishes a from-scratch user entry (`'user'`) from a "Duplicate & edit"
+ * of a builtin/user profile (`'derived'`, with `derivedFrom` provenance).
+ */
+export interface OpeningFrameProfilePresetDoc extends ScopedLibraryDoc {
+  readonly id: string;
+  readonly scope: string;
+  /** User-visible name (DATA, not i18n — same convention as `BimFamilyType.name`). */
+  readonly name: string;
+  readonly origin: 'user' | 'derived';
+  /** Source builtin/user profile id when `origin === 'derived'` (provenance). */
+  readonly derivedFrom?: string;
+  readonly manufacturer: string;
+  readonly series: string;
+  readonly role: FrameProfileRole;
+  readonly faceWidth: number;
+  readonly depth: number;
+  readonly label?: string;
+}
+
+/**
+ * Maps a persisted preset doc to the plain `OpeningFrameProfile` shape consumed
+ * by the resolver/bridge (same fields the builtin catalog entries carry).
+ */
+export function frameProfilePresetDocToProfile(
+  doc: OpeningFrameProfilePresetDoc,
+): OpeningFrameProfile {
+  const profile: OpeningFrameProfile = {
+    id: doc.id,
+    manufacturer: doc.manufacturer,
+    series: doc.series,
+    role: doc.role,
+    faceWidth: doc.faceWidth,
+    depth: doc.depth,
+  };
+  return doc.label === undefined ? profile : { ...profile, label: doc.label };
+}
