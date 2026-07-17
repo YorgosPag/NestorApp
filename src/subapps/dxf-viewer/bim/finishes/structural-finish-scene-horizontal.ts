@@ -310,21 +310,12 @@ export function computeMergedStructuralTopCap(input: HorizontalFinishInput): Hor
     // σοβάς κοβόταν στα 2800 και το καπάκι έμενε στα 3000 = οι «λεπτές λωρίδες» πάνω στην πλάκα.
     if (core) members.push({ core, zTopMm: wallFinishZExtent(w, emptyUnderside, floorElevationMm, wallTopClipById?.get(w.id)).zTopMm });
   }
-  // ADR-534 Φ5 — η **πάνω** παρειά (`up`) των finish-member πλακών μπαίνει στο ΕΝΙΑΙΟ καπάκι
-  // (mirror τοίχου/κολόνας/δοκαριού): ενώνεται με γειτονικά μέλη ίδιου z σε ΕΝΑ λείο περίγραμμα.
-  // Κρατάμε τα ids ανά επίπεδο ώστε η ίδια η πλάκα να μη σβήσει το καπάκι της (Απόφαση Δ).
-  const slabMemberIdsByPlane = new Map<number, Set<string>>();
-  for (const sl of input.slabs) {
-    if (!slabObstacleMember(sl)) continue;
-    const core = coresOf(sl.params.outline.vertices);
-    if (!core) continue;
-    const zTopMm = slabFinishZExtent(sl.params).zTopMm;
-    members.push({ core, zTopMm });
-    const key = Math.round(zTopMm * 1e3);
-    const set = slabMemberIdsByPlane.get(key) ?? new Set<string>();
-    set.add(sl.id!);
-    slabMemberIdsByPlane.set(key, set);
-  }
+  // ADR-534 Φ7 (Giorgio C4D 234109 «hup δεν χρειάζεται»): η **πάνω** όψη ΠΛΑΚΑΣ **ΔΕΝ** σοβατίζεται
+  // — είναι δάπεδο (παίρνει δάπεδο/screed) ή δώμα/επόμενος όροφος (μόνωση), ΠΟΤΕ structural plaster.
+  // Model-verified (proj_5a495bad): το `hup` ήταν αποκλειστικά οι πάνω όψεις δαπέδου (z=0) + οροφής
+  // (z=3000)· οι τοίχοι καλύπτονται πλήρως από την ομώνυμη-περίμετρο πλάκα → σωστά σβήνουν. Έτσι οι
+  // πλάκες συνεισφέρουν ΜΟΝΟ το soffit τους (`down` → `hslab`, η οροφή). Το Φ5 (slab-up στο merged
+  // cap) αναιρείται σκόπιμα. Εκτεθειμένες κορυφές τοίχων/κολόνων/δοκαριών (parapet/pilotis) μένουν.
   if (members.length === 0) return [];
 
   // Covers ΓΝΗΣΙΑΣ κάλυψης άνωθεν (πλάκες/δοκάρια): κρύβουν το καπάκι όπου φτάνουν το επίπεδο.
@@ -350,13 +341,10 @@ export function computeMergedStructuralTopCap(input: HorizontalFinishInput): Hor
     // 100928). Δοκάρι ΠΑΝΩ από χαμηλότερη κολόνα (top-plane > cap) καλύπτει κανονικά (μηδέν regression).
     const beamCoversAbove = beamObs.filter((o) => o.zTopMm > planeZmm + PLANE_TOL_MM);
     const covers = [...slabObs, ...beamCoversAbove];
-    // ADR-534 Φ5 Απόφαση Δ — id-based (ΟΧΙ z-based): μια finish-member πλάκα αυτού του επιπέδου
-    // εξαιρείται από τα εμπόδια· μια non-member coplanar πλάκα (π.χ. `ground`) εξακολουθεί να καλύπτει.
-    const excludeIds = slabMemberIdsByPlane.get(key);
     for (const ring of mergeCoresToFinishedRings(cores, spec.thickness, s)) {
       const face = computeHorizontalFinishFace({
         coreFootprint: ring,
-        coverFootprints: coversAtPlane(covers, planeZmm, bboxOf(ring), PLANE_TOL_MM, excludeIds),
+        coverFootprints: coversAtPlane(covers, planeZmm, bboxOf(ring), PLANE_TOL_MM),
         zMm: planeZmm, direction: 'up', spec, classification: 'interior', unitToMeters,
       });
       if (face) faces.push(face);

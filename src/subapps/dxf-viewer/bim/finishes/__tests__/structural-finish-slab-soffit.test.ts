@@ -106,10 +106,10 @@ describe('merged top-cap με πλάκες — ADR-534 Φ5 Απόφαση Δ', (
       columns: [], beams: [], walls, slabs, beamObstacles: [], floorElevationMm: 0,
     });
 
-  it('finish-member πλάκα → η ΠΑΝΩ παρειά της μπαίνει στο ενιαίο cap (ΔΕΝ σβήνει τον εαυτό της)', () => {
-    const cf = cap([slab('s1', 3000, 0, 0, 4000, 3000)]);
-    expect(cf.length).toBeGreaterThanOrEqual(1);
-    expect(totalArea(cf)).toBeGreaterThan(10); // ~12 m², self-exclusion δουλεύει
+  it('ADR-534 Φ7 — finish-member πλάκα ΔΕΝ συνεισφέρει την ΠΑΝΩ όψη στο ενιαίο cap (δάπεδο/δώμα δεν σοβατίζεται)', () => {
+    // Giorgio C4D 234109: η πάνω όψη πλάκας (δάπεδο/οροφή) ΔΕΝ παίρνει structural plaster. Η πλάκα
+    // συνεισφέρει ΜΟΝΟ το soffit της (`down` → hslab). Άρα σκέτη πλάκα → κανένα merged top-cap.
+    expect(cap([slab('s1', 3000, 0, 0, 4000, 3000)])).toHaveLength(0);
   });
 
   it('ground (non-member) coplanar καλύπτει το top-cap τοίχου (id-exclusion ΜΟΝΟ σε members)', () => {
