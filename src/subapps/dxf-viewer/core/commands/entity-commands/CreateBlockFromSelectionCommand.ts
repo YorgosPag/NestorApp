@@ -25,6 +25,7 @@
 
 import type { ISceneManager, SceneEntity, SerializedCommand } from '../interfaces';
 import type { Entity } from '../../../types/entities';
+import type { Point2D } from '../../../rendering/types/Types';
 import type { InSessionBlockDef } from '../../../bim/block-library/block-library-types';
 import { buildBlockDefFromSelection } from '../../../systems/block/build-block-def-from-selection';
 import { buildBlockEntityFromDef } from '../../../bim/block-library/place-block-from-library';
@@ -41,6 +42,8 @@ export class CreateBlockFromSelectionCommand extends ReplaceEntitiesWithContaine
     memberEntityIds: readonly string[],
     private readonly blockName: string,
     sceneManager: ISceneManager,
+    /** ADR-652 M6 — «Specify base point»: user-picked base (world). Undefined ⇒ AABB min-corner. */
+    private readonly baseOverride?: Point2D,
   ) {
     super(memberEntityIds, sceneManager);
   }
@@ -51,7 +54,7 @@ export class CreateBlockFromSelectionCommand extends ReplaceEntitiesWithContaine
    * restore sources) when the selection has no measurable geometry.
    */
   protected buildContainer(snapshots: Entity[]): SceneEntity | null {
-    const built = buildBlockDefFromSelection(snapshots, this.blockName);
+    const built = buildBlockDefFromSelection(snapshots, this.blockName, this.baseOverride);
     if (!built) return null;
     this.createdDef = built.def;
     return buildBlockEntityFromDef(built.def, { position: built.base }) as unknown as SceneEntity;
@@ -91,6 +94,7 @@ export class CreateBlockFromSelectionCommand extends ReplaceEntitiesWithContaine
         memberEntityIds: [...this.sourceEntityIds],
         memberSnapshots: this.snapshots,
         blockName: this.blockName,
+        baseOverride: this.baseOverride ?? null,
         blockEntity: this.container,
       },
       version: 1,

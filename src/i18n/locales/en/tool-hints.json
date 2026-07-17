@@ -931,6 +931,7 @@
     "noHint": "Select a tool"
   },
   "createBlock": {
-    "selectEntities": "Select objects to create a block"
+    "selectEntities": "Select objects to create a block",
+    "pickBasePoint": "Click on the canvas for the base point · Esc to cancel"
   }
 }

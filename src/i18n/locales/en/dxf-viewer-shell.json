@@ -1387,7 +1387,11 @@
       "confirm": "Create",
       "saving": "Creating…",
       "replaceWithInstance": "Replace selection with the block",
-      "replaceHint": "The selected geometry becomes one instance of the block in the drawing. If off, the drawing is left untouched and the block is only added to your library."
+      "replaceHint": "The selected geometry becomes one instance of the block in the drawing. If off, the drawing is left untouched and the block is only added to your library.",
+      "pickBasePoint": "Pick base point",
+      "basePointLabel": "Base point",
+      "basePointAuto": "Automatic (lower-left corner)",
+      "basePointClear": "Reset to automatic"
     }
   },
   "furniturePlan": {

@@ -21,7 +21,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/i18n';
+import type { Point2D } from '../../../rendering/types/Types';
 import { DEFAULT_USER_IMPORT_LICENSE } from '../../../bim/block-library/block-library-types';
 import { BlockDialogFooter } from './BlockDialogFooter';
 import {
@@ -43,6 +45,12 @@ export interface CreateBlockDialogProps {
   readonly saving: boolean;
   /** Ανήκει ήδη το όνομα σε άλλο block; (το όνομα είναι κλειδί ταυτότητας — βλ. `isBlockNameTaken`). */
   readonly isNameTaken: (name: string) => boolean;
+  /** Επιλεγμένο σημείο βάσης (world)· `null` ⇒ αυτόματο AABB min-corner (ADR-652 M6). */
+  readonly basePoint: Point2D | null;
+  /** «Επιλογή σημείου βάσης»: κρύβει τον διάλογο & arm-άρει το one-click pick στον καμβά. */
+  readonly onPickBasePoint: () => void;
+  /** Επαναφορά στο αυτόματο base (AABB min-corner). */
+  readonly onClearBasePoint: () => void;
   readonly onSubmit: (values: CreateBlockFormValues) => void;
   readonly onCancel: () => void;
 }
@@ -55,6 +63,9 @@ export const CreateBlockDialog: React.FC<CreateBlockDialogProps> = ({
   open,
   saving,
   isNameTaken,
+  basePoint,
+  onPickBasePoint,
+  onClearBasePoint,
   onSubmit,
   onCancel,
 }) => {
@@ -63,12 +74,13 @@ export const CreateBlockDialog: React.FC<CreateBlockDialogProps> = ({
   // AutoCAD BLOCK default: αντικατάσταση της επιλογής με instance.
   const [replaceWithInstance, setReplaceWithInstance] = useState(true);
 
+  // Init ΜΙΑ φορά στο mount (gate-at-mount: ο host mount-άρει fresh inner ανά αίτημα). ΟΧΙ reset
+  // στο `open` toggle — ο διάλογος κρύβεται/επανέρχεται όσο ο χρήστης διαλέγει σημείο βάσης στον
+  // καμβά (ADR-652 M6), και η φόρμα (όνομα/κατηγορία) πρέπει να επιβιώνει αυτού του κύκλου.
   useEffect(() => {
-    if (open) {
-      setForm(initialState());
-      setReplaceWithInstance(true);
-    }
-  }, [open]);
+    setForm(initialState());
+    setReplaceWithInstance(true);
+  }, []);
 
   const handleOpenChange = useCallback(
     (next: boolean) => {
@@ -94,6 +106,27 @@ export const CreateBlockDialog: React.FC<CreateBlockDialogProps> = ({
 
         <fieldset disabled={saving} className="m-0 flex flex-col gap-3 border-0 p-0">
           <BlockMetadataFormFields value={form} onChange={setForm} nameTaken={nameTaken} />
+
+          <section className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-foreground">
+              {t('blockLibrary.create.basePointLabel')}
+            </span>
+            <div className="flex items-center gap-2">
+              <output className="flex-1 text-[11px] tabular-nums text-muted-foreground">
+                {basePoint
+                  ? `${basePoint.x.toFixed(1)}, ${basePoint.y.toFixed(1)}`
+                  : t('blockLibrary.create.basePointAuto')}
+              </output>
+              <Button type="button" variant="outline" size="sm" onClick={onPickBasePoint}>
+                {t('blockLibrary.create.pickBasePoint')}
+              </Button>
+              {basePoint && (
+                <Button type="button" variant="ghost" size="sm" onClick={onClearBasePoint}>
+                  {t('blockLibrary.create.basePointClear')}
+                </Button>
+              )}
+            </div>
+          </section>
 
           <label className="flex items-start gap-2">
             <input

@@ -7,8 +7,9 @@
  * σε ορισμό block. Ίδιο μοντέλο βάσης (base baked → origin) ώστε ο ορισμός να είναι byte-συμβατός
  * με ό,τι παράγει το import → ΜΙΑ διαδρομή τοποθέτησης ({@link buildBlockEntityFromDef}).
  *
- * Base point = κάτω-αριστερή γωνία του AABB της επιλογής (ντετερμινιστικό v1· διαδραστική επιλογή
- * σημείου = μελλοντικό follow-up). Bake: κάθε member μεταφέρεται κατά −base μέσω του SSoT
+ * Base point = κάτω-αριστερή γωνία του AABB της επιλογής (ντετερμινιστικό default)· ο καλών μπορεί
+ * να δώσει `baseOverride` (AutoCAD «Specify base point» — διαδραστική επιλογή σημείου, ADR-652 M6).
+ * Bake: κάθε member μεταφέρεται κατά −base μέσω του SSoT
  * `translateEntityByAnchor` (ΙΔΙΟ μονοπάτι με το `createBlockInstance`), ώστε ο ορισμός να
  * αναπτύσσεται με base (0,0) και να εξάγεται ως BLOCK με base (0,0).
  *
@@ -40,15 +41,19 @@ export interface BuiltBlockDef {
  *
  * Τα member ids ΑΝΑΓΕΝΝΩΝΤΑΙ ώστε ο ορισμός να μη μοιράζεται ταυτότητα με τις ζωντανές οντότητες
  * της σκηνής (στο WBLOCK path η επιλογή παραμένει στη σκηνή) — ο ορισμός είναι πρότυπο, όχι alias.
+ *
+ * `baseOverride` (world, canonical mm): αν δοθεί, παρακάμπτει το AABB min-corner ως base point — το
+ * bake παραμένει ΑΚΡΙΒΩΣ το ίδιο (translate κατά −base), αλλάζει ΜΟΝΟ ποιο σημείο πάει στο origin.
  */
 export function buildBlockDefFromSelection(
   worldEntities: readonly Entity[],
   name: string,
+  baseOverride?: Point2D,
 ): BuiltBlockDef | null {
   if (worldEntities.length === 0) return null;
 
   const bounds = calculateTightBounds(worldEntities as unknown as BoundsEntity[], false);
-  const base: Point2D = { x: bounds.min.x, y: bounds.min.y };
+  const base: Point2D = baseOverride ?? { x: bounds.min.x, y: bounds.min.y };
   const negBase = { x: -base.x, y: -base.y };
 
   // Bake base → origin: ΙΔΙΟ μονοπάτι με createBlockInstance — το translateEntityByAnchor επιστρέφει
