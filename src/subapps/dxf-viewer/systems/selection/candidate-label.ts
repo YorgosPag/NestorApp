@@ -240,16 +240,22 @@ function buildFoundationSemantics(entity: Entity): CandidateSemantics | undefine
  * Extracts the semantic fields the label builder needs from a resolved entity.
  * `undefined` ⇒ no known semantics (generic fallback at render time). Pure —
  * the caller resolves `entity` from the scene ONCE (`resolveEntity` in
- * `buildCandidatesFromHits`); this function never touches scene/store state.
- * Entity `type` is exclusive, so at most one of the branches below matches.
+ * `buildCandidatesFromHits`) and passes the active storey's datum-relative FFL
+ * (`storeyFloorElevationMm`, default 0); this function never touches scene/store
+ * state itself. `storeyFloorElevationMm` turns the FLOOR-RELATIVE stored elevations
+ * (slab/wall/column/beam) into ABSOLUTE building-datum elevations — see the module
+ * header. Entity `type` is exclusive, so at most one of the branches below matches.
  */
-export function buildCandidateSemantics(entity: Entity | null | undefined): CandidateSemantics | undefined {
+export function buildCandidateSemantics(
+  entity: Entity | null | undefined,
+  storeyFloorElevationMm = 0,
+): CandidateSemantics | undefined {
   if (!entity) return undefined;
   return (
-    buildSlabSemantics(entity) ??
-    buildWallSemantics(entity) ??
-    buildColumnSemantics(entity) ??
-    buildBeamSemantics(entity) ??
+    buildSlabSemantics(entity, storeyFloorElevationMm) ??
+    buildWallSemantics(entity, storeyFloorElevationMm) ??
+    buildColumnSemantics(entity, storeyFloorElevationMm) ??
+    buildBeamSemantics(entity, storeyFloorElevationMm) ??
     buildFoundationSemantics(entity)
   );
 }
@@ -324,28 +330,28 @@ function formatHeightLabel(heightMm: number, t: TFn): string {
 function buildWallLabelParts(
   candidate: CandidateLabelInput, s: CandidateSemantics, t: TFn, tEntityType: TFn,
 ): CandidateLabelParts | undefined {
-  const { wallThicknessMm, wallHeightMm, wallBaseOffsetMm } = s;
-  if (wallThicknessMm === undefined || wallHeightMm === undefined || wallBaseOffsetMm === undefined) return undefined;
+  const { wallThicknessMm, wallHeightMm, wallBaseElevationMm } = s;
+  if (wallThicknessMm === undefined || wallHeightMm === undefined || wallBaseElevationMm === undefined) return undefined;
   return {
     primary: entityTypeLabel(candidate.entityType, tEntityType) || candidate.entityType,
     secondary: `${formatLengthForDisplay(wallThicknessMm, { unit: 'cm', precision: 0 })} · ${formatHeightLabel(wallHeightMm, t)}`,
-    tertiary: formatSignedElevationMeters(wallBaseOffsetMm),
+    tertiary: formatSignedElevationMeters(wallBaseElevationMm),
   };
 }
 
 function buildColumnLabelParts(
   candidate: CandidateLabelInput, s: CandidateSemantics, t: TFn, tEntityType: TFn,
 ): CandidateLabelParts | undefined {
-  const { columnShapeKind, columnWidthMm, columnDepthMm, columnHeightMm, columnBaseOffsetMm } = s;
+  const { columnShapeKind, columnWidthMm, columnDepthMm, columnHeightMm, columnBaseElevationMm } = s;
   if (columnWidthMm === undefined || columnDepthMm === undefined
-    || columnHeightMm === undefined || columnBaseOffsetMm === undefined) return undefined;
+    || columnHeightMm === undefined || columnBaseElevationMm === undefined) return undefined;
   const section = columnShapeKind === 'circular'
     ? `Ø${formatLengthForDisplay(columnWidthMm, { unit: 'cm', precision: 0 })}`
     : formatSectionCm(columnWidthMm, columnDepthMm);
   return {
     primary: entityTypeLabel(candidate.entityType, tEntityType) || candidate.entityType,
     secondary: `${section} · ${formatHeightLabel(columnHeightMm, t)}`,
-    tertiary: formatSignedElevationMeters(columnBaseOffsetMm),
+    tertiary: formatSignedElevationMeters(columnBaseElevationMm),
   };
 }
 
