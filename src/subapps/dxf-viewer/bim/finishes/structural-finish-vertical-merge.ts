@@ -301,14 +301,20 @@ function clusterBucket(entries: readonly QuadEntry[], tauScene: number): QuadEnt
   return clusters;
 }
 
-/** Μοναδιαίο outward normal μιας όψης από ένα strip της (mid-outer − mid-core). */
-function outwardPerpOf(s: FinishStrip): Vec2 {
+/**
+ * Μοναδιαίο outward normal μιας όψης = **καθαρό axis-normal του `dir`** (⊥ dir), με πρόσημο core→outer.
+ *
+ * ⚠️ ΟΧΙ `mid-outer − mid-core` (πρώην): σε **ασύμμετρη** όψη (ένα άκρο miter-out κατά +δ, το άλλο
+ * chamfer-in / free) τα mid-points βγάζουν **διαγώνιο** διάνυσμα → skewed extrude frame (το πάχος
+ * εξωθείται λοξά αντί ⊥ στην όψη) → η outer παρειά «γέρνει». Το πάχος ΠΡΕΠΕΙ να εξωθείται κάθετα στον
+ * άξονα → καθαρό `(-dir.y, dir.x)` (ADR-534 Φ7c: το miter το κλείνει το back-cap shift, όχι λοξό perp).
+ * Το πρόσημο (ποια πλευρά είναι outer) το δίνει το mid-diff — αρκεί το ΠΡΟΣΗΜΟ, όχι η διεύθυνση.
+ */
+function outwardPerpOf(s: FinishStrip, dir: Vec2): Vec2 {
+  const nRaw: Vec2 = { x: -dir.y, y: dir.x };
   const mc = mid(s.aCore, s.bCore);
   const mo = mid(s.aOuter, s.bOuter);
-  const dx = mo.x - mc.x;
-  const dy = mo.y - mc.y;
-  const len = Math.hypot(dx, dy) || 1;
-  return { x: dx / len, y: dy / len };
+  return dot(sub(mo, mc), nRaw) >= 0 ? nRaw : { x: -nRaw.x, y: -nRaw.y };
 }
 
 /**
