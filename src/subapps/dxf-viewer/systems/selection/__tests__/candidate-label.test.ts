@@ -41,15 +41,21 @@ const SQUARE = [
   { x: 0, y: 3000 },
 ];
 
-function makeWall(thicknessMm: number, heightMm: number, baseOffsetMm = 0): Entity {
+function makeWall(
+  thicknessMm: number, heightMm: number, baseOffsetMm = 0,
+  baseBinding: 'storey-floor' | 'absolute' = 'storey-floor',
+): Entity {
   const params = buildDefaultWallParams({ x: 0, y: 0 }, { x: 4000, y: 0 }, { thickness: thicknessMm, height: heightMm });
   const built = buildWallEntity(params, '0');
   if (!built.ok) throw new Error(`fixture build failed: ${built.hardErrors.join(', ')}`);
-  if (baseOffsetMm === 0) return built.entity;
-  // baseOffset isn't override-able through the builder (always born 0) — relabel post-build,
-  // same pattern as the DxfSlab wrapper fixture below. Geometry goes stale but semantics
-  // extraction only reads `.params`, so this is safe for this narrow sign-testing purpose.
-  return { ...built.entity, params: { ...built.entity.params, baseOffset: baseOffsetMm } } as unknown as Entity;
+  if (baseOffsetMm === 0 && baseBinding === 'storey-floor') return built.entity;
+  // baseOffset/baseBinding aren't override-able through the builder (born storey-floor @0) —
+  // relabel post-build, same pattern as the DxfSlab wrapper fixture below. Geometry goes stale
+  // but semantics extraction only reads `.params`, so this is safe for this narrow test purpose.
+  return {
+    ...built.entity,
+    params: { ...built.entity.params, baseOffset: baseOffsetMm, baseBinding },
+  } as unknown as Entity;
 }
 
 function makeColumn(kind: ColumnKind, widthMm: number, depthMm: number, heightMm: number, baseOffsetMm = 0): Entity {
@@ -219,22 +225,22 @@ describe('buildCandidateLabel — generic fallback (non-slab / unresolved entity
 });
 
 describe('buildCandidateSemantics — wall/column/beam/foundation (2026-07-17 extension)', () => {
-  it('wall: extracts thickness/height/baseOffset', () => {
+  it('wall: extracts thickness/height/absolute base elevation (FFL=0 → baseOffset)', () => {
     const wall = makeWall(200, 3000);
     expect(buildCandidateSemantics(wall)).toEqual({
-      structuralKind: 'wall', wallThicknessMm: 200, wallHeightMm: 3000, wallBaseOffsetMm: 0,
+      structuralKind: 'wall', wallThicknessMm: 200, wallHeightMm: 3000, wallBaseElevationMm: 0,
     });
   });
 
-  it('column: extracts shape/width/depth/height/baseOffset', () => {
+  it('column: extracts shape/width/depth/height/absolute base elevation (FFL=0 → baseOffset)', () => {
     const column = makeColumn('rectangular', 400, 400, 3000);
     expect(buildCandidateSemantics(column)).toEqual({
       structuralKind: 'column', columnShapeKind: 'rectangular',
-      columnWidthMm: 400, columnDepthMm: 400, columnHeightMm: 3000, columnBaseOffsetMm: 0,
+      columnWidthMm: 400, columnDepthMm: 400, columnHeightMm: 3000, columnBaseElevationMm: 0,
     });
   });
 
-  it('beam: extracts width/depth/topElevation (absolute)', () => {
+  it('beam: extracts width/depth/absolute top elevation (FFL=0 → topElevation)', () => {
     const beam = makeBeam(200, 400, 3000);
     expect(buildCandidateSemantics(beam)).toEqual({
       structuralKind: 'beam', beamWidthMm: 200, beamDepthMm: 400, beamTopElevationMm: 3000,
