@@ -101,6 +101,16 @@ top-priority `elem` hook του resolver, ADR-375 C.5) → κερδίζει το
   χειριζόμενη λαβή). Το `hardware` προστέθηκε στο `OpeningMeshMaterials`, γίνεται resolve+stamp `matId` στο
   attach, και οι λαβές μπαίνουν LAST στο specs array (frame/leaf indices αμετάβλητα). Inner-dims guard
   ενοποιήθηκε σε `openingInnerDims()` (N.18, κοινό leaf+hardware). Βλ. §10.
+- ✅ **Hardware 3Δ realism upgrade — espagnolette assembly (DONE 2026-07-18):** μετά από φωτο-feedback (Giorgio),
+  η αρχική «ροζέτα+μοχλός» αναβαθμίστηκε σε **πλήρη χειρολαβή αλουμινίου** στο ίδιο `opening-hardware-builders.ts`:
+  **(1) κάθετη πλάκα (backplate) ~110mm** αντί μικρής ροζέτας (το «10-11cm»), **(2) λαιμός/άξονας (neck)** που
+  γεφυρώνει την πλάκα με τη μοχλό-λαβή (η λαβή δεν «αιωρείται» πια — το κύριο παράπονο), **(3) αφαλός/κλειδαριά
+  (lock cylinder + keyway)** κάτω από τη λαβή στις πόρτες, **(4) διαμπερής άξονας (spindle)** που ενώνει τις
+  λαβές των δύο όψεων στις πόρτες, **(5) μεντεσέδες (hinge barrels)** στην πλευρά μεντεσέδων — 3/φύλλο σε πόρτες,
+  2 σε ανοιγόμενα παράθυρα, **SSoT-gated** από το take-off catalog (`kindHasHinges` → `OPENING_HARDWARE_CATALOG`
+  έχει `hinge`), ώστε γεωμετρία και προμέτρηση να μη μπορούν να αποκλίνουν. Νέα helpers: `handleAssembly`,
+  `lockCylinder`, `spindleBar`, `hingesAt`. Zero regression: bifold=knob, sliding=pull bar, awning/hopper
+  (χωρίς hinge στο catalog) αμετάβλητα. Βλ. §10.
 - ✅ **BOQ / schedule hookup (DONE 2026-07-18):** το per-part υλικό τροφοδοτεί πλέον το opening schedule.
   Τα `mapDoor`/`mapWindow` (`schedule-presets.ts`) καλούν `resolveOpeningMaterial(p)` (ίδιο idiom με το 3Δ
   attach — χωρίς typeParams) και βγάζουν per-part labels μέσω του υπάρχοντος `lookups.material` (πιάνει
@@ -144,6 +154,15 @@ top-priority `elem` hook του resolver, ADR-375 C.5) → κερδίζει το
 
 ## 10. Changelog
 
+- **2026-07-18** — **Follow-up 3Δ realism (§8) — espagnolette handle assembly.** Μετά από φωτο-feedback (Giorgio:
+  «η λαβή αιωρείται, λείπει ο άξονας, λείπουν οι μεντεσέδες»), το `opening-hardware-builders.ts` αναβαθμίστηκε από
+  ροζέτα+μοχλός σε πλήρη χειρολαβή αλουμινίου: **κάθετη πλάκα ~110mm** (backplate), **λαιμός/άξονας** (neck) που
+  γεφυρώνει πλάκα↔λαβή, **αφαλός/κλειδαριά** (lock cylinder+keyway, πόρτες), **διαμπερής spindle** (ενώνει τις δύο
+  όψεις, πόρτες), **μεντεσέδες** (3/φύλλο πόρτες· 2 ανοιγόμενα παράθυρα) **SSoT-gated** από το take-off catalog
+  (`kindHasHinges`). Νέα helpers `handleAssembly`/`lockCylinder`/`spindleBar`/`hingesAt`· αφαιρέθηκαν τα άχρηστα
+  `ROSE_*` consts. Zero regression (bifold/sliding/awning αμετάβλητα· `bodyChildren` του mesh test αγνοεί hardware).
+  Gates: `opening-hardware-builders` (+5 tests νέα γεωμετρία) + `opening-mesh` + `opening-hardware-set` (parity) →
+  **69/69 πράσινα**· `jscpd:diff` καθαρό. Χωρίς tsc (N.17). ΔΕΝ αγγίζει το BOQ (μεντεσέδες = ποσότητα ήδη, ADR-674).
 - **2026-07-18** — Αρχική έκδοση. Feature υλοποιημένη πλήρως (resolver + zod schema + 3Δ wiring + 2Δ parity +
   per-part UI + persistence) — commits `401222e5` (resolver), `fd327ccf` (schema), `ffc588fd` (3Δ attach),
   `ea670cb5`+`892417ab` (2Δ parity + fix §7), `7f5e915b` (UI). **Boy Scout (N.0.2):** νέο κεντρικό
