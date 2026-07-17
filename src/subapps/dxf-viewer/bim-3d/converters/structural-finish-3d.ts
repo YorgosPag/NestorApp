@@ -214,11 +214,16 @@ function mergeNonIndexed(geos: readonly THREE.BufferGeometry[]): THREE.BufferGeo
  * ADR-534 Φ7c — Ενσωματωμένο 45° miter: μετατοπίζει ΜΟΝΟ τα vertices του **back-cap** (u ≈ thicknessM,
  * outer παρειά) που κάθονται στα t-άκρα της όψης (`tLoM`/`tHiM`) κατά τα `deltaLoM/deltaHiM` → το outer
  * t-άκρο φτάνει τη mitered κορυφή ενώ το front (core) μένει → η πλευρική έδρα γίνεται διαγώνια (45°).
- * Οι τρύπες (ανοίγματα) δεν είναι στα t-άκρα → δεν αγγίζονται. `true` αν έγινε μετατόπιση (→ recompute
- * normals για τη νέα διαγώνια έδρα). Front-cap (u≈0) αμετάβλητο. Non-indexed ExtrudeGeometry → u ∈ {0, th}.
+ *
+ * ⚠️ Τα normals **ΔΕΝ** ξαναϋπολογίζονται (κανένα `computeVertexNormals`): το ορατό back-cap μένει
+ * επίπεδο στο u=thicknessM (μετακινείται μόνο το x εντός του ίδιου επιπέδου) → κρατά το σωστό `+perp`
+ * normal του ExtrudeGeometry. Το μόνο stale normal είναι η διαγώνια 25mm miter-έδρα, που είναι κρυμμένη
+ * στο εσωτερικό της γωνίας. Ένα `computeVertexNormals` θα ξανάγραφε ΟΛΑ τα normals — και τα **reveal
+ * walls των ανοιγμάτων** — ρισκάροντας ανεστραμμένη σκίαση στις τρύπες (Giorgio: «προβλήματα μόνο στα
+ * ανοίγματα»). Οι τρύπες (ανοίγματα) δεν είναι στα t-άκρα → δεν αγγίζονται. u ∈ {0, thicknessM} (no bevel).
  */
-function applyMiterShift(geo: THREE.BufferGeometry, m: FaceMiterDeltas, thicknessM: number): boolean {
-  if (m.deltaLoM === 0 && m.deltaHiM === 0) return false;
+function applyMiterShift(geo: THREE.BufferGeometry, m: FaceMiterDeltas, thicknessM: number): void {
+  if (m.deltaLoM === 0 && m.deltaHiM === 0) return;
   const pos = geo.getAttribute('position') as THREE.BufferAttribute;
   const uHalf = thicknessM * 0.5; // διαχωρίζει front-cap (u=0) από back-cap (u=thicknessM)
   const tTol = Math.max(1e-6, thicknessM * 1e-3); // ταύτιση t-άκρου (m), αρκετά < απόσταση features
@@ -228,7 +233,6 @@ function applyMiterShift(geo: THREE.BufferGeometry, m: FaceMiterDeltas, thicknes
     if (m.deltaHiM !== 0 && Math.abs(x - m.tHiM) <= tTol) pos.setX(i, x + m.deltaHiM);
     else if (m.deltaLoM !== 0 && Math.abs(x - m.tLoM) <= tTol) pos.setX(i, x + m.deltaLoM);
   }
-  return true;
 }
 
 /** FaceProfile → ΕΝΑ welded BufferGeometry (extrude κατά πάχος + ενσωματωμένο miter + world placement). */
@@ -236,7 +240,7 @@ function faceProfileGeometry(profile: FaceProfile, sceneToM: number, baseElevati
   const shapes = faceProfileShapes(profile);
   if (shapes.length === 0 || profile.thicknessM <= 0) return null;
   const geo = new THREE.ExtrudeGeometry(shapes, { depth: profile.thicknessM, bevelEnabled: false });
-  if (applyMiterShift(geo, profile.miter, profile.thicknessM)) geo.computeVertexNormals();
+  applyMiterShift(geo, profile.miter, profile.thicknessM);
   geo.applyMatrix4(faceProfileWorldMatrix(profile, sceneToM, baseElevationM));
   return geo;
 }
