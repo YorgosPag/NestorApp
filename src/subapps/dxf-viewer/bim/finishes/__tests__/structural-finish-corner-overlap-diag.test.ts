@@ -73,4 +73,27 @@ describe('DIAGNOSTIC Φ7b — corner double-coverage (μέτρηση overlap)', 
     expect(ov).toBeGreaterThan(0);
     expect(ov).toBeGreaterThan(0.5 * th * th * 0.9); // >~281mm² → σαφής διπλή κάλυψη, όχι numerical noise
   });
+
+  it('FOUNDATION: τα strips ήδη φέρουν το mitered outer tip (extended κατά τον άξονα) στο junction', () => {
+    const south = mkSeg({ x: 0, y: 0 }, { x: 100, y: 0 });
+    const east = mkSeg({ x: 100, y: 0 }, { x: 100, y: 100 });
+    const groups = mergeSilhouetteBandsToStripGroups([mkBand([south, east], 0, 3000)], 'mm');
+    for (const g of groups) {
+      for (const s of g.strips) {
+        // eslint-disable-next-line no-console
+        console.log('[DIAG strip] dir=', g.dir, 'aCore=', s.aCore, 'aOuter=', s.aOuter, 'bCore=', s.bCore, 'bOuter=', s.bOuter);
+      }
+    }
+    // Ισχυρισμός: σε κάποιο junction άκρο το outer προβάλλεται ΠΕΡΑ από το core κατά τον άξονα (miter tip).
+    const dot = (a: { x: number; y: number }, b: { x: number; y: number }) => a.x * b.x + a.y * b.y;
+    let sawExtended = false;
+    for (const g of groups) {
+      for (const s of g.strips) {
+        const tACore = dot(s.aCore, g.dir), tAOuter = dot(s.aOuter, g.dir);
+        const tBCore = dot(s.bCore, g.dir), tBOuter = dot(s.bOuter, g.dir);
+        if (Math.abs(tAOuter - tACore) > 1 || Math.abs(tBOuter - tBCore) > 1) sawExtended = true;
+      }
+    }
+    expect(sawExtended).toBe(true);
+  });
 });
