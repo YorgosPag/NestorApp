@@ -36,7 +36,7 @@ import { computeBandFinishQuads, type BandFinishQuad } from '../../bim/finishes/
 import type { FinishStrip, FinishStripGroup } from '../../bim/finishes/structural-finish-vertical-merge';
 // ADR-449/534 Φ7/Φ7c — unified welded δέρμα ανά ομοεπίπεδη όψη (union t×z + τρύπες στα ανοίγματα)·
 // το 45° miter της γωνίας είναι **ενσωματωμένο** στο extrude (back-cap shift), όχι ξεχωριστά wedges.
-import { buildFaceProfiles, type FaceProfile, type FaceMiterDeltas } from '../../bim/finishes/structural-finish-face-profile';
+import { buildFaceProfiles, type FaceProfile, type FaceMiterShift } from '../../bim/finishes/structural-finish-face-profile';
 // ADR-404 / ADR-449 Bug A — ο σοβάς κεκλιμένου μέλους ακολουθεί τον πυρήνα: ΙΔΙΟΣ shear
 // SSoT consumer με τον core (no-op fast-path όταν δεν υπάρχει κλίση). Μηδέν νέα μαθηματικά.
 import { applyColumnTilt, applyBeamSlope } from './mesh-slope-shear';
@@ -211,27 +211,29 @@ function mergeNonIndexed(geos: readonly THREE.BufferGeometry[]): THREE.BufferGeo
 }
 
 /**
- * ADR-534 Φ7c — Ενσωματωμένο 45° miter: μετατοπίζει ΜΟΝΟ τα vertices του **back-cap** (u ≈ thicknessM,
- * outer παρειά) που κάθονται στα t-άκρα της όψης (`tLoM`/`tHiM`) κατά τα `deltaLoM/deltaHiM` → το outer
- * t-άκρο φτάνει τη mitered κορυφή ενώ το front (core) μένει → η πλευρική έδρα γίνεται διαγώνια (45°).
+ * ADR-534 Φ7c — Ενσωματωμένα 45° miters: για κάθε shift `{tM, deltaM}` μετατοπίζει τα vertices του
+ * **back-cap** (u ≈ thicknessM, outer παρειά) που κάθονται στο core boundary `tM` κατά `deltaM` → το
+ * outer t-άκρο φτάνει τη mitered κορυφή ενώ το front (core) μένει → η πλευρική έδρα γίνεται διαγώνια (45°).
+ * Τα shifts καλύπτουν **και** τα t-άκρα (γωνίες κτιρίου) **και** τα χείλη κάθε τρύπας (λαμπάδες
+ * ανοιγμάτων): οι hole-corner vertices του back-cap κάθονται ακριβώς στο `tM` του χείλους → mitered-άρουν.
  *
  * ⚠️ Τα normals **ΔΕΝ** ξαναϋπολογίζονται (κανένα `computeVertexNormals`): το ορατό back-cap μένει
  * επίπεδο στο u=thicknessM (μετακινείται μόνο το x εντός του ίδιου επιπέδου) → κρατά το σωστό `+perp`
- * normal του ExtrudeGeometry. Το μόνο stale normal είναι η διαγώνια 25mm miter-έδρα, που είναι κρυμμένη
- * στο εσωτερικό της γωνίας. Ένα `computeVertexNormals` θα ξανάγραφε ΟΛΑ τα normals — και τα **reveal
- * walls των ανοιγμάτων** — ρισκάροντας ανεστραμμένη σκίαση στις τρύπες (Giorgio: «προβλήματα μόνο στα
- * ανοίγματα»). Οι τρύπες (ανοίγματα) δεν είναι στα t-άκρα → δεν αγγίζονται. u ∈ {0, thicknessM} (no bevel).
+ * normal του ExtrudeGeometry. Το μόνο stale normal είναι η διαγώνια 25mm miter-έδρα, κρυμμένη στη γωνία.
+ * Ένα `computeVertexNormals` θα ξανάγραφε ΟΛΑ τα normals — και τα reveal walls — ρισκάροντας ανεστραμμένη
+ * σκίαση στα ανοίγματα. u ∈ {0, thicknessM} (no bevel).
  */
-function applyMiterShift(geo: THREE.BufferGeometry, m: FaceMiterDeltas, thicknessM: number): void {
-  if (m.deltaLoM === 0 && m.deltaHiM === 0) return;
+function applyMiterShift(geo: THREE.BufferGeometry, shifts: readonly FaceMiterShift[], thicknessM: number): void {
+  if (shifts.length === 0) return;
   const pos = geo.getAttribute('position') as THREE.BufferAttribute;
   const uHalf = thicknessM * 0.5; // διαχωρίζει front-cap (u=0) από back-cap (u=thicknessM)
-  const tTol = Math.max(1e-6, thicknessM * 1e-3); // ταύτιση t-άκρου (m), αρκετά < απόσταση features
+  const tTol = Math.max(1e-6, thicknessM * 1e-3); // ταύτιση t-boundary (m), αρκετά < απόσταση features
   for (let i = 0; i < pos.count; i++) {
     if (Math.abs(pos.getZ(i) - thicknessM) > uHalf) continue; // μόνο back cap
     const x = pos.getX(i);
-    if (m.deltaHiM !== 0 && Math.abs(x - m.tHiM) <= tTol) pos.setX(i, x + m.deltaHiM);
-    else if (m.deltaLoM !== 0 && Math.abs(x - m.tLoM) <= tTol) pos.setX(i, x + m.deltaLoM);
+    for (const s of shifts) {
+      if (Math.abs(x - s.tM) <= tTol) { pos.setX(i, x + s.deltaM); break; }
+    }
   }
 }
 
