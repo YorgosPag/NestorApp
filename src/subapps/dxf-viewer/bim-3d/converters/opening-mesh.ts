@@ -24,7 +24,11 @@
 
 import * as THREE from 'three';
 import type { WallEntity } from '../../bim/types/wall-types';
-import type { OpeningEntity } from '../../bim/types/opening-types';
+import {
+  resolveOpeningThreshold,
+  type OpeningEntity,
+  type ResolvedOpeningThreshold,
+} from '../../bim/types/opening-types';
 import { sceneUnitsToMeters } from '../../utils/scene-units';
 import { resolveOpeningFrameProfile } from '../../bim/family-types/resolve-opening-frame-profile';
 import { resolveOpeningHost, type OpeningHost } from '../../bim/geometry/opening-host';
@@ -71,6 +75,7 @@ export function buildOpeningMesh(
   materials: OpeningMeshMaterials,
   floorElevationMm: number,
   buildingBaseElevationM: number,
+  finishThicknessMm: number,
 ): THREE.Group | null {
   const { width, height, sillHeight } = opening.params;
   if (width <= 0 || height <= 0) return null;
@@ -101,10 +106,15 @@ export function buildOpeningMesh(
   const heightM = height * MM_TO_M;
   const sillM = sillHeight * MM_TO_M;
   const floorY = floorElevationMm * MM_TO_M + buildingBaseElevationM;
+  // ADR-673 — κατώφλι (door threshold) SSoT. `profileHeightMm` = the resolved frame
+  // face width (mm); the resolver returns render:false for windows / any sillHeight>0
+  // opening so the bottom bar never double-draws with the existing sill path.
+  const profileHeightMm = frameProfile.faceWidth;
+  const threshold = resolveOpeningThreshold(opening.params, { finishThicknessMm, profileHeightMm });
 
   const dims: LeafDims = { widthW, heightM, sillM, thicknessW, frameW: faceWidthW };
   const specs: BoxSpec[] = [
-    ...frameBars(widthW, heightM, sillM, faceWidthW, depthW, sillHeight > 0, materials.frame),
+    ...frameBars(widthW, heightM, sillM, faceWidthW, depthW, sillHeight > 0, threshold, materials.frame),
     ...buildLeafSpecs(opening, dims, materials),
     // ADR-672 §8 Α — operable hardware (χειρολαβή) appended LAST so the frame-bar
     // indices (jamb/head/sill) that downstream code reads stay stable.
@@ -142,16 +152,25 @@ function makeBoxMesh(s: BoxSpec, basis: THREE.Matrix4, bimId: string): THREE.Mes
 }
 
 /**
- * Κάσα: 2 παραστάδες (jambs) + πρέκι (head) + (παράθυρα) ποδιά (sill).
+ * Κάσα: 2 παραστάδες (jambs) + πρέκι (head) + ΕΝΑ κάτω μέλος (sill Ή κατώφλι).
  *
  * ADR-611 — `faceWidthW`/`depthW` are the resolved κάσα cross-section (mm→m),
  * CONSTANT regardless of `widthW`/`heightM` (opening size) and regardless of the
- * host wall thickness. Only the bar LENGTH (jamb spans `heightM`, head/sill span
+ * host wall thickness. Only the bar LENGTH (jamb spans `heightM`, head/bottom span
  * `widthW`) tracks the opening size — the cross-section never does.
+ *
+ * ADR-673 — the bottom member is ONE slot, mutually exclusive by construction:
+ *   - window (`hasSill`, sillHeight>0) → ποδιά (sill) at the sill height, OR
+ *   - door (`threshold.render`, sillHeight<=0) → κατώφλι, its bottom sunk to
+ *     `threshold.bottomOffsetMm` (0=on FFL, negative=embedded in the screed/γκρο μπετό).
+ * `resolveOpeningThreshold` guarantees `render:false` whenever sillHeight>0, so the two
+ * never coexist and the slot's index (right after `head`) stays stable for downstream
+ * frame-bar consumers (ADR-672 §8 Α — hardware still appended LAST).
  */
 function frameBars(
   widthW: number, heightM: number, sillM: number, faceWidthW: number,
-  depthW: number, hasSill: boolean, mat: THREE.Material,
+  depthW: number, hasSill: boolean, threshold: ResolvedOpeningThreshold,
+  mat: THREE.Material,
 ): BoxSpec[] {
   const cyMid = sillM + heightM / 2;
   const halfW = widthW / 2;
@@ -162,6 +181,9 @@ function frameBars(
   ];
   if (hasSill) {
     bars.push({ cx: 0, cy: sillM + faceWidthW / 2, cz: 0, sx: widthW, sy: faceWidthW, sz: depthW, mat });
+  } else if (threshold.render) {
+    const cy = threshold.bottomOffsetMm * MM_TO_M + faceWidthW / 2;
+    bars.push({ cx: 0, cy, cz: 0, sx: widthW, sy: faceWidthW, sz: depthW, mat });
   }
   return bars;
 }

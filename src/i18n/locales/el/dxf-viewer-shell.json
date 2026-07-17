@@ -1750,6 +1750,7 @@
       "openingKind": "Τύπος",
       "openingFamilyType": "Τύπος Οικογένειας",
       "openingSize": "Διαστάσεις",
+      "openingThreshold": "Κατώφλι",
       "openingFrameProfile": "Διατομή Κάσας",
       "openingActions": "Ενέργειες",
       "openingRenumber": "Επαναρίθμηση",
@@ -3244,6 +3245,17 @@
         "width": "Πλάτος",
         "height": "Ύψος",
         "sillHeight": "Ύψος Ποδιάς",
+        "hasThreshold": "Κατώφλι",
+        "thresholdEmbed": {
+          "section": {
+            "title": "Βύθιση Κατωφλιού"
+          },
+          "none": "Πάνω στο δάπεδο",
+          "flushTop": "Πρόσωπο με πλακίδια",
+          "onSlab": "Στο γκρο μπετό",
+          "custom": "Προσαρμοσμένο"
+        },
+        "thresholdEmbedMm": "Βάθος Βύθισης (mm)",
         "frameProfile": {
           "manufacturer": "Κατασκευαστής",
           "profile": "Διατομή",

@@ -343,6 +343,8 @@ export const RibbonButtonIcon: React.FC<RibbonButtonIconProps> = ({ icon, size }
     case 'bim-opening-tag-style': return <Palette width={sizePx[size]} height={sizePx[size]} className={className} />;
     // ADR-376 Phase C.3 — Opening Schedule PDF export
     case 'bim-opening-schedule-pdf': return <FileDown width={sizePx[size]} height={sizePx[size]} className={className} />;
+    // ADR-673 — Κατώφλι (threshold) on/off toggle
+    case 'bim-opening-threshold': return <ArrowDownToLine width={sizePx[size]} height={sizePx[size]} className={className} />;
     // ADR-396 Phase P6 — Thermal Envelope (ETICS) authoring command
     case 'bim-thermal-envelope': return <Thermometer width={sizePx[size]} height={sizePx[size]} className={className} />;
     // ADR-443 — Structural «Δομικά» tab: distinct base×method composed icons.

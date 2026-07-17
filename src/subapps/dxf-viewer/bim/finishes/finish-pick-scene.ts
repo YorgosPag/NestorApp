@@ -4,15 +4,15 @@
  * Γέφυρα ανάμεσα στα scene entities και τον pure `pickFinishFaceAtPoint`: μαζεύει τα
  * finish-active δομικά στοιχεία με το **stored footprint** τους (canvas units) — ΤΟ ΙΔΙΟ
  * που διαβάζει ο `SetFinishFaceOverrideCommand` (`geometry.footprint.vertices` κολόνα /
- * `geometry.outline.vertices` δοκάρι) ώστε ο `side:i` edge index του pick να δίνει τον
- * σωστό `finishFaceRef` στον writer. Τοίχοι = follow-up (ο command δεν λύνει ακόμη wall
- * footprint· χρειάζεται `wallFootprintPolygon` support).
+ * `geometry.outline.vertices` δοκάρι / ADR-534 Φ6b `params.outline.vertices` πλάκα) ώστε ο
+ * `side:i` edge index του pick να δίνει τον σωστό `finishFaceRef` στον writer. Τοίχοι = follow-up
+ * (ο command δεν λύνει ακόμη wall footprint· χρειάζεται `wallFootprintPolygon` support).
  *
  * @see ./finish-face-pick-2d.ts — ο pure resolver (καταναλωτής)
  * @see core/commands/entity-commands/SetFinishFaceOverrideCommand.ts — ο κοινός writer (2D+3D)
  */
 
-import { isColumnEntity, isBeamEntity } from '../../types/entities';
+import { isColumnEntity, isBeamEntity, isSlabEntity } from '../../types/entities';
 import { toPt2 } from './structural-finish-point';
 import { isFinishActive } from './structural-finish-types';
 import type { FinishPickElement } from './finish-face-pick-2d';
@@ -21,8 +21,10 @@ import type { FinishPickElement } from './finish-face-pick-2d';
 type SceneEntityLike = Parameters<typeof isColumnEntity>[0];
 
 /**
- * Finish-active κολόνες + δοκάρια → `FinishPickElement[]` (canvas-unit footprints). Στοιχεία
- * χωρίς ενεργό σοβά ή έγκυρο footprint παραλείπονται. Τοίχοι εξαιρούνται (command TODO).
+ * Finish-active κολόνες + δοκάρια + πλάκες → `FinishPickElement[]` (canvas-unit footprints).
+ * Στοιχεία χωρίς ενεργό σοβά ή έγκυρο footprint παραλείπονται. Τοίχοι εξαιρούνται (command TODO).
+ * ADR-534 Φ6b — η πλάκα χρησιμοποιεί το `params.outline.vertices` (ΙΔΙΟ που τρέφει τη σιλουέτα &
+ * τον writer → συνεπές `finishFaceRef`).
  */
 export function collectFinishPickElements(entities: readonly SceneEntityLike[]): FinishPickElement[] {
   const out: FinishPickElement[] = [];
@@ -34,6 +36,11 @@ export function collectFinishPickElements(entities: readonly SceneEntityLike[]):
       }
     } else if (isBeamEntity(e)) {
       const verts = e.geometry?.outline?.vertices;
+      if (isFinishActive(e.params.finish) && verts && verts.length >= 3) {
+        out.push({ id: e.id, footprint: verts.map(toPt2), finish: e.params.finish });
+      }
+    } else if (isSlabEntity(e)) {
+      const verts = e.params.outline?.vertices;
       if (isFinishActive(e.params.finish) && verts && verts.length >= 3) {
         out.push({ id: e.id, footprint: verts.map(toPt2), finish: e.params.finish });
       }

@@ -84,6 +84,9 @@ export const OpeningMaterialsSchema = z
   })
   .strict();
 
+/** ADR-673 — κατώφλι vertical-placement mode (mirrors `OpeningThresholdEmbed`). */
+export const OpeningThresholdEmbedSchema = z.enum(['none', 'flush-top', 'on-slab', 'custom']);
+
 export const OpeningParamsSchema = z
   .object({
     kind: OpeningKindSchema,
@@ -113,6 +116,10 @@ export const OpeningParamsSchema = z
     operationType: OpeningOperationTypeSchema.optional(),
     // ─── ADR-396 P7 — ETICS reveal insulation strips (Z4) ────────────────────
     revealInsulation: RevealInsulationSchema.optional(),
+    // ─── ADR-673 — bottom frame member (κατώφλι) + gros-béton embedding ───────
+    hasThreshold: z.boolean().optional(),
+    thresholdEmbed: OpeningThresholdEmbedSchema.optional(),
+    thresholdEmbedMm: z.number().finite().nonnegative().optional(),
   })
   .strict();
 

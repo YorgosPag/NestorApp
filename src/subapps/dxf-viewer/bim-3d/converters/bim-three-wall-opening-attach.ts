@@ -72,6 +72,9 @@ function stampOpeningMaterialIds(
  * διαφέρουν ανά instance/type· τα glazed kinds επιλέγουν το resolved γυαλί στο
  * `buildOpeningMesh`. No-op όταν δεν υπάρχουν openings (π.χ. το group προέκυψε
  * λόγω wallTop/wallBase profile).
+ *
+ * ADR-673 — `finishThicknessMm` (FFL → top-of-structural-slab) is threaded into
+ * `buildOpeningMesh` for the door κατώφλι embed («on-slab» βύθιση στο γκρο μπετό).
  */
 export function attachOpeningMeshes(
   group: THREE.Object3D,
@@ -79,6 +82,7 @@ export function attachOpeningMeshes(
   openings: readonly OpeningEntity[],
   floorElevationMm: number,
   buildingBaseElevationM: number,
+  finishThicknessMm: number,
   levelId?: string,
 ): void {
   if (openings.length === 0) return;
@@ -91,7 +95,7 @@ export function attachOpeningMeshes(
     : null;
   for (const opening of openings) {
     const { materials, matIdByMaterial } = buildOpeningMaterials(opening);
-    const mesh = buildOpeningMesh(opening, wall, materials, floorElevationMm, buildingBaseElevationM);
+    const mesh = buildOpeningMesh(opening, wall, materials, floorElevationMm, buildingBaseElevationM, finishThicknessMm);
     if (!mesh) continue;
     stampOpeningMaterialIds(mesh, matIdByMaterial);
     if (levelId !== undefined) mesh.userData['levelId'] = levelId;

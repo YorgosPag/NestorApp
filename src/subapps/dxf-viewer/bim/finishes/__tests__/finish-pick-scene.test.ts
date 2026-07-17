@@ -25,6 +25,10 @@ const beam = (id: string, finish?: StructuralFinishSpec): any =>
   ({ id, type: 'beam', params: { finish }, geometry: { outline: { vertices: VERTS } } });
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const wall = (id: string): any => ({ id, type: 'wall', params: { finish: SPEC }, geometry: {} });
+// ADR-534 Φ6b — η πλάκα κρατά το outline στο params (όχι geometry.footprint).
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const slab = (id: string, finish?: StructuralFinishSpec): any =>
+  ({ id, type: 'slab', params: { finish, outline: { vertices: VERTS } } });
 
 describe('collectFinishPickElements (ADR-449 Slice C 2D)', () => {
   it('κολόνα (footprint) + δοκάρι (outline) με ενεργό σοβά → και τα δύο', () => {
@@ -44,5 +48,16 @@ describe('collectFinishPickElements (ADR-449 Slice C 2D)', () => {
 
   it('τοίχος → skip (follow-up, ο command δεν λύνει ακόμη wall footprint)', () => {
     expect(collectFinishPickElements([wall('w1')])).toHaveLength(0);
+  });
+
+  it('ADR-534 Φ6b: πλάκα (params.outline) με ενεργό σοβά → paintable', () => {
+    const out = collectFinishPickElements([slab('s1', SPEC)]);
+    expect(out.map((e) => e.id)).toEqual(['s1']);
+    expect(out[0].footprint).toHaveLength(4);
+    expect(out[0].footprint[0]).toEqual({ x: 0, y: 0 });
+  });
+
+  it('ADR-534 Φ6b: πλάκα χωρίς ενεργό σοβά → skip', () => {
+    expect(collectFinishPickElements([slab('s1', { ...SPEC, enabled: false }), slab('s2', undefined)])).toHaveLength(0);
   });
 });

@@ -116,6 +116,25 @@ const SILL_MM_OPTIONS = [
   { value: '1100', labelKey: '1100', isLiteralLabel: true },
 ] as const;
 
+// ─── ADR-673 — Κατώφλι (threshold) vertical placement ───────────────────────
+
+const THRESHOLD_EMBED_OPTIONS = [
+  { value: 'none',      labelKey: 'ribbon.commands.openingEditor.thresholdEmbed.none',     isLiteralLabel: false },
+  { value: 'flush-top', labelKey: 'ribbon.commands.openingEditor.thresholdEmbed.flushTop', isLiteralLabel: false },
+  { value: 'on-slab',   labelKey: 'ribbon.commands.openingEditor.thresholdEmbed.onSlab',   isLiteralLabel: false },
+  { value: 'custom',    labelKey: 'ribbon.commands.openingEditor.thresholdEmbed.custom',   isLiteralLabel: false },
+] as const;
+
+// Editable presets for the custom sink depth (mm) — free typing also allowed
+// (RibbonEditableCombobox infers editability from the all-numeric preset list).
+const THRESHOLD_EMBED_MM_OPTIONS = [
+  { value: '0',  labelKey: '0',  isLiteralLabel: true },
+  { value: '10', labelKey: '10', isLiteralLabel: true },
+  { value: '20', labelKey: '20', isLiteralLabel: true },
+  { value: '30', labelKey: '30', isLiteralLabel: true },
+  { value: '50', labelKey: '50', isLiteralLabel: true },
+] as const;
+
 // ─── ADR-611 — Frame profile (διατομή κάσας) preset dims ────────────────────
 // Editable presets for the two CONSTANT cross-section dims (mm). Free typing
 // is still allowed (RibbonEditableCombobox) — these are just the dropdown
@@ -301,6 +320,53 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
                 commandKey: OPENING_RIBBON_KEYS.params.sillHeight,
                 comboboxWidthPx: 80,
                 options: SILL_MM_OPTIONS,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      // ADR-673 — Κατώφλι (threshold): on/off toggle + vertical embed selector
+      // + custom sink depth (mm, active only when embed==='custom'). Instance-
+      // owned, always editable regardless of `opening.typeId` — mirrors
+      // `sillHeight`/`handing` (never merged into the ADR-421 type-governed set).
+      id: 'opening-threshold',
+      labelKey: 'ribbon.panels.openingThreshold',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'toggle',
+              size: 'small',
+              command: {
+                id: 'opening.hasThreshold',
+                labelKey: 'ribbon.commands.openingEditor.hasThreshold',
+                icon: 'bim-opening-threshold',
+                commandKey: OPENING_RIBBON_KEYS.toggles.hasThreshold,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'opening.thresholdEmbed',
+                labelKey: 'ribbon.commands.openingEditor.thresholdEmbed.section.title',
+                commandKey: OPENING_RIBBON_KEYS.stringParams.thresholdEmbed,
+                comboboxWidthPx: 150,
+                options: THRESHOLD_EMBED_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'opening.thresholdEmbedMm',
+                labelKey: 'ribbon.commands.openingEditor.thresholdEmbedMm',
+                commandKey: OPENING_RIBBON_KEYS.params.thresholdEmbedMm,
+                comboboxWidthPx: 80,
+                options: THRESHOLD_EMBED_MM_OPTIONS,
               },
             },
           ],

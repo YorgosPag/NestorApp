@@ -133,6 +133,18 @@ export interface OpeningMaterials {
   readonly hardware?: string;
 }
 
+/**
+ * ADR-673 — Vertical placement of a door's bottom frame member (κατώφλι/threshold)
+ * relative to the Finished Floor Level (FFL, the opening datum Y=0):
+ *  - `'none'`      → profile BOTTOM rests on the finished floor (visible low step-over).
+ *  - `'flush-top'` → profile TOP flush with the finished floor/tiles (buried in the
+ *                    screed → ομαλή μετάβαση εσωτερικό↔εξώστη, χωρίς σκαλί).
+ *  - `'on-slab'`   → profile BOTTOM rests on the structural slab top / γκρο μπετό
+ *                    (FFL − `Floor.finishThickness`; reuses the storey finish SSoT).
+ *  - `'custom'`    → profile BOTTOM sunk `thresholdEmbedMm` below FFL (manual depth).
+ */
+export type OpeningThresholdEmbed = 'none' | 'flush-top' | 'on-slab' | 'custom';
+
 export interface OpeningParams {
   readonly kind: OpeningKind;
   /** Foreign key — host wall id. ADR-615: absent ⇒ self-hosted (see `selfHost`). */
@@ -247,6 +259,25 @@ export interface OpeningParams {
    * χωριστό πάχος από Z1 (default 0.05m). Set by the P6 auto-apply command.
    */
   readonly revealInsulation?: EnvelopeLayer;
+  /**
+   * ADR-673 — Render the bottom frame member (κατώφλι) for a DOOR opening. Windows
+   * draw their bottom bar via the `sillHeight > 0` sill path instead, so this only
+   * governs door kinds (`!isWindowKind`). Absent ⇒ resolved default per kind via
+   * `resolveOpeningThreshold` — auto-`true` for EVERY door kind (Giorgio 2026-07-17).
+   * Explicit `false` toggles the κατώφλι off for a specific opening.
+   */
+  readonly hasThreshold?: boolean;
+  /**
+   * ADR-673 — Vertical placement of the κατώφλι profile (see {@link OpeningThresholdEmbed}).
+   * Absent ⇒ `'none'` (profile sits on the finished floor). Set `'flush-top'`/`'on-slab'`
+   * to bury the profile so aluminium door thresholds transition smoothly to the tiles.
+   */
+  readonly thresholdEmbed?: OpeningThresholdEmbed;
+  /**
+   * ADR-673 — mm. Sink depth of the κατώφλι profile BOTTOM below FFL, used ONLY when
+   * `thresholdEmbed === 'custom'`. Non-negative; 0 ≡ `'none'`.
+   */
+  readonly thresholdEmbedMm?: number;
 }
 
 /**
@@ -476,6 +507,60 @@ export function isSlidingKind(kind: OpeningKind): boolean {
 /** True for the folding (φυσαρμόνικα / bi-fold) door family — zig-zag plan symbol. */
 export function isFoldingKind(kind: OpeningKind): boolean {
   return kind === 'bifold-door';
+}
+
+/**
+ * True for every DOOR kind (anything that is not a window/fixed-glazing family).
+ * SSoT for the κατώφλι default (ADR-673): windows draw their bottom bar via the
+ * `sillHeight > 0` sill path, so the threshold concept belongs to doors only.
+ */
+export function isDoorKind(kind: OpeningKind): boolean {
+  return !isWindowKind(kind);
+}
+
+/** Resolved κατώφλι (threshold) geometry inputs — see {@link resolveOpeningThreshold}. */
+export interface ResolvedOpeningThreshold {
+  /** Whether to render the bottom frame member at all. */
+  readonly render: boolean;
+  /**
+   * mm — signed offset of the profile BOTTOM relative to FFL (Y=0). `0` sits on the
+   * finished floor; negative sinks it into the screed/slab. The caller places a bar
+   * of height `profileHeightMm` starting at this offset.
+   */
+  readonly bottomOffsetMm: number;
+}
+
+/**
+ * SSoT (ADR-673) — resolves whether an opening shows a bottom frame member (κατώφλι)
+ * and where it sits vertically. Pure: the caller supplies `finishThicknessMm` (storey
+ * `Floor.finishThickness`, the FFL→structural-slab-top gap) and `profileHeightMm` (the
+ * resolved frame face width, i.e. the κατώφλι profile height). Windows / any opening
+ * with `sillHeight > 0` return `render:false` here — their bottom bar is the existing
+ * sill path, never a door threshold, so the two never double-draw.
+ */
+export function resolveOpeningThreshold(
+  params: Pick<OpeningParams, 'kind' | 'sillHeight' | 'hasThreshold' | 'thresholdEmbed' | 'thresholdEmbedMm'>,
+  ctx: { readonly finishThicknessMm: number; readonly profileHeightMm: number },
+): ResolvedOpeningThreshold {
+  const render = params.sillHeight <= 0
+    && (params.hasThreshold ?? isDoorKind(params.kind));
+  if (!render) return { render: false, bottomOffsetMm: 0 };
+  const bottomOffsetMm = resolveThresholdBottomOffsetMm(params, ctx);
+  return { render: true, bottomOffsetMm };
+}
+
+function resolveThresholdBottomOffsetMm(
+  params: Pick<OpeningParams, 'thresholdEmbed' | 'thresholdEmbedMm'>,
+  ctx: { readonly finishThicknessMm: number; readonly profileHeightMm: number },
+): number {
+  switch (params.thresholdEmbed ?? 'none') {
+    case 'none': return 0;
+    // TOP flush with FFL ⇒ BOTTOM sunk by the full profile height.
+    case 'flush-top': return -Math.max(0, ctx.profileHeightMm);
+    // BOTTOM rests on the structural slab top (γκρο μπετό).
+    case 'on-slab': return -Math.max(0, ctx.finishThicknessMm);
+    case 'custom': return -Math.max(0, params.thresholdEmbedMm ?? 0);
+  }
 }
 
 // ─── Plan-view symbol dispatch (SSoT) ────────────────────────────────────────

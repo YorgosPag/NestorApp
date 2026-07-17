@@ -1750,6 +1750,7 @@
       "openingKind": "Type",
       "openingFamilyType": "Family Type",
       "openingSize": "Size",
+      "openingThreshold": "Threshold",
       "openingFrameProfile": "Frame Profile",
       "openingActions": "Actions",
       "openingRenumber": "Renumber",
@@ -3244,6 +3245,17 @@
         "width": "Width",
         "height": "Height",
         "sillHeight": "Sill Height",
+        "hasThreshold": "Threshold",
+        "thresholdEmbed": {
+          "section": {
+            "title": "Threshold Embed"
+          },
+          "none": "On the floor",
+          "flushTop": "Flush with tiles",
+          "onSlab": "On structural slab",
+          "custom": "Custom"
+        },
+        "thresholdEmbedMm": "Embed Depth (mm)",
         "frameProfile": {
           "manufacturer": "Manufacturer",
           "profile": "Profile",

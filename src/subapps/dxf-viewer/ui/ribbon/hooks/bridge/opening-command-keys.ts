@@ -30,6 +30,8 @@ export const OPENING_RIBBON_KEYS = {
     openDirection: 'opening.params.openDirection',
     /** ADR-376 Phase A — Instance Mark (free-text, auto-allocated on placement). */
     mark: 'opening.params.mark',
+    /** ADR-673 — Κατώφλι vertical placement (none/flush-top/on-slab/custom). */
+    thresholdEmbed: 'opening.params.thresholdEmbed',
   },
   params: {
     /** mm — opening width along host wall axis. */
@@ -38,6 +40,13 @@ export const OPENING_RIBBON_KEYS = {
     height: 'opening.params.height',
     /** mm — sill height above floor. */
     sillHeight: 'opening.params.sillHeight',
+    /** ADR-673 — mm. Κατώφλι sink depth below FFL, active only when thresholdEmbed==='custom'. */
+    thresholdEmbedMm: 'opening.params.thresholdEmbedMm',
+  },
+  /** ADR-673 — boolean toggles written straight through `UpdateOpeningParamsCommand`. */
+  toggles: {
+    /** Κατώφλι on/off. Absent ⇒ resolved default true for door kinds. */
+    hasThreshold: 'opening.params.hasThreshold',
   },
   /**
    * ADR-611 — Frame profile (διατομή κάσας) editor. Cascading manufacturer →
@@ -61,13 +70,18 @@ export const OPENING_RIBBON_KEYS = {
 export type OpeningRibbonNumberCommandKey =
   | typeof OPENING_RIBBON_KEYS.params.width
   | typeof OPENING_RIBBON_KEYS.params.height
-  | typeof OPENING_RIBBON_KEYS.params.sillHeight;
+  | typeof OPENING_RIBBON_KEYS.params.sillHeight
+  | typeof OPENING_RIBBON_KEYS.params.thresholdEmbedMm;
 
 export type OpeningRibbonStringCommandKey =
   | typeof OPENING_RIBBON_KEYS.stringParams.kind
   | typeof OPENING_RIBBON_KEYS.stringParams.handing
   | typeof OPENING_RIBBON_KEYS.stringParams.openDirection
-  | typeof OPENING_RIBBON_KEYS.stringParams.mark;
+  | typeof OPENING_RIBBON_KEYS.stringParams.mark
+  | typeof OPENING_RIBBON_KEYS.stringParams.thresholdEmbed;
+
+export type OpeningRibbonToggleCommandKey =
+  typeof OPENING_RIBBON_KEYS.toggles.hasThreshold;
 
 export type OpeningFrameProfileCommandKey =
   | typeof OPENING_RIBBON_KEYS.frameProfile.manufacturer
@@ -79,6 +93,7 @@ export const OPENING_RIBBON_NUMBER_KEYS: readonly OpeningRibbonNumberCommandKey[
   OPENING_RIBBON_KEYS.params.width,
   OPENING_RIBBON_KEYS.params.height,
   OPENING_RIBBON_KEYS.params.sillHeight,
+  OPENING_RIBBON_KEYS.params.thresholdEmbedMm,
 ];
 
 export const OPENING_RIBBON_STRING_KEYS: readonly OpeningRibbonStringCommandKey[] = [
@@ -86,6 +101,12 @@ export const OPENING_RIBBON_STRING_KEYS: readonly OpeningRibbonStringCommandKey[
   OPENING_RIBBON_KEYS.stringParams.handing,
   OPENING_RIBBON_KEYS.stringParams.openDirection,
   OPENING_RIBBON_KEYS.stringParams.mark,
+  OPENING_RIBBON_KEYS.stringParams.thresholdEmbed,
+];
+
+/** ADR-673 — the 1 threshold boolean toggle key. */
+export const OPENING_RIBBON_TOGGLE_KEYS: readonly OpeningRibbonToggleCommandKey[] = [
+  OPENING_RIBBON_KEYS.toggles.hasThreshold,
 ];
 
 /** ADR-611 — the 4 frame-profile editor keys (manufacturer/profile/faceWidth/depth). */
@@ -136,6 +157,17 @@ export const OPENING_RIBBON_KEYS_ACTIONS = {
 
 export const isOpeningTagStyleToggleKey = makeKeySetGuard([
   OPENING_TAG_STYLE_KEYS.leaderVisible,
+]);
+
+/**
+ * ADR-673 — union guard for ALL boolean-toggle keys owned by the opening
+ * bridge (per-project tag style `leaderVisible` PLUS the instance param
+ * `hasThreshold`). Both route to `openingBridge.onToggle`/`getToggleState`,
+ * which discriminates internally — see `useRibbonToggleCommands.ts`.
+ */
+export const isOpeningRibbonToggleKey = makeKeySetGuard([
+  OPENING_TAG_STYLE_KEYS.leaderVisible,
+  ...OPENING_RIBBON_TOGGLE_KEYS,
 ]);
 
 export const isOpeningActionKey = makeKeySetGuard([

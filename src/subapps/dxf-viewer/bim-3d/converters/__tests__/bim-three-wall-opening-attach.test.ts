@@ -14,6 +14,12 @@ import { computeWallGeometry } from '../../../bim/geometry/wall-geometry';
 import type { WallEntity, WallParams } from '../../../bim/types/wall-types';
 import type { OpeningEntity, OpeningParams } from '../../../bim/types/opening-types';
 
+// ADR-673 — storey `Floor.finishThickness` (FFL → structural-slab-top gap), threaded
+// into `attachOpeningMeshes` → `buildOpeningMesh` for the door κατώφλι 'on-slab' embed.
+// These tests only assert material-id stamping, not threshold geometry, so any fixed
+// value is sufficient — kept identical to `opening-mesh.test.ts` for consistency.
+const FINISH_THICKNESS_MM = 80;
+
 function makeWall(): WallEntity {
   const params: WallParams = {
     category: 'exterior',
@@ -64,7 +70,7 @@ function collectMatIds(root: THREE.Object3D): string[] {
 describe('attachOpeningMeshes — matId stamping (ADR-668 §10)', () => {
   it('stamps a default door: wood body (κάσα/φύλλο) + metal hardware (χειρολαβή)', () => {
     const group = new THREE.Group();
-    attachOpeningMeshes(group, makeWall(), [makeOpening()], 0, 0);
+    attachOpeningMeshes(group, makeWall(), [makeOpening()], 0, 0, FINISH_THICKNESS_MM);
 
     const ids = collectMatIds(group);
     expect(ids.length).toBeGreaterThan(0);
@@ -83,6 +89,7 @@ describe('attachOpeningMeshes — matId stamping (ADR-668 §10)', () => {
       [makeOpening({ kind: 'window', width: 1200, height: 1400, sillHeight: 900 })],
       0,
       0,
+      FINISH_THICKNESS_MM,
     );
 
     const ids = collectMatIds(group);
@@ -95,7 +102,7 @@ describe('attachOpeningMeshes — matId stamping (ADR-668 §10)', () => {
   it('every stamped mesh keeps the opening bimId (matId does not cross the element)', () => {
     const group = new THREE.Group();
     group.userData = { bimId: 'wall_test', bimType: 'wall', matId: 'mat-concrete-c25' };
-    attachOpeningMeshes(group, makeWall(), [makeOpening()], 0, 0);
+    attachOpeningMeshes(group, makeWall(), [makeOpening()], 0, 0, FINISH_THICKNESS_MM);
 
     group.traverse((n) => {
       const m = n as THREE.Mesh;
@@ -107,7 +114,7 @@ describe('attachOpeningMeshes — matId stamping (ADR-668 §10)', () => {
 
   it('zero regression — the solid body still defaults to wood (never the wall material)', () => {
     const group = new THREE.Group();
-    attachOpeningMeshes(group, makeWall(), [makeOpening()], 0, 0);
+    attachOpeningMeshes(group, makeWall(), [makeOpening()], 0, 0, FINISH_THICKNESS_MM);
 
     const ids = collectMatIds(group);
     expect(ids.length).toBeGreaterThan(0);
@@ -128,6 +135,7 @@ describe('attachOpeningMeshes — matId stamping (ADR-668 §10)', () => {
       [makeOpening({ materials: { frame: 'mat-metal', leaf: 'mat-metal' } })],
       0,
       0,
+      FINISH_THICKNESS_MM,
     );
 
     const ids = collectMatIds(group);

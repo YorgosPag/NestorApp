@@ -1,6 +1,6 @@
 # ADR-672 — Επεξεργάσιμο υλικό ανά κούφωμα (Revit family surfaces: κάσα/φύλλο/υαλοστάσιο/χειρολαβή)
 
-**Status:** ✅ ACTIVE — υλοποιημένο 2Δ+3Δ+export+UI+persistence+library-dropdown+hardware-3Δ· follow-ups §8 (BOQ, προαιρετικό 2Δ handle glyph)
+**Status:** ✅ ACTIVE — υλοποιημένο 2Δ+3Δ+export+UI+persistence+library-dropdown+hardware-3Δ+BOQ/schedule+2Δ handle glyph (όλα τα follow-ups §8 ΟΛΟΚΛΗΡΩΘΗΚΑΝ)
 **Ημερομηνία:** 2026-07-18
 **Σχετικά:** ADR-611 (opening frame profile — το resolver-idiom που αντιγράφτηκε),
 ADR-412/421 (BIM family types — type→instance «type wins»), ADR-668 (3Δ export OBJ/glTF — ονομάζει το
@@ -100,9 +100,24 @@ top-priority `elem` hook του resolver, ADR-375 C.5) → κερδίζει το
   φυσαρμόνικες, μικρή χειρολαβή σε ανοιγόμενα παράθυρα· **καμία** σε fixed/bay/overhead/revolving (χωρίς
   χειριζόμενη λαβή). Το `hardware` προστέθηκε στο `OpeningMeshMaterials`, γίνεται resolve+stamp `matId` στο
   attach, και οι λαβές μπαίνουν LAST στο specs array (frame/leaf indices αμετάβλητα). Inner-dims guard
-  ενοποιήθηκε σε `openingInnerDims()` (N.18, κοινό leaf+hardware). **2Δ handle glyph** εκτός (τα κουφώματα
-  είναι plan symbols) — προαιρετικό further follow-up. Βλ. §10.
-- **BOQ / schedule hookup:** το υλικό ανά μέρος να τροφοδοτεί προμετρήσεις (`bim/schedule/`).
+  ενοποιήθηκε σε `openingInnerDims()` (N.18, κοινό leaf+hardware). Βλ. §10.
+- ✅ **BOQ / schedule hookup (DONE 2026-07-18):** το per-part υλικό τροφοδοτεί πλέον το opening schedule.
+  Τα `mapDoor`/`mapWindow` (`schedule-presets.ts`) καλούν `resolveOpeningMaterial(p)` (ίδιο idiom με το 3Δ
+  attach — χωρίς typeParams) και βγάζουν per-part labels μέσω του υπάρχοντος `lookups.material` (πιάνει
+  `mat-*` ΚΑΙ `bmat_*`). **Revit-grade curated στήλες ανά preset** (όχι μία σύνθετη): **πόρτα** → Υλικό
+  κάσας / φύλλου / χειρολαβής· **παράθυρο** → Υλικό κάσας / υαλοπίνακα / χειρολαβής — καθρέφτης των Revit
+  family sub-category material params (η πόρτα δεν δείχνει «γυαλί» σε συμπαγές φύλλο, το παράθυρο δεν δείχνει
+  «φύλλο»). Η single legacy `col.material` στήλη door/window αντικαταστάθηκε (μηδέν απώλεια: το legacy single
+  υλικό πέφτει σε frame+leaf μέσω resolver). Data-driven → οι exporters (csv/xlsx/pdf) παίρνουν τις στήλες
+  αυτόματα. Zero regression: legacy κούφωμα → part defaults (frame/leaf=ξύλο, hardware=μέταλλο). Boy Scout:
+  ο κοινός door+window preamble (+ frame/hardware/wall cells) ενοποιήθηκε σε `mapOpeningCommonCells` (N.18).
+  Βλ. §10.
+- ✅ **2Δ handle glyph (DONE 2026-07-18):** διακριτικό σύμβολο χειρολαβής σε κάτοψη στο `drawSwing`
+  (`opening-overlay-drawing.ts`) — μικρό tick κάθετο στο φύλλο, στο latch (ελεύθερο) άκρο. **Latch side =
+  εγγενές της γεωμετρίας** (leaf tip = ελεύθερο άκρο· το hingeArc είναι ήδη handing-aware) → συνεπές με το
+  3Δ hardware (`latchSign`) ΧΩΡΙΣ re-derive του handing. Μόνο swing (door/double/french)· διπλή πόρτα → δύο
+  λαβές. Additive + zero-regression: sliding/folding/overhead/revolving/glazing/bay αμετάβλητα (Revit δείχνει
+  λαβή μόνο σε swing φύλλα σε αυτή την κλίμακα). Βλ. §10.
 - **2Δ = μόνο χρωματισμός** (frame stroke + glass overlay)· τα κουφώματα είναι plan symbols, όχι poché fills —
   γι' αυτό `getMaterialFlatColorHex`, ΟΧΙ το wall `resolveAutoHatch`/`MATERIAL_HATCH_MAP` (διαφορετικό vocabulary).
 
@@ -120,6 +135,10 @@ top-priority `elem` hook του resolver, ADR-375 C.5) → κερδίζει το
 | `bim-3d/converters/opening-mesh-builders.ts` | 3Δ leaf/panel specs + `OpeningMeshMaterials` (`hardware`) + `LEAF_DEPTH_RATIO`/`openingInnerDims` SSoT |
 | `bim-3d/converters/opening-hardware-builders.ts` | **Hardware SSoT** — `buildHardwareSpecs` (χειρολαβή box specs ανά family) |
 | `bim/renderers/OpeningRenderer.ts` | 2Δ — resolved χρώμα ως `elementOverride.color` fallback |
+| `bim/renderers/opening-overlay-drawing.ts` | 2Δ plan symbols — `drawHandleGlyph` (handle tick στο latch άκρο) στο `drawSwing` |
+| `bim/schedule/schedule-presets.ts` | BOQ — `mapDoor`/`mapWindow` → `resolveOpeningMaterial` per-part labels· `mapOpeningCommonCells` SSoT |
+| `bim/schedule/schedule-preset-columns.ts` | BOQ — curated per-part material στήλες (`DOOR_COLUMNS`/`WINDOW_COLUMNS`) |
+| `i18n/locales/{el,en}/dxf-schedule.json` | `col.frameMaterial`/`leafMaterial`/`glassMaterial`/`hardwareMaterial` |
 | `ui/ribbon/components/EditOpeningTypeDialog.tsx` + `OpeningMaterialSelectCell.tsx` | UI — 4 rows ανά μέρος |
 | `bim/walls/opening-firestore-service.ts` + `opening-doc-hydration.ts` | Persistence — generic pass-through (spread) |
 
@@ -146,3 +165,21 @@ top-priority `elem` hook του resolver, ADR-375 C.5) → κερδίζει το
   attach· λαβές appended LAST (frame/leaf indices σταθερά). Inner-dims degenerate guard ενοποιήθηκε σε
   `openingInnerDims()` (N.18, κοινό leaf+hardware). 2Δ handle glyph εκτός scope. Gates: hardware-builders +
   opening-mesh **30/30 ✅**, converters regression **65 suites / 477 ✅**, `jscpd:diff` καθαρό ✅.
+- **2026-07-18** — **Follow-up Γ (§8) — BOQ / schedule hookup.** Τα `mapDoor`/`mapWindow` (`schedule-presets.ts`)
+  καλούν `resolveOpeningMaterial(p)` και βγάζουν per-part material labels (`lookups.material`, πιάνει `bmat_*`).
+  Revit-grade **curated στήλες ανά preset**: πόρτα = κάσα/φύλλο/χειρολαβή, παράθυρο = κάσα/υαλοπίνακα/χειρολαβή
+  (`schedule-preset-columns.ts` `DOOR_COLUMNS`/`WINDOW_COLUMNS`, αντικατέστησαν το single `col.material`)· 4 νέες
+  i18n keys `col.{frame,leaf,glass,hardware}Material` (el+en). Data-driven exporters → αυτόματες στήλες. Zero
+  regression: legacy single υλικό → frame+leaf, hardware→default (test-locked). **Boy Scout (N.18):** ο κοινός
+  door+window preamble + τα κοινά frame/hardware/wall cells ενοποιήθηκαν σε `mapOpeningCommonCells` (`mats`
+  passed-in → single resolve). Gates: `opening-material-schedule.test.ts` (νέο) + `schedule-builder` + full
+  `bim/schedule/__tests__` **6 suites / 117 ✅**. `jscpd:diff`: το ουσιαστικό door/window material διπλότυπο
+  εξαλείφθηκε· απομένουν intra-file preamble clones (6 προϋπάρχοντα σε mapWall/Slab/Column/Beam/Foundation/
+  Combined — εκτός diff· + 1 door/window function-preamble idiom) → baseline-unaware check, commit-time SKIP
+  απόφαση Giorgio.
+- **2026-07-18** — **Follow-up 2Δ handle glyph (§8).** `drawHandleGlyph` στο `drawSwing`
+  (`opening-overlay-drawing.ts`) — διακριτικό tick κάθετο στο φύλλο, στο latch (ελεύθερο) άκρο, geometry-driven
+  (leaf tip = handing-aware μέσω hingeArc → συνεπές με 3Δ `latchSign` χωρίς re-derive). Διπλή πόρτα → 2 λαβές·
+  μόνο swing· sliding/folding/overhead/revolving/glazing/bay αμετάβλητα. `HANDLE_LEAF_FRACTION`/`HANDLE_TICK_RATIO`
+  constants. Gates: `opening-handle-glyph.test.ts` (νέο) **3/3 ✅** (tick στο latch άκρο, όχι στον μεντεσέ·
+  glazing χωρίς λαβή), `OpeningRenderer` parity regression **6/6 ✅**, `jscpd:diff` καθαρό ✅.

@@ -4,7 +4,7 @@ import type { RibbonToggleState } from '../context/RibbonCommandContext';
 import type { UseRibbonCommandsProps } from './useRibbonCommands-types';
 import { isWallRibbonToggleKey } from './bridge/wall-command-keys';
 import { isArrayRibbonToggleKey } from './bridge/array-command-keys';
-import { isOpeningTagStyleToggleKey } from './bridge/opening-command-keys';
+import { isOpeningRibbonToggleKey } from './bridge/opening-command-keys';
 import { isRoofRibbonToggleKey } from './bridge/roof-command-keys';
 import { isMepBoilerToggleKey } from './bridge/mep-boiler-command-keys';
 import { isHatchRibbonToggleKey } from './bridge/hatch-command-keys';
@@ -57,7 +57,7 @@ export function useRibbonToggleCommands({
         arrayBridge.onToggle(key, next);
         return;
       }
-      if (isOpeningTagStyleToggleKey(key)) {
+      if (isOpeningRibbonToggleKey(key)) {
         openingBridge.onToggle(key, next);
         return;
       }
@@ -97,7 +97,7 @@ export function useRibbonToggleCommands({
       if (key === 'animation.snap-toggle') return snapEnabled;
       if (isWallRibbonToggleKey(key)) return wallBridge.getToggleState(key);
       if (isArrayRibbonToggleKey(key)) return arrayBridge.getToggleState(key);
-      if (isOpeningTagStyleToggleKey(key)) return openingBridge.getToggleState(key);
+      if (isOpeningRibbonToggleKey(key)) return openingBridge.getToggleState(key);
       if (isRoofRibbonToggleKey(key)) return roofBridge.getToggleState(key);
       if (isMepBoilerToggleKey(key)) return mepBoilerBridge.getToggleState(key);
       if (isHatchRibbonToggleKey(key)) return hatchBridge.getToggleState(key);

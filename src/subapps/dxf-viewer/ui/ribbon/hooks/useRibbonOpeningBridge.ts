@@ -20,6 +20,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isOpeningEntity } from '../../../types/entities';
+import { isDoorKind } from '../../../bim/types/opening-types';
 import type { OpeningEntity, OpeningKind, OpeningParams } from '../../../bim/types/opening-types';
 import { markAllCanvasDirty } from '../../../rendering/core/UnifiedFrameScheduler';
 import {
@@ -85,6 +86,7 @@ const NUMBER_KEY_TO_FIELD: Readonly<Record<string, keyof OpeningParams>> = {
   [OPENING_RIBBON_KEYS.params.width]: 'width',
   [OPENING_RIBBON_KEYS.params.height]: 'height',
   [OPENING_RIBBON_KEYS.params.sillHeight]: 'sillHeight',
+  [OPENING_RIBBON_KEYS.params.thresholdEmbedMm]: 'thresholdEmbedMm',
 };
 
 const STRING_KEY_TO_FIELD: Readonly<Record<string, keyof OpeningParams>> = {
@@ -92,6 +94,7 @@ const STRING_KEY_TO_FIELD: Readonly<Record<string, keyof OpeningParams>> = {
   [OPENING_RIBBON_KEYS.stringParams.handing]: 'handing',
   [OPENING_RIBBON_KEYS.stringParams.openDirection]: 'openDirection',
   [OPENING_RIBBON_KEYS.stringParams.mark]: 'mark',
+  [OPENING_RIBBON_KEYS.stringParams.thresholdEmbed]: 'thresholdEmbed',
 };
 
 export function useRibbonOpeningBridge(
@@ -147,6 +150,20 @@ export function useRibbonOpeningBridge(
       // `opening.typeId`, mirroring `sillHeight`/`handing`.
       if (isOpeningFrameProfileKey(commandKey)) {
         return resolveOpeningFrameProfileComboboxState(commandKey, opening);
+      }
+      // ADR-673 — Κατώφλι vertical placement. Absent params ⇒ display the same
+      // resolved default `resolveOpeningThreshold` would use (`'none'` / `0`),
+      // and the mm field renders disabled until `thresholdEmbed==='custom'`.
+      if (commandKey === OPENING_RIBBON_KEYS.stringParams.thresholdEmbed) {
+        return { value: opening.params.thresholdEmbed ?? 'none', options: [], disabled };
+      }
+      if (commandKey === OPENING_RIBBON_KEYS.params.thresholdEmbedMm) {
+        const embedActive = (opening.params.thresholdEmbed ?? 'none') === 'custom';
+        return {
+          value: String(Math.round(opening.params.thresholdEmbedMm ?? 0)),
+          options: [],
+          disabled: disabled || !embedActive,
+        };
       }
       if (isOpeningRibbonStringKey(commandKey)) {
         const field = STRING_KEY_TO_FIELD[commandKey];
@@ -204,6 +221,16 @@ export function useRibbonOpeningBridge(
         return;
       }
 
+      // ADR-673 — defense-in-depth: never let a mm-depth edit land while the UI
+      // has the field disabled (thresholdEmbed !== 'custom'). Mirrors the
+      // type-governed guard above.
+      if (
+        commandKey === OPENING_RIBBON_KEYS.params.thresholdEmbedMm
+        && (opening.params.thresholdEmbed ?? 'none') !== 'custom'
+      ) {
+        return;
+      }
+
       // ADR-611 — frame profile editor writes (see resolver comment above).
       if (isOpeningFrameProfileKey(commandKey)) {
         const nextParams = buildOpeningFrameProfileParamsPatch(commandKey, value, opening);
@@ -240,13 +267,28 @@ export function useRibbonOpeningBridge(
     if (key === OPENING_TAG_STYLE_KEYS.leaderVisible) {
       getOpeningTagStyleService().mutateStyle({ leaderVisible: next });
       markAllCanvasDirty();
+      return;
     }
-  }, []);
+    // ADR-673 — Κατώφλι on/off. Writes straight through UpdateOpeningParamsCommand
+    // (undoable), same path as every other opening param — no service involved.
+    if (key === OPENING_RIBBON_KEYS.toggles.hasThreshold) {
+      const opening = resolveOpening();
+      if (!opening) return;
+      dispatchParams(opening, { ...opening.params, hasThreshold: next } as OpeningParams);
+    }
+  }, [resolveOpening, dispatchParams]);
 
   const getToggleState = useCallback((key: string): RibbonToggleState => {
     if (key === OPENING_TAG_STYLE_KEYS.leaderVisible) return leaderVisible;
+    if (key === OPENING_RIBBON_KEYS.toggles.hasThreshold) {
+      const opening = resolveOpening();
+      if (!opening) return NULL_TOGGLE;
+      // Mirrors `resolveOpeningThreshold`'s implicit default (ADR-673): absent
+      // ⇒ true for every door kind, false otherwise.
+      return opening.params.hasThreshold ?? isDoorKind(opening.params.kind);
+    }
     return NULL_TOGGLE;
-  }, [leaderVisible]);
+  }, [leaderVisible, resolveOpening]);
 
   const getBadgeState = useViolationBadgeState(
     resolveOpening,

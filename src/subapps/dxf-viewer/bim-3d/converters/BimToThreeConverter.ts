@@ -58,6 +58,9 @@ import { wallFootprintSubcategory } from '../../bim/walls/wall-render-palette';
 // ADR-421 §A6 — opening 3D body attach (own module, file-size SSoT N.7.1, 2026-07-05).
 import { attachOpeningMeshes } from './bim-three-wall-opening-attach';
 import { projectVerticesTo2D } from '../../bim/geometry/shared/polygon-utils';
+// ADR-673 — active-storey finish thickness SSoT για το door κατώφλι embed (non-React getState).
+import { readActiveStoreyContext } from '../../systems/levels/storey-creation-defaults';
+import { DEFAULT_FLOOR_FINISH_THICKNESS_MM } from '@/utils/floor-naming';
 
 // ADR-406 / ADR-408 Φ3 — point-based converters re-exported from their own module
 // (file-size SSoT, N.7.1). Importers keep `from '.../BimToThreeConverter'`.
@@ -417,7 +420,11 @@ export function wallToMesh(
       if (levelId !== undefined) group.userData['levelId'] = levelId;
       // ADR-421 §A6 — parametric 3D κουφώματος (κάσα + φύλλα + υαλοστάσιο) μέσα
       // στο cutout. Attached ως children ώστε να ακολουθούν το wall group.
-      attachOpeningMeshes(group, wall, openings, floorElevationMm, buildingBaseElevationM, levelId);
+      // ADR-673 — το door κατώφλι διαβάζει το finish thickness του ενεργού ορόφου
+      // (FFL→γκρο μπετό) από τη SSoT active-storey context (ίδιο store με cut-plane/
+      // terrain)· null context → ο canonical default. ΠΟΤΕ hardcoded 80.
+      const finishThicknessMm = readActiveStoreyContext()?.finishThicknessMm ?? DEFAULT_FLOOR_FINISH_THICKNESS_MM;
+      attachOpeningMeshes(group, wall, openings, floorElevationMm, buildingBaseElevationM, finishThicknessMm, levelId);
       return group;
     }
     // Fall through to solid path if segmenting failed (defensive).

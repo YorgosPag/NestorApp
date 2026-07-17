@@ -29,18 +29,22 @@ import {
   faceKeyOverrideData,
 } from './entity-field-override-command';
 
-/** Minimal shape: stored footprint (κολόνα) ή outline (δοκάρι) + params.finish. */
+/** Minimal shape: stored footprint (κολόνα) / outline (δοκάρι geometry· πλάκα params) + params.finish. */
 interface FinishPaintableEntity {
-  readonly params?: { readonly finish?: StructuralFinishSpec };
+  readonly params?: {
+    readonly finish?: StructuralFinishSpec;
+    /** ADR-534 Φ6b — outline πλάκας (SlabParams.outline): το stored footprint για finishFaceRef. */
+    readonly outline?: { readonly vertices?: readonly { x: number; y: number }[] };
+  };
   readonly geometry?: {
     readonly footprint?: { readonly vertices?: readonly { x: number; y: number }[] };
     readonly outline?: { readonly vertices?: readonly { x: number; y: number }[] };
   };
 }
 
-/** Το stored footprint για finishFaceRef: κολόνα → footprint, δοκάρι → outline. */
+/** Το stored footprint για finishFaceRef: κολόνα → footprint, δοκάρι → geometry.outline, πλάκα → params.outline. */
 function finishFootprintVertices(entity: FinishPaintableEntity): readonly { x: number; y: number }[] | undefined {
-  return entity.geometry?.footprint?.vertices ?? entity.geometry?.outline?.vertices;
+  return entity.geometry?.footprint?.vertices ?? entity.geometry?.outline?.vertices ?? entity.params?.outline?.vertices;
 }
 
 export class SetFinishFaceOverrideCommand extends EntityFieldOverrideCommand<StructuralFinishSpec> {

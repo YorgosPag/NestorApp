@@ -31,6 +31,14 @@ function seed(finish?: StructuralFinishSpec): SceneEntity {
   } as unknown as SceneEntity;
 }
 
+/** ADR-534 Φ6b — Slab-like entity: το outline ζει στο `params` (όχι `geometry.footprint`). */
+function seedSlab(finish?: StructuralFinishSpec): SceneEntity {
+  return {
+    id: 'col-1',
+    params: { finish, outline: { vertices: VERTS } },
+  } as unknown as SceneEntity;
+}
+
 function specOf(sm: ReturnType<typeof createMockSceneManager>): StructuralFinishSpec | undefined {
   return (sm.store.get('col-1') as unknown as { params?: { finish?: StructuralFinishSpec } } | undefined)?.params?.finish;
 }
@@ -82,6 +90,12 @@ describe('SetFinishFaceOverrideCommand', () => {
     expect(new SetFinishFaceOverrideCommand('', 'side:0', null, sm).validate()).not.toBeNull();
     expect(new SetFinishFaceOverrideCommand('col-1', '', null, sm).validate()).not.toBeNull();
     expect(new SetFinishFaceOverrideCommand('col-1', 'side:0', null, sm).validate()).toBeNull();
+  });
+
+  it('ADR-534 Φ6b: πλάκα (params.outline, χωρίς geometry.footprint) → βάφει side:0', () => {
+    const sm = createMockSceneManager([seedSlab(SPEC)]);
+    new SetFinishFaceOverrideCommand('col-1', 'side:0', { colorOverride: '#c0d8b0' }, sm).execute();
+    expect(specOf(sm)?.faceOverrides).toEqual({ [REF0]: { colorOverride: '#c0d8b0' } });
   });
 
   it('δεν κάνει merge (κάθε βαφή = δικό της undo step)', () => {
