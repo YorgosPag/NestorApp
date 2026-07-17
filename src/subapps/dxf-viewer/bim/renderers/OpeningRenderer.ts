@@ -95,37 +95,55 @@ export class OpeningRenderer extends BaseEntityRenderer {
     );
 
     this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
-    // ADR-669 2D/3D material parity — the per-opening material (κάσα/υαλοστάσιο)
-    // drives the 2D plan colour, mirroring the 3D pipeline's
-    // `resolveOpeningMaterial()` + `getMaterialFlatColorHex()` (same SSoT the
-    // structural-finish 2D plan geometry already uses for `mat-*`/`bmat_*` ids —
-    // Revit-style «one material, 2D + 3D»). ZERO REGRESSION: only openings that
-    // carry an EXPLICIT instance material (`params.material` / `params.materials`)
-    // resolve to a material colour; untouched legacy openings keep the existing
-    // kind palette (`OPENING_KIND_STROKE`) unchanged.
-    const _hasMaterialOverride = Boolean(opening.params.material) || Boolean(opening.params.materials);
-    const _kindColor = OPENING_KIND_STROKE[opening.kind];
-    let _frameColor = _kindColor;
-    let _glassColor = _kindColor;
-    if (_hasMaterialOverride) {
-      const _resolvedMats = resolveOpeningMaterial(opening.params);
-      _frameColor = getMaterialFlatColorHex(_resolvedMats.frame);
-      _glassColor = getMaterialFlatColorHex(_resolvedMats.glass);
-    }
-    this.ctx.strokeStyle = _frameColor;
+    this.ctx.strokeStyle = OPENING_KIND_STROKE[opening.kind];
     const _opLayerOverride = _opLayer ? {
       lineweightMm: isConcreteLineweight(_opLayer.lineweight) ? _opLayer.lineweight : undefined,
       color: _opLayer.color ?? undefined,
     } : undefined;
+
+    // ADR-669 2D/3D material parity — the per-opening material (κάσα/υαλοστάσιο)
+    // drives the 2D plan colour, mirroring the 3D pipeline's
+    // `resolveOpeningMaterial()` + `getMaterialFlatColorHex()` (same SSoT the
+    // structural-finish 2D plan geometry already uses for `mat-*`/`bmat_*` ids —
+    // Revit-style «one material, 2D + 3D»). The resolved colour is threaded in
+    // as an `elementOverride.color` FALLBACK (ADR-375 C.5 hook — the resolver's
+    // own «elem > sub Object Style > … » precedence), so a real per-instance
+    // style override (opening.styleOverride.color) still wins over material,
+    // exactly as it already wins over everything else today.
+    //
+    // ZERO REGRESSION: `DEFAULT_OBJECT_STYLES` bakes a non-null category colour
+    // into EVERY opening subcategory (door-opening/window-opening/…), which is
+    // `sub Object Style` priority — ABOVE the parent-DEFAULT fallback but BELOW
+    // `elem`. That colour therefore already wins over the plain
+    // `OPENING_KIND_STROKE` baseline for every existing opening. Only openings
+    // that carry an EXPLICIT instance material (`params.material` /
+    // `params.materials`) synthesize an `elem`-level override at all — legacy
+    // openings pass `opening.styleOverride` through UNCHANGED, so `_outlineS`/
+    // `_overlayS` resolve identically to before this change.
+    const _hasMaterialOverride = Boolean(opening.params.material) || Boolean(opening.params.materials);
+    const _withMaterialFallback = (fallbackColor: string): typeof opening.styleOverride => {
+      if (!_hasMaterialOverride || opening.styleOverride?.color !== undefined) return opening.styleOverride;
+      return { ...opening.styleOverride, color: fallbackColor };
+    };
+    let _outlineElementOverride = opening.styleOverride;
+    let _overlayElementOverride = opening.styleOverride;
+    if (_hasMaterialOverride) {
+      const _resolvedMats = resolveOpeningMaterial(opening.params);
+      const _frameColor = getMaterialFlatColorHex(_resolvedMats.frame);
+      const _glassColor = getMaterialFlatColorHex(_resolvedMats.glass);
+      _outlineElementOverride = _withMaterialFallback(_frameColor);
+      _overlayElementOverride = _withMaterialFallback(isWindowKind(opening.kind) ? _glassColor : _frameColor);
+    }
+
     // ADR-377 C.3 — per-kind subcategory style resolution.
-    const _rso = (subcat: string) => resolveSubcategoryStyle({
+    const _rso = (subcat: string, elementOverride: typeof opening.styleOverride) => resolveSubcategoryStyle({
       category: 'opening', subcategoryKey: subcat,
       cutState: _opCutState, scaleDenominator: _opDs.drawingScale,
       dpi: 96, objectStyles: _opDs.objectStyles,
-      elementOverride: opening.styleOverride, layerOverride: _opLayerOverride,
+      elementOverride, layerOverride: _opLayerOverride,
     });
-    const _outlineS = _rso(openingOutlineSubcat(opening.kind));
-    const _overlayS = _rso(openingOverlaySubcat(opening.kind));
+    const _outlineS = _rso(openingOutlineSubcat(opening.kind), _outlineElementOverride);
+    const _overlayS = _rso(openingOverlaySubcat(opening.kind), _overlayElementOverride);
 
     this.ctx.lineWidth = _outlineS.lineWidthPx;
     // Cut → subcategory line pattern (solid poché jambs). Beyond → dashed.
@@ -138,14 +156,15 @@ export class OpeningRenderer extends BaseEntityRenderer {
     // outline style (reuse — no dedicated frame subcategory). Cut symbol only.
     if (_isCut) this.drawFrameOutlines(opening, _outlineS.lineWidthPx);
     // Plan symbol (swing arc / glazing / slide track) only when actually cut.
-    // Glazed kinds draw the double-line glazing symbol in the resolved GLASS
-    // material colour (distinct from the frame) — same material, same colour
-    // as the 3D glazing pane — but only when no explicit subcategory/layer
-    // colour override is already forcing a uniform stroke (existing precedence
-    // preserved untouched).
+    // Only re-apply the (independently resolved) overlay colour when a material
+    // override is active — otherwise `_overlayS.color` resolves to the SAME
+    // DEFAULT_OBJECT_STYLES category colour as `_outlineS.color` for every
+    // existing kind/subcat pairing, so skipping the re-assignment when no
+    // material is set keeps the exact current single-stroke-inherits-from-
+    // outline code path (byte-identical legacy behaviour).
     if (_isCut) {
-      if (_hasMaterialOverride && isWindowKind(opening.kind) && _outlineS.color === null) {
-        this.ctx.strokeStyle = _glassColor;
+      if (_hasMaterialOverride && _overlayS.color !== null) {
+        this.ctx.strokeStyle = _overlayS.color;
       }
       this.drawKindOverlay(opening, _overlayS.lineWidthPx);
     }

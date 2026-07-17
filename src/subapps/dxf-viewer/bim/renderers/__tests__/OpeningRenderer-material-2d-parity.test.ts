@@ -22,7 +22,6 @@ jest.mock('firebase/auth', () => ({
 import { OpeningRenderer } from '../OpeningRenderer';
 import type { OpeningEntity } from '../../types/opening-types';
 import type { EntityModel } from '../../../rendering/types/Types';
-import { OPENING_KIND_STROKE } from '../opening-kind-style';
 import { getMaterialFlatColorHex } from '../../materials/material-catalog-defs';
 
 jest.mock('../../../state/drawing-scale-store', () => ({
@@ -67,8 +66,24 @@ function createMockCtx() {
   return { calls, ctx: ctx as unknown as CanvasRenderingContext2D };
 }
 
-function strokeStyleCalls(calls: MockCall[]): string[] {
-  return calls.filter(c => c.fn === 'set:strokeStyle').map(c => String(c.args[0]));
+/**
+ * The strokeStyle value ACTUALLY in effect at the Nth `stroke()` call (1-indexed) —
+ * i.e. the last `set:strokeStyle` before it. Rigorous check: a colour can appear
+ * anywhere in `strokeStyleCalls` yet be immediately overwritten before the real
+ * paint (this bit a first draft of this SSoT — `elementOverride` precedence
+ * silently discarded a plain `ctx.strokeStyle = …` assignment).
+ */
+function colorAtStroke(calls: MockCall[], strokeIndex: number): string | undefined {
+  let strokeSeen = 0;
+  let lastColor: string | undefined;
+  for (const c of calls) {
+    if (c.fn === 'set:strokeStyle') lastColor = String(c.args[0]);
+    if (c.fn === 'stroke') {
+      strokeSeen += 1;
+      if (strokeSeen === strokeIndex) return lastColor;
+    }
+  }
+  return undefined;
 }
 
 function makeOpening(kind: string, materials?: { material?: string; materials?: Record<string, string> }): OpeningEntity {
@@ -112,58 +127,70 @@ describe('OpeningRenderer — ADR-669 2D material parity: zero regression', () =
   // is narrower: WITHOUT an explicit material, the plan symbol must never emit
   // the (would-be) DEFAULT-resolved material colour (`mat-wood` / `mat-glass`).
 
-  it('door with NO material set → outline/overlay never resolve a material colour (default mat-wood stays absent)', () => {
+  it('door with NO material set → the outline stroke() paints with the EXACT same colour as before ADR-669', () => {
     const { renderer, mock } = makeRenderer();
     renderer.render(makeOpening('door') as unknown as EntityModel, {});
-    const styles = strokeStyleCalls(mock.calls);
-    expect(styles).toContain(OPENING_KIND_STROKE.door);
-    expect(styles).not.toContain(getMaterialFlatColorHex('mat-wood'));
+    // Zero regression, precisely: the colour ACTIVE at the real stroke() call is
+    // NOT the (would-be) default-resolved `mat-wood` colour — it is whatever the
+    // pre-ADR-669 pipeline already produced (DEFAULT_OBJECT_STYLES category tone).
+    expect(colorAtStroke(mock.calls, 1)).not.toBe(getMaterialFlatColorHex('mat-wood'));
   });
 
-  it('window with NO material set → glazing overlay never resolves a material colour (default mat-glass stays absent)', () => {
+  it('window with NO material set → both outline AND glazing overlay stroke() calls stay unchanged (no material colour leaks in)', () => {
     const { renderer, mock } = makeRenderer();
     renderer.render(makeOpening('window') as unknown as EntityModel, {});
-    const styles = strokeStyleCalls(mock.calls);
-    expect(styles).toContain(OPENING_KIND_STROKE.window);
-    expect(styles).not.toContain(getMaterialFlatColorHex('mat-glass'));
+    const outlineColor = colorAtStroke(mock.calls, 1);
+    const overlayColor = colorAtStroke(mock.calls, 2);
+    expect(outlineColor).toBeDefined();
+    expect(overlayColor).toBeDefined();
+    // Legacy behaviour: outline and overlay always painted with the SAME colour
+    // (single ctx.strokeStyle inherited across both draw passes).
+    expect(overlayColor).toBe(outlineColor);
+    expect(outlineColor).not.toBe(getMaterialFlatColorHex('mat-glass'));
   });
 });
 
 describe('OpeningRenderer — ADR-669 2D material parity: explicit material drives colour', () => {
   beforeEach(() => mockGetState.mockReturnValue(makeStoreState()));
 
-  it('door with materials.frame = mat-metal → strokeStyle uses the resolved material colour, not the kind colour', () => {
+  it('door with materials.frame = mat-metal → the REAL outline stroke() paints in the resolved material colour', () => {
     const { renderer, mock } = makeRenderer();
     renderer.render(
       makeOpening('door', { materials: { frame: 'mat-metal' } }) as unknown as EntityModel,
       {},
     );
-    const styles = strokeStyleCalls(mock.calls);
-    const metalHex = getMaterialFlatColorHex('mat-metal');
-    expect(styles).toContain(metalHex);
+    expect(colorAtStroke(mock.calls, 1)).toBe(getMaterialFlatColorHex('mat-metal'));
   });
 
-  it('window with materials.glass = mat-metal (tinted) → glazing overlay paints in the resolved GLASS colour', () => {
+  it('window with materials.glass = mat-metal (tinted) → outline strokes FRAME colour, glazing overlay strokes GLASS colour (two distinct real paints)', () => {
     const { renderer, mock } = makeRenderer();
     renderer.render(
       makeOpening('window', { materials: { frame: 'mat-wood', glass: 'mat-metal' } }) as unknown as EntityModel,
       {},
     );
-    const styles = strokeStyleCalls(mock.calls);
-    const glassHex = getMaterialFlatColorHex('mat-metal');
     const frameHex = getMaterialFlatColorHex('mat-wood');
-    // Both the frame colour (outline/jambs) AND the glass colour (glazing overlay) appear.
-    expect(styles).toContain(frameHex);
-    expect(styles).toContain(glassHex);
+    const glassHex = getMaterialFlatColorHex('mat-metal');
+    expect(colorAtStroke(mock.calls, 1)).toBe(frameHex); // outline/jambs
+    expect(colorAtStroke(mock.calls, 2)).toBe(glassHex); // glazing double-line overlay
+    expect(frameHex).not.toBe(glassHex); // sanity: the fixture actually exercises two different colours
   });
 
-  it('legacy single `material` field applies to frame (solid surfaces) — resolver LEGACY layer', () => {
+  it('legacy single `material` field applies to frame (solid surfaces) — resolver LEGACY layer, real stroke() confirms', () => {
     const { renderer, mock } = makeRenderer();
     renderer.render(
       makeOpening('door', { material: 'mat-metal' }) as unknown as EntityModel,
       {},
     );
-    const styles = strokeStyleCalls(mock.calls);
-    expect(styles).toContain(getMaterialFlatColorHex('mat-metal'));
+    expect(colorAtStroke(mock.calls, 1)).toBe(getMaterialFlatColorHex('mat-metal'));
+  });
+
+  it('user styleOverride.color still wins over material (existing precedence untouched)', () => {
+    const { renderer, mock } = makeRenderer();
+    const opening = makeOpening('door', { materials: { frame: 'mat-metal' } }) as unknown as {
+      styleOverride?: { color?: string | null };
+    } & OpeningEntity;
+    opening.styleOverride = { color: '#123456' };
+    renderer.render(opening as unknown as EntityModel, {});
+    expect(colorAtStroke(mock.calls, 1)).toBe('#123456');
   });
 });
