@@ -45,25 +45,19 @@ export interface FaceProfilePolygon {
 }
 
 /**
- * ADR-534 Φ7c — Γνήσιο 45° miter **ΕΝΣΩΜΑΤΩΜΕΝΟ** στο ενιαίο extrude (ΟΧΙ ξεχωριστά wedges): τα δύο
- * t-ακρότατα της όψης + το πόσο μετατοπίζεται εκεί το **back-cap** (u = thicknessM, outer παρειά) κατά
- * τον άξονα ώστε το outer t-άκρο να φτάσει τη mitered κορυφή (`aOuter/bOuter` — που ήδη φέρει το
- * `computeMiteredOuter`), ενώ το front-cap (core) μένει στο core-length → η πλευρική έδρα γίνεται
- * **διαγώνια = 45° miter** μέσα στο ίδιο welded mesh. Μη-μηδενικό delta ΜΟΝΟ σε **convex κάθετη γωνία**.
+ * ADR-534 Φ7c — Ένα γνήσιο 45° miter **ΕΝΣΩΜΑΤΩΜΕΝΟ** στο ενιαίο extrude (ΟΧΙ ξεχωριστά wedges): σε μια
+ * **κάθετη γωνία** (core boundary στο τοπικό t = `tM`), το **back-cap** (u = thicknessM, outer παρειά)
+ * μετατοπίζεται κατά τον άξονα κατά `deltaM` ώστε το outer t-άκρο να φτάσει τη mitered κορυφή (`aOuter/
+ * bOuter` — που ήδη φέρει το `computeMiteredOuter`), ενώ το front-cap (core) μένει → η πλευρική έδρα
+ * γίνεται **διαγώνια = 45° miter** μέσα στο ίδιο welded mesh. Μια όψη μπορεί να έχει **πολλαπλά** miters:
+ * τα δύο t-ακρότατα (γωνίες κτιρίου) **ΚΑΙ** τα χείλη κάθε τρύπας (λαμπάδες ανοιγμάτων).
  */
-export interface FaceMiterDeltas {
-  /** Τοπικό t (m, από `originCoreScene`) του min-t core ακρότατου (κάτω t-άκρο του profile). */
-  readonly tLoM: number;
-  /** Τοπικό t (m) του max-t core ακρότατου (πάνω t-άκρο). */
-  readonly tHiM: number;
-  /** Μετατόπιση (m, κατά +dir) του back-cap στο tLo — convex → αρνητικό (έξω)· αλλιώς 0. */
-  readonly deltaLoM: number;
-  /** Μετατόπιση (m, κατά +dir) του back-cap στο tHi — convex → θετικό (έξω)· αλλιώς 0. */
-  readonly deltaHiM: number;
+export interface FaceMiterShift {
+  /** Τοπικό t (m, από `originCoreScene`) του core boundary που mitered-άρεται (t-ακρότατο Ή χείλος τρύπας). */
+  readonly tM: number;
+  /** Μετατόπιση (m, κατά +dir) του back-cap εκεί — `t_outer − t_core` (θετικό/αρνητικό ανάλογα τη γωνία). */
+  readonly deltaM: number;
 }
-
-/** Μηδενικό miter (square end-caps) — free ends / concave / collinear / junction. */
-export const ZERO_MITER: FaceMiterDeltas = { tLoM: 0, tHiM: 0, deltaLoM: 0, deltaHiM: 0 };
 
 /**
  * Το προφίλ μιας ομοεπίπεδης όψης έτοιμο για εξώθηση: τα (t,z) πολύγωνα (m) + το τοπικό frame
@@ -80,8 +74,8 @@ export interface FaceProfile {
   /** Πάχος σοβά (m) = seg.thickness · mm→m. */
   readonly thicknessM: number;
   readonly polygons: readonly FaceProfilePolygon[];
-  /** ADR-534 Φ7c — 45° miter deltas (back-cap shift) των δύο t-άκρων· `ZERO_MITER` όταν καμία γωνία. */
-  readonly miter: FaceMiterDeltas;
+  /** ADR-534 Φ7c — 45° miters (back-cap shifts) σε όλες τις κάθετες γωνίες της όψης (άκρα + λαμπάδες τρυπών). */
+  readonly miter: readonly FaceMiterShift[];
 }
 
 /**
@@ -128,7 +122,7 @@ function toProfilePolygons(mp: MultiPolygon): FaceProfilePolygon[] {
 export function buildFaceProfile(
   group: FinishStripGroup,
   sceneToM: number,
-  miter: FaceMiterDeltas = ZERO_MITER,
+  miter: readonly FaceMiterShift[] = [],
 ): FaceProfile | null {
   if (group.strips.length === 0) return null;
   const origin = group.strips[0].aCore;
@@ -146,15 +140,15 @@ export function buildFaceProfile(
 }
 
 /**
- * ADR-534 Φ7c — όλα τα groups → welded face profiles, το καθένα με το **ενσωματωμένο** 45° miter του
- * (back-cap deltas ανά t-άκρο). Το miter υπολογίζεται με **cross-group** perp gate ({@link
- * computeFaceMiterDeltas}) → η γωνία κλείνει ΜΕΣΑ στο ενιαίο extrude, μηδέν ξεχωριστό wedge.
+ * ADR-534 Φ7c — όλα τα groups → welded face profiles, το καθένα με τα **ενσωματωμένα** 45° miters του
+ * (back-cap shifts σε κάθε κάθετη γωνία). Υπολογίζονται με **cross-group** perp gate ({@link
+ * computeFaceMiterShifts}) → οι γωνίες (κτιρίου ΚΑΙ ανοιγμάτων/λαμπάδων) κλείνουν ΜΕΣΑ στο ενιαίο extrude.
  */
 export function buildFaceProfiles(groups: readonly FinishStripGroup[], sceneToM: number): FaceProfile[] {
-  const deltas = computeFaceMiterDeltas(groups, sceneToM);
+  const shifts = computeFaceMiterShifts(groups, sceneToM);
   const out: FaceProfile[] = [];
   for (const g of groups) {
-    const p = buildFaceProfile(g, sceneToM, deltas.get(g) ?? ZERO_MITER);
+    const p = buildFaceProfile(g, sceneToM, shifts.get(g) ?? []);
     if (p) out.push(p);
   }
   return out;
