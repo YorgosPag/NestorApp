@@ -55,6 +55,22 @@ export interface FinishStrip {
   readonly zTopMm: number;
 }
 
+/**
+ * ADR-449/534 Φ7 — Όλα τα strips ΜΙΑΣ ομοεπίπεδης όψης (ίδια ευθεία-στήριξης + πλευρά +
+ * attributes), μαζί με το τοπικό frame της όψης (`dir` = άξονας κατά μήκος, `perp` = μοναδιαίο
+ * outward normal). Το καταναλώνει ο 3Δ builder για να εξωθήσει **ΕΝΑ welded δέρμα ανά όψη**
+ * (union των t×z ορθογωνίων → profile με τρύπες στα ανοίγματα) → μηδέν εσωτερική ραφή. Ο flat
+ * `mergeSilhouetteBandsToStrips` παραμένει το SSoT για DXF/BOQ (= `groups.flatMap(g => g.strips)`).
+ */
+export interface FinishStripGroup {
+  readonly seg: FinishFaceSegment;
+  /** Μοναδιαίος άξονας κατά μήκος της όψης (canonical dir του cluster anchor). */
+  readonly dir: Vec2;
+  /** Μοναδιαίο outward normal (από core προς outer) — άξονας εξώθησης του πάχους. */
+  readonly perp: Vec2;
+  readonly strips: readonly FinishStrip[];
+}
+
 const EPS = 1e-9;
 /** Ανοχή θέσης (canvas units ≈ mm) — dedup t-boundaries/perp grouping. Features ≥ δέκατα mm. */
 const POS_TOL = 1e-3;
@@ -285,18 +301,28 @@ function clusterBucket(entries: readonly QuadEntry[], tauScene: number): QuadEnt
   return clusters;
 }
 
+/** Μοναδιαίο outward normal μιας όψης από ένα strip της (mid-outer − mid-core). */
+function outwardPerpOf(s: FinishStrip): Vec2 {
+  const mc = mid(s.aCore, s.bCore);
+  const mo = mid(s.aOuter, s.bOuter);
+  const dx = mo.x - mc.x;
+  const dy = mo.y - mc.y;
+  const len = Math.hypot(dx, dy) || 1;
+  return { x: dx / len, y: dy / len };
+}
+
 /**
- * ADR-449 Slice X6 (+534 Φ6a) — SSoT: `SilhouetteBand[]` → κάθετα ενοποιημένα `FinishStrip[]`.
- * Ομαδοποιεί ΟΛΕΣ τις όψεις όλων των bands ανά **near-coplanar** επιφάνεια (angle + πλευρά +
- * attributes· perpOff εντός {@link COPLANAR_MERGE_TOL_MM}) και αποσυνθέτει καθεμία σε μαξιμαλικά
- * (t × z) ορθογώνια → μηδέν αυθαίρετη ραφή: ραφή μόνο σε πραγματικό όριο (soffit / πλευρά δοκαριού /
- * γωνία / **πραγματικό σκαλί** > ανοχή / αλλαγή υλικού-χρώματος). Το clustering (`clusterBucket`)
- * ενώνει τη φάσα πλάκας με τον ομοεπίπεδο σοβά τοίχου + γειτονικούς σχεδόν-συνευθειακούς τοίχους.
+ * ADR-449 Slice X6 (+534 Φ6a/Φ7) — SSoT: `SilhouetteBand[]` → **ομαδοποιημένα ανά ομοεπίπεδη όψη**
+ * `FinishStripGroup[]`. Ομαδοποιεί ΟΛΕΣ τις όψεις όλων των bands ανά **near-coplanar** επιφάνεια
+ * (angle + πλευρά + attributes· perpOff εντός {@link COPLANAR_MERGE_TOL_MM}) και αποσυνθέτει
+ * καθεμία σε μαξιμαλικά (t × z) ορθογώνια. Ο 3Δ builder εξωθεί **ΕΝΑ welded δέρμα ανά group**
+ * (Φ7) → μηδέν εσωτερική ραφή· ραφή μόνο σε πραγματικό όριο (γωνία = άλλο group, αλλαγή υλικού =
+ * άλλο bucket, άνοιγμα = τρύπα στο profile). Το clustering ενώνει φάσα πλάκας + σοβά τοίχου.
  */
-export function mergeSilhouetteBandsToStrips(
+export function mergeSilhouetteBandsToStripGroups(
   bands: readonly SilhouetteBand[],
   sceneUnits: SceneUnits,
-): FinishStrip[] {
+): FinishStripGroup[] {
   const s = mmToSceneUnits(sceneUnits);
   const tauScene = COPLANAR_MERGE_TOL_MM * s;
   const buckets = new Map<string, QuadEntry[]>();
@@ -309,15 +335,29 @@ export function mergeSilhouetteBandsToStrips(
       else buckets.set(e.superKey, [e]);
     }
   }
-  const out: FinishStrip[] = [];
+  const out: FinishStripGroup[] = [];
   for (const entries of buckets.values()) {
     for (const cluster of clusterBucket(entries, tauScene)) {
       const anchor = cluster[0];
-      out.push(...decomposeGroup({
+      const strips = decomposeGroup({
         sense: anchor.sense, seg: anchor.seg,
         rects: cluster.map((e) => toRect(e, anchor.dir)),
-      }));
+      });
+      if (strips.length === 0) continue;
+      out.push({ seg: anchor.seg, dir: anchor.dir, perp: outwardPerpOf(strips[0]), strips });
     }
   }
   return out;
+}
+
+/**
+ * ADR-449 Slice X6 — flat SSoT (DXF export/BOQ): `mergeSilhouetteBandsToStripGroups` ξεδιπλωμένο.
+ * Παραμένει byte-for-byte το ίδιο output με πριν (ίδια σειρά bucket→cluster→strips) — η
+ * ομαδοποίηση είναι additive, δεν αλλάζει τα strips.
+ */
+export function mergeSilhouetteBandsToStrips(
+  bands: readonly SilhouetteBand[],
+  sceneUnits: SceneUnits,
+): FinishStrip[] {
+  return mergeSilhouetteBandsToStripGroups(bands, sceneUnits).flatMap((g) => g.strips);
 }

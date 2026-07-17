@@ -33,7 +33,9 @@ import type { FinishFaceSegment, StructuralFinishFaces } from '../../bim/finishe
 // ADR-449 Slice X2 — γωνιακή γεωμετρία = pure SSoT (κοινή με το 2Δ outline· πρώην εδώ).
 // ADR-449 Slice X6 — `computeBandFinishQuads` = η κοινή offset→miter ακολουθία (μηδέν copy-paste).
 import { computeBandFinishQuads, type BandFinishQuad } from '../../bim/finishes/structural-finish-outline-geometry';
-import type { FinishStrip } from '../../bim/finishes/structural-finish-vertical-merge';
+import type { FinishStrip, FinishStripGroup } from '../../bim/finishes/structural-finish-vertical-merge';
+// ADR-449/534 Φ7 — unified welded δέρμα ανά ομοεπίπεδη όψη (union t×z + τρύπες στα ανοίγματα).
+import { buildFaceProfiles, type FaceProfile } from '../../bim/finishes/structural-finish-face-profile';
 // ADR-404 / ADR-449 Bug A — ο σοβάς κεκλιμένου μέλους ακολουθεί τον πυρήνα: ΙΔΙΟΣ shear
 // SSoT consumer με τον core (no-op fast-path όταν δεν υπάρχει κλίση). Μηδέν νέα μαθηματικά.
 import { applyColumnTilt, applyBeamSlope } from './mesh-slope-shear';
@@ -42,6 +44,34 @@ import { applyColumnTilt, applyBeamSlope } from './mesh-slope-shear';
 export { computeMiteredOuter } from '../../bim/finishes/structural-finish-outline-geometry';
 
 const MM_TO_M = 0.001;
+
+/**
+ * SSoT finalize ενός finish mesh (prism Ή unified face): υλικό/χρώμα-override + κατακόρυφη θέση +
+ * bim tags + shadows + edge overlay. Κοινό για {@link addFinishPrism} (per-strip) ΚΑΙ
+ * {@link buildFinishSkinFromStripGroups} (Φ7 unified) → μηδέν copy-paste (N.18).
+ */
+function finalizeFinishMesh(
+  group: THREE.Group,
+  geo: THREE.BufferGeometry,
+  materialId: string,
+  colorOverride: string | undefined,
+  classification: FinishFaceSegment['classification'],
+  id: string,
+  bimType: 'column' | 'beam',
+  levelId: string | undefined,
+  posY: number,
+): void {
+  const material = colorOverride ? getFinishColorOverrideMaterial3D(colorOverride) : getMaterial3D(materialId);
+  const mesh = new THREE.Mesh(geo, material);
+  mesh.position.y = posY;
+  stampBimIdentity(mesh, { bimId: id, bimType, matId: materialId, levelId });
+  mesh.userData['structuralFinish'] = true;
+  mesh.userData['finishClassification'] = classification;
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  attachEdgesProjection(mesh, bimType);
+  group.add(mesh);
+}
 
 /** Χτίζει ΕΝΑ band prism από plan quad και το προσθέτει στο group (tagged). */
 function addFinishPrism(
@@ -67,16 +97,7 @@ function addFinishPrism(
   const geo = stripPrismGeometry(quad, heightM);
   if (!geo) return;
   shearGeo?.(geo);
-  const material = colorOverride ? getFinishColorOverrideMaterial3D(colorOverride) : getMaterial3D(materialId);
-  const mesh = new THREE.Mesh(geo, material);
-  mesh.position.y = baseY;
-  stampBimIdentity(mesh, { bimId: id, bimType, matId: materialId, levelId });
-  mesh.userData['structuralFinish'] = true;
-  mesh.userData['finishClassification'] = classification;
-  mesh.castShadow = true;
-  mesh.receiveShadow = true;
-  attachEdgesProjection(mesh, bimType);
-  group.add(mesh);
+  finalizeFinishMesh(group, geo, materialId, colorOverride, classification, id, bimType, levelId, baseY);
 }
 
 /**
@@ -127,31 +148,73 @@ function quadToScenePoints(q: BandFinishQuad | FinishStrip, sceneToM: number): P
   return m.map((p) => ({ x: p.x, y: p.y, z: 0 }));
 }
 
+/** FaceProfile (t,z) πολύγωνα (m) → THREE.Shape[] (outer + τρύπες = ανοίγματα). */
+function faceProfileShapes(profile: FaceProfile): THREE.Shape[] {
+  const shapes: THREE.Shape[] = [];
+  for (const poly of profile.polygons) {
+    const shape = new THREE.Shape();
+    poly.outer.forEach((p, i) => (i === 0 ? shape.moveTo(p.x, p.y) : shape.lineTo(p.x, p.y)));
+    shape.closePath();
+    for (const hole of poly.holes) {
+      const path = new THREE.Path();
+      hole.forEach((p, i) => (i === 0 ? path.moveTo(p.x, p.y) : path.lineTo(p.x, p.y)));
+      path.closePath();
+      shape.holes.push(path);
+    }
+    shapes.push(shape);
+  }
+  return shapes;
+}
+
 /**
- * ADR-449 Slice X6 — ΕΝΑ prism ανά κατακόρυφα-ενοποιημένο `FinishStrip` (κάθε strip έχει το
- * δικό του `[zBottomMm, zTopMm]`). Αντικαθιστά το «ένα prism ανά band» → μηδέν οριζόντια ραφή
- * στις ελεύθερες παρειές (το `mergeSilhouetteBandsToStrips` ένωσε τα ταυτόσημα z-γειτονικά
- * quads). `baseElevationM` = world datum· κάθε strip κάθεται στο `baseElevationM + zBottomMm`.
- * `null` όταν κανένα strip. Flat-only (silhouette): κανένα shear (τα κεκλιμένα μέλη = per-element).
+ * Matrix τοπικό (t, z, u) → world. Το plan (x,y) → world (x,0,−y)· z_profile → world +Y (ίδια
+ * `ROT_X_NEG_90` σύμβαση). Columns: t→dir, z→up, u(πάχος)→outward perp· translation = originCore
+ * (m) + baseElevation στο Y. `sceneToM` scale-άρει το core σημείο αναφοράς σε μέτρα.
  */
-export function buildFinishSkinFromStrips(
-  strips: readonly FinishStrip[],
+function faceProfileWorldMatrix(profile: FaceProfile, sceneToM: number, baseElevationM: number): THREE.Matrix4 {
+  const { dir: d, perp: n, originCoreScene: o } = profile;
+  return new THREE.Matrix4().set(
+    d.x, 0, n.x, o.x * sceneToM,
+    0, 1, 0, baseElevationM,
+    -d.y, 0, -n.y, -o.y * sceneToM,
+    0, 0, 0, 1,
+  );
+}
+
+/** FaceProfile → ΕΝΑ welded BufferGeometry (extrude κατά πάχος + world placement). */
+function faceProfileGeometry(profile: FaceProfile, sceneToM: number, baseElevationM: number): THREE.BufferGeometry | null {
+  const shapes = faceProfileShapes(profile);
+  if (shapes.length === 0 || profile.thicknessM <= 0) return null;
+  const geo = new THREE.ExtrudeGeometry(shapes, { depth: profile.thicknessM, bevelEnabled: false });
+  geo.applyMatrix4(faceProfileWorldMatrix(profile, sceneToM, baseElevationM));
+  return geo;
+}
+
+/**
+ * ADR-449/534 Φ7 — ΕΝΑ welded δέρμα ΑΝΑ ομοεπίπεδη όψη (big-player: Revit «join» / C4D weld):
+ * τα (t×z) ορθογώνια κάθε `FinishStripGroup` ενώνονται σε ΕΝΑ profile (τρύπες = ανοίγματα) και
+ * εξωθούνται ΜΙΑ φορά → μηδέν εσωτερικό side-face = μηδέν ραφή στη συνεχή coplanar πρόσοψη. Ραφή
+ * μόνο σε πραγματικό όριο (γωνία = άλλο group, αλλαγή υλικού = άλλο group, άνοιγμα = τρύπα).
+ * Αντικαθιστά το «ένα prism ανά strip» ({@link buildFinishSkinFromStrips}) στο silhouette path.
+ * `baseElevationM` = world datum (bakes στο matrix Y). `null` όταν κανένα profile.
+ */
+export function buildFinishSkinFromStripGroups(
+  groups: readonly FinishStripGroup[],
   sceneUnits: SceneUnits,
   baseElevationM: number,
   id: string,
   bimType: 'column' | 'beam',
   levelId?: string,
 ): THREE.Group | null {
-  if (strips.length === 0) return null;
+  if (groups.length === 0) return null;
   const sceneToM = sceneUnitsToMeters(sceneUnits);
   const group = new THREE.Group();
-  for (const strip of strips) {
-    const heightM = (strip.zTopMm - strip.zBottomMm) * MM_TO_M;
-    if (heightM <= 0) continue;
-    const baseY = baseElevationM + strip.zBottomMm * MM_TO_M;
-    addFinishPrism(
-      group, quadToScenePoints(strip, sceneToM), heightM, baseY, id, bimType,
-      strip.seg.materialId, strip.seg.classification, levelId, undefined, strip.seg.colorOverride,
+  for (const profile of buildFaceProfiles(groups, sceneToM)) {
+    const geo = faceProfileGeometry(profile, sceneToM, baseElevationM);
+    if (!geo) continue;
+    finalizeFinishMesh(
+      group, geo, profile.seg.materialId, profile.seg.colorOverride, profile.seg.classification,
+      id, bimType, levelId, 0,
     );
   }
   if (group.children.length === 0) return null;

@@ -14,8 +14,8 @@
 import * as THREE from 'three';
 import type { SceneUnits } from '../../utils/scene-units';
 import type { SilhouetteBand } from '../../bim/finishes/structural-finish-silhouette';
-import { mergeSilhouetteBandsToStrips } from '../../bim/finishes/structural-finish-vertical-merge';
-import { buildFinishSkinFromStrips } from './structural-finish-3d';
+import { mergeSilhouetteBandsToStripGroups } from '../../bim/finishes/structural-finish-vertical-merge';
+import { buildFinishSkinFromStripGroups } from './structural-finish-3d';
 import { stampBimIdentity } from './bim-three-shape-helpers';
 
 /** Σταθερό id για το ενιαίο silhouette skin group (visibility gate = global). */
@@ -52,10 +52,11 @@ export function buildStructuralSilhouetteSkin(
 ): THREE.Group | null {
   if (bands.length === 0) return null;
   // ADR-449 Slice X6 — κάθετος band-merge: τα z-γειτονικά ταυτόσημα quads (ελεύθερες παρειές)
-  // ενώνονται σε ΕΝΑ strip δάπεδο→κορυφή → μηδέν οριζόντια ραφή στο soffit. Παρειά που την κόβει
-  // δοκάρι → το quad διαφέρει πάνω από το soffit → δεν ενώνεται → καθαρό τέλος (καπάκι) στο soffit.
-  const strips = mergeSilhouetteBandsToStrips(bands, sceneUnits);
-  const group = buildFinishSkinFromStrips(strips, sceneUnits, buildingBaseElevationM, id, 'column', levelId);
+  // ενώνονται σε ΕΝΑ strip δάπεδο→κορυφή. ADR-534 Φ7 — τα strips ΚΑΘΕ ομοεπίπεδης όψης ομαδοποιούνται
+  // (`...StripGroups`) και εξωθούνται ως ΕΝΑ welded δέρμα (union t×z + τρύπες στα ανοίγματα) → μηδέν
+  // εσωτερική ραφή στη συνεχή πρόσοψη. Ραφή μόνο σε πραγματικό όριο (γωνία/υλικό/άνοιγμα/soffit).
+  const groups = mergeSilhouetteBandsToStripGroups(bands, sceneUnits);
+  const group = buildFinishSkinFromStripGroups(groups, sceneUnits, buildingBaseElevationM, id, 'column', levelId);
   if (!group) return null;
   stampBimIdentity(group, { bimId: id, bimType: 'column' });
   group.userData['structuralFinish'] = true;
