@@ -24,8 +24,9 @@
  * @see docs/centralized-systems/reference/adrs/ADR-449-structural-finish-skin.md
  */
 
-import type { MultiPolygon, Pair, Polygon } from 'polygon-clipping';
+import type { MultiPolygon, Polygon } from 'polygon-clipping';
 import { safeDifference, safeUnion } from '../geometry/shared/safe-polygon-boolean';
+import { pairRingToPt2, pt2FootprintToClipPolygon, pt2SignedArea } from '../geometry/shared/polygon-clipping-ring';
 import type { Pt2 } from '../geometry/shared/segment-polygon-coverage';
 import type { FinishClassification, StructuralFinishSpec } from './structural-finish-types';
 import { resolveFinishForClass } from './structural-finish-types';
@@ -80,44 +81,10 @@ export interface HorizontalFaceInput {
   readonly minAreaM2?: number;
 }
 
-/** Shoelace signed area (canvas units²)· >0 = CCW. */
-function signedArea(ring: readonly Pt2[]): number {
-  let s = 0;
-  for (let i = 0; i < ring.length; i++) {
-    const a = ring[i];
-    const b = ring[(i + 1) % ring.length];
-    s += a.x * b.y - b.x * a.y;
-  }
-  return s / 2;
-}
-
-/**
- * Pt2[] → polygon-clipping `Polygon` (ένα ring, **CCW**). Η `polygon-clipping` είναι
- * winding-sensitive (CW → τρύπα) — γι' αυτό κανονικοποιούμε CCW πριν το boolean op.
- */
-function footprintToClip(fp: readonly Pt2[]): Polygon {
-  const ccw = signedArea(fp) < 0 ? [...fp].reverse() : fp;
-  const ring: Pair[] = ccw.map((p) => [p.x, p.y]);
-  const first = ring[0];
-  const last = ring[ring.length - 1];
-  if (first && last && (first[0] !== last[0] || first[1] !== last[1])) ring.push([first[0], first[1]]);
-  return [ring];
-}
-
-/** polygon-clipping ring → Pt2[] (αφαιρεί τη διπλή κορυφή κλεισίματος). */
-function ringToPts(ring: readonly Pair[]): Pt2[] {
-  const n = ring.length;
-  const closed = n > 1 && ring[0][0] === ring[n - 1][0] && ring[0][1] === ring[n - 1][1];
-  const lim = closed ? n - 1 : n;
-  const pts: Pt2[] = [];
-  for (let i = 0; i < lim; i++) pts.push({ x: ring[i][0], y: ring[i][1] });
-  return pts;
-}
-
 /** Εκτεθειμένη επιφάνεια = core − ⋃ covers. Καμία κάλυψη → ο πυρήνας αυτούσιος. */
 function exposedRegions(core: readonly Pt2[], covers: readonly (readonly Pt2[])[]): MultiPolygon {
-  const corePoly = footprintToClip(core);
-  const coverPolys = covers.filter((c) => c.length >= 3).map(footprintToClip);
+  const corePoly = pt2FootprintToClipPolygon(core);
+  const coverPolys = covers.filter((c) => c.length >= 3).map(pt2FootprintToClipPolygon);
   if (coverPolys.length === 0) return [corePoly];
   return safeDifference(corePoly, ...coverPolys);
 }
@@ -125,15 +92,15 @@ function exposedRegions(core: readonly Pt2[], covers: readonly (readonly Pt2[])[
 /** polygon-clipping `Polygon` → `HorizontalFinishPolygon` (poly[0]=outer, poly[1..]=holes). */
 function toHorizontalPolygon(poly: Polygon): HorizontalFinishPolygon {
   return {
-    outer: ringToPts(poly[0] ?? []),
-    holes: poly.slice(1).map(ringToPts),
+    outer: pairRingToPt2(poly[0] ?? []),
+    holes: poly.slice(1).map(pairRingToPt2),
   };
 }
 
 /** Καθαρό εμβαδό (canvas units²) ενός polygon = |outer| − Σ|holes|. */
 function netArea(poly: HorizontalFinishPolygon): number {
-  let a = Math.abs(signedArea(poly.outer));
-  for (const h of poly.holes) a -= Math.abs(signedArea(h));
+  let a = Math.abs(pt2SignedArea(poly.outer));
+  for (const h of poly.holes) a -= Math.abs(pt2SignedArea(h));
   return Math.max(0, a);
 }
 
@@ -203,13 +170,13 @@ export function mergeCoresToFinishedRings(
   const weld = WELD_TOL_MM * s;
   const polys = cores
     .filter((c) => c.length >= 3)
-    .map((c) => footprintToClip(weld > 0 ? c.map((p) => snapToGrid(p, weld)) : c));
+    .map((c) => pt2FootprintToClipPolygon(weld > 0 ? c.map((p) => snapToGrid(p, weld)) : c));
   if (polys.length === 0) return [];
   const u: MultiPolygon = polys.length === 1 ? [polys[0]] : safeUnion(polys[0], ...polys.slice(1));
   const rings: Pt2[][] = [];
   for (const poly of u) {
     if (!poly.length) continue;
-    const outer = ringToPts(poly[0]);
+    const outer = pairRingToPt2(poly[0]);
     if (outer.length < 3) continue;
     // ADR-449 — offset του ενωμένου outline με τον ΙΔΙΟ resolver + `computeMiteredOuter`
     // (μέσω `computeFinishedOutline`, obstacles=∅ → όλες οι ακμές εκτεθειμένες) που παράγει
@@ -226,8 +193,8 @@ function largestOuterRing(mp: MultiPolygon): Pt2[] | null {
   let bestArea = -Infinity;
   for (const poly of mp) {
     if (!poly.length) continue;
-    const ring = ringToPts(poly[0]);
-    const a = Math.abs(signedArea(ring));
+    const ring = pairRingToPt2(poly[0]);
+    const a = Math.abs(pt2SignedArea(ring));
     if (a > bestArea) { bestArea = a; best = ring; }
   }
   return best;
@@ -264,6 +231,6 @@ export function computeFinishedOutline(
   const offsets = segs.map((seg) => segOffsetVec(seg, seg.thickness * s));
   const { aOuter, bOuter, aCore, bCore } = computeMiteredOuter(segs, offsets, true);
   const quads = segs.map((_, i) => [aCore[i], bCore[i], bOuter[i], aOuter[i]]);
-  const merged = safeUnion(footprintToClip(core), ...quads.map((q) => footprintToClip(q)));
+  const merged = safeUnion(pt2FootprintToClipPolygon(core), ...quads.map((q) => pt2FootprintToClipPolygon(q)));
   return largestOuterRing(merged) ?? [...core];
 }

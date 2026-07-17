@@ -20,8 +20,9 @@
  * @see docs/centralized-systems/reference/adrs/ADR-449-structural-finish-skin.md §3.septies
  */
 
-import type { MultiPolygon, Pair, Polygon } from 'polygon-clipping';
+import type { MultiPolygon } from 'polygon-clipping';
 import { safeUnion } from '../geometry/shared/safe-polygon-boolean';
+import { pairRingToPt2, pt2FootprintToClipPolygon } from '../geometry/shared/polygon-clipping-ring';
 // ADR-049 SSoT — component-wise grid rounding (reuse· ΟΧΙ re-implement). Welds float-noise
 // drift ώστε flush structural↔structural παρειές να συμπίπτουν ακριβώς πριν το boolean union.
 import { snapToGrid } from '../../systems/grid/grid-snap';
@@ -100,41 +101,6 @@ const WELD_TOL_MM = 1e-3;
 /** Ανοχή (mm) κατακόρυφης επικάλυψης τοίχου↔ζώνης (mirror `WALL_BEAM_BAND_TOL_MM`). */
 const WALL_BAND_TOL_MM = 1;
 
-/** Shoelace signed area· >0 = CCW. */
-function signedArea(fp: readonly Pt2[]): number {
-  let s = 0;
-  for (let i = 0; i < fp.length; i++) {
-    const a = fp[i];
-    const b = fp[(i + 1) % fp.length];
-    s += a.x * b.y - b.x * a.y;
-  }
-  return s / 2;
-}
-
-/**
- * Pt2[] footprint → κλειστό polygon-clipping `Polygon` (ένα ring), **κανονικοποιημένο
- * σε CCW**. ΚΡΙΣΙΜΟ: η `polygon-clipping` είναι winding-sensitive — ένα **CW** ring (π.χ.
- * το beam `buildOutlineRect` outline, signed-area<0) ερμηνεύεται ως **τρύπα** → το `safeUnion`
- * δεν θα ένωνε το δοκάρι με την κολώνα (ο σοβάς έβγαινε λάθος, εντός σώματος). CCW → solid.
- */
-function footprintToPolygon(fp: readonly Pt2[]): Polygon {
-  const ccw = signedArea(fp) < 0 ? [...fp].reverse() : fp;
-  const ring: Pair[] = ccw.map((p) => [p.x, p.y]);
-  const first = ring[0];
-  const last = ring[ring.length - 1];
-  if (first && last && (first[0] !== last[0] || first[1] !== last[1])) ring.push([first[0], first[1]]);
-  return [ring];
-}
-
-/** polygon-clipping outer ring → Pt2[] (αφαιρεί τη διπλή κορυφή κλεισίματος). */
-function outerRingToPts(ring: readonly Pair[]): Pt2[] {
-  const n = ring.length;
-  const pts: Pt2[] = [];
-  const closed = n > 1 && ring[0][0] === ring[n - 1][0] && ring[0][1] === ring[n - 1][1];
-  const lim = closed ? n - 1 : n;
-  for (let i = 0; i < lim; i++) pts.push({ x: ring[i][0], y: ring[i][1] });
-  return pts;
-}
 
 /**
  * Ένωση των footprints σε ΕΝΑ `MultiPolygon` (κενό όταν δεν υπάρχουν). Κάθε κορυφή
@@ -148,7 +114,7 @@ function unionFootprints(footprints: readonly (readonly Pt2[])[], weldQuantum: n
     weldQuantum > 0 ? fp.map((p) => snapToGrid(p, weldQuantum)) : fp;
   const polys = footprints
     .filter((fp) => fp.length >= 3)
-    .map((fp) => footprintToPolygon(weld(fp)));
+    .map((fp) => pt2FootprintToClipPolygon(weld(fp)));
   if (polys.length === 0) return [];
   if (polys.length === 1) return [polys[0]]; // ένα footprint → MultiPolygon χωρίς clipping
   return safeUnion(polys[0], ...polys.slice(1));
@@ -207,7 +173,7 @@ function resolveBandFaces(
     // τρύπες (όψεις δωματίου ενός δομικού πλαισίου) → σοβάς ΚΑΙ στις εσωτερικές πλευρές
     // (αλλιώς frame δοκαριών/κολώνων = σοβάς μόνο απ' έξω). `holeRing` → φορά προς το δωμάτιο.
     for (let ri = 0; ri < poly.length; ri++) {
-      const ring = outerRingToPts(poly[ri]);
+      const ring = pairRingToPt2(poly[ri]);
       if (ring.length < 3) continue;
       const faces = resolveStructuralFinishFaces({
         coreFootprint: ring,

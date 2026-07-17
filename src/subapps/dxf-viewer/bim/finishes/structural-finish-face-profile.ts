@@ -20,8 +20,10 @@
  * @see ./structural-finish-vertical-merge.ts — παράγει τα `FinishStripGroup`
  */
 
-import type { MultiPolygon, Pair, Polygon } from 'polygon-clipping';
+import type { MultiPolygon, Polygon } from 'polygon-clipping';
 import { safeUnion } from '../geometry/shared/safe-polygon-boolean';
+import { pairRingToPt2 } from '../geometry/shared/polygon-clipping-ring';
+import type { Pt2 } from '../geometry/shared/segment-polygon-coverage';
 import type { Vec2 } from './structural-finish-outline-geometry';
 import type { FinishStrip, FinishStripGroup } from './structural-finish-vertical-merge';
 import type { FinishFaceSegment } from './structural-finish-types';
@@ -38,8 +40,8 @@ const sub = (a: Vec2, b: Vec2): Vec2 => ({ x: a.x - b.x, y: a.y - b.y });
  * μήκος, y = z ύψος). Το εξωθεί ο 3Δ builder κατά `thicknessM` (outward perp) → welded δέρμα.
  */
 export interface FaceProfilePolygon {
-  readonly outer: readonly Vec2[];
-  readonly holes: readonly (readonly Vec2[])[];
+  readonly outer: readonly Pt2[];
+  readonly holes: readonly (readonly Pt2[])[];
 }
 
 /**
@@ -77,26 +79,16 @@ function stripRectM(
   return [[[t0, z0], [t1, z0], [t1, z1], [t0, z1], [t0, z0]]];
 }
 
-/** polygon-clipping ring → Vec2[] (πετά τη διπλή κορυφή κλεισίματος). */
-function ringToVec2(ring: readonly Pair[]): Vec2[] {
-  const n = ring.length;
-  const closed = n > 1 && ring[0][0] === ring[n - 1][0] && ring[0][1] === ring[n - 1][1];
-  const lim = closed ? n - 1 : n;
-  const out: Vec2[] = [];
-  for (let i = 0; i < lim; i++) out.push({ x: ring[i][0], y: ring[i][1] });
-  return out;
-}
-
 /** MultiPolygon → FaceProfilePolygon[] (outer + τρύπες, ≥3 κορυφές). */
 function toProfilePolygons(mp: MultiPolygon): FaceProfilePolygon[] {
   const out: FaceProfilePolygon[] = [];
   for (const poly of mp) {
     if (poly.length === 0) continue;
-    const outer = ringToVec2(poly[0]);
+    const outer = pairRingToPt2(poly[0]);
     if (outer.length < 3) continue;
-    const holes: Vec2[][] = [];
+    const holes: Pt2[][] = [];
     for (let ri = 1; ri < poly.length; ri++) {
-      const hole = ringToVec2(poly[ri]);
+      const hole = pairRingToPt2(poly[ri]);
       if (hole.length >= 3) holes.push(hole);
     }
     out.push({ outer, holes });
