@@ -17,7 +17,7 @@
 // ADR-659 fix — use the LIVE registry hit-testing instance (fed by the render loop's
 // updateScene), NOT the zombie exported singleton which never receives a scene.
 import { serviceRegistry } from '../../services/ServiceRegistry';
-import { SelectionCyclingStore, buildCandidatesFromHits } from './SelectionCyclingStore';
+import { SelectionCyclingStore, buildCandidatesFromHits, type EntityResolver } from './SelectionCyclingStore';
 import { setHoveredEntity } from '../hover/HoverStore';
 import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Types';
 
@@ -36,6 +36,13 @@ export interface RepeatedClickCycleParams {
   readonly additive: boolean;
   /** Canonical replace-select-by-id (wired to `replaceEntitySelection`). */
   readonly selectEntityById: (id: string) => void;
+  /**
+   * Optional entity lookup (`scene.entities.find` by id) so the popover row can show
+   * a semantic label (slab role/thickness/elevation) instead of the raw entity-type +
+   * internal level id. Threaded straight into `buildCandidatesFromHits` — ADR-040:
+   * the lookup happens ONCE here, at click time, never per popover render.
+   */
+  readonly resolveEntity?: EntityResolver;
 }
 
 /**
@@ -49,7 +56,7 @@ export function resolveRepeatedClickCycle(p: RepeatedClickCycleParams): boolean 
   }
 
   const hits = serviceRegistry.get('hit-testing').hitTestAll(p.screenPos, p.transform, p.viewport);
-  const candidates = buildCandidatesFromHits(hits);
+  const candidates = buildCandidatesFromHits(hits, p.resolveEntity);
 
   // Not a stack → nothing to disambiguate. Let the normal top-1 path run.
   if (candidates.length < 2) {

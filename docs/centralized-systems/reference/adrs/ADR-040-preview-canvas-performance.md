@@ -4392,3 +4392,18 @@ systems/guides` (42 tests) αμετάβλητο. `jscpd:diff` καθαρό. ΟΧ
 
 Co-staged με ADR-189 changelog. `npx jest systems/guides` → 50/50. `jscpd:diff` καθαρό
 (+ boy-scout de-dup των 3 rotate prompt blocks). ΟΧΙ tsc (N.17). 🔴 verify+commit (Giorgio).
+
+---
+
+### 2026-07-17 — `CanvasSection`: `resolveEntity` getter στο `useSelectionCycling` (ADR-659) + RM guide-listener wiring
+
+**Αρχεία σε scope CHECK 6B:**
+- `components/dxf-layout/CanvasSection.tsx`:
+  - `useSelectionCycling({ …, resolveEntity: (id) => props.currentScene?.entities?.find(e => e.id === id) })`
+    — **κανόνας 2** (event-time getter, όχι snapshot): το popover του selection-cycling διαβάζει
+    role/thickness/elevation μέσω resolver αντί για το raw level id. Καμία νέα συνδρομή, κανένα
+    `useSyncExternalStore` — ο resolver τρέχει on-demand στο cycle event.
+  - RM `useEntityCompleteGuideListener` wiring (μετακινήθηκε — guides refactor, ADR-189).
+    Ο orchestrator παραμένει καθαρός από high-freq stores.
+
+Co-staged με ADR-659. ΟΧΙ tsc (N.17). 🔴 verify+commit (Giorgio).

@@ -8,21 +8,42 @@
 
 import { createExternalStore } from '../../stores/createExternalStore';
 import type { HitTestResult } from '../../services/HitTestingService';
+import type { Entity } from '../../types/entities';
+import { buildCandidateSemantics, type CandidateSemantics } from './candidate-label';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
+/** Resolves an entity id → the live `Entity`, or `undefined` when not found. */
+export type EntityResolver = (id: string) => Entity | undefined;
 
 export interface CyclingCandidate {
   readonly id: string;
   readonly entityType: string;
   readonly layer: string;
+  /**
+   * Semantic fields (slab role/thickness/elevation, …) resolved ONCE at build
+   * time via the optional `resolveEntity` param below — never re-looked-up at
+   * popover render time (ADR-040). `undefined` when `resolveEntity` was not
+   * supplied or the entity carries no known semantics (generic fallback).
+   * @see candidate-label.ts — buildCandidateSemantics / buildCandidateLabel
+   */
+  readonly semantics?: CandidateSemantics;
 }
 
 /**
  * ADR-659 — SSoT dedup: HitTestResult[] → deduped CyclingCandidate[] (first hit wins,
  * preserving the priority→distance sort of `hitTestAll`). Shared by the keyboard trigger
  * (`use-selection-cycling`) AND the repeated-click resolver — no dedup clone (N.18).
+ *
+ * `resolveEntity` — optional entity lookup (scene.entities.find by id) so the popover
+ * can show a meaningful role/thickness/elevation label instead of the raw entity-type
+ * + internal level id (bug fix, 2026-07-17). Omitted ⇒ candidates carry no `semantics`
+ * (generic fallback label at render time).
  */
-export function buildCandidatesFromHits(hits: readonly HitTestResult[]): CyclingCandidate[] {
+export function buildCandidatesFromHits(
+  hits: readonly HitTestResult[],
+  resolveEntity?: EntityResolver,
+): CyclingCandidate[] {
   const seen = new Set<string>();
   const candidates: CyclingCandidate[] = [];
   for (const hit of hits) {
@@ -32,6 +53,7 @@ export function buildCandidatesFromHits(hits: readonly HitTestResult[]): Cycling
         id: hit.entityId,
         entityType: hit.entityType ?? 'entity',
         layer: hit.layer ?? '0',
+        semantics: buildCandidateSemantics(resolveEntity?.(hit.entityId)),
       });
     }
   }

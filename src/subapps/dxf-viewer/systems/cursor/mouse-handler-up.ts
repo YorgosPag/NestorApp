@@ -479,6 +479,11 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
             viewport: hitSnap.viewport,
             additive,
             selectEntityById: (id) => onEntitiesSelected([id]),
+            // Bug fix (2026-07-17) — entity lookup so the popover can show a semantic
+            // label (slab role/thickness/elevation) instead of the raw entity-type +
+            // internal level id. Same resolver shape as the connector-elevation lookup
+            // above (γρ. ~381); the entity resolution happens ONCE here, at click time.
+            resolveEntity: (id) => scene?.entities?.find((en) => en.id === id) as Entity | undefined,
           });
           if (consumed) return;
         }

@@ -23,6 +23,20 @@ describe('buildCandidatesFromHits (ADR-659 SSoT dedup)', () => {
     expect(out).toHaveLength(1);
     expect(out[0]).toEqual({ id: 'x', entityType: 'entity', layer: '0' });
   });
+
+  it('bug fix (2026-07-17) — resolveEntity is optional; omitting it leaves candidates semantics-free', () => {
+    const out = buildCandidatesFromHits([hit('a')]);
+    expect(out[0].semantics).toBeUndefined();
+  });
+
+  it('bug fix (2026-07-17) — resolveEntity is called ONCE per candidate id, at build time', () => {
+    const resolveEntity = jest.fn().mockReturnValue(undefined);
+    buildCandidatesFromHits([hit('a'), hit('b'), hit('a')], resolveEntity);
+    // 'a' deduped away on the 2nd occurrence — resolveEntity only runs for the two unique ids.
+    expect(resolveEntity).toHaveBeenCalledTimes(2);
+    expect(resolveEntity).toHaveBeenCalledWith('a');
+    expect(resolveEntity).toHaveBeenCalledWith('b');
+  });
 });
 
 describe('SelectionCyclingStore armed repeated-click (ADR-659)', () => {

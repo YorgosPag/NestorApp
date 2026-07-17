@@ -38,7 +38,7 @@ import {
 } from '../../hooks/canvas';
 // ADR-449 PART B Slice C — «Βαφή σοβά» 2D paintbrush click wiring (direct import, όχι barrel).
 import { useFinishPaintClick } from '../../hooks/canvas/useFinishPaintClick';
-import { useGuideToolWorkflows, useEntityCompleteGuideListener } from '../../hooks/guides';
+import { useGuideToolWorkflows } from '../../hooks/guides';
 import { useOverlayLayers } from '../../hooks/layers';
 import { SnapSceneSyncLeaf } from './SnapSceneSyncLeaf';
 import { resolveSceneUnits, mmToSceneUnits } from '../../utils/scene-units'; import { DEFAULT_DUCT_WIDTH_MM, DEFAULT_PIPE_DIAMETER_MM } from '../../bim/types/mep-segment-types';
@@ -149,7 +149,11 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   }, []);
   // ADR-357 Phase 15 (G13): Selection Cycling — Shift+Space to cycle overlapping entities.
   const handleCycleEntitySelect = useCallback((id: string) => { setSelectedEntityIds([id]); }, [setSelectedEntityIds]);
-  useSelectionCycling({ activeTool, onSelectEntity: handleCycleEntitySelect });
+  // Bug fix (2026-07-17, ADR-659) — resolveEntity → popover shows role/thickness/elevation, not the raw level id.
+  useSelectionCycling({
+    activeTool, onSelectEntity: handleCycleEntitySelect,
+    resolveEntity: (id) => props.currentScene?.entities?.find((e) => e.id === id),
+  });
   // ADR-040 rule 2 — getter for event-time reads (useTextDoubleClickEditor).
   const getSelectedEntityIds = useCallback(() => universalSelectionRef.current.getSelectedEntityIds(), []);
   const entitySelectedOnMouseDownRef = useRef(false);
@@ -233,10 +237,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     notifyWarning, notifySuccess, universalSelection,
     currentScene: props.currentScene ?? null, eventBus,
   });
-  // B39 (ADR-189): "Create Guides" prompt for every drawn entity via
-  // unified completion pipeline (ADR-057 EventBus). Measurement tools are
-  // excluded — they already raise the prompt through `handleMeasurementComplete`.
-  useEntityCompleteGuideListener(guideWorkflows.handleEntityComplete);
   // === Layer visibility ===
   const showLayerCanvas = showLayerCanvasDebug || overlayMode === 'draw' || overlayMode === 'edit';
   // === Overlay → ColorLayer ===

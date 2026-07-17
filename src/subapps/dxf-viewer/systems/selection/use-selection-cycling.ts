@@ -15,7 +15,7 @@
  */
 
 import { useCallback, useEffect, useRef } from 'react';
-import { SelectionCyclingStore, buildCandidatesFromHits } from './SelectionCyclingStore';
+import { SelectionCyclingStore, buildCandidatesFromHits, type EntityResolver } from './SelectionCyclingStore';
 // ADR-659 fix — the LIVE hit-testing instance (the one the render loop feeds via
 // updateScene) lives in the ServiceRegistry. The exported `hitTestingService` singleton
 // never gets a scene → hitTestAll returns [] (this is why Shift+Space cycling never worked).
@@ -30,16 +30,26 @@ import { useEscapeHandler, ESC_PRIORITY } from '../escape-bus';
 export interface UseSelectionCyclingParams {
   activeTool: string;
   onSelectEntity: (entityId: string) => void;
+  /**
+   * Optional entity lookup (scene.entities.find by id) so the popover row can show a
+   * semantic label (slab role/thickness/elevation) instead of the raw entity-type +
+   * internal level id. Threaded straight into `buildCandidatesFromHits` — ADR-040:
+   * the lookup happens ONCE here, at Shift+Space trigger time, never per popover render.
+   */
+  resolveEntity?: EntityResolver;
 }
 
 /**
  * Side-effect-only hook — no useSyncExternalStore, so CanvasSection never re-renders
  * due to cycling state changes (ADR-040). State is consumed by SelectionCyclingPopover.
  */
-export function useSelectionCycling({ activeTool, onSelectEntity }: UseSelectionCyclingParams): void {
+export function useSelectionCycling({ activeTool, onSelectEntity, resolveEntity }: UseSelectionCyclingParams): void {
   // Stable callback — reads onSelectEntity via ref to avoid effect re-runs.
   const onSelectRef = useRef(onSelectEntity);
   onSelectRef.current = onSelectEntity;
+  // Stable ref for resolveEntity — same rationale (avoid effect churn on identity change).
+  const resolveEntityRef = useRef(resolveEntity);
+  resolveEntityRef.current = resolveEntity;
 
   const triggerCycling = useCallback(() => {
     const screenPos = getImmediatePosition();
@@ -54,7 +64,7 @@ export function useSelectionCycling({ activeTool, onSelectEntity }: UseSelection
     const hits = serviceRegistry.get('hit-testing').hitTestAll(screenPos, transform, viewport);
 
     // ADR-659 — shared dedup SSoT (no clone of the loop, N.18).
-    const candidates = buildCandidatesFromHits(hits);
+    const candidates = buildCandidatesFromHits(hits, resolveEntityRef.current);
 
     if (candidates.length >= 2) {
       const { x, y } = getClientPosition();
