@@ -35,7 +35,7 @@ import type { FinishFaceSegment, StructuralFinishFaces } from '../../bim/finishe
 import { computeBandFinishQuads, type BandFinishQuad } from '../../bim/finishes/structural-finish-outline-geometry';
 import type { FinishStrip, FinishStripGroup } from '../../bim/finishes/structural-finish-vertical-merge';
 // ADR-449/534 Φ7 — unified welded δέρμα ανά ομοεπίπεδη όψη (union t×z + τρύπες στα ανοίγματα).
-import { buildFaceProfiles, type FaceProfile } from '../../bim/finishes/structural-finish-face-profile';
+import { buildFaceProfiles, collectMiterWedges, type FaceProfile, type MiterWedge } from '../../bim/finishes/structural-finish-face-profile';
 // ADR-404 / ADR-449 Bug A — ο σοβάς κεκλιμένου μέλους ακολουθεί τον πυρήνα: ΙΔΙΟΣ shear
 // SSoT consumer με τον core (no-op fast-path όταν δεν υπάρχει κλίση). Μηδέν νέα μαθηματικά.
 import { applyColumnTilt, applyBeamSlope } from './mesh-slope-shear';
@@ -93,7 +93,9 @@ function addFinishPrism(
   // PBR base + custom χρώμα)· απόν → material καταλόγου (SSoT με 2Δ). Δεν αλλάζει BOQ.
   colorOverride?: string,
 ): void {
-  if (quad.length < 4) return;
+  // ≥3 σημεία: quad (per-strip band) Ή τρίγωνο (miter wedge, ADR-534 Φ7b) — ο `stripPrismGeometry`
+  // εξωθεί οποιοδήποτε plan polygon ≥3 κορυφών.
+  if (quad.length < 3) return;
   const geo = stripPrismGeometry(quad, heightM);
   if (!geo) return;
   shearGeo?.(geo);
@@ -181,6 +183,27 @@ function faceProfileWorldMatrix(profile: FaceProfile, sceneToM: number, baseElev
   );
 }
 
+/**
+ * ADR-534 Φ7b — ένα γωνιακό miter wedge (plan τρίγωνο) → τριγωνικό prism, προσθήκη στο group.
+ * Reuse του {@link addFinishPrism} (ίδιο geometry/material/tag SSoT με τα per-strip bands). Το
+ * τρίγωνο (core, mid, tip· scene units) → world metres με `scalePoints` (ίδιο scale με τα quads).
+ */
+function addMiterWedge(
+  group: THREE.Group,
+  w: MiterWedge,
+  sceneToM: number,
+  baseElevationM: number,
+  id: string,
+  bimType: 'column' | 'beam',
+  levelId: string | undefined,
+): void {
+  const tri = scalePoints([w.core, w.mid, w.tip], sceneToM).map((p) => ({ x: p.x, y: p.y, z: 0 }));
+  addFinishPrism(
+    group, tri, (w.zTopMm - w.zBottomMm) * MM_TO_M, baseElevationM + w.zBottomMm * MM_TO_M,
+    id, bimType, w.seg.materialId, w.seg.classification, levelId, undefined, w.seg.colorOverride,
+  );
+}
+
 /** FaceProfile → ΕΝΑ welded BufferGeometry (extrude κατά πάχος + world placement). */
 function faceProfileGeometry(profile: FaceProfile, sceneToM: number, baseElevationM: number): THREE.BufferGeometry | null {
   const shapes = faceProfileShapes(profile);
@@ -216,6 +239,11 @@ export function buildFinishSkinFromStripGroups(
       group, geo, profile.seg.materialId, profile.seg.colorOverride, profile.seg.classification,
       id, bimType, levelId, 0,
     );
+  }
+  // ADR-534 Φ7b — γωνιακά miter wedges: γεμίζουν τη γωνία με διαγώνιο αρμό 45° (μονή κάλυψη), αφού
+  // το welded body τελειώνει στο core-length. Big-player «Miter» join· μηδέν double-coverage/κενό.
+  for (const w of collectMiterWedges(groups)) {
+    addMiterWedge(group, w, sceneToM, baseElevationM, id, bimType, levelId);
   }
   if (group.children.length === 0) return null;
   stampBimIdentity(group, { bimId: id, bimType });

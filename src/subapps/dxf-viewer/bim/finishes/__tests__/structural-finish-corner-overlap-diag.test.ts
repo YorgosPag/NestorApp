@@ -1,15 +1,14 @@
 /**
- * DIAGNOSTIC (Φ7b, 2026-07-18) — ΜΕΤΡΑ τη διπλή κάλυψη στη γωνία, μη μαντεύεις.
+ * ADR-534 Φ7b — Corner miter regression (πρώην diagnostic double-coverage).
  *
- * Στόχος: ποσοτικοποίηση του corner double-coverage bug. Το `buildFaceProfiles` corner-join
- * επεκτείνει **ΚΑΙ ΤΙΣ ΔΥΟ** γειτονικές όψεις κατά το πάχος στο junction → τα δύο plan
- * footprints επικαλύπτονται σε ένα τετράγωνο ~πάχος×πάχος στη γωνία → ο σοβάς μπαίνει 2×.
- *
- * ΔΕΝ είναι fix — είναι μέτρηση. Μετά τον fix (single-owner / miter) το overlap → 0.
+ * ΠΡΙΝ (Φ7 corner-join): το welded body κάθε όψης επεκτεινόταν κατά το πάχος στη γωνία → τα δύο
+ * plan footprints επικαλύπτονταν ~πάχος×πάχος → σοβάς 2× (μετρήθηκε ~312mm²).
+ * ΤΩΡΑ (Φ7b true 45° miter): το body τελειώνει στο core-length (μηδέν overlap) και η γωνία γεμίζει
+ * με δύο miter wedges (ένα ανά όψη) που συναντιούνται στην κοινή mitered κορυφή → μονή κάλυψη.
  */
 
 import { mergeSilhouetteBandsToStripGroups } from '../structural-finish-vertical-merge';
-import { buildFaceProfiles, type FaceProfile } from '../structural-finish-face-profile';
+import { buildFaceProfiles, collectMiterWedges, type FaceProfile } from '../structural-finish-face-profile';
 import type { SilhouetteBand } from '../structural-finish-silhouette';
 import type { FinishFaceSegment } from '../structural-finish-types';
 import type { Pt2 } from '../../geometry/shared/segment-polygon-coverage';
@@ -25,7 +24,7 @@ const mkBand = (segments: FinishFaceSegment[], zBottomMm: number, zTopMm: number
 
 const SCENE_TO_M = 0.001;
 
-/** Plan footprint (m) της εξωθημένης όψης: t-range (outer bbox) × perp[0,thickness], mapped σε world. */
+/** Plan footprint (m) του welded body: t-range (outer bbox) × perp[0,thickness], mapped σε world. */
 function planFootprint(p: FaceProfile): { x0: number; x1: number; y0: number; y1: number } {
   const xs = p.polygons.flatMap((poly) => poly.outer.map((pt) => pt.x));
   const t0 = Math.min(...xs);
@@ -42,7 +41,6 @@ function planFootprint(p: FaceProfile): { x0: number; x1: number; y0: number; y1
   return { x0: Math.min(...cxs), x1: Math.max(...cxs), y0: Math.min(...cys), y1: Math.max(...cys) };
 }
 
-/** Επιφάνεια τομής δύο axis-aligned ορθογωνίων (m²). */
 function overlapArea(
   a: { x0: number; x1: number; y0: number; y1: number },
   b: { x0: number; x1: number; y0: number; y1: number },
@@ -52,48 +50,38 @@ function overlapArea(
   return w * h;
 }
 
-describe('DIAGNOSTIC Φ7b — corner double-coverage (μέτρηση overlap)', () => {
-  it('L-γωνία (Ν+Α όψεις, πάχος 25mm) → overlap ≈ πάχος² (διπλή κάλυψη)', () => {
-    const south = mkSeg({ x: 0, y: 0 }, { x: 100, y: 0 });
-    const east = mkSeg({ x: 100, y: 0 }, { x: 100, y: 100 });
-    const bands: SilhouetteBand[] = [mkBand([south, east], 0, 3000)];
-    const profiles = buildFaceProfiles(mergeSilhouetteBandsToStripGroups(bands, 'mm'), SCENE_TO_M);
+describe('ADR-534 Φ7b — corner miter (μηδέν double-coverage, κοινή mitered κορυφή)', () => {
+  const groups = () =>
+    mergeSilhouetteBandsToStripGroups(
+      [mkBand([mkSeg({ x: 0, y: 0 }, { x: 100, y: 0 }), mkSeg({ x: 100, y: 0 }, { x: 100, y: 100 })], 0, 3000)],
+      'mm',
+    );
 
+  it('τα welded bodies ΔΕΝ επικαλύπτονται πλέον στη γωνία (overlap ≈ 0)', () => {
+    const profiles = buildFaceProfiles(groups(), SCENE_TO_M);
     expect(profiles).toHaveLength(2);
-    const fpA = planFootprint(profiles[0]);
-    const fpB = planFootprint(profiles[1]);
-    const ov = overlapArea(fpA, fpB);
-
-    const th = 0.025;
-    // eslint-disable-next-line no-console
-    console.log('[DIAG corner] footprintA=', fpA, 'footprintB=', fpB, 'overlap m²=', ov, 'thickness²=', th * th);
-
-    // Η διπλή κάλυψη = ένα τετράγωνο ~πάχος×πάχος στη γωνία (μετρημένο ~312mm², της τάξης του πάχος²).
-    // Μετά τον fix (single-owner / miter) το overlap ΠΡΕΠΕΙ να πέσει στο 0.
-    expect(ov).toBeGreaterThan(0);
-    expect(ov).toBeGreaterThan(0.5 * th * th * 0.9); // >~281mm² → σαφής διπλή κάλυψη, όχι numerical noise
+    const ov = overlapArea(planFootprint(profiles[0]), planFootprint(profiles[1]));
+    expect(ov).toBeLessThan(1e-9); // ήταν ~3.1e-4 m² (312mm²) πριν τον fix
   });
 
-  it('FOUNDATION: τα strips ήδη φέρουν το mitered outer tip (extended κατά τον άξονα) στο junction', () => {
-    const south = mkSeg({ x: 0, y: 0 }, { x: 100, y: 0 });
-    const east = mkSeg({ x: 100, y: 0 }, { x: 100, y: 100 });
-    const groups = mergeSilhouetteBandsToStripGroups([mkBand([south, east], 0, 3000)], 'mm');
-    for (const g of groups) {
-      for (const s of g.strips) {
-        // eslint-disable-next-line no-console
-        console.log('[DIAG strip] dir=', g.dir, 'aCore=', s.aCore, 'aOuter=', s.aOuter, 'bCore=', s.bCore, 'bOuter=', s.bOuter);
-      }
+  it('η γωνία γεμίζει με 2 miter wedges που δείχνουν στην κοινή mitered κορυφή (125,-25)', () => {
+    const wedges = collectMiterWedges(groups());
+    expect(wedges).toHaveLength(2); // ένα ανά όψη (Ν + Α)
+    for (const w of wedges) {
+      expect(w.tip.x).toBeCloseTo(125, 6);
+      expect(w.tip.y).toBeCloseTo(-25, 6);
+      expect(w.core.x).toBeCloseTo(100, 6); // κοινή γωνιακή κορυφή πυρήνα
+      expect(w.core.y).toBeCloseTo(0, 6);
+      expect(w.zBottomMm).toBe(0);
+      expect(w.zTopMm).toBe(3000);
     }
-    // Ισχυρισμός: σε κάποιο junction άκρο το outer προβάλλεται ΠΕΡΑ από το core κατά τον άξονα (miter tip).
-    const dot = (a: { x: number; y: number }, b: { x: number; y: number }) => a.x * b.x + a.y * b.y;
-    let sawExtended = false;
-    for (const g of groups) {
-      for (const s of g.strips) {
-        const tACore = dot(s.aCore, g.dir), tAOuter = dot(s.aOuter, g.dir);
-        const tBCore = dot(s.bCore, g.dir), tBOuter = dot(s.bOuter, g.dir);
-        if (Math.abs(tAOuter - tACore) > 1 || Math.abs(tBOuter - tBCore) > 1) sawExtended = true;
-      }
-    }
-    expect(sawExtended).toBe(true);
+    // Τα δύο wedges = εκατέρωθεν της διαγωνίου (core→tip): διαφορετικά mid (το ένα (100,-25), το άλλο (125,0)).
+    const mids = wedges.map((w) => `${Math.round(w.mid.x)},${Math.round(w.mid.y)}`).sort();
+    expect(mids).toEqual(['100,-25', '125,0']);
+  });
+
+  it('FREE END (κανένας γείτονας) → ΚΑΝΕΝΑ wedge (η γωνία δεν υπάρχει)', () => {
+    const g = mergeSilhouetteBandsToStripGroups([mkBand([mkSeg({ x: 0, y: 0 }, { x: 100, y: 0 })], 0, 3000)], 'mm');
+    expect(collectMiterWedges(g)).toHaveLength(0);
   });
 });
