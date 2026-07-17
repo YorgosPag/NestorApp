@@ -61,33 +61,16 @@ export interface FaceProfile {
   readonly polygons: readonly FaceProfilePolygon[];
 }
 
-const cross = (a: Vec2, b: Vec2): number => a.x * b.y - a.y * b.x;
-
-/** Επέκταση (m) t-άκρου σε junction γωνία: το outer band φτάνει την ακμή του γείτονα (overlap). */
-interface EndExtend {
-  /** t (m) του min-t άκρου να επεκταθεί, ή `null`. */
-  readonly loT: number | null;
-  /** t (m) του max-t άκρου να επεκταθεί, ή `null`. */
-  readonly hiT: number | null;
-}
-
-/** Ένα strip → axis-aligned ορθογώνιο (t,z) σε **μέτρα**, ή `null` αν εκφυλισμένο. */
-function stripRectM(
-  strip: FinishStrip,
-  origin: Vec2,
-  dir: Vec2,
-  sceneToM: number,
-  thicknessM: number,
-  ext: EndExtend,
-): Polygon | null {
+/**
+ * Ένα strip → axis-aligned ορθογώνιο (t,z) σε **μέτρα**, ή `null` αν εκφυλισμένο. Το ορθογώνιο
+ * φτάνει ΑΚΡΙΒΩΣ ως το core-length (καμία γωνιακή επέκταση) — τη γωνία τη γεμίζουν τα miter wedges
+ * ({@link collectMiterWedges}), όχι επέκταση του body (που έδινε double-coverage· ADR-534 Φ7b).
+ */
+function stripRectM(strip: FinishStrip, origin: Vec2, dir: Vec2, sceneToM: number): Polygon | null {
   const tA = dot(sub(strip.aCore, origin), dir) * sceneToM;
   const tB = dot(sub(strip.bCore, origin), dir) * sceneToM;
-  let t0 = Math.min(tA, tB);
-  let t1 = Math.max(tA, tB);
-  // ADR-534 Φ7 corner-join — στο junction άκρο επεκτείνουμε το ορθογώνιο κατά το πάχος ώστε το
-  // outer band να φτάσει (overlap) την ακμή της κάθετης γειτονικής όψης → μηδέν κενό στη γωνία.
-  if (ext.loT !== null && Math.abs(t0 - ext.loT) < MIN_SIDE_M) t0 -= thicknessM;
-  if (ext.hiT !== null && Math.abs(t1 - ext.hiT) < MIN_SIDE_M) t1 += thicknessM;
+  const t0 = Math.min(tA, tB);
+  const t1 = Math.max(tA, tB);
   const z0 = strip.zBottomMm * MM_TO_M;
   const z1 = strip.zTopMm * MM_TO_M;
   if (t1 - t0 < MIN_SIDE_M || z1 - z0 < MIN_SIDE_M) return null;
