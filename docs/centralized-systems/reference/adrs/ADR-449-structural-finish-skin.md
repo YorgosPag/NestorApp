@@ -220,6 +220,14 @@ Deterministic IDs: `boq_bim_${id}` / `_finish_int` / `_finish_ext`. Hook στο 
 - ETICS-grade per-element exterior detection (πέρα από outer-ring proximity) = μετέπειτα slice.
 
 ## 6. Changelog
+- **2026-07-18 (Φ7 — UNIFIED welded δέρμα ανά ομοεπίπεδη όψη· πλήρες entry → ADR-534 §6 Φ7)** — Το «ένα prism
+  ανά `FinishStrip`» (Slice X6 `buildFinishSkinFromStrips`) άφηνε **εσωτερικές ραφές** στις coplanar προσόψεις
+  με ανοίγματα (diagnostic: πρόσοψη+παράθυρο → 4 prisms/4 ραφές· Λ1 αδύνατο να τις σβήσει). ΝΕΟ `FinishStripGroup`
+  (`mergeSilhouetteBandsToStripGroups`· flat API αμετάβλητο) → NEW pure `structural-finish-face-profile.ts` ενώνει
+  τα (t×z) ορθογώνια σε ΕΝΑ profile **με τρύπες** (ανοίγματα) → NEW `buildFinishSkinFromStripGroups` εξωθεί ΕΝΑ
+  welded mesh ανά όψη (big-player join/weld). **`buildFinishSkinFromStrips` αφαιρέθηκε (dead).** DXF/BOQ (flat
+  strips) byte-for-byte. +SSoT `polygon-clipping-ring.ts` (κεντρικοποίηση 3× ring→Pt2 clone). 258/258 finishes
+  GREEN. Λεπτομέρειες/files/tests: **ADR-534 §6 Φ7**. | Opus
 - **2026-07-17 (§slab-perimeter-fascia — Η ΠΛΑΚΑ ως silhouette member· ADR-534 Φ5c)** — Η πλάκα αποκτά
   και τον **κάθετο περιμετρικό** σοβά (τη «φάσα»/fascia), ίδιο μοτίβο με τον τοίχο (Slice X3): γίνεται
   `SilhouetteMember` της ΙΔΙΑΣ `computeStructuralFinishSilhouette` → flat finish-member slab → πλήρες
