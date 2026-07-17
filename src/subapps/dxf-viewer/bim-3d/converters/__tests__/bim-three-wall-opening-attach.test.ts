@@ -100,4 +100,32 @@ describe('attachOpeningMeshes — matId stamping (ADR-668 §10)', () => {
       }
     });
   });
+
+  it('zero regression — an opening with no materials override stamps the wood default', () => {
+    const group = new THREE.Group();
+    attachOpeningMeshes(group, makeWall(), [makeOpening()], 0, 0);
+
+    const ids = collectMatIds(group);
+    expect(ids.length).toBeGreaterThan(0);
+    expect(ids.every((id) => id === 'mat-wood')).toBe(true);
+  });
+
+  it('stamps the RESOLVED per-part material id when params.materials overrides frame + leaf', () => {
+    const group = new THREE.Group();
+    // door: κάσα (jambs/head) = materials.frame, φύλλο = materials.leaf — override και τα δύο
+    // solid parts ώστε το 'mat-wood' default να ΜΗΝ εμφανίζεται καθόλου (proves resolved, not default).
+    attachOpeningMeshes(
+      group,
+      makeWall(),
+      [makeOpening({ materials: { frame: 'mat-metal', leaf: 'mat-metal' } })],
+      0,
+      0,
+    );
+
+    const ids = collectMatIds(group);
+    expect(ids.length).toBeGreaterThan(0);
+    // κάθε σώμα (κάσα + φύλλο) φέρει το ΑΝΑ-ΑΝΟΙΓΜΑ resolved id, όχι το module-scope default.
+    expect(ids.every((id) => id === 'mat-metal')).toBe(true);
+    expect(ids).not.toContain('mat-wood');
+  });
 });

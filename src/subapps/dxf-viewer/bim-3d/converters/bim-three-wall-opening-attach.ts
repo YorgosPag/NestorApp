@@ -3,8 +3,9 @@
  *
  * File-private helper εξηγμένο από το `BimToThreeConverter` (file-size SSoT, N.7.1,
  * 2026-07-05). Χτίζει + προσαρτά το parametric 3D mesh κάθε φιλοξενούμενου
- * ανοίγματος (κάσα/φύλλο = ξύλο, υαλοστάσιο = γυαλί) μέσα στο wall group, με
- * ADR-404 battered-wall shear ώστε τα σώματα κουφωμάτων να ακολουθούν την κλίση.
+ * ανοίγματος (κάσα/φύλλο/υαλοστάσιο = per-part resolved υλικά, `resolveOpeningMaterial`)
+ * μέσα στο wall group, με ADR-404 battered-wall shear ώστε τα σώματα κουφωμάτων να
+ * ακολουθούν την κλίση.
  */
 
 import * as THREE from 'three';
@@ -15,24 +16,40 @@ import { buildOpeningMesh, type OpeningMeshMaterials } from './opening-mesh';
 import { isWallTilted, wallTiltShearAt } from '../../bim/geometry/wall-tilt';
 // ADR-404 — object-level tilt SSoT (matrix sibling of applyWallTilt· reuses the wallTiltShearAt amount).
 import { horizontalTiltShearMatrix } from './mesh-slope-shear';
+// Per-part material resolution SSoT (ADR-669 follow-up) — κάσα/φύλλο/υαλοστάσιο ανά άνοιγμα,
+// αντί για ΕΝΑ hardcoded ζεύγος υλικών για όλα τα ανοίγματα του τοίχου.
+import { resolveOpeningMaterial } from '../../bim/family-types/resolve-opening-material';
 
 const MM_TO_M = 0.001;
 
 /**
- * Catalog material ids των σωμάτων του κουφώματος — SSoT (δηλώνονται ΜΙΑ φορά εδώ). Το ΙΔΙΟ id
- * που χτίζει το υλικό (`getMaterial3D`) σφραγίζεται και ως `userData.matId` σε κάθε sub-mesh, ώστε
- * η 3Δ εξαγωγή (ADR-668 §10) να το ονομάζει **σημασιολογικά** (`mat-wood`/`mat-glass`) — όπως το
- * Revit/ArchiCAD δίνουν στην κάσα/φύλλο/υαλοστάσιο μιας πόρτας δικές τους named surfaces — αντί για
- * fallback στο χρώμα. Χωρίς αυτό, το `resolveBimMeshIdentity` (ADR-669 §5.6) δεν βρίσκει `matId` στο
- * άνοιγμα και έπεφτε σε `mat_${color}`.
+ * Χτίζει τα per-part υλικά (THREE) ενός ανοίγματος + τον χάρτη material→catalog-id για τη
+ * σφράγιση `userData.matId` (ADR-668 §10). Το `getMaterial3D` κάνει cache ανά id (singletons),
+ * οπότε δύο ανοίγματα με ίδιο resolved id μοιράζονται instance — και frame/leaf μπορούν πλέον
+ * να διαφέρουν (Revit per-part), σε αντίθεση με το παλιό ενιαίο `frameMat` για κάσα+φύλλο.
  */
-const OPENING_FRAME_MATERIAL_ID = 'mat-wood';   // κάσα + φύλλο (ξύλο)
-const OPENING_GLASS_MATERIAL_ID = 'mat-glass';  // υαλοστάσιο
+function buildOpeningMaterials(opening: OpeningEntity): {
+  materials: OpeningMeshMaterials;
+  matIdByMaterial: Map<THREE.Material, string>;
+} {
+  const mats = resolveOpeningMaterial(opening.params);
+  const frame = getMaterial3D(mats.frame);
+  const leaf = getMaterial3D(mats.leaf);
+  const glass = getMaterial3D(mats.glass);
+  const materials: OpeningMeshMaterials = { frame, leaf, glass };
+  const matIdByMaterial = new Map<THREE.Material, string>([
+    [frame, mats.frame],
+    [leaf, mats.leaf],
+    [glass, mats.glass],
+  ]);
+  return { materials, matIdByMaterial };
+}
 
 /**
  * Σφραγίζει σε κάθε sub-mesh του κουφώματος το catalog id του υλικού του (export naming SSoT).
- * Το `leaf` μοιράζεται το ΙΔΙΟ singleton με το `frame` (και τα δύο ξύλο), οπότε ο χάρτης
- * material→id έχει δύο εγγραφές· ό,τι mesh δεν ταιριάζει (θεωρητικά κανένα) μένει ασφράγιστο.
+ * Ο χάρτης material→id έχει έως τρεις εγγραφές (frame/leaf/glass) — δύο μπορούν να συμπέσουν σε
+ * ίδιο singleton (π.χ. frame===leaf όταν και τα δύο resolve στο ίδιο id, τότε ο χάρτης έχει δύο
+ * κλειδιά με ίδιο instance)· ό,τι mesh δεν ταιριάζει (θεωρητικά κανένα) μένει ασφράγιστο.
  */
 function stampOpeningMaterialIds(
   mesh: THREE.Object3D,
@@ -48,9 +65,11 @@ function stampOpeningMaterialIds(
 
 /**
  * Build + attach the parametric 3D mesh of each hosted opening into the wall
- * `group`. Materials resolved once (κάσα/φύλλο = ξύλο, υαλοστάσιο = γυαλί· τα
- * glazed kinds επιλέγουν γυαλί στο `buildOpeningMesh`). No-op όταν δεν υπάρχουν
- * openings (π.χ. το group προέκυψε λόγω wallTop/wallBase profile).
+ * `group`. Materials resolved ΑΝΑ ΑΝΟΙΓΜΑ (`resolveOpeningMaterial(opening.params)`,
+ * ίδιο idiom με `resolveOpeningFrameProfile`) — κάσα/φύλλο/υαλοστάσιο μπορούν να
+ * διαφέρουν ανά instance/type· τα glazed kinds επιλέγουν το resolved γυαλί στο
+ * `buildOpeningMesh`. No-op όταν δεν υπάρχουν openings (π.χ. το group προέκυψε
+ * λόγω wallTop/wallBase profile).
  */
 export function attachOpeningMeshes(
   group: THREE.Object3D,
@@ -61,14 +80,6 @@ export function attachOpeningMeshes(
   levelId?: string,
 ): void {
   if (openings.length === 0) return;
-  const frameMat = getMaterial3D(OPENING_FRAME_MATERIAL_ID);
-  const glassMat = getMaterial3D(OPENING_GLASS_MATERIAL_ID);
-  const materials: OpeningMeshMaterials = { frame: frameMat, leaf: frameMat, glass: glassMat };
-  // material singleton → catalog id, για τη σφράγιση `matId` ανά sub-mesh (ADR-668 §10).
-  const matIdByMaterial = new Map<THREE.Material, string>([
-    [frameMat, OPENING_FRAME_MATERIAL_ID],
-    [glassMat, OPENING_GLASS_MATERIAL_ID],
-  ]);
   // ADR-404 — battered wall: τα σώματα κουφωμάτων ακολουθούν την ΙΔΙΑ κλίση με τον τοίχο
   // (αλλιώς 3Δ === 2Δ σπάει — η πόρτα έμενε κατακόρυφη σε κεκλιμένο τοίχο). World-space
   // οριζόντιος shear γραμμικός στο ύψος (ίδιο SSoT `wallTiltShearAt`), αγκυρωμένος στο FFL.
@@ -77,6 +88,7 @@ export function attachOpeningMeshes(
     ? horizontalTiltShearMatrix((h) => wallTiltShearAt(wall.params, h), floorY)
     : null;
   for (const opening of openings) {
+    const { materials, matIdByMaterial } = buildOpeningMaterials(opening);
     const mesh = buildOpeningMesh(opening, wall, materials, floorElevationMm, buildingBaseElevationM);
     if (!mesh) continue;
     stampOpeningMaterialIds(mesh, matIdByMaterial);
