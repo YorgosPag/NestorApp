@@ -20,6 +20,7 @@ describe('ADR-363 BIM Firestore Collections', () => {
     ['BIM_PRESETS', 'bim_presets'],
     ['BIM_MATERIALS', 'bim_materials'],
     ['BIM_SETTINGS', 'bim_settings'],
+    ['OPENING_FRAME_PRESETS', 'opening_frame_presets'],
   ];
 
   test.each(EXPECTED)('COLLECTIONS.%s === "%s"', (key, expectedName) => {

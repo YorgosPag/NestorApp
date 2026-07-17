@@ -3978,7 +3978,7 @@
     },
     "bim-id-prefix": {
       "ssotFile": "src/services/enterprise-id-prefixes.ts",
-      "description": "BIM entity ID prefixes (ADR-363): WALL='wall', OPENING='opening', SLAB='slab', SLAB_OPENING='slbopn', COLUMN='col', BEAM='beam', BIM_PRESET='bpst', BIM_MATERIAL='bmat'. All BIM IDs generated via enterprise-id-convenience.ts generateWallId() etc — no inline UUID, no hardcoded prefix strings.",
+      "description": "BIM entity ID prefixes (ADR-363): WALL='wall', OPENING='opening', SLAB='slab', SLAB_OPENING='slbopn', COLUMN='col', BEAM='beam', BIM_PRESET='bpst', BIM_MATERIAL='bmat'. Plus OPENING_FRAME_PRESET='frmpst' (Opening Component Library frame/casing preset, ADR-676). All BIM IDs generated via enterprise-id-convenience.ts generateWallId() etc — no inline UUID, no hardcoded prefix strings.",
       "forbiddenPatterns": [
         "crypto\\.randomUUID\\(\\)[^\\n]*wall",
         "crypto\\.randomUUID\\(\\)[^\\n]*opening",
@@ -4339,6 +4339,19 @@
         "src/subapps/dxf-viewer/rendering/entities/shared/entity-polylines.ts"
       ],
       "addedDate": "2026-07-13",
+      "addedByAdr": "ADR-652",
+      "tier": 3
+    },
+    "block-def-from-selection": {
+      "ssotFile": "src/subapps/dxf-viewer/systems/block/build-block-def-from-selection.ts",
+      "description": "ADR-652 M6 (2026-07-18): «Επιλεγμένες world οντότητες → InSessionBlockDef» (AutoCAD BLOCK/BMAKE «Δημιουργία Block») ζει ΜΙΑ φορά — base point = κάτω-αριστερή γωνία AABB της επιλογής, bake base→origin μέσω του SSoT translateEntityByAnchor (ΙΔΙΟ μονοπάτι με createBlockInstance στο import), bounds μέσω computeBlockLocalBoundsMm. Καταναλωτές: CreateBlockFromSelectionCommand (replace-with-instance) + CreateBlockDialogHost (WBLOCK). Το ΠΑΡΑΓΟΜΕΝΟ BlockEntity βγαίνει από το υπάρχον buildBlockEntityFromDef (κανένα δεύτερο BlockEntity shape). Forbidden: δεύτερη function που ξαναχτίζει block def από επιλογή (re-bake base / re-bounds). Τον structural clone με άλλο όνομα τον πιάνει το token-based jscpd (CHECK 3.28 / ADR-584).",
+      "forbiddenPatterns": [
+        "function [a-zA-Z]*[Bb]lockDef[a-zA-Z]*FromSelection"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/systems/block/build-block-def-from-selection.ts"
+      ],
+      "addedDate": "2026-07-18",
       "addedByAdr": "ADR-652",
       "tier": 3
     },

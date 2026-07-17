@@ -420,6 +420,8 @@ export const COLLECTIONS = {
   BLOCK_LIBRARY: process.env.NEXT_PUBLIC_BLOCK_LIBRARY_COLLECTION || 'block_library',
   /** Per-company BIM configuration (hotkeys, defaults, layer convention). IDs via bset_* prefix. */
   BIM_SETTINGS: process.env.NEXT_PUBLIC_BIM_SETTINGS_COLLECTION || 'bim_settings',
+  /** Opening frame/casing presets — user library (ADR-676). IDs via frmpst_* prefix. Subcollection under companies/{cid}. */
+  OPENING_FRAME_PRESETS: process.env.NEXT_PUBLIC_OPENING_FRAME_PRESETS_COLLECTION || 'opening_frame_presets',
 
   // ✏️ DXF TEXT ENGINE — ADR-344 (companyId-scoped, Phase 0)
   /** Hybrid text templates: TS built-in defaults + per-company overrides. Schema: { id, companyId, name, category, content (DxfTextNode), placeholders[], isDefault }. IDs via tpl_text_* prefix. */

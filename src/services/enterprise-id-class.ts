@@ -392,6 +392,9 @@ export class EnterpriseIdService {
   generateBimSettingsId(): string { return this.generateId(P.BIM_SETTINGS).id; }
   generateBimFamilyTypeId(): string { return this.generateId(P.BIM_FAMILY_TYPE).id; }
 
+  // Opening Component Library — Frame Presets (ADR-676)
+  generateOpeningFramePresetId(): string { return this.generateId(P.OPENING_FRAME_PRESET).id; }
+
   // --- Deterministic Composite Key Generators ---
 
   generateAiUsageDocId(channel: string, userId: string, month: string): string {

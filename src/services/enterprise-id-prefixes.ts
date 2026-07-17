@@ -276,6 +276,9 @@ export const ENTERPRISE_ID_PREFIXES = {
   BIM_SETTINGS: 'bset',        // bim_settings collection — per-company BIM configuration
   BIM_FAMILY_TYPE: 'bimftype', // bim_family_types collection — shared parametric family type definitions (ADR-driven)
 
+  // Opening Component Library — Frame Presets (ADR-676)
+  OPENING_FRAME_PRESET: 'frmpst', // opening_frame_presets collection — frame/casing preset (system/company/project/user scope) (ADR-676)
+
   // DXF 3D BIM Viewer — Performance Diagnostics (ADR-366 §B.5)
   PERF_DIAG: 'perfdiag',       // performance_diagnostics collection — user-submitted HUD snapshots
 

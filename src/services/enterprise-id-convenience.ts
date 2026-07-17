@@ -307,6 +307,9 @@ export const generateBlockLibraryItemId = () => enterpriseIdService.generateBloc
 export const generateBimSettingsId = () => enterpriseIdService.generateBimSettingsId();
 export const generateBimFamilyTypeId = () => enterpriseIdService.generateBimFamilyTypeId();
 
+// Opening Component Library — Frame Presets (ADR-676)
+export const generateOpeningFramePresetId = () => enterpriseIdService.generateOpeningFramePresetId();
+
 // Optimistic & Temporary
 export const generateOptimisticId = () => enterpriseIdService.generateOptimisticId();
 export const generateTempId = () => enterpriseIdService.generateTempId();

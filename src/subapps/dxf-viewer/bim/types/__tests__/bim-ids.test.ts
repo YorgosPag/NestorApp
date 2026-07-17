@@ -20,6 +20,7 @@ import {
   generateBimPresetId,
   generateBimMaterialId,
   generateBimSettingsId,
+  generateOpeningFramePresetId,
 } from '@/services/enterprise-id-convenience';
 
 describe('ADR-363 BIM ID Prefixes', () => {
@@ -34,6 +35,10 @@ describe('ADR-363 BIM ID Prefixes', () => {
     expect(ENTERPRISE_ID_PREFIXES.BIM_MATERIAL).toBe('bmat');
     expect(ENTERPRISE_ID_PREFIXES.BIM_SETTINGS).toBe('bset');
   });
+
+  it('ENTERPRISE_ID_PREFIXES has OPENING_FRAME_PRESET prefix per ADR-676', () => {
+    expect(ENTERPRISE_ID_PREFIXES.OPENING_FRAME_PRESET).toBe('frmpst');
+  });
 });
 
 describe('ADR-363 BIM ID Generators', () => {
@@ -47,6 +52,7 @@ describe('ADR-363 BIM ID Generators', () => {
     ['generateBimPresetId', generateBimPresetId, 'bpst'],
     ['generateBimMaterialId', generateBimMaterialId, 'bmat'],
     ['generateBimSettingsId', generateBimSettingsId, 'bset'],
+    ['generateOpeningFramePresetId', generateOpeningFramePresetId, 'frmpst'],
   ];
 
   test.each(PREFIX_CASES)('%s returns string with prefix %s_', (name, fn, prefix) => {
@@ -68,6 +74,11 @@ describe('ADR-363 BIM ID Generators', () => {
   it('generateBimPresetId produces bpst_ prefix (ADR-363 §5.9.1 BimPreset)', () => {
     const id = generateBimPresetId();
     expect(id).toMatch(/^bpst_/);
+  });
+
+  it('generateOpeningFramePresetId produces frmpst_ prefix (ADR-676 Opening Component Library)', () => {
+    const id = generateOpeningFramePresetId();
+    expect(id).toMatch(/^frmpst_/);
   });
 });
 
