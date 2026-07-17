@@ -10,6 +10,9 @@ import { createExternalStore } from '../../stores/createExternalStore';
 import type { HitTestResult } from '../../services/HitTestingService';
 import type { Entity } from '../../types/entities';
 import { buildCandidateSemantics, type CandidateSemantics } from './candidate-label';
+// ADR-448 — active storey FFL (datum-relative absolute) so popover elevations match the 3D render
+// datum. Zero-React zustand singleton, safe to read from any context; read ONCE per build (ADR-040).
+import { useActiveStoreyStore } from '../levels/active-storey-store';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -39,6 +42,11 @@ export interface CyclingCandidate {
  * can show a meaningful role/thickness/elevation label instead of the raw entity-type
  * + internal level id (bug fix, 2026-07-17). Omitted ⇒ candidates carry no `semantics`
  * (generic fallback label at render time).
+ *
+ * Storey FFL — read ONCE here (the single-floor 2D canvas hit-tests one active storey,
+ * ADR-448) and passed into `buildCandidateSemantics` so slab/wall/column/beam elevations
+ * render ABSOLUTE (building-datum), matching the 3D converters. `?? 0` = no active storey
+ * (unlinked building / tests) → legacy floor-relative value.
  */
 export function buildCandidatesFromHits(
   hits: readonly HitTestResult[],
@@ -46,6 +54,7 @@ export function buildCandidatesFromHits(
 ): CyclingCandidate[] {
   const seen = new Set<string>();
   const candidates: CyclingCandidate[] = [];
+  const storeyFloorElevationMm = useActiveStoreyStore.getState().context?.floorElevationMm ?? 0;
   for (const hit of hits) {
     if (hit.entityId && !seen.has(hit.entityId)) {
       seen.add(hit.entityId);
@@ -53,7 +62,7 @@ export function buildCandidatesFromHits(
         id: hit.entityId,
         entityType: hit.entityType ?? 'entity',
         layer: hit.layer ?? '0',
-        semantics: buildCandidateSemantics(resolveEntity?.(hit.entityId)),
+        semantics: buildCandidateSemantics(resolveEntity?.(hit.entityId), storeyFloorElevationMm),
       });
     }
   }
