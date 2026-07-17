@@ -27,14 +27,21 @@ import {
   type OpeningHardwareBoqComponent,
 } from '../config/bim-to-atoe-mapping';
 import type { OpeningParams } from '../types/opening-types';
+import type { OpeningTypeParams } from '../types/bim-family-type';
 import {
   HARDWARE_COMPONENT_LABEL_KEY,
   openingHasOperableHardware,
   resolveOpeningHardwareSet,
 } from '../family-types/opening-hardware-set';
+import { useBimFamilyTypeStore } from '../family-types/bim-family-type-store';
+import { asOpeningFamilyType } from '../family-types/family-type-ui-helpers';
 import { buildSingleEntityBoqRow } from './boq-base-row';
 import { syncManagedBoqRow } from './boq-firestore-sync';
-import { fetchAllOpeningsForFloorplan, type OpeningBoqContext } from './opening-boq-sync';
+import {
+  fetchAllOpeningsForFloorplan,
+  type OpeningBoqContext,
+} from './opening-boq-sync';
+import type { OpeningDocRow } from './opening-boq-grouper';
 
 /**
  * The full 9-component universe (Phase A SSoT — NOT re-listed). Every recompute
@@ -44,9 +51,16 @@ import { fetchAllOpeningsForFloorplan, type OpeningBoqContext } from './opening-
 const ALL_HARDWARE_COMPONENTS: readonly OpeningHardwareBoqComponent[] =
   Object.keys(HARDWARE_COMPONENT_LABEL_KEY) as OpeningHardwareBoqComponent[];
 
-/** Minimal opening shape the aggregation reads (`kind` lives in `params`). */
+/**
+ * Minimal opening shape the aggregation reads (`kind` lives in `params`).
+ * `typeParams` carries the resolved EFFECTIVE family-type params (type default
+ * + `typeOverrides`, ADR-674 rev.3) so a type-level `hardwareOverrides` reaches
+ * the take-off fold — optional so untyped rows (and existing tests) pass `null`
+ * / omit it and take the legacy catalog-only path unchanged.
+ */
 export interface HardwareBoqOpening {
   readonly params: OpeningParams;
+  readonly typeParams?: OpeningTypeParams | null;
 }
 
 /** Deterministic BOQ row id for a floorplan's aggregated hardware component line. */
@@ -64,11 +78,35 @@ export function sumFloorplanHardware(
   const totals = new Map<OpeningHardwareBoqComponent, number>();
   for (const opening of openings) {
     if (!openingHasOperableHardware(opening.params.kind)) continue;
-    for (const item of resolveOpeningHardwareSet(opening.params)) {
+    for (const item of resolveOpeningHardwareSet(opening.params, opening.typeParams)) {
       totals.set(item.component, (totals.get(item.component) ?? 0) + item.quantity);
     }
   }
   return totals;
+}
+
+/**
+ * Resolve a floorplan opening doc row's EFFECTIVE family-type params (type
+ * default, overwritten by the row's `typeOverrides`) for the hardware take-off
+ * fold — the `HardwareBoqOpening.typeParams` input `sumFloorplanHardware`
+ * expects. Untyped rows or an unresolved type return `null` (legacy fast-path:
+ * catalog default only, zero regression). Imperative catalog read
+ * (`useBimFamilyTypeStore.getState()`), NOT React state — same idiom as
+ * `resolveOpeningEffective` (`../family-types/opening-type-resolution.ts`).
+ */
+function resolveOpeningTypeParamsForRow(row: OpeningDocRow): OpeningTypeParams | null {
+  if (!row.typeId) return null;
+  const type = asOpeningFamilyType(useBimFamilyTypeStore.getState().getType(row.typeId));
+  if (!type) return null;
+  return { ...type.typeParams, ...(row.typeOverrides ?? {}) };
+}
+
+/** Map fetched floorplan opening rows into the shape `sumFloorplanHardware` reads. */
+function toHardwareBoqOpenings(rows: readonly OpeningDocRow[]): HardwareBoqOpening[] {
+  return rows.map((row) => ({
+    params: row.params,
+    typeParams: resolveOpeningTypeParamsForRow(row),
+  }));
 }
 
 async function syncHardwareComponentRow(
@@ -104,8 +142,8 @@ async function syncHardwareComponentRow(
  */
 export async function recomputeFloorplanHardwareBoq(context: OpeningBoqContext): Promise<void> {
   if (!context.companyId || !context.projectId || !context.buildingId || !context.floorplanId) return;
-  const openings = await fetchAllOpeningsForFloorplan(context);
-  const totals = sumFloorplanHardware(openings);
+  const rows = await fetchAllOpeningsForFloorplan(context);
+  const totals = sumFloorplanHardware(toHardwareBoqOpenings(rows));
   await Promise.all(
     ALL_HARDWARE_COMPONENTS.map((component) =>
       syncHardwareComponentRow(component, totals.get(component) ?? 0, context),

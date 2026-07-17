@@ -24,6 +24,12 @@ import type { OpeningKind, OpeningParams } from '../types/opening-types';
 import type { OpeningTypeParams } from '../types/bim-family-type';
 import { resolveOpeningEffective } from '../family-types/opening-type-resolution';
 import { recordBaselineDrift } from './boq-firestore-sync';
+// ADR-674 rev.3 — static import of the hardware sync sibling. Creates a module
+// cycle with opening-hardware-boq-sync.ts (which imports `fetchAllOpeningsForFloorplan`
+// + `OpeningBoqContext` from THIS file), but it is safe: both sides only export
+// `async function` declarations (hoisted) and the cross-call below is deferred to
+// runtime via an ES live binding — nothing is evaluated at module-load time.
+import { recomputeFloorplanHardwareBoq } from './opening-hardware-boq-sync';
 import {
   buildEffectiveSignatureMembers,
   buildOpeningGroupPayload,
@@ -131,6 +137,12 @@ export async function refeedOpeningBoqForTypeOnFloorplan(
       writeSignatureGroup(context, sig, effective.get(signatureKey(sig))?.members ?? []),
     ),
   );
+  // ADR-674 rev.3 — a family-type hardware edit (e.g. `hardwareOverrides`) does
+  // not change the κούφωμα signature groups above but MUST still re-feed the
+  // aggregated σιδερικά rows (they read the SAME floorplan openings). Full
+  // recompute is small + idempotent; fire-and-forget mirrors the per-opening
+  // save/delete paths (`upsertOpeningGroupForOpening` callers `void` it too).
+  void recomputeFloorplanHardwareBoq(context);
 }
 
 // ────────────────────────────────────────────────────────────────────────────
