@@ -172,21 +172,61 @@ function endWedge(core: Vec2, outer: Vec2, tLo: number, tHi: number, dir: Vec2, 
   return { core, mid, tip: outer, zBottomMm: s.zBottomMm, zTopMm: s.zTopMm, seg: s.seg };
 }
 
+const cross = (a: Vec2, b: Vec2): number => a.x * b.y - a.y * b.x;
+
+/** Ένα ακρότατο (min-t Ή max-t) core σημείο μιας ομάδας + ο άξονάς της (scene units). */
+interface GroupEnd {
+  readonly pt: Vec2;
+  readonly dir: Vec2;
+}
+
+/** Τα δύο ακρότατα (min-t, max-t) core σημεία μιας ομάδας — εκεί «τελειώνει» η όψη (πιθανή γωνία). */
+function groupExtremities(g: FinishStripGroup): GroupEnd[] {
+  let tLo = Infinity;
+  let tHi = -Infinity;
+  let lo = g.strips[0].aCore;
+  let hi = g.strips[0].aCore;
+  for (const s of g.strips) {
+    for (const c of [s.aCore, s.bCore]) {
+      const t = dot(c, g.dir);
+      if (t < tLo) { tLo = t; lo = c; }
+      if (t > tHi) { tHi = t; hi = c; }
+    }
+  }
+  return [{ pt: lo, dir: g.dir }, { pt: hi, dir: g.dir }];
+}
+
+/**
+ * Το core σημείο `p` είναι **γνήσια (κάθετη) γωνία**: υπάρχει ακρότατο ΑΛΛΗΣ **ΜΗ-παράλληλης** όψης
+ * εκεί κοντά. Φιλτράρει τα collinear εσωτερικά boundaries (window jamb / αλλαγή υλικού) — εκεί το
+ * `outerAt` του γείτονα δίνει chamfer outer που φαίνεται «επεκταμένο», ΑΛΛΑ δεν είναι πραγματική γωνία.
+ */
+function isPerpCorner(p: Vec2, selfDir: Vec2, ends: readonly GroupEnd[], tol: number): boolean {
+  for (const e of ends) {
+    if (Math.abs(cross(selfDir, e.dir)) < 1e-6) continue; // παράλληλη → collinear, όχι γωνία
+    if (Math.hypot(p.x - e.pt.x, p.y - e.pt.y) < tol) return true;
+  }
+  return false;
+}
+
 /**
  * ADR-534 Φ7b — SSoT: όλα τα junction miter wedges όλων των groups. Αντλεί την κοινή mitered κορυφή
- * **αυτούσια** από τα `aOuter/bOuter` των strips (τα οποία φέρει ήδη το `computeMiteredOuter`) + το
- * `group.perp`· μηδέν νέος υπολογισμός miter. Ο 3Δ builder τα εξωθεί ως τριγωνικά prisms στο z-range.
+ * **αυτούσια** από τα `aOuter/bOuter` των strips (τα οποία φέρει ήδη το `computeMiteredOuter`)· μηδέν
+ * νέος υπολογισμός miter. Wedge ΜΟΝΟ σε **γνήσια κάθετη γωνία** ({@link isPerpCorner}) — όχι σε
+ * collinear εσωτερικά boundaries (window jamb). Ο 3Δ builder τα εξωθεί ως τριγωνικά prisms στο z-range.
  */
 export function collectMiterWedges(groups: readonly FinishStripGroup[]): MiterWedge[] {
+  const ends = groups.flatMap(groupExtremities);
   const out: MiterWedge[] = [];
   for (const g of groups) {
+    const tol = Math.max(2 * g.seg.thickness, 1); // scene units (mm): ανοχή ταύτισης γωνιακής κορυφής
     for (const s of g.strips) {
       const tLo = Math.min(dot(s.aCore, g.dir), dot(s.bCore, g.dir));
       const tHi = Math.max(dot(s.aCore, g.dir), dot(s.bCore, g.dir));
-      const wa = endWedge(s.aCore, s.aOuter, tLo, tHi, g.dir, s);
-      const wb = endWedge(s.bCore, s.bOuter, tLo, tHi, g.dir, s);
-      if (wa) out.push(wa);
-      if (wb) out.push(wb);
+      for (const [core, outer] of [[s.aCore, s.aOuter], [s.bCore, s.bOuter]] as const) {
+        const w = endWedge(core, outer, tLo, tHi, g.dir, s);
+        if (w && isPerpCorner(w.core, g.dir, ends, tol)) out.push(w);
+      }
     }
   }
   return out;
