@@ -6,64 +6,97 @@
  * `ScheduleColumnDef[]` schema, `schedule-presets.ts` owns the entity→cell
  * mappers + registry that consume them.
  *
+ * Shared leading/trailing column fragments are extracted to SSoT constants
+ * (`*_LEAD_COLUMNS` / `ROLLUP_TAIL_COLUMNS`) and spread into each preset —
+ * this keeps the identical opening/structural/roll-up prefixes in ONE place
+ * (N.18 anti-clone) while every preset still reads as its own ordered table.
+ *
  * @see ./schedule-presets.ts
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §6 Phase 8
  */
 
 import type { ScheduleColumnDef } from './types';
 
-// ─── Opening per-part material columns (ADR-672 Φ Γ) ─────────────────────────
-// Shared between DOOR_COLUMNS + WINDOW_COLUMNS — frame + hardware apply to
-// both families identically (only leaf-vs-glass differs by family). Extracted
-// to avoid a byte-identical sibling clone across the two column arrays (N.18).
+// ─── Shared reusable columns ─────────────────────────────────────────────────
+// Opening per-part material columns (ADR-672 Φ Γ): frame + hardware apply to
+// door + window families identically (only leaf-vs-glass differs by family).
 
 const FRAME_MATERIAL_COLUMN: ScheduleColumnDef =
   { key: 'frameMaterial',    i18nKey: 'col.frameMaterial',    valueType: 'text', align: 'left' };
 const HARDWARE_MATERIAL_COLUMN: ScheduleColumnDef =
   { key: 'hardwareMaterial', i18nKey: 'col.hardwareMaterial', valueType: 'text', align: 'left' };
 
+// Door + window presets open with the same mark→…→sill run.
+const OPENING_LEAD_COLUMNS: readonly ScheduleColumnDef[] = [
+  { key: 'mark',   i18nKey: 'col.mark',   valueType: 'text',              align: 'left'  },
+  { key: 'id',     i18nKey: 'col.id',     valueType: 'text',              align: 'left'  },
+  { key: 'floor',  i18nKey: 'col.floor',  valueType: 'text',              align: 'left'  },
+  { key: 'kind',   i18nKey: 'col.kind',   valueType: 'text',              align: 'left'  },
+  { key: 'width',  i18nKey: 'col.width',  valueType: 'dimension-mm-to-m', align: 'right' },
+  { key: 'height', i18nKey: 'col.height', valueType: 'dimension-mm-to-m', align: 'right' },
+  { key: 'sill',   i18nKey: 'col.sill',   valueType: 'dimension-mm-to-m', align: 'right' },
+];
+
+// Structural presets (wall/slab/column/beam/foundation) open with id→building→floor.
+const STRUCTURAL_LEAD_COLUMNS: readonly ScheduleColumnDef[] = [
+  { key: 'id',           i18nKey: 'col.id',           valueType: 'text', align: 'left' },
+  { key: 'buildingName', i18nKey: 'col.buildingName', valueType: 'text', align: 'left' },
+  { key: 'floor',        i18nKey: 'col.floor',        valueType: 'text', align: 'left' },
+];
+
+// Roll-up presets (combined/multi-building) close with the same ΑΤΟΕ tail.
+const ROLLUP_TAIL_COLUMNS: readonly ScheduleColumnDef[] = [
+  { key: 'type',            i18nKey: 'col.type',            valueType: 'text',   align: 'left'   },
+  { key: 'kind',            i18nKey: 'col.kind',            valueType: 'text',   align: 'left'   },
+  { key: 'floor',           i18nKey: 'col.floor',           valueType: 'text',   align: 'left'   },
+  { key: 'primaryQuantity', i18nKey: 'col.primaryQuantity', valueType: 'number', align: 'right'  },
+  { key: 'primaryUnit',     i18nKey: 'col.primaryUnit',     valueType: 'text',   align: 'center' },
+  { key: 'atoeCategory',    i18nKey: 'col.atoeCategory',    valueType: 'text',   align: 'left'   },
+  { key: 'material',        i18nKey: 'col.material',        valueType: 'text',   align: 'left'   },
+];
+
 // ─── Door preset (ADR-363 §6 Phase 8 Q3 + Q4) ────────────────────────────────
 
 export const DOOR_COLUMNS: readonly ScheduleColumnDef[] = [
-  { key: 'mark',         i18nKey: 'col.mark',         valueType: 'text',              align: 'left'   },
-  { key: 'id',           i18nKey: 'col.id',           valueType: 'text',              align: 'left'   },
-  { key: 'floor',        i18nKey: 'col.floor',        valueType: 'text',              align: 'left'   },
-  { key: 'kind',         i18nKey: 'col.kind',         valueType: 'text',              align: 'left'   },
-  { key: 'width',        i18nKey: 'col.width',        valueType: 'dimension-mm-to-m', align: 'right'  },
-  { key: 'height',       i18nKey: 'col.height',       valueType: 'dimension-mm-to-m', align: 'right'  },
-  { key: 'sill',         i18nKey: 'col.sill',         valueType: 'dimension-mm-to-m', align: 'right'  },
-  { key: 'handingText',  i18nKey: 'col.handingText',  valueType: 'text',              align: 'left'   },
-  { key: 'handingCode',  i18nKey: 'col.handingCode',  valueType: 'text',              align: 'center' },
+  ...OPENING_LEAD_COLUMNS,
+  { key: 'handingText',  i18nKey: 'col.handingText',  valueType: 'text', align: 'left'   },
+  { key: 'handingCode',  i18nKey: 'col.handingCode',  valueType: 'text', align: 'center' },
   FRAME_MATERIAL_COLUMN,
-  { key: 'leafMaterial',     i18nKey: 'col.leafMaterial',     valueType: 'text', align: 'left' },
+  { key: 'leafMaterial', i18nKey: 'col.leafMaterial', valueType: 'text', align: 'left'   },
   HARDWARE_MATERIAL_COLUMN,
-  { key: 'wall',         i18nKey: 'col.wall',         valueType: 'text',              align: 'left'   },
+  { key: 'wall',         i18nKey: 'col.wall',         valueType: 'text', align: 'left'   },
 ];
 
 // ─── Window preset ───────────────────────────────────────────────────────────
 
 export const WINDOW_COLUMNS: readonly ScheduleColumnDef[] = [
-  { key: 'mark',      i18nKey: 'col.mark',      valueType: 'text',              align: 'left'  },
-  { key: 'id',        i18nKey: 'col.id',        valueType: 'text',              align: 'left'  },
-  { key: 'floor',     i18nKey: 'col.floor',     valueType: 'text',              align: 'left'  },
-  { key: 'kind',      i18nKey: 'col.kind',      valueType: 'text',              align: 'left'  },
-  { key: 'width',     i18nKey: 'col.width',     valueType: 'dimension-mm-to-m', align: 'right' },
-  { key: 'height',    i18nKey: 'col.height',    valueType: 'dimension-mm-to-m', align: 'right' },
-  { key: 'sill',      i18nKey: 'col.sill',      valueType: 'dimension-mm-to-m', align: 'right' },
-  { key: 'glazing',   i18nKey: 'col.glazing',   valueType: 'count',             align: 'right' },
+  ...OPENING_LEAD_COLUMNS,
+  { key: 'glazing',       i18nKey: 'col.glazing',       valueType: 'count', align: 'right' },
   FRAME_MATERIAL_COLUMN,
-  { key: 'glassMaterial',    i18nKey: 'col.glassMaterial',    valueType: 'text', align: 'left' },
+  { key: 'glassMaterial', i18nKey: 'col.glassMaterial', valueType: 'text',  align: 'left'  },
   HARDWARE_MATERIAL_COLUMN,
-  { key: 'wall',      i18nKey: 'col.wall',      valueType: 'text',              align: 'left'  },
+  { key: 'wall',          i18nKey: 'col.wall',          valueType: 'text',  align: 'left'  },
+];
+
+// ─── Hardware preset (ADR-674 Φ Β — Revit "Door Hardware Schedule" parity) ───
+// ONE row per opening: the readable hardware take-off. The per-component priced
+// explosion lives in the BOQ (Phase C); here `hardwareSet` is a human breakdown
+// ("Χειρολαβή ×1 · Κλειδαριά ×1 · Μεντεσές ×3") and `pieces` its Σ quantities.
+
+export const HARDWARE_COLUMNS: readonly ScheduleColumnDef[] = [
+  { key: 'mark',        i18nKey: 'col.mark',        valueType: 'text',  align: 'left'  },
+  { key: 'floor',       i18nKey: 'col.floor',       valueType: 'text',  align: 'left'  },
+  { key: 'kind',        i18nKey: 'col.kind',        valueType: 'text',  align: 'left'  },
+  { key: 'hardwareSet', i18nKey: 'col.hardwareSet', valueType: 'text',  align: 'left'  },
+  { key: 'pieces',      i18nKey: 'col.pieces',      valueType: 'count', align: 'right' },
+  HARDWARE_MATERIAL_COLUMN,
 ];
 
 // ─── Wall preset ─────────────────────────────────────────────────────────────
 
 export const WALL_COLUMNS: readonly ScheduleColumnDef[] = [
-  { key: 'id',           i18nKey: 'col.id',           valueType: 'text', align: 'left' },
-  { key: 'buildingName', i18nKey: 'col.buildingName', valueType: 'text', align: 'left' },
-  { key: 'floor',        i18nKey: 'col.floor',        valueType: 'text', align: 'left' },
-  { key: 'category',     i18nKey: 'col.category',     valueType: 'text', align: 'left' },
+  ...STRUCTURAL_LEAD_COLUMNS,
+  { key: 'category',   i18nKey: 'col.category',   valueType: 'text',              align: 'left'  },
   { key: 'kind',       i18nKey: 'col.kind',       valueType: 'text',              align: 'left'  },
   { key: 'length',     i18nKey: 'col.length',     valueType: 'number',            align: 'right' },
   { key: 'thickness',  i18nKey: 'col.thickness',  valueType: 'dimension-mm-to-m', align: 'right' },
@@ -76,9 +109,7 @@ export const WALL_COLUMNS: readonly ScheduleColumnDef[] = [
 // ─── Slab preset ─────────────────────────────────────────────────────────────
 
 export const SLAB_COLUMNS: readonly ScheduleColumnDef[] = [
-  { key: 'id',             i18nKey: 'col.id',             valueType: 'text',              align: 'left'  },
-  { key: 'buildingName',   i18nKey: 'col.buildingName',   valueType: 'text',              align: 'left'  },
-  { key: 'floor',          i18nKey: 'col.floor',          valueType: 'text',              align: 'left'  },
+  ...STRUCTURAL_LEAD_COLUMNS,
   { key: 'kind',           i18nKey: 'col.kind',           valueType: 'text',              align: 'left'  },
   { key: 'elevation',      i18nKey: 'col.elevation',      valueType: 'dimension-mm-to-m', align: 'right' },
   { key: 'tosElevation',   i18nKey: 'col.tosElevation',   valueType: 'dimension-mm-to-m', align: 'right' },
@@ -94,9 +125,7 @@ export const SLAB_COLUMNS: readonly ScheduleColumnDef[] = [
 // ─── Column preset ───────────────────────────────────────────────────────────
 
 export const COLUMN_COLUMNS: readonly ScheduleColumnDef[] = [
-  { key: 'id',           i18nKey: 'col.id',           valueType: 'text', align: 'left' },
-  { key: 'buildingName', i18nKey: 'col.buildingName', valueType: 'text', align: 'left' },
-  { key: 'floor',        i18nKey: 'col.floor',        valueType: 'text', align: 'left' },
+  ...STRUCTURAL_LEAD_COLUMNS,
   { key: 'kind',      i18nKey: 'col.kind',      valueType: 'text',              align: 'left'  },
   { key: 'width',     i18nKey: 'col.width',     valueType: 'dimension-mm-to-m', align: 'right' },
   { key: 'depth',     i18nKey: 'col.depth',     valueType: 'dimension-mm-to-m', align: 'right' },
@@ -116,9 +145,7 @@ export const COLUMN_COLUMNS: readonly ScheduleColumnDef[] = [
 // ─── Beam preset ─────────────────────────────────────────────────────────────
 
 export const BEAM_COLUMNS: readonly ScheduleColumnDef[] = [
-  { key: 'id',           i18nKey: 'col.id',           valueType: 'text', align: 'left' },
-  { key: 'buildingName', i18nKey: 'col.buildingName', valueType: 'text', align: 'left' },
-  { key: 'floor',        i18nKey: 'col.floor',        valueType: 'text', align: 'left' },
+  ...STRUCTURAL_LEAD_COLUMNS,
   { key: 'kind',         i18nKey: 'col.kind',         valueType: 'text',              align: 'left'  },
   { key: 'length',       i18nKey: 'col.length',       valueType: 'number',            align: 'right' },
   { key: 'width',        i18nKey: 'col.width',        valueType: 'dimension-mm-to-m', align: 'right' },
@@ -163,9 +190,7 @@ export const SLAB_OPENING_COLUMNS: readonly ScheduleColumnDef[] = [
 // ─── Foundation preset (ADR-441 — pad / strip / tie-beam) ────────────────────
 
 export const FOUNDATION_COLUMNS: readonly ScheduleColumnDef[] = [
-  { key: 'id',           i18nKey: 'col.id',           valueType: 'text',              align: 'left'  },
-  { key: 'buildingName', i18nKey: 'col.buildingName', valueType: 'text',              align: 'left'  },
-  { key: 'floor',        i18nKey: 'col.floor',        valueType: 'text',              align: 'left'  },
+  ...STRUCTURAL_LEAD_COLUMNS,
   { key: 'kind',         i18nKey: 'col.kind',         valueType: 'text',              align: 'left'  },
   { key: 'width',        i18nKey: 'col.width',        valueType: 'dimension-mm-to-m', align: 'right' },
   { key: 'length',       i18nKey: 'col.length',       valueType: 'dimension-mm-to-m', align: 'right' },
@@ -181,15 +206,9 @@ export const FOUNDATION_COLUMNS: readonly ScheduleColumnDef[] = [
 // ─── Combined preset (cross-type geometry-derived roll-up) ───────────────────
 
 export const COMBINED_COLUMNS: readonly ScheduleColumnDef[] = [
-  { key: 'id',                i18nKey: 'col.id',                valueType: 'text',   align: 'left'   },
-  { key: 'buildingName',      i18nKey: 'col.buildingName',      valueType: 'text',   align: 'left'   },
-  { key: 'type',              i18nKey: 'col.type',              valueType: 'text',   align: 'left'   },
-  { key: 'kind',              i18nKey: 'col.kind',              valueType: 'text',   align: 'left'   },
-  { key: 'floor',             i18nKey: 'col.floor',             valueType: 'text',   align: 'left'   },
-  { key: 'primaryQuantity',   i18nKey: 'col.primaryQuantity',   valueType: 'number', align: 'right' },
-  { key: 'primaryUnit',       i18nKey: 'col.primaryUnit',       valueType: 'text',   align: 'center'},
-  { key: 'atoeCategory',      i18nKey: 'col.atoeCategory',      valueType: 'text',   align: 'left'  },
-  { key: 'material',          i18nKey: 'col.material',          valueType: 'text',   align: 'left'  },
+  { key: 'id',           i18nKey: 'col.id',           valueType: 'text', align: 'left' },
+  { key: 'buildingName', i18nKey: 'col.buildingName', valueType: 'text', align: 'left' },
+  ...ROLLUP_TAIL_COLUMNS,
 ];
 
 /**
@@ -198,12 +217,6 @@ export const COMBINED_COLUMNS: readonly ScheduleColumnDef[] = [
  * promote buildingName to the leading column and drop entity-specific fields.
  */
 export const MULTI_BUILDING_COLUMNS: readonly ScheduleColumnDef[] = [
-  { key: 'buildingName',    i18nKey: 'col.buildingName',    valueType: 'text',   align: 'left'   },
-  { key: 'type',            i18nKey: 'col.type',            valueType: 'text',   align: 'left'   },
-  { key: 'kind',            i18nKey: 'col.kind',            valueType: 'text',   align: 'left'   },
-  { key: 'floor',           i18nKey: 'col.floor',           valueType: 'text',   align: 'left'   },
-  { key: 'primaryQuantity', i18nKey: 'col.primaryQuantity', valueType: 'number', align: 'right'  },
-  { key: 'primaryUnit',     i18nKey: 'col.primaryUnit',     valueType: 'text',   align: 'center' },
-  { key: 'atoeCategory',    i18nKey: 'col.atoeCategory',    valueType: 'text',   align: 'left'   },
-  { key: 'material',        i18nKey: 'col.material',        valueType: 'text',   align: 'left'   },
+  { key: 'buildingName', i18nKey: 'col.buildingName', valueType: 'text', align: 'left' },
+  ...ROLLUP_TAIL_COLUMNS,
 ];
