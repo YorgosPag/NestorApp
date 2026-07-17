@@ -18,6 +18,8 @@ export type { OffsetCommandParams } from './OffsetEntityCommand';
 export { ExplodeEntityCommand } from './ExplodeEntityCommand';
 // ADR-575 — GROUP «Ομαδοποίηση» (N entities → 1 block container; UNGROUP = EXPLODE).
 export { CreateGroupCommand } from './CreateGroupCommand';
+// ADR-652 M6 — «Δημιουργία Block» (N entities → 1 BlockEntity instance; AutoCAD BLOCK/BMAKE).
+export { CreateBlockFromSelectionCommand } from './CreateBlockFromSelectionCommand';
 export { CornerEntityCommand } from './CornerEntityCommand';
 export type { CornerCommandParams, CornerTrimOp, CornerKind } from './CornerEntityCommand';
 export { WallSplitCommand } from './WallSplitCommand';
