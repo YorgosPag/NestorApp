@@ -36,19 +36,21 @@ function buildOpeningMaterials(opening: OpeningEntity): {
   const frame = getMaterial3D(mats.frame);
   const leaf = getMaterial3D(mats.leaf);
   const glass = getMaterial3D(mats.glass);
-  const materials: OpeningMeshMaterials = { frame, leaf, glass };
+  const hardware = getMaterial3D(mats.hardware);
+  const materials: OpeningMeshMaterials = { frame, leaf, glass, hardware };
   const matIdByMaterial = new Map<THREE.Material, string>([
     [frame, mats.frame],
     [leaf, mats.leaf],
     [glass, mats.glass],
+    [hardware, mats.hardware],
   ]);
   return { materials, matIdByMaterial };
 }
 
 /**
  * Σφραγίζει σε κάθε sub-mesh του κουφώματος το catalog id του υλικού του (export naming SSoT).
- * Ο χάρτης material→id έχει έως τρεις εγγραφές (frame/leaf/glass) — δύο μπορούν να συμπέσουν σε
- * ίδιο singleton (π.χ. frame===leaf όταν και τα δύο resolve στο ίδιο id, τότε ο χάρτης έχει δύο
+ * Ο χάρτης material→id έχει έως τέσσερις εγγραφές (frame/leaf/glass/hardware) — δύο μπορούν να συμπέσουν
+ * σε ίδιο singleton (π.χ. frame===leaf όταν και τα δύο resolve στο ίδιο id, τότε ο χάρτης έχει δύο
  * κλειδιά με ίδιο instance)· ό,τι mesh δεν ταιριάζει (θεωρητικά κανένα) μένει ασφράγιστο.
  */
 function stampOpeningMaterialIds(

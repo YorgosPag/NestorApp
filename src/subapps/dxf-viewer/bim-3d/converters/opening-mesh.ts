@@ -32,8 +32,10 @@ import { stampBimIdentity } from './bim-three-shape-helpers';
 import {
   buildLeafSpecs,
   type BoxSpec,
+  type LeafDims,
   type OpeningMeshMaterials,
 } from './opening-mesh-builders';
+import { buildHardwareSpecs } from './opening-hardware-builders';
 
 export type { OpeningMeshMaterials };
 
@@ -100,9 +102,13 @@ export function buildOpeningMesh(
   const sillM = sillHeight * MM_TO_M;
   const floorY = floorElevationMm * MM_TO_M + buildingBaseElevationM;
 
+  const dims: LeafDims = { widthW, heightM, sillM, thicknessW, frameW: faceWidthW };
   const specs: BoxSpec[] = [
     ...frameBars(widthW, heightM, sillM, faceWidthW, depthW, sillHeight > 0, materials.frame),
-    ...buildLeafSpecs(opening, { widthW, heightM, sillM, thicknessW, frameW: faceWidthW }, materials),
+    ...buildLeafSpecs(opening, dims, materials),
+    // ADR-672 §8 Α — operable hardware (χειρολαβή) appended LAST so the frame-bar
+    // indices (jamb/head/sill) that downstream code reads stay stable.
+    ...buildHardwareSpecs(opening, dims, materials.hardware),
   ];
   if (specs.length === 0) return null;
 

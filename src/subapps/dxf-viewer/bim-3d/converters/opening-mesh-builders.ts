@@ -23,15 +23,21 @@ export interface BoxSpec {
   readonly mat: THREE.Material;
 }
 
-/** Materials resolved by the caller (κάσα/φύλλο = ξύλο, υαλοστάσιο = γυαλί). */
+/** Materials resolved by the caller (κάσα/φύλλο = ξύλο, υαλοστάσιο = γυαλί, χειρολαβή = μέταλλο). */
 export interface OpeningMeshMaterials {
   readonly frame: THREE.Material;
   readonly leaf: THREE.Material;
   readonly glass: THREE.Material;
+  /** ADR-672 §8 Α — hardware surface (χειρολαβή/μηχανισμός), resolved per opening. */
+  readonly hardware: THREE.Material;
 }
 
-/** Φύλλο/υαλοστάσιο πάχος ως κλάσμα του πάχους τοίχου (κεντραρισμένο). */
-const LEAF_DEPTH_RATIO = 0.35;
+/**
+ * Φύλλο/υαλοστάσιο πάχος ως κλάσμα του πάχους τοίχου (κεντραρισμένο). Exported so
+ * the hardware builder (`opening-hardware-builders.ts`) places handles on the
+ * SAME leaf face plane — one ratio, no duplicated magic number (N.18).
+ */
+export const LEAF_DEPTH_RATIO = 0.35;
 /** Κενό ανάμεσα στα φύλλα (double-leaf) ως κλάσμα του ελεύθερου πλάτους. */
 const LEAF_GAP_RATIO = 0.02;
 /** Επικάλυψη/μετατόπιση συρόμενου panel ως κλάσμα του πάχους. */
@@ -60,6 +66,18 @@ export interface LeafDims {
 }
 
 /**
+ * Ελεύθερο εσωτερικό άνοιγμα (κάσα-relative), δηλ. πλάτος/ύψος μείον την κάσα και
+ * στις δύο πλευρές. `null` όταν degenerate (μηδενικό/αρνητικό). SSoT (N.18):
+ * καταναλώνεται ΚΑΙ από τον leaf/panel builder ΚΑΙ από τον hardware sibling
+ * (`opening-hardware-builders.ts`) — μία φορά ο υπολογισμός, ένας ο degenerate guard.
+ */
+export function openingInnerDims(dims: LeafDims): { readonly innerW: number; readonly innerH: number } | null {
+  const innerW = Math.max(dims.widthW - 2 * dims.frameW, 0);
+  const innerH = Math.max(dims.heightM - 2 * dims.frameW, 0);
+  return innerW <= 0 || innerH <= 0 ? null : { innerW, innerH };
+}
+
+/**
  * Build the leaf/panel box specs for an opening (dispatch by plan-symbol SSoT).
  * Returns [] όταν το ελεύθερο άνοιγμα είναι degenerate.
  */
@@ -68,9 +86,9 @@ export function buildLeafSpecs(
   dims: LeafDims,
   materials: OpeningMeshMaterials,
 ): BoxSpec[] {
-  const innerW = Math.max(dims.widthW - 2 * dims.frameW, 0);
-  const innerH = Math.max(dims.heightM - 2 * dims.frameW, 0);
-  if (innerW <= 0 || innerH <= 0) return [];
+  const inner = openingInnerDims(dims);
+  if (!inner) return [];
+  const { innerW, innerH } = inner;
   const ctx: LeafCtx = {
     innerW,
     innerH,

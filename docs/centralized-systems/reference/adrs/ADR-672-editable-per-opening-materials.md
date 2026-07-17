@@ -1,6 +1,6 @@
 # ADR-672 — Επεξεργάσιμο υλικό ανά κούφωμα (Revit family surfaces: κάσα/φύλλο/υαλοστάσιο/χειρολαβή)
 
-**Status:** ✅ ACTIVE — υλοποιημένο 2Δ+3Δ+export+UI+persistence· follow-ups §8
+**Status:** ✅ ACTIVE — υλοποιημένο 2Δ+3Δ+export+UI+persistence+library-dropdown· follow-ups §8 (hardware geo, BOQ)
 **Ημερομηνία:** 2026-07-18
 **Σχετικά:** ADR-611 (opening frame profile — το resolver-idiom που αντιγράφτηκε),
 ADR-412/421 (BIM family types — type→instance «type wins»), ADR-668 (3Δ export OBJ/glTF — ονομάζει το
@@ -85,12 +85,17 @@ top-priority `elem` hook του resolver, ADR-375 C.5) → κερδίζει το
 `opening.styleOverride.color` του χρήστη κερδίζει ακόμα το material. Το test ενισχύθηκε ώστε να ελέγχει το
 χρώμα τη στιγμή του `stroke()` (το παλιό loose `toContain` περνούσε ΚΑΙ με το bug). 15/15 ✅.
 
-## 8. Follow-ups (εκκρεμή)
+## 8. Follow-ups
 
+- ✅ **`bmat_*` user-library dropdown (DONE 2026-07-18):** το `OpeningMaterialCatalogProvider` seam έλαβε
+  πραγματική υλοποίηση — `createOpeningMaterialCatalog(library)` που λιστάρει τα `companyId`/`projectId`-scoped
+  `bmat_*` υλικά δίπλα στα presets, σε `<optgroup>` (Βασικά / Βιβλιοθήκη) + custom sentinel. Νέο hook
+  `useOpeningMaterialCatalog` δένει το scope-SSoT (`useAuth` + `saveContext?.projectId`, idiom σκάλας/topography)
+  με το `useMaterialLibrary`. Το picker κερδίζει swatch με το πραγματικό thumbnail/albedo του υλικού. Ένα id
+  εκτός presets ΚΑΙ εκτός τρέχουσας βιβλιοθήκης (legacy/cross-company) πέφτει ακόμα στο free-text (zero
+  regression). `classifyOpeningMaterial` έγινε catalog-aware (`listed|custom|empty`). Βλ. §10.
 - **Hardware geometry:** το `hardware` υλικό λύνεται από τον resolver αλλά **δεν έχει 3Δ sub-mesh / 2Δ
   representation** ακόμα — ζει μόνο σε type/UI (+ μελλοντικό BOQ/export naming). Χρειάζεται νέα γεωμετρία χειρολαβής.
-- **`bmat_*` user-library dropdown:** το UI δέχεται custom `bmat_*` id μέσω free-text· πλήρες dropdown από τη
-  βιβλιοθήκη = swap του `OpeningMaterialCatalogProvider` (το seam υπάρχει έτοιμο), απαιτεί company-scope hook στο dialog.
 - **BOQ / schedule hookup:** το υλικό ανά μέρος να τροφοδοτεί προμετρήσεις (`bim/schedule/`).
 - **2Δ = μόνο χρωματισμός** (frame stroke + glass overlay)· τα κουφώματα είναι plan symbols, όχι poché fills —
   γι' αυτό `getMaterialFlatColorHex`, ΟΧΙ το wall `resolveAutoHatch`/`MATERIAL_HATCH_MAP` (διαφορετικό vocabulary).
@@ -103,7 +108,8 @@ top-priority `elem` hook του resolver, ADR-375 C.5) → κερδίζει το
 | `bim/types/bim-family-type.ts` | `OpeningTypeParams.materials` (type default) |
 | `bim/types/opening.schemas.ts` | `OpeningMaterialsSchema` (`.strict()`) — pre-write gate |
 | `bim/family-types/resolve-opening-material.ts` | **Resolver SSoT** — fold ανά μέρος + defaults |
-| `bim/family-types/opening-material-catalog.ts` | **Catalog SSoT** — presets + `MaterialCatalogProvider` seam |
+| `bim/family-types/opening-material-catalog.ts` | **Catalog SSoT** — presets + `createOpeningMaterialCatalog` (library-backed provider) + `classifyOpeningMaterial` |
+| `ui/ribbon/hooks/useOpeningMaterialCatalog.ts` | Scope (`useAuth`+`saveContext.projectId`) + `useMaterialLibrary` → library-backed provider (memoized) |
 | `bim-3d/converters/bim-three-wall-opening-attach.ts` | 3Δ — per-opening resolved `getMaterial3D` + stamp `matId` |
 | `bim/renderers/OpeningRenderer.ts` | 2Δ — resolved χρώμα ως `elementOverride.color` fallback |
 | `ui/ribbon/components/EditOpeningTypeDialog.tsx` + `OpeningMaterialSelectCell.tsx` | UI — 4 rows ανά μέρος |
@@ -117,3 +123,11 @@ top-priority `elem` hook του resolver, ADR-375 C.5) → κερδίζει το
   `opening-material-catalog.ts` (mirror `wall/stair-material-catalog.ts`) — έκλεισε το SSoT gap του hardcoded
   preset list μέσα στο `OpeningMaterialSelectCell`· 5 tests. Gates: family-types **19 suites / 217 ✅**,
   2Δ renderer **15/15 ✅**, `jscpd:diff` καθαρό ✅. Doc-trail ενοποιήθηκε εδώ (ήταν λάθος σε ADR-669/449).
+- **2026-07-18** — **Follow-up Β (§8) — `bmat_*` user-library dropdown.** Ο `OpeningMaterialCatalogProvider`
+  seam έλαβε πραγματική υλοποίηση `createOpeningMaterialCatalog(library)` (presets → `bmat_*` βιβλιοθήκη →
+  custom, σε `<optgroup>`)· νέο hook `useOpeningMaterialCatalog` (scope-SSoT `useAuth`+`saveContext.projectId`
+  → `useMaterialLibrary` → provider, memoized)· `OpeningMaterialSelectCell` πήρε `catalog` prop + swatch με
+  library thumbnail/albedo· `classifyOpeningMaterial` → catalog-aware `listed|custom|empty` (legacy/unknown id
+  = free-text, zero regression)· 2 νέες i18n keys (`materialGroupPresets/Library`, el+en). Καμία αλλαγή σε
+  resolver/persistence (τα `bmat_` ήδη round-trip-άρουν opaque). Gates: opening-material-catalog **10/10 ✅**,
+  family-types+2Δ parity regression **21 suites / 233 ✅**, `jscpd:diff` καθαρό ✅.

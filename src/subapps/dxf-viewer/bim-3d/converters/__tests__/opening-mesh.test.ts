@@ -54,26 +54,36 @@ const materials: OpeningMeshMaterials = {
   frame: new THREE.MeshStandardMaterial(),
   leaf: new THREE.MeshStandardMaterial(),
   glass: new THREE.MeshStandardMaterial(),
+  hardware: new THREE.MeshStandardMaterial(),
 };
 
+/**
+ * Frame + leaf/panel meshes only — hardware (χειρολαβή, ADR-672 §8 Α) is appended
+ * last and covered by `opening-hardware-builders.test.ts`, so these structural
+ * counts filter it out and stay about the body the way they always were.
+ */
+function bodyChildren(g: THREE.Object3D): THREE.Object3D[] {
+  return g.children.filter((c) => (c as THREE.Mesh).material !== materials.hardware);
+}
+
 describe('buildOpeningMesh', () => {
-  it('door (sill=0) → 4 meshes (2 jambs + head + 1 leaf)', () => {
+  it('door (sill=0) → 4 body meshes (2 jambs + head + 1 leaf)', () => {
     const g = buildOpeningMesh(makeOpening(), makeWall(), materials, 0, 0);
     expect(g).not.toBeNull();
-    expect(g!.children).toHaveLength(4);
+    expect(bodyChildren(g!)).toHaveLength(4);
   });
 
-  it('double-door → 5 meshes (frame 3 + 2 leaves)', () => {
+  it('double-door → 5 body meshes (frame 3 + 2 leaves)', () => {
     const g = buildOpeningMesh(makeOpening({ kind: 'double-door', width: 1400 }), makeWall(), materials, 0, 0);
-    expect(g!.children).toHaveLength(5);
+    expect(bodyChildren(g!)).toHaveLength(5);
   });
 
-  it('window (sill>0) → 5 meshes (frame 4 + 1 glass panel)', () => {
+  it('window (sill>0) → 5 body meshes (frame 4 + 1 glass panel)', () => {
     const g = buildOpeningMesh(
       makeOpening({ kind: 'window', width: 1200, height: 1400, sillHeight: 900 }),
       makeWall(), materials, 0, 0,
     );
-    expect(g!.children).toHaveLength(5);
+    expect(bodyChildren(g!)).toHaveLength(5);
     const usesGlass = g!.children.some(
       (c) => (c as THREE.Mesh).material === materials.glass,
     );
@@ -94,7 +104,7 @@ describe('buildOpeningMesh', () => {
   // ─── ADR-421 SLICE B — fan-out family 3D bodies ───────────────────────────
   describe('SLICE B families (frame + leaf counts)', () => {
     const count = (overrides: Parameters<typeof makeOpening>[0]): number =>
-      buildOpeningMesh(makeOpening(overrides), makeWall(), materials, 0, 0)!.children.length;
+      bodyChildren(buildOpeningMesh(makeOpening(overrides), makeWall(), materials, 0, 0)!).length;
 
     it('double-sliding-door → 3 frame + 2 panels = 5', () => {
       expect(count({ kind: 'double-sliding-door', width: 2400 })).toBe(5);
@@ -121,7 +131,7 @@ describe('buildOpeningMesh', () => {
         makeOpening({ kind: 'double-hung-window', width: 900, height: 1500, sillHeight: 900 }),
         makeWall(), materials, 0, 0,
       );
-      expect(g!.children).toHaveLength(6);
+      expect(bodyChildren(g!)).toHaveLength(6);
       expect(g!.children.some((c) => (c as THREE.Mesh).material === materials.glass)).toBe(true);
     });
 
