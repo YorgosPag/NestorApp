@@ -25,7 +25,7 @@ import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas/Preview
 import { MoveEntityCommand, MoveMultipleEntitiesCommand, CompoundCommand } from '../../core/commands';
 import { useSceneManagerAdapter, type SceneAdapterLevelManager } from '../../systems/entity-creation/useSceneManagerAdapter';
 import { useModifyToolActivation } from '../../systems/tools/useModifyToolActivation';
-import { useToolHintText } from './useToolHintPrompt';
+import { useToolHintPromptText } from './useToolHintPrompt';
 // ADR-363 — ORTHO (F8) axis-lock for the AutoCAD MOVE destination (no F9 step here).
 import { applyOrthoToDelta } from '../../bim/grips/grip-move-constraints';
 // ADR-090 — SSoT point+vector add (translate), replaces inline `{x:A.x+B.x,y:A.y+B.y}`.
@@ -207,7 +207,7 @@ export function useMoveTool(props: UseMoveToolProps): UseMoveToolReturn {
     prompt = i18next.t('dxf-viewer-guides:moveTool.selectDestination');
   }
 
-  useToolHintText(isActive && phase !== 'idle', prompt);
+  useToolHintPromptText(isActive && phase !== 'idle', prompt);
 
   return { phase, basePoint, isActive, isCollectingInput, handleMoveClick, handleMoveEscape, prompt };
 }

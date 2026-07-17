@@ -6,11 +6,11 @@
  * (inactive or idle phase) → clear it; clear on unmount.
  *
  * Two entry points, one effect: `useToolHintPrompt` (i18n key under `tool-hints:`)
- * and `useToolHintText` (already-resolved string — for the move/mirror/rotate/
+ * and `useToolHintPromptText` (already-resolved string — for the move/mirror/rotate/
  * schedule-pick tools, whose prompts come from other namespaces).
  */
 import { renderHook } from '@testing-library/react';
-import { useToolHintPrompt, useToolHintText } from '../useToolHintPrompt';
+import { useToolHintPrompt, useToolHintPromptText } from '../useToolHintPrompt';
 import { toolHintOverrideStore } from '../../toolHintOverrideStore';
 
 jest.mock('i18next', () => ({
@@ -81,13 +81,13 @@ interface TextProps {
 function setupText(initial: TextProps) {
   const spy = jest.spyOn(toolHintOverrideStore, 'setOverride');
   const { rerender, unmount } = renderHook(
-    (p: TextProps) => useToolHintText(p.active, p.text),
+    (p: TextProps) => useToolHintPromptText(p.active, p.text),
     { initialProps: initial },
   );
   return { spy, rerender, unmount };
 }
 
-describe('useToolHintText', () => {
+describe('useToolHintPromptText', () => {
   afterEach(() => {
     jest.restoreAllMocks();
     toolHintOverrideStore.setOverride(null);

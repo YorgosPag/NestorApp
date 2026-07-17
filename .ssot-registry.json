@@ -4351,6 +4351,74 @@
         "src/lib/mutations/gateway-action.ts"
       ]
     },
+    "transform-copy-command": {
+      "ssotFile": "src/subapps/dxf-viewer/core/commands/entity-commands/CloneWithTransformCommand.ts",
+      "description": "Copy-with-a-transform is ONE command with the transform baked into the clone's construction (Revit ElementTransformUtils.CopyElements) — never a copy flag on a transform command, and never a CompositeCommand[Clone, Transform] (the transform child cannot target an id minted inside the clone child's execute, and desyncs on the second undo/redo). Rotate, Scale and Mirror each grew their own copy branch doing the identical thing; jscpd flagged Rotate⇔Scale (t222) and was blind to the Mirror twin because the names differed (copyMode vs keepOriginals). Mirror was the only correct one — Rotate/Scale minted a generic id and broadcast nothing, so a copied BIM wall vanished on the next Firestore snapshot, and re-minted on every redo, orphaning the doc. The patterns target the flag's return specifically: a transform command declaring its own copy field is the regression, so the UI-intent copyMode carried by GripHandoffStore/GripCopyModeStore/ScaleToolStore (plain interface fields, never `private readonly`) never matches. ADR-507 §8: copy stays OUT of the SnapshotTransformCommand hierarchy — it has nothing to snapshot, nothing to restore, and no followers to cascade.",
+      "forbiddenPatterns": [
+        "private\\s+readonly\\s+(copyMode|keepOriginals)",
+        "class\\s+CloneWithTransformCommand\\s*"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/core/commands/entity-commands/CloneWithTransformCommand.ts"
+      ],
+      "addedDate": "2026-07-17",
+      "addedByAdr": "ADR-507",
+      "tier": 4
+    },
+    "transform-patch-builders": {
+      "ssotFile": "src/subapps/dxf-viewer/core/commands/entity-commands/transform-patch-builders.ts",
+      "description": "The per-entity geometry patch of a transform (rotate/scale/mirror) is defined ONCE here and shared by the in-place command and the copy command. It was already the universal seam — SnapshotTransformCommand's execute/redo, cascadeConnectedPipes and cascadeTransformedSlabOpenings all funnel through the same computeUpdates shape — but as a `protected` method it was reachable only from INSIDE a transform subclass, which is exactly why the copy path grew a private branch per command instead of reusing it. These builders bind the parameters and delegate to the untouched math SSoTs (rotation-math, scale-entity-transform, mirror-math, bim-*-geometry); they do NOT own geometry. The patterns catch a re-declaration of a builder, so a caller that legitimately invokes calculateBimRotatedGeometry for a preview (useRotationPreview) or a BIM copy (bim-copy-builder) never matches.",
+      "forbiddenPatterns": [
+        "function\\s+(buildRotatePatch|buildScalePatch|buildMirrorPatch)\\s*\\("
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/core/commands/entity-commands/transform-patch-builders.ts"
+      ],
+      "addedDate": "2026-07-17",
+      "addedByAdr": "ADR-507",
+      "tier": 4
+    },
+    "transform-command-factory": {
+      "ssotFile": "src/subapps/dxf-viewer/core/commands/entity-commands/transform-command-factory.ts",
+      "description": "Callers state their copy INTENT and the factory picks the command — they never construct a transform command directly, because that is where the choice used to leak back into a boolean threaded through 11 call sites. createRotate/Scale/MirrorCommand({copy}) returns the in-place command or CloneWithTransformCommand (ADR-507 §8). The pattern targets direct construction, which is the re-implementation; the 3D edit gizmo (bim3d-edit-command-builders) is allowlisted because the 3D viewport has no copy concept at all and structurally cannot route through the intent seam, and __tests__ are exempt by the global rule.",
+      "forbiddenPatterns": [
+        "new\\s+(RotateEntityCommand|ScaleEntityCommand|MirrorEntityCommand)\\s*\\("
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/core/commands/entity-commands/transform-command-factory.ts",
+        "src/subapps/dxf-viewer/core/commands/entity-commands/RotateEntityCommand.ts",
+        "src/subapps/dxf-viewer/bim-3d/animation/bim3d-edit-command-builders.ts"
+      ],
+      "addedDate": "2026-07-17",
+      "addedByAdr": "ADR-507",
+      "tier": 4
+    },
+    "grip-rotation-commit": {
+      "ssotFile": "src/subapps/dxf-viewer/hooks/grips/grip-rotation-commit.ts",
+      "description": "Every grip rotation handle (line, arc, annotation symbol, polyline/area outline, group, block, hatch) ends the same way once its own geometry work has produced a pivot and a swept angle: read the live copy intent, build the command, validate, execute. That tail was copy-pasted across five call sites in four files. What varies is everything BEFORE it — which handle, which entity shape, how the pivot is derived — so only the tail lives here. The copy intent is read at commit time inside the helper (isGripCopyIntent), because the mouseup that triggers a grip commit has lost the native KeyboardEvent by then.",
+      "forbiddenPatterns": [
+        "function\\s+commitGripRotation\\s*\\("
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/hooks/grips/grip-rotation-commit.ts"
+      ],
+      "addedDate": "2026-07-17",
+      "addedByAdr": "ADR-507",
+      "tier": 4
+    },
+    "tool-hint-prompt": {
+      "ssotFile": "src/subapps/dxf-viewer/hooks/tools/useToolHintPrompt.ts",
+      "description": "The status-bar tool-hint prompt effect (publish while active, clear on idle AND on unmount) is written ONCE here (ADR-589). Two entry points, one effect: useToolHintPrompt takes an i18n key under the `tool-hints:` namespace, useToolHintPromptText takes an already-resolved string. The second exists because ADR-589 hardcoded the `tool-hints:` prefix, which the move/mirror/rotate/schedule-pick tools cannot use — they resolve from `dxf-viewer-guides:` / `dxf-schedule:` — so the byte-copied effect survived in those four hooks and a SIXTH copy was later written against the same store. Registered retroactively: this module was an unregistered SSoT, which is why nothing caught that copy. The pattern targets a re-declaration of either hook; useToolHints.useToolHintText (a different hook that RESOLVES a tool's hint text rather than publishing an override) does not match, and callers writing toolHintOverrideStore.setOverride for one-shot error messages (useScaleTool) are untouched by design.",
+      "forbiddenPatterns": [
+        "function\\s+(useToolHintPrompt|useToolHintPromptText)\\s*\\("
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/hooks/tools/useToolHintPrompt.ts"
+      ],
+      "addedDate": "2026-07-17",
+      "addedByAdr": "ADR-589",
+      "tier": 4
+    },
     "dependency-guard": {
       "ssotFile": "src/hooks/guards/useDependencyGuard.tsx",
       "description": "Client-side dependency pre-checks must go through useDependencyGuard (ADR-226/ADR-584). The flow — GET the guard route, map allowed/blocked onto a boolean, render DeletionBlockedDialog, and FAIL-CLOSED when the check itself throws — was written twice (useDeletionGuard, useLinkRemovalGuard); a third copy is where a fail-open regression silently ships, because nothing about the happy path reveals it. The pattern targets the client fetch of a DependencyCheckResult specifically, so it fires only on a re-implementation: the server-side guards (deletion-guard.ts, deletion-link-guard.ts) build that type rather than fetch it, and useLandownerUnlinkGuard (ADR-244) fetches its own LandownerUnlinkResult and fails OPEN by an explicit documented decision — neither ever matches.",
