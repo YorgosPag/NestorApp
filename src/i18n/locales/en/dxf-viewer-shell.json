@@ -6520,7 +6520,9 @@
       "dxf": "DXF (AutoCAD/CAD)",
       "ifc": "IFC4 (BIM — Revit/ArchiCAD)",
       "pdf": "PDF (drawing)",
-      "tek": "TEK (Tekton — architectural)"
+      "tek": "TEK (Tekton — architectural)",
+      "obj": "OBJ (3D — Cinema 4D)",
+      "gltf": "glTF (3D — Blender/C4D 2024+)"
     },
     "content": "Content",
     "contentScopes": {
@@ -6536,6 +6538,9 @@
     },
     "dxfVersion": "DXF version",
     "dxfUnit": "Units",
+    "mesh3dUnit": "Units",
+    "mesh3dUnitHint": "OBJ does not store a unit of measurement. Centimeters open correctly in Cinema 4D without rescaling.",
+    "mesh3dGltfUnitNote": "glTF always defines meters — no choice needed.",
     "units": {
       "millimeters": "Millimeters (mm)",
       "centimeters": "Centimeters (cm)",

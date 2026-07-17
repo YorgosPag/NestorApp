@@ -32,6 +32,7 @@ import type { WallDna } from '../types/wall-dna-types';
 import { isFinishActive } from './structural-finish-types';
 import { wallFootprintPolygon, type WallFinishObstacle } from './structural-finish-scene';
 import type { SilhouetteMember } from './structural-finish-silhouette';
+import { splitFootprintByOpeningBands, type SilhouetteOpeningSource } from './wall-finish-opening-bands';
 
 /** Prefix υλικού σοβά (εσωτ./εξωτ. Knauf/θερμοπρόσοψη) — legacy DNA plaster detection. */
 const PLASTER_MATERIAL_PREFIX = 'mat-plaster';
@@ -58,20 +59,27 @@ export function wallIsFinishMember(wall: WallFinishObstacle): boolean {
 }
 
 /**
- * Ο τοίχος → `SilhouetteMember` (X4: core = **πλήρες** footprint, χωρίς inset → ο σοβάς
- * προεξέχει). Γίνεται member ΜΟΝΟ όταν {@link wallIsFinishMember}· `null` αλλιώς (legacy /
- * bare parapet-fence / εκφυλισμένο footprint).
+ * Ο τοίχος → `SilhouetteMember[]` (X4: core = **πλήρες** footprint, χωρίς inset → ο σοβάς
+ * προεξέχει). Γίνεται member ΜΟΝΟ όταν {@link wallIsFinishMember}· `[]` αλλιώς (legacy /
+ * bare parapet-fence / εκφυλισμένο footprint) → ο caller τον κρατά ως obstacle.
  *
  * Το `zExtent` (building-relative mm, height-aware) δίνεται από τον adapter (που ξέρει τα
  * beam undersides για attached-top στηρίγματα) → εδώ μένει pure geometry. Το πάχος/υλικό
  * του σοβά παράγεται downstream από το ΕΝΙΑΙΟ spec της σιλουέτας (ομοιόμορφο κέλυφος).
+ *
+ * ADR-449 §opening-bands — **πληθυντικός**: με ανοίγματα ο τοίχος δίνει **ένα member ανά z-band**
+ * (τρυπημένο footprint στη ζώνη του κουφώματος) ώστε ο σοβάς να μην τα σκεπάζει· χωρίς ανοίγματα →
+ * **ακριβώς ένα** member με το πλήρες footprint (byte-for-byte η προηγούμενη συμπεριφορά). Ο
+ * `computeStructuralSilhouetteBands` δέχεται ήδη N members ανά στοιχείο (mirror ADR-458 δοκαριού) →
+ * μηδέν αλλαγή στη core engine. Βλ. {@link splitFootprintByOpeningBands}.
  */
-export function wallToSilhouetteMember(
+export function wallToSilhouetteMembers(
   wall: WallFinishObstacle,
   zExtent: { readonly zBotMm: number; readonly zTopMm: number },
-): SilhouetteMember | null {
-  if (!wallIsFinishMember(wall)) return null;
+  openings?: readonly SilhouetteOpeningSource[],
+): SilhouetteMember[] {
+  if (!wallIsFinishMember(wall)) return [];
   const full = wallFootprintPolygon(wall);
-  if (full.length < 3) return null;
-  return { footprint: full, zBotMm: zExtent.zBotMm, zTopMm: zExtent.zTopMm };
+  if (full.length < 3) return [];
+  return splitFootprintByOpeningBands(full, zExtent, openings);
 }

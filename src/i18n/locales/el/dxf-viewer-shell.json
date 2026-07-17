@@ -6520,7 +6520,9 @@
       "dxf": "DXF (AutoCAD/CAD)",
       "ifc": "IFC4 (BIM — Revit/ArchiCAD)",
       "pdf": "PDF (σχέδιο)",
-      "tek": "TEK (Τέκτων — αρχιτεκτονικά)"
+      "tek": "TEK (Τέκτων — αρχιτεκτονικά)",
+      "obj": "OBJ (3Δ — Cinema 4D)",
+      "gltf": "glTF (3Δ — Blender/C4D 2024+)"
     },
     "content": "Περιεχόμενο",
     "contentScopes": {
@@ -6536,6 +6538,9 @@
     },
     "dxfVersion": "Έκδοση DXF",
     "dxfUnit": "Μονάδες",
+    "mesh3dUnit": "Μονάδες",
+    "mesh3dUnitHint": "Το OBJ δεν αποθηκεύει μονάδα μέτρησης. Τα εκατοστά ανοίγουν σωστά στο Cinema 4D χωρίς αλλαγή κλίμακας.",
+    "mesh3dGltfUnitNote": "Το glTF ορίζει πάντα μέτρα — δεν χρειάζεται επιλογή.",
     "units": {
       "millimeters": "Χιλιοστά (mm)",
       "centimeters": "Εκατοστά (cm)",

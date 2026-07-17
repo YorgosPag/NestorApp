@@ -35,6 +35,10 @@ import {
   type FloorStackEntry,
 } from '../../bim-3d/scene/multi-floor-3d-source';
 import {
+  extractBim3DEntities,
+  resolveSnapshotFoundations,
+} from '../../bim-3d/scene/extract-bim3d-entities';
+import {
   resolveBuildingDatumElevationM,
   resolveFloorDatumRelativeElevationMm,
 } from '../../bim-3d/scene/floor-stack-elevation';
@@ -51,10 +55,8 @@ import { resolveBimPersistenceScope } from '../../bim/persistence/bim-floor-scop
 import { loadFloorBimEntities } from '../../bim/persistence/cross-floor-bim-loader';
 import { EMPTY_BOUNDS } from '../../config/geometry-constants';
 import { useFoundationLevelStore } from '../../state/foundation-level-store';
-import {
-  isWallEntity, isColumnEntity, isBeamEntity, isFoundationEntity, isSlabEntity,
-  isSlabOpeningEntity, isOpeningEntity, isStairEntity, isMepFixtureEntity, isElectricalPanelEntity, isRailingEntity, isFurnitureEntity, isMepSegmentEntity, isMepFittingEntity, isMepManifoldEntity, isMepRadiatorEntity, isMepBoilerEntity, isMepWaterHeaterEntity, isRoofEntity, isFloorFinishEntity, isMepUnderfloorEntity,
-} from '../../types/entities';
+// ADR-668 — τα υπόλοιπα type guards μετακόμισαν μαζί με το `extractBim3DEntities` στο SSoT.
+import { isFoundationEntity } from '../../types/entities';
 import type { SceneModel } from '../../types/scene';
 
 interface TargetFloor {
@@ -68,33 +70,9 @@ interface TargetFloor {
   readonly nextFloorElevationMm?: number;
 }
 
-/** Split a persisted scene into the per-category BIM bundle the 3D layer wants. */
-function extractBim3DEntities(scene: SceneModel): Bim3DEntities {
-  const e = scene.entities;
-  return {
-    walls: e.filter(isWallEntity),
-    columns: e.filter(isColumnEntity),
-    beams: e.filter(isBeamEntity),
-    foundations: e.filter(isFoundationEntity),
-    slabs: e.filter(isSlabEntity),
-    slabOpenings: e.filter(isSlabOpeningEntity),
-    openings: e.filter(isOpeningEntity),
-    stairs: e.filter(isStairEntity),
-    fixtures: e.filter(isMepFixtureEntity),
-    panels: e.filter(isElectricalPanelEntity),
-    railings: e.filter(isRailingEntity),
-    furnitures: e.filter(isFurnitureEntity),
-    roofs: e.filter(isRoofEntity),
-    floorFinishes: e.filter(isFloorFinishEntity),
-    mepSegments: e.filter(isMepSegmentEntity),
-    mepFittings: e.filter(isMepFittingEntity),
-    manifolds: e.filter(isMepManifoldEntity),
-    radiators: e.filter(isMepRadiatorEntity),
-    boilers: e.filter(isMepBoilerEntity),
-    waterHeaters: e.filter(isMepWaterHeaterEntity),
-    underfloors: e.filter(isMepUnderfloorEntity),
-  };
-}
+// ADR-668 — `extractBim3DEntities` / `resolveSnapshotFoundations` ζουν πλέον στο SSoT
+// `bim-3d/scene/extract-bim3d-entities.ts`, ώστε ο headless 3Δ exporter (OBJ/glTF) να
+// εφαρμόζει ΤΟΝ ΙΔΙΟ κανόνα και όχι ένα αντίγραφο που θα αποκλίνει.
 
 export function useFloors3DAggregator(active: boolean): void {
   const levelsCtx = useLevelsOptional();
@@ -209,18 +187,9 @@ export function useFloors3DAggregator(active: boolean): void {
         scene && scene.entities.length > 0
           ? extractBim3DEntities(stripForeignFloorBim(scene, t.floorId))
           : loaded.get(t.levelId) ?? null;
-      // ADR-484 Slice 5 — Revit-canonical: τα πέδιλα ζουν ΜΟΝΟ στον foundation level.
-      // Κάθε foundation entity baked σε non-foundation blob (legacy garbage σε λάθος
-      // όροφο, π.χ. πεδιλοδοκοί στο Ισόγειο) ΔΕΝ εμφανίζεται — drop foundations.
-      if (t.levelId !== foundationLevelId) {
-        return base && base.foundations.length > 0 ? { ...base, foundations: [] } : base;
-      }
-      // ADR-459 Φ7 — ο όροφος Θεμελίωσης (non-active): τα cross-level auto πέδιλα δεν
-      // είναι ποτέ στο scene snapshot· έρχονται από το model SSoT (floorplan_foundations).
-      // Override της κατηγορίας `foundations` με τα authoritative model footings· synthetic
-      // entry όταν δεν υπάρχει καθόλου snapshot αλλά υπάρχουν πέδιλα.
-      if (!base && modelFootings.length === 0) return null;
-      return { ...(base ?? EMPTY_BIM_ENTITIES), foundations: modelFootings };
+      // ADR-459 Φ7 / ADR-484 Slice 5 — Revit-canonical foundation rule (SSoT, ADR-668):
+      // πέδιλα ΜΟΝΟ στον foundation level, με override από τα authoritative model footings.
+      return resolveSnapshotFoundations(base, t.levelId, foundationLevelId, modelFootings);
     },
     [activeLevelId, liveActive, getLevelScene, loaded, foundationLevelId, modelFootings],
   );

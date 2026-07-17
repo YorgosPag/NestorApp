@@ -18,6 +18,12 @@ function ceilingSlab(x0: number, y0: number, x1: number, y1: number, levelMm = 3
   } as unknown as SlabEntity;
 }
 
+/** Πλάκα-**δάπεδο** (`kind:'floor'`) — άνω παρειά στο `levelMm`, κρέμεται προς τα κάτω. */
+function floorSlab(x0: number, y0: number, x1: number, y1: number, levelMm = 0, thickMm = 200): SlabEntity {
+  const base = ceilingSlab(x0, y0, x1, y1, levelMm, thickMm);
+  return { ...base, id: 's-floor', params: { ...base.params, kind: 'floor' } } as unknown as SlabEntity;
+}
+
 // Δοκάρι footprint εντός της πλάκας (centroid (4500,4250)).
 const beamFootprint = [{ x: 4000, y: 4000 }, { x: 5000, y: 4000 }, { x: 5000, y: 4500 }, { x: 4000, y: 4500 }];
 
@@ -40,6 +46,23 @@ describe('ADR-534 monolithic top-clip', () => {
     // thickness 1500 → soffit 1500 < bottom 2600 → clamp 2600.
     const hosts = buildCeilingSlabHosts([ceilingSlab(0, 0, 10000, 10000, 3000, 1500)]);
     expect(resolveMemberTopClipZmm(beamFootprint, 3000, 2600, hosts)).toBe(2600);
+  });
+
+  it('πλάκα-ΔΑΠΕΔΟ στη βάση (topside == bottom) → ΔΕΝ καλύπτει (no-op, όχι ύψος 0)', () => {
+    // Regression: η πλάκα-δάπεδο του ίδιου ορόφου (top 0, soffit −200) περιέχει την κολόνα
+    // στο plan, αλλά τη ΣΤΗΡΙΖΕΙ — δεν την καλύπτει. Πριν το topside guard: clip → −200 →
+    // max(0, −200) = 0 == base → effectiveHeightMm 0 → αόρατη κολόνα.
+    const hosts = buildCeilingSlabHosts([floorSlab(0, 0, 10000, 10000, 0, 200)]);
+    expect(resolveMemberTopClipZmm(beamFootprint, 3000, 0, hosts)).toBe(3000);
+  });
+
+  it('κολόνα ΑΝΑΜΕΣΑ σε 2 πλάκες (δάπεδο + οροφή) → clip στο soffit της ΟΡΟΦΗΣ', () => {
+    // Το πραγματικό σενάριο του χρήστη: όροφος με δικό του δάπεδο (0) + αυto-ceiling (3000).
+    const hosts = buildCeilingSlabHosts([
+      floorSlab(0, 0, 10000, 10000, 0, 200),
+      ceilingSlab(0, 0, 10000, 10000, 3000, 200),
+    ]);
+    expect(resolveMemberTopClipZmm(beamFootprint, 3000, 0, hosts)).toBeCloseTo(2800, 6);
   });
 
   it('ground/foundation πλάκες (κάτω) εξαιρούνται', () => {

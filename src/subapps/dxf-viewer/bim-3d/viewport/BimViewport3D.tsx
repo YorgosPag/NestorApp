@@ -8,7 +8,6 @@ import { useProjectHierarchyOptional } from '../../contexts/ProjectHierarchyCont
 import { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 // ADR-453 — register the live manager so the print engine can snapshot the 3D view.
 import { setActiveSceneManager } from '../scene/active-scene-manager-registry';
-import { registerGlbExportPoc } from '../../debug/glb-export-poc';
 import { useViewMode3DStore, selectIs3D } from '../stores/ViewMode3DStore';
 import type { ReducedMotionOverride } from '../accessibility/use-reduced-motion';
 import { LIGHT_PRESETS } from '../lighting/lighting-presets';
@@ -157,9 +156,6 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
     setCanvasEl(managerRef.current.getRendererCanvas());
     // ADR-453 — expose this manager to the print engine (cleared on unmount).
     setActiveSceneManager(managerRef.current);
-    // 🔬 PoC (REVERTIBLE) — `__nestorExportGlb()` console probe for the Cinema 4D
-    // GLB round-trip. Delete once `export/formats/gltf-export-adapter.ts` lands.
-    registerGlbExportPoc();
 
     // ADR-366 §C.1.b — bridge real scene bbox σε `useDxfViewerCallbacks` animation actions.
     setSceneBboxGetter(() => managerRef.current?.getSceneFramingBounds() ?? null);

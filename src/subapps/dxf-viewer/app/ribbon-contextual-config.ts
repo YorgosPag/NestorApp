@@ -69,8 +69,8 @@ import { resolveContextualTrigger } from './resolve-contextual-trigger';
 import { resolveToolActiveTrigger, isLineModifyTool } from './resolve-tool-active-trigger';
 import { annotationKindForTool } from '../config/annotation-kind-registry';
 import { useAnnotationSymbolSelectionStore } from '../state/annotation-symbol-selection-store';
-// ADR-363 / ADR-510 Φ4j — SSoT «Κλείσιμο» normaliser (leading close button per tab).
-import { withStandardClose } from '../ui/ribbon/data/contextual-close-panel';
+// ADR-363 / ADR-510 Φ4j / ADR-581 — SSoT leading-panel normaliser («Κλείσιμο» + σύριγγα).
+import { withStandardLeadPanel } from '../ui/ribbon/data/contextual-lead-panel';
 
 const BIM_KIND_TYPES: ReadonlySet<string> = new Set([
   'wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'foundation', 'stair', 'roof',
@@ -133,13 +133,14 @@ const RAW_RIBBON_CONTEXTUAL_TABS = [
   CONTEXTUAL_TOPO_SURFACE_TAB,
 ];
 
-// ADR-363 / ADR-510 Φ4j — every contextual tab opens with the SAME leading «Κλείσιμο»
-// button (Revit «Modify | …» far-left), which returns to the Home tab. Central
-// injection = SSoT: `withStandardClose` strips any legacy per-tab close button (no
-// duplicate) and prepends the unified Close panel, so ALL current AND future contextual
-// tabs get it with zero per-file work. New contextual tabs must NOT declare their own
-// close button — the registry owns it.
-export const RIBBON_CONTEXTUAL_TABS = RAW_RIBBON_CONTEXTUAL_TABS.map(withStandardClose);
+// ADR-363 / ADR-510 Φ4j / ADR-581 — every contextual tab opens with the SAME leading
+// panel (Revit «Modify | …» far-left): «Κλείσιμο» (returns to Home) + the «Αντιγραφή
+// Ιδιοτήτων» syringe, in that order. Central injection = SSoT: `withStandardLeadPanel`
+// strips any button that belongs to that panel (legacy per-tab close, stray syringe → no
+// duplicate) and prepends the unified panel, so ALL current AND future contextual tabs get
+// it with zero per-file work. New contextual tabs must NOT declare their own close button
+// or syringe — the registry owns them.
+export const RIBBON_CONTEXTUAL_TABS = RAW_RIBBON_CONTEXTUAL_TABS.map(withStandardLeadPanel);
 
 export function useActiveContextualTrigger({
   primarySelectedId, selectedEntityIds, currentScene, activeTool,

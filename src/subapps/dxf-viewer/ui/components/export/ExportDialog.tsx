@@ -5,8 +5,8 @@
  *
  * Controlled Radix Dialog. Owns the form via `useExportDialogState` and
  * delegates the job to `onSubmit(request)` (wired by ExportHost → `runExport`).
- * Three axes: format (DXF/IFC/PDF), content (DXF/BIM/both), floors
- * (active/zip/single) + DXF version & unit.
+ * Three axes: format (DXF/IFC/PDF/TEK/OBJ/glTF), content (DXF/BIM/both), floors
+ * (active/zip/single) + per-format fields (DXF version & unit, TEK modes, OBJ unit).
  *
  * ADR-040: N/A (zero canvas, zero useSyncExternalStore).
  */
@@ -31,12 +31,14 @@ import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry';
 import { DXF_VERSION_NAMES, type DxfVersion } from '../../../types/dxf-export.types';
-import type { ExportRequest } from '../../../export/types';
+import type { ExportRequest, ExportLengthUnit } from '../../../export/types';
 import { useExportDialogState } from './useExportDialogState';
 
 const logger = createModuleLogger('DXF_EXPORT_DIALOG');
 
-const FORMAT_OPTIONS = ['dxf', 'ifc', 'pdf', 'tek'] as const;
+// ADR-668 — 'obj' + 'gltf' = 3Δ mesh εξαγωγή. Το OBJ είναι το ΜΟΝΟ που ανοίγει σε Cinema 4D
+// R15 (ο glTF importer μπήκε στο R2024)· το glTF είναι για Blender / C4D 2024+ / σύγχρονα DCC.
+const FORMAT_OPTIONS = ['dxf', 'ifc', 'pdf', 'tek', 'obj', 'gltf'] as const;
 const ENTITY_SCOPE_OPTIONS = ['both', 'dxf-only', 'bim-only'] as const;
 const FLOOR_SCOPE_OPTIONS = ['active', 'all-zip', 'all-single'] as const;
 const UNIT_OPTIONS = ['millimeters', 'centimeters', 'meters'] as const;
@@ -80,6 +82,9 @@ export function ExportDialog({ open, onOpenChange, onSubmit }: ExportDialogProps
 
   const isDxf = state.format === 'dxf';
   const isTek = state.format === 'tek';
+  // ADR-668 — μονάδα ΜΟΝΟ για OBJ: το glTF είναι spec-locked σε μέτρα, οπότε ένα πεδίο εκεί θα
+  // υποσχόταν επιλογή που ο exporter αγνοεί by design.
+  const isObj = state.format === 'obj';
   const blocked = state.scopeConflictsWithFormat;
 
   return (
@@ -138,16 +143,7 @@ export function ExportDialog({ open, onOpenChange, onSubmit }: ExportDialogProps
           )}
 
           {isDxf && (
-            <Field label={t('export.dxfUnit')}>
-              <Select value={state.dxfUnit} onValueChange={(v) => state.setDxfUnit(v as ExportRequest['dxfUnit'] & string)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {UNIT_OPTIONS.map((u) => (
-                    <SelectItem key={u} value={u}>{t(`export.units.${u}`)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
+            <UnitField label={t('export.dxfUnit')} value={state.dxfUnit} onChange={state.setDxfUnit} />
           )}
 
           {isDxf && (
@@ -203,7 +199,20 @@ export function ExportDialog({ open, onOpenChange, onSubmit }: ExportDialogProps
               </Select>
             </Field>
           )}
+
+          {/* ADR-668 — το OBJ δεν αποθηκεύει μονάδα· default εκατοστά ⇒ ανοίγει σωστά στο C4D
+              με Scale 1. Ίδιο picker με το DXF — μία μονάδα-ένωση, ένα SSoT. */}
+          {isObj && (
+            <UnitField label={t('export.mesh3dUnit')} value={state.mesh3dUnit} onChange={state.setMesh3dUnit} />
+          )}
         </section>
+
+        {isObj && (
+          <p className="text-sm text-muted-foreground">{t('export.mesh3dUnitHint')}</p>
+        )}
+        {state.format === 'gltf' && (
+          <p className="text-sm text-muted-foreground">{t('export.mesh3dGltfUnitNote')}</p>
+        )}
 
         {blocked && (
           <p role="alert" className="text-sm text-destructive">
@@ -226,6 +235,31 @@ export function ExportDialog({ open, onOpenChange, onSubmit }: ExportDialogProps
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/**
+ * Length-unit picker — ONE component, two consumers (DXF `dxfUnit`, ADR-668 OBJ `mesh3dUnit`).
+ * Both pick from the same `ExportLengthUnit` union and the same `export.units.*` keys, so
+ * shipping them as parallel twins would mean two places to fix every future unit (N.18).
+ */
+function UnitField({ label, value, onChange }: {
+  readonly label: string;
+  readonly value: ExportLengthUnit;
+  readonly onChange: (unit: ExportLengthUnit) => void;
+}): React.JSX.Element {
+  const { t } = useTranslation('dxf-viewer-shell');
+  return (
+    <Field label={label}>
+      <Select value={value} onValueChange={(v) => onChange(v as ExportLengthUnit)}>
+        <SelectTrigger><SelectValue /></SelectTrigger>
+        <SelectContent>
+          {UNIT_OPTIONS.map((u) => (
+            <SelectItem key={u} value={u}>{t(`export.units.${u}`)}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </Field>
   );
 }
 

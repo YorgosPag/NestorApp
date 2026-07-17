@@ -451,6 +451,17 @@ DXF writer ΚΑΙ τα live measurements/preview, μέσω κεντρικών pu
 
 ## 6. Changelog
 
+- **2026-07-17** — **Φ4j UPDATE — το leading panel δεν είναι πια close-only: `[ Κλείσιμο ] [ 💉 Αντιγραφή Ιδιοτήτων ]`.**
+  Εντολή Giorgio: η σύριγγα (persistent tool `match-properties`, ADR-581) να εμφανίζεται σε ΚΑΘΕ contextual tab,
+  κολλητά δεξιά από το «Κλείσιμο», ίδιο row, χωρίς διαχωριστικό. Έγινε πάνω στον SSoT normaliser αυτής της φάσης
+  (ένα σημείο· κανένα από τα ~50 `contextual-*-tab.ts` δεν αγγίχτηκε). **Renames:**
+  `contextual-close-panel.ts` → **`contextual-lead-panel.ts`** · `buildClosePanel` → **`buildContextualLeadPanel`** ·
+  `withStandardClose` → **`withStandardLeadPanel`** · panel id `${tabId}-close` → `${tabId}-lead` — ο ρόλος του module
+  άλλαξε από «το close panel» σε «το leading panel κάθε contextual tab», οπότε άλλαξε και το όνομα.
+  Το `CONTEXTUAL_CLOSE_ACTION` + ολόκληρο το close pipeline **αμετάβλητα**. Οι κανόνες της φάσης ισχύουν αυτούσιοι:
+  νέα contextual tabs ΔΕΝ δηλώνουν δικό τους «Κλείσιμο» — **ούτε σύριγγα**· το registry τα κατέχει (strip + idempotent).
+  **Πλήρης τεκμηρίωση:** ADR-581 §11(γ) + changelog 2026-07-17 (Φ7).
+
 - **2026-07-13** — **Φ4j — Ενιαίο leading «Κλείσιμο» button σε ΚΑΘΕ contextual tab (Revit «Modify | …» far-left → Αρχική).**
   Αίτημα Giorgio: όταν επιλέγεται πολυγραμμή/γραμμικό primitive (ή οποιοδήποτε entity) και ανοίγει το contextual tab,
   να εμφανίζεται στην ΑΡΧΗ του ribbon ΜΕΓΑΛΟ κουμπί «Κλείσιμο» που να γυρνάει στην Αρχική καρτέλα — παντού ίδιο. (Αρχική

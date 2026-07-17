@@ -27,8 +27,17 @@ import type {
   DxfImageFillMode,
   TekSymbolMode,
   TekHatchMode,
+  ExportLengthUnit,
 } from '../../../export/types';
+import { isMesh3dFormat } from '../../../export/types';
 import { scopeIncludesBim } from '../../../export/core/export-entity-scope';
+
+/**
+ * ADR-668 — default μονάδα OBJ = **εκατοστά**. Ο three κόσμος είναι μέτρα (ADR-462) και το OBJ
+ * δεν αποθηκεύει μονάδα· το C4D διαβάζει OBJ ως εκατοστά → με μέτρα το μοντέλο άνοιγε 100×
+ * μικρό και ο χρήστης έπρεπε να βάζει Scale 100 στο χέρι.
+ */
+const DEFAULT_MESH3D_UNIT: ExportLengthUnit = 'centimeters';
 
 export interface ExportDialogState {
   format: ExportFormat;
@@ -49,7 +58,10 @@ export interface ExportDialogState {
   setTekSymbolMode: (m: TekSymbolMode) => void;
   tekHatchMode: TekHatchMode;
   setTekHatchMode: (m: TekHatchMode) => void;
-  /** True when current format requires BIM content (IFC) but scope excludes it. */
+  /** ADR-668 — μονάδα του εξαγόμενου OBJ (το glTF είναι spec-locked σε μέτρα). */
+  mesh3dUnit: ExportLengthUnit;
+  setMesh3dUnit: (u: ExportLengthUnit) => void;
+  /** True when current format requires BIM content (IFC/TEK/3Δ) but scope excludes it. */
   readonly scopeConflictsWithFormat: boolean;
   buildRequest: () => ExportRequest;
 }
@@ -73,10 +85,13 @@ export function useExportDialogState(): ExportDialogState {
   // επεξεργάσιμο hatch, αλλά ΚΑΤΑ ΠΡΟΣΕΓΓΙΣΗ. 'exploded' → οι ακριβείς γραμμές (πλήρης ταύτιση
   // με το AutoCAD) με τίμημα το μέγεθος (μετρημένο: πραγματικό σχέδιο 107 MB).
   const [tekHatchMode, setTekHatchMode] = React.useState<TekHatchMode>('native');
+  const [mesh3dUnit, setMesh3dUnit] = React.useState<ExportLengthUnit>(DEFAULT_MESH3D_UNIT);
 
-  // IFC/TEK carry only BIM elements → a `dxf-only` scope produces an empty model.
+  // IFC/TEK/3Δ carry only BIM elements → a `dxf-only` scope produces an empty model.
+  // ADR-668 — the 3Δ formats join this rule because 2D primitives (line/arc/text) have no
+  // solid body: an OBJ of them would be a valid, empty file.
   const scopeConflictsWithFormat =
-    (format === 'ifc' || format === 'tek') && !scopeIncludesBim(entityScope);
+    (format === 'ifc' || format === 'tek' || isMesh3dFormat(format)) && !scopeIncludesBim(entityScope);
 
   const buildRequest = React.useCallback(
     (): ExportRequest => ({
@@ -89,10 +104,13 @@ export function useExportDialogState(): ExportDialogState {
       dxfImageFillMode: format === 'dxf' ? dxfImageFillMode : undefined,
       tekSymbolMode: format === 'tek' ? tekSymbolMode : undefined,
       tekHatchMode: format === 'tek' ? tekHatchMode : undefined,
+      // ADR-668 — OBJ only: glTF is spec-locked to metres, so sending a unit would imply a
+      // choice the exporter is bound to ignore.
+      mesh3dUnit: format === 'obj' ? mesh3dUnit : undefined,
     }),
     [
       format, entityScope, floorScope, dxfVersion, dxfUnit, dxfLineMode, dxfImageFillMode,
-      tekSymbolMode, tekHatchMode,
+      tekSymbolMode, tekHatchMode, mesh3dUnit,
     ],
   );
 
@@ -115,6 +133,8 @@ export function useExportDialogState(): ExportDialogState {
     setTekSymbolMode,
     tekHatchMode,
     setTekHatchMode,
+    mesh3dUnit,
+    setMesh3dUnit,
     scopeConflictsWithFormat,
     buildRequest,
   };

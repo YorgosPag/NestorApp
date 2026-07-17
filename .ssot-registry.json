@@ -4428,6 +4428,20 @@
       "allowlist": [
         "src/hooks/guards/useDependencyGuard.tsx"
       ]
+    },
+    "extract-bim3d-entities": {
+      "ssotFile": "src/subapps/dxf-viewer/bim-3d/scene/extract-bim3d-entities.ts",
+      "description": "ADR-668 - the SceneModel -> Bim3DEntities projection MUST come from extractBim3DEntities() in bim-3d/scene/extract-bim3d-entities.ts. It was a private function of useFloors3DAggregator until the headless 3D exporter (OBJ/glTF) needed the SAME projection: a second copy would silently drift (the aggregator prunes hosted slab openings and resolves snapshot foundations - an exporter-side clone would miss a rule and ship geometry that does not match the live 3D view). It is a pure function (SceneModel in, typed entity buckets out - zero hooks/React), so every caller can import it: the aggregator, the exporter, tests. Re-declaring it (or resolveSnapshotFoundations) anywhere else is forbidden - import instead. Structural (renamed) clones are jscpd territory, not this check (N.18).",
+      "forbiddenPatterns": [
+        "function extractBim3DEntities",
+        "const extractBim3DEntities *=",
+        "function resolveSnapshotFoundations",
+        "const resolveSnapshotFoundations *="
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/bim-3d/scene/extract-bim3d-entities.ts"
+      ],
+      "tier": 3
     }
   }
 }

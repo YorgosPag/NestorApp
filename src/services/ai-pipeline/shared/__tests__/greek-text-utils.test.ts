@@ -11,16 +11,10 @@
 
 // ── Mock server-only (via moduleNameMapper) ──
 
-// ── Mock centralized greek-text utils ──
-jest.mock('@/utils/greek-text', () => ({
-  stripAccents: (text: string) =>
-    text.normalize('NFD').replace(/[\u0300-\u036f]/g, ''),
-  normalizeGreekText: (text: string) =>
-    text
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase(),
-}));
+// ADR-668: `@/utils/greek-text` is deliberately NOT mocked. It is a pure, dependency-free
+// module (no server-only, no I/O), so the mock only restated the real implementation — and
+// once `transliterateGreekToLatin` moved there, the partial mock silently deleted it.
+// Exercising the real SSoT is both simpler and what these assertions always meant to cover.
 
 import {
   transliterateGreekToLatin,

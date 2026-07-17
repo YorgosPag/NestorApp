@@ -1,9 +1,9 @@
 # ADR-581 — Καθολικός Μηχανισμός «Αντιγραφή / Μεταφορά Ιδιοτήτων» (Universal Match/Transfer Properties Engine)
 
-**Status:** 🟡 IMPLEMENTED (UNCOMMITTED) — Φ1+Φ2+Φ3+Φ4+Φ6 υλοποιημένα (75 jest GREEN: 57 πυρήνας + 12 AI intent + 6 preview-entity)· 🔴 browser-verify εκκρεμεί
-**Date:** 2026-07-07
+**Status:** 🟡 IMPLEMENTED (UNCOMMITTED) — Φ1+Φ2+Φ3+Φ4+Φ6+Φ7 υλοποιημένα (94 jest GREEN: 57 πυρήνας + 12 AI intent + 6 preview-entity + 19 ribbon σύριγγα/lead-panel)· 🔴 browser-verify εκκρεμεί
+**Date:** 2026-07-07 (τελευταία ενημέρωση 2026-07-17)
 **Domain:** DXF Viewer / Editing / BIM params & style / UX (canvas + ribbon)
-**Related:** ADR-185 (AI αποφασίζει ΤΙ, ντετερμινιστικός υπολογίζει ΤΙΜΕΣ), ADR-363 §7.1 (multi-selection bulk-edit — το fan-out template), ADR-040 (click hot-path / micro-leaf — CHECK 6B/6D co-stage), ADR-001 (Radix Dialog SSoT), ADR-092 (localStorage SSoT), ADR-294 (SSoT ratchet), ADR-449 (finish-paint — το «writer από click» template), ADR-532 B4 (AllGrips/selection stores)
+**Related:** ADR-510 Φ4j + ADR-363 (contextual leading panel — η σύριγγα συγκατοικεί με το «Κλείσιμο»), ADR-345 (ribbon δομή), ADR-185 (AI αποφασίζει ΤΙ, ντετερμινιστικός υπολογίζει ΤΙΜΕΣ), ADR-363 §7.1 (multi-selection bulk-edit — το fan-out template), ADR-040 (click hot-path / micro-leaf — CHECK 6B/6D co-stage), ADR-001 (Radix Dialog SSoT), ADR-092 (localStorage SSoT), ADR-294 (SSoT ratchet), ADR-449 (finish-paint — το «writer από click» template), ADR-532 B4 (AllGrips/selection stores)
 
 ---
 
@@ -75,7 +75,15 @@
 
 **(β) Ribbon dialog (κύρια ροή):** κουμπί «Αντιγραφή Ιδιοτήτων» στο `multi-selection-bim` contextual tab → action `match-properties.open` → **early-intercept** στο `routeRibbonAction` → `MatchPropertiesDialogStore.open()` (createToggleStore). Το dialog (`ui/match-properties/`): `useMatchProperties` **παγώνει την επιλογή στο mount** (host mount-on-open → φρέσκια source/targets κάθε άνοιγμα)· source = primary, targets = υπόλοιπη επιλογή. `MatchChecklist` (fieldset/legend ανά `MatchCategory`, master checkbox με indeterminate, habit default)· `MatchMappingPreview` (ανά targetType: πηγή→στόχος + confidence% + reason + consistency warnings). Apply → `applyMatchTransfer` → close.
 
-**Tool `'match-properties'`:** registered (`ToolType` + tool-definitions, category `editing` ⇒ ΟΧΙ interactive/drawing) + click-handled (persistent brush). ⚠️ **Χωρίς toolbar button ακόμη** — το σταγονόμετρο δουλεύει με modifiers χωρίς tool· surface button = Φ-later.
+**(γ) Σύριγγα σε ΚΑΘΕ contextual tab (Φ7, Giorgio 2026-07-17):** το leading panel κάθε contextual tab είναι πλέον `[ Κλείσιμο ] [ 💉 Αντιγραφή Ιδιοτήτων ]` — ίδιο row, κολλητά δεξιά, **χωρίς** διαχωριστικό. Πριν, η σύριγγα υπήρχε μόνο στο Home και **εξαφανιζόταν μόλις ο χρήστης επέλεγε οντότητα** — δηλαδή ακριβώς τη στιγμή που τη χρειάζεται.
+
+Η εισαγωγή γίνεται σε **ΕΝΑ** σημείο (`withStandardLeadPanel` ← `RIBBON_CONTEXTUAL_TABS.map(...)`, `app/ribbon-contextual-config.ts`) → **κανένα** από τα ~50 `contextual-*-tab.ts` δεν αγγίχτηκε, και κάθε **μελλοντικό** contextual tab την παίρνει δωρεάν. Νέα contextual tabs **ΔΕΝ** δηλώνουν δικό τους «Κλείσιμο»/σύριγγα — το registry τα κατέχει· ο normaliser στριπάρει ό,τι δηλωθεί (idempotent).
+
+⚠️ **Η σύριγγα ΔΕΝ είναι το `match-properties.open` του (β).** Δύο διαφορετικές λειτουργίες, **όχι** διπλότυπο (απόφαση Giorgio 2026-07-17): σύριγγα = persistent **πινέλο** (`commandKey:'match-properties'` **ΧΩΡΙΣ** `action`)· `match-properties.open` = **dialog** με checklist/AI mapping (**ΜΕ** `action`). Και τα δύο ζουν μαζί στο multi-selection tab. Το `isMatchSyringeCommand` απαιτεί **απουσία** `action` ακριβώς γι' αυτό — αν κάποιος «καθαρίσει» το ένα ως διπλότυπο του άλλου, χάνεται λειτουργία (test-locked: *«keeps the legacy match-properties.open dialog button»*).
+
+**Tool `'match-properties'`:** registered (`ToolType` + tool-definitions, category `editing` ⇒ ΟΧΙ interactive/drawing) + click-handled (persistent brush). **Surface:** Home «Ιδιότητες» panel (Φ6) + leading panel κάθε contextual tab (Φ7). Το σταγονόμετρο δουλεύει και με modifiers χωρίς tool.
+
+**Γιατί «χωρίς `action`» είναι σημασιολογία, όχι λεπτομέρεια:** το `RibbonLargeButton` δίνει προτεραιότητα στο `action` (→ `onAction`) και μόνο αν λείπει καλεί `onToolChange(commandKey)`· ίδιος κανόνας στο `isCommandActive` (active highlight). Πρόσθεσε `action` στη σύριγγα → γίνεται immediate action **και** σβήνει το highlight. Test-locked στο `match-syringe-command.test.ts`.
 
 ## 12. Προαιρετικό AI στρώμα (Φ4 — ✅ IMPLEMENTED, feature-flagged)
 
@@ -108,7 +116,9 @@
 | `systems/match-properties/match-preview-entity.ts` | **SSoT** `buildMatchPreviewEntity` + `recomputeParametricGeometry` (ghost ≡ commit) | Φ6 |
 | `hooks/tools/useMatchHoverGhostPreview.ts` | live hover ghost hook (+brush clear-on-tool-exit) | Φ6 |
 | `components/dxf-layout/canvas-layer-stack-match-ghost.tsx` | micro-leaf mount (ADR-040) | Φ6 |
-| `ui/ribbon/data/home-tab-match.ts` | Home «Ιδιότητες» panel — μεγάλο κουμπί σύριγγας | Φ6 |
+| `ui/ribbon/data/match-syringe-command.ts` | **SSoT** ορισμός κουμπιού σύριγγας (`buildMatchSyringeCommand`) + `isMatchSyringeCommand` (απαιτεί `!action`) | Φ7 |
+| `ui/ribbon/data/home-tab-match.ts` | Home «Ιδιότητες» panel — καταναλώνει τον SSoT builder | Φ6 |
+| `ui/ribbon/data/contextual-lead-panel.ts` | **SSoT** leading panel κάθε contextual tab: `[Κλείσιμο][σύριγγα]` + `withStandardLeadPanel` (ήταν `contextual-close-panel.ts`) | Φ7 |
 | `ui/match-properties/match-dialog-model.ts` | pure offered-groups + preview | Φ3 |
 | `ui/match-properties/useMatchProperties.ts` | dialog controller (selection→applier) | Φ3 |
 | `ui/match-properties/{MatchSettingsDialog,MatchChecklist,match-mapping-preview}.tsx` | UI | Φ3 |
@@ -142,6 +152,20 @@
 ---
 
 ## Changelog
+
+### 2026-07-17 — Φ7: η σύριγγα σε ΚΑΘΕ contextual tab (εντολή Giorgio)
+
+**Πρόβλημα:** η σύριγγα ζούσε μόνο στο Home tab. Μόλις ο χρήστης επέλεγε οντότητα, το ribbon γύριζε στο contextual tab της και η σύριγγα **εξαφανιζόταν** — τη στιγμή ακριβώς που έχει επιλογή και θέλει να αντιγράψει ιδιότητες.
+
+**Λύση σε ΕΝΑ σημείο:** ο SSoT normaliser που εισάγει το «Κλείσιμο» σε κάθε contextual tab (`withStandardClose`, ADR-510 Φ4j) επεκτάθηκε ώστε το leading panel να είναι `[ Κλείσιμο ] [ 💉 Αντιγραφή Ιδιοτήτων ]` — ίδιο row, κολλητά, χωρίς διαχωριστικό (επιλογή Giorgio). Μετονομάστηκε σε **`withStandardLeadPanel`** / **`contextual-lead-panel.ts`** (`buildClosePanel` → `buildContextualLeadPanel`, panel id `${tabId}-close` → `${tabId}-lead`): ο ρόλος του module δεν είναι πια «το close panel» αλλά «το leading panel κάθε contextual tab» — το όνομα έπρεπε να λέει την αλήθεια. **Κανένα** από τα ~50 `contextual-*-tab.ts` δεν αγγίχτηκε· κάθε μελλοντικό tab παίρνει τη σύριγγα δωρεάν.
+
+**Anti-clone (N.0.2/N.18):** ο ορισμός του κουμπιού ήταν inline στο `home-tab-match.ts`· η αντιγραφή του στο lead panel θα γεννούσε sibling clone. Εξήχθη στο **`match-syringe-command.ts`** (`buildMatchSyringeCommand(id)` + `isMatchSyringeCommand`) — ένας ορισμός, δύο call sites, μηδέν drift. `jscpd:diff` καθαρό στα 4 src αρχεία.
+
+**Anti-duplicate + η παγίδα που ΔΕΝ πατήθηκε:** το `isMatchSyringeCommand` απαιτεί **απουσία** `action`, οπότε ο strip pass καθαρίζει close/σύριγγα (idempotent) αλλά **αφήνει ζωντανό** το legacy `match-properties.open` του multi-selection tab. Πινέλο vs dialog = **δύο λειτουργίες, όχι διπλότυπο** (ρητή απόφαση Giorgio 2026-07-17· το dialog checklist/AI δεν το ανοίγει τίποτα άλλο, αφαίρεσή του = απώλεια λειτουργίας). Test-locked και προς τις δύο κατευθύνσεις.
+
+**Ευρήματα από τον κώδικα** (code = source of truth): (1) το `panel.labelKey` **δεν αποδίδεται πουθενά** — το `RibbonPanel` ρεντάρει μόνο rows· ο ρόλος του lead panel είναι η **θέση**, όχι ετικέτα. (2) Όλα τα i18n keys υπήρχαν ήδη → **μηδέν** νέα keys, **καμία** επαφή με τα locale JSON (N.11).
+
+**Αρχεία:** `ui/ribbon/data/match-syringe-command.ts` (νέο) · `ui/ribbon/data/contextual-lead-panel.ts` (← rename `contextual-close-panel.ts`) · `ui/ribbon/data/home-tab-match.ts` · `app/ribbon-contextual-config.ts` · σχόλια σε 3 `contextual-*-tab.ts`. **Tests:** `contextual-lead-panel.test.ts` (rename, 6 παλιά + 5 νέα) + `match-syringe-command.test.ts` (8 νέα) → **19/19**· ολόκληρο ribbon+app **66 suites / 732 tests GREEN**. 🔴 browser-verify εκκρεμεί (Giorgio).
 
 ### 2026-07-07 — Φ6 fix: section-lock σε μεταφορά διατομής (auto-sizable μέλη, user wins)
 **Incident (browser-verify):** column→column μεταφορά width/depth εφαρμοζόταν σωστά (250→400) αλλά ο

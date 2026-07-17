@@ -152,13 +152,25 @@ export function computeOpeningGeometry(
 }
 
 /**
+ * ADR-449 §opening-bands — τα ΜΟΝΑ πεδία που διαβάζει το {@link structuralRevealHeightRangeMm}.
+ * Structural type (όχι το πλήρες `OpeningParams`) ώστε ΚΑΙ ο σοβάς (`SilhouetteOpeningSource`,
+ * minimal 2Δ+3Δ source χωρίς cast) να τρέφει το ΙΔΙΟ SSoT με τον πυρήνα → ίδιο κενό, εξ ορισμού.
+ * Widening του accepted input — κάθε υπάρχων caller με πλήρες `OpeningParams` δουλεύει αυτούσιος.
+ */
+export type OpeningRevealHeightParams = Pick<OpeningParams, 'sillHeight' | 'height' | 'revealInsulation'>;
+
+/**
  * ADR-396 — Structural κατακόρυφο εύρος του cutout όταν υπάρχει reveal μόνωση (3D).
  * Η μόνωση τρώει το περιβάλλον υλικό: πρέκι `+t` πάνω από το head (πάντα)· ποδιά
  * `−t` κάτω από το sill (μόνο παράθυρα, `sillHeight > 0`· η πόρτα φτάνει στο δάπεδο).
  * Χωρίς reveal → `[0|sill .. head]` αμετάβλητο (backward-compat). Όλα σε mm.
+ *
+ * **Σύμβαση datum:** wall-base-relative (0 = πάτος τοίχου/δάπεδο) — ο caller προσθέτει το
+ * `zBot` του τοίχου για building-relative. Ίδια σύμβαση με το `baseAt`/`heightM` του
+ * `computeWallOpeningPieces` (ο πυρήνας).
  */
 export function structuralRevealHeightRangeMm(
-  params: OpeningParams,
+  params: OpeningRevealHeightParams,
 ): { bottomMm: number; topMm: number } {
   const t = (params.revealInsulation?.thickness_m ?? 0) * 1000;
   const headMm = params.sillHeight + params.height;

@@ -12,8 +12,8 @@
  * dxf-special-actions → `topo:ribbon-action` → `runTopoRibbonAction`). Η «Αναδημιουργία
  * ισοϋψών» (`topo.contours.generate`) (re)build-άρει ΚΑΙ το επιλέξιμο footprint της
  * επιφάνειας από την ΙΔΙΑ TIN (Stage B). Η «Επιλογή» reuse-άρει το SSoT
- * `buildSelectPanel`. ΚΑΜΙΑ δήλωση «Κλείσιμο» — το `withStandardClose` το προσθέτει
- * κεντρικά (ribbon-contextual-config.ts). Κανένα νέο command route/label.
+ * `buildSelectPanel`. ΚΑΜΙΑ δήλωση «Κλείσιμο»/σύριγγας — το `withStandardLeadPanel` τα
+ * προσθέτει κεντρικά (ribbon-contextual-config.ts). Κανένα νέο command route/label.
  *
  * @see ./contextual-image-tab.ts — το mirror template (non-BIM sibling, actions-only)
  * @see ./topography-tab.ts — η SSoT των topo actions (`topo.*` command keys)

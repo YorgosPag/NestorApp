@@ -33,6 +33,67 @@ export function normalizeGreekText(text: string): string {
 }
 
 // ============================================================================
+// GREEK → LATIN TRANSLITERATION
+// ============================================================================
+
+/** Digraph mappings (checked first, order matters). */
+const GREEK_DIGRAPHS: ReadonlyArray<readonly [string, string]> = [
+  // Diphthongs
+  ['ου', 'ou'],
+  ['αι', 'ai'],
+  ['ει', 'ei'],
+  ['οι', 'oi'],
+  ['αυ', 'av'],
+  ['ευ', 'ev'],
+  // Consonant clusters
+  ['μπ', 'b'],
+  ['ντ', 'd'],
+  ['γκ', 'g'],
+  ['γγ', 'ng'],
+  ['τσ', 'ts'],
+  ['τζ', 'tz'],
+];
+
+/** Single-character Greek → Latin mapping. */
+const GREEK_TO_LATIN: ReadonlyMap<string, string> = new Map([
+  ['α', 'a'], ['β', 'v'], ['γ', 'g'], ['δ', 'd'], ['ε', 'e'],
+  ['ζ', 'z'], ['η', 'i'], ['θ', 'th'], ['ι', 'i'], ['κ', 'k'],
+  ['λ', 'l'], ['μ', 'm'], ['ν', 'n'], ['ξ', 'x'], ['ο', 'o'],
+  ['π', 'p'], ['ρ', 'r'], ['σ', 's'], ['ς', 's'], ['τ', 't'],
+  ['υ', 'y'], ['φ', 'f'], ['χ', 'ch'], ['ψ', 'ps'], ['ω', 'o'],
+]);
+
+/**
+ * Transliterate Greek text to Latin characters.
+ * "Γιώργος" → "giorgos", "Σοφία" → "sofia"
+ *
+ * Steps:
+ * 1. Lowercase + strip accents
+ * 2. Replace digraphs (ου→ou, μπ→b, etc.)
+ * 3. Replace remaining single characters
+ *
+ * Non-Greek input passes through unchanged (lowercased) — callers may hand it
+ * mixed or already-Latin text.
+ */
+export function transliterateGreekToLatin(text: string): string {
+  let normalized = normalizeGreekText(text);
+
+  // Replace digraphs first (longer sequences before single chars)
+  for (const [greek, latin] of GREEK_DIGRAPHS) {
+    normalized = normalized.split(greek).join(latin);
+  }
+
+  // Replace remaining single Greek characters
+  let result = '';
+  for (const char of normalized) {
+    const mapped = GREEK_TO_LATIN.get(char);
+    result += mapped ?? char;
+  }
+
+  return result;
+}
+
+// ============================================================================
 // TITLE CASE (proper name casing)
 // ============================================================================
 

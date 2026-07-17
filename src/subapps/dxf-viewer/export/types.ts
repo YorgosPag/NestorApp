@@ -13,13 +13,38 @@
 import type { Entity, SceneModel } from '../types/entities';
 import type { DxfVersion, DxfUnit } from '../types/dxf-export.types';
 import type { Level } from '../systems/levels/config';
+import type { BuildingRef, FloorRef } from '../bim/utils/bim-floor-utils';
 
 // ============================================================================
 // SCOPE ENUMS (the three user-facing axes)
 // ============================================================================
 
 /** Target file format. */
-export type ExportFormat = 'dxf' | 'ifc' | 'pdf' | 'tek';
+export type ExportFormat = 'dxf' | 'ifc' | 'pdf' | 'tek' | 'obj' | 'gltf';
+
+/**
+ * ADR-668 — τα δύο 3Δ mesh formats. Ένας adapter, δύο serialisers.
+ *   'obj'  → Wavefront OBJ (+ συνοδό `.mtl`) — το ΜΟΝΟ 3Δ format που διαβάζει το
+ *            Cinema 4D **R15** (ο glTF importer μπήκε στο R2024).
+ *   'gltf' → glTF 2.0 binary (.glb) — Blender / C4D 2024+ / κάθε σύγχρονο DCC.
+ */
+export type Mesh3dFormat = Extract<ExportFormat, 'obj' | 'gltf'>;
+
+export function isMesh3dFormat(format: ExportFormat): format is Mesh3dFormat {
+  return format === 'obj' || format === 'gltf';
+}
+
+/**
+ * ADR-668 — μονάδα μήκους εξαγωγής. **Επαναχρησιμοποιεί** την υπάρχουσα ένωση του DXF
+ * (N.12 — ένα SSoT, ίδια `export.units.*` i18n keys) αντί για δεύτερο, πανομοιότυπο union.
+ *
+ * Γιατί υπάρχει καθόλου για mesh: το OBJ **δεν αποθηκεύει μονάδα** — είναι καθαροί
+ * αριθμοί. Ο three κόσμος είναι σε μέτρα (ADR-462), το C4D διαβάζει OBJ ως εκατοστά →
+ * 100× μικρό μοντέλο. Οι μεγάλοι (Revit/ArchiCAD) δεν το ψήνουν σιωπηλά ούτε το πετούν
+ * στον χρήστη: το κάνουν ρητή επιλογή με σωστό default. Το glTF **επιβάλλει μέτρα** στο
+ * spec → εκεί δεν προσφέρεται επιλογή.
+ */
+export type ExportLengthUnit = DxfUnit;
 
 /**
  * Content filter — which kinds of entities go into the file.
@@ -106,6 +131,13 @@ export interface ExportRequest {
 
   /** ADR-648 Στάδιο Ε — hatch transfer mode (native pattern = ελαφρύ vs exploded = ταύτιση). */
   readonly tekHatchMode?: TekHatchMode;
+
+  /**
+   * ADR-668 — μονάδα του εξαγόμενου OBJ. Meaningful **μόνο** όταν `format === 'obj'`:
+   * το glTF είναι spec-locked σε μέτρα. Default `'centimeters'` (ανοίγει σωστά στο C4D
+   * χωρίς χειροκίνητο Scale 100).
+   */
+  readonly mesh3dUnit?: ExportLengthUnit;
 }
 
 // ============================================================================
@@ -128,6 +160,23 @@ export interface ExportDeps {
   readonly projectName: string;
   /** ISO date (YYYY-MM-DD) — for filename + title block. */
   readonly dateStr: string;
+
+  /**
+   * ADR-668 — building floors + buildings. Χρειάζονται **μόνο** από τον 3Δ mesh exporter,
+   * για να στοιβάξει τους ορόφους στο πραγματικό τους υψόμετρο.
+   *
+   * Γιατί δεν προκύπτουν από τα `levelScenes`: το `Level` κρατά `order`/`floorId` — **όχι**
+   * υψόμετρο. Το FFL βγαίνει από το building floor μέσω `resolveFloorDatumRelativeElevationMm`
+   * (ADR-448/ADR-369). Χωρίς αυτά, το «όλοι οι όροφοι σε ένα αρχείο» θα στοίβαζε κάθε όροφο
+   * στο Z=0 — δηλαδή ένα κτίριο πατημένο σε ένα επίπεδο.
+   *
+   * Optional στον τύπο (DXF/TEK δεν τα αγγίζουν), αλλά ο mesh3d **σκάει ρητά** αν λείπουν
+   * ενώ στοιβάζει >1 όροφο — fail-closed, ποτέ σιωπηλά λάθος γεωμετρία.
+   */
+  readonly floors?: readonly FloorRef[];
+  readonly buildings?: readonly BuildingRef[];
+  /** ADR-668 — active building, για το datum των υψομέτρων. */
+  readonly activeBuildingId?: string | null;
 }
 
 // ============================================================================

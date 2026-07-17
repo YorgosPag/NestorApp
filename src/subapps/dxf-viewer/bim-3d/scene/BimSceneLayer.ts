@@ -61,14 +61,45 @@ export interface EntityResolution {
   readonly baseElevation: number;
 }
 
+/** Construction-time behaviour switches (ADR-668). Absent ⇒ live-viewport semantics. */
+export interface BimSceneLayerOptions {
+  /**
+   * ADR-668 — build meshes for entities the view filters OUT (isolate / V-G hide /
+   * layer off-frozen / discipline off), instead of skipping them, and record their
+   * ids in `hiddenEntityIds`.
+   *
+   * ONLY the 3Δ exporter sets this. Rationale (Giorgio, 2026-07-17): an export must
+   * carry the whole model — if the rebar is switched off on screen it still ships, so
+   * the user can turn it back on in the target DCC. Neither OBJ nor glTF can encode
+   * "hidden" (OBJ has no such concept; three's GLTFExporter never writes
+   * `KHR_node_visibility`), so the exporter marks them by NAME + material instead —
+   * which is exactly what `hiddenEntityIds` feeds.
+   *
+   * The live viewport MUST leave this false: building hidden geometry every sync would
+   * both cost frames and let filtered entities be picked by the raycaster.
+   */
+  readonly includeHidden?: boolean;
+}
+
 export class BimSceneLayer {
   readonly group: THREE.Group;
   private _hasMesh = false;
+  private readonly includeHidden: boolean;
+  private readonly _hiddenEntityIds = new Set<string>();
 
-  constructor(scene: THREE.Scene) {
+  constructor(scene: THREE.Scene, options: BimSceneLayerOptions = {}) {
     this.group = new THREE.Group();
     this.group.name = 'bim-entities';
+    this.includeHidden = options.includeHidden === true;
     scene.add(this.group);
+  }
+
+  /**
+   * ADR-668 — ids of entities that the view would have hidden but were built anyway
+   * (`includeHidden`). Empty in normal viewport mode. Reflects the LAST sync.
+   */
+  get hiddenEntityIds(): ReadonlySet<string> {
+    return this._hiddenEntityIds;
   }
 
   sync(
@@ -201,6 +232,10 @@ export class BimSceneLayer {
    * Per-entity visibility + building binding. Returns null when the entity
    * is filtered out (V/G hide, Layer hide/frozen, Floor hide, Building hide,
    * or active-building outside-of-view). Single SSoT for ADR-382 intersection.
+   *
+   * ADR-668 — under `includeHidden` a filtered entity is NOT dropped: it is built and
+   * its id recorded in `hiddenEntityIds`. This is the one place that knows the verdict,
+   * so recording it here keeps the ~30 converters that stamp mesh `userData` untouched.
    */
   private resolveEntity(
     entity: { id?: string; layerId?: string; discipline?: Discipline },
@@ -216,7 +251,7 @@ export class BimSceneLayer {
     const buildingId = resolved?.id ?? '';
     const buildingMode = ctx.buildingVisModes.get(buildingId);
 
-    if (!resolveIsEntityVisible(
+    const visible = resolveIsEntityVisible(
       { category, id: entity.id, layerId: entity.layerId, discipline: entity.discipline },
       {
         objectStyles: ctx.objectStyles,
@@ -224,10 +259,13 @@ export class BimSceneLayer {
         layer, floorMode: ctx.floorMode, buildingMode,
         isolate: ctx.isolate,
       },
-    )) return null;
+    ) && this.shouldRender(buildingId, ctx.useNewSystem, ctx.buildingVisModes, ctx.activeBuildingId);
 
-    if (!this.shouldRender(buildingId, ctx.useNewSystem, ctx.buildingVisModes, ctx.activeBuildingId)) {
-      return null;
+    if (!visible) {
+      if (!this.includeHidden) return null;
+      // id-less geometry (envelope/wires) cannot be marked downstream — it is built
+      // like everything else, just unmarked.
+      if (entity.id) this._hiddenEntityIds.add(entity.id);
     }
     return { layer, buildingId, buildingMode, baseElevation: resolved?.baseElevation ?? 0 };
   }
@@ -355,6 +393,9 @@ export class BimSceneLayer {
   }
 
   private clearGroup(): void {
+    // ADR-668 — hidden-id bookkeeping describes the CURRENT build; a rebuild starts fresh
+    // (a re-shown entity must not linger as hidden).
+    this._hiddenEntityIds.clear();
     // ADR-363 Bug 2 — wallToMesh now returns Group για openings (per-segment
     // meshes). Recursive traverse disposes nested geometries.
     for (const child of [...this.group.children]) {

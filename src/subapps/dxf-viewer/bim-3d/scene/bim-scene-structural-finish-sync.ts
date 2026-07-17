@@ -13,6 +13,8 @@ import type { EntityResolution } from './BimSceneLayer';
 import type { ColumnEntity } from '../../bim/types/column-types';
 import type { BeamEntity } from '../../bim/types/beam-types';
 import type { WallEntity } from '../../bim/types/wall-types';
+import type { OpeningEntity } from '../../bim/types/opening-types';
+import { filterHostedOpenings } from './bim-scene-hosted-opening-filters';
 import type { BimCategory } from '../../config/bim-object-styles';
 import type { Discipline } from '../../bim/discipline/bim-discipline';
 import { isStructuralFinishVisible } from '../../bim/finishes/structural-finish-visibility';
@@ -98,13 +100,22 @@ export function syncStructuralFinishSkin(
   // του κτιρίου του ώστε να ενωθεί με τα δομικά μέλη στο union (σοβάς τυλίγει + σβήνει στις
   // συμβολές) ΚΑΙ ένας μεμονωμένος τοίχος (χωρίς κολόνες/δοκάρια) να παράγει σοβά. Tilted
   // τοίχοι εξαιρούνται από το flat union (ADR-404, mirror columns/beams) — DNA lines ως πριν.
+  //
+  // ADR-449 §opening-bands — μαζεύουμε ΤΑΥΤΟΧΡΟΝΑ τα ορατά ανοίγματα ανά τοίχο ώστε ο σοβάς να μην
+  // σκεπάζει τα κουφώματα. **ΤΟ ΙΔΙΟ `filterHostedOpenings`** που τρέφει τον πυρήνα (`syncWalls` →
+  // `wallToMesh`) → ο σοβάς κόβεται ακριβώς εκεί που λείπει μπετόν, με ίδιο visibility gating
+  // (ADR-382 2Δ⟷3Δ parity· ADR-615: self-hosted `wallId === undefined` δεν ταιριάζει ποτέ).
+  const openingsByWallId = new Map<string, readonly OpeningEntity[]>();
   for (const wall of entities.walls) {
     if (isWallTilted(wall.params)) continue;
     const r = resolve(wall, 'wall', ctx);
-    if (r) groupFor(r.buildingId, r.baseElevation).walls.push(wall);
+    if (!r) continue;
+    groupFor(r.buildingId, r.baseElevation).walls.push(wall);
+    const ops = filterHostedOpenings(entities.openings, 'wallId', wall.id, r.buildingMode, ctx);
+    if (ops.length > 0) openingsByWallId.set(wall.id, ops);
   }
   for (const [buildingId, g] of groups) {
-    const bands = computeStructuralFinishSilhouette(g.columns, g.beams, g.walls, ctx.floorElevationMm, columnExtents, false, beamTopClipById);
+    const bands = computeStructuralFinishSilhouette(g.columns, g.beams, g.walls, ctx.floorElevationMm, columnExtents, false, beamTopClipById, openingsByWallId);
     const sceneUnits = g.columns[0]?.params.sceneUnits ?? g.beams[0]?.params.sceneUnits ?? g.walls[0]?.params.sceneUnits ?? 'mm';
     const skin = buildStructuralSilhouetteSkin(
       bands, sceneUnits, g.baseElevation, ctx.activeLevelId, `structural-finish-${buildingId}`,

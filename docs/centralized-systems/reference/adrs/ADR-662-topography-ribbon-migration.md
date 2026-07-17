@@ -97,7 +97,7 @@
 |---|---|---|
 | Μόνιμο discipline tab | `ui/ribbon/data/systems-discipline-tabs.ts` (ADR-444: `toolBtn`/`actionBtn` helpers + `RibbonTab`) | `topography-tab.ts` (νέο data file, ΙΔΙΟ pattern) |
 | Εγγραφή tab στο ribbon | `ui/ribbon/data/ribbon-default-tabs.ts` (`DEFAULT_RIBBON_TABS` + `DEFAULT_RIBBON_TAB_ORDER`) | +1 entry `'topography'` + import |
-| Contextual tab registry | `app/ribbon-contextual-config.ts` (`RAW_RIBBON_CONTEXTUAL_TABS` + `withStandardClose`) | +1 `CONTEXTUAL_TOPO_SURFACE_TAB` |
+| Contextual tab registry | `app/ribbon-contextual-config.ts` (`RAW_RIBBON_CONTEXTUAL_TABS` + `withStandardLeadPanel` — ήταν `withStandardClose` πριν το ADR-581 Φ7) | +1 `CONTEXTUAL_TOPO_SURFACE_TAB` |
 | Selection → trigger | `app/resolve-contextual-trigger.ts` (`ENTITY_CONTEXTUAL_TRIGGER` map + `resolveContextualTrigger()`) | topo trigger (βλ. §5 για το πώς) |
 | Trigger tokens barrel | `ui/ribbon/data/contextual-triggers.ts` | +1 `TOPO_SURFACE_CONTEXTUAL_TRIGGER` |
 | Auto-activate contextual tab | `ui/ribbon/components/RibbonRoot.tsx:98-124` (ADR-345 §5.4) | καμία αλλαγή (δουλεύει ήδη) |

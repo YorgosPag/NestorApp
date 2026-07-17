@@ -200,7 +200,7 @@ describe('CONTEXTUAL_BLOCK_LIBRARY_TAB — wiring', () => {
     expect(isBlockLibraryRibbonKey(UNIFORM_KEY)).toBe(false);
   });
 
-  it('δεν δηλώνει δικό του κουμπί «Κλείσιμο» (το βάζει κεντρικά ο withStandardClose)', () => {
+  it('δεν δηλώνει δικό του κουμπί «Κλείσιμο» (το βάζει κεντρικά ο withStandardLeadPanel)', () => {
     expect([...comboboxKeys, ...toggleKeys].some((k) => k.includes('close'))).toBe(false);
   });
 

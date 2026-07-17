@@ -13,9 +13,12 @@
  *   all-zip     → N floors     → N `.dxf` in a `.zip`
  *   all-single  → N floors     → 1 merged `.dxf` (FLnn_ layer prefixes)
  *
+ * Floor handling (3Δ mesh — OBJ/glTF, ADR-668): same three scopes, but `all-single`
+ * STACKS the storeys at their true elevations instead of merging them onto one plane.
+ *
  * IFC / PDF adapters arrive in later slices.
  *
- * ADR-505 §C.
+ * ADR-505 §C · ADR-668.
  */
 
 import { triggerExportDownload } from '@/lib/exports/trigger-export-download';
@@ -34,10 +37,13 @@ import { resolveImageFillsForDxf } from './core/image-fill-export';
 // αλληλοεπικάλυψη marker).
 import { resolveImageEntitiesForDxf } from './core/image-entity-export';
 import { exportFloorToTek, type TekExportOptions } from './formats/tek-export-adapter';
+// ADR-668 — 3Δ mesh formats (OBJ + glTF); one adapter, two serialisers.
+import { exportFloorsToMesh3d } from './formats/mesh3d-export-adapter';
 import { useDrawingScaleStore } from '../state/drawing-scale-store';
 import type { DxfExportSceneRequest } from '../types/dxf-export.types';
 import type {
   DxfImageFillMode, DxfLineMode, ExportArtifact, ExportDeps, ExportRequest, ExportResult,
+  Mesh3dFormat,
 } from './types';
 
 export async function runExport(
@@ -49,12 +55,65 @@ export async function runExport(
       return runDxfExport(request, deps);
     case 'tek':
       return runTekExport(request, deps);
+    case 'obj':
+    case 'gltf':
+      // `request.format` narrows to `Mesh3dFormat` here — passed explicitly so the adapter
+      // never has to re-derive (or cast) what the switch already proved.
+      return runMesh3dExport(request, deps, request.format);
     case 'ifc':
     case 'pdf':
       throw new Error(`EXPORT_FORMAT_NOT_READY:${request.format}`);
     default:
       throw new Error(`EXPORT_FORMAT_UNKNOWN`);
   }
+}
+
+/**
+ * ADR-668 — 3Δ mesh export (OBJ + glTF), built headless from `levelScenes`.
+ *
+ * Floor grouping differs from DXF/TEK, because a 3Δ model has a real Z axis:
+ *   active     → 1 storey                → 1 model
+ *   all-zip    → 1 model PER storey      → N models (zip)
+ *   all-single → ALL storeys STACKED at their true elevations → 1 model
+ *
+ * That last one is why `all-single` is a single `exportFloorsToMesh3d` call over every floor
+ * rather than a merge of per-floor outputs: the stacking is what makes it a building, and
+ * `buildMesh3dScene` already does it (same path the live «Όλοι οι όροφοι» 3Δ view uses).
+ */
+async function runMesh3dExport(
+  request: ExportRequest,
+  deps: ExportDeps,
+  format: Mesh3dFormat,
+): Promise<ExportResult> {
+  const floors = resolveExportFloors(deps.levelScenes, deps.activeLevelId, request.floorScope);
+  // Default cm: three is metres (ADR-462), C4D reads OBJ as centimetres → metres would open
+  // 100× too small. glTF ignores this — spec-locked to metres.
+  const common = { format, baseName: deps.projectName, unit: request.mesh3dUnit ?? 'centimeters' } as const;
+
+  // all-zip → one model per storey; the storey is in the FILENAME, so meshes need no prefix.
+  if (request.floorScope === 'all-zip') {
+    const artifacts: ExportArtifact[] = [];
+    const warnings: string[] = [];
+    for (const floor of floors) {
+      const out = await exportFloorsToMesh3d([floor], deps, {
+        ...common, filenamePart: floor.level.name, prefixMeshesWithFloor: false,
+      });
+      artifacts.push(...out.artifacts);
+      warnings.push(...out.warnings);
+    }
+    return packageArtifacts(artifacts, deps, warnings);
+  }
+
+  // active → the one storey; all-single → every storey stacked into ONE model, where the
+  // per-mesh floor prefix is the ONLY thing separating them.
+  const stacked = request.floorScope === 'all-single';
+  const out = await exportFloorsToMesh3d(floors, deps, {
+    ...common,
+    filenamePart: stacked ? 'all-floors' : '',
+    prefixMeshesWithFloor: stacked,
+  });
+  // OBJ hands back `.obj` + `.mtl` → packaged as ONE zip named after the model, not `_floors`.
+  return packageArtifacts(out.artifacts, deps, out.warnings, stacked ? 'all-floors' : '');
 }
 
 /**
@@ -93,13 +152,18 @@ async function runTekExport(
 
 /**
  * Deliver per-floor artifacts: a single one downloads directly; several pack into
- * one `.zip`. Shared by every multi-floor format path (DXF/TEK) so the pack/
+ * one `.zip`. Shared by every multi-floor format path (DXF/TEK/mesh3d) so the pack/
  * download logic lives in ONE place (N.18 anti-clone).
+ *
+ * `zipLabel` names the bundle. It defaults to `floors` — true for DXF/TEK, where several
+ * artifacts always mean several storeys — but OBJ pairs a `.mtl` with its `.obj` for a
+ * SINGLE storey, and calling that bundle `_floors` would be a lie (ADR-668).
  */
 async function packageArtifacts(
   artifacts: ExportArtifact[],
   deps: ExportDeps,
   warnings: string[],
+  zipLabel = 'floors',
 ): Promise<ExportResult> {
   if (artifacts.length === 1) {
     triggerExportDownload({ blob: artifacts[0].blob, filename: artifacts[0].filename });
@@ -110,7 +174,7 @@ async function packageArtifacts(
     artifacts.map(async (a) => ({ name: a.filename, data: await blobToUint8(a.blob) })),
   );
   const zipBlob = createStoredZip(zipFiles);
-  const zipName = buildFloorFilename(deps.projectName, 'floors', 'zip');
+  const zipName = buildFloorFilename(deps.projectName, zipLabel, 'zip');
   triggerExportDownload({ blob: zipBlob, filename: zipName });
   return { filename: zipName, fileCount: artifacts.length, warnings };
 }

@@ -1,14 +1,13 @@
 /**
  * ADR-581 Φ6 — Home tab, «Ιδιότητες» panel: μεγάλο κουμπί σύριγγας.
  *
- * `commandKey:'match-properties'` ΧΩΡΙΣ `action` → ενεργοποιεί το persistent TOOL
- * (`toolStateStore.selectTool('match-properties')`, όπως Move/Copy/Rotate) αντί για
- * immediate action. Το εικονίδιο `match-syringe` είναι reactive (empty ⇄ full) μέσω
- * του brush store (βλ. `RibbonButtonIcon.tsx`). Το κουμπί παίρνει active highlight
- * όσο το εργαλείο είναι ενεργό (κοινό `activeTool` state των large buttons).
+ * Ο ορισμός του κουμπιού ζει στο `match-syringe-command.ts` (SSoT) — το ΙΔΙΟ κουμπί
+ * μπαίνει και στο leading panel κάθε contextual tab, οπότε η σημασιολογία του
+ * (persistent tool, ΧΩΡΙΣ `action`) δεν επιτρέπεται να αποκλίνει ανά call site.
  */
 
 import type { RibbonPanelDef } from '../types/ribbon-types';
+import { buildMatchSyringeCommand } from './match-syringe-command';
 
 export const HOME_MATCH_PANEL: RibbonPanelDef = {
   id: 'match',
@@ -21,14 +20,7 @@ export const HOME_MATCH_PANEL: RibbonPanelDef = {
         {
           type: 'simple',
           size: 'large',
-          command: {
-            id: 'match.syringe',
-            labelKey: 'ribbon.commands.matchSyringe',
-            tooltipKey: 'ribbon.commands.matchSyringeTooltip',
-            icon: 'match-syringe',
-            commandKey: 'match-properties',
-            shortcut: 'MA',
-          },
+          command: buildMatchSyringeCommand('match.syringe'),
         },
       ],
     },

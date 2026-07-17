@@ -1,0 +1,102 @@
+/**
+ * ADR-668 — 3Δ mesh export adapter (OBJ + glTF). Ένας adapter, δύο serialisers.
+ *
+ * Μιμείται το συμβόλαιο του `tek-export-adapter` (options interface + top-level entry point που
+ * επιστρέφει artifacts + warnings), με μία διαφορά: επιστρέφει **artifacts (πληθυντικό)**, γιατί
+ * το OBJ βγάζει **ζεύγος** `.obj` + `.mtl`.
+ *
+ * **Πλαίσιο στόχου:** το Cinema 4D του χρήστη είναι **R15 (2013)** — ο glTF importer μπήκε στο
+ * R2024, οπότε το OBJ είναι το μόνο που ανοίγει εκεί. Το glTF μπαίνει τώρα γιατί είναι η ίδια
+ * σκηνή με έναν άλλο serialiser (Blender / C4D 2024+ / κάθε σύγχρονο DCC).
+ *
+ * @see docs/centralized-systems/reference/adrs/ADR-668-mesh3d-export-obj-gltf.md
+ */
+
+import type { ResolvedExportFloor } from '../core/export-floor-scope';
+import type { ExportArtifact, ExportDeps, ExportLengthUnit, Mesh3dFormat } from '../types';
+import { buildFloorFilename } from './dxf-export-adapter';
+import { buildMesh3dScene } from '../core/mesh3d/build-mesh3d-scene';
+import { assignExportMaterials, writeMtl } from '../core/mesh3d/mesh3d-materials';
+import { applyExportUnit, nameMeshesForExport } from '../core/mesh3d/mesh3d-prepare';
+import type { MeshNameCharset } from '../core/mesh3d/mesh3d-naming';
+import { injectMtlLib, serialiseGlb, serialiseObj } from '../core/mesh3d/mesh3d-serialise';
+
+export interface Mesh3dExportOptions {
+  readonly format: Mesh3dFormat;
+  readonly baseName: string;
+  /** Μόνο για OBJ — το glTF είναι spec-locked σε μέτρα. */
+  readonly unit: ExportLengthUnit;
+  /**
+   * Κομμάτι ονόματος αρχείου (π.χ. «Ισόγειο» / «all-floors»); κενό ⇒ σκέτο `<base>.<ext>`.
+   * Ανεξάρτητο από τα προθέματα των meshes — βλ. `prefixMeshesWithFloor`.
+   */
+  readonly filenamePart: string;
+  /**
+   * Να μπει το όνομα ορόφου ως πρόθεμα σε **κάθε mesh**; True μόνο στο `all-single`, όπου
+   * πολλοί όροφοι μοιράζονται ΕΝΑ αρχείο και χωρίς πρόθεμα δεν ξεχωρίζουν. Στα `active`/
+   * `all-zip` ο όροφος είναι ήδη στο όνομα του αρχείου → σκέτος θόρυβος.
+   */
+  readonly prefixMeshesWithFloor: boolean;
+}
+
+export interface Mesh3dExportOutput {
+  readonly artifacts: ExportArtifact[];
+  readonly warnings: string[];
+}
+
+/** OBJ = χωρίς προδιαγραφή encoding (C4D R15 ⇒ latin)· glTF = UTF-8 by spec. */
+function charsetFor(format: Mesh3dFormat): MeshNameCharset {
+  return format === 'gltf' ? 'unicode' : 'latin';
+}
+
+/**
+ * Εξάγει τους δοσμένους ορόφους σε **ένα** μοντέλο (ένας όροφος ή στοιβαγμένο κτίριο).
+ * Ο caller (`export-service`) αποφασίζει το grouping μέσω του `floorScope`.
+ */
+export async function exportFloorsToMesh3d(
+  floors: readonly ResolvedExportFloor[],
+  deps: ExportDeps,
+  options: Mesh3dExportOptions,
+): Promise<Mesh3dExportOutput> {
+  const { root, meshCount, hiddenEntityIds, warnings } = buildMesh3dScene(floors, deps);
+  if (meshCount === 0) {
+    return { artifacts: [], warnings };
+  }
+
+  nameMeshesForExport(root, {
+    floorNameByLevelId: options.prefixMeshesWithFloor
+      ? new Map(floors.map((f) => [f.level.id, f.level.name]))
+      : new Map(),
+    hiddenEntityIds,
+    charset: charsetFor(options.format),
+  });
+
+  if (options.format === 'gltf') {
+    // glTF: μέτρα by spec — καμία κλίμακα. Πραγματικό δέντρο + υλικά ταξιδεύουν εγγενώς.
+    // Τα κρυμμένα φέρουν μόνο το `HIDDEN_` όνομα: το glTF 2.0 core δεν έχει ορατότητα και ο
+    // GLTFExporter δεν γράφει ποτέ `KHR_node_visibility` (μετρημένο) — άρα δεν υπάρχει flag
+    // να γραφτεί, ούτε λόγος να νοθεύσουμε τα υλικά ενός format που τα κουβαλά σωστά.
+    const buffer = await serialiseGlb(root);
+    const filename = buildFloorFilename(options.baseName, options.filenamePart, 'glb');
+    return {
+      artifacts: [{ filename, blob: new Blob([buffer], { type: 'model/gltf-binary' }) }],
+      warnings,
+    };
+  }
+
+  // OBJ: το format δεν κουβαλά ούτε μονάδα ούτε υλικά — τα προσθέτουμε εμείς.
+  const materials = assignExportMaterials(root, hiddenEntityIds);
+  applyExportUnit(root, options.unit);
+
+  const objName = buildFloorFilename(options.baseName, options.filenamePart, 'obj');
+  const mtlName = buildFloorFilename(options.baseName, options.filenamePart, 'mtl');
+  const objText = injectMtlLib(serialiseObj(root), mtlName);
+
+  return {
+    artifacts: [
+      { filename: objName, blob: new Blob([objText], { type: 'model/obj' }) },
+      { filename: mtlName, blob: new Blob([writeMtl(materials)], { type: 'model/mtl' }) },
+    ],
+    warnings,
+  };
+}

@@ -13,7 +13,7 @@
  * καθρέφτισμα) + toggle «Ομοιόμορφη» (AutoCAD «Uniform Scale», default ON — ο bridge κρατά
  * X=Y όσο είναι κλειδωμένο, ίδια εμπειρία με την προ-M5 ενιαία κλίμακα).
  *
- * ⚠️ ΚΑΜΙΑ δήλωση κουμπιού «Κλείσιμο» — το `withStandardClose` το προσθέτει κεντρικά.
+ * ⚠️ ΚΑΜΙΑ δήλωση «Κλείσιμο»/σύριγγας — το `withStandardLeadPanel` τα προσθέτει κεντρικά.
  *
  * @see docs/centralized-systems/reference/adrs/ADR-652-block-library.md
  */

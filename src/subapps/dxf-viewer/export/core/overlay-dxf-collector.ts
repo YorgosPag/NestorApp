@@ -32,7 +32,9 @@ import {
   isSlabEntity,
   isFoundationEntity,
   isWallEntity,
+  isOpeningEntity,
 } from '../../types/entities';
+import { isWallHostedOpening, type OpeningEntity } from '../../bim/types/opening-types';
 import type { SceneLayer } from '../../types/scene-types';
 import type { Point2D } from '../../rendering/types/Types';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
@@ -221,9 +223,20 @@ function collectFinishEntities(
   if (columns.length === 0 && beams.length === 0) return;
   const walls = entities.filter(isWallEntity); // obstacles — ανεξάρτητα από δικό τους finish
 
+  // ADR-449 §opening-bands — ο εξαγόμενος σοβάς σέβεται τα κουφώματα, ΟΠΩΣ στην οθόνη (αλλιώς το DXF
+  // θα διέφερε από το 2Δ viewport). Το `componentVisible` gating έχει ήδη γίνει στα μέλη· εδώ αρκεί ο
+  // ADR-615 guard (self-hosted → κανένας host τοίχος να κόψει).
+  const openingsByWallId = new Map<string, OpeningEntity[]>();
+  for (const o of entities.filter(isOpeningEntity)) {
+    if (!isWallHostedOpening(o)) continue;
+    const arr = openingsByWallId.get(o.params.wallId);
+    if (arr) arr.push(o);
+    else openingsByWallId.set(o.params.wallId, [o]);
+  }
+
   // floorElevationMm=0 + legacy extents (params.height): plan-view export path (mirror
   // του unit-test path του silhouette· storey-ceiling band optimization = DEFER).
-  const bands = computeStructuralFinishSilhouette(columns, beams, walls, 0, undefined, true);
+  const bands = computeStructuralFinishSilhouette(columns, beams, walls, 0, undefined, true, undefined, openingsByWallId);
   if (bands.length === 0) return;
   const sceneUnits = columns[0]?.params.sceneUnits ?? beams[0]?.params.sceneUnits ?? 'mm';
 

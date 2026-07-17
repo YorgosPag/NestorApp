@@ -63,6 +63,12 @@ import { render, screen } from '@testing-library/react';
 import type { ExportDialogState } from '../useExportDialogState';
 import { ExportDialog } from '../ExportDialog';
 
+/**
+ * Complete `ExportDialogState`. Typed WITHOUT `as unknown as` on purpose: the cast used to
+ * hide missing fields (`dxfImageFillMode`/`tekHatchMode` had silently drifted out), so a new
+ * per-format row could ship with its state field unset and this suite would still pass.
+ * Now a missing field is a compile error — which is the whole point of the fixture.
+ */
 function makeState(format: ExportDialogState['format']): ExportDialogState {
   return {
     format,
@@ -77,11 +83,18 @@ function makeState(format: ExportDialogState['format']): ExportDialogState {
     setDxfUnit: () => {},
     dxfLineMode: 'polyline',
     setDxfLineMode: () => {},
+    dxfImageFillMode: 'solid',
+    setDxfImageFillMode: () => {},
     tekSymbolMode: 'native',
     setTekSymbolMode: () => {},
+    tekHatchMode: 'native',
+    setTekHatchMode: () => {},
+    // ADR-668 — 3Δ mesh export unit (OBJ only).
+    mesh3dUnit: 'centimeters',
+    setMesh3dUnit: () => {},
     scopeConflictsWithFormat: false,
-    buildRequest: () => ({}) as never,
-  } as unknown as ExportDialogState;
+    buildRequest: () => ({ format, entityScope: 'both', floorScope: 'active' }),
+  };
 }
 
 function renderDialog(format: ExportDialogState['format']) {
@@ -107,5 +120,22 @@ describe('ExportDialog — per-format fields', () => {
     renderDialog('ifc');
     expect(screen.queryByText('export.dxfLineMode')).not.toBeInTheDocument();
     expect(screen.queryByText('export.tekSymbolMode')).not.toBeInTheDocument();
+  });
+
+  // ADR-668 — the unit field is the user's answer to «γιατί βγαίνει 100× μικρό στο C4D».
+  it('shows the «Μονάδες» field + hint when format = obj', () => {
+    renderDialog('obj');
+    expect(screen.getByText('export.mesh3dUnit')).toBeInTheDocument();
+    expect(screen.getByText('export.mesh3dUnitHint')).toBeInTheDocument();
+    expect(screen.queryByText('export.dxfUnit')).not.toBeInTheDocument();
+    expect(screen.queryByText('export.tekSymbolMode')).not.toBeInTheDocument();
+  });
+
+  // glTF is spec-locked to metres → offering a unit would promise a choice the exporter
+  // is bound to ignore. It gets a note instead of a field.
+  it('hides the unit field and explains why when format = gltf', () => {
+    renderDialog('gltf');
+    expect(screen.queryByText('export.mesh3dUnit')).not.toBeInTheDocument();
+    expect(screen.getByText('export.mesh3dGltfUnitNote')).toBeInTheDocument();
   });
 });

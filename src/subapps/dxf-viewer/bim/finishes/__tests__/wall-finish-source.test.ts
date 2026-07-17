@@ -3,12 +3,12 @@
  *
  * X4 σημασιολογία: ο σοβάς = additive finish skin (`WallParams.finish`), ΟΧΙ DNA layer.
  * Επαληθεύει: (1) `wallDnaHasPlaster` (legacy DNA με `mat-plaster` → true· νέο brick-only /
- * EPS / parapet → false), (2) `wallToSilhouetteMember` (member όταν finish active + όχι legacy
- * plaster· core = **πλήρες** footprint χωρίς inset· legacy/parapet → null), (3) integration:
+ * EPS / parapet → false), (2) `wallToSilhouetteMembers` (member όταν finish active + όχι legacy
+ * plaster· core = **πλήρες** footprint χωρίς inset· legacy/parapet → []), (3) integration:
  * `computeStructuralFinishSilhouette` με ΜΟΝΟ νέους τοίχους, (4) contact subtraction.
  */
 
-import { wallDnaHasPlaster, wallToSilhouetteMember } from '../wall-finish-source';
+import { wallDnaHasPlaster, wallToSilhouetteMembers } from '../wall-finish-source';
 import { computeStructuralFinishSilhouette } from '../structural-finish-scene-silhouette';
 import { wallFootprintPolygon, type WallFinishObstacle } from '../structural-finish-scene';
 import { buildDefaultWallParams } from '../../../hooks/drawing/wall-completion';
@@ -113,36 +113,38 @@ describe('wallDnaHasPlaster (X4 legacy detection)', () => {
   });
 });
 
-describe('wallToSilhouetteMember (X4 — full footprint, gate σε finish spec)', () => {
-  it('νέος τοίχος (finish active, brick-only DNA) → member με ΠΛΗΡΕΣ footprint (χωρίς inset)', () => {
+describe('wallToSilhouetteMembers (X4 — full footprint, gate σε finish spec)', () => {
+  it('νέος τοίχος (finish active, brick-only DNA) → ΕΝΑ member με ΠΛΗΡΕΣ footprint (χωρίς inset)', () => {
     const w = wall({ x: 0, y: 0 }, { x: 3000, y: 0 });
-    const m = wallToSilhouetteMember(w, fullZ);
-    expect(m).not.toBeNull();
+    // ADR-449 §opening-bands — χωρίς ανοίγματα ο πληθυντικός δίνει ΑΚΡΙΒΩΣ 1 member (byte-for-byte
+    // η προ-opening-bands συμπεριφορά· αυτό το test είναι ο guard της).
+    const ms = wallToSilhouetteMembers(w, fullZ);
+    expect(ms).toHaveLength(1);
     // Core = full δομικό footprint (όχι inset) → ο σοβάς προεξέχει.
-    expect(m!.footprint).toEqual(wallFootprintPolygon(w));
-    expect(m!.zBotMm).toBe(0);
-    expect(m!.zTopMm).toBe(3000);
+    expect(ms[0].footprint).toEqual(wallFootprintPolygon(w));
+    expect(ms[0].zBotMm).toBe(0);
+    expect(ms[0].zTopMm).toBe(3000);
   });
 
-  it('τοίχος ΧΩΡΙΣ finish spec (legacy/bare) → null (μένει obstacle)', () => {
-    const m = wallToSilhouetteMember(wall({ x: 0, y: 0 }, { x: 3000, y: 0 }, { stripFinish: true }), fullZ);
-    expect(m).toBeNull();
+  it('τοίχος ΧΩΡΙΣ finish spec (legacy/bare) → [] (μένει obstacle)', () => {
+    const ms = wallToSilhouetteMembers(wall({ x: 0, y: 0 }, { x: 3000, y: 0 }, { stripFinish: true }), fullZ);
+    expect(ms).toEqual([]);
   });
 
-  it('finish spec ΑΛΛΑ legacy plaster DNA → null (legacy guard, μηδέν διπλός σοβάς)', () => {
-    const m = wallToSilhouetteMember(
+  it('finish spec ΑΛΛΑ legacy plaster DNA → [] (legacy guard, μηδέν διπλός σοβάς)', () => {
+    const ms = wallToSilhouetteMembers(
       wall({ x: 0, y: 0 }, { x: 3000, y: 0 }, { dna: legacyPlasterDna() }),
       fullZ,
     );
-    expect(m).toBeNull();
+    expect(ms).toEqual([]);
   });
 
-  it('parapet (category parapet → χωρίς finish) → null', () => {
-    const m = wallToSilhouetteMember(
+  it('parapet (category parapet → χωρίς finish) → []', () => {
+    const ms = wallToSilhouetteMembers(
       wall({ x: 0, y: 0 }, { x: 3000, y: 0 }, { category: 'parapet', dna: createDefaultParapetDna() }),
       fullZ,
     );
-    expect(m).toBeNull();
+    expect(ms).toEqual([]);
   });
 });
 

@@ -8,7 +8,9 @@
  * active level, drawing name, date) and routes a submitted `ExportRequest`.
  *
  * Format routing (full SSoT — no duplicated engines):
- *   - DXF → the unified `runExport` pipeline (scope filter + multi-floor here).
+ *   - DXF / TEK / OBJ / glTF → the unified `runExport` pipeline (scope filter +
+ *           multi-floor here). The 3Δ mesh formats (ADR-668) additionally need the
+ *           building's storey elevations — gathered here, like every other live dep.
  *   - IFC → delegates to the canonical IFC4 flow (`bim:ifc-export-requested`,
  *           served by `IfcExportHost`, ADR-369) — whole project, BIM-only.
  *   - PDF → delegates to the canonical Print engine (`dxf:print-dialog-requested`,
@@ -25,6 +27,11 @@ import * as React from 'react';
 import { EventBus } from '../systems/events/EventBus';
 import { useEventGatedDialog } from './dialog-hosts/useEventGatedDialog';
 import { useLevels } from '../systems/levels';
+// ADR-668 — storey elevations for the 3Δ export, from the SAME canonical Firestore source the
+// floor tabs and the live «Όλοι οι όροφοι» 3Δ view use (`useFloors3DAggregator` reads exactly
+// this hook). NOT `Bim3DEntitiesStore.floors`, whose `elevation` arrives undefined → every
+// storey would stack at Y=0.
+import { useFloorsByBuilding } from '@/components/properties/shared/useFloorsByBuilding';
 import { nowISO } from '@/lib/date-local';
 import { runExport } from '../export/export-service';
 import type { ExportDeps, ExportLevelScene, ExportRequest } from '../export/types';
@@ -62,6 +69,17 @@ function ExportBody({ projectId, buildingId, onClose }: ExportBodyProps): React.
     return level?.name ?? level?.sceneFileName ?? 'drawing';
   }, [levels, currentLevelId]);
 
+  // ADR-668 — derived from the ACTIVE LEVEL (not the `buildingId` prop, which scopes the IFC
+  // flow): this mirrors `useFloors3DAggregator` exactly, so the exported stack matches what the
+  // live 3Δ view shows. Falls back to the prop when the level carries no building.
+  const activeBuildingId = React.useMemo(
+    () => levels.find((l) => l.id === currentLevelId)?.buildingId ?? buildingId ?? null,
+    [levels, currentLevelId, buildingId],
+  );
+  // Fetched while the dialog is open (it only mounts on open), so the storey elevations are
+  // ready before submit. DXF/TEK ignore them; the 3Δ exporter fails closed without them.
+  const { floors: buildingFloors } = useFloorsByBuilding(activeBuildingId, true);
+
   const handleSubmit = React.useCallback(
     async (request: ExportRequest) => {
       // IFC / PDF → delegate to the canonical engines (SSoT, no duplication).
@@ -78,7 +96,7 @@ function ExportBody({ projectId, buildingId, onClose }: ExportBodyProps): React.
         return;
       }
 
-      // DXF → unified pipeline (content scope + multi-floor live here).
+      // DXF / TEK / OBJ / glTF → unified pipeline (content scope + multi-floor live here).
       const levelScenes: ExportLevelScene[] = [];
       for (const level of levels) {
         const scene = getLevelScene(level.id);
@@ -89,10 +107,15 @@ function ExportBody({ projectId, buildingId, onClose }: ExportBodyProps): React.
         activeLevelId: currentLevelId,
         projectName,
         dateStr: nowISO().slice(0, 10),
+        // ADR-668 — 3Δ-only: real storey elevations, so «όλοι οι όροφοι» stacks a building
+        // instead of flattening every floor onto Z=0.
+        floors: buildingFloors,
+        activeBuildingId,
       };
       await runExport(request, deps);
     },
-    [levels, getLevelScene, currentLevelId, projectName, projectId, buildingId],
+    [levels, getLevelScene, currentLevelId, projectName, projectId, buildingId,
+     buildingFloors, activeBuildingId],
   );
 
   const handleOpenChange = React.useCallback(

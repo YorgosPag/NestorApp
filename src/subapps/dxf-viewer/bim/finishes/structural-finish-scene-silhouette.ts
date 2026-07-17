@@ -16,7 +16,8 @@ import {
   createDefaultStructuralFinishSpec,
   type StructuralFinishSpec,
 } from './structural-finish-types';
-import { wallToSilhouetteMember } from './wall-finish-source';
+import { wallToSilhouetteMembers, wallIsFinishMember } from './wall-finish-source';
+import type { SilhouetteOpeningSource } from './wall-finish-opening-bands';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import {
   computeStructuralSilhouetteBands,
@@ -132,14 +133,15 @@ export interface SilhouetteColumnSource {
 /** ADR-449 — Pre-resolved κατακόρυφη έκταση κολώνας (building-relative mm), ΙΔΙΑ SSoT με τον πυρήνα. */
 export type ColumnVerticalExtentLookup = ReadonlyMap<string, { readonly zBotMm: number; readonly zTopMm: number }>;
 
-export interface SilhouetteBeamSource {
+/**
+ * N.0.2 boy-scout (2026-07-17): το `geometry` shape ήταν **αυτολεξεί διπλό** με το
+ * {@link BeamFinishOutlineSource} — που το ίδιο του το doc δηλώνει «το ΙΔΙΟ primitive τρέφει ΚΑΙ τον
+ * κάθετο silhouette ΚΑΙ το οριζόντιο top-cap». Τώρα το λέει και ο τύπος (`extends`) αντί να το
+ * επαναλαμβάνει: ΕΝΑ σημείο αλήθειας για το «τι γεωμετρία δοκαριού διαβάζει ο σοβάς».
+ */
+export interface SilhouetteBeamSource extends BeamFinishOutlineSource {
   readonly id: string;
   readonly params: Pick<BeamParams, 'finish' | 'sceneUnits' | 'topElevation' | 'zOffset' | 'depth'>;
-  readonly geometry?: {
-    readonly outline?: { readonly vertices?: readonly { x: number; y: number }[] };
-    /** ADR-449/493 — άξονας (start/end) για επέκταση του outline μέσα στις πλαισιωμένες κολόνες (plaster union). */
-    readonly axisPolyline?: { readonly points?: readonly { x: number; y: number }[] };
-  };
 }
 
 /**
@@ -237,6 +239,7 @@ function pushFinishOverrideEdges(
 export interface BeamFinishOutlineSource {
   readonly geometry?: {
     readonly outline?: { readonly vertices?: readonly { x: number; y: number }[] };
+    /** ADR-449/493 — άξονας (start/end) για επέκταση του outline μέσα στις πλαισιωμένες κολόνες (plaster union). */
     readonly axisPolyline?: { readonly points?: readonly { x: number; y: number }[] };
   };
 }
@@ -303,6 +306,16 @@ export function computeStructuralFinishSilhouette(
    * σοβά κόβεται στο soffit. Absent / χωρίς entry → πλήρες ύψος (2Δ plan & DXF export: undefined).
    */
   beamTopClipById?: ReadonlyMap<string, number>,
+  /**
+   * ADR-449 §opening-bands — τα **ορατά, wall-hosted** ανοίγματα ανά `wallId` (pre-resolved από τον
+   * caller· ίδιο pattern με το `beamTopClipById`). Ο σοβάς του τοίχου τρυπιέται στη ζώνη κάθε
+   * κουφώματος → δεν τα σκεπάζει. **Absent / χωρίς entry → πλήρες footprint** (byte-for-byte).
+   *
+   * Γιατί map και όχι raw array: το `wallId` filtering + το **visibility gating** (ADR-615 self-hosted
+   * guard + το ίδιο φίλτρο που ήδη περνά ο πυρήνας `wallToMesh` → 2Δ⟷3Δ parity) απαιτούν scene ctx →
+   * μένουν στους callers· αυτή η συνάρτηση παραμένει pure.
+   */
+  openingsByWallId?: ReadonlyMap<string, readonly SilhouetteOpeningSource[]>,
 ): SilhouetteBand[] {
   const members: SilhouetteMember[] = [];
   for (const c of columns) {
@@ -337,12 +350,21 @@ export function computeStructuralFinishSilhouette(
   // και **σβήνει αυτόματα στις συμβολές**). Legacy τοίχος (DNA σοβά, χωρίς `finish`) ή bare
   // (parapet/fence) → παραμένει coverage **obstacle** (κόβει όψη γειτόνων, δεν παίρνει δικό
   // του). Το πάχος/υλικό σοβά = το ΕΝΙΑΙΟ spec της σιλουέτας (ομοιόμορφο κέλυφος, εξωτ.25/εσωτ.15).
+  // ADR-449 §opening-bands — ο σοβατισμένος τοίχος δίνει **N members** (ένα ανά z-band· τρυπημένο
+  // footprint στη ζώνη κάθε κουφώματος) → μηδέν σοβάς πάνω από παράθυρα/πόρτες. Χωρίς ανοίγματα → 1
+  // member με το πλήρες footprint (byte-for-byte). Legacy/bare → `[]` → μένει obstacle (ως πριν).
   const obstacleWalls: WallFinishObstacle[] = [];
   for (const w of walls) {
+    // Ο διαχωρισμός member↔obstacle κρίνεται από ΤΟ predicate (`wallIsFinishMember`), ΟΧΙ από το
+    // πλήθος των members: με τα opening-bands ένας σοβατισμένος τοίχος μπορεί θεωρητικά να δώσει `[]`
+    // (άνοιγμα που τον καταναλώνει ολόκληρο) — αυτό είναι «μηδέν σοβάς», ΟΧΙ «obstacle». Αν γινόταν
+    // obstacle θα έκοβε τον σοβά των γειτόνων του.
+    if (!wallIsFinishMember(w)) {
+      obstacleWalls.push(w);
+      continue;
+    }
     const z = wallObstacleZExtent(w, beamUndersideById, floorElevationMm);
-    const m = wallToSilhouetteMember(w, z);
-    if (m) members.push(m);
-    else obstacleWalls.push(w);
+    members.push(...wallToSilhouetteMembers(w, z, openingsByWallId?.get(w.id)));
   }
   if (members.length === 0) return [];
 

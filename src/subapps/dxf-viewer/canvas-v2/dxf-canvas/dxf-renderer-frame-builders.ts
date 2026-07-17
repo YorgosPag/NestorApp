@@ -156,7 +156,14 @@ export function buildStructuralFinishSilhouette2D(
   // ADR-449/458 — 2Δ κάτοψη: `dropPlanHiddenFaces=true` → κρύβει τις junction-όψεις που η
   // plan-προβολή σκεπάζει (π.χ. όψη κολόνας κάτω από δοκάρι) → καθαρό συνεπές outline (miter),
   // χωρίς τις λοξές γραμμούλες της επικαλυπτόμενης z-band στη συμβολή κολόνας↔δοκαριού.
-  const bands = computeStructuralFinishSilhouette(columns, beams, walls, floorElevationMm, columnExtents, true);
+  //
+  // ADR-449 §opening-bands — ο σοβάς σέβεται τα κουφώματα (δεν τα σκεπάζει). **ΤΟ ΙΔΙΟ**
+  // `buildOpeningsByWall` που τρέφει τα cutouts του 2Δ πυρήνα (`WallRenderer`) → σοβάς και μπετόν
+  // κόβονται στο ίδιο κενό εξ ορισμού (+ ADR-615 self-hosted guard δωρεάν). `beamTopClipById`
+  // undefined = ως πριν (το vertical clip δεν αφορά κάτοψη).
+  const bands = computeStructuralFinishSilhouette(
+    columns, beams, walls, floorElevationMm, columnExtents, true, undefined, buildOpeningsByWall(entities),
+  );
   if (bands.length === 0) return null;
   const sceneUnits = columns[0]?.params.sceneUnits ?? beams[0]?.params.sceneUnits ?? walls[0]?.params.sceneUnits ?? 'mm';
   return { bands, sceneUnits };

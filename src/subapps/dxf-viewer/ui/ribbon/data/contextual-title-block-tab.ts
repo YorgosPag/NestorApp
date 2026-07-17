@@ -10,7 +10,7 @@
  *     του σχεδίου· μόλις ο χρήστης το αγγίξει, η πρόταση σταματά (Απόφαση #2).
  *   - **Μετασχηματισμός**: γωνία + κλίμακα τοποθέτησης (τα placement overrides του εργαλείου).
  *
- * ⚠️ ΚΑΜΙΑ δήλωση κουμπιού «Κλείσιμο» — το `withStandardClose` το προσθέτει κεντρικά.
+ * ⚠️ ΚΑΜΙΑ δήλωση «Κλείσιμο»/σύριγγας — το `withStandardLeadPanel` τα προσθέτει κεντρικά.
  *
  * @see docs/centralized-systems/reference/adrs/ADR-651-auto-title-block-generator.md
  */
