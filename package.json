@@ -74,6 +74,8 @@
     "test:ssot-imports": "jest scripts/__tests__/check-ssot-imports.test.js --verbose",
     "test:ssot-discover": "jest scripts/__tests__/check-ssot-discover-ratchet.test.js --verbose",
     "test:registry-golden": "jest scripts/__tests__/registry-golden-regex.test.js --verbose",
+    "test:capability-anchors": "jest --testPathPatterns=\"src/subapps/dxf-viewer/.*-coverage\\.test\\.ts\" --verbose",
+    "test:capability-anchor-gate": "jest scripts/__tests__/check-capability-anchor-gate.test.js --verbose",
     "test:ssot-suite": "jest scripts/__tests__/ --verbose",
     "validate:all": "npm run lint:strict && bash scripts/validate-project-rules.sh",
     "strict-mode": "node scripts/simple-strict-check.js",

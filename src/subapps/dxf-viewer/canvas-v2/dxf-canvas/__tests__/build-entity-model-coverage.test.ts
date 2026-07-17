@@ -50,9 +50,14 @@ describe('toEntityModel capability coverage — ζωντανό seam ↔ descript
     const modelable = RENDERABLE_ENTITY_TYPES.filter((t) => variantSet.has(t));
     expect(asSorted(modelable)).toEqual(
       asSorted([
-        // DXF primitives με variant (14)
+        // DXF primitives με variant (16)
         'line', 'polyline', 'circle', 'arc', 'text', 'dimension', 'angle-measurement',
         'hatch', 'xline', 'ray', 'annotation-symbol', 'scale-bar', 'opening-info-tag', 'image',
+        // ADR-635 Φ B — leader: `DxfLeader` variant (annotation path + tip arrowhead).
+        'leader',
+        // ADR-662 Φ2β — topo-surface: `DxfTopoSurface` variant (footprint outline της TIN· το
+        // 3D mesh το κρατά ο imperative TerrainSceneLayer, εκτός αυτού του seam).
+        'topo-surface',
         // BIM (25 — όλα· το floorplan-symbol μπήκε στο RENDERABLE_ENTITY_TYPES, ADR-415/635)
         'wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'foundation', 'stair',
         'railing', 'roof', 'floor-finish', 'wall-covering', 'thermal-space', 'space-separator',

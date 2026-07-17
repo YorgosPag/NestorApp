@@ -52,10 +52,15 @@ describe('toDxf capability coverage — ζωντανό seam ↔ descriptor domai
     const withToDxf = RENDERABLE_ENTITY_TYPES.filter((t) => supportedSet.has(t));
     expect(asSorted(withToDxf)).toEqual(
       asSorted([
-        // DXF primitives (17)
+        // DXF primitives (20)
         'line', 'polyline', 'lwpolyline', 'circle', 'arc', 'text', 'mtext', 'rectangle',
         'dimension', 'angle-measurement', 'hatch', 'xline', 'ray', 'annotation-symbol', 'scale-bar',
         'opening-info-tag', 'image', 'floorplan-symbol',
+        // ADR-635 Φ B — leader: flat handler (`dxf-scene-entity-flat-handlers`) → DxfLeader.
+        'leader',
+        // ADR-662 Φ2β — topo-surface: flat handler → DxfTopoSurface (το footprint outline ρέει
+        // στο render pipeline). Το handler ΥΠΑΡΧΕΙ· το ΕΞΑΓΩΓΙΚΟ κενό ζει στο entity-export-coverage.
+        'topo-surface',
         // BIM (23 — όλα εκτός wall-covering)
         'wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'foundation', 'stair',
         'railing', 'roof', 'floor-finish', 'thermal-space', 'space-separator', 'furniture',

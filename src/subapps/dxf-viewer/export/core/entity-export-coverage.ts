@@ -51,6 +51,15 @@ export const ENTITY_EXPORT_COVERAGE: Readonly<Record<RenderableEntityType, Entit
   mtext:       { dxf: 'native', tek: 'missing' },
   point:       { dxf: 'native', tek: 'missing' },
   dimension:   { dxf: 'native', tek: 'missing' },
+  // ADR-635 Φ B — native LEADER στο AutoCAD (`dxf-ascii-entity-dispatch` case 'leader', ο ακριβής
+  // αντίστροφος του import `convertLeader`)· ο TEK collector δεν το πιάνει ακόμη (ίδια οικογένεια
+  // με mtext/point/dimension, ADR-648 §7 follow-up).
+  leader:      { dxf: 'native', tek: 'missing' },
+  // ADR-662 Φ2β (Stage A plumbing) — ΚΑΝΕΝΑΣ export dispatch case σε κανένα από τα δύο formats.
+  // ΟΧΙ `drop`: το DXF ΕΧΕΙ έννοια για TIN surface (3DFACE / POLYFACE MESH — ό,τι εκπέμπει το
+  // Civil 3D), άρα αυτό είναι γνήσιο κενό προς κλείσιμο, όχι σκόπιμη παράλειψη. Ο Τέκτων μένει
+  // κι αυτός `missing` μέχρι να τεκμηριωθεί ότι δεν έχει terrain concept (ADR-662 follow-up).
+  'topo-surface': { dxf: 'missing', tek: 'missing' },
   // ── Annotations (non-BIM) ──────────────────────────────────────────────────
   'annotation-symbol': { dxf: 'decompose', tek: 'native' }, // TEK: type-7 object ή decompose
   'scale-bar':         { dxf: 'decompose', tek: 'decompose' },

@@ -86,6 +86,14 @@ describe('Grip-producer capability coverage — ζωντανό seam ↔ descript
         // ήταν ΛΑΘΟΣ· ο renderer ζωγραφίζει, το registry πιάνει — χωρίς producer η εικόνα
         // εμφάνιζε λαβές που δεν την μετακινούσαν ποτέ.)
         'lwpolyline', 'ellipse', 'mtext', 'spline', 'rectangle', 'rect', 'point',
+        // ADR-635 Φ B — leader: renderable annotation ΧΩΡΙΣ per-type grip producer. ⚠️ ΓΝΗΣΙΟ GAP
+        // (ίδια οικογένεια με το ADR-654 image bug): το callout ζωγραφίζεται και επιλέγεται, αλλά
+        // δεν έχει λαβές ούτε move → ο χρήστης δεν μπορεί να το επεξεργαστεί. Pin εδώ = ορατό.
+        'leader',
+        // ADR-662 Φ2β — topo-surface: Stage A plumbing, κανένα producer. Η επιφάνεια είναι
+        // derived (TIN/point-cloud) → η επεξεργασία γίνεται από το topography subsystem, ΟΧΙ με
+        // λαβές πάνω στο footprint outline — σωστό no-op για το Stage A συμβόλαιο.
+        'topo-surface',
         // renderable BIM ΧΩΡΙΣ interactive grips
         'railing', 'wall-covering', 'thermal-space', 'space-separator', 'mep-fitting',
       ]),

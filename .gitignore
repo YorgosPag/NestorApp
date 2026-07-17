@@ -197,7 +197,11 @@ firestore.rules.compiled
 
 # Generated clone-detection report (jscpd· βλ. N.18 / ADR-584)
 /report/
-# Ενδιάμεσο json report του ratchet runner (scripts/check-jscpd-ratchet.js)
+# LEGACY — παλιότερη έκδοση του ratchet runner έγραφε εδώ το ενδιάμεσο json report.
+# Ο σημερινός `scripts/check-jscpd-ratchet.js` γράφει σε os.tmpdir() (mkdtempSync
+# 'jscpd-run-') και καθαρίζει μόνος του — ΤΙΠΟΤΑ δεν γράφει πια σε αυτόν τον φάκελο.
+# Το entry μένει μόνο για να μη θορυβεί τυχόν stale αντίγραφο από παλιό run· αν δεν
+# υπάρχει `.jscpd-tmp/` στον δίσκο σου, αγνόησέ το. ΜΗΝ εμπιστευτείς περιεχόμενό του.
 /.jscpd-tmp/
 
 # Παραγόμενα entourage sprites (ADR-654) — ίδια σύμβαση με το public/textures του

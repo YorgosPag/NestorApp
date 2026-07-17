@@ -1,0 +1,109 @@
+name: ⚓ DXF Entity Capability Anchors (CHECK 5C)
+
+# =============================================================================
+# Layer 2 of Defense in Depth — CI-authoritative gate for the ADR-587 capability
+# coverage anchors.
+#
+# Why this exists
+# ---------------
+# The anchors bind the renderable domain SSoT (`RENDERABLE_ENTITY_TYPES`) to every
+# live capability seam — move / rotate / toDxf / entity-model / export / ghost /
+# grips / bounds / hit-test. Growing the domain without answering "does this type
+# move? rotate? export?" makes them fail BY DESIGN. They are the subapp's guard
+# against a type being silently renderable-but-inert.
+#
+# The incident that created this file (2026-07-17)
+# ------------------------------------------------
+# `7f215980` (ADR-662 Φ2β, +'topo-surface') and `16e9f4cc` (ADR-635 Φ B, +'leader')
+# each grew the domain without answering the anchors → 7 suites / 11 tests red on
+# main. They then survived ~6 commits, because all three layers were blind:
+#   • pre-commit had no registered area for them (fixed: CHECK 5C, Layer 1);
+#   • `unit.yml` — the workflow that would gate jest — is DISABLED (unit.yml.disabled);
+#   • `coverage-ratchet.yml` runs the whole suite but with `continue-on-error: true`,
+#     and gates coverage %, NOT pass/fail. Failing assertions still execute the code,
+#     so coverage never dropped and the check stayed green while main was red.
+# Net: nothing in CI could turn a red anchor into a red build. This workflow does.
+#
+# Scope note (deliberate)
+# -----------------------
+# This gates the ~20 `*-coverage.test.ts` anchors ONLY (~41s locally) — not the full
+# jest suite. Restoring a full blocking unit gate is a separate, larger decision
+# (Giorgio's): it changes every PR and needs the whole suite green first. This
+# workflow closes the specific hole that let 11 red tests live for 6 commits.
+#
+# Test selection is CONVENTION-driven (`*-coverage.test.ts`), not a hand-written
+# manifest — a new anchor named per convention is gated automatically. The hook's
+# own trigger/canary logic is locked by scripts/__tests__/check-capability-anchor-gate.test.js.
+#
+# Pattern mirrors .github/workflows/dxf-tsc-ratchet.yml (CHECK 3.29).
+# =============================================================================
+
+on:
+  pull_request:
+    paths:
+      - 'src/subapps/dxf-viewer/**'
+      - 'scripts/git-hooks/pre-commit'
+      - 'scripts/__tests__/check-capability-anchor-gate.test.js'
+      - '.github/workflows/capability-anchors.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/subapps/dxf-viewer/**'
+      - 'scripts/git-hooks/pre-commit'
+      - 'scripts/__tests__/check-capability-anchor-gate.test.js'
+      - '.github/workflows/capability-anchors.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: capability-anchors-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  capability-anchors:
+    name: ⚓ Capability Anchors (CHECK 5C)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: 📦 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Canary — a convention-driven selector that matches NOTHING must FAIL, never
+      # "pass with 0 tests". This repo has twice shipped false green from a scan whose
+      # file list was silently empty; --passWithNoTests is therefore NEVER used here.
+      - name: ⚓ Canary — the anchor convention still resolves
+        run: |
+          COUNT=$(find src/subapps/dxf-viewer -name '*-coverage.test.ts' | wc -l | tr -d '[:space:]')
+          echo "Anchors found: $COUNT"
+          if [ "$COUNT" -lt 16 ]; then
+            echo "::error title=Capability anchor canary::Expected >=16 '*-coverage.test.ts' anchors, found $COUNT. The selector is broken (renamed/moved), not satisfied — a green run would be meaningless."
+            exit 1
+          fi
+
+      # The gate. NO continue-on-error — that is the exact defect that let main stay red.
+      - name: 🧪 Run capability anchors
+        run: pnpm exec jest --testPathPatterns='src/subapps/dxf-viewer/.*-coverage\.test\.ts' --ci
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
+
+      # Locks the gate's own trigger + canary logic against drift/fail-open.
+      - name: 🔒 Gate self-test (hook trigger matrix + canary fails closed)
+        run: pnpm exec jest scripts/__tests__/check-capability-anchor-gate.test.js --ci
+
+      - name: ✅ Summary
+        if: success()
+        run: echo "::notice title=Capability Anchors (CHECK 5C)::every renderable type has an explicit answer on every capability seam"

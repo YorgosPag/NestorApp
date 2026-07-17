@@ -93,9 +93,14 @@ const supportedSet = new Set<string>(PREVIEW_GHOST_SUPPORTED_TYPES);
 
 // ─── Partition B — renderable types ΧΩΡΙΣ ρητό branch → generic movesEntity / classic ──
 const PREVIEW_GHOST_OFF_PATH_TYPES = [
-  // DXF (11) — asymmetry β (circle/point/ellipse …) + ε (lwpolyline normalized, όχι branch).
+  // DXF (13) — asymmetry β (circle/point/ellipse …) + ε (lwpolyline normalized, όχι branch).
   'circle', 'ellipse', 'spline', 'rectangle', 'rect', 'point',
   'dimension', 'angle-measurement', 'xline', 'ray', 'lwpolyline',
+  // ADR-635 Φ B — leader: κανένα ρητό ghost branch. Δεν έχει grip producer (βλ. grip-computation
+  // coverage) → κανένα parametric drag να κάνει preview· classic path αρκεί.
+  // ADR-662 Φ2β — topo-surface: Stage A plumbing, κανένα ρητό branch (καμία grip/move capability
+  // να χρειάζεται ghost). Όταν καλωδιωθεί, μετακινείται στο PREVIEW_GHOST_MAIN_TYPES.
+  'leader', 'topo-surface',
   // BIM (10) — μη-box, μη-footprint parametric → BIM-whole-entity move / classic.
   // Το `floorplan-symbol` έγινε renderable (ADR-415/635 ghost) χωρίς ρητό branch εδώ → off-path.
   'railing', 'wall-covering', 'thermal-space', 'space-separator',

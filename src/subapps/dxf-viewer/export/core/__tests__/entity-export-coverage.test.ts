@@ -48,12 +48,16 @@ describe('Entity export coverage — declarative SSoT ↔ renderable domain (ADR
 
   it('όλοι οι DXF primitive τύποι εξάγονται στο DXF (κανένα missing)', () => {
     const dxfMissing = DXF_RENDERABLE_TYPES.filter((t) => ENTITY_EXPORT_COVERAGE[t].dxf === 'missing');
-    // Καρφωμένο golden: τα ΜΟΝΑ εναπομείναντα DXF κενά είναι τα annotation measurements (ADR-648 §7).
-    expect(asSorted(dxfMissing)).toEqual(asSorted(['angle-measurement', 'opening-info-tag']));
+    // Καρφωμένο golden: τα εναπομείναντα DXF κενά είναι τα annotation measurements (ADR-648 §7)
+    // + το topo-surface (ADR-662 Φ2β Stage A — renderer χωρίς exporter· 3DFACE/POLYFACE MESH TODO).
+    expect(asSorted(dxfMissing)).toEqual(
+      asSorted(['angle-measurement', 'opening-info-tag', 'topo-surface']),
+    );
   });
 
   it('το τρέχον export-gap backlog είναι καρφωμένο (κλείσιμο = σκόπιμη ενημέρωση)', () => {
     // Snapshot του backlog· μειώνεται καθώς κλείνουν τα κενά (ADR-648 §7). Αν αλλάξει → ενημέρωσε ADR.
-    expect(entitiesWithExportGap().length).toMatchInlineSnapshot(`27`);
+    // 27 → 29: +leader (tek, ADR-635 Φ B) +topo-surface (dxf+tek, ADR-662 Φ2β Stage A).
+    expect(entitiesWithExportGap().length).toMatchInlineSnapshot(`29`);
   });
 });

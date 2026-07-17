@@ -198,3 +198,9 @@ old-style POLYLINE / native HATCH / INSERT-blocks — γι' αυτό ένα Auto
   προσέγγιση· `exploded` = πλήρης ταύτιση/βαρύ), mirror του `TekSymbolMode` σε ΟΛΟ το μονοπάτι
   (types → service → adapter → dialog state → dialog UI → i18n el/en). Solid/gradient → native
   πάντα. **429 export-tests πράσινα**, jscpd καθαρό.
+
+- **2026-07-17 — Στάδιο Δ: δύο νέες εγγραφές στον πίνακα κάλυψης (ξεχωριστή συνεδρία, UNCOMMITTED).** Το coverage test («ΚΑΘΕ renderable type έχει entry») **κοκκίνισε σωστά**: δύο τύποι είχαν μπει στο `RENDERABLE_ENTITY_TYPES` χωρίς απόφαση εξαγωγής — `leader` (`16e9f4cc`, ADR-635 Φ B) και `topo-surface` (`7f215980`, ADR-662 Φ2β). Παρέμεινε κόκκινο ~6 commits γιατί κανένα gate δεν έτρεχε τα anchors (ADR-587 §6.1).
+  - `leader: { dxf: 'native', tek: 'missing' }` — native LEADER στο `dxf-ascii-entity-dispatch` (case υπάρχει, επαληθευμένο με grep)· ο TEK collector δεν το πιάνει (ίδια οικογένεια με mtext/point/dimension, §7).
+  - `'topo-surface': { dxf: 'missing', tek: 'missing' }` — **ΟΧΙ `drop`**: το DXF **έχει** έννοια για TIN surface (3DFACE / POLYFACE MESH, όπως εκπέμπει το Civil 3D) → γνήσιο κενό προς κλείσιμο, όχι σκόπιμη παράλειψη (η διάκριση `drop` vs `missing` του §2 είναι ακριβώς αυτή). Ο Τέκτων μένει `missing` μέχρι να τεκμηριωθεί ότι δεν έχει terrain concept.
+  - **Συνέπεια στα golden:** backlog snapshot **27 → 29**· `dxfMissing` golden = `['angle-measurement', 'opening-info-tag', 'topo-surface']` (το `topo-surface` είναι `DXF_RENDERABLE_TYPE`). Και τα δύο ενημερώθηκαν **σκόπιμα**, όπως απαιτεί το §7.
+  - **Νέο gate:** το `entity-export-coverage.ts` είναι πλέον trigger του **CHECK 5C** (pre-commit + CI) → ο πίνακας δεν μπορεί να αποκλίνει ξανά σιωπηλά.

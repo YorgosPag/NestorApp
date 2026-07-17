@@ -20,8 +20,11 @@
  * Καρφωμένες ασυμμετρίες (ΜΗΝ τις «διορθώσεις» σιωπηλά — fix = χωριστό verified βήμα):
  *  - CAD off-path no-op: `spline`/`dimension`/`xline`/`ray` = renderable αλλά ΚΑΝΕΝΑ move guard
  *    (`isSplineEntity` υπάρχει αλλά ΔΕΝ χρησιμοποιείται εδώ) → `{}`.
- *  - BIM fall-through no-op: `railing`/`wall-covering`/`thermal-space`/`mep-fitting` = renderable αλλά
- *    ΚΑΝΕΝΑ `case` στο BIM switch → null → CAD if-chain → `{}` (γνήσιο gap, όχι hosted-derived).
+ *  - BIM fall-through no-op: `railing`/`wall-covering`/`thermal-space`/`mep-fitting`/`floorplan-symbol`
+ *    = renderable αλλά ΚΑΝΕΝΑ `case` στο BIM switch → null → CAD if-chain → `{}` (γνήσιο gap, όχι
+ *    hosted-derived). Το `floorplan-symbol` έχει ΛΑΒΕΣ αλλά όχι MOVE-tool → grip-vs-tool ασυμμετρία.
+ *  - `leader` (ADR-635 Φ B) = renderable annotation με `vertices` αλλά κανένα guard → `{}` (γνήσιο gap).
+ *  - `topo-surface` (ADR-662 Φ2β) = Stage A plumbing — renderable χωρίς καμία καλωδιωμένη capability.
  *  - `opening` = ΡΗΤΟ hosted-derived no-op (`case 'opening': return {}`) — follow-the-host cascade.
  *
  * Per-type move MATH (κάθε BIM τύπος όντως μετακινεί params+geometry) ζει ΗΔΗ στο sibling
@@ -68,8 +71,24 @@ const MOVE_GOLDEN = [
 const NOOP_GOLDEN = [
   // CAD off-path — renderable αλλά κανένα move guard (raw-DXF, δεν μετακινούνται από αυτό το SSoT)
   'spline', 'dimension', 'xline', 'ray',
+  // ADR-635 Φ B — leader: renderable annotation με `vertices`, ΑΛΛΑ ο `isPolylineEntity` guard
+  // ελέγχει `type === 'polyline'` → το leader δεν τον ταιριάζει και ΚΑΝΕΝΑ άλλο guard δεν το πιάνει
+  // → `{}`. ⚠️ ΓΝΗΣΙΟ GAP (όχι σχεδιαστική επιλογή): ένα callout ΠΡΕΠΕΙ να μετακινείται μαζί με
+  // το σχέδιο. Pin εδώ = ορατό· fix = χωριστό verified βήμα (ADR-635 follow-up).
+  'leader',
+  // ADR-662 Φ2β (Stage A plumbing) — topo-surface: μπήκε στο descriptor domain με renderer
+  // (footprint outline) αλλά ΚΑΜΙΑ capability καλωδιωμένη ακόμη. Καμία guard → `{}`. Η επιφάνεια
+  // είναι derived από το TIN/point-cloud, οπότε το no-op είναι το σωστό Stage-A συμβόλαιο: όταν
+  // το ADR-662 καλωδιώσει move, το live pin παρακάτω σπάει → μετακίνηση στο MOVE_GOLDEN.
+  'topo-surface',
   // BIM fall-through — renderable αλλά κανένα switch case → null → CAD if-chain → `{}` (γνήσιο gap)
   'railing', 'wall-covering', 'thermal-space', 'mep-fitting',
+  // ADR-415/635 — floorplan-symbol: renderable BIM ΜΕ grips/ghost/export/entity-model, αλλά
+  // ΚΑΝΕΝΑ `case` στο `calculateBimMovedGeometry` switch → null → CAD if-chain → `{}`.
+  // ⚠️ ΓΝΗΣΙΟ GAP: το σύμβολο μετακινείται με τις λαβές (centred-box grips) αλλά το εργαλείο
+  // MOVE είναι σιωπηλό no-op πάνω του — ακριβώς η ασυμμετρία grip-vs-tool που περιγράφει το
+  // ADR-587 §4.6. Pin εδώ· fix = χωριστό verified βήμα.
+  'floorplan-symbol',
   // ΡΗΤΟ hosted-derived no-op (`case 'opening': return {}`) — ακολουθεί τον host τοίχο
   'opening',
 ] as const;

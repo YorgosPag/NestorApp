@@ -58,8 +58,14 @@ describe('Rotate capability coverage — ζωντανό seam ↔ descriptor doma
     const noRotate = RENDERABLE_ENTITY_TYPES.filter((t) => !supportedSet.has(t));
     // scale-bar / opening-info-tag (ADR-583/612): renderable non-BIM annotations που
     // περιστρέφονται με parametric `angleRad` (ΟΧΙ μέσω `rotateEntity`) → σωστά no-op εδώ.
+    // leader (ADR-635 Φ B): renderable annotation χωρίς `ROTATE_HANDLERS` entry. Το callout
+    // δείχνει ΠΡΟΣ ένα σημείο — η αυθαίρετη περιστροφή θα έσπαγε τη σχέση με το target, οπότε
+    // το no-op είναι εδώ ΣΩΣΤΟ (ανάλογο του dimension: περιστρέφεις το σχέδιο, όχι τη σήμανση).
+    // topo-surface (ADR-662 Φ2β Stage A): renderable χωρίς καμία καλωδιωμένη capability· επιπλέον
+    // μια γεωαναφερμένη επιφάνεια ΔΕΝ περιστρέφεται αυθαίρετα (το datum είναι SSoT, ADR-650).
     const expected = [
-      'point', 'dimension', 'xline', 'ray', 'scale-bar', 'opening-info-tag', ...BIM_RENDERABLE_TYPES,
+      'point', 'dimension', 'xline', 'ray', 'scale-bar', 'opening-info-tag',
+      'leader', 'topo-surface', ...BIM_RENDERABLE_TYPES,
     ];
     expect(asSorted(noRotate)).toEqual(asSorted(expected));
   });
