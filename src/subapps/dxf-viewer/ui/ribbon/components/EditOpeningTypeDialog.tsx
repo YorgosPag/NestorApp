@@ -42,6 +42,11 @@ import {
   subscribeEditOpeningType,
 } from '../../../bim/family-types/edit-opening-type-store';
 import type { OpeningTypeParams } from '../../../bim/types/bim-family-type';
+import { OpeningMaterialSelectCell } from './OpeningMaterialSelectCell';
+
+/** The 4 opening "family surfaces" a Type owns a material for (ADR-421 SLICE C follow-up). */
+const MATERIAL_PARTS = ['frame', 'leaf', 'glass', 'hardware'] as const;
+type OpeningMaterialPart = (typeof MATERIAL_PARTS)[number];
 
 /** Glazing-pane options (1 single / 2 double / 3 triple). */
 const GLAZING_OPTIONS: readonly (1 | 2 | 3)[] = [1, 2, 3] as const;
@@ -107,6 +112,21 @@ function EditOpeningTypeDialogContent({ typeId }: { typeId: string }): React.Rea
   const setNum = useCallback(
     (key: 'width' | 'height' | 'frameWidth', raw: string) =>
       setDraft((d) => (d ? { ...d, [key]: parseFloat(raw) || 0 } : d)),
+    [],
+  );
+
+  // Per-part surface material (κάσα/φύλλο/υαλοστάσιο/μηχανισμός). Immutable patch of
+  // `typeParams.materials`; `undefined` deletes the key entirely so
+  // `resolveOpeningMaterial` falls back to its part default (zero regression).
+  const setMaterialPart = useCallback(
+    (part: OpeningMaterialPart, value: string | undefined) =>
+      setDraft((d) => {
+        if (!d) return d;
+        const nextMaterials = { ...d.materials };
+        if (value === undefined) delete nextMaterials[part];
+        else nextMaterials[part] = value;
+        return { ...d, materials: nextMaterials };
+      }),
     [],
   );
 
@@ -228,6 +248,30 @@ function EditOpeningTypeDialogContent({ typeId }: { typeId: string }): React.Rea
               className={fieldClass}
             />
           </label>
+
+          <OpeningMaterialSelectCell
+            label={t('ribbon.commands.bimFamilyType.paramFrameMaterial')}
+            material={draft.materials?.frame}
+            onChange={(v) => setMaterialPart('frame', v)}
+          />
+
+          <OpeningMaterialSelectCell
+            label={t('ribbon.commands.bimFamilyType.paramLeafMaterial')}
+            material={draft.materials?.leaf}
+            onChange={(v) => setMaterialPart('leaf', v)}
+          />
+
+          <OpeningMaterialSelectCell
+            label={t('ribbon.commands.bimFamilyType.paramGlassMaterial')}
+            material={draft.materials?.glass}
+            onChange={(v) => setMaterialPart('glass', v)}
+          />
+
+          <OpeningMaterialSelectCell
+            label={t('ribbon.commands.bimFamilyType.paramHardwareMaterial')}
+            material={draft.materials?.hardware}
+            onChange={(v) => setMaterialPart('hardware', v)}
+          />
 
           <label className="flex items-center gap-2 text-xs text-foreground">
             <span className="w-28 shrink-0">{t('ribbon.commands.bimFamilyType.paramFireRating')}</span>
