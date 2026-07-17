@@ -1,6 +1,6 @@
 # ADR-672 — Επεξεργάσιμο υλικό ανά κούφωμα (Revit family surfaces: κάσα/φύλλο/υαλοστάσιο/χειρολαβή)
 
-**Status:** ✅ ACTIVE — υλοποιημένο 2Δ+3Δ+export+UI+persistence+library-dropdown· follow-ups §8 (hardware geo, BOQ)
+**Status:** ✅ ACTIVE — υλοποιημένο 2Δ+3Δ+export+UI+persistence+library-dropdown+hardware-3Δ· follow-ups §8 (BOQ, προαιρετικό 2Δ handle glyph)
 **Ημερομηνία:** 2026-07-18
 **Σχετικά:** ADR-611 (opening frame profile — το resolver-idiom που αντιγράφτηκε),
 ADR-412/421 (BIM family types — type→instance «type wins»), ADR-668 (3Δ export OBJ/glTF — ονομάζει το
@@ -94,8 +94,14 @@ top-priority `elem` hook του resolver, ADR-375 C.5) → κερδίζει το
   με το `useMaterialLibrary`. Το picker κερδίζει swatch με το πραγματικό thumbnail/albedo του υλικού. Ένα id
   εκτός presets ΚΑΙ εκτός τρέχουσας βιβλιοθήκης (legacy/cross-company) πέφτει ακόμα στο free-text (zero
   regression). `classifyOpeningMaterial` έγινε catalog-aware (`listed|custom|empty`). Βλ. §10.
-- **Hardware geometry:** το `hardware` υλικό λύνεται από τον resolver αλλά **δεν έχει 3Δ sub-mesh / 2Δ
-  representation** ακόμα — ζει μόνο σε type/UI (+ μελλοντικό BOQ/export naming). Χρειάζεται νέα γεωμετρία χειρολαβής.
+- ✅ **Hardware 3Δ geometry (DONE 2026-07-18):** νέος `opening-hardware-builders.ts` (sibling του
+  `opening-mesh-builders.ts`) δίνει σχηματική γεωμετρία χειρολαβής ανά family — μοχλός+ροζέτα σε ανοιγόμενες
+  πόρτες (και στις 2 όψεις, latch πλευρά από `params.handing`), κάθετη μπάρα σε συρόμενες, πόμολο σε
+  φυσαρμόνικες, μικρή χειρολαβή σε ανοιγόμενα παράθυρα· **καμία** σε fixed/bay/overhead/revolving (χωρίς
+  χειριζόμενη λαβή). Το `hardware` προστέθηκε στο `OpeningMeshMaterials`, γίνεται resolve+stamp `matId` στο
+  attach, και οι λαβές μπαίνουν LAST στο specs array (frame/leaf indices αμετάβλητα). Inner-dims guard
+  ενοποιήθηκε σε `openingInnerDims()` (N.18, κοινό leaf+hardware). **2Δ handle glyph** εκτός (τα κουφώματα
+  είναι plan symbols) — προαιρετικό further follow-up. Βλ. §10.
 - **BOQ / schedule hookup:** το υλικό ανά μέρος να τροφοδοτεί προμετρήσεις (`bim/schedule/`).
 - **2Δ = μόνο χρωματισμός** (frame stroke + glass overlay)· τα κουφώματα είναι plan symbols, όχι poché fills —
   γι' αυτό `getMaterialFlatColorHex`, ΟΧΙ το wall `resolveAutoHatch`/`MATERIAL_HATCH_MAP` (διαφορετικό vocabulary).
@@ -110,7 +116,9 @@ top-priority `elem` hook του resolver, ADR-375 C.5) → κερδίζει το
 | `bim/family-types/resolve-opening-material.ts` | **Resolver SSoT** — fold ανά μέρος + defaults |
 | `bim/family-types/opening-material-catalog.ts` | **Catalog SSoT** — presets + `createOpeningMaterialCatalog` (library-backed provider) + `classifyOpeningMaterial` |
 | `ui/ribbon/hooks/useOpeningMaterialCatalog.ts` | Scope (`useAuth`+`saveContext.projectId`) + `useMaterialLibrary` → library-backed provider (memoized) |
-| `bim-3d/converters/bim-three-wall-opening-attach.ts` | 3Δ — per-opening resolved `getMaterial3D` + stamp `matId` |
+| `bim-3d/converters/bim-three-wall-opening-attach.ts` | 3Δ — per-opening resolved `getMaterial3D` (frame/leaf/glass/hardware) + stamp `matId` |
+| `bim-3d/converters/opening-mesh-builders.ts` | 3Δ leaf/panel specs + `OpeningMeshMaterials` (`hardware`) + `LEAF_DEPTH_RATIO`/`openingInnerDims` SSoT |
+| `bim-3d/converters/opening-hardware-builders.ts` | **Hardware SSoT** — `buildHardwareSpecs` (χειρολαβή box specs ανά family) |
 | `bim/renderers/OpeningRenderer.ts` | 2Δ — resolved χρώμα ως `elementOverride.color` fallback |
 | `ui/ribbon/components/EditOpeningTypeDialog.tsx` + `OpeningMaterialSelectCell.tsx` | UI — 4 rows ανά μέρος |
 | `bim/walls/opening-firestore-service.ts` + `opening-doc-hydration.ts` | Persistence — generic pass-through (spread) |
@@ -131,3 +139,10 @@ top-priority `elem` hook του resolver, ADR-375 C.5) → κερδίζει το
   = free-text, zero regression)· 2 νέες i18n keys (`materialGroupPresets/Library`, el+en). Καμία αλλαγή σε
   resolver/persistence (τα `bmat_` ήδη round-trip-άρουν opaque). Gates: opening-material-catalog **10/10 ✅**,
   family-types+2Δ parity regression **21 suites / 233 ✅**, `jscpd:diff` καθαρό ✅.
+- **2026-07-18** — **Follow-up Α (§8) — Hardware 3Δ geometry.** Νέος `opening-hardware-builders.ts`
+  (`buildHardwareSpecs`) δίνει σχηματική γεωμετρία χειρολαβής ανά family (door lever+rose και στις 2 όψεις,
+  latch από `handing`· sliding pull bar· bifold knob· operable-window handle· καμία σε fixed/bay/overhead/
+  revolving). `hardware` προστέθηκε στο `OpeningMeshMaterials`· resolve+`getMaterial3D`+stamp `matId` στο
+  attach· λαβές appended LAST (frame/leaf indices σταθερά). Inner-dims degenerate guard ενοποιήθηκε σε
+  `openingInnerDims()` (N.18, κοινό leaf+hardware). 2Δ handle glyph εκτός scope. Gates: hardware-builders +
+  opening-mesh **30/30 ✅**, converters regression **65 suites / 477 ✅**, `jscpd:diff` καθαρό ✅.
