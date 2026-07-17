@@ -220,7 +220,13 @@ function collectFinishEntities(
   const beams = entities
     .filter(isBeamEntity)
     .filter((e) => isFinishActive(e.params?.finish) && componentVisible('plaster', e));
-  if (columns.length === 0 && beams.length === 0) return;
+  // ADR-534 Φ6c — η κατακόρυφη περιμετρική «φάσα» πλάκας εξάγεται ΚΑΙ στο DXF (parity με 2Δ κάτοψη &
+  // 3Δ scene). Tilted/legacy πλάκες → φιλτράρονται εσωτερικά (slabIsFinishMember). Ένας όροφος-δώμα
+  // (μόνο πλάκα, χωρίς κολόνες/δοκάρια) → παράγει φάσα → κράτα slabs στο early-return guard.
+  const slabs = entities
+    .filter(isSlabEntity)
+    .filter((e) => isFinishActive(e.params?.finish) && componentVisible('plaster', e));
+  if (columns.length === 0 && beams.length === 0 && slabs.length === 0) return;
   const walls = entities.filter(isWallEntity); // obstacles — ανεξάρτητα από δικό τους finish
 
   // ADR-449 §opening-bands — ο εξαγόμενος σοβάς σέβεται τα κουφώματα, ΟΠΩΣ στην οθόνη (αλλιώς το DXF
@@ -240,9 +246,10 @@ function collectFinishEntities(
     columns, beams, walls, floorElevationMm: 0,
     dropPlanHiddenFaces: true,
     openingsByWallId,
+    slabs,
   });
   if (bands.length === 0) return;
-  const sceneUnits = columns[0]?.params.sceneUnits ?? beams[0]?.params.sceneUnits ?? 'mm';
+  const sceneUnits = columns[0]?.params.sceneUnits ?? beams[0]?.params.sceneUnits ?? slabs[0]?.params.sceneUnits ?? 'mm';
 
   // ADR-449 Slice X6 — κάθετος band-merge: μία extrusion ανά συνεχή όψη (τα z-γειτονικά ταυτόσημα
   // quads ενώνονται) → μηδέν στοιβαγμένες per-band extrusions/ραφή στο εξαγόμενο μοντέλο. ΙΔΙΟ SSoT

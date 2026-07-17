@@ -80,4 +80,36 @@ describe('buildStructuralFinishSilhouette2D (ADR-449 Slice X2 μέρος Β)', (
     const akra = segs.filter((s) => Math.abs(s.b.y - s.a.y) > Math.abs(s.b.x - s.a.x));
     expect(akra.length).toBeGreaterThanOrEqual(2);
   });
+
+  // ADR-534 Φ6c — 2Δ/DXF parity: η φάσα πλάκας μπαίνε ΚΑΙ στην κάτοψη (πριν: μόνο 3Δ). Ο DxfSlab
+  // wrapper κρατά το BIM entity στο `.slabEntity` (ο builder κάνει `.map(e => e.slabEntity)`).
+  it('ADR-534 Φ6c: μεμονωμένη flat πλάκα με σοβά → bands φάσας (2Δ parity με 3Δ)', () => {
+    const slab = {
+      type: 'slab',
+      id: 's1',
+      visible: true,
+      slabEntity: {
+        params: {
+          kind: 'floor',
+          finish: FINISH,
+          dna: undefined,
+          outline: {
+            vertices: [
+              { x: 0, y: 0, z: 0 }, { x: 4000, y: 0, z: 0 },
+              { x: 4000, y: 3000, z: 0 }, { x: 0, y: 3000, z: 0 },
+            ],
+          },
+          levelElevation: 3000,
+          heightOffsetFromLevel: 0,
+          thickness: 200,
+          geometryType: 'box',
+          slope: undefined,
+          sceneUnits: 'mm',
+        },
+      },
+    };
+    const result = buildStructuralFinishSilhouette2D([slab] as unknown as DxfEntityUnion[]);
+    expect(result).not.toBeNull();
+    expect(result!.bands.flatMap((b) => b.faces.segments).length).toBeGreaterThan(0);
+  });
 });

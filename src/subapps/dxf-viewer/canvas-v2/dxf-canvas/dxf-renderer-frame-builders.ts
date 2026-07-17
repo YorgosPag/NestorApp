@@ -11,7 +11,7 @@
  * relevant composite slot every frame (ADR-040 micro-leaf compliance: the
  * orchestrator drives, the leaves never subscribe).
  */
-import type { DxfEntityUnion, DxfSlabOpening, DxfOpening, DxfColumn, DxfWall, DxfBeam } from './dxf-types';
+import type { DxfEntityUnion, DxfSlabOpening, DxfOpening, DxfColumn, DxfWall, DxfBeam, DxfSlab } from './dxf-types';
 import type { Point2D } from '../../rendering/types/Types';
 import type { DimensionEntity } from '../../types/dimension';
 import type { DimensionLookup } from '../../systems/dimensions/dim-geometry-builder';
@@ -140,11 +140,17 @@ export function buildStructuralFinishSilhouette2D(
     else if (e.type === 'beam' && isFinishActive(e.params.finish)) beams.push(e);
   }
   const walls = entities.filter((w): w is DxfWall => w.type === 'wall');
+  // ADR-534 Φ6c — η πλάκα ως finish-member ΚΑΙ στην 2Δ κάτοψη/DXF export (parity με το 3Δ sync):
+  // η κατακόρυφη περιμετρική «φάσα» πρέπει να φαίνεται και στα δύο. Ο DxfSlab κρατά το BIM entity
+  // στο `.slabEntity` (το `.params` του ικανοποιεί το `SlabFinishMemberSource`, «δύο shapes» ADR-659).
+  // Tilted/legacy → η `computeStructuralFinishSilhouette` τα φιλτράρει εσωτερικά (slabIsFinishMember).
+  const slabs = entities.filter((e): e is DxfSlab => e.type === 'slab').map((e) => e.slabEntity);
   // ADR-449 Slice X3 — ο τοίχος είναι finish-member (όχι μόνο obstacle): ένας μεμονωμένος
   // τοίχος (χωρίς κολόνες/δοκάρια) παράγει σοβά → ΜΗΝ κάνεις early-return όσο υπάρχουν τοίχοι.
+  // ADR-534 Φ6c — ομοίως ένας μεμονωμένος όροφος-δώμα (μόνο πλάκα) παράγει φάσα → κράτα slabs στο guard.
   // Η `computeStructuralFinishSilhouette` φιλτράρει εσωτερικά τους core-only parapet/fence →
   // bands=[] → null παρακάτω (γραμμή `bands.length === 0`) αν κανένα στοιχείο δεν έχει σοβά.
-  if (columns.length === 0 && beams.length === 0 && walls.length === 0) return null;
+  if (columns.length === 0 && beams.length === 0 && walls.length === 0 && slabs.length === 0) return null;
   // ADR-449 Slice 12 — storey-aware columnExtents (ΙΔΙΟ SSoT lookup με το 3Δ). Το
   // active-storey context είναι zero-React store → ασφαλές read από τον DxfRenderer.
   const storey = useActiveStoreyStore.getState().context;
@@ -165,9 +171,10 @@ export function buildStructuralFinishSilhouette2D(
     columns, beams, walls, floorElevationMm, columnExtents,
     dropPlanHiddenFaces: true,
     openingsByWallId: buildOpeningsByWall(entities),
+    slabs,
   });
   if (bands.length === 0) return null;
-  const sceneUnits = columns[0]?.params.sceneUnits ?? beams[0]?.params.sceneUnits ?? walls[0]?.params.sceneUnits ?? 'mm';
+  const sceneUnits = columns[0]?.params.sceneUnits ?? beams[0]?.params.sceneUnits ?? walls[0]?.params.sceneUnits ?? slabs[0]?.params.sceneUnits ?? 'mm';
   return { bands, sceneUnits };
 }
 

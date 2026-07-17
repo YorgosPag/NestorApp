@@ -443,6 +443,10 @@ export function computeStructuralFinishSilhouette(input: SilhouetteFinishInput):
   for (const c of columns) pushFinishOverrideEdges(faceOverrideEdges, c.params.finish, c.geometry?.footprint?.vertices);
   for (const b of beams) pushFinishOverrideEdges(faceOverrideEdges, b.params.finish, b.geometry?.outline?.vertices);
   for (const w of walls) pushFinishOverrideEdges(faceOverrideEdges, w.params.finish, wallFootprintPolygon(w));
+  // ADR-534 Φ6b — Paint on face ΚΑΙ στην πλάκα (Revit «Paint», mirror τοίχου/κολόνας/δοκαριού): τα
+  // per-face overrides του outline της πλάκας σπάνε το ενιαίο δέρμα στο σύνορο υλικού/χρώματος. Το
+  // seamless merge (Φ6a) ΔΕΝ συγκρούεται — το override ζει στο super-key → σπάει το cluster εκεί.
+  for (const sl of slabs) pushFinishOverrideEdges(faceOverrideEdges, sl.params.finish, sl.params.outline?.vertices);
 
   const bands = computeStructuralSilhouetteBands({
     members,
