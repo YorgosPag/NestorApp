@@ -177,10 +177,6 @@ export class OpeningFrameProfileLibraryService {
     return this.library.list();
   }
 
-  async getProfile(id: string): Promise<OpeningFrameProfilePresetDoc | null> {
-    return this.library.getById(id);
-  }
-
   /**
    * Creates a new preset document with an enterprise ID. `projectId` is
    * persisted only when `scope === 'project'` (Firestore rejects `undefined`
