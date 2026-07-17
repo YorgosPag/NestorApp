@@ -152,14 +152,21 @@ const MITER_EXT_TOL = 1e-3;
  * Ένα strip-άκρο (core P, outer O) παράγει miter wedge ΜΟΝΟ όταν το O προβάλλεται κατά τον άξονα
  * **ΠΕΡΑ** από το core t-span του strip (junction miter tip)· chamfer (O προς τα μέσα) ή uniform
  * (O στο core t) → `null`. Το `mid` = P + perp·(perp-συνιστώσα του O−P) = το μη-επεκταμένο outer.
+ *
+ * ⚠️ Το outward normal προκύπτει **από το `dir`** (κάθετο μοναδιαίο, στην πλευρά του outer), ΟΧΙ από
+ * το `group.perp`: εκείνο (`outwardPerpOf` mid-points) είναι διαγώνιο όταν ΚΑΙ ΤΑ ΔΥΟ άκρα έχουν
+ * miter/chamfer → θα κατέρρεε το `mid` στο `tip` (μηδενικό τρίγωνο).
  */
-function endWedge(core: Vec2, outer: Vec2, tLo: number, tHi: number, perp: Vec2, dir: Vec2, s: FinishStrip): MiterWedge | null {
+function endWedge(core: Vec2, outer: Vec2, tLo: number, tHi: number, dir: Vec2, s: FinishStrip): MiterWedge | null {
   const tCore = dot(core, dir);
   const tO = dot(outer, dir);
   const beyondHi = tO > tHi + MITER_EXT_TOL && Math.abs(tCore - tHi) < MITER_EXT_TOL;
   const beyondLo = tO < tLo - MITER_EXT_TOL && Math.abs(tCore - tLo) < MITER_EXT_TOL;
   if (!beyondHi && !beyondLo) return null;
-  const perpComp = dot(sub(outer, core), perp);
+  const d = sub(outer, core);
+  const nRaw: Vec2 = { x: -dir.y, y: dir.x };
+  const perp: Vec2 = dot(d, nRaw) >= 0 ? nRaw : { x: dir.y, y: -dir.x };
+  const perpComp = dot(d, perp);
   if (Math.abs(perpComp) < MITER_EXT_TOL) return null;
   const mid: Vec2 = { x: core.x + perp.x * perpComp, y: core.y + perp.y * perpComp };
   return { core, mid, tip: outer, zBottomMm: s.zBottomMm, zTopMm: s.zTopMm, seg: s.seg };
@@ -176,8 +183,8 @@ export function collectMiterWedges(groups: readonly FinishStripGroup[]): MiterWe
     for (const s of g.strips) {
       const tLo = Math.min(dot(s.aCore, g.dir), dot(s.bCore, g.dir));
       const tHi = Math.max(dot(s.aCore, g.dir), dot(s.bCore, g.dir));
-      const wa = endWedge(s.aCore, s.aOuter, tLo, tHi, g.perp, g.dir, s);
-      const wb = endWedge(s.bCore, s.bOuter, tLo, tHi, g.perp, g.dir, s);
+      const wa = endWedge(s.aCore, s.aOuter, tLo, tHi, g.dir, s);
+      const wb = endWedge(s.bCore, s.bOuter, tLo, tHi, g.dir, s);
       if (wa) out.push(wa);
       if (wb) out.push(wb);
     }

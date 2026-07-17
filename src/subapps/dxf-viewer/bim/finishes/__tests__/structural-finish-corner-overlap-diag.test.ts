@@ -24,16 +24,24 @@ const mkBand = (segments: FinishFaceSegment[], zBottomMm: number, zTopMm: number
 
 const SCENE_TO_M = 0.001;
 
-/** Plan footprint (m) του welded body: t-range (outer bbox) × perp[0,thickness], mapped σε world. */
+/**
+ * Plan footprint (m) του welded body: t-range (outer bbox) × perp[0,thickness]. Το perp παράγεται
+ * από το `dir` (καθαρό axis normal, στην πλευρά του outer) — ΟΧΙ το `p.perp` (που σε πολύ κοντές
+ * όψεις είναι διαγώνιο λόγω `outwardPerpOf` mid-points → bbox artifact). Απομονώνει το t-extension,
+ * που ήταν η αιτία του double-coverage (Φ7b: αφαιρέθηκε).
+ */
 function planFootprint(p: FaceProfile): { x0: number; x1: number; y0: number; y1: number } {
   const xs = p.polygons.flatMap((poly) => poly.outer.map((pt) => pt.x));
   const t0 = Math.min(...xs);
   const t1 = Math.max(...xs);
   const oM = { x: p.originCoreScene.x * SCENE_TO_M, y: p.originCoreScene.y * SCENE_TO_M };
+  const nRaw = { x: -p.dir.y, y: p.dir.x };
+  const side = p.perp.x * nRaw.x + p.perp.y * nRaw.y >= 0 ? 1 : -1;
+  const perp = { x: nRaw.x * side, y: nRaw.y * side };
   const corners: Pt2[] = [];
   for (const t of [t0, t1]) {
     for (const u of [0, p.thicknessM]) {
-      corners.push({ x: oM.x + t * p.dir.x + u * p.perp.x, y: oM.y + t * p.dir.y + u * p.perp.y });
+      corners.push({ x: oM.x + t * p.dir.x + u * perp.x, y: oM.y + t * p.dir.y + u * perp.y });
     }
   }
   const cxs = corners.map((c) => c.x);
