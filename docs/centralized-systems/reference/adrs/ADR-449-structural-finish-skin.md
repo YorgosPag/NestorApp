@@ -220,6 +220,30 @@ Deterministic IDs: `boq_bim_${id}` / `_finish_int` / `_finish_ext`. Hook στο 
 - ETICS-grade per-element exterior detection (πέρα από outer-ring proximity) = μετέπειτα slice.
 
 ## 6. Changelog
+- **2026-07-17 (§slab-perimeter-fascia — Η ΠΛΑΚΑ ως silhouette member· ADR-534 Φ5c)** — Η πλάκα αποκτά
+  και τον **κάθετο περιμετρικό** σοβά (τη «φάσα»/fascia), ίδιο μοτίβο με τον τοίχο (Slice X3): γίνεται
+  `SilhouetteMember` της ΙΔΙΑΣ `computeStructuralFinishSilhouette` → flat finish-member slab → πλήρες
+  footprint + z-band=thickness → `safeUnion` ανά z-band τυλίγει το περίγραμμα + **σβήνει μόνο του στις
+  επαφές** (θαμμένη ακμή ενδιάμεσου δαπέδου) ή αφήνει σοβά στις εκτεθειμένες (μπαλκόνι/δώμα). **ΜΗΔΕΝ νέο
+  math** — το `toMember`.`map(toPt2)` πετά το z του `Polygon3D`, ακριβώς όπως ο αδελφός οριζόντιος δρόμος
+  (Φ5b) διαβάζει ήδη ωμό `outline.vertices`. **Απόφαση Α (options-object refactor, δικό του βήμα):** η
+  `computeStructuralFinishSilhouette` είχε **9 positional params** (callers έγραφαν σειρές `undefined`) →
+  μετατράπηκε σε `SilhouetteFinishInput` options-object (mirror του `HorizontalFinishInput` του αδελφού
+  module)· 3 production + 13 test call sites, **μηδέν αλλαγή συμπεριφοράς** (278 finishes GREEN = απόδειξη).
+  **Απόφαση Β (boy-scout N.0.2):** NEW `bim/geometry/slab-tilt.ts` `isSlabTilted` SSoT (κεντρικοποίηση
+  του inline `geometryType==='tilted' && slope!==undefined` του `wall-host-plan-builder:246`· mirror
+  `isWallTilted`/`isColumnTilted`/`isBeamTilted`). **Απόφαση Γ (κυρίως):** slab loop στον πυρήνα
+  (`slabIsFinishMember` + tilted guard) + `slabs` στο group Map/collection loop του sync + slabs στο
+  sceneUnits fallback **(Ρίσκο Δ:** όροφος με ΜΟΝΟ πλάκα → σωστό scale). Tilted πλάκες εξαιρούνται από το
+  flat union (ADR-404, mirror columns/beams/walls) → per-element σοβάς. NEW
+  `structural-finish-slab-perimeter.test.ts` (member / kind-gate ground / no-finish / tilted / contact-
+  subtraction union<separate). **ΕΚΤΟΣ ADR-040** (pure geometry/adapter). **⚠️ ΤΟ ΟΠΤΙΚΟ αποτέλεσμα της
+  φάσας ΑΝΕΠΑΛΗΘΕΥΤΟ — δεν προβλέπεται από κώδικα, χρειάζεται C4D έλεγχος Giorgio:** το slab footprint είναι
+  ΤΕΡΑΣΤΙΟ και κυριαρχεί στο union (Ρίσκο Α)· μπαλκόνι=εκτεθειμένη ακμή→σοβάς σωστός· ενδιάμεσο δάπεδο=
+  θαμμένη ακμή→πρέπει να σβήνει· δώμα/parapet=;· Ρίσκο Γ: ο classifier interior/exterior κρίνεται από τους
+  **τοίχους** → πλάκα-δώμα χωρίς τοίχους ταξινομείται default. **Φ5d (BOQ) DEFER** (soffit+top κυρίαρχα →
+  ΟΧΙ αντιγραφή column/beam). **ΜΑΘΗΜΑ: ο περιμετρικός σοβάς πλάκας = ΕΝΩΣΗ με την υπάρχουσα silhouette SSoT
+  (member + full footprint), ΟΧΙ νέο σύστημα — ΑΚΡΙΒΩΣ όπως ο τοίχος στο Slice X3.** 🔴 browser/C4D-verify. | Opus
 - **2026-07-17 (§slab-finish-member — Η ΠΛΑΚΑ ως finish-member· ADR-534 Φ5)** — Ο σοβάς αποκτά τον
   **τελευταίο** δομικό τύπο που έλειπε: την πλάκα. `SlabParams.finish` (mirror wall/column/beam)·
   **NEW κεντρικό** `structural-finish.schemas.ts` (`StructuralFinishSpecSchema` — το πρώτο finish zod
