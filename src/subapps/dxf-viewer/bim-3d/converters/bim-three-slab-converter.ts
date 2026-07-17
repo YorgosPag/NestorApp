@@ -12,7 +12,7 @@ import * as THREE from 'three';
 import type { SlabEntity } from '../../bim/types/slab-types';
 import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
 import { getElementMaterial3D } from '../materials/MaterialCatalog3D';
-import { buildShape, extrudeAndRotate, tagMesh, pushHoles, hangDownMeshY } from './bim-three-shape-helpers';
+import { buildShape, extrudeAndRotate, tagMesh, pushHoles, hangDownMeshY, stampBimIdentity, attachElementComponent } from './bim-three-shape-helpers';
 import { scalePoints } from '../../rendering/entities/shared/geometry-vector-utils';
 import { ensureWorldUvs } from './bim-uv-helpers';
 import { applySlabSlope } from './mesh-slope-shear';
@@ -27,6 +27,7 @@ import { buildSlabRebarCage } from './slab-rebar-3d';
 import { sceneUnitsToMeters } from '../../utils/scene-units';
 // ADR-534 Φ4 — soffit finish (ceiling): χρώμα από το shared paint/plaster catalog SSoT.
 import { getWallCoveringColor } from '../../bim/wall-coverings/wall-covering-material-catalog';
+import { isFinishActive } from '../../bim/finishes/structural-finish-types';
 // ADR-539 — Cinema 4D «Polygon Mode»: per-face χρώμα/υλικό μέσω faced multi-material prism.
 import { buildFacedSolidBody } from './bim-three-faced-prism';
 import type { FaceAppearanceMap } from '../../bim/types/face-appearance-types';
@@ -44,8 +45,9 @@ const SOFFIT_FINISH_THICKNESS_MM = 10;
 
 /**
  * ADR-476 — προσθέτει τον κλωβό οπλισμού πλάκας (δι-διευθυντική σχάρα κάτω+άνω) στο ήδη
- * συντεθειμένο slab result. Mirror του `attachBeamRebar`: επιστρέφει το ίδιο αντικείμενο
- * όταν ο οπλισμός είναι ανενεργός (view gate / χωρίς `structuralReinforcement`).
+ * συντεθειμένο slab result. Επιστρέφει το ίδιο αντικείμενο όταν ο οπλισμός είναι ανενεργός
+ * (view gate / χωρίς `structuralReinforcement`)· το Mesh↔Group composition το κάνει το
+ * `attachElementComponent` SSoT (ADR-669 §10).
  * `bottomFaceY` = κάτω παρειά πλάκας (= `mesh.position.y` → ίδιο datum, ευθυγράμμιση).
  * Gate μόνο στον δικό του διακόπτη `showReinforcement` (ADR-470 precedence).
  */
@@ -58,23 +60,20 @@ function attachSlabRebar(
   if (!isStructuralComponentVisible('reinforcement', slab)) return composed;
   const cage = buildSlabRebarCage(slab, bottomFaceY, levelId);
   if (!cage) return composed;
-  if (composed instanceof THREE.Group) {
-    composed.add(cage);
-    return composed;
-  }
-  const group = new THREE.Group();
-  group.add(composed);
-  group.add(cage);
-  group.userData['bimId'] = slab.id;
-  group.userData['bimType'] = 'slab';
-  return group;
+  return attachElementComponent(composed, cage, { bimId: slab.id, bimType: 'slab' });
 }
 
 /**
  * ADR-534 Φ4 — προσθέτει λεπτή στρώση φινιρίσματος στην κάτω παρειά (soffit) μιας ceiling πλάκας
  * (Revit «Paint on face» / RCP). Κρέμεται κάτω από το soffit (top face στο soffit, μεγαλώνει προς
  * τα κάτω) ώστε να φαίνεται από κάτω. Χρώμα από το shared paint/plaster catalog SSoT. No-op όταν
- * δεν είναι ceiling ή δεν έχει `soffitFinish`. Mirror του `attachSlabRebar` (Mesh ↔ Group upgrade).
+ * δεν είναι ceiling ή δεν έχει `soffitFinish`. Το Mesh↔Group upgrade το κάνει το
+ * `attachElementComponent` SSoT (ADR-669 §10) — ο σοβάς soffit είναι component όπως ο οπλισμός.
+ *
+ * ADR-534 Φ5 (Απόφαση Β) — **suppress όταν ενεργός `finish` (σοβάς πλάκας)**: το ενιαίο
+ * structural-finish soffit skin (`slabDownSkin`) καλύπτει ήδη την κάτω παρειά· χωρίς αυτό το guard
+ * θα είχαμε **διπλό δέρμα** στην ceiling. Mirror του `suppressFinishSkin` (ADR-449 X1). Ανενεργός
+ * `finish` → byte-for-byte η προ-Φ5 συμπεριφορά (το `soffitFinish` paint αποδίδεται κανονικά).
  */
 function attachSoffitFinish(
   composed: THREE.Mesh | THREE.Group,
@@ -82,7 +81,7 @@ function attachSoffitFinish(
   shape: THREE.Shape,
   soffitY: number,
 ): THREE.Mesh | THREE.Group {
-  if (slab.kind !== 'ceiling' || !slab.params.soffitFinish) return composed;
+  if (slab.kind !== 'ceiling' || !slab.params.soffitFinish || isFinishActive(slab.params.finish)) return composed;
   const ft = SOFFIT_FINISH_THICKNESS_MM * MM_TO_M;
   const geo = extrudeAndRotate(shape, ft);
   const mat = new THREE.MeshStandardMaterial({
@@ -92,18 +91,8 @@ function attachSoffitFinish(
   });
   const mesh = new THREE.Mesh(geo, mat);
   mesh.position.y = soffitY - ft; // top face στο soffit, μεγαλώνει προς τα κάτω (ορατό από κάτω)
-  mesh.userData['bimId'] = slab.id;
-  mesh.userData['bimType'] = 'slab-soffit-finish';
-  if (composed instanceof THREE.Group) {
-    composed.add(mesh);
-    return composed;
-  }
-  const group = new THREE.Group();
-  group.add(composed);
-  group.add(mesh);
-  group.userData['bimId'] = slab.id;
-  group.userData['bimType'] = 'slab';
-  return group;
+  stampBimIdentity(mesh, { bimId: slab.id, bimType: 'slab-soffit-finish' });
+  return attachElementComponent(composed, mesh, { bimId: slab.id, bimType: 'slab' });
 }
 
 /** Legacy single-material slab body (ExtrudeGeometry + slope + world UVs). Unchanged path. */

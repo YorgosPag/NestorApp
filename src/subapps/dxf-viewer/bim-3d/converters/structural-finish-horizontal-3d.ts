@@ -18,7 +18,7 @@ import * as THREE from 'three';
 import { sceneUnitsToMeters, type SceneUnits } from '../../utils/scene-units';
 import type { Pt2 } from '../../bim/geometry/shared/segment-polygon-coverage';
 import type { HorizontalFinishFace, HorizontalFinishPolygon } from '../../bim/finishes/structural-finish-horizontal';
-import { extrudeAndRotate } from './bim-three-shape-helpers';
+import { extrudeAndRotate, stampBimIdentity } from './bim-three-shape-helpers';
 import { scalePoints } from '../../rendering/entities/shared/geometry-vector-utils';
 import { getMaterial3D } from '../materials/MaterialCatalog3D';
 import { attachEdgesProjection } from './bim-three-edges';
@@ -78,7 +78,7 @@ function buildPolygonSlab(
   face: HorizontalFinishFace,
   baseY: number,
   id: string,
-  bimType: 'column' | 'beam' | 'wall',
+  bimType: 'column' | 'beam' | 'wall' | 'slab',
   levelId: string | undefined,
   sceneToM: number,
 ): THREE.Mesh | null {
@@ -87,12 +87,9 @@ function buildPolygonSlab(
   const geo = extrudeAndRotate(shape, face.thicknessMm * MM_TO_M);
   const mesh = new THREE.Mesh(geo, getMaterial3D(face.materialId));
   mesh.position.y = baseY;
-  mesh.userData['bimId'] = id;
-  mesh.userData['bimType'] = bimType;
+  stampBimIdentity(mesh, { bimId: id, bimType, matId: face.materialId, levelId });
   mesh.userData['structuralFinish'] = true;
-  mesh.userData['matId'] = face.materialId;
   mesh.userData['finishClassification'] = face.classification;
-  if (levelId !== undefined) mesh.userData['levelId'] = levelId;
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   attachEdgesProjection(mesh, bimType);
@@ -106,7 +103,7 @@ function buildPolygonSlab(
  */
 export function buildHorizontalFinishSkin(
   faces: readonly HorizontalFinishFace[],
-  bimType: 'column' | 'beam' | 'wall',
+  bimType: 'column' | 'beam' | 'wall' | 'slab',
   buildingBaseElevationM: number,
   sceneUnits: SceneUnits,
   levelId?: string,
@@ -124,8 +121,7 @@ export function buildHorizontalFinishSkin(
     }
   }
   if (group.children.length === 0) return null;
-  group.userData['bimId'] = id;
-  group.userData['bimType'] = bimType;
+  stampBimIdentity(group, { bimId: id, bimType });
   group.userData['structuralFinish'] = true;
   // ADR-449 Slice 11 — μη-pickable: κλικ σε σοβατισμένη όψη επιλέγει τον δομικό πυρήνα πίσω.
   makeNonPickable(group);

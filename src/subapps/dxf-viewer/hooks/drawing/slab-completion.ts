@@ -37,6 +37,8 @@ import { validateSlabParams } from '../../bim/validators/slab-validator';
 import { resolveAutoSlabTypeId } from '../../bim/family-types/slab-type-auto-assign';
 import { createSlab } from '@/services/factories/slab.factory';
 import { resolveStoreyCeilingElevationMm } from '../../systems/levels/storey-creation-defaults';
+import { slabKindTakesFinish } from '../../bim/finishes/slab-finish-source';
+import { createDefaultStructuralFinishSpec } from '../../bim/finishes/structural-finish-types';
 import type { SceneUnits } from '../../utils/scene-units';
 
 export type { SceneUnits };
@@ -109,6 +111,13 @@ export function buildDefaultSlabParams(
 
   const lifted: Point3D[] = vertices.map((v) => ({ x: v.x, y: v.y, z: 0 }));
 
+  // ADR-534 Φ5 — additive σοβάς ως finish skin (mirror τοίχου: `categoryGetsFinishSkin` →
+  // `createDefaultStructuralFinishSpec`). Δίνεται σε ΟΛΕΣ τις finish-kinds πλάκες (floor/
+  // ceiling/roof)· ground/foundation → undefined. Πλάκα με DNA-σοβά (roof buildup «Plaster
+  // Soffit») παίρνει κι αυτή spec, αλλά το `slabIsFinishMember` το φιλτράρει στο render →
+  // μηδέν διπλό δέρμα (ίδια σημασιολογία με `wallIsFinishMember`).
+  const finish = slabKindTakesFinish(kind) ? createDefaultStructuralFinishSpec() : undefined;
+
   const params: SlabParams = {
     kind,
     outline: { vertices: lifted },
@@ -116,6 +125,7 @@ export function buildDefaultSlabParams(
     thickness,
     geometryType,
     sceneUnits,
+    ...(finish ? { finish } : {}),
     ...(overrides.heightOffsetFromLevel !== undefined
       ? { heightOffsetFromLevel: overrides.heightOffsetFromLevel }
       : {}),

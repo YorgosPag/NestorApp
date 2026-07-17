@@ -16,6 +16,7 @@ import type { SceneUnits } from '../../utils/scene-units';
 import type { SilhouetteBand } from '../../bim/finishes/structural-finish-silhouette';
 import { mergeSilhouetteBandsToStrips } from '../../bim/finishes/structural-finish-vertical-merge';
 import { buildFinishSkinFromStrips } from './structural-finish-3d';
+import { stampBimIdentity } from './bim-three-shape-helpers';
 
 /** Σταθερό id για το ενιαίο silhouette skin group (visibility gate = global). */
 const SILHOUETTE_ID = 'structural-finish-silhouette';
@@ -56,8 +57,7 @@ export function buildStructuralSilhouetteSkin(
   const strips = mergeSilhouetteBandsToStrips(bands, sceneUnits);
   const group = buildFinishSkinFromStrips(strips, sceneUnits, buildingBaseElevationM, id, 'column', levelId);
   if (!group) return null;
-  group.userData['bimId'] = id;
-  group.userData['bimType'] = 'column';
+  stampBimIdentity(group, { bimId: id, bimType: 'column' });
   group.userData['structuralFinish'] = true;
   // ADR-449 Slice X1 — μη-pickable: κλικ σε σοβατισμένη όψη επιλέγει τον δομικό πυρήνα
   // από πίσω (όχι ολόκληρο τον merged σοβά του κτιρίου, που μοιράζεται synthetic bimId).

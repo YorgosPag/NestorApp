@@ -26,6 +26,7 @@ import { stripPrismGeometry } from './envelope-three-mesh';
 import { scalePoints } from '../../rendering/entities/shared/geometry-vector-utils';
 import { getMaterial3D, getFinishColorOverrideMaterial3D } from '../materials/MaterialCatalog3D';
 import { attachEdgesProjection } from './bim-three-edges';
+import { stampBimIdentity } from './bim-three-shape-helpers';
 import { mmToSceneUnits, sceneUnitsToMeters, type SceneUnits } from '../../utils/scene-units';
 import { computeColumnFinishBands, computeBeamFinishFaces } from '../../bim/finishes/structural-finish-scene';
 import type { FinishFaceSegment, StructuralFinishFaces } from '../../bim/finishes/structural-finish-types';
@@ -69,12 +70,9 @@ function addFinishPrism(
   const material = colorOverride ? getFinishColorOverrideMaterial3D(colorOverride) : getMaterial3D(materialId);
   const mesh = new THREE.Mesh(geo, material);
   mesh.position.y = baseY;
-  mesh.userData['bimId'] = id;
-  mesh.userData['bimType'] = bimType;
+  stampBimIdentity(mesh, { bimId: id, bimType, matId: materialId, levelId });
   mesh.userData['structuralFinish'] = true;
-  mesh.userData['matId'] = materialId;
   mesh.userData['finishClassification'] = classification;
-  if (levelId !== undefined) mesh.userData['levelId'] = levelId;
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   attachEdgesProjection(mesh, bimType);
@@ -115,8 +113,7 @@ export function buildFinishSkinFromFaces(
   }
   if (group.children.length === 0) return null;
 
-  group.userData['bimId'] = id;
-  group.userData['bimType'] = bimType;
+  stampBimIdentity(group, { bimId: id, bimType });
   group.userData['structuralFinish'] = true;
   return group;
 }
@@ -158,8 +155,7 @@ export function buildFinishSkinFromStrips(
     );
   }
   if (group.children.length === 0) return null;
-  group.userData['bimId'] = id;
-  group.userData['bimType'] = bimType;
+  stampBimIdentity(group, { bimId: id, bimType });
   group.userData['structuralFinish'] = true;
   return group;
 }
@@ -202,8 +198,7 @@ export function buildColumnFinishSkin(
     if (sub) while (sub.children.length) group.add(sub.children[0]);
   }
   if (group.children.length === 0) return null;
-  group.userData['bimId'] = column.id;
-  group.userData['bimType'] = 'column';
+  stampBimIdentity(group, { bimId: column.id, bimType: 'column' });
   group.userData['structuralFinish'] = true;
   return group;
 }

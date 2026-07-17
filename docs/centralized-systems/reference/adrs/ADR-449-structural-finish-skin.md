@@ -220,6 +220,29 @@ Deterministic IDs: `boq_bim_${id}` / `_finish_int` / `_finish_ext`. Hook στο 
 - ETICS-grade per-element exterior detection (πέρα από outer-ring proximity) = μετέπειτα slice.
 
 ## 6. Changelog
+- **2026-07-17 (§slab-finish-member — Η ΠΛΑΚΑ ως finish-member· ADR-534 Φ5)** — Ο σοβάς αποκτά τον
+  **τελευταίο** δομικό τύπο που έλειπε: την πλάκα. `SlabParams.finish` (mirror wall/column/beam)·
+  **NEW κεντρικό** `structural-finish.schemas.ts` (`StructuralFinishSpecSchema` — το πρώτο finish zod
+  schema· ΟΛΑ τα params το importάρουν αντί inline, N.0.2)· **NEW** `slab-finish-source.ts`
+  (`slabIsFinishMember` SSoT predicate + `SLAB_FINISH_KINDS` + `slabDnaHasPlaster` + `slabFinishZExtent`,
+  ακριβές mirror `wall-finish-source`)· N.7.1 **EXTRACT** `structural-finish-horizontal-obstacles.ts`
+  (bbox/ZExtent/PlanObstacle/coversAtPlane/finishedObstacleOf· το `scene-horizontal` ήταν 481/500).
+  Το soffit (`down`) βγαίνει per-member (`collectSlabSoffitFace`)· η κορυφή (`up`) στο ενιαίο
+  `computeMergedStructuralTopCap`· **id-based self-exclusion** ανά επίπεδο (`coversAtPlane` +`excludeIds`)
+  ώστε η πλάκα να μη σβήνει τον εαυτό της (Απόφαση Δ). `buildHorizontalFinishSkin` δέχεται `'slab'`.
+  **Πλήρης τεκμηρίωση + DEFER (περιμετρικό/BOQ/member-on-slab): ADR-534 §6 Φ5.**
+- **2026-07-17 (§wall-soffit-clip — Ο ΣΟΒΑΣ ΤΟΙΧΟΥ ΣΕΒΕΤΑΙ ΤΗΝ ΠΛΑΚΑ· ΕΝΑ SSoT z-extent)** — Giorgio (OBJ →
+  C4D, ροζ σοβάς): ο κάθετος σοβάς τοίχου **διαπερνούσε** την πλάκα. Το `wallObstacleZExtent` έδινε πλήρες
+  `baseOffset+height` (μηδέν soffit clip), ενώ τα δοκάρια είχαν ήδη clip από **ADR-534 Φ3c-B3b**.
+  **Probe-verified διάγνωση:** αιτία = ο **κάθετος** silhouette· το `hup` καπάκι δεν είχε δικό του bug —
+  απλώς κάθεται στο **ίδιο** άκλιπο `zTop` (flush πλάκα → 25mm χείλος @3000 = οι «λεπτές λωρίδες»). Ένα
+  αίτιο, δύο συμπτώματα → το clip μπήκε **και στα δύο** μονοπάτια.
+  **N.0.2:** το `wallObstacleZExtent` (silhouette) + `wallZExtent` (scene-horizontal) ήταν **αυτολεξεί
+  δίδυμα** → ΕΝΑ SSoT **`wallFinishZExtent`** (`wall-finish-source.ts`): attached-top resolution (Slice X1/8b)
+  → soffit clip (`Math.min`, render-only) → κάτω παρειά **πάντα** ανέγγιχτη. Το clip περνά ΜΟΝΟ στα finish
+  **members**, ΟΧΙ στα coverage **obstacles** (το δομικό σώμα δεν κόβεται). `computeStructuralFinishSilhouette`
+  += **9ο** optional param `wallTopClipById`· `HorizontalFinishInput` += ομώνυμο πεδίο. 2Δ/DXF export →
+  `undefined` = byte-for-byte. **Πλήρης ανάλυση + πίνακας μετρήσεων: ADR-534 §6 (Φ3c-B3b′).**
 - **2026-07-17 (§opening-bands — Ο ΣΟΒΑΣ ΣΕΒΕΤΑΙ ΤΑ ΚΟΥΦΩΜΑΤΑ· 3Δ + 2Δ + DXF export)** — **Giorgio (screenshots):
   «όταν εμφανίζω τους σοβάδες, αυτοί κρύβουν τα ανοίγματα — τα σκεπάζουν και δεν τα σέβονται».** **RECOGNITION
   (N.0.1):** η αλυσίδα του σοβά **δεν δεχόταν openings πουθενά** — το `wallToSilhouetteMember` έπαιρνε

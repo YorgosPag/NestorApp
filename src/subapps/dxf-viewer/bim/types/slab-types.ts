@@ -38,6 +38,7 @@ import type { SceneUnits } from '../../utils/scene-units';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
 import type { EnvelopeLayer } from './thermal-envelope-types';
 import type { SlabDna } from './slab-dna-types';
+import type { StructuralFinishSpec } from '../finishes/structural-finish-types';
 import type { WallCoveringMaterialId } from './wall-covering-types';
 import type { SlabTypeParams } from './bim-family-type';
 import type { SlabFoundationReinforcement } from '../structural/reinforcement/slab-foundation-reinforcement-types';
@@ -185,8 +186,23 @@ export interface SlabParams {
   /**
    * ADR-534 Φ4 — Φινίρισμα κάτω παρειάς (soffit) για `kind='ceiling'` πλάκες (ανά φάτνωμα).
    * Non-structural· δείχνει στο shared paint/plaster catalog. Absent ⇒ raw σκυρόδεμα.
+   *
+   * ⚠️ ADR-534 Φ5 — **ΣΥΝΥΠΑΡΧΕΙ** με το {@link SlabParams.finish}, δεν αντικαθίσταται. Όταν
+   * το `finish` είναι ενεργό, το `soffitFinish` **καταστέλλεται** στο render (αλλιώς διπλό
+   * δέρμα στην κάτω παρειά) — το πεδίο όμως μένει στο Firestore (μηδέν data loss, μηδέν
+   * migration). Άλλο catalog: `soffitFinish` → paint· `finish` → plaster.
    */
   readonly soffitFinish?: SoffitFinish;
+  /**
+   * ADR-534 Φ5 / ADR-449 — additive σοβάς ως **finish skin** (mirror `WallParams.finish`).
+   * Ο σοβάς **ΔΕΝ** μπαίνει στο `thickness` (που ανήκει στον δομικό πυρήνα / `dna`): προεξέχει
+   * από τον πυρήνα μέσω της ενιαίας structural-finish σιλουέτας, με δικό υλικό + (ασύμμετρο)
+   * πάχος, BOQ-tracked. Absent = legacy πλάκα → δεν γίνεται finish-member (μηδέν migration).
+   *
+   * ⚠️ **Δεν είναι το `dna`.** Το `dna` = υγρομόνωση/θερμομόνωση/κονία/πλακάκι = *είναι* το
+   * πάχος. Ο σοβάς = δέρμα 15/25mm από πάνω του. Βλ. `bim/finishes/slab-finish-source.ts`.
+   */
+  readonly finish?: StructuralFinishSpec;
 }
 
 // ─── Geometry cache (derivable from params; SSoT = params) ──────────────────

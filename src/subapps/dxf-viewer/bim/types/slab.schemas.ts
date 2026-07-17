@@ -22,6 +22,7 @@ import {
   IfcPropertySetSchema,
 } from './ifc-entity-mixin';
 import { EnvelopeLayerSchema } from './thermal-envelope.schemas';
+import { StructuralFinishSpecSchema } from '../finishes/structural-finish.schemas';
 
 // ─── Primitive schemas ──────────────────────────────────────────────────────
 
@@ -118,6 +119,9 @@ const SlabParamsBaseSchema = z
     envelopeLayer: EnvelopeLayerSchema.optional(),
     // ─── ADR-534 Φ4 — soffit finish (ceiling paint/plaster, references wall-covering catalog)
     soffitFinish: z.object({ materialId: z.string().min(1) }).optional(),
+    // ─── ADR-534 Φ5 / ADR-449 — additive σοβάς (finish skin). ΚΕΝΤΡΙΚΟ schema — μην το
+    // γράψεις inline εδώ: το ίδιο spec ζει σε 4 entity params (wall/column/beam/slab).
+    finish: StructuralFinishSpecSchema.optional(),
   })
   .strict();
 

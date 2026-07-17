@@ -54,6 +54,7 @@ import { KIND_STROKE, KIND_FILL } from '../slabs/slab-render-palette';
 // ADR-531 Φ5b.4 — «Μόνο κάτοψη DXF» plan-lines όψη (view flag).
 import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
 import { getWallCoveringColor } from '../wall-coverings/wall-covering-material-catalog';
+import { isFinishActive } from '../finishes/structural-finish-types';
 import { hexToRgba } from '../utils/bim-vg-fill-tint';
 import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
 
@@ -179,7 +180,10 @@ export class SlabRenderer extends BimFootprintRenderer {
    * `FloorFinishRenderer`). No-op όταν δεν είναι ceiling ή δεν έχει finish (raw σκυρόδεμα).
    */
   private drawSoffitFinishTint(slab: SlabEntity, verts: readonly Point2D[]): void {
-    if (slab.kind !== 'ceiling' || !slab.params.soffitFinish) return;
+    // ADR-534 Φ5 (Απόφαση Β) — suppress όταν ενεργός `finish` (σοβάς πλάκας): ο σοβάς είναι το
+    // φινίρισμα της κάτω παρειάς· το `soffitFinish` paint καταστέλλεται (μηδέν διπλή στρώση, 2Δ↔3Δ
+    // parity με το `attachSoffitFinish`). Ανενεργός finish → byte-for-byte η προ-Φ5 συμπεριφορά.
+    if (slab.kind !== 'ceiling' || !slab.params.soffitFinish || isFinishActive(slab.params.finish)) return;
     const hex = getWallCoveringColor(slab.params.soffitFinish.materialId);
     this.ctx.save();
     this.ctx.fillStyle = adaptFillTintForCanvas(hexToRgba(hex, 0.18) ?? hex);
