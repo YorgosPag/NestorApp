@@ -33,10 +33,8 @@ import {
   DEFAULT_FRAME_PROFILE_FACE_MM,
   DEFAULT_FRAME_PROFILE_DEPTH_MM,
 } from '../types/opening-frame-profile';
-import {
-  DEFAULT_FRAME_PROFILE_ID,
-  getFrameProfileById,
-} from './opening-frame-profile-catalog';
+import { DEFAULT_FRAME_PROFILE_ID } from './opening-frame-profile-catalog';
+import { resolveFrameProfileById } from './opening-frame-profile-lookup';
 
 /** Resolved, ready-to-consume frame cross-section (mm). */
 export interface ResolvedFrameProfile {
@@ -76,7 +74,7 @@ function applyCatalogProfile(acc: FrameAccumulator, profile: OpeningFrameProfile
 function applyProfileIdLayer(acc: FrameAccumulator, frameProfileId: string | undefined): void {
   if (!frameProfileId) return;
   acc.id = frameProfileId;
-  const catalog = getFrameProfileById(frameProfileId);
+  const catalog = resolveFrameProfileById(frameProfileId);
   if (catalog) applyCatalogProfile(acc, catalog);
 }
 
@@ -92,7 +90,7 @@ export function resolveOpeningFrameProfile(
   params: OpeningParams,
   typeParams?: OpeningTypeParams | null,
 ): ResolvedFrameProfile {
-  const base = getFrameProfileById(DEFAULT_FRAME_PROFILE_ID);
+  const base = resolveFrameProfileById(DEFAULT_FRAME_PROFILE_ID);
   const acc: FrameAccumulator = {
     id: base?.id ?? DEFAULT_FRAME_PROFILE_ID,
     manufacturer: base?.manufacturer ?? 'Generic',

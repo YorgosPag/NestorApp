@@ -23,16 +23,16 @@
  * field actually changes.
  *
  * @see ../../../../bim/family-types/resolve-opening-frame-profile.ts — SSoT resolver
- * @see ../../../../bim/family-types/opening-frame-profile-catalog.ts — SSoT catalog
+ * @see ../../../../bim/family-types/opening-frame-profile-lookup.ts — builtin+user merge SSoT (ADR-676 Phase 3 PILOT)
  * @see docs/centralized-systems/reference/adrs/ADR-611-opening-frame-profile.md
  */
 
 import type { OpeningEntity, OpeningParams } from '../../../../bim/types/opening-types';
 import { CATALOG_CUSTOM_SENTINEL } from '../../../../bim/types/opening-frame-profile';
 import {
-  listFrameProfiles,
-  listFrameProfileManufacturers,
-} from '../../../../bim/family-types/opening-frame-profile-catalog';
+  listMergedFrameProfiles,
+  listMergedFrameProfileManufacturers,
+} from '../../../../bim/family-types/opening-frame-profile-lookup';
 import { resolveOpeningFrameProfile } from '../../../../bim/family-types/resolve-opening-frame-profile';
 import { OPENING_RIBBON_KEYS } from './opening-command-keys';
 import type { RibbonComboboxState } from '../../context/RibbonCommandContext';
@@ -55,7 +55,7 @@ export function resolveOpeningFrameProfileComboboxState(
   const resolved = resolveOpeningFrameProfile(opening.params);
 
   if (commandKey === OPENING_RIBBON_KEYS.frameProfile.manufacturer) {
-    const options = listFrameProfileManufacturers().map((m) => ({
+    const options = listMergedFrameProfileManufacturers().map((m) => ({
       value: m,
       labelKey: m,
       isLiteralLabel: true as const,
@@ -64,7 +64,7 @@ export function resolveOpeningFrameProfileComboboxState(
   }
 
   if (commandKey === OPENING_RIBBON_KEYS.frameProfile.profile) {
-    const catalogOptions = listFrameProfiles(resolved.manufacturer).map((p) => ({
+    const catalogOptions = listMergedFrameProfiles(resolved.manufacturer).map((p) => ({
       value: p.id,
       labelKey: p.label ?? `${p.series} · ${p.role}`,
       isLiteralLabel: true as const,
@@ -90,7 +90,7 @@ export function resolveOpeningFrameProfileComboboxState(
 
 /** Pick the manufacturer's default profile: prefer role `frame`, else its first entry. */
 function firstProfileForManufacturer(manufacturer: string): string | null {
-  const profiles = listFrameProfiles(manufacturer);
+  const profiles = listMergedFrameProfiles(manufacturer);
   const preferred = profiles.find((p) => p.role === 'frame') ?? profiles[0];
   return preferred?.id ?? null;
 }
