@@ -67,7 +67,7 @@ describe('ADR-449/534 Φ7 — buildStructuralSilhouetteSkin (unified face weld)'
     expect(skin.children).toHaveLength(1);
   });
 
-  it('δύο κάθετες όψεις (Β + Δ, ΚΟΙΛΗ γωνία) → 2 meshes (πραγματικό όριο· ΚΑΝΕΝΑ miter wedge)', () => {
+  it('δύο κάθετες όψεις (Β + Δ) ΙΔΙΟΥ υλικού → 1 merged mesh (ADR-534 Φ7b: ένα συνεχές δέρμα)', () => {
     const north = mkSeg({ x: 0, y: 50 }, { x: 50, y: 50 });
     const west = mkSeg({ x: 0, y: 0 }, { x: 0, y: 50 });
     const bands: SilhouetteBand[] = [
@@ -75,10 +75,17 @@ describe('ADR-449/534 Φ7 — buildStructuralSilhouetteSkin (unified face weld)'
       mkBand([north, west], 1500, 3000),
     ];
     const skin = buildStructuralSilhouetteSkin(bands, 'mm', 0)!;
-    // Γωνία = πραγματικό όριο (2 ξεχωριστά welded bodies, όχι weld). Αυτή είναι ΚΟΙΛΗ (concave) γωνία:
-    // το mitered outer κόβεται ΠΡΟΣ ΤΑ ΜΕΣΑ (trim), δεν προεξέχει → ΚΑΝΕΝΑ miter wedge (τα wedges Φ7b
-    // αφορούν ΚΥΡΤΕΣ εξωτερικές γωνίες, όπου ήταν το double-coverage). Βλ. corner-overlap-diag για κυρτή.
-    expect(skin.children).toHaveLength(2);
+    // Φ7b: όλες οι όψεις + wedges ΙΔΙΟΥ υλικού κάνουν merge σε ΕΝΑ mesh → μηδέν per-face
+    // κατακερματισμός στο OBJ export (Giorgio: «ένα συνεχές δέρμα»). Ήταν 2 πριν το merge.
+    expect(skin.children).toHaveLength(1);
+  });
+
+  it('δύο υλικά (plaster-ext + gypsum) → 2 merged meshes (ένα ανά υλικό)', () => {
+    const extWall = mkSeg({ x: 0, y: 0 }, { x: 3000, y: 0 });
+    const gypWall = mkSeg({ x: 0, y: 2000 }, { x: 3000, y: 2000 }, { materialId: 'mat-gypsum-board' });
+    const bands: SilhouetteBand[] = [mkBand([extWall, gypWall], 0, 3000)];
+    const skin = buildStructuralSilhouetteSkin(bands, 'mm', 0)!;
+    expect(skin.children).toHaveLength(2); // ένα merged mesh ανά υλικό
   });
 
   it('baseElevation → κατακόρυφη θέση του δέρματος (bakes στο geometry, όχι position.y)', () => {
