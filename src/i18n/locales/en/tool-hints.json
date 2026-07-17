@@ -457,7 +457,8 @@
       "name": "Parallel Guide",
       "description": "Create guide parallel to existing",
       "steps": [
-        "Click on guide — type distance + Enter"
+        "Click on the reference guide",
+        "Move the cursor to the side you want — type distance + Enter"
       ],
       "shortcuts": "G→P | ESC=Cancel"
     },

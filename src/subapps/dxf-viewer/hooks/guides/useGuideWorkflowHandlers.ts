@@ -12,6 +12,8 @@ import type { UseConstructionPointStateReturn } from '../state/useConstructionPo
 import type { PromptDialogOptions } from '../../systems/prompt-dialog';
 import type { GuideWorkflowState } from './guide-workflow-types';
 import { CanvasNumericInputStore } from '../../systems/canvas-numeric-input/CanvasNumericInputStore';
+import { getRealtimeWorldCursor } from '../../systems/cursor/ImmediatePositionStore';
+import { resolveParallelSide } from '../../systems/guides/guide-parallel-side';
 
 export interface UseGuideWorkflowHandlersParams {
   guideState: UseGuideStateReturn;
@@ -26,13 +28,22 @@ export function useGuideWorkflowHandlers(params: UseGuideWorkflowHandlersParams)
   const { guideState, cpState, showPromptDialog, t, notifyWarning, state } = params;
 
   // ─── Parallel workflow ───
+  /**
+   * Κλικ στον οδηγό αναφοράς → ανοίγει η πληκτρολόγηση απόστασης. Η ΠΛΕΥΡΑ
+   * αποφασίζεται τη στιγμή του Enter, από το πού βρίσκεται τότε ο κέρσορας:
+   * ο resolver διαβάζει event-time το `getRealtimeWorldCursor()` (ADR-040 κανόνας 2).
+   * Έτσι ο χρήστης δείχνει την πλευρά κουνώντας το ποντίκι, όπως σε AutoCAD/Revit.
+   */
   const handleParallelRefSelected = useCallback((refGuideId: string) => {
     state.setParallelRefGuideId(refGuideId);
-  }, [state]);
 
-  const handleParallelSideChosen = useCallback((refGuideId: string, sign: 1 | -1) => {
     CanvasNumericInputStore.activate(
-      sign,
+      () => {
+        const cursor = getRealtimeWorldCursor();
+        const refGuide = guideState.guides.find(g => g.id === refGuideId);
+        if (!cursor || !refGuide) return 1;
+        return resolveParallelSide(refGuide, cursor);
+      },
       refGuideId,
       (distance, s, id) => {
         guideState.addParallelGuide(id, distance * s);
@@ -47,50 +58,46 @@ export function useGuideWorkflowHandlers(params: UseGuideWorkflowHandlersParams)
     state.setRotateRefGuideId(guideId);
   }, [state]);
 
-  const handleRotatePivotSet = useCallback((guideId: string, pivot: Point2D) => {
+  /**
+   * SSoT για τους τρεις rotate διαλόγους γωνίας: ίδιος διάλογος, ίδια επικύρωση
+   * (μη-αριθμός ή πολλαπλάσιο του 360 = άκυρο), διαφορετική μόνο η ενέργεια.
+   * `onAngle` καλείται ΜΟΝΟ με έγκυρη γωνία· `onSettled` πάντα στο τέλος.
+   */
+  const promptRotateAngle = useCallback((
+    titleKey: string,
+    onAngle: (angleDeg: number) => void,
+    onSettled?: () => void,
+  ) => {
+    const isInvalidAngle = (n: number) => isNaN(n) || n === 0 || n % 360 === 0;
     showPromptDialog({
-      title: t('promptDialog.rotateGuideAngle'),
+      title: t(titleKey),
       label: t('promptDialog.enterRotateAngle'),
       placeholder: t('promptDialog.rotateAnglePlaceholder'),
       inputType: 'number',
-      validate: (val) => {
-        const n = parseFloat(val);
-        if (isNaN(n)) return t('promptDialog.invalidNumber');
-        if (n === 0 || n % 360 === 0) return t('promptDialog.invalidNumber');
-        return null;
-      },
+      validate: (val) => (isInvalidAngle(parseFloat(val)) ? t('promptDialog.invalidNumber') : null),
     }).then((result) => {
       if (result !== null) {
         const angleDeg = parseFloat(result);
-        if (!isNaN(angleDeg) && angleDeg !== 0 && angleDeg % 360 !== 0) {
-          guideState.rotateGuide(guideId, pivot, angleDeg);
-        }
+        if (!isInvalidAngle(angleDeg)) onAngle(angleDeg);
       }
-      state.setRotateRefGuideId(null);
+      onSettled?.();
     });
-  }, [showPromptDialog, t, guideState, state]);
+  }, [showPromptDialog, t]);
+
+  const handleRotatePivotSet = useCallback((guideId: string, pivot: Point2D) => {
+    promptRotateAngle(
+      'promptDialog.rotateGuideAngle',
+      (angleDeg) => { guideState.rotateGuide(guideId, pivot, angleDeg); },
+      () => { state.setRotateRefGuideId(null); },
+    );
+  }, [promptRotateAngle, guideState, state]);
 
   const handleRotateAllPivotSet = useCallback((pivot: Point2D) => {
-    showPromptDialog({
-      title: t('promptDialog.rotateAllGuidesAngle'),
-      label: t('promptDialog.enterRotateAngle'),
-      placeholder: t('promptDialog.rotateAnglePlaceholder'),
-      inputType: 'number',
-      validate: (val) => {
-        const n = parseFloat(val);
-        if (isNaN(n)) return t('promptDialog.invalidNumber');
-        if (n === 0 || n % 360 === 0) return t('promptDialog.invalidNumber');
-        return null;
-      },
-    }).then((result) => {
-      if (result !== null) {
-        const angleDeg = parseFloat(result);
-        if (!isNaN(angleDeg) && angleDeg !== 0 && angleDeg % 360 !== 0) {
-          guideState.rotateAllGuides(pivot, angleDeg);
-        }
-      }
-    });
-  }, [showPromptDialog, t, guideState]);
+    promptRotateAngle(
+      'promptDialog.rotateAllGuidesAngle',
+      (angleDeg) => { guideState.rotateAllGuides(pivot, angleDeg); },
+    );
+  }, [promptRotateAngle, guideState]);
 
   const handleRotateGroupToggle = useCallback((guideId: string) => {
     state.setRotateGroupSelectedIds((() => {
@@ -102,27 +109,12 @@ export function useGuideWorkflowHandlers(params: UseGuideWorkflowHandlersParams)
   }, [state]);
 
   const handleRotateGroupPivotSet = useCallback((guideIds: readonly string[], pivot: Point2D) => {
-    showPromptDialog({
-      title: t('promptDialog.rotateGuideGroupAngle'),
-      label: t('promptDialog.enterRotateAngle'),
-      placeholder: t('promptDialog.rotateAnglePlaceholder'),
-      inputType: 'number',
-      validate: (val) => {
-        const n = parseFloat(val);
-        if (isNaN(n)) return t('promptDialog.invalidNumber');
-        if (n === 0 || n % 360 === 0) return t('promptDialog.invalidNumber');
-        return null;
-      },
-    }).then((result) => {
-      if (result !== null) {
-        const angleDeg = parseFloat(result);
-        if (!isNaN(angleDeg) && angleDeg !== 0 && angleDeg % 360 !== 0) {
-          guideState.rotateGuideGroup(guideIds, pivot, angleDeg);
-        }
-      }
-      state.setRotateGroupSelectedIds(new Set());
-    });
-  }, [showPromptDialog, t, guideState, state]);
+    promptRotateAngle(
+      'promptDialog.rotateGuideGroupAngle',
+      (angleDeg) => { guideState.rotateGuideGroup(guideIds, pivot, angleDeg); },
+      () => { state.setRotateGroupSelectedIds(new Set()); },
+    );
+  }, [promptRotateAngle, guideState, state]);
 
   // ─── Equalize workflow ───
   const handleEqualizeToggle = useCallback((guideId: string) => {
@@ -349,7 +341,7 @@ export function useGuideWorkflowHandlers(params: UseGuideWorkflowHandlersParams)
   }, [guideState]);
 
   return {
-    handleParallelRefSelected, handleParallelSideChosen,
+    handleParallelRefSelected,
     handleRotateRefSelected, handleRotatePivotSet, handleRotateAllPivotSet,
     handleRotateGroupToggle, handleRotateGroupPivotSet,
     handleEqualizeToggle, handleEqualizeApply,

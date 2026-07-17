@@ -200,30 +200,24 @@ function handleGuideDelete(ctx: GuideClickContext, p: UseCanvasClickHandlerParam
   return true;
 }
 
-/** guide-parallel — 1-click: select reference + infer side from cursor position */
+/**
+ * guide-parallel — το κλικ επιλέγει ΜΟΝΟ τον οδηγό αναφοράς.
+ *
+ * Η πλευρά ΔΕΝ κρίνεται εδώ: το κλικ πρέπει να πέσει μέσα στην ανοχή των 30px
+ * γύρω από τη γραμμή, οπότε το «πάνω/κάτω» του ίδιου του κλικ είναι θόρυβος
+ * λίγων pixel. Η πλευρά προκύπτει από τη θέση του κέρσορα τη στιγμή του commit
+ * (βλ. `useGuideWorkflowHandlers.handleParallelRefSelected`).
+ */
 function handleGuideParallel(ctx: GuideClickContext, p: UseCanvasClickHandlerParams): boolean {
   if (!p.guides || p.guides.length === 0) return true;
-  if (!p.onParallelSideChosen) return true;
+  if (!p.onParallelRefSelected) return true;
+  if (p.parallelRefGuideId) return true;  // αναφορά ήδη επιλεγμένη — περιμένουμε απόσταση
 
   const result = findNearestGuide(ctx.worldPoint, p.guides, 30 / ctx.transform.scale);
   if (!result) return true;
 
-  const { guide } = result;
-  let sign: 1 | -1;
-  if (guide.axis === 'XZ' && guide.startPoint && guide.endPoint) {
-    const dx = guide.endPoint.x - guide.startPoint.x;
-    const dy = guide.endPoint.y - guide.startPoint.y;
-    const cx = ctx.worldPoint.x - guide.startPoint.x;
-    const cy = ctx.worldPoint.y - guide.startPoint.y;
-    sign = (cx * dy - cy * dx) >= 0 ? 1 : -1;
-  } else {
-    sign = guide.axis === 'X'
-      ? (ctx.worldPoint.x >= guide.offset ? 1 : -1)
-      : (ctx.worldPoint.y >= guide.offset ? -1 : 1);  // Inverted for Y axis (ADR-189 coordinate semantics)
-  }
-
-  p.onParallelSideChosen(guide.id, sign);
-  dlog('guideClickHandlers', 'Parallel: reference + side in 1 click', guide.id, sign > 0 ? '+' : '-', guide.axis);
+  p.onParallelRefSelected(result.guide.id);
+  dlog('guideClickHandlers', 'Parallel step 0: reference selected', result.guide.id, result.guide.axis);
   return true;
 }
 

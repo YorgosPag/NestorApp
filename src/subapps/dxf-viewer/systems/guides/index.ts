@@ -10,6 +10,9 @@ export type { Guide, GuideGroup, GuideRenderStyle, GridAxis, ConstructionPoint }
 export { GUIDE_COLORS, GUIDE_COLOR_PALETTE, DEFAULT_GUIDE_STYLE, GHOST_GUIDE_STYLE, SELECTED_GUIDE_STYLE, TEMPORARY_GUIDE_STYLE, GUIDE_LIMITS, CONSTRUCTION_POINT_LIMITS } from './guide-types';
 export { isDiagonalGuide, pointToSegmentDistance, projectPointOnSegment } from './guide-types';
 
+// Parallel side SSoT (ADR-189) — μία πηγή για «ποια πλευρά του οδηγού αναφοράς»
+export { resolveParallelSide } from './guide-parallel-side';
+
 // Store
 export { GuideStore, getGlobalGuideStore } from './guide-store';
 export { ConstructionPointStore, getGlobalConstructionPointStore } from './construction-point-store';

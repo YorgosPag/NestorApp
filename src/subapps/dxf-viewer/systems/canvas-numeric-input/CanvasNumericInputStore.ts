@@ -14,9 +14,11 @@ import { DirectDistanceEntry } from '../../text-engine/interaction/DirectDistanc
 type Listener = () => void;
 type ConfirmFn = (distance: number, sign: 1 | -1, refGuideId: string) => void;
 type CancelFn = () => void;
+/** Διαβάζεται τη στιγμή του commit — ΟΧΙ στο activate (ADR-040 κανόνας 2). */
+type SignResolver = () => 1 | -1;
 
 const _dde = new DirectDistanceEntry();
-let _sign: 1 | -1 = 1;
+let _signResolver: SignResolver = () => 1;
 let _refGuideId: string | null = null;
 let _onConfirm: ConfirmFn | null = null;
 let _onCancel: CancelFn | null = null;
@@ -35,8 +37,13 @@ export const CanvasNumericInputStore = {
     return _dde.snapshot().buffer;
   },
 
-  activate(sign: 1 | -1, refGuideId: string, onConfirm: ConfirmFn, onCancel?: CancelFn): void {
-    _sign = sign;
+  /**
+   * `signResolver` καλείται στο `confirm()`, όχι εδώ: η πλευρά πρέπει να προκύπτει
+   * από το ΠΟΥ είναι ο κέρσορας τη στιγμή που ο χρήστης πατά Enter — όχι από το
+   * πού έτυχε να πέσει το κλικ επιλογής της αναφοράς.
+   */
+  activate(signResolver: SignResolver, refGuideId: string, onConfirm: ConfirmFn, onCancel?: CancelFn): void {
+    _signResolver = signResolver;
     _refGuideId = refGuideId;
     _onConfirm = onConfirm;
     _onCancel = onCancel ?? null;
@@ -66,7 +73,7 @@ export const CanvasNumericInputStore = {
       return false;
     }
     const refGuideId = _refGuideId!;
-    const sign = _sign;
+    const sign = _signResolver();
     const cb = _onConfirm;
     _refGuideId = null;
     _onConfirm = null;

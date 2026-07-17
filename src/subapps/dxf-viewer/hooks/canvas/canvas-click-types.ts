@@ -300,10 +300,12 @@ export interface UseCanvasClickHandlerParams {
   getGuides?: () => readonly Guide[];
   /** Currently selected reference guide for parallel creation (null = step 1) */
   parallelRefGuideId?: string | null;
-  /** Step 1 callback: user clicked near a guide → select as reference */
+  /**
+   * Το κλικ κοντά σε οδηγό τον ορίζει ως αναφορά και ανοίγει την πληκτρολόγηση
+   * απόστασης. Η πλευρά ΔΕΝ περνά από εδώ — προκύπτει από τη θέση του κέρσορα
+   * τη στιγμή του Enter (βλ. `guide-parallel-side.ts`).
+   */
   onParallelRefSelected?: (refGuideId: string) => void;
-  /** Step 2 callback: user clicked on a side → determines direction + opens dialog */
-  onParallelSideChosen?: (refGuideId: string, sign: 1 | -1) => void;
 
   // ── ADR-189 §3.3: Diagonal guide 3-click workflow ────────────────────
   guideAddDiagonalGuide?: (startPoint: Point2D, endPoint: Point2D) => CreateDiagonalGuideCommand;
