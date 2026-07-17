@@ -1,28 +1,26 @@
 /**
- * Tests for opening-hardware-boq-sync (ADR-674 Φ C — priced «σιδερικά» take-off).
+ * Tests for opening-hardware-boq-sync (ADR-674 Φ C rev.2 — AGGREGATED priced «σιδερικά»).
  *
- * Mirrors stair-boq-sync.test.ts Firestore-mock pattern. Focus:
- *   - a door explodes into one row per hardware component with the RIGHT
- *     per-component qty (lever 1, lockset 1, hinge 3) + OIK-5.3x codes, pcs.
- *   - hardware-less kinds (fixed/bay-window/overhead-door/revolving-door) write
- *     ZERO hardware rows.
- *   - the pure builder is exhaustive-safe (kind-change deletes stale rows via
- *     the universe sweep) and the κούφωμα row is left entirely to opening-boq-sync.
- *   - detach guard (skip), zero/absent component → delete-instead-of-write,
- *     createdAt preservation, missing buildingId → no write, delete cascade.
+ * Big-player parity: hardware is measured as ONE line per article summed over the
+ * whole floorplan, NOT per instance. Focus:
+ *   - pure `sumFloorplanHardware`: per-component totals across many openings
+ *     (2 doors → 6 hinges), hardware-less kinds contribute nothing.
+ *   - `recomputeFloorplanHardwareBoq`: one row per component with the floorplan
+ *     TOTAL, id `boq_bim_hw_<floorplanId>_<component>`, sourceEntityId = floorplanId,
+ *     OIK-5.3x / pcs; absent components zero-deleted (universe sweep); the κούφωμα
+ *     row is left entirely to opening-boq-sync; detach + createdAt + missing-scope guards.
  */
 
 import {
-  upsertOpeningHardwareBoq,
-  deleteOpeningHardwareBoq,
-  buildOpeningHardwareBoqRows,
+  recomputeFloorplanHardwareBoq,
+  sumFloorplanHardware,
   openingHardwareBoqId,
-  type OpeningForHardwareBoq,
+  type HardwareBoqOpening,
 } from '../opening-hardware-boq-sync';
 import type { OpeningKind, OpeningParams } from '../../types/opening-types';
 
 // ---------------------------------------------------------------------------
-// Mock Firestore
+// Mocks — Firestore I/O (syncManagedBoqRow) + the shared floorplan fetch SSoT
 // ---------------------------------------------------------------------------
 
 const mockGetDoc = jest.fn();
@@ -40,14 +38,21 @@ jest.mock('firebase/firestore', () => ({
 jest.mock('@/lib/firebase', () => ({ db: {} }));
 jest.mock('@/config/firestore-collections', () => ({ COLLECTIONS: { BOQ_ITEMS: 'boq_items' } }));
 jest.mock('@/lib/telemetry', () => ({ createModuleLogger: () => ({ error: jest.fn(), warn: jest.fn() }) }));
-jest.mock('@/lib/date-local', () => ({ nowISO: () => '2026-07-17T00:00:00.000Z' }));
+jest.mock('@/lib/date-local', () => ({ nowISO: () => '2026-07-18T00:00:00.000Z' }));
 jest.mock('@/utils/firestore-sanitize', () => ({ stripUndefinedDeep: (v: unknown) => v }));
+
+// The aggregated recompute reads the floorplan's openings via opening-boq-sync's
+// exported fetch SSoT — stub it so the sum is driven by the test's opening list.
+const mockFetchAll = jest.fn();
+jest.mock('../opening-boq-sync', () => ({
+  fetchAllOpeningsForFloorplan: (...args: unknown[]) => mockFetchAll(...args),
+}));
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-const context = { companyId: 'c1', projectId: 'p1', buildingId: 'b1' };
+const context = { companyId: 'c1', projectId: 'p1', buildingId: 'b1', floorplanId: 'fp1' };
 const contextWithFloor = { ...context, floorId: 'floor-A' };
 
 function makeParams(kind: OpeningKind, overrides: Partial<OpeningParams> = {}): OpeningParams {
@@ -62,8 +67,8 @@ function makeParams(kind: OpeningKind, overrides: Partial<OpeningParams> = {}): 
   } as OpeningParams;
 }
 
-function makeOpening(kind: OpeningKind, id = 'op-001'): OpeningForHardwareBoq {
-  return { id, kind, params: makeParams(kind) };
+function op(kind: OpeningKind): HardwareBoqOpening {
+  return { params: makeParams(kind) };
 }
 
 function makeSnap(exists: boolean, data?: Record<string, unknown>) {
@@ -76,158 +81,137 @@ function payloadById(id: string): Record<string, unknown> | undefined {
 }
 
 // ---------------------------------------------------------------------------
-// Pure builder — buildOpeningHardwareBoqRows
+// Pure — sumFloorplanHardware
 // ---------------------------------------------------------------------------
 
-describe('buildOpeningHardwareBoqRows (pure)', () => {
-  it('a door explodes into lever×1 + lockset×1 + hinge×3 with OIK-5.3x pcs codes', () => {
-    const rows = buildOpeningHardwareBoqRows(makeOpening('door'));
-    const byComponent = new Map(rows.map((r) => [r.component, r]));
-
-    expect(rows).toHaveLength(3);
-    expect(byComponent.get('lever')!.quantity).toBe(1);
-    expect(byComponent.get('lockset')!.quantity).toBe(1);
-    expect(byComponent.get('hinge')!.quantity).toBe(3);
-
-    expect(byComponent.get('hinge')!.mapping.categoryCode).toBe('OIK-5.36');
-    expect(byComponent.get('lockset')!.mapping.categoryCode).toBe('OIK-5.35');
-    for (const row of rows) expect(row.mapping.unit).toBe('pcs');
+describe('sumFloorplanHardware (pure)', () => {
+  it('one door → lever1 + lockset1 + hinge3', () => {
+    const totals = sumFloorplanHardware([op('door')]);
+    expect(totals.get('lever')).toBe(1);
+    expect(totals.get('lockset')).toBe(1);
+    expect(totals.get('hinge')).toBe(3);
   });
 
-  it('deterministic row ids are boq_bim_<openingId>_hw_<component>', () => {
-    const rows = buildOpeningHardwareBoqRows(makeOpening('door', 'op-XYZ'));
-    const hinge = rows.find((r) => r.component === 'hinge')!;
-    expect(hinge.id).toBe('boq_bim_op-XYZ_hw_hinge');
-    expect(openingHardwareBoqId('op-XYZ', 'hinge')).toBe('boq_bim_op-XYZ_hw_hinge');
+  it('aggregates across openings: 2 doors → 6 hinges, 2 locksets, 2 levers', () => {
+    const totals = sumFloorplanHardware([op('door'), op('door')]);
+    expect(totals.get('hinge')).toBe(6);
+    expect(totals.get('lockset')).toBe(2);
+    expect(totals.get('lever')).toBe(2);
   });
 
-  it('a double-door sums 2 levers + 6 hinges + 2 flush-bolts + 1 lockset', () => {
-    const rows = buildOpeningHardwareBoqRows(makeOpening('double-door'));
-    const q = new Map(rows.map((r) => [r.component, r.quantity]));
-    expect(q.get('lever')).toBe(2);
-    expect(q.get('hinge')).toBe(6);
-    expect(q.get('flush-bolt')).toBe(2);
-    expect(q.get('lockset')).toBe(1);
+  it('mixes kinds: door + sliding-door → door set + pull-handle1 + sliding-track1', () => {
+    const totals = sumFloorplanHardware([op('door'), op('sliding-door')]);
+    expect(totals.get('hinge')).toBe(3);
+    expect(totals.get('pull-handle')).toBe(1);
+    expect(totals.get('sliding-track')).toBe(1);
+  });
+
+  it('50 identical doors → 150 hinges (contractor total)', () => {
+    const totals = sumFloorplanHardware(Array.from({ length: 50 }, () => op('door')));
+    expect(totals.get('hinge')).toBe(150);
+    expect(totals.get('lockset')).toBe(50);
   });
 
   it.each(['fixed', 'bay-window', 'overhead-door', 'revolving-door'] as const)(
-    'hardware-less kind %s yields NO hardware rows',
+    'hardware-less kind %s contributes nothing',
     (kind) => {
-      expect(buildOpeningHardwareBoqRows(makeOpening(kind))).toHaveLength(0);
+      expect(sumFloorplanHardware([op(kind)]).size).toBe(0);
     },
   );
+
+  it('deterministic row id = boq_bim_hw_<floorplanId>_<component>', () => {
+    expect(openingHardwareBoqId('fp-XYZ', 'hinge')).toBe('boq_bim_hw_fp-XYZ_hinge');
+  });
 });
 
 // ---------------------------------------------------------------------------
-// upsertOpeningHardwareBoq — Firestore I/O
+// recomputeFloorplanHardwareBoq — Firestore I/O
 // ---------------------------------------------------------------------------
 
-describe('upsertOpeningHardwareBoq', () => {
+describe('recomputeFloorplanHardwareBoq', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockGetDoc.mockResolvedValue(makeSnap(false));
     mockSetDoc.mockResolvedValue(undefined);
     mockDeleteDoc.mockResolvedValue(undefined);
+    mockFetchAll.mockResolvedValue([op('door'), op('door')]); // 2 doors default
   });
 
-  it('writes exactly the door hardware rows (present components) with the right qty', async () => {
-    await upsertOpeningHardwareBoq(makeOpening('door'), contextWithFloor, 'created');
+  it('writes one row per present component with the floorplan TOTAL', async () => {
+    await recomputeFloorplanHardwareBoq(contextWithFloor);
 
-    // 3 present components → 3 setDoc; absent 6 components → no write (never existed).
+    // 3 present components (lever/lockset/hinge) → 3 setDoc; other 6 absent → no write.
     expect(mockSetDoc).toHaveBeenCalledTimes(3);
 
-    const hinge = payloadById('boq_bim_op-001_hw_hinge')!;
+    const hinge = payloadById('boq_bim_hw_fp1_hinge')!;
+    expect(hinge.estimatedQuantity).toBe(6); // 2 doors × 3
     expect(hinge.categoryCode).toBe('OIK-5.36');
     expect(hinge.unit).toBe('pcs');
-    expect(hinge.estimatedQuantity).toBe(3);
     expect(hinge.sourceEntityType).toBe('opening');
-    expect(hinge.sourceEntityId).toBe('op-001');
+    expect(hinge.sourceEntityId).toBe('fp1'); // aggregation scope = floorplan
     expect(hinge.linkedFloorId).toBe('floor-A');
     expect(hinge.scope).toBe('floor');
 
-    expect(payloadById('boq_bim_op-001_hw_lockset')!.estimatedQuantity).toBe(1);
-    expect(payloadById('boq_bim_op-001_hw_lever')!.estimatedQuantity).toBe(1);
+    expect(payloadById('boq_bim_hw_fp1_lockset')!.estimatedQuantity).toBe(2);
+    expect(payloadById('boq_bim_hw_fp1_lever')!.estimatedQuantity).toBe(2);
   });
 
-  it('does NOT emit the κούφωμα row — hardware is additive-only (owned by opening-boq-sync)', async () => {
-    await upsertOpeningHardwareBoq(makeOpening('door'), context, 'created');
-    const koufoma = mockSetDoc.mock.calls.find((c) =>
-      String((c[0] as { id: string }).id).startsWith('boq_bim_opening_sig_'),
-    );
-    expect(koufoma).toBeUndefined();
-    // No plain single-entity κούφωμα id either.
-    expect(payloadById('boq_bim_op-001')).toBeUndefined();
+  it('does NOT emit the κούφωμα signature row — that is opening-boq-sync\'s job', async () => {
+    await recomputeFloorplanHardwareBoq(context);
+    const nonHardware = mockSetDoc.mock.calls
+      .map((c) => String((c[0] as { id: string }).id))
+      .filter((id) => !id.startsWith('boq_bim_hw_'));
+    expect(nonHardware).toHaveLength(0);
   });
 
-  it('a hardware-less kind (fixed) writes nothing', async () => {
-    await upsertOpeningHardwareBoq(makeOpening('fixed'), context, 'created');
+  it('floorplan with only hardware-less openings writes nothing', async () => {
+    mockFetchAll.mockResolvedValue([op('fixed'), op('bay-window')]);
+    await recomputeFloorplanHardwareBoq(context);
     expect(mockSetDoc).not.toHaveBeenCalled();
   });
 
-  it('deletes stale rows when a component is absent for the kind (kind-change sweep)', async () => {
-    // A sliding-door carries pull-handle + sliding-track — the door-only hinge
-    // row from a previous kind must be zero-deleted. Simulate every row existing.
-    mockGetDoc.mockResolvedValue(makeSnap(true, { createdAt: '2026-01-01T00:00:00.000Z' }));
+  it('zero-deletes stale component rows (all openings removed / re-kinded)', async () => {
+    mockFetchAll.mockResolvedValue([op('sliding-door')]); // pull-handle + sliding-track only
+    mockGetDoc.mockResolvedValue(makeSnap(true, { createdAt: '2026-01-01T00:00:00.000Z', status: 'draft' }));
 
-    await upsertOpeningHardwareBoq(makeOpening('sliding-door'), context, 'updated');
+    await recomputeFloorplanHardwareBoq(context);
 
-    // 2 present → setDoc; the other 7 (incl. hinge/lockset/lever) → deleteDoc.
+    // 2 present → setDoc; the other 7 (hinge/lever/lockset/…) exist → deleteDoc.
     expect(mockSetDoc).toHaveBeenCalledTimes(2);
     expect(mockDeleteDoc).toHaveBeenCalledTimes(7);
     const deletedIds = mockDeleteDoc.mock.calls.map((c) => (c[0] as { id: string }).id);
-    expect(deletedIds).toContain('boq_bim_op-001_hw_hinge');
-    expect(deletedIds).toContain('boq_bim_op-001_hw_lever');
+    expect(deletedIds).toContain('boq_bim_hw_fp1_hinge');
+    expect(deletedIds).toContain('boq_bim_hw_fp1_lever');
   });
 
   it('preserves createdAt on update', async () => {
     mockGetDoc.mockImplementation((ref: { id: string }) =>
       Promise.resolve(
-        ref.id === 'boq_bim_op-001_hw_hinge'
-          ? makeSnap(true, { createdAt: '2020-02-02T00:00:00.000Z' })
+        ref.id === 'boq_bim_hw_fp1_hinge'
+          ? makeSnap(true, { createdAt: '2020-02-02T00:00:00.000Z', status: 'draft' })
           : makeSnap(false),
       ),
     );
-    await upsertOpeningHardwareBoq(makeOpening('door'), context, 'updated');
-    expect(payloadById('boq_bim_op-001_hw_hinge')!.createdAt).toBe('2020-02-02T00:00:00.000Z');
+    await recomputeFloorplanHardwareBoq(context);
+    expect(payloadById('boq_bim_hw_fp1_hinge')!.createdAt).toBe('2020-02-02T00:00:00.000Z');
   });
 
-  it('detach guard: a detached row is never overwritten', async () => {
+  it('detach guard: a detached component row is never overwritten', async () => {
     mockGetDoc.mockResolvedValue(makeSnap(true, { detached: true, createdAt: 'x' }));
-    await upsertOpeningHardwareBoq(makeOpening('door'), context, 'updated');
+    await recomputeFloorplanHardwareBoq(context);
     expect(mockSetDoc).not.toHaveBeenCalled();
     expect(mockDeleteDoc).not.toHaveBeenCalled();
   });
 
-  it('missing buildingId → no write', async () => {
-    await upsertOpeningHardwareBoq(makeOpening('door'), { companyId: 'c1', projectId: 'p1', buildingId: '' }, 'created');
-    expect(mockGetDoc).not.toHaveBeenCalled();
+  it('missing floorplanId → no fetch, no write', async () => {
+    await recomputeFloorplanHardwareBoq({ companyId: 'c1', projectId: 'p1', buildingId: 'b1', floorplanId: '' });
+    expect(mockFetchAll).not.toHaveBeenCalled();
     expect(mockSetDoc).not.toHaveBeenCalled();
   });
-});
 
-// ---------------------------------------------------------------------------
-// deleteOpeningHardwareBoq
-// ---------------------------------------------------------------------------
-
-describe('deleteOpeningHardwareBoq', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    mockSetDoc.mockResolvedValue(undefined);
-    mockDeleteDoc.mockResolvedValue(undefined);
-  });
-
-  it('cascades a delete over every hardware component row (skip detached)', async () => {
-    mockGetDoc.mockImplementation((ref: { id: string }) =>
-      Promise.resolve(
-        ref.id === 'boq_bim_op-001_hw_lockset'
-          ? makeSnap(true, { detached: true })
-          : makeSnap(true, {}),
-      ),
-    );
-    await deleteOpeningHardwareBoq('op-001');
-    // 9 components: 8 deleted, the detached lockset skipped.
-    expect(mockDeleteDoc).toHaveBeenCalledTimes(8);
-    const deletedIds = mockDeleteDoc.mock.calls.map((c) => (c[0] as { id: string }).id);
-    expect(deletedIds).not.toContain('boq_bim_op-001_hw_lockset');
+  it('missing buildingId → no fetch, no write', async () => {
+    await recomputeFloorplanHardwareBoq({ companyId: 'c1', projectId: 'p1', buildingId: '', floorplanId: 'fp1' });
+    expect(mockFetchAll).not.toHaveBeenCalled();
+    expect(mockSetDoc).not.toHaveBeenCalled();
   });
 });

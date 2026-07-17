@@ -55,8 +55,8 @@ function mockEmptyGroup(): void {
   mockGetDocs.mockResolvedValue({ forEach: () => {} });
 }
 
-function mockExistingRow(status: string | undefined): void {
-  mockGetDoc.mockResolvedValue({ exists: () => true, data: () => ({ status, companyId: 'c1' }) });
+function mockExistingRow(status: string | undefined, extra: Record<string, unknown> = {}): void {
+  mockGetDoc.mockResolvedValue({ exists: () => true, data: () => ({ status, companyId: 'c1', ...extra }) });
 }
 
 beforeEach(() => {
@@ -78,21 +78,35 @@ describe('ADR-673 — isBoqAutoManagedStatus', () => {
   });
 });
 
-describe('ADR-673 — opening BOQ sync frozen-baseline guard', () => {
-  it('does NOT delete an empty group whose row is certified (contractual baseline)', async () => {
+describe('ADR-673/675 — opening BOQ sync frozen-baseline guard + drift surfacing', () => {
+  it('records model drift (never deletes/overwrites) on a certified baseline emptied by the model', async () => {
     mockEmptyGroup();
-    mockExistingRow('certified');
+    mockExistingRow('certified', { estimatedQuantity: 10, liveQuantity: null });
     await deleteOpeningFromGroup(makeParams(), context);
+    // Baseline immutable: never deleted, never fully overwritten.
     expect(mockDeleteDoc).not.toHaveBeenCalled();
-    expect(mockSetDoc).not.toHaveBeenCalled();
+    // ADR-675: the drift is recorded as SEPARATE metadata via a merge write
+    // (live=0 vs signed baseline 10) — estimatedQuantity is left untouched.
+    expect(mockSetDoc).toHaveBeenCalledTimes(1);
+    const [, payload, options] = mockSetDoc.mock.calls[0] as [unknown, Record<string, unknown>, unknown];
+    expect(options).toEqual({ merge: true });
+    expect(payload).toMatchObject({ liveQuantity: 0 });
+    expect(payload).not.toHaveProperty('estimatedQuantity');
   });
 
-  it('does NOT delete an empty group whose row is approved or locked', async () => {
+  it('records drift but never deletes an empty group whose row is approved or locked', async () => {
     for (const status of ['approved', 'locked']) {
+      mockSetDoc.mockClear();
+      mockDeleteDoc.mockClear();
       mockEmptyGroup();
-      mockExistingRow(status);
+      mockExistingRow(status, { estimatedQuantity: 5 });
       await deleteOpeningFromGroup(makeParams(), context);
       expect(mockDeleteDoc).not.toHaveBeenCalled();
+      expect(mockSetDoc).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ liveQuantity: 0 }),
+        { merge: true },
+      );
     }
   });
 
