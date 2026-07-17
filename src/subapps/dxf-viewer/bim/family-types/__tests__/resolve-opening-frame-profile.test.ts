@@ -4,7 +4,9 @@
 
 import { resolveOpeningFrameProfile } from '../resolve-opening-frame-profile';
 import { getFrameProfileById } from '../opening-frame-profile-catalog';
+import { useOpeningFrameProfileStore } from '../opening-frame-profile-store';
 import { CATALOG_CUSTOM_SENTINEL } from '../../types/opening-frame-profile';
+import type { OpeningFrameProfile } from '../../types/opening-frame-profile';
 import type { OpeningParams } from '../../types/opening-types';
 import type { OpeningTypeParams } from '../../types/bim-family-type';
 
@@ -134,5 +136,42 @@ describe('resolveOpeningFrameProfile — legacy frameWidth fallback (zero regres
     const r = resolveOpeningFrameProfile(makeParams({ frameWidth: 45 }), typeParams);
     expect(r.faceWidth).toBe(70);
     expect(r.depth).toBe(62);
+  });
+});
+
+describe('resolveOpeningFrameProfile — user-library id (ADR-676 Phase 3 PILOT)', () => {
+  const USER_PROFILE: OpeningFrameProfile = {
+    id: 'frmpst_res1',
+    manufacturer: 'MyBrand',
+    series: 'Custom',
+    role: 'frame',
+    faceWidth: 123,
+    depth: 45,
+  };
+
+  afterEach(() => {
+    useOpeningFrameProfileStore.getState().setProfiles([]);
+  });
+
+  it('resolves an instance frameProfileId that only exists in the user library', () => {
+    useOpeningFrameProfileStore.getState().setProfiles([USER_PROFILE]);
+    const r = resolveOpeningFrameProfile(makeParams({ frameProfileId: 'frmpst_res1' }));
+    expect(r.id).toBe('frmpst_res1');
+    expect(r.manufacturer).toBe('MyBrand');
+    expect(r.faceWidth).toBe(123);
+    expect(r.depth).toBe(45);
+  });
+
+  it('resolves a type-level frameProfileId that only exists in the user library', () => {
+    useOpeningFrameProfileStore.getState().setProfiles([USER_PROFILE]);
+    const typeParams: OpeningTypeParams = {
+      kind: 'door',
+      width: 900,
+      height: 2100,
+      frameProfileId: 'frmpst_res1',
+    };
+    const r = resolveOpeningFrameProfile(makeParams(), typeParams);
+    expect(r.faceWidth).toBe(123);
+    expect(r.depth).toBe(45);
   });
 });
