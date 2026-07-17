@@ -2,7 +2,9 @@
  * Tests for BIM → ATOE mapping resolver (ADR-363 Phase 6)
  */
 
-import { resolveAtoeMapping, resolveStairComponentMapping, deriveAtoeQuantity, BIM_TO_ATOE_MAPPING } from '../bim-to-atoe-mapping';
+import { resolveAtoeMapping, resolveStairComponentMapping, resolveOpeningHardwareMapping, deriveAtoeQuantity, BIM_TO_ATOE_MAPPING } from '../bim-to-atoe-mapping';
+import { HARDWARE_COMPONENT_LABEL_KEY } from '../../family-types/opening-hardware-set';
+import type { OpeningHardwareComponent } from '../../family-types/opening-hardware-set';
 
 describe('resolveAtoeMapping', () => {
   describe('wall', () => {
@@ -118,6 +120,45 @@ describe('resolveAtoeMapping', () => {
       const m = resolveStairComponentMapping('handrail');
       expect(m.categoryCode).toBe('OIK-12.01');
       expect(m.unit).toBe('m');
+    });
+  });
+
+  // ADR-674 Φ C — opening hardware «σιδερικά» → OIK-5.3x per-piece articles.
+  describe('opening hardware component (ADR-674 Φ C)', () => {
+    it('lever → OIK-5.31 pcs', () => {
+      const m = resolveOpeningHardwareMapping('lever');
+      expect(m.categoryCode).toBe('OIK-5.31');
+      expect(m.unit).toBe('pcs');
+    });
+
+    it('lockset → OIK-5.35 pcs', () => {
+      const m = resolveOpeningHardwareMapping('lockset');
+      expect(m.categoryCode).toBe('OIK-5.35');
+      expect(m.unit).toBe('pcs');
+    });
+
+    it('hinge → OIK-5.36 pcs', () => {
+      const m = resolveOpeningHardwareMapping('hinge');
+      expect(m.categoryCode).toBe('OIK-5.36');
+      expect(m.unit).toBe('pcs');
+    });
+
+    it('friction-stay → OIK-5.39 pcs', () => {
+      const m = resolveOpeningHardwareMapping('friction-stay');
+      expect(m.categoryCode).toBe('OIK-5.39');
+    });
+
+    it('is total over the Phase A component union — every component maps to OIK-5.3x pcs (unique code)', () => {
+      const components = Object.keys(HARDWARE_COMPONENT_LABEL_KEY) as OpeningHardwareComponent[];
+      const seen = new Set<string>();
+      for (const component of components) {
+        const m = resolveOpeningHardwareMapping(component);
+        expect(m.unit).toBe('pcs');
+        expect(m.categoryCode).toMatch(/^OIK-5\.3\d$/);
+        expect(seen.has(m.categoryCode)).toBe(false);
+        seen.add(m.categoryCode);
+      }
+      expect(seen.size).toBe(components.length);
     });
   });
 

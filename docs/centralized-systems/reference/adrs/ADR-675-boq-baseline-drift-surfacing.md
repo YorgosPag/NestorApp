@@ -70,6 +70,12 @@ subscription + join = βαρύτερο, χωρίς όφελος αφού τα ru
 - `live` αμετάβλητο από την προηγούμενη καταγραφή → no-op.
 - αλλιώς → merge-write το νέο drift + ISO timestamp.
 
+**Predicate (κρίσιμη λεπτομέρεια):** ο frozen-guard χρησιμοποιεί **`isFrozenBaselineStatus(status)`**
+(`src/types/boq/units.ts` — ρητά `approved`/`certified`/`locked`), **ΟΧΙ** `!isBoqAutoManagedStatus`. Τα δύο
+διαφέρουν ΜΟΝΟ σε `undefined`/άγνωστο status: το `!isBoqAutoManagedStatus(undefined) === true` θα θεωρούσε
+**κάθε row χωρίς status** ως frozen → μπλόκαρε normal upsert + orphan-cleanup των sibling syncs (παλινδρόμηση:
+6 tests σε stair/envelope/bridge). Ένα row χωρίς ρητό signed status **δεν** είναι baseline → παραμένει auto-managed.
+
 **Baseline immutability (και στα 4 write sites):** το merge-write προσθέτει ΜΟΝΟ `liveQuantity`/`liveQuantitySyncedAt`.
 Το `estimatedQuantity` (και κάθε άλλο baseline/scope field) δεν αγγίζεται ποτέ → 5D-BIM αρχή + Firestore update rule
 ικανοποιημένα.
