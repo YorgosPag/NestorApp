@@ -45,8 +45,29 @@ export interface FaceProfilePolygon {
 }
 
 /**
+ * ADR-534 Φ7c — Γνήσιο 45° miter **ΕΝΣΩΜΑΤΩΜΕΝΟ** στο ενιαίο extrude (ΟΧΙ ξεχωριστά wedges): τα δύο
+ * t-ακρότατα της όψης + το πόσο μετατοπίζεται εκεί το **back-cap** (u = thicknessM, outer παρειά) κατά
+ * τον άξονα ώστε το outer t-άκρο να φτάσει τη mitered κορυφή (`aOuter/bOuter` — που ήδη φέρει το
+ * `computeMiteredOuter`), ενώ το front-cap (core) μένει στο core-length → η πλευρική έδρα γίνεται
+ * **διαγώνια = 45° miter** μέσα στο ίδιο welded mesh. Μη-μηδενικό delta ΜΟΝΟ σε **convex κάθετη γωνία**.
+ */
+export interface FaceMiterDeltas {
+  /** Τοπικό t (m, από `originCoreScene`) του min-t core ακρότατου (κάτω t-άκρο του profile). */
+  readonly tLoM: number;
+  /** Τοπικό t (m) του max-t core ακρότατου (πάνω t-άκρο). */
+  readonly tHiM: number;
+  /** Μετατόπιση (m, κατά +dir) του back-cap στο tLo — convex → αρνητικό (έξω)· αλλιώς 0. */
+  readonly deltaLoM: number;
+  /** Μετατόπιση (m, κατά +dir) του back-cap στο tHi — convex → θετικό (έξω)· αλλιώς 0. */
+  readonly deltaHiM: number;
+}
+
+/** Μηδενικό miter (square end-caps) — free ends / concave / collinear / junction. */
+export const ZERO_MITER: FaceMiterDeltas = { tLoM: 0, tHiM: 0, deltaLoM: 0, deltaHiM: 0 };
+
+/**
  * Το προφίλ μιας ομοεπίπεδης όψης έτοιμο για εξώθηση: τα (t,z) πολύγωνα (m) + το τοπικό frame
- * (origin core, dir, outward perp) για τη χαρτογράφηση σε world, + attributes/πάχος.
+ * (origin core, dir, outward perp) για τη χαρτογράφηση σε world, + attributes/πάχος + miter deltas.
  */
 export interface FaceProfile {
   readonly seg: FinishFaceSegment;
@@ -59,12 +80,15 @@ export interface FaceProfile {
   /** Πάχος σοβά (m) = seg.thickness · mm→m. */
   readonly thicknessM: number;
   readonly polygons: readonly FaceProfilePolygon[];
+  /** ADR-534 Φ7c — 45° miter deltas (back-cap shift) των δύο t-άκρων· `ZERO_MITER` όταν καμία γωνία. */
+  readonly miter: FaceMiterDeltas;
 }
 
 /**
  * Ένα strip → axis-aligned ορθογώνιο (t,z) σε **μέτρα**, ή `null` αν εκφυλισμένο. Το ορθογώνιο
- * φτάνει ΑΚΡΙΒΩΣ ως το core-length (καμία γωνιακή επέκταση) — τη γωνία τη γεμίζουν τα miter wedges
- * ({@link collectMiterWedges}), όχι επέκταση του body (που έδινε double-coverage· ADR-534 Φ7b).
+ * φτάνει ΑΚΡΙΒΩΣ ως το core-length (καμία γωνιακή επέκταση) — τη γωνία την κλείνει το ενσωματωμένο
+ * 45° miter (back-cap shift, {@link computeFaceMiterDeltas}), ΟΧΙ επέκταση του body (double-coverage)
+ * ΟΥΤΕ ξεχωριστό wedge (coincident face → artifact· ADR-534 Φ7c αντικατέστησε το Φ7b wedge-hack).
  */
 function stripRectM(strip: FinishStrip, origin: Vec2, dir: Vec2, sceneToM: number): Polygon | null {
   const tA = dot(sub(strip.aCore, origin), dir) * sceneToM;
@@ -101,7 +125,11 @@ function toProfilePolygons(mp: MultiPolygon): FaceProfilePolygon[] {
  * core-length** (καμία γωνιακή επέκταση). `null` όταν κανένα έγκυρο ορθογώνιο. `sceneToM` = scene
  * units → μέτρα (ίδιο SSoT με `quadToScenePoints`).
  */
-export function buildFaceProfile(group: FinishStripGroup, sceneToM: number): FaceProfile | null {
+export function buildFaceProfile(
+  group: FinishStripGroup,
+  sceneToM: number,
+  miter: FaceMiterDeltas = ZERO_MITER,
+): FaceProfile | null {
   if (group.strips.length === 0) return null;
   const origin = group.strips[0].aCore;
   const thicknessM = group.seg.thickness * MM_TO_M;
@@ -114,14 +142,19 @@ export function buildFaceProfile(group: FinishStripGroup, sceneToM: number): Fac
   const mp: MultiPolygon = rects.length === 1 ? [rects[0]] : safeUnion(rects[0], ...rects.slice(1));
   const polygons = toProfilePolygons(mp);
   if (polygons.length === 0) return null;
-  return { seg: group.seg, originCoreScene: origin, dir: group.dir, perp: group.perp, thicknessM, polygons };
+  return { seg: group.seg, originCoreScene: origin, dir: group.dir, perp: group.perp, thicknessM, polygons, miter };
 }
 
-/** ADR-534 Φ7 — όλα τα groups → welded face profiles (bodies· η γωνία = ξεχωριστά miter wedges). */
+/**
+ * ADR-534 Φ7c — όλα τα groups → welded face profiles, το καθένα με το **ενσωματωμένο** 45° miter του
+ * (back-cap deltas ανά t-άκρο). Το miter υπολογίζεται με **cross-group** perp gate ({@link
+ * computeFaceMiterDeltas}) → η γωνία κλείνει ΜΕΣΑ στο ενιαίο extrude, μηδέν ξεχωριστό wedge.
+ */
 export function buildFaceProfiles(groups: readonly FinishStripGroup[], sceneToM: number): FaceProfile[] {
+  const deltas = computeFaceMiterDeltas(groups, sceneToM);
   const out: FaceProfile[] = [];
   for (const g of groups) {
-    const p = buildFaceProfile(g, sceneToM);
+    const p = buildFaceProfile(g, sceneToM, deltas.get(g) ?? ZERO_MITER);
     if (p) out.push(p);
   }
   return out;
