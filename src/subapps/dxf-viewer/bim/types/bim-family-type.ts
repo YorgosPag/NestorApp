@@ -41,7 +41,7 @@ import type { WallCategory } from './wall-types';
 import type { WallDna } from './wall-dna-types';
 import type { SlabKind } from './slab-types';
 import type { SlabDna } from './slab-dna-types';
-import type { OpeningKind, OpeningMaterials } from './opening-types';
+import type { OpeningKind, OpeningMaterials, OpeningHardwareOverrides } from './opening-types';
 // Type-only import (no runtime cycle) — RoofSoffitMode is defined in roof-types,
 // which in turn imports RoofTypeParams from here. TS resolves type-only cycles.
 import type { RoofSoffitMode } from './roof-types';
@@ -284,6 +284,14 @@ export interface OpeningTypeParams {
    * @see OpeningMaterials
    */
   readonly materials?: OpeningMaterials;
+  /**
+   * ADR-674 — Per-component **type-default** override of the hardware-set quantities
+   * (σιδερικά) shared by every instance of the Type (Revit «Hardware Set» type param —
+   * e.g. «όλες οι P1 πόρτες: 4 μεντεσέδες»). Overridden per placement by
+   * `OpeningParams.hardwareOverrides`. Folded in `resolveOpeningHardwareSet`.
+   * @see OpeningHardwareOverrides
+   */
+  readonly hardwareOverrides?: OpeningHardwareOverrides;
   /** Glazing panes — 1 single / 2 double / 3 triple. Glazed kinds only. */
   readonly glazingPanes?: 1 | 2 | 3;
   /** Fire-resistance rating spec for Revit-grade schedules (e.g. «EI30»). */

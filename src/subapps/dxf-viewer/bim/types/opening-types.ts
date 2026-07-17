@@ -31,6 +31,10 @@ import type { OpeningOperationType } from './opening-operation-types';
 // ADR-421 SLICE C — Family/Type link. Type-only import (TS resolves the
 // bim-family-type ↔ opening-types type cycle; no runtime dependency).
 import type { OpeningTypeParams } from './bim-family-type';
+// ADR-674 (editable hardware) — the purchasable-component union owns the SSoT for
+// the override keys. Type-only (TS resolves the opening-types ↔ opening-hardware-set
+// cycle; the hardware-set module is erased at runtime here).
+import type { OpeningHardwareComponent } from '../family-types/opening-hardware-set';
 
 // ─── Sub-type discriminator (ADR-363 §5.4) ───────────────────────────────────
 
@@ -134,6 +138,25 @@ export interface OpeningMaterials {
 }
 
 /**
+ * ADR-674 — Per-component quantity override for an opening's hardware set (σιδερικά)
+ * — the editable counterpart of the per-kind catalog defaults
+ * (`OPENING_HARDWARE_CATALOG`): the Revit «Hardware Set» edit / ArchiCAD per-instance
+ * accessory quantity. Each key maps a purchasable {@link OpeningHardwareComponent}
+ * to a REPLACEMENT quantity (integer ≥ 0): a value REPLACES that component's catalog
+ * default, `0` REMOVES it, and a component absent from the kind's default is ADDED
+ * when given a positive quantity. Undefined key ⇒ the resolver keeps the catalog
+ * default for that component (zero regression).
+ *
+ * Sibling of {@link OpeningMaterials}: lives on BOTH the family Type
+ * ({@link OpeningTypeParams.hardwareOverrides}, the type default) and the instance
+ * ({@link OpeningParams.hardwareOverrides}, the per-placement override). Both fold
+ * LAST-wins in `resolveOpeningHardwareSet` — «type default, instance override».
+ */
+export type OpeningHardwareOverrides = {
+  readonly [K in OpeningHardwareComponent]?: number;
+};
+
+/**
  * ADR-673 — Vertical placement of a door's bottom frame member (κατώφλι/threshold)
  * relative to the Finished Floor Level (FFL, the opening datum Y=0):
  *  - `'none'`      → profile BOTTOM rests on the finished floor (visible low step-over).
@@ -209,6 +232,13 @@ export interface OpeningParams {
    * ⇒ default → zero regression. @see OpeningMaterials
    */
   readonly materials?: OpeningMaterials;
+  /**
+   * ADR-674 — Per-component **instance** override of the hardware-set quantities
+   * (σιδερικά). Wins LAST over the family Type's `hardwareOverrides` and the per-kind
+   * catalog default in `resolveOpeningHardwareSet` (Revit «this door: 4 hinges»).
+   * Undefined component ⇒ catalog/type default (zero regression). @see OpeningHardwareOverrides
+   */
+  readonly hardwareOverrides?: OpeningHardwareOverrides;
   /** Glazing panes — 1 single / 2 double / 3 triple. Window / french-door / fixed. */
   readonly glazingPanes?: 1 | 2 | 3;
   /**

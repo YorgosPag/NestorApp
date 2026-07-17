@@ -3057,6 +3057,7 @@
         "paramLeafMaterial": "Leaf material",
         "paramGlassMaterial": "Glass material",
         "paramHardwareMaterial": "Hardware material",
+        "paramHardwareSet": "Hardware (quantities)",
         "materialPresetWood": "Wood",
         "materialPresetMetal": "Metal",
         "materialPresetGlass": "Glass",
@@ -6751,5 +6752,16 @@
     },
     "loading": "Checking permissions…",
     "locked": "The vehicle library is not available on your account."
+  },
+  "hardwareComponent": {
+    "lever": "Lever",
+    "pullHandle": "Sliding pull",
+    "knob": "Knob",
+    "windowHandle": "Window handle",
+    "lockset": "Lockset",
+    "hinge": "Hinge",
+    "flushBolt": "Flush bolt",
+    "slidingTrack": "Sliding track",
+    "frictionStay": "Friction stay"
   }
 }

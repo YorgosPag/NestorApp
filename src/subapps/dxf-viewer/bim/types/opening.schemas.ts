@@ -84,6 +84,28 @@ export const OpeningMaterialsSchema = z
   })
   .strict();
 
+/**
+ * ADR-674 — per-component hardware-set quantity override (σιδερικά). Mirrors
+ * `OpeningHardwareOverrides` (opening-types.ts) field-for-field over the nine
+ * purchasable {@link OpeningHardwareComponent}s. Each quantity is a non-negative
+ * integer (`0` removes the component). `.strict()` rejects any non-component key —
+ * the same guard convention as `OpeningMaterialsSchema`. Shared by the instance
+ * (`OpeningParamsSchema`) and the family Type (`OpeningTypeParamsSchema`).
+ */
+export const OpeningHardwareOverridesSchema = z
+  .object({
+    'lever': z.number().int().nonnegative().optional(),
+    'pull-handle': z.number().int().nonnegative().optional(),
+    'knob': z.number().int().nonnegative().optional(),
+    'window-handle': z.number().int().nonnegative().optional(),
+    'lockset': z.number().int().nonnegative().optional(),
+    'hinge': z.number().int().nonnegative().optional(),
+    'flush-bolt': z.number().int().nonnegative().optional(),
+    'sliding-track': z.number().int().nonnegative().optional(),
+    'friction-stay': z.number().int().nonnegative().optional(),
+  })
+  .strict();
+
 /** ADR-673 — κατώφλι vertical-placement mode (mirrors `OpeningThresholdEmbed`). */
 export const OpeningThresholdEmbedSchema = z.enum(['none', 'flush-top', 'on-slab', 'custom']);
 
@@ -111,6 +133,8 @@ export const OpeningParamsSchema = z
     openDirection: OpeningSwingSchema.optional(),
     material: z.string().min(1).optional(),
     materials: OpeningMaterialsSchema.optional(),
+    // ─── ADR-674 — per-instance hardware-set quantity override (σιδερικά) ─────
+    hardwareOverrides: OpeningHardwareOverridesSchema.optional(),
     glazingPanes: OpeningGlazingPanesSchema.optional(),
     // ─── ADR-421 §A2 — explicit IFC operation (optional/non-breaking) ────────
     operationType: OpeningOperationTypeSchema.optional(),
@@ -144,6 +168,8 @@ export const OpeningTypeParamsSchema = z
     frameProfileId: z.string().min(1).optional(),
     material: z.string().min(1).optional(),
     materials: OpeningMaterialsSchema.optional(),
+    // ─── ADR-674 — family-type default hardware-set quantity override (σιδερικά) ─
+    hardwareOverrides: OpeningHardwareOverridesSchema.optional(),
     glazingPanes: OpeningGlazingPanesSchema.optional(),
     fireRating: z.string().min(1).optional(),
   })

@@ -25,7 +25,7 @@
  * @see ./resolve-opening-frame-profile.ts — sibling resolver idiom
  */
 
-import type { OpeningKind, OpeningParams } from '../types/opening-types';
+import type { OpeningHardwareOverrides, OpeningKind, OpeningParams } from '../types/opening-types';
 import { resolveOpeningMaterial } from './resolve-opening-material';
 import type { OpeningTypeParams } from '../types/bim-family-type';
 
@@ -149,38 +149,81 @@ export const OPENING_HARDWARE_CATALOG: Readonly<
 };
 
 /**
- * TRUE iff the catalog set for `kind` is non-empty — i.e. the opening carries
- * user-operable hardware. This is the EXTRACTED predicate shared by the geometry
- * side (`buildHardwareSpecs` early guard) and the take-off side, so they cannot
- * drift. MUST equal `resolveOpeningHardwareSet(...).length > 0` and MUST agree
- * with the 3D handle dispatch (empty for fixed/bay-window/overhead-door/revolving-door).
+ * TRUE iff the catalog set for `kind` is non-empty — i.e. the opening's FAMILY
+ * carries user-operable hardware. This is the KIND-level geometry guard shared by
+ * the geometry side (`buildHardwareSpecs` early guard) and the take-off candidate
+ * route, so they cannot drift; it MUST agree with the 3D handle dispatch (empty
+ * for fixed/bay-window/overhead-door/revolving-door). For UN-overridden params it
+ * equals `resolveOpeningHardwareSet(...).length > 0`; ADR-674 per-instance
+ * quantity overrides operate BELOW this guard (they retune counts of an already
+ * hardware-bearing kind), so this predicate stays a pure function of `kind`.
  */
 export function openingHasOperableHardware(kind: OpeningKind): boolean {
   return OPENING_HARDWARE_CATALOG[kind].length > 0;
 }
 
 /**
- * Resolve the hardware take-off for a placed opening: the catalog rows for its
- * kind, each stamped with the resolved metal `materialId` (from
- * `resolveOpeningMaterial().hardware`) and the component's i18n `labelKey` stem.
+ * Fold one per-component override layer onto the working quantity map (LAST wins).
+ * A defined value REPLACES the component's quantity (`0` ⇒ removed downstream); a
+ * component absent from the catalog default is ADDED. Undefined values are skipped
+ * so a sparse override never wipes a catalog default. Mirrors the per-part fold of
+ * `resolve-opening-material.ts`.
+ */
+function applyHardwareOverrides(
+  quantities: Map<OpeningHardwareComponent, number>,
+  overrides: OpeningHardwareOverrides | undefined,
+): void {
+  if (!overrides) return;
+  for (const key of Object.keys(overrides) as OpeningHardwareComponent[]) {
+    const value = overrides[key];
+    if (value !== undefined) quantities.set(key, value);
+  }
+}
+
+/**
+ * Resolve the hardware take-off for a placed opening: the per-kind catalog rows
+ * FOLDED with the family-type and per-instance quantity overrides (ADR-674), each
+ * stamped with the resolved metal `materialId` (from `resolveOpeningMaterial().hardware`)
+ * and the component's i18n `labelKey` stem.
  *
- * Returns `[]` for empty-set kinds. The material is resolved ONCE (all items are
- * metal → same id) and reused across every row — never re-derived per component.
+ * ─── QUANTITY FOLD, PER COMPONENT (LAST wins) ────────────────────────────────
+ *   1. `OPENING_HARDWARE_CATALOG[kind]` — the Revit-standard default count.
+ *   2. `typeParams.hardwareOverrides`   — the family Type default (all instances).
+ *   3. `params.hardwareOverrides`       — the per-placement override («this door»).
+ * Components folding to `≤ 0` are dropped (an override of `0` removes a component).
  *
- * @param params      Instance opening params (the take-off subject).
- * @param typeParams  Optional family-type params (feeds the material resolver).
+ * Un-overridden params reproduce the catalog set exactly (zero regression). The
+ * material is resolved ONCE (all items are metal → same id) and only when at least
+ * one positive row survives — empty-set kinds still short-circuit to `[]`.
+ *
+ * @param params      Instance opening params (the take-off subject + instance override).
+ * @param typeParams  Optional family-type params (material resolver + type-default override).
  */
 export function resolveOpeningHardwareSet(
   params: OpeningParams,
   typeParams?: OpeningTypeParams | null,
 ): ReadonlyArray<ResolvedHardwareItem> {
-  const set = OPENING_HARDWARE_CATALOG[params.kind];
-  if (set.length === 0) return [];
-  const materialId = resolveOpeningMaterial(params, typeParams).hardware;
-  return set.map((entry) => ({
-    component: entry.component,
-    quantity: entry.quantity,
-    materialId,
-    labelKey: HARDWARE_COMPONENT_LABEL_KEY[entry.component],
-  }));
+  // Catalog default → family-type override → instance override (LAST wins). Insertion
+  // order preserves the catalog sequence; overridden components keep their slot, added
+  // components append (deterministic schedule breakdown order).
+  const quantities = new Map<OpeningHardwareComponent, number>();
+  for (const entry of OPENING_HARDWARE_CATALOG[params.kind]) {
+    quantities.set(entry.component, entry.quantity);
+  }
+  applyHardwareOverrides(quantities, typeParams?.hardwareOverrides);
+  applyHardwareOverrides(quantities, params.hardwareOverrides);
+
+  const items: ResolvedHardwareItem[] = [];
+  let materialId: string | null = null;
+  for (const [component, quantity] of quantities) {
+    if (quantity <= 0) continue; // 0 / negative override removes the component
+    if (materialId === null) materialId = resolveOpeningMaterial(params, typeParams).hardware;
+    items.push({
+      component,
+      quantity,
+      materialId,
+      labelKey: HARDWARE_COMPONENT_LABEL_KEY[component],
+    });
+  }
+  return items;
 }

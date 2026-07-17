@@ -3057,6 +3057,7 @@
         "paramLeafMaterial": "Υλικό φύλλου",
         "paramGlassMaterial": "Υλικό υαλοστασίου",
         "paramHardwareMaterial": "Υλικό μηχανισμού",
+        "paramHardwareSet": "Σιδερικά (ποσότητες)",
         "materialPresetWood": "Ξύλο",
         "materialPresetMetal": "Μέταλλο",
         "materialPresetGlass": "Γυαλί",
@@ -6751,5 +6752,16 @@
     },
     "loading": "Έλεγχος δικαιωμάτων…",
     "locked": "Η βιβλιοθήκη οχημάτων δεν είναι διαθέσιμη στον λογαριασμό σου."
+  },
+  "hardwareComponent": {
+    "lever": "Χειρολαβή",
+    "pullHandle": "Χερούλι συρόμενου",
+    "knob": "Πόμολο",
+    "windowHandle": "Χειρολαβή παραθύρου",
+    "lockset": "Κλειδαριά",
+    "hinge": "Μεντεσές",
+    "flushBolt": "Σύρτης",
+    "slidingTrack": "Μηχανισμός συρόμενου",
+    "frictionStay": "Μηχανισμός ανάκλισης"
   }
 }

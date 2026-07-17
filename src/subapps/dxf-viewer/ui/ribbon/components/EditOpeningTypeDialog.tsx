@@ -42,7 +42,9 @@ import {
   subscribeEditOpeningType,
 } from '../../../bim/family-types/edit-opening-type-store';
 import type { OpeningTypeParams } from '../../../bim/types/bim-family-type';
+import type { OpeningHardwareComponent } from '../../../bim/family-types/opening-hardware-set';
 import { OpeningMaterialSelectCell } from './OpeningMaterialSelectCell';
+import { OpeningHardwareSetEditor } from './OpeningHardwareSetEditor';
 import { useOpeningMaterialCatalog } from '../hooks/useOpeningMaterialCatalog';
 
 /** The 4 opening "family surfaces" a Type owns a material for (ADR-421 SLICE C follow-up). */
@@ -128,6 +130,21 @@ function EditOpeningTypeDialogContent({ typeId }: { typeId: string }): React.Rea
         if (value === undefined) delete nextMaterials[part];
         else nextMaterials[part] = value;
         return { ...d, materials: nextMaterials };
+      }),
+    [],
+  );
+
+  // Per-component hardware quantity override (ADR-674 Φ B). Immutable patch of
+  // `typeParams.hardwareOverrides`; `undefined` deletes the key entirely so
+  // `resolveOpeningHardwareSet` falls back to the catalog default (zero regression).
+  const setHardwareOverride = useCallback(
+    (component: OpeningHardwareComponent, quantity: number | undefined) =>
+      setDraft((d) => {
+        if (!d) return d;
+        const nextOverrides = { ...d.hardwareOverrides };
+        if (quantity === undefined) delete nextOverrides[component];
+        else nextOverrides[component] = quantity;
+        return { ...d, hardwareOverrides: nextOverrides };
       }),
     [],
   );
@@ -291,6 +308,12 @@ function EditOpeningTypeDialogContent({ typeId }: { typeId: string }): React.Rea
               className={fieldClass}
             />
           </label>
+
+          <OpeningHardwareSetEditor
+            kind={draft.kind}
+            overrides={draft.hardwareOverrides}
+            onChange={setHardwareOverride}
+          />
         </div>
 
         <footer className="mt-3 flex justify-end gap-2 border-t border-border pt-3">
