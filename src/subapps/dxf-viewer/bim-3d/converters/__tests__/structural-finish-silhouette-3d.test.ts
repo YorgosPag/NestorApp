@@ -67,7 +67,7 @@ describe('ADR-449/534 Φ7 — buildStructuralSilhouetteSkin (unified face weld)'
     expect(skin.children).toHaveLength(1);
   });
 
-  it('δύο κάθετες όψεις (Β + Δ) ΙΔΙΟΥ υλικού → 1 merged mesh (ADR-534 Φ7b: ένα συνεχές δέρμα)', () => {
+  it('δύο κάθετες όψεις (Β + Δ) ΙΔΙΟΥ υλικού → 1 merged mesh (ADR-534 Φ7c: ένα συνεχές δέρμα)', () => {
     const north = mkSeg({ x: 0, y: 50 }, { x: 50, y: 50 });
     const west = mkSeg({ x: 0, y: 0 }, { x: 0, y: 50 });
     const bands: SilhouetteBand[] = [
@@ -75,9 +75,32 @@ describe('ADR-449/534 Φ7 — buildStructuralSilhouetteSkin (unified face weld)'
       mkBand([north, west], 1500, 3000),
     ];
     const skin = buildStructuralSilhouetteSkin(bands, 'mm', 0)!;
-    // Φ7b: όλες οι όψεις + wedges ΙΔΙΟΥ υλικού κάνουν merge σε ΕΝΑ mesh → μηδέν per-face
-    // κατακερματισμός στο OBJ export (Giorgio: «ένα συνεχές δέρμα»). Ήταν 2 πριν το merge.
+    // Φ7c: όλες οι όψεις ΙΔΙΟΥ υλικού κάνουν merge σε ΕΝΑ mesh (το miter είναι ενσωματωμένο στο extrude,
+    // όχι ξεχωριστά wedges) → μηδέν per-face κατακερματισμός στο OBJ export (Giorgio: «ένα συνεχές δέρμα»).
     expect(skin.children).toHaveLength(1);
+  });
+
+  it('ADR-534 Φ7c — L-γωνία: το outer corner φτάνει τη mitered κορυφή ΜΕΣΑ στο ενιαίο mesh (μηδέν wedge)', () => {
+    // Ν όψη x[0,100] + Α όψη y[0,100] στο x=100, ίδιο υλικό → μοιράζονται τη γωνία (100,0).
+    const south = mkSeg({ x: 0, y: 0 }, { x: 100, y: 0 });
+    const east = mkSeg({ x: 100, y: 0 }, { x: 100, y: 100 });
+    const skin = buildStructuralSilhouetteSkin([mkBand([south, east], 0, 3000)], 'mm', 0)!;
+    expect(skin.children).toHaveLength(1); // ΕΝΑ merged mesh — ΟΧΙ ξεχωριστά wedge children
+    const mesh = skin.children[0] as THREE.Mesh;
+    const pos = mesh.geometry.getAttribute('position');
+    const hasWorldVertex = (x: number, z: number): boolean => {
+      for (let i = 0; i < pos.count; i++) {
+        if (Math.abs(pos.getX(i) - x) <= 1e-4 && Math.abs(pos.getZ(i) - z) <= 1e-4) return true;
+      }
+      return false;
+    };
+    // outer mitered tip (125,-25)mm → world (0.125, *, 0.025)· core corner (100,0) → world (0.1, *, 0).
+    expect(hasWorldVertex(0.125, 0.025)).toBe(true); // το miter είναι ΜΕΣΑ στο mesh
+    expect(hasWorldVertex(0.1, 0)).toBe(true);       // το core corner ΔΕΝ μετακινήθηκε
+    // Τίποτα πέρα από το miter tip → το body ΔΕΝ διπλο-επεκτείνεται (πρώην double-coverage).
+    let maxX = -Infinity;
+    for (let i = 0; i < pos.count; i++) maxX = Math.max(maxX, pos.getX(i));
+    expect(maxX).toBeCloseTo(0.125, 4);
   });
 
   it('δύο υλικά (plaster-ext + gypsum) → 2 merged meshes (ένα ανά υλικό)', () => {

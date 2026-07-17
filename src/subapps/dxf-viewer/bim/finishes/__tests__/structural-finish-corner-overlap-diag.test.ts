@@ -1,14 +1,16 @@
 /**
- * ADR-534 Φ7b — Corner miter regression (πρώην diagnostic double-coverage).
+ * ADR-534 Φ7c — Γνήσιο 45° miter ΕΝΣΩΜΑΤΩΜΕΝΟ στο ενιαίο welded mesh (πρώην: ξεχωριστά wedges).
  *
- * ΠΡΙΝ (Φ7 corner-join): το welded body κάθε όψης επεκτεινόταν κατά το πάχος στη γωνία → τα δύο
- * plan footprints επικαλύπτονταν ~πάχος×πάχος → σοβάς 2× (μετρήθηκε ~312mm²).
- * ΤΩΡΑ (Φ7b true 45° miter): το body τελειώνει στο core-length (μηδέν overlap) και η γωνία γεμίζει
- * με δύο miter wedges (ένα ανά όψη) που συναντιούνται στην κοινή mitered κορυφή → μονή κάλυψη.
+ * ΠΡΙΝ (Φ7 corner-join): το welded body κάθε όψης επεκτεινόταν κατά το πάχος στη γωνία → double-coverage.
+ * ΕΝΔΙΑΜΕΣΑ (Φ7b wedges): body στο core-length + ξεχωριστά τριγωνικά prisms → coincident face με το
+ * square end-cap του body → z-fighting/artifact στην όψη.
+ * ΤΩΡΑ (Φ7c): κανένα wedge. Το **back-cap** (outer παρειά, u=thicknessM) κάθε όψης σπρώχνεται στο t-άκρο
+ * ώστε το outer corner να φτάσει τη **κοινή** mitered κορυφή (125,-25), ενώ το front (core) μένει στο
+ * (100,0) → η πλευρική έδρα γίνεται διαγώνια = 45° miter ΜΕΣΑ στο ίδιο extrude. Μηδέν coincident face.
  */
 
 import { mergeSilhouetteBandsToStripGroups } from '../structural-finish-vertical-merge';
-import { buildFaceProfiles, collectMiterWedges, type FaceProfile } from '../structural-finish-face-profile';
+import { buildFaceProfiles, type FaceProfile } from '../structural-finish-face-profile';
 import type { SilhouetteBand } from '../structural-finish-silhouette';
 import type { FinishFaceSegment } from '../structural-finish-types';
 import type { Pt2 } from '../../geometry/shared/segment-polygon-coverage';
@@ -25,71 +27,85 @@ const mkBand = (segments: FinishFaceSegment[], zBottomMm: number, zTopMm: number
 const SCENE_TO_M = 0.001;
 
 /**
- * Plan footprint (m) του welded body: t-range (outer bbox) × perp[0,thickness]. Το perp παράγεται
- * από το `dir` (καθαρό axis normal, στην πλευρά του outer) — ΟΧΙ το `p.perp` (που σε πολύ κοντές
- * όψεις είναι διαγώνιο λόγω `outwardPerpOf` mid-points → bbox artifact). Απομονώνει το t-extension,
- * που ήταν η αιτία του double-coverage (Φ7b: αφαιρέθηκε).
+ * Plan point (scene units) της γωνιακής κορυφής **του back-cap** (outer παρειά, u=πάχος) ή του
+ * **front-cap** (core, u=0) ενός profile, στο δοθέν t-άκρο ('lo'|'hi'), ΜΕΤΑ το miter shift. Αναπαράγει
+ * ακριβώς τη χαρτογράφηση του extrude: p = originCore + (t+δ)·dir + u·perp (το `perp` είναι πλέον
+ * καθαρό axis-normal → μηδέν skew· ADR-534 Φ7c fix στο `outwardPerpOf`).
  */
-function planFootprint(p: FaceProfile): { x0: number; x1: number; y0: number; y1: number } {
-  const xs = p.polygons.flatMap((poly) => poly.outer.map((pt) => pt.x));
-  const t0 = Math.min(...xs);
-  const t1 = Math.max(...xs);
-  const oM = { x: p.originCoreScene.x * SCENE_TO_M, y: p.originCoreScene.y * SCENE_TO_M };
-  const nRaw = { x: -p.dir.y, y: p.dir.x };
-  const side = p.perp.x * nRaw.x + p.perp.y * nRaw.y >= 0 ? 1 : -1;
-  const perp = { x: nRaw.x * side, y: nRaw.y * side };
-  const corners: Pt2[] = [];
-  for (const t of [t0, t1]) {
-    for (const u of [0, p.thicknessM]) {
-      corners.push({ x: oM.x + t * p.dir.x + u * perp.x, y: oM.y + t * p.dir.y + u * perp.y });
-    }
-  }
-  const cxs = corners.map((c) => c.x);
-  const cys = corners.map((c) => c.y);
-  return { x0: Math.min(...cxs), x1: Math.max(...cxs), y0: Math.min(...cys), y1: Math.max(...cys) };
+function capCorner(p: FaceProfile, end: 'lo' | 'hi', face: 'core' | 'outer'): Pt2 {
+  const tM = end === 'hi' ? p.miter.tHiM : p.miter.tLoM;
+  const dM = face === 'outer' ? (end === 'hi' ? p.miter.deltaHiM : p.miter.deltaLoM) : 0;
+  const tScene = (tM + dM) / SCENE_TO_M;
+  const uScene = face === 'outer' ? p.thicknessM / SCENE_TO_M : 0;
+  return {
+    x: p.originCoreScene.x + tScene * p.dir.x + uScene * p.perp.x,
+    y: p.originCoreScene.y + tScene * p.dir.y + uScene * p.perp.y,
+  };
 }
 
-function overlapArea(
-  a: { x0: number; x1: number; y0: number; y1: number },
-  b: { x0: number; x1: number; y0: number; y1: number },
-): number {
-  const w = Math.max(0, Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0));
-  const h = Math.max(0, Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0));
-  return w * h;
-}
+/** Το profile της όψης με τον δοθέντα κύριο άξονα ('x' = οριζόντια / 'y' = κατακόρυφη στο plan). */
+const byAxis = (profiles: FaceProfile[], axis: 'x' | 'y'): FaceProfile =>
+  profiles.find((p) => (axis === 'x' ? Math.abs(p.dir.x) : Math.abs(p.dir.y)) > 0.99)!;
 
-describe('ADR-534 Φ7b — corner miter (μηδέν double-coverage, κοινή mitered κορυφή)', () => {
+describe('ADR-534 Φ7c — ενσωματωμένο 45° miter (back-cap shift, κοινή mitered κορυφή, μηδέν wedge)', () => {
+  // Ν όψη x[0,100] (dir +x)· Α όψη y[0,100] στο x=100 (dir +y)· μοιράζονται τη γωνία (100,0).
   const groups = () =>
     mergeSilhouetteBandsToStripGroups(
       [mkBand([mkSeg({ x: 0, y: 0 }, { x: 100, y: 0 }), mkSeg({ x: 100, y: 0 }, { x: 100, y: 100 })], 0, 3000)],
       'mm',
     );
 
-  it('τα welded bodies ΔΕΝ επικαλύπτονται πλέον στη γωνία (overlap ≈ 0)', () => {
+  it('ΚΑΙ οι δύο όψεις: το outer γωνιακό corner φτάνει τη ΚΟΙΝΗ mitered κορυφή (125,-25)', () => {
     const profiles = buildFaceProfiles(groups(), SCENE_TO_M);
     expect(profiles).toHaveLength(2);
-    const ov = overlapArea(planFootprint(profiles[0]), planFootprint(profiles[1]));
-    expect(ov).toBeLessThan(1e-9); // ήταν ~3.1e-4 m² (312mm²) πριν τον fix
-  });
+    const south = byAxis(profiles, 'x'); // dir +x, γωνία στο hi-άκρο (t=100)
+    const east = byAxis(profiles, 'y');  // dir +y, γωνία στο lo-άκρο (t=0 τοπικό)
 
-  it('η γωνία γεμίζει με 2 miter wedges που δείχνουν στην κοινή mitered κορυφή (125,-25)', () => {
-    const wedges = collectMiterWedges(groups());
-    expect(wedges).toHaveLength(2); // ένα ανά όψη (Ν + Α)
-    for (const w of wedges) {
-      expect(w.tip.x).toBeCloseTo(125, 6);
-      expect(w.tip.y).toBeCloseTo(-25, 6);
-      expect(w.core.x).toBeCloseTo(100, 6); // κοινή γωνιακή κορυφή πυρήνα
-      expect(w.core.y).toBeCloseTo(0, 6);
-      expect(w.zBottomMm).toBe(0);
-      expect(w.zTopMm).toBe(3000);
+    const southTip = capCorner(south, 'hi', 'outer');
+    const eastTip = capCorner(east, 'lo', 'outer');
+    for (const tip of [southTip, eastTip]) {
+      expect(tip.x).toBeCloseTo(125, 6);
+      expect(tip.y).toBeCloseTo(-25, 6);
     }
-    // Τα δύο wedges = εκατέρωθεν της διαγωνίου (core→tip): διαφορετικά mid (το ένα (100,-25), το άλλο (125,0)).
-    const mids = wedges.map((w) => `${Math.round(w.mid.x)},${Math.round(w.mid.y)}`).sort();
-    expect(mids).toEqual(['100,-25', '125,0']);
   });
 
-  it('FREE END (κανένας γείτονας) → ΚΑΝΕΝΑ wedge (η γωνία δεν υπάρχει)', () => {
-    const g = mergeSilhouetteBandsToStripGroups([mkBand([mkSeg({ x: 0, y: 0 }, { x: 100, y: 0 })], 0, 3000)], 'mm');
-    expect(collectMiterWedges(g)).toHaveLength(0);
+  it('το front (core) γωνιακό corner ΜΕΝΕΙ στο (100,0) — δεν επεκτείνεται (μόνο το back-cap κινείται)', () => {
+    const profiles = buildFaceProfiles(groups(), SCENE_TO_M);
+    const southCore = capCorner(byAxis(profiles, 'x'), 'hi', 'core');
+    const eastCore = capCorner(byAxis(profiles, 'y'), 'lo', 'core');
+    for (const core of [southCore, eastCore]) {
+      expect(core.x).toBeCloseTo(100, 6);
+      expect(core.y).toBeCloseTo(0, 6);
+    }
+  });
+
+  it('τα miter deltas: γωνία = μη-μηδενικό (έξω)· ελεύθερο άκρο = 0 (square)', () => {
+    const profiles = buildFaceProfiles(groups(), SCENE_TO_M);
+    const south = byAxis(profiles, 'x');
+    const east = byAxis(profiles, 'y');
+    expect(south.miter.deltaHiM).toBeCloseTo(0.025, 6); // γωνία (t=100) → +25mm έξω
+    expect(south.miter.deltaLoM).toBeCloseTo(0, 9);     // ελεύθερο a-άκρο → 0
+    expect(east.miter.deltaLoM).toBeCloseTo(-0.025, 6); // γωνία (t=0) → −25mm έξω
+    expect(east.miter.deltaHiM).toBeCloseTo(0, 9);      // ελεύθερο άνω άκρο → 0
+  });
+
+  it('το perp είναι πλέον καθαρό axis-normal (μηδέν skew) και για τις δύο όψεις', () => {
+    const profiles = buildFaceProfiles(groups(), SCENE_TO_M);
+    const south = byAxis(profiles, 'x');
+    const east = byAxis(profiles, 'y');
+    expect(Math.abs(south.perp.x)).toBeCloseTo(0, 9); // ⊥ στο dir +x → (0,±1)
+    expect(Math.abs(south.perp.y)).toBeCloseTo(1, 9);
+    expect(Math.abs(east.perp.x)).toBeCloseTo(1, 9);  // ⊥ στο dir +y → (±1,0)
+    expect(Math.abs(east.perp.y)).toBeCloseTo(0, 9);
+  });
+
+  it('FREE END (κανένας γείτονας) → ΚΑΝΕΝΑ miter (deltas = 0, square)', () => {
+    const profiles = buildFaceProfiles(
+      mergeSilhouetteBandsToStripGroups([mkBand([mkSeg({ x: 0, y: 0 }, { x: 100, y: 0 })], 0, 3000)], 'mm'),
+      SCENE_TO_M,
+    );
+    expect(profiles).toHaveLength(1);
+    expect(profiles[0].miter.deltaLoM).toBeCloseTo(0, 9);
+    expect(profiles[0].miter.deltaHiM).toBeCloseTo(0, 9);
   });
 });
