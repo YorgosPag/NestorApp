@@ -45,6 +45,8 @@ import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { projectVerticesTo2D } from '../geometry/shared/polygon-utils';
 import { OPENING_KIND_STROKE } from './opening-kind-style';
 import { drawOpeningPlanOverlay, drawOpeningFrameOutlines } from './opening-overlay-drawing';
+import { resolveOpeningMaterial } from '../family-types/resolve-opening-material';
+import { getMaterialFlatColorHex } from '../materials/material-catalog-defs';
 import {
   OpeningTagRenderer,
   computeTagCenter,
@@ -93,7 +95,24 @@ export class OpeningRenderer extends BaseEntityRenderer {
     );
 
     this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
-    this.ctx.strokeStyle = OPENING_KIND_STROKE[opening.kind];
+    // ADR-669 2D/3D material parity — the per-opening material (κάσα/υαλοστάσιο)
+    // drives the 2D plan colour, mirroring the 3D pipeline's
+    // `resolveOpeningMaterial()` + `getMaterialFlatColorHex()` (same SSoT the
+    // structural-finish 2D plan geometry already uses for `mat-*`/`bmat_*` ids —
+    // Revit-style «one material, 2D + 3D»). ZERO REGRESSION: only openings that
+    // carry an EXPLICIT instance material (`params.material` / `params.materials`)
+    // resolve to a material colour; untouched legacy openings keep the existing
+    // kind palette (`OPENING_KIND_STROKE`) unchanged.
+    const _hasMaterialOverride = Boolean(opening.params.material) || Boolean(opening.params.materials);
+    const _kindColor = OPENING_KIND_STROKE[opening.kind];
+    let _frameColor = _kindColor;
+    let _glassColor = _kindColor;
+    if (_hasMaterialOverride) {
+      const _resolvedMats = resolveOpeningMaterial(opening.params);
+      _frameColor = getMaterialFlatColorHex(_resolvedMats.frame);
+      _glassColor = getMaterialFlatColorHex(_resolvedMats.glass);
+    }
+    this.ctx.strokeStyle = _frameColor;
     const _opLayerOverride = _opLayer ? {
       lineweightMm: isConcreteLineweight(_opLayer.lineweight) ? _opLayer.lineweight : undefined,
       color: _opLayer.color ?? undefined,
@@ -119,7 +138,17 @@ export class OpeningRenderer extends BaseEntityRenderer {
     // outline style (reuse — no dedicated frame subcategory). Cut symbol only.
     if (_isCut) this.drawFrameOutlines(opening, _outlineS.lineWidthPx);
     // Plan symbol (swing arc / glazing / slide track) only when actually cut.
-    if (_isCut) this.drawKindOverlay(opening, _overlayS.lineWidthPx);
+    // Glazed kinds draw the double-line glazing symbol in the resolved GLASS
+    // material colour (distinct from the frame) — same material, same colour
+    // as the 3D glazing pane — but only when no explicit subcategory/layer
+    // colour override is already forcing a uniform stroke (existing precedence
+    // preserved untouched).
+    if (_isCut) {
+      if (_hasMaterialOverride && isWindowKind(opening.kind) && _outlineS.color === null) {
+        this.ctx.strokeStyle = _glassColor;
+      }
+      this.drawKindOverlay(opening, _overlayS.lineWidthPx);
+    }
 
     // ADR-376 Phase A — paint instance Mark tag overlay (canvas-pill SSoT).
     // Layer toggle gating is read μέσω the dedicated module; tag renderer
