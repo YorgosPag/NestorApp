@@ -37,6 +37,8 @@ import { useExplodeRibbonAction } from '../ui/ribbon/hooks/useExplodeRibbonActio
 import { useJoinRibbonAction } from '../ui/ribbon/hooks/useJoinRibbonAction';
 // ADR-575 — GROUP «Ομαδοποίηση» / UNGROUP «Κατάργηση» action interceptor.
 import { useGroupRibbonAction } from '../ui/ribbon/hooks/useGroupRibbonAction';
+// ADR-652 M6 — «Δημιουργία Block» action interceptor (opens the create dialog for the selection).
+import { useCreateBlockRibbonAction } from '../ui/ribbon/hooks/useCreateBlockRibbonAction';
 // ADR-641 — «Επεξεργασία Μπλοκ» (BEDIT) action interceptor for the contextual block tab.
 import { useBlockEditRibbonAction } from '../ui/ribbon/hooks/useBlockEditRibbonAction';
 // ADR-654 — διαστάσεις εικόνας action interceptor (Επαναφορά Διαστάσεων + Κλείδωμα Αναλογιών).
@@ -130,6 +132,12 @@ export function useDxfViewerRibbon(params: DxfViewerRibbonParams): DxfViewerRibb
     levelManager, universalSelection,
     fallback: blockEditActionInterceptor,
   });
+  // ADR-652 M6 — «Δημιουργία Block» wraps the image-dimension interceptor (top of chain). Καταγράφει
+  // την επιλογή και ανοίγει τον διάλογο· το build/replace/save ζει στο CreateBlockDialogHost.
+  const createBlockActionInterceptor = useCreateBlockRibbonAction({
+    universalSelection,
+    fallback: imageDimensionActionInterceptor,
+  });
 
   // ADR-358 Phase 7a / ADR-363 — BIM contextual bridges. ADR-408 Φ5 — MEP circuit.
   const { stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, columnBridge, beamBridge, foundationBridge, slabOpeningBridge, mepCircuitBridge, mepPipeNetworkBridge, mepFixtureBridge, mepManifoldBridge, electricalPanelBridge, mepRadiatorBridge, mepBoilerBridge, mepWaterHeaterBridge, mepUnderfloorBridge, mepSegmentBridge, waterAutoSupplyBridge, drainageAutoBridge, heatingAutoBridge, electricalAutoBridge, electricalWeakAutoBridge, hvacAutoBridge, fireAutoBridge, gasAutoBridge, clashDetectionBridge, furnitureBridge, blockLibraryBridge, titleBlockBridge, floorplanSymbolBridge, annotationSymbolBridge, scaleBarBridge, mepFixtureLibraryBridge, mepRiserBridge, floorFinishBridge, wallCoveringBridge, hatchBridge, thermalSpaceBridge } =
@@ -157,7 +165,7 @@ export function useDxfViewerRibbon(params: DxfViewerRibbonParams): DxfViewerRibb
 
   const ribbonCommands = useRibbonCommands({
     activeTool, handleToolChange, handleRibbonComingSoon,
-    wrappedHandleAction: imageDimensionActionInterceptor,
+    wrappedHandleAction: createBlockActionInterceptor,
     closeContextualTab,
     canUndo, canRedo,
     textEditorBridge, arrayBridge, stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge, wallCoveringBridge, hatchBridge, thermalSpaceBridge, columnBridge, beamBridge, foundationBridge,

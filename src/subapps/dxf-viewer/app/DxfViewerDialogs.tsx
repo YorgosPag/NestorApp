@@ -25,6 +25,9 @@ import { useSelectedEntityIds } from '../systems/selection';
 import { resolveActiveBuildingId } from '../systems/levels/level-floor-resolution';
 import { EventBus } from '../systems/events/EventBus';
 import { buildDxfImportSaveContext } from './dxf-import-save-context';
+// ADR-652 M6 — «Δημιουργία Block» host (always-mounted outer reads the light request store;
+// the heavy inner mounts only while a create is requested — gate-at-mount).
+import { CreateBlockDialogHost } from '../ui/panels/block-library/CreateBlockDialogHost';
 import type { DxfViewerCallbacksReturn } from './useDxfViewerCallbacks';
 import type { DxfViewerUiState } from './useDxfViewerUiState';
 import {
@@ -251,6 +254,8 @@ export function DxfViewerDialogs(props: DxfViewerDialogsProps): React.JSX.Elemen
       <React.Suspense fallback={hiddenFallback}><FloorManagementDialogHost buildingId={buildingId} /></React.Suspense>
       {/* ADR-581 — «Αντιγραφή Ιδιοτήτων» modal (opened from multi-selection contextual tab). */}
       <React.Suspense fallback={hiddenFallback}><MatchPropertiesDialogHost levelManager={levelManager} /></React.Suspense>
+      {/* ADR-652 M6 — «Δημιουργία Block» dialog (opened από Home→Modify με ενεργή επιλογή). */}
+      <CreateBlockDialogHost levelManager={levelManager} projectId={projectId} />
       {USE_AI_DRAWING_ASSISTANT && (
         <React.Suspense fallback={hiddenFallback}>
           <DxfAiChatPanel

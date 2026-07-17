@@ -308,6 +308,20 @@ export const HOME_MODIFY_PANEL: RibbonPanelDef = {
             comingSoon: false,
           },
         },
+        {
+          type: 'simple',
+          size: 'small',
+          command: {
+            // ADR-652 M6 — «Δημιουργία Block» (AutoCAD BLOCK/BMAKE): η επιλογή → BlockEntity +
+            // αποθήκευση στην ιδιωτική βιβλιοθήκη. Action-only (ανοίγει διάλογο μέσω interceptor).
+            id: 'modify.create-block',
+            labelKey: 'ribbon.commands.createBlock',
+            icon: 'block-library',
+            commandKey: 'create-block',
+            action: 'create-block',
+            comingSoon: false,
+          },
+        },
       ],
     },
   ],
