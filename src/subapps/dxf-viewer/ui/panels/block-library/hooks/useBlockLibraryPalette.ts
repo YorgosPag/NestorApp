@@ -28,6 +28,7 @@ import {
   subscribeSessionBlockDefs,
   getSessionBlockDef,
   removeSessionBlockDef,
+  upsertSessionBlockDef,
 } from '../../../../bim/block-library/block-library-registry';
 import {
   listCloudBlockItems,
@@ -35,13 +36,14 @@ import {
 } from '../../../../bim/block-library/block-library-cloud-store';
 import { mergeBlockPaletteEntries } from '../../../../bim/block-library/block-palette-entries';
 import { hydrateCloudBlockDef } from '../../../../bim/block-library/hydrate-cloud-block';
-import { computeBlockLocalBoundsMm } from '../../../../bim/block-library/block-local-bounds';
+import { buildUserBlockSaveInput } from '../../../../bim/block-library/build-save-block-input';
 import type {
   BlockPaletteEntry,
 } from '../../../../bim/block-library/block-palette-entries';
 import type {
   BlockCategory,
   BlockLicense,
+  InSessionBlockDef,
   PromoteBlockLibraryItemInput,
 } from '../../../../bim/block-library/block-library-types';
 
@@ -74,6 +76,11 @@ export interface UseBlockLibraryPaletteResult {
   readonly selectEntry: (entry: BlockPaletteEntry) => Promise<string | null>;
   /** Αποθήκευση session block στη ΔΙΚΗ ΜΟΥ βιβλιοθήκη (scope `user`). */
   readonly saveEntry: (entry: BlockPaletteEntry, values: BlockSaveFormValues) => Promise<boolean>;
+  /** M6 — «Δημιουργία Block»: register νέου ορισμού + persist (scope `user`), χωρίς entry. */
+  readonly saveNewBlockFromDef: (
+    def: InSessionBlockDef,
+    values: BlockSaveFormValues,
+  ) => Promise<boolean>;
   /** M3 — προαγωγή ιδιωτικού block σε εταιρεία/έργο (περνά από το νομικό gate). */
   readonly promoteEntry: (
     entry: BlockPaletteEntry,
@@ -175,32 +182,49 @@ export function useBlockLibraryPalette(projectId?: string): UseBlockLibraryPalet
         return false;
       }
 
-      const boundsMm = def.boundsMm ?? computeBlockLocalBoundsMm(def.localMembers);
-      if (!boundsMm) {
+      const input = buildUserBlockSaveInput(def, values, userId, Date.now());
+      if (!input) {
         // No stored bounds and no computable geometry (empty members) → nothing to save.
         setError('saveFailed');
         return false;
       }
 
-      return runEntryAction(entry, 'saveFailed', (svc) =>
-        svc
-          .saveBlock({
-            scope: 'user',
-            name: values.name,
-            category: values.category,
-            boundsMm,
-            localMembers: def.localMembers,
-            provenance: {
-              sourceType: 'user-import',
-              importedAt: Date.now(),
-              importedBy: userId,
-            },
-            license: values.license,
-          })
-          .then(() => undefined),
-      );
+      return runEntryAction(entry, 'saveFailed', (svc) => svc.saveBlock(input).then(() => undefined));
     },
     [runEntryAction, userId],
+  );
+
+  /**
+   * M6 — «Δημιουργία Block»: register τον νέο ορισμό στο in-session registry (εμφανίζεται αμέσως
+   * στο palette) ΚΑΙ persist στην ΙΔΙΩΤΙΚΗ βιβλιοθήκη (scope `user`). Δεν αγγίζει τη σκηνή — το
+   * (προαιρετικό) «αντικατάσταση με instance» ζει στον host ({@link CreateBlockDialogHost}) ως
+   * undoable command, ξεχωριστά από την persistence.
+   */
+  const saveNewBlockFromDef = useCallback(
+    async (def: InSessionBlockDef, values: BlockSaveFormValues): Promise<boolean> => {
+      setError(null);
+      if (!service || !userId) {
+        setError('saveFailed');
+        return false;
+      }
+      const input = buildUserBlockSaveInput(def, values, userId, Date.now());
+      if (!input) {
+        setError('saveFailed');
+        return false;
+      }
+      upsertSessionBlockDef(def); // ορατό αμέσως στο palette (session card → «αποθηκευμένο» μετά το save)
+      setBusyKey(`new:${def.name}`);
+      try {
+        await service.saveBlock(input);
+        return true;
+      } catch {
+        setError('saveFailed');
+        return false;
+      } finally {
+        setBusyKey(null);
+      }
+    },
+    [service, userId],
   );
 
   const promoteEntry = useCallback(
@@ -271,6 +295,7 @@ export function useBlockLibraryPalette(projectId?: string): UseBlockLibraryPalet
     error,
     selectEntry,
     saveEntry,
+    saveNewBlockFromDef,
     promoteEntry,
     updateEntry,
     deleteEntry,
