@@ -152,6 +152,47 @@ describe('mergeSilhouetteBandsToStrips', () => {
   });
 });
 
+// ─── ADR-534 Φ6a: near-coplanar tolerance (drift → seamless· πραγματικό σκαλί → ραφή) ─────
+
+describe('mergeSilhouetteBandsToStrips — Φ6a near-coplanar tolerance (COPLANAR_MERGE_TOL_MM=5)', () => {
+  it('(a) drift < ανοχή (2mm) z-stacked → 1 seamless strip δάπεδο→κορυφή (φάσα↔τοίχος)', () => {
+    const wall = mkSeg({ x: 0, y: 0 }, { x: 100, y: 0 });     // z 0→2500 (σοβάς τοίχου)
+    const fascia = mkSeg({ x: 0, y: 2 }, { x: 100, y: 2 });   // z 2500→3000, 2mm drift (φάσα πλάκας)
+    const strips = mergeSilhouetteBandsToStrips(
+      [mkBand([wall], 0, 2500), mkBand([fascia], 2500, 3000)], 'mm');
+    expect(strips).toHaveLength(1);
+    expect(strips[0].zBottomMm).toBe(0);
+    expect(strips[0].zTopMm).toBe(3000);
+  });
+
+  it('(b) πραγματικό σκαλί > ανοχή (20mm — π.χ. δοκάρι από κολόνα) → 2 strips (ραφή διατηρείται)', () => {
+    const lower = mkSeg({ x: 0, y: 0 }, { x: 100, y: 0 });
+    const upper = mkSeg({ x: 0, y: 20 }, { x: 100, y: 20 });
+    const strips = mergeSilhouetteBandsToStrips(
+      [mkBand([lower], 0, 2500), mkBand([upper], 2500, 3000)], 'mm');
+    expect(strips).toHaveLength(2);
+    expect(strips.some((s) => s.zBottomMm === 0 && s.zTopMm === 3000)).toBe(false);
+  });
+
+  it('(c) αλλαγή υλικού εντός ανοχής (2mm) → 2 strips (attribute seam νικά τη γεωμετρία — paint survives)', () => {
+    const a = mkSeg({ x: 0, y: 0 }, { x: 100, y: 0 });
+    const b = mkSeg({ x: 0, y: 2 }, { x: 100, y: 2 }, { materialId: 'mat-gypsum-board' });
+    expect(mergeSilhouetteBandsToStrips(
+      [mkBand([a], 0, 2500), mkBand([b], 2500, 3000)], 'mm')).toHaveLength(2);
+  });
+
+  it('(d) anchor clustering (όχι chaining): y=0/4/8mm z-stacked → {0,4} ενώνεται, {8} σπάει → 2 strips', () => {
+    const s0 = mkSeg({ x: 0, y: 0 }, { x: 100, y: 0 });
+    const s1 = mkSeg({ x: 0, y: 4 }, { x: 100, y: 4 });
+    const s2 = mkSeg({ x: 0, y: 8 }, { x: 100, y: 8 });
+    const strips = mergeSilhouetteBandsToStrips(
+      [mkBand([s0], 0, 1000), mkBand([s1], 1000, 2000), mkBand([s2], 2000, 3000)], 'mm');
+    expect(strips).toHaveLength(2); // ΟΧΙ 1 — neighbour-chaining (0→4→8) θα έδινε 1 λανθασμένα
+    expect(strips.some((s) => s.zBottomMm === 0 && s.zTopMm === 2000)).toBe(true);    // cluster {0,4}
+    expect(strips.some((s) => s.zBottomMm === 2000 && s.zTopMm === 3000)).toBe(true); // cluster {8}
+  });
+});
+
 // ─── integration: μέσω του πραγματικού silhouette (κολόνα + δοκάρι) ─────────────
 
 describe('ADR-449 Slice X6 — integration: κολόνα + δοκάρι → ελεύθερες παρειές ενιαίες, beam-side καθαρό soffit', () => {

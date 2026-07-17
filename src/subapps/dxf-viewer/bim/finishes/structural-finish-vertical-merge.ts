@@ -66,12 +66,17 @@ const Z_TOL_MM = 1e-3;
  * ADR-449/534 Φ6a — Perpendicular ανοχή (building-mm) για ομαδοποίηση *near*-coplanar όψεων σοβά
  * σε ΜΙΑ συνεχή κάθετη λωρίδα (seamless δέρμα). Όψεις των οποίων οι core support lines απέχουν
  * ≤ αυτό — ΚΑΙ ταιριάζουν σε angle/side/υλικό/κατάταξη/πάχος/χρώμα — ενώνονται χωρίς ραφή· κενό
- * μεγαλύτερο = **πραγματικό σκαλί** → κρατά ραφή. 25mm = ονομαστικό εξωτερικό πάχος σοβά: πάνω από
- * τον θόρυβο (few-mm offsets από μεικτές πηγές γεωμετρίας — outline πλάκας vs footprint τοίχου,
- * σχεδόν-συνευθειακοί γειτονικοί τοίχοι) ~5×, κάτω από το μικρότερο πραγματικό reveal (~50mm) ~2×.
- * Scene units: `COPLANAR_MERGE_TOL_MM * mmToSceneUnits(units)` στο call site.
+ * μεγαλύτερο = **πραγματικό σκαλί** → κρατά ραφή.
+ *
+ * Τιμή **5mm**: γεφυρώνει μόνο **numerical drift** μεταξύ ομοεπίπεδων επιφανειών από διαφορετικές
+ * πηγές γεωμετρίας (outline πλάκας vs footprint τοίχου· union floating-point· σχεδόν-συνευθειακοί
+ * γειτονικοί τοίχοι — τυπικά sub-mm έως λίγα mm), ΧΩΡΙΣ να ενώνει **πραγματικά** structural jogs
+ * (≥ ~1-2cm — π.χ. δοκάρι που εξέχει από κολόνα· η BOQ-ταυτότητα των γειτονικών t-όψεων μένει
+ * ανέγγιχτη). ⚠️ Tunable: αν στο C4D η φάσα απέχει > 5mm από τον τοίχο (μη-flush σχεδίαση), αυξήστε
+ * ΜΟΝΟ αφού επιβεβαιωθεί ότι δεν σπάει BOQ-ταυτότητα (δοκάρι/κολόνα). Scene units:
+ * `COPLANAR_MERGE_TOL_MM * mmToSceneUnits(units)` στο call site.
  */
-const COPLANAR_MERGE_TOL_MM = 25;
+const COPLANAR_MERGE_TOL_MM = 5;
 
 /** Μία όψη ως ορθογώνιο σε (t, z), με τα αρχικά mitered core/outer σημεία στα δύο t-άκρα. */
 interface FaceRect {
@@ -94,11 +99,10 @@ interface CoplanarGroup {
 }
 
 /**
- * ADR-534 Φ6a — Ένα band-quad ΠΡΙΝ την ομαδοποίηση: το **super-key** (όλα τα attributes ΕΚΤΟΣ
- * του perpOff — αυτό γίνεται πλέον συντεταγμένη clustering, όχι μέρος ταυτότητας) + τα πραγματικά
- * mitered σημεία + ο δικός του άξονας/sense. Το `FaceRect` χτίζεται αργότερα ({@link toRect}) με
- * τον **κοινό** άξονα του cluster, ώστε near-coplanar όψεις από διαφορετικές πηγές να δίνουν
- * συνεπή t (αλλιώς σπάει το `boundaryTs` dedup / z-stack merge).
+ * ADR-534 Φ6a — Ένα band-quad ΠΡΙΝ την ομαδοποίηση: το **super-key** (attributes ΕΚΤΟΣ perpOff —
+ * το perpOff γίνεται συντεταγμένη clustering, όχι μέρος ταυτότητας) + τα πραγματικά mitered σημεία +
+ * ο δικός του άξονας/sense. Το `FaceRect` χτίζεται αργότερα ({@link toRect}) με τον **κοινό** άξονα
+ * του cluster anchor → συνεπή t (αλλιώς near-coplanar όψεις σπάνε το `boundaryTs` dedup / z-stack merge).
  */
 interface QuadEntry {
   readonly superKey: string;
