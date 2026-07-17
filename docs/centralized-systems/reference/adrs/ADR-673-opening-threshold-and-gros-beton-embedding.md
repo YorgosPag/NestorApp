@@ -92,8 +92,40 @@ window-unaffected) + `__tests__/bim-three-wall-opening-attach.test.ts` (νέο a
   όχι index → order-independent (επαληθευμένο).
 - **Οπτική αλλαγή by design:** κάθε πόρτα αποκτά πλέον default κάτω μέλος (χαμηλό, `'none'`)· toggle-off το κρύβει.
 
-## 7. Changelog
+## 7. Follow-up — BOQ frozen-baseline guard (Firestore permissions error)
+
+**Αφορμή:** κατά το testing, resize δίφυλλης πόρτας άδειασε ένα παλιό signature group → ο auto-sync
+(`opening-boq-sync.ts`) προσπάθησε `deleteDoc` στο άδειο BOQ row → **«Missing or insufficient permissions»**.
+
+**Διάγνωση (ΟΧΙ από αυτό το feature):** το opening `computeOpeningSignature` είναι
+`kind×width×height×sillHeight×openDirection` — τα threshold params **δεν** μπαίνουν, άρα το κατώφλι ποτέ δεν
+αλλάζει signature. Το row είχε προχωρήσει από `draft`/`submitted` σε προστατευμένη κατάσταση· ο Firestore
+`boq_items` delete rule επιτρέπει delete μόνο σε `status in ['draft','submitted']`. Λογική εξαγωγή: ο κώδικας
+φτάνει στο delete μόνο **μετά** από επιτυχές tenant-scoped read (ίδιο `belongsToCompany`), άρα το μοναδικό
+επιπλέον μπλοκάρισμα είναι ο status guard.
+
+**Απόφαση (enterprise / 5D-BIM cost πρακτική — CostX/iTWO/Vico):** μια εγκεκριμένη/πιστοποιημένη ποσότητα
+είναι **αμετάβλητο συμβατικό baseline**. Ο auto-sync **ΠΟΤΕ** δεν διαγράφει ούτε ξαναγράφει τέτοιο row — το
+αντιμετωπίζει ως frozen (όπως τον υπάρχοντα `detached` guard). Η απόκλιση μοντέλου↔baseline είναι **variance
+για ανθρώπινο έλεγχο**, όχι αυτόματη μεταβολή. Αυτό εξαλείφει το permission error στην πηγή (δεν επιχειρείται
+ποτέ απαγορευμένο delete) — **καμία αλλαγή στους Firestore rules** (ήταν σωστοί, προστάτευαν πιστοποιημένα δεδομένα).
+
+**Υλοποίηση:**
+- `src/types/boq/units.ts` — SSoT `BOQ_AUTO_MANAGED_STATUSES = ['draft','submitted']` + `isBoqAutoManagedStatus()`
+  (mirror του delete rule).
+- `bim/services/opening-boq-sync.ts` → `writeSignatureGroup` — επέκταση του guard (πριν delete **ΚΑΙ** upsert
+  branches): `if (!isBoqAutoManagedStatus(data.status)) return;`.
+- Test `__tests__/opening-boq-sync-frozen-baseline.test.ts` (5 πράσινα): certified/approved/locked → κανένα
+  delete/setDoc· draft → delete κανονικά.
+
+**Επόμενο (προτεινόμενο, εκτός scope):** variance surfacing — flag «άλλαξε το μοντέλο μετά την πιστοποίηση» στο
+BOQ panel (πλήρες 5D-BIM: baseline vs live + Δ), ώστε ο μηχανικός να αποφασίσει revision. Αυτό είναι το «full
+enterprise» επόμενο επίπεδο· ο τρέχων guard είναι το σωστό core (immutability + μηδέν σφάλμα).
+
+## 8. Changelog
 
 - **2026-07-17** — Δημιουργία. Root cause (§2), απόφαση «κατώφλι σε όλους τους door τύπους + 4 embed modes»,
   SSoT resolver, plumbing `finishThickness` μέσω `readActiveStoreyContext()`, UI στο contextual opening tab,
   tests. Orchestrator execution (lead + 3 agents: geometry/plumbing, UI/i18n, tests).
+- **2026-07-17** — §7 follow-up: BOQ frozen-baseline guard (permissions error σε resize/delete πόρτας). SSoT
+  `isBoqAutoManagedStatus`· ο auto-sync δεν αγγίζει approved/certified/locked rows (5D-BIM immutable baseline).

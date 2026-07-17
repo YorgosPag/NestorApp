@@ -14,9 +14,10 @@
  * @see docs/centralized-systems/reference/adrs/ADR-376-opening-tags.md §7 B.2 §11 v7
  */
 
-import { collection, deleteDoc, doc, getDoc, getDocs, query, setDoc, where } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, getDocs, query, setDoc, where, type QueryConstraint } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { isBoqAutoManagedStatus } from '@/types/boq/units';
 import { createModuleLogger } from '@/lib/telemetry';
 import { resolveAtoeMapping } from '../config/bim-to-atoe-mapping';
 import type { OpeningKind, OpeningParams } from '../types/opening-types';
@@ -170,7 +171,15 @@ async function writeSignatureGroup(
   const existing = await getDoc(doc(db, COLLECTIONS.BOQ_ITEMS, groupId)).catch(() => null);
   if (existing && existing.exists()) {
     const data = existing.data() as Record<string, unknown>;
+    // Detach guard: ο χρήστης αποσύνδεσε manually αυτό το BOQ row — μένει ως έχει.
     if (data.detached === true) return;
+    // ADR-673 — frozen-baseline guard: μόλις ένα BOQ row φύγει από draft/submitted
+    // (approved/certified/locked) είναι συμβατικό στιγμιότυπο. Ο BIM auto-sync ΠΟΤΕ δεν
+    // το διαγράφει ούτε το ξαναγράφει — καθρεφτίζει τον Firestore delete rule + την 5D-BIM
+    // cost πρακτική (πιστοποιημένη ποσότητα αμετάβλητη· η απόκλιση = variance για άνθρωπο,
+    // όχι αυτόματη μεταβολή). Έτσι αποφεύγεται και το "Missing or insufficient permissions"
+    // delete error ενάντια σε προστατευμένα rows.
+    if (!isBoqAutoManagedStatus(data.status)) return;
   }
 
   if (members.length === 0) {
@@ -207,17 +216,28 @@ async function writeSignatureGroup(
   }
 }
 
-async function fetchOpeningsForSignature(
-  context: OpeningBoqContext,
-  signature: OpeningSignature,
-): Promise<GrouperOpeningRow[]> {
-  const q = query(
+/**
+ * Base equality query over a floorplan's persisted openings, scoped to
+ * companyId+projectId+floorplanId (served by the existing composite index —
+ * CHECK 3.10 satisfied: companyId inline). Extra constraints (e.g. a `kind`
+ * filter) are appended by the caller so both fetch helpers share this prefix
+ * instead of a duplicated query preamble (N.18 / jscpd, ADR-583).
+ */
+function queryFloorplanOpenings(context: OpeningBoqContext, ...extra: QueryConstraint[]) {
+  return query(
     collection(db, COLLECTIONS.FLOORPLAN_OPENINGS),
     where('companyId', '==', context.companyId),
     where('projectId', '==', context.projectId),
     where('floorplanId', '==', context.floorplanId),
-    where('kind', '==', signature.kind),
+    ...extra,
   );
+}
+
+async function fetchOpeningsForSignature(
+  context: OpeningBoqContext,
+  signature: OpeningSignature,
+): Promise<GrouperOpeningRow[]> {
+  const q = queryFloorplanOpenings(context, where('kind', '==', signature.kind));
 
   let snap;
   try {
@@ -259,12 +279,7 @@ async function fetchOpeningsForSignature(
 async function fetchAllOpeningsForFloorplan(
   context: OpeningBoqContext,
 ): Promise<OpeningDocRow[]> {
-  const q = query(
-    collection(db, COLLECTIONS.FLOORPLAN_OPENINGS),
-    where('companyId', '==', context.companyId),
-    where('projectId', '==', context.projectId),
-    where('floorplanId', '==', context.floorplanId),
-  );
+  const q = queryFloorplanOpenings(context);
 
   let snap;
   try {

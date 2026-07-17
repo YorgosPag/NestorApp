@@ -136,7 +136,7 @@ top-priority `elem` hook του resolver, ADR-375 C.5) → κερδίζει το
 | `bim-3d/converters/opening-hardware-builders.ts` | **Hardware SSoT** — `buildHardwareSpecs` (χειρολαβή box specs ανά family) |
 | `bim/renderers/OpeningRenderer.ts` | 2Δ — resolved χρώμα ως `elementOverride.color` fallback |
 | `bim/renderers/opening-overlay-drawing.ts` | 2Δ plan symbols — `drawHandleGlyph` (handle tick στο latch άκρο) στο `drawSwing` |
-| `bim/schedule/schedule-presets.ts` | BOQ — `mapDoor`/`mapWindow` → `resolveOpeningMaterial` per-part labels· `mapOpeningCommonCells` SSoT |
+| `bim/schedule/schedule-presets.ts` | BOQ — `mapDoor`/`mapWindow` → `resolveOpeningMaterial` per-part labels· `mapOpeningCommonCells` SSoT· `mapCombined` → `openingCombinedMaterial` (frame+leaf summary) |
 | `bim/schedule/schedule-preset-columns.ts` | BOQ — curated per-part material στήλες (`DOOR_COLUMNS`/`WINDOW_COLUMNS`) |
 | `i18n/locales/{el,en}/dxf-schedule.json` | `col.frameMaterial`/`leafMaterial`/`glassMaterial`/`hardwareMaterial` |
 | `ui/ribbon/components/EditOpeningTypeDialog.tsx` + `OpeningMaterialSelectCell.tsx` | UI — 4 rows ανά μέρος |
@@ -183,3 +183,10 @@ top-priority `elem` hook του resolver, ADR-375 C.5) → κερδίζει το
   μόνο swing· sliding/folding/overhead/revolving/glazing/bay αμετάβλητα. `HANDLE_LEAF_FRACTION`/`HANDLE_TICK_RATIO`
   constants. Gates: `opening-handle-glyph.test.ts` (νέο) **3/3 ✅** (tick στο latch άκρο, όχι στον μεντεσέ·
   glazing χωρίς λαβή), `OpeningRenderer` parity regression **6/6 ✅**, `jscpd:diff` καθαρό ✅.
+- **2026-07-18** — **Follow-up Γ ext. (§8) — combined (μεικτό) schedule.** Το `mapCombined` διάβαζε το νεκρό
+  legacy `params.material` → **κενό κελί** για per-part κουφώματα· τώρα περνά από `resolveOpeningMaterial` μέσω
+  του νέου `openingCombinedMaterial` (distinct labels κάσας+φύλλου, π.χ. «Ξύλο / Αλουμίνιο»). Το ετερογενές
+  roll-up κρατά **μία** στήλη υλικού (τοίχοι/κολώνες δεν έχουν φύλλο/γυαλί/χειρολαβή)· η αναλυτική ανά-μέρος
+  ανάλυση ζει στα dedicated door/window schedules. Non-openings: αμετάβλητο legacy single (extracted σε
+  `legacyCombinedMaterial`). Gates: `opening-material-schedule.test.ts` +5 combined tests → **56 (schedule) /
+  6 suites 117 ✅**· `jscpd:diff` clone-neutral (count 7 αμετάβλητο· όλα προϋπάρχον preamble idiom).

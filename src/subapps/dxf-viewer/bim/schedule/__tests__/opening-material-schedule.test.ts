@@ -15,6 +15,7 @@
 
 import type { OpeningEntity, OpeningKind } from '../../types/opening-types';
 import { getPreset } from '../schedule-presets';
+import type { AnyBimEntity } from '../schedule-presets';
 import type { ScheduleLookups } from '../types';
 
 // ─── Lookups ──────────────────────────────────────────────────────────────
@@ -135,5 +136,55 @@ describe('window preset — per-part materials (ADR-672 Φ Γ)', () => {
     expect(keys).toContain('hardwareMaterial');
     expect(keys).not.toContain('leafMaterial');
     expect(keys).not.toContain('material');
+  });
+});
+
+// ─── Combined preset (heterogeneous roll-up, one material column) ────────────
+
+describe('combined preset — per-part opening summary (ADR-672 Φ Γ ext.)', () => {
+  test('opening summarises distinct frame + leaf labels', () => {
+    const door = makeOpening('c1', 'door', {
+      materials: { frame: 'mat-aluminum', leaf: 'mat-wood' },
+    });
+    const cells = getPreset('combined').map(door, lookups);
+    expect(cells.material).toBe('M:mat-aluminum / M:mat-wood');
+  });
+
+  test('same frame + leaf → single label (deduplicated)', () => {
+    const door = makeOpening('c2', 'door', {
+      materials: { frame: 'mat-oak', leaf: 'mat-oak' },
+    });
+    const cells = getPreset('combined').map(door, lookups);
+    expect(cells.material).toBe('M:mat-oak');
+  });
+
+  test('per-part opening with NO legacy `material` no longer shows a blank cell (bug fix)', () => {
+    // The old combined mapper read the dead legacy `params.material` → blank
+    // for per-part openings. It now reads through the resolver → part defaults.
+    const window = makeOpening('c3', 'window', {
+      materials: { frame: 'mat-pvc' },
+    });
+    const cells = getPreset('combined').map(window, lookups);
+    // frame=pvc (explicit), leaf=wood (default) → distinct summary, never empty.
+    expect(cells.material).toBe('M:mat-pvc / M:mat-wood');
+  });
+
+  test('legacy single-material opening folds to one label', () => {
+    const door = makeOpening('c4', 'door', { material: 'mat-wood' });
+    const cells = getPreset('combined').map(door, lookups);
+    expect(cells.material).toBe('M:mat-wood');
+  });
+
+  test('non-opening row keeps its legacy single material (zero regression)', () => {
+    const wall = {
+      id: 'wc1',
+      type: 'wall',
+      kind: 'exterior',
+      floorId: 'floor-1',
+      params: { material: 'mat-concrete-c25', category: 'structural' },
+      geometry: { area: 0, volume: 0, length: 0 },
+    } as unknown as AnyBimEntity;
+    const cells = getPreset('combined').map(wall, lookups);
+    expect(cells.material).toBe('M:mat-concrete-c25');
   });
 });

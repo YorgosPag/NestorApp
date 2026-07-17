@@ -76,6 +76,22 @@ export type BOQItemStatus =
   | 'certified'   // Πιστοποιημένο — πραγματική ποσότητα καταχωρημένη
   | 'locked';     // Κλειδωμένο — τελικό, αμετάβλητο
 
+/**
+ * ADR-673 — οι δύο «επεξεργάσιμες» καταστάσεις τις οποίες ο BIM auto-sync (BOQ bridge)
+ * επιτρέπεται να δημιουργεί/ενημερώνει/διαγράφει. Καθρεφτίζει τον Firestore `boq_items`
+ * delete rule (`status in ['draft','submitted']`). Οι `approved`/`certified`/`locked`
+ * είναι **παγωμένα συμβατικά baselines**: ο auto-sync ΠΟΤΕ δεν τα διαγράφει ούτε τα
+ * ξαναγράφει (5D-BIM cost πρακτική — CostX/iTWO/Vico: πιστοποιημένη ποσότητα = αμετάβλητη·
+ * η απόκλιση μοντέλου εμφανίζεται ως variance για ανθρώπινο έλεγχο, ποτέ ως αυτόματη
+ * μεταβολή). SSoT ώστε ο guard και κάθε μελλοντικό variance UI να συμφωνούν.
+ */
+export const BOQ_AUTO_MANAGED_STATUSES: readonly BOQItemStatus[] = ['draft', 'submitted'];
+
+/** True όταν ένα BOQ row είναι ακόμα σε lifecycle που ο BIM auto-sync δικαιούται να μεταβάλει/διαγράψει. */
+export function isBoqAutoManagedStatus(status: unknown): status is 'draft' | 'submitted' {
+  return status === 'draft' || status === 'submitted';
+}
+
 /** Μέθοδος μέτρησης */
 export type MeasurementMethod =
   | 'manual'       // Χειρωνακτική εισαγωγή
