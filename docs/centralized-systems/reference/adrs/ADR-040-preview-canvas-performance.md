@@ -72,6 +72,17 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-07-18 — ➕ ADR-652 M7: block wysiwyg ghost expand στο preview render
+**Τι:** ο `BimPreviewRenderer.render` (`canvas-v2/preview-canvas/bim-preview-render.ts`) — το ΕΝΑ σημείο
+όπου κάθε WYSIWYG ghost χτυπά τον `EntityRendererComposite` — απέκτησε branch για BlockEntity ghost. Ο
+`EntityRendererComposite`/`entity-renderer-registry` ΔΕΝ έχει renderer για `'block'` (στο committed path
+το block γίνεται **expand ΠΡΙΝ** το conversion). Στο preview το ghost είναι `BlockEntity` με
+`wysiwygPreview:true`, οπότε όταν `isBlockEntity(entity)` → `expandBlockInstance(entity)` (systems/block/
+block-expander.ts, ίδιο placement transform με το committed) → κάθε world member ζωγραφίζεται με
+`composite.render(member, {})` μέσα στο ΙΔΙΟ `save/restore` + viewport/transform override. **Συμμόρφωση
+ADR-040:** pure paint στον preview ctx — καμία νέα subscription, κανένα `useSyncExternalStore`, event-time
+transform/viewport (ίδιο contract με το column/wall wysiwyg path). Non-block ghost path αμετάβλητος.
+
 ### 2026-07-18 — ➕ ADR-652 M6.1: base-point ghost marker leaf (gate-at-mount)
 **Τι:** νέο read-only SVG overlay `components/dxf-layout/BasePointPickMarkerOverlay.tsx` στο
 `canvas-layer-stack-2d-overlays-leaf.tsx` group — δείχνει «σημείο βάσης» marker όσο ο διάλογος «Δημιουργία
