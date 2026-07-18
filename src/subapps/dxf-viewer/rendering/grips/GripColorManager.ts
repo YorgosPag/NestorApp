@@ -7,8 +7,8 @@
  * @compliance CLAUDE.md Enterprise Standards - NO hardcoded colors
  */
 
-import type { GripTemperature, GripType, GripSettings } from './types';
-import { DEFAULT_GRIP_COLORS, EDGE_GRIP_COLOR } from './constants';
+import type { GripTemperature, GripSettings } from './types';
+import { DEFAULT_GRIP_COLORS } from './constants';
 
 // ============================================================================
 // GRIP COLOR MANAGER CLASS
@@ -18,22 +18,30 @@ import { DEFAULT_GRIP_COLORS, EDGE_GRIP_COLOR } from './constants';
  * Enterprise Grip Color Manager
  * Centralized color selection with priority system:
  * 1. Custom color override (ADR-047)
- * 2. Type-specific color (edge grips cold → green)
- * 3. Temperature-based color from settings
- * 4. Default temperature color
+ * 2. Temperature-based color from settings
+ * 3. Default temperature color
+ *
+ * ⚠️ COLOUR ENCODES **STATE ONLY** — never grip type.
+ * The grip's *type* (vertex / edge-midpoint / corner / …) is carried by its
+ * **shape** (`GripShape`: square vs diamond vs move/rotation glyph), exactly as
+ * AutoCAD / Revit / ArchiCAD do it: shape = what the grip *is* (static),
+ * colour = what the grip is *doing right now* (dynamic). Do NOT reintroduce a
+ * type→colour rule here; it collides with the temperature channel (see the
+ * ADR-048 changelog entry for the `edge + cold → green` regression this replaced).
  *
  * @example
  * ```typescript
  * const colorMgr = new GripColorManager();
  *
  * // Custom color (highest priority)
- * colorMgr.getColor('cold', 'vertex', '#00ff00'); // '#00ff00'
+ * colorMgr.getColor('cold', '#00ff00'); // '#00ff00'
  *
- * // Edge grip cold (type-specific)
- * colorMgr.getColor('cold', 'edge'); // Green color
+ * // Any grip at rest — vertex, edge, corner alike
+ * colorMgr.getColor('cold'); // azure (GRIP_COLD_COLOR)
  *
- * // Edge grip hot (temperature overrides type)
- * colorMgr.getColor('hot', 'edge'); // Red color (hot overrides green)
+ * // Hover / drag
+ * colorMgr.getColor('warm'); // magenta
+ * colorMgr.getColor('hot');  // red
  * ```
  */
 export class GripColorManager {
@@ -50,34 +58,28 @@ export class GripColorManager {
    *
    * Priority order:
    * 1. customColor (if provided) - ADR-047 support
-   * 2. Type-specific color (edge grips cold → green)
-   * 3. Temperature color from settings (if available)
-   * 4. Default temperature color (fallback)
+   * 2. Temperature color from settings (if available)
+   * 3. Default temperature color (fallback)
+   *
+   * Grip *type* is deliberately NOT a parameter — see the class doc: type is
+   * encoded by shape, colour is reserved for state.
    *
    * @param temperature - Current grip temperature
-   * @param type - Grip type (vertex/edge/etc.)
    * @param customColor - Optional custom color override (ADR-047)
    * @param settings - Optional grip settings from store
    * @returns Hex color string
    */
   getColor(
     temperature: GripTemperature,
-    type: GripType,
     customColor?: string,
     settings?: Partial<GripSettings>
   ): string {
-    // Priority 1: Custom color override (ADR-047 green grip support)
+    // Priority 1: Custom color override (ADR-047 green close-indicator grip)
     if (customColor) {
       return this.validateColor(customColor);
     }
 
-    // Priority 2: Type-specific color (edge grips cold → green)
-    // NOTE: Only for COLD edge grips - warm/hot use temperature colors
-    if (type === 'edge' && temperature === 'cold') {
-      return EDGE_GRIP_COLOR;
-    }
-
-    // Priority 3: Temperature color from settings (cold/warm/hot only — 'snappable'
+    // Priority 2: Temperature color from settings (cold/warm/hot only — 'snappable'
     // (ADR-397) and 'armed' (ADR-501) have no user-facing override, they fall
     // through to their default colours).
     if (settings?.colors && temperature !== 'snappable' && temperature !== 'armed') {
@@ -87,7 +89,7 @@ export class GripColorManager {
       }
     }
 
-    // Priority 4: Default temperature color (fallback)
+    // Priority 3: Default temperature color (fallback)
     return this.getDefaultColor(temperature);
   }
 

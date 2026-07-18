@@ -125,31 +125,14 @@ export class UnifiedGripRenderer {
           )
         : 'cold');
 
-    // Step 2: Calculate size
-    const baseSize = settings?.gripSize || UI_SIZE_DEFAULTS.GRIP_SIZE;
-    const dpiScale = settings?.dpiScale || 1.0;
-    const size = this.sizeCalculator.calculateSize(
-      baseSize,
+    // Steps 2-4: size + shape + colours (shared with the batched path)
+    const { size, shape, fillColor, outlineColor, highlightColor } = this.resolveGripVisuals(
+      config,
       temperature,
-      dpiScale,
-      config.sizeMultiplier
-    );
-
-    // Step 3: Get colors
-    const fillColor = this.colorManager.getColor(
-      temperature,
-      config.type,
-      config.customColor,
+      settings?.gripSize || UI_SIZE_DEFAULTS.GRIP_SIZE,
+      settings?.dpiScale || 1.0,
       settings
     );
-    const outlineColor = this.colorManager.getOutlineColor(settings);
-
-    // Step 4: Render shape
-    const shape = config.shape || 'square';
-    // ADR-397 Φ2 — warm colour for the hovered MOVE arm (cold cross underneath).
-    const highlightColor = config.hoveredZone
-      ? this.colorManager.getColor('warm', config.type, undefined, settings)
-      : undefined;
     this.shapeRenderer.renderShape(
       this.ctx,
       screenPos,
@@ -194,7 +177,7 @@ export class UnifiedGripRenderer {
     const baseHalf = ((safeSettings?.gripSize ?? UI_SIZE_DEFAULTS.GRIP_SIZE) * 0.6) * dpiScale;
     const key = gripState.toUpperCase() as 'COLD' | 'WARM' | 'HOT';
     const halfSize = Math.round(baseHalf * EDGE_GRIP_SIZE_MULTIPLIERS[key]);
-    const fillColor = this.colorManager.getColor(gripState, 'edge', undefined, safeSettings);
+    const fillColor = this.colorManager.getColor(gripState, undefined, safeSettings);
     const outlineColor = gripState !== 'cold'
       ? fillColor
       : this.colorManager.getOutlineColor(safeSettings);
@@ -228,6 +211,41 @@ export class UnifiedGripRenderer {
   }
 
   /**
+   * Resolve everything the shape renderer needs to draw a grip: size, shape and
+   * the three colours. SSoT for BOTH the per-grip path (`_renderGripCore`) and the
+   * batched path (`renderGripSetBatched`) — they used to carry twin copies of this
+   * block, which is how the two paths drifted apart before ADR-048 v2.3.
+   *
+   * `baseSize`/`dpiScale` stay caller-supplied: the two paths resolve them with
+   * different null-coalescing semantics (`||` vs `??`) and unifying that here would
+   * silently change behaviour for a stored gripSize of 0.
+   */
+  private resolveGripVisuals(
+    config: GripRenderConfig,
+    temperature: GripTemperature,
+    baseSize: number,
+    dpiScale: number,
+    settings?: Partial<GripSettings>
+  ): {
+    size: number;
+    shape: NonNullable<GripRenderConfig['shape']>;
+    fillColor: string;
+    outlineColor: string;
+    highlightColor: string | undefined;
+  } {
+    return {
+      size: this.sizeCalculator.calculateSize(baseSize, temperature, dpiScale, config.sizeMultiplier),
+      shape: config.shape ?? 'square',
+      fillColor: this.colorManager.getColor(temperature, config.customColor, settings),
+      outlineColor: this.colorManager.getOutlineColor(settings),
+      // ADR-397 Φ2 — warm colour for the hovered MOVE arm (cold cross underneath).
+      highlightColor: config.hoveredZone
+        ? this.colorManager.getColor('warm', undefined, settings)
+        : undefined,
+    };
+  }
+
+  /**
    * Batch-optimized grip set rendering.
    * Groups grips by (temperature × shape × customColor) and renders each group
    * with a single ctx.save()/restore() — O(groups) vs O(n) canvas state changes.
@@ -255,6 +273,12 @@ export class UnifiedGripRenderer {
       // ADR-397 Φ2 — the per-arm hover zone is likewise per-grip; without it in the
       // key the hovered move handle would share a group with same-angle handles and
       // light the wrong (or every) arm.
+      // NOTE: `type` is intentionally absent from the key. Colour is a pure function
+      // of (temperature, customColor, settings) — grip type is expressed by `shape`,
+      // which IS in the key. Keeping type out avoids splitting batches for a value
+      // that cannot change the pixels. If a type→colour rule is ever reintroduced,
+      // this key becomes wrong (the group representative's type would colour every
+      // member) — that was exactly the `edge + cold → green` bug; see ADR-048.
       const key = `${temperature}\0${shape}\0${grip.customColor ?? ''}\0${grip.glyphRotationRad ?? ''}\0${grip.hoveredZone ?? ''}`;
       let g = groups.get(key);
       if (!g) {
@@ -266,18 +290,13 @@ export class UnifiedGripRenderer {
 
     for (const { positions, config } of groups.values()) {
       const temperature = config.temperature ?? 'cold';
-      const shape = config.shape ?? 'square';
-      const size = this.sizeCalculator.calculateSize(baseSize, temperature, dpiScale, config.sizeMultiplier);
-      const fillColor = this.colorManager.getColor(temperature, config.type, config.customColor, settings);
-      const outlineColor = this.colorManager.getOutlineColor(settings);
+      const { size, shape, fillColor, outlineColor, highlightColor } = this.resolveGripVisuals(
+        config, temperature, baseSize, dpiScale, settings
+      );
 
       if (shape === 'square') {
         this.shapeRenderer.renderSquareGripsBatch(this.ctx, positions, size, fillColor, outlineColor);
       } else {
-        // ADR-397 Φ2 — warm colour for the hovered MOVE arm (cold cross underneath).
-        const highlightColor = config.hoveredZone
-          ? this.colorManager.getColor('warm', config.type, undefined, settings)
-          : undefined;
         for (const pos of positions) {
           this.shapeRenderer.renderShape(
             this.ctx, pos, size, shape, fillColor, outlineColor, 1,

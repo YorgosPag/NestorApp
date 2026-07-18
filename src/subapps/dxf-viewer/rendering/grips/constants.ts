@@ -7,7 +7,7 @@
  * @compliance CLAUDE.md Enterprise Standards - NO magic numbers
  */
 
-import { UI_COLORS, GRIP_COLD_COLOR, GRIP_WARM_COLOR, GRIP_HOT_COLOR, GRIP_CONTOUR_COLOR, GRIP_SNAPPABLE_COLOR, GRIP_ARMED_COLOR } from '../../config/color-config';
+import { GRIP_COLD_COLOR, GRIP_WARM_COLOR, GRIP_HOT_COLOR, GRIP_CONTOUR_COLOR, GRIP_SNAPPABLE_COLOR, GRIP_ARMED_COLOR } from '../../config/color-config';
 
 // ============================================================================
 // GRIP SIZE MULTIPLIERS (AutoCAD/BricsCAD Standards)
@@ -78,12 +78,11 @@ export const DEFAULT_GRIP_COLORS = {
  */
 export const MIDPOINT_SIZE_FACTOR = 0.75;
 
-/**
- * Edge grip cold color (special case)
- * Edge grips when cold (not hovered) use green color for distinction
- * Following existing GripPhaseRenderer pattern
- */
-export const EDGE_GRIP_COLOR = UI_COLORS.SUCCESS_BRIGHT; // Green for midpoint/edge grips (AutoCAD standard)
+// REMOVED: EDGE_GRIP_COLOR (green for cold edge grips).
+// Colour encodes grip STATE, never grip TYPE — type is carried by `GripShape`.
+// The old comment claimed "(AutoCAD standard)"; it was the opposite: in AutoCAD
+// green means HOVER, so a green resting grip read as "you are on it". See the
+// ADR-048 changelog entry. Do not reintroduce.
 
 /**
  * Minimum grip size (pixels)

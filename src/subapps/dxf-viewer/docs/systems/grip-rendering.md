@@ -375,9 +375,9 @@ export class GripColorManager {
    * @param settings - Grip settings from store
    * @returns Hex color string
    */
+  // ADR-048 v2.3 — NO `type` param: colour encodes STATE only, type is carried by GripShape.
   getColor(
     temperature: GripTemperature,
-    type: GripType,
     customColor?: string,
     settings?: GripSettings
   ): string;
@@ -530,10 +530,7 @@ export const DEFAULT_GRIP_COLORS = {
  */
 export const MIDPOINT_SIZE_FACTOR = 0.75; // 75% of vertex grip size
 
-/**
- * Edge grip color (for consistency)
- */
-export const EDGE_GRIP_COLOR = '#00FF00'; // Green (SUCCESS_BRIGHT)
+// ADR-048 v2.3 — EDGE_GRIP_COLOR REMOVED. Colour = state, shape = type.
 ```
 
 ### Integration Points
@@ -697,7 +694,6 @@ cd src/subapps/dxf-viewer/rendering/grips
 - `GRIP_SIZE_MULTIPLIERS`
 - `DEFAULT_GRIP_COLORS`
 - `MIDPOINT_SIZE_FACTOR`
-- `EDGE_GRIP_COLOR`
 
 **Validation:**
 - All constants frozen (`as const`)
@@ -745,9 +741,8 @@ applyDpiScaling(size, dpiScale): number
 
 **Methods:**
 ```typescript
-getColor(temperature, type, customColor?, settings?): string
+getColor(temperature, customColor?, settings?): string   // ADR-048 v2.3 — no `type`
 getTemperatureColor(temperature, settings): string
-getTypeColor(type): string
 validateColor(color): string
 ```
 
