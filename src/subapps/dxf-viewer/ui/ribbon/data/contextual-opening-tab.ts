@@ -5,15 +5,22 @@
  * `app/ribbon-contextual-config.ts` όταν primary-selected entity έχει
  * `type === 'opening'`, OR active tool === 'opening').
  *
- * Panels (Phase 2 — minimal):
- *   Kind      → kind combobox (5 τύποι) + handing + openDirection (door only)
- *   Size      → width (mm) + height (mm) + sill (mm)
- *   Actions   → close + delete
+ * Panels (ADR-676 ΒΗΜΑ 2 layout — 8 panels, στοιβαγμένες σειρές + flyouts ώστε το
+ * tab να μη ξεχειλίζει οριζόντια):
+ *   Σήμανση        → mark· (flyout) reset-tag / renumber / schedule / IFC pset
+ *   Τύπος          → kind · (row2) handing + openDirection
+ *   Οικογένεια     → familyType · (row2) type-properties + hardware
+ *   Διαστάσεις     → width + height · (row2) sill
+ *   Κατώφλι        → toggle + embed · (row2) custom depth
+ *   Διατομή Κάσας  → manufacturer / profile / faceWidth+depth · (flyout) save-as-mine
+ *   Ετικέτα        → font/border · leader-style · (flyout) χρώματα + leader-visible
+ *   Ενέργειες      → close + delete
  *
  * Live behavior: bridge (`useRibbonOpeningBridge`) dispatches updates
  * σε κάθε combobox change. Auto-save 500ms debounce via `useOpeningPersistence`.
  *
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.4
+ * @see docs/centralized-systems/reference/adrs/ADR-676-opening-component-library-parametric.md
  */
 
 import type { RibbonTab } from '../types/ribbon-types';
