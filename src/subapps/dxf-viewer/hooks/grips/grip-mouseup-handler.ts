@@ -18,6 +18,7 @@ import { createSceneManagerAdapter } from './grip-scene-manager-adapter';
 // ADR-513 §grip-parity — πληκτρολογημένο Μήκος/Γωνία (Δαχτυλίδι) στην ΕΠΕΚΤΑΣΗ ΑΚΡΟΥ γραμμής.
 import { resolveLineEndpointLockedDelta } from '../../systems/dynamic-input/grip-endpoint-lock';
 import { resolveOpeningWidthLockedDelta } from '../../systems/dynamic-input/opening-width-lock';
+import { DynamicInputLockStore } from '../../systems/dynamic-input/DynamicInputLockStore';
 import { resolveEndpointReshapePolarLock } from './grip-endpoint-polar-lock';
 import { resolveActiveFootprintGripKind } from '../../systems/grip/footprint-reshape-anchors';
 import { commitHotGripCopy } from './grip-parametric-commits';
@@ -127,7 +128,17 @@ function resolveOpeningWidthCommitLock(
 ): Point2D | null {
   const ctx = resolveLineGripContext(grip, deps);
   if (!ctx) return null;
-  return resolveOpeningWidthLockedDelta(ctx.entity, gripKindOf(grip, 'opening'), grip.position, worldPos);
+  const kind = gripKindOf(grip, 'opening');
+  const delta = resolveOpeningWidthLockedDelta(ctx.entity, kind, grip.position, worldPos);
+  // TEMP DIAGNOSTIC (ADR-513 §opening-width) — αφαιρείται μετά τη διάγνωση.
+  // eslint-disable-next-line no-console
+  console.warn('[opening-width-commit]', {
+    kind,
+    hasGeometry: !!(ctx.entity as { geometry?: unknown })?.geometry,
+    lockLength: DynamicInputLockStore.getLocked().length,
+    delta,
+  });
+  return delta;
 }
 
 /**
