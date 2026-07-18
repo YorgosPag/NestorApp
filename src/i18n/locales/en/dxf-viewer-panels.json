@@ -109,14 +109,6 @@
       "description": "Layer Drawing & Status Management",
       "headerWithCount": "DXF Layers ({count})"
     },
-    "annotations": {
-      "title": "Annotations",
-      "openingTags": {
-        "label": "Opening tags",
-        "description": "Show marks on doors and windows",
-        "toggleAria": "Toggle opening tags visibility"
-      }
-    },
     "colors": {
       "loading": "Loading..."
     },
