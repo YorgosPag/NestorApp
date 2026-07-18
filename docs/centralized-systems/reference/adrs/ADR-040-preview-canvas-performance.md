@@ -4455,3 +4455,11 @@ Co-staged με ADR-659. ΟΧΙ tsc (N.17). 🔴 verify+commit (Giorgio).
 
 **ADR-040 invariants:** pure draw helpers, μηδέν νέα `useSyncExternalStore`, bitmap-cache key
 αμετάβλητο, cardinal rules intact. Staged για CHECK 6B/6D. ΟΧΙ tsc (N.17). 🔴 verify+commit (Giorgio).
+
+### 2026-07-18 (b): ADR-513 §grip-parity — vertex/edge reshape displacement lock στο ghost chain
+
+`useGripGhostPreview` draw callback: το lock-chain (opening-width → line-endpoint → **vertex-reshape (NEW)** →
+polar) πήρε έναν κλάδο `resolveVertexReshapeLockedDelta` (arc/polyline vertex + straight edge, displacement
+Model A) — pure resolver, μηδέν subscription, μηδέν bitmap-cache αλλαγή. Ίδιος resolver τρέχει στο commit
+(`grip-mouseup-handler.resolveEndpointCommitDelta`) → preview≡commit. Λεπτομέρειες: ADR-513 changelog 2026-07-18.
+Co-staged με ADR-513. CHECK 6B/6D. ΟΧΙ tsc (N.17). 🔴 verify+commit (Giorgio).
