@@ -3403,6 +3403,13 @@
             "red": "Red"
           }
         },
+        "tagVisibility": {
+          "label": "Tags",
+          "show": "Show",
+          "hide": "Hide",
+          "tooltipShow": "Show opening tags",
+          "tooltipHide": "Hide opening tags"
+        },
         "scheduleExport": {
           "label": "Schedule PDF",
           "tooltip": "Export opening schedule (doors + windows) as PDF"
