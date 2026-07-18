@@ -4499,3 +4499,20 @@ Co-staged με ADR-513. CHECK 6B/6D. ΟΧΙ tsc (N.17). 🔴 verify+commit (Gior
   `DxfCanvasHarness.tsx` (test harness call site). Μηδέν αλλαγή συμπεριφοράς — αφαίρεση μόνο.
   Καμία νέα subscription στο Shell (CHECK 6C αμετάβλητο: οι αναφορές `useSyncExternalStore` στο
   `CanvasLayerStack` παραμένουν **αποκλειστικά σχόλια**). ΟΧΙ tsc (N.17).
+- **2026-07-18 (Opus 4.8) — δύο extractions του ghost pipeline (N.7.1, όριο 500 γραμμών).** Και τα δύο
+  αρχεία πέρασαν το όριο με τις προσθήκες ADR-513/620 της ίδιας μέρας. **Η τομή είναι σημασιολογική,
+  όχι αυθαίρετο κόψιμο** — κάθε νέο module απαντά σε διαφορετικό ερώτημα:
+  **(1)** `rendering/ghost/normalize-preview-entity.ts` ← `apply-entity-preview.ts` (514→**473**):
+  `rawTypeOf` + `normalizePreviewEntity` = «ΤΙ είναι αυτή η οντότητα;» (lwpolyline→polyline ADR-186/561,
+  rectangle→polyline ADR-620), ενώ το `applyEntityPreview` μένει με το «ΠΩΣ μετασχηματίζεται;».
+  **(2)** `hooks/tools/grip-ghost-locked-delta.ts` ← `useGripGhostPreview.ts` (527→**479**): όλη η σκάλα
+  προτεραιότητας των κλειδωμένων delta (πλάτος κουφώματος → άκρο γραμμής → vertex/edge reshape → POLAR
+  άκρου) = καθαρή, testable λογική **χωρίς React**, ενώ το hook μένει RAF/canvas ενορχήστρωση. Η σκάλα
+  ήταν ήδη 4 φωλιασμένα if/else με **λάθος εσοχή** μετά την τελευταία προσθήκη· τώρα είναι 4 early
+  returns με ρητή αρίθμηση.
+  **ΚΑΝΕΝΑ re-export shim** σε καμία από τις δύο περιπτώσεις — θα ήταν duplicate export path (το σαρώνει
+  το CHECK 3.18). Οι καταναλωτές δείχνουν στο νέο module: `rendering/ghost/index.ts` + 3 test αρχεία.
+  **Παρεμπιπτόντως διορθώθηκε:** διπλό `import type { WallEntity }` στο `useGripGhostPreview` (duplicate
+  identifier — είχε προστεθεί δεύτερη φορά μαζί με το opening-width lock).
+  **Tests:** 181 suites / **1652 GREEN** (ghost + dynamic-input + hooks). `jscpd:diff` καθαρό σε 4 αρχεία.
+  Μηδέν αλλαγή συμπεριφοράς — καθαρή μετακίνηση κώδικα. ΟΧΙ tsc (N.17).

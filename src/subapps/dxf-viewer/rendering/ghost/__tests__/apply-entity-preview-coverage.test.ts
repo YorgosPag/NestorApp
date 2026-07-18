@@ -53,10 +53,8 @@ jest.mock('firebase/auth', () => ({
   signInAnonymously: jest.fn(),
 }));
 
-import {
-  applyEntityPreview,
-  normalizePreviewEntity,
-} from '../apply-entity-preview';
+import { applyEntityPreview } from '../apply-entity-preview';
+import { normalizePreviewEntity } from '../normalize-preview-entity';
 import { applyParametricBoxPreview } from '../apply-parametric-box-preview';
 import type { EntityPreviewTransform } from '../entity-preview-types';
 import { RENDERABLE_ENTITY_TYPES } from '../../contract/renderable-entity-type';

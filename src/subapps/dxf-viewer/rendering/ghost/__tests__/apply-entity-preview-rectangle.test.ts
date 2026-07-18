@@ -8,7 +8,8 @@
  * the SAME `rectangleEntityVertices` order the grips + commit use, so preview ≡ commit.
  */
 
-import { applyEntityPreview, normalizePreviewEntity } from '../apply-entity-preview';
+import { applyEntityPreview } from '../apply-entity-preview';
+import { normalizePreviewEntity } from '../normalize-preview-entity';
 import type { EntityPreviewTransform } from '../entity-preview-types';
 import type { DxfEntityUnion } from '../../../canvas-v2/dxf-canvas/dxf-types';
 

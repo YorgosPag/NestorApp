@@ -38,10 +38,10 @@ import type { WallEntity } from '../../bim/types/wall-types';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { LevelSceneReader } from '../../systems/levels/level-scene-accessor';
 import type { DxfGripDragPreview } from '../grip-computation';
-// ADR-513 §grip-parity — length/angle lock για την ΕΠΕΚΤΑΣΗ ΑΚΡΟΥ γραμμής (ίδιος SSoT preview≡commit).
-import { resolveLineEndpointLockedDelta } from '../../systems/dynamic-input/grip-endpoint-lock';
-// ADR-357/513 §grip-polar — POLAR angle-snap του άκρου (γραμμή + polyline), κοινό preview+commit SSoT.
-import { resolveEndpointReshapePolarLock, type EndpointReshapePolarLock } from '../grips/grip-endpoint-polar-lock';
+// ADR-513/357 §grip-parity — ΟΛΗ η σκάλα των κλειδωμένων delta (πλάτος κουφώματος → άκρο γραμμής →
+// vertex/edge reshape → POLAR άκρου) σε ένα module, κοινό preview+commit SSoT.
+import { resolveGripGhostLockedDelta } from './grip-ghost-locked-delta';
+import type { EndpointReshapePolarLock } from '../grips/grip-endpoint-polar-lock';
 import {
   applyEntityPreview,
   normalizePreviewEntity,
@@ -108,7 +108,6 @@ import { drawMoveBasePointMarker } from '../../rendering/ui/move-base-point-mark
 import { resolveLiveGripDragPreview } from './grip-ghost-preview-live-transform';
 // ADR-508 §grip-tracking (Giorgio 2026-07-06) — ενεργό footprint grip-kind σε reshape λαβές
 // (κορυφή/μεσαία) πολυγωνικής BIM οντότητας — χρησιμοποιείται στο POLAR lock του άκρου.
-import { resolveActiveFootprintGripKind } from '../../systems/grip/footprint-reshape-anchors';
 // ADR-508/507/560 — grip-drag tail overlays (action-alignment traces + move-clearance dims + hatch
 // gradient handle marker) σε δικό τους module (file-size SRP N.7.1). Gates/SSoT ζουν μέσα στους helpers.
 import {
@@ -182,29 +181,15 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
     const entity = normalizePreviewEntity(rawEntity as unknown as DxfEntityUnion) as unknown as typeof rawEntity;
     if (!entity) return;
 
-    // ADR-513 §grip-parity — length/angle lock στο ghost της ΕΠΕΚΤΑΣΗΣ ΑΚΡΟΥ γραμμής (grip 0/1). Ο
-    // ΙΔΙΟΣ helper τρέχει και στο commit (grip-mouseup) → preview ≡ commit. No-op όταν δεν υπάρχει lock.
+    // ADR-513/357 §grip-parity — η σκάλα προτεραιότητας των κλειδωμένων delta (πλάτος κουφώματος →
+    // άκρο γραμμής → vertex/edge reshape → POLAR άκρου) ζει σε ΕΝΑ module, το οποίο τρέχει ΚΑΙ στο
+    // commit (grip-mouseup) → preview ≡ commit. No-op όταν δεν υπάρχει ενεργό κλείδωμα.
     let endpointPolar: EndpointReshapePolarLock | null = null;
-    // ADR-602 Stage 4 — hoisted once (read ×2 below). lineGripKind is invariant across the
-    // `dp` reassignment inside this block (the spread at the `lockedDelta` branch preserves it).
-    const lineKind = gripKindOf(dp, 'line');
     if (!isRotation && !isHatchDrag && dp.anchorPos && effectiveCursor) {
-      const lockedDelta = resolveLineEndpointLockedDelta(
-        entity, dp.gripIndex, lineKind, dp.anchorPos, effectiveCursor,
-      );
-      if (lockedDelta) {
-        dp = { ...dp, delta: lockedDelta };
-      } else {
-        // ADR-357/513 §grip-polar — POLAR angle-snap του ΑΚΡΟΥ (γραμμή grip 0/1 ή ανοιχτό polyline
-        // endpoint) γύρω από τον ΣΤΑΘΕΡΟ γείτονα, ΙΔΙΟ SSoT με τη σχεδίαση (`resolveOrthoPolarStep`).
-        // Ο ίδιος resolver τρέχει στο commit (grip-mouseup) → preview ≡ commit. No-op όταν POLAR off,
-        // ORTHO on, δεν είναι άκρο, ή ο κέρσορας δεν κούμπωσε σε polar ακτίνα.
-        endpointPolar = resolveEndpointReshapePolarLock(
-          entity, dp.gripIndex, lineKind, dp.anchorPos, effectiveCursor,
-          // ADR-508 §grip-tracking — καθολικό POLAR σε reshape λαβές πολυγωνικών BIM (κολόνα/πλάκα/…).
-          resolveActiveFootprintGripKind(dp),
-        );
-        if (endpointPolar) dp = { ...dp, delta: endpointPolar.delta };
+      const locked = resolveGripGhostLockedDelta(entity, dp, dp.anchorPos, effectiveCursor, levelManager);
+      if (locked) {
+        dp = { ...dp, delta: locked.delta };
+        endpointPolar = locked.endpointPolar;
       }
     }
 

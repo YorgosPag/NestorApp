@@ -14,7 +14,8 @@
  * @see ADR-049 — Unified Move Tool
  */
 
-export { applyEntityPreview, normalizePreviewEntity } from './apply-entity-preview';
+export { applyEntityPreview } from './apply-entity-preview';
+export { normalizePreviewEntity } from './normalize-preview-entity';
 export { makeTranslationPreview } from './make-translation-preview';
 export type { EntityPreviewTransform } from './apply-entity-preview';
 export { drawGhostEntity } from './draw-ghost-entity';

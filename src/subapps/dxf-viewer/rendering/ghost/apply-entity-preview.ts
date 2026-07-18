@@ -29,6 +29,8 @@ import { applyLineRotationDrag } from '../../systems/line/line-grips';
 // `rotationGhost` SSoT (helpers) which runs the commit's `rotateEntity` engine (preview ≡
 // commit by identity). polylineBboxCenter = the commit's per-polyline pivot fallback.
 import { polylineBboxCenter } from '../../systems/polyline/rectangle-detect';
+// SSoT — RAW discriminator reader + preview-side type normalization (εξήχθη 2026-07-18, N.7.1).
+import { rawTypeOf } from './normalize-preview-entity';
 import type { Entity, GroupEntity, BlockEntity } from '../../types/entities';
 // ADR-575 §8 — GROUP gizmo live ghost: reuse the commit's whole-group transform SSoTs
 // (rotate via `applyPrimitiveRotationDrag`→`rotateEntity`, move via `calculateMovedGeometry`)
@@ -94,29 +96,7 @@ export type { EntityPreviewTransform, ApplyEntityPreviewContext };
  * behind an explicit cast to its real type; this accessor is what makes the guards themselves
  * type-legal instead of comparing against a tag the union has narrowed away.
  */
-function rawTypeOf(entity: DxfEntityUnion): string {
-  return (entity as { readonly type: string }).type;
-}
-
 // ── Public API ───────────────────────────────────────────────────────────────
-
-/**
- * ADR-186 / ADR-561 — normalize a RAW scene entity's discriminator for the drag-preview
- * pipeline. An `'lwpolyline'` (e.g. the result of joining two lines at an angle) is
- * geometrically a STANDARD polyline — same `{ vertices, closed, bulges }` shape — and the
- * committed canvas already renders it as one (`dxf-scene-entity-converter`: «LWPolyline →
- * render as standard polyline»). But this preview SSoT + the ghost model builder
- * (`buildEntityModelFromDxf`) are keyed on `'polyline'`, and preview callers pass the RAW
- * scene entity (`getEntity`), so a joined lwpolyline would match no branch → the ghost never
- * appears. Map the discriminator up-front (shallow clone, shape untouched) so it transforms +
- * renders EXACTLY like a polyline. The ONE place this preview-side mapping lives — shared by
- * every preview consumer (grip drag / body-drag / Move tool), so they can never diverge.
- */
-export function normalizePreviewEntity(entity: DxfEntityUnion): DxfEntityUnion {
-  return rawTypeOf(entity) === 'lwpolyline'
-    ? ({ ...(entity as object), type: 'polyline' } as DxfEntityUnion)
-    : entity;
-}
 
 /**
  * Apply a drag-preview transform to a DXF entity. Returns a cloned entity
