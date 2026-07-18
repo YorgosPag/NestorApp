@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | 🔵 PROPOSED (Milestones 1 + 1.5 + 2 + 3 + 4 + 5 + 6 υλοποιημένα) |
+| **Status** | 🔵 PROPOSED (Milestones 1 + 1.5 + 2 + 3 + 4 + 5 + 6 + 7 υλοποιημένα) |
 | **Date** | 2026-07-13 |
 | **Category** | DXF Viewer / Content Library |
 | **Related** | ADR-410 (CC0 furniture), ADR-411 (BIM mesh library), ADR-600 (single-click placement SSoT), ADR-640 (BlockEntity / INSERT preserve), ADR-397 (append-entity SSoT), ADR-040 (canvas perf), ADR-363 §Phase 6.5 (material library — ο πυρήνας που μοιραζόμαστε), ADR-413 (registry host pattern) |
