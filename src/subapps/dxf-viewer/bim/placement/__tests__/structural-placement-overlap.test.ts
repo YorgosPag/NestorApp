@@ -150,9 +150,9 @@ describe('findStructuralOverlap · block/allow', () => {
 });
 
 describe('structuralCollisionGroupOf', () => {
-  it('τοίχος + κολόνα → ίδια ομάδα "vertical"', () => {
-    expect(structuralCollisionGroupOf('wall')).toBe('vertical');
-    expect(structuralCollisionGroupOf('column')).toBe('vertical');
+  it('τοίχος & κολόνα → ΞΕΧΩΡΙΣΤΕΣ ομάδες (Giorgio 2026-07-18 §wall-column)', () => {
+    expect(structuralCollisionGroupOf('wall')).toBe('wall');
+    expect(structuralCollisionGroupOf('column')).toBe('column');
   });
   it('δοκάρι/πλάκα/θεμέλιο → ξεχωριστές ομάδες', () => {
     expect(structuralCollisionGroupOf('beam')).toBe('beam');
@@ -177,11 +177,13 @@ describe('findStructuralOverlap · collision groups (ADR-567 Φ1b)', () => {
     expect(findStructuralOverlap(rect(0, 0, 200, 200), [existingColumn], { candidateType: 'slab' })).toBeNull();
   });
 
-  it('τοίχος πάνω σε κολόνα → BLOCK (ίδια ομάδα "vertical")', () => {
-    expect(findStructuralOverlap(rect(0, 0, 200, 200), [existingColumn], { candidateType: 'wall' })?.blockedById).toBe('col');
+  it('τοίχος ΠΑΝΩ/ΑΝΑΜΕΣΑ σε κολόνα → ALLOW (ξεχωριστή ομάδα· Giorgio §wall-column)', () => {
+    // Ο τοίχος που πλαισιώνει/ενώνεται σε κολόνα (Revit — κολόνα ενσωματώνεται στον τοίχο) δεν μπλοκάρεται,
+    // ακόμη κι όταν το άκρο του καλύπτει πλήρως το μικρό footprint της κολόνας. ΑΥΤΟ ήταν το bug (2026-07-18).
+    expect(findStructuralOverlap(rect(0, 0, 200, 200), [existingColumn], { candidateType: 'wall' })).toBeNull();
   });
 
-  it('κολόνα πάνω σε κολόνα → BLOCK (ίδια ομάδα)', () => {
+  it('κολόνα ΠΑΝΩ σε κολόνα → BLOCK (ίδια ομάδα)', () => {
     expect(findStructuralOverlap(rect(0, 0, 200, 200), [existingColumn], { candidateType: 'column' })?.blockedById).toBe('col');
   });
 
