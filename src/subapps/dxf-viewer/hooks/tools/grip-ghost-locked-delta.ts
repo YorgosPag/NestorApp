@@ -11,6 +11,7 @@
  *   2. **Άκρο γραμμής** — Μήκος/Γωνία στο grip 0/1 (ADR-513 §grip-parity)
  *   3. **Vertex/edge reshape** — displacement Model A σε τόξο/πολυγραμμή/προβεβλημένο ορθογώνιο
  *   4. **POLAR angle-snap άκρου** — γύρω από τον ΣΤΑΘΕΡΟ γείτονα (ADR-357/513 §grip-polar)
+ *   5. **Μετακίνηση ολόκληρης οντότητας** — displacement Model A σε λαβή `movesEntity` (ADR-513 §grip-parity)
  *
  * Γιατί χωριστό module (2026-07-18): εξήχθη από το `useGripGhostPreview` όταν εκείνο πέρασε το
  * όριο των 500 γραμμών (N.7.1). Το όριο είναι σημασιολογικό — αυτή είναι καθαρή, testable
@@ -31,6 +32,8 @@ import { resolveActiveFootprintGripKind } from '../../systems/grip/footprint-res
 import { resolveLineEndpointLockedDelta } from '../../systems/dynamic-input/grip-endpoint-lock';
 import { resolveVertexReshapeLockedDelta } from '../../systems/dynamic-input/vertex-reshape-lock';
 import { resolveOpeningWidthLockedDelta, isOpeningCornerGripKind } from '../../systems/dynamic-input/opening-width-lock';
+// ADR-513 §grip-parity — 5ο σκαλί: typed «Μήκος» σε λαβή ΜΕΤΑΚΙΝΗΣΗΣ ολόκληρης οντότητας.
+import { resolveMoveDisplacementLockedDelta } from '../../systems/dynamic-input/move-displacement-lock';
 import { resolveEndpointReshapePolarLock, type EndpointReshapePolarLock } from '../grips/grip-endpoint-polar-lock';
 
 /** Το αποτέλεσμα ενός κλειδώματος: το delta που αντικαθιστά το ελεύθερο drag + το polar context. */
@@ -109,6 +112,15 @@ export function resolveGripGhostLockedDelta(
     entity, dp.gripIndex, lineKind, anchorPos, cursorWorld, resolveActiveFootprintGripKind(dp),
   );
   if (endpointPolar) return { delta: endpointPolar.delta, endpointPolar };
+
+  // 5 — ΜΕΤΑΚΙΝΗΣΗ ΟΛΟΚΛΗΡΗΣ ΟΝΤΟΤΗΤΑΣ (move-σταυρός / Alt-move): displacement (Model A) — κατεύθυνση
+  // ORTHO/POLAR από το σημείο βάσης + πληκτρολογούμενο «Μήκος». ΤΕΛΕΥΤΑΙΟ σκαλί επίτηδες: τα 1-4
+  // αφορούν λαβές που ΑΝΑΜΟΡΦΩΝΟΥΝ (κορυφή/άκρο/παρειά, όλα `movesEntity !== true`), οπότε είναι
+  // αμοιβαία αποκλειόμενα με αυτό — η σειρά δεν μπορεί να «κλέψει» λαβή από τα προηγούμενα.
+  const moveDelta = resolveMoveDisplacementLockedDelta(
+    { movesEntity: dp.movesEntity, isRotation: dp.rotatePivot != null }, anchorPos, cursorWorld,
+  );
+  if (moveDelta) return { delta: moveDelta, endpointPolar: null };
 
   return null;
 }

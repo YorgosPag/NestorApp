@@ -20,6 +20,8 @@ import { resolveLineEndpointLockedDelta } from '../../systems/dynamic-input/grip
 // ADR-513 §grip-parity — displacement (Model A) Μήκος/Γωνία lock για arc/polyline vertex + straight edge.
 import { resolveVertexReshapeLockedDelta } from '../../systems/dynamic-input/vertex-reshape-lock';
 import { resolveOpeningWidthLockedDelta } from '../../systems/dynamic-input/opening-width-lock';
+// ADR-513 §grip-parity — typed «Μήκος» σε λαβή ΜΕΤΑΚΙΝΗΣΗΣ ολόκληρης οντότητας (5ο σκαλί).
+import { resolveMoveDisplacementLockedDelta } from '../../systems/dynamic-input/move-displacement-lock';
 import type { WallEntity } from '../../bim/types/wall-types';
 import { resolveEndpointReshapePolarLock } from './grip-endpoint-polar-lock';
 import { resolveActiveFootprintGripKind } from '../../systems/grip/footprint-reshape-anchors';
@@ -242,7 +244,14 @@ export async function runGripMouseUp(worldPos: Point2D, ctx: GripMouseUpCtx): Pr
       // ORTHO (F8) locks BOTH a "move" hot-grip AND a corner reshape to the H/V axis
       // (AutoCAD/Revit parity). SNAP-MODE (F9) step then quantizes (both no-op when OFF).
       const rawDelta = { x: worldPos.x - effectiveAnchor.x, y: worldPos.y - effectiveAnchor.y };
-      const delta: Point2D = hotOp === 'move' ? applyMoveConstraints(rawDelta) : applyResizeConstraints(rawDelta);
+      // ADR-513 §grip-parity — ΡΗΤΗ ΕΙΣΟΔΟΣ ΝΙΚΑ: πληκτρολογημένο «Μήκος» σε λαβή ΜΕΤΑΚΙΝΗΣΗΣ →
+      // displacement κατά την ORTHO/POLAR κατεύθυνση, ακριβώς όπως στην αναμόρφωση άκρου παραπάνω.
+      // ΙΔΙΟΣ resolver με το ghost (5ο σκαλί) → preview ≡ commit. Η περιστροφή έχει ήδη επιστρέψει.
+      const delta: Point2D =
+        resolveMoveDisplacementLockedDelta(
+          { movesEntity: activeGrip.movesEntity, isRotation: false }, effectiveAnchor, worldPos,
+        )
+        ?? (hotOp === 'move' ? applyMoveConstraints(rawDelta) : applyResizeConstraints(rawDelta));
       // ADR-363 Phase 1G.4 + ADR-397 — Ctrl (or ⌘) held at the terminal click of
       // a MOVE hot-grip copies the entity (AutoCAD MOVE→COPY) instead of
       // translating it. Dispatched entity-agnostically (wall-midpoint /
@@ -302,7 +311,11 @@ export async function runGripMouseUp(worldPos: Point2D, ctx: GripMouseUpCtx): Pr
       // AutoCAD/Revit parity. SNAP-MODE (F9) step then quantizes (all no-op when OFF).
       const rawDelta = { x: worldPos.x - effectiveAnchor.x, y: worldPos.y - effectiveAnchor.y };
       const movesWhole = activeGrip.movesEntity === true || isActiveGripAltMove();
-      const delta: Point2D = movesWhole ? applyMoveConstraints(rawDelta) : applyResizeConstraints(rawDelta);
+      // ADR-513 §grip-parity — ΙΔΙΟ 5ο σκαλί και στο press-drag (διπλή επιλογή: drag-and-drop Ή
+      // κλικ + πληκτρολόγηση), ίδιος resolver → οι δύο χειρονομίες δεν μπορούν να αποκλίνουν.
+      const delta: Point2D =
+        resolveMoveDisplacementLockedDelta({ movesEntity: movesWhole, isRotation: false }, effectiveAnchor, worldPos)
+        ?? (movesWhole ? applyMoveConstraints(rawDelta) : applyResizeConstraints(rawDelta));
       commitDxfGripDragModeAware(activeGrip, delta, dxfCommitDeps, GripModeStore.getSnapshot());
       // The override is a per-drag modifier — clear it at commit so the
       // next drag starts from the natural grip anchor.

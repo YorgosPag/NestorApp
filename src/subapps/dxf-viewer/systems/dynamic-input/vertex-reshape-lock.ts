@@ -26,9 +26,10 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import { isVertexReshapeGrip } from '../../hooks/grips/vertex-reshape-hotgrip';
-import { resolveOrthoPolarStep } from '../../hooks/drawing/drawing-handler-utils';
-import { cadToggleState } from '../constraints/cad-toggle-state';
-import { applyLengthAngleLock, isLengthAngleLockActive } from './length-angle-lock';
+// N.18 (2026-07-18) — τα ORTHO/POLAR→typed-length μαθηματικά ζουν ΜΙΑ φορά στον κοινό πυρήνα·
+// εδώ μένει ΜΟΝΟ το «ποια λαβή είναι επιλέξιμη». Ο αδελφός καταναλωτής είναι το
+// `move-displacement-lock.ts` (λαβή μετακίνησης) — γραμμένοι ως δίδυμα θα ήταν structural clones.
+import { resolveDisplacementLockedDelta } from './displacement-lock-core';
 
 /** Minimal grip view the resolver needs — supplied by the ghost (`dp`) and the commit (`grip`).
  *  The caller resolves `polylineKind` via `gripKindOf(x, 'polyline')` + `isEdge` from `edgeVertexIndices`. */
@@ -50,7 +51,6 @@ export function resolveVertexReshapeLockedDelta(
   anchorPos: Readonly<Point2D>,
   cursorWorld: Readonly<Point2D>,
 ): Point2D | null {
-  if (!isLengthAngleLockActive()) return null;
   const eligible = isVertexReshapeGrip({
     entityType: (entity as { type?: string } | null | undefined)?.type,
     gripIndex: grip.gripIndex,
@@ -61,10 +61,5 @@ export function resolveVertexReshapeLockedDelta(
   if (!eligible) return null;
 
   // ORTHO/POLAR determine the DIRECTION from the grabbed grip; typed «Μήκος» rescales the magnitude.
-  const step = resolveOrthoPolarStep(cursorWorld, anchorPos, {
-    ortho: cadToggleState.isOrthoOn(),
-    polar: cadToggleState.isPolarOn(),
-  });
-  const locked = applyLengthAngleLock(step.constrained, anchorPos);
-  return { x: locked.x - anchorPos.x, y: locked.y - anchorPos.y };
+  return resolveDisplacementLockedDelta(anchorPos, cursorWorld);
 }
