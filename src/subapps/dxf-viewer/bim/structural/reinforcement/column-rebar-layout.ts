@@ -22,12 +22,23 @@ import type { Point2D } from '../../../rendering/types/Types';
 import type { ColumnReinforcement } from './column-reinforcement-types';
 import { MAX_RESTRAINED_BAR_SPACING_MM } from './column-reinforcement-types';
 import { distributeRectBarsBySpacing } from './column-bar-distribution';
-import { projectVerticesTo2D } from '../../geometry/shared/polygon-utils';
+import { buildRoundedStirrupPath } from './column-stirrup-path-geometry';
 
 // Bar-distribution helpers ζουν στο sibling `column-bar-distribution.ts` (file-size
 // split). Re-export για back-compat — οι εξωτερικοί consumers (column-perimeter-layout,
 // column-multihoop-layout) τα εισάγουν από εδώ.
 export { distributeBarsAlongPolygon, distributeRectBarsBySpacing, pointPairKey } from './column-bar-distribution';
+
+// Path/arc geometry primitives ζουν στο sibling `column-stirrup-path-geometry.ts` (file-size
+// split, ADR-456). Re-export για back-compat — οι consumers (perimeter/multihoop/wall/beam)
+// τα εισάγουν από εδώ.
+export {
+  STIRRUP_ARC_MAX_CHORD_MM,
+  STIRRUP_ARC_MAX_SEGMENTS,
+  closedPolylineLengthMm,
+  buildRoundedStirrupPath,
+  roundedPathCenterlineLengthMm,
+} from './column-stirrup-path-geometry';
 
 /**
  * Συντελεστής ακτίνας **άξονα** (centerline) κάμψης συνδετήρα (× dbw). EC2
@@ -39,9 +50,10 @@ export { distributeBarsAlongPolygon, distributeRectBarsBySpacing, pointPairKey }
 export const STIRRUP_BEND_CL_FACTOR = 2.5;
 
 /**
- * Τμήματα ανά γωνιακό τόξο (tessellation). Το ΙΔΙΟ tessellated polyline τρέφει 2Δ
- * (lineTo) ΚΑΙ 3Δ (cylinder segments) → απόλυτη συνέπεια κάτοψης/τομής/3Δ (SSoT).
- * 6 = λείο σε column scale, ελάχιστο geometry (Revit/Tekla επίσης tessellate-άρουν).
+ * **Ελάχιστα** τμήματα ανά γωνιακό τόξο (tessellation floor). Το ΙΔΙΟ tessellated polyline τρέφει
+ * 2Δ (lineTo) ΚΑΙ 3Δ (cylinder segments) → απόλυτη συνέπεια κάτοψης/τομής/3Δ (SSoT). Πάνω από αυτό
+ * το floor, το `buildRoundedStirrupPath` **πυκνώνει προσαρμοστικά** μεγάλα τόξα (chord-tolerance,
+ * όπως Revit/ArchiCAD) ώστε καμπύλες κάθε ακτίνας να βγαίνουν ομαλές — βλ. `STIRRUP_ARC_MAX_CHORD_MM`.
  */
 export const STIRRUP_BEND_ARC_SEGMENTS = 6;
 
@@ -91,6 +103,15 @@ export interface ColumnRebarLayout {
    */
   readonly extraStirrupPathsMm?: readonly (readonly Point2D[])[];
   /**
+   * ADR-456 — **Αναλυτικό** (arc-aware) μήκος ΑΞΟΝΑ ανά `extraStirrupPathsMm` hoop
+   * (index-aligned): η «geometric truth» των ποσοτήτων για τα επιπλέον στεφάνια,
+   * **decoupled** από το display tessellation του `extraStirrupPathsMm` (ίδιο big-players
+   * split: εμφάνιση ≠ ποσότητα). Οι builders το γεμίζουν με `roundedPathCenterlineLengthMm`
+   * (ή το rect closed-form). Absent → ο compute κάνει fallback σε μέτρηση του tessellated
+   * path (adaptive → <0,1% σφάλμα, όχι παραπλανητικό, αλλά όχι πλήρως decoupled).
+   */
+  readonly extraStirrupCenterlineLengthsMm?: readonly number[];
+  /**
    * ADR-460 follow-up 6 — Άκρα γάντζου 135° **ανά** `extraStirrupPathsMm` hoop
    * (index-aligned): κάθε σκέλος-στεφάνι του multihoop κλείνει με τον δικό του γάντζο
    * (πλήρες Revit detailing). Ίδια σύμβαση με `stirrupHookEndsMm` (array πολυγραμμών
@@ -104,96 +125,6 @@ export interface ColumnRebarLayout {
    * diamond/grid). Absent → rectangular path ή κανένα tie.
    */
   readonly crossTieAnchorsMm?: readonly { readonly a: Point2D; readonly b: Point2D }[];
-}
-
-/** Μήκος **κλειστής** polyline (mm): άθροισμα ακμών + ακμή last→first. <2 σημεία → 0. */
-export function closedPolylineLengthMm(path: readonly Point2D[]): number {
-  const n = path.length;
-  if (n < 2) return 0;
-  let total = 0;
-  for (let i = 0; i < n; i++) {
-    const a = path[i];
-    const b = path[(i + 1) % n];
-    total += Math.hypot(b.x - a.x, b.y - a.y);
-  }
-  return total;
-}
-
-/** Μέτρο διανύσματος· 0 → 1 (αποφυγή διαίρεσης με μηδέν). */
-function safeLen(dx: number, dy: number): number {
-  return Math.hypot(dx, dy) || 1;
-}
-
-/**
- * Κλειστή tessellated polyline με στρογγυλεμένες γωνίες από πολύγωνο γωνιών (CCW).
- * Κάθε γωνία → τόξο ακτίνας `rMm`, **εφαπτόμενο** στις δύο γειτονικές πλευρές (κέντρο
- * = offset κατά rMm προς το **εσωτερικό της στροφής**). **Concave-aware**: σε κυρτή
- * (αριστερόστροφη) κορυφή το κέντρο πάει αριστερά, σε **reflex** (δεξιόστροφη — π.χ.
- * εσωτερική γωνία διατομής Γ/Τ/Π) το κέντρο γυρίζει δεξιά, ώστε το στεφάνι να
- * στρογγυλεύει σωστά και στα δύο. Τα ευθύγραμμα τμήματα μεταξύ διαδοχικών τόξων
- * προκύπτουν αυτόματα (consumer κάνει lineTo/segment). `rMm` clamped ≤ μισό της
- * κοντύτερης πλευράς. Fallback στις αιχμηρές γωνίες όταν `rMm ≤ 0` ή εκφυλισμένο.
- */
-export function buildRoundedStirrupPath(
-  corners: readonly Point2D[],
-  rMm: number,
-  segPerArc: number,
-): Point2D[] {
-  const n = corners.length;
-  if (n < 3 || rMm <= 0) return projectVerticesTo2D(corners);
-
-  // Clamp: η ακτίνα δεν μπορεί να ξεπερνά το μισό της κοντύτερης πλευράς (αλλιώς
-  // γειτονικά τόξα επικαλύπτονται).
-  let minEdge = Infinity;
-  for (let i = 0; i < n; i++) {
-    const a = corners[i];
-    const b = corners[(i + 1) % n];
-    minEdge = Math.min(minEdge, Math.hypot(b.x - a.x, b.y - a.y));
-  }
-  const r = Math.min(rMm, minEdge / 2);
-  if (r <= 0) return projectVerticesTo2D(corners);
-
-  const seg = Math.max(1, Math.floor(segPerArc));
-  const out: Point2D[] = [];
-  for (let i = 0; i < n; i++) {
-    const prev = corners[(i - 1 + n) % n];
-    const curr = corners[i];
-    const next = corners[(i + 1) % n];
-
-    // Μοναδιαία διεύθυνση εισερχόμενης (prev→curr) & εξερχόμενης (curr→next) πλευράς.
-    const inLen = safeLen(curr.x - prev.x, curr.y - prev.y);
-    const inx = (curr.x - prev.x) / inLen;
-    const iny = (curr.y - prev.y) / inLen;
-    const outLen = safeLen(next.x - curr.x, next.y - curr.y);
-    const outx = (next.x - curr.x) / outLen;
-    const outy = (next.y - curr.y) / outLen;
-
-    // Σημεία επαφής (tangent) πάνω στις δύο πλευρές, σε απόσταση r από τη γωνία.
-    const tInx = curr.x - inx * r;
-    const tIny = curr.y - iny * r;
-    const tOutx = curr.x + outx * r;
-    const tOuty = curr.y + outy * r;
-
-    // Φορά στροφής: cross(in, out) > 0 = αριστερόστροφη (κυρτή σε CCW) → κέντρο
-    // αριστερά· < 0 = δεξιόστροφη (reflex/εσωτερική) → κέντρο δεξιά (sgn flip).
-    const cross = inx * outy - iny * outx;
-    const sgn = cross >= 0 ? 1 : -1;
-    // Κέντρο τόξου = tangent + κάθετο (αριστερά της φοράς) × r × sgn.
-    const cx = tInx + -iny * r * sgn;
-    const cy = tIny + inx * r * sgn;
-
-    const a0 = Math.atan2(tIny - cy, tInx - cx);
-    const a1 = Math.atan2(tOuty - cy, tOutx - cx);
-    // Σύντομο τόξο (minor): φέρε το da στο (−π, π].
-    let da = a1 - a0;
-    da = ((da % (2 * Math.PI)) + 3 * Math.PI) % (2 * Math.PI) - Math.PI;
-
-    for (let k = 0; k <= seg; k++) {
-      const a = a0 + (da * k) / seg;
-      out.push({ x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) });
-    }
-  }
-  return out;
 }
 
 /** Μοναδιαίο διάνυσμα a→b (0,0 αν ταυτίζονται). */
@@ -313,6 +244,40 @@ export function stirrupCenterlinePerimeterMm(
   return 2 * (W + D) - 8 * rad + 2 * Math.PI * rad;
 }
 
+/** Καθαρισμένες διάμετροι/επικάλυψη (mm, ≥0) από το intent — κοινό σε όλες τις ring engines (N.18). */
+export function rebarDims(r: ColumnReinforcement): { dbL: number; dbw: number; cover: number } {
+  return {
+    dbL: Math.max(0, r.longitudinal.diameterMm),
+    dbw: Math.max(0, r.stirrups.diameterMm),
+    cover: Math.max(0, r.coverMm),
+  };
+}
+
+/**
+ * Κοινά μέρη στεφανιού από ΕΝΑ ring (SSoT, N.18): ακτίνα γωνίας (clamped ≤ μισό κοντύτερης πλευράς),
+ * tessellated display path, και τα δύο άκρα γάντζου 135° τυλιγμένα στο γωνιακό κολωνοσίδερο
+ * (`longitudinalBarsMm[0]`, fallback στη γωνία ring). Το μοιράζονται ΟΛΕΣ οι ring-based engines
+ * (rect fast-path + perimeter outline) ώστε να μην υπάρχουν parallel twins.
+ */
+export function buildRingStirrupParts(
+  stirrupRingMm: readonly Point2D[],
+  longitudinalBarsMm: readonly Point2D[],
+  dbw: number,
+  dbL: number,
+): { stirrupCornerRadiusMm: number; stirrupPathMm: Point2D[]; stirrupHookEndsMm: Point2D[][] } {
+  let minEdge = Infinity;
+  for (let i = 0; i < stirrupRingMm.length; i++) {
+    const a = stirrupRingMm[i];
+    const b = stirrupRingMm[(i + 1) % stirrupRingMm.length];
+    minEdge = Math.min(minEdge, Math.hypot(b.x - a.x, b.y - a.y));
+  }
+  const stirrupCornerRadiusMm = Math.min(STIRRUP_BEND_CL_FACTOR * dbw, minEdge / 2);
+  const stirrupPathMm = buildRoundedStirrupPath(stirrupRingMm, stirrupCornerRadiusMm, STIRRUP_BEND_ARC_SEGMENTS);
+  const hookBar = longitudinalBarsMm.length > 0 ? longitudinalBarsMm[0] : stirrupRingMm[0];
+  const stirrupHookEndsMm = buildStirrupHookEndsMm(stirrupRingMm, hookBar, { x: 0, y: 0 }, dbw, dbL, STIRRUP_BEND_ARC_SEGMENTS);
+  return { stirrupCornerRadiusMm, stirrupPathMm, stirrupHookEndsMm };
+}
+
 /**
  * Υπολογίζει τη διάταξη οπλισμού ορθογωνικής διατομής σε LOCAL mm. Επιστρέφει
  * `null` αν η διατομή είναι εκφυλισμένη (≤0) ή δεν υπάρχει οπλισμός να σχεδιαστεί.
@@ -329,9 +294,7 @@ export function computeColumnRebarLayout(
   maxBarSpacingMm: number = MAX_RESTRAINED_BAR_SPACING_MM,
 ): ColumnRebarLayout | null {
   if (widthMm <= 0 || depthMm <= 0) return null;
-  const dbL = Math.max(0, r.longitudinal.diameterMm);
-  const dbw = Math.max(0, r.stirrups.diameterMm);
-  const cover = Math.max(0, r.coverMm);
+  const { dbL, dbw, cover } = rebarDims(r);
 
   // Centerline στεφανιού: inset = cover + μισή διάμετρος συνδετήρα.
   const stirrupInset = cover + dbw / 2;
@@ -353,13 +316,10 @@ export function computeColumnRebarLayout(
   if (longitudinalBarsMm.length === 0 && (halfWs <= 0 || halfDs <= 0)) return null;
 
   // Ακτίνα κάμψης γωνίας (EC2) — clamped ≤ μισό κοντύτερης πλευράς (μέσα στον generator).
-  const stirrupCornerRadiusMm = Math.min(STIRRUP_BEND_CL_FACTOR * dbw, halfWs, halfDs);
-  const stirrupPathMm = buildRoundedStirrupPath(stirrupRingMm, stirrupCornerRadiusMm, STIRRUP_BEND_ARC_SEGMENTS);
-  // Δύο άκρα γάντζου 135° στη γωνία κλεισίματος, τυλιγμένα γύρω από το γωνιακό
-  // κολωνοσίδερο (longitudinalBarsMm[0] = ίδια γωνία BL με stirrupRingMm[0]· fallback
-  // στη γωνία στεφανιού αν δεν υπάρχουν ράβδοι). Κέντρο διατομής = origin (LOCAL mm).
-  const hookBar = longitudinalBarsMm.length > 0 ? longitudinalBarsMm[0] : stirrupRingMm[0];
-  const stirrupHookEndsMm = buildStirrupHookEndsMm(stirrupRingMm, hookBar, { x: 0, y: 0 }, dbw, dbL, STIRRUP_BEND_ARC_SEGMENTS);
+  // Ring-based στεφάνι (ακτίνα/path/γάντζοι) μέσω του κοινού SSoT — για ορθογωνικό ring, το
+  // `minEdge/2` == `min(halfWs, halfDs)` → ίδια ακτίνα με πριν (μηδέν regression).
+  const { stirrupCornerRadiusMm, stirrupPathMm, stirrupHookEndsMm } =
+    buildRingStirrupParts(stirrupRingMm, longitudinalBarsMm, dbw, dbL);
 
   return {
     longitudinalBarsMm,

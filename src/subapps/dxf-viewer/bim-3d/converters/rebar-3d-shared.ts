@@ -25,8 +25,12 @@ export const MM_TO_M = 0.001;
  * μία φορά, reused σε όλες τις κολώνες ΚΑΙ θεμελιώσεις (μηδέν per-element shader).
  */
 export const REBAR_MATERIAL = new THREE.MeshBasicMaterial({ color: REBAR_COLOR_INT });
-/** Πλευρές κυλίνδρου ράβδου (χαμηλό — λεπτή ράβδος, ελάχιστο geometry). */
-const ROD_RADIAL_SEGMENTS = 6;
+/**
+ * Πλευρές κυλίνδρου ράβδου. **12** = ρεαλιστικά στρογγυλή διατομή (τα πραγματικά κολωνοσίδερα είναι
+ * κυκλικά, όχι πολυγωνικά) όπως Revit/ArchiCAD «fine» detail, χωρίς υπερβολικό geometry. Καθαρά
+ * ΟΠΤΙΚΟ (cross-section): ΔΕΝ επηρεάζει μήκος/βάρος — αυτά μετρώνται στην κεντρική γραμμή (ADR-456).
+ */
+const ROD_RADIAL_SEGMENTS = 12;
 /** Ελάχιστη ακτίνα (scene units) ώστε εκφυλισμένο Ø να μη δίνει μηδενικό geometry. */
 export const MIN_RADIUS = 1e-4;
 

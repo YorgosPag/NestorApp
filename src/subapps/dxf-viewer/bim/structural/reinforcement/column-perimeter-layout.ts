@@ -20,13 +20,11 @@ import type { Point2D } from '../../../rendering/types/Types';
 import { insetPolygonMiter, projectVerticesTo2D } from '../../geometry/shared/polygon-utils';
 import type { ColumnReinforcement } from './column-reinforcement-types';
 import {
-  buildRoundedStirrupPath,
-  buildStirrupHookEndsMm,
-  closedPolylineLengthMm,
+  buildRingStirrupParts,
+  rebarDims,
+  roundedPathCenterlineLengthMm,
   distributeBarsAlongPolygon,
   pointPairKey,
-  STIRRUP_BEND_ARC_SEGMENTS,
-  STIRRUP_BEND_CL_FACTOR,
   type ColumnRebarLayout,
 } from './column-rebar-layout';
 
@@ -34,17 +32,6 @@ import {
 export function insetOutlineMm(outlineMm: readonly Point2D[], d: number): Point2D[] | null {
   const inner = insetPolygonMiter(outlineMm, d);
   return inner ? projectVerticesTo2D(inner) : null;
-}
-
-/** Ελάχιστο μήκος ακμής κλειστού πολυγώνου (mm). */
-function minEdgeLengthMm(poly: readonly Point2D[]): number {
-  let min = Infinity;
-  for (let i = 0; i < poly.length; i++) {
-    const a = poly[i];
-    const b = poly[(i + 1) % poly.length];
-    min = Math.min(min, Math.hypot(b.x - a.x, b.y - a.y));
-  }
-  return Number.isFinite(min) ? min : 0;
 }
 
 // ── ADR-460 — grid cross-ties για μη-ορθογώνια perimeter (Γ/Τ/Π/πολύγωνο) ───────
@@ -226,19 +213,16 @@ export function buildPerimeterLayoutFromOutline(
   outlineMm: readonly Point2D[],
 ): ColumnRebarLayout | null {
   if (outlineMm.length < 3) return null;
-  const dbL = Math.max(0, r.longitudinal.diameterMm);
-  const dbw = Math.max(0, r.stirrups.diameterMm);
-  const cover = Math.max(0, r.coverMm);
+  const { dbL, dbw, cover } = rebarDims(r);
 
   const stirrupRingMm = insetOutlineMm(outlineMm, cover + dbw / 2);
   if (!stirrupRingMm || stirrupRingMm.length < 3) return null;
   const barPolygon = insetOutlineMm(outlineMm, cover + dbw + dbL / 2) ?? stirrupRingMm;
   const longitudinalBarsMm = distributeBarsAlongPolygon(barPolygon, Math.max(0, Math.floor(r.longitudinal.count)));
 
-  const stirrupCornerRadiusMm = Math.min(STIRRUP_BEND_CL_FACTOR * dbw, minEdgeLengthMm(stirrupRingMm) / 2);
-  const stirrupPathMm = buildRoundedStirrupPath(stirrupRingMm, stirrupCornerRadiusMm, STIRRUP_BEND_ARC_SEGMENTS);
-  const hookBar = longitudinalBarsMm.length > 0 ? longitudinalBarsMm[0] : stirrupRingMm[0];
-  const stirrupHookEndsMm = buildStirrupHookEndsMm(stirrupRingMm, hookBar, { x: 0, y: 0 }, dbw, dbL, STIRRUP_BEND_ARC_SEGMENTS);
+  // Ακτίνα/path/γάντζοι στεφανιού μέσω του κοινού SSoT (ίδιος helper με το rect fast-path, N.18).
+  const { stirrupCornerRadiusMm, stirrupPathMm, stirrupHookEndsMm } =
+    buildRingStirrupParts(stirrupRingMm, longitudinalBarsMm, dbw, dbL);
 
   // Grid cross-ties: δένουν τις ενδιάμεσες ράβδους με την αντικριστή τους (ADR-460).
   const crossTieAnchorsMm = buildPerimeterCrossTieAnchors(barPolygon, longitudinalBarsMm, dbL);
@@ -251,7 +235,9 @@ export function buildPerimeterLayoutFromOutline(
     stirrupHookEndsMm,
     barDiameterMm: dbL,
     stirrupDiameterMm: dbw,
-    stirrupCenterlineLengthMm: closedPolylineLengthMm(stirrupPathMm),
+    // ADR-456 — αναλυτικό (arc-aware) μήκος από corners+radius, ΑΝΕΞΑΡΤΗΤΟ από το display tessellation
+    // (ώστε το smoothing να μην αλλάζει ποτέ το βάρος χάλυβα). Πριν: μέτρηση του display polyline.
+    stirrupCenterlineLengthMm: roundedPathCenterlineLengthMm(stirrupRingMm, stirrupCornerRadiusMm),
     ...(crossTieAnchorsMm.length > 0 ? { crossTieAnchorsMm } : {}),
   };
 }

@@ -205,8 +205,14 @@ describe('buildRoundedStirrupPath', () => {
     expect(buildRoundedStirrupPath(SQUARE, -5, 6)).toHaveLength(4);
   });
 
-  it('produces (segPerArc+1) points per corner', () => {
-    expect(buildRoundedStirrupPath(SQUARE, 20, 6)).toHaveLength(4 * 7);
+  it('adaptive tessellation: densifies large arcs above the floor (chord-tolerance)', () => {
+    // 200×200 τετράγωνο, r=20 → τεταρτοκύκλιο ≈31.4mm· σε ≤4mm χορδή ⇒ 8 seg > floor 6 ⇒ >7 pts/γωνία.
+    expect(buildRoundedStirrupPath(SQUARE, 20, 6).length).toBeGreaterThan(4 * 7);
+  });
+
+  it('adaptive tessellation: κρατά το floor (segPerArc) για μικρά τόξα', () => {
+    // r=1 → τεταρτοκύκλιο ≈1.6mm ⇒ 1 seg < floor ⇒ μένει στο floor 6 ⇒ 7 pts/γωνία.
+    expect(buildRoundedStirrupPath(SQUARE, 1, 6)).toHaveLength(4 * 7);
   });
 
   it('clamps radius to half the shortest side', () => {

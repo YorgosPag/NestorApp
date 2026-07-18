@@ -41,6 +41,10 @@ import {
   formatLongitudinalLabel,
   formatStirrupsLabel,
 } from '../structural/reinforcement/column-reinforcement-compute';
+// ADR-456 — shape-aware BOQ: χωρίς `section` ο υπολογισμός έπεφτε ΠΑΝΤΑ στο ορθογωνικό fast-path,
+// οπότε μια κολώνα Γ/Τ/κυκλική/τοίχωμα ανέφερε ΟΡΘΟΓΩΝΙΚΟ βάρος χάλυβα (παραπλανητικό). Το section
+// δρομολογεί το σωστό σχήμα· για ορθογωνική επιστρέφει ίδια νούμερα (dispatcher → rect fast-path).
+import { resolveColumnReinforcementSection } from '../structural/reinforcement/column-section-outline';
 // ADR-463 — βάρος χάλυβα θεμελίωσης στο BOQ (mirror της κολώνας).
 import { computeFootingReinforcementQuantities } from '../structural/reinforcement/footing-reinforcement-compute';
 import { buildFootingSectionContext } from '../structural/section-context';
@@ -281,6 +285,9 @@ export function mapColumn(entity: AnyBimEntity, lookups: ScheduleLookups): Sched
     ? computeColumnReinforcementQuantities(
         { widthMm: p.width, depthMm: p.depth, heightMm: p.height, grossAreaMm2: g.area * 1e6 },
         p.reinforcement,
+        undefined,
+        // ADR-456 — shape-aware (Γ/Τ/Π/κυκλική/τοίχωμα)· ορθογωνική → ίδιο rect fast-path (μηδέν regression).
+        resolveColumnReinforcementSection(p),
       )
     : null;
   return {

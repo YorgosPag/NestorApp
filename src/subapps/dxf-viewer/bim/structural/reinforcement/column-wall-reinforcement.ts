@@ -20,7 +20,7 @@ import type { Point2D } from '../../../rendering/types/Types';
 import type { ColumnReinforcement, WallReinforcementIntent } from './column-reinforcement-types';
 import {
   buildRoundedStirrupPath,
-  closedPolylineLengthMm,
+  roundedPathCenterlineLengthMm,
   STIRRUP_BEND_ARC_SEGMENTS,
   STIRRUP_BEND_CL_FACTOR,
   type ColumnRebarLayout,
@@ -75,8 +75,14 @@ function webBars(innerHalfLen: number, lcBar: number, tBar: number, spacingMm: n
   return bars;
 }
 
-/** Ορθογώνιο boundary hoop (4 κορυφές, στρογγυλεμένο) σε ζώνη άκρου. */
-function boundaryHoop(endSignU: number, halfLen: number, lc: number, tStir: number, dbw: number, axis: Point2D): Point2D[] {
+/**
+ * Ορθογώνιο boundary hoop (4 κορυφές, στρογγυλεμένο) σε ζώνη άκρου. Επιστρέφει ΚΑΙ το
+ * tessellated display `pathMm` ΚΑΙ το **αναλυτικό** (arc-aware) `centerlineLengthMm` από
+ * corners+radius — decoupled από το tessellation (ADR-456, εμφάνιση ≠ ποσότητα).
+ */
+function boundaryHoop(
+  endSignU: number, halfLen: number, lc: number, tStir: number, dbw: number, axis: Point2D,
+): { pathMm: Point2D[]; centerlineLengthMm: number } {
   const uOuter = endSignU * halfLen;
   const uInner = endSignU * (halfLen - lc);
   const corners = [
@@ -86,7 +92,11 @@ function boundaryHoop(endSignU: number, halfLen: number, lc: number, tStir: numb
     uvToXY(uInner, tStir, axis),
   ];
   const minEdge = Math.min(lc, 2 * tStir);
-  return buildRoundedStirrupPath(corners, Math.min(STIRRUP_BEND_CL_FACTOR * dbw, minEdge / 2), STIRRUP_BEND_ARC_SEGMENTS);
+  const radiusMm = Math.min(STIRRUP_BEND_CL_FACTOR * dbw, minEdge / 2);
+  return {
+    pathMm: buildRoundedStirrupPath(corners, radiusMm, STIRRUP_BEND_ARC_SEGMENTS),
+    centerlineLengthMm: roundedPathCenterlineLengthMm(corners, radiusMm),
+  };
 }
 
 /**
@@ -137,10 +147,8 @@ export function buildWallLayout(
   const stirrupCornerRadiusMm = Math.min(STIRRUP_BEND_CL_FACTOR * dbw, tStir);
   const stirrupPathMm = buildRoundedStirrupPath(stirrupRingMm, stirrupCornerRadiusMm, STIRRUP_BEND_ARC_SEGMENTS);
 
-  const extraStirrupPathsMm = [
-    boundaryHoop(+1, halfLenStir, lc, tStir, dbw, axis),
-    boundaryHoop(-1, halfLenStir, lc, tStir, dbw, axis),
-  ];
+  const hoopPlus = boundaryHoop(+1, halfLenStir, lc, tStir, dbw, axis);
+  const hoopMinus = boundaryHoop(-1, halfLenStir, lc, tStir, dbw, axis);
 
   return {
     longitudinalBarsMm,
@@ -150,8 +158,11 @@ export function buildWallLayout(
     stirrupHookEndsMm: [],
     barDiameterMm: dbL,
     stirrupDiameterMm: dbw,
-    stirrupCenterlineLengthMm: closedPolylineLengthMm(stirrupPathMm),
-    extraStirrupPathsMm,
+    // ADR-456 — αναλυτικό (arc-aware) μήκος από corners+radius, decoupled από το display tessellation.
+    stirrupCenterlineLengthMm: roundedPathCenterlineLengthMm(stirrupRingMm, stirrupCornerRadiusMm),
+    extraStirrupPathsMm: [hoopPlus.pathMm, hoopMinus.pathMm],
+    // ADR-456 — αναλυτικά μήκη boundary hoops (decoupled από tessellation· ο compute τα διαβάζει).
+    extraStirrupCenterlineLengthsMm: [hoopPlus.centerlineLengthMm, hoopMinus.centerlineLengthMm],
     crossTieAnchorsMm,
   };
 }

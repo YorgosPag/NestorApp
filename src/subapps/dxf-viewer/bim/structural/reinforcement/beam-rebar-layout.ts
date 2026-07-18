@@ -34,7 +34,7 @@ import {
   STIRRUP_BEND_ARC_SEGMENTS,
   buildRoundedStirrupPath,
   buildStirrupHookEndsMm,
-  closedPolylineLengthMm,
+  roundedPathCenterlineLengthMm,
 } from './column-rebar-layout';
 
 /**
@@ -219,6 +219,7 @@ export function resolveBeamRebarLayout(
     stirrupLevelsMm: computeBeamStirrupLevelsMm(ctx, r),
     stirrupCornerRadiusMm,
     stirrupDiameterMm: dbw,
-    stirrupCenterlineLengthMm: closedPolylineLengthMm(stirrupSectionPathMm),
+    // ADR-456 — αναλυτικό (arc-aware) μήκος από corners+radius, decoupled από το display tessellation.
+    stirrupCenterlineLengthMm: roundedPathCenterlineLengthMm(stirrupRing, stirrupCornerRadiusMm),
   };
 }
