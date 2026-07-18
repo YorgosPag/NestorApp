@@ -13,6 +13,7 @@
 import type { Point2D } from '../../rendering/types/Types';
 import { resolveHotGripMouseUp } from './wall-hot-grip-fsm';
 import { commitDxfGripDragModeAware } from './grip-commit-adapters';
+import { isClickActionGripKind } from './grip-click-action';
 import { createSceneManagerAdapter } from './grip-scene-manager-adapter';
 // ADR-513 §grip-parity — πληκτρολογημένο Μήκος/Γωνία (Δαχτυλίδι) στην ΕΠΕΚΤΑΣΗ ΑΚΡΟΥ γραμμής.
 import { resolveLineEndpointLockedDelta } from '../../systems/dynamic-input/grip-endpoint-lock';
@@ -230,7 +231,17 @@ export async function runGripMouseUp(worldPos: Point2D, ctx: GripMouseUpCtx): Pr
       const clickDelta = { x: worldPos.x - effectiveAnchor.x, y: worldPos.y - effectiveAnchor.y };
       const movedPx = Math.hypot(clickDelta.x, clickDelta.y) * getImmediateTransform().scale;
       if (movedPx < ARM_CLICK_MAX_MOVE_PX && !isActiveGripAltMove()) {
-        applyGripArmClick(activeGrip);
+        // ADR-501 fix (Giorgio 2026-07-18) — a click-toggle ACTION grip (opening
+        // flip-hand / flip-facing, manifold outlet ▲/▼) must EXECUTE on a plain click,
+        // not merely arm. Route it to the commit adapter (which handles these BEFORE
+        // its own zero-delta guard) with a zero delta; otherwise arm as before. Without
+        // this, the arm-click branch returned first and the toggle never fired — the
+        // reported "opening rotation/flip marker does nothing" bug.
+        if (isClickActionGripKind(activeGrip)) {
+          commitDxfGripDragModeAware(activeGrip, { x: 0, y: 0 }, dxfCommitDeps, GripModeStore.getSnapshot());
+        } else {
+          applyGripArmClick(activeGrip);
+        }
         GripBasePointStore.clear();
         markDragFinished();
         resetToIdle();

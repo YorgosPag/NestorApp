@@ -74,14 +74,20 @@ describe('opening-grips (Phase 2.5 — wall parity)', () => {
     expect(grips.every((g) => !g.movesEntity)).toBe(true);
   });
 
-  it('1b. window emits 5 grips: no facing grip (move removed Slice 2; openDirection undefined)', () => {
+  // ADR-501 fix — a non-hinged wall-hosted opening (window) has no `handing` to flip,
+  // so the Revit flip-hand rotation marker is HIDDEN (dead-click removal): only the 4
+  // corner grips remain (move + facing were already absent).
+  it('1b. window emits 4 grips: 4 corners only (no rotation/facing/move — nothing to flip)', () => {
     const host = makeHorizontalWall();
     const params = buildDefaultOpeningParams(host, { x: 2000, y: 0 }, { kind: 'window' });
     const windowOpening = unwrapOpening(buildOpeningEntity(params, host, '0'));
     const grips = getOpeningGrips(windowOpening);
-    expect(grips).toHaveLength(5);
-    expect(grips.map((g) => gripKindOf(g, 'opening'))).not.toContain('opening-facing');
-    expect(grips.map((g) => gripKindOf(g, 'opening'))).not.toContain('opening-move');
+    expect(grips).toHaveLength(4);
+    const kinds = grips.map((g) => gripKindOf(g, 'opening'));
+    expect(kinds.filter((k) => k?.startsWith('opening-corner'))).toHaveLength(4);
+    expect(kinds).not.toContain('opening-rotation');
+    expect(kinds).not.toContain('opening-facing');
+    expect(kinds).not.toContain('opening-move');
   });
 
   it('2. central move grip (opening-move) is NOT emitted; first grip is rotation', () => {

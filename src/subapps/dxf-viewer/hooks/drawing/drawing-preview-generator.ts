@@ -50,6 +50,8 @@ import { generateWallCoveringPreview } from './wall-covering-preview-helpers';
 import { generateBeamPreview } from './beam-preview-helpers';
 // ADR-398 §3.8 — column WYSIWYG preview (real ColumnRenderer ghost).
 import { generateColumnPreview } from './column-preview-helpers';
+// ADR-652 §M7 — Block Library WYSIWYG preview (real block renderer ghost, free single-click placement).
+import { generateBlockLibraryPreview } from './block-preview-helpers';
 // ADR-436 Slice 2 — foundation line-tool preview (strip / tie-beam band ghost).
 // ADR-514 Φ6c — foundation pad live ghost (flush σε παρειά κολόνας ζωντανά).
 import { generateFoundationPreview, generateFoundationPadPreview } from './foundation-preview-helpers';
@@ -232,6 +234,13 @@ export function generatePreviewEntity(
   //    === commit). Replaces the legacy 9-anchor schematic ghost.
   if (tool === 'column') {
     return generateColumnPreview(cursorPoint, sceneUnits);
+  }
+  // ── ADR-652 §M7 — Block Library tool WYSIWYG preview branch ──────────────
+  //    Single-click free member (no rubber-band tempPoints, no face-snap resolver) → the ghost is
+  //    built from the raw cursor + the live selection/bridge SSoT (preview === commit). Mirror of
+  //    the column branch above.
+  if (tool === 'block-library') {
+    return generateBlockLibraryPreview(cursorPoint, sceneUnits);
   }
   // ── ADR-508 §line-cyan — Line tool flush/κάθετο κούμπωμα σε υφιστάμενη γραμμή/μέλος + κυανές
   //    listening dimensions (ΙΔΙΟΣ εγκέφαλος έλξης με τον τοίχο → preview ≡ commit). Επιστρέφει το

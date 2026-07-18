@@ -176,7 +176,9 @@ export type DrawingTool =
   | 'scale-bar'
   // ADR-612 — Opening info tag: generic SINGLE-CLICK accumulator tool (mirror 'annotation-symbol'
   // click-count, scale-bar's accumulator plumbing).
-  | 'opening-info-tag';
+  | 'opening-info-tag'
+  // ADR-652 §M7 — Block Library placement (single-click free-point WYSIWYG ghost, mirror 'column').
+  | 'block-library';
 
 export interface DrawingState {
   currentTool: DrawingTool;

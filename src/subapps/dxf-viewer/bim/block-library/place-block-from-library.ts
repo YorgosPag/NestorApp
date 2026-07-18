@@ -16,9 +16,10 @@
 
 import type { BlockEntity, Entity } from '../../types/entities';
 import type { Point2D } from '../../rendering/types/Types';
+import type { SceneUnits } from '../../utils/scene-units';
 import { generateEntityId } from '../../systems/entity-creation/utils';
 import { deepClone } from '../../utils/clone-utils';
-import type { InSessionBlockDef } from './block-library-types';
+import type { InSessionBlockDef, BlockLibraryParamOverrides } from './block-library-types';
 
 /** Παράμετροι τοποθέτησης ενός block instance. */
 export interface BlockPlacementParams {
@@ -29,6 +30,36 @@ export interface BlockPlacementParams {
   readonly rotation?: number;
   /** Layer του instance· default `'0'`. */
   readonly layerId?: string;
+}
+
+/**
+ * ADR-652 §M7 — ΚΟΙΝΟΣ mapper cursor+ribbon overrides → {@link BlockPlacementParams}: το χρησιμοποιεί
+ * ΚΑΙ το commit path (`useBlockLibraryTool.buildParams`) ΚΑΙ το ghost path
+ * (`generateBlockLibraryPreview`) — preview ≡ commit, μηδέν διπλότυπο μαπαρίσματος (N.18).
+ *
+ * M5 — X/Y κλίμακα (αρνητικό = mirror): όταν ΚΑΝΕΝΑ από τα δύο δεν ήρθε (`scaleX`/`scaleY` both
+ * absent) → `undefined` ⇒ ο assembler βάζει το default `{x:1,y:1}` (bridge έχει ήδη συγχρονίσει τους
+ * δύο άξονες όταν το «Ομοιόμορφη» lock είναι ON).
+ *
+ * `sceneUnits` δεν καταναλώνεται ακόμα — τα blocks είναι αυτο-συνεπή στις scene units, καμία mm→scene
+ * μετατροπή (βλ. σχόλιο `BlockSceneUnits` στο `useBlockLibraryTool`). Κρατιέται στην υπογραφή για
+ * parity με τους υπόλοιπους `buildDefault*Params` builders (mm→scene conversion) + μελλοντική χρήση.
+ */
+export function buildBlockPlacementParams(
+  cursor: Readonly<Point2D>,
+  overrides: BlockLibraryParamOverrides,
+  sceneUnits: SceneUnits,
+): BlockPlacementParams {
+  void sceneUnits;
+  return {
+    position: { x: cursor.x, y: cursor.y },
+    scale:
+      overrides.scaleX != null || overrides.scaleY != null
+        ? { x: overrides.scaleX ?? 1, y: overrides.scaleY ?? 1 }
+        : undefined,
+    rotation: overrides.rotation,
+    layerId: '0',
+  };
 }
 
 /** Κλωνοποιεί τα BLOCK-LOCAL members με ΦΡΕΣΚΑ ids (ανεξάρτητο instance). */

@@ -27,6 +27,7 @@ import { getSessionBlockDef } from '../../bim/block-library/block-library-regist
 import { getSelectedBlockName } from '../../bim/block-library/block-library-selection-store';
 import {
   buildBlockEntityFromDef,
+  buildBlockPlacementParams,
   type BlockPlacementParams,
 } from '../../bim/block-library/place-block-from-library';
 import { computeBlockFootprint } from '../../bim/block-library/block-library-footprint';
@@ -65,17 +66,10 @@ const useBlockPlacement = createSingleClickPlacementTool<
   BlockSceneUnits
 >({
   defaultSceneUnits: 'mm',
-  // M5 — X/Y κλίμακα (αρνητικό = mirror). Ο bridge έχει ήδη συγχρονίσει τους δύο άξονες
-  // όταν το «Ομοιόμορφη» lock είναι ON, οπότε εδώ διαβάζουμε απευθείας scaleX/scaleY.
-  // Απόντα και τα δύο ⇒ undefined ⇒ ο assembler βάζει το default `{x:1,y:1}`.
+  // ADR-652 §M7 — extracted ΚΟΙΝΟΣ mapper (preview ≡ commit, N.18): ο ίδιος
+  // `buildBlockPlacementParams` τροφοδοτεί ΚΑΙ το ghost (`generateBlockLibraryPreview`).
   buildParams: (clickPoint, overrides): BlockToolParams => ({
-    position: { x: clickPoint.x, y: clickPoint.y },
-    scale:
-      overrides.scaleX != null || overrides.scaleY != null
-        ? { x: overrides.scaleX ?? 1, y: overrides.scaleY ?? 1 }
-        : undefined,
-    rotation: overrides.rotation,
-    layerId: '0',
+    ...buildBlockPlacementParams(clickPoint, overrides, 'mm'),
     blockName: getSelectedBlockName() ?? '',
   }),
   buildEntity: (params) => {

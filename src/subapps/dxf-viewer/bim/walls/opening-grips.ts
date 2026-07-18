@@ -184,10 +184,20 @@ export function getOpeningGrips(entity: Readonly<OpeningEntity>): GripInfo[] {
   // ADR-363 Φ1G.5 Slice 2 — a WALL-HOSTED opening drops the central MOVE marker
   // (`opening-move`, 4-way arrow): redundant now that Alt+drag from any opening
   // grip (corner / rotation) slides the WHOLE opening along the host wall
-  // (`applyOpeningAltSlide`). Filtered here (not un-pushed) so the gripIndex math
-  // above — incl. the `opening-facing` `grips.length` index — stays intact; the
-  // `opening-move` transform (`moveAlongWall`) is retained but no longer reachable.
-  return grips.filter((g) => gripKindOf(g, 'opening') !== 'opening-move');
+  // (`applyOpeningAltSlide`).
+  //
+  // ADR-501 fix (Giorgio 2026-07-18) — the wall-hosted rotation grip is a Revit
+  // «Flip Hand» toggle (`flipOpening`), meaningful ONLY for hinged kinds (they carry
+  // `handing`). Non-hinged kinds (windows / sliding / pocket / fixed …) have no
+  // handing to flip, so the marker would be a DEAD click — hide it. Filtered here
+  // (not un-pushed) so the gripIndex math above stays intact.
+  const hinged = isHingedKind(entity.params.kind);
+  return grips.filter((g) => {
+    const kind = gripKindOf(g, 'opening');
+    if (kind === 'opening-move') return false;
+    if (kind === 'opening-rotation' && !hinged) return false;
+    return true;
+  });
 }
 
 // ─── Drag transforms ─────────────────────────────────────────────────────────
