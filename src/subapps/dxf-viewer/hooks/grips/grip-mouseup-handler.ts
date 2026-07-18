@@ -17,6 +17,8 @@ import { isClickActionGripKind } from './grip-click-action';
 import { createSceneManagerAdapter } from './grip-scene-manager-adapter';
 // ADR-513 §grip-parity — πληκτρολογημένο Μήκος/Γωνία (Δαχτυλίδι) στην ΕΠΕΚΤΑΣΗ ΑΚΡΟΥ γραμμής.
 import { resolveLineEndpointLockedDelta } from '../../systems/dynamic-input/grip-endpoint-lock';
+// ADR-513 §grip-parity — displacement (Model A) Μήκος/Γωνία lock για arc/polyline vertex + straight edge.
+import { resolveVertexReshapeLockedDelta } from '../../systems/dynamic-input/vertex-reshape-lock';
 import { resolveOpeningWidthLockedDelta } from '../../systems/dynamic-input/opening-width-lock';
 import { DynamicInputLockStore } from '../../systems/dynamic-input/DynamicInputLockStore';
 import { resolveEndpointReshapePolarLock } from './grip-endpoint-polar-lock';
@@ -115,7 +117,32 @@ function resolveEndpointCommitDelta(
 ): Point2D | null {
   return resolveOpeningWidthCommitLock(grip, worldPos, deps)
     ?? resolveLineEndpointCommitLock(grip, worldPos, deps)
+    ?? resolveVertexReshapeCommitLock(grip, worldPos, deps)
     ?? resolveEndpointReshapeCommitPolar(grip, worldPos, deps);
+}
+
+/**
+ * ADR-513 §grip-parity — the DISPLACEMENT (Model A) length-locked commit displacement for an
+ * arc/polyline vertex OR straight edge-midpoint reshape (incl. projected rectangle), or `null` when
+ * no lock / not an eligible reshape. SAME `resolveVertexReshapeLockedDelta` SSoT the ghost uses
+ * (relative to `grip.position`) → committed stretch == preview (WYSIWYG). LINE endpoints are served
+ * by `resolveLineEndpointCommitLock` above (own «set line length» semantics), so this never doubles.
+ */
+function resolveVertexReshapeCommitLock(
+  grip: UnifiedGripInfo, worldPos: Point2D, deps: DxfCommitDeps,
+): Point2D | null {
+  const ctx = resolveLineGripContext(grip, deps);
+  if (!ctx) return null;
+  return resolveVertexReshapeLockedDelta(
+    ctx.entity,
+    {
+      gripIndex: grip.gripIndex,
+      movesEntity: grip.movesEntity,
+      polylineKind: gripKindOf(grip, 'polyline'),
+      isEdge: grip.type === 'edge' || grip.edgeVertexIndices != null,
+    },
+    grip.position, worldPos,
+  );
 }
 
 /**

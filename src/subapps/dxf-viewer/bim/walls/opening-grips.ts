@@ -252,6 +252,17 @@ function resizeJamb(
   const frameWidth = params.frameWidth ?? DEFAULT_FRAME_WIDTH_MM;
   const cursorAxial = projectPointToWallOffsetMm(currentPos, hostWall);
 
+  // TEMP DIAGNOSTIC (ADR-513 §opening-width) — αφαιρείται μετά τη διάγνωση.
+  // eslint-disable-next-line no-console
+  console.warn('[resizeJamb]', {
+    jamb,
+    currentPos,
+    cursorAxial,
+    offsetFromStart: params.offsetFromStart,
+    width: params.width,
+    hostLengthMm,
+  });
+
   if (jamb === 'end') {
     // Start jamb pinned at offsetFromStart; the end jamb tracks the cursor.
     const startAxial = params.offsetFromStart;

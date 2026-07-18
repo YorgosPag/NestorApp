@@ -48,6 +48,7 @@ import {
   getActiveDragGrip,
   isLineEndpointDragInfo,
   isOpeningCornerDragInfo,
+  isVertexReshapeDragInfo,
 } from '../../systems/cursor/GripDragStore';
 import { DynamicInputLockStore } from '../../systems/dynamic-input/DynamicInputLockStore';
 // ADR-513 §rotation-ring — single-slice «Γωνία» ring στο rotate-free (typed rotation angle).
@@ -150,6 +151,7 @@ export const DynamicInputSubscriber = React.memo(function DynamicInputSubscriber
   const activeDrag = useSyncExternalStore(subscribeActiveDragGrip, getActiveDragGrip, () => null);
   const lineEndpointDrag = isLineEndpointDragInfo(activeDrag);
   const openingCornerDrag = isOpeningCornerDragInfo(activeDrag);
+  const vertexReshapeDrag = isVertexReshapeDragInfo(activeDrag);
 
   // Wire keyboard pipeline: maps `dynamic-input-coordinate-submit` events back
   // to the canvas drawing pipeline (`onDrawingPoint`) — see ADR §4 G2.
@@ -174,6 +176,22 @@ export const DynamicInputSubscriber = React.memo(function DynamicInputSubscriber
         config={GRIP_LINEAR_RING_CONFIG}
         placementMode="canvas-click"
         startKey={`grip:${activeDrag.entityId}:${activeDrag.gripIndex}`}
+        sceneUnits={getSceneUnits()}
+        getCanvasEl={getCanvasEl}
+        onDeactivate={unlockGripEndpointLocks}
+      />
+    );
+  }
+
+  // ADR-513 §grip-parity-hotgrip — ΚΟΡΥΦΗ/ΠΛΕΥΡΑ ΠΟΛΥΓΡΑΜΜΗΣ ή ΑΚΡΟ ΤΟΞΟΥ (incl. projected ορθογώνιο)
+  // → ΤΟ ΙΔΙΟ Μήκος/Γωνία «Δαχτυλίδι Εντολών» (canvas-click), ίδιος μηχανισμός με το άκρο γραμμής: type +
+  // Enter → displacement (τραπέζιο / όλη η πλευρά) ή κλικ έξω = commit στον κέρσορα. Ίδιο `GRIP_LINEAR_RING_CONFIG`.
+  if (dynInput.on && !is3D && vertexReshapeDrag && activeDrag && getSceneUnits) {
+    return (
+      <RadialCommandRing
+        config={GRIP_LINEAR_RING_CONFIG}
+        placementMode="canvas-click"
+        startKey={`grip-reshape:${activeDrag.entityId}:${activeDrag.gripIndex}`}
         sceneUnits={getSceneUnits()}
         getCanvasEl={getCanvasEl}
         onDeactivate={unlockGripEndpointLocks}
