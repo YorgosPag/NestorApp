@@ -5,7 +5,8 @@
     "ariaToggle": "Toggle plan cut plane",
     "enable": "Enable plan cut plane",
     "disable": "Disable plan cut plane",
-    "unitMeters": "m"
+    "unitMeters": "m",
+    "activeBadge": "Cut active"
   },
   "axisCut": {
     "labelX": "Section X",

@@ -5,7 +5,8 @@
     "ariaToggle": "Εναλλαγή τομής κάτοψης",
     "enable": "Ενεργοποίηση τομής κάτοψης",
     "disable": "Απενεργοποίηση τομής κάτοψης",
-    "unitMeters": "m"
+    "unitMeters": "m",
+    "activeBadge": "Τομή ενεργή"
   },
   "axisCut": {
     "labelX": "Τομή Χ",

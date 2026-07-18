@@ -29,6 +29,13 @@ export interface SectionSliderShellProps {
   readonly readout: string;
   readonly label: string;
   /**
+   * Prominent «active» badge text (e.g. «Τομή ενεργή»). When supplied AND `active`,
+   * it REPLACES the muted `label` with a loud primary-coloured caption so the user
+   * can never miss that a cut is filtering the view (the whole reason a wall/column
+   * silently vanished). Absent → the normal label shows in both states.
+   */
+  readonly activeLabel?: string;
+  /**
    * Compact mode (ADR-455 X/Y cuts): omit the Radix slider and render only the
    * toggle + extra control + readout + label as a small fixed corner widget. The cut
    * position is driven by the on-canvas handle (`axis-cut-grip`), not a normalized track,
@@ -57,6 +64,7 @@ export const SectionSliderShell = React.memo(function SectionSliderShell({
   icon,
   readout,
   label,
+  activeLabel,
   compact = false,
   min,
   max,
@@ -82,18 +90,24 @@ export const SectionSliderShell = React.memo(function SectionSliderShell({
         onClick={onToggle}
         aria-label={toggleAriaLabel}
         aria-pressed={active}
-        // Like the ViewCube faces: the active (orange) state rests at ~60% and lifts to
-        // full opacity on hover. The inactive state keeps its own neutral hover.
+        // Active = LOUD (ADR-452 discoverability): a cut silently hides every structural
+        // BIM whose base sits above it, so the control must read unmistakably «on». Full
+        // opacity + a primary ring-halo (was a dimmed 60% ViewCube-face rest — too easy to
+        // miss, the whole reason a placed wall/column «vanished»). Inactive keeps neutral hover.
         className={`flex cursor-pointer select-none items-center justify-center rounded border p-1.5 shadow-md backdrop-blur-sm transition-all ${
           active
-            ? 'border-primary bg-primary text-primary-foreground opacity-60 hover:opacity-100'
+            ? 'border-primary bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2 ring-offset-background hover:brightness-110'
             : 'border-border bg-background/80 text-foreground hover:bg-accent hover:text-accent-foreground'
         }`}
       >
         {icon}
       </button>
       {extraControl}
-      <output className="rounded bg-background/80 px-1 py-0.5 text-[10px] font-semibold tabular-nums text-foreground shadow-sm backdrop-blur-sm">
+      <output
+        className={`rounded px-1 py-0.5 text-[10px] font-semibold tabular-nums shadow-sm backdrop-blur-sm ${
+          active ? 'bg-primary text-primary-foreground' : 'bg-background/80 text-foreground'
+        }`}
+      >
         {readout}
       </output>
       {!compact && value !== undefined && onValueChange && (
@@ -112,9 +126,18 @@ export const SectionSliderShell = React.memo(function SectionSliderShell({
           onValueChange={(v) => onValueChange(v[0])}
         />
       )}
-      <span className="select-none text-[9px] font-medium text-muted-foreground" aria-hidden="true">
-        {label}
-      </span>
+      {active && activeLabel ? (
+        <span
+          className="select-none rounded bg-primary px-1 py-0.5 text-center text-[9px] font-bold uppercase leading-tight tracking-wide text-primary-foreground shadow-sm"
+          aria-hidden="true"
+        >
+          {activeLabel}
+        </span>
+      ) : (
+        <span className="select-none text-[9px] font-medium text-muted-foreground" aria-hidden="true">
+          {label}
+        </span>
+      )}
     </aside>
   );
 });

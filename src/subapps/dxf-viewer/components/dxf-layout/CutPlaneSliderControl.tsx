@@ -72,6 +72,7 @@ export const CutPlaneSliderControl = React.memo(function CutPlaneSliderControl({
       icon={<CutPlaneIcon />}
       readout={`${meters}${t('cutPlane.unitMeters')}`}
       label={t('cutPlane.label')}
+      activeLabel={t('cutPlane.activeBadge')}
       min={range.minMm}
       max={range.maxMm}
       step={CUT_PLANE_STEP_MM}

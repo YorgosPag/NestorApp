@@ -126,6 +126,16 @@ side must render as a **GHOST** (semi-transparent), NOT be hidden (explicit choi
 
 ## 6. Changelog
 
+- **v1.1 (2026-07-19)** — **Έντονη ένδειξη «ΕΝΕΡΓΗ» στο `SectionSliderShell`** (discoverability, αίτημα
+  Giorgio). Αφορμή: χρήστης τοποθέτησε τοίχο+κολώνα και «εξαφανίστηκαν», ενώ έπιπλο+γραμμή φαίνονταν.
+  Αιτία (ADR-452): το cut-plane slider ήταν στο τέρμα κάτω (~-0.01m) → ο κανόνας `isHiddenByCutPlane`
+  κρύβει κάθε **δομικό** BIM με base πάνω από την τομή (`getEntityZExtents`: wall/column/beam/slab έχουν
+  z-extents· έπιπλο/raw DXF → `null` → ποτέ δεν κόβονται). Δεν ήταν bug — **αόρατη κατάσταση χωρίς
+  feedback**. Το active state του shell ήταν **dimmed 60%** (ViewCube-face rest) → περνούσε απαρατήρητο.
+  FIX (κοινό shell, SSoT για ΟΛΟΥΣ τους cut sliders — cut-plane + Χ/Ψ): active → **πλήρες opacity +
+  primary ring-halo** στο toggle, **πορτοκαλί readout pill**, και νέο optional `activeLabel` που
+  αντικαθιστά το muted label με loud primary caption (cut-plane περνά `cutPlane.activeBadge` = «Τομή
+  ενεργή» / «Cut active», el+en). Μηδέν hardcoded χρώμα (tokens). N.18 jscpd καθαρό. 🔴 browser-verify + commit.
 - **v1 (2026-06-14)** — initial implementation (slices: SSoT, 3D generalisation, 2D ghost +
   section line, «L» UI, tests). ADR number is **455** (453/454 taken by the concurrent
   print-export work).
