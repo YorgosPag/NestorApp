@@ -22,6 +22,8 @@ import { paintDirectionArc } from '../../canvas-v2/preview-canvas/direction-arc-
 import { rotateSweepDegFromDirs } from '../grips/grip-projections';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { drawGhostEntity, GHOST_DEFAULTS } from '../../rendering/ghost';
+// ADR-049/040 — gold dashed rubber-band SSoT (shared with the ribbon Move + Rotation previews).
+import { drawRubberBandLine } from '../../canvas-v2/preview-canvas/rubber-band-paint';
 // ADR-575 §8 / ADR-640 — expand a transformed GROUP / BLOCK container into its member
 // primitives to ghost each (container-agnostic; each expander re-tags with the container id).
 import { expandGroupEntity } from '../../systems/group/group-expander';
