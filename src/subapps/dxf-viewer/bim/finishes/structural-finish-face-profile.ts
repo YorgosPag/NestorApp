@@ -198,20 +198,21 @@ function isPerpCorner(p: Vec2, selfDir: Vec2, ends: readonly FaceEnd[], tol: num
 
 /**
  * Ένα strip-άκρο (core P, mitered outer O) → scalar back-cap shift `{t, delta}` (scene units) ή `null`.
- * Miter ΜΟΝΟ όταν (α) το O προβάλλεται κατά τον άξονα **ΠΕΡΑ** από το t-span του **strip** (convex
- * junction — chamfer/uniform → όχι) ΚΑΙ (β) το P είναι γνήσια κάθετη γωνία ({@link isPerpCorner}).
- * Ίδιο gating με το πρώην `endWedge`/`collectMiterWedges` (strip-level → πιάνει ΚΑΙ τα χείλη ανοιγμάτων,
- * όχι μόνο τα group-ακρότατα), αλλά κρατά ΜΟΝΟ το scalar `delta = tO − tCore` (θετικό/αρνητικό).
+ * Miter όταν (α) το O έχει **αξονική μετατόπιση** ως προς το P (`tO ≠ tCore`) ΚΑΙ (β) το P είναι γνήσια
+ * κάθετη γωνία ({@link isPerpCorner}). Το `computeMiteredOuter` δίνει **και** convex (extend — outer
+ * προεξέχει, `delta` έξω, Φ7c) **και** concave/reflex (trim — outer τραβιέται μέσα, `delta` μέσα, Φ7d)
+ * mitered outer· το {@link applyMiterShift} είναι **sign-agnostic** (`x + deltaM`) → η ΙΔΙΑ διαδρομή
+ * κλείνει ΚΑΙ τις εξωτερικές ΚΑΙ τις **εσωτερικές** γωνίες. Επίπεδο/square/junction άκρο → `tO == tCore`
+ * (perp offset = μηδέν axial shift, ή core+outer extend μαζί) → κανένα miter. Perp-corner gate → ελεύθερο
+ * chamfer άκρο (κανένας κάθετος γείτονας) μένει square. Strip-level → πιάνει ΚΑΙ τα χείλη ανοιγμάτων.
  */
 function endShift(
-  core: Vec2, outer: Vec2, tLo: number, tHi: number, dir: Vec2, ends: readonly FaceEnd[], tol: number,
+  core: Vec2, outer: Vec2, dir: Vec2, ends: readonly FaceEnd[], tol: number,
 ): { t: number; delta: number } | null {
   const tCore = dot(core, dir);
   const tO = dot(outer, dir);
-  const beyondHi = tO > tHi + MITER_EXT_TOL && Math.abs(tCore - tHi) < MITER_EXT_TOL;
-  const beyondLo = tO < tLo - MITER_EXT_TOL && Math.abs(tCore - tLo) < MITER_EXT_TOL;
-  if (!beyondHi && !beyondLo) return null;
-  if (!isPerpCorner(core, dir, ends, tol)) return null;
+  if (Math.abs(tO - tCore) <= MITER_EXT_TOL) return null; // επίπεδο/square/junction → μηδέν axial shift
+  if (!isPerpCorner(core, dir, ends, tol)) return null;   // ελεύθερο chamfer άκρο → square
   return { t: tCore, delta: tO - tCore };
 }
 
@@ -219,9 +220,10 @@ function endShift(
 const SHIFT_DEDUP_M = 1e-6;
 
 /**
- * ADR-534 Φ7c — SSoT: όλα τα 45° miter back-cap shifts ανά group (σε **μέτρα**, τοπικό t από
- * `strips[0].aCore`). Σαρώνει **κάθε strip-άκρο** (όχι μόνο τα 2 group-ακρότατα): σε κάθε convex κάθετη
- * γωνία σπρώχνει το back-cap ώστε το outer να φτάσει την ήδη-υπολογισμένη mitered κορυφή (`aOuter/bOuter`
+ * ADR-534 Φ7c / ADR-449 Φ7d — SSoT: όλα τα 45° miter back-cap shifts ανά group (σε **μέτρα**, τοπικό t
+ * από `strips[0].aCore`). Σαρώνει **κάθε strip-άκρο** (όχι μόνο τα 2 group-ακρότατα): σε κάθε κάθετη
+ * γωνία (**convex → extend** Φ7c ΚΑΙ **concave/reflex → trim** Φ7d) μετατοπίζει το back-cap ώστε το outer
+ * να φτάσει την ήδη-υπολογισμένη mitered κορυφή (`aOuter/bOuter`
  * από `computeMiteredOuter`). Έτσι κλείνουν **ΚΑΙ** οι γωνίες κτιρίου (group-ακρότατα) **ΚΑΙ** τα χείλη
  * ανοιγμάτων (η πρόσοψη mitered-άρει το χείλος της τρύπας· η λαμπάδα mitered-άρει το άκρο της → οι δύο
  * μισές τρίγωνες γεμίζουν συμπληρωματικά, μηδέν overlap). Cross-group perp gate (collinear → square).
@@ -238,10 +240,8 @@ export function computeFaceMiterShifts(
     const tol = Math.max(2 * g.seg.thickness, 1); // scene units (mm): ανοχή ταύτισης γωνιακής κορυφής
     const byT = new Map<number, FaceMiterShift>();
     for (const s of g.strips) {
-      const tLo = Math.min(dot(s.aCore, g.dir), dot(s.bCore, g.dir));
-      const tHi = Math.max(dot(s.aCore, g.dir), dot(s.bCore, g.dir));
       for (const [core, outer] of [[s.aCore, s.aOuter], [s.bCore, s.bOuter]] as const) {
-        const sh = endShift(core, outer, tLo, tHi, g.dir, ends, tol);
+        const sh = endShift(core, outer, g.dir, ends, tol);
         if (!sh) continue;
         const tM = (sh.t - tOrigin) * sceneToM;
         const key = Math.round(tM / SHIFT_DEDUP_M);

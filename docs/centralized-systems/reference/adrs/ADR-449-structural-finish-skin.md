@@ -220,6 +220,35 @@ Deterministic IDs: `boq_bim_${id}` / `_finish_int` / `_finish_ext`. Hook στο 
 - ETICS-grade per-element exterior detection (πέρα από outer-ring proximity) = μετέπειτα slice.
 
 ## 6. Changelog
+- **2026-07-19 (Φ7d — 45° miter ΚΑΙ στις ΕΣΩΤΕΡΙΚΕΣ (concave/reflex) γωνίες σοβά)** — Giorgio C4D-report: οι
+  εσωτερικές γωνίες του σοβά **δεν έκαναν miter** — «X»/επικάλυψη στο wireframe. Διάγνωση: το OBJ γράφει το ΙΔΙΟ
+  mesh με το 3Δ preview (ο exporter δεν re-triangulate-άρει)· δεν φαινόταν στην εφαρμογή γιατί το shaded-with-edges
+  (ADR-375) δείχνει μόνο σκληρές ακμές, όχι τις διαγώνιες triangulation — το C4D wireframe τις αποκάλυψε. **Root:**
+  το Φ7c miter (back-cap shift) εφαρμοζόταν **ΜΟΝΟ σε convex** γωνίες — το gate του `endShift`
+  (`structural-finish-face-profile.ts`) δεχόταν shift μόνο όταν το mitered outer προεξείχε **ΠΕΡΑ** από το strip
+  (`beyondHi/beyondLo`). Στις concave γωνίες το `computeMiteredOuter` **ήδη** TRIM-άρει σωστά το outer προς τα μέσα
+  (reflex), αλλά το gate το απέρριπτε → 0 shift → οι δύο κάθετες λωρίδες επικαλύπτονταν. **Fix (μηδέν νέα γεωμετρία,
+  full reuse):** χαλάρωσε το gate σε «αξονική μετατόπιση outer (`tO ≠ tCore`) + γνήσια κάθετη γωνία
+  (`isPerpCorner`)» → δέχεται ΚΑΙ convex (extend, `delta` έξω) ΚΑΙ concave (trim, `delta` μέσα)· το `applyMiterShift`
+  ήταν ήδη sign-agnostic (`x + deltaM`). Επίπεδα/square/junction άκρα (`tO==tCore`) + ελεύθερα chamfer άκρα (μηδέν
+  perp γείτονας) μένουν square (μηδέν regression). Αφαιρέθηκαν τα πλέον αχρησιμοποίητα `tLo/tHi`. **Regression
+  LOCK** (C4D-verified από Giorgio 2026-07-19): concave tests στο `structural-finish-corner-overlap-diag.test.ts`
+  (outer corners ΚΑΙ των δύο όψεων **συγκλίνουν** στην κοινή concave κορυφή (75,−25) → μηδέν επικάλυψη «X»· core
+  μένει στη γωνία) + `structural-finish-face-profile.test.ts` (|delta|=25mm· πριν το fix=0). **Finish suite GREEN**.
+  ΕΚΤΟΣ ADR-040. | Opus
+- **2026-07-19 (§wall-column-flush — ΚΑΤΑΡΓΗΣΗ pull-back· ο τοίχος flush στην κολόνα)** — Ο 3Δ πυρήνας τοίχου
+  που «κουμπώνει» σε κολόνα έβγαινε **4mm κοντός** (2mm pull-back ανά άκρη, `wall-column-pullback-3d.ts` `#2/#C`)
+  → ορατό κενό στο 3D/OBJ (Giorgio browser-report, C4D «1.746 αντί 1.750»). **Root:** το pull-back ήταν workaround
+  για το z-fight «σοβάς στη στενή όψη», που όμως **λύθηκε στην ΠΗΓΗ** στις 2026-07-18 (§wall-plaster winding-fix
+  `reverseWindingNonIndexed` + merged silhouette Slice X3) → πλέον **περιττό**. **Fix (Giorgio-approved «Option iii-c
+  flush», 2026-07-19):** αφαιρέθηκε το pull-back module + test· η `wallToMesh` (`BimToThreeConverter.ts`) κρατά τον
+  τοίχο **ΑΚΡΙΒΩΣ flush** — μηδέν geometry change → 1750mm στο 3D/OBJ, watertight + per-element `matId` identity
+  (ADR-668/669) ακέραια, **#C διατηρείται** (ο τοίχος ακουμπά την παρειά, μηδέν geometry ΜΕΣΑ στην κολόνα). Ο
+  πυρήνας-cap (normal→κολόνα) είναι back-facing από την πλευρά θέασης → culled (`FrontSide`) → μηδέν coincident-face
+  z-fight ακόμη και flush· δίχτυ ασφαλείας για τυχόν residual coplanar tie = ADR-366 `material-depth-priority`
+  (η κολόνα νικά, offset 4 > wall-core 1). Απορρίφθηκαν iii-a (union → σπάει matId identity/export) & iii-b (drop
+  end-cap → σπάει watertight OBJ). NEW `wall-column-flush-3d.test.ts` (X-span=1.750m repro, GREEN). ⚠️ Browser-verify
+  ότι το z-fight ΔΕΝ επιστρέφει = εκκρεμεί από Giorgio. | Opus
 - **2026-07-18 (§wall-plaster — 3D z-fight σοβά↔τοίχου· ΑΝΑΚΛΑΣΗ winding)** — Giorgio browser-report (3D): ο σοβάς σε
   τοίχο εμφάνιζε «ανακατεμένα χρώματα» (κόκκινο μπρίκι `0xb05030` ↔ γκρι σοβάς `0xe8e0d0`, hatch-like, άλλαζε στο orbit),
   αν και τοποθετημένος σωστά ως ενιαίο δέρμα χωρίς γεωμετρική επικάλυψη. Toggle: με σοβά OFF ο πυρήνας ήταν καθαρός

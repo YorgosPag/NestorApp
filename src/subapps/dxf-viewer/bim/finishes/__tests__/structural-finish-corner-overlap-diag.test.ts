@@ -43,7 +43,7 @@ function capCorner(p: FaceProfile, shiftIdx: number, face: 'core' | 'outer'): Pt
 const byAxis = (profiles: FaceProfile[], axis: 'x' | 'y'): FaceProfile =>
   profiles.find((p) => (axis === 'x' ? Math.abs(p.dir.x) : Math.abs(p.dir.y)) > 0.99)!;
 
-describe('ADR-534 Φ7c — ενσωματωμένα 45° miters (back-cap shift, μηδέν wedge)', () => {
+describe('ADR-534 Φ7c / ADR-449 Φ7d — ενσωματωμένα 45° miters (back-cap shift, convex + concave, μηδέν wedge)', () => {
   describe('γωνία κτιρίου (L: Ν x[0,100] + Α y[0,100], κοινή γωνία (100,0))', () => {
     const groups = () =>
       mergeSilhouetteBandsToStripGroups(
@@ -89,6 +89,42 @@ describe('ADR-534 Φ7c — ενσωματωμένα 45° miters (back-cap shift,
         SCENE_TO_M,
       );
       expect(profiles[0].miter).toHaveLength(0);
+    });
+  });
+
+  // ADR-449 Φ7d — REGRESSION LOCK: οι ΕΣΩΤΕΡΙΚΕΣ (concave/reflex) γωνίες πρέπει να μιτεράρουν όπως οι
+  // εξωτερικές. Πριν το Φ7d το gate ήταν convex-only → 0 shift → οι δύο λωρίδες επικαλύπτονταν = το «X»
+  // που ανέφερε ο Giorgio στο C4D (2026-07-19). Το lock ελέγχει ΤΗ ΣΥΓΚΛΙΣΗ των outer corners (μηδέν overlap).
+  describe('ΕΣΩΤΕΡΙΚΗ γωνία — Φ7d (reflex L: Ν x[0,100] + όψη y[0,−100] στο x=100, κοινή γωνία (100,0))', () => {
+    // Δεξιά στροφή → concave: το mitered outer TRIM-άρεται προς τα μέσα (κοινή κορυφή (75,−25)), όχι extend.
+    const groups = () =>
+      mergeSilhouetteBandsToStripGroups(
+        [mkBand([mkSeg({ x: 0, y: 0 }, { x: 100, y: 0 }), mkSeg({ x: 100, y: 0 }, { x: 100, y: -100 })], 0, 3000)],
+        'mm',
+      );
+
+    it('κάθε όψη έχει ΕΝΑ miter — η εσωτερική γωνία ΜΙΤΕΡΑΡΕΙ πλέον (πριν το Φ7d: 0 → επικάλυψη)', () => {
+      const profiles = buildFaceProfiles(groups(), SCENE_TO_M);
+      expect(profiles).toHaveLength(2);
+      for (const p of profiles) expect(p.miter).toHaveLength(1);
+    });
+
+    it('LOCK: το outer corner ΚΑΙ των δύο όψεων φτάνει την ΚΟΙΝΗ concave κορυφή (75,−25) → μηδέν επικάλυψη «X»', () => {
+      const profiles = buildFaceProfiles(groups(), SCENE_TO_M);
+      for (const p of profiles) {
+        const tip = capCorner(p, 0, 'outer');
+        expect(tip.x).toBeCloseTo(75, 6);
+        expect(tip.y).toBeCloseTo(-25, 6);
+      }
+    });
+
+    it('το front (core) corner ΜΕΝΕΙ στο (100,0) — μόνο το back-cap κινείται (προς τα μέσα)', () => {
+      const profiles = buildFaceProfiles(groups(), SCENE_TO_M);
+      for (const p of profiles) {
+        const core = capCorner(p, 0, 'core');
+        expect(core.x).toBeCloseTo(100, 6);
+        expect(core.y).toBeCloseTo(0, 6);
+      }
     });
   });
 

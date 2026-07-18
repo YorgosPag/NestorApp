@@ -23,12 +23,7 @@ import { computeWallOpeningPieces, type WallTopLocalFn, type WallBaseLocalFn, ty
 import { buildSlopedWallPieceGeometry, buildWallLoftBandGeometry } from './wall-piece-geometry';
 import { buildColumnPrismGeometry } from './column-piece-geometry';
 import { isMultiLayerWall, splitPieceByLayers } from './wall-layer-geometry';
-import {
-  pullBackStraightWallEndsFromColumns,
-  WALL_COLUMN_PULLBACK_MM,
-  WALL_COLUMN_BUTT_TOL_MM,
-} from './wall-column-pullback-3d';
-import { mmToSceneUnits, sceneUnitsToMeters } from '../../utils/scene-units';
+import { sceneUnitsToMeters } from '../../utils/scene-units';
 import { buildMultiLayerSolidWall } from './wall-multilayer-solid-3d';
 import { ensureWorldUvs } from './bim-uv-helpers';
 // ADR-470 — core (σώμα τοίχου) component gate (single-solid path).
@@ -357,34 +352,17 @@ export function wallToMesh(
   // is the override; without a storey context `nominalHeightMm` === it → no-op.
   const heightMm = (nominalHeightMm !== undefined && Math.abs(nominalHeightMm - wall.params.height) > 1e-6)
     ? nominalHeightMm : undefined;
-  // ADR-449 #2/#C — υποχώρησε άκρη ίσιου τοίχου που κουμπώνει σε κολόνα ΜΑΚΡΙΑ της κατά
-  // τον άξονα (3Δ-only, σπάει το coincident end-cap → τέλος z-fight· #C: μηδέν geometry
-  // μέσα στην κολόνα → δεν διαρρέει στο cut-plane fast-path). `null` όταν καμία άκρη δεν
-  // κουμπώνει → renderWall ≡ wall (byte-for-byte). 2Δ/BOQ/finish-obstacle = αρχικό wall.
-  const pullBack = wall.kind === 'straight'
-    ? pullBackStraightWallEndsFromColumns(
-        wall.geometry, wall.params.start, wall.params.end, columns,
-        WALL_COLUMN_PULLBACK_MM * mmToSceneUnits(wall.params.sceneUnits ?? 'mm'),
-        WALL_COLUMN_BUTT_TOL_MM * mmToSceneUnits(wall.params.sceneUnits ?? 'mm'),
-      )
-    : null;
-  const renderWall = (heightMm !== undefined || pullBack)
-    ? {
-        ...wall,
-        params: {
-          ...wall.params,
-          ...(heightMm !== undefined ? { height: heightMm } : {}),
-          ...(pullBack ? { start: pullBack.start, end: pullBack.end } : {}),
-        },
-        geometry: pullBack
-          ? {
-              ...wall.geometry,
-              outerEdge: { ...wall.geometry.outerEdge, points: pullBack.outer },
-              innerEdge: { ...wall.geometry.innerEdge, points: pullBack.inner },
-              axisPolyline: { ...wall.geometry.axisPolyline, points: pullBack.axis },
-            }
-          : wall.geometry,
-      }
+  // ADR-449 #2/#C (2026-07-19 — FLUSH join) — ο τοίχος μένει ΑΚΡΙΒΩΣ flush στην παρειά της
+  // κολόνας: ΜΗΔΕΝ pull-back → μηδέν κενό στο 3D/OBJ (πρώην 2mm ανά άκρη κόντυνε τον πυρήνα 4mm →
+  // 1746 αντί 1750, ορατό στο C4D). Το z-fight «σοβάς στη στενή όψη» λύθηκε στην ΠΗΓΗ (§wall-plaster
+  // winding-fix: reverseWindingNonIndexed + merged silhouette Slice X3), οπότε το pull-back workaround
+  // καταργήθηκε. Ο πυρήνας-cap του τοίχου (normal προς την κολόνα) είναι εξ ορισμού back-facing από
+  // την πλευρά θέασης → culled (FrontSide) → μηδέν coincident-face z-fight ακόμη και flush. #C
+  // διατηρείται (μηδέν geometry ΜΕΣΑ στην κολόνα — ο τοίχος απλώς ακουμπά την παρειά). Δίχτυ ασφαλείας
+  // για τυχόν υπόλειμμα coplanar tie = ADR-366 material-depth-priority (η κολόνα νικά). renderWall
+  // διαφέρει από wall ΜΟΝΟ όταν το storey-ceiling override αλλάζει το ύψος (ADR-448).
+  const renderWall = heightMm !== undefined
+    ? { ...wall, params: { ...wall.params, height: heightMm } }
     : wall;
   const coreLayer = wall.params.dna?.layers.find((l) => l.side === 'core');
   const matId = coreLayer?.materialId ?? CATEGORY_MAT_ID[wall.params.category] ?? 'mat-concrete';

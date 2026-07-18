@@ -55,6 +55,8 @@ interface DimensionConfig {
   readonly step: number;
   /** Stepper floor (meters). */
   readonly min: number;
+  /** Decimal places for display (length = 3 → ακρίβεια χιλιοστού· height/thickness = 2). */
+  readonly decimals: number;
   /** Editable only on straight walls (length depends on a single axis). */
   readonly straightOnly: boolean;
   read(wall: WallEntity): number | null;
@@ -67,6 +69,7 @@ const CONFIGS: Record<WallDimension, DimensionConfig> = {
     presets: [],
     step: 0.1,
     min: 0.1,
+    decimals: 3,
     straightOnly: true,
     read: (w) => w.geometry.length,
     commit: (p, m) => {
@@ -84,6 +87,7 @@ const CONFIGS: Record<WallDimension, DimensionConfig> = {
     presets: [2.4, 2.7, 3.0, 3.3, 3.6, 4.0],
     step: 0.1,
     min: 0.1,
+    decimals: 2,
     straightOnly: false,
     read: (w) => w.params.height / 1000,
     commit: (p, m) => setWallHeightMeters(p, m),
@@ -93,6 +97,7 @@ const CONFIGS: Record<WallDimension, DimensionConfig> = {
     presets: [0.1, 0.15, 0.2, 0.25, 0.3, 0.5],
     step: 0.05,
     min: 0.05,
+    decimals: 2,
     straightOnly: false,
     read: (w) => w.params.thickness / 1000,
     commit: (p, m) => setWallThicknessMeters(p, m),
@@ -102,9 +107,9 @@ const CONFIGS: Record<WallDimension, DimensionConfig> = {
 /** Debounce window for live commit while typing. */
 const COMMIT_DEBOUNCE_MS = DXF_TIMING.ui.COMMIT_DEBOUNCE; // ADR-516
 
-function toDraft(meters: number | null): string {
+function toDraft(meters: number | null, decimals: number): string {
   if (meters === null || !Number.isFinite(meters)) return '';
-  return meters.toFixed(2);
+  return meters.toFixed(decimals);
 }
 
 /** Parse a draft accepting both '.' and ',' as the decimal separator. */
@@ -135,7 +140,7 @@ export function RibbonWallDimensionWidget(
   const currentMeters = wall ? cfg.read(wall) : null;
   const editable = !!wall && (!cfg.straightOnly || wall.kind === 'straight');
 
-  const initialString = useMemo(() => toDraft(currentMeters), [currentMeters]);
+  const initialString = useMemo(() => toDraft(currentMeters, cfg.decimals), [currentMeters, cfg.decimals]);
   const [draft, setDraft] = useState<string>(initialString);
   const inputRef = useRef<HTMLInputElement>(null);
   const focusedRef = useRef<boolean>(false);
@@ -191,16 +196,16 @@ export function RibbonWallDimensionWidget(
     const parsed = parseMeters(draft);
     const base = Number.isNaN(parsed) ? (currentMeters ?? 0) : parsed;
     const nextVal = Math.max(cfg.min, Math.round((base + delta) * 100) / 100);
-    setDraft(nextVal.toFixed(2));
+    setDraft(nextVal.toFixed(cfg.decimals));
     clearCommitTimer();
     commitMeters(nextVal);
-  }, [draft, currentMeters, cfg.min, clearCommitTimer, commitMeters]);
+  }, [draft, currentMeters, cfg.min, cfg.decimals, clearCommitTimer, commitMeters]);
 
   const selectPreset = useCallback((meters: number) => {
-    setDraft(meters.toFixed(2));
+    setDraft(meters.toFixed(cfg.decimals));
     clearCommitTimer();
     commitMeters(meters);
-  }, [clearCommitTimer, commitMeters]);
+  }, [cfg.decimals, clearCommitTimer, commitMeters]);
 
   // ESC reverts draft + blurs (ADR-364 escape-bus SSoT — owns ESC while focused).
   useEscapeHandler({
@@ -246,7 +251,7 @@ export function RibbonWallDimensionWidget(
       <span className="dxf-ribbon-wall-length">
         <span className="dxf-ribbon-wall-length-label">{label}</span>
         <span className="dxf-ribbon-wall-length-value">
-          {currentMeters !== null ? `${currentMeters.toFixed(2)} ${unit}` : '—'}
+          {currentMeters !== null ? `${currentMeters.toFixed(cfg.decimals)} ${unit}` : '—'}
         </span>
       </span>
     );
@@ -287,7 +292,7 @@ export function RibbonWallDimensionWidget(
             <DropdownMenuContent align="end">
               {cfg.presets.map((preset) => (
                 <DropdownMenuItem key={preset} onSelect={() => selectPreset(preset)}>
-                  {`${preset.toFixed(2)} ${unit}`}
+                  {`${preset.toFixed(cfg.decimals)} ${unit}`}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
