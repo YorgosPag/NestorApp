@@ -41,6 +41,13 @@ The Firestore upsert/delete lifecycle every managed BOQ row shares — **detach 
 - **`deleteManagedBoqRow(id, logLabel, logContext?)`** — single-id detach-guarded delete. Adopted by `stair-boq-sync` (`deleteStairBoq`) + `BimToBoqBridge` (`deleteBoqItemForBim` cascade).
 - `BimToBoqBridge.upsertSingleEntry` deliberately keeps its **bespoke** lifecycle — its detach guard is action-scoped (`updated` only), a different contract. Its two internal prologue/tail clones were instead folded into local `resolveEntityAtoeMapping` + `upsertRowGroup` helpers.
 
+### `boq-row-write-queue.ts` — per-row write serialization (2026-07-18 follow-up)
+The managed-row lifecycle is **read-then-write** (`getDoc` → decide upsert / delete / drift). Concurrent changes to the **same row id** raced: the classic trigger is a **mass opening delete**, which fires N parallel `deleteOpeningFromGroup` (signature groups) + N `recomputeFloorplanHardwareBoq` (hardware) for the same ids at once. Symptoms:
+- **False console error** — two callers both read `exists() === true` → both `deleteDoc` → the loser deletes a now-missing doc, which the Firestore `boq_items` delete rule (`resource.data.status in [...]` on a `null` resource) surfaces as the misleading **`Missing or insufficient permissions`**. The row *was* deleted correctly; the second attempt just cried wolf.
+- **Silent wrong quantity** (worse) — on the upsert side two callers count members before the other's delete lands → a stale `estimatedQuantity` is persisted.
+
+Decision: **`createKeyedSerialQueue()`** + a module-singleton **`boqRowWriteQueue`** keyed by BOQ row id. `writeSignatureGroup` (opening signature-group rows) and `syncManagedBoqRow` / `deleteManagedBoqRow` (hardware / stair / envelope rows) route their read-modify-write through it, so no two writes to one row ever interleave. Distinct ids still run fully in parallel — no throughput regression. Belt-and-suspenders (N.7.2 #4): a shared **`deleteBoqRowIdempotent(ref, logLabel, logContext?)`** treats an already-missing row as success (`debug`, not `error`), so any residual/legacy race degrades to a no-op instead of a false alarm.
+
 ---
 
 ## Consequences
@@ -54,5 +61,6 @@ The Firestore upsert/delete lifecycle every managed BOQ row shares — **detach 
 ---
 
 ## Changelog
+- **2026-07-18** — Per-row write serialization landed: new `boq-row-write-queue.ts` (`createKeyedSerialQueue` + `boqRowWriteQueue` singleton) + `deleteBoqRowIdempotent` in `boq-firestore-sync.ts`. `writeSignatureGroup` (opening) and `syncManagedBoqRow` / `deleteManagedBoqRow` (hardware/stair/envelope) now serialize their read-modify-write per BOQ row id. Fixes the mass-delete race that spammed a false `Missing or insufficient permissions` on the `boq_bim_opening_sig_*` delete-when-empty path and could persist a wrong `estimatedQuantity` on the upsert path. New `boq-row-write-queue.test.ts` (5 tests: serialize-same-key / concurrent-distinct-keys / result-passthrough / rejection-isolation / mass-delete-race model). `bim/services` **23 suites / 341 tests** green; `jscpd:diff` clean on the 3 staged files.
 - **2026-07-10** — Created. Cluster #21. New `boq-base-row.ts` (`buildBoqBaseRow` + `buildSingleEntityBoqRow` + `BoqBaseRowContext`/`BoqSourceEntityType`); 6 BOQ writers migrated; ADR + adr-index + memory pointer. Firestore-sync SSoT noted as follow-up. Numbered ADR-634 (ADR-632 = stairwell-auto-opening, ADR-633 = multi-flight stair geometry — both concurrent).
 - **2026-07-10** — Firestore-sync follow-up landed: `boq-firestore-sync.ts` (`syncManagedBoqRow` + `deleteManagedBoqRow`) adopted by `stair`/`envelope`/bridge; `buildGroupParentBoqRow` (+ `BuiltBoqRow` moved to `boq-base-row`) for multi-layer/finish parents; bridge-local `resolveEntityAtoeMapping`/`upsertRowGroup`. 6 co-staged clones eliminated → `jscpd:diff` clean, 132 BOQ jest green, no skip.

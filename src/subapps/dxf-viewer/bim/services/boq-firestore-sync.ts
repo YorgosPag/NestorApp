@@ -33,6 +33,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { nowISO } from '@/lib/date-local';
 import { isFrozenBaselineStatus } from '@/types/boq/units';
 import { createModuleLogger } from '@/lib/telemetry';
+import { boqRowWriteQueue } from './boq-row-write-queue';
 
 const logger = createModuleLogger('BoqFirestoreSync');
 
@@ -41,6 +42,34 @@ type LogContext = Readonly<Record<string, unknown>>;
 
 function isDetached(data: Record<string, unknown> | undefined): boolean {
   return data?.detached === true;
+}
+
+/**
+ * Delete a BOQ row doc idempotently. Under the per-row write queue two writes to
+ * one id never interleave, so a delete should not race — but keep it
+ * belt-and-suspenders (N.7.2 #4): if the row is already gone (a concurrent path,
+ * or a stale retry), the goal is met → `debug`, not a false `error`. A genuine
+ * failure (permission / network on an existing row) still logs `error`.
+ *
+ * SSoT for the "delete a managed BOQ row and don't cry over an already-missing
+ * one" behaviour — shared by the zero-quantity cleanup here, `deleteManagedBoqRow`,
+ * and the signature-group delete-when-empty path in `opening-boq-sync`.
+ */
+export async function deleteBoqRowIdempotent(
+  ref: DocumentReference,
+  logLabel: string,
+  logContext?: LogContext,
+): Promise<void> {
+  try {
+    await deleteDoc(ref);
+  } catch (err) {
+    const alreadyGone = await getDoc(ref).then((s) => !s.exists()).catch(() => false);
+    if (alreadyGone) {
+      logger.debug(`${logLabel}: row already deleted (no-op)`, { rowId: ref.id, ...logContext });
+      return;
+    }
+    logger.error(`${logLabel}: delete failed`, { rowId: ref.id, ...logContext, err });
+  }
 }
 
 export interface SyncManagedBoqRowParams {
@@ -104,43 +133,44 @@ export async function recordBaselineDrift(
  */
 export async function syncManagedBoqRow(params: SyncManagedBoqRowParams): Promise<void> {
   const { id, quantity, buildPayload, logLabel, logContext } = params;
-  const ref = doc(db, COLLECTIONS.BOQ_ITEMS, id);
+  // Serialize the read-modify-write per row id — a concurrent recompute of the
+  // SAME row (e.g. a mass opening delete firing N recomputes at once) must not
+  // read stale membership and write a wrong quantity / double-delete (ADR-634).
+  return boqRowWriteQueue.run(id, async () => {
+    const ref = doc(db, COLLECTIONS.BOQ_ITEMS, id);
 
-  const snap = await getDoc(ref).catch(() => null);
-  if (snap === null) return;
+    const snap = await getDoc(ref).catch(() => null);
+    if (snap === null) return;
 
-  const data = snap.exists() ? (snap.data() as Record<string, unknown>) : undefined;
-  // Detach guard: a user-owned row is never auto-touched.
-  if (isDetached(data)) return;
+    const data = snap.exists() ? (snap.data() as Record<string, unknown>) : undefined;
+    // Detach guard: a user-owned row is never auto-touched.
+    if (isDetached(data)) return;
 
-  // ADR-674 — frozen-baseline guard: a row που έφυγε από draft/submitted
-  // (approved/certified/locked) είναι υπογεγραμμένο συμβατικό στιγμιότυπο. Ο
-  // auto-sync ΠΟΤΕ δεν αγγίζει `estimatedQuantity` ούτε το διαγράφει — μόνο
-  // καταγράφει την απόκλιση του live μοντέλου ως drift metadata (5D-BIM).
-  if (data && isFrozenBaselineStatus(data.status)) {
-    await recordBaselineDrift(ref, data, quantity, logLabel, logContext);
-    return;
-  }
-
-  if (quantity <= 0) {
-    if (snap.exists()) {
-      try {
-        await deleteDoc(ref);
-      } catch (err) {
-        logger.error(`${logLabel}: zero-quantity delete failed`, { rowId: id, ...logContext, err });
-      }
+    // ADR-674 — frozen-baseline guard: a row που έφυγε από draft/submitted
+    // (approved/certified/locked) είναι υπογεγραμμένο συμβατικό στιγμιότυπο. Ο
+    // auto-sync ΠΟΤΕ δεν αγγίζει `estimatedQuantity` ούτε το διαγράφει — μόνο
+    // καταγράφει την απόκλιση του live μοντέλου ως drift metadata (5D-BIM).
+    if (data && isFrozenBaselineStatus(data.status)) {
+      await recordBaselineDrift(ref, data, quantity, logLabel, logContext);
+      return;
     }
-    return;
-  }
 
-  const existingCreatedAt = (data?.createdAt as string | undefined) ?? null;
-  const payload = buildPayload(existingCreatedAt);
+    if (quantity <= 0) {
+      if (snap.exists()) {
+        await deleteBoqRowIdempotent(ref, logLabel, logContext);
+      }
+      return;
+    }
 
-  try {
-    await setDoc(ref, payload);
-  } catch (err) {
-    logger.error(`${logLabel}: upsert failed`, { rowId: id, ...logContext, err });
-  }
+    const existingCreatedAt = (data?.createdAt as string | undefined) ?? null;
+    const payload = buildPayload(existingCreatedAt);
+
+    try {
+      await setDoc(ref, payload);
+    } catch (err) {
+      logger.error(`${logLabel}: upsert failed`, { rowId: id, ...logContext, err });
+    }
+  });
 }
 
 /**
@@ -152,13 +182,17 @@ export async function deleteManagedBoqRow(
   logLabel: string,
   logContext?: LogContext,
 ): Promise<void> {
-  const ref = doc(db, COLLECTIONS.BOQ_ITEMS, id);
-  try {
-    const snap = await getDoc(ref);
+  return boqRowWriteQueue.run(id, async () => {
+    const ref = doc(db, COLLECTIONS.BOQ_ITEMS, id);
+    let snap;
+    try {
+      snap = await getDoc(ref);
+    } catch (err) {
+      logger.error(`${logLabel}: delete failed`, { rowId: id, ...logContext, err });
+      return;
+    }
     if (!snap.exists()) return;
     if (isDetached(snap.data() as Record<string, unknown>)) return;
-    await deleteDoc(ref);
-  } catch (err) {
-    logger.error(`${logLabel}: delete failed`, { rowId: id, ...logContext, err });
-  }
+    await deleteBoqRowIdempotent(ref, logLabel, logContext);
+  });
 }
