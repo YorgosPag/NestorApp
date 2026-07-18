@@ -49,6 +49,7 @@ import {
   isMepUnderfloorEntity,
   isMepSegmentEntity,
   isStairEntity,
+  isBlockEntity,
 } from '../../types/entities';
 import { getStairCharacteristicPoints } from '../stairs/stair-characteristic-points';
 import { getWallCornerWorldPoints } from '../walls/wall-corner-anchors';
@@ -58,6 +59,10 @@ import { getOpeningCornerWorldPoints } from '../walls/opening-corner-anchors';
 import { getColumnCornerWorldPoints } from '../columns/column-corner-anchors';
 import { computeColumnGeometry } from '../geometry/column-geometry';
 import { getFoundationGrips } from '../foundations/foundation-grips';
+// ADR-597 §block-snap (Giorgio 2026-07-18) — οι box-grips του block (4 γωνίες + 4 μέσα) γίνονται
+// snap targets μέσω του ΙΔΙΟΥ SSoT που τα ζωγραφίζει (pixel-perfect με τις ορατές λαβές).
+import { getBlockBoxGrips } from '../../systems/block/block-box-grips';
+import { computeBlockSelectionBounds } from '../../systems/block/block-selection-bounds';
 import { gripKindOf } from '../../hooks/grip-kinds';
 import { getCentredBoxGrips, type CentredBoxParams } from '../grips/centred-box-grips';
 import { polygon2DCentroid, polygon2DAreaCentroid, footprintEdgeMidpoints, projectVerticesTo2D } from '../geometry/shared/polygon-utils';
@@ -165,6 +170,9 @@ export function getBimCharacteristicPoints(entity: Entity): BimCharPoints {
   if (isStairEntity(entity)) return stairPoints(entity);
   if (isFoundationEntity(entity)) return foundationPoints(entity);
   if (isCentredBoxEntity(entity)) return centredBoxPoints(entity);
+  // ADR-597 §block-snap — το block (container) εκθέτει τις box-grips του (AABB των expanded
+  // members) ως snap targets, ΙΔΙΕΣ θέσεις με τις ορατές λαβές (`getBlockBoxGrips`).
+  if (isBlockEntity(entity)) return blockPoints(entity);
   const polygon = polygonFootprint(entity);
   if (polygon) return polygonPoints(entity, polygon);
   return EMPTY;
@@ -261,6 +269,22 @@ function centredBoxPoints(entity: Entity): BimCharPoints {
     return { corners: [], midpoints: [], center: { x: box.position.x, y: box.position.y }, labelRoot: null };
   }
   const corners = getCentredBoxGrips(box).filter((g) => g.role.startsWith('corner-')).map((g) => g.position);
+  return footprintPoints(corners, getBimCharacteristicLabelRoot(entity));
+}
+
+/**
+ * Block (container) — οι 4 γωνιακές box-grips του (AABB των expanded members) → corners →
+ * `footprintPoints` παράγει τα 4 μέσα ακμών + κέντρο. ΙΔΙΑ πηγή με τις ορατές λαβές
+ * (`getBlockBoxGrips`), ώστε τα snap markers να συμπίπτουν pixel-perfect. `labelRoot` πέφτει σε
+ * `null` (αυθαίρετο σχήμα block → snap glyph ΧΩΡΙΣ κείμενο, req #4) — μηδέν νέο i18n key.
+ */
+function blockPoints(entity: Entity): BimCharPoints {
+  if (!isBlockEntity(entity)) return EMPTY;
+  const bounds = computeBlockSelectionBounds(entity);
+  if (!bounds) return EMPTY;
+  const corners = getBlockBoxGrips(entity.id, bounds)
+    .filter((g) => g.type === 'corner')
+    .map((g) => g.position);
   return footprintPoints(corners, getBimCharacteristicLabelRoot(entity));
 }
 
