@@ -5,16 +5,24 @@
  * `app/ribbon-contextual-config.ts` όταν primary-selected entity έχει
  * `type === 'opening'`, OR active tool === 'opening').
  *
- * Panels (ADR-676 ΒΗΜΑ 2 layout — 8 panels, στοιβαγμένες σειρές + flyouts ώστε το
- * tab να μη ξεχειλίζει οριζόντια):
- *   Σήμανση        → mark· (flyout) reset-tag / renumber / schedule / IFC pset
- *   Τύπος          → kind · (row2) handing + openDirection
- *   Οικογένεια     → familyType · (row2) type-properties + hardware
- *   Διαστάσεις     → width + height · (row2) sill
- *   Κατώφλι        → toggle + embed · (row2) custom depth
- *   Διατομή Κάσας  → manufacturer / profile / faceWidth+depth · (flyout) save-as-mine
- *   Ετικέτα        → font/border · leader-style · (flyout) χρώματα + leader-visible
- *   Ενέργειες      → close + delete
+ * ─── LAYOUT (ADR-676 ΒΗΜΑ 2 UI, Giorgio 2026-07-18) ──────────────────────────
+ * ΚΑΝΟΝΑΣ: ΚΑΘΟΛΟΥ flyout/dropdown — όλα ορατά. Κάθε `row` με small buttons
+ * αποδίδεται από το CSS ως **ΚΑΘΕΤΗ στήλη** (`.dxf-ribbon-panel-row[data-row-size=
+ * "small"] { flex-direction: column }`), και πολλές rows = **στήλες δίπλα-δίπλα**.
+ * Άρα: κάθε panel = **ΜΙΑ row** (μία στήλη) με **έως 4 εντολές** τη μία κάτω από
+ * την άλλη· μόνο όταν οι εντολές είναι >4 μπαίνει 2η row (δεύτερη στήλη). Έτσι το
+ * tab δεν απλώνεται οριζόντια εκτός οθόνης.
+ *
+ * Panels (9):
+ *   Σήμανση        → mark · reset-tag · renumber · schedule            (1 στήλη ×4)
+ *   Τύπος          → kind · handing · openDirection                    (1 στήλη ×3)
+ *   Οικογένεια     → familyType · type-properties · hardware           (1 στήλη ×3)
+ *   Διαστάσεις     → width · height · sill                             (1 στήλη ×3)
+ *   Κατώφλι        → hasThreshold · embed · embed-mm                    (1 στήλη ×3)
+ *   Διατομή Κάσας  → manufacturer·profile·faceWidth·depth | save-mine   (2 στήλες 4+1)
+ *   Ετικέτα        → font·border·leader-style·leader-visible | χρώματα  (2 στήλες 4+2)
+ *   IFC            → pset                                               (1 στήλη ×1)
+ *   Ενέργειες      → close · delete                                     (1 στήλη ×2)
  *
  * Live behavior: bridge (`useRibbonOpeningBridge`) dispatches updates
  * σε κάθε combobox change. Auto-save 500ms debounce via `useOpeningPersistence`.
@@ -169,6 +177,8 @@ const FRAME_PROFILE_DEPTH_MM_OPTIONS = [
 ] as const;
 
 // ─── Tab definition ──────────────────────────────────────────────────────────
+// Κάθε panel έχει ΜΙΑ row (= μία κάθετη στήλη έως 4 εντολών)· τα panels με >4
+// εντολές παίρνουν 2η row (δεύτερη στήλη). ΚΑΜΙΑ flyout — όλα ορατά.
 
 export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
   id: 'opening-editor',
@@ -176,15 +186,10 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
   isContextual: true,
   contextualTrigger: OPENING_CONTEXTUAL_TRIGGER,
   badgeKey: OPENING_RIBBON_BADGE_KEYS.violations,
-  // ADR-676 ΒΗΜΑ 2 (UI) — αναδιάταξη ώστε το tab να μη ξεχειλίζει δεξιά: οι πλατιές
-  // μονές σειρές γίνονται στοιβαγμένες στήλες (μικρότερο πλάτος/panel) και οι σπάνιες
-  // ή appearance εντολές πάνε σε flyout rows (▼, μοτίβο Revit/AutoCAD panel-expander).
-  // Τα πρώην μικρά panels (renumber/schedule/ifc/resetTag) απορροφώνται ως flyout του
-  // «Σήμανση» panel → 11 panels → 8. Καμία εντολή δεν αφαιρέθηκε· μηδέν νέο i18n.
   panels: [
     {
-      // «Σήμανση & Πίνακας» — mark ορατό· reset-tag / renumber / schedule / IFC pset
-      // (σπάνιες) σε flyout ώστε να μη σπαταλούν 4 ξεχωριστά panel chromes.
+      // «Σήμανση»: mark + reset-tag + renumber + schedule → ΜΙΑ στήλη ×4
+      // (απορροφά τα πρώην μονο-εντολά panels «Επαναρίθμηση» & «Πίνακας»).
       id: 'opening-mark',
       labelKey: 'ribbon.panels.openingMark',
       rows: [
@@ -202,11 +207,6 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
                 options: [],
               },
             },
-          ],
-        },
-        {
-          isInFlyout: true,
-          buttons: [
             {
               type: 'simple',
               size: 'small',
@@ -229,11 +229,6 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
                 action: OPENING_RIBBON_KEYS_ACTIONS.renumber,
               },
             },
-          ],
-        },
-        {
-          isInFlyout: true,
-          buttons: [
             {
               type: 'simple',
               size: 'small',
@@ -245,23 +240,12 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
                 action: OPENING_RIBBON_KEYS_ACTIONS.exportSchedulePdf,
               },
             },
-            {
-              type: 'simple',
-              size: 'small',
-              command: {
-                id: 'opening.pset.open',
-                labelKey: 'ribbon.commands.psetEditor.open',
-                icon: 'ifc-pset',
-                commandKey: 'opening.pset.open',
-                action: PSET_RIBBON_ACTION,
-              },
-            },
           ],
         },
       ],
     },
     {
-      // Στοιβαγμένο: kind (πλατύ) στη 1η σειρά· handing + openDirection στη 2η.
+      // «Τύπος»: kind + handing + openDirection → ΜΙΑ στήλη ×3
       id: 'opening-kind',
       labelKey: 'ribbon.panels.openingKind',
       rows: [
@@ -279,11 +263,6 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
                 options: OPENING_KIND_OPTIONS,
               },
             },
-          ],
-        },
-        {
-          isInFlyout: false,
-          buttons: [
             {
               type: 'combobox',
               size: 'small',
@@ -291,7 +270,7 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
                 id: 'opening.handing',
                 labelKey: 'ribbon.commands.openingEditor.handing.section.title',
                 commandKey: OPENING_RIBBON_KEYS.stringParams.handing,
-                comboboxWidthPx: 100,
+                comboboxWidthPx: 140,
                 options: HANDING_OPTIONS,
               },
             },
@@ -302,7 +281,7 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
                 id: 'opening.openDirection',
                 labelKey: 'ribbon.commands.openingEditor.openDirection.section.title',
                 commandKey: OPENING_RIBBON_KEYS.stringParams.openDirection,
-                comboboxWidthPx: 110,
+                comboboxWidthPx: 140,
                 options: OPEN_DIRECTION_OPTIONS,
               },
             },
@@ -311,8 +290,8 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
       ],
     },
     {
-      // ADR-421 SLICE C — BIM Family Type. Στοιβαγμένο: selector 1η σειρά·
-      // type-properties + hardware override 2η.
+      // ADR-421 SLICE C — «Οικογένεια/Τύπος»: selector + type-properties +
+      // instance hardware override (ADR-674 Φ C) → ΜΙΑ στήλη ×3.
       id: 'opening-family-type',
       labelKey: 'ribbon.panels.openingFamilyType',
       rows: [
@@ -329,11 +308,6 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
                 commandKey: 'opening.familyType.select',
               },
             },
-          ],
-        },
-        {
-          isInFlyout: false,
-          buttons: [
             {
               type: 'widget',
               size: 'small',
@@ -345,7 +319,6 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
               },
             },
             {
-              // ADR-674 Φ C — INSTANCE-level hardware override («this door: 4 hinges»).
               type: 'widget',
               size: 'small',
               widgetId: 'opening-hardware',
@@ -360,7 +333,7 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
       ],
     },
     {
-      // Στοιβαγμένο: width + height 1η σειρά· sill 2η.
+      // «Διαστάσεις»: width + height + sill → ΜΙΑ στήλη ×3
       id: 'opening-size',
       labelKey: 'ribbon.panels.openingSize',
       rows: [
@@ -374,7 +347,7 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
                 id: 'opening.width',
                 labelKey: 'ribbon.commands.openingEditor.width',
                 commandKey: OPENING_RIBBON_KEYS.params.width,
-                comboboxWidthPx: 80,
+                comboboxWidthPx: 120,
                 options: WIDTH_MM_OPTIONS,
               },
             },
@@ -385,15 +358,10 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
                 id: 'opening.height',
                 labelKey: 'ribbon.commands.openingEditor.height',
                 commandKey: OPENING_RIBBON_KEYS.params.height,
-                comboboxWidthPx: 80,
+                comboboxWidthPx: 120,
                 options: HEIGHT_MM_OPTIONS,
               },
             },
-          ],
-        },
-        {
-          isInFlyout: false,
-          buttons: [
             {
               type: 'combobox',
               size: 'small',
@@ -401,7 +369,7 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
                 id: 'opening.sillHeight',
                 labelKey: 'ribbon.commands.openingEditor.sillHeight',
                 commandKey: OPENING_RIBBON_KEYS.params.sillHeight,
-                comboboxWidthPx: 80,
+                comboboxWidthPx: 120,
                 options: SILL_MM_OPTIONS,
               },
             },
@@ -410,7 +378,7 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
       ],
     },
     {
-      // ADR-673 — Κατώφλι. Στοιβαγμένο: toggle + embed 1η σειρά· custom depth 2η.
+      // ADR-673 — «Κατώφλι»: toggle + embed + custom-depth → ΜΙΑ στήλη ×3
       id: 'opening-threshold',
       labelKey: 'ribbon.panels.openingThreshold',
       rows: [
@@ -438,11 +406,6 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
                 options: THRESHOLD_EMBED_OPTIONS,
               },
             },
-          ],
-        },
-        {
-          isInFlyout: false,
-          buttons: [
             {
               type: 'combobox',
               size: 'small',
@@ -450,7 +413,7 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
                 id: 'opening.thresholdEmbedMm',
                 labelKey: 'ribbon.commands.openingEditor.thresholdEmbedMm',
                 commandKey: OPENING_RIBBON_KEYS.params.thresholdEmbedMm,
-                comboboxWidthPx: 80,
+                comboboxWidthPx: 150,
                 options: THRESHOLD_EMBED_MM_OPTIONS,
               },
             },
@@ -459,8 +422,8 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
       ],
     },
     {
-      // ADR-611/676 — Frame Profile (διατομή κάσας). Στοιβαγμένο σε στήλη ώστε το
-      // πλατύ «profile» select να μην απλώνει το panel· save/duplicate (σπάνιο) → flyout.
+      // ADR-611/676 — «Διατομή Κάσας»: στήλη1 ×4 (manufacturer·profile·faceWidth·
+      // depth) + στήλη2 ×1 (save-as-mine). Δύο στήλες γιατί οι εντολές είναι >4.
       id: 'opening-frame-profile',
       labelKey: 'ribbon.panels.openingFrameProfile',
       rows: [
@@ -474,7 +437,7 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
                 id: 'opening.frameProfile.manufacturer',
                 labelKey: 'ribbon.commands.openingEditor.frameProfile.manufacturer',
                 commandKey: OPENING_RIBBON_KEYS.frameProfile.manufacturer,
-                comboboxWidthPx: 110,
+                comboboxWidthPx: 150,
                 options: [],
               },
             },
@@ -485,15 +448,10 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
                 id: 'opening.frameProfile.profile',
                 labelKey: 'ribbon.commands.openingEditor.frameProfile.profile',
                 commandKey: OPENING_RIBBON_KEYS.frameProfile.profile,
-                comboboxWidthPx: 170,
+                comboboxWidthPx: 150,
                 options: [],
               },
             },
-          ],
-        },
-        {
-          isInFlyout: false,
-          buttons: [
             {
               type: 'combobox',
               size: 'small',
@@ -501,7 +459,7 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
                 id: 'opening.frameProfile.faceWidth',
                 labelKey: 'ribbon.commands.openingEditor.frameProfile.faceWidth',
                 commandKey: OPENING_RIBBON_KEYS.frameProfile.faceWidth,
-                comboboxWidthPx: 70,
+                comboboxWidthPx: 150,
                 options: FRAME_PROFILE_FACE_WIDTH_MM_OPTIONS,
               },
             },
@@ -512,7 +470,7 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
                 id: 'opening.frameProfile.depth',
                 labelKey: 'ribbon.commands.openingEditor.frameProfile.depth',
                 commandKey: OPENING_RIBBON_KEYS.frameProfile.depth,
-                comboboxWidthPx: 70,
+                comboboxWidthPx: 150,
                 options: FRAME_PROFILE_DEPTH_MM_OPTIONS,
               },
             },
@@ -520,8 +478,7 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
         },
         {
           // ADR-676 Phase 3 PILOT — «Αποθήκευση ως δικό μου» / «Αντιγραφή & επεξεργασία».
-          // Σπάνια ενέργεια → flyout.
-          isInFlyout: true,
+          isInFlyout: false,
           buttons: [
             {
               type: 'widget',
@@ -538,8 +495,8 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
       ],
     },
     {
-      // Ετικέτα (tag style). Ορατά: μέγεθος/περίγραμμα/οδηγός· τα appearance
-      // (χρώματα pill/leader + ορατότητα οδηγού) → flyout.
+      // «Ετικέτα»: στήλη1 ×4 (font·border·leader-style·leader-visible) + στήλη2 ×2
+      // (χρώμα pill·χρώμα οδηγού). Δύο στήλες γιατί οι εντολές είναι >4.
       id: 'opening-tag-style',
       labelKey: 'ribbon.panels.openingTagStyle',
       rows: [
@@ -553,7 +510,7 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
                 id: 'opening.tagStyle.fontSizePx',
                 labelKey: 'ribbon.commands.openingEditor.tagStyle.ribbon.fontSize',
                 commandKey: OPENING_TAG_STYLE_KEYS.fontSizePx,
-                comboboxWidthPx: 72,
+                comboboxWidthPx: 130,
                 options: FONT_SIZE_OPTIONS,
               },
             },
@@ -564,15 +521,10 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
                 id: 'opening.tagStyle.borderWidthPx',
                 labelKey: 'ribbon.commands.openingEditor.tagStyle.ribbon.borderWidth',
                 commandKey: OPENING_TAG_STYLE_KEYS.borderWidthPx,
-                comboboxWidthPx: 64,
+                comboboxWidthPx: 130,
                 options: BORDER_WIDTH_OPTIONS,
               },
             },
-          ],
-        },
-        {
-          isInFlyout: false,
-          buttons: [
             {
               type: 'combobox',
               size: 'small',
@@ -580,14 +532,24 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
                 id: 'opening.tagStyle.leaderStyle',
                 labelKey: 'ribbon.commands.openingEditor.tagStyle.ribbon.leaderStyleLabel',
                 commandKey: OPENING_TAG_STYLE_KEYS.leaderStyle,
-                comboboxWidthPx: 120,
+                comboboxWidthPx: 130,
                 options: LEADER_STYLE_OPTIONS,
+              },
+            },
+            {
+              type: 'toggle',
+              size: 'small',
+              command: {
+                id: 'opening.tagStyle.leaderVisible',
+                labelKey: 'ribbon.commands.openingEditor.tagStyle.ribbon.leaderVisibleLabel',
+                icon: 'bim-opening-leader-visible',
+                commandKey: OPENING_TAG_STYLE_KEYS.leaderVisible,
               },
             },
           ],
         },
         {
-          isInFlyout: true,
+          isInFlyout: false,
           buttons: [
             {
               type: 'widget',
@@ -609,14 +571,27 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
               },
               widgetId: 'opening-tag-leader-color',
             },
+          ],
+        },
+      ],
+    },
+    {
+      // «IFC»: property-set editor → ΜΙΑ στήλη ×1
+      id: 'opening-ifc',
+      labelKey: 'ribbon.panels.ifcProperties',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
             {
-              type: 'toggle',
+              type: 'simple',
               size: 'small',
               command: {
-                id: 'opening.tagStyle.leaderVisible',
-                labelKey: 'ribbon.commands.openingEditor.tagStyle.ribbon.leaderVisibleLabel',
-                icon: 'bim-opening-leader-visible',
-                commandKey: OPENING_TAG_STYLE_KEYS.leaderVisible,
+                id: 'opening.pset.open',
+                labelKey: 'ribbon.commands.psetEditor.open',
+                icon: 'ifc-pset',
+                commandKey: 'opening.pset.open',
+                action: PSET_RIBBON_ACTION,
               },
             },
           ],
@@ -624,6 +599,7 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
       ],
     },
     {
+      // «Ενέργειες»: close + delete → ΜΙΑ στήλη ×2
       id: 'opening-actions',
       labelKey: 'ribbon.panels.openingActions',
       rows: [
