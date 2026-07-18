@@ -63,6 +63,12 @@ export interface ActiveDragGripInfo {
    * «Δαχτυλίδι Εντολών» πλάτους (`isOpeningCornerDragInfo`), όπως το `gripIndex` για το άκρο γραμμής.
    */
   openingCorner?: boolean;
+  /**
+   * ADR-513 §grip-parity — arc/polyline vertex Ή straight edge-midpoint (incl. projected ορθογώνιο)
+   * σε click-move-click hot-grip (ΔΥΝ ON). Σηματοδοτεί στο `DynamicInputSubscriber` να mount-άρει το
+   * Μήκος/Γωνία «Δαχτυλίδι Εντολών» (`isVertexReshapeDragInfo`), όπως το `gripIndex` για το άκρο γραμμής.
+   */
+  vertexReshape?: boolean;
 }
 
 let activeDragGrip: ActiveDragGripInfo | null = null;
@@ -100,6 +106,15 @@ export function isLineEndpointDragInfo(info: ActiveDragGripInfo | null): boolean
  */
 export function isOpeningCornerDragInfo(info: ActiveDragGripInfo | null): boolean {
   return !!info && info.openingCorner === true;
+}
+
+/**
+ * ADR-513 §grip-parity — pure predicate: is `info` an arc/polyline vertex-or-edge reshape drag
+ * (click-move-click hot-grip)? Set ONLY στο vertex-reshape hot-grip enter, οπότε ταυτοποιεί μοναδικά
+ * το drag που δείχνει το Μήκος/Γωνία «Δαχτυλίδι Εντολών» (mirror `isLineEndpointDragInfo`).
+ */
+export function isVertexReshapeDragInfo(info: ActiveDragGripInfo | null): boolean {
+  return !!info && info.vertexReshape === true;
 }
 
 /** Write — called by useUnifiedGripInteraction when DXF grip drag starts */
