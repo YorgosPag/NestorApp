@@ -6,6 +6,7 @@
  */
 import { useState, useEffect } from 'react';
 import { EventBus } from '../../systems/events';
+import { CanvasNumericInputStore } from '../../systems/canvas-numeric-input/CanvasNumericInputStore';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import type { ToolType } from '../../ui/toolbar/types';
 import type { UseGuideStateReturn } from '../state/useGuideState';
@@ -42,8 +43,18 @@ export function useGuideWorkflowState({
   const [selectedGuideIds, setSelectedGuideIds] = useState<ReadonlySet<string>>(new Set());
 
   // ─── Tool reset effects ───
+  /**
+   * Αλλαγή εργαλείου με ενεργή χειρονομία «παράλληλου»: πριν το anchor ζούσε μόνο
+   * ως React state και η διαρροή ήταν αόρατη. Τώρα ζωγραφίζεται — άρα ο μη
+   * καθαρισμός θα άφηνε ΟΡΦΑΝΗ διακεκομμένη γραμμή στην οθόνη. Το gate διαβάζει
+   * τον STORE (όχι το React state) ώστε το `parallelRefGuideId` να μη μπει στα deps.
+   */
   useEffect(() => {
-    if (activeTool !== 'guide-parallel') setParallelRefGuideId(null);
+    if (activeTool === 'guide-parallel') return;
+    if (CanvasNumericInputStore.getAnchor() !== null) {
+      CanvasNumericInputStore.cancel(); // το onCancel μηδενίζει ήδη το parallelRefGuideId
+    }
+    setParallelRefGuideId(null);
   }, [activeTool]);
 
   useEffect(() => {

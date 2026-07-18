@@ -20,7 +20,7 @@ import type { ViewTransform } from '../../rendering/types/Types';
 import type { SceneModel } from '../../types/entities';
 import { dlog } from '../../debug';
 import type { Guide } from '../../systems/guides/guide-types';
-import { pointToSegmentDistance } from '../../systems/guides/guide-types';
+import { pointToSegmentDistance, projectPointOntoGuide } from '../../systems/guides/guide-types';
 import { clamp01 } from '../../utils/scalar-math';
 
 import type { UseCanvasClickHandlerParams } from './canvas-click-types';
@@ -207,6 +207,11 @@ function handleGuideDelete(ctx: GuideClickContext, p: UseCanvasClickHandlerParam
  * γύρω από τη γραμμή, οπότε το «πάνω/κάτω» του ίδιου του κλικ είναι θόρυβος
  * λίγων pixel. Η πλευρά προκύπτει από τη θέση του κέρσορα τη στιγμή του commit
  * (βλ. `useGuideWorkflowHandlers.handleParallelRefSelected`).
+ *
+ * Το σημείο του κλικ ΔΕΝ πετιέται πλέον ολόκληρο: η ΠΡΟΒΟΛΗ του πάνω στη γραμμή
+ * κρατιέται ως anchor της δυναμικής διακεκομμένης (ADR-189 §3.13). Χρησιμοποιεί
+ * το ίδιο `projectPointOntoGuide` με το crosshair hover-lock → το ＋ κάθεται
+ * ακριβώς εκεί που ήδη έδειχνε ο κλειδωμένος σταυρός, χωρίς άλμα.
  */
 function handleGuideParallel(ctx: GuideClickContext, p: UseCanvasClickHandlerParams): boolean {
   if (!p.guides || p.guides.length === 0) return true;
@@ -216,7 +221,7 @@ function handleGuideParallel(ctx: GuideClickContext, p: UseCanvasClickHandlerPar
   const result = findNearestGuide(ctx.worldPoint, p.guides, 30 / ctx.transform.scale);
   if (!result) return true;
 
-  p.onParallelRefSelected(result.guide.id);
+  p.onParallelRefSelected(result.guide.id, projectPointOntoGuide(result.guide, ctx.worldPoint));
   dlog('guideClickHandlers', 'Parallel step 0: reference selected', result.guide.id, result.guide.axis);
   return true;
 }

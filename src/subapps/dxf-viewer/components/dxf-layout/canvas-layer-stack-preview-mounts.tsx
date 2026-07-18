@@ -66,6 +66,7 @@ import {
   GripDragPreviewMount,
   WallSplitKnifePreviewMount,
   BeamBetweenMembersPreviewMount,
+  ParallelGuideAnchorPreviewMount,
   type RotationPreviewMountProps,
   type MovePreviewMountProps,
   type MirrorPreviewMountProps,
@@ -185,6 +186,14 @@ export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
           του anchor-μέλους προς το μέλος/κέρσορα. Store-driven anchor (self-subscribes). */}
       <BeamBetweenMembersPreviewMount
         levelManager={levelManager}
+        transform={transform}
+        getCanvas={getCanvas}
+        getViewportElement={getViewportElement}
+      />
+      {/* ADR-189 §3.13 — «Παράλληλος οδηγός»: κόκκινο ＋ στην προβολή του κλικ πάνω
+          στον οδηγό αναφοράς + χρυσή διακεκομμένη προς τον κέρσορα, με τους ΙΔΙΟΥΣ
+          painters του Move (ADR-049). Store-driven anchor (self-subscribes). */}
+      <ParallelGuideAnchorPreviewMount
         transform={transform}
         getCanvas={getCanvas}
         getViewportElement={getViewportElement}

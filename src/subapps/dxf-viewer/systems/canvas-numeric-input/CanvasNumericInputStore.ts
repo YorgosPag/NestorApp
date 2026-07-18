@@ -9,6 +9,8 @@
  * @see ADR-040: micro-leaf subscriber pattern
  * @see ADR-189: guide-parallel workflow (primary consumer)
  */
+import { useSyncExternalStore } from 'react';
+import type { Point2D } from '../../rendering/types/Types';
 import { DirectDistanceEntry } from '../../text-engine/interaction/DirectDistanceEntry';
 
 type Listener = () => void;
@@ -20,6 +22,12 @@ type SignResolver = () => 1 | -1;
 const _dde = new DirectDistanceEntry();
 let _signResolver: SignResolver = () => 1;
 let _refGuideId: string | null = null;
+/**
+ * Το σημείο ΠΑΝΩ στον οδηγό αναφοράς απ' όπου ξεκινά η δυναμική διακεκομμένη
+ * (ADR-189 §3.13). ΠΑΓΩΝΕΙ στο κλικ — σε αντίθεση με την ΠΛΕΥΡΑ, που παραμένει
+ * event-time (`_signResolver`). Low-frequency: αλλάζει 1× ανά χειρονομία.
+ */
+let _anchor: Point2D | null = null;
 let _onConfirm: ConfirmFn | null = null;
 let _onCancel: CancelFn | null = null;
 const _listeners = new Set<Listener>();
@@ -42,13 +50,43 @@ export const CanvasNumericInputStore = {
    * από το ΠΟΥ είναι ο κέρσορας τη στιγμή που ο χρήστης πατά Enter — όχι από το
    * πού έτυχε να πέσει το κλικ επιλογής της αναφοράς.
    */
-  activate(signResolver: SignResolver, refGuideId: string, onConfirm: ConfirmFn, onCancel?: CancelFn): void {
+  activate(
+    signResolver: SignResolver,
+    refGuideId: string,
+    anchor: Point2D,
+    onConfirm: ConfirmFn,
+    onCancel?: CancelFn,
+  ): void {
     _signResolver = signResolver;
     _refGuideId = refGuideId;
+    // Αντίγραφο: ο caller δεν πρέπει να μπορεί να μεταλλάξει το anchor εκ των υστέρων.
+    _anchor = { x: anchor.x, y: anchor.y };
     _onConfirm = onConfirm;
     _onCancel = onCancel ?? null;
     _dde.begin();
     _notify();
+  },
+
+  /**
+   * Το παγωμένο σημείο εκκίνησης της δυναμικής γραμμής. Επιστρέφει ΤΗΝ ΙΔΙΑ
+   * αναφορά μεταξύ ειδοποιήσεων — απαραίτητο για `useSyncExternalStore`
+   * (νέο literal σε κάθε κλήση ⇒ ατέρμονο re-render).
+   */
+  getAnchor(): Point2D | null {
+    return _anchor;
+  },
+
+  /**
+   * Η πληκτρολογημένη απόσταση ως αριθμός, ή `null` όσο ο buffer είναι κενός/μη
+   * έγκυρος. Το φάντασμα-οδηγός τη διαβάζει για να κουμπώσει στην τιμή που
+   * γράφει ο χρήστης αντί να ακολουθεί τον κέρσορα (WYSIWYG με το commit).
+   */
+  getPendingDistance(): number | null {
+    const buffer = _dde.snapshot().buffer;
+    if (!buffer) return null;
+    const value = parseFloat(buffer);
+    if (!Number.isFinite(value) || Math.abs(value) < 0.001) return null;
+    return Math.abs(value);
   },
 
   /** Accepts digit, '.', '-', or ',' (normalised to '.'). Returns true if consumed. */
@@ -76,6 +114,7 @@ export const CanvasNumericInputStore = {
     const sign = _signResolver();
     const cb = _onConfirm;
     _refGuideId = null;
+    _anchor = null;
     _onConfirm = null;
     _onCancel = null;
     _notify();
@@ -87,6 +126,7 @@ export const CanvasNumericInputStore = {
     const cb = _onCancel;
     _dde.reset();
     _refGuideId = null;
+    _anchor = null;
     _onConfirm = null;
     _onCancel = null;
     _notify();
@@ -98,3 +138,29 @@ export const CanvasNumericInputStore = {
     return () => _listeners.delete(listener);
   },
 } as const;
+
+// ── React hooks (ΜΟΝΟ για micro-leaves — ADR-040) ─────────────────────────────
+
+const _getNullAnchor = (): Point2D | null => null;
+const _getNullDistance = (): number | null => null;
+
+/**
+ * Το σημείο εκκίνησης της δυναμικής γραμμής, για το leaf που τη ζωγραφίζει.
+ * `null` ⇒ καμία ενεργή χειρονομία ⇒ το preview είναι σβηστό.
+ */
+export function useCanvasNumericAnchor(): Point2D | null {
+  return useSyncExternalStore(
+    CanvasNumericInputStore.subscribe,
+    CanvasNumericInputStore.getAnchor,
+    _getNullAnchor,
+  );
+}
+
+/** Η πληκτρολογημένη απόσταση, για το φάντασμα-οδηγό (WYSIWYG με το commit). */
+export function useCanvasNumericPendingDistance(): number | null {
+  return useSyncExternalStore(
+    CanvasNumericInputStore.subscribe,
+    CanvasNumericInputStore.getPendingDistance,
+    _getNullDistance,
+  );
+}

@@ -21,6 +21,8 @@ import { useWallSplitKnifePreview } from '../../hooks/tools/useWallSplitKnifePre
 import { useWallSplitFirstPoint } from '../../systems/wall-split/WallSplitStore';
 import { useBeamBetweenMembersPreview } from '../../hooks/tools/useBeamBetweenMembersPreview';
 import { useBeamBetweenAnchor } from '../../systems/beam-between-members/BeamBetweenMembersStore';
+import { useParallelGuideAnchorPreview } from '../../hooks/tools/useParallelGuideAnchorPreview';
+import { useCanvasNumericAnchor } from '../../systems/canvas-numeric-input/CanvasNumericInputStore';
 import type { MovePhase } from '../../hooks/tools/useMoveTool';
 import type { MirrorPhase } from '../../hooks/tools/useMirrorTool';
 import type { DxfGripDragPreview } from '../../hooks/grip-computation';
@@ -179,5 +181,25 @@ export const BeamBetweenMembersPreviewMount = React.memo(function BeamBetweenMem
 ) {
   const anchor = useBeamBetweenAnchor();
   useBeamBetweenMembersPreview({ ...props, anchor });
+  return null;
+});
+
+// ── Παράλληλος οδηγός: anchor ＋ δυναμική διακεκομμένη (ADR-189 §3.13) ─────────
+
+export interface ParallelGuideAnchorPreviewMountProps {
+  transform: ViewTransform;
+  getCanvas: () => HTMLCanvasElement | null;
+  getViewportElement: () => HTMLElement | null;
+}
+
+/**
+ * Store-driven: αυτο-εγγράφεται στο anchor (CanvasNumericInputStore) — ο orchestrator
+ * μένει inert (ADR-040). Χωρίς `levelManager`: το preview δεν διαβάζει καμία οντότητα.
+ */
+export const ParallelGuideAnchorPreviewMount = React.memo(function ParallelGuideAnchorPreviewMount(
+  props: ParallelGuideAnchorPreviewMountProps,
+) {
+  const anchor = useCanvasNumericAnchor();
+  useParallelGuideAnchorPreview({ ...props, anchor });
   return null;
 });

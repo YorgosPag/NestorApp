@@ -304,8 +304,12 @@ export interface UseCanvasClickHandlerParams {
    * Το κλικ κοντά σε οδηγό τον ορίζει ως αναφορά και ανοίγει την πληκτρολόγηση
    * απόστασης. Η πλευρά ΔΕΝ περνά από εδώ — προκύπτει από τη θέση του κέρσορα
    * τη στιγμή του Enter (βλ. `guide-parallel-side.ts`).
+   *
+   * `anchor` = η ΠΡΟΒΟΛΗ του κλικ πάνω στη γραμμή του οδηγού
+   * (`projectPointOntoGuide`) — το σημείο εκκίνησης της δυναμικής διακεκομμένης
+   * προς τον κέρσορα (ADR-189 §3.13). Παγώνει εδώ· η πλευρά όχι.
    */
-  onParallelRefSelected?: (refGuideId: string) => void;
+  onParallelRefSelected?: (refGuideId: string, anchor: Point2D) => void;
 
   // ── ADR-189 §3.3: Diagonal guide 3-click workflow ────────────────────
   guideAddDiagonalGuide?: (startPoint: Point2D, endPoint: Point2D) => CreateDiagonalGuideCommand;

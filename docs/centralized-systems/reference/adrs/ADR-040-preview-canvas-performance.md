@@ -72,6 +72,32 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-07-18 — ➕ ADR-189 §3.13: micro-leaf για τη δυναμική γραμμή του «Παράλληλου οδηγού»
+**Τι:** νέο store-driven micro-leaf `ParallelGuideAnchorPreviewMount`
+(`components/dxf-layout/canvas-layer-stack-tool-preview-mounts.tsx`) + `useParallelGuideAnchorPreview`
+(`hooks/tools/`), που ζωγραφίζει το ＋ στο anchor και τη χρυσή διακεκομμένη προς τον κέρσορα.
+**Τρίτη περίπτωση** του ήδη καθιερωμένου μοτίβου `WallSplitKnifePreviewMount` /
+`BeamBetweenMembersPreviewMount` — `React.memo` που επιστρέφει `null` και αυτο-εγγράφεται.
+
+**Συμμόρφωση ADR-040:**
+- **Κανένα νέο store.** Το anchor ζει στον `CanvasNumericInputStore`, που ήδη κατέχει τον κύκλο
+  ζωής αυτής της χειρονομίας (`_refGuideId`, `_signResolver`). Μηδέν νέος κάτοχος κατάστασης.
+- **Το μοναδικό `useSyncExternalStore` ζει ΜΕΣΑ στο leaf** (`useCanvasNumericAnchor`). Ο
+  `CanvasSection.tsx`, ο `CanvasLayerStack.tsx` και το `canvas-layer-stack-types.ts` **ΔΕΝ
+  αγγίχτηκαν** — μηδέν πεδία προστέθηκαν στο `PreviewCanvasMountsProps`. **CHECK 6C: καμία
+  επιφάνεια.**
+- **Σταθερότητα snapshot (κρίσιμο):** ο `addChar`/`backspace` καλεί `_notify()` σε **κάθε**
+  πάτημα πλήκτρου, αλλά ο `getAnchor()` επιστρέφει **την ίδια αναφορά** → `Object.is` ισχύει →
+  το leaf δεν ξανα-αποδίδει. Fresh literal εκεί = **ατέρμονος βρόχος**· κλειδωμένο σε test.
+- **Cursor/transform στα 60fps μένουν εντός `useCanvasGhostPreview`** (ADR-398 §4) — μηδέν νέος
+  RAF loop, μηδέν νέο high-frequency subscription στο leaf. Το leaf έχει **ένα** low-frequency
+  store hook και **μηδέν** canvas elements (ζωγραφίζει imperatively στο shared PreviewCanvas).
+- **Bitmap cache άθικτο** — τίποτα δεν μπαίνει στο `dxf-bitmap-cache.ts` ή στο κλειδί του
+  (Cardinal rule 3 δεν μπορεί να πυροδοτηθεί).
+- Το `useGuideWorkflowComputed` απέκτησε ένα **low-frequency** `useSyncExternalStore`
+  (`useCanvasNumericPendingDistance` — αλλάζει μόνο σε πάτημα πλήκτρου, όχι στα 60fps).
+  Το hook καλείται ήδη σε leaf (`CanvasLayerStack` υποδέντρο), όχι σε orchestrator.
+
 ### 2026-07-18 — ➕ ADR-652 M7: block wysiwyg ghost expand στο preview render
 **Τι:** ο `BimPreviewRenderer.render` (`canvas-v2/preview-canvas/bim-preview-render.ts`) — το ΕΝΑ σημείο
 όπου κάθε WYSIWYG ghost χτυπά τον `EntityRendererComposite` — απέκτησε branch για BlockEntity ghost. Ο

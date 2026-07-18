@@ -33,8 +33,11 @@ export function useGuideWorkflowHandlers(params: UseGuideWorkflowHandlersParams)
    * αποφασίζεται τη στιγμή του Enter, από το πού βρίσκεται τότε ο κέρσορας:
    * ο resolver διαβάζει event-time το `getRealtimeWorldCursor()` (ADR-040 κανόνας 2).
    * Έτσι ο χρήστης δείχνει την πλευρά κουνώντας το ποντίκι, όπως σε AutoCAD/Revit.
+   *
+   * Το `anchor` (προβολή του κλικ πάνω στον οδηγό) περνά στον store ως σημείο
+   * εκκίνησης της δυναμικής διακεκομμένης — ADR-189 §3.13.
    */
-  const handleParallelRefSelected = useCallback((refGuideId: string) => {
+  const handleParallelRefSelected = useCallback((refGuideId: string, anchor: Point2D) => {
     state.setParallelRefGuideId(refGuideId);
 
     CanvasNumericInputStore.activate(
@@ -45,6 +48,7 @@ export function useGuideWorkflowHandlers(params: UseGuideWorkflowHandlersParams)
         return resolveParallelSide(refGuide, cursor);
       },
       refGuideId,
+      anchor,
       (distance, s, id) => {
         guideState.addParallelGuide(id, distance * s);
         state.setParallelRefGuideId(null);

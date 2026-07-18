@@ -8,6 +8,10 @@ import { useMemo } from 'react';
 import { pointToSegmentDistance, GUIDE_HIT_TOLERANCE_PX } from '../../systems/guides/guide-types';
 import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
 import { useCursorWorldPosition } from '../../systems/cursor/useCursor';
+// ADR-189 §3.13 — WYSIWYG φάντασμα: όσο πληκτρολογείται απόσταση, το φάντασμα
+// κουμπώνει σε αυτήν αντί να ακολουθεί τον κέρσορα.
+import { useCanvasNumericPendingDistance } from '../../systems/canvas-numeric-input/CanvasNumericInputStore';
+import { resolveParallelGhostOffset, resolveParallelGhostDiagonal } from '../../systems/guides/guide-parallel-ghost';
 import type { ToolType } from '../../ui/toolbar/types';
 import type { UseGuideStateReturn } from '../state/useGuideState';
 import type { UseConstructionPointStateReturn } from '../state/useConstructionPointState';
@@ -30,6 +34,8 @@ interface UseGuideWorkflowComputedParams {
 export function useGuideWorkflowComputed(params: UseGuideWorkflowComputedParams) {
   const { activeTool, guideState, cpState, transform, state } = params;
   const mouseWorld = useCursorWorldPosition();
+  // Low-frequency: αλλάζει ΜΟΝΟ σε πάτημα πλήκτρου, όχι στα 60fps του κέρσορα.
+  const typedDistance = useCanvasNumericPendingDistance();
 
   // ─── Highlight computation ───
   const highlightedGuideId = useMemo<string | null>(() => {
@@ -96,7 +102,7 @@ export function useGuideWorkflowComputed(params: UseGuideWorkflowComputedParams)
     if (activeTool === 'guide-parallel' && state.parallelRefGuideId) {
       const refGuide = guideState.guides.find(g => g.id === state.parallelRefGuideId);
       if (refGuide && refGuide.axis !== 'XZ') {
-        return { axis: refGuide.axis, offset: refGuide.axis === 'X' ? mouseWorld.x : mouseWorld.y };
+        return { axis: refGuide.axis, offset: resolveParallelGhostOffset(refGuide, mouseWorld, typedDistance) };
       }
     }
     if (activeTool === 'guide-perpendicular' && state.perpRefGuideId) {
@@ -107,26 +113,16 @@ export function useGuideWorkflowComputed(params: UseGuideWorkflowComputedParams)
       }
     }
     return null;
-  }, [activeTool, mouseWorld, state.parallelRefGuideId, state.perpRefGuideId, guideState.guides]);
+  }, [activeTool, mouseWorld, typedDistance, state.parallelRefGuideId, state.perpRefGuideId, guideState.guides]);
 
   const ghostDiagonalGuide = useMemo(() => {
     if (!mouseWorld) return null;
 
     if (activeTool === 'guide-parallel' && state.parallelRefGuideId) {
       const refGuide = guideState.guides.find(g => g.id === state.parallelRefGuideId);
-      if (refGuide?.axis === 'XZ' && refGuide.startPoint && refGuide.endPoint) {
-        const dx = refGuide.endPoint.x - refGuide.startPoint.x;
-        const dy = refGuide.endPoint.y - refGuide.startPoint.y;
-        const len = Math.sqrt(dx * dx + dy * dy);
-        if (len > 0) {
-          const nx = -dy / len;
-          const ny = dx / len;
-          const perpDist = (mouseWorld.x - refGuide.startPoint.x) * nx + (mouseWorld.y - refGuide.startPoint.y) * ny;
-          return {
-            start: { x: refGuide.startPoint.x + nx * perpDist, y: refGuide.startPoint.y + ny * perpDist },
-            end: { x: refGuide.endPoint.x + nx * perpDist, y: refGuide.endPoint.y + ny * perpDist },
-          };
-        }
+      if (refGuide) {
+        const diagonal = resolveParallelGhostDiagonal(refGuide, mouseWorld, typedDistance);
+        if (diagonal) return diagonal;
       }
     }
 
@@ -149,7 +145,7 @@ export function useGuideWorkflowComputed(params: UseGuideWorkflowComputedParams)
     }
 
     return null;
-  }, [activeTool, mouseWorld, state.diagonalStep, state.diagonalStartPoint, state.diagonalDirectionPoint, state.parallelRefGuideId, guideState.guides]);
+  }, [activeTool, mouseWorld, typedDistance, state.diagonalStep, state.diagonalStartPoint, state.diagonalDirectionPoint, state.parallelRefGuideId, guideState.guides]);
 
   const ghostSegmentLine = useMemo(() => {
     if (!mouseWorld) return null;
