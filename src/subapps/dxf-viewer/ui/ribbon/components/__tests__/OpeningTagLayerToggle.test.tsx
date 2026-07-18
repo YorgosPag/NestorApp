@@ -15,7 +15,7 @@ import {
   isOpeningTagLayerVisible,
   setOpeningTagLayerVisible,
   __resetOpeningTagLayerForTests,
-} from '../../../systems/layers/opening-tag-layer';
+} from '../../../../systems/layers/opening-tag-layer';
 
 jest.mock('@/i18n/hooks/useTranslation', () => ({
   useTranslation: () => ({ t: (key: string) => key }),

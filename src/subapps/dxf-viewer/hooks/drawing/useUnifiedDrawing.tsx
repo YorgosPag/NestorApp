@@ -250,6 +250,10 @@ export function useUnifiedDrawing() {
     // ADR-514 Φ6c — foundation pad runs its own single-click FSM (mirror column), so `machineTool`
     // stays 'select'. Route it through the WYSIWYG preview path → live face-snapped pad ghost.
     const isFoundationPad = activeTool === 'foundation-pad';
+    // ADR-652 §M7 — block-library placement τρέχει δικό του single-click FSM (mirror column/
+    // foundation-pad): το `machineTool` μένει 'select'. Route μέσω του WYSIWYG preview path →
+    // ζωντανό block ghost + ενδείξεις τοποθέτησης (λευκά ίχνη + κυανές + ΜΗΚΟΣ/ΓΩΝΙΑ + ΤΟΞΟ ΦΟΡΑΣ).
+    const isBlockLibrary = activeTool === 'block-library';
     // ADR-363 Phase 1J — «Τοίχος πάνω σε οντότητα»: δικό του single-entity preview (γραμμή →
     // φάντασμα τοίχου, side = live cursor). Στυλίζεται ως 'wall' (WYSIWYG member ghost).
     const isWallOnEntity = activeTool === 'wall-on-entity';
@@ -264,8 +268,8 @@ export function useUnifiedDrawing() {
     // με slab/roof/hatch· τα vertices έρχονται από το `stairRegionPreviewStore` μέσω
     // `resolveBimToolTempPoints(activeTool)` — όχι από το currentTool).
     const isStairRegion = activeTool === 'stair-from-region';
-    const currentTool: DrawingTool = isStair ? 'stair' : (isWall || isWallOnEntity) ? 'wall' : isSlab ? 'slab' : isBeam ? 'beam' : isRoof ? 'roof' : isColumn ? 'column' : isFoundationPad ? 'foundation-pad' : isText ? 'text' : isMText ? 'mtext' : isStairRegion ? 'slab' : machineTool;
-    if (!isStair && !isWall && !isWallOnEntity && !isSlab && !isBeam && !isRoof && !isColumn && !isFoundationPad && !isText && !isMText && !isStairRegion && (!machineTool || machineTool === 'select')) return;
+    const currentTool: DrawingTool = isStair ? 'stair' : (isWall || isWallOnEntity) ? 'wall' : isSlab ? 'slab' : isBeam ? 'beam' : isRoof ? 'roof' : isColumn ? 'column' : isFoundationPad ? 'foundation-pad' : isBlockLibrary ? 'block-library' : isText ? 'text' : isMText ? 'mtext' : isStairRegion ? 'slab' : machineTool;
+    if (!isStair && !isWall && !isWallOnEntity && !isSlab && !isBeam && !isRoof && !isColumn && !isFoundationPad && !isBlockLibrary && !isText && !isMText && !isStairRegion && (!machineTool || machineTool === 'select')) return;
 
     // machineMoveCursor intentionally removed — it updated cursorPosition in machine context
     // (never read by any component) and notified React useSyncExternalStore subscribers on
@@ -281,7 +285,7 @@ export function useUnifiedDrawing() {
     // `$INSUNITS` propagated by dxf-scene-builder, falls back to bounds
     // heuristic for legacy / unitless scenes.
     const sceneUnitsForPreview = (() => {
-      if (!isStair && !isWall && !isWallOnEntity && !isSlab && !isBeam && !isRoof && !isColumn && !isFoundationPad && !isStairRegion) return 'mm' as const;
+      if (!isStair && !isWall && !isWallOnEntity && !isSlab && !isBeam && !isRoof && !isColumn && !isFoundationPad && !isBlockLibrary && !isStairRegion) return 'mm' as const;
       const levelId = currentLevelId;
       if (!levelId) return 'mm' as const;
       return resolveSceneUnits(getLevelScene(levelId));
