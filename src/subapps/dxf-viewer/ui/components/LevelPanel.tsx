@@ -19,7 +19,6 @@ import { OverlayProperties } from '../OverlayProperties';
 import { useGripContext } from '../../providers/GripProvider';
 import { SceneInfoSection } from './SceneInfoSection';
 import { LayersSection } from './LayersSection';
-import { AnnotationsSection } from './AnnotationsSection';
 import type { LevelPanelProps, EditingMode } from './level-panel-types';
 import { entityTypeToFloorplanType, buildDuplicateDestinations } from './level-panel-helpers';
 import type { SceneModel } from '../../types/scene';
@@ -380,10 +379,6 @@ export function LevelPanel({
           />
         </div>
       )}
-
-      <div className={PANEL_TOKENS.LEVEL_PANEL.SECTIONS_BORDER}>
-        <AnnotationsSection />
-      </div>
 
       {showOverlayPanel && (
         <div className={PANEL_TOKENS.LEVEL_PANEL.OVERLAY_SECTION}>
