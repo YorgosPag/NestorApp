@@ -264,10 +264,13 @@ export function runGripMouseDown(worldPos: Point2D, isShift: boolean, ctx: GripM
       }
       // ADR-513 §grip-parity-hotgrip — ΑΚΡΟ ΤΟΞΟΥ (grip 1/2) ή ΚΟΡΥΦΗ/ΚΕΝΤΡΙΚΗ ΛΑΒΗ ΠΛΕΥΡΑΣ πολυγραμμής
       // (incl. projected ορθογώνιο) → ΙΔΙΟΣ κορμός `beginEndpointStretchHotGrip` (op 'endpoint-stretch'):
-      // κόκκινη λαβή, ακολουθεί button-free, ring Μήκος/Γωνία, type+Enter (displacement — μία κορυφή →
-      // τραπέζιο, ή edge → όλη η πλευρά) ή κλικ καμβά = commit εκεί. `vertexReshape:true` →
-      // `isVertexReshapeDragInfo` mount-άρει το ring. Gate στη ΔΥΝ (mirror άκρου γραμμής· OFF → press-drag).
-      if (cadToggleState.isDynInputOn() && resolveVertexReshapeHotGrip(gripEntity, nearGrip)) {
+      // κόκκινη λαβή, ακολουθεί button-free, κλικ καμβά = commit εκεί (μία κορυφή → τραπέζιο, ή edge → όλη
+      // η πλευρά). Με ΔΥΝ ON εμφανίζεται επιπλέον το «Δαχτυλίδι Εντολών» Μήκος/Γωνία (type+Enter =
+      // displacement)· `vertexReshape:true` → `isVertexReshapeDragInfo` mount-άρει το ring. ΙΔΙΟ gating με
+      // το άκρο γραμμής: `!isShift` (Giorgio 2026-07-18 — big-player parity: κλικ σε λαβή reshape = HOT
+      // ΑΝΕΞΑΡΤΗΤΑ από τη ΔΥΝ· Shift+click → πέφτει στο press-drag → ΠΟΡΤΟΚΑΛΙ arm ADR-501). Χωρίς ring το
+      // click-move-click δουλεύει μέσω του `'stay'` guard (grab-click mouseup, `!movedSinceArm`).
+      if (!isShift && resolveVertexReshapeHotGrip(gripEntity, nearGrip)) {
         beginEndpointStretchHotGrip(nearGrip, ctx, {
           gripKind: gripKindOf(nearGrip, 'polyline') ?? null,
           vertexReshape: true,
