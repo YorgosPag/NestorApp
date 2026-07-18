@@ -45,7 +45,7 @@ import { GripHandoffStore } from '../../systems/grip/GripHandoffStore';
 import { getGlobalCommandHistory } from '../../core/commands/CommandHistory';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import i18next from 'i18next';
-import { setActiveDragGrip } from '../../systems/cursor/GripDragStore';
+import { setActiveDragGrip, type ActiveDragGripInfo } from '../../systems/cursor/GripDragStore';
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import type {
   SelectedGrip,
@@ -58,6 +58,10 @@ import { applyHotGripHint, seedRotateFreeStep } from './grip-hotgrip-actions';
 import { resolveCtrlEndpointRotateCopy } from './ctrl-endpoint-rotate-copy';
 // ADR-513 §grip-parity — plain-line endpoint → click-move-click hot-grip entry (Dynamic Input ON).
 import { resolveLineEndpointHotGrip } from './line-endpoint-hotgrip';
+// ADR-513 §grip-parity — arc/polyline vertex + straight edge-midpoint (incl. projected rectangle)
+// → same click-move-click hot-grip (Giorgio 2026-07-18 «όλες οι vertex λαβές»).
+import { resolveVertexReshapeHotGrip } from './vertex-reshape-hotgrip';
+import { resolveOpeningCornerHotGrip } from './opening-corner-hotgrip';
 import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
 import { CtrlKeyTracker } from '../../keyboard/CtrlKeyTracker';
 import { resolveRotateReferenceAnchor } from '../../bim/grips/rotate-reference-axis';
@@ -66,6 +70,34 @@ import type { GripMouseDownCtx } from './grip-mouse-handlers.types';
 // Ctx types live in `grip-mouse-handlers.types.ts` (file-size split). Re-export
 // for callers (useUnifiedGripInteraction).
 export type { GripMouseDownCtx, GripMouseUpCtx } from './grip-mouse-handlers.types';
+
+/**
+ * ADR-513 §grip-parity/§opening-width — SSoT για την είσοδο σε click-move-click hot-grip ΕΠΕΚΤΑΣΗΣ
+ * (op 'endpoint-stretch', anchor = η λαβή, terminal 'tracking'). Το ΑΚΡΟ ΓΡΑΜΜΗΣ και η ΛΑΒΗ ΠΑΡΕΙΑΣ
+ * κουφώματος μοιράζονται ΤΟΝ ΙΔΙΟ κορμό — διαφέρει μόνο ο `ActiveDragGripInfo` discriminator
+ * (`lineGripKind` vs `openingCorner`), που έρχεται μέσω `dragInfo`. Extract (N.18) ώστε τα δύο
+ * call-sites να μην είναι sibling clones. NO arm release: το canvas-click ring μπλοκάρει ΟΛΑ τα inside
+ * events (incl. το grab-click release) → enter tracking directly· το πρώτο moved click κάνει commit.
+ */
+function beginEndpointStretchHotGrip(
+  nearGrip: Parameters<typeof beginHotGripSession>[0],
+  ctx: Parameters<typeof beginHotGripSession>[1],
+  dragInfo: Partial<ActiveDragGripInfo>,
+): void {
+  beginHotGripSession(nearGrip, ctx, {
+    op: 'endpoint-stretch',
+    awaitingFirstRelease: false,
+    base: null,
+    anchor: nearGrip.position,
+    step: initialHotGripStep('endpoint-stretch'), // 'tracking' (terminal)
+  });
+  setActiveDragGrip({
+    entityId: nearGrip.entityId!,
+    gripIndex: nearGrip.gripIndex,
+    ...dragInfo,
+  });
+  GripSessionUndoStore.markSessionStart(getGlobalCommandHistory().size());
+}
 
 // ============================================================================
 // MOUSE DOWN
@@ -226,30 +258,36 @@ export function runGripMouseDown(worldPos: Point2D, isShift: boolean, ctx: GripM
       // 'tracking' = 2-click). With Dynamic Input OFF the endpoint keeps its press-drag path below
       // (zero regression). Runs AFTER the Ctrl-endpoint rotate-copy so Ctrl still wins; Alt (base-
       // point move) took priority.
+      // ADR-513 §grip-parity-hotgrip — ΑΚΡΟ ΓΡΑΜΜΗΣ (gripIndex 0/1, no lineGripKind) → κοινός κορμός
+      // μέσω `beginEndpointStretchHotGrip`· το `isLineEndpointDragInfo` γίνεται true → mount του ring.
       if (cadToggleState.isDynInputOn() && resolveLineEndpointHotGrip(gripEntity, nearGrip)) {
-        // Enter hot-grip via the SSoT. NO arm release: the canvas-click ring blocks ALL inside
-        // events (incl. the grab-click release) exactly like the wall, so there is no release to
-        // arm on — enter tracking directly (awaiting=false); the grab-click's own release resolves
-        // to 'stay' (moved=false), and the FIRST moved click (wedge Enter → synthetic canvas click,
-        // or a click outside the wheel) commits. Anchor = the grabbed endpoint (like a corner):
-        // the ghost + commit measure the stretch from here. Mirrors the wall (1st click = a point,
-        // no hot-grip arm).
-        beginHotGripSession(nearGrip, ctx, {
-          op: 'endpoint-stretch',
-          awaitingFirstRelease: false,
-          base: null,
-          anchor: nearGrip.position,
-          step: initialHotGripStep('endpoint-stretch'), // 'tracking' (terminal)
+        beginEndpointStretchHotGrip(nearGrip, ctx, { gripKind: null, lineGripKind: null });
+        return true;
+      }
+      // ADR-513 §grip-parity-hotgrip — ΑΚΡΟ ΤΟΞΟΥ (grip 1/2) ή ΚΟΡΥΦΗ/ΚΕΝΤΡΙΚΗ ΛΑΒΗ ΠΛΕΥΡΑΣ πολυγραμμής
+      // (incl. projected ορθογώνιο) → ΙΔΙΟΣ κορμός `beginEndpointStretchHotGrip` (op 'endpoint-stretch'):
+      // κόκκινη λαβή, ακολουθεί button-free, ring Μήκος/Γωνία, type+Enter (displacement — μία κορυφή →
+      // τραπέζιο, ή edge → όλη η πλευρά) ή κλικ καμβά = commit εκεί. `vertexReshape:true` →
+      // `isVertexReshapeDragInfo` mount-άρει το ring. Gate στη ΔΥΝ (mirror άκρου γραμμής· OFF → press-drag).
+      if (cadToggleState.isDynInputOn() && resolveVertexReshapeHotGrip(gripEntity, nearGrip)) {
+        beginEndpointStretchHotGrip(nearGrip, ctx, {
+          gripKind: gripKindOf(nearGrip, 'polyline') ?? null,
+          vertexReshape: true,
         });
-        // ADR-513 §grip-parity — expose the endpoint (gripIndex 0/1, no lineGripKind) so
-        // `isLineEndpointDragInfo` is true → `DynamicInputSubscriber` mounts the ring.
-        setActiveDragGrip({
-          entityId: nearGrip.entityId!,
-          gripKind: null,
-          gripIndex: nearGrip.gripIndex,
-          lineGripKind: null,
+        return true;
+      }
+      // ADR-513 §opening-width — ΛΑΒΗ ΠΑΡΕΙΑΣ ΚΟΥΦΩΜΑΤΟΣ → ΙΔΙΟΣ κορμός (click-move-click, op
+      // 'endpoint-stretch'): η παρειά ακολουθεί button-free, το length-only «Δαχτυλίδι Εντολών» (Μήκος)
+      // γίνεται κλικαριστό, terminal placement = canvas click (ή Enter → synthetic click → commit με το
+      // length lock). `openingCorner:true` → `isOpeningCornerDragInfo` mount-άρει το ring.
+      // ΣΗΜΕΙΩΣΗ (Giorgio 2026-07-18): **ΔΕΝ** gate-άρεται στη ΔΥΝ (σε αντίθεση με το άκρο γραμμής) — η
+      // προδιαγραφή είναι «κλικ στη λαβή → λάστιχο → πληκτρολόγηση/κλικ», χωρίς διακόπτη. Bespoke gate
+      // (kind + wall-hosted) — δεν μπαίνει στο HOT_GRIP_OP_REGISTRY.
+      if (resolveOpeningCornerHotGrip(gripEntity, nearGrip)) {
+        beginEndpointStretchHotGrip(nearGrip, ctx, {
+          gripKind: gripKindOf(nearGrip, 'opening') ?? null,
+          openingCorner: true,
         });
-        GripSessionUndoStore.markSessionStart(getGlobalCommandHistory().size());
         return true;
       }
     }
