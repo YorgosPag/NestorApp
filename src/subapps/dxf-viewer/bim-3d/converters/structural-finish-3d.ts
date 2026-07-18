@@ -237,13 +237,47 @@ function applyMiterShift(geo: THREE.BufferGeometry, shifts: readonly FaceMiterSh
   }
 }
 
+/**
+ * ADR-449 §wall-plaster (Giorgio 2026-07-18) — αντιστρέφει τη φορά (winding) ΟΛΩΝ των τριγώνων ενός
+ * **non-indexed** BufferGeometry (το `ExtrudeGeometry` είναι πάντα non-indexed): ανά τρίγωνο (3 διαδοχικές
+ * κορυφές) εναλλάσσει τη 2η↔3η κορυφή σε ΟΛΑ τα per-vertex attributes → CW↔CCW. Απαραίτητο μετά από
+ * reflection matrix (det<0): το `applyMatrix4` καθρεφτίζει τις θέσεις → η screen-space φορά κάθε τριγώνου
+ * αντιστρέφεται → το outward cap γίνεται back-facing. Το normal ήδη το διορθώνει το `applyMatrix4`
+ * (normalMatrix), οπότε μένει μόνο η φορά. Pure/in-place.
+ */
+function reverseWindingNonIndexed(geo: THREE.BufferGeometry): void {
+  for (const attr of Object.values(geo.attributes) as THREE.BufferAttribute[]) {
+    const n = attr.itemSize;
+    const a = attr.array as Float32Array;
+    for (let v = 0; v + 3 <= attr.count; v += 3) {
+      const o1 = (v + 1) * n;
+      const o2 = (v + 2) * n;
+      for (let k = 0; k < n; k++) {
+        const tmp = a[o1 + k];
+        a[o1 + k] = a[o2 + k];
+        a[o2 + k] = tmp;
+      }
+    }
+    attr.needsUpdate = true;
+  }
+}
+
 /** FaceProfile → ΕΝΑ welded BufferGeometry (extrude κατά πάχος + ενσωματωμένο miter + world placement). */
 function faceProfileGeometry(profile: FaceProfile, sceneToM: number, baseElevationM: number): THREE.BufferGeometry | null {
   const shapes = faceProfileShapes(profile);
   if (shapes.length === 0 || profile.thicknessM <= 0) return null;
   const geo = new THREE.ExtrudeGeometry(shapes, { depth: profile.thicknessM, bevelEnabled: false });
   applyMiterShift(geo, profile.miter, profile.thicknessM);
-  geo.applyMatrix4(faceProfileWorldMatrix(profile, sceneToM, baseElevationM));
+  const matrix = faceProfileWorldMatrix(profile, sceneToM, baseElevationM);
+  geo.applyMatrix4(matrix);
+  // ADR-449 §wall-plaster (Giorgio 2026-07-18) — το `faceProfileWorldMatrix` είναι ΑΝΑΚΛΑΣΗ (det<0) για
+  // τη μία από κάθε ζεύγος παράλληλων όψεων: det = −(dir×perp)· όταν `perp` = αριστερή κάθετος → det=−1.
+  // Το `applyMatrix4` σε mirror αντιστρέφει το winding των τριγώνων → το outward cap του σοβά γίνεται
+  // back-facing και ΚΟΒΕΤΑΙ (υλικά = `THREE.FrontSide`) → φαίνεται το inner cap (coplanar με τον πυρήνα)
+  // → z-fight (κόκκινο μπρίκι «τρυπάει» τον γκρι σοβά· η μία όψη έσπαγε, η αντικριστή όχι). Επαναφέρω τη
+  // σωστή φορά στο ανακλασμένο μισό ώστε το outward cap να μείνει front-facing (κρατά FrontSide +
+  // ADR-366 §B.5 perf). Πιάνει ΚΑΙ τις ίδιες όψεις σε κολόνα/δοκάρι που περνούν από αυτό το path.
+  if (matrix.determinant() < 0) reverseWindingNonIndexed(geo);
   return geo;
 }
 

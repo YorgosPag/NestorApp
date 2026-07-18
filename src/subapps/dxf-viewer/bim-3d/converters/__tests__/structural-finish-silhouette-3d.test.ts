@@ -121,4 +121,39 @@ describe('ADR-449/534 Φ7 — buildStructuralSilhouetteSkin (unified face weld)'
   it('κενά bands → null', () => {
     expect(buildStructuralSilhouetteSkin([], 'mm', 0)).toBeNull();
   });
+
+  it('ADR-449 §wall-plaster — ΚΑΘΕ όψη έχει outward-consistent winding (reflection matrix → όχι culled cap)', () => {
+    // Root του z-fight σοβά↔τοίχου (Giorgio 2026-07-18): ο `faceProfileWorldMatrix` είναι ΑΝΑΚΛΑΣΗ
+    // (det<0) για τη μία από κάθε ζεύγος αντικριστών όψεων → το `applyMatrix4` αναστρέφει το winding →
+    // το outward cap γίνεται back-facing → ΚΟΒΕΤΑΙ (FrontSide) → φαίνεται το inner cap (coplanar με τον
+    // πυρήνα) → z-fight. Ένα κλειστό ορθογώνιο δωματίου δίνει ΚΑΙ ΤΙΣ 4 φορές perp → σίγουρα ≥1 det<0.
+    // Invariant: για ΚΑΘΕ τρίγωνο το geometric normal (από το winding) συμφωνεί με το stored normal (dot>0).
+    const loop = [
+      mkSeg({ x: 0, y: 0 }, { x: 1000, y: 0 }),
+      mkSeg({ x: 1000, y: 0 }, { x: 1000, y: 1000 }),
+      mkSeg({ x: 1000, y: 1000 }, { x: 0, y: 1000 }),
+      mkSeg({ x: 0, y: 1000 }, { x: 0, y: 0 }),
+    ];
+    const skin = buildStructuralSilhouetteSkin([mkBand(loop, 0, 3000)], 'mm', 0)!;
+    expect(skin).not.toBeNull();
+    let triangles = 0;
+    for (const child of skin.children) {
+      const geo = (child as THREE.Mesh).geometry;
+      const pos = geo.getAttribute('position');
+      const nrm = geo.getAttribute('normal');
+      for (let i = 0; i + 3 <= pos.count; i += 3) {
+        const p0 = new THREE.Vector3().fromBufferAttribute(pos, i);
+        const p1 = new THREE.Vector3().fromBufferAttribute(pos, i + 1);
+        const p2 = new THREE.Vector3().fromBufferAttribute(pos, i + 2);
+        const geoN = new THREE.Vector3().subVectors(p1, p0).cross(new THREE.Vector3().subVectors(p2, p0));
+        if (geoN.lengthSq() < 1e-12) continue; // degenerate → skip
+        const storedN = new THREE.Vector3().fromBufferAttribute(nrm, i)
+          .add(new THREE.Vector3().fromBufferAttribute(nrm, i + 1))
+          .add(new THREE.Vector3().fromBufferAttribute(nrm, i + 2));
+        expect(geoN.dot(storedN)).toBeGreaterThan(0);
+        triangles++;
+      }
+    }
+    expect(triangles).toBeGreaterThan(0); // δίχτυ: όντως ελέγξαμε τρίγωνα
+  });
 });

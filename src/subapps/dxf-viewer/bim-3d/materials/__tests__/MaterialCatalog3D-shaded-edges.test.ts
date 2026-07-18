@@ -40,19 +40,3 @@ describe('MaterialCatalog3D — Shaded with Edges depth bias (polygonOffset)', (
     expect(mat.polygonOffsetUnits).toBeGreaterThan(0);
   });
 });
-
-describe('MaterialCatalog3D — §wall-plaster depth ordering (Giorgio 2026-07-18)', () => {
-  it('ο σοβάς νικά τον τοίχο-πυρήνα στο coplanar depth test (μικρότερο units)', () => {
-    // Ο τοίχος-πυρήνας παίρνει το DNA υλικό του (mat-brick/mat-concrete) — ΟΧΙ elem-wall key →
-    // default tier. Ο σοβάς (mat-plaster) πρέπει να έχει ΜΙΚΡΟΤΕΡΟ units ώστε να κερδίζει (κοντύτερα).
-    const plaster = getMaterial3D('mat-plaster-ext');
-    const brickCore = getMaterial3D('mat-brick-masonry');
-    const concreteCore = getMaterial3D('mat-concrete-c25');
-    expect(plaster.polygonOffsetUnits).toBeLessThan(brickCore.polygonOffsetUnits);
-    expect(plaster.polygonOffsetUnits).toBeLessThan(concreteCore.polygonOffsetUnits);
-  });
-
-  it('ο σοβάς μένει ΠΙΣΩ από τις ακμές (units > 0 → Shaded-with-Edges intact)', () => {
-    expect(getMaterial3D('mat-plaster-int').polygonOffsetUnits).toBeGreaterThan(0);
-  });
-});

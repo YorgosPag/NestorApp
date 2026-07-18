@@ -220,17 +220,21 @@ Deterministic IDs: `boq_bim_${id}` / `_finish_int` / `_finish_ext`. Hook στο 
 - ETICS-grade per-element exterior detection (πέρα από outer-ring proximity) = μετέπειτα slice.
 
 ## 6. Changelog
-- **2026-07-18 (§wall-plaster — 3D z-fight σοβά↔τοίχου)** — Giorgio browser-report (C4D-style 3D): ο σοβάς σε
-  τοίχο εμφανιζόταν με «ανακατεμένα χρώματα» (κόκκινο μπρίκι ↔ γκρι σοβάς που άλλαζαν στο orbit), αν και ο σοβάς
-  ήταν σωστά τοποθετημένος ως ενιαίο δέρμα χωρίς γεωμετρικές επικαλύψεις. **Root:** το per-category depth-priority
-  (`bim-3d/materials/material-depth-priority.ts`, ADR-366 §B.5) δίνει σε κάθε δομικό πυρήνα `elem-*` key με tier
-  2/3/4 (slab/beam/column) ώστε το finish (`mat-plaster`, default 1) να τα νικά στο coplanar depth test. Ο **τοίχος**
-  όμως ΔΕΝ έχει `elem-wall` key — ο πυρήνας του παίρνει το DNA υλικό του (`mat-brick-masonry`/`mat-concrete-*`) →
-  default tier **1** = ίδιο με τον σοβά → ισοπαλία βάθους → z-fighting. Επιβεβαιώθηκε στη βάση: `floorplan_walls` →
-  `dna.layers[core].materialId='mat-brick-masonry'` + `finish.enabled=true` (`mat-plaster-int/ext`). **Fix:** ο σοβάς
-  παίρνει δικό του finish tier `FINISH_SKIN_DEPTH_OFFSET_UNITS = 0.5` (< default 1 → νικά ΚΑΘΕ πυρήνα, incl. τον
-  material-keyed τοίχο· > 0 → μένει πίσω από τις ακμές, ADR-375 intact). Zero blast radius (αλλάζει μόνο το
-  `mat-plaster`). +2 regression tests στο `MaterialCatalog3D-shaded-edges.test.ts`. Μηδέν αλλαγή σε γεωμετρία/BOQ. | Opus
+- **2026-07-18 (§wall-plaster — 3D z-fight σοβά↔τοίχου· ΑΝΑΚΛΑΣΗ winding)** — Giorgio browser-report (3D): ο σοβάς σε
+  τοίχο εμφάνιζε «ανακατεμένα χρώματα» (κόκκινο μπρίκι `0xb05030` ↔ γκρι σοβάς `0xe8e0d0`, hatch-like, άλλαζε στο orbit),
+  αν και τοποθετημένος σωστά ως ενιαίο δέρμα χωρίς γεωμετρική επικάλυψη. Toggle: με σοβά OFF ο πυρήνας ήταν καθαρός
+  συμπαγής· με σοβά ON έμπαινε το κόκκινο. **Λάθος πρώτη διάγνωση (απορρίφθηκε):** depth-priority tie (`mat-plaster`
+  vs `mat-brick` και τα δύο tier 1) — δεν ήταν αυτό (hard refresh → επέμενε). **Πραγματικό root:** ο
+  `faceProfileWorldMatrix` (`bim-3d/converters/structural-finish-3d.ts`) είναι **ΑΝΑΚΛΑΣΗ** (det<0) για τη μία από
+  κάθε ζεύγος αντικριστών όψεων — `det = −(dir×perp)`· όταν `perp` = αριστερή κάθετος → det=−1. Το
+  `geo.applyMatrix4(mirror)` **αναστρέφει το winding** των τριγώνων → το outward cap του σοβά γίνεται back-facing
+  → **ΚΟΒΕΤΑΙ** (υλικά = `THREE.FrontSide`, `pbr-material-builder.ts:34`) → μένει ορατό το inner cap (coplanar με τον
+  πυρήνα) → z-fight. Γι' αυτό έσπαγε η μία όψη και η αντικριστή όχι, ΚΑΙ γιατί το depth fix ήταν άκυρο (η μπροστινή
+  όψη ήταν *culled*, όχι απλώς σε ισοπαλία). **Fix:** στο `faceProfileGeometry`, μετά το `applyMatrix4`, αν
+  `matrix.determinant() < 0` → `reverseWindingNonIndexed(geo)` (εναλλαγή 2ης↔3ης κορυφής ανά τρίγωνο σε όλα τα
+  attributes) → το outward cap ξαναγίνεται front-facing, κρατώντας `FrontSide` + ADR-366 §B.5 perf. Πιάνει ΚΑΙ τις
+  ίδιες όψεις σε κολόνα/δοκάρι/silhouette που περνούν από αυτό το path. +1 regression test (winding-vs-normal invariant,
+  επαληθευμένο ότι αποτυγχάνει χωρίς το fix) στο `structural-finish-silhouette-3d.test.ts`. Μηδέν αλλαγή σε BOQ/depth. | Opus
 - **2026-07-18 (Φ7c — ΓΝΗΣΙΟ 45° miter ΕΝΣΩΜΑΤΩΜΕΝΟ στο welded mesh + openings· πλήρες entry → ADR-534 §6 Φ7c)** —
   Τα Φ7b wedges (ξεχωριστά τριγωνικά prisms) έδιναν coincident face με το square end-cap του body → artifacts (Giorgio).
   FIX (Giorgio: γνήσιο miter, ΟΧΙ hack): αφαιρέθηκε το wedge machinery· NEW `computeFaceMiterShifts` (pure) → **strip-level**
