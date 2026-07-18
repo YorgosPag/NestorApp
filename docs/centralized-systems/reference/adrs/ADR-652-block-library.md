@@ -415,6 +415,66 @@ patch**, άρα το boolean `uniform` συνυπάρχει με τα numeric ov
 - i18n `dxf-viewer-shell` (el+en): `ribbon.commands.blockLibraryEditor.{scaleX,scaleY,uniform}`
   (αντικατέστησαν το `.scale`).
 
+## Απόφαση (M7) — 2-click place→rotate + WYSIWYG ghost parity με κολώνα/πέδιλο
+
+Μέχρι το M6 το block tool ήταν **1-click free-point** (καμία γωνία στο ίδιο το κλικ — μόνο το
+ribbon tab όριζε rotation *πριν* το κλικ, M1.5). Το M7 προσθέτει το **2ο κλικ ορίζει γωνία** idiom
+που ήδη έχουν column/foundation (ADR-514 Φ6d/ADR-508): 1ο κλικ κλειδώνει θέση, 2ο κλικ ορίζει τη
+γωνία τοποθέτησης δείχνοντας προς τον κέρσορα.
+
+### SSoT reuse (grep, όχι μνήμη) — ΜΗΔΕΝ νέος μηχανισμός
+Η προφανής υλοποίηση θα ήταν να αντιγραφεί το `awaitingRotation` handling του `useColumnTool`/
+`useFoundationTool` μέσα στο block tool (sibling clone, ακριβώς το λάθος του N.18). Αντ' αυτού:
+- **`create-single-click-placement-tool.ts` (ADR-600 πυρήνας)** — έγινε ο φορέας: νέο optional
+  `config.placeThenRotate: { anchor?, withRotation(overrides, deg) }`. Απόν ⇒ μηδέν αλλαγή στους
+  υπόλοιπους 8 καταναλωτές (furniture/mep-*/electrical-panel/floorplan-symbol) — classic 1-click
+  FSM αμετάβλητο. Παρόν ⇒ το `onCanvasClick` διακλαδίζεται: 1ο κλικ → `setPlacementRotationLock`
+  (**ΚΟΙΝΟ** store με κολώνα/πέδιλο, `PlacementRotationStore`) + `phase:'awaitingRotation'`· 2ο κλικ
+  → `resolveColumnRotationDeg(lock.origin, point, wpp)` (ΙΔΙΟΣ SSoT υπολογισμός γωνίας) →
+  `config.placeThenRotate.withRotation(overrides, deg)` → commit στο **κλειδωμένο** origin (όχι στο
+  2ο click point — mirror column/foundation).
+- **Το τόξο φοράς + η πορτοκαλί γραμμή έρχονται ΔΩΡΕΑΝ**: τα ζωγραφίζει το tool-agnostic
+  `drawing-hover-overlays.ts` πάνω στο ΙΔΙΟ `PlacementRotationStore` lock — το block tool δεν
+  προσθέτει ΚΑΝΕΝΑ δικό του overlay.
+- **`useBlockLibraryTool.ts`** — μόνο το thin config: `placeThenRotate: { withRotation: (o, deg) =>
+  ({ ...o, rotation: deg }) }` + `getStatusText` branch (`awaitingRotation` →
+  `tools.blockLibrary.statusRotation`, mirror `tools.foundation.statusRotation`).
+- **`place-block-from-library.ts` — `buildBlockPlacementParams(cursor, overrides, sceneUnits)`**
+  εξήχθη ως ο **ΚΟΙΝΟΣ** mapper cursor+overrides→`BlockPlacementParams`: τον καλεί ΚΑΙ το commit
+  path (`useBlockLibraryTool.buildParams`) ΚΑΙ το ghost path (`generateBlockLibraryPreview`) — πριν
+  το M7 το mapping ήταν inline και διπλό, τώρα preview ≡ commit από ΕΝΑ σημείο (N.18).
+- **`block-preview-helpers.ts` (νέο)** — WYSIWYG ghost mirror του column/foundation preview: στο
+  `awaitingRotation` (`getPlacementRotationLock()` truthy) το block **μένει στην ΚΛΕΙΔΩΜΕΝΗ θέση**
+  και **περιστρέφεται live** προς τον κέρσορα (`resolveColumnRotationDeg`, ΙΔΙΟΣ SSoT με το commit)·
+  στο `awaitingPosition` το ghost ακολουθεί τον κέρσορα ελεύθερα + neighbor-clearance dims
+  (`resolveClearanceDimsForGhost`, Revit temporary dims) + footprint HUD (`paintFootprintHud`, ΚΟΙΝΟΣ
+  painter με κολώνα/πέδιλο — reuse, όχι νέο σχέδιο). Το block **δεν** έχει δικό του «ύψος/βάθος»
+  spec (mirror: πέδιλο→«βάθος X», κολώνα→«ύψος X») ⇒ κενή ετικέτα, ΟΧΙ hardcoded placeholder (N.11).
+- **WYSIWYG expand στον preview renderer** — ο `BimPreviewRenderer.render` (ΕΝΑ σημείο όπου κάθε
+  ghost χτυπά τον `EntityRendererComposite`) απέκτησε branch: `isBlockEntity(ghost)` →
+  `expandBlockInstance(ghost)` (ίδιος expander με το committed path) → κάθε world member
+  ζωγραφίζεται μέσω `composite.render(member, {})` στο ΙΔΙΟ save/restore + viewport/transform
+  override — έτσι το ghost δείχνει την **πραγματική** γεωμετρία του block (όχι σχηματικό
+  περίγραμμα), ίδια πρακτική με το wall/column wysiwyg preview (βλ. ADR-040 changelog 2026-07-18).
+
+### ADR-040 συμμόρφωση
+Μηδέν `useSyncExternalStore` σε orchestrator· event-time reads (`getPlacementRotationLock()`,
+`getImmediateTransform()`)· το `buildGhostBlockEntity` παραμένει transient (χωρίς per-frame clone,
+ίδιο με πριν το M7) — το M7 προσθέτει ΜΟΝΟ ένα branch πάνω στο ήδη-transient ghost, καμία νέα
+subscription.
+
+### Αρχεία (M7)
+- `hooks/drawing/create-single-click-placement-tool.ts` — `placeThenRotate` config + `awaitingRotation`
+  phase στο invariant FSM (ADR-600 πυρήνας, οπότε διαθέσιμο by-construction σε ΚΑΘΕ μελλοντικό
+  καταναλωτή του factory).
+- `bim/block-library/place-block-from-library.ts` — εξαγωγή `buildBlockPlacementParams` (ΚΟΙΝΟΣ mapper).
+- `hooks/drawing/block-preview-helpers.ts` (νέο) — WYSIWYG ghost, δύο φάσεις (awaitingRotation/awaitingPosition).
+- `hooks/drawing/useBlockLibraryTool.ts` — `placeThenRotate` wiring + `getStatusText` awaitingRotation branch.
+- `canvas-v2/preview-canvas/bim-preview-render.ts` — block ghost expand branch (βλ. ADR-040 changelog).
+- i18n `dxf-viewer-shell` (el+en): `tools.blockLibrary.statusRotation`.
+- Jest: `hooks/drawing/__tests__/block-preview-helpers.test.ts` (νέο — awaitingRotation/awaitingPosition
+  ghost assembly, footprint HUD, clearance dims).
+
 ## Νομική ασφάλεια (by design)
 Ο τύπος `BlockLibraryItem.license` (M2) κρατά ανά αντικείμενο τύπο άδειας + `redistributable`. Default για
 user-import → `unknown` / `redistributable:false`. Promote σε shared/system scope → μπλοκάρεται εκτός αν
@@ -474,6 +534,24 @@ user-import → `unknown` / `redistributable:false`. Promote σε shared/system 
 - **Anonymous blocks**: αποθηκεύονται μόνο named/πραγματικά (`shouldPreserveBlockName`), όχι `*X`/`*D`.
 
 ## Changelog
+- **2026-07-18** — **M7** υλοποιημένο — **2-click place→rotate** + WYSIWYG ghost parity με
+  κολώνα/πέδιλο. **SSoT reuse (grep, όχι μνήμη):** ο invariant FSM (`create-single-click-placement-tool.ts`,
+  ADR-600) απέκτησε optional `config.placeThenRotate` — 1ο κλικ κλειδώνει θέση στο **ΚΟΙΝΟ**
+  `PlacementRotationStore` (ίδιο lock με column/foundation, το τόξο φοράς + πορτοκαλί γραμμή
+  ζωγραφίζονται ΔΩΡΕΑΝ από το tool-agnostic `drawing-hover-overlays.ts`), 2ο κλικ υπολογίζει τη
+  γωνία με τον ΙΔΙΟ `resolveColumnRotationDeg` και κάνει commit στο κλειδωμένο origin. Απόν config
+  ⇒ μηδέν αλλαγή στους 8 άλλους καταναλωτές του factory (furniture/mep-*/…). Εξήχθη επίσης ο
+  **ΚΟΙΝΟΣ** `buildBlockPlacementParams(cursor, overrides, sceneUnits)` (`place-block-from-library.ts`)
+  ώστε commit path ΚΑΙ ghost path (νέο `block-preview-helpers.ts`) να μοιράζονται ΕΝΑ mapping
+  (preview ≡ commit, N.18) — πριν ήταν inline/διπλό. Το ghost expand πλέον περνά μέσα από τον
+  πραγματικό `EntityRendererComposite` (`bim-preview-render.ts`, βλ. ADR-040 changelog) → **WYSIWYG**
+  block preview (πραγματική γεωμετρία, όχι σχηματικό περίγραμμα) + footprint HUD/clearance dims reuse
+  με κολώνα/πέδιλο. Αρχεία: `create-single-click-placement-tool.ts` (factory) ·
+  `place-block-from-library.ts` (`buildBlockPlacementParams` extraction) · `block-preview-helpers.ts`
+  (νέο) · `useBlockLibraryTool.ts` (wiring + status text) · `bim-preview-render.ts` (block expand
+  branch) · i18n el+en (`tools.blockLibrary.statusRotation`). **Jest (νέο):**
+  `block-preview-helpers.test.ts` (awaitingRotation/awaitingPosition ghost assembly, footprint HUD,
+  clearance dims).
 - **2026-07-18** — **M6.1** — **interactive base-point pick** (AutoCAD «Specify base point») + jest για
   dialog/host. Έκλεισε το ρητό **Deferred M6**. Ο χρήστης πατά **«Επιλογή σημείου βάσης»** στον διάλογο
   «Δημιουργία Block» → ο (modal) διάλογος **κρύβεται προσωρινά** (`open={!armed}`, ώστε το overlay να μη
