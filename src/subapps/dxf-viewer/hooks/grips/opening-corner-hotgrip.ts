@@ -1,15 +1,15 @@
 /**
  * ADR-513 §opening-width — λαβή παρειάς κουφώματος → click-move-click hot-grip entry SSoT gate.
  *
- * Parity με την ΕΠΕΚΤΑΣΗ ΑΚΡΟΥ ΓΡΑΜΜΗΣ (`line-endpoint-hotgrip.ts`): με τη Δυναμική Εισαγωγή (ΔΥΝ) ON,
- * το πιάσιμο λαβής παρειάς μπαίνει στη ροή «κλικ → ο κέρσορας ακολουθεί με το πλήκτρο ΕΛΕΥΘΕΡΟ →
- * πληκτρολόγησε «Μήκος» / κλικ στον καμβά για commit» (AutoCAD hot-grip), αντί για press-drag — ώστε
- * να είναι κλικαριστό το «Δαχτυλίδι Εντολών». Χρησιμοποιεί το ΙΔΙΟ `wall-hot-grip-fsm` (op
- * `'endpoint-stretch'`, terminal `tracking`) με το άκρο γραμμής — μηδέν νέο FSM/commit path.
+ * Parity με την ΕΠΕΚΤΑΣΗ ΑΚΡΟΥ ΓΡΑΜΜΗΣ (`line-endpoint-hotgrip.ts`): το πιάσιμο λαβής παρειάς μπαίνει στη
+ * ροή «κλικ → ο κέρσορας ακολουθεί με το πλήκτρο ΕΛΕΥΘΕΡΟ → πληκτρολόγησε «Μήκος» / κλικ στον καμβά για
+ * commit» (AutoCAD hot-grip), αντί για press-drag — ώστε να είναι κλικαριστό το «Δαχτυλίδι Εντολών».
+ * Χρησιμοποιεί το ΙΔΙΟ `wall-hot-grip-fsm` (op `'endpoint-stretch'`, terminal `tracking`) με το άκρο
+ * γραμμής — μηδέν νέο FSM/commit path.
  *
- * Pure, DOM-free: αποφασίζει ΜΟΝΟ αν η χειρονομία πληροί τις προϋποθέσεις. Ο caller προσθέτει το gate
- * `cadToggleState.isDynInputOn()` (μένει έξω ώστε ο resolver να είναι καθαρός)· με ΔΥΝ OFF η παρειά
- * κρατά το press-drag path (μηδέν regression).
+ * Pure, DOM-free: αποφασίζει ΜΟΝΟ αν η χειρονομία πληροί τις προϋποθέσεις. ⚠️ Σε ΑΝΤΙΘΕΣΗ με το άκρο
+ * γραμμής, ο caller **ΔΕΝ** gate-άρει στη ΔΥΝ (Giorgio 2026-07-18): η προδιαγραφή είναι «κλικ στη λαβή →
+ * λάστιχο → πληκτρολόγηση/κλικ», χωρίς διακόπτη· το press-drag εξακολουθεί να δουλεύει (moved-release).
  *
  * Αυστηρό gate: ΜΟΝΟ λαβή παρειάς (`opening-corner-*`) ΚΑΙ **wall-hosted** κούφωμα (self-hosted κρατά
  * το δικό του box-grip flow, ADR-615). Οι λαβές move/rotation/facing κρατούν τους δικούς τους ρόλους.
@@ -33,7 +33,7 @@ interface OpeningCornerHotGripEntity {
 
 /**
  * Αποφάσισε αν το πάτημα `grip` (του `entity`) πρέπει να ξεκινήσει το hot-grip της παρειάς. `false`
- * όταν δεν πληροί (ο caller κρατά το press-drag). Το ΔΥΝ toggle ελέγχεται από τον caller.
+ * όταν δεν πληροί (ο caller κρατά το press-drag). ΔΕΝ gate-άρεται στη ΔΥΝ (βλ. σχόλιο header).
  */
 export function resolveOpeningCornerHotGrip(
   entity: OpeningCornerHotGripEntity | null | undefined,
