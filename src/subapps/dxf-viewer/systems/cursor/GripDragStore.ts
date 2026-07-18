@@ -57,6 +57,12 @@ export interface ActiveDragGripInfo {
    * neither a line grip nor an Alt-move). Entity-agnostic — one base-point brain for every mover.
    */
   movesEntity?: boolean;
+  /**
+   * ADR-513 §opening-width — λαβή παρειάς κουφώματος (`opening-corner-*`) σε click-move-click
+   * hot-grip (ΔΥΝ ON). Σηματοδοτεί στο `DynamicInputSubscriber` να mount-άρει το length-only
+   * «Δαχτυλίδι Εντολών» πλάτους (`isOpeningCornerDragInfo`), όπως το `gripIndex` για το άκρο γραμμής.
+   */
+  openingCorner?: boolean;
 }
 
 let activeDragGrip: ActiveDragGripInfo | null = null;
@@ -85,6 +91,15 @@ export function subscribeActiveDragGrip(cb: () => void): () => void {
  */
 export function isLineEndpointDragInfo(info: ActiveDragGripInfo | null): boolean {
   return !!info && !info.lineGripKind && (info.gripIndex === 0 || info.gripIndex === 1);
+}
+
+/**
+ * ADR-513 §opening-width — pure predicate: is `info` a λαβή παρειάς κουφώματος drag (click-move-click
+ * hot-grip)? Set ONLY στο opening-corner hot-grip enter, οπότε ταυτοποιεί μοναδικά το drag που δείχνει
+ * το length-only «Δαχτυλίδι Εντολών» πλάτους κουφώματος.
+ */
+export function isOpeningCornerDragInfo(info: ActiveDragGripInfo | null): boolean {
+  return !!info && info.openingCorner === true;
 }
 
 /** Write — called by useUnifiedGripInteraction when DXF grip drag starts */
