@@ -47,4 +47,29 @@ describe('stretchRectangle — corner1/corner2 rectangle (no x/y/w/h)', () => {
     expect(u.corner1).toEqual({ x: 5, y: -4 });
     expect(u.corner2).toEqual({ x: 105, y: 56 });
   });
+
+  // ADR-620/513 fix (Giorgio 2026-07-18) — the coerced polyline MUST inherit the rectangle's own
+  // style/state (color, lineweight, …); the previous id/layerId/visible-only copy dropped `color`
+  // → a reshaped rectangle rendered with the default stroke (WHITE) instead of its colour (green).
+  it('partial capture → polyline INHERITS color/style + STRIPS rectangle-only anchors', () => {
+    const styledRect = {
+      id: 'r', type: 'rectangle', corner1: { x: 0, y: 0 }, corner2: { x: 100, y: 60 }, rotation: 0,
+      visible: true, layerId: 'L', color: '#00ff00', lineweight: 25, opacity: 0.8, locked: true,
+    } as unknown as Entity;
+    const res = applyVertexDisplacement(styledRect, [cornerRef(2)], { x: 20, y: 10 });
+    expect(res.kind).toBe('replace');
+    if (res.kind !== 'replace') return;
+    const poly = res.entity as unknown as Record<string, unknown>;
+    expect(poly.type).toBe('polyline');
+    // Style/state carried over → no more green→white regression.
+    expect(poly.color).toBe('#00ff00');
+    expect(poly.lineweight).toBe(25);
+    expect(poly.opacity).toBe(0.8);
+    expect(poly.locked).toBe(true);
+    // Rectangle-only anchors stripped → no stale rect geometry lingers on the polyline.
+    expect(poly.corner1).toBeUndefined();
+    expect(poly.corner2).toBeUndefined();
+    expect(poly.width).toBeUndefined();
+    expect(poly.height).toBeUndefined();
+  });
 });
