@@ -17,6 +17,7 @@
 import { AutoAreaPreviewOverlay } from './AutoAreaPreviewOverlay';
 import { RegionPerimeterPreviewOverlay } from './RegionPerimeterPreviewOverlay';
 import { RegionGapMarkersOverlay } from './RegionGapMarkersOverlay';
+import { BasePointPickMarkerOverlay } from './BasePointPickMarkerOverlay';
 import { TopoAutoBreaklinePreviewOverlay } from './TopoAutoBreaklinePreviewOverlay';
 import { AnalyticalDispatchCanvas } from './analytical-overlays/AnalyticalDispatchCanvas';
 import type { ViewTransform, Viewport } from '../../rendering/types/Types';
@@ -39,6 +40,11 @@ export function CanvasLayerStack2DOverlays({ transform, viewport }: CanvasLayerS
           pick δεν κλείνει βρόχο (AutoCAD BOUNDARY red-circles). Self-subscribes στο
           RegionGapMarkersStore· read-only, pointer-events-none. STAGE ADR-040 + ADR-419. */}
       <RegionGapMarkersOverlay transform={transform} viewport={viewport} />
+      {/* ADR-652 M6.1 — «σημείο βάσης» ghost marker όσο ο διάλογος «Δημιουργία Block» έχει armed
+          την επιλογή σημείου (AutoCAD «Specify base point» rubber marker). Gate-at-mount στο armed
+          flag· ο high-freq realtime-cursor subscriber ζει μόνο όσο armed. Read-only,
+          pointer-events-none. STAGE ADR-040 + ADR-652. */}
+      <BasePointPickMarkerOverlay transform={transform} viewport={viewport} />
       {/* ADR-650 M8β/Γ — προτεινόμενες γραμμές ασυνέχειας (auto-breaklines) υπό έγκριση:
           πράσινο = τσεκαρισμένη, γκρι διακεκομμένο = απορριφθείσα. Self-subscribes στο
           LOW-freq auto-breakline store· read-only, pointer-events-none. STAGE ADR-650. */}

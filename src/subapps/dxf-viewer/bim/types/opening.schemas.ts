@@ -23,6 +23,19 @@ import {
 import { RevealInsulationSchema } from './thermal-envelope.schemas';
 import { OPENING_OPERATION_VALUES } from './opening-operation-types';
 
+// ─── ADR-676 ΒΗΜΑ 2 — swept frame cross-section outline (mm, closed) ──────────
+
+/**
+ * A closed swept cross-section outline: ≥3 finite `{ x, y }` vertices in mm,
+ * local `(face × depth)` plane. SSoT reused by BOTH the per-instance
+ * `frameProfileOverrides.section` (here) AND the preset library write validation
+ * (`opening-frame-profile-library-service.ts`) — one shape, no duplicate schema.
+ * @see FrameSectionPoint (opening-frame-profile.ts)
+ */
+export const FrameSectionSchema = z
+  .array(z.object({ x: z.number().finite(), y: z.number().finite() }).strict())
+  .min(3);
+
 // ─── Enums (mirror opening-types.ts unions) ──────────────────────────────────
 
 export const OpeningKindSchema = z.enum([
@@ -126,6 +139,8 @@ export const OpeningParamsSchema = z
         depth: z.number().positive().optional(),
         manufacturer: z.string().min(1).optional(),
         series: z.string().min(1).optional(),
+        // ADR-676 ΒΗΜΑ 2 — hand-edited swept cross-section outline (mm, closed).
+        section: FrameSectionSchema.optional(),
       })
       .strict()
       .optional(),

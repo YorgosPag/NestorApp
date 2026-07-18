@@ -28,7 +28,7 @@
 
 import type { OpeningParams } from '../types/opening-types';
 import type { OpeningTypeParams } from '../types/bim-family-type';
-import type { OpeningFrameProfile } from '../types/opening-frame-profile';
+import type { OpeningFrameProfile, FrameSectionPoint } from '../types/opening-frame-profile';
 import {
   DEFAULT_FRAME_PROFILE_FACE_MM,
   DEFAULT_FRAME_PROFILE_DEPTH_MM,
@@ -46,6 +46,12 @@ export interface ResolvedFrameProfile {
   readonly faceWidth: number;
   /** mm through the wall thickness. INDEPENDENT of wall.thickness. CONSTANT. */
   readonly depth: number;
+  /**
+   * ADR-676 ΒΗΜΑ 2 — optional swept cross-section outline (mm). Absent → the 3D
+   * mesh builds the default `faceWidth × depth` box (zero regression). Present →
+   * the outline is extruded along each frame member. @see FrameSectionPoint
+   */
+  readonly section?: readonly FrameSectionPoint[];
 }
 
 /** Mutable accumulator used while folding the resolution layers. */
@@ -55,6 +61,7 @@ interface FrameAccumulator {
   series: string;
   faceWidth: number;
   depth: number;
+  section?: readonly FrameSectionPoint[];
 }
 
 /** Overwrite the accumulator from a resolved catalog profile (a layer «wins»). */
@@ -64,6 +71,9 @@ function applyCatalogProfile(acc: FrameAccumulator, profile: OpeningFrameProfile
   acc.series = profile.series;
   acc.faceWidth = profile.faceWidth;
   acc.depth = profile.depth;
+  // ADR-676 ΒΗΜΑ 2 — a profile's own section wins; a section-less profile layer
+  // does NOT clear a section set by a previous layer (only an explicit override does).
+  if (profile.section !== undefined) acc.section = profile.section;
 }
 
 /**
@@ -110,6 +120,8 @@ export function resolveOpeningFrameProfile(
     if (ov.depth !== undefined) acc.depth = ov.depth;
     if (ov.manufacturer !== undefined) acc.manufacturer = ov.manufacturer;
     if (ov.series !== undefined) acc.series = ov.series;
+    // ADR-676 ΒΗΜΑ 2 — per-instance hand-edited section outline wins LAST.
+    if (ov.section !== undefined) acc.section = ov.section;
   }
 
   // Layer 5 — LEGACY fallback: no profile chosen anywhere but a legacy
@@ -120,11 +132,13 @@ export function resolveOpeningFrameProfile(
     acc.depth = params.frameWidth;
   }
 
-  return {
+  const resolved: ResolvedFrameProfile = {
     id: acc.id,
     manufacturer: acc.manufacturer,
     series: acc.series,
     faceWidth: acc.faceWidth,
     depth: acc.depth,
   };
+  // Keep `section` ABSENT when undefined (zero regression — no explicit undefined key).
+  return acc.section === undefined ? resolved : { ...resolved, section: acc.section };
 }

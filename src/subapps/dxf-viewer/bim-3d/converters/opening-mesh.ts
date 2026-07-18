@@ -27,7 +27,6 @@ import type { WallEntity } from '../../bim/types/wall-types';
 import {
   resolveOpeningThreshold,
   type OpeningEntity,
-  type ResolvedOpeningThreshold,
 } from '../../bim/types/opening-types';
 import { sceneUnitsToMeters } from '../../utils/scene-units';
 import { resolveOpeningFrameProfile } from '../../bim/family-types/resolve-opening-frame-profile';
@@ -40,6 +39,11 @@ import {
   type OpeningMeshMaterials,
 } from './opening-mesh-builders';
 import { buildHardwareSpecs } from './opening-hardware-builders';
+import {
+  frameBarLayout,
+  buildFrameProfileMembers,
+  type FrameBarLayout,
+} from './opening-frame-section-geometry';
 
 export type { OpeningMeshMaterials };
 
@@ -113,21 +117,62 @@ export function buildOpeningMesh(
   const threshold = resolveOpeningThreshold(opening.params, { finishThicknessMm, profileHeightMm });
 
   const dims: LeafDims = { widthW, heightM, sillM, thicknessW, frameW: faceWidthW };
-  const specs: BoxSpec[] = [
-    ...frameBars(widthW, heightM, sillM, faceWidthW, depthW, sillHeight > 0, threshold, materials.frame),
+  // ADR-676 ΒΗΜΑ 2 — the κάσα skeleton (jamb/head/sill positions) is the SSoT both
+  // the box path AND the swept-section path derive from (`frameBarLayout`).
+  const layout = frameBarLayout(widthW, heightM, sillM, faceWidthW, sillHeight > 0, threshold);
+  const nonFrameSpecs: BoxSpec[] = [
     ...buildLeafSpecs(opening, dims, materials),
     // ADR-672 §8 Α — operable hardware (χειρολαβή) appended LAST so the frame-bar
     // indices (jamb/head/sill) that downstream code reads stay stable.
     ...buildHardwareSpecs(opening, dims, materials.hardware),
   ];
-  if (specs.length === 0) return null;
 
   const basis = makeBasis(opening.geometry.rotation);
   const group = new THREE.Group();
-  for (const s of specs) group.add(makeBoxMesh(s, basis, opening.id));
+  // Realistic swept κάσα when a section outline resolved; else the constant
+  // faceWidth×depth box (zero regression). Leaf/panel + hardware are always boxes.
+  addFrameMembers(group, layout, frameProfile.section, faceWidthW, depthW, basis, materials.frame, opening.id);
+  for (const s of nonFrameSpecs) group.add(makeBoxMesh(s, basis, opening.id));
+  if (group.children.length === 0) return null;
+
   group.position.set(pos.x * sceneToM, floorY, -pos.y * sceneToM);
   stampBimIdentity(group, { bimId: opening.id, bimType: 'opening' });
   return group;
+}
+
+/**
+ * Add the κάσα frame members to the group. When the resolved profile carries a
+ * `section` outline (≥3 vertices) each member is the swept extrude of that outline
+ * (ADR-676 ΒΗΜΑ 2)· otherwise each member is the constant `faceWidth × depth` box
+ * (zero regression — byte-identical positions via the shared `frameBarLayout`).
+ */
+function addFrameMembers(
+  group: THREE.Group,
+  layout: readonly FrameBarLayout[],
+  section: readonly { readonly x: number; readonly y: number }[] | undefined,
+  faceWidthW: number,
+  depthW: number,
+  basis: THREE.Matrix4,
+  mat: THREE.Material,
+  bimId: string,
+): void {
+  if (section && section.length >= 3) {
+    for (const geo of buildFrameProfileMembers(section, layout)) {
+      group.add(finalizeMemberMesh(geo, basis, mat, bimId));
+    }
+    return;
+  }
+  for (const bar of layout) {
+    group.add(makeBoxMesh(layoutToBoxSpec(bar, faceWidthW, depthW, mat), basis, bimId));
+  }
+}
+
+/** Map a frame-bar layout entry to the equivalent constant-box spec (legacy path). */
+function layoutToBoxSpec(bar: FrameBarLayout, faceWidthW: number, depthW: number, mat: THREE.Material): BoxSpec {
+  const { cx, cy, cz } = bar.center;
+  return bar.orientation === 'vertical'
+    ? { cx, cy, cz, sx: faceWidthW, sy: bar.length, sz: depthW, mat }
+    : { cx, cy, cz, sx: bar.length, sy: faceWidthW, sz: depthW, mat };
 }
 
 /** Basis: local +X = host-axis direction (DXF y → world -z), +Y = up, +Z = perp. */
@@ -143,47 +188,25 @@ function makeBoxMesh(s: BoxSpec, basis: THREE.Matrix4, bimId: string): THREE.Mes
     Math.max(s.sx, 1e-4), Math.max(s.sy, 1e-4), Math.max(s.sz, 1e-4),
   );
   geo.translate(s.cx, s.cy, s.cz);
+  return finalizeMemberMesh(geo, basis, s.mat, bimId);
+}
+
+/**
+ * Apply the opening basis to a frame-LOCAL geometry and wrap it as a shadowing,
+ * BIM-stamped mesh. SSoT tail shared by the box path (`makeBoxMesh`) and the swept
+ * frame-section path (`buildFrameProfileMembers` output) — one place owns the
+ * basis-apply + shadow flags + identity stamp (N.18: no duplicated mesh tail).
+ */
+function finalizeMemberMesh(
+  geo: THREE.BufferGeometry,
+  basis: THREE.Matrix4,
+  mat: THREE.Material,
+  bimId: string,
+): THREE.Mesh {
   geo.applyMatrix4(basis);
-  const mesh = new THREE.Mesh(geo, s.mat);
+  const mesh = new THREE.Mesh(geo, mat);
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   stampBimIdentity(mesh, { bimId, bimType: 'opening' });
   return mesh;
-}
-
-/**
- * Κάσα: 2 παραστάδες (jambs) + πρέκι (head) + ΕΝΑ κάτω μέλος (sill Ή κατώφλι).
- *
- * ADR-611 — `faceWidthW`/`depthW` are the resolved κάσα cross-section (mm→m),
- * CONSTANT regardless of `widthW`/`heightM` (opening size) and regardless of the
- * host wall thickness. Only the bar LENGTH (jamb spans `heightM`, head/bottom span
- * `widthW`) tracks the opening size — the cross-section never does.
- *
- * ADR-673 — the bottom member is ONE slot, mutually exclusive by construction:
- *   - window (`hasSill`, sillHeight>0) → ποδιά (sill) at the sill height, OR
- *   - door (`threshold.render`, sillHeight<=0) → κατώφλι, its bottom sunk to
- *     `threshold.bottomOffsetMm` (0=on FFL, negative=embedded in the screed/γκρο μπετό).
- * `resolveOpeningThreshold` guarantees `render:false` whenever sillHeight>0, so the two
- * never coexist and the slot's index (right after `head`) stays stable for downstream
- * frame-bar consumers (ADR-672 §8 Α — hardware still appended LAST).
- */
-function frameBars(
-  widthW: number, heightM: number, sillM: number, faceWidthW: number,
-  depthW: number, hasSill: boolean, threshold: ResolvedOpeningThreshold,
-  mat: THREE.Material,
-): BoxSpec[] {
-  const cyMid = sillM + heightM / 2;
-  const halfW = widthW / 2;
-  const bars: BoxSpec[] = [
-    { cx: -(halfW - faceWidthW / 2), cy: cyMid, cz: 0, sx: faceWidthW, sy: heightM, sz: depthW, mat },
-    { cx: halfW - faceWidthW / 2, cy: cyMid, cz: 0, sx: faceWidthW, sy: heightM, sz: depthW, mat },
-    { cx: 0, cy: sillM + heightM - faceWidthW / 2, cz: 0, sx: widthW, sy: faceWidthW, sz: depthW, mat },
-  ];
-  if (hasSill) {
-    bars.push({ cx: 0, cy: sillM + faceWidthW / 2, cz: 0, sx: widthW, sy: faceWidthW, sz: depthW, mat });
-  } else if (threshold.render) {
-    const cy = threshold.bottomOffsetMm * MM_TO_M + faceWidthW / 2;
-    bars.push({ cx: 0, cy, cz: 0, sx: widthW, sy: faceWidthW, sz: depthW, mat });
-  }
-  return bars;
 }

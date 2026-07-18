@@ -28,6 +28,8 @@ import type {
 import type { IfcEntityMixin } from './ifc-entity-mixin';
 import type { EnvelopeLayer } from './thermal-envelope-types';
 import type { OpeningOperationType } from './opening-operation-types';
+// ADR-676 ΒΗΜΑ 2 — swept frame cross-section vertex SSoT (type-only).
+import type { FrameSectionPoint } from './opening-frame-profile';
 // ADR-421 SLICE C — Family/Type link. Type-only import (TS resolves the
 // bim-family-type ↔ opening-types type cycle; no runtime dependency).
 import type { OpeningTypeParams } from './bim-family-type';
@@ -214,6 +216,12 @@ export interface OpeningParams {
     readonly depth?: number;
     readonly manufacturer?: string;
     readonly series?: string;
+    /**
+     * ADR-676 ΒΗΜΑ 2 — per-instance hand-edited swept cross-section outline (mm,
+     * closed, ≥3 vertices). Wins LAST in `resolveOpeningFrameProfile`. Absent →
+     * the resolved profile's own section (or the default box). @see FrameSectionPoint
+     */
+    readonly section?: readonly FrameSectionPoint[];
   };
   /** Door swing hinge side. Door-only — undefined για window/fixed. */
   readonly handing?: OpeningHanding;

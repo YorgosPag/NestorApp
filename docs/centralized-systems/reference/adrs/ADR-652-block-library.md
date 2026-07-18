@@ -491,9 +491,15 @@ user-import → `unknown` / `redistributable:false`. Promote σε shared/system 
   (branch PRIORITY 0.4, gate `isPickBasePointArmed()` — δεν υπάρχει activeTool, ο διάλογος είναι το mode) ·
   `CreateBlockDialog.tsx` (κουμπί + ένδειξη σημείου) · `CreateBlockDialogHost.tsx` (arm/hide/Esc/adopt +
   περνά `baseOverride`) · i18n el+en (`blockLibrary.create.{pickBasePoint,basePointLabel,basePointAuto,basePointClear}`,
-  `tool-hints:createBlock.pickBasePoint`). **Jest (NEW, +9):** `CreateBlockDialog.test.tsx` (6 — canConfirm
-  gate + replaceWithInstance toggle + pick callbacks/ένδειξη) · `CreateBlockDialogHost.test.tsx` (3 — replace
-  path→command+reselect · WBLOCK→χωρίς command · cancel→clear). Σύνολο M6+M6.1 = **21 jest** πράσινα.
+  `tool-hints:createBlock.pickBasePoint`). **Ghost marker (2026-07-18):** πορτοκαλί τετράγωνο + σταυρόνημα
+  ακολουθεί το τελικό **snapped** σημείο όσο armed (AutoCAD «Specify base point» rubber marker). NEW:
+  `components/dxf-layout/BasePointPickMarkerOverlay.tsx` — SVG micro-leaf (mirror `RegionGapMarkersOverlay`),
+  **gate-at-mount** στο armed flag (ο high-freq realtime-cursor subscriber ζει μόνο όσο armed, ADR-040)·
+  διαβάζει τον **realtime** channel (`getRealtimeWorldCursor`, FINAL effective snapped — ΟΧΙ τον throttled
+  raw)· mount στο `canvas-layer-stack-2d-overlays-leaf.tsx` (βλ. ADR-040 changelog). **Jest (NEW, +13):**
+  `CreateBlockDialog.test.tsx` (6 — canConfirm gate + replaceWithInstance toggle + pick callbacks/ένδειξη) ·
+  `CreateBlockDialogHost.test.tsx` (3 — replace path→command+reselect · WBLOCK→χωρίς command · cancel→clear) ·
+  `BasePointPickMarkerOverlay.test.tsx` (4 — armed/cursor gate). Σύνολο M6+M6.1 = **25 jest** πράσινα.
 - **2026-07-18** — **M6** υλοποιημένο — **«Δημιουργία Block» από επιλογή** (AutoCAD BLOCK/BMAKE + WBLOCK).
   Έκλεισε το κενό στην **αρχή** της αλυσίδας: μέχρι τώρα το palette «Τα Blocks μου» τροφοδοτούνταν
   **μόνο** από DXF import (`captureSessionBlocksFromScene` στο `useSceneState.handleFileImport`) — δεν

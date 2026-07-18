@@ -42,6 +42,8 @@ import type {
   OpeningFrameProfile,
   OpeningFrameProfilePresetDoc,
 } from '../types/opening-frame-profile';
+// ADR-676 ΒΗΜΑ 2 — reuse the ONE swept-section schema (no duplicate shape).
+import { FrameSectionSchema } from '../types/opening.schemas';
 
 // ============================================================================
 // CONFIG
@@ -80,6 +82,8 @@ const FrameProfileFieldsSchema = z.object({
   role: FrameProfileRoleSchema,
   faceWidth: z.number().positive(),
   depth: z.number().positive(),
+  // ADR-676 ΒΗΜΑ 2 — optional swept cross-section outline (mm, closed, ≥3 vertices).
+  section: FrameSectionSchema.optional(),
   label: z.string().optional(),
 });
 
@@ -203,6 +207,8 @@ export class OpeningFrameProfileLibraryService {
       role: input.profile.role,
       faceWidth: input.profile.faceWidth,
       depth: input.profile.depth,
+      // ADR-676 ΒΗΜΑ 2 — persist section when present; pruneUndefined drops it otherwise.
+      section: input.profile.section,
       label: input.profile.label,
       builtin: false,
       ownerId: this.config.userId,

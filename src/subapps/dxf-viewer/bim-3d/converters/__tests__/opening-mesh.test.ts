@@ -397,4 +397,35 @@ describe('buildOpeningMesh', () => {
       expect(bodyChildren(g)).toHaveLength(4); // 2 jambs + head + 1 leaf, no bottom bar.
     });
   });
+
+  // ─── ADR-676 ΒΗΜΑ 2 — realistic swept κάσα section ─────────────────────────
+  // A profile WITHOUT a section stays the constant faceWidth×depth box (every test
+  // above proves zero regression). A profile WITH a section extrudes the outline
+  // along each frame member — same member COUNT + ORDER, just ExtrudeGeometry.
+  describe('ADR-676 ΒΗΜΑ 2 — swept frame section', () => {
+    const REBATE = { frameProfileId: 'GENERIC-70x70-rebate-frame' } as const;
+
+    it('section-less profile → frame members are BoxGeometry (zero regression)', () => {
+      const g = buildOpeningMesh(makeOpening(), makeWall(), materials, 0, 0, FINISH_THICKNESS_MM)!;
+      expect((g.children[0] as THREE.Mesh).geometry.type).toBe('BoxGeometry');
+    });
+
+    it('rebate profile (has section) → all 4 frame members are ExtrudeGeometry, count invariant', () => {
+      const g = buildOpeningMesh(makeOpening(REBATE), makeWall(), materials, 0, 0, FINISH_THICKNESS_MM)!;
+      expect(bodyChildren(g)).toHaveLength(5); // 2 jambs + head + κατώφλι + 1 leaf
+      for (const m of g.children.slice(0, 4) as THREE.Mesh[]) {
+        expect(m.geometry.type).toBe('ExtrudeGeometry');
+      }
+      // the leaf (index 4) stays a plain box — only the κάσα is swept.
+      expect((g.children[4] as THREE.Mesh).geometry.type).toBe('BoxGeometry');
+    });
+
+    it('rebate jamb bbox fills its 70×70mm × height envelope', () => {
+      const g = buildOpeningMesh(makeOpening(REBATE), makeWall(), materials, 0, 0, FINISH_THICKNESS_MM)!;
+      const jamb = new THREE.Box3().setFromObject(g.children[0]).getSize(new THREE.Vector3());
+      expect(jamb.x).toBeCloseTo(0.07, 3); // faceWidth 70mm along the host axis
+      expect(jamb.z).toBeCloseTo(0.07, 3); // depth 70mm through the wall
+      expect(jamb.y).toBeCloseTo(2.1, 2); // jamb length = opening height 2100mm
+    });
+  });
 });

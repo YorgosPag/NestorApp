@@ -42,6 +42,24 @@ export { CATALOG_CUSTOM_SENTINEL };
  */
 export type FrameProfileRole = 'frame' | 'sash' | 'mullion' | 'sill';
 
+// ─── Cross-section outline (ADR-676 ΒΗΜΑ 2 — swept realistic section) ──────────
+
+/**
+ * A single 2D vertex of a frame member's swept cross-section, in **mm**, expressed
+ * in the member's local `(face × depth)` plane with the ORIGIN at the member
+ * centerline (x = across the visible FACE, y = through the wall depth). A closed
+ * `FrameSectionPoint[]` outline is swept along the member length (Revit *Profile
+ * Family* / ArchiCAD *Complex Profile* / C4D constant-cross-section).
+ *
+ * SSoT NOTE: the dxf-viewer has no canonical shared 2D-point type (every module
+ * declares a local `Vec2`); this named contract is the domain SSoT for the frame
+ * section outline and is imported by the resolver + 3D geometry — do NOT re-declare.
+ */
+export interface FrameSectionPoint {
+  readonly x: number;
+  readonly y: number;
+}
+
 // ─── Catalog entry ────────────────────────────────────────────────────────────
 
 /**
@@ -62,6 +80,13 @@ export interface OpeningFrameProfile {
   readonly faceWidth: number;
   /** mm through the wall-thickness direction (INDEPENDENT of wall.thickness). */
   readonly depth: number;
+  /**
+   * ADR-676 ΒΗΜΑ 2 — optional realistic swept cross-section (κλειστό outline, mm,
+   * local `(face × depth)` plane, origin at centerline). Absent → the member is
+   * the default `faceWidth × depth` rectangular box (zero regression). Present →
+   * the outline is extruded along the member length (πατούρα/rebate/θερμοδιακοπή).
+   */
+  readonly section?: readonly FrameSectionPoint[];
   /** Optional human label; catalog data (not i18n) — code/dims are literal facts. */
   readonly label?: string;
 }
@@ -97,17 +122,21 @@ export interface OpeningFrameProfilePresetDoc extends ScopedLibraryDoc {
   readonly role: FrameProfileRole;
   readonly faceWidth: number;
   readonly depth: number;
+  /** ADR-676 ΒΗΜΑ 2 — persisted swept cross-section outline (mm). @see OpeningFrameProfile.section */
+  readonly section?: readonly FrameSectionPoint[];
   readonly label?: string;
 }
 
 /**
  * Maps a persisted preset doc to the plain `OpeningFrameProfile` shape consumed
- * by the resolver/bridge (same fields the builtin catalog entries carry).
+ * by the resolver/bridge (same fields the builtin catalog entries carry). Optional
+ * fields (`label`, `section`) are spread in ONLY when present so an absent field
+ * never becomes an explicit `undefined` (zero regression / Firestore-clean).
  */
 export function frameProfilePresetDocToProfile(
   doc: OpeningFrameProfilePresetDoc,
 ): OpeningFrameProfile {
-  const profile: OpeningFrameProfile = {
+  let profile: OpeningFrameProfile = {
     id: doc.id,
     manufacturer: doc.manufacturer,
     series: doc.series,
@@ -115,5 +144,7 @@ export function frameProfilePresetDocToProfile(
     faceWidth: doc.faceWidth,
     depth: doc.depth,
   };
-  return doc.label === undefined ? profile : { ...profile, label: doc.label };
+  if (doc.section !== undefined) profile = { ...profile, section: doc.section };
+  if (doc.label !== undefined) profile = { ...profile, label: doc.label };
+  return profile;
 }

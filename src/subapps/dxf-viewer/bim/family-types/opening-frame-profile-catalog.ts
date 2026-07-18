@@ -33,6 +33,17 @@ export const FRAME_PROFILE_CATALOG: readonly OpeningFrameProfile[] = [
   // ─── Generic (manufacturer-agnostic defaults) ──────────────────────────────
   { id: 'GENERIC-50x50-frame', manufacturer: 'Generic', series: '50×50', role: 'frame', faceWidth: 50, depth: 50, label: 'Generic 50×50' },
   { id: 'GENERIC-70x70-frame', manufacturer: 'Generic', series: '70×70', role: 'frame', faceWidth: 70, depth: 70, label: 'Generic 70×70' },
+  // ADR-676 ΒΗΜΑ 2 — realistic swept cross-section demo: an L-shaped rebate (πατούρα)
+  // on the interior corner where the φύλλο seats. `section` outline is mm, origin at
+  // the member centerline (x = across FACE, y = through DEPTH). bbox == faceWidth×depth.
+  {
+    id: 'GENERIC-70x70-rebate-frame', manufacturer: 'Generic', series: '70×70 πατούρα', role: 'frame', faceWidth: 70, depth: 70,
+    section: [
+      { x: -35, y: -35 }, { x: 35, y: -35 }, { x: 35, y: 15 },
+      { x: 15, y: 15 }, { x: 15, y: 35 }, { x: -35, y: 35 },
+    ],
+    label: 'Generic 70×70 με πατούρα',
+  },
 
   // ─── Alumil ────────────────────────────────────────────────────────────────
   { id: 'ALUMIL-M9660-frame', manufacturer: 'Alumil', series: 'M9660',   role: 'frame', faceWidth: 72,  depth: 60,  label: 'Alumil M9660 κάσα' },

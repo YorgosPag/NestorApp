@@ -5,8 +5,15 @@
 import { resolveOpeningFrameProfile } from '../resolve-opening-frame-profile';
 import { getFrameProfileById } from '../opening-frame-profile-catalog';
 import { useOpeningFrameProfileStore } from '../opening-frame-profile-store';
-import { CATALOG_CUSTOM_SENTINEL } from '../../types/opening-frame-profile';
-import type { OpeningFrameProfile } from '../../types/opening-frame-profile';
+import {
+  CATALOG_CUSTOM_SENTINEL,
+  frameProfilePresetDocToProfile,
+} from '../../types/opening-frame-profile';
+import type {
+  OpeningFrameProfile,
+  OpeningFrameProfilePresetDoc,
+  FrameSectionPoint,
+} from '../../types/opening-frame-profile';
 import type { OpeningParams } from '../../types/opening-types';
 import type { OpeningTypeParams } from '../../types/bim-family-type';
 
@@ -173,5 +180,51 @@ describe('resolveOpeningFrameProfile — user-library id (ADR-676 Phase 3 PILOT)
     const r = resolveOpeningFrameProfile(makeParams(), typeParams);
     expect(r.faceWidth).toBe(123);
     expect(r.depth).toBe(45);
+  });
+});
+
+// ─── ADR-676 ΒΗΜΑ 2 — swept cross-section (section) propagation ────────────────
+describe('resolveOpeningFrameProfile — section outline (ADR-676 ΒΗΜΑ 2)', () => {
+  const RECT: readonly FrameSectionPoint[] = [
+    { x: -35, y: -35 }, { x: 35, y: -35 }, { x: 35, y: 35 }, { x: -35, y: 35 },
+  ];
+
+  afterEach(() => useOpeningFrameProfileStore.getState().setProfiles([]));
+
+  it('a section-less profile resolves section = undefined (default box, zero regression)', () => {
+    expect(resolveOpeningFrameProfile(makeParams()).section).toBeUndefined();
+    expect(resolveOpeningFrameProfile(makeParams({ frameWidth: 45 })).section).toBeUndefined();
+  });
+
+  it('carries the section from the builtin catalog rebate profile', () => {
+    const r = resolveOpeningFrameProfile(makeParams({ frameProfileId: 'GENERIC-70x70-rebate-frame' }));
+    expect(r.section).toBeDefined();
+    expect(r.section).toHaveLength(6); // L-shaped rebate outline
+  });
+
+  it('carries the section from a user-library profile', () => {
+    const withSection: OpeningFrameProfile = {
+      id: 'frmpst_sec1', manufacturer: 'MyBrand', series: 'Custom',
+      role: 'frame', faceWidth: 70, depth: 70, section: RECT,
+    };
+    useOpeningFrameProfileStore.getState().setProfiles([withSection]);
+    const r = resolveOpeningFrameProfile(makeParams({ frameProfileId: 'frmpst_sec1' }));
+    expect(r.section).toEqual(RECT);
+  });
+
+  it('a per-instance override section wins LAST', () => {
+    const r = resolveOpeningFrameProfile(
+      makeParams({ frameProfileId: 'GENERIC-70x70-rebate-frame', frameProfileOverrides: { section: RECT } }),
+    );
+    expect(r.section).toEqual(RECT);
+  });
+
+  it('mapper round-trips section on the preset doc, absent when unset', () => {
+    const base: OpeningFrameProfilePresetDoc = {
+      id: 'frmpst_map1', scope: 'user', name: 'P', origin: 'user',
+      manufacturer: 'B', series: 'S', role: 'frame', faceWidth: 70, depth: 70,
+    } as OpeningFrameProfilePresetDoc;
+    expect(frameProfilePresetDocToProfile(base).section).toBeUndefined();
+    expect(frameProfilePresetDocToProfile({ ...base, section: RECT }).section).toEqual(RECT);
   });
 });

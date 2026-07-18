@@ -72,6 +72,14 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-07-18 — ➕ ADR-652 M6.1: base-point ghost marker leaf (gate-at-mount)
+**Τι:** νέο read-only SVG overlay `components/dxf-layout/BasePointPickMarkerOverlay.tsx` στο
+`canvas-layer-stack-2d-overlays-leaf.tsx` group — δείχνει «σημείο βάσης» marker όσο ο διάλογος «Δημιουργία
+Block» έχει armed την επιλογή σημείου. **Συμμόρφωση:** gate-at-mount — ο εξωτερικός subscriber ακούει ΜΟΝΟ
+το low-freq `armed` flag (`pick-base-point-store`)· ο high-freq realtime-cursor subscriber
+(`subscribeRealtimeWorldCursor`, Φ12 SSoT) ζει **μόνο** όσο armed (ο inner leaf unmount-άρει αλλιώς). Ένα
+leaf, ένα SVG, ≤2 high-freq hooks (rule 4). Κανένα shell subscription — mirror του `RegionGapMarkersOverlay`.
+
 ### 2026-07-15 — ➕ ADR-661: `DxfRenderer.render` ξαναγράφτηκε σε single array-order πέρασμα (DRAWORDER SSoT)
 **Τι:** ο πυρήνας render loop του `DxfRenderer` (`canvas-v2/dxf-canvas/DxfRenderer.ts`) ξαναγράφτηκε
 από το παλιό δύο-περασμάτων μοντέλο («**όλες** οι συμπαγείς γραμμές πρώτα, σε ένα batched πέρασμα,

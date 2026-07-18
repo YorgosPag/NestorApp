@@ -98,6 +98,21 @@ export function buildShape(outer: readonly Point3D[], inner?: readonly Point3D[]
   return shape;
 }
 
+/**
+ * ADR-676 ΒΗΜΑ 2 — build a closed `THREE.Shape` from an already-2D ring (`{x,y}`
+ * points, ANY units — caller pre-scales). SSoT for the `moveTo → lineTo* →
+ * closePath` idiom that every swept-profile builder (I-beam, frame section, …)
+ * otherwise re-writes inline. Returns `null` for a degenerate ring (<3 vertices).
+ */
+export function buildClosedShape(pts: readonly { readonly x: number; readonly y: number }[]): THREE.Shape | null {
+  if (pts.length < 3) return null;
+  const shape = new THREE.Shape();
+  shape.moveTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length; i++) shape.lineTo(pts[i].x, pts[i].y);
+  shape.closePath();
+  return shape;
+}
+
 export function extrudeAndRotate(shape: THREE.Shape, depthM: number): THREE.BufferGeometry {
   const geo = new THREE.ExtrudeGeometry(shape, { depth: depthM, bevelEnabled: false });
   geo.applyMatrix4(ROT_X_NEG_90);
