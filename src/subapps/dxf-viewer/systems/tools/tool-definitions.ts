@@ -462,3 +462,27 @@ export function toolOwnsPlacementGhost(tool: string | undefined | null): boolean
   const entityType = TOOL_CREATES_ENTITY[tool as ToolType];
   return entityType !== undefined && PLACEMENT_GHOST_OWNER_ENTITY_TYPES.has(entityType);
 }
+
+/**
+ * ADR-189 §3.13 — εργαλεία που κατέχουν τον κοινό PreviewCanvas με ΔΙΚΟ τους ghost RAF
+ * αλλά **δεν δημιουργούν οντότητα**, άρα δεν τα πιάνει το `TOOL_CREATES_ENTITY` (και
+ * συνεπώς ούτε το `toolOwnsPlacementGhost`).
+ *
+ * `guide-parallel`: το `useParallelGuideAnchorPreview` ζωγραφίζει το anchor ＋ και τη
+ * διακεκομμένη προς τον κέρσορα. Το εργαλείο είναι `category: 'drawing'`, οπότε περνά
+ * το `isInDrawingMode` και ο γενικός `processDrawingHover` έτρεχε σε κάθε mousemove —
+ * χωρίς `previewEntity` έπεφτε στο `previewCanvasRef.current.clear()` και **έσβηνε το
+ * preview σε κάθε κίνηση** (ο σταυρός φαινόταν μόνο στο κλικ, η γραμμή ποτέ).
+ * ΑΚΡΙΒΩΣ το bug που περιγράφει το ADR-624 για τα placement ghosts.
+ */
+const GESTURE_PREVIEW_OWNER_TOOLS: ReadonlySet<string> = new Set<string>(['guide-parallel']);
+
+/**
+ * True όταν το `tool` κατέχει τον κοινό PreviewCanvas — είτε ως placement ghost (ADR-624)
+ * είτε ως gesture preview (ADR-189 §3.13). Ο γενικός drawing-hover ΠΡΕΠΕΙ να παρακάμπτεται
+ * όσο ισχύει, αλλιώς οι δύο μηχανισμοί κονταροχτυπιούνται στον ίδιο καμβά.
+ */
+export function toolOwnsPreviewCanvas(tool: string | undefined | null): boolean {
+  if (!tool) return false;
+  return toolOwnsPlacementGhost(tool) || GESTURE_PREVIEW_OWNER_TOOLS.has(tool);
+}

@@ -70,7 +70,7 @@ import { ambientAlignmentConfigStore } from '../../systems/tracking/ambient-alig
 import { processDrawingHover } from './drawing-hover-handler';
 // ADR-624 — single-click placement tools own the PreviewCanvas via their dedicated ghost;
 // the generic hover must not clear it (else the ghost flickers on cursor move).
-import { toolOwnsPlacementGhost } from '../../systems/tools/tool-definitions';
+import { toolOwnsPreviewCanvas } from '../../systems/tools/tool-definitions';
 export { MEASURE_TOOLS_FOR_GUIDES } from './drawing-handler-utils';
 
 type Pt = { x: number, y: number };
@@ -397,7 +397,9 @@ export function useDrawingHandlers(
     // and (b) ran the per-move ambient-alignment scan over ALL scene entities + tracking
     // resolution → main-thread cost that made the ghost lag behind the OS cursor. Snapping
     // still works (ImmediateSnapStore is updated by the snap engine, not here).
-    if (toolOwnsPlacementGhost(activeTool)) return;
+    // ADR-189 §3.13 — το ίδιο ισχύει για gesture previews χωρίς οντότητα
+    // («Παράλληλος οδηγός»): κατέχουν κι αυτά τον καμβά με δικό τους RAF.
+    if (toolOwnsPreviewCanvas(activeTool)) return;
     processDrawingHover(p, {
       activeTool,
       isDimTool: dimRouting.isDimTool,
