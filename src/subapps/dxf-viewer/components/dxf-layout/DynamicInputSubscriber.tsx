@@ -42,10 +42,12 @@ import { RectLockStore } from '../../systems/dynamic-input/RectLockStore';
 import { ringStartKey } from '../../systems/dynamic-input/ring-config';
 // ADR-513 §grip-parity — press-drag άκρου γραμμής δείχνει το ΙΔΙΟ δαχτυλίδι (lock-only).
 import { GRIP_LINEAR_RING_CONFIG } from '../../systems/dynamic-input/grip-linear-ring-config';
+import { OPENING_WIDTH_RING_CONFIG } from '../../systems/dynamic-input/opening-width-ring-config';
 import {
   subscribeActiveDragGrip,
   getActiveDragGrip,
   isLineEndpointDragInfo,
+  isOpeningCornerDragInfo,
 } from '../../systems/cursor/GripDragStore';
 import { DynamicInputLockStore } from '../../systems/dynamic-input/DynamicInputLockStore';
 // ADR-513 §rotation-ring — single-slice «Γωνία» ring στο rotate-free (typed rotation angle).
@@ -147,6 +149,7 @@ export const DynamicInputSubscriber = React.memo(function DynamicInputSubscriber
   // start/end, όχι ανά frame). Οδηγεί το mount/unmount του δαχτυλιδιού στην επέκταση άκρου γραμμής.
   const activeDrag = useSyncExternalStore(subscribeActiveDragGrip, getActiveDragGrip, () => null);
   const lineEndpointDrag = isLineEndpointDragInfo(activeDrag);
+  const openingCornerDrag = isOpeningCornerDragInfo(activeDrag);
 
   // Wire keyboard pipeline: maps `dynamic-input-coordinate-submit` events back
   // to the canvas drawing pipeline (`onDrawingPoint`) — see ADR §4 G2.
@@ -171,6 +174,23 @@ export const DynamicInputSubscriber = React.memo(function DynamicInputSubscriber
         config={GRIP_LINEAR_RING_CONFIG}
         placementMode="canvas-click"
         startKey={`grip:${activeDrag.entityId}:${activeDrag.gripIndex}`}
+        sceneUnits={getSceneUnits()}
+        getCanvasEl={getCanvasEl}
+        onDeactivate={unlockGripEndpointLocks}
+      />
+    );
+  }
+
+  // ADR-513 §opening-width — ΕΠΕΚΤΑΣΗ ΠΛΑΤΟΥΣ ΚΟΥΦΩΜΑΤΟΣ (click-move-click, hot-grip): δείξε το length-only
+  // «Δαχτυλίδι Εντολών» (Μήκος) σε `canvas-click` mode — ΑΚΡΙΒΩΣ ο μηχανισμός του άκρου γραμμής. Ο χρήστης
+  // κλικάρει τη λαβή παρειάς, η παρειά ακολουθεί button-free, πληκτρολογεί «Μήκος» → Enter → synthetic canvas
+  // click που κάνει το commit (hot-grip terminal), ή κλικ ΕΞΩ από τον τροχό → commit στον κέρσορα. Ίδιος 3D-yield.
+  if (dynInput.on && !is3D && openingCornerDrag && activeDrag && getSceneUnits) {
+    return (
+      <RadialCommandRing
+        config={OPENING_WIDTH_RING_CONFIG}
+        placementMode="canvas-click"
+        startKey={`opening-width:${activeDrag.entityId}:${activeDrag.gripIndex}`}
         sceneUnits={getSceneUnits()}
         getCanvasEl={getCanvasEl}
         onDeactivate={unlockGripEndpointLocks}

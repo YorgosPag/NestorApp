@@ -17,6 +17,7 @@ import { isClickActionGripKind } from './grip-click-action';
 import { createSceneManagerAdapter } from './grip-scene-manager-adapter';
 // ADR-513 §grip-parity — πληκτρολογημένο Μήκος/Γωνία (Δαχτυλίδι) στην ΕΠΕΚΤΑΣΗ ΑΚΡΟΥ γραμμής.
 import { resolveLineEndpointLockedDelta } from '../../systems/dynamic-input/grip-endpoint-lock';
+import { resolveOpeningWidthLockedDelta } from '../../systems/dynamic-input/opening-width-lock';
 import { resolveEndpointReshapePolarLock } from './grip-endpoint-polar-lock';
 import { resolveActiveFootprintGripKind } from '../../systems/grip/footprint-reshape-anchors';
 import { commitHotGripCopy } from './grip-parametric-commits';
@@ -111,8 +112,22 @@ function resolveEndpointReshapeCommitPolar(
 function resolveEndpointCommitDelta(
   grip: UnifiedGripInfo, worldPos: Point2D, deps: DxfCommitDeps,
 ): Point2D | null {
-  return resolveLineEndpointCommitLock(grip, worldPos, deps)
+  return resolveOpeningWidthCommitLock(grip, worldPos, deps)
+    ?? resolveLineEndpointCommitLock(grip, worldPos, deps)
     ?? resolveEndpointReshapeCommitPolar(grip, worldPos, deps);
+}
+
+/**
+ * ADR-513 §opening-width — το length-locked commit displacement για λαβή παρειάς κουφώματος
+ * (`opening-corner-*`), ή `null` όταν δεν υπάρχει lock / δεν είναι λαβή παρειάς. ΙΔΙΟΣ
+ * `resolveOpeningWidthLockedDelta` SSoT με το ghost (σχετικά με `grip.position`) → commit ≡ preview.
+ */
+function resolveOpeningWidthCommitLock(
+  grip: UnifiedGripInfo, worldPos: Point2D, deps: DxfCommitDeps,
+): Point2D | null {
+  const ctx = resolveLineGripContext(grip, deps);
+  if (!ctx) return null;
+  return resolveOpeningWidthLockedDelta(ctx.entity, gripKindOf(grip, 'opening'), grip.position, worldPos);
 }
 
 /**

@@ -53,7 +53,7 @@ interface OpeningGeometryLike {
  * ισχύει (no lock / όχι λαβή παρειάς / χωρίς γεωμετρία).
  */
 export function resolveOpeningWidthLockedDelta(
-  entity: OpeningGeometryLike | null | undefined,
+  entity: unknown,
   openingGripKind: OpeningGripKind | null | undefined,
   gripPosition: Readonly<Point2D>,
   cursorWorld: Readonly<Point2D>,
@@ -64,7 +64,7 @@ export function resolveOpeningWidthLockedDelta(
   const lengthScene = DynamicInputLockStore.getLocked().length;
   if (lengthScene === null) return null;
 
-  const g = entity?.geometry;
+  const g = (entity as OpeningGeometryLike | null | undefined)?.geometry;
   if (!g?.position || g.rotation === undefined) return null;
 
   // Τοπικός μοναδιαίος άξονας τοίχου στο κούφωμα (rotation = διεύθυνση άξονα).
