@@ -391,7 +391,6 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
             ref={previewCanvasRef as React.RefObject<PreviewCanvasHandle>}
             transform={transform}
             viewport={viewport}
-            isActive={isInDrawingMode(activeTool, overlayMode)}
             className={`absolute ${PANEL_LAYOUT.INSET['0']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}
             defaultOptions={PREVIEW_DEFAULTS}
             sceneUnits={dxfScene?.units ?? 'mm'}

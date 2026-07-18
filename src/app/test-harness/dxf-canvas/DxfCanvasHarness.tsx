@@ -225,7 +225,6 @@ export default function DxfCanvasHarness() {
             ref={previewCanvasRef}
             transform={transform}
             viewport={HARNESS_VIEWPORT}
-            isActive
           />
           <SnapIndicatorOverlay
             snapResult={snapResult}

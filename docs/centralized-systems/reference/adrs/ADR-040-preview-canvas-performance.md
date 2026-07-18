@@ -4489,3 +4489,13 @@ polar) πήρε έναν κλάδο `resolveVertexReshapeLockedDelta` (arc/polyl
 Model A) — pure resolver, μηδέν subscription, μηδέν bitmap-cache αλλαγή. Ίδιος resolver τρέχει στο commit
 (`grip-mouseup-handler.resolveEndpointCommitDelta`) → preview≡commit. Λεπτομέρειες: ADR-513 changelog 2026-07-18.
 Co-staged με ADR-513. CHECK 6B/6D. ΟΧΙ tsc (N.17). 🔴 verify+commit (Giorgio).
+- **2026-07-18 (Opus 4.8) — αφαίρεση του νεκρού `PreviewCanvas.isActive`.** Το prop δηλωνόταν στο
+  `PreviewCanvasProps`, γινόταν destructure με `= true` και **δεν διαβαζόταν πουθενά στο σώμα** — ο
+  καμβάς ζωγράφιζε πάντα, ανεξάρτητα από την τιμή. Το `CanvasLayerStack` του περνούσε
+  `isInDrawingMode(activeTool, overlayMode)`, δηλαδή ένα gate που **έμοιαζε** να ελέγχει το preview
+  ενώ ήταν no-op· ακριβώς το είδος ψευδο-συμβολαίου που παραπλανά όποιον διαβάζει το Shell ψάχνοντας
+  ποιος κατέχει τον καμβά (η πραγματική απάντηση ζει στο `toolOwnsPreviewCanvas`, ADR-189 §3.13 /
+  ADR-624). **MOD (3):** `PreviewCanvas.tsx` (prop + destructure), `CanvasLayerStack.tsx` (call site),
+  `DxfCanvasHarness.tsx` (test harness call site). Μηδέν αλλαγή συμπεριφοράς — αφαίρεση μόνο.
+  Καμία νέα subscription στο Shell (CHECK 6C αμετάβλητο: οι αναφορές `useSyncExternalStore` στο
+  `CanvasLayerStack` παραμένουν **αποκλειστικά σχόλια**). ΟΧΙ tsc (N.17).

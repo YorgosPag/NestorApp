@@ -58,8 +58,6 @@ export interface PreviewCanvasProps {
   className?: string;
   /** Custom styles */
   style?: React.CSSProperties;
-  /** Is preview rendering active? */
-  isActive?: boolean;
   /** Current view transform (for coordinate conversion) */
   transform: ViewTransform;
   /** Viewport dimensions */
@@ -195,7 +193,6 @@ export const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>
     {
       className = '',
       style,
-      isActive = true,
       transform,
       viewport,
       defaultOptions,
