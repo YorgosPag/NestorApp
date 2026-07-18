@@ -26,15 +26,21 @@ export interface ExportMaterialEntry {
   readonly transparent: boolean;
 }
 
-function isMeshStandard(m: THREE.Material): m is THREE.MeshStandardMaterial {
-  return (m as THREE.MeshStandardMaterial).isMeshStandardMaterial === true;
+/**
+ * Το diffuse χρώμα ενός υλικού, αν έχει (`MeshStandardMaterial`/`MeshBasicMaterial`/`Lambert`/
+ * `Phong`… — όλα εκθέτουν `.color: THREE.Color`), αλλιώς null. Ο οπλισμός (ADR-463) είναι
+ * `MeshBasicMaterial` crimson: χωρίς αυτό θα έπεφτε στο γκρι fallback και θα έχανε το χρώμα του.
+ */
+function materialColor(m: THREE.Material): THREE.Color | null {
+  const c = (m as { color?: unknown }).color;
+  return c instanceof THREE.Color ? c : null;
 }
 
 /** Σταθερό όνομα υλικού: το DNA matId αν υπάρχει, αλλιώς το χρώμα (ποτέ δύο υλικά με ίδιο όνομα). */
 function resolveMaterialName(matId: string | null, material: THREE.Material): string {
   if (matId !== null) return sanitizeMeshNamePart(matId);
-  const color = isMeshStandard(material) ? material.color.getHexString() : '808080';
-  return `mat_${color}`;
+  const color = materialColor(material);
+  return `mat_${color ? color.getHexString() : '808080'}`;
 }
 
 /**
@@ -78,7 +84,7 @@ export function assignExportMaterials(
       clones.set(name, clone);
       table.set(name, {
         name,
-        color: isMeshStandard(clone) ? clone.color.clone() : new THREE.Color(0x808080),
+        color: materialColor(clone)?.clone() ?? new THREE.Color(0x808080),
         opacity: clone.opacity,
         transparent: clone.transparent,
       });

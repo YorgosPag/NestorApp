@@ -27,6 +27,8 @@ import {
   resolveFloorDatumRelativeElevationMm,
 } from '../../../bim-3d/scene/floor-stack-elevation';
 import type { FloorStackEntry } from '../../../bim-3d/scene/multi-floor-3d-source';
+import { stripExportDecorations } from './mesh3d-decorations';
+import { bakeInstancedMeshesForExport } from './mesh3d-instancing';
 import type { ResolvedExportFloor } from '../export-floor-scope';
 import type { ExportDeps } from '../../types';
 
@@ -110,7 +112,25 @@ export function buildMesh3dScene(
   // είναι αναμμένο στην οθόνη (απόφαση Giorgio 2026-07-17). Ό,τι ήταν σβηστό ταξιδεύει
   // σημαδεμένο ως `HIDDEN_`, ώστε ο χρήστης να το ξανακρύψει ή να το εμφανίσει στο C4D.
   const layer = new BimSceneLayer(scene, { includeHidden: true });
-  layer.syncMultiFloor(entries, deps.floors ?? [], deps.buildings ?? [], deps.activeBuildingId ?? null);
+  // ADR-668 — the export carries the WHOLE selected scope. The active-building «focus» is a
+  // transient screen state (Revit/ArchiCAD never let it filter an export), and the `includeHidden`
+  // contract above already promises the whole model. So the building-visibility gate is neutralised
+  // for export by passing `activeBuildingId = null` (BimSceneLayer.shouldRender → show all): the
+  // scope is decided by WHICH floors populate `entries`, not by building focus. This is
+  // belt-and-suspenders — a future forgotten `deps.buildings` can never again blank an export.
+  // `deps.buildings` is still forwarded so each entity resolves its building for correct baseElevation.
+  layer.syncMultiFloor(entries, deps.floors ?? [], deps.buildings ?? [], null);
+
+  // ADR-668 §4.7 — οι converters προσαρτούν screen-space edge overlays (`LineSegments2`, ADR-375) ως
+  // παιδιά κάθε σώματος· επειδή κληρονομούν `isMesh`, θα εξάγονταν ως εκφυλισμένα συμπίπτοντα δίδυμα
+  // (`…_2`, Z=0) σκουπίδια — και μέσα από τους ίδιους τους three serialisers. Τα αφαιρούμε ΠΡΙΝ
+  // μετρήσουμε/ονοματίσουμε/σειριοποιήσουμε: το αρχείο κουβαλά μόνο σώματα μοντέλου.
+  stripExportDecorations(layer.group);
+
+  // ADR-668 §4.8 — ο οπλισμός (όταν ON) είναι `InstancedMesh` (ADR-463)· ο OBJExporter δεν
+  // επεκτείνει instances → θα έβγαινε ένας κύλινδρος στο origin. Τον ψήνουμε σε πραγματική
+  // γεωμετρία ώστε ο κλωβός να εξάγεται σαν κάθε άλλη οντότητα (σοβάς κ.λπ.), σε OBJ και glTF.
+  bakeInstancedMeshesForExport(layer.group);
 
   const meshCount = countMeshes(layer.group);
   if (meshCount === 0) {

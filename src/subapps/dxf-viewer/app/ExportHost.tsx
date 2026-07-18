@@ -16,8 +16,9 @@
  *   - PDF → delegates to the canonical Print engine (`dxf:print-dialog-requested`,
  *           served by `PrintHost`, ADR-453).
  *
- * Mounted as a React.Suspense leaf in `DxfViewerDialogs`. ADR-040: zero canvas
- * subscriptions, zero useSyncExternalStore.
+ * Mounted as a React.Suspense leaf in `DxfViewerDialogs`. ADR-040: zero HIGH-FREQUENCY
+ * canvas subscriptions (transform/hover/cursor). The low-frequency Firestore feeds it reads
+ * (`useFloorsByBuilding`, `useFirestoreBuildings`) are rarely-changing lists, not 60fps stores.
  *
  * @see docs/centralized-systems/reference/adrs/ADR-505-unified-export-system.md
  */
@@ -32,9 +33,15 @@ import { useLevels } from '../systems/levels';
 // this hook). NOT `Bim3DEntitiesStore.floors`, whose `elevation` arrives undefined → every
 // storey would stack at Y=0.
 import { useFloorsByBuilding } from '@/components/properties/shared/useFloorsByBuilding';
+// ADR-668 — building records (baseElevation + membership) from the SAME canonical Firestore SSoT
+// the live 3Δ store feeds on: `useFirestoreBuildings` (ONE shared BUILDINGS listener, ADR-227/300)
+// → `useBuildingFloors3DSync` → `Bim3DEntitiesStore.buildings`. Low-frequency list, not a canvas
+// store — the ADR-040 concern is high-freq subscriptions, not a rarely-changing buildings feed.
+import { useFirestoreBuildings } from '@/hooks/useFirestoreBuildings';
 import { nowISO } from '@/lib/date-local';
 import { runExport } from '../export/export-service';
 import type { ExportDeps, ExportLevelScene, ExportRequest } from '../export/types';
+import type { BuildingRef } from '../bim/utils/bim-floor-utils';
 import { ExportDialog } from '../ui/components/export/ExportDialog';
 
 export interface ExportHostProps {
@@ -80,6 +87,18 @@ function ExportBody({ projectId, buildingId, onClose }: ExportBodyProps): React.
   // ready before submit. DXF/TEK ignore them; the 3Δ exporter fails closed without them.
   const { floors: buildingFloors } = useFloorsByBuilding(activeBuildingId, true);
 
+  // ADR-668 — building refs for the 3Δ exporter. Mirrors `useBuildingFloors3DSync`'s map exactly
+  // (id + baseElevation + name), from the same `useFirestoreBuildings` SSoT. Without them
+  // `resolveEntityBuilding` fails → every body resolves to buildingId='' → the mesh3d building gate
+  // marks it `HIDDEN_` AND its `baseElevation` Y-offset collapses to 0. Left UNFILTERED by project:
+  // the exporter only ever does `.find(b => b.id === …)`, so extra buildings are harmless while a
+  // stale/missing projectId prop could starve it (fail-open beats fail-closed here).
+  const { buildings: firestoreBuildings } = useFirestoreBuildings();
+  const buildings = React.useMemo<BuildingRef[]>(
+    () => firestoreBuildings.map((b) => ({ id: b.id, baseElevation: b.baseElevation, name: b.name })),
+    [firestoreBuildings],
+  );
+
   const handleSubmit = React.useCallback(
     async (request: ExportRequest) => {
       // IFC / PDF → delegate to the canonical engines (SSoT, no duplication).
@@ -110,12 +129,15 @@ function ExportBody({ projectId, buildingId, onClose }: ExportBodyProps): React.
         // ADR-668 — 3Δ-only: real storey elevations, so «όλοι οι όροφοι» stacks a building
         // instead of flattening every floor onto Z=0.
         floors: buildingFloors,
+        // ADR-668 — 3Δ-only: building records so `resolveEntityBuilding` binds every body to its
+        // building (correct baseElevation + never spuriously HIDDEN_).
+        buildings,
         activeBuildingId,
       };
       await runExport(request, deps);
     },
     [levels, getLevelScene, currentLevelId, projectName, projectId, buildingId,
-     buildingFloors, activeBuildingId],
+     buildingFloors, buildings, activeBuildingId],
   );
 
   const handleOpenChange = React.useCallback(
