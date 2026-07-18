@@ -120,3 +120,12 @@ math → λάθος σε rotated· απαιτεί unproject cursor στους τ
   normalization + commit corner1/corner2 finite) + 20 existing GREEN. Το `stretchRectangle` πέφτει στο
   «FOLLOW-UP» slice όσον αφορά ΟΡΘΟΓΩΝΙΟΤΗΤΑ σε rotated frame (partial drag → polyline, by design).
   jscpd 3.28 (diff). CHECK 6D co-stage. ΟΧΙ tsc (N.17). 🔴 browser-verify + commit (Giorgio).
+- **2026-07-18 (Opus 4.8) — Partial-capture reshape: το ορθογώνιο γινόταν ΠΡΑΣΙΝΟ→ΛΕΥΚΟ (χρώμα χάνεται).**
+  Ρίζα: το partial-capture branch του `stretchRectangle` (`systems/stretch/stretch-entity-transform.ts`)
+  παρήγαγε το replacement polyline αντιγράφοντας ΜΟΝΟ `id`/`layerId`/`visible` → **πετούσε το `color`** (και
+  `lineweight`/`opacity`/`lineType`/`colorMode`/`colorAci`/`metadata`/`locked`/…) → η polyline αποδιδόταν με το
+  default stroke (**λευκό**) αντί για το χρώμα του ορθογωνίου (π.χ. πράσινο). Fix: **spread** όλων των
+  BaseEntity style/state props + override ΜΟΝΟ `type`+`vertices`+`closed`, με strip των rectangle-only anchors
+  (`x/y/w/h/rotation/corner1/corner2/fillColor/strokeWidth`) ώστε να μη μείνει stale rect geometry στην polyline.
+  jest: +1 test (color/lineweight/opacity/locked preserved + anchors stripped) → **3/3 GREEN** στο
+  `stretch-entity-transform-rectangle`. jscpd 3.28 (diff) 0 new. ΟΧΙ tsc (N.17). 🔴 browser-verify + commit (Giorgio).
