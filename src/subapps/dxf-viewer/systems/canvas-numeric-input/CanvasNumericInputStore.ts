@@ -11,6 +11,7 @@
  */
 import { useSyncExternalStore } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
+import type { Guide } from '../guides/guide-types';
 import { DirectDistanceEntry } from '../../text-engine/interaction/DirectDistanceEntry';
 
 type Listener = () => void;
@@ -21,7 +22,14 @@ type SignResolver = () => 1 | -1;
 
 const _dde = new DirectDistanceEntry();
 let _signResolver: SignResolver = () => 1;
-let _refGuideId: string | null = null;
+/**
+ * Ο ΟΔΗΓΟΣ ΑΝΑΦΟΡΑΣ, παγωμένος ως ΑΝΤΙΓΡΑΦΟ στο κλικ — όπως και το anchor.
+ * Το leaf που ζωγραφίζει τη διακεκομμένη χρειάζεται τη ΓΕΩΜΕΤΡΙΑ (άξονας/offset/
+ * άκρα) για να κλειδώσει το ΟΡΘΟ κάθετα στον οδηγό· ένα σκέτο id δεν αρκεί και θα
+ * ανάγκαζε το leaf να συνδρομήσει στο GuideStore (ADR-040: high-freq leaf ≤2 hooks).
+ * Το `_refGuideId` καταργήθηκε — το id προκύπτει από `_refGuide.id` (μία πηγή).
+ */
+let _refGuide: Guide | null = null;
 /**
  * Το σημείο ΠΑΝΩ στον οδηγό αναφοράς απ' όπου ξεκινά η δυναμική διακεκομμένη
  * (ADR-189 §3.13). ΠΑΓΩΝΕΙ στο κλικ — σε αντίθεση με την ΠΛΕΥΡΑ, που παραμένει
@@ -34,6 +42,16 @@ const _listeners = new Set<Listener>();
 
 function _notify(): void {
   _listeners.forEach(fn => fn());
+}
+
+/** Βαθύ-όσο-χρειάζεται αντίγραφο: ο caller δεν πρέπει να μπορεί να μεταλλάξει
+ *  τον παγωμένο οδηγό (offset/visible είναι mutable πεδία του `Guide`). */
+function _cloneGuide(guide: Guide): Guide {
+  return {
+    ...guide,
+    startPoint: guide.startPoint ? { x: guide.startPoint.x, y: guide.startPoint.y } : undefined,
+    endPoint: guide.endPoint ? { x: guide.endPoint.x, y: guide.endPoint.y } : undefined,
+  };
 }
 
 export const CanvasNumericInputStore = {
@@ -52,13 +70,13 @@ export const CanvasNumericInputStore = {
    */
   activate(
     signResolver: SignResolver,
-    refGuideId: string,
+    refGuide: Guide,
     anchor: Point2D,
     onConfirm: ConfirmFn,
     onCancel?: CancelFn,
   ): void {
     _signResolver = signResolver;
-    _refGuideId = refGuideId;
+    _refGuide = _cloneGuide(refGuide);
     // Αντίγραφο: ο caller δεν πρέπει να μπορεί να μεταλλάξει το anchor εκ των υστέρων.
     _anchor = { x: anchor.x, y: anchor.y };
     _onConfirm = onConfirm;
@@ -74,6 +92,15 @@ export const CanvasNumericInputStore = {
    */
   getAnchor(): Point2D | null {
     return _anchor;
+  },
+
+  /**
+   * Ο παγωμένος οδηγός αναφοράς. Ίδια σύμβαση με το `getAnchor`: επιστρέφει ΤΗΝ
+   * ΙΔΙΑ ΑΝΑΦΟΡΑ μεταξύ ειδοποιήσεων (νέο literal σε κάθε κλήση ⇒ ατέρμονο
+   * re-render στο `useSyncExternalStore`).
+   */
+  getRefGuide(): Guide | null {
+    return _refGuide;
   },
 
   /**
@@ -110,10 +137,10 @@ export const CanvasNumericInputStore = {
       _notify();
       return false;
     }
-    const refGuideId = _refGuideId!;
+    const refGuideId = _refGuide?.id ?? '';
     const sign = _signResolver();
     const cb = _onConfirm;
-    _refGuideId = null;
+    _refGuide = null;
     _anchor = null;
     _onConfirm = null;
     _onCancel = null;
@@ -125,7 +152,7 @@ export const CanvasNumericInputStore = {
   cancel(): void {
     const cb = _onCancel;
     _dde.reset();
-    _refGuideId = null;
+    _refGuide = null;
     _anchor = null;
     _onConfirm = null;
     _onCancel = null;
@@ -143,6 +170,7 @@ export const CanvasNumericInputStore = {
 
 const _getNullAnchor = (): Point2D | null => null;
 const _getNullDistance = (): number | null => null;
+const _getNullGuide = (): Guide | null => null;
 
 /**
  * Το σημείο εκκίνησης της δυναμικής γραμμής, για το leaf που τη ζωγραφίζει.
@@ -153,6 +181,19 @@ export function useCanvasNumericAnchor(): Point2D | null {
     CanvasNumericInputStore.subscribe,
     CanvasNumericInputStore.getAnchor,
     _getNullAnchor,
+  );
+}
+
+/**
+ * Ο παγωμένος οδηγός αναφοράς, για το leaf που ζωγραφίζει τη διακεκομμένη: του
+ * χρειάζεται η ΓΕΩΜΕΤΡΙΑ ώστε το ΟΡΘΟ να κλειδώσει κάθετα ΣΤΟΝ ΟΔΗΓΟ
+ * (`resolveParallelCursor`). `null` ⇒ καμία ενεργή χειρονομία.
+ */
+export function useCanvasNumericRefGuide(): Guide | null {
+  return useSyncExternalStore(
+    CanvasNumericInputStore.subscribe,
+    CanvasNumericInputStore.getRefGuide,
+    _getNullGuide,
   );
 }
 

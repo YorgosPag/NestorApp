@@ -34,6 +34,7 @@ import {
   SHEAR_WALL_CATALOG,
   formatIShapePresetLabel,
 } from '../../../bim/columns/section-catalog';
+import { literalNumberOptions } from './ribbon-numeric-options';
 
 export const COLUMN_CONTEXTUAL_TRIGGER = 'column-selected';
 
@@ -56,48 +57,16 @@ export const COLUMN_KIND_OPTIONS = [
 ] as const;
 
 // ADR-363 Phase 8D — polygon sides numeric input options (3-12 per MIN/MAX_POLYGON_SIDES).
-const POLYGON_SIDES_OPTIONS = [
-  { value: '3',  labelKey: '3',  isLiteralLabel: true },
-  { value: '4',  labelKey: '4',  isLiteralLabel: true },
-  { value: '5',  labelKey: '5',  isLiteralLabel: true },
-  { value: '6',  labelKey: '6',  isLiteralLabel: true },
-  { value: '7',  labelKey: '7',  isLiteralLabel: true },
-  { value: '8',  labelKey: '8',  isLiteralLabel: true },
-  { value: '10', labelKey: '10', isLiteralLabel: true },
-  { value: '12', labelKey: '12', isLiteralLabel: true },
-] as const;
+const POLYGON_SIDES_OPTIONS = literalNumberOptions([3, 4, 5, 6, 7, 8, 10, 12]);
 
 // ADR-363 Phase 8D — I-shape flange thickness presets (IPE/HEA typical range).
-const I_FLANGE_THICKNESS_OPTIONS = [
-  { value: '8',  labelKey: '8',  isLiteralLabel: true },
-  { value: '10', labelKey: '10', isLiteralLabel: true },
-  { value: '12', labelKey: '12', isLiteralLabel: true },
-  { value: '15', labelKey: '15', isLiteralLabel: true },
-  { value: '20', labelKey: '20', isLiteralLabel: true },
-  { value: '25', labelKey: '25', isLiteralLabel: true },
-  { value: '30', labelKey: '30', isLiteralLabel: true },
-] as const;
+const I_FLANGE_THICKNESS_OPTIONS = literalNumberOptions([8, 10, 12, 15, 20, 25, 30]);
 
 // ADR-363 Phase 8D — I-shape web thickness presets (IPE/HEA typical range).
-const I_WEB_THICKNESS_OPTIONS = [
-  { value: '6',  labelKey: '6',  isLiteralLabel: true },
-  { value: '8',  labelKey: '8',  isLiteralLabel: true },
-  { value: '10', labelKey: '10', isLiteralLabel: true },
-  { value: '12', labelKey: '12', isLiteralLabel: true },
-  { value: '15', labelKey: '15', isLiteralLabel: true },
-  { value: '18', labelKey: '18', isLiteralLabel: true },
-  { value: '20', labelKey: '20', isLiteralLabel: true },
-] as const;
+const I_WEB_THICKNESS_OPTIONS = literalNumberOptions([6, 8, 10, 12, 15, 18, 20]);
 
 // ADR-363 Phase 2b — U-shape (Π) leg/base thickness presets (RC wall typical, mm).
-const U_PLATE_THICKNESS_OPTIONS = [
-  { value: '100', labelKey: '100', isLiteralLabel: true },
-  { value: '130', labelKey: '130', isLiteralLabel: true },
-  { value: '150', labelKey: '150', isLiteralLabel: true },
-  { value: '200', labelKey: '200', isLiteralLabel: true },
-  { value: '250', labelKey: '250', isLiteralLabel: true },
-  { value: '300', labelKey: '300', isLiteralLabel: true },
-] as const;
+const U_PLATE_THICKNESS_OPTIONS = literalNumberOptions([100, 130, 150, 200, 250, 300]);
 
 // ADR-363 Phase 8E / ADR-409 §C — SSoT: dropdown options GENERATED from the
 // section catalog. Adding a preset in `section-catalog.ts` surfaces it here
@@ -134,45 +103,13 @@ const COLUMN_ANCHOR_OPTIONS = [
   { value: 'se',     labelKey: 'ribbon.commands.columnEditor.anchor.se',     isLiteralLabel: false },
 ] as const;
 
-const WIDTH_MM_OPTIONS = [
-  { value: '250',  labelKey: '250',  isLiteralLabel: true },
-  { value: '300',  labelKey: '300',  isLiteralLabel: true },
-  { value: '400',  labelKey: '400',  isLiteralLabel: true },
-  { value: '500',  labelKey: '500',  isLiteralLabel: true },
-  { value: '600',  labelKey: '600',  isLiteralLabel: true },
-  { value: '800',  labelKey: '800',  isLiteralLabel: true },
-  { value: '1000', labelKey: '1000', isLiteralLabel: true },
-] as const;
+const WIDTH_MM_OPTIONS = literalNumberOptions([250, 300, 400, 500, 600, 800, 1000]);
 
-const DEPTH_MM_OPTIONS = [
-  { value: '250',  labelKey: '250',  isLiteralLabel: true },
-  { value: '300',  labelKey: '300',  isLiteralLabel: true },
-  { value: '400',  labelKey: '400',  isLiteralLabel: true },
-  { value: '500',  labelKey: '500',  isLiteralLabel: true },
-  { value: '600',  labelKey: '600',  isLiteralLabel: true },
-  { value: '800',  labelKey: '800',  isLiteralLabel: true },
-  { value: '1000', labelKey: '1000', isLiteralLabel: true },
-] as const;
+const DEPTH_MM_OPTIONS = literalNumberOptions([250, 300, 400, 500, 600, 800, 1000]);
 
-const HEIGHT_MM_OPTIONS = [
-  { value: '2400', labelKey: '2400', isLiteralLabel: true },
-  { value: '2700', labelKey: '2700', isLiteralLabel: true },
-  { value: '3000', labelKey: '3000', isLiteralLabel: true },
-  { value: '3300', labelKey: '3300', isLiteralLabel: true },
-  { value: '3600', labelKey: '3600', isLiteralLabel: true },
-  { value: '4000', labelKey: '4000', isLiteralLabel: true },
-] as const;
+const HEIGHT_MM_OPTIONS = literalNumberOptions([2400, 2700, 3000, 3300, 3600, 4000]);
 
-const ROTATION_DEG_OPTIONS = [
-  { value: '0',   labelKey: '0',   isLiteralLabel: true },
-  { value: '15',  labelKey: '15',  isLiteralLabel: true },
-  { value: '30',  labelKey: '30',  isLiteralLabel: true },
-  { value: '45',  labelKey: '45',  isLiteralLabel: true },
-  { value: '60',  labelKey: '60',  isLiteralLabel: true },
-  { value: '90',  labelKey: '90',  isLiteralLabel: true },
-  { value: '135', labelKey: '135', isLiteralLabel: true },
-  { value: '180', labelKey: '180', isLiteralLabel: true },
-] as const;
+const ROTATION_DEG_OPTIONS = literalNumberOptions([0, 15, 30, 45, 60, 90, 135, 180]);
 
 // ADR-404 Φ5 — κεκλιμένη κολώνα: on/off toggle + γωνία (μοίρες από κατακόρυφο, 0..80°,
 // editable-free) + φορά (reuse ROTATION_DEG_OPTIONS ως ring 0..180°). Exported ώστε το
@@ -182,16 +119,7 @@ export const TILT_ENABLED_OPTIONS = [
   { value: 'off', labelKey: 'ribbon.commands.columnEditor.tilt.off', isLiteralLabel: false },
 ] as const;
 
-export const TILT_ANGLE_DEG_OPTIONS = [
-  { value: '0',  labelKey: '0',  isLiteralLabel: true },
-  { value: '5',  labelKey: '5',  isLiteralLabel: true },
-  { value: '10', labelKey: '10', isLiteralLabel: true },
-  { value: '15', labelKey: '15', isLiteralLabel: true },
-  { value: '20', labelKey: '20', isLiteralLabel: true },
-  { value: '30', labelKey: '30', isLiteralLabel: true },
-  { value: '45', labelKey: '45', isLiteralLabel: true },
-  { value: '60', labelKey: '60', isLiteralLabel: true },
-] as const;
+export const TILT_ANGLE_DEG_OPTIONS = literalNumberOptions([0, 5, 10, 15, 20, 30, 45, 60]);
 
 export const TILT_DIRECTION_DEG_OPTIONS = ROTATION_DEG_OPTIONS;
 
@@ -253,6 +181,7 @@ export const CONTEXTUAL_COLUMN_TAB: RibbonTab = {
                 commandKey: COLUMN_RIBBON_KEYS.params.width,
                 comboboxWidthPx: 80,
                 options: WIDTH_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -264,6 +193,7 @@ export const CONTEXTUAL_COLUMN_TAB: RibbonTab = {
                 commandKey: COLUMN_RIBBON_KEYS.params.depth,
                 comboboxWidthPx: 80,
                 options: DEPTH_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -275,6 +205,7 @@ export const CONTEXTUAL_COLUMN_TAB: RibbonTab = {
                 commandKey: COLUMN_RIBBON_KEYS.params.height,
                 comboboxWidthPx: 80,
                 options: HEIGHT_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             // ADR-451 Slice 4 — «Ύψος Ορόφου»: γράφει το ύψος του ΕΝΕΡΓΟΥ ορόφου (ΙΔΙΟ
@@ -289,6 +220,7 @@ export const CONTEXTUAL_COLUMN_TAB: RibbonTab = {
                 commandKey: STOREY_RIBBON_KEYS.height,
                 comboboxWidthPx: 90,
                 options: HEIGHT_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -300,6 +232,7 @@ export const CONTEXTUAL_COLUMN_TAB: RibbonTab = {
                 commandKey: COLUMN_RIBBON_KEYS.params.rotation,
                 comboboxWidthPx: 80,
                 options: ROTATION_DEG_OPTIONS,
+                numericInput: { quantityKind: 'angle' },
               },
             },
           ],
@@ -336,7 +269,7 @@ export const CONTEXTUAL_COLUMN_TAB: RibbonTab = {
                 commandKey: COLUMN_RIBBON_KEYS.params.tiltAngle,
                 comboboxWidthPx: 80,
                 options: TILT_ANGLE_DEG_OPTIONS,
-                numericInput: { min: 0, max: 80 },
+                numericInput: { quantityKind: 'angle', min: 0, max: 80 },
               },
             },
             {
@@ -348,6 +281,7 @@ export const CONTEXTUAL_COLUMN_TAB: RibbonTab = {
                 commandKey: COLUMN_RIBBON_KEYS.params.tiltDirection,
                 comboboxWidthPx: 80,
                 options: TILT_DIRECTION_DEG_OPTIONS,
+                numericInput: { quantityKind: 'angle' },
               },
             },
           ],
@@ -373,6 +307,7 @@ export const CONTEXTUAL_COLUMN_TAB: RibbonTab = {
                 commandKey: COLUMN_RIBBON_KEYS.params.sides,
                 comboboxWidthPx: 80,
                 options: POLYGON_SIDES_OPTIONS,
+                numericInput: { quantityKind: 'count' },
               },
             },
           ],
@@ -398,6 +333,7 @@ export const CONTEXTUAL_COLUMN_TAB: RibbonTab = {
                 commandKey: COLUMN_RIBBON_KEYS.params.flangeThickness,
                 comboboxWidthPx: 80,
                 options: I_FLANGE_THICKNESS_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -409,6 +345,7 @@ export const CONTEXTUAL_COLUMN_TAB: RibbonTab = {
                 commandKey: COLUMN_RIBBON_KEYS.params.webThickness,
                 comboboxWidthPx: 80,
                 options: I_WEB_THICKNESS_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
           ],
@@ -435,6 +372,7 @@ export const CONTEXTUAL_COLUMN_TAB: RibbonTab = {
                 commandKey: COLUMN_RIBBON_KEYS.params.legThickness,
                 comboboxWidthPx: 80,
                 options: U_PLATE_THICKNESS_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -446,6 +384,7 @@ export const CONTEXTUAL_COLUMN_TAB: RibbonTab = {
                 commandKey: COLUMN_RIBBON_KEYS.params.baseThickness,
                 comboboxWidthPx: 80,
                 options: U_PLATE_THICKNESS_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
           ],

@@ -26,6 +26,7 @@ import {
   MEP_SEGMENT_RIBBON_KEYS_ACTIONS,
   MEP_SEGMENT_RIBBON_VISIBILITY_KEYS,
 } from '../hooks/bridge/mep-segment-command-keys';
+import { literalNumberOptions } from './ribbon-numeric-options';
 
 export const MEP_SEGMENT_CONTEXTUAL_TRIGGER = 'mep-segment-selected';
 
@@ -37,44 +38,16 @@ const MEP_SEGMENT_SECTION_OPTIONS = [
 ] as const;
 
 // Rectangular duct width (mm).
-const WIDTH_MM_OPTIONS = [
-  { value: '200', labelKey: '200', isLiteralLabel: true },
-  { value: '300', labelKey: '300', isLiteralLabel: true },
-  { value: '400', labelKey: '400', isLiteralLabel: true },
-  { value: '500', labelKey: '500', isLiteralLabel: true },
-  { value: '600', labelKey: '600', isLiteralLabel: true },
-  { value: '800', labelKey: '800', isLiteralLabel: true },
-] as const;
+const WIDTH_MM_OPTIONS = literalNumberOptions([200, 300, 400, 500, 600, 800]);
 
 // Rectangular duct height (mm).
-const HEIGHT_MM_OPTIONS = [
-  { value: '150', labelKey: '150', isLiteralLabel: true },
-  { value: '200', labelKey: '200', isLiteralLabel: true },
-  { value: '250', labelKey: '250', isLiteralLabel: true },
-  { value: '300', labelKey: '300', isLiteralLabel: true },
-  { value: '400', labelKey: '400', isLiteralLabel: true },
-] as const;
+const HEIGHT_MM_OPTIONS = literalNumberOptions([150, 200, 250, 300, 400]);
 
 // Round duct / pipe outer diameter (mm) — DN + round-duct presets.
-const DIAMETER_MM_OPTIONS = [
-  { value: '32',  labelKey: '32',  isLiteralLabel: true },
-  { value: '40',  labelKey: '40',  isLiteralLabel: true },
-  { value: '50',  labelKey: '50',  isLiteralLabel: true },
-  { value: '63',  labelKey: '63',  isLiteralLabel: true },
-  { value: '100', labelKey: '100', isLiteralLabel: true },
-  { value: '160', labelKey: '160', isLiteralLabel: true },
-  { value: '250', labelKey: '250', isLiteralLabel: true },
-] as const;
+const DIAMETER_MM_OPTIONS = literalNumberOptions([32, 40, 50, 63, 100, 160, 250]);
 
 // Centreline elevation (mm) — plenum above a typical ceiling, or below-floor pipe.
-const CENTERLINE_ELEVATION_MM_OPTIONS = [
-  { value: '-300', labelKey: '-300', isLiteralLabel: true },
-  { value: '0',    labelKey: '0',    isLiteralLabel: true },
-  { value: '1000', labelKey: '1000', isLiteralLabel: true },
-  { value: '2800', labelKey: '2800', isLiteralLabel: true },
-  { value: '3000', labelKey: '3000', isLiteralLabel: true },
-  { value: '3200', labelKey: '3200', isLiteralLabel: true },
-] as const;
+const CENTERLINE_ELEVATION_MM_OPTIONS = literalNumberOptions([-300, 0, 1000, 2800, 3000, 3200]);
 
 // ADR-408 Φ14 — plumbing classification (what the pipe conveys). Drives colour
 // (blue/red/brown) + IFC. The System wins once the pipe joins a network.
@@ -146,6 +119,7 @@ export const CONTEXTUAL_MEP_SEGMENT_TAB: RibbonTab = {
                 commandKey: MEP_SEGMENT_RIBBON_KEYS.params.width,
                 comboboxWidthPx: 90,
                 options: WIDTH_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -157,6 +131,7 @@ export const CONTEXTUAL_MEP_SEGMENT_TAB: RibbonTab = {
                 commandKey: MEP_SEGMENT_RIBBON_KEYS.params.height,
                 comboboxWidthPx: 90,
                 options: HEIGHT_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
           ],
@@ -181,6 +156,7 @@ export const CONTEXTUAL_MEP_SEGMENT_TAB: RibbonTab = {
                 commandKey: MEP_SEGMENT_RIBBON_KEYS.params.diameter,
                 comboboxWidthPx: 90,
                 options: DIAMETER_MM_OPTIONS,
+                numericInput: { quantityKind: 'nominal-diameter' },
               },
             },
           ],
@@ -207,6 +183,7 @@ export const CONTEXTUAL_MEP_SEGMENT_TAB: RibbonTab = {
                 commandKey: MEP_SEGMENT_RIBBON_KEYS.params.centerlineElevation,
                 comboboxWidthPx: 90,
                 options: CENTERLINE_ELEVATION_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
           ],
@@ -233,6 +210,7 @@ export const CONTEXTUAL_MEP_SEGMENT_TAB: RibbonTab = {
                 commandKey: MEP_SEGMENT_RIBBON_KEYS.params.startElevation,
                 comboboxWidthPx: 90,
                 options: CENTERLINE_ELEVATION_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -244,6 +222,7 @@ export const CONTEXTUAL_MEP_SEGMENT_TAB: RibbonTab = {
                 commandKey: MEP_SEGMENT_RIBBON_KEYS.params.endElevation,
                 comboboxWidthPx: 90,
                 options: CENTERLINE_ELEVATION_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
           ],
@@ -299,6 +278,7 @@ export const CONTEXTUAL_MEP_SEGMENT_TAB: RibbonTab = {
                 commandKey: MEP_SEGMENT_RIBBON_KEYS.params.slopePercent,
                 comboboxWidthPx: 80,
                 options: SLOPE_PERCENT_OPTIONS,
+                numericInput: { quantityKind: 'percent' },
               },
             },
           ],

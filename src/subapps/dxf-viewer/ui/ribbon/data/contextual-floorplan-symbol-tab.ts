@@ -70,6 +70,7 @@ export const CONTEXTUAL_FLOORPLAN_SYMBOL_TAB: RibbonTab = {
                 commandKey: FLOORPLAN_SYMBOL_RIBBON_KEYS.params.rotation,
                 comboboxWidthPx: 80,
                 options: ROTATION_DEG_OPTIONS,
+                numericInput: { quantityKind: 'angle' },
               },
             },
           ],

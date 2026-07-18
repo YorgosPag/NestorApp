@@ -310,6 +310,17 @@ export interface UseCanvasClickHandlerParams {
    * προς τον κέρσορα (ADR-189 §3.13). Παγώνει εδώ· η πλευρά όχι.
    */
   onParallelRefSelected?: (refGuideId: string, anchor: Point2D) => void;
+  /**
+   * ΔΕΥΤΕΡΟ ΚΛΙΚ = COMMIT (ADR-189 §3.13). Όσο υπάρχει `parallelRefGuideId`, το
+   * επόμενο κλικ στον καμβά τοποθετεί τον παράλληλο οδηγό — ισότιμη διαδρομή με
+   * το Enter, ΟΧΙ αντικατάστασή του (και τα δύο μένουν ενεργά).
+   *
+   * Περνά ΩΜΟ `worldPoint`: ο περιορισμός (ΟΡΘΟ κάθετα στον οδηγό + βήμα F9) και
+   * η απόσταση/πλευρά υπολογίζονται στον workflow handler μέσω του ΕΝΟΣ SSoT
+   * `resolveParallelCursor` — το ίδιο που ζωγραφίζει τη διακεκομμένη. Ο click
+   * handler μένει λεπτός δρομολογητής: μηδέν γεωμετρία εκεί.
+   */
+  onParallelDistanceCommitted?: (refGuideId: string, worldPoint: Point2D) => void;
 
   // ── ADR-189 §3.3: Diagonal guide 3-click workflow ────────────────────
   guideAddDiagonalGuide?: (startPoint: Point2D, endPoint: Point2D) => CreateDiagonalGuideCommand;

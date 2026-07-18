@@ -259,6 +259,7 @@ export const CONTEXTUAL_STAIR_TAB: RibbonTab = {
                 commandKey: STAIR_RIBBON_KEYS.params.winderCount,
                 comboboxWidthPx: 70,
                 options: WINDER_COUNT_OPTIONS,
+                numericInput: { quantityKind: 'count' },
               },
             },
             {
@@ -292,6 +293,7 @@ export const CONTEXTUAL_STAIR_TAB: RibbonTab = {
                 commandKey: STAIR_RIBBON_KEYS.params.rise,
                 comboboxWidthPx: 70,
                 options: RISE_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -303,6 +305,7 @@ export const CONTEXTUAL_STAIR_TAB: RibbonTab = {
                 commandKey: STAIR_RIBBON_KEYS.params.tread,
                 comboboxWidthPx: 70,
                 options: TREAD_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -314,6 +317,7 @@ export const CONTEXTUAL_STAIR_TAB: RibbonTab = {
                 commandKey: STAIR_RIBBON_KEYS.params.width,
                 comboboxWidthPx: 80,
                 options: WIDTH_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -325,6 +329,7 @@ export const CONTEXTUAL_STAIR_TAB: RibbonTab = {
                 commandKey: STAIR_RIBBON_KEYS.params.stepCount,
                 comboboxWidthPx: 70,
                 options: STEP_COUNT_OPTIONS,
+                numericInput: { quantityKind: 'count' },
               },
             },
             {
@@ -340,6 +345,7 @@ export const CONTEXTUAL_STAIR_TAB: RibbonTab = {
                 commandKey: STAIR_RIBBON_KEYS.params.waistThickness,
                 comboboxWidthPx: 70,
                 options: WAIST_THICKNESS_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
           ],
@@ -391,6 +397,7 @@ export const CONTEXTUAL_STAIR_TAB: RibbonTab = {
                 commandKey: STAIR_RIBBON_KEYS.params.storyCount,
                 comboboxWidthPx: 70,
                 options: STORY_COUNT_OPTIONS,
+                numericInput: { quantityKind: 'count' },
               },
             },
           ],
@@ -418,6 +425,7 @@ export const CONTEXTUAL_STAIR_TAB: RibbonTab = {
                 commandKey: STAIR_RIBBON_KEYS.params.storyHeight,
                 comboboxWidthPx: 80,
                 options: STORY_HEIGHT_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
           ],

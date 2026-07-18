@@ -28,6 +28,7 @@ import {
   ROOF_RIBBON_BADGE_KEYS,
   ROOF_EDGE_KEYS,
 } from '../hooks/bridge/roof-command-keys';
+import { literalNumberOptions } from './ribbon-numeric-options';
 
 export const ROOF_CONTEXTUAL_TRIGGER = 'roof-selected';
 
@@ -41,24 +42,11 @@ const ROOF_SHAPE_OPTIONS = [
 ] as const;
 
 // mm — στάθμη γείσου (eaves datum / pivot line) presets.
-const BASE_PIVOT_Z_MM_OPTIONS = [
-  { value: '0',    labelKey: '0',    isLiteralLabel: true },
-  { value: '2800', labelKey: '2800', isLiteralLabel: true },
-  { value: '3000', labelKey: '3000', isLiteralLabel: true },
-  { value: '3300', labelKey: '3300', isLiteralLabel: true },
-  { value: '6000', labelKey: '6000', isLiteralLabel: true },
-] as const;
+const BASE_PIVOT_Z_MM_OPTIONS = literalNumberOptions([0, 2800, 3000, 3300, 6000]);
 
 // mm — οριζόντια προεξοχή γείσου (overhang) presets — εφαρμόζεται ενιαία σε όλες
 // τις περιμετρικές ακμές (ADR-417 Φ2b). 0 = χωρίς προεξοχή (δώμα/παραπέτο).
-const OVERHANG_MM_OPTIONS = [
-  { value: '0',   labelKey: '0',   isLiteralLabel: true },
-  { value: '200', labelKey: '200', isLiteralLabel: true },
-  { value: '300', labelKey: '300', isLiteralLabel: true },
-  { value: '400', labelKey: '400', isLiteralLabel: true },
-  { value: '500', labelKey: '500', isLiteralLabel: true },
-  { value: '600', labelKey: '600', isLiteralLabel: true },
-] as const;
+const OVERHANG_MM_OPTIONS = literalNumberOptions([0, 200, 300, 400, 500, 600]);
 
 // on/off — «Ορίζει κλίση;» (definesSlope) της επιλεγμένης ακμής (ADR-417 Φ-per-edge).
 const ROOF_EDGE_DEFINES_OPTIONS = [
@@ -175,7 +163,7 @@ export const CONTEXTUAL_ROOF_TAB: RibbonTab = {
                 // είναι αριθμητικό πεδίο — είναι picker ακμής με labels «Ακμή N ·
                 // κατεύθυνση». Χωρίς αυτό, το `isNumericOptionList` θα το έκανε
                 // editable numeric input (έδειχνε «0», όχι dropdown). Force Select.
-                numericInput: { editable: false },
+                numericInput: { quantityKind: 'count', editable: false },
               },
             },
             {
@@ -212,6 +200,7 @@ export const CONTEXTUAL_ROOF_TAB: RibbonTab = {
                 comboboxWidthPx: 90,
                 // Reuse των mm presets → numeric editable (type-to-enter + quick-pick).
                 options: OVERHANG_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
           ],
@@ -234,6 +223,7 @@ export const CONTEXTUAL_ROOF_TAB: RibbonTab = {
                 commandKey: ROOF_RIBBON_KEYS.params.basePivotZ,
                 comboboxWidthPx: 90,
                 options: BASE_PIVOT_Z_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -245,6 +235,7 @@ export const CONTEXTUAL_ROOF_TAB: RibbonTab = {
                 commandKey: ROOF_RIBBON_KEYS.params.overhangMm,
                 comboboxWidthPx: 90,
                 options: OVERHANG_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
           ],

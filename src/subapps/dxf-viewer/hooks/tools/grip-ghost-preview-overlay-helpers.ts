@@ -40,6 +40,10 @@ import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
 // ADR-557 — whole-entity move paints resolve #1's PUBLISHED tracking (same store useDimGripGhostPreview
 // paints for dims) instead of a divergent local re-resolve on the post-OSNAP-override cursor.
 import { getGripAlignmentTracking } from '../../systems/cursor/GripAlignmentTrackingStore';
+// ADR-508 §length-angle-hud-global — ΙΔΙΟΣ live HUD μήκους/γωνίας με τη σχεδίαση γραμμής/τοίχου.
+import { paintWallHud, buildSegmentHudMeta } from '../../canvas-v2/preview-canvas/wall-hud-paint';
+import { isLengthAngleHudVisible } from '../../systems/constraints/length-angle-hud-gate';
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 
 /**
  * ADR-508 §move-clearance — κυανές neighbor-clearance listening dims κατά το grip-drag: ΤΟ ΙΔΙΟ
@@ -178,6 +182,42 @@ export function paintGripActionAlignmentTraces(
   if (actionTracking) {
     paintActionAlignmentTracking(ctx, actionTracking, t, vp, sceneUnits);
   }
+}
+
+/**
+ * ADR-508 §length-angle-hud-global — Η ΛΕΥΚΗ ΕΝΔΕΙΞΗ ΜΗΚΟΥΣ + ΓΩΝΙΑΣ κατά τη ΜΕΤΑΚΙΝΗΣΗ ΛΑΒΗΣ.
+ *
+ * Giorgio 2026-07-18 (στιγμιότυπο 210337): «όταν λέω ένδειξη απόστασης εννοώ ΑΥΤΕΣ τις λευκές
+ * ενδείξεις που εμφανίζονται όταν δημιουργώ μια γραμμή — ΔΕΝ θέλω πινακίδα». Δηλαδή ακριβώς το
+ * ΥΠΑΡΧΟΝ live HUD της σχεδίασης (aligned διάσταση μήκους + `∠ γωνία`), όχι η `drawDimPill` που το
+ * ADR-560 κατάργησε ρητά από όλες τις ροές μετακίνησης. Καμία ανατροπή του ADR-560 — άλλη ένδειξη.
+ *
+ * Ίδιος painter (`paintWallHud` → `paintWallHudCore`) και ίδιο SSoT gate (`isLengthAngleHudVisible`,
+ * status-bar «ΜΗΚΟΣ/ΓΩΝΙΑ») με τη σχεδίαση γραμμής/τοίχου → μηδέν νέος painter, μηδέν νέο toggle. Το
+ * ίδιο το gate module ορίζει ρητά ως πεδίο εφαρμογής «κατά τη ΣΧΕΔΙΑΣΗ **και κατά το GRIP-DRAG**»,
+ * οπότε αυτό κλείνει ένα τεκμηριωμένο κενό, δεν επεκτείνει σκοπό.
+ *
+ * Το τμήμα που διαστασιολογείται είναι ΤΟ ΛΑΣΤΙΧΟ: σημείο βάσης (`anchorPos`) → τρέχουσα θέση λαβής
+ * (`anchorPos + delta`). Άρα η ένδειξη δείχνει πάντα την ΠΡΑΓΜΑΤΙΚΗ μετατόπιση — ήδη ORTHO/βήμα
+ * constrained και ήδη typed-value locked (το `dp.delta` έχει περάσει από τη σκάλα κλειδωμάτων), οπότε
+ * το νούμερο ταυτίζεται με ό,τι θα γίνει commit (WYSIWYG).
+ *
+ * `specLabel` κενό: η μετατόπιση δεν έχει BIM ταυτότητα (πάχος/ύψος) — μόνο μήκος + γωνία, όπως η γραμμή.
+ * No-op: εκτός armed hot-grip, χωρίς άγκυρα, σε μηδενικό delta (τίποτα να μετρηθεί), ή σε ΠΕΡΙΣΤΡΟΦΗ
+ * (εκεί η ρητή ένδειξη είναι το χρωματιστό τόξο φοράς με τις μοίρες — διαφορετική σημασιολογία).
+ */
+export function paintGripArmedDistanceHud(
+  ctx: CanvasRenderingContext2D,
+  dp: DxfGripDragPreview,
+  sceneUnits: SceneUnits,
+  t: ViewTransform,
+  vp: Viewport,
+): void {
+  if (!dp.hotGrip || !dp.anchorPos || dp.rotatePivot) return;
+  if (dp.delta.x === 0 && dp.delta.y === 0) return;
+  if (!isLengthAngleHudVisible()) return;
+  const end = translatePoint(dp.anchorPos, dp.delta);
+  paintWallHud(ctx, buildSegmentHudMeta(dp.anchorPos, end, sceneUnits), '', t, vp);
 }
 
 /**

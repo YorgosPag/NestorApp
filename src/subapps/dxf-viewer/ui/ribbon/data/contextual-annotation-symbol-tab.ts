@@ -24,13 +24,7 @@ const VARIANT_OPTIONS = listAnnotationSymbolsByKind('north-arrow').map((d) => ({
 }));
 
 /** Paper-height presets (mm). Literal labels — the number IS the label. */
-const SIZE_MM_OPTIONS = [
-  { value: '10', labelKey: '10', isLiteralLabel: true },
-  { value: '15', labelKey: '15', isLiteralLabel: true },
-  { value: '20', labelKey: '20', isLiteralLabel: true },
-  { value: '25', labelKey: '25', isLiteralLabel: true },
-  { value: '30', labelKey: '30', isLiteralLabel: true },
-] as const;
+const SIZE_MM_OPTIONS = literalNumberOptions([10, 15, 20, 25, 30]);
 
 const ROTATION_DEG_OPTIONS = literalNumberOptions([0, 45, 90, 135, 180, 225, 270, 315]);
 
@@ -78,6 +72,7 @@ export const CONTEXTUAL_ANNOTATION_SYMBOL_TAB: RibbonTab = {
                 commandKey: ANNOTATION_SYMBOL_RIBBON_KEYS.params.sizeMm,
                 comboboxWidthPx: 80,
                 options: SIZE_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -89,6 +84,7 @@ export const CONTEXTUAL_ANNOTATION_SYMBOL_TAB: RibbonTab = {
                 commandKey: ANNOTATION_SYMBOL_RIBBON_KEYS.params.rotation,
                 comboboxWidthPx: 80,
                 options: ROTATION_DEG_OPTIONS,
+                numericInput: { quantityKind: 'angle' },
               },
             },
           ],

@@ -36,6 +36,7 @@ import {
   TILT_SIDE_LEFT,
   TILT_SIDE_RIGHT,
 } from '../hooks/bridge/wall-tilt-param';
+import { literalNumberOptions } from './ribbon-numeric-options';
 
 export const WALL_CONTEXTUAL_TRIGGER = 'wall-selected';
 
@@ -72,16 +73,7 @@ const WALL_TILT_ENABLED_OPTIONS = [
   { value: TILT_ENABLED_OFF, labelKey: 'ribbon.commands.wallEditor.tilt.off', isLiteralLabel: false },
 ] as const;
 
-const WALL_TILT_ANGLE_DEG_OPTIONS = [
-  { value: '0',  labelKey: '0',  isLiteralLabel: true },
-  { value: '5',  labelKey: '5',  isLiteralLabel: true },
-  { value: '10', labelKey: '10', isLiteralLabel: true },
-  { value: '15', labelKey: '15', isLiteralLabel: true },
-  { value: '20', labelKey: '20', isLiteralLabel: true },
-  { value: '30', labelKey: '30', isLiteralLabel: true },
-  { value: '45', labelKey: '45', isLiteralLabel: true },
-  { value: '60', labelKey: '60', isLiteralLabel: true },
-] as const;
+const WALL_TILT_ANGLE_DEG_OPTIONS = literalNumberOptions([0, 5, 10, 15, 20, 30, 45, 60]);
 
 const WALL_TILT_SIDE_OPTIONS = [
   { value: TILT_SIDE_LEFT,  labelKey: 'ribbon.commands.wallEditor.tilt.left',  isLiteralLabel: false },
@@ -299,7 +291,7 @@ export const CONTEXTUAL_WALL_TAB: RibbonTab = {
                 commandKey: WALL_RIBBON_KEYS.tilt.angle,
                 comboboxWidthPx: 80,
                 options: WALL_TILT_ANGLE_DEG_OPTIONS,
-                numericInput: { min: 0, max: 80 },
+                numericInput: { quantityKind: 'angle', min: 0, max: 80 },
               },
             },
             {

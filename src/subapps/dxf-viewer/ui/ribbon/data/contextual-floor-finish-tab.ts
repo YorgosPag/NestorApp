@@ -97,6 +97,7 @@ export const CONTEXTUAL_FLOOR_FINISH_TAB: RibbonTab = {
                 commandKey: FLOOR_FINISH_RIBBON_KEYS.params.thicknessMm,
                 comboboxWidthPx: 100,
                 options: THICKNESS_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
           ],
@@ -119,6 +120,7 @@ export const CONTEXTUAL_FLOOR_FINISH_TAB: RibbonTab = {
                 commandKey: FLOOR_FINISH_RIBBON_KEYS.params.tileLengthMm,
                 comboboxWidthPx: 100,
                 options: TILE_DIM_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -130,6 +132,7 @@ export const CONTEXTUAL_FLOOR_FINISH_TAB: RibbonTab = {
                 commandKey: FLOOR_FINISH_RIBBON_KEYS.params.tileWidthMm,
                 comboboxWidthPx: 100,
                 options: TILE_DIM_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
           ],

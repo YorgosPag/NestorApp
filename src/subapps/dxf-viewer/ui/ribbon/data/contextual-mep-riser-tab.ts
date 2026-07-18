@@ -17,6 +17,7 @@
 
 import type { RibbonTab } from '../types/ribbon-types';
 import { MEP_RISER_RIBBON_KEYS } from '../hooks/bridge/mep-riser-command-keys';
+import { literalNumberOptions } from './ribbon-numeric-options';
 
 export const MEP_RISER_CONTEXTUAL_TRIGGER = 'mep-riser-tool-active';
 
@@ -27,13 +28,7 @@ export const MEP_RISER_CONTEXTUAL_TRIGGER = 'mep-riser-tool-active';
 const TO_FLOOR_OPTIONS: readonly never[] = [];
 
 // Drainage stack outer diameter (mm) — sanitary DN presets (DEFAULT = 100).
-const DIAMETER_MM_OPTIONS = [
-  { value: '50',  labelKey: '50',  isLiteralLabel: true },
-  { value: '75',  labelKey: '75',  isLiteralLabel: true },
-  { value: '100', labelKey: '100', isLiteralLabel: true },
-  { value: '125', labelKey: '125', isLiteralLabel: true },
-  { value: '160', labelKey: '160', isLiteralLabel: true },
-] as const;
+const DIAMETER_MM_OPTIONS = literalNumberOptions([50, 75, 100, 125, 160]);
 
 // ─── Tab definition ──────────────────────────────────────────────────────────
 
@@ -70,6 +65,7 @@ export const CONTEXTUAL_MEP_RISER_TAB: RibbonTab = {
                 commandKey: MEP_RISER_RIBBON_KEYS.params.diameter,
                 comboboxWidthPx: 80,
                 options: DIAMETER_MM_OPTIONS,
+                numericInput: { quantityKind: 'nominal-diameter' },
               },
             },
           ],

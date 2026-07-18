@@ -117,6 +117,20 @@ export function isVertexReshapeDragInfo(info: ActiveDragGripInfo | null): boolea
   return !!info && info.vertexReshape === true;
 }
 
+/**
+ * ADR-513 §grip-parity — pure predicate: είναι το `info` ενεργή ΜΕΤΑΚΙΝΗΣΗ ολόκληρης οντότητας με
+ * ΟΡΙΣΜΕΝΟ σημείο βάσης; Τότε το Μήκος/Γωνία «Δαχτυλίδι Εντολών» γίνεται κλικαριστό ώστε ο χρήστης
+ * να πληκτρολογήσει τη μετατόπιση (5ο σκαλί, `move-displacement-lock`).
+ *
+ * Το `dragAnchor` είναι ΑΠΑΡΑΙΤΗΤΟ στο gate: το move hot-grip είναι 3-click (λαβή → σημείο βάσης →
+ * τελικό σημείο) και το `dragAnchor` γράφεται στο 2ο κλικ. Χωρίς αυτόν τον όρο το δαχτυλίδι θα
+ * εμφανιζόταν ήδη στο βήμα «διάλεξε σημείο βάσης», όπου ένα πληκτρολογημένο μήκος δεν έχει νόημα
+ * (δεν υπάρχει ακόμη αρχή να μετρήσει).
+ */
+export function isMoveDisplacementDragInfo(info: ActiveDragGripInfo | null): boolean {
+  return !!info && info.movesEntity === true && info.dragAnchor != null;
+}
+
 /** Write — called by useUnifiedGripInteraction when DXF grip drag starts */
 export function setActiveDragGrip(info: ActiveDragGripInfo): void {
   activeDragGrip = info;

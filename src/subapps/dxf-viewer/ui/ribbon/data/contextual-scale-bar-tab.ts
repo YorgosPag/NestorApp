@@ -104,6 +104,7 @@ export const CONTEXTUAL_SCALE_BAR_TAB: RibbonTab = {
                 commandKey: SCALE_BAR_RIBBON_KEYS.params.divisions,
                 comboboxWidthPx: 80,
                 options: DIVISION_OPTIONS,
+                numericInput: { quantityKind: 'count' },
               },
             },
             {
@@ -115,6 +116,7 @@ export const CONTEXTUAL_SCALE_BAR_TAB: RibbonTab = {
                 commandKey: SCALE_BAR_RIBBON_KEYS.params.subdivisions,
                 comboboxWidthPx: 80,
                 options: SUBDIVISION_OPTIONS,
+                numericInput: { quantityKind: 'count' },
               },
             },
           ],
@@ -137,6 +139,7 @@ export const CONTEXTUAL_SCALE_BAR_TAB: RibbonTab = {
                 commandKey: SCALE_BAR_RIBBON_KEYS.params.barHeightMm,
                 comboboxWidthPx: 100,
                 options: BAR_HEIGHT_OPTIONS,
+                numericInput: { quantityKind: 'paper-length' },
               },
             },
             {
@@ -148,6 +151,7 @@ export const CONTEXTUAL_SCALE_BAR_TAB: RibbonTab = {
                 commandKey: SCALE_BAR_RIBBON_KEYS.params.labelHeightMm,
                 comboboxWidthPx: 100,
                 options: LABEL_HEIGHT_OPTIONS,
+                numericInput: { quantityKind: 'paper-length' },
               },
             },
             {

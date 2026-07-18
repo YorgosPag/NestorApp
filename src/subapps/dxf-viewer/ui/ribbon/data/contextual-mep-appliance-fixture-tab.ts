@@ -34,16 +34,7 @@ export const MEP_APPLIANCE_FIXTURE_CONTEXTUAL_TRIGGER = 'mep-appliance-fixture-s
 
 // Footprint width/length (mm) — covers typical appliance plan sizes (washing
 // machine ≈ 600×600).
-const DIMENSION_MM_OPTIONS = [
-  { value: '400', labelKey: '400', isLiteralLabel: true },
-  { value: '450', labelKey: '450', isLiteralLabel: true },
-  { value: '500', labelKey: '500', isLiteralLabel: true },
-  { value: '550', labelKey: '550', isLiteralLabel: true },
-  { value: '587', labelKey: '587', isLiteralLabel: true },
-  { value: '597', labelKey: '597', isLiteralLabel: true },
-  { value: '600', labelKey: '600', isLiteralLabel: true },
-  { value: '700', labelKey: '700', isLiteralLabel: true },
-] as const;
+const DIMENSION_MM_OPTIONS = literalNumberOptions([400, 450, 500, 550, 587, 597, 600, 700]);
 
 const ROTATION_DEG_OPTIONS = literalNumberOptions([0, 45, 90, 135, 180, 225, 270, 315]);
 
@@ -77,6 +68,7 @@ export const CONTEXTUAL_MEP_APPLIANCE_FIXTURE_TAB: RibbonTab = {
                 commandKey: MEP_FIXTURE_RIBBON_KEYS.params.width,
                 comboboxWidthPx: 80,
                 options: DIMENSION_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -88,6 +80,7 @@ export const CONTEXTUAL_MEP_APPLIANCE_FIXTURE_TAB: RibbonTab = {
                 commandKey: MEP_FIXTURE_RIBBON_KEYS.params.length,
                 comboboxWidthPx: 80,
                 options: DIMENSION_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -99,6 +92,7 @@ export const CONTEXTUAL_MEP_APPLIANCE_FIXTURE_TAB: RibbonTab = {
                 commandKey: MEP_FIXTURE_RIBBON_KEYS.params.rotation,
                 comboboxWidthPx: 80,
                 options: ROTATION_DEG_OPTIONS,
+                numericInput: { quantityKind: 'angle' },
               },
             },
             {
@@ -110,6 +104,7 @@ export const CONTEXTUAL_MEP_APPLIANCE_FIXTURE_TAB: RibbonTab = {
                 commandKey: MEP_FIXTURE_RIBBON_KEYS.params.bodyHeight,
                 comboboxWidthPx: 80,
                 options: BODY_HEIGHT_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -121,6 +116,7 @@ export const CONTEXTUAL_MEP_APPLIANCE_FIXTURE_TAB: RibbonTab = {
                 commandKey: MEP_FIXTURE_RIBBON_KEYS.params.mountingElevation,
                 comboboxWidthPx: 90,
                 options: MOUNTING_ELEVATION_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
           ],

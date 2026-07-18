@@ -39,6 +39,7 @@ import {
   OPENING_TAG_STYLE_KEYS,
 } from '../hooks/bridge/opening-command-keys';
 import { PSET_RIBBON_ACTION } from '../hooks/bridge/pset-action-keys';
+import { literalNumberOptions } from './ribbon-numeric-options';
 
 export const OPENING_CONTEXTUAL_TRIGGER = 'opening-selected';
 
@@ -76,25 +77,9 @@ const OPEN_DIRECTION_OPTIONS = [
   { value: 'outward', labelKey: 'ribbon.commands.openingEditor.openDirection.outward', isLiteralLabel: false },
 ] as const;
 
-const WIDTH_MM_OPTIONS = [
-  { value: '700',  labelKey: '700',  isLiteralLabel: true },
-  { value: '800',  labelKey: '800',  isLiteralLabel: true },
-  { value: '900',  labelKey: '900',  isLiteralLabel: true },
-  { value: '1000', labelKey: '1000', isLiteralLabel: true },
-  { value: '1200', labelKey: '1200', isLiteralLabel: true },
-  { value: '1400', labelKey: '1400', isLiteralLabel: true },
-  { value: '1800', labelKey: '1800', isLiteralLabel: true },
-  { value: '2000', labelKey: '2000', isLiteralLabel: true },
-] as const;
+const WIDTH_MM_OPTIONS = literalNumberOptions([700, 800, 900, 1000, 1200, 1400, 1800, 2000]);
 
-const HEIGHT_MM_OPTIONS = [
-  { value: '1400', labelKey: '1400', isLiteralLabel: true },
-  { value: '1800', labelKey: '1800', isLiteralLabel: true },
-  { value: '2000', labelKey: '2000', isLiteralLabel: true },
-  { value: '2100', labelKey: '2100', isLiteralLabel: true },
-  { value: '2200', labelKey: '2200', isLiteralLabel: true },
-  { value: '2400', labelKey: '2400', isLiteralLabel: true },
-] as const;
+const HEIGHT_MM_OPTIONS = literalNumberOptions([1400, 1800, 2000, 2100, 2200, 2400]);
 
 // ─── Tag style options ───────────────────────────────────────────────────────
 
@@ -123,13 +108,7 @@ const LEADER_STYLE_OPTIONS = [
 ] as const;
 
 
-const SILL_MM_OPTIONS = [
-  { value: '0',    labelKey: '0',    isLiteralLabel: true },
-  { value: '300',  labelKey: '300',  isLiteralLabel: true },
-  { value: '600',  labelKey: '600',  isLiteralLabel: true },
-  { value: '900',  labelKey: '900',  isLiteralLabel: true },
-  { value: '1100', labelKey: '1100', isLiteralLabel: true },
-] as const;
+const SILL_MM_OPTIONS = literalNumberOptions([0, 300, 600, 900, 1100]);
 
 // ─── ADR-673 — Κατώφλι (threshold) vertical placement ───────────────────────
 
@@ -142,39 +121,15 @@ const THRESHOLD_EMBED_OPTIONS = [
 
 // Editable presets for the custom sink depth (mm) — free typing also allowed
 // (RibbonEditableCombobox infers editability from the all-numeric preset list).
-const THRESHOLD_EMBED_MM_OPTIONS = [
-  { value: '0',  labelKey: '0',  isLiteralLabel: true },
-  { value: '10', labelKey: '10', isLiteralLabel: true },
-  { value: '20', labelKey: '20', isLiteralLabel: true },
-  { value: '30', labelKey: '30', isLiteralLabel: true },
-  { value: '50', labelKey: '50', isLiteralLabel: true },
-] as const;
+const THRESHOLD_EMBED_MM_OPTIONS = literalNumberOptions([0, 10, 20, 30, 50]);
 
 // ─── ADR-611 — Frame profile (διατομή κάσας) preset dims ────────────────────
 // Editable presets for the two CONSTANT cross-section dims (mm). Free typing
 // is still allowed (RibbonEditableCombobox) — these are just the dropdown
 // shortcuts, spanning the seed catalog's face-width/depth range.
-const FRAME_PROFILE_FACE_WIDTH_MM_OPTIONS = [
-  { value: '50', labelKey: '50', isLiteralLabel: true },
-  { value: '60', labelKey: '60', isLiteralLabel: true },
-  { value: '65', labelKey: '65', isLiteralLabel: true },
-  { value: '68', labelKey: '68', isLiteralLabel: true },
-  { value: '70', labelKey: '70', isLiteralLabel: true },
-  { value: '72', labelKey: '72', isLiteralLabel: true },
-  { value: '74', labelKey: '74', isLiteralLabel: true },
-  { value: '78', labelKey: '78', isLiteralLabel: true },
-  { value: '84', labelKey: '84', isLiteralLabel: true },
-] as const;
+const FRAME_PROFILE_FACE_WIDTH_MM_OPTIONS = literalNumberOptions([50, 60, 65, 68, 70, 72, 74, 78, 84]);
 
-const FRAME_PROFILE_DEPTH_MM_OPTIONS = [
-  { value: '50', labelKey: '50', isLiteralLabel: true },
-  { value: '55', labelKey: '55', isLiteralLabel: true },
-  { value: '58', labelKey: '58', isLiteralLabel: true },
-  { value: '60', labelKey: '60', isLiteralLabel: true },
-  { value: '62', labelKey: '62', isLiteralLabel: true },
-  { value: '70', labelKey: '70', isLiteralLabel: true },
-  { value: '75', labelKey: '75', isLiteralLabel: true },
-] as const;
+const FRAME_PROFILE_DEPTH_MM_OPTIONS = literalNumberOptions([50, 55, 58, 60, 62, 70, 75]);
 
 // ─── Tab definition ──────────────────────────────────────────────────────────
 // Κάθε panel έχει ΜΙΑ row (= μία κάθετη στήλη έως 4 εντολών)· τα panels με >4
@@ -349,6 +304,7 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
                 commandKey: OPENING_RIBBON_KEYS.params.width,
                 comboboxWidthPx: 120,
                 options: WIDTH_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -360,6 +316,7 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
                 commandKey: OPENING_RIBBON_KEYS.params.height,
                 comboboxWidthPx: 120,
                 options: HEIGHT_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -371,6 +328,7 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
                 commandKey: OPENING_RIBBON_KEYS.params.sillHeight,
                 comboboxWidthPx: 120,
                 options: SILL_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
           ],
@@ -415,6 +373,7 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
                 commandKey: OPENING_RIBBON_KEYS.params.thresholdEmbedMm,
                 comboboxWidthPx: 150,
                 options: THRESHOLD_EMBED_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
           ],
@@ -461,6 +420,7 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
                 commandKey: OPENING_RIBBON_KEYS.frameProfile.faceWidth,
                 comboboxWidthPx: 150,
                 options: FRAME_PROFILE_FACE_WIDTH_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -472,6 +432,7 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
                 commandKey: OPENING_RIBBON_KEYS.frameProfile.depth,
                 comboboxWidthPx: 150,
                 options: FRAME_PROFILE_DEPTH_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
           ],
@@ -523,6 +484,7 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
                 commandKey: OPENING_TAG_STYLE_KEYS.fontSizePx,
                 comboboxWidthPx: 130,
                 options: FONT_SIZE_OPTIONS,
+                numericInput: { quantityKind: 'screen-px' },
               },
             },
             {
@@ -534,6 +496,7 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
                 commandKey: OPENING_TAG_STYLE_KEYS.borderWidthPx,
                 comboboxWidthPx: 130,
                 options: BORDER_WIDTH_OPTIONS,
+                numericInput: { quantityKind: 'screen-px' },
               },
             },
             {

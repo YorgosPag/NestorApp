@@ -29,6 +29,7 @@ import {
   MEP_FIXTURE_RIBBON_KEYS_ACTIONS,
   MEP_FIXTURE_RIBBON_VISIBILITY_KEYS,
 } from '../hooks/bridge/mep-fixture-command-keys';
+import { literalNumberOptions } from './ribbon-numeric-options';
 
 export const MEP_FIXTURE_CONTEXTUAL_TRIGGER = 'mep-fixture-selected';
 
@@ -40,56 +41,17 @@ const MEP_FIXTURE_SHAPE_OPTIONS = [
 ] as const;
 
 // Footprint width / diameter presets (mm) — 600×600 recessed panel default.
-const WIDTH_MM_OPTIONS = [
-  { value: '100',  labelKey: '100',  isLiteralLabel: true },
-  { value: '150',  labelKey: '150',  isLiteralLabel: true },
-  { value: '200',  labelKey: '200',  isLiteralLabel: true },
-  { value: '300',  labelKey: '300',  isLiteralLabel: true },
-  { value: '400',  labelKey: '400',  isLiteralLabel: true },
-  { value: '600',  labelKey: '600',  isLiteralLabel: true },
-  { value: '1200', labelKey: '1200', isLiteralLabel: true },
-] as const;
+const WIDTH_MM_OPTIONS = literalNumberOptions([100, 150, 200, 300, 400, 600, 1200]);
 
-const LENGTH_MM_OPTIONS = [
-  { value: '100',  labelKey: '100',  isLiteralLabel: true },
-  { value: '150',  labelKey: '150',  isLiteralLabel: true },
-  { value: '200',  labelKey: '200',  isLiteralLabel: true },
-  { value: '300',  labelKey: '300',  isLiteralLabel: true },
-  { value: '400',  labelKey: '400',  isLiteralLabel: true },
-  { value: '600',  labelKey: '600',  isLiteralLabel: true },
-  { value: '1200', labelKey: '1200', isLiteralLabel: true },
-] as const;
+const LENGTH_MM_OPTIONS = literalNumberOptions([100, 150, 200, 300, 400, 600, 1200]);
 
-const ROTATION_DEG_OPTIONS = [
-  { value: '0',   labelKey: '0',   isLiteralLabel: true },
-  { value: '15',  labelKey: '15',  isLiteralLabel: true },
-  { value: '30',  labelKey: '30',  isLiteralLabel: true },
-  { value: '45',  labelKey: '45',  isLiteralLabel: true },
-  { value: '60',  labelKey: '60',  isLiteralLabel: true },
-  { value: '90',  labelKey: '90',  isLiteralLabel: true },
-  { value: '135', labelKey: '135', isLiteralLabel: true },
-  { value: '180', labelKey: '180', isLiteralLabel: true },
-] as const;
+const ROTATION_DEG_OPTIONS = literalNumberOptions([0, 15, 30, 45, 60, 90, 135, 180]);
 
 // Body thickness presets (mm) — thin recessed/surface fixture.
-const BODY_HEIGHT_MM_OPTIONS = [
-  { value: '40',  labelKey: '40',  isLiteralLabel: true },
-  { value: '60',  labelKey: '60',  isLiteralLabel: true },
-  { value: '80',  labelKey: '80',  isLiteralLabel: true },
-  { value: '100', labelKey: '100', isLiteralLabel: true },
-  { value: '150', labelKey: '150', isLiteralLabel: true },
-  { value: '200', labelKey: '200', isLiteralLabel: true },
-] as const;
+const BODY_HEIGHT_MM_OPTIONS = literalNumberOptions([40, 60, 80, 100, 150, 200]);
 
 // Ceiling-relative mounting elevation presets (mm) — typical ceiling heights.
-const MOUNTING_ELEVATION_MM_OPTIONS = [
-  { value: '2400', labelKey: '2400', isLiteralLabel: true },
-  { value: '2700', labelKey: '2700', isLiteralLabel: true },
-  { value: '3000', labelKey: '3000', isLiteralLabel: true },
-  { value: '3300', labelKey: '3300', isLiteralLabel: true },
-  { value: '3600', labelKey: '3600', isLiteralLabel: true },
-  { value: '4000', labelKey: '4000', isLiteralLabel: true },
-] as const;
+const MOUNTING_ELEVATION_MM_OPTIONS = literalNumberOptions([2400, 2700, 3000, 3300, 3600, 4000]);
 
 // ─── Tab definition ──────────────────────────────────────────────────────────
 
@@ -137,6 +99,7 @@ export const CONTEXTUAL_MEP_FIXTURE_TAB: RibbonTab = {
                 commandKey: MEP_FIXTURE_RIBBON_KEYS.params.width,
                 comboboxWidthPx: 90,
                 options: WIDTH_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -148,6 +111,7 @@ export const CONTEXTUAL_MEP_FIXTURE_TAB: RibbonTab = {
                 commandKey: MEP_FIXTURE_RIBBON_KEYS.params.bodyHeight,
                 comboboxWidthPx: 80,
                 options: BODY_HEIGHT_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -159,6 +123,7 @@ export const CONTEXTUAL_MEP_FIXTURE_TAB: RibbonTab = {
                 commandKey: MEP_FIXTURE_RIBBON_KEYS.params.mountingElevation,
                 comboboxWidthPx: 90,
                 options: MOUNTING_ELEVATION_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
           ],
@@ -184,6 +149,7 @@ export const CONTEXTUAL_MEP_FIXTURE_TAB: RibbonTab = {
                 commandKey: MEP_FIXTURE_RIBBON_KEYS.params.length,
                 comboboxWidthPx: 90,
                 options: LENGTH_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -195,6 +161,7 @@ export const CONTEXTUAL_MEP_FIXTURE_TAB: RibbonTab = {
                 commandKey: MEP_FIXTURE_RIBBON_KEYS.params.rotation,
                 comboboxWidthPx: 80,
                 options: ROTATION_DEG_OPTIONS,
+                numericInput: { quantityKind: 'angle' },
               },
             },
           ],

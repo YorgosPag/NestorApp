@@ -24,6 +24,7 @@
 
 import type { RibbonTab } from '../types/ribbon-types';
 import { literalNumberOptions, MEP_FIXTURE_PARAMETRIC_3D_VIEW_OPTIONS } from './ribbon-numeric-options';
+import { actionButton, singleRowPanel } from './ribbon-panel-builders';
 import {
   MEP_FIXTURE_RIBBON_KEYS,
   MEP_FIXTURE_RIBBON_KEYS_ACTIONS,
@@ -72,13 +73,10 @@ export interface MepOutletContextualTabConfig {
 export function buildMepOutletContextualTab(config: MepOutletContextualTabConfig): RibbonTab {
   const { tabId, panelIdPrefix, commandIdPrefix, trigger, tabLabelKey, panelLabelKeys } = config;
 
-  const geometryPanel: RibbonTab['panels'][number] = {
-    id: `${panelIdPrefix}-geometry`,
-    labelKey: panelLabelKeys.geometry,
-    rows: [
-      {
-        isInFlyout: false,
-        buttons: [
+  const geometryPanel = singleRowPanel(
+    `${panelIdPrefix}-geometry`,
+    panelLabelKeys.geometry,
+    [
           {
             type: 'combobox',
             size: 'small',
@@ -88,6 +86,7 @@ export function buildMepOutletContextualTab(config: MepOutletContextualTabConfig
               commandKey: MEP_FIXTURE_RIBBON_KEYS.params.width,
               comboboxWidthPx: 80,
               options: DIMENSION_MM_OPTIONS,
+              numericInput: { quantityKind: 'model-length' },
             },
           },
           {
@@ -99,6 +98,7 @@ export function buildMepOutletContextualTab(config: MepOutletContextualTabConfig
               commandKey: MEP_FIXTURE_RIBBON_KEYS.params.length,
               comboboxWidthPx: 80,
               options: DIMENSION_MM_OPTIONS,
+              numericInput: { quantityKind: 'model-length' },
             },
           },
           {
@@ -110,6 +110,7 @@ export function buildMepOutletContextualTab(config: MepOutletContextualTabConfig
               commandKey: MEP_FIXTURE_RIBBON_KEYS.params.rotation,
               comboboxWidthPx: 80,
               options: ROTATION_DEG_OPTIONS,
+              numericInput: { quantityKind: 'angle' },
             },
           },
           {
@@ -121,6 +122,7 @@ export function buildMepOutletContextualTab(config: MepOutletContextualTabConfig
               commandKey: MEP_FIXTURE_RIBBON_KEYS.params.bodyHeight,
               comboboxWidthPx: 80,
               options: BODY_HEIGHT_MM_OPTIONS,
+              numericInput: { quantityKind: 'model-length' },
             },
           },
           {
@@ -132,20 +134,16 @@ export function buildMepOutletContextualTab(config: MepOutletContextualTabConfig
               commandKey: MEP_FIXTURE_RIBBON_KEYS.params.mountingElevation,
               comboboxWidthPx: 90,
               options: MOUNTING_ELEVATION_MM_OPTIONS,
+              numericInput: { quantityKind: 'model-length' },
             },
           },
-        ],
-      },
     ],
-  };
+  );
 
-  const threeDViewPanel: RibbonTab['panels'][number] = {
-    id: `${panelIdPrefix}-3d-view`,
-    labelKey: panelLabelKeys.threeDView,
-    rows: [
-      {
-        isInFlyout: false,
-        buttons: [
+  const threeDViewPanel = singleRowPanel(
+    `${panelIdPrefix}-3d-view`,
+    panelLabelKeys.threeDView,
+    [
           {
             type: 'combobox',
             size: 'small',
@@ -157,44 +155,27 @@ export function buildMepOutletContextualTab(config: MepOutletContextualTabConfig
               options: MEP_FIXTURE_PARAMETRIC_3D_VIEW_OPTIONS,
             },
           },
-        ],
-      },
     ],
-  };
+  );
 
-  const actionsPanel: RibbonTab['panels'][number] = {
-    id: `${panelIdPrefix}-actions`,
-    labelKey: panelLabelKeys.actions,
-    rows: [
-      {
-        isInFlyout: false,
-        buttons: [
-          {
-            type: 'simple',
-            size: 'small',
-            command: {
-              id: `${commandIdPrefix}.close`,
-              labelKey: 'ribbon.commands.mepSanitaryFixtureEditor.close',
-              icon: 'select',
-              commandKey: MEP_FIXTURE_RIBBON_KEYS_ACTIONS.close,
-              action: MEP_FIXTURE_RIBBON_KEYS_ACTIONS.close,
-            },
-          },
-          {
-            type: 'simple',
-            size: 'small',
-            command: {
-              id: `${commandIdPrefix}.delete`,
-              labelKey: 'ribbon.commands.mepSanitaryFixtureEditor.delete',
-              icon: 'trash',
-              commandKey: MEP_FIXTURE_RIBBON_KEYS_ACTIONS.delete,
-              action: MEP_FIXTURE_RIBBON_KEYS_ACTIONS.delete,
-            },
-          },
-        ],
-      },
+  const actionsPanel = singleRowPanel(
+    `${panelIdPrefix}-actions`,
+    panelLabelKeys.actions,
+    [
+      actionButton(
+        `${commandIdPrefix}.close`,
+        'ribbon.commands.mepSanitaryFixtureEditor.close',
+        'select',
+        MEP_FIXTURE_RIBBON_KEYS_ACTIONS.close,
+      ),
+      actionButton(
+        `${commandIdPrefix}.delete`,
+        'ribbon.commands.mepSanitaryFixtureEditor.delete',
+        'trash',
+        MEP_FIXTURE_RIBBON_KEYS_ACTIONS.delete,
+      ),
     ],
-  };
+  );
 
   return {
     id: tabId,

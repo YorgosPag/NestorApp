@@ -27,6 +27,8 @@ import {
   MEP_MANIFOLD_RIBBON_VISIBILITY_KEYS,
 } from '../hooks/bridge/mep-manifold-command-keys';
 import { MEP_PIPE_NETWORK_RIBBON_ACTIONS } from '../hooks/bridge/mep-pipe-network-command-keys';
+import { mepNetworkPanelRows } from './mep-network-panel-rows';
+import { actionButton, singleRowPanel } from './ribbon-panel-builders';
 
 /** Build a list of literal mm presets (delegates to the numeric-options SSoT). */
 export function mmOptions(values: readonly number[]): readonly RibbonComboboxOption[] {
@@ -129,13 +131,10 @@ export function buildMepManifoldContextualTab(config: ManifoldContextualTabConfi
     ],
   };
 
-  const geometryPanel: RibbonTab['panels'][number] = {
-    id: `${panelIdPrefix}-geometry`,
-    labelKey: panelLabelKeys.geometry,
-    rows: [
-      {
-        isInFlyout: false,
-        buttons: [
+  const geometryPanel = singleRowPanel(
+    `${panelIdPrefix}-geometry`,
+    panelLabelKeys.geometry,
+    [
           {
             type: 'combobox',
             size: 'small',
@@ -145,6 +144,7 @@ export function buildMepManifoldContextualTab(config: ManifoldContextualTabConfi
               commandKey: MEP_MANIFOLD_RIBBON_KEYS.params.width,
               comboboxWidthPx: 90,
               options: presets.width,
+              numericInput: { quantityKind: 'model-length' },
             },
           },
           {
@@ -156,6 +156,7 @@ export function buildMepManifoldContextualTab(config: ManifoldContextualTabConfi
               commandKey: MEP_MANIFOLD_RIBBON_KEYS.params.length,
               comboboxWidthPx: 80,
               options: presets.length,
+              numericInput: { quantityKind: 'model-length' },
             },
           },
           {
@@ -167,6 +168,7 @@ export function buildMepManifoldContextualTab(config: ManifoldContextualTabConfi
               commandKey: MEP_MANIFOLD_RIBBON_KEYS.params.bodyHeight,
               comboboxWidthPx: 80,
               options: presets.bodyHeight,
+              numericInput: { quantityKind: 'model-length' },
             },
           },
           {
@@ -178,20 +180,16 @@ export function buildMepManifoldContextualTab(config: ManifoldContextualTabConfi
               commandKey: MEP_MANIFOLD_RIBBON_KEYS.params.mountingElevation,
               comboboxWidthPx: 90,
               options: presets.mountingElevation,
+              numericInput: { quantityKind: 'model-length' },
             },
           },
-        ],
-      },
     ],
-  };
+  );
 
-  const connectionsPanel: RibbonTab['panels'][number] = {
-    id: `${panelIdPrefix}-connections`,
-    labelKey: panelLabelKeys.connections,
-    rows: [
-      {
-        isInFlyout: false,
-        buttons: [
+  const connectionsPanel = singleRowPanel(
+    `${panelIdPrefix}-connections`,
+    panelLabelKeys.connections,
+    [
           {
             type: 'combobox',
             size: 'small',
@@ -201,6 +199,7 @@ export function buildMepManifoldContextualTab(config: ManifoldContextualTabConfi
               commandKey: MEP_MANIFOLD_RIBBON_KEYS.params.outletCount,
               comboboxWidthPx: 70,
               options: presets.count,
+              numericInput: { quantityKind: 'count' },
             },
           },
           {
@@ -212,6 +211,7 @@ export function buildMepManifoldContextualTab(config: ManifoldContextualTabConfi
               commandKey: MEP_MANIFOLD_RIBBON_KEYS.params.inletDiameter,
               comboboxWidthPx: 80,
               options: presets.inletDiameter,
+              numericInput: { quantityKind: 'nominal-diameter' },
             },
           },
           {
@@ -223,12 +223,11 @@ export function buildMepManifoldContextualTab(config: ManifoldContextualTabConfi
               commandKey: MEP_MANIFOLD_RIBBON_KEYS.params.outletDiameter,
               comboboxWidthPx: 80,
               options: presets.outletDiameter,
+              numericInput: { quantityKind: 'nominal-diameter' },
             },
           },
-        ],
-      },
     ],
-  };
+  );
 
   // ADR-408 Φ13 fold-in — manage the pipe network this manifold sources (Revit
   // "System Properties" from the equipment). Self-hides when no network is sourced.
@@ -237,112 +236,17 @@ export function buildMepManifoldContextualTab(config: ManifoldContextualTabConfi
     id: `${panelIdPrefix}-network`,
     labelKey: 'ribbon.panels.mepPipeNetworkProperties',
     visibilityKey: MEP_MANIFOLD_RIBBON_VISIBILITY_KEYS.hasNetwork,
-    rows: [
-      {
-        isInFlyout: false,
-        buttons: [
-          {
-            type: 'widget',
-            size: 'small',
-            widgetId: 'mep-circuit-picker',
-            command: {
-              id: 'mepManifold.network.picker',
-              labelKey: 'ribbon.commands.mepCircuit.networkPicker',
-              commandKey: 'mepManifold.network.picker',
-            },
-          },
-        ],
-      },
-      {
-        isInFlyout: false,
-        buttons: [
-          {
-            type: 'widget',
-            size: 'small',
-            widgetId: 'mep-circuit-name',
-            command: {
-              id: 'mepManifold.network.name',
-              labelKey: 'ribbon.commands.mepCircuit.name',
-              commandKey: 'mepManifold.network.name',
-            },
-          },
-          {
-            type: 'simple',
-            size: 'small',
-            command: {
-              id: 'mepManifold.network.addMembers',
-              labelKey: 'ribbon.commands.mepPipeNetwork.addMembers',
-              tooltipKey: 'ribbon.commands.mepPipeNetwork.addMembersTooltip',
-              icon: 'bim-pipe',
-              commandKey: MEP_PIPE_NETWORK_RIBBON_ACTIONS.addMembers,
-              action: MEP_PIPE_NETWORK_RIBBON_ACTIONS.addMembers,
-            },
-          },
-        ],
-      },
-      {
-        isInFlyout: false,
-        buttons: [
-          {
-            type: 'widget',
-            size: 'small',
-            widgetId: 'mep-circuit-color',
-            command: {
-              id: 'mepManifold.network.color',
-              labelKey: 'ribbon.commands.mepCircuit.color',
-              commandKey: 'mepManifold.network.color',
-            },
-          },
-          {
-            type: 'simple',
-            size: 'small',
-            command: {
-              id: 'mepManifold.network.removeMembers',
-              labelKey: 'ribbon.commands.mepPipeNetwork.removeMembers',
-              tooltipKey: 'ribbon.commands.mepPipeNetwork.removeMembersTooltip',
-              icon: 'trash',
-              commandKey: MEP_PIPE_NETWORK_RIBBON_ACTIONS.removeMembers,
-              action: MEP_PIPE_NETWORK_RIBBON_ACTIONS.removeMembers,
-            },
-          },
-        ],
-      },
-    ],
+    rows: mepNetworkPanelRows('mepManifold'),
   };
 
-  const actionsPanel: RibbonTab['panels'][number] = {
-    id: `${panelIdPrefix}-actions`,
-    labelKey: panelLabelKeys.actions,
-    rows: [
-      {
-        isInFlyout: false,
-        buttons: [
-          {
-            type: 'simple',
-            size: 'small',
-            command: {
-              id: 'mepManifold.close',
-              labelKey: fieldLabelKeys.close,
-              icon: 'select',
-              commandKey: MEP_MANIFOLD_RIBBON_KEYS_ACTIONS.close,
-              action: MEP_MANIFOLD_RIBBON_KEYS_ACTIONS.close,
-            },
-          },
-          {
-            type: 'simple',
-            size: 'small',
-            command: {
-              id: 'mepManifold.delete',
-              labelKey: fieldLabelKeys.delete,
-              icon: 'trash',
-              commandKey: MEP_MANIFOLD_RIBBON_KEYS_ACTIONS.delete,
-              action: MEP_MANIFOLD_RIBBON_KEYS_ACTIONS.delete,
-            },
-          },
-        ],
-      },
+  const actionsPanel = singleRowPanel(
+    `${panelIdPrefix}-actions`,
+    panelLabelKeys.actions,
+    [
+      actionButton('mepManifold.close', fieldLabelKeys.close, 'select', MEP_MANIFOLD_RIBBON_KEYS_ACTIONS.close),
+      actionButton('mepManifold.delete', fieldLabelKeys.delete, 'trash', MEP_MANIFOLD_RIBBON_KEYS_ACTIONS.delete),
     ],
-  };
+  );
 
   return {
     id: tabId,

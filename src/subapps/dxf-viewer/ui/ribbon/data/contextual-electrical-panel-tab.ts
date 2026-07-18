@@ -38,42 +38,19 @@ export const ELECTRICAL_PANEL_CONTEXTUAL_TRIGGER = 'electrical-panel-selected';
 // ─── Combobox options (mm / deg presets) ─────────────────────────────────────
 
 // Panel face width (mm) — single → multi-gang consumer unit / distribution board.
-const WIDTH_MM_OPTIONS = [
-  { value: '300', labelKey: '300', isLiteralLabel: true },
-  { value: '400', labelKey: '400', isLiteralLabel: true },
-  { value: '500', labelKey: '500', isLiteralLabel: true },
-  { value: '600', labelKey: '600', isLiteralLabel: true },
-  { value: '800', labelKey: '800', isLiteralLabel: true },
-] as const;
+const WIDTH_MM_OPTIONS = literalNumberOptions([300, 400, 500, 600, 800]);
 
 // Panel depth into the wall (mm).
-const LENGTH_MM_OPTIONS = [
-  { value: '100', labelKey: '100', isLiteralLabel: true },
-  { value: '150', labelKey: '150', isLiteralLabel: true },
-  { value: '200', labelKey: '200', isLiteralLabel: true },
-  { value: '250', labelKey: '250', isLiteralLabel: true },
-] as const;
+const LENGTH_MM_OPTIONS = literalNumberOptions([100, 150, 200, 250]);
 
 const ROTATION_DEG_OPTIONS = literalNumberOptions([0, 45, 90, 135, 180, 225, 270, 315]);
 
 // Panel box vertical height (mm).
-const BODY_HEIGHT_MM_OPTIONS = [
-  { value: '400', labelKey: '400', isLiteralLabel: true },
-  { value: '500', labelKey: '500', isLiteralLabel: true },
-  { value: '600', labelKey: '600', isLiteralLabel: true },
-  { value: '700', labelKey: '700', isLiteralLabel: true },
-  { value: '900', labelKey: '900', isLiteralLabel: true },
-] as const;
+const BODY_HEIGHT_MM_OPTIONS = literalNumberOptions([400, 500, 600, 700, 900]);
 
 // Wall-mount vertical-centre elevation above FFL (mm) — IEC/Revit reachability
 // (breakers ≤ ~2 m).
-const MOUNTING_ELEVATION_MM_OPTIONS = [
-  { value: '1200', labelKey: '1200', isLiteralLabel: true },
-  { value: '1400', labelKey: '1400', isLiteralLabel: true },
-  { value: '1500', labelKey: '1500', isLiteralLabel: true },
-  { value: '1700', labelKey: '1700', isLiteralLabel: true },
-  { value: '1800', labelKey: '1800', isLiteralLabel: true },
-] as const;
+const MOUNTING_ELEVATION_MM_OPTIONS = literalNumberOptions([1200, 1400, 1500, 1700, 1800]);
 
 // ─── Tab definition ──────────────────────────────────────────────────────────
 
@@ -99,6 +76,7 @@ export const CONTEXTUAL_ELECTRICAL_PANEL_TAB: RibbonTab = {
                 commandKey: ELECTRICAL_PANEL_RIBBON_KEYS.params.width,
                 comboboxWidthPx: 90,
                 options: WIDTH_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -110,6 +88,7 @@ export const CONTEXTUAL_ELECTRICAL_PANEL_TAB: RibbonTab = {
                 commandKey: ELECTRICAL_PANEL_RIBBON_KEYS.params.length,
                 comboboxWidthPx: 80,
                 options: LENGTH_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -121,6 +100,7 @@ export const CONTEXTUAL_ELECTRICAL_PANEL_TAB: RibbonTab = {
                 commandKey: ELECTRICAL_PANEL_RIBBON_KEYS.params.rotation,
                 comboboxWidthPx: 80,
                 options: ROTATION_DEG_OPTIONS,
+                numericInput: { quantityKind: 'angle' },
               },
             },
             {
@@ -132,6 +112,7 @@ export const CONTEXTUAL_ELECTRICAL_PANEL_TAB: RibbonTab = {
                 commandKey: ELECTRICAL_PANEL_RIBBON_KEYS.params.bodyHeight,
                 comboboxWidthPx: 80,
                 options: BODY_HEIGHT_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -143,6 +124,7 @@ export const CONTEXTUAL_ELECTRICAL_PANEL_TAB: RibbonTab = {
                 commandKey: ELECTRICAL_PANEL_RIBBON_KEYS.params.mountingElevation,
                 comboboxWidthPx: 90,
                 options: MOUNTING_ELEVATION_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
           ],

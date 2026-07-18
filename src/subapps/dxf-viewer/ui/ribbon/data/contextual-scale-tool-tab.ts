@@ -97,7 +97,7 @@ export const CONTEXTUAL_SCALE_TOOL_TAB: RibbonTab = {
                 commandKey: SCALE_TOOL_RIBBON_KEYS.factor,
                 comboboxWidthPx: 100,
                 options: FACTOR_OPTIONS,
-                numericInput: { editable: true, allowNegative: true, allowDecimal: true },
+                numericInput: { quantityKind: 'ratio', editable: true, allowNegative: true, allowDecimal: true },
               },
             },
           ],

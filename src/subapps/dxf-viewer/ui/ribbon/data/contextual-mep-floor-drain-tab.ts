@@ -28,35 +28,21 @@ import {
   MEP_FIXTURE_RIBBON_KEYS,
   MEP_FIXTURE_RIBBON_KEYS_ACTIONS,
 } from '../hooks/bridge/mep-fixture-command-keys';
+import { literalNumberOptions } from './ribbon-numeric-options';
 
 export const MEP_FLOOR_DRAIN_CONTEXTUAL_TRIGGER = 'mep-floor-drain-selected';
 
 // ─── Combobox options (floor-level mm presets) ───────────────────────────────
 
 // Square grating side (mm) — 150×150 default catch-basin.
-const SIZE_MM_OPTIONS = [
-  { value: '100', labelKey: '100', isLiteralLabel: true },
-  { value: '150', labelKey: '150', isLiteralLabel: true },
-  { value: '200', labelKey: '200', isLiteralLabel: true },
-  { value: '250', labelKey: '250', isLiteralLabel: true },
-  { value: '300', labelKey: '300', isLiteralLabel: true },
-] as const;
+const SIZE_MM_OPTIONS = literalNumberOptions([100, 150, 200, 250, 300]);
 
 // Basin body depth (mm) — recessed below the floor.
-const BODY_HEIGHT_MM_OPTIONS = [
-  { value: '50',  labelKey: '50',  isLiteralLabel: true },
-  { value: '80',  labelKey: '80',  isLiteralLabel: true },
-  { value: '100', labelKey: '100', isLiteralLabel: true },
-  { value: '150', labelKey: '150', isLiteralLabel: true },
-] as const;
+const BODY_HEIGHT_MM_OPTIONS = literalNumberOptions([50, 80, 100, 150]);
 
 // Floor-relative mounting elevation (mm) — 0 = flush with FFL (a small upstand
 // raises the grating slightly above the finished floor).
-const MOUNTING_ELEVATION_MM_OPTIONS = [
-  { value: '0',   labelKey: '0',   isLiteralLabel: true },
-  { value: '20',  labelKey: '20',  isLiteralLabel: true },
-  { value: '50',  labelKey: '50',  isLiteralLabel: true },
-] as const;
+const MOUNTING_ELEVATION_MM_OPTIONS = literalNumberOptions([0, 20, 50]);
 
 // ─── Tab definition ──────────────────────────────────────────────────────────
 
@@ -82,6 +68,7 @@ export const CONTEXTUAL_MEP_FLOOR_DRAIN_TAB: RibbonTab = {
                 commandKey: MEP_FIXTURE_RIBBON_KEYS.params.width,
                 comboboxWidthPx: 80,
                 options: SIZE_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -93,6 +80,7 @@ export const CONTEXTUAL_MEP_FLOOR_DRAIN_TAB: RibbonTab = {
                 commandKey: MEP_FIXTURE_RIBBON_KEYS.params.length,
                 comboboxWidthPx: 80,
                 options: SIZE_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -104,6 +92,7 @@ export const CONTEXTUAL_MEP_FLOOR_DRAIN_TAB: RibbonTab = {
                 commandKey: MEP_FIXTURE_RIBBON_KEYS.params.bodyHeight,
                 comboboxWidthPx: 80,
                 options: BODY_HEIGHT_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -115,6 +104,7 @@ export const CONTEXTUAL_MEP_FLOOR_DRAIN_TAB: RibbonTab = {
                 commandKey: MEP_FIXTURE_RIBBON_KEYS.params.mountingElevation,
                 comboboxWidthPx: 90,
                 options: MOUNTING_ELEVATION_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
           ],

@@ -39,7 +39,7 @@ import { LINE_RING_CONFIG } from '../../systems/dynamic-input/line-ring-config';
 import { PERPENDICULAR_LINE_RING_CONFIG } from '../../systems/dynamic-input/perpendicular-line-ring-config';
 import { RECTANGLE_RING_CONFIG } from '../../systems/dynamic-input/rectangle-ring-config';
 import { RectLockStore } from '../../systems/dynamic-input/RectLockStore';
-import { ringStartKey } from '../../systems/dynamic-input/ring-config';
+import { ringStartKey, type RingConfig } from '../../systems/dynamic-input/ring-config';
 // ADR-513 §grip-parity — press-drag άκρου γραμμής δείχνει το ΙΔΙΟ δαχτυλίδι (lock-only).
 import { GRIP_LINEAR_RING_CONFIG } from '../../systems/dynamic-input/grip-linear-ring-config';
 import { OPENING_WIDTH_RING_CONFIG } from '../../systems/dynamic-input/opening-width-ring-config';
@@ -49,7 +49,33 @@ import {
   isLineEndpointDragInfo,
   isOpeningCornerDragInfo,
   isVertexReshapeDragInfo,
+  isMoveDisplacementDragInfo,
+  type ActiveDragGripInfo,
 } from '../../systems/cursor/GripDragStore';
+
+/**
+ * ADR-513 §grip-parity-hotgrip — Η ΜΙΑ διάταξη «ποιο ενεργό grip drag δείχνει ποιο Δαχτυλίδι Εντολών».
+ * Πρώτο match κερδίζει· η σειρά είναι σημασιολογική (ειδικό → γενικό), γι' αυτό η ΜΕΤΑΚΙΝΗΣΗ (η πιο
+ * γενική συνθήκη) είναι τελευταία και δεν μπορεί να κλέψει drag από τις λαβές αναμόρφωσης.
+ *
+ * `requiresDynInput: false` ⇒ το δαχτυλίδι εμφανίζεται ανεξάρτητα από τον διακόπτη ΔΥΝ — ισχύει για το
+ * πλάτος κουφώματος (Giorgio 2026-07-18: «κλικ στη λαβή → λάστιχο → πληκτρολόγηση», χωρίς διακόπτη).
+ */
+const GRIP_RING_VARIANTS: readonly {
+  readonly match: (info: ActiveDragGripInfo) => boolean;
+  readonly config: RingConfig;
+  readonly keyPrefix: string;
+  readonly requiresDynInput: boolean;
+}[] = [
+  // ΕΠΕΚΤΑΣΗ ΑΚΡΟΥ ΓΡΑΜΜΗΣ — Μήκος/Γωνία, σημασιολογία «όρισε το μήκος της γραμμής».
+  { match: isLineEndpointDragInfo, config: GRIP_LINEAR_RING_CONFIG, keyPrefix: 'grip', requiresDynInput: true },
+  // ΚΟΡΥΦΗ/ΠΛΕΥΡΑ ΠΟΛΥΓΡΑΜΜΗΣ ή ΑΚΡΟ ΤΟΞΟΥ (incl. projected ορθογώνιο) — displacement (τραπέζιο / όλη η πλευρά).
+  { match: isVertexReshapeDragInfo, config: GRIP_LINEAR_RING_CONFIG, keyPrefix: 'grip-reshape', requiresDynInput: true },
+  // ΠΛΑΤΟΣ ΚΟΥΦΩΜΑΤΟΣ — length-only δαχτυλίδι, χωρίς gate ΔΥΝ.
+  { match: isOpeningCornerDragInfo, config: OPENING_WIDTH_RING_CONFIG, keyPrefix: 'opening-width', requiresDynInput: false },
+  // ΜΕΤΑΚΙΝΗΣΗ ΟΛΟΚΛΗΡΗΣ ΟΝΤΟΤΗΤΑΣ (5ο σκαλί) — displacement κατά ORTHO/POLAR με πληκτρολογημένο μήκος.
+  { match: isMoveDisplacementDragInfo, config: GRIP_LINEAR_RING_CONFIG, keyPrefix: 'grip-move', requiresDynInput: true },
+];
 import { DynamicInputLockStore } from '../../systems/dynamic-input/DynamicInputLockStore';
 // ADR-513 §rotation-ring — single-slice «Γωνία» ring στο rotate-free (typed rotation angle).
 import { ROTATION_RING_CONFIG } from '../../systems/dynamic-input/rotation-ring-config';
@@ -149,9 +175,6 @@ export const DynamicInputSubscriber = React.memo(function DynamicInputSubscriber
   // ADR-513 §grip-parity — low-freq reactive read του ενεργού grip drag (fires μία φορά στο
   // start/end, όχι ανά frame). Οδηγεί το mount/unmount του δαχτυλιδιού στην επέκταση άκρου γραμμής.
   const activeDrag = useSyncExternalStore(subscribeActiveDragGrip, getActiveDragGrip, () => null);
-  const lineEndpointDrag = isLineEndpointDragInfo(activeDrag);
-  const openingCornerDrag = isOpeningCornerDragInfo(activeDrag);
-  const vertexReshapeDrag = isVertexReshapeDragInfo(activeDrag);
 
   // Wire keyboard pipeline: maps `dynamic-input-coordinate-submit` events back
   // to the canvas drawing pipeline (`onDrawingPoint`) — see ADR §4 G2.
@@ -164,58 +187,31 @@ export const DynamicInputSubscriber = React.memo(function DynamicInputSubscriber
     onEntityCreated: noopEntityCreated,
   });
 
-  // ADR-513 §grip-parity-hotgrip — ΕΠΕΚΤΑΣΗ ΑΚΡΟΥ ΓΡΑΜΜΗΣ (click-move-click, hot-grip): δείξε το ΙΔΙΟ
-  // «Δαχτυλίδι Εντολών» (Μήκος/Γωνία) σε **`canvas-click`** mode — ΑΚΡΙΒΩΣ ο μηχανισμός του τοίχου/γραμμής
-  // (Giorgio: «πανομοιότυπη λειτουργία με τον τοίχο»). Ο τροχός μπλοκάρει ΟΛΑ τα inside events άνευ όρων
-  // (μηδέν race), το κλικ σε φέτα ανοίγει πεδίο, Enter → κλείδωμα + synthetic canvas click που κάνει το
-  // commit του grip (hot-grip terminal), κλικ ΕΞΩ από τον τροχό → commit στον κέρσορα. Ανεξάρτητο από το
+  // ADR-513 §grip-parity-hotgrip — ΕΝΑ mount για ΟΛΑ τα δαχτυλίδια λαβής (πίνακας `GRIP_RING_VARIANTS`).
+  // Ο μηχανισμός είναι πάντα ο ΙΔΙΟΣ — `canvas-click` mode, ΑΚΡΙΒΩΣ ο μηχανισμός του τοίχου/γραμμής
+  // (Giorgio: «πανομοιότυπη λειτουργία με τον τοίχο»): ο τροχός μπλοκάρει ΟΛΑ τα inside events άνευ όρων
+  // (μηδέν race), κλικ σε φέτα ανοίγει πεδίο, Enter → κλείδωμα + synthetic canvas click που κάνει το commit
+  // του grip (hot-grip terminal), κλικ ΕΞΩ από τον τροχό → commit στον κέρσορα. Ανεξάρτητο από το
   // `interactive` gate (στο grip-drag το εργαλείο είναι 'select'). Ίδιος 3D-yield κανόνας.
-  if (dynInput.on && !is3D && lineEndpointDrag && activeDrag && getSceneUnits) {
-    return (
-      <RadialCommandRing
-        config={GRIP_LINEAR_RING_CONFIG}
-        placementMode="canvas-click"
-        startKey={`grip:${activeDrag.entityId}:${activeDrag.gripIndex}`}
-        sceneUnits={getSceneUnits()}
-        getCanvasEl={getCanvasEl}
-        onDeactivate={unlockGripEndpointLocks}
-      />
+  //
+  // Ο πίνακας αντικατέστησε τρία σχεδόν ταυτόσημα `if`-blocks (2026-07-18, N.0.2/N.18): διέφεραν ΜΟΝΟ σε
+  // predicate/config/startKey, οπότε η προσθήκη 4ου (μετακίνηση) με copy-paste θα ήταν sibling clone.
+  if (!is3D && activeDrag && getSceneUnits) {
+    const variant = GRIP_RING_VARIANTS.find(
+      (v) => (dynInput.on || !v.requiresDynInput) && v.match(activeDrag),
     );
-  }
-
-  // ADR-513 §grip-parity-hotgrip — ΚΟΡΥΦΗ/ΠΛΕΥΡΑ ΠΟΛΥΓΡΑΜΜΗΣ ή ΑΚΡΟ ΤΟΞΟΥ (incl. projected ορθογώνιο)
-  // → ΤΟ ΙΔΙΟ Μήκος/Γωνία «Δαχτυλίδι Εντολών» (canvas-click), ίδιος μηχανισμός με το άκρο γραμμής: type +
-  // Enter → displacement (τραπέζιο / όλη η πλευρά) ή κλικ έξω = commit στον κέρσορα. Ίδιο `GRIP_LINEAR_RING_CONFIG`.
-  if (dynInput.on && !is3D && vertexReshapeDrag && activeDrag && getSceneUnits) {
-    return (
-      <RadialCommandRing
-        config={GRIP_LINEAR_RING_CONFIG}
-        placementMode="canvas-click"
-        startKey={`grip-reshape:${activeDrag.entityId}:${activeDrag.gripIndex}`}
-        sceneUnits={getSceneUnits()}
-        getCanvasEl={getCanvasEl}
-        onDeactivate={unlockGripEndpointLocks}
-      />
-    );
-  }
-
-  // ADR-513 §opening-width — ΕΠΕΚΤΑΣΗ ΠΛΑΤΟΥΣ ΚΟΥΦΩΜΑΤΟΣ (click-move-click, hot-grip): δείξε το length-only
-  // «Δαχτυλίδι Εντολών» (Μήκος) σε `canvas-click` mode. Ο χρήστης κλικάρει τη λαβή παρειάς, η παρειά ακολουθεί
-  // button-free, πληκτρολογεί «Μήκος» → Enter → synthetic canvas click που κάνει το commit (hot-grip terminal),
-  // ή κλικ ΕΞΩ από τον τροχό → commit στον κέρσορα. **ΔΕΝ** gate-άρεται στη ΔΥΝ (Giorgio 2026-07-18): το ring
-  // mount-άρεται όποτε τρέχει opening-corner drag (το `openingCornerDrag` μπαίνει μόνο σε αυτό το hot-grip).
-  // Ίδιος 3D-yield κανόνας.
-  if (!is3D && openingCornerDrag && activeDrag && getSceneUnits) {
-    return (
-      <RadialCommandRing
-        config={OPENING_WIDTH_RING_CONFIG}
-        placementMode="canvas-click"
-        startKey={`opening-width:${activeDrag.entityId}:${activeDrag.gripIndex}`}
-        sceneUnits={getSceneUnits()}
-        getCanvasEl={getCanvasEl}
-        onDeactivate={unlockGripEndpointLocks}
-      />
-    );
+    if (variant) {
+      return (
+        <RadialCommandRing
+          config={variant.config}
+          placementMode="canvas-click"
+          startKey={`${variant.keyPrefix}:${activeDrag.entityId}:${activeDrag.gripIndex}`}
+          sceneUnits={getSceneUnits()}
+          getCanvasEl={getCanvasEl}
+          onDeactivate={unlockGripEndpointLocks}
+        />
+      );
+    }
   }
 
   // ADR-513 §rotation-ring — ΠΕΡΙΣΤΡΟΦΗ hot-grip (free-rotate): με κέντρο δηλωμένο, δείξε το ΙΔΙΟ

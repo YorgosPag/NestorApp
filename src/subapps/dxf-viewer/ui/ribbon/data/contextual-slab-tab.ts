@@ -32,6 +32,7 @@ import {
   SLAB_SLOPE_UNIT_PERCENT,
   SLAB_SLOPE_UNIT_RATIO,
 } from '../hooks/bridge/slab-slope-unit';
+import { literalNumberOptions } from './ribbon-numeric-options';
 
 export const SLAB_CONTEXTUAL_TRIGGER = 'slab-selected';
 
@@ -52,16 +53,7 @@ const REINFORCEMENT_OPTIONS = [
   { value: 'flat',    labelKey: 'ribbon.commands.slabEditor.reinforcement.flat',   isLiteralLabel: false },
 ] as const;
 
-const THICKNESS_MM_OPTIONS = [
-  { value: '100', labelKey: '100', isLiteralLabel: true },
-  { value: '150', labelKey: '150', isLiteralLabel: true },
-  { value: '180', labelKey: '180', isLiteralLabel: true },
-  { value: '200', labelKey: '200', isLiteralLabel: true },
-  { value: '250', labelKey: '250', isLiteralLabel: true },
-  { value: '300', labelKey: '300', isLiteralLabel: true },
-  { value: '400', labelKey: '400', isLiteralLabel: true },
-  { value: '500', labelKey: '500', isLiteralLabel: true },
-] as const;
+const THICKNESS_MM_OPTIONS = literalNumberOptions([100, 150, 180, 200, 250, 300, 400, 500]);
 
 // ADR-363 Phase 4.5e-A — slab material picker (ENABLED). 3 preset options.
 // Phase 6.5 material library will expand to full catalog.
@@ -87,15 +79,7 @@ const SOFFIT_FINISH_OPTIONS = [
   { value: 'knauf-gypsum-board',  labelKey: 'wallCovering.materials.knaufGypsumBoard',      isLiteralLabel: false },
 ] as const;
 
-const ELEVATION_MM_OPTIONS = [
-  { value: '-500', labelKey: '-500', isLiteralLabel: true },
-  { value: '0',    labelKey: '0',    isLiteralLabel: true },
-  { value: '1500', labelKey: '1500', isLiteralLabel: true },
-  { value: '2800', labelKey: '2800', isLiteralLabel: true },
-  { value: '3000', labelKey: '3000', isLiteralLabel: true },
-  { value: '3300', labelKey: '3300', isLiteralLabel: true },
-  { value: '6000', labelKey: '6000', isLiteralLabel: true },
-] as const;
+const ELEVATION_MM_OPTIONS = literalNumberOptions([-500, 0, 1500, 2800, 3000, 3300, 6000]);
 
 // ─── ADR-404 Phase 5c — κεκλιμένη/ρύση πλάκα (Sloped slab) ────────────────────
 // on/off + μονάδα (%/μοίρες/λόγος) + τιμή + φορά° (ελεύθερη) + άξονας. Το angle
@@ -112,21 +96,10 @@ const SLAB_SLOPE_UNIT_OPTIONS = [
 ] as const;
 
 // Παρουσιαζόμενα presets σε όρους % (drainage συνηθισμένα)· numericInput δέχεται ό,τι αξία.
-const SLAB_SLOPE_ANGLE_OPTIONS = [
-  { value: '1',  labelKey: '1',  isLiteralLabel: true },
-  { value: '2',  labelKey: '2',  isLiteralLabel: true },
-  { value: '3',  labelKey: '3',  isLiteralLabel: true },
-  { value: '5',  labelKey: '5',  isLiteralLabel: true },
-  { value: '10', labelKey: '10', isLiteralLabel: true },
-] as const;
+const SLAB_SLOPE_ANGLE_OPTIONS = literalNumberOptions([1, 2, 3, 5, 10]);
 
 // Φορά «ανηφόρας» σε μοίρες CCW (0=Αν, 90=Β, 180=Δ, 270=Ν)· numericInput ελεύθερη 0..360.
-const SLAB_SLOPE_DIRECTION_OPTIONS = [
-  { value: '0',   labelKey: '0',   isLiteralLabel: true },
-  { value: '90',  labelKey: '90',  isLiteralLabel: true },
-  { value: '180', labelKey: '180', isLiteralLabel: true },
-  { value: '270', labelKey: '270', isLiteralLabel: true },
-] as const;
+const SLAB_SLOPE_DIRECTION_OPTIONS = literalNumberOptions([0, 90, 180, 270]);
 
 const SLAB_SLOPE_PIVOT_OPTIONS = [
   { value: 'center', labelKey: 'ribbon.commands.slabEditor.slope.pivotCenter', isLiteralLabel: false },
@@ -218,6 +191,7 @@ export const CONTEXTUAL_SLAB_TAB: RibbonTab = {
                 commandKey: SLAB_RIBBON_KEYS.params.thickness,
                 comboboxWidthPx: 80,
                 options: THICKNESS_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -229,6 +203,7 @@ export const CONTEXTUAL_SLAB_TAB: RibbonTab = {
                 commandKey: SLAB_RIBBON_KEYS.params.levelElevation,
                 comboboxWidthPx: 90,
                 options: ELEVATION_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
           ],
@@ -276,7 +251,7 @@ export const CONTEXTUAL_SLAB_TAB: RibbonTab = {
                 commandKey: SLAB_RIBBON_KEYS.slope.angle,
                 comboboxWidthPx: 80,
                 options: SLAB_SLOPE_ANGLE_OPTIONS,
-                numericInput: { min: 0, max: 1000 },
+                numericInput: { quantityKind: 'percent', min: 0, max: 1000 },
               },
             },
             {
@@ -288,7 +263,7 @@ export const CONTEXTUAL_SLAB_TAB: RibbonTab = {
                 commandKey: SLAB_RIBBON_KEYS.slope.direction,
                 comboboxWidthPx: 80,
                 options: SLAB_SLOPE_DIRECTION_OPTIONS,
-                numericInput: { min: 0, max: 360 },
+                numericInput: { quantityKind: 'angle', min: 0, max: 360 },
               },
             },
             {

@@ -29,6 +29,7 @@
 import type { RibbonTab } from '../types/ribbon-types';
 import { DIM_RIBBON_KEYS } from '../hooks/bridge/dim-command-keys';
 import { LINEWEIGHT_RIBBON_OPTIONS } from './lineweight-ribbon-options';
+import { literalNumberOptions } from './ribbon-numeric-options';
 
 export const DIMENSION_CONTEXTUAL_TRIGGER = 'dim-selected';
 
@@ -45,40 +46,16 @@ const DIMSTYLE_OPTIONS = [
 
 // ADR-362 — linetype DENSITY presets (dimltscale, Path A). Numeric literals —
 // editable (type any value > 0). ×0.5 = πυκνά, ×1 = catalog, ×2 = αραιά.
-const LINETYPE_SCALE_OPTIONS = [
-  { value: '0.5', labelKey: '0.5', isLiteralLabel: true },
-  { value: '0.75', labelKey: '0.75', isLiteralLabel: true },
-  { value: '1', labelKey: '1', isLiteralLabel: true },
-  { value: '1.5', labelKey: '1.5', isLiteralLabel: true },
-  { value: '2', labelKey: '2', isLiteralLabel: true },
-] as const;
+const LINETYPE_SCALE_OPTIONS = literalNumberOptions([0.5, 0.75, 1, 1.5, 2]);
 
 // Arrow size presets (paper mm). Numeric literals — editable (type any value).
-const ARROW_SIZE_OPTIONS = [
-  { value: '1.5', labelKey: '1.5', isLiteralLabel: true },
-  { value: '2.0', labelKey: '2.0', isLiteralLabel: true },
-  { value: '2.5', labelKey: '2.5', isLiteralLabel: true },
-  { value: '3.5', labelKey: '3.5', isLiteralLabel: true },
-  { value: '5.0', labelKey: '5.0', isLiteralLabel: true },
-] as const;
+const ARROW_SIZE_OPTIONS = literalNumberOptions([1.5, '2.0', 2.5, 3.5, '5.0']);
 
 // Font-family presets (names are literal — not translatable).
-const FONT_OPTIONS = [
-  { value: 'Arial',           labelKey: 'Arial',           isLiteralLabel: true },
-  { value: 'Roboto',          labelKey: 'Roboto',          isLiteralLabel: true },
-  { value: 'Helvetica',       labelKey: 'Helvetica',       isLiteralLabel: true },
-  { value: 'Times New Roman', labelKey: 'Times New Roman', isLiteralLabel: true },
-  { value: 'Courier New',     labelKey: 'Courier New',     isLiteralLabel: true },
-] as const;
+const FONT_OPTIONS = literalNumberOptions(['Arial', 'Roboto', 'Helvetica', 'Times New Roman', 'Courier New']);
 
 // Paper-space text height presets (mm). Numeric literals — not translatable.
-const TEXT_HEIGHT_OPTIONS = [
-  { value: '2.5',  labelKey: '2.5',  isLiteralLabel: true },
-  { value: '3.5',  labelKey: '3.5',  isLiteralLabel: true },
-  { value: '5.0',  labelKey: '5.0',  isLiteralLabel: true },
-  { value: '7.0',  labelKey: '7.0',  isLiteralLabel: true },
-  { value: '10.0', labelKey: '10.0', isLiteralLabel: true },
-] as const;
+const TEXT_HEIGHT_OPTIONS = literalNumberOptions([2.5, 3.5, '5.0', '7.0', '10.0']);
 
 // DIMTAD text-position presets (above / center / below dim line).
 const TEXT_POSITION_OPTIONS = [
@@ -229,7 +206,7 @@ export const DIMENSION_CONTEXTUAL_TAB: RibbonTab = {
                 commandKey: O.lineTypeScale,
                 comboboxWidthPx: 80,
                 options: LINETYPE_SCALE_OPTIONS,
-                numericInput: { editable: true, min: 0 },
+                numericInput: { quantityKind: 'ratio', editable: true, min: 0 },
               },
             },
           ],
@@ -305,7 +282,7 @@ export const DIMENSION_CONTEXTUAL_TAB: RibbonTab = {
                 commandKey: O.extTypeScale,
                 comboboxWidthPx: 80,
                 options: LINETYPE_SCALE_OPTIONS,
-                numericInput: { editable: true, min: 0 },
+                numericInput: { quantityKind: 'ratio', editable: true, min: 0 },
               },
             },
           ],
@@ -353,7 +330,7 @@ export const DIMENSION_CONTEXTUAL_TAB: RibbonTab = {
                 comboboxWidthPx: 80,
                 options: ARROW_SIZE_OPTIONS,
                 // Editable paper-mm size (> 0).
-                numericInput: { editable: true, min: 0 },
+                numericInput: { quantityKind: 'paper-length', editable: true, min: 0 },
               },
             },
           ],
@@ -466,6 +443,7 @@ export const DIMENSION_CONTEXTUAL_TAB: RibbonTab = {
                 commandKey: DIM_RIBBON_KEYS.text.height,
                 comboboxWidthPx: 80,
                 options: TEXT_HEIGHT_OPTIONS,
+                numericInput: { quantityKind: 'paper-length' },
               },
             },
             {
@@ -493,6 +471,7 @@ export const DIMENSION_CONTEXTUAL_TAB: RibbonTab = {
                 commandKey: DIM_RIBBON_KEYS.text.rotation,
                 comboboxWidthPx: 80,
                 options: TEXT_ROTATION_OPTIONS,
+                numericInput: { quantityKind: 'angle' },
               },
             },
             {

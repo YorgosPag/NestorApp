@@ -65,7 +65,7 @@ export const CONTEXTUAL_BLOCK_LIBRARY_TAB: RibbonTab = {
                 options: ROTATION_DEG_OPTIONS,
                 // Ρητό (τα presets είναι ακέραιοι/θετικοί, άρα το auto-infer θα απέκλειε
                 // και τα δύο): επιτρέπονται δεκαδικές μοίρες (22.5°) και αρνητικές (-90°).
-                numericInput: { editable: true, allowNegative: true, allowDecimal: true },
+                numericInput: { quantityKind: 'angle', editable: true, allowNegative: true, allowDecimal: true },
               },
             },
           ],
@@ -95,7 +95,7 @@ export const CONTEXTUAL_BLOCK_LIBRARY_TAB: RibbonTab = {
                 comboboxWidthPx: 80,
                 options: SCALE_OPTIONS,
                 // Δεκαδικά (0.35×) + αρνητικά (−1 = καθρέφτισμα στον X, AutoCAD parity).
-                numericInput: { editable: true, allowNegative: true, allowDecimal: true },
+                numericInput: { quantityKind: 'ratio', editable: true, allowNegative: true, allowDecimal: true },
               },
             },
             {
@@ -108,7 +108,7 @@ export const CONTEXTUAL_BLOCK_LIBRARY_TAB: RibbonTab = {
                 comboboxWidthPx: 80,
                 options: SCALE_OPTIONS,
                 // Δεκαδικά (0.35×) + αρνητικά (−1 = καθρέφτισμα στον Y, AutoCAD parity).
-                numericInput: { editable: true, allowNegative: true, allowDecimal: true },
+                numericInput: { quantityKind: 'ratio', editable: true, allowNegative: true, allowDecimal: true },
               },
             },
           ],

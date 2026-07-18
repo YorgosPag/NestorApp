@@ -201,22 +201,36 @@ function handleGuideDelete(ctx: GuideClickContext, p: UseCanvasClickHandlerParam
 }
 
 /**
- * guide-parallel — το κλικ επιλέγει ΜΟΝΟ τον οδηγό αναφοράς.
+ * guide-parallel — ΔΥΟ κλικ: το πρώτο επιλέγει τον οδηγό αναφοράς, το δεύτερο
+ * ΤΟΠΟΘΕΤΕΙ τον παράλληλο (ADR-189 §3.13).
  *
- * Η πλευρά ΔΕΝ κρίνεται εδώ: το κλικ πρέπει να πέσει μέσα στην ανοχή των 30px
- * γύρω από τη γραμμή, οπότε το «πάνω/κάτω» του ίδιου του κλικ είναι θόρυβος
- * λίγων pixel. Η πλευρά προκύπτει από τη θέση του κέρσορα τη στιγμή του commit
- * (βλ. `useGuideWorkflowHandlers.handleParallelRefSelected`).
+ * ΙΣΤΟΡΙΚΟ (μην το «διορθώσεις» πίσω): εδώ υπήρχε σκόπιμο guard
+ * `if (p.parallelRefGuideId) return true;` επειδή είχε ζητηθεί ρητά «commit ΜΟΝΟ
+ * με Enter». Ο χρήστης το άλλαξε: πλέον δουλεύουν ΚΑΙ ΤΑ ΔΥΟ. Το guard έγινε
+ * ΚΛΑΔΟΣ — το κλικ δεν καταναλώνεται πια σιωπηλά, κάνει commit.
  *
- * Το σημείο του κλικ ΔΕΝ πετιέται πλέον ολόκληρο: η ΠΡΟΒΟΛΗ του πάνω στη γραμμή
- * κρατιέται ως anchor της δυναμικής διακεκομμένης (ADR-189 §3.13). Χρησιμοποιεί
- * το ίδιο `projectPointOntoGuide` με το crosshair hover-lock → το ＋ κάθεται
- * ακριβώς εκεί που ήδη έδειχνε ο κλειδωμένος σταυρός, χωρίς άλμα.
+ * Η πλευρά ΔΕΝ κρίνεται εδώ: το κλικ επιλογής πρέπει να πέσει μέσα στην ανοχή
+ * των 30px γύρω από τη γραμμή, οπότε το «πάνω/κάτω» του είναι θόρυβος λίγων
+ * pixel. Η πλευρά προκύπτει από το ΠΕΡΙΟΡΙΣΜΕΝΟ σημείο τη στιγμή του commit
+ * (βλ. `useGuideWorkflowHandlers` — ένα `resolveParallelCursor` για όλους).
+ *
+ * Το σημείο του πρώτου κλικ ΔΕΝ πετιέται ολόκληρο: η ΠΡΟΒΟΛΗ του πάνω στη γραμμή
+ * κρατιέται ως anchor της δυναμικής διακεκομμένης. Χρησιμοποιεί το ίδιο
+ * `projectPointOntoGuide` με το crosshair hover-lock → το ＋ κάθεται ακριβώς εκεί
+ * που ήδη έδειχνε ο κλειδωμένος σταυρός, χωρίς άλμα.
  */
 function handleGuideParallel(ctx: GuideClickContext, p: UseCanvasClickHandlerParams): boolean {
+  // ΒΗΜΑ 1 — αναφορά ήδη επιλεγμένη: το κλικ ΤΟΠΟΘΕΤΕΙ (ισότιμο με Enter).
+  // Ελέγχεται ΠΡΩΤΟ: το commit δεν εξαρτάται ούτε από τη λίστα οδηγών ούτε από
+  // το `onParallelRefSelected`, και δεν πρέπει να χαθεί σε κλικ μακριά από γραμμή.
+  if (p.parallelRefGuideId) {
+    p.onParallelDistanceCommitted?.(p.parallelRefGuideId, ctx.worldPoint);
+    dlog('guideClickHandlers', 'Parallel step 1: commit by second click', p.parallelRefGuideId);
+    return true;
+  }
+
   if (!p.guides || p.guides.length === 0) return true;
   if (!p.onParallelRefSelected) return true;
-  if (p.parallelRefGuideId) return true;  // αναφορά ήδη επιλεγμένη — περιμένουμε απόσταση
 
   const result = findNearestGuide(ctx.worldPoint, p.guides, 30 / ctx.transform.scale);
   if (!result) return true;

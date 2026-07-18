@@ -22,7 +22,7 @@ import { useWallSplitFirstPoint } from '../../systems/wall-split/WallSplitStore'
 import { useBeamBetweenMembersPreview } from '../../hooks/tools/useBeamBetweenMembersPreview';
 import { useBeamBetweenAnchor } from '../../systems/beam-between-members/BeamBetweenMembersStore';
 import { useParallelGuideAnchorPreview } from '../../hooks/tools/useParallelGuideAnchorPreview';
-import { useCanvasNumericAnchor } from '../../systems/canvas-numeric-input/CanvasNumericInputStore';
+import { useCanvasNumericAnchor, useCanvasNumericRefGuide } from '../../systems/canvas-numeric-input/CanvasNumericInputStore';
 import type { MovePhase } from '../../hooks/tools/useMoveTool';
 import type { MirrorPhase } from '../../hooks/tools/useMirrorTool';
 import type { DxfGripDragPreview } from '../../hooks/grip-computation';
@@ -193,13 +193,18 @@ export interface ParallelGuideAnchorPreviewMountProps {
 }
 
 /**
- * Store-driven: αυτο-εγγράφεται στο anchor (CanvasNumericInputStore) — ο orchestrator
- * μένει inert (ADR-040). Χωρίς `levelManager`: το preview δεν διαβάζει καμία οντότητα.
+ * Store-driven: αυτο-εγγράφεται στο anchor ΚΑΙ στον παγωμένο οδηγό αναφοράς
+ * (CanvasNumericInputStore) — ο orchestrator μένει inert (ADR-040). Και τα δύο είναι
+ * LOW-frequency (γράφονται ΜΙΑ φορά στο `activate()`, όχι ανά mousemove), οπότε δεν
+ * παραβιάζουν το όριο high-freq hooks του micro-leaf. Ο οδηγός χρειάζεται ώστε η
+ * διακεκομμένη να περνά από τον ΙΔΙΟ περιορισμό (ΟΡΘΟ κάθετα στον οδηγό + βήμα) με το
+ * commit. Χωρίς `levelManager`: το preview δεν διαβάζει καμία οντότητα.
  */
 export const ParallelGuideAnchorPreviewMount = React.memo(function ParallelGuideAnchorPreviewMount(
   props: ParallelGuideAnchorPreviewMountProps,
 ) {
   const anchor = useCanvasNumericAnchor();
-  useParallelGuideAnchorPreview({ ...props, anchor });
+  const refGuide = useCanvasNumericRefGuide();
+  useParallelGuideAnchorPreview({ ...props, anchor, refGuide });
   return null;
 });

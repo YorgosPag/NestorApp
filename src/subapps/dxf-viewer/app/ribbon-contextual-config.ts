@@ -1,62 +1,19 @@
 import React from 'react';
 import type { SceneModel } from '../types/scene';
 import type { Entity } from '../types/entities';
-import { CONTEXTUAL_TEXT_EDITOR_TAB } from '../ui/ribbon/data/contextual-text-editor-tab';
-import {
-  CONTEXTUAL_ARRAY_RECT_TAB, CONTEXTUAL_ARRAY_POLAR_TAB, CONTEXTUAL_ARRAY_PATH_TAB,
-} from '../ui/ribbon/data/contextual-array-tab';
-import { CONTEXTUAL_STAIR_TAB } from '../ui/ribbon/data/contextual-stair-tab';
-import { CONTEXTUAL_WALL_TAB } from '../ui/ribbon/data/contextual-wall-tab';
-import { CONTEXTUAL_OPENING_TAB } from '../ui/ribbon/data/contextual-opening-tab';
-import { CONTEXTUAL_SLAB_TAB } from '../ui/ribbon/data/contextual-slab-tab';
-import { CONTEXTUAL_ROOF_TAB } from '../ui/ribbon/data/contextual-roof-tab';
-import { CONTEXTUAL_COLUMN_TAB } from '../ui/ribbon/data/contextual-column-tab';
-import { CONTEXTUAL_BEAM_TAB } from '../ui/ribbon/data/contextual-beam-tab';
-import { CONTEXTUAL_FOUNDATION_TAB } from '../ui/ribbon/data/contextual-foundation-tab';
-import { CONTEXTUAL_SLAB_OPENING_TAB } from '../ui/ribbon/data/contextual-slab-opening-tab';
-import { DIMENSION_CONTEXTUAL_TAB, DIMENSION_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-dimension-tab';
-import { CONTEXTUAL_LINE_TOOL_TAB } from '../ui/ribbon/data/contextual-line-tool-tab';
-import { CONTEXTUAL_BLOCK_TAB } from '../ui/ribbon/data/contextual-block-tab';
-import { CONTEXTUAL_IMAGE_TAB } from '../ui/ribbon/data/contextual-image-tab';
-import { CONTEXTUAL_XLINE_MODE_TAB } from '../ui/ribbon/data/contextual-xline-mode-tab';
-import { CONTEXTUAL_SKETCH_TAB } from '../ui/ribbon/data/contextual-sketch-tab';
-import { CONTEXTUAL_SCALE_TOOL_TAB, SCALE_TOOL_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-scale-tool-tab';
-import { CONTEXTUAL_MULTI_SELECTION_TAB, MULTI_SELECTION_CONTEXTUAL_TRIGGER, CONTEXTUAL_TRIGGER_SEPARATOR } from '../ui/ribbon/data/contextual-multi-selection-tab';
-import { CONTEXTUAL_MEP_CIRCUIT_TAB, MEP_CIRCUIT_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-circuit-tab';
-import { CONTEXTUAL_MEP_PIPE_NETWORK_TAB, MEP_PIPE_NETWORK_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-pipe-network-tab';
-import { CONTEXTUAL_MEP_FIXTURE_TAB } from '../ui/ribbon/data/contextual-mep-fixture-tab';
-import { CONTEXTUAL_MEP_FLOOR_DRAIN_TAB } from '../ui/ribbon/data/contextual-mep-floor-drain-tab';
-import { CONTEXTUAL_MEP_SANITARY_FIXTURE_TAB } from '../ui/ribbon/data/contextual-mep-sanitary-fixture-tab';
-import { CONTEXTUAL_MEP_APPLIANCE_FIXTURE_TAB } from '../ui/ribbon/data/contextual-mep-appliance-fixture-tab';
-import { CONTEXTUAL_MEP_SOCKET_TAB } from '../ui/ribbon/data/contextual-mep-socket-tab';
-import { CONTEXTUAL_MEP_DATA_OUTLET_TAB } from '../ui/ribbon/data/contextual-mep-data-outlet-tab';
-import { CONTEXTUAL_MEP_MANIFOLD_TAB } from '../ui/ribbon/data/contextual-mep-manifold-tab';
-import { CONTEXTUAL_DRAINAGE_COLLECTOR_TAB } from '../ui/ribbon/data/contextual-drainage-collector-tab';
-import { CONTEXTUAL_MEP_RADIATOR_TAB } from '../ui/ribbon/data/contextual-mep-radiator-tab';
-import { CONTEXTUAL_MEP_BOILER_TAB } from '../ui/ribbon/data/contextual-mep-boiler-tab';
-import { CONTEXTUAL_MEP_WATER_HEATER_TAB } from '../ui/ribbon/data/contextual-mep-water-heater-tab';
-import { CONTEXTUAL_MEP_UNDERFLOOR_TAB } from '../ui/ribbon/data/contextual-mep-underfloor-tab';
-import { CONTEXTUAL_FLOOR_FINISH_TAB } from '../ui/ribbon/data/contextual-floor-finish-tab';
-import { CONTEXTUAL_WALL_COVERING_TAB } from '../ui/ribbon/data/contextual-wall-covering-tab';
-import { CONTEXTUAL_HATCH_TAB } from '../ui/ribbon/data/contextual-hatch-tab';
-import { CONTEXTUAL_THERMAL_SPACE_TAB } from '../ui/ribbon/data/contextual-thermal-space-tab';
-import { CONTEXTUAL_MEP_SEGMENT_TAB } from '../ui/ribbon/data/contextual-mep-segment-tab';
-import { CONTEXTUAL_FURNITURE_TAB } from '../ui/ribbon/data/contextual-furniture-tab';
-import { CONTEXTUAL_BLOCK_LIBRARY_TAB } from '../ui/ribbon/data/contextual-block-library-tab';
-import { CONTEXTUAL_TITLE_BLOCK_TAB } from '../ui/ribbon/data/contextual-title-block-tab';
-import { CONTEXTUAL_FLOORPLAN_SYMBOL_TAB } from '../ui/ribbon/data/contextual-floorplan-symbol-tab';
-import { CONTEXTUAL_ANNOTATION_SYMBOL_TAB } from '../ui/ribbon/data/contextual-annotation-symbol-tab';
-import { CONTEXTUAL_SCALE_BAR_TAB } from '../ui/ribbon/data/contextual-scale-bar-tab';
-import { CONTEXTUAL_MEP_FIXTURE_LIBRARY_TAB } from '../ui/ribbon/data/contextual-mep-fixture-library-tab';
-import { CONTEXTUAL_MEP_RISER_TAB } from '../ui/ribbon/data/contextual-mep-riser-tab';
-import { ANIMATION_CONTEXTUAL_TAB, ANIMATION_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-animation-tab';
-import { CONTEXTUAL_GUIDES_TAB } from '../ui/ribbon/data/contextual-guides-tab';
-import { CONTEXTUAL_DIMENSIONS_TAB, DIMENSIONS_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-dimensions-tab';
-import { CONTEXTUAL_TOPO_SURFACE_TAB } from '../ui/ribbon/data/contextual-topo-surface-tab';
+// ADR-677 Φάση 2β — ο ΚΑΤΑΛΟΓΟΣ των contextual tabs ζει σε pure data module, ώστε ένα test
+// να τον διατρέχει χωρίς να φορτώσει React/stores. Εδώ μένει μόνο ο stateful resolver.
+import { RAW_RIBBON_CONTEXTUAL_TABS } from '../ui/ribbon/data/contextual-tabs-registry';
+import { DIMENSION_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-dimension-tab';
+import { SCALE_TOOL_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-scale-tool-tab';
+import { MULTI_SELECTION_CONTEXTUAL_TRIGGER, CONTEXTUAL_TRIGGER_SEPARATOR } from '../ui/ribbon/data/contextual-multi-selection-tab';
+import { MEP_CIRCUIT_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-circuit-tab';
+import { MEP_PIPE_NETWORK_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-pipe-network-tab';
+import { ANIMATION_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-animation-tab';
+import { DIMENSIONS_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-dimensions-tab';
 import { selectAnimationToolActive, useAnimationStore } from '../bim-3d/animation/AnimationStore';
 import { useMepSystemStore } from '../bim/mep-systems/mep-system-store';
 import { useMepCircuitEditorStore } from '../bim/mep-systems/mep-circuit-editor-store';
-import { CONTEXTUAL_ELECTRICAL_PANEL_TAB } from '../ui/ribbon/data/contextual-electrical-panel-tab';
 import { isPipeNetworkSourceEntity } from '../bim/mep-systems/pipe-network-source';
 import { isMepSegmentEntity } from '../types/entities';
 import { useFoundationLevelStore } from '../state/foundation-level-store';
@@ -75,63 +32,6 @@ import { withStandardLeadPanel } from '../ui/ribbon/data/contextual-lead-panel';
 const BIM_KIND_TYPES: ReadonlySet<string> = new Set([
   'wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'foundation', 'stair', 'roof',
 ]);
-
-const RAW_RIBBON_CONTEXTUAL_TABS = [
-  CONTEXTUAL_TEXT_EDITOR_TAB,
-  CONTEXTUAL_ARRAY_RECT_TAB,
-  CONTEXTUAL_ARRAY_POLAR_TAB,
-  CONTEXTUAL_ARRAY_PATH_TAB,
-  CONTEXTUAL_STAIR_TAB,
-  CONTEXTUAL_WALL_TAB,
-  CONTEXTUAL_OPENING_TAB,
-  CONTEXTUAL_SLAB_TAB,
-  CONTEXTUAL_ROOF_TAB,
-  CONTEXTUAL_COLUMN_TAB,
-  CONTEXTUAL_BEAM_TAB,
-  CONTEXTUAL_FOUNDATION_TAB,
-  CONTEXTUAL_SLAB_OPENING_TAB,
-  DIMENSION_CONTEXTUAL_TAB,
-  CONTEXTUAL_LINE_TOOL_TAB,
-  CONTEXTUAL_BLOCK_TAB,
-  CONTEXTUAL_IMAGE_TAB,
-  CONTEXTUAL_XLINE_MODE_TAB,
-  CONTEXTUAL_SKETCH_TAB,
-  CONTEXTUAL_SCALE_TOOL_TAB,
-  CONTEXTUAL_MULTI_SELECTION_TAB,
-  CONTEXTUAL_MEP_CIRCUIT_TAB,
-  CONTEXTUAL_MEP_PIPE_NETWORK_TAB,
-  CONTEXTUAL_MEP_FIXTURE_TAB,
-  CONTEXTUAL_MEP_FLOOR_DRAIN_TAB,
-  CONTEXTUAL_MEP_SANITARY_FIXTURE_TAB,
-  CONTEXTUAL_MEP_APPLIANCE_FIXTURE_TAB,
-  CONTEXTUAL_MEP_SOCKET_TAB,
-  CONTEXTUAL_MEP_DATA_OUTLET_TAB,
-  CONTEXTUAL_ELECTRICAL_PANEL_TAB,
-  CONTEXTUAL_MEP_MANIFOLD_TAB,
-  CONTEXTUAL_DRAINAGE_COLLECTOR_TAB,
-  CONTEXTUAL_MEP_RADIATOR_TAB,
-  CONTEXTUAL_MEP_BOILER_TAB,
-  CONTEXTUAL_MEP_WATER_HEATER_TAB,
-  CONTEXTUAL_MEP_UNDERFLOOR_TAB,
-  CONTEXTUAL_MEP_SEGMENT_TAB,
-  CONTEXTUAL_MEP_FIXTURE_LIBRARY_TAB,
-  CONTEXTUAL_MEP_RISER_TAB,
-  CONTEXTUAL_FURNITURE_TAB,
-  CONTEXTUAL_BLOCK_LIBRARY_TAB,
-  CONTEXTUAL_TITLE_BLOCK_TAB,
-  CONTEXTUAL_FLOORPLAN_SYMBOL_TAB,
-  CONTEXTUAL_ANNOTATION_SYMBOL_TAB,
-  CONTEXTUAL_SCALE_BAR_TAB,
-  CONTEXTUAL_FLOOR_FINISH_TAB,
-  CONTEXTUAL_WALL_COVERING_TAB,
-  CONTEXTUAL_HATCH_TAB,
-  CONTEXTUAL_THERMAL_SPACE_TAB,
-  ANIMATION_CONTEXTUAL_TAB,
-  CONTEXTUAL_GUIDES_TAB,
-  CONTEXTUAL_DIMENSIONS_TAB,
-  // ADR-662 Φ2β Stage C — επιλεγμένη τοπογραφική επιφάνεια → «Τοπογραφική Επιφάνεια» tab.
-  CONTEXTUAL_TOPO_SURFACE_TAB,
-];
 
 // ADR-363 / ADR-510 Φ4j / ADR-581 — every contextual tab opens with the SAME leading
 // panel (Revit «Modify | …» far-left): «Κλείσιμο» (returns to Home) + the «Αντιγραφή

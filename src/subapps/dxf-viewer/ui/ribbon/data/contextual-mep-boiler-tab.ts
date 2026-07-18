@@ -34,6 +34,8 @@ import {
   BOILER_SYSTEM_PRESSURES_BAR,
 } from '../../../bim/types/mep-boiler-types';
 import { MEP_PIPE_NETWORK_RIBBON_ACTIONS } from '../hooks/bridge/mep-pipe-network-command-keys';
+import { literalNumberOptions } from './ribbon-numeric-options';
+import { mepNetworkPanelRows } from './mep-network-panel-rows';
 
 // NOTE: the model combobox declares `options: []` here — the bridge
 // (useRibbonMepBoilerBridge.getComboboxState) returns the dynamic options list
@@ -45,115 +47,52 @@ export const MEP_BOILER_CONTEXTUAL_TRIGGER = 'mep-boiler-selected';
 // ─── Combobox options (mm presets) ───────────────────────────────────────────
 
 // Body width (mm) — the largest horizontal dimension of the boiler cabinet.
-const WIDTH_MM_OPTIONS = [
-  { value: '400',  labelKey: '400',  isLiteralLabel: true },
-  { value: '450',  labelKey: '450',  isLiteralLabel: true },
-  { value: '600',  labelKey: '600',  isLiteralLabel: true },
-  { value: '800',  labelKey: '800',  isLiteralLabel: true },
-] as const;
+const WIDTH_MM_OPTIONS = literalNumberOptions([400, 450, 600, 800]);
 
 // Depth (mm) — front-to-back depth of the boiler cabinet.
-const LENGTH_MM_OPTIONS = [
-  { value: '250', labelKey: '250', isLiteralLabel: true },
-  { value: '300', labelKey: '300', isLiteralLabel: true },
-  { value: '350', labelKey: '350', isLiteralLabel: true },
-  { value: '450', labelKey: '450', isLiteralLabel: true },
-] as const;
+const LENGTH_MM_OPTIONS = literalNumberOptions([250, 300, 350, 450]);
 
 // Body vertical height (mm) — typical wall-hung boiler heights.
-const BODY_HEIGHT_MM_OPTIONS = [
-  { value: '500', labelKey: '500', isLiteralLabel: true },
-  { value: '700', labelKey: '700', isLiteralLabel: true },
-  { value: '900', labelKey: '900', isLiteralLabel: true },
-] as const;
+const BODY_HEIGHT_MM_OPTIONS = literalNumberOptions([500, 700, 900]);
 
 // Floor-relative mounting elevation (mm) — vertical centre (wall-mounted boiler).
-const MOUNTING_ELEVATION_MM_OPTIONS = [
-  { value: '900',  labelKey: '900',  isLiteralLabel: true },
-  { value: '1200', labelKey: '1200', isLiteralLabel: true },
-  { value: '1500', labelKey: '1500', isLiteralLabel: true },
-] as const;
+const MOUNTING_ELEVATION_MM_OPTIONS = literalNumberOptions([900, 1200, 1500]);
 
 // Supply/return connector diameter (mm) — typical hydronic boiler tails.
-const CONNECTOR_DIAMETER_MM_OPTIONS = [
-  { value: '15', labelKey: '15', isLiteralLabel: true },
-  { value: '18', labelKey: '18', isLiteralLabel: true },
-  { value: '22', labelKey: '22', isLiteralLabel: true },
-  { value: '28', labelKey: '28', isLiteralLabel: true },
-] as const;
+const CONNECTOR_DIAMETER_MM_OPTIONS = literalNumberOptions([15, 18, 22, 28]);
 
 // COMBI DHW connector diameter (mm) — tap-water tails, smaller than hydronic (DN15 default).
-const DHW_CONNECTOR_DIAMETER_MM_OPTIONS = [
-  { value: '15', labelKey: '15', isLiteralLabel: true },
-  { value: '18', labelKey: '18', isLiteralLabel: true },
-  { value: '22', labelKey: '22', isLiteralLabel: true },
-] as const;
+const DHW_CONNECTOR_DIAMETER_MM_OPTIONS = literalNumberOptions([15, 18, 22]);
 
 // Combustion flue (καπναγωγός) diameter (mm) — typical condensing flue sizes DN80/100/130.
-const FLUE_DIAMETER_MM_OPTIONS = [
-  { value: '80',  labelKey: '80',  isLiteralLabel: true },
-  { value: '100', labelKey: '100', isLiteralLabel: true },
-  { value: '130', labelKey: '130', isLiteralLabel: true },
-] as const;
+const FLUE_DIAMETER_MM_OPTIONS = literalNumberOptions([80, 100, 130]);
 
 // Combustion fuel supply (τροφοδοσία καυσίμου) diameter (mm) — typical gas/oil line DN15/20/25.
-const FUEL_DIAMETER_MM_OPTIONS = [
-  { value: '15', labelKey: '15', isLiteralLabel: true },
-  { value: '20', labelKey: '20', isLiteralLabel: true },
-  { value: '25', labelKey: '25', isLiteralLabel: true },
-] as const;
+const FUEL_DIAMETER_MM_OPTIONS = literalNumberOptions([15, 20, 25]);
 
 // Condensate drain (αποχέτευση συμπυκνωμάτων) diameter (mm) — typical condensate trap line DN20/25/32.
-const CONDENSATE_DIAMETER_MM_OPTIONS = [
-  { value: '20', labelKey: '20', isLiteralLabel: true },
-  { value: '25', labelKey: '25', isLiteralLabel: true },
-  { value: '32', labelKey: '32', isLiteralLabel: true },
-] as const;
+const CONDENSATE_DIAMETER_MM_OPTIONS = literalNumberOptions([20, 25, 32]);
 
 // Service-clearance distance (mm) — Revit Mechanical Equipment «Clearances». Uniform
 // keep-clear envelope offset outward from the footprint for maintenance access.
-const SERVICE_CLEARANCE_MM_OPTIONS = [
-  { value: '300', labelKey: '300', isLiteralLabel: true },
-  { value: '400', labelKey: '400', isLiteralLabel: true },
-  { value: '500', labelKey: '500', isLiteralLabel: true },
-  { value: '600', labelKey: '600', isLiteralLabel: true },
-  { value: '800', labelKey: '800', isLiteralLabel: true },
-] as const;
+const SERVICE_CLEARANCE_MM_OPTIONS = literalNumberOptions([300, 400, 500, 600, 800]);
 
 // Seasonal appliance efficiency (%) — Revit «Nominal Efficiency». Editable; the heat-pump
 // catalogue value (~156%) lands above the list but the bridge still surfaces it as the
 // current value (editable combobox). Drives the read-only ErP class readout.
-const EFFICIENCY_PERCENT_OPTIONS = [
-  { value: '80', labelKey: '80', isLiteralLabel: true },
-  { value: '85', labelKey: '85', isLiteralLabel: true },
-  { value: '90', labelKey: '90', isLiteralLabel: true },
-  { value: '94', labelKey: '94', isLiteralLabel: true },
-  { value: '98', labelKey: '98', isLiteralLabel: true },
-] as const;
+const EFFICIENCY_PERCENT_OPTIONS = literalNumberOptions([80, 85, 90, 94, 98]);
 
 // Measured NOx emissions (mg/kWh) — Revit «NOx Emission». Editable; spans the two EU Ecodesign
 // ceilings (gas ≤56, oil ≤120) so the picker covers both a compliant gas figure and a typical
 // oil one. Integer mg → plain numeric combobox (no rounding hazard). Drives the read-only NOx
 // compliance readout (resolveNoxClass).
-const NOX_MG_KWH_OPTIONS = [
-  { value: '30',  labelKey: '30',  isLiteralLabel: true },
-  { value: '40',  labelKey: '40',  isLiteralLabel: true },
-  { value: '56',  labelKey: '56',  isLiteralLabel: true },
-  { value: '80',  labelKey: '80',  isLiteralLabel: true },
-  { value: '120', labelKey: '120', isLiteralLabel: true },
-] as const;
+const NOX_MG_KWH_OPTIONS = literalNumberOptions([30, 40, 56, 80, 120]);
 
 // Measured sound power level L_WA (dB(A)) — Revit Mechanical Equipment «Sound». Editable; spans the
 // guidance bands (≤45 quiet, ≤55 standard, >55 loud) so the picker covers a quiet wall-hung gas unit
 // up to a floor-standing oil one. Integer dB → plain numeric combobox (no rounding hazard). Drives the
 // read-only placement-suitability readout (resolveAcousticBand). ANY fuel type (≠ NOx, combustion-only).
-const SOUND_POWER_DBA_OPTIONS = [
-  { value: '40', labelKey: '40', isLiteralLabel: true },
-  { value: '45', labelKey: '45', isLiteralLabel: true },
-  { value: '50', labelKey: '50', isLiteralLabel: true },
-  { value: '55', labelKey: '55', isLiteralLabel: true },
-  { value: '60', labelKey: '60', isLiteralLabel: true },
-] as const;
+const SOUND_POWER_DBA_OPTIONS = literalNumberOptions([40, 45, 50, 55, 60]);
 
 // Safety relief valve set pressure (bar) — Revit «Safety Relief Valve» set pressure. Derived
 // from the SSoT standard valve ratings (BOILER_RELIEF_PRESSURES_BAR) so the picker and the
@@ -184,44 +123,21 @@ const SYSTEM_PRESSURE_BAR_OPTIONS = BOILER_SYSTEM_PRESSURES_BAR.map((p) => ({
 }));
 
 // Nominal catalogue thermal output (W) — typical residential/commercial boiler range.
-const THERMAL_OUTPUT_W_OPTIONS = [
-  { value: '6000',  labelKey: '6000',  isLiteralLabel: true },
-  { value: '12000', labelKey: '12000', isLiteralLabel: true },
-  { value: '18000', labelKey: '18000', isLiteralLabel: true },
-  { value: '24000', labelKey: '24000', isLiteralLabel: true },
-  { value: '35000', labelKey: '35000', isLiteralLabel: true },
-] as const;
+const THERMAL_OUTPUT_W_OPTIONS = literalNumberOptions([6000, 12000, 18000, 24000, 35000]);
 
 // Minimum modulating output (W) — Revit «Turndown Ratio». Integer W → plain numeric combobox
 // (no rounding hazard). The nominal/maximum is `thermalOutput`; min < max → a turndown ratio.
-const MIN_THERMAL_OUTPUT_W_OPTIONS = [
-  { value: '3000',  labelKey: '3000',  isLiteralLabel: true },
-  { value: '6000',  labelKey: '6000',  isLiteralLabel: true },
-  { value: '9000',  labelKey: '9000',  isLiteralLabel: true },
-  { value: '12000', labelKey: '12000', isLiteralLabel: true },
-] as const;
+const MIN_THERMAL_OUTPUT_W_OPTIONS = literalNumberOptions([3000, 6000, 9000, 12000]);
 
 // Appliance dry weight (kg) — Revit Mechanical Equipment «Weight». Editable; spans light wall-hung
 // gas (~35 kg) to heavy floor-standing oil (~180 kg). Integer kg → plain numeric combobox. Drives
 // the «Βάρος» plan-tag line (structural loading).
-const WEIGHT_KG_OPTIONS = [
-  { value: '20',  labelKey: '20',  isLiteralLabel: true },
-  { value: '35',  labelKey: '35',  isLiteralLabel: true },
-  { value: '80',  labelKey: '80',  isLiteralLabel: true },
-  { value: '130', labelKey: '130', isLiteralLabel: true },
-  { value: '180', labelKey: '180', isLiteralLabel: true },
-] as const;
+const WEIGHT_KG_OPTIONS = literalNumberOptions([20, 35, 80, 130, 180]);
 
 // Boiler water content (L) — IFC Pset_BoilerTypeCommon.WaterStorageCapacity. Editable; spans a
 // small wall-hung heat exchanger (~2.5 L) to a large floor-standing oil body (~38 L). Decimal L →
 // plain numeric combobox. Drives the «Νερό» plan-tag line + the «Προτεινόμενο δοχείο» readout.
-const WATER_CONTENT_L_OPTIONS = [
-  { value: '2.5', labelKey: '2.5', isLiteralLabel: true },
-  { value: '5',   labelKey: '5',   isLiteralLabel: true },
-  { value: '12',  labelKey: '12',  isLiteralLabel: true },
-  { value: '25',  labelKey: '25',  isLiteralLabel: true },
-  { value: '38',  labelKey: '38',  isLiteralLabel: true },
-] as const;
+const WATER_CONTENT_L_OPTIONS = literalNumberOptions([2.5, 5, 12, 25, 38]);
 
 // ─── Tab definition ──────────────────────────────────────────────────────────
 
@@ -320,6 +236,7 @@ export const CONTEXTUAL_MEP_BOILER_TAB: RibbonTab = {
                 commandKey: MEP_BOILER_RIBBON_KEYS.params.dhwConnectorDiameter,
                 comboboxWidthPx: 90,
                 options: DHW_CONNECTOR_DIAMETER_MM_OPTIONS,
+                numericInput: { quantityKind: 'nominal-diameter' },
               },
             },
             {
@@ -358,6 +275,7 @@ export const CONTEXTUAL_MEP_BOILER_TAB: RibbonTab = {
                 commandKey: MEP_BOILER_RIBBON_KEYS.params.flueDiameter,
                 comboboxWidthPx: 90,
                 options: FLUE_DIAMETER_MM_OPTIONS,
+                numericInput: { quantityKind: 'nominal-diameter' },
               },
             },
             {
@@ -412,6 +330,7 @@ export const CONTEXTUAL_MEP_BOILER_TAB: RibbonTab = {
                 commandKey: MEP_BOILER_RIBBON_KEYS.params.condensateDiameter,
                 comboboxWidthPx: 90,
                 options: CONDENSATE_DIAMETER_MM_OPTIONS,
+                numericInput: { quantityKind: 'nominal-diameter' },
               },
             },
             {
@@ -450,6 +369,7 @@ export const CONTEXTUAL_MEP_BOILER_TAB: RibbonTab = {
                 commandKey: MEP_BOILER_RIBBON_KEYS.params.fuelDiameter,
                 comboboxWidthPx: 90,
                 options: FUEL_DIAMETER_MM_OPTIONS,
+                numericInput: { quantityKind: 'nominal-diameter' },
               },
             },
           ],
@@ -472,6 +392,7 @@ export const CONTEXTUAL_MEP_BOILER_TAB: RibbonTab = {
                 commandKey: MEP_BOILER_RIBBON_KEYS.params.width,
                 comboboxWidthPx: 90,
                 options: WIDTH_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -483,6 +404,7 @@ export const CONTEXTUAL_MEP_BOILER_TAB: RibbonTab = {
                 commandKey: MEP_BOILER_RIBBON_KEYS.params.length,
                 comboboxWidthPx: 80,
                 options: LENGTH_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -494,6 +416,7 @@ export const CONTEXTUAL_MEP_BOILER_TAB: RibbonTab = {
                 commandKey: MEP_BOILER_RIBBON_KEYS.params.bodyHeight,
                 comboboxWidthPx: 80,
                 options: BODY_HEIGHT_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -505,6 +428,7 @@ export const CONTEXTUAL_MEP_BOILER_TAB: RibbonTab = {
                 commandKey: MEP_BOILER_RIBBON_KEYS.params.mountingElevation,
                 comboboxWidthPx: 90,
                 options: MOUNTING_ELEVATION_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
           ],
@@ -539,6 +463,7 @@ export const CONTEXTUAL_MEP_BOILER_TAB: RibbonTab = {
                 commandKey: MEP_BOILER_RIBBON_KEYS.params.serviceClearance,
                 comboboxWidthPx: 90,
                 options: SERVICE_CLEARANCE_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
           ],
@@ -576,6 +501,7 @@ export const CONTEXTUAL_MEP_BOILER_TAB: RibbonTab = {
                 commandKey: MEP_BOILER_RIBBON_KEYS.stringParams.reliefValvePressure,
                 comboboxWidthPx: 90,
                 options: RELIEF_PRESSURE_BAR_OPTIONS,
+                numericInput: { quantityKind: 'pressure' },
               },
             },
             {
@@ -600,6 +526,7 @@ export const CONTEXTUAL_MEP_BOILER_TAB: RibbonTab = {
                 commandKey: MEP_BOILER_RIBBON_KEYS.params.expansionVesselVolume,
                 comboboxWidthPx: 90,
                 options: EXPANSION_VESSEL_VOLUME_L_OPTIONS,
+                numericInput: { quantityKind: 'volume' },
               },
             },
             {
@@ -627,6 +554,7 @@ export const CONTEXTUAL_MEP_BOILER_TAB: RibbonTab = {
                 commandKey: MEP_BOILER_RIBBON_KEYS.stringParams.systemPressure,
                 comboboxWidthPx: 90,
                 options: SYSTEM_PRESSURE_BAR_OPTIONS,
+                numericInput: { quantityKind: 'pressure' },
               },
             },
             {
@@ -663,6 +591,7 @@ export const CONTEXTUAL_MEP_BOILER_TAB: RibbonTab = {
                 commandKey: MEP_BOILER_RIBBON_KEYS.params.connectorDiameter,
                 comboboxWidthPx: 80,
                 options: CONNECTOR_DIAMETER_MM_OPTIONS,
+                numericInput: { quantityKind: 'nominal-diameter' },
               },
             },
             {
@@ -674,6 +603,7 @@ export const CONTEXTUAL_MEP_BOILER_TAB: RibbonTab = {
                 commandKey: MEP_BOILER_RIBBON_KEYS.params.thermalOutput,
                 comboboxWidthPx: 90,
                 options: THERMAL_OUTPUT_W_OPTIONS,
+                numericInput: { quantityKind: 'power' },
               },
             },
             {
@@ -688,6 +618,7 @@ export const CONTEXTUAL_MEP_BOILER_TAB: RibbonTab = {
                 commandKey: MEP_BOILER_RIBBON_KEYS.params.minThermalOutput,
                 comboboxWidthPx: 90,
                 options: MIN_THERMAL_OUTPUT_W_OPTIONS,
+                numericInput: { quantityKind: 'power' },
               },
             },
             {
@@ -701,6 +632,7 @@ export const CONTEXTUAL_MEP_BOILER_TAB: RibbonTab = {
                 commandKey: MEP_BOILER_RIBBON_KEYS.params.efficiency,
                 comboboxWidthPx: 90,
                 options: EFFICIENCY_PERCENT_OPTIONS,
+                numericInput: { quantityKind: 'percent' },
               },
             },
             {
@@ -728,6 +660,7 @@ export const CONTEXTUAL_MEP_BOILER_TAB: RibbonTab = {
                 commandKey: MEP_BOILER_RIBBON_KEYS.params.nox,
                 comboboxWidthPx: 90,
                 options: NOX_MG_KWH_OPTIONS,
+                numericInput: { quantityKind: 'dimensionless' },
               },
             },
             {
@@ -755,6 +688,7 @@ export const CONTEXTUAL_MEP_BOILER_TAB: RibbonTab = {
                 commandKey: MEP_BOILER_RIBBON_KEYS.params.soundPower,
                 comboboxWidthPx: 110,
                 options: SOUND_POWER_DBA_OPTIONS,
+                numericInput: { quantityKind: 'dimensionless' },
               },
             },
             {
@@ -796,6 +730,7 @@ export const CONTEXTUAL_MEP_BOILER_TAB: RibbonTab = {
                 commandKey: MEP_BOILER_RIBBON_KEYS.params.weight,
                 comboboxWidthPx: 90,
                 options: WEIGHT_KG_OPTIONS,
+                numericInput: { quantityKind: 'mass' },
               },
             },
             {
@@ -807,6 +742,7 @@ export const CONTEXTUAL_MEP_BOILER_TAB: RibbonTab = {
                 commandKey: MEP_BOILER_RIBBON_KEYS.params.waterContent,
                 comboboxWidthPx: 110,
                 options: WATER_CONTENT_L_OPTIONS,
+                numericInput: { quantityKind: 'volume' },
               },
             },
             {
@@ -882,77 +818,7 @@ export const CONTEXTUAL_MEP_BOILER_TAB: RibbonTab = {
       id: 'mep-boiler-network',
       labelKey: 'ribbon.panels.mepPipeNetworkProperties',
       visibilityKey: MEP_BOILER_RIBBON_VISIBILITY_KEYS.hasNetwork,
-      rows: [
-        {
-          isInFlyout: false,
-          buttons: [
-            {
-              type: 'widget',
-              size: 'small',
-              widgetId: 'mep-circuit-picker',
-              command: {
-                id: 'mepBoiler.network.picker',
-                labelKey: 'ribbon.commands.mepCircuit.networkPicker',
-                commandKey: 'mepBoiler.network.picker',
-              },
-            },
-          ],
-        },
-        {
-          isInFlyout: false,
-          buttons: [
-            {
-              type: 'widget',
-              size: 'small',
-              widgetId: 'mep-circuit-name',
-              command: {
-                id: 'mepBoiler.network.name',
-                labelKey: 'ribbon.commands.mepCircuit.name',
-                commandKey: 'mepBoiler.network.name',
-              },
-            },
-            {
-              type: 'simple',
-              size: 'small',
-              command: {
-                id: 'mepBoiler.network.addMembers',
-                labelKey: 'ribbon.commands.mepPipeNetwork.addMembers',
-                tooltipKey: 'ribbon.commands.mepPipeNetwork.addMembersTooltip',
-                icon: 'bim-pipe',
-                commandKey: MEP_PIPE_NETWORK_RIBBON_ACTIONS.addMembers,
-                action: MEP_PIPE_NETWORK_RIBBON_ACTIONS.addMembers,
-              },
-            },
-          ],
-        },
-        {
-          isInFlyout: false,
-          buttons: [
-            {
-              type: 'widget',
-              size: 'small',
-              widgetId: 'mep-circuit-color',
-              command: {
-                id: 'mepBoiler.network.color',
-                labelKey: 'ribbon.commands.mepCircuit.color',
-                commandKey: 'mepBoiler.network.color',
-              },
-            },
-            {
-              type: 'simple',
-              size: 'small',
-              command: {
-                id: 'mepBoiler.network.removeMembers',
-                labelKey: 'ribbon.commands.mepPipeNetwork.removeMembers',
-                tooltipKey: 'ribbon.commands.mepPipeNetwork.removeMembersTooltip',
-                icon: 'trash',
-                commandKey: MEP_PIPE_NETWORK_RIBBON_ACTIONS.removeMembers,
-                action: MEP_PIPE_NETWORK_RIBBON_ACTIONS.removeMembers,
-              },
-            },
-          ],
-        },
-      ],
+      rows: mepNetworkPanelRows('mepBoiler'),
     },
     {
       id: 'mep-boiler-actions',

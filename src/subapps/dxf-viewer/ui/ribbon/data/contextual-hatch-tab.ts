@@ -16,6 +16,7 @@
 
 import type { RibbonTab } from '../types/ribbon-types';
 import { HATCH_RIBBON_KEYS } from '../hooks/bridge/hatch-command-keys';
+import { literalNumberOptions } from './ribbon-numeric-options';
 
 export const HATCH_CONTEXTUAL_TRIGGER = 'hatch-selected';
 
@@ -25,14 +26,7 @@ export const HATCH_CONTEXTUAL_TRIGGER = 'hatch-selected';
  * Gap tolerance (AutoCAD HPGAPTOL, σε μονάδες σχεδίου — π.χ. mm) — editable numeric.
  * Presets ρεαλιστικά για κατόψεις σε mm· ο χρήστης πληκτρολογεί ελεύθερα 0..5000.
  */
-const GAP_TOLERANCE_OPTIONS = [
-  { value: '0', labelKey: '0', isLiteralLabel: true },
-  { value: '10', labelKey: '10', isLiteralLabel: true },
-  { value: '50', labelKey: '50', isLiteralLabel: true },
-  { value: '100', labelKey: '100', isLiteralLabel: true },
-  { value: '250', labelKey: '250', isLiteralLabel: true },
-  { value: '500', labelKey: '500', isLiteralLabel: true },
-] as const;
+const GAP_TOLERANCE_OPTIONS = literalNumberOptions([0, 10, 50, 100, 250, 500]);
 
 // ─── Tab definition (tools-only) ──────────────────────────────────────────────
 
@@ -87,7 +81,7 @@ export const CONTEXTUAL_HATCH_TAB: RibbonTab = {
                 commandKey: HATCH_RIBBON_KEYS.params.gapTolerance,
                 comboboxWidthPx: 90,
                 options: GAP_TOLERANCE_OPTIONS,
-                numericInput: { editable: true, min: 0, max: 5000 },
+                numericInput: { quantityKind: 'model-length', editable: true, min: 0, max: 5000 },
               },
             },
           ],

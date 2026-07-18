@@ -5,9 +5,10 @@
  * κλειδώνει το ANCHOR που φτάνει στο `onParallelRefSelected`: η ΠΡΟΒΟΛΗ του κλικ
  * πάνω στη γραμμή του οδηγού (`projectPointOntoGuide`) — ΟΧΙ το ωμό σημείο του κλικ.
  *
- * Καλύπτει επίσης το regression guard: όταν `parallelRefGuideId` είναι ήδη
- * επιλεγμένο, ένα δεύτερο κλικ ΔΕΝ ξαναφωνάζει το callback (η αναφορά κλειδώνει
- * με Enter, όχι με δεύτερο κλικ).
+ * Καλύπτει επίσης τον ΚΛΑΔΟ COMMIT: όταν `parallelRefGuideId` είναι ήδη
+ * επιλεγμένο, το δεύτερο κλικ ΔΕΝ ξαναδιαλέγει αναφορά — δρομολογείται στο
+ * `onParallelDistanceCommitted` με τον ΩΜΟ worldPoint (η γεωμετρία ανήκει στον
+ * workflow handler, όχι εδώ).
  */
 
 import { handleGuideToolClick } from '../guide-click-handlers';
@@ -64,12 +65,14 @@ function makeCtx(worldPoint: Point2D, transform: ViewTransform = makeTransform()
 function makeParams(overrides: {
   guides?: readonly Guide[];
   onParallelRefSelected?: jest.Mock;
+  onParallelDistanceCommitted?: jest.Mock;
   parallelRefGuideId?: string | null;
 }): UseCanvasClickHandlerParams {
   return {
     activeTool: 'guide-parallel',
     guides: overrides.guides ?? [],
     onParallelRefSelected: overrides.onParallelRefSelected ?? jest.fn(),
+    onParallelDistanceCommitted: overrides.onParallelDistanceCommitted ?? jest.fn(),
     parallelRefGuideId: overrides.parallelRefGuideId ?? null,
   } as unknown as UseCanvasClickHandlerParams;
 }
@@ -130,19 +133,81 @@ describe('handleGuideToolClick — guide-parallel anchor pinning', () => {
     expect(onParallelRefSelected).not.toHaveBeenCalled();
   });
 
-  it('regression guard: parallelRefGuideId ήδη ορισμένο → δεύτερο κλικ ΔΕΝ ξαναφωνάζει το callback', () => {
+  it('μη-παλινδρόμηση: το ΠΡΩΤΟ κλικ επιλέγει αναφορά και ΔΕΝ κάνει commit', () => {
     const onParallelRefSelected = jest.fn();
+    const onParallelDistanceCommitted = jest.fn();
     const params = makeParams({
       guides: [VERTICAL_GUIDE],
       onParallelRefSelected,
-      parallelRefGuideId: 'guide-x-1', // η αναφορά είναι ήδη επιλεγμένη
+      onParallelDistanceCommitted,
+      parallelRefGuideId: null,
     });
-    // Κλικ ξανά μέσα στην ανοχή του ίδιου οδηγού — θα «χτυπούσε» αν δεν υπήρχε το guard.
+
+    handleGuideToolClick(makeCtx({ x: 103, y: 250 }), params);
+
+    expect(onParallelRefSelected).toHaveBeenCalledTimes(1);
+    expect(onParallelDistanceCommitted).not.toHaveBeenCalled();
+  });
+});
+
+describe('handleGuideToolClick — guide-parallel commit by second click', () => {
+  it('parallelRefGuideId ορισμένο → δρομολόγηση σε commit, ΟΧΙ σε νέα επιλογή αναφοράς', () => {
+    const onParallelRefSelected = jest.fn();
+    const onParallelDistanceCommitted = jest.fn();
+    const params = makeParams({
+      guides: [VERTICAL_GUIDE],
+      onParallelRefSelected,
+      onParallelDistanceCommitted,
+      parallelRefGuideId: 'guide-x-1',
+    });
     const ctx = makeCtx({ x: 103, y: 250 });
 
     const consumed = handleGuideToolClick(ctx, params);
 
     expect(consumed).toBe(true);
     expect(onParallelRefSelected).not.toHaveBeenCalled();
+    expect(onParallelDistanceCommitted).toHaveBeenCalledTimes(1);
+    expect(onParallelDistanceCommitted).toHaveBeenCalledWith('guide-x-1', { x: 103, y: 250 });
+  });
+
+  it('περνά τον ΩΜΟ worldPoint — καμία προβολή/γεωμετρία μέσα στον click handler', () => {
+    const onParallelDistanceCommitted = jest.fn();
+    const params = makeParams({
+      guides: [DIAGONAL_GUIDE],
+      onParallelDistanceCommitted,
+      parallelRefGuideId: 'guide-xz-1',
+    });
+
+    handleGuideToolClick(makeCtx({ x: 52, y: 48 }), params);
+
+    // Αν ο handler «βοηθούσε» προβάλλοντας, εδώ θα έφτανε το (50,50).
+    expect(onParallelDistanceCommitted).toHaveBeenCalledWith('guide-xz-1', { x: 52, y: 48 });
+  });
+
+  it('commit ΚΑΙ μακριά από κάθε οδηγό — το κλικ δεν χρειάζεται να πέσει πάνω σε γραμμή', () => {
+    const onParallelDistanceCommitted = jest.fn();
+    const params = makeParams({
+      guides: [VERTICAL_GUIDE],
+      onParallelDistanceCommitted,
+      parallelRefGuideId: 'guide-x-1',
+    });
+
+    handleGuideToolClick(makeCtx({ x: 900, y: 900 }), params);
+
+    expect(onParallelDistanceCommitted).toHaveBeenCalledWith('guide-x-1', { x: 900, y: 900 });
+  });
+
+  it('χωρίς οδηγούς στα params το commit περνά κανονικά (ο handler δεν τους χρειάζεται)', () => {
+    const onParallelDistanceCommitted = jest.fn();
+    const params = makeParams({
+      guides: [],
+      onParallelDistanceCommitted,
+      parallelRefGuideId: 'guide-x-1',
+    });
+
+    const consumed = handleGuideToolClick(makeCtx({ x: 10, y: 20 }), params);
+
+    expect(consumed).toBe(true);
+    expect(onParallelDistanceCommitted).toHaveBeenCalledTimes(1);
   });
 });

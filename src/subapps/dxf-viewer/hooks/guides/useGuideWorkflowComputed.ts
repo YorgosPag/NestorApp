@@ -6,12 +6,29 @@
  */
 import { useMemo } from 'react';
 import { pointToSegmentDistance, GUIDE_HIT_TOLERANCE_PX } from '../../systems/guides/guide-types';
+import type { Guide, Point2D } from '../../systems/guides/guide-types';
 import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
 import { useCursorWorldPosition } from '../../systems/cursor/useCursor';
 // ADR-189 §3.13 — WYSIWYG φάντασμα: όσο πληκτρολογείται απόσταση, το φάντασμα
 // κουμπώνει σε αυτήν αντί να ακολουθεί τον κέρσορα.
-import { useCanvasNumericPendingDistance } from '../../systems/canvas-numeric-input/CanvasNumericInputStore';
+import { useCanvasNumericPendingDistance, useCanvasNumericAnchor } from '../../systems/canvas-numeric-input/CanvasNumericInputStore';
 import { resolveParallelGhostOffset, resolveParallelGhostDiagonal } from '../../systems/guides/guide-parallel-ghost';
+import { resolveParallelCursor, readParallelCursorToggles } from '../../systems/guides/guide-parallel-cursor';
+
+/**
+ * Ο κέρσορας που «βλέπει» το φάντασμα-οδηγός — ΜΕΤΑ ΟΡΘΟ και ΒΗΜΑ.
+ *
+ * ΓΙΑΤΙ ΥΠΑΡΧΕΙ: το φάντασμα είναι ο ΠΕΜΠΤΟΣ αναγνώστης του ίδιου κέρσορα (μαζί με τη
+ * διακεκομμένη, το λευκό HUD, το Enter και το κλικ). Όσο έπαιρνε τον ΩΜΟ κέρσορα, με F9
+ * ενεργό ζωγραφιζόταν στο 23 ενώ ο οδηγός έπεφτε στο 20 — δύο στοιχεία της ΙΔΙΑΣ οθόνης
+ * σε διαφορετική θέση. Περνώντας το περιορισμένο σημείο, διορθώνεται ΚΑΙ η πλευρά:
+ * το `guide-parallel-ghost` καλεί εσωτερικά `resolveParallelSide(cursor)`, οπότε παίρνει
+ * πλέον το ίδιο πρόσημο με το commit (το βήμα ΜΠΟΡΕΙ να γυρίσει πλευρά — βλ. slice A test).
+ */
+function constrainParallelCursor(refGuide: Guide, anchor: Point2D | null, cursor: Point2D): Point2D {
+  if (!anchor) return cursor;
+  return resolveParallelCursor(refGuide, anchor, cursor, readParallelCursorToggles()).point;
+}
 import type { ToolType } from '../../ui/toolbar/types';
 import type { UseGuideStateReturn } from '../state/useGuideState';
 import type { UseConstructionPointStateReturn } from '../state/useConstructionPointState';
@@ -36,6 +53,8 @@ export function useGuideWorkflowComputed(params: UseGuideWorkflowComputedParams)
   const mouseWorld = useCursorWorldPosition();
   // Low-frequency: αλλάζει ΜΟΝΟ σε πάτημα πλήκτρου, όχι στα 60fps του κέρσορα.
   const typedDistance = useCanvasNumericPendingDistance();
+  // Low-frequency: παγώνει 1× στο κλικ επιλογής αναφοράς (ADR-189 §3.13).
+  const parallelAnchor = useCanvasNumericAnchor();
 
   // ─── Highlight computation ───
   const highlightedGuideId = useMemo<string | null>(() => {
@@ -102,7 +121,8 @@ export function useGuideWorkflowComputed(params: UseGuideWorkflowComputedParams)
     if (activeTool === 'guide-parallel' && state.parallelRefGuideId) {
       const refGuide = guideState.guides.find(g => g.id === state.parallelRefGuideId);
       if (refGuide && refGuide.axis !== 'XZ') {
-        return { axis: refGuide.axis, offset: resolveParallelGhostOffset(refGuide, mouseWorld, typedDistance) };
+        const cursor = constrainParallelCursor(refGuide, parallelAnchor, mouseWorld);
+        return { axis: refGuide.axis, offset: resolveParallelGhostOffset(refGuide, cursor, typedDistance) };
       }
     }
     if (activeTool === 'guide-perpendicular' && state.perpRefGuideId) {
@@ -113,7 +133,7 @@ export function useGuideWorkflowComputed(params: UseGuideWorkflowComputedParams)
       }
     }
     return null;
-  }, [activeTool, mouseWorld, typedDistance, state.parallelRefGuideId, state.perpRefGuideId, guideState.guides]);
+  }, [activeTool, mouseWorld, typedDistance, parallelAnchor, state.parallelRefGuideId, state.perpRefGuideId, guideState.guides]);
 
   const ghostDiagonalGuide = useMemo(() => {
     if (!mouseWorld) return null;
@@ -121,7 +141,8 @@ export function useGuideWorkflowComputed(params: UseGuideWorkflowComputedParams)
     if (activeTool === 'guide-parallel' && state.parallelRefGuideId) {
       const refGuide = guideState.guides.find(g => g.id === state.parallelRefGuideId);
       if (refGuide) {
-        const diagonal = resolveParallelGhostDiagonal(refGuide, mouseWorld, typedDistance);
+        const cursor = constrainParallelCursor(refGuide, parallelAnchor, mouseWorld);
+        const diagonal = resolveParallelGhostDiagonal(refGuide, cursor, typedDistance);
         if (diagonal) return diagonal;
       }
     }
@@ -145,7 +166,7 @@ export function useGuideWorkflowComputed(params: UseGuideWorkflowComputedParams)
     }
 
     return null;
-  }, [activeTool, mouseWorld, typedDistance, state.diagonalStep, state.diagonalStartPoint, state.diagonalDirectionPoint, state.parallelRefGuideId, guideState.guides]);
+  }, [activeTool, mouseWorld, typedDistance, parallelAnchor, state.diagonalStep, state.diagonalStartPoint, state.diagonalDirectionPoint, state.parallelRefGuideId, guideState.guides]);
 
   const ghostSegmentLine = useMemo(() => {
     if (!mouseWorld) return null;

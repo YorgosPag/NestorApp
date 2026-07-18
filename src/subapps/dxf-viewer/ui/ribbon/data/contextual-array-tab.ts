@@ -73,6 +73,7 @@ export const CONTEXTUAL_ARRAY_RECT_TAB: RibbonTab = {
                 commandKey: ARRAY_RIBBON_KEYS.params.rows,
                 comboboxWidthPx: 80,
                 options: COUNT_OPTIONS,
+                numericInput: { quantityKind: 'count' },
               },
             },
             {
@@ -84,6 +85,7 @@ export const CONTEXTUAL_ARRAY_RECT_TAB: RibbonTab = {
                 commandKey: ARRAY_RIBBON_KEYS.params.cols,
                 comboboxWidthPx: 80,
                 options: COUNT_OPTIONS,
+                numericInput: { quantityKind: 'count' },
               },
             },
             {
@@ -95,6 +97,7 @@ export const CONTEXTUAL_ARRAY_RECT_TAB: RibbonTab = {
                 commandKey: ARRAY_RIBBON_KEYS.params.angle,
                 comboboxWidthPx: 90,
                 options: ANGLE_OPTIONS,
+                numericInput: { quantityKind: 'angle' },
               },
             },
           ],
@@ -117,6 +120,7 @@ export const CONTEXTUAL_ARRAY_RECT_TAB: RibbonTab = {
                 commandKey: ARRAY_RIBBON_KEYS.params.rowSpacing,
                 comboboxWidthPx: 100,
                 options: SPACING_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -128,6 +132,7 @@ export const CONTEXTUAL_ARRAY_RECT_TAB: RibbonTab = {
                 commandKey: ARRAY_RIBBON_KEYS.params.colSpacing,
                 comboboxWidthPx: 100,
                 options: SPACING_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
           ],
@@ -163,6 +168,7 @@ export const CONTEXTUAL_ARRAY_POLAR_TAB: RibbonTab = {
                 commandKey: ARRAY_RIBBON_KEYS.params.polarCount,
                 comboboxWidthPx: 80,
                 options: COUNT_OPTIONS,
+                numericInput: { quantityKind: 'count' },
               },
             },
             {
@@ -174,6 +180,7 @@ export const CONTEXTUAL_ARRAY_POLAR_TAB: RibbonTab = {
                 commandKey: ARRAY_RIBBON_KEYS.params.polarFillAngle,
                 comboboxWidthPx: 90,
                 options: FILL_ANGLE_OPTIONS,
+                numericInput: { quantityKind: 'angle' },
               },
             },
             {
@@ -185,6 +192,7 @@ export const CONTEXTUAL_ARRAY_POLAR_TAB: RibbonTab = {
                 commandKey: ARRAY_RIBBON_KEYS.params.polarStartAngle,
                 comboboxWidthPx: 90,
                 options: START_ANGLE_OPTIONS,
+                numericInput: { quantityKind: 'angle' },
               },
             },
             {
@@ -196,6 +204,7 @@ export const CONTEXTUAL_ARRAY_POLAR_TAB: RibbonTab = {
                 commandKey: ARRAY_RIBBON_KEYS.params.polarRadius,
                 comboboxWidthPx: 100,
                 options: RADIUS_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
           ],
@@ -271,6 +280,7 @@ export const CONTEXTUAL_ARRAY_PATH_TAB: RibbonTab = {
                 commandKey: ARRAY_RIBBON_KEYS.params.pathCount,
                 comboboxWidthPx: 80,
                 options: COUNT_OPTIONS,
+                numericInput: { quantityKind: 'count' },
               },
             },
             {
@@ -282,6 +292,7 @@ export const CONTEXTUAL_ARRAY_PATH_TAB: RibbonTab = {
                 commandKey: ARRAY_RIBBON_KEYS.params.pathSpacing,
                 comboboxWidthPx: 100,
                 options: SPACING_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
           ],
@@ -314,6 +325,7 @@ export const CONTEXTUAL_ARRAY_PATH_TAB: RibbonTab = {
                 commandKey: ARRAY_RIBBON_KEYS.params.pathAlignOffset,
                 comboboxWidthPx: 90,
                 options: ALIGN_OFFSET_OPTIONS,
+                numericInput: { quantityKind: 'angle' },
               },
             },
             {
@@ -357,6 +369,7 @@ export const CONTEXTUAL_ARRAY_PATH_TAB: RibbonTab = {
                 commandKey: ARRAY_RIBBON_KEYS.params.pathRotationJitter,
                 comboboxWidthPx: 90,
                 options: ROTATION_JITTER_OPTIONS,
+                numericInput: { quantityKind: 'angle' },
               },
             },
             {
@@ -368,6 +381,7 @@ export const CONTEXTUAL_ARRAY_PATH_TAB: RibbonTab = {
                 commandKey: ARRAY_RIBBON_KEYS.params.pathScaleJitter,
                 comboboxWidthPx: 90,
                 options: SCALE_JITTER_OPTIONS,
+                numericInput: { quantityKind: 'percent' },
               },
             },
             {
@@ -379,6 +393,7 @@ export const CONTEXTUAL_ARRAY_PATH_TAB: RibbonTab = {
                 commandKey: ARRAY_RIBBON_KEYS.params.pathOffsetJitter,
                 comboboxWidthPx: 90,
                 options: OFFSET_JITTER_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -401,6 +416,7 @@ export const CONTEXTUAL_ARRAY_PATH_TAB: RibbonTab = {
                 commandKey: ARRAY_RIBBON_KEYS.params.pathSeed,
                 comboboxWidthPx: 80,
                 options: SEED_OPTIONS,
+                numericInput: { quantityKind: 'dimensionless' },
               },
             },
           ],

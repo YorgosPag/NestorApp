@@ -72,6 +72,46 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-07-18 (c) — ➕ ADR-189 §3.13: δεύτερο κλικ + ΟΡΘΟ-κάθετο-στον-οδηγό + λευκό HUD + βήμα Snap (compliance)
+
+**Τι:** τέσσερα νέα χαρακτηριστικά πάνω στο ήδη-καθιερωμένο `ParallelGuideAnchorPreviewMount`
+(βλ. entry ακριβώς παρακάτω) — δεύτερο κλικ ισότιμο με Enter, ΟΡΘΟ (F8) κάθετο ΣΤΟΝ ΟΔΗΓΟ
+αναφοράς, λευκό HUD μήκους, quantize όταν Snap (F9) ενεργό. Πλήρης περιγραφή λειτουργίας:
+ADR-189 §3.13, changelog 2026-07-18.
+
+**Συμμόρφωση ADR-040:**
+- **`CanvasSection.tsx` ΔΕΝ απέκτησε `useSyncExternalStore`.** Η μοναδική αλλαγή είναι ΕΝΑ
+  ακόμη pass-through callback στο props object του preview-mounts
+  (`onParallelDistanceCommitted: guideWorkflows.handleParallelDistanceCommitted`) — ίδιο σχήμα
+  με το ήδη υπάρχον `onParallelRefSelected`. **CHECK 6C: καμία νέα επιφάνεια.**
+- **Δύο store hooks, ΚΑΙ ΤΑ ΔΥΟ low-frequency**: `useCanvasNumericRefGuide()` (νέο) +
+  `useCanvasNumericAnchor()` (προϋπήρχε). Και οι δύο διαβάζουν το `CanvasNumericInputStore`,
+  που γράφεται **1× ανά χειρονομία** μέσα στο `activate()` (κλικ επιλογής αναφοράς) — ΟΧΙ σε
+  κάθε mousemove. Ο κέρσορας/RAF ζει αποκλειστικά στο `useCanvasGhostPreview` (ADR-398 §4),
+  όχι σε αυτά τα δύο hooks.
+- **Σταθερότητα αναφοράς (getter convention, κρίσιμο για `useSyncExternalStore`)**: το νέο
+  `CanvasNumericInputStore.getRefGuide()` επιστρέφει **την ίδια αναφορά** `_refGuide` μεταξύ
+  ειδοποιήσεων — ίδια σύμβαση με το προϋπάρχον `getAnchor()`. Το `activate()` παγώνει ΕΝΑ
+  αντίγραφο (`_cloneGuide`) και δεν το ξαναδημιουργεί μέχρι το επόμενο
+  `activate()`/`confirm()`/`cancel()`. Fresh literal σε κάθε κλήση θα ήταν ατέρμονος
+  re-render βρόχος — ίδιος κίνδυνος με το `getAnchor()`, ίδια λύση.
+- **Τα toggles ΟΡΘΟ/Snap διαβάζονται EVENT-TIME, όχι ως snapshot σε dependency array (κανόνας
+  2).** Το νέο SSoT `systems/guides/guide-parallel-cursor.ts` εκθέτει
+  `readParallelCursorToggles()` — καλείται ΜΕΣΑ στο `draw` callback του
+  `useParallelGuideAnchorPreview` (κάθε frame, μέσα στο RAF), ΟΧΙ αποθηκευμένο σε
+  `useState`/`useMemo` με `[]`/stale deps. Αν το F8/F9 άλλαζε ενώ ο χρήστης σέρνει τον
+  κέρσορα, ένα snapshot θα κόλλαγε τη γραμμή στην παλιά τιμή του διακόπτη μέχρι το επόμενο
+  re-render. Το ΙΔΙΟ `readParallelCursorToggles()` καλείται και στα δύο commit paths
+  (Enter-resolver, click-handler) — preview≡commit δομικά, όχι από σύμπτωση.
+- **Bitmap cache άθικτο** — τίποτα δεν αγγίζει το `dxf-bitmap-cache.ts` ή το κλειδί του
+  (Cardinal rule 3 δεν μπορεί να πυροδοτηθεί).
+- **Cardinal rule 4**: το leaf εξακολουθεί να έχει ≤2 high-frequency hooks και μηδέν δικά του
+  canvas elements (imperative paint στο shared `PreviewCanvas`).
+
+Λεπτομέρειες υλοποίησης/ευρήματα (grip-step Q-gate ασύμβατο εδώ, sign-από-τελικό-σημείο-ποτέ-
+από-ωμό-κέρσορα, commit-με-κλικ-δεν-χρησιμοποιεί-OSNAP-worldPoint, το coverage gap
+102-πράσινων-tests-μηδέν-κάλυψη-καλωδίωσης): βλ. ADR-189 §3.13, changelog 2026-07-18.
+
 ### 2026-07-18 — ➕ ADR-189 §3.13: micro-leaf για τη δυναμική γραμμή του «Παράλληλου οδηγού»
 **Τι:** νέο store-driven micro-leaf `ParallelGuideAnchorPreviewMount`
 (`components/dxf-layout/canvas-layer-stack-tool-preview-mounts.tsx`) + `useParallelGuideAnchorPreview`

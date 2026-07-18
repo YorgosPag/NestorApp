@@ -119,6 +119,7 @@ export const CONTEXTUAL_WALL_COVERING_TAB: RibbonTab = {
                 commandKey: WALL_COVERING_RIBBON_KEYS.params.heightTopMm,
                 comboboxWidthPx: 100,
                 options: [...HEIGHT_MM_OPTIONS],
+                numericInput: { quantityKind: 'model-length' },
               },
             },
           ],

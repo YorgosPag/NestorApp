@@ -28,26 +28,18 @@ import {
   MEP_UNDERFLOOR_RIBBON_VISIBILITY_KEYS,
 } from '../hooks/bridge/mep-underfloor-command-keys';
 import { MEP_PIPE_NETWORK_RIBBON_ACTIONS } from '../hooks/bridge/mep-pipe-network-command-keys';
+import { literalNumberOptions } from './ribbon-numeric-options';
+import { mepNetworkPanelRows } from './mep-network-panel-rows';
 
 export const MEP_UNDERFLOOR_CONTEXTUAL_TRIGGER = 'mep-underfloor-selected';
 
 // ─── Combobox options (mm presets) ───────────────────────────────────────────
 
 // Centre-to-centre pipe spacing (mm) — typical residential radiant-floor range.
-const PIPE_SPACING_MM_OPTIONS = [
-  { value: '100', labelKey: '100', isLiteralLabel: true },
-  { value: '150', labelKey: '150', isLiteralLabel: true },
-  { value: '200', labelKey: '200', isLiteralLabel: true },
-  { value: '250', labelKey: '250', isLiteralLabel: true },
-] as const;
+const PIPE_SPACING_MM_OPTIONS = literalNumberOptions([100, 150, 200, 250]);
 
 // Edge clearance (mm) — inset from the room walls before the field starts.
-const EDGE_CLEARANCE_MM_OPTIONS = [
-  { value: '50',  labelKey: '50',  isLiteralLabel: true },
-  { value: '100', labelKey: '100', isLiteralLabel: true },
-  { value: '150', labelKey: '150', isLiteralLabel: true },
-  { value: '200', labelKey: '200', isLiteralLabel: true },
-] as const;
+const EDGE_CLEARANCE_MM_OPTIONS = literalNumberOptions([50, 100, 150, 200]);
 
 // Serpentine layout pattern (enum). Translated labels.
 const PATTERN_TYPE_OPTIONS = [
@@ -57,26 +49,13 @@ const PATTERN_TYPE_OPTIONS = [
 ] as const;
 
 // Screed offset (mm) — pipe centreline elevation above FFL.
-const SCREED_OFFSET_MM_OPTIONS = [
-  { value: '30', labelKey: '30', isLiteralLabel: true },
-  { value: '50', labelKey: '50', isLiteralLabel: true },
-  { value: '70', labelKey: '70', isLiteralLabel: true },
-] as const;
+const SCREED_OFFSET_MM_OPTIONS = literalNumberOptions([30, 50, 70]);
 
 // Supply/return connector diameter (mm) — typical PEX loop tails.
-const CONNECTOR_DIAMETER_MM_OPTIONS = [
-  { value: '16', labelKey: '16', isLiteralLabel: true },
-  { value: '18', labelKey: '18', isLiteralLabel: true },
-  { value: '20', labelKey: '20', isLiteralLabel: true },
-] as const;
+const CONNECTOR_DIAMETER_MM_OPTIONS = literalNumberOptions([16, 18, 20]);
 
 // Nominal catalogue thermal output (W) — typical per-loop range.
-const THERMAL_OUTPUT_W_OPTIONS = [
-  { value: '1000', labelKey: '1000', isLiteralLabel: true },
-  { value: '2000', labelKey: '2000', isLiteralLabel: true },
-  { value: '3000', labelKey: '3000', isLiteralLabel: true },
-  { value: '4000', labelKey: '4000', isLiteralLabel: true },
-] as const;
+const THERMAL_OUTPUT_W_OPTIONS = literalNumberOptions([1000, 2000, 3000, 4000]);
 
 // ─── Tab definition ──────────────────────────────────────────────────────────
 
@@ -102,6 +81,7 @@ export const CONTEXTUAL_MEP_UNDERFLOOR_TAB: RibbonTab = {
                 commandKey: MEP_UNDERFLOOR_RIBBON_KEYS.params.pipeSpacing,
                 comboboxWidthPx: 80,
                 options: PIPE_SPACING_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -113,6 +93,7 @@ export const CONTEXTUAL_MEP_UNDERFLOOR_TAB: RibbonTab = {
                 commandKey: MEP_UNDERFLOOR_RIBBON_KEYS.params.edgeClearance,
                 comboboxWidthPx: 80,
                 options: EDGE_CLEARANCE_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -157,6 +138,7 @@ export const CONTEXTUAL_MEP_UNDERFLOOR_TAB: RibbonTab = {
                 commandKey: MEP_UNDERFLOOR_RIBBON_KEYS.params.screedOffset,
                 comboboxWidthPx: 80,
                 options: SCREED_OFFSET_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -168,6 +150,7 @@ export const CONTEXTUAL_MEP_UNDERFLOOR_TAB: RibbonTab = {
                 commandKey: MEP_UNDERFLOOR_RIBBON_KEYS.params.connectorDiameter,
                 comboboxWidthPx: 80,
                 options: CONNECTOR_DIAMETER_MM_OPTIONS,
+                numericInput: { quantityKind: 'nominal-diameter' },
               },
             },
             {
@@ -179,6 +162,7 @@ export const CONTEXTUAL_MEP_UNDERFLOOR_TAB: RibbonTab = {
                 commandKey: MEP_UNDERFLOOR_RIBBON_KEYS.params.thermalOutput,
                 comboboxWidthPx: 90,
                 options: THERMAL_OUTPUT_W_OPTIONS,
+                numericInput: { quantityKind: 'power' },
               },
             },
           ],
@@ -192,77 +176,7 @@ export const CONTEXTUAL_MEP_UNDERFLOOR_TAB: RibbonTab = {
       id: 'mep-underfloor-network',
       labelKey: 'ribbon.panels.mepPipeNetworkProperties',
       visibilityKey: MEP_UNDERFLOOR_RIBBON_VISIBILITY_KEYS.hasNetwork,
-      rows: [
-        {
-          isInFlyout: false,
-          buttons: [
-            {
-              type: 'widget',
-              size: 'small',
-              widgetId: 'mep-circuit-picker',
-              command: {
-                id: 'mepUnderfloor.network.picker',
-                labelKey: 'ribbon.commands.mepCircuit.networkPicker',
-                commandKey: 'mepUnderfloor.network.picker',
-              },
-            },
-          ],
-        },
-        {
-          isInFlyout: false,
-          buttons: [
-            {
-              type: 'widget',
-              size: 'small',
-              widgetId: 'mep-circuit-name',
-              command: {
-                id: 'mepUnderfloor.network.name',
-                labelKey: 'ribbon.commands.mepCircuit.name',
-                commandKey: 'mepUnderfloor.network.name',
-              },
-            },
-            {
-              type: 'simple',
-              size: 'small',
-              command: {
-                id: 'mepUnderfloor.network.addMembers',
-                labelKey: 'ribbon.commands.mepPipeNetwork.addMembers',
-                tooltipKey: 'ribbon.commands.mepPipeNetwork.addMembersTooltip',
-                icon: 'bim-pipe',
-                commandKey: MEP_PIPE_NETWORK_RIBBON_ACTIONS.addMembers,
-                action: MEP_PIPE_NETWORK_RIBBON_ACTIONS.addMembers,
-              },
-            },
-          ],
-        },
-        {
-          isInFlyout: false,
-          buttons: [
-            {
-              type: 'widget',
-              size: 'small',
-              widgetId: 'mep-circuit-color',
-              command: {
-                id: 'mepUnderfloor.network.color',
-                labelKey: 'ribbon.commands.mepCircuit.color',
-                commandKey: 'mepUnderfloor.network.color',
-              },
-            },
-            {
-              type: 'simple',
-              size: 'small',
-              command: {
-                id: 'mepUnderfloor.network.removeMembers',
-                labelKey: 'ribbon.commands.mepPipeNetwork.removeMembers',
-                tooltipKey: 'ribbon.commands.mepPipeNetwork.removeMembersTooltip',
-                icon: 'trash',
-                commandKey: MEP_PIPE_NETWORK_RIBBON_ACTIONS.removeMembers,
-                action: MEP_PIPE_NETWORK_RIBBON_ACTIONS.removeMembers,
-              },
-            },
-          ],
-        },
-      ],
+      rows: mepNetworkPanelRows('mepUnderfloor'),
     },
     {
       id: 'mep-underfloor-actions',

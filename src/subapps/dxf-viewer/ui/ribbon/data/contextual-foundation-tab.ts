@@ -24,6 +24,7 @@ import {
   FOUNDATION_RIBBON_BADGE_KEYS,
   FOUNDATION_RIBBON_VISIBILITY_KEYS,
 } from '../hooks/bridge/foundation-command-keys';
+import { literalNumberOptions } from './ribbon-numeric-options';
 
 export const FOUNDATION_CONTEXTUAL_TRIGGER = 'foundation-selected';
 
@@ -40,15 +41,7 @@ const FOUNDATION_KIND_OPTIONS = [
 ] as const;
 
 // Τυπικά πλάτη band πεδιλοδοκού/συνδετήριας (mm) — μικρότερα από pad.
-const LINE_WIDTH_MM_OPTIONS = [
-  { value: '200', labelKey: '200', isLiteralLabel: true },
-  { value: '250', labelKey: '250', isLiteralLabel: true },
-  { value: '300', labelKey: '300', isLiteralLabel: true },
-  { value: '400', labelKey: '400', isLiteralLabel: true },
-  { value: '500', labelKey: '500', isLiteralLabel: true },
-  { value: '600', labelKey: '600', isLiteralLabel: true },
-  { value: '800', labelKey: '800', isLiteralLabel: true },
-] as const;
+const LINE_WIDTH_MM_OPTIONS = literalNumberOptions([200, 250, 300, 400, 500, 600, 800]);
 
 // ADR-441 Slice 5a-control — Location Line (justification) γραμμικού πεδίλου/συνδετήριας.
 // Σχετικά με τη φορά σχεδίασης start→end (Revit «Location Line»). `center` = concentric default.
@@ -58,13 +51,7 @@ const JUSTIFICATION_OPTIONS = [
   { value: 'right',  labelKey: 'ribbon.commands.foundationEditor.justification.right',  isLiteralLabel: false },
 ] as const;
 
-const LINE_THICKNESS_MM_OPTIONS = [
-  { value: '300', labelKey: '300', isLiteralLabel: true },
-  { value: '400', labelKey: '400', isLiteralLabel: true },
-  { value: '500', labelKey: '500', isLiteralLabel: true },
-  { value: '600', labelKey: '600', isLiteralLabel: true },
-  { value: '700', labelKey: '700', isLiteralLabel: true },
-] as const;
+const LINE_THICKNESS_MM_OPTIONS = literalNumberOptions([300, 400, 500, 600, 700]);
 
 const FOUNDATION_ANCHOR_OPTIONS = [
   { value: 'center', labelKey: 'ribbon.commands.foundationEditor.anchor.center', isLiteralLabel: false },
@@ -79,42 +66,14 @@ const FOUNDATION_ANCHOR_OPTIONS = [
 ] as const;
 
 // Τυπικές διαστάσεις μεμονωμένου πεδίλου (mm).
-const PAD_DIMENSION_MM_OPTIONS = [
-  { value: '800',  labelKey: '800',  isLiteralLabel: true },
-  { value: '1000', labelKey: '1000', isLiteralLabel: true },
-  { value: '1200', labelKey: '1200', isLiteralLabel: true },
-  { value: '1500', labelKey: '1500', isLiteralLabel: true },
-  { value: '1800', labelKey: '1800', isLiteralLabel: true },
-  { value: '2000', labelKey: '2000', isLiteralLabel: true },
-  { value: '2500', labelKey: '2500', isLiteralLabel: true },
-] as const;
+const PAD_DIMENSION_MM_OPTIONS = literalNumberOptions([800, 1000, 1200, 1500, 1800, 2000, 2500]);
 
-const PAD_THICKNESS_MM_OPTIONS = [
-  { value: '300', labelKey: '300', isLiteralLabel: true },
-  { value: '400', labelKey: '400', isLiteralLabel: true },
-  { value: '500', labelKey: '500', isLiteralLabel: true },
-  { value: '600', labelKey: '600', isLiteralLabel: true },
-  { value: '800', labelKey: '800', isLiteralLabel: true },
-] as const;
+const PAD_THICKNESS_MM_OPTIONS = literalNumberOptions([300, 400, 500, 600, 800]);
 
-const ROTATION_DEG_OPTIONS = [
-  { value: '0',   labelKey: '0',   isLiteralLabel: true },
-  { value: '15',  labelKey: '15',  isLiteralLabel: true },
-  { value: '30',  labelKey: '30',  isLiteralLabel: true },
-  { value: '45',  labelKey: '45',  isLiteralLabel: true },
-  { value: '60',  labelKey: '60',  isLiteralLabel: true },
-  { value: '90',  labelKey: '90',  isLiteralLabel: true },
-] as const;
+const ROTATION_DEG_OPTIONS = literalNumberOptions([0, 15, 30, 45, 60, 90]);
 
 // Στάθμη άνω παρειάς (mm, κάτω από στάθμη → αρνητική).
-const TOP_ELEVATION_MM_OPTIONS = [
-  { value: '-500',  labelKey: '-500',  isLiteralLabel: true },
-  { value: '-800',  labelKey: '-800',  isLiteralLabel: true },
-  { value: '-1000', labelKey: '-1000', isLiteralLabel: true },
-  { value: '-1200', labelKey: '-1200', isLiteralLabel: true },
-  { value: '-1500', labelKey: '-1500', isLiteralLabel: true },
-  { value: '-2000', labelKey: '-2000', isLiteralLabel: true },
-] as const;
+const TOP_ELEVATION_MM_OPTIONS = literalNumberOptions([-500, -800, -1000, -1200, -1500, -2000]);
 
 // ─── Tab definition ──────────────────────────────────────────────────────────
 
@@ -176,6 +135,7 @@ export const CONTEXTUAL_FOUNDATION_TAB: RibbonTab = {
                 commandKey: FOUNDATION_RIBBON_KEYS.params.width,
                 comboboxWidthPx: 80,
                 options: PAD_DIMENSION_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -187,6 +147,7 @@ export const CONTEXTUAL_FOUNDATION_TAB: RibbonTab = {
                 commandKey: FOUNDATION_RIBBON_KEYS.params.length,
                 comboboxWidthPx: 80,
                 options: PAD_DIMENSION_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -198,6 +159,7 @@ export const CONTEXTUAL_FOUNDATION_TAB: RibbonTab = {
                 commandKey: FOUNDATION_RIBBON_KEYS.params.thickness,
                 comboboxWidthPx: 80,
                 options: PAD_THICKNESS_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -210,7 +172,7 @@ export const CONTEXTUAL_FOUNDATION_TAB: RibbonTab = {
                 comboboxWidthPx: 80,
                 options: ROTATION_DEG_OPTIONS,
                 // Presets are all-positive but rotation may be CW (negative); allow typing it.
-                numericInput: { allowNegative: true, allowDecimal: true },
+                numericInput: { quantityKind: 'angle', allowNegative: true, allowDecimal: true },
               },
             },
           ],
@@ -237,6 +199,7 @@ export const CONTEXTUAL_FOUNDATION_TAB: RibbonTab = {
                 commandKey: FOUNDATION_RIBBON_KEYS.params.width,
                 comboboxWidthPx: 80,
                 options: LINE_WIDTH_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -248,6 +211,7 @@ export const CONTEXTUAL_FOUNDATION_TAB: RibbonTab = {
                 commandKey: FOUNDATION_RIBBON_KEYS.params.thickness,
                 comboboxWidthPx: 80,
                 options: LINE_THICKNESS_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -282,6 +246,7 @@ export const CONTEXTUAL_FOUNDATION_TAB: RibbonTab = {
                 commandKey: FOUNDATION_RIBBON_KEYS.params.topElevation,
                 comboboxWidthPx: 90,
                 options: TOP_ELEVATION_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
           ],

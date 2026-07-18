@@ -275,16 +275,22 @@
 
 Δημιουργεί γραμμή-οδηγό **παράλληλη** σε υφιστάμενη, σε καθορισμένη απόσταση.
 
-**Workflow (ΥΛΟΠΟΙΗΜΕΝΟ — 2026-07-18):**
+**Workflow (ΤΕΛΙΚΗ κατάσταση — 2026-07-18):**
 1. "Επιλέξτε γραμμή" → μετακίνηση σταυρονήματος κοντά σε οδηγό → η γραμμή **φωτίζεται** (highlight) → κλικ
-2. Το κλικ **καρφώνει anchor ΠΑΝΩ στον οδηγό** και εμφανίζεται **δυναμική διακεκομμένη** anchor → σταυρόνημα, ζωντανά στα 60fps
-3. Prompt: "Δώστε απόσταση" → **πληκτρολόγηση στο keyboard + Enter** (ΟΧΙ popup dialog)
-4. Δημιουργείται παράλληλη γραμμή στην πλευρά που βρίσκεται το σταυρόνημα
+2. Το κλικ **καρφώνει anchor ΠΑΝΩ στον οδηγό** και εμφανίζεται **δυναμική χρυσή διακεκομμένη** anchor → σταυρόνημα, ζωντανά στα 60fps, μαζί με ένα **λευκό HUD** που δείχνει το τρέχον μήκος
+3. Commit με **οποιοδήποτε** από τα δύο ισότιμα μονοπάτια:
+   - **Enter** αφού πληκτρολογήσεις απόσταση στο keyboard (ΟΧΙ popup dialog)
+   - **ΔΕΥΤΕΡΟ ΚΛΙΚ** στον καμβά — χωρίς πληκτρολόγηση χρησιμοποιεί την τρέχουσα (ΟΡΘΟ/βήμα περιορισμένη) απόσταση κέρσορα↔οδηγός· αν έχει ήδη πληκτρολογηθεί κάτι, **νικά η πληκτρολογημένη τιμή** (ίδια σύμβαση με το φάντασμα, WYSIWYG)
+4. Δημιουργείται παράλληλη γραμμή στην πλευρά που έδειχνε ο κέρσορας τη στιγμή του commit
 
-⚠️ **ΔΕΝ υπάρχει δεύτερο κλικ.** Μόλις οριστεί η αναφορά, ο guard στο
-`guide-click-handlers.ts` (`if (p.parallelRefGuideId) return true;`) καταπίνει κάθε επόμενο
-κλικ. Το commit γίνεται **αποκλειστικά** με Enter (`CanvasNumericInputStore.confirm()`).
-Επιβεβαιώθηκε από τον Giorgio (2026-07-18) ως η επιθυμητή ροή — μην «διορθώσεις» τον guard.
+**Δύο ισότιμα commit paths (ΑΝΑΘΕΩΡΗΘΗΚΕ 2026-07-18)**: μέχρι νωρίτερα το ίδιο πρωί ίσχυε
+ρητή απόφαση Giorgio «commit ΜΟΝΟ με Enter» — ο guard στο `guide-click-handlers.ts`
+(`if (p.parallelRefGuideId) return true;`) κατανάλωνε σιωπηλά κάθε επόμενο κλικ. Ο Giorgio
+άλλαξε γνώμη αυθημερόν: το ίδιο `if` έγινε **ΚΛΑΔΟΣ** — καλεί
+`p.onParallelDistanceCommitted?.(refGuideId, worldPoint)` αντί να επιστρέφει σιωπηλά `true`.
+Ελέγχεται **ΠΡΩΤΟ** μέσα στο `handleGuideParallel`, πριν από οποιαδήποτε εξάρτηση από τη
+λίστα οδηγών, ώστε το commit να μη χαθεί ποτέ σε κλικ μακριά από γραμμή. **ΜΗΝ επαναφέρεις
+τον παλιό guard** — το ιστορικό (και γιατί άλλαξε) είναι τεκμηριωμένο in-line στο handler.
 
 **Το anchor** = `projectPointOntoGuide(refGuide, clickWorldPoint)` — η κάθετη προβολή του
 κλικ πάνω στη γραμμή. Το ίδιο projector με το crosshair hover-lock, άρα το ＋ κάθεται εκεί
@@ -296,15 +302,65 @@
 ταιριασμένες τιμές: το `useParallelGuideAnchorPreview` δεν περιέχει κανένα χρώμα/dash/πάχος
 (κλειδωμένο με source-level assertion στο test του).
 
+**ΟΡΘΟ (F8) — σημασιολογία «κάθετα ΣΤΟΝ ΟΔΗΓΟ», ΟΧΙ παγκόσμιο H/V**: όταν το ΟΡΘΟ είναι ON,
+η διακεκομμένη κλειδώνει στην **κάθετο της γραμμής-αναφοράς**, όχι στους παγκόσμιους άξονες
+X/Y. Σε οδηγό άξονα X ή Y αυτό ταυτίζεται με το κλασικό ΟΡΘΟ (η κάθετος ενός
+κατακόρυφου/οριζόντιου οδηγού ΕΙΝΑΙ ο άλλος παγκόσμιος άξονας). Σε διαγώνιο οδηγό (XZ) δίνει
+την **πραγματική κάθετο** στη γραμμή — όχι μια H/V προσέγγιση. Συνέπεια σκόπιμη: με ΟΡΘΟ ON,
+το **μήκος της διακεκομμένης ισούται ΠΑΝΤΑ με την τελική κάθετη απόσταση** του νέου οδηγού,
+ανεξαρτήτως γωνίας αναφοράς.
+
+**Λευκό HUD απόστασης (νέο 2026-07-18)**: δίπλα στον κέρσορα εμφανίζεται το τρέχον μήκος,
+μέσω του **ΚΟΙΝΟΥ** painter `paintTooltip` (`canvas-v2/preview-canvas/tracking-paint.ts`,
+ADR-357 Φ4 — ο ΙΔΙΟΣ που δείχνει η περιστροφή δίπλα στη δική της διακεκομμένη). Πύλη
+ορατότητας: `isLengthAngleHudVisible()` (`systems/constraints/length-angle-hud-gate.ts`) —
+το κοινό status-bar toggle «ΜΗΚΟΣ/ΓΩΝΙΑ», ίδιο με όλα τα υπόλοιπα εργαλεία σχεδίασης. **Ρητή
+απόφαση**: ο αριθμός δείχνει το **ΜΗΚΟΣ ΤΗΣ ΔΙΑΚΕΚΟΜΜΕΝΗΣ** (`lineLength`, anchor→σημείο),
+ΟΧΙ την κάθετη απόσταση από τον οδηγό. Με ΟΡΘΟ ON τα δύο ταυτίζονται. Με ΟΡΘΟ OFF σε διαγώνιο
+οδηγό **αποκλίνουν** — αποδεκτό συνειδητά από τον Giorgio: ο αριθμός πρέπει να ταιριάζει με
+αυτό που ο χρήστης βλέπει να τραβιέται στην οθόνη, όχι με μια «αόρατη» κάθετη μέτρηση.
+
+**Βήμα/quantize όταν είναι ενεργό το Snap (F9, νέο 2026-07-18)**: με ΟΡΘΟ ON, κβαντίζεται το
+**βαθμωτό κατά μήκος της καθέτου** (το σημείο ΜΕΝΕΙ πάνω στη γραμμή — κβάντιση x/y χωριστά θα
+το έβγαζε εκτός)· με ΟΡΘΟ OFF, κβαντίζεται το **μήκος από το anchor**, ίδια σύμβαση με τα
+υπόλοιπα εργαλεία σχεδίασης (`applyAlongAxisStepSnap`). Το μέγεθος βήματος + η μετατροπή
+mm→scene units είναι **αντίγραφο** της `applyGripStepSnap`
+(`getSnapStep() * immediateSceneScale.getMmToScene()`), αλλά η πύλη εδώ είναι **σκέτο
+`isSnapOn()`** — ΟΧΙ το κοινό `isGripStepActive()` των grips (`bim/grips/grip-step-quantize.ts`),
+που απαιτεί ΚΑΙ κρατημένο πλήκτρο **Q**. Εκτός grip-drag το Q ανοίγει το εργαλείο Τόξου, άρα
+το grip helper ήταν ασύμβατο εδώ χωρίς να επηρεαστεί η συμπεριφορά των grips.
+
+**SSoT `systems/guides/guide-parallel-cursor.ts`**: `resolveParallelCursor(refGuide, anchor,
+rawCursor, {ortho, stepSnap, stepSceneUnits})` → `{point, signedPerpDistance, sign,
+lineLength}`, + `readParallelCursorToggles()` (event-time ανάγνωση ΟΡΘΟ/Snap/βήμα — ADR-040
+κανόνας 2). Καθαρή συνάρτηση — δεν διαβάζει stores, τεστάρεται ντετερμινιστικά. **ΠΕΝΤΕ
+αναγνώστες περνούν ΟΛΟΙ από εδώ** — ένα σημείο, μία απάντηση:
+1. Η δυναμική διακεκομμένη (`useParallelGuideAnchorPreview`)
+2. Το λευκό HUD (ίδιο hook, `paintLengthHud`)
+3. Ο φάντασμα-οδηγός (`useGuideWorkflowComputed`, μέσω `systems/guides/guide-parallel-ghost.ts`)
+4. Commit-με-Enter — ο `signResolver` περνάει από `resolveParallelCursor(...).sign` αντί να
+   καλεί απευθείας το `resolveParallelSide` με τον ωμό κέρσορα
+   (`useGuideWorkflowHandlers.handleParallelRefSelected`)
+5. Commit-με-κλικ (`useGuideWorkflowHandlers.handleParallelDistanceCommitted`)
+
+**Σύμβαση προσήμου (κρίσιμη)**: το `sign` προκύπτει ΠΑΝΤΑ από το **ΤΕΛΙΚΟ** (περιορισμένο)
+σημείο, ποτέ από τον ωμό κέρσορα. Αιτία: το βήμα μπορεί να **γυρίσει την πλευρά** — ωμός
+κέρσορας στο −0.4 κβαντίζεται σε 0, και το πρόσημο θα άλλαζε από −1 σε +1 αν διαβαζόταν πριν
+την κβάντιση.
+
+**Commit-με-κλικ ΔΕΝ χρησιμοποιεί το `worldPoint` του κλικ**: το `mouse-handler-up` εφαρμόζει
+OSNAP πριν φτάσει στον handler (`findSnapPoint` → `snappedPoint`), οπότε ένα κλικ πάνω σε
+OSNAP σημείο θα τοποθετούσε τον οδηγό αλλού από ό,τι έδειχνε η γραμμή. Ο handler διαβάζει
+`getRealtimeWorldCursor()` — τον ίδιο ωμό κέρσορα με τη ζωγραφική/HUD/Enter-resolver.
+
 **UX λεπτομέρεια**: Η πλευρά (αριστερά/δεξιά ή πάνω/κάτω) καθορίζεται από τη **θέση του
-σταυρονήματος τη στιγμή του Enter** — ΟΧΙ από το πού έπεσε το κλικ επιλογής (το κλικ πέφτει
-υποχρεωτικά μέσα σε 30px από τη γραμμή, άρα το «πάνω/κάτω» του είναι θόρυβος). Ο
-`_signResolver` καλείται event-time στο `confirm()`.
+σταυρονήματος τη στιγμή του commit** (Enter ή δεύτερο κλικ) — ΟΧΙ από το πού έπεσε το κλικ
+επιλογής (το κλικ πέφτει υποχρεωτικά μέσα σε 30px από τη γραμμή, άρα το «πάνω/κάτω» του
+είναι θόρυβος).
 
 **Φάντασμα WYSIWYG**: όσο πληκτρολογείται απόσταση, ο φάντασμα-οδηγός **κουμπώνει στην
-πληκτρολογημένη τιμή** (`refGuide.offset ± typed`) αντί να ακολουθεί τον κέρσορα. Πριν το
-2026-07-18 ακολουθούσε τον κέρσορα, άρα η προεπισκόπηση διαφωνούσε με το αποτέλεσμα του
-Enter. SSoT γεωμετρίας: `systems/guides/guide-parallel-ghost.ts`.
+πληκτρολογημένη τιμή** (`refGuide.offset ± typed`) αντί να ακολουθεί τον κέρσορα. SSoT
+γεωμετρίας: `systems/guides/guide-parallel-ghost.ts`.
 
 ### 3.14 Διαγραφή Οδηγού (12ο πλήκτρο)
 
@@ -1919,6 +1975,7 @@ User selects target market → auto-validate + suggest corrections.
 | 2026-07-17 | **B121 ΑΦΑΙΡΕΘΗΚΕ — τέλος το αυτόματο «Δημιουργία οδηγών;» toast (Giorgio· DONE· 🔴 verify+commit).** Giorgio: «όταν δημιουργώ μια γραμμή δεν θέλω να εμφανίζεται πλέον αυτό το μήνυμα toast». Το B121 (2026-05-11) κρεμούσε listener στο `drawing:complete` (ADR-057) → prompt σε **κάθε** σχεδιασμένη οντότητα, όχι μόνο γραμμή· ρωτήθηκε το εύρος, ο Giorgio επέλεξε **όλα τα entities**. RM: `useEntityCompleteGuideListener.ts` + `extract-entity-key-points.ts` (νεκρός μετά — μόνος καταναλωτής ήταν το B121), `handleEntityComplete` από `useGuideEntityHandlers`, η κλήση + το import στο `CanvasSection.tsx`, το export από το `hooks/guides/index.ts`, το i18n key `guides.entityToGuide` (el+en). **ΔΕΝ αγγίχτηκε** το B36 (Measure→Guide) — το `promptCreateGuidesAtPoints()` παραμένει, μοναδικός καταναλωτής πλέον το `handleMeasurementComplete`· ούτε το `MEASURE_TOOLS_FOR_GUIDES` (το χρησιμοποιεί ακόμη το `useDrawingHandlers`). Οι οδηγοί από οντότητα παραμένουν **χειροκίνητα** μέσω B8/B37. ✅ Google-level: YES — αφαίρεση ολόκληρου του μονοπατιού, μηδέν ορφανός κώδικας/κλειδί, ρητός κανόνας «μην το επαναφέρεις» στο §4 B121. 🔴 verify (σχεδίασε γραμμή → **κανένα** toast· τόξο/κύκλο/ορθογώνιο → κανένα toast· εργαλείο Απόσταση/Γωνία → το toast μέτρησης **εξακολουθεί** να βγαίνει και το «Δημιουργία Οδηγών» δουλεύει) + commit. |
 | 2026-07-18 | **§3.13: η «δυναμική γραμμή» έγινε ΠΡΑΓΜΑΤΙΚΗ (Giorgio· 🔴 verify+commit).** Giorgio: «μόλις επιλέξω τον οδηγό, να δημιουργείται σημείο εκκίνησης πάνω στον οδηγό και δυναμική διακεκομμένη μέχρι το κέντρο του κέρσορα — **ίδια** με του εργαλείου Μετακίνηση». Το §3.13 βήμα 2 **υποσχόταν** αυτή τη γραμμή από τις 2026-02-19 χωρίς ποτέ να υλοποιηθεί (phantom spec ~5 μηνών). **Υλοποίηση:** το κλικ κρατά πλέον την **ΠΡΟΒΟΛΗ** του πάνω στη γραμμή (`projectPointOntoGuide` — ίδιο projector με το crosshair hover-lock, άρα μηδέν άλμα) ως `_anchor` στο `CanvasNumericInputStore`· νέο store-driven micro-leaf `ParallelGuideAnchorPreviewMount` + `useParallelGuideAnchorPreview` ζωγραφίζει κόκκινο ＋ στο anchor + χρυσή διακεκομμένη προς τον κέρσορα. **Μηδέν νέος κώδικας ζωγραφικής**: καλούνται ΑΥΤΟΥΣΙΟΙ οι painters του Move (`drawMoveBasePointMarker` ADR-049 + `drawRubberBandLine`) → η οπτική ταυτότητα προκύπτει από **κοινό κώδικα**, κλειδωμένη με source-level assertion (καμία τιμή χρώματος/dash/πάχους μέσα στο hook). Το anchor **παγώνει** στο κλικ· η **πλευρά** παραμένει event-time στο Enter (μην το αλλάξεις — αναιρεί το fix της 2026-07-17). **Ροή αμετάβλητη**: ΔΕΝ προστέθηκε δεύτερο κλικ, commit μόνο με Enter (ρητή επιλογή Giorgio). **+FIX φαντάσματος**: όσο πληκτρολογούνταν απόσταση, το φάντασμα ακολουθούσε τον **κέρσορα** αντί της τιμής → η προεπισκόπηση διαφωνούσε με το αποτέλεσμα του Enter· τώρα κουμπώνει στο `offset ± typed` (WYSIWYG). **Boy-scout (N.0.2)**: το κάθετο `n=(-dy,dx)/len` ήταν σε **3** σημεία → NEW SSoT `systems/guides/guide-parallel-ghost.ts` (`perpendicularNormal` + `resolveParallelGhostOffset` + `resolveParallelGhostDiagonal`)· ο διαγώνιος κλάδος του `useGuideWorkflowComputed` έπεσε από ~17 σε 5 γραμμές. **+FIX διαρροής**: αλλαγή εργαλείου με ενεργή χειρονομία άφηνε ορφανή διακεκομμένη (πριν ήταν αόρατη γιατί δεν ζωγραφιζόταν τίποτα) → cleanup effect με store-read gate. **ADR-040**: κανένα νέο store, κανένα νέο πεδίο στο `PreviewCanvasMountsProps`· `CanvasSection.tsx` / `CanvasLayerStack.tsx` / `canvas-layer-stack-types.ts` **ΔΕΝ αγγίχτηκαν** — το μοναδικό `useSyncExternalStore` ζει στο leaf. Τρίτη περίπτωση του μοτίβου WallSplit/BeamBetween. |
 | 2026-07-18 | **FIX (same-day): η δυναμική γραμμή σβηνόταν σε κάθε κίνηση ποντικιού — ο κοινός PreviewCanvas είχε ΔΕΥΤΕΡΟ ιδιοκτήτη.** Giorgio: «ο κόκκινος σταυρός εμφανίζεται μόνο μόλις κάνω κλικ, ύστερα εξαφανίζεται· η διακεκομμένη δεν εμφανίζεται καθόλου». **Ρίζα:** το `guide-parallel` είναι `category: 'drawing'` (`tool-definitions.ts`), άρα περνά το `isInDrawingMode` → σε κάθε mousemove ο `mouse-handler-move` καλεί `onDrawingHover` → `processDrawingHover`. Τα εργαλεία οδηγών **δεν παράγουν ΠΟΤΕ `previewEntity`**, οπότε η ροή έπεφτε στο `else { previewCanvasRef.current.clear() }` (`drawing-hover-handler.ts:346`) και **σκούπιζε ολόκληρο τον καμβά 60 φορές το δευτερόλεπτο**. Το leaf προλάβαινε ΜΟΝΟ το initial paint του click (εξού «φαίνεται στο κλικ»)· η διακεκομμένη απαιτεί κίνηση, και κάθε κίνηση την έσβηνε → «δεν εμφανίζεται καθόλου». **ΤΟ ΙΔΙΟ BUG ΕΙΧΕ ΞΑΝΑΣΥΜΒΕΙ**: το ADR-624 (2026-07-12) το έλυσε για τα placement ghosts με `toolOwnsPlacementGhost` — predicate **παραγόμενο από `TOOL_CREATES_ENTITY`**, άρα τυφλό σε previews που δεν δημιουργούν οντότητα. **Fix:** NEW `toolOwnsPreviewCanvas(tool)` = `toolOwnsPlacementGhost(tool) \|\| GESTURE_PREVIEW_OWNER_TOOLS.has(tool)` — ΕΝΑ ερώτημα «ποιος κατέχει τον καμβά», μία απάντηση· το `useDrawingHandlers.onDrawingHover` καλεί πλέον αυτό. Το `toolOwnsPlacementGhost` μένει ακέραιο (δικοί του καταναλωτές). NEW `tool-owns-preview-canvas.test`(4) — κλειδώνει ΚΑΙ το `category: 'drawing'`, γιατί αυτό ακριβώς είναι ο λόγος ύπαρξης της παράκαμψης· αν αλλάξει, το test σε αναγκάζει να ξανασκεφτείς τη ροή αντί να σβήσεις σιωπηλά τον έλεγχο. **Μάθημα:** «κατέχει τον PreviewCanvas» ΔΕΝ συνάγεται από «δημιουργεί οντότητα» — μην ξαναδέσεις τα δύο. |
+| 2026-07-18 | **§3.13: δεύτερο κλικ = commit ισότιμο με Enter, ΟΡΘΟ κάθετο ΣΤΟΝ ΟΔΗΓΟ, λευκό HUD απόστασης, βήμα Snap (Giorgio· DONE· 🔴 verify+commit).** Giorgio ζήτησε τέσσερα πρόσθετα χαρακτηριστικά πάνω στο §3.13 της ίδιας μέρας (πρωί): **(1)** δεύτερο κλικ στον καμβά να κάνει commit εξίσου με το Enter· **(2)** το ΟΡΘΟ (F8) να κλειδώνει τη διακεκομμένη κάθετα ΣΤΟΝ ΟΔΗΓΟ αναφοράς (όχι σε παγκόσμιο H/V)· **(3)** λευκό HUD μήκους δίπλα στον κέρσορα, όπως σε όλα τα υπόλοιπα εργαλεία σχεδίασης· **(4)** κβάντιση/βήμα όταν το Snap (F9) είναι ενεργό. **Νέο SSoT** `systems/guides/guide-parallel-cursor.ts` → `resolveParallelCursor(refGuide, anchor, rawCursor, {ortho, stepSnap, stepSceneUnits})` επιστρέφει `{point, signedPerpDistance, sign, lineLength}`, με `readParallelCursorToggles()` για event-time ανάγνωση των διακοπτών (ADR-040 κανόνας 2). **ΠΕΝΤΕ αναγνώστες** το χρησιμοποιούν πλέον: διακεκομμένη, λευκό HUD, φάντασμα-οδηγός, commit-με-Enter (`signResolver`), commit-με-κλικ — preview≡commit εγγυημένο δομικά, όχι από σύμπτωση. **Ο guard έγινε κλάδος**: το `if (p.parallelRefGuideId) return true;` στο `guide-click-handlers.ts` (που η καταχώρηση της ίδιας μέρας «§3.13: η δυναμική γραμμή έγινε ΠΡΑΓΜΑΤΙΚΗ» έλεγε ρητά «ΔΕΝ προστέθηκε δεύτερο κλικ, commit μόνο με Enter — ρητή επιλογή Giorgio») τώρα καλεί `p.onParallelDistanceCommitted?.(...)` πρώτο πράγμα μέσα στο `handleGuideParallel`, πριν από οποιαδήποτε άλλη εξάρτηση — ο Giorgio επιβεβαίωσε ότι ήθελε ΚΑΙ τα δύο commit paths, όχι αντικατάσταση του Enter. **ΤΡΙΑ ευρήματα κατά την υλοποίηση:** (α) το κοινό `isGripStepActive()`/`applyPointStepSnap` των grips (`bim/grips/grip-step-quantize.ts`) κάνει gate σε Snap(F9) **ΚΑΙ** κρατημένο πλήκτρο **Q** — εκτός grip-drag το Q ανοίγει το εργαλείο Τόξου, άρα ήταν αδιάθετο εδώ· χρησιμοποιήθηκε η καθαρή primitive `quantizeMagnitude`/`quantizePointFromAnchor` (`systems/tracking/adaptive-distance-snap.ts`) με πύλη ΜΟΝΟ `isSnapOn()`, ίδια μετατροπή μονάδων mm→scene με το grip helper. (β) το βήμα μπορεί να **γυρίσει την πλευρά** (ωμό −0.4 → κβάντιση 0 → sign από −1 σε +1) — γι' αυτό το `sign` προκύπτει ΠΑΝΤΑ από το ΤΕΛΙΚΟ (κβαντισμένο) σημείο, ποτέ από τον ωμό κέρσορα. (γ) το commit-με-κλικ ΔΕΝ μπορεί να χρησιμοποιήσει το `worldPoint` του click event — το `mouse-handler-up` εφαρμόζει OSNAP πάνω του πριν φτάσει στον handler — διαβάζει `getRealtimeWorldCursor()` ώστε να ταυτίζεται με ό,τι ζωγραφίζεται. **ΠΕΡΙΣΤΑΤΙΚΟ (coverage gap):** το χαρακτηριστικό #1 υλοποιήθηκε πλήρως στο `useGuideWorkflowHandlers`/`guide-click-handlers.ts` αλλά ήταν **ΝΕΚΡΟ** — το `onParallelDistanceCommitted` δεν περάστηκε ποτέ ως prop στο `CanvasSection.tsx` (μία γραμμή που έλειπε)· η κλήση `p.onParallelDistanceCommitted?.(...)` είναι optional-chained, άρα σιωπηλό no-op χωρίς κανένα error. 102 tests πράσινα, μηδέν κάλυψη της ίδιας της καλωδίωσης. NEW `hooks/guides/__tests__/parallel-guide-wiring.test.ts` — φρουρός που ελέγχει ΤΗ ΣΥΝΔΕΣΗ, όχι μόνο τη λογική πίσω από αυτήν. **CanvasNumericInputStore**: `activate()` δέχεται πλέον ολόκληρο το `Guide` αντί για `refGuideId` (νέα `getRefGuide()`/`useCanvasNumericRefGuide()`) — το leaf της διακεκομμένης χρειάζεται τη ΓΕΩΜΕΤΡΙΑ (άξονας/offset/άκρα) για να κλειδώσει το ΟΡΘΟ κάθετα στον οδηγό, ένα σκέτο id δεν αρκούσε. **Αρχεία:** NEW `systems/guides/guide-parallel-cursor.ts`(+test), NEW `hooks/guides/__tests__/guide-parallel-commit-workflow.test.ts`, NEW `hooks/guides/__tests__/parallel-guide-wiring.test.ts`, `systems/canvas-numeric-input/CanvasNumericInputStore.ts`(+test), `hooks/canvas/canvas-click-types.ts`, `hooks/canvas/guide-click-handlers.ts`, `hooks/guides/useGuideWorkflowHandlers.ts`, `hooks/guides/useGuideWorkflowComputed.ts`, `hooks/tools/useParallelGuideAnchorPreview.ts`, `components/dxf-layout/canvas-layer-stack-tool-preview-mounts.tsx`, `components/dxf-layout/CanvasSection.tsx`. ✅ Google-level: YES — μία καθαρή SSoT συνάρτηση, στιγμιαία (event-time) ανάγνωση διακοπτών, το coverage gap έκλεισε με dedicated wiring test. **ADR-040**: βλ. δικό του changelog 2026-07-18 (νέο compliance entry). 🔴 verify (G→P· κλικ σε οδηγό → κόκκινο ＋ + χρυσή διακεκομμένη + λευκό μήκος· δεύτερο κλικ χωρίς πληκτρολόγηση → commit στην τρέχουσα απόσταση· F8 σε διαγώνιο οδηγό → η διακεκομμένη κλειδώνει κάθετα στη γραμμή, όχι σε H/V· F9 → η απόσταση κβαντίζεται στο βήμα) + commit. |
 
 ---
 

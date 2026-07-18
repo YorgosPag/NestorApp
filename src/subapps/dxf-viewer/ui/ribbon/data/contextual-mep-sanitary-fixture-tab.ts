@@ -33,20 +33,7 @@ export const MEP_SANITARY_FIXTURE_CONTEXTUAL_TRIGGER = 'mep-sanitary-fixture-sel
 
 // Footprint width/length (mm) — covers typical sanitary plan sizes (WC 380×680,
 // basin 600×460, shower 900×900, tub 1700×750, bidet 360×560).
-const DIMENSION_MM_OPTIONS = [
-  { value: '300', labelKey: '300', isLiteralLabel: true },
-  { value: '360', labelKey: '360', isLiteralLabel: true },
-  { value: '400', labelKey: '400', isLiteralLabel: true },
-  { value: '460', labelKey: '460', isLiteralLabel: true },
-  { value: '500', labelKey: '500', isLiteralLabel: true },
-  { value: '560', labelKey: '560', isLiteralLabel: true },
-  { value: '600', labelKey: '600', isLiteralLabel: true },
-  { value: '680', labelKey: '680', isLiteralLabel: true },
-  { value: '750', labelKey: '750', isLiteralLabel: true },
-  { value: '900', labelKey: '900', isLiteralLabel: true },
-  { value: '1200', labelKey: '1200', isLiteralLabel: true },
-  { value: '1700', labelKey: '1700', isLiteralLabel: true },
-] as const;
+const DIMENSION_MM_OPTIONS = literalNumberOptions([300, 360, 400, 460, 500, 560, 600, 680, 750, 900, 1200, 1700]);
 
 const ROTATION_DEG_OPTIONS = literalNumberOptions([0, 45, 90, 135, 180, 225, 270, 315]);
 
@@ -85,6 +72,7 @@ export const CONTEXTUAL_MEP_SANITARY_FIXTURE_TAB: RibbonTab = {
                 commandKey: MEP_FIXTURE_RIBBON_KEYS.params.width,
                 comboboxWidthPx: 80,
                 options: DIMENSION_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -96,6 +84,7 @@ export const CONTEXTUAL_MEP_SANITARY_FIXTURE_TAB: RibbonTab = {
                 commandKey: MEP_FIXTURE_RIBBON_KEYS.params.length,
                 comboboxWidthPx: 80,
                 options: DIMENSION_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -107,6 +96,7 @@ export const CONTEXTUAL_MEP_SANITARY_FIXTURE_TAB: RibbonTab = {
                 commandKey: MEP_FIXTURE_RIBBON_KEYS.params.rotation,
                 comboboxWidthPx: 80,
                 options: ROTATION_DEG_OPTIONS,
+                numericInput: { quantityKind: 'angle' },
               },
             },
             {
@@ -118,6 +108,7 @@ export const CONTEXTUAL_MEP_SANITARY_FIXTURE_TAB: RibbonTab = {
                 commandKey: MEP_FIXTURE_RIBBON_KEYS.params.bodyHeight,
                 comboboxWidthPx: 80,
                 options: BODY_HEIGHT_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -129,6 +120,7 @@ export const CONTEXTUAL_MEP_SANITARY_FIXTURE_TAB: RibbonTab = {
                 commandKey: MEP_FIXTURE_RIBBON_KEYS.params.mountingElevation,
                 comboboxWidthPx: 90,
                 options: MOUNTING_ELEVATION_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
           ],

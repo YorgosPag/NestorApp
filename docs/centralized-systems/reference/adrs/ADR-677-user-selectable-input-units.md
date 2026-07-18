@@ -1,6 +1,6 @@
 # ADR-677 — Επιλογή Μονάδας από τον Χρήστη (mm/cm/m) για Δημιουργία / Μετακίνηση / Μετασχηματισμό Οντοτήτων
 
-**Status:** 🚧 ΣΕ ΕΞΕΛΙΞΗ — **Φάσεις 1 + 2α ✅ ΟΛΟΚΛΗΡΩΜΕΝΕΣ** (2026-07-18) · pending Φάση 2β (G7), 3, 4 · Discovery: 2026-07-18 (Opus 4.8, 5-agent orchestrated audit)
+**Status:** 🚧 ΣΕ ΕΞΕΛΙΞΗ — **Φάσεις 1 + 2α + 2β + 2γ ✅** (2026-07-18) · **pending Φάση 2δ** (η μονάδα λείπει από την αριστερή παλέτα Ιδιοτήτων + τα advanced panels — βλ. §7), 3, 4 · Discovery: 2026-07-18 (Opus 4.8, 5-agent orchestrated audit)
 **Σχετικά / εξαρτάται:** ADR-462 (canonical-mm units — η διέπουσα απόφαση), ADR-357 §5.5 (display-unit selector, default `cm`), ADR-358 (stair units + width-heuristic), ADR-368 (import drawing-units override), ADR-513 (Radial Command Ring / direct-distance-entry), ADR-508 (grip/HUD live), ADR-049 (move/grip SSoT), ADR-082 (FormatterRegistry locale engine).
 **Αφορμή:** Ερώτημα Giorgio — «κατά τη δημιουργία οντοτήτων DXF BIM/MEP (2Δ ή 3Δ), σε τι μονάδα δουλεύουμε (mm/cm/m); Θέλω ο χρήστης με έναν διακόπτη/επιλογή να διαλέγει αν οι τιμές μετακίνησης / μετασχηματισμού / δημιουργίας θα είναι σε χιλιοστά, εκατοστά ή μέτρα.»
 
@@ -68,7 +68,11 @@
 | HUD μήκους/γωνίας (drag) | display unit | ✅ ΝΑΙ |
 | Ruler ticks / dimension pills / entity labels / X-Y readout | display unit | ✅ ΝΑΙ |
 | Βήμα snap F9 («βήμα») | display unit (store μένει mm) | ✅ ΝΑΙ (Φάση 2α — G2 έκλεισε) |
-| Ribbon comboboxes «Πλάτος» (700/800/900…) | **hardcoded mm** | ❌ ΟΧΙ (βλ. G7) |
+| Ribbon comboboxes διαστάσεων («Πλάτος» 700/800/900…) | display unit (presets μένουν mm) | ✅ ΝΑΙ (Φάση 2β — G7 έκλεισε) |
+| Ribbon comboboxes — **ένδειξη** μονάδας στην οθόνη | σύμβολο μέσα στο πεδίο, δυναμικό | ✅ ΝΑΙ (Φάση 2γ — 13 ετικέτες «(mm)» καθαρίστηκαν) |
+| **Αριστερή παλέτα Ιδιοτήτων** — Γεωμετρία γραμμής (Μήκος/Γωνία/Αρχή/Τέλος/Δ) | display unit (μετατροπή στον bridge) | ⚠️ ΤΙΜΗ ναι, **ΕΝΔΕΙΞΗ όχι** (βλ. Φάση 2δ) |
+| Ribbon comboboxes πλήθους / μοιρών / ποσοστού / DN | αυτούσια, **by design** | ➖ Δ/Υ — δεν είναι μήκη (§7.2) |
+| Ribbon comboboxes μεγεθών ΧΑΡΤΙΟΥ (ύψος κειμένου, βέλη) | mm χαρτιού, σταθερά | ➖ Δ/Υ — paper-length, όπως στο Revit (§7.2) |
 | Legacy Ctrl+L linear lock (`DynamicInputOverlay`) | display-string χωρίς conversion | ⚠️ BUG/dead (βλ. G3) |
 | 3Δ move readout | display unit | ✅ ΝΑΙ |
 | Σκάλες (αποθήκευση params) | scene units + width-heuristic | ⚠️ απόκλιση (βλ. G4) |
@@ -167,7 +171,80 @@ Tests: 6 νέα anchors στο υπάρχον `config/__tests__/units-format.tes
 - **G2:** το βήμα F9 άλλαξε **μόνο στο σύνορο UI** (`CadStatusBar.SnapToggleWithStep`): presets + τιμή + `unitSuffix` περνούν από `toDisplay`/`fromDisplay`/`DISPLAY_UNIT_LABELS`. Το `cad-toggle-state` και το `grip-step-quantize.ts` **παραμένουν καθαρά mm** — κανένα quantization δεν έμαθε για display units (canonical-mm ακέραιο, ADR-462).
 - **i18n διόρθωση:** το `cadDock.statusBar.snapStepTitle` έγραφε **«Βήμα πρόσδεσης (mm)» / «Snap step (mm)»** — hardcoded μονάδα σε label που πλέον ψεύδεται. Αφαιρέθηκε το `(mm)` σε el **και** en· η μονάδα φαίνεται δυναμικά στο `unitSuffix`.
 
-**Φάση 2β — G7 (ribbon numeric comboboxes).** ⏳ **PENDING — δική της συνεδρία** (βλ. §7.1 για το γιατί χωρίστηκε και τον δρόμο που επιλέχθηκε).
+**Φάση 2β — G7 (ribbon numeric comboboxes).** ✅ **ΟΛΟΚΛΗΡΩΘΗΚΕ 2026-07-18.** Δρόμος Β, με μία
+ουσιώδη αναθεώρηση του σχεδίου που προέκυψε από το audit (§7.2).
+
+- **Το σύνορο μπήκε σε ΕΝΑ σημείο** — `RibbonCombobox.tsx`, πάνω από τη διακλάδωση editable/Select
+  ώστε να καλύπτει και τα `editable:false` αριθμητικά πεδία. Μετατρέπονται: preset ladder, τρέχουσα
+  τιμή, `min`/`max` όρια (δηλωμένα σε mm), και το commit πίσω σε mm.
+- **Κανένα από τα preset arrays δεν άλλαξε.** Τα mm έμειναν mm στα data αρχεία, όπως ορίζει ο δρόμος Β.
+- **Νέο SSoT μετατροπής:** `ui/ribbon/units/ribbon-display-unit.ts`. Το `toDisp`/`fromDisp` του
+  Line-Tool bridge **μετακόμισε εκεί** (re-export για σταθερότητα διαδρομής) — δεύτερη δήλωση θα ήταν
+  ακριβώς το sibling clone που κυνηγά το CHECK 3.28 (N.18).
+- **Ταξινόμηση αντί boolean flag:** κάθε αριθμητικό combobox δηλώνει `numericInput.quantityKind`
+  (`RibbonQuantityKind`). Μόνο το `'model-length'` μετατρέπεται· κάθε άλλη κατηγορία —
+  **και η απουσία δήλωσης** — περνά αυτούσια. Ο λόγος της ασυμμετρίας στο §7.2.
+- **Κάλυψη:** 188 δηλώσεις σε 39 αρχεία (112 `model-length`, 76 μη-διαστατικά).
+- **Κατάλογος tabs σε pure module:** ο inline κατάλογος του `app/ribbon-contextual-config.ts`
+  εξήχθη στο `ui/ribbon/data/contextual-tabs-registry.ts`, ώστε το anchor να διατρέχει κάθε
+  contextual tab χωρίς να φορτώνει React/5 zustand stores.
+- **Tests:** `ui/ribbon/units/__tests__/ribbon-display-unit.test.ts` (15) +
+  `ui/ribbon/data/__tests__/ribbon-quantity-kind-coverage.test.ts` (9, εκ των οποίων ο έλεγχος
+  πληρότητας). Regression: 66 suites / 726 tests πράσινα σε όλο το `ui/ribbon`.
+
+**Φάση 2γ — το UI γύρω από τον μηχανισμό.** ✅ **ΟΛΟΚΛΗΡΩΘΗΚΕ 2026-07-18.**
+
+1. **Οι 13 ετικέτες που έλεγαν ψέματα καθαρίστηκαν** (el **και** en) — ίδιο ακριβώς σφάλμα με το
+   `snapStepTitle` της Φάσης 2α, σε 13 σημεία (`stairEditor.waistThickness`, `floorFinishEditor.*`,
+   `mepUnderfloorEditor.*`, `wallCoveringEditor.height`, `thermalSpaceEditor.ceilingHeightMm` κ.ά.).
+   **Τρία «(mm)» έμειναν ανέγγιχτα γιατί λένε αλήθεια:** `connectorDiameter` (DN καταλόγου) +
+   `scaleBar.barHeight/labelHeight` (χιλιοστά **χαρτιού**).
+2. **Η μονάδα φαίνεται πλέον μέσα στο πεδίο** (Revit «900.0 mm»): `unitSuffixFor(kind, unit)` στο
+   `ribbon-display-unit.ts` → `RibbonCombobox` → νέο prop `unitSuffix` του `RibbonEditableCombobox`.
+   Το σύμβολο **δεν είναι i18n** — είναι φυσική σημειογραφία όπως το «°», SSoT `DISPLAY_UNIT_LABELS`
+   (N.11 αφορά μεταφράσιμο κείμενο). Εμφανίζεται **μόνο** σε `model-length` και **μόνο** όταν το πεδίο
+   διαβάζεται αριθμητικό — στη μεικτή επιλογή «—» θα σχολίαζε το τίποτα. Ίδιος κανόνας με το
+   `StatusBarEditableCombobox` («Ελεύθερο» κρύβει το suffix). Η μονάδα μπαίνει **και** στο accessible
+   name του input: το ορατό σύμβολο είναι `aria-hidden`, οπότε χωρίς αυτό ένας χρήστης screen reader
+   θα άκουγε σκέτο «Πλάτος 0.900» — η αφαίρεση του «(mm)» θα ήταν καθαρή απώλεια γι' αυτόν.
+3. **Το combobox ΣΥΝΔΡΟΜΕΙ πλέον στη μονάδα** (`useDisplayUnit`), δεν την διαβάζει μόνο. Η Φάση 2β
+   καλούσε `toDisp`, που ρωτά το `displayUnitState` την ώρα του render· **χωρίς συνδρομή ένα ανοιχτό
+   ribbon συνέχιζε να δείχνει χιλιοστά** μετά την αλλαγή μονάδας, ώσπου κάτι άλλο να προκαλέσει
+   re-render. Low-frequency store (κλικ στη status bar, όχι ανά frame) → εκτός της απαγόρευσης
+   ADR-040, και το combobox **είναι** leaf, όχι orchestrator.
+
+**Η θωράκιση διπλής μετατροπής άλλαξε στόχο — το handoff ήταν μπαγιάτικο.** Το σχέδιο έλεγε «τα 8
+Geometry keys έχουν `options: []` άρα δεν πήραν δήλωση». Το anchor βγήκε **κενό**: τα 8 πεδία **δεν
+είναι καθόλου ribbon commands** — μετακόμισαν στην **αριστερή παλέτα Ιδιοτήτων** (ADR-510 Φ2E #5,
+«geometry = Ctrl+1, ποτέ ribbon»). Ένα anchor που φιλτράρει άδειο σύνολο περνά για πάντα χωρίς να
+ελέγχει τίποτα (ADR-587 §6.1: «anchor χωρίς gate είναι σχόλιο» — εδώ, anchor χωρίς **αντικείμενο**).
+Γράφτηκαν δύο **αληθινά** anchors στη θέση του:
+- **κανένα** Geometry key δεν είναι ribbon command (πιάνει την επιστροφή τους στο ribbon)·
+- **κανένα** Geometry πεδίο της παλέτας δεν δηλώνει `quantityKind` — ο τύπος το επιτρέπει συντακτικά,
+  αλλά η παλέτα **δεν** εφαρμόζει το σύνορο, οπότε η δήλωση θα ήταν ψέμα που δεν κάνει τίποτα: ο
+  επόμενος που θα καλωδιώσει τη μονάδα εκεί θα την εμπιστευόταν και θα διπλασίαζε τη μετατροπή.
+
+**Tests:** +5 στο `ribbon-display-unit.test.ts` (unitSuffixFor ανά kind), +5 νέο
+`RibbonEditableCombobox.unit-suffix.test.tsx` (ορατό σύμβολο, accessible name, κρύψιμο σε μεικτή/
+χωρίς-μονάδα, presets dropdown), +7 στο `ribbon-quantity-kind-coverage.test.ts` — εκ των οποίων ο
+**φύλακας των ετικετών**: καμία ετικέτα `model-length` πεδίου δεν επιτρέπεται να περιέχει μονάδα, σε
+el **και** en. Η διόρθωση των 13 ήταν διόρθωση· **αυτό** είναι η εγγύηση ότι δεν θα ξανασυμβεί σιωπηλά
+όταν κάποιος αντιγράψει παλιά ετικέτα σε νέο πεδίο. **67 suites / 753 tests πράσινα** στο `ui/ribbon`.
+
+**Ρίζα του κενού #1:** το checklist ρωτούσε «χρειάστηκαν **νέα** i18n keys;» (όχι) αντί για «ποια
+**υπάρχοντα** keys αχρηστεύει η αλλαγή;» (13). Η αλλαγή μονάδας δεν προσθέτει κείμενο — **ακυρώνει**
+υπάρχον. Κάθε μελλοντική φάση μονάδων πρέπει να κάνει το δεύτερο ερώτημα.
+
+**Φάση 2δ — η ίδια ασυνέπεια στις υπόλοιπες επιφάνειες.** ⏳ **ΕΚΚΡΕΜΕΙ.**
+Το σύνορο της Φάσης 2β/2γ καλύπτει **μόνο** το ribbon. Ανοιχτά, με φθίνουσα σοβαρότητα:
+- **Αριστερή παλέτα Ιδιοτήτων — Γεωμετρία γραμμής**: η τιμή έρχεται ήδη σε display unit (ο bridge
+  κάνει `toDisp`), αλλά ο `EntityPropertyRow.EditableRow` **δεν δείχνει καμία μονάδα** — σκέτο «0.900».
+  Ακριβώς το πρόβλημα #2 της 2γ, σε άλλη επιφάνεια.
+- **Advanced panels / dialogs / reports**: ~41 κλειδιά με «(mm)» (`stairAdvancedPanel`,
+  `beamAdvancedPanel`, `wallAdvancedPanel`, `columnDetail`, `thermalStudyReport`, `viewRange`,
+  `autoDimension`, `multiSelection.properties`). Αυτά **δεν** πέρασαν από το σύνορο — δείχνουν όντως
+  χιλιοστά, άρα οι ετικέτες τους λένε **αλήθεια**. Είναι κενό **εναρμόνισης**, όχι ψέματος: το ίδιο
+  μέγεθος εμφανίζεται σε μέτρα στο ribbon και σε χιλιοστά στο panel.
 
 **Φάση 3 — Καθαρισμός (G3 + G5).**
 Αφαίρεση ή διόρθωση του legacy Ctrl+L path στο `DynamicInputOverlay.tsx` (latent 100× bug· επιβεβαίωση ότι είναι όντως unreachable πριν τη διαγραφή). Διόρθωση stale σχολίου `StairToThreeConverter.ts:9`.
@@ -207,6 +284,54 @@ commands είναι διαστατικά δηλώνεται **ρητά** με fl
 
 Precedent για το μοτίβο: `ui/ribbon/hooks/useRibbonLineToolBridge.helpers.ts:155-162`
 (`toDisp`/`fromDisp`) — το μοναδικό ήδη unit-aware σημείο του ribbon.
+
+### 7.2 Τι ανέτρεψε το audit της Φάσης 2β — από boolean flag σε ταξινόμηση ποσότητας
+
+Το §7.1 προδιέγραφε «opt-in flag ανά command» και άφηνε ανοιχτό το ερώτημα *αν η αναλογία
+διαστατικών/μη-διαστατικών αντιστρέφει τη σχεδίαση*. Η πλήρης σάρωση των 42 αρχείων απάντησε και
+τα δύο — και άλλαξε τη μορφή της δήλωσης.
+
+**Εύρημα 1 — καμία πλευρά δεν είναι «λίγη».** 191 αριθμητικά comboboxes: **112 διαστατικά, 79
+μη-διαστατικά**. Το πλήθος δεν μπορεί να κρίνει την κατεύθυνση (η υπόθεση «αν είναι ~90, αντίστρεψε»
+προϋπέθετε φθηνή πλευρά· δεν υπάρχει). **Την κρίνει η ασυμμετρία της αστοχίας:**
+
+| | Ξεχνώ δήλωση σε **opt-in** | Ξεχνώ εξαίρεση σε **opt-out** |
+|---|---|---|
+| Αποτέλεσμα | το πεδίο μένει σε mm | «16 βαθμίδες» → «0.016» |
+| Ορατότητα | άμεσα ορατό δίπλα στα διπλανά πεδία | σιωπηλό |
+| Ζημιά | καμία — λάθος ένδειξη | **αλλοίωση δεδομένων** |
+
+Άρα opt-in, ανεξάρτητα από το ότι είναι οι 112 και όχι οι 79. Το ίδιο σκεπτικό είναι γραμμένο και
+στο doc-comment του `RibbonQuantityKind`, ώστε να μην «βελτιστοποιηθεί» αργότερα από κάποιον που
+μετράει μόνο γραμμές.
+
+**Εύρημα 2 — υπάρχει ΤΡΙΤΗ κατηγορία που το §7.1 δεν προέβλεπε: μήκη ΧΑΡΤΙΟΥ.** Το `dim.text.height`
+(2.5–10, ISO), το `dim.override.arrowSize` και το `text.font.height` **είναι** χιλιοστά — αλλά
+χιλιοστά στο τυπωμένο φύλλο, όχι του κτιρίου. Ύψος κειμένου 2.5 mm μένει 2.5 mm όποια κι αν είναι η
+μονάδα του έργου· έτσι ακριβώς συμπεριφέρονται τα annotation μεγέθη στο Revit. Ένα boolean
+`isDimensional` θα τα κατέτασσε λάθος **και προς τις δύο κατευθύνσεις** (μήκη μεν, μη μετατρέψιμα δε)
+και θα απαιτούσε δεύτερο flag. Στην ίδια κατηγορία προσετέθησαν και τα `scaleBar.barHeight` /
+`labelHeight` (πάχος και ύψος αριθμών της γραφικής κλίμακας).
+
+**Συνέπεια: `quantityKind` αντί boolean.** Κάθε πεδίο δηλώνει *τι ποσότητα είναι* — `model-length`,
+`paper-length`, `screen-px`, `angle`, `count`, `percent`, `ratio`, `nominal-diameter`, `power`,
+`pressure`, `temperature`, `volume`, `mass`, `dimensionless`. Αυτό είναι το μοντέλο του Revit
+(κάθε παράμετρος δηλώνει Length / Angle / Number / Slope / Piping Diameter, με δικό της κανόνα στα
+Project Units) και όχι δική μας επινόηση — ο πήχης «αν οι μεγάλοι δεν το προτείνουν, ακολουθούμε
+τους μεγάλους». Πρακτικό κέρδος: όταν αύριο ζητηθούν μοίρες→βαθμοί ή W→kW, η υποδομή υπάρχει και
+το μόνο που αλλάζει είναι ο μετατροπέας — όχι 191 δηλώσεις.
+
+**Οι ονομαστικές διάμετροι (DN)** ταξινομήθηκαν ως `nominal-diameter`, όχι μήκος: το DN80 **ονομάζει**
+προϊόν καταλόγου, δεν το μετράει — ίδιο ακριβώς σκεπτικό με το «κούφωμα 900mm = φυσικό μέγεθος
+προϊόντος» που κράτησε τα presets σε mm.
+
+**Ο έλεγχος πληρότητας.** Η opt-in σχεδίαση αγοράζει ασφάλεια με τίμημα «μπορεί να ξεχαστεί πεδίο»,
+και σε ~190 πεδία που μεγαλώνουν, το μάτι δεν αρκεί. Το `ribbon-quantity-kind-coverage.test.ts`
+διατρέχει κάθε contextual + default tab, εντοπίζει κάθε αριθμητικό combobox με το **ίδιο** κριτήριο
+που χρησιμοποιεί ο dispatcher (`isNumericOptionList` — όχι ανεξάρτητη επανυλοποίηση) και απαιτεί ρητή
+δήλωση. Παράλειψη = κόκκινο test, όχι παράπονο χρήστη (ADR-587 §6.1: «anchor χωρίς gate δεν είναι
+anchor — είναι σχόλιο»). **Δηλωμένο όριο:** πεδία με δυναμική λίστα από bridge (`options: []`) δεν
+έχουν στατική λίστα να επιθεωρηθεί· σήμερα κανένα τους δεν είναι διαστατικό.
 
 ### Ρίσκα / σημεία προσοχής
 - **Ακρίβεια σε μέτρα:** ΛΥΜΕΝΟ — `DEFAULT_DISPLAY_PRECISION['m'] = 3` (απόφαση #9). Έλεγχος ότι τα 3 δεκαδικά δεν σπάνε locale formatting (`FormatterRegistry`) ούτε τα parseable editable inputs (`formatDisplayValue`).
@@ -259,6 +384,8 @@ Precedent για το μοτίβο: `ui/ribbon/hooks/useRibbonLineToolBridge.hel
 
 ## 9. Changelog
 
+- **2026-07-18 (Opus 4.8) — ✅ ΦΑΣΗ 2γ ΥΛΟΠΟΙΗΘΗΚΕ — το UI συμβαδίζει πλέον με τον μηχανισμό.** **(1)** Οι **13 ετικέτες** που έγραφαν «(mm)»/«(χιλ.)» ενώ το πεδίο έδειχνε μέτρα καθαρίστηκαν σε **el ΚΑΙ en** (26 γραμμές, μηδέν άλλη αλλαγή στα locale JSONs — επιβεβαιωμένο με byte-identical round-trip πριν την εγγραφή)· τα **3 σωστά «(mm)»** (DN καταλόγου + 2 μεγέθη **χαρτιού**) έμειναν ανέγγιχτα. **(2)** Νέο `unitSuffixFor(kind, unit)` στο `ribbon-display-unit.ts` → `RibbonCombobox` → prop `unitSuffix` του `RibbonEditableCombobox`: το σύμβολο ζωγραφίζεται **μέσα** στο πεδίο (Revit «900.0 mm»), μόνο σε `model-length`, μόνο όταν το πεδίο διαβάζεται αριθμητικό (η μεικτή επιλογή «—» δεν παίρνει μονάδα — ίδιος κανόνας με το «Ελεύθερο» του `StatusBarEditableCombobox`), και **μπαίνει και στο accessible name** του input γιατί το ορατό σύμβολο είναι `aria-hidden` — αλλιώς η αφαίρεση του «(mm)» θα ήταν καθαρή απώλεια για χρήστη screen reader. Το σύμβολο **δεν πήγε σε i18n**: φυσική σημειογραφία όπως το «°», SSoT `DISPLAY_UNIT_LABELS`. **(3) Βρέθηκε live bug της Φάσης 2β:** το combobox **διάβαζε** τη μονάδα (`toDisp` → `displayUnitState`) χωρίς να **συνδρομεί** — ένα ανοιχτό ribbon συνέχιζε να δείχνει χιλιοστά μετά την αλλαγή μονάδας ώσπου κάτι άλλο να προκαλέσει re-render· προστέθηκε `useDisplayUnit()` (low-frequency store, leaf — εκτός απαγόρευσης ADR-040). **(4) Η θωράκιση διπλής μετατροπής άλλαξε στόχο: το handoff ήταν λάθος.** Έλεγε «τα 8 Geometry keys έχουν `options: []` άρα δεν πήραν δήλωση»· στην πραγματικότητα **δεν είναι καθόλου ribbon commands** — μετακόμισαν στην αριστερή παλέτα (ADR-510 Φ2E #5). Το anchor όπως σχεδιάστηκε φιλτράριζε **άδειο σύνολο** και θα περνούσε για πάντα χωρίς να ελέγχει τίποτα· το έπιασε το δίχτυ ασφαλείας `expect(length).toBeGreaterThanOrEqual(8)` → `Received: 0`. Αντικαταστάθηκε από **δύο anchors με αντικείμενο**: κανένα Geometry key δεν είναι ribbon command· κανένα Geometry πεδίο της **παλέτας** δεν δηλώνει `quantityKind` (ο τύπος το επιτρέπει, η παλέτα δεν εφαρμόζει το σύνορο → η δήλωση θα ήταν ψέμα που δεν κάνει τίποτα). **(5) Νέο εύρημα → Φάση 2δ:** ο `EntityPropertyRow.EditableRow` της παλέτας δείχνει τη γεωμετρία σε display unit **χωρίς καμία ένδειξη μονάδας** — το ίδιο πρόβλημα #2, σε άλλη επιφάνεια. **Tests: +17** (5 `unitSuffixFor` ανά kind· 5 νέο `RibbonEditableCombobox.unit-suffix.test.tsx`· 7 στο coverage anchor, εκ των οποίων ο **φύλακας ετικετών** el+en που κάνει την επανάληψη του σφάλματος κόκκινο test). **67 suites / 753 tests πράσινα** σε όλο το `ui/ribbon`. `jscpd:diff` καθαρό στα 3 αρχεία κώδικα. **ΟΧΙ tsc (N.17).** Δεν έγινε commit (N.-1).
+- **2026-07-18 (Opus 4.8) — ✅ ΦΑΣΗ 2β ΥΛΟΠΟΙΗΘΗΚΕ (G7) — δρόμος Β, με αναθεώρηση της μορφής της δήλωσης.** Το σύνορο μονάδας μπήκε σε **ΕΝΑ** σημείο (`RibbonCombobox.tsx`, πάνω από τη διακλάδωση editable/Select ώστε να πιάνει και τα `editable:false`): μετατρέπονται presets, τρέχουσα τιμή, `min`/`max` (δηλωμένα σε mm) και το commit επιστρέφει mm. **Κανένα preset array δεν άλλαξε** — ο πυρήνας παρέμεινε canonical-mm. Νέο SSoT `ui/ribbon/units/ribbon-display-unit.ts`· το `toDisp`/`fromDisp` του Line-Tool bridge **μετακόμισε** εκεί (re-export) αντί να δηλωθεί δεύτερη φορά (N.18). **Το audit ανέτρεψε δύο υποθέσεις του §7.1** (νέο §7.2): (α) η αναλογία είναι **112 διαστατικά / 79 μη**, δηλαδή **καμία φθηνή πλευρά** — άρα την κατεύθυνση την κρίνει η **ασυμμετρία της αστοχίας** (ξεχασμένο opt-in = μένει mm, ορατό, ακίνδυνο· ξεχασμένο opt-out = «16 βαθμίδες»→«0.016», σιωπηλή αλλοίωση), όχι το πλήθος· (β) βρέθηκε **τρίτη κατηγορία που δεν είχε προβλεφθεί — μήκη ΧΑΡΤΙΟΥ** (`dim.text.height` 2.5mm ISO, `arrowSize`, `text.font.height`, `scaleBar.barHeight/labelHeight`): είναι μήκη αλλά μένουν σταθερά, όπως τα annotation μεγέθη στο Revit. Ένα boolean `isDimensional` θα τα κατέτασσε λάθος **και προς τις δύο κατευθύνσεις**. Γι' αυτό το flag έγινε **ταξινόμηση `quantityKind`** 14 κατηγοριών (μοντέλο Revit «parameter type» → Project Units)· μόνο το `'model-length'` μετατρέπεται, **η απουσία δήλωσης δεν μετατρέπει**. Οι DN διάμετροι → `nominal-diameter` (ονομάζουν προϊόν καταλόγου, δεν το μετρούν — ίδιο σκεπτικό με το «κούφωμα 900mm»). **188 δηλώσεις σε 39 αρχεία** (112 `model-length`, 76 μη-διαστατικά), μέσω 6 παράλληλων agents με ρητή ταξινόμηση ανά command. **Έλεγχος πληρότητας** (`ribbon-quantity-kind-coverage.test.ts`): διατρέχει κάθε contextual + default tab με το **ίδιο** κριτήριο που χρησιμοποιεί ο dispatcher (`isNumericOptionList`, όχι επανυλοποίηση) και απαιτεί ρητή δήλωση — παράλειψη = κόκκινο test· δηλωμένο όριο τα bridge-driven `options: []`. Ο κατάλογος contextual tabs εξήχθη σε pure module (`contextual-tabs-registry.ts`) ώστε το anchor να τρέχει χωρίς React/stores. **66 suites / 726 tests πράσινα** σε όλο το `ui/ribbon` (+24 νέα). `jscpd:diff` καθαρό στα αρχεία υποδομής· στα data αρχεία τα ευρήματα αποδείχθηκαν **προϋπάρχοντα** (clones σε γραμμές 38-164, δικές μου αλλαγές από 84-256 και κάτω — `git diff -U0`), δηλαδή baseline-unaware θόρυβος, όχι νέα δίδυμα. Δεν έγινε commit (N.-1).
 - **2026-07-18 (Opus 4.8) — ✅ ΦΑΣΗ 2α ΥΛΟΠΟΙΗΘΗΚΕ (G1 + G2)· το G7 χωρίστηκε σε Φάση 2β.** **G1:** το bespoke `openingWidthMmField` αποδείχθηκε structural clone του κοινού `lengthRingField` με μόνη διαφορά τη μονάδα → **διαγράφηκε ολόκληρο**· το `OPENING_WIDTH_RING_CONFIG` καλεί πλέον τον κοινό builder (unit-ασυνέπεια + διπλότυπο λύθηκαν με μία διαγραφή). **G2:** το βήμα F9 μετατρέπεται **μόνο στο σύνορο UI** (`CadStatusBar.SnapToggleWithStep` → `toDisplay`/`fromDisplay`/`DISPLAY_UNIT_LABELS`)· τα `cad-toggle-state` + `grip-step-quantize.ts` **μένουν καθαρά mm** — κανένα quantization δεν έμαθε για display units. **i18n:** το `snapStepTitle` έγραφε hardcoded «(mm)» και πλέον ψευδόταν → αφαιρέθηκε σε el **και** en. **Ο υπάρχων `opening-width-ring-config.test.ts` κατοχύρωνε το ΑΝΤΙΘΕΤΟ** (mm-native, 2026-07-18) → ξαναγράφτηκε ώστε να κωδικοποιεί την απόφαση #2/#3 **μαζί με ρητή προειδοποίηση «δεν είναι bug, είναι απόφαση»**, ώστε να μην αναιρεθεί κατά λάθος· +1 test παρότητας με τον κοινό builder. **489/489 πράσινα** (dynamic-input 268, grips+statusbar 221). `jscpd:diff` καθαρό. **Το G7 ΔΕΝ υλοποιήθηκε:** το audit βρήκε **92 preset arrays σε 25 αρχεία** (όχι «τα comboboxes Πλάτος») + unit-blind prop contract + **παγίδα**: μέσα τους υπάρχουν counts/μοίρες που ένα τυφλό `toDisplay` θα κατέστρεφε («16 βαθμίδες» → «0.016»). Ο Giorgio επέλεξε **δρόμο Β** — ένα σύνορο μονάδας στο `RibbonCombobox` dispatcher με opt-in flag, presets μένουν mm (νέο §7.1). Δεν έγινε commit (N.-1).
 - **2026-07-18 (Opus 4.8) — ✅ ΦΑΣΗ 1 ΥΛΟΠΟΙΗΘΗΚΕ + η απόφαση #5 ΑΝΑΘΕΩΡΗΘΗΚΕ.** `config/units.ts`: `DEFAULT_DISPLAY_UNIT` `'cm'` → **`'m'`** (η μοναδική αλλαγή συμπεριφοράς). **Το shortcut κύκλου μονάδας ΑΠΟΡΡΙΦΘΗΚΕ** (νέο §6.1, εγκρίθηκε από τον Giorgio): κανένας από τους μεγάλους δεν εναλλάσσει μονάδα με πλήκτρο (Revit `UN`→dialog, AutoCAD `UNITS`→dialog, ArchiCAD→Preferences), και μετά την απόφαση #7 (input-unit = display-unit) η μονάδα διερμηνεύει **κάθε πληκτρολογούμενο αριθμό** — ένα κατά λάθος πάτημα θα έκανε το `3` να γίνει 3mm αντί 3m σιωπηλά. **SSoT audit πριν τον κώδικα (νέο §8.1):** το `DEFAULT_DISPLAY_PRECISION['m']` ήταν **ήδη 3** (καμία αλλαγή τιμής — μόνο σχόλιο + anchor)· ο μόνος καταναλωτής του default είναι το `display-unit-state.ts` (κανένα hardcoded `'cm'`)· βρέθηκε το κανονικό shortcut registry (`config/keyboard-shortcuts.ts`) και **4 υπάρχοντα αντίγραφα** cycle-helper — ένα 5ο θα ήταν sibling clone. **Μηδέν νέα i18n keys, μηδέν νέο store, μηδέν νέο σύστημα.** Tests: +6 anchors στο υπάρχον `config/__tests__/units-format.test.ts` (default=`m`, precision 3 σε length/area/coordinate, round-trip 895mm↔0.895m, BIM πλάτη 700/800/900/2500/3000/12345, «τυπωμένο 3 = 3 μέτρα», ανά-χιλιοστό σάρωση 890-910mm). **472/472 πράσινα** σε 35 suites (units, display-length-format, dimensions, move-readout, ribbon bridge, persist smoke). `jscpd:diff` καθαρό. Δεν έγινε commit (N.-1).
 - **2026-07-18 (Opus 4.8) — Q&A γύρος 2: ΟΛΑ ΤΑ ΕΡΩΤΗΜΑΤΑ ΚΛΕΙΣΑΝ.** `DEFAULT_DISPLAY_PRECISION['m'] = **3 δεκαδικά**` (ώστε το 0,895 να εκφράζει 895mm). **Καμία μηχανική migration** — ο Giorgio είναι ο μοναδικός χρήστης και η εφαρμογή δεν έχει βγει σε παραγωγή· η αλλαγή default είναι απλή αλλαγή σταθεράς. §7β = κανένα ανοιχτό ερώτημα· έτοιμο για Φάση 1.

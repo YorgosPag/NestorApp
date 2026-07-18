@@ -9,11 +9,28 @@
 
 import { CanvasNumericInputStore } from '../CanvasNumericInputStore';
 import type { Point2D } from '../../../rendering/types/Types';
+import type { Guide } from '../../guides/guide-types';
+
+function makeGuide(id: string, overrides: Partial<Guide> = {}): Guide {
+  return {
+    id,
+    axis: 'X',
+    offset: 100,
+    label: null,
+    style: null,
+    visible: true,
+    locked: false,
+    createdAt: '2026-07-18T00:00:00.000Z',
+    parentId: null,
+    groupId: null,
+    ...overrides,
+  };
+}
 
 function activate(
   overrides: Partial<{
     signResolver: () => 1 | -1;
-    refGuideId: string;
+    refGuide: Guide;
     anchor: Point2D;
     onConfirm: (distance: number, sign: 1 | -1, refGuideId: string) => void;
     onCancel: () => void;
@@ -31,7 +48,7 @@ function activate(
 
   CanvasNumericInputStore.activate(
     overrides.signResolver ?? signResolver,
-    overrides.refGuideId ?? 'guide_X_001',
+    overrides.refGuide ?? makeGuide('guide_X_001'),
     overrides.anchor ?? anchor,
     overrides.onConfirm ?? onConfirm,
     overrides.onCancel ?? onCancel,
@@ -57,6 +74,52 @@ describe('CanvasNumericInputStore', () => {
       callerAnchor.y = 999;
 
       expect(CanvasNumericInputStore.getAnchor()).toEqual({ x: 10, y: 20 });
+    });
+  });
+
+  describe('getRefGuide() — παγωμένο αντίγραφο του οδηγού αναφοράς', () => {
+    it('κλωνοποιεί τον οδηγό — μετέπειτα mutation του caller ΔΕΝ αλλάζει το getRefGuide()', () => {
+      const callerGuide = makeGuide('guide_X_007', { offset: 100 });
+      activate({ refGuide: callerGuide });
+
+      callerGuide.offset = 999;
+      callerGuide.visible = false;
+
+      expect(CanvasNumericInputStore.getRefGuide()?.offset).toBe(100);
+      expect(CanvasNumericInputStore.getRefGuide()?.visible).toBe(true);
+    });
+
+    it('κλωνοποιεί και τα άκρα ενός διαγώνιου (XZ) οδηγού', () => {
+      const start: Point2D = { x: 0, y: 0 };
+      const callerGuide = makeGuide('guide_XZ_001', {
+        axis: 'XZ', offset: 0, startPoint: start, endPoint: { x: 10, y: 10 },
+      });
+      activate({ refGuide: callerGuide });
+
+      start.x = 999;
+
+      expect(CanvasNumericInputStore.getRefGuide()?.startPoint).toEqual({ x: 0, y: 0 });
+    });
+
+    it('επιστρέφει ΤΗΝ ΙΔΙΑ αναφορά πριν/μετά από addChar (useSyncExternalStore contract)', () => {
+      activate();
+      const before = CanvasNumericInputStore.getRefGuide();
+      CanvasNumericInputStore.addChar('5');
+
+      expect(before).not.toBeNull();
+      expect(CanvasNumericInputStore.getRefGuide()).toBe(before);
+    });
+
+    it('null μετά από confirm() και μετά από cancel()', () => {
+      activate();
+      CanvasNumericInputStore.addChar('5');
+      CanvasNumericInputStore.confirm();
+      expect(CanvasNumericInputStore.getRefGuide()).toBeNull();
+
+      activate();
+      CanvasNumericInputStore.addChar('5');
+      CanvasNumericInputStore.cancel();
+      expect(CanvasNumericInputStore.getRefGuide()).toBeNull();
     });
   });
 
@@ -133,7 +196,7 @@ describe('CanvasNumericInputStore', () => {
 
   describe('onConfirm payload', () => {
     it('καλείται με (absoluteDistance, sign, refGuideId)', () => {
-      const { onConfirm, signResolver } = activate({ refGuideId: 'guide_X_042' });
+      const { onConfirm, signResolver } = activate({ refGuide: makeGuide('guide_X_042') });
       signResolver.mockReturnValue(-1);
 
       CanvasNumericInputStore.addChar('7');

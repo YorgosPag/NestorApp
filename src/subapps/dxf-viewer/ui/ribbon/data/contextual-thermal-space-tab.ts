@@ -132,6 +132,7 @@ export const CONTEXTUAL_THERMAL_SPACE_TAB: RibbonTab = {
                 commandKey: THERMAL_SPACE_RIBBON_KEYS.params.setpointTempC,
                 comboboxWidthPx: 100,
                 options: SETPOINT_C_OPTIONS,
+                numericInput: { quantityKind: 'temperature' },
               },
             },
             {
@@ -143,6 +144,7 @@ export const CONTEXTUAL_THERMAL_SPACE_TAB: RibbonTab = {
                 commandKey: THERMAL_SPACE_RIBBON_KEYS.params.airChangesPerHour,
                 comboboxWidthPx: 100,
                 options: ACH_OPTIONS,
+                numericInput: { quantityKind: 'dimensionless' },
               },
             },
             {
@@ -220,6 +222,7 @@ export const CONTEXTUAL_THERMAL_SPACE_TAB: RibbonTab = {
                 commandKey: THERMAL_SPACE_RIBBON_KEYS.params.ceilingHeightMm,
                 comboboxWidthPx: 100,
                 options: CEILING_HEIGHT_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
           ],

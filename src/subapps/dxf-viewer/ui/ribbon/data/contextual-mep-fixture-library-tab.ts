@@ -84,6 +84,7 @@ export const CONTEXTUAL_MEP_FIXTURE_LIBRARY_TAB: RibbonTab = {
                 commandKey: MEP_FIXTURE_LIBRARY_KEYS.params.rotation,
                 comboboxWidthPx: 80,
                 options: ROTATION_DEG_OPTIONS,
+                numericInput: { quantityKind: 'angle' },
               },
             },
             {
@@ -95,6 +96,7 @@ export const CONTEXTUAL_MEP_FIXTURE_LIBRARY_TAB: RibbonTab = {
                 commandKey: MEP_FIXTURE_LIBRARY_KEYS.params.scale,
                 comboboxWidthPx: 80,
                 options: SCALE_OPTIONS,
+                numericInput: { quantityKind: 'ratio' },
               },
             },
           ],

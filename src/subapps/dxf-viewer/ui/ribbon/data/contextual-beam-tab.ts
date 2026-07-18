@@ -36,6 +36,7 @@ import {
   ISHAPE_CATALOG,
   formatIShapePresetLabel,
 } from '../../../bim/columns/section-catalog';
+import { literalNumberOptions } from './ribbon-numeric-options';
 
 export const BEAM_CONTEXTUAL_TRIGGER = 'beam-selected';
 
@@ -53,21 +54,9 @@ const BEAM_SUPPORT_TYPE_OPTIONS = [
   { value: 'cantilever', labelKey: 'ribbon.commands.beamEditor.supportType.cantilever', isLiteralLabel: false },
 ] as const;
 
-const WIDTH_MM_OPTIONS = [
-  { value: '150', labelKey: '150', isLiteralLabel: true },
-  { value: '200', labelKey: '200', isLiteralLabel: true },
-  { value: '250', labelKey: '250', isLiteralLabel: true },
-  { value: '300', labelKey: '300', isLiteralLabel: true },
-  { value: '400', labelKey: '400', isLiteralLabel: true },
-] as const;
+const WIDTH_MM_OPTIONS = literalNumberOptions([150, 200, 250, 300, 400]);
 
-const DEPTH_MM_OPTIONS = [
-  { value: '300', labelKey: '300', isLiteralLabel: true },
-  { value: '400', labelKey: '400', isLiteralLabel: true },
-  { value: '500', labelKey: '500', isLiteralLabel: true },
-  { value: '600', labelKey: '600', isLiteralLabel: true },
-  { value: '800', labelKey: '800', isLiteralLabel: true },
-] as const;
+const DEPTH_MM_OPTIONS = literalNumberOptions([300, 400, 500, 600, 800]);
 
 // ADR-363 Phase 5.5c — material picker (ENABLED). 3 options matching
 // `BeamMaterialKey` union από `beam-hatch-patterns.ts` (rc/steel/glulam).
@@ -95,23 +84,9 @@ const BEAM_SECTION_KIND_OPTIONS = [
 
 // ADR-363 Φ2 — I-shape flange/web thickness presets (IPE/HEA typical range,
 // ίδιες τιμές με την κολώνα). Manual fine-tune· catalog τις γράφει αυτόματα.
-const I_FLANGE_THICKNESS_OPTIONS = [
-  { value: '8',  labelKey: '8',  isLiteralLabel: true },
-  { value: '10', labelKey: '10', isLiteralLabel: true },
-  { value: '12', labelKey: '12', isLiteralLabel: true },
-  { value: '15', labelKey: '15', isLiteralLabel: true },
-  { value: '20', labelKey: '20', isLiteralLabel: true },
-  { value: '30', labelKey: '30', isLiteralLabel: true },
-] as const;
+const I_FLANGE_THICKNESS_OPTIONS = literalNumberOptions([8, 10, 12, 15, 20, 30]);
 
-const I_WEB_THICKNESS_OPTIONS = [
-  { value: '6',  labelKey: '6',  isLiteralLabel: true },
-  { value: '8',  labelKey: '8',  isLiteralLabel: true },
-  { value: '10', labelKey: '10', isLiteralLabel: true },
-  { value: '12', labelKey: '12', isLiteralLabel: true },
-  { value: '15', labelKey: '15', isLiteralLabel: true },
-  { value: '20', labelKey: '20', isLiteralLabel: true },
-] as const;
+const I_WEB_THICKNESS_OPTIONS = literalNumberOptions([6, 8, 10, 12, 15, 20]);
 
 // ADR-363 Φ2 — custom sentinel (Revit-style: «user deviated from standard»).
 // Translatable label (έχει κείμενο). FULL SSOT: τα options παράγονται από το
@@ -129,14 +104,7 @@ const ISHAPE_CATALOG_OPTIONS: readonly RibbonComboboxOption[] = [
   ...ISHAPE_CATALOG.map((p) => ({ value: p.id, labelKey: formatIShapePresetLabel(p), isLiteralLabel: true })),
 ];
 
-const ELEVATION_MM_OPTIONS = [
-  { value: '2400', labelKey: '2400', isLiteralLabel: true },
-  { value: '2700', labelKey: '2700', isLiteralLabel: true },
-  { value: '3000', labelKey: '3000', isLiteralLabel: true },
-  { value: '3300', labelKey: '3300', isLiteralLabel: true },
-  { value: '3600', labelKey: '3600', isLiteralLabel: true },
-  { value: '4000', labelKey: '4000', isLiteralLabel: true },
-] as const;
+const ELEVATION_MM_OPTIONS = literalNumberOptions([2400, 2700, 3000, 3300, 3600, 4000]);
 
 // ─── Tab definition ──────────────────────────────────────────────────────────
 
@@ -210,6 +178,7 @@ export const CONTEXTUAL_BEAM_TAB: RibbonTab = {
                 commandKey: BEAM_RIBBON_KEYS.params.width,
                 comboboxWidthPx: 80,
                 options: WIDTH_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -221,6 +190,7 @@ export const CONTEXTUAL_BEAM_TAB: RibbonTab = {
                 commandKey: BEAM_RIBBON_KEYS.params.depth,
                 comboboxWidthPx: 80,
                 options: DEPTH_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -232,6 +202,7 @@ export const CONTEXTUAL_BEAM_TAB: RibbonTab = {
                 commandKey: BEAM_RIBBON_KEYS.params.topElevation,
                 comboboxWidthPx: 80,
                 options: ELEVATION_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -248,6 +219,7 @@ export const CONTEXTUAL_BEAM_TAB: RibbonTab = {
                 commandKey: BEAM_RIBBON_KEYS.params.topElevationEnd,
                 comboboxWidthPx: 80,
                 options: ELEVATION_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
           ],
@@ -285,6 +257,7 @@ export const CONTEXTUAL_BEAM_TAB: RibbonTab = {
                 commandKey: BEAM_RIBBON_KEYS.params.flangeThickness,
                 comboboxWidthPx: 80,
                 options: I_FLANGE_THICKNESS_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -296,6 +269,7 @@ export const CONTEXTUAL_BEAM_TAB: RibbonTab = {
                 commandKey: BEAM_RIBBON_KEYS.params.webThickness,
                 comboboxWidthPx: 80,
                 options: I_WEB_THICKNESS_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
           ],
@@ -402,6 +376,7 @@ export const CONTEXTUAL_BEAM_TAB: RibbonTab = {
                 commandKey: BEAM_FINISH_KEYS.thickness,
                 comboboxWidthPx: 110,
                 options: FINISH_THICKNESS_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
           ],

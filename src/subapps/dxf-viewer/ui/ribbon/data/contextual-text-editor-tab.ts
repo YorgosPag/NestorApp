@@ -22,17 +22,11 @@
 
 import type { RibbonTab } from '../types/ribbon-types';
 import { TEXT_RIBBON_KEYS } from '../hooks/bridge/command-keys';
+import { literalNumberOptions } from './ribbon-numeric-options';
 
 export const TEXT_EDITOR_CONTEXTUAL_TRIGGER = 'text-selected';
 
-const WIDTH_FACTOR_OPTIONS = [
-  { value: '0.50', labelKey: '0.50', isLiteralLabel: true },
-  { value: '0.75', labelKey: '0.75', isLiteralLabel: true },
-  { value: '1.00', labelKey: '1.00', isLiteralLabel: true },
-  { value: '1.25', labelKey: '1.25', isLiteralLabel: true },
-  { value: '1.50', labelKey: '1.50', isLiteralLabel: true },
-  { value: '2.00', labelKey: '2.00', isLiteralLabel: true },
-] as const;
+const WIDTH_FACTOR_OPTIONS = literalNumberOptions(['0.50', 0.75, '1.00', 1.25, '1.50', '2.00']);
 
 const OBLIQUE_ANGLE_OPTIONS = [
   { value: '-30', labelKey: '-30°', isLiteralLabel: true },
@@ -42,12 +36,7 @@ const OBLIQUE_ANGLE_OPTIONS = [
   { value: '30', labelKey: '30°', isLiteralLabel: true },
 ] as const;
 
-const TRACKING_OPTIONS = [
-  { value: '0.80', labelKey: '0.80', isLiteralLabel: true },
-  { value: '1.00', labelKey: '1.00', isLiteralLabel: true },
-  { value: '1.20', labelKey: '1.20', isLiteralLabel: true },
-  { value: '1.50', labelKey: '1.50', isLiteralLabel: true },
-] as const;
+const TRACKING_OPTIONS = literalNumberOptions(['0.80', '1.00', '1.20', '1.50']);
 
 const ROTATION_OPTIONS = [
   { value: '0', labelKey: '0°', isLiteralLabel: true },
@@ -136,6 +125,7 @@ export const CONTEXTUAL_TEXT_EDITOR_TAB: RibbonTab = {
                 commandKey: TEXT_RIBBON_KEYS.font.height,
                 comboboxWidthPx: 80,
                 options: FONT_HEIGHT_OPTIONS,
+                numericInput: { quantityKind: 'paper-length' },
               },
             },
           ],
@@ -221,6 +211,7 @@ export const CONTEXTUAL_TEXT_EDITOR_TAB: RibbonTab = {
                 commandKey: TEXT_RIBBON_KEYS.font.widthFactor,
                 comboboxWidthPx: 80,
                 options: WIDTH_FACTOR_OPTIONS,
+                numericInput: { quantityKind: 'ratio' },
               },
             },
             {
@@ -232,6 +223,7 @@ export const CONTEXTUAL_TEXT_EDITOR_TAB: RibbonTab = {
                 commandKey: TEXT_RIBBON_KEYS.font.obliqueAngle,
                 comboboxWidthPx: 80,
                 options: OBLIQUE_ANGLE_OPTIONS,
+                numericInput: { quantityKind: 'angle' },
               },
             },
             {
@@ -243,6 +235,7 @@ export const CONTEXTUAL_TEXT_EDITOR_TAB: RibbonTab = {
                 commandKey: TEXT_RIBBON_KEYS.font.tracking,
                 comboboxWidthPx: 80,
                 options: TRACKING_OPTIONS,
+                numericInput: { quantityKind: 'ratio' },
               },
             },
           ],
@@ -324,7 +317,7 @@ export const CONTEXTUAL_TEXT_EDITOR_TAB: RibbonTab = {
                 options: ROTATION_OPTIONS,
                 // Rotation is a free degree value: allow negatives + decimals when typing
                 // (presets are the common 0/45/90… snaps; the live rotate-grip writes any°).
-                numericInput: { allowNegative: true, allowDecimal: true },
+                numericInput: { quantityKind: 'angle', allowNegative: true, allowDecimal: true },
               },
             },
           ],

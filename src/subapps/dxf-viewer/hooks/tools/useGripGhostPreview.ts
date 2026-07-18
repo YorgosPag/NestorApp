@@ -115,6 +115,7 @@ import {
   paintGripMoveClearanceDims,
   drawHatchGradientHandleMarker,
   paintWallJoinCornerArc,
+  paintGripArmedDistanceHud,
 } from './grip-ghost-preview-overlay-helpers';
 import { gripKindOf } from '../grip-kinds';
 // ADR-641 — BEDIT-aware O(1) cached entity getter (member in VIEW space while inside a Block Editor).
@@ -261,6 +262,14 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
       const fromW = dp.rotatePivot ?? dp.anchorPos;
       const toW = translatePoint(dp.anchorPos, dp.delta);
       drawDashedSegment(ctx, fromW, toW, t, vp);
+    }
+
+    // ADR-508 §length-angle-hud-global — ΛΕΥΚΗ ένδειξη μήκους + γωνίας πάνω στο λάστιχο, ΙΔΙΟ HUD με
+    // τη σχεδίαση γραμμής (Giorgio 2026-07-18). Εδώ, μαζί με τα λάστιχα και ΠΡΙΝ το early-return του
+    // `drawGroupGhost`, ώστε να τη δείχνει και η μετακίνηση GROUP/BLOCK. Gates/no-op μέσα στον helper.
+    {
+      const hudScene = levelManager.currentLevelId ? levelManager.getLevelScene(levelManager.currentLevelId) : null;
+      paintGripArmedDistanceHud(ctx, dp, resolveSceneUnits(hudScene), t, vp);
     }
 
     // ADR-408 Φ7 P2 — snapshot→transform map is now the shared SSoT helper, so the

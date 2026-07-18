@@ -236,7 +236,7 @@ export const CONTEXTUAL_TITLE_BLOCK_TAB: RibbonTab = {
                 commandKey: TITLE_BLOCK_RIBBON_KEYS.params.rotation,
                 comboboxWidthPx: 80,
                 options: ROTATION_DEG_OPTIONS,
-                numericInput: { editable: true, allowNegative: true, allowDecimal: true },
+                numericInput: { quantityKind: 'angle', editable: true, allowNegative: true, allowDecimal: true },
               },
             },
             {
@@ -248,7 +248,7 @@ export const CONTEXTUAL_TITLE_BLOCK_TAB: RibbonTab = {
                 commandKey: TITLE_BLOCK_RIBBON_KEYS.params.scale,
                 comboboxWidthPx: 80,
                 options: SCALE_OPTIONS,
-                numericInput: { editable: true, allowNegative: false, allowDecimal: true, min: 0 },
+                numericInput: { quantityKind: 'ratio', editable: true, allowNegative: false, allowDecimal: true, min: 0 },
               },
             },
           ],

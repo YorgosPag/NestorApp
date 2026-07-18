@@ -13,7 +13,10 @@ import type { PromptDialogOptions } from '../../systems/prompt-dialog';
 import type { GuideWorkflowState } from './guide-workflow-types';
 import { CanvasNumericInputStore } from '../../systems/canvas-numeric-input/CanvasNumericInputStore';
 import { getRealtimeWorldCursor } from '../../systems/cursor/ImmediatePositionStore';
-import { resolveParallelSide } from '../../systems/guides/guide-parallel-side';
+import {
+  resolveParallelCursor,
+  readParallelCursorToggles,
+} from '../../systems/guides/guide-parallel-cursor';
 
 export interface UseGuideWorkflowHandlersParams {
   guideState: UseGuideStateReturn;
@@ -34,20 +37,30 @@ export function useGuideWorkflowHandlers(params: UseGuideWorkflowHandlersParams)
    * ο resolver διαβάζει event-time το `getRealtimeWorldCursor()` (ADR-040 κανόνας 2).
    * Έτσι ο χρήστης δείχνει την πλευρά κουνώντας το ποντίκι, όπως σε AutoCAD/Revit.
    *
+   * ΚΡΙΣΙΜΟ: ο resolver ΔΕΝ καλεί πλέον απευθείας το `resolveParallelSide` με τον
+   * ΩΜΟ κέρσορα — περνά από το ίδιο `resolveParallelCursor` με τη ζωγραφική. Ο
+   * ωμός κέρσορας αγνοούσε ΟΡΘΟ και βήμα, οπότε σε οριακές θέσεις (π.χ. ωμό −0.4
+   * που το βήμα κβαντίζει στο 0) το Enter τοποθετούσε τον οδηγό σε ΑΛΛΗ πλευρά
+   * από αυτήν που έδειχνε η διακεκομμένη. Ένα σημείο, τέσσερις αναγνώστες.
+   *
    * Το `anchor` (προβολή του κλικ πάνω στον οδηγό) περνά στον store ως σημείο
    * εκκίνησης της δυναμικής διακεκομμένης — ADR-189 §3.13.
    */
   const handleParallelRefSelected = useCallback((refGuideId: string, anchor: Point2D) => {
+    const findRef = () => guideState.guides.find(g => g.id === refGuideId);
+    const refGuideAtClick = findRef();
+    if (!refGuideAtClick) return;
+
     state.setParallelRefGuideId(refGuideId);
 
     CanvasNumericInputStore.activate(
       () => {
         const cursor = getRealtimeWorldCursor();
-        const refGuide = guideState.guides.find(g => g.id === refGuideId);
+        const refGuide = findRef();
         if (!cursor || !refGuide) return 1;
-        return resolveParallelSide(refGuide, cursor);
+        return resolveParallelCursor(refGuide, anchor, cursor, readParallelCursorToggles()).sign;
       },
-      refGuideId,
+      refGuideAtClick,
       anchor,
       (distance, s, id) => {
         guideState.addParallelGuide(id, distance * s);
@@ -56,6 +69,45 @@ export function useGuideWorkflowHandlers(params: UseGuideWorkflowHandlersParams)
       () => { state.setParallelRefGuideId(null); },
     );
   }, [guideState, state]);
+
+  /**
+   * ΔΕΥΤΕΡΟ ΚΛΙΚ = COMMIT (ADR-189 §3.13) — ισότιμη διαδρομή με το Enter.
+   *
+   * ΠΟΙΟΣ ΝΙΚΑ ΟΤΑΝ Ο ΧΡΗΣΤΗΣ ΕΧΕΙ ΗΔΗ ΠΛΗΚΤΡΟΛΟΓΗΣΕΙ: **η πληκτρολογημένη τιμή**.
+   * Μόλις ο buffer πάψει να είναι κενός, το φάντασμα-οδηγός κουμπώνει στην τιμή που
+   * γράφει ο χρήστης και σταματά να ακολουθεί τον κέρσορα — άρα αυτό ΒΛΕΠΕΙ στην
+   * οθόνη τη στιγμή του κλικ. Το να νικούσε ο κέρσορας θα τοποθετούσε οδηγό εκεί που
+   * ΔΕΝ έδειχνε το preview (WYSIWYG παραβίαση, το ίδιο bug preview≠commit).
+   * Ο κέρσορας κρατά πάντα την ΠΛΕΥΡΑ — η πληκτρολόγηση δίνει μόνο ΜΕΓΕΘΟΣ.
+   *
+   * Ο καθαρισμός γίνεται ΑΠΟΚΛΕΙΣΤΙΚΑ μέσω `CanvasNumericInputStore.cancel()`, που
+   * τρέχει τον `_onCancel` του `activate` → `setParallelRefGuideId(null)`. Μία
+   * διαδρομή μηδενισμού· κανένα διπλό set, κανένα ορφανό numeric flow.
+   */
+  const handleParallelDistanceCommitted = useCallback((refGuideId: string, worldPoint: Point2D) => {
+    const refGuide = guideState.guides.find(g => g.id === refGuideId);
+    const anchor = CanvasNumericInputStore.getAnchor();
+    if (!refGuide || !anchor) {
+      CanvasNumericInputStore.cancel();
+      return;
+    }
+
+    // ΟΧΙ το `worldPoint` του κλικ: το `mouse-handler-up` εφαρμόζει OSNAP πάνω του πριν
+    // φτάσει εδώ (`findSnapPoint` → `snappedPoint`). Η διακεκομμένη, το λευκό HUD και ο
+    // sign resolver του Enter διαβάζουν όλα τον ΩΜΟ `getRealtimeWorldCursor()`. Αν το κλικ
+    // κβάντιζε από OSNAP-σημείο, ο οδηγός θα έπεφτε αλλού από εκεί που έδειχνε η γραμμή —
+    // ίδιο bug preview≠commit, απλώς μετατοπισμένο. Ένας κέρσορας, τέσσερις αναγνώστες.
+    const rawCursor = getRealtimeWorldCursor() ?? worldPoint;
+    const resolution = resolveParallelCursor(refGuide, anchor, rawCursor, readParallelCursorToggles());
+    const typed = CanvasNumericInputStore.getPendingDistance();
+    const distance = typed ?? Math.abs(resolution.signedPerpDistance);
+
+    // Εκφυλισμένο: κλικ πάνω στον ίδιο τον οδηγό ⇒ μηδενική απόσταση ⇒ ο νέος
+    // οδηγός θα έπεφτε ακριβώς πάνω στην αναφορά. Ακύρωσε καθαρά, μη δημιουργείς.
+    if (distance >= 0.001) guideState.addParallelGuide(refGuideId, distance * resolution.sign);
+
+    CanvasNumericInputStore.cancel();
+  }, [guideState]);
 
   // ─── Rotate workflow ───
   const handleRotateRefSelected = useCallback((guideId: string) => {
@@ -345,7 +397,7 @@ export function useGuideWorkflowHandlers(params: UseGuideWorkflowHandlersParams)
   }, [guideState]);
 
   return {
-    handleParallelRefSelected,
+    handleParallelRefSelected, handleParallelDistanceCommitted,
     handleRotateRefSelected, handleRotatePivotSet, handleRotateAllPivotSet,
     handleRotateGroupToggle, handleRotateGroupPivotSet,
     handleEqualizeToggle, handleEqualizeApply,

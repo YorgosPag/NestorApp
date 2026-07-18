@@ -27,6 +27,7 @@ import {
   MEP_RADIATOR_RIBBON_KEYS_ACTIONS,
 } from '../hooks/bridge/mep-radiator-command-keys';
 import { SYSTEM_REGIME_PRESETS } from '../../../bim/thermal/sizing/radiator-sizing-config';
+import { literalNumberOptions } from './ribbon-numeric-options';
 
 // ADR-422 L2 — ΔΤ regime options derived from the config SSoT (id → «80/60» label).
 const SYSTEM_REGIME_OPTIONS = SYSTEM_REGIME_PRESETS.map((p) => ({
@@ -40,58 +41,22 @@ export const MEP_RADIATOR_CONTEXTUAL_TRIGGER = 'mep-radiator-selected';
 // ─── Combobox options (mm presets) ───────────────────────────────────────────
 
 // Body width (mm) — the run along the wall. 1000 = radiator default.
-const WIDTH_MM_OPTIONS = [
-  { value: '400',  labelKey: '400',  isLiteralLabel: true },
-  { value: '600',  labelKey: '600',  isLiteralLabel: true },
-  { value: '800',  labelKey: '800',  isLiteralLabel: true },
-  { value: '1000', labelKey: '1000', isLiteralLabel: true },
-  { value: '1200', labelKey: '1200', isLiteralLabel: true },
-  { value: '1600', labelKey: '1600', isLiteralLabel: true },
-] as const;
+const WIDTH_MM_OPTIONS = literalNumberOptions([400, 600, 800, 1000, 1200, 1600]);
 
 // Depth (mm) — radiator panel thickness.
-const LENGTH_MM_OPTIONS = [
-  { value: '60',  labelKey: '60',  isLiteralLabel: true },
-  { value: '80',  labelKey: '80',  isLiteralLabel: true },
-  { value: '100', labelKey: '100', isLiteralLabel: true },
-  { value: '120', labelKey: '120', isLiteralLabel: true },
-  { value: '160', labelKey: '160', isLiteralLabel: true },
-] as const;
+const LENGTH_MM_OPTIONS = literalNumberOptions([60, 80, 100, 120, 160]);
 
 // Body vertical height (mm).
-const BODY_HEIGHT_MM_OPTIONS = [
-  { value: '300', labelKey: '300', isLiteralLabel: true },
-  { value: '400', labelKey: '400', isLiteralLabel: true },
-  { value: '500', labelKey: '500', isLiteralLabel: true },
-  { value: '600', labelKey: '600', isLiteralLabel: true },
-  { value: '900', labelKey: '900', isLiteralLabel: true },
-] as const;
+const BODY_HEIGHT_MM_OPTIONS = literalNumberOptions([300, 400, 500, 600, 900]);
 
 // Floor-relative mounting elevation (mm) — vertical centre (wall-mounted).
-const MOUNTING_ELEVATION_MM_OPTIONS = [
-  { value: '300', labelKey: '300', isLiteralLabel: true },
-  { value: '450', labelKey: '450', isLiteralLabel: true },
-  { value: '600', labelKey: '600', isLiteralLabel: true },
-  { value: '900', labelKey: '900', isLiteralLabel: true },
-] as const;
+const MOUNTING_ELEVATION_MM_OPTIONS = literalNumberOptions([300, 450, 600, 900]);
 
 // Supply/return connector diameter (mm) — typical hydronic tails.
-const CONNECTOR_DIAMETER_MM_OPTIONS = [
-  { value: '12', labelKey: '12', isLiteralLabel: true },
-  { value: '15', labelKey: '15', isLiteralLabel: true },
-  { value: '18', labelKey: '18', isLiteralLabel: true },
-  { value: '22', labelKey: '22', isLiteralLabel: true },
-] as const;
+const CONNECTOR_DIAMETER_MM_OPTIONS = literalNumberOptions([12, 15, 18, 22]);
 
 // Nominal catalogue thermal output (W, at ΔT 50K) — typical panel-radiator range.
-const THERMAL_OUTPUT_W_OPTIONS = [
-  { value: '500',  labelKey: '500',  isLiteralLabel: true },
-  { value: '800',  labelKey: '800',  isLiteralLabel: true },
-  { value: '1000', labelKey: '1000', isLiteralLabel: true },
-  { value: '1500', labelKey: '1500', isLiteralLabel: true },
-  { value: '2000', labelKey: '2000', isLiteralLabel: true },
-  { value: '2500', labelKey: '2500', isLiteralLabel: true },
-] as const;
+const THERMAL_OUTPUT_W_OPTIONS = literalNumberOptions([500, 800, 1000, 1500, 2000, 2500]);
 
 // ─── Tab definition ──────────────────────────────────────────────────────────
 
@@ -117,6 +82,7 @@ export const CONTEXTUAL_MEP_RADIATOR_TAB: RibbonTab = {
                 commandKey: MEP_RADIATOR_RIBBON_KEYS.params.width,
                 comboboxWidthPx: 90,
                 options: WIDTH_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -128,6 +94,7 @@ export const CONTEXTUAL_MEP_RADIATOR_TAB: RibbonTab = {
                 commandKey: MEP_RADIATOR_RIBBON_KEYS.params.length,
                 comboboxWidthPx: 80,
                 options: LENGTH_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -139,6 +106,7 @@ export const CONTEXTUAL_MEP_RADIATOR_TAB: RibbonTab = {
                 commandKey: MEP_RADIATOR_RIBBON_KEYS.params.bodyHeight,
                 comboboxWidthPx: 80,
                 options: BODY_HEIGHT_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
             {
@@ -150,6 +118,7 @@ export const CONTEXTUAL_MEP_RADIATOR_TAB: RibbonTab = {
                 commandKey: MEP_RADIATOR_RIBBON_KEYS.params.mountingElevation,
                 comboboxWidthPx: 90,
                 options: MOUNTING_ELEVATION_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
               },
             },
           ],
@@ -172,6 +141,7 @@ export const CONTEXTUAL_MEP_RADIATOR_TAB: RibbonTab = {
                 commandKey: MEP_RADIATOR_RIBBON_KEYS.params.connectorDiameter,
                 comboboxWidthPx: 80,
                 options: CONNECTOR_DIAMETER_MM_OPTIONS,
+                numericInput: { quantityKind: 'nominal-diameter' },
               },
             },
             {
@@ -183,6 +153,7 @@ export const CONTEXTUAL_MEP_RADIATOR_TAB: RibbonTab = {
                 commandKey: MEP_RADIATOR_RIBBON_KEYS.params.thermalOutput,
                 comboboxWidthPx: 90,
                 options: THERMAL_OUTPUT_W_OPTIONS,
+                numericInput: { quantityKind: 'power' },
               },
             },
           ],
