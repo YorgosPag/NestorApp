@@ -917,6 +917,7 @@
       "lineLabel": "Line command ring",
       "perpendicularLabel": "Perpendicular line command ring",
       "endpointLabel": "Endpoint command ring",
+      "openingWidthLabel": "Opening width command ring",
       "rotationAngle": "Angle",
       "rotationLabel": "Rotation command ring",
       "rectWidth": "Width",
