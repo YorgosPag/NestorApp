@@ -100,12 +100,16 @@ describe('generateBlockLibraryPreview', () => {
     expect(ghost.rotation).toBe(45);
   });
 
-  it('degenerate block (χωρίς μετρήσιμη γεωμετρία) → ghost χωρίς footprintHud (no-op)', () => {
+  it('degenerate block (χωρίς μέλη) → footprint πέφτει στο σημείο εισαγωγής (pointBounds fallback)', () => {
     upsertSessionBlockDef({ name: 'EMPTY', localMembers: [], boundsMm: null });
     setSelectedBlockName('EMPTY');
-    const ghost = generateBlockLibraryPreview({ x: 0, y: 0 }) as { footprintHud?: unknown };
+    const ghost = generateBlockLibraryPreview({ x: 300, y: 400 }) as {
+      footprintHud?: { footprint: readonly { x: number; y: number }[] };
+    };
     expect(ghost).not.toBeNull();
-    expect(ghost.footprintHud).toBeUndefined();
+    // getEntityBounds('block') fallback: κενά members → pointBounds(position) → degenerate 4×ίδια κορυφή.
+    expect(ghost.footprintHud).toBeDefined();
+    expect(ghost.footprintHud!.footprint.every((p) => p.x === 300 && p.y === 400)).toBe(true);
   });
 
   describe('place+rotate (κοινό PlacementRotationStore με κολόνα/πέδιλο)', () => {

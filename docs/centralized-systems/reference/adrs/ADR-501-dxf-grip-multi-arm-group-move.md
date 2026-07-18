@@ -172,6 +172,18 @@ duplicate deselect/move logic, ADR-040-safe.
 
 ## Changelog
 
+- **2026-07-18** — Fix (Opus 4.8, Giorgio report): the click-vs-drag arm branch in
+  `grip-mouseup-handler` swallowed **click-toggle ACTION grips** — a plain click on an
+  opening's rotation/flip marker (`opening-rotation` flip-hand, `opening-facing`
+  flip-facing) or a manifold outlet ▲/▼ armed the grip (`applyGripArmClick`) and
+  returned BEFORE `commitDxfGripDragModeAware`, so the toggle never fired («the rotation
+  marker does nothing»). New SSoT predicate `isClickActionGripKind` (`grip-click-action.ts`)
+  now routes those grips to the commit adapter (which already dispatches them before its
+  own zero-delta guard) on a plain click; everything else still arms. Also: a WALL-HOSTED
+  opening's rotation grip is a Revit flip-HAND toggle (meaningful only for hinged kinds),
+  so `getOpeningGrips` now HIDES it for non-hinged kinds (windows / sliding / fixed) — no
+  dead-click marker. Self-hosted openings keep the real drag-rotate. jest: `grip-click-action`
+  (5) + updated `opening-grips` window case + `grip-commit-mode-aware-coverage` (20) green· jscpd clean.
 - **2026-06-19** — Slice 2 created (Opus 4.8). Marquee rubber-band over grips →
   `runGripMarqueeArm` (pure, reuses `selectItemsInMarquee` point-in-box + `GripArmedStore.armMany`)
   + `ArmableGripsStore` (event-time read SSoT, published low-freq by the grip hook).
