@@ -23,6 +23,8 @@
 
 import { EntityRendererComposite } from '../../rendering/core/EntityRendererComposite';
 import type { Entity, ViewTransform, Viewport } from '../../rendering/types/Types';
+import { isBlockEntity } from '../../types/entities';
+import { expandBlockInstance } from '../../systems/block/block-expander';
 
 export class BimPreviewRenderer {
   private composite: EntityRendererComposite | null = null;
