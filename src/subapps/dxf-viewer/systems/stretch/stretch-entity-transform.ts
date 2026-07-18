@@ -30,6 +30,9 @@ import { degToRad } from '../../rendering/entities/shared/geometry-angle-utils';
 import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 // SSoT convergence — canonical rigid-move geometry (handles every entity type incl. lwpolyline/BIM/group).
 import { calculateMovedGeometry } from '../../core/commands/entity-commands/move-entity-geometry';
+// ADR-620/513 — SSoT rectangle→4-vertex projection (corner1/corner2 OR x/y/w/h + rotation), the SAME
+// order the grips + main-canvas projection + the reshape ghost use → commit ≡ ghost by construction.
+import { rectangleEntityVertices } from '../../rendering/entities/shared/geometry-utils';
 
 export interface WorldVector {
   readonly x: number;
@@ -233,17 +236,27 @@ function stretchRectangle(
   }
   if (captured.size === 0) return { kind: 'noop' };
 
+  // ADR-620/513 — derive the 4 corners via the SSoT that handles BOTH representations
+  // (`corner1/corner2` from the drawing tool + rotation, OR legacy `x/y/w/h`) in the SAME
+  // vertex ORDER the grips + main-canvas projection use. Reading `entity.x/width` directly gave
+  // `undefined → NaN` for a freshly-drawn rectangle → the reshaped entity vanished on drop
+  // (Giorgio 2026-07-18). Degenerate rect (NaN) → noop (mirror `rectangleEntityVertices` intent).
+  const corners = rectangleEntityVertices(entity);
+  if (corners.some((c) => !Number.isFinite(c.x) || !Number.isFinite(c.y))) return { kind: 'noop' };
+
   if (captured.size === 4) {
+    // Rigid translate keeping the rectangle representation. corner1/corner2 (drawn/rotated) →
+    // translate both anchors; legacy x/y/w/h → translate the x/y origin. Either keeps it a rectangle.
+    if (entity.corner1 && entity.corner2) {
+      return { kind: 'update', updates: {
+        corner1: translatePoint(entity.corner1, d),
+        corner2: translatePoint(entity.corner2, d),
+      } as Partial<SceneEntity> };
+    }
     return { kind: 'update', updates: translatePoint({ x: entity.x, y: entity.y }, d) as Partial<SceneEntity> };
   }
 
   // Partial capture → coerce to polyline preserving id, layer, visibility, etc.
-  const corners: Point2D[] = [
-    { x: entity.x,                y: entity.y },
-    { x: entity.x + entity.width, y: entity.y },
-    { x: entity.x + entity.width, y: entity.y + entity.height },
-    { x: entity.x,                y: entity.y + entity.height },
-  ];
   const newVertices = corners.map((c, i) => (captured.has(i) ? translatePoint(c, d) : c));
 
   // ADR-358 Phase 9D-5a: id-only WRITE — legacy `layer` field dropped (schema flip deferred to 9D-5b).
