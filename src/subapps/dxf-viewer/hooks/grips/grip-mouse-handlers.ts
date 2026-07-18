@@ -62,7 +62,6 @@ import { resolveLineEndpointHotGrip } from './line-endpoint-hotgrip';
 // → same click-move-click hot-grip (Giorgio 2026-07-18 «όλες οι vertex λαβές»).
 import { resolveVertexReshapeHotGrip } from './vertex-reshape-hotgrip';
 import { resolveOpeningCornerHotGrip } from './opening-corner-hotgrip';
-import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
 import { CtrlKeyTracker } from '../../keyboard/CtrlKeyTracker';
 import { resolveRotateReferenceAnchor } from '../../bim/grips/rotate-reference-axis';
 import type { GripMouseDownCtx } from './grip-mouse-handlers.types';
@@ -248,19 +247,18 @@ export function runGripMouseDown(worldPos: Point2D, isShift: boolean, ctx: GripM
         GripSessionUndoStore.markSessionStart(getGlobalCommandHistory().size());
         return true;
       }
-      // ADR-513 §grip-parity-hotgrip — plain-LINE endpoint → click-move-click hot-grip when
-      // Dynamic Input is ON, working EXACTLY like the wall/line ring: the endpoint becomes the
-      // point being placed, follows the cursor button-free, the «Δαχτυλίδι Εντολών» wedges are
-      // clickable, and the terminal placement is a canvas click (or Enter → synthetic click) —
-      // driven by the SAME `placementMode='canvas-click'` ring the wall uses (`DynamicInputSubscriber`).
-      // Bespoke entry (the endpoint grip carries no kind → absent from HOT_GRIP_OP_REGISTRY):
-      // op 'endpoint-stretch' shares the 'corner' shape (anchor = the grabbed endpoint, terminal
-      // 'tracking' = 2-click). With Dynamic Input OFF the endpoint keeps its press-drag path below
-      // (zero regression). Runs AFTER the Ctrl-endpoint rotate-copy so Ctrl still wins; Alt (base-
-      // point move) took priority.
-      // ADR-513 §grip-parity-hotgrip — ΑΚΡΟ ΓΡΑΜΜΗΣ (gripIndex 0/1, no lineGripKind) → κοινός κορμός
-      // μέσω `beginEndpointStretchHotGrip`· το `isLineEndpointDragInfo` γίνεται true → mount του ring.
-      if (cadToggleState.isDynInputOn() && resolveLineEndpointHotGrip(gripEntity, nearGrip)) {
+      // ADR-513 §grip-parity-hotgrip — plain-LINE endpoint → click-move-click hot-grip: το ΑΚΡΟ γίνεται
+      // HOT (κόκκινο), ακολουθεί τον κέρσορα button-free, κλικ καμβά = commit εκεί (op 'endpoint-stretch',
+      // terminal 'tracking' = 2-click· anchor = το πιασμένο άκρο). **ΔΕΝ** gate-άρεται πλέον στη Δυναμική
+      // Εισαγωγή (Giorgio 2026-07-18 — big-player parity: AutoCAD/Revit/Figma → κλικ σε λαβή = HOT + άμεσο
+      // edit ΑΝΕΞΑΡΤΗΤΑ από τον διακόπτη· η ΔΥΝ ελέγχει ΜΟΝΟ αν εμφανίζεται το πληκτρολογημένο «Δαχτυλίδι
+      // Εντολών» Μήκος/Γωνία, όχι το κόκκινο/λάστιχο). Το click-move-click δουλεύει και ΧΩΡΙΣ ring: το
+      // grab-click mouseup παίρνει `'stay'` (`!movedSinceArm`) στο FSM → μένει hot· το 1ο moved click κάνει
+      // commit. Gate ΤΩΡΑ στο `!isShift`: το Shift+click πέφτει στο press-drag → `applyGripArmClick` =
+      // ΠΟΡΤΟΚΑΛΙ multi-grip arm (ADR-501, ΑΜΕΤΑΒΛΗΤΟ). Runs AFTER Ctrl-endpoint rotate-copy (Ctrl νικά)·
+      // Alt (base-point move) πήρε προτεραιότητα. Bespoke entry (το άκρο δεν φέρει kind → εκτός
+      // HOT_GRIP_OP_REGISTRY)· `isLineEndpointDragInfo` → mount του ring όταν ΔΥΝ ON.
+      if (!isShift && resolveLineEndpointHotGrip(gripEntity, nearGrip)) {
         beginEndpointStretchHotGrip(nearGrip, ctx, { gripKind: null, lineGripKind: null });
         return true;
       }
