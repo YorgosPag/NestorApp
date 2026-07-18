@@ -49,12 +49,80 @@ export interface RibbonComboboxOption {
 }
 
 /**
+ * ADR-677 Φάση 2β — WHAT QUANTITY a numeric combobox holds (Revit «parameter type»).
+ *
+ * The ribbon's numeric fields are NOT all lengths: the same `literalNumberOptions`
+ * ladder renders stair step COUNTS (16), wall tilt DEGREES (45), boiler efficiency
+ * PERCENT (80) and door width MILLIMETRES (900). Only the last may be re-expressed in
+ * the user's display unit — running the others through `toDisplay` would turn
+ * «16 βαθμίδες» into «0.016».
+ *
+ * So each numeric field DECLARES its quantity, exactly as every Revit parameter
+ * declares Length / Angle / Number / Slope / Piping Diameter and each gets its own
+ * Project-Units rule. The declaration is EXPLICIT — never inferred from a variable
+ * name (`WIDTH_MM_OPTIONS`) or a value range, both of which lie.
+ *
+ * **Only `'model-length'` is converted.** Every other kind — including an ABSENT
+ * declaration — renders and commits verbatim, exactly as before this phase. The
+ * asymmetry is deliberate: a forgotten declaration leaves a field in mm (visible,
+ * harmless, one-line fix), whereas a convert-by-default design would silently
+ * corrupt counts. Completeness is enforced by the anchor test rather than by hope.
+ *
+ * @see ../units/ribbon-display-unit.ts — the single conversion boundary
+ * @see ../data/__tests__/ribbon-quantity-kind-coverage.test.ts — the anchor
+ */
+export type RibbonQuantityKind =
+  /** Physical size of the BUILDING, stored in mm → re-expressed in the display unit. */
+  | 'model-length'
+  /**
+   * Millimetres ON THE PRINTED SHEET (ISO text height 2.5 mm, arrowhead 3.5 mm).
+   * A length, but a PAPER one: it must stay 2.5 mm whatever the project unit is —
+   * the same rule Revit applies to text/annotation sizes. NEVER converted.
+   */
+  | 'paper-length'
+  /** Screen pixels (tag font size, border width) — a graphic size, not a world size. */
+  | 'screen-px'
+  /** Degrees (rotation, tilt, chamfer angle, slope direction). */
+  | 'angle'
+  /** A whole tally: steps, storeys, rows, polygon sides, divisions. */
+  | 'count'
+  /** Percent (efficiency, slope %, jitter). */
+  | 'percent'
+  /** A pure factor: scale X/Y, width factor, linetype scale, tracking. */
+  | 'ratio'
+  /**
+   * NOMINAL catalogue size (DN15, DN80, DN110). The number names a product from a
+   * catalogue rather than measuring it — same reasoning that keeps a «900 mm» door
+   * preset written as 900 (ADR-677 §7.1). NEVER converted.
+   */
+  | 'nominal-diameter'
+  /** Thermal/electrical output (W). */
+  | 'power'
+  /** Pressure (bar). */
+  | 'pressure'
+  /** Temperature (°C). */
+  | 'temperature'
+  /** Capacity (litres). */
+  | 'volume'
+  /** Mass (kg). */
+  | 'mass'
+  /** Everything else with no unit at all: seeds, air-changes/h, dB(A), mg/kWh. */
+  | 'dimensionless';
+
+/**
  * ADR-345 §4.5 — Editable numeric combobox override (Revit type-to-enter).
  * RibbonCombobox auto-renders an EDITABLE field for any all-numeric option list
  * (presets in the dropdown + free typing). This config overrides the inferred
  * behaviour for a specific field. All fields optional → zero breaking change.
  */
 export interface RibbonNumericInputConfig {
+  /**
+   * ADR-677 Φάση 2β — what quantity this field holds. `'model-length'` (and ONLY
+   * that) makes presets, the current value and typed input flow through the display
+   * unit; `min`/`max` below stay declared in mm and are converted with them. Any
+   * other kind — or omitting this — keeps the field exactly as authored.
+   */
+  quantityKind?: RibbonQuantityKind;
   /** `true` forces editing even without a numeric preset list; `false` forces a plain Select. */
   editable?: boolean;
   /** Allow a leading minus. Default: inferred (true when any preset is negative). */

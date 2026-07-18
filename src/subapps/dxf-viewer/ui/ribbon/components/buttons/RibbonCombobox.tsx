@@ -42,6 +42,14 @@ import { HatchPatternPicker } from './HatchPatternPicker';
 import { RibbonDxfColorPickerWidget } from './RibbonDxfColorPickerWidget';
 import { RibbonComboboxThumbnail } from './RibbonComboboxThumbnail';
 import { resolveNumericConfig } from './ribbon-combobox-numeric';
+// ADR-677 Φάση 2β — the display-unit boundary (mm ↔ user unit) for numeric comboboxes.
+import {
+  optionsToDisplayUnit,
+  valueToDisplayUnit,
+  valueFromDisplayUnit,
+  boundsToDisplayUnit,
+  isSameCommittedValue,
+} from '../../units/ribbon-display-unit';
 
 const DEFAULT_WIDTH_PX = 140;
 const MIXED_PLACEHOLDER = '—';
@@ -104,16 +112,24 @@ const RibbonComboboxDefault: React.FC<RibbonComboboxProps> = ({ command }) => {
     el.style.setProperty('--ribbon-combobox-width', `${widthPx}px`);
   }, [widthPx]);
 
+  // ADR-677 Φάση 2β — THE display-unit boundary. Everything below this line speaks the
+  // user's unit; everything above it (presets in `data/`, the bridge, the store) stays
+  // canonical-mm. Applied here, ABOVE the editable/Select branch, so a `editable:false`
+  // numeric field (e.g. roof) is re-expressed just like a typed one. Non-`model-length`
+  // fields — counts, degrees, DN sizes, paper mm — pass through untouched.
+  const quantityKind = command.numericInput?.quantityKind;
   const dynamicOpts = dynamicState?.options;
-  const baseOptions: readonly RibbonComboboxOption[] =
+  const authoredOptions: readonly RibbonComboboxOption[] =
     (dynamicOpts && dynamicOpts.length > 0 ? dynamicOpts : null) ?? command.options ?? [];
+  const baseOptions = optionsToDisplayUnit(authoredOptions, quantityKind);
   // Treat an empty-string value like "no selection" (null): Radix Select forbids a
   // SelectItem with value="" (see select.tsx guard), so an empty value must never be
   // injected as an option below. A bridge that returns '' for an unset/unclassified
   // field (e.g. a pipe with no classification) therefore shows the placeholder, not
   // a crash. SSoT render guard — covers every contextual combobox.
   const rawValue = dynamicState?.value ?? null;
-  const value = rawValue === '' ? null : rawValue;
+  const storedValue = rawValue === '' ? null : rawValue;
+  const value = valueToDisplayUnit(storedValue, quantityKind);
   const isMixed = value === null;
   // Inject current value as first option if not already present — ensures
   // free-form values (e.g. height=500) are always visible, not replaced by '—'.
@@ -144,18 +160,32 @@ const RibbonComboboxDefault: React.FC<RibbonComboboxProps> = ({ command }) => {
         onComingSoon(ariaLabel);
         return;
       }
-      onComboboxChange(command.commandKey, next);
+      // Back across the boundary: the store only ever receives millimetres.
+      const committed = valueFromDisplayUnit(next, quantityKind);
+      // Rounding to the unit's precision makes «0.900» and «0.9» the same millimetre value
+      // but different strings, so the editable field's own `next !== external` guard would
+      // let a no-op through. Compare where it actually matters — in mm.
+      if (storedValue !== null && isSameCommittedValue(committed, storedValue)) return;
+      onComboboxChange(command.commandKey, committed);
     },
-    [onComboboxChange, onComingSoon, command.commandKey, command.comingSoon, ariaLabel],
+    [
+      onComboboxChange, onComingSoon, command.commandKey, command.comingSoon,
+      ariaLabel, quantityKind, storedValue,
+    ],
   );
 
   // ADR-345 §4.5 — Revit-grade editable numeric combobox. When the option list is
   // purely numeric (resolveNumericConfig ≠ null), render a type-to-enter input with
   // preset dropdown instead of the read-only Radix Select. Non-numeric enum combos
   // (kind/justification/anchor/scale/fonts) and Coming-Soon fields keep the Select.
-  const numericConfig = command.comingSoon
+  // ADR-677 Φάση 2β — resolved against the CONVERTED presets, so a metre ladder correctly
+  // infers `allowDecimal`. `min`/`max` are authored in mm and are moved into the same space
+  // as the draft, or a `max: 5000` mm guard would wave through 5000 m.
+  const resolvedNumeric = command.comingSoon
     ? null
     : resolveNumericConfig(command, baseOptions);
+  const numericConfig =
+    resolvedNumeric === null ? null : boundsToDisplayUnit(resolvedNumeric, quantityKind);
   if (numericConfig) {
     return (
       <RibbonEditableCombobox
