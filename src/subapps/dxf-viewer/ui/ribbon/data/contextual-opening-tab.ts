@@ -20,7 +20,7 @@
  *   Διαστάσεις     → width · height · sill                             (1 στήλη ×3)
  *   Κατώφλι        → hasThreshold · embed · embed-mm                    (1 στήλη ×3)
  *   Διατομή Κάσας  → manufacturer·profile·faceWidth·depth | save-mine   (2 στήλες 4+1)
- *   Ετικέτα        → font·border·leader-style·leader-visible | χρώματα  (2 στήλες 4+2)
+ *   Ετικέτα        → ορατότητα·font·border·leader-style | leader-visible·χρώματα (2 στήλες 4+3)
  *   IFC            → pset                                               (1 στήλη ×1)
  *   Ενέργειες      → close · delete                                     (1 στήλη ×2)
  *
@@ -495,14 +495,25 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
       ],
     },
     {
-      // «Ετικέτα»: στήλη1 ×4 (font·border·leader-style·leader-visible) + στήλη2 ×2
-      // (χρώμα pill·χρώμα οδηγού). Δύο στήλες γιατί οι εντολές είναι >4.
+      // «Ετικέτα»: στήλη1 ×4 (ορατότητα·font·border·leader-style) + στήλη2 ×3
+      // (leader-visible·χρώμα pill·χρώμα οδηγού). Η ορατότητα ετικετών προηγείται του
+      // στυλ (scene-wide layer toggle, ADR-363)· >4 εντολές → 2 στήλες.
       id: 'opening-tag-style',
       labelKey: 'ribbon.panels.openingTagStyle',
       rows: [
         {
           isInFlyout: false,
           buttons: [
+            {
+              type: 'widget',
+              size: 'small',
+              widgetId: 'opening-tag-visibility',
+              command: {
+                id: 'opening.tagVisibility',
+                labelKey: 'ribbon.commands.openingEditor.tagVisibility.label',
+                commandKey: 'opening.tagVisibility.toggle',
+              },
+            },
             {
               type: 'combobox',
               size: 'small',
@@ -536,6 +547,11 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
                 options: LEADER_STYLE_OPTIONS,
               },
             },
+          ],
+        },
+        {
+          isInFlyout: false,
+          buttons: [
             {
               type: 'toggle',
               size: 'small',
@@ -546,11 +562,6 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
                 commandKey: OPENING_TAG_STYLE_KEYS.leaderVisible,
               },
             },
-          ],
-        },
-        {
-          isInFlyout: false,
-          buttons: [
             {
               type: 'widget',
               size: 'small',
