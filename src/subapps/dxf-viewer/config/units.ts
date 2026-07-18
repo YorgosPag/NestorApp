@@ -25,12 +25,29 @@ export const DISPLAY_UNIT_LABELS: Record<DisplayUnit, string> = {
   ft: "'",
 };
 
-/** Default display unit per ADR-357 §5.5 (confirmed Giorgio 2026-05-16). */
-export const DEFAULT_DISPLAY_UNIT: DisplayUnit = 'cm';
+/**
+ * Default display unit — **metres** (ADR-677 Φάση 1, Giorgio 2026-07-18).
+ *
+ * Supersedes the earlier `'cm'` default of ADR-357 §5.5 (2026-05-16). This is the
+ * ONE project unit: it drives both the readouts AND the interpretation of every
+ * typed value (ring length/thickness/height, direct-distance entry) — Revit/AutoCAD
+ * style, a single setting rather than split display-vs-input units.
+ *
+ * Paired with `DEFAULT_DISPLAY_PRECISION['m'] = 3`, so `0.895 m` still expresses a
+ * whole millimetre — no precision is lost against the canonical-mm store (ADR-462).
+ */
+export const DEFAULT_DISPLAY_UNIT: DisplayUnit = 'm';
 
 export const DISPLAY_UNIT_STORAGE_KEY = 'dxf:displayUnit';
 
-/** Default decimal places per unit. mm gets 0 (no sub-mm in construction). */
+/**
+ * Default decimal places per unit. mm gets 0 (no sub-mm in construction).
+ *
+ * `m: 3` is load-bearing, not cosmetic (ADR-677 απόφαση #9): metres is the default
+ * unit, so 3 decimals is what keeps a typed/displayed value millimetre-exact against
+ * the canonical-mm store (`0.895 m` ≡ 895 mm). Lowering it to 2 would silently round
+ * every readout to the centimetre. Anchored by `units-format.test.ts`.
+ */
 export const DEFAULT_DISPLAY_PRECISION: Record<DisplayUnit, number> = {
   mm: 0,
   cm: 2,

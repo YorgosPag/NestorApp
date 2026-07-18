@@ -11,8 +11,61 @@ import {
   formatDisplayValue,
   formatAngleValue,
   DEFAULT_ANGLE_PRECISION,
+  DEFAULT_DISPLAY_UNIT,
+  DEFAULT_DISPLAY_PRECISION,
+  DEFAULT_AREA_PRECISION,
+  DEFAULT_COORDINATE_PRECISION,
   fromDisplay,
+  toDisplay,
 } from '../units';
+
+/**
+ * ADR-677 Φάση 1 — the default-unit contract.
+ *
+ * These are not style assertions: metres is the ONE project unit, so it governs how
+ * every typed number (ring length, direct-distance entry) is interpreted, not just how
+ * readouts look. The precision pins exist because 2 decimals on metres would silently
+ * round every value to the centimetre against a canonical-mm store (ADR-462).
+ */
+describe('ADR-677 — default display unit is metres, millimetre-exact', () => {
+  it('defaults to metres', () => {
+    expect(DEFAULT_DISPLAY_UNIT).toBe('m');
+  });
+
+  it('gives metres 3 decimals across length, area and coordinate readouts', () => {
+    expect(DEFAULT_DISPLAY_PRECISION.m).toBe(3);
+    expect(DEFAULT_AREA_PRECISION.m).toBe(3);
+    expect(DEFAULT_COORDINATE_PRECISION.m).toBe(3);
+  });
+
+  it('round-trips a whole millimetre through the default unit without loss', () => {
+    // 895 mm → 0.895 m → back to 895 mm. This is the case απόφαση #9 was chosen for.
+    expect(formatDisplayValue(895, DEFAULT_DISPLAY_UNIT)).toBe('0.895');
+    expect(fromDisplay(parseFloat(formatDisplayValue(895, DEFAULT_DISPLAY_UNIT)), 'm')).toBeCloseTo(895, 6);
+  });
+
+  it('round-trips typical BIM dimensions (mm → m → mm) to the millimetre', () => {
+    // Opening widths (ADR-677 απόφαση #3: presets become 0,70/0,80/0,90) + a wall run.
+    for (const mm of [700, 800, 900, 2500, 3000, 12_345]) {
+      const shown = formatDisplayValue(mm, 'm');
+      expect(fromDisplay(parseFloat(shown), 'm')).toBeCloseTo(mm, 6);
+    }
+  });
+
+  it('interprets a typed "3" as 3 metres, not 3 millimetres', () => {
+    // The direct-distance-entry contract (ADR-513): typed display value → mm.
+    expect(fromDisplay(3, DEFAULT_DISPLAY_UNIT)).toBe(3000);
+    expect(toDisplay(3000, DEFAULT_DISPLAY_UNIT).value).toBeCloseTo(3, 9);
+    expect(toDisplay(3000, DEFAULT_DISPLAY_UNIT).label).toBe('m');
+  });
+
+  it('survives a mm → m → mm round-trip for every 1 mm step in a door-width band', () => {
+    // Guards against a precision regression that would only bite on odd millimetres.
+    for (let mm = 890; mm <= 910; mm++) {
+      expect(fromDisplay(parseFloat(formatDisplayValue(mm, 'm')), 'm')).toBeCloseTo(mm, 6);
+    }
+  });
+});
 
 describe('formatDisplayValue — LUPREC-style per-unit rounding', () => {
   it('rounds cm to 2 decimals (no float noise)', () => {
