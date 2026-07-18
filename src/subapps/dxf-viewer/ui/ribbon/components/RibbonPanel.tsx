@@ -57,6 +57,7 @@ import { RibbonRoofTypePropertiesWidget } from './RibbonRoofTypePropertiesWidget
 import { RibbonOpeningFamilyTypeWidget } from './RibbonOpeningFamilyTypeWidget';
 import { RibbonOpeningTypePropertiesWidget } from './RibbonOpeningTypePropertiesWidget';
 import { RibbonOpeningHardwareWidget } from './RibbonOpeningHardwareWidget';
+import { OpeningFrameProfileLibraryWidget } from './opening-frame-profile-library-widget';
 import { RibbonMepCircuitPickerWidget } from './RibbonMepCircuitPickerWidget';
 import { RibbonMepFixtureCircuitWidget } from './RibbonMepFixtureCircuitWidget';
 import { RibbonMepCircuitNameWidget } from './RibbonMepCircuitNameWidget';
@@ -258,6 +259,9 @@ function renderButton(button: RibbonButton): React.ReactNode {
     }
     if (button.widgetId === 'opening-hardware') {
       return <RibbonOpeningHardwareWidget key="opening-hardware-widget" />;
+    }
+    if (button.widgetId === 'opening-frame-profile-library') {
+      return <OpeningFrameProfileLibraryWidget key="opening-frame-profile-library-widget" />;
     }
     if (button.widgetId === 'multi-selection-common-properties') {
       return <MultiSelectionCommonPropertiesPanel key="multi-selection-common-widget" />;

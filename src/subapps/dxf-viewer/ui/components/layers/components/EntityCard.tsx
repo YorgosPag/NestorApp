@@ -10,6 +10,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PANEL_LAYOUT } from '../../../../config/panel-tokens';
+import { handleInlineRenameKey } from '../../../utils/inline-rename-keyboard';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n';
@@ -114,18 +115,21 @@ export const EntityCard = ({
             type="text"
             value={editingEntityName}
             onChange={(e) => onSetEditingEntityName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                if (editingEntityName.trim()) {
-                  onEntityRename?.(entity.id, editingEntityName.trim());
-                }
-                onSetEditingEntity(null);
-                onSetEditingEntityName('');
-              } else if (e.key === 'Escape') {
-                onSetEditingEntity(null);
-                onSetEditingEntityName('');
-              }
-            }}
+            onKeyDown={(e) =>
+              handleInlineRenameKey(e, {
+                onConfirm: () => {
+                  if (editingEntityName.trim()) {
+                    onEntityRename?.(entity.id, editingEntityName.trim());
+                  }
+                  onSetEditingEntity(null);
+                  onSetEditingEntityName('');
+                },
+                onCancel: () => {
+                  onSetEditingEntity(null);
+                  onSetEditingEntityName('');
+                },
+              })
+            }
             onBlur={() => {
               if (editingEntityName.trim()) {
                 onEntityRename?.(entity.id, editingEntityName.trim());

@@ -35,6 +35,8 @@ import { DimensionsTab } from '../panels/dimensions/DimensionsTab';
 import { MaterialsLibraryPanel } from '../panels/materials/MaterialsLibraryPanel';
 // ADR-366 Group B — 3D scene controls mirrored in sidebar.
 import { Bim3DFloatingTab } from '../panels/bim3d/Bim3DFloatingTab';
+// ADR-676 Phase 3 PILOT — Opening frame-profile user library (κάσες).
+import { FrameProfilesLibraryPanel } from '../panels/frame-profiles/FrameProfilesLibraryPanel';
 // ADR-650 Milestone 1 — Topographic contours panel (load points → contours).
 
 interface UsePanelContentRendererParams {
@@ -130,6 +132,9 @@ export function usePanelContentRenderer({
 
       case 'bim3d':
         return <Bim3DFloatingTab />;
+
+      case 'frame-profiles':
+        return <FrameProfilesLibraryPanel projectId={projectId} />;
 
       default:
         return (

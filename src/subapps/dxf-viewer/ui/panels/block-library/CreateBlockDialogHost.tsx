@@ -19,15 +19,26 @@
  * @see ./CreateBlockDialog.tsx — η φόρμα (pure UI)
  */
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
+import i18next from 'i18next';
 import { useCreateBlockRequest, clearCreateBlockRequest } from '../../../systems/block/create-block-request-store';
 import { buildBlockDefFromSelection } from '../../../systems/block/build-block-def-from-selection';
+import {
+  armPickBasePoint,
+  disarmPickBasePoint,
+  clearPickBasePoint,
+  usePickBasePointState,
+} from '../../../systems/block/pick-base-point-store';
 import { CreateBlockFromSelectionCommand } from '../../../core/commands/entity-commands/CreateBlockFromSelectionCommand';
 import { useCommandHistory } from '../../../core/commands';
 import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import { SelectedEntitiesStore } from '../../../systems/selection';
+import { toolHintOverrideStore } from '../../../hooks/toolHintOverrideStore';
+import { useEscapeHandler } from '../../../systems/escape-bus/useEscapeHandler';
+import { ESC_PRIORITY } from '../../../systems/escape-bus/escape-priority';
 import { isBlockNameTaken } from '../../../bim/block-library/block-palette-entries';
 import type { Entity } from '../../../types/entities';
+import type { Point2D } from '../../../rendering/types/Types';
 import type { useLevels } from '../../../systems/levels';
 import { CreateBlockDialog, type CreateBlockFormValues } from './CreateBlockDialog';
 import { useBlockLibraryPalette } from './hooks/useBlockLibraryPalette';
@@ -59,6 +70,51 @@ const CreateBlockDialogInner: React.FC<CreateBlockDialogInnerProps> = ({
   const palette = useBlockLibraryPalette(projectId);
   const { execute: executeCommand } = useCommandHistory();
   const [saving, setSaving] = useState(false);
+  // ADR-652 M6 — «Specify base point»: user-picked base (world), ή null = αυτόματο AABB min-corner.
+  const [pickedBase, setPickedBase] = useState<Point2D | null>(null);
+  const pick = usePickBasePointState();
+
+  // Υιοθέτησε ένα captured σημείο (one-shot) → πίσω στον διάλογο με το base συμπληρωμένο.
+  useEffect(() => {
+    if (pick.point) {
+      setPickedBase(pick.point);
+      clearPickBasePoint();
+    }
+  }, [pick.point]);
+
+  // Όσο armed: banner hint στο status bar. Ο διάλογος κρύβεται μέσω `open={!armed}`
+  // ώστε το modal overlay να μη μπλοκάρει τα κλικ στον καμβά.
+  useEffect(() => {
+    if (!pick.armed) return;
+    toolHintOverrideStore.setOverride(i18next.t('tool-hints:createBlock.pickBasePoint'));
+    return () => {
+      toolHintOverrideStore.setOverride(null);
+    };
+  }, [pick.armed]);
+
+  // Esc → ακύρωση του pick-base-point μέσω του κεντρικού Escape bus (ADR-364), όχι ιδιωτικού
+  // window listener. Priority MODAL_DIALOG: όσο armed, η ακύρωση της pick session προηγείται
+  // κάθε tool/selection handler.
+  useEscapeHandler(
+    pick.armed
+      ? {
+          id: 'create-block-pick-base-point',
+          priority: ESC_PRIORITY.MODAL_DIALOG,
+          canHandle: () => true,
+          handle: () => {
+            disarmPickBasePoint();
+            return true;
+          },
+        }
+      : null,
+  );
+
+  // Safety net: αν ο host unmount-άρει (αίτημα καθαρίστηκε) ενώ armed, μη μείνει «ζωντανό» το pick
+  // mode στον καμβά — reset ολόκληρης της pick session.
+  useEffect(() => () => {
+    disarmPickBasePoint();
+    clearPickBasePoint();
+  }, []);
 
   const isNameTaken = useCallback(
     (name: string) => isBlockNameTaken(palette.entries, name, ''),
@@ -79,7 +135,8 @@ const CreateBlockDialogInner: React.FC<CreateBlockDialogInnerProps> = ({
       setSaving(true);
       try {
         // (1) build + validate ΜΙΑ φορά από την τρέχουσα επιλογή — degenerate γεωμετρία → κράτα ανοιχτό.
-        const built = buildBlockDefFromSelection(readSelectedEntities(), values.name);
+        //     `pickedBase` (αν υπάρχει) παρακάμπτει το AABB min-corner (ADR-652 M6).
+        const built = buildBlockDefFromSelection(readSelectedEntities(), values.name, pickedBase ?? undefined);
         if (!built) return;
         let def = built.def;
 
@@ -92,7 +149,7 @@ const CreateBlockDialogInner: React.FC<CreateBlockDialogInnerProps> = ({
               levelManager.setLevelScene,
               levelId,
             );
-            const cmd = new CreateBlockFromSelectionCommand([...pendingIds], values.name, sm);
+            const cmd = new CreateBlockFromSelectionCommand([...pendingIds], values.name, sm, pickedBase ?? undefined);
             executeCommand(cmd);
             def = cmd.getCreatedDef() ?? def;
             const createdId = cmd.getCreatedEntityId();
@@ -109,14 +166,17 @@ const CreateBlockDialogInner: React.FC<CreateBlockDialogInnerProps> = ({
         clearCreateBlockRequest();
       }
     },
-    [readSelectedEntities, levelManager, pendingIds, executeCommand, palette],
+    [readSelectedEntities, levelManager, pendingIds, executeCommand, palette, pickedBase],
   );
 
   return (
     <CreateBlockDialog
-      open
+      open={!pick.armed}
       saving={saving}
       isNameTaken={isNameTaken}
+      basePoint={pickedBase}
+      onPickBasePoint={armPickBasePoint}
+      onClearBasePoint={() => setPickedBase(null)}
       onSubmit={handleSubmit}
       onCancel={clearCreateBlockRequest}
     />

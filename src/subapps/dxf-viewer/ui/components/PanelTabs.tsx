@@ -2,7 +2,7 @@
 'use client';
 
 import React from 'react';
-import { BarChart, Box, Palette, Ruler, Settings, Sliders } from 'lucide-react';
+import { BarChart, Box, Frame, Palette, Ruler, Settings, Sliders } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Use centralized TabsOnlyTriggers (same as Contacts, ΓΕΜΗ tabs)
 import { TabsOnlyTriggers, type TabDefinition } from '@/components/ui/navigation/TabsComponents';
@@ -77,6 +77,13 @@ export function PanelTabs({ activePanel, onTabClick, disabledPanels, isCollapsed
       icon: Box,
       content: null,
       disabled: disabledPanels['bim3d'],
+    },
+    {
+      id: 'frame-profiles',
+      label: isCollapsed ? '' : t('panels.frameProfiles.title'),
+      icon: Frame,
+      content: null,
+      disabled: disabledPanels['frame-profiles'],
     },
     // ADR-662 Φ4 — το «Τοπογραφικό» tab αποσύρθηκε: όλες οι λειτουργίες ζουν πλέον στο μόνιμο
     // ribbon «Τοπογραφικό» (authoring + section-in-dialog reviews) + στο Properties palette

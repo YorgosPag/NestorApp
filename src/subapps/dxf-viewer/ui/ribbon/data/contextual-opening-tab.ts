@@ -448,6 +448,24 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
             },
           ],
         },
+        {
+          // ADR-676 Phase 3 PILOT — user-library save/duplicate affordance for
+          // the resolved frame profile above («Αποθήκευση ως δικό μου» /
+          // «Αντιγραφή & επεξεργασία»). Instance-owned like the rest of the panel.
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'widget',
+              size: 'small',
+              widgetId: 'opening-frame-profile-library',
+              command: {
+                id: 'opening.frameProfile.library',
+                labelKey: 'ribbon.commands.openingEditor.frameProfile.saveAsMine',
+                commandKey: 'opening.frameProfile.library',
+              },
+            },
+          ],
+        },
       ],
     },
     {

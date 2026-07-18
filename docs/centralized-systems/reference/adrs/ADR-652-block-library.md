@@ -474,6 +474,26 @@ user-import → `unknown` / `redistributable:false`. Promote σε shared/system 
 - **Anonymous blocks**: αποθηκεύονται μόνο named/πραγματικά (`shouldPreserveBlockName`), όχι `*X`/`*D`.
 
 ## Changelog
+- **2026-07-18** — **M6.1** — **interactive base-point pick** (AutoCAD «Specify base point») + jest για
+  dialog/host. Έκλεισε το ρητό **Deferred M6**. Ο χρήστης πατά **«Επιλογή σημείου βάσης»** στον διάλογο
+  «Δημιουργία Block» → ο (modal) διάλογος **κρύβεται προσωρινά** (`open={!armed}`, ώστε το overlay να μη
+  μπλοκάρει τον καμβά), banner hint στο status bar + **Esc** ακυρώνει → ΕΝΑ κλικ (ήδη snapped) γράφει το
+  world σημείο → ο διάλογος επιστρέφει με το base **συμπληρωμένο** και «Επαναφορά αυτόματου». **SSoT reuse
+  (grep, όχι μνήμη):** καθρέφτης του **geo-ref pick pattern** (ADR-650 M10) — zero-React `createExternalStore`
+  (`arm → capture one-shot → read`)· **ΔΕΝ** φτιάχτηκε νέο tool ούτε χρησιμοποιήθηκε το βαρύ
+  `createSingleClickPlacementTool` (είναι για τοποθέτηση *οντοτήτων*). Το bake παρέμεινε **αμετάβλητο**:
+  `translateEntityByAnchor(−base)` — άλλαξε **μόνο** ποιο σημείο πάει στο origin (`baseOverride` παρακάμπτει
+  το AABB min-corner). Undo/redo/reselect ακέραια (το base ταξιδεύει με το def μέσω `buildBlockEntityFromDef`).
+  Η φόρμα init-άρει πλέον **στο mount** (όχι στο `open` toggle) ώστε όνομα/κατηγορία να επιβιώνουν του
+  hide/show κύκλου. Αρχεία (NEW): `systems/block/pick-base-point-store.ts` (mirror geo-ref) ·
+  `hooks/canvas/canvas-click-pick-base-point.ts` (mirror canvas-click-geo-ref). Edits: `build-block-def-from-selection.ts`
+  (+`baseOverride?`) · `CreateBlockFromSelectionCommand.ts` (threads `baseOverride`) · `useCanvasClickHandler.ts`
+  (branch PRIORITY 0.4, gate `isPickBasePointArmed()` — δεν υπάρχει activeTool, ο διάλογος είναι το mode) ·
+  `CreateBlockDialog.tsx` (κουμπί + ένδειξη σημείου) · `CreateBlockDialogHost.tsx` (arm/hide/Esc/adopt +
+  περνά `baseOverride`) · i18n el+en (`blockLibrary.create.{pickBasePoint,basePointLabel,basePointAuto,basePointClear}`,
+  `tool-hints:createBlock.pickBasePoint`). **Jest (NEW, +9):** `CreateBlockDialog.test.tsx` (6 — canConfirm
+  gate + replaceWithInstance toggle + pick callbacks/ένδειξη) · `CreateBlockDialogHost.test.tsx` (3 — replace
+  path→command+reselect · WBLOCK→χωρίς command · cancel→clear). Σύνολο M6+M6.1 = **21 jest** πράσινα.
 - **2026-07-18** — **M6** υλοποιημένο — **«Δημιουργία Block» από επιλογή** (AutoCAD BLOCK/BMAKE + WBLOCK).
   Έκλεισε το κενό στην **αρχή** της αλυσίδας: μέχρι τώρα το palette «Τα Blocks μου» τροφοδοτούνταν
   **μόνο** από DXF import (`captureSessionBlocksFromScene` στο `useSceneState.handleFileImport`) — δεν

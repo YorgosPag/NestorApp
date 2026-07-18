@@ -127,6 +127,26 @@
     "bim3d": {
       "title": "BIM 3D"
     },
+    "frameProfiles": {
+      "title": "Frame Profiles",
+      "empty": "No saved profiles",
+      "rename": "Rename",
+      "save": "Save",
+      "cancel": "Cancel",
+      "delete": {
+        "title": "Delete profile",
+        "description": "The profile \"{name}\" will be permanently deleted.",
+        "confirm": "Delete",
+        "cancel": "Cancel"
+      },
+      "filter": {
+        "search": "Search profiles...",
+        "allScopes": "All scopes"
+      },
+      "scopeUser": "Personal",
+      "scopeCompany": "Company",
+      "scopeProject": "Project"
+    },
     "dimensions": {
       "title": "Dimensions",
       "loading": "Loading dimension styles...",
