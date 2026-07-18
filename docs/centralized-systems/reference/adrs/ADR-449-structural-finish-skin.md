@@ -220,6 +220,17 @@ Deterministic IDs: `boq_bim_${id}` / `_finish_int` / `_finish_ext`. Hook στο 
 - ETICS-grade per-element exterior detection (πέρα από outer-ring proximity) = μετέπειτα slice.
 
 ## 6. Changelog
+- **2026-07-18 (§wall-plaster — 3D z-fight σοβά↔τοίχου)** — Giorgio browser-report (C4D-style 3D): ο σοβάς σε
+  τοίχο εμφανιζόταν με «ανακατεμένα χρώματα» (κόκκινο μπρίκι ↔ γκρι σοβάς που άλλαζαν στο orbit), αν και ο σοβάς
+  ήταν σωστά τοποθετημένος ως ενιαίο δέρμα χωρίς γεωμετρικές επικαλύψεις. **Root:** το per-category depth-priority
+  (`bim-3d/materials/material-depth-priority.ts`, ADR-366 §B.5) δίνει σε κάθε δομικό πυρήνα `elem-*` key με tier
+  2/3/4 (slab/beam/column) ώστε το finish (`mat-plaster`, default 1) να τα νικά στο coplanar depth test. Ο **τοίχος**
+  όμως ΔΕΝ έχει `elem-wall` key — ο πυρήνας του παίρνει το DNA υλικό του (`mat-brick-masonry`/`mat-concrete-*`) →
+  default tier **1** = ίδιο με τον σοβά → ισοπαλία βάθους → z-fighting. Επιβεβαιώθηκε στη βάση: `floorplan_walls` →
+  `dna.layers[core].materialId='mat-brick-masonry'` + `finish.enabled=true` (`mat-plaster-int/ext`). **Fix:** ο σοβάς
+  παίρνει δικό του finish tier `FINISH_SKIN_DEPTH_OFFSET_UNITS = 0.5` (< default 1 → νικά ΚΑΘΕ πυρήνα, incl. τον
+  material-keyed τοίχο· > 0 → μένει πίσω από τις ακμές, ADR-375 intact). Zero blast radius (αλλάζει μόνο το
+  `mat-plaster`). +2 regression tests στο `MaterialCatalog3D-shaded-edges.test.ts`. Μηδέν αλλαγή σε γεωμετρία/BOQ. | Opus
 - **2026-07-18 (Φ7c — ΓΝΗΣΙΟ 45° miter ΕΝΣΩΜΑΤΩΜΕΝΟ στο welded mesh + openings· πλήρες entry → ADR-534 §6 Φ7c)** —
   Τα Φ7b wedges (ξεχωριστά τριγωνικά prisms) έδιναν coincident face με το square end-cap του body → artifacts (Giorgio).
   FIX (Giorgio: γνήσιο miter, ΟΧΙ hack): αφαιρέθηκε το wedge machinery· NEW `computeFaceMiterShifts` (pure) → **strip-level**

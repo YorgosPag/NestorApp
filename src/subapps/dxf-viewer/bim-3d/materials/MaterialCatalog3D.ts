@@ -270,7 +270,8 @@ export function getSystemTintedMaterial3D(
  * paints a custom base colour, so a painted face reads as **tinted plaster** rather than a
  * foreign material — the geometry/BOQ still belong to the finish. Cached per `finish-color:
  * ${hex}` (never mutates a shared singleton). Honours the Visual Style FACES axis + the
- * finish depth tier (default units, ≥ its own structural core). Invalid hex → plaster flat.
+ * finish depth tier (`mat-plaster` = FINISH_SKIN_DEPTH_OFFSET_UNITS, BELOW every structural core so
+ * the skin wins the coplanar depth test — §wall-plaster). Invalid hex → plaster flat.
  */
 export function getFinishColorOverrideMaterial3D(colorHex: string): THREE.MeshStandardMaterial {
   const cacheKey = `finish-color:${colorHex}`;
