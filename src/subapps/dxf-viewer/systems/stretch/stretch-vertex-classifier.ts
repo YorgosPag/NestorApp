@@ -13,6 +13,8 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
+// ADR-620/513 — SSoT rectangle→4-vertex reader (corner1/corner2 OR x/y/w/h + rotation).
+import { rectangleEntityVertices } from '../../rendering/entities/shared/geometry-utils';
 
 // ── Vertex reference (discriminated union) ────────────────────────────────────
 
@@ -145,14 +147,12 @@ function readSplineCv(entity: Entity, index: number | undefined): Point2D | null
 function readRectangleCorner(entity: Entity, index: number | undefined): Point2D | null {
   if (index === undefined) return null;
   if (entity.type !== 'rectangle' && entity.type !== 'rect') return null;
-  const { x, y, width: w, height: h } = entity;
-  switch (index) {
-    case 0: return { x, y };
-    case 1: return { x: x + w, y };
-    case 2: return { x: x + w, y: y + h };
-    case 3: return { x, y: y + h };
-    default: return null;
-  }
+  // ADR-620/513 — read the corner via the SSoT (corner1/corner2 OR x/y/w/h + rotation), SAME order
+  // as the grips + reshape ghost + commit. Reading `entity.x/width` directly gave `undefined → NaN`
+  // for a freshly-drawn rectangle (corner1/corner2 only) → the crossing-window Stretch tool captured
+  // a NaN corner (sibling of the grip-drag `stretchRectangle` bug, Giorgio 2026-07-18).
+  const v = rectangleEntityVertices(entity)[index];
+  return v && Number.isFinite(v.x) && Number.isFinite(v.y) ? v : null;
 }
 
 function readCircleQuadrant(entity: Entity, index: number | undefined): Point2D | null {
