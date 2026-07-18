@@ -19,6 +19,7 @@
 import { ref as makeStorageRef, uploadBytes, getDownloadURL, getBytes } from 'firebase/storage';
 
 import { storage } from '@/lib/firebase';
+import { createModuleLogger } from '@/lib/telemetry';
 import { buildBlockLibraryGeometryPath } from '@/services/upload/utils/storage-path';
 import {
   parseBlockGeometryBlob,
@@ -26,6 +27,8 @@ import {
   type BlockGeometryBlob,
   type SerializeBlockGeometryInput,
 } from './block-geometry-blob';
+
+const logger = createModuleLogger('BlockGeometryStorage');
 
 export interface BlockGeometryLocator {
   /** `null` ⇒ system/partner περιεχόμενο (ADR-652 M3) — δεν ανήκει σε εταιρεία. */
@@ -63,10 +66,25 @@ export async function uploadBlockGeometry(
 export async function fetchBlockGeometry(
   locator: BlockGeometryLocator,
 ): Promise<BlockGeometryBlob | null> {
+  const storagePath = buildBlockLibraryGeometryPath(locator);
   try {
-    const bytes = await getBytes(makeStorageRef(storage, buildBlockLibraryGeometryPath(locator)));
-    return parseBlockGeometryBlob(new TextDecoder().decode(bytes));
-  } catch {
+    const bytes = await getBytes(makeStorageRef(storage, storagePath));
+    const blob = parseBlockGeometryBlob(new TextDecoder().decode(bytes));
+    // Το κατέβασμα πέτυχε αλλά το περιεχόμενο είναι άκυρο (corrupt/legacy blob) — ξεχωριστό
+    // από «λείπει το αντικείμενο», ώστε το debug να ξεχωρίζει τις δύο αιτίες του ίδιου UI error.
+    if (!blob) {
+      logger.warn('fetchBlockGeometry: blob parsed to null (invalid content)', { storagePath, locator });
+    }
+    return blob;
+  } catch (err) {
+    // Ήταν σιωπηλό `catch {}` — αποκάλυπτε ΤΙΠΟΤΑ. Ο Firebase code (`storage/object-not-found`
+    // vs `storage/unauthorized`) είναι η ΜΟΝΗ διάκριση μεταξύ «σβησμένο blob» και «rules deny».
+    logger.warn('fetchBlockGeometry: getBytes failed', {
+      storagePath,
+      locator,
+      code: (err as { code?: string })?.code ?? null,
+      message: (err as { message?: string })?.message ?? String(err),
+    });
     return null;
   }
 }
