@@ -187,6 +187,9 @@ export function buildMultiHoopLayout(
     stirrupDiameterMm: Math.max(0, r.stirrups.diameterMm),
     stirrupCenterlineLengthMm: main.centerlineLengthMm,
     extraStirrupPathsMm: legs.slice(1).map((l) => l.pathMm),
+    // ADR-456 — αναλυτικά μήκη extra σκελών (rect closed-form ανά σκέλος), decoupled από το
+    // display tessellation· ο compute τα διαβάζει αντί να μετρά το tessellated path.
+    extraStirrupCenterlineLengthsMm: legs.slice(1).map((l) => l.centerlineLengthMm),
     // Κάθε επιπλέον σκέλος-στεφάνι κλείνει με τον δικό του γάντζο 135° (A — Revit detailing).
     extraStirrupHookEndsMm: legs.slice(1).map((l) => l.hookEndsMm),
     ...(crossTieAnchorsMm.length > 0 ? { crossTieAnchorsMm } : {}),

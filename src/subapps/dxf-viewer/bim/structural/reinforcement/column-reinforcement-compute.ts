@@ -201,8 +201,13 @@ export function computeColumnReinforcementQuantities(
   const isSpiral = (r.stirrups.type ?? DEFAULT_STIRRUP_TYPE) === 'spiral';
   const spiral = isSpiral ? spiralTotals(perimeterMm, levels) : null;
   const stirrupCount = spiral ? spiral.turns : computeStirrupCount(ctx, r);
-  // Boundary hoops τοιχώματος (extra closed loops) — επαναλαμβάνονται ανά στάθμη.
-  const extraHoopMm = layout?.extraStirrupPathsMm?.reduce((s, p) => s + closedPolylineLengthMm(p), 0) ?? 0;
+  // Boundary/extra hoops (extra closed loops) — επαναλαμβάνονται ανά στάθμη. ADR-456: προτίμα το
+  // **αναλυτικό** (arc-aware, decoupled) μήκος ανά hoop· fallback σε μέτρηση tessellated path όταν
+  // ο builder δεν το παρέχει (adaptive → <0,1% σφάλμα). ΠΟΤΕ display polyline όταν υπάρχει analytic.
+  const extraHoopMm =
+    layout?.extraStirrupCenterlineLengthsMm?.reduce((s, l) => s + l, 0)
+    ?? layout?.extraStirrupPathsMm?.reduce((s, p) => s + closedPolylineLengthMm(p), 0)
+    ?? 0;
   const stirrupTotalLengthM =
     (spiral ? spiral.totalMm : stirrupCount * (stirrupSingleLengthMm(perimeterMm, r) + extraHoopMm)) * MM_TO_M;
   const stirrupSingleLengthM = stirrupCount > 0 ? stirrupTotalLengthM / stirrupCount : 0;
