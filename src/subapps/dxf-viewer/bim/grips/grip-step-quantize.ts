@@ -39,7 +39,12 @@ import { QKeyTracker } from '../../keyboard/QKeyTracker';
 // zoom-adaptive wall step uses, so the fixed step "grows the length" identically.
 import { quantizePointFromAnchor } from '../../systems/tracking/adaptive-distance-snap';
 
-/** Default SNAP-MODE increment, in **millimetres** (the unit the user types). */
+/**
+ * Default SNAP-MODE increment, in **millimetres** — the canonical unit the step is stored
+ * and quantized in (ADR-462). The user TYPES it in whatever display unit the status-bar
+ * selector shows (ADR-677 Φάση 2, G2): `CadStatusBar`'s step field converts display → mm on
+ * commit, so everything below this line stays purely mm and needs no unit awareness.
+ */
 export const DEFAULT_GRIP_SNAP_STEP = 50;
 
 /** Round a scalar to the nearest multiple of `step` (no-op when step ≤ 0).

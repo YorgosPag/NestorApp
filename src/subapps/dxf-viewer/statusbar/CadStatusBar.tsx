@@ -28,6 +28,8 @@ import {
   DISPLAY_UNIT_OPTIONS,
   DISPLAY_UNIT_LABELS,
   isValidDisplayUnit,
+  toDisplay,
+  fromDisplay,
 } from '../config/units';
 import { CommandLineInput } from '../ui/command-line/CommandLineInput';
 
@@ -114,6 +116,7 @@ export default function CadStatusBar() {
                 toggle={toggle}
                 step={snapStep}
                 onStepChange={setSnapStep}
+                displayUnit={displayUnit}
               />
             ) : (
               <CadToggleRow
@@ -351,32 +354,46 @@ function PolarToggleWithPopover({ id, label, fkey, description, toggle }: {
 }
 
 /**
- * SNAP-MODE (F9) toggle + inline live step field. OFF → no field, no quantization.
- * ON → a number input appears; whatever value (mm) you type applies immediately —
- * no presets, no popover, no Apply button (Giorgio 2026-06-12: «απλό toggle on/off»).
+ * SNAP-step preset ladder, authored in **mm** — the canonical unit the step is stored in.
+ * `0` = «Ελεύθερο» (SNAP on, no quantization — see cad-toggle-state: step 0 ⇒ no snap grid).
  */
-function SnapToggleWithStep({ id, label, fkey, description, toggle, step, onStepChange }: {
+const SNAP_STEP_PRESETS_MM: readonly number[] = [0, 10, 25, 50, 100, 500, 1000];
+
+/**
+ * The mm ladder presented in the user's display unit (ADR-677 Φάση 2, G2).
+ *
+ * The step itself STAYS mm in `cadToggleState` — `grip-step-quantize.ts` keeps reading mm
+ * and converting to scene units. Only this field's boundary converts, exactly mirroring how
+ * the Δαχτυλίδι Εντολών stores its lock in scene units while you type in the display unit.
+ * Labels use `String(value)` (not `formatDisplayValue`) so a preset renders identically to
+ * the same number typed by hand — `StatusBarEditableCombobox` falls back to `String(value)`.
+ */
+function buildSnapStepPresets(unit: DisplayUnit, freeLabel: string): readonly StatusBarComboboxPreset[] {
+  return SNAP_STEP_PRESETS_MM.map((mm) => {
+    const { value } = toDisplay(mm, unit);
+    return { value, label: mm === 0 ? freeLabel : String(value) };
+  });
+}
+
+/**
+ * SNAP-MODE (F9) toggle + inline live step field. OFF → no field, no quantization.
+ * ON → a number input appears; whatever value you type applies immediately —
+ * no popover, no Apply button (Giorgio 2026-06-12: «απλό toggle on/off»).
+ * The typed value is read in the user's display unit (ADR-677 G2), not hardcoded mm.
+ */
+function SnapToggleWithStep({ id, label, fkey, description, toggle, step, onStepChange, displayUnit }: {
   id: string;
   label: string;
   fkey: string;
   description: string;
   toggle: CadToggle;
+  /** Current step in **mm** (canonical) — converted to the display unit for the field. */
   step: number;
+  /** Receives the new step in **mm** (canonical) — the field converts before calling. */
   onStepChange: (value: number) => void;
+  displayUnit: DisplayUnit;
 }) {
   const { t } = useTranslation('dxf-viewer-panels');
-
-  // SNAP-step presets (mm) for the shared editable combobox. `0` = «Ελεύθερο»
-  // (SNAP on, no quantization — see cad-toggle-state: step 0 ⇒ no snap grid).
-  const snapPresets: readonly StatusBarComboboxPreset[] = [
-    { value: 0, label: t('cadDock.statusBar.snapStepFree') },
-    { value: 10, label: '10' },
-    { value: 25, label: '25' },
-    { value: 50, label: '50' },
-    { value: 100, label: '100' },
-    { value: 500, label: '500' },
-    { value: 1000, label: '1000' },
-  ];
 
   return (
     <div className="flex items-center gap-1.5 shrink-0">
@@ -384,13 +401,13 @@ function SnapToggleWithStep({ id, label, fkey, description, toggle, step, onStep
       {toggle.on && (
         <StatusBarEditableCombobox
           id={`${id}-step`}
-          value={step}
-          onCommit={onStepChange}
-          presets={snapPresets}
+          value={toDisplay(step, displayUnit).value}
+          onCommit={(value) => onStepChange(fromDisplay(value, displayUnit))}
+          presets={buildSnapStepPresets(displayUnit, t('cadDock.statusBar.snapStepFree'))}
           ariaLabel={t('cadDock.statusBar.snapStepTitle')}
           allowDecimal
           min={0}
-          unitSuffix="mm"
+          unitSuffix={DISPLAY_UNIT_LABELS[displayUnit]}
         />
       )}
     </div>
