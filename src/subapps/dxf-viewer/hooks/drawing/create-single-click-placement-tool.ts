@@ -205,9 +205,13 @@ export function createSingleClickPlacementTool<
       setState((prev) => ({ ...prev, overrides: { ...prev.overrides, ...overrides } }));
     }, []);
 
-    const deactivate = useCallback(() => setState(INITIAL_STATE), []);
+    const deactivate = useCallback(() => {
+      clearPlacementRotationLock();
+      setState(INITIAL_STATE);
+    }, []);
 
     const reset = useCallback(() => {
+      clearPlacementRotationLock();
       setState((prev) => ({
         ...prev,
         error: null,
