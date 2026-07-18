@@ -106,3 +106,17 @@ math → λάθος σε rotated· απαιτεί unproject cursor στους τ
   `rectangleEntityVertices` SSoT (−3 duplicate copies) + όλα τα vertex call sites rotation-aware +
   RectangleRenderer measurements fix. jest: rect-lock 9 / rotation 5 GREEN + regression. jscpd 3.28 (diff) 0 new
   clones. CHECK 6B/6D co-stage με ADR-040 + ADR-513. ΟΧΙ tsc (N.17). 🔴 browser-verify + commit (Giorgio).
+- **2026-07-18 (Opus 4.8)** — **Corner-grip reshape ενός σχεδιασμένου ορθογωνίου: no-ghost + εξαφάνιση στο
+  drop (fix).** Ρίζα (ΔΥΟ, ίδιο μοτίβο «corner1/corner2 χωρίς x/y/w/h»): (α) το `normalizePreviewEntity`
+  (`rendering/ghost/apply-entity-preview.ts`) κανονικοποιούσε ΜΟΝΟ `lwpolyline`→`polyline`, όχι `rectangle` →
+  `applyEntityPreview` δεν έβρισκε branch → `applyClassicEntityPreview` default → `transformed===entity` →
+  **κανένα φάντασμα**· (β) το `stretchRectangle` (`systems/stretch/stretch-entity-transform.ts`) διάβαζε
+  `entity.x/y/width/height` (runtime `undefined` σε drawn rect, ο τύπος τα δηλώνει required αλλά ο builder
+  κάνει cast) → **NaN** vertices → replacement polyline **αόρατο**. Fix: (α) `normalizePreviewEntity` πλέον
+  χαρτογραφεί `rectangle`/`rect`→`polyline` με `rectangleEntityVertices` (finite-guard· ίδια σειρά με
+  grips/projection) → corner-drag ghost ως polyline vertex move· (β) `stretchRectangle` παράγει τις 4 κορυφές
+  από το SSoT `rectangleEntityVertices` (corner1/corner2 OR x/y/w/h + rotation)· 4-corner rigid → μεταφορά
+  corner1/corner2 (ή x/y). preview ≡ commit by construction (ίδιος SSoT + σειρά). jest: 6 νέα (ghost
+  normalization + commit corner1/corner2 finite) + 20 existing GREEN. Το `stretchRectangle` πέφτει στο
+  «FOLLOW-UP» slice όσον αφορά ΟΡΘΟΓΩΝΙΟΤΗΤΑ σε rotated frame (partial drag → polyline, by design).
+  jscpd 3.28 (diff). CHECK 6D co-stage. ΟΧΙ tsc (N.17). 🔴 browser-verify + commit (Giorgio).
