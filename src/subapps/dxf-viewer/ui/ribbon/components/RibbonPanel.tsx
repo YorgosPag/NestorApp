@@ -28,6 +28,7 @@ import { ViewTemplatesPanel } from '../panels/ViewTemplatesPanel';
 import { VisibilityGraphicsPanel } from '../panels/VisibilityGraphicsPanel';
 import { HideBimToggle } from './HideBimToggle';
 import { PlanLinesToggle } from './PlanLinesToggle';
+import { OpeningTagLayerToggle } from './OpeningTagLayerToggle';
 import { MepWireToggle } from './MepWireToggle';
 import { DrainPipeToggle } from './DrainPipeToggle';
 import { ColorBySystemToggle } from './ColorBySystemToggle';
@@ -149,6 +150,9 @@ function renderButton(button: RibbonButton): React.ReactNode {
     }
     if (button.widgetId === 'plan-lines') {
       return <PlanLinesToggle key="plan-lines-widget" />;
+    }
+    if (button.widgetId === 'opening-tag-visibility') {
+      return <OpeningTagLayerToggle key="opening-tag-visibility-widget" />;
     }
     if (button.widgetId === 'dim-row-handles-toggle') {
       return <DimRowHandlesToggle key="dim-row-handles-toggle-widget" />;
