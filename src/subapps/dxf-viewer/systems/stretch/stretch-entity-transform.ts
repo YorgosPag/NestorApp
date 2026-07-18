@@ -256,14 +256,23 @@ function stretchRectangle(
     return { kind: 'update', updates: translatePoint({ x: entity.x, y: entity.y }, d) as Partial<SceneEntity> };
   }
 
-  // Partial capture → coerce to polyline preserving id, layer, visibility, etc.
+  // Partial capture → coerce to polyline.
   const newVertices = corners.map((c, i) => (captured.has(i) ? translatePoint(c, d) : c));
 
-  // ADR-358 Phase 9D-5a: id-only WRITE — legacy `layer` field dropped (schema flip deferred to 9D-5b).
+  // ADR-620/513 fix (Giorgio 2026-07-18) — PRESERVE every BaseEntity style/state prop (color,
+  // lineweight, opacity, lineType, colorMode/colorAci/colorTrueColor, transparency, metadata, locked,
+  // name, lineStyleId, …). Ο προηγούμενος id/layerId/visible-only copy ΠΕΤΟΥΣΕ το `color` → το
+  // reshaped ορθογώνιο αποδιδόταν με το default stroke (**λευκό**) αντί για το δικό του χρώμα (π.χ.
+  // πράσινο). Spread του source, μετά override type + geometry και strip των rectangle-only anchors
+  // (x/y/w/h/rotation/corner1/corner2/fillColor/strokeWidth) ώστε να μη μείνει stale rect geometry
+  // πάνω στην polyline. ADR-358 9D: id-based (layerId, όχι legacy `layer`).
+  const {
+    x: _x, y: _y, width: _w, height: _h, rotation: _rot,
+    corner1: _c1, corner2: _c2, fillColor: _fill, strokeWidth: _sw,
+    ...preservedProps
+  } = entity;
   const replacement = {
-    id: entity.id,
-    layerId: entity.layerId,
-    visible: entity.visible,
+    ...preservedProps,
     type: 'polyline' as const,
     vertices: newVertices,
     closed: true,
