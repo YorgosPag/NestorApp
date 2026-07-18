@@ -1,6 +1,6 @@
 # ADR-677 — Επιλογή Μονάδας από τον Χρήστη (mm/cm/m) για Δημιουργία / Μετακίνηση / Μετασχηματισμό Οντοτήτων
 
-**Status:** 🔍 Discovery/Analysis — **pending αποφάσεις Giorgio (Q&A)** · 2026-07-18 (Opus 4.8, 5-agent orchestrated audit)
+**Status:** ✅ ΑΠΟΦΑΣΙΣΜΕΝΟ (Q&A Giorgio 2026-07-18) — **pending υλοποίηση Φάσεων 1-4** · Discovery: 2026-07-18 (Opus 4.8, 5-agent orchestrated audit)
 **Σχετικά / εξαρτάται:** ADR-462 (canonical-mm units — η διέπουσα απόφαση), ADR-357 §5.5 (display-unit selector, default `cm`), ADR-358 (stair units + width-heuristic), ADR-368 (import drawing-units override), ADR-513 (Radial Command Ring / direct-distance-entry), ADR-508 (grip/HUD live), ADR-049 (move/grip SSoT), ADR-082 (FormatterRegistry locale engine).
 **Αφορμή:** Ερώτημα Giorgio — «κατά τη δημιουργία οντοτήτων DXF BIM/MEP (2Δ ή 3Δ), σε τι μονάδα δουλεύουμε (mm/cm/m); Θέλω ο χρήστης με έναν διακόπτη/επιλογή να διαλέγει αν οι τιμές μετακίνησης / μετασχηματισμού / δημιουργίας θα είναι σε χιλιοστά, εκατοστά ή μέτρα.»
 
@@ -101,31 +101,57 @@
 
 ---
 
-## 6. Πώς προχωράμε μπροστά — προτεινόμενες επιλογές
+## 6. ΑΠΟΦΑΣΕΙΣ (Giorgio, Q&A 2026-07-18)
 
-**Καμία επιλογή δεν απαιτεί νέο store ή νέα υποδομή — όλα πλug-άρουν στο `displayUnitState` / `useDisplayUnit` / `config/units.ts`.**
+| # | Ερώτημα | **Απόφαση** |
+|---|---|---|
+| 1 | Προεπιλεγμένη μονάδα | **Μέτρα (`m`)** — αλλάζει το `DEFAULT_DISPLAY_UNIT` από `'cm'` σε `'m'` (υπερισχύει της απόφασης ADR-357 §5.5 / 2026-05-16) |
+| 2 | Εξαιρέσεις G1/G2/G7 | **Επιλογή Α — Πλήρης εναρμόνιση.** ΟΛΑ τα πεδία εισόδου σέβονται τον επιλογέα· ΕΝΑ project unit παντού |
+| 3 | Πλάτη κουφωμάτων | **Πλήρης συνέπεια** — τα presets γίνονται `0,70 / 0,80 / 0,90` σε m. Ο Giorgio επιβεβαίωσε ρητά τη συνέπεια της αλλαγής (περισσότερα δεκαδικά στην πληκτρολόγηση) |
+| 4 | Persistence | **Project-scoped Firestore** (υλοποίηση του G6 / ADR-357 §5.5) — η μονάδα ταξιδεύει με το project, όχι με τον browser |
+| 5 | Discoverability | **Dropdown + keyboard shortcut κύκλου** `mm→cm→m` |
+| 6 | Σκάλες (G4) | **ΝΑΙ, αλλά σε ξεχωριστή μεταγενέστερη φάση/ADR** — δεν μπλέκεται με τη δουλειά της μονάδας |
+| 7 | Ενιαίο vs χωριστό input/display | **ΕΝΑ setting** (input-unit = display-unit), Revit/AutoCAD-style. *Απόφαση agent — συνεπές με την «πλήρη εναρμόνιση»· δύο ανεξάρτητες ρυθμίσεις θα ήταν ακριβώς η ασυνέπεια που καταργούμε* |
+| 8 | 3Δ καμβάς | **Κανένας ξεχωριστός χειρισμός** — ακολουθεί ήδη τον ίδιο επιλογέα μέσω `move-readout`. *Απόφαση agent* |
 
-**Βήμα 0 (μηδενικού κόστους): Discoverability.** Αν ο σκοπός καλύπτεται ήδη από τον υπάρχοντα dropdown, ίσως αρκεί: (α) πιο εμφανής θέση/στιλ, (β) keyboard shortcut κύκλου `mm→cm→m` (π.χ. πλήκτρο), (γ) tooltip/onboarding. **Πρόταση: ξεκινάμε από εδώ πριν αγγίξουμε pipeline.**
-
-**Επιλογή Α — «Πλήρης εναρμόνιση» (Revit-grade consistency):** ΟΛΑ τα σημεία εισόδου σέβονται τον επιλογέα — εναρμονίζουμε G1 (opening-width), G2 (βήμα F9), G7 (ribbon comboboxes), αφαιρούμε G3. Ένα project unit, παντού. Καθαρότερο UX, μεγαλύτερο scope.
-
-**Επιλογή Β — «Συνειδητές εξαιρέσεις» (τεκμηριωμένο status quo):** Κρατάμε συγκεκριμένα πεδία mm-native (πλάτος κουφώματος, βήμα) γιατί οι επαγγελματίες τα σκέφτονται σε mm ακόμη κι όταν το project δουλεύει σε m — όπως το Revit κρατά κάποια πεδία σε project units κι άλλα σταθερά. Απλώς **τεκμηριώνουμε** τη λογική και **διορθώνουμε το latent bug G3 + το stale σχόλιο G5**. Μικρό scope, χαμηλό ρίσκο.
-
-**Επιλογή Γ — «Α + persistence».** Επιπλέον υλοποιούμε το G6 (project-scoped Firestore override) ώστε η μονάδα να ταξιδεύει με το project/χρήστη, όχι με τον browser.
-
-**Ορθογώνιο ερώτημα — «input unit» vs «display unit»:** σήμερα είναι **ΕΝΑ** setting (ό,τι βλέπεις, τόσο πληκτρολογείς — Revit/AutoCAD-style). Ο Giorgio μιλά για «τιμές μετακίνησης/μετασχηματισμού/δημιουργίας», που είναι input. Πρέπει να επιβεβαιωθεί ότι θέλουμε **ενιαίο** input+display unit (προτεινόμενο) και όχι δύο ανεξάρτητα.
+**⚠️ Συνέπεια της απόφασης #1+#3 που έγινε δεκτή συνειδητά:** το G1 (mm-native πλάτος κουφώματος) είχε μπει ως **σκόπιμο fix την ίδια μέρα (2026-07-18)**. Η απόφαση #2/#3 το **αναιρεί**. Αν στην πράξη αποδειχθεί δύσχρηστο (πληκτρολόγηση `0.9` αντί `900`), επανεξετάζεται — τεκμηριωμένο εδώ ώστε να μη χαθεί το ιστορικό.
 
 ---
 
-## 7. Ανοιχτά ερωτήματα (για το Q&A)
+## 7. Πλάνο υλοποίησης (μία φάση = μία συνεδρία, ≤70% context)
 
-1. **Default μονάδα:** να μείνει `cm`, ή να γίνει `m` (πιο φυσικό για αρχιτεκτονική κλίμακα), ή `mm`;
-2. **Discoverability:** αρκεί ο υπάρχων dropdown, ή θέλεις και keyboard shortcut κύκλου μονάδας + πιο εμφανή ένδειξη;
-3. **Ενιαίο vs χωριστό:** input-unit = display-unit (ΕΝΑ setting, προτεινόμενο) ή δύο ανεξάρτητες ρυθμίσεις;
-4. **Εξαιρέσεις (G1/G2/G7):** πλήρης εναρμόνιση (Επιλογή Α) ή συνειδητές mm-native εξαιρέσεις (Επιλογή Β) για πλάτος κουφώματος / βήμα F9 / ribbon comboboxes;
-5. **Persistence:** per-browser (σήμερα) ή project-scoped Firestore (G6);
-6. **Σκάλες (G4):** να τις φέρουμε στο canonical-mm (migration + persisted `sceneUnits`) ή να μείνουν «leave as-is»;
-7. **3Δ:** χρειάζεσαι ξεχωριστό χειρισμό μονάδας στον 3Δ καμβά ή αρκεί που ακολουθεί τον ίδιο επιλογέα;
+**Καμία φάση δεν απαιτεί νέο store — όλα plug-άρουν στο υπάρχον `displayUnitState` / `useDisplayUnit` / `config/units.ts`.**
+
+**Φάση 1 — Default `m` + shortcut κύκλου.**
+`config/units.ts`: `DEFAULT_DISPLAY_UNIT = 'm'` (+ έλεγχος `DEFAULT_DISPLAY_PRECISION['m']` ώστε να μη χαθεί ακρίβεια σε mm-κλίμακα — μέτρα με 2 δεκαδικά κόβουν στο εκατοστό· πιθανώς χρειάζεται 3). Νέο keyboard shortcut κύκλου `mm→cm→m` στο υπάρχον shortcut registry, καλώντας `displayUnitState.setUnit`. i18n keys για το shortcut label. Tests: round-trip `toDisplay`/`fromDisplay` σε `m`.
+
+**Φάση 2 — Εναρμόνιση εξαιρέσεων (G1 + G2 + G7).**
+- G1: `opening-width-ring-config.ts` → από `valueMm` σε `lengthDisplayToSceneLock` (ίδιο μοτίβο με `lengthRingField`).
+- G2: `grip-step-quantize.ts` + `CadStatusBar` step field → `unitSuffix` από `currentDisplayUnitLabel()`, τιμή μέσω `fromDisplay`· τα presets μετατρέπονται στη display μονάδα.
+- G7: ribbon numeric comboboxes διαστάσεων → presets μέσω `toDisplay`, commit μέσω `fromDisplay`.
+- ⚠️ **Απαιτεί SSoT audit πρώτα** (N.0.2): τα 3 σημεία μοιράζονται το ίδιο idiom → πιθανός κοινός helper αντί τριπλότυπου. `npm run jscpd:diff` πριν το «done» (N.18).
+
+**Φάση 3 — Καθαρισμός (G3 + G5).**
+Αφαίρεση ή διόρθωση του legacy Ctrl+L path στο `DynamicInputOverlay.tsx` (latent 100× bug· επιβεβαίωση ότι είναι όντως unreachable πριν τη διαγραφή). Διόρθωση stale σχολίου `StairToThreeConverter.ts:9`.
+
+**Φάση 4 — Project-scoped persistence (G6).**
+Firestore `projects/{id}/dxfSettings.displayUnit` με localStorage ως fallback. Προσοχή: **CHECK 3.10** (queries με `where()` θέλουν `companyId`) και **N.6** (enterprise IDs, `setDoc` όχι `addDoc`). Precedence: project → localStorage → default.
+
+**Φάση 5 — ΞΕΧΩΡΙΣΤΟ ADR: σκάλες σε canonical-mm (G4).**
+Δεν ανήκει σε αυτό το ADR. Θα χρειαστεί persisted `sceneUnits` στο `StairParams`, κατάργηση του `inferSceneUnitsFromWidth` heuristic, και data migration για υπάρχουσες σκάλες. Ενημέρωση `.claude-rules/pending-ratchet-work.md:481` (που σήμερα λέει «leave as-is»).
+
+### Ρίσκα / σημεία προσοχής
+- **Ακρίβεια σε μέτρα:** με 2 δεκαδικά, το `0,90` δεν μπορεί να εκφράσει 895mm. Το `DEFAULT_DISPLAY_PRECISION` για `m` πρέπει να επανεξεταστεί (πιθανώς 3 δεκαδικά).
+- **Υπάρχοντες χρήστες:** όποιος έχει ήδη `dxf:displayUnit` στο localStorage δεν επηρεάζεται από την αλλαγή default — μόνο νέοι. Να αποφασιστεί αν θέλουμε one-time reset.
+- **CHECK 6D/6B:** πολλά από τα αγγιζόμενα αρχεία είναι render-path → απαιτούν staged ADR στο commit.
+- **N.17:** κανένα `tsc` από τον πράκτορα σε καμία φάση.
+
+---
+
+## 7β. Ανοιχτά ερωτήματα που ΠΑΡΑΜΕΝΟΥΝ
+
+1. **Ακρίβεια δεκαδικών σε `m`** — 2 ή 3 δεκαδικά; (επηρεάζει αν μπορείς να δηλώσεις 895mm)
+2. **One-time reset** του υπάρχοντος localStorage ώστε οι ήδη-χρήστες να δουν το νέο default `m`;
 
 ---
 
@@ -153,4 +179,5 @@
 
 ## 9. Changelog
 
+- **2026-07-18 (Opus 4.8) — Q&A Giorgio → ΑΠΟΦΑΣΕΙΣ κλειδώθηκαν (§6) + πλάνο 5 φάσεων (§7).** Default → **μέτρα**· **πλήρης εναρμόνιση** όλων των πεδίων εισόδου (αναιρεί συνειδητά το mm-native opening-width fix της ίδιας μέρας)· **project-scoped Firestore** persistence· **dropdown + shortcut κύκλου**· σκάλες (G4) → **ξεχωριστό μεταγενέστερο ADR**. Δύο αποφάσεις πάρθηκαν από τον agent (ενιαίο input=display unit· 3Δ χωρίς ξεχωριστό χειρισμό) — σημειωμένες ως τέτοιες. Παραμένουν ανοιχτά: ακρίβεια δεκαδικών σε `m`, one-time reset localStorage. **Καμία αλλαγή κώδικα ακόμη.** Δεν έγινε commit (N.-1).
 - **2026-07-18 (Opus 4.8) — ADR δημιουργήθηκε (Phase 1 Recognition, N.0.1).** 5-agent orchestrated audit (units SSoT / 2Δ creation / 3Δ scene / move-grip / UI) κατέγραψε την τρέχουσα κατάσταση του κώδικα: το ζητούμενο user-selectable input-unit feature είναι ήδη ~85% υλοποιημένο μέσω του display-unit stack (ADR-462 Phase 2 / ADR-357 §5.5). Καταγράφηκαν 7 ασυνέπειες/κενά (G1–G7) + 3 επιλογές πορείας + 7 ανοιχτά ερωτήματα. **Καμία αλλαγή κώδικα** — pending αποφάσεις Q&A. Δεν έγινε commit (N.-1).
