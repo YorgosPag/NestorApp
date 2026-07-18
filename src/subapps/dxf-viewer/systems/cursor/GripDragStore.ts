@@ -16,6 +16,9 @@ import type { DimensionGripKind, LineGripKind } from '../../hooks/grip-types';
 import { clearGripAlignmentTracking } from './GripAlignmentTrackingStore';
 import { clearMoveOrthoAxis } from '../grip/MoveOrthoAxisStore';
 import { GripAltMoveStore } from '../grip/GripAltMoveStore';
+// ADR-513 §grip-parity Φάση Δ — ΕΝΑ predicate «είναι λαβή αλλαγής μεγέθους;», κοινό με το typed-value
+// lock (`resize-grip-lock`), ώστε mount δαχτυλιδιού ≡ αποδοχή τιμής. Καθαρό pure module (μηδέν κύκλος).
+import { isResizeGripKind } from '../dynamic-input/resize-grip-lock';
 
 export interface ActiveDragGripInfo {
   entityId: string;
@@ -115,6 +118,23 @@ export function isOpeningCornerDragInfo(info: ActiveDragGripInfo | null): boolea
  */
 export function isVertexReshapeDragInfo(info: ActiveDragGripInfo | null): boolean {
   return !!info && info.vertexReshape === true;
+}
+
+/**
+ * ADR-513 §grip-parity Φάση Δ — pure predicate: είναι το `info` ενεργό drag λαβής ΑΛΛΑΓΗΣ ΜΕΓΕΘΟΥΣ
+ * (γωνία / μεσοπλευρική / λαβή διάστασης, ΟΠΟΙΑΣΔΗΠΟΤΕ οντότητας); Τότε mount-άρεται το Μήκος/Γωνία
+ * «Δαχτυλίδι Εντολών» ώστε ο χρήστης να πληκτρολογήσει τη μετατόπιση της λαβής (5ο σκαλί).
+ *
+ * Το εύρος διαβάζεται από το ΥΠΑΡΧΟΝ `HOT_GRIP_OP_REGISTRY` μέσω του κοινού `isResizeGripKind` —
+ * ΤΟ ΙΔΙΟ predicate που πυλωρεί και το κλείδωμα της τιμής (`resize-grip-lock`). Έτσι «ποια λαβή
+ * δείχνει δαχτυλίδι» και «ποια λαβή δέχεται τιμή» είναι ΑΔΥΝΑΤΟΝ να αποκλίνουν — το κλασικό κενό
+ * όπου το δαχτυλίδι εμφανίζεται αλλά το Enter δεν κάνει τίποτα (ή το αντίστροφο).
+ *
+ * Το `gripKind` γράφεται στο hot-grip enter (`grip-mouse-handlers` → `hotGripKindOf(nearGrip)`),
+ * δηλαδή ακριβώς για τις λαβές που η Φάση Γ έκανε click-armed.
+ */
+export function isResizeGripDragInfo(info: ActiveDragGripInfo | null): boolean {
+  return !!info && isResizeGripKind(info.gripKind);
 }
 
 /**

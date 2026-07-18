@@ -49,6 +49,7 @@ import {
   isLineEndpointDragInfo,
   isOpeningCornerDragInfo,
   isVertexReshapeDragInfo,
+  isResizeGripDragInfo,
   isMoveDisplacementDragInfo,
   type ActiveDragGripInfo,
 } from '../../systems/cursor/GripDragStore';
@@ -73,6 +74,9 @@ const GRIP_RING_VARIANTS: readonly {
   { match: isVertexReshapeDragInfo, config: GRIP_LINEAR_RING_CONFIG, keyPrefix: 'grip-reshape', requiresDynInput: true },
   // ΠΛΑΤΟΣ ΚΟΥΦΩΜΑΤΟΣ — length-only δαχτυλίδι, χωρίς gate ΔΥΝ.
   { match: isOpeningCornerDragInfo, config: OPENING_WIDTH_RING_CONFIG, keyPrefix: 'opening-width', requiresDynInput: false },
+  // ΑΛΛΑΓΗ ΜΕΓΕΘΟΥΣ (γωνία / μεσοπλευρική / λαβή διάστασης, ΚΑΘΕ οντότητας) — ΙΔΙΟ Μήκος/Γωνία
+  // δαχτυλίδι με την αναμόρφωση κορυφής, γιατί έχει ΙΔΙΑ σημασιολογία: displacement της λαβής.
+  { match: isResizeGripDragInfo, config: GRIP_LINEAR_RING_CONFIG, keyPrefix: 'grip-resize', requiresDynInput: true },
   // ΜΕΤΑΚΙΝΗΣΗ ΟΛΟΚΛΗΡΗΣ ΟΝΤΟΤΗΤΑΣ (5ο σκαλί) — displacement κατά ORTHO/POLAR με πληκτρολογημένο μήκος.
   { match: isMoveDisplacementDragInfo, config: GRIP_LINEAR_RING_CONFIG, keyPrefix: 'grip-move', requiresDynInput: true },
 ];
