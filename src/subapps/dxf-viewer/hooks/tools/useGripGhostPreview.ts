@@ -90,6 +90,7 @@ import { translatePoint } from '../../rendering/entities/shared/geometry-vector-
 // marker / ADR-543 co-move partner ghosts) live in a sibling module.
 import {
   drawDashedSegment,
+  drawMoveRubberBand,
   drawComovePartnerGhosts,
   drawStructuralFinishSkinPreview,
   drawMemberBodyGhostWithJoinMiter,
@@ -99,6 +100,9 @@ import {
   paintGripEndpointReshapeArcs,
   drawGroupGhost,
 } from './grip-ghost-preview-draw-helpers';
+// ADR-049/363/640 — the red base-point ＋ crosshair the ribbon Move tool draws, shared SSoT so a
+// whole-entity MOVE hot-grip (incl. GROUP/BLOCK) shows the SAME base affordance (parity «ΑΚΡΙΒΩΣ όπως»).
+import { drawMoveBasePointMarker } from '../../rendering/ui/move-base-point-marker';
 // ADR-040 Φ12 — SSoT live cursor-driven drag-preview resolver (file-size SRP split, N.7.1):
 // recomputes translate + rotation sweep from the effective-world identically to the commit.
 import { resolveLiveGripDragPreview } from './grip-ghost-preview-live-transform';
@@ -236,6 +240,44 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
       );
     }
 
+    // ── Rubber-band leaders (base→cursor) ────────────────────────────────────────
+    // ADR-575 §8 / ADR-640 — drawn HERE (before `drawGroupGhost`'s early-return below) so a GROUP/
+    // BLOCK move — which returns at `drawGroupGhost` — still shows its leader. Previously this block
+    // lived AFTER that return, so container moves rendered a ghost but NO leader (dead code for them).
+    // Uses only `dp`/`t`/`vp` — none of the ghost body computations below — so it is safe to hoist.
+    if (dp.rotateRefLine || dp.rotateAlignLine) {
+      // ADR-363 Phase 1G.3 — rotate-reference (6-click) guide segments. Drawn for the reference +
+      // alignment lines regardless of ghost delta (they exist even while not yet rotating).
+      if (dp.rotateRefLine) {
+        drawDashedSegment(ctx, dp.rotateRefLine.from, dp.rotateRefLine.to, t, vp);
+      }
+      if (dp.rotateAlignLine) {
+        drawDashedSegment(ctx, dp.rotateAlignLine.from, dp.rotateAlignLine.to, t, vp);
+      }
+    } else if (dp.hotGrip && dp.anchorPos && dp.movesEntity === true && !dp.rotatePivot) {
+      // ADR-049/040 parity — a whole-entity MOVE hot-grip (line/circle/arc/polyline/text/hatch/
+      // GROUP/BLOCK move cross → `movesEntity:true`) shows the SAME base affordance as the ribbon
+      // Move tool: a RED base-point ＋ crosshair + a GOLD dashed rubber-band to the cursor, via the
+      // SAME shared SSoT painters (`drawMoveBasePointMarker` + `drawRubberBandLine`). The crosshair
+      // shows the moment the base is set (zero-delta); the leader once the cursor moves.
+      drawMoveBasePointMarker(ctx, dp.anchorPos, t, vp);
+      if (dp.delta.x !== 0 || dp.delta.y !== 0) {
+        drawMoveRubberBand(ctx, dp.anchorPos, translatePoint(dp.anchorPos, dp.delta), t, vp);
+      }
+    } else if (
+      // ADR-363 Phase 1G — dashed ghost-cyan leader for the corner hot-grip (resize, `movesEntity:
+      // false`) OR free-rotate (cursor-driven, `rotatePivot` set). The start is the pivot (free rotate)
+      // or the corner anchor; the end is the cursor (anchorPos + delta). Kept neutral (not gold) —
+      // these are not whole-entity base-point moves.
+      dp.hotGrip &&
+      dp.anchorPos &&
+      (dp.delta.x !== 0 || dp.delta.y !== 0)
+    ) {
+      const fromW = dp.rotatePivot ?? dp.anchorPos;
+      const toW = translatePoint(dp.anchorPos, dp.delta);
+      drawDashedSegment(ctx, fromW, toW, t, vp);
+    }
+
     // ADR-408 Φ7 P2 — snapshot→transform map is now the shared SSoT helper, so the
     // ghost and the live home-run wire derive the SAME previewed entity.
     const preview = toEntityPreviewTransform(dp);
@@ -283,29 +325,8 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
       );
     }
 
-    // ADR-363 Phase 1G.3 — rotate-reference (6-click) guide segments. Drawn for
-    // the reference + alignment lines regardless of ghost delta (they exist even
-    // while the wall is not yet rotating, e.g. tracing the reference line).
-    if (dp.rotateRefLine || dp.rotateAlignLine) {
-      if (dp.rotateRefLine) {
-        drawDashedSegment(ctx, dp.rotateRefLine.from, dp.rotateRefLine.to, t, vp);
-      }
-      if (dp.rotateAlignLine) {
-        drawDashedSegment(ctx, dp.rotateAlignLine.from, dp.rotateAlignLine.to, t, vp);
-      }
-    } else if (
-      // ADR-363 Phase 1G — dashed rubber-band leader to the cursor (corner/move
-      // hot-grip). Drawn BEFORE the ghost short-circuit so it shows even when the
-      // params clamp to an identical entity reference (e.g. thickness floor). The
-      // start is the move/corner anchor; the end is the cursor (anchorPos + delta).
-      dp.hotGrip &&
-      dp.anchorPos &&
-      (dp.delta.x !== 0 || dp.delta.y !== 0)
-    ) {
-      const fromW = dp.rotatePivot ?? dp.anchorPos;
-      const toW = translatePoint(dp.anchorPos, dp.delta);
-      drawDashedSegment(ctx, fromW, toW, t, vp);
-    }
+    // (Rubber-band leaders — rotate-ref/align guides + MOVE base-point ＋ + gold leader — are drawn
+    //  EARLIER, before `drawGroupGhost`'s early-return, so GROUP/BLOCK moves get their leader too.)
 
     // ADR-357/513 §grip-polar — πορτοκαλί polar ray + γωνία από τον ΣΤΑΘΕΡΟ γείτονα προς το κλειδωμένο
     // άκρο (ΙΔΙΟ `paintPolarTrackingLine` SSoT με σχεδίαση/περιστροφή/κολώνα — μηδέν νέο paint). Γραμμή

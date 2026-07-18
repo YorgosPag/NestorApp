@@ -27,6 +27,8 @@ import type { Entity } from '../../types/entities';
 // ADR-641 — BEDIT-aware O(1) cached entity getter (member in VIEW space while inside a Block Editor).
 import { useBeditAwareEntityGetter } from './use-bedit-aware-entity-getter';
 import { drawRubberBandLine } from '../../canvas-v2/preview-canvas/rubber-band-paint';
+// ADR-049 — red base-point ＋ crosshair SSoT (shared with the grip MOVE hot-grip preview).
+import { drawMoveBasePointMarker } from '../../rendering/ui/move-base-point-marker';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import type { MovePhase } from './useMoveTool';
@@ -107,18 +109,8 @@ export function useMovePreview(props: UseMovePreviewProps): void {
 
     const pivotScreen = CoordinateTransforms.worldToScreen(basePoint, t, viewport);
 
-    // Base point crosshair (red)
-    const markerSize = 8;
-    ctx.save();
-    ctx.strokeStyle = '#FF4444';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(pivotScreen.x - markerSize, pivotScreen.y);
-    ctx.lineTo(pivotScreen.x + markerSize, pivotScreen.y);
-    ctx.moveTo(pivotScreen.x, pivotScreen.y - markerSize);
-    ctx.lineTo(pivotScreen.x, pivotScreen.y + markerSize);
-    ctx.stroke();
-    ctx.restore();
+    // Base-point ＋ crosshair (red) — shared SSoT painter (same glyph the grip MOVE hot-grip draws).
+    drawMoveBasePointMarker(ctx, basePoint, t, viewport);
 
     if (!effectiveCursor) return;
 

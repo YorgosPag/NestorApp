@@ -94,6 +94,27 @@ export function drawDashedSegment(
 }
 
 /**
+ * ADR-049/040 — WORLD-space wrapper for the GOLD «rubber-band» leader (base→cursor) used by the
+ * whole-entity MOVE hot-grip. Projects both endpoints, then delegates the style to the SAME SSoT
+ * `drawRubberBandLine` the ribbon Move + Rotation previews use → the grip MOVE leader is byte-identical
+ * to the toolbar Move leader (parity «ΑΚΡΙΒΩΣ όπως»). Distinct from `drawDashedSegment` (ghost-cyan
+ * corner/free-rotate leader) — different colour intent, so they must not be merged.
+ */
+export function drawMoveRubberBand(
+  ctx: CanvasRenderingContext2D,
+  fromW: { x: number; y: number },
+  toW: { x: number; y: number },
+  transform: ViewTransform,
+  vp: { width: number; height: number },
+): void {
+  drawRubberBandLine(
+    ctx,
+    CoordinateTransforms.worldToScreen(fromW, transform, vp),
+    CoordinateTransforms.worldToScreen(toW, transform, vp),
+  );
+}
+
+/**
  * ADR-357/397/561 — the SSoT «endpoint-reshape 🟢/🔴 direction arc». Given the FIXED pivot,
  * the ORIGINAL moved point and the NEW moved point, it derives the signed swept angle via the
  * shared `rotateSweepDegFromDirs` and paints the centralized `paintDirectionArc`. ONE glue for
