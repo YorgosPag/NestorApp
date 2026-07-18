@@ -17,8 +17,11 @@ import { clearGripAlignmentTracking } from './GripAlignmentTrackingStore';
 import { clearMoveOrthoAxis } from '../grip/MoveOrthoAxisStore';
 import { GripAltMoveStore } from '../grip/GripAltMoveStore';
 // ADR-513 §grip-parity Φάση Δ — ΕΝΑ predicate «είναι λαβή αλλαγής μεγέθους;», κοινό με το typed-value
-// lock (`resize-grip-lock`), ώστε mount δαχτυλιδιού ≡ αποδοχή τιμής. Καθαρό pure module (μηδέν κύκλος).
-import { isResizeGripKind } from '../dynamic-input/resize-grip-lock';
+// lock (`resize-grip-lock`). Εισάγεται ΑΠΕΥΘΕΙΑΣ από το registry (`wall-hot-grip-fsm`, type-only deps)
+// και ΟΧΙ από το `resize-grip-lock`: αλλιώς αυτό το low-level store θα έσερνε το βαρύ
+// `displacement-lock-core → drawing-handler-utils → preview-canvas` graph → κύκλος αρχικοποίησης που
+// τύφλωνε το mount του δαχτυλιδιού (bug 1ης απόπειρας, Giorgio 2026-07-18).
+import { isResizeGripKind } from '../../hooks/grips/wall-hot-grip-fsm';
 
 export interface ActiveDragGripInfo {
   entityId: string;

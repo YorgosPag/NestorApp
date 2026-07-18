@@ -39,8 +39,12 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import { hotGripOpForKind } from '../../hooks/grips/wall-hot-grip-fsm';
+// N.18/κύκλος-init — το eligibility predicate ζει ΔΙΠΛΑ στο registry (`wall-hot-grip-fsm`), ΟΧΙ εδώ,
+// ώστε το low-level `GripDragStore` να το εισάγει χωρίς να σύρει το βαρύ `displacement-lock-core` graph.
+import { isResizeGripKind } from '../../hooks/grips/wall-hot-grip-fsm';
 import { resolveDisplacementLockedDelta } from './displacement-lock-core';
+
+export { isResizeGripKind };
 
 /** Ελάχιστη όψη λαβής που χρειάζεται ο resolver — δίνεται από το ghost (`dp`) και το commit (`grip`). */
 export interface ResizeGripLike {
@@ -50,15 +54,6 @@ export interface ResizeGripLike {
   readonly movesEntity?: boolean;
   /** `true` ⇒ περιστροφή σε εξέλιξη — η ρητή είσοδος είναι γωνία, όχι μήκος. */
   readonly isRotation: boolean;
-}
-
-/**
- * Είναι το `kind` λαβή ΑΛΛΑΓΗΣ ΜΕΓΕΘΟΥΣ (γωνία ή μεσοπλευρική/διάσταση); Καθαρό predicate πάνω στο
- * ΥΠΑΡΧΟΝ μητρώο hot-grip — μοιράζεται με το `GripDragStore.isResizeGripDragInfo` (mount του
- * δαχτυλιδιού) ώστε «ποια λαβή δείχνει δαχτυλίδι» και «ποια λαβή δέχεται τιμή» να μην αποκλίνουν.
- */
-export function isResizeGripKind(kind: string | null | undefined): boolean {
-  return hotGripOpForKind(kind) === 'corner';
 }
 
 /**

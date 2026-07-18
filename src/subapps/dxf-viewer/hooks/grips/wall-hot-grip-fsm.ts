@@ -263,6 +263,21 @@ export function isWallHotGripKind(kind: string | undefined | null): boolean {
 }
 
 /**
+ * ADR-513 §grip-parity Φάση Δ — True μόνο για λαβή ΑΛΛΑΓΗΣ ΜΕΓΕΘΟΥΣ (op `'corner'`): η ίδια η λαβή
+ * είναι η άγκυρα, το `tracking` τερματικό. Το ΕΝΑ predicate που ορίζει «ποια λαβή δείχνει δαχτυλίδι»
+ * (`GripDragStore.isResizeGripDragInfo`) ΚΑΙ «ποια λαβή δέχεται πληκτρολογημένη τιμή»
+ * (`resize-grip-lock.resolveResizeGripLockedDelta`) — αδύνατον να αποκλίνουν.
+ *
+ * Ζει ΕΔΩ (δίπλα στο `HOT_GRIP_OP_REGISTRY`), όχι στο `resize-grip-lock`, επίτηδες: είναι καθαρό
+ * registry-lookup με ΜΗΔΕΝ εξαρτήσεις μαθηματικών. Έτσι το low-level `GripDragStore` το εισάγει
+ * χωρίς να σύρει το βαρύ `displacement-lock-core → drawing-handler-utils → preview-canvas` graph
+ * (που θα δημιουργούσε κύκλο αρχικοποίησης — το bug της 1ης απόπειρας, Giorgio 2026-07-18).
+ */
+export function isResizeGripKind(kind: string | undefined | null): boolean {
+  return hotGripOpForKind(kind) === 'corner';
+}
+
+/**
  * ADR-397 — read the parametric grip kind from a unified grip regardless of which
  * BIM entity owns it (wall / column / stair are mutually exclusive discriminators).
  * Entity-agnostic key for the hot-grip routing in `grip-mouse-handlers`.
