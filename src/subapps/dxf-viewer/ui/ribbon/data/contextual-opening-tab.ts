@@ -169,8 +169,15 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
   isContextual: true,
   contextualTrigger: OPENING_CONTEXTUAL_TRIGGER,
   badgeKey: OPENING_RIBBON_BADGE_KEYS.violations,
+  // ADR-676 ΒΗΜΑ 2 (UI) — αναδιάταξη ώστε το tab να μη ξεχειλίζει δεξιά: οι πλατιές
+  // μονές σειρές γίνονται στοιβαγμένες στήλες (μικρότερο πλάτος/panel) και οι σπάνιες
+  // ή appearance εντολές πάνε σε flyout rows (▼, μοτίβο Revit/AutoCAD panel-expander).
+  // Τα πρώην μικρά panels (renumber/schedule/ifc/resetTag) απορροφώνται ως flyout του
+  // «Σήμανση» panel → 11 panels → 8. Καμία εντολή δεν αφαιρέθηκε· μηδέν νέο i18n.
   panels: [
     {
+      // «Σήμανση & Πίνακας» — mark ορατό· reset-tag / renumber / schedule / IFC pset
+      // (σπάνιες) σε flyout ώστε να μη σπαταλούν 4 ξεχωριστά panel chromes.
       id: 'opening-mark',
       labelKey: 'ribbon.panels.openingMark',
       rows: [
@@ -188,6 +195,11 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
                 options: [],
               },
             },
+          ],
+        },
+        {
+          isInFlyout: true,
+          buttons: [
             {
               type: 'simple',
               size: 'small',
@@ -199,11 +211,50 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
                 action: OPENING_RIBBON_KEYS_ACTIONS.resetTagPosition,
               },
             },
+            {
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'opening.renumber',
+                labelKey: 'ribbon.commands.openingEditor.renumber.label',
+                icon: 'bim-opening-renumber',
+                commandKey: OPENING_RIBBON_KEYS_ACTIONS.renumber,
+                action: OPENING_RIBBON_KEYS_ACTIONS.renumber,
+              },
+            },
+          ],
+        },
+        {
+          isInFlyout: true,
+          buttons: [
+            {
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'opening.scheduleExport',
+                labelKey: 'ribbon.commands.openingEditor.scheduleExport.label',
+                icon: 'bim-opening-schedule-pdf',
+                commandKey: OPENING_RIBBON_KEYS_ACTIONS.exportSchedulePdf,
+                action: OPENING_RIBBON_KEYS_ACTIONS.exportSchedulePdf,
+              },
+            },
+            {
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'opening.pset.open',
+                labelKey: 'ribbon.commands.psetEditor.open',
+                icon: 'ifc-pset',
+                commandKey: 'opening.pset.open',
+                action: PSET_RIBBON_ACTION,
+              },
+            },
           ],
         },
       ],
     },
     {
+      // Στοιβαγμένο: kind (πλατύ) στη 1η σειρά· handing + openDirection στη 2η.
       id: 'opening-kind',
       labelKey: 'ribbon.panels.openingKind',
       rows: [
@@ -221,6 +272,11 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
                 options: OPENING_KIND_OPTIONS,
               },
             },
+          ],
+        },
+        {
+          isInFlyout: false,
+          buttons: [
             {
               type: 'combobox',
               size: 'small',
@@ -248,10 +304,8 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
       ],
     },
     {
-      // ADR-421 SLICE C — BIM Family Type: selector (Radix Select, ADR-001) +
-      // type properties / per-instance override editor. Selector assigns/detaches
-      // the opening's `typeId` (a Type can switch the family → 2D/3D/IFC follow);
-      // properties widget shows effective dims + renames/edits user types.
+      // ADR-421 SLICE C — BIM Family Type. Στοιβαγμένο: selector 1η σειρά·
+      // type-properties + hardware override 2η.
       id: 'opening-family-type',
       labelKey: 'ribbon.panels.openingFamilyType',
       rows: [
@@ -268,6 +322,11 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
                 commandKey: 'opening.familyType.select',
               },
             },
+          ],
+        },
+        {
+          isInFlyout: false,
+          buttons: [
             {
               type: 'widget',
               size: 'small',
@@ -279,9 +338,7 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
               },
             },
             {
-              // ADR-674 Φ C — INSTANCE-level hardware override trigger («this
-              // door: 4 hinges»), sibling of the TYPE-wide properties widget
-              // above. Opens `EditOpeningHardwareDialog` for the selection.
+              // ADR-674 Φ C — INSTANCE-level hardware override («this door: 4 hinges»).
               type: 'widget',
               size: 'small',
               widgetId: 'opening-hardware',
@@ -296,6 +353,7 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
       ],
     },
     {
+      // Στοιβαγμένο: width + height 1η σειρά· sill 2η.
       id: 'opening-size',
       labelKey: 'ribbon.panels.openingSize',
       rows: [
@@ -324,6 +382,11 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
                 options: HEIGHT_MM_OPTIONS,
               },
             },
+          ],
+        },
+        {
+          isInFlyout: false,
+          buttons: [
             {
               type: 'combobox',
               size: 'small',
@@ -340,10 +403,7 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
       ],
     },
     {
-      // ADR-673 — Κατώφλι (threshold): on/off toggle + vertical embed selector
-      // + custom sink depth (mm, active only when embed==='custom'). Instance-
-      // owned, always editable regardless of `opening.typeId` — mirrors
-      // `sillHeight`/`handing` (never merged into the ADR-421 type-governed set).
+      // ADR-673 — Κατώφλι. Στοιβαγμένο: toggle + embed 1η σειρά· custom depth 2η.
       id: 'opening-threshold',
       labelKey: 'ribbon.panels.openingThreshold',
       rows: [
@@ -371,6 +431,11 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
                 options: THRESHOLD_EMBED_OPTIONS,
               },
             },
+          ],
+        },
+        {
+          isInFlyout: false,
+          buttons: [
             {
               type: 'combobox',
               size: 'small',
@@ -387,10 +452,8 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
       ],
     },
     {
-      // ADR-611 — Frame Profile (διατομή κάσας): manufacturer + profile/series
-      // Radix Selects (cascading — profile options filter by the manufacturer
-      // value) plus the two editable, CONSTANT cross-section dims. Instance-
-      // owned (never type-governed, unlike kind/width/height above).
+      // ADR-611/676 — Frame Profile (διατομή κάσας). Στοιβαγμένο σε στήλη ώστε το
+      // πλατύ «profile» select να μην απλώνει το panel· save/duplicate (σπάνιο) → flyout.
       id: 'opening-frame-profile',
       labelKey: 'ribbon.panels.openingFrameProfile',
       rows: [
@@ -449,10 +512,9 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
           ],
         },
         {
-          // ADR-676 Phase 3 PILOT — user-library save/duplicate affordance for
-          // the resolved frame profile above («Αποθήκευση ως δικό μου» /
-          // «Αντιγραφή & επεξεργασία»). Instance-owned like the rest of the panel.
-          isInFlyout: false,
+          // ADR-676 Phase 3 PILOT — «Αποθήκευση ως δικό μου» / «Αντιγραφή & επεξεργασία».
+          // Σπάνια ενέργεια → flyout.
+          isInFlyout: true,
           buttons: [
             {
               type: 'widget',
@@ -469,50 +531,8 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
       ],
     },
     {
-      id: 'opening-ifc',
-      labelKey: 'ribbon.panels.ifcProperties',
-      rows: [
-        {
-          isInFlyout: false,
-          buttons: [
-            {
-              type: 'simple',
-              size: 'small',
-              command: {
-                id: 'opening.pset.open',
-                labelKey: 'ribbon.commands.psetEditor.open',
-                icon: 'ifc-pset',
-                commandKey: 'opening.pset.open',
-                action: PSET_RIBBON_ACTION,
-              },
-            },
-          ],
-        },
-      ],
-    },
-    {
-      id: 'opening-renumber',
-      labelKey: 'ribbon.panels.openingRenumber',
-      rows: [
-        {
-          isInFlyout: false,
-          buttons: [
-            {
-              type: 'simple',
-              size: 'small',
-              command: {
-                id: 'opening.renumber',
-                labelKey: 'ribbon.commands.openingEditor.renumber.label',
-                icon: 'bim-opening-renumber',
-                commandKey: OPENING_RIBBON_KEYS_ACTIONS.renumber,
-                action: OPENING_RIBBON_KEYS_ACTIONS.renumber,
-              },
-            },
-          ],
-        },
-      ],
-    },
-    {
+      // Ετικέτα (tag style). Ορατά: μέγεθος/περίγραμμα/οδηγός· τα appearance
+      // (χρώματα pill/leader + ορατότητα οδηγού) → flyout.
       id: 'opening-tag-style',
       labelKey: 'ribbon.panels.openingTagStyle',
       rows: [
@@ -541,6 +561,11 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
                 options: BORDER_WIDTH_OPTIONS,
               },
             },
+          ],
+        },
+        {
+          isInFlyout: false,
+          buttons: [
             {
               type: 'combobox',
               size: 'small',
@@ -555,7 +580,7 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
           ],
         },
         {
-          isInFlyout: false,
+          isInFlyout: true,
           buttons: [
             {
               type: 'widget',
@@ -585,28 +610,6 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
                 labelKey: 'ribbon.commands.openingEditor.tagStyle.ribbon.leaderVisibleLabel',
                 icon: 'bim-opening-leader-visible',
                 commandKey: OPENING_TAG_STYLE_KEYS.leaderVisible,
-              },
-            },
-          ],
-        },
-      ],
-    },
-    {
-      id: 'opening-schedule',
-      labelKey: 'ribbon.panels.openingSchedule',
-      rows: [
-        {
-          isInFlyout: false,
-          buttons: [
-            {
-              type: 'simple',
-              size: 'small',
-              command: {
-                id: 'opening.scheduleExport',
-                labelKey: 'ribbon.commands.openingEditor.scheduleExport.label',
-                icon: 'bim-opening-schedule-pdf',
-                commandKey: OPENING_RIBBON_KEYS_ACTIONS.exportSchedulePdf,
-                action: OPENING_RIBBON_KEYS_ACTIONS.exportSchedulePdf,
               },
             },
           ],
