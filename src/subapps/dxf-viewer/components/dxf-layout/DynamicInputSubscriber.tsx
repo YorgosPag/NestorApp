@@ -182,10 +182,12 @@ export const DynamicInputSubscriber = React.memo(function DynamicInputSubscriber
   }
 
   // ADR-513 §opening-width — ΕΠΕΚΤΑΣΗ ΠΛΑΤΟΥΣ ΚΟΥΦΩΜΑΤΟΣ (click-move-click, hot-grip): δείξε το length-only
-  // «Δαχτυλίδι Εντολών» (Μήκος) σε `canvas-click` mode — ΑΚΡΙΒΩΣ ο μηχανισμός του άκρου γραμμής. Ο χρήστης
-  // κλικάρει τη λαβή παρειάς, η παρειά ακολουθεί button-free, πληκτρολογεί «Μήκος» → Enter → synthetic canvas
-  // click που κάνει το commit (hot-grip terminal), ή κλικ ΕΞΩ από τον τροχό → commit στον κέρσορα. Ίδιος 3D-yield.
-  if (dynInput.on && !is3D && openingCornerDrag && activeDrag && getSceneUnits) {
+  // «Δαχτυλίδι Εντολών» (Μήκος) σε `canvas-click` mode. Ο χρήστης κλικάρει τη λαβή παρειάς, η παρειά ακολουθεί
+  // button-free, πληκτρολογεί «Μήκος» → Enter → synthetic canvas click που κάνει το commit (hot-grip terminal),
+  // ή κλικ ΕΞΩ από τον τροχό → commit στον κέρσορα. **ΔΕΝ** gate-άρεται στη ΔΥΝ (Giorgio 2026-07-18): το ring
+  // mount-άρεται όποτε τρέχει opening-corner drag (το `openingCornerDrag` μπαίνει μόνο σε αυτό το hot-grip).
+  // Ίδιος 3D-yield κανόνας.
+  if (!is3D && openingCornerDrag && activeDrag && getSceneUnits) {
     return (
       <RadialCommandRing
         config={OPENING_WIDTH_RING_CONFIG}
