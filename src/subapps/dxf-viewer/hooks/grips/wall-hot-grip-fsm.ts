@@ -184,6 +184,71 @@ export const HOT_GRIP_OP_REGISTRY: Readonly<Record<string, WallHotGripOp>> = {
   // αναφοράς πράσινο/κόκκινο, ΟΧΙ press-drag). Η εικόνα κάνει orbit το picked centre (position +
   // rotation) μέσω του pivot-aware `applyImageGripDrag`. Move / 4 γωνίες / 3 μεσοπλευρικές = press-drag.
   'image-rotation': 'rotate',
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // ΚΑΘΟΛΙΚΟΤΗΤΑ ΛΑΒΩΝ ΑΛΛΑΓΗΣ ΜΕΓΕΘΟΥΣ (Giorgio 2026-07-18, ADR-513 §grip-parity Φάση Γ)
+  // ══════════════════════════════════════════════════════════════════════════
+  // Ζητούμενο: «ΚΑΘΟΛΙΚΑ, για ΚΑΘΕ οντότητα — κλικ σε λαβή → κόκκινη → ακολουθεί τον κέρσορα →
+  // δεύτερο κλικ ή πληκτρολογημένη τιμή». Μέχρι τώρα ΜΟΝΟ οι glyph handles (move/rotate) και οι
+  // γωνίες των rect-based οντοτήτων ήταν εδώ· κάθε λαβή ΔΙΑΣΤΑΣΗΣ έμενε press-drag → κλικ πάνω της
+  // έπεφτε στο `applyGripArmClick` → ΠΟΡΤΟΚΑΛΙ arm (ADR-501) αντί για κόκκινο reshape.
+  //
+  // ΓΙΑΤΙ ΗΤΑΝ ΑΣΦΑΛΕΣ ΝΑ ΑΝΟΙΞΕΙ (grep-verified 2026-07-18): ο αρχικός αποκλεισμός τεκμηριωνόταν ως
+  // «resize is a plain drag» — ΑΠΟΦΑΣΗ ΠΡΟΪΟΝΤΟΣ, ΟΧΙ τεχνικό εμπόδιο. Το hot-grip `'corner'` και το
+  // press-drag καταλήγουν στην ΙΔΙΑ ακριβώς γραμμή commit (`applyResizeConstraints(rawDelta)` →
+  // `commitDxfGripDragModeAware`), οπότε δεν χρειάζεται καμία αλλαγή στον axis-box/rect-grip engine.
+  // Προϋπάρχουσα απόδειξη: τα `mep-fixture-corner-*` ήταν ΗΔΗ εδώ ως `'corner'` και κάνουν resize
+  // κανονικά. Το `'corner'` είναι το σωστό op: η ίδια η λαβή είναι η άγκυρα, το `tracking` τερματικό.
+  //
+  // Το press-drag ΔΕΝ χάνεται — παραμένει η εναλλακτική χειρονομία (διπλή επιλογή, όπως ζητήθηκε).
+
+  // Κολόνα (ADR-397/518) — 4 γωνίες + 4 μεσοπλευρικές μέσω του κοινού rect-grip-engine.
+  'column-corner-ne': 'corner',
+  'column-corner-nw': 'corner',
+  'column-corner-sw': 'corner',
+  'column-corner-se': 'corner',
+  'column-width': 'corner',
+  'column-depth': 'corner',
+  'column-edge-w': 'corner',
+  'column-edge-s': 'corner',
+  // Πέδιλο (ADR-436) — καθρέφτης της κολόνας (ίδιος engine, ίδιο σχήμα λαβών).
+  'foundation-corner-ne': 'corner',
+  'foundation-corner-nw': 'corner',
+  'foundation-corner-sw': 'corner',
+  'foundation-corner-se': 'corner',
+  'foundation-edge-w': 'corner',
+  'foundation-edge-s': 'corner',
+  'foundation-width': 'corner',
+  'foundation-length': 'corner',
+  // Κείμενο / MText (ADR-557) — 4 γωνίες + 4 μεσοπλευρικές του πλαισίου.
+  'text-corner-ne': 'corner',
+  'text-corner-nw': 'corner',
+  'text-corner-sw': 'corner',
+  'text-corner-se': 'corner',
+  'text-edge-n': 'corner',
+  'text-edge-s': 'corner',
+  'text-edge-e': 'corner',
+  'text-edge-w': 'corner',
+  // Σκάλα (ADR-393) — 4 γωνίες + πλάτος/μήκος/βάθος πλατύσκαλου.
+  'stair-corner-start-left': 'corner',
+  'stair-corner-start-right': 'corner',
+  'stair-corner-end-left': 'corner',
+  'stair-corner-end-right': 'corner',
+  'stair-width': 'corner',
+  'stair-length': 'corner',
+  'stair-landing-depth': 'corner',
+  // Δοκός (ADR-564) — άκρα άξονα + πλάτος. Η ΚΑΜΠΥΛΟΤΗΤΑ (`beam-curve`) μένει press-drag: είναι
+  // λαβή βέλους/bulge, όχι μετατόπιση σημείου — 2-click εκεί έχει ασαφή σημασιολογία.
+  'beam-start': 'corner',
+  'beam-end': 'corner',
+  'beam-width': 'corner',
+  // Τοίχος (ADR-363) — άκρα άξονα + πάχος. Οι 4 ασύμμετρες γωνίες είναι ήδη πάνω ως `'corner'`.
+  // `wall-curve` / `wall-arc-apex` μένουν press-drag για τον ίδιο λόγο με το `beam-curve`.
+  'wall-start': 'corner',
+  'wall-end': 'corner',
+  'wall-thickness': 'corner',
+  // MEP fixture (ADR-406) — η διάμετρος του κυκλικού (οι 4 γωνίες είναι ήδη πάνω).
+  'mep-fixture-diameter': 'corner',
 } as const;
 
 /** Map any grip kind to its hot-grip operation, or null if it stays drag. */

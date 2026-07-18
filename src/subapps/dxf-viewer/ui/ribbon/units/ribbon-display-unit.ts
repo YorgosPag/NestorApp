@@ -21,7 +21,12 @@
  * @see docs/centralized-systems/reference/adrs/ADR-677-user-selectable-input-units.md
  */
 
-import { formatDisplayValue, fromDisplay } from '../../../config/units';
+import {
+  formatDisplayValue,
+  fromDisplay,
+  DISPLAY_UNIT_LABELS,
+  type DisplayUnit,
+} from '../../../config/units';
 import { displayUnitState } from '../../../config/display-unit-state';
 import type { RibbonComboboxOption, RibbonQuantityKind } from '../types/ribbon-types';
 import {
@@ -52,6 +57,26 @@ export function fromDisp(value: string): number {
  */
 export function isUnitConvertedKind(kind: RibbonQuantityKind | undefined): boolean {
   return kind === 'model-length';
+}
+
+/**
+ * ADR-677 Φάση 2γ — the unit symbol a field should display, or `undefined` when it must show
+ * none. Only a converted field earns one: a suffix on a count («16 βαθμίδες m») or on a DN
+ * catalogue size would be worse than silence.
+ *
+ * The symbol is NOT an i18n string. It is a physical notation like «°» or «%» — identical in
+ * every locale — so it lives in the `DISPLAY_UNIT_LABELS` SSoT, not in the locale JSONs
+ * (CLAUDE.md N.11 is about translatable text). Same call the status bar makes for the F9 snap
+ * step (Φάση 2α), so both readouts can never disagree about what «m» is.
+ *
+ * Takes the unit as an argument rather than reading `displayUnitState`: the caller already
+ * subscribes reactively, and a pure function is what the tests can pin.
+ */
+export function unitSuffixFor(
+  kind: RibbonQuantityKind | undefined,
+  unit: DisplayUnit,
+): string | undefined {
+  return isUnitConvertedKind(kind) ? DISPLAY_UNIT_LABELS[unit] : undefined;
 }
 
 /**

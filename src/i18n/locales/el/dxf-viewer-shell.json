@@ -2850,7 +2850,7 @@
         "tread": "Πάτημα",
         "width": "Πλάτος",
         "stepCount": "Πλήθος Σκαλιών",
-        "waistThickness": "Πάχος Πλάκας (mm)",
+        "waistThickness": "Πάχος Πλάκας",
         "storyCount": "Διανυόμενοι Όροφοι",
         "storyHeight": "Ύψος Ορόφου",
         "flight2TurnDirection": "Στροφή Σκέλους 2",
@@ -3255,7 +3255,7 @@
         },
         "interiorMaterial": "Εσωτ. Υλικό",
         "exteriorMaterial": "Εξωτ. Υλικό",
-        "thickness": "Πάχος (χιλ.)"
+        "thickness": "Πάχος"
       },
       "openingEditor": {
         "mark": "Mark",
@@ -3272,7 +3272,7 @@
           "onSlab": "Στο γκρο μπετό",
           "custom": "Προσαρμοσμένο"
         },
-        "thresholdEmbedMm": "Βάθος Βύθισης (mm)",
+        "thresholdEmbedMm": "Βάθος Βύθισης",
         "frameProfile": {
           "manufacturer": "Κατασκευαστής",
           "profile": "Διατομή",
@@ -3963,7 +3963,7 @@
         "condensateDiameter": "Διάμετρος συμπυκνωμάτων",
         "condensateNeutraliser": "Εξουδετερωτής",
         "showServiceClearance": "Καθαρός χώρος",
-        "serviceClearance": "Απόσταση (mm)",
+        "serviceClearance": "Απόσταση",
         "safetyReliefValve": "Ασφαλιστική βαλβίδα",
         "reliefValvePressure": "Πίεση (bar)",
         "expansionVessel": "Δοχείο διαστολής",
@@ -4058,14 +4058,14 @@
         "deleteConfirm": "Διαγραφή θερμοσίφωνα; Η ενέργεια δεν μπορεί να αναιρεθεί."
       },
       "mepUnderfloorEditor": {
-        "pipeSpacing": "Βήμα σωλήνα (mm)",
-        "edgeClearance": "Απόσταση από τοίχο (mm)",
+        "pipeSpacing": "Βήμα σωλήνα",
+        "edgeClearance": "Απόσταση από τοίχο",
         "patternType": "Μοτίβο",
         "patternBoustrophedon": "Σερπαντίνα (μπρος-πίσω)",
         "patternCounterflow": "Διπλή σπείρα (αντιρροή)",
         "patternSpiral": "Σπιράλ (κοχλίας)",
         "totalLength": "Μήκος σωλήνα (m)",
-        "screedOffset": "Ύψος στη γαρμπίλα (mm)",
+        "screedOffset": "Ύψος στη γαρμπίλα",
         "connectorDiameter": "Διάμετρος σύνδεσης (mm)",
         "thermalOutput": "Θερμική ισχύς (W)",
         "close": "Κλείσιμο",
@@ -4074,9 +4074,9 @@
       },
       "floorFinishEditor": {
         "material": "Υλικό",
-        "thickness": "Πάχος (mm)",
-        "tileLengthMm": "Μήκος πλακιδίου (mm)",
-        "tileWidthMm": "Πλάτος πλακιδίου (mm)",
+        "thickness": "Πάχος",
+        "tileLengthMm": "Μήκος πλακιδίου",
+        "tileWidthMm": "Πλάτος πλακιδίου",
         "tileRotate90": "Περιστροφή 90°",
         "close": "Κλείσιμο",
         "delete": "Διαγραφή",
@@ -4086,7 +4086,7 @@
         "bodyMaterial": "Υλικό φινιρίσματος",
         "surfaceMaterial": "Χρώμα/μπογιά",
         "faceSide": "Παρειά",
-        "height": "Ύψος (mm)",
+        "height": "Ύψος",
         "close": "Κλείσιμο",
         "delete": "Διαγραφή",
         "deleteConfirm": "Διαγραφή φινιρίσματος τοίχου; Η ενέργεια δεν μπορεί να αναιρεθεί."
@@ -4213,7 +4213,7 @@
         "solarShadingLevel": "Σκίαση",
         "airTightnessLevel": "Στεγανότητα κελύφους",
         "ventilationSystem": "Σύστημα αερισμού",
-        "ceilingHeightMm": "Ύψος (mm)",
+        "ceilingHeightMm": "Ύψος",
         "close": "Κλείσιμο",
         "delete": "Διαγραφή",
         "deleteConfirm": "Διαγραφή θερμικού χώρου; Η ενέργεια δεν μπορεί να αναιρεθεί.",
@@ -5060,7 +5060,7 @@
       },
       "annotationSymbolEditor": {
         "variant": "Στυλ",
-        "size": "Μέγεθος (mm)",
+        "size": "Μέγεθος",
         "rotation": "Περιστροφή"
       },
       "scaleBarEditor": {

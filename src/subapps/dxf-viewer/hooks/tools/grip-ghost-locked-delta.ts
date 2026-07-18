@@ -11,7 +11,9 @@
  *   2. **Άκρο γραμμής** — Μήκος/Γωνία στο grip 0/1 (ADR-513 §grip-parity)
  *   3. **Vertex/edge reshape** — displacement Model A σε τόξο/πολυγραμμή/προβεβλημένο ορθογώνιο
  *   4. **POLAR angle-snap άκρου** — γύρω από τον ΣΤΑΘΕΡΟ γείτονα (ADR-357/513 §grip-polar)
- *   5. **Μετακίνηση ολόκληρης οντότητας** — displacement Model A σε λαβή `movesEntity` (ADR-513 §grip-parity)
+ *   5. **Αλλαγή μεγέθους** — displacement Model A σε λαβή γωνίας/μεσοπλευρικής/διάστασης ΚΑΘΕ
+ *      οντότητας· εύρος = `HOT_GRIP_OP_REGISTRY` op `'corner'` (ADR-513 §grip-parity Φάση Δ)
+ *   6. **Μετακίνηση ολόκληρης οντότητας** — displacement Model A σε λαβή `movesEntity` (ADR-513 §grip-parity)
  *
  * Γιατί χωριστό module (2026-07-18): εξήχθη από το `useGripGhostPreview` όταν εκείνο πέρασε το
  * όριο των 500 γραμμών (N.7.1). Το όριο είναι σημασιολογικό — αυτή είναι καθαρή, testable
@@ -32,7 +34,9 @@ import { resolveActiveFootprintGripKind } from '../../systems/grip/footprint-res
 import { resolveLineEndpointLockedDelta } from '../../systems/dynamic-input/grip-endpoint-lock';
 import { resolveVertexReshapeLockedDelta } from '../../systems/dynamic-input/vertex-reshape-lock';
 import { resolveOpeningWidthLockedDelta, isOpeningCornerGripKind } from '../../systems/dynamic-input/opening-width-lock';
-// ADR-513 §grip-parity — 5ο σκαλί: typed «Μήκος» σε λαβή ΜΕΤΑΚΙΝΗΣΗΣ ολόκληρης οντότητας.
+// ADR-513 §grip-parity — 5ο σκαλί: typed «Μήκος» σε λαβή ΑΛΛΑΓΗΣ ΜΕΓΕΘΟΥΣ (γωνία/μεσοπλευρική).
+import { resolveResizeGripLockedDelta } from '../../systems/dynamic-input/resize-grip-lock';
+// ADR-513 §grip-parity — 6ο σκαλί: typed «Μήκος» σε λαβή ΜΕΤΑΚΙΝΗΣΗΣ ολόκληρης οντότητας.
 import { resolveMoveDisplacementLockedDelta } from '../../systems/dynamic-input/move-displacement-lock';
 import { resolveEndpointReshapePolarLock, type EndpointReshapePolarLock } from '../grips/grip-endpoint-polar-lock';
 
@@ -113,10 +117,21 @@ export function resolveGripGhostLockedDelta(
   );
   if (endpointPolar) return { delta: endpointPolar.delta, endpointPolar };
 
-  // 5 — ΜΕΤΑΚΙΝΗΣΗ ΟΛΟΚΛΗΡΗΣ ΟΝΤΟΤΗΤΑΣ (move-σταυρός / Alt-move): displacement (Model A) — κατεύθυνση
-  // ORTHO/POLAR από το σημείο βάσης + πληκτρολογούμενο «Μήκος». ΤΕΛΕΥΤΑΙΟ σκαλί επίτηδες: τα 1-4
-  // αφορούν λαβές που ΑΝΑΜΟΡΦΩΝΟΥΝ (κορυφή/άκρο/παρειά, όλα `movesEntity !== true`), οπότε είναι
-  // αμοιβαία αποκλειόμενα με αυτό — η σειρά δεν μπορεί να «κλέψει» λαβή από τα προηγούμενα.
+  // 5 — ΑΛΛΑΓΗ ΜΕΓΕΘΟΥΣ (γωνία / μεσοπλευρική / λαβή διάστασης, ΚΑΘΕ οντότητας): displacement
+  // (Model A) — «η λαβή μετακινείται ΚΑΤΑ την τιμή», ίδια σημασιολογία με τα σκαλιά 1/3/6. Το εύρος
+  // ορίζεται από το `HOT_GRIP_OP_REGISTRY` (op `'corner'`), όχι από δεύτερη λίστα → νέα λαβή resize
+  // κληρονομεί το typed value αυτόματα. Μετά το 4 (οι λαβές αναμόρφωσης έχουν δικά τους σκαλιά με
+  // ειδικότερη σημασιολογία) και πριν το 6 (`movesEntity` — αμοιβαία αποκλειόμενο, βλ. παρακάτω).
+  const resizeDelta = resolveResizeGripLockedDelta(
+    { gripKind: dp.gripKind?.kind, movesEntity: dp.movesEntity, isRotation: dp.rotatePivot != null },
+    anchorPos, cursorWorld,
+  );
+  if (resizeDelta) return { delta: resizeDelta, endpointPolar: null };
+
+  // 6 — ΜΕΤΑΚΙΝΗΣΗ ΟΛΟΚΛΗΡΗΣ ΟΝΤΟΤΗΤΑΣ (move-σταυρός / Alt-move): displacement (Model A) — κατεύθυνση
+  // ORTHO/POLAR από το σημείο βάσης + πληκτρολογούμενο «Μήκος». ΤΕΛΕΥΤΑΙΟ σκαλί επίτηδες: τα 1-5
+  // αφορούν λαβές που ΑΝΑΜΟΡΦΩΝΟΥΝ (κορυφή/άκρο/παρειά/διάσταση, όλα `movesEntity !== true`), οπότε
+  // είναι αμοιβαία αποκλειόμενα με αυτό — η σειρά δεν μπορεί να «κλέψει» λαβή από τα προηγούμενα.
   const moveDelta = resolveMoveDisplacementLockedDelta(
     { movesEntity: dp.movesEntity, isRotation: dp.rotatePivot != null }, anchorPos, cursorWorld,
   );

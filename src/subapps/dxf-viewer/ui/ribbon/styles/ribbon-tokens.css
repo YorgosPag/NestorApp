@@ -839,6 +839,14 @@ html[data-dxf-header-hidden="true"] header.sticky.top-0 {
   height: 24px;
 }
 
+/* ADR-677 Φάση 2γ — positioning context for the in-field unit symbol. The wrapper hugs the
+   input (not the ▾ trigger), so the symbol lands on the input's right edge whether or not the
+   field has a preset dropdown. */
+.dxf-ribbon-editable-combobox-field {
+  position: relative;
+  display: inline-flex;
+}
+
 .dxf-ribbon-editable-combobox-input {
   width: var(--ribbon-combobox-width, 140px);
   min-width: 48px;
@@ -863,6 +871,23 @@ html[data-dxf-header-hidden="true"] header.sticky.top-0 {
 
 .dxf-ribbon-editable-combobox[data-mixed="true"] .dxf-ribbon-editable-combobox-input {
   border-style: dashed;
+}
+
+/* Reserve room for the symbol only while it is shown, so a unit-less field (count, DN)
+   keeps the full input width. */
+.dxf-ribbon-editable-combobox-field[data-unit="true"] .dxf-ribbon-editable-combobox-input {
+  padding-right: 22px;
+}
+
+.dxf-ribbon-editable-combobox-unit {
+  position: absolute;
+  right: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  font-size: 10px;
+  line-height: 1;
+  color: var(--ribbon-text-muted);
 }
 
 .dxf-ribbon-editable-combobox-trigger {

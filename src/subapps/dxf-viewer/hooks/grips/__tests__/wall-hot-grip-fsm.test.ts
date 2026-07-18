@@ -73,8 +73,22 @@ describe('hotGripOpForKind / isWallHotGripKind / initialHotGripStep', () => {
     expect(hotGripOpForKind('wall-rotation')).toBe('rotate');
   });
 
-  it("non-hot wall grips → null", () => {
-    for (const k of ['wall-start', 'wall-end', 'wall-thickness', 'wall-curve', 'wall-vertex-1'] as WallGripKind[]) {
+  // ADR-513 §grip-parity Φάση Γ (Giorgio 2026-07-18 «ΟΛΕΣ οι λαβές click-armed») — τα άκρα άξονα
+  // και το πάχος opt-in πλέον στο 2-click `'corner'`. Το press-drag παραμένει ως εναλλακτική
+  // χειρονομία (διπλή επιλογή), οπότε δεν χάνεται λειτουργικότητα.
+  it("wall άκρα άξονα + πάχος → 'corner' (Φάση Γ)", () => {
+    for (const k of ['wall-start', 'wall-end', 'wall-thickness'] as WallGripKind[]) {
+      expect(hotGripOpForKind(k)).toBe('corner');
+      expect(isWallHotGripKind(k)).toBe(true);
+    }
+  });
+
+  // ΤΟ ΟΡΙΟ ΠΟΥ ΚΡΑΤΗΘΗΚΕ: οι λαβές ΚΑΜΠΥΛΟΤΗΤΑΣ (βέλος/bulge) ΔΕΝ είναι μετατόπιση σημείου —
+  // ένα 2-click «άφησέ το εδώ» έχει ασαφή σημασιολογία εκεί, οπότε μένουν press-drag σκόπιμα.
+  // Το `wall-vertex-N` είναι δυναμικό (index-templated) → δεν μπορεί να ζήσει σε στατικό registry·
+  // εξυπηρετείται από το bespoke `vertex-reshape-hotgrip`.
+  it("λαβές καμπυλότητας + δυναμικά vertex kinds μένουν press-drag → null", () => {
+    for (const k of ['wall-curve', 'wall-arc-apex', 'wall-vertex-1'] as WallGripKind[]) {
       expect(hotGripOpForKind(k)).toBeNull();
       expect(isWallHotGripKind(k)).toBe(false);
     }
@@ -119,8 +133,21 @@ describe('ADR-397 — column hot-grip kinds (shared registry)', () => {
     expect(hotGripOpForKind('column-rotation')).toBe('rotate');
   });
 
-  it('column resize/variant grips stay drag (null op)', () => {
-    for (const k of ['column-width', 'column-depth', 'column-arm-length', 'column-i-web-thickness']) {
+  // ADR-513 §grip-parity Φάση Γ — οι ΓΕΩΜΕΤΡΙΚΕΣ λαβές διαστάσεων (4 γωνίες + 4 μεσοπλευρικές του
+  // rect-grip-engine) είναι πλέον click-armed. Ήταν το αρχικό παράπονο του Giorgio: κλικ σε γωνία
+  // κολόνας έμενε ΠΟΡΤΟΚΑΛΙ (ADR-501 arm) αντί να γίνει κόκκινη reshape.
+  it("column γωνίες + μεσοπλευρικές → 'corner' (Φάση Γ)", () => {
+    for (const k of ['column-corner-ne', 'column-corner-sw', 'column-width', 'column-depth',
+      'column-edge-w', 'column-edge-s']) {
+      expect(hotGripOpForKind(k)).toBe('corner');
+      expect(isWallHotGripKind(k)).toBe(true);
+    }
+  });
+
+  // ΤΟ ΟΡΙΟ: οι λαβές ΠΑΡΑΜΕΤΡΩΝ ΔΙΑΤΟΜΗΣ (πάχος κορμού/πέλματος Ι-διατομής, μήκος σκέλους Γ κ.λπ.)
+  // δεν είναι γεωμετρία του περιγράμματος — μένουν press-drag μέχρι να ζητηθούν ρητά.
+  it('column λαβές παραμέτρων διατομής μένουν press-drag → null', () => {
+    for (const k of ['column-arm-length', 'column-i-web-thickness', 'column-flange-length']) {
       expect(hotGripOpForKind(k)).toBeNull();
       expect(isWallHotGripKind(k)).toBe(false);
     }
@@ -155,8 +182,14 @@ describe('ADR-363 Phase 5.5d — beam hot-grip kinds (axis-based wall parity)', 
     expect(hotGripOpForKind('beam-rotation')).toBe('rotate');
   });
 
-  it('beam start/end/curve/width/depth stay press-drag (null op)', () => {
-    for (const k of ['beam-start', 'beam-end', 'beam-curve', 'beam-width', 'beam-depth']) {
+  // ADR-513 §grip-parity Φάση Γ — άκρα άξονα + πλάτος click-armed· η ΚΑΜΠΥΛΟΤΗΤΑ όχι (ίδιο σκεπτικό
+  // με τον τοίχο). Το `beam-depth` δεν εκπέμπεται ως λαβή σήμερα → μένει εκτός registry.
+  it("beam άκρα + πλάτος → 'corner'· καμπυλότητα μένει press-drag (Φάση Γ)", () => {
+    for (const k of ['beam-start', 'beam-end', 'beam-width']) {
+      expect(hotGripOpForKind(k)).toBe('corner');
+      expect(isWallHotGripKind(k)).toBe(true);
+    }
+    for (const k of ['beam-curve', 'beam-depth']) {
       expect(hotGripOpForKind(k)).toBeNull();
       expect(isWallHotGripKind(k)).toBe(false);
     }
@@ -190,9 +223,11 @@ describe('ADR-406 — MEP fixture hot-grip kinds (full wall parity)', () => {
     }
   });
 
-  it('mep-fixture-diameter (circular) stays press-drag (null op)', () => {
-    expect(hotGripOpForKind('mep-fixture-diameter')).toBeNull();
-    expect(isWallHotGripKind('mep-fixture-diameter')).toBe(false);
+  // ADR-513 §grip-parity Φάση Γ — η διάμετρος του κυκλικού fixture είναι γεωμετρική λαβή
+  // διάστασης, οπότε γίνεται click-armed όπως οι 4 γωνίες του ορθογώνιου.
+  it("mep-fixture-diameter → 'corner' (Φάση Γ)", () => {
+    expect(hotGripOpForKind('mep-fixture-diameter')).toBe('corner');
+    expect(isWallHotGripKind('mep-fixture-diameter')).toBe(true);
   });
 
   it('mep-fixture move/rotation/corner enter hot-grip on mousedown', () => {
@@ -273,13 +308,15 @@ describe('ADR-557 — text/mtext hot-grip kinds (rect-box column parity)', () =>
     expect(hotGripOpForKind('text-rotation')).toBe('rotate');
   });
 
-  it('text corner + edge resize grips stay press-drag (null op)', () => {
+  // ADR-513 §grip-parity Φάση Γ — οι 4 γωνίες + 4 μεσοπλευρικές του πλαισίου κειμένου
+  // γίνονται click-armed, πλήρης ισοτιμία με την κολόνα (ίδιο σχήμα λαβών).
+  it("text γωνίες + μεσοπλευρικές → 'corner' (Φάση Γ)", () => {
     for (const k of [
       'text-corner-ne', 'text-corner-nw', 'text-corner-sw', 'text-corner-se',
       'text-edge-e', 'text-edge-w', 'text-edge-n', 'text-edge-s',
     ]) {
-      expect(hotGripOpForKind(k)).toBeNull();
-      expect(isWallHotGripKind(k)).toBe(false);
+      expect(hotGripOpForKind(k)).toBe('corner');
+      expect(isWallHotGripKind(k)).toBe(true);
     }
   });
 
@@ -348,7 +385,9 @@ describe('resolveHotGripMouseDown', () => {
 
   it("non-hot grip + μη-hot phase → 'none' (κανονικό drag)", () => {
     for (const phase of NON_HOT) {
-      for (const k of NON_CORNER_KINDS.filter((k) => k !== 'wall-midpoint' && k !== 'wall-rotation')) {
+      // Φάση Γ: wall-start/end/thickness είναι πλέον hot ('corner') → εξαιρούνται κι αυτά.
+      // Μένουν μόνο οι λαβές καμπυλότητας + τα δυναμικά vertex kinds.
+      for (const k of NON_CORNER_KINDS.filter((k) => !isWallHotGripKind(k))) {
         expect(resolveHotGripMouseDown(phase, k)).toBe('none');
       }
       expect(resolveHotGripMouseDown(phase, undefined)).toBe('none');

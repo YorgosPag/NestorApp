@@ -240,28 +240,33 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
       if (dp.rotateAlignLine) {
         drawDashedSegment(ctx, dp.rotateAlignLine.from, dp.rotateAlignLine.to, t, vp);
       }
-    } else if (dp.hotGrip && dp.anchorPos && dp.movesEntity === true && !dp.rotatePivot) {
-      // ADR-049/040 parity — a whole-entity MOVE hot-grip (line/circle/arc/polyline/text/hatch/
-      // GROUP/BLOCK move cross → `movesEntity:true`) shows the SAME base affordance as the ribbon
-      // Move tool: a RED base-point ＋ crosshair + a GOLD dashed rubber-band to the cursor, via the
-      // SAME shared SSoT painters (`drawMoveBasePointMarker` + `drawRubberBandLine`). The crosshair
-      // shows the moment the base is set (zero-delta); the leader once the cursor moves.
+    } else if (dp.hotGrip && dp.anchorPos && dp.rotatePivot) {
+      // ΠΕΡΙΣΤΡΟΦΗ — Η ΜΟΝΗ ΕΞΑΙΡΕΣΗ (Giorgio 2026-07-18, ADR-513 §grip-parity Φάση Δ). Κυανός
+      // leader από το ΚΕΝΤΡΟ περιστροφής προς τον κέρσορα: δεν είναι μετατόπιση σημείου, οπότε ένας
+      // «σταυρός σημείου βάσης» θα ήταν σημασιολογικά λάθος. Η περιστροφή έχει ήδη τη ΔΙΚΗ της
+      // πλήρη ένδειξη — pivot ⊙ + χρωματιστό τόξο φοράς 🟢/🔴 + ζωντανές μοίρες (paintDirectionArc,
+      // παραπάνω). ΜΗΝ την ενοποιήσεις με τα υπόλοιπα.
+      if (dp.delta.x !== 0 || dp.delta.y !== 0) {
+        drawDashedSegment(ctx, dp.rotatePivot, translatePoint(dp.anchorPos, dp.delta), t, vp);
+      }
+    } else if (dp.hotGrip && dp.anchorPos) {
+      // ΕΝΑ ΣΥΣΤΗΜΑ AFFORDANCE ΓΙΑ ΚΑΘΕ ΛΑΒΗ (Giorgio 2026-07-18, ADR-513 §grip-parity Φάση Δ):
+      // ΚΟΚΚΙΝΟΣ ＋ σταυρός στο σημείο του κλικ + ΚΙΤΡΙΝΗ διακεκομμένη ως τον κέρσορα — ΑΚΡΙΒΩΣ όπως
+      // η εντολή «Μετακίνηση» της καρτέλας «Αρχική», μέσω των ΙΔΙΩΝ κοινών SSoT painters
+      // (`drawMoveBasePointMarker` + `drawRubberBandLine`). Ο σταυρός εμφανίζεται τη στιγμή που
+      // ορίζεται η βάση (μηδενικό delta)· το λάστιχο μόλις κινηθεί ο κέρσορας.
+      //
+      // ΙΣΤΟΡΙΚΟ — ΓΙΑΤΙ ΗΤΑΝ ΔΥΟ: μέχρι τη Φάση Δ το διαχωριστικό ήταν το `dp.movesEntity === true`,
+      // δηλαδή ΜΟΝΟ οι λαβές που μετακινούν ΟΛΗ την οντότητα έπαιρναν σταυρό+κίτρινη· κάθε λαβή
+      // reshape/resize έπαιρνε κυανή ΧΩΡΙΣ σταυρό, με ρητό σχόλιο «kept neutral (not gold) — these
+      // are not whole-entity base-point moves». Ήταν ΣΚΟΠΙΜΗ σχεδιαστική επιλογή που ο Giorgio
+      // ΑΝΕΤΡΕΨΕ ρητά: ο χρήστης δεν διακρίνει «μετακινώ» από «αναμορφώνω» — και στις δύο
+      // περιπτώσεις έπιασε ένα σημείο και το πάει αλλού, άρα βλέπει την ΙΔΙΑ ένδειξη. Ένα σύστημα,
+      // μία γλώσσα. **ΜΗΝ επαναφέρεις τον διαχωρισμό `movesEntity`.**
       drawMoveBasePointMarker(ctx, dp.anchorPos, t, vp);
       if (dp.delta.x !== 0 || dp.delta.y !== 0) {
         drawMoveRubberBand(ctx, dp.anchorPos, translatePoint(dp.anchorPos, dp.delta), t, vp);
       }
-    } else if (
-      // ADR-363 Phase 1G — dashed ghost-cyan leader for the corner hot-grip (resize, `movesEntity:
-      // false`) OR free-rotate (cursor-driven, `rotatePivot` set). The start is the pivot (free rotate)
-      // or the corner anchor; the end is the cursor (anchorPos + delta). Kept neutral (not gold) —
-      // these are not whole-entity base-point moves.
-      dp.hotGrip &&
-      dp.anchorPos &&
-      (dp.delta.x !== 0 || dp.delta.y !== 0)
-    ) {
-      const fromW = dp.rotatePivot ?? dp.anchorPos;
-      const toW = translatePoint(dp.anchorPos, dp.delta);
-      drawDashedSegment(ctx, fromW, toW, t, vp);
     }
 
     // ADR-508 §length-angle-hud-global — ΛΕΥΚΗ ένδειξη μήκους + γωνίας πάνω στο λάστιχο, ΙΔΙΟ HUD με

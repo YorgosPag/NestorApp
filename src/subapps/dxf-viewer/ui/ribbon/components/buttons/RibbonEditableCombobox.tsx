@@ -36,6 +36,7 @@ import type {
 import {
   filterNumericDraft,
   commitNumericDraft,
+  parseOptionNumber,
   type ResolvedNumericConfig,
 } from './ribbon-combobox-numeric';
 
@@ -51,6 +52,12 @@ interface RibbonEditableComboboxProps {
   config: ResolvedNumericConfig;
   ariaLabel: string;
   widthPx: number;
+  /**
+   * ADR-677 Φάση 2γ — trailing unit symbol (e.g. «m», «cm»), or `undefined` for a field that
+   * carries no unit (counts, DN sizes). Resolved by the caller — this control never asks what
+   * unit is active, it only renders what it is handed.
+   */
+  unitSuffix?: string;
   /** Same handler as the Select path — `onComboboxChange(commandKey, value)`. */
   onCommit: (value: string) => void;
 }
@@ -63,6 +70,7 @@ export const RibbonEditableCombobox: React.FC<RibbonEditableComboboxProps> = ({
   config,
   ariaLabel,
   widthPx,
+  unitSuffix,
   onCommit,
 }) => {
   const colors = useSemanticColors();
@@ -139,6 +147,14 @@ export const RibbonEditableCombobox: React.FC<RibbonEditableComboboxProps> = ({
 
   const inputBg = colors.bg.primary;
   const isMixed = value === null && draft === '';
+  // The symbol annotates a number; on the mixed em-dash (or a half-typed «-») it would annotate
+  // nothing. Same rule as the status-bar combobox, where «Ελεύθερο» hides the suffix.
+  const showUnit = unitSuffix !== undefined && parseOptionNumber(draft) !== null;
+  // The visible «(mm)» left the labels the moment the fields started showing metres, so the
+  // accessible name must carry the unit instead — otherwise a screen-reader user hears a bare
+  // «0.9» with no way to know what it means. Punctuation + a physical symbol, not translatable
+  // text (N.11).
+  const fieldAriaLabel = unitSuffix === undefined ? ariaLabel : `${ariaLabel} (${unitSuffix})`;
   // Keep input focus when the preset trigger is pressed (no blur-commit race).
   const preventBlur = (e: React.MouseEvent): void => e.preventDefault();
 
@@ -151,24 +167,38 @@ export const RibbonEditableCombobox: React.FC<RibbonEditableComboboxProps> = ({
         className="dxf-ribbon-editable-combobox"
         data-mixed={isMixed ? 'true' : undefined}
       >
-        <input
-          ref={inputRef}
-          className={cn('dxf-ribbon-editable-combobox-input', inputBg)}
-          type="text"
-          inputMode={config.allowDecimal ? 'decimal' : 'numeric'}
-          autoComplete="off"
-          disabled={disabled}
-          value={draft}
-          placeholder={MIXED_PLACEHOLDER}
-          onChange={onChange}
-          onFocus={() => {
-            focusedRef.current = true;
-          }}
-          onBlur={onBlur}
-          onKeyDown={onKeyDown}
-          aria-label={ariaLabel}
-          data-command-id={command.id}
-        />
+        {/* The unit rides INSIDE the field (Revit «900.0 mm»), so it stays attached to the
+            number when several comboboxes sit side by side in one ribbon row. */}
+        <span
+          className="dxf-ribbon-editable-combobox-field"
+          data-unit={showUnit ? 'true' : undefined}
+        >
+          <input
+            ref={inputRef}
+            className={cn('dxf-ribbon-editable-combobox-input', inputBg)}
+            type="text"
+            inputMode={config.allowDecimal ? 'decimal' : 'numeric'}
+            autoComplete="off"
+            disabled={disabled}
+            value={draft}
+            placeholder={MIXED_PLACEHOLDER}
+            onChange={onChange}
+            onFocus={() => {
+              focusedRef.current = true;
+            }}
+            onBlur={onBlur}
+            onKeyDown={onKeyDown}
+            aria-label={fieldAriaLabel}
+            data-command-id={command.id}
+          />
+          {showUnit && (
+            // Presentational only — the unit reaches assistive tech through `fieldAriaLabel`,
+            // so reading this span too would say «Πλάτος (m) 0.9 m».
+            <span className="dxf-ribbon-editable-combobox-unit" aria-hidden="true">
+              {unitSuffix}
+            </span>
+          )}
+        </span>
         {options.length > 0 && !disabled && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -188,7 +218,9 @@ export const RibbonEditableCombobox: React.FC<RibbonEditableComboboxProps> = ({
                   key={opt.value}
                   onSelect={() => selectPreset(opt.value)}
                 >
-                  {opt.labelKey}
+                  {unitSuffix !== undefined && parseOptionNumber(opt.labelKey) !== null
+                    ? `${opt.labelKey} ${unitSuffix}`
+                    : opt.labelKey}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>

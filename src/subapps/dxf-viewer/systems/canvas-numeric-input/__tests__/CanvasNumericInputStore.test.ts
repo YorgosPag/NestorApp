@@ -10,6 +10,14 @@
 import { CanvasNumericInputStore } from '../CanvasNumericInputStore';
 import type { Point2D } from '../../../rendering/types/Types';
 import type { Guide } from '../../guides/guide-types';
+// ADR-677 — ο πληκτρολογημένος αριθμός περνά πλέον από fromDisplay(τιμή, μονάδα εμφάνισης)
+// πριν γίνει scene units. Χωρίς ρητό setUnit() το store πέφτει στο DEFAULT_DISPLAY_UNIT
+// ('m' — ADR-677 Φ1), οπότε κάθε test που ελέγχει συγκεκριμένο αριθμό πρέπει να δηλώνει
+// ρητά τη μονάδα (μη-ντετερμινιστικό αλλιώς: το default μπορεί να αλλάξει ξανά στο μέλλον).
+import { displayUnitState } from '../../../config/display-unit-state';
+// Sole writer: useDxfSceneConversion σε production· εδώ κλειδώνουμε 1 (1 scene unit = 1 mm)
+// ώστε η μετατροπή display→scene να είναι ΜΟΝΟ fromDisplay, χωρίς δεύτερο άγνωστο συντελεστή.
+import { immediateSceneScale } from '../../cursor/ImmediateSceneScaleStore';
 
 function makeGuide(id: string, overrides: Partial<Guide> = {}): Guide {
   return {
@@ -58,6 +66,13 @@ function activate(
 }
 
 describe('CanvasNumericInputStore', () => {
+  beforeEach(() => {
+    // Ντετερμινιστική κλίμακα: 1 scene unit = 1 mm — επαληθεύτηκε πως χωρίς αυτό το
+    // module-level default είναι ήδη 1 (κανένα άλλο test σε αυτό το αρχείο το αλλάζει),
+    // αλλά το δηλώνουμε ρητά ώστε τα νούμερα να μη βασίζονται σε σιωπηρή προϋπόθεση.
+    immediateSceneScale.set(1);
+  });
+
   afterEach(() => {
     // Καθαρισμός module-singleton state — αλλιώς «διαρρέει» σε επόμενο test.
     CanvasNumericInputStore.cancel();
@@ -165,12 +180,21 @@ describe('CanvasNumericInputStore', () => {
   });
 
   describe('getPendingDistance()', () => {
+    // Μονάδα εμφάνισης = 'mm' ⇒ fromDisplay(τιμή, 'mm') = τιμή (ταυτοτική μετατροπή,
+    // βλ. mmToSceneUnits('mm') = 1 στο scene-units.ts) — έτσι αυτά τα tests συνεχίζουν
+    // να ελέγχουν «η τιμή περνά αυτούσια», ΟΧΙ ένα νέο νόημα. Αν ο χρήστης είχε 'm'
+    // επιλεγμένο (DEFAULT_DISPLAY_UNIT, ADR-677 Φ1) οι ίδιες πληκτρολογήσεις θα έδιναν
+    // ×1000 — αυτό το καλύπτει το νέο describe «μονάδα εμφάνισης» παρακάτω.
+    const originalUnit = displayUnitState.getUnit();
+    beforeEach(() => { displayUnitState.setUnit('mm'); });
+    afterEach(() => { displayUnitState.setUnit(originalUnit); });
+
     it('null όσο ο buffer είναι κενός', () => {
       activate();
       expect(CanvasNumericInputStore.getPendingDistance()).toBeNull();
     });
 
-    it('επιστρέφει την parsed απόλυτη τιμή ενώ πληκτρολογεί', () => {
+    it('επιστρέφει την parsed απόλυτη τιμή ενώ πληκτρολογεί (μονάδα mm — ταυτοτική)', () => {
       activate();
       CanvasNumericInputStore.addChar('5');
       expect(CanvasNumericInputStore.getPendingDistance()).toBe(5);
@@ -180,22 +204,85 @@ describe('CanvasNumericInputStore', () => {
       expect(CanvasNumericInputStore.getPendingDistance()).toBeCloseTo(5.2, 6);
     });
 
-    it('επιστρέφει την ΑΠΟΛΥΤΗ τιμή ακόμα κι αν ο buffer έχει αρνητικό πρόσημο', () => {
+    it('επιστρέφει την ΑΠΟΛΥΤΗ τιμή ακόμα κι αν ο buffer έχει αρνητικό πρόσημο (μονάδα mm — ταυτοτική)', () => {
       activate();
       CanvasNumericInputStore.addChar('-');
       CanvasNumericInputStore.addChar('3');
       expect(CanvasNumericInputStore.getPendingDistance()).toBe(3);
     });
 
-    it('null όταν η τιμή είναι ~0 (κάτω από το threshold 0.001)', () => {
+    it('null όταν η τιμή είναι ~0 (κάτω από το threshold 0.001, μετά τη μετατροπή)', () => {
       activate();
       CanvasNumericInputStore.addChar('0');
       expect(CanvasNumericInputStore.getPendingDistance()).toBeNull();
     });
   });
 
+  describe('μονάδα εμφάνισης (ADR-677) — η πληκτρολογημένη τιμή ερμηνεύεται display → mm → scene', () => {
+    const originalUnit = displayUnitState.getUnit();
+    afterEach(() => { displayUnitState.setUnit(originalUnit); });
+
+    it('mm: 150 πληκτρολογημένα = 150 scene units (ταυτοτική)', () => {
+      displayUnitState.setUnit('mm');
+      activate();
+      CanvasNumericInputStore.addChar('1');
+      CanvasNumericInputStore.addChar('5');
+      CanvasNumericInputStore.addChar('0');
+      expect(CanvasNumericInputStore.getPendingDistance()).toBe(150);
+    });
+
+    it('m: 150 πληκτρολογημένα μέτρα = 150000 scene units (mm)', () => {
+      displayUnitState.setUnit('m');
+      activate();
+      CanvasNumericInputStore.addChar('1');
+      CanvasNumericInputStore.addChar('5');
+      CanvasNumericInputStore.addChar('0');
+      expect(CanvasNumericInputStore.getPendingDistance()).toBe(150000);
+    });
+
+    it('cm: 150 πληκτρολογημένα εκατοστά = 1500 scene units (mm)', () => {
+      displayUnitState.setUnit('cm');
+      activate();
+      CanvasNumericInputStore.addChar('1');
+      CanvasNumericInputStore.addChar('5');
+      CanvasNumericInputStore.addChar('0');
+      expect(CanvasNumericInputStore.getPendingDistance()).toBe(1500);
+    });
+
+    it('confirm() δίνει στο onConfirm ΤΗΝ ΙΔΙΑ μετατραπείσα τιμή που έβλεπε το φάντασμα (WYSIWYG)', () => {
+      displayUnitState.setUnit('m');
+      const { onConfirm } = activate();
+      CanvasNumericInputStore.addChar('2');
+      const ghostValue = CanvasNumericInputStore.getPendingDistance();
+
+      CanvasNumericInputStore.confirm();
+
+      expect(ghostValue).toBe(2000);
+      expect(onConfirm).toHaveBeenCalledWith(2000, expect.any(Number), expect.any(String));
+    });
+
+    it('το κατώφλι ελέγχεται ΜΕΤΑ τη μετατροπή: "0.0005" σε m (=0,5mm) ΔΕΝ είναι null', () => {
+      displayUnitState.setUnit('m');
+      activate();
+      '0.0005'.split('').forEach(ch => CanvasNumericInputStore.addChar(ch));
+      expect(CanvasNumericInputStore.getPendingDistance()).toBeCloseTo(0.5, 6);
+    });
+
+    it('το ίδιο πληκτρολογημένο "0.0005" σε mm ΕΙΝΑΙ null (κάτω από το threshold)', () => {
+      displayUnitState.setUnit('mm');
+      activate();
+      '0.0005'.split('').forEach(ch => CanvasNumericInputStore.addChar(ch));
+      expect(CanvasNumericInputStore.getPendingDistance()).toBeNull();
+    });
+  });
+
   describe('onConfirm payload', () => {
-    it('καλείται με (absoluteDistance, sign, refGuideId)', () => {
+    // Μονάδα mm — ταυτοτική μετατροπή, βλ. σχόλιο στο describe getPendingDistance().
+    const originalUnit = displayUnitState.getUnit();
+    beforeEach(() => { displayUnitState.setUnit('mm'); });
+    afterEach(() => { displayUnitState.setUnit(originalUnit); });
+
+    it('καλείται με (absoluteDistance, sign, refGuideId) (μονάδα mm — ταυτοτική)', () => {
       const { onConfirm, signResolver } = activate({ refGuide: makeGuide('guide_X_042') });
       signResolver.mockReturnValue(-1);
 

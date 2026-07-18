@@ -49,7 +49,9 @@ import {
   valueFromDisplayUnit,
   boundsToDisplayUnit,
   isSameCommittedValue,
+  unitSuffixFor,
 } from '../../units/ribbon-display-unit';
+import { useDisplayUnit } from '../../../../hooks/common/useDisplayUnit';
 
 const DEFAULT_WIDTH_PX = 140;
 const MIXED_PLACEHOLDER = '—';
@@ -118,6 +120,13 @@ const RibbonComboboxDefault: React.FC<RibbonComboboxProps> = ({ command }) => {
   // numeric field (e.g. roof) is re-expressed just like a typed one. Non-`model-length`
   // fields — counts, degrees, DN sizes, paper mm — pass through untouched.
   const quantityKind = command.numericInput?.quantityKind;
+  // ADR-677 Φάση 2γ — SUBSCRIBING to the unit, not just reading it. Φάση 2β called `toDisp`,
+  // which reads `displayUnitState` at render time; with no subscription an open ribbon kept
+  // showing millimetres after the user switched to metres, until something else forced a
+  // re-render. Low-frequency store (changes on a status-bar click, not per frame), so this is
+  // outside the ADR-040 high-frequency ban — and this IS a leaf, not an orchestrator.
+  const { displayUnit } = useDisplayUnit();
+  const unitSuffix = unitSuffixFor(quantityKind, displayUnit);
   const dynamicOpts = dynamicState?.options;
   const authoredOptions: readonly RibbonComboboxOption[] =
     (dynamicOpts && dynamicOpts.length > 0 ? dynamicOpts : null) ?? command.options ?? [];
@@ -196,6 +205,7 @@ const RibbonComboboxDefault: React.FC<RibbonComboboxProps> = ({ command }) => {
         config={numericConfig}
         ariaLabel={ariaLabel}
         widthPx={widthPx}
+        unitSuffix={unitSuffix}
         onCommit={handleValueChange}
       />
     );

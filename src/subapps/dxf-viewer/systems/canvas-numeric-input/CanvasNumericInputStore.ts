@@ -13,12 +13,39 @@ import { useSyncExternalStore } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import type { Guide } from '../guides/guide-types';
 import { DirectDistanceEntry } from '../../text-engine/interaction/DirectDistanceEntry';
+// ADR-677 — η πληκτρολογημένη τιμή ερμηνεύεται στη μονάδα εμφάνισης του χρήστη.
+import { fromDisplay } from '../../config/units';
+import { displayUnitState } from '../../config/display-unit-state';
+import { immediateSceneScale } from '../cursor/ImmediateSceneScaleStore';
 
 type Listener = () => void;
 type ConfirmFn = (distance: number, sign: 1 | -1, refGuideId: string) => void;
 type CancelFn = () => void;
 /** Διαβάζεται τη στιγμή του commit — ΟΧΙ στο activate (ADR-040 κανόνας 2). */
 type SignResolver = () => 1 | -1;
+
+/**
+ * Ελάχιστη αποδεκτή απόσταση σε scene units. Ο έλεγχος γίνεται ΜΕΤΑ τη μετατροπή:
+ * το «0.0005» σε μέτρα είναι 0,5 mm — υπαρκτή απόσταση, όχι θόρυβος.
+ */
+const SCENE_EPSILON = 0.001;
+
+/**
+ * Ο πληκτρολογημένος αριθμός είναι στη ΜΟΝΑΔΑ ΕΜΦΑΝΙΣΗΣ που έχει επιλέξει ο χρήστης
+ * (status bar) — ο κόσμος όμως μετριέται σε scene units. Μία μετατροπή, στο σύνορο
+ * εισόδου: display → mm → scene. Ίδιο πρότυπο με το SNAP step (`CadStatusBar`,
+ * ADR-677): το UI boundary μετατρέπει, το domain μένει canonical.
+ *
+ * ΓΙΑΤΙ ΕΔΩ ΚΑΙ ΟΧΙ ΣΤΟΝ CALLER: ο buffer είναι το ΜΟΝΟ σημείο όπου μπαίνει τιμή σε
+ * μονάδα χρήστη. Αν η μετατροπή ζούσε στη ροή «Παράλληλος Οδηγός», κάθε μελλοντικός
+ * καταναλωτής αυτού του γενικού store θα κληρονομούσε σιωπηλά το ίδιο σφάλμα.
+ * Και οι ΔΥΟ έξοδοι (`getPendingDistance` για το φάντασμα, `confirm` για το commit)
+ * επιστρέφουν πλέον scene units — αλλιώς φάντασμα και commit θα διαφωνούσαν κατά ×1000.
+ */
+function _typedToSceneUnits(typed: number): number {
+  const mm = fromDisplay(typed, displayUnitState.getUnit());
+  return mm * immediateSceneScale.getMmToScene();
+}
 
 const _dde = new DirectDistanceEntry();
 let _signResolver: SignResolver = () => 1;
@@ -112,8 +139,9 @@ export const CanvasNumericInputStore = {
     const buffer = _dde.snapshot().buffer;
     if (!buffer) return null;
     const value = parseFloat(buffer);
-    if (!Number.isFinite(value) || Math.abs(value) < 0.001) return null;
-    return Math.abs(value);
+    if (!Number.isFinite(value)) return null;
+    const scene = _typedToSceneUnits(Math.abs(value));
+    return scene < SCENE_EPSILON ? null : scene;
   },
 
   /** Accepts digit, '.', '-', or ',' (normalised to '.'). Returns true if consumed. */
@@ -131,8 +159,9 @@ export const CanvasNumericInputStore = {
 
   /** Commits buffer. Returns false if buffer is empty/zero (no-op). */
   confirm(): boolean {
-    const value = _dde.commit();
-    if (value === null || Math.abs(value) < 0.001) {
+    const typed = _dde.commit();
+    const value = typed === null ? null : _typedToSceneUnits(Math.abs(typed));
+    if (value === null || value < SCENE_EPSILON) {
       _dde.reset();
       _notify();
       return false;
@@ -145,7 +174,7 @@ export const CanvasNumericInputStore = {
     _onConfirm = null;
     _onCancel = null;
     _notify();
-    cb?.(Math.abs(value), sign, refGuideId);
+    cb?.(value, sign, refGuideId);
     return true;
   },
 

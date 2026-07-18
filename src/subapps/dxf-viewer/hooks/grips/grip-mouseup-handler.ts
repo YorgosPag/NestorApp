@@ -11,7 +11,7 @@
  * @see wall-hot-grip-fsm.ts — hot-grip decision SSoT
  */
 import type { Point2D } from '../../rendering/types/Types';
-import { resolveHotGripMouseUp } from './wall-hot-grip-fsm';
+import { resolveHotGripMouseUp, hotGripKindOf } from './wall-hot-grip-fsm';
 import { commitDxfGripDragModeAware } from './grip-commit-adapters';
 import { isClickActionGripKind } from './grip-click-action';
 import { createSceneManagerAdapter } from './grip-scene-manager-adapter';
@@ -20,7 +20,9 @@ import { resolveLineEndpointLockedDelta } from '../../systems/dynamic-input/grip
 // ADR-513 §grip-parity — displacement (Model A) Μήκος/Γωνία lock για arc/polyline vertex + straight edge.
 import { resolveVertexReshapeLockedDelta } from '../../systems/dynamic-input/vertex-reshape-lock';
 import { resolveOpeningWidthLockedDelta } from '../../systems/dynamic-input/opening-width-lock';
-// ADR-513 §grip-parity — typed «Μήκος» σε λαβή ΜΕΤΑΚΙΝΗΣΗΣ ολόκληρης οντότητας (5ο σκαλί).
+// ADR-513 §grip-parity Φάση Δ — typed ΜΕΤΑΤΟΠΙΣΗ σε λαβή ΑΛΛΑΓΗΣ ΜΕΓΕΘΟΥΣ (5ο σκαλί).
+import { resolveResizeGripLockedDelta } from '../../systems/dynamic-input/resize-grip-lock';
+// ADR-513 §grip-parity — typed «Μήκος» σε λαβή ΜΕΤΑΚΙΝΗΣΗΣ ολόκληρης οντότητας (6ο σκαλί).
 import { resolveMoveDisplacementLockedDelta } from '../../systems/dynamic-input/move-displacement-lock';
 import type { WallEntity } from '../../bim/types/wall-types';
 import { resolveEndpointReshapePolarLock } from './grip-endpoint-polar-lock';
@@ -120,7 +122,15 @@ function resolveEndpointCommitDelta(
   return resolveOpeningWidthCommitLock(grip, worldPos, deps)
     ?? resolveLineEndpointCommitLock(grip, worldPos, deps)
     ?? resolveVertexReshapeCommitLock(grip, worldPos, deps)
-    ?? resolveEndpointReshapeCommitPolar(grip, worldPos, deps);
+    ?? resolveEndpointReshapeCommitPolar(grip, worldPos, deps)
+    // ADR-513 §grip-parity Φάση Δ — 5ο σκαλί: πληκτρολογημένη ΜΕΤΑΤΟΠΙΣΗ σε λαβή ΑΛΛΑΓΗΣ ΜΕΓΕΘΟΥΣ
+    // (γωνία/μεσοπλευρική/διάσταση, ΚΑΘΕ οντότητας). ΤΕΛΕΥΤΑΙΟ εδώ: τα προηγούμενα είναι ειδικότερα
+    // (παρειά κουφώματος / άκρο γραμμής / κορυφή πολυγραμμής) και δεν πρέπει να τους το κλέψει. ΙΔΙΟΣ
+    // resolver με το ghost (`grip-ghost-locked-delta` σκαλί 5) → preview ≡ commit εξ ορισμού.
+    ?? resolveResizeGripLockedDelta(
+      { gripKind: hotGripKindOf(grip), movesEntity: grip.movesEntity, isRotation: false },
+      grip.position, worldPos,
+    );
 }
 
 /**

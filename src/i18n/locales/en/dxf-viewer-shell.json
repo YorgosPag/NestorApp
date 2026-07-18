@@ -2850,7 +2850,7 @@
         "tread": "Tread",
         "width": "Width",
         "stepCount": "Steps",
-        "waistThickness": "Slab Thickness (mm)",
+        "waistThickness": "Slab Thickness",
         "storyCount": "Stories Traversed",
         "storyHeight": "Story Height",
         "flight2TurnDirection": "Flight 2 Turn",
@@ -3255,7 +3255,7 @@
         },
         "interiorMaterial": "Interior Mat.",
         "exteriorMaterial": "Exterior Mat.",
-        "thickness": "Thickness (mm)"
+        "thickness": "Thickness"
       },
       "openingEditor": {
         "mark": "Mark",
@@ -3272,7 +3272,7 @@
           "onSlab": "On structural slab",
           "custom": "Custom"
         },
-        "thresholdEmbedMm": "Embed Depth (mm)",
+        "thresholdEmbedMm": "Embed Depth",
         "frameProfile": {
           "manufacturer": "Manufacturer",
           "profile": "Profile",
@@ -3963,7 +3963,7 @@
         "condensateDiameter": "Condensate drain diameter",
         "condensateNeutraliser": "Neutraliser",
         "showServiceClearance": "Clearance zone",
-        "serviceClearance": "Distance (mm)",
+        "serviceClearance": "Distance",
         "safetyReliefValve": "Relief valve",
         "reliefValvePressure": "Pressure (bar)",
         "expansionVessel": "Expansion vessel",
@@ -4058,14 +4058,14 @@
         "deleteConfirm": "Delete water heater? This action cannot be undone."
       },
       "mepUnderfloorEditor": {
-        "pipeSpacing": "Pipe spacing (mm)",
-        "edgeClearance": "Wall clearance (mm)",
+        "pipeSpacing": "Pipe spacing",
+        "edgeClearance": "Wall clearance",
         "patternType": "Pattern",
         "patternBoustrophedon": "Serpentine (back-and-forth)",
         "patternCounterflow": "Counterflow spiral",
         "patternSpiral": "Spiral (snail)",
         "totalLength": "Pipe length (m)",
-        "screedOffset": "Screed elevation (mm)",
+        "screedOffset": "Screed elevation",
         "connectorDiameter": "Connector diameter (mm)",
         "thermalOutput": "Thermal output (W)",
         "close": "Close",
@@ -4074,9 +4074,9 @@
       },
       "floorFinishEditor": {
         "material": "Material",
-        "thickness": "Thickness (mm)",
-        "tileLengthMm": "Tile length (mm)",
-        "tileWidthMm": "Tile width (mm)",
+        "thickness": "Thickness",
+        "tileLengthMm": "Tile length",
+        "tileWidthMm": "Tile width",
         "tileRotate90": "Rotate 90°",
         "close": "Close",
         "delete": "Delete",
@@ -4086,7 +4086,7 @@
         "bodyMaterial": "Finish material",
         "surfaceMaterial": "Colour/paint",
         "faceSide": "Face",
-        "height": "Height (mm)",
+        "height": "Height",
         "close": "Close",
         "delete": "Delete",
         "deleteConfirm": "Delete wall finish? This action cannot be undone."
@@ -4213,7 +4213,7 @@
         "solarShadingLevel": "Solar shading",
         "airTightnessLevel": "Envelope air-tightness",
         "ventilationSystem": "Ventilation system",
-        "ceilingHeightMm": "Height (mm)",
+        "ceilingHeightMm": "Height",
         "close": "Close",
         "delete": "Delete",
         "deleteConfirm": "Delete thermal space? This action cannot be undone.",
@@ -5060,7 +5060,7 @@
       },
       "annotationSymbolEditor": {
         "variant": "Style",
-        "size": "Size (mm)",
+        "size": "Size",
         "rotation": "Rotation"
       },
       "scaleBarEditor": {
