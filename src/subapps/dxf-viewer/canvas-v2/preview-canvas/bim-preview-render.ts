@@ -51,7 +51,18 @@ export class BimPreviewRenderer {
     this.composite.setTransform(transform);
     this.ctx.save();
     try {
-      this.composite.render(entity, {});
+      // ADR-652 M7 — WYSIWYG block ghost: το committed path κάνει expand ΠΡΙΝ το
+      // conversion, οπότε ο composite/registry ΔΕΝ έχει renderer για 'block'. Στο
+      // preview το ghost είναι BlockEntity (wysiwygPreview) → expand-άρουμε εδώ σε
+      // world members (ίδιο placement transform με το committed) και ζωγραφίζουμε
+      // τον καθένα μέσω των ΠΡΑΓΜΑΤΙΚΩΝ renderers, ίδιο transform/viewport/ctx.
+      if (isBlockEntity(entity)) {
+        for (const member of expandBlockInstance(entity)) {
+          this.composite.render(member, {});
+        }
+      } else {
+        this.composite.render(entity, {});
+      }
     } finally {
       this.ctx.restore();
       this.composite.setViewportOverride(null);
