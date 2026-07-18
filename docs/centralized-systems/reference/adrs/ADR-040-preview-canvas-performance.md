@@ -4426,3 +4426,32 @@ Co-staged με ADR-189 changelog. `npx jest systems/guides` → 50/50. `jscpd:di
     Ο orchestrator παραμένει καθαρός από high-freq stores.
 
 Co-staged με ADR-659. ΟΧΙ tsc (N.17). 🔴 verify+commit (Giorgio).
+
+### 2026-07-18: ADR-640/049 — glyph-move rubber-band parity (κόκκινο ＋ + χρυσή διακεκομμένη) στο grip MOVE
+
+**Ζητούμενο (Giorgio):** όταν μετακινώ τοποθετημένο **BLOCK** (ή group/line/…) μέσω του move glyph
+(4-βελο → κλικ σημείο-βάση → κίνηση κέρσορα), να δείχνει **ΑΚΡΙΒΩΣ όπως το ribbon «Μετακίνηση
+Αντικειμένων»**: **κόκκινο σταυρουδάκι** στο σημείο-βάση + **χρυσή διακεκομμένη** rubber-band προς
+τον κέρσορα.
+
+**Ρίζα (ΔΥΟ stacked κενά, grep-verified):**
+1. Το `drawGroupGhost` (container ghost για block/group) επέστρεφε `true` → **early-return** στο
+   `useGripGhostPreview` **ΠΡΙΝ** το rubber-band block → η leader ήταν **dead code** για blocks/groups.
+2. Δεν υπήρχε καθόλου base-point crosshair για MOVE (μόνο rotation-pivot ⊙), και η leader ήταν
+   ghost-cyan (`drawDashedSegment`), όχι χρυσή.
+
+**Αλλαγές (SSoT reuse — N.18):**
+- **`rendering/ui/move-base-point-marker.ts`** (νέο): `drawMoveBasePointMarker` — ο κόκκινος ＋
+  (χωρίς δαχτυλίδι), sibling του `rotation-pivot-marker.ts`. Κοινός SSoT.
+- **`hooks/tools/useMovePreview.ts`**: το inline crosshair (`#FF4444`, size 8) αντικαταστάθηκε με
+  κλήση `drawMoveBasePointMarker` → μία πηγή γλυφής.
+- **`hooks/tools/grip-ghost-preview-draw-helpers.ts`**: `drawMoveRubberBand` (world-space wrapper που
+  delegate-άρει στο SSoT `drawRubberBandLine`, χρυσό `#FFD700`).
+- **`hooks/tools/useGripGhostPreview.ts`**: το leader block **μετακινήθηκε ΠΡΙΝ** το `drawGroupGhost`
+  early-return (χρησιμοποιεί μόνο `dp`/`t`/`vp` → ασφαλές hoist). Νέος κλάδος: whole-entity MOVE
+  hot-grip (`dp.hotGrip && dp.movesEntity === true && !dp.rotatePivot`) → κόκκινο ＋ (πάντα, ακόμα &
+  zero-delta) + χρυσή leader (όταν delta≠0). Corner-resize (`movesEntity:false`) & free-rotate
+  (`rotatePivot`) κρατούν το ghost-cyan `drawDashedSegment` (αμετάβλητα).
+
+**ADR-040 invariants:** pure draw helpers, μηδέν νέα `useSyncExternalStore`, bitmap-cache key
+αμετάβλητο, cardinal rules intact. Staged για CHECK 6B/6D. ΟΧΙ tsc (N.17). 🔴 verify+commit (Giorgio).
