@@ -1269,6 +1269,7 @@
     },
     "blockLibrary": {
       "statusPosition": "Κάνε κλικ για τοποθέτηση block",
+      "statusRotation": "Ορίστε γωνία περιστροφής (κλικ)",
       "errorNoSelection": "Επίλεξε ένα block από το «Τα Blocks μου»"
     },
     "titleBlock": {

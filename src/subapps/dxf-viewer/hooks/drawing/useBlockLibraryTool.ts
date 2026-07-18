@@ -7,7 +7,8 @@
  * στο `block-library-selection-store` (SSoT) και το tool το διαβάζει σε EVENT-TIME (κλικ/ghost),
  * ώστε να μη χρειάζεται React re-render για να αλλάξει ο ghost (ADR-040).
  *
- * FSM: idle → awaitingPosition → committed → awaitingPosition (continuous). ESC reset.
+ * FSM: idle → awaitingPosition → awaitingRotation → committed → awaitingPosition (continuous,
+ * ADR-652 §M7 2-click place→rotate — mirror κολώνας/πεδίλου, ADR-514 Φ6d). ESC reset.
  * Το commit το κάνει ο καλών μέσω `onBlockCreated` → `addBlockToScene` (undoable SSoT).
  *
  * M1.5: το `useExtension` δημοσιεύει το tool handle στο `blockLibraryToolBridgeStore` ώστε το
@@ -81,7 +82,16 @@ const useBlockPlacement = createSingleClickPlacementTool<
     const def = getSessionBlockDef(params.blockName);
     return def ? computeBlockFootprint(def, params) : [];
   },
-  getStatusText: (s) => (s.phase === 'awaitingPosition' ? 'tools.blockLibrary.statusPosition' : ''),
+  getStatusText: (s) => {
+    if (s.phase === 'awaitingRotation') return 'tools.blockLibrary.statusRotation';
+    return s.phase === 'awaitingPosition' ? 'tools.blockLibrary.statusPosition' : '';
+  },
+  // ADR-652 §M7 place+rotate — 2ο κλικ ορίζει τη γωνία (mirror κολώνας/πεδίλου, ADR-514 Φ6d):
+  // το τόξο φοράς + η πορτοκαλί γραμμή έρχονται ΔΩΡΕΑΝ από το κοινό `drawing-hover-overlays.ts`
+  // (ίδιο `PlacementRotationStore` lock) — καμία επιπλέον state εδώ.
+  placeThenRotate: {
+    withRotation: (overrides, deg) => ({ ...overrides, rotation: deg }),
+  },
   // ADR-652 M1.5 — δημοσίευσε το handle στο ribbon (tool → contextual tab). Καμία extra tool
   // state: ο πυρήνας (ADR-600) κατέχει ήδη τα `overrides` + τον `setParamOverrides` setter,
   // άρα ο bridge γράφει ΑΠΕΥΘΕΙΑΣ στον SSoT setter — κανένα δεύτερο αντίγραφο του transform.

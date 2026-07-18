@@ -1269,6 +1269,7 @@
     },
     "blockLibrary": {
       "statusPosition": "Click to place block",
+      "statusRotation": "Click to set the rotation angle",
       "errorNoSelection": "Select a block from «My Blocks»"
     },
     "titleBlock": {
