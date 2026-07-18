@@ -20,7 +20,7 @@ import { resolveLineEndpointLockedDelta } from '../../systems/dynamic-input/grip
 // ADR-513 §grip-parity — displacement (Model A) Μήκος/Γωνία lock για arc/polyline vertex + straight edge.
 import { resolveVertexReshapeLockedDelta } from '../../systems/dynamic-input/vertex-reshape-lock';
 import { resolveOpeningWidthLockedDelta } from '../../systems/dynamic-input/opening-width-lock';
-import { DynamicInputLockStore } from '../../systems/dynamic-input/DynamicInputLockStore';
+import type { WallEntity } from '../../bim/types/wall-types';
 import { resolveEndpointReshapePolarLock } from './grip-endpoint-polar-lock';
 import { resolveActiveFootprintGripKind } from '../../systems/grip/footprint-reshape-anchors';
 import { commitHotGripCopy } from './grip-parametric-commits';
@@ -153,19 +153,15 @@ function resolveVertexReshapeCommitLock(
 function resolveOpeningWidthCommitLock(
   grip: UnifiedGripInfo, worldPos: Point2D, deps: DxfCommitDeps,
 ): Point2D | null {
-  const ctx = resolveLineGripContext(grip, deps);
-  if (!ctx) return null;
-  const kind = gripKindOf(grip, 'opening');
-  const delta = resolveOpeningWidthLockedDelta(ctx.entity, kind, grip.position, worldPos);
-  // TEMP DIAGNOSTIC (ADR-513 §opening-width) — αφαιρείται μετά τη διάγνωση.
-  // eslint-disable-next-line no-console
-  console.warn('[opening-width-commit]', {
-    kind,
-    hasGeometry: !!(ctx.entity as { geometry?: unknown })?.geometry,
-    lockLength: DynamicInputLockStore.getLocked().length,
-    delta,
-  });
-  return delta;
+  if (grip.entityId === undefined) return null;
+  const sceneManager = createSceneManagerAdapter(deps);
+  if (!sceneManager) return null;
+  // Ανάλυση host τοίχου (ίδια πηγή με το `commitOpeningGripDrag`) ώστε ο resolver να δουλεύει στο
+  // wall-axial πλαίσιο (όχι το opening rotation — μπορεί να είναι αντιπαράλληλο· βλ. opening-width-lock).
+  const opening = sceneManager.getEntity(grip.entityId) as { params?: { wallId?: string } } | null | undefined;
+  const wallId = opening?.params?.wallId;
+  const hostWall = wallId ? (sceneManager.getEntity(wallId) as WallEntity | null | undefined) : null;
+  return resolveOpeningWidthLockedDelta(hostWall, gripKindOf(grip, 'opening'), grip.position, worldPos);
 }
 
 /**
