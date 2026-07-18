@@ -44,17 +44,27 @@ beforeEach(() => {
 
 afterEach(() => blockLibraryToolBridgeStore.set(null));
 
-/** Τοποθετεί ένα block με τα δοσμένα overrides και επιστρέφει το committed BlockEntity. */
-function placeWith(overrides: Parameters<
-  ReturnType<typeof useBlockLibraryTool>['setParamOverrides']
->[0]): BlockEntity {
+/**
+ * Τοποθετεί ένα block με τα δοσμένα overrides και επιστρέφει το committed BlockEntity.
+ *
+ * ADR-652 §M7 — 2-click place→rotate: 1ο κλικ κλειδώνει θέση `{x:100,y:50}` (= `entity.position`),
+ * 2ο κλικ ορίζει τη γωνία από την κατεύθυνση lock→click (`rotationTarget`, default ίδιο σημείο με
+ * το lock ⇒ degenerate ⇒ 0°) και κάνει commit. Το click-computed `rotation` αντικαθιστά ΟΤΙΔΗΠΟΤΕ
+ * `overrides.rotation` (mirror κολώνας/πεδίλου) — γι' αυτό το test της explicit γωνίας περνά ρητό
+ * `rotationTarget` που παράγει την επιθυμητή γωνία, αντί να στηρίζεται στο override.
+ */
+function placeWith(
+  overrides: Parameters<ReturnType<typeof useBlockLibraryTool>['setParamOverrides']>[0],
+  rotationTarget: { x: number; y: number } = { x: 100, y: 50 },
+): BlockEntity {
   let created: BlockEntity | null = null;
   const { result } = renderHook(() =>
     useBlockLibraryTool({ onBlockCreated: (e) => { created = e; } }),
   );
   act(() => result.current.activate());
   act(() => result.current.setParamOverrides(overrides));
-  act(() => { result.current.onCanvasClick({ x: 100, y: 50 }); });
+  act(() => { result.current.onCanvasClick({ x: 100, y: 50 }); }); // 1ο κλικ — κλειδώνει θέση.
+  act(() => { result.current.onCanvasClick(rotationTarget); }); // 2ο κλικ — γωνία → commit.
   if (!created) throw new Error('block was not created');
   return created;
 }
@@ -76,8 +86,9 @@ describe('useBlockLibraryTool — M5 overrides → placement scale', () => {
     expect(entity.scale).toEqual({ x: 2, y: 1 });
   });
 
-  it('κανένα scale override → default ομοιόμορφο {1,1}', () => {
-    const entity = placeWith({ rotation: 45 });
+  it('κανένα scale override → default ομοιόμορφο {1,1}· 2ο κλικ ορίζει τη γωνία (M7)', () => {
+    // Lock {100,50} → 2ο κλικ {200,150}: dx=100,dy=100 ⇒ 45° (quantized στο zoom-adaptive step 5°).
+    const entity = placeWith({}, { x: 200, y: 150 });
     expect(entity.scale).toEqual({ x: 1, y: 1 });
     expect(entity.rotation).toBe(45);
   });
