@@ -30,11 +30,25 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import type { Point3D } from '../../bim/types/bim-base';
+import type { ColumnAnchor } from '../../bim/types/column-types';
 import { EventBus } from '../../systems/events/EventBus';
+import {
+  setPlacementRotationLock,
+  getPlacementRotationLock,
+  clearPlacementRotationLock,
+} from '../../systems/cursor/PlacementRotationStore';
+import { resolveColumnRotationDeg } from '../../bim/columns/column-rotation';
+import { worldPerPixel } from '../../rendering/utils/viewport-scale';
+import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 
 // ─── Core FSM types ──────────────────────────────────────────────────────────
 
-export type PlacementToolPhase = 'idle' | 'awaitingPosition' | 'committed';
+/**
+ * `awaitingRotation` — optional 2-click «place→rotate» phase (ADR-514 Φ6d, mirror
+ * `useColumnTool`): 1ο κλικ κλειδώνει θέση (`PlacementRotationStore`), 2ο ορίζει γωνία
+ * → commit. Ενεργοποιείται ΜΟΝΟ όταν το `config.placeThenRotate` είναι παρόν (item 4).
+ */
+export type PlacementToolPhase = 'idle' | 'awaitingPosition' | 'awaitingRotation' | 'committed';
 
 export interface CorePlacementState<TOverrides> {
   readonly phase: PlacementToolPhase;
@@ -122,6 +136,17 @@ export interface PlacementToolConfig<
   getStatusText(state: CorePlacementState<TOverrides> & TExtra): string;
   /** Omitted ⇒ no 3D placement bridge (floorplan symbol). */
   readonly place3dEvent?: PlacementPlaceEvent;
+  /**
+   * Optional 2-click «place→rotate» (ADR-514 Φ6d, mirror `useColumnTool`): 1ο κλικ
+   * κλειδώνει θέση+anchor στο `PlacementRotationStore` (τόξο φοράς + πορτοκαλί γραμμή
+   * ζωγραφίζονται ΑΥΤΟΜΑΤΑ από `drawing-hover-overlays.ts` — tool-agnostic, μη πειράξεις),
+   * 2ο κλικ ορίζει τη γωνία από την κατεύθυνση κλειδωμένη-θέση→click. Omitted ⇒ κλασική
+   * 1-click commit (backward-compat, καμία αλλαγή συμπεριφοράς).
+   */
+  readonly placeThenRotate?: {
+    readonly anchor?: ColumnAnchor;
+    withRotation(overrides: TOverrides, rotationDeg: number): TOverrides;
+  };
   /** Escape hatch: extra state setters + bespoke bridge publish + extra getters. */
   useExtension?(
     ctx: PlacementExtensionCtx<CorePlacementState<TOverrides> & TExtra, TOverrides, TUnits>,
@@ -208,6 +233,31 @@ export function createSingleClickPlacementTool<
     const onCanvasClick = useCallback(
       (point: Readonly<Point2D>): boolean => {
         const s = stateRef.current;
+        // ADR-514 Φ6d — optional 2-click «place→rotate» (mirror useColumnTool). Absent
+        // config.placeThenRotate ⇒ fall through to the classic 1-click FSM below unchanged.
+        if (config.placeThenRotate) {
+          if (s.phase === 'awaitingPosition') {
+            setPlacementRotationLock(point, config.placeThenRotate.anchor ?? 'center');
+            setState({ ...s, phase: 'awaitingRotation', error: null });
+            return false;
+          }
+          if (s.phase === 'awaitingRotation') {
+            const lock = getPlacementRotationLock();
+            clearPlacementRotationLock();
+            if (!lock) {
+              setState({ ...s, phase: 'awaitingPosition' });
+              return false;
+            }
+            const deg = resolveColumnRotationDeg(
+              lock.origin,
+              point,
+              worldPerPixel(getImmediateTransform().scale),
+            );
+            const s2 = { ...s, overrides: config.placeThenRotate.withRotation(s.overrides, deg) };
+            return commitFromState(s2, lock.origin);
+          }
+          return false;
+        }
         if (s.phase !== 'awaitingPosition') return false;
         return commitFromState(s, point);
       },
