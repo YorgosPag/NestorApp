@@ -1,5 +1,5 @@
 /**
- * ADR-599 — Import smoke for the 13 store-backed ribbon toggles migrated to the
+ * ADR-599 — Import smoke for the store-backed ribbon toggles migrated to the
  * `RibbonToggleWidget` / `RibbonInlineToggleButton` SSoT.
  *
  * Cheap module-graph guard: every migrated call-site must still export its named
@@ -24,10 +24,13 @@ import { DisciplineVisibilityToggle } from '../DisciplineVisibilityToggle';
 import { DimRowHandlesToggle } from '../DimRowHandlesToggle';
 // ADR-531 Φ5b.3 — «Μόνο κάτοψη DXF» plan-lines toggle (ίδιο RibbonToggleWidget SSoT).
 import { PlanLinesToggle } from '../PlanLinesToggle';
+// ADR-363 — «Ετικέτες ανοιγμάτων» opening-tag layer visibility (ίδιο RibbonToggleWidget SSoT).
+import { OpeningTagLayerToggle } from '../OpeningTagLayerToggle';
 
 const MIGRATED_TOGGLES = {
   HideBimToggle,
   PlanLinesToggle,
+  OpeningTagLayerToggle,
   MepWireToggle,
   DrainPipeToggle,
   ColorBySystemToggle,
@@ -43,9 +46,9 @@ const MIGRATED_TOGGLES = {
 };
 
 describe('ADR-599 — migrated ribbon toggles export their named component', () => {
-  it('exposes all 14 call-sites as function components', () => {
+  it('exposes all 15 call-sites as function components', () => {
     const entries = Object.entries(MIGRATED_TOGGLES);
-    expect(entries).toHaveLength(14);
+    expect(entries).toHaveLength(15);
     for (const [name, component] of entries) {
       expect(typeof component).toBe('function');
       expect(name.length).toBeGreaterThan(0);
