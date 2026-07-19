@@ -45,8 +45,15 @@ export interface ZoomPanConfig {
   minZoom?: number;
   /** Maximum zoom level (default: 4) */
   maxZoom?: number;
-  /** Zoom step for button controls (default: 0.25) */
+  /** Additive zoom step for button controls (default: 0.25). Ignored when `zoomFactor` is set. */
   zoomStep?: number;
+  /**
+   * Multiplicative step for the +/- buttons (big-players pattern — Figma/Revit/ArchiCAD).
+   * When set (e.g. 1.5), zoom-in multiplies and zoom-out divides by this factor, so the
+   * buttons traverse a deep zoom range in a few clicks instead of ~120 additive steps.
+   * Undefined → falls back to the additive `zoomStep` (backward compatible).
+   */
+  zoomFactor?: number;
   /** Default/initial zoom level (default: 1) */
   defaultZoom?: number;
   /** Wheel zoom sensitivity — higher = faster (default: 0.001) */
@@ -125,6 +132,7 @@ export function useZoomPan(config: ZoomPanConfig = {}): UseZoomPanReturn {
     minZoom = DEFAULTS.minZoom,
     maxZoom = DEFAULTS.maxZoom,
     zoomStep = DEFAULTS.zoomStep,
+    zoomFactor,
     defaultZoom = DEFAULTS.defaultZoom,
     wheelSensitivity = DEFAULTS.wheelSensitivity,
   } = config;
@@ -165,16 +173,17 @@ export function useZoomPan(config: ZoomPanConfig = {}): UseZoomPanReturn {
   // =========================================================================
 
   const zoomIn = useCallback(() => {
-    setZoomRaw(prev => clampZoom(prev + zoomStep));
-  }, [clampZoom, zoomStep]);
+    // Multiplicative (big-players) when zoomFactor is set, else additive zoomStep.
+    setZoomRaw(prev => clampZoom(zoomFactor ? prev * zoomFactor : prev + zoomStep));
+  }, [clampZoom, zoomStep, zoomFactor]);
 
   const zoomOut = useCallback(() => {
     setZoomRaw(prev => {
-      const next = clampZoom(prev - zoomStep);
+      const next = clampZoom(zoomFactor ? prev / zoomFactor : prev - zoomStep);
       if (next <= 1) setPanOffset(ZERO_OFFSET);
       return next;
     });
-  }, [clampZoom, zoomStep]);
+  }, [clampZoom, zoomStep, zoomFactor]);
 
   const resetAll = useCallback(() => {
     setZoomRaw(defaultZoom);

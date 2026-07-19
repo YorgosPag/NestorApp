@@ -24,9 +24,8 @@ export function Bim3DReadOnlyOverlay({ bimSnapshot, projectId, onClose }: Bim3DR
       walls: bimSnapshot.walls,
       columns: bimSnapshot.columns,
       beams: bimSnapshot.beams,
-      // ADR-436 — read-only preview does not load floorplan_foundations yet
-      // (deferred, Slice 1-persist). Empty keeps the bundle valid.
-      foundations: [],
+      // ADR-370 v2 — foundations now loaded read-only (ADR-436 deferral resolved).
+      foundations: bimSnapshot.foundations,
       slabs: bimSnapshot.slabs,
       slabOpenings: bimSnapshot.slabOpenings,
       openings: bimSnapshot.openings,
@@ -53,9 +52,8 @@ export function Bim3DReadOnlyOverlay({ bimSnapshot, projectId, onClose }: Bim3DR
       // ADR-408 DHW — same as above: read-only preview does not load
       // floorplan_mep_water_heaters yet (deferred). Empty keeps the bundle valid.
       waterHeaters: [],
-      // ADR-410 — same as above: read-only preview does not load
-      // floorplan_furniture yet (deferred). Empty keeps the bundle valid.
-      furnitures: [],
+      // ADR-370 v2 — furniture now loaded read-only (ADR-410 deferral resolved).
+      furnitures: bimSnapshot.furnitures,
       // ADR-408 Φ8 — same as above: read-only preview does not load
       // floorplan_mep_segments yet (deferred). Empty keeps the bundle valid.
       mepSegments: [],
@@ -72,7 +70,7 @@ export function Bim3DReadOnlyOverlay({ bimSnapshot, projectId, onClose }: Bim3DR
       // floorplan_mep_underfloors yet (deferred). Empty keeps the bundle valid.
       underfloors: [],
     }),
-    [bimSnapshot.walls, bimSnapshot.columns, bimSnapshot.beams, bimSnapshot.slabs, bimSnapshot.slabOpenings, bimSnapshot.openings, bimSnapshot.stairs],
+    [bimSnapshot.walls, bimSnapshot.columns, bimSnapshot.beams, bimSnapshot.slabs, bimSnapshot.slabOpenings, bimSnapshot.openings, bimSnapshot.stairs, bimSnapshot.foundations, bimSnapshot.furnitures],
   );
 
   return (

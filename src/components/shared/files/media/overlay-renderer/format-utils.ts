@@ -17,17 +17,22 @@ function trimDecimals(value: number, decimals: number = 2): string {
     .replace(/\.$/, '');
 }
 
-/** Distance label — "<value> <unit>". */
+/** Fixed decimals, no trailing-zero trim (surveyor style — always "3.50", not "3.5"). */
+function fixedDecimals(value: number, decimals: number = 2): string {
+  return Number.isFinite(value) ? value.toFixed(decimals) : '—';
+}
+
+/** Distance label — "<value> <unit>" with EXACTLY 2 decimals (e.g. "3.50 μ"). */
 export function formatDistance(meters: number, unit: string = 'm'): string {
-  return `${trimDecimals(meters)} ${unit}`;
+  return `${fixedDecimals(meters)} ${unit}`;
 }
 
-/** Area label — "<value> m²" by default. */
+/** Area label — "<value> m²" with EXACTLY 2 decimals (e.g. "8.50 μ²"). */
 export function formatArea(squareMeters: number, unit: string = 'm²'): string {
-  return `${trimDecimals(squareMeters)} ${unit}`;
+  return `${fixedDecimals(squareMeters)} ${unit}`;
 }
 
-/** Angle label — degrees with ° symbol. */
+/** Angle label — degrees with ° symbol (1 decimal, CAD convention). */
 export function formatAngle(degrees: number): string {
   return `${trimDecimals(degrees, 1)}°`;
 }

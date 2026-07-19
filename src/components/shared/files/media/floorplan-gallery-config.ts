@@ -89,11 +89,24 @@ export type DxfDrawingMode = 'dark' | 'light';
 /** Supported floorplan file extensions (includes 'json' for scene data saved by FloorplanSaveOrchestrator) */
 export const FLOORPLAN_EXTENSIONS = ['dxf', 'pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp', 'json'];
 
-/** Zoom configuration for the useZoomPan hook */
+/**
+ * Zoom configuration for the useZoomPan hook (SSoT — feeds BOTH the inline and the
+ * fullscreen-modal viewports + the zoom-control buttons).
+ *
+ * `maxZoom` = deepest zoom-in. Raised 4 → 32 so dense areas (title-blocks, small
+ * annotations) can be read up close. Safe for vector DXF (redrawn crisp per zoom via
+ * `renderDxfToCanvas`, and text now scales purely with zoom — ADR-370 Phase 9.2); raster
+ * backgrounds (PDF/image) simply get more magnification.
+ *
+ * `zoomFactor: 1.5` makes the +/- BUTTONS multiplicative (big-players pattern —
+ * Figma/Revit/ArchiCAD): each click ×1.5 / ÷1.5, so ~9 clicks span 1 → 32 instead of ~124
+ * additive 0.25 steps. Wheel/pinch are already multiplicative and reach the ceiling smoothly.
+ */
 export const ZOOM_CONFIG = {
   minZoom: 0.25,
-  maxZoom: 4,
+  maxZoom: 32,
   zoomStep: 0.25,
+  zoomFactor: 1.5,
   defaultZoom: 1,
 } as const;
 

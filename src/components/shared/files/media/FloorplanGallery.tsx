@@ -23,13 +23,15 @@ import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 import type { FloorplanGalleryProps, DxfDrawingMode } from '@/components/shared/files/media/floorplan-gallery-config';
 import { ZOOM_CONFIG, filterFloorplanFiles, getFileIcon } from '@/components/shared/files/media/floorplan-gallery-config';
 import { computeActualBounds } from '@/components/shared/files/media/floorplan-dxf-renderer';
-import { computeOverlayAABBs, screenToWorld, hitTestOverlays } from '@/components/shared/files/media/floorplan-overlay-system';
-import { hitTestPdfOverlays } from '@/components/shared/files/media/floorplan-pdf-overlay-renderer';
+import { computeOverlayAABBs } from '@/components/shared/files/media/floorplan-overlay-system';
+import { useFloorplanOverlayHitTest } from '@/components/shared/files/media/useFloorplanOverlayHitTest';
 import { useFloorplanSceneLoader } from '@/components/shared/files/media/useFloorplanSceneLoader';
 import { useFloorplanPdfLoader } from '@/components/shared/files/media/useFloorplanPdfLoader';
 import { useFloorplanImageLoader } from '@/components/shared/files/media/useFloorplanImageLoader';
 import { useFloorplanCanvasRender } from '@/components/shared/files/media/useFloorplanCanvasRender';
 import { useFloorplanBimEntities } from '@/components/shared/files/media/useFloorplanBimEntities';
+import { buildSceneBimSnapshot } from '@/components/shared/files/media/floorplan-scene-bim';
+import type { Entity } from '@/subapps/dxf-viewer/types/entities';
 import { useFileDownload } from '@/components/shared/files/hooks/useFileDownload';
 import { FloorplanGalleryZoomControls } from '@/components/shared/files/media/FloorplanGalleryZoomControls';
 import { MeasureToolbar, type MeasureMode } from '@/components/shared/files/media/MeasureToolbar';
@@ -112,9 +114,6 @@ export function FloorplanGallery({
     () => isDxf && overlays ? computeOverlayAABBs(overlays) : [],
     [isDxf, overlays],
   );
-  // SPEC-237C: Local hover state for cursor + visual feedback
-  const [hoveredOverlayUnitId, setHoveredOverlayUnitId] = useState<string | null>(null);
-  const rafRef = useRef<number>(0);
   // ADR-340 Phase 9 STEP H: transient measure tool mode (distance/area/angle/off)
   const [measureMode, setMeasureMode] = useState<MeasureMode | null>(null);
   const snapFinder = useMeasureSnapFinder(loadedScene?.entities, isDxf);
@@ -124,57 +123,18 @@ export function FloorplanGallery({
   const [show3D, setShow3D] = useState(false);
   const calibrationImageSrc = isRaster ? (rasterImage?.src ?? currentFile?.downloadUrl ?? null) : null;
   const canCalibrate = isRaster && !!backgroundId && !!calibrationImageSrc;
+  // SPEC-237C: Canvas hover/click hit-testing (extracted hook — SRP + file-size SSoT)
+  const {
+    hoveredOverlayUnitId,
+    handleCanvasMouseMove,
+    handleCanvasClick,
+    handleCanvasMouseLeave,
+  } = useFloorplanOverlayHitTest({
+    canvasRef: inlineCanvasRef, overlays, isDxf, isRaster, currentBounds, rasterBounds,
+    overlayAABBs, zoom: inlineZP.zoom, panOffset: inlineZP.panOffset, onHoverOverlay, onClickOverlay,
+  });
   // SPEC-237C: Effective highlight = external (list hover) OR local (canvas hover)
   const effectiveHighlightId = highlightedOverlayUnitId || hoveredOverlayUnitId;
-  // SPEC-237C: Canvas Mouse Handlers (Hit-Testing, Hover, Click)
-  const resolveHit = useCallback((screenX: number, screenY: number, canvas: HTMLCanvasElement) => {
-    if (!overlays?.length) return null;
-    if (isDxf && currentBounds) {
-      const worldPt = screenToWorld(screenX, screenY, canvas, currentBounds, inlineZP.zoom, inlineZP.panOffset);
-      return hitTestOverlays(worldPt, overlays, overlayAABBs);
-    }
-    if (isRaster && rasterBounds) {
-      return hitTestPdfOverlays(
-        screenX, screenY, canvas.width, canvas.height, rasterBounds, overlays,
-        inlineZP.zoom, inlineZP.panOffset,
-      );
-    }
-    return null;
-  }, [isDxf, isRaster, currentBounds, rasterBounds, overlays, overlayAABBs, inlineZP.zoom, inlineZP.panOffset]);
-  const handleCanvasMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!overlays?.length || !inlineCanvasRef.current) return;
-    cancelAnimationFrame(rafRef.current);
-    rafRef.current = requestAnimationFrame(() => {
-      const canvas = inlineCanvasRef.current;
-      if (!canvas) return;
-      const rect = canvas.getBoundingClientRect();
-      const screenX = (e.clientX - rect.left) * (canvas.width / rect.width);
-      const screenY = (e.clientY - rect.top) * (canvas.height / rect.height);
-      const hit = resolveHit(screenX, screenY, canvas);
-      const propertyId = hit?.linked?.propertyId ?? null;
-      setHoveredOverlayUnitId(propertyId);
-      onHoverOverlay?.(propertyId);
-    });
-  }, [overlays, resolveHit, onHoverOverlay]);
-  const handleCanvasClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!overlays?.length || !inlineCanvasRef.current) return;
-    const canvas = inlineCanvasRef.current;
-    const rect = canvas.getBoundingClientRect();
-    const screenX = (e.clientX - rect.left) * (canvas.width / rect.width);
-    const screenY = (e.clientY - rect.top) * (canvas.height / rect.height);
-    const hit = resolveHit(screenX, screenY, canvas);
-    if (hit?.linked?.propertyId) onClickOverlay?.(hit.linked.propertyId);
-  }, [overlays, resolveHit, onClickOverlay]);
-
-  const handleCanvasMouseLeave = useCallback(() => {
-    cancelAnimationFrame(rafRef.current);
-    setHoveredOverlayUnitId(null);
-    onHoverOverlay?.(null);
-  }, [onHoverOverlay]);
-  // Cleanup rAF on unmount
-  useEffect(() => {
-    return () => cancelAnimationFrame(rafRef.current);
-  }, []);
   // NAVIGATION
   const goToPrevious = useCallback(() => {
     setCurrentIndex(prev => (prev > 0 ? prev - 1 : floorplanFiles.length - 1));
@@ -226,8 +186,27 @@ export function FloorplanGallery({
     [propertyLabels],
   );
 
-  const bimSubscriptionId = isDxf ? (floorplanId ?? currentFile?.id ?? null) : null;
-  const bimEntities = useFloorplanBimEntities(bimSubscriptionId);
+  // ADR-420 — BIM entities are scoped by the durable building-storey `floorId`
+  // (a floor-scoped file's `entityId`), not the volatile file id. Query with the
+  // SAME scope the editor's persistence services use, else imported entities
+  // (whose `floorplanId` mirrors `floorId`) are silently missed. File id stays as
+  // provenance/fallback for project/building-level canvases with no floor bound.
+  const bimScope = isDxf && currentFile
+    ? {
+        projectId: currentFile.projectId ?? null,
+        floorId: currentFile.entityType === 'floor' ? (currentFile.entityId ?? null) : null,
+        floorplanId: floorplanId ?? currentFile.id ?? null,
+      }
+    : null;
+  const bimEntities = useFloorplanBimEntities(bimScope);
+  // ADR-370 Phase 11 — the read-only 3D toggle + overlay source their BIM entities
+  // from the loaded scene (SSoT), NOT the projectId-scoped Firestore feed: that feed
+  // is structurally empty on the public page (no projectId, and an unauthenticated
+  // visitor cannot query Firestore). Geometry is rehydrated from params.
+  const sceneBim = useMemo(
+    () => buildSceneBimSnapshot(loadedScene?.entities as unknown as readonly Entity[] | undefined),
+    [loadedScene],
+  );
   useFloorplanCanvasRender({
     canvasRef: inlineCanvasRef, enabled: true, isDxf, isRaster, loadedScene, rasterImage, rasterBounds,
     currentBounds, zoom: inlineZP.zoom, panOffset: inlineZP.panOffset, drawingMode,
@@ -325,8 +304,8 @@ export function FloorplanGallery({
             rasterSize={isRaster ? rasterBounds : null}
             zoom={zp.zoom}
             panOffset={zp.panOffset}
-            unitsPerMeter={unitsPerMeter ?? null}
-            findSnapPoint={(worldPt) => snapFinder(worldPt, zp.zoom)}
+            unitsPerMeter={unitsPerMeter ?? null} scopeKey={floorplanId ?? currentFile?.id ?? null}
+            findSnapPoint={(worldPt, screenScale) => snapFinder(worldPt, screenScale)}
           />
         )}
         {isDxf && !anyLoading && !anyError && !loadedScene && currentFile?.processedData && (
@@ -383,7 +362,7 @@ export function FloorplanGallery({
           <nav className="flex items-center gap-1" aria-label={t('floorplan.actions')}>
             {isDxf && (
               <>
-                {bimEntities.hasAny && (
+                {sceneBim.hasAny && (
                   <Bim3DToggleButton
                     active={show3D}
                     onToggle={() => setShow3D((v) => !v)}
@@ -408,7 +387,7 @@ export function FloorplanGallery({
                 <span className="w-px h-6 bg-border mx-1" aria-hidden="true" />
               </>
             )}
-            <MeasureToolbar mode={measureMode} onModeChange={setMeasureMode} />
+            <MeasureToolbar mode={measureMode} onModeChange={setMeasureMode} scopeKey={floorplanId ?? currentFile?.id ?? null} />
             {canCalibrate && (
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -450,7 +429,7 @@ export function FloorplanGallery({
         {renderViewerContent(inlineZP, inlineCanvasRef, 'min-h-[500px]', true,
           show3D && isDxf ? (
             <Bim3DReadOnlyOverlay
-              bimSnapshot={bimEntities}
+              bimSnapshot={sceneBim}
               projectId={projectId}
               onClose={() => setShow3D(false)}
             />

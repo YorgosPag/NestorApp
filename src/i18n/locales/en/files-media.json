@@ -36,6 +36,7 @@
       "area": "Area",
       "angle": "Angle",
       "disable": "Disable measure",
+      "clearAll": "Clear all",
       "clearHint": "Press ESC to clear",
       "modeDistanceHint": "Two clicks to measure distance",
       "modeAreaHint": "Three or more clicks for area",

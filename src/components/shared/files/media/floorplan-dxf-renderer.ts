@@ -85,19 +85,11 @@ export function computeActualBounds(entities: DxfSceneData['entities']): SceneBo
         if (c2) expand(c2.x, c2.y);
         break;
       }
-      case 'circle': {
-        const c = e.center as BoundsPoint | undefined;
-        const r = e.radius as number | undefined;
-        if (c && r != null) {
-          expand(c.x - r, c.y - r);
-          expand(c.x + r, c.y + r);
-        }
-        break;
-      }
+      case 'circle':
       case 'arc': {
+        // Arc: conservative full-circle AABB (avoids angle-sweep math for a simple viewer)
         const c = e.center as BoundsPoint | undefined;
         const r = e.radius as number | undefined;
-        // Conservative: full circle AABB (avoids angle-sweep math for a simple viewer)
         if (c && r != null) {
           expand(c.x - r, c.y - r);
           expand(c.x + r, c.y + r);
@@ -320,12 +312,19 @@ export function renderDxfToCanvas(
             // Font size uses same formula as DXF-imported path — runHeight (2.5mm default)
             // is too small to be legible at gallery scale (~1.35 px/mm for A4).
             ctx.textBaseline = 'top';
-            ctx.font = `${Math.max(8, (height || 10) * scale)}px Arial`;
+            // ADR-370 — font scales PURELY with zoom (screenHeight = height × scale),
+            // mirroring the canonical DXF-Viewer TextRenderer SSoT. NO min/max clamp:
+            // a fixed floor (was `Math.max(8, …)`) freezes on-screen text size, so at low
+            // zoom the glyphs stop shrinking and overlap into an unreadable blob. `|| 10`
+            // is only a fallback height for entities that carry no intrinsic height.
+            ctx.font = `${(height || 10) * scale}px Arial`;
           } else {
             // DXF-imported entity: position = BL (baseline, standard DXF TEXT anchor).
             // 'alphabetic' matches the baseline rendering in the DXF viewer.
             ctx.textBaseline = 'alphabetic';
-            ctx.font = `${Math.max(8, (height || 10) * scale)}px Arial`;
+            // ADR-370 — pure zoom-scaled font (see textNode branch above): no min/max
+            // clamp, matching the canonical TextRenderer so text no longer "sticks" on zoom.
+            ctx.font = `${(height || 10) * scale}px Arial`;
           }
           ctx.fillText(
             text,

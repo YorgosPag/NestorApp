@@ -11,12 +11,23 @@
  * @enterprise SPEC-237D
  */
 
-import { useEffect, useRef, type RefObject } from 'react';
+import { useEffect, useRef, useSyncExternalStore, type RefObject } from 'react';
 import type { PanOffset } from '@/hooks/useZoomPan';
+// ADR-370 v2 / ADR-654 — async material-image / procedural decode signals a redraw
+// through this SSoT store; the read-only canvas has no frame scheduler of its own, so
+// it repaints by treating the asset-ready version as an effect dependency.
+import {
+  subscribeImageAssetReady,
+  getImageAssetReadyVersion,
+} from '@/subapps/dxf-viewer/rendering/entities/shared/hatch-image-cache';
 import type { DxfSceneData } from '@/types/file-record';
 import type { FloorOverlayItem } from '@/hooks/useFloorOverlays';
 import type { DxfDrawingMode } from '@/components/shared/files/media/floorplan-gallery-config';
 import { renderDxfToCanvas } from '@/components/shared/files/media/floorplan-dxf-renderer';
+// ADR-370 Phase 10 — big-players SSoT: drive the read-only DXF scene through the
+// editor's OWN engine (DxfRenderer + convertSceneToDxf) so image / hatch / block /
+// column / stair render verbatim. `renderDxfToCanvas` stays as the no-bounds fallback.
+import { renderFloorplanScene } from '@/components/shared/files/media/floorplan-scene-render';
 import { drawOverlayPolygons } from '@/components/shared/files/media/floorplan-overlay-system';
 import { renderPdfWithOverlays } from '@/components/shared/files/media/floorplan-pdf-overlay-renderer';
 import { renderBimEntitiesToCanvas } from '@/components/shared/files/media/bim-readonly-render';
@@ -60,6 +71,15 @@ export function useFloorplanCanvasRender(params: FloorplanCanvasRenderParams): v
     getOverlayLabel, firstRenderDelay, bimEntities,
   } = params;
 
+  // ADR-370 v2 — bumps whenever a hatch material image finishes decoding, so the
+  // render effect below re-runs and the now-cached image paints (was invisible on
+  // the first synchronous pass).
+  const imageAssetVersion = useSyncExternalStore(
+    subscribeImageAssetReady,
+    getImageAssetReadyVersion,
+    getImageAssetReadyVersion,
+  );
+
   const readyRef = useRef(false);
   useEffect(() => { if (!enabled) readyRef.current = false; }, [enabled]);
 
@@ -72,7 +92,14 @@ export function useFloorplanCanvasRender(params: FloorplanCanvasRenderParams): v
       const canvas = canvasRef.current;
       if (!canvas) return;
       if (isDxf && loadedScene) {
-        renderDxfToCanvas(canvas, loadedScene, zoom, panOffset, drawingMode);
+        if (currentBounds) {
+          // Same `currentBounds` (computeActualBounds) the overlay pass uses → the
+          // engine's world→pixel transform stays aligned with the unit polygons.
+          renderFloorplanScene(canvas, loadedScene, currentBounds, zoom, panOffset, drawingMode);
+        } else {
+          // Empty scene / no derived bounds — primitive fallback.
+          renderDxfToCanvas(canvas, loadedScene, zoom, panOffset, drawingMode);
+        }
         if (bimEntities && currentBounds && bimEntities.hasAny) {
           renderBimEntitiesToCanvas(canvas, bimEntities, currentBounds, zoom, panOffset);
         }
@@ -100,6 +127,6 @@ export function useFloorplanCanvasRender(params: FloorplanCanvasRenderParams): v
   }, [
     canvasRef, enabled, isDxf, loadedScene, isRaster, rasterImage, rasterBounds,
     currentBounds, zoom, panOffset, drawingMode, overlays, highlightedUnitId,
-    getOverlayLabel, firstRenderDelay, bimEntities,
+    getOverlayLabel, firstRenderDelay, bimEntities, imageAssetVersion,
   ]);
 }

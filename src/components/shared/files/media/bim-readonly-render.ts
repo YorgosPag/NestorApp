@@ -1,36 +1,41 @@
 /**
  * ADR-370 — Read-only BIM render façade for Properties floorplan tab.
  *
- * Instantiates the existing `BaseEntityRenderer` subclasses from the DXF Viewer
- * subapp and draws hydrated BIM entities onto the same canvas used by
- * `renderDxfToCanvas`. The synthetic `ViewTransform` from
- * `buildBimViewTransform()` aligns `CoordinateTransforms.worldToScreen` with
- * the DXF renderer pixel space, so BIM fills and DXF geometry stack with zero
- * misalignment.
+ * ADR-370 v2 (full parity, big-players): drives the SAME
+ * `EntityRendererComposite` the DXF Viewer uses (`createEntityRenderers` SSoT
+ * registry) instead of a hand-maintained renderer subset. Any persisted BIM
+ * entity type the editor can draw (walls, slabs, columns, openings, stairs,
+ * hatches — incl. material image fills — foundations, furniture, …) renders
+ * here verbatim, non-interactively. Adding a new type never needs a change in
+ * this file again — the registry is the single source of truth.
+ *
+ * The synthetic `ViewTransform` from `buildBimViewTransform()` aligns
+ * `CoordinateTransforms.worldToScreen` with the DXF renderer pixel space, so
+ * BIM fills and DXF geometry stack with zero misalignment.
  *
  * SSoT contract:
- *  - Reuses `WallRenderer`, `SlabRenderer`, `BeamRenderer`, `ColumnRenderer`,
- *    `OpeningRenderer`, `SlabOpeningRenderer` verbatim — no duplication.
+ *  - Reuses `EntityRendererComposite` + every `BaseEntityRenderer` subclass
+ *    verbatim — no duplicated renderer, no per-type list to drift (N.18).
  *  - Read-only: `grips: false`, no hover, no selection halo.
+ *  - Async assets (hatch material images, furniture meshes) decode off-thread
+ *    and signal a redraw through `subscribeImageAssetReady` (ADR-654), which the
+ *    canvas render effect listens to.
  *
  * @see docs/centralized-systems/reference/adrs/ADR-370-bim-readonly-visualization.md
  */
 
 import type { PanOffset } from '@/hooks/useZoomPan';
 
-import { WallRenderer, type OpeningsByWall } from '@/subapps/dxf-viewer/bim/renderers/WallRenderer';
-import { SlabRenderer, type SlabOpeningsBySlab } from '@/subapps/dxf-viewer/bim/renderers/SlabRenderer';
-import { BeamRenderer } from '@/subapps/dxf-viewer/bim/renderers/BeamRenderer';
-import { ColumnRenderer } from '@/subapps/dxf-viewer/bim/renderers/ColumnRenderer';
-import { OpeningRenderer } from '@/subapps/dxf-viewer/bim/renderers/OpeningRenderer';
-import { SlabOpeningRenderer } from '@/subapps/dxf-viewer/bim/renderers/SlabOpeningRenderer';
-import { StairRenderer } from '@/subapps/dxf-viewer/bim/renderers/StairRenderer';
+import { EntityRendererComposite } from '@/subapps/dxf-viewer/rendering/core/EntityRendererComposite';
+import type { OpeningsByWall } from '@/subapps/dxf-viewer/bim/renderers/WallRenderer';
+import type { SlabOpeningsBySlab } from '@/subapps/dxf-viewer/bim/renderers/SlabRenderer';
 
 import {
   isWallHostedOpening,
   type OpeningEntity,
 } from '@/subapps/dxf-viewer/bim/types/opening-types';
 import type { SlabOpeningEntity } from '@/subapps/dxf-viewer/bim/types/slab-opening-types';
+import type { Entity } from '@/subapps/dxf-viewer/types/entities';
 import type { RenderOptions } from '@/subapps/dxf-viewer/rendering/types/Types';
 
 import {
@@ -40,6 +45,25 @@ import {
 import type { FloorplanBimSnapshot } from '@/components/shared/files/media/useFloorplanBimEntities';
 
 const READONLY_OPTIONS: RenderOptions = { grips: false, hovered: false };
+
+/**
+ * Persist ONE composite per canvas. The composite's renderers own async asset
+ * caches (hatch material images, segment geometry); recreating them every paint
+ * would discard the decoded image between the async-load redraw and the repaint,
+ * spinning an infinite reload→bump→repaint loop. A per-canvas instance keeps the
+ * cache warm so the second paint (triggered by `subscribeImageAssetReady`) hits
+ * it and terminates. Keyed weakly so a detached canvas is GC'd with its composite.
+ */
+const compositeByCanvas = new WeakMap<HTMLCanvasElement, EntityRendererComposite>();
+
+function getComposite(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D): EntityRendererComposite {
+  let composite = compositeByCanvas.get(canvas);
+  if (!composite) {
+    composite = new EntityRendererComposite(ctx);
+    compositeByCanvas.set(canvas, composite);
+  }
+  return composite;
+}
 
 function buildOpeningsByWall(openings: ReadonlyArray<OpeningEntity>): OpeningsByWall {
   const map = new Map<string, OpeningEntity[]>();
@@ -68,6 +92,26 @@ function buildSlabOpeningsBySlab(
   return map as SlabOpeningsBySlab;
 }
 
+/**
+ * Assemble the draw list in painter order (bottom → top). 2D z-order = array
+ * order (SSoT). Material hatches sit under the structural bodies; furniture is
+ * an interior overlay above the shell; stairs cap the list.
+ */
+function orderedDrawList(snapshot: FloorplanBimSnapshot): Entity[] {
+  return [
+    ...snapshot.hatches,
+    ...snapshot.slabs,
+    ...snapshot.foundations,
+    ...snapshot.walls,
+    ...snapshot.beams,
+    ...snapshot.columns,
+    ...snapshot.openings,
+    ...snapshot.slabOpenings,
+    ...snapshot.furnitures,
+    ...snapshot.stairs,
+  ];
+}
+
 export function renderBimEntitiesToCanvas(
   canvas: HTMLCanvasElement,
   snapshot: FloorplanBimSnapshot,
@@ -88,38 +132,22 @@ export function renderBimEntitiesToCanvas(
     panOffset,
   );
 
-  const wallRenderer = new WallRenderer(ctx);
-  const slabRenderer = new SlabRenderer(ctx);
-  const beamRenderer = new BeamRenderer(ctx);
-  const columnRenderer = new ColumnRenderer(ctx);
-  const openingRenderer = new OpeningRenderer(ctx);
-  const slabOpeningRenderer = new SlabOpeningRenderer(ctx);
-  const stairRenderer = new StairRenderer(ctx);
+  const composite = getComposite(canvas, ctx);
+  composite.setTransform(transform);
 
-  wallRenderer.setTransform(transform);
-  slabRenderer.setTransform(transform);
-  beamRenderer.setTransform(transform);
-  columnRenderer.setTransform(transform);
-  openingRenderer.setTransform(transform);
-  slabOpeningRenderer.setTransform(transform);
-  stairRenderer.setTransform(transform);
-
-  wallRenderer.setOpeningsByWall(buildOpeningsByWall(snapshot.openings));
-  // ADR-509 §axis-clip — κόψε τον άξονα τοίχου στην παρειά κολώνας (parity με live render).
-  wallRenderer.setColumnFootprints(
+  // Per-frame cross-entity indices (parity with the live DxfRenderer pass).
+  composite.setOpeningsByWall(buildOpeningsByWall(snapshot.openings));
+  // ADR-509 §axis-clip — cut the wall axis at the column face (parity with live render).
+  composite.setColumnFootprints(
     snapshot.columns
       .map((c) => c.geometry?.footprint?.vertices)
       .filter((v): v is NonNullable<typeof v> => !!v && v.length >= 3),
   );
-  slabRenderer.setSlabOpeningsBySlab(buildSlabOpeningsBySlab(snapshot.slabOpenings));
+  composite.setSlabOpeningsBySlab(buildSlabOpeningsBySlab(snapshot.slabOpenings));
 
   ctx.save();
-  for (const slab of snapshot.slabs) slabRenderer.render(slab, READONLY_OPTIONS);
-  for (const wall of snapshot.walls) wallRenderer.render(wall, READONLY_OPTIONS);
-  for (const beam of snapshot.beams) beamRenderer.render(beam, READONLY_OPTIONS);
-  for (const column of snapshot.columns) columnRenderer.render(column, READONLY_OPTIONS);
-  for (const opening of snapshot.openings) openingRenderer.render(opening, READONLY_OPTIONS);
-  for (const so of snapshot.slabOpenings) slabOpeningRenderer.render(so, READONLY_OPTIONS);
-  for (const stair of snapshot.stairs) stairRenderer.render(stair, READONLY_OPTIONS);
+  // renderEntities skips `visible === false` and dispatches each entity to its
+  // registered renderer (unknown types are a no-op warn, never a throw).
+  composite.renderEntities(orderedDrawList(snapshot), READONLY_OPTIONS);
   ctx.restore();
 }
