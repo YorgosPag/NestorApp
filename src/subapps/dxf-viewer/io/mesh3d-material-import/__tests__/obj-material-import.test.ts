@@ -114,6 +114,16 @@ describe('resolveImportAppearance', () => {
   it('returns null for an unknown material with no colour', () => {
     expect(resolveImportAppearance('ghost', mtl)).toBeNull();
   });
+
+  it('reads a hex colour encoded in the material name (C4D R15 has no .mtl)', () => {
+    expect(resolveImportAppearance('8B4513', mtl)).toEqual({ colorHex: '#8b4513' });
+    expect(resolveImportAppearance('#c0d8b0', mtl)).toEqual({ colorHex: '#c0d8b0' });
+  });
+
+  it('prefers the .mtl Kd over a name that also parses as hex', () => {
+    const m = parseMtl('newmtl abcdef\nKd 0 0 0\n');
+    expect(resolveImportAppearance('abcdef', m)).toEqual({ colorHex: '#000000' });
+  });
 });
 
 describe('isUnchangedNestorMaterial (ΡΙΖΑ 2 — skip unchanged)', () => {

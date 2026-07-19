@@ -106,6 +106,14 @@ SyncContext). Το single-building/single-user project το θέλει έτσι.
 - **2026-07-19 (Φ1-UI)** — `C4dMaterialImportButton.tsx` (LevelPanel, κάτω από τον wizard): file picker
   `.obj/.mtl` → `importC4dMaterials` → toast «βάφτηκαν X / ταίριαξαν Y / Z χωρίς αντιστοίχιση». i18n
   keys `c4dMaterialImport.*` (el+en). Φ1 πλήρες end-to-end.
+- **2026-07-19 (Φ1.1-b, C4D R15 ground truth)** — Μετρημένο σε πραγματικό export: ο OBJ exporter του
+  **Cinema 4D R15** ΔΕΝ γράφει `.mtl` (οι Preferences → Wavefront OBJ Export έχουν ΜΟΝΟ «Scale» — καμία
+  επιλογή materials). Γράφει `usemtl <όνομα>` αλλά μηδέν `mtllib`/`.mtl` → το flat `Kd` χρώμα δεν
+  επιβιώνει. **Λύση name-based (Revit/IFC convention):** (α) όνομα υλικού = catalog id → χρώμα από τον
+  κατάλογο· (β) όνομα υλικού = hex (`#8B4513` ή `8B4513`) → `hexColorFromName` το διαβάζει ως `colorHex`,
+  χωρίς `.mtl`. Το `.mtl` `Kd` παραμένει πρώτο όταν υπάρχει (newer exporters). Βελτιωμένο warning
+  (`noChanges`) όταν το αρχείο έχει objects αλλά μηδέν αλλαγή. +2 tests (28 σύνολο). Files:
+  `resolve-import-appearance.ts` (`hexColorFromName`), `C4dMaterialImportButton.tsx`, i18n `noChanges`.
 - **2026-07-19 (Φ1.1)** — Σοβάς round-trip + skip αμετάβλητων (§4.3). Ρίζα: ο σοβάς είναι merged
   building-skin με synthetic bimId → έπεφτε στα «χωρίς αντιστοίχιση». (1) Νέο `finish-import-routing.ts`
   (`isFinishSkinName` / `finishTargetTypes` / `buildFinishImportCommands`): τα `structural-finish-*`

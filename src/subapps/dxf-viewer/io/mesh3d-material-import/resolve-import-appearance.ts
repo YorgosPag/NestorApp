@@ -44,11 +44,26 @@ export function isUnchangedNestorMaterial(name: string): boolean {
 }
 
 /**
+ * Χρώμα κωδικοποιημένο στο ΟΝΟΜΑ του υλικού (`#8B4513` ή `8B4513`) → CSS hex.
+ *
+ * **Γιατί υπάρχει (ADR-678 Φ1.1):** ο OBJ exporter του **Cinema 4D R15** ΔΕΝ γράφει `.mtl` (μόνο
+ * `usemtl <όνομα>`). Άρα το flat χρώμα δεν επιβιώνει μέσω `Kd`. Λύση name-based (όπως Revit/IFC
+ * naming conventions): ο χρήστης ονομάζει το C4D υλικό με τον hex κωδικό του χρώματος → επιβιώνει
+ * στο `usemtl` και το διαβάζουμε κατευθείαν, χωρίς `.mtl`. `mat_<hex6>` ΔΕΝ φτάνει εδώ (πιάνεται
+ * πρώτα ως αμετάβλητο DNA — {@link isUnchangedNestorMaterial}).
+ */
+function hexColorFromName(name: string): string | null {
+  const m = /^#?([0-9a-fA-F]{6})$/.exec(name);
+  return m ? `#${m[1].toLowerCase()}` : null;
+}
+
+/**
  * `materialName` (από το OBJ `usemtl`) + ο πίνακας `.mtl` → `FaceAppearance` ή `null` (καμία αλλαγή).
  *   0. αρχικό DNA του Νέστορα (αμετάβλητο) → `null` (ΡΙΖΑ 2 — no-op, μηδέν άχρηστο override).
- *   1. catalog id → `{ materialId }` (χρώμα από τον κατάλογο).
- *   2. αλλιώς `Kd` χρώμα → `{ colorHex }`.
- *   3. τίποτα από τα παραπάνω → `null`.
+ *   1. catalog id → `{ materialId }` (χρώμα από τον κατάλογο, οδηγεί ΚΑΙ BOQ).
+ *   2. `Kd` χρώμα από το `.mtl` → `{ colorHex }`.
+ *   3. hex στο όνομα (C4D R15 χωρίς `.mtl`) → `{ colorHex }`.
+ *   4. τίποτα από τα παραπάνω → `null`.
  */
 export function resolveImportAppearance(
   materialName: string | null,
@@ -63,6 +78,9 @@ export function resolveImportAppearance(
 
   const material = mtl.get(materialName) ?? mtl.get(clean);
   if (material) return { colorHex: material.colorHex };
+
+  const hex = hexColorFromName(clean);
+  if (hex) return { colorHex: hex };
 
   return null;
 }
