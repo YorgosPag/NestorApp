@@ -102,13 +102,16 @@ export function PolygonMaterialPanel() {
     : listWallCoveringMaterials().map((m) => ({ id: m.id, color: m.color, label: t(`dxf-viewer-shell:wallCovering.materials.${m.labelKeySuffix}`), draggable: true }));
 
   return (
+    // ADR-539 — Cinema 4D «Material Manager»: φαρδιά μπάρα υλικών στη ΒΑΣΗ του 3D κάμβα
+    // (full-width, οριζόντια swatches), όχι πλαϊνό panel πάνω δεξιά (Giorgio 2026-07-19).
     <section
-      className="absolute right-3 top-20 z-[60] w-52 select-none rounded-md border border-white/20 bg-black/60 p-2 text-white/90 backdrop-blur-sm"
+      className="absolute inset-x-0 bottom-0 z-[60] flex select-none items-stretch gap-3 border-t border-white/20 bg-black/70 px-3 py-2 text-white/90 backdrop-blur-sm"
       aria-label={t('polygonMode.title')}
     >
-      <header className="mb-1.5">
+      {/* Αριστερό cluster: τίτλος + hint + layer toggle (σώμα/σοβάς). */}
+      <header className="flex min-w-[190px] shrink-0 flex-col justify-center gap-1 border-r border-white/10 pr-3">
         <h3 className="text-xs font-semibold">{t('polygonMode.title')}</h3>
-        <p className="mt-0.5 text-[10px] text-white/60">
+        <p className="text-[10px] leading-tight text-white/60">
           {faceCount > 1
             ? t('polygonMode.hintMultiFace', { count: faceCount })
             : faceCount === 1
@@ -119,26 +122,28 @@ export function PolygonMaterialPanel() {
                   ? t('polygonMode.hintWholeElement')
                   : t('polygonMode.hintPickFace')}
         </p>
+        {/* ADR-449 Slice C — layer toggle: σώμα (539 FaceAppearance) ↔ σοβάς (449 faceOverrides). */}
+        <fieldset className="grid grid-cols-2 gap-1" aria-label={t('polygonMode.layerLabel')}>
+          {(['body', 'finish'] as PolygonTargetLayer[]).map((layer) => (
+            <button
+              key={layer}
+              type="button"
+              aria-pressed={targetLayer === layer}
+              onClick={() => setTargetLayer(layer)}
+              className={`rounded border px-1.5 py-1 text-[10px] transition-colors ${
+                targetLayer === layer ? 'border-white/60 bg-white/20' : 'border-white/15 hover:bg-white/10'
+              }`}
+            >
+              {t(layer === 'body' ? 'polygonMode.layerBody' : 'polygonMode.layerFinish')}
+            </button>
+          ))}
+        </fieldset>
       </header>
-      {/* ADR-449 Slice C — layer toggle: σώμα (539 FaceAppearance) ↔ σοβάς (449 faceOverrides). */}
-      <fieldset className="mb-1.5 grid grid-cols-2 gap-1" aria-label={t('polygonMode.layerLabel')}>
-        {(['body', 'finish'] as PolygonTargetLayer[]).map((layer) => (
-          <button
-            key={layer}
-            type="button"
-            aria-pressed={targetLayer === layer}
-            onClick={() => setTargetLayer(layer)}
-            className={`rounded border px-1.5 py-1 text-[10px] transition-colors ${
-              targetLayer === layer ? 'border-white/60 bg-white/20' : 'border-white/15 hover:bg-white/10'
-            }`}
-          >
-            {t(layer === 'body' ? 'polygonMode.layerBody' : 'polygonMode.layerFinish')}
-          </button>
-        ))}
-      </fieldset>
-      <ul className="grid grid-cols-2 gap-1">
+
+      {/* Κεντρικό cluster: οριζόντια σειρά υλικών (C4D thumbnails), scroll όταν δεν χωράνε. */}
+      <ul className="flex flex-1 items-center gap-2 overflow-x-auto py-1">
         {swatches.map((m) => (
-          <li key={m.id}>
+          <li key={m.id} className="shrink-0">
             <Tooltip>
               <TooltipTrigger asChild>
                 {/* Body swatches: draggable (Cinema 4D drag-drop). Finish: click-only. */}
@@ -150,15 +155,15 @@ export function PolygonMaterialPanel() {
                     e.dataTransfer.effectAllowed = 'copy';
                   } : undefined}
                   onClick={() => apply({ materialId: m.id })}
-                  className={`flex w-full items-center gap-1.5 rounded border border-white/15 px-1.5 py-1 text-[10px] transition-colors hover:bg-white/10 ${m.draggable ? 'cursor-grab active:cursor-grabbing' : ''}`}
+                  className={`flex w-14 flex-col items-center gap-1 rounded border border-white/15 p-1 text-[9px] transition-colors hover:bg-white/10 ${m.draggable ? 'cursor-grab active:cursor-grabbing' : ''}`}
                 >
                   {/* Data-driven catalog colour → inline style (accepted N.3 exception, mirror MaterialSwatch). */}
                   <span
-                    className="h-3 w-3 shrink-0 rounded-sm border border-white/30"
+                    className="h-9 w-9 shrink-0 rounded-sm border border-white/30"
                     style={{ backgroundColor: m.color }}
                     aria-hidden="true"
                   />
-                  <span className="truncate">{m.label}</span>
+                  <span className="w-full truncate text-center">{m.label}</span>
                 </button>
               </TooltipTrigger>
               <TooltipContent>{m.label}</TooltipContent>
@@ -166,28 +171,32 @@ export function PolygonMaterialPanel() {
           </li>
         ))}
       </ul>
-      {/* Custom colour (EnterpriseColorDialog) → apply({ colorHex }) to the faces, or whole solid. */}
-      <button
-        type="button"
-        disabled={!canApply}
-        onClick={() => setColorOpen(true)}
-        className="mt-1.5 flex w-full items-center gap-1.5 rounded border border-white/15 px-1.5 py-1 text-[10px] transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
-      >
-        <span
-          className="h-3 w-3 shrink-0 rounded-sm border border-white/30"
-          style={{ backgroundColor: customHex }}
-          aria-hidden="true"
-        />
-        <span className="truncate">{t('polygonMode.customColor')}</span>
-      </button>
-      <button
-        type="button"
-        disabled={!canApply}
-        onClick={() => apply(null)}
-        className="mt-1 w-full rounded border border-white/15 px-1.5 py-1 text-[10px] transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
-      >
-        {faceCount > 0 ? t('polygonMode.clearFace') : t('polygonMode.clearWhole')}
-      </button>
+
+      {/* Δεξί cluster: προσαρμοσμένο χρώμα + καθαρισμός. */}
+      <div className="flex min-w-[170px] shrink-0 flex-col justify-center gap-1 border-l border-white/10 pl-3">
+        {/* Custom colour (EnterpriseColorDialog) → apply({ colorHex }) to the faces, or whole solid. */}
+        <button
+          type="button"
+          disabled={!canApply}
+          onClick={() => setColorOpen(true)}
+          className="flex w-full items-center gap-1.5 rounded border border-white/15 px-1.5 py-1 text-[10px] transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <span
+            className="h-3 w-3 shrink-0 rounded-sm border border-white/30"
+            style={{ backgroundColor: customHex }}
+            aria-hidden="true"
+          />
+          <span className="truncate">{t('polygonMode.customColor')}</span>
+        </button>
+        <button
+          type="button"
+          disabled={!canApply}
+          onClick={() => apply(null)}
+          className="w-full rounded border border-white/15 px-1.5 py-1 text-[10px] transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          {faceCount > 0 ? t('polygonMode.clearFace') : t('polygonMode.clearWhole')}
+        </button>
+      </div>
 
       <EnterpriseColorDialog
         isOpen={colorOpen}
