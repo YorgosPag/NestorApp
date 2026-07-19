@@ -106,6 +106,11 @@ SyncContext). Το single-building/single-user project το θέλει έτσι.
 - **2026-07-19 (Φ1-UI)** — `C4dMaterialImportButton.tsx` (LevelPanel, κάτω από τον wizard): file picker
   `.obj/.mtl` → `importC4dMaterials` → toast «βάφτηκαν X / ταίριαξαν Y / Z χωρίς αντιστοίχιση». i18n
   keys `c4dMaterialImport.*` (el+en). Φ1 πλήρες end-to-end.
+- **2026-07-19 (Φ1.1-c, finish render fix)** — Live bug: το `paint-red` γραφόταν στον σοβά αλλά έμενε
+  άβαφος. Ρίζα: ο finish silhouette color-resolver (`structural-finish-attribution.ts`) παίρνει το ορατό
+  χρώμα ΜΟΝΟ από `faceOverride.colorOverride` — ΟΧΙ από `materialId` (ξέρει μόνο plaster/structural, όχι
+  wall-covering catalog ids). Fix στο `appearanceToFinishOverride`: βάζει ΠΑΝΤΑ `colorOverride` (catalog
+  id → hex από `listWallCoveringMaterials`, + `materialId` για BOQ· flat → hex). Test προσαρμοσμένο.
 - **2026-07-19 (Φ1.1-b, C4D R15 ground truth)** — Μετρημένο σε πραγματικό export: ο OBJ exporter του
   **Cinema 4D R15** ΔΕΝ γράφει `.mtl` (οι Preferences → Wavefront OBJ Export έχουν ΜΟΝΟ «Scale» — καμία
   επιλογή materials). Γράφει `usemtl <όνομα>` αλλά μηδέν `mtllib`/`.mtl` → το flat `Kd` χρώμα δεν

@@ -97,14 +97,15 @@ describe('buildFinishImportCommands', () => {
     expect(children).toHaveLength(8);
   });
 
-  it('maps a catalog material to { materialId } (drives BOQ)', () => {
+  it('maps a catalog material to { materialId + colorOverride } (BOQ + visible σοβάς)', () => {
     const { children } = buildFinishImportCommands(
       fakeLevels(),
       [finishObj('Column_structural-finish-hcol-b1', 'paint-red')],
       woodMtl,
     );
     const c = children as unknown as Array<{ value: unknown }>;
-    expect(c[0].value).toEqual({ materialId: 'paint-red' });
+    // materialId → BOQ· colorOverride → ΟΡΑΤΟ χρώμα (ο finish resolver δεν ξέρει wall-covering ids).
+    expect(c[0].value).toEqual({ materialId: 'paint-red', colorOverride: '#C0392B' });
   });
 
   it('no-ops when the finish material is unchanged Nestor DNA (ΡΙΖΑ 2)', () => {

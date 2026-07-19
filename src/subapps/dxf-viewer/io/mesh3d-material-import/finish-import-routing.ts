@@ -29,8 +29,14 @@ import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/Le
 import { SetFinishFaceOverrideCommand } from '../../core/commands/entity-commands/SetFinishFaceOverrideCommand';
 import { isFinishActive, type FinishFaceOverride, type StructuralFinishSpec } from '../../bim/finishes/structural-finish-types';
 import type { FaceAppearance } from '../../bim/types/face-appearance-types';
+import { listWallCoveringMaterials } from '../../bim/wall-coverings/wall-covering-material-catalog';
 import { resolveImportAppearance } from './resolve-import-appearance';
 import type { ImportedMaterial, ObjectMaterialAssignment } from './obj-mtl-parse';
+
+/** catalog id → hex χρώμα (στατικό SSoT· ο σοβάς χρειάζεται ΡΗΤΟ χρώμα, βλ. appearanceToFinishOverride). */
+const CATALOG_COLOR: ReadonlyMap<string, string> = new Map(
+  listWallCoveringMaterials().map((m) => [m.id, m.color]),
+);
 
 /** Τα synthetic bimId ονόματα του merged σοβά ξεκινούν πάντα με αυτό (βλ. finish-sync). */
 const FINISH_SKIN_TOKEN = 'structural-finish-';
@@ -69,9 +75,21 @@ export function finishTargetTypes(objectName: string): readonly FinishMemberType
   return ALL_FINISH_TYPES;
 }
 
-/** `FaceAppearance` (import resolve) → `FinishFaceOverride`: catalog → materialId· flat → colorOverride. */
+/**
+ * `FaceAppearance` (import resolve) → `FinishFaceOverride`.
+ *
+ * ⚠️ Ο σοβάς (silhouette) παίρνει το ΟΡΑΤΟ χρώμα **μόνο** από το `colorOverride` — ΟΧΙ από το
+ * `materialId` (ο finish color-resolver ξέρει μόνο plaster/structural υλικά, ΟΧΙ wall-covering ids).
+ * Άρα βάζουμε ΠΑΝΤΑ `colorOverride`: για catalog id → το hex του καταλόγου (+ `materialId` για BOQ)·
+ * για flat χρώμα → το hex. Χωρίς αυτό, το `paint-red` γραφόταν αλλά ο σοβάς έμενε άβαφος.
+ */
 function appearanceToFinishOverride(appearance: FaceAppearance): FinishFaceOverride | null {
-  if (appearance.materialId) return { materialId: appearance.materialId };
+  if (appearance.materialId) {
+    const color = CATALOG_COLOR.get(appearance.materialId);
+    return color
+      ? { materialId: appearance.materialId, colorOverride: color }
+      : { materialId: appearance.materialId };
+  }
   if (appearance.colorHex) return { colorOverride: appearance.colorHex };
   return null;
 }
