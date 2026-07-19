@@ -30,6 +30,10 @@
     "canvasAlt": "Floorplan: {fileName}",
     "lightMode": "Light background",
     "darkMode": "Dark background",
+    "colorMode": {
+      "black": "Monochrome drawing",
+      "colored": "Colored drawing"
+    },
     "measure": {
       "toolbar": "Measure tools",
       "distance": "Distance",

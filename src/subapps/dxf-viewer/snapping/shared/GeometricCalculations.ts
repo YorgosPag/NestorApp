@@ -39,8 +39,12 @@ import {
   isFoundationEntity,
   isHatchEntity,
   isRoofEntity,
+  isImageEntity,
 } from '../../types/entities';
 import type { RoofEntity } from '../../bim/types/roof-types';
+// ADR-651/654 — raster image / 2D furniture entourage rotated-rectangle vertices SSoT
+// (same 4 corners the renderer / bounds / hit-test use → snap agrees with what's drawn).
+import { imageEntityRectVertices } from '../../rendering/entities/shared/image-rect-vertices';
 // ADR-363 BIM entity key-point SSoT (delegates to bim-entity-points.ts).
 import { getBimEntityKeyPoints2D, getBimEntityEdgeMidpoints2D } from '../../bim/utils/bim-entity-points';
 // ADR-507 — hatch boundary bbox-center SSoT (reused for the hatch CENTER snap; zero duplicate bbox math).
@@ -99,6 +103,11 @@ export class GeometricCalculations {
     } else if (isRectangleEntity(entity)) {
       const corners = GeometricCalculations.getRectangleCorners(entity);
       endpoints.push(...corners);
+    } else if (isImageEntity(entity)) {
+      // ADR-651/654 — raster image / 2D furniture entourage: 4 ROTATED corners (world
+      // frame) via the shared image-vertex SSoT (pivot = position). AutoCAD IMAGE osnap.
+      const corners = imageEntityRectVertices(entity);
+      if (corners) endpoints.push(...corners);
     } else if (isWallEntity(entity) || isColumnEntity(entity) || isBeamEntity(entity) || isSlabEntity(entity) || isSlabOpeningEntity(entity) || isOpeningEntity(entity)) {
       // ADR-363 — BIM entity key points delegated to SSoT (bim-entity-points.ts).
       endpoints.push(...getBimEntityKeyPoints2D(entity));
@@ -175,6 +184,10 @@ export class GeometricCalculations {
     } else if (isWallEntity(entity) || isBeamEntity(entity) || isSlabEntity(entity) || isSlabOpeningEntity(entity) || isOpeningEntity(entity)) {
       // ADR-363 — BIM entity edge midpoints delegated to SSoT (bim-entity-points.ts).
       midpoints.push(...getBimEntityEdgeMidpoints2D(entity));
+    } else if (isImageEntity(entity)) {
+      // ADR-651/654 — edge midpoints of the rotated image rectangle (closed ring).
+      const corners = imageEntityRectVertices(entity);
+      if (corners) midpoints.push(...GeometricCalculations.ringEdgeMidpoints(corners, true));
     }
 
     return midpoints;

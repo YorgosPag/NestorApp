@@ -4,21 +4,32 @@ import { useMemo } from 'react';
 import { BimViewport3D } from '@/subapps/dxf-viewer/bim-3d/viewport/BimViewport3D';
 import type { FloorplanBimSnapshot } from '@/components/shared/files/media/useFloorplanBimEntities';
 import type { Bim3DEntities } from '@/subapps/dxf-viewer/bim-3d/stores/Bim3DEntitiesStore';
+import type { DxfScene } from '@/subapps/dxf-viewer/canvas-v2/dxf-canvas/dxf-types';
 
-// ADR-371: read-only 3D overlay for Properties floorplan tab.
-// Converts FloorplanBimSnapshot (Firestore feed from useFloorplanBimEntities) into
-// the Bim3DEntities shape expected by BimViewport3D. Uses `visible` prop to bypass
-// global ViewMode3DStore (Q1: state independent from /dxf/viewer).
-// ADR-040 compliant: no high-freq store subscriptions here — entities come from Firestore
-// (low-freq) already computed by the parent FloorplanGallery.
+// ADR-371 / ADR-370 Phase 11-12: read-only 3D overlay for Properties floorplan tab.
+// Converts the scene-derived FloorplanBimSnapshot into the Bim3DEntities shape and
+// forwards the loaded DxfScene, so BimViewport3D shows BOTH the BIM elements AND the
+// DXF linework/κάτοψη (with a working cut-plane). Uses `visible` to bypass the global
+// ViewMode3DStore (Q1: state independent from /dxf/viewer).
+// ADR-040 compliant: no high-freq store subscriptions here — both feeds are scene-derived
+// (low-freq), already computed by the parent FloorplanGallery. The public read-only page is
+// unauthenticated with projectId=null, so the persisted scene.json — never Firestore — is
+// the sole data source (ADR-370 Phase 11).
 
 export interface Bim3DReadOnlyOverlayProps {
   bimSnapshot: FloorplanBimSnapshot;
+  /**
+   * ADR-370 Phase 12 — the loaded floor-plan `DxfScene` (same WeakMap-cached instance
+   * the 2D read-only render uses, via `getFloorplanDxfScene`). Feeds the 3D DXF overlay
+   * so the linework/κάτοψη renders in 3D exactly as the editor shows it, and the
+   * cut-plane has geometry to clip. Null when there is no scene.
+   */
+  dxfScene: DxfScene | null;
   projectId: string | null;
   onClose: () => void;
 }
 
-export function Bim3DReadOnlyOverlay({ bimSnapshot, projectId, onClose }: Bim3DReadOnlyOverlayProps) {
+export function Bim3DReadOnlyOverlay({ bimSnapshot, dxfScene, projectId, onClose }: Bim3DReadOnlyOverlayProps) {
   const bimEntities = useMemo<Bim3DEntities>(
     () => ({
       walls: bimSnapshot.walls,
@@ -79,6 +90,7 @@ export function Bim3DReadOnlyOverlay({ bimSnapshot, projectId, onClose }: Bim3DR
         readOnly
         visible
         bimEntities={bimEntities}
+        dxfScene={dxfScene}
         projectId={projectId}
         onClose={onClose}
       />

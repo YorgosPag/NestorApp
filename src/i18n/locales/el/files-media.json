@@ -30,6 +30,10 @@
     "canvasAlt": "Κάτοψη: {fileName}",
     "lightMode": "Λευκό φόντο",
     "darkMode": "Σκούρο φόντο",
+    "colorMode": {
+      "black": "Μαύρο σχέδιο",
+      "colored": "Έγχρωμο σχέδιο"
+    },
     "measure": {
       "toolbar": "Εργαλεία μέτρησης",
       "distance": "Απόσταση",

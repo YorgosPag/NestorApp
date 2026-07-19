@@ -18,6 +18,7 @@ import { OverlayList } from '../OverlayList';
 import { OverlayProperties } from '../OverlayProperties';
 import { useGripContext } from '../../providers/GripProvider';
 import { SceneInfoSection } from './SceneInfoSection';
+import { C4dMaterialImportButton } from './C4dMaterialImportButton';
 import { LayersSection } from './LayersSection';
 import type { LevelPanelProps, EditingMode } from './level-panel-types';
 import { entityTypeToFloorplanType, buildDuplicateDestinations } from './level-panel-helpers';
@@ -241,6 +242,8 @@ export function LevelPanel({
           <Download className={iconSizes.sm} />{t('panels.levels.loadFromStorage')}
         </Button>
       )}
+      {/* ADR-678 — round-trip: «κατέβασμα» υλικών/χρωμάτων από C4D OBJ πίσω στα BIM στοιχεία. */}
+      <C4dMaterialImportButton />
       <div className="w-full flex items-center gap-1">
         <button
           type="button"

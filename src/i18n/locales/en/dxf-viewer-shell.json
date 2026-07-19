@@ -767,6 +767,14 @@
     "importFloorplan": "Import Floorplan",
     "importFloorplanWizard": "Import Floorplan (Wizard)"
   },
+  "c4dMaterialImport": {
+    "button": "Import materials from C4D",
+    "success": "C4D materials: {applied} bodies + {finish} finish members (matched {matched}, {unmatched} unmatched).",
+    "noMatch": "No object matched. Use an OBJ file exported from Nestor.",
+    "noChanges": "The file has no material change (all are original Nestor materials). In C4D apply the material to the object and export WITH materials (.mtl) — then select BOTH the .obj AND the .mtl.",
+    "noObj": "Select a .obj file (and its companion .mtl) from C4D.",
+    "readError": "Failed to read the file."
+  },
   "floorTabs": {
     "ariaLabel": "Building floor navigation",
     "emptyBadge": "empty",

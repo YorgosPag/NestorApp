@@ -31,6 +31,8 @@ import { useFloorplanImageLoader } from '@/components/shared/files/media/useFloo
 import { useFloorplanCanvasRender } from '@/components/shared/files/media/useFloorplanCanvasRender';
 import { useFloorplanBimEntities } from '@/components/shared/files/media/useFloorplanBimEntities';
 import { buildSceneBimSnapshot } from '@/components/shared/files/media/floorplan-scene-bim';
+// ADR-370 Phase 12 — SAME WeakMap-cached DxfScene the 2D read-only render uses, fed to the 3D overlay.
+import { getFloorplanDxfScene } from '@/components/shared/files/media/floorplan-scene-render';
 import type { Entity } from '@/subapps/dxf-viewer/types/entities';
 import { useFileDownload } from '@/components/shared/files/hooks/useFileDownload';
 import { FloorplanGalleryZoomControls } from '@/components/shared/files/media/FloorplanGalleryZoomControls';
@@ -40,6 +42,7 @@ import { CalibrateScaleDialog } from '@/components/shared/files/media/CalibrateS
 import { useMeasureSnapFinder } from '@/components/shared/files/media/measure-snap-bridge';
 import { Bim3DToggleButton } from '@/components/shared/files/media/Bim3DToggleButton';
 import { Bim3DReadOnlyOverlay } from '@/components/shared/files/media/Bim3DReadOnlyOverlay';
+import { FloorplanColorModeButton } from '@/components/shared/files/media/FloorplanColorModeButton';
 
 // Re-exports for backward compatibility
 export type { FloorplanGalleryProps, DxfDrawingMode };
@@ -103,8 +106,11 @@ export function FloorplanGallery({
   }, [isDxf, loadedScene]);
   // Fullscreen modal state (ADR-241 centralized)
   const fullscreen = useFullscreen();
-  // DXF drawing mode — dark (colored) or light (black & white)
+  // DXF drawing mode — dark or light BACKGROUND theme (☀/🌙 button).
   const [drawingMode, setDrawingMode] = useState<DxfDrawingMode>('dark');
+  // ADR-340 — «Μαύρο σχέδιο»: force entities to a single black ink. Independent axis
+  // from `drawingMode` (background only), per Giorgio Q (2026-07-19). Default = colored.
+  const [monochrome, setMonochrome] = useState(false);
   // Zoom + Pan — inline view
   const inlineZP = useZoomPan(ZOOM_CONFIG);
   // Zoom + Pan — fullscreen modal (independent instance)
@@ -207,16 +213,23 @@ export function FloorplanGallery({
     () => buildSceneBimSnapshot(loadedScene?.entities as unknown as readonly Entity[] | undefined),
     [loadedScene],
   );
+  // ADR-370 Phase 12 — the DXF linework for the read-only 3D overlay. Reuses the SAME
+  // WeakMap-cached DxfScene the 2D pass built (`getFloorplanDxfScene`), so BIM + DXF stack
+  // in 3D with one conversion and the cut-plane has geometry to clip.
+  const dxf3DScene = useMemo(
+    () => (isDxf && loadedScene?.entities?.length ? getFloorplanDxfScene(loadedScene) : null),
+    [isDxf, loadedScene],
+  );
   useFloorplanCanvasRender({
     canvasRef: inlineCanvasRef, enabled: true, isDxf, isRaster, loadedScene, rasterImage, rasterBounds,
-    currentBounds, zoom: inlineZP.zoom, panOffset: inlineZP.panOffset, drawingMode,
+    currentBounds, zoom: inlineZP.zoom, panOffset: inlineZP.panOffset, drawingMode, monochrome,
     overlays, highlightedUnitId: effectiveHighlightId, getOverlayLabel,
     bimEntities,
   });
   useFloorplanCanvasRender({
     canvasRef: modalCanvasRef, enabled: fullscreen.isFullscreen, isDxf, isRaster, loadedScene,
     rasterImage, rasterBounds, currentBounds, zoom: modalZP.zoom, panOffset: modalZP.panOffset,
-    drawingMode, overlays, highlightedUnitId: effectiveHighlightId, getOverlayLabel,
+    drawingMode, monochrome, overlays, highlightedUnitId: effectiveHighlightId, getOverlayLabel,
     firstRenderDelay: 280, bimEntities,
   });
   // ACTIONS
@@ -384,6 +397,10 @@ export function FloorplanGallery({
                   </TooltipTrigger>
                   <TooltipContent>{drawingMode === 'dark' ? t('floorplan.lightMode') : t('floorplan.darkMode')}</TooltipContent>
                 </Tooltip>
+                <FloorplanColorModeButton
+                  monochrome={monochrome}
+                  onToggle={() => setMonochrome(prev => !prev)}
+                />
                 <span className="w-px h-6 bg-border mx-1" aria-hidden="true" />
               </>
             )}
@@ -430,6 +447,7 @@ export function FloorplanGallery({
           show3D && isDxf ? (
             <Bim3DReadOnlyOverlay
               bimSnapshot={sceneBim}
+              dxfScene={dxf3DScene}
               projectId={projectId}
               onClose={() => setShow3D(false)}
             />

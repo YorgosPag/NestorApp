@@ -19,6 +19,15 @@ import type { DxfDrawingMode } from '@/components/shared/files/media/floorplan-g
 // DRAWING MODE CONFIG
 // ============================================================================
 
+/**
+ * SSoT ink for the «Μαύρο σχέδιο» (monochrome) display axis — big-player B/W
+ * (AutoCAD/Revit «Monochrome»). ONE owner of the ink hex: both the legacy
+ * force-black path (`DRAWING_MODE_CONFIG.light`, no-bounds fallback renderer) and
+ * the engine-path recolor (`applyMonochromeInk`, `floorplan-monochrome.ts`) read
+ * this same value, so the two render paths never drift on the ink colour.
+ */
+export const MONOCHROME_INK = '#1a1a1a';
+
 /** Visual config per drawing mode */
 export const DRAWING_MODE_CONFIG = {
   dark: {
@@ -28,8 +37,8 @@ export const DRAWING_MODE_CONFIG = {
   },
   light: {
     background: '#ffffff',
-    entityColor: '#1a1a1a', // Force black
-    textColor: '#1a1a1a',   // Force black
+    entityColor: MONOCHROME_INK, // Force black
+    textColor: MONOCHROME_INK,   // Force black
   },
 } as const;
 

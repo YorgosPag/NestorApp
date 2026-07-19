@@ -46,6 +46,7 @@ import { useNotifications } from '@/providers/NotificationProvider';
 import { useBim3DStoreSync } from './use-bim3d-store-sync'; import { useBim3DVgResync } from './use-bim3d-vg-resync'; import { useBim3DMultiFloorSync } from './use-bim3d-multifloor-sync';
 import { resyncBimScene } from '../scene/bim3d-resync';
 import { resyncDxfOverlay } from '../scene/dxf-overlay-resync';
+import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { useBim3DPointerHandlers } from './use-bim3d-pointer-handlers';
 // ADR-539 Φ2 — Cinema 4D «Polygon Mode» HTML5 drag-drop υλικού πάνω σε όψη (drop target).
 import { usePolygonDragDrop } from './use-polygon-drag-drop';
@@ -74,13 +75,20 @@ export interface BimViewport3DProps {
   readOnly?: boolean;
   /** External BIM entity feed (Properties read-only). When provided, replaces Bim3DEntitiesStore subscription. */
   bimEntities?: Bim3DEntities | null;
+  /**
+   * ADR-370 Phase 12 — external DXF floor-plan overlay feed (Properties read-only 3D).
+   * The read-only page never mounts the editor shell that populates `DxfOverlay3DStore`,
+   * so in `externalEntitiesMode` the overlay is fed straight from this prop through the
+   * SAME `syncDxfOverlay` → `DxfToThreeConverter` path the editor uses (zero new converter).
+   */
+  dxfScene?: DxfScene | null;
   /** Controlled visibility — overrides global ViewMode3DStore when provided (ADR-371 read-only). */
   visible?: boolean;
   /** Called when user clicks the ← 2D exit button in readOnly mode. */
   onClose?: () => void;
 }
 
-export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimEntities, visible, onClose }: BimViewport3DProps = {}) {
+export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimEntities, dxfScene, visible, onClose }: BimViewport3DProps = {}) {
   const { t } = useTranslation('bim3d');
   const containerRef = useRef<HTMLDivElement>(null);
   const managerRef = useRef<ThreeJsSceneManager | null>(null);
@@ -169,7 +177,12 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
     const initialFloorModes = useViewMode3DStore.getState().floorVisibilityModes;
     resyncBimScene(managerRef.current, { externalEntitiesMode, bimEntities });
     // ADR-399 Phase B — scope-aware (single active overlay OR stacked per-floor plans).
-    resyncDxfOverlay(managerRef.current);
+    // ADR-370 Phase 12 — the read-only Properties pipeline never populates
+    // `DxfOverlay3DStore` (no editor shell), so feed the overlay straight from the
+    // `dxfScene` prop through the SAME converter path. The store branch stays for
+    // the live /dxf/viewer pipeline (external prop absent).
+    if (externalEntitiesMode) managerRef.current.syncDxfOverlay(dxfScene ?? null);
+    else resyncDxfOverlay(managerRef.current);
 
     // ADR-382 Phase C — post-hoc apply preserves ghost styling + defense-in-depth
     // for floor-mode toggles between rebuilds. Hide is handled pre-mesh in sync().
@@ -256,6 +269,13 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
     if (!externalEntitiesMode) return;
     resyncBimScene(managerRef.current, { externalEntitiesMode: true, bimEntities });
   }, [externalEntitiesMode, bimEntities]);
+
+  // ADR-370 Phase 12 — external DXF overlay feed — push prop changes into the scene
+  // (mirrors the BIM external-feed effect above; no-op on the live /dxf/viewer path).
+  useEffect(() => {
+    if (!externalEntitiesMode) return;
+    managerRef.current?.syncDxfOverlay(dxfScene ?? null);
+  }, [externalEntitiesMode, dxfScene]);
 
   useBim3DStoreSync(managerRef);
   // ADR-399 Phase B — multi-floor ("Όλοι οι όροφοι") aggregation + sync wiring.

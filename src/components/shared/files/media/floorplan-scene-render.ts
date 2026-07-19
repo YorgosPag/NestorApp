@@ -53,6 +53,8 @@ import { createSceneLayer } from '@/subapps/dxf-viewer/types/scene-types';
 import type { Entity, SceneLayer, SceneModel } from '@/subapps/dxf-viewer/types/entities';
 import { EMPTY_BOUNDS } from '@/subapps/dxf-viewer/config/geometry-constants';
 import { rehydrateBimGeometry } from '@/components/shared/files/media/floorplan-scene-bim';
+// ADR-340 «Μαύρο σχέδιο» — SSoT ink recolor of the rendered entities (engine untouched).
+import { applyMonochromeInk } from '@/components/shared/files/media/floorplan-monochrome';
 
 /** Read-only render options — no grids, no grips, no interactive affordances. */
 const DXF_READONLY_OPTIONS = {
@@ -111,7 +113,14 @@ function toSceneModel(data: DxfSceneData): SceneModel {
  */
 const sceneCache = new WeakMap<DxfSceneData, DxfScene>();
 
-function getDxfScene(data: DxfSceneData): DxfScene {
+/**
+ * ADR-370 Phase 12 — the SAME converted `DxfScene` the 2D read-only render uses,
+ * exposed so the read-only 3D overlay (`Bim3DReadOnlyOverlay` → `BimViewport3D`)
+ * can feed the editor's `DxfToThreeConverter` verbatim. Keyed on the loaded
+ * scene-data identity, so the 2D pass and the 3D overlay share ONE conversion
+ * (zero recompute, zero drift). Returns the cached scene when already built.
+ */
+export function getFloorplanDxfScene(data: DxfSceneData): DxfScene {
   let scene = sceneCache.get(data);
   if (!scene) {
     const model = toSceneModel(data);
@@ -150,6 +159,7 @@ export function renderFloorplanScene(
   zoom: number,
   panOffset: PanOffset,
   drawingMode: DxfDrawingMode,
+  monochrome: boolean = false,
 ): void {
   if (!sceneData.entities?.length) return;
 
@@ -162,7 +172,7 @@ export function renderFloorplanScene(
     canvas.height = rect.height;
   }
 
-  const dxfScene = getDxfScene(sceneData);
+  const dxfScene = getFloorplanDxfScene(sceneData);
   const { transform, viewport } = buildBimViewTransform(
     bounds,
     canvas.width,
@@ -178,6 +188,10 @@ export function renderFloorplanScene(
 
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
+  // ADR-340 «Μαύρο σχέδιο» — collapse every rendered entity to a single ink while the
+  // canvas still holds ONLY the transparent-background entity render, before the gallery
+  // background is painted below. Independent of the dark/light theme (`drawingMode`).
+  if (monochrome) applyMonochromeInk(ctx, canvas.width, canvas.height);
   ctx.save();
   ctx.globalCompositeOperation = 'destination-over';
   ctx.fillStyle = drawingMode === 'light' ? SCENE_BACKGROUND.light : SCENE_BACKGROUND.dark;

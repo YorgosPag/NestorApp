@@ -54,6 +54,8 @@ export interface FloorplanCanvasRenderParams {
   zoom: number;
   panOffset: PanOffset;
   drawingMode: DxfDrawingMode;
+  /** ADR-340 — «Μαύρο σχέδιο»: force every entity to a single black ink, independent of the dark/light background theme (`drawingMode`). */
+  monochrome?: boolean;
   overlays?: ReadonlyArray<FloorOverlayItem>;
   highlightedUnitId?: string | null;
   /** Resolver for in-polygon hover label; returns null/undefined to skip. */
@@ -67,7 +69,7 @@ export interface FloorplanCanvasRenderParams {
 export function useFloorplanCanvasRender(params: FloorplanCanvasRenderParams): void {
   const {
     canvasRef, enabled, isDxf, isRaster, loadedScene, rasterImage, rasterBounds,
-    currentBounds, zoom, panOffset, drawingMode, overlays, highlightedUnitId,
+    currentBounds, zoom, panOffset, drawingMode, monochrome = false, overlays, highlightedUnitId,
     getOverlayLabel, firstRenderDelay, bimEntities,
   } = params;
 
@@ -95,7 +97,7 @@ export function useFloorplanCanvasRender(params: FloorplanCanvasRenderParams): v
         if (currentBounds) {
           // Same `currentBounds` (computeActualBounds) the overlay pass uses → the
           // engine's world→pixel transform stays aligned with the unit polygons.
-          renderFloorplanScene(canvas, loadedScene, currentBounds, zoom, panOffset, drawingMode);
+          renderFloorplanScene(canvas, loadedScene, currentBounds, zoom, panOffset, drawingMode, monochrome);
         } else {
           // Empty scene / no derived bounds — primitive fallback.
           renderDxfToCanvas(canvas, loadedScene, zoom, panOffset, drawingMode);
@@ -126,7 +128,7 @@ export function useFloorplanCanvasRender(params: FloorplanCanvasRenderParams): v
     doRender();
   }, [
     canvasRef, enabled, isDxf, loadedScene, isRaster, rasterImage, rasterBounds,
-    currentBounds, zoom, panOffset, drawingMode, overlays, highlightedUnitId,
+    currentBounds, zoom, panOffset, drawingMode, monochrome, overlays, highlightedUnitId,
     getOverlayLabel, firstRenderDelay, bimEntities, imageAssetVersion,
   ]);
 }
