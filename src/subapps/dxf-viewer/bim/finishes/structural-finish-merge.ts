@@ -19,15 +19,7 @@
  */
 
 import type { FinishFaceSegment } from './structural-finish-types';
-
-/** Μοναδιαία κατεύθυνση a→b του segment. `null` αν εκφυλισμένο (μηδενικό μήκος). */
-function unitDir(seg: FinishFaceSegment): { x: number; y: number } | null {
-  const dx = seg.b.x - seg.a.x;
-  const dy = seg.b.y - seg.a.y;
-  const len = Math.hypot(dx, dy);
-  if (len < 1e-9) return null;
-  return { x: dx / len, y: dy / len };
-}
+import { segmentAxis } from './finish-segment-geometry';
 
 /**
  * True όταν το `next` συνεχίζει collinear το `prev` (prev.b ↔ next.a) με ΙΔΙΟ υλικό.
@@ -38,15 +30,18 @@ function canMerge(prev: FinishFaceSegment, next: FinishFaceSegment): boolean {
   const v = prev.b;
   const tol = 1e-6 * (1 + Math.hypot(v.x, v.y));
   if (Math.hypot(v.x - next.a.x, v.y - next.a.y) > tol) return false; // όχι κοινή κορυφή
-  const du = unitDir(prev);
-  const dv = unitDir(next);
+  const du = segmentAxis(prev.a, prev.b);
+  const dv = segmentAxis(next.a, next.b);
   if (!du || !dv) return false; // εκφυλισμένο → ποτέ merge
   if (Math.abs(du.x * dv.y - du.y * dv.x) >= 1e-6) return false; // όχι παράλληλα
+  // ADR-449 PART B Fix C — nullish-safe σύγκριση appearance: `undefined` (απόν override) και
+  // ρητό `null` είναι σημασιολογικά ΙΔΙΟ «καμία τιμή» → normalize ώστε δύο σημασιολογικά όμοια
+  // κομμάτια (π.χ. μετά από attribution split) να ΞΑΝΑΕΝΩΝΟΝΤΑΙ αντί να μένουν περιττό σύνορο.
   return (
     prev.classification === next.classification &&
-    prev.materialId === next.materialId &&
+    (prev.materialId ?? null) === (next.materialId ?? null) &&
     prev.thickness === next.thickness &&
-    prev.colorOverride === next.colorOverride
+    (prev.colorOverride ?? null) === (next.colorOverride ?? null)
   );
 }
 

@@ -72,6 +72,19 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-07-19 (b) — ➕ ADR-397: gate καταστολής OSNAP glyph πάνω από MOVE cross (SnapIndicatorSubscriber)
+
+**Τι:** το micro-leaf `SnapIndicatorSubscriber` (στο `canvas-layer-stack-leaves.tsx`) αποκτά gate: όταν
+το OSNAP glyph (□/△) θα καθόταν πάνω στο 4-arrow MOVE cross επιλεγμένης οντότητας, ο leaf κάνει render
+τίποτα (Revit/AutoCAD parity — το glyph κρύβεται πάνω από gizmo, το snapping ΑΘΙΚΤΟ). Predicate SSoT:
+`snap-over-move-cross`. Πλήρης λόγος: ADR-397 §glyph-suppression.
+
+**Συμμόρφωση ADR-040:** το gate διαβάζει το ΙΔΙΟ `snapResult` (`useSyncExternalStore` που ήδη ζει στον
+leaf) που ζωγραφίζει το glyph → zero tolerance/throttle desync. Προστίθεται `useSelectedEntityIds()` που
+είναι **low-freq** (μία αλλαγή ανά επιλογή) ώστε το live grip set (AllGripsStore, ADR-532) να είναι fresh
+— μόνο αυτός ο leaf re-render-άρει, καμία 60fps regression. Η διαδρομή έλξης snap (mouse-handler-up)
+μένει άθικτη → το κλικ ακόμα κάνει snap.
+
 ### 2026-07-19 — ➕ ADR-680: DistMeasureOverlayLeaf (εφήμερο «Μέτρημα Απόστασης» live-overlay micro-leaf, z20)
 
 **Τι:** νέο micro-leaf `DistMeasureOverlayLeaf` mounted στο `CanvasLayerStack` (z20), δίπλα στο

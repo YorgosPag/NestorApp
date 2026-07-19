@@ -20,6 +20,15 @@ import { DxfCanvas, LayerCanvas } from '../../canvas-v2';
 import SnapIndicatorOverlay from '../../canvas-v2/overlays/SnapIndicatorOverlay';
 import { subscribeSnapResult, getFullSnapResult } from '../../systems/cursor/ImmediateSnapStore';
 import { toSnapIndicatorView } from '../../snapping/extended-types';
+// ADR-397 §glyph-suppression — the OSNAP glyph (□/△) must never cover a selected
+// entity's 4-arrow MOVE cross (Revit/AutoCAD: OSNAP hidden over a gizmo, snapping
+// itself untouched). The cross is drawn AT the entity's move-grip position, so the
+// glyph covers it exactly when the snap point lands on that grip. This gate reads the
+// SAME `snapResult` that draws the glyph (zero tolerance/throttle desync) + the live
+// grip set (AllGripsStore, ADR-532); the snap ATTRACTION path is untouched → click
+// still snaps. Predicate SSoT: `snap-over-move-cross`.
+import { AllGripsStore } from '../../systems/grip/AllGripsStore';
+import { snapCoversMoveCross } from '../../systems/grip/snap-over-move-cross';
 import { useGuideWorkflowComputed } from '../../hooks/guides/useGuideWorkflowComputed';
 import { useDraftPolygonLayer } from '../../hooks/layers/useDraftPolygonLayer';
 import { useHoveredEntity } from '../../systems/hover/useHover';
@@ -91,9 +100,21 @@ export const SnapIndicatorSubscriber = React.memo(function SnapIndicatorSubscrib
   viewport, dxfCanvasRef, transform, className,
 }: SnapIndicatorSubscriberProps) {
   const snapResult = useSyncExternalStore(subscribeSnapResult, getFullSnapResult);
+  // ADR-532 B4 — re-render on selection change so the live move-grip set (AllGripsStore,
+  // written by GripRegistryPublisher) is fresh for the suppression gate below. Low-freq
+  // (one change per selection) → ADR-040-safe; only this leaf re-renders.
+  useSelectedEntityIds();
+  const view = toSnapIndicatorView(snapResult);
+  // ADR-397 §glyph-suppression — hooks run unconditionally, then gate. If the snap
+  // glyph would sit on a selected entity's MOVE cross, render nothing so the □/△ does
+  // not hide the 4-arrow handle. Same `snapResult` that draws the glyph → zero desync.
+  // The snap attraction (mouse-handler-up) is untouched → the click still snaps.
+  if (view && transform && snapCoversMoveCross(view.point, transform.scale, AllGripsStore.get())) {
+    return null;
+  }
   return (
     <SnapIndicatorOverlay
-      snapResult={toSnapIndicatorView(snapResult)}
+      snapResult={view}
       viewport={viewport}
       canvasRect={dxfCanvasRef?.current?.getCanvas?.()?.getBoundingClientRect() ?? null}
       transform={transform}

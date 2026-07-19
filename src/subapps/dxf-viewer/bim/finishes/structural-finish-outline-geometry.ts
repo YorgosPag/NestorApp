@@ -18,6 +18,7 @@
  */
 
 import type { FinishFaceSegment } from './structural-finish-types';
+import { segmentAxis } from './finish-segment-geometry';
 
 export interface Vec2 {
   readonly x: number;
@@ -47,8 +48,39 @@ function lineIntersect(p0: Vec2, d0: Vec2, p1: Vec2, d1: Vec2): Vec2 | null {
 const MITER_LIMIT_FACTOR = 4;
 
 /**
- * ADR-449 Slice 6/10 + Δρόμος Β — κλείσιμο των **ΑΝΟΙΧΤΩΝ** άκρων (που δεν mitered-ηκαν με
- * γειτονική όψη του ΙΔΙΟΥ στοιχείου). **Τρεις** περιπτώσεις, ανάλογα με το είδος του γείτονα:
+ * ADR-449 PART B (per-face paint corner fix) — «flush-collinear» ανίχνευση: το άκρο `atB` του
+ * segment `i` έχει **συνευθειακή συνέχεια** στην ίδια ευθεία; (γείτονας που μοιράζεται την
+ * κορυφή, ΙΔΙΑ φορά). True = το άκρο είναι **σύνορο attribute πάνω σε ευθεία** (per-face paint /
+ * override split boundary), ΟΧΙ ελεύθερη άκρη περιμέτρου.
+ *
+ * **Γιατί υπάρχει:** όταν το per-face βάψιμο σπάει ένα collinear blanket run σε κομμάτια
+ * (`applyFinishOverrideEdges`), το split point μοιράζεται κορυφή με collinear γείτονα → το
+ * `tryMiterPair` το απορρίπτει (παράλληλα, `lineIntersect`=null) → έπεφτε στον default κλάδο
+ * «chamfer 45°» που τραβά την εξωτερική γωνία **μέσα κατά το πάχος** → η γωνία της κολόνας
+ * «μπαίνει μέσα». Στη συνευθειακή συνέχεια τα δύο outer offset σημεία ΣΥΜΠΙΠΤΟΥΝ στην κορυφή
+ * (ίδιο offset) → σωστό = **flush pass-through** (μηδέν chamfer), όχι λοξό κόψιμο.
+ */
+function hasCollinearRunNeighbor(segs: readonly FinishFaceSegment[], i: number, atB: boolean): boolean {
+  const di = segmentAxis(segs[i].a, segs[i].b);
+  if (!di) return false;
+  const v = atB ? segs[i].b : segs[i].a;
+  const tol = 1e-6 * (1 + Math.hypot(v.x, v.y));
+  for (let j = 0; j < segs.length; j++) {
+    if (j === i) continue;
+    // b-άκρο → γείτονας που ΞΕΚΙΝΑ (a) στην κορυφή· a-άκρο → γείτονας που ΤΕΛΕΙΩΝΕΙ (b).
+    const w = atB ? segs[j].a : segs[j].b;
+    if (Math.hypot(v.x - w.x, v.y - w.y) > tol) continue;
+    const dj = segmentAxis(segs[j].a, segs[j].b);
+    if (!dj) continue;
+    // Παράλληλα (cross≈0) ΚΑΙ ίδια φορά (dot>0) → collinear συνέχεια της ίδιας ευθείας.
+    if (Math.abs(di.x * dj.y - di.y * dj.x) < 1e-6 && di.x * dj.x + di.y * dj.y > 0) return true;
+  }
+  return false;
+}
+
+/**
+ * ADR-449 Slice 6/10 + Δρόμος Β + PART B — κλείσιμο των **ΑΝΟΙΧΤΩΝ** άκρων (που δεν mitered-ηκαν
+ * με γειτονική όψη του ΙΔΙΟΥ στοιχείου). **Τέσσερις** περιπτώσεις, ανάλογα με το είδος του γείτονα:
  *
  *  - **Ελεύθερο** άκρο (open space, `!aJunction`) → **chamfer 45°**: ΜΟΝΟ η εξωτερική γωνία
  *    τραβιέται **μέσα** κατά το πάχος (το core μένει) → λοξό end-cap (φαλτσογωνιά) αντί για
@@ -64,6 +96,10 @@ const MITER_LIMIT_FACTOR = 4;
  *    Δρόμος Β) → **καθαρό τετράγωνο σταμάτημα** (no-op): ούτε chamfer ούτε extend. Ο τοίχος έχει
  *    **δικό** του σοβά (layered DNA, ADR-447) → ΜΗΝ εκτείνεσαι μέσα του (αλλιώς #A over-reach) ΚΑΙ
  *    ΜΗΝ κάνεις chamfer (που θα άφηνε τριγωνικό κενό στην collinear flush όψη).
+ *  - **Flush-collinear** άκρο (ADR-449 PART B — {@link hasCollinearRunNeighbor}: σύνορο per-face
+ *    override πάνω σε ευθεία) → **flush pass-through** (no-op): τα δύο collinear outer σημεία
+ *    συμπίπτουν ήδη στην κορυφή → ούτε chamfer (που θα τραβούσε τη γωνία μέσα κατά το πάχος —
+ *    το bug των βαμμένων γωνιών) ούτε extend. Η γραμμή χρώματος μένει, η γεωμετρία περνά ίσια.
  *
  * Clamp στο μισό μήκος για μικρές όψεις (μηδέν inversion στο chamfer/extend).
  */
@@ -95,6 +131,8 @@ function closeOpenOuterEnds(
       } else if (segs[i].aSquareEnd) {
         // Δρόμος Β (wall butt): καθαρό τετράγωνο σταμάτημα στην παρειά του τοίχου — ούτε
         // chamfer ούτε extend (ο τοίχος έχει δικό του σοβά). Αφήνουμε core/outer ως έχουν.
+      } else if (hasCollinearRunNeighbor(segs, i, false)) {
+        // PART B flush-collinear: σύνορο per-face override σε ευθεία → πέρνα ίσια, μηδέν chamfer.
       } else {
         // Chamfer 45°: μόνο outer μέσα (+άξονας) → λοξό end-cap σε ελεύθερο άκρο.
         aOuter[i] = { x: aOuter[i].x + ux, y: aOuter[i].y + uy };
@@ -106,6 +144,8 @@ function closeOpenOuterEnds(
         bOuter[i] = { x: bOuter[i].x + ux, y: bOuter[i].y + uy };
       } else if (segs[i].bSquareEnd) {
         // Δρόμος Β (wall butt): καθαρό τετράγωνο σταμάτημα (βλ. παραπάνω).
+      } else if (hasCollinearRunNeighbor(segs, i, true)) {
+        // PART B flush-collinear: σύνορο per-face override σε ευθεία → πέρνα ίσια, μηδέν chamfer.
       } else {
         bOuter[i] = { x: bOuter[i].x - ux, y: bOuter[i].y - uy };
       }

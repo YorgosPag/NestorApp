@@ -27,6 +27,7 @@
 
 import type { FinishFaceSegment, FinishFaceOverride } from './structural-finish-types';
 import type { Pt2 } from '../geometry/shared/segment-polygon-coverage';
+import { segmentAxis, type SegAxis } from './finish-segment-geometry';
 
 /**
  * Μια ακμή footprint στοιχείου που φέρει per-face override (canvas units — ΙΔΙΟΣ χώρος
@@ -44,30 +45,15 @@ const DEFAULT_TOL = 1e-3;
 /** Ελάχιστο t-εύρος (0..1) ώστε ένα κομμάτι/interval να μη θεωρηθεί εκφυλισμένο. */
 const T_EPS = 1e-9;
 
-interface UnitAxis {
-  readonly x: number;
-  readonly y: number;
-  readonly len: number;
-}
-
-/** Μοναδιαία κατεύθυνση a→b + μήκος. `null` αν εκφυλισμένο. */
-function axisOf(a: Pt2, b: Pt2): UnitAxis | null {
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
-  const len = Math.hypot(dx, dy);
-  if (len < 1e-9) return null;
-  return { x: dx / len, y: dy / len, len };
-}
-
 /** Απόσταση σημείου `p` από την **άπειρη ευθεία** που περνά από `a` με μοναδιαία διεύθυνση `u`. */
-function perpDist(p: Pt2, a: Pt2, u: UnitAxis): number {
+function perpDist(p: Pt2, a: Pt2, u: SegAxis): number {
   const wx = p.x - a.x;
   const wy = p.y - a.y;
   return Math.abs(wx * u.y - wy * u.x);
 }
 
 /** Παράμετρος t∈ℝ του `p` προβεβλημένου στο a→b (0 = a, 1 = b). */
-function projectT(p: Pt2, a: Pt2, u: UnitAxis): number {
+function projectT(p: Pt2, a: Pt2, u: SegAxis): number {
   return ((p.x - a.x) * u.x + (p.y - a.y) * u.y) / u.len;
 }
 
@@ -83,14 +69,21 @@ interface CoverInterval {
 
 /** Covering intervals μιας ακμής πάνω στο seg: collinear override-edges → [t0,t1] clamped στο [0,1]. */
 function coverIntervals(seg: FinishFaceSegment, u: UnitAxis, edges: readonly FinishOverrideEdge[], tol: number): CoverInterval[] {
+  // ADR-449 PART B Fix A — παραμετρική ανοχή = canvas tol / μήκος seg: σύνορο override που πέφτει
+  // εντός αυτής από πραγματικό άκρο snap-άρει στο ΑΚΡΙΒΩΣ 0/1. Ρίζα: το override-edge χτίζεται από
+  // τα ΑΝΕΠΕΞΕΡΓΑΣΤΑ element vertices, το blanket segment από τη WELDED union (drift ~quantum/2) →
+  // χωρίς snap γεννιόνται εκφυλισμένα default slivers στα άκρα → ψευδο-γωνίες κοντά σε πραγματικές.
+  const tSnap = tol / u.len;
   const out: CoverInterval[] = [];
   for (const e of edges) {
     // Collinear: ΚΑΙ τα δύο άκρα της override-edge πάνω στην ευθεία του seg.
     if (perpDist(e.a, seg.a, u) > tol || perpDist(e.b, seg.a, u) > tol) continue;
     const ta = projectT(e.a, seg.a, u);
     const tb = projectT(e.b, seg.a, u);
-    const t0 = Math.max(0, Math.min(ta, tb));
-    const t1 = Math.min(1, Math.max(ta, tb));
+    let t0 = Math.max(0, Math.min(ta, tb));
+    let t1 = Math.min(1, Math.max(ta, tb));
+    if (t0 < tSnap) t0 = 0;
+    if (t1 > 1 - tSnap) t1 = 1;
     if (t1 - t0 > T_EPS) out.push({ t0, t1, override: e.override });
   }
   return out;
@@ -133,7 +126,7 @@ function buildPiece(
 
 /** Ένα blanket segment → κομμάτια σπασμένα στα σύνορα override (ή το ίδιο αν κανένα override). */
 function attributeSegment(seg: FinishFaceSegment, edges: readonly FinishOverrideEdge[], tol: number): FinishFaceSegment[] {
-  const u = axisOf(seg.a, seg.b);
+  const u = segmentAxis(seg.a, seg.b);
   if (!u) return [seg];
   const intervals = coverIntervals(seg, u, edges, tol);
   if (intervals.length === 0) return [seg];

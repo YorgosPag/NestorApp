@@ -220,6 +220,25 @@ Deterministic IDs: `boq_bim_${id}` / `_finish_int` / `_finish_ext`. Hook στο 
 - ETICS-grade per-element exterior detection (πέρα από outer-ring proximity) = μετέπειτα slice.
 
 ## 6. Changelog
+- **2026-07-19 (PART B — per-face paint CORNER fix + segment-axis SSoT)** — Giorgio live-report (C4D round-trip
+  ΚΑΙ ζωντανό «Paint»): όταν ο σοβάς βάφεται **ανά όψη**, «αλλοιώνονται τα κλεισίματα του σοβά στις γωνίες
+  της κολόνας» — η εξωτερική γωνία **μπαίνει μέσα κατά ~το πάχος**. **Root cause (γεωμετρικό, όχι rendering):**
+  το per-face override σπάει ένα collinear blanket run σε κομμάτια (`applyFinishOverrideEdges`). Το split point
+  μοιράζεται κορυφή με collinear γείτονα → `tryMiterPair` το απορρίπτει (παράλληλα, `lineIntersect`=null) → και
+  το `buildPiece` σβήνει τα junction/square flags στα ενδιάμεσα → έπεφτε στον **default κλάδο «chamfer 45°»** που
+  τραβά το outer **μέσα κατά το πάχος** (`closeOpenOuterEnds`, `structural-finish-outline-geometry.ts`). Ίδια
+  υπογραφή με το ιστορικό incident 2026-06-20 (`silhouette-corner.test`: chamfer ±185 vs miter −215).
+  **Fix (3 μέρη, 290 finish tests πράσινα, jscpd καθαρό):**
+  - **B (root):** νέα 4η περίπτωση `closeOpenOuterEnds` — `hasCollinearRunNeighbor` ανιχνεύει «σύνορο override
+    πάνω σε ευθεία» → **flush pass-through** (μηδέν chamfer· τα δύο outer offset σημεία ήδη συμπίπτουν στην κορυφή).
+    Καλύπτει live 2D/3D paint ΚΑΙ C4D import. Γνήσιες γωνίες (non-collinear) αμετάβλητες.
+  - **A:** `coverIntervals` (`structural-finish-attribution.ts`) — snap των split-boundaries κοντά στα άκρα
+    (`tSnap = tol/len`) στο ΑΚΡΙΒΩΣ 0/1 → μηδέν εκφυλισμένα default slivers από weld drift (~quantum/2) κοντά σε
+    πραγματικές γωνίες.
+  - **C:** `canMerge` (`structural-finish-merge.ts`) — nullish-safe σύγκριση appearance (`?? null`) → σημασιολογικά
+    ίδια κομμάτια ξαναενώνονται.
+  - **SSoT (N.18/N.0.2):** τα τρία ιδιωτικά `unitDir`/`axisOf`/`segUnitDir` (sibling clones) → **ΕΝΑ**
+    `finish-segment-geometry.ts::segmentAxis`. Νέο regression test: `structural-finish-paint-corner.test.ts`.
 - **2026-07-19 (Φ7d — 45° miter ΚΑΙ στις ΕΣΩΤΕΡΙΚΕΣ (concave/reflex) γωνίες σοβά)** — Giorgio C4D-report: οι
   εσωτερικές γωνίες του σοβά **δεν έκαναν miter** — «X»/επικάλυψη στο wireframe. Διάγνωση: το OBJ γράφει το ΙΔΙΟ
   mesh με το 3Δ preview (ο exporter δεν re-triangulate-άρει)· δεν φαινόταν στην εφαρμογή γιατί το shaded-with-edges
