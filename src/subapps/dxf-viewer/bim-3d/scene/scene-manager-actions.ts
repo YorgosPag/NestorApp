@@ -102,6 +102,14 @@ function rebuildBimMeshes(
   deps.pathTracerRenderer.invalidateScene();
   deps.sectionController.ensureInit();
   deps.sectionController.applyState();
+  // ADR-455/665 — `applyState()`'s fast path (slider drag = unchanged cut composition)
+  // skips the scene-wide `applyClippingPlanes`, so meshes JUST rebuilt above (column core
+  // μπετόν, finish σοβάς skin, rebar cage, edge overlays) would keep `clippingPlanes=null`
+  // and never cut — the finish appeared clipped only because its material was warmed by an
+  // earlier slow path. Mirror the topo layer's contract: the layer rebuilt, so re-assert the
+  // CURRENT planes onto the fresh BIM subtree. Subtree-scoped + idempotent (no scene-wide
+  // needsUpdate storm); the controller stays the single owner of the planes.
+  deps.sectionController.reapplyClipPlanesUnder(deps.bimLayer.group);
 }
 
 export function syncBimEntitiesIntoScene(

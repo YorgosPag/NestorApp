@@ -159,3 +159,13 @@ side must render as a **GHOST** (semi-transparent), NOT be hidden (explicit choi
   the edge-pinned tab and drag to pull the cut back into view (absolute `screenToWorld` mapping).
   Note: the renderer runs inside a RAF callback captured once at mount, so HMR keeps the old
   module — a FULL reload is needed to pick up renderer changes during dev.
+- **v2.12 (2026-07-19)** — 3D fast-path clip gap: a column's finish (σοβάς) cut at the horizontal
+   section plane but its concrete core (μπετόν) did not. Root cause: `SectionSceneController.applyState()`
+   FAST PATH (slider drag = unchanged cut composition) mutates only `plane.constant` and SKIPS the
+   scene-wide `applyClippingPlanes`, so any mesh freshly rebuilt by a BIM sync (`rebuildBimMeshes`)
+   keeps `clippingPlanes = null` and never clips — the finish only appeared clipped because its
+   cached material had been warmed by an earlier slow path. Fix (1 line, `scene-manager-actions.ts`):
+   after every BIM rebuild call `sectionController.reapplyClipPlanesUnder(bimLayer.group)` — the same
+   contract the topo layers already use (ADR-665). Subtree-scoped + idempotent; controller stays the
+   single owner of the planes. Not read-only-specific — the editor 3D shared the same gap. First
+   surfaced on the public read-only 3D (ADR-370 Phase 11) where 3D newly works.

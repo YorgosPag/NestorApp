@@ -32,19 +32,22 @@ import {
   drawMeasurement,
   rectBoundsToScene,
 } from '@/components/shared/files/media/overlay-renderer';
-import type { Point2D, SceneBounds } from '@/components/shared/files/media/overlay-renderer';
+import type { Point2D, SceneBounds, FitTransform } from '@/components/shared/files/media/overlay-renderer';
 import type { MeasureMode } from '@/components/shared/files/media/MeasureToolbar';
 import { useLocalMeasurements } from '@/components/shared/files/media/useLocalMeasurements';
 import {
   STROKE_COLOR,
   STROKE_WIDTH,
+  CLOSE_POLYGON_TOLERANCE_PX,
   minPointsForMode,
   dedupeConsecutivePoints,
   appendPoint,
   computeMeasurement,
+  screenDistance,
   drawCommittedMeasurement,
   drawConfirmedAngleRay,
   drawAngleMeasurement,
+  drawAreaCloseHandle,
   drawRubberBand,
   drawSegmentLabels,
   drawSnapIndicator,
@@ -252,12 +255,20 @@ export function MeasureToolOverlay({
       }
       if (cursor.snapped) drawSnapIndicator(ctx, cursor.pos, effectiveBounds, fit, cursor.snapType);
     }
+
+    // AREA close affordance: ring on the first vertex once the polygon is valid
+    // (≥3 pts); fills when the cursor is within closing distance.
+    if (mode === 'area' && points.length >= 3) {
+      const active = !!cursor
+        && screenDistance(points[0], cursor.pos, effectiveBounds, fit) <= CLOSE_POLYGON_TOLERANCE_PX;
+      drawAreaCloseHandle(ctx, points[0], effectiveBounds, fit, active);
+    }
   }, [points, cursor, mode, measurements, effectiveBounds, effectiveUnitsPerMeter, zoom, panOffset, t]);
 
-  // SSoT for pointer→world resolution (+ snap). Shared by click + move handlers
-  // (N.18 — one place computes the rect/fit/world/snap chain, no copy-paste).
+  // SSoT for pointer→world resolution (+ snap + fit). Shared by click + move
+  // handlers (N.18 — one place computes the rect/fit/world/snap chain).
   const resolvePointer = useCallback(
-    (e: React.MouseEvent<HTMLCanvasElement>): { world: Point2D; snap: MeasureSnapPoint | null } | null => {
+    (e: React.MouseEvent<HTMLCanvasElement>): { world: Point2D; snap: MeasureSnapPoint | null; fit: FitTransform } | null => {
       if (!effectiveBounds) return null;
       const canvas = e.currentTarget;
       const rect = canvas.getBoundingClientRect();
@@ -265,7 +276,7 @@ export function MeasureToolOverlay({
       const sy = (e.clientY - rect.top) * (canvas.height / rect.height);
       const fit = computeFitTransform(canvas.width, canvas.height, effectiveBounds, zoom, panOffset);
       const world = screenToWorld(sx, sy, effectiveBounds, fit);
-      return { world, snap: findSnapPointRef.current?.(world, fit.scale) ?? null };
+      return { world, snap: findSnapPointRef.current?.(world, fit.scale) ?? null, fit };
     },
     [effectiveBounds, zoom, panOffset],
   );
@@ -274,10 +285,20 @@ export function MeasureToolOverlay({
     (e: React.MouseEvent<HTMLCanvasElement>) => {
       if (!mode) return;
       const r = resolvePointer(e);
-      if (!r) return;
-      setPoints((prev) => appendPoint(prev, r.snap?.point ?? r.world, mode));
+      if (!r || !effectiveBounds) return;
+      const prev = pointsRef.current;
+      // AREA: clicking the first vertex (with ≥3 points) closes + commits the polygon.
+      if (
+        mode === 'area' &&
+        prev.length >= 3 &&
+        screenDistance(prev[0], r.world, effectiveBounds, r.fit) <= CLOSE_POLYGON_TOLERANCE_PX
+      ) {
+        commitCurrent();
+        return;
+      }
+      setPoints((p) => appendPoint(p, r.snap?.point ?? r.world, mode));
     },
-    [mode, resolvePointer],
+    [mode, resolvePointer, effectiveBounds, commitCurrent],
   );
 
   // Double-click closes an area polygon (distance auto-commits at 2 pts, angle at 3).
