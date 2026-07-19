@@ -5,6 +5,10 @@
 
 import type { LevelsHookReturn } from '../../../systems/levels/useLevels';
 import { importC4dMaterials } from '../import-c4d-materials';
+import { buildKnownMaterialResolver } from '../known-import-materials';
+
+/** Static-catalog resolver (wall-covering paint-red κ.λπ.)· κανένα library υλικό εδώ. */
+const resolveKnownId = buildKnownMaterialResolver();
 
 const mockCapture = { executed: null as unknown };
 
@@ -62,7 +66,7 @@ describe('importC4dMaterials (orchestrator)', () => {
   beforeEach(() => { mockCapture.executed = null; });
 
   it('matches, resolves and applies per entity as a base override', () => {
-    const result = importC4dMaterials(fakeLevels(), { objText: OBJ, mtlText: MTL });
+    const result = importC4dMaterials(fakeLevels(), { objText: OBJ, mtlText: MTL }, resolveKnownId);
 
     expect(result.objectCount).toBe(3);
     expect(result.matchedCount).toBe(2);
@@ -82,7 +86,7 @@ describe('importC4dMaterials (orchestrator)', () => {
   it('does nothing when no object matches', () => {
     const result = importC4dMaterials(fakeLevels(), {
       objText: 'o Nope_x\nusemtl paint-red\nf 1 2 3\n', mtlText: MTL,
-    });
+    }, resolveKnownId);
     expect(result.appliedCount).toBe(0);
     expect(mockCapture.executed).toBeNull();
   });

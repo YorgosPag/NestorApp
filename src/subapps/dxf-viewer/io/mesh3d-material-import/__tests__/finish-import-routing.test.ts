@@ -10,6 +10,10 @@ import {
   finishTargetTypes,
   buildFinishImportCommands,
 } from '../finish-import-routing';
+import { buildKnownMaterialResolver } from '../known-import-materials';
+
+/** Static-catalog resolver (wall-covering + δάπεδα)· κανένα library υλικό στα finish tests. */
+const resolveKnownId = buildKnownMaterialResolver();
 
 jest.mock('../../../systems/entity-creation/LevelSceneManagerAdapter', () => ({
   createLevelSceneManagerAdapter: (_g: unknown, _s: unknown, levelId: string) => ({ levelId }),
@@ -77,6 +81,7 @@ describe('buildFinishImportCommands', () => {
       fakeLevels(),
       [finishObj('Column_structural-finish-hcol-b1', 'road_wood')],
       woodMtl,
+      resolveKnownId,
     );
     // hcol → μόνο κολόνες· 1 ενεργή κολόνα × 4 πλευρές = 4 commands.
     expect(memberCount).toBe(1);
@@ -91,6 +96,7 @@ describe('buildFinishImportCommands', () => {
       fakeLevels(),
       [finishObj('Column_structural-finish-b1', 'road_wood')],
       woodMtl,
+      resolveKnownId,
     );
     // col-1 (4) + beam-1 (4) = 8· slab-1 έχει enabled:false → παραλείπεται.
     expect(memberCount).toBe(2);
@@ -102,9 +108,10 @@ describe('buildFinishImportCommands', () => {
       fakeLevels(),
       [finishObj('Column_structural-finish-hcol-b1', 'paint-red')],
       woodMtl,
+      resolveKnownId,
     );
     const c = children as unknown as Array<{ value: unknown }>;
-    // materialId → BOQ· colorOverride → ΟΡΑΤΟ χρώμα (ο finish resolver δεν ξέρει wall-covering ids).
+    // materialId → BOQ· colorOverride → ΟΡΑΤΟ χρώμα (ενοποιημένος material-color-registry).
     expect(c[0].value).toEqual({ materialId: 'paint-red', colorOverride: '#C0392B' });
   });
 
@@ -113,13 +120,26 @@ describe('buildFinishImportCommands', () => {
       fakeLevels(),
       [finishObj('Column_structural-finish-b1', 'mat-plaster-ext')],
       woodMtl,
+      resolveKnownId,
     );
     expect(memberCount).toBe(0);
     expect(children).toHaveLength(0);
   });
 
+  it('resolves a floor-finish catalog colour for the σοβάς (ADR-679 Φ2a — όχι μόνο wall-covering)', () => {
+    const { children } = buildFinishImportCommands(
+      fakeLevels(),
+      [finishObj('Column_structural-finish-hcol-b1', 'floor-wood-oak')],
+      woodMtl,
+      resolveKnownId,
+    );
+    const c = children as unknown as Array<{ value: unknown }>;
+    // floor-wood-oak → materialId (BOQ) + το hex του καταλόγου δαπέδου (ορατός σοβάς).
+    expect(c[0].value).toEqual({ materialId: 'floor-wood-oak', colorOverride: '#C8A97E' });
+  });
+
   it('no-ops when there are no finish-skin objects', () => {
-    const { children, memberCount } = buildFinishImportCommands(fakeLevels(), [], woodMtl);
+    const { children, memberCount } = buildFinishImportCommands(fakeLevels(), [], woodMtl, resolveKnownId);
     expect(memberCount).toBe(0);
     expect(children).toHaveLength(0);
   });

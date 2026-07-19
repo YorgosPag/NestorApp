@@ -29,14 +29,10 @@ import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/Le
 import { SetFinishFaceOverrideCommand } from '../../core/commands/entity-commands/SetFinishFaceOverrideCommand';
 import { isFinishActive, type FinishFaceOverride, type StructuralFinishSpec } from '../../bim/finishes/structural-finish-types';
 import type { FaceAppearance } from '../../bim/types/face-appearance-types';
-import { listWallCoveringMaterials } from '../../bim/wall-coverings/wall-covering-material-catalog';
+import { getMaterialColorById } from '../../bim/materials/material-color-registry';
 import { resolveImportAppearance } from './resolve-import-appearance';
+import type { KnownMaterialResolver } from './known-import-materials';
 import type { ImportedMaterial, ObjectMaterialAssignment } from './obj-mtl-parse';
-
-/** catalog id → hex χρώμα (στατικό SSoT· ο σοβάς χρειάζεται ΡΗΤΟ χρώμα, βλ. appearanceToFinishOverride). */
-const CATALOG_COLOR: ReadonlyMap<string, string> = new Map(
-  listWallCoveringMaterials().map((m) => [m.id, m.color]),
-);
 
 /** Τα synthetic bimId ονόματα του merged σοβά ξεκινούν πάντα με αυτό (βλ. finish-sync). */
 const FINISH_SKIN_TOKEN = 'structural-finish-';
@@ -79,13 +75,15 @@ export function finishTargetTypes(objectName: string): readonly FinishMemberType
  * `FaceAppearance` (import resolve) → `FinishFaceOverride`.
  *
  * ⚠️ Ο σοβάς (silhouette) παίρνει το ΟΡΑΤΟ χρώμα **μόνο** από το `colorOverride` — ΟΧΙ από το
- * `materialId` (ο finish color-resolver ξέρει μόνο plaster/structural υλικά, ΟΧΙ wall-covering ids).
- * Άρα βάζουμε ΠΑΝΤΑ `colorOverride`: για catalog id → το hex του καταλόγου (+ `materialId` για BOQ)·
- * για flat χρώμα → το hex. Χωρίς αυτό, το `paint-red` γραφόταν αλλά ο σοβάς έμενε άβαφος.
+ * `materialId` (ο finish color-resolver ξέρει μόνο plaster/structural υλικά, ΟΧΙ catalog ids).
+ * Άρα βάζουμε ΠΑΝΤΑ `colorOverride`: για γνωστό υλικό → το hex από τον ενοποιημένο
+ * `material-color-registry` (ADR-679: wall-covering + δάπεδα + library `bmat_*`) + `materialId` για
+ * BOQ· για flat χρώμα → το hex. Library υλικό χωρίς επιλύσιμο χρώμα → μόνο `materialId` (BOQ, το
+ * ορατό χρώμα του σοβά έρχεται στο Φ2b με τις υφές). Χωρίς αυτό, ο σοβάς έμενε άβαφος.
  */
 function appearanceToFinishOverride(appearance: FaceAppearance): FinishFaceOverride | null {
   if (appearance.materialId) {
-    const color = CATALOG_COLOR.get(appearance.materialId);
+    const color = getMaterialColorById(appearance.materialId);
     return color
       ? { materialId: appearance.materialId, colorOverride: color }
       : { materialId: appearance.materialId };
@@ -110,10 +108,11 @@ function finishSideCount(member: FinishMember): number {
 function buildTypeOverrides(
   finishObjects: readonly ObjectMaterialAssignment[],
   mtl: ReadonlyMap<string, ImportedMaterial>,
+  resolveKnownId: KnownMaterialResolver,
 ): Map<FinishMemberType, FinishFaceOverride> {
   const byType = new Map<FinishMemberType, FinishFaceOverride>();
   for (const obj of finishObjects) {
-    const appearance = resolveImportAppearance(obj.materialName, mtl);
+    const appearance = resolveImportAppearance(obj.materialName, mtl, resolveKnownId);
     if (!appearance) continue;
     const override = appearanceToFinishOverride(appearance);
     if (!override) continue;
@@ -145,8 +144,9 @@ export function buildFinishImportCommands(
   levels: LevelsHookReturn,
   finishObjects: readonly ObjectMaterialAssignment[],
   mtl: ReadonlyMap<string, ImportedMaterial>,
+  resolveKnownId: KnownMaterialResolver,
 ): FinishImportResult {
-  const byType = buildTypeOverrides(finishObjects, mtl);
+  const byType = buildTypeOverrides(finishObjects, mtl, resolveKnownId);
   if (byType.size === 0) return { children: [], memberCount: 0 };
 
   const children: ICommand[] = [];

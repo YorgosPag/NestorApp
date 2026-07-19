@@ -2,23 +2,26 @@
  * resolve-import-appearance — ADR-678 Φ1. Μετατρέπει το εισαγόμενο υλικό (C4D `usemtl` + `.mtl`)
  * σε `FaceAppearance` του δικού μας συστήματος (ADR-539).
  *
- * **SSoT-first (όπως Revit/ArchiCAD name-based mapping):** αν το όνομα του υλικού ταιριάζει με id
- * του wall-covering catalog (ADR-511) → κρατάμε `{ materialId }` (το χρώμα έρχεται από ΤΟΝ ΚΑΤΑΛΟΓΟ,
- * όχι από το OBJ — robust, ενημερώνεται κεντρικά). Αλλιώς (ο Giorgio έφτιαξε δικό του υλικό στο
- * C4D) → κρατάμε το `Kd` flat χρώμα ως `{ colorHex }`. Textures (`map_Kd`) = Φ2, αγνοούνται εδώ.
+ * **SSoT-first (όπως Revit/ArchiCAD name-based mapping):** αν το όνομα του υλικού ταιριάζει με
+ * γνωστό Νέστωρ υλικό (ADR-679 Φ2a: wall-covering + δάπεδα + library `bmat_*` — by id ή ανθρώπινο
+ * όνομα) → κρατάμε `{ materialId }` (το χρώμα λύνεται ΚΕΝΤΡΙΚΑ downstream από τον
+ * `material-color-registry` — robust, ενημερώνεται κεντρικά). Αλλιώς (ο Giorgio έφτιαξε δικό του
+ * υλικό στο C4D) → κρατάμε το `Kd` flat χρώμα ως `{ colorHex }`. Textures (`map_Kd`) = Φ2b.
  *
- * @see ../../bim/wall-coverings/wall-covering-material-catalog — catalog SSoT
+ * Η αναγνώριση «γνωστό υλικό;» είναι **injected** (`KnownMaterialResolver`) — ο caller
+ * προ-φορτώνει τα library υλικά (async, scoped) και περνά τον resolver· έτσι αυτό το core μένει
+ * pure/sync/testable, χωρίς να ξέρει από Firestore/scope.
+ *
+ * @see ./known-import-materials — ο resolver «όνομα → material id» (SSoT αναγνώρισης)
+ * @see ../../bim/materials/material-color-registry — το χρώμα των ids (downstream)
  * @see ../../bim/types/face-appearance-types — FaceAppearance union
  * @see docs/centralized-systems/reference/adrs/ADR-678-c4d-obj-material-roundtrip-import.md
  */
 
-import { listWallCoveringMaterials } from '../../bim/wall-coverings/wall-covering-material-catalog';
 import type { FaceAppearance } from '../../bim/types/face-appearance-types';
 import type { ImportedMaterial } from './obj-mtl-parse';
+import type { KnownMaterialResolver } from './known-import-materials';
 import { HIDDEN_NAME_PREFIX } from '../../export/core/mesh3d/mesh3d-naming';
-
-/** Set με τα catalog ids (μία φορά· ο κατάλογος είναι στατικός SSoT). */
-const CATALOG_IDS: ReadonlySet<string> = new Set(listWallCoveringMaterials().map((m) => m.id));
 
 /** Αφαιρεί το `HIDDEN_` πρόθεμα του export (το κρυμμένο υλικό κρατά το πραγματικό του όνομα). */
 function stripHiddenPrefix(name: string): string {
@@ -58,9 +61,10 @@ function hexColorFromName(name: string): string | null {
 }
 
 /**
- * `materialName` (από το OBJ `usemtl`) + ο πίνακας `.mtl` → `FaceAppearance` ή `null` (καμία αλλαγή).
+ * `materialName` (από το OBJ `usemtl`) + ο πίνακας `.mtl` + ο `resolveKnownId` → `FaceAppearance`
+ * ή `null` (καμία αλλαγή).
  *   0. αρχικό DNA του Νέστορα (αμετάβλητο) → `null` (ΡΙΖΑ 2 — no-op, μηδέν άχρηστο override).
- *   1. catalog id → `{ materialId }` (χρώμα από τον κατάλογο, οδηγεί ΚΑΙ BOQ).
+ *   1. γνωστό υλικό (catalog/library, by id ή όνομα) → `{ materialId }` (χρώμα κεντρικά, οδηγεί BOQ).
  *   2. `Kd` χρώμα από το `.mtl` → `{ colorHex }`.
  *   3. hex στο όνομα (C4D R15 χωρίς `.mtl`) → `{ colorHex }`.
  *   4. τίποτα από τα παραπάνω → `null`.
@@ -68,13 +72,15 @@ function hexColorFromName(name: string): string | null {
 export function resolveImportAppearance(
   materialName: string | null,
   mtl: ReadonlyMap<string, ImportedMaterial>,
+  resolveKnownId: KnownMaterialResolver,
 ): FaceAppearance | null {
   if (materialName === null) return null;
   const clean = stripHiddenPrefix(materialName);
 
   if (isUnchangedNestorMaterial(clean)) return null;
 
-  if (CATALOG_IDS.has(clean)) return { materialId: clean };
+  const knownId = resolveKnownId(clean);
+  if (knownId) return { materialId: knownId };
 
   const material = mtl.get(materialName) ?? mtl.get(clean);
   if (material) return { colorHex: material.colorHex };

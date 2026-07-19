@@ -12,14 +12,17 @@
  * @see docs/centralized-systems/reference/adrs/ADR-678-c4d-obj-material-roundtrip-import.md
  */
 
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useMemo } from 'react';
 import { useTranslation } from '@/i18n';
 import { Palette } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useAuth } from '@/auth/hooks/useAuth';
 import { useLevels } from '../../systems/levels';
 import { useNotifications } from '../../../../providers/NotificationProvider';
+import { useMaterialLibrary } from '../panels/materials/hooks/useMaterialLibrary';
 import { importC4dMaterials } from '../../io/mesh3d-material-import/import-c4d-materials';
+import { buildKnownMaterialResolver } from '../../io/mesh3d-material-import/known-import-materials';
 
 /** Βρίσκει το `.obj` (υποχρεωτικό) και το `.mtl` (προαιρετικό) μέσα στα επιλεγμένα αρχεία. */
 async function readObjMtl(files: FileList): Promise<{ objText: string; mtlText: string } | null> {
@@ -37,6 +40,16 @@ export function C4dMaterialImportButton() {
   const iconSizes = useIconSizes();
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // ADR-679 Φ2a — live library υλικά (system + company + project scope) ώστε το round-trip
+  // import να αναγνωρίζει ΚΑΙ τα δικά σου υλικά (by id ή ανθρώπινο όνομα), όχι μόνο catalog.
+  const { user } = useAuth();
+  const { materials } = useMaterialLibrary({
+    companyId: user?.companyId ?? undefined,
+    userId: user?.uid ?? undefined,
+    projectId: levels.saveContext?.projectId ?? undefined,
+  });
+  const resolveKnownId = useMemo(() => buildKnownMaterialResolver(materials), [materials]);
+
   const handleFiles = useCallback(async (files: FileList | null): Promise<void> => {
     if (!files || files.length === 0) return;
     let payload: { objText: string; mtlText: string } | null;
@@ -50,7 +63,7 @@ export function C4dMaterialImportButton() {
       notifications.warning(t('c4dMaterialImport.noObj'));
       return;
     }
-    const result = importC4dMaterials(levels, payload);
+    const result = importC4dMaterials(levels, payload, resolveKnownId);
     if (result.appliedCount === 0 && result.finishMemberCount === 0) {
       // Διάκριση: λάθος/κενό αρχείο (κανένα object) vs έγκυρο Nestor OBJ αλλά ΧΩΡΙΣ αλλαγή
       // υλικού (όλα αρχικά DNA — το C4D paint δεν μπήκε στο export ή λείπει το .mtl).
@@ -63,7 +76,7 @@ export function C4dMaterialImportButton() {
       matched: result.matchedCount,
       unmatched: result.unmatched.length,
     }));
-  }, [levels, notifications, t]);
+  }, [levels, notifications, t, resolveKnownId]);
 
   return (
     <>

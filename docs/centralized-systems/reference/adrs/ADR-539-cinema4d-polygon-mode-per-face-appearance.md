@@ -160,6 +160,14 @@ slab persistence serialize path (αν whitelist).
 
 ## 7. Changelog
 
+- **2026-07-19 (cross-ref → ADR-679 Φ2a — UNIFIED COLOR REGISTRY)** — Ο `faceAppearanceColorHex` (ο SSoT
+  «χρώμα όψης», 3D painted + 2D plan fill) έλυνε το `materialId` **μόνο** μέσω `getWallCoveringColor` →
+  όψη βαμμένη με υλικό δαπέδου/library υλικό έβγαινε γκρι. Πλέον δείχνει στον ενοποιημένο
+  `bim/materials/material-color-registry::getMaterialColorById` (extensible provider-registry): wall-covering
+  (ADR-511) + δάπεδα (ADR-419) στατικά + library `bmat_*` (δηλωμένο late από `user-material-registry`).
+  **Body/2D path σημασιολογικά αμετάβλητο για wall-covering ids** (ίδιο hex)· απλώς αναγνωρίζονται και οι
+  υπόλοιποι κατάλογοι. Καμία αλλαγή στο `FaceAppearance` type/store. Detail: **ADR-679 changelog (Φ2a)**.
+
 - **2026-07-19 (UI — Cinema 4D «Material Manager» bottom bar)** — Το `PolygonMaterialPanel` μετακινήθηκε από πλαϊνό panel **πάνω δεξιά** (`absolute right-3 top-20 w-52`, κάθετο grid-2) σε **φαρδιά οριζόντια μπάρα υλικών στη ΒΑΣΗ** του 3D κάμβα (`absolute inset-x-0 bottom-0`, flex row), όπως ο Material Manager του Cinema 4D (Giorgio 2026-07-19). Layout: αριστερά cluster (τίτλος + hint + σώμα/σοβάς toggle), κέντρο οριζόντια scroll-able σειρά thumbnails (`w-14`, swatch `h-9 w-9` + label από κάτω), δεξιά cluster (προσαρμοσμένο χρώμα + καθαρισμός). **Καμία αλλαγή σε logic/apply/drag-drop/i18n** — μόνο JSX/CSS restructure· ADR-040 leaf αμετάβλητο.
 - **2026-07-02 (cross-ref → ADR-449 Slice C 2D)** — Το **2D** ισοδύναμο του per-face paint υλοποιήθηκε ως ξεχωριστό εργαλείο `finish-paint` (Revit «Paint») **ΟΧΙ** ως αντιγραφή αυτού του store: το 2D έχει canonical `ToolStateStore`, οπότε το «active» = `activeTool==='finish-paint'` (μηδέν δεύτερος mode-μηχανισμός)· αυτό το 3D store κράτησε δικό του `active` ΜΟΝΟ επειδή το 3D δεν έχει tool-state σύστημα. Κοινός πυρήνας 2D+3D: `applyFinishFaceOverrideToFaces` (writer) + `FINISH_MATERIAL_OPTIONS`/`getMaterialFlatColorHex` (swatches) + `EnterpriseColorDialog`. Πλήρες detail: **ADR-449 changelog (δ.PART-B-Slice-C-2D-wiring)**.
 - **2026-07-02 (cross-ref → ADR-449 Slice C)** — Το polygon mode απέκτησε **layer target** (`PolygonMode3DStore.targetLayer: 'body'|'finish'`) ώστε το ΙΔΙΟ face-pick + `PolygonMaterialPanel` + `EnterpriseColorDialog` να βάφει ΕΙΤΕ το **σώμα** (`FaceAppearance`, εδώ) ΕΙΤΕ τον **σοβά** (`spec.faceOverrides`, ADR-449). Το `PolygonMaterialPanel` πήρε toggle «Σώμα|Σοβάς» + finish swatches· το `apply` route-άρει σε `applyFinishFaceOverrideToFaces` όταν layer='finish'. **Body path αμετάβλητο (byte-for-byte).** Πλήρες detail: **ADR-449 changelog (δ.PART-B-Slice-C-3D)**. Το `side:i` faceKey (`buildFacedPrism`) → `finishFaceRef` της ακμής i = η γέφυρα των δύο layer.

@@ -1,6 +1,6 @@
 # ADR-679 — PBR Material «Full Parity»: πλήρες σύστημα υλικών/υφών ανά όψη (C4D-grade)
 
-**Status:** 🟡 PLANNING (Φ0 — σχεδιασμός· καμία υλοποίηση ακόμα)
+**Status:** 🟢 Φ2a ΥΛΟΠΟΙΗΘΗΚΕ (import name→όλα τα υλικά + ενοποιημένος color registry)· Φ2b/Φ2c εκκρεμούν
 **Date:** 2026-07-19
 **Owner:** Giorgio
 **Σχετικά:** ADR-413 (BimMaterial library + PBR textures) · ADR-539 (per-face appearance) · ADR-449 (structural finish) · ADR-678 (C4D↔Νέστωρ round-trip) · ADR-511 (wall-covering catalog)
@@ -51,7 +51,7 @@ BimMaterial** (PBR texture set) και να το **render-άρει** μέσω τ
 
 | Φάση | Περιεχόμενο | Μέγεθος |
 |------|-------------|---------|
-| **Φ2a** | **Import name→όλα τα υλικά.** `resolveImportAppearance` (ADR-678) να αναγνωρίζει user materials + όλους τους καταλόγους (όχι μόνο wall-covering) μέσω `MaterialLibraryService`. Name-based, όπως Revit/IFC. | Μικρό |
+| **Φ2a** ✅ | **Import name→όλα τα υλικά.** `resolveImportAppearance` (ADR-678) αναγνωρίζει user materials (`bmat_*`, by id ή ανθρώπινο όνομα) + wall-covering + δάπεδα (όχι μόνο wall-covering) μέσω injected `KnownMaterialResolver` (ο button τον τροφοδοτεί με `useMaterialLibrary`). Name-based, όπως Revit/IFC. **+** ενοποιημένος `material-color-registry` λύνει το χρώμα ΚΑΘΕ id σε 3D/2D/σοβά. | Μικρό |
 | **Φ2b** | **Per-face PBR (η καρδιά).** Επέκταση `FaceAppearance` + `FinishFaceOverride` να δείχνουν σε `BimMaterial.id`· `resolveFaceMaterial` + finish converter να χτίζουν PBR υλικό (texture) μέσω `pbr-material-builder`, όχι flat color. Σώμα + σοβάς. | **Μεγάλο** |
 | **Φ2c** | **Material editor UI (C4D-parity).** Διπλό κλικ σε swatch → πάνελ PBR (Base Color/Texture upload, Roughness, Metalness, Normal, Opacity). Reuse `useMaterialPbrTextureUpload`. Εμφανές «όνομα για C4D». | Μεσαίο |
 | **Φ3** | glTF PBR round-trip (το glTF ΕΧΕΙ πραγματικά PBR + textures — αντίθετα από το OBJ/R15). Προαιρετικό. | Μεσαίο |
@@ -71,3 +71,19 @@ BimMaterial** (PBR texture set) και να το **render-άρει** μέσω τ
 - **2026-07-19** — Δημιουργία ADR. Απόφαση PBR (όχι legacy C4D R15). Ground-truth της υπάρχουσας μηχανής
   (ADR-413 library + PBR textures + upload + builder ΥΠΑΡΧΟΥΝ· το κενό = per-face flat-colour-only).
   Phased plan Φ2a→Φ2b→Φ2c. Καμία υλοποίηση ακόμα.
+- **2026-07-19 — Φ2a ΥΛΟΠΟΙΗΘΗΚΕ.** Δύο μέρη, full SSoT/enterprise, μηδέν διπλότυπα (jscpd καθαρό):
+  1. **Ενοποιημένος color registry** (`bim/materials/material-color-registry.ts`, ΝΕΟ): επεκτάσιμος
+     provider-registry `getMaterialColorById(id)` — wall-covering (ADR-511) + δάπεδα (ADR-419)
+     στατικά· τα library `bmat_*` υλικά δηλώνονται από το `bim-3d/materials/user-material-registry`
+     μέσω `registerMaterialColorProvider` (late registration → μηδέν ανοδική εξάρτηση bim/utils→bim-3d,
+     καμία κυκλική). Ο ADR-539 `face-appearance-color` + ο σοβάς (`finish-import-routing`) διαβάζουν
+     πλέον ΤΟΝ ΙΔΙΟ registry αντί για wall-covering-only (σκοτώθηκε το διπλό `CATALOG_COLOR`). **Άρα
+     όψη/σοβάς βαμμένα με δάπεδο ή δικό σου υλικό δείχνουν ΤΟ χρώμα τους, όχι γκρι.** Χρώμα δικού
+     υλικού = flat κατά κατηγορία (`getCategoryMaterialDef` → `trueColorToHex`)· υφές = Φ2b.
+     Procedural (`proc:*`, ADR-653) ΕΚΤΟΣ by design (2D hatch generator, ποτέ `FaceAppearance.materialId`).
+  2. **Import name→όλα τα υλικά** (`io/mesh3d-material-import/known-import-materials.ts`, ΝΕΟ):
+     `buildKnownMaterialResolver(userMaterials)` → «όνομα → id» για wall-covering+δάπεδα (by id) και
+     library υλικά (by id ΚΑΙ `nameEl`/`nameEn`). **id-first** σε σύγκρουση (Giorgio). Injected στο
+     `resolveImportAppearance` + `buildFinishImportCommands` (pure/sync core)· ο `C4dMaterialImportButton`
+     τον χτίζει από `useMaterialLibrary` + `useAuth` scope. Tests: +2 νέα suites, ενημέρωση 3 υπαρχόντων
+     (44 πράσινα στο import + 8 registry). `MaterialLibraryService` reused (μηδέν νέο service).

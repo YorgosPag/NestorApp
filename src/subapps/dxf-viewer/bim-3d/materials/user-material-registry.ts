@@ -34,6 +34,8 @@ import {
 import { configurePbrTexture } from './pbr-texture-config';
 import type { LoadedTextureSet } from './bim-texture-cache';
 import { useBim3DEntitiesStore } from '../stores/Bim3DEntitiesStore';
+import { registerMaterialColorProvider } from '../../bim/materials/material-color-registry';
+import { trueColorToHex } from '../../utils/dxf-true-color';
 
 /** Resolved 3D appearance of a library material: flat fallback + optional textures. */
 export interface UserMaterialAppearance {
@@ -143,6 +145,15 @@ export function setUserMaterials(materials: readonly BimMaterial[]): void {
 export function getUserMaterialAppearance(id: string): UserMaterialAppearance | null {
   return entries.get(id) ?? null;
 }
+
+// ADR-679 Φ2a — ένα `bmat_*` library υλικό τροφοδοτεί με το flat χρώμα του (ανά κατηγορία)
+// τον ενοποιημένο per-face color resolver (ADR-539), ώστε μια όψη βαμμένη με library υλικό
+// να δείχνει ΤΟ χρώμα του σε 3D+2D (όχι γκρι). Οι υφές του = Φ2b. Εγγραφή μία φορά στο
+// module-load (πάντα-ζωντανό μέσω `UserMaterialRegistryHost`)· `null` για ξένα ids.
+registerMaterialColorProvider((id) => {
+  const appearance = getUserMaterialAppearance(id);
+  return appearance ? trueColorToHex(appearance.def.color) : null;
+});
 
 /** Synchronous read of a loaded per-material texture set, or null on a miss. */
 export function getUserMaterialTextureSet(id: string): LoadedTextureSet | null {

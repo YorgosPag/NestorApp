@@ -22,6 +22,7 @@ import { BASE_FACE_KEY } from '../../bim/types/face-appearance-types';
 import type { MeshNameCharset } from '../../export/core/mesh3d/mesh3d-naming';
 import { parseObjObjects, parseMtl } from './obj-mtl-parse';
 import { resolveImportAppearance } from './resolve-import-appearance';
+import type { KnownMaterialResolver } from './known-import-materials';
 import { matchObjectsToEntities, type EntityExportIdentity } from './match-objects-to-entities';
 import { isFinishSkinName, buildFinishImportCommands } from './finish-import-routing';
 
@@ -72,6 +73,7 @@ function enumerateEntities(
 export function importC4dMaterials(
   levels: LevelsHookReturn,
   input: C4dMaterialImportInput,
+  resolveKnownId: KnownMaterialResolver,
 ): C4dMaterialImportResult {
   const charset = input.charset ?? 'latin';
   const objects = parseObjObjects(input.objText);
@@ -86,14 +88,14 @@ export function importC4dMaterials(
   const { matched, unmatched } = matchObjectsToEntities(bodyObjects, identities, charset);
 
   const bodyChildren = matched.flatMap((m) => {
-    const appearance = resolveImportAppearance(m.materialName, mtl);
+    const appearance = resolveImportAppearance(m.materialName, mtl, resolveKnownId);
     const levelId = levelByBimId.get(m.bimId);
     if (appearance === null || levelId === undefined) return [];
     const adapter = createLevelSceneManagerAdapter(levels.getLevelScene, levels.setLevelScene, levelId);
     return [new SetFaceAppearanceCommand(m.bimId, BASE_FACE_KEY, appearance, adapter)];
   });
 
-  const finish = buildFinishImportCommands(levels, finishObjects, mtl);
+  const finish = buildFinishImportCommands(levels, finishObjects, mtl, resolveKnownId);
   const children: ICommand[] = [...bodyChildren, ...finish.children];
 
   if (children.length > 0) {

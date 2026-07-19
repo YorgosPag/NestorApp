@@ -5,7 +5,14 @@
 
 import { parseObjObjects, parseMtl } from '../obj-mtl-parse';
 import { resolveImportAppearance, isUnchangedNestorMaterial } from '../resolve-import-appearance';
+import { buildKnownMaterialResolver } from '../known-import-materials';
 import { matchObjectsToEntities, type EntityExportIdentity } from '../match-objects-to-entities';
+import type { BimMaterial } from '../../../bim/types/bim-material-types';
+
+/** Minimal library υλικό — ο resolver διαβάζει μόνο id/nameEl/nameEn. */
+function fakeMaterial(id: string, nameEl: string, nameEn: string): BimMaterial {
+  return { id, nameEl, nameEn } as unknown as BimMaterial;
+}
 
 const MTL = `# c4d export
 newmtl paint-red
@@ -98,31 +105,43 @@ describe('matchObjectsToEntities', () => {
 
 describe('resolveImportAppearance', () => {
   const mtl = parseMtl(MTL);
+  const resolveKnownId = buildKnownMaterialResolver();
 
-  it('maps a catalog material name to { materialId } (SSoT colour)', () => {
-    expect(resolveImportAppearance('paint-red', mtl)).toEqual({ materialId: 'paint-red' });
+  it('maps a wall-covering material name to { materialId } (SSoT colour)', () => {
+    expect(resolveImportAppearance('paint-red', mtl, resolveKnownId)).toEqual({ materialId: 'paint-red' });
+  });
+
+  it('maps a floor-finish catalog id to { materialId } (ADR-679 Φ2a — όχι μόνο wall-covering)', () => {
+    expect(resolveImportAppearance('floor-wood-oak', mtl, resolveKnownId)).toEqual({ materialId: 'floor-wood-oak' });
   });
 
   it('maps a custom C4D material to its flat { colorHex }', () => {
-    expect(resolveImportAppearance('mat_myblue', mtl)).toEqual({ colorHex: '#1a334d' });
+    expect(resolveImportAppearance('mat_myblue', mtl, resolveKnownId)).toEqual({ colorHex: '#1a334d' });
   });
 
   it('returns null when the object had no material', () => {
-    expect(resolveImportAppearance(null, mtl)).toBeNull();
+    expect(resolveImportAppearance(null, mtl, resolveKnownId)).toBeNull();
   });
 
   it('returns null for an unknown material with no colour', () => {
-    expect(resolveImportAppearance('ghost', mtl)).toBeNull();
+    expect(resolveImportAppearance('ghost', mtl, resolveKnownId)).toBeNull();
   });
 
   it('reads a hex colour encoded in the material name (C4D R15 has no .mtl)', () => {
-    expect(resolveImportAppearance('8B4513', mtl)).toEqual({ colorHex: '#8b4513' });
-    expect(resolveImportAppearance('#c0d8b0', mtl)).toEqual({ colorHex: '#c0d8b0' });
+    expect(resolveImportAppearance('8B4513', mtl, resolveKnownId)).toEqual({ colorHex: '#8b4513' });
+    expect(resolveImportAppearance('#c0d8b0', mtl, resolveKnownId)).toEqual({ colorHex: '#c0d8b0' });
   });
 
   it('prefers the .mtl Kd over a name that also parses as hex', () => {
     const m = parseMtl('newmtl abcdef\nKd 0 0 0\n');
-    expect(resolveImportAppearance('abcdef', m)).toEqual({ colorHex: '#000000' });
+    expect(resolveImportAppearance('abcdef', m, resolveKnownId)).toEqual({ colorHex: '#000000' });
+  });
+
+  it('recognises a user library material by id AND by human name (ADR-679 Φ2a)', () => {
+    const resolve = buildKnownMaterialResolver([fakeMaterial('bmat_oak01', 'Δρύινο δάπεδο', 'Oak floor')]);
+    expect(resolveImportAppearance('bmat_oak01', mtl, resolve)).toEqual({ materialId: 'bmat_oak01' });
+    expect(resolveImportAppearance('Δρύινο δάπεδο', mtl, resolve)).toEqual({ materialId: 'bmat_oak01' });
+    expect(resolveImportAppearance('oak floor', mtl, resolve)).toEqual({ materialId: 'bmat_oak01' }); // case-insensitive
   });
 });
 
@@ -146,14 +165,15 @@ describe('isUnchangedNestorMaterial (ΡΙΖΑ 2 — skip unchanged)', () => {
 
 describe('resolveImportAppearance — skips unchanged Nestor DNA (ΡΙΖΑ 2)', () => {
   const mtl = parseMtl(MTL);
+  const resolveKnownId = buildKnownMaterialResolver();
 
   it('returns null for an original DNA matId (no useless override)', () => {
-    expect(resolveImportAppearance('mat-concrete-c25', mtl)).toBeNull();
-    expect(resolveImportAppearance('elem-railing', mtl)).toBeNull();
-    expect(resolveImportAppearance('mat_808080', mtl)).toBeNull();
+    expect(resolveImportAppearance('mat-concrete-c25', mtl, resolveKnownId)).toBeNull();
+    expect(resolveImportAppearance('elem-railing', mtl, resolveKnownId)).toBeNull();
+    expect(resolveImportAppearance('mat_808080', mtl, resolveKnownId)).toBeNull();
   });
 
   it('returns null even when HIDDEN_ prefixed', () => {
-    expect(resolveImportAppearance('HIDDEN_mat-concrete-c25', mtl)).toBeNull();
+    expect(resolveImportAppearance('HIDDEN_mat-concrete-c25', mtl, resolveKnownId)).toBeNull();
   });
 });
