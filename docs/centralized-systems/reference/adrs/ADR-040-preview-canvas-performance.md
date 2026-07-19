@@ -72,6 +72,19 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-07-19 — ➕ ADR-680: DistMeasureOverlayLeaf (εφήμερο «Μέτρημα Απόστασης» live-overlay micro-leaf, z20)
+
+**Τι:** νέο micro-leaf `DistMeasureOverlayLeaf` mounted στο `CanvasLayerStack` (z20), δίπλα στο
+`SketchFreehandPreviewSubscriber`. Ζωγραφίζει τη ζωντανή πολυγραμμή + rubber-band προς τον cursor +
+ανά-τμήμα μήκη + τρέχον ΣΥΝΟΛΟ για το εφήμερο εργαλείο DIST, από το in-memory `dist-ephemeral-store`.
+Καμία εγγραφή entity/DB. Πλήρης περιγραφή: ADR-680.
+
+**Συμμόρφωση ADR-040:** Το Shell (`CanvasLayerStack`) ΔΕΝ subscribe-άρει — απλώς mount-άρει το leaf και
+του περνά `transform`/`viewport`/`sceneUnits` (low-freq). Το leaf έχει outer subscription ΜΟΝΟ στο
+`activeTool` (low-freq)· το 60fps realtime-cursor `useSyncExternalStore` ζει στο inner `DistActiveLayer`,
+που mount-άρεται ΜΟΝΟ όσο το εργαλείο DIST είναι ενεργό. Το ESC δρομολογείται μέσω του κεντρικού
+escape-bus (`useEscapeHandler`, ADR-364, priority DRAW_TOOL) — όχι raw keydown listener.
+
 ### 2026-07-18 (c) — ➕ ADR-189 §3.13: δεύτερο κλικ + ΟΡΘΟ-κάθετο-στον-οδηγό + λευκό HUD + βήμα Snap (compliance)
 
 **Τι:** τέσσερα νέα χαρακτηριστικά πάνω στο ήδη-καθιερωμένο `ParallelGuideAnchorPreviewMount`

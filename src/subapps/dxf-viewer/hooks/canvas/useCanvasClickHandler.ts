@@ -36,6 +36,7 @@ import { handleTopoBoundaryClick } from './canvas-click-topo-boundary'; // ADR-6
 import { handleGeoRefAnchorClick } from './canvas-click-geo-ref'; // ADR-650 M10
 import { handlePickBasePointClick } from './canvas-click-pick-base-point'; // ADR-652 M6
 import { isPickBasePointArmed } from '../../systems/block/pick-base-point-store'; // ADR-652 M6
+import { addDistPoint } from '../../systems/measure/dist-ephemeral-store'; // ADR-680 — εφήμερο DIST
 import { isAnnotationSymbolTool } from '../../config/annotation-kind-registry';
 // ADR-581 — Match Properties σταγονόμετρο/σύριγγα (Alt pick / Ctrl+Alt inject / πινέλο).
 import { handleMatchBrushClick } from './match-click-handlers';
@@ -119,6 +120,10 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       dwarn('useCanvasClickHandler', 'Click blocked: viewport not ready', viewport);
       return;
     }
+    // PRIORITY 0.35: ADR-680 — εφήμερο «Μέτρημα Απόστασης» (DIST). Το `worldPoint` έρχεται ΗΔΗ
+    // OSNAP-snapped κεντρικά (mouse-handler-up). Γράφεται ΜΟΝΟ σε in-memory store — ΚΑΝΕΝΑ
+    // scene/DB write. Καταναλώνει το κλικ (νωρίς) ώστε να ΜΗΝ φτάσει σε πινέλο/grips/drawing.
+    if (activeTool === 'dist') { addDistPoint(worldPoint); return; }
     // PRIORITY 0.4: ADR-652 M6 — «Επιλογή σημείου βάσης» για «Δημιουργία Block». Όσο ο διάλογος
     // έχει armed την επιλογή σημείου, ΕΝΑ κλικ (ήδη snapped) γράφεται ως base και καταναλώνεται
     // (δεν πέφτει σε πινέλο/grips/drawing/selection). Δεν υπάρχει activeTool — ο διάλογος είναι το mode.

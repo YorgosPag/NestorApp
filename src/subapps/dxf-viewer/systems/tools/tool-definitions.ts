@@ -63,6 +63,10 @@ export const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   // 🏢 ENTERPRISE FIX (2026-01-26): allowsContinuous: true for consecutive measurements
   // Pattern: AutoCAD/BricsCAD - measurement tools stay active for multiple measurements
   'measure': { id: 'measure', category: 'measurement', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  // ADR-680 — εφήμερο tape-measure (DIST). category 'editing' (ΟΧΙ 'measurement') ΕΠΙΤΗΔΕΣ:
+  // το `useCanvasEffects` auto-start-άρει το unified drawing ΜΟΝΟ για drawing/measurement tools·
+  // το 'dist' γράφει μόνο σε in-memory store (ΚΑΝΕΝΑ entity/DB). ΔΕΝ μπαίνει στο TOOL_CREATES_ENTITY.
+  'dist': { id: 'dist', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'measure-distance': { id: 'measure-distance', category: 'measurement', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   // 🏢 ENTERPRISE (2026-01-27): Continuous distance measurement - AutoCAD MEASUREGEOM pattern
   // Creates separate measurement entities for each pair of points, continues until double-click/Escape

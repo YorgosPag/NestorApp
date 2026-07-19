@@ -62,6 +62,9 @@ export type ToolType =
   // ADR-353: Polar Array command (Πίνακας Πολικός — Phase B)
   | 'array-polar'
   | 'measure'
+  // ADR-680: εφήμερο «Μέτρημα» (tape) — μετράει στην οθόνη, ΚΑΜΙΑ εγγραφή entity/DB.
+  // category 'editing' (ΟΧΙ 'measurement') ώστε να ΜΗΝ το πιάνει το measurement auto-start.
+  | 'dist'
   | 'measure-distance'
   | 'measure-distance-continuous'
   | 'measure-area'

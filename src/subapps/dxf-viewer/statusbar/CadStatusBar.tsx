@@ -32,6 +32,7 @@ import {
   fromDisplay,
 } from '../config/units';
 import { CommandLineInput } from '../ui/command-line/CommandLineInput';
+import { DistMeasureButton } from './DistMeasureButton';
 
 export default function CadStatusBar() {
   const { osnap, grid, snap, ortho, polar, dynInput, dimHud, dirArc, listeningDim, snapStep, setSnapStep } = useCadToggles();
@@ -83,6 +84,8 @@ export default function CadStatusBar() {
         <div className="flex items-center gap-4 px-4 py-1.5 overflow-x-auto">
           {/* ADR-357 Phase 14-B: Command line input — leftmost, always visible */}
           <CommandLineInput />
+          {/* ADR-680: εφήμερο «Μέτρημα Απόστασης» (DIST) — κάτω-αριστερά δίπλα στη γραμμή εντολών */}
+          <DistMeasureButton id="cad-dist-measure" />
           {stairStatusText && (
             <span
               className="shrink-0 text-xs font-semibold text-[hsl(var(--text-warning))]"
