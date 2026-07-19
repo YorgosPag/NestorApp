@@ -1,9 +1,11 @@
 /* eslint-disable design-system/no-hardcoded-colors */
 /**
- * ADR-340 — «Μαύρο σχέδιο» (monochrome ink) recolor for the read-only floorplan.
+ * ADR-340 — «Χρώμα σχεδίου» single-ink recolor for the read-only floorplan.
  *
  * Big-players / SSoT: AutoCAD/Revit/ArchiCAD «Monochrome» display collapses every
- * entity to ONE ink regardless of its layer/ACI/TrueColor/ByLayer style. Rather than
+ * entity to ONE ink regardless of its layer/ACI/TrueColor/ByLayer style. The user picks
+ * that ink (black on light, white on dark, or any colour via the OS colour picker) —
+ * this helper is colour-agnostic (the ink is a parameter). Rather than
  * clone the scene and re-fight the editor engine's full colour cascade
  * (`resolveStyleForRender` → ACI 62 → TrueColor 420 → ByLayer → hex), this recolors
  * the ALREADY-rendered pixels: the engine draws every entity onto a TRANSPARENT

@@ -42,7 +42,7 @@ import { CalibrateScaleDialog } from '@/components/shared/files/media/CalibrateS
 import { useMeasureSnapFinder } from '@/components/shared/files/media/measure-snap-bridge';
 import { Bim3DToggleButton } from '@/components/shared/files/media/Bim3DToggleButton';
 import { Bim3DReadOnlyOverlay } from '@/components/shared/files/media/Bim3DReadOnlyOverlay';
-import { FloorplanColorModeButton } from '@/components/shared/files/media/FloorplanColorModeButton';
+import { FloorplanInkPicker } from '@/components/shared/files/media/FloorplanInkPicker';
 
 // Re-exports for backward compatibility
 export type { FloorplanGalleryProps, DxfDrawingMode };
@@ -108,9 +108,10 @@ export function FloorplanGallery({
   const fullscreen = useFullscreen();
   // DXF drawing mode — dark or light BACKGROUND theme (☀/🌙 button).
   const [drawingMode, setDrawingMode] = useState<DxfDrawingMode>('dark');
-  // ADR-340 — «Μαύρο σχέδιο»: force entities to a single black ink. Independent axis
-  // from `drawingMode` (background only), per Giorgio Q (2026-07-19). Default = colored.
-  const [monochrome, setMonochrome] = useState(false);
+  // ADR-340 — entity ink axis, independent from `drawingMode` (background only), per
+  // Giorgio Q (2026-07-19): null = «Έγχρωμο» (layer colours); a hex = force that single
+  // ink (e.g. white lines on dark background). Applied via `applyMonochromeInk`.
+  const [inkColor, setInkColor] = useState<string | null>(null);
   // Zoom + Pan — inline view
   const inlineZP = useZoomPan(ZOOM_CONFIG);
   // Zoom + Pan — fullscreen modal (independent instance)
@@ -222,14 +223,14 @@ export function FloorplanGallery({
   );
   useFloorplanCanvasRender({
     canvasRef: inlineCanvasRef, enabled: true, isDxf, isRaster, loadedScene, rasterImage, rasterBounds,
-    currentBounds, zoom: inlineZP.zoom, panOffset: inlineZP.panOffset, drawingMode, monochrome,
+    currentBounds, zoom: inlineZP.zoom, panOffset: inlineZP.panOffset, drawingMode, inkColor,
     overlays, highlightedUnitId: effectiveHighlightId, getOverlayLabel,
     bimEntities,
   });
   useFloorplanCanvasRender({
     canvasRef: modalCanvasRef, enabled: fullscreen.isFullscreen, isDxf, isRaster, loadedScene,
     rasterImage, rasterBounds, currentBounds, zoom: modalZP.zoom, panOffset: modalZP.panOffset,
-    drawingMode, monochrome, overlays, highlightedUnitId: effectiveHighlightId, getOverlayLabel,
+    drawingMode, inkColor, overlays, highlightedUnitId: effectiveHighlightId, getOverlayLabel,
     firstRenderDelay: 280, bimEntities,
   });
   // ACTIONS
@@ -397,10 +398,7 @@ export function FloorplanGallery({
                   </TooltipTrigger>
                   <TooltipContent>{drawingMode === 'dark' ? t('floorplan.lightMode') : t('floorplan.darkMode')}</TooltipContent>
                 </Tooltip>
-                <FloorplanColorModeButton
-                  monochrome={monochrome}
-                  onToggle={() => setMonochrome(prev => !prev)}
-                />
+                <FloorplanInkPicker inkColor={inkColor} onChange={setInkColor} />
                 <span className="w-px h-6 bg-border mx-1" aria-hidden="true" />
               </>
             )}

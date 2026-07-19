@@ -31,8 +31,8 @@
     "lightMode": "Light background",
     "darkMode": "Dark background",
     "colorMode": {
-      "black": "Monochrome drawing",
-      "colored": "Colored drawing"
+      "colored": "Colored drawing",
+      "pick": "Pick drawing colour"
     },
     "measure": {
       "toolbar": "Measure tools",

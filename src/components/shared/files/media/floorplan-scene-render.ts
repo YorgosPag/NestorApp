@@ -53,7 +53,7 @@ import { createSceneLayer } from '@/subapps/dxf-viewer/types/scene-types';
 import type { Entity, SceneLayer, SceneModel } from '@/subapps/dxf-viewer/types/entities';
 import { EMPTY_BOUNDS } from '@/subapps/dxf-viewer/config/geometry-constants';
 import { rehydrateBimGeometry } from '@/components/shared/files/media/floorplan-scene-bim';
-// ADR-340 «Μαύρο σχέδιο» — SSoT ink recolor of the rendered entities (engine untouched).
+// ADR-340 «Χρώμα σχεδίου» — SSoT single-ink recolor of the rendered entities (any hex, engine untouched).
 import { applyMonochromeInk } from '@/components/shared/files/media/floorplan-monochrome';
 
 /** Read-only render options — no grids, no grips, no interactive affordances. */
@@ -159,7 +159,7 @@ export function renderFloorplanScene(
   zoom: number,
   panOffset: PanOffset,
   drawingMode: DxfDrawingMode,
-  monochrome: boolean = false,
+  inkColor: string | null = null,
 ): void {
   if (!sceneData.entities?.length) return;
 
@@ -188,10 +188,11 @@ export function renderFloorplanScene(
 
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
-  // ADR-340 «Μαύρο σχέδιο» — collapse every rendered entity to a single ink while the
+  // ADR-340 «Χρώμα σχεδίου» — collapse every rendered entity to a single ink while the
   // canvas still holds ONLY the transparent-background entity render, before the gallery
-  // background is painted below. Independent of the dark/light theme (`drawingMode`).
-  if (monochrome) applyMonochromeInk(ctx, canvas.width, canvas.height);
+  // background is painted below. Independent of the dark/light theme (`drawingMode`); a
+  // null `inkColor` keeps the authored layer colours.
+  if (inkColor) applyMonochromeInk(ctx, canvas.width, canvas.height, inkColor);
   ctx.save();
   ctx.globalCompositeOperation = 'destination-over';
   ctx.fillStyle = drawingMode === 'light' ? SCENE_BACKGROUND.light : SCENE_BACKGROUND.dark;
