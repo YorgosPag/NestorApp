@@ -213,11 +213,26 @@ export function dotRadii(settings: GridSettings): { minor: number; major: number
   };
 }
 
-/** Cross arm half-lengths, derived exactly as the pre-§5.9 renderer derived them. */
+/**
+ * Cross arm half-length = weight × this, floored at `CROSS_ARM_MIN_PX`.
+ *
+ * Raised 2 → 3 on Giorgio's «κάνε τους σταυρούς λίγο πιο μεγάλους» (2026-07-20).
+ * Applied as a MULTIPLIER on the weight rather than a flat addition, so the
+ * major/minor emphasis ratio (`deriveMajorGridWeight`, ADR-681 §5.7) survives
+ * untouched — at the shipped weight of 1 the arms go 2→3px minor and 3→4.5px
+ * major, i.e. ×1.5 on both, hierarchy intact.
+ */
+const CROSS_ARM_WEIGHT_MULTIPLIER = 3;
+/** Floor, so a hairline weight still yields a legible cross. */
+const CROSS_ARM_MIN_PX = 3;
+
+/** Cross arm half-lengths for the two style classes. */
 export function crossArms(settings: GridSettings): { minor: number; major: number } {
+  const arm = (weight: number): number =>
+    Math.max(CROSS_ARM_MIN_PX, weight * CROSS_ARM_WEIGHT_MULTIPLIER);
   return {
-    minor: Math.max(2, settings.minorGridWeight * 2),
-    major: Math.max(2, deriveMajorGridWeight(settings.minorGridWeight) * 2),
+    minor: arm(settings.minorGridWeight),
+    major: arm(deriveMajorGridWeight(settings.minorGridWeight)),
   };
 }
 
