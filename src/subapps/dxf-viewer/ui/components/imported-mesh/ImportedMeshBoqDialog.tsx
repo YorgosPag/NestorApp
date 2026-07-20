@@ -75,6 +75,12 @@ export interface ImportedMeshBoqDialogProps {
   readonly suggestionSource: IdentitySuggestionSource | null;
   /** Η ζωντανή βιβλιοθήκη υλικών — μόνο για τον προαιρετικό δείκτη τιμής. */
   readonly materials: readonly BimMaterial[];
+  /**
+   * Πόσα **άλλα** εισαγόμενα πλέγματα μένουν ανανάθετα. Δείχνεται γιατί η δουλειά είναι κατά φύση
+   * επαναληπτική (ένα `.glb` φέρνει δεκάδες κόμβους) και η απουσία ανάθεσης δεν παράγει γραμμή BOQ:
+   * χωρίς αυτόν τον αριθμό, ο χρήστης παραδίδει προϋπολογισμό με αντικείμενα αόρατα (§10.2).
+   */
+  readonly remainingUnassigned: number;
   readonly onSave: (identity: ImportedMeshBoqIdentity) => void;
   /** Αφαίρεση ανάθεσης → η γραμμή προμέτρησης διαγράφεται. */
   readonly onClear: () => void;
@@ -113,7 +119,8 @@ function draftFromIdentity(identity: ImportedMeshBoqIdentity | null): DraftIdent
 }
 
 export function ImportedMeshBoqDialog({
-  open, params, initial, suggestionSource, materials, onSave, onClear, onCancel,
+  open, params, initial, suggestionSource, materials, remainingUnassigned,
+  onSave, onClear, onCancel,
 }: ImportedMeshBoqDialogProps) {
   const { t } = useTranslation('dxf-viewer-shell');
   const [draft, setDraft] = useState<DraftIdentity>(EMPTY_DRAFT);
@@ -172,6 +179,12 @@ export function ImportedMeshBoqDialog({
         </DialogHeader>
 
         {params && <ImportedMeshMeasuredSummary params={params} />}
+
+        {remainingUnassigned > 0 && (
+          <p className="px-2 text-xs text-muted-foreground">
+            {t(`${K}.remainingUnassigned`, { count: remainingUnassigned })}
+          </p>
+        )}
 
         {suggestionSource && (
           <p className="px-2 text-xs text-muted-foreground">

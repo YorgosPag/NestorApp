@@ -160,3 +160,25 @@ export function importedMeshBoqPayload(entity: ImportedMeshEntity): BimEntityFor
 export function hasBoqIdentity(params: ImportedMeshParams): boolean {
   return params.importedMeshIdentity !== undefined;
 }
+
+/** Ελάχιστο σχήμα οντότητας σκηνής για το μέτρημα — μόνο ο τύπος και τα params. */
+interface SceneEntityLike {
+  readonly type: string;
+  readonly params?: unknown;
+}
+
+/**
+ * Πόσα εισαγόμενα πλέγματα της σκηνής **δεν** έχουν ακόμη ανατεθειμένο άρθρο (§10.2).
+ *
+ * Είναι ο αριθμός που κάνει την «ορατή απουσία» πραγματικά ορατή. Η απόφαση ήταν ρητή: ένα
+ * ανανάθετο αντικείμενο **δεν** παράγει μηδενική γραμμή BOQ (θα έμοιαζε με μετρημένο κόστος μηδέν),
+ * αλλά αν η απουσία δεν αναφέρεται πουθενά, ο χρήστης παραδίδει προϋπολογισμό με 7 αντικείμενα
+ * αόρατα. Το ένα προϋποθέτει το άλλο.
+ */
+export function countUnassignedImportedMeshes(entities: readonly SceneEntityLike[]): number {
+  return entities.reduce((count, entity) => {
+    if (entity.type !== 'imported-mesh') return count;
+    const params = entity.params as ImportedMeshParams | undefined;
+    return params && !hasBoqIdentity(params) ? count + 1 : count;
+  }, 0);
+}

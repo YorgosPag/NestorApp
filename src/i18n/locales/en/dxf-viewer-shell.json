@@ -6983,6 +6983,7 @@
     "noUnitsForArticle": "No unit fits: this article requires a quantity this geometry does not measure. Pick another article.",
     "clear": "Remove assignment",
     "cancel": "Cancel",
-    "save": "Save"
+    "save": "Save",
+    "remainingUnassigned": "{count, plural, one {# more object is still unassigned.} other {# more objects are still unassigned.}}"
   }
 }

@@ -8,7 +8,11 @@
  *   3. κληρονομιά ομάδας που χάνεται σε υποκατηγορία → σιωπηλή χαλάρωση του gating.
  */
 
-import { assignableBoqUnits, withImportedMeshIdentity } from '../imported-mesh-boq';
+import {
+  assignableBoqUnits,
+  countUnassignedImportedMeshes,
+  withImportedMeshIdentity,
+} from '../imported-mesh-boq';
 import { suggestImportedMeshIdentity } from '../imported-mesh-identity-suggest';
 import type { ImportedMeshParams } from '../imported-mesh-types';
 import type { BimMaterial } from '../../../types/bim-material-types';
@@ -227,5 +231,36 @@ describe('withImportedMeshIdentity', () => {
 
   it('αφαίρεση σε ανανάθετο = no-op, χωρίς σφάλμα (ιδεμποτεντικό)', () => {
     expect(withImportedMeshIdentity(railing, undefined)).toEqual(railing);
+  });
+});
+
+// ─── countUnassignedImportedMeshes — η «ορατή απουσία» ────────────────────────
+
+describe('countUnassignedImportedMeshes', () => {
+  const identity = { categoryCode: 'OIK-12.1', unit: 'm', titleEL: 'Κάγκελα μπαλκονιού' } as const;
+  const mesh = (id: string, assigned: boolean) => ({
+    id, type: 'imported-mesh',
+    params: assigned ? withImportedMeshIdentity(railing, identity) : railing,
+  });
+
+  it('μετρά μόνο τα ανανάθετα εισαγόμενα πλέγματα', () => {
+    expect(countUnassignedImportedMeshes([
+      mesh('a', false), mesh('b', true), mesh('c', false),
+    ])).toBe(2);
+  });
+
+  it('αγνοεί ΟΛΟΥΣ τους άλλους τύπους — ένας τοίχος δεν είναι «ανανάθετος»', () => {
+    expect(countUnassignedImportedMeshes([
+      { type: 'wall', params: {} }, { type: 'slab', params: {} }, mesh('a', false),
+    ])).toBe(1);
+  });
+
+  it('κενή σκηνή ή όλα ανατεθειμένα → 0', () => {
+    expect(countUnassignedImportedMeshes([])).toBe(0);
+    expect(countUnassignedImportedMeshes([mesh('a', true), mesh('b', true)])).toBe(0);
+  });
+
+  it('πλέγμα χωρίς params δεν μετριέται (δεν σκάει σε ελλιπές έγγραφο)', () => {
+    expect(countUnassignedImportedMeshes([{ type: 'imported-mesh' }])).toBe(0);
   });
 });

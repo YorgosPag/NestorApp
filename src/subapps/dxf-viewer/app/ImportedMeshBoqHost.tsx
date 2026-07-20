@@ -27,6 +27,7 @@ import { ImportedMeshBoqDialogStore } from '../stores/ImportedMeshBoqDialogStore
 import { useMaterialLibrary } from '../ui/panels/materials/hooks/useMaterialLibrary';
 import { buildKnownMaterialResolver } from '../io/mesh3d-material-import/known-import-materials';
 import { suggestImportedMeshIdentity } from '../bim/entities/imported-mesh/imported-mesh-identity-suggest';
+import { countUnassignedImportedMeshes } from '../bim/entities/imported-mesh/imported-mesh-boq';
 import type {
   ImportedMeshBoqIdentity,
   ImportedMeshParams,
@@ -70,6 +71,16 @@ export function ImportedMeshBoqHost({
   });
 
   const params = readMeshParams(levelManager, entityId);
+
+  // Τα **υπόλοιπα** ανανάθετα: το τρέχον αφαιρείται, γιατί ο χρήστης το κρατά ήδη ανοιχτό — ένα
+  // «μένουν 7» που περιλαμβάνει αυτό που μόλις κοιτάς είναι λάθος αριθμός.
+  const remainingUnassigned = useMemo(() => {
+    const levelId = levelManager.currentLevelId;
+    if (entityId === null || !levelId) return 0;
+    const entities = levelManager.getLevelScene(levelId)?.entities ?? [];
+    const total = countUnassignedImportedMeshes(entities);
+    return params && params.importedMeshIdentity === undefined ? Math.max(0, total - 1) : total;
+  }, [entityId, levelManager, params]);
 
   /**
    * Η αρχική τιμή του εντύπου. **Η υπάρχουσα ταυτότητα υπερισχύει πάντα** της πρότασης: όταν το
@@ -121,6 +132,7 @@ export function ImportedMeshBoqHost({
       initial={initial}
       suggestionSource={suggestionSource}
       materials={materials}
+      remainingUnassigned={remainingUnassigned}
       onSave={handleSave}
       onClear={handleClear}
       onCancel={handleCancel}
