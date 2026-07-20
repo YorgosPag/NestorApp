@@ -29,9 +29,14 @@ export {
   resolveAuditPolicy,
   resolveDedupWindowMs,
   computeAuditExpiry,
-  buildAuditDedupKey,
-  shouldSuppressDuplicate,
 } from './audit-policy';
+
+// ⚠️ ΣΚΟΠΙΜΑ ΔΕΝ εξάγονται: `buildAuditDedupKey`, `shouldSuppressDuplicate`,
+// `releaseDedupKey`. Είναι **stateful** — μοιράζονται ένα module-level `Map` και το
+// `shouldSuppressDuplicate` ΜΕΤΑΒΑΛΛΕΙ αυτή την κατάσταση κάθε φορά που καλείται.
+// Εξωτερικός καλών θα σφράγιζε κλειδιά χωρίς να γράψει τίποτα, τυφλώνοντας το πραγματικό
+// audit path για 5 λεπτά. Μοναδικός νόμιμος καταναλωτής: το `audit-core.ts`, που τα
+// εισάγει απευθείας από `'./audit-policy'`. Tests: επίσης απευθείας.
 
 // Convenience functions
 export {

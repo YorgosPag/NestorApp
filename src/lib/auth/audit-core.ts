@@ -31,6 +31,7 @@ import type {
 import {
   buildAuditDedupKey,
   computeAuditExpiry,
+  releaseDedupKey,
   resolveAuditPolicy,
   resolveDedupWindowMs,
   shouldSuppressDuplicate,
@@ -129,13 +130,20 @@ type PersistableAuditEntry = Omit<AuditLogEntry, 'timestamp'> & { timestamp: Fie
  *
  * Απομονωμένο από το `logAuditEvent` ώστε το ίδιο σώμα να μπορεί είτε να γίνει
  * `await` (blocking tiers) είτε να αφεθεί fire-and-forget (access tier).
+ *
+ * @returns `true` αν η γραμμή έφτασε πράγματι στο Firestore· `false` αν χάθηκε.
+ *
+ * ⚠️ Η συνάρτηση **δεν πετάει ποτέ** — ένα audit σφάλμα δεν επιτρέπεται να ρίξει το
+ * request που το προκάλεσε. Γι' αυτό η αποτυχία επιστρέφεται ως τιμή αντί για exception:
+ * ο caller πρέπει να μπορεί να ξεχωρίσει «γράφτηκε» από «χάθηκε σιωπηλά», ώστε να μην
+ * αφήσει το dedup key σφραγισμένο για ένα write που δεν έγινε ποτέ (βλ. `logAuditEvent`).
  */
 async function persistAuditEntry(
   db: Firestore,
   ctx: AuthContext,
   action: AuditAction,
   entry: PersistableAuditEntry
-): Promise<void> {
+): Promise<boolean> {
   try {
     const companyExists = await validateCompanyExists(ctx.companyId);
     if (!companyExists) {
@@ -151,7 +159,7 @@ async function persistAuditEntry(
           companyId: ctx.companyId,
           error: getErrorMessage(materializeError),
         });
-        return;
+        return false;
       }
     }
 
@@ -162,9 +170,11 @@ async function persistAuditEntry(
       .collection(AUDIT_COLLECTION)
       .doc(auditId)
       .set(entry);
+    return true;
   } catch (error) {
     logger.error('[AUDIT] Failed to write audit log:', { error });
     logger.info('[AUDIT] Fallback entry:', { entry: JSON.stringify(entry) });
+    return false;
   }
 }
 
@@ -233,6 +243,11 @@ export async function logAuditEvent(
   // Opt-in dedup: το call site δήλωσε ότι διαδοχικές ταυτόσημες κλήσεις δεν προσθέτουν
   // πληροφορία, ΚΑΙ το tier επιτρέπει καταστολή (blocking tiers → 0 ⇒ ποτέ εδώ).
   const dedupWindowMs = resolveDedupWindowMs(action, options.dedupable);
+
+  // Το κλειδί που σφραγίσαμε αισιόδοξα — `null` όταν δεν έγινε dedup καθόλου.
+  // Κρατιέται εκτός του block ώστε να μπορεί να ΑΠΟσφραγιστεί αν το write αποτύχει.
+  let sealedDedupKey: string | null = null;
+
   if (dedupWindowMs > 0) {
     const dedupKey = buildAuditDedupKey({
       companyId: ctx.companyId,
@@ -244,6 +259,7 @@ export async function logAuditEvent(
     if (shouldSuppressDuplicate(dedupKey, dedupWindowMs, Date.now())) {
       return;
     }
+    sealedDedupKey = dedupKey;
   }
 
   const rawEntry = {
@@ -270,16 +286,29 @@ export async function logAuditEvent(
     entry.metadata = {};
   }
 
+  // Αν το write δεν έγινε, λύσε την αισιόδοξη σφραγίδα: αλλιώς μία χαμένη γραμμή
+  // μετατρέπεται σε ολόκληρο παράθυρο σιωπής για εκείνο το κλειδί.
+  const releaseSealIfLost = (written: boolean): void => {
+    if (!written && sealedDedupKey !== null) {
+      releaseDedupKey(sealedDedupKey);
+    }
+  };
+
   if (policy.delivery === 'async') {
     // Fire-and-forget: ο caller δεν πληρώνει το Firestore round-trip. Η συνάρτηση
     // επιστρέφει ήδη-resolved Promise ⇒ τα `await logAuditEvent(...)` δεν αλλάζουν.
-    void persistAuditEntry(db, ctx, action, entry).catch((error: unknown) => {
-      logger.error('[AUDIT] Async audit write failed:', { action, error: getErrorMessage(error) });
-    });
+    void persistAuditEntry(db, ctx, action, entry)
+      .then(releaseSealIfLost)
+      .catch((error: unknown) => {
+        // Η persistAuditEntry δεν πετάει· αυτό εδώ πιάνει μόνο απρόβλεπτα σφάλματα
+        // (π.χ. στο ίδιο το release). Και σε αυτή την περίπτωση ξεσφραγίζουμε.
+        logger.error('[AUDIT] Async audit write failed:', { action, error: getErrorMessage(error) });
+        releaseSealIfLost(false);
+      });
     return;
   }
 
-  await persistAuditEntry(db, ctx, action, entry);
+  releaseSealIfLost(await persistAuditEntry(db, ctx, action, entry));
 }
 
 // =============================================================================

@@ -235,6 +235,40 @@ describe('logAuditEvent — dedup opt-in (observable write count)', () => {
     expect(firebaseAdminMock.__setMock).toHaveBeenCalledTimes(2);
   });
 
+  it('ΚΡΙΣΙΜΟ: αποτυχημένο write ΛΥΝΕΙ τη σφραγίδα — η επόμενη πρόσβαση δεν χάνεται', async () => {
+    // ΑΥΤΟ ΕΙΝΑΙ ΤΟ #4 ΤΟΥ HANDOFF. Το κλειδί σφραγίζεται ΠΡΙΝ το write (σκόπιμα, ως
+    // guard έναντι ταυτόχρονων requests). Αν το write χαθεί και η σφραγίδα μείνει,
+    // μία χαμένη γραμμή γίνεται ΠΕΝΤΕ ΛΕΠΤΑ τυφλότητας για εκείνο το κλειδί.
+    const failCtx = ctx({ uid: 'actor_fail', companyId: 'comp_fail' });
+    const opts = { dedupable: true, metadata: { path: '/api/flaky' } };
+
+    firebaseAdminMock.__setMock.mockRejectedValueOnce(new Error('Firestore unavailable'));
+
+    await logAuditEvent(failCtx, 'data_accessed', 'target_flaky', 'api', opts);
+    await flushAsyncWrites();
+    expect(firebaseAdminMock.__setMock).toHaveBeenCalledTimes(1); // επιχειρήθηκε, απέτυχε
+
+    // Δεύτερη, ΠΡΑΓΜΑΤΙΚΗ πρόσβαση μέσα στο ίδιο 5λεπτο παράθυρο: πρέπει να γραφτεί,
+    // γιατί στη βάση δεν υπάρχει τίποτα από την πρώτη.
+    await logAuditEvent(failCtx, 'data_accessed', 'target_flaky', 'api', opts);
+    await flushAsyncWrites();
+    expect(firebaseAdminMock.__setMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('ΕΠΙΤΥΧΗΜΕΝΟ write ΚΡΑΤΑΕΙ τη σφραγίδα — δεν λύνεται κατά λάθος πάντα', async () => {
+    // Ο έλεγχος-καθρέφτης του προηγούμενου: αν το release γινόταν ανεξαιρέτως, το dedup
+    // θα ήταν νεκρό και το test αυτό θα έδειχνε 2 writes αντί για 1.
+    const okCtx = ctx({ uid: 'actor_ok_seal', companyId: 'comp_ok_seal' });
+    const opts = { dedupable: true, metadata: { path: '/api/stable' } };
+
+    await logAuditEvent(okCtx, 'data_accessed', 'target_stable', 'api', opts);
+    await flushAsyncWrites();
+    await logAuditEvent(okCtx, 'data_accessed', 'target_stable', 'api', opts);
+    await flushAsyncWrites();
+
+    expect(firebaseAdminMock.__setMock).toHaveBeenCalledTimes(1);
+  });
+
   it('ΚΡΙΣΙΜΟ: dedupable: true σε security action ΔΕΝ καταστέλλει — δύο writes', async () => {
     // Λάθος σε call site δεν επιτρέπεται να καταπιεί γραμμή forensics.
     const secCtx = ctx({ uid: 'actor_sec_dedup', companyId: 'comp_sec_dedup' });

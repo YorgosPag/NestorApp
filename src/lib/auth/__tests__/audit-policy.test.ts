@@ -17,6 +17,7 @@ import {
   resolveAuditPolicy,
   computeAuditExpiry,
   buildAuditDedupKey,
+  releaseDedupKey,
   resolveDedupWindowMs,
   shouldSuppressDuplicate,
 } from '../audit-policy';
@@ -262,5 +263,89 @@ describe('shouldSuppressDuplicate', () => {
     expect(shouldSuppressDuplicate(keyB, windowMs, t0)).toBe(false);
     // Και το keyA παραμένει καταπιεσμένο ανεξάρτητα από το keyB.
     expect(shouldSuppressDuplicate(keyA, windowMs, t0 + 1)).toBe(true);
+  });
+});
+
+describe('releaseDedupKey — η αισιόδοξη σφραγίδα λύνεται όταν το write χαθεί', () => {
+  const windowMs = 300_000;
+
+  it('μετά από release, το ΙΔΙΟ κλειδί ξαναγράφεται μέσα στο ίδιο παράθυρο', () => {
+    const key = `unit-test-release-${Math.random()}`;
+    const t0 = 6_000_000;
+
+    // Σφραγίζεται αισιόδοξα...
+    expect(shouldSuppressDuplicate(key, windowMs, t0)).toBe(false);
+    // ...και χωρίς release θα ήταν τυφλό για όλο το παράθυρο:
+    expect(shouldSuppressDuplicate(key, windowMs, t0 + 1)).toBe(true);
+
+    // Το write απέτυχε ⇒ λύνουμε τη σφραγίδα.
+    releaseDedupKey(key);
+
+    // Η επόμενη ΠΡΑΓΜΑΤΙΚΗ πρόσβαση γράφεται, αντί να χαθεί κι αυτή.
+    expect(shouldSuppressDuplicate(key, windowMs, t0 + 2)).toBe(false);
+  });
+
+  it('είναι idempotent — release άγνωστου κλειδιού δεν πετάει', () => {
+    expect(() => releaseDedupKey(`unit-test-never-sealed-${Math.random()}`)).not.toThrow();
+  });
+
+  it('απελευθερώνει ΜΟΝΟ το κλειδί που του δόθηκε', () => {
+    const keyA = `unit-test-rel-a-${Math.random()}`;
+    const keyB = `unit-test-rel-b-${Math.random()}`;
+    const t0 = 7_000_000;
+
+    expect(shouldSuppressDuplicate(keyA, windowMs, t0)).toBe(false);
+    expect(shouldSuppressDuplicate(keyB, windowMs, t0)).toBe(false);
+
+    releaseDedupKey(keyA);
+
+    expect(shouldSuppressDuplicate(keyA, windowMs, t0 + 1)).toBe(false); // λύθηκε
+    expect(shouldSuppressDuplicate(keyB, windowMs, t0 + 1)).toBe(true);  // ανέπαφο
+  });
+});
+
+/**
+ * Το `dedupSeen` Map είναι module-level και μεγαλώνει με κάθε νέο κλειδί. Ο ίδιος ο
+ * κώδικας δηλώνει ότι αυτό — όχι μια διπλή γραμμή audit — είναι το μοναδικό πραγματικό
+ * ρίσκο του dedup. Μέχρι τώρα ΔΕΝ υπήρχε test γι' αυτό.
+ *
+ * ⚠️ ΤΕΛΕΥΤΑΙΟ describe του αρχείου ΣΚΟΠΙΜΑ: γεμίζει και καθαρίζει το κοινόχρηστο Map,
+ * οπότε θα μόλυνε την κατάσταση οποιουδήποτε test έτρεχε μετά.
+ */
+describe('bounded dedup map — eviction στα 5.000 entries', () => {
+  const windowMs = 300_000;
+
+  it('ΔΕΝ μεγαλώνει απεριόριστα: μετά από 6.000 φρέσκα κλειδιά, τα παλιά έχουν καθαριστεί', () => {
+    const t0 = 10_000_000;
+    const firstKey = 'bound-test-key-0';
+
+    for (let i = 0; i < 6000; i++) {
+      shouldSuppressDuplicate(`bound-test-key-${i}`, windowMs, t0);
+    }
+
+    // Αν το Map μεγάλωνε ανεξέλεγκτα, το πρώτο κλειδί θα ήταν ακόμη σφραγισμένο (φρέσκο,
+    // ίδιο t0). Το ότι ΔΕΝ είναι, αποδεικνύει ότι έγινε eviction/clear ⇒ φραγμένο.
+    expect(shouldSuppressDuplicate(firstKey, windowMs, t0)).toBe(false);
+  });
+
+  it('η εκκαθάριση πετάει ΠΡΩΤΑ τα ληγμένα και ΑΦΗΝΕΙ τα φρέσκα', () => {
+    const t0 = 20_000_000;
+
+    // 5.000 κλειδιά που θα λήξουν...
+    for (let i = 0; i < 5000; i++) {
+      shouldSuppressDuplicate(`stale-test-key-${i}`, windowMs, t0);
+    }
+
+    // ...κι ένα φρέσκο, στη μέση του παραθύρου.
+    const freshKey = 'stale-test-FRESH';
+    expect(shouldSuppressDuplicate(freshKey, windowMs, t0 + windowMs / 2)).toBe(false);
+
+    // Τη στιγμή που τα 5.000 λήγουν, νέο κλειδί πυροδοτεί eviction.
+    shouldSuppressDuplicate('stale-test-TRIGGER', windowMs, t0 + windowMs);
+
+    // Το φρέσκο κλειδί ΕΠΙΒΙΩΝΕΙ — δεν σαρώθηκε μαζί με τα ληγμένα.
+    expect(shouldSuppressDuplicate(freshKey, windowMs, t0 + windowMs)).toBe(true);
+    // Ενώ ένα από τα ληγμένα έχει όντως φύγει.
+    expect(shouldSuppressDuplicate('stale-test-key-0', windowMs, t0 + windowMs)).toBe(false);
   });
 });

@@ -186,8 +186,7 @@ export {
   resolveAuditPolicy,
   resolveDedupWindowMs,
   computeAuditExpiry,
-  buildAuditDedupKey,
-  shouldSuppressDuplicate,
+  // ⚠️ Τα stateful dedup helpers ΔΕΝ επανεξάγονται — βλ. σχόλιο στο `audit.ts`.
 } from './audit';
 
 // =============================================================================
