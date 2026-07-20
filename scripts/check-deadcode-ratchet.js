@@ -29,9 +29,16 @@ const result = spawnSync('npx', ['knip', '--reporter', 'json', '--cache'], {
 
 const raw = result.stdout ?? '';
 
+// `.npmrc` sets loglevel=info, so npx prefixes stdout with "npm info using npm@..."
+// lines before knip's JSON. Parsing the raw buffer throws, which surfaced as a bogus
+// "new dead code introduced" block on every commit that touches a non-dxf-viewer file
+// (dxf-viewer paths are smart-skipped, which is why this stayed hidden).
+const jsonStart = raw.indexOf('{');
+const json = jsonStart >= 0 ? raw.slice(jsonStart) : raw;
+
 let report;
 try {
-  report = JSON.parse(raw);
+  report = JSON.parse(json);
 } catch {
   console.error('❌ Could not parse knip JSON output.');
   process.exit(1);
