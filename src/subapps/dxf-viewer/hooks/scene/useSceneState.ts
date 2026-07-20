@@ -173,7 +173,27 @@ export function useSceneState() {
       if (levelsSystem.setSaveContext) {
         levelsSystem.setSaveContext(saveContext ?? null);
       }
-      
+
+      // 🛡️ ADR-635 Φ C.16 — ο ΣΤΟΧΟΣ αυτής της εισαγωγής, δηλωμένος ΡΗΤΑ, ώστε τα
+      // per-entity first-saves να γράψουν στον σωστό όροφο ανεξάρτητα από το τι είναι
+      // «ενεργό» όταν τρέξουν οι listeners. Υπολογίζεται ΕΔΩ, ΠΡΙΝ από κάθε `await`:
+      // μετά το await, ο ενεργός όροφος μπορεί να έχει προσπεράσει (React re-render +
+      // effect), ενώ ο στόχος μας δεν αλλάζει. Ένας υπολογισμός για ΚΑΙ τα δύο branches
+      // (.tek + DXF) — N.18, όχι δίδυμα.
+      //
+      // Προτεραιότητα `saveContext` πρώτα (αντίθετα από το `DxfViewerTopBar`, που τιμά
+      // το durable `Level.floorId`): εδώ το `saveContext` είναι ΟΡΙΣΜΑ αυτής της κλήσης —
+      // η δήλωση του wizard για ΑΥΤΗ την εισαγωγή, άρα το φρεσκότερο. Το `levels` closure
+      // μπορεί να ΜΗΝ περιέχει ακόμα ένα level που μόλις έφτιαξε το
+      // `findOrCreateLevelForFloor` (level-panel-hooks) — γι' αυτό είναι fallback.
+      const targetLevel = levels.find((l) => l.id === targetLevelId);
+      const importTargetScope = {
+        levelId: targetLevelId,
+        floorId: saveContext?.floorId ?? targetLevel?.floorId ?? null,
+        floorplanId: resolvedFileRecordId ?? targetLevel?.sceneFileId ?? null,
+      };
+
+
       // ADR-526 — Tekton .tek → ίδιο pipeline (level-resolution έγινε ήδη παραπάνω).
       // Φορτώνει τη σκηνή· οι σκάλες (BIM) κάνουν first-save μέσω StairPersistenceHost,
       // ενώ τα 2Δ primitives (Φ5a: line/arc/circle) ζουν ΜΟΝΟ στο scene blob (DXF-style).
@@ -192,7 +212,7 @@ export function useSceneState() {
         // ADR-531 Φ5b.2 — ΚΡΙΣΙΜΟ: χωρίς first-save, το Firestore reconciliation snapshot (reconcile-
         // LoadedSceneBim) αφαιρεί τα per-entity entities από το scene (ο τοίχος/η γραμμοσκίαση
         // «εμφανίζεται & εξαφανίζεται»). SSoT emitter — ίδιος για .tek ΚΑΙ DXF import (N.18).
-        emitImportedEntityCreateEvents(result.scene.entities);
+        emitImportedEntityCreateEvents(result.scene.entities, importTargetScope);
         // Block Library M1 — «κράτα» τα named blocks της σκηνής στο in-session registry.
         captureSessionBlocksFromScene(result.scene.entities);
         // 🛡️ ADR-526 Φ5a — persist the level↔FileRecord link now (shared helper, N.18).
@@ -212,7 +232,7 @@ export function useSceneState() {
         // first-save μέσω του ΙΔΙΟΥ SSoT emitter με το .tek branch. ΧΩΡΙΣ αυτό, οι εισαγόμενες
         // AutoCAD γραμμοσκιάσεις ζωγραφίζονται μία φορά αλλά το `reconcileLoadedSceneBim` τις πετά
         // στο πρώτο reload (καμία `floorplan_hatches` doc) → «hatches χάνονται μετά την εισαγωγή».
-        emitImportedEntityCreateEvents(scene.entities);
+        emitImportedEntityCreateEvents(scene.entities, importTargetScope);
         // Block Library M1 — «κράτα» τα named blocks του DXF στο in-session registry («Τα Blocks μου»).
         captureSessionBlocksFromScene(scene.entities);
         // 🛡️ ROOT-CAUSE FIX (incident 2026-06-08 — "hard refresh → χάνεται το σχέδιο"):

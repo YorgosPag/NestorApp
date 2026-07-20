@@ -81,6 +81,9 @@ function buildHook(spies: {
 }) {
   let svc: ReturnType<typeof makeService>;
   const created: ReturnType<typeof makeService>[] = [];
+  // ADR-635 Φ C.16 — which scope each service was built for (the whole point of the
+  // fix is WHERE the write lands, so the tests must assert on the scope, not just the call).
+  const createdScopes: { floorId?: string; floorplanId: string }[] = [];
   const hook = createBimEntityPersistenceHook<
     ReturnType<typeof makeService>,
     { id: string; params: { w: number } },
@@ -93,9 +96,10 @@ function buildHook(spies: {
     saveErrorKey: 'SAVE_ERR',
     restoreErrorKey: 'RESTORE_ERR',
     entityComparable: (e) => e.params,
-    createService: () => {
+    createService: (scope) => {
       svc = makeService();
       created.push(svc);
+      createdScopes.push({ floorId: scope.floorId, floorplanId: scope.floorplanId });
       return svc;
     },
     service: {
@@ -122,7 +126,12 @@ function buildHook(spies: {
     onRestored: spies.onRestored,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   }) as any;
-  return { hook, getSvc: () => created[created.length - 1] };
+  return {
+    hook,
+    getSvc: () => created[created.length - 1],
+    getAllSvc: () => created,
+    getScopes: () => createdScopes,
+  };
 }
 
 const baseParams = (lm: ReturnType<typeof makeLevelManager>, primarySelected: TestEntity | null) => ({
@@ -190,6 +199,117 @@ describe('createBimEntityPersistenceHook', () => {
     expect(getSvc().save).toHaveBeenCalledTimes(1);
     expect(onPersisted).toHaveBeenCalledTimes(1);
     expect(onPersisted.mock.calls[0][1].isNew).toBe(true);
+    unmount();
+  });
+
+  // -------------------------------------------------------------------------
+  // ADR-635 Φ C.16 — explicit target scope beats the active-level global.
+  //
+  // Repro of the 2026-07-20 incident (117 imported hatches lost): the same DXF was
+  // imported into two storeys; on one of them the hatches never reached Firestore and
+  // `reconcileLoadedSceneBim` dropped them on load. Unlike Φ C.15 the service is NOT
+  // null here — it exists and points at the PREVIOUSLY-ACTIVE floor, so the write
+  // succeeded into the wrong scope, silently. Φ C.15's deferral cannot catch this.
+  // -------------------------------------------------------------------------
+  it('Φ C.16: create-event carrying a DIFFERENT target scope writes to the TARGET floor, not the active one', async () => {
+    const onPersisted = jest.fn();
+    const { hook, getScopes, getAllSvc } = buildHook({ onPersisted });
+    const lm = makeLevelManager();
+    // Active/live scope is floor f1 (baseParams) — the service is fully ready.
+    const { unmount } = renderHook(() => hook(baseParams(lm, null)));
+    await act(async () => { await tick(); });
+
+    const liveSvc = getAllSvc()[0];
+    expect(getScopes()[0].floorId).toBe('f1');
+
+    // The import declares floor f2 as its target while f1 is still active.
+    await act(async () => {
+      EventBus.emit('drawing:entity-created', {
+        tool: 'furniture',
+        entity: ent('e1', 5),
+        scope: { levelId: 'lvl2', floorId: 'f2', floorplanId: 'fp2' },
+      });
+      await tick();
+    });
+
+    // A SECOND service was built, for f2 — and it is the one that received the write.
+    expect(getScopes()).toHaveLength(2);
+    expect(getScopes()[1]).toEqual({ floorId: 'f2', floorplanId: 'fp2' });
+    expect(getAllSvc()[1].save).toHaveBeenCalledTimes(1);
+    // The active floor's service must NOT have been written to — that is the bug.
+    expect(liveSvc.save).not.toHaveBeenCalled();
+    // Audit/BOQ see the scope actually written, not the active one.
+    expect(onPersisted).toHaveBeenCalledTimes(1);
+    expect(onPersisted.mock.calls[0][1].scope.floorId).toBe('f2');
+    unmount();
+  });
+
+  it('Φ C.16: many entities for the same target scope build ONE service (117-hatch import)', async () => {
+    const { hook, getScopes, getAllSvc } = buildHook({});
+    const lm = makeLevelManager();
+    const { unmount } = renderHook(() => hook(baseParams(lm, null)));
+    await act(async () => { await tick(); });
+
+    await act(async () => {
+      for (let i = 0; i < 20; i++) {
+        EventBus.emit('drawing:entity-created', {
+          tool: 'furniture',
+          entity: ent(`h${i}`, i),
+          scope: { levelId: 'lvl2', floorId: 'f2', floorplanId: 'fp2' },
+        });
+      }
+      await tick();
+    });
+
+    // 1 live service + exactly 1 scoped service, not 1 + 20.
+    expect(getScopes()).toHaveLength(2);
+    expect(getAllSvc()[1].save).toHaveBeenCalledTimes(20);
+    unmount();
+  });
+
+  it('Φ C.16: a target scope EQUAL to the live one keeps the normal path (no extra service)', async () => {
+    // Interactive drawing never sets `scope`; an import into the ALREADY-active floor
+    // does, and must not pay for — or diverge onto — a second code path.
+    const onPersisted = jest.fn();
+    const { hook, getScopes, getAllSvc } = buildHook({ onPersisted });
+    const lm = makeLevelManager();
+    const { unmount } = renderHook(() => hook(baseParams(lm, null)));
+    await act(async () => { await tick(); });
+
+    await act(async () => {
+      EventBus.emit('drawing:entity-created', {
+        tool: 'furniture',
+        entity: ent('e1', 5),
+        scope: { levelId: 'lvl', floorId: 'f1', floorplanId: 'fp1' },
+      });
+      await tick();
+    });
+
+    expect(getScopes()).toHaveLength(1);
+    expect(getAllSvc()[0].save).toHaveBeenCalledTimes(1);
+    expect(onPersisted.mock.calls[0][1].scope.floorId).toBe('f1');
+    unmount();
+  });
+
+  it('Φ C.16: an UNRESOLVABLE target scope falls back to the live path instead of dropping the save', async () => {
+    const { hook, getAllSvc } = buildHook({});
+    const lm = makeLevelManager();
+    const { unmount } = renderHook(() => hook(baseParams(lm, null)));
+    await act(async () => { await tick(); });
+
+    await act(async () => {
+      // Neither floorId nor floorplanId → resolveBimPersistenceScope → null.
+      EventBus.emit('drawing:entity-created', {
+        tool: 'furniture',
+        entity: ent('e1', 5),
+        scope: { levelId: 'lvl9', floorId: null, floorplanId: null },
+      });
+      await tick();
+    });
+
+    // No scope key at all → treated as "no explicit target" → normal live-service path.
+    expect(getAllSvc()).toHaveLength(1);
+    expect(getAllSvc()[0].save).toHaveBeenCalledTimes(1);
     unmount();
   });
 

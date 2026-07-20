@@ -26,6 +26,7 @@
  */
 
 import type { AnySceneEntity } from '../../types/entities';
+import type { EntityCreateTargetScope } from '../../bim/persistence/bim-floor-scope';
 import { EventBus } from '../events';
 import { isPerEntityPersistedEntity } from './scene-bim-load-policy';
 
@@ -36,11 +37,19 @@ import { isPerEntityPersistedEntity } from './scene-bim-load-policy';
  * στο scene blob και δεν έχουν per-entity host.
  *
  * @param entities Τα entities της εισαγόμενης σκηνής (scene order — ΜΗΝ ανακατεύεις).
+ * @param scope 🛡️ ADR-635 Φ C.16 — ο όροφος-ΣΤΟΧΟΣ της εισαγωγής. Ο caller τον ξέρει
+ *   ΗΔΗ (`handleFileImport.targetLevelId`, ADR-420) **πριν** το `await` του parse· χωρίς
+ *   αυτόν τα hosts διάβαζαν τον *ενεργό* όροφο και οι γραμμοσκιάσεις γράφονταν σε λάθος
+ *   scope (117 χαμένες, 2026-07-20). Προαιρετικό: χωρίς αυτόν η συμπεριφορά είναι η
+ *   παλιά (live scope) — δεν σπάει κανέναν άλλο caller.
  */
-export function emitImportedEntityCreateEvents(entities: readonly AnySceneEntity[]): void {
+export function emitImportedEntityCreateEvents(
+  entities: readonly AnySceneEntity[],
+  scope?: EntityCreateTargetScope,
+): void {
   for (const entity of entities) {
     if (isPerEntityPersistedEntity(entity)) {
-      EventBus.emit('drawing:entity-created', { entity, tool: entity.type });
+      EventBus.emit('drawing:entity-created', { entity, tool: entity.type, ...(scope ? { scope } : {}) });
     }
   }
 }

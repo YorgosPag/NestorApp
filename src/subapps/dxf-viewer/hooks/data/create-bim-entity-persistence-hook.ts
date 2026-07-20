@@ -37,7 +37,11 @@ import { dequal } from 'dequal';
 import type { AnySceneEntity } from '../../types/entities';
 import { DXF_TIMING } from '../../config/dxf-timing';
 import { EventBus } from '../../systems/events/EventBus';
-import { resolveBimPersistenceScope } from '../../bim/persistence/bim-floor-scope';
+import {
+  resolveBimPersistenceScope,
+  entityCreateScopeKey,
+  type EntityCreateTargetScope,
+} from '../../bim/persistence/bim-floor-scope';
 import { mergeDocsIntoScene } from './merge-docs-into-scene';
 import type { DocsMergeConfig } from './merge-docs-into-scene';
 import { useBimFirestoreWriteGrace } from './useBimFirestoreWriteGrace';
@@ -117,6 +121,10 @@ export function createBimEntityPersistenceHook<
     // ADR-635 Φ C.15 — first-save events that arrived before the async service was ready
     // (fresh-import-into-new-level race); flushed by the service-instantiation effect below.
     const deferredFirstSaveRef = useRef<Map<string, TEntity>>(new Map());
+    // ADR-635 Φ C.16 — services for an EXPLICIT target scope that is not the live one
+    // (import-into-another-storey). Cached per scope key so importing 117 hatches builds
+    // ONE service, not 117.
+    const scopedServiceCacheRef = useRef<Map<string, TService | null>>(new Map());
     const deletedIdsRef = useRef<Set<string>>(new Set());
     const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const selectedRef = useRef<TEntity | null>(null);
@@ -151,9 +159,17 @@ export function createBimEntityPersistenceHook<
       levelManager,
     });
     scopeRef.current = { companyId, projectId, floorplanId, buildingId, floorId, levelManager };
+    // `userId` is not part of `BimPersistenceScope` (no lifecycle callback needs it) but
+    // the scope resolver does — keep it event-time readable for Φ C.16 scoped writes.
+    const userIdRef = useRef(userId);
+    userIdRef.current = userId;
 
     // ---- Service instantiation (auth + scope ready) ------------------------
     useEffect(() => {
+      // ADR-635 Φ C.16 — the explicitly-scoped services were built from THIS identity
+      // (companyId/projectId/userId); drop them whenever it changes so a scope key can
+      // never resolve to a service belonging to a previous tenant/session.
+      scopedServiceCacheRef.current.clear();
       const scope = resolveBimPersistenceScope({ companyId, projectId, userId, floorId, floorplanId });
       if (!scope) {
         serviceRef.current = null;
@@ -229,6 +245,20 @@ export function createBimEntityPersistenceHook<
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [currentLevelId, companyId, projectId, floorplanId, floorId, userId]);
 
+    /**
+     * Post-write bookkeeping SSoT: the entity is now the committed baseline, so it is
+     * neither dirty nor awaiting its first save, and (when enabled) its write is graced
+     * against the echo snapshot. Shared by every write path — normal persist, Φ C.16
+     * explicitly-scoped first-save, and undo-restore — so a future change to what
+     * "saved" means cannot drift between them (N.18: one copy, not three).
+     */
+    const recordSaved = (entity: TEntity): void => {
+      lastSavedParamsRef.current.set(entity.id, config.entityComparable(entity));
+      if (config.writeGrace) grace.recordWrite(entity.id);
+      dirtyIdsRef.current.delete(entity.id);
+      pendingFirstSaveIdsRef.current.delete(entity.id);
+    };
+
     // ---- Immediate persist (auto-save flush + explicit + first-save) -------
     const persistOnce = useCallback(async (entity: TEntity) => {
       const svc = serviceRef.current;
@@ -256,10 +286,7 @@ export function createBimEntityPersistenceHook<
           await config.service.remove(svc, toSave.id);
           return;
         }
-        lastSavedParamsRef.current.set(toSave.id, config.entityComparable(toSave));
-        if (config.writeGrace) grace.recordWrite(toSave.id);
-        dirtyIdsRef.current.delete(toSave.id);
-        pendingFirstSaveIdsRef.current.delete(toSave.id);
+        recordSaved(toSave);
         setSaveState('saved');
         setLastSavedAt(Date.now());
         config.onPersisted?.(toSave, {
@@ -284,6 +311,67 @@ export function createBimEntityPersistenceHook<
           : persistOnce(entity),
       [persistOnce],
     );
+
+    // ---- First-save into an EXPLICIT target scope (ADR-635 Φ C.16) ---------
+    /**
+     * Write a freshly-created entity to the floor the ACTION declared, bypassing the
+     * live (active-level) service entirely.
+     *
+     * 🛡️ WHY: `serviceRef` is rebuilt by an effect keyed on the ACTIVE floor. An import
+     * resolves its target level up-front, then emits create-events synchronously after a
+     * variable-duration parse — so at emit time the live service may still point at the
+     * PREVIOUS storey. It is not null (Φ C.15 would have caught that); it is simply
+     * WRONG, and the write succeeds into the wrong scope. Resolving the scope here makes
+     * the write independent of React effect timing: the race is removed, not narrowed.
+     *
+     * Same shape as `foundation-cross-level-writer` (ADR-459) / `stairwell-opening-
+     * cross-level-writer` (ADR-632) — build a service for the target scope and save
+     * directly. Like them it skips `beforeSave` (its hooks — wall soft-lock, opening mark
+     * alloc — are bound to the ACTIVE floor's scene and would be meaningless, or wrong,
+     * against another storey). `onPersisted` DOES run, carrying the scope actually
+     * written, so audit/BOQ stay correct.
+     */
+    const persistToScope = useCallback(async (entity: TEntity, target: EntityCreateTargetScope) => {
+      const live = scopeRef.current;
+      const cacheKey = `${target.floorId ?? ''}|${target.floorplanId ?? ''}`;
+      let svc = scopedServiceCacheRef.current.get(cacheKey);
+      if (svc === undefined) {
+        const resolved = resolveBimPersistenceScope({
+          companyId: live.companyId,
+          projectId: live.projectId,
+          userId: userIdRef.current,
+          floorId: target.floorId,
+          floorplanId: target.floorplanId,
+        });
+        svc = resolved ? config.createService(resolved) : null;
+        scopedServiceCacheRef.current.set(cacheKey, svc);
+      }
+      if (!svc) {
+        // Unresolvable target scope — fall back to the live path rather than dropping the
+        // save (Φ C.15 deferral still protects it if the live service is not ready).
+        if (!serviceRef.current) {
+          deferredFirstSaveRef.current.set(entity.id, entity);
+          return;
+        }
+        await persist(entity);
+        return;
+      }
+      try {
+        await config.service.save(svc, entity);
+        recordSaved(entity);
+        config.onPersisted?.(entity, {
+          isNew: true,
+          prevComparable: null,
+          scope: { ...live, floorId: target.floorId, floorplanId: target.floorplanId },
+          extra,
+        });
+      } catch (err) {
+        // Keep `pending`/`dirty` set on failure: the entity stays protected from the
+        // snapshot merge's orphan-drop and the next edit re-saves it.
+        setError(err instanceof Error ? err.message : config.saveErrorKey);
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [persist]);
 
     // ---- Shared dirty-gate + debounce scheduler ----------------------------
     // SSoT for the auto-save gate, used by the selected-entity effect (majority)
@@ -410,10 +498,7 @@ export function createBimEntityPersistenceHook<
     // Shared save + baseline/grace/dirty/pending bookkeeping (both restore modes).
     const commitRestoreWrite = async (svc: TService, entity: TEntity): Promise<void> => {
       await config.service.save(svc, entity);
-      lastSavedParamsRef.current.set(entity.id, config.entityComparable(entity));
-      if (config.writeGrace) grace.recordWrite(entity.id);
-      dirtyIdsRef.current.delete(entity.id);
-      pendingFirstSaveIdsRef.current.delete(entity.id);
+      recordSaved(entity);
     };
     const persistRestore = useCallback(async (entity: TEntity) => {
       const svc = serviceRef.current;
@@ -442,7 +527,7 @@ export function createBimEntityPersistenceHook<
     useEffect(() => {
       const cleanups = allCreateTriggers.map((trigger) =>
         EventBus.on(trigger.event, (payload) => {
-          const p = payload as { tool?: string; entity?: AnySceneEntity };
+          const p = payload as { tool?: string; entity?: AnySceneEntity; scope?: EntityCreateTargetScope };
           if (p.tool !== trigger.tool) return;
           const entity = p.entity as TEntity | undefined;
           if (!entity || (entity as { type?: string }).type !== config.entityType) return;
@@ -456,6 +541,18 @@ export function createBimEntityPersistenceHook<
           // silently losing both the protection AND the first-save.
           pendingFirstSaveIdsRef.current.add(entity.id);
           dirtyIdsRef.current.add(entity.id);
+          // ADR-635 Φ C.16 — an EXPLICIT target scope beats the live one. Only when it
+          // actually resolves to a DIFFERENT floor: same-floor creations keep the normal
+          // path (serializer + beforeSave + full bookkeeping), so interactive drawing —
+          // which never sets `scope` — is byte-for-byte unchanged.
+          const target = p.scope;
+          if (target) {
+            const targetKey = entityCreateScopeKey(target);
+            if (targetKey && targetKey !== entityCreateScopeKey(scopeRef.current)) {
+              void persistToScope(entity, target);
+              return;
+            }
+          }
           if (!serviceRef.current) {
             // Service not ready — defer; the instantiation effect flushes it once scoped.
             deferredFirstSaveRef.current.set(entity.id, entity);
@@ -465,7 +562,7 @@ export function createBimEntityPersistenceHook<
         }),
       );
       return () => { for (const c of cleanups) c(); };
-    }, [persist]);
+    }, [persist, persistToScope]);
 
     // ---- Delete-requested listener (optional — floorplan-symbol has none) --
     useEffect(() => {

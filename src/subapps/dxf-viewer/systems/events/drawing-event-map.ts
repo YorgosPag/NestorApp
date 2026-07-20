@@ -12,6 +12,7 @@ import type { MepAutoDesignEventMap } from './drawing-event-map-mep-autodesign';
 import type { BimEventMap } from './drawing-event-map-bim';
 import type { TopoEventMap } from './drawing-event-map-topo';
 import type { PrintFidelityNote } from '../../print/print-fidelity';
+import type { EntityCreateTargetScope } from '../../bim/persistence/bim-floor-scope';
 
 // Event type definitions - centralized and type-safe.
 // MEP auto-design feedback events live in `MepAutoDesignEventMap` (SRP split, N.7.1).
@@ -59,6 +60,20 @@ export interface DrawingEventMap extends MepAutoDesignEventMap, BimEventMap, Top
      * move/rotate άσχετου entity ξανα-πυροδοτεί τον ανιχνευτή κουφωμάτων (false positive).
      */
     origin?: 'create' | 'retrim';
+    /**
+     * ADR-635 Φ C.16 — the floor/level this creation BELONGS to, when the emitter
+     * knows it and it may differ from the active level. Absent (the overwhelming
+     * majority: interactive drawing on the visible floor) = "use the live scope",
+     * i.e. behaviour is unchanged.
+     *
+     * Set by the import path, which resolves `targetLevelId` BEFORE the
+     * variable-duration parse and would otherwise let a stale active-level scope
+     * decide where the docs land (incident 2026-07-20 — 117 hatches written to the
+     * previously-active storey, then dropped by `reconcileLoadedSceneBim`).
+     * Mirrors the long-standing `entity:create-request.targetLevelId` precedent
+     * (ADR-055) below.
+     */
+    scope?: EntityCreateTargetScope;
   };
   'drawing:cancelled': {
     tool: string;

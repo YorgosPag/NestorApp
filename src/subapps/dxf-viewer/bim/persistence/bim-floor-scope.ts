@@ -155,6 +155,52 @@ export interface ResolvedBimPersistenceScope {
 }
 
 /**
+ * ADR-635 Φ C.16 — the target scope an entity-creation event may carry so the
+ * write lands on the floor the ACTION meant, not on "whatever floor the user is
+ * looking at when the listener runs".
+ *
+ * 🛡️ ROOT-CAUSE (incident 2026-07-20 — 117 imported hatches lost): a DXF import
+ * resolves its `targetLevelId` explicitly (`useSceneState.handleFileImport`, per
+ * ADR-420) and writes the scene to it — then emits `drawing:entity-created`
+ * WITHOUT that scope. The ~30 persistence hosts all derive `floorId` from the
+ * ACTIVE level (`DxfViewerTopBar`), which is updated through a React re-render +
+ * effect, while the create-events fire synchronously after a variable-duration
+ * `await importDxfFile`. Import the same file into two storeys and the hatches
+ * (per-entity persisted, `floorplan_hatches`) landed in the previous storey's
+ * scope; `reconcileLoadedSceneBim` then found no docs on the real target and
+ * dropped them. Non-deterministic — a FASTER machine loses more.
+ *
+ * The principle (Revit / ArchiCAD / Figma): **a write never reads "what is the
+ * user looking at now" — the scope travels with the action.** This is the same
+ * conclusion `foundation-cross-level-writer` (ADR-459) and
+ * `stairwell-opening-cross-level-writer` (ADR-632) already reached for their own
+ * cross-level writes; Φ C.16 generalises it to the shared first-save path.
+ *
+ * `levelId` targets the SCENE, `floorId`/`floorplanId` target FIRESTORE — they
+ * are separate identities (ADR-420: `floorId` durable, `floorplanId` volatile).
+ */
+export interface EntityCreateTargetScope {
+  /** DXF-viewer level whose scene owns the entity (scene-side target). */
+  readonly levelId: string;
+  /** Durable building-storey id (`flr_*`) — the preferred Firestore scope key. */
+  readonly floorId?: string | null;
+  /** Source DXF FileRecord id — provenance / legacy fallback scope key. */
+  readonly floorplanId?: string | null;
+}
+
+/**
+ * The scope key a target resolves to (`floorId` preferred, `floorplanId`
+ * fallback) — or `null` when neither is bound. Use it to decide whether an
+ * explicit target actually differs from the live scope before paying for a
+ * separately-scoped service.
+ */
+export function entityCreateScopeKey(
+  scope: Pick<EntityCreateTargetScope, 'floorId' | 'floorplanId'>,
+): string | null {
+  return scope.floorId || scope.floorplanId || null;
+}
+
+/**
  * Single source of truth for the "is this BIM persistence service allowed to
  * instantiate?" gate — replaces the 26× copy-pasted
  * `if (!companyId || !projectId || !floorplanId || !userId) …` guard.
