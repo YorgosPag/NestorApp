@@ -43,6 +43,8 @@
 
 import type * as THREE from 'three';
 
+import { forEachTriangle, readWorldPositions, triangleArea } from './mesh-triangles';
+
 /** Κάδος κβαντισμού κορυφών για το ακριβές `hash` (0.1 mm). */
 export const GEOMETRY_QUANTUM_M = 1e-4;
 
@@ -84,30 +86,6 @@ const FNV_OFFSET = 0x811c9dc5;
 const FNV_PRIME = 0x01000193;
 const MIX_PRIME = 0x85ebca6b;
 
-/**
- * Κορυφές σε world space. Η matrix θεωρείται affine (TRS δέντρο — πάντα αληθές για BIM σκηνές
- * και για ό,τι γράφει/διαβάζει ο GLTFExporter/Loader), οπότε η 4η γραμμή παραλείπεται.
- */
-function readWorldPositions(mesh: THREE.Mesh): Float64Array | null {
-  const position = mesh.geometry.getAttribute('position');
-  if (!position || position.itemSize < 3 || position.count === 0) return null;
-
-  mesh.updateWorldMatrix(true, false);
-  const e = mesh.matrixWorld.elements;
-  const out = new Float64Array(position.count * 3);
-
-  for (let i = 0; i < position.count; i += 1) {
-    const x = position.getX(i);
-    const y = position.getY(i);
-    const z = position.getZ(i);
-    const o = i * 3;
-    out[o] = e[0] * x + e[4] * y + e[8] * z + e[12];
-    out[o + 1] = e[1] * x + e[5] * y + e[9] * z + e[13];
-    out[o + 2] = e[2] * x + e[6] * y + e[10] * z + e[14];
-  }
-  return out;
-}
-
 /** Μεταφέρει τις κορυφές ώστε το bbox min να πέσει στο origin· επιστρέφει διαστάσεις + κεντροειδές. */
 function rebaseToBoundingBox(points: Float64Array): { sizeM: Vec3M; centroidM: Vec3M } {
   const min: [number, number, number] = [Infinity, Infinity, Infinity];
@@ -133,37 +111,15 @@ function rebaseToBoundingBox(points: Float64Array): { sizeM: Vec3M; centroidM: V
   };
 }
 
-/** Εμβαδόν ενός τριγώνου από 3 δείκτες κορυφών (μισό μέτρο του εξωτερικού γινομένου). */
-function triangleArea(p: Float64Array, ia: number, ib: number, ic: number): number {
-  const ax = p[ib * 3] - p[ia * 3];
-  const ay = p[ib * 3 + 1] - p[ia * 3 + 1];
-  const az = p[ib * 3 + 2] - p[ia * 3 + 2];
-  const bx = p[ic * 3] - p[ia * 3];
-  const by = p[ic * 3 + 1] - p[ia * 3 + 1];
-  const bz = p[ic * 3 + 2] - p[ia * 3 + 2];
-  const cx = ay * bz - az * by;
-  const cy = az * bx - ax * bz;
-  const cz = ax * by - ay * bx;
-  return Math.sqrt(cx * cx + cy * cy + cz * cz) / 2;
-}
-
-/** Συνολικό εμβαδόν + πλήθος τριγώνων· καλύπτει indexed και non-indexed γεωμετρία. */
+/** Συνολικό εμβαδόν + πλήθος τριγώνων. Η διέλευση ζει στο `./mesh-triangles` (κοινή με το solid measure). */
 function measureTriangles(
   mesh: THREE.Mesh,
   points: Float64Array,
 ): { areaM2: number; triangleCount: number } {
-  const index = mesh.geometry.getIndex();
-  const count = index !== null ? index.count : points.length / 3;
-  const triangleCount = Math.floor(count / 3);
   let areaM2 = 0;
-
-  for (let t = 0; t < triangleCount; t += 1) {
-    const base = t * 3;
-    const ia = index !== null ? index.getX(base) : base;
-    const ib = index !== null ? index.getX(base + 1) : base + 1;
-    const ic = index !== null ? index.getX(base + 2) : base + 2;
+  const triangleCount = forEachTriangle(mesh, points.length / 3, (ia, ib, ic) => {
     areaM2 += triangleArea(points, ia, ib, ic);
-  }
+  });
   return { areaM2, triangleCount };
 }
 
