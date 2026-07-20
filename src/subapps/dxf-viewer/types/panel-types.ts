@@ -39,7 +39,9 @@
  */
 // ADR-662 Φ4 — το 'topography' αποσύρθηκε (πλέον ribbon + Properties, ΟΧΙ αριστερό tab).
 // ADR-676 Phase 3 PILOT — 'frame-profiles': opening frame-profile user library (κάσες).
-export type FloatingPanelType = 'levels' | 'colors' | 'properties' | 'dimensions' | 'materials' | 'bim3d' | 'frame-profiles';
+// ADR-683 Φ3.1γ — 'imported-meshes': λίστα εισαγόμενων πλεγμάτων + πλήθος ανανάθετων. Είναι
+// project-wide αναθεώρηση (όχι object-bound), γι' αυτό ΔΕΝ χωρά στο Properties palette.
+export type FloatingPanelType = 'levels' | 'colors' | 'properties' | 'dimensions' | 'materials' | 'bim3d' | 'frame-profiles' | 'imported-meshes';
 
 /**
  * 🏢 ENTERPRISE: All Panel Types (including future/hidden)
@@ -86,7 +88,7 @@ export type PanelType = FloatingPanelType;
 export function isFloatingPanelType(value: unknown): value is FloatingPanelType {
   return (
     typeof value === 'string' &&
-    ['levels', 'colors', 'properties', 'dimensions', 'materials', 'bim3d', 'frame-profiles'].includes(value)
+    ['levels', 'colors', 'properties', 'dimensions', 'materials', 'bim3d', 'frame-profiles', 'imported-meshes'].includes(value)
   );
 }
 
@@ -103,6 +105,7 @@ export const FLOATING_PANEL_TYPES: readonly FloatingPanelType[] = [
   'materials',
   'bim3d',
   'frame-profiles',
+  'imported-meshes',
 ] as const;
 
 // ============================================================================
@@ -120,7 +123,7 @@ export interface PanelMetadata {
   /** Fallback label (Greek) */
   fallbackLabel: string;
   /** Lucide icon name */
-  iconName: 'BarChart' | 'Settings' | 'Sliders' | 'Ruler' | 'Palette' | 'Box' | 'Frame';
+  iconName: 'BarChart' | 'Settings' | 'Sliders' | 'Ruler' | 'Palette' | 'Box' | 'Frame' | 'PackageOpen';
   /** Whether panel can be disabled */
   canBeDisabled: boolean;
 }
@@ -180,6 +183,13 @@ export const PANEL_METADATA: Record<FloatingPanelType, PanelMetadata> = {
     iconName: 'Frame',
     canBeDisabled: false,
   },
+  'imported-meshes': {
+    type: 'imported-meshes',
+    labelKey: 'panels.importedMeshes.title',
+    fallbackLabel: 'Εισαγόμενα',
+    iconName: 'PackageOpen',
+    canBeDisabled: false,
+  },
   // ADR-662 Φ4 — το topography panel entry αφαιρέθηκε (πλέον ribbon + Properties).
 } as const;
 
@@ -194,7 +204,7 @@ export const PANEL_METADATA: Record<FloatingPanelType, PanelMetadata> = {
  */
 export const PANEL_LAYOUT = {
   /** Top row panels (ADR-309: 2 tabs + Phase 8 ADR-358 Properties tab + ADR-362 F1 Dimensions tab + ADR-650 Topography) */
-  topRow: ['levels', 'colors', 'properties', 'dimensions', 'materials', 'bim3d', 'frame-profiles'] as const satisfies readonly FloatingPanelType[],
+  topRow: ['levels', 'colors', 'properties', 'dimensions', 'materials', 'bim3d', 'frame-profiles', 'imported-meshes'] as const satisfies readonly FloatingPanelType[],
   /** Bottom row panels — empty after ADR-309 Phase 1 */
   bottomRow: [] as const satisfies readonly FloatingPanelType[],
 } as const;

@@ -120,6 +120,12 @@
     "bim3d": {
       "title": "BIM 3D"
     },
+    "importedMeshes": {
+      "title": "Εισαγόμενα",
+      "empty": "Δεν υπάρχουν εισαγόμενα πλέγματα σε αυτόν τον όροφο.",
+      "unassigned": "Χωρίς ανάθεση",
+      "unassignedBadge": "{count, plural, one {# χωρίς ανάθεση} other {# χωρίς ανάθεση}}"
+    },
     "frameProfiles": {
       "title": "Διατομές Κάσας",
       "empty": "Δεν υπάρχουν αποθηκευμένες διατομές",

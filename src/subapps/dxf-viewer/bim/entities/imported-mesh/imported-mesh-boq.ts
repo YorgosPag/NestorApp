@@ -25,6 +25,7 @@ import { getAllowedUnits } from '@/config/boq-categories';
 import { findSubCategory } from '@/config/boq-subcategories';
 import type { BimEntityForBoq } from '../../services/BimToBoqBridge';
 import {
+  IMPORTED_MESH_ENTITY_TYPE,
   isImportedMeshBoqUnit,
   type ImportedMeshBoqIdentity,
   type ImportedMeshBoqUnit,
@@ -161,8 +162,13 @@ export function hasBoqIdentity(params: ImportedMeshParams): boolean {
   return params.importedMeshIdentity !== undefined;
 }
 
-/** Ελάχιστο σχήμα οντότητας σκηνής για το μέτρημα — μόνο ο τύπος και τα params. */
-interface SceneEntityLike {
+/**
+ * Ελάχιστο σχήμα οντότητας σκηνής για το μέτρημα — μόνο ο τύπος και τα params.
+ *
+ * Εξάγεται ώστε οι υπόλοιποι καταναλωτές της σκηνής (π.χ. η λίστα του πάνελ εισαγόμενων) να
+ * ρωτούν **το ίδιο** ελάχιστο συμβόλαιο αντί να ξαναδηλώνουν δικό τους δίδυμο σχήμα.
+ */
+export interface SceneEntityLike {
   readonly type: string;
   readonly params?: unknown;
 }
@@ -177,7 +183,7 @@ interface SceneEntityLike {
  */
 export function countUnassignedImportedMeshes(entities: readonly SceneEntityLike[]): number {
   return entities.reduce((count, entity) => {
-    if (entity.type !== 'imported-mesh') return count;
+    if (entity.type !== IMPORTED_MESH_ENTITY_TYPE) return count;
     const params = entity.params as ImportedMeshParams | undefined;
     return params && !hasBoqIdentity(params) ? count + 1 : count;
   }, 0);

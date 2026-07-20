@@ -120,6 +120,12 @@
     "bim3d": {
       "title": "BIM 3D"
     },
+    "importedMeshes": {
+      "title": "Imported",
+      "empty": "No imported meshes on this floor.",
+      "unassigned": "Unassigned",
+      "unassignedBadge": "{count, plural, one {# unassigned} other {# unassigned}}"
+    },
     "frameProfiles": {
       "title": "Frame Profiles",
       "empty": "No saved profiles",

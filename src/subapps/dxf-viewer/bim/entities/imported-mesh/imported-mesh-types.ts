@@ -230,6 +230,13 @@ export interface ImportedMeshEntity
 
 // ─── Σταθερές ─────────────────────────────────────────────────────────────────
 
+/**
+ * Ο discriminator της οντότητας στη σκηνή. Υπάρχει ως σταθερά επειδή τον ρωτούν **πολλαπλοί**
+ * καταναλωτές που δέχονται χαλαρό `{ type: string }` (μετρητής, λίστα πάνελ, host) — εκεί ο tsc
+ * **δεν** μπορεί να ελέγξει ένα literal, οπότε ένα τυπογραφικό θα έδινε σιωπηλά «κανένα εισαγόμενο».
+ */
+export const IMPORTED_MESH_ENTITY_TYPE: ImportedMeshEntity['type'] = 'imported-mesh';
+
 /** Διαχωριστικό κλειδιού mesh: `<uploadId>#<nodeName>`. */
 export const IMPORTED_MESH_NODE_SEPARATOR = '#';
 

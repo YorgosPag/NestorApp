@@ -37,6 +37,8 @@ import { MaterialsLibraryPanel } from '../panels/materials/MaterialsLibraryPanel
 import { Bim3DFloatingTab } from '../panels/bim3d/Bim3DFloatingTab';
 // ADR-676 Phase 3 PILOT — Opening frame-profile user library (κάσες).
 import { FrameProfilesLibraryPanel } from '../panels/frame-profiles/FrameProfilesLibraryPanel';
+// ADR-683 Φ3.1γ — Λίστα εισαγόμενων πλεγμάτων + πλήθος ανανάθετων (project-wide αναθεώρηση).
+import { ImportedMeshesPanel } from '../panels/imported-meshes/ImportedMeshesPanel';
 // ADR-650 Milestone 1 — Topographic contours panel (load points → contours).
 
 interface UsePanelContentRendererParams {
@@ -135,6 +137,9 @@ export function usePanelContentRenderer({
 
       case 'frame-profiles':
         return <FrameProfilesLibraryPanel projectId={projectId} />;
+
+      case 'imported-meshes':
+        return <ImportedMeshesPanel scene={scene} />;
 
       default:
         return (
