@@ -711,6 +711,28 @@ const FURNITURE_TRACKED_FIELDS_RAW: Record<string, string> = {
 export const FURNITURE_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
   mergeDefs(FURNITURE_TRACKED_FIELDS_RAW, {});
 
+// ADR-683 Φ3β — baked mesh imported from a collaborator's glTF.
+// Οι `measured*` διαστάσεις παρακολουθούνται αν και ΔΕΝ επεξεργάσιμες: αλλαγή τους σημαίνει ότι ο
+// συνεργάτης έστειλε άλλη γεωμετρία (κατάσταση C του §5) — ακριβώς το είδος γεγονότος που το
+// ιστορικό πρέπει να δείχνει. Το `storagePath`/`uploadId` δείχνουν ΠΟΙΟ αρχείο το παρήγαγε.
+const IMPORTED_MESH_TRACKED_FIELDS_RAW: Record<string, string> = {
+  kind: 'kind',
+  layerId: 'layerId',
+  nodeName: 'nodeName',
+  uploadId: 'uploadId',
+  sourceFileName: 'sourceFileName',
+  storagePath: 'storagePath',
+  measuredWidthMm: 'measuredWidthMm',
+  measuredDepthMm: 'measuredDepthMm',
+  measuredHeightMm: 'measuredHeightMm',
+  mountingElevationMm: 'mountingElevationMm',
+  rotationDeg: 'rotationDeg',
+  storeyId: 'storeyId',
+};
+
+export const IMPORTED_MESH_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
+  mergeDefs(IMPORTED_MESH_TRACKED_FIELDS_RAW, {});
+
 // ADR-415 — pure-vector 2D floorplan symbol (WC/sanitary first).
 const FLOORPLAN_SYMBOL_TRACKED_FIELDS_RAW: Record<string, string> = {
   category: 'category',

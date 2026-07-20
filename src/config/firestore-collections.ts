@@ -412,6 +412,8 @@ export const COLLECTIONS = {
   FLOORPLAN_FURNITURE: process.env.NEXT_PUBLIC_FLOORPLAN_FURNITURE_COLLECTION || 'floorplan_furniture',
   /** ADR-415 — pure-vector 2D floorplan symbols (WC/sanitary first). IDs via fpsym_* prefix. */
   FLOORPLAN_SYMBOLS: process.env.NEXT_PUBLIC_FLOORPLAN_SYMBOLS_COLLECTION || 'floorplan_symbols',
+  /** ADR-683 Φ3β — baked meshes imported from a collaborator's glTF. IDs via imesh_* prefix. */
+  FLOORPLAN_IMPORTED_MESHES: process.env.NEXT_PUBLIC_FLOORPLAN_IMPORTED_MESHES_COLLECTION || 'floorplan_imported_meshes',
   /** BIM element presets (system/company/project/user scope). IDs via bpst_* prefix. */
   BIM_PRESETS: process.env.NEXT_PUBLIC_BIM_PRESETS_COLLECTION || 'bim_presets',
   /** Material library — 25 seeded generics (Phase 6+). IDs via bmat_* prefix. */
@@ -513,6 +515,7 @@ export const FLOOR_SCOPED_BIM_COLLECTIONS = [
   COLLECTIONS.FLOORPLAN_ELECTRICAL_PANELS,
   COLLECTIONS.FLOORPLAN_FURNITURE,
   COLLECTIONS.FLOORPLAN_SYMBOLS,
+  COLLECTIONS.FLOORPLAN_IMPORTED_MESHES,
   COLLECTIONS.FLOORPLAN_MEP_FIXTURES,
   COLLECTIONS.FLOORPLAN_MEP_SYSTEMS,
   COLLECTIONS.FLOORPLAN_MEP_SEGMENTS,
