@@ -106,6 +106,19 @@ export type FurnitureGripKind =
   | 'furniture-corner-se';
 
 /**
+ * ADR-683 Φ3 §10.1 — εισαγόμενο πλέγμα: **ΔΥΟ λαβές, τέλος**.
+ *   - `imported-mesh-move`     → μετατόπιση του `position` (glyph MOVE).
+ *   - `imported-mesh-rotation` → περιστροφή περί το `position` (καμπύλο glyph).
+ *
+ * ⚠️ **Καμία λαβή γωνίας — και δεν πρόκειται να προστεθεί.** Ο αδελφός τύπος `furniture` έχει
+ * τέσσερις (`furniture-corner-*`) επειδή είναι παραμετρικό κουτί με authored διαστάσεις από
+ * κατάλογο. Το εισαγόμενο πλέγμα είναι **ψημένη γεωμετρία**: το «πλάτος» του δεν είναι παράμετρος
+ * αλλά *μέτρηση* των τριγώνων του. Λαβή resize εδώ θα παραμόρφωνε το σχέδιο του συνεργάτη — αυτό
+ * ακριβώς απαγορεύει το ADR-683 §3. Το όριο δηλώνεται στον χρήστη μέσω της **απουσίας** των λαβών.
+ */
+export type ImportedMeshGripKind = 'imported-mesh-move' | 'imported-mesh-rotation';
+
+/**
  * ADR-415 — floorplan-symbol grip kind (parametric grip type). 1:1 mirror of
  * `FurnitureGripKind`: routes commit through `applyFloorplanSymbolGripDrag()` +
  * `UpdateFloorplanSymbolParamsCommand` (centre translate + rotation + opposite-

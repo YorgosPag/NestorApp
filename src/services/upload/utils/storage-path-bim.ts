@@ -115,6 +115,24 @@ export function buildBimMaterialTextureMapPath(params: {
 }
 
 /**
+ * Storage path για **εισαγόμενο ψημένο πλέγμα** συνεργάτη (ADR-683 Φ3).
+ *
+ * Path scheme: `companies/{companyId}/projects/{projectId}/imported-meshes/{uploadId}.glb`
+ *
+ * ΞΕΧΩΡΙΣΤΟ δέντρο από το `bim-mesh-library/…`: εκείνο είναι curated κατάλογος με write μόνο
+ * από super-admin, ενώ αυτά τα ανεβάζει ο χρήστης και ανήκουν σε **ένα** έργο — άλλα rules
+ * (βλ. `storage.rules` → `@pathId: imported_meshes`). Project-scoped κάτω από το company
+ * prefix, ώστε να ισχύει το ίδιο tenant isolation με τα υπόλοιπα paths εδώ.
+ */
+export function buildImportedMeshPath(params: {
+  companyId: string;
+  projectId: string;
+  uploadId: string;
+}): string {
+  return `companies/${params.companyId}/projects/${params.projectId}/imported-meshes/${params.uploadId}.glb`;
+}
+
+/**
  * Builds the storage path for a Block Library geometry blob (ADR-652 M2/M3 —
  * το «αρχείο» ενός block, όπως το .rfa του Revit / το .gsm του ArchiCAD).
  *

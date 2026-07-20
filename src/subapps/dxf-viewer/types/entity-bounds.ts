@@ -128,6 +128,8 @@ export type BimEntityWithBounds =
   | 'electrical-panel'
   // ADR-410 — furniture
   | 'furniture'
+  // ADR-683 Φ3 — εισαγόμενο ψημένο πλέγμα (bbox του μετρημένου κουτιού)
+  | 'imported-mesh'
   // ADR-408 Φ8 — MEP segment
   | 'mep-segment'
   // ADR-408 Φ11 — MEP fitting

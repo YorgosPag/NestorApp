@@ -104,6 +104,10 @@ const PREVIEW_GHOST_OFF_PATH_TYPES = [
   'railing', 'wall-covering', 'thermal-space', 'space-separator',
   'mep-radiator', 'mep-boiler', 'mep-water-heater', 'mep-fitting', 'mep-underfloor',
   'floorplan-symbol',
+  // ADR-683 Φ3 — εισαγόμενο πλέγμα: ΚΑΜΙΑ παραμετρική προεπισκόπηση. Το ghost για
+  // move/rotate καλύπτεται από το generic movesEntity path· ρητό branch θα χρειαζόταν
+  // μόνο για live προεπισκόπηση **σχήματος**, που εδώ δεν υπάρχει by design (§3).
+  'imported-mesh',
 ] as const;
 
 const mk = (type: string, extra: Record<string, unknown> = {}): DxfEntityUnion =>

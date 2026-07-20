@@ -75,6 +75,10 @@ export const ENTITY_EXPORT_COVERAGE: Readonly<Record<RenderableEntityType, Entit
   roof:            { dxf: 'decompose', tek: 'native' },
   stair:           { dxf: 'decompose', tek: 'native' },
   furniture:       { dxf: 'decompose', tek: 'native' },
+  // ADR-683 Φ3 §10.1 — «Εξάγεται; ✅ Ναι (OBJ/glTF)». Το 3Δ export το καλύπτει ο κοινός
+  // converter chain. DXF: decompose (το περίγραμμα κάτοψης γίνεται primitives). TEK: κενό —
+  // το TEK περιμένει παραμετρικό στοιχείο, και το εισαγόμενο δεν είναι (§3).
+  'imported-mesh': { dxf: 'decompose', tek: 'missing' },
   slab:            { dxf: 'decompose', tek: 'missing' },
   'slab-opening':  { dxf: 'decompose', tek: 'missing' },
   column:          { dxf: 'decompose', tek: 'missing' },

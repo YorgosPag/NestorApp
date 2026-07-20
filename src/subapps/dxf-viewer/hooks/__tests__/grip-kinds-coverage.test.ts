@@ -52,9 +52,10 @@ describe('ADR-602 grip discriminator SSoT — coverage', () => {
   });
 
   // ── 2. Runtime completeness ────────────────────────────────────────────────
-  it('runtime: 35 grip-producer entities, μηδέν διπλότυπα', () => {
-    expect(GRIP_KIND_ENTITIES).toHaveLength(35);
-    expect(new Set(GRIP_KIND_ENTITIES).size).toBe(35);
+  it('runtime: 36 grip-producer entities, μηδέν διπλότυπα', () => {
+    // 35 → 36: +imported-mesh (ADR-683 Φ3 — move + rotation ΜΟΝΟ, καμία λαβή σχήματος).
+    expect(GRIP_KIND_ENTITIES).toHaveLength(36);
+    expect(new Set(GRIP_KIND_ENTITIES).size).toBe(36);
   });
 
   it('runtime: περιλαμβάνει τα editor-only `group` + `block` (domain ≠ RENDERABLE)', () => {

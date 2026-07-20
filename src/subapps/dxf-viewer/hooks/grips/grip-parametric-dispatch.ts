@@ -39,6 +39,7 @@ import {
   commitMepWaterHeaterGripDrag,
   commitMepSegmentGripDrag,
   commitFurnitureGripDrag,
+  commitImportedMeshGripDrag,
   commitFloorplanSymbolGripDrag,
   commitFloorFinishGripDrag,
   commitHatchGripDrag,
@@ -115,6 +116,8 @@ export const PARAMETRIC_COMMIT_HANDLERS: Partial<
   'mep-water-heater': commitMepWaterHeaterGripDrag,
   'mep-segment': commitMepSegmentGripDrag,
   furniture: commitFurnitureGripDrag,
+  // ADR-683 Φ3 — εισαγόμενο πλέγμα (move / rotation ΜΟΝΟ· καμία διαδρομή resize).
+  'imported-mesh': commitImportedMeshGripDrag,
   'floorplan-symbol': commitFloorplanSymbolGripDrag,
   'floor-finish': commitFloorFinishGripDrag,
   hatch: commitHatchGripDrag,

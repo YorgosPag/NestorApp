@@ -109,6 +109,7 @@ export {
   commitMepManifoldGripDrag,
   commitMepManifoldOutletCountGrip,
   commitFurnitureGripDrag,
+  commitImportedMeshGripDrag,
   commitFloorplanSymbolGripDrag,
 } from './grip-parametric-centred-box-commits';
 

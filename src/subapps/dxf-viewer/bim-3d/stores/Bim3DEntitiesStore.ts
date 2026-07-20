@@ -22,6 +22,7 @@ import type { MepFixtureEntity } from '../../bim/types/mep-fixture-types';
 import type { ElectricalPanelEntity } from '../../bim/types/electrical-panel-types';
 import type { RailingEntity } from '../../bim/types/railing-types';
 import type { FurnitureEntity } from '../../bim/types/furniture-types';
+import type { ImportedMeshEntity } from '../../bim/entities/imported-mesh/imported-mesh-types';
 import type { MepSegmentEntity } from '../../bim/types/mep-segment-types';
 import type { MepFittingEntity } from '../../bim/types/mep-fitting-types';
 import type { MepManifoldEntity } from '../../bim/types/mep-manifold-types';
@@ -65,6 +66,8 @@ export interface Bim3DEntities {
   readonly railings: readonly RailingEntity[];
   /** ADR-410 — mesh-based CC0 furniture (chair first). */
   readonly furnitures: readonly FurnitureEntity[];
+  /** ADR-683 Φ3 — εισαγόμενα ψημένα πλέγματα συνεργάτη (κατάσταση D). */
+  readonly importedMeshes: readonly ImportedMeshEntity[];
   /** ADR-417 — parametric pitched roofs (footprint + per-edge slopes). */
   readonly roofs: readonly RoofEntity[];
   /** ADR-419 — floor-finish coverings (per-room thin polygon, IfcCovering FLOORING). */
@@ -104,6 +107,7 @@ export const EMPTY_BIM_ENTITIES: Bim3DEntities = {
   panels: [],
   railings: [],
   furnitures: [],
+  importedMeshes: [],
   roofs: [],
   floorFinishes: [],
   mepSegments: [],
@@ -190,27 +194,9 @@ interface Bim3DEntitiesStoreState extends Bim3DEntities {
 
 export const useBim3DEntitiesStore = create<Bim3DEntitiesStoreState>()(
   subscribeWithSelector((set) => ({
-    walls: [],
-    columns: [],
-    beams: [],
-    foundations: [],
-    slabs: [],
-    slabOpenings: [],
-    openings: [],
-    stairs: [],
-    fixtures: [],
-    panels: [],
-    railings: [],
-    furnitures: [],
-    roofs: [],
-    floorFinishes: [],
-    mepSegments: [],
-    mepFittings: [],
-    manifolds: [],
-    radiators: [],
-    boilers: [],
-    waterHeaters: [],
-    underfloors: [],
+    // Κάθε entity slice ξεκινά κενό — μία πηγή, το EMPTY_BIM_ENTITIES παραπάνω.
+    // Νέο slice → μπαίνει ΜΟΝΟ εκεί· εδώ έρχεται αυτόματα (ADR-583 / N.18).
+    ...EMPTY_BIM_ENTITIES,
     meshAssetVersion: 0,
     textureAssetVersion: 0,
     activeLevelId: null,
@@ -277,6 +263,7 @@ export function selectBim3DEntities(state: Bim3DEntitiesStoreState): Bim3DEntiti
     panels: state.panels,
     railings: state.railings,
     furnitures: state.furnitures,
+    importedMeshes: state.importedMeshes,
     roofs: state.roofs,
     floorFinishes: state.floorFinishes,
     mepSegments: state.mepSegments,

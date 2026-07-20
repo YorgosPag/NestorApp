@@ -243,6 +243,8 @@ export const ENTITY_BOUNDS_PROVIDERS: Partial<Record<EntityType, (entity: Entity
   roof: bimBounds,
   'floor-finish': bimBounds,
   furniture: bimBounds,
+  // ADR-683 Φ3 — εισαγόμενο πλέγμα: ίδιο μονοπάτι με κάθε BIM entity (geometry.bbox).
+  'imported-mesh': bimBounds,
   'mep-fixture': bimBounds,
   'electrical-panel': bimBounds,
   'mep-manifold': bimBounds,

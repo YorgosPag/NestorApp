@@ -87,6 +87,9 @@ export const BIM_RENDERABLE_TYPES = [
   'mep-segment',
   'mep-fitting',
   'mep-underfloor',
+  // ADR-683 Φ3 — εισαγόμενο ψημένο πλέγμα. **Πλήρης πολίτης** (§10.1): 2Δ περίγραμμα στην κάτοψη
+  // + 3Δ, όχι 3Δ-only διακοσμητικό. Renderer: ImportedMeshRenderer.
+  'imported-mesh',
 ] as const;
 
 /** Όλοι οι renderable entity types (DXF + BIM). */

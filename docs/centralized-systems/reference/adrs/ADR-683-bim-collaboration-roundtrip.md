@@ -1,6 +1,6 @@
 # ADR-683 — Συνεργατικό round-trip: παράδοση project σε εξωτερικό μηχανικό και επιστροφή
 
-**Status:** 🟡 IN PROGRESS — Φ1 (ADR-678) DONE · **Φ2 DONE** (glTF import + geometry fingerprint + manifest + **UI καλωδίωση**) · Φ3/Φ4 TODO
+**Status:** 🟡 IN PROGRESS — Φ1 (ADR-678) DONE · **Φ2 DONE** (glTF import + geometry fingerprint + manifest + **UI καλωδίωση**) · **Φ3α DONE** (τύπος `imported-mesh`: 2Δ+3Δ+move/rotate, 20 anchors) · Φ3β/Φ3.1/Φ4 TODO
 **Date:** 2026-07-20
 **Owner:** Giorgio
 **Σχετικά:** ADR-678 (C4D material round-trip — **γίνεται η Φ1 αυτού του σχεδίου**) · **ADR-679 (PBR full parity — ιδιοκτήτης όλου του PBR/υφών· αυτό το ADR ΔΕΝ το επαναλαμβάνει)** · ADR-668 (mesh3d export OBJ/glTF) · ADR-413 (BimMaterial library + PBR textures) · ADR-539 (per-face appearance) · ADR-449 (structural finish skin) · ADR-511 (material catalog SSoT)
@@ -209,8 +209,16 @@ io/mesh3d-roundtrip/           ← νέο, δίπλα στο υπάρχον mesh
   import-gltf-appearance.ts    🟢 Φ2-UI — λεπτός wrapper glTF πάνω από τον κοινό πυρήνα
   reconcile-scene.ts           ⬜ Φ4 — οι 5 καταστάσεις του §5 → ReconcileReport (pure)
   apply-reconcile.ts           ⬜ Φ4 — ReconcileReport + αποφάσεις χρήστη → CompositeCommand
-bim/entities/imported-mesh/    ⬜ Φ3 — Κ2: νέος τύπος οντότητας
-  imported-mesh-types.ts
+bim/entities/imported-mesh/    🟢 Φ3α — Κ2: ο νέος τύπος οντότητας
+  imported-mesh-types.ts       🟢 params/geometry/entity + κλειδί bundle `<uploadId>#<nodeName>`
+  imported-mesh-geometry.ts    🟢 params → geometry (delegate στον κοινό πυρήνα ίχνους) + validate
+  imported-mesh-grips.ts       🟢 ΔΥΟ λαβές (move+rotation)· ΚΑΜΙΑ λαβή σχήματος (§3)
+  build-imported-mesh-entity.ts 🟢 unmatched κόμβος → οντότητα (κατάσταση D)
+bim/geometry/shared/
+  centred-box-footprint.ts     🟢 Φ3α — ο κοινός πυρήνας ίχνους (furniture + imported-mesh)
+bim/renderers/ImportedMeshRenderer.ts        🟢 Φ3α — 2Δ περίγραμμα (fallback: μετρημένο bbox)
+bim-3d/converters/imported-mesh-to-three.ts  🟢 Φ3α — 3Δ (λεπτός adapter στο meshToObject3D)
+core/commands/entity-commands/UpdateImportedMeshParamsCommand.ts  🟢 Φ3α
 ```
 
 ### 8.1 Το σχήμα «ΕΝΑΣ πυρήνας + δύο wrappers» (Φ2-UI)
@@ -259,7 +267,8 @@ glTF import θα «δούλευε» (θα ταίριαζε, θα ανέφερε 
 |---|---|---|---|
 | **Φ1** | Appearance round-trip OBJ (ADR-678) | χρώμα/υλικό ανά στοιχείο | 🟢 **DONE** |
 | **Φ2** | **glTF import** (Κ1) + geometry fingerprint + manifest + **UI καλωδίωση** (§8.1) · 4 modules + 53 jest tests | 🎯 **ο κύκλος βαφής κλείνει: στέλνω .glb → γυρίζει βαμμένο → μπαίνει** | 🟢 **DONE** |
-| **Φ3** | **`imported-mesh` entities** (Κ2) — κατάσταση D· 2Δ κάτοψη + move/rotate (§10.1)· **CHECK 5C ενεργοποιείται** | 🎯 **τα κάγκελα, τα έπιπλα, η βλάστηση** | ⬜ TODO |
+| **Φ3α** | **`imported-mesh` entity type** (Κ2) — 2Δ κάτοψη + 3Δ + move/rotate (§10.1)· **CHECK 5C ενεργοποιήθηκε** (20 capability anchors απαντήθηκαν) | 🎯 ο τύπος υπάρχει, σχεδιάζεται, επιλέγεται, μετακινείται | 🟢 **DONE** |
+| **Φ3β** | **Καλωδίωση εισαγωγής** — τα unmatched του import flow γίνονται οντότητες (upload `.glb` σε Storage + UI επιλογής + persistence) | 🎯 **τα κάγκελα μπαίνουν πραγματικά** | ⬜ TODO |
 | **Φ3.1** | Ταυτότητα→προμέτρηση (§10.2): πρόταση από όνομα/υλικό + μνήμη κανόνων + ομάδα BOQ | κοστολόγηση εισαγόμενων | ⬜ TODO |
 | **Φ4** | Reconcile UI — διάλογος έγκρισης για C/E | «αντιλαμβάνεται τι άλλαξε» | ⬜ TODO |
 | **Φ5** | **Καλωδίωση** του PBR/υφών του ADR-679 στο round-trip (glTF PBR ↔ `BimMaterial`) — **όχι** νέο σύστημα υλικών | γυαλί, καθρέφτης, υφές, φωτορεαλισμός | ⬜ TODO (μετά ADR-679 Φ2b/c) |
@@ -331,6 +340,49 @@ mapping). Ερώτημα: τα εισαγόμενα κάγκελα να προτ
 `pbr-material-builder`, Φ2a DONE). Η Φ5 εδώ είναι μόνο η **καλωδίωση** στο round-trip.
 
 ## 11. Changelog
+
+- **2026-07-20 (Φ3α — ο τύπος `imported-mesh` γεννιέται)** — Το κενό **Κ2** (§2.1) έκλεισε στο επίπεδο
+  του μοντέλου: υπάρχει πλέον οντότητα για τη γεωμετρία που φτιάχνει ο συνεργάτης. **Πλήρης πολίτης**
+  κατά §10.1 — 2Δ περίγραμμα στην κάτοψη, 3Δ, επιλογή, hit-test, μετακίνηση, περιστροφή, εξαγωγή.
+  - **~80% ήταν ήδη εκεί.** Το ADR-411 είχε γενικεύσει το mesh pipeline ακριβώς γι' αυτό:
+    `bimMeshCache` (glTF load + template cache), `mesh-silhouette` (2Δ περίγραμμα από πραγματικό
+    πλέγμα), `meshToObject3D` (3Δ τοποθέτηση), `resolveMoveRotateHandleWorld` (λαβές) δουλεύουν
+    **αμετάβλητα**. Ο νέος τύπος είναι καταναλωτής, όχι νέο σύστημα.
+  - **Το μοναδικό αρχιτεκτονικό εμπόδιο** ήταν ο `resolveMeshUrl`: έχτιζε πάντα
+    `bim-mesh-library/<category>/<assetId>.glb`, όπου τα `storage.rules` δίνουν **write μόνο σε
+    super-admin** — ο χρήστης δεν μπορούσε να ανεβάσει. Λύση εντός του ίδιου SSoT αρχείου:
+    μητρώο **προ-δηλωμένων** paths (`registerMeshAssetPath`) + `importedMeshStoragePath()` για
+    project-scoped δέντρο `companies/{c}/projects/{p}/imported-meshes/{uploadId}.glb`, με **δικά του**
+    rules (@pathId: `imported_meshes` — write από μέλη εταιρείας, όχι super-admin). Η υπόσχεση του
+    αρχείου («αλλάζει hosting ⇒ αλλάζει ΜΟΝΟ αυτό») έμεινε αληθινή.
+  - **Linked-model, όχι αντίγραφο ανά αντικείμενο** (απόφαση Giorgio): ένα `.glb` με 12 κάγκελα
+    ανεβαίνει **μία** φορά· κάθε οντότητα κρατά `<uploadId>#<nodeName>`. Το `bimMeshCache` κατεβάζει
+    το αρχείο μία φορά και ευρετηριάζει **όλους** τους κόμβους → οι υπόλοιποι 11 είναι δωρεάν cache
+    hits. ⚠️ **Παγίδα που πιάστηκε:** το `status` guard κλειδώνει ανά *κόμβο*, οπότε 12 ταυτόχρονες
+    `preload` ξεκινούσαν **12 λήψεις του ίδιου αρχείου** (λειτουργικά σωστό, ορατό μόνο στο network
+    tab). Προστέθηκε de-dup στο επίπεδο **αρχείου** (`inFlightScenes`) + test που το καρφώνει.
+  - **N.18 — clone αποτράπηκε με εξαγωγή, όχι με αντιγραφή:** το `computeFurnitureGeometry` είχε
+    ιδιωτικό τον μετασχηματισμό «κεντραρισμένο ορθογώνιο + στροφή». Αντί να αντιγραφεί, εξήχθη στο
+    `bim/geometry/shared/centred-box-footprint.ts` και **το furniture μετακινήθηκε εκεί** (25 tests
+    του πράσινα ⇒ behavior-preserving). `jscpd:diff` καθαρό σε 8 νέα αρχεία.
+  - **Το όριο του §3 είναι πλέον εκτελέσιμο, όχι σχόλιο:** οι λαβές είναι **δύο** (move + rotation)·
+    το `UpdateImportedMeshParamsCommand.validate()` **απορρίπτει** κάθε αλλαγή μετρημένης διάστασης·
+    και υπάρχει test («ΚΑΜΙΑ λαβή σχήματος») που σπάει αν κάποιος προσθέσει resize «για ευκολία».
+    IFC: `IfcBuildingElementProxy` — ποτέ `IfcRailing`, όσο κι αν ο κόμβος λέγεται `Rail_01` (§10.4).
+  - **CHECK 5C ενεργοποιήθηκε by design:** 20 capability anchors ρώτησαν «μετακινείται; περιστρέφεται;
+    εξάγεται; έχει λαβές/ghost;» και **απαντήθηκαν ρητά** — 329/329 anchor tests πράσινα (21 suites).
+    Οι απαντήσεις είναι του §10.1, δεν εφευρέθηκαν. Export: `dxf: 'decompose'`, `tek: 'missing'`
+    (το TEK θέλει παραμετρικό στοιχείο· το 3Δ OBJ/glTF export δουλεύει κανονικά) — export-gap 29→30.
+  - **Μετρημένες, όχι authored διαστάσεις:** το `furniture` ρωτά τον κατάλογο· εδώ δεν υπάρχει
+    κατάλογος. Οι διαστάσεις προκύπτουν **μία φορά** από το `GeometrySignature.sizeM` της Φ2 (μηδέν
+    νέα γεωμετρική εργασία) και **αποθηκεύονται**, ώστε το ίχνος —άρα hit-test και επιλογή— να
+    υπάρχει **πριν** κατέβει το `.glb`. Άξονες: glTF Y-up → `width←x, depth←z, height←y`.
+  - **Tests:** 28 νέα (geometry/grips/builder) + 5 για το bundle cache· **18.840 πράσινα** σε πλήρη
+    σάρωση των 9 επηρεαζόμενων περιοχών του subapp.
+  - **ΕΚΤΟΣ Φ3α (σκόπιμα, βλ. Φ3β):** το upload του `.glb` σε Storage, η καλωδίωση των unmatched του
+    import flow, το UI επιλογής και το persistence. Ο τύπος **υπάρχει και ζει**· η αυτόματη
+    **τροφοδότησή** του από την εισαγωγή είναι το επόμενο βήμα. Ως τότε τα unmatched εξακολουθούν
+    να αναφέρονται μόνο στο toast.
 
 - **2026-07-20 (Φ2-UI — καλωδίωση glTF import στο UI)** — Ο parser της Φ2 **δεν καλούνταν από
   πουθενά**· τώρα καλείται. **53 jest tests πράσινα** στο `io/mesh3d-*` πεδίο (73 μαζί με ADR-678),

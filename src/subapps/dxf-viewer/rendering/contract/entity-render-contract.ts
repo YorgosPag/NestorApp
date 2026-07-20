@@ -126,6 +126,11 @@ export const ENTITY_RENDER_CONTRACTS: Readonly<
   roof: point('roof'),
   'floor-finish': point('floor-finish'),
   furniture: point('furniture', true), // 3D placement ghost: FurniturePlacementGhost
+  // ADR-683 Φ3 — εισαγόμενο πλέγμα: 2Δ περίγραμμα + 3Δ (point placement, ίδιο με το έπιπλο).
+  // ΧΩΡΙΣ placement ghost: δεν τοποθετείται με κλικ — γεννιέται από την εισαγωγή `.glb`
+  // στη θέση που του έδωσε ο συνεργάτης. Ghost θα είχε νόημα μόνο αν υπήρχε εργαλείο
+  // «τοποθέτησε εισαγόμενο», που ρητά ΔΕΝ υπάρχει σε αυτή τη φάση.
+  'imported-mesh': point('imported-mesh'),
   'electrical-panel': point('electrical-panel', true), // ghost: ElectricalPanelPlacementGhost
   'mep-manifold': point('mep-manifold', true), // ghost: MepManifoldPlacementGhost
   'mep-radiator': point('mep-radiator', true), // ghost: MepRadiatorPlacementGhost

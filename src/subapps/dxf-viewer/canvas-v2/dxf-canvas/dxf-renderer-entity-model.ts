@@ -151,6 +151,8 @@ export function buildEntityModelFromDxf(
     case 'electrical-panel':
     case 'railing':
     case 'furniture':
+    // ADR-683 Φ3 — εισαγόμενο πλέγμα: φέρει το τυπικό quartet, ίδιο passthrough.
+    case 'imported-mesh':
     case 'roof':
     case 'mep-segment':
     case 'mep-fitting':
@@ -289,6 +291,8 @@ export const TO_ENTITY_MODEL_SUPPORTED_TYPES = [
   'wall-covering', 'space-separator', 'mep-segment', 'mep-fitting', 'floorplan-symbol',
   'annotation-symbol', 'scale-bar', 'opening-info-tag', 'mep-manifold', 'mep-radiator', 'mep-boiler', 'mep-water-heater',
   'mep-underfloor', 'xline', 'ray', 'hatch', 'image', 'topo-surface', 'leader',
+  // ADR-683 Φ3 — εισαγόμενο ψημένο πλέγμα.
+  'imported-mesh',
 ] as const;
 
 // Bridge 1 — every listed token IS a real `DxfEntityUnion` discriminant (typo/stale ⇒ tsc breaks).

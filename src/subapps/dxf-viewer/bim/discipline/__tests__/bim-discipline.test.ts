@@ -81,8 +81,9 @@ describe('ADR-405 CATEGORIES_BY_DISCIPLINE (inverse)', () => {
       'mep-water-heater', 'mep-underfloor', 'sanitary',
     ]);
     expect(CATEGORIES_BY_DISCIPLINE.electrical).toEqual(['light-fixture', 'electrical-panel', 'mep-wire']);
-    // ADR-410 — furniture is the first (and only) placeable interior category.
-    expect(CATEGORIES_BY_DISCIPLINE.interior).toEqual(['furniture']);
+    // ADR-410 — furniture ήταν η πρώτη placeable interior κατηγορία.
+    // ADR-683 Φ3 — το εισαγόμενο πλέγμα (έπιπλα/κάγκελα/βλάστηση συνεργάτη) είναι η δεύτερη.
+    expect(CATEGORIES_BY_DISCIPLINE.interior).toEqual(['furniture', 'imported-mesh']);
   });
 });
 

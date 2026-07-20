@@ -268,7 +268,8 @@ export const ENTERPRISE_ID_PREFIXES = {
   HATCH: 'hatch',              // floorplan_hatches collection — flat DXF hatch fill / Revit Filled-Region (ADR-507)
   THERMAL_SPACE: 'tsp',        // floorplan_thermal_spaces collection — analytical thermal space / θερμικός χώρος (IfcSpace) (ADR-422)
   SPACE_SEPARATOR: 'ssp',      // floorplan_space_separators collection — space separator / γραμμή διαχωρισμού χώρου (IfcVirtualElement) (ADR-437)
-  FURNITURE: 'furn',           // floorplan_furniture collection — mesh-based CC0 furniture (ADR-410, chair first)
+  FURNITURE: 'furn',
+  IMPORTED_MESH: 'imesh',      // imported_meshes collection — εισαγόμενο ψημένο πλέγμα συνεργάτη (ADR-683 Φ3)           // floorplan_furniture collection — mesh-based CC0 furniture (ADR-410, chair first)
   FLOORPLAN_SYMBOL: 'fpsym',   // floorplan_symbols collection — pure-vector 2D floorplan symbol (ADR-415, WC/sanitary first)
   BIM_PRESET: 'bpst',          // bim_presets collection — element type presets (system/company/project/user scope)
   BIM_MATERIAL: 'bmat',        // bim_materials collection — material library (Phase 6+)

@@ -96,7 +96,10 @@ export type EntityType =
   | 'image'
   // ADR-662 Φ2β (Δρόμος Γ) — τοπογραφική επιφάνεια ως first-class selectable
   // αντικείμενο (thin/derived· δείκτης στο TopoSurfaceDoc + footprint για hit-test).
-  | 'topo-surface';
+  | 'topo-surface'
+  // ADR-683 Φ3 — εισαγόμενο ψημένο πλέγμα από συνεργάτη (κατάσταση D: unmatched κόμβος
+  // επιστρεφόμενου .glb). Μετακινείται/περιστρέφεται· ΠΟΤΕ δεν αλλάζει σχήμα (§3).
+  | 'imported-mesh';
 
 export interface BaseEntity {
   id: string;

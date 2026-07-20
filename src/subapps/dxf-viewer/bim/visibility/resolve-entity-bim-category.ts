@@ -26,7 +26,7 @@ import { resolveSymbolCategoryConfig } from '../floorplan-symbols/floorplan-symb
  */
 const DIRECT_CATEGORY_TYPES = new Set<string>([
   'wall', 'column', 'beam', 'slab', 'slab-opening', 'opening', 'stair', 'roof',
-  'foundation', 'railing', 'furniture', 'electrical-panel', 'mep-manifold',
+  'foundation', 'railing', 'furniture', 'imported-mesh', 'electrical-panel', 'mep-manifold',
   'mep-radiator', 'mep-boiler', 'mep-water-heater', 'mep-underfloor',
   'floor-finish', 'wall-covering', 'thermal-space', 'space-separator',
 ]);

@@ -64,6 +64,9 @@ const BBOX_FALLBACK = [
   // Path/mesh-based BIM: το footprint δεν είναι cached ως polygon εδώ (railing = διαδρομή,
   // roof = κεκλιμένες έδρες, furniture = mesh). Το geometry.bbox δίνει ήδη σφιχτό AABB.
   'railing', 'roof', 'furniture', 'floorplan-symbol',
+  // ADR-683 Φ3 — εισαγόμενο πλέγμα: ίδιος λόγος με το furniture. Το ακριβές περίγραμμα ζει
+  // στο `bimMeshCache` (απαιτεί φορτωμένο glTF)· το bbox δουλεύει ΚΑΙ πριν κατέβει το αρχείο.
+  'imported-mesh',
   // Αναλυτικός χώρος: το κλικ οπουδήποτε μέσα στο κουτί του ΕΙΝΑΙ η επιθυμητή σημασιολογία.
   'thermal-space',
   // Point-based MEP: μικρά σύμβολα — το AABB τους ΕΙΝΑΙ πρακτικά το σχήμα τους.

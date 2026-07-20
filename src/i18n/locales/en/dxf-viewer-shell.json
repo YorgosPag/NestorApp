@@ -6911,5 +6911,14 @@
     "flushBolt": "Flush bolt",
     "slidingTrack": "Sliding track",
     "frictionStay": "Friction stay"
+  },
+  "importedMesh": {
+    "validation": {
+      "hardErrors": {
+        "missingSource": "Source file reference is missing — the mesh cannot be loaded",
+        "nonPositiveDimension": "The file node has no valid dimensions",
+        "degenerateNode": "The file node is degenerate (zero thickness)"
+      }
+    }
   }
 }

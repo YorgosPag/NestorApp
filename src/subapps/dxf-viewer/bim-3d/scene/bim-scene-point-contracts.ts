@@ -44,6 +44,7 @@ import { roofToMesh } from '../converters/roof-to-three';
 import { floorFinishToMesh } from '../converters/floor-finish-to-three';
 import { underfloorToObject3D } from '../converters/mep-underfloor-to-three';
 import { furnitureToObject3D } from '../converters/furniture-to-three';
+import { importedMeshToObject3D } from '../converters/imported-mesh-to-three';
 
 /** Ελάχιστο σχήμα point entity (όπως απαιτεί ο `syncPointEntities`). */
 type PointEntity = { id?: string; layerId?: string; discipline?: Discipline };
@@ -108,6 +109,9 @@ export const POINT_ENTITY_CONTRACTS: readonly PointEntityContract[] = [
     (uf, c, r) => underfloorToObject3D(uf, c.floorElevationMm, c.activeLevelId, r.baseElevation)),
   pointContract('furniture', 'furniture', (e) => e.furnitures,
     (f, c, r) => furnitureToObject3D(f, c.floorElevationMm, c.activeLevelId, r.baseElevation)),
+  // ADR-683 Φ3 — εισαγόμενο πλέγμα (ίδιο point μονοπάτι με το έπιπλο).
+  pointContract('imported-mesh', 'imported-mesh', (e) => e.importedMeshes,
+    (m, c, r) => importedMeshToObject3D(m, c.floorElevationMm, c.activeLevelId, r.baseElevation)),
 ];
 
 /** Οι renderable types του registry (για το coverage test binding). */

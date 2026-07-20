@@ -13,62 +13,26 @@
  */
 
 import { nowTimestamp } from '@/lib/firestore-now';
-import type { BimValidation, Point3D } from '../types/bim-base';
+import type { BimValidation } from '../types/bim-base';
 import type { FurnitureGeometry, FurnitureParams } from '../types/furniture-types';
 import { MIN_FURNITURE_DIMENSION_MM } from '../types/furniture-types';
-import { polygonArea, polygonBbox } from '../geometry/shared/polygon-utils';
-import { mmToSceneUnits } from '../../utils/scene-units';
-
-const MM_TO_M = 1 / 1000;
-const DEG_TO_RAD = Math.PI / 180;
+import { computeCentredBoxFootprint } from '../geometry/shared/centred-box-footprint';
 
 /**
  * Compute `FurnitureGeometry` from `FurnitureParams`. Pure SSoT. Caller MUST
  * ensure positive dimensions (validator guard upstream). Throws nothing.
+ *
+ * ADR-683 Φ3: ο μετασχηματισμός ίχνους ζει πλέον στο `computeCentredBoxFootprint`
+ * — κοινός με το `imported-mesh`, ώστε τα δύο να μην αποκλίνουν ποτέ (N.18).
  */
 export function computeFurnitureGeometry(params: FurnitureParams): FurnitureGeometry {
-  const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
-  const local = buildRectangularLocal(params.widthMm, params.depthMm, s);
-  const transformed = transformFootprint(local, params);
-
-  const bbox = polygonBbox(transformed);
-  const areaCanvas2 = polygonArea(transformed);
-  const canvasToM = (1 / s) * MM_TO_M;
-  const areaM2 = areaCanvas2 * canvasToM * canvasToM;
-
-  return {
-    footprint: { vertices: transformed },
-    bbox,
-    area: areaM2,
-    height: Math.max(0, params.heightMm),
-  };
-}
-
-// ─── Local footprint builder ──────────────────────────────────────────────────
-
-function buildRectangularLocal(widthMm: number, depthMm: number, s: number): Point3D[] {
-  const hw = (widthMm * s) / 2;
-  const hd = (depthMm * s) / 2;
-  return [
-    { x: -hw, y: -hd, z: 0 },
-    { x:  hw, y: -hd, z: 0 },
-    { x:  hw, y:  hd, z: 0 },
-    { x: -hw, y:  hd, z: 0 },
-  ];
-}
-
-/**
- * Translate local-frame vertices to world coords (anchor = centre on
- * `position`) and rotate around `position` by `rotationDeg`.
- */
-function transformFootprint(local: readonly Point3D[], params: FurnitureParams): Point3D[] {
-  const { position } = params;
-  const cos = Math.cos(params.rotationDeg * DEG_TO_RAD);
-  const sin = Math.sin(params.rotationDeg * DEG_TO_RAD);
-  return local.map((v) => {
-    const rx = v.x * cos - v.y * sin;
-    const ry = v.x * sin + v.y * cos;
-    return { x: position.x + rx, y: position.y + ry, z: 0 };
+  return computeCentredBoxFootprint({
+    widthMm: params.widthMm,
+    depthMm: params.depthMm,
+    heightMm: params.heightMm,
+    position: params.position,
+    rotationDeg: params.rotationDeg,
+    sceneUnits: params.sceneUnits,
   });
 }
 

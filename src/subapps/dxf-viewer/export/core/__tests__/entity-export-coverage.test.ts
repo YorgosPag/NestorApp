@@ -58,6 +58,8 @@ describe('Entity export coverage — declarative SSoT ↔ renderable domain (ADR
   it('το τρέχον export-gap backlog είναι καρφωμένο (κλείσιμο = σκόπιμη ενημέρωση)', () => {
     // Snapshot του backlog· μειώνεται καθώς κλείνουν τα κενά (ADR-648 §7). Αν αλλάξει → ενημέρωσε ADR.
     // 27 → 29: +leader (tek, ADR-635 Φ B) +topo-surface (dxf+tek, ADR-662 Φ2β Stage A).
-    expect(entitiesWithExportGap().length).toMatchInlineSnapshot(`29`);
+    // 29 → 30: +imported-mesh (tek only — ADR-683 Φ3· το TEK θέλει παραμετρικό στοιχείο,
+    // το ψημένο πλέγμα δεν είναι· το 3Δ OBJ/glTF export ΔΟΥΛΕΥΕΙ κανονικά).
+    expect(entitiesWithExportGap().length).toMatchInlineSnapshot(`30`);
   });
 });

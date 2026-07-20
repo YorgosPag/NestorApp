@@ -326,6 +326,27 @@ export const STORAGE_RULES_COVERAGE: readonly StorageCoverageEntry[] = [
       cell('anonymous',         'delete', 'deny',  'missing_claim'),
     ] as const,
   },
+
+  // -------------------------------------------------------------------------
+  // Path 7: Imported meshes — ADR-683 Φ3 (γεωμετρία που γύρισε ο συνεργάτης)
+  // storage.rules lines 526-541
+  //
+  // Project-scoped κάτω από το company prefix, ώστε το ίδιο tenant isolation να
+  // ισχύει όπως στο canonical path. ΞΕΧΩΡΙΣΤΟ δέντρο από το `/bim-mesh-library/`
+  // επίτηδες: εκείνο είναι curated κατάλογος (write = super_admin only), ενώ εδώ
+  // ο απλός μηχανικός ΠΡΕΠΕΙ να μπορεί να ανεβάσει. Γι' αυτό το αντίστοιχο
+  // pending entry της βιβλιοθήκης ΔΕΝ καλύπτει αυτό το path — άλλο συμβόλαιο.
+  //
+  // Το write έχει ένα επιπλέον σκέλος (isValidFileSize()) που δεν είναι
+  // persona-dependent, οπότε δεν προστίθεται γραμμή στη μήτρα.
+  // -------------------------------------------------------------------------
+  {
+    pathId: 'imported_meshes',
+    pattern: 'company_scoped_with_project',
+    rulesRange: [526, 541],
+    testFile: 'tests/storage-rules/suites/imported-meshes.storage.test.ts',
+    matrix: companyScopedMatrix(),
+  },
 ] as const;
 
 /**

@@ -65,13 +65,16 @@ describe('Grip-producer capability coverage — ζωντανό seam ↔ descript
         'hatch', 'xline', 'ray', 'annotation-symbol', 'scale-bar', 'opening-info-tag',
         // ADR-654 — raster image (entourage / furniture-plan sprite): move + rotation + 4 corners.
         'image',
-        // BIM (20 — όλα εκτός railing/wall-covering/thermal-space/space-separator/mep-fitting).
+        // BIM (21 — όλα εκτός railing/wall-covering/thermal-space/space-separator/mep-fitting).
         // Το `floorplan-symbol` ΔΕΝ είναι πια editor-only: μπήκε στο RENDERABLE_ENTITY_TYPES
         // (ADR-415/635 ghost preview) — code=truth, η λίστα ήταν stale.
         'wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'foundation', 'stair',
         'roof', 'floor-finish', 'furniture', 'mep-fixture', 'electrical-panel', 'mep-manifold',
         'mep-radiator', 'mep-boiler', 'mep-water-heater', 'mep-segment', 'mep-underfloor',
         'floorplan-symbol',
+        // ADR-683 Φ3 §10.1 — εισαγόμενο πλέγμα: ΕΧΕΙ producer, αλλά εκπέμπει ΜΟΝΟ
+        // move + rotation. Καμία λαβή σχήματος (ψημένη γεωμετρία — §3).
+        'imported-mesh',
       ]),
     );
   });

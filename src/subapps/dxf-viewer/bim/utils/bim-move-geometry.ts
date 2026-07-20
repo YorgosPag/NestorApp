@@ -53,6 +53,10 @@ import type { MepSegmentEntity, MepSegmentParams } from '../types/mep-segment-ty
 import type { ElectricalPanelEntity, ElectricalPanelParams } from '../types/electrical-panel-types';
 import type { MepManifoldEntity, MepManifoldParams } from '../types/mep-manifold-types';
 import type { FurnitureEntity, FurnitureParams } from '../types/furniture-types';
+import type {
+  ImportedMeshEntity,
+  ImportedMeshParams,
+} from '../entities/imported-mesh/imported-mesh-types';
 import type { FloorFinishEntity, FloorFinishParams } from '../types/floor-finish-types';
 import { computeFloorFinishGeometry } from '../types/floor-finish-types';
 import type { SpaceSeparatorEntity, SpaceSeparatorParams } from '../types/space-separator-types';
@@ -77,6 +81,7 @@ import { computeElectricalPanelGeometry } from '../electrical-panels/electrical-
 import { computeMepManifoldGeometry } from '../mep-manifolds/mep-manifold-geometry';
 import { computeMepSegmentGeometry } from '../geometry/mep-segment-geometry';
 import { computeFurnitureGeometry } from '../furniture/furniture-geometry';
+import { computeImportedMeshGeometry } from '../entities/imported-mesh/imported-mesh-geometry';
 import { computeMepRadiatorGeometry } from '../mep-radiators/mep-radiator-geometry';
 import { computeMepBoilerGeometry } from '../mep-boilers/mep-boiler-geometry';
 import { computeMepWaterHeaterGeometry } from '../mep-water-heaters/mep-water-heater-geometry';
@@ -230,6 +235,20 @@ function moveFurniture(entity: FurnitureEntity, delta: Point2D): Partial<SceneEn
     position: translatePoint(entity.params.position, delta),
   };
   const geometry = computeFurnitureGeometry(newParams);
+  return { params: newParams, geometry } as unknown as Partial<SceneEntity>;
+}
+
+/**
+ * ADR-683 Φ3 — εισαγόμενο πλέγμα: μετατόπιση του σημείου εισαγωγής, ακριβώς όπως το έπιπλο.
+ * Η γεωμετρία του πλέγματος **δεν αγγίζεται** — η μετακίνηση είναι μετασχηματισμός, όχι
+ * παραμόρφωση (§10.1· το reshape απαγορεύεται ρητά από το §3).
+ */
+function moveImportedMesh(entity: ImportedMeshEntity, delta: Point2D): Partial<SceneEntity> {
+  const newParams: ImportedMeshParams = {
+    ...entity.params,
+    position: translatePoint(entity.params.position, delta),
+  };
+  const geometry = computeImportedMeshGeometry(newParams);
   return { params: newParams, geometry } as unknown as Partial<SceneEntity>;
 }
 
@@ -398,6 +417,8 @@ export function calculateBimMovedGeometry(
       return moveMepManifold(entity, delta);
     case 'furniture':
       return moveFurniture(entity, delta);
+    case 'imported-mesh':
+      return moveImportedMesh(entity, delta);
     case 'floor-finish':
       return moveFloorFinish(entity, delta);
     case 'space-separator':

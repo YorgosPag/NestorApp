@@ -17,64 +17,17 @@ import { z } from 'zod';
 
 // ─── Type unions ─────────────────────────────────────────────────────────────
 
-export type IfcEntityType =
-  | 'IfcWall'
-  | 'IfcWallStandardCase'
-  | 'IfcSlab'
-  | 'IfcBeam'
-  | 'IfcColumn'
-  | 'IfcDoor'
-  | 'IfcWindow'
-  // ADR-406 — MEP point-based fixtures (IfcFlowTerminal family).
-  | 'IfcLightFixture'
-  // ADR-407 — path-based railing (handrail/guardrail/balustrade).
-  | 'IfcRailing'
-  // ADR-408 Φ3 — electrical panel (panelboard / consumer unit).
-  | 'IfcElectricDistributionBoard'
-  // ADR-410 — mesh-based furniture (IfcFurnishingElement family, IFC4 ADD2).
-  | 'IfcFurniture'
-  // ADR-408 Φ8 — linear MEP segments (IfcDistributionFlowElement family).
-  | 'IfcDuctSegment'
-  | 'IfcPipeSegment'
-  // ADR-408 Φ11 — auto pipe/duct fittings (IfcFlowFitting family).
-  | 'IfcPipeFitting'
-  | 'IfcDuctFitting'
-  // ADR-408 Φ14 — drainage collector / φρεάτιο (sump/catch basin; IfcFlowStorageDevice family).
-  | 'IfcFlowStorageDevice'
-  // ADR-415 — sanitary plan symbols (WC/washbasin/…; IfcSanitaryTerminal family).
-  | 'IfcSanitaryTerminal'
-  // ADR-408 Δρόμος B — connectable household appliance (washing machine; Electrical Appliance family).
-  | 'IfcElectricAppliance'
-  // ADR-417 — parametric pitched roof container (IfcRoofTypeEnum on derived shape).
-  | 'IfcRoof'
-  // ADR-408 Εύρος Β — hydronic heating terminal (radiator; IfcFlowTerminal family).
-  | 'IfcSpaceHeater'
-  // ADR-408 Eyros B #2 — hydronic heat source (boiler; Mechanical Equipment family).
-  | 'IfcBoiler'
-  // ADR-408 DHW — domestic hot water heater / θερμοσίφωνας (packaged plumbing equipment).
-  | 'IfcUnitaryEquipment'
-  // ADR-419 — thin floor covering per room (IfcCovering FLOORING).
-  | 'IfcCovering'
-  // ADR-422 — analytical thermal space / θερμικός χώρος (HVAC analytical space).
-  | 'IfcSpace'
-  // ADR-430/431 — electrical/data receptacle (socket / data outlet; IfcOutlet, IfcFlowTerminal family).
-  | 'IfcOutlet'
-  // ADR-432 — HVAC supply diffuser (στόμιο; IfcAirTerminal, IfcFlowTerminal family).
-  | 'IfcAirTerminal'
-  // ADR-433 — fire sprinkler head (καταιονητήρας; IfcFireSuppressionTerminal, IfcFlowTerminal family).
-  | 'IfcFireSuppressionTerminal'
-  // ADR-433 — fire riser / control-valve assembly source (στήλη πυρόσβεσης; IfcFlowController family).
-  | 'IfcFlowController'
-  // ADR-434 — gas meter (μετρητής αερίου; IfcFlowMeter, fuel-network source) + gas cooker/hob
-  // (εστία αερίου; IfcBurner, gas appliance terminal).
-  | 'IfcFlowMeter'
-  | 'IfcBurner'
-  // ADR-436 — θεμελίωση: shallow footing (πέδιλο/πεδιλοδοκός/συνδετήρια δοκός).
-  | 'IfcFooting'
-  // ADR-437 — space separator / γραμμή διαχωρισμού χώρου (virtual boundary).
-  | 'IfcVirtualElement';
-
-export const IFC_ENTITY_TYPE_VALUES: readonly IfcEntityType[] = [
+/**
+ * SSoT λίστα IFC4 κλάσεων — η ΜΟΝΗ απαρίθμηση στο αρχείο.
+ *
+ * Και ο τύπος `IfcEntityType` και το `IfcEntityTypeSchema` παράγονται από εδώ.
+ * Νέα κλάση → πρόσθεσέ την **μία φορά**, εδώ.
+ *
+ * (ADR-583 / N.18 — μέχρι το 2026-07-20 η ίδια λίστα υπήρχε τρεις φορές: union,
+ * const array, zod enum. Έφυγαν εκτός συγχρονισμού — 4 κλάσεις έλειπαν από το
+ * schema, βλ. ADR-434 §Αρχεία. Το jscpd το εντόπισε ως clone εντός αρχείου.)
+ */
+export const IFC_ENTITY_TYPE_VALUES = [
   'IfcWall',
   'IfcWallStandardCase',
   'IfcSlab',
@@ -82,54 +35,62 @@ export const IFC_ENTITY_TYPE_VALUES: readonly IfcEntityType[] = [
   'IfcColumn',
   'IfcDoor',
   'IfcWindow',
-  // ADR-406 — MEP point-based fixtures.
+  // ADR-406 — MEP point-based fixtures (IfcFlowTerminal family).
   'IfcLightFixture',
-  // ADR-407 — path-based railing.
+  // ADR-407 — path-based railing (handrail/guardrail/balustrade).
   'IfcRailing',
-  // ADR-408 Φ3 — electrical panel.
+  // ADR-408 Φ3 — electrical panel (panelboard / consumer unit).
   'IfcElectricDistributionBoard',
-  // ADR-410 — mesh-based furniture.
+  // ADR-410 — mesh-based furniture (IfcFurnishingElement family, IFC4 ADD2).
   'IfcFurniture',
-  // ADR-408 Φ8 — linear MEP segments.
+  // ADR-408 Φ8 — linear MEP segments (IfcDistributionFlowElement family).
   'IfcDuctSegment',
   'IfcPipeSegment',
-  // ADR-408 Φ11 — auto pipe/duct fittings.
+  // ADR-408 Φ11 — auto pipe/duct fittings (IfcFlowFitting family).
   'IfcPipeFitting',
   'IfcDuctFitting',
-  // ADR-408 Φ14 — drainage collector / φρεάτιο (sump/catch basin).
+  // ADR-408 Φ14 — drainage collector / φρεάτιο (sump/catch basin; IfcFlowStorageDevice family).
   'IfcFlowStorageDevice',
-  // ADR-415 — sanitary plan symbols.
+  // ADR-415 — sanitary plan symbols (WC/washbasin/…; IfcSanitaryTerminal family).
   'IfcSanitaryTerminal',
-  // ADR-408 Δρόμος B — connectable household appliance (washing machine).
+  // ADR-408 Δρόμος B — connectable household appliance (washing machine; Electrical Appliance family).
   'IfcElectricAppliance',
-  // ADR-417 — parametric pitched roof container.
+  // ADR-417 — parametric pitched roof container (IfcRoofTypeEnum on derived shape).
   'IfcRoof',
-  // ADR-408 Εύρος Β — hydronic heating terminal (radiator).
+  // ADR-408 Εύρος Β — hydronic heating terminal (radiator; IfcFlowTerminal family).
   'IfcSpaceHeater',
-  // ADR-408 Εύρος Β #2 — hydronic heat source (boiler).
+  // ADR-408 Eyros B #2 — hydronic heat source (boiler; Mechanical Equipment family).
   'IfcBoiler',
-  // ADR-408 DHW — domestic hot water heater / θερμοσίφωνας.
+  // ADR-408 DHW — domestic hot water heater / θερμοσίφωνας (packaged plumbing equipment).
   'IfcUnitaryEquipment',
-  // ADR-419 — thin floor covering per room.
+  // ADR-419 — thin floor covering per room (IfcCovering FLOORING).
   'IfcCovering',
-  // ADR-422 — analytical thermal space (IfcSpace).
+  // ADR-422 — analytical thermal space / θερμικός χώρος (HVAC analytical space).
   'IfcSpace',
-  // ADR-430/431 — electrical/data receptacle (socket / data outlet).
+  // ADR-430/431 — electrical/data receptacle (socket / data outlet; IfcOutlet, IfcFlowTerminal family).
   'IfcOutlet',
-  // ADR-432 — HVAC supply diffuser (στόμιο).
+  // ADR-432 — HVAC supply diffuser (στόμιο; IfcAirTerminal, IfcFlowTerminal family).
   'IfcAirTerminal',
-  // ADR-433 — fire sprinkler head (καταιονητήρας).
+  // ADR-433 — fire sprinkler head (καταιονητήρας; IfcFireSuppressionTerminal, IfcFlowTerminal family).
   'IfcFireSuppressionTerminal',
-  // ADR-433 — fire riser / control-valve assembly source (στήλη πυρόσβεσης).
+  // ADR-433 — fire riser / control-valve assembly source (στήλη πυρόσβεσης; IfcFlowController family).
   'IfcFlowController',
-  // ADR-434 — gas meter (μετρητής αερίου) + gas cooker/hob (εστία αερίου).
+  // ADR-434 — gas meter (μετρητής αερίου; IfcFlowMeter, fuel-network source) + gas cooker/hob
+  // (εστία αερίου; IfcBurner, gas appliance terminal).
   'IfcFlowMeter',
   'IfcBurner',
-  // ADR-436 — θεμελίωση: shallow footing.
+  // ADR-436 — θεμελίωση: shallow footing (πέδιλο/πεδιλοδοκός/συνδετήρια δοκός).
   'IfcFooting',
-  // ADR-437 — space separator (virtual boundary).
+  // ADR-437 — space separator / γραμμή διαχωρισμού χώρου (virtual boundary).
   'IfcVirtualElement',
+  // ADR-683 Φ3 — εισαγόμενο ψημένο πλέγμα από συνεργάτη. Το IFC ορίζει το proxy
+  // ΑΚΡΙΒΩΣ γι' αυτό: γεωμετρία χωρίς σημασιολογία δομικού στοιχείου. Δεν
+  // «μαντεύουμε» ότι ένα εισαγόμενο κάγκελο είναι IfcRailing (ADR-683 §3).
+  'IfcBuildingElementProxy',
 ] as const;
+
+/** Παράγεται από το `IFC_ENTITY_TYPE_VALUES` — μην το ξαναγράψεις ως χειρόγραφο union. */
+export type IfcEntityType = (typeof IFC_ENTITY_TYPE_VALUES)[number];
 
 export type IfcPropertySetValue = string | number | boolean | null;
 
@@ -154,61 +115,8 @@ export const IfcGuidSchema = z
   .string()
   .regex(IFC_GUID_REGEX, 'Invalid IFC4 GlobalId — must be 22 chars from [0-9A-Za-z_$]');
 
-export const IfcEntityTypeSchema = z.enum([
-  'IfcWall',
-  'IfcWallStandardCase',
-  'IfcSlab',
-  'IfcBeam',
-  'IfcColumn',
-  'IfcDoor',
-  'IfcWindow',
-  // ADR-406 — MEP point-based fixtures.
-  'IfcLightFixture',
-  // ADR-407 — path-based railing.
-  'IfcRailing',
-  // ADR-408 Φ3 — electrical panel.
-  'IfcElectricDistributionBoard',
-  // ADR-410 — mesh-based furniture.
-  'IfcFurniture',
-  // ADR-408 Φ8 — linear MEP segments.
-  'IfcDuctSegment',
-  'IfcPipeSegment',
-  // ADR-408 Φ11 — auto pipe/duct fittings.
-  'IfcPipeFitting',
-  'IfcDuctFitting',
-  // ADR-408 Φ14 — drainage collector / φρεάτιο (sump/catch basin).
-  'IfcFlowStorageDevice',
-  // ADR-415 — sanitary plan symbols.
-  'IfcSanitaryTerminal',
-  // ADR-408 Δρόμος B — connectable household appliance (washing machine).
-  'IfcElectricAppliance',
-  // ADR-417 — parametric pitched roof container.
-  'IfcRoof',
-  // ADR-408 Εύρος Β — hydronic heating terminal (radiator).
-  'IfcSpaceHeater',
-  // ADR-408 Εύρος Β #2 — hydronic heat source (boiler).
-  'IfcBoiler',
-  // ADR-408 DHW — domestic hot water heater / θερμοσίφωνας.
-  'IfcUnitaryEquipment',
-  // ADR-419 — thin floor covering per room.
-  'IfcCovering',
-  // ADR-422 — analytical thermal space (IfcSpace).
-  'IfcSpace',
-  // ADR-430/431 — electrical/data receptacle (socket / data outlet).
-  'IfcOutlet',
-  // ADR-432 — HVAC supply diffuser (στόμιο) + air handling unit (ΚΚΜ).
-  'IfcAirTerminal',
-  // ADR-433 — fire sprinkler head (καταιονητήρας) + fire riser (στήλη πυρόσβεσης).
-  'IfcFireSuppressionTerminal',
-  'IfcFlowController',
-  // ADR-434 — gas meter (μετρητής αερίου) + gas cooker/hob (εστία αερίου).
-  'IfcFlowMeter',
-  'IfcBurner',
-  // ADR-436 — θεμελίωση: shallow footing.
-  'IfcFooting',
-  // ADR-437 — space separator (virtual boundary).
-  'IfcVirtualElement',
-]);
+/** Παράγεται από το `IFC_ENTITY_TYPE_VALUES` — δεν μπορεί να ξεσυγχρονιστεί από τον τύπο. */
+export const IfcEntityTypeSchema = z.enum(IFC_ENTITY_TYPE_VALUES);
 
 export const IfcPropertySetValueSchema = z.union([
   z.string(),

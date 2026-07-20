@@ -508,6 +508,39 @@ service firebase.storage {
     }
 
     // =========================================================================
+    // 🗂️ IMPORTED MESHES (ADR-683 Φ3 — γεωμετρία που γύρισε ο συνεργάτης)
+    // =========================================================================
+    // Path: /companies/{companyId}/projects/{projectId}/imported-meshes/{fileName}
+    //
+    // ΓΙΑΤΙ ΞΕΧΩΡΙΣΤΟ ΔΕΝΤΡΟ (και όχι bim-mesh-library/): το `bim-mesh-library` είναι
+    // **curated κατάλογος περιεχομένου** — κοινός σε όλη την εταιρεία, write μόνο από
+    // super_admin. Τα εισαγόμενα πλέγματα είναι το ΑΝΤΙΘΕΤΟ: ανεβαίνουν από τον απλό
+    // χρήστη, ανήκουν σε ΕΝΑ έργο, και δεν πρέπει να εμφανίζονται σε picker άλλου έργου.
+    // Ίδια rules θα σήμαινε είτε να δώσουμε write στη βιβλιοθήκη (κακό), είτε να μην
+    // μπορεί ο χρήστης να εισάγει (άχρηστο).
+    //
+    // Ένα αρχείο ανά εισαγωγή (Revit linked-model): πολλά `imported-mesh` entities
+    // δείχνουν στο ΙΔΙΟ `.glb` μέσω `<uploadId>#<nodeName>`.
+    // =========================================================================
+    // @pathId: imported_meshes
+    match /companies/{companyId}/projects/{projectId}/imported-meshes/{fileName} {
+
+      // 📖 READ: μέλη της εταιρείας (το πλέγμα φορτώνεται σε κάθε άνοιγμα του έργου)
+      allow read: if isAuthenticated() && (belongsToCompany(companyId) || isSuperAdmin());
+
+      // ✍️ WRITE: μέλη της εταιρείας + έλεγχος μεγέθους. ΟΧΙ super-admin-only —
+      // η εισαγωγή είναι καθημερινή ενέργεια του μηχανικού, όχι διαχείριση καταλόγου.
+      // (Ο super_admin περνά επίσης, όπως σε ΚΑΘΕ company-scoped path εδώ — το
+      // «όχι super-admin-only» αφορά το να ΜΗΝ αποκλείεται ο μηχανικός, ADR-301 §3.3.)
+      allow write: if isAuthenticated()
+                   && (belongsToCompany(companyId) || isSuperAdmin())
+                   && isValidFileSize();
+
+      // 🗑️ DELETE: μέλη της εταιρείας (καθαρισμός εισαγωγών που δεν χρειάζονται πια)
+      allow delete: if isAuthenticated() && (belongsToCompany(companyId) || isSuperAdmin());
+    }
+
+    // =========================================================================
     // 🗂️ BIM TEXTURE LIBRARY (ADR-413 — CC0 PBR texture content library)
     // =========================================================================
     // Path: /bim-texture-library/<slug>/<map>.jpg (albedo/normal/roughness/ao)

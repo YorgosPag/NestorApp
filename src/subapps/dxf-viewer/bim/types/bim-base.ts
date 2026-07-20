@@ -51,6 +51,8 @@ export type BimElementType =
   | 'railing'
   // ADR-410 — mesh-based CC0 furniture.
   | 'furniture'
+  // ADR-683 Φ3 — εισαγόμενο ψημένο πλέγμα από συνεργάτη (κατάσταση D).
+  | 'imported-mesh'
   // ADR-408 Φ8 — unified linear MEP segment (duct + pipe).
   | 'mep-segment'
   // ADR-408 Φ11 — auto pipe fitting (point-based junction element).

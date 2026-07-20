@@ -33,6 +33,7 @@ import type { ElectricalPanelEntity } from '../../bim/types/electrical-panel-typ
 import type { RailingEntity } from '../../bim/types/railing-types';
 // ADR-410 — furniture direct entity for DXF render pipeline.
 import type { FurnitureEntity } from '../../bim/types/furniture-types';
+import type { ImportedMeshEntity } from '../../bim/entities/imported-mesh/imported-mesh-types';
 // ADR-417 — roof direct entity for DXF render pipeline.
 import type { RoofEntity } from '../../bim/types/roof-types';
 import type { FloorFinishEntity } from '../../bim/types/floor-finish-types';
@@ -379,6 +380,19 @@ export interface DxfFurniture extends DxfEntity {
 }
 
 /**
+ * ADR-683 Φ3 — DxfImportedMesh direct entity (ίδιο σχήμα με το DxfFurniture).
+ * Ο `ImportedMeshRenderer` διαβάζει `geometry.footprint` + `params` στο top level· το
+ * ακριβές περίγραμμα το τραβά από το `bimMeshCache` όταν το glTF έχει φορτώσει.
+ */
+export interface DxfImportedMesh extends DxfEntity {
+  type: 'imported-mesh';
+  kind: ImportedMeshEntity['kind'];
+  params: ImportedMeshEntity['params'];
+  geometry: ImportedMeshEntity['geometry'];
+  validation?: ImportedMeshEntity['validation'];
+}
+
+/**
  * ADR-408 Φ8 — DxfMepSegment direct entity (same pattern as DxfBeam).
  * MepSegmentRenderer reads geometry.outline + axisPolyline + params at top level.
  */
@@ -683,7 +697,7 @@ export interface DxfLeader extends DxfEntity {
   hasHookLine?: LeaderEntity['hasHookLine'];
 }
 
-export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair | DxfDimension | DxfSlab | DxfSlabOpening | DxfOpening | DxfWall | DxfColumn | DxfFoundation | DxfMepFixture | DxfElectricalPanel | DxfRailing | DxfFurniture | DxfMepSegment | DxfMepFitting | DxfFloorplanSymbol | DxfAnnotationSymbol | DxfScaleBar | DxfOpeningInfoTag | DxfMepManifold | DxfMepRadiator | DxfMepBoiler | DxfMepWaterHeater | DxfMepUnderfloor | DxfRoof | DxfFloorFinish | DxfWallCovering | DxfThermalSpace | DxfSpaceSeparator | DxfBeam | DxfHatch | DxfXLine | DxfRay | DxfImage | DxfTopoSurface | DxfLeader;
+export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair | DxfDimension | DxfSlab | DxfSlabOpening | DxfOpening | DxfWall | DxfColumn | DxfFoundation | DxfMepFixture | DxfElectricalPanel | DxfRailing | DxfFurniture | DxfMepSegment | DxfMepFitting | DxfFloorplanSymbol | DxfAnnotationSymbol | DxfScaleBar | DxfOpeningInfoTag | DxfMepManifold | DxfMepRadiator | DxfMepBoiler | DxfMepWaterHeater | DxfMepUnderfloor | DxfRoof | DxfFloorFinish | DxfWallCovering | DxfThermalSpace | DxfSpaceSeparator | DxfBeam | DxfHatch | DxfXLine | DxfRay | DxfImage | DxfTopoSurface | DxfLeader | DxfImportedMesh;
 
 // === WRAPPED (SUB-ENTITY) VARIANTS — SSoT ===
 /**

@@ -61,11 +61,14 @@ describe('toDxf capability coverage — ζωντανό seam ↔ descriptor domai
         // ADR-662 Φ2β — topo-surface: flat handler → DxfTopoSurface (το footprint outline ρέει
         // στο render pipeline). Το handler ΥΠΑΡΧΕΙ· το ΕΞΑΓΩΓΙΚΟ κενό ζει στο entity-export-coverage.
         'topo-surface',
-        // BIM (23 — όλα εκτός wall-covering)
+        // BIM (24 — όλα εκτός wall-covering)
         'wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'foundation', 'stair',
         'railing', 'roof', 'floor-finish', 'thermal-space', 'space-separator', 'furniture',
         'mep-fixture', 'electrical-panel', 'mep-manifold', 'mep-radiator', 'mep-boiler',
         'mep-water-heater', 'mep-segment', 'mep-fitting', 'mep-underfloor',
+        // ADR-683 Φ3 — εισαγόμενο πλέγμα: flat handler → DxfImportedMesh (το περίγραμμα ρέει
+        // στο 2Δ render pipeline, όπως το furniture).
+        'imported-mesh',
       ]),
     );
   });

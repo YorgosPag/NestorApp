@@ -58,12 +58,14 @@ describe('toEntityModel capability coverage — ζωντανό seam ↔ descript
         // ADR-662 Φ2β — topo-surface: `DxfTopoSurface` variant (footprint outline της TIN· το
         // 3D mesh το κρατά ο imperative TerrainSceneLayer, εκτός αυτού του seam).
         'topo-surface',
-        // BIM (25 — όλα· το floorplan-symbol μπήκε στο RENDERABLE_ENTITY_TYPES, ADR-415/635)
+        // BIM (26 — όλα· το floorplan-symbol μπήκε στο RENDERABLE_ENTITY_TYPES, ADR-415/635)
         'wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'foundation', 'stair',
         'railing', 'roof', 'floor-finish', 'wall-covering', 'thermal-space', 'space-separator',
         'furniture', 'mep-fixture', 'electrical-panel', 'mep-manifold', 'mep-radiator',
         'mep-boiler', 'mep-water-heater', 'mep-segment', 'mep-fitting', 'mep-underfloor',
         'floorplan-symbol',
+        // ADR-683 Φ3 — εισαγόμενο πλέγμα: `DxfImportedMesh` variant.
+        'imported-mesh',
       ]),
     );
   });

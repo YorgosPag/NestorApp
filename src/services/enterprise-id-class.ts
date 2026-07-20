@@ -385,6 +385,7 @@ export class EnterpriseIdService {
   generateThermalSpaceId(): string { return this.generateId(P.THERMAL_SPACE).id; }
   generateSpaceSeparatorId(): string { return this.generateId(P.SPACE_SEPARATOR).id; }
   generateFurnitureId(): string { return this.generateId(P.FURNITURE).id; }
+  generateImportedMeshId(): string { return this.generateId(P.IMPORTED_MESH).id; }
   generateFloorplanSymbolId(): string { return this.generateId(P.FLOORPLAN_SYMBOL).id; }
   generateBimPresetId(): string { return this.generateId(P.BIM_PRESET).id; }
   generateBimMaterialId(): string { return this.generateId(P.BIM_MATERIAL).id; }

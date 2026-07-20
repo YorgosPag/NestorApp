@@ -151,6 +151,9 @@ export const HIT_TEST_BOUNDS_HANDLERS: Partial<Record<EntityType, EntityBoundsHa
   'thermal-space': calculateBimEntityBounds,
   'space-separator': calculateBimEntityBounds,
   furniture: calculateBimEntityBounds,
+  // ADR-683 Φ3 — εισαγόμενο πλέγμα: το `geometry.bbox` του μετρημένου κουτιού. Διαθέσιμο
+  // ΧΩΡΙΣ φορτωμένο glTF, ώστε η επιλογή να δουλεύει αμέσως μετά το reload.
+  'imported-mesh': calculateBimEntityBounds,
   'floorplan-symbol': calculateBimEntityBounds,
   'mep-fixture': calculateBimEntityBounds,
   'electrical-panel': calculateBimEntityBounds,

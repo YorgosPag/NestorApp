@@ -61,27 +61,16 @@ function preload(category: string, assetId: string): void {
   if (templates.has(key) || status.has(key)) return;
   status.set(key, 'loading');
 
-  void resolveMeshUrl(category, assetId)
-    .then((url) => loader.loadAsync(url))
-    .then((gltf) => {
-      // Recentre the footprint (X/Z) on the local origin so the mesh sits on its
-      // insertion point regardless of where the artist placed the glTF origin.
-      // The SAME recentred template feeds the 3D placement (getInstance clone) AND
-      // the 2D silhouette below → the two views can never desync (ADR-411 2D
-      // polish, issue #2).
-      const template = recentreMeshFootprint(gltf.scene);
-      templates.set(key, template);
-      // Derive the 2D plan silhouette + interior edges from the actual mesh
-      // (per-asset representative footprint). Computed once; failures fall back
-      // to the authored rectangle in the renderer.
-      try {
-        const sil = computeTopSilhouette(template);
-        if (sil.length >= 3) silhouettes.set(key, sil);
-        const eg = computeTopEdges(template);
-        if (eg.length > 0) edges.set(key, eg);
-      } catch {
-        /* non-fatal — renderer falls back to the catalog rectangle */
-      }
+  // ADR-683 Φ3 — «bundle» asset (`<uploadId>#<nodeName>`): ένα ανεβασμένο `.glb` κουβαλά ΠΟΛΛΑ
+  // αντικείμενα (Revit linked-model). Κατεβαίνει **μία** φορά και ευρετηριάζεται ανά κόμβο.
+  const bundle = splitBundleAssetId(assetId);
+
+  loadScene(category, bundle ? bundle.bundleId : assetId)
+    .then((scene) => {
+      if (bundle) indexBundleNodes(category, bundle.bundleId, scene);
+      else indexTemplate(key, scene);
+      // Ο ζητούμενος κόμβος μπορεί να μην υπάρχει στο αρχείο (μετονομάστηκε/διαγράφηκε στον
+      // επόμενο γύρο): σβήνουμε το 'loading' ούτως ή άλλως, αλλιώς θα κολλούσε για πάντα.
       status.delete(key);
       // One shared resync signal: 3D rebuild (bbox placeholder → real mesh) AND
       // 2D repaint (rectangle → silhouette). The 2D canvas is dirtied directly
@@ -94,6 +83,86 @@ function preload(category: string, assetId: string): void {
       // bbox placeholder remains as the visible fallback.
       status.set(key, 'error');
     });
+}
+
+/**
+ * Ευρετηριάζει ΕΝΑ φορτωμένο αντικείμενο ως template + 2Δ περίγραμμα.
+ *
+ * Recentre the footprint (X/Z) on the local origin so the mesh sits on its insertion point
+ * regardless of where the artist placed the glTF origin. The SAME recentred template feeds the 3D
+ * placement (getInstance clone) AND the 2D silhouette → the two views can never desync
+ * (ADR-411 2D polish, issue #2).
+ */
+function indexTemplate(key: string, object: THREE.Object3D): void {
+  const template = recentreMeshFootprint(object);
+  templates.set(key, template);
+  // Derive the 2D plan silhouette + interior edges from the actual mesh (per-asset
+  // representative footprint). Computed once; failures fall back to the rectangle in the renderer.
+  try {
+    const sil = computeTopSilhouette(template);
+    if (sil.length >= 3) silhouettes.set(key, sil);
+    const eg = computeTopEdges(template);
+    if (eg.length > 0) edges.set(key, eg);
+  } catch {
+    /* non-fatal — renderer falls back to the authored/measured rectangle */
+  }
+}
+
+/**
+ * ADR-683 Φ3 — σπάει ένα φορτωμένο bundle σε **ένα template ανά top-level κόμβο**, με κλειδί
+ * `category/<bundleId>#<nodeName>`.
+ *
+ * Ευρετηριάζονται ΟΛΟΙ οι κόμβοι, όχι μόνο ο ζητούμενος: το αρχείο κατέβηκε ήδη ολόκληρο, οπότε
+ * τα υπόλοιπα 11 κάγκελα είναι δωρεάν — και η επόμενη `preload` τους βρίσκει σε cache hit χωρίς
+ * δεύτερη διαδρομή δικτύου. Αυτό είναι όλο το νόημα του linked-model μοντέλου.
+ */
+function indexBundleNodes(category: string, bundleId: string, scene: THREE.Object3D): void {
+  for (const child of [...scene.children]) {
+    const nodeName = child.name;
+    if (!nodeName) continue;
+    const key = meshAssetKey(category, `${bundleId}${BUNDLE_SEPARATOR}${nodeName}`);
+    if (templates.has(key)) continue;
+    // Ο κόμβος αποσπάται από τη σκηνή: το `recentreMeshFootprint` μέσα στο `indexTemplate`
+    // πρέπει να δουλέψει σε τοπικό σύστημα, χωρίς τον μετασχηματισμό του γονέα.
+    indexTemplate(key, child);
+  }
+}
+
+/** Διαχωριστικό κλειδιού bundle (καθρέφτης του `IMPORTED_MESH_NODE_SEPARATOR`). */
+const BUNDLE_SEPARATOR = '#';
+
+/**
+ * In-flight **λήψεις αρχείου**, keyed by `category/<fileId>` (ΟΧΙ ανά κόμβο).
+ *
+ * ⚠️ Χωρίς αυτό, ένα bundle με 12 κάγκελα θα προκαλούσε **12 παράλληλα `loadAsync`** του ΙΔΙΟΥ
+ * αρχείου: το `status` guard παραπάνω κλειδώνει ανά *κόμβο* (`…#Rail_01`), οπότε καθένας από τους
+ * 12 περνά τον έλεγχο και ξεκινά δική του λήψη. Το `resolveMeshUrl` de-dup-άρει μόνο το *URL*, όχι
+ * το κατέβασμα των bytes. Ένα 20MB αρχείο × 12 = 240MB δικτύου και 12 φορές parse — γι' αυτό η
+ * de-dup γίνεται **εδώ**, στο επίπεδο αρχείου.
+ */
+const inFlightScenes = new Map<string, Promise<THREE.Object3D>>();
+
+/** Κατεβάζει + κάνει parse ένα αρχείο **μία φορά**· ταυτόχρονοι καλούντες μοιράζονται το Promise. */
+function loadScene(category: string, fileId: string): Promise<THREE.Object3D> {
+  const fileKey = meshAssetKey(category, fileId);
+  const existing = inFlightScenes.get(fileKey);
+  if (existing) return existing;
+
+  const promise = resolveMeshUrl(category, fileId)
+    .then((url) => loader.loadAsync(url))
+    .then((gltf) => gltf.scene)
+    .finally(() => { inFlightScenes.delete(fileKey); });
+  inFlightScenes.set(fileKey, promise);
+  return promise;
+}
+
+/** `<bundleId>#<nodeName>` → τα δύο μέρη, ή `null` για απλό (μη-bundle) assetId. */
+function splitBundleAssetId(
+  assetId: string,
+): { readonly bundleId: string; readonly nodeName: string } | null {
+  const at = assetId.indexOf(BUNDLE_SEPARATOR);
+  if (at <= 0 || at === assetId.length - 1) return null;
+  return { bundleId: assetId.slice(0, at), nodeName: assetId.slice(at + 1) };
 }
 
 /** Return a fresh clone of the cached template, or null on a miss. */
@@ -125,4 +194,5 @@ export function __resetBimMeshCacheForTests(): void {
   status.clear();
   silhouettes.clear();
   edges.clear();
+  inFlightScenes.clear();
 }

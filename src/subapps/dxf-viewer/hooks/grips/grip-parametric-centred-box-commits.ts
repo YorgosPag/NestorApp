@@ -20,6 +20,7 @@ import { buildManifoldParamUpdate } from '../../bim/mep-manifolds/mep-manifold-p
 import { clampOutletCount } from '../../bim/mep-manifolds/mep-manifold-geometry';
 import type { Entity } from '../../types/entities';
 import type { FurnitureEntity } from '../../bim/types/furniture-types';
+import type { ImportedMeshEntity } from '../../bim/entities/imported-mesh/imported-mesh-types';
 import { applyMepFixtureGripDrag } from '../../bim/mep-fixtures/mep-fixture-grips';
 import { UpdateMepFixtureParamsCommand } from '../../core/commands/entity-commands/UpdateMepFixtureParamsCommand';
 import { applyElectricalPanelGripDrag } from '../../bim/electrical-panels/electrical-panel-grips';
@@ -29,6 +30,8 @@ import { UpdateMepManifoldParamsCommand } from '../../core/commands/entity-comma
 import { executeHostMoveWithConnectedPipes } from '../../bim/mep-segments/build-connectivity-host-update';
 import { applyFurnitureGripDrag } from '../../bim/furniture/furniture-grips';
 import { UpdateFurnitureParamsCommand } from '../../core/commands/entity-commands/UpdateFurnitureParamsCommand';
+import { applyImportedMeshGripDrag } from '../../bim/entities/imported-mesh/imported-mesh-grips';
+import { UpdateImportedMeshParamsCommand } from '../../core/commands/entity-commands/UpdateImportedMeshParamsCommand';
 import type { FloorplanSymbolEntity } from '../../bim/types/floorplan-symbol-types';
 import { applyFloorplanSymbolGripDrag } from '../../bim/floorplan-symbols/floorplan-symbol-grips';
 import { UpdateFloorplanSymbolParamsCommand } from '../../core/commands/entity-commands/UpdateFloorplanSymbolParamsCommand';
@@ -313,6 +316,53 @@ export function commitFurnitureGripDrag(
   if (command.validate() !== null) return;
   deps.execute(command);
   emitBimEntityParamsUpdated('furniture', grip.entityId);
+}
+
+/**
+ * ADR-683 Φ3 — Commit λαβής εισαγόμενου πλέγματος: **μόνο** μετακίνηση κέντρου + περιστροφή.
+ *
+ * Αδελφός του `commitFurnitureGripDrag` με μία ουσιώδη διαφορά: **δεν υπάρχει διαδρομή resize**,
+ * γιατί δεν υπάρχουν γωνιακές λαβές να την ενεργοποιήσουν (§10.1). Το `UpdateImportedMeshParams
+ * Command` επαναϋπολογίζει geometry + validation ατομικά· το merge window (isDragging=true)
+ * συμπτύσσει το συνεχές drag σε ΕΝΑ undo (ADR-031).
+ *
+ * Το ORTHO (F8) δεν διαβάζεται εδώ: αφορά γωνιακά drags (περιορισμός σε κυρίαρχο τοπικό άξονα)
+ * που εδώ **δεν υπάρχουν**. Η περιστροφή περνά από την ίδια διαδρομή pivot (ADR-397 hot-grip)
+ * με κάθε άλλο centred-box.
+ */
+export function commitImportedMeshGripDrag(
+  grip: UnifiedGripInfo,
+  delta: Point2D,
+  deps: DxfCommitDeps,
+): void {
+  const importedMeshKind = gripKindOf(grip, 'imported-mesh');
+  if (!grip.entityId || !importedMeshKind) return;
+  const resolved = resolveParametricGripEntity<ImportedMeshEntity>(deps, grip.entityId, 'imported-mesh');
+  if (!resolved) return;
+  const { sceneManager, entity: mesh } = resolved;
+  const originalParams = mesh.params;
+  const { currentPos, pivotPatch } = resolveGripCommitAnchor(
+    importedMeshKind === 'imported-mesh-rotation',
+    grip.position,
+    delta,
+  );
+  const newParams = applyImportedMeshGripDrag(importedMeshKind, {
+    originalParams,
+    delta,
+    currentPos,
+    ...pivotPatch,
+  });
+  if (newParams === originalParams) return;
+  const command = new UpdateImportedMeshParamsCommand(
+    grip.entityId,
+    newParams,
+    originalParams,
+    sceneManager,
+    true,
+  );
+  if (command.validate() !== null) return;
+  deps.execute(command);
+  emitBimEntityParamsUpdated('imported-mesh', grip.entityId);
 }
 
 /**

@@ -84,6 +84,11 @@ const NO_SELECTION_TAB_TYPES = [
   // ADR-635 Φάση B — leader callout: annotation επεξεργάζεται μέσω grips (path vertices), ΟΧΙ
   // per-selection ribbon tab → null στην επιλογή (όπως point/xline/furniture).
   'leader',
+  // ADR-683 Φ3 — εισαγόμενο πλέγμα: ΚΑΜΙΑ per-selection καρτέλα επεξεργασίας, όπως το
+  // furniture. Δεν υπάρχει τίποτα παραμετρικό να επεξεργαστείς (§3) — μόνο θέση/στροφή,
+  // που γίνονται με λαβές. Η ανάθεση ταυτότητας για προμέτρηση είναι Φ3.1 (§10.2) και
+  // ΤΟΤΕ θα μετακινηθεί στο `ENTITY_CONTEXTUAL_TRIGGER` map.
+  'imported-mesh',
 ];
 
 describe('Selection contextual-trigger coverage — map ↔ resolver ↔ descriptor domain (ADR-587 Φ3a)', () => {

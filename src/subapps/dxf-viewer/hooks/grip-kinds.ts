@@ -28,6 +28,7 @@ import type {
   ElectricalPanelGripKind,
   MepManifoldGripKind,
   FurnitureGripKind,
+  ImportedMeshGripKind,
   FloorplanSymbolGripKind,
   MepSegmentGripKind,
   XLineGripKind,
@@ -340,6 +341,7 @@ export type {
   ElectricalPanelGripKind,
   MepManifoldGripKind,
   FurnitureGripKind,
+  ImportedMeshGripKind,
   FloorplanSymbolGripKind,
   MepSegmentGripKind,
   XLineGripKind,
@@ -394,6 +396,7 @@ export interface GripKindByEntity {
   'mep-boiler': MepBoilerGripKind;
   'mep-water-heater': MepWaterHeaterGripKind;
   furniture: FurnitureGripKind;
+  'imported-mesh': ImportedMeshGripKind;
   'floorplan-symbol': FloorplanSymbolGripKind;
   'mep-segment': MepSegmentGripKind;
   xline: XLineGripKind;
@@ -449,4 +452,6 @@ export const GRIP_KIND_ENTITIES = [
   'mep-water-heater', 'furniture', 'floorplan-symbol', 'mep-segment', 'xline',
   'ray', 'polyline', 'circle', 'arc', 'line', 'group', 'block', 'annotation-symbol', 'scale-bar',
   'opening-info-tag', 'image', 'text',
+  // ADR-683 Φ3 — εισαγόμενο πλέγμα: move + rotation ΜΟΝΟ (καμία λαβή σχήματος, §3).
+  'imported-mesh',
 ] as const satisfies readonly (keyof GripKindByEntity)[];

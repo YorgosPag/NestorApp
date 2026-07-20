@@ -27,7 +27,7 @@ import { dxfSubEntityPayload } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { Point2D } from '../../rendering/types/Types';
 // rotated-rectangle entity-level SSoT (corner1/corner2 ή x/y/w/h + rotation, pivot=corner1).
 import type { HatchEntity } from '../../types/entities';
-import { isSlabEntity, isSlabOpeningEntity, isOpeningEntity, isWallEntity, isBeamEntity, isColumnEntity, isFoundationEntity, isMepFixtureEntity, isElectricalPanelEntity, isRailingEntity, isFurnitureEntity, isMepSegmentEntity, isMepFittingEntity, isFloorplanSymbolEntity, isAnnotationSymbolEntity, isScaleBarEntity, isOpeningInfoTagEntity, isMepManifoldEntity, isMepRadiatorEntity, isMepBoilerEntity, isMepWaterHeaterEntity, isMepUnderfloorEntity, isRoofEntity, isFloorFinishEntity, isThermalSpaceEntity, isSpaceSeparatorEntity, isXLineEntity, isRayEntity, isHatchEntity } from '../../types/entities';
+import { isSlabEntity, isSlabOpeningEntity, isOpeningEntity, isWallEntity, isBeamEntity, isColumnEntity, isFoundationEntity, isMepFixtureEntity, isElectricalPanelEntity, isRailingEntity, isFurnitureEntity, isImportedMeshEntity, isMepSegmentEntity, isMepFittingEntity, isFloorplanSymbolEntity, isAnnotationSymbolEntity, isScaleBarEntity, isOpeningInfoTagEntity, isMepManifoldEntity, isMepRadiatorEntity, isMepBoilerEntity, isMepWaterHeaterEntity, isMepUnderfloorEntity, isRoofEntity, isFloorFinishEntity, isThermalSpaceEntity, isSpaceSeparatorEntity, isXLineEntity, isRayEntity, isHatchEntity } from '../../types/entities';
 // ADR-583 — annotation symbol (North arrow) lightweight entity for DXF render pipeline.
 import type { AnnotationSymbolEntity } from '../../types/annotation-symbol';
 import type { ScaleBarEntity } from '../../types/scale-bar';
@@ -58,6 +58,7 @@ import type { MepUnderfloorEntity } from '../../bim/types/mep-underfloor-types';
 // ADR-407 — railing direct entity for DXF render pipeline.
 import type { RailingEntity } from '../../bim/types/railing-types';
 import type { FurnitureEntity } from '../../bim/types/furniture-types';
+import type { ImportedMeshEntity } from '../../bim/entities/imported-mesh/imported-mesh-types';
 import type { FloorplanSymbolEntity } from '../../bim/types/floorplan-symbol-types';
 // ADR-417 — roof direct entity for DXF render pipeline.
 import type { RoofEntity } from '../../bim/types/roof-types';
@@ -254,6 +255,15 @@ export const TO_DXF_HANDLERS: Partial<Record<EntityType, ToDxfHandler>> = {
     if (!isFurnitureEntity(entity)) return null;
     const fn = entity as FurnitureEntity;
     return { ...base, type: 'furniture' as const, kind: fn.kind, params: fn.params, geometry: fn.geometry, validation: fn.validation } as DxfEntityUnion;
+  },
+  'imported-mesh': (entity, base) => {
+    // ADR-683 Φ3 — direct entity (ίδιο σχήμα με το furniture). Ο `ImportedMeshRenderer`
+    // διαβάζει geometry.footprint + params στο top level. ΧΩΡΙΣ αυτό το case, το
+    // φρεσκο-εισαγμένο πλέγμα θα «έπεφτε» σιωπηλά εδώ → αόρατο στον 2Δ καμβά (ορατό
+    // μόνο σε 3Δ, που διαβάζει params απευθείας) — ακριβώς το bug του ADR-410.
+    if (!isImportedMeshEntity(entity)) return null;
+    const im = entity as ImportedMeshEntity;
+    return { ...base, type: 'imported-mesh' as const, kind: im.kind, params: im.params, geometry: im.geometry, validation: im.validation } as DxfEntityUnion;
   },
   roof: (entity, base) => {
     // ADR-417 — direct entity (same pattern as slab/furniture). RoofRenderer
