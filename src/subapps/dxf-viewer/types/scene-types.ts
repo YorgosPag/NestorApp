@@ -55,6 +55,15 @@ export interface SceneLayer {
   /** Stable identifier — `lyr_<UUID-v4>` from enterprise-id.service. */
   readonly id: string;
   name: string;
+  /**
+   * ADR-635 Φ C.17 — το ΑΡΧΙΚΟ όνομα layer του αρχείου προέλευσης (DXF LAYER table).
+   * IMMUTABLE: το `renameLayer()` αλλάζει ΜΟΝΟ το `name`, ποτέ αυτό. Χάρη σε αυτό, ένα
+   * μετονομασμένο layer εξακολουθεί να ταιριάζει όταν ξανα-εισαχθεί το ίδιο αρχείο
+   * (`reconcileSceneLayerIdentity`) — αλλιώς κάθε rename θα ξανα-ορφάνιαζε τα
+   * per-entity-persisted entities του. Αναλογία: AutoCAD XREF κρατά το source layer name.
+   * Απόν σε layers που δεν ήρθαν από import (user-created) και σε σκηνές προ-Φ C.17.
+   */
+  readonly sourceName?: string;
   color: string;
   colorAci?: number;
   colorTrueColor?: number | null;
@@ -82,6 +91,8 @@ export interface SceneLayer {
  */
 export function createSceneLayer(input: {
   name: string;
+  /** ADR-635 Φ C.17 — αρχικό όνομα αρχείου προέλευσης· περνούν ΜΟΝΟ τα import boundaries. */
+  sourceName?: string;
   color?: string;
   visible?: boolean;
   locked?: boolean;
@@ -106,6 +117,7 @@ export function createSceneLayer(input: {
   return {
     id: input.id ?? generateLayerId(),
     name: input.name,
+    sourceName: input.sourceName,
     color: input.color ?? '#ffffff',
     colorAci: input.colorAci ?? 7,
     colorTrueColor: input.colorTrueColor ?? null,

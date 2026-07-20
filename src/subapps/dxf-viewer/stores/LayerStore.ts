@@ -143,13 +143,24 @@ export function getLayerByName(name: string): SceneLayer | null {
 }
 
 /**
- * Resolve an entity's layer NAME via stable id only (ADR-358 Phase 9D-5b-iii schema flip).
+ * Resolve an entity's layer NAME via stable id ONLY (ADR-358 Phase 9D-5b-iii schema flip).
  *
- * Id-only post-schema-flip: `entity.layer` name backref no longer used.
- *   1. If `entity.layerId` is set AND registered in store → return layer name.
- *   2. Legacy fallback: if `entity.layer` (name backref) is present → return it.
- *      Covers pre-9F entities and unit-test mocks where the store singleton is empty.
- *   3. Otherwise → return undefined.
+ *   1. `entity.layerId` set ΚΑΙ registered στο store → return layer name.
+ *   2. Οτιδήποτε άλλο → `undefined`.
+ *
+ * ⚠️ ΚΑΜΙΑ fallback στο legacy `entity.layer` name backref — **σκόπιμα**, όχι παράλειψη.
+ * (Μέχρι το ADR-635 Φ C.17 αυτό το docstring υποσχόταν τέτοια fallback ενώ ο κώδικας δεν
+ * την είχε ΠΟΤΕ — σχόλιο που έλεγε ψέματα, διορθώθηκε 2026-07-20.)
+ *
+ * ΓΙΑΤΙ ΔΕΝ ΠΡΕΠΕΙ να προστεθεί: το `renameLayer()` κρατά το id σταθερό και αλλάζει το
+ * `name`. Ένα entity με stale `.layer` θα resolve-άρε στο ΠΑΛΙΟ όνομα — ακριβώς το bug
+ * που έλυσε το id-flip — και θα έσπαγε το `layer-rename-backref-integration.test.ts`.
+ *
+ * Τα legacy δίχτυα ζουν στο σωστό επίπεδο, όχι εδώ:
+ *   - `canvas-v2/dxf-canvas/dxf-entity-layer-skip.ts` — name lookup στο scene `layersById`
+ *   - `services/dxf-scene-migration.ts` `deriveLayersByIdFromEntities` — load boundary
+ * Κλειδωμένο με test: `stores/__tests__/LayerStore.resolveEntityLayerName.test.ts`
+ * (cases 1 & 4 — entity με μόνο legacy `.layer`, και stale id + `.layer` παρόν).
  */
 export function resolveEntityLayerName(
   entity: { layerId?: string } | null | undefined

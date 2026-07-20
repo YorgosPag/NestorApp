@@ -8,13 +8,9 @@
 import { useEffect, useCallback } from 'react';
 import type { SceneModel, AnySceneEntity } from '../../types/scene';
 import { useLevels, useCurrentLevelScene } from '../../systems/levels';
-// Giorgio 2026-07-11 — fresh-import → fit-to-extents intent for the SINGLE
-// `useViewportAutoFit` controller (ADR-399). Replaces the imperative fit emit.
-import { markFreshImportFit } from '../../systems/zoom/viewport-fit-intent';
-// ADR-635 Φ C.8 — imported per-entity (BIM/stair/hatch) first-save emitter (SSoT, shared .tek+DXF)
-import { emitImportedEntityCreateEvents } from '../../systems/levels/emit-imported-entity-create-events';
-// Block Library M1 — μετά το import, «κράτα» τα named blocks στο in-session registry («Τα Blocks μου»).
-import { captureSessionBlocksFromScene } from '../../bim/block-library/capture-session-blocks';
+// ADR-635 Φ C.17 — η ΜΙΑ πόρτα εισαγωγής σκηνής σε όροφο (reconcile layer ids → write →
+// per-entity first-saves → block capture → file link → auto-fit). Κοινή για .tek ΚΑΙ DXF.
+import { commitImportedScene } from '../../systems/levels/commit-imported-scene';
 import type { DxfSaveContext } from '../../services/dxf-firestore.service';
 // ✅ ΦΑΣΗ 7: useDxfImport μεταφέρθηκε στο hooks/ folder
 import { useDxfImport } from '../useDxfImport';
@@ -193,6 +189,18 @@ export function useSceneState() {
         floorplanId: resolvedFileRecordId ?? targetLevel?.sceneFileId ?? null,
       };
 
+      // 🛡️ ADR-635 Φ C.17 — Η ΜΙΑ πόρτα εισαγωγής (setLevelScene → emit → capture → link →
+      // fit), ΜΑΖΙ με το layer-identity reconcile που εμποδίζει τα per-entity persisted
+      // entities να ορφανιάσουν σε κάθε re-import (117 γραμμοσκιάσεις, 2026-07-20).
+      // Η σειρά των βημάτων είναι συμβόλαιο — ζει στο module, κλειδωμένη με test.
+      const commitImported = (imported: SceneModel): void => commitImportedScene(imported, {
+        targetLevelId,
+        scope: importTargetScope,
+        getLevelScene,
+        setLevelScene,
+        linkSceneFileToLevel,
+      });
+
 
       // ADR-526 — Tekton .tek → ίδιο pipeline (level-resolution έγινε ήδη παραπάνω).
       // Φορτώνει τη σκηνή· οι σκάλες (BIM) κάνουν first-save μέσω StairPersistenceHost,
@@ -206,50 +214,13 @@ export function useSceneState() {
         if (result.warnings.length > 0) {
           notifications.warning(result.warnings.join('\n'), { duration: 5000 });
         }
-        setLevelScene(targetLevelId, result.scene);
-        // BIM/stair/hatch → PersistenceHost first-save (Firestore). 2Δ primitives (line/arc/
-        // circle/text/dimension) ΔΕΝ έχουν host → ΟΧΙ emit· σώζονται με το scene blob (linkSceneToLevel).
-        // ADR-531 Φ5b.2 — ΚΡΙΣΙΜΟ: χωρίς first-save, το Firestore reconciliation snapshot (reconcile-
-        // LoadedSceneBim) αφαιρεί τα per-entity entities από το scene (ο τοίχος/η γραμμοσκίαση
-        // «εμφανίζεται & εξαφανίζεται»). SSoT emitter — ίδιος για .tek ΚΑΙ DXF import (N.18).
-        emitImportedEntityCreateEvents(result.scene.entities, importTargetScope);
-        // Block Library M1 — «κράτα» τα named blocks της σκηνής στο in-session registry.
-        captureSessionBlocksFromScene(result.scene.entities);
-        // 🛡️ ADR-526 Φ5a — persist the level↔FileRecord link now (shared helper, N.18).
-        linkSceneFileToLevel();
-        // Giorgio 2026-07-11 — signal the SINGLE `useViewportAutoFit` controller (ADR-399)
-        // to fit-to-extents on this fresh import (all entity types), instead of racing it
-        // with an imperative `EventBus.emit('canvas-fit-to-view')`. Sync, before render commit.
-        markFreshImportFit();
+        commitImported(result.scene);
         return;
       }
 
       const scene = await importDxfFile(file);
       if (scene) {
-
-        setLevelScene(targetLevelId, scene);
-        // 🛡️ ADR-635 Φ C.8 — imported per-entity entities (hatch· + Φ B SOLID→hatch, τυχόν BIM)
-        // first-save μέσω του ΙΔΙΟΥ SSoT emitter με το .tek branch. ΧΩΡΙΣ αυτό, οι εισαγόμενες
-        // AutoCAD γραμμοσκιάσεις ζωγραφίζονται μία φορά αλλά το `reconcileLoadedSceneBim` τις πετά
-        // στο πρώτο reload (καμία `floorplan_hatches` doc) → «hatches χάνονται μετά την εισαγωγή».
-        emitImportedEntityCreateEvents(scene.entities, importTargetScope);
-        // Block Library M1 — «κράτα» τα named blocks του DXF στο in-session registry («Τα Blocks μου»).
-        captureSessionBlocksFromScene(scene.entities);
-        // 🛡️ ROOT-CAUSE FIX (incident 2026-06-08 — "hard refresh → χάνεται το σχέδιο"):
-        // Link the level to the canonical wizard FileRecord id DETERMINISTICALLY, NOW —
-        // instead of relying on the 2s debounced auto-save round-trip. The auto-save
-        // re-resolves the id (injectedRef ?? cache ?? findExistingFileRecord ?? generateFileId)
-        // and, because useLevelSceneLoader.resetDxfAutoSaveTarget() clears the injected id for
-        // a still-file-less level, it could mint a PHANTOM id that has no `files` doc → on
-        // reload loadFromStorageImpl(getById('FILES', id)) returns null → empty canvas.
-        // linkSceneToLevel is idempotent (skips if already linked to this id), so the later
-        // onSceneSaved callback is a harmless no-op. Skipped when no canonical id (non-wizard
-        // drag-drop import has no FileRecord). Raster (non-dxf) never reaches here.
-        linkSceneFileToLevel();
-        // Scene rendering is handled by Canvas V2 system.
-        // Giorgio 2026-07-11 — fresh import → fit-to-extents via the SINGLE
-        // `useViewportAutoFit` controller (ADR-399), no imperative double-emit race.
-        markFreshImportFit();
+        commitImported(scene);
       } else {
         derr('SceneState', '❌ DXF import returned null scene');
         const errorMessage = importError ? `DXF Import Error: ${importError}` : 'Failed to import DXF file. Please check the file format and try again.';

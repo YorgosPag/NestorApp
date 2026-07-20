@@ -177,6 +177,9 @@ export class DxfSceneBuilder {
     const defaultLayerColor = layerColors[DXF_DEFAULT_LAYER]?.color || DEFAULT_LAYER_COLOR;
     layers[DXF_DEFAULT_LAYER] = createSceneLayer({
       name: DXF_DEFAULT_LAYER,
+      // ADR-635 Φ C.17 — βλ. registerLayer· το «0» είναι το ΣΗΜΑΝΤΙΚΟΤΕΡΟ match, γιατί
+      // κάθε νέο BIM entity καρφώνεται στο id του (useSceneState.onEntityCreated).
+      sourceName: DXF_DEFAULT_LAYER,
       color: defaultLayerColor,
       visible: true,
       locked: false,
@@ -433,8 +436,12 @@ export class DxfSceneBuilder {
       const resolvedColor = resolveLayerColor(layerName, layerColors) ?? getLayerColor(layerName);
 
       // ADR-358 Phase 9C/9D-2 — factory auto-gens stable `lyr_<UUID-v4>` id.
+      // ADR-635 Φ C.17 — `sourceName` = το όνομα ΤΟΥ ΑΡΧΕΙΟΥ, immutable. Επιτρέπει στο
+      // `reconcileSceneLayerIdentity` να ξαναβρεί αυτό το layer σε επόμενο import ΑΚΟΜΑ
+      // ΚΑΙ αν ο χρήστης το έχει μετονομάσει στο μεταξύ.
       layers[layerName] = createSceneLayer({
         name: layerName,
+        sourceName: layerName,
         color: resolvedColor,
         visible,
         locked: false,
