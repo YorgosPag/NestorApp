@@ -41,6 +41,12 @@ interface ToolbarCoordinatesDisplayProps {
  * mousemove), the readout writes `textContent` DIRECTLY from the world-position
  * store subscription — same bypass-React pattern as the compositor crosshair.
  * Result: zero React reconciliation on the 60fps cursor stream.
+ *
+ * ADR-040 Φ12b (2026-07-20): the value shown is the **effective** cursor — after OSNAP /
+ * F9+Q step / AutoAlign — i.e. the point a click would commit, matching AutoCAD's
+ * status-bar convention. It used to show the raw pointer, which visibly disagreed with
+ * the snapped crosshair. No change here: the fix is upstream, at the single writer
+ * (`mouse-handler-move.ts`), so this leaf keeps its unchanged ~20fps subscription.
  */
 export const ToolbarCoordinatesDisplay: React.FC<ToolbarCoordinatesDisplayProps> = React.memo(
   function ToolbarCoordinatesDisplay({ precision, className }) {

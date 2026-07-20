@@ -158,15 +158,22 @@ export function useMouseMoveHandler({
     const CURSOR_UPDATE_THROTTLE_MS = PANEL_LAYOUT.TIMING.CURSOR_UPDATE_THROTTLE;
     const now = performance.now();
 
-    if (now - refs.cursorThrottleRef.current.lastUpdateTime >= CURSOR_UPDATE_THROTTLE_MS) {
+    // ADR-040 Φ12b — the WORLD publish is deferred to after the snap resolution below
+    // (it must carry the EFFECTIVE point, not the raw pointer); this flag carries the
+    // throttle decision down so both publishes stay on the SAME ~20fps tick.
+    const worldChannelDue = now - refs.cursorThrottleRef.current.lastUpdateTime >= CURSOR_UPDATE_THROTTLE_MS;
+
+    if (worldChannelDue) {
       refs.cursorThrottleRef.current.lastUpdateTime = now;
       withPerf('cursor-update-pos', () => cursor.updatePosition(screenPos));
-      withPerf('cursor-update-world', () => cursor.updateWorldPosition(worldPos));
 
       if (freshViewport.width !== cursor.viewport.width || freshViewport.height !== cursor.viewport.height) {
         withPerf('cursor-update-viewport', () => cursor.updateViewport(freshViewport));
       }
 
+      // NOTE (ADR-040 Φ12b): this event carries the RAW pointer pair — `screenPos` and
+      // `worldPos` are the same physical point in two spaces. It answers "where is the
+      // mouse", NOT "what will be committed"; the latter is the world channel below.
       withPerf('eventbus-emit', () =>
         canvasEventBus.emit(CANVAS_EVENTS.MOUSE_MOVE, { screenPos, worldPos, canvas: 'dxf' }),
       );
@@ -233,6 +240,17 @@ export function useMouseMoveHandler({
     // throttle, so it stays locked to the compositor crosshair (same value, same
     // clock) — no React-state / 20fps-throttle desync. Must run before onMouseMove.
     setRealtimeWorldCursor(moveWorldPos);
+
+    // 🏢 ADR-040 Φ12b — the THROTTLED (~20fps) world channel publishes the SAME
+    // effective point as the realtime one, just at React-friendly rate. Before this,
+    // it carried the RAW `worldPos` while the crosshair (F9+Q step) and the ghost
+    // (OSNAP / AutoAlign) rode `moveWorldPos` — so the status-bar readout showed a
+    // point that would NOT be committed, and the crosshair visibly disagreed with it.
+    // One resolved cursor, two rates: 60fps for ghosts, ~20fps for React/UI readouts.
+    if (worldChannelDue) {
+      withPerf('cursor-update-world', () => cursor.updateWorldPosition(moveWorldPos));
+    }
+
     onMouseMove?.(screenPos, moveWorldPos);
 
     // Drawing preview callback

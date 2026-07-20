@@ -313,6 +313,14 @@ export function subscribeToImmediatePosition(listener: (position: Point2D | null
 }
 
 // 🌍 World position convenience (2026-05-08)
+//
+// SEMANTIC (ADR-040 Φ12b, 2026-07-20): this channel carries the **effective** cursor —
+// the point AFTER snap resolution (OSNAP / F9+Q step / AutoAlign), i.e. the point that
+// would be committed on click — throttled to ~20fps for React/UI consumers. It is the
+// same value as `getRealtimeWorldCursor()` below, only sampled slower. Sole production
+// writer: `mouse-handler-move.ts`. Consumers that need the RAW pointer location (not the
+// snapped one) must read `getImmediatePosition()` (screen) or the `CANVAS_EVENTS.MOUSE_MOVE`
+// event payload, both of which stay un-snapped by design.
 export function setImmediateWorldPosition(pos: Point2D | null): void {
   ImmediatePositionStore.setWorldPosition(pos);
 }
@@ -331,7 +339,7 @@ export function subscribeToImmediateWorldPosition(
 // The 60fps synchronous post-snap world cursor SSoT — read imperatively by every
 // ghost preview (no useSyncExternalStore, no React re-render). NOT to be confused
 // with `getImmediateWorldPosition()` above, which is the THROTTLED ~20fps React
-// channel for the toolbar/guides.
+// channel for the toolbar/guides — SAME effective point (ADR-040 Φ12b), slower rate.
 export function setRealtimeWorldCursor(pos: Point2D | null): void {
   ImmediatePositionStore.setRealtimeWorld(pos);
 }

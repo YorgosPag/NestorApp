@@ -72,6 +72,84 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-07-20 (b) — ➕ ADR-514 §2 γενικευμένο: το commit των ΓΕΝΙΚΩΝ εργαλείων δεσμεύει τον armed snap (δείκτης ≡ αποτέλεσμα)
+
+**Το σύμπτωμα** (Giorgio, εργαλείο «Γραμμή»): ο δείκτης έδειχνε καθαρά «γωνία τοίχου» πάνω στη γωνία·
+μετά το κλικ το 1ο σημείο προσγειώθηκε **~2 mm δίπλα** (ορατό ως κυανό ίχνος `0,002 m`).
+
+**Ρίζα — διπλή, ανεξάρτητη επίλυση έλξης.** Ο `snap-scheduler` επιλύει την έλξη στην κίνηση, τη γράφει
+στο `ImmediateSnap`/`fullSnapResult`, και ο `SnapIndicatorOverlay` ζωγραφίζει **αυτό**. Στο mouseup όμως ο
+γενικός κλάδος του `mouse-handler-up` έκανε **δεύτερη** `findSnapPoint(worldPoint)` — με **άλλη είσοδο**
+(ωμό world της στιγμής του κλικ, όχι του τελευταίου tick του scheduler) και από **άλλη διαδρομή μηχανής**
+απ' αυτήν που παρήγαγε τον δείκτη. Δύο εγκέφαλοι, δύο απαντήσεις: ο δείκτης υποσχόταν τη γωνία τοίχου,
+το commit προσγειωνόταν αλλού.
+
+Ακριβώς η ρίζα που το **ADR-514 §2** είχε ήδη διαγνώσει και λύσει για `column` (γρ. 327) και `beam`
+(γρ. 367) — με ρητό σχόλιο «*με το `findSnapPoint` το commit ΞΑΝΑ-snapάριζε σε διαφορετικό σημείο →
+preview≠commit*». Η λύση **δεν είχε γενικευτεί**· «Γραμμή» και κάθε άλλο γενικό εργαλείο έμειναν στον
+παλιό κλάδο.
+
+**Η αλλαγή.** Ο γενικός κλάδος προτιμά πλέον τον **armed snap** — `getFullSnapResult()`, δηλαδή ακριβώς
+το αντικείμενο που ρεντάρει ο `SnapIndicatorOverlay`:
+
+```ts
+const armed = getFullSnapResult();
+const snapResult = armed?.found === true && armed.snappedPoint != null
+  ? armed                                        // ό,τι είδες — αυτό δεσμεύεται
+  : findSnapPoint(worldPoint.x, worldPoint.y);   // δίχτυ: κανένας armed snap → ως πριν
+```
+
+Και οι δύο κλάδοι δίνουν `ProSnapResult`, οπότε η ανάκτηση υψομέτρου συνδέσμου MEP
+(`resolveSnapConnectorElevationMm(snapResult.snapPoint, …)`, ADR-408 Φ-B1) δουλεύει αμετάβλητη.
+
+**Γιατί fallback και όχι σκέτη αφαίρεση** (N.7.2 #4, belt-and-suspenders): όταν ο scheduler δεν έχει
+armed snap ο χρήστης **δεν είδε δείκτη** → ελεύθερο σημείο είναι το σωστό WYSIWYG· το `findSnapPoint`
+μένει ως δίχτυ ώστε η συμπεριφορά «καμία έλξη οπλισμένη» να είναι bit-for-bit η προηγούμενη.
+
+**Έλεγχος:** `npx jest systems/cursor hooks/drawing --runInBand` → **61 suites / 481 tests πράσινα**.
+
+**Αρχεία:** `systems/cursor/mouse-handler-up.ts` + NEW SSoT `systems/cursor/resolve-armed-snap-commit.ts`
+(`resolveArmedSnapForCommit()` — η επιλογή armed-vs-findSnapPoint εξήχθη σε δικό της module ώστε ο handler
+να μείνει < 500 γρ. N.7.1· EXTRACT not trim).
+
+### 2026-07-20 — Φ12b: το throttled world channel δημοσιεύει τον ΕΝΕΡΓΟ κέρσορα (readout ≡ σταυρός)
+
+**Το πρόβλημα.** Ο `mouse-handler-move` υπολόγιζε **δύο** παγκόσμιες τιμές ανά κίνηση και τις έστελνε σε
+διαφορετικά κανάλια με **ασύμφωνη σημασιολογία**:
+
+| Τιμή | Κανάλι | Καταναλωτές |
+|---|---|---|
+| `worldPos` — **ωμός** δείκτης | `cursor.updateWorldPosition()` → `getImmediateWorldPosition()` (~20fps) | status-bar readout, `useCanvasContainerHandlers`, keyboard shortcuts, draft-polygon/guide previews |
+| `moveWorldPos` — **μετά** από OSNAP / F9+Q step / AutoAlign | `setRealtimeWorldCursor()` (60fps, Φ12) | κάθε ghost preview |
+
+Ο σταυρός κουμπώνει στο βήμα (γρ. 133, `applyPointStepSnap`) και το φάντασμα στο OSNAP, ενώ το readout
+έδειχνε τον **ωμό** δείκτη — δηλαδή σημείο που **δεν** θα δεσμευόταν στο κλικ. Ορατή διαφωνία σταυρού και
+ένδειξης· παραβίαση της σύμβασης AutoCAD/Revit (η status bar δείχνει πάντα το ενεργό σημείο).
+
+**Η αλλαγή.** Η δημοσίευση στο throttled κανάλι **μετακινείται μετά** την επίλυση της έλξης και μεταφέρει
+πλέον το `moveWorldPos`. Ο throttle **δεν** αλλάζει: η απόφαση του tick αιχμαλωτίζεται σε `worldChannelDue`
+και τα δύο publishes μένουν στο ΙΔΙΟ ~20fps βήμα. Άρα **ένας** επιλυμένος κέρσορας, **δύο** ρυθμοί — 60fps
+για τα φαντάσματα, ~20fps για τα React/UI readouts.
+
+**Τι ΔΕΝ άλλαξε (σκόπιμα).** Το `CANVAS_EVENTS.MOUSE_MOVE` κρατά το ωμό ζεύγος `{screenPos, worldPos}` —
+είναι το ίδιο φυσικό σημείο σε δύο χώρους και απαντά «πού είναι το ποντίκι», όχι «τι θα δεσμευτεί».
+Ο `ToolbarCoordinatesDisplay` δεν άγγιξε κώδικα (μόνο σχόλιο): η διόρθωση είναι **upstream, στον μοναδικό
+writer**, οπότε η συνδρομή του μένει ως έχει και δεν επιστρέφει το κόστος της Φάσης H (Tooltip 30% +
+`useTranslation` 29% του frame).
+
+**Blast radius.** Και οι υπόλοιποι καταναλωτές του `getImmediateWorldPosition()` βλέπουν πλέον το ενεργό
+σημείο. Αυτό είναι **διόρθωση, όχι regression**: π.χ. το `useCanvasContainerHandlers.ts:116` έγραφε ήδη
+χειροκίνητα `snap?.found ? snap.point : getImmediateWorldPosition()` — δηλαδή προσπαθούσε να ανακατασκευάσει
+ακριβώς αυτό που τώρα του δίνεται έτοιμο· paste-at-cursor και rubber-band previews κουμπώνουν σωστά.
+
+**Παρατήρηση καθαριότητας.** Ο `useLayerCanvasMouseMove` γράφει κι αυτός στο ίδιο store, αλλά **δεν
+καλείται πουθενά** — εξάγεται μόνο από το `hooks/canvas/index.ts`. Νεκρός κώδικας που επέζησε επειδή το
+knip αγνοεί το `dxf-viewer`. Δεν αφαιρέθηκε σε αυτό το commit (εκτός εμβέλειας)· καταγράφεται εδώ ώστε να
+μη θεωρηθεί δεύτερος writer σε μελλοντική ανάλυση.
+
+**Αρχεία:** `systems/cursor/mouse-handler-move.ts`, `systems/cursor/ImmediatePositionStore.ts` (σχόλια
+σημασιολογίας), `ui/toolbar/ToolbarCoordinatesDisplay.tsx` (σχόλιο).
+
 ### 2026-07-19 (b) — ➕ ADR-397: gate καταστολής OSNAP glyph πάνω από MOVE cross (SnapIndicatorSubscriber)
 
 **Τι:** το micro-leaf `SnapIndicatorSubscriber` (στο `canvas-layer-stack-leaves.tsx`) αποκτά gate: όταν

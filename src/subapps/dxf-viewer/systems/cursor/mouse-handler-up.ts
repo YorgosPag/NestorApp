@@ -40,6 +40,7 @@ import { buildColumnPolarSnapOptions } from '../../bim/columns/column-polar-opts
 import { resolveColumnHeadReferences } from '../../hooks/drawing/column-completion';
 import { sceneSnapTargetsStore } from '../../bim/framing/scene-snap-targets';
 import { resolveEffectivePreviewCursor } from '../../hooks/drawing/wysiwyg-preview-shared';
+import { resolveArmedSnapForCommit } from './resolve-armed-snap-commit';
 import { applyBimDrawingConstraint } from '../../hooks/drawing/bim-ortho-reference';
 // ADR-363 §neighbor-gap-step — το shift που υπολόγισε το preview (στρογγύλεμα διάκενου προς τη μεριά
 // κίνησης, Q κρατημένο)· το commit το εφαρμόζει αυτούσιο στο ελεύθερο ghost → preview ≡ commit.
@@ -366,7 +367,7 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
           // **centered** (preview≠commit). Με τον ΙΔΙΟ effectiveCursor → north-flush by construction.
           worldPoint = resolveEffectivePreviewCursor(worldPoint);
         } else {
-          const snapResult = findSnapPoint(worldPoint.x, worldPoint.y);
+          const snapResult = resolveArmedSnapForCommit(worldPoint, findSnapPoint); // ADR-514 §2 γεν. — armed snap αντί για 2η findSnapPoint (SSoT helper)
           if (snapResult && snapResult.found && snapResult.snappedPoint) {
             worldPoint = snapResult.snappedPoint;
             // ADR-408 Φ-B1 (SSoT) — recover the connector's 3D elevation from the
