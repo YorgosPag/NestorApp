@@ -176,6 +176,19 @@ export {
   extractRequestMetadata,
 } from './audit';
 
+// Audit policy (ADR-438 three-tier retention / delivery / dedup)
+export type { AuditTier, AuditTierConfig } from './audit';
+
+export {
+  AUDIT_TIER_CONFIG,
+  AUDIT_ACTION_TIER,
+  resolveAuditTier,
+  resolveAuditPolicy,
+  computeAuditExpiry,
+  buildAuditDedupKey,
+  shouldSuppressDuplicate,
+} from './audit';
+
 // =============================================================================
 // TENANT ISOLATION
 // =============================================================================

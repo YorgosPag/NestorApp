@@ -20,7 +20,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { withAuth, logAuditEvent } from '@/lib/auth';
+import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -97,14 +97,6 @@ export const GET = withStandardRateLimit(async function GET(
         if (cachedProjects) {
           const duration = Date.now() - startTime;
           logger.info('Cache hit', { projectsCount: cachedProjects.length, durationMs: duration });
-
-          // 📊 Audit: Cache hit
-          await logAuditEvent(ctx, 'data_accessed', 'projects', 'api', {
-            metadata: {
-              path: '/api/projects/by-company',
-              reason: `Projects by company accessed (${cachedProjects.length} items from cache, ${duration}ms)`
-            }
-          });
 
           return apiSuccess({
             projects: cachedProjects,
@@ -185,14 +177,6 @@ export const GET = withStandardRateLimit(async function GET(
 
         const duration = Date.now() - startTime;
         logger.info('Complete: projects cached', { count: projects.length, durationMs: duration });
-
-        // 📊 Audit: Firestore load
-        await logAuditEvent(ctx, 'data_accessed', 'projects', 'api', {
-          metadata: {
-            path: '/api/projects/by-company',
-            reason: `Projects by company accessed (${projects.length} items from Firestore, ${duration}ms)`
-          }
-        });
 
         return apiSuccess({
           projects,

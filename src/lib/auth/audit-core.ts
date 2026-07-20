@@ -28,6 +28,12 @@ import type {
   AuditChangeValue,
   AuditMetadata,
 } from './types';
+import {
+  buildAuditDedupKey,
+  computeAuditExpiry,
+  resolveAuditPolicy,
+  shouldSuppressDuplicate,
+} from './audit-policy';
 import { createModuleLogger, sentryCaptureMessage } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 const logger = createModuleLogger('audit');
@@ -44,41 +50,36 @@ import { nowISO } from '@/lib/date-local';
 const AUDIT_COLLECTION = SUBCOLLECTIONS.COMPANY_AUDIT_LOGS;
 
 // =============================================================================
-// RETENTION / TTL (ADR-438)
-// =============================================================================
-
-/**
- * Audit log retention window, in months. After this period elapses, Firestore's
- * TTL policy on the `expiresAt` field auto-deletes the document. This bounds the
- * otherwise-unbounded growth of the audit trail.
- *
- * TTL policy is enabled out-of-band (GCP-side) on the `audit_logs` and
- * `system_audit_logs` collection groups — see ADR-438 for the gcloud command.
- *
- * @see docs/centralized-systems/reference/adrs/ADR-438-audit-log-retention-ttl.md
- */
-const AUDIT_LOG_RETENTION_MONTHS = 12;
-
-/**
- * Compute the TTL expiry instant for a new audit entry: now + retention window.
- *
- * Returned as a JS `Date`; the Firebase Admin SDK persists it as a Firestore
- * `Timestamp`, which is the type the TTL policy requires.
- */
-function computeAuditExpiry(): Date {
-  const expiry = new Date();
-  expiry.setMonth(expiry.getMonth() + AUDIT_LOG_RETENTION_MONTHS);
-  return expiry;
-}
-
-// =============================================================================
 // FIRESTORE DATA SANITIZATION
 // =============================================================================
+
+/**
+ * Είναι «σκέτο» αντικείμενο ({...} ή Object.create(null)) — δηλαδή κάτι που έχει νόημα
+ * να σαρωθεί αναδρομικά για `undefined`;
+ *
+ * ⚠️ ΜΗΝ το χαλαρώσεις σε `typeof v === 'object'`. Τα `Date` και τα `FieldValue`
+ * sentinels (π.χ. `serverTimestamp()`) είναι μεν objects, αλλά **δεν έχουν own
+ * enumerable properties**: `Object.entries(new Date())` → `[]`. Αναδρομή πάνω τους
+ * παράγει `{}`, ο έλεγχος «κενό ⇒ πέτα το κλειδί» παρακάτω τα εξαφανίζει, και τα
+ * documents γράφονται ΧΩΡΙΣ `expiresAt` και ΧΩΡΙΣ `timestamp` — δηλαδή το TTL policy
+ * του ADR-438 δεν βρίσκει πεδίο να τηρήσει και το retention μένει άπειρο.
+ * Αυτό ακριβώς συνέβη σιωπηλά από το v1 (2026-06-10) έως το v2 (2026-07-20).
+ */
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    return false;
+  }
+  const proto = Object.getPrototypeOf(value) as unknown;
+  return proto === Object.prototype || proto === null;
+}
 
 /**
  * Remove undefined values from object (Firestore compatibility).
  * Firestore throws error on undefined values. Recursively removes undefined
  * while preserving null values (which are valid).
+ *
+ * Μη-plain αντικείμενα (Date, Timestamp, FieldValue sentinel, GeoPoint, DocumentReference)
+ * περνούν **αυτούσια** στον Admin SDK, που ξέρει να τα σειριοποιήσει.
  */
 function removeUndefinedValues<T extends Record<string, unknown>>(obj: T): Partial<T> {
   const result: Record<string, unknown> = {};
@@ -88,8 +89,8 @@ function removeUndefinedValues<T extends Record<string, unknown>>(obj: T): Parti
       continue;
     }
 
-    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
-      const cleaned = removeUndefinedValues(value as Record<string, unknown>);
+    if (isPlainObject(value)) {
+      const cleaned = removeUndefinedValues(value);
       if (Object.keys(cleaned).length > 0) {
         result[key] = cleaned;
       }
@@ -119,10 +120,63 @@ function getDb(): Firestore | null {
 // CORE AUDIT LOGGING
 // =============================================================================
 
+/** Το σχήμα που φτάνει πράγματι στο Firestore (server timestamp αντί για Date). */
+type PersistableAuditEntry = Omit<AuditLogEntry, 'timestamp'> & { timestamp: FieldValue };
+
+/**
+ * Γράψε την εγγραφή στο /companies/{companyId}/audit_logs/{auditId}.
+ *
+ * Απομονωμένο από το `logAuditEvent` ώστε το ίδιο σώμα να μπορεί είτε να γίνει
+ * `await` (blocking tiers) είτε να αφεθεί fire-and-forget (access tier).
+ */
+async function persistAuditEntry(
+  db: Firestore,
+  ctx: AuthContext,
+  action: AuditAction,
+  entry: PersistableAuditEntry
+): Promise<void> {
+  try {
+    const companyExists = await validateCompanyExists(ctx.companyId);
+    if (!companyExists) {
+      logger.warn('[AUDIT] Company document not found — materializing to preserve audit trail', {
+        companyId: ctx.companyId,
+        action,
+        actorId: ctx.uid,
+      });
+      try {
+        await ensureCompanyDocument(ctx.companyId, undefined, ctx.uid);
+      } catch (materializeError) {
+        logger.error('[AUDIT] Failed to materialize company document — audit event lost', {
+          companyId: ctx.companyId,
+          error: getErrorMessage(materializeError),
+        });
+        return;
+      }
+    }
+
+    const auditId = generateAuditId();
+    await db
+      .collection(COLLECTIONS.COMPANIES)
+      .doc(ctx.companyId)
+      .collection(AUDIT_COLLECTION)
+      .doc(auditId)
+      .set(entry);
+  } catch (error) {
+    logger.error('[AUDIT] Failed to write audit log:', { error });
+    logger.info('[AUDIT] Fallback entry:', { entry: JSON.stringify(entry) });
+  }
+}
+
 /**
  * Log an audit event to Firestore.
  *
  * Events are written to: /companies/{companyId}/audit_logs/{autoId}
+ *
+ * Το tier του `action` (βλ. `./audit-policy`) καθορίζει τρία πράγματα:
+ * το retention (`expiresAt`), το αν ο caller περιμένει το write, και το αν
+ * ταυτόσημα διαδοχικά γεγονότα καταστέλλονται. Τα ~110 υπάρχοντα
+ * `await logAuditEvent(...)` call sites μένουν ΑΜΕΤΑΒΛΗΤΑ — απλώς παύουν να
+ * μπλοκάρουν όταν το action ανήκει σε async tier.
  *
  * @param ctx - Authenticated context (provides companyId and actorId)
  * @param action - Audit action type
@@ -162,6 +216,23 @@ export async function logAuditEvent(
     });
   }
 
+  const policy = resolveAuditPolicy(action);
+
+  // Access tier: ίδιος δράστης + ίδιος στόχος + ίδια διαδρομή μέσα στο παράθυρο ⇒
+  // δεν προσθέτει πληροφορία. Τα blocking tiers έχουν dedupWindowMs = 0 ⇒ ποτέ εδώ.
+  if (policy.dedupWindowMs > 0) {
+    const dedupKey = buildAuditDedupKey({
+      companyId: ctx.companyId,
+      actorId: ctx.uid,
+      action,
+      targetId,
+      path: options.metadata?.path,
+    });
+    if (shouldSuppressDuplicate(dedupKey, policy.dedupWindowMs, Date.now())) {
+      return;
+    }
+  }
+
   const rawEntry = {
     companyId: ctx.companyId,
     action,
@@ -171,7 +242,7 @@ export async function logAuditEvent(
     previousValue: options.previousValue ?? null,
     newValue: options.newValue ?? null,
     timestamp: FieldValue.serverTimestamp(),
-    expiresAt: computeAuditExpiry(), // ADR-438: TTL auto-deletes after retention window
+    expiresAt: computeAuditExpiry(action), // ADR-438: TTL auto-deletes after the tier's retention window
     metadata: removeUndefinedValues({
       ipAddress: options.metadata?.ipAddress,
       userAgent: options.metadata?.userAgent,
@@ -180,42 +251,22 @@ export async function logAuditEvent(
     }),
   };
 
-  const entry = removeUndefinedValues(rawEntry) as Omit<AuditLogEntry, 'timestamp'> & { timestamp: FieldValue };
+  const entry = removeUndefinedValues(rawEntry) as PersistableAuditEntry;
 
   if (!entry.metadata || Object.keys(entry.metadata).length === 0) {
     entry.metadata = {};
   }
 
-  try {
-    const companyExists = await validateCompanyExists(ctx.companyId);
-    if (!companyExists) {
-      logger.warn('[AUDIT] Company document not found — materializing to preserve audit trail', {
-        companyId: ctx.companyId,
-        action,
-        actorId: ctx.uid,
-      });
-      try {
-        await ensureCompanyDocument(ctx.companyId, undefined, ctx.uid);
-      } catch (materializeError) {
-        logger.error('[AUDIT] Failed to materialize company document — audit event lost', {
-          companyId: ctx.companyId,
-          error: getErrorMessage(materializeError),
-        });
-        return;
-      }
-    }
-
-    const auditId = generateAuditId();
-    await db
-      .collection(COLLECTIONS.COMPANIES)
-      .doc(ctx.companyId)
-      .collection(AUDIT_COLLECTION)
-      .doc(auditId)
-      .set(entry);
-  } catch (error) {
-    logger.error('[AUDIT] Failed to write audit log:', { error });
-    logger.info('[AUDIT] Fallback entry:', { entry: JSON.stringify(entry) });
+  if (policy.delivery === 'async') {
+    // Fire-and-forget: ο caller δεν πληρώνει το Firestore round-trip. Η συνάρτηση
+    // επιστρέφει ήδη-resolved Promise ⇒ τα `await logAuditEvent(...)` δεν αλλάζουν.
+    void persistAuditEntry(db, ctx, action, entry).catch((error: unknown) => {
+      logger.error('[AUDIT] Async audit write failed:', { action, error: getErrorMessage(error) });
+    });
+    return;
   }
+
+  await persistAuditEntry(db, ctx, action, entry);
 }
 
 // =============================================================================
@@ -280,7 +331,7 @@ export async function logWebhookEvent(
       },
     },
     timestamp: FieldValue.serverTimestamp(),
-    expiresAt: computeAuditExpiry(), // ADR-438: TTL auto-deletes after retention window
+    expiresAt: computeAuditExpiry('webhook_received'), // ADR-438: TTL auto-deletes after retention window
     metadata: removeUndefinedValues({
       ipAddress: metadata.ipAddress,
       userAgent: metadata.userAgent,
@@ -289,7 +340,7 @@ export async function logWebhookEvent(
     }),
   };
 
-  const entry = removeUndefinedValues(rawEntry) as Omit<AuditLogEntry, 'timestamp'> & { timestamp: FieldValue };
+  const entry = removeUndefinedValues(rawEntry) as PersistableAuditEntry;
 
   if (!entry.metadata || Object.keys(entry.metadata).length === 0) {
     entry.metadata = { reason: `Webhook event received from ${webhookSource}` };
