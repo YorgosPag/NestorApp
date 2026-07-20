@@ -725,6 +725,11 @@ const IMPORTED_MESH_TRACKED_FIELDS_RAW: Record<string, string> = {
   measuredWidthMm: 'measuredWidthMm',
   measuredDepthMm: 'measuredDepthMm',
   measuredHeightMm: 'measuredHeightMm',
+  // ADR-683 Φ3.1 — τα δύο μεγέθη που τροφοδοτούν την προμέτρηση. Το `measuredVolumeM3` αλλάζει από
+  // `null` σε αριθμό (ή αντίστροφα) όταν ο συνεργάτης κλείσει/ανοίξει το κέλυφος — γεγονός που
+  // μεταβάλλει ΠΟΙΕΣ μονάδες κοστολόγησης επιτρέπονται, άρα οφείλει να φαίνεται στο ιστορικό.
+  measuredSurfaceAreaM2: 'measuredSurfaceAreaM2',
+  measuredVolumeM3: 'measuredVolumeM3',
   mountingElevationMm: 'mountingElevationMm',
   rotationDeg: 'rotationDeg',
   storeyId: 'storeyId',
