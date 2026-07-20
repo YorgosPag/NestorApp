@@ -3,10 +3,15 @@
 /**
  * ADR-363 Phase 7.1 Step 6.3 — Bridge για το Multi-Selection contextual tab.
  *
- * Pure read+write hook (όχι store με `useSyncExternalStore` — universalSelection
- * είναι React Context state, ήδη reactive). Καταναλώνεται μέσα στα ribbon panel
- * leaves (`MultiSelectionCommonPropertiesPanel`, `MultiSelectionFilterPanel`) —
- * δεν εγκαθίσταται στο `CanvasSection` orchestrator (ADR-040 Rule 1).
+ * Καταναλώνεται μέσα στα ribbon panel leaves (`MultiSelectionCommonPropertiesPanel`,
+ * `MultiSelectionFilterPanel`) — δεν εγκαθίσταται στο `CanvasSection` orchestrator
+ * (ADR-040 Rule 1), άρα οι store subscriptions ανήκουν εδώ.
+ *
+ * ⚠️ Ιστορικό (2026-07-20): αυτό το header έλεγε «όχι store — το universalSelection
+ * είναι React Context state, ήδη reactive». Αυτό ΕΠΑΨΕ να ισχύει με το ADR-532 (η
+ * επιλογή μετακόμισε στο zero-React `SelectedEntitiesStore`) και το ADR-547 (η σκηνή
+ * στο `SceneStore`). Η παραδοχή έμεινε στον κώδικα ως παγωμένο `useMemo` — βλ. σχόλιο
+ * στο `bimEntries`. Διαβάζουμε πλέον από τα δύο stores.
  *
  * Bridge mode rules:
  *   - 0 BIM-eligible entities → mode='none'
@@ -28,6 +33,8 @@ import { useCommandHistory } from '../../../core/commands';
 import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import type { LevelSceneWriter } from '../../../systems/levels/level-scene-accessor';
 import type { useUniversalSelection } from '../../../systems/selection';
+import { useSelectionEntries } from '../../../systems/selection/useSelectedEntities';
+import { useLevelScene } from '../../../systems/scene/useSceneSelectors';
 import type { EntityType } from '../../../types/entities';
 import type { SelectionEntry } from '../../../systems/selection/types';
 import {
@@ -88,12 +95,17 @@ export function useMultiSelectionRibbonBridge(
   const { execute: executeCommand } = useCommandHistory();
 
   // ─── Resolve BIM entries from current selection + active level scene ───────
+  // ΖΩΝΤΑΝΕΣ πηγές (ADR-532 `useSelectionEntries` + ADR-547 `useLevelScene`): το παλιό
+  // `useMemo([levelManager, universalSelection])` πάγωνε ΚΑΙ τη σκηνή ΚΑΙ την επιλογή
+  // (σταθερά context refs) → το panel κρατούσε τα entries της πρώτης επιλογής και το
+  // bulk-patch έγραφε πάνω σε μπαγιάτικη λίστα (ADR-547 changelog 2026-07-20).
+  // Οι δύο καταναλωτές είναι leaf panels (multi-selection contextual tab), άρα η
+  // subscription ανήκει εδώ — ΟΧΙ σε orchestrator (ADR-040 CHECK 6C).
+  const selectionEntries = useSelectionEntries();
+  const scene = useLevelScene(levelManager.currentLevelId);
+
   const bimEntries = useMemo<readonly BimSelectionEntry[]>(() => {
-    const lid = levelManager.currentLevelId;
-    if (!lid) return [];
-    const scene = levelManager.getLevelScene(lid);
     if (!scene) return [];
-    const selectionEntries = universalSelection.getAll();
     const result: BimSelectionEntry[] = [];
     for (const entry of selectionEntries) {
       const ent = scene.entities.find((e) => e.id === entry.id);
@@ -103,7 +115,7 @@ export function useMultiSelectionRibbonBridge(
       result.push({ id: entry.id, kind, selectableType: entry.type });
     }
     return result;
-  }, [levelManager, universalSelection]);
+  }, [scene, selectionEntries]);
 
   // ─── Derived state ─────────────────────────────────────────────────────────
   const kinds = useMemo<readonly EntityType[]>(

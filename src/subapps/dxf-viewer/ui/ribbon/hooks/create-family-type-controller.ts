@@ -27,7 +27,7 @@
 import { useCallback, useMemo } from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { useLevels } from '../../../systems/levels';
-import { useUniversalSelection } from '../../../systems/selection';
+import { useLivePrimaryEntity } from '../../../systems/selection/useLiveSelectedEntity';
 import { useCommandHistory } from '../../../core/commands';
 import type { ICommand } from '../../../core/commands/interfaces';
 import type { FamilyTypeMutationDeps } from '../../../core/commands/entity-commands/UpdateFamilyTypeCommand';
@@ -151,7 +151,6 @@ export function useFamilyTypeController<
 
   const { user } = useAuth();
   const levelManager = useLevels();
-  const universalSelection = useUniversalSelection();
   const { execute } = useCommandHistory();
 
   // Reactive catalog snapshot + stable lookup.
@@ -167,14 +166,14 @@ export function useFamilyTypeController<
     [user?.companyId, user?.uid],
   );
 
-  const entity = useMemo<E | null>(() => {
-    const id = universalSelection.getPrimaryId();
-    if (!id || !levelManager.currentLevelId) return null;
-    const scene = levelManager.getLevelScene(levelManager.currentLevelId);
-    const e = scene?.entities.find((x) => x.id === id);
-    return e && config.isEntity(e) ? e : null;
-    // byId is a dep so the resolved type refreshes when the catalog changes.
-  }, [levelManager, universalSelection, byId, config]);
+  // ΖΩΝΤΑΝΗ ανάγνωση (SSoT `useLivePrimaryEntity`) — το παλιό
+  // `useMemo([levelManager, universalSelection, byId, config])` πάγωνε την οντότητα
+  // στο mount (τα δύο πρώτα deps είναι σταθερά refs) → ο επιλογέας family-type
+  // έδειχνε/έγραφε πάνω στο `typeId` της ΠΡΟΗΓΟΥΜΕΝΗΣ οντότητας μέχρι να αλλάξει ο
+  // κατάλογος (ADR-547 changelog 2026-07-20). Το `byId` ΔΕΝ ήταν πραγματικό dep της
+  // οντότητας — το χρησιμοποιεί ο `currentType` παρακάτω, που το έχει ήδη.
+  const live = useLivePrimaryEntity();
+  const entity: E | null = live && config.isEntity(live) ? live : null;
 
   const currentType = useMemo(
     () => (entity?.typeId ? config.asFamilyType(getType(entity.typeId)) : null),

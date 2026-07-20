@@ -33,7 +33,8 @@ import {
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu';
 import { useLevels } from '../../../systems/levels';
-import { useUniversalSelection } from '../../../systems/selection';
+import { useLiveSelectedEntity } from '../../../systems/selection/useLiveSelectedEntity';
+import { emitBimEntityParamsUpdated } from '../../../systems/events/emit-bim-entity-params-updated';
 import { useEscapeHandler, ESC_PRIORITY } from '../../../systems/escape-bus';
 import { normalizeNumber } from '../../../systems/dynamic-input/utils/number';
 import { isWallEntity } from '../../../types/entities';
@@ -124,18 +125,14 @@ export function RibbonWallDimensionWidget(
   const { t } = useTranslation('dxf-viewer-shell');
   const colors = useSemanticColors();
   const levelManager = useLevels();
-  const universalSelection = useUniversalSelection();
   const dispatchPatch = useWallParamsDispatcher({ levelManager });
 
-  const wall = useMemo<WallEntity | null>(() => {
-    const id = universalSelection.getPrimaryId();
-    if (!id || !levelManager.currentLevelId) return null;
-    const scene = levelManager.getLevelScene(levelManager.currentLevelId);
-    if (!scene) return null;
-    const e = scene.entities.find((x) => x.id === id);
-    if (!e || !isWallEntity(e)) return null;
-    return e;
-  }, [levelManager, universalSelection]);
+  // ΖΩΝΤΑΝΗ ανάγνωση (SSoT `useLiveSelectedEntity`). Το προηγούμενο
+  // `useMemo([levelManager, universalSelection])` πάγωνε τον τοίχο στο mount (και
+  // τα δύο deps είναι σταθερά refs) → το commit συνέθετε patch πάνω σε μπαγιάτικα
+  // params, οπότε αλλαγή ΠΑΧΟΥΣ επανέγραφε το παλιό `end` (επανέφερε το ΜΗΚΟΣ)
+  // και αντίστροφα (Giorgio 2026-07-20).
+  const wall = useLiveSelectedEntity<WallEntity>(isWallEntity);
 
   const currentMeters = wall ? cfg.read(wall) : null;
   const editable = !!wall && (!cfg.straightOnly || wall.kind === 'straight');
@@ -166,6 +163,9 @@ export function RibbonWallDimensionWidget(
     const patch = cfg.commit(wall.params, meters);
     if (!patch) return; // no-op / invalid → skip dispatch (no undo pollution)
     dispatchPatch(wall, patch);
+    // kind→event SSoT: μια γεωμετρική αλλαγή ανακοινώνεται ΜΙΑ φορά, ανεξάρτητα
+    // από την επιφάνεια που την έκανε (parity με RibbonWallJoinWidget + grips).
+    emitBimEntityParamsUpdated('wall', wall.id);
   }, [wall, cfg, dispatchPatch]);
 
   const commitDraft = useCallback((raw: string) => {

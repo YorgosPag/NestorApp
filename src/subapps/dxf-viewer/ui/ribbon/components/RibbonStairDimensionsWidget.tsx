@@ -23,10 +23,9 @@
  * level-scene store at the leaf, never at the orchestrator panel.
  */
 
-import React, { useMemo } from 'react';
+import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { useLevels } from '../../../systems/levels';
-import { useUniversalSelection } from '../../../systems/selection';
+import { useLiveSelectedEntity } from '../../../systems/selection/useLiveSelectedEntity';
 import { isStairEntity } from '../../../types/entities';
 import type { StairEntity } from '../../../types/entities';
 import { mmFactorFromWidth } from '../../../bim/stairs/stair-floor-link';
@@ -40,18 +39,11 @@ function formatMeters(valueMm: number | null): string {
 
 export function RibbonStairDimensionsWidget(): React.JSX.Element {
   const { t } = useTranslation('dxf-viewer-shell');
-  const levelManager = useLevels();
-  const universalSelection = useUniversalSelection();
-
-  const stair = useMemo<StairEntity | null>(() => {
-    const id = universalSelection.getPrimaryId();
-    if (!id || !levelManager.currentLevelId) return null;
-    const scene = levelManager.getLevelScene(levelManager.currentLevelId);
-    if (!scene) return null;
-    const e = scene.entities.find((x) => x.id === id);
-    if (!e || !isStairEntity(e)) return null;
-    return e;
-  }, [levelManager, universalSelection]);
+  // ΖΩΝΤΑΝΗ ανάγνωση (SSoT `useLiveSelectedEntity`) — το προηγούμενο
+  // `useMemo([levelManager, universalSelection])` πάγωνε τη σκάλα στο mount (και
+  // τα δύο deps είναι σταθερά refs), οπότε το read-out έδειχνε μπαγιάτικες
+  // διαστάσεις μέχρι ένα άσχετο re-render (ADR-547 changelog 2026-07-20).
+  const stair = useLiveSelectedEntity<StairEntity>(isStairEntity);
 
   if (!stair) {
     return (

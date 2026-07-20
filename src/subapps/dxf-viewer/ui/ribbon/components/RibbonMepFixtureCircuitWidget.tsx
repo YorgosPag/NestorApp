@@ -19,8 +19,7 @@
 
 import React, { useMemo } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { useLevels } from '../../../systems/levels';
-import { useUniversalSelection } from '../../../systems/selection';
+import { useLivePrimaryEntity } from '../../../systems/selection/useLiveSelectedEntity';
 import { useMepSystemStore } from '../../../bim/mep-systems/mep-system-store';
 import { useMepCircuitEditorStore } from '../../../bim/mep-systems/mep-circuit-editor-store';
 import { resolveManagedSystems } from '../../../bim/mep-systems/mep-circuit-editor';
@@ -28,21 +27,19 @@ import { systemColor } from '../../../bim/mep-systems/mep-system-color';
 
 export function RibbonMepFixtureCircuitWidget(): React.JSX.Element | null {
   const { t } = useTranslation('dxf-viewer-shell');
-  const levelManager = useLevels();
-  const universalSelection = useUniversalSelection();
   const systems = useMepSystemStore((s) => s.systems);
   const activeSystemId = useMepCircuitEditorStore((s) => s.activeSystemId);
+  // ΖΩΝΤΑΝΗ ανάγνωση (SSoT) — το προηγούμενο memo πάγωνε τη συσκευή στο mount
+  // (σταθερά context refs) → έδειχνε το κύκλωμα της ΠΡΩΤΗΣ επιλογής
+  // (ADR-547 changelog 2026-07-20).
+  const entity = useLivePrimaryEntity();
 
   // The circuit(s) the selected fixture belongs to (Revit single-circuit ⇒ one).
   const circuit = useMemo(() => {
-    const id = universalSelection.getPrimaryId();
-    if (!id || !levelManager.currentLevelId) return null;
-    const scene = levelManager.getLevelScene(levelManager.currentLevelId);
-    const entity = scene?.entities.find((e) => e.id === id);
     if (!entity) return null;
     const candidates = resolveManagedSystems([entity], systems);
     return candidates.find((c) => c.id === activeSystemId) ?? candidates[0] ?? null;
-  }, [levelManager, universalSelection, systems, activeSystemId]);
+  }, [entity, systems, activeSystemId]);
 
   if (!circuit) return null;
   const label = t('ribbon.commands.mepFixtureEditor.circuit.label');

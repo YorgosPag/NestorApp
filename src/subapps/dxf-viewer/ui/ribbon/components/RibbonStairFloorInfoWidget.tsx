@@ -25,12 +25,12 @@
  *     converts on "Reset to floor" (m → mm).
  */
 
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Button } from '@/components/ui/button';
 import { Link2 as LinkIcon, AlertTriangle, RotateCcw } from 'lucide-react';
 import { useLevels } from '../../../systems/levels';
-import { useUniversalSelection } from '../../../systems/selection';
+import { useLiveSelectedEntity } from '../../../systems/selection/useLiveSelectedEntity';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateStairParamsCommand } from '../../../core/commands/entity-commands/UpdateStairParamsCommand';
 import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
@@ -65,7 +65,6 @@ function isLinkedToFloor(
 export function RibbonStairFloorInfoWidget(): React.JSX.Element | null {
   const { t } = useTranslation('dxf-viewer-shell');
   const levelManager = useLevels();
-  const universalSelection = useUniversalSelection();
   const { execute } = useCommandHistory();
 
   // ADR-358 Phase 9 — accept any populated floorId in saveContext (entityType
@@ -78,15 +77,12 @@ export function RibbonStairFloorInfoWidget(): React.JSX.Element | null {
   // used by BuildingTabs (no duplicate cost).
   const { floorsCount: totalFloors } = useBuildingTotalFloors(floor?.buildingId);
 
-  const stair = useMemo<StairEntity | null>(() => {
-    const id = universalSelection.getPrimaryId();
-    if (!id || !levelManager.currentLevelId) return null;
-    const scene = levelManager.getLevelScene(levelManager.currentLevelId);
-    if (!scene) return null;
-    const e = scene.entities.find((x) => x.id === id);
-    if (!e || !isStairEntity(e)) return null;
-    return e;
-  }, [levelManager, universalSelection]);
+  // ΖΩΝΤΑΝΗ ανάγνωση (SSoT). ΚΡΙΣΙΜΟ εδώ, όχι απλή ένδειξη: το `handleResetToFloor`
+  // γράφει ΟΛΑ τα params (`{ ...prev, multiStoryConfig }`) — με παγωμένο snapshot
+  // (το παλιό `useMemo([levelManager, universalSelection])`, δύο σταθερά refs) η
+  // «επαναφορά στον όροφο» θα επανέφερε ΚΑΙ κάθε άλλη ενδιάμεση αλλαγή της σκάλας
+  // (ίδιο clobber με τον τοίχο πάχος↔μήκος — ADR-547 changelog 2026-07-20).
+  const stair = useLiveSelectedEntity<StairEntity>(isStairEntity);
 
   const handleResetToFloor = useCallback(() => {
     if (!stair || !floor || typeof floor.height !== 'number') return;

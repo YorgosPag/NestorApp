@@ -50,10 +50,21 @@ export { SelectedEntitiesStore } from './SelectedEntitiesStore';
 export {
   useSelectedEntityIds,
   usePrimarySelectedId,
+  useSelectionEntries,
   useSelectionCount,
   useIsSelected,
   useSelectionByType,
 } from './useSelectedEntities';
+
+// SSoT: ζωντανή primary-selected οντότητα (selection store × SceneStore) —
+// αντικαθιστά το παγωμένο `useMemo([levelManager, universalSelection])` pattern.
+//
+// ⚠️ ΣΚΟΠΙΜΑ **ΕΚΤΟΣ** barrel: το `useLiveSelectedEntity` εξαρτάται από το
+// `useLevels` → `LevelsSystem` → `dxf-firestore.service` → Firebase auth. Αν
+// επανεξαχθεί από εδώ, ΚΑΘΕ import από `systems/selection` τραβάει όλη την
+// αλυσίδα Firebase (μετρημένο 2026-07-20: έσπασε το
+// `useMultiSelectionRibbonBridge.test.tsx` σε node env). Import με ΠΛΗΡΕΣ path:
+//   import { useLiveSelectedEntity } from '…/systems/selection/useLiveSelectedEntity';
 
 // ADR-420 — reset 2D selection on floor navigation (cross-floor selection leak)
 export { useSelectionLevelReset } from './useSelectionLevelReset';

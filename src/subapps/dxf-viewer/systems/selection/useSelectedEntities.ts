@@ -15,10 +15,11 @@
 
 import { useCallback, useSyncExternalStore } from 'react';
 
-import type { SelectableEntityType } from './types';
+import type { SelectableEntityType, SelectionEntry } from './types';
 import {
   subscribeSelection,
   getStorePrimaryId,
+  getStoreSelectionEntries,
   getStoreSelectedEntityIds,
   getStoreSelectionCount,
   getStoreIdsByType,
@@ -37,6 +38,19 @@ export function useSelectedEntityIds(): string[] {
 /** Reactive primary selected id (value-stable string snapshot). */
 export function usePrimarySelectedId(): string | null {
   return useSyncExternalStore(subscribeSelection, getStorePrimaryId, getStorePrimaryId);
+}
+
+/**
+ * Reactive ΠΛΗΡΕΙΣ selection entries (`{ id, type }`, όχι μόνο ids) — reference-stable
+ * μέχρι να αλλάξει η επιλογή. Το reactive αντίστοιχο του `useUniversalSelection().getAll()`
+ * για leaves που ΔΕΙΧΝΟΥΝ την επιλογή (π.χ. multi-selection ribbon panels).
+ */
+export function useSelectionEntries(): readonly SelectionEntry[] {
+  return useSyncExternalStore(
+    subscribeSelection,
+    getStoreSelectionEntries,
+    getStoreSelectionEntries,
+  );
 }
 
 /** Reactive total selection count (value-stable number snapshot). */

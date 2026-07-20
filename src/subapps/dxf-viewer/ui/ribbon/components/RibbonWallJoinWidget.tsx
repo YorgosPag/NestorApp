@@ -23,7 +23,7 @@
  * @see ../../wall-advanced-panel/commands/dispatchWallParamPatch.ts — SSoT writer
  */
 
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback } from 'react';
 import {
   Select,
   SelectContent,
@@ -33,7 +33,7 @@ import {
 } from '@/components/ui/select';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useLevels } from '../../../systems/levels';
-import { useUniversalSelection } from '../../../systems/selection';
+import { useLiveSelectedEntity } from '../../../systems/selection/useLiveSelectedEntity';
 import { isWallEntity } from '../../../types/entities';
 import type { WallEntity, WallParams, WallJoinMode } from '../../../bim/types/wall-types';
 import { useWallParamsDispatcher } from '../../wall-advanced-panel/commands/dispatchWallParamPatch';
@@ -61,18 +61,11 @@ function priorityOptionKey(joinPriority: number | undefined): string {
 export function RibbonWallJoinWidget(): React.JSX.Element | null {
   const { t } = useTranslation('dxf-viewer-shell');
   const levelManager = useLevels();
-  const universalSelection = useUniversalSelection();
   const dispatchPatch = useWallParamsDispatcher({ levelManager });
 
-  const wall = useMemo<WallEntity | null>(() => {
-    const id = universalSelection.getPrimaryId();
-    if (!id || !levelManager.currentLevelId) return null;
-    const scene = levelManager.getLevelScene(levelManager.currentLevelId);
-    if (!scene) return null;
-    const e = scene.entities.find((x) => x.id === id);
-    if (!e || !isWallEntity(e)) return null;
-    return e;
-  }, [levelManager, universalSelection]);
+  // ΖΩΝΤΑΝΗ ανάγνωση (SSoT) — το παλιό `useMemo([levelManager, universalSelection])`
+  // πάγωνε τον τοίχο στο mount, οπότε ένα join-patch επανέγραφε μπαγιάτικα params.
+  const wall = useLiveSelectedEntity<WallEntity>(isWallEntity);
 
   const setJoin = useCallback(
     (endpoint: 'start' | 'end', mode: WallJoinMode) => {

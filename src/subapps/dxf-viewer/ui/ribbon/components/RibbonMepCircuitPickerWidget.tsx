@@ -16,16 +16,8 @@
 
 import React, { useCallback, useMemo } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { cn } from '@/lib/utils';
-import { useSemanticColors } from '@/hooks/useSemanticColors';
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from '@/components/ui/dropdown-menu';
-import { useLevels } from '../../../systems/levels';
-import { useUniversalSelection } from '../../../systems/selection';
+import { RibbonCompactDropdown } from './RibbonCompactDropdown';
+import { useLivePrimaryEntity } from '../../../systems/selection/useLiveSelectedEntity';
 import { useMepSystemStore } from '../../../bim/mep-systems/mep-system-store';
 import { useMepCircuitEditorStore } from '../../../bim/mep-systems/mep-circuit-editor-store';
 import { resolveManagedSystems } from '../../../bim/mep-systems/mep-circuit-editor';
@@ -33,21 +25,19 @@ import { isPipeSystemParams } from '../../../bim/types/mep-system-types';
 
 export function RibbonMepCircuitPickerWidget(): React.JSX.Element | null {
   const { t } = useTranslation('dxf-viewer-shell');
-  const colors = useSemanticColors();
-  const levelManager = useLevels();
-  const universalSelection = useUniversalSelection();
   const systems = useMepSystemStore((s) => s.systems);
   const activeSystemId = useMepCircuitEditorStore((s) => s.activeSystemId);
   const setActiveSystemId = useMepCircuitEditorStore((s) => s.setActiveSystemId);
+  // ΖΩΝΤΑΝΗ ανάγνωση (SSoT) — το προηγούμενο `useMemo([levelManager,
+  // universalSelection, systems])` πάγωνε την οντότητα στο mount (τα δύο πρώτα
+  // deps είναι σταθερά refs) → ο επιλογέας κρατούσε τα κυκλώματα της ΠΡΩΤΗΣ
+  // επιλογής (ADR-547 changelog 2026-07-20).
+  const entity = useLivePrimaryEntity();
 
-  const candidates = useMemo(() => {
-    const id = universalSelection.getPrimaryId();
-    if (!id || !levelManager.currentLevelId) return [];
-    const scene = levelManager.getLevelScene(levelManager.currentLevelId);
-    const entity = scene?.entities.find((e) => e.id === id);
-    if (!entity) return [];
-    return resolveManagedSystems([entity], systems);
-  }, [levelManager, universalSelection, systems]);
+  const candidates = useMemo(
+    () => (entity ? resolveManagedSystems([entity], systems) : []),
+    [entity, systems],
+  );
 
   const activeName = useMemo(
     () => candidates.find((c) => c.id === activeSystemId)?.params.name
@@ -80,28 +70,14 @@ export function RibbonMepCircuitPickerWidget(): React.JSX.Element | null {
   }
 
   return (
-    <span className="dxf-ribbon-combobox-row">
-      <span className="dxf-ribbon-combobox-label">{label}</span>
-      <span className="dxf-ribbon-widget-compact">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              className={cn('dxf-ribbon-wall-length-input', colors.bg.primary)}
-              aria-label={label}
-            >
-              {activeName} ▾
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            {candidates.map((circuit) => (
-              <DropdownMenuItem key={circuit.id} onSelect={() => onPick(circuit.id)}>
-                {circuit.params.name}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </span>
-    </span>
+    <RibbonCompactDropdown
+      label={label}
+      triggerContent={activeName}
+      items={candidates.map((circuit) => ({
+        key: circuit.id,
+        onSelect: () => onPick(circuit.id),
+        content: circuit.params.name,
+      }))}
+    />
   );
 }

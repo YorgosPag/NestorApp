@@ -5,8 +5,17 @@
 import { renderHook, act } from '@testing-library/react';
 import { useMultiSelectionRibbonBridge } from '../useMultiSelectionRibbonBridge';
 import { resetGlobalCommandHistory } from '../../../../core/commands';
+import { SceneStore } from '../../../../systems/scene/SceneStore';
+import { SelectedEntitiesStore } from '../../../../systems/selection/SelectedEntitiesStore';
 import type { SceneModel } from '../../../../types/scene';
 import type { SelectionEntry } from '../../../../systems/selection/types';
+
+// 2026-07-20 — ΑΝΑΓΝΩΣΗ από τα stores, ΟΧΙ από props. Το bridge διάβαζε σκηνή +
+// επιλογή μέσα σε `useMemo([levelManager, universalSelection])`, δηλαδή από δύο
+// ΣΤΑΘΕΡΑ context refs → πάγωνε στο mount. Πλέον διαβάζει ζωντανά από
+// `SceneStore` (ADR-547) + `SelectedEntitiesStore` (ADR-532), οπότε το setup
+// γεμίζει τα stores· τα props κρατούν μόνο τα WRITE paths (setLevelScene,
+// selectMultiple), που παραμένουν mockαρισμένα.
 
 // ─── Test fixtures ───────────────────────────────────────────────────────────
 
@@ -59,6 +68,15 @@ function setup(opts: {
   const scene = opts.scene === undefined ? makeScene() : opts.scene;
   const levelManager = makeLevelManager(scene);
   const universalSelection = makeUniversalSelection(opts.entries ?? []);
+
+  // Γέμισμα των ΖΩΝΤΑΝΩΝ stores (η ανάγνωση δεν περνά πια από τα props).
+  SceneStore._resetForTests();
+  SelectedEntitiesStore._resetForTests();
+  if (scene) SceneStore.setLevelScene('lvl-1', scene);
+  for (const entry of opts.entries ?? []) {
+    SelectedEntitiesStore.addEntity({ id: entry.id, type: entry.type });
+  }
+
   const { result } = renderHook(() =>
     useMultiSelectionRibbonBridge({ levelManager, universalSelection }),
   );

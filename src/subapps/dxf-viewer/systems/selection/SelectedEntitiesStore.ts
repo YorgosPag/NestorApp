@@ -308,6 +308,7 @@ export {
   subscribe as subscribeSelection,
   getVersion as getSelectionVersion,
   getPrimaryId as getStorePrimaryId,
+  getEntries as getStoreSelectionEntries,
   getSelectedEntityIds as getStoreSelectedEntityIds,
   isSelected as isStoreSelected,
   getIdsByType as getStoreIdsByType,
