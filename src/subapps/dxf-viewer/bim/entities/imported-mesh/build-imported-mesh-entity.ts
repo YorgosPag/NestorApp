@@ -41,6 +41,12 @@ export interface ImportedMeshSource {
   readonly sourceFileName: string;
   /** Όνομα κόμβου μέσα στο αρχείο (π.χ. `Rail_01`). */
   readonly nodeName: string;
+  /**
+   * ADR-683 Φ3.1β — το όνομα υλικού του κόμβου (`record.materialName`), όταν υπάρχει. Ταξιδεύει ως
+   * τα params γιατί η ανάθεση κοστολόγησης γίνεται σε άλλη συνεδρία, όταν το `.glb` δεν είναι πια
+   * φορτωμένο (βλ. `ImportedMeshParams.sourceMaterialName`).
+   */
+  readonly sourceMaterialName?: string | null;
   /** Ο περιγραφέας γεωμετρίας της Φ2 — από εδώ βγαίνουν οι διαστάσεις **και** το εμβαδόν. */
   readonly signature: GeometrySignature;
   /**
@@ -76,10 +82,14 @@ export function buildImportedMeshParams(source: ImportedMeshSource): ImportedMes
   // η εισαγωγή «δουλεύει» και δεν μπαίνει τίποτα. Αποσυνθέτουμε με θέση, μία φορά, εδώ.
   const [sizeXm, sizeYm, sizeZm] = source.signature.sizeM;
   const mounting = source.mountingElevationMm;
+  // Το κλειδί **παραλείπεται** όταν δεν υπάρχει όνομα υλικού — ποτέ `undefined` τιμή: το Firestore
+  // την απορρίπτει και το `params` γράφεται ως ενιαίο map (`updateImportedMesh`).
+  const materialName = source.sourceMaterialName;
   return {
     kind: 'imported',
     uploadId: source.uploadId,
     nodeName: source.nodeName,
+    ...(materialName ? { sourceMaterialName: materialName } : {}),
     storagePath: source.storagePath,
     sourceFileName: source.sourceFileName,
     position: source.position,

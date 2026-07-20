@@ -107,6 +107,9 @@ export async function importGltfMeshes(
       storagePath,
       sourceFileName: input.sourceFileName,
       nodeName: record.objectName,
+      // ADR-683 Φ3.1β — το όνομα υλικού ζει ΜΟΝΟ στο φορτωμένο glTF· εδώ είναι η τελευταία στιγμή
+      // που μπορεί να διασωθεί για την (μεταγενέστερη) ανάθεση κοστολόγησης.
+      sourceMaterialName: record.materialName,
       signature: record.fingerprint.signature,
       solid: record.solid,
       position,

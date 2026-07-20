@@ -21,11 +21,15 @@
  * @see docs/centralized-systems/reference/adrs/ADR-683-bim-collaboration-roundtrip.md §10.2
  */
 
+import { getAllowedUnits } from '@/config/boq-categories';
+import { findSubCategory } from '@/config/boq-subcategories';
 import type { BimEntityForBoq } from '../../services/BimToBoqBridge';
-import type {
-  ImportedMeshBoqUnit,
-  ImportedMeshEntity,
-  ImportedMeshParams,
+import {
+  isImportedMeshBoqUnit,
+  type ImportedMeshBoqIdentity,
+  type ImportedMeshBoqUnit,
+  type ImportedMeshEntity,
+  type ImportedMeshParams,
 } from './imported-mesh-types';
 
 const MM_TO_M = 1 / 1000;
@@ -49,6 +53,58 @@ export function supportedBoqUnits(params: ImportedMeshParams): readonly Imported
 /** Μπορεί η ανάθεση αυτής της μονάδας να παραγάγει πραγματικό νούμερο; */
 export function isBoqUnitSupported(params: ImportedMeshParams, unit: ImportedMeshBoqUnit): boolean {
   return supportedBoqUnits(params).includes(unit);
+}
+
+/**
+ * Ο **κωδικός ομάδας** ΑΤΟΕ ενός άρθρου. Η ταυτότητα μπορεί να δηλώνει είτε ομάδα (`OIK-3`) είτε
+ * υποκατηγορία (`OIK-3.1`), αλλά οι επιτρεπόμενες μονάδες ορίζονται **μόνο** στην ομάδα
+ * (`ATOE_MASTER_CATEGORIES`). Χωρίς αυτή τη μετάβαση, το `getAllowedUnits('OIK-3.1')` δεν βρίσκει
+ * κατηγορία και πέφτει στο γενικό fallback — δηλαδή η υποκατηγορία θα χαλάρωνε σιωπηλά το gating
+ * αντί να το κληρονομεί.
+ */
+function atoeGroupCodeOf(categoryCode: string): string {
+  return findSubCategory(categoryCode)?.parentCode ?? categoryCode;
+}
+
+/**
+ * Οι μονάδες που μπορούν πράγματι **να ανατεθούν** σε αυτό το πλέγμα για αυτό το άρθρο ΑΤΟΕ.
+ *
+ * Τομή **τριών** ανεξάρτητων περιορισμών, καθένας από τον δικό του SSoT:
+ *   1. **Τι μετρά τίμια η γεωμετρία** — {@link supportedBoqUnits} (m³/kg μόνο σε κλειστό κέλυφος).
+ *   2. **Τι επιτρέπει το άρθρο** — `getAllowedUnits` (`config/boq-categories`): σκυρόδεμα σε m³,
+ *      χρωματισμοί σε m². Η ίδια λίστα που περιορίζει κάθε χειροκίνητη γραμμή προμέτρησης.
+ *   3. **Τι μετατρέπει ο κανόνας ποσότητας** — `IMPORTED_MESH_BOQ_UNITS` (μέσω του type guard):
+ *      ό,τι δεν καλύπτει το `deriveAtoeQuantity` θα έγραφε σιωπηλά μηδέν.
+ *
+ * **Κενή τομή είναι έγκυρη απάντηση**, όχι σφάλμα: ανοιχτό πλέγμα + άρθρο σκυροδέματος (μόνο m³/ton)
+ * δεν έχει τίμια μονάδα. Ο dialog το λέει ρητά αντί να προσφέρει μια μονάδα που θα έδινε λάθος
+ * νούμερο — ίδια γραμμή με το §10.2: ποτέ αριθμός που ο χρήστης θα εμπιστευόταν λανθασμένα.
+ */
+export function assignableBoqUnits(
+  params: ImportedMeshParams,
+  categoryCode: string,
+): readonly ImportedMeshBoqUnit[] {
+  const measurable = supportedBoqUnits(params);
+  const allowedByArticle = getAllowedUnits(atoeGroupCodeOf(categoryCode));
+  return measurable.filter(
+    (unit) => allowedByArticle.includes(unit) && isImportedMeshBoqUnit(unit),
+  );
+}
+
+/**
+ * Γράφει (ή **αφαιρεί**) την ανάθεση κοστολόγησης πάνω στα params — η μία μετάλλαξη της Φ3.1β.
+ *
+ * ⚠️ Η αφαίρεση **σβήνει το κλειδί**, δεν το θέτει `undefined`. Δύο λόγοι, και οι δύο πραγματικοί:
+ * το Firestore απορρίπτει τιμές `undefined` (το `updateImportedMesh` γράφει ολόκληρο το `params`
+ * map), και ένα `undefined` κλειδί θα περνούσε τον έλεγχο `'importedMeshIdentity' in params` σε
+ * κάθε μελλοντικό καταναλωτή. Το `hasBoqIdentity` ελέγχει `!== undefined`, οπότε και οι δύο μορφές
+ * θα «δούλευαν» εδώ — αλλά μόνο η μία επιβιώνει του κύκλου αποθήκευσης/ανάγνωσης.
+ */
+export function withImportedMeshIdentity(
+  params: ImportedMeshParams,
+  identity: ImportedMeshBoqIdentity | undefined,
+): ImportedMeshParams {
+  return { ...params, importedMeshIdentity: identity };
 }
 
 /**
