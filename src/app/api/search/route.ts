@@ -27,106 +27,16 @@ import {
   SEARCH_ENTITY_TYPES,
   SEARCH_AUDIENCE,
   SEARCH_CONFIG,
-  isSearchEntityType,
-  type SearchEntityType,
   type SearchResult,
-  type SearchResultStat,
   type SearchDocument,
   type SearchAuditMetadata,
 } from '@/types/search';
-import { getSearchIndexConfig, extractStats } from '@/config/search-index-config';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { parseEntityTypes, parseLimit } from './search-query-params';
+import { transformToSearchResult, type SearchResponseData } from './search-result-transform';
 
 const logger = createModuleLogger('SearchRoute');
-
-// =============================================================================
-// TYPES
-// =============================================================================
-
-/**
- * Response data type for search API.
- */
-interface SearchResponseData {
-  results: SearchResult[];
-  query: {
-    normalized: string;
-    types?: SearchEntityType[];
-  };
-}
-// =============================================================================
-// HELPER FUNCTIONS
-// =============================================================================
-/**
- * Parse entity types from query parameter.
- *
- * @param typesParam - Comma-separated types string
- * @returns Array of valid SearchEntityType values
- */
-function parseEntityTypes(typesParam: string | null): SearchEntityType[] | undefined {
-  if (!typesParam) return undefined;
-
-  const types = typesParam
-    .split(',')
-    .map((t) => t.trim().toLowerCase())
-    .filter(isSearchEntityType);
-
-  return types.length > 0 ? types : undefined;
-}
-
-/**
- * Parse limit from query parameter with bounds checking.
- *
- * @param limitParam - Limit string from query
- * @returns Validated limit number
- */
-function parseLimit(limitParam: string | null): number {
-  if (!limitParam) return SEARCH_CONFIG.DEFAULT_LIMIT;
-
-  const parsed = parseInt(limitParam, 10);
-  if (isNaN(parsed) || parsed < 1) return SEARCH_CONFIG.DEFAULT_LIMIT;
-  if (parsed > SEARCH_CONFIG.MAX_LIMIT) return SEARCH_CONFIG.MAX_LIMIT;
-
-  return parsed;
-}
-/**
- * Transform SearchDocument to SearchResult.
- * 🏢 ENTERPRISE: Includes stats and status for card display
- *
- * @param doc - SearchDocument from Firestore
- * @returns SearchResult for API response
- */
-function transformToSearchResult(doc: SearchDocument): SearchResult {
-  // 🏢 ENTERPRISE: Extract stats from metadata if available
-  let stats: SearchResultStat[] | undefined;
-
-  if (doc.metadata) {
-    const config = getSearchIndexConfig(doc.entityType);
-    if (config) {
-      // Convert metadata to Record<string, unknown> for extractStats
-      const metadataRecord: Record<string, unknown> = {
-        floor: doc.metadata.floor,
-        area: doc.metadata.area,
-        price: doc.metadata.price,
-        type: doc.metadata.type,
-      };
-      const extractedStats = extractStats(metadataRecord, config);
-      if (extractedStats.length > 0) {
-        stats = extractedStats;
-      }
-    }
-  }
-
-  return {
-    entityType: doc.entityType,
-    entityId: doc.entityId,
-    title: doc.title,
-    subtitle: doc.subtitle,
-    href: doc.links.href,
-    status: doc.status, // 🏢 ENTERPRISE: Include status for badge display
-    stats,
-  };
-}
 
 // =============================================================================
 // API HANDLER
@@ -262,6 +172,7 @@ const handleGET = withAuth<ApiSuccessResponse<SearchResponseData>>(
       audience: SEARCH_AUDIENCE.INTERNAL,
     };
 
+    // ADR-438 §2.5: ΣΚΟΠΙΜΑ ΧΩΡΙΣ `dedupable` — κάθε αναζήτηση = διακριτό γεγονός· το dedup key είναι σταθερό εδώ.
     await logAuditEvent(
       ctx,
       'data_accessed',
