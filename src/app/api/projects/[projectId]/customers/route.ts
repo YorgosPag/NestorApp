@@ -222,7 +222,11 @@ export const GET = withStandardRateLimit(async function GET(
         logger.info('[Projects/Customers] Complete', { customersCount: customers.length, soldPropertiesCount: soldProperties.length });
 
         // Audit successful access
+        // ADR-438: dedupable — idempotent listing ανά έργο. Το `targetId` (projectId)
+        // ΕΙΝΑΙ μέσα στο dedup key ⇒ διαφορετικά έργα δεν αλληλοκαλύπτονται· μόνο το
+        // επαναληπτικό άνοιγμα του ΙΔΙΟΥ έργου συμπτύσσεται.
         await logAuditEvent(ctx, 'data_accessed', projectId, 'project', {
+          dedupable: true,
           metadata: {
             path: `/api/projects/${projectId}/customers`,
             reason: `Project customers accessed (${customers.length} customers, ${soldProperties.length} properties)`

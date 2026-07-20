@@ -61,7 +61,11 @@ export const GET = withHighRateLimit(
       const duration = Date.now() - startTime;
       logger.info(`[Portfolio] Aggregation complete in ${duration}ms`);
 
+      // ADR-438: dedupable — idempotent refresh ενός cached aggregate. Ο ίδιος χρήστης
+      // που ξαναφορτώνει το ίδιο portfolio μέσα σε 5 λεπτά δεν είναι νέα πληροφορία
+      // πρόσβασης· το `reason` (πλήθος/duration) είναι τηλεμετρία απόδοσης, όχι γεγονός.
       await logAuditEvent(ctx, 'data_accessed', 'portfolio', 'api', {
+        dedupable: true,
         metadata: {
           path: '/api/financial-intelligence/portfolio',
           reason: `Portfolio aggregation (${result.projects.length} projects, ${duration}ms)`,

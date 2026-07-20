@@ -11,11 +11,14 @@
  * με το «access telemetry» (ποιος διάβασε τι). Διαφορετική αξία ⇒ διαφορετικό
  * retention, διαφορετικό delivery, διαφορετικό dedup.
  *
- * | Tier       | Retention | Delivery | Dedup  | Γιατί                                    |
- * |------------|-----------|----------|--------|------------------------------------------|
- * | security   | 24 μήνες  | blocking | —      | forensics· πρέπει να επιβιώνει audit     |
- * | compliance | 12 μήνες  | blocking | —      | business record· ADR-438 status quo      |
- * | access     | 1 μήνας   | async    | 5 min  | τηλεμετρία· όγκος >> αξία ανά γραμμή     |
+ * | Tier       | Retention | Delivery | Dedup παράθυρο | Γιατί                             |
+ * |------------|-----------|----------|----------------|-----------------------------------|
+ * | security   | 24 μήνες  | blocking | — (0)          | forensics· πρέπει να επιβιώνει    |
+ * | compliance | 12 μήνες  | blocking | — (0)          | business record· ADR-438 status quo|
+ * | access     | 1 μήνας   | async    | 5 min          | τηλεμετρία· όγκος >> αξία/γραμμή  |
+ *
+ * ⚠️ Το tier ορίζει **πόσο μεγάλο** είναι το dedup παράθυρο — ΟΧΙ **αν** εφαρμόζεται.
+ * Το «αν» το δηλώνει το call site (`dedupable: true`). Βλ. `resolveDedupWindowMs`.
  *
  * ⚠️ Το `AUDIT_ACTION_TIER` είναι `Record<AuditAction, AuditTier>` — ΟΧΙ `Partial<>`,
  * ΟΧΙ index signature. Νέο action στο `AUDIT_ACTIONS` χωρίς tier = **compile error**.
@@ -40,7 +43,10 @@ export interface AuditTierConfig {
   retentionMonths: number;
   /** `blocking` = ο caller περιμένει το write· `async` = fire-and-forget. */
   delivery: 'blocking' | 'async';
-  /** Παράθυρο καταστολής διπλοεγγραφών σε ms. `0` = ποτέ καταστολή. */
+  /**
+   * Παράθυρο καταστολής διπλοεγγραφών σε ms — **εφόσον** το call site το ζητήσει
+   * (`dedupable: true`). `0` = το tier απαγορεύει καταστολή ακόμη κι αν ζητηθεί.
+   */
   dedupWindowMs: number;
 }
 
@@ -122,6 +128,33 @@ export function resolveAuditTier(action: AuditAction): AuditTier {
 /** Η πλήρης πολιτική ενός action (retention + delivery + dedup). */
 export function resolveAuditPolicy(action: AuditAction): AuditTierConfig {
   return AUDIT_TIER_CONFIG[resolveAuditTier(action)];
+}
+
+/**
+ * Το πραγματικό dedup παράθυρο μιας κλήσης — **ο μοναδικός τόπος** όπου συναντιούνται
+ * η δήλωση του call site και η πολιτική του tier.
+ *
+ * Κανόνας: **dedup = opt-in**. Χωρίς `dedupable: true` δεν καταστέλλεται τίποτα ποτέ.
+ *
+ * ΓΙΑΤΙ opt-in κι όχι καθολικό ανά tier (η ρίζα του ADR-438 v3):
+ * το κλειδί dedup είναι `companyId|actorId|action|targetId|path` — συστατικά που σε
+ * endpoints όπως το `/api/search` είναι **σταθερά ανά χρήστη**. Η διακριτική πληροφορία
+ * (query, resultCount) ζει στο `newValue`/`reason`, **εκτός κλειδιού**. Άρα καθολικό
+ * dedup σήμαινε: 20 διαφορετικές αναζητήσεις σε 5 λεπτά → **1 γραμμή**. Αυτό είναι
+ * απώλεια τηλεμετρίας, όχι καταστολή διπλότυπων.
+ *
+ * ⚠️ ΜΗΝ «λύσεις» το ίδιο πρόβλημα βάζοντας το `reason` μέσα στο κλειδί: περιέχει
+ * `duration ms` ⇒ πάντα μοναδικό ⇒ το dedup γίνεται νεκρό παντού, σιωπηλά.
+ *
+ * Δύο φρουροί, όχι ένας: ακόμη κι αν κάποιος γράψει `dedupable: true` σε security ή
+ * compliance action, το `dedupWindowMs: 0` του tier το ακυρώνει. Μια γραμμή forensics
+ * **δεν μπορεί** να καταπιεί από λάθος σε call site.
+ */
+export function resolveDedupWindowMs(action: AuditAction, dedupable: boolean | undefined): number {
+  if (dedupable !== true) {
+    return 0;
+  }
+  return resolveAuditPolicy(action).dedupWindowMs;
 }
 
 /**

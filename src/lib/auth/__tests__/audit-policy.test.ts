@@ -17,6 +17,7 @@ import {
   resolveAuditPolicy,
   computeAuditExpiry,
   buildAuditDedupKey,
+  resolveDedupWindowMs,
   shouldSuppressDuplicate,
 } from '../audit-policy';
 import { AUDIT_ACTIONS, type AuditAction } from '../audit-types';
@@ -177,6 +178,44 @@ describe('buildAuditDedupKey', () => {
     // τεκμηριώνουμε τη ΠΡΑΓΜΑΤΙΚΗ συμπεριφορά (join με fallback '').
     expect(withoutPath).toBe(withEmptyPath);
     expect(withoutPath).not.toBe(withRealPath);
+  });
+});
+
+describe('resolveDedupWindowMs — dedup είναι opt-in ανά call site', () => {
+  it('χωρίς dedupable -> 0 (καμία καταστολή), ακόμη και σε access tier', () => {
+    expect(resolveDedupWindowMs('data_accessed', undefined)).toBe(0);
+  });
+
+  it('dedupable: false -> 0', () => {
+    expect(resolveDedupWindowMs('data_accessed', false)).toBe(0);
+  });
+
+  it('dedupable: true σε access tier -> το παράθυρο του tier', () => {
+    expect(resolveDedupWindowMs('data_accessed', true)).toBe(AUDIT_TIER_CONFIG.access.dedupWindowMs);
+    expect(resolveDedupWindowMs('data_accessed', true)).toBeGreaterThan(0);
+  });
+
+  it('ΚΡΙΣΙΜΟ: dedupable: true σε security action -> ΠΑΡΑΜΕΝΕΙ 0 (το tier υπερισχύει)', () => {
+    // Δεύτερος φρουρός: λάθος `dedupable: true` σε call site forensics ΔΕΝ μπορεί να
+    // καταπιεί audit γραμμή. Αν αυτό γίνει ποτέ > 0, χάνονται γραμμές ασφαλείας.
+    expect(resolveDedupWindowMs('access_denied', true)).toBe(0);
+    expect(resolveDedupWindowMs('role_changed', true)).toBe(0);
+    expect(resolveDedupWindowMs('permission_revoked', true)).toBe(0);
+  });
+
+  it('ΚΡΙΣΙΜΟ: dedupable: true σε compliance action -> ΠΑΡΑΜΕΝΕΙ 0', () => {
+    expect(resolveDedupWindowMs('data_created', true)).toBe(0);
+    expect(resolveDedupWindowMs('data_updated', true)).toBe(0);
+    expect(resolveDedupWindowMs('data_deleted', true)).toBe(0);
+  });
+
+  it('ΚΑΝΕΝΑ action δεν αποκτά dedup χωρίς ρητή δήλωση του call site', () => {
+    // Καθολικό δίχτυ: αν κάποιος επαναφέρει «dedup ανά tier», αυτό σκάει για ΟΛΑ.
+    const actions = Object.keys(AUDIT_ACTION_TIER) as AuditAction[];
+    expect(actions.length).toBeGreaterThanOrEqual(43);
+    for (const action of actions) {
+      expect(resolveDedupWindowMs(action, undefined)).toBe(0);
+    }
   });
 });
 

@@ -184,6 +184,7 @@ export {
   AUDIT_ACTION_TIER,
   resolveAuditTier,
   resolveAuditPolicy,
+  resolveDedupWindowMs,
   computeAuditExpiry,
   buildAuditDedupKey,
   shouldSuppressDuplicate,

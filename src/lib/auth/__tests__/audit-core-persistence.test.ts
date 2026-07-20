@@ -148,9 +148,8 @@ describe('logAuditEvent — persisted payload keeps TTL/timestamp sentinels', ()
       firebaseAdminMock.__setMock.mock.calls.length - 1
     ][0] as Record<string, unknown>;
 
-    // data_accessed: access tier, ASYNC fire-and-forget + 5-minute dedup-suppressed.
-    // Distinct actor/company/target vs every other case in this suite so dedup
-    // (keyed on companyId+actorId+action+targetId+path) cannot eat this call.
+    // data_accessed: access tier, ASYNC fire-and-forget. Χωρίς `dedupable` ⇒ καμία
+    // καταστολή (ADR-438 v3: dedup opt-in) — γράφεται πάντα.
     await logAuditEvent(
       ctx({ uid: 'actor_access_unique', companyId: 'comp_access_unique' }),
       'data_accessed',
@@ -183,5 +182,67 @@ describe('logAuditEvent — persisted payload keeps TTL/timestamp sentinels', ()
     // well under half of compliance (12mo), and compliance well under security (24mo).
     expect(accessExpiry - before).toBeLessThan((complianceExpiry - before) / 2);
     expect(complianceExpiry - before).toBeLessThan((securityExpiry - before) / 2 + 1000);
+  });
+});
+
+/**
+ * ADR-438 v3 — dedup opt-in ανά call site, μέσα από το PUBLIC API.
+ *
+ * ΓΙΑΤΙ ΕΔΩ ΚΑΙ ΟΧΙ ΜΟΝΟ ΣΤΟ audit-policy.test: εκεί δοκιμάζεται η καθαρή συνάρτηση
+ * απόφασης. Εδώ αποδεικνύεται το observable αποτέλεσμα — **πόσα documents φτάνουν
+ * πράγματι στο Firestore**. Μια regression που καλεί σωστά το `resolveDedupWindowMs`
+ * αλλά αγνοεί το αποτέλεσμα θα περνούσε εκεί και θα σκάσει εδώ.
+ */
+describe('logAuditEvent — dedup opt-in (observable write count)', () => {
+  /** Το access tier είναι fire-and-forget· ξεπλένουμε micro+macro task queue. */
+  async function flushAsyncWrites(): Promise<void> {
+    await Promise.resolve();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+
+  it('ΧΩΡΙΣ dedupable: δύο ταυτόσημες κλήσεις -> ΔΥΟ writes (καμία απώλεια τηλεμετρίας)', async () => {
+    // Αυτό είναι το σενάριο `/api/search`: ίδιος actor, ίδιο target, ίδιο path —
+    // δηλαδή ΤΑΥΤΟΣΗΜΟ dedup key — αλλά διαφορετικά γεγονότα.
+    const searchCtx = ctx({ uid: 'actor_search', companyId: 'comp_search' });
+    const opts = { metadata: { path: '/api/search' } };
+
+    await logAuditEvent(searchCtx, 'data_accessed', 'global_search', 'api', opts);
+    await logAuditEvent(searchCtx, 'data_accessed', 'global_search', 'api', opts);
+    await flushAsyncWrites();
+
+    expect(firebaseAdminMock.__setMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('ΜΕ dedupable: δύο ταυτόσημες κλήσεις -> ΕΝΑ write (καταστολή idempotent polling)', async () => {
+    const pollCtx = ctx({ uid: 'actor_poll', companyId: 'comp_poll' });
+    const opts = { dedupable: true, metadata: { path: '/api/financial-intelligence/portfolio' } };
+
+    await logAuditEvent(pollCtx, 'data_accessed', 'portfolio', 'api', opts);
+    await logAuditEvent(pollCtx, 'data_accessed', 'portfolio', 'api', opts);
+    await flushAsyncWrites();
+
+    expect(firebaseAdminMock.__setMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('ΜΕ dedupable: διαφορετικό targetId -> ΔΥΟ writes (το key δεν συγχέει στόχους)', async () => {
+    const projCtx = ctx({ uid: 'actor_proj', companyId: 'comp_proj' });
+    const opts = { dedupable: true, metadata: { path: '/api/projects/customers' } };
+
+    await logAuditEvent(projCtx, 'data_accessed', 'project_A', 'project', opts);
+    await logAuditEvent(projCtx, 'data_accessed', 'project_B', 'project', opts);
+    await flushAsyncWrites();
+
+    expect(firebaseAdminMock.__setMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('ΚΡΙΣΙΜΟ: dedupable: true σε security action ΔΕΝ καταστέλλει — δύο writes', async () => {
+    // Λάθος σε call site δεν επιτρέπεται να καταπιεί γραμμή forensics.
+    const secCtx = ctx({ uid: 'actor_sec_dedup', companyId: 'comp_sec_dedup' });
+    const opts = { dedupable: true, metadata: { path: '/api/secure' } };
+
+    await logAuditEvent(secCtx, 'access_denied', 'target_sec', 'project', opts);
+    await logAuditEvent(secCtx, 'access_denied', 'target_sec', 'project', opts);
+
+    expect(firebaseAdminMock.__setMock).toHaveBeenCalledTimes(2);
   });
 });

@@ -173,7 +173,11 @@ async function handleProcessFloorplan(
 
     // 9. AUDIT LOG
     const duration = Date.now() - startTime;
-    await logAuditEvent(ctx, 'data_accessed', fileId, 'api', {
+    // ADR-438 #3: ΜΕΤΑΒΑΛΛΕΙ κατάσταση (γράφει processedData + processingStatus:'done'
+    // παραπάνω) ⇒ `data_updated`, ΟΧΙ `data_accessed`. Ως access tier κληρονομούσε
+    // 1μηνο retention + lossy fire-and-forget delivery για ένα business γεγονός.
+    // Ως compliance: 12 μήνες, blocking, ποτέ dedup.
+    await logAuditEvent(ctx, 'data_updated', fileId, 'api', {
       metadata: {
         path: '/api/floorplans/process',
         reason: `Floorplan processed: ${fileData.displayName} (${result.processedData.fileType}, ${duration}ms)`,

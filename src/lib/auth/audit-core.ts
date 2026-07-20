@@ -32,6 +32,7 @@ import {
   buildAuditDedupKey,
   computeAuditExpiry,
   resolveAuditPolicy,
+  resolveDedupWindowMs,
   shouldSuppressDuplicate,
 } from './audit-policy';
 import { createModuleLogger, sentryCaptureMessage } from '@/lib/telemetry';
@@ -172,11 +173,12 @@ async function persistAuditEntry(
  *
  * Events are written to: /companies/{companyId}/audit_logs/{autoId}
  *
- * Το tier του `action` (βλ. `./audit-policy`) καθορίζει τρία πράγματα:
- * το retention (`expiresAt`), το αν ο caller περιμένει το write, και το αν
- * ταυτόσημα διαδοχικά γεγονότα καταστέλλονται. Τα ~110 υπάρχοντα
- * `await logAuditEvent(...)` call sites μένουν ΑΜΕΤΑΒΛΗΤΑ — απλώς παύουν να
- * μπλοκάρουν όταν το action ανήκει σε async tier.
+ * Το tier του `action` (βλ. `./audit-policy`) καθορίζει το retention (`expiresAt`) και
+ * το αν ο caller περιμένει το write. Τα ~110 υπάρχοντα `await logAuditEvent(...)` call
+ * sites μένουν ΑΜΕΤΑΒΛΗΤΑ — απλώς παύουν να μπλοκάρουν όταν το action ανήκει σε async tier.
+ *
+ * Η **καταστολή διπλοεγγραφών είναι opt-in** μέσω `options.dedupable` — βλ.
+ * `resolveDedupWindowMs`. Προεπιλογή: κάθε κλήση γράφεται.
  *
  * @param ctx - Authenticated context (provides companyId and actorId)
  * @param action - Audit action type
@@ -193,6 +195,16 @@ export async function logAuditEvent(
     previousValue?: AuditChangeValue | null;
     newValue?: AuditChangeValue | null;
     metadata?: Partial<AuditMetadata>;
+    /**
+     * `true` ⇒ «διαδοχικές ταυτόσημες κλήσεις εδώ ΔΕΝ προσθέτουν πληροφορία».
+     *
+     * Βάλ' το ΜΟΝΟ όταν το γεγονός είναι **idempotent polling/refresh** (π.χ. λίστα που
+     * ξαναζητιέται, cached aggregation). ΜΗΝ το βάλεις όταν κάθε κλήση είναι **διακριτό
+     * γεγονός** (π.χ. αναζήτηση) — εκεί η διαφορά ζει εκτός του dedup key και θα χαθεί.
+     *
+     * @default false — καμία καταστολή.
+     */
+    dedupable?: boolean;
   } = {}
 ): Promise<void> {
   const db = getDb();
@@ -218,9 +230,10 @@ export async function logAuditEvent(
 
   const policy = resolveAuditPolicy(action);
 
-  // Access tier: ίδιος δράστης + ίδιος στόχος + ίδια διαδρομή μέσα στο παράθυρο ⇒
-  // δεν προσθέτει πληροφορία. Τα blocking tiers έχουν dedupWindowMs = 0 ⇒ ποτέ εδώ.
-  if (policy.dedupWindowMs > 0) {
+  // Opt-in dedup: το call site δήλωσε ότι διαδοχικές ταυτόσημες κλήσεις δεν προσθέτουν
+  // πληροφορία, ΚΑΙ το tier επιτρέπει καταστολή (blocking tiers → 0 ⇒ ποτέ εδώ).
+  const dedupWindowMs = resolveDedupWindowMs(action, options.dedupable);
+  if (dedupWindowMs > 0) {
     const dedupKey = buildAuditDedupKey({
       companyId: ctx.companyId,
       actorId: ctx.uid,
@@ -228,7 +241,7 @@ export async function logAuditEvent(
       targetId,
       path: options.metadata?.path,
     });
-    if (shouldSuppressDuplicate(dedupKey, policy.dedupWindowMs, Date.now())) {
+    if (shouldSuppressDuplicate(dedupKey, dedupWindowMs, Date.now())) {
       return;
     }
   }

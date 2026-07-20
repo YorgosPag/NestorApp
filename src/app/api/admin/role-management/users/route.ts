@@ -216,7 +216,11 @@ export const GET = withSensitiveRateLimit(
           }
         }
 
+        // ADR-438: dedupable — idempotent listing. Το πάνελ διαχείρισης ρόλων ξαναζητά
+        // την ίδια λίστα σε κάθε mount/refresh· «ο X είδε τη λίστα χρηστών» καταγράφεται
+        // μία φορά ανά 5λεπτο παράθυρο. Οι ΑΛΛΑΓΕΣ ρόλων είναι security tier, αδιπλασίαστες.
         await logAuditEvent(ctx, 'data_accessed', ctx.companyId, 'user', {
+          dedupable: true,
           metadata: { reason: `Listed ${users.length} company users + ${unassignedUsers.length} unassigned` },
         });
 
