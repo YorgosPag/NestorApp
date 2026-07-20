@@ -17,12 +17,20 @@ jest.mock('@/services/enterprise-id.service', () => ({
   })(),
 }));
 
-/** Κάγκελο: 2m πλάτος × 0.1m βάθος × 1m ύψος — κάθε άξονας διακριτός. */
+/**
+ * Κάγκελο: 2m πλάτος × 0.1m βάθος × 1m ύψος — κάθε άξονας διακριτός.
+ *
+ * ⚠️ Το `Vec3M` είναι **tuple** `[x, y, z]`. Αυτό το fixture έγραφε αρχικά `{x,y,z}` και, επειδή
+ * το `src/subapps/dxf-viewer/**` εξαιρείται από το root `tsconfig.json`, ο tsc δεν το είδε ποτέ:
+ * ο κώδικας διάβαζε `sizeM.x` → `undefined` → `NaN` → **κάθε πραγματικός κόμβος απορριπτόταν**
+ * ως εκφυλισμένος, ενώ τα tests έμεναν πράσινα (το fixture είχε το ίδιο λάθος με τον κώδικα).
+ * **Κράτα τα tuples** — είναι ο μόνος τρόπος αυτά τα tests να μιλούν για την πραγματικότητα.
+ */
 const signature: GeometrySignature = {
   vertexCount: 100,
   triangleCount: 50,
-  sizeM: { x: 2, y: 1, z: 0.1 },
-  centroidM: { x: 1, y: 0.5, z: 0.05 },
+  sizeM: [2, 1, 0.1],
+  centroidM: [1, 0.5, 0.05],
   areaM2: 4,
 };
 
@@ -83,7 +91,10 @@ describe('buildImportedMeshEntity', () => {
   });
 
   it('απορρίπτει εκφυλισμένο κόμβο αντί να τον εισάγει σιωπηλά', () => {
-    const flat = { ...source, signature: { ...signature, sizeM: { x: 2, y: 1, z: 0 } } };
+    const flat: ImportedMeshSource = {
+      ...source,
+      signature: { ...signature, sizeM: [2, 1, 0] },
+    };
     expect(buildImportedMeshEntity(flat)).toBeNull();
   });
 });
@@ -91,10 +102,10 @@ describe('buildImportedMeshEntity', () => {
 describe('buildImportedMeshEntities', () => {
   it('χτίζει τα καλά και ΑΝΑΦΕΡΕΙ τα παραλειφθέντα (καμία σιωπηλή απώλεια)', () => {
     const good = { ...source, nodeName: 'Rail_01' };
-    const bad = {
+    const bad: ImportedMeshSource = {
       ...source,
       nodeName: 'Empty_Node',
-      signature: { ...signature, sizeM: { x: 0, y: 0, z: 0 } },
+      signature: { ...signature, sizeM: [0, 0, 0] },
     };
     const { entities, skipped } = buildImportedMeshEntities([good, bad]);
     expect(entities).toHaveLength(1);

@@ -26,13 +26,16 @@
  * @see docs/centralized-systems/reference/adrs/ADR-683-bim-collaboration-roundtrip.md §2.1 Κ1
  */
 
-import type * as THREE from 'three';
+import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+import { finiteBox3FromObject } from '../../bim-3d/scene/finite-bounds';
 import type {
   ObjectMaterialAssignment,
   ImportedMaterial,
 } from '../mesh3d-material-import/obj-mtl-parse';
 import { computeGeometryFingerprint, type GeometryFingerprint } from './geometry-hash';
+import type { GltfNodeWorldBox } from './gltf-node-placement';
 
 /**
  * Ένα mesh του επιστρεφόμενου glTF. Επεκτείνει το OBJ συμβόλαιο (`objectName` + `materialName`)
@@ -41,6 +44,12 @@ import { computeGeometryFingerprint, type GeometryFingerprint } from './geometry
 export interface GltfObjectRecord extends ObjectMaterialAssignment {
   /** `null` όταν το mesh δεν έχει αξιοποιήσιμες κορυφές — ποτέ «ίδιο» εξ ορισμού. */
   readonly fingerprint: GeometryFingerprint | null;
+  /**
+   * ADR-683 Φ3β — **απόλυτη** θέση του κόμβου στον κόσμο (m). Ξεχωριστό πεδίο, **ποτέ** μέσα στο
+   * `fingerprint`: το signature οφείλει να μένει ανεξάρτητο μετατόπισης (ένα μετακινημένο αλλά
+   * αναλλοίωτο αντικείμενο είναι κατάσταση **A**, όχι **C**). `null` για κενή γεωμετρία.
+   */
+  readonly worldBoxM: GltfNodeWorldBox | null;
 }
 
 /**
@@ -56,6 +65,18 @@ function resolveMaterialName(mesh: THREE.Mesh): string | null {
     if (typeof name === 'string' && name.length > 0) return name;
   }
   return null;
+}
+
+/**
+ * Το παγκόσμιο κουτί ενός mesh (m). Επιστρέφει `null` για κενή/μη-πεπερασμένη γεωμετρία, ώστε ο
+ * καλών να μην πάρει ποτέ `Infinity` ως «θέση» — ένα `Box3` χωρίς σημεία είναι εξ ορισμού άπειρο.
+ */
+function readWorldBox(mesh: THREE.Mesh): GltfNodeWorldBox | null {
+  const box = finiteBox3FromObject(mesh);
+  if (!box) return null;
+
+  const centre = box.getCenter(new THREE.Vector3());
+  return { centre: { x: centre.x, y: centre.y, z: centre.z }, minY: box.min.y };
 }
 
 /**
@@ -75,6 +96,7 @@ export function collectGltfObjects(root: THREE.Object3D): GltfObjectRecord[] {
       objectName: mesh.name,
       materialName: resolveMaterialName(mesh),
       fingerprint: computeGeometryFingerprint(mesh),
+      worldBoxM: readWorldBox(mesh),
     });
   });
 

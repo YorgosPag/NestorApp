@@ -774,7 +774,23 @@
     "noChanges": "The file has no material change (all are original Nestor materials). Apply the material to the object and export WITH materials — for OBJ select BOTH the .obj AND the .mtl (.glb carries them inside).",
     "noSource": "Select a .glb or .gltf file, or a .obj file together with its companion .mtl.",
     "parseError": "The 3D file could not be read. If it is a .gltf with external files (.bin / textures), ask for a .glb — it carries everything in one file.",
-    "readError": "Failed to read the file."
+    "readError": "Failed to read the file.",
+    "importMeshes": {
+      "title": "Import objects from your collaborator",
+      "description": "These objects do not match any element in the project — they are new geometry. Choose which ones to place on the plan.",
+      "columnObject": "Object",
+      "columnSize": "Dimensions",
+      "selectAll": "Select all",
+      "selectedCount": "{count, plural, one {# selected} other {# selected}}",
+      "confirm": "Import",
+      "cancel": "Cancel",
+      "uploading": "Uploading file…",
+      "success": "{count, plural, one {Imported # object} other {Imported # objects}}.",
+      "skipped": "{count, plural, one {# object skipped} other {# objects skipped}} — empty or flat geometry.",
+      "uploadError": "Uploading the 3D file failed. No objects were imported.",
+      "missingProject": "No active project — open the drawing from within a project to import objects.",
+      "note": "Imported objects come in as designed: they move and rotate, but their shape cannot be edited."
+    }
   },
   "floorTabs": {
     "ariaLabel": "Building floor navigation",

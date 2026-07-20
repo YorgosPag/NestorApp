@@ -44,6 +44,14 @@ export interface ImportedMeshSource {
   readonly signature: GeometrySignature;
   /** Θέση εισαγωγής σε canvas units. */
   readonly position: Point3D;
+  /**
+   * ADR-683 Φ3β — υψόμετρο έδρασης πάνω από το δάπεδο του ορόφου (mm). Παραλείπεται όταν ο καλών
+   * δεν ξέρει τη θέση καθ' ύψος (π.χ. χειροκίνητη τοποθέτηση) → πατά στο δάπεδο.
+   *
+   * Το δίνει ο importer από το `minY` του κόμβου, ώστε ένα φωτιστικό οροφής να ξαναμπεί στην
+   * οροφή και όχι στο πάτωμα.
+   */
+  readonly mountingElevationMm?: number;
   /** Μονάδα καμβά της σκηνής υποδοχής. */
   readonly sceneUnits: SceneUnits;
   /** Ο όροφος υποδοχής. */
@@ -57,7 +65,11 @@ export interface ImportedMeshSource {
  * ελέγχεται η αντιστοίχιση αξόνων/μονάδων χωρίς να παράγονται ids.
  */
 export function buildImportedMeshParams(source: ImportedMeshSource): ImportedMeshParams {
-  const { sizeM } = source.signature;
+  // ⚠️ Το `sizeM` είναι **tuple** `[x, y, z]` (`Vec3M`), όχι αντικείμενο `{x,y,z}`. Η ανάγνωση με
+  // `.x/.y/.z` δίνει `undefined → NaN` και **κάθε** κόμβος απορρίπτεται σιωπηλά ως εκφυλισμένος:
+  // η εισαγωγή «δουλεύει» και δεν μπαίνει τίποτα. Αποσυνθέτουμε με θέση, μία φορά, εδώ.
+  const [sizeXm, sizeYm, sizeZm] = source.signature.sizeM;
+  const mounting = source.mountingElevationMm;
   return {
     kind: 'imported',
     uploadId: source.uploadId,
@@ -67,10 +79,13 @@ export function buildImportedMeshParams(source: ImportedMeshSource): ImportedMes
     position: source.position,
     // Ο συνεργάτης έδωσε τον προσανατολισμό μέσα στη γεωμετρία· δεν «διορθώνουμε» γωνία.
     rotationDeg: 0,
-    measuredWidthMm: sizeM.x * M_TO_MM,
-    measuredDepthMm: sizeM.z * M_TO_MM,
-    measuredHeightMm: sizeM.y * M_TO_MM,
-    mountingElevationMm: DEFAULT_IMPORTED_MESH_MOUNTING_ELEVATION_MM,
+    measuredWidthMm: sizeXm * M_TO_MM,
+    measuredDepthMm: sizeZm * M_TO_MM,
+    measuredHeightMm: sizeYm * M_TO_MM,
+    mountingElevationMm:
+      typeof mounting === 'number' && Number.isFinite(mounting)
+        ? mounting
+        : DEFAULT_IMPORTED_MESH_MOUNTING_ELEVATION_MM,
     sceneUnits: source.sceneUnits,
     storeyId: source.storeyId,
   };

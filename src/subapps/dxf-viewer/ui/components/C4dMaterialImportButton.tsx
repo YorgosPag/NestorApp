@@ -18,7 +18,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-683-bim-collaboration-roundtrip.md
  */
 
-import { useRef, useCallback, useMemo } from 'react';
+import { useRef, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from '@/i18n';
 import { Palette } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -33,11 +33,20 @@ import {
 } from '../../io/mesh3d-material-import/import-c4d-materials';
 import { importGltfAppearance } from '../../io/mesh3d-roundtrip/import-gltf-appearance';
 import { buildKnownMaterialResolver } from '../../io/mesh3d-material-import/known-import-materials';
+import type { GltfObjectRecord } from '../../io/mesh3d-roundtrip/gltf-scene-parse';
+import { isImportableNode } from '../../io/mesh3d-roundtrip/import-gltf-meshes';
+import { ImportedMeshImportDialog } from './imported-mesh/ImportedMeshImportDialog';
 
 /** Τι βρέθηκε στην επιλογή του χρήστη — το format καθορίζει και τον τρόπο ανάγνωσης. */
 type ImportPayload =
-  | { readonly kind: 'gltf'; readonly data: ArrayBuffer | string }
+  | { readonly kind: 'gltf'; readonly data: ArrayBuffer | string; readonly file: File }
   | { readonly kind: 'obj'; readonly objText: string; readonly mtlText: string };
+
+/** ADR-683 Φ3β — τι περιμένει απόφαση του χρήστη μετά το parse (κατάσταση D του §5). */
+interface PendingMeshImport {
+  readonly records: readonly GltfObjectRecord[];
+  readonly file: File;
+}
 
 /**
  * Διαλέγει format από την κατάληξη και διαβάζει τα bytes με τον σωστό τρόπο: `.glb` = binary
@@ -52,7 +61,9 @@ async function readImportFiles(files: FileList): Promise<ImportPayload | null> {
   const gltf = list.find((f) => /\.(glb|gltf)$/i.test(f.name));
   if (gltf) {
     const binary = /\.glb$/i.test(gltf.name);
-    return { kind: 'gltf', data: binary ? await gltf.arrayBuffer() : await gltf.text() };
+    // Το `File` κρατιέται δίπλα στα bytes: αν ο χρήστης εισαγάγει τους unmatched κόμβους, ανεβαίνει
+    // **το ίδιο** αρχείο που αναλύθηκε — όχι δεύτερη ανάγνωση που θα μπορούσε να αποκλίνει.
+    return { kind: 'gltf', data: binary ? await gltf.arrayBuffer() : await gltf.text(), file: gltf };
   }
 
   const obj = list.find((f) => /\.obj$/i.test(f.name));
@@ -78,6 +89,10 @@ export function C4dMaterialImportButton() {
   });
   const resolveKnownId = useMemo(() => buildKnownMaterialResolver(materials), [materials]);
 
+  // ADR-683 Φ3β — οι κόμβοι χωρίς αντιστοίχιση περιμένουν απόφαση του χρήστη. Κρατιούνται σε state
+  // (όχι σε ref) γιατί η άφιξή τους ΠΡΕΠΕΙ να ανοίξει το dialog.
+  const [pendingImport, setPendingImport] = useState<PendingMeshImport | null>(null);
+
   const handleFiles = useCallback(async (files: FileList | null): Promise<void> => {
     if (!files || files.length === 0) return;
     let payload: ImportPayload | null;
@@ -93,14 +108,30 @@ export function C4dMaterialImportButton() {
     }
 
     let result: ImportedAppearanceResult;
+    let importableRecords: readonly GltfObjectRecord[] = [];
     try {
       // Ένας πυρήνας, δύο wrappers (ADR-683 §8.1) — η διαφορά είναι μόνο parse + charset.
-      result = payload.kind === 'gltf'
-        ? await importGltfAppearance(levels, payload.data, resolveKnownId)
-        : importC4dMaterials(levels, payload, resolveKnownId);
+      if (payload.kind === 'gltf') {
+        const gltfResult = await importGltfAppearance(levels, payload.data, resolveKnownId);
+        result = gltfResult.appearance;
+        // ADR-683 Φ3β — μόνο το glTF κουβαλά γεωμετρία, άρα μόνο από εκεί μπορεί να προκύψει
+        // νέα οντότητα. Ο OBJ δρόμος δεν έχει τι να προσφέρει εδώ (μηδέν κορυφές).
+        importableRecords = gltfResult.unmatchedRecords.filter(isImportableNode);
+      } else {
+        result = importC4dMaterials(levels, payload, resolveKnownId);
+      }
     } catch {
       // Κατεστραμμένο/μη έγκυρο glTF ή `.gltf` με εξωτερικά `.bin` που δεν επιλέχθηκαν.
       notifications.error(t('c4dMaterialImport.parseError'));
+      return;
+    }
+
+    // ⚠️ Η προσφορά εισαγωγής προηγείται **σκόπιμα** των μηνυμάτων βαφής. Ένα αρχείο που περιέχει
+    // ΜΟΝΟ νέα γεωμετρία (ο συνεργάτης έφτιαξε τα κάγκελα, δεν άλλαξε κανένα υλικό) έχει
+    // `appliedCount === 0` → θα έπεφτε στο early return του «καμία αλλαγή» και ο χρήστης δεν θα
+    // έβλεπε ΠΟΤΕ τα αντικείμενά του. Δηλαδή ακριβώς η περίπτωση για την οποία φτιάχτηκε η Φ3β.
+    if (payload.kind === 'gltf' && importableRecords.length > 0) {
+      setPendingImport({ records: importableRecords, file: payload.file });
       return;
     }
 
@@ -132,6 +163,15 @@ export function C4dMaterialImportButton() {
         hidden
         onChange={(e) => { void handleFiles(e.target.files); e.target.value = ''; }}
       />
+      {pendingImport && (
+        <ImportedMeshImportDialog
+          open
+          records={pendingImport.records}
+          data={pendingImport.file}
+          sourceFileName={pendingImport.file.name}
+          onClose={() => setPendingImport(null)}
+        />
+      )}
     </>
   );
 }

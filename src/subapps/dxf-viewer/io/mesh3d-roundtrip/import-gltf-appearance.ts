@@ -26,14 +26,41 @@ import {
   applyImportedAppearance,
   type ImportedAppearanceResult,
 } from '../mesh3d-material-import/import-c4d-materials';
-import { parseGltfScene } from './gltf-scene-parse';
+import { parseGltfScene, type GltfObjectRecord } from './gltf-scene-parse';
+
+/**
+ * ADR-683 Φ3β — το αποτέλεσμα κουβαλά, δίπλα στην αναφορά βαφής, τις **πλήρεις εγγραφές** των
+ * κόμβων χωρίς αντιστοίχιση (κατάσταση D).
+ *
+ * **Γιατί εγγραφές και όχι ονόματα:** το `ImportedAppearanceResult.unmatched` είναι `string[]` —
+ * αρκετό για να πει «3 δεν ταίριαξαν», άχρηστο για να τα **εισαγάγει**. Οι διαστάσεις και η θέση
+ * τους έχουν ήδη υπολογιστεί κατά το parse· επιστρέφοντας μόνο ονόματα θα αναγκάζαμε τον καλούντα
+ * να ξανα-φορτώσει και να ξανα-αναλύσει ολόκληρο το `.glb` για δεδομένα που κρατούσαμε στο χέρι.
+ */
+export interface GltfAppearanceImportResult {
+  readonly appearance: ImportedAppearanceResult;
+  /** Οι κόμβοι που δεν ταίριαξαν σε καμία ζωντανή οντότητα — υποψήφιοι για `imported-mesh`. */
+  readonly unmatchedRecords: readonly GltfObjectRecord[];
+}
 
 /** Εφαρμόζει την εμφάνιση ενός επιστρεφόμενου `.glb`/`.gltf` στα ζωντανά BIM στοιχεία. */
 export async function importGltfAppearance(
   levels: LevelsHookReturn,
   data: ArrayBuffer | string,
   resolveKnownId: KnownMaterialResolver,
-): Promise<ImportedAppearanceResult> {
+): Promise<GltfAppearanceImportResult> {
   const { objects, materials } = await parseGltfScene(data);
-  return applyImportedAppearance(levels, { objects, materials, charset: 'unicode' }, resolveKnownId);
+  const appearance = applyImportedAppearance(
+    levels,
+    { objects, materials, charset: 'unicode' },
+    resolveKnownId,
+  );
+
+  // Το `unmatched` του πυρήνα είναι ονόματα object· τα ξανασυνδέουμε με τις εγγραφές τους. Ο
+  // πυρήνας μένει format-agnostic (ο OBJ δρόμος δεν έχει γεωμετρία να επιστρέψει) — η γνώση ότι
+  // «στο glTF ένα unmatched είναι εισαγώγιμο» ανήκει εδώ, στον glTF wrapper.
+  const unmatchedNames = new Set(appearance.unmatched);
+  const unmatchedRecords = objects.filter((o) => unmatchedNames.has(o.objectName));
+
+  return { appearance, unmatchedRecords };
 }
