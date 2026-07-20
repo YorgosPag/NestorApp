@@ -40,7 +40,7 @@ import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
 import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
 import { isStructuralComponentVisible } from '../visibility/structural-component-visibility';
 import { resolveCutState } from '../../config/bim-view-range';
-import { resolveBimBodyFill } from '../utils/bim-body-fill';
+import { resolveBimBodyFill, fillBimBodyPath } from '../utils/bim-body-fill';
 import { topFacePlanFill } from '../utils/bim-face-plan-fill';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
@@ -129,9 +129,11 @@ export class ColumnRenderer extends BimFootprintRenderer {
     // όλα τα BIM: V/G tint ?? παλέτα → background-adaptive boost ⇒ ΙΔΙΑ διαφάνεια.
     // ADR-539 Φ3e — η βαμμένη ΑΝΩ όψη (Cinema 4D «Polygon Mode») γίνεται το χρώμα γεμίσματος
     // στην κάτοψη (top cap = ό,τι βλέπουμε από πάνω)· αλλιώς το legacy V/G body fill.
-    this.ctx.fillStyle = topFacePlanFill(column) ?? resolveBimBodyFill('column', _colCutState, _colStyles, KIND_FILL[column.kind]);
+    // Revit background+foreground pattern (bim-body-fill) — opaque base occludes
+    // drawing aids beneath the column, poché tint on top.
+    const _colBodyFill = topFacePlanFill(column) ?? resolveBimBodyFill('column', _colCutState, _colStyles, KIND_FILL[column.kind]);
     this.drawPolygonPath(verts);
-    this.ctx.fill();
+    fillBimBodyPath(this.ctx, _colBodyFill, _colCutState);
 
     // ADR-507 Φ7 — unified per-material poché (all kinds, incl. circular). cutState
     // → surface vs cut pattern μέσω MATERIAL_HATCH_MAP.

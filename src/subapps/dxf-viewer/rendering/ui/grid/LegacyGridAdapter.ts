@@ -66,9 +66,11 @@ export class LegacyGridAdapter {
 
       // SmoothFade defaults — feature disabled in legacy adapter.
       smoothFade: false,
-      smoothFadeMinPx: 0,
-      smoothFadeMaxPx: 0,
       smoothFadeDurationMs: 0,
+
+      // Cascade anchor — unused while smoothFade is off, but the contract
+      // requires a real value (never 0: a 0 floor would loop the cascade).
+      minGridSpacing: 10,
 
       zIndex: RENDERING_ZINDEX.GRID  // 🏢 ADR-034: Centralized z-index (10)
     };

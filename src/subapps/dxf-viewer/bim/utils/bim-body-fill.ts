@@ -18,6 +18,7 @@ import type { BimCategory, ObjectStyle } from '../../config/bim-object-styles';
 import type { CutState } from '../../config/bim-view-range';
 import { resolveVgFillTint } from './bim-vg-fill-tint';
 import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
+import { resolveDxfCanvasBackgroundHex } from '../../config/color-config';
 
 /**
  * Resolve the final canvas `fillStyle` string for a BIM member's translucent body
@@ -37,4 +38,49 @@ export function resolveBimBodyFill(
   bgHex?: string,
 ): string {
   return adaptFillTintForCanvas(resolveVgFillTint(category, cutState, objectStyles) ?? fallbackFill, bgHex);
+}
+
+/**
+ * 🎨 BACKGROUND + FOREGROUND PATTERN (Revit / ArchiCAD cut-fill model).
+ *
+ * Fills the CURRENT canvas path twice — the caller builds the path, this owns
+ * the paint. Revit's cut fill is not one layer but two: an **opaque background
+ * pattern** in the sheet colour that occludes whatever sits beneath the member,
+ * plus a **foreground pattern** (the translucent poché tint + hatch) that
+ * carries the category/material identity. This project only ever had the
+ * foreground, which is why drawing aids beneath a body (the F7 grid) read
+ * straight through the wall.
+ *
+ * Because the base is painted in the LIVE canvas background colour, the
+ * composited result over empty canvas is pixel-identical to the previous
+ * single-fill look — only content *underneath* the body is now occluded, which
+ * is precisely the Revit/ArchiCAD behaviour (a wall hides linked CAD beneath it).
+ *
+ * ONE owner for wall/column/slab so the two-pass order can never drift apart
+ * across renderers (CLAUDE.md N.18 — no sibling clones).
+ *
+ * `beyond` members are the one exception: they sit outside the view range and
+ * are drawn as a faint "there is something over there" hint, so they must NOT
+ * occlude — same rule Revit applies to beyond-range geometry. `cut` and
+ * `projection` both occlude (a slab below the cut plane hides what is under it).
+ *
+ * @param resolvedFill final foreground `fillStyle` — the caller resolves it
+ *   (top-face override, V/G tint, palette fallback) via {@link resolveBimBodyFill}.
+ * @param cutState the member's display state; `beyond` skips the opaque base.
+ * @param bgHex optional live canvas background (defaults to the resolved DXF bg).
+ */
+export function fillBimBodyPath(
+  ctx: CanvasRenderingContext2D,
+  resolvedFill: string,
+  cutState?: CutState,
+  bgHex?: string,
+): void {
+  const previousFill = ctx.fillStyle;
+  if (cutState !== 'beyond') {
+    ctx.fillStyle = bgHex ?? resolveDxfCanvasBackgroundHex();
+    ctx.fill();
+  }
+  ctx.fillStyle = resolvedFill;
+  ctx.fill();
+  ctx.fillStyle = previousFill;
 }

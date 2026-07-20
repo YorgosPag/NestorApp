@@ -33,7 +33,7 @@ import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveSubcategoryStyle, type BimLayerOverride } from '../../config/bim-line-weight-resolver';
 import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
 import { isStructuralComponentVisible } from '../visibility/structural-component-visibility';
-import { resolveBimBodyFill } from '../utils/bim-body-fill';
+import { resolveBimBodyFill, fillBimBodyPath } from '../utils/bim-body-fill';
 import { bimDashPx } from '../../config/bim-dash-resolver';
 import { resolveCutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
@@ -295,7 +295,9 @@ export class WallRenderer extends BaseEntityRenderer {
     // ADR-375 v2.12 — V/G category color tints the body fill (SSoT helper).
     // ADR-509 / FULL SSoT (bim-body-fill) — ίδιος κώδικας body-fill με κολώνα & όλα τα
     // BIM: V/G tint ?? παλέτα → background-adaptive boost ⇒ ΙΔΙΑ διαφάνεια σε κάθε φόντο.
-    this.ctx.fillStyle = resolveBimBodyFill('wall', _cutState, _styles, WALL_CATEGORY_FILL[cat]);
+    // Revit background+foreground pattern (bim-body-fill) — opaque sheet-coloured
+    // base under the poché so drawing aids beneath the wall are occluded.
+    const _bodyFill = resolveBimBodyFill('wall', _cutState, _styles, WALL_CATEGORY_FILL[cat]);
     this.ctx.lineWidth = _edgePx;
     this.ctx.setLineDash(bimDashPx(_edgePattern, this.transform.scale));
 
@@ -303,7 +305,7 @@ export class WallRenderer extends BaseEntityRenderer {
     // so the perimeter is well-oriented for fill. ADR-458 — cut pieces όταν τέμνεται
     // από κολόνα (multi-subpath), αλλιώς το πλήρες ring.
     traceWallBody(this.ctx, (p) => this.worldToScreen(p), outer, inner, pieces);
-    this.ctx.fill();
+    fillBimBodyPath(this.ctx, _bodyFill, _cutState);
 
     // ADR-363 Phase 2.5 — subtract hosted opening outlines from the fill.
     this.punchHostedOpenings(wall);

@@ -21,10 +21,13 @@ export interface AdaptiveLevelInputs {
   readonly scale: number;
   /** Number of minor subdivisions per major (settings.majorInterval ≥ 2). */
   readonly subDivisions: number;
-  /** Screen px below which the minor level is invisible. */
-  readonly fadeMinPx: number;
-  /** Screen px above which the minor level is fully visible. */
-  readonly fadeMaxPx: number;
+  /**
+   * The ONLY density knob: the cascade band's low edge, in MINOR screen px.
+   * Below it the grid coarsens. The band's high edge and the cross-fade window
+   * are DERIVED from it — see `computeAdaptiveLevels` for why they cannot be
+   * independent inputs.
+   */
+  readonly minSpacingPx: number;
 }
 
 export interface AdaptiveLevels {
@@ -41,8 +44,8 @@ export interface AdaptiveLineRenderInput {
   readonly worldStep: number;
   readonly scale: number;
   readonly subDivisions: number;
-  readonly fadeMinPx: number;
-  readonly fadeMaxPx: number;
+  /** Sole density knob — the cascade band floor. Band top + cross-fade derive from it. */
+  readonly minSpacingPx: number;
   readonly fadeDurationMs: number;
   readonly minorColor: string;
   readonly minorWeight: number;
@@ -67,8 +70,7 @@ export function renderAdaptiveGridLines(input: AdaptiveLineRenderInput): Adaptiv
     worldStep: input.worldStep,
     scale: input.scale,
     subDivisions: input.subDivisions,
-    fadeMinPx: input.fadeMinPx,
-    fadeMaxPx: input.fadeMaxPx,
+    minSpacingPx: input.minSpacingPx,
   });
   const now = performance.now();
   const dtMs = input.previousTimestampMs > 0 ? now - input.previousTimestampMs : 0;
@@ -115,57 +117,95 @@ export function lerpOpacityTowards(
 /**
  * Compute on-screen minor + major spacings and the minor opacity factor.
  *
- * Cascading semantics (industry pattern — AutoCAD `GRIDDISPLAY`,
- * Fusion 360, tldraw 4-level grid, bgolus log-frac shader, Google Maps
- * tile LOD):
+ * ## Cascading semantics
  *
  *  - The user's `settings.size` is the BASE step — the cascade's anchor.
- *  - At any zoom, the renderer picks the cascade level whose major
- *    on-screen spacing fits the target window `[fadeMaxPx, fadeMaxPx *
- *    subDivisions]`. As the user zooms in/out, the cascade level shifts
- *    by powers of `subDivisions` so the visible step always feels
- *    natural (~50-100 px on screen for major lines).
- *  - The role assignments are stable: at any zoom the FINER active
- *    level is the "minor" (rendered with the user-chosen `minorColor`
- *    and `minorWeight`), the COARSER active level is the "major"
- *    (`majorColor` / `majorWeight`). Colors NEVER swap at zoom — they
- *    follow the role, not the absolute level.
- *  - The major level is always at full opacity. The minor level fades
- *    smoothstep over `[fadeMinPx, fadeMaxPx]` based on its own on-screen
- *    spacing, providing a continuous transition at the moment the
- *    cascade is about to step up (when minor would become too dense).
+ *  - At any zoom the renderer picks the cascade level whose MINOR on-screen
+ *    spacing lands inside `[minSpacingPx, minSpacingPx * subDivisions]`
+ *    (default 10-50 px, so major lands at 50-250 px with 5 subdivisions —
+ *    the AutoCAD `GRIDDISPLAY` / Fusion 360 feel). The band tracks the MINOR
+ *    level because that is the finer of the two drawn levels and therefore
+ *    the one that sets perceived density.
+ *  - Role assignments are stable: the FINER active level is always the
+ *    "minor" (`minorColor` / `minorWeight`), the COARSER always the "major"
+ *    (`majorColor` / `majorWeight`). Colors NEVER swap at zoom — they follow
+ *    the role, not the absolute level.
+ *
+ * ## Cross-fade — why the band top and the fade window are DERIVED
+ *
+ * Mirrored verbatim from this repo's MAXON/Cinema 4D grid SSoT
+ * (`bim-3d/scene/grid/cinema4d-grid-material.ts`, ADR-558 — Giorgio's
+ * "do it like C4D"), whose fragment shader reads:
+ *
+ * ```glsl
+ * float lodFade = lod - lodFloor;   // 0 just after a step, ->1 just before
+ * float minorC = lineCoverage(...) * (1.0 - lodFade);   // minor cross-fades
+ * float majorC = lineCoverage(...);                     // major stays full
+ * ```
+ *
+ * `lodFade` is the fractional position inside the cascade period, measured in
+ * LOG space because the cascade is geometric (ratio `subDivisions`). The 2D
+ * equivalent is `log_subDivisions(bandTop / minorScreenPx)`.
+ *
+ * This makes the level change invisible, and the proof is arithmetic:
+ *
+ *  - minor at the band TOP  → `lodFade = 0` → opacity 1 (sparsest, fully drawn)
+ *  - minor at the band FLOOR → `lodFade = 1` → opacity 0 (densest, invisible)
+ *
+ * So the instant before the cascade coarsens, the minor level has already
+ * faded to nothing and the only lines on screen are the major ones. The step
+ * then promotes that very major level to "minor" at the identical spacing and
+ * full opacity. Visible line spacing before the step == after the step ⇒ no
+ * density pop.
+ *
+ * That continuity holds ONLY when the band spans exactly one cascade period,
+ * i.e. `bandTop === minSpacingPx * subDivisions`. A band ratio above that
+ * leaves the minor still partly visible when the step fires (residual pop);
+ * below it, the minor is dead over part of the band. The band top is therefore
+ * a STRUCTURAL CONSEQUENCE of the cascade, not a preference — so it is derived
+ * here rather than accepted as an input, exactly as C4D exposes a single
+ * `uMinCellPx` knob and derives the rest.
+ *
+ * The same reasoning retires the old independent `[fadeMinPx, fadeMaxPx]`
+ * window. Shipped as `[2,10]` while the minor lived in `[10,50]`, its
+ * smoothstep saturated at 1 for every reachable zoom — the cross-fade was
+ * dead code and the ×`subDivisions` density jump was fully exposed on every
+ * wheel click (measured 2026-07-20: minor 10.48px → 44.56px between two
+ * consecutive wheel clicks, opacity 1.0 on both sides).
  *
  * Pure function — safe inside hot render paths.
  */
 export function computeAdaptiveLevels(input: AdaptiveLevelInputs): AdaptiveLevels {
-  const { worldStep, scale, subDivisions, fadeMinPx, fadeMaxPx } = input;
+  const { worldStep, scale, subDivisions, minSpacingPx } = input;
 
-  // Cascade window: the active major's screen spacing should fall within
-  // `[fadeMaxPx, fadeMaxPx * subDivisions]`. That guarantees the active
-  // minor (= major / subDivisions) lands inside `[fadeMaxPx /
-  // subDivisions, fadeMaxPx]` — i.e. visible at full opacity until the
-  // lower edge where smoothstep takes over.
-  const targetMajorMin = fadeMaxPx;
-  const targetMajorMax = fadeMaxPx * subDivisions;
+  // A cascade needs a real geometric period; `log(1)` is 0 and would make the
+  // fade term divide by zero. GridRenderer routes `majorInterval <= 1` to the
+  // legacy path, but keep the math total for direct callers.
+  if (!(subDivisions > 1) || !(scale > 0) || !(worldStep > 0) || !(minSpacingPx > 0)) {
+    const flatPx = worldStep * scale;
+    return { majorScreenPx: flatPx, minorScreenPx: flatPx, minorOpacity: 1 };
+  }
 
-  let majorWorldStep = worldStep;
-  // Defensive bounds prevent runaway loops when scale is 0 / NaN.
+  // DERIVED — one cascade period above the floor. See the doc block above:
+  // any other value reintroduces the pop this function exists to remove.
+  const maxSpacingPx = minSpacingPx * subDivisions;
+
+  let minorWorldStep = worldStep;
+  // Defensive bounds prevent runaway loops when scale is denormal / NaN.
   let safety = 64;
-  while (majorWorldStep * scale < targetMajorMin && safety-- > 0) {
-    majorWorldStep *= subDivisions;
+  while (minorWorldStep * scale < minSpacingPx && safety-- > 0) {
+    minorWorldStep *= subDivisions;
   }
   safety = 64;
-  while (majorWorldStep * scale > targetMajorMax && safety-- > 0) {
-    majorWorldStep /= subDivisions;
+  while (minorWorldStep * scale > maxSpacingPx && safety-- > 0) {
+    minorWorldStep /= subDivisions;
   }
 
-  const minorWorldStep = majorWorldStep / subDivisions;
   const minorScreenPx = minorWorldStep * scale;
-  const majorScreenPx = majorWorldStep * scale;
+  const majorScreenPx = minorScreenPx * subDivisions;
 
-  const denom = Math.max(0.001, fadeMaxPx - fadeMinPx);
-  const t = clamp01((minorScreenPx - fadeMinPx) / denom);
-  const minorOpacity = t * t * (3 - 2 * t); // smoothstep
+  // C4D `1.0 - lodFade`, in log space over the cascade period.
+  const lodFade = clamp01(Math.log(maxSpacingPx / minorScreenPx) / Math.log(subDivisions));
 
-  return { majorScreenPx, minorScreenPx, minorOpacity };
+  return { majorScreenPx, minorScreenPx, minorOpacity: 1 - lodFade };
 }

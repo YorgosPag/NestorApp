@@ -135,32 +135,33 @@ export function createInitialGridSettings(
 }
 
 /**
- * Migrate legacy adaptive fade defaults to safe values + force-disable
- * smoothFade. The original window (8/32) made the minor grid invisible at
- * typical zooms which made minor/major colors indistinguishable. Disabling
- * smoothFade restores the pre-feature behaviour (legacy 2-pass minor+major
- * draw with the user's panel colors directly).
+ * Strip the retired adaptive-fade window from persisted grid blobs.
  *
- * The user can opt back into adaptive via the Δυναμικό πλέγμα toggle.
+ * `smoothFadeMinPx` / `smoothFadeMaxPx` were user-tunable px thresholds for
+ * the minor-level cross-fade. They are gone: the fade window is now DERIVED
+ * from the cascade band inside `computeAdaptiveLevels` (the MAXON/C4D model —
+ * see `rendering/ui/grid/grid-adaptive.ts`). Keeping them as independent knobs
+ * is what let the window drift outside the band and silently kill the
+ * cross-fade — the 2026-07-20 density-jump defect.
+ *
+ * Blobs written before this change still carry both keys, and `deepMerge`
+ * would otherwise propagate them back into Firestore forever, so they are
+ * deleted here rather than merely ignored.
  *
  * Runs at every load — both from localStorage (createInitialGridSettings)
  * and from the Firestore UserSettings repository
  * (useUserSettingsRulersGridSync hydrate callback).
  */
 export function migrateAdaptiveFadeDefaults(grid: GridSettings): GridSettings {
-  const b = grid.behavior;
-  const isLegacyFadeWindow = b.smoothFadeMinPx === 8 && b.smoothFadeMaxPx === 32;
-  const migrated = isLegacyFadeWindow
-    ? {
-        ...grid,
-        behavior: {
-          ...b,
-          smoothFade: false,
-          smoothFadeMinPx: 2,
-          smoothFadeMaxPx: 10,
-        },
-      }
+  const behavior: Record<string, unknown> = { ...grid.behavior };
+  const hadRetiredKeys = 'smoothFadeMinPx' in behavior || 'smoothFadeMaxPx' in behavior;
+  delete behavior.smoothFadeMinPx;
+  delete behavior.smoothFadeMaxPx;
+
+  const migrated = hadRetiredKeys
+    ? { ...grid, behavior: behavior as unknown as GridSettings['behavior'] }
     : grid;
+
   // Sync axes to SSoT default on load.
   if (migrated.visual.showAxes !== GRID_AXES_DEFAULTS.showAxes) {
     return { ...migrated, visual: { ...migrated.visual, showAxes: GRID_AXES_DEFAULTS.showAxes } };

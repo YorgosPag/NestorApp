@@ -3,9 +3,14 @@
  *
  * Extracted from `GridSettings.tsx` to keep that component under the
  * Google-level 500-line limit (CLAUDE.md SOS. N.7.1). Renders the toggle +
- * 3 sliders that drive `gridSettings.behavior.{smoothFade, smoothFadeMinPx,
- * smoothFadeMaxPx, smoothFadeDurationMs}` (industry pattern: AutoCAD /
- * Fusion 360 / OnShape / Figma / Miro).
+ * the temporal-lerp duration slider, driving
+ * `gridSettings.behavior.{smoothFade, smoothFadeDurationMs}`.
+ *
+ * The former `smoothFadeMinPx` / `smoothFadeMaxPx` sliders are GONE by design:
+ * the cross-fade window is derived from the cascade band (MAXON/C4D model, see
+ * `rendering/ui/grid/grid-adaptive.ts`). Exposing it let the window drift
+ * outside the band, which silently disabled the cross-fade and produced the
+ * 2026-07-20 density jump. Duration stays — it is orthogonal to the window.
  *
  * @module ui/components/dxf-settings/settings/special/GridAdaptiveFadeSection
  */
@@ -22,24 +27,18 @@ import { SliderInput } from '../../../shared/SliderInput';
 
 interface AdaptiveFadeView {
   smoothFade: boolean;
-  smoothFadeMinPx: number;
-  smoothFadeMaxPx: number;
   smoothFadeDurationMs: number;
 }
 
 interface GridAdaptiveFadeSectionProps {
   fade: AdaptiveFadeView;
   onToggle: (enabled: boolean) => void;
-  onFadeMinChange: (px: number) => void;
-  onFadeMaxChange: (px: number) => void;
   onFadeDurationChange: (ms: number) => void;
 }
 
 export function GridAdaptiveFadeSection({
   fade,
   onToggle,
-  onFadeMinChange,
-  onFadeMaxChange,
   onFadeDurationChange,
 }: GridAdaptiveFadeSectionProps) {
   const { t } = useTranslation([
@@ -68,20 +67,10 @@ export function GridAdaptiveFadeSection({
       </div>
 
       {fade.smoothFade && (
-        <>
-          <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.muted} ${quick.card} ${PANEL_LAYOUT.SPACING.GAP_SM} ${PANEL_LAYOUT.MARGIN.TOP_SM}`}>
-            <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>{t('gridSettings.adaptive.fadeMinDescription')}</p>
-            <SliderInput label={t('gridSettings.adaptive.fadeMinLabel')} value={fade.smoothFadeMinPx} min={2} max={32} step={1} onChange={onFadeMinChange} showValue formatValue={(v) => `${v}px`} />
-          </div>
-          <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.muted} ${quick.card} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-            <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>{t('gridSettings.adaptive.fadeMaxDescription')}</p>
-            <SliderInput label={t('gridSettings.adaptive.fadeMaxLabel')} value={fade.smoothFadeMaxPx} min={8} max={128} step={1} onChange={onFadeMaxChange} showValue formatValue={(v) => `${v}px`} />
-          </div>
-          <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.muted} ${quick.card} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-            <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>{t('gridSettings.adaptive.fadeDurationDescription')}</p>
-            <SliderInput label={t('gridSettings.adaptive.fadeDurationLabel')} value={fade.smoothFadeDurationMs} min={0} max={2000} step={50} onChange={onFadeDurationChange} showValue formatValue={(v) => `${v}ms`} />
-          </div>
-        </>
+        <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.muted} ${quick.card} ${PANEL_LAYOUT.SPACING.GAP_SM} ${PANEL_LAYOUT.MARGIN.TOP_SM}`}>
+          <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>{t('gridSettings.adaptive.fadeDurationDescription')}</p>
+          <SliderInput label={t('gridSettings.adaptive.fadeDurationLabel')} value={fade.smoothFadeDurationMs} min={0} max={2000} step={50} onChange={onFadeDurationChange} showValue formatValue={(v) => `${v}ms`} />
+        </div>
       )}
     </section>
   );

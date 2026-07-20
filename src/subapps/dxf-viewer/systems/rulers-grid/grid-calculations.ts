@@ -138,63 +138,22 @@ export const GridCalculations = {
   },
 
   /**
-   * 🌊 ADAPTIVE GRID — multi-level smooth fade.
+   * 🌊 ADAPTIVE GRID cascade levels — REMOVED 2026-07-20.
    *
-   * Returns the world-space minor + major step plus the screen-space opacity
-   * factor for the minor level (in [0,1]). Used by GridRenderer to draw
-   * minor + major in two passes with a continuous fade transition as the
-   * user zooms — exactly the AutoCAD / Fusion 360 / OnShape / Figma /
-   * Miro behaviour.
+   * This was a SECOND, never-called implementation of the cascade that the
+   * live renderer already does in `rendering/ui/grid/grid-adaptive.ts`
+   * (`computeAdaptiveLevels`). Only this dead copy kept the cascade window
+   * distinct from the fade window; the live one derived both from the fade
+   * threshold, which is what produced the over-dense grid. The correct
+   * semantics were moved INTO the live path rather than kept as a twin
+   * (CLAUDE.md N.18).
    *
-   * Algorithm:
-   *   1. Pick the largest `step` whose screen spacing fits the
-   *      `[minGridSpacing, maxGridSpacing]` window — that's the MAJOR step
-   *      (always at full opacity).
-   *   2. The MINOR step is `majorStep / subDivisions`.
-   *   3. The minor's screen spacing controls its opacity via smoothstep
-   *      between `smoothFadeMinPx` and `smoothFadeMaxPx`. Below min the
-   *      minor disappears entirely; above max it's fully visible. As the
-   *      user zooms in, the minor fades up; when minor crosses above max
-   *      and a new finer step would be needed, the algorithm cascades
-   *      the major down, the previous minor becomes the new major (full
-   *      opacity), and a finer minor enters at opacity 0 — perfectly
-   *      continuous visually.
+   * Both windows have since been retired as independent quantities entirely:
+   * the live path derives the band top AND the cross-fade from the single
+   * `minGridSpacing` anchor (ADR-681 §5, MAXON/C4D model).
+   *
+   * @see ../../rendering/ui/grid/grid-adaptive.ts — the single owner
    */
-  calculateAdaptiveLevels: (
-    scale: number,
-    baseStep: number,
-    settings: GridSettings,
-  ): {
-    readonly minorStep: number;
-    readonly majorStep: number;
-    readonly minorOpacity: number;
-    readonly minorScreenPx: number;
-    readonly majorScreenPx: number;
-  } => {
-    const subDivisions = settings?.visual?.subDivisions || RULERS_GRID_CONFIG.DEFAULT_SUBDIVISIONS;
-    const min = settings.behavior.minGridSpacing;
-    const max = settings.behavior.maxGridSpacing;
-
-    // 1. Find majorStep whose screen spacing fits [min, max].
-    let majorStep = baseStep;
-    while (majorStep * scale < min) majorStep *= subDivisions;
-    while (majorStep * scale > max) majorStep /= subDivisions;
-
-    // 2. Minor is one level finer.
-    const minorStep = majorStep / subDivisions;
-    const minorScreenPx = minorStep * scale;
-    const majorScreenPx = majorStep * scale;
-
-    // 3. Smoothstep opacity for minor.
-    const fadeMin = settings.behavior.smoothFadeMinPx ?? 8;
-    const fadeMax = settings.behavior.smoothFadeMaxPx ?? 32;
-    const t = clamp01((minorScreenPx - fadeMin) / Math.max(0.001, fadeMax - fadeMin));
-    const minorOpacity = settings.behavior.smoothFade === false
-      ? (minorScreenPx >= min ? 1 : 0) // legacy discrete
-      : t * t * (3 - 2 * t); // smoothstep
-
-    return { minorStep, majorStep, minorOpacity, minorScreenPx, majorScreenPx };
-  },
 
   calculateVisibleBounds: (
     transform: ViewTransform,

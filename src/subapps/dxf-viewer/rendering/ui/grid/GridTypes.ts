@@ -48,9 +48,27 @@ export interface GridSettings extends UIElementSettings {
 
   // 🌊 ADAPTIVE GRID — multi-level smooth fade
   readonly smoothFade: boolean;       // Enable per-level smooth opacity transition
-  readonly smoothFadeMinPx: number;   // Screen px where minor opacity = 0
-  readonly smoothFadeMaxPx: number;   // Screen px where minor opacity = 1
   readonly smoothFadeDurationMs: number; // Temporal lerp duration (0 = instant)
+
+  /**
+   * 🪜 CASCADE ANCHOR — the MINOR level's screen spacing (px) at which the grid
+   * coarsens. **This is the single density knob.** The band top and the
+   * cross-fade window are DERIVED from it inside `computeAdaptiveLevels`:
+   *
+   *  - band top      = `minGridSpacing * majorInterval` (one cascade period)
+   *  - minor opacity = `1 - log_majorInterval(bandTop / minorPx)`  (C4D model)
+   *
+   * They are not settings because they are not free: a band that does not span
+   * exactly one cascade period, or a fade window that does not cover exactly
+   * that band, reintroduces the density pop. Three separate 2026-07-20 defects
+   * were all this same shape — coupled quantities configured independently and
+   * drifting apart. See `grid-adaptive.ts` for the arithmetic.
+   *
+   * Engineering constant, not a user preference — deliberately NOT sourced from
+   * `rulers-grid/config.ts` `behavior.minGridSpacing/maxGridSpacing`, which are
+   * ruler/snap-step values with different semantics.
+   */
+  readonly minGridSpacing: number;
 
   // 🏢 ORIGIN & AXES: AutoCAD-style UCS icon (consolidated from rulers-grid/config.ts)
   readonly showOrigin: boolean;     // Show origin crosshair at world (0,0)
@@ -112,12 +130,14 @@ export const DEFAULT_GRID_SETTINGS: GridSettings = {
   axesWeight: GRID_AXES_DEFAULTS.axesWeight,
 
   // 🌊 Adaptive grid — opt-in. Default OFF so the renderer uses the legacy
-  // 2-pass minor+major draw with the user's panel colors directly. When
-  // enabled, fade window is biased toward visibility (2-10px screen window).
+  // 2-pass minor+major draw with the user's panel colors directly.
   smoothFade: false,
-  smoothFadeMinPx: 2,
-  smoothFadeMaxPx: 10,
   smoothFadeDurationMs: DXF_TIMING.animation.FADE, // ADR-516
+
+  // 🪜 Cascade anchor — minor lines coarsen at 10 screen px, so the derived
+  // band is 10-50 px and major lands at 50-250 px with 5 subdivisions
+  // (AutoCAD GRIDDISPLAY / Fusion 360 feel).
+  minGridSpacing: 10,
 
   zIndex: RENDERING_ZINDEX.GRID  // 🏢 ADR-034: Centralized z-index (10)
 };

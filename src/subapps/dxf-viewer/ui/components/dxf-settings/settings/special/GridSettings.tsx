@@ -123,28 +123,12 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
   // written before these fields existed (controlled-input contract).
   const adaptiveFade = {
     smoothFade: gridSettings.behavior.smoothFade ?? false,
-    smoothFadeMinPx: gridSettings.behavior.smoothFadeMinPx ?? 2,
-    smoothFadeMaxPx: gridSettings.behavior.smoothFadeMaxPx ?? 10,
     smoothFadeDurationMs: gridSettings.behavior.smoothFadeDurationMs ?? 200,
   };
 
   const handleSmoothFadeToggle = (enabled: boolean) => {
     updateGridSettings({
       behavior: { ...gridSettings.behavior, ...adaptiveFade, smoothFade: enabled },
-    });
-  };
-
-  const handleSmoothFadeMinChange = (px: number) => {
-    const cappedMin = Math.min(px, adaptiveFade.smoothFadeMaxPx - 1);
-    updateGridSettings({
-      behavior: { ...gridSettings.behavior, ...adaptiveFade, smoothFadeMinPx: cappedMin },
-    });
-  };
-
-  const handleSmoothFadeMaxChange = (px: number) => {
-    const cappedMax = Math.max(px, adaptiveFade.smoothFadeMinPx + 1);
-    updateGridSettings({
-      behavior: { ...gridSettings.behavior, ...adaptiveFade, smoothFadeMaxPx: cappedMax },
     });
   };
 
@@ -279,8 +263,6 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
       <GridAdaptiveFadeSection
         fade={adaptiveFade}
         onToggle={handleSmoothFadeToggle}
-        onFadeMinChange={handleSmoothFadeMinChange}
-        onFadeMaxChange={handleSmoothFadeMaxChange}
         onFadeDurationChange={handleSmoothFadeDurationChange}
       />
 

@@ -149,9 +149,9 @@ export class CanvasSettings {
         axesColor: GRID_AXES_DEFAULTS.axesColor,
         axesWeight: GRID_AXES_DEFAULTS.axesWeight,
         smoothFade: false,
-        smoothFadeMinPx: 2,
-        smoothFadeMaxPx: 10,
         smoothFadeDurationMs: DXF_TIMING.animation.FADE, // ADR-516
+        // 🪜 Cascade anchor — minor screen px at which the grid coarsens
+        minGridSpacing: 10,
         zIndex: RENDERING_ZINDEX.GRID  // 🏢 ADR-034: Centralized z-index (10)
       },
       rulers: {

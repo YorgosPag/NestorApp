@@ -121,10 +121,6 @@ export interface GridSettings {
      * step jump of the legacy adaptiveGrid logic.
      */
     smoothFade: boolean;
-    /** Screen px below which minor lines are invisible (opacity 0). */
-    smoothFadeMinPx: number;
-    /** Screen px above which minor lines are at full opacity. */
-    smoothFadeMaxPx: number;
     /**
      * Duration (ms) of the temporal lerp applied to the minor opacity
      * between frames. 0 = instant per-frame fade (raw zoom mapping);
@@ -243,8 +239,6 @@ export const DEFAULT_GRID_SETTINGS: GridSettings = {
     maxGridSpacing: 100,
     adaptiveGrid: true,
     smoothFade: false,
-    smoothFadeMinPx: 2,
-    smoothFadeMaxPx: 10,
     smoothFadeDurationMs: DXF_TIMING.animation.FADE, // ADR-516
     fadeAtDistance: true,
     fadeThreshold: 0.1

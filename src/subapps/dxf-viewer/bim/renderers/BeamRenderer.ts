@@ -144,6 +144,11 @@ export class BeamRenderer extends BaseEntityRenderer {
     const _beamStyleCut: CutState = _beamCutState === 'hidden' ? 'projection' : _beamCutState;
     // Translucent fill first. FULL SSoT (bim-body-fill) — ίδιος κώδικας body-fill με
     // όλα τα BIM (V/G tint ?? παλέτα → background-adaptive boost ⇒ ΙΔΙΑ διαφάνεια).
+    // ⚠️ ΣΚΟΠΙΜΑ ΧΩΡΙΣ `fillBimBodyPath` (2026-07-20): το δοκάρι είναι overhead
+    // (πάνω από το επίπεδο κοπής, dashed outline — βλ. `_beamStyleCut` παραπάνω).
+    // Revit/ArchiCAD: ό,τι είναι ΠΑΝΩ από τον παρατηρητή ΔΕΝ παίρνει αδιαφανές
+    // background pattern — δεν κρύβει το πάτωμα ούτε τα drawing aids από κάτω.
+    // ΜΗΝ το «ευθυγραμμίσεις» με wall/column/slab: η διαφορά είναι το σχέδιο.
     this.ctx.fillStyle = resolveBimBodyFill('beam', _beamStyleCut, _beamDs.objectStyles, KIND_FILL[beam.kind]);
     this.buildPiecesPath(drawable);
     this.ctx.fill();

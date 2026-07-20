@@ -39,7 +39,7 @@ import type { SlabOpeningEntity } from '../types/slab-opening-types';
 import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
 import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
 import { isStructuralComponentVisible } from '../visibility/structural-component-visibility';
-import { resolveBimBodyFill } from '../utils/bim-body-fill';
+import { resolveBimBodyFill, fillBimBodyPath } from '../utils/bim-body-fill';
 import { topFacePlanFill } from '../utils/bim-face-plan-fill';
 import { bimDashPx } from '../../config/bim-dash-resolver';
 import { resolveCutState } from '../../config/bim-view-range';
@@ -140,9 +140,11 @@ export class SlabRenderer extends BimFootprintRenderer {
     // παλέτα → background-adaptive boost ⇒ ΙΔΙΑ διαφάνεια σε κάθε φόντο).
     // ADR-539 Φ3e — η βαμμένη ΑΝΩ όψη (Cinema 4D «Polygon Mode») γίνεται το χρώμα γεμίσματος
     // στην κάτοψη (top cap = ό,τι βλέπουμε από πάνω)· αλλιώς το legacy V/G body fill.
-    this.ctx.fillStyle = topFacePlanFill(slab) ?? resolveBimBodyFill('slab', _slabCutState, _slabStyles, KIND_FILL[slab.kind]);
+    // Revit background+foreground pattern (bim-body-fill) — opaque base occludes
+    // drawing aids beneath the slab, poché tint on top.
+    const _slabBodyFill = topFacePlanFill(slab) ?? resolveBimBodyFill('slab', _slabCutState, _slabStyles, KIND_FILL[slab.kind]);
     this.drawPolygonPath(verts);
-    this.ctx.fill();
+    fillBimBodyPath(this.ctx, _slabBodyFill, _slabCutState);
 
     // ADR-534 Φ4 — soffit finish swatch (reflected ceiling plan): tint πάνω από το body fill.
     this.drawSoffitFinishTint(slab, verts);

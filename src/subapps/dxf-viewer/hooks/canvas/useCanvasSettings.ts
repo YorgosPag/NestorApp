@@ -22,6 +22,8 @@ import { useMemo } from 'react';
 import type { CrosshairSettings } from '../../rendering/ui/crosshair/CrosshairTypes';
 import type { CursorSettings } from '../../systems/cursor/config';
 import type { GridSettings, RulerSettings, SnapSettings, SelectionSettings } from '../../canvas-v2';
+// 🪜 Cascade band SSoT — engineering constant, see GridTypes.DEFAULT_GRID_SETTINGS.
+import { DEFAULT_GRID_SETTINGS } from '../../rendering/ui/grid/GridTypes';
 import { UI_COLORS } from '../../config/color-config';
 // 🏢 SSoT: Axis/origin defaults — single source of truth
 import { GRID_AXES_DEFAULTS } from '../../config/grid-axis-defaults';
@@ -55,8 +57,6 @@ export interface GridContextSettings {
   // 🌊 ADAPTIVE behaviour — smooth fade between levels (industry pattern)
   behavior?: {
     smoothFade?: boolean;
-    smoothFadeMinPx?: number;
-    smoothFadeMaxPx?: number;
     smoothFadeDurationMs?: number;
   };
 }
@@ -287,9 +287,14 @@ export function useCanvasSettings(props: UseCanvasSettingsProps): UseCanvasSetti
     // 2-pass renders with user's panel colors directly. When ON, smoothstep
     // fade based on screen-space spacing (industry pattern).
     smoothFade: gridContextSettings?.behavior?.smoothFade ?? false,
-    smoothFadeMinPx: gridContextSettings?.behavior?.smoothFadeMinPx ?? 2,
-    smoothFadeMaxPx: gridContextSettings?.behavior?.smoothFadeMaxPx ?? 10,
     smoothFadeDurationMs: gridContextSettings?.behavior?.smoothFadeDurationMs ?? 200,
+
+    // 🪜 CASCADE ANCHOR — the minor-line spacing at which the grid coarsens.
+    // The band top and the cross-fade window derive from it (see grid-adaptive.ts);
+    // they are not settings because they are not free. An engineering constant
+    // rather than a user preference, so it comes from the renderer defaults and NOT
+    // from `behavior.minGridSpacing/maxGridSpacing` (ruler/snap values, other units).
+    minGridSpacing: DEFAULT_GRID_SETTINGS.minGridSpacing,
   }), [gridContextSettings, showGrid]);
 
   /**
