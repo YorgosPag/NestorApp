@@ -19,6 +19,7 @@
 
 import { generateImportedMeshId } from '@/services/enterprise-id.service';
 import type { GeometrySignature } from '../../../io/mesh3d-roundtrip/geometry-hash';
+import type { MeshSolidMeasure } from '../../../io/mesh3d-roundtrip/mesh-solid-measure';
 import type { Point3D } from '../../types/bim-base';
 import type { SceneUnits } from '../../../utils/scene-units';
 import type { ImportedMeshEntity, ImportedMeshParams } from './imported-mesh-types';
@@ -40,8 +41,13 @@ export interface ImportedMeshSource {
   readonly sourceFileName: string;
   /** Όνομα κόμβου μέσα στο αρχείο (π.χ. `Rail_01`). */
   readonly nodeName: string;
-  /** Ο περιγραφέας γεωμετρίας της Φ2 — από εδώ βγαίνουν οι διαστάσεις. */
+  /** Ο περιγραφέας γεωμετρίας της Φ2 — από εδώ βγαίνουν οι διαστάσεις **και** το εμβαδόν. */
   readonly signature: GeometrySignature;
+  /**
+   * ADR-683 Φ3.1 — όγκος/στεγανότητα από τα τρίγωνα (`io/mesh3d-roundtrip/mesh-solid-measure`).
+   * Το μόνο μέγεθος που δεν προκύπτει από το `signature`, γιατί απαιτεί τοπολογία και όχι μόνο bbox.
+   */
+  readonly solid: MeshSolidMeasure;
   /** Θέση εισαγωγής σε canvas units. */
   readonly position: Point3D;
   /**
@@ -82,6 +88,10 @@ export function buildImportedMeshParams(source: ImportedMeshSource): ImportedMes
     measuredWidthMm: sizeXm * M_TO_MM,
     measuredDepthMm: sizeZm * M_TO_MM,
     measuredHeightMm: sizeYm * M_TO_MM,
+    // Το εμβαδόν είναι ήδη μετρημένο στη Φ2· ο όγκος είναι `null` για ό,τι δεν είναι κλειστό
+    // κέλυφος — δηλαδή για κάθε ανοιχτή γεωμετρία, όπου το κουτί θα υπερεκτιμούσε δραματικά.
+    measuredSurfaceAreaM2: source.signature.areaM2,
+    measuredVolumeM3: source.solid.volumeM3,
     mountingElevationMm:
       typeof mounting === 'number' && Number.isFinite(mounting)
         ? mounting

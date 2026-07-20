@@ -36,6 +36,7 @@ import type {
 } from '../mesh3d-material-import/obj-mtl-parse';
 import { computeGeometryFingerprint, type GeometryFingerprint } from './geometry-hash';
 import type { GltfNodeWorldBox } from './gltf-node-placement';
+import { measureMeshSolid, type MeshSolidMeasure } from './mesh-solid-measure';
 
 /**
  * Ένα mesh του επιστρεφόμενου glTF. Επεκτείνει το OBJ συμβόλαιο (`objectName` + `materialName`)
@@ -50,6 +51,13 @@ export interface GltfObjectRecord extends ObjectMaterialAssignment {
    * αναλλοίωτο αντικείμενο είναι κατάσταση **A**, όχι **C**). `null` για κενή γεωμετρία.
    */
   readonly worldBoxM: GltfNodeWorldBox | null;
+  /**
+   * ADR-683 Φ3.1 (§10.2) — μπορεί αυτός ο κόμβος να κοστολογηθεί σε m³/kg; Το εμβαδόν και οι
+   * διαστάσεις βγαίνουν ήδη από το `fingerprint.signature`· ο **όγκος** χρειάζεται τα τρίγωνα και
+   * ισχύει μόνο για κλειστό κέλυφος (βλ. `./mesh-solid-measure`). Μετριέται εδώ γιατί εδώ είναι
+   * φορτωμένη η γεωμετρία — μετά την εισαγωγή δεν ξαναδιαβάζεται ποτέ.
+   */
+  readonly solid: MeshSolidMeasure;
 }
 
 /**
@@ -97,6 +105,7 @@ export function collectGltfObjects(root: THREE.Object3D): GltfObjectRecord[] {
       materialName: resolveMaterialName(mesh),
       fingerprint: computeGeometryFingerprint(mesh),
       worldBoxM: readWorldBox(mesh),
+      solid: measureMeshSolid(mesh),
     });
   });
 

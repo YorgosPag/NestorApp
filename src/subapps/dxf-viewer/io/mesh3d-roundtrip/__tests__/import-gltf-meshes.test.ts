@@ -55,6 +55,8 @@ function record(overrides: Partial<GltfObjectRecord> = {}): GltfObjectRecord {
       },
     },
     worldBoxM: { centre: { x: 3, y: 0.5, z: 5 }, minY: 0 },
+    // Κάγκελο = ανοιχτό πλέγμα → κανένας αξιόπιστος όγκος (ADR-683 §10.2).
+    solid: { isWatertight: false, volumeM3: null },
     ...overrides,
   };
 }

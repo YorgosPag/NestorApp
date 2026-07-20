@@ -8,6 +8,7 @@
 
 import { buildImportedMeshEntity, buildImportedMeshEntities, type ImportedMeshSource } from '../build-imported-mesh-entity';
 import type { GeometrySignature } from '../../../../io/mesh3d-roundtrip/geometry-hash';
+import type { MeshSolidMeasure } from '../../../../io/mesh3d-roundtrip/mesh-solid-measure';
 
 jest.mock('@/services/enterprise-id.service', () => ({
   __esModule: true,
@@ -34,12 +35,20 @@ const signature: GeometrySignature = {
   areaM2: 4,
 };
 
+/**
+ * Κάγκελο = **ανοιχτό** πλέγμα → κανένας αξιόπιστος όγκος (ADR-683 §10.2). Το `null` εδώ δεν είναι
+ * «δεν μετρήθηκε» αλλά «η γεωμετρία δεν στηρίζει την ερώτηση» — και είναι η συνήθης περίπτωση για
+ * ό,τι στέλνει ένας συνεργάτης από DCC.
+ */
+const openSolid: MeshSolidMeasure = { isWatertight: false, volumeM3: null };
+
 const source: ImportedMeshSource = {
   uploadId: 'imesh_upload',
   storagePath: 'projects/p1/imported-meshes/imesh_upload.glb',
   sourceFileName: 'Ισόγειο.glb',
   nodeName: 'Rail_01',
   signature,
+  solid: openSolid,
   position: { x: 10, y: 20, z: 0 },
   sceneUnits: 'mm',
   layerId: 'lyr_1',

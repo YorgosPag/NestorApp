@@ -108,6 +108,7 @@ export async function importGltfMeshes(
       sourceFileName: input.sourceFileName,
       nodeName: record.objectName,
       signature: record.fingerprint.signature,
+      solid: record.solid,
       position,
       sceneUnits: input.placement.sceneUnits,
       layerId: input.layerId,
