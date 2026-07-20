@@ -36,6 +36,8 @@ import {
 import { usePerformanceHUDStore } from '../bim-3d/performance/PerformanceHUDStore';
 // ADR-391 — open AdminLayerManager dialog via store SSoT
 import { AdminLayerManagerDialogStore } from '../stores/AdminLayerManagerDialogStore';
+import { ImportedMeshBoqDialogStore } from '../stores/ImportedMeshBoqDialogStore';
+import { IMPORTED_MESH_ASSIGN_BOQ_ACTION } from '../ui/ribbon/data/contextual-imported-mesh-tab';
 // ADR-563 — auto-dimension command flow (dialog → engine → batch commit)
 import { runAutoDimensionFlow } from '../systems/dimensions/auto/run-auto-dimension-flow';
 // ADR-362 §7 — «Ιδιότητες…»: open the F11/Ctrl+1 Full Properties Palette (self-follows selection).
@@ -111,6 +113,14 @@ export function dispatchDxfSpecialAction(action: string, deps: DxfSpecialActionD
   // 🏢 ADR-241: Fullscreen toggle (Portal-based, zero remount)
   if (action === 'toggle-fullscreen') {
     fullscreen.toggle();
+    return true;
+  }
+  // ADR-683 Φ3.1β: «Ανάθεση προμέτρησης» για το επιλεγμένο εισαγόμενο πλέγμα. Το tab είναι ήδη
+  // per-selection (φαίνεται μόνο όταν ΕΝΑ imported-mesh είναι επιλεγμένο), αλλά το id διαβάζεται
+  // εδώ, τη στιγμή του κλικ — ποτέ από snapshot: το store κρατά ΤΟ αντικείμενο όσο είναι ανοιχτό.
+  if (action === IMPORTED_MESH_ASSIGN_BOQ_ACTION) {
+    const [importedMeshId] = selectedEntityIds;
+    if (importedMeshId) ImportedMeshBoqDialogStore.open(importedMeshId);
     return true;
   }
   // ADR-391: Open AdminLayerManager modal dialog (Revit View > Layer Manager pattern)

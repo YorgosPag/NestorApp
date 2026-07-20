@@ -193,10 +193,15 @@ export interface BOQItem {
    * ADR-408 — Η-Μ (Ηλεκτρομηχανολογικά) entities τροφοδοτούν επίσης BOQ
    * (βλ. `bim-to-atoe-mapping.ts` BimEntityType), οπότε ο τύπος πηγής μπορεί
    * να είναι MEP (σωλήνας/συλλέκτης/καλοριφέρ/λέβητας/θερμοσίφωνας/ενδοδαπέδια).
+   * ADR-683 Φ3.1β — `'imported-mesh'` = γεωμετρία συνεργάτη (`.glb`) με **χειροκίνητα**
+   * ανατεθειμένο άρθρο ΑΤΟΕ (§10.2). Η ομαδοποίηση γίνεται μέσω αυτού του πεδίου, χωρίς
+   * νέα τιμή στο `BOQSource`: η πηγή παραμένει `'bim-auto'` — ο χρήστης δήλωσε **πώς**
+   * κοστολογείται, η **ποσότητα** εξακολουθεί να βγαίνει από μετρημένη γεωμετρία.
    */
   sourceEntityType?:
     | 'wall' | 'opening' | 'slab' | 'column' | 'beam' | 'stair' | 'envelope' | 'railing' | 'furniture' | 'roof'
     | 'mep-segment' | 'mep-manifold' | 'mep-radiator' | 'mep-boiler' | 'mep-water-heater' | 'mep-underfloor'
+    | 'imported-mesh'
     | null;
 
   /** Αν true: ο χρήστης το αποσύνδεσε από BIM — δεν ενημερώνεται αυτόματα πλέον. */
