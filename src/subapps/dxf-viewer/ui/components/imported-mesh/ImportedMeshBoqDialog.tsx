@@ -55,7 +55,7 @@ import type {
   ImportedMeshBoqUnit,
   ImportedMeshParams,
 } from '../../../bim/entities/imported-mesh/imported-mesh-types';
-import type { ImportedMeshIdentitySuggestion } from '../../../bim/entities/imported-mesh/imported-mesh-identity-suggest';
+import type { IdentitySuggestionSource } from '../../../bim/entities/imported-mesh/imported-mesh-identity-suggest';
 import { ImportedMeshMeasuredSummary } from './ImportedMeshMeasuredSummary';
 
 const K = 'importedMeshBoq';
@@ -63,8 +63,16 @@ const K = 'importedMeshBoq';
 export interface ImportedMeshBoqDialogProps {
   readonly open: boolean;
   readonly params: ImportedMeshParams | null;
-  /** Η πρόταση προσυμπλήρωσης, ή `null` όταν καμία πηγή δεν αναγνώρισε το αντικείμενο. */
-  readonly suggestion: ImportedMeshIdentitySuggestion | null;
+  /**
+   * Η αρχική τιμή του εντύπου: η **υπάρχουσα** ταυτότητα σε ανατεθειμένο πλέγμα, αλλιώς η πρόταση.
+   * `null` → κενό έντυπο (καμία πηγή δεν αναγνώρισε το αντικείμενο· §3: ποτέ αυθαίρετη προεπιλογή).
+   */
+  readonly initial: ImportedMeshBoqIdentity | null;
+  /**
+   * Από πού ήρθε η αρχική τιμή — **μόνο** όταν είναι πρόταση. Σε ήδη ανατεθειμένο πλέγμα είναι
+   * `null`: η δική του ταυτότητα δεν χρειάζεται εξήγηση, και μια θα ήταν ψευδής.
+   */
+  readonly suggestionSource: IdentitySuggestionSource | null;
   /** Η ζωντανή βιβλιοθήκη υλικών — μόνο για τον προαιρετικό δείκτη τιμής. */
   readonly materials: readonly BimMaterial[];
   readonly onSave: (identity: ImportedMeshBoqIdentity) => void;
@@ -91,21 +99,21 @@ function effectiveCode(draft: DraftIdentity): string {
   return draft.subCategoryCode || draft.groupCode;
 }
 
-/** Πρόταση → αρχική κατάσταση εντύπου. Η υποκατηγορία αναγνωρίζεται από τη μορφή `OIK-x.y`. */
-function draftFromSuggestion(suggestion: ImportedMeshIdentitySuggestion | null): DraftIdentity {
-  if (!suggestion) return EMPTY_DRAFT;
-  const isSub = suggestion.categoryCode.includes('.');
+/** Ταυτότητα → αρχική κατάσταση εντύπου. Η υποκατηγορία αναγνωρίζεται από τη μορφή `OIK-x.y`. */
+function draftFromIdentity(identity: ImportedMeshBoqIdentity | null): DraftIdentity {
+  if (!identity) return EMPTY_DRAFT;
+  const isSub = identity.categoryCode.includes('.');
   return {
-    groupCode: isSub ? suggestion.categoryCode.split('.')[0] : suggestion.categoryCode,
-    subCategoryCode: isSub ? suggestion.categoryCode : '',
-    unit: suggestion.unit,
-    titleEL: suggestion.titleEL,
-    materialId: suggestion.materialId ?? '',
+    groupCode: isSub ? identity.categoryCode.split('.')[0] : identity.categoryCode,
+    subCategoryCode: isSub ? identity.categoryCode : '',
+    unit: identity.unit,
+    titleEL: identity.titleEL,
+    materialId: identity.materialId ?? '',
   };
 }
 
 export function ImportedMeshBoqDialog({
-  open, params, suggestion, materials, onSave, onClear, onCancel,
+  open, params, initial, suggestionSource, materials, onSave, onClear, onCancel,
 }: ImportedMeshBoqDialogProps) {
   const { t } = useTranslation('dxf-viewer-shell');
   const [draft, setDraft] = useState<DraftIdentity>(EMPTY_DRAFT);
@@ -113,8 +121,8 @@ export function ImportedMeshBoqDialog({
   // Το έντυπο ξαναγεμίζει σε κάθε άνοιγμα: το dialog ανοίγει για ΑΛΛΟ πλέγμα κάθε φορά, οπότε ένα
   // διατηρημένο draft θα μετέφερε σιωπηλά την ταυτότητα του προηγούμενου αντικειμένου.
   useEffect(() => {
-    if (open) setDraft(draftFromSuggestion(suggestion));
-  }, [open, suggestion]);
+    if (open) setDraft(draftFromIdentity(initial));
+  }, [open, initial]);
 
   const code = effectiveCode(draft);
   const subCategories = useMemo(() => subCategoriesFor(draft.groupCode), [draft.groupCode]);
