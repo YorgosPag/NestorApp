@@ -1728,7 +1728,8 @@
       "hvac": "HVAC",
       "fireGas": "Fire & Gas",
       "topography": "Topography",
-      "topoSurfaceProperties": "Topographic Surface"
+      "topoSurfaceProperties": "Topographic Surface",
+      "importedMeshProperties": "Imported Mesh"
     },
     "panels": {
       "topoData": "Data",
@@ -2028,7 +2029,8 @@
       "structural": "Structural",
       "peoplePlan": "People",
       "vehiclePlan": "Vehicles",
-      "plantsPlan": "Plants"
+      "plantsPlan": "Plants",
+      "importedMeshBoq": "Bill of quantities"
     },
     "minimizeStates": {
       "full": "Full Ribbon",
@@ -5216,7 +5218,12 @@
       "peoplePlan": "People",
       "vehiclePlan": "Vehicles",
       "plantsPlan": "Plants",
-      "createBlock": "Create Block"
+      "createBlock": "Create Block",
+      "importedMesh": {
+        "assignBoq": {
+          "label": "Assign to BOQ"
+        }
+      }
     },
     "tooltips": {
       "bimSchedule": "Open BIM Schedule — export structural elements",
@@ -6936,5 +6943,46 @@
         "degenerateNode": "The file node is degenerate (zero thickness)"
       }
     }
+  },
+  "importedMeshBoq": {
+    "title": "Assign to bill of quantities",
+    "description": "Declare how this imported object is costed. The quantity is derived automatically from the measured geometry.",
+    "measured": {
+      "node": "Node",
+      "size": "Dimensions",
+      "area": "Surface area",
+      "volume": "Volume",
+      "volumeUnmeasurable": "not measurable (open mesh)"
+    },
+    "suggestion": {
+      "name": "Pre-filled from the object name.",
+      "material": "Pre-filled from the object material.",
+      "name+material": "Pre-filled from the object name and material."
+    },
+    "fields": {
+      "group": "ATOE category",
+      "groupPlaceholder": "Select a category",
+      "subCategory": "Sub-category",
+      "subCategoryNone": "— None —",
+      "unit": "Measurement unit",
+      "unitPlaceholder": "Select a unit",
+      "title": "Line title",
+      "titlePlaceholder": "The title the contractor will see",
+      "material": "Material",
+      "materialNone": "— None —"
+    },
+    "units": {
+      "pcs": "pcs",
+      "m": "m",
+      "m2": "m²",
+      "m3": "m³",
+      "kg": "kg"
+    },
+    "materialNote": "Optional. The material brings a unit price from the library.",
+    "openMeshNote": "This mesh is not a closed shell, so volume and weight units are not offered.",
+    "noUnitsForArticle": "No unit fits: this article requires a quantity this geometry does not measure. Pick another article.",
+    "clear": "Remove assignment",
+    "cancel": "Cancel",
+    "save": "Save"
   }
 }
