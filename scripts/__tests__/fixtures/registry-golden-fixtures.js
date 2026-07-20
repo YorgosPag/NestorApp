@@ -346,4 +346,45 @@ useEffect(() => {
 import { useEdgeTriggeredLifecycle } from './useEdgeTriggeredLifecycle';
 useEdgeTriggeredLifecycle(isActive, () => enterTool(), () => exitTool());`,
   },
+
+  // ADR-682. These fixtures exist because the ORIGINAL patterns had two escape
+  // hatches that were found by executing them, not by reading them:
+  //   (a) "^[^*]*<input..." stopped matching the moment any '*' appeared
+  //       earlier on the line — e.g. a JSX expression containing a product.
+  //   (b) "^[[:space:]]*type=..." only fired when the attribute was the FIRST
+  //       thing on its continuation line, so a spread before it slipped past.
+  // Both shapes are pinned below. Comment-line skipping is NOT a regex concern:
+  // check-ssot-imports.js drops comment lines before matching.
+  'slider-primitive': {
+    shouldMatch: `// (a) '*' earlier on the line used to disarm the old anchored pattern:
+const w = <input style={{ width: cols * 8 }} type="range" min="0" max="100" />;
+// (b) attribute NOT first on its continuation line:
+<input
+  {...rest} type="range"
+  max={100}
+/>
+// (c) plain multi-line form, attribute alone on its line:
+<input
+  type="range"
+  value={v}
+/>
+// (d) imperative construction bypasses JSX entirely:
+const el = document.createElement('input');
+el.type = 'range';
+// (e) re-styling the third-party primitive from scratch:
+import * as SliderPrimitive from "@radix-ui/react-slider";`,
+    shouldSkip: `// Canonical usage: the shared primitive and its viewer wrapper.
+import { Slider } from '@/components/ui/slider';
+import { SliderInput } from '../shared/SliderInput';
+import { SLIDER_VALUE_UNITS } from '../shared/slider-value-units';
+
+<Slider value={[value]} min={0} max={100} step={1} onValueChange={onChange} />
+<SliderInput label={t('opacity')} value={v} min={0} max={1} step={0.01}
+  onChange={setV} showValue unit={SLIDER_VALUE_UNITS.percent01} />
+
+// Neither a range input nor an import of the raw package:
+const type = 'range';
+input.setAttribute('data-kind', 'range');
+element.dataset.type = 'rangefinder';`,
+  },
 };

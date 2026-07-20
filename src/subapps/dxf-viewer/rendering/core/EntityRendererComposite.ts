@@ -96,6 +96,18 @@ export class EntityRendererComposite {
   }
 
   /**
+   * ADR-362 — forward the scene's longest span (scene/model units) to the
+   * dimension renderer so its text-readability clamp can cap a mismatched
+   * imported DIMSCALE. No-op when the dim renderer is absent (test setups).
+   */
+  setDimensionSceneSpan(span: number): void {
+    const dim = this.renderers.get('dimension');
+    if (dim instanceof DimensionRenderer) {
+      dim.setSceneSpan(span);
+    }
+  }
+
+  /**
    * ADR-363 Phase 2.5 — forward the per-frame opening-by-wall index so the
    * wall renderer can punch boolean cutouts into its fill. No-op when the
    * wall renderer is absent (defensive for partial test setups).

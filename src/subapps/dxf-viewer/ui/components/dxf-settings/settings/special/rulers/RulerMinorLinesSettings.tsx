@@ -55,6 +55,8 @@ import { PANEL_LAYOUT } from '../../../../../../config/panel-tokens';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n';
 import { SliderInput } from '../../../../shared/SliderInput';
+// ADR-682: unit = format+parse pair → the value beside the slider becomes typeable.
+import { SLIDER_VALUE_UNITS } from '../../../../shared/slider-value-units';
 
 export interface RulerMinorLinesSettingsProps {
   className?: string;
@@ -183,7 +185,8 @@ export const RulerMinorLinesSettings: React.FC<RulerMinorLinesSettingsProps> = (
           step={0.1}
           onChange={handleMinorTickOpacityChange}
           showValue
-          formatValue={(v) => `${Math.round(v * 100)}%`}
+          unit={SLIDER_VALUE_UNITS.percent01}
+          tooltip={t('rulerSettings.minorLines.opacity.title')}
         />
       </div>
 
@@ -204,7 +207,10 @@ export const RulerMinorLinesSettings: React.FC<RulerMinorLinesSettingsProps> = (
         />
       </div>
 
-      {/* Minor Lines Thickness */}
+      {/* Minor Lines Thickness — the slider works in PX (0.5..3); the stored
+          `minorTickLength` is that px value ×10. The ÷10/×10 pair is a model
+          SCALING, not a unit, so it stays put and `pixels` describes what the
+          user actually sees and types. */}
       <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.hover} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
           <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('rulerSettings.minorLines.width.title')}</div>
@@ -217,7 +223,8 @@ export const RulerMinorLinesSettings: React.FC<RulerMinorLinesSettingsProps> = (
           step={0.5}
           onChange={handleMinorTickThicknessChange}
           showValue
-          formatValue={(v) => `${v}px`}
+          unit={SLIDER_VALUE_UNITS.pixels}
+          tooltip={t('rulerSettings.minorLines.width.title')}
         />
       </div>
     </div>

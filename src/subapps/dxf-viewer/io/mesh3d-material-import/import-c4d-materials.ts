@@ -20,22 +20,44 @@ import { CompositeCommand } from '../../core/commands/CompositeCommand';
 import { SetFaceAppearanceCommand } from '../../core/commands/entity-commands/SetFaceAppearanceCommand';
 import { BASE_FACE_KEY } from '../../bim/types/face-appearance-types';
 import type { MeshNameCharset } from '../../export/core/mesh3d/mesh3d-naming';
-import { parseObjObjects, parseMtl } from './obj-mtl-parse';
+import {
+  parseObjObjects,
+  parseMtl,
+  type ObjectMaterialAssignment,
+  type ImportedMaterial,
+} from './obj-mtl-parse';
 import { resolveImportAppearance } from './resolve-import-appearance';
 import type { KnownMaterialResolver } from './known-import-materials';
 import { matchObjectsToEntities, type EntityExportIdentity } from './match-objects-to-entities';
 import { isFinishSkinName, buildFinishImportCommands } from './finish-import-routing';
 
+/**
+ * **Format-agnostic** είσοδος του πυρήνα εφαρμογής (ADR-683 Φ2-UI). Ό,τι έχει ήδη αναλυθεί: ποιο
+ * object → ποιο υλικό, και τι είναι το κάθε υλικό. Το OBJ το παράγει με text parsing
+ * (`parseObjObjects` + `parseMtl`), το glTF με `parseGltfScene` — **ίδιο σχήμα, ένας πυρήνας**.
+ */
+export interface ImportedAppearanceInput {
+  readonly objects: readonly ObjectMaterialAssignment[];
+  readonly materials: ReadonlyMap<string, ImportedMaterial>;
+  /**
+   * Το charset με το οποίο παρήχθησαν τα ονόματα στο export: `'latin'` για OBJ (ο C4D R15
+   * transliteration), `'unicode'` για glTF (επιβάλλει UTF-8). Λάθος charset ⇒ **κανένα** ταίριασμα
+   * σε ελληνικά ονόματα ορόφων.
+   */
+  readonly charset: MeshNameCharset;
+}
+
 /** Το OBJ+MTL κείμενο + το charset του export (OBJ = 'latin' λόγω C4D R15). */
 export interface C4dMaterialImportInput {
   readonly objText: string;
   readonly mtlText: string;
-  /** Default 'latin' (OBJ). glTF import θα έδινε 'unicode'. */
+  /** Default 'latin' (OBJ). Το glTF μονοπάτι δίνει 'unicode' (βλ. `importGltfAppearance`). */
   readonly charset?: MeshNameCharset;
 }
 
-export interface C4dMaterialImportResult {
-  /** Πόσα OBJ objects είχε το αρχείο. */
+/** Αναφορά εισαγωγής εμφάνισης — κοινή για OBJ και glTF. */
+export interface ImportedAppearanceResult {
+  /** Πόσα objects είχε το αρχείο. */
   readonly objectCount: number;
   /** Πόσα (μη-σοβά) objects ταιριάξαν σε BIM στοιχείο. */
   readonly matchedCount: number;
@@ -46,6 +68,12 @@ export interface C4dMaterialImportResult {
   /** Ονόματα object χωρίς αντίστοιχο BIM στοιχείο (νέα γεωμετρία C4D κ.λπ.· ΟΧΙ σοβά-skins). */
   readonly unmatched: readonly string[];
 }
+
+/**
+ * Ιστορικό όνομα (ADR-678 Φ1) — διατηρείται ώστε να μη σπάσουν οι υπάρχοντες καταναλωτές. Ο
+ * τύπος είναι πλέον format-agnostic ({@link ImportedAppearanceResult}).
+ */
+export type C4dMaterialImportResult = ImportedAppearanceResult;
 
 /** Απαριθμεί όλες τις BIM οντότητες όλων των επιπέδων → export identity + χάρτης bimId→levelId. */
 function enumerateEntities(
@@ -67,17 +95,21 @@ function enumerateEntities(
 }
 
 /**
- * Εφαρμόζει τα εισαγόμενα υλικά. Επιστρέφει αναφορά (πόσα ταιριάξαν/βάφτηκαν/έμειναν). Καμία
+ * **Ο πυρήνας** (ADR-683 Φ2-UI) — εφαρμόζει εμφάνιση από ήδη αναλυμένα objects+υλικά, ανεξάρτητα
+ * από το format προέλευσης. Επιστρέφει αναφορά (πόσα ταιριάξαν/βάφτηκαν/έμειναν). Καμία
  * παρενέργεια όταν δεν βρεθεί τίποτα — άδειο CompositeCommand δεν εκτελείται.
+ *
+ * **Γιατί εδώ κόβεται το συμβόλαιο:** το OBJ είναι sync text, το glTF async binary — δεν χωράνε σε
+ * μία υπογραφή. Ό,τι είναι *μετά* το parsing όμως (matching → resolve → command → undo) είναι
+ * **ταυτόσημο**. Δύο orchestrators θα ήταν sibling clone (N.18)· ένας πυρήνας + δύο λεπτοί
+ * wrappers είναι ο μόνος τρόπος να μην αποκλίνουν ποτέ.
  */
-export function importC4dMaterials(
+export function applyImportedAppearance(
   levels: LevelsHookReturn,
-  input: C4dMaterialImportInput,
+  input: ImportedAppearanceInput,
   resolveKnownId: KnownMaterialResolver,
-): C4dMaterialImportResult {
-  const charset = input.charset ?? 'latin';
-  const objects = parseObjObjects(input.objText);
-  const mtl = parseMtl(input.mtlText);
+): ImportedAppearanceResult {
+  const { objects, materials: mtl, charset } = input;
 
   // ADR-678 Φ1.1 — τα merged σοβά-skins (synthetic bimId) δεν κάνουν name-match· δρομολογούνται
   // ξεχωριστά (ομοιόμορφος σοβάς ανά ζώνη), αλλιώς θα έπεφταν άδικα στα «χωρίς αντιστοίχιση».
@@ -111,4 +143,24 @@ export function importC4dMaterials(
     finishMemberCount: finish.memberCount,
     unmatched,
   };
+}
+
+/**
+ * **Wrapper OBJ** (ADR-678 Φ1) — text parsing → πυρήνας. Το `.mtl` είναι προαιρετικό (ο C4D R15
+ * δεν το γράφει· τότε το χρώμα έρχεται name-based, βλ. `resolve-import-appearance`).
+ */
+export function importC4dMaterials(
+  levels: LevelsHookReturn,
+  input: C4dMaterialImportInput,
+  resolveKnownId: KnownMaterialResolver,
+): ImportedAppearanceResult {
+  return applyImportedAppearance(
+    levels,
+    {
+      objects: parseObjObjects(input.objText),
+      materials: parseMtl(input.mtlText),
+      charset: input.charset ?? 'latin',
+    },
+    resolveKnownId,
+  );
 }

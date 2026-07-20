@@ -24,12 +24,18 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n';
 import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
 import { SliderInput } from '../../../shared/SliderInput';
+import { SLIDER_VALUE_UNITS } from '../../../shared/slider-value-units';
 
 interface AdaptiveFadeView {
   smoothFade: boolean;
   smoothFadeDurationMs: number;
 }
 
+/**
+ * The duration slider declares `unit`, not the legacy display-only `formatValue`:
+ * a format+parse pair is what licenses the value to be TYPED, so an exact
+ * duration like 250ms no longer has to be hunted for by dragging (ADR-682 §3.5).
+ */
 interface GridAdaptiveFadeSectionProps {
   fade: AdaptiveFadeView;
   onToggle: (enabled: boolean) => void;
@@ -69,7 +75,7 @@ export function GridAdaptiveFadeSection({
       {fade.smoothFade && (
         <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.muted} ${quick.card} ${PANEL_LAYOUT.SPACING.GAP_SM} ${PANEL_LAYOUT.MARGIN.TOP_SM}`}>
           <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>{t('gridSettings.adaptive.fadeDurationDescription')}</p>
-          <SliderInput label={t('gridSettings.adaptive.fadeDurationLabel')} value={fade.smoothFadeDurationMs} min={0} max={2000} step={50} onChange={onFadeDurationChange} showValue formatValue={(v) => `${v}ms`} />
+          <SliderInput label={t('gridSettings.adaptive.fadeDurationLabel')} value={fade.smoothFadeDurationMs} min={0} max={2000} step={50} onChange={onFadeDurationChange} showValue unit={SLIDER_VALUE_UNITS.milliseconds} />
         </div>
       )}
     </section>

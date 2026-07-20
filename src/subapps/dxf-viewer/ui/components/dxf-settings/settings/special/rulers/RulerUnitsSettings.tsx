@@ -18,6 +18,8 @@ import { PANEL_LAYOUT } from '../../../../../../config/panel-tokens';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n';
 import { SliderInput } from '../../../../shared/SliderInput';
+// ADR-682: unit = format+parse pair → the value beside the slider becomes typeable.
+import { SLIDER_VALUE_UNITS } from '../../../../shared/slider-value-units';
 
 /**
  * ╔════════════════════════════════════════════════════════════════════════════╗
@@ -189,7 +191,8 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
           step={1}
           onChange={handleRulerUnitsFontSizeChange}
           showValue
-          formatValue={(v) => `${v}px`}
+          unit={SLIDER_VALUE_UNITS.pixels}
+          tooltip={t('rulerSettings.units.sizeTitle')}
         />
       </div>
 

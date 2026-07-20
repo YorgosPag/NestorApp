@@ -30,7 +30,7 @@ import { isDrawnByBatchedLineLayer, isDrawnByWebglLineLayer } from '../webgl-lin
 // `isEntityLayerSkipped` method, extracted so the WebGL buffer builder asks the same question).
 import { isEntityLayerSkipped as isEntityLayerSkippedShared } from './dxf-entity-layer-skip';
 // Per-frame index builders (extracted Boy-Scout file-size split, 2026-05-19).
-import { buildDimensionLookup, buildSlabOpeningsBySlab, buildOpeningsByWall, buildWallsById, buildColumnFootprints } from './dxf-renderer-frame-builders';
+import { buildDimensionLookup, buildSlabOpeningsBySlab, buildOpeningsByWall, buildWallsById, buildColumnFootprints, computeSceneDimensionSpan } from './dxf-renderer-frame-builders';
 // ADR-550 / ADR-358 §G7 — entity render-style SSoT (shared with the WYSIWYG preview path).
 import { resolveEntityRenderStyle, type ResolvedRenderStyle } from './dxf-renderer-style-resolve';
 // ADR-642 Φ2-B — genuine complex linetypes (embedded text) opt out of the solid LINE batch.
@@ -126,6 +126,9 @@ export class DxfRenderer {
     // ADR-362 Round 5 — propagate active scene units so dim text + arrows scale
     // correctly in non-mm DXFs (e.g. meters). Default `'mm'` keeps legacy parity.
     this.entityComposite.setDimensionSceneUnits(scene.units ?? 'mm');
+    // ADR-362 — publish this scene's longest span (scene units) so the dimension renderer
+    // can clamp a mismatched imported DIMSCALE (the "giant dimension cross").
+    this.entityComposite.setDimensionSceneSpan(computeSceneDimensionSpan(scene.bounds));
     // ADR-510 Φ2H — publish this scene's base LTSCALE (auto-fit / file $LTSCALE) as the
     // per-frame ambient every dash-stroke site reads via getEffectiveLinetypeScale().
     setActiveSceneLinetypeScale(scene.linetypeScale);

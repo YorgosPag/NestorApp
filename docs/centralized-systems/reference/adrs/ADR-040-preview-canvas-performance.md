@@ -4660,3 +4660,32 @@ Co-staged με ADR-513. CHECK 6B/6D. ΟΧΙ tsc (N.17). 🔴 verify+commit (Gior
   identifier — είχε προστεθεί δεύτερη φορά μαζί με το opening-width lock).
   **Tests:** 181 suites / **1652 GREEN** (ghost + dynamic-input + hooks). `jscpd:diff` καθαρό σε 4 αρχεία.
   Μηδέν αλλαγή συμπεριφοράς — καθαρή μετακίνηση κώδικα. ΟΧΙ tsc (N.17).
+
+## 2026-07-20: N.7.1 file-size split — `computeSceneDimensionSpan` βγήκε από τον `DxfRenderer` (CHECK 6B stage)
+
+**Καθαρή μετακίνηση κώδικα, μηδέν αρχιτεκτονική αλλαγή.** Το ADR-362 per-frame «άνοιγμα
+σκηνής» (longest span, τροφοδοτεί τον readability clamp του mismatched `DIMSCALE`) είχε
+προστεθεί inline στο `DxfRenderer.setScene()` και ανέβασε το αρχείο σε **501/500** γραμμές →
+CHECK 4 μπλόκαρε το commit.
+
+**Fix (EXTRACT, ποτέ trim):** NEW `computeSceneDimensionSpan(bounds)` στο υπάρχον
+`canvas-v2/dxf-canvas/dxf-renderer-frame-builders.ts` — το module που **ήδη** στεγάζει τους
+per-frame pure builders του `DxfRenderer.render()` για ακριβώς αυτόν τον λόγο (Boy-Scout
+file-size split, 2026-05-19). Ο `DxfRenderer` έπεσε **501 → 494**.
+
+**Παρεμπιπτόντως διορθώθηκε:** το inline block καλούσε `getBoundsDimensions(scene.bounds)`
+**δύο φορές** (μία για `width`, μία για `height`) σε κάθε `setScene`. Τώρα μία φορά, με
+destructuring.
+
+**ADR-040 συμμόρφωση — κανένας από τους 4 κανόνες δεν αγγίχτηκε:**
+- Καμία νέα συνδρομή· ο helper είναι **pure function** πάνω σε `bounds` — χωρίς `this`,
+  χωρίς React, χωρίς store reads (ίδιο συμβόλαιο με τους υπόλοιπους frame builders).
+- Δεν αγγίζει το bitmap cache key (κανόνας 3) — το span είναι scene-level, όχι hover/selection.
+- Δεν προστέθηκε `useSyncExternalStore` πουθενά (κανόνες 1/4).
+- `null`/μη-πεπερασμένα bounds ⇒ `0` ⇒ clamp απενεργοποιημένο (ρητά τεκμηριωμένο: ένα clamp
+  οδηγούμενο από `NaN` είναι χειρότερο από καθόλου clamp).
+
+**Tests:** 34/35 suites GREEN (261/262). Το 1 κόκκινο (`build-entity-model-coverage`) είναι
+**pre-existing και ξένο** — προκαλείται από unstaged εργασία τρίτου agent που πρόσθεσε
+`'imported-mesh'` στο `RENDERABLE_ENTITY_TYPES` χωρίς να απαντήσει τα ADR-587 capability
+anchors. Δεν περιλαμβάνεται σε αυτό το commit. `jscpd:diff` καθαρό σε 2 αρχεία. ΟΧΙ tsc (N.17).

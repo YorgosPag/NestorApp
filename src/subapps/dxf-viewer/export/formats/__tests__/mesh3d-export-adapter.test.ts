@@ -177,7 +177,10 @@ describe('materials (.mtl)', () => {
     mockScene([makeMesh({ bimType: 'wall', bimId: 'w-1', matId: 'mat-concrete-c25' })]);
     const out = await exportFloorsToMesh3d([makeFloor('lvl-1', 'Ισόγειο')], DEPS, OBJ_OPTS);
 
-    expect(out.artifacts.map((a) => a.filename)).toEqual(['Katoikia.obj', 'Katoikia.mtl']);
+    // ADR-683 §7 — το `.nestor.json` sidecar συνοδεύει πλέον ΚΑΘΕ 3Δ export.
+    expect(out.artifacts.map((a) => a.filename)).toEqual([
+      'Katoikia.obj', 'Katoikia.mtl', 'Katoikia.nestor.json',
+    ]);
     const obj = await readText(out.artifacts[0].blob);
     expect(obj.startsWith('mtllib Katoikia.mtl')).toBe(true);
   });
@@ -203,8 +206,8 @@ describe('materials (.mtl)', () => {
       prefixMeshesWithFloor: false,
     });
 
-    expect(out.artifacts).toHaveLength(1);
-    expect(out.artifacts[0].filename).toBe('Katoikia.glb');
+    // Το glTF δεν παίρνει `.mtl` (κουβαλά υλικά εγγενώς) — μόνο το manifest του ADR-683 §7.
+    expect(out.artifacts.map((a) => a.filename)).toEqual(['Katoikia.glb', 'Katoikia.nestor.json']);
   });
 });
 

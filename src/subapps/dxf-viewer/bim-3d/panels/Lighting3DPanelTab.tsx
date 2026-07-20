@@ -11,17 +11,7 @@ import { HDRI_PRESETS } from '../lighting/hdri-environment';
 import { HdriUploader } from '../lighting/HdriUploader';
 import { computeSolarPosition, timeOfDayToDate } from '../lighting/solar-position';
 import { SliderInput } from '../../ui/components/shared/SliderInput';
-
-/**
- * Fractional hour → zero-padded `hh:mm` clock text.
- * Pure: derives the string from its ARGUMENT only, so it can be handed to
- * `SliderInput.formatValue` without closing over render-scope state.
- */
-function formatHourMinute(hourFloat: number): string {
-  const hh = String(Math.floor(hourFloat)).padStart(2, '0');
-  const mm = String(Math.floor((hourFloat % 1) * 60)).padStart(2, '0');
-  return `${hh}:${mm}`;
-}
+import { SLIDER_VALUE_UNITS } from '../../ui/components/shared/slider-value-units';
 
 export function Lighting3DPanelTab() {
   const { t } = useTranslation('bim3d');
@@ -114,6 +104,13 @@ export function Lighting3DPanelTab() {
         ))}
       </div>
 
+      {/*
+        `unit` (όχι `formatValue`): το πεδίο έδειχνε «13:15» αλλά διάβαζε πίσω
+        ωμό δεκαδικό, οπότε ένα πληκτρολογημένο «14:30» έβγαινε NaN → σιωπηλό
+        revert. Το hourOfDay κλείνει τον κύκλο (δέχεται ΚΑΙ «14:30» ΚΑΙ «14.5»),
+        που είναι και η προϋπόθεση για να γίνει το πεδίο editable. Το `label`
+        δίνει το accessible name που απαιτεί ο editable δρόμος.
+      */}
       <SliderInput
         label={t('lighting.timeLabel')}
         value={timeHour}
@@ -122,7 +119,7 @@ export function Lighting3DPanelTab() {
         step={0.25}
         onChange={applyTime}
         showValue
-        formatValue={formatHourMinute}
+        unit={SLIDER_VALUE_UNITS.hourOfDay}
       />
 
       <button

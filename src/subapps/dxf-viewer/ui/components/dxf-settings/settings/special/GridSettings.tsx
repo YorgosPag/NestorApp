@@ -33,6 +33,8 @@ import { useTranslation } from '@/i18n';
 // 🌊 Extracted adaptive-grid section (SRP + 500-line limit)
 import { GridAdaptiveFadeSection } from './GridAdaptiveFadeSection';
 import { SliderInput } from '../../../shared/SliderInput';
+// 🏢 ADR-682: format+parse pairs — what licenses the value field to be typed into
+import { SLIDER_VALUE_UNITS } from '../../../shared/slider-value-units';
 
 export interface GridSettingsProps {
   className?: string;
@@ -236,7 +238,8 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
           step={0.5}
           onChange={handleGridSizeChange}
           showValue
-          formatValue={String}
+          unit={SLIDER_VALUE_UNITS.scalar}
+          tooltip={t('gridSettings.size.title')}
         />
       </section>
 
@@ -328,7 +331,8 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
                 step={0.1}
                 onChange={handleMinorGridWeightChange}
                 showValue
-                formatValue={String}
+                unit={SLIDER_VALUE_UNITS.scalar}
+                tooltip={t('gridSettings.weight.label', { type: gridLinesLabels.minor })}
               />
             </div>
           </div>

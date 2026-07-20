@@ -107,6 +107,11 @@ export class DxfEntityParser {
     let inHeader = false;
     let currentVariable = '';
 
+    // ADR-362 Round 20 — accumulate $EXTMIN/$EXTMAX point coords (code 10=X, 20=Y). Both are
+    // point sysvars (9/$VAR then 10/x, 20/y, 30/z pairs) so they stay aligned with the fixed
+    // 2-line stride. Assigned onto the header AFTER the loop, only when finite & non-sentinel.
+    let extMinX = NaN, extMinY = NaN, extMaxX = NaN, extMaxY = NaN;
+
     for (let i = 0; i < lines.length - 1; i += 2) {
       const code = lines[i].trim();
       const value = lines[i + 1]?.trim() || '';
@@ -159,7 +164,29 @@ export class DxfEntityParser {
             if (Number.isFinite(lts) && lts > 0) header.ltscale = lts;
           }
           break;
+        // ADR-362 Round 20 — stored drawing extents (unit-detection input only, never a transform).
+        case '$EXTMIN':
+          if (code === '10') extMinX = parseFloat(value);
+          else if (code === '20') extMinY = parseFloat(value);
+          break;
+        case '$EXTMAX':
+          if (code === '10') extMaxX = parseFloat(value);
+          else if (code === '20') extMaxY = parseFloat(value);
+          break;
       }
+    }
+
+    // ADR-362 Round 20 — commit the extents only when both corners are finite AND not the
+    // uninitialized `±1e20` sentinel AutoCAD writes for a never-zoomed drawing (guarded by a
+    // generous 1e15 magnitude ceiling — real surveys/plants never reach it). A degenerate or
+    // inverted box (min > max) is also rejected so the heuristic falls back to computed bounds.
+    const EXT_SENTINEL_CEILING = 1e15;
+    const extFinite = [extMinX, extMinY, extMaxX, extMaxY].every(
+      v => Number.isFinite(v) && Math.abs(v) < EXT_SENTINEL_CEILING,
+    );
+    if (extFinite && extMaxX >= extMinX && extMaxY >= extMinY) {
+      header.extmin = { x: extMinX, y: extMinY };
+      header.extmax = { x: extMaxX, y: extMaxY };
     }
 
     console.debug('📋 DXF HEADER parsed:', {

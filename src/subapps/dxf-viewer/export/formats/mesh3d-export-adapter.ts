@@ -12,6 +12,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-668-mesh3d-export-obj-gltf.md
  */
 
+import type * as THREE from 'three';
 import type { ResolvedExportFloor } from '../core/export-floor-scope';
 import type { ExportArtifact, ExportDeps, ExportLengthUnit, Mesh3dFormat } from '../types';
 import { buildFloorFilename } from './dxf-export-adapter';
@@ -20,6 +21,13 @@ import { assignExportMaterials, writeMtl } from '../core/mesh3d/mesh3d-materials
 import { applyExportUnit, nameMeshesForExport } from '../core/mesh3d/mesh3d-prepare';
 import type { MeshNameCharset } from '../core/mesh3d/mesh3d-naming';
 import { injectMtlLib, serialiseGlb, serialiseObj } from '../core/mesh3d/mesh3d-serialise';
+// ADR-683 §7 — sidecar manifest· ταξιδεύει με ΚΑΘΕ 3Δ export (OBJ και GLB).
+import {
+  buildExportManifest,
+  serialiseManifest,
+  NESTOR_MANIFEST_EXT,
+  NESTOR_MANIFEST_MIME,
+} from '../../io/mesh3d-roundtrip/export-manifest';
 
 export interface Mesh3dExportOptions {
   readonly format: Mesh3dFormat;
@@ -71,6 +79,12 @@ export async function exportFloorsToMesh3d(
     charset: charsetFor(options.format),
   });
 
+  // ADR-683 §7 — το manifest χτίζεται ΕΔΩ, στο κοινό σημείο: **μετά** την ονοματοδοσία (αλλιώς
+  // τα `meshName` είναι κενά) και **πριν** το `applyExportUnit` του OBJ (αλλιώς τα fingerprints
+  // δεν είναι σε μέτρα και το ίδιο μοντέλο θα έδινε άλλο hash ανά επιλογή μονάδας). Ένα σημείο
+  // κλήσης για δύο formats ⇒ OBJ και GLB δεν μπορούν να αποκλίνουν.
+  const manifestArtifact = buildManifestArtifact(root, deps, options);
+
   if (options.format === 'gltf') {
     // glTF: μέτρα by spec — καμία κλίμακα. Πραγματικό δέντρο + υλικά ταξιδεύουν εγγενώς.
     // Τα κρυμμένα φέρουν μόνο το `HIDDEN_` όνομα: το glTF 2.0 core δεν έχει ορατότητα και ο
@@ -79,7 +93,10 @@ export async function exportFloorsToMesh3d(
     const buffer = await serialiseGlb(root);
     const filename = buildFloorFilename(options.baseName, options.filenamePart, 'glb');
     return {
-      artifacts: [{ filename, blob: new Blob([buffer], { type: 'model/gltf-binary' }) }],
+      artifacts: [
+        { filename, blob: new Blob([buffer], { type: 'model/gltf-binary' }) },
+        manifestArtifact,
+      ],
       warnings,
     };
   }
@@ -96,7 +113,34 @@ export async function exportFloorsToMesh3d(
     artifacts: [
       { filename: objName, blob: new Blob([objText], { type: 'model/obj' }) },
       { filename: mtlName, blob: new Blob([writeMtl(materials)], { type: 'model/mtl' }) },
+      manifestArtifact,
     ],
     warnings,
+  };
+}
+
+/**
+ * ADR-683 §7 — το sidecar `.nestor.json` ως artifact. Το `unit` περιγράφει το **αρχείο μοντέλου**
+ * (glTF = spec-locked μέτρα· OBJ = η επιλογή του χρήστη), ενώ τα fingerprints μέσα του είναι
+ * πάντα σε μέτρα.
+ *
+ * **Συνέπεια για το glTF:** η εξαγωγή γίνεται πλέον **δύο** artifacts (`.glb` + `.nestor.json`)
+ * και άρα κατεβαίνει ως `.zip`, όπως ήδη συνέβαινε στο OBJ με το `.mtl`. Αυτό είναι το ζητούμενο:
+ * το manifest **πρέπει** να ταξιδέψει μαζί με το μοντέλο, αλλιώς δεν επιστρέφει ποτέ.
+ */
+function buildManifestArtifact(
+  root: THREE.Object3D,
+  deps: ExportDeps,
+  options: Mesh3dExportOptions,
+): ExportArtifact {
+  const manifest = buildExportManifest(root, {
+    exportedAt: new Date().toISOString(),
+    projectName: options.baseName,
+    buildingId: deps.activeBuildingId ?? null,
+    unit: options.format === 'gltf' ? 'meters' : options.unit,
+  });
+  return {
+    filename: buildFloorFilename(options.baseName, options.filenamePart, NESTOR_MANIFEST_EXT),
+    blob: new Blob([serialiseManifest(manifest)], { type: NESTOR_MANIFEST_MIME }),
   };
 }

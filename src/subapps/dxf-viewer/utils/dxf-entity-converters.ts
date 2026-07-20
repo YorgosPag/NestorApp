@@ -27,8 +27,8 @@ import { vectorMagnitude } from '../rendering/entities/shared/geometry-rendering
 
 import {
   type EntityData,
-  parseVerticesFromData,
   parseVerticesFromPairs,
+  verticesFromPairsOrData,
   extractEntityColor,
   applyImportedStyleFields
 } from './dxf-converter-helpers';
@@ -125,9 +125,7 @@ export function convertLwPolyline(
   index: number,
   pairs?: ReadonlyArray<readonly [string, string]>
 ): AnySceneEntity | null {
-  const vertices = pairs && pairs.length > 0
-    ? parseVerticesFromPairs(pairs).map(v => ({ x: v.x, y: v.y }))
-    : parseVerticesFromData(data);
+  const vertices = verticesFromPairsOrData(data, pairs);
   return buildPolylineSceneEntity(vertices, data, layer, index, 'LWPOLYLINE');
 }
 
@@ -299,9 +297,17 @@ import { convertText, convertMText, convertAttrib, convertAttdef } from './dxf-t
 export function convertSpline(
   data: Record<string, string>,
   layer: string,
-  index: number
+  index: number,
+  pairs?: ReadonlyArray<readonly [string, string]>
 ): AnySceneEntity | null {
-  const vertices = parseVerticesFromData(data);
+  // ADR-507 pattern (mirror of LWPOLYLINE): the flat `data` map OVERWRITES repeated code-10
+  // control points → only the LAST survives → every multi-CV spline collapsed to 1 point and
+  // was DROPPED (<2). Real-file symptom: a geo-referenced survey lost all 10 contour splines
+  // ("Skipped SPLINE×10"). Read the ordered `pairs` so all control points survive. A DXF
+  // SPLINE is a smooth curve by definition, so the resulting polyline carries `smoothDisplay`
+  // → the PolylineRenderer lays a fitted curve through the control points (contour SSoT,
+  // ADR-650/658) instead of a straight control polygon.
+  const vertices = verticesFromPairsOrData(data, pairs);
 
   if (vertices.length < 2) {
     dwarn('EntityConverter', `⚠️ Skipping SPLINE ${index}: insufficient control points`, vertices.length);
@@ -317,6 +323,7 @@ export function convertSpline(
     visible: true,
     vertices,
     closed: false,
+    smoothDisplay: true,
     ...(color && { color })
   };
 }
@@ -429,7 +436,8 @@ function routeEntityToConverter(
     case 'ATTDEF':
       return convertAttdef(data, layer, index);
     case 'SPLINE':
-      return convertSpline(data, layer, index);
+      // ADR-507 pairs → survive repeated code-10 control points (flat `data` keeps only the last).
+      return convertSpline(data, layer, index, entityData.pairs);
     case 'DIMENSION':
       return convertDimension(data, layer, index, header, dimStyles);
     case 'XLINE':

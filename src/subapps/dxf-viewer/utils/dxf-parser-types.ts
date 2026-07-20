@@ -110,6 +110,19 @@ export interface DxfHeaderData {
    * manual global knob (mirror of the C.3 `$LWDISPLAY` no-wire decision). Absent ⇒ undefined.
    */
   ltscale?: number;
+  /**
+   * $EXTMIN / $EXTMAX — the drawing's stored bounding extents (ADR-362 Round 20).
+   * AutoCAD maintains these as the junk-free extent the app itself zooms to; they
+   * EXCLUDE stray off-drawing entities (legacy ASHADE blocks parked at the origin,
+   * degenerate control points) that pollute a raw entity-bounds pass. Used ONLY to
+   * feed the import-source unit heuristic (`resolveUnitDetectionBounds`) with a clean
+   * extent, so a metre survey mis-declared as `$INSUNITS=4` (mm) is detected as metres
+   * instead of being dragged into the mm bucket by origin junk. Absent (older/hand-
+   * written DXFs) OR the uninitialized `±1e20` sentinel ⇒ undefined (heuristic falls
+   * back to computed entity bounds). Never applied as a transform — detection only.
+   */
+  extmin?: { x: number; y: number };
+  extmax?: { x: number; y: number };
 }
 
 // ============================================================================

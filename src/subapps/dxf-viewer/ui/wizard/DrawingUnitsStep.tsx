@@ -1,9 +1,10 @@
 'use client';
 
 import React from 'react';
-import { Ruler, Wand2 } from 'lucide-react';
+import { Ruler, Wand2, AlertTriangle } from 'lucide-react';
 import { useLevels } from '../../systems/levels';
 import type { SceneUnits } from '../../utils/scene-units';
+import { useDxfUnitSuggestion } from '../../hooks/common/useDxfUnitSuggestion';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -35,6 +36,11 @@ export function DrawingUnitsStep() {
   const colors = useSemanticColors();
   const { importWizard, setUserDrawingUnits } = useLevels();
 
+  // ADR-362 Round 20 — read the file header and warn if $INSUNITS disagrees with the
+  // magnitude-derived unit (the "declares mm but is metres" Greek-survey case). Mirrors
+  // the auto importer's decision; never mutates the choice (auto already resolves right).
+  const suggestion = useDxfUnitSuggestion(importWizard.file);
+
   const current: DrawingUnitsChoice = importWizard.userDrawingUnits ?? 'auto';
 
   const handleSelect = (value: DrawingUnitsChoice) => {
@@ -52,6 +58,26 @@ export function DrawingUnitsStep() {
           {t('drawingUnits.description')}
         </p>
       </header>
+
+      {suggestion?.mismatch && (
+        <aside
+          role="alert"
+          className={`${colors.bg.warningSubtle} ${PANEL_LAYOUT.SPACING.MD} ${PANEL_LAYOUT.CONTAINER.BORDER_RADIUS} ${getStatusBorder('warning')} flex items-start gap-2`}
+        >
+          <AlertTriangle className={`w-4 h-4 flex-shrink-0 mt-0.5 ${colors.text.warning}`} />
+          <div>
+            <p className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.warning}`}>
+              {t('drawingUnits.mismatch.title')}
+            </p>
+            <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.warning} mt-0.5`}>
+              {t('drawingUnits.mismatch.body', {
+                declared: suggestion.declared ?? '—',
+                suggested: suggestion.suggested,
+              })}
+            </p>
+          </div>
+        </aside>
+      )}
 
       <ul className={`${PANEL_LAYOUT.SPACING.GAP_SM} list-none`} role="radiogroup" aria-label={t('drawingUnits.title')}>
         {UNIT_OPTIONS.map(opt => {
@@ -82,6 +108,12 @@ export function DrawingUnitsStep() {
                       <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.successSubtle} ${colors.text.success} px-1.5 py-0.5 rounded flex items-center gap-1`}>
                         <Wand2 className="w-3 h-3" />
                         {t('drawingUnits.recommended')}
+                      </span>
+                    )}
+                    {suggestion?.mismatch && suggestion.suggested === opt.value && (
+                      <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.warningSubtle} ${colors.text.warning} px-1.5 py-0.5 rounded flex items-center gap-1`}>
+                        <Wand2 className="w-3 h-3" />
+                        {t('drawingUnits.mismatch.badge')}
                       </span>
                     )}
                   </span>

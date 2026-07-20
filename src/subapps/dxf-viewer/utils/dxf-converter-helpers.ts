@@ -204,6 +204,21 @@ export function parseVerticesFromPairs(
   return vertices;
 }
 
+/**
+ * Vertices for any repeated-code-10 entity (LWPOLYLINE / SPLINE): prefer the ordered
+ * `pairs` (ADR-507 — survives the repeated 10/20 that the flat `data` map overwrites),
+ * else fall back to the flat `data`. ONE home for the pairs-or-data idiom so the polyline
+ * and spline converters can't drift into parallel twins (N.18 — jscpd flagged the clone).
+ */
+export function verticesFromPairsOrData(
+  data: Record<string, string>,
+  pairs?: ReadonlyArray<readonly [string, string]>,
+): Point2D[] {
+  return pairs && pairs.length > 0
+    ? parseVerticesFromPairs(pairs).map(v => ({ x: v.x, y: v.y }))
+    : parseVerticesFromData(data);
+}
+
 // ============================================================================
 // 🏢 ENTERPRISE: GREEK TEXT DECODING
 // ============================================================================

@@ -18,8 +18,12 @@ import React from 'react';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { canvasUtilities } from '@/styles/design-tokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { GEO_COLORS } from '../../config/color-config';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+// Cross-subapp by design (ADR-682): a design system spans the product, not one
+// subapp. Precedent already exists — geo-canvas imports dxf-viewer icons and
+// modal primitives.
+import { SliderInput } from '@/subapps/dxf-viewer/ui/components/shared/SliderInput';
+import { SLIDER_VALUE_UNITS } from '@/subapps/dxf-viewer/ui/components/shared/slider-value-units';
 
 /**
  * Component props
@@ -108,29 +112,28 @@ export function FloorPlanControls({
         </Tooltip>
       )}
 
-      {/* Opacity Slider */}
+      {/*
+        Opacity — ADR-682. This was the last raw native range input that was a
+        genuine migration rather than a redesign: a plain scalar parameter in
+        a settings panel, i.e. exactly what SliderInput is for. It now inherits
+        the design tokens (it used to render browser-chrome grey with an inline
+        `accentColor`, breaking in dark mode), the Radix keyboard/ARIA contract,
+        and — via `unit` — a value the user can TYPE instead of hunting for by
+        drag. `percent01` is the right unit: the model is 0..1 while the display
+        and input space is 0..100%, which is precisely the round-trip a
+        display-only formatter cannot express.
+      */}
       <div className="space-y-2">
-        <div className="flex items-center justify-between text-xs">
-          <label htmlFor="floor-plan-opacity" className="text-foreground font-medium">
-            Opacity
-          </label>
-          <span className="text-foreground font-semibold">
-            {Math.round(opacity * 100)}%
-          </span>
-        </div>
-
-        <input
-          id="floor-plan-opacity"
-          type="range"
-          min="0"
-          max="100"
-          value={Math.round(opacity * 100)}
-          onChange={(e) => onOpacityChange(parseInt(e.target.value) / 100)}
+        <SliderInput
+          label="Opacity"
+          value={opacity}
+          min={0}
+          max={1}
+          step={0.01}
+          onChange={onOpacityChange}
           disabled={!visible}
-          className={`w-full h-2 ${colors.bg.hover} rounded-lg appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed`}
-          style={{
-            accentColor: GEO_COLORS.POLYGON.DRAFT
-          }}
+          showValue
+          unit={SLIDER_VALUE_UNITS.percent01}
         />
 
         <div className="flex justify-between text-xs text-muted-foreground">

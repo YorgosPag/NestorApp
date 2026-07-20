@@ -24,6 +24,8 @@ import { Switch } from '@/components/ui/switch';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n';
 import { SliderInput } from '../../../../shared/SliderInput';
+// ADR-682: unit = format+parse pair → the value beside the slider becomes typeable.
+import { SLIDER_VALUE_UNITS } from '../../../../shared/slider-value-units';
 
 export interface RulerTextSettingsProps {
   className?: string;
@@ -137,7 +139,8 @@ export const RulerTextSettings: React.FC<RulerTextSettingsProps> = ({ className 
           step={1}
           onChange={handleRulerFontSizeChange}
           showValue
-          formatValue={(v) => `${v}px`}
+          unit={SLIDER_VALUE_UNITS.pixels}
+          tooltip={t('rulerSettings.text.sizeTitle')}
         />
       </div>
 

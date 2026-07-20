@@ -18,6 +18,8 @@ import type { DimensionLookup } from '../../systems/dimensions/dim-geometry-buil
 import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
 import { isWallHostedOpening, type OpeningEntity } from '../../bim/types/opening-types';
 import type { OpeningsByWall } from '../../bim/renderers/WallRenderer';
+// ADR-362 — Bounds → {width,height} SSoT for the per-frame dimension span (readability clamp).
+import { getBoundsDimensions } from '../../utils/bounds-utils';
 import type { WallCoveringHost } from '../../bim/wall-coverings/wall-covering-strip-geometry';
 import type { SceneUnits } from '../../utils/scene-units';
 import { isFinishActive } from '../../bim/finishes/structural-finish-types';
@@ -183,6 +185,23 @@ export function buildStructuralFinishSilhouette2D(
 // BOQ + 3Δ per-element paths (`computeColumnFinishContribution`, ghosts) ΑΜΕΤΑΒΛΗΤΑ.
 
 /** DXF transparency (0..90) → canvas alpha (0..1). 0 transparency = fully opaque. */
+/**
+ * ADR-362 — the scene's longest span (scene units), published each frame so the dimension
+ * renderer can clamp a mismatched imported `DIMSCALE` (the "giant dimension cross" on
+ * units-mismatched DXFs).
+ *
+ * Returns 0 when bounds are absent or non-finite ⇒ the clamp is disabled, which is the
+ * safe default (an un-clamped dimension is wrong-looking; a clamp driven by NaN is worse).
+ */
+export function computeSceneDimensionSpan(
+  bounds: { min: Point2D; max: Point2D } | null | undefined,
+): number {
+  if (!bounds) return 0;
+  const { width, height } = getBoundsDimensions(bounds);
+  const span = Math.max(width, height);
+  return Number.isFinite(span) ? span : 0;
+}
+
 export function transparencyToAlpha(transparency: number | undefined): number {
   if (typeof transparency !== 'number' || !Number.isFinite(transparency)) return 1;
   const clamped = Math.max(0, Math.min(90, transparency));

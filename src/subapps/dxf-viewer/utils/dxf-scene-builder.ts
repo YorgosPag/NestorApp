@@ -1,5 +1,4 @@
 import type { SceneModel, AnySceneEntity, SceneLayer } from '../types/scene';
-import type { Entity } from '../types/entities';
 import { DxfEntityParser, type LayerColorMap } from './dxf-entity-parser';
 // ADR-635 Φ C.4 — LTYPE table pre-pass: register the DXF's custom linetypes into the
 // runtime registry BEFORE entities convert, so per-entity linetype names (group 6) that
@@ -43,10 +42,12 @@ import { createSceneLayer } from '../types/entities';
 // ADR-635 ΦC.13 / N.18 — extracted pure entity-array bounds SSoT (keeps this file lean).
 import { computeEntityArrayBounds } from './dxf-entity-array-bounds';
 // ADR-358 Phase 8 — propagate real $INSUNITS to SceneModel.units via SSoT.
-// ADR-462 canonical-mm — scale source units → mm at import (mmToSceneUnits inverse).
-import { insunitsCodeToSceneUnits, mmToSceneUnits, resolveImportSourceUnits, type SceneUnits } from './scene-units';
-// ADR-348 SSoT — per-entity scale transform (reused for the import unit-scale pass).
-import { scaleEntity } from '../systems/scale/scale-entity-transform';
+import type { SceneUnits } from './scene-units';
+// ADR-462 canonical-mm — source-unit resolution + one-shot scale-to-mm pass (extracted SSoT).
+import { applyCanonicalMmScale } from './dxf-canonical-mm-scale';
+// ADR-462 Round 21 — drop far-flung off-drawing junk (origin ASHADE blocks) that would
+// anchor the scene bbox to the geo-referenced magnitude and make the viewport un-frameable.
+import { dropOutOfExtentsEntities } from './dxf-out-of-extents-filter';
 // ADR-510 Φ2H — per-scene base LTSCALE resolver (fit dash density so mm-convention patterns
 // stay visible on meter-scale drawings; ADR-462 bakes geometry to mm). SSoT lives with the
 // autoscale helpers so the scene-builder stays lean.
@@ -337,8 +338,21 @@ export class DxfSceneBuilder {
       sampleLayers
     });
 
+    // ADR-462 Round 21 — drop far-flung off-drawing junk (legacy ASHADE blocks / orphan
+    // ATTRIBs parked at the origin while the drawing is geo-referenced far away). Left in,
+    // they anchor the scene bbox from 0 to the geo magnitude → the viewport frames a giant
+    // empty box → the real drawing is a sub-pixel speck ("empty canvas"). AutoCAD/Revit
+    // exclude them from $EXTMIN/$EXTMAX + Zoom-Extents; we do the same. No-op when extents
+    // are absent or nothing lies entirely outside them (normal drawings untouched).
+    const { kept: drawingEntities, dropped: offDrawingCount } = dropOutOfExtentsEntities(
+      entities, header.extmin, header.extmax,
+    );
+    if (offDrawingCount > 0) {
+      console.debug(`🧹 Dropped ${offDrawingCount} off-drawing entities (outside $EXTMIN/$EXTMAX)`);
+    }
+
     // Calculate bounds (ADR-640 Φ7 — block-aware: expands any BlockEntity to its members first).
-    const bounds = calculateBoundsWithBlocks(entities, DxfSceneBuilder.calculateBounds);
+    const bounds = calculateBoundsWithBlocks(drawingEntities, DxfSceneBuilder.calculateBounds);
 
     // ╔════════════════════════════════════════════════════════════════════════╗
     // ║ 🔧 BACKUP COMPATIBILITY (2026-01-03)                                   ║
@@ -346,39 +360,18 @@ export class DxfSceneBuilder {
     // ║ Τα entities περνάνε απευθείας χωρίς text height normalization.        ║
     // ╚════════════════════════════════════════════════════════════════════════╝
 
-    // ADR-462 CANONICAL-mm — resolve the SOURCE unit (what the DXF was authored in),
-    // then scale every coordinate to millimetres so the stored scene is always mm.
-    // Priority: explicit wizard override → $INSUNITS → bounds heuristic (ADR-368 order,
-    // now applied as a SCALE instead of a render-time label).
-    const fromInsunits = insunitsCodeToSceneUnits(header.insunits);
-    const sourceUnits: SceneUnits = unitsOverride ?? resolveImportSourceUnits(fromInsunits, bounds);
-
-    // mmToSceneUnits('m') = 0.001 → a value in metres × (1/0.001)=1000 becomes mm.
-    const mmFactor = 1 / mmToSceneUnits(sourceUnits);
-
-    let finalEntities = entities;
-    let finalBounds = bounds;
-    if (Number.isFinite(mmFactor) && mmFactor > 0 && Math.abs(mmFactor - 1) > 1e-9) {
-      // Uniform scale around the origin (0,0) → reuses the ADR-348 per-entity SSoT
-      // (`scaleEntity`), so every entity type (line/arc/circle/text/dimension/hatch…)
-      // scales correctly without re-implementing per-type math. Coordinates, radii
-      // and text heights all become mm.
-      const origin = { x: 0, y: 0 };
-      finalEntities = entities.map((e) => {
-        try {
-          return { ...e, ...scaleEntity(e as unknown as Entity, origin, mmFactor, mmFactor) } as AnySceneEntity;
-        } catch (err) {
-          // A single entity that resists the unit-scale must not sink the whole import —
-          // keep it unscaled and record it (ADR-635 Φ3).
-          recordError(diagnostics, {
-            kind: (e as { type?: string }).type || 'UNKNOWN',
-            reason: `unit-scale failed: ${err instanceof Error ? err.message : String(err)}`,
-          });
-          return e;
-        }
-      });
-      finalBounds = calculateBoundsWithBlocks(finalEntities, DxfSceneBuilder.calculateBounds);
-    }
+    // ADR-462 CANONICAL-mm — resolve the SOURCE unit (what the DXF was authored in), then
+    // scale every coordinate to millimetres so the stored scene is always mm. Extracted to
+    // `dxf-canonical-mm-scale` (N.7.1 file-size split) — the resolution priority and the
+    // per-entity scale loop live there as ONE testable SSoT.
+    const { entities: finalEntities, bounds: finalBounds } = applyCanonicalMmScale({
+      entities: drawingEntities,
+      bounds,
+      header,
+      unitsOverride,
+      diagnostics,
+      recomputeBounds: (list) => calculateBoundsWithBlocks(list, DxfSceneBuilder.calculateBounds),
+    });
 
     // ADR-358 Phase 9E-1: build id-keyed mirror alongside name-keyed `layers`.
     const layersById: Record<string, SceneLayer> = Object.fromEntries(

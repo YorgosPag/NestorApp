@@ -18,9 +18,9 @@ import {
 import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n';
-// 🏢 ADR-081: Centralized percentage formatting
-import { formatPercent } from '../../../../../rendering/entities/shared/distance-label-utils';
 import { SliderInput } from '../../../shared/SliderInput';
+// 🏢 ADR-682: format+parse pairs — what licenses the value field to be typed into
+import { SLIDER_VALUE_UNITS } from '../../../shared/slider-value-units';
 
 export function CursorSettings() {
   const iconSizes = useIconSizes();
@@ -224,7 +224,8 @@ export function CursorSettings() {
           step={0.5}
           onChange={handleCursorLineWidthChange}
           showValue
-          formatValue={(v) => `${v}px`}
+          unit={SLIDER_VALUE_UNITS.pixels}
+          tooltip={t('cursorSettings.lineWidth.title')}
         />
         <div className={`flex ${PANEL_LAYOUT.GAP.XS}`}>
           {[1, 1.5, 2, 3, 4, 5].map(width => (
@@ -258,7 +259,8 @@ export function CursorSettings() {
               step={0.1}
               onChange={handleCursorOpacityChange}
               showValue
-              formatValue={formatPercent}
+              unit={SLIDER_VALUE_UNITS.percent01}
+              tooltip={t('cursorSettings.opacity.title')}
             />
       </section>
 
@@ -301,7 +303,8 @@ export function CursorSettings() {
               step={1}
               onChange={handleCursorSizeChange}
               showValue
-              formatValue={(v) => `${v}px`}
+              unit={SLIDER_VALUE_UNITS.pixels}
+              tooltip={t('cursorSettings.size.title')}
             />
             <div className={`flex ${PANEL_LAYOUT.GAP.XS}`}>
               {[5, 10, 15, 25, 50].map(size => (

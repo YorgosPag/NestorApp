@@ -18,6 +18,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PANEL_LAYOUT } from '../../../../../../config/panel-tokens';
 import { ColorDialogTrigger } from '../../../../../color/EnterpriseColorDialog';
 import { SliderInput } from '../../../../shared/SliderInput';
+import type { SliderValueUnit } from '../../../../shared/slider-value-units';
 import {
   getSelectionLinePreview,
   SELECTION_BORDER_STYLES,
@@ -109,7 +110,12 @@ interface SliderSettingRowProps {
   max: number;
   step: number;
   onChange: (value: number) => void;
-  formatValue: (value: number) => string;
+  /**
+   * ADR-682 — format+parse pair. Replaces the old display-only `formatValue`,
+   * which rendered "60%" but read a raw number back, so typing "80" clamped
+   * silently to 100% with no keystroke that could reach 80%.
+   */
+  unit: SliderValueUnit;
 }
 
 export function SliderSettingRow({
@@ -120,11 +126,18 @@ export function SliderSettingRow({
   max,
   step,
   onChange,
-  formatValue,
+  unit,
 }: SliderSettingRowProps) {
   return (
     <SettingCard>
       <RowHeading title={title} description={description} />
+      {/*
+        `tooltip`, not `label`: SliderInput's accessible name is `label ?? tooltip`,
+        but `label` also PAINTS the text — and `RowHeading` above already paints
+        this exact title. Routing it through `tooltip` names the field for
+        assistive tech (and licenses it to be editable) without showing the title
+        twice on screen.
+      */}
       <SliderInput
         value={value}
         min={min}
@@ -132,7 +145,8 @@ export function SliderSettingRow({
         step={step}
         onChange={onChange}
         showValue
-        formatValue={formatValue}
+        unit={unit}
+        tooltip={title}
       />
     </SettingCard>
   );

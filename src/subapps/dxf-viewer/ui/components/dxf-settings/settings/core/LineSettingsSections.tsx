@@ -26,7 +26,6 @@ import type { LineType } from '../../../../../settings-core/types';
 import { AccordionSection } from '../shared/AccordionSection';
 import { Checkbox } from '@/components/ui/checkbox';
 import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
-import { formatPercent } from '../../../../../rendering/entities/shared/distance-label-utils';
 import {
   SettingsIcon,
   PaintbrushIcon,
@@ -36,6 +35,13 @@ import {
 } from './line-settings-icons';
 import type { LineSettingsState } from './useLineSettingsState';
 import { SliderInput } from '../../../shared/SliderInput';
+/**
+ * ADR-682: the label no longer carries the value (`labels.*Value` interpolation).
+ * A `unit` gives the value beside the label a format+parse pair, so it renders
+ * AND reads back in the same space — which is what licenses it to be editable.
+ * The plain `labels.*` keys already existed; no new i18n keys were needed.
+ */
+import { SLIDER_VALUE_UNITS } from '../../../shared/slider-value-units';
 
 import { ByLayerToggle } from './ByLayerToggle';
 
@@ -149,11 +155,12 @@ export function BasicSection({
           />
           {!lineweightIsByLayer && (
             <SliderInput
-              label={t('settings.line.labels.widthValue', { value: settings.lineWidth })}
+              label={t('settings.line.labels.width')}
               min={LINE_WIDTH_RANGE.min} max={LINE_WIDTH_RANGE.max} step={LINE_WIDTH_RANGE.step}
               value={settings.lineWidth}
               onChange={(v) => settingsUpdater.updateSetting('lineWidth', v)}
-              showNumberInput
+              showValue
+              unit={SLIDER_VALUE_UNITS.pixels}
             />
           )}
         </div>
@@ -192,11 +199,12 @@ export function BasicSection({
 
         {/* Opacity */}
         <SliderInput
-          label={t('settings.line.labels.opacityValue', { value: formatPercent(settings.opacity, false) })}
+          label={t('settings.line.labels.opacity')}
           min={OPACITY_RANGE.min} max={OPACITY_RANGE.max} step={OPACITY_RANGE.step}
           value={settings.opacity}
           onChange={(v) => settingsUpdater.updateSetting('opacity', v)}
-          showNumberInput
+          showValue
+          unit={SLIDER_VALUE_UNITS.percent01}
         />
 
         {/* Break at Center */}
@@ -251,20 +259,22 @@ export function HoverSection({
 
         {/* Hover Width */}
         <SliderInput
-          label={t('settings.line.labels.hoverWidthValue', { value: settings.hoverWidth })}
+          label={t('settings.line.labels.hoverWidth')}
           min={LINE_WIDTH_RANGE.min} max={LINE_WIDTH_RANGE.max} step={LINE_WIDTH_RANGE.step}
           value={settings.hoverWidth}
           onChange={(v) => settingsUpdater.updateSetting('hoverWidth', v)}
-          showNumberInput
+          showValue
+          unit={SLIDER_VALUE_UNITS.pixels}
         />
 
         {/* Hover Opacity */}
         <SliderInput
-          label={t('settings.line.labels.hoverOpacityValue', { value: formatPercent(settings.hoverOpacity, false) })}
+          label={t('settings.line.labels.hoverOpacity')}
           min={OPACITY_RANGE.min} max={OPACITY_RANGE.max} step={OPACITY_RANGE.step}
           value={settings.hoverOpacity}
           onChange={(v) => settingsUpdater.updateSetting('hoverOpacity', v)}
-          showNumberInput
+          showValue
+          unit={SLIDER_VALUE_UNITS.percent01}
         />
       </div>
     </AccordionSection>
@@ -304,20 +314,22 @@ export function FinalSection({
 
         {/* Final Width */}
         <SliderInput
-          label={t('settings.line.labels.finalWidthValue', { value: settings.finalWidth })}
+          label={t('settings.line.labels.finalWidth')}
           min={LINE_WIDTH_RANGE.min} max={LINE_WIDTH_RANGE.max} step={LINE_WIDTH_RANGE.step}
           value={settings.finalWidth}
           onChange={(v) => settingsUpdater.updateSetting('finalWidth', v)}
-          showNumberInput
+          showValue
+          unit={SLIDER_VALUE_UNITS.pixels}
         />
 
         {/* Final Opacity */}
         <SliderInput
-          label={t('settings.line.labels.finalOpacityValue', { value: formatPercent(settings.finalOpacity, false) })}
+          label={t('settings.line.labels.finalOpacity')}
           min={OPACITY_RANGE.min} max={OPACITY_RANGE.max} step={OPACITY_RANGE.step}
           value={settings.finalOpacity}
           onChange={(v) => settingsUpdater.updateSetting('finalOpacity', v)}
-          showNumberInput
+          showValue
+          unit={SLIDER_VALUE_UNITS.percent01}
         />
       </div>
     </AccordionSection>
@@ -342,11 +354,12 @@ export function AdvancedSection({
         {/* Dash Scale (only for non-solid lines) */}
         {settings.lineType !== 'solid' && (
           <SliderInput
-            label={t('settings.line.labels.dashScaleValue', { value: settings.dashScale })}
+            label={t('settings.line.labels.dashScale')}
             min={DASH_SCALE_RANGE.min} max={DASH_SCALE_RANGE.max} step={DASH_SCALE_RANGE.step}
             value={settings.dashScale}
             onChange={(v) => settingsUpdater.updateSetting('dashScale', v)}
-            showNumberInput
+            showValue
+            unit={SLIDER_VALUE_UNITS.scalar}
           />
         )}
 
@@ -397,11 +410,12 @@ export function AdvancedSection({
         {/* Dash Offset (only for non-solid lines) */}
         {settings.lineType !== 'solid' && (
           <SliderInput
-            label={t('settings.line.labels.dashOffsetValue', { value: settings.dashOffset })}
+            label={t('settings.line.labels.dashOffset')}
             min={DASH_OFFSET_RANGE.min} max={DASH_OFFSET_RANGE.max} step={DASH_OFFSET_RANGE.step}
             value={settings.dashOffset}
             onChange={(v) => settingsUpdater.updateSetting('dashOffset', v)}
-            showNumberInput
+            showValue
+            unit={SLIDER_VALUE_UNITS.pixels}
           />
         )}
       </div>

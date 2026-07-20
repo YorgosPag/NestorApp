@@ -148,6 +148,31 @@
     /* ── Calendar SSoT colors ── */
     --cal-today: #3b82f6;          /* today indicator — big + mini calendar */
     --cal-today-selected: #2563eb; /* today when also selected */
+
+    /* 🎚️ ADR-682: Slider thumb diameter — SSoT for BOTH the thumb's own size
+       (src/components/ui/slider.tsx) AND anything that must position itself in
+       the thumb's coordinate space (TimelineScrubber waypoint ticks, which
+       need Radix's in-bounds ±½-thumb offset). Previously duplicated as a
+       hardcoded `THUMB_SIZE_PX = 20` guarded only by a "keep in sync" comment.
+       Not mode-dependent, so it is declared once — no .dark counterpart. */
+    --slider-thumb-size: 1.25rem;
+
+    /* 🎚️ ADR-682 §5.5: Slider ACCENT — SSoT for every slider's filled range,
+       thumb border and (at 25% alpha) its empty track.
+
+       WHY THIS EXISTS INSTEAD OF `--primary`: the primitive used to paint itself
+       with `bg-primary`, which reads as "use the brand accent" in stock shadcn.
+       In THIS app `--primary` was repurposed as a dark SURFACE colour — in dark
+       mode it is `217 33% 17%`, byte-identical to `--card`. A slider sitting on a
+       card was therefore drawn in exactly its background's colour. It was never
+       "too dark"; it was invisible by construction. Repointing `--primary` was
+       not an option: it also paints buttons and surfaces app-wide.
+
+       The value is the app's interactive blue — same family and same light/dark
+       polarity as `--link-color` (deeper on white, brighter on slate). It is
+       declared, not referenced, on purpose: coupling slider colour to link colour
+       would make a typography change silently repaint every control. */
+    --slider-accent: 221 83% 53%;        /* blue-600 — vivid on light surfaces */
   }
 
   .dark {
@@ -181,6 +206,10 @@
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
     
+    /* 🎚️ ADR-682 §5.5: brighter in dark mode so the range separates from --card
+       (217 33% 17%). blue-400 — the same step --link-color takes for dark. */
+    --slider-accent: 213 94% 68%;
+
     --border: 217 19% 27%; /* 🏢 ENTERPRISE: Matches Tailwind gray-700 (#374151) exactly */
     --input: 217 19% 35%; /* Λίγο πιο ανοιχτό για dark mode */
     --ring: 210 40% 98%;
@@ -351,18 +380,22 @@
   }
 
   /* ✂️ ADR-452 Cut-plane slider — scopes the unified ViewCube orange (--viewcube-accent) onto the
-     shared Slider primitive (which reads --primary) + the toggle button, WITHOUT touching any other
-     slider in the app. SSoT colour lives in --viewcube-accent (globals :root/.dark). */
+     shared Slider primitive + the toggle button, WITHOUT touching any other slider in the app.
+     SSoT colour lives in --viewcube-accent (globals :root/.dark).
+     ⚠️ ADR-682 §5.5: the SLIDER now reads --slider-accent, the BUTTON still reads --primary.
+     Both are overridden here on purpose — dropping either one silently un-themes half of this
+     control (the giveaway would be a blue cut-plane slider next to an orange toggle). */
   .cut-plane-slider-accent {
     --primary: var(--viewcube-accent);
     --primary-foreground: var(--viewcube-accent-foreground);
     --ring: var(--viewcube-accent);
+    --slider-accent: var(--viewcube-accent);
   }
   /* Slider mimics the ViewCube compass ring: neutral grey-blue at rest (#8899aa = the ring's
-     COMPASS_RING_DEFAULT_COLOR) and lights up to the orange accent on hover. The `--primary`
-     override is local to the slider, so the toggle button keeps the orange accent. */
-  .cut-plane-slider-accent .cut-plane-slider { --primary: 210 17% 60%; }
-  .cut-plane-slider-accent .cut-plane-slider:hover { --primary: var(--viewcube-accent); }
+     COMPASS_RING_DEFAULT_COLOR) and lights up to the orange accent on hover. The override is
+     local to the slider, so the toggle button keeps the orange accent. */
+  .cut-plane-slider-accent .cut-plane-slider { --slider-accent: 210 17% 60%; }
+  .cut-plane-slider-accent .cut-plane-slider:hover { --slider-accent: var(--viewcube-accent); }
   .cut-plane-slider-accent .cut-plane-slider :where([role="slider"], span) {
     transition: background-color 160ms ease, border-color 160ms ease;
   }

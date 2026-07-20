@@ -1,60 +1,41 @@
 /**
  * =============================================================================
- * SLIDER VALUE FIELD — inline-editable numeric field for SliderInput (ADR-682)
+ * SLIDER VALUE FIELD — the value beside a slider label (ADR-682)
  * =============================================================================
  *
- * Figma / Cinema 4D / Revit grade scalar affordance: the number is the PRIMARY
- * input, the slider is the secondary one. Blurred → shows the formatted value
- * (e.g. "20%"). Focused → becomes a raw numeric text field (no unit symbol)
- * with the whole text auto-selected.
+ * Two renderings, chosen by a single rule:
  *
- * Commit semantics:
- *   - Enter / blur → parse, clamp to [min,max], quantize to the nearest step,
- *                    then onChange (skipped when the value did not change).
- *   - Invalid / empty input → revert to the previous value, NO onChange.
- *   - Escape → revert without commit + blur.
- *   - ArrowUp / ArrowDown → ±1 step, Shift+Arrow → ±10 steps (C4D/Figma).
+ *   EDITABLE   — a `unit` (format+parse pair) AND an accessible name are given.
+ *   READ-ONLY  — anything missing. A plain, non-focusable `<span>`.
+ *
+ * WHY the rule: making the field editable is a promise that whatever the user
+ * types can come back out. Only a `SliderValueUnit` can keep that promise — a
+ * display-only `formatValue` renders "60%" but reads a raw number, so "80"
+ * lands as 8000% → clamped to the max, with no keystroke that reaches 80%.
+ * And a focusable control with no accessible name fails WCAG 4.1.2.
+ *
+ * So the degradation is deliberate: a call site that passes neither keeps the
+ * exact read-only span it had before this component existed — zero a11y debt,
+ * zero regression. Adopting a unit is an upgrade, never a prerequisite.
+ *
+ * FOCUSED TEXT is DISPLAY space without the symbol (`unit.formatEdit`), the
+ * same space `unit.parse` reads. Showing the raw model number instead would
+ * make an edit of 0.6 → 0.7 mean 0.7% for a percent unit.
  *
  * Zero inline styles. Fixed width so the layout never jumps while typing.
  */
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React from 'react';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PANEL_LAYOUT } from '../../../config/panel-tokens';
-import { clamp } from '../../../utils/scalar-math';
-import { quantizeToStep } from '../../../rendering/entities/shared/geometry-utils';
-import { handleInlineRenameKey } from '../../utils/inline-rename-keyboard';
+import type { SliderValueUnit } from './slider-value-units';
+import {
+  useSliderValueEditing,
+  type SliderValueStatus,
+} from './useSliderValueEditing';
 
-// =============================================================================
-// PURE HELPERS
-// =============================================================================
-
-/** Decimal places carried by `step` — used to kill float noise after quantization. */
-function decimalsOfStep(step: number): number {
-  const text = String(step);
-  const exponent = text.indexOf('e-');
-  if (exponent >= 0) return Number(text.slice(exponent + 2));
-  const dot = text.indexOf('.');
-  return dot < 0 ? 0 : text.length - dot - 1;
-}
-
-/**
- * Clamp to [min,max] and quantize to the step grid anchored at `min`
- * (same grid Radix Slider uses), then strip float noise.
- */
-export function normalizeSliderValue(
-  raw: number,
-  min: number,
-  max: number,
-  step: number
-): number {
-  const clamped = clamp(raw, min, max);
-  const quantized = step > 0 ? min + quantizeToStep(clamped - min, step) : clamped;
-  const bounded = clamp(quantized, min, max);
-  const factor = 10 ** decimalsOfStep(step);
-  return Math.round(bounded * factor) / factor;
-}
+export { normalizeSliderValue } from './useSliderValueEditing';
 
 // =============================================================================
 // PROPS
@@ -65,144 +46,125 @@ interface SliderValueFieldProps {
   min: number;
   max: number;
   onChange: (value: number) => void;
-  /** Default 1. Fractional steps supported (e.g. 0.1) */
+  /** Default 1. Fractional steps supported (e.g. 0.1). */
   step?: number;
-  /** Formatter used ONLY while blurred (editing always shows the raw number) */
-  formatValue?: (v: number) => string;
-  /** Already-translated accessible name (no i18n happens in this component) */
-  label?: string;
+  /**
+   * Format+parse pair. Supplying it is what makes the field editable —
+   * see the degradation rule above.
+   */
+  unit?: SliderValueUnit;
+  /** Already-translated accessible name (no i18n happens in this component). */
+  ariaLabel?: string;
+  /** Ties the field to an external `<label htmlFor>`. */
+  id?: string;
+  /** Legacy DISPLAY-ONLY formatter. Never makes the field editable. */
+  formatValue?: (value: number) => string;
   disabled?: boolean;
   className?: string;
 }
 
 // =============================================================================
-// COMPONENT
+// SHARED PRESENTATION
 // =============================================================================
 
-export function SliderValueField({
+/** Geometry/typography shared by both renderings so they never drift apart. */
+const FIELD_SHAPE = [
+  PANEL_LAYOUT.WIDTH.MD,
+  PANEL_LAYOUT.TEXT_ALIGN.RIGHT,
+  PANEL_LAYOUT.TYPOGRAPHY.XS,
+  PANEL_LAYOUT.PADDING.HORIZONTAL_HALF,
+].join(' ');
+
+// =============================================================================
+// ENTRY — picks the rendering, then delegates. No hooks before the branch.
+// =============================================================================
+
+export function SliderValueField(props: SliderValueFieldProps) {
+  const { unit, ariaLabel } = props;
+
+  if (!unit || !ariaLabel?.trim()) {
+    return <SliderValueReadout {...props} />;
+  }
+  return <SliderValueInput {...props} unit={unit} ariaLabel={ariaLabel} />;
+}
+
+// =============================================================================
+// READ-ONLY RENDERING — the safe path
+// =============================================================================
+
+function SliderValueReadout({
   value,
-  min,
-  max,
-  onChange,
-  step = 1,
   formatValue,
-  label,
-  disabled = false,
   className = '',
 }: SliderValueFieldProps) {
   const colors = useSemanticColors();
+  const text = formatValue ? formatValue(value) : String(value);
+
+  return (
+    <span className={`${FIELD_SHAPE} ${colors.text.muted} ${className}`}>{text}</span>
+  );
+}
+
+// =============================================================================
+// EDITABLE RENDERING — only reachable with a unit + an accessible name
+// =============================================================================
+
+interface SliderValueInputProps extends SliderValueFieldProps {
+  unit: SliderValueUnit;
+  ariaLabel: string;
+}
+
+function SliderValueInput(props: SliderValueInputProps) {
+  const { value, min, max, onChange, unit, ariaLabel, id } = props;
+  const { step = 1, disabled = false, className = '' } = props;
+
+  const colors = useSemanticColors();
   const { quick } = useBorderTokens();
 
-  const inputRef = useRef<HTMLInputElement>(null);
-  /** `null` = not editing; string = in-flight draft text */
-  const [draft, setDraft] = useState<string | null>(null);
-  /** Set right before a programmatic blur() so blur does not commit twice */
-  const skipBlurCommitRef = useRef(false);
-
-  const isEditing = draft !== null;
-
-  useEffect(() => {
-    if (isEditing) inputRef.current?.select();
-  }, [isEditing]);
-
-  const commitText = useCallback(
-    (text: string) => {
-      setDraft(null);
-      const trimmed = text.trim();
-      if (trimmed === '') return;
-      const parsed = Number(trimmed);
-      if (!Number.isFinite(parsed)) return;
-      const next = normalizeSliderValue(parsed, min, max, step);
-      if (next !== value) onChange(next);
-    },
-    [min, max, step, value, onChange]
-  );
-
-  const nudge = useCallback(
-    (direction: 1 | -1, coarse: boolean) => {
-      const base = draft !== null ? Number(draft) : value;
-      const start = Number.isFinite(base) ? base : value;
-      const next = normalizeSliderValue(
-        start + direction * step * (coarse ? 10 : 1),
-        min,
-        max,
-        step
-      );
-      setDraft(String(next));
-      if (next !== value) onChange(next);
-    },
-    [draft, value, min, max, step, onChange]
-  );
-
-  const handleFocus = useCallback(() => setDraft(String(value)), [value]);
-
-  const handleChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => setDraft(event.target.value),
-    []
-  );
-
-  const handleBlur = useCallback(
-    (event: React.FocusEvent<HTMLInputElement>) => {
-      if (skipBlurCommitRef.current) {
-        skipBlurCommitRef.current = false;
-        return;
-      }
-      commitText(event.target.value);
-    },
-    [commitText]
-  );
-
-  const handleKeyDown = useCallback(
-    (event: React.KeyboardEvent<HTMLInputElement>) => {
-      if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
-        event.preventDefault();
-        nudge(event.key === 'ArrowUp' ? 1 : -1, event.shiftKey);
-        return;
-      }
-      // Local <input> Enter/Escape via the SSoT helper (ADR-364 allowlist):
-      // the Escape Command Bus intentionally skips editable focus.
-      const target = event.currentTarget;
-      handleInlineRenameKey(event, {
-        onConfirm: () => {
-          skipBlurCommitRef.current = true;
-          commitText(target.value);
-          target.blur();
-        },
-        onCancel: () => {
-          skipBlurCommitRef.current = true;
-          setDraft(null);
-          target.blur();
-        },
-      });
-    },
-    [commitText, nudge]
-  );
-
-  const formatted = formatValue ? formatValue(value) : String(value);
-  const fieldClassName = [
-    PANEL_LAYOUT.WIDTH.MD,
-    PANEL_LAYOUT.TEXT_ALIGN.RIGHT,
-    PANEL_LAYOUT.TYPOGRAPHY.XS,
-    PANEL_LAYOUT.PADDING.HORIZONTAL_HALF,
-    PANEL_LAYOUT.INPUT.FOCUS,
-    PANEL_LAYOUT.INTERACTIVE.DISABLED,
-    isEditing ? `${quick.input} ${colors.bg.hover} ${colors.text.primary}` : colors.text.muted,
-    className,
-  ].join(' ');
+  const editing = useSliderValueEditing({ value, min, max, step, unit, disabled, onChange });
+  const stateClassName = resolveStateClassName(editing.status, editing.isEditing, { quick, colors });
 
   return (
     <input
-      ref={inputRef}
+      ref={editing.inputRef}
+      id={id}
       type="text"
       inputMode="decimal"
-      value={draft ?? formatted}
-      onFocus={handleFocus}
-      onChange={handleChange}
-      onBlur={handleBlur}
-      onKeyDown={handleKeyDown}
+      value={editing.text}
+      onFocus={editing.handleFocus}
+      onChange={editing.handleTextChange}
+      onBlur={editing.handleBlur}
+      onKeyDown={editing.handleKeyDown}
       disabled={disabled}
-      aria-label={label || undefined}
-      className={fieldClassName}
+      aria-label={ariaLabel}
+      aria-invalid={editing.status !== 'ok'}
+      className={[
+        FIELD_SHAPE,
+        PANEL_LAYOUT.INPUT.FOCUS,
+        PANEL_LAYOUT.INTERACTIVE.DISABLED,
+        stateClassName,
+        className,
+      ].join(' ')}
     />
   );
+}
+
+// =============================================================================
+// STATE STYLING — rejection and clamping must both be SEEN, not just announced
+// =============================================================================
+
+interface StateTokens {
+  quick: ReturnType<typeof useBorderTokens>['quick'];
+  colors: ReturnType<typeof useSemanticColors>;
+}
+
+function resolveStateClassName(
+  status: SliderValueStatus,
+  isEditing: boolean,
+  { quick, colors }: StateTokens
+): string {
+  if (status === 'rejected') return `${quick.error} ${colors.text.error}`;
+  if (status === 'clamped') return `${quick.warning} ${colors.text.warning}`;
+  if (isEditing) return `${quick.input} ${colors.bg.hover} ${colors.text.primary}`;
+  return colors.text.muted;
 }

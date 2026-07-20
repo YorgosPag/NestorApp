@@ -16,7 +16,7 @@ import { useTranslation } from '@/i18n';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 import { PANEL_LAYOUT } from '../../../../../../config/panel-tokens';
-import { formatPercent } from '../../../../../../rendering/entities/shared/distance-label-utils';
+import { SLIDER_VALUE_UNITS } from '../../../../shared/slider-value-units';
 import { useCursorSettings } from '../../../../../../systems/cursor';
 import type {
   SelectionBoxSettings,
@@ -37,8 +37,6 @@ const I18N_NAMESPACES = [
   'dxf-viewer-panels',
   'dxf-viewer-shell',
 ] as const;
-
-const formatPx = (v: number) => `${v}px`;
 
 export function SelectionModeSettings({ mode }: { mode: SelectionMode }) {
   const { settings, updateSettings } = useCursorSettings();
@@ -89,7 +87,7 @@ export function SelectionModeSettings({ mode }: { mode: SelectionMode }) {
         max={1}
         step={0.1}
         onChange={(fillOpacity) => update({ fillOpacity })}
-        formatValue={formatPercent}
+        unit={SLIDER_VALUE_UNITS.percent01}
       />
 
       <ColorSettingRow
@@ -107,7 +105,7 @@ export function SelectionModeSettings({ mode }: { mode: SelectionMode }) {
         max={1}
         step={0.1}
         onChange={(borderOpacity) => update({ borderOpacity })}
-        formatValue={formatPercent}
+        unit={SLIDER_VALUE_UNITS.percent01}
       />
 
       <SliderSettingRow
@@ -118,7 +116,7 @@ export function SelectionModeSettings({ mode }: { mode: SelectionMode }) {
         max={5}
         step={0.25}
         onChange={(borderWidth) => update({ borderWidth })}
-        formatValue={formatPx}
+        unit={SLIDER_VALUE_UNITS.pixels}
       />
 
       <BorderStyleRow

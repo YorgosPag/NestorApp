@@ -6,7 +6,12 @@
  * physical height (the meters/mm text-size bug was the violation of exactly this).
  */
 
-import { paperHeightToModel, resolveEffectiveDimscale } from '../annotation-scale';
+import {
+  paperHeightToModel,
+  resolveEffectiveDimscale,
+  clampDimscaleForReadability,
+  DIM_TEXT_MAX_SCENE_RATIO,
+} from '../annotation-scale';
 import { mmToSceneUnits, type SceneUnits } from '../scene-units';
 
 describe('paperHeightToModel — annotation-scale SSoT', () => {
@@ -65,5 +70,58 @@ describe('resolveEffectiveDimscale — dimension annotation-scale SSoT', () => {
   it('defends against a non-finite / non-positive drawingScale fallback', () => {
     expect(resolveEffectiveDimscale(1, 0)).toBe(1);
     expect(resolveEffectiveDimscale(1, Number.NaN)).toBe(1);
+  });
+});
+
+describe('clampDimscaleForReadability — the giant-dimension-cross fix', () => {
+  // The real ACAD-τοπογραφικόFinal.dxf case: a 307.8-unit drawing whose imported
+  // DIMSCALE=100 blew DIMTXT 0.6 up to 60 units (19.5% of the drawing) → an
+  // unreadable overlapping cross of labels.
+  const SPAN = 307.8;
+  const DIMTXT = 0.6;
+
+  it('caps the text height at exactly maxRatio × sceneSpan when DIMSCALE is oversized', () => {
+    const clamped = clampDimscaleForReadability(100, DIMTXT, 'mm', SPAN);
+    expect(clamped).toBeLessThan(100);
+    // Post-clamp model-space text height == 2% of the span.
+    expect(paperHeightToModel(DIMTXT, clamped, 'mm')).toBeCloseTo(SPAN * DIM_TEXT_MAX_SCENE_RATIO, 6);
+  });
+
+  it('is a no-op when the text already fits under the ceiling (correct DXFs untouched)', () => {
+    // dimscale 1 → 0.6 units text = 0.2% of the span, well under 2%.
+    expect(clampDimscaleForReadability(1, DIMTXT, 'mm', SPAN)).toBe(1);
+    // A legitimate 1:50 drawing where the geometry is large enough.
+    expect(clampDimscaleForReadability(50, 2.5, 'mm', 100_000)).toBe(50);
+  });
+
+  it('never ENLARGES — clamp is one-directional (down only)', () => {
+    const clamped = clampDimscaleForReadability(100, DIMTXT, 'mm', SPAN);
+    expect(clamped).toBeLessThanOrEqual(100);
+  });
+
+  it('is idempotent — feeding the clamped value back returns it unchanged', () => {
+    const once = clampDimscaleForReadability(100, DIMTXT, 'mm', SPAN);
+    const twice = clampDimscaleForReadability(once, DIMTXT, 'mm', SPAN);
+    expect(twice).toBeCloseTo(once, 9);
+  });
+
+  it('honours a custom maxTextRatio', () => {
+    const clamped = clampDimscaleForReadability(100, DIMTXT, 'mm', SPAN, 0.05);
+    expect(paperHeightToModel(DIMTXT, clamped, 'mm')).toBeCloseTo(SPAN * 0.05, 6);
+  });
+
+  it('is a no-op for a non-positive span / dimtxt / dimscale (preview + empty scene)', () => {
+    expect(clampDimscaleForReadability(100, DIMTXT, 'mm', 0)).toBe(100);
+    expect(clampDimscaleForReadability(100, DIMTXT, 'mm', -1)).toBe(100);
+    expect(clampDimscaleForReadability(100, 0, 'mm', SPAN)).toBe(100);
+    expect(clampDimscaleForReadability(0, DIMTXT, 'mm', SPAN)).toBe(0);
+  });
+
+  it('produces a proportionate text height in a correctly-declared metre scene', () => {
+    // 300 m drawing, DIMTXT 0.6 mm paper, DIMSCALE 1000 (1:1000) → 0.6 m text (huge
+    // relative to nothing? no — 0.6/300 = 0.2%, fine). But DIMSCALE 200000 blows it
+    // to 120 m (40%) → clamped back to 2%.
+    const clamped = clampDimscaleForReadability(200_000, 0.6, 'm', 300);
+    expect(paperHeightToModel(0.6, clamped, 'm')).toBeCloseTo(300 * DIM_TEXT_MAX_SCENE_RATIO, 6);
   });
 });

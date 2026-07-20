@@ -52,6 +52,8 @@ import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n';
 import { SliderInput } from '../../../shared/SliderInput';
+// 🏢 ADR-682: format+parse pairs — what licenses the value field to be typed into
+import { SLIDER_VALUE_UNITS } from '../../../shared/slider-value-units';
 
 interface LayersSettingsProps {
   // Για μελλοντική επέκταση μπορούμε να προσθέσουμε props
@@ -262,7 +264,8 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
                 step={0.1}
                 onChange={setFillsOpacity}
                 showValue
-                formatValue={(v) => `${Math.round(v * 100)}%`}
+                unit={SLIDER_VALUE_UNITS.percent01}
+                tooltip={t('layersSettings.fills.opacityTitle')}
               />
             </div>
 
@@ -328,7 +331,8 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
                 step={DIM_OPACITY_STEP}
                 onChange={handleIsolateOpacityChange}
                 showValue
-                formatValue={(v) => `${v}%`}
+                unit={SLIDER_VALUE_UNITS.percent100}
+                tooltip={t('layersSettings.isolate.dimOpacityTitle')}
                 disabled={isolateSettings.mode !== 'dim'}
               />
             </div>

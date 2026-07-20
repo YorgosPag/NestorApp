@@ -89,6 +89,12 @@ export class DimensionRenderer extends BaseEntityRenderer {
    * by `setSceneUnits()` via the composite orchestrator.
    */
   private sceneUnits: SceneUnits = 'mm';
+  /**
+   * ADR-362 — longest side of the scene bounds (scene/model units), injected
+   * per-frame by the composite orchestrator. Drives the readability clamp that
+   * caps imported-DIMSCALE text height. `0` (default / unit tests) disables it.
+   */
+  private sceneSpan = 0;
   private _isHovered = false;
   private _inGlowPass = false;
 
@@ -125,9 +131,20 @@ export class DimensionRenderer extends BaseEntityRenderer {
     this.sceneUnits = units;
   }
 
+  /**
+   * ADR-362 — inject the scene's longest span (scene/model units) so the
+   * dimension text readability clamp can cap a mismatched imported DIMSCALE.
+   * Mirrors `setSceneUnits`; forwarded per-frame by the composite orchestrator.
+   */
+  setSceneSpan(span: number): void {
+    this.sceneSpan = Number.isFinite(span) && span > 0 ? span : 0;
+  }
+
   render(entity: EntityModel, options: RenderOptions = {}): void {
     this._isHovered = options.hovered ?? false;
-    const resolved = resolveDimensionRender(entity, this.styleRegistry, this.sceneUnits, this.dimensionLookup);
+    const resolved = resolveDimensionRender(
+      entity, this.styleRegistry, this.sceneUnits, this.dimensionLookup, this.sceneSpan,
+    );
     if (!resolved) return;
 
     // ADR-362 Phase K — DIMBREAK reads the entity's persisted `manualBreaks`

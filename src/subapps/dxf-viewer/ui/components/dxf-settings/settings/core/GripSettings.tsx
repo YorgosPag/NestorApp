@@ -23,11 +23,19 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { formatPercent } from '../../../../../rendering/entities/shared/distance-label-utils';
 import { UI_SIZE_DEFAULTS } from '../../../../../config/text-rendering-config';
 import { CogIcon, ColorSwatchIcon, ViewGridIcon, AdjustmentsIcon } from './grip-settings-icons';
 import { GripFactoryResetModal } from './GripFactoryResetModal';
 import { SliderInput } from '../../../shared/SliderInput';
+/**
+ * ADR-682: each slider now owns its own `<label htmlFor>` + editable value.
+ * Previously the label was hand-rolled ABOVE the slider with the value spliced
+ * into its text ("Μέγεθος: 8px") and pointed at nothing, so the paired number
+ * input was a focusable control with no accessible name (WCAG 4.1.2). Passing
+ * `label` + `showValue` + `unit` fixes the name AND makes the value typeable in
+ * the unit's own space, so the separate number spinner is redundant.
+ */
+import { SLIDER_VALUE_UNITS } from '../../../shared/slider-value-units';
 
 export function GripSettings({ contextType }: { contextType?: 'preview' | 'completion' }) {
   const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
@@ -140,19 +148,23 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
         >
           <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
             {/* Grip Size */}
-            <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-              <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
-                {t('settings.grip.labels.size')}: {gripSettings.gripSize || UI_SIZE_DEFAULTS.GRIP_SIZE}px
-              </label>
-              <SliderInput value={gripSettings.gripSize || UI_SIZE_DEFAULTS.GRIP_SIZE} min={4} max={30} step={1} onChange={(v) => updateSettings({ gripSize: v })} showNumberInput />
-            </div>
+            <SliderInput
+              label={t('settings.grip.labels.size')}
+              value={gripSettings.gripSize || UI_SIZE_DEFAULTS.GRIP_SIZE}
+              min={4} max={30} step={1}
+              onChange={(v) => updateSettings({ gripSize: v })}
+              showValue
+              unit={SLIDER_VALUE_UNITS.pixels}
+            />
             {/* Opacity */}
-            <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-              <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
-                {t('settings.grip.labels.opacity')}: {formatPercent(gripSettings.opacity)}
-              </label>
-              <SliderInput value={gripSettings.opacity} min={0.1} max={1} step={0.1} onChange={(v) => updateSettings({ opacity: v })} showNumberInput />
-            </div>
+            <SliderInput
+              label={t('settings.grip.labels.opacity')}
+              value={gripSettings.opacity}
+              min={0.1} max={1} step={0.1}
+              onChange={(v) => updateSettings({ opacity: v })}
+              showValue
+              unit={SLIDER_VALUE_UNITS.percent01}
+            />
           </div>
         </AccordionSection>
 
@@ -221,33 +233,41 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
         >
           <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
             {/* Pick Box Size */}
-            <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-              <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
-                {t('settings.grip.labels.pickBoxSize')}: {gripSettings.pickBoxSize || UI_SIZE_DEFAULTS.PICK_BOX_SIZE}px
-              </label>
-              <SliderInput value={gripSettings.pickBoxSize || UI_SIZE_DEFAULTS.PICK_BOX_SIZE} min={1} max={8} step={1} onChange={(v) => updateSettings({ pickBoxSize: v })} showNumberInput />
-            </div>
+            <SliderInput
+              label={t('settings.grip.labels.pickBoxSize')}
+              value={gripSettings.pickBoxSize || UI_SIZE_DEFAULTS.PICK_BOX_SIZE}
+              min={1} max={8} step={1}
+              onChange={(v) => updateSettings({ pickBoxSize: v })}
+              showValue
+              unit={SLIDER_VALUE_UNITS.pixels}
+            />
             {/* Aperture Size */}
-            <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-              <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
-                {t('settings.grip.labels.apertureSize')}: {gripSettings.apertureSize || 16}px
-              </label>
-              <SliderInput value={gripSettings.apertureSize || 16} min={8} max={32} step={2} onChange={(v) => updateSettings({ apertureSize: v })} showNumberInput />
-            </div>
-            {/* Max Grips */}
-            <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-              <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
-                {t('settings.grip.labels.maxGrips')}: {gripSettings.maxGripsPerEntity || 50}
-              </label>
-              <SliderInput value={gripSettings.maxGripsPerEntity || 50} min={10} max={200} step={10} onChange={(v) => updateSettings({ maxGripsPerEntity: v })} showNumberInput />
-            </div>
+            <SliderInput
+              label={t('settings.grip.labels.apertureSize')}
+              value={gripSettings.apertureSize || 16}
+              min={8} max={32} step={2}
+              onChange={(v) => updateSettings({ apertureSize: v })}
+              showValue
+              unit={SLIDER_VALUE_UNITS.pixels}
+            />
+            {/* Max Grips — a plain count, so `scalar`: no symbol either way. */}
+            <SliderInput
+              label={t('settings.grip.labels.maxGrips')}
+              value={gripSettings.maxGripsPerEntity || 50}
+              min={10} max={200} step={10}
+              onChange={(v) => updateSettings({ maxGripsPerEntity: v })}
+              showValue
+              unit={SLIDER_VALUE_UNITS.scalar}
+            />
             {/* Grip Object Limit (AutoCAD GRIPOBJLIMIT) — 0 = no limit (always show grips) */}
-            <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-              <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
-                {t('settings.grip.labels.gripObjLimit')}: {gripSettings.gripObjLimit ?? 100}
-              </label>
-              <SliderInput value={gripSettings.gripObjLimit ?? 100} min={0} max={1000} step={10} onChange={(v) => updateSettings({ gripObjLimit: v })} showNumberInput />
-            </div>
+            <SliderInput
+              label={t('settings.grip.labels.gripObjLimit')}
+              value={gripSettings.gripObjLimit ?? 100}
+              min={0} max={1000} step={10}
+              onChange={(v) => updateSettings({ gripObjLimit: v })}
+              showValue
+              unit={SLIDER_VALUE_UNITS.scalar}
+            />
             {/* Advanced Checkboxes */}
             <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
               <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>

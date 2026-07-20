@@ -403,6 +403,13 @@ faces), and the cut elevation is unified to a single FFL-relative frame across 2
     forced even if the slider lands on the previous elevation). Camera-only frames (cut value unchanged) skip edges
     entirely. The gradual "edges shrink at the plane" result is unchanged — it just lands on release instead of
     fighting every tick. Tests: `edge-cut-cull.test.ts` (6) + existing `edge-cut-trim` (5) green.
+- **2026-07-20** — v2.14 — **⚠️ ΤΟ ΧΡΩΜΑ ΤΟΥ SLIDER ΔΕΝ ΠΕΡΝΑ ΠΙΑ ΑΠΟ ΤΟ `--primary`.** Το ADR-682 §5.5
+  γενίκευσε τη διάγνωση της v2.12 (παρακάτω): το `--primary` είναι **επιφάνεια** σε αυτή την εφαρμογή
+  (στο dark ταυτόσημο με το `--card`), οπότε **κάθε** slider ήταν αόρατο — όχι μόνο αυτός εδώ. Το
+  primitive διαβάζει πλέον `--slider-accent`. Το `.cut-plane-slider-accent` ενημερώθηκε ώστε να ορίζει
+  **και τα δύο**: `--slider-accent` (το slider) **και** `--primary` (το κουμπί toggle, αμετάβλητο).
+  **Αν αφαιρεθεί το ένα, το πορτοκαλί μισό-σπάει σιωπηλά** — μπλε slider δίπλα σε πορτοκαλί toggle,
+  χωρίς κόκκινο test. Το οπτικό αποτέλεσμα της v2.13 (rest γκρι-μπλε → hover πορτοκαλί) είναι **ίδιο**.
 - **2026-06-13** — v2.12 / v2.13 — **slider colour de-hardcoded → unified with the ViewCube orange.**
   The slider looked black because it inherited the app `--primary` token (`222.2 47.4% 11.2%`, near-black
   navy) — not a hardcoded value, but an unwanted one. The mechanism: a `.cut-plane-slider-accent` utility

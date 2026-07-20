@@ -170,6 +170,84 @@ export function resolveImportSourceUnits(
   return insunitsUnit;
 }
 
+/** Axis-aligned XY extent consumed by the import unit-detection heuristics. */
+export interface DetectionBounds {
+  min: { x: number; y: number };
+  max: { x: number; y: number };
+}
+
+/**
+ * Is this a USABLE drawing extent for unit detection? Rejects null, non-finite coords,
+ * the uninitialized `±1e20` AutoCAD sentinel (magnitude ceiling 1e15 — real surveys /
+ * plants never reach it), an inverted box (min > max) and a zero-area point. Keeps the
+ * "can we trust $EXTMIN/$EXTMAX?" question in ONE place (ADR-362 Round 20).
+ */
+export function isUsableDetectionExtent(
+  b: DetectionBounds | null | undefined,
+): b is DetectionBounds {
+  if (!b) return false;
+  const { min, max } = b;
+  if (![min.x, min.y, max.x, max.y].every(v => Number.isFinite(v) && Math.abs(v) < 1e15)) {
+    return false;
+  }
+  const dx = max.x - min.x;
+  const dy = max.y - min.y;
+  if (dx < 0 || dy < 0) return false;
+  return Math.hypot(dx, dy) > 0;
+}
+
+/**
+ * Which bounds should feed the import-source unit heuristic? Prefer the DXF's stored
+ * drawing extents ($EXTMIN/$EXTMAX) — the junk-free extent AutoCAD itself zooms to,
+ * which EXCLUDES stray origin blocks (legacy ASHADE) and degenerate control points that
+ * would otherwise inflate a raw entity-bounds diagonal into the wrong (mm) magnitude
+ * bucket. Fall back to the computed entity bounds when the header carries no usable
+ * extent (older/hand-written DXFs, or the ±1e20 sentinel). Detection-only — never a
+ * transform.
+ *
+ * Narrow ADR-462-safe fix for the "Greek survey declares mm but is metres" class: it
+ * improves the SIGNAL fed to {@link resolveImportSourceUnits} (import-source path)
+ * without touching {@link resolveSceneUnits} (the declared-trust render path). (R20.)
+ */
+export function resolveUnitDetectionBounds(
+  declaredExtents: DetectionBounds | null | undefined,
+  computedBounds: DetectionBounds | null | undefined,
+): DetectionBounds | null {
+  if (isUsableDetectionExtent(declaredExtents)) return declaredExtents;
+  return computedBounds ?? null;
+}
+
+/** Result of the import-time units sanity check surfaced by the wizard (ADR-362 R20). */
+export interface UnitSuggestion {
+  /** What the file DECLARES via `$INSUNITS` (null = unitless / a unit we don't model). */
+  declared: SceneUnits | null;
+  /** What an 'auto' import will actually resolve the SOURCE units to. */
+  suggested: SceneUnits;
+  /** True when the declaration and the magnitude-derived suggestion disagree. */
+  mismatch: boolean;
+}
+
+/**
+ * Compute the units the auto importer will PICK versus what the file DECLARES, so the
+ * import wizard can warn on a mismatch ("declares mm but looks like metres") and
+ * pre-point its recommendation at the right unit — a Revit/ArchiCAD-grade units check.
+ * Fully ADR-462-safe: it only MIRRORS {@link resolveImportSourceUnits}, never overrides.
+ *
+ * `declaredExtents` = the header's `$EXTMIN/$EXTMAX` (preferred signal). When neither
+ * that nor `computedBounds` is usable, `suggested === declared` ⇒ `mismatch:false`
+ * (no false warning).
+ */
+export function computeUnitSuggestion(
+  insunitsCode: number | null | undefined,
+  declaredExtents: DetectionBounds | null | undefined,
+  computedBounds?: DetectionBounds | null,
+): UnitSuggestion {
+  const declared = insunitsCodeToSceneUnits(insunitsCode);
+  const detectBounds = resolveUnitDetectionBounds(declaredExtents, computedBounds);
+  const suggested = resolveImportSourceUnits(declared, detectBounds);
+  return { declared, suggested, mismatch: declared != null && suggested !== declared };
+}
+
 /**
  * Preferred entry point for consumers needing the effective scene units.
  *

@@ -54,6 +54,8 @@ import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n';
 import { SliderInput } from '../../../shared/SliderInput';
+// 🏢 ADR-682: format+parse pairs — what licenses the value field to be typed into
+import { SLIDER_VALUE_UNITS } from '../../../shared/slider-value-units';
 
 export interface CrosshairBehaviorSettingsProps {
   className?: string;
@@ -139,7 +141,8 @@ export const CrosshairBehaviorSettings: React.FC<CrosshairBehaviorSettingsProps>
           step={0.1}
           onChange={(v) => updateSettings({ crosshair: { ...settings.crosshair, opacity: v } })}
           showValue
-          formatValue={(v) => `${Math.round(v * 100)}%`}
+          unit={SLIDER_VALUE_UNITS.percent01}
+          tooltip={t('crosshairSettings.behavior.opacityTitle')}
         />
       </div>
 

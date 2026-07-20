@@ -55,3 +55,47 @@ export function resolveEffectiveDimscale(rawDimscale: number, drawingScale: numb
   if (Number.isFinite(rawDimscale) && rawDimscale > 1) return rawDimscale;
   return Number.isFinite(drawingScale) && drawingScale > 0 ? drawingScale : 1;
 }
+
+/**
+ * Upper bound on dimension text height as a fraction of the scene's longest span.
+ * ISO/CAD annotations sit around 1.5–3 % of the drawing extent; 2 % is a safe
+ * ceiling — a label taller than that is illegible clutter, not annotation.
+ */
+export const DIM_TEXT_MAX_SCENE_RATIO = 0.02;
+
+/**
+ * ADR-362 — readability clamp for imported DIMSCALE (the "giant dimension cross"
+ * fix). Some DXFs declare a plot `DIMSCALE` (e.g. 100 for 1:100) that is wildly
+ * mismatched to the drawing's real extent — typically a units mismatch upstream
+ * (mm-declared file authored in metres). The result is dimension text taller than
+ * ~20 % of the whole drawing, so every label overlaps into an unreadable blob.
+ *
+ * This caps the EFFECTIVE dimscale so the model-space text height never exceeds
+ * `maxTextRatio × sceneSpan`. It is **clamp-only (never enlarges)**: a drawing
+ * whose text is already ≤ the ceiling is returned untouched, so correctly-authored
+ * DXFs are unaffected. Uniform across the scene (one `sceneSpan`) → all labels keep
+ * the SAME height (CAD convention), unlike a per-dimension cap. Idempotent: feeding
+ * the clamped value back returns it unchanged.
+ *
+ * A non-positive/non-finite `sceneSpan` or `dimtxt` (preview path, empty scene)
+ * is a no-op — the resolved dimscale passes through verbatim.
+ *
+ * @param effectiveDimscale  Output of `resolveEffectiveDimscale` (already healed).
+ * @param dimtxt             Paper-space text height (mm) from the DIMSTYLE.
+ * @param units              Active scene unit system (drives paper→model factor).
+ * @param sceneSpan          Longest side of the scene bounds, in scene/model units.
+ * @param maxTextRatio       Ceiling as a fraction of `sceneSpan` (default 2 %).
+ */
+export function clampDimscaleForReadability(
+  effectiveDimscale: number,
+  dimtxt: number,
+  units: SceneUnits,
+  sceneSpan: number,
+  maxTextRatio: number = DIM_TEXT_MAX_SCENE_RATIO,
+): number {
+  if (!(sceneSpan > 0) || !(dimtxt > 0) || !(effectiveDimscale > 0)) return effectiveDimscale;
+  const textHeight = paperHeightToModel(dimtxt, effectiveDimscale, units);
+  const maxHeight = sceneSpan * maxTextRatio;
+  if (!(textHeight > maxHeight)) return effectiveDimscale;
+  return effectiveDimscale * (maxHeight / textHeight);
+}

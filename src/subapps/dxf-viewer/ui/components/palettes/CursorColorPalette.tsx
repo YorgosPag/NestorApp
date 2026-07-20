@@ -8,6 +8,8 @@ import { UI_COLORS } from '../../../config/color-config';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { PANEL_LAYOUT } from '../../../config/panel-tokens';
 import { SliderInput } from '../shared/SliderInput';
+// 🏢 ADR-682: format+parse pairs — what licenses the value field to be typed into
+import { SLIDER_VALUE_UNITS } from '../shared/slider-value-units';
 
 export interface CursorColors {
   crosshairColor: string;
@@ -90,7 +92,8 @@ export function CursorColorPalette({ colors, onColorsChange }: CursorColorPalett
             step={0.1}
             onChange={(v) => handleColorChange(opacityKey, String(v))}
             showValue
-            formatValue={(v) => `${Math.round(v * 100)}%`}
+            unit={SLIDER_VALUE_UNITS.percent01}
+            tooltip={label}
             className="flex-1"
           />
         )}

@@ -19,6 +19,8 @@ import { PANEL_LAYOUT } from '../../../../../../config/panel-tokens';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n';
 import { SliderInput } from '../../../../shared/SliderInput';
+// ADR-682: unit = format+parse pair → the value beside the slider becomes typeable.
+import { SLIDER_VALUE_UNITS } from '../../../../shared/slider-value-units';
 
 /**
  * ╔════════════════════════════════════════════════════════════════════════════╗
@@ -252,7 +254,8 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
           step={0.1}
           onChange={handleRulerOpacityChange}
           showValue
-          formatValue={(v) => `${Math.round(v * 100)}%`}
+          unit={SLIDER_VALUE_UNITS.percent01}
+          tooltip={t('rulerSettings.background.opacity.title')}
         />
       </div>
 
@@ -269,7 +272,8 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
           step={5}
           onChange={handleRulerWidthChange}
           showValue
-          formatValue={(v) => `${v}px`}
+          unit={SLIDER_VALUE_UNITS.pixels}
+          tooltip={t('rulerSettings.background.width.title')}
         />
       </div>
 
@@ -326,7 +330,8 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
           step={1}
           onChange={handleBorderWidthChange}
           showValue
-          formatValue={(v) => `${v}px`}
+          unit={SLIDER_VALUE_UNITS.pixels}
+          tooltip={t('rulerSettings.background.borderWidth.title')}
         />
       </div>
     </div>

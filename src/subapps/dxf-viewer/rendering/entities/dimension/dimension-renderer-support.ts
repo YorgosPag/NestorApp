@@ -25,7 +25,11 @@ import {
 } from '../../../systems/dimensions/dim-geometry-builder';
 import { resolveDimStyle } from '../../../systems/dimensions/dim-style-resolver';
 import type { DimStyleRegistry } from '../../../systems/dimensions/dim-style-registry';
-import { paperHeightToModel, resolveEffectiveDimscale } from '../../../utils/annotation-scale';
+import {
+  paperHeightToModel,
+  resolveEffectiveDimscale,
+  clampDimscaleForReadability,
+} from '../../../utils/annotation-scale';
 import { useDrawingScaleStore } from '../../../state/drawing-scale-store';
 import type { SceneUnits } from '../../../utils/scene-units';
 import { measureDimPrimaryText } from './dim-text-renderer';
@@ -126,15 +130,21 @@ export function resolveDimensionRender(
   styleRegistry: DimStyleRegistry,
   sceneUnits: SceneUnits,
   dimensionLookup: DimensionLookup,
+  sceneSpan = 0,
 ): ResolvedDimensionRender | null {
   const e = entity as Entity;
   if (!isDimensionEntity(e)) return null;
   const dim = e as DimensionEntity;
   const rawStyle = resolveDimStyle(dim, styleRegistry);
   const drawingScale = useDrawingScaleStore.getState().drawingScale;
+  // ADR-362 — heal the effective annotation scale ONCE, then clamp it so a
+  // wildly-mismatched imported DIMSCALE can't blow the text past ~2% of the
+  // drawing extent (the "giant dimension cross" on units-mismatched DXFs).
+  // `sceneSpan = 0` (unit tests / preview) → clamp is a no-op.
+  const effective = resolveEffectiveDimscale(rawStyle.dimscale, drawingScale);
   const style: DimStyle = {
     ...rawStyle,
-    dimscale: resolveEffectiveDimscale(rawStyle.dimscale, drawingScale),
+    dimscale: clampDimscaleForReadability(effective, rawStyle.dimtxt, sceneUnits, sceneSpan),
   };
   const geoStyle = scaleGeometryOffsets(style, sceneUnits);
   let geometry: DimGeometry;

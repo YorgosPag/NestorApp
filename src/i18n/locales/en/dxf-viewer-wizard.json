@@ -482,6 +482,11 @@
         "label": "Inches (in)",
         "desc": "Anglo-Saxon files — detail drawings"
       }
+    },
+    "mismatch": {
+      "title": "Possible units mismatch",
+      "body": "The file declares «{declared}» units, but its dimensions look like «{suggested}». Auto-detect will correctly import it as «{suggested}» — change it below if needed.",
+      "badge": "Suggested"
     }
   }
 }

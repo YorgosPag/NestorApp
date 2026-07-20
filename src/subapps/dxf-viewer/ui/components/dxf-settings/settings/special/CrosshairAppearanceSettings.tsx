@@ -56,6 +56,8 @@ import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n';
 import { SliderInput } from '../../../shared/SliderInput';
+// 🏢 ADR-682: format+parse pairs — what licenses the value field to be typed into
+import { SLIDER_VALUE_UNITS } from '../../../shared/slider-value-units';
 
 const I18N_NAMESPACES = ['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell'] as const;
 
@@ -209,7 +211,8 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
           step={0.5}
           onChange={(v) => updateSettings({ crosshair: { ...settings.crosshair, line_width: v } })}
           showValue
-          formatValue={(v) => `${v}px`}
+          unit={SLIDER_VALUE_UNITS.pixels}
+          tooltip={t('crosshairSettings.appearance.lineWidthTitle')}
         />
         <div className={`flex ${PANEL_LAYOUT.GAP.XS}`}>
           {[1, 1.5, 2, 3, 4, 5].map(width => (
