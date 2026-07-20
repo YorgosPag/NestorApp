@@ -69,7 +69,26 @@ export type ImportedMeshKind = 'imported';
  * και θα έδιναν σιωπηλά **μηδέν**. Ο περιορισμός στον **τύπο** σημαίνει ότι το λάθος δεν μπορεί
  * καν να γραφτεί — δεν χρειάζεται έλεγχος στο runtime.
  */
-export type ImportedMeshBoqUnit = Extract<BOQMeasurementUnit, 'pcs' | 'm' | 'm2' | 'm3' | 'kg'>;
+export const IMPORTED_MESH_BOQ_UNITS = [
+  'pcs',
+  'm',
+  'm2',
+  'm3',
+  'kg',
+] as const satisfies readonly BOQMeasurementUnit[];
+
+export type ImportedMeshBoqUnit = (typeof IMPORTED_MESH_BOQ_UNITS)[number];
+
+/**
+ * Type guard για τιμές που έρχονται από index-typed `params` (bridge) ή από persisted έγγραφα.
+ * Ζει δίπλα στη λίστα ώστε να μην μπορεί να ξεχαστεί όταν αυτή αλλάξει.
+ */
+export function isImportedMeshBoqUnit(value: unknown): value is ImportedMeshBoqUnit {
+  return (
+    typeof value === 'string' &&
+    (IMPORTED_MESH_BOQ_UNITS as readonly string[]).includes(value)
+  );
+}
 
 /**
  * **Η μία χειροκίνητη πληροφορία ολόκληρης της φάσης** (ADR-683 §10.2).

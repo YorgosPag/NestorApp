@@ -26,6 +26,7 @@ import type { MepManifoldKind } from '../types/mep-manifold-types';
 import type { MepUnderfloorKind } from '../types/mep-underfloor-types';
 import type { PlumbingSystemClassification } from '../types/mep-connector-types';
 import type { OpeningHardwareComponent } from '../family-types/opening-hardware-set';
+import { isImportedMeshBoqUnit } from '../entities/imported-mesh/imported-mesh-types';
 
 // ============================================================================
 // TYPES
@@ -34,7 +35,11 @@ import type { OpeningHardwareComponent } from '../family-types/opening-hardware-
 export type BimEntityType =
   | 'wall' | 'opening' | 'slab' | 'column' | 'beam' | 'stair' | 'railing' | 'furniture' | 'roof'
   // ADR-408 — Η-Μ (Ηλεκτρομηχανολογικά) entities feeding the BOQ.
-  | 'mep-radiator' | 'mep-boiler' | 'mep-water-heater' | 'mep-segment' | 'mep-underfloor' | 'mep-manifold';
+  | 'mep-radiator' | 'mep-boiler' | 'mep-water-heater' | 'mep-segment' | 'mep-underfloor' | 'mep-manifold'
+  // ADR-683 Φ3.1 — εισαγόμενο ψημένο πλέγμα συνεργάτη. Ο ΜΟΝΟΣ τύπος του οποίου η αντιστοίχιση
+  // δεν είναι πίνακας: το «τι είναι» το δηλώνει ο χρήστης μία φορά (§10.2), γιατί δεν υπάρχει
+  // στη γεωμετρία. Λύνεται από το `resolveImportedMeshMapping`, ποτέ από `kind`.
+  | 'imported-mesh';
 
 export interface AtoeMappingEntry {
   /**
@@ -368,6 +373,11 @@ export function resolveAtoeMapping(
   // never per kind. Callers use `resolveStairComponentMapping` instead.
   if (entityType === 'stair') return null;
 
+  // ADR-683 Φ3.1 — το εισαγόμενο πλέγμα έχει ΕΝΑ kind ('imported') που δεν λέει τίποτα για το
+  // κόστος· ο διαχωριστής είναι η **ανατεθειμένη ταυτότητα** μέσα στα params. Λύνεται από το
+  // `resolveImportedMeshMapping`, ώστε ένα ανανάθετο πλέγμα να μη βρίσκει ποτέ γραμμή κατά λάθος.
+  if (entityType === 'imported-mesh') return null;
+
   const typeMap = BIM_TO_ATOE_MAPPING[entityType] as Readonly<Record<string, AtoeMappingEntry>>;
   return typeMap?.[kind] ?? null;
 }
@@ -394,6 +404,29 @@ function resolveMepSegmentMapping(kind: string, classification?: string): AtoeMa
     ? (MEP_SEGMENT_PIPE_MAPPING as Readonly<Record<string, AtoeMappingEntry>>)[classification]
     : undefined;
   return byClass ?? MEP_SEGMENT_PIPE_GENERIC_MAPPING;
+}
+
+/**
+ * ADR-683 Φ3.1 (§10.2) — αντιστοίχιση **εισαγόμενου πλέγματος** από την ανατεθειμένη ταυτότητα.
+ *
+ * Ο έκτος resolver εκτός του kind-πίνακα (μαζί με beam I-shape / mep-segment / stair /
+ * opening-hardware / foundation), και ο μόνος του οποίου η πηγή είναι **δήλωση χρήστη** αντί για
+ * ιδιότητα του μοντέλου: ένα ψημένο πλέγμα δεν φέρει κόστος ούτε μονάδα μέτρησης (§3).
+ *
+ * Το όρισμα είναι `unknown` γιατί έρχεται από το index-typed `params` του bridge. Η επικύρωση
+ * γίνεται εδώ, **fail-closed**: ό,τι δεν είναι πλήρης ταυτότητα → `null` → **καμία γραμμή**.
+ * Ποτέ μερική γραμμή με κενό τίτλο ή μονάδα που δεν παράγει ποσότητα.
+ */
+export function resolveImportedMeshMapping(identity: unknown): AtoeMappingEntry | null {
+  if (typeof identity !== 'object' || identity === null) return null;
+  const { categoryCode, unit, titleEL } = identity as Partial<Record<string, unknown>>;
+  if (typeof categoryCode !== 'string' || categoryCode.length === 0) return null;
+  if (typeof titleEL !== 'string' || titleEL.length === 0) return null;
+  if (typeof unit !== 'string') return null;
+  // Μόνο οι μονάδες που το `deriveAtoeQuantity` μετατρέπει όντως σε ποσότητα — οι υπόλοιπες θα
+  // έγραφαν σιωπηλά μηδέν στην προμέτρηση.
+  if (!isImportedMeshBoqUnit(unit)) return null;
+  return { categoryCode, unit, titleEL };
 }
 
 /** Resolve the ΑΤΟΕ mapping for a single stair BOQ component (ADR-395 §G1). */

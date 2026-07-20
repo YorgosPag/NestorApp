@@ -33,6 +33,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import type { BOQItem } from '@/types/boq';
 import {
   resolveAtoeMapping,
+  resolveImportedMeshMapping,
   deriveAtoeQuantity,
   type AtoeMappingEntry,
   type BimEntityType,
@@ -213,6 +214,12 @@ function resolveEntityAtoeMapping(
   entityType: BimEntityType,
   entity: BimEntityForBoq,
 ): AtoeMappingEntry | undefined {
+  // ADR-683 Φ3.1 — το εισαγόμενο πλέγμα δεν έχει διαχωριστή στο μοντέλο· τον δηλώνει ο χρήστης.
+  // Ανανάθετο → `null` → **καμία γραμμή** (§10.2: ορατή απουσία αντί για μηδενικό κόστος).
+  if (entityType === 'imported-mesh') {
+    return resolveImportedMeshMapping(entity.params?.['importedMeshIdentity']) ?? undefined;
+  }
+
   const category = entity.params?.category;
   const rawSectionKind = entity.params?.['sectionKind'];
   const sectionKind = typeof rawSectionKind === 'string' ? rawSectionKind : undefined;

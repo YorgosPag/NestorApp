@@ -27,6 +27,12 @@ import {
   type ImportedMeshDoc,
 } from '../../bim/entities/imported-mesh/imported-mesh-firestore-service';
 import { recordImportedMeshChange } from '../../bim/entities/imported-mesh/imported-mesh-audit-client';
+import {
+  hasBoqIdentity,
+  importedMeshBoqPayload,
+} from '../../bim/entities/imported-mesh/imported-mesh-boq';
+import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
+import { createBimBoqAuditLifecycle } from './create-bim-boq-audit-lifecycle';
 import { importedMeshDocToEntity as docToEntity } from './imported-mesh-persistence-helpers';
 import type { LevelSceneWriter } from '../../systems/levels/level-scene-accessor';
 import { createBimEntityPersistenceHook } from './create-bim-entity-persistence-hook';
@@ -58,6 +64,31 @@ export interface UseImportedMeshPersistenceResult {
 function isImportedMesh(entity: AnySceneEntity): entity is ImportedMeshEntity {
   return (entity as { type?: string }).type === 'imported-mesh';
 }
+
+const boqLifecycle = createBimBoqAuditLifecycle<ImportedMeshEntity>({
+  boqType: 'imported-mesh',
+  recordChange: recordImportedMeshChange,
+  deletedFallbackKind: 'imported',
+  // Τα μεγέθη περνούν μετρημένα από την εισαγωγή· το `params` χρειάζεται ώστε ο resolver να βρει
+  // την ανατεθειμένη ταυτότητα — αυτή είναι ο διαχωριστής αυτού του τύπου.
+  boqPayload: importedMeshBoqPayload,
+});
+
+/**
+ * ADR-683 Φ3.1 — ο κοινός lifecycle, συν **μία** περίπτωση που δεν καλύπτει: την **αφαίρεση**
+ * ανάθεσης. Χωρίς ταυτότητα το mapping γίνεται `null`, οπότε το upsert σιωπηλά δεν κάνει τίποτα
+ * και η προηγούμενη γραμμή θα έμενε ορφανή στην προμέτρηση, με το παλιό κόστος να μετράει για
+ * πάντα. Η αποσύνδεση είναι πράξη του χρήστη· οφείλει να έχει αποτέλεσμα.
+ */
+const importedMeshBoqLifecycle: typeof boqLifecycle = {
+  ...boqLifecycle,
+  onPersisted: (entity, info) => {
+    boqLifecycle.onPersisted(entity, info);
+    if (!hasBoqIdentity(entity.params) && info.scope.companyId) {
+      void bimToBoqBridge.deleteBoqItemForBim(entity.id, info.scope.companyId);
+    }
+  },
+};
 
 const useImportedMeshPersistenceBase = createBimEntityPersistenceHook<
   ImportedMeshFirestoreService,
@@ -99,22 +130,12 @@ const useImportedMeshPersistenceBase = createBimEntityPersistenceHook<
     event: 'bim:imported-mesh-delete-requested',
     getId: (p) => (p as { importedMeshId?: string }).importedMeshId,
   },
-  onPersisted: (entity, { isNew, prevComparable }) => {
-    recordImportedMeshChange(isNew ? 'created' : 'updated', entity, {
-      prevParams: prevComparable ?? undefined,
-    });
-  },
-  onDeleted: (id, deleted) => {
-    recordImportedMeshChange(
-      'deleted',
-      deleted
-        ? { id: deleted.id, kind: deleted.kind, layerId: deleted.layerId, params: deleted.params }
-        : { id },
-    );
-  },
-  onRestored: (entity) => {
-    recordImportedMeshChange('restored', entity);
-  },
+  // ADR-683 Φ3.1 — audit + BOQ auto-feed μέσω του κοινού lifecycle (ADR-628), **όχι** χειρόγραφα.
+  //
+  // ⚠️ Το προφανές πρότυπο για αντιγραφή θα ήταν το `useRailingPersistence`, που όμως έχει κενό:
+  // το `onDeleted` του κάνει μόνο audit και **αφήνει ορφανή** τη γραμμή BOQ. Ο helper κάνει και
+  // τα τρία σωστά (audit + upsert + delete), οπότε το κενό δεν κληρονομείται εδώ.
+  ...importedMeshBoqLifecycle,
 });
 
 export function useImportedMeshPersistence(
