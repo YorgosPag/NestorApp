@@ -12,6 +12,7 @@ import {
   serialiseManifest,
   parseExportManifest,
   indexManifestByMeshName,
+  indexManifestMaterials,
   manifestFingerprint,
   NESTOR_MANIFEST_SCHEMA,
 } from '../export-manifest';
@@ -115,6 +116,47 @@ describe('indexManifestByMeshName', () => {
     root.add(namedMesh('', { bimId: 'x-1' }));
 
     expect(indexManifestByMeshName(buildExportManifest(root, OPTIONS)).size).toBe(0);
+  });
+});
+
+describe('material baseline (ADR-683 §7, Break C)', () => {
+  it('serialises the per-material baseline colour map (name → sRGB hex)', () => {
+    const baseline = new Map([['mat-concrete-c25', '#808080'], ['mat_a1b2c3', '#a1b2c3']]);
+    const manifest = buildExportManifest(sceneWithWall(), { ...OPTIONS, materialBaseline: baseline });
+
+    expect(manifest.materials).toEqual({ 'mat-concrete-c25': '#808080', 'mat_a1b2c3': '#a1b2c3' });
+  });
+
+  it('defaults to an empty map when no baseline is supplied', () => {
+    expect(buildExportManifest(sceneWithWall(), OPTIONS).materials).toEqual({});
+  });
+
+  it('survives serialise → parse and indexes back to a Map', () => {
+    const baseline = new Map([['mat-concrete-c25', '#808080']]);
+    const parsed = parseExportManifest(
+      serialiseManifest(buildExportManifest(sceneWithWall(), { ...OPTIONS, materialBaseline: baseline })),
+    );
+
+    expect(parsed?.materials).toEqual({ 'mat-concrete-c25': '#808080' });
+    expect(indexManifestMaterials(parsed!).get('mat-concrete-c25')).toBe('#808080');
+  });
+
+  it('parses a legacy manifest (no `materials` field) as an empty map — backward compatible', () => {
+    const text = JSON.stringify({ schema: NESTOR_MANIFEST_SCHEMA, entities: [] });
+    const parsed = parseExportManifest(text);
+
+    expect(parsed?.materials).toEqual({});
+    expect(indexManifestMaterials(parsed!).size).toBe(0);
+  });
+
+  it('drops non-string material entries (fail-closed)', () => {
+    const text = JSON.stringify({
+      schema: NESTOR_MANIFEST_SCHEMA,
+      entities: [],
+      materials: { 'mat-ok': '#123456', 'mat-bad': 42, 'mat-null': null },
+    });
+
+    expect(parseExportManifest(text)?.materials).toEqual({ 'mat-ok': '#123456' });
   });
 });
 

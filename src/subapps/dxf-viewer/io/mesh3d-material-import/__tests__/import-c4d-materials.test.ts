@@ -4,8 +4,9 @@
  */
 
 import type { LevelsHookReturn } from '../../../systems/levels/useLevels';
-import { importC4dMaterials } from '../import-c4d-materials';
+import { importC4dMaterials, applyImportedAppearance } from '../import-c4d-materials';
 import { buildKnownMaterialResolver } from '../known-import-materials';
+import type { ImportedMaterial } from '../obj-mtl-parse';
 
 /** Static-catalog resolver (wall-covering paint-red κ.λπ.)· κανένα library υλικό εδώ. */
 const resolveKnownId = buildKnownMaterialResolver();
@@ -89,5 +90,27 @@ describe('importC4dMaterials (orchestrator)', () => {
     }, resolveKnownId);
     expect(result.appliedCount).toBe(0);
     expect(mockCapture.executed).toBeNull();
+  });
+
+  it('ADR-683 Break C — the manifest baseline reaches the body paint path (glTF)', () => {
+    // ο συνεργάτης ξαναέβαψε το DNA υλικό του τοίχου, κρατώντας το όνομα — χωρίς baseline θα ήταν no-op.
+    const materials: ReadonlyMap<string, ImportedMaterial> = new Map([
+      ['mat-concrete-c25', { name: 'mat-concrete-c25', colorHex: '#cc2200', opacity: 1 }],
+    ]);
+    const result = applyImportedAppearance(
+      fakeLevels(),
+      {
+        objects: [{ objectName: 'Wall_w-42', materialName: 'mat-concrete-c25' }],
+        materials,
+        charset: 'unicode',
+        baseline: new Map([['mat-concrete-c25', '#808080']]),
+      },
+      resolveKnownId,
+    );
+
+    expect(result.appliedCount).toBe(1);
+    expect(mockCapture.executed).toMatchObject({
+      entityId: 'w-42', faceKey: '*', value: { colorHex: '#cc2200' },
+    });
   });
 });

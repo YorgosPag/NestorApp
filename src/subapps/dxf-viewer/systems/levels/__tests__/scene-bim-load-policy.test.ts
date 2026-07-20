@@ -19,6 +19,7 @@ jest.mock('../../entity-creation/utils', () => {
 
 import {
   reconcileLoadedSceneBim,
+  reconcileLoadedSceneBimPreserving,
   isPerEntityPersistedEntity,
   stripForeignFloorBim,
   replaceFootingsFromModel,
@@ -110,6 +111,43 @@ describe('reconcileLoadedSceneBim', () => {
     const result = reconcileLoadedSceneBim(loaded, existing);
     // snapshot hatch dropped, DXF kept, in-memory (DB-sourced) hatch preserved.
     expect(result.entities.map((e) => e.id).sort()).toEqual(['h_db', 'l1']);
+  });
+});
+
+describe('reconcileLoadedSceneBimPreserving (ADR-635 Φ C.18 — keep no-doc per-entity)', () => {
+  it('keeps loaded per-entity entities whose id ∈ keepIds; drops the rest', () => {
+    // h_missing has no Firestore doc (server-wizard import) → kept; h_hasdoc has one → dropped.
+    const loaded = scene([ent('l1', 'line'), ent('h_missing', 'hatch'), ent('h_hasdoc', 'hatch')]);
+    const result = reconcileLoadedSceneBimPreserving(loaded, null, new Set(['h_missing']));
+    expect(result.entities.map((e) => e.id).sort()).toEqual(['h_missing', 'l1']);
+  });
+
+  it('empty keepIds ⇒ identical to reconcileLoadedSceneBim (delegation)', () => {
+    const loaded = scene([ent('l1', 'line'), ent('c1', 'column'), ent('h1', 'hatch')]);
+    const preserving = reconcileLoadedSceneBimPreserving(loaded, null, new Set());
+    const base = reconcileLoadedSceneBim(loaded, null);
+    expect(preserving.entities.map((e) => e.id)).toEqual(base.entities.map((e) => e.id));
+  });
+
+  it('unions kept blob hatches with preserved in-memory BIM (dedup-by-id)', () => {
+    const loaded = scene([ent('l1', 'line'), ent('h_missing', 'hatch'), ent('col_stale', 'column')]);
+    const existing = scene([ent('col_db', 'column'), ent('h_missing', 'hatch')]);
+    // keep h_missing from blob; snapshot column dropped; in-memory col_db preserved;
+    // the in-memory h_missing must NOT double (kept blob copy wins by id).
+    const result = reconcileLoadedSceneBimPreserving(loaded, existing, new Set(['h_missing']));
+    expect(result.entities.map((e) => e.id).sort()).toEqual(['col_db', 'h_missing', 'l1']);
+    // the kept h_missing is the BLOB copy, not the in-memory one.
+    expect(result.entities.find((e) => e.id === 'h_missing')).toBe(
+      loaded.entities.find((e) => e.id === 'h_missing'),
+    );
+  });
+
+  it('DXF id wins over a kept per-entity id collision (no duplicate id emitted)', () => {
+    const loaded = scene([ent('dup', 'line'), ent('dup', 'hatch')]);
+    const result = reconcileLoadedSceneBimPreserving(loaded, null, new Set(['dup']));
+    // The kept hatch collides in id with the DXF line → filtered; only the DXF wins.
+    expect(result.entities).toHaveLength(1);
+    expect(result.entities[0].type).toBe('line');
   });
 });
 

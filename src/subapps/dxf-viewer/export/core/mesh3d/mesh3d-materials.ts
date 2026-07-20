@@ -96,6 +96,29 @@ export function assignExportMaterials(
 }
 
 /**
+ * ADR-683 §7 — το **baseline χρώμα ανά υλικό** για το manifest: `καθαρό όνομα → sRGB "#rrggbb"`.
+ * Ο import συγκρίνει το πραγματικό χρώμα του επιστρεφόμενου υλικού με αυτό ώστε να ξεχωρίσει
+ * «ο συνεργάτης ξαναέβαψε» από «αμετάβλητο» — χωρίς lossy reverse-parse ονόματος (βλ.
+ * `resolve-import-appearance::detectRepaint`).
+ *
+ * **Γιατί strip `HIDDEN_`:** το κρυμμένο υλικό εξάγεται ως `HIDDEN_<name>` (OBJ) αλλά κρατά το
+ * **πραγματικό** του χρώμα· ο import συγκρίνει με το καθαρό όνομα (`stripHiddenPrefix`). Έτσι το
+ * OBJ `{mat-x, HIDDEN_mat-x}` και το glTF `{mat-x}` καταρρέουν στην **ίδια** εγγραφή → baseline
+ * ταυτόσημο ανά format. `getHexString()` = **sRGB** (ίδιος χώρος με το `collectGltfMaterials`).
+ */
+export function buildMaterialBaseline(
+  entries: readonly ExportMaterialEntry[],
+): Map<string, string> {
+  const prefix = `${HIDDEN_NAME_PREFIX}_`;
+  const map = new Map<string, string>();
+  for (const e of entries) {
+    const clean = e.name.startsWith(prefix) ? e.name.slice(prefix.length) : e.name;
+    if (!map.has(clean)) map.set(clean, `#${e.color.getHexString()}`);
+  }
+  return map;
+}
+
+/**
  * Wavefront `.mtl`. `Kd` = diffuse (το χρώμα που βλέπει ο χρήστης στο C4D), `d` = opacity.
  * Ο three δεν γράφει ΠΟΤΕ `.mtl` — αυτός ο writer είναι ο λόγος που το OBJ αποκτά χρώματα.
  */

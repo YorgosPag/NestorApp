@@ -45,6 +45,12 @@ export interface ImportedAppearanceInput {
    * σε ελληνικά ονόματα ορόφων.
    */
   readonly charset: MeshNameCharset;
+  /**
+   * ADR-683 §7 — το manifest baseline (`καθαρό όνομα υλικού → sRGB hex`) από το `.nestor.json`.
+   * Επιτρέπει ανίχνευση repaint που κράτησε το όνομα υλικού (βλ. `resolveImportAppearance`).
+   * **Μόνο glTF** — το OBJ δεν το περνά (colour-space mismatch, βλ. `import-gltf-appearance`).
+   */
+  readonly baseline?: ReadonlyMap<string, string>;
 }
 
 /** Το OBJ+MTL κείμενο + το charset του export (OBJ = 'latin' λόγω C4D R15). */
@@ -109,7 +115,7 @@ export function applyImportedAppearance(
   input: ImportedAppearanceInput,
   resolveKnownId: KnownMaterialResolver,
 ): ImportedAppearanceResult {
-  const { objects, materials: mtl, charset } = input;
+  const { objects, materials: mtl, charset, baseline } = input;
 
   // ADR-678 Φ1.1 — τα merged σοβά-skins (synthetic bimId) δεν κάνουν name-match· δρομολογούνται
   // ξεχωριστά (ομοιόμορφος σοβάς ανά ζώνη), αλλιώς θα έπεφταν άδικα στα «χωρίς αντιστοίχιση».
@@ -120,14 +126,14 @@ export function applyImportedAppearance(
   const { matched, unmatched } = matchObjectsToEntities(bodyObjects, identities, charset);
 
   const bodyChildren = matched.flatMap((m) => {
-    const appearance = resolveImportAppearance(m.materialName, mtl, resolveKnownId);
+    const appearance = resolveImportAppearance(m.materialName, mtl, resolveKnownId, baseline);
     const levelId = levelByBimId.get(m.bimId);
     if (appearance === null || levelId === undefined) return [];
     const adapter = createLevelSceneManagerAdapter(levels.getLevelScene, levels.setLevelScene, levelId);
     return [new SetFaceAppearanceCommand(m.bimId, BASE_FACE_KEY, appearance, adapter)];
   });
 
-  const finish = buildFinishImportCommands(levels, finishObjects, mtl, resolveKnownId);
+  const finish = buildFinishImportCommands(levels, finishObjects, mtl, resolveKnownId, baseline);
   const children: ICommand[] = [...bodyChildren, ...finish.children];
 
   if (children.length > 0) {

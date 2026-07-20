@@ -5,7 +5,15 @@ import { DxfFirestoreService } from '../../../services/dxf-firestore.service';
 import { useAutoSaveSceneManager } from '../../../hooks/scene/useAutoSaveSceneManager';
 import { onSuperAdminActiveCompanyChange } from '@/services/firestore/super-admin-active-company';
 import { isCrossFloorSceneLink } from '../cross-floor-link';
-import { reconcileLoadedSceneBim, ensureUniqueEntityIds } from '../scene-bim-load-policy';
+import {
+  reconcileLoadedSceneBim,
+  reconcileLoadedSceneBimPreserving,
+  ensureUniqueEntityIds,
+} from '../scene-bim-load-policy';
+import {
+  detectMissingPerEntityDocIds,
+  emitBackfillFirstSaves,
+} from '../backfill-missing-per-entity-docs';
 import type { Level } from '../config';
 
 // 🔺 FIXED: Helper για ΠΡΑΓΜΑΤΙΚΑ κενή σκηνή χωρίς default layer
@@ -196,15 +204,33 @@ export function useLevelSceneLoader({
           // raced ahead of the load) so it is never clobbered/lost. The snapshot is
           // unchanged on save → multi-floor 3D (ADR-399) keeps reading other floors'
           // BIM from their snapshots.
+          // 🛡️ ADR-635 Φ C.18 — server-wizard import (Door B) never first-saves its
+          // per-entity entities (hatches), so on reload reconcile would drop them with
+          // no doc to repopulate (117 hatches vanished, incident 2026-07-20). Detect the
+          // no-doc ids up-front (read-only batch existence check), KEEP those visible via
+          // the preserving reconcile, and emit their first-save below. Entities that DO
+          // have docs stay out of `missing` → dropped as usual → refilled from the SSoT.
+          const missingDocIds = await detectMissingPerEntityDocIds(fileRecord.scene);
+          if (abortController.signal.aborted) return;
           // ADR-578 — heal legacy duplicate entity ids (Revit «Audit»-on-open)
           // before applying. Same-reference no-op for clean scenes.
           const reconciled = ensureUniqueEntityIds(
-            reconcileLoadedSceneBim(
+            reconcileLoadedSceneBimPreserving(
               fileRecord.scene,
               sceneManager.getLevelScene(currentLevelId),
+              missingDocIds,
             ),
           );
           sceneManager.setLevelScene(currentLevelId, reconciled, 'load');
+          // 🛡️ ADR-635 Φ C.18 — first-save the no-doc entities with an EXPLICIT target
+          // scope (Φ C.16), so the write lands on THIS floor independently of the
+          // persistence host's render timing. `isCrossFloorSceneLink` (above) already
+          // guaranteed `fileRecord` belongs to `level.floorId`, so the scope is trusted.
+          emitBackfillFirstSaves(fileRecord.scene, missingDocIds, {
+            levelId: currentLevelId,
+            floorId: level?.floorId ?? (fileRecord.entityType === 'floor' ? fileRecord.entityId : null),
+            floorplanId: sceneFileId,
+          });
           // Set the filename for auto-save context
           if (fileRecord.fileName && sceneManager.setCurrentFileName) {
             sceneManager.setCurrentFileName(fileRecord.fileName);

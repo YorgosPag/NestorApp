@@ -38,6 +38,7 @@ import { projectVerticesTo2D } from '../geometry/shared/polygon-utils';
 import type { Point2D } from '../../rendering/types/Types';
 import type { HatchEntity, HatchImageFill } from '../../types/entities';
 import type { HatchGradient } from './hatch-gradient';
+import type { HatchPattern } from '../../data/hatch-pattern-catalog';
 
 // ============================================================================
 // TYPES
@@ -91,6 +92,13 @@ export interface HatchDocData {
    * (δεν είναι scalar key → structurally excluded από το pickHatchData allowlist).
    */
   readonly imageFill?: HatchImageFill;
+  /**
+   * ADR-635 Φ C.18 — inline (imported) PAT μοτίβο για third-party DXF εκτός catalog
+   * (ADR-507 Φ6). Flat map (`name`/`labelKey`/`category` + `lines` = array-of-maps) →
+   * Firestore-legal αυτούσιο. Χωρίς αυτό, μια εισαγόμενη γραμμοσκίαση (π.χ. `HEX`) έχανε
+   * το μοτίβο της στο reload γιατί το `patternName` δεν υπάρχει στον catalog.
+   */
+  readonly inlinePattern?: HatchPattern;
 }
 
 export interface HatchDoc {
@@ -144,6 +152,12 @@ const HATCH_SCALAR_KEYS: readonly (keyof HatchDocData)[] = [
   // ADR-643 — image-fill = flat object (assetId + tile params + grout) → ίδιος μηχανισμός.
   // Το export-only `dxfImageExport` marker ΕΠΙΤΗΔΕΣ ΛΕΙΠΕΙ (allowlist → ποτέ persisted).
   'imageFill',
+  // ADR-635 Φ C.18 — inline (imported) PAT μοτίβο για third-party DXF εκτός catalog
+  // (ADR-507 Φ6). Οι εισαγόμενες γραμμοσκιάσεις το φέρουν (π.χ. `patternName:'HEX'` +
+  // `inlinePattern.lines[]`)· χωρίς αυτό, μια σωσμένη γραμμοσκίαση ΧΑΝΕΙ το μοτίβο της
+  // στο reload. Firestore-legal: `lines` = array-of-maps (τα nested `origin`/`delta`/
+  // `dashes` arrays ζουν κάτω από map key, ποτέ array-μέσα-σε-array).
+  'inlinePattern',
 ];
 
 /** Runtime hatch shape consumed on the write side (boundaryPaths = Point2D[][]). */

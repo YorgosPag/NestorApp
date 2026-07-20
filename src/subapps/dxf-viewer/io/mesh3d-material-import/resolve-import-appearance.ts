@@ -61,9 +61,34 @@ function hexColorFromName(name: string): string | null {
 }
 
 /**
+ * ADR-683 §7 — «αμετάβλητο DNA» ΑΛΛΑ ο συνεργάτης το ξαναέβαψε κρατώντας το όνομα (Blender/glTF).
+ * Το manifest baseline (`καθαρό όνομα → sRGB hex`) δίνει το εξαχθέν χρώμα· αν το πραγματικό χρώμα
+ * του επιστρεφόμενου υλικού διαφέρει → **βάφτηκε** → flat `{ colorHex }`. Ίσο ή απόν baseline →
+ * `null` (η προ-baseline ΡΙΖΑ 2: αμετάβλητο = no-op — μηδέν regression για OBJ/χωρίς sidecar).
+ *
+ * ⚠️ Χρησιμοποιείται **μόνο** στο glTF μονοπάτι: εκεί το πραγματικό χρώμα (`collectGltfMaterials`)
+ * και το baseline είναι **sRGB** (`getHexString`), άρα συγκρίσιμα. Το OBJ `.mtl` `Kd` είναι linear
+ * → δεν περνά baseline (θα έδινε false-positive).
+ */
+function detectRepaint(
+  clean: string,
+  materialName: string,
+  mtl: ReadonlyMap<string, ImportedMaterial>,
+  exportedBaseline: ReadonlyMap<string, string> | undefined,
+): FaceAppearance | null {
+  const baseHex = exportedBaseline?.get(clean);
+  const actual = mtl.get(materialName) ?? mtl.get(clean);
+  if (baseHex && actual && actual.colorHex.toLowerCase() !== baseHex.toLowerCase()) {
+    return { colorHex: actual.colorHex };
+  }
+  return null;
+}
+
+/**
  * `materialName` (από το OBJ `usemtl`) + ο πίνακας `.mtl` + ο `resolveKnownId` → `FaceAppearance`
  * ή `null` (καμία αλλαγή).
- *   0. αρχικό DNA του Νέστορα (αμετάβλητο) → `null` (ΡΙΖΑ 2 — no-op, μηδέν άχρηστο override).
+ *   0. αρχικό DNA του Νέστορα (αμετάβλητο) → `null` — ΕΚΤΟΣ αν το manifest baseline δείχνει repaint
+ *      (ADR-683 §7, `detectRepaint`) → `{ colorHex }`.
  *   1. γνωστό υλικό (catalog/library, by id ή όνομα) → `{ materialId }` (χρώμα κεντρικά, οδηγεί BOQ).
  *   2. `Kd` χρώμα από το `.mtl` → `{ colorHex }`.
  *   3. hex στο όνομα (C4D R15 χωρίς `.mtl`) → `{ colorHex }`.
@@ -73,11 +98,12 @@ export function resolveImportAppearance(
   materialName: string | null,
   mtl: ReadonlyMap<string, ImportedMaterial>,
   resolveKnownId: KnownMaterialResolver,
+  exportedBaseline?: ReadonlyMap<string, string>,
 ): FaceAppearance | null {
   if (materialName === null) return null;
   const clean = stripHiddenPrefix(materialName);
 
-  if (isUnchangedNestorMaterial(clean)) return null;
+  if (isUnchangedNestorMaterial(clean)) return detectRepaint(clean, materialName, mtl, exportedBaseline);
 
   const knownId = resolveKnownId(clean);
   if (knownId) return { materialId: knownId };

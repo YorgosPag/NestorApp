@@ -17,7 +17,7 @@ import type { ResolvedExportFloor } from '../core/export-floor-scope';
 import type { ExportArtifact, ExportDeps, ExportLengthUnit, Mesh3dFormat } from '../types';
 import { buildFloorFilename } from './dxf-export-adapter';
 import { buildMesh3dScene } from '../core/mesh3d/build-mesh3d-scene';
-import { assignExportMaterials, writeMtl } from '../core/mesh3d/mesh3d-materials';
+import { assignExportMaterials, buildMaterialBaseline, writeMtl } from '../core/mesh3d/mesh3d-materials';
 import { applyExportUnit, nameMeshesForExport } from '../core/mesh3d/mesh3d-prepare';
 import type { MeshNameCharset } from '../core/mesh3d/mesh3d-naming';
 import { injectMtlLib, serialiseGlb, serialiseObj } from '../core/mesh3d/mesh3d-serialise';
@@ -79,17 +79,25 @@ export async function exportFloorsToMesh3d(
     charset: charsetFor(options.format),
   });
 
-  // ADR-683 §7 — το manifest χτίζεται ΕΔΩ, στο κοινό σημείο: **μετά** την ονοματοδοσία (αλλιώς
-  // τα `meshName` είναι κενά) και **πριν** το `applyExportUnit` του OBJ (αλλιώς τα fingerprints
-  // δεν είναι σε μέτρα και το ίδιο μοντέλο θα έδινε άλλο hash ανά επιλογή μονάδας). Ένα σημείο
-  // κλήσης για δύο formats ⇒ OBJ και GLB δεν μπορούν να αποκλίνουν.
-  const manifestArtifact = buildManifestArtifact(root, deps, options);
+  // ADR-683 §7 — ονοματοδοσία υλικών στο **κοινό** μονοπάτι (όπως ήδη το `nameMeshesForExport`),
+  // ώστε το glTF να αποκτήσει ονομασμένα υλικά (χωρίς αυτά ο import δεν ταιριάζει τίποτα με όνομα).
+  // glTF ⇒ **κενό hidden set**: τα κρυμμένα ταξιδεύουν μέσω ονόματος κόμβου, όχι μέσω διαφανούς
+  // υλικού (glTF 2.0 core δεν έχει ορατότητα)· έτσι κανένα `HIDDEN_` prefix/transparency στα glTF
+  // υλικά. OBJ ⇒ πραγματικό hidden set (transparency + `.mtl`). Το χρώμα βάσης είναι ανεξάρτητο
+  // του hidden flag, οπότε το baseline βγαίνει ταυτόσημο ανά format.
+  const materials = assignExportMaterials(
+    root,
+    options.format === 'gltf' ? new Set<string>() : hiddenEntityIds,
+  );
+  const materialBaseline = buildMaterialBaseline(materials);
+
+  // Το manifest χτίζεται ΕΔΩ: **μετά** ονοματοδοσία (mesh + υλικών) και **πριν** το `applyExportUnit`
+  // του OBJ (αλλιώς τα fingerprints δεν είναι σε μέτρα). Ένα σημείο για δύο formats ⇒ μηδέν απόκλιση.
+  const manifestArtifact = buildManifestArtifact(root, deps, options, materialBaseline);
 
   if (options.format === 'gltf') {
-    // glTF: μέτρα by spec — καμία κλίμακα. Πραγματικό δέντρο + υλικά ταξιδεύουν εγγενώς.
-    // Τα κρυμμένα φέρουν μόνο το `HIDDEN_` όνομα: το glTF 2.0 core δεν έχει ορατότητα και ο
-    // GLTFExporter δεν γράφει ποτέ `KHR_node_visibility` (μετρημένο) — άρα δεν υπάρχει flag
-    // να γραφτεί, ούτε λόγος να νοθεύσουμε τα υλικά ενός format που τα κουβαλά σωστά.
+    // glTF: μέτρα by spec — καμία κλίμακα. Πραγματικό δέντρο + (πλέον ονομασμένα) υλικά ταξιδεύουν
+    // εγγενώς μέσα στο `.glb`.
     const buffer = await serialiseGlb(root);
     const filename = buildFloorFilename(options.baseName, options.filenamePart, 'glb');
     return {
@@ -101,8 +109,7 @@ export async function exportFloorsToMesh3d(
     };
   }
 
-  // OBJ: το format δεν κουβαλά ούτε μονάδα ούτε υλικά — τα προσθέτουμε εμείς.
-  const materials = assignExportMaterials(root, hiddenEntityIds);
+  // OBJ: το format δεν κουβαλά μονάδα — την προσθέτουμε εμείς (τα υλικά ονοματίστηκαν παραπάνω).
   applyExportUnit(root, options.unit);
 
   const objName = buildFloorFilename(options.baseName, options.filenamePart, 'obj');
@@ -132,12 +139,14 @@ function buildManifestArtifact(
   root: THREE.Object3D,
   deps: ExportDeps,
   options: Mesh3dExportOptions,
+  materialBaseline: ReadonlyMap<string, string>,
 ): ExportArtifact {
   const manifest = buildExportManifest(root, {
     exportedAt: new Date().toISOString(),
     projectName: options.baseName,
     buildingId: deps.activeBuildingId ?? null,
     unit: options.format === 'gltf' ? 'meters' : options.unit,
+    materialBaseline,
   });
   return {
     filename: buildFloorFilename(options.baseName, options.filenamePart, NESTOR_MANIFEST_EXT),

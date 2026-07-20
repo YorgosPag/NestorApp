@@ -143,4 +143,38 @@ describe('buildFinishImportCommands', () => {
     expect(memberCount).toBe(0);
     expect(children).toHaveLength(0);
   });
+
+  it('ADR-683 Break C — repaints a DNA finish material when the baseline shows a colour change', () => {
+    // ο συνεργάτης ξαναέβαψε τον σοβά (DNA name mat-plaster-ext) σε κόκκινο, κρατώντας το όνομα.
+    const repaintedMtl: ReadonlyMap<string, ImportedMaterial> = new Map([
+      ['mat-plaster-ext', { name: 'mat-plaster-ext', colorHex: '#cc2200', opacity: 1 }],
+    ]);
+    const baseline = new Map([['mat-plaster-ext', '#d9cfa8']]); // εξαχθέν χρώμα σοβά
+    const { children, memberCount } = buildFinishImportCommands(
+      fakeLevels(),
+      [finishObj('Column_structural-finish-b1', 'mat-plaster-ext')],
+      repaintedMtl,
+      resolveKnownId,
+      baseline,
+    );
+    // col-1 (4) + beam-1 (4) = 8 πλευρές, όλες με το νέο flat χρώμα.
+    expect(memberCount).toBe(2);
+    const c = children as unknown as Array<{ value: unknown }>;
+    expect(c[0].value).toEqual({ colorOverride: '#cc2200' });
+  });
+
+  it('stays a no-op when the baseline colour matches (truly unchanged σοβάς)', () => {
+    const sameMtl: ReadonlyMap<string, ImportedMaterial> = new Map([
+      ['mat-plaster-ext', { name: 'mat-plaster-ext', colorHex: '#d9cfa8', opacity: 1 }],
+    ]);
+    const baseline = new Map([['mat-plaster-ext', '#d9cfa8']]);
+    const { children } = buildFinishImportCommands(
+      fakeLevels(),
+      [finishObj('Column_structural-finish-b1', 'mat-plaster-ext')],
+      sameMtl,
+      resolveKnownId,
+      baseline,
+    );
+    expect(children).toHaveLength(0);
+  });
 });

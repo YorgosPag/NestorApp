@@ -98,6 +98,26 @@ describe('groupImportedMeshesByUpload', () => {
   it('επιστρέφει κενό για κενή σκηνή', () => {
     expect(groupImportedMeshesByUpload([])).toEqual([]);
   });
+
+  // Το ίδιο .glb εισαγμένο δύο φορές — επιβεβαιωμένο στην οθόνη (Giorgio, 2026-07-20). Μέχρι τη
+  // Φ4 καμία εισαγωγή δεν αντικαθιστά, οπότε οι διπλές κεφαλίδες είναι κανονική κατάσταση.
+  it('αριθμεί ομάδες που μοιράζονται όνομα αρχείου', () => {
+    const groups = groupImportedMeshesByUpload([
+      mesh('e1', 'node_id5', 'imesh_A', 'Ισόγειο-2.glb'),
+      mesh('e2', 'node_id5', 'imesh_B', 'Ισόγειο-2.glb'),
+    ]);
+
+    expect(groups.map((g) => g.duplicateIndex)).toEqual([1, 2]);
+  });
+
+  it('δεν αριθμεί όταν το όνομα αρχείου είναι μοναδικό', () => {
+    const groups = groupImportedMeshesByUpload([
+      mesh('e1', 'n1', 'imesh_A', 'a.glb'),
+      mesh('e2', 'n2', 'imesh_B', 'b.glb'),
+    ]);
+
+    expect(groups.every((g) => g.duplicateIndex === null)).toBe(true);
+  });
 });
 
 describe('totalUnassigned', () => {

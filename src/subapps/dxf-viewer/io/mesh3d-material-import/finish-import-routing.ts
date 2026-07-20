@@ -109,10 +109,11 @@ function buildTypeOverrides(
   finishObjects: readonly ObjectMaterialAssignment[],
   mtl: ReadonlyMap<string, ImportedMaterial>,
   resolveKnownId: KnownMaterialResolver,
+  baseline: ReadonlyMap<string, string> | undefined,
 ): Map<FinishMemberType, FinishFaceOverride> {
   const byType = new Map<FinishMemberType, FinishFaceOverride>();
   for (const obj of finishObjects) {
-    const appearance = resolveImportAppearance(obj.materialName, mtl, resolveKnownId);
+    const appearance = resolveImportAppearance(obj.materialName, mtl, resolveKnownId, baseline);
     if (!appearance) continue;
     const override = appearanceToFinishOverride(appearance);
     if (!override) continue;
@@ -145,8 +146,9 @@ export function buildFinishImportCommands(
   finishObjects: readonly ObjectMaterialAssignment[],
   mtl: ReadonlyMap<string, ImportedMaterial>,
   resolveKnownId: KnownMaterialResolver,
+  baseline?: ReadonlyMap<string, string>,
 ): FinishImportResult {
-  const byType = buildTypeOverrides(finishObjects, mtl, resolveKnownId);
+  const byType = buildTypeOverrides(finishObjects, mtl, resolveKnownId, baseline);
   if (byType.size === 0) return { children: [], memberCount: 0 };
 
   const children: ICommand[] = [];

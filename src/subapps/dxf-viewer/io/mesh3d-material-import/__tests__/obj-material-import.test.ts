@@ -177,3 +177,53 @@ describe('resolveImportAppearance — skips unchanged Nestor DNA (ΡΙΖΑ 2)', 
     expect(resolveImportAppearance('HIDDEN_mat-concrete-c25', mtl, resolveKnownId)).toBeNull();
   });
 });
+
+describe('resolveImportAppearance — manifest baseline repaint detection (ADR-683 §7, Break C)', () => {
+  const resolveKnownId = buildKnownMaterialResolver();
+
+  it('flags a repainted DNA material when the actual glTF colour ≠ exported baseline', () => {
+    // ο συνεργάτης άλλαξε το χρώμα του mat-concrete-c25 σε κόκκινο ΑΛΛΑ κράτησε το όνομα
+    const mtl = parseMtl('newmtl mat-concrete-c25\nKd 0.8 0.1 0.1\n'); // #cc1a1a-ish
+    const baseline = new Map([['mat-concrete-c25', '#808080']]);
+    expect(resolveImportAppearance('mat-concrete-c25', mtl, resolveKnownId, baseline))
+      .toEqual({ colorHex: mtl.get('mat-concrete-c25')?.colorHex });
+  });
+
+  it('flags a repainted mat_<hex6> fallback material via baseline', () => {
+    const mtl = parseMtl('newmtl mat_808080\nKd 0.8 0.1 0.1\n');
+    const baseline = new Map([['mat_808080', '#808080']]);
+    expect(resolveImportAppearance('mat_808080', mtl, resolveKnownId, baseline))
+      .toEqual({ colorHex: mtl.get('mat_808080')?.colorHex });
+  });
+
+  it('returns null when the actual colour EQUALS the baseline (truly unchanged)', () => {
+    const mtl = parseMtl('newmtl mat_808080\nKd 0.501961 0.501961 0.501961\n'); // = #808080
+    const baseline = new Map([['mat_808080', '#808080']]);
+    expect(resolveImportAppearance('mat_808080', mtl, resolveKnownId, baseline)).toBeNull();
+  });
+
+  it('is case-insensitive on the hex comparison', () => {
+    const mtl = parseMtl('newmtl mat_808080\nKd 0.501961 0.501961 0.501961\n');
+    const baseline = new Map([['mat_808080', '#808080'.toUpperCase()]]);
+    expect(resolveImportAppearance('mat_808080', mtl, resolveKnownId, baseline)).toBeNull();
+  });
+
+  it('strips HIDDEN_ before the baseline lookup (baseline keyed by clean name)', () => {
+    const mtl = parseMtl('newmtl HIDDEN_mat-concrete-c25\nKd 0.8 0.1 0.1\n');
+    const baseline = new Map([['mat-concrete-c25', '#808080']]);
+    expect(resolveImportAppearance('HIDDEN_mat-concrete-c25', mtl, resolveKnownId, baseline))
+      .toEqual({ colorHex: mtl.get('HIDDEN_mat-concrete-c25')?.colorHex });
+  });
+
+  it('falls back to current no-op when no baseline is supplied (backward compatible)', () => {
+    const mtl = parseMtl('newmtl mat_808080\nKd 0.8 0.1 0.1\n');
+    expect(resolveImportAppearance('mat_808080', mtl, resolveKnownId)).toBeNull();
+    expect(resolveImportAppearance('mat_808080', mtl, resolveKnownId, undefined)).toBeNull();
+  });
+
+  it('returns null when the material name is not in the baseline map', () => {
+    const mtl = parseMtl('newmtl mat_808080\nKd 0.8 0.1 0.1\n');
+    const baseline = new Map([['mat-other', '#808080']]);
+    expect(resolveImportAppearance('mat_808080', mtl, resolveKnownId, baseline)).toBeNull();
+  });
+});

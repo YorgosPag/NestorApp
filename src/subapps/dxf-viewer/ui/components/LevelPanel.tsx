@@ -24,6 +24,7 @@ import type { LevelPanelProps, EditingMode } from './level-panel-types';
 import { entityTypeToFloorplanType, buildDuplicateDestinations } from './level-panel-helpers';
 import type { SceneModel } from '../../types/scene';
 import { useLevels } from '../../systems/levels';
+import { commitImportedScene } from '../../systems/levels/commit-imported-scene';
 import { countSceneEntities } from '../../utils/scene-entity-count';
 import { orderLevelsForPanel } from '../../systems/levels/level-display-order';
 import { resolveActiveBuildingId } from '../../systems/levels/level-floor-resolution';
@@ -73,6 +74,7 @@ export function LevelPanel({
     getLevelScene,
     setLevelScene,
     linkLevelToFloor,
+    linkSceneToLevel,
     updateLevelContext,
   } = useLevels();
 
@@ -418,7 +420,24 @@ export function LevelPanel({
           if (!currentLevelId) return;
           const record = await DxfFirestoreService.loadFromStorage(fileId);
           if (!record?.scene) throw new Error(t('panels.levels.storagePicker.error'));
-          setLevelScene(currentLevelId, record.scene);
+          // 🛡️ ADR-635 Φ C.18 — route the load-wizard through the SSoT import door
+          // (N.18, reuse) instead of a raw `setLevelScene`: the raw write was
+          // session-only (no per-entity first-save → hatches vanished on reload, no
+          // file-link → scene lost on hard refresh). `commitImportedScene` first-saves
+          // the per-entity docs and links the file to the level.
+          commitImportedScene(record.scene, {
+            targetLevelId: currentLevelId,
+            scope: {
+              levelId: currentLevelId,
+              floorId: currentLevel?.floorId ?? null,
+              floorplanId: fileId,
+            },
+            getLevelScene,
+            setLevelScene,
+            linkSceneFileToLevel: () => {
+              void linkSceneToLevel(currentLevelId, fileId, record.fileName ?? fileId);
+            },
+          });
         }}
       />
       {onSceneImported && (

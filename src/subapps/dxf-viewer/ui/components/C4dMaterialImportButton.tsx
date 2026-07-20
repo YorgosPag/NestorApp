@@ -35,11 +35,18 @@ import { importGltfAppearance } from '../../io/mesh3d-roundtrip/import-gltf-appe
 import { buildKnownMaterialResolver } from '../../io/mesh3d-material-import/known-import-materials';
 import type { GltfObjectRecord } from '../../io/mesh3d-roundtrip/gltf-scene-parse';
 import { isImportableNode } from '../../io/mesh3d-roundtrip/import-gltf-meshes';
+import { parseExportManifest, indexManifestMaterials } from '../../io/mesh3d-roundtrip/export-manifest';
 import { ImportedMeshImportDialog } from './imported-mesh/ImportedMeshImportDialog';
 
 /** Τι βρέθηκε στην επιλογή του χρήστη — το format καθορίζει και τον τρόπο ανάγνωσης. */
 type ImportPayload =
-  | { readonly kind: 'gltf'; readonly data: ArrayBuffer | string; readonly file: File }
+  | {
+      readonly kind: 'gltf';
+      readonly data: ArrayBuffer | string;
+      readonly file: File;
+      /** ADR-683 §7 — manifest baseline από συνοδό `.nestor.json` (repaint detection). */
+      readonly baseline?: ReadonlyMap<string, string>;
+    }
   | { readonly kind: 'obj'; readonly objText: string; readonly mtlText: string };
 
 /** ADR-683 Φ3β — τι περιμένει απόφαση του χρήστη μετά το parse (κατάσταση D του §5). */
@@ -63,13 +70,32 @@ async function readImportFiles(files: FileList): Promise<ImportPayload | null> {
     const binary = /\.glb$/i.test(gltf.name);
     // Το `File` κρατιέται δίπλα στα bytes: αν ο χρήστης εισαγάγει τους unmatched κόμβους, ανεβαίνει
     // **το ίδιο** αρχείο που αναλύθηκε — όχι δεύτερη ανάγνωση που θα μπορούσε να αποκλίνει.
-    return { kind: 'gltf', data: binary ? await gltf.arrayBuffer() : await gltf.text(), file: gltf };
+    return {
+      kind: 'gltf',
+      data: binary ? await gltf.arrayBuffer() : await gltf.text(),
+      file: gltf,
+      baseline: await readManifestBaseline(list),
+    };
   }
 
   const obj = list.find((f) => /\.obj$/i.test(f.name));
   if (!obj) return null;
   const mtl = list.find((f) => /\.mtl$/i.test(f.name));
   return { kind: 'obj', objText: await obj.text(), mtlText: mtl ? await mtl.text() : '' };
+}
+
+/**
+ * ADR-683 §7 — διαβάζει το συνοδό `.nestor.json` (αν ο χρήστης το επέλεξε) → baseline υλικών
+ * (`όνομα → sRGB hex`) για ανίχνευση repaint. Απόν/μη έγκυρο manifest → `undefined` (no-op:
+ * ο import πέφτει στην προ-baseline συμπεριφορά, καμία αποτυχία).
+ */
+async function readManifestBaseline(
+  list: readonly File[],
+): Promise<ReadonlyMap<string, string> | undefined> {
+  const sidecar = list.find((f) => /\.json$/i.test(f.name));
+  if (!sidecar) return undefined;
+  const manifest = parseExportManifest(await sidecar.text());
+  return manifest ? indexManifestMaterials(manifest) : undefined;
 }
 
 export function C4dMaterialImportButton() {
@@ -112,7 +138,7 @@ export function C4dMaterialImportButton() {
     try {
       // Ένας πυρήνας, δύο wrappers (ADR-683 §8.1) — η διαφορά είναι μόνο parse + charset.
       if (payload.kind === 'gltf') {
-        const gltfResult = await importGltfAppearance(levels, payload.data, resolveKnownId);
+        const gltfResult = await importGltfAppearance(levels, payload.data, resolveKnownId, payload.baseline);
         result = gltfResult.appearance;
         // ADR-683 Φ3β — μόνο το glTF κουβαλά γεωμετρία, άρα μόνο από εκεί μπορεί να προκύψει
         // νέα οντότητα. Ο OBJ δρόμος δεν έχει τι να προσφέρει εδώ (μηδέν κορυφές).
@@ -158,7 +184,7 @@ export function C4dMaterialImportButton() {
       <input
         ref={inputRef}
         type="file"
-        accept=".glb,.gltf,.obj,.mtl"
+        accept=".glb,.gltf,.obj,.mtl,.json"
         multiple
         hidden
         onChange={(e) => { void handleFiles(e.target.files); e.target.value = ''; }}

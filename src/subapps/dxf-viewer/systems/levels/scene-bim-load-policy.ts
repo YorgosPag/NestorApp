@@ -73,6 +73,52 @@ export function reconcileLoadedSceneBim(
 }
 
 /**
+ * ADR-635 Φ C.18 — variant του `reconcileLoadedSceneBim` που ΚΡΑΤΑ επιπλέον όσα
+ * loaded per-entity entities έχουν `id ∈ keepIds` (αντί να τα πετάξει ως derived
+ * cache). Το `keepIds` = εκείνα τα per-entity entities που φορτώθηκαν από το scene
+ * blob ΑΛΛΑ **δεν έχουν backing Firestore doc** (server-wizard import που ποτέ δεν
+ * first-save-άρισε — «Door B»). Χωρίς αυτά, το reconcile θα τα έπεταγε και τίποτα
+ * δεν θα τα ξαναγέμιζε → μόνιμη εξαφάνιση στο reload (117 γραμμοσκιάσεις).
+ *
+ * Τα διατηρημένα είναι η ΜΟΝΑΔΙΚΗ πηγή αλήθειας γι' αυτά τα ids (δεν υπάρχει doc να
+ * γίνει stale), άρα μπαίνουν αμέσως στη σκηνή (no-flash)· ένα παράλληλο first-save
+ * (`emitBackfillFirstSaves`) δημιουργεί το doc τους. Entities με doc ΔΕΝ είναι στο
+ * `keepIds` → στριμώχνονται ως σήμερα → ξαναγεμίζουν από το authoritative doc.
+ *
+ * Delegates στο `reconcileLoadedSceneBim` όταν `keepIds` κενό (ταυτόσημη συμπεριφορά,
+ * μηδέν απόκλιση για το κοινό μονοπάτι). Pure + idempotent.
+ *
+ * @param loaded   Το scene όπως φορτώθηκε από το snapshot.
+ * @param existing Η τρέχουσα in-memory σκηνή (ή null).
+ * @param keepIds  Ids per-entity entities του `loaded` που πρέπει να διατηρηθούν
+ *                 (no-doc backfill set). Dedup ασφάλεια έναντι preserved in-memory BIM.
+ * @see ./backfill-missing-per-entity-docs.ts — ποιος υπολογίζει το `keepIds`.
+ */
+export function reconcileLoadedSceneBimPreserving(
+  loaded: SceneModel,
+  existing: SceneModel | null,
+  keepIds: ReadonlySet<string>,
+): SceneModel {
+  if (keepIds.size === 0) return reconcileLoadedSceneBim(loaded, existing);
+
+  const dxfOnly = loaded.entities.filter((e) => !isPerEntityPersistedEntity(e));
+  // Το DXF προηγείται πάντα (όπως στο base): ένα kept per-entity που συγκρούεται σε id
+  // με DXF entity φιλτράρεται, ώστε να μη δημιουργηθεί διπλό id που το base δεν θα έβγαζε.
+  const dxfIds = new Set(dxfOnly.map((e) => e.id));
+  const keptPerEntity = loaded.entities.filter(
+    (e) => isPerEntityPersistedEntity(e) && keepIds.has(e.id) && !dxfIds.has(e.id),
+  );
+  const preservedBim = existing
+    ? existing.entities.filter((e) => isPerEntityPersistedEntity(e))
+    : [];
+  // Dedup-by-id: τα kept (blob) προηγούνται· ό,τι ήδη κρατήθηκε δεν διπλασιάζεται
+  // από το in-memory preserved BIM.
+  const keptIds = new Set(keptPerEntity.map((e) => e.id));
+  const preserved = preservedBim.filter((e) => !dxfIds.has(e.id) && !keptIds.has(e.id));
+  return { ...loaded, entities: [...dxfOnly, ...keptPerEntity, ...preserved] };
+}
+
+/**
  * ADR-459 Phase 7 — Foreign-floor BIM guard (η write-side συμπληρωματική του
  * `reconcileLoadedSceneBim`). Ένα floor snapshot πρέπει να περιέχει ΜΟΝΟ τα δικά
  * του entities. Cross-level BIM (π.χ. πέδιλο του ορόφου Θεμελίωσης που διέρρευσε

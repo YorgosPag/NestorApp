@@ -209,6 +209,29 @@ describe('materials (.mtl)', () => {
     // Το glTF δεν παίρνει `.mtl` (κουβαλά υλικά εγγενώς) — μόνο το manifest του ADR-683 §7.
     expect(out.artifacts.map((a) => a.filename)).toEqual(['Katoikia.glb', 'Katoikia.nestor.json']);
   });
+
+  it('ADR-683 Break B — NAMES glTF materials too (import matches by material name)', async () => {
+    const root = mockScene([makeMesh({ bimType: 'wall', bimId: 'w-1', matId: 'mat-steel' })]);
+    await exportFloorsToMesh3d([makeFloor('lvl-1', 'Ισόγειο')], DEPS, {
+      format: 'gltf', baseName: 'Katoikia', unit: 'meters', filenamePart: '',
+      prefixMeshesWithFloor: false,
+    });
+
+    // Πριν τη διόρθωση το glTF υλικό έμενε ανώνυμο → μηδέν αντιστοίχιση στον import.
+    expect((root.children[0] as THREE.Mesh).material).toHaveProperty('name', 'mat-steel');
+  });
+
+  it('ADR-683 Break C — the manifest carries the per-material baseline colour', async () => {
+    mockScene([makeMesh({ bimType: 'wall', bimId: 'w-1', matId: 'mat-steel' })]);
+    const out = await exportFloorsToMesh3d([makeFloor('lvl-1', 'Ισόγειο')], DEPS, {
+      format: 'gltf', baseName: 'Katoikia', unit: 'meters', filenamePart: '',
+      prefixMeshesWithFloor: false,
+    });
+    const manifest = JSON.parse(await readText(out.artifacts[1].blob));
+
+    // makeMesh χρησιμοποιεί MeshStandardMaterial({ color: 0xff0000 }) → sRGB #ff0000.
+    expect(manifest.materials).toEqual({ 'mat-steel': '#ff0000' });
+  });
 });
 
 // ── Κρυμμένα: εξάγονται ΟΛΑ, σημαδεμένα (απόφαση Giorgio 2026-07-17) ────────

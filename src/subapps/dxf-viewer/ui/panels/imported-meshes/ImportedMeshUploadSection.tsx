@@ -23,15 +23,22 @@ export interface ImportedMeshUploadSectionProps {
 export function ImportedMeshUploadSection({ group, onSelect }: ImportedMeshUploadSectionProps) {
   const colors = useSemanticColors();
 
+  // Το ίδιο αρχείο μπορεί να έχει εισαχθεί πολλές φορές· χωρίς αρίθμηση οι κεφαλίδες είναι
+  // πανομοιότυπες και ο χρήστης δεν ξεχωρίζει ποια ομάδα είναι ποια.
+  const label =
+    group.duplicateIndex === null
+      ? group.sourceFileName
+      : `${group.sourceFileName} (${group.duplicateIndex})`;
+
   return (
     <article className="flex flex-col gap-1">
       <Tooltip>
         <TooltipTrigger asChild>
           <h4 className={`truncate px-1 text-[11px] font-medium ${colors.text.muted}`}>
-            {group.sourceFileName}
+            {label}
           </h4>
         </TooltipTrigger>
-        <TooltipContent>{group.sourceFileName}</TooltipContent>
+        <TooltipContent>{label}</TooltipContent>
       </Tooltip>
       <ul className="flex flex-col">
         {group.rows.map((row) => (

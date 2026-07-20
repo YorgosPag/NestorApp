@@ -57,6 +57,17 @@ export interface ImportedMeshUploadGroup {
   readonly sourceFileName: string;
   readonly rows: readonly ImportedMeshRow[];
   readonly unassignedCount: number;
+  /**
+   * 1-based σειρά **μόνο** όταν το ίδιο όνομα αρχείου εμφανίζεται σε πάνω από μία εισαγωγή·
+   * αλλιώς `null`.
+   *
+   * ⚠️ Υπάρχει επειδή το ίδιο `.glb` **μπορεί** να εισαχθεί δύο φορές (μέχρι τη Φ4 καμία εισαγωγή
+   * δεν αντικαθιστά — όλες προσθέτουν), και τότε δύο ομάδες έχουν **πανομοιότυπη** κεφαλίδα: ο
+   * χρήστης βλέπει τα ίδια ονόματα κόμβων δύο φορές χωρίς να μπορεί να ξεχωρίσει ποια είναι ποια.
+   * Επιβεβαιώθηκε στην οθόνη (Giorgio, 2026-07-20). Το `uploadId` δεν δείχνεται — δεν λέει τίποτα
+   * σε άνθρωπο· η σειρά εμφάνισης λέει.
+   */
+  readonly duplicateIndex: number | null;
 }
 
 // ─── Εσωτερικά ────────────────────────────────────────────────────────────────
@@ -113,14 +124,38 @@ export function groupImportedMeshesByUpload(
     group.rows.push(toRow(entity.id, params));
   }
 
-  return [...byUpload.entries()]
+  const groups = [...byUpload.entries()]
     .map(([uploadId, group]) => ({
       uploadId,
       sourceFileName: group.sourceFileName,
       rows: [...group.rows].sort(compareRows),
       unassignedCount: group.rows.reduce((n, row) => (row.assigned ? n : n + 1), 0),
+      duplicateIndex: null,
     }))
     .sort(compareGroups);
+
+  return numberDuplicateFileNames(groups);
+}
+
+/**
+ * Αριθμεί τις ομάδες που μοιράζονται όνομα αρχείου, **στη σειρά που εμφανίζονται**. Μοναδικά
+ * ονόματα μένουν `null` ώστε η συνηθισμένη περίπτωση να μη μολύνεται με «(1)».
+ */
+function numberDuplicateFileNames(
+  groups: readonly ImportedMeshUploadGroup[],
+): readonly ImportedMeshUploadGroup[] {
+  const totals = new Map<string, number>();
+  for (const group of groups) {
+    totals.set(group.sourceFileName, (totals.get(group.sourceFileName) ?? 0) + 1);
+  }
+
+  const seen = new Map<string, number>();
+  return groups.map((group) => {
+    if ((totals.get(group.sourceFileName) ?? 0) < 2) return group;
+    const next = (seen.get(group.sourceFileName) ?? 0) + 1;
+    seen.set(group.sourceFileName, next);
+    return { ...group, duplicateIndex: next };
+  });
 }
 
 /** Το συνολικό πλήθος ανανάθετων στις ομάδες — ο αριθμός του badge. */

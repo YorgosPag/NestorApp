@@ -43,16 +43,23 @@ export interface GltfAppearanceImportResult {
   readonly unmatchedRecords: readonly GltfObjectRecord[];
 }
 
-/** Εφαρμόζει την εμφάνιση ενός επιστρεφόμενου `.glb`/`.gltf` στα ζωντανά BIM στοιχεία. */
+/**
+ * Εφαρμόζει την εμφάνιση ενός επιστρεφόμενου `.glb`/`.gltf` στα ζωντανά BIM στοιχεία.
+ *
+ * `baseline` = το manifest baseline (`όνομα υλικού → sRGB hex`) από το συνοδό `.nestor.json`, όταν
+ * ο χρήστης το επιλέξει (ADR-683 §7). Επιτρέπει ανίχνευση repaint που κράτησε το όνομα υλικού
+ * (Blender/glTF). Σωστό **μόνο** στο glTF: εδώ και το πραγματικό χρώμα και το baseline είναι sRGB.
+ */
 export async function importGltfAppearance(
   levels: LevelsHookReturn,
   data: ArrayBuffer | string,
   resolveKnownId: KnownMaterialResolver,
+  baseline?: ReadonlyMap<string, string>,
 ): Promise<GltfAppearanceImportResult> {
   const { objects, materials } = await parseGltfScene(data);
   const appearance = applyImportedAppearance(
     levels,
-    { objects, materials, charset: 'unicode' },
+    { objects, materials, charset: 'unicode', baseline },
     resolveKnownId,
   );
 

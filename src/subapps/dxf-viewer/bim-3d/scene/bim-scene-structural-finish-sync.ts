@@ -141,11 +141,17 @@ export function syncStructuralFinishSkin(
       slabs: g.slabs,
     });
     const sceneUnits = g.columns[0]?.params.sceneUnits ?? g.beams[0]?.params.sceneUnits ?? g.walls[0]?.params.sceneUnits ?? g.slabs[0]?.params.sceneUnits ?? 'mm';
+    // ADR-683 §7 — σταθερή, μη-κενή ταυτότητα ΜΟΝΟ για το όνομα του skin (ο συνεργάτης δεν πρέπει
+    // να δει `structural-finish-` με ξεκρέμαστη παύλα). Ανατεθειμένα/single-building έργα έχουν
+    // κενό `buildingId` (resolveEntityBuilding → ''); πέφτουμε στο ενεργό κτίριο, αλλιώς 'default'.
+    // Το `groups` key και το `userData['buildingId']` ΜΕΝΟΥΝ ως έχουν → μηδέν grouping regression·
+    // τα zone tokens (-hcol-/…) είναι ΠΡΙΝ το id → η δρομολόγηση import δεν επηρεάζεται.
+    const nameId = buildingId || ctx.activeBuildingId || 'default';
     const skin = buildStructuralSilhouetteSkin(
-      bands, sceneUnits, g.baseElevation, ctx.activeLevelId, `structural-finish-${buildingId}`,
+      bands, sceneUnits, g.baseElevation, ctx.activeLevelId, `structural-finish-${nameId}`,
     );
     if (skin) { skin.userData['buildingId'] = buildingId; group.add(skin); }
-    addHorizontalFinish(group, g, entities, ctx, buildingId, sceneUnits, columnExtents, wallTopClipById);
+    addHorizontalFinish(group, g, entities, ctx, buildingId, nameId, sceneUnits, columnExtents, wallTopClipById);
   }
 }
 
@@ -233,7 +239,10 @@ function addHorizontalFinish(
   g: { baseElevation: number; columns: ColumnEntity[]; beams: BeamEntity[] },
   entities: Bim3DEntities,
   ctx: SyncContext,
+  /** Πραγματικό id για το `userData['buildingId']` tag (μπορεί να είναι κενό). */
   buildingId: string,
+  /** Σταθερό μη-κενό id ΜΟΝΟ για το όνομα του skin (ADR-683 §7). */
+  nameId: string,
   sceneUnits: SceneUnits,
   columnExtents: ColumnVerticalExtentLookup,
   wallTopClipById: ReadonlyMap<string, number>,
@@ -255,22 +264,22 @@ function addHorizontalFinish(
   // ταύτιση παρειών (μηδέν δοντωτό χείλος, μηδέν εισχώρηση/κενό). Giorgio 2026-07-01.
   const upSkin = buildHorizontalFinishSkin(
     computeMergedStructuralTopCap(finishInput),
-    'wall', g.baseElevation, sceneUnits, ctx.activeLevelId, `structural-finish-hup-${buildingId}`,
+    'wall', g.baseElevation, sceneUnits, ctx.activeLevelId, `structural-finish-hup-${nameId}`,
   );
   if (upSkin) { upSkin.userData['buildingId'] = buildingId; group.add(upSkin); }
   // Down καπάκια (soffit δοκαριού, βάση pilotis κολόνας) — per-type· καμία junction ραφή εκεί.
   const colDownSkin = buildHorizontalFinishSkin(
-    columnFaces.filter((f) => !isUp(f)), 'column', g.baseElevation, sceneUnits, ctx.activeLevelId, `structural-finish-hcol-${buildingId}`,
+    columnFaces.filter((f) => !isUp(f)), 'column', g.baseElevation, sceneUnits, ctx.activeLevelId, `structural-finish-hcol-${nameId}`,
   );
   if (colDownSkin) { colDownSkin.userData['buildingId'] = buildingId; group.add(colDownSkin); }
   const beamDownSkin = buildHorizontalFinishSkin(
-    beamFaces.filter((f) => !isUp(f)), 'beam', g.baseElevation, sceneUnits, ctx.activeLevelId, `structural-finish-hbeam-${buildingId}`,
+    beamFaces.filter((f) => !isUp(f)), 'beam', g.baseElevation, sceneUnits, ctx.activeLevelId, `structural-finish-hbeam-${nameId}`,
   );
   if (beamDownSkin) { beamDownSkin.userData['buildingId'] = buildingId; group.add(beamDownSkin); }
   // ADR-534 Φ5 — soffit (κάτω παρειά) των finish-member πλακών: η οροφή του από-κάτω χώρου. Όλες
   // `down` (η πάνω παρειά μπήκε στο ενιαίο upSkin). Per-type skin — καμία junction ραφή εδώ.
   const slabDownSkin = buildHorizontalFinishSkin(
-    slabFaces.filter((f) => !isUp(f)), 'slab', g.baseElevation, sceneUnits, ctx.activeLevelId, `structural-finish-hslab-${buildingId}`,
+    slabFaces.filter((f) => !isUp(f)), 'slab', g.baseElevation, sceneUnits, ctx.activeLevelId, `structural-finish-hslab-${nameId}`,
   );
   if (slabDownSkin) { slabDownSkin.userData['buildingId'] = buildingId; group.add(slabDownSkin); }
 }

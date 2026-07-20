@@ -288,6 +288,32 @@ describe('converters — entity ↔ doc round-trip', () => {
     expect(rebuilt.imageFill).toEqual(imageHatch.imageFill);
   });
 
+  it('round-trips inlinePattern (ADR-635 Φ C.18 — imported PAT survives refresh)', () => {
+    // Imported third-party hatch (π.χ. HEX) εκτός catalog → inline PAT ορισμός. Χωρίς
+    // persist του inlinePattern, το reload έχανε το μοτίβο (patternName άγνωστο στο catalog).
+    const inlineHatch: HatchEntity = {
+      ...HATCH,
+      patternName: 'HEX',
+      patternType: 'pattern',
+      fillType: 'predefined',
+      inlinePattern: {
+        name: 'HEX',
+        labelKey: 'ribbon.commands.hatchEditor.patterns.imported',
+        category: 'special',
+        lines: [
+          { angle: 90, origin: [0, 0], delta: [0, 27.5], dashes: [15.875, -31.75] },
+          { angle: 210, origin: [0, 0], delta: [0, 27.5], dashes: [15.875, -31.75] },
+        ],
+      },
+    };
+    const data = pickHatchData(inlineHatch);
+    // Flat map (lines = array-of-maps) persisted verbatim.
+    expect(data.inlinePattern).toEqual(inlineHatch.inlinePattern);
+    const rebuilt = hatchDocToEntity({ ...docOf(), data });
+    expect(rebuilt.patternName).toBe('HEX');
+    expect(rebuilt.inlinePattern).toEqual(inlineHatch.inlinePattern);
+  });
+
   it('NEVER persists the export-only dxfImageExport marker (ADR-643 §6 — transient)', () => {
     const withMarker = {
       ...HATCH,

@@ -60,6 +60,13 @@ export interface NestorExportManifest {
   /** Μονάδα του **αρχείου μοντέλου** — όχι των fingerprints (πάντα μέτρα). */
   readonly unit: string;
   readonly entities: readonly ManifestEntity[];
+  /**
+   * ADR-683 §7 — το **εξαχθέν χρώμα ανά υλικό** (`καθαρό όνομα υλικού → sRGB "#rrggbb"`), mirror
+   * του `.mtl` table. Ο import το συγκρίνει με το πραγματικό χρώμα του επιστρεφόμενου υλικού για
+   * να ανιχνεύσει repaint που **κράτησε το όνομα** (Blender/glTF) — αλλιώς περνά ως «αμετάβλητο».
+   * Keyed ανά όνομα (όχι ανά mesh) γιατί ο import κλειδώνει την εμφάνιση με όνομα υλικού.
+   */
+  readonly materials: Readonly<Record<string, string>>;
 }
 
 export interface ManifestBuildOptions {
@@ -67,6 +74,8 @@ export interface ManifestBuildOptions {
   readonly projectName: string;
   readonly buildingId: string | null;
   readonly unit: string;
+  /** ADR-683 §7 — `καθαρό όνομα υλικού → sRGB hex` (βλ. `buildMaterialBaseline`). */
+  readonly materialBaseline?: ReadonlyMap<string, string>;
 }
 
 /**
@@ -102,6 +111,7 @@ export function buildExportManifest(
     buildingId: options.buildingId,
     unit: options.unit,
     entities,
+    materials: Object.fromEntries(options.materialBaseline ?? []),
   };
 }
 
@@ -181,7 +191,27 @@ export function parseExportManifest(text: string): NestorExportManifest | null {
     buildingId: readString(raw, 'buildingId'),
     unit: readString(raw, 'unit') ?? 'meters',
     entities,
+    materials: parseMaterials(raw['materials']),
   };
+}
+
+/**
+ * Fail-closed ανάγνωση του `materials` map. Παλιό manifest (πριν το ADR-683 §7 baseline) δεν το
+ * έχει → `{}`, ώστε ο import να πέφτει στην προ-baseline συμπεριφορά (repaint αόρατο, όχι crash).
+ * Κρατά μόνο string→string ζεύγη — κάθε άλλο αγνοείται σιωπηλά.
+ */
+function parseMaterials(value: unknown): Record<string, string> {
+  if (!isRecord(value)) return {};
+  const out: Record<string, string> = {};
+  for (const [name, hex] of Object.entries(value)) {
+    if (typeof hex === 'string') out[name] = hex;
+  }
+  return out;
+}
+
+/** `όνομα υλικού → sRGB hex` σε Map — το σχήμα που καταναλώνει ο `resolveImportAppearance`. */
+export function indexManifestMaterials(manifest: NestorExportManifest): Map<string, string> {
+  return new Map(Object.entries(manifest.materials));
 }
 
 /**
