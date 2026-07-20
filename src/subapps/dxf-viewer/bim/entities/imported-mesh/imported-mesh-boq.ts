@@ -104,7 +104,9 @@ export function withImportedMeshIdentity(
   params: ImportedMeshParams,
   identity: ImportedMeshBoqIdentity | undefined,
 ): ImportedMeshParams {
-  return { ...params, importedMeshIdentity: identity };
+  if (identity !== undefined) return { ...params, importedMeshIdentity: identity };
+  const { importedMeshIdentity: _removed, ...rest } = params;
+  return rest;
 }
 
 /**
