@@ -23,7 +23,7 @@
 
 import { NextRequest } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { withAuth, logAuditEvent, resolveSuperAdminProjectScope } from '@/lib/auth';
+import { withAuth, resolveSuperAdminProjectScope } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -133,14 +133,6 @@ export const GET = withHighRateLimit(
     const duration = Date.now() - startTime;
     logger.info('[Projects/List] CACHE HIT', { count: cachedData.count, durationMs: duration });
 
-    // Audit event for cache hit
-    await logAuditEvent(ctx, 'data_accessed', 'projects', 'api', {
-      metadata: {
-        path: '/api/projects/list',
-        reason: `Projects list accessed (${cachedData.count} items from cache, ${duration}ms)`
-      }
-    });
-
     return apiSuccess<ProjectListResponse>({
       ...cachedData,
       source: 'cache'
@@ -227,17 +219,6 @@ export const GET = withHighRateLimit(
 
   const duration = Date.now() - startTime;
   logger.info('[Projects/List] Complete', { count: projects.length, durationMs: duration });
-
-  // ============================================================================
-  // 6. AUDIT EVENT (Enterprise compliance)
-  // ============================================================================
-
-  await logAuditEvent(ctx, 'data_accessed', 'projects', 'api', {
-    metadata: {
-      path: '/api/projects/list',
-      reason: `Projects list accessed (${projects.length} items from firestore, ${duration}ms)`
-    }
-  });
 
   return apiSuccess<ProjectListResponse>(response, `Projects loaded in ${duration}ms`);
     },
