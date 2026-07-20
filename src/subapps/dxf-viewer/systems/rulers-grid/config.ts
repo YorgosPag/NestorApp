@@ -94,8 +94,7 @@ export interface GridSettings {
     axesColor: string;
     axesWeight: number;
     majorGridColor: string;
-    minorGridColor: string;
-    majorGridWeight: number;
+    minorGridColor: string;
     minorGridWeight: number;
   };
   snap: {
@@ -221,8 +220,7 @@ export const DEFAULT_GRID_SETTINGS: GridSettings = {
     axesColor: GRID_AXES_DEFAULTS.axesColor,
     axesWeight: GRID_AXES_DEFAULTS.axesWeight,
     majorGridColor: UI_COLORS.GRID_MAJOR, // Γκρι για τις κύριες γραμμές
-    minorGridColor: UI_COLORS.GRID_MINOR, // Ανοιχτότερο γκρι για τις δευτερεύουσες γραμμές
-    majorGridWeight: 1,
+    minorGridColor: UI_COLORS.GRID_MINOR, // Ανοιχτότερο γκρι για τις δευτερεύουσες γραμμές
     minorGridWeight: 0.5
   },
   snap: {

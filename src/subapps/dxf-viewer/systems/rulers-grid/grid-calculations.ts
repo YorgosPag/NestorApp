@@ -17,6 +17,8 @@ import type { ViewTransform } from './config';
 import { AXIS_DETECTION } from '../../config/tolerance-config';
 import { clamp01 } from '../../rendering/entities/shared/geometry-utils';
 import { formatLengthMm } from '../../config/display-length-format';
+// 🪜 ADR-681 §5.7: major emphasis is DERIVED from minor, never set beside it.
+import { deriveMajorGridWeight } from '../../config/grid-emphasis';
 
 // ============================================================================
 // HELPERS (private to this module)
@@ -43,7 +45,7 @@ function createGridLine(
       position,
       orientation,
       opacity: settings.visual.opacity,
-      weight: settings.visual.majorGridWeight,
+      weight: deriveMajorGridWeight(settings.visual.minorGridWeight),
       color: settings.visual.majorGridColor || settings.visual.color
     };
   }

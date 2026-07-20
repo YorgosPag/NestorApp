@@ -66,7 +66,6 @@ const GRID_SETTINGS: GridSettings = {
   showMinorGrid: true,
   adaptiveOpacity: false,
   minVisibleSize: 5,
-  majorGridWeight: 2,
   minorGridWeight: 1,
   smoothFade: false,
   smoothFadeDurationMs: 0,

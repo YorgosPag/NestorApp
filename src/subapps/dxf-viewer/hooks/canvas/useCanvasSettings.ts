@@ -44,7 +44,6 @@ export interface GridContextSettings {
     majorGridColor?: string;
     minorGridColor?: string;
     opacity?: number;
-    majorGridWeight?: number;
     minorGridWeight?: number;
     style?: 'lines' | 'dots' | 'crosses';
     subDivisions?: number;
@@ -266,7 +265,6 @@ export function useCanvasSettings(props: UseCanvasSettingsProps): UseCanvasSetti
 
     // ✅ LINE WIDTHS: From panel settings
     lineWidth: gridContextSettings?.visual?.minorGridWeight ?? 0.5,
-    majorGridWeight: gridContextSettings?.visual?.majorGridWeight ?? 1,
     minorGridWeight: gridContextSettings?.visual?.minorGridWeight ?? 0.5,
 
     // ✅ GRID STYLE: From panel settings (lines/dots/crosses)

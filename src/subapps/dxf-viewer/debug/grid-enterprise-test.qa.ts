@@ -216,7 +216,7 @@ async function testMajorMinorConfiguration(): Promise<TestFunctionResult> {
     };
   }
 
-  const hasMajor = !!gridSettings.visual.majorGridColor && !!gridSettings.visual.majorGridWeight;
+  const hasMajor = !!gridSettings.visual.majorGridColor && !!gridSettings.visual.minorGridWeight;
   const hasMinor = !!gridSettings.visual.minorGridColor && !!gridSettings.visual.minorGridWeight;
 
   if (hasMajor && hasMinor) {
@@ -226,7 +226,7 @@ async function testMajorMinorConfiguration(): Promise<TestFunctionResult> {
       details: {
         major: {
           color: gridSettings.visual.majorGridColor,
-          weight: gridSettings.visual.majorGridWeight
+          weight: deriveMajorGridWeight(gridSettings.visual.minorGridWeight)
         },
         minor: {
           color: gridSettings.visual.minorGridColor,
@@ -755,7 +755,7 @@ export async function runGridEnterpriseTests(): Promise<GridTestReport> {
     style: gridSettings.visual?.style || 'lines',
     majorColor: gridSettings.visual?.majorGridColor || UI_COLORS.GRID_MAJOR,
     minorColor: gridSettings.visual?.minorGridColor || UI_COLORS.GRID_MINOR,
-    majorWeight: gridSettings.visual?.majorGridWeight || 1,
+    majorWeight: deriveMajorGridWeight(gridSettings.visual?.minorGridWeight ?? 1),
     minorWeight: gridSettings.visual?.minorGridWeight || 0.5,
     size: gridSettings.visual?.step || 10
   } : null;

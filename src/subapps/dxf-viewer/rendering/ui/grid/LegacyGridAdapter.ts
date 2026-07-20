@@ -55,7 +55,6 @@ export class LegacyGridAdapter {
       showMinorGrid: true,
       adaptiveOpacity: true,
       minVisibleSize: 5,
-      majorGridWeight: 2,
       minorGridWeight: 1,
 
       // 🏢 ORIGIN & AXES: fallback to SSoT — config/grid-axis-defaults.ts

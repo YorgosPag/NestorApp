@@ -24,6 +24,8 @@ import { pixelPerfect } from '../../entities/shared/geometry-rendering-utils';
 import { renderAdaptiveGridLines } from './grid-adaptive';
 // Mark dxf-canvas dirty while temporal lerp is still settling.
 import { markSystemsDirty } from '../../core/UnifiedFrameScheduler';
+// 🪜 ADR-681 §5.7: major emphasis is DERIVED from minor, never set beside it.
+import { deriveMajorGridWeight } from '../../../config/grid-emphasis';
 
 /**
  * 🔺 CENTRALIZED GRID RENDERER
@@ -165,7 +167,7 @@ export class GridRenderer implements UIRenderer {
       if (settings.showMajorGrid) {
         const majorSize = settings.smoothFade ? gridSize : gridSize * settings.majorInterval;
         ctx.strokeStyle = settings.majorGridColor;
-        ctx.lineWidth = settings.majorGridWeight;
+        ctx.lineWidth = deriveMajorGridWeight(settings.minorGridWeight);
         this.drawGridLines(ctx, viewport, transform, majorSize);
       }
       return;
@@ -181,7 +183,7 @@ export class GridRenderer implements UIRenderer {
       minorColor: settings.minorGridColor,
       minorWeight: settings.minorGridWeight,
       majorColor: settings.majorGridColor,
-      majorWeight: settings.majorGridWeight,
+      majorWeight: deriveMajorGridWeight(settings.minorGridWeight),
       showMinor: settings.showMinorGrid,
       showMajor: settings.showMajorGrid,
       previousOpacity: this.renderedMinorOpacity,
@@ -246,7 +248,7 @@ export class GridRenderer implements UIRenderer {
     // Fixed pixel size - does NOT scale with zoom (like lines and crosses)
     // Factory defaults: minor=1px, major=1.5px (adjustable via Settings)
     const minorDotSize = Math.max(1, settings.minorGridWeight);        // 1px default (1:1 with weight)
-    const majorDotSize = Math.max(1.5, settings.majorGridWeight * 0.75); // 1.5px default
+    const majorDotSize = Math.max(1.5, deriveMajorGridWeight(settings.minorGridWeight) * 0.75); // 1.5px default
 
     // Calculate grid origin in screen coordinates
     // 🏢 ADR-118: Using centralized WORLD_ORIGIN constant
@@ -295,7 +297,7 @@ export class GridRenderer implements UIRenderer {
   ): void {
     const gridSize = settings.size * transform.scale;
     const minorCrossSize = Math.max(2, settings.minorGridWeight * 2);
-    const majorCrossSize = Math.max(2, settings.majorGridWeight * 2);
+    const majorCrossSize = Math.max(2, deriveMajorGridWeight(settings.minorGridWeight) * 2);
 
     // ✅ CORRECT: Use world (0,0) as reference
     // 🏢 ADR-118: Using centralized WORLD_ORIGIN constant
@@ -315,7 +317,7 @@ export class GridRenderer implements UIRenderer {
 
         if ((isMajor && settings.showMajorGrid) || (!isMajor && settings.showMinorGrid)) {
           ctx.strokeStyle = isMajor ? settings.majorGridColor : settings.minorGridColor;
-          ctx.lineWidth = isMajor ? settings.majorGridWeight : settings.minorGridWeight;
+          ctx.lineWidth = isMajor ? deriveMajorGridWeight(settings.minorGridWeight) : settings.minorGridWeight;
 
           const size = isMajor ? majorCrossSize : minorCrossSize;
 

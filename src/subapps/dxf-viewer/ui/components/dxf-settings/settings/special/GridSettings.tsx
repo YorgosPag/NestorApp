@@ -100,12 +100,6 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
     });
   };
 
-  const handleMajorGridWeightChange = (weight: number) => {
-    updateGridSettings({
-      visual: { ...gridSettings.visual, majorGridWeight: weight }
-    });
-  };
-
   const handleMinorGridColorChange = (color: string) => {
     updateGridSettings({
       visual: { ...gridSettings.visual, minorGridColor: color }
@@ -297,22 +291,9 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
               />
             </div>
 
-            {/* Major Grid Line Weight */}
-            <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${quick.card} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-              <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
-                <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('gridSettings.weight.label', { type: gridLinesLabels.major })}</div>
-                <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('gridSettings.weight.description', { type: gridLinesLabels.major.toLowerCase() })}</div>
-              </div>
-              <SliderInput
-                value={gridSettings.visual.majorGridWeight}
-                min={0.1}
-                max={5}
-                step={0.1}
-                onChange={handleMajorGridWeightChange}
-                showValue
-                formatValue={String}
-              />
-            </div>
+            {/* Major line weight is DERIVED from the minor weight
+                (config/grid-emphasis.ts, ADR-681 §5.7) — no slider, because
+                their RATIO is what makes a cascade role-swap visible. */}
           </div>
         ) : (
           /* Minor Lines Tab Content */

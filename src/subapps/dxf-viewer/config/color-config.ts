@@ -248,8 +248,13 @@ export const UI_COLORS_BASE = {
   CUSTOM_TEST_COLOR: '#123456',  // For unit tests
 
   // Grid Colors
-  GRID_MAJOR: '#888888',        // Major grid lines
-  GRID_MINOR: '#bbbbbb',        // Minor grid lines
+  // 🪜 ADR-681 §5.7 — the cascade promotes a level from minor to major as zoom
+  // changes, so a wide minor/major gap makes that swap read as an event. C4D
+  // keeps its two levels ~10/255 apart (major DARKER, emphasis from width);
+  // we keep a larger gap because a 2D drafting grid is a measuring reference,
+  // but narrowed 51 → 24 so the swap stops being a jump.
+  GRID_MAJOR: '#989898',        // Major grid lines (darker; weight carries emphasis)
+  GRID_MINOR: '#b0b0b0',        // Minor grid lines
 
   // Debug & Development Colors
   DEBUG_CURSOR: '#0066FF',      // Blue for cursor debug markers

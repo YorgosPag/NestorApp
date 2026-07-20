@@ -140,7 +140,6 @@ export class CanvasSettings {
         showMinorGrid: true,
         adaptiveOpacity: true,
         minVisibleSize: 2,
-        majorGridWeight: 1.5,
         minorGridWeight: 0.5,
         opacity: 0.5,
         // 🏢 ORIGIN & AXES: AutoCAD-style UCS icon — SSoT: config/grid-axis-defaults.ts

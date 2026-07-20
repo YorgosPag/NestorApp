@@ -42,9 +42,13 @@ export interface GridSettings extends UIElementSettings {
   readonly adaptiveOpacity: boolean; // Fade out when zoomed out
   readonly minVisibleSize: number;   // Minimum pixel size to show grid
 
-  // ✅ ENTERPRISE FIX: Missing properties used by GridRenderer
-  readonly majorGridWeight: number; // Major grid line thickness
-  readonly minorGridWeight: number; // Minor grid line thickness
+  /**
+   * Minor grid line thickness. **The only line-weight input**: the major
+   * weight is derived from it via `config/grid-emphasis.ts`, because their
+   * RATIO is what decides whether a cascade role-swap reads as an event
+   * (ADR-681 §5.7).
+   */
+  readonly minorGridWeight: number;
 
   // 🌊 ADAPTIVE GRID — multi-level smooth fade
   readonly smoothFade: boolean;       // Enable per-level smooth opacity transition
@@ -119,9 +123,8 @@ export const DEFAULT_GRID_SETTINGS: GridSettings = {
   adaptiveOpacity: true,
   minVisibleSize: 5,     // Don't show grid if smaller than 5px
 
-  // ✅ ENTERPRISE FIX: Default values for missing properties
-  majorGridWeight: 2,    // Thicker major grid lines
-  minorGridWeight: 1,    // Standard minor grid lines
+  // Major weight is DERIVED (× GRID_MAJOR_EMPHASIS_RATIO) — see grid-emphasis.ts
+  minorGridWeight: 1,
 
   // 🏢 ORIGIN & AXES: AutoCAD-style UCS icon defaults — SSoT: config/grid-axis-defaults.ts
   showOrigin: GRID_AXES_DEFAULTS.showOrigin,
