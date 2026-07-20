@@ -71,18 +71,22 @@ export function ImportedMeshBoqHost({
 
   const params = readMeshParams(levelManager, entityId);
 
-  // Η πρόταση υπολογίζεται μία φορά ανά άνοιγμα/υλικά — καθαρή συνάρτηση, καμία παρενέργεια.
-  const suggestion = useMemo(() => {
-    if (!params) return null;
-    // Ήδη ανατεθειμένο → η υπάρχουσα ταυτότητα ΕΙΝΑΙ η αρχική τιμή· μια «πρόταση» θα την έσβηνε.
+  /**
+   * Η αρχική τιμή του εντύπου. **Η υπάρχουσα ταυτότητα υπερισχύει πάντα** της πρότασης: όταν το
+   * πλέγμα είναι ήδη ανατεθειμένο, ο χρήστης το ανοίγει για να δει/διορθώσει ό,τι δήλωσε — μια
+   * πρόταση θα του έσβηνε σιωπηλά τη δουλειά του με μια μαντεψιά από όνομα αρχείου.
+   */
+  const { initial, suggestionSource } = useMemo(() => {
+    if (!params) return { initial: null, suggestionSource: null };
     if (params.importedMeshIdentity) {
-      return { ...params.importedMeshIdentity, source: 'name' as const };
+      return { initial: params.importedMeshIdentity, suggestionSource: null };
     }
-    return suggestImportedMeshIdentity({
+    const suggestion = suggestImportedMeshIdentity({
       params,
       resolveMaterialId: buildKnownMaterialResolver(materials),
       materials,
     });
+    return { initial: suggestion, suggestionSource: suggestion?.source ?? null };
   }, [params, materials]);
 
   const applyIdentity = useCallback(
@@ -114,7 +118,8 @@ export function ImportedMeshBoqHost({
     <ImportedMeshBoqDialog
       open={entityId !== null && params !== null}
       params={params}
-      suggestion={suggestion}
+      initial={initial}
+      suggestionSource={suggestionSource}
       materials={materials}
       onSave={handleSave}
       onClear={handleClear}

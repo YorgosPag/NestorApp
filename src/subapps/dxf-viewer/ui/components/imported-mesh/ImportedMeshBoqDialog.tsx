@@ -173,9 +173,9 @@ export function ImportedMeshBoqDialog({
 
         {params && <ImportedMeshMeasuredSummary params={params} />}
 
-        {suggestion && (
+        {suggestionSource && (
           <p className="px-2 text-xs text-muted-foreground">
-            {t(`${K}.suggestion.${suggestion.source}`)}
+            {t(`${K}.suggestion.${suggestionSource}`)}
           </p>
         )}
 

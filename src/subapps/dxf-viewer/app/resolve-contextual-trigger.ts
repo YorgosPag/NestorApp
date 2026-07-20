@@ -65,6 +65,7 @@ import {
   ANNOTATION_SYMBOL_CONTEXTUAL_TRIGGER,
   SCALE_BAR_CONTEXTUAL_TRIGGER,
   TOPO_SURFACE_CONTEXTUAL_TRIGGER,
+  IMPORTED_MESH_CONTEXTUAL_TRIGGER,
 } from '../ui/ribbon/data/contextual-triggers';
 import { isSanitaryKind } from '../bim/sanitary/sanitary-symbol-spec';
 import { isApplianceKind } from '../bim/appliances/appliance-symbol-spec';
@@ -146,6 +147,9 @@ export const ENTITY_CONTEXTUAL_TRIGGER: Partial<Record<EntityType, string>> = {
   // sibling του image) → «Τοπογραφική Επιφάνεια» tab (ενέργειες)· ΟΛΕΣ οι ιδιότητες
   // εμφάνισης στο αριστερό Properties palette (TopoSurfacePropertiesTab, object-bound).
   'topo-surface': TOPO_SURFACE_CONTEXTUAL_TRIGGER,
+  // ADR-683 Φ3.1β — εισαγόμενο πλέγμα → «Εισαγόμενο Πλέγμα» tab. Ενέργειες ΜΟΝΟ: το ψημένο πλέγμα
+  // δεν έχει παραμέτρους (§3)· η μία απόφαση του χρήστη είναι πώς κοστολογείται (§10.2).
+  'imported-mesh': IMPORTED_MESH_CONTEXTUAL_TRIGGER,
 };
 
 /**

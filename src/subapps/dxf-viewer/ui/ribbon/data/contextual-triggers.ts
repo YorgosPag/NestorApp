@@ -53,6 +53,7 @@ export { XLINE_MODE_CONTEXTUAL_TRIGGER } from './contextual-xline-mode-tab';
 export { SKETCH_CONTEXTUAL_TRIGGER } from './contextual-sketch-tab';
 export { SCALE_TOOL_CONTEXTUAL_TRIGGER } from './contextual-scale-tool-tab';
 export { FURNITURE_CONTEXTUAL_TRIGGER } from './contextual-furniture-tab';
+export { IMPORTED_MESH_CONTEXTUAL_TRIGGER } from './contextual-imported-mesh-tab';
 export { BLOCK_LIBRARY_CONTEXTUAL_TRIGGER } from './contextual-block-library-tab';
 export { TITLE_BLOCK_CONTEXTUAL_TRIGGER } from './contextual-title-block-tab';
 export { FLOORPLAN_SYMBOL_CONTEXTUAL_TRIGGER } from './contextual-floorplan-symbol-tab';
