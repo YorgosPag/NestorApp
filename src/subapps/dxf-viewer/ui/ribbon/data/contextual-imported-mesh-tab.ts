@@ -45,7 +45,7 @@ export const CONTEXTUAL_IMPORTED_MESH_TAB: RibbonTab = {
             actionBtn(
               'importedMeshTools.assignBoq',
               `${K}.assignBoq.label`,
-              'tag',
+              'boq-assign',
               IMPORTED_MESH_ASSIGN_BOQ_ACTION,
               IMPORTED_MESH_ASSIGN_BOQ_ACTION,
             ),

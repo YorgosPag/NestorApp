@@ -476,6 +476,8 @@ export const RibbonButtonIcon: React.FC<RibbonButtonIconProps> = ({ icon, size }
     case 'topo-cutfill': return <Mountain width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'topo-qa': return <ShieldCheck width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'topo-cloud': return <Cloud width={sizePx[size]} height={sizePx[size]} className={className} />;
+    // ADR-683 Φ3.1β — «Ανάθεση προμέτρησης» (εισαγόμενο πλέγμα → άρθρο ΑΤΟΕ).
+    case 'boq-assign': return <Tag width={sizePx[size]} height={sizePx[size]} className={className} />;
     default: return inlineSvg(size, <circle cx="12" cy="12" r="2" />);
   }
 };
