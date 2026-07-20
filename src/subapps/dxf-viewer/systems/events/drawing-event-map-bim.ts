@@ -115,6 +115,9 @@ export interface BimEventMap {
   // ADR-410 — BIM furniture params + delete events
   'bim:furniture-params-updated': { furnitureId: string };
   'bim:furniture-delete-requested': { furnitureId: string };
+  // ADR-683 Φ3β — imported baked mesh params + delete events (mirror of furniture)
+  'bim:imported-mesh-params-updated': { importedMeshId: string };
+  'bim:imported-mesh-delete-requested': { importedMeshId: string };
   // ADR-408 Φ3 — BIM electrical panel params + delete events
   'bim:electrical-panel-params-updated': { panelId: string };
   'bim:electrical-panel-delete-requested': { panelId: string };

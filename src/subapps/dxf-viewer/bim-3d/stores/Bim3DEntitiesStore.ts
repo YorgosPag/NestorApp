@@ -161,6 +161,8 @@ interface Bim3DEntitiesStoreState extends Bim3DEntities {
   setPanels: (panels: readonly ElectricalPanelEntity[]) => void;
   setRailings: (railings: readonly RailingEntity[]) => void;
   setFurnitures: (furnitures: readonly FurnitureEntity[]) => void;
+  /** ADR-683 Φ3β — feed the imported baked-mesh slice (collaborator glTF). */
+  setImportedMeshes: (importedMeshes: readonly ImportedMeshEntity[]) => void;
   /** ADR-417 — feed the parametric pitched roofs slice. */
   setRoofs: (roofs: readonly RoofEntity[]) => void;
   /** ADR-419 — feed the floor-finish coverings slice. */
@@ -217,6 +219,7 @@ export const useBim3DEntitiesStore = create<Bim3DEntitiesStoreState>()(
     setPanels: (panels) => set({ panels }),
     setRailings: (railings) => set({ railings }),
     setFurnitures: (furnitures) => set({ furnitures }),
+    setImportedMeshes: (importedMeshes) => set({ importedMeshes }),
     setRoofs: (roofs) => set({ roofs }),
     setFloorFinishes: (floorFinishes) => set({ floorFinishes }),
     setMepSegments: (mepSegments) => set({ mepSegments }),

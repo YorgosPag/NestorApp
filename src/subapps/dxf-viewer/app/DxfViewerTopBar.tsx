@@ -43,6 +43,7 @@ import { GeoReferenceHost } from './GeoReferenceHost';
 import { HostingReconcilerHost } from './HostingReconcilerHost';
 import { MepFixturePersistenceHost } from './MepFixturePersistenceHost';
 import { FurniturePersistenceHost } from './FurniturePersistenceHost';
+import { ImportedMeshPersistenceHost } from './ImportedMeshPersistenceHost';
 import { FloorplanSymbolPersistenceHost } from './FloorplanSymbolPersistenceHost';
 import { ElectricalPanelPersistenceHost } from './ElectricalPanelPersistenceHost';
 import { MepManifoldPersistenceHost } from './MepManifoldPersistenceHost';
@@ -254,6 +255,13 @@ export function DxfViewerTopBar({
         floorId={floorId}
       />
       <FurniturePersistenceHost
+        primarySelectedId={primarySelectedId}
+        levelManager={levelManager}
+        projectId={projectId}
+        floorplanId={levelManager.fileRecordId ?? undefined}
+        floorId={floorId}
+      />
+      <ImportedMeshPersistenceHost
         primarySelectedId={primarySelectedId}
         levelManager={levelManager}
         projectId={projectId}

@@ -3688,6 +3688,18 @@ service cloud.firestore {
       allow delete: if isAuthenticated() && canDeleteBimEntity();
     }
 
+    // ADR-683 Φ3β — baked meshes imported from a collaborator's glTF. Exact mirror of
+    // floorplan_furniture: same AUTHORING tier, same company scope, same create contract.
+    // The mesh BYTES live in Storage (companies/{c}/projects/{p}/imported-meshes/) under
+    // storage.rules; this doc only carries the pointer + measured dimensions.
+    match /floorplan_imported_meshes/{importedMeshId} {
+      // ADR-657 AUTHORING tier — editor-only (/dxf/viewer). external_user denied.
+      allow read:   if isAuthenticated() && canReadBimAuthoring(resource.data.companyId);
+      allow create: if isAuthenticated() && canCreateBimEntity(['companyId', 'projectId', 'floorplanId', 'kind', 'params']);
+      allow update: if isAuthenticated() && canUpdateBimEntity();
+      allow delete: if isAuthenticated() && canDeleteBimEntity();
+    }
+
     // ADR-415 — pure-vector 2D floorplan symbols (WC/sanitary first). Mirror of
     // floorplan_furniture (company-scoped, owner/admin writes). Create requires
     // the category-driven `category` field alongside kind/params.
