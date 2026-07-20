@@ -320,7 +320,12 @@ export function LevelPanel({
                   isOnlyLevel={isOnlyLevel}
                   onSelect={() => {
                     setCurrentLevel(level.id);
-                    if (currentTool !== 'grip-edit' && onToolChange) onToolChange('grip-edit');
+                    // Πλοήγηση σε επίπεδο = ΕΠΙΛΟΓΗ, όχι σχεδίαση (Giorgio 2026-07-20).
+                    // Ζητούσε 'grip-edit', που το bridge effect του useDxfViewerEffects
+                    // (activeTool==='grip-edit' && overlayMode!=='edit') προωθούσε αμέσως
+                    // σε 'layering' → «Σχεδίαση Επιπέδων» άναβε μόνο του σε κάθε κλικ
+                    // κάρτας. Το 'select' δίνει τις ίδιες λαβές χωρίς να μπει σε σχεδίαση.
+                    if (currentTool !== 'select' && onToolChange) onToolChange('select');
                     EventBus.emit('level-panel:layering-activate', { levelId: level.id, source: 'card' });
                   }}
                   onEdit={(e) => {
