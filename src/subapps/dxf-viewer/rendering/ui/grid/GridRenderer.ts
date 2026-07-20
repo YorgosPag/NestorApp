@@ -20,8 +20,20 @@ import { addCirclePath } from '../../primitives/canvasPaths';
 import { WORLD_ORIGIN } from '../../../config/geometry-constants';
 // 🏢 ADR-088: Pixel-perfect alignment for crisp 1px rendering
 import { pixelPerfect } from '../../entities/shared/geometry-rendering-utils';
-// 🌊 Adaptive grid math + 2-pass render (extracted for SRP + 500-line limit)
-import { renderAdaptiveGridLines } from './grid-adaptive';
+// 🌊 Adaptive grid math + pass schedule (extracted for SRP + 500-line limit)
+import { renderAdaptiveGrid } from './grid-adaptive';
+// 🔵 ADR-681 §5.9: dot/cross rasterisers — adaptive passes + legacy fallbacks.
+import {
+  paintDotMarks,
+  paintCrossMarks,
+  paintLegacyDotGrid,
+  paintLegacyCrossGrid,
+  dotRadii,
+  crossArms,
+  roleColor,
+  applyRoleStroke,
+  type GridMarkLattice,
+} from './grid-mark-painters';
 // Mark dxf-canvas dirty while temporal lerp is still settling.
 import { markSystemsDirty } from '../../core/UnifiedFrameScheduler';
 // 🪜 ADR-681 §5.7: major emphasis is DERIVED from minor, never set beside it.
@@ -146,14 +158,15 @@ export class GridRenderer implements UIRenderer {
     this.lastRenderTime = performance.now() - startTime;
   }
 
-  /** 🌊 Render grid as lines: 2-pass adaptive (smoothstep + temporal lerp). */
+  /** 🌊 Render grid as lines: 3-level adaptive cascade with a cross-faded
+   *  emphasis (ADR-681 §5.8) — see `renderAdaptiveGrid`. */
   private renderGridLines(
     ctx: CanvasRenderingContext2D,
     viewport: Viewport,
     settings: GridSettings,
     transform: { scale: number; offsetX: number; offsetY: number }
   ): void {
-    if (!settings.smoothFade || settings.majorInterval <= 1) {
+    if (this.isLegacyGrid(settings)) {
       const gridSize = settings.size * transform.scale;
       if (settings.showMinorGrid && settings.smoothFade && settings.majorInterval > 1) {
         ctx.strokeStyle = settings.minorGridColor;
@@ -172,18 +185,34 @@ export class GridRenderer implements UIRenderer {
       }
       return;
     }
-    const result = renderAdaptiveGridLines({
+    this.runAdaptiveGrid(ctx, settings, transform, ({ spacingPx, major }) => {
+      applyRoleStroke(ctx, settings, major);
+      this.drawGridLines(ctx, viewport, transform, spacingPx);
+    });
+  }
+
+  /**
+   * 🌊 Drive the shared adaptive cascade for ONE grid style (ADR-681 §5.9).
+   *
+   * The temporal fade state lives on the renderer, not per style, so the twelve
+   * mechanism inputs are assembled exactly once. Each style differs only in its
+   * `drawMarks` callback — which is the whole point of generalising
+   * `renderAdaptiveGrid`: three callers, one mechanism, no sibling clones.
+   */
+  private runAdaptiveGrid(
+    ctx: CanvasRenderingContext2D,
+    settings: GridSettings,
+    transform: { scale: number; offsetX: number; offsetY: number },
+    drawMarks: (pass: { spacingPx: number; major: boolean }) => void
+  ): void {
+    const result = renderAdaptiveGrid({
       ctx,
-      drawLines: (g) => this.drawGridLines(ctx, viewport, transform, g),
+      drawMarks,
       worldStep: settings.size,
       scale: transform.scale,
       subDivisions: settings.majorInterval,
       minSpacingPx: settings.minGridSpacing,
       fadeDurationMs: settings.smoothFadeDurationMs,
-      minorColor: settings.minorGridColor,
-      minorWeight: settings.minorGridWeight,
-      majorColor: settings.majorGridColor,
-      majorWeight: deriveMajorGridWeight(settings.minorGridWeight),
       showMinor: settings.showMinorGrid,
       showMajor: settings.showMajorGrid,
       previousOpacity: this.renderedMinorOpacity,
@@ -192,6 +221,37 @@ export class GridRenderer implements UIRenderer {
     });
     this.renderedMinorOpacity = result.renderedOpacity;
     this.lastFrameTimestampMs = result.timestampMs;
+  }
+
+  /** Screen-space lattice anchor for a mark pass at the given spacing. */
+  private markLattice(
+    viewport: Viewport,
+    transform: { scale: number; offsetX: number; offsetY: number },
+    spacingPx: number
+  ): GridMarkLattice {
+    // 🏢 ADR-118: Using centralized WORLD_ORIGIN constant
+    const { CoordinateTransforms: CT } = require('../../core/CoordinateTransforms');
+    const screenOrigin = CT.worldToScreen(WORLD_ORIGIN, transform, viewport);
+    return {
+      viewport,
+      originScreenX: screenOrigin.x,
+      originScreenY: screenOrigin.y,
+      spacingPx,
+    };
+  }
+
+  /** Lattice at the RAW, uncascaded step — legacy renders only. */
+  private rawLattice(
+    viewport: Viewport,
+    settings: GridSettings,
+    transform: { scale: number; offsetX: number; offsetY: number }
+  ): GridMarkLattice {
+    return this.markLattice(viewport, transform, settings.size * transform.scale);
+  }
+
+  /** True when the user has the cascade switched off — legacy render applies. */
+  private isLegacyGrid(settings: GridSettings): boolean {
+    return !settings.smoothFade || settings.majorInterval <= 1;
   }
 
   /**
@@ -233,8 +293,8 @@ export class GridRenderer implements UIRenderer {
   }
 
   /**
-   * Render grid as dots
-   * ✅ ENTERPRISE FIX (2026-01-05): Proper dot sizing - minimum 2-3px radius
+   * 🔵 Render grid as dots: same 3-level adaptive cascade as the lines
+   * (ADR-681 §5.9). Emphasis maps to dot RADIUS instead of stroke weight.
    */
   private renderGridDots(
     ctx: CanvasRenderingContext2D,
@@ -242,52 +302,26 @@ export class GridRenderer implements UIRenderer {
     settings: GridSettings,
     transform: { scale: number; offsetX: number; offsetY: number }
   ): void {
-    const gridSize = settings.size * transform.scale;
-
-    // 🏢 ENTERPRISE DOT SIZING:
-    // Fixed pixel size - does NOT scale with zoom (like lines and crosses)
-    // Factory defaults: minor=1px, major=1.5px (adjustable via Settings)
-    const minorDotSize = Math.max(1, settings.minorGridWeight);        // 1px default (1:1 with weight)
-    const majorDotSize = Math.max(1.5, deriveMajorGridWeight(settings.minorGridWeight) * 0.75); // 1.5px default
-
-    // Calculate grid origin in screen coordinates
-    // 🏢 ADR-118: Using centralized WORLD_ORIGIN constant
-    const { CoordinateTransforms: CT } = require('../../core/CoordinateTransforms');
-    const screenOrigin = CT.worldToScreen(WORLD_ORIGIN, transform, viewport);
-    const startX = screenOrigin.x % gridSize;
-    const startY = screenOrigin.y % gridSize;
-
-    // Ensure start positions are positive
-    const adjustedStartX = startX < 0 ? startX + gridSize : startX;
-    const adjustedStartY = startY < 0 ? startY + gridSize : startY;
-
-    // Render dots at grid intersections
-    // ✅ ENTERPRISE FIX: Using ellipse() instead of arc() due to browser/GPU compatibility
-    // arc() has rendering bugs on some GPU drivers, ellipse() uses different rendering path
-    for (let x = adjustedStartX; x <= viewport.width; x += gridSize) {
-      for (let y = adjustedStartY; y <= viewport.height; y += gridSize) {
-        // Check if this should be a major dot - use Math.round for floating point precision
-        const gridIndexX = Math.round((x - adjustedStartX) / gridSize);
-        const gridIndexY = Math.round((y - adjustedStartY) / gridSize);
-        const isMajorX = gridIndexX % settings.majorInterval === 0;
-        const isMajorY = gridIndexY % settings.majorInterval === 0;
-        const isMajor = isMajorX && isMajorY;
-
-        if ((isMajor && settings.showMajorGrid) || (!isMajor && settings.showMinorGrid)) {
-          const dotSize = isMajor ? majorDotSize : minorDotSize;
-          ctx.fillStyle = isMajor ? settings.majorGridColor : settings.minorGridColor;
-          // 🏢 ADR-058: Use centralized canvas primitives
-          ctx.beginPath();
-          addCirclePath(ctx, { x, y }, dotSize);
-          ctx.fill();
-        }
-      }
+    if (this.isLegacyGrid(settings)) {
+      paintLegacyDotGrid(ctx, this.rawLattice(viewport, settings, transform), settings);
+      return;
     }
+    // 🏢 ENTERPRISE DOT SIZING: fixed pixel size — does NOT scale with zoom.
+    // Factory defaults: minor=1px, major=1.5px (adjustable via Settings).
+    const radii = dotRadii(settings);
+    this.runAdaptiveGrid(ctx, settings, transform, ({ spacingPx, major }) => {
+      ctx.fillStyle = roleColor(settings, major);
+      paintDotMarks(
+        ctx,
+        this.markLattice(viewport, transform, spacingPx),
+        major ? radii.major : radii.minor
+      );
+    });
   }
 
   /**
-   * Render grid as crosses
-   * ✅ UNIFIED WITH COORDINATETRANSFORMS: Use INVERTED offsetY
+   * ✚ Render grid as crosses: same 3-level adaptive cascade as the lines
+   * (ADR-681 §5.9). Emphasis maps to ARM LENGTH plus the usual weight/colour.
    */
   private renderGridCrosses(
     ctx: CanvasRenderingContext2D,
@@ -295,44 +329,19 @@ export class GridRenderer implements UIRenderer {
     settings: GridSettings,
     transform: { scale: number; offsetX: number; offsetY: number }
   ): void {
-    const gridSize = settings.size * transform.scale;
-    const minorCrossSize = Math.max(2, settings.minorGridWeight * 2);
-    const majorCrossSize = Math.max(2, deriveMajorGridWeight(settings.minorGridWeight) * 2);
-
-    // ✅ CORRECT: Use world (0,0) as reference
-    // 🏢 ADR-118: Using centralized WORLD_ORIGIN constant
-    const { CoordinateTransforms: CT } = require('../../core/CoordinateTransforms');
-    const screenOrigin = CT.worldToScreen(WORLD_ORIGIN, transform, viewport);
-    const startX = (screenOrigin.x % gridSize);
-    const startY = (screenOrigin.y % gridSize);
-
-    ctx.beginPath();
-
-    for (let x = startX; x <= viewport.width; x += gridSize) {
-      for (let y = startY; y <= viewport.height; y += gridSize) {
-        // Check if this should be a major cross
-        const isMajorX = ((x - startX) / gridSize) % settings.majorInterval === 0;
-        const isMajorY = ((y - startY) / gridSize) % settings.majorInterval === 0;
-        const isMajor = isMajorX && isMajorY;
-
-        if ((isMajor && settings.showMajorGrid) || (!isMajor && settings.showMinorGrid)) {
-          ctx.strokeStyle = isMajor ? settings.majorGridColor : settings.minorGridColor;
-          ctx.lineWidth = isMajor ? deriveMajorGridWeight(settings.minorGridWeight) : settings.minorGridWeight;
-
-          const size = isMajor ? majorCrossSize : minorCrossSize;
-
-          // Horizontal line
-          ctx.moveTo(x - size, y);
-          ctx.lineTo(x + size, y);
-
-          // Vertical line
-          ctx.moveTo(x, y - size);
-          ctx.lineTo(x, y + size);
-        }
-      }
+    if (this.isLegacyGrid(settings)) {
+      paintLegacyCrossGrid(ctx, this.rawLattice(viewport, settings, transform), settings);
+      return;
     }
-
-    ctx.stroke();
+    const arms = crossArms(settings);
+    this.runAdaptiveGrid(ctx, settings, transform, ({ spacingPx, major }) => {
+      applyRoleStroke(ctx, settings, major);
+      paintCrossMarks(
+        ctx,
+        this.markLattice(viewport, transform, spacingPx),
+        major ? arms.major : arms.minor
+      );
+    });
   }
 
 
@@ -345,6 +354,16 @@ export class GridRenderer implements UIRenderer {
   /** Size of the X/Y axis label text */
   private static readonly AXIS_LABEL_FONT = 'bold 11px monospace';
 
+  /** Pixel-perfect screen position of world origin (0,0). */
+  private screenOrigin(
+    viewport: Viewport,
+    transform: { scale: number; offsetX: number; offsetY: number }
+  ): { ox: number; oy: number } {
+    const { CoordinateTransforms: CT } = require('../../core/CoordinateTransforms');
+    const screen = CT.worldToScreen(WORLD_ORIGIN, transform, viewport);
+    return { ox: pixelPerfect(screen.x), oy: pixelPerfect(screen.y) };
+  }
+
   /**
    * 🏢 Render X/Y axis lines through world origin (0,0)
    * AutoCAD draws infinite axis lines through origin in a distinct color.
@@ -356,10 +375,7 @@ export class GridRenderer implements UIRenderer {
     settings: GridSettings,
     transform: { scale: number; offsetX: number; offsetY: number }
   ): void {
-    const { CoordinateTransforms: CT } = require('../../core/CoordinateTransforms');
-    const screenOrigin = CT.worldToScreen(WORLD_ORIGIN, transform, viewport);
-    const ox = pixelPerfect(screenOrigin.x);
-    const oy = pixelPerfect(screenOrigin.y);
+    const { ox, oy } = this.screenOrigin(viewport, transform);
 
     ctx.strokeStyle = settings.axesColor;
     ctx.lineWidth = settings.axesWeight;
@@ -387,10 +403,7 @@ export class GridRenderer implements UIRenderer {
     settings: GridSettings,
     transform: { scale: number; offsetX: number; offsetY: number }
   ): void {
-    const { CoordinateTransforms: CT } = require('../../core/CoordinateTransforms');
-    const screenOrigin = CT.worldToScreen(WORLD_ORIGIN, transform, viewport);
-    const ox = pixelPerfect(screenOrigin.x);
-    const oy = pixelPerfect(screenOrigin.y);
+    const { ox, oy } = this.screenOrigin(viewport, transform);
     const arm = GridRenderer.ORIGIN_ARM_LENGTH;
 
     ctx.save();

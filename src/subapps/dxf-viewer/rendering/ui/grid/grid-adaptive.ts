@@ -3,8 +3,16 @@
  *
  * Industry pattern (AutoCAD / Fusion 360 / OnShape / Figma / Miro): instead
  * of snapping the grid step to a discrete level when zoom crosses a
- * threshold, render minor + major simultaneously and smoothly fade the minor
- * level in/out as a function of its on-screen spacing.
+ * threshold, render several levels simultaneously and fade them as a function
+ * of their on-screen spacing.
+ *
+ * TWO quantities have to survive a cascade step, and they were fixed in that
+ * order on 2026-07-20 (ADR-681):
+ *
+ *  - §5   DENSITY — how many lines. Fixed by the C4D opacity cross-fade in
+ *         `computeAdaptiveLevels`.
+ *  - §5.8 EMPHASIS — which lines are bright. Needs a THIRD rendered level;
+ *         see `renderAdaptiveGrid` for why two can never suffice.
  *
  * Extracted from GridRenderer to keep the renderer file under the
  * Google-level 500-line limit (CLAUDE.md SOS. N.7.1).
@@ -33,24 +41,54 @@ export interface AdaptiveLevelInputs {
 export interface AdaptiveLevels {
   readonly majorScreenPx: number;
   readonly minorScreenPx: number;
+  /**
+   * The level one cascade period ABOVE the major — drawn so the coarse rhythm
+   * is already on screen before the step promotes it. See
+   * `renderAdaptiveGrid` for why a two-level render cannot be continuous.
+   */
+  readonly coarseScreenPx: number;
+  /**
+   * `1 - lodFade`. Doubles as the EMPHASIS mix: it is simultaneously the finest
+   * level's opacity and the fraction of "majorness" the surviving level still
+   * carries. One scalar, because the two are the same quantity — see
+   * `renderAdaptiveGrid`.
+   */
   readonly minorOpacity: number;
 }
 
 // ─── Renderer integration helper ────────────────────────────────────────────
 
-export interface AdaptiveLineRenderInput {
+/**
+ * One scheduled pass. The mechanism decides WHICH marks to paint and at what
+ * alpha; the caller decides WHAT a mark looks like.
+ *
+ * `major` is the pass's cascade ROLE, not a discrete level identity — it is the
+ * style class the four-pass table assigns, and each style maps it to its own
+ * visual dimension: lines → stroke weight, dots → radius, crosses → arm length.
+ * Keeping it a boolean rather than a style object is what lets one mechanism
+ * serve all three without knowing about any of them.
+ */
+export interface AdaptiveGridPass {
+  /** On-screen spacing, in px, at which to lay this pass's marks. */
+  readonly spacingPx: number;
+  /** True → paint in the MAJOR style class; false → the MINOR one. */
+  readonly major: boolean;
+}
+
+export interface AdaptiveGridRenderInput {
   readonly ctx: CanvasRenderingContext2D;
-  readonly drawLines: (gridSize: number) => void;
+  /**
+   * Paint one pass. Called with `ctx.globalAlpha` ALREADY set; the callback
+   * owns every other style property (colour, weight, size) because those differ
+   * per grid style. Style-agnostic by construction — see `AdaptiveGridPass`.
+   */
+  readonly drawMarks: (pass: AdaptiveGridPass) => void;
   readonly worldStep: number;
   readonly scale: number;
   readonly subDivisions: number;
   /** Sole density knob — the cascade band floor. Band top + cross-fade derive from it. */
   readonly minSpacingPx: number;
   readonly fadeDurationMs: number;
-  readonly minorColor: string;
-  readonly minorWeight: number;
-  readonly majorColor: string;
-  readonly majorWeight: number;
   readonly showMinor: boolean;
   readonly showMajor: boolean;
   readonly previousOpacity: number;
@@ -58,15 +96,97 @@ export interface AdaptiveLineRenderInput {
   readonly markDirty: () => void;
 }
 
-export interface AdaptiveLineRenderOutput {
+export interface AdaptiveGridRenderOutput {
   readonly renderedOpacity: number;
   readonly timestampMs: number;
 }
 
-/** Run the adaptive 2-pass minor+major draw with smoothstep + temporal lerp. */
-export function renderAdaptiveGridLines(input: AdaptiveLineRenderInput): AdaptiveLineRenderOutput {
+/**
+ * Run the adaptive THREE-level draw: fine + surviving + coarse, with the
+ * emphasis cross-faded so a cascade step changes nothing on screen.
+ *
+ * ## Style-agnostic by construction (ADR-681 §5.9)
+ *
+ * This schedules PASSES; it never paints. Everything below is a property of the
+ * cascade geometry, identical whether the marks are lines, dots or crosses, so
+ * all three styles share this one mechanism rather than each growing a copy:
+ * level selection, the temporal lerp, the four-pass table, alpha compositing,
+ * the show/hide gates and the invisible-pass cull. The caller supplies
+ * `drawMarks` and owns colour, weight and size — the only things that actually
+ * differ per style. Adding a fourth style must not touch this function.
+ *
+ * ## Why two levels cannot be smooth, however the styles are tuned
+ *
+ * The ADR-681 §5 cross-fade made the LINE COUNT continuous. It could not make
+ * the EMPHASIS PATTERN continuous, because with only two levels drawn the step
+ * reorganises which lines are bright (measured on Giorgio's 2026-07-20 pair:
+ * bright lines every 53.5px → every 227.5px, ×4.25, while density moved only
+ * ×0.959). Two things break at once:
+ *
+ *  1. the surviving level switches style major → minor, and
+ *  2. the level one period coarser, **not drawn at all** before the step,
+ *     appears at full major emphasis after it — a large-scale rhythm born from
+ *     nothing, which reads as an event even when each individual line changes
+ *     only ×1.32.
+ *
+ * Lowering the major/minor ratio (ADR-681 §5.7, `GRID_MAJOR_EMPHASIS_RATIO`)
+ * attacks the symptom of (1) and cannot touch (2) at all. The only ratio that
+ * hides both is ≈1.13 — i.e. abolishing the hierarchy the two levels exist for.
+ *
+ * ## The fix — style is a function of cascade phase, not of discrete role
+ *
+ * Let `e = minorOpacity = 1 - lodFade` (1 just after a step, → 0 just before).
+ * Three levels are drawn, each level's lines being a subset of the finer one's
+ * positions, so the passes COMPOSITE rather than add:
+ *
+ * | pass | spacing        | style | alpha  |
+ * |------|----------------|-------|--------|
+ * | 1    | `minor`        | minor | `e`    |
+ * | 2    | `major`        | minor | `1`    |
+ * | 3    | `major`        | major | `e`    |
+ * | 4    | `coarse`       | major | `1-e`  |
+ *
+ * Resulting effective alpha per line set (`1-(1-a)(1-b)` compositing):
+ *
+ * | line set | minor-styled | major-styled |
+ * |----------|--------------|--------------|
+ * | `minor`  | `e`          | 0            |
+ * | `major`  | 1            | `e`          |
+ * | `coarse` | 1            | `1-(1-e)e`   |
+ *
+ * Evaluate at the step, where `e: 0 → 1` and every level is promoted one slot:
+ *
+ * ```
+ * before (e=0)                       after (e=1)
+ *   minor   : invisible                (gone)
+ *   major   : pure MINOR       ──►     minor   : pure MINOR    ✅ identical
+ *   coarse  : full MAJOR       ──►     major   : full MAJOR    ✅ identical
+ *   (coarse's own subset)      ──►     coarse  : full MAJOR    ✅ identical
+ * ```
+ *
+ * Every physical line carries the SAME draw state on both sides of the step, so
+ * the transition is not merely subtle — it is arithmetically absent, and stays
+ * absent for any weight ratio, any colours and any background. That is the
+ * property `GRID_MAJOR_EMPHASIS_RATIO` alone could never provide: its ×1.00 was
+ * a cancellation calibrated against one specific background luminance.
+ *
+ * ## Provenance
+ *
+ * Pass 1 and pass 3 are the existing C4D `minorC * (1.0 - lodFade)` mechanism
+ * (`bim-3d/scene/grid/cinema4d-grid-material.ts:99`, ADR-558) applied to a
+ * second quantity; passes 2 and 4 are plain draws. No colour interpolation is
+ * introduced — the fade is alpha compositing, exactly as the shader does it.
+ *
+ * MAXON/Revit/ArchiCAD/Figma do not render a third level (C4D hides the same
+ * reorganisation behind near-identical styles; Revit and ArchiCAD have no
+ * cascade to step). Continuous style interpolation over a fractional zoom level
+ * is however standard in Mapbox GL and Blender's overlay grid. Chosen by
+ * Giorgio 2026-07-20 over the ratio-only alternative, which preserved
+ * precedent but cost the major level's legibility as a measuring reference.
+ */
+export function renderAdaptiveGrid(input: AdaptiveGridRenderInput): AdaptiveGridRenderOutput {
   const { ctx } = input;
-  const { majorScreenPx, minorScreenPx, minorOpacity: target } = computeAdaptiveLevels({
+  const { majorScreenPx, minorScreenPx, coarseScreenPx, minorOpacity: target } = computeAdaptiveLevels({
     worldStep: input.worldStep,
     scale: input.scale,
     subDivisions: input.subDivisions,
@@ -74,22 +194,27 @@ export function renderAdaptiveGridLines(input: AdaptiveLineRenderInput): Adaptiv
   });
   const now = performance.now();
   const dtMs = input.previousTimestampMs > 0 ? now - input.previousTimestampMs : 0;
+  // ONE temporal state drives all four passes: the emphasis mix and the finest
+  // level's opacity are the same scalar, so they can never drift out of step.
   const renderedOpacity = lerpOpacityTowards(input.previousOpacity, target, dtMs, input.fadeDurationMs);
   if (Math.abs(target - renderedOpacity) > 0.005) input.markDirty();
+  const emphasis = clamp01(renderedOpacity);
 
   const baseAlpha = ctx.globalAlpha;
-  if (input.showMinor && renderedOpacity > 0.001) {
-    ctx.globalAlpha = baseAlpha * renderedOpacity;
-    ctx.strokeStyle = input.minorColor;
-    ctx.lineWidth = input.minorWeight;
-    input.drawLines(minorScreenPx);
-  }
-  if (input.showMajor) {
-    ctx.globalAlpha = baseAlpha;
-    ctx.strokeStyle = input.majorColor;
-    ctx.lineWidth = input.majorWeight;
-    input.drawLines(majorScreenPx);
-  }
+  // Below this the stroke is invisible anyway, so the pass is pure cost. It
+  // matters most for pass 1, whose spacing collapses toward `minSpacingPx`.
+  const INVISIBLE = 0.004;
+  const pass = (spacingPx: number, major: boolean, alpha: number): void => {
+    if (!(major ? input.showMajor : input.showMinor) || alpha < INVISIBLE) return;
+    ctx.globalAlpha = baseAlpha * alpha;
+    input.drawMarks({ spacingPx, major });
+  };
+
+  pass(minorScreenPx, false, emphasis);      // 1 — finest level, fading out
+  pass(majorScreenPx, false, 1);             // 2 — survivor's opaque minor base
+  pass(majorScreenPx, true, emphasis);       // 3 — survivor's majorness, fading out
+  pass(coarseScreenPx, true, 1 - emphasis);  // 4 — coarse majorness, fading IN
+
   ctx.globalAlpha = baseAlpha;
   return { renderedOpacity, timestampMs: now };
 }
@@ -183,7 +308,7 @@ export function computeAdaptiveLevels(input: AdaptiveLevelInputs): AdaptiveLevel
   // legacy path, but keep the math total for direct callers.
   if (!(subDivisions > 1) || !(scale > 0) || !(worldStep > 0) || !(minSpacingPx > 0)) {
     const flatPx = worldStep * scale;
-    return { majorScreenPx: flatPx, minorScreenPx: flatPx, minorOpacity: 1 };
+    return { majorScreenPx: flatPx, minorScreenPx: flatPx, coarseScreenPx: flatPx, minorOpacity: 1 };
   }
 
   // DERIVED — one cascade period above the floor. See the doc block above:
@@ -203,9 +328,12 @@ export function computeAdaptiveLevels(input: AdaptiveLevelInputs): AdaptiveLevel
 
   const minorScreenPx = minorWorldStep * scale;
   const majorScreenPx = minorScreenPx * subDivisions;
+  // One period above the major — the level the step is about to promote. It is
+  // drawn NOW (at fading-in emphasis) so its rhythm is never born from nothing.
+  const coarseScreenPx = majorScreenPx * subDivisions;
 
   // C4D `1.0 - lodFade`, in log space over the cascade period.
   const lodFade = clamp01(Math.log(maxSpacingPx / minorScreenPx) / Math.log(subDivisions));
 
-  return { majorScreenPx, minorScreenPx, minorOpacity: 1 - lodFade };
+  return { majorScreenPx, minorScreenPx, coarseScreenPx, minorOpacity: 1 - lodFade };
 }

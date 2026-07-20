@@ -1,15 +1,20 @@
 /**
  * =============================================================================
- * SLIDER INPUT — SSoT per tutti gli slider del DXF Viewer (ADR-342-ext)
+ * SLIDER INPUT — SSoT for every DXF Viewer slider (ADR-682)
  * =============================================================================
  *
- * Wrapper attorno a @/components/ui/slider (Radix UI Slider primitivo).
- * Zero inline styles. Filled track cross-browser via bg-primary su SliderRange.
+ * Wrapper around @/components/ui/slider (Radix UI Slider primitive).
+ * Zero inline styles. Filled track cross-browser via bg-primary on SliderRange.
  *
- * Varianti:
- *   - Solo slider (default)
- *   - Slider + numero affiancato (showNumberInput)
- *   - Valore mostrato accanto alla label (showValue + formatValue)
+ * The value shown next to the label is TYPE-ABLE (ADR-682): it is a
+ * `SliderValueField`, not a read-only span — click it and type an exact number
+ * (Enter/blur commits, Escape reverts, Arrow keys nudge by step). The slider is
+ * the SECONDARY affordance, matching Revit / ArchiCAD / Cinema 4D / Figma.
+ *
+ * Variants:
+ *   - Slider only (default)
+ *   - Slider + paired number input (showNumberInput)
+ *   - Editable value beside the label (showValue + formatValue)
  */
 
 import React, { useMemo } from 'react';
@@ -17,6 +22,7 @@ import { Slider } from '@/components/ui/slider';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PANEL_LAYOUT } from '../../../config/panel-tokens';
+import { SliderValueField } from './SliderValueField';
 
 // =============================================================================
 // PROPS
@@ -63,8 +69,6 @@ export function SliderInput({
   const colors = useSemanticColors();
   const { quick } = useBorderTokens();
 
-  const displayValue = formatValue ? formatValue(value) : String(value);
-
   // Stable array ref — Radix Slider's internal useMemo has this as a dep
   const sliderValues = useMemo(() => [value], [value]);
 
@@ -87,11 +91,16 @@ export function SliderInput({
             </label>
           )}
           {showValue && (
-            <span
-              className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}
-            >
-              {displayValue}
-            </span>
+            <SliderValueField
+              value={value}
+              min={min}
+              max={max}
+              step={step}
+              onChange={onChange}
+              formatValue={formatValue}
+              label={label}
+              disabled={disabled}
+            />
           )}
         </div>
       )}

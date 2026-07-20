@@ -7,7 +7,7 @@
  * w-72 sidebar tab:
  *  - Config row (duration/fps/axis/direction)
  *  - "Add at current camera" button (reads CameraTargetStore SSoT)
- *  - Horizontal scrubber slider (0..durationSec)
+ *  - Playhead scrubber (TimelineScrubber SSoT — 0..durationSec + waypoint ticks)
  *  - Vertical waypoint list (diamond + ordinal + time + remove + drag-reorder)
  *  - Selected waypoint properties form (position/target/fov/easingToNext)
  *
@@ -31,6 +31,8 @@ import {
   type Waypoint,
 } from './animation-types';
 import { ANIMATION_LIMITS } from './presets/animation-presets';
+import { formatTime, waypointTimesSec } from './timeline-time-format';
+import { TimelineScrubber, type TimelineScrubberMarker } from './TimelineScrubber';
 import { TimelineWaypointForm } from './TimelineWaypointForm';
 
 const AXIS_OPTIONS: readonly AnimationAxis[] = ['x', 'y', 'z'];
@@ -69,9 +71,16 @@ export function TimelineEditor() {
     });
   }, [addWaypoint]);
 
-  const handleScrubberInput = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => setScrubberSec(Number(e.target.value)),
-    [],
+  // Τα waypoints είναι ισοκατανεμημένα στη διάρκεια — ίδιος υπολογισμός με
+  // την κάθετη λίστα, μία φορά γραμμένος (timeline-time-format SSoT).
+  const waypointTimes = useMemo(
+    () => waypointTimesSec(waypoints.length, durationSec),
+    [waypoints.length, durationSec],
+  );
+
+  const scrubberMarkers = useMemo<ReadonlyArray<TimelineScrubberMarker>>(
+    () => waypointTimes.map((timeSec) => ({ timeSec })),
+    [waypointTimes],
   );
 
   return (
@@ -105,17 +114,18 @@ export function TimelineEditor() {
         {t('animation.toolbar.addAtCurrentCamera')}
       </button>
 
-      <ScrubberRow
+      <TimelineScrubber
         valueSec={scrubberSec}
         durationSec={durationSec}
-        onChange={handleScrubberInput}
+        onChange={setScrubberSec}
+        waypoints={scrubberMarkers}
         ariaLabel={t('animation.timeline.scrubberLabel')}
       />
 
       <WaypointList
         waypoints={waypoints}
         activeIndex={activeIndex}
-        durationSec={durationSec}
+        times={waypointTimes}
         onSelect={setActive}
         onRemove={removeWaypoint}
         onReorder={reorderWaypoints}
@@ -202,42 +212,14 @@ function ConfigRow(props: ConfigRowProps) {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Scrubber row
-// ──────────────────────────────────────────────────────────────────────────────
-
-interface ScrubberRowProps {
-  readonly valueSec: number;
-  readonly durationSec: number;
-  readonly onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  readonly ariaLabel: string;
-}
-
-function ScrubberRow({ valueSec, durationSec, onChange, ariaLabel }: ScrubberRowProps) {
-  return (
-    <div className="flex flex-col gap-1">
-      <span className="font-mono text-[10px] text-white/70">{formatTime(valueSec)}</span>
-      <input
-        type="range"
-        min={0}
-        max={durationSec}
-        step={0.001}
-        value={Math.min(valueSec, durationSec)}
-        onChange={onChange}
-        aria-label={ariaLabel}
-        className="w-full"
-      />
-    </div>
-  );
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
 // Waypoint list (drag-to-reorder)
 // ──────────────────────────────────────────────────────────────────────────────
 
 interface WaypointListProps {
   readonly waypoints: ReadonlyArray<Waypoint>;
   readonly activeIndex: number | null;
-  readonly durationSec: number;
+  /** Χρόνος ανά waypoint — από το timeline-time-format SSoT. */
+  readonly times: readonly number[];
   readonly onSelect: (index: number) => void;
   readonly onRemove: (index: number) => void;
   readonly onReorder: (from: number, to: number) => void;
@@ -246,13 +228,8 @@ interface WaypointListProps {
 }
 
 function WaypointList(props: WaypointListProps) {
-  const { waypoints, activeIndex, durationSec, onSelect, onRemove, onReorder, emptyLabel, deleteLabel } = props;
+  const { waypoints, activeIndex, times, onSelect, onRemove, onReorder, emptyLabel, deleteLabel } = props;
   const [dragIndex, setDragIndex] = useState<number | null>(null);
-
-  const stepSec = useMemo(
-    () => (waypoints.length > 1 ? durationSec / (waypoints.length - 1) : 0),
-    [waypoints.length, durationSec],
-  );
 
   if (waypoints.length === 0) {
     return <p className="rounded border border-dashed border-white/20 p-2 text-center text-[11px] text-white/40">{emptyLabel}</p>;
@@ -284,7 +261,7 @@ function WaypointList(props: WaypointListProps) {
             >
               <span aria-hidden className="text-[hsl(var(--text-warning))]">◆</span>
               <span className="w-6 font-mono">{i + 1}</span>
-              <span className="font-mono text-[10px] text-white/50">{formatTime(stepSec * i)}</span>
+              <span className="font-mono text-[10px] text-white/50">{formatTime(times[i] ?? 0)}</span>
             </button>
             <button
               type="button"
@@ -312,24 +289,6 @@ function LabeledField({ label, children }: { readonly label: string; readonly ch
       {children}
     </label>
   );
-}
-
-export function formatTime(seconds: number): string {
-  const safe = Math.max(0, seconds);
-  const m = Math.floor(safe / 60);
-  const s = Math.floor(safe % 60);
-  const ms = Math.floor((safe % 1) * 1000);
-  return `${pad2(m)}:${pad2(s)}.${pad3(ms)}`;
-}
-
-function pad2(n: number): string {
-  return n < 10 ? `0${n}` : `${n}`;
-}
-
-function pad3(n: number): string {
-  if (n < 10) return `00${n}`;
-  if (n < 100) return `0${n}`;
-  return `${n}`;
 }
 
 export const TIMELINE_EASING_OPTIONS: readonly EasingPresetId[] = EASING_PRESET_IDS;

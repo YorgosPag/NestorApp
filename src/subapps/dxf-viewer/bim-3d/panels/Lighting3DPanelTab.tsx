@@ -10,6 +10,18 @@ import { PRESET_ORDER } from '../lighting/lighting-presets';
 import { HDRI_PRESETS } from '../lighting/hdri-environment';
 import { HdriUploader } from '../lighting/HdriUploader';
 import { computeSolarPosition, timeOfDayToDate } from '../lighting/solar-position';
+import { SliderInput } from '../../ui/components/shared/SliderInput';
+
+/**
+ * Fractional hour → zero-padded `hh:mm` clock text.
+ * Pure: derives the string from its ARGUMENT only, so it can be handed to
+ * `SliderInput.formatValue` without closing over render-scope state.
+ */
+function formatHourMinute(hourFloat: number): string {
+  const hh = String(Math.floor(hourFloat)).padStart(2, '0');
+  const mm = String(Math.floor((hourFloat % 1) * 60)).padStart(2, '0');
+  return `${hh}:${mm}`;
+}
 
 export function Lighting3DPanelTab() {
   const { t } = useTranslation('bim3d');
@@ -55,9 +67,6 @@ export function Lighting3DPanelTab() {
     }, 2000);
     return () => clearInterval(id);
   }, [sunAnimating, solarLatDeg, solarLngDeg]);
-
-  const hh = String(Math.floor(timeHour)).padStart(2, '0');
-  const mm = String(Math.floor((timeHour % 1) * 60)).padStart(2, '0');
 
   return (
     <div className="space-y-3 p-3 text-xs text-white/80">
@@ -105,21 +114,16 @@ export function Lighting3DPanelTab() {
         ))}
       </div>
 
-      <div>
-        <div className="mb-1 flex justify-between">
-          <span>{t('lighting.timeLabel')}</span>
-          <span className="text-white/50">{hh}:{mm}</span>
-        </div>
-        <input
-          type="range"
-          min={0}
-          max={23.75}
-          step={0.25}
-          value={timeHour}
-          onChange={(e) => applyTime(Number(e.target.value))}
-          className="w-full accent-primary"
-        />
-      </div>
+      <SliderInput
+        label={t('lighting.timeLabel')}
+        value={timeHour}
+        min={0}
+        max={23.75}
+        step={0.25}
+        onChange={applyTime}
+        showValue
+        formatValue={formatHourMinute}
+      />
 
       <button
         onClick={() => setAdvanced((v) => !v)}
