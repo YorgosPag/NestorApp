@@ -268,3 +268,108 @@ describe('registerImportedDimStyles — DIMSCALE passthrough (rescue is render-s
     expect(registry.getStyle(result.created[0])?.dimscale).toBe(100);
   });
 });
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Incident 2026-07-20 — «υπερμεγέθη κείμενα διαστάσεων»
+//
+// Ground truth: `Αδείας.Κάτοψη ισογείου.dxf` (metres, $EXTMIN/MAX 74.66 × 40.58).
+// Its DIMSTYLE table, read straight off the file:
+//
+//     CHRIS 0.085/1 · STANDARD 0.18/1 · STAIRS_I 0.09375/96
+//     ANNOTATIVE 0.09375/0 · CHRIS$0 0.085/1 · TEO 0.3/1
+//
+// Two independent defects stacked, the first masking the second:
+//   (Α) AutoCAD writes `STANDARD`; the election compared `=== 'Standard'` and
+//       never matched, so a synthetic 2.5 paper-mm default won instead.
+//   (Β) DIMTXT is in DRAWING units, but `DimStyle`/`paperHeightToModel` expect
+//       paper-mm — verbatim copying is off by 1000 in a metres file.
+// Fixing (Α) alone would have swapped giant text for invisible text.
+// ──────────────────────────────────────────────────────────────────────────────
+
+describe('registerImportedDimStyles — drawing units → paper-mm (incident 2026-07-20)', () => {
+  let registry: DimStyleRegistry;
+  beforeEach(() => { registry = new DimStyleRegistry(); });
+
+  it('converts metre-authored DIMTXT to its paper-mm equivalent', () => {
+    const result = registerImportedDimStyles(
+      makeSceneWithUnits({ CHRIS: makeImportedStyle({ name: 'CHRIS', dimtxt: 0.085 }) }, 'm'),
+      registry,
+    );
+    // 0.085 m of drawing → 85 paper-mm, so paperHeightToModel(85, 1, 'm') = 0.085 m.
+    expect(registry.getStyle(result.created[0])?.dimtxt).toBeCloseTo(85, 6);
+  });
+
+  it('leaves mm-authored DIMTXT untouched (factor is exactly 1)', () => {
+    const result = registerImportedDimStyles(
+      makeSceneWithUnits({ Standard: makeImportedStyle({ dimtxt: 2.5 }) }, 'mm'),
+      registry,
+    );
+    expect(registry.getStyle(result.created[0])?.dimtxt).toBe(2.5);
+  });
+
+  it('converts every size field, not just DIMTXT', () => {
+    const result = registerImportedDimStyles(
+      makeSceneWithUnits(
+        { S: makeImportedStyle({ name: 'S', dimasz: 0.1, dimgap: 0.02, dimexe: 0.05, dimexo: 0.03, dimdli: 0.4, dimcen: 0.09 }) },
+        'm',
+      ),
+      registry,
+    );
+    const style = registry.getStyle(result.created[0]);
+    expect(style?.dimasz).toBeCloseTo(100, 6);
+    expect(style?.dimgap).toBeCloseTo(20, 6);
+    expect(style?.dimexe).toBeCloseTo(50, 6);
+    expect(style?.dimexo).toBeCloseTo(30, 6);
+    expect(style?.dimdli).toBeCloseTo(400, 6);
+    expect(style?.dimcen).toBeCloseTo(90, 6);
+    expect(style?.breakGap).toBeCloseTo(150, 6);
+  });
+
+  it('does NOT rescale measurement-space fields (DIMRND / DIMTM / DIMTP / DIMLFAC)', () => {
+    const result = registerImportedDimStyles(
+      makeSceneWithUnits({ S: makeImportedStyle({ name: 'S', dimrnd: 0.05, dimtm: 0.01, dimtp: 0.02, dimlfac: 1 }) }, 'm'),
+      registry,
+    );
+    const style = registry.getStyle(result.created[0]);
+    expect(style?.dimrnd).toBe(0.05);
+    expect(style?.dimtm).toBe(0.01);
+    expect(style?.dimtp).toBe(0.02);
+    expect(style?.dimlfac).toBe(1);
+  });
+
+  it('elects the uppercase AutoCAD "STANDARD" as active', () => {
+    const result = registerImportedDimStyles(
+      makeSceneWithUnits(
+        {
+          CHRIS: makeImportedStyle({ name: 'CHRIS', dimtxt: 0.085 }),
+          STANDARD: makeImportedStyle({ name: 'STANDARD', dimtxt: 0.18 }),
+          TEO: makeImportedStyle({ name: 'TEO', dimtxt: 0.3 }),
+        },
+        'm',
+      ),
+      registry,
+    );
+    expect(result.activeChanged).toBe(true);
+    const active = registry.getActiveStyle();
+    expect(active.name).toBe('imported:STANDARD');
+    // 0.18 m text, NOT the 2.5 paper-mm phantom that used to win this election.
+    expect(active.dimtxt).toBeCloseTo(180, 6);
+  });
+
+  it('flags a file-declared DIMSCALE as explicit, and the annotative sentinel as not', () => {
+    const result = registerImportedDimStyles(
+      makeSceneWithUnits(
+        {
+          CHRIS: makeImportedStyle({ name: 'CHRIS', dimscale: 1 }),
+          ANNOTATIVE: makeImportedStyle({ name: 'ANNOTATIVE', dimscale: 0 }),
+        },
+        'm',
+        1,
+      ),
+      registry,
+    );
+    const [chris, annotative] = result.created.map((id) => registry.getStyle(id));
+    expect(chris?.dimscaleExplicit).toBe(true);
+    expect(annotative?.dimscaleExplicit).toBe(false);
+  });
+});

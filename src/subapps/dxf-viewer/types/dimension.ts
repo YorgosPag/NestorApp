@@ -257,6 +257,19 @@ export interface DimStyle {
    */
   dimscale: number;
   /**
+   * True when `dimscale` was **explicitly declared by the source file** (DXF
+   * DIMSTYLE code 40 > 0), as opposed to a runtime/template default.
+   *
+   * ADR-362 — `resolveEffectiveDimscale` substitutes the live `drawingScale`
+   * SSoT whenever `dimscale ≤ 1`, on the assumption that "≤ 1 means nobody said".
+   * That assumption is false for an imported style that declares `DIMSCALE = 1`:
+   * the file HAS spoken, and multiplying its already-correct sizes by the View
+   * ribbon's 1:N inflates every imported dimension by that factor. Only set by
+   * `dim-style-importer`; absent (falsy) everywhere else preserves the old
+   * behaviour for built-in templates and ribbon-created styles.
+   */
+  dimscaleExplicit?: boolean;
+  /**
    * @deprecated Legacy duplicate of `dimtxt` (both paper-mm). NOT a live edit
    * target — `dimtxt` is the text-height SSoT (renderer + I/O read it; the ribbon
    * control writes it). Kept populated (= `dimtxt` on import) for back-compat only;

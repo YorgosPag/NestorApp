@@ -21,6 +21,7 @@ import type { DxfHeaderData, DimStyleMap } from './dxf-entity-parser';
 import { calculateDistance, calculateAngle } from '../rendering/entities/shared/geometry-rendering-utils';
 import { radToDeg } from '../rendering/entities/shared/geometry-utils';
 import { extractEntityColor } from './dxf-converter-helpers';
+import { lookupDimStyleEntry, STANDARD_DIMSTYLE_NAME } from './dxf-parser-types';
 import { dwarn } from '../debug';
 
 // ============================================================================
@@ -55,16 +56,21 @@ function calculateDimensionTextHeight(
   header: DxfHeaderData,
   dimStyles?: DimStyleMap
 ): number {
-  const styleName = data['3'] || 'Standard';
+  const styleName = data['3'] || STANDARD_DIMSTYLE_NAME;
   const entityDimtxt = parseFloat(data['140']) || 0;
+
+  // ADR-362 — case-INSENSITIVE per the DXF spec: AutoCAD writes `STANDARD`, and a
+  // literal `dimStyles['Standard']` missed it (see `lookupDimStyleEntry`).
+  const named = lookupDimStyleEntry(dimStyles, styleName);
+  const standard = lookupDimStyleEntry(dimStyles, STANDARD_DIMSTYLE_NAME);
 
   let baseDimtxt: number;
   if (entityDimtxt > 0) {
     baseDimtxt = entityDimtxt;
-  } else if (dimStyles && dimStyles[styleName]) {
-    baseDimtxt = dimStyles[styleName].dimtxt;
-  } else if (dimStyles && dimStyles['Standard']) {
-    baseDimtxt = dimStyles['Standard'].dimtxt;
+  } else if (named) {
+    baseDimtxt = named.dimtxt;
+  } else if (standard) {
+    baseDimtxt = standard.dimtxt;
   } else if (header.dimtxt > 0) {
     baseDimtxt = header.dimtxt;
   } else {

@@ -51,8 +51,18 @@ export function paperHeightToModel(
  * old renderer heuristic (`unitFactor ≤ m && dimscale < 10`) that only rescued
  * metre scenes, leaving mm/cm dimensions microscopic.
  */
-export function resolveEffectiveDimscale(rawDimscale: number, drawingScale: number): number {
+export function resolveEffectiveDimscale(
+  rawDimscale: number,
+  drawingScale: number,
+  rawIsExplicit = false,
+): number {
   if (Number.isFinite(rawDimscale) && rawDimscale > 1) return rawDimscale;
+  // ADR-362 — an imported style that DECLARES its DIMSCALE (even 1) has already
+  // spoken: its sizes are correct as authored, and folding the View-ribbon 1:N
+  // on top inflates every imported dimension by that factor. `≤ 1` only means
+  // "unset" for built-in templates and the annotative sentinel (DIMSCALE 0),
+  // which is why the flag is opt-in rather than the default.
+  if (rawIsExplicit && Number.isFinite(rawDimscale) && rawDimscale > 0) return rawDimscale;
   return Number.isFinite(drawingScale) && drawingScale > 0 ? drawingScale : 1;
 }
 

@@ -141,7 +141,7 @@ export function resolveDimensionRender(
   // wildly-mismatched imported DIMSCALE can't blow the text past ~2% of the
   // drawing extent (the "giant dimension cross" on units-mismatched DXFs).
   // `sceneSpan = 0` (unit tests / preview) → clamp is a no-op.
-  const effective = resolveEffectiveDimscale(rawStyle.dimscale, drawingScale);
+  const effective = resolveEffectiveDimscale(rawStyle.dimscale, drawingScale, rawStyle.dimscaleExplicit);
   const style: DimStyle = {
     ...rawStyle,
     dimscale: clampDimscaleForReadability(effective, rawStyle.dimtxt, sceneUnits, sceneSpan),

@@ -11,11 +11,30 @@
 import { getAciColor } from '../settings/standards/aci';
 import { DXF_DEFAULT_LAYER } from '../config/layer-config';
 import type { DimStyleEntry, DimStyleMap, LayerColorEntry, LayerColorMap } from './dxf-parser-types';
-import { DEFAULT_DIMSTYLE } from './dxf-parser-types';
+import { DEFAULT_DIMSTYLE, STANDARD_DIMSTYLE_NAME } from './dxf-parser-types';
 
 // ============================================================================
 // DIMSTYLE TABLE PARSER
 // ============================================================================
+
+/**
+ * Commit a partially-parsed LAYER entry into the colour map (N.18 — this ran
+ * verbatim at both `ENDTAB` and the next `0/LAYER`). A negative ACI colour index
+ * is AutoCAD's "layer off" encoding: magnitude is the colour, sign is visibility.
+ */
+function flushLayerEntry(
+  entry: Partial<LayerColorEntry>,
+  into: LayerColorMap,
+): void {
+  if (!entry.name) return;
+  const colorIndex = entry.colorIndex ?? 7;
+  into[entry.name] = {
+    name: entry.name,
+    colorIndex: Math.abs(colorIndex),
+    color: getAciColor(Math.abs(colorIndex)),
+    visible: colorIndex >= 0,
+  };
+}
 
 /** Apply DEFAULT_DIMSTYLE fallbacks to a partially-parsed style entry. */
 function finalizeDimStyleEntry(s: Partial<DimStyleEntry>): DimStyleEntry {
@@ -68,6 +87,19 @@ function finalizeDimStyleEntry(s: Partial<DimStyleEntry>): DimStyleEntry {
 }
 
 /**
+ * Τα ζεύγη (code, value) ενός DXF — **ένας** αναγνώστης, όχι δίδυμοι βρόχοι σε κάθε parser.
+ *
+ * Το DXF είναι ροή ζευγών «κωδικός ομάδας / τιμή» σε διαδοχικές γραμμές· ο τρόπος ανάγνωσης είναι
+ * ίδιος για κάθε πίνακα (DIMSTYLE, LAYER, …) και δεν έχει λόγο να ξαναγράφεται. Το `break`/`continue`
+ * του καταναλωτή δουλεύει ακριβώς όπως σε χειρόγραφο `for` (ADR-583 / N.18).
+ */
+function* dxfCodeValuePairs(lines: string[]): Generator<{ code: string; value: string }> {
+  for (let i = 0; i < lines.length - 1; i += 2) {
+    yield { code: lines[i].trim(), value: lines[i + 1]?.trim() || '' };
+  }
+}
+
+/**
  * Parse DIMSTYLE table from TABLES section.
  *
  * Extracts DIMSTYLE variables for dimension rendering + roundtrip (ADR-362 H1).
@@ -77,17 +109,13 @@ function finalizeDimStyleEntry(s: Partial<DimStyleEntry>): DimStyleEntry {
  */
 export function parseDimStyles(lines: string[]): DimStyleMap {
   const dimStyles: DimStyleMap = {};
-  dimStyles['Standard'] = { ...DEFAULT_DIMSTYLE };
 
   let inTables = false;
   let inDimStyleTable = false;
   let inDimStyleEntry = false;
   let currentStyle: Partial<DimStyleEntry> = {};
 
-  for (let i = 0; i < lines.length - 1; i += 2) {
-    const code = lines[i].trim();
-    const value = lines[i + 1]?.trim() || '';
-
+  for (const { code, value } of dxfCodeValuePairs(lines)) {
     if (code === '2' && value === 'TABLES') {
       inTables = true;
       continue;
@@ -180,6 +208,16 @@ export function parseDimStyles(lines: string[]): DimStyleMap {
     }
   }
 
+  // ADR-362 — the synthetic default is a **no-DIMSTYLE-table fallback**, not a
+  // baseline. Seeding it up-front made it survive under the key `'Standard'`
+  // whenever the file wrote `STANDARD` (AutoCAD's casing), and `dim-style-importer`
+  // then elected that 2.5 paper-mm phantom as the ACTIVE style — every imported
+  // dimension rendered ~29× too large while the file's own DIMTXT sat unused.
+  // A file that declares its own styles is authoritative; invent nothing.
+  if (Object.keys(dimStyles).length === 0) {
+    dimStyles[STANDARD_DIMSTYLE_NAME] = { ...DEFAULT_DIMSTYLE };
+  }
+
   const styleCount = Object.keys(dimStyles).length;
   if (styleCount > 1) {
     console.debug('📏 DXF DIMSTYLES parsed:', {
@@ -228,10 +266,7 @@ export function parseLayerColors(lines: string[]): LayerColorMap {
   let prevCode = '';
   let prevValue = '';
 
-  for (let i = 0; i < lines.length - 1; i += 2) {
-    const code = lines[i].trim();
-    const value = lines[i + 1]?.trim() || '';
-
+  for (const { code, value } of dxfCodeValuePairs(lines)) {
     if (prevCode === '0' && prevValue === 'SECTION' && code === '2' && value === 'TABLES') {
       inTablesSection = true;
       prevCode = code;
@@ -257,15 +292,7 @@ export function parseLayerColors(lines: string[]): LayerColorMap {
     }
 
     if (code === '0' && value === 'ENDTAB' && inLayerTable) {
-      if (inLayerEntry && currentLayer.name) {
-        const colorIndex = currentLayer.colorIndex ?? 7;
-        layerColors[currentLayer.name] = {
-          name: currentLayer.name,
-          colorIndex: Math.abs(colorIndex),
-          color: getAciColor(Math.abs(colorIndex)),
-          visible: colorIndex >= 0
-        };
-      }
+      if (inLayerEntry) flushLayerEntry(currentLayer, layerColors);
       inLayerTable = false;
       inLayerEntry = false;
       prevCode = code;
@@ -280,15 +307,7 @@ export function parseLayerColors(lines: string[]): LayerColorMap {
     }
 
     if (code === '0' && value === 'LAYER') {
-      if (inLayerEntry && currentLayer.name) {
-        const colorIndex = currentLayer.colorIndex ?? 7;
-        layerColors[currentLayer.name] = {
-          name: currentLayer.name,
-          colorIndex: Math.abs(colorIndex),
-          color: getAciColor(Math.abs(colorIndex)),
-          visible: colorIndex >= 0
-        };
-      }
+      if (inLayerEntry) flushLayerEntry(currentLayer, layerColors);
       currentLayer = {};
       inLayerEntry = true;
       prevCode = code;

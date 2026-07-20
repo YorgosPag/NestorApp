@@ -16,9 +16,20 @@
  *      AutoCAD code-driven enums) into the runtime `DimStyle` interface
  *      (string-keyed enums + Round 5 fields like `paperTextHeight`, `dimblk`).
  *      AutoCAD DIMSCALE is dimensionless (e.g. 100 for 1:100 regardless of
- *      model units), so it is stored verbatim. The renderer formula
- *      `dimtxt × dimscale × mmToSceneUnits × viewScale` applies the unit
- *      factor itself — no pre-normalization is needed or correct here.
+ *      model units), so it is stored verbatim.
+ *
+ *      🔴 **Size fields are converted, not copied** (incident 2026-07-20). DXF
+ *      DIMTXT/DIMASZ/DIMGAP/DIMEXE/DIMEXO/DIMDLI/DIMCEN are authored in the
+ *      file's DRAWING units, while the runtime `DimStyle` contract — and
+ *      `paperHeightToModel`, which every renderer folds them through — is
+ *      **paper-mm**. Until this pass the values were copied verbatim, and the
+ *      comment here asserted that was "not needed or correct". It held only
+ *      because drawing-units == mm in the common mm-authored DXF, where the
+ *      conversion factor is exactly 1. In a metres file it is off by 1000:
+ *      `Αδείας.Κάτοψη ισογείου.dxf` declares DIMTXT 0.085 (= 8.5 cm text), which
+ *      `paperHeightToModel(0.085, 1, 'm')` rendered as 0.000085 m — invisible.
+ *      The identity coinciding with correctness in the majority case is exactly
+ *      why this went unnoticed; the conversion is now explicit for every unit.
  *   2. **Reconcile** registry state on every (re)import: previous
  *      session-imported styles are removed before the new ones are added so
  *      switching between DXFs doesn't leak stale entries. Built-in templates
@@ -44,6 +55,8 @@ import {
   type CreateCustomStyleInput,
   getDimStyleRegistry,
 } from './dim-style-registry';
+import { mmToSceneUnits } from '../../utils/scene-units';
+import { STANDARD_DIMSTYLE_NAME } from '../../utils/dxf-parser-types';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Provenance tag
@@ -113,6 +126,7 @@ function translateToDimStyle(
   entry: ImportedSceneDimStyle,
   sourceLabel: string,
   headerDimscale: number,
+  toPaperMm: number,
 ): CreateCustomStyleInput {
   // AutoCAD DIMSCALE is dimensionless (e.g. 100 for 1:100 regardless of
   // model units). The renderer formula already applies mmToSceneUnits, so
@@ -120,6 +134,10 @@ function translateToDimStyle(
   // and m scenes. DIMSCALE=0 is the AutoCAD "annotative" sentinel — fall
   // back to the global $DIMSCALE from the file header.
   const rawDimscale = entry.dimscale === 0 ? headerDimscale : entry.dimscale;
+  // DXF size variables are in DRAWING units; the runtime `DimStyle` contract is
+  // paper-mm (see `paperHeightToModel`). See the header note for why the identity
+  // held only for mm files. `size` is the one place that conversion happens.
+  const size = (drawingUnits: number) => drawingUnits * toPaperMm;
   const decSep = entry.dimdsep === 44 ? ',' : '.';
   const dimtad = DIMTAD_MAP[entry.dimtad] ?? 'above';
   const dimlunit = DIMLUNIT_MAP[entry.dimlunit] ?? 'decimal';
@@ -144,9 +162,9 @@ function translateToDimStyle(
     dimltype: 'ByLayer',
     dimltex1: 'ByLayer',
     dimltex2: 'ByLayer',
-    dimexe: entry.dimexe,
-    dimexo: entry.dimexo,
-    dimdli: entry.dimdli,
+    dimexe: size(entry.dimexe),
+    dimexo: size(entry.dimexo),
+    dimdli: size(entry.dimdli),
     suppressDimLine1: entry.suppressDimLine1,
     suppressDimLine2: entry.suppressDimLine2,
     // DIMSAH/arrowhead suppression is not parsed from DXF yet (see round-trip note above) →
@@ -157,17 +175,17 @@ function translateToDimStyle(
     suppressExtLine2: entry.suppressExtLine2,
 
     // Symbols & arrows
-    dimasz: entry.dimasz,
+    dimasz: size(entry.dimasz),
     dimblk: 'closedFilled',
     dimblk1: '',
     dimblk2: '',
-    dimcen: entry.dimcen,
-    breakGap: entry.dimexe * 3,
+    dimcen: size(entry.dimcen),
+    breakGap: size(entry.dimexe * 3),
 
     // Text
-    dimtxt: entry.dimtxt,
+    dimtxt: size(entry.dimtxt),
     dimclrt: entry.dimclrt,
-    dimgap: entry.dimgap,
+    dimgap: size(entry.dimgap),
     dimtad,
     dimtih: entry.dimtih,
     dimtoh: entry.dimtoh,
@@ -181,7 +199,10 @@ function translateToDimStyle(
     dimatfit: entry.dimatfit,
     dimtmove: entry.dimtmove,
     dimscale: rawDimscale,
-    paperTextHeight: entry.dimtxt,
+    // DIMSCALE 0 is the annotative sentinel — the file delegates sizing to the
+    // viewport, so the live `drawingScale` SSoT must still win downstream.
+    dimscaleExplicit: entry.dimscale > 0,
+    paperTextHeight: size(entry.dimtxt),
 
     // Primary units
     dimlunit,
@@ -276,16 +297,23 @@ export function registerImportedDimStyles(
   // become dead code under ADR-462 (resolveSceneUnits now trusts the declared unit,
   // so the "declared-mm-but-bounds-metres" conflict it keyed on never fires).
 
+  // DXF size variables are authored in DRAWING units; `DimStyle` stores paper-mm.
+  const toPaperMm = 1 / mmToSceneUnits(scene.units ?? 'mm');
+
   const created: string[] = [];
   let standardId: string | null = null;
   let firstId: string | null = null;
 
   for (const [name, entry] of entries) {
-    const input = translateToDimStyle(entry, name, headerDimscale);
+    const input = translateToDimStyle(entry, name, headerDimscale, toPaperMm);
     const style = registry.createCustomStyle(input);
     created.push(style.id);
     if (firstId === null) firstId = style.id;
-    if (name === 'Standard' && standardId === null) standardId = style.id;
+    // Case-INSENSITIVE per the DXF spec — AutoCAD writes `STANDARD`, and the old
+    // `=== 'Standard'` never matched it (see `lookupDimStyleEntry`).
+    if (standardId === null && name.toLowerCase() === STANDARD_DIMSTYLE_NAME.toLowerCase()) {
+      standardId = style.id;
+    }
   }
 
   const nextActive = standardId ?? firstId;

@@ -125,3 +125,32 @@ describe('clampDimscaleForReadability — the giant-dimension-cross fix', () => 
     expect(paperHeightToModel(0.6, clamped, 'm')).toBeCloseTo(300 * DIM_TEXT_MAX_SCENE_RATIO, 6);
   });
 });
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Incident 2026-07-20 — a file-declared DIMSCALE must not be overridden.
+//
+// `≤ 1 means nobody said` holds for built-in templates and the annotative
+// sentinel, but NOT for an imported style that explicitly declares DIMSCALE = 1
+// (e.g. `CHRIS` in `Αδείας.Κάτοψη ισογείου.dxf`). Substituting the View-ribbon
+// 1:N there inflates every imported dimension by that factor.
+// ──────────────────────────────────────────────────────────────────────────────
+
+describe('resolveEffectiveDimscale — explicitly declared DIMSCALE', () => {
+  it('honours an explicit dimscale=1 instead of substituting drawingScale', () => {
+    expect(resolveEffectiveDimscale(1, 100, true)).toBe(1);
+  });
+
+  it('still substitutes drawingScale when the flag is absent (built-ins, ribbon styles)', () => {
+    expect(resolveEffectiveDimscale(1, 100)).toBe(100);
+    expect(resolveEffectiveDimscale(1, 100, false)).toBe(100);
+  });
+
+  it('treats the annotative sentinel (0) as unset even when marked explicit', () => {
+    expect(resolveEffectiveDimscale(0, 100, true)).toBe(100);
+  });
+
+  it('leaves the >1 imported-plot-scale rule untouched', () => {
+    expect(resolveEffectiveDimscale(96, 100, true)).toBe(96);
+    expect(resolveEffectiveDimscale(96, 100, false)).toBe(96);
+  });
+});

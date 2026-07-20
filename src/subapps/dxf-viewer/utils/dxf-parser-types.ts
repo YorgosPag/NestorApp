@@ -301,6 +301,38 @@ export const DEFAULT_DIMSTYLE: DimStyleEntry = {
   dimatfit: 3,
 };
 
+/**
+ * The DIMSTYLE every DXF is expected to carry (AutoCAD's primary style). Written
+ * **uppercase** by AutoCAD in the TABLES section, but mixed-case by several other
+ * authoring tools — so it must never be compared with `===`.
+ */
+export const STANDARD_DIMSTYLE_NAME = 'Standard';
+
+/**
+ * DIMSTYLE lookup by name — exact match first, then **case-insensitive** (SSoT).
+ *
+ * ADR-362 — DIMSTYLE table names are case-INSENSITIVE identifiers in the DXF
+ * spec, and AutoCAD emits them uppercased (`STANDARD`). Every `map['Standard']`
+ * comparison in this codebase silently missed those files: the lookup fell
+ * through to a synthetic default whose `dimtxt` is 2.5 paper-mm, which then won
+ * the active-style election in `dim-style-importer` and rendered every imported
+ * dimension ~29× too large (incident 2026-07-20, `Αδείας.Κάτοψη ισογείου.dxf`:
+ * the file declares `STANDARD` with DIMTXT 0.18 and `CHRIS` with 0.085).
+ */
+export function lookupDimStyleEntry(
+  map: DimStyleMap | undefined,
+  name: string,
+): DimStyleEntry | undefined {
+  if (!map) return undefined;
+  const exact = map[name];
+  if (exact) return exact;
+  const wanted = name.toLowerCase();
+  for (const key of Object.keys(map)) {
+    if (key.toLowerCase() === wanted) return map[key];
+  }
+  return undefined;
+}
+
 // ============================================================================
 // LAYER COLOR DATA TYPE
 // ============================================================================
