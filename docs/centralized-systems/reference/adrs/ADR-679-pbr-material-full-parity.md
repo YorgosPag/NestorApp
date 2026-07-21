@@ -1,7 +1,7 @@
 # ADR-679 — PBR Material «Full Parity»: πλήρες σύστημα υλικών/υφών ανά όψη (C4D-grade)
 
-**Status:** 🟢 Φ2a ΥΛΟΠΟΙΗΘΗΚΕ (import name→όλα τα υλικά + color registry)· 🟢 Φ5.1a ΥΛΟΠΟΙΗΘΗΚΕ (DAE writer texture-capable + πραγματικά UVs)· 🟢 Φ5.1b ΥΛΟΠΟΙΗΘΗΚΕ + **R15 GROUND-TRUTH ✅** (texture-byte bundling + headless prewarm· checker-cube `.dae`+`.zip` άνοιξε στον C4D R15.037 με σωστά χαρτογραφημένη υφή σε όλες τις όψεις)· Φ2b/Φ2c εκκρεμούν
-**Date:** 2026-07-19
+**Status:** 🟢 Φ2a ΥΛΟΠΟΙΗΘΗΚΕ (import name→όλα τα υλικά + color registry)· 🟢 Φ5.1a ΥΛΟΠΟΙΗΘΗΚΕ (DAE writer texture-capable + πραγματικά UVs)· 🟢 Φ5.1b ΥΛΟΠΟΙΗΘΗΚΕ + **R15 GROUND-TRUTH ✅** (texture-byte bundling + headless prewarm· checker-cube `.dae`+`.zip` άνοιξε στον C4D R15.037 με σωστά χαρτογραφημένη υφή σε όλες τις όψεις)· 🟢 **Φ2b ΥΛΟΠΟΙΗΘΗΚΕ** (per-face PBR **render** — σώμα μέσω `resolveFaceMaterial`→`getMaterial3D` + faced-prism UVs· σοβάς `materialId` ήταν ήδη textured, καμία αλλαγή)· Φ2c εκκρεμεί· **Φ5.2 (per-face texture export) ξεκλειδώθηκε**
+**Date:** 2026-07-21
 **Owner:** Giorgio
 **Σχετικά:** ADR-413 (BimMaterial library + PBR textures) · ADR-539 (per-face appearance) · ADR-449 (structural finish) · ADR-678 (C4D↔Νέστωρ round-trip) · ADR-511 (wall-covering catalog)
 
@@ -52,7 +52,7 @@ BimMaterial** (PBR texture set) και να το **render-άρει** μέσω τ
 | Φάση | Περιεχόμενο | Μέγεθος |
 |------|-------------|---------|
 | **Φ2a** ✅ | **Import name→όλα τα υλικά.** `resolveImportAppearance` (ADR-678) αναγνωρίζει user materials (`bmat_*`, by id ή ανθρώπινο όνομα) + wall-covering + δάπεδα (όχι μόνο wall-covering) μέσω injected `KnownMaterialResolver` (ο button τον τροφοδοτεί με `useMaterialLibrary`). Name-based, όπως Revit/IFC. **+** ενοποιημένος `material-color-registry` λύνει το χρώμα ΚΑΘΕ id σε 3D/2D/σοβά. | Μικρό |
-| **Φ2b** | **Per-face PBR (η καρδιά).** Επέκταση `FaceAppearance` + `FinishFaceOverride` να δείχνουν σε `BimMaterial.id`· `resolveFaceMaterial` + finish converter να χτίζουν PBR υλικό (texture) μέσω `pbr-material-builder`, όχι flat color. Σώμα + σοβάς. | **Μεγάλο** |
+| **Φ2b** ✅ | **Per-face PBR (η καρδιά) — ΥΛΟΠΟΙΗΘΗΚΕ (render, όχι export).** `resolveFaceMaterial` (ADR-539) έγινε thin delegate: `colorHex`→flat (νικά)· `materialId`→**reuse** `getMaterial3D` (ήδη texture-aware μέσω `pbr-material-builder`+`bim-texture-cache`+`user-material-registry`) σε DoubleSide variant· χωρίς override→base. `buildFacedPrism` απέκτησε UVs (τα faced solids είχαν μηδέν). **Finding:** ο σοβάς (`FinishFaceOverride.materialId`, ADR-449) ήταν ΗΔΗ textured μέσω `getMaterial3D` — καμία αλλαγή χρειάστηκε εκεί· μόνο το `colorOverride` μένει flat by design (visual-only hex). Ξεκλειδώνει Φ5.2 (export). | Μικρό (2 αρχεία κώδικα) |
 | **Φ2c** | **Material editor UI (C4D-parity).** Διπλό κλικ σε swatch → πάνελ PBR (Base Color/Texture upload, Roughness, Metalness, Normal, Opacity). Reuse `useMaterialPbrTextureUpload`. Εμφανές «όνομα για C4D». | Μεσαίο |
 | **Φ3** | glTF PBR round-trip (το glTF ΕΧΕΙ πραγματικά PBR + textures — αντίθετα από το OBJ/R15). Προαιρετικό. | Μεσαίο |
 | **Φ5** | **COLLADA/DAE texture export (Νέστωρ→C4D R15) — FULL PARITY track.** Ground-truth correction (2026-07-21): ο R15 **DAE** importer **ΚΟΥΒΑΛΑ** textures (αποδεδειγμένο: native Aeron `.dae` με `library_images`+sampler), σε αντίθεση με το OBJ που ΔΕΝ διαβάζει υλικά. Άρα το DAE είναι ο textured δρόμος για R15. Sub-phases: **Φ5.1a** DAE writer texture-capable + πραγματικά UVs ✅· **Φ5.1b** texture-byte bundling (fetch από Storage → loose `textures/*` σε `.zip`) + headless prewarm ✅ (**SSOT correction: ΟΧΙ `fflate`** — reuse του υπάρχοντος zero-dep `zip-pack.ts` + `image-export-shared.fetch*` + `packageArtifacts`, ίδιο pattern με το DXF image-fill eTransmit· ένας packer, όπως οι μεγάλοι)· **Φ5.2** per-face texture export (εξαρτάται Φ2b)· **Φ5.3** per-triangle. | **Μεγάλο** |
@@ -69,6 +69,36 @@ BimMaterial** (PBR texture set) και να το **render-άρει** μέσω τ
 
 ## 7. Changelog
 
+- **2026-07-21 — Φ2b ΥΛΟΠΟΙΗΘΗΚΕ (per-face PBR render· σώμα + finding σοβά).** Το κενό (§4): το per-face
+  «βάψιμο» (ADR-539) ήταν FLAT-COLOUR-ONLY — όψη με `materialId` που δείχνει σε textured `BimMaterial`
+  απέδιδε flat χρώμα, όχι υφή. **Fix (2 αλλαγές κώδικα, ZERO νέο type/builder/system, N.5/N.12 SSoT reuse):**
+  1. `bim-3d/materials/face-appearance-material.ts::resolveFaceMaterial` έγινε **thin delegate**: `colorHex` →
+     `getFaceColorMaterial3D(hex)` (flat matte DoubleSide, cached ανά hex, **νικά** το `materialId` — κρατά
+     τη 2D/3D χρωματική συμφωνία)· `materialId` (χωρίς `colorHex`) → **gated**: ΜΟΝΟ βιβλιοθήκης `bmat_*`
+     υλικό με ανεβασμένο albedo ΚΑΙ realistic-materials ON → `getFaceMaterial3D(materialId)` = **reuse** του
+     ήδη texture-aware `getMaterial3D` (preload→resync ήδη wired) σε DoubleSide variant (ορατά τοιχώματα
+     τρύπας)· wall-covering (ADR-511)/δάπεδο (ADR-419) ids, οποιοδήποτε id με realistic OFF ή χωρίς
+     ανεβασμένη υφή, ΚΑΙ χωρίς override → **ΑΜΕΤΑΒΛΗΤΟ** legacy flat-colour path (`faceAppearanceColorHex`:
+     colorHex wins, αλλιώς materialId→catalog color). Gate = αποτροπή regression: χωρίς αυτό το
+     `getMaterial3D('paint-red')` θα έπεφτε στο `resolveMaterialKey` default `mat-concrete` → wall-covering
+     όψη βαμμένη σαν σκυρόδεμα.
+  2. `bim-3d/materials/MaterialCatalog3D.ts` +`getFaceMaterial3D`/`getFaceColorMaterial3D` (+ `FACE_DOUBLE_SIDED`
+     WeakMap, κλειδί = source material instance → auto-invalidate στο texture resync swap· + `FACE_COLOR_CACHE`
+     Map, disposed στο `disposeMaterialCatalog3D`). **Side-fix (προϋπάρχον leak):** το παλιό
+     `resolveFaceMaterial` έχτιζε fresh **uncached** material ανά βαμμένη όψη σε κάθε scene rebuild
+     (`BimSceneLayer.clearGroup` disposes μόνο geometry, ποτέ materials).
+  3. `bim-3d/converters/bim-three-faced-prism.ts::buildFacedPrism` καλεί `setBoxWorldUvs(flat)` μετά το
+     `computeVertexNormals()` — τα faced solids (slab/column/beam/foundation/wall) είχαν **ΜΗΔΕΝ uv/uv2** →
+     καμία υφή δεν μπορούσε να αποδοθεί πάνω τους. Το roof είχε ήδη UVs.
+  **Finding (καμία αλλαγή χρειάστηκε):** ο σοβάς (ADR-449) ήταν **ΗΔΗ** textured — το `structural-finish-3d.ts`
+  καλεί `getMaterial3D(materialId)` για το `materialId` του finish· μόνο το `colorOverride` μένει flat by
+  design (visual-only hex contract). Άρα ADR-449 δεν χρειάστηκε κώδικα, μόνο changelog note.
+  **Reuse (ΜΗΔΕΝ διπλότυπο, §6):** κανένα νέο material type (επεκτείνει `BimMaterial`/`FaceAppearance`), κανένα
+  νέο PBR builder (`pbr-material-builder`+`bim-texture-cache`+`user-material-registry` μέσω `getMaterial3D`),
+  κανένα νέο per-face σύστημα (επεκτείνει ADR-539). N.7.1 (≤500/≤40) τηρήθηκε, DoubleSide διατηρήθηκε (hole
+  walls), ΟΧΙ tsc (N.17). **Scope:** per-face texture **render** στην εφαρμογή (3D σώμα + σοβάς μέσω
+  `materialId`) — **ΟΧΙ ακόμη export** (Φ5.2, τώρα ξεκλειδωμένο αφού ο DAE writer Φ5.1 ήδη ξέρει textures).
+  Detail cross-ref: **ADR-539 changelog (Φ4d)**.
 - **2026-07-21 — Φ5.1b ΥΛΟΠΟΙΗΘΗΚΕ (texture-byte bundling + headless prewarm).** Εντολή Giorgio:
   «όπως οι μεγάλοι + FULL SSOT». **SSOT audit (grep όλο το `src/`) ΠΡΙΝ κώδικα → διόρθωση πλάνου:**
   το handoff πρότεινε νέο dep `fflate`, αλλά υπάρχει ήδη **zero-dependency zip SSOT** — άρα το fflate

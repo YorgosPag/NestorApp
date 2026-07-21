@@ -220,6 +220,12 @@ Deterministic IDs: `boq_bim_${id}` / `_finish_int` / `_finish_ext`. Hook στο 
 - ETICS-grade per-element exterior detection (πέρα από outer-ring proximity) = μετέπειτα slice.
 
 ## 6. Changelog
+- **2026-07-21 (cross-ref → ADR-679 Φ2b — per-face PBR, finding: ΚΑΜΙΑ αλλαγή εδώ)** — Κατά την υλοποίηση
+  του per-face PBR (ADR-539/ADR-679 Φ2b), SSoT audit βρήκε ότι ο σοβάς **ήδη** αποδίδει υφή: το
+  `bim-3d/converters/structural-finish-3d.ts` καλεί `getMaterial3D(materialId)` (texture-aware, ADR-413)
+  για το `materialId` ενός `FinishFaceOverride` → αν δείχνει σε textured `BimMaterial`, η υφή **ήδη**
+  φαίνεται στη σοβατισμένη όψη. Το `colorOverride` παραμένει **flat by design** (visual-only hex contract,
+  βλ. ADR-678 Φ1.1-c) — δεν είναι bug, δεν αλλάζει. Καμία αλλαγή κώδικα σε αυτό το ADR.
 - **2026-07-19 (PART B — per-face paint CORNER fix + segment-axis SSoT)** — Giorgio live-report (C4D round-trip
   ΚΑΙ ζωντανό «Paint»): όταν ο σοβάς βάφεται **ανά όψη**, «αλλοιώνονται τα κλεισίματα του σοβά στις γωνίες
   της κολόνας» — η εξωτερική γωνία **μπαίνει μέσα κατά ~το πάχος**. **Root cause (γεωμετρικό, όχι rendering):**

@@ -10,7 +10,8 @@
  *   0 = `bottom`, 1 = `top`, 2+i = `side:i` (ακμή i του outline, `j=(i+1)%n`).
  *
  * Trade-off (ADR-539 Φ1): καθαρό prism ΧΩΡΙΣ holes/openings — `triangulateShape(contour, [])`.
- * Slab-openings/holes = Φ2. Ένα prism = ένα solid, μηδέν UV (flat-colour faces).
+ * Slab-openings/holes = Φ2. Κάθε όψη παίρνει box-projected world-meter UVs (uv+uv2) ώστε
+ * TEXTURED materials να κάνουν σωστό tiling ανά παρειά (ADR-679 Φ2b).
  *
  * @see roof-to-three.ts `buildPrismIndex` — το πρότυπο (proven winding· migration Φ3)
  * @see bim/types/face-appearance-types.ts — FaceKey SSoT
@@ -20,6 +21,7 @@
 import * as THREE from 'three';
 import type { FaceKey, FaceAppearanceMap } from '../../bim/types/face-appearance-types';
 import { resolveFaceMaterial } from '../materials/face-appearance-material';
+import { setBoxWorldUvs } from './bim-uv-helpers';
 
 /** Αποτέλεσμα: geometry με per-face groups + ο πίνακας materialIndex → FaceKey. */
 export interface FacedPrism {
@@ -158,6 +160,11 @@ export function buildFacedPrism(
   // are preserved (start/count map 1:1 from index-space to the expanded vertex array).
   const flat = geo.toNonIndexed();
   flat.computeVertexNormals();
+  // Box-projected world-meter UVs (uv+uv2) ανά όψη, βάσει των flat normals μόλις
+  // υπολογισμένων παραπάνω — ίδιο helper με τα preview bands του Edit-Type (bim-uv-helpers,
+  // ADR-413), ΟΧΙ νέο UV scheme. Χωρίς αυτό οι faced solids (slab/foundation) είχαν
+  // degenerate/απούσα UV → TEXTURED materials σε βαμμένη όψη δεν έκαναν tile (ADR-679 Φ2b).
+  setBoxWorldUvs(flat);
   geo.dispose();
   return { geometry: flat, faceKeyByMaterialIndex };
 }

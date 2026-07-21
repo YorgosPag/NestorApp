@@ -284,11 +284,86 @@ export function getFinishColorOverrideMaterial3D(colorHex: string): THREE.MeshSt
   return withFaceMode(withDepthPriority(mat, 'mat-plaster'));
 }
 
+// ── ADR-539 Φ4d / ADR-679 Φ2b — per-face PBR material («Paint on face» με ΥΦΗ) ────
+// Μια βαμμένη όψη επαναχρησιμοποιεί ΑΚΡΙΒΩΣ το ίδιο texture-aware, cached resolution με
+// κάθε άλλο 3D υλικό (`getMaterial3D`) — μηδέν δεύτερος PBR builder, μηδέν δεύτερο texture
+// cache (N.18 / ADR-584). Το μόνο per-face-specific είναι το `THREE.DoubleSide`: μια βαμμένη
+// όψη μπορεί να είναι τοίχωμα ανοίγματος (slab hole) με flat normal προς το κενό, άρα πρέπει
+// να render-άρει + raycast-άρει από μέσα (ADR-539 Φ2). Το `getMaterial3D` επιστρέφει FrontSide
+// singletons (backface culling κλειστού solid), οπότε κρατάμε cached double-sided VARIANT
+// κλειδωμένο στο ΙΔΙΟ instance της πηγής. WeakMap → auto-invalidate στο preload→resync swap:
+// όταν το texture φορτώσει, το `getMaterial3D` επιστρέφει ΝΕΟ textured instance → miss → νέο
+// double-sided clone· το παλιό source+clone γίνονται GC. Το clone ΜΟΙΡΑΖΕΤΑΙ τα texture objects
+// της πηγής (`Material.clone` αντιγράφει map refs, ΠΟΤΕ το GPU texture) → ΠΟΤΕ dispose per-mesh.
+const FACE_DOUBLE_SIDED = new WeakMap<THREE.Material, THREE.MeshStandardMaterial>();
+
+function doubleSidedVariant(source: THREE.MeshStandardMaterial): THREE.MeshStandardMaterial {
+  if (source.side === THREE.DoubleSide) return source;
+  let clone = FACE_DOUBLE_SIDED.get(source);
+  if (!clone) {
+    clone = source.clone();
+    clone.side = THREE.DoubleSide;
+    FACE_DOUBLE_SIDED.set(source, clone);
+  }
+  return clone;
+}
+
+/**
+ * ADR-539 Φ4d — έχει το υλικό όψης ΠΡΑΓΜΑΤΙΚΗ υφή σε αυτό το μονοπάτι; ΜΟΝΟ τα library
+ * `bmat_*` υλικά κουβαλούν υφή ως `FaceAppearance.materialId` (τα wall-covering/floor-finish
+ * είναι flat-χρώμα κατάλογοι). Κρίσιμο: αποτρέπει το `getMaterial3D('paint-red')` → concrete
+ * fallback (foreign id → `resolveMaterialKey` default `mat-concrete`) — ξένο id ΔΕΝ γίνεται υφή.
+ */
+function hasFaceTexture(materialId: string): boolean {
+  if (!materialId.startsWith(USER_MATERIAL_ID_PREFIX)) return false;
+  return !!getUserMaterialAppearance(materialId)?.textures?.albedoUrl;
+}
+
+/**
+ * ADR-539 Φ4d — textured double-sided υλικό όψης, ή `null` όταν το υλικό ΔΕΝ έχει υφή σε
+ * αυτό το μονοπάτι (wall-covering/floor-finish flat κατάλογοι, χωρίς uploaded texture, ή
+ * realistic OFF) ώστε ο caller να κρατά το legacy flat-χρώμα path — ΠΟΤΕ concrete fallback
+ * για ξένο id. Όταν επιστρέφει υλικό: reuse `getMaterial3D` (texture-aware, cached, preload→
+ * resync wired) + DoubleSide variant (hole-wall visibility). Cached — ΠΟΤΕ dispose το result.
+ */
+export function getFaceMaterial3D(materialId: string): THREE.MeshStandardMaterial | null {
+  if (!useBimRenderSettingsStore.getState().realisticMaterials) return null;
+  if (!hasFaceTexture(materialId)) return null;
+  return doubleSidedVariant(getMaterial3D(materialId));
+}
+
+/**
+ * ADR-539 — flat-χρώμα υλικό όψης βαμμένης με σκέτο CSS hex (`colorHex` override, χωρίς
+ * ταυτότητα υλικού). Matte look (roughness 0.92, metalness 0), DoubleSide (hole-wall).
+ * Cached ανά hex — ΕΝΑ shared singleton, μηδέν per-rebuild leak (πριν χτιζόταν fresh material
+ * ανά βαμμένη όψη σε ΚΑΘΕ resync). Invalid hex → μαύρο (THREE default), όπως το legacy path.
+ */
+const FACE_COLOR_CACHE = new Map<string, THREE.MeshStandardMaterial>();
+
+export function getFaceColorMaterial3D(colorHex: string): THREE.MeshStandardMaterial {
+  let mat = FACE_COLOR_CACHE.get(colorHex);
+  if (!mat) {
+    mat = new THREE.MeshStandardMaterial({
+      color: new THREE.Color(colorHex),
+      roughness: 0.92,
+      metalness: 0,
+      // ADR-539 Φ2 — double-sided so a painted hole-wall renders + raycasts from inside the void.
+      side: THREE.DoubleSide,
+    });
+    FACE_COLOR_CACHE.set(colorHex, mat);
+  }
+  return mat;
+}
+
 /**
  * Dispose all cached materials. Call only on full app teardown —
  * NOT on 3D→2D mode toggle (ThreeJsSceneManager.dispose only disposes geometries).
  */
 export function disposeMaterialCatalog3D(): void {
+  // ADR-539 Φ4d — per-face flat-colour singletons (the double-sided textured variants live
+  // in a WeakMap → GC'd with their source; their shared textures are freed by the caches below).
+  for (const mat of FACE_COLOR_CACHE.values()) mat.dispose();
+  FACE_COLOR_CACHE.clear();
   for (const mat of CACHE.values()) mat.dispose();
   CACHE.clear();
   // ADR-413 §2D Phase 3 — per-material user variants (textures owned/disposed by

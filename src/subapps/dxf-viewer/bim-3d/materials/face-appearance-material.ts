@@ -1,42 +1,50 @@
 /**
- * face-appearance-material — ADR-539. Επιλύει το THREE material μιας όψης από το
- * per-face appearance override. Mirror του `attachSoffitFinish` (ADR-534): χρώμα από
- * το shared wall-covering catalog SSoT (`getWallCoveringColor`) ή σκέτο hex.
+ * face-appearance-material — ADR-539 / ADR-679 Φ2b. Επιλύει το THREE material μιας όψης
+ * από το per-face appearance override. Thin delegate προς το `MaterialCatalog3D` (ΕΝΑ SSoT
+ * για ΚΑΘΕ 3D υλικό): μηδέν κατασκευή textured material εδώ, μηδέν δεύτερο texture cache (N.18).
  *
- * Όψη ΧΩΡΙΣ override → επιστρέφει το `baseMaterial` (legacy single-material look,
- * byte-for-byte). Έτσι ο πίνακας `material[]` του faced prism έχει το base σε κάθε
- * αβαφή θέση και ένα flat-colour material μόνο στις βαμμένες.
+ * Cascade (Revit/Cinema 4D base+override): `appearance[faceKey]` → αλλιώς το base
+ * `appearance['*']` («βάψε όλο») → αλλιώς το `baseMaterial` (κοινό instance, μηδέν regression).
  *
- * @see bim/wall-coverings/wall-covering-material-catalog.ts — χρώμα catalog SSoT
- * @see bim-3d/converters/bim-three-faced-prism.ts — faceKey ↔ materialIndex
+ * Ανάλυση override (ADR-679 Φ2b — «η καρδιά», textured per-face):
+ *   1. Αν το υλικό της όψης έχει ΠΡΑΓΜΑΤΙΚΗ υφή (library `bmat_*` + albedo + realistic ON) →
+ *      το textured PBR υλικό μέσω `getFaceMaterial3D` → `getMaterial3D` (υφή, cached, preload→
+ *      resync δωρεάν). Πριν το Φ2b αυτό ισοπεδωνόταν σε flat χρώμα — ΑΥΤΟ ήταν το κενό.
+ *   2. Αλλιώς → ΑΜΕΤΑΒΛΗΤΟ legacy flat χρώμα μέσω `faceAppearanceColorHex` (το ΙΔΙΟ SSoT με το
+ *      2D plan fill): `colorHex` κερδίζει· αλλιώς `materialId` → χρώμα καταλόγου (wall-covering/
+ *      floor-finish, flat). Καμία πηγή χρώματος → `baseMaterial`. Μηδέν παλινδρόμηση για flat ids.
+ *
+ * @see bim-3d/materials/MaterialCatalog3D — getFaceMaterial3D / getFaceColorMaterial3D (SSoT)
+ * @see bim/utils/face-appearance-color — faceAppearanceColorHex (κοινό με 2D plan fill)
+ * @see bim-3d/converters/bim-three-faced-prism.ts — faceKey ↔ materialIndex (+ Φ2b UVs)
  * @see docs/centralized-systems/reference/adrs/ADR-539-cinema4d-polygon-mode-per-face-appearance.md
  */
 
-import * as THREE from 'three';
+import type { Material } from 'three';
 import type { FaceAppearanceMap } from '../../bim/types/face-appearance-types';
 import { BASE_FACE_KEY } from '../../bim/types/face-appearance-types';
-// ADR-539 — shared color SSoT (Boy-Scout N.0.2: κοινό με το 2D plan fill της Φ3e).
 import { faceAppearanceColorHex } from '../../bim/utils/face-appearance-color';
+import { getFaceMaterial3D, getFaceColorMaterial3D } from './MaterialCatalog3D';
 
 /**
- * Material για ΜΙΑ όψη. Cascade (Revit/Cinema 4D base+override): `appearance[faceKey]` →
- * αλλιώς το base `appearance['*']` («βάψε όλο») → αλλιώς το `baseMaterial` (κοινό instance,
- * μηδέν regression). Pure (καμία mutation του base). Ο caller dispose-άρει τα νέα materials.
+ * Material για ΜΙΑ όψη. Καθαρή, re-entrant επίλυση (καλείται fresh σε κάθε `resyncBimScene`):
+ * επιστρέφει cached singletons — ο caller ΠΟΤΕ δεν κάνει dispose ό,τι επιστρέφει εδώ (το leak
+ * του παλιού fresh-per-face path εξαλείφεται). Ο `baseMaterial` (αβαφής όψη) παραμένει ο κοινός
+ * base του solid.
  */
 export function resolveFaceMaterial(
   faceKey: string,
   appearance: FaceAppearanceMap,
-  baseMaterial: THREE.Material,
-): THREE.Material {
+  baseMaterial: Material,
+): Material {
   const face = appearance[faceKey] ?? appearance[BASE_FACE_KEY];
   if (!face) return baseMaterial;
+  // 1. Textured PBR — μόνο όταν το υλικό όψης έχει όντως υφή (Φ2b).
+  if (face.materialId) {
+    const textured = getFaceMaterial3D(face.materialId);
+    if (textured) return textured;
+  }
+  // 2. Legacy flat χρώμα (ΑΜΕΤΑΒΛΗΤΟ): colorHex ή materialId→catalog color.
   const hex = faceAppearanceColorHex(face);
-  if (!hex) return baseMaterial;
-  return new THREE.MeshStandardMaterial({
-    color: new THREE.Color(hex),
-    roughness: 0.92,
-    metalness: 0,
-    // ADR-539 Φ2 — double-sided so a painted hole-wall renders + raycasts from inside the void.
-    side: THREE.DoubleSide,
-  });
+  return hex ? getFaceColorMaterial3D(hex) : baseMaterial;
 }

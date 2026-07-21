@@ -83,6 +83,21 @@ describe('buildFacedPrism', () => {
     const b = buildFacedPrism(squareTopRing(), 0.2)!;
     expect(a.faceKeyByMaterialIndex).toEqual(b.faceKeyByMaterialIndex);
   });
+
+  // ADR-679 Φ2b — box-projected world-meter UVs per face (setBoxWorldUvs), so a face
+  // painted with a TEXTURED material tiles correctly instead of showing degenerate UVs.
+  it('carries box-projected uv + uv2 attributes matching the position count', () => {
+    const { geometry } = buildFacedPrism(squareTopRing(), 0.2)!;
+    const pos = geometry.getAttribute('position');
+    const uv = geometry.getAttribute('uv');
+    const uv2 = geometry.getAttribute('uv2');
+    expect(uv).toBeDefined();
+    expect(uv2).toBeDefined();
+    expect(uv.itemSize).toBe(2);
+    expect(uv2.itemSize).toBe(2);
+    expect(uv.count).toBe(pos.count);
+    expect(uv2.count).toBe(pos.count);
+  });
 });
 
 // ADR-539 Φ1.5 — shared faced-solid-body SSoT (slab + foundation both delegate here).

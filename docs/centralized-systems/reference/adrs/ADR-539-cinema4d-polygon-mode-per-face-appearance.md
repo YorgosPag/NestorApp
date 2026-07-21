@@ -112,7 +112,7 @@ single-material (byte-for-byte, zero regression για τα ~30 slab tests).
 | **Φ4a** | keyboard copy/paste εμφάνισης όψης (Ctrl+C/V face) + **entity-level** copy/paste (Ctrl+Shift+C/V, όλες οι όψεις, ένα undo) | 🟢 IMPLEMENTED UNCOMMITTED |
 | **Φ4b** | multi-face select (Shift) + N overlays + batch command (ένα undo) | 🟢 IMPLEMENTED UNCOMMITTED |
 | **Φ4c** | `bmat_*` library drag swatches + `faceAppearanceColorHex` resolve extend | ⬜ PLANNED |
-| **Φ4d** | per-face PBR textures (γέφυρα `MaterialCatalog3D`, ADR-413) | ⬜ PLANNED |
+| **Φ4d** | per-face PBR textures (γέφυρα `MaterialCatalog3D`, ADR-413) — `resolveFaceMaterial` delegate σε `getFaceMaterial3D`/`getFaceColorMaterial3D` (reuse `getMaterial3D`) + `buildFacedPrism` UVs | ✅ DONE (2026-07-21, βλ. ADR-679 Φ2b) |
 
 ## 5. Συνέπειες
 
@@ -160,6 +160,25 @@ slab persistence serialize path (αν whitelist).
 
 ## 7. Changelog
 
+- **2026-07-21 (Φ4d — cross-ref → ADR-679 Φ2b — PER-FACE PBR TEXTURES, DONE)** — Το `resolveFaceMaterial`
+  (`bim-3d/materials/face-appearance-material.ts`) ήταν flat-colour-only ακόμη κι όταν το `FaceAppearance`
+  έδειχνε σε textured `materialId`. Έγινε **thin delegate** (ZERO νέο type/builder/system): `colorHex` →
+  `getFaceColorMaterial3D(hex)` (flat matte DoubleSide, cached ανά hex, **νικά** το `materialId` — κρατά
+  τη 2D/3D χρωματική συμφωνία)· `materialId` (χωρίς `colorHex`) → **gated**: ΜΟΝΟ βιβλιοθήκης `bmat_*` υλικό
+  με ανεβασμένο albedo ΚΑΙ realistic-materials ON → `getFaceMaterial3D(materialId)` = **reuse** του ήδη
+  texture-aware `getMaterial3D` (ADR-413, preload→resync wired) τυλιγμένο σε DoubleSide variant (ορατότητα
+  τοιχωμάτων τρύπας)· wall-covering (ADR-511)/δάπεδο (ADR-419) ids, οποιοδήποτε id με realistic OFF ή χωρίς
+  ανεβασμένη υφή, ΚΑΙ χωρίς override → **ΑΜΕΤΑΒΛΗΤΟ** legacy flat-colour path (`faceAppearanceColorHex`:
+  colorHex wins, αλλιώς materialId→catalog color). Το gate αποτρέπει regression: χωρίς αυτό το
+  `getMaterial3D('paint-red')` θα έπεφτε στο `resolveMaterialKey` default `mat-concrete` και θα έβαφε μια
+  wall-covering όψη σαν σκυρόδεμα. Νέα στο `MaterialCatalog3D.ts`:
+  `getFaceMaterial3D`/`getFaceColorMaterial3D` + `FACE_DOUBLE_SIDED` (WeakMap, auto-invalidate στο texture
+  resync swap) + `FACE_COLOR_CACHE` (disposed στο `disposeMaterialCatalog3D`). **Side-fix (leak):** το παλιό
+  `resolveFaceMaterial` έχτιζε **fresh, uncached** material ανά βαμμένη όψη σε κάθε scene rebuild
+  (`BimSceneLayer.clearGroup` disposes μόνο geometry, ποτέ materials) — πλέον cached. **Επίσης:** τα faced
+  solids (slab/column/beam/foundation/wall, `bim-three-faced-prism.ts::buildFacedPrism`) είχαν **ΜΗΔΕΝ
+  uv/uv2** → προστέθηκε `setBoxWorldUvs(flat)` μετά το `computeVertexNormals()` (το roof είχε ήδη UVs).
+  Detail: **ADR-679 changelog (Φ2b)**.
 - **2026-07-19 (cross-ref → ADR-679 Φ2a — UNIFIED COLOR REGISTRY)** — Ο `faceAppearanceColorHex` (ο SSoT
   «χρώμα όψης», 3D painted + 2D plan fill) έλυνε το `materialId` **μόνο** μέσω `getWallCoveringColor` →
   όψη βαμμένη με υλικό δαπέδου/library υλικό έβγαινε γκρι. Πλέον δείχνει στον ενοποιημένο
