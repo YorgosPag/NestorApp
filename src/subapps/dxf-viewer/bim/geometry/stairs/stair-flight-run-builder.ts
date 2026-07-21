@@ -35,7 +35,16 @@ import type {
   StairParams,
   StairRestLanding,
 } from '../../../bim/types/stair-types';
-import { type Vec2, arrowSymbol, perp, point } from './stair-geometry-shared';
+import {
+  type Vec2,
+  type WidthEdges,
+  arrowSymbol,
+  buildTransitionRiser,
+  centrelineWidthEdges,
+  edgeWidthEdges,
+  perp,
+  point,
+} from './stair-geometry-shared';
 import {
   type FlightGeometry,
   assembleMultiFlight,
@@ -190,6 +199,8 @@ interface StairRunBuilders {
   buildLanding(cursor: Vec2, length: number, z: number): Polygon3D;
   landingCenter(cursor: Vec2, length: number, z: number): Point3D;
   walklinePoint(cursor: Vec2, z: number): Point3D;
+  /** Width edges of the run's cross-section at `cursor` (for transition risers). */
+  widthEdges(cursor: Vec2): WidthEdges;
 }
 
 /**
@@ -211,7 +222,13 @@ function walkStairRun(scalars: StairRunScalars, builders: StairRunBuilders, orig
   let cursor: Vec2 = { x: originXY.x, y: originXY.y };
   const walklinePts: Point3D[] = [builders.walklinePoint(cursor, zAtLevel(0))];
 
-  for (const seg of segments) {
+  for (let idx = 0; idx < segments.length; idx++) {
+    const seg = segments[idx];
+    // Top level of this segment (highest level it occupies): a flight's last
+    // tread, or the landing's single level. Every inter-segment boundary in a run
+    // touches a landing (consecutive flight levels coalesce into one segment), so
+    // each boundary needs the transition riser the per-segment generators omit.
+    let segTopLevel: number;
     if (seg.kind === 'flight') {
       const flight = builders.buildFlight(cursor, zAtLevel(seg.startLevel), seg.treadCount);
       treads.push(...flight.treads);
@@ -221,6 +238,7 @@ function walkStairRun(scalars: StairRunScalars, builders: StairRunBuilders, orig
       const along = tread * seg.treadCount;
       cursor = { x: cursor.x + builders.along.x * along, y: cursor.y + builders.along.y * along };
       walklinePts.push(builders.walklinePoint(cursor, zAtLevel(seg.startLevel + seg.treadCount)));
+      segTopLevel = seg.startLevel + seg.treadCount - 1;
     } else {
       const z = zAtLevel(seg.level);
       const length = resolveRestLandingLength(seg.landing.length, width);
@@ -234,6 +252,12 @@ function walkStairRun(scalars: StairRunScalars, builders: StairRunBuilders, orig
       });
       cursor = { x: cursor.x + builders.along.x * length, y: cursor.y + builders.along.y * length };
       walklinePts.push(builders.walklinePoint(cursor, z));
+      segTopLevel = seg.level;
+    }
+    // Transition riser at the boundary to the next segment (cursor now sits on the
+    // shared plan edge). Skipped after the last segment (top of the run).
+    if (idx < segments.length - 1) {
+      risers.push(buildTransitionRiser(builders.widthEdges(cursor), zAtLevel(segTopLevel), zAtLevel(segTopLevel + 1)));
     }
   }
 
@@ -260,6 +284,7 @@ export function buildRectilinearRun(input: BuildRectilinearRunInput): StairRunRe
     landingCenter: (cursor, length, z) =>
       point(cursor.x + u.x * (length / 2), cursor.y + u.y * (length / 2), z),
     walklinePoint: (cursor, z) => point(cursor.x, cursor.y, z),
+    widthEdges: (cursor) => centrelineWidthEdges(cursor, u, width),
   };
   return walkStairRun(input, builders, input.originXY);
 }
@@ -299,6 +324,7 @@ export function assembleTurnRunStair(
   runs: readonly StairRunResult[],
   turnLandings: readonly Polygon3D[],
   walkline: Point3D[],
+  turnRisers: readonly Segment3D[] = [],
 ): StairGeometry {
   const treads: Polygon3D[] = [];
   const risers: Segment3D[] = [];
@@ -315,6 +341,9 @@ export function assembleTurnRunStair(
     landingHandles.push(...run.landingHandles);
     if (i < turnLandings.length) landings.push(turnLandings[i]);
   });
+  // Transition risers around each turn landing (flight→landing→flight) — the
+  // per-run generators only emit each flight's internal risers (N.18 SSoT).
+  risers.push(...turnRisers);
   const geometry = assembleMultiFlight(params, {
     treads,
     risers,
@@ -352,6 +381,7 @@ export function buildEdgeOriginRun(input: BuildEdgeOriginRunInput): StairRunResu
         z,
       ),
     walklinePoint: (cursor, z) => centreOffset(cursor, z),
+    widthEdges: (cursor) => edgeWidthEdges(cursor, vWidth, width),
   };
   return walkStairRun(input, builders, input.originXY);
 }

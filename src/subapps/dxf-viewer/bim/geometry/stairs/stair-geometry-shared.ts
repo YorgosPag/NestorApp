@@ -90,6 +90,65 @@ export function arrowSymbol(
   return { start, end, label: upDirection === 'forward' ? 'UP' : 'DOWN' };
 }
 
+// ─── Transition risers (level boundaries around landings) ─────────────────────
+
+/**
+ * The two width-edge endpoints of a stair surface (tread/landing) at a plan
+ * point, in the SAME `[startSide, endSide]` order the flight generators use for
+ * their diagonal risers (`buildRectilinearFlight` = `−v..+v`; `buildFlightFromEdge`
+ * = `origin..+vWidth`).
+ */
+export type WidthEdges = readonly [Vec2, Vec2];
+
+/** Width edges of a CENTRELINE surface at `centre`: `centre ± perp(u)·(width/2)`. */
+export function centrelineWidthEdges(centre: Vec2, u: Vec2, width: number): WidthEdges {
+  const v = perp(u);
+  const halfW = width * 0.5;
+  return [offsetAlong(centre, v, -halfW), offsetAlong(centre, v, halfW)];
+}
+
+/** Width edges of an EDGE-ORIGIN surface at `origin`: `origin` → `origin + vWidth·width`. */
+export function edgeWidthEdges(origin: Vec2, vWidth: Vec2, width: number): WidthEdges {
+  return [origin, offsetAlong(origin, vWidth, width)];
+}
+
+/**
+ * A transition riser across a level boundary between two adjacent stair surfaces
+ * (tread↔landing / landing↔tread / landing↔landing), in the ADR-370 Phase 5.3
+ * diagonal `Segment3D` encoding the in-flight risers use (`start` at the low
+ * elevation, `end` at the high). SSoT for the risers the flight generators can
+ * NEVER emit — each generator only produces `count−1` INTERNAL risers, so every
+ * landing boundary (both sides) had no riser (the ADR-637 "riser count invariant"
+ * claim was false in code). `edges` are the shared boundary's two width endpoints
+ * (`centrelineWidthEdges` / `edgeWidthEdges`).
+ */
+export function buildTransitionRiser(edges: WidthEdges, zLow: number, zHigh: number): Segment3D {
+  return {
+    start: point(edges[0].x, edges[0].y, zLow),
+    end: point(edges[1].x, edges[1].y, zHigh),
+  };
+}
+
+/**
+ * The TWO transition risers around one landing at `zLanding`: the incoming
+ * flight's top tread (`zLanding − rise`) → landing, and the landing →
+ * outgoing flight's first tread (`zLanding + rise`). `inEdges`/`outEdges` are the
+ * incoming/outgoing surfaces' width edges in their own origin convention
+ * (centreline or edge), so one call serves L/U/Γ turn landings and multi-flight
+ * corners alike (N.18 — no per-kind twin).
+ */
+export function landingTransitionRisers(
+  inEdges: WidthEdges,
+  outEdges: WidthEdges,
+  zLanding: number,
+  rise: number,
+): Segment3D[] {
+  return [
+    buildTransitionRiser(inEdges, zLanding - rise, zLanding),
+    buildTransitionRiser(outEdges, zLanding, zLanding + rise),
+  ];
+}
+
 export function bboxOfPolygons(polygons: readonly Polygon3D[]): BoundingBox3D {
   let minX = Infinity, minY = Infinity, minZ = Infinity;
   let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;

@@ -24,6 +24,9 @@ import {
   point,
   arrowSymbol,
   offsetAlong,
+  centrelineWidthEdges,
+  edgeWidthEdges,
+  landingTransitionRisers,
 } from './stair-geometry-shared';
 import { resolveSwitchbackBase } from './stair-geometry-generators';
 import {
@@ -84,6 +87,16 @@ function computeLShapeWithLanding(
   const flight2Origin = offsetAlong(run1.endXY, v1, turnSign * width * 0.5);
   const run2 = edgeRun(common, flight2Origin, u2, u1, n1 + 1, n2, per[1]);
 
+  // Transition risers around the corner landing (flight 1 top → landing → flight 2
+  // first tread). Flight 1 is centreline (u1); flight 2 is edge-origin (cross-width
+  // u1). Level n1 landing sits at basePoint.z + rise·n1.
+  const turnRisers = landingTransitionRisers(
+    centrelineWidthEdges(run1.endXY, u1, width),
+    edgeWidthEdges(flight2Origin, u1, width),
+    basePoint.z + rise * n1,
+    rise,
+  );
+
   let walkline: Point3D[];
   if (!params.restLandings || params.restLandings.length === 0) {
     walkline = buildLShapeWalkline(basePoint, u1, u2, rise, tread, width, n1, n2);
@@ -91,7 +104,7 @@ function computeLShapeWithLanding(
     walkline = [...run1.walklinePts];
     appendRunAcrossNinetyTurn(walkline, run2, u1, width);
   }
-  return assembleTurnRunStair(params, [run1, run2], [turnLanding], walkline);
+  return assembleTurnRunStair(params, [run1, run2], [turnLanding], walkline, turnRisers);
 }
 
 /**

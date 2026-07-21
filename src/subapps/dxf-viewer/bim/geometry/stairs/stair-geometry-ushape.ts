@@ -37,6 +37,9 @@ import type {
 } from '../../../bim/types/stair-types';
 import {
   type Vec2,
+  centrelineWidthEdges,
+  edgeWidthEdges,
+  landingTransitionRisers,
   offsetAlong,
   point,
 } from './stair-geometry-shared';
@@ -83,13 +86,23 @@ export function computeUShape(
   const flight2Origin = offsetAlong(run1.endXY, v1, turnSign * halfW);
   const run2 = edgeRun(common, flight2Origin, u2, vOut, n1 + 1, n2, per[1]);
 
+  // Transition risers around the switchback landing (flight 1 top → landing →
+  // flight 2 first tread). Flight 1 is centreline (u1); flight 2 is edge-origin
+  // (cross-width vOut). Level n1 landing sits at basePoint.z + rise·n1.
+  const turnRisers = landingTransitionRisers(
+    centrelineWidthEdges(run1.endXY, u1, width),
+    edgeWidthEdges(flight2Origin, vOut, width),
+    basePoint.z + rise * n1,
+    rise,
+  );
+
   let walkline: Point3D[];
   if (!params.restLandings || params.restLandings.length === 0) {
     walkline = buildUShapeWalkline(basePoint, u1, v1, u2, turnSign, rise, tread, width, n1, n2);
   } else {
     walkline = stitchUShapeWalkline(run1, run2, v1, turnSign, width);
   }
-  return assembleTurnRunStair(params, [run1, run2], [turnLanding], walkline);
+  return assembleTurnRunStair(params, [run1, run2], [turnLanding], walkline, turnRisers);
 }
 
 // ─── helpers ────────────────────────────────────────────────────────────────

@@ -41,6 +41,9 @@ import {
   directionToUnitVector,
   offsetAlong,
   point,
+  centrelineWidthEdges,
+  edgeWidthEdges,
+  landingTransitionRisers,
 } from './stair-geometry-shared';
 import { buildCornerLanding } from './stair-geometry-generators';
 import {
@@ -91,8 +94,27 @@ export function computeGamma(
   const flight3Origin = offsetAlong(run2.endXY, v2, turnSign2 * halfW);
   const run3 = edgeRun(common, flight3Origin, u3, u2, n1 + n2 + 2, n3, per[2]);
 
+  // Transition risers around both turn landings. Turn 1: flight 1 centreline (u1)
+  // → landing 1 (level n1) → flight 2 edge-origin (cross-width u1). Turn 2: flight
+  // 2 edge-origin (cross-width u1) → landing 2 (level n1+n2+1) → flight 3 edge-
+  // origin (cross-width u2). Each landing adds +1 rise (gamma z-model).
+  const turnRisers = [
+    ...landingTransitionRisers(
+      centrelineWidthEdges(run1.endXY, u1, width),
+      edgeWidthEdges(flight2Origin, u1, width),
+      basePoint.z + rise * n1,
+      rise,
+    ),
+    ...landingTransitionRisers(
+      edgeWidthEdges(run2.endXY, u1, width),
+      edgeWidthEdges(flight3Origin, u2, width),
+      basePoint.z + rise * (n1 + n2 + 1),
+      rise,
+    ),
+  ];
+
   const walkline = gammaWalkline(params, variant, [run1, run2, run3], { u1, u2, u3 });
-  return assembleTurnRunStair(params, [run1, run2, run3], [landing1, landing2], walkline);
+  return assembleTurnRunStair(params, [run1, run2, run3], [landing1, landing2], walkline, turnRisers);
 }
 
 /**

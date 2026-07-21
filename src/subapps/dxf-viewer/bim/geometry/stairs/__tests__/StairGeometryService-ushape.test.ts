@@ -223,4 +223,23 @@ describe('StairGeometryService — U-shape', () => {
       }
     }
   });
+
+  it('Test 14: transition risers bridge the switchback landing (regression)', () => {
+    // Regression: flight generators emit only count−1 INTERNAL risers, so the two
+    // level boundaries around the turn landing had no vertical face — flight 2's
+    // first tread floated a rise above the πλατύσκαλο with no riser (reported bug:
+    // "μετά το πλατύσκαλο δεν έχει ρίχτυ").
+    const g = computeStairGeometry(makeUShapeParams());
+    // 10 steps + 1 turn landing (level 5) → 10 transitions → 10 risers (8 internal + 2).
+    expect(g.risers).toHaveLength(10);
+    const bridges = (zLo: number, zHi: number): boolean =>
+      g.risers.some((r) => {
+        const lo = Math.min(r.start.z, r.end.z);
+        const hi = Math.max(r.start.z, r.end.z);
+        return Math.abs(lo - zLo) < COORD_TOL && Math.abs(hi - zHi) < COORD_TOL;
+      });
+    // rise=175, n1=5: flight-1 top tread @700 → landing @875 → flight-2 first @1050.
+    expect(bridges(700, 875)).toBe(true);  // exit riser (flight 1 → landing)
+    expect(bridges(875, 1050)).toBe(true); // entry riser (landing → flight 2) — the bug
+  });
 });

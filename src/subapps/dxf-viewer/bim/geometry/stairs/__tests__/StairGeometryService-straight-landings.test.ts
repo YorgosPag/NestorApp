@@ -119,4 +119,23 @@ describe('StairGeometryService — straight with rest landings', () => {
       for (const v of t) expect(Math.abs(v.z - z)).toBeLessThan(Z_TOL);
     }
   });
+
+  it('transition risers bridge the landing (no floating tread around the πλατύσκαλο)', () => {
+    // Regression: the per-segment flight generators only emit count−1 INTERNAL
+    // risers, so the two level boundaries around a landing had no riser — a tread
+    // sat floating a rise above/below the landing with no vertical face.
+    const g = computeStairGeometry(makeStraightParams({ restLandings: [{ id: 'l1', at: 0.5, length: 'auto' }] }));
+    // stepCount=10: a rest landing REPLACES one tread level (9 treads + 1 landing,
+    // levels 0..9) → 9 level transitions → 9 risers (4+3 internal + 2 around the landing).
+    expect(g.risers).toHaveLength(9);
+    const bridges = (zLo: number, zHi: number): boolean =>
+      g.risers.some((r) => {
+        const lo = Math.min(r.start.z, r.end.z);
+        const hi = Math.max(r.start.z, r.end.z);
+        return Math.abs(lo - zLo) < 1e-6 && Math.abs(hi - zHi) < 1e-6;
+      });
+    // rise=175: flight-below top tread @700 → landing @875 → flight-above first @1050.
+    expect(bridges(700, 875)).toBe(true);
+    expect(bridges(875, 1050)).toBe(true);
+  });
 });

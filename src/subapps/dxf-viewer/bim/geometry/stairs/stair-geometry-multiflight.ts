@@ -37,6 +37,8 @@ import {
   point,
   directionToUnitVector,
   arrowSymbol,
+  centrelineWidthEdges,
+  landingTransitionRisers,
 } from './stair-geometry-shared';
 import {
   assembleMultiFlight,
@@ -89,6 +91,15 @@ export function computeMultiFlight(
           step.next.landingDepth,
           step.end.z,
           /* centered = */ true,
+        ),
+      );
+      // Transition risers around the corner landing (both flights centreline).
+      risers.push(
+        ...landingTransitionRisers(
+          centrelineWidthEdges({ x: step.end.x, y: step.end.y }, step.dir, width),
+          centrelineWidthEdges({ x: step.next.start.x, y: step.next.start.y }, step.next.dir, width),
+          step.end.z,
+          rise,
         ),
       );
       walkline.push(step.next.start);
@@ -212,6 +223,17 @@ function appendTurn(
   const adv = advanceMultiFlightTurn(end, state.u, state.dirDeg, turn, width, rise);
   acc.landings.push(
     buildCornerLanding({ x: state.cx, y: state.cy }, state.u, perp(state.u), width, adv.landingDepth, endZ, true),
+  );
+  // Transition risers around the corner landing (both flights centreline). Uses
+  // the pre-turn frame (state.u / cx,cy) for the incoming edge and the advance's
+  // next frame for the outgoing edge.
+  acc.risers.push(
+    ...landingTransitionRisers(
+      centrelineWidthEdges({ x: state.cx, y: state.cy }, state.u, width),
+      centrelineWidthEdges({ x: adv.nextStart.x, y: adv.nextStart.y }, adv.dir, width),
+      endZ,
+      rise,
+    ),
   );
   acc.walkline.push(adv.nextStart);
   state.dirDeg = adv.nextDirDeg;
