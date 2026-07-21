@@ -38,7 +38,7 @@ import { stripHiddenPrefix } from '../../export/core/mesh3d/mesh3d-naming';
  * **Γιατί εδώ (ground-truth 2026-07-22):** χωρίς το φίλτρο, ο pre-pass ζητούσε upload για ΟΛΑ τα
  * textured (mat-wood/tex_concrete_albedo/…) → θορυβώδες warning + πιθανό διπλότυπο των δικών μας.
  */
-async function foreignAndBrokenTextures(
+export async function foreignAndBrokenTextures(
   textures: ReadonlyMap<string, string>,
   resolveKnownId: KnownMaterialResolver,
   isKnownBroken?: KnownMaterialHealthProbe,

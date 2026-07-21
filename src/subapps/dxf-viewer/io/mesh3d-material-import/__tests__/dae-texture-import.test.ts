@@ -10,6 +10,7 @@
 import { parseColladaScene } from '../dae-material-parse';
 import { buildKnownMaterialResolver, withImportedMaterials } from '../known-import-materials';
 import { importForeignTextures, type ForeignTextureImporterDeps } from '../import-foreign-textures';
+import { foreignAndBrokenTextures } from '../import-collada-appearance';
 import type { BimMaterial, SaveBimMaterialInput } from '../../../bim/types/bim-material-types';
 
 // ── 1. parser: textured effect → filename ─────────────────────────────────────
@@ -294,5 +295,78 @@ describe('importForeignTextures (ADR-678 Βήμα 3)', () => {
     expect(out.created.has('MatA')).toBe(false); // απέτυχε → skip
     expect(out.created.get('MatB')).toBe('bmat_2'); // πέρασε
     expect(spy.deletes).toEqual(['bmat_1']); // μόνο ο αποτυχημένος έγινε rollback
+  });
+});
+
+// ── 4. Self-heal (ADR-678, ghost bmat_ με σπασμένο albedo) ────────────────────
+
+describe('importForeignTextures — self-heal ghost albedo (ADR-678, 2026-07-22)', () => {
+  it('repairIds: γνωστό υλικό με απόν albedo → re-upload στο ΙΔΙΟ id, κανένα save, σταθερό id', async () => {
+    const existing = [fakeMaterial('bmat_ghost', 'hash-bark')];
+    const { deps, spy } = makeDeps(existing, { 'bark.jpg': 'hash-bark' });
+    const out = await importForeignTextures(
+      new Map([['Trunk.1', 'bark.jpg']]), [imageFile('bark.jpg')], deps,
+      new Map([['Trunk.1', 'bmat_ghost']]), // ρητός self-heal στόχος
+    );
+    expect(spy.saved).toHaveLength(0);                         // κανένα διπλότυπο υλικό
+    expect(spy.uploads).toEqual([{ materialId: 'bmat_ghost' }]); // re-upload στο ίδιο id
+    expect(spy.updates[0]).toEqual({ id: 'bmat_ghost', hash: 'hash-bark' });
+    expect(out.created.get('Trunk.1')).toBe('bmat_ghost');    // σταθερό id → οι όψεις γίνονται bamboo
+  });
+
+  it('hash-match σε broken (isAlbedoReachable=false) → repair στο ίδιο id, κανένα save', async () => {
+    const existing = [fakeMaterial('bmat_ghost', 'hash-bark')];
+    const base = makeDeps(existing, { 'bark.jpg': 'hash-bark' });
+    const deps: ForeignTextureImporterDeps = { ...base.deps, isAlbedoReachable: async () => false };
+    const out = await importForeignTextures(
+      new Map([['road_wood', 'bark.jpg']]), [imageFile('bark.jpg')], deps,
+    );
+    expect(base.spy.saved).toHaveLength(0);
+    expect(base.spy.uploads).toEqual([{ materialId: 'bmat_ghost' }]); // repair αντί για reuse
+    expect(out.created.get('road_wood')).toBe('bmat_ghost');
+  });
+
+  it('hash-match σε healthy (isAlbedoReachable=true) → reuse ΧΩΡΙΣ re-upload', async () => {
+    const existing = [fakeMaterial('bmat_ok', 'hash-bark')];
+    const base = makeDeps(existing, { 'bark.jpg': 'hash-bark' });
+    const deps: ForeignTextureImporterDeps = { ...base.deps, isAlbedoReachable: async () => true };
+    const out = await importForeignTextures(
+      new Map([['road_wood', 'bark.jpg']]), [imageFile('bark.jpg')], deps,
+    );
+    expect(base.spy.uploads).toHaveLength(0); // υγιές → κανένα re-upload
+    expect(out.created.get('road_wood')).toBe('bmat_ok');
+  });
+});
+
+// ── 5. foreignAndBrokenTextures (wrapper decision: foreign vs repair vs skip) ──
+
+describe('foreignAndBrokenTextures (ADR-678 self-heal split)', () => {
+  it('άγνωστο όνομα → foreign, κανένα repair', async () => {
+    const resolve = buildKnownMaterialResolver();
+    const { foreign, repairIds } = await foreignAndBrokenTextures(
+      new Map([['Trunk.1', 'bark.jpg']]), resolve,
+    );
+    expect(foreign.get('Trunk.1')).toBe('bark.jpg');
+    expect(repairIds.size).toBe(0);
+  });
+
+  it('γνωστό & υγιές → skip (ούτε foreign ούτε repair)', async () => {
+    const known = fakeMaterial('bmat_known', 'h');
+    const resolve = buildKnownMaterialResolver([known]); // by name «bmat_known»
+    const { foreign, repairIds } = await foreignAndBrokenTextures(
+      new Map([['bmat_known', 'x.jpg']]), resolve, async () => false, // όχι σπασμένο
+    );
+    expect(foreign.size).toBe(0);
+    expect(repairIds.size).toBe(0);
+  });
+
+  it('γνωστό & σπασμένο → foreign ΚΑΙ repair (ίδιο id)', async () => {
+    const ghost = fakeMaterial('bmat_ghost', 'h');
+    const resolve = buildKnownMaterialResolver([ghost]);
+    const { foreign, repairIds } = await foreignAndBrokenTextures(
+      new Map([['bmat_ghost', 'bark.jpg']]), resolve, async () => true, // σπασμένο
+    );
+    expect(foreign.get('bmat_ghost')).toBe('bark.jpg');
+    expect(repairIds.get('bmat_ghost')).toBe('bmat_ghost');
   });
 });
