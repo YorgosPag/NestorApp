@@ -20,6 +20,33 @@ import type { LevelsHookReturn } from '../../systems/levels/useLevels';
 import { withImportedMaterials, type KnownMaterialResolver } from './known-import-materials';
 import { applyImportedAppearance, type ImportedAppearanceResult } from './import-c4d-materials';
 import { parseColladaScene } from './dae-material-parse';
+import { isUnchangedNestorMaterial } from './resolve-import-appearance';
+import { stripHiddenPrefix } from '../../export/core/mesh3d/mesh3d-naming';
+
+/**
+ * ADR-678 Βήμα 3 — κρατά ΜΟΝΟ τις **ξένες** υφές (που πρόσθεσε ο συνεργάτης) από όλα τα textured
+ * effects. Οι ΔΙΚΕΣ μας εξαγόμενες υφές έχουν γνωστά Nestor ονόματα (`mat-*`/`elem-*`/`mat_<hex>` =
+ * αμετάβλητο DNA· `tex_*` = legacy texture export· catalog/preset/`bmat_*` = γνωστό id) — δεν
+ * χρειάζονται upload (η όψη μένει no-op) και δεν πρέπει ούτε να δημιουργήσουν διπλότυπο `bmat_*` ούτε
+ * να μπουν ως «missing» στο warning. Ξένο = τίποτα από τα παραπάνω (π.χ. `Trunk.1`, `road_wood`).
+ *
+ * **Γιατί εδώ (ground-truth 2026-07-22):** χωρίς το φίλτρο, ο pre-pass ζητούσε upload για ΟΛΑ τα
+ * textured (mat-wood/tex_concrete_albedo/…) → θορυβώδες warning + πιθανό διπλότυπο των δικών μας.
+ */
+function foreignTexturesOnly(
+  textures: ReadonlyMap<string, string>,
+  resolveKnownId: KnownMaterialResolver,
+): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const [name, file] of textures) {
+    const clean = stripHiddenPrefix(name);
+    if (isUnchangedNestorMaterial(clean)) continue;
+    if (clean.startsWith('tex_')) continue;
+    if (resolveKnownId(clean) !== null) continue;
+    out.set(name, file);
+  }
+  return out;
+}
 
 /**
  * ADR-678 Βήμα 3 — injected pre-pass που δημιουργεί `bmat_*` από ξένες υφές (C4D `<library_images>`)
@@ -52,8 +79,11 @@ export async function importColladaAppearance(
   textureImporter?: ColladaTextureImporter,
 ): Promise<ImportedAppearanceResult> {
   const { objects, materials, texturesByMaterialName } = parseColladaScene(daeText);
-  const importedIds = textureImporter && texturesByMaterialName.size > 0
-    ? await textureImporter(texturesByMaterialName)
+  // ΜΟΝΟ οι ξένες υφές ανεβαίνουν — οι δικές μας (mat-*/tex_*/catalog) είναι no-op, ούτε upload ούτε
+  // «missing» θόρυβος (ground-truth 2026-07-22: ο R15 έγραφε textured effects και για τα Nestor DNA).
+  const foreign = foreignTexturesOnly(texturesByMaterialName, resolveKnownId);
+  const importedIds = textureImporter && foreign.size > 0
+    ? await textureImporter(foreign)
     : new Map<string, string>();
   const resolver = withImportedMaterials(resolveKnownId, importedIds);
   return applyImportedAppearance(

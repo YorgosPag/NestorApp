@@ -218,22 +218,32 @@ export function C4dMaterialImportButton() {
         // Toast ΜΟΝΟ όταν όντως θα τρέξει upload (companyId + εικόνες): αλλιώς θα έλεγε ψευδώς
         // «ανεβάζω» ενώ ο textureImporter είναι undefined (χωρίς companyId δεν φτιάχνεται υλικό).
         if (companyId && payload.imageFiles.length > 0) notifications.info(t('c4dMaterialImport.uploadingTextures'));
+        // Οι υφές που το `.dae` αναφέρει αλλά ο χρήστης δεν επέλεξε (ο C4D γράφει absolute path άλλου
+        // δίσκου) — τις μαζεύουμε για actionable warning (Revit «missing assets»).
+        let missingTextures: readonly string[] = [];
         const textureImporter: ColladaTextureImporter | undefined = companyId
-          ? (textures) => importForeignTextures(textures, payload.imageFiles, {
-              existingMaterials: materials,
-              saveMaterial: save,
-              updateMaterial: update,
-              uploadAlbedo: (file, materialId) =>
-                uploadMaterialTextureMap({ file, companyId, materialId, map: 'albedo' })
-                  .then((r) => r.downloadUrl),
-              hashFile: sha256HexOfFile,
-              deleteMaterial: remove,
-            })
+          ? async (textures) => {
+              const { created, missing } = await importForeignTextures(textures, payload.imageFiles, {
+                existingMaterials: materials,
+                saveMaterial: save,
+                updateMaterial: update,
+                uploadAlbedo: (file, materialId) =>
+                  uploadMaterialTextureMap({ file, companyId, materialId, map: 'albedo' })
+                    .then((r) => r.downloadUrl),
+                hashFile: sha256HexOfFile,
+                deleteMaterial: remove,
+              });
+              missingTextures = missing;
+              return created;
+            }
           : undefined;
         result = await importColladaAppearance(
           levels, payload.daeText, resolveKnownId, payload.baseline,
           payload.materialBaselineByMesh, textureImporter,
         );
+        if (missingTextures.length > 0) {
+          notifications.warning(t('c4dMaterialImport.missingTextures', { files: missingTextures.join(', ') }));
+        }
       } else {
         result = importC4dMaterials(levels, payload, resolveKnownId);
       }

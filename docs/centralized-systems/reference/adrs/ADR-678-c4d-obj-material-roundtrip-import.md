@@ -172,6 +172,24 @@ SyncContext). Το single-building/single-user project το θέλει έτσι.
       δεν decode-άρει TIFF/TGA)· follow-up warning· (δ) `handleFiles` >40 γρ. (pre-existing, Boy-Scout).
     - **Tests:** +17 (rollback, per-texture isolation, duplicate-textured disambiguation, bump-not-textured,
       percent-decode) → **100/100 πράσινα στο import domain**, jscpd καθαρό.
+  - **Ground-truth R15 (Giorgio, 2026-07-22, `Ισόγειο-C4D-EXPORT-baboo.dae`):** ο συνεργάτης έβαψε **κολώνα**
+    (`Column_col_bb83d00a…`) με υφή bamboo (υλικό «Trunk.1»). **«Δεν εμφανίστηκε».** Διάγνωση (ΟΧΙ bug parser):
+    ο C4D έγραψε την υφή ως **absolute path άλλου δίσκου** — `file:///F:/Shared/…/bamboo/Ξερό-bark-21.jpg` — και
+    **δεν** αντέγραψε το αρχείο στο `textures/` (εκεί μόνο οι δικές μας mat-*.jpg). Ο browser δεν διαβάζει `F:/…`
+    → η υφή προσπεράστηκε σιωπηλά → `appliedCount 0` → «noChanges». **Ο parser είναι σωστός** (regression test με
+    το ΑΚΡΙΒΕΣ native R15 fragment: chain `diffuse→texture(ID7)→sampler(ID6)→surface→image(ID5)` → `Trunk.1 →
+    Ξερό-bark-21.jpg`, decoded· symbol=`Material1` του C4D· dominant per-object).
+    - **UX fix (Google/Revit «missing assets»):** ο σιωπηλός skip έγινε **actionable warning** — `importForeignTextures`
+      επιστρέφει πλέον `{ created, missing }`· ο button δείχνει `c4dMaterialImport.missingTextures` (el+en) με τη
+      λίστα των filenames που λείπουν + οδηγία («στείλε τες μαζί» / «Save Project with Assets»).
+    - **Foreign-texture filter (2ο ground-truth iteration):** ο R15 γράφει textured effects ΚΑΙ για τα δικά μας DNA
+      (`mat-*`/`tex_*`/catalog) → το warning έδειχνε ΟΛΕΣ τις υφές ως «missing» (θόρυβος) + κίνδυνος διπλότυπου των
+      δικών μας. **Fix:** `foreignTexturesOnly` (import-collada-appearance) → ο pre-pass δέχεται ΜΟΝΟ ξένα ονόματα
+      (όχι `isUnchangedNestorMaterial`, όχι `tex_`, όχι `resolveKnownId`-hit· π.χ. `Trunk.1`). Λύνει και το deferred
+      critic #13 (καμία δημιουργία διπλότυπου για γνωστό υλικό). +1 test (φίλτρο).
+    - **Οδηγία χρήστη:** για να δουλέψει η ξένη υφή, ο συνεργάτης πρέπει είτε να στείλει και το `Ξερό-bark-21.jpg`
+      (multi-select μαζί με το `.dae`) είτε να κάνει **C4D → «Save Project with Assets»** ώστε να μπει στο `textures/`.
+    - **Tests:** +1 real-R15 fixture + missing-textures → **101/101**.
 
 - **2026-07-21 (Φ2 Βήμα 2 — per-entity + per-face material baseline: catalog→catalog swap detection)** —
   **Ρίζα:** το `isUnchangedNestorMaterial(name)` (resolve-import-appearance) είναι **name-based regex** — κάθε

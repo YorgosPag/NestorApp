@@ -51,15 +51,20 @@ export interface ForeignTextureImporterDeps {
 }
 
 /**
- * Το τελευταίο segment ενός path, lowercase — για case-insensitive ταίριασμα filename↔File. **Decode**
- * (percent-encoded παραλλαγή) ώστε το parsed filename να ταιριάζει με το OS-decoded `File.name` (κρίσιμο
- * για ελληνικά/με-κενό ονόματα). Malformed % → raw (guarded).
+ * Το τελευταίο segment ενός path (basename). **Decode** (percent-encoded παραλλαγή) ώστε το parsed
+ * filename να ταιριάζει με το OS-decoded `File.name` (κρίσιμο για ελληνικά/με-κενό ονόματα — ο C4D
+ * γράφει π.χ. `file:///F:/…/Ξερό-bark-21.jpg` με `%20` κενά). Malformed % → raw (guarded).
  */
-function baseNameLower(name: string): string {
+function baseNameDecoded(name: string): string {
   let decoded = name;
   try { decoded = decodeURIComponent(name); } catch { /* malformed % → raw */ }
   const parts = decoded.replace(/\\/g, '/').split('/');
-  return (parts[parts.length - 1] || name).toLowerCase();
+  return parts[parts.length - 1] || name;
+}
+
+/** Ίδιο basename, lowercase — για case-insensitive ταίριασμα filename↔File. */
+function baseNameLower(name: string): string {
+  return baseNameDecoded(name).toLowerCase();
 }
 
 /** `basename(lower) → File` από την επιλογή του χρήστη (τελευταίο κερδίζει σε διπλό basename). */
@@ -109,18 +114,30 @@ async function createTextureMaterial(
   }
 }
 
+/** Αποτέλεσμα του pre-pass: τι δημιουργήθηκε + ποιες υφές λείπουν (για actionable warning). */
+export interface ForeignTextureImportResult {
+  /** `όνομα υλικού → bmat_*` για τις υφές που ανέβηκαν/βρέθηκαν. */
+  readonly created: ReadonlyMap<string, string>;
+  /** Filenames υφών που το `.dae` αναφέρει αλλά ΔΕΝ βρέθηκαν στα επιλεγμένα αρχεία (Revit «missing
+   * assets»). Ο C4D συχνά γράφει absolute path άλλου δίσκου· ο χρήστης πρέπει να τις στείλει μαζί. */
+  readonly missing: readonly string[];
+}
+
 /**
  * Για κάθε ξένη υφή (`όνομα υλικού → filename`), βρίσκει την εικόνα, κάνει content-hash dedup, και
- * (αν νέα) δημιουργεί υλικό. Επιστρέφει `όνομα υλικού → bmat_*` για τα ταιριασμένα. Υφή χωρίς
- * επιλεγμένη εικόνα → παραλείπεται (η όψη κρατά ό,τι είχε — ποτέ throw, όπως το texture bundle).
+ * (αν νέα) δημιουργεί υλικό. Επιστρέφει τα δημιουργημένα **και** τα filenames που λείπουν. Υφή χωρίς
+ * επιλεγμένη εικόνα → μπαίνει στο `missing` (ο caller ειδοποιεί) και προσπερνιέται (η όψη κρατά ό,τι
+ * είχε — ποτέ throw, όπως το texture bundle).
  */
 export async function importForeignTextures(
   texturesByMaterialName: ReadonlyMap<string, string>,
   imageFiles: readonly File[],
   deps: ForeignTextureImporterDeps,
-): Promise<Map<string, string>> {
-  const out = new Map<string, string>();
-  if (texturesByMaterialName.size === 0) return out;
+): Promise<ForeignTextureImportResult> {
+  const created = new Map<string, string>();
+  const missing: string[] = [];
+  const missingSeen = new Set<string>();
+  if (texturesByMaterialName.size === 0) return { created, missing };
 
   const imagesByName = indexImagesByName(imageFiles);
   // content hash → material id: seed cross-session από τα live υλικά που κουβαλούν albedoHash,
@@ -133,11 +150,15 @@ export async function importForeignTextures(
 
   for (const [materialName, fileName] of texturesByMaterialName) {
     const file = imagesByName.get(baseNameLower(fileName));
-    if (!file) continue;
+    if (!file) {
+      const display = baseNameDecoded(fileName);
+      if (!missingSeen.has(display)) { missingSeen.add(display); missing.push(display); }
+      continue;
+    }
     const hash = (await deps.hashFile(file)).toLowerCase();
     const existingId = idByHash.get(hash);
     if (existingId) {
-      out.set(materialName, existingId);
+      created.set(materialName, existingId);
       continue;
     }
     // Per-texture isolation: μια αποτυχία save/upload/update ΜΙΑΣ υφής δεν ρίχνει ΟΛΟ το import — η
@@ -145,8 +166,8 @@ export async function importForeignTextures(
     try {
       const id = await createTextureMaterial(materialName, file, hash, deps);
       idByHash.set(hash, id);
-      out.set(materialName, id);
+      created.set(materialName, id);
     } catch { /* skip αυτή την υφή· η όψη κρατά ό,τι είχε */ }
   }
-  return out;
+  return { created, missing };
 }

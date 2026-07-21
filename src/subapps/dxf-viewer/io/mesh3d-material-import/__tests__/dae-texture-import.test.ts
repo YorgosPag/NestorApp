@@ -52,6 +52,38 @@ describe('parseColladaScene — texturesByMaterialName (ADR-678 Βήμα 3)', ()
     expect(scene.texturesByMaterialName.get('bamboo')).toBe('bamboo.png');
   });
 
+  // Ground-truth: ΑΚΡΙΒΕΣ fragment από πραγματικό C4D R15 export (Ισόγειο-C4D-EXPORT-baboo.dae,
+  // 2026-07-22): ο συνεργάτης έβαψε κολώνα με υφή bamboo «Trunk.1» → absolute path άλλου δίσκου.
+  it('πραγματική native C4D R15 δομή (bamboo σε κολώνα) → σωστό filename ανά υλικό', () => {
+    const realDae = `<?xml version="1.0" encoding="UTF-8"?>
+<COLLADA xmlns="http://www.collada.org/2005/11/COLLADASchema" version="1.4.1">
+  <library_images>
+    <image id="ID5"><init_from>file:///F:/Shared/Υλικά%20και%20αντικείμενα/_C4D%20-%20Ολοκληρωμένα%20texture/bamboo/Ξερό-bark-21.jpg</init_from></image>
+  </library_images>
+  <library_effects>
+    <effect id="ID4"><profile_COMMON>
+      <newparam sid="ID6"><surface type="2D"><init_from>ID5</init_from></surface></newparam>
+      <newparam sid="ID7"><sampler2D><source>ID6</source></sampler2D></newparam>
+      <technique sid="COMMON"><blinn><diffuse><texture texture="ID7" texcoord="UVSET0"/></diffuse></blinn></technique>
+    </profile_COMMON></effect>
+  </library_effects>
+  <library_materials>
+    <material id="ID3" name="Trunk.1"><instance_effect url="#ID4"/></material>
+  </library_materials>
+  <library_visual_scenes><visual_scene id="s">
+    <node id="ID445" name="Column_col_bb83d00a-6ee0-4416-9f04-4f214765f4a6"><instance_geometry url="#ID446">
+      <bind_material><technique_common><instance_material symbol="Material1" target="#ID3"/>
+      </technique_common></bind_material></instance_geometry></node>
+  </visual_scene></library_visual_scenes>
+</COLLADA>`;
+    const scene = parseColladaScene(realDae);
+    // Ο parser εξάγει σωστά την υφή (decoded basename, %20 → space, raw ελληνικά).
+    expect(scene.texturesByMaterialName.get('Trunk.1')).toBe('Ξερό-bark-21.jpg');
+    // Ο κόμβος-κολώνα δένει το «Trunk.1» (dominant per-object, symbol=Material1 του C4D).
+    expect(scene.objects[0].objectName).toBe('Column_col_bb83d00a-6ee0-4416-9f04-4f214765f4a6');
+    expect(scene.objects[0].materialName).toBe('Trunk.1');
+  });
+
   it('percent-encoded URI (κενά/ελληνικά) → decoded basename που ταιριάζει με File.name', () => {
     const scene = parseColladaScene(texturedDae('wood', 'file:///C:/tex/my%20%CE%BE%CF%8D%CE%BB%CE%BF.png'));
     expect(scene.texturesByMaterialName.get('wood')).toBe('my ξύλο.png');
@@ -205,7 +237,8 @@ describe('importForeignTextures (ADR-678 Βήμα 3)', () => {
     const out = await importForeignTextures(
       new Map([['Ξερό-bark-21', 'bark.jpg']]), [imageFile('bark.jpg')], deps,
     );
-    expect(out.get('Ξερό-bark-21')).toBe('bmat_1');
+    expect(out.created.get('Ξερό-bark-21')).toBe('bmat_1');
+    expect(out.missing).toEqual([]);
     expect(spy.saved[0]).toMatchObject({ scope: 'company', category: 'other', nameEl: 'Ξερό-bark-21' });
     expect(spy.uploads).toEqual([{ materialId: 'bmat_1' }]);
     expect(spy.updates[0]).toEqual({ id: 'bmat_1', hash: 'hash-bark' });
@@ -217,8 +250,8 @@ describe('importForeignTextures (ADR-678 Βήμα 3)', () => {
       new Map([['MatA', 'bark.jpg'], ['MatB', 'bark.jpg']]), [imageFile('bark.jpg')], deps,
     );
     expect(spy.saved).toHaveLength(1);
-    expect(out.get('MatA')).toBe(ids[0]);
-    expect(out.get('MatB')).toBe(ids[0]);
+    expect(out.created.get('MatA')).toBe(ids[0]);
+    expect(out.created.get('MatB')).toBe(ids[0]);
   });
 
   it('cross-session dedup: υπάρχον υλικό με ίδιο albedoHash → reuse, κανένα save', async () => {
@@ -228,16 +261,18 @@ describe('importForeignTextures (ADR-678 Βήμα 3)', () => {
       new Map([['Ξερό-bark-21', 'bark.jpg']]), [imageFile('bark.jpg')], deps,
     );
     expect(spy.saved).toHaveLength(0);
-    expect(out.get('Ξερό-bark-21')).toBe('bmat_existing');
+    expect(out.created.get('Ξερό-bark-21')).toBe('bmat_existing');
   });
 
-  it('υφή χωρίς επιλεγμένη εικόνα → παραλείπεται (καμία εγγραφή, κανένα throw)', async () => {
+  it('υφή χωρίς επιλεγμένη εικόνα → missing (καμία εγγραφή, κανένα throw)', async () => {
     const { deps, spy } = makeDeps([], {});
     const out = await importForeignTextures(
-      new Map([['Ξερό-bark-21', 'missing.jpg']]), [], deps,
+      new Map([['Ξερό-bark-21', 'file:///F:/tex/bamboo/Ξερό-bark-21.jpg']]), [], deps,
     );
     expect(spy.saved).toHaveLength(0);
-    expect(out.size).toBe(0);
+    expect(out.created.size).toBe(0);
+    // Actionable: το decoded basename επιστρέφεται για warning (όχι το absolute path).
+    expect(out.missing).toEqual(['Ξερό-bark-21.jpg']);
   });
 
   it('rollback: αποτυχία upload → delete του orphan, καμία εγγραφή στο out, κανένα throw', async () => {
@@ -246,7 +281,7 @@ describe('importForeignTextures (ADR-678 Βήμα 3)', () => {
       new Map([['bark', 'bark.jpg']]), [imageFile('bark.jpg')], deps,
     );
     expect(spy.deletes).toEqual(['bmat_1']); // orphan σβήστηκε
-    expect(out.size).toBe(0); // η όψη μένει αβαφή, όχι σκουπίδι στη βιβλιοθήκη
+    expect(out.created.size).toBe(0); // η όψη μένει αβαφή, όχι σκουπίδι στη βιβλιοθήκη
   });
 
   it('per-texture isolation: μία υφή αποτυγχάνει, η άλλη περνά κανονικά', async () => {
@@ -256,8 +291,8 @@ describe('importForeignTextures (ADR-678 Βήμα 3)', () => {
     const out = await importForeignTextures(
       new Map([['MatA', 'a.jpg'], ['MatB', 'b.jpg']]), [imageFile('a.jpg'), imageFile('b.jpg')], deps,
     );
-    expect(out.has('MatA')).toBe(false); // απέτυχε → skip
-    expect(out.get('MatB')).toBe('bmat_2'); // πέρασε
+    expect(out.created.has('MatA')).toBe(false); // απέτυχε → skip
+    expect(out.created.get('MatB')).toBe('bmat_2'); // πέρασε
     expect(spy.deletes).toEqual(['bmat_1']); // μόνο ο αποτυχημένος έγινε rollback
   });
 });

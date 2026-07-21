@@ -120,6 +120,39 @@ describe('importColladaAppearance', () => {
     });
   });
 
+  // ADR-678 Βήμα 3 — ground-truth 2026-07-22: ο R15 γράφει textured effects ΚΑΙ για τα δικά μας DNA
+  // (mat-*/tex_*). Ο texture pre-pass πρέπει να δέχεται ΜΟΝΟ τα ξένα (π.χ. «Trunk.1»).
+  it('foreign-texture filter: ο textureImporter δέχεται ΜΟΝΟ ξένες υφές, όχι mat-*/tex_*', async () => {
+    const texturedMat = (matId: string, matName: string, effId: string, imgId: string, file: string) =>
+      `<image id="${imgId}"><init_from>${file}</init_from></image>` +
+      `|<effect id="${effId}"><profile_COMMON>` +
+      `<newparam sid="su_${effId}"><surface type="2D"><init_from>${imgId}</init_from></surface></newparam>` +
+      `<newparam sid="sa_${effId}"><sampler2D><source>su_${effId}</source></sampler2D></newparam>` +
+      `<technique sid="COMMON"><blinn><diffuse><texture texture="sa_${effId}"/></diffuse></blinn></technique>` +
+      `</profile_COMMON></effect>` +
+      `|<material id="${matId}" name="${matName}"><instance_effect url="#${effId}"/></material>`;
+    const parts = [
+      texturedMat('mC', 'mat-concrete', 'eC', 'iC', 'textures/mat-concrete.jpg'),
+      texturedMat('mT', 'Trunk.1', 'eT', 'iT', 'file:///F:/x/Ξερό-bark-21.jpg'),
+    ].map((s) => s.split('|'));
+    const dae = `<?xml version="1.0"?><COLLADA version="1.4.1">` +
+      `<library_images>${parts.map((p) => p[0]).join('')}</library_images>` +
+      `<library_effects>${parts.map((p) => p[1]).join('')}</library_effects>` +
+      `<library_materials>${parts.map((p) => p[2]).join('')}</library_materials>` +
+      `<library_visual_scenes><visual_scene><node name="Column_col-7"><instance_geometry url="#g">` +
+      `<bind_material><technique_common><instance_material symbol="sym_0" target="#mT"/>` +
+      `</technique_common></bind_material></instance_geometry></node></visual_scene></library_visual_scenes>` +
+      `</COLLADA>`;
+
+    const seen: string[] = [];
+    const textureImporter = async (textures: ReadonlyMap<string, string>) => {
+      seen.push(...textures.keys());
+      return new Map<string, string>();
+    };
+    await importColladaAppearance(fakeLevels(), dae, resolveKnownId, undefined, undefined, textureImporter);
+    expect(seen).toEqual(['Trunk.1']); // mat-concrete φιλτραρίστηκε (δικό μας DNA)
+  });
+
   it('no match → καμία παρενέργεια', async () => {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), named('paint-red'));
     mesh.name = 'Column_nope';
