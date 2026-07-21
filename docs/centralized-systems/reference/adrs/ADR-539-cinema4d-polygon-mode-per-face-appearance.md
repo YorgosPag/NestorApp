@@ -178,6 +178,20 @@ slab persistence serialize path (αν whitelist).
   (`BimSceneLayer.clearGroup` disposes μόνο geometry, ποτέ materials) — πλέον cached. **Επίσης:** τα faced
   solids (slab/column/beam/foundation/wall, `bim-three-faced-prism.ts::buildFacedPrism`) είχαν **ΜΗΔΕΝ
   uv/uv2** → προστέθηκε `setBoxWorldUvs(flat)` μετά το `computeVertexNormals()` (το roof είχε ήδη UVs).
+  **UI slice (ολοκληρώνει Φ2b end-to-end — data model + render + UI):** το `PolygonMaterialPanel.tsx`
+  (Σώμα layer) δίνει πλέον **ΤΡΙΑ** swatch groups (Cinema 4D Material Manager parity): (1) textured
+  catalog PBR υλικά — νέο `FACE_TEXTURE_MATERIAL_IDS` = brick/stone/wood/tile/concrete/metal/plaster/
+  roof-tile, (2) τα `bmat_*` βιβλιοθήκης υλικά του χρήστη (μέσω **reuse** `useMaterialLibrary`), (3) τα
+  υπάρχοντα wall-covering flat paints (διατηρούνται). Catalog+library swatches δείχνουν πραγματική
+  υφή-thumbnail μέσω **reuse** `<MaterialSwatch>`. Drag-drop + click-apply αναλλοίωτα (ίδιο
+  `FaceAppearance.materialId` path). Νέο pure helper `bim-3d/ui/polygon-material-swatches.ts`
+  (`FACE_TEXTURE_MATERIAL_IDS` + `buildLibraryMaterialSwatches`). i18n: `constructionMaterials.mat-brick`/
+  `mat-stone` (el+en, dxf-viewer-shell). **Gate extension:** `MaterialCatalog3D.hasFaceTexture` επεκτάθηκε
+  — επιστρέφει true ΚΑΙ για catalog `mat-*`/`elem-*` id με texture slug (`textureSlugForKey(resolveMaterialKey(id))`),
+  πέρα από `bmat_*` με albedo· ξένα wall-covering/finish paint ids (όχι `mat-`/`elem-`) παραμένουν
+  εκτός → flat colour (καμία `mat-concrete` πτώση). Reuse (μηδέν διπλότυπο): `MaterialSwatch`,
+  `useMaterialLibrary`, `constructionMaterialLabelKey`, `MATERIAL_TEXTURE_MAP`. Αποτέλεσμα: όψη βαμμένη
+  με textured catalog ή library υλικό δείχνει πλέον την υφή της σε 3D (realistic ON).
   Detail: **ADR-679 changelog (Φ2b)**.
 - **2026-07-19 (cross-ref → ADR-679 Φ2a — UNIFIED COLOR REGISTRY)** — Ο `faceAppearanceColorHex` (ο SSoT
   «χρώμα όψης», 3D painted + 2D plan fill) έλυνε το `materialId` **μόνο** μέσω `getWallCoveringColor` →

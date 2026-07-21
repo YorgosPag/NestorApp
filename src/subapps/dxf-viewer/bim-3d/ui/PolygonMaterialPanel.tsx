@@ -24,9 +24,14 @@
 
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useAuth } from '@/auth/hooks/useAuth';
+import { useCompanyId } from '@/hooks/useCompanyId';
 import { EnterpriseColorDialog } from '../../ui/color/EnterpriseColorDialog';
+import { MaterialSwatch } from '../../ui/components/shared/MaterialSwatch';
 import { useLevelsOptional } from '../../systems/levels/useLevels';
+import { useProjectHierarchyOptional } from '../../contexts/ProjectHierarchyContext';
 import { usePolygonMode3DStore, type PolygonTargetLayer } from '../stores/PolygonMode3DStore';
 import { listWallCoveringMaterials } from '../../bim/wall-coverings/wall-covering-material-catalog';
 import type { FaceAppearance } from '../../bim/types/face-appearance-types';
@@ -38,17 +43,76 @@ import { applyFinishFaceOverrideToFaces } from './apply-finish-face-override';
 import { FINISH_MATERIAL_OPTIONS } from '../../ui/ribbon/hooks/bridge/finish-param';
 import { getMaterialFlatColorHex } from '../../bim/materials/material-catalog-defs';
 import type { FinishFaceOverride } from '../../bim/finishes/structural-finish-types';
+// ADR-679 Φ2b / ADR-539 Φ4d — BODY layer textured swatches (catalog + user bmat_* library).
+import { useMaterialLibrary } from '../../ui/panels/materials/hooks/useMaterialLibrary';
+import { constructionMaterialLabelKey } from '../../bim/materials/construction-materials';
+import type { BimMaterial, BimMaterialCategory } from '../../bim/types/bim-material-types';
+import { FACE_TEXTURE_MATERIAL_IDS, buildLibraryMaterialSwatches } from './polygon-material-swatches';
 
 /** Default seed for the custom-colour dialog (a warm Cinema 4D red). */
 const DEFAULT_CUSTOM_COLOR = '#C0392B';
 
-/** Ένα swatch υλικού στο panel (layer-agnostic: catalog χρώμα + label + drag id). */
-interface SwatchItem {
-  readonly id: string;
-  readonly color: string;
-  readonly label: string;
-  /** Body swatches είναι draggable (drag-drop 539)· finish = click-only. */
-  readonly draggable: boolean;
+/**
+ * Textured swatch reference (ADR-679 Φ2b) — catalog `mat-*` id OR user-library `bmat_*`
+ * category+urls. Rendered via the shared `<MaterialSwatch>` (real photo/albedo), not a flat span.
+ */
+interface SwatchTextureRef {
+  readonly materialId?: string;
+  readonly category?: BimMaterialCategory;
+  readonly thumbnailUrl?: string | null;
+  readonly albedoUrl?: string | null;
+}
+
+/**
+ * Ένα swatch υλικού στο panel (layer-agnostic: label + drag id), σε ΔΥΟ σχήματα:
+ *   - flat χρώμα (legacy wall-covering paints + finish materials) → `color` hex, καμία υφή·
+ *   - textured (ADR-679 Φ2b: catalog cladding + user library) → `swatch` ref, render μέσω
+ *     `<MaterialSwatch>` (πραγματική φωτογραφία/albedo).
+ * Discriminated ώστε το render branch να είναι type-safe (όχι optional-both, όχι `!`).
+ */
+type SwatchItem =
+  | {
+      readonly id: string;
+      readonly label: string;
+      /** Body swatches είναι draggable (drag-drop 539)· finish = click-only. */
+      readonly draggable: boolean;
+      readonly color: string;
+      readonly swatch?: undefined;
+    }
+  | {
+      readonly id: string;
+      readonly label: string;
+      readonly draggable: boolean;
+      readonly swatch: SwatchTextureRef;
+      readonly color?: undefined;
+    };
+
+/**
+ * ADR-679 Φ2b — BODY layer swatch groups, Cinema 4D Material Manager order:
+ *   1. textured catalog cladding materials (`FACE_TEXTURE_MATERIAL_IDS`) — brick/stone/wood/…
+ *   2. the user's own material library (`bmat_*`, `useMaterialLibrary`)
+ *   3. legacy flat wall-covering paints (unchanged — N.18 reuse of `listWallCoveringMaterials`)
+ */
+function buildBodySwatches(library: readonly BimMaterial[], t: TFunction): SwatchItem[] {
+  const catalog: SwatchItem[] = FACE_TEXTURE_MATERIAL_IDS.map((id) => ({
+    id,
+    label: t(`dxf-viewer-shell:${constructionMaterialLabelKey(id)}`),
+    draggable: true,
+    swatch: { materialId: id },
+  }));
+  const fromLibrary: SwatchItem[] = buildLibraryMaterialSwatches(library).map((d) => ({
+    id: d.id,
+    label: d.label,
+    draggable: true,
+    swatch: { category: d.category, thumbnailUrl: d.thumbnailUrl, albedoUrl: d.albedoUrl },
+  }));
+  const flatPaints: SwatchItem[] = listWallCoveringMaterials().map((m) => ({
+    id: m.id,
+    color: m.color,
+    label: t(`dxf-viewer-shell:wallCovering.materials.${m.labelKeySuffix}`),
+    draggable: true,
+  }));
+  return [...catalog, ...fromLibrary, ...flatPaints];
 }
 
 /**
@@ -63,6 +127,17 @@ function toFinishOverride(value: FaceAppearance | null): FinishFaceOverride | nu
 export function PolygonMaterialPanel() {
   const { t } = useTranslation(['bim3d', 'dxf-viewer-shell']);
   const levels = useLevelsOptional();
+  // ADR-679 Φ2b — user material library (bmat_*) for the BODY layer's textured swatches.
+  // Called UNCONDITIONALLY (React hook rules) — mirrors MaterialsLibraryPanel's companyId/
+  // userId wiring; projectId comes from the same hierarchy context BimViewport3D itself reads.
+  const { user } = useAuth();
+  const companyResult = useCompanyId();
+  const hierarchy = useProjectHierarchyOptional();
+  const { materials: libraryMaterials } = useMaterialLibrary({
+    companyId: companyResult?.companyId,
+    userId: user?.uid,
+    projectId: hierarchy?.selectedProject?.id ?? undefined,
+  });
   const active = usePolygonMode3DStore((s) => s.active);
   const selectedFaces = usePolygonMode3DStore((s) => s.selectedFaces);
   const targetBimId = usePolygonMode3DStore((s) => s.targetBimId);
@@ -96,10 +171,13 @@ export function PolygonMaterialPanel() {
   const faceCount = selectedFaces.length;
   /** Σώμα: όψεις Ή «όλο το στοιχείο». Σοβάς: μόνο επιλεγμένες όψεις (per-face override). */
   const canApply = faceCount > 0 || (!isFinish && targetBimId !== null);
-  /** Swatches ανά layer: σώμα = wall coverings (draggable)· σοβάς = finish materials (click-only). */
+  /**
+   * Swatches ανά layer: σώμα = textured catalog + user library + wall coverings (draggable,
+   * ADR-679 Φ2b)· σοβάς = finish materials (click-only, flat — αμετάβλητο).
+   */
   const swatches: SwatchItem[] = isFinish
     ? FINISH_MATERIAL_OPTIONS.map((o) => ({ id: o.value, color: getMaterialFlatColorHex(o.value), label: t(o.labelKey), draggable: false }))
-    : listWallCoveringMaterials().map((m) => ({ id: m.id, color: m.color, label: t(`dxf-viewer-shell:wallCovering.materials.${m.labelKeySuffix}`), draggable: true }));
+    : buildBodySwatches(libraryMaterials, t);
 
   return (
     // ADR-539 — Cinema 4D «Material Manager»: φαρδιά μπάρα υλικών στη ΒΑΣΗ του 3D κάμβα
@@ -157,12 +235,23 @@ export function PolygonMaterialPanel() {
                   onClick={() => apply({ materialId: m.id })}
                   className={`flex w-14 flex-col items-center gap-1 rounded border border-white/15 p-1 text-[9px] transition-colors hover:bg-white/10 ${m.draggable ? 'cursor-grab active:cursor-grabbing' : ''}`}
                 >
-                  {/* Data-driven catalog colour → inline style (accepted N.3 exception, mirror MaterialSwatch). */}
-                  <span
-                    className="h-9 w-9 shrink-0 rounded-sm border border-white/30"
-                    style={{ backgroundColor: m.color }}
-                    aria-hidden="true"
-                  />
+                  {m.swatch ? (
+                    // ADR-679 Φ2b — textured catalog/library swatch: real photo/albedo image.
+                    <MaterialSwatch
+                      materialId={m.swatch.materialId}
+                      category={m.swatch.category}
+                      thumbnailUrl={m.swatch.thumbnailUrl}
+                      albedoUrl={m.swatch.albedoUrl}
+                      className="h-9 w-9 shrink-0 rounded-sm border border-white/30"
+                    />
+                  ) : (
+                    // Data-driven catalog colour → inline style (accepted N.3 exception, mirror MaterialSwatch).
+                    <span
+                      className="h-9 w-9 shrink-0 rounded-sm border border-white/30"
+                      style={{ backgroundColor: m.color }}
+                      aria-hidden="true"
+                    />
+                  )}
                   <span className="w-full truncate text-center">{m.label}</span>
                 </button>
               </TooltipTrigger>

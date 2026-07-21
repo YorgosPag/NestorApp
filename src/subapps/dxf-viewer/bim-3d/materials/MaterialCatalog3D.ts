@@ -315,8 +315,18 @@ function doubleSidedVariant(source: THREE.MeshStandardMaterial): THREE.MeshStand
  * fallback (foreign id → `resolveMaterialKey` default `mat-concrete`) — ξένο id ΔΕΝ γίνεται υφή.
  */
 function hasFaceTexture(materialId: string): boolean {
-  if (!materialId.startsWith(USER_MATERIAL_ID_PREFIX)) return false;
-  return !!getUserMaterialAppearance(materialId)?.textures?.albedoUrl;
+  // Library `bmat_*` υλικό → υφή μόνο όταν έχει ανεβασμένο albedo.
+  if (materialId.startsWith(USER_MATERIAL_ID_PREFIX)) {
+    return !!getUserMaterialAppearance(materialId)?.textures?.albedoUrl;
+  }
+  // Catalog DNA/element υλικό (`mat-*`/`elem-*`) με χαρτογραφημένο texture slug (brick/wood/
+  // stone/tile/concrete/metal/plaster/roof-tiles). Ξένα wall-covering/finish paint ids (π.χ.
+  // 'paint-red') ΔΕΝ ξεκινούν με `mat-`/`elem-` → εξαιρούνται → legacy flat χρώμα (κανένα
+  // concrete fallback). ADR-539 Φ4d — «ντύσιμο» όψης με catalog υλικό (brick/wood/stone/…).
+  if (materialId.startsWith('mat-') || materialId.startsWith('elem-')) {
+    return textureSlugForKey(resolveMaterialKey(materialId)) !== null;
+  }
+  return false;
 }
 
 /**

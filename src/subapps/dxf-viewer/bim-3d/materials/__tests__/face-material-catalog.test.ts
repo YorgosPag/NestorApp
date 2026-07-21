@@ -5,24 +5,41 @@
  * face-appearance-material.test.ts).
  *
  * ADR-679 Φ2b regression fix — `getFaceMaterial3D` now returns `MeshStandardMaterial | null`:
- * it is a real texture ONLY when realistic materials are ON AND the id is a `bmat_*` library
- * material with an uploaded albedo (`hasFaceTexture`). Any other case (realistic OFF, or a
- * flat/unknown/non-bmat id) → `null`, so the caller falls through to the legacy flat-colour
- * path instead of silently collapsing to a wrong/default texture.
+ *   - realistic materials OFF → always `null` (unchanged, regardless of id shape).
+ *   - realistic materials ON → non-null DoubleSide material when the id is EITHER
+ *     (a) a `bmat_*` library material with an uploaded albedo, OR
+ *     (b) a catalog `mat-*`/`elem-*` id whose resolved key has a mapped texture slug
+ *         (brick/stone/wood/tile/concrete/metal/plaster/roof-tiles) — the `hasFaceTexture`
+ *         gate (`MaterialCatalog3D.ts`).
+ *   - realistic ON but the id has NO texture path → `null` (foreign non-"mat-"/"elem-" id, or a
+ *     "mat-" / "elem-" id with no mapped slug e.g. `mat-glass`) — so the caller falls through to
+ *     the legacy flat-colour path instead of a wrong/default texture (no concrete fallback for
+ *     a foreign id like a wall-covering `'paint-red'`).
  *
  * `realisticMaterials` is OFF by default (store default → 'shaded-edges' preset, see
- * `bim-render-settings-types.ts` `DEFAULT_VISUAL_STYLE`) — the jest default here — so this
- * suite exercises the null-path without loading any texture asset. Driving the non-null
- * (realistic ON + uploaded albedo) branch would require faking the user-material-registry's
- * texture-set cache, which is out of scope for this unit and belongs to that registry's own
- * suite — not fabricated here.
+ * `bim-render-settings-types.ts` `DEFAULT_VISUAL_STYLE`) — the jest default here. The
+ * "realistic ON" suite below flips the store for its own tests only and restores OFF
+ * afterwards so it doesn't leak into sibling suites (mirrors the pattern in
+ * `MaterialCatalog3D-visual-style.test.ts`).
+ *
+ * NOT covered here: the `bmat_*` + uploaded-albedo non-null branch. That would require
+ * faking the user-material-registry's texture-set cache (a loaded albedo asset), which is
+ * out of scope for this unit and belongs to that registry's own suite — not fabricated here.
+ * The catalog `mat-brick` case below drives the SAME `doubleSidedVariant` gate/wrapping logic
+ * (`getMaterial3D` returns its flat singleton because no texture is actually loaded — that's
+ * fine; the point under test is that the gate itself returns a non-null DoubleSide variant).
  */
 
 import * as THREE from 'three';
+import { useBimRenderSettingsStore } from '../../../state/bim-render-settings-store';
 import {
   getFaceMaterial3D,
   getFaceColorMaterial3D,
 } from '../MaterialCatalog3D';
+
+jest.mock('../../../services/bim-render-settings.service', () => ({
+  saveBimRenderSettings: jest.fn().mockResolvedValue(undefined),
+}));
 
 describe('getFaceColorMaterial3D', () => {
   it('builds a matte DoubleSide MeshStandardMaterial with the requested colour', () => {
@@ -58,5 +75,30 @@ describe('getFaceMaterial3D — realistic OFF (jest default store state)', () =>
 
   it('returns null for an unknown/garbage id', () => {
     expect(getFaceMaterial3D('not-a-real-material-id')).toBeNull();
+  });
+});
+
+describe('getFaceMaterial3D — realistic ON (catalog-textured branch, ADR-679 Φ2b gate extension)', () => {
+  beforeEach(() => {
+    useBimRenderSettingsStore.getState().setRealisticMaterials(true);
+  });
+
+  afterEach(() => {
+    // restore the suite-wide default (realistic OFF) so this doesn't leak into sibling suites.
+    useBimRenderSettingsStore.getState().setRealisticMaterials(false);
+  });
+
+  it('mat-brick (mapped texture slug) → non-null DoubleSide material', () => {
+    const mat = getFaceMaterial3D('mat-brick');
+    expect(mat).not.toBeNull();
+    expect(mat?.side).toBe(THREE.DoubleSide);
+  });
+
+  it('mat-glass (no mapped texture slug) → null, even with realistic ON', () => {
+    expect(getFaceMaterial3D('mat-glass')).toBeNull();
+  });
+
+  it('paint-red (foreign id, not mat-/elem- prefixed) → null, even with realistic ON', () => {
+    expect(getFaceMaterial3D('paint-red')).toBeNull();
   });
 });

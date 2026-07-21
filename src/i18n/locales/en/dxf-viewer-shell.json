@@ -204,6 +204,8 @@
   },
   "constructionMaterials": {
     "mat-concrete": "Concrete",
+    "mat-brick": "Brick",
+    "mat-stone": "Stone",
     "mat-screed": "Cement Screed",
     "mat-insulation": "Thermal Insulation",
     "mat-tile": "Ceramic Tile",

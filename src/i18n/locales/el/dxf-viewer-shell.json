@@ -204,6 +204,8 @@
   },
   "constructionMaterials": {
     "mat-concrete": "Σκυρόδεμα",
+    "mat-brick": "Τούβλο",
+    "mat-stone": "Πέτρα",
     "mat-screed": "Τσιμεντοκονία",
     "mat-insulation": "Θερμομόνωση",
     "mat-tile": "Κεραμικό πλακάκι",
