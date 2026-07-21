@@ -675,7 +675,11 @@ export const COLUMN_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
   mergeDefs(COLUMN_TRACKED_FIELDS_RAW, {});
 
 // ADR-406 — point-based MEP fixture (light fixture first).
-const MEP_FIXTURE_TRACKED_FIELDS_RAW: Record<string, string> = {
+// ADR-408 — τα ΚΟΙΝΑ πεδία κάθε point-based MEP σώματος (fixture/panel/manifold/radiator/boiler/
+// water-heater). Ένα SSoT· κάθε entity κάνει spread + προσθέτει τα δικά του (N.18: μηδέν clone
+// αντί για 6× copy-paste του ίδιου προθέματος). Η σειρά κλειδιών δεν επηρεάζει το diff — μόνο τη
+// σειρά εμφάνισης στο delete audit (cosmetic).
+const MEP_POINT_BODY_TRACKED_FIELDS_RAW: Record<string, string> = {
   kind: 'kind',
   layerId: 'layerId',
   shape: 'shape',
@@ -687,6 +691,10 @@ const MEP_FIXTURE_TRACKED_FIELDS_RAW: Record<string, string> = {
   material: 'material',
   storeyId: 'storeyId',
   hostId: 'hostId',
+};
+
+const MEP_FIXTURE_TRACKED_FIELDS_RAW: Record<string, string> = {
+  ...MEP_POINT_BODY_TRACKED_FIELDS_RAW,
 };
 
 export const MEP_FIXTURE_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
@@ -738,6 +746,24 @@ const IMPORTED_MESH_TRACKED_FIELDS_RAW: Record<string, string> = {
 export const IMPORTED_MESH_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
   mergeDefs(IMPORTED_MESH_TRACKED_FIELDS_RAW, {});
 
+// ADR-684 Φ4-C — παραμετρικό στερεό. Το `shape` (nested union: kind + διαστάσεις) track-άρεται
+// ολόκληρο: κάθε αλλαγή σχήματος/διάστασης σειριοποιείται (serializeScalar → JSON) → μία εγγραφή
+// ιστορικού. Το `structuralRole` είναι το κρίσιμο BOQ-metadata (δομικό↔διακοσμητικό αλλάζει την
+// προμέτρηση), οπότε οφείλει να φαίνεται στο ιστορικό.
+const GENERIC_SOLID_TRACKED_FIELDS_RAW: Record<string, string> = {
+  kind: 'kind',
+  layerId: 'layerId',
+  shape: 'shape',
+  rotationDeg: 'rotationDeg',
+  mountingElevationMm: 'mountingElevationMm',
+  material: 'material',
+  structuralRole: 'structuralRole',
+  storeyId: 'storeyId',
+};
+
+export const GENERIC_SOLID_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
+  mergeDefs(GENERIC_SOLID_TRACKED_FIELDS_RAW, {});
+
 // ADR-415 — pure-vector 2D floorplan symbol (WC/sanitary first).
 const FLOORPLAN_SYMBOL_TRACKED_FIELDS_RAW: Record<string, string> = {
   category: 'category',
@@ -772,17 +798,7 @@ export const MEP_SYSTEM_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
 
 // ADR-408 Φ3 — point-based electrical panel (circuit source).
 const ELECTRICAL_PANEL_TRACKED_FIELDS_RAW: Record<string, string> = {
-  kind: 'kind',
-  layerId: 'layerId',
-  shape: 'shape',
-  width: 'width',
-  length: 'length',
-  bodyHeightMm: 'bodyHeightMm',
-  mountingElevationMm: 'mountingElevationMm',
-  rotation: 'rotation',
-  material: 'material',
-  storeyId: 'storeyId',
-  hostId: 'hostId',
+  ...MEP_POINT_BODY_TRACKED_FIELDS_RAW,
 };
 
 export const ELECTRICAL_PANEL_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
@@ -790,20 +806,10 @@ export const ELECTRICAL_PANEL_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
 
 // ADR-408 Φ12 — point-based plumbing manifold (συλλέκτης, pipe-network source).
 const MEP_MANIFOLD_TRACKED_FIELDS_RAW: Record<string, string> = {
-  kind: 'kind',
-  layerId: 'layerId',
-  shape: 'shape',
-  width: 'width',
-  length: 'length',
-  bodyHeightMm: 'bodyHeightMm',
-  mountingElevationMm: 'mountingElevationMm',
+  ...MEP_POINT_BODY_TRACKED_FIELDS_RAW,
   outletCount: 'outletCount',
   inletDiameterMm: 'inletDiameterMm',
   outletDiameterMm: 'outletDiameterMm',
-  rotation: 'rotation',
-  material: 'material',
-  storeyId: 'storeyId',
-  hostId: 'hostId',
 };
 
 export const MEP_MANIFOLD_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
@@ -811,19 +817,9 @@ export const MEP_MANIFOLD_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
 
 // ADR-408 Εύρος Β — heating radiator audited fields.
 const MEP_RADIATOR_TRACKED_FIELDS_RAW: Record<string, string> = {
-  kind: 'kind',
-  layerId: 'layerId',
-  shape: 'shape',
-  width: 'width',
-  length: 'length',
-  bodyHeightMm: 'bodyHeightMm',
-  mountingElevationMm: 'mountingElevationMm',
+  ...MEP_POINT_BODY_TRACKED_FIELDS_RAW,
   connectorDiameterMm: 'connectorDiameterMm',
   thermalOutputW: 'thermalOutputW',
-  rotation: 'rotation',
-  material: 'material',
-  storeyId: 'storeyId',
-  hostId: 'hostId',
 };
 
 export const MEP_RADIATOR_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
@@ -831,19 +827,9 @@ export const MEP_RADIATOR_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
 
 // ADR-408 Εύρος Β #2 — heating boiler audited fields.
 const MEP_BOILER_TRACKED_FIELDS_RAW: Record<string, string> = {
-  kind: 'kind',
-  layerId: 'layerId',
-  shape: 'shape',
-  width: 'width',
-  length: 'length',
-  bodyHeightMm: 'bodyHeightMm',
-  mountingElevationMm: 'mountingElevationMm',
+  ...MEP_POINT_BODY_TRACKED_FIELDS_RAW,
   connectorDiameterMm: 'connectorDiameterMm',
   thermalOutputW: 'thermalOutputW',
-  rotation: 'rotation',
-  material: 'material',
-  storeyId: 'storeyId',
-  hostId: 'hostId',
   systemClassification: 'systemClassification',
 };
 
@@ -853,19 +839,9 @@ export const MEP_BOILER_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
 // ADR-408 — DHW water heater (αντλία θερμότητας / ηλεκτρικός/αερίου θερμοσίφωνας) audited fields.
 // Mirrors MEP_BOILER_TRACKED_FIELDS + adds `tankCapacityL` (nominal storage volume in litres).
 const MEP_WATER_HEATER_TRACKED_FIELDS_RAW: Record<string, string> = {
-  kind: 'kind',
-  layerId: 'layerId',
-  shape: 'shape',
-  width: 'width',
-  length: 'length',
-  bodyHeightMm: 'bodyHeightMm',
-  mountingElevationMm: 'mountingElevationMm',
+  ...MEP_POINT_BODY_TRACKED_FIELDS_RAW,
   connectorDiameterMm: 'connectorDiameterMm',
   thermalOutputW: 'thermalOutputW',
-  rotation: 'rotation',
-  material: 'material',
-  storeyId: 'storeyId',
-  hostId: 'hostId',
   systemClassification: 'systemClassification',
   // Water-heater-specific: nominal storage capacity in litres (absent on boiler).
   tankCapacityL: 'tankCapacityL',

@@ -57,7 +57,13 @@ export type AuditEntityType =
   | 'bim_animation'
   // ADR-412 Φ5 — BIM family types (Revit Type/Instance). Subcollection-scoped
   // under companies/{companyId}/bim_family_types/{typeId}.
-  | 'bim_family_type';
+  | 'bim_family_type'
+  // ADR-410 / ADR-683 / ADR-684 — mesh/parametric point entities. Ήταν ΟΛΑ απόντα → κάθε audit POST
+  // τους έκανε 400 «Invalid entityType» και το ιστορικό δεν καταγραφόταν ΠΟΤΕ (fire-and-forget το
+  // έκρυβε). Ίδια «desync» κλάση με mep-fitting/foundation· προστέθηκαν μαζί με το generic-solid.
+  | 'furniture'
+  | 'imported-mesh'
+  | 'generic-solid';
 
 /** Actions that can be recorded in the audit trail */
 export type AuditAction =
