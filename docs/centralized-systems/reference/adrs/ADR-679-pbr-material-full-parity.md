@@ -1,6 +1,6 @@
 # ADR-679 — PBR Material «Full Parity»: πλήρες σύστημα υλικών/υφών ανά όψη (C4D-grade)
 
-**Status:** 🟢 Φ2a ΥΛΟΠΟΙΗΘΗΚΕ (import name→όλα τα υλικά + color registry)· 🟢 Φ5.1a ΥΛΟΠΟΙΗΘΗΚΕ (DAE writer texture-capable + πραγματικά UVs)· 🟢 Φ5.1b ΥΛΟΠΟΙΗΘΗΚΕ (texture-byte bundling + headless prewarm — R15-visible υφή, εκκρεμεί ground-truth στον R15)· Φ2b/Φ2c εκκρεμούν
+**Status:** 🟢 Φ2a ΥΛΟΠΟΙΗΘΗΚΕ (import name→όλα τα υλικά + color registry)· 🟢 Φ5.1a ΥΛΟΠΟΙΗΘΗΚΕ (DAE writer texture-capable + πραγματικά UVs)· 🟢 Φ5.1b ΥΛΟΠΟΙΗΘΗΚΕ + **R15 GROUND-TRUTH ✅** (texture-byte bundling + headless prewarm· checker-cube `.dae`+`.zip` άνοιξε στον C4D R15.037 με σωστά χαρτογραφημένη υφή σε όλες τις όψεις)· Φ2b/Φ2c εκκρεμούν
 **Date:** 2026-07-19
 **Owner:** Giorgio
 **Σχετικά:** ADR-413 (BimMaterial library + PBR textures) · ADR-539 (per-face appearance) · ADR-449 (structural finish) · ADR-678 (C4D↔Νέστωρ round-trip) · ADR-511 (wall-covering catalog)
@@ -93,7 +93,11 @@ BimMaterial** (PBR texture set) και να το **render-άρει** μέσω τ
   (4) **Wiring** `mesh3d-export-adapter.ts`: το **dae** path χτίζεται με `buildTexturedMesh3dScene` +
   bundling artifacts (obj/gltf κρατούν τον sync builder — surgical scope, μηδέν αλλαγή κόστους τους).
   Με ≥1 texture artifact, το `packageArtifacts` παράγει `.zip` (`.zae`-style)· χωρίς υφές, ιστορικό
-  `.dae`+manifest ζεύγος. **7 νέα tests** (bundle 4 + prewarm gate 3), 95 mesh3d+formats πράσινα,
+  `.dae`+manifest ζεύγος. **R15 GROUND-TRUTH ✅ (2026-07-21):** hermetic checker-cube (φτιαγμένο από τον
+  πραγματικό `serialiseCollada` + `buildStoredZipBytes`) άνοιξε στον C4D **R15.037** με το κόκκινο/λευκό καρό
+  σωστά χαρτογραφημένο σε ΟΛΕΣ τις όψεις → η δομή `.dae` (library_images + surface/sampler + textured
+  diffuse + `bind_vertex_input UVSET0`) + το relative-path zip bundling επικυρώθηκαν στην πραγματική
+  πλατφόρμα-στόχο. **7 νέα tests** (bundle 4 + prewarm gate 3), 95 mesh3d+formats πράσινα,
   bim-3d materials tests πράσινα, `jscpd:diff` καθαρό, ≤500/≤40 ✅, ΟΧΙ tsc (N.17). Execution: **orchestrator**
   (Phase 1 = 3 παράλληλοι read-only investigation agents για το prewarm contract· coupled edits σε ελεγχόμενη
   σειρά λόγω shared working tree). **Επόμενο:** ground-truth στον R15 (textured `BimMaterial`, realistic ON →
