@@ -836,6 +836,13 @@ export interface DxfRenderOptions {
    */
   movePreviewActive?: boolean;
   /**
+   * When true (a transform tool — Move/Copy/Rotate/Mirror — is armed with a selection but
+   * BEFORE the base point is picked), selected entities paint ORANGE so the user sees WHAT is
+   * selected while the grips are hidden. Mutually exclusive with `movePreviewActive` (which
+   * begins once the ghost phase starts). Giorgio 2026-07-21. See RenderOptions twin field.
+   */
+  armedTransformHighlight?: boolean;
+  /**
    * Id of the entity currently being GRIP-DRAGGED (null when idle). ADR-049 inverted
    * ghost: this one entity renders as a ghost at its original position, while its SOLID
    * real-colour moving copy is drawn on PreviewCanvas by useGripGhostPreview. Distinct

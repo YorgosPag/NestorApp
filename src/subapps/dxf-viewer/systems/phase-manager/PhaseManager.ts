@@ -44,7 +44,7 @@ import type {
 
 // Centralized configuration
 // 🏢 ADR-119: Centralized Opacity Constants
-import { UI_COLORS, OPACITY, HOVER_HIGHLIGHT } from '../../config/color-config';
+import { UI_COLORS, OPACITY, HOVER_HIGHLIGHT, GRIP_ARMED_COLOR } from '../../config/color-config';
 // 🏢 ADR-044: Centralized Line Widths
 // 🏢 ADR-097: Centralized Line Dash Patterns
 import { RENDER_LINE_WIDTHS, LINE_DASH_PATTERNS } from '../../config/text-rendering-config';
@@ -155,6 +155,20 @@ export class PhaseManager {
       };
     }
 
+    // Armed transform (Move/Copy/Rotate/Mirror engaged, base point not yet picked):
+    // paint the selection ORANGE so the user sees WHAT is selected now that grips are
+    // hidden (Giorgio 2026-07-21). Precedes the plain-selected branch; the ghost phase
+    // clears the flag so this reverts to the live move colour.
+    if (options.selected && options.armedTransformHighlight) {
+      return {
+        phase: 'armed-selected',
+        isActive: true,
+        priority: 3,
+        context: { fromEntity: true, hasPreview: false },
+        gripState: this.getGripState(entity)
+      };
+    }
+
     // Interactive states (selection)
     if (options.selected) {
       return {
@@ -203,6 +217,10 @@ export class PhaseManager {
 
       case 'highlighted':
         this.applyHighlightedStyle(entity);
+        break;
+
+      case 'armed-selected':
+        this.applyArmedSelectedStyle(entity);
         break;
     }
   }
@@ -348,6 +366,21 @@ export class PhaseManager {
     this.ctx.setLineDash([]);
     this.ctx.globalAlpha = HOVER_HIGHLIGHT.ENTITY.opacity;
     // Glow is rendered as a double-stroke pre-pass in renderWithPhases (shadowBlur removed — GPU-expensive)
+  }
+
+  /**
+   * Apply armed-selected phase styling — solid ORANGE (GRIP_ARMED_COLOR) so the user sees
+   * WHAT is selected while a transform command is armed but the grips are hidden. Overrides
+   * the entity colour (unlike hover, which keeps it) since the selection has no other cue.
+   * Giorgio 2026-07-21 (provisional selection affordance during Move/Copy/Rotate/Mirror).
+   */
+  private applyArmedSelectedStyle(entity: Entity): void {
+    this.ctx.strokeStyle = GRIP_ARMED_COLOR;
+    // The entity's own resolved weight (no NORMAL floor) — Giorgio 2026-07-21: thinner than the
+    // first cut. Colour alone carries the armed-selection cue, so no extra weight emphasis.
+    this.ctx.lineWidth = resolveEntityStrokeWidthPx(entity);
+    this.ctx.setLineDash([]);
+    this.ctx.globalAlpha = OPACITY.OPAQUE;
   }
 
   // ==========================================================================

@@ -10,25 +10,16 @@ import { useCrosshairCursor } from '../../systems/cursor/useCrosshairCursor';
 import { resolveSceneUnits } from '../../utils/scene-units';
 import { FloorplanBackgroundCanvas } from '../../floorplan-background';
 // 🏢 Grid as the BOTTOM-MOST layer (beneath the floorplan κάτοψη). ADR-040 (2026-06-05).
-import { GridUnderlayCanvas } from './GridUnderlayCanvas';
-import { TopoGridUnderlayLeaf } from './TopoGridUnderlayLeaf';
-import { NorthArrowLeaf } from './NorthArrowLeaf';
-import { COORDINATE_LAYOUT } from '../../rendering/core/CoordinateTransforms';
-import { PANEL_LAYOUT } from '../../config/panel-tokens';
-import { RULERS_GRID_CONFIG } from '../../systems/rulers-grid/config';
-import { PREVIEW_DEFAULTS } from '../../config/color-config';
-import { buildDxfRulerSettings } from './canvas-layer-stack-ruler-settings';
-import { canvasUI } from '@/styles/design-tokens/canvas';
-import { isInDrawingMode } from '../../systems/tools/ToolStateManager';
+import { GridUnderlayCanvas } from './GridUnderlayCanvas'; import { TopoGridUnderlayLeaf } from './TopoGridUnderlayLeaf'; import { NorthArrowLeaf } from './NorthArrowLeaf';
+import { COORDINATE_LAYOUT } from '../../rendering/core/CoordinateTransforms'; import { PANEL_LAYOUT } from '../../config/panel-tokens'; import { RULERS_GRID_CONFIG } from '../../systems/rulers-grid/config'; import { PREVIEW_DEFAULTS } from '../../config/color-config';
+import { buildDxfRulerSettings } from './canvas-layer-stack-ruler-settings'; import { canvasUI } from '@/styles/design-tokens/canvas'; import { isInDrawingMode } from '../../systems/tools/ToolStateManager';
 import type { Point2D } from '../../rendering/types/Types';
 import { setHoveredEntity, setHoveredOverlay } from '../../systems/hover/HoverStore';
 // ADR-561 EXT — copy-drag detection for the inverted-ghost gate, via the SAME copy-intent
 // SSoT the commits use. Plain getSnapshot reads inside it (NOT useSyncExternalStore) →
 // CHECK 6C compliant; the Shell stays inert per ADR-040.
 import { isGripCopyIntent } from '../../systems/grip/grip-copy-intent';
-import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas';
-import type { DxfRenderOptions } from '../../canvas-v2/dxf-canvas/dxf-types';
-import type { CanvasLayerStackProps } from './canvas-layer-stack-types';
+import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas'; import type { DxfRenderOptions } from '../../canvas-v2/dxf-canvas/dxf-types'; import type { CanvasLayerStackProps } from './canvas-layer-stack-types';
 import {
   SnapIndicatorSubscriber,
   DraftLayerSubscriber,
@@ -51,8 +42,7 @@ import { ViewMode3DToggleButton } from '../../bim-3d/viewport/ViewMode3DToggleBu
 import { ContainerSelectionLayers } from './ContainerSelectionLayers';
 import { CutPlaneSliderLeaf } from './CutPlaneSliderLeaf'; /* ADR-452 cut-plane slider, self-gated 2D */ import { AxisCutSliderLeaf } from './AxisCutSliderLeaf'; /* ADR-455 vertical X/Y section sliders, self-gated 2D */ import { useDxfOverlay3DSync } from './useDxfOverlay3DSync'; import { useLevelId3DSync } from './useLevelId3DSync';
 // ADR-396 P4 — ETICS θερμοπρόσοψη 2D overlay (dedicated floor-overlay micro-leaf).
-import { EnvelopeOverlay } from './EnvelopeOverlay';
-import { HomeRunWiresOverlay } from './HomeRunWiresOverlay';
+import { EnvelopeOverlay } from './EnvelopeOverlay'; import { HomeRunWiresOverlay } from './HomeRunWiresOverlay';
 // ADR-362 Round 35 — «Λαβές Μετακίνησης Σειρών» row-move handle overlay (self-gated leaf).
 import { DimRowHandleOverlay } from './DimRowHandleOverlay';
 // ADR-399 Phase D — 2D «Όλοι οι όροφοι» read-only underlay (other floors, faded, behind active).
@@ -253,10 +243,19 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
       // → the leaf OR-s them in (CHECK 6C forbids useSyncExternalStore in this Shell).
       movePreviewActive:
         movePreview.phase === 'awaiting-destination' || rotationPreview.phase === 'awaiting-angle',
+      // Giorgio 2026-07-21 — a transform tool is armed with a selection but the base point
+      // is not yet picked → paint the selection ORANGE (grips are hidden). Cleared the moment
+      // the ghost phase begins (destination/target/angle/second-point) → live move colour.
+      armedTransformHighlight:
+        (activeTool === 'move' && movePreview.phase === 'awaiting-base-point') ||
+        (activeTool === 'copy' && copyPreview.phase === 'awaiting-base-point') ||
+        (activeTool === 'rotate' &&
+          (rotationPreview.phase === 'awaiting-base-point' || rotationPreview.phase === 'awaiting-reference')) ||
+        (activeTool === 'mirror' && mirrorPreview.phase === 'awaiting-first-point'),
       gripDraggedEntityId,
       gripDragIsCopy,
     }),
-    [dxfGripInteraction.gripInteractionState, movePreview.phase, rotationPreview.phase, gripDraggedEntityId, gripDragIsCopy],
+    [dxfGripInteraction.gripInteractionState, activeTool, movePreview.phase, copyPreview.phase, rotationPreview.phase, mirrorPreview.phase, gripDraggedEntityId, gripDragIsCopy],
   );
   // Guide workflow computed params (passed to DxfCanvasSubscriber)
   const guideComputedParams = useMemo(() => ({

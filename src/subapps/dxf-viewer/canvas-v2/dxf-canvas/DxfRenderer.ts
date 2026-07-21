@@ -5,8 +5,7 @@ import { GHOST_DEFAULTS } from '../../rendering/ghost';
 import { isGripObjLimitExceeded } from '../../hooks/grips/grip-obj-limit';
 import { gripStyleStore } from '../../stores/GripStyleStore';
 import type { DxfScene, DxfEntityUnion, DxfLine, DxfRenderOptions } from './dxf-types';
-import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
-import { canvasBoundsService } from '../../services/CanvasBoundsService';
+import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms'; import { canvasBoundsService } from '../../services/CanvasBoundsService';
 import { EntityRendererComposite } from '../../rendering/core/EntityRendererComposite';
 import { Canvas2DContext } from '../../rendering/adapters/canvas2d/Canvas2DContext';
 import type { EntityModel, RenderOptions } from '../../rendering/types/Types';
@@ -35,8 +34,7 @@ import { buildDimensionLookup, buildSlabOpeningsBySlab, buildOpeningsByWall, bui
 import { resolveEntityRenderStyle, type ResolvedRenderStyle } from './dxf-renderer-style-resolve';
 // ADR-642 Φ2-B — genuine complex linetypes (embedded text) opt out of the solid LINE batch.
 import { isSimpleExpressible } from '../../config/complex-linetype-adapters';
-import { drawFoundationReinforcement2D } from './dxf-foundation-reinforcement-overlay';
-import { drawSlabReinforcement2D } from './dxf-slab-reinforcement-overlay';
+import { drawFoundationReinforcement2D } from './dxf-foundation-reinforcement-overlay'; import { drawSlabReinforcement2D } from './dxf-slab-reinforcement-overlay';
 // Scene-level structural overlay passes (Boy-Scout file-size split, 2026-06-17 —
 // mirror του foundation overlay· ADR-449 σοβάς + ADR-456/471 οπλισμός μελών κολώνα+δοκάρι).
 import { drawMemberReinforcement2D, drawStructuralFinishSkin2D } from './dxf-renderer-structural-overlays';
@@ -298,6 +296,8 @@ export class DxfRenderer {
       suppressGrips?: boolean;
       // When true, selected entity renders as ghost (alpha × GHOST_DEFAULTS.alpha).
       movePreviewActive?: boolean;
+      // When true, selected entity paints ORANGE (armed transform, base point not yet picked).
+      armedTransformHighlight?: boolean;
     } = {},
   ): void {
     if (!entity.visible) return;
@@ -317,6 +317,7 @@ export class DxfRenderer {
       layersById: interaction.layersById,
       suppressGrips: interaction.suppressGrips,
       movePreviewActive: interaction.movePreviewActive,
+      armedTransformHighlight: interaction.armedTransformHighlight,
     };
     this._selectionSet = new Set(syntheticOptions.selectedEntityIds);
     // ADR-559 — single-entity overlay path: never exceeds the limit (size ≤ 1), but keep
@@ -373,6 +374,9 @@ export class DxfRenderer {
       hovered: isHovered,
       selected: isSelected,
       alpha: (entity.visible ? 1.0 : 0.3) * resolved.alpha * ghostMult,
+      // Giorgio 2026-07-21 — armed transform selection paints ORANGE (PhaseManager reads
+      // this + `selected` to pick the armed-selected phase). Cleared once the ghost begins.
+      armedTransformHighlight: options.armedTransformHighlight,
     };
 
     this.entityComposite.render(entityModel, renderOptions);

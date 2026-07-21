@@ -277,6 +277,7 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
                 movePreviewActive:
                   curRenderOptions.movePreviewActive ||
                   (selId === curRenderOptions.gripDraggedEntityId && !curRenderOptions.gripDragIsCopy),
+                armedTransformHighlight: curRenderOptions.armedTransformHighlight,
               });
             }
             continue;
@@ -287,6 +288,7 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
               gripInteractionState: curRenderOptions.gripInteractionState,
               layersById: curLayersById,
               suppressGrips: !gripsAllowed,
+              armedTransformHighlight: curRenderOptions.armedTransformHighlight,
               // ADR-049 inverted ghost: dim the original at its origin when this entity is
               // the one being move-previewed. The 2-click Move tool dims ALL selected
               // (movePreviewActive); a grip drag dims ONLY the single grabbed entity

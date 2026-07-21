@@ -72,6 +72,14 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-07-21 (β) — ➕ armed-transform selection highlight (πορτοκαλί)
+
+`CanvasLayerStack.dxfRenderOptionsBase` υπολογίζει νέο flag `armedTransformHighlight` (twin του
+`movePreviewActive`, mutually exclusive): true όταν Move/Copy/Rotate/Mirror είναι armed με selection
+πριν το base point. Ρέει `DxfRenderer.renderSingleEntity` → `renderEntityUnified` (RenderOptions) →
+`PhaseManager` phase `'armed-selected'` → πορτοκαλί stroke. Orchestrator παραμένει inert (απλό
+computed flag στο υπάρχον useMemo, καμία νέα subscription). Πλήρες σκεπτικό: ADR-577 changelog 2026-07-21 (β).
+
 ### 2026-07-21 — ➕ Copy tool live preview mount (twin του Move)
 
 Νέο `CopyPreviewMount` στο `PreviewCanvasMounts` (composite) + `copyPreview` payload στο

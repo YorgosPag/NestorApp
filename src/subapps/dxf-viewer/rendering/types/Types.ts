@@ -104,6 +104,15 @@ export interface RenderOptions {
 
   // ✅ ENTERPRISE FIX: Missing grips property for BaseEntityRenderer TS2339 errors
   grips?: boolean;      // Whether to show entity grips
+
+  /**
+   * When true (a transform tool — Move/Copy/Rotate/Mirror — is armed with a selection
+   * but BEFORE the base point is picked), selected entities paint ORANGE (GRIP_ARMED_COLOR)
+   * so the user sees WHAT is selected now that the grips are hidden. Cleared once the ghost
+   * phase begins (awaiting-destination/target/angle/second-point) → entities return to their
+   * live move colour. Giorgio 2026-07-21 — provisional selection affordance during commands.
+   */
+  armedTransformHighlight?: boolean;
 }
 
 // ===== GRIP TYPES =====
