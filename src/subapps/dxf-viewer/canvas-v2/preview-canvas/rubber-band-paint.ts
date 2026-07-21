@@ -4,7 +4,8 @@
  * (extracted 2026-07-12 — CHECK 3.28 de-dup of the pre-existing Move/Rotation twins).
  */
 
-import type { Point2D } from '../../rendering/types/Types';
+import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Types';
+import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 
 /** Gold dashed straight leader between two SCREEN-space points (pivot → cursor). */
 export function drawRubberBandLine(
@@ -22,4 +23,23 @@ export function drawRubberBandLine(
   ctx.stroke();
   ctx.setLineDash([]);
   ctx.restore();
+}
+
+/**
+ * WORLD-space convenience twin — projects both endpoints then draws the leader.
+ * ONE SSoT for the base→destination rubber band shared by the Move + Copy previews
+ * (N.18 — no parallel `worldToScreen ×2 + drawRubberBandLine` triplets in each hook).
+ */
+export function drawRubberBandWorld(
+  ctx: CanvasRenderingContext2D,
+  fromWorld: Point2D,
+  toWorld: Point2D,
+  transform: ViewTransform,
+  viewport: Viewport,
+): void {
+  drawRubberBandLine(
+    ctx,
+    CoordinateTransforms.worldToScreen(fromWorld, transform, viewport),
+    CoordinateTransforms.worldToScreen(toWorld, transform, viewport),
+  );
 }

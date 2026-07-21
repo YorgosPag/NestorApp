@@ -59,6 +59,7 @@ import { ExtendPreviewOverlay } from './ExtendPreviewOverlay';
 import {
   RotationPreviewMount,
   MovePreviewMount,
+  CopyPreviewMount,
   MirrorPreviewMount,
   ScalePreviewMount,
   StretchPreviewMount,
@@ -69,6 +70,7 @@ import {
   ParallelGuideAnchorPreviewMount,
   type RotationPreviewMountProps,
   type MovePreviewMountProps,
+  type CopyPreviewMountProps,
   type MirrorPreviewMountProps,
   type ScalePreviewMountProps,
   type StretchPreviewMountProps,
@@ -81,6 +83,7 @@ import type { SceneModel } from '../../types/scene';
 export interface PreviewCanvasMountsProps {
   rotation: Omit<RotationPreviewMountProps, 'selectedEntityIds' | 'levelManager' | 'transform' | 'getCanvas' | 'getViewportElement'>;
   move: Omit<MovePreviewMountProps, 'selectedEntityIds' | 'levelManager' | 'transform' | 'getCanvas' | 'getViewportElement'>;
+  copy: Omit<CopyPreviewMountProps, 'selectedEntityIds' | 'levelManager' | 'transform' | 'getCanvas' | 'getViewportElement'>;
   mirror: Omit<MirrorPreviewMountProps, 'selectedEntityIds' | 'levelManager' | 'transform' | 'getCanvas' | 'getViewportElement'>;
   scale: Omit<ScalePreviewMountProps, 'levelManager' | 'transform' | 'getCanvas' | 'getViewportElement'>;
   stretch: Omit<StretchPreviewMountProps, 'levelManager' | 'transform' | 'getCanvas' | 'getViewportElement'>;
@@ -122,7 +125,7 @@ export interface PreviewCanvasMountsProps {
 export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
   props: PreviewCanvasMountsProps,
 ) {
-  const { rotation, move, mirror, scale, stretch, mepFixtureGhost, floorplanSymbolGhost, electricalPanelGhost, mepManifoldGhost, mepRadiatorGhost, mepBoilerGhost, mepWaterHeaterGhost, mepSegmentGhost, slabOpeningGhost, openingGhost, gripDragPreview, levelManager, transform, viewport, getCanvas, getViewportElement } = props;
+  const { rotation, move, copy, mirror, scale, stretch, mepFixtureGhost, floorplanSymbolGhost, electricalPanelGhost, mepManifoldGhost, mepRadiatorGhost, mepBoilerGhost, mepWaterHeaterGhost, mepSegmentGhost, slabOpeningGhost, openingGhost, gripDragPreview, levelManager, transform, viewport, getCanvas, getViewportElement } = props;
   // ADR-532 B4 — leaf subscription: ghost mounts need the CURRENT selection at the
   // moment a Move/Rotate/Mirror tool engages, without re-rendering CanvasSection.
   const selectedEntityIds = useSelectedEntityIds();
@@ -146,6 +149,17 @@ export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
       />
       <MovePreviewMount
         {...move}
+        selectedEntityIds={selectedEntityIds}
+        levelManager={levelManager}
+        transform={transform}
+        getCanvas={getCanvas}
+        getViewportElement={getViewportElement}
+      />
+      {/* ADR-577 — «Αντιγραφή»: twin of Move preview (red base-point cross ＋ dashed gold
+          rubber band ＋ solid WYSIWYG clone at the target). Original stays SOLID (a copy
+          duplicates, it does not relocate → no source dimming). */}
+      <CopyPreviewMount
+        {...copy}
         selectedEntityIds={selectedEntityIds}
         levelManager={levelManager}
         transform={transform}

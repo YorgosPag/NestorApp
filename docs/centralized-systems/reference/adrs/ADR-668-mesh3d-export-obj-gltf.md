@@ -311,6 +311,15 @@ OBJ → import στο **C4D R15 με Scale 1**: τοίχοι/κολώνες/πλ
 
 ## 10. Changelog
 
+- **2026-07-21 (group-aware OBJ writer — ADR-678 Φ3.1α)** — **Ο OBJ αποκτά per-face `usemtl`.** Ο
+  stock three `OBJExporter` **δεν** είναι group-aware (γράφει `usemtl` μόνο από `mesh.material.name`,
+  αγνοεί `geometry.groups` + material array). Απόφαση Giorgio «όπως οι μεγάλοι» (Blender/C4D): δικός
+  μας writer `export/core/mesh3d/mesh3d-obj-writer.ts` (`serialiseObjGroupAware`) → **ΕΝΑ `o`** με
+  **πολλά `usemtl` blocks** (ένα ανά `geometry.group`). Ο `serialiseObj` (`mesh3d-serialise.ts`) τον
+  καλεί αντί για `new OBJExporter().parse()`. Single-material έξοδος = **byte-for-byte ίδια** με stock
+  → μηδέν regression (609 tests πράσινα, +6 νέα). Το re-import per-face στο OBJ **δεν** έγινε ακόμα
+  (Φ3.1β, evidence-first — βλ. ADR-678). ⚠️ Η διόρθωση §2/47-49 «ο stock γράφει `usemtl` μόνο με
+  όνομα» ισχύει για τον **stock**· ο δικός μας writer γράφει πλέον `usemtl` ανά group.
 - **2026-07-17** — Αρχική έκδοση. Πυρήνας + adapter (uncommitted, ανεπαλήθευτα) → routing στο
   `export-service`, storey elevations στο `ExportHost`, UI (formats + πεδίο μονάδας), 14 tests
   (πρώτη εκτέλεση του πυρήνα — **καμία γραμμή δεν είχε τρέξει ποτέ**), καθαρισμός PoC, registry

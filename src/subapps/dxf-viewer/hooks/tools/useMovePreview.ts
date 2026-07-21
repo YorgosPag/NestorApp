@@ -14,9 +14,11 @@
  * primitives used by `useGripGhostPreview` so the two preview paths cannot
  * visually diverge.
  *
- * Migrated to the shared `useCanvasGhostPreview` harness (ADR-398 §4): RAF
- * lifecycle + DPR-clear + canonical viewport/transform + clear-on-exit ζουν
- * πλέον ΜΙΑ φορά στο harness· εδώ μένει ΜΟΝΟ η draw logic.
+ * Built on the shared `useTranslationGhostPreview` harness (N.18, twin of
+ * useCopyPreview): the deps bundle + red base-point crosshair + base/cursor
+ * guards + RAF/DPR-clear lifecycle (ADR-398 §4) live ONCE in the harness; here
+ * remains ONLY the MOVE-specific draw (ORTHO/AutoAlign destination, rubber band,
+ * entity ghost, overlays, neighbor-clearance dims).
  *
  * @module hooks/tools/useMovePreview
  */
@@ -24,25 +26,14 @@
 import { useCallback } from 'react';
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
-// ADR-641 — BEDIT-aware O(1) cached entity getter (member in VIEW space while inside a Block Editor).
-import { useBeditAwareEntityGetter } from './use-bedit-aware-entity-getter';
-import { drawRubberBandLine } from '../../canvas-v2/preview-canvas/rubber-band-paint';
-// ADR-049 — red base-point ＋ crosshair SSoT (shared with the grip MOVE hot-grip preview).
-import { drawMoveBasePointMarker } from '../../rendering/ui/move-base-point-marker';
-import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
+import { drawRubberBandWorld } from '../../canvas-v2/preview-canvas/rubber-band-paint';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import type { MovePhase } from './useMoveTool';
 import type { LevelSceneReader } from '../../systems/levels/level-scene-accessor';
 import type { Overlay } from '../../overlays/types';
-import {
-  applyEntityPreview,
-  makeTranslationPreview,
-  GHOST_DEFAULTS,
-} from '../../rendering/ghost';
-// Deep import (not via the ghost barrel) — pulls in the full EntityRendererComposite.
-import { drawRealEntityPreview } from '../../rendering/ghost/draw-real-entity-preview';
-import { useBimPreviewRenderer } from './useBimPreviewRenderer';
-import { useLevelLayersById } from './useLevelLayersById';
+import { GHOST_DEFAULTS } from '../../rendering/ghost';
+// SSoT translated-selection ghost loop (deep import — pulls in the full EntityRendererComposite).
+import { drawTranslatedEntitiesPreview } from '../../rendering/ghost/draw-real-entity-preview';
 // ADR-363 — ORTHO (F8) axis-lock for the live MOVE ghost (no-op when OFF).
 import { applyOrthoToDelta } from '../../bim/grips/grip-move-constraints';
 // ADR-090 — SSoT point+vector add (translate), replaces inline `{x:A.x+B.x,y:A.y+B.y}`.
@@ -55,8 +46,11 @@ import { resolveActionAlignmentTracking, paintActionAlignmentTracking } from '..
 import { resolveMoveClearanceForSelection } from '../../bim/framing/move-clearance-dims';
 import { paintGhostFaceDimensions } from '../../canvas-v2/preview-canvas/ghost-face-dim-paint';
 import { worldPerPixel } from '../../rendering/utils/viewport-scale';
-import { useCanvasGhostPreview } from './useCanvasGhostPreview';
-import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
+// SSoT scaffolding (deps + base marker + guards + RAF) shared with useCopyPreview (N.18).
+import {
+  useTranslationGhostPreview,
+  type TranslationGhostDrawFrame,
+} from './use-translation-ghost-preview';
 
 // ============================================================================
 // TYPES
@@ -96,29 +90,12 @@ export function useMovePreview(props: UseMovePreviewProps): void {
     getViewportElement,
   } = props;
 
-  // BEDIT-aware O(1) cached entity getter (shared SSoT with the Stretch preview).
-  const getEntity = useBeditAwareEntityGetter(levelManager);
-
-  // ADR-550 — lazy real-entity renderer + level layer-table getter (shared SSoT hooks).
-  const getBimPreview = useBimPreviewRenderer();
-  const getLayersById = useLevelLayersById(levelManager);
-
-  const draw = useCallback(({ ctx, effectiveCursor, viewport, transform: t }: GhostDrawFrame) => {
-    if (!PREVIEW_PHASES.has(phase)) return;
-    if (!basePoint) return;
-
-    const pivotScreen = CoordinateTransforms.worldToScreen(basePoint, t, viewport);
-
-    // Base-point ＋ crosshair (red) — shared SSoT painter (same glyph the grip MOVE hot-grip draws).
-    drawMoveBasePointMarker(ctx, basePoint, t, viewport);
-
-    if (!effectiveCursor) return;
-
+  const drawFrame = useCallback(({ ctx, basePoint: base, effectiveCursor, viewport, transform: t, deps }: TranslationGhostDrawFrame) => {
     // ORTHO (F8): lock the destination to the H/V axis from the base point so the
     // rubber band, ghost, and tooltip all match the committed move (useMoveTool).
     // No-op when ORTHO is OFF.
-    const orthoDelta = applyOrthoToDelta({ x: effectiveCursor.x - basePoint.x, y: effectiveCursor.y - basePoint.y });
-    const orthoDestination: Point2D = translatePoint(basePoint, orthoDelta);
+    const orthoDelta = applyOrthoToDelta({ x: effectiveCursor.x - base.x, y: effectiveCursor.y - base.y });
+    const orthoDestination: Point2D = translatePoint(base, orthoDelta);
 
     // ADR-562 Φ9.3 — AutoAlign override + traces on the ORTHO-locked destination (base
     // point ⊕ ambient). SAME resolve as the commit (useMoveTool) → the ghost, rubber band
@@ -126,15 +103,14 @@ export function useMovePreview(props: UseMovePreviewProps): void {
     // AutoAlign inside the helper → identity (previous behaviour) when the aids are off.
     const scene = levelManager.currentLevelId ? levelManager.getLevelScene(levelManager.currentLevelId) : null;
     const moveTrk = resolveActionAlignmentTracking(
-      orthoDestination, [basePoint], t.scale,
+      orthoDestination, [base], t.scale,
       (scene?.entities ?? null) as unknown as readonly Entity[] | null,
       new Set(selectedEntityIds), // ADR-557 — no self-OTRACK: the moving selection is excluded from ambient.
     );
     const destination = moveTrk ? moveTrk.point : orthoDestination;
-    const cursorScreen = CoordinateTransforms.worldToScreen(destination, t, viewport);
 
     // Rubber band (dashed gold) — shared SSoT paint (CHECK 3.28 de-dup with the Rotation preview).
-    drawRubberBandLine(ctx, pivotScreen, cursorScreen);
+    drawRubberBandWorld(ctx, base, destination, t, viewport);
 
     // AutoAlign traces (dashed paths + intersection halo + distance tooltip) on top of the
     // rubber band, via the SAME SSoT paint the dim grip + creation flows use.
@@ -146,12 +122,12 @@ export function useMovePreview(props: UseMovePreviewProps): void {
     if (phase !== 'awaiting-destination') return;
 
     // Same ORTHO+AutoAlign-locked displacement the rubber band + commit use (WYSIWYG).
-    const delta: Point2D = { x: destination.x - basePoint.x, y: destination.y - basePoint.y };
+    const delta: Point2D = { x: destination.x - base.x, y: destination.y - base.y };
 
     // ADR-508 §neighbor-clearance — κυανές listening dims (ΕΝΑΣ κοινός entry point με το body-drag·
     // self-excluded)· «σβήνουν» την πινακίδα όταν υπάρχουν. Paint στο τέλος (μετά το ghost).
     const moveClearanceDims = resolveMoveClearanceForSelection(
-      (id) => getEntity(id) as unknown as Entity | null,
+      (id) => deps.getEntity(id) as unknown as Entity | null,
       selectedEntityIds, delta, scene?.entities ?? [], resolveSceneUnits(scene), worldPerPixel(t.scale),
     );
 
@@ -161,53 +137,53 @@ export function useMovePreview(props: UseMovePreviewProps): void {
 
     // ADR-550 (WYSIWYG preview) — solid REAL-renderer copies at the destination (full
     // fidelity, byte-identical to the committed render), AutoCAD/Revit parity. The originals
-    // dim to ghosts at their source via `movePreviewActive`.
-    if (Math.abs(delta.x) > 0.001 || Math.abs(delta.y) > 0.001) {
+    // dim to ghosts at their source via `movePreviewActive`. The shared SSoT owns the
+    // sub-epsilon no-op guard + save/restore (drawTranslatedEntitiesPreview).
+    drawTranslatedEntitiesPreview({
+      ctx,
+      bimPreview: deps.getBimPreview(ctx),
+      selectedEntityIds,
+      delta,
+      getEntity: deps.getEntity,
+      layersById: deps.getLayersById(),
+      transform: t,
+      viewport,
+    });
+
+    // Solid overlay preview at destination (AutoCAD parity) — overlays are NOT entities,
+    // so they ride a separate epsilon-guarded pass (the entity ghost SSoT skips them).
+    const movedFar = Math.abs(delta.x) > 0.001 || Math.abs(delta.y) > 0.001;
+    if (movedFar && selectedOverlayIds && selectedOverlayIds.length > 0 && getOverlay) {
       ctx.save();
-      const layersById = getLayersById();
-      const bimPreview = getBimPreview(ctx);
-
-      for (const entityId of selectedEntityIds) {
-        const entity = getEntity(entityId);
-        if (!entity) continue;
-        const preview = makeTranslationPreview(entityId, delta);
-        const transformed = applyEntityPreview(entity as unknown as DxfEntityUnion, preview);
-        drawRealEntityPreview(bimPreview, transformed, layersById, t, viewport);
+      ctx.globalAlpha = 1.0;
+      ctx.strokeStyle = GHOST_DEFAULTS.color;
+      ctx.lineWidth = GHOST_DEFAULTS.lineWidth;
+      for (const ovId of selectedOverlayIds) {
+        const ov = getOverlay(ovId);
+        if (!ov || ov.polygon.length < 2) continue;
+        const pts = ov.polygon.map(([x, y]) =>
+          CoordinateTransforms.worldToScreen({ x: x + delta.x, y: y + delta.y }, t, viewport)
+        );
+        ctx.beginPath();
+        ctx.moveTo(pts[0].x, pts[0].y);
+        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+        ctx.closePath();
+        ctx.stroke();
       }
-
       ctx.restore();
-
-      // Solid overlay preview at destination (AutoCAD parity).
-      if (selectedOverlayIds && selectedOverlayIds.length > 0 && getOverlay) {
-        ctx.save();
-        ctx.globalAlpha = 1.0;
-        ctx.strokeStyle = GHOST_DEFAULTS.color;
-        ctx.lineWidth = GHOST_DEFAULTS.lineWidth;
-        for (const ovId of selectedOverlayIds) {
-          const ov = getOverlay(ovId);
-          if (!ov || ov.polygon.length < 2) continue;
-          const pts = ov.polygon.map(([x, y]) =>
-            CoordinateTransforms.worldToScreen({ x: x + delta.x, y: y + delta.y }, t, viewport)
-          );
-          ctx.beginPath();
-          ctx.moveTo(pts[0].x, pts[0].y);
-          for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
-          ctx.closePath();
-          ctx.stroke();
-        }
-        ctx.restore();
-      }
     }
 
     // ADR-508 §neighbor-clearance — paint των κυανών ΜΕΤΑ το ghost (convention: listening-dim overlay).
     if (moveClearanceDims) paintGhostFaceDimensions(ctx, moveClearanceDims, t, viewport);
-  }, [phase, basePoint, selectedEntityIds, selectedOverlayIds, getOverlay, getEntity, levelManager, getBimPreview, getLayersById]);
+  }, [phase, selectedEntityIds, selectedOverlayIds, getOverlay, levelManager]);
 
-  useCanvasGhostPreview({
+  useTranslationGhostPreview({
     isActive: PREVIEW_PHASES.has(phase),
+    basePoint,
+    levelManager,
+    transform,
     getCanvas,
     getViewportElement,
-    transform,
-    draw,
+    drawFrame,
   });
 }

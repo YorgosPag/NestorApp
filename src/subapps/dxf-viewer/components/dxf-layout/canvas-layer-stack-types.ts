@@ -222,6 +222,11 @@ export interface CanvasLayerStackProps {
     selectedOverlayIds?: string[];
     getOverlay?: (id: string) => import('../../overlays/types').Overlay | null;
   };
+  // === ADR-577: Copy tool preview (twin of Move) ===
+  copyPreview: {
+    phase: import('../../hooks/tools/useCopyTool').CopyPhase;
+    basePoint: Point2D | null;
+  };
   // === Mirror tool preview ===
   mirrorPreview: {
     phase: import('../../hooks/tools/useMirrorTool').MirrorPhase;

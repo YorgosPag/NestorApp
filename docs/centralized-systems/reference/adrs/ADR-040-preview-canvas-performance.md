@@ -72,6 +72,15 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-07-21 — ➕ Copy tool live preview mount (twin του Move)
+
+Νέο `CopyPreviewMount` στο `PreviewCanvasMounts` (composite) + `copyPreview` payload στο
+`CanvasLayerStackProps`, τροφοδοτούμενο από `CanvasSection.tsx` με `{ phase, basePoint }` του
+`copyTool`. Ίδιο micro-leaf pattern με το Move: React.memo mount χωρίς JSX, self-subscribed
+`selectedEntityIds`, imperative draw στο shared PreviewCanvas μέσω `useCanvasGhostPreview` (RAF +
+DPR-clear στο harness). Ο orchestrator (CanvasSection) μένει inert — απλό pass-through prop, καμία
+`useSyncExternalStore`. Πλήρες σκεπτικό: ADR-577 changelog 2026-07-21.
+
 ### 2026-07-20 (b) — ➕ ADR-514 §2 γενικευμένο: το commit των ΓΕΝΙΚΩΝ εργαλείων δεσμεύει τον armed snap (δείκτης ≡ αποτέλεσμα)
 
 **Το σύμπτωμα** (Giorgio, εργαλείο «Γραμμή»): ο δείκτης έδειχνε καθαρά «γωνία τοίχου» πάνω στη γωνία·

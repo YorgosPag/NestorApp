@@ -58,8 +58,7 @@ import { DimRowHandleOverlay } from './DimRowHandleOverlay';
 // ADR-399 Phase D — 2D «Όλοι οι όροφοι» read-only underlay (other floors, faded, behind active).
 import { FloorUnderlayOverlay } from './FloorUnderlayOverlay';
 import { CanvasLayerStack2DOverlays } from './canvas-layer-stack-2d-overlays-leaf';
-import { useCanvasLayerStackHandlers } from './useCanvasLayerStackHandlers';
-import { useCanvasLayerStackZoomHandlers } from './useCanvasLayerStackZoomHandlers';
+import { useCanvasLayerStackHandlers } from './useCanvasLayerStackHandlers'; import { useCanvasLayerStackZoomHandlers } from './useCanvasLayerStackZoomHandlers';
 export type { CanvasLayerStackProps } from './canvas-layer-stack-types';
 export const CanvasLayerStack = React.memo(function CanvasLayerStack({
   transform, viewport, activeTool, overlayMode, showLayers,
@@ -75,7 +74,7 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
   entityPickingActive,
   selectedGuideIds, constructionPoints,
   guideWorkflowState, guideStateObj, cpStateObj,
-  rotationPreview, movePreview, mirrorPreview, scalePreview, stretchPreview, mepFixtureGhostPreview, floorplanSymbolGhostPreview, electricalPanelGhostPreview, mepManifoldGhostPreview, mepRadiatorGhostPreview, mepBoilerGhostPreview, mepWaterHeaterGhostPreview, mepSegmentGhostPreview, slabOpeningGhostPreview, openingGhostPreview, levelManager,
+  rotationPreview, movePreview, copyPreview, mirrorPreview, scalePreview, stretchPreview, mepFixtureGhostPreview, floorplanSymbolGhostPreview, electricalPanelGhostPreview, mepManifoldGhostPreview, mepRadiatorGhostPreview, mepBoilerGhostPreview, mepWaterHeaterGhostPreview, mepSegmentGhostPreview, slabOpeningGhostPreview, openingGhostPreview, levelManager,
 }: CanvasLayerStackProps) {
   // --- Destructure grouped props ---
   const {
@@ -399,6 +398,7 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
           <PreviewCanvasMounts
             rotation={rotationPreview}
             move={movePreview}
+            copy={copyPreview}
             mirror={mirrorPreview}
             scale={scalePreview}
             stretch={stretchPreview}

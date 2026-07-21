@@ -62,8 +62,7 @@ import { isWallEntity, isSlabEntity } from '../../types/entities'; import type {
 import { useTouchGestures } from '../../hooks/gestures/useTouchGestures';
 import { useResponsiveLayout as useResponsiveLayoutForCanvas } from '@/components/contacts/dynamic/hooks/useResponsiveLayout';
 import { useViewportAutoFit } from '../../hooks/canvas/useViewportAutoFit'; import { useCanvasEditActions } from '../../hooks/canvas/useCanvasEditActions';
-import { useCanvasSectionUI } from '../../hooks/canvas/useCanvasSectionUI';
-import { useCanvasSelectAll } from '../../hooks/canvas/useCanvasSelectAll';
+import { useCanvasSectionUI } from '../../hooks/canvas/useCanvasSectionUI'; import { useCanvasSelectAll } from '../../hooks/canvas/useCanvasSelectAll';
 import { useSelectionCycling } from '../../systems/selection/use-selection-cycling';
 import { useCanvasSection2DFocus } from '../../hooks/canvas/useCanvasSection2DFocus';
 import { CanvasSectionOverlays } from './CanvasSectionOverlays';
@@ -467,6 +466,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         guideStateObj={guideState} cpStateObj={cpState}
         rotationPreview={{ phase: rotationTool.phase, basePoint: rotationTool.basePoint, referencePoint: rotationTool.referencePoint, currentAngle: rotationTool.currentAngle }}
         movePreview={{ phase: moveTool.phase, basePoint: moveTool.basePoint, selectedOverlayIds: universalSelection.getIdsByType('overlay'), getOverlay: (id) => overlayStore.overlays[id] ?? null }}
+        copyPreview={{ phase: copyTool.phase, basePoint: copyTool.basePoint }}
         mirrorPreview={{ phase: mirrorTool.phase, firstPoint: mirrorTool.firstPoint, secondPoint: mirrorTool.secondPoint }}
         scalePreview={{}}
         stretchPreview={{}}

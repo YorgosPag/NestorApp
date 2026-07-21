@@ -12,6 +12,7 @@
 import React from 'react';
 import { useRotationPreview } from '../../hooks/tools/useRotationPreview';
 import { useMovePreview } from '../../hooks/tools/useMovePreview';
+import { useCopyPreview } from '../../hooks/tools/useCopyPreview';
 import { useGripGhostPreview } from '../../hooks/tools/useGripGhostPreview';
 import { useMirrorPreview } from '../../hooks/tools/useMirrorPreview';
 import { useScalePreview } from '../../hooks/tools/useScalePreview';
@@ -24,6 +25,7 @@ import { useBeamBetweenAnchor } from '../../systems/beam-between-members/BeamBet
 import { useParallelGuideAnchorPreview } from '../../hooks/tools/useParallelGuideAnchorPreview';
 import { useCanvasNumericAnchor, useCanvasNumericRefGuide } from '../../systems/canvas-numeric-input/CanvasNumericInputStore';
 import type { MovePhase } from '../../hooks/tools/useMoveTool';
+import type { CopyPhase } from '../../hooks/tools/useCopyTool';
 import type { MirrorPhase } from '../../hooks/tools/useMirrorTool';
 import type { DxfGripDragPreview } from '../../hooks/grip-computation';
 import type { ViewTransform, Point2D } from '../../rendering/types/Types';
@@ -63,6 +65,23 @@ export const MovePreviewMount = React.memo(function MovePreviewMount(
   props: MovePreviewMountProps,
 ) {
   useMovePreview(props);
+  return null;
+});
+
+export interface CopyPreviewMountProps {
+  phase: CopyPhase;
+  basePoint: Point2D | null;
+  selectedEntityIds: string[];
+  levelManager: Parameters<typeof useCopyPreview>[0]['levelManager'];
+  transform: ViewTransform;
+  getCanvas: () => HTMLCanvasElement | null;
+  getViewportElement: () => HTMLElement | null;
+}
+
+export const CopyPreviewMount = React.memo(function CopyPreviewMount(
+  props: CopyPreviewMountProps,
+) {
+  useCopyPreview(props);
   return null;
 });
 

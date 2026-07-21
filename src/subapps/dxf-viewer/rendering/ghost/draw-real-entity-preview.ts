@@ -22,13 +22,15 @@
  * @see ADR-049 — Move tool / grip drag SSoT · ADR-040 — Preview Canvas Performance
  */
 
-import type { ViewTransform, Viewport } from '../types/Types';
-import type { SceneLayer } from '../../types/entities';
+import type { Point2D, ViewTransform, Viewport } from '../types/Types';
+import type { Entity, SceneLayer } from '../../types/entities';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { BimPreviewRenderer } from '../../canvas-v2/preview-canvas/bim-preview-render';
 import { buildEntityModelFromDxf } from '../../canvas-v2/dxf-canvas/dxf-renderer-entity-model';
 import { resolveEntityRenderStyle } from '../../canvas-v2/dxf-canvas/dxf-renderer-style-resolve';
 import { DXF_WRAPPED_SUBENTITY_FIELD, dxfSubEntityPayload, type DxfWrappedType } from '../../canvas-v2/dxf-canvas/dxf-types';
+import { applyEntityPreview } from './apply-entity-preview';
+import { makeTranslationPreview } from './make-translation-preview';
 
 /**
  * ADR-363/ADR-550 — normalise a preview entity into a VALID `DxfEntityUnion` before
@@ -77,4 +79,38 @@ export function drawRealEntityPreview(
   const resolved = resolveEntityRenderStyle(renderable, layersById);
   const model = buildEntityModelFromDxf(renderable, false, resolved);
   bimPreview.render(model, transform, viewport);
+}
+
+const TRANSLATION_EPSILON = 0.001;
+
+/**
+ * SSoT translated-selection ghost — draws SOLID WYSIWYG copies of a selection at a
+ * translation `delta`, one per resolvable id. Owns the whole chrome (sub-`TRANSLATION_EPSILON`
+ * no-op guard + `ctx.save()/restore()` + the per-entity translate → real-render loop) so BOTH
+ * 2-click flows call it in ONE statement and cannot diverge (N.18 — no parallel twins):
+ *   - useMovePreview — original dims via `movePreviewActive`, ghost lands at destination
+ *   - useCopyPreview — original stays SOLID (a copy duplicates), only the clone ghost moves
+ * The caller still owns the base-marker + rubber-band chrome (those differ per tool).
+ */
+export function drawTranslatedEntitiesPreview(params: {
+  ctx: CanvasRenderingContext2D;
+  bimPreview: BimPreviewRenderer;
+  selectedEntityIds: readonly string[];
+  delta: Point2D;
+  getEntity: (id: string) => Entity | null;
+  layersById: Record<string, SceneLayer> | undefined;
+  transform: ViewTransform;
+  viewport: Viewport;
+}): void {
+  const { ctx, bimPreview, selectedEntityIds, delta, getEntity, layersById, transform, viewport } = params;
+  if (Math.abs(delta.x) <= TRANSLATION_EPSILON && Math.abs(delta.y) <= TRANSLATION_EPSILON) return;
+  ctx.save();
+  for (const entityId of selectedEntityIds) {
+    const entity = getEntity(entityId);
+    if (!entity) continue;
+    const preview = makeTranslationPreview(entityId, delta);
+    const transformed = applyEntityPreview(entity as unknown as DxfEntityUnion, preview);
+    drawRealEntityPreview(bimPreview, transformed, layersById, transform, viewport);
+  }
+  ctx.restore();
 }

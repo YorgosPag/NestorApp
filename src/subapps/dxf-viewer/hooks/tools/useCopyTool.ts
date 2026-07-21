@@ -61,6 +61,8 @@ export interface UseCopyToolReturn {
    *  `awaiting-entity` clicks fall through to normal selection (mirrors Move). */
   isCollectingInput: boolean;
   phase: CopyPhase;
+  /** Committed base point (after the 1st click) — feeds the live copy preview. */
+  basePoint: Point2D | null;
   handleCopyClick: (worldPoint: Point2D) => void;
   handleCopyEscape: () => void;
 }
@@ -154,5 +156,5 @@ export function useCopyTool({
     return () => { toolHintOverrideStore.setOverride(null); };
   }, [isActive, phase]);
 
-  return { isActive, isCollectingInput, phase, handleCopyClick, handleCopyEscape };
+  return { isActive, isCollectingInput, phase, basePoint, handleCopyClick, handleCopyEscape };
 }
