@@ -27,6 +27,7 @@ jest.mock('firebase/firestore', () => ({
   deleteDoc: jest.fn(),
   serverTimestamp: jest.fn(() => '__server_timestamp__'),
   where: jest.fn((field: string, op: string, value: unknown) => ({ __where: true, field, op, value })),
+  Timestamp: { fromDate: jest.fn(() => '__ts__'), now: jest.fn(() => '__ts__') },
 }));
 jest.mock('@/lib/firebase', () => ({ db: { __mockDb: true } }));
 jest.mock('@/services/firestore', () => ({
@@ -38,6 +39,7 @@ jest.mock('@/services/enterprise-id-convenience', () => ({
     mockIdCounter += 1;
     return `gsol_test${String(mockIdCounter).padStart(18, '0')}`;
   },
+  generateIfcGuid: () => 'ifc_test_guid',
 }));
 
 // SUT imports AFTER mocks
