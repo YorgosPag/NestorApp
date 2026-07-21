@@ -207,4 +207,20 @@ describe('StairGeometryService — U-shape', () => {
       /Phase 3c/,
     );
   });
+
+  it('Test 13: flight 2 treads do NOT overlap the landing footprint (regression)', () => {
+    // Flight 2 runs anti-parallel (−u1) back ALONGSIDE flight 1. Its treads must
+    // start at the landing's NEAR u1 edge (x = n1·tread = 1400) and descend toward
+    // basePoint — NOT at the far edge (x = 1400 + landingDepth = 2400), which would
+    // lay the treads back over the [1400, 2400] landing footprint (the reported bug:
+    // "το δεύτερο σκέλος καλύπτει το πλατύσκαλο").
+    const g = computeStairGeometry(makeUShapeParams());
+    const all: readonly Polygon3D[] = [...g.treadsBelowCut, ...g.treadsAboveCut];
+    const landingNearX = 5 * 280; // n1·tread
+    for (let i = 5; i < 10; i++) {
+      for (const v of all[i]) {
+        expect(v.x).toBeLessThanOrEqual(landingNearX + COORD_TOL);
+      }
+    }
+  });
 });

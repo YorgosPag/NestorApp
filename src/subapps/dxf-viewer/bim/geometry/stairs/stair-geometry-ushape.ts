@@ -74,9 +74,14 @@ export function computeUShape(
   const turnLanding = buildUShapeLandingAt(
     run1.endXY, u1, v1, turnSign, width, landingDepth, basePoint.z + rise * n1,
   );
-  // Flight 2 inner edge = far u1 edge of the landing, shared side (v1·turnSign·halfW).
-  const innerEdge = offsetAlong(offsetAlong(run1.endXY, u1, landingDepth), v1, turnSign * halfW);
-  const run2 = edgeRun(common, innerEdge, u2, vOut, n1 + 1, n2, per[1]);
+  // Flight 2 origin = NEAR u1 edge of the landing (flight-1 plan end, u1 = n1·tread),
+  // on the shared side (v1·turnSign·halfW). Flight 2 runs anti-parallel (−u1) back
+  // ALONGSIDE flight 1, so it must start at the landing's near edge — starting at the
+  // FAR edge (+landingDepth) would run the treads back OVER the landing footprint
+  // (the treads/walkline mismatch that made flight 2 sit on top of the πλατύσκαλο).
+  // Mirrors l-shape flight 2 (lateral-only offset off run1.endXY).
+  const flight2Origin = offsetAlong(run1.endXY, v1, turnSign * halfW);
+  const run2 = edgeRun(common, flight2Origin, u2, vOut, n1 + 1, n2, per[1]);
 
   let walkline: Point3D[];
   if (!params.restLandings || params.restLandings.length === 0) {
