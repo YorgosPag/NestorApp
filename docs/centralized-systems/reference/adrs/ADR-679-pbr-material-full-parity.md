@@ -1,6 +1,6 @@
 # ADR-679 — PBR Material «Full Parity»: πλήρες σύστημα υλικών/υφών ανά όψη (C4D-grade)
 
-**Status:** 🟢 Φ2a ΥΛΟΠΟΙΗΘΗΚΕ (import name→όλα τα υλικά + ενοποιημένος color registry)· Φ2b/Φ2c εκκρεμούν
+**Status:** 🟢 Φ2a ΥΛΟΠΟΙΗΘΗΚΕ (import name→όλα τα υλικά + color registry)· 🟢 Φ5.1a ΥΛΟΠΟΙΗΘΗΚΕ (DAE writer texture-capable + πραγματικά UVs, export track)· Φ2b/Φ2c/Φ5.1b εκκρεμούν
 **Date:** 2026-07-19
 **Owner:** Giorgio
 **Σχετικά:** ADR-413 (BimMaterial library + PBR textures) · ADR-539 (per-face appearance) · ADR-449 (structural finish) · ADR-678 (C4D↔Νέστωρ round-trip) · ADR-511 (wall-covering catalog)
@@ -69,6 +69,23 @@ BimMaterial** (PBR texture set) και να το **render-άρει** μέσω τ
 
 ## 7. Changelog
 
+- **2026-07-21 — Φ5.1a ΥΛΟΠΟΙΗΘΗΚΕ (DAE writer texture-capable + πραγματικά UVs).** Εντολή Giorgio:
+  **FULL PARITY** χρωμάτων/υλικών/υφών, ανά όψη & ανά τρίγωνο, αμφίδρομα Νέστωρ↔C4D. Ground-truth
+  correction: ο R15 **DAE** importer κουβαλά textures (native Aeron `.dae`: `library_images` →
+  `<surface>`/`<sampler2D>` newparams → `<diffuse><texture texcoord="UVSET0">`), άρα το DAE (όχι το OBJ)
+  είναι ο textured δρόμος. **Αλλαγές (χειρουργικά, δικά μας paths):**
+  (1) `ExportMaterialEntry` + optional `map: ExportTextureRef {fileName, url}`· `assignExportMaterials`
+  εξάγει το `.map` του THREE υλικού (typed, όχι `any`· url από `texture.image.src`/`userData.url`,
+  relative `textures/<matId>.<ext>`).
+  (2) `mesh3d-collada-geometry.ts`: γράφει **πραγματικά** `geometry.attributes.uv` στο TEXCOORD source
+  (αντί για το placeholder `(0,0)`)· fallback `(0,0)` μόνο όταν λείπει uv (το `<bind_vertex_input>`
+  παραμένει — R15 requirement, ADR-678 Φ3.1δ).
+  (3) `mesh3d-collada-writer.ts`: `<library_images>` + textured `<effect>` (surface→sampler→texture
+  diffuse, native C4D δομή) όταν το υλικό έχει `map`· αλλιώς flat `<diffuse><color>`.
+  **Scope:** whole-element υλικά (per-face υφή = Φ2b/Φ5.2, per-triangle = Φ5.3). **13 collada + 4
+  materials νέα/ενημ. tests ✅** (88 mesh3d+formats συνολικά), `jscpd:diff` καθαρό, ≤500/≤40 ✅,
+  ΟΧΙ tsc (N.17). **Επόμενο (Φ5.1b, πριν R15-visible):** byte-bundling — fetch των .jpg από Storage
+  URL → loose files σε `.zip` (`fflate` MIT). Βλ. ADR-678/668.
 - **2026-07-19** — Δημιουργία ADR. Απόφαση PBR (όχι legacy C4D R15). Ground-truth της υπάρχουσας μηχανής
   (ADR-413 library + PBR textures + upload + builder ΥΠΑΡΧΟΥΝ· το κενό = per-face flat-colour-only).
   Phased plan Φ2a→Φ2b→Φ2c. Καμία υλοποίηση ακόμα.
