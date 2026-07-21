@@ -15,9 +15,8 @@ import type { LevelsHookReturn } from '../../systems/levels/useLevels';
 import type { ICommand } from '../../core/commands/interfaces';
 import { extractBim3DEntities } from '../../bim-3d/scene/extract-bim3d-entities';
 import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
-import { getGlobalCommandHistory } from '../../core/commands';
-import { CompositeCommand } from '../../core/commands/CompositeCommand';
 import { SetFaceAppearanceCommand } from '../../core/commands/entity-commands/SetFaceAppearanceCommand';
+import { executeAsAtomicBatch } from '../../core/commands/execute-atomic-batch';
 import { BASE_FACE_KEY, type FaceAppearance } from '../../bim/types/face-appearance-types';
 import type { MeshNameCharset } from '../../export/core/mesh3d/mesh3d-naming';
 import {
@@ -176,12 +175,7 @@ export function applyImportedAppearance(
 
   const finish = buildFinishImportCommands(levels, finishObjects, mtl, resolveKnownId, baseline);
   const children: ICommand[] = [...bodyChildren, ...finish.children];
-
-  if (children.length > 0) {
-    getGlobalCommandHistory().execute(
-      children.length === 1 ? children[0] : new CompositeCommand(children),
-    );
-  }
+  executeAsAtomicBatch(children);
 
   return {
     objectCount: objects.length,

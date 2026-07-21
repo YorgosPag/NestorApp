@@ -138,13 +138,13 @@ export class ArcRenderer extends BaseEntityRenderer {
     const arcData = validateArcEntity(entity);
     if (!arcData) return [];
 
-    const { center, radius, startAngle, endAngle } = arcData;
+    const { center, radius, startAngle, endAngle, counterclockwise } = arcData;
 
     // ADR-561 — render the SAME grips the interaction path emits (`computeDxfEntityGrips`
     // → `getArcGrips`), mapped to the render `GripInfo` shape (mirror `LineRenderer`). The
     // centre → 4-arrow MOVE glyph, the rotation handle → curved ROTATION glyph via the
     // shared `gripGlyphShape` registry; start/end/mid stay 'square'.
-    return getArcGrips(entity.id, center, radius, startAngle, endAngle).map((g) =>
+    return getArcGrips(entity.id, center, radius, startAngle, endAngle, counterclockwise).map((g) =>
       toRenderGripInfo(g, gripGlyphShape(gripKindOf(g, 'arc'))),
     );
   }

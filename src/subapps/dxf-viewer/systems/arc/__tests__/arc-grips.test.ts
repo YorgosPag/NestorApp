@@ -64,6 +64,23 @@ describe('getArcGrips (ADR-561)', () => {
     expect(grips[2].position.y).toBeCloseTo(10, 6);
   });
 
+  it('respects counterclockwise — samples the DRAWN arc, not the mirror (Giorgio «MIRROR»)', () => {
+    // ccw=false (default): 0→90 drawn as the short NE quarter → 1/3 @ 30° on the curve.
+    const cw = getArcGrips('A', center, radius, 0, 90, false);
+    const a30 = (Math.PI / 2) / 3;
+    expect(cw[3].position.x).toBeCloseTo(radius * Math.cos(a30), 6);
+    expect(cw[3].position.y).toBeCloseTo(radius * Math.sin(a30), 6);
+
+    // ccw=true: the SAME angles are drawn the OTHER way (270° major arc through S/W) →
+    // the 1/3 point lands at world −90° = (0, −r) (south), i.e. the mirror side. This is
+    // the direction-aware behaviour that keeps handles ON the visible curve.
+    const ccw = getArcGrips('A', center, radius, 0, 90, true);
+    expect(ccw[3].position.x).toBeCloseTo(0, 6);
+    expect(ccw[3].position.y).toBeCloseTo(-radius, 6);
+    // ...and the two samplings are genuinely different (guards against ignoring the flag).
+    expect(ccw[3].position.y).not.toBeCloseTo(cw[3].position.y, 3);
+  });
+
   it('only mid(MOVE) + rotation carry an arcGripKind; centre + start/end do not', () => {
     const grips = getArcGrips('A1', center, radius, 0, 90);
     expect(gripKindOf(grips[0], 'arc')).toBeUndefined();

@@ -285,7 +285,7 @@ export const GRIP_PRODUCERS: Partial<Record<DxfEntityUnion['type'], (e: DxfEntit
   // SHARED `getArcGrips` SSoT (the SAME `ArcRenderer.getGrips` paints on canvas).
   arc: (e) => {
     const a = e as Extract<DxfEntityUnion, { type: 'arc' }>;
-    return getArcGrips(a.id, a.center, a.radius, a.startAngle, a.endAngle);
+    return getArcGrips(a.id, a.center, a.radius, a.startAngle, a.endAngle, a.counterclockwise);
   },
 
   // ADR-557 — full rect-box parity grips via the shared text↔RectFrame adapter

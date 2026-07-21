@@ -16,6 +16,12 @@ import { BimRotateHotGripStore } from '../../bim/grips/bim-rotate-hotgrip-store'
 import { directionForZone } from '../../bim/grips/move-glyph-zones';
 import { getPromptDialogStore } from '../../systems/prompt-dialog';
 import { GripModeStore } from '../../systems/grip/GripModeStore';
+import { displayUnitState } from '../../config/display-unit-state';
+import {
+  DISPLAY_UNIT_LABELS,
+  DISPLAY_UNIT_DISTANCE_EXAMPLE,
+  fromDisplay,
+} from '../../config/units';
 import type { WallHotGripOp, HotGripStep } from './wall-hot-grip-fsm';
 import type { UnifiedGripInfo } from './unified-grip-types';
 import type { GripMouseDownCtx } from './grip-mouse-handlers.types';
@@ -27,9 +33,13 @@ import i18next from 'i18next';
 /**
  * Open the distance prompt (the shared rotation-angle `PromptDialog` SSoT) and, on
  * confirm, translate the entity by `distance × the clicked arm's world axis`. The
- * typed value is millimetres → canvas units via the grip's `moveGlyphMmScale`. The
- * move is committed through the SAME `commitDxfGripDragModeAware` the drag flow uses
- * — no new command. Cancel (`null`) / non-positive input → no-op.
+ * typed value is read in the **status-bar display unit** (ADR-357/677 SSoT via
+ * `displayUnitState`, not hardcoded mm): the unit suffix, the "π.χ." example and the
+ * value→mm conversion all track the same store the status bar and every readout use,
+ * so the dialog «ακούει» the chosen unit. mm → canvas units via the grip's
+ * `moveGlyphMmScale`. The move is committed through the SAME
+ * `commitDxfGripDragModeAware` the drag flow uses — no new command. Cancel (`null`) /
+ * non-positive input → no-op.
  */
 export async function runDirectionalMove(
   grip: UnifiedGripInfo,
@@ -40,12 +50,15 @@ export async function runDirectionalMove(
   if (!frame) return;
   const dir = directionForZone(zone, frame);
   if (!dir) return;
+  const unit = displayUnitState.getUnit();
   const raw = await getPromptDialogStore().prompt({
     title: i18next.t('dxf-viewer-wizard:promptDialog.moveDistance'),
     label: i18next.t('dxf-viewer-wizard:promptDialog.moveDistanceLabel'),
-    placeholder: i18next.t('dxf-viewer-wizard:promptDialog.distancePlaceholder'),
+    placeholder: i18next.t('dxf-viewer-wizard:promptDialog.distancePlaceholder', {
+      example: DISPLAY_UNIT_DISTANCE_EXAMPLE[unit],
+    }),
     inputType: 'number',
-    unit: 'mm',
+    unit: DISPLAY_UNIT_LABELS[unit],
     validate: (v) => {
       const n = parseFloat(v);
       // Negatives allowed (AutoCAD direct-distance parity): the clicked arm is the
@@ -57,7 +70,8 @@ export async function runDirectionalMove(
     },
   });
   if (raw === null) return;
-  const mm = parseFloat(raw);
+  // Typed in the display unit → mm (the canonical store unit), then mm → canvas.
+  const mm = fromDisplay(parseFloat(raw), unit);
   if (!Number.isFinite(mm) || mm === 0) return;
   // Signed: positive → along the clicked arm; negative → opposite direction.
   const canvas = mm * (grip.moveGlyphMmScale ?? 1);

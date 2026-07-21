@@ -22,8 +22,8 @@ import type { LevelsHookReturn } from '../../systems/levels/useLevels';
 import type { SelectedFace3D } from '../stores/PolygonMode3DStore';
 import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { getGlobalCommandHistory } from '../../core/commands';
-import { CompositeCommand } from '../../core/commands/CompositeCommand';
 import { SetFaceAppearanceCommand } from '../../core/commands/entity-commands/SetFaceAppearanceCommand';
+import { executeAsAtomicBatch } from '../../core/commands/execute-atomic-batch';
 import type { ISceneManager } from '../../core/commands/interfaces';
 import type { FaceAppearance } from '../../bim/types/face-appearance-types';
 
@@ -63,7 +63,5 @@ export function applyFaceAppearanceToFaces(
   const children = faces.map(
     (f) => new SetFaceAppearanceCommand(f.bimId, f.faceKey, value, adapter),
   );
-  getGlobalCommandHistory().execute(
-    children.length === 1 ? children[0] : new CompositeCommand(children),
-  );
+  executeAsAtomicBatch(children);
 }

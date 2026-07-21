@@ -35,6 +35,7 @@ export const ARC_MOVE_KIND: ArcGripKind = 'arc-move';
 export const ARC_ROTATION_KIND: ArcGripKind = 'arc-rotation';
 
 const DEG_TO_RAD = Math.PI / 180;
+const TAU = Math.PI * 2;
 
 /**
  * MOVE + ROTATE handles sit ON the curve at these sweep fractions (start→end), evenly
@@ -44,27 +45,48 @@ const DEG_TO_RAD = Math.PI / 180;
 const ARC_MOVE_SWEEP_FRACTION = 1 / 3;
 const ARC_ROTATION_SWEEP_FRACTION = 2 / 3;
 
-/** Point ON the arc curve at `fraction` of the sweep (start→end). */
+/**
+ * Point ON the DRAWN arc curve at `fraction` of the sweep (0 = start … 1 = end),
+ * sampled the SAME way `ArcRenderer` draws it so a handle always lands on the VISIBLE
+ * curve — NOT the mirrored/opposite arc (Giorgio 2026-07-21: «χρειάζεται MIRROR»).
+ *
+ * The renderer draws `ctx.arc(-startRad → -endRad, anticlockwise = !counterclockwise)`
+ * (Y-inversion: screen angle = −world angle). We replicate that screen sweep — picking
+ * the increasing/decreasing wrap the renderer's `anticlockwise` implies — then invert
+ * back to a world angle. A naive `start + (end−start)·f` breaks whenever the stored
+ * angles are not already ordered for the drawn direction (→ handles jump to the mirror).
+ */
 function arcSweepPoint(
-  center: Point2D, radius: number, startAngleDeg: number, endAngleDeg: number, fraction: number,
+  center: Point2D, radius: number,
+  startAngleDeg: number, endAngleDeg: number,
+  counterclockwise: boolean, fraction: number,
 ): Point2D {
-  const startRad = startAngleDeg * DEG_TO_RAD;
-  const endRad = endAngleDeg * DEG_TO_RAD;
-  return pointOnCircle(center, radius, startRad + (endRad - startRad) * fraction);
+  const sStart = -startAngleDeg * DEG_TO_RAD;
+  let sEnd = -endAngleDeg * DEG_TO_RAD;
+  if (counterclockwise) {
+    // renderer: anticlockwise = false → screen sweeps INCREASING
+    while (sEnd <= sStart) sEnd += TAU;
+  } else {
+    // renderer: anticlockwise = true → screen sweeps DECREASING
+    while (sEnd >= sStart) sEnd -= TAU;
+  }
+  const sAngle = sStart + (sEnd - sStart) * fraction;
+  return pointOnCircle(center, radius, -sAngle);
 }
 
 /**
- * World position of the arc's rotation handle: ON the curve at 2/3 of the sweep, so it
- * sits on the arc line itself (the MOVE glyph takes the 1/3 point) — NOT near the far
- * centre (Giorgio 2026-07-21). The pivot stays the centre regardless (see grip 4 below).
+ * World position of the arc's rotation handle: ON the DRAWN curve at 2/3 of the sweep, so
+ * it sits on the arc line itself (the MOVE glyph takes the 1/3 point) — NOT near the far
+ * centre and NOT on the mirror arc (Giorgio 2026-07-21). Pivot stays the centre.
  */
 export function arcRotationHandlePos(
   center: Point2D,
   radius: number,
   startAngleDeg: number,
   endAngleDeg: number,
+  counterclockwise: boolean = false,
 ): Point2D {
-  return arcSweepPoint(center, radius, startAngleDeg, endAngleDeg, ARC_ROTATION_SWEEP_FRACTION);
+  return arcSweepPoint(center, radius, startAngleDeg, endAngleDeg, counterclockwise, ARC_ROTATION_SWEEP_FRACTION);
 }
 
 /**
@@ -86,6 +108,7 @@ export function getArcGrips(
   radius: number,
   startAngleDeg: number,
   endAngleDeg: number,
+  counterclockwise: boolean = false,
 ): GripInfo[] {
   const startRad = startAngleDeg * DEG_TO_RAD;
   const endRad = endAngleDeg * DEG_TO_RAD;
@@ -96,18 +119,18 @@ export function getArcGrips(
     { entityId, gripIndex: 0, type: 'center', position: center, movesEntity: true },
     { entityId, gripIndex: 1, type: 'vertex', position: pointOnCircle(center, radius, startRad), movesEntity: false },
     { entityId, gripIndex: 2, type: 'vertex', position: pointOnCircle(center, radius, endRad), movesEntity: false },
-    // 3 → arc 1/3 point, ON the curve: the MOVE affordance (4-arrow glyph + directional
-    //     move-by-value), on the arc line where the eye is (was the centre).
+    // 3 → arc 1/3 point, ON the drawn curve: the MOVE affordance (4-arrow glyph +
+    //     directional move-by-value), on the arc line where the eye is (was the centre).
     {
       entityId, gripIndex: 3, type: 'edge',
-      position: arcSweepPoint(center, radius, startAngleDeg, endAngleDeg, ARC_MOVE_SWEEP_FRACTION),
+      position: arcSweepPoint(center, radius, startAngleDeg, endAngleDeg, counterclockwise, ARC_MOVE_SWEEP_FRACTION),
       movesEntity: true,
       gripKind: { on: 'arc', kind: ARC_MOVE_KIND },
     },
     // 4 → rotation handle: arc 2/3 point, ON the curve (evenly spaced with grip 3 + endpoints).
     {
       entityId, gripIndex: 4, type: 'vertex',
-      position: arcRotationHandlePos(center, radius, startAngleDeg, endAngleDeg), movesEntity: false,
+      position: arcRotationHandlePos(center, radius, startAngleDeg, endAngleDeg, counterclockwise), movesEntity: false,
       gripKind: { on: 'arc', kind: ARC_ROTATION_KIND },
     },
   ];

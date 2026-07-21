@@ -41,6 +41,22 @@ export const DEFAULT_DISPLAY_UNIT: DisplayUnit = 'm';
 export const DISPLAY_UNIT_STORAGE_KEY = 'dxf:displayUnit';
 
 /**
+ * Example magnitude shown in a distance-input placeholder ("π.χ. {{example}}"),
+ * one "round" value per display unit so the prompt suggestion tracks the status-bar
+ * unit (ADR-397 Φ2 → ADR-677). All are the same order of magnitude of a typical
+ * nudge (~0.1–1 m): mm→100, cm→10, m→1, in→4, ft→1. Not converted from a single mm
+ * seed on purpose — a converted seed yields ugly examples ("0.1"), a hand-picked
+ * round number reads better. Locale-free (numbers), so it lives here, not in i18n.
+ */
+export const DISPLAY_UNIT_DISTANCE_EXAMPLE: Record<DisplayUnit, string> = {
+  mm: '100',
+  cm: '10',
+  m: '1',
+  in: '4',
+  ft: '1',
+};
+
+/**
  * Default decimal places per unit. mm gets 0 (no sub-mm in construction).
  *
  * `m: 3` is load-bearing, not cosmetic (ADR-677 απόφαση #9): metres is the default
