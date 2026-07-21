@@ -106,10 +106,38 @@ SyncContext). Το single-building/single-user project το θέλει έτσι.
 | **Φ1.1** | Σοβάς round-trip (merged skin → ομοιόμορφος σοβάς μελών, ADR-449 command) + skip αμετάβλητων (`mat-*`/`elem-*`/`mat_<hex6>`) · +12 tests (26 σύνολο) | 🟢 DONE |
 | **Φ2** | Textures (`map_Kd` εικόνες → BIM texture registry, UV) | ⬜ TODO |
 | **Φ3** | **Per-face round-trip μέσω glTF** (named array-material primitives → `FaceKey`, ζωντανό ΚΑΙ σε επαναλαμβανόμενο γύρο συνεργασίας) — **OBJ παραμένει per-object dominant** (stock `OBJExporter` δεν είναι group-aware, §3) | 🟢 **DONE (glTF)** |
-| **Φ3.1** | Best-effort per-face στο **OBJ** μονοπάτι (θα απαιτούσε custom writer, όχι stock `OBJExporter`) · per-building/per-side σοβάς (πέρα από το ομοιόμορφο-ζώνης της Φ1.1) | ⬜ TODO |
+| **Φ3.1α** | **Per-face OBJ export**: δικός μας group-aware OBJ writer (`mesh3d-obj-writer.ts`) — ΕΝΑ `o <object>` με **πολλά `usemtl` blocks** (ένα ανά `geometry.group`, σειρά = `buildFacedIndex`), όπως Blender/C4D. Single-material = byte-identical με stock. | 🟢 **DONE (export)** |
+| **Φ3.1β** | **Per-face OBJ re-import**: το OBJ **δεν** κουβαλά την αρίθμηση όψεων όπως το glTF (`userData.faceKeyByMaterialIndex`)· μόνο όνομα υλικού + σειρά επιβιώνουν στο C4D. Blocked σε **πραγματικό C4D-round-tripped OBJ** για μέτρηση αν το C4D διατηρεί τη σειρά όψεων (order-based) ή χρειάζεται geometry-based αντιστοίχιση («ground-truth ΠΡΙΝ parser»). | ⬜ TODO (evidence-first) |
+| **Φ3.1γ** | per-building/per-side σοβάς (πέρα από το ομοιόμορφο-ζώνης της Φ1.1) | ⬜ TODO |
 
 ## 6. Changelog
 
+- **2026-07-21 (Φ3.1α — per-face OBJ export, group-aware writer)** — Ο **στόχος** του χρήστη είναι
+  Cinema 4D **R15 (2013)** που ανοίγει **μόνο OBJ** (ο glTF importer μπήκε στο R2024)· άρα το per-face
+  που έλυσε η Φ3 για glTF **δεν έφτανε** στο R15.
+  - **Ρίζα (μετρημένο, `OBJExporter.js:~44-48`):** ο stock three `OBJExporter.parseMesh` διαβάζει
+    **μόνο** `mesh.material.name` (μία γραμμή). Όταν το `mesh.material` είναι **array** (per-face,
+    ADR-539) το `.name` είναι `undefined` ⇒ γράφει **κανένα** `usemtl` και **αγνοεί** τα
+    `geometry.groups`. Ο βρόχος faces γράφει ΟΛΑ τα `f` σε ένα ενιαίο μπλοκ.
+  - **Σχεδιαστική απόφαση (χρήστης):** «όπως οι μεγάλοι» — Blender/C4D/Maya γράφουν **ΕΝΑ `o`** με
+    **πολλά `usemtl` blocks** (ένα ανά material group). Απορρίφθηκε το «pre-split σε single-material
+    children» (θα έσπαγε το «ένα object = ένα στοιχείο» → μη-standard, μπελάς στην επιστροφή).
+  - **Αρχεία (2):**
+    1. `export/core/mesh3d/mesh3d-obj-writer.ts` (**νέο**) — `serialiseObjGroupAware`: ΕΝΑ `usemtl`
+       ανά `geometry.group` πριν τα `f` του group, σειρά = `buildFacedIndex` (bottom, top, side:i,
+       hole:h:k). Single-material = **byte-for-byte ίδιο** με stock (μηδέν regression). Χειρίζεται
+       indexed + non-indexed, παγκόσμιοι δείκτες κορυφών όπως ο stock.
+    2. `export/core/mesh3d/mesh3d-serialise.ts` — ο `serialiseObj` καλεί πλέον τον group-aware writer
+       αντί για `new OBJExporter().parse()`.
+  - **Tests:** `mesh3d-obj-writer.test.ts` (6 νέα: single-material parity με stock byte-for-byte ×2,
+    per-group usemtl ×2, πραγματικό faced prism, ομοιόμορφη βαφή). Σύνολο mesh3d export/import/
+    roundtrip: 609 πράσινα. `jscpd:diff` καθαρό.
+  - **🔴 ΓΝΩΣΤΟ ΟΡΙΟ (Φ3.1β):** ο re-import per-face **δεν** υλοποιήθηκε. Το OBJ δεν έχει κανάλι για
+    την αρίθμηση όψεων (το glTF την κουβαλά node-level)· μόνο όνομα υλικού + σειρά επιβιώνουν στο C4D,
+    και **δεν έχουμε τεκμήριο** αν το C4D R15 διατηρεί τη σειρά όψεων στην επαν-εξαγωγή. Το order-based
+    parsing θα ήταν **μαντεψιά** → αναβλήθηκε μέχρι μέτρηση σε πραγματικό C4D-round-tripped αρχείο
+    («ground-truth ΠΡΙΝ parser»). Ο υπάρχων ανά-στοιχείο import (dominant/majority vote) **συνεχίζει
+    αμετάβλητος** — μηδέν regression.
 - **2026-07-21 (Φ3 — per-face material round-trip, ΜΟΝΟ glTF)** — Έλυσε το «🔴 ΓΝΩΣΤΟ ΟΡΙΟ» του
   ADR-683 §11 (2026-07-21): μόλις ένα στοιχείο αποκτούσε per-face appearance (ADR-539) γινόταν
   multi-material mesh· το `assignExportMaterials` έκανε **skip** τα multi-material → στην

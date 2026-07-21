@@ -337,7 +337,7 @@
     "invalidNumber": "Please enter a valid number",
     "parallelDistance": "Parallel Guide Distance",
     "enterDistance": "Distance from reference guide",
-    "distancePlaceholder": "e.g. {{example}}",
+    "distancePlaceholder": "e.g. {example}",
     "segmentCount": "Number of Segments",
     "enterSegmentCount": "Divide into equal segments",
     "segmentCountPlaceholder": "e.g. 4",

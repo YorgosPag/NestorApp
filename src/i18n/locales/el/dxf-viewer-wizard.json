@@ -337,7 +337,7 @@
     "invalidNumber": "Εισαγάγετε έγκυρο αριθμό",
     "parallelDistance": "Απόσταση Παράλληλου Οδηγού",
     "enterDistance": "Απόσταση από τον οδηγό αναφοράς",
-    "distancePlaceholder": "π.χ. {{example}}",
+    "distancePlaceholder": "π.χ. {example}",
     "segmentCount": "Αριθμός Τμημάτων",
     "enterSegmentCount": "Διαίρεση σε ίσα τμήματα",
     "segmentCountPlaceholder": "π.χ. 4",

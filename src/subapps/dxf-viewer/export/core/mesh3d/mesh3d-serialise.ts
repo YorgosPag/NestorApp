@@ -6,10 +6,10 @@
 
 import type * as THREE from 'three';
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
-import { OBJExporter } from 'three/examples/jsm/exporters/OBJExporter.js';
+import { serialiseObjGroupAware } from './mesh3d-obj-writer';
 
 /**
- * Ο `OBJExporter` **δεν γράφει ποτέ** `mtllib` — ούτε καν όταν γράφει `usemtl`. Χωρίς τη γραμμή
+ * Ο OBJ writer **δεν γράφει ποτέ** `mtllib` — ούτε καν όταν γράφει `usemtl`. Χωρίς τη γραμμή
  * `mtllib`, το C4D (και κάθε άλλος importer) αγνοεί σιωπηλά το `.mtl` και ανοίγει το μοντέλο
  * γκρι. Άρα την εισάγουμε εμείς, πριν από οτιδήποτε άλλο.
  */
@@ -17,8 +17,13 @@ export function injectMtlLib(objText: string, mtlFilename: string): string {
   return `mtllib ${mtlFilename}\n${objText}`;
 }
 
+/**
+ * ADR-678 Φ3.1 — group-aware OBJ (per-face `usemtl` ανά material group, όπως Blender/C4D). Ο stock
+ * three `OBJExporter` **δεν** είναι group-aware (διαβάζει μόνο `mesh.material.name` → κανένα
+ * `usemtl` σε multi-material mesh)· βλ. `./mesh3d-obj-writer` για το πλήρες σκεπτικό.
+ */
 export function serialiseObj(root: THREE.Object3D): string {
-  return new OBJExporter().parse(root);
+  return serialiseObjGroupAware(root);
 }
 
 /**
