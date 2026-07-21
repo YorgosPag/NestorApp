@@ -21,7 +21,7 @@
  * @see ./bim-material-thumbnail-upload.service.ts — the mirrored Phase-2 template
  */
 
-import { ref as makeStorageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref as makeStorageRef, uploadBytes, getDownloadURL, getMetadata } from 'firebase/storage';
 import { storage } from '@/lib/firebase';
 import {
   buildBimMaterialTextureMapPath,
@@ -108,11 +108,53 @@ export async function uploadMaterialTextureMap(
   try {
     await uploadBytes(fileRef, file, { contentType: contentTypeFor(ext) });
     const downloadUrl = await getDownloadURL(fileRef);
+    // Verify-after-write (atomic verified asset commit — Revit/ArchiCAD asset durability).
+    // getDownloadURL already proves the object existed a moment ago; this second, independent
+    // getMetadata assert converts a silent «wrote-but-not-durable» outcome into a typed error so
+    // the caller can rollback instead of persisting a ghost material doc that points at a 403 URL.
+    await assertTextureDurable(storagePath);
     return { storagePath, downloadUrl, ext };
   } catch (err) {
+    if (err instanceof MaterialTextureUploadError) throw err;
     throw new MaterialTextureUploadError(
       'upload-failed',
       err instanceof Error ? err.message : String(err),
     );
+  }
+}
+
+/** Throws `upload-failed` if the just-written object is not durably present (object-not-found). */
+async function assertTextureDurable(storagePath: string): Promise<void> {
+  const reachable = await isMaterialTextureReachable(storagePath);
+  if (!reachable) {
+    throw new MaterialTextureUploadError(
+      'upload-failed',
+      `texture not durable after upload: ${storagePath}`,
+    );
+  }
+}
+
+/**
+ * Durability probe SSoT — is a material texture object actually present in Storage?
+ *
+ * Accepts either a storage path (`companies/.../albedo.jpg`) or a full `getDownloadURL` https URL
+ * (`ref(storage, url)` parses both). Uses the authenticated Admin-rules read path (`getMetadata`),
+ * NOT the download token, so a company member probing their own material resolves via the storage
+ * rule. Returns `false` ONLY on a definitive `storage/object-not-found` (→ safe to re-upload/repair);
+ * any other error (permission/network/parse ambiguity) returns `true` to avoid a false repair loop.
+ *
+ * Consumers:
+ *  - {@link uploadMaterialTextureMap} — verify-after-write (durable-commit guarantee)
+ *  - import self-healing — a «known» `bmat_*` whose albedo is unreachable is re-uploaded in place
+ *    (see io/mesh3d-material-import/import-foreign-textures.ts)
+ */
+export async function isMaterialTextureReachable(urlOrPath: string): Promise<boolean> {
+  try {
+    await getMetadata(makeStorageRef(storage, urlOrPath));
+    return true;
+  } catch (err) {
+    const code = (err as { code?: string } | null)?.code;
+    if (code === 'storage/object-not-found') return false;
+    return true;
   }
 }

@@ -770,7 +770,7 @@
     "importFloorplanWizard": "Εισαγωγή Κάτοψης (Wizard)"
   },
   "c4dMaterialImport": {
-    "button": "Εισαγωγή υλικών από 3Δ αρχείο",
+    "button": "Εισαγωγή 3Δ αρχείου (γεωμετρία + υλικά)",
     "uploadingTextures": "Ανέβασμα υφών και δημιουργία υλικών…",
     "missingTextures": "Λείπουν εικόνες υφών: {files}. Στείλ' τες μαζί με το .dae (ο C4D τις αναφέρει από άλλον δίσκο) ή χρησιμοποίησε «Save Project with Assets» στον C4D ώστε να μπουν στον φάκελο textures.",
     "success": "Εισαγωγή υλικών: {applied} σώματα + {finish} μέλη σοβά (ταίριαξαν {matched}, {unmatched} χωρίς αντιστοίχιση).",

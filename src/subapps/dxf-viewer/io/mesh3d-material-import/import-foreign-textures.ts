@@ -48,6 +48,13 @@ export interface ForeignTextureImporterDeps {
   readonly hashFile: (file: Blob) => Promise<string>;
   /** Rollback ενός μισο-δημιουργημένου υλικού όταν αποτύχει το upload/update (μηδέν orphan). */
   readonly deleteMaterial: (id: string) => Promise<void>;
+  /**
+   * Self-heal probe (προαιρετικό): είναι το albedo ενός **υπάρχοντος** υλικού όντως προσβάσιμο στο
+   * Storage; Χρησιμοποιείται στο content-hash dedup ώστε ένα «γνωστό» υλικό με **σπασμένο** albedo (ghost
+   * doc που δείχνει σε 403 URL) να ΜΗΝ γίνεται reuse σιωπηλά — αντ' αυτού ξανα-ανεβαίνει η υφή στο ίδιο id
+   * (repair in-place, σταθερό id, μηδέν διπλότυπο). Παραλείπεται → legacy συμπεριφορά (assume reachable).
+   */
+  readonly isAlbedoReachable?: (material: BimMaterial) => Promise<boolean>;
 }
 
 /**
@@ -114,6 +121,69 @@ async function createTextureMaterial(
   }
 }
 
+/**
+ * Ξανα-ανεβάζει το albedo σε ένα **υπάρχον** υλικό (self-heal / hash-match repair): σταθερό id, μηδέν
+ * διπλότυπο, idempotent. Ενημερώνει τα `pbrTextures` με το φρέσκο URL + hash. Οι όψεις που δείχνουν ήδη
+ * σ' αυτό το id (μέσω resolveKnownId) γίνονται bamboo χωρίς καμία αλλαγή στη βαφή. Επιστρέφει το ίδιο id.
+ */
+async function repairTextureMaterial(
+  materialId: string,
+  file: File,
+  albedoHash: string,
+  deps: ForeignTextureImporterDeps,
+): Promise<string> {
+  const albedoUrl = await deps.uploadAlbedo(file, materialId);
+  await deps.updateMaterial(materialId, {
+    pbrTextures: { albedoUrl, normalUrl: null, roughnessUrl: null, aoUrl: null, tileSizeM: 1, albedoHash },
+  });
+  return materialId;
+}
+
+/**
+ * Είναι το albedo ενός hash-matched υπάρχοντος υλικού όντως durable; Χωρίς probe → assume yes (legacy /
+ * tests). Υλικό χωρίς `albedoUrl` = τετριμμένα «υγιές» (τίποτα να σπάσει). Έτσι το content-hash dedup
+ * ΔΕΝ κάνει ποτέ reuse ενός ghost doc (URL χωρίς αρχείο) — ο caller τότε κάνει repair in-place.
+ */
+async function isExistingAlbedoHealthy(
+  materialId: string,
+  materialsById: ReadonlyMap<string, BimMaterial>,
+  deps: ForeignTextureImporterDeps,
+): Promise<boolean> {
+  if (!deps.isAlbedoReachable) return true;
+  const material = materialsById.get(materialId);
+  if (!material || !material.pbrTextures?.albedoUrl) return true;
+  return deps.isAlbedoReachable(material);
+}
+
+/**
+ * Λύνει ΜΙΑ υφή σε material id, με σειρά προτεραιότητας: (1) ρητός self-heal στόχος (γνωστό υλικό με
+ * σπασμένο albedo) → repair in-place· (2) content-hash dedup → reuse, ΕΚΤΟΣ αν το matched υλικό έχει
+ * σπασμένο albedo (τότε repair in-place)· (3) ολοκαίνουργιο υλικό. Ρίχνει αν αποτύχει το upload/save.
+ */
+async function resolveTextureMaterialId(
+  materialName: string,
+  file: File,
+  deps: ForeignTextureImporterDeps,
+  idByHash: Map<string, string>,
+  materialsById: ReadonlyMap<string, BimMaterial>,
+  repairId: string | undefined,
+): Promise<string> {
+  const hash = (await deps.hashFile(file)).toLowerCase();
+  if (repairId) {
+    const id = await repairTextureMaterial(repairId, file, hash, deps);
+    idByHash.set(hash, id);
+    return id;
+  }
+  const existingId = idByHash.get(hash);
+  if (existingId) {
+    if (await isExistingAlbedoHealthy(existingId, materialsById, deps)) return existingId;
+    return repairTextureMaterial(existingId, file, hash, deps);
+  }
+  const id = await createTextureMaterial(materialName, file, hash, deps);
+  idByHash.set(hash, id);
+  return id;
+}
+
 /** Αποτέλεσμα του pre-pass: τι δημιουργήθηκε + ποιες υφές λείπουν (για actionable warning). */
 export interface ForeignTextureImportResult {
   /** `όνομα υλικού → bmat_*` για τις υφές που ανέβηκαν/βρέθηκαν. */
@@ -133,6 +203,11 @@ export async function importForeignTextures(
   texturesByMaterialName: ReadonlyMap<string, string>,
   imageFiles: readonly File[],
   deps: ForeignTextureImporterDeps,
+  /**
+   * `όνομα υλικού → υπάρχον bmat_*` για self-heal: γνωστά υλικά που ο caller εντόπισε με **σπασμένο**
+   * albedo (ghost doc). Γι' αυτά ξανα-ανεβαίνει η υφή στο ίδιο id (repair) αντί να δημιουργηθεί νέο.
+   */
+  repairIds: ReadonlyMap<string, string> = new Map(),
 ): Promise<ForeignTextureImportResult> {
   const created = new Map<string, string>();
   const missing: string[] = [];
@@ -140,6 +215,7 @@ export async function importForeignTextures(
   if (texturesByMaterialName.size === 0) return { created, missing };
 
   const imagesByName = indexImagesByName(imageFiles);
+  const materialsById = new Map(deps.existingMaterials.map((m) => [m.id, m] as const));
   // content hash → material id: seed cross-session από τα live υλικά που κουβαλούν albedoHash,
   // μετά συσσωρεύει within-import ώστε ίδια υφή σε πολλά effects → ΕΝΑ νέο υλικό.
   const idByHash = new Map<string, string>();
@@ -155,17 +231,12 @@ export async function importForeignTextures(
       if (!missingSeen.has(display)) { missingSeen.add(display); missing.push(display); }
       continue;
     }
-    const hash = (await deps.hashFile(file)).toLowerCase();
-    const existingId = idByHash.get(hash);
-    if (existingId) {
-      created.set(materialName, existingId);
-      continue;
-    }
     // Per-texture isolation: μια αποτυχία save/upload/update ΜΙΑΣ υφής δεν ρίχνει ΟΛΟ το import — η
     // συγκεκριμένη όψη μένει αβαφή, οι υπόλοιπες βάφονται κανονικά (documented contract, ποτέ throw).
     try {
-      const id = await createTextureMaterial(materialName, file, hash, deps);
-      idByHash.set(hash, id);
+      const id = await resolveTextureMaterialId(
+        materialName, file, deps, idByHash, materialsById, repairIds.get(materialName),
+      );
       created.set(materialName, id);
     } catch { /* skip αυτή την υφή· η όψη κρατά ό,τι είχε */ }
   }

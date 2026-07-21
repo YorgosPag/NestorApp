@@ -24,28 +24,43 @@ import { isUnchangedNestorMaterial } from './resolve-import-appearance';
 import { stripHiddenPrefix } from '../../export/core/mesh3d/mesh3d-naming';
 
 /**
- * ADR-678 Βήμα 3 — κρατά ΜΟΝΟ τις **ξένες** υφές (που πρόσθεσε ο συνεργάτης) από όλα τα textured
- * effects. Οι ΔΙΚΕΣ μας εξαγόμενες υφές έχουν γνωστά Nestor ονόματα (`mat-*`/`elem-*`/`mat_<hex>` =
- * αμετάβλητο DNA· `tex_*` = legacy texture export· catalog/preset/`bmat_*` = γνωστό id) — δεν
- * χρειάζονται upload (η όψη μένει no-op) και δεν πρέπει ούτε να δημιουργήσουν διπλότυπο `bmat_*` ούτε
- * να μπουν ως «missing» στο warning. Ξένο = τίποτα από τα παραπάνω (π.χ. `Trunk.1`, `road_wood`).
+ * ADR-678 Βήμα 3 — χωρίζει τις υφές σε **foreign** (χρειάζονται upload) και **repair** (self-heal). Οι
+ * ΔΙΚΕΣ μας εξαγόμενες υφές έχουν γνωστά Nestor ονόματα (`mat-*`/`elem-*`/`mat_<hex>` = αμετάβλητο DNA·
+ * `tex_*` = legacy texture export· catalog/preset/`bmat_*` = γνωστό id) — δεν χρειάζονται upload (η όψη
+ * μένει no-op) και δεν πρέπει ούτε να δημιουργήσουν διπλότυπο `bmat_*` ούτε να μπουν ως «missing» στο
+ * warning. Ξένο = τίποτα από τα παραπάνω (π.χ. `Trunk.1`, `road_wood`) → `foreign`.
+ *
+ * **Self-heal (ground-truth 2026-07-22):** ένα γνωστό υλικό (π.χ. `Trunk.1`) του οποίου το albedo έγινε
+ * απρόσιτο (ghost doc → 403) μπαίνει ΚΑΙ στο `foreign` (θα ανέβει η υφή) ΚΑΙ στο `repairIds` (upload στο
+ * ίδιο id) → η κολώνα θεραπεύεται σε επόμενο import, χωρίς διπλότυπο, σταθερό id. Χωρίς probe → η παλιά
+ * συμπεριφορά ακέραιη (κάθε γνωστό = skip).
  *
  * **Γιατί εδώ (ground-truth 2026-07-22):** χωρίς το φίλτρο, ο pre-pass ζητούσε upload για ΟΛΑ τα
  * textured (mat-wood/tex_concrete_albedo/…) → θορυβώδες warning + πιθανό διπλότυπο των δικών μας.
  */
-function foreignTexturesOnly(
+async function foreignAndBrokenTextures(
   textures: ReadonlyMap<string, string>,
   resolveKnownId: KnownMaterialResolver,
-): Map<string, string> {
-  const out = new Map<string, string>();
+  isKnownBroken?: KnownMaterialHealthProbe,
+): Promise<{ foreign: Map<string, string>; repairIds: Map<string, string> }> {
+  const foreign = new Map<string, string>();
+  const repairIds = new Map<string, string>();
   for (const [name, file] of textures) {
     const clean = stripHiddenPrefix(name);
     if (isUnchangedNestorMaterial(clean)) continue;
     if (clean.startsWith('tex_')) continue;
-    if (resolveKnownId(clean) !== null) continue;
-    out.set(name, file);
+    const id = resolveKnownId(clean);
+    if (id === null) { foreign.set(name, file); continue; }
+    // Self-heal (ground-truth 2026-07-22): ένα «γνωστό» υλικό του οποίου το albedo έγινε 403/απόν (ghost
+    // doc) ΔΕΝ πρέπει να προσπερνιέται σιωπηλά — αλλιώς κανένα re-import δεν το θεραπεύει (sticky). Το
+    // βάζουμε στο foreign (θα ανέβει η υφή) + στο repairIds (upload στο ΙΔΙΟ id → σταθερό, μηδέν διπλότυπο).
+    if (isKnownBroken && (await isKnownBroken(id))) {
+      foreign.set(name, file);
+      repairIds.set(name, id);
+    }
+    // αλλιώς γνωστό & υγιές → no-op (η όψη κρατά ό,τι είχε)
   }
-  return out;
+  return { foreign, repairIds };
 }
 
 /**
@@ -55,7 +70,15 @@ function foreignTexturesOnly(
  */
 export type ColladaTextureImporter = (
   texturesByMaterialName: ReadonlyMap<string, string>,
+  repairIds: ReadonlyMap<string, string>,
 ) => Promise<ReadonlyMap<string, string>>;
+
+/**
+ * ADR-678 self-heal probe — είναι «σπασμένο» (μη-προσβάσιμο albedo) το γνωστό υλικό με αυτό το id;
+ * Injected (ο io wrapper μένει καθαρός από Firebase): ο button το καλωδιώνει με το durability SSoT
+ * `isMaterialTextureReachable`. `true` → self-heal στόχος (η υφή ξανα-ανεβαίνει στο ίδιο id).
+ */
+export type KnownMaterialHealthProbe = (materialId: string) => Promise<boolean>;
 
 /**
  * Εφαρμόζει την εμφάνιση ενός επιστρεφόμενου `.dae` στα ζωντανά BIM στοιχεία (per-face όταν το αρχείο
@@ -77,13 +100,17 @@ export async function importColladaAppearance(
   baseline?: ReadonlyMap<string, string>,
   materialBaselineByMesh?: ReadonlyMap<string, Readonly<Record<string, string>>>,
   textureImporter?: ColladaTextureImporter,
+  isKnownBroken?: KnownMaterialHealthProbe,
 ): Promise<ImportedAppearanceResult> {
   const { objects, materials, texturesByMaterialName } = parseColladaScene(daeText);
   // ΜΟΝΟ οι ξένες υφές ανεβαίνουν — οι δικές μας (mat-*/tex_*/catalog) είναι no-op, ούτε upload ούτε
   // «missing» θόρυβος (ground-truth 2026-07-22: ο R15 έγραφε textured effects και για τα Nestor DNA).
-  const foreign = foreignTexturesOnly(texturesByMaterialName, resolveKnownId);
+  // Εξαίρεση: γνωστό υλικό με σπασμένο albedo (ghost) → self-heal (repairIds), ξανα-ανεβαίνει στο ίδιο id.
+  const { foreign, repairIds } = await foreignAndBrokenTextures(
+    texturesByMaterialName, resolveKnownId, isKnownBroken,
+  );
   const importedIds = textureImporter && foreign.size > 0
-    ? await textureImporter(foreign)
+    ? await textureImporter(foreign, repairIds)
     : new Map<string, string>();
   const resolver = withImportedMaterials(resolveKnownId, importedIds);
   return applyImportedAppearance(
