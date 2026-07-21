@@ -1,6 +1,6 @@
 # ADR-679 — PBR Material «Full Parity»: πλήρες σύστημα υλικών/υφών ανά όψη (C4D-grade)
 
-**Status:** 🟢 Φ2a ΥΛΟΠΟΙΗΘΗΚΕ (import name→όλα τα υλικά + color registry)· 🟢 Φ5.1a ΥΛΟΠΟΙΗΘΗΚΕ (DAE writer texture-capable + πραγματικά UVs)· 🟢 Φ5.1b ΥΛΟΠΟΙΗΘΗΚΕ + **R15 GROUND-TRUTH ✅** (texture-byte bundling + headless prewarm· checker-cube `.dae`+`.zip` άνοιξε στον C4D R15.037 με σωστά χαρτογραφημένη υφή σε όλες τις όψεις)· 🟢 **Φ2b ΥΛΟΠΟΙΗΘΗΚΕ** (per-face PBR **render** — σώμα μέσω `resolveFaceMaterial`→`getMaterial3D` + faced-prism UVs· σοβάς `materialId` ήταν ήδη textured, καμία αλλαγή)· Φ2c εκκρεμεί· **Φ5.2 (per-face texture export) ξεκλειδώθηκε**
+**Status:** 🟢 Φ2a ΥΛΟΠΟΙΗΘΗΚΕ (import name→όλα τα υλικά + color registry)· 🟢 Φ5.1a ΥΛΟΠΟΙΗΘΗΚΕ (DAE writer texture-capable + πραγματικά UVs)· 🟢 Φ5.1b ΥΛΟΠΟΙΗΘΗΚΕ + **R15 GROUND-TRUTH ✅** (texture-byte bundling + headless prewarm· checker-cube `.dae`+`.zip` άνοιξε στον C4D R15.037 με σωστά χαρτογραφημένη υφή σε όλες τις όψεις)· 🟢 **Φ2b ΥΛΟΠΟΙΗΘΗΚΕ** (per-face PBR **render** — σώμα μέσω `resolveFaceMaterial`→`getMaterial3D` + faced-prism UVs· σοβάς `materialId` ήταν ήδη textured, καμία αλλαγή)· Φ2c εκκρεμεί· 🟢 **Φ5.2 ΥΛΟΠΟΙΗΘΗΚΕ + R15 GROUND-TRUTH ✅** (per-face texture export — ο COLLADA writer έγραφε ΗΔΗ per-group `<triangles material>`+`<instance_material>`· κολώνα με ΔΥΟ υφές σε ΔΥΟ όψεις άνοιξε στον R15 με κάθε όψη τη δική της υφή, 2026-07-21)· 🟡 **Φ4 COLLADA import** (C4D→Νέστωρ per-face· code+jest DONE, R15 ground-truth pending — λεπτομέρειες **ADR-678 Φ4**)
 **Date:** 2026-07-21
 **Owner:** Giorgio
 **Σχετικά:** ADR-413 (BimMaterial library + PBR textures) · ADR-539 (per-face appearance) · ADR-449 (structural finish) · ADR-678 (C4D↔Νέστωρ round-trip) · ADR-511 (wall-covering catalog)
@@ -55,7 +55,7 @@ BimMaterial** (PBR texture set) και να το **render-άρει** μέσω τ
 | **Φ2b** ✅ | **Per-face PBR (η καρδιά) — ΥΛΟΠΟΙΗΘΗΚΕ (render, όχι export).** `resolveFaceMaterial` (ADR-539) έγινε thin delegate: `colorHex`→flat (νικά)· `materialId`→**reuse** `getMaterial3D` (ήδη texture-aware μέσω `pbr-material-builder`+`bim-texture-cache`+`user-material-registry`) σε DoubleSide variant· χωρίς override→base. `buildFacedPrism` απέκτησε UVs (τα faced solids είχαν μηδέν). **Finding:** ο σοβάς (`FinishFaceOverride.materialId`, ADR-449) ήταν ΗΔΗ textured μέσω `getMaterial3D` — καμία αλλαγή χρειάστηκε εκεί· μόνο το `colorOverride` μένει flat by design (visual-only hex). Ξεκλειδώνει Φ5.2 (export). | Μικρό (2 αρχεία κώδικα) |
 | **Φ2c** | **Material editor UI (C4D-parity).** Διπλό κλικ σε swatch → πάνελ PBR (Base Color/Texture upload, Roughness, Metalness, Normal, Opacity). Reuse `useMaterialPbrTextureUpload`. Εμφανές «όνομα για C4D». | Μεσαίο |
 | **Φ3** | glTF PBR round-trip (το glTF ΕΧΕΙ πραγματικά PBR + textures — αντίθετα από το OBJ/R15). Προαιρετικό. | Μεσαίο |
-| **Φ5** | **COLLADA/DAE texture export (Νέστωρ→C4D R15) — FULL PARITY track.** Ground-truth correction (2026-07-21): ο R15 **DAE** importer **ΚΟΥΒΑΛΑ** textures (αποδεδειγμένο: native Aeron `.dae` με `library_images`+sampler), σε αντίθεση με το OBJ που ΔΕΝ διαβάζει υλικά. Άρα το DAE είναι ο textured δρόμος για R15. Sub-phases: **Φ5.1a** DAE writer texture-capable + πραγματικά UVs ✅· **Φ5.1b** texture-byte bundling (fetch από Storage → loose `textures/*` σε `.zip`) + headless prewarm ✅ (**SSOT correction: ΟΧΙ `fflate`** — reuse του υπάρχοντος zero-dep `zip-pack.ts` + `image-export-shared.fetch*` + `packageArtifacts`, ίδιο pattern με το DXF image-fill eTransmit· ένας packer, όπως οι μεγάλοι)· **Φ5.1c** ✅ (2026-07-21, R15 ground-truth bug-fix) **per-face export material-naming** — `resolveMaterialName` ονόμαζε ΚΑΘΕ per-face textured υλικό `mat_ffffff` (χρώμα-based name, αλλά `applyTextureSet` βάζει `color=0xffffff` σε ΟΛΑ τα textured PBR) → collapse σε ΕΝΑ material/texture (πέτρα κολόνας + ξύλο σκάλας ίδια υφή). Fix: name-by-texture-source-identity (`tex_<parentDir>_<fileStem>`) όταν per-face υλικό (matId=null) ΕΧΕΙ texture· διαφορετικές υφές → διαφορετικά ονόματα/αρχεία, ίδια υφή → dedup. **Ξεκλειδώνει/σχετίζεται με Φ5.2** — τα per-face υλικά τώρα εξάγονται με σωστές διακριτές ταυτότητες· **Φ5.2** per-face texture export (εξαρτάται Φ2b)· **Φ5.3** per-triangle. | **Μεγάλο** |
+| **Φ5** | **COLLADA/DAE texture export (Νέστωρ→C4D R15) — FULL PARITY track.** Ground-truth correction (2026-07-21): ο R15 **DAE** importer **ΚΟΥΒΑΛΑ** textures (αποδεδειγμένο: native Aeron `.dae` με `library_images`+sampler), σε αντίθεση με το OBJ που ΔΕΝ διαβάζει υλικά. Άρα το DAE είναι ο textured δρόμος για R15. Sub-phases: **Φ5.1a** DAE writer texture-capable + πραγματικά UVs ✅· **Φ5.1b** texture-byte bundling (fetch από Storage → loose `textures/*` σε `.zip`) + headless prewarm ✅ (**SSOT correction: ΟΧΙ `fflate`** — reuse του υπάρχοντος zero-dep `zip-pack.ts` + `image-export-shared.fetch*` + `packageArtifacts`, ίδιο pattern με το DXF image-fill eTransmit· ένας packer, όπως οι μεγάλοι)· **Φ5.1c** ✅ (2026-07-21, R15 ground-truth bug-fix) **per-face export material-naming** — `resolveMaterialName` ονόμαζε ΚΑΘΕ per-face textured υλικό `mat_ffffff` (χρώμα-based name, αλλά `applyTextureSet` βάζει `color=0xffffff` σε ΟΛΑ τα textured PBR) → collapse σε ΕΝΑ material/texture (πέτρα κολόνας + ξύλο σκάλας ίδια υφή). Fix: name-by-texture-source-identity (`tex_<parentDir>_<fileStem>`) όταν per-face υλικό (matId=null) ΕΧΕΙ texture· διαφορετικές υφές → διαφορετικά ονόματα/αρχεία, ίδια υφή → dedup. **Ξεκλειδώνει/σχετίζεται με Φ5.2** — τα per-face υλικά τώρα εξάγονται με σωστές διακριτές ταυτότητες· **Φ5.2** ✅ (2026-07-21, R15 ground-truth) per-face texture export — **ΚΑΜΙΑ αλλαγή κώδικα χρειάστηκε**: ο COLLADA writer (`mesh3d-collada-geometry.ts` `buildGroupsXml`/`triangleGroups`) έγραφε ΗΔΗ per-group `<triangles material="sym_i">` + matching `<instance_material symbol="sym_i" target="#material_j">` μέσα σε ΕΝΑ `<bind_material><technique_common>` ανά mesh, με texture chain (`<surface>`/`<sampler2D>`/`<image>`) ανά υλικό. Μαζί με το Φ5.1c (διακριτά ονόματα ανά ταυτότητα υφής), μια κολώνα με διαφορετική υφή ανά όψη εξάγεται με σωστό per-primitive binding· ο C4D R15.037 δείχνει κάθε όψη με τη δική της υφή. Test-guard: `mesh3d-collada-writer.test.ts` («ΕΝΑ <triangles> + binding ανά group»)· **Φ5.3** per-triangle. | **Μεγάλο** |
 
 **Σειρά:** Φ2a (γρήγορη νίκη, ξεκλειδώνει catalog/user materials στο round-trip) → Φ2b (η ουσία) → Φ2c (UX). **Full-parity export track (εντολή Giorgio 2026-07-21):** Φ5.1 (whole-element υφή export, R15-testable) → Φ2b/Φ3/Φ5.2 (per-face) → Φ5.3 (per-triangle) → import COLLADA parser (orchestrator).
 
@@ -69,6 +69,36 @@ BimMaterial** (PBR texture set) και να το **render-άρει** μέσω τ
 
 ## 7. Changelog
 
+- **2026-07-21 — Export material NAMING: by-identity πάνω από by-texture (ADR-678 Φ2 Βήμα 1).**
+  Το Φ5.1c (κάτω) ονόμαζε τα per-face textured υλικά `tex_<texture-path>` — σωστό για C4D display/dedup,
+  αλλά **αόρατο στο re-import** (δεν λύνεται σε Nestor id). Νέα προτεραιότητα στο `resolveMaterialName`
+  (`mesh3d-materials.ts`): αν το per-face υλικό έχει σφραγισμένο `userData.nestorMaterialId` (θέτεται
+  από `getFaceMaterial3D`) → όνομα = **το id** (`bmat_oak`)· το `tex_<...>` μένει fallback ΜΟΝΟ για
+  materials χωρίς id. Το dedup (διαφορετική υφή → διαφορετικό αρχείο) διατηρείται, τώρα by-identity.
+  **Δεν αλλάζει η δομή/υφές του `.dae`** — μόνο τα ονόματα υλικών (re-verify Φ5.2 στον R15). Πλήρες:
+  **ADR-678 §6 (Φ2 Βήμα 1)**.
+- **2026-07-21 — Φ4 COLLADA per-face IMPORT (C4D→Νέστωρ· code+jest DONE, R15 ground-truth pending).**
+  Το import σκέλος του full round-trip. Νέος parser `dae-material-parse.ts` (mirror του writer) →
+  ίδιο σχήμα με OBJ/glTF → **αυτούσιος** ο κοινός πυρήνας `applyImportedAppearance`. Ο writer γράφει
+  πλέον τα faceKeys σε COLLADA `<extra>` (round-trip identity· ο R15 τα αγνοεί). SSoT boy-scout:
+  `@/lib/xml/xml-dom` + `rgb-unit-hex` (μηδέν clone). **Πλήρεις λεπτομέρειες + roadmap: ADR-678 §5/§6
+  (Φ4).** ⚠️ Εκκρεμεί R15 ground-truth (βάψε όψη στον C4D → re-import).
+- **2026-07-21 — Φ5.2 ΕΠΙΚΥΡΩΘΗΚΕ (per-face texture export — R15 ground-truth, ΚΑΜΙΑ αλλαγή κώδικα).**
+  Ερώτημα Φ5.2: ΕΝΑ στοιχείο με **διαφορετική υφή ανά όψη** εξάγεται με σωστό per-primitive binding ώστε ο
+  C4D R15 να δείχνει κάθε όψη διαφορετικά; **Ground-truth (Giorgio, R15.037):** κολώνα βαμμένη με ΔΥΟ
+  διαφορετικές υφές σε ΔΥΟ όψεις (Polygon Mode, realistic ON) → export → **κάθε όψη δείχνει τη δική της
+  υφή στον R15 ✅**. **Κώδικας (source of truth, επιβεβαιωμένος με audit):** ο COLLADA writer ήταν ΗΔΗ
+  per-group-aware — `export/core/mesh3d/mesh3d-collada-geometry.ts`: `triangleGroups()` χαρτογραφεί κάθε
+  `geometry.group`→`materialIndex`· `buildGroupsXml()` γράφει ΕΝΑ `<triangles material="sym_i">` + ένα
+  matching `<instance_material symbol="sym_i" target="#material_j"><bind_vertex_input semantic="UVSET0".../>`
+  ανά group, όλα μέσα σε ΕΝΑ `<bind_material><technique_common>` ανά node. Ο texture chain
+  (`<surface type="2D">`/`<sampler2D>`/`<image>`) γράφεται ανά υλικό στο `mesh3d-collada-writer.ts`
+  (`effectElement`/`buildMaterialLibraries`). Μαζί με Φ5.1c (ονόματα ανά ταυτότητα υφής) → διακριτές υφές
+  ανά όψη κουβαλιούνται σωστά. **Test-guard υπάρχει ήδη:** `mesh3d-collada-writer.test.ts` επιβεβαιώνει 2
+  `<triangles>` + 2 `<instance_material>` + 2 `<bind_vertex_input>` για multi-material mesh με groups.
+  **Αποτέλεσμα:** το Φ5.2 ήταν ήδη ολοκληρωμένο ως παρενέργεια του σωστά αρχιτεκτονημένου writer (per-group
+  από τη σχεδίαση, όπως οι μεγάλοι)· χρειαζόταν μόνο το naming-fix του Φ5.1c για να μη γίνεται collapse.
+  **Απομένει στο track:** **Φ5.3** per-triangle export, **Φ4** import COLLADA parser (name-based).
 - **2026-07-21 — Φ5.1c BUG-FIX (export material-naming collapse, βρέθηκε μέσω C4D R15 ground-truth).**
   Μετά το per-face texture render in-app (Φ2b), το εξαγόμενο `.dae` **collapse-άρε ΟΛΕΣ** τις textured
   οντότητες σε **ΕΝΑ** material `mat_ffffff` με **ΜΙΑ** texture `textures/mat_ffffff.jpg` — πέτρινη κολόνα

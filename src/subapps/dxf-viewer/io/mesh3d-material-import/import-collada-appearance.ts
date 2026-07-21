@@ -1,0 +1,41 @@
+/**
+ * import-collada-appearance — ADR-678 Φ4. Ο **wrapper COLLADA (`.dae`)** πάνω από τον
+ * format-agnostic πυρήνα `applyImportedAppearance` (ADR-678 Φ1).
+ *
+ * Ο Giorgio στέλνει `.dae` στον συνεργάτη (C4D R15), εκείνος το γυρίζει βαμμένο **ανά όψη**, και τα
+ * χρώματα/υλικά «κατεβαίνουν» στα ίδια BIM στοιχεία — ακριβώς όπως ήδη γίνεται με OBJ/glTF. Μία μόνο
+ * διαφορά από το OBJ μονοπάτι: `charset: 'unicode'` (το `.dae` είναι UTF-8 XML by spec — τα ονόματα
+ * ορόφων ταξιδεύουν ελληνικά ακέραια· ίδιο με glTF, βλ. `charsetFor` στο mesh3d-export-adapter).
+ *
+ * Ό,τι είναι μετά το parsing (matching → resolve → SetFaceAppearanceCommand → ΕΝΑ undo) είναι κοινό
+ * — δεν επαναλαμβάνεται εδώ (N.18: δεύτερος orchestrator ανά format = sibling clone).
+ *
+ * @see ./dae-material-parse — parseColladaScene (objects + υλικά + faceKeys, μία διέλευση)
+ * @see ./import-c4d-materials — ο κοινός πυρήνας + ο OBJ wrapper
+ * @see ../mesh3d-roundtrip/import-gltf-appearance — ο glTF wrapper (ίδιο μοτίβο)
+ * @see docs/centralized-systems/reference/adrs/ADR-678-c4d-obj-material-roundtrip-import.md
+ */
+
+import type { LevelsHookReturn } from '../../systems/levels/useLevels';
+import type { KnownMaterialResolver } from './known-import-materials';
+import { applyImportedAppearance, type ImportedAppearanceResult } from './import-c4d-materials';
+import { parseColladaScene } from './dae-material-parse';
+
+/**
+ * Εφαρμόζει την εμφάνιση ενός επιστρεφόμενου `.dae` στα ζωντανά BIM στοιχεία (per-face όταν το αρχείο
+ * κουβαλά faceKeys). `baseline` = manifest baseline (`όνομα υλικού → sRGB hex`) από συνοδό
+ * `.nestor.json` — repaint detection (ADR-683 §7)· το `.dae` `<color>` είναι sRGB, άρα συγκρίσιμο.
+ */
+export function importColladaAppearance(
+  levels: LevelsHookReturn,
+  daeText: string,
+  resolveKnownId: KnownMaterialResolver,
+  baseline?: ReadonlyMap<string, string>,
+): ImportedAppearanceResult {
+  const { objects, materials } = parseColladaScene(daeText);
+  return applyImportedAppearance(
+    levels,
+    { objects, materials, charset: 'unicode', baseline },
+    resolveKnownId,
+  );
+}

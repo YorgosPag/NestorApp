@@ -115,6 +115,48 @@ describe('serialiseCollada — per-face (multi-material groups)', () => {
   });
 });
 
+describe('serialiseCollada — faceKeys <extra> (ADR-678 Φ4 round-trip identity)', () => {
+  it('γράφει <extra> profile=NESTOR με ένα <k> ανά όψη, στη σειρά των groups', () => {
+    const geo = makeTriangleGeometry(4);
+    geo.clearGroups();
+    geo.addGroup(0, 6, 0);
+    geo.addGroup(6, 6, 1);
+    const mesh = new THREE.Mesh(geo, [named('mat_ff0000', 0xff0000), named('mat_00ff00', 0x00ff00)]);
+    mesh.name = 'Slab_s-1';
+    mesh.userData['faceKeyByMaterialIndex'] = ['bottom', 'top'];
+    const materials = [entry('mat_ff0000', 0xff0000), entry('mat_00ff00', 0x00ff00)];
+
+    const dae = serialiseCollada(rootWith(mesh), materials, CM);
+
+    expect(dae).toContain(
+      '<extra><technique profile="NESTOR"><face_keys><k>bottom</k><k>top</k></face_keys></technique></extra>',
+    );
+    // Το <extra> ζει ΜΕΣΑ στο <node>, μετά το </instance_geometry>
+    expect(dae).toContain('</instance_geometry><extra>');
+  });
+
+  it('single-material mesh χωρίς faceKeyByMaterialIndex → κανένα <extra>', () => {
+    const mesh = new THREE.Mesh(makeTriangleGeometry(1), named('mat_ff0000', 0xff0000));
+    mesh.name = 'X';
+    const dae = serialiseCollada(rootWith(mesh), [entry('mat_ff0000', 0xff0000)], CM);
+
+    expect(dae).not.toContain('<extra>');
+  });
+
+  it('faceKeys με ειδικούς χαρακτήρες (side:0, hole:0:1) περνούν αυτούσια', () => {
+    const geo = makeTriangleGeometry(2);
+    geo.clearGroups();
+    geo.addGroup(0, 3, 0);
+    geo.addGroup(3, 3, 1);
+    const mesh = new THREE.Mesh(geo, [named('m0', 0xffffff), named('m1', 0x000000)]);
+    mesh.name = 'H';
+    mesh.userData['faceKeyByMaterialIndex'] = ['side:0', 'hole:0:1'];
+    const dae = serialiseCollada(rootWith(mesh), [entry('m0', 0xffffff), entry('m1', 0x000000)], CM);
+
+    expect(dae).toContain('<k>side:0</k><k>hole:0:1</k>');
+  });
+});
+
 describe('serialiseCollada — χρώμα/διαφάνεια/μονάδα', () => {
   it('γκρι 0x808080 → sRGB συνιστώσες (ΟΧΙ linear)', () => {
     const mesh = new THREE.Mesh(makeTriangleGeometry(1), named('mat_808080', 0x808080));

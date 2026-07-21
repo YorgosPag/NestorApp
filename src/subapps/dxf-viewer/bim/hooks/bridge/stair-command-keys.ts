@@ -66,6 +66,13 @@ export const STAIR_RIBBON_KEYS = {
      */
     waistThickness: 'stair.params.waistThickness',
     /**
+     * ADR-358 (2026-07-21) — 3D landing structural depth (mm), Revit "Total Depth".
+     * Plain-mm numeric combobox (like waistThickness). `undefined` ⇒ inherits the
+     * waist ("Same as Run"). Clamp 20–400 mm — thinner floor than the RC waist so a
+     * timber/thin landing renders. 3D-only (StairToThreeConverter), no geometry recompute.
+     */
+    landingThickness: 'stair.params.landingThickness',
+    /**
      * ADR-358 Phase 3f — winder count for l-shape with winders. Numeric
      * combobox 1-5 (NOK quarter-turn default 3). Recomputes `flightSplit`
      * so `n1 + winderCount + n2 = stepCount` invariant holds.
@@ -130,6 +137,7 @@ export type StairRibbonComboKey =
   | typeof STAIR_RIBBON_KEYS.params.storyCount
   | typeof STAIR_RIBBON_KEYS.params.storyHeight
   | typeof STAIR_RIBBON_KEYS.params.waistThickness
+  | typeof STAIR_RIBBON_KEYS.params.landingThickness
   | typeof STAIR_RIBBON_KEYS.params.winderCount;
 
 export type StairRibbonStringComboKey =
@@ -157,6 +165,7 @@ const ALL_STAIR_COMBO_KEYS: ReadonlySet<string> = new Set<string>([
   STAIR_RIBBON_KEYS.params.storyCount,
   STAIR_RIBBON_KEYS.params.storyHeight,
   STAIR_RIBBON_KEYS.params.waistThickness,
+  STAIR_RIBBON_KEYS.params.landingThickness,
   STAIR_RIBBON_KEYS.params.winderCount,
 ]);
 

@@ -414,10 +414,14 @@ export interface StairVariantVShape {
 // STAIR PARAMS (§5.1)
 // ============================================================================
 
-export interface StairParams {
-  readonly basePoint: Point3D;
-  readonly direction: number; // deg, 0 = +X
-
+/**
+ * Shared stair parameters — the type-level subset carried by BOTH a placed
+ * `StairParams` and a `StairTypeParams` family type (ADR-412). Holds every field
+ * EXCEPT the per-placement geometry (`basePoint`, `direction`) and the
+ * instance-only overrides (`perRiserOverrides`, `restLandings`). Extracted as the
+ * SSoT base so the two interfaces never drift into parallel twins (ADR-583 / N.18).
+ */
+export interface StairSharedParams {
   readonly rise: number; // mm
   readonly tread: number; // mm (excl. nosing)
   readonly nosing: number; // mm
@@ -443,11 +447,20 @@ export interface StairParams {
    */
   readonly waistThickness?: number; // mm
 
+  /**
+   * ADR-358 (2026-07-21) — 3D landing structural depth (mm), Revit "Monolithic
+   * Landing → Total Depth". `undefined` ⇒ "Same as Run": the landing inherits
+   * `waistThickness` (the μηρός), then the 150 mm SSoT default. Editable 20–400 mm
+   * via the ribbon — a BROADER floor than the RC `waistThickness` [80,400] so a
+   * thin/timber landing (e.g. 40 mm) renders, DECOUPLED from the reinforced-concrete
+   * waist minimum (a wooden landing has no RC waist). 3D-only: consumed by
+   * `StairToThreeConverter.resolveLandingThicknessMm`, NOT `computeStairGeometry`.
+   */
+  readonly landingThickness?: number; // mm
+
   readonly riserType: StairRiserType;
   readonly materials?: StairMaterials;
   readonly perTreadOverrides?: Readonly<Record<number, StairPerTreadOverride>>;
-  /** ADR-358 Q19 Φ7 — per-riser material overrides (0-based global build-order key). */
-  readonly perRiserOverrides?: Readonly<Record<number, StairPerRiserOverride>>;
   readonly antiskidNosing: boolean;
   readonly adaContrastStrip: boolean;
 
@@ -455,15 +468,6 @@ export interface StairParams {
   readonly cutPlaneHeight?: number;
 
   readonly variant: StairVariantParams;
-
-  /**
-   * ADR-637 — kind-independent intermediate rest landings (πλατύσκαλα). Optional
-   * for back-compat: absent/empty → the run is a single uninterrupted flight and
-   * geometry stays byte-identical to the pre-ADR-637 path. Planned + consumed via
-   * `planStairRunSegments`. Distinct from turn landings (which live in the variant
-   * and imply a direction change) — a rest landing keeps the travel direction.
-   */
-  readonly restLandings?: readonly StairRestLanding[];
 
   readonly walklineOffset: number; // mm (default 300)
   readonly handrails: StairHandrails;
@@ -516,6 +520,28 @@ export interface StairParams {
   readonly attachTopToIds?: readonly string[];
   /** Host FK ids όταν `baseBinding === 'attached'` (≥1, validated). */
   readonly attachBaseToIds?: readonly string[];
+}
+
+/**
+ * Full placed-stair params: the shared type-level subset ({@link StairSharedParams})
+ * plus the per-placement geometry (`basePoint`, `direction`) and the instance-only
+ * overrides (`perRiserOverrides`, `restLandings`).
+ */
+export interface StairParams extends StairSharedParams {
+  readonly basePoint: Point3D;
+  readonly direction: number; // deg, 0 = +X
+
+  /** ADR-358 Q19 Φ7 — per-riser material overrides (0-based global build-order key). */
+  readonly perRiserOverrides?: Readonly<Record<number, StairPerRiserOverride>>;
+
+  /**
+   * ADR-637 — kind-independent intermediate rest landings (πλατύσκαλα). Optional
+   * for back-compat: absent/empty → the run is a single uninterrupted flight and
+   * geometry stays byte-identical to the pre-ADR-637 path. Planned + consumed via
+   * `planStairRunSegments`. Distinct from turn landings (which live in the variant
+   * and imply a direction change) — a rest landing keeps the travel direction.
+   */
+  readonly restLandings?: readonly StairRestLanding[];
 }
 
 // ============================================================================

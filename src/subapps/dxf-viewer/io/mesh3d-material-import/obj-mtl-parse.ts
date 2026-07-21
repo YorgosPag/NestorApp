@@ -11,8 +11,11 @@
  * εμφάνιση του στοιχείου. Το per-face είναι Φ3.
  *
  * @see ./match-objects-to-entities.ts — name → bimId
+ * @see ./rgb-unit-hex — κοινό SSoT «RGB 0..1 → hex» (μοιράζεται με τον COLLADA parser)
  * @see docs/centralized-systems/reference/adrs/ADR-678-c4d-obj-material-roundtrip-import.md
  */
+
+import { rgbUnitToHex } from './rgb-unit-hex';
 
 /** Ανάθεση υλικού σε ένα OBJ object (dominant material ή null αν το block δεν είχε `usemtl`). */
 export interface ObjectMaterialAssignment {
@@ -79,14 +82,9 @@ export function parseObjObjects(objText: string): ObjectMaterialAssignment[] {
   return result;
 }
 
-/** `Kd 0.752941 0.223529 0.168627` → `#c0392b`. Clamp 0..1 → 0..255. */
+/** `Kd 0.752941 0.223529 0.168627` → `#c0392b`. Κοινό SSoT μετατροπής ({@link rgbUnitToHex}). */
 function kdToHex(tokens: readonly string[]): string | null {
-  const rgb = tokens.slice(0, 3).map(Number);
-  if (rgb.length !== 3 || rgb.some((n) => !Number.isFinite(n))) return null;
-  const hex = rgb
-    .map((n) => Math.round(Math.min(1, Math.max(0, n)) * 255).toString(16).padStart(2, '0'))
-    .join('');
-  return `#${hex}`;
+  return rgbUnitToHex(tokens);
 }
 
 /**

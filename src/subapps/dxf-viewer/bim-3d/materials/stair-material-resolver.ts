@@ -5,7 +5,10 @@
  *   1. per-SUB-element override (ADR-358 Q19): `perTreadOverrides[subIndex].material`
  *      for treads · `perRiserOverrides[subIndex].material` for risers (Φ7)
  *   2. `stair.params.materials?.[componentField]`
- *   3. element-type default (`elem-stair-{component}` via MaterialCatalog3D)
+ *   3. structure-type coherent default (Revit: the material set follows the stair
+ *      TYPE — monolithic → concrete, stringer/suspended → timber, glass-tread →
+ *      glass, steel-grating → metal). SSoT: `stair-structure-material-defaults.ts`.
+ *   4. element-type default (`elem-stair-{component}` via MaterialCatalog3D)
  *
  * Bridge from 2D stair material preset IDs (`stair-material-catalog.ts`: oak/walnut/
  * marble/granite/concrete/steel/glass/terrazzo/tile + 'custom' free-form) to the
@@ -17,6 +20,7 @@
 import type * as THREE from 'three';
 import type { StairEntity } from '../../bim/types/stair-types';
 import { getMaterial3D, getElementMaterial3D, type Stair3DComponent } from './MaterialCatalog3D';
+import { resolveStructureComponentMaterialKey } from './stair-structure-material-defaults';
 
 type ComponentField = 'tread' | 'riser' | 'stringer' | 'landing';
 
@@ -89,6 +93,12 @@ export function resolveStairMaterial(
     }
   }
 
-  // 3. Element-type default.
+  // 3. Structure-type coherent default (Revit: material set follows the stair type).
+  //    Replaces the arbitrary fixed `elem-stair-*` mix so a monolithic stair reads as
+  //    all-concrete instead of concrete-with-incongruous-timber-treads (Giorgio 2026-07-21).
+  const structKey = resolveStructureComponentMaterialKey(stair.params.structureType, component);
+  if (structKey) return getMaterial3D(structKey);
+
+  // 4. Element-type default (last resort — only for an unmapped structure/component).
   return getElementMaterial3D(component);
 }

@@ -29,6 +29,8 @@ import { attachEdgesProjection } from './bim-three-edges';
 import { ensureWorldUvs } from './bim-uv-helpers';
 import { stampBimIdentity } from './bim-three-shape-helpers';
 import { polygonCentroid } from '../../bim/geometry/shared/polygon-utils';
+import { DEFAULT_WAIST_SLAB_THICKNESS_MM } from '../../bim/stairs/stair-boq-quantities';
+import { buildWaistSlabMeshes } from './stair-waist-slabs';
 
 // ADR-375 Phase C.7 — stair subcategory wiring (ADR-377 SUBCATEGORY_TAXONOMY).
 // ADR-377 Phase E — unified onto the shared `attachEdgesProjection` SSoT (was a
@@ -43,9 +45,15 @@ const ROT_X_NEG_90 = new THREE.Matrix4().makeRotationX(-Math.PI / 2);
 
 // Industry defaults (mm absolute) — Revit/ArchiCAD aligned, applied when stair
 // lacks explicit values. Converted to meters at use site (× 0.001).
+//
+// `tread`/`riser` are FINISH thicknesses (a 40 mm timber tread board over the
+// structural waist, a 20 mm riser face) — Revit models these as separate run-type
+// properties, so they stay independent of the structural depth. The LANDING has NO
+// hardcoded thickness: per the Revit "Monolithic Landing → Same as Run" default it
+// inherits the run's structural depth (`StairParams.waistThickness`, the μηρός),
+// resolved via `resolveLandingThicknessMm`. See ADR-358 changelog (2026-07-21).
 const DEFAULT_TREAD_THICKNESS_MM = 40;
 const DEFAULT_RISER_THICKNESS_MM = 20;
-const DEFAULT_LANDING_THICKNESS_MM = 200;
 const DEFAULT_HANDRAIL_RADIUS_MM = 25;
 const DEFAULT_HANDRAIL_HEIGHT_MM = 900;
 const HANDRAIL_TUBE_SEGMENTS = 8;
@@ -379,6 +387,27 @@ function handrailTube(
 
 // ── Landings ─────────────────────────────────────────────────────────────────
 
+/**
+ * Landing structural depth (meters), Revit "Monolithic Landing → Total Depth" with a
+ * "Same as Run" fallback. Precedence:
+ *   1. `landingThickness` — the landing's OWN depth (Revit Total Depth), editable
+ *      20–400 mm so a thin/timber landing (e.g. 40 mm) is reachable, decoupled from
+ *      the RC waist minimum;
+ *   2. `waistThickness` — "Same as Run": inherit the run's structural depth (μηρός);
+ *   3. `DEFAULT_WAIST_SLAB_THICKNESS_MM` (150 mm) — SSoT default.
+ *
+ * This also seats the transition riser correctly: the landing slab drops by
+ * `thickness` from the top face, so with the 150 mm default < the typical 175 mm rise
+ * the slab bottom stays ABOVE the lower tread's top and no longer swallows the riser
+ * (the pre-2026-07-21 hardcoded 200 mm > rise buried it). No scene-unit scaling — the
+ * thickness fields are absolute mm, matching the tread/riser thickness convention.
+ */
+function resolveLandingThicknessMm(stair: StairEntity): number {
+  const p = stair.params;
+  const mm = p.landingThickness ?? p.waistThickness ?? DEFAULT_WAIST_SLAB_THICKNESS_MM;
+  return mm * MM_TO_M;
+}
+
 function buildLandingMeshes(
   stair: StairEntity,
   baseY: number,
@@ -386,7 +415,7 @@ function buildLandingMeshes(
   levelId?: string,
 ): THREE.Mesh[] {
   const out: THREE.Mesh[] = [];
-  const thicknessM = DEFAULT_LANDING_THICKNESS_MM * MM_TO_M;
+  const thicknessM = resolveLandingThicknessMm(stair);
   const mat = resolveStairMaterial(stair, 'stair-landing');
   const landings = stair.geometry.landings;
   for (let i = 0; i < landings.length; i++) {
@@ -398,6 +427,29 @@ function buildLandingMeshes(
     const tagged = tagStairMesh(mesh, stair, 'landing', levelId, i);
     // landing has no canonical subcategory in ADR-377 taxonomy → parent stair style.
     attachStairEdges(tagged);
+    out.push(tagged);
+  }
+  return out;
+}
+
+// ── Waist slab (μηρός — monolithic solid body) ───────────────────────────────
+
+/**
+ * ADR-358 (2026-07-21) — the inclined structural slab under the steps (Revit
+ * "Monolithic Stair"). Pure geometry lives in `stair-waist-slabs.ts`; here we stamp
+ * the shared stair identity + edges so it picks/styles like any stair component.
+ * Empty for open/stringer structures.
+ */
+function buildWaistMeshes(
+  stair: StairEntity,
+  baseY: number,
+  sceneToM: number,
+  levelId?: string,
+): THREE.Mesh[] {
+  const out: THREE.Mesh[] = [];
+  for (const mesh of buildWaistSlabMeshes(stair, baseY, sceneToM)) {
+    const tagged = tagStairMesh(mesh, stair, 'waist', levelId);
+    attachStairEdges(tagged); // no subcategory → parent stair style (like landings)
     out.push(tagged);
   }
   return out;
@@ -418,6 +470,7 @@ export function stairToMeshes(
   const sceneToM = sceneUnitsToMeters(sceneUnits);
   const baseY = floorElevationMm * MM_TO_M + buildingBaseElevationM;
   return [
+    ...buildWaistMeshes(stair, baseY, sceneToM, levelId),
     ...buildLandingMeshes(stair, baseY, sceneToM, levelId),
     ...buildTreadMeshes(stair, baseY, sceneToM, levelId),
     ...buildRiserMeshes(stair, baseY, sceneToM, levelId),

@@ -36,6 +36,19 @@ export const BimFamilyTypeScopeSchema = z.enum(['user', 'company', 'project']);
 
 export const BimFamilyTypeOriginSchema = z.enum(['built-in', 'user', 'auto']);
 
+// ─── Shared type-param shape (ADR-583 / N.18 — no parallel twins) ────────────
+
+/**
+ * The `thickness` + opaque `dna` + optional `material` triplet common to the
+ * Wall / Slab / Roof type-param schemas. Spread into each `z.object({…})` so the
+ * shared fields live in ONE place; each schema adds its own discriminator/extras.
+ */
+const TYPE_PARAMS_COMMON_SHAPE = {
+  thickness: z.number().positive(),
+  dna: z.unknown().optional(),
+  material: z.string().min(1).optional(),
+} as const;
+
 // ─── Wall category (mirror wall-types.ts WallCategory) ───────────────────────
 
 const WallCategorySchema = z.enum([
@@ -55,9 +68,7 @@ const WallCategorySchema = z.enum([
 export const WallTypeParamsSchema = z
   .object({
     category: WallCategorySchema,
-    thickness: z.number().positive(),
-    dna: z.unknown().optional(),
-    material: z.string().min(1).optional(),
+    ...TYPE_PARAMS_COMMON_SHAPE,
   })
   .strict();
 
@@ -82,9 +93,7 @@ const SlabKindSchema = z.enum([
 export const SlabTypeParamsSchema = z
   .object({
     kind: SlabKindSchema,
-    thickness: z.number().positive(),
-    dna: z.unknown().optional(),
-    material: z.string().min(1).optional(),
+    ...TYPE_PARAMS_COMMON_SHAPE,
   })
   .strict();
 
@@ -99,9 +108,7 @@ export type SlabTypeParamsParsed = z.infer<typeof SlabTypeParamsSchema>;
  */
 export const RoofTypeParamsSchema = z
   .object({
-    thickness: z.number().positive(),
-    dna: z.unknown().optional(),
-    material: z.string().min(1).optional(),
+    ...TYPE_PARAMS_COMMON_SHAPE,
     // ─── Eave detailing (ADR-417 Φ2b) — type-level fascia/soffit appearance ────
     fasciaMaterial: z.string().min(1).optional(),
     soffitMaterial: z.string().min(1).optional(),
@@ -195,6 +202,7 @@ export const StairTypeParamsSchema = z
     stringerParams: z.unknown().optional(),
 
     waistThickness: z.number().finite().optional(),
+    landingThickness: z.number().finite().optional(),
 
     riserType: StairRiserTypeSchema,
     materials: z.unknown().optional(),

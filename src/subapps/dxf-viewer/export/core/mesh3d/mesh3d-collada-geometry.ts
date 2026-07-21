@@ -35,6 +35,9 @@ export interface ColladaMeshBlocks {
   readonly node: string;
 }
 
+/** COLLADA `<extra>` technique profile για τα δικά μας metadata (ADR-678 Φ4 round-trip identity). */
+const NESTOR_EXTRA_PROFILE = 'NESTOR';
+
 /** Ένα εύρος τριγώνων που μοιράζονται υλικό — single-material ⇒ ένα group για όλο το mesh. */
 interface TriangleGroup {
   readonly materialIndex: number;
@@ -194,6 +197,27 @@ function buildGroupsXml(
 }
 
 /**
+ * Η αρίθμηση όψεων (`faceKeyByMaterialIndex`) του mesh — ταξιδεύει node-level (ADR-678 Φ3). `null`
+ * όταν το mesh δεν είναι faced solid (legacy single-material) ή το πεδίο δεν είναι πίνακας strings.
+ * Ίδιο validation με το import-side `readFaceKeys` (gltf-scene-parse) — κοινό συμβόλαιο round-trip.
+ */
+function readFaceKeys(mesh: THREE.Mesh): readonly string[] | null {
+  const raw: unknown = mesh.userData?.['faceKeyByMaterialIndex'];
+  if (!Array.isArray(raw) || raw.length === 0) return null;
+  return raw.every((k) => typeof k === 'string') ? (raw as string[]) : null;
+}
+
+/**
+ * `<extra>` block με τα faceKeys (ένα `<k>` ανά όψη, στη σειρά των `geometry.groups` = στη σειρά των
+ * `sym_i` bindings). Ο import parser (ADR-678 Φ4) το διαβάζει για να χαρτογραφήσει `sym_i → faceKey_i`.
+ * Ο C4D R15 αγνοεί άγνωστα `<extra>` profiles → μηδέν επίπτωση στην εμφάνιση/εξαγωγή.
+ */
+function faceKeysExtraXml(faceKeys: readonly string[]): string {
+  const keys = faceKeys.map((k) => `<k>${escapeXml(k)}</k>`).join('');
+  return `<extra><technique profile="${NESTOR_EXTRA_PROFILE}"><face_keys>${keys}</face_keys></technique></extra>`;
+}
+
+/**
  * Ένα mesh → `<geometry>` + `<node>`. Επιστρέφει null για mesh χωρίς θέσεις (τίποτα να γραφτεί).
  * Τα ids είναι index-based (`geom_k`/`node_k`) — μηδέν κίνδυνος άκυρου xs:ID από ονόματα· το
  * αναγνώσιμο όνομα μπαίνει (escaped) στο `name=`.
@@ -232,9 +256,12 @@ export function buildColladaMeshBlocks(
     `<geometry id="${geomId}" name="${safeName}"><mesh>${sources.join('')}` +
     `<vertices id="${ids.verticesId}"><input semantic="POSITION" source="#${geomId}_pos"/></vertices>` +
     `${triangles.join('')}</mesh></geometry>`;
+  const faceKeys = readFaceKeys(mesh);
+  const extra = faceKeys !== null ? faceKeysExtraXml(faceKeys) : '';
   const node =
     `<node id="node_${index}" name="${safeName}" type="NODE"><instance_geometry url="#${geomId}">` +
-    `<bind_material><technique_common>${bindings.join('')}</technique_common></bind_material></instance_geometry></node>`;
+    `<bind_material><technique_common>${bindings.join('')}</technique_common></bind_material></instance_geometry>` +
+    `${extra}</node>`;
 
   return { geometry: geometryXml, node };
 }

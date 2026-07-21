@@ -2880,6 +2880,7 @@
         "width": "Πλάτος",
         "stepCount": "Πλήθος Σκαλιών",
         "waistThickness": "Πάχος Πλάκας",
+        "landingThickness": "Πάχος Πλατύσκαλου",
         "storyCount": "Διανυόμενοι Όροφοι",
         "storyHeight": "Ύψος Ορόφου",
         "flight2TurnDirection": "Στροφή Σκέλους 2",
@@ -5743,6 +5744,15 @@
       "codeViolations": {
         "tooSmallForKind": "Η διάνοιξη είναι μικρότερη από το ελάχιστο για τον τύπο",
         "outlineAtSlabEdge": "Το άνοιγμα φτάνει ως το χείλος της πλάκας"
+      }
+    }
+  },
+  "genericSolid": {
+    "validation": {
+      "hardErrors": {
+        "nonPositiveDimension": "Οι διαστάσεις πρέπει να είναι πεπερασμένες και μεγαλύτερες από 0",
+        "degenerateDimension": "Διάσταση κάτω από το ελάχιστο (1mm) — εκφυλισμένο σχήμα",
+        "tooFewSides": "Το πρίσμα χρειάζεται τουλάχιστον 3 πλευρές"
       }
     }
   },

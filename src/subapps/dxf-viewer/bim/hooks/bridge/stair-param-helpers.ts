@@ -164,6 +164,11 @@ export function readStairNumericField(
     // the SSoT default (150 mm) so the combobox always shows a live number.
     case STAIR_RIBBON_KEYS.params.waistThickness:
       return String(p.waistThickness ?? DEFAULT_WAIST_SLAB_THICKNESS_MM);
+    // ADR-358 (2026-07-21) — landing depth (plain mm). Surface the EFFECTIVE value
+    // ("Same as Run"): own override → waist → 150 mm default, so the combobox always
+    // shows the depth actually rendered in 3D.
+    case STAIR_RIBBON_KEYS.params.landingThickness:
+      return String(p.landingThickness ?? p.waistThickness ?? DEFAULT_WAIST_SLAB_THICKNESS_MM);
     case STAIR_RIBBON_KEYS.params.winderCount:
       return p.variant.kind === 'l-shape' && p.variant.cornerStyle === 'winders'
         ? String(p.variant.winderCount)
@@ -325,6 +330,7 @@ export function patchStairNumericParam(
     case STAIR_RIBBON_KEYS.params.storyCount:    return patchStoryCount(prev, numeric, ctx);
     case STAIR_RIBBON_KEYS.params.storyHeight:   return patchStoryHeight(prev, numeric);
     case STAIR_RIBBON_KEYS.params.waistThickness: return patchWaistThickness(prev, numeric);
+    case STAIR_RIBBON_KEYS.params.landingThickness: return patchLandingThickness(prev, numeric);
     case STAIR_RIBBON_KEYS.params.winderCount:   return patchLShapeWinderCount(prev, numeric);
     default: return null;
   }
@@ -453,6 +459,21 @@ function patchWaistThickness(prev: StairParams, rawMm: number): StairParams | nu
   const current = prev.waistThickness ?? DEFAULT_WAIST_SLAB_THICKNESS_MM;
   if (waistThickness === current) return null;
   return { ...prev, waistThickness };
+}
+
+/**
+ * ADR-358 (2026-07-21) — patch the 3D landing depth (mm), Revit "Total Depth".
+ * Input in plain mm, stored unscaled; drives `StairToThreeConverter` only (no
+ * geometry recompute). Clamp [20, 400] — a THINNER floor than the RC waist [80,400]
+ * so a timber/thin landing (e.g. 40 mm) is reachable, decoupled from the concrete
+ * waist minimum. No-op when unchanged vs the effective current value (own → waist
+ * → 150 mm default) so re-selecting "Same as Run" doesn't churn the entity.
+ */
+function patchLandingThickness(prev: StairParams, rawMm: number): StairParams | null {
+  const landingThickness = Math.round(clamp(rawMm, 20, 400));
+  const current = prev.landingThickness ?? prev.waistThickness ?? DEFAULT_WAIST_SLAB_THICKNESS_MM;
+  if (landingThickness === current) return null;
+  return { ...prev, landingThickness };
 }
 
 // ── Geometry recompute ───────────────────────────────────────────────────────

@@ -102,6 +102,11 @@ const STEP_COUNT_OPTIONS = literalNumberOptions([3, 4, 5, 6, 7, 8, 9, 10, 11, 12
 // 150 mm (`DEFAULT_WAIST_SLAB_THICKNESS_MM`). Plain mm (not scene-scaled).
 const WAIST_THICKNESS_MM_OPTIONS = literalNumberOptions([120, 140, 150, 160, 180, 200, 220, 250]);
 
+// ADR-358 (2026-07-21) — 3D landing structural depth (mm), Revit "Total Depth".
+// Broader/thinner range than the RC waist so a timber/thin landing (40–60 mm) is
+// reachable; empty ⇒ "Same as Run" (inherits waistThickness). Plain mm.
+const LANDING_THICKNESS_MM_OPTIONS = literalNumberOptions([40, 60, 80, 100, 120, 150, 180, 200, 250]);
+
 const STORY_COUNT_OPTIONS = literalNumberOptions([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
 
 // ADR-358 Phase 7b2b-β Stream F — turn direction options for flight2/3.
@@ -345,6 +350,22 @@ export const CONTEXTUAL_STAIR_TAB: RibbonTab = {
                 commandKey: STAIR_RIBBON_KEYS.params.waistThickness,
                 comboboxWidthPx: 70,
                 options: WAIST_THICKNESS_MM_OPTIONS,
+                numericInput: { quantityKind: 'model-length' },
+              },
+            },
+            {
+              // ADR-358 (2026-07-21) — 3D landing structural depth (mm), Revit
+              // "Monolithic Landing → Total Depth". Empty ⇒ inherits the waist
+              // ("Same as Run"). Thinner floor (20 mm) than the RC waist so a
+              // timber/thin landing renders. 3D-only (no geometry recompute).
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'stair.landingThickness',
+                labelKey: 'ribbon.commands.stairEditor.landingThickness',
+                commandKey: STAIR_RIBBON_KEYS.params.landingThickness,
+                comboboxWidthPx: 70,
+                options: LANDING_THICKNESS_MM_OPTIONS,
                 numericInput: { quantityKind: 'model-length' },
               },
             },

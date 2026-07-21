@@ -1,6 +1,6 @@
 # ADR-678 — C4D → Νέστωρ round-trip: εισαγωγή υλικών/χρωμάτων από OBJ+MTL
 
-**Status:** 🟡 IN PROGRESS (Φ1 + Φ1.1 + **Φ3 glTF per-face** done· Φ2 textures + Φ3 OBJ/per-building-plaster TODO)
+**Status:** 🟡 IN PROGRESS (Φ1 + Φ1.1 + **Φ3 glTF per-face** + **Φ4 COLLADA `.dae` per-face import** [code+jest ✅, R15 ground-truth pending] done· Φ2 textures + Φ3 OBJ/per-building-plaster TODO)
 **Date:** 2026-07-19
 **Owner:** Giorgio
 **Σχετικά:** ADR-668 (mesh3d export OBJ/GLTF) · ADR-539 (per-face appearance / Cinema 4D Polygon Mode) · ADR-511 (wall-covering material catalog SSoT)
@@ -104,14 +104,102 @@ SyncContext). Το single-building/single-user project το θέλει έτσι.
 | **Φ1** | Ανά-στοιχείο χρώμα/υλικό: OBJ+MTL parse · name→bimId match · apply base `'*'` · pure core + orchestrator + 14 tests | 🟢 CORE DONE |
 | **Φ1-UI** | Κουμπί «Εισαγωγή υλικών από C4D» (LevelPanel) + file picker (.obj/.mtl) + toast αποτελέσματος | 🟢 DONE |
 | **Φ1.1** | Σοβάς round-trip (merged skin → ομοιόμορφος σοβάς μελών, ADR-449 command) + skip αμετάβλητων (`mat-*`/`elem-*`/`mat_<hex6>`) · +12 tests (26 σύνολο) | 🟢 DONE |
-| **Φ2** | Textures (`map_Kd` εικόνες → BIM texture registry, UV) | ⬜ TODO |
+| **Φ2** | **Textures/υλικά round-trip (κοινή βιβλιοθήκη 🅱️ + ξένες υφές 🅰️).** 3 βήματα: **Βήμα 1** export round-trip identity (per-face υλικά ονομάζονται με το Nestor materialId αντί `tex_*`) · **Βήμα 2** import recognition catalog `mat-*` + per-entity baseline · **Βήμα 3 (🅰️)** texture upload (`<library_images>` → `uploadMaterialTextureMap` → νέο `bmat_*`). | 🟡 **Βήμα 1 code+jest DONE** (🅱️ `bmat_*` round-trip)· Βήματα 2-3 TODO |
 | **Φ3** | **Per-face round-trip μέσω glTF** (named array-material primitives → `FaceKey`, ζωντανό ΚΑΙ σε επαναλαμβανόμενο γύρο συνεργασίας) — **OBJ παραμένει per-object dominant** (stock `OBJExporter` δεν είναι group-aware, §3) | 🟢 **DONE (glTF)** |
 | **Φ3.1α** | **Per-face OBJ export**: δικός μας group-aware OBJ writer (`mesh3d-obj-writer.ts`) — ΕΝΑ `o <object>` με **πολλά `usemtl` blocks** (ένα ανά `geometry.group`, σειρά = `buildFacedIndex`), όπως Blender/C4D. Single-material = byte-identical με stock. | 🟢 **DONE (export)** |
 | **Φ3.1β** | **Per-face OBJ re-import**: το OBJ **δεν** κουβαλά την αρίθμηση όψεων όπως το glTF (`userData.faceKeyByMaterialIndex`)· μόνο όνομα υλικού + σειρά επιβιώνουν στο C4D. Blocked σε **πραγματικό C4D-round-tripped OBJ** για μέτρηση αν το C4D διατηρεί τη σειρά όψεων (order-based) ή χρειάζεται geometry-based αντιστοίχιση («ground-truth ΠΡΙΝ parser»). | ⬜ TODO (evidence-first) |
 | **Φ3.1γ** | per-building/per-side σοβάς (πέρα από το ομοιόμορφο-ζώνης της Φ1.1) | ⬜ TODO |
 | **Φ3.1 (COLLADA)** | **Per-face COLLADA `.dae` export** — το ΜΟΝΟ εγγράψιμο format που ο C4D **R15 διαβάζει ΜΕ χρώματα** (ο R15 OBJ importer δεν διαβάζει υλικά, μετρημένο). Δικός μας 1.4.1 writer, per-group `<triangles>` + `<bind_material>` + `<bind_vertex_input>` (native C4D δομή, Φ3.1δ). Βλ. ADR-668 changelog 2026-07-21. | ✅ **DONE — ΕΠΙΒΕΒΑΙΩΜΕΝΟ στον R15** (per-face χρώμα κολώνας ορατό, ground-truth Giorgio 2026-07-21) |
+| **Φ4 (COLLADA import)** | **COLLADA `.dae` re-import** (C4D R15 → Νέστωρ). Νέος parser `dae-material-parse.ts` → `ObjectMaterialAssignment[]` (+`faceMaterials`) + `Map<name, ImportedMaterial>` → **αυτούσιος** ο κοινός πυρήνας (`applyImportedAppearance`, `charset:'unicode'`). Per-face **μόνο για δικό μας `.dae`** (faceKeys σε `<extra profile="NESTOR">` + `sym_i`)· **ξένος/C4D `.dae` → per-object dominant** (ο R15 exporter χάνει extras+symbols, βλ. changelog 2026-07-21 R15-GT). +wrapper + UI `.dae` branch. | 🟡 **per-object ΕΠΙΒΕΒΑΙΩΜΕΝΟ με R15 output** (42/42 objects διαβάζονται)· **per-face μέσω C4D = ΑΔΥΝΑΤΟ** (R15 χάνει face-identity)· **textured import = Φ2 TODO** |
 
 ## 6. Changelog
+
+- **2026-07-21 (Φ4/Φ2 — R15 GROUND-TRUTH #2: duplicate material names, `Ισόγειο (22)`)** — Ο Giorgio
+  έβαψε μια κολώνα **ροζ** στον C4D με νέο υλικό ονόματι `Mat`· re-import **βάφτηκε ΓΚΡΙ** (όχι ροζ).
+  **Ρίζα:** ο C4D R15 επιτρέπει **duplicate material names** — το `.dae` είχε ΔΥΟ `<material name="Mat">`
+  (ID1 γκρι `#cccccc`, ID3 ροζ `#ff80ff`). Ο parser χαρτογραφούσε **by name** → ο name-keyed πίνακας
+  κρατούσε ΜΟΝΟ το πρώτο "Mat" (γκρι)· ο κόμβος της κολώνας (`target="#ID3"`) → name "Mat" → γκρι.
+  **Fix (`dae-material-parse.ts` `parseMaterials`):** COLLADA binding γίνεται **by ID** (μοναδικό),
+  όχι by name (πρακτική των μεγάλων). Σε σύγκρουση ονόματος με **διαφορετικό** flat χρώμα, το 2ο+ υλικό
+  παίρνει μοναδικό όνομα `<name>#<id>` (π.χ. `Mat#ID3`) ώστε ο κόμβος να πάρει το ΔΙΚΟ του χρώμα. Ίδιο
+  χρώμα/όνομα → κοινό όνομα (τα Nestor `bmat_*`/`mat-*` που dedup-άρουν νόμιμα δεν χαλάνε). Μετά το fix:
+  κολώνα → `{colorHex:'#ff80ff'}` = **ροζ ✅** (επαληθευμένο στο πραγματικό αρχείο). +unit test (dup "Mat").
+  ⚠️ Ισχύει για **flat χρώμα**· duplicate **textured** names (Βήμα 3) δεν καλύπτονται ακόμα.
+- **2026-07-21 (Φ2 Βήμα 1 — EXPORT round-trip identity· η βάση για τα υλικά round-trip)** —
+  **Ρίζα (μετρημένη από `Ισόγειο.nestor.json`):** το export ονόμαζε τα per-face textured υλικά
+  `tex_<υφή>` (Φ5.1c), ΟΧΙ με το Nestor material id — άρα στο re-import το `tex_wood_albedo` δεν
+  λυνόταν σε κανένα υλικό (`resolveKnownId`→null) → no-op. Το baseline έδειχνε ΟΛΑ τα textured
+  `#ffffff` (λόγω `applyTextureSet`) → `detectRepaint` άχρηστο για υφές. **Χωρίς σταθερή ταυτότητα
+  στο export, ΚΑΝΕΝΑ import υλικών δεν δουλεύει.** **Fix (2 σημεία, reuse-only):**
+  - `bim-3d/materials/MaterialCatalog3D.ts` `getFaceMaterial3D` — σφραγίζει `userData.nestorMaterialId
+    = materialId` στο (cached) per-face textured υλικό. Σταθερό ανά `bmat_*` (μοναδικό source→clone)·
+    catalog `mat-*` που μοιράζονται texture key κρατούν το τελευταίο id (αποδεκτό — ίδια εμφάνιση·
+    Βήμα 2 το ακριβοποιεί).
+  - `export/core/mesh3d/mesh3d-materials.ts` `resolveMaterialName` — νέα προτεραιότητα #2: αν το
+    per-face υλικό (`matId=null`) έχει σφραγισμένο `nestorMaterialId` → όνομα = **αυτό** (`bmat_oak`),
+    πριν πέσει στο legacy `tex_<υφή>` fallback (#3, για materials χωρίς id). Το texture filename
+    ακολουθεί (`textures/bmat_oak.jpg`). **Φ5.1c dedup διατηρείται** (διαφορετικά ids → διαφορετικά
+    αρχεία), τώρα by-identity αντί by-texture-path.
+  - **Αποτέλεσμα:** per-face `bmat_*` υλικό → export name `bmat_oak` → re-import
+    `resolveImportAppearance('bmat_oak')` → `{materialId:'bmat_oak'}` (name-based, ήδη υποστηριζόμενο).
+    Ξεκλειδώνει το 🅱️ round-trip **user materials**. Catalog `mat-*` (Βήμα 2) + ξένες υφές (Βήμα 3) TODO.
+  - **Tests (65 πράσινα):** identity naming (`bmat_*` όχι `tex_*`, dedup, legacy fallback αμετάβλητο) +
+    end-to-end round-trip (`assignExportMaterials`→`serialiseCollada`→`parseColladaScene`→resolve) +
+    regression Φ5/collada/face-appearance. jscpd καθαρό.
+  - **⚠️ Ground-truth PENDING (Giorgio):** (α) export → επιβεβαίωσε ότι τα ονόματα είναι `bmat_*`/`mat-*`
+    (όχι `tex_*`)· (β) **regression Φ5.2**: οι υφές πρέπει να ΦΑΙΝΟΝΤΑΙ ακόμα στον R15 (τα ονόματα
+    άλλαξαν, η δομή/υφές ίδιες)· (γ) 🅱️: ο συνεργάτης εφαρμόζει υπάρχον `bmat_*` σε ΟΛΟ στοιχείο → import.
+- **2026-07-21 (Φ4 — R15 GROUND-TRUTH: πραγματικό C4D `.dae` output, `Ισόγειο-C4D-EXPORT.dae`)** —
+  Ο Giorgio έβαψε στον C4D R15.037 και re-import — **δεν άλλαξε τίποτα**. Ανάλυση του πραγματικού
+  αρχείου αποκάλυψε **δύο** πράγματα:
+  - **🔴 Bug (διορθώθηκε):** ο native COLLADA exporter του C4D R15 γράφει **`symbol="Material1"`** για
+    ΟΛΑ τα `<instance_material>` (ΟΧΙ το δικό μας `sym_i`) και **ενώνει** τα per-face groups σε ΕΝΑ
+    `<triangles>` ανά geometry. Ο parser απαιτούσε `sym_i` → `symbolIndex` επέστρεφε `null` → **όλα** τα
+    bindings απορρίπτονταν → `materialName: null` → no-op (0/42 objects). **Fix:** `nodeBindings`
+    επιστρέφει πλέον ΚΑΙ `ordered` λίστα (dominant per-object, ανεξάρτητα symbol) ΚΑΙ `bySymbolIndex`
+    (per-face μόνο όταν υπάρχουν `sym_i` + faceKeys). Μετά το fix: **42/42 objects** διαβάζονται σωστά.
+  - **⚠️ Θεμελιώδη όρια (ΟΧΙ bug):** (α) **per-face round-trip μέσω C4D = αδύνατο** — ο R15 exporter
+    πετά το `<extra profile="NESTOR">` ΚΑΙ ενώνει τα groups, άρα η ανά-όψη ταυτότητα χάνεται εντελώς
+    (per-face δουλεύει ΜΟΝΟ όταν το `.dae` δεν πέρασε από C4D). (β) **Το `Trunk.1` του Giorgio ήταν
+    ΥΦΗ** (`bamboo/Ξερό-bark-21.jpg`), όχι flat χρώμα· το import υλικών κατεβάζει **χρώματα + γνωστά
+    library υλικά**, ΟΧΙ νέες υφές από τον δίσκο του συνεργάτη — αυτό είναι **Φ2 (textures import),
+    ⬜ TODO**. Στο συγκεκριμένο αρχείο ΟΛΑ τα υλικά ήταν είτε DNA (`elem-*`/`mat-*` → σωστό no-op)
+    είτε textured (`tex_*`, `Trunk.1` → Φ2), άρα κανένα «ξένο flat χρώμα» να κατέβει.
+  - **Πρακτικό συμπέρασμα:** για να δει ο χρήστης βαφή να «κατεβαίνει» από C4D **σήμερα**, βάφει με
+    **flat χρώμα** (όχι υφή) → εφαρμόζεται **per-object** (όλο το στοιχείο, αφού ο C4D ένωσε τις όψεις).
+    Per-face + textures από C4D = μελλοντικές φάσεις (geometry-based matching / Φ2).
+  - **Tests:** +C4D-style fixture (`symbol="Material1"`, ID targets, χωρίς `<extra>` → per-object). jscpd καθαρό.
+- **2026-07-21 (Φ4 — COLLADA `.dae` per-face IMPORT)** — Το **import** σκέλος του full round-trip:
+  ο Νέστωρ διαβάζει `.dae` που γύρισε ο συνεργάτης (C4D R15) και «κατεβάζει» χρώματα/υλικά **ανά όψη**
+  στα ίδια BIM στοιχεία. **Λύνει το OBJ κενό (Φ3.1β):** εκεί το per-face re-import ήταν blocked γιατί
+  το OBJ δεν κουβαλά την αρίθμηση όψεων· το COLLADA το κουβαλά πλέον σε `<extra><technique
+  profile="NESTOR"><face_keys><k>…</k></face_keys>` (write-side: `mesh3d-collada-geometry.ts`, ο R15
+  αγνοεί άγνωστα `<extra>` profiles → μηδέν regression). **Αρχιτεκτονική = mirror OBJ/glTF, μηδέν νέο
+  downstream:**
+  - **Parser** `io/mesh3d-material-import/dae-material-parse.ts` (pure, testable, native `DOMParser`):
+    `<library_materials>`+`<library_effects>` → `Map<name, ImportedMaterial>` (flat `<diffuse><color>`
+    sRGB → hex· textured `<diffuse><texture>` → skip, name-based· `<transparency>` → opacity)·
+    `<library_visual_scenes>` `<node>` → objects· `<instance_material symbol="sym_i" target="#mat_j">`
+    (index `i` από το `sym_i`, ΟΧΙ θέση) ζιπαρισμένο με τα `<extra>` faceKeys → `faceMaterials`. Node
+    χωρίς `<extra>` → dominant per-object (legacy-safe). **Ίδιο σχήμα εξόδου** με `obj-mtl-parse` /
+    `gltf-scene-parse` → ο κοινός πυρήνας (`applyImportedAppearance` → `matchObjectsToEntities` →
+    `resolveImportAppearance` → `SetFaceAppearanceCommand`, ΕΝΑ undo) τρέχει **αυτούσιος**.
+  - **Wrapper** `import-collada-appearance.ts` (λεπτός, `charset:'unicode'` — το `.dae` είναι UTF-8 XML,
+    ίδιο με glTF· + optional `.nestor.json` baseline για repaint detection, όπως glTF).
+  - **UI** `C4dMaterialImportButton.tsx`: +`.dae` στο accept + format branch (ΕΝΑ κουμπί, καμία νέα i18n).
+  - **SSoT (boy scout, N.18):** εξήχθησαν δύο κοινά modules για να ΜΗΝ γίνουν structural clones —
+    `@/lib/xml/xml-dom.ts` (generic parse+DOM helpers, ο Tekton reader refactor-ίστηκε να τα reuse) +
+    `io/mesh3d-material-import/rgb-unit-hex.ts` (RGB 0..1 → hex, κοινό OBJ `Kd` + COLLADA `<color>`).
+    `jscpd:diff` καθαρό.
+  - **Round-trip identity:** τα αμετάβλητα textured υλικά (Φ5.1c `tex_*`) **δεν** είναι DNA/known →
+    `resolveImportAppearance` → `null` (no-op, σωστό — η όψη κρατά την υφή της). Repaint/known/flat →
+    override στη σωστή όψη.
+  - **Tests (jest, 106 πράσινα):** `dae-material-parse.test.ts` (round-trip guard: `serialiseCollada`
+    → `parseColladaScene`, per-face/textured/opacity/multi-node/escaping/errors)· wrapper wiring·
+    `<extra>` write-side· `xml-dom` SSoT· regression Tekton + OBJ.
+  - **⚠️ ΕΚΚΡΕΜΕΙ R15 ground-truth (Giorgio):** βάψε μια όψη στοιχείου στον C4D R15 → export `.dae` →
+    re-import στον Νέστωρ → η όψη παίρνει το νέο χρώμα/υλικό. Μέχρι τότε το Φ4 είναι code+jest DONE, όχι
+    πλήρως επιβεβαιωμένο end-to-end.
 
 - **2026-07-21 (Φ3.1δ — COLLADA binding: αντιγραφή native C4D δομής)** — **Bug:** ο R15 φόρτωνε τα
   υλικά με σωστά χρώματα στο Material Manager αλλά άφηνε τη γεωμετρία **γκρι** — **ακόμα και single-

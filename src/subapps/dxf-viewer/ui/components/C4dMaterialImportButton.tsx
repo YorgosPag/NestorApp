@@ -1,10 +1,10 @@
 'use client';
 
 /**
- * C4dMaterialImportButton — ADR-678 Φ1 UI · **ADR-683 Φ2-UI (glTF/GLB)**. Κουμπί «Εισαγωγή υλικών
- * από 3Δ αρχείο»: ο χρήστης επιλέγει ό,τι του γύρισε ο συνεργάτης — `.glb`/`.gltf` (σύγχρονος
- * παραλήπτης) ή `.obj` + `.mtl` (legacy C4D R15) — και τα χρώματα/υλικά «κατεβαίνουν» πίσω στα
- * ίδια BIM στοιχεία (name-based).
+ * C4dMaterialImportButton — ADR-678 Φ1 UI · **ADR-683 Φ2-UI (glTF/GLB)** · **ADR-678 Φ4 (COLLADA
+ * `.dae`, per-face)**. Κουμπί «Εισαγωγή υλικών από 3Δ αρχείο»: ο χρήστης επιλέγει ό,τι του γύρισε ο
+ * συνεργάτης — `.glb`/`.gltf` (σύγχρονος παραλήπτης), `.dae` (C4D R15, per-face) ή `.obj` + `.mtl`
+ * (legacy C4D R15) — και τα χρώματα/υλικά «κατεβαίνουν» πίσω στα ίδια BIM στοιχεία (name-based).
  *
  * **ΕΝΑ κουμπί για όλα τα formats**, όχι ένα ανά format: είναι η πρακτική των μεγάλων (Revit
  * «Link/Import» = ένα dialog με format dropdown· ίδιο ArchiCAD/C4D). Ο διαχωρισμός γίνεται από την
@@ -32,6 +32,7 @@ import {
   type ImportedAppearanceResult,
 } from '../../io/mesh3d-material-import/import-c4d-materials';
 import { importGltfAppearance } from '../../io/mesh3d-roundtrip/import-gltf-appearance';
+import { importColladaAppearance } from '../../io/mesh3d-material-import/import-collada-appearance';
 import { buildKnownMaterialResolver } from '../../io/mesh3d-material-import/known-import-materials';
 import type { GltfObjectRecord } from '../../io/mesh3d-roundtrip/gltf-scene-parse';
 import { isImportableNode } from '../../io/mesh3d-roundtrip/import-gltf-meshes';
@@ -45,6 +46,12 @@ type ImportPayload =
       readonly data: ArrayBuffer | string;
       readonly file: File;
       /** ADR-683 §7 — manifest baseline από συνοδό `.nestor.json` (repaint detection). */
+      readonly baseline?: ReadonlyMap<string, string>;
+    }
+  | {
+      /** ADR-678 Φ4 — COLLADA `.dae` (C4D R15, per-face). */
+      readonly kind: 'dae';
+      readonly daeText: string;
       readonly baseline?: ReadonlyMap<string, string>;
     }
   | { readonly kind: 'obj'; readonly objText: string; readonly mtlText: string };
@@ -76,6 +83,12 @@ async function readImportFiles(files: FileList): Promise<ImportPayload | null> {
       file: gltf,
       baseline: await readManifestBaseline(list),
     };
+  }
+
+  // COLLADA `.dae` (C4D R15, per-face) — XML κείμενο· το ίδιο `.nestor.json` baseline με glTF.
+  const dae = list.find((f) => /\.dae$/i.test(f.name));
+  if (dae) {
+    return { kind: 'dae', daeText: await dae.text(), baseline: await readManifestBaseline(list) };
   }
 
   const obj = list.find((f) => /\.obj$/i.test(f.name));
@@ -141,8 +154,11 @@ export function C4dMaterialImportButton() {
         const gltfResult = await importGltfAppearance(levels, payload.data, resolveKnownId, payload.baseline);
         result = gltfResult.appearance;
         // ADR-683 Φ3β — μόνο το glTF κουβαλά γεωμετρία, άρα μόνο από εκεί μπορεί να προκύψει
-        // νέα οντότητα. Ο OBJ δρόμος δεν έχει τι να προσφέρει εδώ (μηδέν κορυφές).
+        // νέα οντότητα. Ο OBJ/DAE δρόμος δεν έχει τι να προσφέρει εδώ (μηδέν κορυφές).
         importableRecords = gltfResult.unmatchedRecords.filter(isImportableNode);
+      } else if (payload.kind === 'dae') {
+        // ADR-678 Φ4 — COLLADA per-face: text/XML parsing → κοινός πυρήνας (όπως OBJ, sync).
+        result = importColladaAppearance(levels, payload.daeText, resolveKnownId, payload.baseline);
       } else {
         result = importC4dMaterials(levels, payload, resolveKnownId);
       }
@@ -184,7 +200,7 @@ export function C4dMaterialImportButton() {
       <input
         ref={inputRef}
         type="file"
-        accept=".glb,.gltf,.obj,.mtl,.json"
+        accept=".glb,.gltf,.dae,.obj,.mtl,.json"
         multiple
         hidden
         onChange={(e) => { void handleFiles(e.target.files); e.target.value = ''; }}
