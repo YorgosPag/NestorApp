@@ -32,5 +32,7 @@ export function genericSolidDocToEntity(doc: GenericSolidDoc): GenericSolidEntit
     validation,
     visible: true,
     ifcType: 'IfcBuildingElementProxy',
+    // ADR-539 / ADR-684 Φ4-C — re-hydrate τη βαφή εδρών ώστε να επιβιώνει το reload.
+    ...(doc.faceAppearance !== undefined ? { faceAppearance: doc.faceAppearance } : {}),
   } as GenericSolidEntity;
 }

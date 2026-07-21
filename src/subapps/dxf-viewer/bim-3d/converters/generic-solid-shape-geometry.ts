@@ -111,11 +111,19 @@ function buildPyramidGeometry(widthM: number, depthM: number, heightM: number): 
   const c: [number, number, number] = [hw, -hh, hd];
   const d: [number, number, number] = [-hw, -hh, hd];
   const p: [number, number, number] = [0, hh, 0];
-  // Εξωστρεφής περιέλιξη (βλ. τεκμηρίωση στο ADR-684): βάση κάτω, 4 τριγωνικές όψεις.
+  // Εξωστρεφής περιέλιξη (βλ. τεκμηρίωση στο ADR-684): βάση κάτω (2 τρίγωνα), 4 τριγωνικές όψεις.
   const tris = [a, b, c, a, c, d, b, a, p, c, b, p, d, c, p, a, d, p];
   const positions = new Float32Array(tris.flat());
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
   geometry.computeVertexNormals();
+  // ADR-684 Φ4-C — geometry groups ώστε κάθε όψη να είναι per-face pickable/paintable, ίδια σειρά με
+  // το `genericSolidFaceKeys('pyramid')` = [bottom, side:0..3]. Οι THREE primitives τα δίνουν έτοιμα·
+  // η hand-built πυραμίδα πρέπει να τα δηλώσει ρητά (βάση = 6 κορυφές, κάθε πλευρά = 3).
+  geometry.addGroup(0, 6, 0); // βάση → materialIndex 0 (bottom)
+  geometry.addGroup(6, 3, 1); // πλευρά 1 → side:0
+  geometry.addGroup(9, 3, 2); // πλευρά 2 → side:1
+  geometry.addGroup(12, 3, 3); // πλευρά 3 → side:2
+  geometry.addGroup(15, 3, 4); // πλευρά 4 → side:3
   return geometry;
 }

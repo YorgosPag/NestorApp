@@ -33,6 +33,7 @@ import { generateGenericSolidId } from '@/services/enterprise-id-convenience';
 import { firestoreQueryService } from '@/services/firestore';
 import { buildBimScopeConstraints, bimScopeWriteFields } from '../../persistence/bim-floor-scope';
 import type { BimValidation } from '../../types/bim-base';
+import type { FaceAppearanceMap } from '../../types/face-appearance-types';
 import type {
   GenericSolidEntity,
   GenericSolidGeometry,
@@ -57,6 +58,8 @@ export interface GenericSolidDoc {
   readonly buildingId?: string;
   readonly floorId?: string;
   readonly layerId?: string;
+  /** ADR-539 / ADR-684 Φ4-C — per-face appearance override (Cinema 4D «Polygon Mode»). */
+  readonly faceAppearance?: FaceAppearanceMap;
   readonly createdAt: Timestamp;
   readonly createdBy: string;
   readonly updatedAt: Timestamp;
@@ -81,6 +84,8 @@ export interface GenericSolidSaveInput {
   readonly buildingId?: string;
   readonly floorId?: string;
   readonly layerId?: string;
+  /** ADR-539 / ADR-684 Φ4-C — per-face appearance override (round-trip της βαφής εδρών). */
+  readonly faceAppearance?: FaceAppearanceMap;
 }
 
 export interface GenericSolidUpdateInput {
@@ -89,6 +94,12 @@ export interface GenericSolidUpdateInput {
   readonly geometry?: GenericSolidGeometry;
   readonly name?: string;
   readonly layerId?: string;
+  /**
+   * ADR-539 / ADR-684 Φ4-C — per-face appearance edit σε ΥΠΑΡΧΟΝ στερεό. Η faced βαφή persist-άρει
+   * μέσω `updateDoc` (μη-πρώτη εγγραφή), οπότε το patch ΠΡΕΠΕΙ να το μεταφέρει αλλιώς οι βαμμένες
+   * έδρες χάνονται στο reload (mirror foundation).
+   */
+  readonly faceAppearance?: FaceAppearanceMap;
 }
 
 export class GenericSolidFirestoreService {
@@ -135,6 +146,7 @@ export class GenericSolidFirestoreService {
     if (input.name !== undefined) base.name = input.name;
     if (input.buildingId !== undefined) base.buildingId = input.buildingId;
     if (input.layerId !== undefined) base.layerId = input.layerId;
+    if (input.faceAppearance !== undefined) base.faceAppearance = input.faceAppearance;
 
     await setDoc(ref, base);
     return base as unknown as GenericSolidDoc;
@@ -150,6 +162,7 @@ export class GenericSolidFirestoreService {
     if (patch.geometry !== undefined) payload.geometry = patch.geometry;
     if (patch.name !== undefined) payload.name = patch.name;
     if (patch.layerId !== undefined) payload.layerId = patch.layerId;
+    if (patch.faceAppearance !== undefined) payload.faceAppearance = patch.faceAppearance;
 
     await updateDoc(this.docRef(genericSolidId), payload);
   }
@@ -174,5 +187,7 @@ export function genericSolidEntityToSaveInput(entity: GenericSolidEntity): Gener
     name: entity.name,
     layerId: entity.layerId,
     floorId: entity.floorId,
+    // ADR-539 / ADR-684 Φ4-C — μετάφερε τη βαφή εδρών στο persisted doc (round-trip).
+    ...(entity.faceAppearance !== undefined && { faceAppearance: entity.faceAppearance }),
   };
 }

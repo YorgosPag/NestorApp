@@ -83,6 +83,8 @@ const useGenericSolidPersistenceBase = createBimEntityPersistenceHook<
         geometry: e.geometry,
         name: e.name,
         layerId: e.layerId,
+        // ADR-539 / ADR-684 Φ4-C — persist τις βαφές εδρών στο υπάρχον doc (αλλιώς χάνονται στο reload).
+        faceAppearance: e.faceAppearance,
       }),
     remove: (svc, id) => svc.deleteGenericSolid(id),
     subscribe: (svc, onDocs, onErr) =>

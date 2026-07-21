@@ -19,8 +19,11 @@ import * as THREE from 'three';
 import type { GenericSolidEntity } from '../../bim/entities/generic-solid/generic-solid-types';
 import { sceneUnitsToMeters } from '../../utils/scene-units';
 import { getMaterial3D } from '../materials/MaterialCatalog3D';
+import { resolveFaceMaterial } from '../materials/face-appearance-material';
 import { tagMesh } from './bim-three-shape-helpers';
+import { genericSolidFaceKeys } from './generic-solid-face-keys';
 import { buildGenericSolidShapeGeometry } from './generic-solid-shape-geometry';
+import { shouldRenderFaced } from './should-render-faced';
 
 const MM_TO_M = 0.001;
 const DEG_TO_RAD = Math.PI / 180;
@@ -42,7 +45,17 @@ export function genericSolidToObject3D(
   if (!params) return null;
 
   const { geometry, baseOffsetM } = buildGenericSolidShapeGeometry(params.shape);
-  const material = getMaterial3D(params.material ?? DEFAULT_GENERIC_SOLID_MATERIAL_ID);
+  const baseMaterialId = params.material ?? DEFAULT_GENERIC_SOLID_MATERIAL_ID;
+  const baseMaterial = getMaterial3D(baseMaterialId);
+
+  // ADR-684 Φ4-C / ADR-539 — faced (ανά-έδρα pickable/paintable) όταν το στερεό είναι βαμμένο Ή το
+  // Polygon Mode είναι ενεργό (SSoT gate). Faced → πίνακας υλικών ένα-προς-ένα με τα geometry groups,
+  // μέσω του κοινού `resolveFaceMaterial` (μηδέν νέο material building). Άβαφο + Polygon Mode κλειστό →
+  // legacy single-material path (byte-for-byte ο προηγούμενος κώδικας, μηδέν παλινδρόμηση).
+  const faceKeys = shouldRenderFaced(solid.faceAppearance) ? genericSolidFaceKeys(params.shape) : null;
+  const material: THREE.Material | THREE.Material[] = faceKeys
+    ? faceKeys.map((fk) => resolveFaceMaterial(fk, solid.faceAppearance ?? {}, baseMaterial))
+    : baseMaterial;
   const mesh = new THREE.Mesh(geometry, material);
 
   const sceneToM = sceneUnitsToMeters(params.sceneUnits ?? 'mm');
@@ -55,5 +68,9 @@ export function genericSolidToObject3D(
   // Plan CCW (+Z) maps to clockwise about world +Y (plan Y → world -Z mirror).
   mesh.rotation.y = -params.rotationDeg * DEG_TO_RAD;
 
-  return tagMesh(mesh, solid.id, 'generic-solid', params.material ?? DEFAULT_GENERIC_SOLID_MATERIAL_ID, levelId);
+  const tagged = tagMesh(mesh, solid.id, 'generic-solid', baseMaterialId, levelId);
+  // ADR-539 — ο raycaster διαβάζει `userData.faceKeyByMaterialIndex[hit.face.materialIndex]` για να
+  // βρει ποια έδρα κτυπήθηκε· χωρίς αυτό το per-face select/paint δεν έχει faceKey να γράψει.
+  if (faceKeys) tagged.userData['faceKeyByMaterialIndex'] = faceKeys;
+  return tagged;
 }
