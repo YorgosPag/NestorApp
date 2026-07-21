@@ -406,6 +406,10 @@
 
 ## Pending tasks (priority order)
 
+### 🔧 Global `sha256Hex(bytes)` browser SSoT — ~6 duplicate call sites (priorità bassa, ~1h, discovered 2026-07-21 via ADR-678 Βήμα 3)
+
+- [ ] **~6 σημεία επαναλαμβάνουν `crypto.subtle.digest('SHA-256', data)` → hex χωρίς κοινό SSoT:** `services/two-factor/two-factor-helpers.ts:69`, `services/sharing/unified-sharing.service.ts:75`, `services/session/session-device-detection.ts:137`, `services/obligations/obligation-transmittal-operations.ts:38` (`sha256Hex`), `services/file-share.service.ts:117`, `subapps/dxf-viewer/bim-3d/telemetry/session-id-generator.ts:72`. **Πρόταση:** shared `sha256Hex(bytes: BufferSource): Promise<string>` σε `src/lib/hash/` (ή reuse του `obligation` helper αν γενικευτεί) + migrate-on-touch. Το ADR-678 Βήμα 3 έφτιαξε **dxf-viewer-scoped** `texture-content-hash.ts` (`sha256HexOfFile`) — όταν γίνει το global SSoT, να καταναλώνει από εκεί. Cross-cutting sweep (>4 αρχεία, 2 domains) → **ΟΧΙ inline** (N.0.2).
+
 ### 🔴 API CRUD routes — parking/storages/properties σε `defineRoute` + **ΚΕΝΟ ΑΣΦΑΛΕΙΑΣ storages** (priorità ΑΛΤΗ για το σκέλος ασφαλείας· 2026-07-16, N.18/ADR-584 jscpd)
 
 **Βρέθηκε** τρέχοντας full `jscpd:check` κατ' εντολή Giorgio (11 clones / 643 tokens μεταξύ `api/parking/**` και `api/storages/**`). **Αποσύρθηκε ρητά** από τη φουρνιά de-duplication — δεν είναι ασφαλές refactor:
