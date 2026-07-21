@@ -148,6 +148,61 @@ describe('assignExportMaterials — per-face (array) materials (ADR-678 Φ3 / AD
   });
 });
 
+describe('assignExportMaterials — per-face textured naming (ADR-679 Φ5)', () => {
+  const texturedMaterial = (url: string): THREE.MeshStandardMaterial => {
+    const tex = new THREE.Texture();
+    tex.userData = { url };
+    const mat = new THREE.MeshStandardMaterial({ color: 0xffffff }); // λευκή βάση (PBR σύμβαση textured)
+    mat.map = tex;
+    return mat;
+  };
+
+  it('δύο διαφορετικές υφές ανά όψη → ΔΥΟ ξεχωριστές εγγραφές tex_<parent>_<stem>, όχι mat_ffffff', () => {
+    const root = new THREE.Group();
+    const matA = texturedMaterial('https://s/textures/stone/albedo.jpg');
+    const matB = texturedMaterial('https://s/textures/wood/albedo.jpg');
+    const mesh = new THREE.Mesh(new THREE.BufferGeometry(), [matA, matB]);
+    root.add(mesh);
+
+    const table = assignExportMaterials(root);
+
+    const names = table.map((e) => e.name).sort();
+    expect(names).toEqual(['tex_stone_albedo', 'tex_wood_albedo']);
+    expect(names).not.toContain('mat_ffffff'); // η παλιά white-colour collapse δεν ξαναεμφανίζεται
+
+    const stone = table.find((e) => e.name === 'tex_stone_albedo');
+    const wood = table.find((e) => e.name === 'tex_wood_albedo');
+    expect(stone?.map?.fileName).toBe('textures/tex_stone_albedo.jpg');
+    expect(wood?.map?.fileName).toBe('textures/tex_wood_albedo.jpg');
+  });
+
+  it('δύο όψεις με ΤΗΝ ΙΔΙΑ υφή → dedup σε ΜΙΑ εγγραφή', () => {
+    const root = new THREE.Group();
+    const matA = texturedMaterial('https://s/textures/stone/albedo.jpg');
+    const matB = texturedMaterial('https://s/textures/stone/albedo.jpg');
+    const mesh = new THREE.Mesh(new THREE.BufferGeometry(), [matA, matB]);
+    root.add(mesh);
+
+    const table = assignExportMaterials(root);
+
+    expect(table).toHaveLength(1);
+    expect(table[0].name).toBe('tex_stone_albedo');
+  });
+
+  it('όψη χωρίς .map αλλά με διακριτό χρώμα → mat_<hex> (το flat-colour μονοπάτι μένει ανέγγιχτο)', () => {
+    const root = new THREE.Group();
+    const textured = texturedMaterial('https://s/textures/stone/albedo.jpg');
+    const flat = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
+    const mesh = new THREE.Mesh(new THREE.BufferGeometry(), [textured, flat]);
+    root.add(mesh);
+
+    const table = assignExportMaterials(root);
+
+    const names = table.map((e) => e.name).sort();
+    expect(names).toEqual(['mat_00ff00', 'tex_stone_albedo']);
+  });
+});
+
 describe('buildMaterialBaseline (ADR-683 §7, Break C)', () => {
   const entry = (name: string, hex: number): ExportMaterialEntry => ({
     name,

@@ -55,7 +55,7 @@ BimMaterial** (PBR texture set) και να το **render-άρει** μέσω τ
 | **Φ2b** ✅ | **Per-face PBR (η καρδιά) — ΥΛΟΠΟΙΗΘΗΚΕ (render, όχι export).** `resolveFaceMaterial` (ADR-539) έγινε thin delegate: `colorHex`→flat (νικά)· `materialId`→**reuse** `getMaterial3D` (ήδη texture-aware μέσω `pbr-material-builder`+`bim-texture-cache`+`user-material-registry`) σε DoubleSide variant· χωρίς override→base. `buildFacedPrism` απέκτησε UVs (τα faced solids είχαν μηδέν). **Finding:** ο σοβάς (`FinishFaceOverride.materialId`, ADR-449) ήταν ΗΔΗ textured μέσω `getMaterial3D` — καμία αλλαγή χρειάστηκε εκεί· μόνο το `colorOverride` μένει flat by design (visual-only hex). Ξεκλειδώνει Φ5.2 (export). | Μικρό (2 αρχεία κώδικα) |
 | **Φ2c** | **Material editor UI (C4D-parity).** Διπλό κλικ σε swatch → πάνελ PBR (Base Color/Texture upload, Roughness, Metalness, Normal, Opacity). Reuse `useMaterialPbrTextureUpload`. Εμφανές «όνομα για C4D». | Μεσαίο |
 | **Φ3** | glTF PBR round-trip (το glTF ΕΧΕΙ πραγματικά PBR + textures — αντίθετα από το OBJ/R15). Προαιρετικό. | Μεσαίο |
-| **Φ5** | **COLLADA/DAE texture export (Νέστωρ→C4D R15) — FULL PARITY track.** Ground-truth correction (2026-07-21): ο R15 **DAE** importer **ΚΟΥΒΑΛΑ** textures (αποδεδειγμένο: native Aeron `.dae` με `library_images`+sampler), σε αντίθεση με το OBJ που ΔΕΝ διαβάζει υλικά. Άρα το DAE είναι ο textured δρόμος για R15. Sub-phases: **Φ5.1a** DAE writer texture-capable + πραγματικά UVs ✅· **Φ5.1b** texture-byte bundling (fetch από Storage → loose `textures/*` σε `.zip`) + headless prewarm ✅ (**SSOT correction: ΟΧΙ `fflate`** — reuse του υπάρχοντος zero-dep `zip-pack.ts` + `image-export-shared.fetch*` + `packageArtifacts`, ίδιο pattern με το DXF image-fill eTransmit· ένας packer, όπως οι μεγάλοι)· **Φ5.2** per-face texture export (εξαρτάται Φ2b)· **Φ5.3** per-triangle. | **Μεγάλο** |
+| **Φ5** | **COLLADA/DAE texture export (Νέστωρ→C4D R15) — FULL PARITY track.** Ground-truth correction (2026-07-21): ο R15 **DAE** importer **ΚΟΥΒΑΛΑ** textures (αποδεδειγμένο: native Aeron `.dae` με `library_images`+sampler), σε αντίθεση με το OBJ που ΔΕΝ διαβάζει υλικά. Άρα το DAE είναι ο textured δρόμος για R15. Sub-phases: **Φ5.1a** DAE writer texture-capable + πραγματικά UVs ✅· **Φ5.1b** texture-byte bundling (fetch από Storage → loose `textures/*` σε `.zip`) + headless prewarm ✅ (**SSOT correction: ΟΧΙ `fflate`** — reuse του υπάρχοντος zero-dep `zip-pack.ts` + `image-export-shared.fetch*` + `packageArtifacts`, ίδιο pattern με το DXF image-fill eTransmit· ένας packer, όπως οι μεγάλοι)· **Φ5.1c** ✅ (2026-07-21, R15 ground-truth bug-fix) **per-face export material-naming** — `resolveMaterialName` ονόμαζε ΚΑΘΕ per-face textured υλικό `mat_ffffff` (χρώμα-based name, αλλά `applyTextureSet` βάζει `color=0xffffff` σε ΟΛΑ τα textured PBR) → collapse σε ΕΝΑ material/texture (πέτρα κολόνας + ξύλο σκάλας ίδια υφή). Fix: name-by-texture-source-identity (`tex_<parentDir>_<fileStem>`) όταν per-face υλικό (matId=null) ΕΧΕΙ texture· διαφορετικές υφές → διαφορετικά ονόματα/αρχεία, ίδια υφή → dedup. **Ξεκλειδώνει/σχετίζεται με Φ5.2** — τα per-face υλικά τώρα εξάγονται με σωστές διακριτές ταυτότητες· **Φ5.2** per-face texture export (εξαρτάται Φ2b)· **Φ5.3** per-triangle. | **Μεγάλο** |
 
 **Σειρά:** Φ2a (γρήγορη νίκη, ξεκλειδώνει catalog/user materials στο round-trip) → Φ2b (η ουσία) → Φ2c (UX). **Full-parity export track (εντολή Giorgio 2026-07-21):** Φ5.1 (whole-element υφή export, R15-testable) → Φ2b/Φ3/Φ5.2 (per-face) → Φ5.3 (per-triangle) → import COLLADA parser (orchestrator).
 
@@ -69,6 +69,23 @@ BimMaterial** (PBR texture set) και να το **render-άρει** μέσω τ
 
 ## 7. Changelog
 
+- **2026-07-21 — Φ5.1c BUG-FIX (export material-naming collapse, βρέθηκε μέσω C4D R15 ground-truth).**
+  Μετά το per-face texture render in-app (Φ2b), το εξαγόμενο `.dae` **collapse-άρε ΟΛΕΣ** τις textured
+  οντότητες σε **ΕΝΑ** material `mat_ffffff` με **ΜΙΑ** texture `textures/mat_ffffff.jpg` — πέτρινη κολόνα
+  + ξύλινη σκάλα κ.λπ. έπαιρναν όλα την ΙΔΙΑ υφή. **Root cause:** `export/core/mesh3d/mesh3d-materials.ts`
+  `resolveMaterialName` ονόμαζε per-face materials (`matId=null`) βάσει **ΧΡΩΜΑΤΟΣ** (`mat_<hex>`), αλλά το
+  `applyTextureSet` επιβάλλει `color=0xffffff` σε ΚΑΘΕ textured PBR material (λευκή βάση ώστε το albedo
+  να μην διπλο-βάφεται) → κάθε textured όψη → ίδιο όνομα `mat_ffffff` → dedup σε ΕΝΑ material + ΕΝΑ αρχείο
+  texture. **Fix (conservative, ADR-679 Φ5):** το `resolveMaterialName`, για per-face material (`matId=null`)
+  που ΕΧΕΙ texture, ονομάζεται πλέον βάσει της **ταυτότητας πηγής** της υφής — `tex_<parentDir>_<fileStem>`
+  από το url path της υφής (χωρίς query, ώστε τα Storage signed-url tokens να μην το μεταβάλλουν), π.χ.
+  `.../textures/stone/albedo.jpg` → `tex_stone_albedo`. Διαφορετικές υφές → διαφορετικά ονόματα/αρχεία
+  (split)· ίδια υφή (shared singleton → ίδιο url) → dedup. Single-material meshes ΜΕ `matId` κρατούν το
+  matId-based όνομά τους αναλλοίωτο· per-face **FLAT** paints κρατούν `mat_<hex>`. Νέος helper
+  `textureIdentityToken`. Deterministic (χωρίς `Date`/random). **Αποτέλεσμα:** η εξαγωγή πλέον κουβαλά
+  per-entity textures που ταιριάζουν με το in-app render, και ο texture bundler βγάζει ΕΝΑ αρχείο ανά
+  διακριτή υφή. **Σχετίζεται/ξεκλειδώνει Φ5.2** (per-face texture export) — τα per-face υλικά εξάγονται
+  πλέον με σωστές διακριτές ταυτότητες.
 - **2026-07-21 — Φ2b ΥΛΟΠΟΙΗΘΗΚΕ (per-face PBR render· σώμα + finding σοβά).** Το κενό (§4): το per-face
   «βάψιμο» (ADR-539) ήταν FLAT-COLOUR-ONLY — όψη με `materialId` που δείχνει σε textured `BimMaterial`
   απέδιδε flat χρώμα, όχι υφή. **Fix (2 αλλαγές κώδικα, ZERO νέο type/builder/system, N.5/N.12 SSoT reuse):**

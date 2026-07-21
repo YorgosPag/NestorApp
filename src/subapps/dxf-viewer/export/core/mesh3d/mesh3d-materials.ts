@@ -49,9 +49,20 @@ function materialColor(m: THREE.Material): THREE.Color | null {
   return c instanceof THREE.Color ? c : null;
 }
 
-/** Σταθερό όνομα υλικού: το DNA matId αν υπάρχει, αλλιώς το χρώμα (ποτέ δύο υλικά με ίδιο όνομα). */
+/**
+ * Σταθερό όνομα υλικού. Προτεραιότητα:
+ *   1. **DNA matId** αν υπάρχει (single-material mesh — αναλλοίωτη συμπεριφορά).
+ *   2. **Textured χωρίς matId → ταυτότητα ΥΦΗΣ** (ADR-679 Φ5 fix): τα per-face υλικά περνούν με
+ *      `matId=null`, και το `applyTextureSet` θέτει `color=0xffffff` σε ΚΑΘΕ textured PBR (white
+ *      base ώστε η υφή να μη διπλο-χρωματίζεται). Άρα ένα colour-based όνομα καταρρέει stone+wood+
+ *      brick+… σε ΕΝΑ `mat_ffffff` → μία υφή για όλα. Ονομάζουμε ανά texture source ⇒ διαφορετική
+ *      υφή = διαφορετικό όνομα/αρχείο· ίδια υφή (shared singleton ⇒ ίδιο url) = dedup.
+ *   3. αλλιώς **χρώμα** (per-face flat paint: `colorHex` → `mat_<hex6>`, ξεχωρίζει ανά χρώμα).
+ */
 function resolveMaterialName(matId: string | null, material: THREE.Material): string {
   if (matId !== null) return sanitizeMeshNamePart(matId);
+  const texToken = textureIdentityToken(material);
+  if (texToken) return `tex_${texToken}`;
   const color = materialColor(material);
   return `mat_${color ? color.getHexString() : '808080'}`;
 }
@@ -63,6 +74,29 @@ function textureSourceUrl(map: THREE.Texture): string | null {
   const img = map.image as { src?: string; currentSrc?: string } | undefined;
   const src = img?.currentSrc ?? img?.src;
   return typeof src === 'string' && src.length > 0 ? src : null;
+}
+
+/**
+ * Σταθερό, filesystem-safe token ταυτότητας της diffuse υφής ενός υλικού, ή `null` αν δεν έχει
+ * υφή / δεν λύνεται το URL. Παράγεται από το source path (χωρίς query — τα Storage signed urls
+ * έχουν μεταβλητό token) ως `<γονικός φάκελος>_<stem αρχείου>`, π.χ. `/textures/stone/albedo.jpg`
+ * → `stone_albedo`, `.../bim-materials/bmat_ab12/albedo.jpg` → `bmat_ab12_albedo`. Ο γονικός
+ * φάκελος (slug catalog / id βιβλιοθήκης) είναι μοναδικός ανά υφή ⇒ διακριτά tokens· ίδιο url ⇒
+ * ίδιο token ⇒ dedup. ΝΤΕΤΕΡΜΙΝΙΣΤΙΚΟ (κανένα Date/random).
+ */
+function textureIdentityToken(material: THREE.Material): string | null {
+  const map = (material as { map?: unknown }).map;
+  if (!(map instanceof THREE.Texture)) return null;
+  const url = textureSourceUrl(map);
+  if (url === null) return null;
+  const path = decodeURIComponent(url.split(/[?#]/)[0]);
+  const segs = path.split('/').filter((s) => s.length > 0);
+  const file = segs[segs.length - 1] ?? '';
+  const parent = segs[segs.length - 2] ?? '';
+  const fileStem = file.replace(/\.[^.]+$/, '');
+  const raw = parent.length > 0 && parent !== 'textures' ? `${parent}_${fileStem}` : fileStem;
+  const token = sanitizeMeshNamePart(raw);
+  return token.length > 0 ? token : null;
 }
 
 /** Επέκταση αρχείου εικόνας από το URL (jpg/png/webp), default `.png`. */
