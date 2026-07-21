@@ -1,7 +1,7 @@
 {
   "onboarding": {
     "org": {
-      "title": "Welcome to Nestor",
+      "title": "Welcome to Nestor App",
       "subtitle": "Set up your organization departments",
       "description": "Select the departments your company uses. You can modify them anytime from Settings.",
       "preselected": "Pre-selected",
@@ -35,11 +35,11 @@
       "dismiss": "Dismiss"
     },
     "email": {
-      "subject": "Reminder: Set up your Nestor organization structure",
+      "subject": "Reminder: Set up your Nestor App organization structure",
       "greeting": "Dear administrator,",
       "body": "The Accounting department has not been configured within 7 days of the initial invitation. Please log in to the application and complete the setup.",
       "cta": "Set up now",
-      "footer": "This message was sent automatically by Nestor."
+      "footer": "This message was sent automatically by Nestor App."
     }
   }
 }
