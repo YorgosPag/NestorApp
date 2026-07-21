@@ -24,6 +24,8 @@ export const BIM_3D_CONVERTER_TYPES: readonly BimRenderableType[] = [
   'floor-finish',
   'foundation',
   'furniture',
+  // ADR-684 — παραμετρικό γεωμετρικό στερεό (point converter, procedural geometry).
+  'generic-solid',
   // ADR-683 Φ3 — εισαγόμενο πλέγμα (point converter, ίδιο μονοπάτι με το έπιπλο).
   'imported-mesh',
   'mep-boiler',

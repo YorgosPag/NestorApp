@@ -67,6 +67,8 @@ import { SpaceSeparatorRenderer } from '../../bim/renderers/SpaceSeparatorRender
 import { FurnitureRenderer } from '../../bim/renderers/FurnitureRenderer';
 // ADR-683 Φ3 — εισαγόμενο πλέγμα leaf (2Δ περίγραμμα από το πραγματικό mesh· fallback bbox).
 import { ImportedMeshRenderer } from '../../bim/renderers/ImportedMeshRenderer';
+// ADR-684 — παραμετρικό στερεό leaf (2Δ footprint outline· procedural geometry).
+import { GenericSolidRenderer } from '../../bim/renderers/GenericSolidRenderer';
 // ADR-415 — 2D floorplan symbol leaf (WC/κουζίνα/έπιπλα κάτοψης; pure-vector footprint + kind glyph).
 import { FloorplanSymbolRenderer } from '../../bim/renderers/FloorplanSymbolRenderer';
 // ADR-408 Φ8 — MEP segment leaf (linear duct/pipe run, dashed outline + centerline).
@@ -140,6 +142,8 @@ export function createEntityRenderers(
   const furnitureRenderer = new FurnitureRenderer(ctx);
   // ADR-683 Φ3 — renderer εισαγόμενου πλέγματος.
   const importedMeshRenderer = new ImportedMeshRenderer(ctx);
+  // ADR-684 — renderer παραμετρικού στερεού.
+  const genericSolidRenderer = new GenericSolidRenderer(ctx);
   // ADR-415 — floorplan symbol renderer (pure-vector 2D κάτοψη; footprint + kind strokes).
   const floorplanSymbolRenderer = new FloorplanSymbolRenderer(ctx);
   // ADR-408 Φ8 — MEP segment renderer (linear duct/pipe run, dashed outline + centerline).
@@ -205,6 +209,7 @@ export function createEntityRenderers(
   renderers.set('space-separator', spaceSeparatorRenderer);
   renderers.set('furniture', furnitureRenderer);
   renderers.set('imported-mesh', importedMeshRenderer);
+  renderers.set('generic-solid', genericSolidRenderer);
   renderers.set('floorplan-symbol', floorplanSymbolRenderer);
   renderers.set('mep-segment', mepSegmentRenderer);
   renderers.set('mep-fitting', mepFittingRenderer);

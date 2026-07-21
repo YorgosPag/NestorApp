@@ -35,6 +35,7 @@ import { ColumnPlacementGhost } from './ColumnPlacementGhost';
 import { WallPlacementGhost } from './WallPlacementGhost';
 import { BeamFromWallGhost } from './BeamFromWallGhost';
 import { FurniturePlacementGhost } from './FurniturePlacementGhost';
+import { GenericSolidPlacementGhost } from './GenericSolidPlacementGhost';
 import { ElectricalPanelPlacementGhost } from './ElectricalPanelPlacementGhost';
 import { MepFixturePlacementGhost } from './MepFixturePlacementGhost';
 import { MepSegmentPlacementGhost } from './MepSegmentPlacementGhost';
@@ -62,6 +63,7 @@ export type GhostBimType =
   | 'wall'
   | 'beam'
   | 'furniture'
+  | 'generic-solid'
   | 'electrical-panel'
   | 'mep-fixture'
   | 'mep-segment'
@@ -80,6 +82,7 @@ export const PLACEMENT_GHOST_3D_FACTORIES = {
   wall: (s: THREE.Scene) => new WallPlacementGhost(s),
   beam: (s: THREE.Scene) => new BeamFromWallGhost(s),
   furniture: (s: THREE.Scene) => new FurniturePlacementGhost(s),
+  'generic-solid': (s: THREE.Scene) => new GenericSolidPlacementGhost(s),
   'electrical-panel': (s: THREE.Scene) => new ElectricalPanelPlacementGhost(s),
   'mep-fixture': (s: THREE.Scene) => new MepFixturePlacementGhost(s),
   'mep-segment': (s: THREE.Scene) => new MepSegmentPlacementGhost(s),

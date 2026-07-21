@@ -32,6 +32,9 @@ import { applyFurnitureGripDrag } from '../../bim/furniture/furniture-grips';
 import { UpdateFurnitureParamsCommand } from '../../core/commands/entity-commands/UpdateFurnitureParamsCommand';
 import { applyImportedMeshGripDrag } from '../../bim/entities/imported-mesh/imported-mesh-grips';
 import { UpdateImportedMeshParamsCommand } from '../../core/commands/entity-commands/UpdateImportedMeshParamsCommand';
+import type { GenericSolidEntity } from '../../bim/entities/generic-solid/generic-solid-types';
+import { applyGenericSolidGripDrag } from '../../bim/entities/generic-solid/generic-solid-grips';
+import { UpdateGenericSolidParamsCommand } from '../../core/commands/entity-commands/UpdateGenericSolidParamsCommand';
 import type { FloorplanSymbolEntity } from '../../bim/types/floorplan-symbol-types';
 import { applyFloorplanSymbolGripDrag } from '../../bim/floorplan-symbols/floorplan-symbol-grips';
 import { UpdateFloorplanSymbolParamsCommand } from '../../core/commands/entity-commands/UpdateFloorplanSymbolParamsCommand';
@@ -316,6 +319,52 @@ export function commitFurnitureGripDrag(
   if (command.validate() !== null) return;
   deps.execute(command);
   emitBimEntityParamsUpdated('furniture', grip.entityId);
+}
+
+/**
+ * ADR-684 Φ2/Φ3 — Parametric generic-solid grip commit (centre translate + rotation + box
+ * corner-anchored width/depth resize). 1:1 mirror του `commitFurnitureGripDrag`: params-driven,
+ * `UpdateGenericSolidParamsCommand` επαναϋπολογίζει geometry + validation ατομικά, merge window
+ * (isDragging=true) → ΕΝΑ undo (ADR-031). ORTHO (F8) από το non-React `cadToggleState` snapshot
+ * περιορίζει τα γωνιακά drags στον κυρίαρχο τοπικό άξονα.
+ *
+ * Οι γωνιακές λαβές εκπέμπονται ΜΟΝΟ για `box` (βλ. `getGenericSolidGrips`)· για τα άλλα σχήματα
+ * φτάνουν μόνο move/rotation, οπότε η ίδια διαδρομή εξυπηρετεί όλα τα σχήματα χωρίς κλάδο.
+ */
+export function commitGenericSolidGripDrag(
+  grip: UnifiedGripInfo,
+  delta: Point2D,
+  deps: DxfCommitDeps,
+): void {
+  const genericSolidKind = gripKindOf(grip, 'generic-solid');
+  if (!grip.entityId || !genericSolidKind) return;
+  const resolved = resolveParametricGripEntity<GenericSolidEntity>(deps, grip.entityId, 'generic-solid');
+  if (!resolved) return;
+  const { sceneManager, entity: solid } = resolved;
+  const originalParams = solid.params;
+  const { currentPos, pivotPatch } = resolveGripCommitAnchor(
+    genericSolidKind === 'generic-solid-rotation',
+    grip.position,
+    delta,
+  );
+  const newParams = applyGenericSolidGripDrag(genericSolidKind, {
+    originalParams,
+    delta,
+    currentPos,
+    ortho: cadToggleState.isOrthoOn(),
+    ...pivotPatch,
+  });
+  if (newParams === originalParams) return;
+  const command = new UpdateGenericSolidParamsCommand(
+    grip.entityId,
+    newParams,
+    originalParams,
+    sceneManager,
+    true,
+  );
+  if (command.validate() !== null) return;
+  deps.execute(command);
+  emitBimEntityParamsUpdated('generic-solid', grip.entityId);
 }
 
 /**

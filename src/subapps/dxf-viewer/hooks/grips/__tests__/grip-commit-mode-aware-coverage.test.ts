@@ -80,6 +80,9 @@ const SEAM_B_PARAMETRIC = [
   // ADR-654 — raster image: όλες οι λαβές (move/rotation/corner) περνούν από το Seam-B
   // parametric dispatch (`commitImageGripDrag`), κανένα Seam-C action gate.
   'image',
+  // ADR-684 Φ2/Φ3 — παραμετρικό στερεό: Seam B parametric (commitGenericSolidGripDrag),
+  // χωρίς ρητό Seam-C gate (όπως furniture / imported-mesh).
+  'generic-solid',
 ] as const;
 
 /**
@@ -166,11 +169,11 @@ const domainSet = new Set<string>(GRIP_KIND_ENTITIES);
 
 describe('Mode-aware grip-commit routing coverage — Seam C ↔ grip discriminator domain (ADR-587 Φ7)', () => {
   // ── Domain closure & disjointness ─────────────────────────────────────────
-  it('(A)∪(B)∪(C) === GRIP_KIND_ENTITIES (domain closure, 9 + 26 + 1 = 36)', () => {
+  it('(A)∪(B)∪(C) === GRIP_KIND_ENTITIES (domain closure, 9 + 27 + 1 = 37)', () => {
     const union = [...SEAM_C_GATED, ...SEAM_B_PARAMETRIC, ...GENERIC_DISPATCH_ONLY];
     expect(asSorted(union)).toEqual(asSorted([...GRIP_KIND_ENTITIES]));
-    expect(GRIP_KIND_ENTITIES).toHaveLength(36);
-    expect(union).toHaveLength(36); // καμία επικάλυψη → κάθε entity σε ΑΚΡΙΒΩΣ 1 partition
+    expect(GRIP_KIND_ENTITIES).toHaveLength(37);
+    expect(union).toHaveLength(37); // καμία επικάλυψη → κάθε entity σε ΑΚΡΙΒΩΣ 1 partition
   });
 
   it('οι 3 partitions είναι pairwise disjoint', () => {
@@ -198,8 +201,8 @@ describe('Mode-aware grip-commit routing coverage — Seam C ↔ grip discrimina
     expect(SEAM_C_GATED).toHaveLength(9);
   });
 
-  it('(B) SEAM_B_PARAMETRIC = 26 (οι 28 Seam-B ΜΕΙΟΝ opening + mep-manifold)', () => {
-    expect(SEAM_B_PARAMETRIC).toHaveLength(26);
+  it('(B) SEAM_B_PARAMETRIC = 27 (οι 29 Seam-B ΜΕΙΟΝ opening + mep-manifold)', () => {
+    expect(SEAM_B_PARAMETRIC).toHaveLength(27);
     // opening + mep-manifold ΔΕΝ ανήκουν εδώ — ανεβαίνουν στο (A) λόγω action gates
     expect(SEAM_B_PARAMETRIC).not.toContain('opening');
     expect(SEAM_B_PARAMETRIC).not.toContain('mep-manifold');

@@ -36,6 +36,7 @@ import { useRibbonAnnotationSymbolBridge } from '../useRibbonAnnotationSymbolBri
 import { useRibbonFloorplanSymbolBridge } from '../useRibbonFloorplanSymbolBridge';
 import { useRibbonScaleBarBridge } from '../useRibbonScaleBarBridge';
 import { useRibbonFurnitureBridge } from '../useRibbonFurnitureBridge';
+import { useRibbonGenericSolidBridge } from '../useRibbonGenericSolidBridge';
 import { useRibbonMepFixtureLibraryBridge } from '../useRibbonMepFixtureLibraryBridge';
 import { useRibbonMepRiserBridge } from '../useRibbonMepRiserBridge';
 import { useRibbonMepUnderfloorBridge } from '../useRibbonMepUnderfloorBridge';
@@ -63,6 +64,7 @@ describe('ribbon entity-bridge SSoT wiring (ADR-623)', () => {
       useRibbonFloorplanSymbolBridge,
       useRibbonScaleBarBridge,
       useRibbonFurnitureBridge,
+      useRibbonGenericSolidBridge,
       useRibbonMepFixtureLibraryBridge,
       useRibbonMepRiserBridge,
       useRibbonMepUnderfloorBridge,

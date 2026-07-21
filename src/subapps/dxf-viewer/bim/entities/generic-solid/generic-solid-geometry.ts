@@ -14,7 +14,9 @@
 
 import { nowTimestamp } from '@/lib/firestore-now';
 import type { BimValidation } from '../../types/bim-base';
-import { computeCentredBoxFootprint } from '../../geometry/shared/centred-box-footprint';
+import { polygonArea, polygonBbox } from '../../geometry/shared/polygon-utils';
+import { mmToSceneUnits } from '../../../utils/scene-units';
+import { computeGenericSolidPlanOutline } from './generic-solid-plan-outline';
 import type {
   GenericSolidGeometry,
   GenericSolidParams,
@@ -73,17 +75,33 @@ export function shapeBoundingBoxMm(shape: GenericSolidShape): ShapeBoundingBoxMm
 
 // ─── Γεωμετρία ──────────────────────────────────────────────────────────────────
 
-/** Υπολογίζει `GenericSolidGeometry` από τις παραμέτρους. Καθαρό SSoT· δεν πετά ποτέ. */
+const MM_TO_M = 1 / 1000;
+
+/**
+ * Υπολογίζει `GenericSolidGeometry` από τις παραμέτρους. Καθαρό SSoT· δεν πετά ποτέ.
+ *
+ * Το `footprint` είναι το **πραγματικό περίγραμμα κάτοψης** του σχήματος (κύκλος/n-γωνο/ορθογώνιο —
+ * το εξωτερικό όριο `rings[0]` του {@link computeGenericSolidPlanOutline}), ώστε hit-test/bounds/export
+ * να ταιριάζουν με ό,τι βλέπει ο χρήστης. Το ύψος μένει το bbox Z του σχήματος (`shapeBoundingBoxMm`).
+ */
 export function computeGenericSolidGeometry(params: GenericSolidParams): GenericSolidGeometry {
   const box = shapeBoundingBoxMm(params.shape);
-  return computeCentredBoxFootprint({
-    widthMm: box.widthMm,
-    depthMm: box.depthMm,
-    heightMm: box.heightMm,
-    position: params.position,
-    rotationDeg: params.rotationDeg,
-    sceneUnits: params.sceneUnits,
-  });
+  const outer = computeGenericSolidPlanOutline(
+    params.shape,
+    params.position,
+    params.rotationDeg,
+    params.sceneUnits,
+  ).rings[0];
+
+  const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
+  const canvasToM = (1 / s) * MM_TO_M;
+
+  return {
+    footprint: { vertices: [...outer] },
+    bbox: polygonBbox(outer),
+    area: polygonArea(outer) * canvasToM * canvasToM,
+    height: Math.max(0, box.heightMm),
+  };
 }
 
 // ─── Επικύρωση ────────────────────────────────────────────────────────────────

@@ -90,6 +90,9 @@ export const BIM_RENDERABLE_TYPES = [
   // ADR-683 Φ3 — εισαγόμενο ψημένο πλέγμα. **Πλήρης πολίτης** (§10.1): 2Δ περίγραμμα στην κάτοψη
   // + 3Δ, όχι 3Δ-only διακοσμητικό. Renderer: ImportedMeshRenderer.
   'imported-mesh',
+  // ADR-684 — παραμετρικό γεωμετρικό στερεό (κουτί/σφαίρα/…/torus/πυραμίδα). Πλήρης πολίτης:
+  // 2Δ footprint στην κάτοψη + procedural 3Δ. Renderer: GenericSolidRenderer.
+  'generic-solid',
 ] as const;
 
 /** Όλοι οι renderable entity types (DXF + BIM). */

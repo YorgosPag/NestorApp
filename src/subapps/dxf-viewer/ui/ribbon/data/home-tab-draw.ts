@@ -303,6 +303,16 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
               commandKey: 'furniture',
               shortcut: 'FN',
             },
+            // ADR-684 — «Παραμετρικό στερεό» (box/sphere/cylinder/cone/torus/pyramid/disc/prism):
+            // procedural όγκος, δομικός ή διακοσμητικός (Revit «Generic Model / Mass», C4D «Add → primitive»).
+            {
+              id: 'draw.bim.genericSolid',
+              labelKey: 'ribbon.commands.bim.genericSolid.label',
+              tooltipKey: 'ribbon.commands.bim.genericSolid.tooltip',
+              icon: 'bim-generic-solid',
+              commandKey: 'generic-solid',
+              shortcut: 'GS',
+            },
           ],
         },
       ],

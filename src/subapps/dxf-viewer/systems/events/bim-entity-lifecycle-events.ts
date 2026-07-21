@@ -56,6 +56,8 @@ export function emitBimEntityDeleteRequested(type: string, id: string): void {
     // ADR-683 Φ3β — χωρίς αυτή τη γραμμή, το Ctrl+Z μιας εισαγωγής θα έβγαζε το αντικείμενο από
     // τη σκηνή αλλά ΟΧΙ από το Firestore → θα επέστρεφε μόνο του στο επόμενο reload.
     case 'imported-mesh': EventBus.emit('bim:imported-mesh-delete-requested', { importedMeshId: id }); break;
+    // ADR-684 — παραμετρικό στερεό: undo-of-create + delete-tool → Firestore deleteDoc + tombstone.
+    case 'generic-solid': EventBus.emit('bim:generic-solid-delete-requested', { genericSolidId: id }); break;
     case 'mep-segment': EventBus.emit('bim:mep-segment-delete-requested', { segmentId: id }); break;
     case 'mep-manifold': EventBus.emit('bim:mep-manifold-delete-requested', { manifoldId: id }); break;
     case 'mep-radiator': EventBus.emit('bim:mep-radiator-delete-requested', { radiatorId: id }); break;

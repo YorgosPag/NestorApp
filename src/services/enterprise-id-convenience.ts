@@ -301,6 +301,7 @@ export const generateMepUnderfloorId = () => enterpriseIdService.generateMepUnde
 export const generateRailingId = () => enterpriseIdService.generateRailingId();
 export const generateFurnitureId = () => enterpriseIdService.generateFurnitureId();
 export const generateImportedMeshId = () => enterpriseIdService.generateImportedMeshId();
+export const generateGenericSolidId = () => enterpriseIdService.generateGenericSolidId();
 export const generateFloorplanSymbolId = () => enterpriseIdService.generateFloorplanSymbolId();
 export const generateBimPresetId = () => enterpriseIdService.generateBimPresetId();
 export const generateBimMaterialId = () => enterpriseIdService.generateBimMaterialId();

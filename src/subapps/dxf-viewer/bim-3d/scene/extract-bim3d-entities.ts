@@ -23,7 +23,7 @@ import { EMPTY_BIM_ENTITIES, type Bim3DEntities } from '../stores/Bim3DEntitiesS
 import {
   isWallEntity, isColumnEntity, isBeamEntity, isFoundationEntity, isSlabEntity,
   isSlabOpeningEntity, isOpeningEntity, isStairEntity, isMepFixtureEntity,
-  isElectricalPanelEntity, isRailingEntity, isFurnitureEntity, isImportedMeshEntity, isMepSegmentEntity,
+  isElectricalPanelEntity, isRailingEntity, isFurnitureEntity, isImportedMeshEntity, isGenericSolidEntity, isMepSegmentEntity,
   isMepFittingEntity, isMepManifoldEntity, isMepRadiatorEntity, isMepBoilerEntity,
   isMepWaterHeaterEntity, isRoofEntity, isFloorFinishEntity, isMepUnderfloorEntity,
 } from '../../types/entities';
@@ -46,6 +46,7 @@ export function extractBim3DEntities(scene: SceneModel): Bim3DEntities {
     railings: e.filter(isRailingEntity),
     furnitures: e.filter(isFurnitureEntity),
     importedMeshes: e.filter(isImportedMeshEntity),
+    genericSolids: e.filter(isGenericSolidEntity),
     roofs: e.filter(isRoofEntity),
     floorFinishes: e.filter(isFloorFinishEntity),
     mepSegments: e.filter(isMepSegmentEntity),

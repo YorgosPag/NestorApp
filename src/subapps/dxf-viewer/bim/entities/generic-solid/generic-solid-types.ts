@@ -71,6 +71,22 @@ export type GenericSolidShape =
 /** Οι discriminator τιμές του σχήματος. */
 export type GenericSolidShapeKind = GenericSolidShape['kind'];
 
+/**
+ * ADR-684 Φ4-C — ρόλος του στερεού για ταξινόμηση/BOQ (§4.3). **Metadata, ΟΧΙ γεωμετρία** — το ίδιο
+ * σχήμα είναι είτε δομικός δακτύλιος (RC, μετριέται σε m³) είτε διακοσμητικό (χωρίς αυτόματη γραμμή
+ * κόστους, όπως ανανάθετο imported-mesh). Ακριβώς το «Structural» toggle του Revit Generic Model.
+ */
+export type GenericSolidStructuralRole = 'structural' | 'decorative';
+
+/** SSoT λίστα ρόλων — για UI selector + coverage. */
+export const GENERIC_SOLID_STRUCTURAL_ROLES = [
+  'structural',
+  'decorative',
+] as const satisfies readonly GenericSolidStructuralRole[];
+
+/** Προεπιλογή: διακοσμητικό (μη-δομικό, όπως το Revit Generic Model default). */
+export const DEFAULT_GENERIC_SOLID_STRUCTURAL_ROLE: GenericSolidStructuralRole = 'decorative';
+
 /** SSoT λίστα σχημάτων — για UI selectors + coverage. Παράγεται μία φορά εδώ. */
 export const GENERIC_SOLID_SHAPE_KINDS = [
   'box',
@@ -97,6 +113,11 @@ export interface GenericSolidParams {
   readonly mountingElevationMm: number;
   /** Προαιρετικός δείκτης σε `BimMaterial` (Φ4· απόν → προεπιλεγμένο υλικό στερεού). */
   readonly material?: string;
+  /**
+   * ADR-684 Φ4-C — ρόλος ταξινόμησης/BOQ (§4.3). Απόν → {@link DEFAULT_GENERIC_SOLID_STRUCTURAL_ROLE}
+   * (διακοσμητικό). **Metadata πάνω στην ΙΔΙΑ γεωμετρία** — δεν αλλάζει σχήμα/converter/ίχνος.
+   */
+  readonly structuralRole?: GenericSolidStructuralRole;
   /** Μονάδα συντεταγμένων του καμβά. Απόν → `'mm'`. */
   readonly sceneUnits?: SceneUnits;
   /** FK → Floor.id (αναφορά ορόφου). */

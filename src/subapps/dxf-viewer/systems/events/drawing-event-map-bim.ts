@@ -118,6 +118,9 @@ export interface BimEventMap {
   // ADR-683 Φ3β — imported baked mesh params + delete events (mirror of furniture)
   'bim:imported-mesh-params-updated': { importedMeshId: string };
   'bim:imported-mesh-delete-requested': { importedMeshId: string };
+  // ADR-684 — παραμετρικό στερεό params + delete events (point entity, mirror of furniture)
+  'bim:generic-solid-params-updated': { genericSolidId: string };
+  'bim:generic-solid-delete-requested': { genericSolidId: string };
   // ADR-408 Φ3 — BIM electrical panel params + delete events
   'bim:electrical-panel-params-updated': { panelId: string };
   'bim:electrical-panel-delete-requested': { panelId: string };
@@ -199,6 +202,8 @@ export interface BimEventMap {
   'bim:place-railing-3d': { point: Point2D };
   // ADR-410 — 3D furniture placement (mirror of bim:place-column-3d).
   'bim:place-furniture-3d': { point: Point2D };
+  // ADR-684 — 3D generic-solid placement (mirror of bim:place-furniture-3d).
+  'bim:place-generic-solid-3d': { point: Point2D };
   // ADR-401 — 3D manual attach pick-host: the 3D viewport raycast a structural
   // host (beam/slab) while a `*-attach-top/-base` tool is active. The 2D
   // `useWallAttachTool` listens and dispatches the existing Attach{Walls|Columns|
@@ -230,7 +235,9 @@ export interface BimEventMap {
       | 'foundation' | 'mep-fixture' | 'electrical-panel' | 'mep-manifold' | 'mep-radiator'
       | 'mep-boiler' | 'mep-water-heater' | 'mep-underfloor' | 'mep-segment' | 'railing'
       | 'furniture' | 'floorplan-symbol' | 'floor-finish' | 'wall-covering' | 'roof'
-      | 'thermal-space' | 'space-separator' | 'hatch';
+      | 'thermal-space' | 'space-separator' | 'hatch'
+      // ADR-684 — παραμετρικό γεωμετρικό στερεό (authored parametric → restore-able).
+      | 'generic-solid';
     entitySnapshot: AnySceneEntity;
     source: 'undo-delete' | 'redo-restore';
   };

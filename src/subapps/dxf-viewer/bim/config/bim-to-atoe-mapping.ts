@@ -39,7 +39,11 @@ export type BimEntityType =
   // ADR-683 Φ3.1 — εισαγόμενο ψημένο πλέγμα συνεργάτη. Ο ΜΟΝΟΣ τύπος του οποίου η αντιστοίχιση
   // δεν είναι πίνακας: το «τι είναι» το δηλώνει ο χρήστης μία φορά (§10.2), γιατί δεν υπάρχει
   // στη γεωμετρία. Λύνεται από το `resolveImportedMeshMapping`, ποτέ από `kind`.
-  | 'imported-mesh';
+  | 'imported-mesh'
+  // ADR-684 Φ4-C — παραμετρικό στερεό. Ο διαχωριστής δεν είναι `kind` (πάντα `'generic'`) αλλά ο
+  // δηλωμένος `structuralRole` (§4.3): δομικό → RC m³ (έχουμε ακριβή όγκο)· διακοσμητικό → καμία
+  // αυτόματη γραμμή (όπως ανανάθετο imported-mesh). Λύνεται από το `resolveGenericSolidMapping`.
+  | 'generic-solid';
 
 export interface AtoeMappingEntry {
   /**
@@ -378,6 +382,11 @@ export function resolveAtoeMapping(
   // `resolveImportedMeshMapping`, ώστε ένα ανανάθετο πλέγμα να μη βρίσκει ποτέ γραμμή κατά λάθος.
   if (entityType === 'imported-mesh') return null;
 
+  // ADR-684 Φ4-C — το παραμετρικό στερεό διαχωρίζεται από τον `structuralRole` (§4.3), όχι το kind.
+  // Λύνεται από το `resolveGenericSolidMapping` (bridge branch), ώστε ένα διακοσμητικό να μη βρίσκει
+  // ποτέ δομική γραμμή RC κατά λάθος.
+  if (entityType === 'generic-solid') return null;
+
   const typeMap = BIM_TO_ATOE_MAPPING[entityType] as Readonly<Record<string, AtoeMappingEntry>>;
   return typeMap?.[kind] ?? null;
 }
@@ -432,6 +441,26 @@ export function resolveImportedMeshMapping(identity: unknown): AtoeMappingEntry 
 /** Resolve the ΑΤΟΕ mapping for a single stair BOQ component (ADR-395 §G1). */
 export function resolveStairComponentMapping(component: StairBoqComponent): AtoeMappingEntry {
   return STAIR_COMPONENT_MAPPING[component];
+}
+
+/**
+ * ADR-684 Φ4-C — δομικό παραμετρικό στερεό → σκυρόδεμα OIK-2 (m³). Ίδια ομάδα με κολώνα/τοιχείο
+ * (OIK-2.03): ένα δομικό στερεό είναι στοιχείο ΟΣ που μετριέται σε όγκο. Ο ακριβής όγκος βγαίνει από
+ * τις παραμέτρους (`generic-solid-boq.genericSolidVolumeM3`), σε αντίθεση με το imported-mesh.
+ */
+const GENERIC_SOLID_STRUCTURAL_MAPPING: AtoeMappingEntry = {
+  categoryCode: 'OIK-2.03', unit: 'm3', titleEL: 'Γενικό δομικό στερεό RC (BIM)',
+};
+
+/**
+ * ADR-684 Φ4-C (§4.3) — αντιστοίχιση παραμετρικού στερεού από τον δηλωμένο `structuralRole`.
+ *
+ * **δομικό** → RC m³ (`GENERIC_SOLID_STRUCTURAL_MAPPING`). **διακοσμητικό / απόν** → `null`:
+ * καμία αυτόματη γραμμή, όπως ένα ανανάθετο imported-mesh (§10.2 — ορατή απουσία, όχι μηδενικό
+ * κόστος). Ο ρόλος έρχεται από το index-typed `params` του bridge → όρισμα `unknown`, fail-closed.
+ */
+export function resolveGenericSolidMapping(structuralRole: unknown): AtoeMappingEntry | null {
+  return structuralRole === 'structural' ? GENERIC_SOLID_STRUCTURAL_MAPPING : null;
 }
 
 /**

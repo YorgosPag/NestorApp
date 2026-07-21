@@ -79,6 +79,10 @@ export const ENTITY_EXPORT_COVERAGE: Readonly<Record<RenderableEntityType, Entit
   // converter chain. DXF: decompose (το περίγραμμα κάτοψης γίνεται primitives). TEK: κενό —
   // το TEK περιμένει παραμετρικό στοιχείο, και το εισαγόμενο δεν είναι (§3).
   'imported-mesh': { dxf: 'decompose', tek: 'missing' },
+  // ADR-684 Φ2 §6 — «Εξάγεται; ✅ Ναι». 3Δ mesh export (triangle soup) μέσω του κοινού converter
+  // chain. DXF: decompose (το footprint outline γίνεται lwpolyline μέσω του generic extractor).
+  // TEK: κενό — το TEK περιμένει παραμετρικό δομικό στοιχείο (mirror imported-mesh).
+  'generic-solid': { dxf: 'decompose', tek: 'missing' },
   slab:            { dxf: 'decompose', tek: 'missing' },
   'slab-opening':  { dxf: 'decompose', tek: 'missing' },
   column:          { dxf: 'decompose', tek: 'missing' },

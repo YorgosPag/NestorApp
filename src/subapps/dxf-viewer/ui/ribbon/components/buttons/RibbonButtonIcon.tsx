@@ -7,7 +7,7 @@
  */
 
 import React, { useSyncExternalStore } from 'react';
-import { Undo, Redo, Trash2, PanelRight, Eye, BarChart3, Grid3X3, Crop, Scissors, Lasso, Pentagon, FileImage, Upload, FolderUp, Wand2, Download, Crosshair, FlaskConical, Activity, Sparkles, Layers, Maximize2, Bold, Italic, Underline, Strikethrough, Ruler, MoveHorizontal, MoveDiagonal2, Triangle, CircleDot, Diameter, Spline, CircleSlash, MoveUpRight, Rows3, Equal, Palette, Check, Pencil, RotateCcw, RefreshCw, Settings, Type, Construction, DoorOpen, Columns3, SquareDashed, RectangleHorizontal, TableProperties, Boxes, FileDown, Thermometer, Flame, Droplet, ArrowUpToLine, ArrowDownToLine, Unlink2, Lightbulb, Fence, Server, Armchair, Users, Car, Trees, Split, Info, Plug, Printer, Frame, Merge, Group, Ungroup, Syringe, Stamp, History, LibraryBig, Waypoints, MapPin, Tag, Mountain, ShieldCheck, Cloud } from 'lucide-react';
+import { Undo, Redo, Trash2, PanelRight, Eye, BarChart3, Grid3X3, Crop, Scissors, Lasso, Pentagon, FileImage, Upload, FolderUp, Wand2, Download, Crosshair, FlaskConical, Activity, Sparkles, Layers, Maximize2, Bold, Italic, Underline, Strikethrough, Ruler, MoveHorizontal, MoveDiagonal2, Triangle, CircleDot, Diameter, Spline, CircleSlash, MoveUpRight, Rows3, Equal, Palette, Check, Pencil, RotateCcw, RefreshCw, Settings, Type, Construction, DoorOpen, Columns3, SquareDashed, RectangleHorizontal, TableProperties, Boxes, FileDown, Thermometer, Flame, Droplet, ArrowUpToLine, ArrowDownToLine, Unlink2, Lightbulb, Fence, Server, Armchair, Users, Car, Trees, Split, Info, Plug, Printer, Frame, Merge, Group, Ungroup, Syringe, Stamp, History, LibraryBig, Waypoints, MapPin, Tag, Mountain, ShieldCheck, Cloud, Box } from 'lucide-react';
 // ADR-581 Φ6 — reactive 2-state σύριγγα icon (empty ⇄ full) driven by the brush store.
 // Direct module import (ΟΧΙ barrel) → ο ribbon icon chunk δεν τραβά command classes.
 import { subscribeMatchBrush, hasMatchBrushSource } from '../../../../systems/match-properties/match-brush-store';
@@ -312,6 +312,8 @@ export const RibbonButtonIcon: React.FC<RibbonButtonIconProps> = ({ icon, size }
     case 'bim-mep-water-heater': return <Droplet width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'bim-railing': return <Fence width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'bim-furniture': return <Armchair width={sizePx[size]} height={sizePx[size]} className={className} />;
+    // ADR-684 — parametric primitive solid (box/sphere/cylinder/…): a single cube glyph.
+    case 'bim-generic-solid': return <Box width={sizePx[size]} height={sizePx[size]} className={className} />;
     // ADR-417 — parametric pitched roof (gable glyph: peak slopes + eave line).
     case 'bim-roof': return inlineSvg(size, (
       <>

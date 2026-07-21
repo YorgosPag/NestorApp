@@ -51,6 +51,7 @@ import {
   HATCH_CONTEXTUAL_TRIGGER,
   THERMAL_SPACE_CONTEXTUAL_TRIGGER,
   FURNITURE_CONTEXTUAL_TRIGGER,
+  GENERIC_SOLID_CONTEXTUAL_TRIGGER,
   BLOCK_LIBRARY_CONTEXTUAL_TRIGGER,
   TITLE_BLOCK_CONTEXTUAL_TRIGGER,
   FLOORPLAN_SYMBOL_CONTEXTUAL_TRIGGER,
@@ -93,6 +94,8 @@ export const TOOL_ACTIVE_TRIGGER: ReadonlyMap<string, string> = new Map<string, 
   ['foundation-strip-from-wall', FOUNDATION_CONTEXTUAL_TRIGGER],
   // ADR-410 / ADR-415 / ADR-583 — library picker tabs (variant/size for next place).
   ['furniture', FURNITURE_CONTEXTUAL_TRIGGER],
+  // ADR-684 — generic-solid tool active → «Ιδιότητες Στερεού» (shape + dims for next place).
+  ['generic-solid', GENERIC_SOLID_CONTEXTUAL_TRIGGER],
   ['floorplan-symbol', FLOORPLAN_SYMBOL_CONTEXTUAL_TRIGGER],
   // ADR-652 M1.5 — Block Library tool active → «Τοποθέτηση Block» (rotation/scale του επόμενου
   // κλικ). ΧΩΡΙΣ picker: το «ποιο block» το κατέχει το palette «Τα Blocks μου», όχι το ribbon.

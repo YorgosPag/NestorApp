@@ -29,6 +29,7 @@ import type {
   MepManifoldGripKind,
   FurnitureGripKind,
   ImportedMeshGripKind,
+  GenericSolidGripKind,
   FloorplanSymbolGripKind,
   MepSegmentGripKind,
   XLineGripKind,
@@ -342,6 +343,7 @@ export type {
   MepManifoldGripKind,
   FurnitureGripKind,
   ImportedMeshGripKind,
+  GenericSolidGripKind,
   FloorplanSymbolGripKind,
   MepSegmentGripKind,
   XLineGripKind,
@@ -397,6 +399,7 @@ export interface GripKindByEntity {
   'mep-water-heater': MepWaterHeaterGripKind;
   furniture: FurnitureGripKind;
   'imported-mesh': ImportedMeshGripKind;
+  'generic-solid': GenericSolidGripKind;
   'floorplan-symbol': FloorplanSymbolGripKind;
   'mep-segment': MepSegmentGripKind;
   xline: XLineGripKind;
@@ -454,4 +457,6 @@ export const GRIP_KIND_ENTITIES = [
   'opening-info-tag', 'image', 'text',
   // ADR-683 Φ3 — εισαγόμενο πλέγμα: move + rotation ΜΟΝΟ (καμία λαβή σχήματος, §3).
   'imported-mesh',
+  // ADR-684 Φ2/Φ3 — παραμετρικό στερεό: move + rotation πάντα· 4 corners ΜΟΝΟ για box.
+  'generic-solid',
 ] as const satisfies readonly (keyof GripKindByEntity)[];

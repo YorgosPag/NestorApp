@@ -75,6 +75,9 @@ describe('Grip-producer capability coverage — ζωντανό seam ↔ descript
         // ADR-683 Φ3 §10.1 — εισαγόμενο πλέγμα: ΕΧΕΙ producer, αλλά εκπέμπει ΜΟΝΟ
         // move + rotation. Καμία λαβή σχήματος (ψημένη γεωμετρία — §3).
         'imported-mesh',
+        // ADR-684 Φ2/Φ3 — παραμετρικό στερεό: ΕΧΕΙ producer. move + rotation πάντα·
+        // 4 corners ΜΟΝΟ για box (per-shape reshape → Φ4).
+        'generic-solid',
       ]),
     );
   });

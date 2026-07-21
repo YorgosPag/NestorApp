@@ -771,9 +771,11 @@
   },
   "c4dMaterialImport": {
     "button": "Import materials from 3D file",
+    "uploadingTextures": "Uploading textures and creating materials…",
+    "missingTextures": "Missing texture images: {files}. Send them together with the .dae (C4D references them from another disk) or use “Save Project with Assets” in C4D so they land in the textures folder.",
     "success": "Material import: {applied} bodies + {finish} finish members (matched {matched}, {unmatched} unmatched).",
-    "noMatch": "No object matched. Use a file (.glb or .obj) exported from Nestor.",
-    "noChanges": "The file has no material change (all are original Nestor materials). Apply the material to the object and export WITH materials — for OBJ select BOTH the .obj AND the .mtl (.glb carries them inside).",
+    "noMatch": "No object matched. Use a file (.glb or .obj) exported from Nestor App.",
+    "noChanges": "The file has no material change (all are original Nestor App materials). Apply the material to the object and export WITH materials — for OBJ select BOTH the .obj AND the .mtl (.glb carries them inside).",
     "noSource": "Select a .glb or .gltf file, or a .obj file together with its companion .mtl.",
     "parseError": "The 3D file could not be read. If it is a .gltf with external files (.bin / textures), ask for a .glb — it carries everything in one file.",
     "readError": "Failed to read the file.",
@@ -1327,6 +1329,9 @@
       "statusPosition": "Click to place the plant",
       "errorNoSelection": "No plant selected",
       "errorUnknownItem": "Unknown plant"
+    },
+    "genericSolid": {
+      "statusPosition": "Click to place solid"
     }
   },
   "blockLibrary": {
@@ -1731,7 +1736,8 @@
       "fireGas": "Fire & Gas",
       "topography": "Topography",
       "topoSurfaceProperties": "Topographic Surface",
-      "importedMeshProperties": "Imported Mesh"
+      "importedMeshProperties": "Imported Mesh",
+      "genericSolidProperties": "Solid Properties"
     },
     "panels": {
       "topoData": "Data",
@@ -2032,7 +2038,20 @@
       "peoplePlan": "People",
       "vehiclePlan": "Vehicles",
       "plantsPlan": "Plants",
-      "importedMeshBoq": "Bill of quantities"
+      "importedMeshBoq": "Bill of quantities",
+      "genericSolidShape": "Shape",
+      "genericSolidPlacement": "Placement",
+      "genericSolidClassification": "Classification",
+      "genericSolidDimensions": {
+        "box": "Box dimensions",
+        "sphere": "Sphere dimensions",
+        "cylinder": "Cylinder dimensions",
+        "cone": "Cone dimensions",
+        "torus": "Torus dimensions",
+        "pyramid": "Pyramid dimensions",
+        "disc": "Disc dimensions",
+        "prism": "Prism dimensions"
+      }
     },
     "minimizeStates": {
       "full": "Full Ribbon",
@@ -2694,6 +2713,10 @@
         "clashDetectionClear": {
           "label": "Clear",
           "tooltip": "Clear the clash report (no scene change)"
+        },
+        "genericSolid": {
+          "label": "Solid",
+          "tooltip": "Place a parametric solid (box/sphere/cylinder/cone/torus/pyramid/disc/prism) with a single click (shortcut GS)"
         }
       },
       "select": "Select",
@@ -5225,6 +5248,40 @@
       "importedMesh": {
         "assignBoq": {
           "label": "Assign to BOQ"
+        }
+      },
+      "genericSolidEditor": {
+        "shapeLabel": "Shape",
+        "shape": {
+          "box": "Box",
+          "sphere": "Sphere",
+          "cylinder": "Cylinder",
+          "cone": "Cone",
+          "torus": "Torus",
+          "pyramid": "Pyramid",
+          "disc": "Disc",
+          "prism": "Prism"
+        },
+        "rotation": "Rotation",
+        "mountingElevation": "Mounting height",
+        "structuralRoleLabel": "Role",
+        "structuralRole": {
+          "structural": "Structural",
+          "decorative": "Decorative"
+        },
+        "dim": {
+          "widthMm": "Width",
+          "depthMm": "Depth",
+          "heightMm": "Height",
+          "radiusMm": "Radius",
+          "radiusBottomMm": "Bottom radius",
+          "radiusTopMm": "Top radius",
+          "majorRadiusMm": "Ring radius",
+          "tubeRadiusMm": "Tube radius",
+          "baseWidthMm": "Base width",
+          "baseDepthMm": "Base depth",
+          "thicknessMm": "Thickness",
+          "sides": "Sides"
         }
       }
     },

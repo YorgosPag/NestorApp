@@ -119,6 +119,37 @@ export type FurnitureGripKind =
 export type ImportedMeshGripKind = 'imported-mesh-move' | 'imported-mesh-rotation';
 
 /**
+ * ADR-684 Φ2/Φ3 — παραμετρικό στερεό: centred-box λαβές (mirror `FurnitureGripKind`).
+ *   - `generic-solid-move`     → μετατόπιση του `position` (glyph MOVE).
+ *   - `generic-solid-rotation` → περιστροφή περί το `position` (καμπύλο glyph).
+ *   - `generic-solid-corner-{ne,nw,sw,se}` → two-direction resize πλάτους × βάθους.
+ *
+ * ⚠️ Οι γωνιακές λαβές (`generic-solid-corner-*`) εκπέμπονται **ΜΟΝΟ** όταν `shape.kind === 'box'`
+ * (η μόνη μορφή με authored ορθογώνιες διαστάσεις, ίδια σημασιολογία με το `furniture`).
+ *
+ * ADR-684 Φ4-A — τα **στρογγυλά** σχήματα (σφαίρα/κύλινδρος/δίσκος/κώνος/πρίσμα) παίρνουν **μία λαβή
+ * ακτίνας** (`generic-solid-radius`) στην περιφέρεια (+X), symmetric resize περί κέντρου — αδελφός
+ * του `column-circular-adapter` (Revit plan drag-handle). Το **κουλούρι** παίρνει **δύο** ομοαξονικές
+ * λαβές: `generic-solid-major` (κεντρική ακτίνα δακτυλίου) + `generic-solid-tube` (πάχος σωλήνα).
+ *
+ * ⚠️ **Καμία λαβή ύψους/πάχους/πλευρών σε κάτοψη — σκόπιμα.** Το ύψος δεν αλλάζει το ίχνος → μια
+ * plan λαβή ύψους δεν έχει καμία οπτική ανάδραση (μη-Revit-grade· ούτε Revit ούτε ArchiCAD τη βάζουν).
+ * Αυτές οι διαστάσεις (height/thickness/sides/radiusTop) επεξεργάζονται από το per-selection editor
+ * tab (Φ4-B, Properties-palette parity). Το φιλτράρισμα ανά σχήμα γίνεται στο `getGenericSolidGrips`.
+ */
+export type GenericSolidGripKind =
+  | 'generic-solid-move'
+  | 'generic-solid-rotation'
+  | 'generic-solid-corner-ne'
+  | 'generic-solid-corner-nw'
+  | 'generic-solid-corner-sw'
+  | 'generic-solid-corner-se'
+  // ADR-684 Φ4-A — per-shape radial reshape (plan-visible· ύψος/πάχος/πλευρές → editor tab).
+  | 'generic-solid-radius'
+  | 'generic-solid-major'
+  | 'generic-solid-tube';
+
+/**
  * ADR-415 — floorplan-symbol grip kind (parametric grip type). 1:1 mirror of
  * `FurnitureGripKind`: routes commit through `applyFloorplanSymbolGripDrag()` +
  * `UpdateFloorplanSymbolParamsCommand` (centre translate + rotation + opposite-

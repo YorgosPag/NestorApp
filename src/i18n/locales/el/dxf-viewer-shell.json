@@ -771,9 +771,11 @@
   },
   "c4dMaterialImport": {
     "button": "Εισαγωγή υλικών από 3Δ αρχείο",
+    "uploadingTextures": "Ανέβασμα υφών και δημιουργία υλικών…",
+    "missingTextures": "Λείπουν εικόνες υφών: {files}. Στείλ' τες μαζί με το .dae (ο C4D τις αναφέρει από άλλον δίσκο) ή χρησιμοποίησε «Save Project with Assets» στον C4D ώστε να μπουν στον φάκελο textures.",
     "success": "Εισαγωγή υλικών: {applied} σώματα + {finish} μέλη σοβά (ταίριαξαν {matched}, {unmatched} χωρίς αντιστοίχιση).",
-    "noMatch": "Κανένα αντικείμενο δεν ταίριαξε. Χρησιμοποίησε αρχείο (.glb ή .obj) εξαγμένο από τον Νέστορα.",
-    "noChanges": "Το αρχείο δεν έχει καμία αλλαγή υλικού (όλα είναι τα αρχικά υλικά του Νέστορα). Εφάρμοσε το υλικό στο αντικείμενο και κάνε export ΜΕ τα υλικά — στο OBJ επίλεξε ΚΑΙ το .obj ΚΑΙ το .mtl (το .glb τα κουβαλά μέσα του).",
+    "noMatch": "Κανένα αντικείμενο δεν ταίριαξε. Χρησιμοποίησε αρχείο (.glb ή .obj) εξαγμένο από το Nestor App.",
+    "noChanges": "Το αρχείο δεν έχει καμία αλλαγή υλικού (όλα είναι τα αρχικά υλικά του Nestor App). Εφάρμοσε το υλικό στο αντικείμενο και κάνε export ΜΕ τα υλικά — στο OBJ επίλεξε ΚΑΙ το .obj ΚΑΙ το .mtl (το .glb τα κουβαλά μέσα του).",
     "noSource": "Επίλεξε αρχείο .glb ή .gltf, ή αρχείο .obj μαζί με το συνοδευτικό .mtl.",
     "parseError": "Το 3Δ αρχείο δεν διαβάστηκε. Αν είναι .gltf με εξωτερικά αρχεία (.bin / υφές), ζήτησε .glb — κουβαλά τα πάντα σε ένα αρχείο.",
     "readError": "Αποτυχία ανάγνωσης του αρχείου.",
@@ -1327,6 +1329,9 @@
       "statusPosition": "Κάντε κλικ για να τοποθετήσετε το φυτό",
       "errorNoSelection": "Δεν έχει επιλεγεί φυτό",
       "errorUnknownItem": "Άγνωστο φυτό"
+    },
+    "genericSolid": {
+      "statusPosition": "Κλικ για τοποθέτηση στερεού"
     }
   },
   "blockLibrary": {
@@ -1731,7 +1736,8 @@
       "fireGas": "Πυρόσβεση & Αέριο",
       "topography": "Τοπογραφικό",
       "topoSurfaceProperties": "Τοπογραφική Επιφάνεια",
-      "importedMeshProperties": "Εισαγόμενο Πλέγμα"
+      "importedMeshProperties": "Εισαγόμενο Πλέγμα",
+      "genericSolidProperties": "Ιδιότητες Στερεού"
     },
     "panels": {
       "topoData": "Δεδομένα",
@@ -2032,7 +2038,20 @@
       "peoplePlan": "Άνθρωποι",
       "vehiclePlan": "Οχήματα",
       "plantsPlan": "Φυτά",
-      "importedMeshBoq": "Προμέτρηση"
+      "importedMeshBoq": "Προμέτρηση",
+      "genericSolidShape": "Σχήμα",
+      "genericSolidPlacement": "Τοποθέτηση",
+      "genericSolidClassification": "Ταξινόμηση",
+      "genericSolidDimensions": {
+        "box": "Διαστάσεις κουτιού",
+        "sphere": "Διαστάσεις σφαίρας",
+        "cylinder": "Διαστάσεις κυλίνδρου",
+        "cone": "Διαστάσεις κώνου",
+        "torus": "Διαστάσεις κουλουριού",
+        "pyramid": "Διαστάσεις πυραμίδας",
+        "disc": "Διαστάσεις δίσκου",
+        "prism": "Διαστάσεις πρίσματος"
+      }
     },
     "minimizeStates": {
       "full": "Πλήρης Προβολή",
@@ -2694,6 +2713,10 @@
         "clashDetectionClear": {
           "label": "Καθαρισμός",
           "tooltip": "Καθαρισμός της αναφοράς συγκρούσεων (καμία αλλαγή στη σκηνή)"
+        },
+        "genericSolid": {
+          "label": "Στερεό",
+          "tooltip": "Τοποθέτηση παραμετρικού στερεού (κουτί/σφαίρα/κύλινδρος/κώνος/κουλούρι/πυραμίδα/δίσκος/πρίσμα) με ένα κλικ (συντόμευση GS)"
         }
       },
       "select": "Επιλογή",
@@ -5225,6 +5248,40 @@
       "importedMesh": {
         "assignBoq": {
           "label": "Ανάθεση προμέτρησης"
+        }
+      },
+      "genericSolidEditor": {
+        "shapeLabel": "Σχήμα",
+        "shape": {
+          "box": "Κουτί",
+          "sphere": "Σφαίρα",
+          "cylinder": "Κύλινδρος",
+          "cone": "Κώνος",
+          "torus": "Κουλούρι",
+          "pyramid": "Πυραμίδα",
+          "disc": "Δίσκος",
+          "prism": "Πρίσμα"
+        },
+        "rotation": "Περιστροφή",
+        "mountingElevation": "Ύψος τοποθέτησης",
+        "structuralRoleLabel": "Ρόλος",
+        "structuralRole": {
+          "structural": "Δομικό",
+          "decorative": "Διακοσμητικό"
+        },
+        "dim": {
+          "widthMm": "Πλάτος",
+          "depthMm": "Βάθος",
+          "heightMm": "Ύψος",
+          "radiusMm": "Ακτίνα",
+          "radiusBottomMm": "Κάτω ακτίνα",
+          "radiusTopMm": "Άνω ακτίνα",
+          "majorRadiusMm": "Ακτίνα δακτυλίου",
+          "tubeRadiusMm": "Ακτίνα σωλήνα",
+          "baseWidthMm": "Πλάτος βάσης",
+          "baseDepthMm": "Βάθος βάσης",
+          "thicknessMm": "Πάχος",
+          "sides": "Πλευρές"
         }
       }
     },

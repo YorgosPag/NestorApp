@@ -66,6 +66,7 @@ import {
   SCALE_BAR_CONTEXTUAL_TRIGGER,
   TOPO_SURFACE_CONTEXTUAL_TRIGGER,
   IMPORTED_MESH_CONTEXTUAL_TRIGGER,
+  GENERIC_SOLID_CONTEXTUAL_TRIGGER,
 } from '../ui/ribbon/data/contextual-triggers';
 import { isSanitaryKind } from '../bim/sanitary/sanitary-symbol-spec';
 import { isApplianceKind } from '../bim/appliances/appliance-symbol-spec';
@@ -150,6 +151,10 @@ export const ENTITY_CONTEXTUAL_TRIGGER: Partial<Record<EntityType, string>> = {
   // ADR-683 Φ3.1β — εισαγόμενο πλέγμα → «Εισαγόμενο Πλέγμα» tab. Ενέργειες ΜΟΝΟ: το ψημένο πλέγμα
   // δεν έχει παραμέτρους (§3)· η μία απόφαση του χρήστη είναι πώς κοστολογείται (§10.2).
   'imported-mesh': IMPORTED_MESH_CONTEXTUAL_TRIGGER,
+  // ADR-684 Φ4-B — επιλεγμένο παραμετρικό στερεό → «Ιδιότητες Στερεού» tab (dual mode: edit selected
+  // ↔ tool-active defaults, ΤΟ ΙΔΙΟ trigger, mirror annotation-symbol/scale-bar). Ο editor επεξεργάζεται
+  // σχήμα/διαστάσεις/περιστροφή/υψόμετρο — ό,τι δεν βγαίνει με λαβή (ύψος/πάχος/πλευρές, Φ4-A).
+  'generic-solid': GENERIC_SOLID_CONTEXTUAL_TRIGGER,
 };
 
 /**

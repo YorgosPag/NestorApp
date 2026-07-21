@@ -57,6 +57,10 @@ import type {
   ImportedMeshEntity,
   ImportedMeshParams,
 } from '../entities/imported-mesh/imported-mesh-types';
+import type {
+  GenericSolidEntity,
+  GenericSolidParams,
+} from '../entities/generic-solid/generic-solid-types';
 import type { FloorFinishEntity, FloorFinishParams } from '../types/floor-finish-types';
 import { computeFloorFinishGeometry } from '../types/floor-finish-types';
 import type { SpaceSeparatorEntity, SpaceSeparatorParams } from '../types/space-separator-types';
@@ -82,6 +86,7 @@ import { computeMepManifoldGeometry } from '../mep-manifolds/mep-manifold-geomet
 import { computeMepSegmentGeometry } from '../geometry/mep-segment-geometry';
 import { computeFurnitureGeometry } from '../furniture/furniture-geometry';
 import { computeImportedMeshGeometry } from '../entities/imported-mesh/imported-mesh-geometry';
+import { computeGenericSolidGeometry } from '../entities/generic-solid/generic-solid-geometry';
 import { computeMepRadiatorGeometry } from '../mep-radiators/mep-radiator-geometry';
 import { computeMepBoilerGeometry } from '../mep-boilers/mep-boiler-geometry';
 import { computeMepWaterHeaterGeometry } from '../mep-water-heaters/mep-water-heater-geometry';
@@ -252,6 +257,20 @@ function moveImportedMesh(entity: ImportedMeshEntity, delta: Point2D): Partial<S
   return { params: newParams, geometry } as unknown as Partial<SceneEntity>;
 }
 
+/**
+ * ADR-684 Φ2 — παραμετρικό στερεό: μετατόπιση του σημείου εισαγωγής (mirror imported-mesh/έπιπλο).
+ * Το σχήμα (`shape`) δεν αλλάζει — η μετακίνηση είναι μετασχηματισμός θέσης, όχι reshape· η
+ * γεωμετρία (ίχνος/bbox) ξαναϋπολογίζεται από το SSoT.
+ */
+function moveGenericSolid(entity: GenericSolidEntity, delta: Point2D): Partial<SceneEntity> {
+  const newParams: GenericSolidParams = {
+    ...entity.params,
+    position: translatePoint(entity.params.position, delta),
+  };
+  const geometry = computeGenericSolidGeometry(newParams);
+  return { params: newParams, geometry } as unknown as Partial<SceneEntity>;
+}
+
 // ADR-419 — polygon floor-finish: shift all footprint vertices (mirror slab outline).
 function moveFloorFinish(entity: FloorFinishEntity, delta: Point2D): Partial<SceneEntity> {
   const newParams: FloorFinishParams = {
@@ -419,6 +438,8 @@ export function calculateBimMovedGeometry(
       return moveFurniture(entity, delta);
     case 'imported-mesh':
       return moveImportedMesh(entity, delta);
+    case 'generic-solid':
+      return moveGenericSolid(entity, delta);
     case 'floor-finish':
       return moveFloorFinish(entity, delta);
     case 'space-separator':

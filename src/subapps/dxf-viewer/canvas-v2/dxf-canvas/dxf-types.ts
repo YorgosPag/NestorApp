@@ -25,15 +25,12 @@ import type { ColumnEntity } from '../../bim/types/column-types';
 // ADR-470 — per-element structural component visibility override.
 import type { BimElementStyleOverride } from '../../config/bim-object-styles';
 import type { FoundationEntity } from '../../bim/types/foundation-types';
-// ADR-406 — MEP fixture direct entity for DXF render pipeline.
-import type { MepFixtureEntity } from '../../bim/types/mep-fixture-types';
-// ADR-408 Φ3 — electrical panel direct entity for DXF render pipeline.
-import type { ElectricalPanelEntity } from '../../bim/types/electrical-panel-types';
-// ADR-407 — railing direct entity for DXF render pipeline.
-import type { RailingEntity } from '../../bim/types/railing-types';
-// ADR-410 — furniture direct entity for DXF render pipeline.
-import type { FurnitureEntity } from '../../bim/types/furniture-types';
-import type { ImportedMeshEntity } from '../../bim/entities/imported-mesh/imported-mesh-types';
+// ADR-584 / N.18 — MEP fixture (406), electrical panel (408 Φ3), railing (407),
+// furniture (410), imported-mesh, generic-solid (684 Φ2) via the shared barrel (one import).
+import type {
+  MepFixtureEntity, ElectricalPanelEntity, RailingEntity,
+  FurnitureEntity, ImportedMeshEntity, GenericSolidEntity,
+} from '../../bim/types/bim-placeable-entity-types';
 // ADR-417 — roof direct entity for DXF render pipeline.
 import type { RoofEntity } from '../../bim/types/roof-types';
 import type { FloorFinishEntity } from '../../bim/types/floor-finish-types';
@@ -393,6 +390,19 @@ export interface DxfImportedMesh extends DxfEntity {
 }
 
 /**
+ * ADR-684 Φ2 — DxfGenericSolid direct entity (ίδιο quartet passthrough με DxfImportedMesh).
+ * Ο `GenericSolidRenderer` διαβάζει `geometry.footprint` + `params.shape` στο top level· το
+ * περίγραμμα είναι το ορθογώνιο του bbox (κοινός πυρήνας με imported-mesh/furniture).
+ */
+export interface DxfGenericSolid extends DxfEntity {
+  type: 'generic-solid';
+  kind: GenericSolidEntity['kind'];
+  params: GenericSolidEntity['params'];
+  geometry: GenericSolidEntity['geometry'];
+  validation?: GenericSolidEntity['validation'];
+}
+
+/**
  * ADR-408 Φ8 — DxfMepSegment direct entity (same pattern as DxfBeam).
  * MepSegmentRenderer reads geometry.outline + axisPolyline + params at top level.
  */
@@ -697,7 +707,7 @@ export interface DxfLeader extends DxfEntity {
   hasHookLine?: LeaderEntity['hasHookLine'];
 }
 
-export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair | DxfDimension | DxfSlab | DxfSlabOpening | DxfOpening | DxfWall | DxfColumn | DxfFoundation | DxfMepFixture | DxfElectricalPanel | DxfRailing | DxfFurniture | DxfMepSegment | DxfMepFitting | DxfFloorplanSymbol | DxfAnnotationSymbol | DxfScaleBar | DxfOpeningInfoTag | DxfMepManifold | DxfMepRadiator | DxfMepBoiler | DxfMepWaterHeater | DxfMepUnderfloor | DxfRoof | DxfFloorFinish | DxfWallCovering | DxfThermalSpace | DxfSpaceSeparator | DxfBeam | DxfHatch | DxfXLine | DxfRay | DxfImage | DxfTopoSurface | DxfLeader | DxfImportedMesh;
+export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair | DxfDimension | DxfSlab | DxfSlabOpening | DxfOpening | DxfWall | DxfColumn | DxfFoundation | DxfMepFixture | DxfElectricalPanel | DxfRailing | DxfFurniture | DxfMepSegment | DxfMepFitting | DxfFloorplanSymbol | DxfAnnotationSymbol | DxfScaleBar | DxfOpeningInfoTag | DxfMepManifold | DxfMepRadiator | DxfMepBoiler | DxfMepWaterHeater | DxfMepUnderfloor | DxfRoof | DxfFloorFinish | DxfWallCovering | DxfThermalSpace | DxfSpaceSeparator | DxfBeam | DxfHatch | DxfXLine | DxfRay | DxfImage | DxfTopoSurface | DxfLeader | DxfImportedMesh | DxfGenericSolid;
 
 // === WRAPPED (SUB-ENTITY) VARIANTS — SSoT ===
 /**

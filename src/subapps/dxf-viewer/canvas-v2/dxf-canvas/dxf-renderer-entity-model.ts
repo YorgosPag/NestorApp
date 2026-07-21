@@ -153,6 +153,8 @@ export function buildEntityModelFromDxf(
     case 'furniture':
     // ADR-683 Φ3 — εισαγόμενο πλέγμα: φέρει το τυπικό quartet, ίδιο passthrough.
     case 'imported-mesh':
+    // ADR-684 Φ2 — παραμετρικό στερεό: τυπικό quartet, ίδιο passthrough.
+    case 'generic-solid':
     case 'roof':
     case 'mep-segment':
     case 'mep-fitting':
@@ -293,6 +295,8 @@ export const TO_ENTITY_MODEL_SUPPORTED_TYPES = [
   'mep-underfloor', 'xline', 'ray', 'hatch', 'image', 'topo-surface', 'leader',
   // ADR-683 Φ3 — εισαγόμενο ψημένο πλέγμα.
   'imported-mesh',
+  // ADR-684 Φ2 — παραμετρικό γεωμετρικό στερεό.
+  'generic-solid',
 ] as const;
 
 // Bridge 1 — every listed token IS a real `DxfEntityUnion` discriminant (typo/stale ⇒ tsc breaks).

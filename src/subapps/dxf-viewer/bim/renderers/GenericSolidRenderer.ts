@@ -17,6 +17,7 @@ import { polygonBboxHitTest } from './bim-polygon-render';
 import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
 import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../rendering/types/Types';
 import type { GenericSolidEntity } from '../entities/generic-solid/generic-solid-types';
+import { computeGenericSolidPlanOutline } from '../entities/generic-solid/generic-solid-plan-outline';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
 import { getLayer } from '../../stores/LayerStore';
@@ -61,6 +62,21 @@ export class GenericSolidRenderer extends BimFootprintRenderer {
     this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
     this.drawPolygonPath(verts);
     this.ctx.stroke();
+
+    // Εσωτερικά δαχτυλίδια (τρύπα του torus): δύο ομόκεντροι κύκλοι = κλασικό plan σύμβολο.
+    // Το `footprint` (outer) καλύπτει τα υπόλοιπα σχήματα· μόνο ο torus έχει inner ring.
+    if (solid.params.shape.kind === 'torus') {
+      const rings = computeGenericSolidPlanOutline(
+        solid.params.shape,
+        solid.params.position,
+        solid.params.rotationDeg,
+        solid.params.sceneUnits,
+      ).rings;
+      for (let i = 1; i < rings.length; i++) {
+        this.drawPolygonPath(rings[i]);
+        this.ctx.stroke();
+      }
+    }
 
     this.ctx.restore();
     this.finalizeRender(entity, options);

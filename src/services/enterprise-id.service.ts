@@ -91,7 +91,7 @@ export {
   generateDimensionId, generateDimStyleId, generateLineStyleId, generateCenterMarkId, generateCenterLineId,
   generatePerformanceDiagnosticId,
   generateWallId, generateOpeningId, generateSlabId, generateSlabOpeningId,
-  generateColumnId, generateBeamId, generateFoundationId, generateMepFixtureId, generateMepSystemId, generateElectricalPanelId, generateMepSegmentId, generateMepManifoldId, generateRailingId, generateFurnitureId, generateImportedMeshId, generateBimPresetId, generateBimMaterialId, generateBlockLibraryItemId, generateBimSettingsId, generateBimFamilyTypeId,
+  generateColumnId, generateBeamId, generateFoundationId, generateMepFixtureId, generateMepSystemId, generateElectricalPanelId, generateMepSegmentId, generateMepManifoldId, generateRailingId, generateFurnitureId, generateImportedMeshId, generateGenericSolidId, generateBimPresetId, generateBimMaterialId, generateBlockLibraryItemId, generateBimSettingsId, generateBimFamilyTypeId,
   generateOpeningFramePresetId,
   generateMepBoilerId, generateMepWaterHeaterId, generateMepUnderfloorId, generateThermalSpaceId, generateSpaceSeparatorId,
   generateBim3DPrefId, generateBim3DDimensionId,

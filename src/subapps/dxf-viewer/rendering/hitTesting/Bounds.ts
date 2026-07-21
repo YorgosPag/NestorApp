@@ -154,6 +154,8 @@ export const HIT_TEST_BOUNDS_HANDLERS: Partial<Record<EntityType, EntityBoundsHa
   // ADR-683 Φ3 — εισαγόμενο πλέγμα: το `geometry.bbox` του μετρημένου κουτιού. Διαθέσιμο
   // ΧΩΡΙΣ φορτωμένο glTF, ώστε η επιλογή να δουλεύει αμέσως μετά το reload.
   'imported-mesh': calculateBimEntityBounds,
+  // ADR-684 Φ2 — παραμετρικό στερεό: το `geometry.bbox` του ίχνους (ίδιο μονοπάτι με κάθε BIM).
+  'generic-solid': calculateBimEntityBounds,
   'floorplan-symbol': calculateBimEntityBounds,
   'mep-fixture': calculateBimEntityBounds,
   'electrical-panel': calculateBimEntityBounds,

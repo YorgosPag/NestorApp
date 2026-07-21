@@ -34,6 +34,7 @@ import type { BOQItem } from '@/types/boq';
 import {
   resolveAtoeMapping,
   resolveImportedMeshMapping,
+  resolveGenericSolidMapping,
   deriveAtoeQuantity,
   type AtoeMappingEntry,
   type BimEntityType,
@@ -218,6 +219,12 @@ function resolveEntityAtoeMapping(
   // Ανανάθετο → `null` → **καμία γραμμή** (§10.2: ορατή απουσία αντί για μηδενικό κόστος).
   if (entityType === 'imported-mesh') {
     return resolveImportedMeshMapping(entity.params?.['importedMeshIdentity']) ?? undefined;
+  }
+
+  // ADR-684 Φ4-C — παραμετρικό στερεό: ο διαχωριστής είναι ο `structuralRole` (§4.3), όχι το kind.
+  // Δομικό → RC m³· διακοσμητικό/απόν → καμία γραμμή (mirror ανανάθετου imported-mesh).
+  if (entityType === 'generic-solid') {
+    return resolveGenericSolidMapping(entity.params?.['structuralRole']) ?? undefined;
   }
 
   const category = entity.params?.category;

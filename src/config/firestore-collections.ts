@@ -414,6 +414,8 @@ export const COLLECTIONS = {
   FLOORPLAN_SYMBOLS: process.env.NEXT_PUBLIC_FLOORPLAN_SYMBOLS_COLLECTION || 'floorplan_symbols',
   /** ADR-683 Φ3β — baked meshes imported from a collaborator's glTF. IDs via imesh_* prefix. */
   FLOORPLAN_IMPORTED_MESHES: process.env.NEXT_PUBLIC_FLOORPLAN_IMPORTED_MESHES_COLLECTION || 'floorplan_imported_meshes',
+  /** ADR-684 — parametric geometric solids (box/sphere/…/torus/pyramid). IDs via gsol_* prefix. */
+  FLOORPLAN_GENERIC_SOLIDS: process.env.NEXT_PUBLIC_FLOORPLAN_GENERIC_SOLIDS_COLLECTION || 'floorplan_generic_solids',
   /** BIM element presets (system/company/project/user scope). IDs via bpst_* prefix. */
   BIM_PRESETS: process.env.NEXT_PUBLIC_BIM_PRESETS_COLLECTION || 'bim_presets',
   /** Material library — 25 seeded generics (Phase 6+). IDs via bmat_* prefix. */
@@ -516,6 +518,7 @@ export const FLOOR_SCOPED_BIM_COLLECTIONS = [
   COLLECTIONS.FLOORPLAN_FURNITURE,
   COLLECTIONS.FLOORPLAN_SYMBOLS,
   COLLECTIONS.FLOORPLAN_IMPORTED_MESHES,
+  COLLECTIONS.FLOORPLAN_GENERIC_SOLIDS,
   COLLECTIONS.FLOORPLAN_MEP_FIXTURES,
   COLLECTIONS.FLOORPLAN_MEP_SYSTEMS,
   COLLECTIONS.FLOORPLAN_MEP_SEGMENTS,

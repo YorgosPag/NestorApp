@@ -118,6 +118,8 @@ export const GenericSolidParamsSchema = z
     rotationDeg: z.number().finite(),
     mountingElevationMm: z.number().finite(),
     material: z.string().min(1).optional(),
+    // ADR-684 Φ4-C — ρόλος ταξινόμησης/BOQ (§4.3). Απόν → διακοσμητικό (default).
+    structuralRole: z.enum(['structural', 'decorative']).optional(),
     sceneUnits: z.string().optional(),
     storeyId: z.string().min(1).optional(),
   })

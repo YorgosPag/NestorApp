@@ -40,6 +40,7 @@ import type { MepBoilerEntity } from '../bim/types/mep-boiler-types';
 import type { MepWaterHeaterEntity } from '../bim/types/mep-water-heater-types';
 import type { FurnitureEntity } from '../bim/types/furniture-types';
 import type { ImportedMeshEntity } from '../bim/entities/imported-mesh/imported-mesh-types';
+import type { GenericSolidEntity } from '../bim/entities/generic-solid/generic-solid-types';
 import type { FloorplanSymbolEntity } from '../bim/types/floorplan-symbol-types';
 import type { MepSegmentEntity } from '../bim/types/mep-segment-types';
 import type { RoofEntity } from '../bim/types/roof-types';
@@ -64,6 +65,7 @@ import { getMepBoilerGrips } from '../bim/mep-boilers/mep-boiler-grips';
 import { getMepWaterHeaterGrips } from '../bim/mep-water-heaters/mep-water-heater-grips';
 import { getFurnitureGrips } from '../bim/furniture/furniture-grips';
 import { getImportedMeshGrips } from '../bim/entities/imported-mesh/imported-mesh-grips';
+import { getGenericSolidGrips } from '../bim/entities/generic-solid/generic-solid-grips';
 import { getFloorplanSymbolGrips } from '../bim/floorplan-symbols/floorplan-symbol-grips';
 import { getAnnotationSymbolGrips } from '../bim/annotation-symbols/annotation-symbol-grips';
 import { getScaleBarGrips } from '../bim/scale-bar/scale-bar-grips';
@@ -363,6 +365,10 @@ export const GRIP_PRODUCERS: Partial<Record<DxfEntityUnion['type'], (e: DxfEntit
   // ADR-683 Φ3 §10.1 — εισαγόμενο πλέγμα: move + rotation ΜΟΝΟ. Οι γωνιακές λαβές
   // λείπουν ΣΚΟΠΙΜΑ (ψημένη γεωμετρία δεν παραμορφώνεται — §3), όχι από παράλειψη.
   'imported-mesh': (e) => getImportedMeshGrips(e as unknown as ImportedMeshEntity),
+
+  // ADR-684 Φ2/Φ3 — παραμετρικό στερεό: move + rotation πάντα· 4 corners ΜΟΝΟ για box
+  // (per-shape reshape → Φ4). Το φιλτράρισμα ανά σχήμα γίνεται στο getGenericSolidGrips.
+  'generic-solid': (e) => getGenericSolidGrips(e as unknown as GenericSolidEntity),
 
   // ADR-415 — parametric floorplan-symbol grips (1:1 mirror of furniture). Editor-only
   // type (absent from RENDERABLE_ENTITY_TYPES) — pinned as the non-renderable extra.

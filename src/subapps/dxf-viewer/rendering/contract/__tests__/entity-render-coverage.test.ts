@@ -46,6 +46,7 @@ import { ColumnPlacementGhost } from '../../../bim-3d/placement/ColumnPlacementG
 import { WallPlacementGhost } from '../../../bim-3d/placement/WallPlacementGhost';
 import { BeamFromWallGhost } from '../../../bim-3d/placement/BeamFromWallGhost';
 import { FurniturePlacementGhost } from '../../../bim-3d/placement/FurniturePlacementGhost';
+import { GenericSolidPlacementGhost } from '../../../bim-3d/placement/GenericSolidPlacementGhost';
 import { ElectricalPanelPlacementGhost } from '../../../bim-3d/placement/ElectricalPanelPlacementGhost';
 import { MepFixturePlacementGhost } from '../../../bim-3d/placement/MepFixturePlacementGhost';
 import { MepSegmentPlacementGhost } from '../../../bim-3d/placement/MepSegmentPlacementGhost';
@@ -193,6 +194,7 @@ describe('Φ-Ghost binding: declaration ↔ 3D ghost factory registry (ADR-550 �
       ['wall', WallPlacementGhost],
       ['beam', BeamFromWallGhost],
       ['furniture', FurniturePlacementGhost],
+      ['generic-solid', GenericSolidPlacementGhost],
       ['electrical-panel', ElectricalPanelPlacementGhost],
       ['mep-fixture', MepFixturePlacementGhost],
       ['mep-segment', MepSegmentPlacementGhost],

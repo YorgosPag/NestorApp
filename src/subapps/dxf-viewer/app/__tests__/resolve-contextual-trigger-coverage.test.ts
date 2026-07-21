@@ -38,6 +38,7 @@ import { STYLE_EDITABLE_PRIMITIVE_TYPES } from '../../types/style-editable-primi
 import { WALL_CONTEXTUAL_TRIGGER } from '../../ui/ribbon/data/contextual-wall-tab';
 import { HATCH_CONTEXTUAL_TRIGGER } from '../../ui/ribbon/data/contextual-hatch-tab';
 import { ANNOTATION_SYMBOL_CONTEXTUAL_TRIGGER } from '../../ui/ribbon/data/contextual-annotation-symbol-tab';
+import { GENERIC_SOLID_CONTEXTUAL_TRIGGER } from '../../ui/ribbon/data/contextual-generic-solid-tab';
 import { SCALE_BAR_CONTEXTUAL_TRIGGER } from '../../ui/ribbon/data/contextual-scale-bar-tab';
 import { TEXT_EDITOR_CONTEXTUAL_TRIGGER } from '../../ui/ribbon/data/contextual-text-editor-tab';
 import { LINE_TOOL_CONTEXTUAL_TRIGGER } from '../../ui/ribbon/data/contextual-line-tool-tab';
@@ -72,6 +73,9 @@ const NO_SELECTION_TAB_TYPES = [
   'railing',
   'space-separator',
   'furniture',
+  // ADR-684 Φ4-B — το `generic-solid` ΜΕΤΑΚΙΝΗΘΗΚΕ στο `ENTITY_CONTEXTUAL_TRIGGER` map: μια
+  // επιλεγμένη οντότητα ανοίγει τώρα την «Ιδιότητες Στερεού» tab (dual mode edit ↔ tool defaults),
+  // ώστε ύψος/πάχος/πλευρές/άνω-ακτίνα — ό,τι δεν βγαίνει με λαβή (Φ4-A) — να επεξεργάζονται εκεί.
   // ADR-415 — το 2D floorplan symbol (WC/κουζίνα/έπιπλα κάτοψης) τοποθετείται & επεξεργάζεται
   // μέσω tool-active tab· στην ΕΠΙΛΟΓΗ δεν έχει per-selection editor tab → null (όπως furniture).
   'floorplan-symbol',
@@ -163,6 +167,8 @@ describe('Selection contextual-trigger coverage — map ↔ resolver ↔ descrip
       );
       // ADR-583 Φ3e — a selected graphic scale-bar surfaces the «Γραφική Κλίμακα» tab.
       expect(resolveContextualTrigger({ type: 'scale-bar' })).toBe(SCALE_BAR_CONTEXTUAL_TRIGGER);
+      // ADR-684 Φ4-B — a selected generic-solid surfaces the «Ιδιότητες Στερεού» tab (dual mode).
+      expect(resolveContextualTrigger({ type: 'generic-solid' })).toBe(GENERIC_SOLID_CONTEXTUAL_TRIGGER);
       expect(resolveContextualTrigger({ type: 'text' })).toBe(TEXT_EDITOR_CONTEXTUAL_TRIGGER);
       expect(resolveContextualTrigger({ type: 'mtext' })).toBe(TEXT_EDITOR_CONTEXTUAL_TRIGGER);
     });

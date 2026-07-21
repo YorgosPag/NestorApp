@@ -245,6 +245,8 @@ export type ToolType =
   | 'railing'
   // ADR-410: mesh-based CC0 furniture drawing tool (single-click placement)
   | 'furniture'
+  // ADR-684: parametric primitive solid (box/sphere/cylinder/…) drawing tool (single-click placement)
+  | 'generic-solid'
   // Block Library M1: single-click re-placement of a session/imported DXF block
   | 'block-library'
   // ADR-651 Φάση Β: single-click τοποθέτηση πινακίδας σχεδίου (resolved title-block ως BLOCK)

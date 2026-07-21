@@ -161,6 +161,13 @@ export interface FurnitureToolLike {
   onCanvasClick: (point: Point2D) => boolean;
 }
 
+/**
+ * ADR-684 — το παραμετρικό στερεό δρομολογείται ΑΚΡΙΒΩΣ όπως το έπιπλο (single-click,
+ * RAW worldPoint), οπότε μοιράζεται το ίδιο routing συμβόλαιο — alias, όχι δίδυμο
+ * interface (N.18).
+ */
+export type GenericSolidToolLike = FurnitureToolLike;
+
 /** Block Library M1 — Minimal block-library tool interface for click routing (single-click). */
 export interface BlockLibraryToolLike {
   readonly isActive: boolean;

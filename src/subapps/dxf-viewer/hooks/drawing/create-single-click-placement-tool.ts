@@ -64,7 +64,8 @@ export type PlacementPlaceEvent =
   | 'bim:place-mep-boiler-3d'
   | 'bim:place-mep-fixture-3d'
   | 'bim:place-electrical-panel-3d'
-  | 'bim:place-furniture-3d';
+  | 'bim:place-furniture-3d'
+  | 'bim:place-generic-solid-3d';
 
 /** `build{X}Entity` result contract — shared by every completion module. */
 export type PlacementBuildResult<TEntity> =

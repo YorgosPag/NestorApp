@@ -16,6 +16,7 @@
 import { useEffect } from 'react';
 import { useMepFixtureTool } from '../drawing/useMepFixtureTool';
 import { useFurnitureTool } from '../drawing/useFurnitureTool';
+import { useGenericSolidTool } from '../drawing/useGenericSolidTool';
 import { useBlockLibraryTool } from '../drawing/useBlockLibraryTool';
 import { useTitleBlockTool } from '../drawing/useTitleBlockTool';
 import {
@@ -39,6 +40,7 @@ import { useToolLifecycle } from './useToolLifecycle';
 import { resolveSceneUnits } from '../../utils/scene-units';
 import { addMepFixtureToScene } from '../../bim/mep-fixtures/add-mep-fixture-to-scene';
 import { addFurnitureToScene } from '../../bim/furniture/add-furniture-to-scene';
+import { addGenericSolidToScene } from '../../bim/entities/generic-solid/add-generic-solid-to-scene';
 import { addBlockToScene } from '../../bim/block-library/add-block-to-scene';
 import { addEntourageToScene } from '../../bim/entourage/add-entourage-to-scene';
 import { useProjectHierarchyOptional } from '../../contexts/ProjectHierarchyContext';
@@ -50,15 +52,12 @@ import { addMepBoilerToScene } from '../../bim/mep-boilers/add-mep-boiler-to-sce
 import { addMepWaterHeaterToScene } from '../../bim/mep-water-heaters/add-mep-water-heater-to-scene';
 import { addMepSegmentToScene } from '../../bim/mep-segments/add-mep-segment-to-scene';
 import { DEFAULT_DRAINAGE_SLOPE_PERCENT } from '../../bim/types/mep-segment-types';
-import { plumbingFixtureToolKind } from '../../bim/mep-fixtures/plumbing-fixture-spec';
-import { socketFixtureToolKind } from '../../bim/mep-fixtures/socket-symbol-spec';
-import { dataOutletFixtureToolKind } from '../../bim/mep-fixtures/data-outlet-symbol-spec';
-import { airTerminalFixtureToolKind } from '../../bim/mep-fixtures/air-terminal-symbol-spec';
-import { ahuFixtureToolKind } from '../../bim/mep-fixtures/ahu-symbol-spec';
-import { sprinklerFixtureToolKind } from '../../bim/mep-fixtures/sprinkler-symbol-spec';
-import { fireRiserFixtureToolKind } from '../../bim/mep-fixtures/fire-riser-symbol-spec';
-import { gasMeterFixtureToolKind } from '../../bim/mep-fixtures/gas-meter-symbol-spec';
-import { gasCookerFixtureToolKind } from '../../bim/mep-fixtures/gas-cooker-symbol-spec';
+// ADR-584 / N.18 — fixture tool-kind predicates via the shared barrel (one import).
+import {
+  plumbingFixtureToolKind, socketFixtureToolKind, dataOutletFixtureToolKind,
+  airTerminalFixtureToolKind, ahuFixtureToolKind, sprinklerFixtureToolKind,
+  fireRiserFixtureToolKind, gasMeterFixtureToolKind, gasCookerFixtureToolKind,
+} from '../../bim/mep-fixtures/fixture-tool-kinds';
 import { addRailingToScene } from '../../bim/railings/add-railing-to-scene';
 import type { LevelsHookReturn } from '../../systems/levels';
 
@@ -72,6 +71,7 @@ export interface UseSpecialToolsPlacementProps {
 export interface PlacementToolsReturn {
   mepFixtureTool: ReturnType<typeof useMepFixtureTool>; // ADR-406
   furnitureTool: ReturnType<typeof useFurnitureTool>; // ADR-410
+  genericSolidTool: ReturnType<typeof useGenericSolidTool>; // ADR-684
   blockLibraryTool: ReturnType<typeof useBlockLibraryTool>; // Block Library M1
   titleBlockTool: ReturnType<typeof useTitleBlockTool>; // ADR-651 Φάση Β
   furniturePlanTool: ReturnType<typeof useFurniturePlanTool>; // ADR-654
@@ -184,6 +184,20 @@ export function useSpecialToolsPlacementTools(
     },
   });
   useToolLifecycle(activeTool === 'furniture', furnitureTool.activate, furnitureTool.deactivate);
+
+  // ADR-684 — GENERIC SOLID TOOL: single-click placement of a parametric primitive
+  // (box/sphere/cylinder/cone/torus/pyramid/disc/prism). The «which shape» + dims
+  // live in the ribbon shape selector (generic-solid-tool-bridge-store); here only
+  // activate/commit (undoable append+broadcast via addGenericSolidToScene, like furniture).
+  const genericSolidTool = useGenericSolidTool({
+    currentLevelId: levelManager.currentLevelId || '0',
+    onGenericSolidCreated: (genericSolidEntity) => addGenericSolidToScene(genericSolidEntity, levelManager),
+    getSceneUnits: () => {
+      const lid = levelManager.currentLevelId;
+      return lid ? resolveSceneUnits(levelManager.getLevelScene(lid)) : 'mm';
+    },
+  });
+  useToolLifecycle(activeTool === 'generic-solid', genericSolidTool.activate, genericSolidTool.deactivate);
 
   // Block Library M1 — single-click ΕΠΑΝΑτοποθέτηση ενός imported/session block. Το «ποιο block»
   // το ορίζει το palette («Τα Blocks μου») στο block-library-selection-store· εδώ μόνο activate/
@@ -424,6 +438,7 @@ export function useSpecialToolsPlacementTools(
   return {
     mepFixtureTool,
     furnitureTool,
+    genericSolidTool,
     blockLibraryTool,
     titleBlockTool,
     furniturePlanTool,

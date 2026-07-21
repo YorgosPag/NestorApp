@@ -8,13 +8,17 @@
  * γεωμετρία με έπιπλο / MEP box. Επαναχρησιμοποιούμε τον `createCentredBoxGripAdapter` (ADR-602) —
  * μηδέν νέα μαθηματικά, μηδέν clone (N.18).
  *
- * ## Οι γωνιακές λαβές εκπέμπονται ΜΟΝΟ για `box`
+ * ## Δύο οικογένειες λαβών reshape ανά σχήμα
  *
- * Μόνο το `box` σχήμα έχει authored ορθογώνιες διαστάσεις (`widthMm`/`depthMm`) που το corner-resize
- * μπορεί να επεξεργαστεί άμεσα — ίδια σημασιολογία με το `furniture`. Σφαίρα/κύλινδρος/κώνος/
- * κουλούρι/δίσκος/πρίσμα/πυραμίδα έχουν **διαφορετική** reshape σημασιολογία (ακτίνα/ύψος/πλευρές):
- * μια τετράγωνη λαβή γωνίας θα παραμόρφωνε το τετράγωνο ίχνος τους ασύμβατα με τις παραμέτρους τους.
- * Γι' αυτά εκπέμπονται **μόνο** move + rotation στη Φ2/Φ3 (οι per-shape λαβές ακτίνας είναι Φ4).
+ * - **box** → 4 γωνιακές λαβές (`generic-solid-corner-*`): authored ορθογώνιες διαστάσεις
+ *   (`widthMm`/`depthMm`), ίδια σημασιολογία με το `furniture` (centred-box adapter, ADR-602).
+ * - **στρογγυλά** (σφαίρα/κύλινδρος/δίσκος/κώνος/πρίσμα/κουλούρι) → radial λαβές ακτίνας (Φ4-A),
+ *   που ζουν στο αδελφό module {@link ./generic-solid-shape-grips} (mirror `column-circular-adapter`).
+ * - **pyramid** → μόνο move + rotation (ορθογώνιο ίχνος αλλά χωρίς corner grips εδώ· οι διαστάσεις
+ *   βάσης επεξεργάζονται από το editor tab, Φ4-B).
+ *
+ * Το ύψος/πάχος/πλευρές/άνω-ακτίνα **δεν** έχουν plan λαβή (καμία οπτική ανάδραση σε κάτοψη· βλ.
+ * shape-grips module) — επεξεργάζονται από το per-selection editor tab (Φ4-B).
  *
  * Ο διαχωρισμός γίνεται με **runtime φιλτράρισμα** στο {@link getGenericSolidGrips}, όχι με δεύτερο
  * adapter: ο τύπος `GenericSolidGripKind` κρατά όλο το capability set (όπως το furniture).
@@ -22,7 +26,7 @@
  * Μηδέν εξαρτήσεις React / DOM / Firestore / canvas.
  *
  * @see ../../grips/create-centred-box-grip-adapter — ο adapter factory (ADR-602)
- * @see ../../furniture/furniture-grips — ο αδελφός box consumer (πλήρες corner set)
+ * @see ./generic-solid-shape-grips — οι per-shape radial λαβές (Φ4-A)
  * @see ./generic-solid-geometry — shapeBoundingBoxMm (πηγή των bbox διαστάσεων)
  */
 
@@ -37,6 +41,10 @@ import type { CentredBoxParams, CentredBoxPatch } from '../../grips/centred-box-
 import type { GenericSolidEntity, GenericSolidParams } from './generic-solid-types';
 import { MIN_GENERIC_SOLID_DIMENSION_MM } from './generic-solid-types';
 import { shapeBoundingBoxMm } from './generic-solid-geometry';
+import {
+  getGenericSolidShapeReshapeGrips,
+  applyGenericSolidShapeReshape,
+} from './generic-solid-shape-grips';
 
 // ─── Param bridge: shape-nested dims ↔ centred-box SSoT ────────────────────────
 
@@ -98,22 +106,31 @@ const ROTATION_KIND: GenericSolidGripKind = 'generic-solid-rotation';
 
 /**
  * Λαβές ενός `GenericSolidEntity`. Για `box` → move + rotation + 4 γωνίες (πλήρες centred-box set).
- * Για κάθε άλλο σχήμα → **μόνο** move + rotation (το φιλτράρισμα εδώ, όχι δεύτερος adapter).
+ * Για κάθε άλλο σχήμα → move + rotation (centred-box) **+** οι per-shape radial reshape λαβές (Φ4-A:
+ * ακτίνα για στρογγυλά, major+tube για κουλούρι· pyramid = μόνο move/rotation, βλ. shape-grips module).
  */
 export function getGenericSolidGrips(entity: Readonly<GenericSolidEntity>): GripInfo[] {
   const all = adapter.getGrips(entity);
   if (entity.params.shape.kind === 'box') return all;
-  return all.filter((g) => {
+  const moveRotate = all.filter((g) => {
     const kind = g.gripKind?.on === 'generic-solid' ? g.gripKind.kind : undefined;
     return kind === MOVE_KIND || kind === ROTATION_KIND;
   });
+  return [...moveRotate, ...getGenericSolidShapeReshapeGrips(entity)];
 }
 
 /**
  * Καθαρός μετασχηματισμός: είδος λαβής + drag → νέες `GenericSolidParams`. Μηδενικό delta / άγνωστο
- * είδος → επιστρέφει τις **ίδιες** παραμέτρους (short-circuit commit). Delegate 100% στον adapter.
+ * είδος → επιστρέφει τις **ίδιες** παραμέτρους (short-circuit commit).
+ *
+ * Φ4-A — δοκιμάζει ΠΡΩΤΑ τις radial reshape λαβές (ακτίνα/major/tube)· `null` → fall back στον
+ * centred-box adapter (move/rotation/box-corner). Mirror του `applyColumnGripDrag` (rect→circular→base).
  */
-export const applyGenericSolidGripDrag: (
+export function applyGenericSolidGripDrag(
   kind: GenericSolidGripKind,
   input: Readonly<GenericSolidGripDragInput>,
-) => GenericSolidParams = adapter.applyGripDrag;
+): GenericSolidParams {
+  const reshaped = applyGenericSolidShapeReshape(kind, input.originalParams, input.delta);
+  if (reshaped) return reshaped;
+  return adapter.applyGripDrag(kind, input);
+}

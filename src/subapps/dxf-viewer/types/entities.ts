@@ -474,6 +474,7 @@ export type {
 } from '../bim/types/furniture-types';
 import type { FurnitureEntity } from '../bim/types/furniture-types';
 import type { ImportedMeshEntity } from '../bim/entities/imported-mesh/imported-mesh-types';
+import type { GenericSolidEntity } from '../bim/entities/generic-solid/generic-solid-types';
 
 // ADR-415: pure-vector 2D floorplan symbol types live in bim/types/floorplan-symbol-types.ts (SRP).
 export type {
@@ -979,6 +980,8 @@ export type Entity = (
   | ThermalSpaceEntity
   // ADR-437 — space separator (IfcVirtualElement).
   | SpaceSeparatorEntity
+  // ADR-684 — παραμετρικό γεωμετρικό στερεό (κουτί/σφαίρα/…/torus/πυραμίδα).
+  | GenericSolidEntity
 ) & Pick<BaseEntity,
   // Required identifiers — needed everywhere (ADR-363 fix: BIM entities now in union)
   'id' | 'name' | 'layerId' |
@@ -1170,6 +1173,10 @@ export const isFurnitureEntity = (entity: Entity): entity is FurnitureEntity =>
 export const isImportedMeshEntity = (entity: Entity): entity is ImportedMeshEntity =>
   entity.type === 'imported-mesh';
 
+/** ADR-684 — παραμετρικό γεωμετρικό στερεό (κουτί/σφαίρα/κύλινδρος/κώνος/torus/πυραμίδα/δίσκος/πρίσμα). */
+export const isGenericSolidEntity = (entity: Entity): entity is GenericSolidEntity =>
+  entity.type === 'generic-solid';
+
 /** ADR-408 Φ8 — unified linear MEP segment (duct + pipe). */
 export const isMepSegmentEntity = (entity: Entity): entity is MepSegmentEntity =>
   entity.type === 'mep-segment';
@@ -1216,10 +1223,12 @@ export const isBimEntityType = (type: string): boolean =>
   type === 'furniture' || type === 'mep-segment' || type === 'mep-fitting' ||
   type === 'floorplan-symbol' || type === 'roof' || type === 'floor-finish' || type === 'wall-covering' || type === 'thermal-space' || type === 'space-separator' ||
   // ADR-683 Φ3 — εισαγόμενο ψημένο πλέγμα: BIM πολίτης (V/G, ορατότητα, επιλογή).
-  type === 'imported-mesh';
+  type === 'imported-mesh' ||
+  // ADR-684 — παραμετρικό γεωμετρικό στερεό: BIM πολίτης (V/G, ορατότητα, επιλογή, persistence).
+  type === 'generic-solid';
 
 /** True for any ADR-363/406/407/408/410/415/417/419/422/437 BIM parametric entity */
-export const isBimEntity = (entity: Entity): entity is WallEntity | OpeningEntity | SlabEntity | SlabOpeningEntity | ColumnEntity | BeamEntity | FoundationEntity | MepFixtureEntity | ElectricalPanelEntity | MepManifoldEntity | MepRadiatorEntity | MepBoilerEntity | MepWaterHeaterEntity | MepUnderfloorEntity | RailingEntity | FurnitureEntity | MepSegmentEntity | MepFittingEntity | FloorplanSymbolEntity | RoofEntity | FloorFinishEntity | WallCoveringEntity | ThermalSpaceEntity | SpaceSeparatorEntity | ImportedMeshEntity =>
+export const isBimEntity = (entity: Entity): entity is WallEntity | OpeningEntity | SlabEntity | SlabOpeningEntity | ColumnEntity | BeamEntity | FoundationEntity | MepFixtureEntity | ElectricalPanelEntity | MepManifoldEntity | MepRadiatorEntity | MepBoilerEntity | MepWaterHeaterEntity | MepUnderfloorEntity | RailingEntity | FurnitureEntity | MepSegmentEntity | MepFittingEntity | FloorplanSymbolEntity | RoofEntity | FloorFinishEntity | WallCoveringEntity | ThermalSpaceEntity | SpaceSeparatorEntity | ImportedMeshEntity | GenericSolidEntity =>
   isBimEntityType(entity.type);
 
 // ✅ ENTERPRISE MIGRATION: generateEntityId moved to systems/entity-creation/utils.ts

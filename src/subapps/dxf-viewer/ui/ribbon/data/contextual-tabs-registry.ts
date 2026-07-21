@@ -56,6 +56,7 @@ import { CONTEXTUAL_MEP_SEGMENT_TAB } from './contextual-mep-segment-tab';
 import { CONTEXTUAL_MEP_FIXTURE_LIBRARY_TAB } from './contextual-mep-fixture-library-tab';
 import { CONTEXTUAL_MEP_RISER_TAB } from './contextual-mep-riser-tab';
 import { CONTEXTUAL_FURNITURE_TAB } from './contextual-furniture-tab';
+import { CONTEXTUAL_GENERIC_SOLID_TAB } from './contextual-generic-solid-tab';
 import { CONTEXTUAL_BLOCK_LIBRARY_TAB } from './contextual-block-library-tab';
 import { CONTEXTUAL_TITLE_BLOCK_TAB } from './contextual-title-block-tab';
 import { CONTEXTUAL_FLOORPLAN_SYMBOL_TAB } from './contextual-floorplan-symbol-tab';
@@ -117,6 +118,7 @@ export const RAW_RIBBON_CONTEXTUAL_TABS: readonly RibbonTab[] = [
   CONTEXTUAL_MEP_FIXTURE_LIBRARY_TAB,
   CONTEXTUAL_MEP_RISER_TAB,
   CONTEXTUAL_FURNITURE_TAB,
+  CONTEXTUAL_GENERIC_SOLID_TAB,
   CONTEXTUAL_BLOCK_LIBRARY_TAB,
   CONTEXTUAL_TITLE_BLOCK_TAB,
   CONTEXTUAL_FLOORPLAN_SYMBOL_TAB,

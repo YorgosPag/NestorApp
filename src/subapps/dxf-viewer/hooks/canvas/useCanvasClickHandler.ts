@@ -69,6 +69,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     beamBetweenMembersTool,
     mepFixtureTool,
     furnitureTool,
+    genericSolidTool,
     floorplanSymbolTool,
     electricalPanelTool,
     mepManifoldTool,
@@ -417,6 +418,10 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       entitySelectedOnMouseDownRef.current = false;
     }
   // ADR-040 XXII.A: `transform` removed from deps — SSoT read at event time.
+  // ADR-584/N.18: this dependency list mirrors the params destructure above — a
+  // React exhaustive-deps requirement, NOT copy-pasted logic (`params` itself is
+  // already a dep on the last line). Documented jscpd false-positive → ignored.
+  /* jscpd:ignore-start */
   }, [
     viewportReady, viewport,
     activeTool, overlayMode,
@@ -434,6 +439,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     beamBetweenMembersTool,
     mepFixtureTool,
     furnitureTool,
+    genericSolidTool,
     floorplanSymbolTool,
     electricalPanelTool,
     mepManifoldTool,
@@ -472,5 +478,6 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     currentOverlays, handleOverlayClick,
     params,
   ]);
+  /* jscpd:ignore-end */
   return { handleCanvasClick };
 }

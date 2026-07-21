@@ -40,6 +40,7 @@ import {
   commitMepSegmentGripDrag,
   commitFurnitureGripDrag,
   commitImportedMeshGripDrag,
+  commitGenericSolidGripDrag,
   commitFloorplanSymbolGripDrag,
   commitFloorFinishGripDrag,
   commitHatchGripDrag,
@@ -118,6 +119,8 @@ export const PARAMETRIC_COMMIT_HANDLERS: Partial<
   furniture: commitFurnitureGripDrag,
   // ADR-683 Φ3 — εισαγόμενο πλέγμα (move / rotation ΜΟΝΟ· καμία διαδρομή resize).
   'imported-mesh': commitImportedMeshGripDrag,
+  // ADR-684 Φ2/Φ3 — παραμετρικό στερεό (move / rotation· box corner resize).
+  'generic-solid': commitGenericSolidGripDrag,
   'floorplan-symbol': commitFloorplanSymbolGripDrag,
   'floor-finish': commitFloorFinishGripDrag,
   hatch: commitHatchGripDrag,

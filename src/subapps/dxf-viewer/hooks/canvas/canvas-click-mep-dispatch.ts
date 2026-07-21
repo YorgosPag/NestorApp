@@ -5,15 +5,12 @@
 // ADR-406 (MEP fixture) · ADR-407 (railing) · ADR-408 (MEP tools) · ADR-410 (furniture)
 // ADR-415 (floorplan-symbol)
 import type { Point2D } from '../../rendering/types/Types';
-import { plumbingFixtureToolKind } from '../../bim/mep-fixtures/plumbing-fixture-spec';
-import { socketFixtureToolKind } from '../../bim/mep-fixtures/socket-symbol-spec';
-import { dataOutletFixtureToolKind } from '../../bim/mep-fixtures/data-outlet-symbol-spec';
-import { airTerminalFixtureToolKind } from '../../bim/mep-fixtures/air-terminal-symbol-spec';
-import { ahuFixtureToolKind } from '../../bim/mep-fixtures/ahu-symbol-spec';
-import { sprinklerFixtureToolKind } from '../../bim/mep-fixtures/sprinkler-symbol-spec';
-import { fireRiserFixtureToolKind } from '../../bim/mep-fixtures/fire-riser-symbol-spec';
-import { gasMeterFixtureToolKind } from '../../bim/mep-fixtures/gas-meter-symbol-spec';
-import { gasCookerFixtureToolKind } from '../../bim/mep-fixtures/gas-cooker-symbol-spec';
+// ADR-584 / N.18 — fixture tool-kind predicates via the shared barrel (one import).
+import {
+  plumbingFixtureToolKind, socketFixtureToolKind, dataOutletFixtureToolKind,
+  airTerminalFixtureToolKind, ahuFixtureToolKind, sprinklerFixtureToolKind,
+  fireRiserFixtureToolKind, gasMeterFixtureToolKind, gasCookerFixtureToolKind,
+} from '../../bim/mep-fixtures/fixture-tool-kinds';
 import type {
   MepFixtureToolLike,
   MepSegmentToolLike,
@@ -21,6 +18,7 @@ import type {
   MepRadiatorToolLike,
   MepBoilerToolLike,
   FurnitureToolLike,
+  GenericSolidToolLike,
   FloorplanSymbolToolLike,
   ElectricalPanelToolLike,
   RailingToolLike,
@@ -32,6 +30,7 @@ export interface MepDispatchParams {
   mepFixtureTool?: MepFixtureToolLike;
   mepRiserTool?: { readonly isActive: boolean; onCanvasClick(point: Readonly<Point2D>): boolean };
   furnitureTool?: FurnitureToolLike;
+  genericSolidTool?: GenericSolidToolLike;
   floorplanSymbolTool?: FloorplanSymbolToolLike;
   electricalPanelTool?: ElectricalPanelToolLike;
   mepManifoldTool?: MepManifoldToolLike;
@@ -59,6 +58,7 @@ export function handleMepPointPlacementClick(
     mepFixtureTool,
     mepRiserTool,
     furnitureTool,
+    genericSolidTool,
     floorplanSymbolTool,
     electricalPanelTool,
     mepManifoldTool,
@@ -101,6 +101,12 @@ export function handleMepPointPlacementClick(
   // worldPoint; free-point placement, no existing-geometry hit-test).
   if (activeTool === 'furniture' && furnitureTool?.isActive) {
     furnitureTool.onCanvasClick(worldPoint);
+    return true;
+  }
+  // PRIORITY 4.92a-ter: ADR-684 — Generic-solid tool single-click placement (RAW
+  // worldPoint; free-point placement, no existing-geometry hit-test).
+  if (activeTool === 'generic-solid' && genericSolidTool?.isActive) {
+    genericSolidTool.onCanvasClick(worldPoint);
     return true;
   }
   // PRIORITY 4.92a-bis: ADR-415 — Floorplan-symbol tool single-click placement

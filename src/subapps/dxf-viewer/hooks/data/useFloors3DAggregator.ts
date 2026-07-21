@@ -120,6 +120,7 @@ export function useFloors3DAggregator(active: boolean): void {
   const panels = useBim3DEntitiesStore((s) => s.panels);
   const railings = useBim3DEntitiesStore((s) => s.railings);
   const furnitures = useBim3DEntitiesStore((s) => s.furnitures);
+  const genericSolids = useBim3DEntitiesStore((s) => s.genericSolids); // ADR-684
   const roofs = useBim3DEntitiesStore((s) => s.roofs);
   const floorFinishes = useBim3DEntitiesStore((s) => s.floorFinishes);
   const mepSegments = useBim3DEntitiesStore((s) => s.mepSegments);
@@ -135,8 +136,8 @@ export function useFloors3DAggregator(active: boolean): void {
   const [loaded, setLoaded] = useState<ReadonlyMap<string, Bim3DEntities>>(new Map());
 
   const liveActive = useMemo<Bim3DEntities>(
-    () => ({ walls, columns, beams, foundations, slabs, slabOpenings, openings, stairs, fixtures, panels, railings, furnitures, roofs, floorFinishes, mepSegments, mepFittings, manifolds, radiators, boilers, waterHeaters, underfloors }),
-    [walls, columns, beams, foundations, slabs, slabOpenings, openings, stairs, fixtures, panels, railings, furnitures, roofs, floorFinishes, mepSegments, mepFittings, manifolds, radiators, boilers, waterHeaters, underfloors],
+    () => ({ walls, columns, beams, foundations, slabs, slabOpenings, openings, stairs, fixtures, panels, railings, furnitures, genericSolids, roofs, floorFinishes, mepSegments, mepFittings, manifolds, radiators, boilers, waterHeaters, underfloors }),
+    [walls, columns, beams, foundations, slabs, slabOpenings, openings, stairs, fixtures, panels, railings, furnitures, genericSolids, roofs, floorFinishes, mepSegments, mepFittings, manifolds, radiators, boilers, waterHeaters, underfloors],
   );
 
   // One target per building floor (first level wins for a floor with duplicates).

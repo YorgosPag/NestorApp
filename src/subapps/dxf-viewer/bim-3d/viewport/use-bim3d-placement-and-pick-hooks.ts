@@ -19,6 +19,7 @@ import { useBim3DColumnPlacement } from '../placement/use-bim3d-column-placement
 import { useBim3DWallPlacement } from '../placement/use-bim3d-wall-placement';
 import { useBim3DMepFixturePlacement } from '../placement/use-bim3d-mep-fixture-placement';
 import { useBim3DFurniturePlacement } from '../placement/use-bim3d-furniture-placement';
+import { useBim3DGenericSolidPlacement } from '../placement/use-bim3d-generic-solid-placement';
 import { useBim3DElectricalPanelPlacement } from '../placement/use-bim3d-electrical-panel-placement';
 import { useBim3DMepManifoldPlacement } from '../placement/use-bim3d-mep-manifold-placement';
 import { useBim3DMepSegmentPlacement } from '../placement/use-bim3d-mep-segment-placement';
@@ -65,6 +66,9 @@ export function useBim3DPlacementAndPickHooks({
 
   // ADR-410 — 3D furniture placement (mirror of MEP fixture placement).
   useBim3DFurniturePlacement({ managerRef, canvasEl });
+
+  // ADR-684 — 3D generic-solid placement (mirror of furniture placement).
+  useBim3DGenericSolidPlacement({ managerRef, canvasEl });
 
   // ADR-408 Φ3 — 3D electrical panel placement (mirror of MEP fixture placement).
   useBim3DElectricalPanelPlacement({ managerRef, canvasEl });

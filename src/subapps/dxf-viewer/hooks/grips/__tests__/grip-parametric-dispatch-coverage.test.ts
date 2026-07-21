@@ -45,14 +45,14 @@ const NON_PARAMETRIC_KINDS = [
 ] as const;
 
 describe('Parametric-commit dispatch coverage — ζωντανό seam ↔ grip discriminator domain (ADR-587 Φ7)', () => {
-  it('τα SUPPORTED_KINDS ταυτίζονται με τα keys του HANDLERS (28 params-driven kinds)', () => {
+  it('τα SUPPORTED_KINDS ταυτίζονται με τα keys του HANDLERS (29 params-driven kinds)', () => {
     expect(asSorted(PARAMETRIC_COMMIT_SUPPORTED_KINDS)).toEqual(
       asSorted(Object.keys(PARAMETRIC_COMMIT_HANDLERS)),
     );
-    expect(PARAMETRIC_COMMIT_SUPPORTED_KINDS).toHaveLength(28);
+    expect(PARAMETRIC_COMMIT_SUPPORTED_KINDS).toHaveLength(29);
   });
 
-  it('grip kinds με parametric commit = καρφωμένο golden set (28)', () => {
+  it('grip kinds με parametric commit = καρφωμένο golden set (29)', () => {
     expect(asSorted(PARAMETRIC_COMMIT_SUPPORTED_KINDS)).toEqual(
       asSorted([
         'stair', 'dimension', 'wall', 'opening', 'slab', 'slab-opening', 'roof',
@@ -65,6 +65,9 @@ describe('Parametric-commit dispatch coverage — ζωντανό seam ↔ grip d
         // ADR-683 Φ3 — εισαγόμενο πλέγμα: params-driven (position/rotationDeg) μέσω
         // UpdateImportedMeshParamsCommand. ΧΩΡΙΣ γωνιακό resize — §3.
         'imported-mesh',
+        // ADR-684 Φ2/Φ3 — παραμετρικό στερεό: params-driven μέσω UpdateGenericSolidParamsCommand
+        // (position/rotationDeg· box corner resize επεξεργάζεται shape.widthMm/depthMm).
+        'generic-solid',
       ]),
     );
   });
@@ -74,10 +77,10 @@ describe('Parametric-commit dispatch coverage — ζωντανό seam ↔ grip d
     expect(asSorted(noParametric)).toEqual(asSorted([...NON_PARAMETRIC_KINDS]));
   });
 
-  it('golden ∪ complement === GRIP_KIND_ENTITIES (domain closure, 28 + 8 = 36)', () => {
+  it('golden ∪ complement === GRIP_KIND_ENTITIES (domain closure, 29 + 8 = 37)', () => {
     const union = [...PARAMETRIC_COMMIT_SUPPORTED_KINDS, ...NON_PARAMETRIC_KINDS];
     expect(asSorted(union)).toEqual(asSorted([...GRIP_KIND_ENTITIES]));
-    expect(GRIP_KIND_ENTITIES).toHaveLength(36);
+    expect(GRIP_KIND_ENTITIES).toHaveLength(37);
   });
 
   it('κανένα supported kind δεν είναι εκτός domain (seam ⊆ discriminator)', () => {

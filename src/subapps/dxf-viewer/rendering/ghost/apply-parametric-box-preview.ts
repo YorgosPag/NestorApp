@@ -45,6 +45,9 @@ import type { MepSegmentEntity } from '../../bim/types/mep-segment-types';
 import { applyFurnitureGripDrag } from '../../bim/furniture/furniture-grips';
 import { computeFurnitureGeometry } from '../../bim/furniture/furniture-geometry';
 import type { FurnitureEntity } from '../../bim/types/furniture-types';
+import { applyGenericSolidGripDrag } from '../../bim/entities/generic-solid/generic-solid-grips';
+import { computeGenericSolidGeometry } from '../../bim/entities/generic-solid/generic-solid-geometry';
+import type { GenericSolidEntity } from '../../bim/entities/generic-solid/generic-solid-types';
 import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
 import type { EntityPreviewTransform } from './entity-preview-types';
 import { gripKindOf } from '../../hooks/grip-kinds';
@@ -70,6 +73,7 @@ export function applyParametricBoxPreview(
   const mepManifoldGripKind = gripKindOf(preview, 'mep-manifold');
   const mepSegmentGripKind = gripKindOf(preview, 'mep-segment');
   const furnitureGripKind = gripKindOf(preview, 'furniture');
+  const genericSolidGripKind = gripKindOf(preview, 'generic-solid');
 
   // ── ADR-397 — parametric column live preview (move / rotation / resize) ────
   // Mirror of the wall branch: routes through `applyColumnGripDrag` so the live
@@ -223,6 +227,28 @@ export function applyParametricBoxPreview(
     });
     if (newParams === furniture.params) return entity;
     const newGeometry = computeFurnitureGeometry(newParams);
+    return { ...(entity as object), params: newParams, geometry: newGeometry } as unknown as DxfEntityUnion;
+  }
+
+  // ── ADR-684 Φ2/Φ3 — parametric generic-solid live preview (move / rotation / box corner) ──
+  // Mirror of the furniture branch; ORTHO (F8) από το `cadToggleState` ώστε το corner-resize ghost
+  // να ισούται με το commit. `rotatePivot` (generic-solid-rotation 6-click) περιστρέφει περί το
+  // επιλεγμένο κέντρο. Οι γωνιακές λαβές εκπέμπονται μόνο για box· τα άλλα σχήματα παίρνουν
+  // μόνο move/rotation, ίδια διαδρομή.
+  if (genericSolidGripKind && entity.type === 'generic-solid') {
+    const solid = entity as unknown as GenericSolidEntity;
+    const currentPos: Point2D = anchorPos
+      ? translatePoint(anchorPos, delta)
+      : { x: delta.x, y: delta.y };
+    const newParams = applyGenericSolidGripDrag(genericSolidGripKind, {
+      originalParams: solid.params,
+      delta,
+      currentPos,
+      ortho: cadToggleState.isOrthoOn(),
+      ...(rotatePivot ? { pivot: rotatePivot } : {}),
+    });
+    if (newParams === solid.params) return entity;
+    const newGeometry = computeGenericSolidGeometry(newParams);
     return { ...(entity as object), params: newParams, geometry: newGeometry } as unknown as DxfEntityUnion;
   }
 

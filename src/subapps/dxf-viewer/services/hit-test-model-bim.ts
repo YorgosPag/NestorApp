@@ -32,6 +32,7 @@ import { computeMepSegmentGeometry } from '../bim/geometry/mep-segment-geometry'
 import { computeMepFittingGeometry } from '../bim/geometry/mep-fitting-geometry';
 import { computeFurnitureGeometry } from '../bim/furniture/furniture-geometry';
 import { computeImportedMeshGeometry } from '../bim/entities/imported-mesh/imported-mesh-geometry';
+import { computeGenericSolidGeometry } from '../bim/entities/generic-solid/generic-solid-geometry';
 import { computeFloorplanSymbolGeometry } from '../bim/floorplan-symbols/floorplan-symbol-geometry';
 import { computeRoofGeometry } from '../bim/geometry/roof-geometry';
 
@@ -117,6 +118,9 @@ export const HIT_TEST_MODEL_BIM_HANDLERS = {
   // ΚΡΙΣΙΜΟ εδώ: μετά από reload το `geometry` λείπει, και χωρίς αυτό το εισαγόμενο
   // αντικείμενο θα ήταν αόρατο στο spatial index (= άκλικο).
   'imported-mesh': bimWithGeometryRecompute('imported-mesh', computeImportedMeshGeometry),
+  // ADR-684 Φ2 — παραμετρικό στερεό: recompute fallback ΚΡΙΣΙΜΟ (μετά reload το geometry
+  // λείπει· χωρίς αυτό το στερεό θα ήταν αόρατο στο spatial index = άκλικο).
+  'generic-solid': bimWithGeometryRecompute('generic-solid', computeGenericSolidGeometry),
   'floorplan-symbol': bimWithGeometryRecompute('floorplan-symbol', computeFloorplanSymbolGeometry),
   roof: bimWithGeometryRecompute('roof', computeRoofGeometry),
 

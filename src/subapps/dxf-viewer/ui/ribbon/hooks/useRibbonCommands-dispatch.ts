@@ -50,6 +50,7 @@ import { isMepWaterHeaterRibbonKey } from './bridge/mep-water-heater-command-key
 import { isMepUnderfloorRibbonKey } from './bridge/mep-underfloor-command-keys';
 import { isMepSegmentRibbonKey, isMepSegmentRibbonStringKey } from './bridge/mep-segment-command-keys';
 import { isFurnitureRibbonKey, isFurnitureRibbonStringKey } from './bridge/furniture-command-keys';
+import { isGenericSolidRibbonKey, isGenericSolidRibbonStringKey } from './bridge/generic-solid-command-keys';
 import { isFloorplanSymbolRibbonKey, isFloorplanSymbolRibbonStringKey } from './bridge/floorplan-symbol-command-keys';
 import { isAnnotationSymbolRibbonKey, isAnnotationSymbolRibbonStringKey } from './bridge/annotation-symbol-command-keys';
 import { isScaleBarRibbonKey, isScaleBarRibbonStringKey } from './bridge/scale-bar-command-keys';
@@ -83,6 +84,7 @@ import { isMepWaterHeaterPanelVisibilityKey } from './useRibbonMepWaterHeaterBri
 import { isMepUnderfloorPanelVisibilityKey } from './useRibbonMepUnderfloorBridge';
 import { isMepSegmentPanelVisibilityKey } from './useRibbonMepSegmentBridge';
 import { isFurniturePanelVisibilityKey } from './useRibbonFurnitureBridge';
+import { isGenericSolidPanelVisibilityKey } from './useRibbonGenericSolidBridge';
 import { isFloorplanSymbolPanelVisibilityKey } from './useRibbonFloorplanSymbolBridge';
 
 /** A ribbon key → boolean predicate (Φ3b-1 guard). */
@@ -138,6 +140,7 @@ export interface ComboboxRouteDeps {
   readonly mepUnderfloorBridge: ComboboxCapable;
   readonly mepSegmentBridge: ComboboxCapable;
   readonly furnitureBridge: ComboboxCapable;
+  readonly genericSolidBridge: ComboboxCapable;
   readonly floorplanSymbolBridge: ComboboxCapable;
   readonly annotationSymbolBridge: ComboboxCapable;
   readonly scaleBarBridge: ComboboxCapable;
@@ -180,6 +183,7 @@ export interface VisibilityRouteDeps {
   readonly mepUnderfloorBridge: VisibilityCapable;
   readonly mepSegmentBridge: VisibilityCapable;
   readonly furnitureBridge: VisibilityCapable;
+  readonly genericSolidBridge: VisibilityCapable;
   readonly floorplanSymbolBridge: VisibilityCapable;
   readonly hatchBridge: VisibilityCapable;
   readonly lineToolBridge: VisibilityCapable;
@@ -220,6 +224,7 @@ export function buildComboboxRoutes(d: ComboboxRouteDeps): readonly ComboboxRout
   const mepBoilerWriteG = anyOf(isMepBoilerRibbonKey, isMepBoilerRibbonStringKey);
   const mepSegmentG = anyOf(isMepSegmentRibbonKey, isMepSegmentRibbonStringKey);
   const furnitureG = anyOf(isFurnitureRibbonKey, isFurnitureRibbonStringKey);
+  const genericSolidG = anyOf(isGenericSolidRibbonKey, isGenericSolidRibbonStringKey);
   const floorplanSymbolG = anyOf(isFloorplanSymbolRibbonKey, isFloorplanSymbolRibbonStringKey);
   const annotationSymbolG = anyOf(isAnnotationSymbolRibbonKey, isAnnotationSymbolRibbonStringKey);
   const scaleBarG = anyOf(isScaleBarRibbonKey, isScaleBarRibbonStringKey);
@@ -260,6 +265,7 @@ export function buildComboboxRoutes(d: ComboboxRouteDeps): readonly ComboboxRout
     { ...both(isMepUnderfloorRibbonKey), ...boundCombobox(d.mepUnderfloorBridge) },
     { ...both(mepSegmentG), ...boundCombobox(d.mepSegmentBridge) },
     { ...both(furnitureG), ...boundCombobox(d.furnitureBridge) },
+    { ...both(genericSolidG), ...boundCombobox(d.genericSolidBridge) },
     { ...both(floorplanSymbolG), ...boundCombobox(d.floorplanSymbolBridge) },
     { ...both(annotationSymbolG), ...boundCombobox(d.annotationSymbolBridge) },
     { ...both(scaleBarG), ...boundCombobox(d.scaleBarBridge) },
@@ -309,6 +315,7 @@ export function buildVisibilityRoutes(d: VisibilityRouteDeps): readonly SimpleRo
     { match: isMepUnderfloorPanelVisibilityKey, handle: (k) => d.mepUnderfloorBridge.getPanelVisibility(k) },
     { match: isMepSegmentPanelVisibilityKey, handle: (k) => d.mepSegmentBridge.getPanelVisibility(k) },
     { match: isFurniturePanelVisibilityKey, handle: (k) => d.furnitureBridge.getPanelVisibility(k) },
+    { match: isGenericSolidPanelVisibilityKey, handle: (k) => d.genericSolidBridge.getPanelVisibility(k) },
     { match: isFloorplanSymbolPanelVisibilityKey, handle: (k) => d.floorplanSymbolBridge.getPanelVisibility(k) },
     { match: isHatchRibbonVisibilityKey, handle: (k) => d.hatchBridge.getPanelVisibility(k) },
     // ADR-510 Φ4 — Geometry panel is line-only (bridge inspects the selection).

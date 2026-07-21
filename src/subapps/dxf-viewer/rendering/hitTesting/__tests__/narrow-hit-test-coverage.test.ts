@@ -67,6 +67,9 @@ const BBOX_FALLBACK = [
   // ADR-683 Φ3 — εισαγόμενο πλέγμα: ίδιος λόγος με το furniture. Το ακριβές περίγραμμα ζει
   // στο `bimMeshCache` (απαιτεί φορτωμένο glTF)· το bbox δουλεύει ΚΑΙ πριν κατέβει το αρχείο.
   'imported-mesh',
+  // ADR-684 Φ2 — παραμετρικό στερεό: ίδιος λόγος με το furniture (rotatable box). Το ίχνος
+  // είναι το ορθογώνιο του bbox· χωρίς wired precise handler → bbox fallback (per-shape → Φ4).
+  'generic-solid',
   // Αναλυτικός χώρος: το κλικ οπουδήποτε μέσα στο κουτί του ΕΙΝΑΙ η επιθυμητή σημασιολογία.
   'thermal-space',
   // Point-based MEP: μικρά σύμβολα — το AABB τους ΕΙΝΑΙ πρακτικά το σχήμα τους.

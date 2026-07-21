@@ -270,6 +270,7 @@ export const ENTERPRISE_ID_PREFIXES = {
   SPACE_SEPARATOR: 'ssp',      // floorplan_space_separators collection — space separator / γραμμή διαχωρισμού χώρου (IfcVirtualElement) (ADR-437)
   FURNITURE: 'furn',
   IMPORTED_MESH: 'imesh',      // imported_meshes collection — εισαγόμενο ψημένο πλέγμα συνεργάτη (ADR-683 Φ3)           // floorplan_furniture collection — mesh-based CC0 furniture (ADR-410, chair first)
+  GENERIC_SOLID: 'gsol',       // floorplan_generic_solids collection — παραμετρικό γεωμετρικό στερεό (ADR-684)
   FLOORPLAN_SYMBOL: 'fpsym',   // floorplan_symbols collection — pure-vector 2D floorplan symbol (ADR-415, WC/sanitary first)
   BIM_PRESET: 'bpst',          // bim_presets collection — element type presets (system/company/project/user scope)
   BIM_MATERIAL: 'bmat',        // bim_materials collection — material library (Phase 6+)

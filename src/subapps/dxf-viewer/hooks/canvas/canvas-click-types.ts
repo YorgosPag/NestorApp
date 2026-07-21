@@ -43,6 +43,7 @@ import type {
   MepRadiatorToolLike,
   MepBoilerToolLike,
   FurnitureToolLike,
+  GenericSolidToolLike,
   BlockLibraryToolLike,
   TitleBlockToolLike,
   EntouragePlacementToolLike,
@@ -122,6 +123,8 @@ export interface UseCanvasClickHandlerParams {
   mepRiserTool?: { readonly isActive: boolean; onCanvasClick(point: Readonly<Point2D>): boolean };
   /** ADR-410 — Furniture tool click pipeline (single-click placement). */
   furnitureTool?: FurnitureToolLike;
+  /** ADR-684 — Generic-solid tool click pipeline (single-click parametric primitive placement). */
+  genericSolidTool?: GenericSolidToolLike;
   /** Block Library M1 — block re-placement tool click pipeline (single-click). */
   blockLibraryTool?: BlockLibraryToolLike;
   /** ADR-651 Φάση Β — title-block tool click pipeline (single-click placement). */

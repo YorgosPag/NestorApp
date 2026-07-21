@@ -73,10 +73,12 @@ const PREVIEW_GHOST_MAIN_TYPES = [
   // live preview της περιστροφής/κλιμάκωσης να τρέχει τον ΙΔΙΟ transform με το commit.
   'image',
 ] as const;
-/** `apply-parametric-box-preview.ts` branches (8) — box-like BIM (asymmetry α). */
+/** `apply-parametric-box-preview.ts` branches (9) — box-like BIM (asymmetry α). */
 const PREVIEW_GHOST_BOX_TYPES = [
   'column', 'foundation', 'beam', 'mep-fixture', 'electrical-panel',
   'mep-manifold', 'mep-segment', 'furniture',
+  // ADR-684 Φ2/Φ3 — παραμετρικό στερεό: box preview branch (move/rotation/box corner resize).
+  'generic-solid',
 ] as const;
 /** Editor-only containers — NON-renderable, rotation + move (asymmetry δ). ADR-640 adds `block`. */
 const PREVIEW_GHOST_EDITOR_ONLY_TYPES = ['group', 'block'] as const;

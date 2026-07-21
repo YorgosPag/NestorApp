@@ -53,7 +53,8 @@ export type Bim3DPlacePointEvent =
   | 'bim:place-mep-fixture-3d'
   | 'bim:place-mep-manifold-3d'
   | 'bim:place-mep-radiator-3d'
-  | 'bim:place-mep-water-heater-3d';
+  | 'bim:place-mep-water-heater-3d'
+  | 'bim:place-generic-solid-3d';
 
 /**
  * Minimal structural contract the factory needs from a `*-tool-bridge-store`:

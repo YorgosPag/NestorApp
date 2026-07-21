@@ -4706,3 +4706,19 @@ destructuring.
 **pre-existing και ξένο** — προκαλείται από unstaged εργασία τρίτου agent που πρόσθεσε
 `'imported-mesh'` στο `RENDERABLE_ENTITY_TYPES` χωρίς να απαντήσει τα ADR-587 capability
 anchors. Δεν περιλαμβάνεται σε αυτό το commit. `jscpd:diff` καθαρό σε 2 αρχεία. ΟΧΙ tsc (N.17).
+
+---
+
+### 2026-07-21 — `CanvasSection`: threading του `generic-solid` placement tool (ADR-684 Φ3, CHECK 6B stage, μηδέν αρχιτεκτονική αλλαγή)
+
+**Αρχείο σε scope CHECK 6B:** `components/dxf-layout/CanvasSection.tsx`.
+
+Καθαρή **+1 tool** επέκταση, ΑΚΡΙΒΩΣ το pattern του `furniture` (ADR-410): προστέθηκε το
+`genericSolidTool` (α) στο destructure του `useSpecialTools({ activeTool, levelManager })` και
+(β) στο params object του `useCanvasClickHandler({ … })`. Κανένα νέο `useSyncExternalStore`, καμία
+high-freq subscription, κανένα snapshot-αντί-getter — ο orchestrator απλώς προωθεί ένα ακόμη tool
+handle στο click-dispatch (κανόνες 1–4 αμετάβλητοι). Το click routing ζει στο
+`canvas-click-mep-dispatch.ts` (priority 4.92a-ter, RAW worldPoint free-point placement).
+
+Co-staged με ADR-684 (πλήρες Φ3 authoring). `npx jest -- -coverage.test` → 332/332 GREEN,
+`useRibbonCommands` → 17/17, `jscpd:diff` καθαρό (10 νέα αρχεία). ΟΧΙ tsc (N.17). 🔴 verify+commit (Giorgio).

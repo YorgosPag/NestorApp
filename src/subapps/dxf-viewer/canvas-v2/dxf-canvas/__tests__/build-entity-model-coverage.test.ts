@@ -66,6 +66,8 @@ describe('toEntityModel capability coverage — ζωντανό seam ↔ descript
         'floorplan-symbol',
         // ADR-683 Φ3 — εισαγόμενο πλέγμα: `DxfImportedMesh` variant.
         'imported-mesh',
+        // ADR-684 Φ2 — παραμετρικό στερεό: `DxfGenericSolid` variant.
+        'generic-solid',
       ]),
     );
   });

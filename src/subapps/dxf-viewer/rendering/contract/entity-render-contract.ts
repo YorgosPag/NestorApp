@@ -131,6 +131,9 @@ export const ENTITY_RENDER_CONTRACTS: Readonly<
   // στη θέση που του έδωσε ο συνεργάτης. Ghost θα είχε νόημα μόνο αν υπήρχε εργαλείο
   // «τοποθέτησε εισαγόμενο», που ρητά ΔΕΝ υπάρχει σε αυτή τη φάση.
   'imported-mesh': point('imported-mesh'),
+  // ADR-684 — παραμετρικό στερεό: point 3Δ (procedural) + 3D placement ghost (Φ3,
+  // τοποθετείται με κλικ). ghost: GenericSolidPlacementGhost.
+  'generic-solid': point('generic-solid', true),
   'electrical-panel': point('electrical-panel', true), // ghost: ElectricalPanelPlacementGhost
   'mep-manifold': point('mep-manifold', true), // ghost: MepManifoldPlacementGhost
   'mep-radiator': point('mep-radiator', true), // ghost: MepRadiatorPlacementGhost

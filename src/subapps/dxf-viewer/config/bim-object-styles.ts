@@ -61,6 +61,8 @@ export const BIM_CATEGORY_LINE_COLORS = {
   // Πριν ήταν hardcoded τοπικές σταθερές μέσα σε κάθε renderer (N.0.2 duplicate).
   /** Έπιπλο — tan ξύλου (parent `furniture`, ADR-410). */
   furniture: '#8b5e34',
+  /** Παραμετρικό στερεό — indigo (parent `generic-solid`, ADR-684). */
+  genericSolid: '#7b6cff',
   /** Είδος υγιεινής — cool blue (parent `sanitary`, ADR-415). */
   sanitary: '#0369a1',
   /** Στοιχείο κουζίνας — πράσινο casework (parent `kitchen`, ADR-415). */
@@ -138,7 +140,9 @@ export type BimCategory =
   // ADR-434 — gas/oil fuel supply run (μηχανολογικό· own V/G discipline, yellow gas convention).
   | 'fuel'
   // ADR-436 — θεμελίωση / substructure (πέδιλα/πεδιλοδοκοί/συνδετήριες δοκοί, structural).
-  | 'foundation';
+  | 'foundation'
+  // ADR-684 — παραμετρικό γεωμετρικό στερεό (κουτί/σφαίρα/…/torus/πυραμίδα).
+  | 'generic-solid';
 
 /**
  * Per-subcategory style overrides (ADR-377).
@@ -212,7 +216,7 @@ export interface ObjectStyle {
 export const BIM_CATEGORIES: readonly BimCategory[] = [
   'wall', 'column', 'beam', 'slab', 'opening', 'slab-opening',
   'stair', 'roof', 'ceiling', 'dimension', 'hatch', 'grip', 'envelope',
-  'light-fixture', 'electrical-panel', 'mep-manifold', 'mep-radiator', 'mep-boiler', 'mep-water-heater', 'mep-underfloor', 'railing', 'mep-wire', 'furniture',
+  'light-fixture', 'electrical-panel', 'mep-manifold', 'mep-radiator', 'mep-boiler', 'mep-water-heater', 'mep-underfloor', 'railing', 'mep-wire', 'furniture', 'generic-solid',
   'duct', 'pipe', 'fuel', 'drain-pipe', 'sanitary', 'kitchen',
   // ADR-436 — θεμελίωση.
   'foundation',
@@ -254,6 +258,8 @@ export const MODEL_BIM_CATEGORIES: readonly BimCategory[] = [
   'mep-wire',
   // ADR-410 — mesh-based CC0 furniture.
   'furniture',
+  // ADR-684 — παραμετρικά γεωμετρικά στερεά.
+  'generic-solid',
   // ADR-408 Φ8 — linear MEP duct + pipe runs.
   'duct', 'pipe',
   // ADR-434 — gas/oil fuel supply run.
@@ -397,6 +403,12 @@ export const DEFAULT_OBJECT_STYLES: Readonly<Record<BimCategory, ObjectStyle>> =
     projectionPen: 3, cutPen: 3,
     projectionColor: BIM_CATEGORY_LINE_COLORS.furniture,
     cutColor: BIM_CATEGORY_LINE_COLORS.furniture,
+  },
+  // ADR-684 — παραμετρικό στερεό: λεπτή γραμμή footprint (κάτοψη), indigo ταυτότητα.
+  'generic-solid': {
+    projectionPen: 3, cutPen: 3,
+    projectionColor: BIM_CATEGORY_LINE_COLORS.genericSolid,
+    cutColor: BIM_CATEGORY_LINE_COLORS.genericSolid,
   },
   // ADR-408 Φ8 — αεραγωγός: μεσαία γραμμή (mechanical duct run, plan rectangle).
   duct:           { projectionPen: 4, cutPen: 5 },

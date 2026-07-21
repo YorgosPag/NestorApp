@@ -57,14 +57,14 @@ function comboboxMock(tag: string): ComboboxMock {
   };
 }
 
-/** All 33 combobox bridges, each a tagged mock keyed by the bridge prop name. */
+/** All 34 combobox bridges, each a tagged mock keyed by the bridge prop name. */
 function comboboxDeps(): Record<string, ComboboxMock> {
   const names = [
     'stairBridge', 'wallBridge', 'openingBridge', 'slabBridge', 'roofBridge', 'floorFinishBridge',
     'wallCoveringBridge', 'hatchBridge', 'thermalSpaceBridge', 'columnBridge', 'beamBridge',
     'foundationBridge', 'slabOpeningBridge', 'mepFixtureBridge', 'mepManifoldBridge',
     'electricalPanelBridge', 'mepRadiatorBridge', 'mepBoilerBridge', 'mepWaterHeaterBridge',
-    'mepUnderfloorBridge', 'mepSegmentBridge', 'furnitureBridge', 'floorplanSymbolBridge',
+    'mepUnderfloorBridge', 'mepSegmentBridge', 'furnitureBridge', 'genericSolidBridge', 'floorplanSymbolBridge',
     'annotationSymbolBridge', 'scaleBarBridge', 'mepFixtureLibraryBridge', 'mepRiserBridge', 'arrayBridge',
     'lineToolBridge', 'dimBridge', 'xlineModeBridge', 'scaleToolBridge',
     // ADR-658 M2 (D3) — «Μολύβι» fidelity (numeric-free: 4 named levels).
@@ -89,16 +89,16 @@ function boolDeps(method: 'getBadgeState' | 'getPanelVisibility', names: readonl
 }
 
 describe('dispatch tables — completeness', () => {
-  it('combobox = 36 routes (35 bridges + storey module-handler), badge = 9, visibility = 15', () => {
+  it('combobox = 37 routes (36 bridges + storey module-handler), badge = 9, visibility = 16', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect(buildComboboxRoutes(comboboxDeps() as any)).toHaveLength(36);
+    expect(buildComboboxRoutes(comboboxDeps() as any)).toHaveLength(37);
     expect(buildBadgeRoutes(boolDeps('getBadgeState',
       ['stairBridge', 'wallBridge', 'openingBridge', 'slabBridge', 'roofBridge', 'columnBridge',
         'beamBridge', 'foundationBridge', 'slabOpeningBridge']) as never)).toHaveLength(9);
     expect(buildVisibilityRoutes(boolDeps('getPanelVisibility',
       ['stairBridge', 'columnBridge', 'beamBridge', 'slabBridge', 'mepFixtureBridge', 'mepManifoldBridge',
         'electricalPanelBridge', 'mepBoilerBridge', 'mepWaterHeaterBridge', 'mepUnderfloorBridge',
-        'mepSegmentBridge', 'furnitureBridge', 'floorplanSymbolBridge', 'hatchBridge', 'lineToolBridge']) as never)).toHaveLength(15);
+        'mepSegmentBridge', 'furnitureBridge', 'genericSolidBridge', 'floorplanSymbolBridge', 'hatchBridge', 'lineToolBridge']) as never)).toHaveLength(16);
   });
 });
 
@@ -113,7 +113,7 @@ describe('dispatch tables — no-drift invariant (write ≡ read except readouts
 
   it('every other route shares ONE matcher for write & read (cannot drift)', () => {
     const same = routes.filter((r) => r.matchWrite === r.matchRead);
-    expect(same).toHaveLength(32); // 36 total − 4 readout routes
+    expect(same).toHaveLength(33); // 37 total − 4 readout routes
   });
 });
 

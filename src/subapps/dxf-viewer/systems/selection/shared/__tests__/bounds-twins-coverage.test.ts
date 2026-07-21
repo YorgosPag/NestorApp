@@ -84,6 +84,8 @@ const A_HANDLED = [
   'mep-boiler', 'mep-water-heater', 'mep-underfloor',
   // ADR-683 Φ3 — εισαγόμενο πλέγμα: resolver provider (bimBounds), όπως κάθε BIM entity.
   'imported-mesh',
+  // ADR-684 Φ2 — παραμετρικό στερεό: resolver provider (bimBounds), όπως κάθε BIM entity.
+  'generic-solid',
   // ADR-415/635 — το floorplan-symbol μπήκε στο RENDERABLE_ENTITY_TYPES (ghost preview)· ο resolver
   // το δρομολογούσε ΗΔΗ (`ENTITY_BOUNDS_PROVIDERS['floorplan-symbol'] = bimBounds`), απλώς έλειπε
   // από αυτή τη golden λίστα → το exhaustive assertion ήταν κόκκινο (code=truth, ADR-654 sweep).
@@ -123,6 +125,8 @@ const B_HANDLED = [
   'railing', 'thermal-space', 'space-separator',
   // ADR-683 Φ3 — εισαγόμενο πλέγμα (βλ. `A_HANDLED`).
   'imported-mesh',
+  // ADR-684 Φ2 — παραμετρικό στερεό (βλ. `A_HANDLED`).
+  'generic-solid',
   // ADR-415/635 — βλ. `A_HANDLED`: renderable πλέον, provider υπήρχε ήδη· λίστα stale.
   'floorplan-symbol',
 ] as const;

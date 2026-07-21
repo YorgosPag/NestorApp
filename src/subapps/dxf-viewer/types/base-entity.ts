@@ -99,7 +99,9 @@ export type EntityType =
   | 'topo-surface'
   // ADR-683 Φ3 — εισαγόμενο ψημένο πλέγμα από συνεργάτη (κατάσταση D: unmatched κόμβος
   // επιστρεφόμενου .glb). Μετακινείται/περιστρέφεται· ΠΟΤΕ δεν αλλάζει σχήμα (§3).
-  | 'imported-mesh';
+  | 'imported-mesh'
+  // ADR-684 — παραμετρικό γεωμετρικό στερεό (κουτί/σφαίρα/κύλινδρος/κώνος/torus/πυραμίδα/δίσκος/πρίσμα).
+  | 'generic-solid';
 
 export interface BaseEntity {
   id: string;

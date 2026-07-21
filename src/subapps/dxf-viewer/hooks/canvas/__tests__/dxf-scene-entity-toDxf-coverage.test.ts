@@ -69,6 +69,9 @@ describe('toDxf capability coverage — ζωντανό seam ↔ descriptor domai
         // ADR-683 Φ3 — εισαγόμενο πλέγμα: flat handler → DxfImportedMesh (το περίγραμμα ρέει
         // στο 2Δ render pipeline, όπως το furniture).
         'imported-mesh',
+        // ADR-684 Φ2 — παραμετρικό στερεό: handler → DxfGenericSolid (footprint outline στο
+        // 2Δ render pipeline, όπως imported-mesh/furniture).
+        'generic-solid',
       ]),
     );
   });

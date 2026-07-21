@@ -18,11 +18,11 @@ import type { SlabEntity } from '../../bim/types/slab-types';
 import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
 import type { StairEntity } from '../../bim/types/stair-types';
-import type { MepFixtureEntity } from '../../bim/types/mep-fixture-types';
-import type { ElectricalPanelEntity } from '../../bim/types/electrical-panel-types';
-import type { RailingEntity } from '../../bim/types/railing-types';
-import type { FurnitureEntity } from '../../bim/types/furniture-types';
-import type { ImportedMeshEntity } from '../../bim/entities/imported-mesh/imported-mesh-types';
+// ADR-584 / N.18 — shared placeable-entity set via the barrel (one import).
+import type {
+  MepFixtureEntity, ElectricalPanelEntity, RailingEntity,
+  FurnitureEntity, ImportedMeshEntity, GenericSolidEntity,
+} from '../../bim/types/bim-placeable-entity-types';
 import type { MepSegmentEntity } from '../../bim/types/mep-segment-types';
 import type { MepFittingEntity } from '../../bim/types/mep-fitting-types';
 import type { MepManifoldEntity } from '../../bim/types/mep-manifold-types';
@@ -68,6 +68,8 @@ export interface Bim3DEntities {
   readonly furnitures: readonly FurnitureEntity[];
   /** ADR-683 Φ3 — εισαγόμενα ψημένα πλέγματα συνεργάτη (κατάσταση D). */
   readonly importedMeshes: readonly ImportedMeshEntity[];
+  /** ADR-684 — παραμετρικά γεωμετρικά στερεά (κουτί/σφαίρα/…/torus/πυραμίδα). */
+  readonly genericSolids: readonly GenericSolidEntity[];
   /** ADR-417 — parametric pitched roofs (footprint + per-edge slopes). */
   readonly roofs: readonly RoofEntity[];
   /** ADR-419 — floor-finish coverings (per-room thin polygon, IfcCovering FLOORING). */
@@ -108,6 +110,7 @@ export const EMPTY_BIM_ENTITIES: Bim3DEntities = {
   railings: [],
   furnitures: [],
   importedMeshes: [],
+  genericSolids: [],
   roofs: [],
   floorFinishes: [],
   mepSegments: [],
@@ -163,6 +166,8 @@ interface Bim3DEntitiesStoreState extends Bim3DEntities {
   setFurnitures: (furnitures: readonly FurnitureEntity[]) => void;
   /** ADR-683 Φ3β — feed the imported baked-mesh slice (collaborator glTF). */
   setImportedMeshes: (importedMeshes: readonly ImportedMeshEntity[]) => void;
+  /** ADR-684 — feed the parametric geometric solids slice. */
+  setGenericSolids: (genericSolids: readonly GenericSolidEntity[]) => void;
   /** ADR-417 — feed the parametric pitched roofs slice. */
   setRoofs: (roofs: readonly RoofEntity[]) => void;
   /** ADR-419 — feed the floor-finish coverings slice. */
@@ -220,6 +225,7 @@ export const useBim3DEntitiesStore = create<Bim3DEntitiesStoreState>()(
     setRailings: (railings) => set({ railings }),
     setFurnitures: (furnitures) => set({ furnitures }),
     setImportedMeshes: (importedMeshes) => set({ importedMeshes }),
+    setGenericSolids: (genericSolids) => set({ genericSolids }),
     setRoofs: (roofs) => set({ roofs }),
     setFloorFinishes: (floorFinishes) => set({ floorFinishes }),
     setMepSegments: (mepSegments) => set({ mepSegments }),
@@ -267,6 +273,7 @@ export function selectBim3DEntities(state: Bim3DEntitiesStoreState): Bim3DEntiti
     railings: state.railings,
     furnitures: state.furnitures,
     importedMeshes: state.importedMeshes,
+    genericSolids: state.genericSolids,
     roofs: state.roofs,
     floorFinishes: state.floorFinishes,
     mepSegments: state.mepSegments,

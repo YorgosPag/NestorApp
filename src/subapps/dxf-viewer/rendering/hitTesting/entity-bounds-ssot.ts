@@ -245,6 +245,8 @@ export const ENTITY_BOUNDS_PROVIDERS: Partial<Record<EntityType, (entity: Entity
   furniture: bimBounds,
   // ADR-683 Φ3 — εισαγόμενο πλέγμα: ίδιο μονοπάτι με κάθε BIM entity (geometry.bbox).
   'imported-mesh': bimBounds,
+  // ADR-684 Φ2 — παραμετρικό στερεό: ίδιο μονοπάτι (geometry.bbox του ίχνους).
+  'generic-solid': bimBounds,
   'mep-fixture': bimBounds,
   'electrical-panel': bimBounds,
   'mep-manifold': bimBounds,

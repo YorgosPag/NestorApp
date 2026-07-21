@@ -258,6 +258,7 @@ export const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   // useCanvasClickHandler καταναλώνει το κλικ (βάφει όψη σοβά) → μένει armed (πολλές όψεις).
   'finish-paint': { id: 'finish-paint', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'furniture': { id: 'furniture', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false }, // ADR-410 — single-click mesh-based CC0 furniture (chair first)
+  'generic-solid': { id: 'generic-solid', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false }, // ADR-684 — single-click parametric primitive solid (box/sphere/cylinder/cone/torus/pyramid/disc/prism)
   'block-library': { id: 'block-library', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false }, // ADR-652 — single-click re-placement of a session/imported DXF block ('block' entity already renders via ADR-640)
   'furniture-plan': { id: 'furniture-plan', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false }, // ADR-654 — single-click placement of a floorplan-entourage furniture image (ImageEntity, non-BIM), mirror of block-library
   'people-plan': { id: 'people-plan', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false }, // ADR-654 M6 — single-click placement of a top-view people entourage image (ImageEntity, non-BIM), shared entourage engine
@@ -410,6 +411,8 @@ export const TOOL_CREATES_ENTITY: Partial<Record<ToolType, RenderableEntityType>
   'floor-finish': 'floor-finish',
   'wall-covering': 'wall-covering', 'wall-covering-room': 'wall-covering',
   'furniture': 'furniture',
+  // ADR-684 — parametric primitive solid tool → generic-solid entity (single-click placement)
+  'generic-solid': 'generic-solid',
   // ADR-415 / ADR-550 (2026-07-12) — asymmetry RESOLVED: `floorplan-symbol` is now a
   // registered RenderableEntityType (renderable-entity-type.ts) with a live renderer in
   // EntityRendererComposite, so it carries a normal tool→entity back-link like furniture.
