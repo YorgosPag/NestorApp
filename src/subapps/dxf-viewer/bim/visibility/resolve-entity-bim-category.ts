@@ -26,10 +26,17 @@ import { resolveSymbolCategoryConfig } from '../floorplan-symbols/floorplan-symb
  */
 const DIRECT_CATEGORY_TYPES = new Set<string>([
   'wall', 'column', 'beam', 'slab', 'slab-opening', 'opening', 'stair', 'roof',
-  'foundation', 'railing', 'furniture', 'imported-mesh', 'electrical-panel', 'mep-manifold',
+  'foundation', 'railing', 'furniture', 'electrical-panel', 'mep-manifold',
   'mep-radiator', 'mep-boiler', 'mep-water-heater', 'mep-underfloor',
   'floor-finish', 'wall-covering', 'thermal-space', 'space-separator',
 ]);
+// NOTE: `imported-mesh` is deliberately NOT here. Every entry above IS a valid
+// `BimCategory` key in DEFAULT_OBJECT_STYLES; `imported-mesh` is a composite mesh
+// with no V/G Object Style, no entry in BIM_CATEGORIES (so no Isolate target), and
+// no structural colour identity. Casting it to BimCategory was a type-lie (Set is
+// Set<string>) that made `styles['imported-mesh']` undefined downstream → crash in
+// resolveSubcategoryStyle. It must resolve to `null` (raw DXF cascade), like any
+// primitive.
 
 /**
  * Collect the distinct BimCategories of the given selected entity ids (raw DXF

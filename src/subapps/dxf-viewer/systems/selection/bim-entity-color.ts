@@ -84,6 +84,12 @@ export function resolveBimEntityColorHex(
 ): string | null {
   const category = resolveEntityBimCategory(entity);
   if (category === null) return null; // not a BIM entity → caller uses DXF cascade
+  // Belt-and-suspenders (N.7.2 #4): resolveEntityBimCategory casts entity.type to
+  // BimCategory, so a future DIRECT_CATEGORY_TYPES drift could yield a type that has
+  // no DEFAULT_OBJECT_STYLES entry. Without this guard that undefined parent crashes
+  // resolveSubcategoryStyle (`parent.visible`) + the line 102 default lookup below.
+  // Degrade to the DXF colour cascade instead of throwing.
+  if (!(category in DEFAULT_OBJECT_STYLES)) return null;
 
   const { color } = resolveSubcategoryStyle({
     category,
