@@ -29,6 +29,7 @@
 
 import type * as THREE from 'three';
 import { resolveBimMeshIdentity } from '../../export/core/mesh3d/mesh3d-identity';
+import { stripHiddenPrefix } from '../../export/core/mesh3d/mesh3d-naming';
 import { computeGeometryFingerprint, type GeometryFingerprint, type GeometrySignature, type Vec3M } from './geometry-hash';
 
 /** Έκδοση σχήματος. Αλλαγή **ασύμβατη** ⇒ νέο string, ώστε ένα παλιό manifest να απορρίπτεται ρητά. */
@@ -49,6 +50,18 @@ export interface ManifestEntity {
   /** `null` όταν το mesh δεν είχε αξιοποιήσιμες κορυφές — ποτέ δεν θεωρείται «ίδιο». */
   readonly geometryHash: string | null;
   readonly geometry: GeometrySignature | null;
+  /**
+   * ADR-678 Φ2 — το **καθαρό εξαχθέν όνομα υλικού ανά όψη** αυτού του στοιχείου. Key = faceKey:
+   * `'*'` για single-material/όλο-το-στοιχείο· αλλιώς `top`/`bottom`/`side:i`/`hole:h:k` (η αρίθμηση
+   * του `userData.faceKeyByMaterialIndex`). Value = το όνομα μετά `assignExportMaterials`, με
+   * stripped `HIDDEN_` (ίδιο cleaning με `buildMaterialBaseline`).
+   *
+   * **Γιατί ανά στοιχείο+όψη:** το global `isUnchangedNestorMaterial` είναι name-based regex και
+   * αφήνει αόρατο ένα swap `mat-concrete-c25 → mat-brick` (και τα δύο «Nestor-shaped»). Ο import
+   * συγκρίνει το εισερχόμενο όνομα με το εξαχθέν **γι' αυτή την όψη** → ίδιο = unchanged, διαφορετικό
+   * = swap. Απόν σε παλιό manifest → import πέφτει στο global fallback (μηδέν regression).
+   */
+  readonly materialsByFace?: Readonly<Record<string, string>>;
 }
 
 export interface NestorExportManifest {
@@ -101,6 +114,7 @@ export function buildExportManifest(
       levelId: identity.levelId,
       geometryHash: fingerprint?.hash ?? null,
       geometry: fingerprint?.signature ?? null,
+      materialsByFace: buildMaterialsByFace(mesh),
     });
   });
 
@@ -113,6 +127,35 @@ export function buildExportManifest(
     entities,
     materials: Object.fromEntries(options.materialBaseline ?? []),
   };
+}
+
+/** Η αρίθμηση όψεων του mesh (`userData.faceKeyByMaterialIndex`), ή `undefined` αν λείπει/κακή. */
+function readFaceKeys(mesh: THREE.Mesh): readonly string[] | undefined {
+  const raw = (mesh.userData as { faceKeyByMaterialIndex?: unknown } | undefined)?.faceKeyByMaterialIndex;
+  if (!Array.isArray(raw)) return undefined;
+  return raw.every((k): k is string => typeof k === 'string') ? raw : undefined;
+}
+
+/**
+ * ADR-678 Φ2 — `faceKey → καθαρό όνομα υλικού` για ΕΝΑ mesh, μετά το `assignExportMaterials` (τα
+ * `material.name` είναι set). Single-material → `{ '*': name }`· array → ανά index, key από το
+ * `faceKeyByMaterialIndex` (fallback `side:i`). Κενό όνομα → παραλείπεται· κανένα ζεύγος → `undefined`
+ * (ώστε το JSON να μην κουβαλά άδειο object και τα παλιά meshes χωρίς όνομα υλικού να μένουν αμετάβλητα).
+ */
+function buildMaterialsByFace(mesh: THREE.Mesh): Record<string, string> | undefined {
+  const material = mesh.material;
+  const out: Record<string, string> = {};
+  if (Array.isArray(material)) {
+    const faceKeys = readFaceKeys(mesh);
+    material.forEach((face, i) => {
+      const clean = stripHiddenPrefix(face.name);
+      if (clean.length > 0) out[faceKeys?.[i] ?? `side:${i}`] = clean;
+    });
+  } else if (material !== undefined) {
+    const clean = stripHiddenPrefix(material.name);
+    if (clean.length > 0) out['*'] = clean;
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
 }
 
 /** Αναγνώσιμο JSON — ο χρήστης μπορεί να το ανοίξει και να καταλάβει τι στέλνει. */
@@ -164,7 +207,22 @@ function parseEntity(value: unknown): ManifestEntity | null {
     levelId: readString(value, 'levelId'),
     geometryHash: readString(value, 'geometryHash'),
     geometry: parseSignature(value['geometry']),
+    materialsByFace: parseMaterialsByFace(value['materialsByFace']),
   };
+}
+
+/**
+ * Fail-closed ανάγνωση του `materialsByFace` (ADR-678 Φ2). Παλιό manifest (πριν το πεδίο) → απόν →
+ * `undefined`, ώστε ο import να πέσει στο global `isUnchangedNestorMaterial` (μηδέν regression).
+ * Κρατά μόνο string→string ζεύγη· κανένα έγκυρο ζεύγος → `undefined` (όχι άδειο object).
+ */
+function parseMaterialsByFace(value: unknown): Record<string, string> | undefined {
+  if (!isRecord(value)) return undefined;
+  const out: Record<string, string> = {};
+  for (const [key, name] of Object.entries(value)) {
+    if (typeof name === 'string') out[key] = name;
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
 }
 
 /**

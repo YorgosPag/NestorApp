@@ -33,6 +33,17 @@ const UNKNOWN_CATEGORY = 'Misc';
 export const HIDDEN_NAME_PREFIX = 'HIDDEN';
 
 /**
+ * SSoT για το «καθαρό» όνομα υλικού: strip του `HIDDEN_` προθέματος. Το κρυμμένο υλικό εξάγεται ως
+ * `HIDDEN_<name>` (OBJ) αλλά αναφέρεται στο **ίδιο** λογικό υλικό. Ζει εδώ (THREE-free naming SSoT)
+ * ώστε να το μοιράζονται και η export πλευρά (`buildMaterialBaseline`/`buildExportManifest`) και ο
+ * **pure** import πυρήνας (`resolve-import-appearance`) χωρίς να σέρνεται το THREE στο import.
+ */
+export function stripHiddenPrefix(name: string): string {
+  const prefix = `${HIDDEN_NAME_PREFIX}_`;
+  return name.startsWith(prefix) ? name.slice(prefix.length) : name;
+}
+
+/**
  * Πώς γράφονται τα ελληνικά ονόματα ορόφων ανά format (απόφαση Giorgio 2026-07-17):
  *   'unicode' → glTF. Το spec **επιβάλλει UTF-8** → «Ισόγειο» ταξιδεύει αυτούσιο.
  *   'latin'   → OBJ. Το format **δεν ορίζει encoding**· το C4D **R15 (2013)** διαβάζει τα bytes

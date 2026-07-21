@@ -160,6 +160,109 @@ describe('material baseline (ADR-683 §7, Break C)', () => {
   });
 });
 
+describe('materialsByFace (ADR-678 Φ2 — per-entity + per-face baseline)', () => {
+  function named(name: string): THREE.MeshStandardMaterial {
+    const m = new THREE.MeshStandardMaterial();
+    m.name = name;
+    return m;
+  }
+
+  function meshWith(
+    name: string,
+    material: THREE.Material | THREE.Material[],
+    userData: Record<string, unknown> = {},
+  ): THREE.Mesh {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), material);
+    mesh.name = name;
+    mesh.userData = { bimId: 'x-1', bimType: 'wall', ...userData };
+    return mesh;
+  }
+
+  function faceMapOf(mesh: THREE.Mesh): Readonly<Record<string, string>> | undefined {
+    const root = new THREE.Group();
+    root.add(mesh);
+    return buildExportManifest(root, OPTIONS).entities[0].materialsByFace;
+  }
+
+  it('single-material mesh → { "*": cleanName }', () => {
+    expect(faceMapOf(meshWith('Wall_w-1', named('mat-concrete-c25')))).toEqual({
+      '*': 'mat-concrete-c25',
+    });
+  });
+
+  it('per-face array → { faceKey: name } στη σειρά του faceKeyByMaterialIndex', () => {
+    const mesh = meshWith('Wall_w-2', [named('mat-brick'), named('mat_a1b2c3'), named('mat-plaster')], {
+      faceKeyByMaterialIndex: ['top', 'bottom', 'side:0'],
+    });
+
+    expect(faceMapOf(mesh)).toEqual({
+      top: 'mat-brick',
+      bottom: 'mat_a1b2c3',
+      'side:0': 'mat-plaster',
+    });
+  });
+
+  it('array χωρίς faceKeyByMaterialIndex → fallback key `side:i`', () => {
+    const mesh = meshWith('Wall_w-3', [named('mat-a'), named('mat-b')]);
+
+    expect(faceMapOf(mesh)).toEqual({ 'side:0': 'mat-a', 'side:1': 'mat-b' });
+  });
+
+  it('strips το `HIDDEN_` prefix — OBJ κρυμμένο υλικό καταρρέει στο καθαρό όνομα', () => {
+    expect(faceMapOf(meshWith('Wall_w-4', named('HIDDEN_mat-concrete-c25')))).toEqual({
+      '*': 'mat-concrete-c25',
+    });
+  });
+
+  it('παραλείπει όψεις με κενό όνομα υλικού', () => {
+    const mesh = meshWith('Wall_w-5', [named('mat-a'), named('')], {
+      faceKeyByMaterialIndex: ['top', 'bottom'],
+    });
+
+    expect(faceMapOf(mesh)).toEqual({ top: 'mat-a' });
+  });
+
+  it('κανένα όνομα υλικού → `undefined` (χωρίς άδειο object στο JSON)', () => {
+    expect(faceMapOf(meshWith('Wall_w-6', named('')))).toBeUndefined();
+  });
+
+  it('επιβιώνει serialise → parse', () => {
+    const mesh = meshWith('Wall_w-7', [named('mat-brick'), named('mat-plaster')], {
+      faceKeyByMaterialIndex: ['top', 'bottom'],
+    });
+    const root = new THREE.Group();
+    root.add(mesh);
+    const parsed = parseExportManifest(serialiseManifest(buildExportManifest(root, OPTIONS)));
+
+    expect(parsed?.entities[0].materialsByFace).toEqual({ top: 'mat-brick', bottom: 'mat-plaster' });
+  });
+
+  it('παλιό manifest (χωρίς πεδίο) → parse δίνει undefined (fail-closed, μηδέν regression)', () => {
+    const text = JSON.stringify({
+      schema: NESTOR_MANIFEST_SCHEMA,
+      entities: [{ meshName: 'Wall_w-1' }],
+    });
+
+    expect(parseExportManifest(text)?.entities[0].materialsByFace).toBeUndefined();
+  });
+
+  it('drops non-string face entries (fail-closed) και άδειο map → undefined', () => {
+    const text = JSON.stringify({
+      schema: NESTOR_MANIFEST_SCHEMA,
+      entities: [
+        { meshName: 'A', materialsByFace: { top: 'mat-ok', bottom: 42, side: null } },
+        { meshName: 'B', materialsByFace: { top: 7 } },
+        { meshName: 'C', materialsByFace: 'not-an-object' },
+      ],
+    });
+    const parsed = parseExportManifest(text);
+
+    expect(parsed?.entities[0].materialsByFace).toEqual({ top: 'mat-ok' });
+    expect(parsed?.entities[1].materialsByFace).toBeUndefined();
+    expect(parsed?.entities[2].materialsByFace).toBeUndefined();
+  });
+});
+
 describe('manifestFingerprint', () => {
   it('returns null when the export could not fingerprint the mesh (κενή γεωμετρία)', () => {
     const root = new THREE.Group();

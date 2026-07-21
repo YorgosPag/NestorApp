@@ -35,6 +35,16 @@ jest.mock('../../../core/commands/entity-commands/SetFaceAppearanceCommand', () 
     ) {}
   },
 }));
+// ADR-678 Εύρημα A — «όλο το στοιχείο» = replace map `{ '*': … }` (καθαρίζει stale per-face).
+jest.mock('../../../core/commands/entity-commands/SetEntityFaceAppearanceMapCommand', () => ({
+  SetEntityFaceAppearanceMapCommand: class {
+    constructor(
+      public readonly entityId: string,
+      public readonly value: unknown,
+      public readonly adapter: unknown,
+    ) {}
+  },
+}));
 jest.mock('../../../systems/entity-creation/LevelSceneManagerAdapter', () => ({
   createLevelSceneManagerAdapter: (_g: unknown, _s: unknown, levelId: string) => ({ levelId }),
 }));
@@ -92,11 +102,12 @@ describe('glTF appearance import (ADR-683 Φ2-UI)', () => {
 
     const children = (mockCapture.executed as { children: Array<Record<string, unknown>> }).children;
     // Γνωστό υλικό καταλόγου → materialId (χρώμα κεντρικά)· ξένο C4D υλικό → flat χρώμα.
+    // Εύρημα A — «όλο το στοιχείο» = replace map `{ '*': … }` (καθαρίζει stale per-face overrides).
     expect(children[0]).toMatchObject({
-      entityId: 'w-42', faceKey: '*', value: { materialId: 'paint-red' }, adapter: { levelId: 'lvl-1' },
+      entityId: 'w-42', value: { '*': { materialId: 'paint-red' } }, adapter: { levelId: 'lvl-1' },
     });
     expect(children[1]).toMatchObject({
-      entityId: 'col-7', faceKey: '*', value: { colorHex: '#1a334d' }, adapter: { levelId: 'lvl-1' },
+      entityId: 'col-7', value: { '*': { colorHex: '#1a334d' } }, adapter: { levelId: 'lvl-1' },
     });
   });
 
@@ -106,7 +117,7 @@ describe('glTF appearance import (ADR-683 Φ2-UI)', () => {
     importScene(returnedScene(), 'unicode');
 
     const children = (mockCapture.executed as { children: Array<Record<string, unknown>> }).children;
-    expect(children[1].value).toEqual({ colorHex: '#1a334d' });
+    expect(children[1].value).toEqual({ '*': { colorHex: '#1a334d' } });
   });
 
   it('ΑΠΑΙΤΕΙ charset unicode — με latin (OBJ) κανένα ελληνικό όνομα ορόφου δεν ταιριάζει', () => {

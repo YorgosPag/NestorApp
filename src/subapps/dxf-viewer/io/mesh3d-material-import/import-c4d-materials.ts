@@ -16,8 +16,9 @@ import type { ICommand } from '../../core/commands/interfaces';
 import { extractBim3DEntities } from '../../bim-3d/scene/extract-bim3d-entities';
 import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { SetFaceAppearanceCommand } from '../../core/commands/entity-commands/SetFaceAppearanceCommand';
+import { SetEntityFaceAppearanceMapCommand } from '../../core/commands/entity-commands/SetEntityFaceAppearanceMapCommand';
 import { executeAsAtomicBatch } from '../../core/commands/execute-atomic-batch';
-import { BASE_FACE_KEY, type FaceAppearance } from '../../bim/types/face-appearance-types';
+import { entireElementFaceMap, type FaceAppearance } from '../../bim/types/face-appearance-types';
 import type { MeshNameCharset } from '../../export/core/mesh3d/mesh3d-naming';
 import {
   parseObjObjects,
@@ -50,6 +51,15 @@ export interface ImportedAppearanceInput {
    * **Μόνο glTF** — το OBJ δεν το περνά (colour-space mismatch, βλ. `import-gltf-appearance`).
    */
   readonly baseline?: ReadonlyMap<string, string>;
+  /**
+   * ADR-678 Βήμα 2 — per-entity/per-face baseline από το manifest: `meshName → { faceKey → εξαχθέν
+   * όνομα υλικού }` (`'*'` για single-material/whole-object). Key = `objectName` — το ΙΔΙΟ join key
+   * με `indexManifestByMeshName`. Επιτρέπει ανίχνευση catalog→catalog swap (`mat-concrete-c25` →
+   * `mat-brick-masonry`) που ο global name-based `isUnchangedNestorMaterial` αφήνει αόρατο.
+   * Απόν (παλιό manifest / OBJ χωρίς sidecar) → global fallback (μηδέν regression). Name-based, όχι
+   * χρωματικό — άρα **ασφαλές και για OBJ** (σε αντίθεση με το `baseline` colour compare).
+   */
+  readonly materialBaselineByMesh?: ReadonlyMap<string, Readonly<Record<string, string>>>;
 }
 
 /** Το OBJ+MTL κείμενο + το charset του export (OBJ = 'latin' λόγω C4D R15). */
@@ -58,6 +68,11 @@ export interface C4dMaterialImportInput {
   readonly mtlText: string;
   /** Default 'latin' (OBJ). Το glTF μονοπάτι δίνει 'unicode' (βλ. `importGltfAppearance`). */
   readonly charset?: MeshNameCharset;
+  /**
+   * ADR-678 Βήμα 2 — per-entity/per-face baseline από συνοδό `.nestor.json` (name-based, ασφαλές
+   * για OBJ). Βλ. {@link ImportedAppearanceInput.materialBaselineByMesh}.
+   */
+  readonly materialBaselineByMesh?: ReadonlyMap<string, Readonly<Record<string, string>>>;
 }
 
 /** Αναφορά εισαγωγής εμφάνισης — κοινή για OBJ και glTF. */
@@ -109,26 +124,39 @@ function sameAppearance(a: FaceAppearance, b: FaceAppearance): boolean {
 /**
  * ADR-678 Φ3 — τα commands βαφής ενός ταιριασμένου object. Με per-face δεδομένα (glTF): κάθε όψη
  * λύνεται ανεξάρτητα με τον ίδιο pure `resolveImportAppearance` (μηδέν αλλαγή εκεί)· αμετάβλητες όψεις
- * → κανένα command. **Collapse σε ΕΝΑ base `'*'`** όταν ΟΛΕΣ οι όψεις βάφτηκαν με το ΙΔΙΟ appearance
- * (idempotent, ένα καθαρό undo — parity με τον ζωντανό «βάψε όλο το στοιχείο»). Χωρίς per-face δεδομένα
- * (OBJ/legacy single-material) → το ανά-στοιχείο `materialName` στο `BASE_FACE_KEY`.
+ * → κανένα command. **Collapse σε ΕΝΑ «όλο το στοιχείο»** όταν ΟΛΕΣ οι όψεις βάφτηκαν με το ΙΔΙΟ
+ * appearance (idempotent, ένα καθαρό undo — parity με τον ζωντανό «βάψε όλο το στοιχείο»). Χωρίς
+ * per-face δεδομένα (OBJ/C4D per-object) → το ανά-στοιχείο `materialName` ως «όλο το στοιχείο».
+ *
+ * ADR-678 Βήμα 2 — `faceBaseline` (`faceKey → εξαχθέν όνομα υλικού`, `'*'` για whole-object) περνά
+ * ανά όψη στο `resolveImportAppearance` ως `exportedName`: ίδιο όνομα → αμετάβλητο· διαφορετικό →
+ * catalog swap (που ο global `isUnchangedNestorMaterial` θα άφηνε αόρατο). Απόν → global fallback.
+ *
+ * ADR-678 Εύρημα A — το «όλο το στοιχείο» γράφεται με **replace semantics**
+ * (`SetEntityFaceAppearanceMapCommand` + `entireElementFaceMap`), ώστε να **καθαρίζονται** τυχόν
+ * προϋπάρχοντα per-face overrides. Ground-truth: ο συνεργάτης έβαψε ΟΛΗ την κολώνα στον C4D, μα
+ * μια όψη είχε persisted per-face ξύλο· ένα merge-set του `'*'` άφηνε το ξύλο να κερδίζει στον
+ * cascade → η όψη έμενε αβαφή. Το replace κάνει το «βάψε όλο» πραγματικά «όλο».
  */
 function buildBodyFaceCommands(
   m: MatchedObject,
   mtl: ReadonlyMap<string, ImportedMaterial>,
   resolveKnownId: KnownMaterialResolver,
   baseline: ReadonlyMap<string, string> | undefined,
+  faceBaseline: Readonly<Record<string, string>> | undefined,
   adapter: LevelSceneAdapter,
 ): ICommand[] {
   const faces = m.faceMaterials;
   if (!faces || faces.size === 0) {
-    const appearance = resolveImportAppearance(m.materialName, mtl, resolveKnownId, baseline);
-    return appearance ? [new SetFaceAppearanceCommand(m.bimId, BASE_FACE_KEY, appearance, adapter)] : [];
+    const appearance = resolveImportAppearance(m.materialName, mtl, resolveKnownId, baseline, faceBaseline?.['*']);
+    return appearance
+      ? [new SetEntityFaceAppearanceMapCommand(m.bimId, entireElementFaceMap(appearance), adapter)]
+      : [];
   }
 
   const painted: { faceKey: string; appearance: FaceAppearance }[] = [];
   for (const [faceKey, materialName] of faces) {
-    const appearance = resolveImportAppearance(materialName, mtl, resolveKnownId, baseline);
+    const appearance = resolveImportAppearance(materialName, mtl, resolveKnownId, baseline, faceBaseline?.[faceKey]);
     if (appearance) painted.push({ faceKey, appearance });
   }
   if (painted.length === 0) return [];
@@ -136,7 +164,7 @@ function buildBodyFaceCommands(
   const uniform = painted.length === faces.size
     && painted.every((p) => sameAppearance(p.appearance, painted[0].appearance));
   return uniform
-    ? [new SetFaceAppearanceCommand(m.bimId, BASE_FACE_KEY, painted[0].appearance, adapter)]
+    ? [new SetEntityFaceAppearanceMapCommand(m.bimId, entireElementFaceMap(painted[0].appearance), adapter)]
     : painted.map((p) => new SetFaceAppearanceCommand(m.bimId, p.faceKey, p.appearance, adapter));
 }
 
@@ -155,7 +183,7 @@ export function applyImportedAppearance(
   input: ImportedAppearanceInput,
   resolveKnownId: KnownMaterialResolver,
 ): ImportedAppearanceResult {
-  const { objects, materials: mtl, charset, baseline } = input;
+  const { objects, materials: mtl, charset, baseline, materialBaselineByMesh } = input;
 
   // ADR-678 Φ1.1 — τα merged σοβά-skins (synthetic bimId) δεν κάνουν name-match· δρομολογούνται
   // ξεχωριστά (ομοιόμορφος σοβάς ανά ζώνη), αλλιώς θα έπεφταν άδικα στα «χωρίς αντιστοίχιση».
@@ -169,7 +197,10 @@ export function applyImportedAppearance(
     const levelId = levelByBimId.get(m.bimId);
     if (levelId === undefined) return [] as ICommand[];
     const adapter = createLevelSceneManagerAdapter(levels.getLevelScene, levels.setLevelScene, levelId);
-    return buildBodyFaceCommands(m, mtl, resolveKnownId, baseline, adapter);
+    // ADR-678 Βήμα 2 — join το per-entity baseline με το πρωτότυπο objectName (ίδιο κλειδί με το
+    // manifest meshName). Απόν → undefined → global fallback ανά όψη.
+    const faceBaseline = materialBaselineByMesh?.get(m.objectName);
+    return buildBodyFaceCommands(m, mtl, resolveKnownId, baseline, faceBaseline, adapter);
   });
   const bodyChildren = bodyGroups.flat();
 
@@ -201,6 +232,7 @@ export function importC4dMaterials(
       objects: parseObjObjects(input.objText),
       materials: parseMtl(input.mtlText),
       charset: input.charset ?? 'latin',
+      materialBaselineByMesh: input.materialBaselineByMesh,
     },
     resolveKnownId,
   );

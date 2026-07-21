@@ -203,6 +203,60 @@ describe('assignExportMaterials — per-face textured naming (ADR-679 Φ5)', () 
   });
 });
 
+describe('assignExportMaterials — per-face identity naming (ADR-678 Φ2 round-trip)', () => {
+  const facedMaterialWithId = (url: string, materialId: string): THREE.MeshStandardMaterial => {
+    const tex = new THREE.Texture();
+    tex.userData = { url };
+    const mat = new THREE.MeshStandardMaterial({ color: 0xffffff });
+    mat.map = tex;
+    mat.userData['nestorMaterialId'] = materialId; // ό,τι σφραγίζει το getFaceMaterial3D
+    return mat;
+  };
+
+  it('per-face textured με σφραγισμένο nestorMaterialId → όνομα = το id (bmat_*), όχι tex_*', () => {
+    const root = new THREE.Group();
+    const matA = facedMaterialWithId('https://s/bim-material-textures/bmat_oak/albedo.jpg', 'bmat_oak');
+    const matB = facedMaterialWithId('https://s/bim-material-textures/bmat_brick/albedo.jpg', 'bmat_brick');
+    const mesh = new THREE.Mesh(new THREE.BufferGeometry(), [matA, matB]);
+    root.add(mesh);
+
+    const table = assignExportMaterials(root);
+
+    const names = table.map((e) => e.name).sort();
+    expect(names).toEqual(['bmat_brick', 'bmat_oak']); // η ΤΑΥΤΟΤΗΤΑ, όχι texture-derived tex_*
+    expect(names.some((n) => n.startsWith('tex_'))).toBe(false);
+    // το texture filename ακολουθεί το νέο όνομα (round-trip: import ξαναβρίσκει το bmat_oak)
+    expect(table.find((e) => e.name === 'bmat_oak')?.map?.fileName).toBe('textures/bmat_oak.jpg');
+  });
+
+  it('ίδιο id σε δύο όψεις → dedup σε ΜΙΑ εγγραφή (Φ5.1c dedup διατηρείται)', () => {
+    const root = new THREE.Group();
+    const matA = facedMaterialWithId('https://s/bim-material-textures/bmat_oak/albedo.jpg', 'bmat_oak');
+    const matB = facedMaterialWithId('https://s/bim-material-textures/bmat_oak/albedo.jpg', 'bmat_oak');
+    const mesh = new THREE.Mesh(new THREE.BufferGeometry(), [matA, matB]);
+    root.add(mesh);
+
+    const table = assignExportMaterials(root);
+
+    expect(table).toHaveLength(1);
+    expect(table[0].name).toBe('bmat_oak');
+  });
+
+  it('material χωρίς σφραγισμένο id → legacy tex_ fallback αμετάβλητο (μηδέν regression Φ5)', () => {
+    const root = new THREE.Group();
+    const tex = new THREE.Texture();
+    tex.userData = { url: 'https://s/textures/stone/albedo.jpg' };
+    const mat = new THREE.MeshStandardMaterial({ color: 0xffffff });
+    mat.map = tex; // χωρίς nestorMaterialId
+    const mesh = new THREE.Mesh(new THREE.BufferGeometry(), [mat]);
+    root.add(mesh);
+
+    const table = assignExportMaterials(root);
+
+    expect(table[0].name).toBe('tex_stone_albedo');
+  });
+});
+
 describe('buildMaterialBaseline (ADR-683 §7, Break C)', () => {
   const entry = (name: string, hex: number): ExportMaterialEntry => ({
     name,

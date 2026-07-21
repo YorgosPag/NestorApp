@@ -104,7 +104,7 @@ SyncContext). Το single-building/single-user project το θέλει έτσι.
 | **Φ1** | Ανά-στοιχείο χρώμα/υλικό: OBJ+MTL parse · name→bimId match · apply base `'*'` · pure core + orchestrator + 14 tests | 🟢 CORE DONE |
 | **Φ1-UI** | Κουμπί «Εισαγωγή υλικών από C4D» (LevelPanel) + file picker (.obj/.mtl) + toast αποτελέσματος | 🟢 DONE |
 | **Φ1.1** | Σοβάς round-trip (merged skin → ομοιόμορφος σοβάς μελών, ADR-449 command) + skip αμετάβλητων (`mat-*`/`elem-*`/`mat_<hex6>`) · +12 tests (26 σύνολο) | 🟢 DONE |
-| **Φ2** | **Textures/υλικά round-trip (κοινή βιβλιοθήκη 🅱️ + ξένες υφές 🅰️).** 3 βήματα: **Βήμα 1** export round-trip identity (per-face υλικά ονομάζονται με το Nestor materialId αντί `tex_*`) · **Βήμα 2** import recognition catalog `mat-*` + per-entity baseline · **Βήμα 3 (🅰️)** texture upload (`<library_images>` → `uploadMaterialTextureMap` → νέο `bmat_*`). | 🟡 **Βήμα 1 code+jest DONE** (🅱️ `bmat_*` round-trip)· Βήματα 2-3 TODO |
+| **Φ2** | **Textures/υλικά round-trip (κοινή βιβλιοθήκη 🅱️ + ξένες υφές 🅰️).** 3 βήματα: **Βήμα 1** export round-trip identity (per-face υλικά ονομάζονται με το Nestor materialId αντί `tex_*`) · **Βήμα 2** import recognition catalog `mat-*` + per-entity baseline · **Βήμα 3 (🅰️)** texture upload (`<library_images>` → `uploadMaterialTextureMap` → νέο `bmat_*`). | 🟡 **Βήμα 1 code+jest DONE** (🅱️ `bmat_*`)· **Βήμα 2 code+jest DONE** (per-entity+per-face baseline, catalog swap detection, όλα τα formats wired — ground-truth PENDING)· **Βήμα 3 (🅰️) TODO** |
 | **Φ3** | **Per-face round-trip μέσω glTF** (named array-material primitives → `FaceKey`, ζωντανό ΚΑΙ σε επαναλαμβανόμενο γύρο συνεργασίας) — **OBJ παραμένει per-object dominant** (stock `OBJExporter` δεν είναι group-aware, §3) | 🟢 **DONE (glTF)** |
 | **Φ3.1α** | **Per-face OBJ export**: δικός μας group-aware OBJ writer (`mesh3d-obj-writer.ts`) — ΕΝΑ `o <object>` με **πολλά `usemtl` blocks** (ένα ανά `geometry.group`, σειρά = `buildFacedIndex`), όπως Blender/C4D. Single-material = byte-identical με stock. | 🟢 **DONE (export)** |
 | **Φ3.1β** | **Per-face OBJ re-import**: το OBJ **δεν** κουβαλά την αρίθμηση όψεων όπως το glTF (`userData.faceKeyByMaterialIndex`)· μόνο όνομα υλικού + σειρά επιβιώνουν στο C4D. Blocked σε **πραγματικό C4D-round-tripped OBJ** για μέτρηση αν το C4D διατηρεί τη σειρά όψεων (order-based) ή χρειάζεται geometry-based αντιστοίχιση («ground-truth ΠΡΙΝ parser»). | ⬜ TODO (evidence-first) |
@@ -114,6 +114,61 @@ SyncContext). Το single-building/single-user project το θέλει έτσι.
 
 ## 6. Changelog
 
+- **2026-07-21 (Φ2 Βήμα 2 — per-entity + per-face material baseline: catalog→catalog swap detection)** —
+  **Ρίζα:** το `isUnchangedNestorMaterial(name)` (resolve-import-appearance) είναι **name-based regex** — κάθε
+  `mat-*`/`elem-*` → «αμετάβλητο» → **short-circuit πριν καν κληθεί ο `resolveKnownId`**. Άρα ένας συνεργάτης
+  που αλλάζει μια όψη από `mat-concrete-c25` → `mat-brick-masonry` (και τα δύο catalog DNA) περνά **αόρατος**.
+  **Λύση (πρακτική μεγάλων — ground-truth ανά στοιχείο, όχι εικασία ονόματος):** το manifest κρατά πλέον ΑΝΑ
+  ΣΤΟΙΧΕΙΟ + ΑΝΑ ΟΨΗ το εξαχθέν όνομα υλικού· το import συγκρίνει εισερχόμενο vs εξαχθέν όνομα ανά όψη.
+  **Ενορχηστρώθηκε ως multi-agent workflow** (export ‖ import κατά frozen contract → adversarial verify).
+  - **Export (schema, additive/backward-compat — μηδέν bump του `NESTOR_MANIFEST_SCHEMA`):** `ManifestEntity`
+    αποκτά optional `materialsByFace?: Record<faceKey, cleanName>` (`'*'` = single/whole-object· αλλιώς
+    `top`/`bottom`/`side:i`/…). `buildExportManifest` το γεμίζει ανά mesh (single → `{'*':name}`· array →
+    per-`faceKeyByMaterialIndex[i]`). `parseEntity` fail-closed (μόνο string→string· παλιό manifest → undefined
+    → global fallback, μηδέν regression).
+  - **Import:** `resolveImportAppearance` νέα optional `exportedName` — αν υπάρχει per-entity baseline: `clean
+    === exportedName` → αμετάβλητο (color repaint μόνο)· `clean !== exportedName` → **CHANGED** → `resolveKnownId`
+    (χωρίς το global guard). `buildKnownMaterialResolver` αναγνωρίζει πλέον τα wall preset catalog ids
+    (`WALL_MATERIAL_PRESET_IDS`: `mat-concrete-c20/c25/c30`, `mat-brick-masonry`, `mat-concrete-block`). Threading
+    `materialBaselineByMesh` (key = meshName) μέσω `ImportedAppearanceInput` → `buildBodyFaceCommands`. Το «όλο
+    το στοιχείο» replace (Εύρημα A) διατηρήθηκε ακέραιο.
+  - **Wiring ΟΛΩΝ των formats (ο adversarial verifier έπιασε ότι το αρχικό fan-out κάλυψε μόνο OBJ):** το
+    `materialBaselineByMesh` προωθείται πλέον και από τους `.dae` (`importColladaAppearance`) **και** glTF
+    (`importGltfAppearance`) wrappers — το `.dae` είναι το **κύριο** per-face μονοπάτι του C4D round-trip, άρα
+    ήταν απαραίτητο. Το button χτίζει το baseline (`readMaterialBaselineByMesh`) και για τα 3 payloads.
+  - **SSoT (boy scout, full-SSOT standard):** ο `stripHiddenPrefix` κεντρικοποιήθηκε στο THREE-free
+    `mesh3d-naming.ts` (πρώην inline σε `mesh3d-materials` + διπλότυπο στο pure import core) → ΕΝΑ ορισμός,
+    reuse από export baseline/manifest + pure import, χωρίς να σέρνεται THREE στο import.
+  - **Tests:** export-manifest (+9: materialsByFace populate/parse fail-closed/round-trip), resolve (+per-entity
+    swap/same/foreign/repaint), known-materials (+catalog ids), import-c4d (+swap→{materialId}, same→no-op,
+    no-baseline→regression guard, per-face selective), collada (+.dae swap production path end-to-end). **132/132
+    πράσινα σε 16 suites, jscpd καθαρό, μηδέν `any`, ≤500/40.**
+  - **⚠️ Ground-truth PENDING (Giorgio):** στον C4D R15 άλλαξε ΜΙΑ όψη σε **catalog** υλικό (π.χ. `mat-brick-masonry`),
+    export **με** συνοδό `.nestor.json`, re-import `.dae` → η αλλαγή catalog πρέπει να «κατεβαίνει» (πριν ήταν αόρατη).
+- **2026-07-21 (Εύρημα A — «βάψε όλο» = πραγματικά όλο: replace semantics καθαρίζει stale per-face)** —
+  **Ground-truth (Giorgio, screenshot `2026-07-21 222359.jpg`):** έβαψε την κολώνα **ΟΛΗ ροζ** στον C4D →
+  import → **3 όψεις ροζ, 1 όψη έμεινε ΞΥΛΟ**. **Ρίζα:** η κολώνα είχε ΗΔΗ persisted per-face override
+  ξύλου (`faceAppearance['side:x']`). Το import έγραφε το base `'*'` με **merge-set** (`SetFaceAppearanceCommand`
+  → `withFaceAppearance` κρατά τα υπόλοιπα κλειδιά) → ο cascade `resolveFaceMaterial`
+  (`appearance[face] ?? appearance['*']`, ADR-539) έδινε προτεραιότητα στο per-face ξύλο → η όψη έμενε
+  αβαφή. Δηλαδή το «βάψε όλο» **δεν** ήταν πραγματικά «όλο». **Fix (SSoT, reuse-only — μηδέν νέο command):**
+  όταν βάφεται ΟΛΟ το στοιχείο (per-object / uniform collapse), γράφεται πλέον με **replace semantics**
+  μέσω του υπάρχοντος `SetEntityFaceAppearanceMapCommand` (ADR-539 Φ4a) — αντικαθιστά ΟΛΟΚΛΗΡΟ το map
+  με `{ '*': appearance }`, άρα καθαρίζει ταυτόχρονα κάθε προϋπάρχον per-face override.
+  - Νέος pure helper **`entireElementFaceMap(value)`** στο `bim/types/face-appearance-types.ts` (SSoT
+    ορισμός του «όλο το στοιχείο» ως map· `null → {}` = Revit «remove paint»). Κοινός για τα δύο μονοπάτια.
+  - `io/mesh3d-material-import/import-c4d-materials.ts` `buildBodyFaceCommands` — και οι δύο base-branches
+    (OBJ/C4D per-object `faces.size===0` **και** το uniform collapse των per-face) → `SetEntityFaceAppearanceMapCommand`.
+  - **Boy-scout (ίδιο λανθάνον bug):** το ζωντανό «όλο το στοιχείο» του `PolygonMaterialPanel` έγραφε κι
+    αυτό merge-set → route πλέον στο `applyEntityFaceAppearanceMap` + `entireElementFaceMap`. ΕΝΑ SSoT
+    «όλο το στοιχείο» για file-import **και** live panel — μηδέν divergence.
+  - Ο **per-face** (non-uniform) δρόμος μένει `SetFaceAppearanceCommand` (merge) — σωστό: περιγράφει
+    συγκεκριμένες όψεις, δεν είναι «όλο».
+  - **Tests:** ενημερώθηκαν 3 orchestrator suites (import-c4d / collada / gltf) → assert replace map
+    `{ '*': … }` αντί merge-set `faceKey:'*'`. Το clearing/replace καλύπτεται ήδη στο
+    `SetEntityFaceAppearanceMapCommand.test.ts` («faces outside value are dropped»). 50 tests πράσινα, jscpd καθαρό.
+  - **✅ Ground-truth ΕΠΙΒΕΒΑΙΩΜΕΝΟ (Giorgio, 2026-07-21):** ξαναέβαψε την κολώνα ΟΛΗ ροζ στον C4D →
+    import → **ΟΛΕΣ οι όψεις ροζ** (η όψη-ξύλο καθαρίστηκε σωστά). Το «βάψε όλο» είναι πλέον πραγματικά «όλο».
 - **2026-07-21 (Φ4/Φ2 — R15 GROUND-TRUTH #2: duplicate material names, `Ισόγειο (22)`)** — Ο Giorgio
   έβαψε μια κολώνα **ροζ** στον C4D με νέο υλικό ονόματι `Mat`· re-import **βάφτηκε ΓΚΡΙ** (όχι ροζ).
   **Ρίζα:** ο C4D R15 επιτρέπει **duplicate material names** — το `.dae` είχε ΔΥΟ `<material name="Mat">`

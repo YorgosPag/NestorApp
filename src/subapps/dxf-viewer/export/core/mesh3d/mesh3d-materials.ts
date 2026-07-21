@@ -16,7 +16,7 @@
 
 import * as THREE from 'three';
 import { resolveBimMeshIdentity } from './mesh3d-identity';
-import { HIDDEN_NAME_PREFIX, sanitizeMeshNamePart } from './mesh3d-naming';
+import { HIDDEN_NAME_PREFIX, sanitizeMeshNamePart, stripHiddenPrefix } from './mesh3d-naming';
 
 /**
  * Αναφορά σε diffuse texture ενός υλικού (ADR-679 Φ1 — texture parity export).
@@ -49,18 +49,27 @@ function materialColor(m: THREE.Material): THREE.Color | null {
   return c instanceof THREE.Color ? c : null;
 }
 
+/** Το σφραγισμένο Nestor material id ενός per-face material (ADR-678 Φ2), ή null. */
+function faceMaterialId(material: THREE.Material): string | null {
+  const id = (material.userData as { nestorMaterialId?: unknown } | undefined)?.nestorMaterialId;
+  return typeof id === 'string' && id.length > 0 ? id : null;
+}
+
 /**
  * Σταθερό όνομα υλικού. Προτεραιότητα:
  *   1. **DNA matId** αν υπάρχει (single-material mesh — αναλλοίωτη συμπεριφορά).
- *   2. **Textured χωρίς matId → ταυτότητα ΥΦΗΣ** (ADR-679 Φ5 fix): τα per-face υλικά περνούν με
- *      `matId=null`, και το `applyTextureSet` θέτει `color=0xffffff` σε ΚΑΘΕ textured PBR (white
- *      base ώστε η υφή να μη διπλο-χρωματίζεται). Άρα ένα colour-based όνομα καταρρέει stone+wood+
- *      brick+… σε ΕΝΑ `mat_ffffff` → μία υφή για όλα. Ονομάζουμε ανά texture source ⇒ διαφορετική
- *      υφή = διαφορετικό όνομα/αρχείο· ίδια υφή (shared singleton ⇒ ίδιο url) = dedup.
- *   3. αλλιώς **χρώμα** (per-face flat paint: `colorHex` → `mat_<hex6>`, ξεχωρίζει ανά χρώμα).
+ *   2. **Per-face με σφραγισμένη ταυτότητα** (ADR-678 Φ2 round-trip identity): τα per-face textured
+ *      υλικά περνούν με `matId=null`, αλλά το `getFaceMaterial3D` σφραγίζει το πραγματικό Nestor id
+ *      στο `userData.nestorMaterialId`. Το χρησιμοποιούμε ως όνομα (`bmat_*`/`mat-*`) ώστε το re-import
+ *      να το αναγνωρίζει (name-based). Διαφορετικά ids ⇒ διαφορετικά ονόματα/αρχεία (dedup διατηρείται).
+ *   3. **Textured χωρίς id → ταυτότητα ΥΦΗΣ** (ADR-679 Φ5, legacy fallback): ονομάζουμε ανά texture
+ *      source (`tex_<...>`) για materials χωρίς σφραγισμένο id — αποτρέπει το `mat_ffffff` collapse.
+ *   4. αλλιώς **χρώμα** (per-face flat paint: `colorHex` → `mat_<hex6>`, ξεχωρίζει ανά χρώμα).
  */
 function resolveMaterialName(matId: string | null, material: THREE.Material): string {
   if (matId !== null) return sanitizeMeshNamePart(matId);
+  const faceId = faceMaterialId(material);
+  if (faceId) return sanitizeMeshNamePart(faceId);
   const texToken = textureIdentityToken(material);
   if (texToken) return `tex_${texToken}`;
   const color = materialColor(material);
@@ -191,18 +200,16 @@ export function assignExportMaterials(
  * «ο συνεργάτης ξαναέβαψε» από «αμετάβλητο» — χωρίς lossy reverse-parse ονόματος (βλ.
  * `resolve-import-appearance::detectRepaint`).
  *
- * **Γιατί strip `HIDDEN_`:** το κρυμμένο υλικό εξάγεται ως `HIDDEN_<name>` (OBJ) αλλά κρατά το
- * **πραγματικό** του χρώμα· ο import συγκρίνει με το καθαρό όνομα (`stripHiddenPrefix`). Έτσι το
- * OBJ `{mat-x, HIDDEN_mat-x}` και το glTF `{mat-x}` καταρρέουν στην **ίδια** εγγραφή → baseline
- * ταυτόσημο ανά format. `getHexString()` = **sRGB** (ίδιος χώρος με το `collectGltfMaterials`).
+ * **Γιατί strip `HIDDEN_`:** βλ. `stripHiddenPrefix` — το OBJ `{mat-x, HIDDEN_mat-x}` και το glTF
+ * `{mat-x}` καταρρέουν στην **ίδια** εγγραφή → baseline ταυτόσημο ανά format. `getHexString()` =
+ * **sRGB** (ίδιος χώρος με το `collectGltfMaterials`).
  */
 export function buildMaterialBaseline(
   entries: readonly ExportMaterialEntry[],
 ): Map<string, string> {
-  const prefix = `${HIDDEN_NAME_PREFIX}_`;
   const map = new Map<string, string>();
   for (const e of entries) {
-    const clean = e.name.startsWith(prefix) ? e.name.slice(prefix.length) : e.name;
+    const clean = stripHiddenPrefix(e.name);
     if (!map.has(clean)) map.set(clean, `#${e.color.getHexString()}`);
   }
   return map;

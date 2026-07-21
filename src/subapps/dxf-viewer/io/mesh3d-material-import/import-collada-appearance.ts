@@ -25,17 +25,21 @@ import { parseColladaScene } from './dae-material-parse';
  * Εφαρμόζει την εμφάνιση ενός επιστρεφόμενου `.dae` στα ζωντανά BIM στοιχεία (per-face όταν το αρχείο
  * κουβαλά faceKeys). `baseline` = manifest baseline (`όνομα υλικού → sRGB hex`) από συνοδό
  * `.nestor.json` — repaint detection (ADR-683 §7)· το `.dae` `<color>` είναι sRGB, άρα συγκρίσιμο.
+ * `materialBaselineByMesh` = ADR-678 Βήμα 2 per-entity/per-face baseline (`meshName → { faceKey →
+ * εξαχθέν όνομα υλικού }`) από το ίδιο `.nestor.json` — εντοπίζει catalog→catalog swap. Το `.dae`
+ * είναι το **κύριο** per-face μονοπάτι του C4D round-trip, άρα αυτή η καλωδίωση είναι απαραίτητη.
  */
 export function importColladaAppearance(
   levels: LevelsHookReturn,
   daeText: string,
   resolveKnownId: KnownMaterialResolver,
   baseline?: ReadonlyMap<string, string>,
+  materialBaselineByMesh?: ReadonlyMap<string, Readonly<Record<string, string>>>,
 ): ImportedAppearanceResult {
   const { objects, materials } = parseColladaScene(daeText);
   return applyImportedAppearance(
     levels,
-    { objects, materials, charset: 'unicode', baseline },
+    { objects, materials, charset: 'unicode', baseline, materialBaselineByMesh },
     resolveKnownId,
   );
 }

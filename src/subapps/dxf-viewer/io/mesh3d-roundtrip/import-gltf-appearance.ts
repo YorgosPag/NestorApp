@@ -49,17 +49,21 @@ export interface GltfAppearanceImportResult {
  * `baseline` = το manifest baseline (`όνομα υλικού → sRGB hex`) από το συνοδό `.nestor.json`, όταν
  * ο χρήστης το επιλέξει (ADR-683 §7). Επιτρέπει ανίχνευση repaint που κράτησε το όνομα υλικού
  * (Blender/glTF). Σωστό **μόνο** στο glTF: εδώ και το πραγματικό χρώμα και το baseline είναι sRGB.
+ * `materialBaselineByMesh` = ADR-678 Βήμα 2 per-entity/per-face baseline από το ίδιο `.nestor.json`
+ * (`meshName → { faceKey → εξαχθέν όνομα υλικού }`) — εντοπίζει catalog→catalog swap ανά όψη (το
+ * glTF είναι το per-primitive per-face format, άρα εδώ αξιοποιείται πλήρως).
  */
 export async function importGltfAppearance(
   levels: LevelsHookReturn,
   data: ArrayBuffer | string,
   resolveKnownId: KnownMaterialResolver,
   baseline?: ReadonlyMap<string, string>,
+  materialBaselineByMesh?: ReadonlyMap<string, Readonly<Record<string, string>>>,
 ): Promise<GltfAppearanceImportResult> {
   const { objects, materials } = await parseGltfScene(data);
   const appearance = applyImportedAppearance(
     levels,
-    { objects, materials, charset: 'unicode', baseline },
+    { objects, materials, charset: 'unicode', baseline, materialBaselineByMesh },
     resolveKnownId,
   );
 

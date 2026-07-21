@@ -130,4 +130,33 @@ describe('importColladaAppearance', () => {
     expect(result.appliedCount).toBe(0);
     expect(mockCapture.executed).toBeNull();
   });
+
+  // ADR-678 Βήμα 2 — catalog→catalog swap ΜΕΣΩ του .dae production path (ο κύριος C4D δρόμος).
+  // Ο συνεργάτης άλλαξε την κολώνα από mat-concrete-c25 → mat-brick-masonry (και τα δύο catalog DNA).
+  describe('catalog swap via manifest per-entity baseline (.dae wiring)', () => {
+    function swappedColumnDae(): string {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), named('mat-brick-masonry'));
+      mesh.name = 'Column_col-7';
+      return serialiseCollada(rootWith(mesh), [entry('mat-brick-masonry', 0x8a4b2f)], CM);
+    }
+
+    it('χωρίς baseline → αόρατο (global name-based fallback: mat-* = «αμετάβλητο»)', () => {
+      const result = importColladaAppearance(fakeLevels(), swappedColumnDae(), resolveKnownId);
+      expect(result.appliedCount).toBe(0);
+      expect(mockCapture.executed).toBeNull();
+    });
+
+    it('με baseline (εξήχθη mat-concrete-c25) → swap ορατό → {materialId: mat-brick-masonry}', () => {
+      const baselineByMesh = new Map<string, Readonly<Record<string, string>>>([
+        ['Column_col-7', { '*': 'mat-concrete-c25' }],
+      ]);
+      const result = importColladaAppearance(
+        fakeLevels(), swappedColumnDae(), resolveKnownId, undefined, baselineByMesh,
+      );
+      expect(result.appliedCount).toBe(1);
+      expect(mockCapture.executed).toMatchObject({
+        entityId: 'col-7', value: { '*': { materialId: 'mat-brick-masonry' } },
+      });
+    });
+  });
 });

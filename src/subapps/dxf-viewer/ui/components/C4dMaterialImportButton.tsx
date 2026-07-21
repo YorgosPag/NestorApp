@@ -36,7 +36,7 @@ import { importColladaAppearance } from '../../io/mesh3d-material-import/import-
 import { buildKnownMaterialResolver } from '../../io/mesh3d-material-import/known-import-materials';
 import type { GltfObjectRecord } from '../../io/mesh3d-roundtrip/gltf-scene-parse';
 import { isImportableNode } from '../../io/mesh3d-roundtrip/import-gltf-meshes';
-import { parseExportManifest, indexManifestMaterials } from '../../io/mesh3d-roundtrip/export-manifest';
+import { parseExportManifest, indexManifestMaterials, indexManifestByMeshName } from '../../io/mesh3d-roundtrip/export-manifest';
 import { ImportedMeshImportDialog } from './imported-mesh/ImportedMeshImportDialog';
 
 /** Τι βρέθηκε στην επιλογή του χρήστη — το format καθορίζει και τον τρόπο ανάγνωσης. */
@@ -47,14 +47,24 @@ type ImportPayload =
       readonly file: File;
       /** ADR-683 §7 — manifest baseline από συνοδό `.nestor.json` (repaint detection). */
       readonly baseline?: ReadonlyMap<string, string>;
+      /** ADR-678 Βήμα 2 — per-entity/per-face baseline από συνοδό `.nestor.json` (catalog swap). */
+      readonly materialBaselineByMesh?: ReadonlyMap<string, Readonly<Record<string, string>>>;
     }
   | {
       /** ADR-678 Φ4 — COLLADA `.dae` (C4D R15, per-face). */
       readonly kind: 'dae';
       readonly daeText: string;
       readonly baseline?: ReadonlyMap<string, string>;
+      /** ADR-678 Βήμα 2 — per-entity/per-face baseline (το `.dae` είναι το κύριο per-face μονοπάτι). */
+      readonly materialBaselineByMesh?: ReadonlyMap<string, Readonly<Record<string, string>>>;
     }
-  | { readonly kind: 'obj'; readonly objText: string; readonly mtlText: string };
+  | {
+      readonly kind: 'obj';
+      readonly objText: string;
+      readonly mtlText: string;
+      /** ADR-678 Βήμα 2 — per-entity/per-face baseline από συνοδό `.nestor.json` (catalog swap). */
+      readonly materialBaselineByMesh?: ReadonlyMap<string, Readonly<Record<string, string>>>;
+    };
 
 /** ADR-683 Φ3β — τι περιμένει απόφαση του χρήστη μετά το parse (κατάσταση D του §5). */
 interface PendingMeshImport {
@@ -82,19 +92,32 @@ async function readImportFiles(files: FileList): Promise<ImportPayload | null> {
       data: binary ? await gltf.arrayBuffer() : await gltf.text(),
       file: gltf,
       baseline: await readManifestBaseline(list),
+      materialBaselineByMesh: await readMaterialBaselineByMesh(list),
     };
   }
 
   // COLLADA `.dae` (C4D R15, per-face) — XML κείμενο· το ίδιο `.nestor.json` baseline με glTF.
   const dae = list.find((f) => /\.dae$/i.test(f.name));
   if (dae) {
-    return { kind: 'dae', daeText: await dae.text(), baseline: await readManifestBaseline(list) };
+    return {
+      kind: 'dae',
+      daeText: await dae.text(),
+      baseline: await readManifestBaseline(list),
+      materialBaselineByMesh: await readMaterialBaselineByMesh(list),
+    };
   }
 
   const obj = list.find((f) => /\.obj$/i.test(f.name));
   if (!obj) return null;
   const mtl = list.find((f) => /\.mtl$/i.test(f.name));
-  return { kind: 'obj', objText: await obj.text(), mtlText: mtl ? await mtl.text() : '' };
+  return {
+    kind: 'obj',
+    objText: await obj.text(),
+    mtlText: mtl ? await mtl.text() : '',
+    // ADR-678 Βήμα 2 — το per-entity baseline είναι name-based, άρα ασφαλές για OBJ (σε αντίθεση με
+    // το χρωματικό `baseline` που το OBJ σκόπιμα παραλείπει λόγω colour-space mismatch).
+    materialBaselineByMesh: await readMaterialBaselineByMesh(list),
+  };
 }
 
 /**
@@ -109,6 +132,26 @@ async function readManifestBaseline(
   if (!sidecar) return undefined;
   const manifest = parseExportManifest(await sidecar.text());
   return manifest ? indexManifestMaterials(manifest) : undefined;
+}
+
+/**
+ * ADR-678 Βήμα 2 — από το συνοδό `.nestor.json` χτίζει το per-entity/per-face baseline
+ * (`meshName → { faceKey → εξαχθέν όνομα υλικού }`) που εντοπίζει catalog→catalog swap. Reuse
+ * `indexManifestByMeshName` (ίδιο join key με τον parser). Απόν/παλιό manifest ή manifest χωρίς
+ * `materialsByFace` → `undefined` (no-op: ο import πέφτει στο global name-based fallback).
+ */
+async function readMaterialBaselineByMesh(
+  list: readonly File[],
+): Promise<ReadonlyMap<string, Readonly<Record<string, string>>> | undefined> {
+  const sidecar = list.find((f) => /\.json$/i.test(f.name));
+  if (!sidecar) return undefined;
+  const manifest = parseExportManifest(await sidecar.text());
+  if (!manifest) return undefined;
+  const byMesh = new Map<string, Readonly<Record<string, string>>>();
+  for (const [meshName, entity] of indexManifestByMeshName(manifest)) {
+    if (entity.materialsByFace) byMesh.set(meshName, entity.materialsByFace);
+  }
+  return byMesh.size > 0 ? byMesh : undefined;
 }
 
 export function C4dMaterialImportButton() {
@@ -151,14 +194,18 @@ export function C4dMaterialImportButton() {
     try {
       // Ένας πυρήνας, δύο wrappers (ADR-683 §8.1) — η διαφορά είναι μόνο parse + charset.
       if (payload.kind === 'gltf') {
-        const gltfResult = await importGltfAppearance(levels, payload.data, resolveKnownId, payload.baseline);
+        const gltfResult = await importGltfAppearance(
+          levels, payload.data, resolveKnownId, payload.baseline, payload.materialBaselineByMesh,
+        );
         result = gltfResult.appearance;
         // ADR-683 Φ3β — μόνο το glTF κουβαλά γεωμετρία, άρα μόνο από εκεί μπορεί να προκύψει
         // νέα οντότητα. Ο OBJ/DAE δρόμος δεν έχει τι να προσφέρει εδώ (μηδέν κορυφές).
         importableRecords = gltfResult.unmatchedRecords.filter(isImportableNode);
       } else if (payload.kind === 'dae') {
         // ADR-678 Φ4 — COLLADA per-face: text/XML parsing → κοινός πυρήνας (όπως OBJ, sync).
-        result = importColladaAppearance(levels, payload.daeText, resolveKnownId, payload.baseline);
+        result = importColladaAppearance(
+          levels, payload.daeText, resolveKnownId, payload.baseline, payload.materialBaselineByMesh,
+        );
       } else {
         result = importC4dMaterials(levels, payload, resolveKnownId);
       }

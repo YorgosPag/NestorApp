@@ -29,6 +29,17 @@ jest.mock('../../../core/commands/entity-commands/SetFaceAppearanceCommand', () 
     ) {}
   },
 }));
+// ADR-678 Εύρημα A — το «όλο το στοιχείο» (per-object / uniform collapse) γράφεται πλέον με
+// replace semantics ώστε να καθαρίζει προϋπάρχοντα per-face overrides. Το `value` είναι map `{ '*': … }`.
+jest.mock('../../../core/commands/entity-commands/SetEntityFaceAppearanceMapCommand', () => ({
+  SetEntityFaceAppearanceMapCommand: class {
+    constructor(
+      public readonly entityId: string,
+      public readonly value: unknown,
+      public readonly adapter: unknown,
+    ) {}
+  },
+}));
 jest.mock('../../../systems/entity-creation/LevelSceneManagerAdapter', () => ({
   createLevelSceneManagerAdapter: (_g: unknown, _s: unknown, levelId: string) => ({ levelId }),
 }));
@@ -66,7 +77,7 @@ function fakeLevels(): LevelsHookReturn {
 describe('importC4dMaterials (orchestrator)', () => {
   beforeEach(() => { mockCapture.executed = null; });
 
-  it('matches, resolves and applies per entity as a base override', () => {
+  it('matches, resolves and applies per entity as a whole-element (replace) override', () => {
     const result = importC4dMaterials(fakeLevels(), { objText: OBJ, mtlText: MTL }, resolveKnownId);
 
     expect(result.objectCount).toBe(3);
@@ -76,11 +87,13 @@ describe('importC4dMaterials (orchestrator)', () => {
 
     const children = (mockCapture.executed as { children: Array<Record<string, unknown>> }).children;
     expect(children).toHaveLength(2);
+    // Εύρημα A — replace map `{ '*': … }` (καθαρίζει stale per-face), όχι merge-set με faceKey.
     expect(children[0]).toMatchObject({
-      entityId: 'w-42', faceKey: '*', value: { materialId: 'paint-red' }, adapter: { levelId: 'lvl-1' },
+      entityId: 'w-42', value: { '*': { materialId: 'paint-red' } }, adapter: { levelId: 'lvl-1' },
     });
+    expect(children[0]).not.toHaveProperty('faceKey');
     expect(children[1]).toMatchObject({
-      entityId: 'col-7', faceKey: '*', value: { colorHex: '#1a334d' }, adapter: { levelId: 'lvl-1' },
+      entityId: 'col-7', value: { '*': { colorHex: '#1a334d' } }, adapter: { levelId: 'lvl-1' },
     });
   });
 
@@ -110,7 +123,7 @@ describe('importC4dMaterials (orchestrator)', () => {
 
     expect(result.appliedCount).toBe(1);
     expect(mockCapture.executed).toMatchObject({
-      entityId: 'w-42', faceKey: '*', value: { colorHex: '#cc2200' },
+      entityId: 'w-42', value: { '*': { colorHex: '#cc2200' } },
     });
   });
 });
@@ -178,10 +191,12 @@ describe('applyImportedAppearance — per-face materials (ADR-678 Φ3)', () => {
     );
 
     expect(result.appliedCount).toBe(1);
-    // ΕΝΑ command (όχι CompositeCommand) — idempotent, ίδιο undo-shape με το ανά-στοιχείο βάψιμο
+    // ΕΝΑ command (όχι CompositeCommand) — replace map `{ '*': … }`, idempotent, ίδιο undo-shape
+    // με το ανά-στοιχείο βάψιμο· καθαρίζει τυχόν προϋπάρχοντα per-face overrides (Εύρημα A).
     expect(mockCapture.executed).toMatchObject({
-      entityId: 'w-42', faceKey: '*', value: { colorHex: '#1a334d' },
+      entityId: 'w-42', value: { '*': { colorHex: '#1a334d' } },
     });
+    expect(mockCapture.executed).not.toHaveProperty('faceKey');
   });
 
   it('applies nothing when every face is an unchanged Nestor DNA material (no baseline repaint)', () => {
@@ -207,6 +222,85 @@ describe('applyImportedAppearance — per-face materials (ADR-678 Φ3)', () => {
     expect(mockCapture.executed).toBeNull();
   });
 
+  it('ADR-678 Βήμα 2 — catalog swap detected via per-entity baseline (whole-element)', () => {
+    // Ο συνεργάτης άλλαξε το DNA υλικό του τοίχου: εξαχθέν `mat-concrete-c25` → `mat-brick-masonry`.
+    // Χωρίς baseline ο global name-based guard βλέπει `mat-*` → «αμετάβλητο» → no-op (το bug).
+    const result = applyImportedAppearance(
+      fakeLevels(),
+      {
+        objects: [{ objectName: 'Wall_w-42', materialName: 'mat-brick-masonry' }],
+        materials: new Map(),
+        charset: 'latin',
+        materialBaselineByMesh: new Map([['Wall_w-42', { '*': 'mat-concrete-c25' }]]),
+      },
+      resolveKnownId,
+    );
+
+    expect(result.appliedCount).toBe(1);
+    expect(mockCapture.executed).toMatchObject({
+      entityId: 'w-42', value: { '*': { materialId: 'mat-brick-masonry' } },
+    });
+  });
+
+  it('ADR-678 Βήμα 2 — no-op when the incoming id equals the exported baseline (same face)', () => {
+    const result = applyImportedAppearance(
+      fakeLevels(),
+      {
+        objects: [{ objectName: 'Wall_w-42', materialName: 'mat-concrete-c25' }],
+        materials: new Map(),
+        charset: 'latin',
+        materialBaselineByMesh: new Map([['Wall_w-42', { '*': 'mat-concrete-c25' }]]),
+      },
+      resolveKnownId,
+    );
+
+    expect(result.appliedCount).toBe(0);
+    expect(mockCapture.executed).toBeNull();
+  });
+
+  it('ADR-678 Βήμα 2 — regression guard: without baseline the same swap stays invisible', () => {
+    const result = applyImportedAppearance(
+      fakeLevels(),
+      {
+        objects: [{ objectName: 'Wall_w-42', materialName: 'mat-brick-masonry' }],
+        materials: new Map(),
+        charset: 'latin',
+      },
+      resolveKnownId,
+    );
+
+    expect(result.appliedCount).toBe(0);
+    expect(mockCapture.executed).toBeNull();
+  });
+
+  it('ADR-678 Βήμα 2 — per-face: swaps only the face whose exported name differs', () => {
+    const result = applyImportedAppearance(
+      fakeLevels(),
+      {
+        objects: [{
+          objectName: 'Wall_w-42',
+          materialName: null,
+          faceMaterials: new Map<string, string | null>([
+            ['top', 'mat-brick-masonry'],   // swap: εξαχθέν ήταν mat-concrete-c25
+            ['bottom', 'mat-concrete-c25'],  // ίδιο με το εξαχθέν → αμετάβλητο
+          ]),
+        }],
+        materials: new Map(),
+        charset: 'latin',
+        materialBaselineByMesh: new Map([
+          ['Wall_w-42', { top: 'mat-concrete-c25', bottom: 'mat-concrete-c25' }],
+        ]),
+      },
+      resolveKnownId,
+    );
+
+    expect(result.appliedCount).toBe(1);
+    // Μία μόνο όψη άλλαξε → ΕΝΑ σκέτο SetFaceAppearanceCommand (μηδέν composite overhead).
+    expect(mockCapture.executed).toMatchObject({
+      entityId: 'w-42', faceKey: 'top', value: { materialId: 'mat-brick-masonry' },
+    });
+  });
+
   it('back-compat: objects without faceMaterials still use the whole-element "*" path', () => {
     const result = applyImportedAppearance(
       fakeLevels(),
@@ -220,7 +314,7 @@ describe('applyImportedAppearance — per-face materials (ADR-678 Φ3)', () => {
 
     expect(result.appliedCount).toBe(1);
     expect(mockCapture.executed).toMatchObject({
-      entityId: 'w-42', faceKey: '*', value: { colorHex: '#1a334d' },
+      entityId: 'w-42', value: { '*': { colorHex: '#1a334d' } },
     });
   });
 });

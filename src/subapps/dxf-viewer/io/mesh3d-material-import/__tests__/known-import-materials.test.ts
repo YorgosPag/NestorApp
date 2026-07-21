@@ -32,6 +32,24 @@ describe('buildKnownMaterialResolver — static catalogs (by id)', () => {
   });
 });
 
+describe('buildKnownMaterialResolver — wall DNA preset ids (ADR-678 Βήμα 2, by id)', () => {
+  const resolve = buildKnownMaterialResolver();
+
+  it('recognises catalog mat-* preset ids so a catalog swap is not lost', () => {
+    expect(resolve('mat-concrete-c25')).toBe('mat-concrete-c25');
+    expect(resolve('mat-brick-masonry')).toBe('mat-brick-masonry');
+    expect(resolve('mat-eps-graphite')).toBe('mat-eps-graphite');
+  });
+
+  it('is case/whitespace-insensitive for preset ids', () => {
+    expect(resolve('  MAT-BRICK-MASONRY ')).toBe('mat-brick-masonry');
+  });
+
+  it('still returns null for an unknown mat-* variant not in the catalog', () => {
+    expect(resolve('mat-unicorn-9000')).toBeNull();
+  });
+});
+
 describe('buildKnownMaterialResolver — library υλικά (by id AND human name)', () => {
   const resolve = buildKnownMaterialResolver([
     fakeMaterial('bmat_oak01', 'Δρύινο δάπεδο', 'Oak floor'),

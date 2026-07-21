@@ -21,13 +21,7 @@
 import type { FaceAppearance } from '../../bim/types/face-appearance-types';
 import type { ImportedMaterial } from './obj-mtl-parse';
 import type { KnownMaterialResolver } from './known-import-materials';
-import { HIDDEN_NAME_PREFIX } from '../../export/core/mesh3d/mesh3d-naming';
-
-/** Αφαιρεί το `HIDDEN_` πρόθεμα του export (το κρυμμένο υλικό κρατά το πραγματικό του όνομα). */
-function stripHiddenPrefix(name: string): string {
-  const prefix = `${HIDDEN_NAME_PREFIX}_`;
-  return name.startsWith(prefix) ? name.slice(prefix.length) : name;
-}
+import { stripHiddenPrefix } from '../../export/core/mesh3d/mesh3d-naming';
 
 /**
  * ΡΙΖΑ 2 (ADR-678 Φ1.1) — «αμετάβλητο ⇒ no-op». Ένα υλικό είναι **αρχικό DNA του Νέστορα** (ο
@@ -85,8 +79,44 @@ function detectRepaint(
 }
 
 /**
+ * Το «άλλαξε» μονοπάτι (μετά τον αποκλεισμό «αμετάβλητο»): γνωστό catalog/library id → `Kd` χρώμα
+ * του `.mtl` → hex κωδικοποιημένο στο όνομα (C4D R15 χωρίς `.mtl`) → `null`. Κοινό για την
+ * name-based ΡΙΖΑ (global) και για το per-entity baseline «CHANGED» branch (ADR-678 Βήμα 2), ώστε
+ * η σειρά προτεραιότητας να μένει ΜΙΑ (κανένα sibling clone — N.18).
+ */
+function resolveChangedAppearance(
+  clean: string,
+  materialName: string,
+  mtl: ReadonlyMap<string, ImportedMaterial>,
+  resolveKnownId: KnownMaterialResolver,
+): FaceAppearance | null {
+  const knownId = resolveKnownId(clean);
+  if (knownId) return { materialId: knownId };
+
+  const material = mtl.get(materialName) ?? mtl.get(clean);
+  if (material) return { colorHex: material.colorHex };
+
+  const hex = hexColorFromName(clean);
+  if (hex) return { colorHex: hex };
+
+  return null;
+}
+
+/**
  * `materialName` (από το OBJ `usemtl`) + ο πίνακας `.mtl` + ο `resolveKnownId` → `FaceAppearance`
  * ή `null` (καμία αλλαγή).
+ *
+ * **ADR-678 Βήμα 2 — per-entity/per-face baseline (`exportedName`):** το manifest κρατά ΑΝΑ ΟΨΗ το
+ * όνομα υλικού που ΕΞΗΧΘΗ. Όταν το ξέρουμε γι' αυτή την όψη (`typeof exportedName === 'string'`), η
+ * σύγκριση γίνεται **στοχευμένα**, όχι με τον global name-based `isUnchangedNestorMaterial`:
+ *   - `clean === exportedName` → αμετάβλητο **γι' αυτή την όψη** → `null` (ή repaint αν το χρωματικό
+ *     baseline δείχνει αλλαγή, `detectRepaint`).
+ *   - `clean !== exportedName` → **swap** (π.χ. `mat-concrete-c25` → `mat-brick-masonry`) — που ο
+ *     global regex θα άφηνε αόρατο· λύνεται με το «CHANGED» μονοπάτι (`resolveChangedAppearance`),
+ *     ΧΩΡΙΣ να συμβουλευτεί τον global `isUnchangedNestorMaterial`.
+ *
+ * **Χωρίς `exportedName`** (παλιό manifest / OBJ χωρίς per-entity baseline) → η προ-Βήμα-2
+ * συμπεριφορά ακέραιη (global `isUnchangedNestorMaterial` fallback — μηδέν regression):
  *   0. αρχικό DNA του Νέστορα (αμετάβλητο) → `null` — ΕΚΤΟΣ αν το manifest baseline δείχνει repaint
  *      (ADR-683 §7, `detectRepaint`) → `{ colorHex }`.
  *   1. γνωστό υλικό (catalog/library, by id ή όνομα) → `{ materialId }` (χρώμα κεντρικά, οδηγεί BOQ).
@@ -99,20 +129,18 @@ export function resolveImportAppearance(
   mtl: ReadonlyMap<string, ImportedMaterial>,
   resolveKnownId: KnownMaterialResolver,
   exportedBaseline?: ReadonlyMap<string, string>,
+  exportedName?: string | null,
 ): FaceAppearance | null {
   if (materialName === null) return null;
   const clean = stripHiddenPrefix(materialName);
 
+  if (typeof exportedName === 'string') {
+    return clean === exportedName
+      ? detectRepaint(clean, materialName, mtl, exportedBaseline)
+      : resolveChangedAppearance(clean, materialName, mtl, resolveKnownId);
+  }
+
   if (isUnchangedNestorMaterial(clean)) return detectRepaint(clean, materialName, mtl, exportedBaseline);
 
-  const knownId = resolveKnownId(clean);
-  if (knownId) return { materialId: knownId };
-
-  const material = mtl.get(materialName) ?? mtl.get(clean);
-  if (material) return { colorHex: material.colorHex };
-
-  const hex = hexColorFromName(clean);
-  if (hex) return { colorHex: hex };
-
-  return null;
+  return resolveChangedAppearance(clean, materialName, mtl, resolveKnownId);
 }
