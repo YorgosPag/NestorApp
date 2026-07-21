@@ -55,20 +55,44 @@ export async function decodeImageWithTimeout(src: string): Promise<HTMLImageElem
   }
 }
 
+/** Fetch bytes at `src` (both `fetch` + `.blob()` timeout-guarded). `null` on HTTP error/timeout. */
+async function fetchBlobWithTimeout(src: string): Promise<Blob | null> {
+  const res = await withTimeout(fetch(src), IMAGE_OP_TIMEOUT_MS);
+  if (!res.ok) return null;
+  return withTimeout(res.blob(), IMAGE_OP_TIMEOUT_MS);
+}
+
 /**
  * Κατέβασμα raster bytes για bundling. `filename` = `images/<sanitized-id>.<ext>` (relative
- * path μέσα στο zip). `null` σε αποτυχία (missing/HTTP error/timeout).
+ * path μέσα στο zip, ΠΑΡΑΓΟΜΕΝΟ από το mime/url). `null` σε αποτυχία (missing/HTTP error/timeout).
  */
 export async function fetchRasterWithTimeout(
   src: string, id: string,
 ): Promise<{ filename: string; artifact: ExportArtifact } | null> {
   try {
-    const res = await withTimeout(fetch(src), IMAGE_OP_TIMEOUT_MS);
-    if (!res.ok) return null;
-    const blob = await withTimeout(res.blob(), IMAGE_OP_TIMEOUT_MS);
+    const blob = await fetchBlobWithTimeout(src);
+    if (!blob) return null;
     const ext = extFromMime(blob.type) ?? extFromUrl(src) ?? 'png';
     const filename = `images/${sanitizeFilenameId(id)}.${ext}`;
     return { filename, artifact: { filename, blob } };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * ADR-679 Φ5.1b — fetch bytes at `src` into an `ExportArtifact` with the GIVEN `filename`.
+ * Δίδυμο του `fetchRasterWithTimeout`, αλλά ο caller ΞΕΡΕΙ ήδη το archive-relative path (π.χ.
+ * ένα COLLADA `init_from` texture ref `textures/oak.jpg`), ώστε το zip entry να ταιριάζει
+ * byte-για-byte με την αναφορά μέσα στο `.dae`. Κοινό `fetchBlobWithTimeout` (μηδέν clone,
+ * N.18). `null` σε αποτυχία (missing/HTTP error/timeout).
+ */
+export async function fetchArtifactWithTimeout(
+  src: string, filename: string,
+): Promise<ExportArtifact | null> {
+  try {
+    const blob = await fetchBlobWithTimeout(src);
+    return blob ? { filename, blob } : null;
   } catch {
     return null;
   }

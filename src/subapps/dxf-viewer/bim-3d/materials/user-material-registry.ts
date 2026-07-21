@@ -57,6 +57,8 @@ const entries = new Map<string, RegistryEntry>();
 const sets = new Map<string, LoadedTextureSet>();
 /** materialId → in-flight / error marker (so we never double-load or hammer). */
 const status = new Map<string, LoadState>();
+/** materialId → in-flight load promise (settles on success/error) — headless prewarm drain (ADR-679 Φ5.1b). */
+const inFlight = new Map<string, Promise<void>>();
 /** materialId → monotonic version, bumped on every appearance / set change. */
 const versions = new Map<string, number>();
 
@@ -192,7 +194,7 @@ export function preloadUserMaterialTextures(id: string): void {
 
   const t = entry.textures;
   const startVersion = getUserMaterialSetVersion(id);
-  void (async (): Promise<void> => {
+  const p = (async (): Promise<void> => {
     const [albedo, normal, roughness, ao] = await Promise.all([
       loadMap(t.albedoUrl, t.tileSizeM, true),
       loadMap(t.normalUrl, t.tileSizeM, false),
@@ -221,7 +223,21 @@ export function preloadUserMaterialTextures(id: string): void {
     useBim3DEntitiesStore.getState().bumpTextureAssetVersion();
   })().catch(() => {
     status.set(id, 'error');
+  }).finally(() => {
+    inFlight.delete(id);
   });
+  inFlight.set(id, p);
+}
+
+/**
+ * ADR-679 Φ5.1b — headless prewarm drain (user-material twin of
+ * `awaitInFlightTextureSets`). Resolves once every CURRENTLY in-flight per-material
+ * texture load has settled, returning how many were awaited. Zero ⇒ nothing was
+ * loading → caller can skip its rebuild. Never rejects.
+ */
+export function awaitInFlightUserMaterialTextures(): Promise<number> {
+  const pending = [...inFlight.values()];
+  return Promise.all(pending).then(() => pending.length);
 }
 
 /** Test-only — reset the registry between specs. */
@@ -230,4 +246,5 @@ export function __resetUserMaterialRegistryForTests(): void {
   entries.clear();
   status.clear();
   versions.clear();
+  inFlight.clear();
 }

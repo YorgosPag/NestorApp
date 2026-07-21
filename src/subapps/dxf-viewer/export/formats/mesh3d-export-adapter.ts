@@ -17,6 +17,10 @@ import type { ResolvedExportFloor } from '../core/export-floor-scope';
 import type { ExportArtifact, ExportDeps, ExportLengthUnit, Mesh3dFormat } from '../types';
 import { buildFloorFilename } from './dxf-export-adapter';
 import { buildMesh3dScene } from '../core/mesh3d/build-mesh3d-scene';
+// ADR-679 Φ5.1b — το COLLADA path χτίζεται με προ-φορτωμένες υφές (double-build gated) ώστε τα
+// υλικά να έχουν `.map`· obj/gltf κρατούν τον sync builder (μηδέν αλλαγή συμπεριφοράς/κόστους).
+import { buildTexturedMesh3dScene } from '../core/mesh3d/mesh3d-texture-prewarm';
+import { bundleTextureArtifacts } from '../core/mesh3d/mesh3d-texture-bundle';
 import { assignExportMaterials, buildMaterialBaseline, writeMtl } from '../core/mesh3d/mesh3d-materials';
 import { applyExportUnit, nameMeshesForExport } from '../core/mesh3d/mesh3d-prepare';
 import type { MeshNameCharset } from '../core/mesh3d/mesh3d-naming';
@@ -68,7 +72,14 @@ export async function exportFloorsToMesh3d(
   deps: ExportDeps,
   options: Mesh3dExportOptions,
 ): Promise<Mesh3dExportOutput> {
-  const { root, meshCount, hiddenEntityIds, warnings } = buildMesh3dScene(floors, deps);
+  // COLLADA (dae) = το μόνο format που το R15 διαβάζει ΜΕ υφές → prewarm ώστε τα υλικά να έχουν
+  // `.map` (αλλιώς μια «κρύα» υφή εξάγεται flat). obj (το `.mtl` δεν έχει `map_Kd`) & gltf μένουν
+  // στον sync builder — surgical scope για τη Φ5.1b, μηδέν αλλαγή στο κόστος τους.
+  const built =
+    options.format === 'dae'
+      ? await buildTexturedMesh3dScene(floors, deps)
+      : buildMesh3dScene(floors, deps);
+  const { root, meshCount, hiddenEntityIds, warnings } = built;
   if (meshCount === 0) {
     return { artifacts: [], warnings };
   }
@@ -124,12 +135,17 @@ export async function exportFloorsToMesh3d(
       unit: options.unit,
       createdIso: nowISO(),
     });
+    // ADR-679 Φ5.1b — κατέβασε τα diffuse-texture bytes ώστε να ταξιδέψουν δίπλα στο `.dae`
+    // (relative `textures/*`). Με ≥1 artifact, το `packageArtifacts` πακετάρει τα πάντα σε ένα
+    // `.zip` (`.zae`-style)· χωρίς υφές, μένει το ιστορικό `.dae`+manifest ζεύγος.
+    const textures = await bundleTextureArtifacts(materials);
     return {
       artifacts: [
         { filename: daeName, blob: new Blob([daeText], { type: 'model/vnd.collada+xml' }) },
         manifestArtifact,
+        ...textures.artifacts,
       ],
-      warnings,
+      warnings: [...warnings, ...textures.warnings],
     };
   }
 

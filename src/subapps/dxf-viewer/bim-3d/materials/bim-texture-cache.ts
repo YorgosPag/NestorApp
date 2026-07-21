@@ -48,6 +48,8 @@ const loader = new THREE.TextureLoader();
 const sets = new Map<string, LoadedTextureSet>();
 /** slug → in-flight / error marker (so we never double-load or hammer on error). */
 const status = new Map<string, CacheState>();
+/** slug → in-flight load promise (settles on success/error) — headless prewarm drain (ADR-679 Φ5.1b). */
+const inFlight = new Map<string, Promise<void>>();
 
 /** Is this slug a known registry slug? */
 function isKnownSlug(slug: string): slug is PbrTextureSlug {
@@ -80,7 +82,7 @@ export function preloadTextureSet(slug: string): void {
   status.set(slug, 'loading');
 
   const def = TEXTURE_SET_DEFS[slug];
-  void (async (): Promise<void> => {
+  const p = (async (): Promise<void> => {
     const [albedo, normal, roughness, ao, displacement] = await Promise.all([
       loadMap(slug, 'albedo', def.tileSizeM),
       def.hasNormal ? loadMap(slug, 'normal', def.tileSizeM) : Promise.resolve(null),
@@ -107,7 +109,10 @@ export function preloadTextureSet(slug: string): void {
     // Leave an 'error' marker so we don't hammer the source on every resync; the
     // flat material remains as the visible fallback.
     status.set(slug, 'error');
+  }).finally(() => {
+    inFlight.delete(slug);
   });
+  inFlight.set(slug, p);
 }
 
 /** Synchronous read of a loaded texture set, or null on a miss / while loading. */
@@ -115,8 +120,20 @@ export function getTextureSet(slug: string): LoadedTextureSet | null {
   return sets.get(slug) ?? null;
 }
 
+/**
+ * ADR-679 Φ5.1b — headless prewarm drain. Resolves once every CURRENTLY in-flight
+ * texture-set load has settled (success or error), returning how many were awaited.
+ * Zero ⇒ nothing was loading (all cached / none needed) → caller can skip its rebuild.
+ * Never rejects — each load's own `.catch` already neutralises failures.
+ */
+export function awaitInFlightTextureSets(): Promise<number> {
+  const pending = [...inFlight.values()];
+  return Promise.all(pending).then(() => pending.length);
+}
+
 /** Test-only — reset the cache between specs. */
 export function __resetBimTextureCacheForTests(): void {
   sets.clear();
   status.clear();
+  inFlight.clear();
 }
