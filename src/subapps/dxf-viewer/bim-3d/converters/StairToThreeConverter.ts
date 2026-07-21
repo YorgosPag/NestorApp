@@ -28,6 +28,7 @@ import { inferSceneUnitsFromWidth, sceneUnitsToMeters } from '../../utils/scene-
 import { attachEdgesProjection } from './bim-three-edges';
 import { ensureWorldUvs } from './bim-uv-helpers';
 import { stampBimIdentity } from './bim-three-shape-helpers';
+import { polygonCentroid } from '../../bim/geometry/shared/polygon-utils';
 
 // ADR-375 Phase C.7 — stair subcategory wiring (ADR-377 SUBCATEGORY_TAXONOMY).
 // ADR-377 Phase E — unified onto the shared `attachEdgesProjection` SSoT (was a
@@ -156,10 +157,14 @@ function buildRiserMeshes(
   const riseM = stair.params.rise * sceneToM;
   const thicknessM = DEFAULT_RISER_THICKNESS_MM * MM_TO_M;
   const risers = stair.geometry.risers;
+  // Tread centroids (scene units) for the flush-seating ascent direction.
+  const treadInfo = [...stair.geometry.treadsBelowCut, ...stair.geometry.treadsAboveCut]
+    .map((t) => ({ z: t[0]?.z ?? 0, c: polygonCentroid(t) }));
   for (let i = 0; i < risers.length; i++) {
     // ADR-358 Q19 Φ7 — per-riser material override (0-based, matches the `stairComponentIndex` tag).
     const mat = resolveStairMaterial(stair, 'stair-riser', i);
-    const mesh = buildRiserBox(risers[i]!, sceneToM, riseM, thicknessM, mat, baseY);
+    const ascent = riserAscentDir(risers[i]!, treadInfo);
+    const mesh = buildRiserBox(risers[i]!, sceneToM, riseM, thicknessM, mat, baseY, ascent);
     if (mesh) {
       const tagged = tagStairMesh(mesh, stair, 'riser', levelId, i);
       attachStairEdges(tagged, 'risers');
@@ -169,6 +174,57 @@ function buildRiserMeshes(
   return out;
 }
 
+interface Vec2Scene { readonly x: number; readonly y: number; }
+
+/**
+ * Unit ascent (travel) direction at a riser, derived from the adjacent TREAD:
+ * the upper tread (dir = treadCentroid − riserMid) when present, else the lower
+ * (dir = riserMid − treadCentroid). Landings are deliberately skipped — a
+ * landing's centroid sits off the travel axis (e.g. a 2·width switchback landing)
+ * and would skew the direction. Used to seat the riser panel flush BEHIND the
+ * tread edge (Giorgio 2026-07-21) instead of centred on it.
+ */
+function riserAscentDir(
+  seg: Segment3D,
+  treadInfo: readonly { z: number; c: Vec2Scene }[],
+): Vec2Scene | null {
+  const midX = (seg.start.x + seg.end.x) * 0.5;
+  const midY = (seg.start.y + seg.end.y) * 0.5;
+  const zLow = Math.min(seg.start.z, seg.end.z);
+  const zHigh = Math.max(seg.start.z, seg.end.z);
+  const zTol = (zHigh - zLow) * 0.5 + 1e-6;
+  const upper = nearestTreadCentroid(treadInfo, zHigh, zTol, midX, midY);
+  if (upper) return unitVec(upper.x - midX, upper.y - midY);
+  const lower = nearestTreadCentroid(treadInfo, zLow, zTol, midX, midY);
+  if (lower) return unitVec(midX - lower.x, midY - lower.y);
+  return null;
+}
+
+/** Nearest tread centroid (xy) among treads whose z is within `zTol` of `targetZ`. */
+function nearestTreadCentroid(
+  treadInfo: readonly { z: number; c: Vec2Scene }[],
+  targetZ: number,
+  zTol: number,
+  midX: number,
+  midY: number,
+): Vec2Scene | null {
+  let best: Vec2Scene | null = null;
+  let bestD = Infinity;
+  for (const t of treadInfo) {
+    if (Math.abs(t.z - targetZ) > zTol) continue;
+    const dx = t.c.x - midX;
+    const dy = t.c.y - midY;
+    const d = dx * dx + dy * dy;
+    if (d < bestD) { bestD = d; best = t.c; }
+  }
+  return best;
+}
+
+function unitVec(x: number, y: number): Vec2Scene | null {
+  const m = Math.hypot(x, y);
+  return m < 1e-9 ? null : { x: x / m, y: y / m };
+}
+
 function buildRiserBox(
   seg: Segment3D,
   sceneToM: number,
@@ -176,6 +232,7 @@ function buildRiserBox(
   thicknessM: number,
   mat: THREE.MeshStandardMaterial,
   baseY: number,
+  ascentDir: Vec2Scene | null,
 ): THREE.Mesh | null {
   // ADR-370 Phase 5.3 (2026-05-25) — riser Segment3D uses DIAGONAL encoding:
   // start = corner A @zLow on one width edge, end = OPPOSITE corner B @zHigh
@@ -191,10 +248,18 @@ function buildRiserBox(
   const geo = new THREE.BoxGeometry(thicknessM, riseM, widthM);
   ensureWorldUvs(geo); // ADR-413 — aoMap uv2 (BoxGeometry auto-UVs).
   const mesh = new THREE.Mesh(geo, mat);
+  // Seat the panel flush BEHIND the tread edge: shift it half its thickness along
+  // the ascent direction, so it sits BETWEEN the two treads (face flush with the
+  // tread edge) rather than centred ON the edge — which buried half the panel
+  // under the tread and left half poking out (Giorgio 2026-07-21). `ascentDir` is
+  // a scene-frame unit vector; the offset magnitude is in meters (thickness/2).
+  const halfThickM = thicknessM * 0.5;
+  const offXM = ascentDir ? ascentDir.x * halfThickM : 0;
+  const offZM = ascentDir ? -ascentDir.y * halfThickM : 0; // DXF Y → world -Z
   mesh.position.set(
-    midXScene * sceneToM,
+    midXScene * sceneToM + offXM,
     baseY + (seg.start.z + seg.end.z) * 0.5 * sceneToM,
-    -midYScene * sceneToM, // DXF Y → world -Z
+    -midYScene * sceneToM + offZM, // DXF Y → world -Z
   );
   // BoxGeometry width axis = local +Z. Three.js Y-rotation by θ maps (0,0,1) →
   // (sin θ, 0, cos θ). Target world XZ direction = (dxScene, -dyScene)/widthScene
