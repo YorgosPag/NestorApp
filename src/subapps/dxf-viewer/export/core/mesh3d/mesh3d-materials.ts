@@ -44,17 +44,53 @@ function resolveMaterialName(matId: string | null, material: THREE.Material): st
 }
 
 /**
- * Περνά τη σκηνή, δίνει σε κάθε mesh ένα **ονοματισμένο clone** του υλικού του και επιστρέφει
- * τον πίνακα υλικών για το `.mtl`. Ένα clone ανά μοναδικό όνομα (τα meshes το μοιράζονται),
- * ώστε το OBJ να γράψει `usemtl X` μία φορά ανά ομάδα και όχι ανά τρίγωνο.
+ * Ονοματίζει ΕΝΑ υλικό (single-material mesh Ή στοιχείο array): dedup ονόματος, ονοματισμένο clone,
+ * καταχώρηση στο `table`. Επιστρέφει το κοινό clone (τα meshes/όψεις με ίδιο όνομα το μοιράζονται
+ * ⇒ ένα `usemtl`/primitive ανά μοναδικό υλικό, όχι ανά τρίγωνο).
  *
- * Multi-material meshes (array `material`) εξαιρούνται: ο `OBJExporter` γράφει ούτως ή άλλως
- * ένα `usemtl` ανά mesh, οπότε ένα ψεύτικο όνομα θα έλεγε ψέματα για το ποιο υλικό ισχύει.
+ * ADR-668 — κρυμμένο υλικό → `HIDDEN_…` clone με `d 0` (τελείως διαφανές) που κρατά το **πραγματικό**
+ * του χρώμα, ώστε να επανέρχεται σωστά χρωματισμένο όταν ο χρήστης ανεβάσει το `d` στο C4D.
+ */
+function registerNamedMaterial(
+  source: THREE.Material,
+  matId: string | null,
+  hidden: boolean,
+  clones: Map<string, THREE.Material>,
+  table: Map<string, ExportMaterialEntry>,
+): THREE.Material {
+  const baseName = resolveMaterialName(matId, source);
+  const name = hidden ? `${HIDDEN_NAME_PREFIX}_${baseName}` : baseName;
+
+  let clone = clones.get(name);
+  if (clone === undefined) {
+    clone = source.clone();
+    clone.name = name;
+    if (hidden) {
+      clone.transparent = true;
+      clone.opacity = 0;
+    }
+    clones.set(name, clone);
+    table.set(name, {
+      name,
+      color: materialColor(clone)?.clone() ?? new THREE.Color(0x808080),
+      opacity: clone.opacity,
+      transparent: clone.transparent,
+    });
+  }
+  return clone;
+}
+
+/**
+ * Περνά τη σκηνή, δίνει σε κάθε mesh **ονοματισμένα clones** των υλικών του και επιστρέφει τον
+ * πίνακα υλικών για το `.mtl` + το manifest baseline. Ένα clone ανά μοναδικό όνομα.
  *
- * ADR-668 — ό,τι ήταν σβηστό στην οθόνη παίρνει **δικό του** `HIDDEN_…` υλικό με `d 0`
- * (τελείως διαφανές), ώστε να έρθει στο C4D αόρατο αντί να μπλοκάρει τη θέα. Κρατά το
- * **πραγματικό του χρώμα**: ο χρήστης ανεβάζει το `d` και το αντικείμενο επανέρχεται σωστά
- * χρωματισμένο — αν όλα τα κρυμμένα μοιράζονταν ένα υλικό, θα επανέρχονταν μονόχρωμα.
+ * **Multi-material (per-face, ADR-539/678 Φ3):** ΚΑΘΕ όψη ονοματίζεται χωριστά — **colour-based**
+ * (`mat_<hex6>`), γιατί το `matId` είναι ανά-στοιχείο και δεν ξεχωρίζει όψεις. Ομοιόμορφη βαφή →
+ * όλες οι όψεις ίδιο όνομα → dedup σε ΕΝΑ υλικό· per-face-varied → ξεχωριστά ονόματα. Το glTF τα
+ * εξάγει ως named per-primitive υλικά → ο συνεργάτης βάφει ανά όψη και το round-trip επιστρέφει ανά
+ * όψη (η αρίθμηση όψεων ταξιδεύει αυτούσια στο `mesh.userData.faceKeyByMaterialIndex`, node-level).
+ * Ο stock `OBJExporter` ΔΕΝ είναι group-aware, οπότε τα per-face ονόματα φτάνουν μόνο στο
+ * `.mtl`/baseline — ποτέ σε ψεύτικο per-face `usemtl` (ADR-668: OBJ = per-object dominant).
  */
 export function assignExportMaterials(
   root: THREE.Object3D,
@@ -65,31 +101,14 @@ export function assignExportMaterials(
 
   root.traverse((node) => {
     const mesh = node as THREE.Mesh;
-    if (mesh.isMesh !== true || Array.isArray(mesh.material)) return;
+    if (mesh.isMesh !== true) return;
 
-    const source = mesh.material;
     const { matId, bimId } = resolveBimMeshIdentity(mesh);
     const hidden = bimId !== null && hiddenEntityIds.has(bimId);
-    const baseName = resolveMaterialName(matId, source);
-    const name = hidden ? `${HIDDEN_NAME_PREFIX}_${baseName}` : baseName;
 
-    let clone = clones.get(name);
-    if (clone === undefined) {
-      clone = source.clone();
-      clone.name = name;
-      if (hidden) {
-        clone.transparent = true;
-        clone.opacity = 0;
-      }
-      clones.set(name, clone);
-      table.set(name, {
-        name,
-        color: materialColor(clone)?.clone() ?? new THREE.Color(0x808080),
-        opacity: clone.opacity,
-        transparent: clone.transparent,
-      });
-    }
-    mesh.material = clone;
+    mesh.material = Array.isArray(mesh.material)
+      ? mesh.material.map((face) => registerNamedMaterial(face, null, hidden, clones, table))
+      : registerNamedMaterial(mesh.material, matId, hidden, clones, table);
   });
 
   return [...table.values()];

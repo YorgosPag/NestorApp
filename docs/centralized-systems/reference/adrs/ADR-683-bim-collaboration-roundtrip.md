@@ -388,6 +388,20 @@ mapping). Ερώτημα: τα εισαγόμενα κάγκελα να προτ
     mesh3d-roundtrip)· `jscpd:diff` καθαρό. Το finish-sync naming fallback (τετριμμένο `||`) δεν πήρε
     δικό του integration test — η ουσιαστική εγγύηση (token routing επιβιώνει με μη-κενό suffix)
     καλύπτεται από τα `finishTargetTypes`/`isFinishSkinName` tests.
+  - **✅ Επαληθευμένο στην οθόνη (Giorgio, 2026-07-21):** ΚΑΙ τα δύο paint paths ζωντανά — σώματα
+    (κολώνες→κόκκινες, `SetFaceAppearanceCommand`) ΚΑΙ σοβάς (φινιρίσματα→πράσινα, `finish-import-
+    routing`), αμφότερα DNA υλικά που ανιχνεύθηκαν μέσω manifest baseline. buildingId fallback
+    ορατό ως `structural-finish-default`.
+  - **🔴 ΓΝΩΣΤΟ ΟΡΙΟ — το round-trip ΔΕΝ είναι επαναλήψιμο σε ήδη-βαμμένα στοιχεία.** Μόλις ένα
+    στοιχείο αποκτήσει per-face appearance (είτε από import είτε χειροκίνητα, ADR-539), ο converter
+    το κάνει **multi-material mesh** (array υλικών ανά όψη). Το `assignExportMaterials` **σκόπιμα
+    παρακάμπτει** τα multi-material (`mesh3d-materials.ts` — `Array.isArray(mesh.material)`), οπότε
+    στην **επαν-εξαγωγή** αυτά τα υλικά βγαίνουν **ανώνυμα** και **εκτός baseline**. Μετρήθηκε:
+    export ήδη-βαμμένου ορόφου → 81 ανώνυμα κόκκινα υλικά (13 κολώνες × per-face) + 1 named
+    `mat-plaster-int`. Συνέπεια: **δεύτερος** γύρος συνεργασίας σε ήδη-βαμμένα στοιχεία σπάει (χάνεται
+    το κανάλι ονόματος). Ο **πρώτος** γύρος (φρέσκο μοντέλο → βαφή → import) δουλεύει πλήρως. Fix =
+    ξεχωριστή συνεδρία: ονοματοδοσία per-face υλικών στο multi-material μονοπάτι εξαγωγής (σύνορο
+    ADR-539 ↔ ADR-668), ΟΧΙ τετριμμένο.
 
 - **2026-07-20 (Φ3.1γ — το πάνελ εισαγόμενων· η ορατή απουσία αποκτά τόπο)** — Η Φ3.1γ **σπάστηκε**:
   εδώ έγινε **μόνο** το πάνελ· η μνήμη κανόνων αποσπάστηκε ως **Φ3.1δ** (N.8: ~10-13 αρχεία / 4

@@ -46,13 +46,13 @@ export type CircleGripKind = 'circle-move';
 
 /**
  * ADR-561 — Arc grip kind (plain DXF `arc` primitive). Το τόξο έχει εγγενή
- * προσανατολισμό (start/end angle) → ΚΑΙ σταυρός ΚΑΙ περιστροφή:
- *   - `arc-move`     → κεντρικό grip, 4-arrow MOVE glyph + directional prompt +
+ * προσανατολισμό (start/end angle) → ΚΑΙ σταυρός ΚΑΙ περιστροφή, ΑΜΦΟΤΕΡΑ ΠΑΝΩ ΣΤΗΝ
+ * καμπύλη στο arc midpoint (Giorgio 2026-07-21), ΟΧΙ στο μακρινό κέντρο:
+ *   - `arc-move`     → grip στο arc-MIDPOINT, 4-arrow MOVE glyph + directional prompt +
  *                      whole-entity translate.
- *   - `arc-rotation` → λαβή περιστροφής (midway κάτω από το κέντρο, μέσω
- *                      `rotationHandleMidwayOffset`)· commit μέσω της canonical
- *                      `RotateEntityCommand` (pivot = κέντρο), όπως `line-rotation`.
- * start/end/mid grips μένουν untagged (standard reshape).
+ *   - `arc-rotation` → λαβή περιστροφής ακτινικά λίγο ΕΞΩ από το midpoint· commit μέσω
+ *                      της canonical `RotateEntityCommand` (pivot = κέντρο), όπως `line-rotation`.
+ * Το κέντρο μένει plain whole-move grip· start/end μένουν untagged (standard reshape).
  */
 export type ArcGripKind = 'arc-move' | 'arc-rotation';
 

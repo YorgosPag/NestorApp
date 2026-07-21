@@ -18,6 +18,13 @@
 export interface ObjectMaterialAssignment {
   readonly objectName: string;
   readonly materialName: string | null;
+  /**
+   * ADR-678 Φ3 — **per-face** υλικά (`FaceKey → όνομα υλικού`), όταν η προέλευση τα κουβαλά. Το glTF
+   * τα γεμίζει (named per-primitive υλικά + η αρίθμηση όψεων του `faceKeyByMaterialIndex`)· το OBJ
+   * μένει `undefined` (ο stock exporter δεν είναι group-aware → per-object dominant, βλ. ADR-668).
+   * Απόν/κενό ⇒ ο καταναλωτής πέφτει στο ανά-στοιχείο `materialName` (`BASE_FACE_KEY '*'`).
+   */
+  readonly faceMaterials?: ReadonlyMap<string, string | null>;
 }
 
 /** Ένα υλικό του `.mtl` — μόνο ό,τι χρειάζεται η Φ1 (χρώμα + διαφάνεια). */

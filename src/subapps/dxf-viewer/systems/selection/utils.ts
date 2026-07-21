@@ -16,6 +16,8 @@ import {
   isPolylineEntity,
   isRectangleEntity,
   isAngleMeasurementEntity,
+  isArcEntity,
+  type ArcEntity,
   type Entity
 } from '../../types/entities';
 // ADR-130: Centralized Default Layer Name
@@ -24,7 +26,26 @@ import { getLayerNameOrDefault } from '../../config/layer-config';
 import { resolveEntityLayerName } from '../../stores/LayerStore';
 import { createRectangleVertices, calculateEntityBounds } from './shared/selection-duplicate-utils';
 import { extractAngleMeasurementPoints } from '../../rendering/entities/shared/geometry-rendering-utils';
-import { isPointInPolygon, segmentsIntersect } from '../../utils/geometry/GeometryUtils';
+import { isPointInPolygon, segmentsIntersect, arcToPolyline } from '../../utils/geometry/GeometryUtils';
+// 🏢 ADR-089: Centralized Point-In-Bounds (reused for arc precise-selection)
+import { SpatialUtils } from '../../core/spatial/SpatialUtils';
+// Reuse the marquee segment-vs-rect SSoT for precise arc crossing (no duplicate math).
+import { lineIntersectsRectangle } from './universal-marquee-geometry';
+
+/** ADR-561 selection — arc segment count for its sampled-curve selection geometry. */
+const ARC_SELECTION_SEGMENTS = 24;
+
+/**
+ * Arc selection geometry = its ACTUAL sampled curve (never the centre / full-circle
+ * bbox). Reuses the `arcToPolyline` tessellation SSoT (ADR-166) so a marquee/lasso
+ * tests the visible arc, not the far centre point (Giorgio 2026-07-21).
+ */
+function arcSelectionPoints(entity: ArcEntity): Point2D[] {
+  return arcToPolyline(
+    { center: entity.center, radius: entity.radius, startAngle: entity.startAngle, endAngle: entity.endAngle },
+    ARC_SELECTION_SEGMENTS,
+  );
+}
 
 // Helper function to get rectangle vertices (eliminates code duplication)
 export function getRectangleVertices(entity: Entity): Point2D[] | null {
@@ -214,6 +235,9 @@ export class UnifiedEntitySelection {
       }
       return pts;
     }
+    // ADR-561 — arc selects by its ACTUAL curve (sampled), NOT the centre. Fixes the
+    // "centre pulls in selection" over-selection when an arc sits among other entities.
+    if (isArcEntity(entity)) return arcSelectionPoints(entity);
     if (isPolylineEntity(entity)) return entity.vertices;
     if (isRectangleEntity(entity)) {
       const verts = getRectangleVertices(entity);
@@ -250,6 +274,13 @@ export class UnifiedEntitySelection {
           { x: center.x + radius * Math.cos(a2), y: center.y + radius * Math.sin(a2) },
         ]);
       }
+      return segs;
+    }
+    // ADR-561 — arc crossing segments = its sampled curve edges (never the centre).
+    if (isArcEntity(entity)) {
+      const pts = arcSelectionPoints(entity);
+      const segs: Array<[Point2D, Point2D]> = [];
+      for (let i = 0; i < pts.length - 1; i++) segs.push([pts[i], pts[i + 1]]);
       return segs;
     }
     if (isPolylineEntity(entity)) {
@@ -355,6 +386,17 @@ export class UnifiedEntitySelection {
   }
 
   private static entityIntersectsBounds(entity: Entity, bounds: { min: Point2D, max: Point2D }): boolean {
+    // ADR-561 — precise arc crossing: test the sampled curve, NOT the full-circle bbox,
+    // so the empty area around the far centre never sweeps the arc into the selection.
+    if (isArcEntity(entity)) {
+      const pts = arcSelectionPoints(entity);
+      if (pts.some(p => SpatialUtils.pointInRect(p, bounds))) return true;
+      for (let i = 0; i < pts.length - 1; i++) {
+        if (lineIntersectsRectangle(pts[i], pts[i + 1], bounds)) return true;
+      }
+      return false;
+    }
+
     const entityBounds = this.getEntityBounds(entity);
     if (!entityBounds) return false;
 
@@ -367,6 +409,13 @@ export class UnifiedEntitySelection {
   }
 
   private static isEntityFullyInsideBounds(entity: Entity, bounds: { min: Point2D, max: Point2D }): boolean {
+    // ADR-561 — window mode: the whole sampled arc curve must be inside (not the loose
+    // full-circle bbox, which would refuse an arc the window actually encloses).
+    if (isArcEntity(entity)) {
+      const pts = arcSelectionPoints(entity);
+      return pts.length > 0 && pts.every(p => SpatialUtils.pointInRect(p, bounds));
+    }
+
     const entityBounds = this.getEntityBounds(entity);
     if (!entityBounds) return false;
 

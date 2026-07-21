@@ -131,12 +131,14 @@ export class EnterpriseApiClient {
 
     let lastError: Error | null = null;
     let attempts = 0;
+    let authRefreshed = false;
+    let forceTokenRefresh = false;
 
     while (attempts < (retry ? maxRetries : 1)) {
       attempts++;
 
       try {
-        const requestHeaders = await this.buildHeaders(headers, skipAuth, body);
+        const requestHeaders = await this.buildHeaders(headers, skipAuth, body, forceTokenRefresh);
         const fetchOptions: RequestInit = { method, headers: requestHeaders };
 
         if (body !== undefined && body !== null) {
@@ -152,6 +154,26 @@ export class EnterpriseApiClient {
 
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
+
+        // 🔐 Stale-token recovery: a 401 means our cached Firebase ID token was
+        // rejected server-side (expired / revoked / claims changed) — even though
+        // the Firebase SDK itself (e.g. Storage uploads) still works with its own
+        // fresh token. Force-refresh the ID token once and retry, independent of
+        // the normal retry budget so it also works when retry is disabled.
+        // Idempotent: the rejected request never reached the route handler.
+        if (
+          !skipAuth &&
+          !authRefreshed &&
+          ApiClientError.isApiClientError(error) &&
+          error.statusCode === 401
+        ) {
+          authRefreshed = true;
+          forceTokenRefresh = true;
+          this.tokenCache = null;
+          attempts--; // do not consume a normal retry slot for the auth refresh
+          continue;
+        }
+
         const shouldRetryNow = this.shouldRetry(error, attempts, maxRetries, retry);
 
         if (shouldRetryNow) {
@@ -203,6 +225,7 @@ export class EnterpriseApiClient {
     customHeaders: Record<string, string>,
     skipAuth: boolean,
     body?: unknown,
+    forceTokenRefresh: boolean = false,
   ): Promise<Record<string, string>> {
     const headers: Record<string, string> = { ...customHeaders };
 
@@ -211,7 +234,7 @@ export class EnterpriseApiClient {
     }
 
     if (!skipAuth) {
-      const token = await this.getIdToken();
+      const token = await this.getIdToken(forceTokenRefresh);
       headers['Authorization'] = `Bearer ${token}`;
       if (this.superAdminCompanyId) {
         headers['X-Super-Admin-Company-Id'] = this.superAdminCompanyId;

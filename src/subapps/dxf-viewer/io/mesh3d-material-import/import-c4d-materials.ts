@@ -18,7 +18,7 @@ import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/Le
 import { getGlobalCommandHistory } from '../../core/commands';
 import { CompositeCommand } from '../../core/commands/CompositeCommand';
 import { SetFaceAppearanceCommand } from '../../core/commands/entity-commands/SetFaceAppearanceCommand';
-import { BASE_FACE_KEY } from '../../bim/types/face-appearance-types';
+import { BASE_FACE_KEY, type FaceAppearance } from '../../bim/types/face-appearance-types';
 import type { MeshNameCharset } from '../../export/core/mesh3d/mesh3d-naming';
 import {
   parseObjObjects,
@@ -28,7 +28,7 @@ import {
 } from './obj-mtl-parse';
 import { resolveImportAppearance } from './resolve-import-appearance';
 import type { KnownMaterialResolver } from './known-import-materials';
-import { matchObjectsToEntities, type EntityExportIdentity } from './match-objects-to-entities';
+import { matchObjectsToEntities, type EntityExportIdentity, type MatchedObject } from './match-objects-to-entities';
 import { isFinishSkinName, buildFinishImportCommands } from './finish-import-routing';
 
 /**
@@ -67,7 +67,7 @@ export interface ImportedAppearanceResult {
   readonly objectCount: number;
   /** Πόσα (μη-σοβά) objects ταιριάξαν σε BIM στοιχείο. */
   readonly matchedCount: number;
-  /** Πόσα σώματα (base `'*'`) βάφτηκαν πραγματικά (matched ΚΑΙ με ΑΛΛΑΓΜΕΝΟ χρώμα/υλικό). */
+  /** Πόσα σώματα βάφτηκαν πραγματικά (matched ΚΑΙ ≥1 όψη με αλλαγμένο χρώμα/υλικό — base ή per-face). */
   readonly appliedCount: number;
   /** ADR-678 Φ1.1 — πόσα δομικά μέλη πήραν σοβά-override από merged finish-skins. */
   readonly finishMemberCount: number;
@@ -100,6 +100,47 @@ function enumerateEntities(
   return { identities, levelByBimId };
 }
 
+type LevelSceneAdapter = ReturnType<typeof createLevelSceneManagerAdapter>;
+
+/** Ίδιο appearance (ίδιο catalog id ΚΑΙ ίδιο flat χρώμα) — για collapse ομοιόμορφης per-face βαφής. */
+function sameAppearance(a: FaceAppearance, b: FaceAppearance): boolean {
+  return a.materialId === b.materialId && a.colorHex === b.colorHex;
+}
+
+/**
+ * ADR-678 Φ3 — τα commands βαφής ενός ταιριασμένου object. Με per-face δεδομένα (glTF): κάθε όψη
+ * λύνεται ανεξάρτητα με τον ίδιο pure `resolveImportAppearance` (μηδέν αλλαγή εκεί)· αμετάβλητες όψεις
+ * → κανένα command. **Collapse σε ΕΝΑ base `'*'`** όταν ΟΛΕΣ οι όψεις βάφτηκαν με το ΙΔΙΟ appearance
+ * (idempotent, ένα καθαρό undo — parity με τον ζωντανό «βάψε όλο το στοιχείο»). Χωρίς per-face δεδομένα
+ * (OBJ/legacy single-material) → το ανά-στοιχείο `materialName` στο `BASE_FACE_KEY`.
+ */
+function buildBodyFaceCommands(
+  m: MatchedObject,
+  mtl: ReadonlyMap<string, ImportedMaterial>,
+  resolveKnownId: KnownMaterialResolver,
+  baseline: ReadonlyMap<string, string> | undefined,
+  adapter: LevelSceneAdapter,
+): ICommand[] {
+  const faces = m.faceMaterials;
+  if (!faces || faces.size === 0) {
+    const appearance = resolveImportAppearance(m.materialName, mtl, resolveKnownId, baseline);
+    return appearance ? [new SetFaceAppearanceCommand(m.bimId, BASE_FACE_KEY, appearance, adapter)] : [];
+  }
+
+  const painted: { faceKey: string; appearance: FaceAppearance }[] = [];
+  for (const [faceKey, materialName] of faces) {
+    const appearance = resolveImportAppearance(materialName, mtl, resolveKnownId, baseline);
+    if (appearance) painted.push({ faceKey, appearance });
+  }
+  if (painted.length === 0) return [];
+
+  const uniform = painted.length === faces.size
+    && painted.every((p) => sameAppearance(p.appearance, painted[0].appearance));
+  return uniform
+    ? [new SetFaceAppearanceCommand(m.bimId, BASE_FACE_KEY, painted[0].appearance, adapter)]
+    : painted.map((p) => new SetFaceAppearanceCommand(m.bimId, p.faceKey, p.appearance, adapter));
+}
+
 /**
  * **Ο πυρήνας** (ADR-683 Φ2-UI) — εφαρμόζει εμφάνιση από ήδη αναλυμένα objects+υλικά, ανεξάρτητα
  * από το format προέλευσης. Επιστρέφει αναφορά (πόσα ταιριάξαν/βάφτηκαν/έμειναν). Καμία
@@ -125,13 +166,13 @@ export function applyImportedAppearance(
   const { identities, levelByBimId } = enumerateEntities(levels);
   const { matched, unmatched } = matchObjectsToEntities(bodyObjects, identities, charset);
 
-  const bodyChildren = matched.flatMap((m) => {
-    const appearance = resolveImportAppearance(m.materialName, mtl, resolveKnownId, baseline);
+  const bodyGroups = matched.map((m) => {
     const levelId = levelByBimId.get(m.bimId);
-    if (appearance === null || levelId === undefined) return [];
+    if (levelId === undefined) return [] as ICommand[];
     const adapter = createLevelSceneManagerAdapter(levels.getLevelScene, levels.setLevelScene, levelId);
-    return [new SetFaceAppearanceCommand(m.bimId, BASE_FACE_KEY, appearance, adapter)];
+    return buildBodyFaceCommands(m, mtl, resolveKnownId, baseline, adapter);
   });
+  const bodyChildren = bodyGroups.flat();
 
   const finish = buildFinishImportCommands(levels, finishObjects, mtl, resolveKnownId, baseline);
   const children: ICommand[] = [...bodyChildren, ...finish.children];
@@ -145,7 +186,7 @@ export function applyImportedAppearance(
   return {
     objectCount: objects.length,
     matchedCount: matched.length,
-    appliedCount: bodyChildren.length,
+    appliedCount: bodyGroups.filter((g) => g.length > 0).length,
     finishMemberCount: finish.memberCount,
     unmatched,
   };

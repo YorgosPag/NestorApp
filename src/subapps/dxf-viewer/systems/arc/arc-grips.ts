@@ -8,22 +8,20 @@
  *   - `ArcRenderer.getGrips`               → on-canvas 2D grip painting.
  *
  * Unlike the circle, the arc has an intrinsic orientation (start/end angle), so it
- * gets BOTH a move cross AND a rotation handle:
- *   - `arc-move`     → centre grip, 4-arrow MOVE glyph + per-arm directional
+ * gets BOTH a MOVE glyph AND a rotation handle — BOTH placed ON the visible curve at
+ * the arc midpoint (Giorgio 2026-07-21), NOT at the far centre:
+ *   - `arc-move`     → arc-MIDPOINT grip, 4-arrow MOVE glyph + per-arm directional
  *                      move-by-value (ADR-397 Φ2) + whole-entity translate
  *                      (existing `movesEntity` path — NO new commit).
- *   - `arc-rotation` → rotation handle midway between the centre and the (nominal)
- *                      bottom, via the SHARED `rotationHandleMidwayOffset` policy
- *                      (parity με column/text placement). Commit routes through the
- *                      canonical `RotateEntityCommand` (pivot = centre) — same as
- *                      the line, NO bespoke transform.
+ *   - `arc-rotation` → rotation handle radially just OUTSIDE the arc midpoint, on/beside
+ *                      the curve. Commit routes through the canonical `RotateEntityCommand`
+ *                      (pivot = centre) — same as the line, NO bespoke transform.
  *
- * The start/end endpoints + the arc midpoint stay untagged (standard reshape /
- * whole-move), exactly as before.
+ * The centre stays a plain whole-move grip (AutoCAD-style square — move / radius
+ * reference), and the start/end endpoints stay untagged (standard reshape).
  *
  * Zero React / DOM / Firestore / canvas deps.
  *
- * @see bim/grips/rotation-handle-policy.ts — `rotationHandleMidwayOffset` (shared)
  * @see bim/grips/grip-glyph-registry.ts — `'arc-move' → 'move'`, `'arc-rotation' → 'rotation'`
  * @see docs/centralized-systems/reference/adrs/ADR-561-move-rotate-grips-primitives.md
  */
@@ -31,7 +29,6 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { GripInfo, ArcGripKind } from '../../hooks/grip-types';
 import { pointOnCircle } from '../../rendering/entities/shared/geometry-rendering-utils';
-import { rotationHandleMidwayOffset } from '../../bim/grips/rotation-handle-policy';
 
 /** The arc MOVE + ROTATION grip kinds (mirror `line-move` / `line-rotation`). */
 export const ARC_MOVE_KIND: ArcGripKind = 'arc-move';
@@ -39,24 +36,31 @@ export const ARC_ROTATION_KIND: ArcGripKind = 'arc-rotation';
 
 const DEG_TO_RAD = Math.PI / 180;
 
+/** ROTATE handle radial factor: sits just outside the curve at the arc midpoint. */
+const ARC_ROTATION_RADIAL_FACTOR = 1.18;
+
 /**
- * World position of the arc's rotation handle: midway between the centre and the
- * nominal bottom edge, via the SAME `rotationHandleMidwayOffset` policy the column
- * / text use (`−dimY/4` with `dimY = 2·radius` ⇒ `−radius/2`). Sits INSIDE the arc
- * disc, visually distinct from the centre MOVE cross. World-down (local −Y) because
- * an arc carries no rectangular frame — the pivot is the centre regardless.
+ * World position of the arc's rotation handle: radially just OUTSIDE the arc midpoint
+ * (`radius · ARC_ROTATION_RADIAL_FACTOR` along the mid-sweep angle), so it sits ON/beside
+ * the visible curve where the user's eye is — NOT near the far centre (Giorgio
+ * 2026-07-21). The pivot stays the centre regardless (see grip 4 below).
  */
-export function arcRotationHandlePos(center: Point2D, radius: number): Point2D {
-  const offY = rotationHandleMidwayOffset(radius * 2); // negative (convex) ⇒ −radius/2
-  return { x: center.x, y: center.y + offY };
+export function arcRotationHandlePos(
+  center: Point2D,
+  radius: number,
+  startAngleDeg: number,
+  endAngleDeg: number,
+): Point2D {
+  const midRad = ((startAngleDeg + endAngleDeg) / 2) * DEG_TO_RAD;
+  return pointOnCircle(center, radius * ARC_ROTATION_RADIAL_FACTOR, midRad);
 }
 
 /**
  * The 5 grips of a plain DXF arc — the SSoT both grip paths consume:
- *   0 → centre (whole-arc translate; `'arc-move'` → 4-arrow MOVE glyph + directional prompt)
+ *   0 → centre (plain whole-arc translate — AutoCAD-style square, move / radius ref)
  *   1 → start endpoint (edit `startAngle`)
  *   2 → end endpoint (edit `endAngle`)
- *   3 → arc midpoint (whole-arc translate — kept as before)
+ *   3 → arc midpoint (`'arc-move'` → 4-arrow MOVE glyph + directional prompt + translate)
  *   4 → rotation handle (`'arc-rotation'` → curved glyph + hot-grip rotate + RotateEntityCommand)
  *
  * `type: 'vertex'` on the rotation handle so it is never filtered by the
@@ -75,17 +79,23 @@ export function getArcGrips(
   const endRad = endAngleDeg * DEG_TO_RAD;
   const midRad = (startRad + endRad) / 2;
   return [
-    {
-      entityId, gripIndex: 0, type: 'center',
-      position: center, movesEntity: true,
-      gripKind: { on: 'arc', kind: ARC_MOVE_KIND },
-    },
+    // 0 → centre: plain whole-arc MOVE grip (AutoCAD-style square). KEPT as a move /
+    //     radius reference, but the MOVE glyph now lives on the curve (grip 3) so the
+    //     far-from-arc centre no longer carries the 4-arrow affordance.
+    { entityId, gripIndex: 0, type: 'center', position: center, movesEntity: true },
     { entityId, gripIndex: 1, type: 'vertex', position: pointOnCircle(center, radius, startRad), movesEntity: false },
     { entityId, gripIndex: 2, type: 'vertex', position: pointOnCircle(center, radius, endRad), movesEntity: false },
-    { entityId, gripIndex: 3, type: 'edge', position: pointOnCircle(center, radius, midRad), movesEntity: true },
+    // 3 → arc midpoint: the MOVE affordance (4-arrow glyph + directional move-by-value),
+    //     now ON the curve where the eye is (was the centre).
+    {
+      entityId, gripIndex: 3, type: 'edge',
+      position: pointOnCircle(center, radius, midRad), movesEntity: true,
+      gripKind: { on: 'arc', kind: ARC_MOVE_KIND },
+    },
+    // 4 → rotation handle: radially just outside the midpoint, on/beside the curve.
     {
       entityId, gripIndex: 4, type: 'vertex',
-      position: arcRotationHandlePos(center, radius), movesEntity: false,
+      position: arcRotationHandlePos(center, radius, startAngleDeg, endAngleDeg), movesEntity: false,
       gripKind: { on: 'arc', kind: ARC_ROTATION_KIND },
     },
   ];

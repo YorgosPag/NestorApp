@@ -32,6 +32,8 @@ export interface MatchedObject {
   readonly objectName: string;
   readonly bimId: string;
   readonly materialName: string | null;
+  /** ADR-678 Φ3 — per-face υλικά (`FaceKey → όνομα υλικού`), όταν η προέλευση τα κουβαλά (glTF). */
+  readonly faceMaterials?: ReadonlyMap<string, string | null>;
 }
 
 export interface MatchResult {
@@ -89,7 +91,12 @@ export function matchObjectsToEntities(
     ];
     const bimId = candidates.map((c) => nameToBimId.get(c)).find((v) => v !== undefined);
     if (bimId !== undefined) {
-      matched.push({ objectName: obj.objectName, bimId, materialName: obj.materialName });
+      matched.push({
+        objectName: obj.objectName,
+        bimId,
+        materialName: obj.materialName,
+        faceMaterials: obj.faceMaterials,
+      });
     } else {
       unmatched.push(obj.objectName);
     }
