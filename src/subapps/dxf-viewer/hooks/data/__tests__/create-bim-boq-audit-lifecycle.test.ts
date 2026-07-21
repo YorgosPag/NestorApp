@@ -146,3 +146,36 @@ describe('createBimBoqAuditLifecycle — onRestored', () => {
     expect(recordChange).toHaveBeenCalledWith('restored', e);
   });
 });
+
+// ADR-684 Φ4-C — optional recordChange: BOQ-only entities (generic-solid) omit the audit client.
+describe('createBimBoqAuditLifecycle — BOQ-only (no recordChange)', () => {
+  function boqOnly() {
+    return createBimBoqAuditLifecycle<FakeEntity>({
+      boqType: 'generic-solid',
+      deletedFallbackKind: 'wall-boiler',
+      boqPayload: (e) => ({ id: e.id, kind: e.kind }),
+    });
+  }
+
+  it('upserts the BOQ row without an audit call and without throwing', () => {
+    const lc = boqOnly();
+    expect(() =>
+      lc.onPersisted(fakeEntity('g1'), { isNew: true, prevComparable: null, scope: scope(), extra: undefined }),
+    ).not.toThrow();
+    expect(recordChange).not.toHaveBeenCalled();
+    expect(mockUpsert).toHaveBeenCalledWith('generic-solid', { id: 'g1', kind: 'wall-boiler' }, expect.anything(), 'created');
+  });
+
+  it('deletes the BOQ row without an audit call', () => {
+    const lc = boqOnly();
+    expect(() => lc.onDeleted('g1', fakeEntity('g1'), { scope: scope(), extra: undefined, lastSavedComparable: null })).not.toThrow();
+    expect(recordChange).not.toHaveBeenCalled();
+    expect(mockDelete).toHaveBeenCalledWith('g1', 'co-1');
+  });
+
+  it('onRestored is a no-op (no audit, no throw)', () => {
+    const lc = boqOnly();
+    expect(() => lc.onRestored(fakeEntity('g1'), { scope: scope(), extra: undefined })).not.toThrow();
+    expect(recordChange).not.toHaveBeenCalled();
+  });
+});

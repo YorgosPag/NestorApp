@@ -7,9 +7,10 @@
  * μηχανισμός αποθήκευσης. Καθρέφτης του `useImportedMeshPersistence.ts`: hybrid auto-save,
  * selective-skip diff-merge, first-save στο `drawing:entity-created`, delete + undo restore.
  *
- * **Audit + BOQ**: σκόπιμα εκτός Φ2 (ADR-684 §7 — μεταφέρονται στη Φ4 μαζί με την ταξινόμηση/
- * κοστολόγηση). Τα lifecycle callbacks του hook είναι optional· η παράλειψή τους δεν επηρεάζει
- * persistence/undo. Το «δομικό vs διακοσμητικό» (που ορίζει BOQ) είναι metadata της Φ4.
+ * **BOQ auto-feed** (ADR-684 Φ4-C): δομικό στερεό → αυτόματη γραμμή προμέτρησης (RC, m³, ακριβής
+ * όγκος) μέσω του κοινού `createBimBoqAuditLifecycle` (χωρίς `recordChange` — μόνο BOQ, ο bridge κάνει
+ * skip μόνος του για διακοσμητικό/null mapping). **Audit trail** (ADR-195) παραμένει ξεχωριστό
+ * μελλοντικό follow-up — προστίθεται με μία γραμμή (`recordChange`) όταν χρειαστεί.
  *
  * **Ο λόγος ύπαρξης, με μία πρόταση:** χωρίς αυτό, ό,τι στερεό δημιουργείται εξαφανίζεται στο πρώτο
  * reload — γιατί ο `reconcileLoadedSceneBim` πετά τα per-entity BIM του scene snapshot και τα
@@ -29,8 +30,10 @@ import {
   GenericSolidFirestoreService,
   type GenericSolidDoc,
 } from '../../bim/entities/generic-solid/generic-solid-firestore-service';
+import { genericSolidBoqPayload } from '../../bim/entities/generic-solid/generic-solid-boq';
 import { genericSolidDocToEntity as docToEntity } from './generic-solid-persistence-helpers';
 import type { LevelSceneWriter } from '../../systems/levels/level-scene-accessor';
+import { createBimBoqAuditLifecycle } from './create-bim-boq-audit-lifecycle';
 import { createBimEntityPersistenceHook } from './create-bim-entity-persistence-hook';
 import type {
   BimEntityPersistenceParams,
@@ -103,6 +106,13 @@ const useGenericSolidPersistenceBase = createBimEntityPersistenceHook<
     event: 'bim:generic-solid-delete-requested',
     getId: (p) => (p as { genericSolidId?: string }).genericSolidId,
   },
+  // ADR-684 Φ4-C — BOQ auto-feed (δομικό → γραμμή RC m³· διακοσμητικό → skip στον bridge). Χωρίς
+  // `recordChange`: μόνο BOQ, όχι audit trail (scoped follow-up). Κοινός SSoT lifecycle, μηδέν clone.
+  ...createBimBoqAuditLifecycle<GenericSolidEntity>({
+    boqType: 'generic-solid',
+    deletedFallbackKind: 'generic',
+    boqPayload: genericSolidBoqPayload,
+  }),
 });
 
 export function useGenericSolidPersistence(

@@ -63,8 +63,13 @@ export type BimEntityAuditRecorder<TEntity extends BimBoqAuditEntity> = (
 export interface BimBoqAuditLifecycleConfig<TEntity extends BimBoqAuditEntity> {
   /** BOQ entity discriminant (ΑΤΟΕ/ΑΤΗΕ mapping key). */
   readonly boqType: BimEntityType;
-  /** Per-entity audit client (`recordMep<X>Change`). */
-  readonly recordChange: BimEntityAuditRecorder<TEntity>;
+  /**
+   * Per-entity audit client (`recordMep<X>Change`). **Optional** (ADR-684 Φ4-C): entities that only
+   * need the BOQ auto-feed — not an audit trail yet — omit it and this builder skips every audit call
+   * while keeping the BOQ upsert/delete guard SSoT (μηδέν inline clone, N.18). Adding audit later is a
+   * one-line config change, no lifecycle rewrite.
+   */
+  readonly recordChange?: BimEntityAuditRecorder<TEntity>;
   /** `kind` used in the delete audit snapshot when the entity is already gone. */
   readonly deletedFallbackKind: TEntity['kind'];
   /** BOQ payload builder. Default: `{ id, kind }` (1-piece MEP items). Underfloor
@@ -95,7 +100,7 @@ export function createBimBoqAuditLifecycle<TEntity extends BimBoqAuditEntity>(
 
   return {
     onPersisted: (entity, { isNew, prevComparable, scope }) => {
-      config.recordChange(isNew ? 'created' : 'updated', entity, {
+      config.recordChange?.(isNew ? 'created' : 'updated', entity, {
         prevParams: prevComparable ?? undefined,
       });
       // ADR-408 — Η-Μ BOQ auto-feed (guarded; bridge also no-ops on incomplete scope).
@@ -133,12 +138,12 @@ export function createBimBoqAuditLifecycle<TEntity extends BimBoqAuditEntity>(
             readonly params: TEntity['params'];
           })
         : { id, kind: config.deletedFallbackKind };
-      config.recordChange('deleted', snapshot);
+      config.recordChange?.('deleted', snapshot);
       // ADR-408 — remove the auto-fed Η-Μ BOQ row (skips user-detached rows).
       if (scope.companyId) void bimToBoqBridge.deleteBoqItemForBim(id, scope.companyId);
     },
     onRestored: (entity) => {
-      config.recordChange('restored', entity);
+      config.recordChange?.('restored', entity);
     },
   };
 }
