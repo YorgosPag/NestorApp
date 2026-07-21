@@ -18,12 +18,25 @@ import * as THREE from 'three';
 import { resolveBimMeshIdentity } from './mesh3d-identity';
 import { HIDDEN_NAME_PREFIX, sanitizeMeshNamePart } from './mesh3d-naming';
 
-/** Ό,τι χρειάζεται το `.mtl` — κρατημένο σε δικό μας τύπο ώστε ο writer να είναι pure/testable. */
+/**
+ * Αναφορά σε diffuse texture ενός υλικού (ADR-679 Φ1 — texture parity export).
+ * Ο writer γράφει το `fileName` ως `init_from`· ο bundler κατεβάζει τα bytes από το `url`.
+ */
+export interface ExportTextureRef {
+  /** Relative path όπως θα γραφτεί δίπλα στο .dae, π.χ. `textures/oak.jpg` (init_from). */
+  readonly fileName: string;
+  /** Πηγή bytes για το bundling (Storage/blob URL)· null αν δεν βρέθηκε (writer γράφει μόνο ref). */
+  readonly url: string | null;
+}
+
+/** Ό,τι χρειάζεται το `.mtl`/`.dae` — δικός μας τύπος ώστε ο writer να είναι pure/testable. */
 export interface ExportMaterialEntry {
   readonly name: string;
   readonly color: THREE.Color;
   readonly opacity: number;
   readonly transparent: boolean;
+  /** Diffuse texture (ADR-679 Φ1)· undefined/null = flat χρώμα (η συντριπτική πλειονότητα). */
+  readonly map?: ExportTextureRef | null;
 }
 
 /**
@@ -41,6 +54,29 @@ function resolveMaterialName(matId: string | null, material: THREE.Material): st
   if (matId !== null) return sanitizeMeshNamePart(matId);
   const color = materialColor(material);
   return `mat_${color ? color.getHexString() : '808080'}`;
+}
+
+/** Το image `src`/`currentSrc` ενός THREE.Texture (browser), ή explicit `userData.url` (SSR/test). */
+function textureSourceUrl(map: THREE.Texture): string | null {
+  const explicit = (map.userData as { url?: unknown } | undefined)?.url;
+  if (typeof explicit === 'string' && explicit.length > 0) return explicit;
+  const img = map.image as { src?: string; currentSrc?: string } | undefined;
+  const src = img?.currentSrc ?? img?.src;
+  return typeof src === 'string' && src.length > 0 ? src : null;
+}
+
+/** Επέκταση αρχείου εικόνας από το URL (jpg/png/webp), default `.png`. */
+function textureExtension(url: string | null): string {
+  const m = url?.match(/\.(jpe?g|png|webp)(?:[?#]|$)/i);
+  return m ? `.${m[1].toLowerCase()}` : '.png';
+}
+
+/** Diffuse texture ενός υλικού → `ExportTextureRef`, ή null όταν δεν έχει `.map`. */
+function extractTextureRef(material: THREE.Material, materialName: string): ExportTextureRef | null {
+  const map = (material as { map?: unknown }).map;
+  if (!(map instanceof THREE.Texture)) return null;
+  const url = textureSourceUrl(map);
+  return { fileName: `textures/${sanitizeMeshNamePart(materialName)}${textureExtension(url)}`, url };
 }
 
 /**
@@ -75,6 +111,7 @@ function registerNamedMaterial(
       color: materialColor(clone)?.clone() ?? new THREE.Color(0x808080),
       opacity: clone.opacity,
       transparent: clone.transparent,
+      map: extractTextureRef(clone, name),
     });
   }
   return clone;

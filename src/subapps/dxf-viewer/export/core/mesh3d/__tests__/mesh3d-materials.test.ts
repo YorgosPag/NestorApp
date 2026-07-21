@@ -43,6 +43,39 @@ describe('assignExportMaterials — non-Standard material colour (ADR-668 §4.8)
   });
 });
 
+describe('assignExportMaterials — texture extraction (ADR-679 Φ1)', () => {
+  it('εξάγει ExportTextureRef από υλικό με .map (url από userData) + relative fileName', () => {
+    const root = new THREE.Group();
+    const tex = new THREE.Texture();
+    tex.userData = { url: 'https://storage/bim-material-textures/oak/albedo.jpg' };
+    const mat = new THREE.MeshStandardMaterial({ color: 0xffffff });
+    mat.map = tex;
+    const wall = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat);
+    wall.userData = { bimId: 'w-tex', bimType: 'wall', matId: 'oak-01' };
+    root.add(wall);
+
+    const table = assignExportMaterials(root);
+
+    expect(table[0].map).not.toBeNull();
+    expect(table[0].map?.url).toBe('https://storage/bim-material-textures/oak/albedo.jpg');
+    expect(table[0].map?.fileName).toBe('textures/oak-01.jpg'); // relative, από matId + .jpg
+  });
+
+  it('υλικό ΧΩΡΙΣ .map → map είναι null', () => {
+    const root = new THREE.Group();
+    const wall = new THREE.Mesh(
+      new THREE.BoxGeometry(1, 1, 1),
+      new THREE.MeshStandardMaterial({ color: 0x808080 }),
+    );
+    wall.userData = { bimId: 'w-plain', bimType: 'wall' };
+    root.add(wall);
+
+    const table = assignExportMaterials(root);
+
+    expect(table[0].map).toBeNull();
+  });
+});
+
 describe('assignExportMaterials — per-face (array) materials (ADR-678 Φ3 / ADR-683 Φ3)', () => {
   it('names every face of a uniform-colour array material and dedups to ONE table entry', () => {
     const root = new THREE.Group();

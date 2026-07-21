@@ -55,8 +55,9 @@ BimMaterial** (PBR texture set) και να το **render-άρει** μέσω τ
 | **Φ2b** | **Per-face PBR (η καρδιά).** Επέκταση `FaceAppearance` + `FinishFaceOverride` να δείχνουν σε `BimMaterial.id`· `resolveFaceMaterial` + finish converter να χτίζουν PBR υλικό (texture) μέσω `pbr-material-builder`, όχι flat color. Σώμα + σοβάς. | **Μεγάλο** |
 | **Φ2c** | **Material editor UI (C4D-parity).** Διπλό κλικ σε swatch → πάνελ PBR (Base Color/Texture upload, Roughness, Metalness, Normal, Opacity). Reuse `useMaterialPbrTextureUpload`. Εμφανές «όνομα για C4D». | Μεσαίο |
 | **Φ3** | glTF PBR round-trip (το glTF ΕΧΕΙ πραγματικά PBR + textures — αντίθετα από το OBJ/R15). Προαιρετικό. | Μεσαίο |
+| **Φ5** | **COLLADA/DAE texture export (Νέστωρ→C4D R15) — FULL PARITY track.** Ground-truth correction (2026-07-21): ο R15 **DAE** importer **ΚΟΥΒΑΛΑ** textures (αποδεδειγμένο: native Aeron `.dae` με `library_images`+sampler), σε αντίθεση με το OBJ που ΔΕΝ διαβάζει υλικά. Άρα το DAE είναι ο textured δρόμος για R15. Sub-phases: **Φ5.1a** DAE writer texture-capable + πραγματικά UVs ✅· **Φ5.1b** texture-byte bundling (fetch από Storage → loose files σε `.zip`, +`fflate` MIT)· **Φ5.2** per-face texture export (εξαρτάται Φ2b)· **Φ5.3** per-triangle. | **Μεγάλο** |
 
-**Σειρά:** Φ2a (γρήγορη νίκη, ξεκλειδώνει catalog/user materials στο round-trip) → Φ2b (η ουσία) → Φ2c (UX).
+**Σειρά:** Φ2a (γρήγορη νίκη, ξεκλειδώνει catalog/user materials στο round-trip) → Φ2b (η ουσία) → Φ2c (UX). **Full-parity export track (εντολή Giorgio 2026-07-21):** Φ5.1 (whole-element υφή export, R15-testable) → Φ2b/Φ3/Φ5.2 (per-face) → Φ5.3 (per-triangle) → import COLLADA parser (orchestrator).
 
 ## 6. Κανόνες / SSoT (μην αναπαράγεις)
 

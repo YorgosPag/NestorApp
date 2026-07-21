@@ -66,15 +66,37 @@ function srgbComponents(color: THREE.Color): { r: number; g: number; b: number }
  * **Πραγματικά διάφανα** (κρυφά `HIDDEN_` opacity 0, ή γυαλί) → emit `<transparency>` (`A_ONE`:
  * result opacity = transparent.color.a × transparency = 1 × opacity ⇒ float = opacity· 0 = διάφανο).
  */
-function effectElement(effectId: string, entry: ExportMaterialEntry): string {
-  const { r, g, b } = srgbComponents(entry.color);
+/** Τα sid/id ενός textured effect: surface→sampler→image αλυσίδα (native C4D δομή). */
+interface EffectTextureIds {
+  readonly imageId: string;
+  readonly surfSid: string;
+  readonly sampSid: string;
+}
+
+function effectElement(
+  effectId: string,
+  entry: ExportMaterialEntry,
+  tex: EffectTextureIds | null,
+): string {
   const transparency = entry.transparent
     ? `<transparent opaque="A_ONE"><color>1 1 1 1</color></transparent>` +
       `<transparency><float>${entry.opacity}</float></transparency>`
     : '';
+  // Textured (ADR-679 Φ1): newparams surface→sampler ΜΕΣΑ στο profile_COMMON (πριν το technique) +
+  // `<diffuse><texture>` — ακριβώς όπως το native C4D. Αλλιώς flat `<diffuse><color>`.
+  const newparams = tex
+    ? `<newparam sid="${tex.surfSid}"><surface type="2D"><init_from>${tex.imageId}</init_from></surface></newparam>` +
+      `<newparam sid="${tex.sampSid}"><sampler2D><source>${tex.surfSid}</source></sampler2D></newparam>`
+    : '';
+  const diffuse = tex
+    ? `<diffuse><texture texture="${tex.sampSid}" texcoord="UVSET0"/></diffuse>`
+    : (() => {
+        const { r, g, b } = srgbComponents(entry.color);
+        return `<diffuse><color>${r} ${g} ${b} 1</color></diffuse>`;
+      })();
   return (
-    `<effect id="${effectId}"><profile_COMMON><technique sid="COMMON"><blinn>` +
-    `<diffuse><color>${r} ${g} ${b} 1</color></diffuse>` +
+    `<effect id="${effectId}"><profile_COMMON>${newparams}<technique sid="COMMON"><blinn>` +
+    diffuse +
     transparency +
     `</blinn></technique></profile_COMMON></effect>`
   );
@@ -90,12 +112,14 @@ function assetElement(options: ColladaExportOptions): string {
   );
 }
 
-/** Τα `<effect>`/`<material>` + η απεικόνιση `όνομα υλικού → material id` για τα bindings. */
+/** `<library_images>` + `<effect>`/`<material>` + απεικόνιση `όνομα υλικού → material id`. */
 function buildMaterialLibraries(materials: readonly ExportMaterialEntry[]): {
+  images: string[];
   effects: string[];
   materialDefs: string[];
   materialIdByName: Map<string, string>;
 } {
+  const images: string[] = [];
   const effects: string[] = [];
   const materialDefs: string[] = [];
   const materialIdByName = new Map<string, string>();
@@ -103,12 +127,19 @@ function buildMaterialLibraries(materials: readonly ExportMaterialEntry[]): {
     const matId = `material_${i}`;
     const effectId = `effect_${i}`;
     materialIdByName.set(entry.name, matId);
-    effects.push(effectElement(effectId, entry));
+    const tex =
+      entry.map != null
+        ? { imageId: `image_${i}`, surfSid: `surf_${i}`, sampSid: `samp_${i}` }
+        : null;
+    if (tex !== null && entry.map != null) {
+      images.push(`<image id="${tex.imageId}"><init_from>${escapeXml(entry.map.fileName)}</init_from></image>`);
+    }
+    effects.push(effectElement(effectId, entry, tex));
     materialDefs.push(
       `<material id="${matId}" name="${escapeXml(entry.name)}"><instance_effect url="#${effectId}"/></material>`,
     );
   });
-  return { effects, materialDefs, materialIdByName };
+  return { images, effects, materialDefs, materialIdByName };
 }
 
 /**
@@ -122,7 +153,7 @@ export function serialiseCollada(
   options: ColladaExportOptions,
 ): string {
   root.updateMatrixWorld(true);
-  const { effects, materialDefs, materialIdByName } = buildMaterialLibraries(materials);
+  const { images, effects, materialDefs, materialIdByName } = buildMaterialLibraries(materials);
 
   const geometries: string[] = [];
   const nodes: string[] = [];
@@ -142,6 +173,7 @@ export function serialiseCollada(
     `<?xml version="1.0" encoding="utf-8"?>\n` +
     `<COLLADA xmlns="http://www.collada.org/2005/11/COLLADASchema" version="1.4.1">` +
     assetElement(options) +
+    (images.length > 0 ? `<library_images>${images.join('')}</library_images>` : '') +
     `<library_effects>${effects.join('')}</library_effects>` +
     `<library_materials>${materialDefs.join('')}</library_materials>` +
     `<library_geometries>${geometries.join('')}</library_geometries>` +

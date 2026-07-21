@@ -153,3 +153,42 @@ describe('serialiseCollada — χρώμα/διαφάνεια/μονάδα', () =
     expect(dae).not.toContain('name="mat_a&b<c"');
   });
 });
+
+describe('serialiseCollada — textures + πραγματικά UVs (ADR-679 Φ1)', () => {
+  it('υλικό με .map → library_images + surface/sampler + texture diffuse (native C4D δομή)', () => {
+    const geo = makeTriangleGeometry(1);
+    geo.setAttribute('uv', new THREE.BufferAttribute(new Float32Array([0, 0, 1, 0, 1, 1]), 2));
+    const mesh = new THREE.Mesh(geo, named('mat_oak'));
+    mesh.name = 'Wall';
+    const textured: ExportMaterialEntry = {
+      name: 'mat_oak',
+      color: new THREE.Color(0xffffff),
+      opacity: 1,
+      transparent: false,
+      map: { fileName: 'textures/mat_oak.jpg', url: 'https://x/oak.jpg' },
+    };
+    const dae = serialiseCollada(rootWith(mesh), [textured], CM);
+
+    expect(dae).toContain('<library_images><image id="image_0"><init_from>textures/mat_oak.jpg</init_from></image></library_images>');
+    expect(dae).toContain('<newparam sid="surf_0"><surface type="2D"><init_from>image_0</init_from></surface></newparam>');
+    expect(dae).toContain('<newparam sid="samp_0"><sampler2D><source>surf_0</source></sampler2D></newparam>');
+    expect(dae).toContain('<diffuse><texture texture="samp_0" texcoord="UVSET0"/></diffuse>');
+    // Textured ⇒ ΚΑΝΕΝΑ flat <diffuse><color>
+    expect(dae).not.toContain('<diffuse><color>');
+    // Πραγματικά UVs στο TEXCOORD source (ΟΧΙ το placeholder "0 0")
+    expect(dae).toContain('<float_array id="geom_0_uv_arr" count="6">0 0 1 0 1 1</float_array>');
+  });
+
+  it('υλικό ΧΩΡΙΣ .map → κανένα library_images, flat color diffuse, placeholder UV', () => {
+    const mesh = new THREE.Mesh(makeTriangleGeometry(1), named('mat_ff0000', 0xff0000));
+    mesh.name = 'Flat';
+    const dae = serialiseCollada(rootWith(mesh), [entry('mat_ff0000', 0xff0000)], CM);
+
+    expect(dae).not.toContain('<library_images>');
+    expect(dae).toContain('<diffuse><color>');
+    expect(dae).not.toContain('<texture ');
+    // Χωρίς uv attribute → placeholder (0,0) — αλλά το bind_vertex_input παραμένει
+    expect(dae).toContain('<float_array id="geom_0_uv_arr" count="2">0 0</float_array>');
+    expect(dae).toContain('<bind_vertex_input semantic="UVSET0" input_semantic="TEXCOORD" input_set="0"/>');
+  });
+});

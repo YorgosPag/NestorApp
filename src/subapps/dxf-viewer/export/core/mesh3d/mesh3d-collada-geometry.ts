@@ -77,6 +77,15 @@ function worldNormals(geometry: THREE.BufferGeometry, matrixWorld: THREE.Matrix4
   return out;
 }
 
+/** Επίπεδα UV `[u,v, …]` από το `uv` attribute (ADR-679 Φ1), ή null όταν λείπει. Χωρίς transform. */
+function uvArray(geometry: THREE.BufferGeometry): number[] | null {
+  const uv = geometry.getAttribute('uv');
+  if (uv === undefined) return null;
+  const out: number[] = [];
+  for (let i = 0; i < uv.count; i += 1) out.push(uv.getX(i), uv.getY(i));
+  return out;
+}
+
 /** Multi-material (per-face) ⇒ ένα group ανά `geometry.group`· αλλιώς ένα group για όλο το mesh. */
 function triangleGroups(mesh: THREE.Mesh): TriangleGroup[] {
   const geometry = mesh.geometry;
@@ -121,13 +130,17 @@ function pIndices(
   triStart: number,
   triEnd: number,
   hasNormal: boolean,
+  hasUv: boolean,
 ): string {
   const index = geometry.getIndex();
   const out: string[] = [];
   for (let t = triStart; t < triEnd; t += 1) {
     for (let m = 0; m < 3; m += 1) {
       const local = index !== null ? index.getX(t * 3 + m) : t * 3 + m;
-      out.push(hasNormal ? `${local} ${local} 0` : `${local} 0`);
+      // TEXCOORD ordinal = ο ίδιος index (uv attribute παράλληλο με position) όταν έχουμε
+      // πραγματικά UVs· αλλιώς `0` → το μοναδικό placeholder `(0,0)`.
+      const uvOrd = hasUv ? `${local}` : '0';
+      out.push(hasNormal ? `${local} ${local} ${uvOrd}` : `${local} ${uvOrd}`);
     }
   }
   return out.join(' ');
@@ -139,8 +152,9 @@ function trianglesElement(
   ids: { verticesId: string; normalSourceId: string; uvSourceId: string },
   group: TriangleGroup,
   symbol: string,
-  hasNormal: boolean,
+  flags: { hasNormal: boolean; hasUv: boolean },
 ): string {
+  const { hasNormal, hasUv } = flags;
   const texcoordOffset = hasNormal ? 2 : 1;
   const inputs =
     `<input semantic="VERTEX" source="#${ids.verticesId}" offset="0"/>` +
@@ -148,7 +162,7 @@ function trianglesElement(
     `<input semantic="TEXCOORD" source="#${ids.uvSourceId}" offset="${texcoordOffset}" set="0"/>`;
   return (
     `<triangles material="${symbol}" count="${group.triEnd - group.triStart}">${inputs}` +
-    `<p>${pIndices(geometry, group.triStart, group.triEnd, hasNormal)}</p></triangles>`
+    `<p>${pIndices(geometry, group.triStart, group.triEnd, hasNormal, hasUv)}</p></triangles>`
   );
 }
 
@@ -156,14 +170,14 @@ function trianglesElement(
 function buildGroupsXml(
   mesh: THREE.Mesh,
   ids: { verticesId: string; normalSourceId: string; uvSourceId: string },
-  hasNormal: boolean,
+  flags: { hasNormal: boolean; hasUv: boolean },
   materialIdByName: ReadonlyMap<string, string>,
 ): { triangles: string[]; bindings: string[] } {
   const triangles: string[] = [];
   const bindings: string[] = [];
   triangleGroups(mesh).forEach((group, gi) => {
     const symbol = `sym_${gi}`;
-    triangles.push(trianglesElement(mesh.geometry, ids, group, symbol, hasNormal));
+    triangles.push(trianglesElement(mesh.geometry, ids, group, symbol, flags));
     const matName = groupMaterialName(mesh, group.materialIndex);
     const matId = matName !== undefined ? materialIdByName.get(matName) : undefined;
     // `bind_vertex_input` → UVSET0/TEXCOORD/set 0: το native C4D R15 το γράφει σε ΚΑΘΕ
@@ -194,6 +208,8 @@ export function buildColladaMeshBlocks(
   if (positions.length === 0) return null;
   const normals = worldNormals(geometry, mesh.matrixWorld);
   const hasNormal = normals !== null;
+  const uvs = uvArray(geometry);
+  const hasUv = uvs !== null;
 
   const geomId = `geom_${index}`;
   const ids = {
@@ -204,11 +220,12 @@ export function buildColladaMeshBlocks(
 
   const sources = [floatSource(`${geomId}_pos`, positions, ['X', 'Y', 'Z'])];
   if (normals !== null) sources.push(floatSource(ids.normalSourceId, normals, ['X', 'Y', 'Z']));
-  // Μοναδικό UV `(0,0)` που το δείχνουν όλες οι κορυφές — υπαρκτό TEXCOORD set ώστε το
-  // `<bind_vertex_input>` του R15 να έχει στόχο. Flat χρώμα ⇒ η τιμή UV αδιάφορη.
-  sources.push(floatSource(ids.uvSourceId, [0, 0], ['S', 'T']));
+  // TEXCOORD source: πραγματικά UVs (ADR-679 Φ1, για textures) όταν υπάρχουν· αλλιώς μοναδικό
+  // placeholder `(0,0)` — σε κάθε περίπτωση υπαρκτό set ώστε το `<bind_vertex_input>` (που ο R15
+  // απαιτεί για την ανάθεση υλικού) να έχει στόχο.
+  sources.push(floatSource(ids.uvSourceId, uvs ?? [0, 0], ['S', 'T']));
 
-  const { triangles, bindings } = buildGroupsXml(mesh, ids, hasNormal, materialIdByName);
+  const { triangles, bindings } = buildGroupsXml(mesh, ids, { hasNormal, hasUv }, materialIdByName);
   const safeName = escapeXml(mesh.name);
 
   const geometryXml =
