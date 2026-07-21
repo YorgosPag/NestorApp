@@ -277,6 +277,17 @@ New `.ssot-registry.json` Tier 3 module `bim-family-types`:
 
 ## 9. Changelog
 
+- **v0.16 (2026-07-21)** — **SSoT extraction: `StairSharedParams` base interface (ADR-583 / N.18).**
+  Το `StairTypeParams` (εδώ) και το `StairParams` (`stair-types.ts`) είχαν αποκλίνει σε **δύο
+  παράλληλα δίδυμα** — spelled-out subset του §3 (ADR-412 «clarity, not `Omit<>`»), που το token-based
+  jscpd (CHECK 3.28) πιάνει πλέον ως clone (2 clones, 26+54 γρ.). Fix: τα κοινά type-level πεδία ζουν
+  **μία φορά** στο νέο `export interface StairSharedParams` (στο `stair-types.ts`, κάτω-στρώμα του
+  domain). Πλέον `StairParams extends StairSharedParams` (+ `basePoint`/`direction` + instance-only
+  `perRiserOverrides`/`restLandings`) και `StairTypeParams = StairSharedParams` (alias· καθαρίστηκαν 15
+  orphaned stair imports από εδώ). Structural typing → η assignability `StairTypeParams` ↔
+  `Omit<StairParams,'basePoint'|'direction'>` **διατηρείται ακέραιη**. Παράλληλα: το
+  `bim-family-type.schemas.ts` (Wall/Slab/Roof) πήρε κοινό `TYPE_PARAMS_COMMON_SHAPE` spread αντί για
+  τριπλό `{thickness,dna,material}`. Commit `26a92750`.
 - **v0.15 (2026-07-16)** — **`family-type-ui-helpers.ts`: μία generic factory αντί για 4 αντίγραφα**
   (ADR-584 / N.18, Plan Mode μετά από N.8 gate). Η πεντάδα helpers των §3.3/§3.4 ήταν γραμμένη **4
   φορές** (wall/slab/roof/opening). Πλέον τα σώματα ζουν **μία φορά** στη module-private
