@@ -54,3 +54,4 @@ The public wrapper param interfaces cloned an identical 7-field scope block (als
 
 ## Changelog
 - **2026-07-10** — ADR created. Cluster #18: `useWallBooleanOpPersistence` primitive (merge/split twins → thin), `createBimBoqAuditLifecycle` builder (5 MEP hooks adopt), `BimEntityPersistencePublicScope` param-surface SSoT. Full-scan 3494→3262; 60 jest; jscpd:diff clean.
+- **2026-07-22** — `createBimBoqAuditLifecycle.recordChange` έγινε **optional** (ADR-684 Φ4-C D2). Entities που χρειάζονται μόνο BOQ auto-feed — όχι audit trail ακόμη — παραλείπουν το audit client και ο builder κάνει skip κάθε audit κλήση (`config.recordChange?.(...)`), κρατώντας το BOQ upsert/delete guard **SSoT** (μηδέν inline clone, N.18). Πρώτος καταναλωτής: `useGenericSolidPersistence` (BOQ-only). Backward-compatible: οι 6 MEP + imported-mesh callers αμετάβλητοι. +3 tests (BOQ-only path).
