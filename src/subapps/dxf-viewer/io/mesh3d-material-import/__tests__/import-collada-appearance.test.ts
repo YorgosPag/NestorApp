@@ -88,12 +88,12 @@ function fakeLevels(): LevelsHookReturn {
 describe('importColladaAppearance', () => {
   beforeEach(() => { mockCapture.executed = null; });
 
-  it('single-material: parse → match → known material → whole-element replace map', () => {
+  it('single-material: parse → match → known material → whole-element replace map', async () => {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), named('paint-red'));
     mesh.name = 'Column_col-7';
     const dae = serialiseCollada(rootWith(mesh), [entry('paint-red', 0xc0392b)], CM);
 
-    const result = importColladaAppearance(fakeLevels(), dae, resolveKnownId);
+    const result = await importColladaAppearance(fakeLevels(), dae, resolveKnownId);
 
     expect(result.matchedCount).toBe(1);
     expect(result.appliedCount).toBe(1);
@@ -102,7 +102,7 @@ describe('importColladaAppearance', () => {
     });
   });
 
-  it('per-face uniform: faceMaterials φτάνει και collapse-άρει σε ΕΝΑ whole-element replace map', () => {
+  it('per-face uniform: faceMaterials φτάνει και collapse-άρει σε ΕΝΑ whole-element replace map', async () => {
     const geo = makeTriangleGeometry(4);
     geo.clearGroups();
     geo.addGroup(0, 6, 0);
@@ -112,7 +112,7 @@ describe('importColladaAppearance', () => {
     mesh.userData['faceKeyByMaterialIndex'] = ['top', 'bottom'];
     const dae = serialiseCollada(rootWith(mesh), [entry('paint-red', 0xc0392b)], CM);
 
-    const result = importColladaAppearance(fakeLevels(), dae, resolveKnownId);
+    const result = await importColladaAppearance(fakeLevels(), dae, resolveKnownId);
 
     expect(result.appliedCount).toBe(1);
     expect(mockCapture.executed).toMatchObject({
@@ -120,12 +120,12 @@ describe('importColladaAppearance', () => {
     });
   });
 
-  it('no match → καμία παρενέργεια', () => {
+  it('no match → καμία παρενέργεια', async () => {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), named('paint-red'));
     mesh.name = 'Column_nope';
     const dae = serialiseCollada(rootWith(mesh), [entry('paint-red', 0xc0392b)], CM);
 
-    const result = importColladaAppearance(fakeLevels(), dae, resolveKnownId);
+    const result = await importColladaAppearance(fakeLevels(), dae, resolveKnownId);
 
     expect(result.appliedCount).toBe(0);
     expect(mockCapture.executed).toBeNull();
@@ -140,17 +140,17 @@ describe('importColladaAppearance', () => {
       return serialiseCollada(rootWith(mesh), [entry('mat-brick-masonry', 0x8a4b2f)], CM);
     }
 
-    it('χωρίς baseline → αόρατο (global name-based fallback: mat-* = «αμετάβλητο»)', () => {
-      const result = importColladaAppearance(fakeLevels(), swappedColumnDae(), resolveKnownId);
+    it('χωρίς baseline → αόρατο (global name-based fallback: mat-* = «αμετάβλητο»)', async () => {
+      const result = await importColladaAppearance(fakeLevels(), swappedColumnDae(), resolveKnownId);
       expect(result.appliedCount).toBe(0);
       expect(mockCapture.executed).toBeNull();
     });
 
-    it('με baseline (εξήχθη mat-concrete-c25) → swap ορατό → {materialId: mat-brick-masonry}', () => {
+    it('με baseline (εξήχθη mat-concrete-c25) → swap ορατό → {materialId: mat-brick-masonry}', async () => {
       const baselineByMesh = new Map<string, Readonly<Record<string, string>>>([
         ['Column_col-7', { '*': 'mat-concrete-c25' }],
       ]);
-      const result = importColladaAppearance(
+      const result = await importColladaAppearance(
         fakeLevels(), swappedColumnDae(), resolveKnownId, undefined, baselineByMesh,
       );
       expect(result.appliedCount).toBe(1);

@@ -339,7 +339,13 @@ function hasFaceTexture(materialId: string): boolean {
 export function getFaceMaterial3D(materialId: string): THREE.MeshStandardMaterial | null {
   if (!useBimRenderSettingsStore.getState().realisticMaterials) return null;
   if (!hasFaceTexture(materialId)) return null;
-  return doubleSidedVariant(getMaterial3D(materialId));
+  const mat = doubleSidedVariant(getMaterial3D(materialId));
+  // ADR-678 Φ2 (round-trip identity): σφραγίζει το Nestor material id ώστε το export να ονομάζει το
+  // per-face υλικό με ΤΗΝ ΤΑΥΤΟΤΗΤΑ ΤΟΥ (`bmat_*`/`mat-*`) — όχι texture-derived `tex_*` — για να το
+  // αναγνωρίζει το re-import. Σταθερό ανά `bmat_*` (μοναδικό source→clone)· catalog `mat-*` που
+  // μοιράζονται texture key κρατούν το τελευταίο id (αποδεκτό: ίδια εμφάνιση· Βήμα 2 το ακριβοποιεί).
+  mat.userData['nestorMaterialId'] = materialId;
+  return mat;
 }
 
 /**

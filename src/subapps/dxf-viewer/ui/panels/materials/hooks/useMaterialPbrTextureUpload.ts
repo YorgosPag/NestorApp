@@ -150,5 +150,8 @@ export async function uploadPendingPbrMaps(
     roughnessUrl: urls.roughness,
     aoUrl: urls.ao,
     tileSizeM: tileSizeM > 0 ? tileSizeM : 1,
+    // ADR-678 Βήμα 3 — χειροκίνητο editor upload: καμία content-hash dedup (ο χρήστης
+    // ονομάζει/επιλέγει ρητά το υλικό). Το auto import round-trip γεμίζει το hash.
+    albedoHash: null,
   };
 }

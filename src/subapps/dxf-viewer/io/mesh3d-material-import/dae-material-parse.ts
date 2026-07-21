@@ -41,6 +41,14 @@ export interface ColladaSceneImport {
   readonly objects: readonly ObjectMaterialAssignment[];
   /** Ισοδύναμο του `parseMtl` — όνομα υλικού → χρώμα/διαφάνεια (μόνο flat-color υλικά). */
   readonly materials: ReadonlyMap<string, ImportedMaterial>;
+  /**
+   * ADR-678 Βήμα 3 — `όνομα υλικού → filename (basename) της diffuse υφής` από το
+   * `<library_images>`. Μόνο για textured effects (ξένη υφή που έβαλε ο συνεργάτης στο
+   * C4D). Ο UI pre-pass ταιριάζει το filename με ένα εικόνα-`File` του `FileList`,
+   * ανεβάζει, φτιάχνει νέο `bmat_*`, και βάφει την όψη μ' αυτό. Το κλειδί είναι το ΙΔΙΟ
+   * `name` που δένει ο κόμβος (post-collision `<name>#<id>`).
+   */
+  readonly texturesByMaterialName: ReadonlyMap<string, string>;
 }
 
 /** Η εμφάνιση ενός `<effect>`: flat χρώμα (ή `null` για textured) + διαφάνεια. */
@@ -94,21 +102,101 @@ function parseEffects(root: Element): Map<string, EffectAppearance> {
   return out;
 }
 
-/** `materialId → όνομα υλικού` + ο πίνακας flat χρωμάτων (`όνομα → ImportedMaterial`). */
+/** Το τελευταίο segment ενός URI/path (basename)· καθαρίζει `file://` prefix + backslashes. */
+function baseName(uri: string): string {
+  const clean = uri.replace(/^file:\/+/i, '').replace(/\\/g, '/');
+  const parts = clean.split('/');
+  return parts[parts.length - 1] || uri;
+}
+
+/** `imageId → filename (basename)` από το `<library_images>` (COLLADA 1.4.1 `<init_from>` = URI). */
+function parseImages(root: Element): Map<string, string> {
+  const out = new Map<string, string>();
+  const lib = firstDescendant(root, 'library_images');
+  if (!lib) return out;
+  for (const image of directChildren(lib, 'image')) {
+    const id = image.getAttribute('id');
+    const initFrom = firstDescendant(image, 'init_from')?.textContent?.trim();
+    if (id && initFrom) out.set(id, baseName(initFrom));
+  }
+  return out;
+}
+
+/**
+ * Το filename της diffuse υφής ενός `<effect>` (ή `null` αν flat). Ακολουθεί την τυπική COLLADA
+ * 1.4.1 αλυσίδα `diffuse<texture[@texture=samplerSid]>` → `newparam[@sid=samplerSid]/sampler2D/
+ * source=surfaceSid` → `newparam[@sid=surfaceSid]/surface/init_from=imageId` → `<image>` filename.
+ *
+ * **Ανθεκτικό σε παραλλαγές exporter (C4D R15 vs δικός μας writer):** (α) αν το `texture` δείχνει
+ * κατευθείαν στο surface· (β) αν σπάσει η αλυσίδα, πέφτει στο μοναδικό surface→image του effect·
+ * (γ) αν το init_from κρατά URI αντί για image id· (δ) αν υπάρχει texture μα μία μόνο εικόνα στο
+ * αρχείο. Ground-truth C4D R15 θα κουρδίσει τυχόν επιπλέον παραλλαγή (ADR-678 §Βήμα 3).
+ */
+function effectTextureFileName(effect: Element, imagesById: ReadonlyMap<string, string>): string | null {
+  const samplerToSurface = new Map<string, string>();
+  const surfaceToImage = new Map<string, string>();
+  for (const np of Array.from(effect.getElementsByTagName('newparam'))) {
+    const sid = np.getAttribute('sid');
+    if (!sid) continue;
+    const sampler = firstDescendant(np, 'sampler2D');
+    const source = sampler ? firstChild(sampler, 'source')?.textContent?.trim() : null;
+    if (source) samplerToSurface.set(sid, source);
+    const surface = firstDescendant(np, 'surface');
+    const img = surface ? firstChild(surface, 'init_from')?.textContent?.trim() : null;
+    if (img) surfaceToImage.set(sid, img);
+  }
+
+  const diffuse = firstDescendant(effect, 'diffuse');
+  const textureEl = diffuse ? firstChild(diffuse, 'texture') : null;
+  const samplerSid = textureEl?.getAttribute('texture') ?? null;
+
+  let imageRef: string | null = null;
+  if (samplerSid) {
+    const surfaceSid = samplerToSurface.get(samplerSid) ?? samplerSid;
+    imageRef = surfaceToImage.get(surfaceSid) ?? surfaceToImage.get(samplerSid) ?? null;
+  }
+  imageRef ??= [...surfaceToImage.values()][0] ?? null;
+
+  if (imageRef && imagesById.has(imageRef)) return imagesById.get(imageRef) ?? null;
+  if (imageRef) return baseName(imageRef);
+  if (textureEl && imagesById.size === 1) return [...imagesById.values()][0] ?? null;
+  return null;
+}
+
+/** `effectId → filename υφής` για textured effects (surface→sampler→image chain). */
+function parseEffectTextures(root: Element): Map<string, string> {
+  const out = new Map<string, string>();
+  const images = parseImages(root);
+  const lib = firstDescendant(root, 'library_effects');
+  if (!lib || images.size === 0) return out;
+  for (const effect of directChildren(lib, 'effect')) {
+    const id = effect.getAttribute('id');
+    if (!id) continue;
+    const fileName = effectTextureFileName(effect, images);
+    if (fileName) out.set(id, fileName);
+  }
+  return out;
+}
+
+/** `materialId → όνομα υλικού` + flat χρώματα + `όνομα → filename υφής` (textured). */
 function parseMaterials(root: Element): {
   nameById: Map<string, string>;
   materials: Map<string, ImportedMaterial>;
+  texturesByName: Map<string, string>;
 } {
   const effects = parseEffects(root);
+  const effectTextures = parseEffectTextures(root);
   const nameById = new Map<string, string>();
   const materials = new Map<string, ImportedMaterial>();
+  const texturesByName = new Map<string, string>();
   const lib = firstDescendant(root, 'library_materials');
-  if (!lib) return { nameById, materials };
+  if (!lib) return { nameById, materials, texturesByName };
   for (const mat of directChildren(lib, 'material')) {
     const id = mat.getAttribute('id');
     const rawName = mat.getAttribute('name');
     if (!id || !rawName) continue;
-    const appearance = effects.get(refId(firstChild(mat, 'instance_effect'), 'url') ?? '');
+    const effectUrl = refId(firstChild(mat, 'instance_effect'), 'url') ?? '';
+    const appearance = effects.get(effectUrl);
     // Duplicate COLLADA material NAMES είναι νόμιμα (ground-truth C4D R15: γράφει πολλά "Mat"). Το
     // binding γίνεται by **ID** (μοναδικό), όχι by name. Αν δύο ids μοιράζονται όνομα ΑΛΛΑ κουβαλούν
     // ΔΙΑΦΟΡΕΤΙΚΟ flat χρώμα (π.χ. γκρι "Mat" + ροζ "Mat"), το δεύτερο θα κρυβόταν πίσω από το πρώτο
@@ -124,8 +212,12 @@ function parseMaterials(root: Element): {
     if (appearance?.colorHex && !materials.has(name)) {
       materials.set(name, { name, colorHex: appearance.colorHex, opacity: appearance.opacity });
     }
+    // ADR-678 Βήμα 3 — textured effect: κρατάμε `όνομα → filename υφής` (ίδιο `name` που δένει ο
+    // κόμβος). Το πρώτο κερδίζει σε διπλό όνομα (ντετερμινιστικό, όπως τα flat χρώματα).
+    const textureFile = effectTextures.get(effectUrl);
+    if (textureFile && !texturesByName.has(name)) texturesByName.set(name, textureFile);
   }
-  return { nameById, materials };
+  return { nameById, materials, texturesByName };
 }
 
 /** `sym_5` → `5`· οτιδήποτε άλλο (π.χ. το `Material1` του C4D) → `null`. */
@@ -199,7 +291,7 @@ function parseNode(node: Element, nameById: ReadonlyMap<string, string>): Object
  */
 export function parseColladaScene(daeText: string): ColladaSceneImport {
   const root = parseXml(daeText, 'COLLADA');
-  const { nameById, materials } = parseMaterials(root);
+  const { nameById, materials, texturesByName } = parseMaterials(root);
   const objects: ObjectMaterialAssignment[] = [];
   const scenes = firstDescendant(root, 'library_visual_scenes');
   if (scenes) {
@@ -209,5 +301,5 @@ export function parseColladaScene(daeText: string): ColladaSceneImport {
       }
     }
   }
-  return { objects, materials };
+  return { objects, materials, texturesByMaterialName: texturesByName };
 }

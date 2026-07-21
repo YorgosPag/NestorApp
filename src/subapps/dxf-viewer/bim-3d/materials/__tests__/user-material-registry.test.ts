@@ -100,6 +100,7 @@ describe('change-versioning + resync bump', () => {
 describe('texture load + teardown', () => {
   const tex: PbrMaterialTextures = {
     albedoUrl: 'https://x/albedo.jpg', normalUrl: null, roughnessUrl: null, aoUrl: null, tileSizeM: 1,
+    albedoHash: null,
   };
 
   it('loads only the present maps and exposes the set', async () => {

@@ -32,7 +32,13 @@ import {
   type ImportedAppearanceResult,
 } from '../../io/mesh3d-material-import/import-c4d-materials';
 import { importGltfAppearance } from '../../io/mesh3d-roundtrip/import-gltf-appearance';
-import { importColladaAppearance } from '../../io/mesh3d-material-import/import-collada-appearance';
+import {
+  importColladaAppearance,
+  type ColladaTextureImporter,
+} from '../../io/mesh3d-material-import/import-collada-appearance';
+import { importForeignTextures } from '../../io/mesh3d-material-import/import-foreign-textures';
+import { sha256HexOfFile } from '../../io/mesh3d-material-import/texture-content-hash';
+import { uploadMaterialTextureMap } from '../../bim/services/bim-material-texture-upload.service';
 import { buildKnownMaterialResolver } from '../../io/mesh3d-material-import/known-import-materials';
 import type { GltfObjectRecord } from '../../io/mesh3d-roundtrip/gltf-scene-parse';
 import { isImportableNode } from '../../io/mesh3d-roundtrip/import-gltf-meshes';
@@ -57,6 +63,8 @@ type ImportPayload =
       readonly baseline?: ReadonlyMap<string, string>;
       /** ADR-678 Βήμα 2 — per-entity/per-face baseline (το `.dae` είναι το κύριο per-face μονοπάτι). */
       readonly materialBaselineByMesh?: ReadonlyMap<string, Readonly<Record<string, string>>>;
+      /** ADR-678 Βήμα 3 — τα αρχεία εικόνων (ξένες υφές) που επέλεξε ο χρήστης δίπλα στο `.dae`. */
+      readonly imageFiles: readonly File[];
     }
   | {
       readonly kind: 'obj';
@@ -104,6 +112,8 @@ async function readImportFiles(files: FileList): Promise<ImportPayload | null> {
       daeText: await dae.text(),
       baseline: await readManifestBaseline(list),
       materialBaselineByMesh: await readMaterialBaselineByMesh(list),
+      // ADR-678 Βήμα 3 — οι εικόνες υφών που ήρθαν μαζί (Maxon «Save with Assets»).
+      imageFiles: list.filter((f) => /\.(png|jpe?g|webp)$/i.test(f.name)),
     };
   }
 
@@ -164,8 +174,9 @@ export function C4dMaterialImportButton() {
   // ADR-679 Φ2a — live library υλικά (system + company + project scope) ώστε το round-trip
   // import να αναγνωρίζει ΚΑΙ τα δικά σου υλικά (by id ή ανθρώπινο όνομα), όχι μόνο catalog.
   const { user } = useAuth();
-  const { materials } = useMaterialLibrary({
-    companyId: user?.companyId ?? undefined,
+  const companyId = user?.companyId ?? undefined;
+  const { materials, save, update } = useMaterialLibrary({
+    companyId,
     userId: user?.uid ?? undefined,
     projectId: levels.saveContext?.projectId ?? undefined,
   });
@@ -202,9 +213,23 @@ export function C4dMaterialImportButton() {
         // νέα οντότητα. Ο OBJ/DAE δρόμος δεν έχει τι να προσφέρει εδώ (μηδέν κορυφές).
         importableRecords = gltfResult.unmatchedRecords.filter(isImportableNode);
       } else if (payload.kind === 'dae') {
-        // ADR-678 Φ4 — COLLADA per-face: text/XML parsing → κοινός πυρήνας (όπως OBJ, sync).
-        result = importColladaAppearance(
-          levels, payload.daeText, resolveKnownId, payload.baseline, payload.materialBaselineByMesh,
+        // ADR-678 Φ4/Βήμα 3 — COLLADA per-face: parse → (async) upload ξένων υφών → βαφή. Ο
+        // textureImporter injected ώστε ο io wrapper να μένει καθαρός από Firebase (DI).
+        if (payload.imageFiles.length > 0) notifications.info(t('c4dMaterialImport.uploadingTextures'));
+        const textureImporter: ColladaTextureImporter | undefined = companyId
+          ? (textures) => importForeignTextures(textures, payload.imageFiles, {
+              existingMaterials: materials,
+              saveMaterial: save,
+              updateMaterial: update,
+              uploadAlbedo: (file, materialId) =>
+                uploadMaterialTextureMap({ file, companyId, materialId, map: 'albedo' })
+                  .then((r) => r.downloadUrl),
+              hashFile: sha256HexOfFile,
+            })
+          : undefined;
+        result = await importColladaAppearance(
+          levels, payload.daeText, resolveKnownId, payload.baseline,
+          payload.materialBaselineByMesh, textureImporter,
         );
       } else {
         result = importC4dMaterials(levels, payload, resolveKnownId);
@@ -236,7 +261,7 @@ export function C4dMaterialImportButton() {
       matched: result.matchedCount,
       unmatched: result.unmatched.length,
     }));
-  }, [levels, notifications, t, resolveKnownId]);
+  }, [levels, notifications, t, resolveKnownId, companyId, materials, save, update]);
 
   return (
     <>
@@ -247,7 +272,7 @@ export function C4dMaterialImportButton() {
       <input
         ref={inputRef}
         type="file"
-        accept=".glb,.gltf,.dae,.obj,.mtl,.json"
+        accept=".glb,.gltf,.dae,.obj,.mtl,.json,.png,.jpg,.jpeg,.webp"
         multiple
         hidden
         onChange={(e) => { void handleFiles(e.target.files); e.target.value = ''; }}

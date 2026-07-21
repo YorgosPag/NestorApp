@@ -17,9 +17,18 @@
  */
 
 import type { LevelsHookReturn } from '../../systems/levels/useLevels';
-import type { KnownMaterialResolver } from './known-import-materials';
+import { withImportedMaterials, type KnownMaterialResolver } from './known-import-materials';
 import { applyImportedAppearance, type ImportedAppearanceResult } from './import-c4d-materials';
 import { parseColladaScene } from './dae-material-parse';
+
+/**
+ * ADR-678 Βήμα 3 — injected pre-pass που δημιουργεί `bmat_*` από ξένες υφές (C4D `<library_images>`)
+ * και επιστρέφει `όνομα υλικού → bmat_*`. Injected (όχι άμεση εξάρτηση) ώστε αυτός ο wrapper να μένει
+ * καθαρός από Firebase/React — ο button τον καλωδιώνει με τα SSoT (`importForeignTextures`).
+ */
+export type ColladaTextureImporter = (
+  texturesByMaterialName: ReadonlyMap<string, string>,
+) => Promise<ReadonlyMap<string, string>>;
 
 /**
  * Εφαρμόζει την εμφάνιση ενός επιστρεφόμενου `.dae` στα ζωντανά BIM στοιχεία (per-face όταν το αρχείο
@@ -28,18 +37,28 @@ import { parseColladaScene } from './dae-material-parse';
  * `materialBaselineByMesh` = ADR-678 Βήμα 2 per-entity/per-face baseline (`meshName → { faceKey →
  * εξαχθέν όνομα υλικού }`) από το ίδιο `.nestor.json` — εντοπίζει catalog→catalog swap. Το `.dae`
  * είναι το **κύριο** per-face μονοπάτι του C4D round-trip, άρα αυτή η καλωδίωση είναι απαραίτητη.
+ *
+ * **Async (ADR-678 Βήμα 3):** όπως ο glTF wrapper, γίνεται `async` — όχι για το parse (sync) αλλά για
+ * το `textureImporter` pre-pass: ανεβάζει τις ξένες υφές → νέα `bmat_*` → επαυξάνει τον resolver
+ * ({@link withImportedMaterials}), ώστε ο sync πυρήνας να βάψει τις όψεις με `{ materialId }`. Χωρίς
+ * υφές ή χωρίς importer → η προηγούμενη sync συμπεριφορά ακέραιη (μηδέν regression).
  */
-export function importColladaAppearance(
+export async function importColladaAppearance(
   levels: LevelsHookReturn,
   daeText: string,
   resolveKnownId: KnownMaterialResolver,
   baseline?: ReadonlyMap<string, string>,
   materialBaselineByMesh?: ReadonlyMap<string, Readonly<Record<string, string>>>,
-): ImportedAppearanceResult {
-  const { objects, materials } = parseColladaScene(daeText);
+  textureImporter?: ColladaTextureImporter,
+): Promise<ImportedAppearanceResult> {
+  const { objects, materials, texturesByMaterialName } = parseColladaScene(daeText);
+  const importedIds = textureImporter && texturesByMaterialName.size > 0
+    ? await textureImporter(texturesByMaterialName)
+    : new Map<string, string>();
+  const resolver = withImportedMaterials(resolveKnownId, importedIds);
   return applyImportedAppearance(
     levels,
     { objects, materials, charset: 'unicode', baseline, materialBaselineByMesh },
-    resolveKnownId,
+    resolver,
   );
 }

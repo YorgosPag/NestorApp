@@ -72,3 +72,22 @@ export function buildKnownMaterialResolver(
     return byId.get(key) ?? byName.get(key) ?? null;
   };
 }
+
+/**
+ * ADR-678 Βήμα 3 — επαυξάνει έναν υπάρχοντα resolver με τα υλικά που **μόλις δημιουργήθηκαν** από
+ * ξένες υφές του τρέχοντος import (`όνομα υλικού C4D → νέο bmat_*`). Τα νέα υλικά δεν βρίσκονται
+ * ακόμη στο live `useMaterialLibrary` snapshot (μόλις γράφτηκαν στο Firestore), οπότε ο base
+ * resolver τα αγνοεί· αυτό το wrapper τα βάζει **μπροστά** ώστε η όψη με την υφή να λύνεται σε
+ * `{ materialId }` και ο sync πυρήνας να τη βάψει χωρίς καμία αλλαγή του (N.18).
+ *
+ * Άδειο `imported` → επιστρέφει τον base αυτούσιο (μηδέν κόστος για non-textured imports).
+ */
+export function withImportedMaterials(
+  base: KnownMaterialResolver,
+  imported: ReadonlyMap<string, string>,
+): KnownMaterialResolver {
+  if (imported.size === 0) return base;
+  const byName = new Map<string, string>();
+  for (const [name, id] of imported) byName.set(norm(name), id);
+  return (name: string): string | null => byName.get(norm(name)) ?? base(name);
+}

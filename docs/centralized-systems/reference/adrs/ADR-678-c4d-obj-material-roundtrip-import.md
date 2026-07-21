@@ -104,7 +104,7 @@ SyncContext). Το single-building/single-user project το θέλει έτσι.
 | **Φ1** | Ανά-στοιχείο χρώμα/υλικό: OBJ+MTL parse · name→bimId match · apply base `'*'` · pure core + orchestrator + 14 tests | 🟢 CORE DONE |
 | **Φ1-UI** | Κουμπί «Εισαγωγή υλικών από C4D» (LevelPanel) + file picker (.obj/.mtl) + toast αποτελέσματος | 🟢 DONE |
 | **Φ1.1** | Σοβάς round-trip (merged skin → ομοιόμορφος σοβάς μελών, ADR-449 command) + skip αμετάβλητων (`mat-*`/`elem-*`/`mat_<hex6>`) · +12 tests (26 σύνολο) | 🟢 DONE |
-| **Φ2** | **Textures/υλικά round-trip (κοινή βιβλιοθήκη 🅱️ + ξένες υφές 🅰️).** 3 βήματα: **Βήμα 1** export round-trip identity (per-face υλικά ονομάζονται με το Nestor materialId αντί `tex_*`) · **Βήμα 2** import recognition catalog `mat-*` + per-entity baseline · **Βήμα 3 (🅰️)** texture upload (`<library_images>` → `uploadMaterialTextureMap` → νέο `bmat_*`). | 🟡 **Βήμα 1 code+jest DONE** (🅱️ `bmat_*`)· **Βήμα 2 code+jest DONE** (per-entity+per-face baseline, catalog swap detection, όλα τα formats wired — ground-truth PENDING)· **Βήμα 3 (🅰️) TODO** |
+| **Φ2** | **Textures/υλικά round-trip (κοινή βιβλιοθήκη 🅱️ + ξένες υφές 🅰️).** 3 βήματα: **Βήμα 1** export round-trip identity (per-face υλικά ονομάζονται με το Nestor materialId αντί `tex_*`) · **Βήμα 2** import recognition catalog `mat-*` + per-entity baseline · **Βήμα 3 (🅰️)** texture upload (`<library_images>` → `uploadMaterialTextureMap` → νέο `bmat_*`). | 🟡 **Βήμα 1 code+jest DONE** (🅱️ `bmat_*`)· **Βήμα 2 code+jest DONE** (per-entity+per-face baseline, catalog swap detection, όλα τα formats wired — ground-truth PENDING)· **Βήμα 3 (🅰️) code+jest DONE** (`<library_images>` parse → content-hash dedup → νέο company `bmat_*` → per-face βαφή· async pre-pass· ground-truth R15 PENDING — §6 changelog 2026-07-21) |
 | **Φ3** | **Per-face round-trip μέσω glTF** (named array-material primitives → `FaceKey`, ζωντανό ΚΑΙ σε επαναλαμβανόμενο γύρο συνεργασίας) — **OBJ παραμένει per-object dominant** (stock `OBJExporter` δεν είναι group-aware, §3) | 🟢 **DONE (glTF)** |
 | **Φ3.1α** | **Per-face OBJ export**: δικός μας group-aware OBJ writer (`mesh3d-obj-writer.ts`) — ΕΝΑ `o <object>` με **πολλά `usemtl` blocks** (ένα ανά `geometry.group`, σειρά = `buildFacedIndex`), όπως Blender/C4D. Single-material = byte-identical με stock. | 🟢 **DONE (export)** |
 | **Φ3.1β** | **Per-face OBJ re-import**: το OBJ **δεν** κουβαλά την αρίθμηση όψεων όπως το glTF (`userData.faceKeyByMaterialIndex`)· μόνο όνομα υλικού + σειρά επιβιώνουν στο C4D. Blocked σε **πραγματικό C4D-round-tripped OBJ** για μέτρηση αν το C4D διατηρεί τη σειρά όψεων (order-based) ή χρειάζεται geometry-based αντιστοίχιση («ground-truth ΠΡΙΝ parser»). | ⬜ TODO (evidence-first) |
@@ -113,6 +113,41 @@ SyncContext). Το single-building/single-user project το θέλει έτσι.
 | **Φ4 (COLLADA import)** | **COLLADA `.dae` re-import** (C4D R15 → Νέστωρ). Νέος parser `dae-material-parse.ts` → `ObjectMaterialAssignment[]` (+`faceMaterials`) + `Map<name, ImportedMaterial>` → **αυτούσιος** ο κοινός πυρήνας (`applyImportedAppearance`, `charset:'unicode'`). Per-face **μόνο για δικό μας `.dae`** (faceKeys σε `<extra profile="NESTOR">` + `sym_i`)· **ξένος/C4D `.dae` → per-object dominant** (ο R15 exporter χάνει extras+symbols, βλ. changelog 2026-07-21 R15-GT). +wrapper + UI `.dae` branch. | 🟡 **per-object ΕΠΙΒΕΒΑΙΩΜΕΝΟ με R15 output** (42/42 objects διαβάζονται)· **per-face μέσω C4D = ΑΔΥΝΑΤΟ** (R15 χάνει face-identity)· **textured import = Φ2 TODO** |
 
 ## 6. Changelog
+
+- **2026-07-21 (Φ2 Βήμα 3 🅰️ — texture upload ξένων υφών: `<library_images>` → νέο `bmat_*` → per-face βαφή)** —
+  **Πρόβλημα (μετρημένο):** ο συνεργάτης βάζει **νέα υφή** από τον δίσκο του (π.χ. `Ξερό-bark-21.jpg`) σε μια όψη
+  στον C4D. Ο browser δεν διαβάζει `file://`· ο `.dae` parser **αγνοούσε** τις υφές (textured effect → `colorHex:
+  null`, name-based). **Λύση (πρακτική μεγάλων — Maxon «Save Project with Assets» / Revit appearance-asset link):**
+  ο συνεργάτης στέλνει `.dae` **+ τα αρχεία εικόνων**· το UI τα μαζεύει, ανεβάζει το albedo στο Storage ως **νέο
+  company-scope `bmat_*`**, και βάφει την όψη μ' αυτό. **Καμία αλλαγή στον format-agnostic πυρήνα** — ο resolver
+  **επαυξάνεται** (`withImportedMaterials`) ώστε το όνομα της υφής → νέο `bmat_*` και ο sync core το βάφει ως
+  `{ materialId }`.
+  - **Parser** (`dae-material-parse.ts`): +`texturesByMaterialName` (`όνομα υλικού → filename`). Νέα `parseImages`
+    (`<library_images>/<init_from>` → basename, καθαρισμός `file://`+backslashes) + `effectTextureFileName`
+    (COLLADA 1.4.1 chain `diffuse<texture>` → `sampler2D/source` → `surface/init_from` → `<image>`, ανθεκτικό σε
+    exporter variants). Κλειδί = το ΙΔΙΟ post-collision `name` που δένει ο κόμβος.
+  - **Content-hash SSoT** (`texture-content-hash.ts`, νέο): `sha256HexOfFile` (native `crypto.subtle`, μηδέν dep).
+  - **Import service** (`import-foreign-textures.ts`, νέο, **dependency injection** → καθαρό io layer, testable):
+    ταιριάζει filename↔`File` (basename), **content-hash dedup** (cross-session μέσω `pbrTextures.albedoHash` όλων
+    των live υλικών **+** within-import), δημιουργεί `bmat_*` με το SSoT sequence `saveMaterial` → `uploadMaterialTextureMap`
+    (albedo) → `updateMaterial({ pbrTextures })`. Υφή χωρίς εικόνα → skip (ποτέ throw).
+  - **Schema** (`bim-material-types.ts`, additive): `PbrMaterialTextures.albedoHash: string | null` (dedup key·
+    `null` για χειροκίνητα editor υλικά — καμία auto-dedup).
+  - **Wrapper** (`import-collada-appearance.ts`): → **async**, δέχεται injected `textureImporter` (καθρέφτης του
+    ήδη-async glTF wrapper). Χωρίς υφές/importer → η προηγούμενη sync συμπεριφορά ακέραιη.
+  - **UI** (`C4dMaterialImportButton.tsx`): μάζεμα image files από το `FileList` (accept += `.png,.jpg,.jpeg,.webp`),
+    build injected importer (companyId + `useMaterialLibrary.save/update` + `uploadMaterialTextureMap` + `sha256HexOfFile`),
+    `await`. i18n `c4dMaterialImport.uploadingTextures` (el+en).
+  - **Αποφάσεις Giorgio (2026-07-21):** scope=**company** (όλα τα έργα)· dedup=**content-hash, ποτέ διπλότυπο**·
+    όνομα=**αυτόματο από C4D** (nameEn μέσω `transliterateGreekToLatin`+`toGreekTitleCase`, category `'other'`,
+    ΑΤΟΕ generic `OIK-77.01` διορθώσιμο)· async=**pre-pass** (core sync/pure).
+  - **Tests:** `dae-texture-import.test.ts` (parser textures + `withImportedMaterials` + service dedup/create/skip)
+    + `import-collada-appearance.test.ts` → async. 122/122 πράσινα στο import domain, jscpd καθαρό.
+  - **⚠️ Ground-truth PENDING (Giorgio):** στον R15 βάλε νέα υφή σε μία όψη → export `.dae` + εικόνες → import → η
+    υφή πρέπει να **ΦΑΙΝΕΤΑΙ** στην όψη (νέο `bmat_*` με PBR albedo). Ο parser είναι best-effort για τη native R15
+    δομή — τυχόν παραλλαγή θα κουρδιστεί στο πραγματικό αρχείο.
+  - **Boy-Scout (N.0.2):** ~6 σημεία επαναλαμβάνουν `crypto.subtle.digest('SHA-256')→hex` χωρίς SSoT → flagged
+    στο `.claude-rules/pending-ratchet-work.md` (global `sha256Hex`).
 
 - **2026-07-21 (Φ2 Βήμα 2 — per-entity + per-face material baseline: catalog→catalog swap detection)** —
   **Ρίζα:** το `isUnchangedNestorMaterial(name)` (resolve-import-appearance) είναι **name-based regex** — κάθε

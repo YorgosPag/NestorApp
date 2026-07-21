@@ -50,6 +50,15 @@ export interface PbrMaterialTextures {
   readonly aoUrl: string | null;
   /** Real-world repeat size of one texture tile, σε ΜΕΤΡΑ (Revit «Sample Size»). */
   readonly tileSizeM: number;
+  /**
+   * ADR-678 Βήμα 3 — SHA-256 (hex) των albedo bytes, για content-hash dedup των
+   * υλικών που δημιουργούνται **αυτόματα** κατά το round-trip import ξένων υφών (C4D
+   * `<library_images>` → νέο `bmat_*`). Η ίδια φωτογραφία-υφή που ξαναέρχεται (ίδια
+   * bytes) → ίδιο hash → reuse του υπάρχοντος υλικού αντί για διπλότυπο (Maxon/Revit
+   * asset dedup). `null` για υλικά που φτιάχνει ο χρήστης χειροκίνητα στο editor
+   * (καμία αυτόματη dedup — ονομάζονται/επιλέγονται ρητά).
+   */
+  readonly albedoHash: string | null;
 }
 
 /**

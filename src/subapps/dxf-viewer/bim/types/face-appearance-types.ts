@@ -60,3 +60,16 @@ export const BASE_FACE_KEY = '*';
  * (string at runtime, Firestore-safe).
  */
 export type FaceAppearanceMap = Readonly<Record<string, FaceAppearance>>;
+
+/**
+ * SSoT «βάψε ΟΛΟ το στοιχείο» ως πλήρες map (ADR-539). Επιστρέφει map που περιέχει **ΜΟΝΟ** το
+ * base `'*'` — άρα, εφαρμοσμένο με replace semantics (`SetEntityFaceAppearanceMapCommand`),
+ * καθαρίζει ταυτόχρονα κάθε προϋπάρχον per-face override. Αυτό κάνει το «βάψε όλο» πραγματικά
+ * «όλο»: χωρίς αυτό, ένα merge-set του `'*'` άφηνε τα per-face overrides να κερδίζουν στον
+ * cascade (`resolveFaceMaterial`: `appearance[face] ?? appearance['*']`) → μία όψη έμενε αβαφή.
+ * `value = null` → `{}` (καθάρισε τα πάντα, επιστροφή σε base look — Revit «remove paint»).
+ * Κοινό για το file-import (C4D per-object) και το ζωντανό «όλο το στοιχείο» του polygon panel.
+ */
+export function entireElementFaceMap(value: FaceAppearance | null): FaceAppearanceMap {
+  return value ? { [BASE_FACE_KEY]: value } : {};
+}

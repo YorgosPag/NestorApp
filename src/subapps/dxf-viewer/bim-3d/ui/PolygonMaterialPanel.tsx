@@ -35,8 +35,9 @@ import { useProjectHierarchyOptional } from '../../contexts/ProjectHierarchyCont
 import { usePolygonMode3DStore, type PolygonTargetLayer } from '../stores/PolygonMode3DStore';
 import { listWallCoveringMaterials } from '../../bim/wall-coverings/wall-covering-material-catalog';
 import type { FaceAppearance } from '../../bim/types/face-appearance-types';
-import { BASE_FACE_KEY } from '../../bim/types/face-appearance-types';
+import { entireElementFaceMap } from '../../bim/types/face-appearance-types';
 import { applyFaceAppearanceToFaces } from './apply-face-appearance';
+import { applyEntityFaceAppearanceMap } from './apply-entity-face-appearance-map';
 import { BIM_MATERIAL_MIME, serializeFaceAppearanceDrag } from './polygon-material-dnd';
 // ADR-449 PART B Slice C — «Σοβάς» layer: ίδιο picking/panel/dialog, route στο faceOverrides.
 import { applyFinishFaceOverrideToFaces } from './apply-finish-face-override';
@@ -156,6 +157,11 @@ export function PolygonMaterialPanel() {
    *   - **Σοβάς** (449): ΜΟΝΟ per-face (το override είναι ανά ακμή· δεν υπάρχει base «όλο»)
    *     → route στο `applyFinishFaceOverrideToFaces` (γράφει `spec.faceOverrides[ref]`).
    * Και τα δύο μέσω batch SSoT = ΕΝΑ undo.
+   *
+   * ADR-678 Εύρημα A — το «όλο το στοιχείο» χρησιμοποιεί **replace semantics**
+   * (`applyEntityFaceAppearanceMap` + `entireElementFaceMap`), ώστε να καθαρίζει τυχόν
+   * προϋπάρχοντα per-face overrides — αλλιώς «βάψε όλο» άφηνε βαμμένες όψεις αναλλοίωτες
+   * (ίδιο cascade bug με το file-import· ένα SSoT «όλο το στοιχείο» για τα δύο μονοπάτια).
    */
   const apply = (value: FaceAppearance | null): void => {
     const faces = usePolygonMode3DStore.getState().selectedFaces;
@@ -165,7 +171,7 @@ export function PolygonMaterialPanel() {
     }
     const target = usePolygonMode3DStore.getState().targetBimId;
     if (faces.length > 0) applyFaceAppearanceToFaces(levels, faces, value);
-    else if (target) applyFaceAppearanceToFaces(levels, [{ bimId: target, faceKey: BASE_FACE_KEY }], value);
+    else if (target) applyEntityFaceAppearanceMap(levels, target, entireElementFaceMap(value));
   };
 
   const faceCount = selectedFaces.length;
