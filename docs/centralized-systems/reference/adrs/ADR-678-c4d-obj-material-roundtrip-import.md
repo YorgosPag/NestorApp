@@ -148,6 +148,30 @@ SyncContext). Το single-building/single-user project το θέλει έτσι.
     δομή — τυχόν παραλλαγή θα κουρδιστεί στο πραγματικό αρχείο.
   - **Boy-Scout (N.0.2):** ~6 σημεία επαναλαμβάνουν `crypto.subtle.digest('SHA-256')→hex` χωρίς SSoT → flagged
     στο `.claude-rules/pending-ratchet-work.md` (global `sha256Hex`).
+  - **Adversarial verification (multi-agent workflow, 4 reviewers + completeness critic, 2026-07-21) → fixes:**
+    - **[BLOCKER] parser crash:** ο collision guard `appearance?.colorHex !== undefined` έσκαγε σε textured
+      effect (`colorHex === null`· `null !== undefined` = true → `null.toLowerCase()`) όταν textured «Mat» μοιραζόταν
+      όνομα με προηγούμενο flat «Mat» (ο R15 γράφει πολλά «Mat»). **Fix:** nullish `!= null`.
+    - **[MAJOR] wrong texture filename:** δύο textured «Mat» με ΔΙΑΦΟΡΕΤΙΚΑ αρχεία → το 2ο χανόταν στο
+      `texturesByName`. **Fix:** disambiguation by id (`${rawName}#${id}`) και για textured **και** για mixed
+      flat↔textured (αλλιώς cross-contamination στον resolver).
+    - **[MAJOR] bump misclassified:** ο surface fallback άρπαζε bump/normal image όταν το diffuse ήταν flat.
+      **Fix:** early-return αν δεν υπάρχει `<diffuse><texture>`.
+    - **[MAJOR] no error isolation:** μία αποτυχία upload έριχνε ΟΛΟ το import (αντέβαινε το documented «ποτέ
+      throw»). **Fix:** try/catch ανά υφή → continue.
+    - **[MAJOR] orphan material + defeated dedup:** partial failure (save ok, upload/update fail) άφηνε `bmat_*`
+      χωρίς `albedoHash` → αόρατο στο dedup → διπλότυπο στο retry. **Fix:** rollback (injected `deleteMaterial`).
+    - **[MAJOR/critic] Greek/space filenames:** `<init_from>` = percent-encoded URI· χωρίς decode το `my%20ξύλο.png`
+      δεν ταίριαζε με το OS-decoded `File.name`. **Fix:** `decodeURIComponent` (guarded) και στις δύο πλευρές.
+    - **[minor] misleading toast:** «ανεβάζω υφές» εμφανιζόταν και χωρίς `companyId` (όπου δεν τρέχει importer).
+      **Fix:** gate σε `companyId`.
+    - **Deferred (τεκμηριωμένα, όχι bugs):** (α) undo δεν σβήνει τα δημιουργημένα υλικά — **intended Revit parity**
+      (τα appearance assets είναι προσθήκες βιβλιοθήκης, όχι μέρος του paint-undo· deduped by hash)· (β)
+      name-collision με υπάρχον υλικό → νέο διπλότυπο: **design call** (σκόπιμα η νέα υφή κερδίζει· hash-dedup
+      καλύπτει ίδια bytes) — αφημένο για απόφαση Giorgio· (γ) `.tif/.tga` C4D textures → silent drop (ο browser
+      δεν decode-άρει TIFF/TGA)· follow-up warning· (δ) `handleFiles` >40 γρ. (pre-existing, Boy-Scout).
+    - **Tests:** +17 (rollback, per-texture isolation, duplicate-textured disambiguation, bump-not-textured,
+      percent-decode) → **100/100 πράσινα στο import domain**, jscpd καθαρό.
 
 - **2026-07-21 (Φ2 Βήμα 2 — per-entity + per-face material baseline: catalog→catalog swap detection)** —
   **Ρίζα:** το `isUnchangedNestorMaterial(name)` (resolve-import-appearance) είναι **name-based regex** — κάθε

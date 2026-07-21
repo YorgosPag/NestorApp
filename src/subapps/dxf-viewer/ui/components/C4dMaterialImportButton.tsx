@@ -175,7 +175,7 @@ export function C4dMaterialImportButton() {
   // import να αναγνωρίζει ΚΑΙ τα δικά σου υλικά (by id ή ανθρώπινο όνομα), όχι μόνο catalog.
   const { user } = useAuth();
   const companyId = user?.companyId ?? undefined;
-  const { materials, save, update } = useMaterialLibrary({
+  const { materials, save, update, remove } = useMaterialLibrary({
     companyId,
     userId: user?.uid ?? undefined,
     projectId: levels.saveContext?.projectId ?? undefined,
@@ -215,7 +215,9 @@ export function C4dMaterialImportButton() {
       } else if (payload.kind === 'dae') {
         // ADR-678 Φ4/Βήμα 3 — COLLADA per-face: parse → (async) upload ξένων υφών → βαφή. Ο
         // textureImporter injected ώστε ο io wrapper να μένει καθαρός από Firebase (DI).
-        if (payload.imageFiles.length > 0) notifications.info(t('c4dMaterialImport.uploadingTextures'));
+        // Toast ΜΟΝΟ όταν όντως θα τρέξει upload (companyId + εικόνες): αλλιώς θα έλεγε ψευδώς
+        // «ανεβάζω» ενώ ο textureImporter είναι undefined (χωρίς companyId δεν φτιάχνεται υλικό).
+        if (companyId && payload.imageFiles.length > 0) notifications.info(t('c4dMaterialImport.uploadingTextures'));
         const textureImporter: ColladaTextureImporter | undefined = companyId
           ? (textures) => importForeignTextures(textures, payload.imageFiles, {
               existingMaterials: materials,
@@ -225,6 +227,7 @@ export function C4dMaterialImportButton() {
                 uploadMaterialTextureMap({ file, companyId, materialId, map: 'albedo' })
                   .then((r) => r.downloadUrl),
               hashFile: sha256HexOfFile,
+              deleteMaterial: remove,
             })
           : undefined;
         result = await importColladaAppearance(
@@ -261,7 +264,7 @@ export function C4dMaterialImportButton() {
       matched: result.matchedCount,
       unmatched: result.unmatched.length,
     }));
-  }, [levels, notifications, t, resolveKnownId, companyId, materials, save, update]);
+  }, [levels, notifications, t, resolveKnownId, companyId, materials, save, update, remove]);
 
   return (
     <>

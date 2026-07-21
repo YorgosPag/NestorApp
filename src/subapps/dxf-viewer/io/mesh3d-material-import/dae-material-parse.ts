@@ -102,9 +102,16 @@ function parseEffects(root: Element): Map<string, EffectAppearance> {
   return out;
 }
 
-/** Το τελευταίο segment ενός URI/path (basename)· καθαρίζει `file://` prefix + backslashes. */
+/**
+ * Το τελευταίο segment ενός URI/path (basename)· **decode** (COLLADA `<init_from>` = percent-encoded
+ * URI ανά RFC 3986· ο C4D γράφει π.χ. `my%20wood.png`, ελληνικά ως `%CE%BE…`) → καθαρισμός `file://`
+ * prefix + backslashes. Χωρίς decode, το ελληνικό/με-κενό filename δεν ταιριάζει με το OS-decoded
+ * `File.name` → σιωπηλά αβαφή όψη. Malformed encoding → raw (guarded).
+ */
 function baseName(uri: string): string {
-  const clean = uri.replace(/^file:\/+/i, '').replace(/\\/g, '/');
+  let decoded = uri;
+  try { decoded = decodeURIComponent(uri); } catch { /* malformed % → κράτα το raw */ }
+  const clean = decoded.replace(/^file:\/+/i, '').replace(/\\/g, '/');
   const parts = clean.split('/');
   return parts[parts.length - 1] || uri;
 }
@@ -148,7 +155,10 @@ function effectTextureFileName(effect: Element, imagesById: ReadonlyMap<string, 
 
   const diffuse = firstDescendant(effect, 'diffuse');
   const textureEl = diffuse ? firstChild(diffuse, 'texture') : null;
-  const samplerSid = textureEl?.getAttribute('texture') ?? null;
+  // ΜΟΝΟ diffuse-textured effects μετράνε. Χωρίς `<diffuse><texture>` (flat χρώμα, ή texture μόνο σε
+  // bump/normal/specular channel — συχνό σε C4D υλικά) → flat: μην αρπάξεις κατά λάθος το bump image.
+  if (!textureEl) return null;
+  const samplerSid = textureEl.getAttribute('texture');
 
   let imageRef: string | null = null;
   if (samplerSid) {
@@ -159,7 +169,7 @@ function effectTextureFileName(effect: Element, imagesById: ReadonlyMap<string, 
 
   if (imageRef && imagesById.has(imageRef)) return imagesById.get(imageRef) ?? null;
   if (imageRef) return baseName(imageRef);
-  if (textureEl && imagesById.size === 1) return [...imagesById.values()][0] ?? null;
+  if (imagesById.size === 1) return [...imagesById.values()][0] ?? null;
   return null;
 }
 
@@ -203,18 +213,29 @@ function parseMaterials(root: Element): {
     // στον name-keyed πίνακα → κατέβαινε ΛΑΘΟΣ χρώμα. Κάνουμε το όνομα μοναδικό (`<name>#<id>`) ΜΟΝΟ
     // στη σύγκρουση, ώστε ο κόμβος (δένει by id) να πάρει το ΔΙΚΟ του χρώμα. Ίδιο χρώμα/όνομα → κοινό
     // όνομα (τα Nestor `bmat_*`/`mat-*` που dedup-άρουν νόμιμα δεν χαλάνε το name-based matching).
-    const existing = materials.get(rawName);
-    const collides = existing !== undefined && appearance?.colorHex !== undefined
-      && existing.colorHex.toLowerCase() !== appearance.colorHex.toLowerCase();
-    const name = collides ? `${rawName}#${id}` : rawName;
+    const textureFile = effectTextures.get(effectUrl);
+    const existingFlat = materials.get(rawName);
+    const existingTex = texturesByName.get(rawName);
+    // Collision (→ rename `${rawName}#${id}`) όταν το ΙΔΙΟ όνομα ξαναχρησιμοποιείται με ΔΙΑΦΟΡΕΤΙΚΗ
+    // ταυτότητα (C4D R15 γράφει πολλά "Mat"). Το binding γίνεται by **id** (μοναδικό), οπότε
+    // κάνουμε το όνομα μοναδικό ΜΟΝΟ στη σύγκρουση ώστε ο κόμβος να πάρει το ΔΙΚΟ του χρώμα/υφή:
+    //  • flat vs flat με άλλο χρώμα· • textured vs textured με άλλη υφή· • ανάμιξη flat↔textured
+    //    (αλλιώς το ίδιο όνομα θα έδενε ΚΑΙ flat χρώμα ΚΑΙ υφή → cross-contamination στον resolver).
+    // ⚠️ `appearance?.colorHex != null` (nullish): textured effect έχει `colorHex === null` — το παλιό
+    // `!== undefined` περνούσε (`null !== undefined`) και έσκαγε σε `null.toLowerCase()`.
+    const flatCollides = existingFlat !== undefined && appearance?.colorHex != null
+      && existingFlat.colorHex.toLowerCase() !== appearance.colorHex.toLowerCase();
+    const texCollides = existingTex !== undefined && textureFile !== undefined
+      && existingTex.toLowerCase() !== textureFile.toLowerCase();
+    const mixedCollides = (textureFile !== undefined && existingTex === undefined && existingFlat !== undefined)
+      || (appearance?.colorHex != null && existingFlat === undefined && existingTex !== undefined);
+    const name = (flatCollides || texCollides || mixedCollides) ? `${rawName}#${id}` : rawName;
     nameById.set(id, name);
     // Μόνο flat-color υλικά μπαίνουν στον πίνακα· textured ταξιδεύουν με το όνομα (name-based resolve).
     if (appearance?.colorHex && !materials.has(name)) {
       materials.set(name, { name, colorHex: appearance.colorHex, opacity: appearance.opacity });
     }
-    // ADR-678 Βήμα 3 — textured effect: κρατάμε `όνομα → filename υφής` (ίδιο `name` που δένει ο
-    // κόμβος). Το πρώτο κερδίζει σε διπλό όνομα (ντετερμινιστικό, όπως τα flat χρώματα).
-    const textureFile = effectTextures.get(effectUrl);
+    // ADR-678 Βήμα 3 — textured effect: κρατάμε `όνομα → filename υφής` (ίδιο `name` που δένει ο κόμβος).
     if (textureFile && !texturesByName.has(name)) texturesByName.set(name, textureFile);
   }
   return { nameById, materials, texturesByName };

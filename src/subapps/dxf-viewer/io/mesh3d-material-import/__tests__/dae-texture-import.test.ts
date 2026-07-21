@@ -52,6 +52,62 @@ describe('parseColladaScene — texturesByMaterialName (ADR-678 Βήμα 3)', ()
     expect(scene.texturesByMaterialName.get('bamboo')).toBe('bamboo.png');
   });
 
+  it('percent-encoded URI (κενά/ελληνικά) → decoded basename που ταιριάζει με File.name', () => {
+    const scene = parseColladaScene(texturedDae('wood', 'file:///C:/tex/my%20%CE%BE%CF%8D%CE%BB%CE%BF.png'));
+    expect(scene.texturesByMaterialName.get('wood')).toBe('my ξύλο.png');
+  });
+
+  it('duplicate textured names, ΔΙΑΦΟΡΕΤΙΚΑ αρχεία → disambiguation by id (καμία απώλεια)', () => {
+    const dae = `<?xml version="1.0"?><COLLADA version="1.4.1">
+      <library_images>
+        <image id="i1"><init_from>a.png</init_from></image>
+        <image id="i2"><init_from>b.png</init_from></image>
+      </library_images>
+      <library_effects>
+        <effect id="e1"><profile_COMMON>
+          <newparam sid="su1"><surface type="2D"><init_from>i1</init_from></surface></newparam>
+          <newparam sid="sa1"><sampler2D><source>su1</source></sampler2D></newparam>
+          <technique sid="COMMON"><blinn><diffuse><texture texture="sa1"/></diffuse></blinn></technique>
+        </profile_COMMON></effect>
+        <effect id="e2"><profile_COMMON>
+          <newparam sid="su2"><surface type="2D"><init_from>i2</init_from></surface></newparam>
+          <newparam sid="sa2"><sampler2D><source>su2</source></sampler2D></newparam>
+          <technique sid="COMMON"><blinn><diffuse><texture texture="sa2"/></diffuse></blinn></technique>
+        </profile_COMMON></effect>
+      </library_effects>
+      <library_materials>
+        <material id="m1" name="Mat"><instance_effect url="#e1"/></material>
+        <material id="m2" name="Mat"><instance_effect url="#e2"/></material>
+      </library_materials>
+      <library_visual_scenes><visual_scene><node name="A"><instance_geometry url="#g">
+        <bind_material><technique_common><instance_material symbol="sym_0" target="#m2"/>
+        </technique_common></bind_material></instance_geometry></node></visual_scene></library_visual_scenes>
+    </COLLADA>`;
+    const scene = parseColladaScene(dae);
+    // Και οι δύο υφές διατηρούνται (η μία renamed σε "Mat#m2")· καμία δεν χάθηκε.
+    const files = [...scene.texturesByMaterialName.values()].sort();
+    expect(files).toEqual(['a.png', 'b.png']);
+    // Ο κόμβος δεμένος στο m2 λύνεται στο ΔΙΚΟ του αρχείο (b.png), όχι στο a.png του πρώτου.
+    expect(scene.texturesByMaterialName.get('Mat#m2')).toBe('b.png');
+  });
+
+  it('flat diffuse + bump-only surface (χωρίς diffuse texture) → ΟΧΙ textured', () => {
+    const dae = `<?xml version="1.0"?><COLLADA version="1.4.1">
+      <library_images><image id="ib"><init_from>bump.png</init_from></image></library_images>
+      <library_effects><effect id="e"><profile_COMMON>
+        <newparam sid="sb"><surface type="2D"><init_from>ib</init_from></surface></newparam>
+        <technique sid="COMMON"><blinn><diffuse><color>0.5 0.2 0.2 1</color></diffuse>
+        <bump><texture texture="sb"/></bump></blinn></technique>
+      </profile_COMMON></effect></library_effects>
+      <library_materials><material id="m" name="wood"><instance_effect url="#e"/></material></library_materials>
+      <library_visual_scenes><visual_scene><node name="A"><instance_geometry url="#g">
+        <bind_material><technique_common><instance_material symbol="sym_0" target="#m"/>
+        </technique_common></bind_material></instance_geometry></node></visual_scene></library_visual_scenes>
+    </COLLADA>`;
+    const scene = parseColladaScene(dae);
+    expect(scene.texturesByMaterialName.size).toBe(0); // το bump δεν μετρά ως diffuse υφή
+  });
+
   it('flat υλικό (χωρίς texture) → κανένα texture entry', () => {
     const flat = `<?xml version="1.0"?><COLLADA version="1.4.1">
       <library_effects><effect id="e"><profile_COMMON><technique sid="COMMON"><blinn>
@@ -106,13 +162,19 @@ interface Spy {
   saved: SaveBimMaterialInput[];
   uploads: { materialId: string }[];
   updates: { id: string; hash: string | null | undefined }[];
+  deletes: string[];
+}
+
+interface FailPlan {
+  uploadFailsFor?: string; // materialId whose upload rejects
 }
 
 function makeDeps(
   existingMaterials: readonly BimMaterial[],
   hashByName: Record<string, string>,
+  fail: FailPlan = {},
 ): { deps: ForeignTextureImporterDeps; spy: Spy; ids: string[] } {
-  const spy: Spy = { saved: [], uploads: [], updates: [] };
+  const spy: Spy = { saved: [], uploads: [], updates: [], deletes: [] };
   const ids: string[] = [];
   let n = 0;
   const deps: ForeignTextureImporterDeps = {
@@ -128,9 +190,11 @@ function makeDeps(
     },
     uploadAlbedo: async (_file, materialId) => {
       spy.uploads.push({ materialId });
+      if (fail.uploadFailsFor === materialId) throw new Error('upload boom');
       return `https://storage/${materialId}/albedo.jpg`;
     },
     hashFile: async (file) => hashByName[(file as File).name] ?? 'h-default',
+    deleteMaterial: async (id) => { spy.deletes.push(id); },
   };
   return { deps, spy, ids };
 }
@@ -174,5 +238,26 @@ describe('importForeignTextures (ADR-678 Βήμα 3)', () => {
     );
     expect(spy.saved).toHaveLength(0);
     expect(out.size).toBe(0);
+  });
+
+  it('rollback: αποτυχία upload → delete του orphan, καμία εγγραφή στο out, κανένα throw', async () => {
+    const { deps, spy } = makeDeps([], { 'bark.jpg': 'h' }, { uploadFailsFor: 'bmat_1' });
+    const out = await importForeignTextures(
+      new Map([['bark', 'bark.jpg']]), [imageFile('bark.jpg')], deps,
+    );
+    expect(spy.deletes).toEqual(['bmat_1']); // orphan σβήστηκε
+    expect(out.size).toBe(0); // η όψη μένει αβαφή, όχι σκουπίδι στη βιβλιοθήκη
+  });
+
+  it('per-texture isolation: μία υφή αποτυγχάνει, η άλλη περνά κανονικά', async () => {
+    const { deps, spy } = makeDeps(
+      [], { 'a.jpg': 'ha', 'b.jpg': 'hb' }, { uploadFailsFor: 'bmat_1' },
+    );
+    const out = await importForeignTextures(
+      new Map([['MatA', 'a.jpg'], ['MatB', 'b.jpg']]), [imageFile('a.jpg'), imageFile('b.jpg')], deps,
+    );
+    expect(out.has('MatA')).toBe(false); // απέτυχε → skip
+    expect(out.get('MatB')).toBe('bmat_2'); // πέρασε
+    expect(spy.deletes).toEqual(['bmat_1']); // μόνο ο αποτυχημένος έγινε rollback
   });
 });

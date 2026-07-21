@@ -46,11 +46,19 @@ export interface ForeignTextureImporterDeps {
   readonly uploadAlbedo: (file: File, materialId: string) => Promise<string>;
   /** Σταθερή ταυτότητα περιεχομένου (SHA-256 hex) των bytes της εικόνας. */
   readonly hashFile: (file: Blob) => Promise<string>;
+  /** Rollback ενός μισο-δημιουργημένου υλικού όταν αποτύχει το upload/update (μηδέν orphan). */
+  readonly deleteMaterial: (id: string) => Promise<void>;
 }
 
-/** Το τελευταίο segment ενός path, lowercase — για case-insensitive ταίριασμα filename↔File. */
+/**
+ * Το τελευταίο segment ενός path, lowercase — για case-insensitive ταίριασμα filename↔File. **Decode**
+ * (percent-encoded παραλλαγή) ώστε το parsed filename να ταιριάζει με το OS-decoded `File.name` (κρίσιμο
+ * για ελληνικά/με-κενό ονόματα). Malformed % → raw (guarded).
+ */
 function baseNameLower(name: string): string {
-  const parts = name.replace(/\\/g, '/').split('/');
+  let decoded = name;
+  try { decoded = decodeURIComponent(name); } catch { /* malformed % → raw */ }
+  const parts = decoded.replace(/\\/g, '/').split('/');
   return (parts[parts.length - 1] || name).toLowerCase();
 }
 
@@ -67,7 +75,14 @@ function toNameEn(name: string): string {
   return latin || name;
 }
 
-/** Δημιουργεί ΕΝΑ company-scope υλικό υφής: save → upload albedo → update(pbrTextures+hash). */
+/**
+ * Δημιουργεί ΕΝΑ company-scope υλικό υφής: save → upload albedo → update(pbrTextures+hash).
+ *
+ * **Rollback (μηδέν orphan):** αν αποτύχει το upload/update ΜΕΤΑ το save, το `bmat_*` doc μένει
+ * χωρίς `pbrTextures.albedoHash` → **αόρατο στο content-hash dedup** → επόμενο import ίδιας υφής
+ * φτιάχνει διπλότυπο για πάντα. Οπότε σβήνουμε το μισο-δημιουργημένο doc και ρίχνουμε ώστε ο loop να
+ * το προσπεράσει (η όψη κρατά ό,τι είχε — graceful degradation, όπως το texture bundle).
+ */
 async function createTextureMaterial(
   materialName: string,
   file: File,
@@ -82,18 +97,16 @@ async function createTextureMaterial(
     atoeCategory: IMPORTED_TEXTURE_ATOE_CATEGORY,
     defaultUnit: 'm2',
   });
-  const albedoUrl = await deps.uploadAlbedo(file, saved.id);
-  await deps.updateMaterial(saved.id, {
-    pbrTextures: {
-      albedoUrl,
-      normalUrl: null,
-      roughnessUrl: null,
-      aoUrl: null,
-      tileSizeM: 1,
-      albedoHash,
-    },
-  });
-  return saved.id;
+  try {
+    const albedoUrl = await deps.uploadAlbedo(file, saved.id);
+    await deps.updateMaterial(saved.id, {
+      pbrTextures: { albedoUrl, normalUrl: null, roughnessUrl: null, aoUrl: null, tileSizeM: 1, albedoHash },
+    });
+    return saved.id;
+  } catch (err) {
+    await deps.deleteMaterial(saved.id).catch(() => { /* best-effort rollback· μην κρύψεις το αρχικό */ });
+    throw err;
+  }
 }
 
 /**
@@ -127,9 +140,13 @@ export async function importForeignTextures(
       out.set(materialName, existingId);
       continue;
     }
-    const id = await createTextureMaterial(materialName, file, hash, deps);
-    idByHash.set(hash, id);
-    out.set(materialName, id);
+    // Per-texture isolation: μια αποτυχία save/upload/update ΜΙΑΣ υφής δεν ρίχνει ΟΛΟ το import — η
+    // συγκεκριμένη όψη μένει αβαφή, οι υπόλοιπες βάφονται κανονικά (documented contract, ποτέ throw).
+    try {
+      const id = await createTextureMaterial(materialName, file, hash, deps);
+      idByHash.set(hash, id);
+      out.set(materialName, id);
+    } catch { /* skip αυτή την υφή· η όψη κρατά ό,τι είχε */ }
   }
   return out;
 }
