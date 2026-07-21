@@ -25,6 +25,14 @@ describe('resolveEntityBimCategory', () => {
     expect(resolveEntityBimCategory(asEntity({ type: 'circle' }))).toBeNull();
     expect(resolveEntityBimCategory(asEntity({ type: 'text' }))).toBeNull();
   });
+
+  it('returns null for imported-mesh (composite, no V/G Object Style)', () => {
+    // Regression: imported-mesh is NOT a BimCategory / has no DEFAULT_OBJECT_STYLES
+    // entry. Previously it was in DIRECT_CATEGORY_TYPES and cast to BimCategory,
+    // making styles['imported-mesh'] undefined → crash in resolveSubcategoryStyle
+    // (`parent.visible`) during the column batch-fill same-colour scan.
+    expect(resolveEntityBimCategory(asEntity({ type: 'imported-mesh' }))).toBeNull();
+  });
 });
 
 describe('collectBimCategories', () => {
