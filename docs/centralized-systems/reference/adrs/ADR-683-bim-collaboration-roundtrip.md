@@ -1,6 +1,6 @@
 # ADR-683 — Συνεργατικό round-trip: παράδοση project σε εξωτερικό μηχανικό και επιστροφή
 
-**Status:** 🟡 IN PROGRESS — Φ1 (ADR-678) DONE · **Φ2 DONE** (glTF import + geometry fingerprint + manifest + **UI καλωδίωση**) · **Φ3α DONE** (τύπος `imported-mesh`: 2Δ+3Δ+move/rotate, 20 anchors) · **Φ3β DONE** (καλωδίωση εισαγωγής) · **Φ3.1α DONE** (μοντέλο κοστολόγησης) · **Φ3.1β DONE** (διεπαφή ανάθεσης — ⚠️ **καμία επαλήθευση στον browser**) · Φ3.1γ (μνήμη κανόνων) / Φ4 TODO
+**Status:** 🟡 IN PROGRESS — Φ1 (ADR-678) DONE · **Φ2 DONE** (glTF import + geometry fingerprint + manifest + **UI καλωδίωση**) · **per-face round-trip (ADR-678 Φ3, ΜΟΝΟ glTF) DONE 2026-07-21** (κλείνει το «🔴 ΓΝΩΣΤΟ ΟΡΙΟ» του Φ2 hotfix, βλ. §11) · **Φ3α DONE** (τύπος `imported-mesh`: 2Δ+3Δ+move/rotate, 20 anchors) · **Φ3β DONE** (καλωδίωση εισαγωγής) · **Φ3.1α DONE** (μοντέλο κοστολόγησης) · **Φ3.1β DONE** (διεπαφή ανάθεσης — ⚠️ **καμία επαλήθευση στον browser**) · Φ3.1γ (μνήμη κανόνων) / Φ4 TODO
 **Date:** 2026-07-20
 **Owner:** Giorgio
 **Σχετικά:** ADR-678 (C4D material round-trip — **γίνεται η Φ1 αυτού του σχεδίου**) · **ADR-679 (PBR full parity — ιδιοκτήτης όλου του PBR/υφών· αυτό το ADR ΔΕΝ το επαναλαμβάνει)** · ADR-668 (mesh3d export OBJ/glTF) · ADR-413 (BimMaterial library + PBR textures) · ADR-539 (per-face appearance) · ADR-449 (structural finish skin) · ADR-511 (material catalog SSoT)
@@ -354,6 +354,36 @@ mapping). Ερώτημα: τα εισαγόμενα κάγκελα να προτ
 
 ## 11. Changelog
 
+- **2026-07-21 (ADR-678 Φ3 — per-face material round-trip, ΜΟΝΟ glTF· κλείνει το «🔴 ΓΝΩΣΤΟ ΟΡΙΟ»
+  του hotfix παρακάτω)** — Ιδιοκτησία αυτής της φάσης: **ADR-678** (πώς ταξιδεύει ένα υλικό),
+  καταγράφεται εδώ γιατί λύνει ρητά το όριο που κατέγραψε ο Φ2 hotfix του ίδιου ADR-683.
+  - **Ρίζα:** μόλις ένα στοιχείο αποκτούσε per-face appearance (ADR-539) γινόταν multi-material
+    mesh· το `assignExportMaterials` έκανε **skip** τα multi-material → στην επαν-εξαγωγή τα
+    per-face υλικά έβγαιναν **ανώνυμα** και εκτός baseline → ο **2ος** γύρος συνεργασίας έσπαγε
+    (μετρημένο: 81 ανώνυμα κόκκινα + 1 named σοβάς). Ο 1ος γύρος δούλευε ήδη πλήρως.
+  - **Μετρημένη συμπεριφορά three (jest probe):** ο `GLTFExporter` σπάει ένα multi-material mesh σε
+    **ένα primitive ανά `geometry.group`**· ο `GLTFLoader` το επιστρέφει ως **`THREE.Group` με ένα
+    single-material child mesh ανά primitive** (ΟΧΙ mesh με `material[]`). Το node-level
+    `mesh.userData` (άρα και το `faceKeyByMaterialIndex`) **επιβιώνει ακέραιο**, σε αρχική σειρά· τα
+    ονόματα υλικών επιβιώνουν verbatim· primitive↔child = 1:1 ντετερμινιστικό. Per-primitive
+    `extras` δεν είναι εφικτά (`geometry.userData` ίδιο σε όλα) → η «διεύθυνση όψης» ταξιδεύει
+    **μόνο** ως το node-level array + η θέση.
+  - **Αρχεία (5, ADR-678 §6 έχει το πλήρες detail):** `mesh3d-materials.ts` (ονοματίζει ΚΑΙ τα array
+    υλικά, colour-based `mat_<hex6>`)· `obj-mtl-parse.ts` + `match-objects-to-entities.ts` (νέο
+    `faceMaterials?` πεδίο)· `gltf-scene-parse.ts` (αναγνωρίζει faced solid, ξαναχτίζει
+    `faceMaterials` ανά θέση, skip per-face children ως ξεχωριστές entities)· `import-c4d-
+    materials.ts` (per-face `SetFaceAppearanceCommand`, collapse σε `BASE_FACE_KEY '*'` όταν όλες οι
+    όψεις ταιριάζουν, idempotent).
+  - **SSoT:** η αρίθμηση όψεων παραμένει ΕΝΑ SSoT (`bim-three-faced-prism.ts::faceKeyByMaterialIndex`,
+    node-level `userData`) — ταξιδεύει αυτούσια, μηδέν δεύτερος υπολογισμός στον import.
+  - **ΜΟΝΟ glTF.** Το OBJ μονοπάτι παραμένει per-object dominant — ο stock `OBJExporter` του three
+    δεν είναι group-aware (§6.2 του ADR-678). Δεν αλλάζει το §6 (πίνακας formats) αυτού του ADR: το
+    glTF ήταν ήδη ο «🏆 Κύριος δρόμος», τώρα κερδίζει πλήρες per-face round-trip έναντι του OBJ.
+  - **134 υπάρχοντα tests πράσινα + νέα Φ3 tests.** Γνωστό όριο (τίμια): ένα προϋπάρχον 3-γραμμο
+    idiom collapse-σε-CompositeCommand υπάρχει τώρα ΚΑΙ σε `import-c4d-materials.ts` ΚΑΙ σε
+    `bim-3d/ui/apply-face-appearance.ts` — δεν εξήχθη σε κοινό helper (δεύτερο αρχείο κοινό με άλλον
+    πράκτορα ταυτόχρονα)· Boy-scout on-touch υποψήφιο.
+
 - **2026-07-21 (Φ2 hotfix — το round-trip εμφάνισης δουλεύει ΟΛΟΚΛΗΡΟ· δύο δικά μας σπασίματα)** — Το
   όραμα του §1 (στέλνω `.glb` → ο συνεργάτης βάφει → γυρίζει → **ταιριάζει**) **δεν είχε δοκιμαστεί
   ποτέ ολόκληρο**. Δοκιμάστηκε με το `scripts/simulate-partner-repaint.js` («τέλειος συνεργάτης»:
@@ -402,6 +432,13 @@ mapping). Ερώτημα: τα εισαγόμενα κάγκελα να προτ
     το κανάλι ονόματος). Ο **πρώτος** γύρος (φρέσκο μοντέλο → βαφή → import) δουλεύει πλήρως. Fix =
     ξεχωριστή συνεδρία: ονοματοδοσία per-face υλικών στο multi-material μονοπάτι εξαγωγής (σύνορο
     ADR-539 ↔ ADR-668), ΟΧΙ τετριμμένο.
+    **✅ ΕΠΙΛΥΘΗΚΕ (2026-07-21, ADR-678 Φ3)** — βλ. καταχώρηση στην κορυφή αυτού του §11. Περίληψη:
+    `assignExportMaterials` ονοματίζει πλέον ΚΑΙ τα array (per-face) υλικά χρωματικά (`mat_<hex6>`)·
+    ο glTF import (`gltf-scene-parse.ts`) αναγνωρίζει το faced solid (Group child-per-primitive **ή**
+    single Mesh με `userData.faceKeyByMaterialIndex`) και ξαναχτίζει `faceMaterials` ανά θέση· ο
+    orchestrator εφαρμόζει per-face `SetFaceAppearanceCommand` με collapse σε `BASE_FACE_KEY '*'`
+    όταν όλες οι όψεις ταιριάζουν. **Μόνο glTF** — το OBJ μονοπάτι παραμένει per-object dominant
+    (stock `OBJExporter` όχι group-aware).
 
 - **2026-07-20 (Φ3.1γ — το πάνελ εισαγόμενων· η ορατή απουσία αποκτά τόπο)** — Η Φ3.1γ **σπάστηκε**:
   εδώ έγινε **μόνο** το πάνελ· η μνήμη κανόνων αποσπάστηκε ως **Φ3.1δ** (N.8: ~10-13 αρχεία / 4

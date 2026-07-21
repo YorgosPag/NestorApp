@@ -1,10 +1,10 @@
 /**
  * ADR-561 — `getArcGrips` SSoT tests.
  *
- * Handles now sit ON the visible curve at the arc midpoint (Giorgio 2026-07-21):
- *   - centre  → plain whole-move grip, NO glyph (AutoCAD-style square)
- *   - midpoint→ the 4-arrow MOVE glyph (`arc-move`)
- *   - rotation→ just OUTSIDE the midpoint (`arc-rotation`), on/beside the curve
+ * Both handles now sit ON the visible curve (Giorgio 2026-07-21):
+ *   - centre   → plain whole-move grip, NO glyph (AutoCAD-style square)
+ *   - 1/3 sweep→ the 4-arrow MOVE glyph (`arc-move`), ON the curve
+ *   - 2/3 sweep→ the rotation handle (`arc-rotation`), ON the curve
  */
 import { getArcGrips, arcRotationHandlePos, ARC_MOVE_KIND, ARC_ROTATION_KIND } from '../arc-grips';
 import { gripKindOf } from '../../../hooks/grip-kinds';
@@ -26,17 +26,20 @@ describe('getArcGrips (ADR-561)', () => {
     expect(gripKindOf(centre, 'arc')).toBeUndefined();
   });
 
-  it('MOVE glyph lives on the curve at the arc midpoint (grip 3)', () => {
+  it('MOVE glyph lives ON the curve at 1/3 of the sweep (grip 3)', () => {
     const grips = getArcGrips('A1', center, radius, 0, 90);
     const move = grips[3];
     expect(gripKindOf(move, 'arc')).toBe(ARC_MOVE_KIND);
     expect(move.movesEntity).toBe(true);
-    // midpoint of a 0→90° arc @ r=10 → 45° on the circumference
-    expect(move.position.x).toBeCloseTo(10 * Math.cos(Math.PI / 4), 6);
-    expect(move.position.y).toBeCloseTo(10 * Math.sin(Math.PI / 4), 6);
+    // 1/3 of a 0→90° sweep → 30° on the circumference
+    const a = (Math.PI / 2) * (1 / 3);
+    expect(move.position.x).toBeCloseTo(10 * Math.cos(a), 6);
+    expect(move.position.y).toBeCloseTo(10 * Math.sin(a), 6);
+    // strictly ON the curve (|move| == radius)
+    expect(Math.hypot(move.position.x, move.position.y)).toBeCloseTo(radius, 6);
   });
 
-  it('rotation handle carries arc-rotation kind and sits just OUTSIDE the arc midpoint', () => {
+  it('rotation handle carries arc-rotation kind and sits ON the curve at 2/3 of the sweep', () => {
     const grips = getArcGrips('A1', center, radius, 0, 90);
     const rot = grips.find((g) => gripKindOf(g, 'arc') === ARC_ROTATION_KIND)!;
     expect(rot).toBeDefined();
@@ -45,11 +48,12 @@ describe('getArcGrips (ADR-561)', () => {
 
     const expected = arcRotationHandlePos(center, radius, 0, 90);
     expect(rot.position).toEqual(expected);
-    // radially outside the midpoint (factor 1.18) along the 45° mid-sweep angle
-    expect(expected.x).toBeCloseTo(radius * 1.18 * Math.cos(Math.PI / 4), 6);
-    expect(expected.y).toBeCloseTo(radius * 1.18 * Math.sin(Math.PI / 4), 6);
-    // ...and strictly beyond the curve (|handle| > radius)
-    expect(Math.hypot(expected.x, expected.y)).toBeGreaterThan(radius);
+    // 2/3 of a 0→90° sweep → 60° on the circumference
+    const a = (Math.PI / 2) * (2 / 3);
+    expect(expected.x).toBeCloseTo(radius * Math.cos(a), 6);
+    expect(expected.y).toBeCloseTo(radius * Math.sin(a), 6);
+    // strictly ON the curve (|handle| == radius)
+    expect(Math.hypot(expected.x, expected.y)).toBeCloseTo(radius, 6);
   });
 
   it('start/end endpoints sit on the circumference at the given angles', () => {

@@ -43,6 +43,78 @@ describe('assignExportMaterials — non-Standard material colour (ADR-668 §4.8)
   });
 });
 
+describe('assignExportMaterials — per-face (array) materials (ADR-678 Φ3 / ADR-683 Φ3)', () => {
+  it('names every face of a uniform-colour array material and dedups to ONE table entry', () => {
+    const root = new THREE.Group();
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), [
+      new THREE.MeshStandardMaterial({ color: 0x112233 }),
+      new THREE.MeshStandardMaterial({ color: 0x112233 }),
+      new THREE.MeshStandardMaterial({ color: 0x112233 }),
+    ]);
+    mesh.userData = { bimId: 'roof-1', bimType: 'roof' };
+    root.add(mesh);
+
+    const table = assignExportMaterials(root);
+
+    expect(table).toHaveLength(1);
+    expect(table[0].name).toBe('mat_112233');
+    const material = mesh.material as THREE.Material[];
+    expect(material).toHaveLength(3);
+    for (const m of material) expect(m.name).toBe('mat_112233');
+  });
+
+  it('names each differently-coloured face separately (multiple table entries, no dedup)', () => {
+    const root = new THREE.Group();
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), [
+      new THREE.MeshStandardMaterial({ color: 0x111111 }),
+      new THREE.MeshStandardMaterial({ color: 0x222222 }),
+      new THREE.MeshStandardMaterial({ color: 0x333333 }),
+    ]);
+    mesh.userData = { bimId: 'roof-2', bimType: 'roof' };
+    root.add(mesh);
+
+    const table = assignExportMaterials(root);
+
+    expect(table.map((e) => e.name).sort()).toEqual(['mat_111111', 'mat_222222', 'mat_333333']);
+    const material = mesh.material as THREE.Material[];
+    expect(material.map((m) => m.name)).toEqual(['mat_111111', 'mat_222222', 'mat_333333']);
+  });
+
+  it('keeps mesh.material as an array of named CLONES — never mutates the shared source materials', () => {
+    const root = new THREE.Group();
+    const source = [
+      new THREE.MeshStandardMaterial({ color: 0xaaaaaa }),
+      new THREE.MeshStandardMaterial({ color: 0xbbbbbb }),
+    ];
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), source);
+    root.add(mesh);
+
+    assignExportMaterials(root);
+
+    expect(Array.isArray(mesh.material)).toBe(true);
+    const material = mesh.material as THREE.Material[];
+    expect(material[0]).not.toBe(source[0]);
+    expect(material[1]).not.toBe(source[1]);
+    expect(source[0].name).toBe(''); // το πρωτότυπο, ζωντανό υλικό μένει ανέγγιχτο
+  });
+
+  it('single-material mesh is unaffected by the array path (regression)', () => {
+    const root = new THREE.Group();
+    const mesh = new THREE.Mesh(
+      new THREE.BoxGeometry(1, 1, 1),
+      new THREE.MeshStandardMaterial({ color: 0x9e9e9e }),
+    );
+    mesh.userData = { matId: 'mat-concrete-c25' };
+    root.add(mesh);
+
+    const table = assignExportMaterials(root);
+
+    expect(table).toHaveLength(1);
+    expect(table[0].name).toBe('mat-concrete-c25');
+    expect(Array.isArray(mesh.material)).toBe(false);
+  });
+});
+
 describe('buildMaterialBaseline (ADR-683 §7, Break C)', () => {
   const entry = (name: string, hex: number): ExportMaterialEntry => ({
     name,

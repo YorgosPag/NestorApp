@@ -1,6 +1,6 @@
 # ADR-678 — C4D → Νέστωρ round-trip: εισαγωγή υλικών/χρωμάτων από OBJ+MTL
 
-**Status:** 🟡 IN PROGRESS (Φ1 + Φ1.1 done· Φ2 textures TODO)
+**Status:** 🟡 IN PROGRESS (Φ1 + Φ1.1 + **Φ3 glTF per-face** done· Φ2 textures + Φ3 OBJ/per-building-plaster TODO)
 **Date:** 2026-07-19
 **Owner:** Giorgio
 **Σχετικά:** ADR-668 (mesh3d export OBJ/GLTF) · ADR-539 (per-face appearance / Cinema 4D Polygon Mode) · ADR-511 (wall-covering material catalog SSoT)
@@ -29,9 +29,18 @@
 
 - **Γεωμετρία ΔΕΝ ξαναδιαβάζεται ως BIM.** OBJ = τρίγωνα· χάνεται το parametric (τοίχος/κολόνα).
   Το round-trip είναι **αποκλειστικά για εμφάνιση** (υλικό/χρώμα), όχι σχήμα.
-- **Ανά-όψη (per-polygon) = αναξιόπιστο.** Το export βγάζει ΕΝΑ `o` block ανά στοιχείο, χωρίς
-  face-groups· το C4D τριγωνοποιεί/συγκολλά → δεν αντιστοιχίζεται στο δικό μας `FaceKey`.
-  **Φ1 = μόνο ανά-στοιχείο (`BASE_FACE_KEY '*'`).**
+- **Ανά-όψη (per-polygon): αναξιόπιστο για OBJ, λυμένο για glTF (Φ3, 2026-07-21).** Το **OBJ**
+  export βγάζει ΕΝΑ `o` block ανά στοιχείο, χωρίς face-groups· το C4D τριγωνοποιεί/συγκολλά → δεν
+  αντιστοιχίζεται στο δικό μας `FaceKey`. **Το OBJ μονοπάτι παραμένει μόνο ανά-στοιχείο
+  (`BASE_FACE_KEY '*'`)** — ο stock `OBJExporter` του three δεν είναι group-aware, άρα ένα multi-
+  material mesh βγαίνει ως ένα `o` block με ένα `usemtl` (dominant), όχι πολλά. Το **glTF** μονοπάτι
+  όμως **έχει** per-primitive ομαδοποίηση εγγενώς: ο `GLTFExporter` σπάει ένα multi-material mesh σε
+  ένα primitive ανά `geometry.group`, ο `GLTFLoader` το επιστρέφει ως `THREE.Group` με ένα
+  single-material child mesh ανά primitive, σε σταθερή σειρά, με το node-level `userData` (άρα και
+  το `faceKeyByMaterialIndex`) ακέραιο. Πάνω σε αυτό λύθηκε το per-face round-trip **αποκλειστικά
+  glTF** (§6 changelog 2026-07-21) — `assignExportMaterials` ονοματίζει πλέον ΚΑΙ τα array υλικά
+  (`mat_<hex6>` ανά χρώμα), ο import χτίζει `faceMaterials` ανά θέση και εφαρμόζει per-face
+  `SetFaceAppearanceCommand` (collapse σε `BASE_FACE_KEY '*'` όταν όλες οι όψεις ταιριάζουν).
 - **Textures (`map_Kd` εικόνες) = Φ2.** Το σύστημα υλικών (ADR-539/511) ξέρει flat χρώματα +
   κατάλογο, όχι αυθαίρετες εικόνες με UV. Φ1: το `map_Kd` αγνοείται, κρατάμε `Kd` flat χρώμα.
 
@@ -96,9 +105,56 @@ SyncContext). Το single-building/single-user project το θέλει έτσι.
 | **Φ1-UI** | Κουμπί «Εισαγωγή υλικών από C4D» (LevelPanel) + file picker (.obj/.mtl) + toast αποτελέσματος | 🟢 DONE |
 | **Φ1.1** | Σοβάς round-trip (merged skin → ομοιόμορφος σοβάς μελών, ADR-449 command) + skip αμετάβλητων (`mat-*`/`elem-*`/`mat_<hex6>`) · +12 tests (26 σύνολο) | 🟢 DONE |
 | **Φ2** | Textures (`map_Kd` εικόνες → BIM texture registry, UV) | ⬜ TODO |
-| **Φ3** | Best-effort per-face (usemtl groups μέσα σε object → `FaceKey`) · per-building/per-side σοβάς | ⬜ TODO |
+| **Φ3** | **Per-face round-trip μέσω glTF** (named array-material primitives → `FaceKey`, ζωντανό ΚΑΙ σε επαναλαμβανόμενο γύρο συνεργασίας) — **OBJ παραμένει per-object dominant** (stock `OBJExporter` δεν είναι group-aware, §3) | 🟢 **DONE (glTF)** |
+| **Φ3.1** | Best-effort per-face στο **OBJ** μονοπάτι (θα απαιτούσε custom writer, όχι stock `OBJExporter`) · per-building/per-side σοβάς (πέρα από το ομοιόμορφο-ζώνης της Φ1.1) | ⬜ TODO |
 
 ## 6. Changelog
+
+- **2026-07-21 (Φ3 — per-face material round-trip, ΜΟΝΟ glTF)** — Έλυσε το «🔴 ΓΝΩΣΤΟ ΟΡΙΟ» του
+  ADR-683 §11 (2026-07-21): μόλις ένα στοιχείο αποκτούσε per-face appearance (ADR-539) γινόταν
+  multi-material mesh· το `assignExportMaterials` έκανε **skip** τα multi-material → στην
+  επαν-εξαγωγή τα per-face υλικά έβγαιναν **ανώνυμα** και εκτός baseline → ο **2ος** γύρος
+  συνεργασίας έσπαγε (μετρημένο: 81 ανώνυμα κόκκινα + 1 named σοβάς). Ο 1ος γύρος (φρέσκο μοντέλο →
+  βαφή → import) δούλευε ήδη πλήρως.
+  - **Μετρημένη συμπεριφορά three (jest probe, τεκμήριο όχι υπόθεση):** ο `GLTFExporter` σπάει ένα
+    multi-material mesh σε **ένα primitive ανά `geometry.group`**· ο `GLTFLoader` το επιστρέφει ως
+    **`THREE.Group` με ένα single-material child mesh ανά primitive** (ΟΧΙ mesh με `material[]`).
+    Το node-level `mesh.userData` (άρα και το `faceKeyByMaterialIndex`) **επιβιώνει ακέραιο** στο
+    Group, στην αρχική σειρά· τα ονόματα υλικών επιβιώνουν verbatim· η αντιστοίχιση
+    primitive↔child είναι 1:1 ντετερμινιστική. Per-primitive `extras` **δεν είναι εφικτά**
+    (`geometry.userData` αντιγράφεται ίδιο σε όλα τα primitives) → η «διεύθυνση όψης» ταξιδεύει
+    **μόνο** ως το node-level array + η θέση μέσα του.
+  - **Αρχεία (5):**
+    1. `export/core/mesh3d/mesh3d-materials.ts` — `assignExportMaterials` ονοματίζει πλέον **και**
+       τα array υλικά, ανά στοιχείο, colour-based (`mat_<hex6>`), μέσω νέου `registerNamedMaterial`.
+       glTF → named per-primitive υλικά. Το OBJ (stock `OBJExporter`, όχι group-aware) εξακολουθεί
+       να παίρνει μόνο το dominant υλικό — τα ονόματα φτάνουν στο `.mtl`/baseline, όχι σε ψεύτικο
+       per-face `usemtl`.
+    2. `io/mesh3d-material-import/obj-mtl-parse.ts` — `ObjectMaterialAssignment` +=
+       `faceMaterials?: ReadonlyMap<string, string|null>`.
+    3. `io/mesh3d-material-import/match-objects-to-entities.ts` — `MatchedObject` += `faceMaterials?`.
+    4. `io/mesh3d-roundtrip/gltf-scene-parse.ts` — `collectGltfObjects` αναγνωρίζει faced solid
+       (Group-of-children ή single Mesh με `userData.faceKeyByMaterialIndex`), χτίζει `faceMaterials`
+       (zip κατά θέση), fingerprint/solid από merged representative (reuse κεντρικού
+       `mergeGeometries`), worldBox από node, skip των per-face children (δεν είναι ξεχωριστές
+       οντότητες).
+    5. `io/mesh3d-material-import/import-c4d-materials.ts` — `applyImportedAppearance` βγάζει
+       per-face `SetFaceAppearanceCommand` ανά `FaceKey`· **collapse σε ΕΝΑ `BASE_FACE_KEY '*'`**
+       όταν όλες οι όψεις βάφτηκαν το ίδιο (idempotent, μηδέν artificial per-face split όταν δεν
+       χρειάζεται)· back-compat χωρίς `faceMaterials` (OBJ path, legacy manifests).
+  - **SSoT:** η αρίθμηση όψεων μένει **ΕΝΑ** SSoT (`bim-three-faced-prism.ts::faceKeyByMaterialIndex`,
+    node-level `userData`) — ταξιδεύει αυτούσια, **μηδέν** δεύτερος υπολογισμός στον import (το
+    αρχικά σχεδιασμένο «extract ordering helper» **δεν χρειάστηκε**, γιατί το node-level array ήδη
+    κουβαλά τη σειρά). Ο import readback ήταν ήδη έτοιμος για arrays (`collectGltfMaterials`
+    iterate-άρει ήδη σε ADR-683 Φ2-UI).
+  - **Tests:** 134 υπάρχοντα πράσινα + νέα Φ3 tests (gltf-scene-parse faced-solid parsing,
+    assignExportMaterials array-naming, import-c4d-materials per-face + collapse).
+  - **Γνωστό όριο (τίμια, νέο):** ένα προϋπάρχον 3-γραμμο idiom
+    (`children.length === 1 ? children[0] : new CompositeCommand(children)`) υπάρχει τώρα και στο
+    `import-c4d-materials.ts` **και** στο `bim-3d/ui/apply-face-appearance.ts` — **δεν** εξήχθη σε
+    κοινό helper σε αυτή τη συνεδρία (το 2ο αρχείο είναι κοινό με άλλον πράκτορα ταυτόχρονα). Boy
+    Scout on-touch υποψήφιο (N.0.2), όχι blocking.
+  - **Ενημέρωση ADR-683 §11:** το «🔴 ΓΝΩΣΤΟ ΟΡΙΟ» εκείνης της καταχώρησης σημειώθηκε ΕΠΙΛΥΜΕΝΟ.
 
 - **2026-07-19** — Δημιουργία ADR. Ground-truth mapping export↔import. Φ1 pure core (parse/resolve/match)
   + orchestrator (`import-c4d-materials.ts`: enumerate all-floor entities → match → resolve → per-level

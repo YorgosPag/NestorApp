@@ -114,3 +114,113 @@ describe('importC4dMaterials (orchestrator)', () => {
     });
   });
 });
+
+/**
+ * ADR-678 Φ3 — per-face materials (μόνο glTF μονοπάτι, `faceMaterials` στο `ObjectMaterialAssignment`).
+ * `buildBodyFaceCommands` λύνει κάθε όψη ξεχωριστά με τον ίδιο pure `resolveImportAppearance`.
+ */
+describe('applyImportedAppearance — per-face materials (ADR-678 Φ3)', () => {
+  beforeEach(() => { mockCapture.executed = null; });
+
+  const mtlWithBlue = new Map<string, ImportedMaterial>([
+    ['mat_myblue', { name: 'mat_myblue', colorHex: '#1a334d', opacity: 1 }],
+  ]);
+
+  it('emits ONE SetFaceAppearanceCommand per differently-painted face (non-uniform)', () => {
+    const result = applyImportedAppearance(
+      fakeLevels(),
+      {
+        objects: [{
+          objectName: 'Wall_w-42',
+          materialName: null,
+          faceMaterials: new Map<string, string | null>([
+            ['top', 'paint-red'],          // γνωστό catalog υλικό
+            ['bottom', 'mat_myblue'],      // Kd χρώμα από το .mtl
+            ['side', 'mat-concrete-c25'],  // αμετάβλητο DNA — καμία αλλαγή, κανένα command
+          ]),
+        }],
+        materials: mtlWithBlue,
+        charset: 'unicode',
+      },
+      resolveKnownId,
+    );
+
+    expect(result.matchedCount).toBe(1);
+    expect(result.appliedCount).toBe(1);
+
+    const children = (mockCapture.executed as { children: Array<Record<string, unknown>> }).children;
+    expect(children).toHaveLength(2); // 'side' έμεινε αμετάβλητο — δεν παράγει command
+    expect(children).toContainEqual(
+      expect.objectContaining({ entityId: 'w-42', faceKey: 'top', value: { materialId: 'paint-red' } }),
+    );
+    expect(children).toContainEqual(
+      expect.objectContaining({ entityId: 'w-42', faceKey: 'bottom', value: { colorHex: '#1a334d' } }),
+    );
+  });
+
+  it('collapses per-face materials into ONE base "*" command when ALL faces got the same appearance', () => {
+    const result = applyImportedAppearance(
+      fakeLevels(),
+      {
+        objects: [{
+          objectName: 'Wall_w-42',
+          materialName: null,
+          faceMaterials: new Map<string, string | null>([
+            ['top', 'mat_myblue'],
+            ['bottom', 'mat_myblue'],
+            ['side', 'mat_myblue'],
+          ]),
+        }],
+        materials: mtlWithBlue,
+        charset: 'unicode',
+      },
+      resolveKnownId,
+    );
+
+    expect(result.appliedCount).toBe(1);
+    // ΕΝΑ command (όχι CompositeCommand) — idempotent, ίδιο undo-shape με το ανά-στοιχείο βάψιμο
+    expect(mockCapture.executed).toMatchObject({
+      entityId: 'w-42', faceKey: '*', value: { colorHex: '#1a334d' },
+    });
+  });
+
+  it('applies nothing when every face is an unchanged Nestor DNA material (no baseline repaint)', () => {
+    const result = applyImportedAppearance(
+      fakeLevels(),
+      {
+        objects: [{
+          objectName: 'Wall_w-42',
+          materialName: null,
+          faceMaterials: new Map<string, string | null>([
+            ['top', 'mat-concrete-c25'],
+            ['bottom', 'mat-concrete-c25'],
+          ]),
+        }],
+        materials: new Map(),
+        charset: 'unicode',
+      },
+      resolveKnownId,
+    );
+
+    expect(result.matchedCount).toBe(1);
+    expect(result.appliedCount).toBe(0);
+    expect(mockCapture.executed).toBeNull();
+  });
+
+  it('back-compat: objects without faceMaterials still use the whole-element "*" path', () => {
+    const result = applyImportedAppearance(
+      fakeLevels(),
+      {
+        objects: [{ objectName: 'Wall_w-42', materialName: 'mat_myblue' }],
+        materials: mtlWithBlue,
+        charset: 'unicode',
+      },
+      resolveKnownId,
+    );
+
+    expect(result.appliedCount).toBe(1);
+    expect(mockCapture.executed).toMatchObject({
+      entityId: 'w-42', faceKey: '*', value: { colorHex: '#1a334d' },
+    });
+  });
+});
