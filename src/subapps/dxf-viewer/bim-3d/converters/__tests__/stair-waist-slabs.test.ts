@@ -97,28 +97,32 @@ describe('stair-waist-slabs (μηρός)', () => {
     }
   });
 
-  it('soffit sits exactly `waist` PERPENDICULAR below the re-entrant corners', () => {
+  it('soffit sits `waist` PERPENDICULAR below the NOSING line (min concrete = waist)', () => {
     const mesh = buildWaistSlabMeshes(makeStraightMonolithic(), 0, sceneToM)[0]!;
     mesh.geometry.computeBoundingBox();
     const box = mesh.geometry.boundingBox!;
     const waistM = WAIST_MM * 0.001;
-    // Deepest point = soffit under the floor corner (x=0,y=0): vertical drop = waist / cosθ.
     const cosT = TREAD / Math.hypot(TREAD, RISE);
-    expect(box.min.y).toBeCloseTo(-waistM / cosT, 5);
+    // Deepest point = soffit under the base corner: one rise below it (nosing line) + waist/cosθ.
+    expect(box.min.y).toBeCloseTo(-(RISE * sceneToM + waistM / cosT), 5);
     // Top reaches the landing-edge corner (one step past the last tread), no overhang.
     expect(box.max.y).toBeCloseTo(RISE * STEP_COUNT * sceneToM, 5);
   });
 
-  it('flightSectionPoints: stepped top on the re-entrant line, soffit vShift below', () => {
-    const pts = flightSectionPoints(3, TREAD, RISE, 190);
-    // 2 soffit + (2·M+1) staircase vertices.
-    expect(pts).toHaveLength(2 + 7);
+  it('flightSectionPoints: stepped top on re-entrant line, soffit BELOW the nosing line (valid solid)', () => {
+    const cosT = TREAD / Math.hypot(TREAD, RISE);
+    const vShift = WAIST_MM / cosT;          // perpendicular waist → vertical component
+    const drop = RISE + vShift;              // soffit below the re-entrant corners
+    const pts = flightSectionPoints(3, TREAD, RISE, drop);
+    expect(pts).toHaveLength(2 + 7);         // 2 soffit + (2·M+1) staircase
     // Every vertex on/below the re-entrant line y = pitch·x (tread tops touch, never exceed).
     for (const p of pts) expect(p.y).toBeLessThanOrEqual(PITCH * p.x + 1e-9);
-    // Re-entrant corners present exactly; soffit runs 190 below them.
+    // Soffit vertices sit strictly BELOW the nosing line y = pitch·x − rise → no self-intersection.
+    const soffit = [pts[0]!, pts[1]!];
+    for (const p of soffit) expect(p.y).toBeLessThan(PITCH * p.x - RISE + 1e-9);
+    // Re-entrant corners present exactly.
     const has = (x: number, y: number) => pts.some((p) => Math.abs(p.x - x) < 1e-9 && Math.abs(p.y - y) < 1e-9);
     expect(has(0, 0) && has(TREAD, RISE) && has(3 * TREAD, 3 * RISE)).toBe(true);
-    expect(has(0, -190) && has(3 * TREAD, 3 * RISE - 190)).toBe(true);
   });
 
   it('integrates: stairToMeshes tags waist meshes with component "waist"', () => {

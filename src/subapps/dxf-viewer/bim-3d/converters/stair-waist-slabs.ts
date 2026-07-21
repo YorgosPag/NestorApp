@@ -18,7 +18,10 @@
  *   • TOP  = the staircase polyline through the corners (horizontal tread + vertical
  *            riser per step) → the finishes seat flush, never pierced.
  *   • SOFFIT = a straight line parallel to the pitch, `waist` PERPENDICULAR below the
- *            re-entrant corners (vertical drop `waist / cosθ`).
+ *            NOSING line (the step tips = the LOWEST step envelope). Measuring from the
+ *            nosings (not the re-entrant corners) keeps the soffit below EVERY step even
+ *            for a thin waist (`waist < rise·cosθ`) — otherwise it would cut up through
+ *            the steps and self-intersect (the wedge/garbage Giorgio saw in C4D).
  *   • ENDS = vertical (plumb) cuts, extended one step toward each adjacent LANDING so
  *            the run reaches the support edges without overhanging the floors.
  * The section is extruded across the flight `width`.
@@ -99,19 +102,23 @@ function groupIntoFlights(sorted: readonly ReentrantCorner[], riseScene: number)
 /**
  * Section outline (in the flight's own vertical plane, `a` = horizontal along the run,
  * `y` = height) of a monolithic flight of `M` steps: the stepped TOP (tread + riser per
- * step, tops on the re-entrant line) closed by a parallel SOFFIT `vShift` vertically
- * below, with vertical end faces. Traced CCW: soffit L→R, up the top end, staircase R→L.
- * Exported for the geometry regression (the seat/no-poke invariants live here).
+ * step, tops on the re-entrant line) closed by a parallel SOFFIT `soffitDrop` vertically
+ * below the re-entrant corners, with vertical end faces. `soffitDrop = rise + waist/cosθ`
+ * so the soffit clears the NOSING line (lowest step envelope) → the section never
+ * self-intersects. Traced CCW: soffit L→R, up the top end, staircase R→L. Exported for
+ * the geometry regression (the seat / no-poke / soffit-clearance invariants live here).
  */
 export function flightSectionPoints(
-  M: number, tStep: number, rStep: number, vShift: number,
+  M: number, tStep: number, rStep: number, soffitDrop: number,
 ): THREE.Vector2[] {
   const stair: THREE.Vector2[] = [new THREE.Vector2(0, 0)];
   for (let k = 0; k < M; k++) {
     stair.push(new THREE.Vector2((k + 1) * tStep, k * rStep));       // tread top → riser foot
     stair.push(new THREE.Vector2((k + 1) * tStep, (k + 1) * rStep)); // riser → next corner
   }
-  const pts: THREE.Vector2[] = [new THREE.Vector2(0, -vShift), new THREE.Vector2(M * tStep, M * rStep - vShift)];
+  const pts: THREE.Vector2[] = [
+    new THREE.Vector2(0, -soffitDrop), new THREE.Vector2(M * tStep, M * rStep - soffitDrop),
+  ];
   for (let i = stair.length - 1; i >= 0; i--) pts.push(stair[i]!);
   return pts;
 }
@@ -138,9 +145,11 @@ function buildFlightWaist(
   const uh = horiz.divideScalar(tStep);                     // horizontal run direction
   const up = new THREE.Vector3(0, 1, 0);
   const zDir = new THREE.Vector3().crossVectors(uh, up);    // width axis (horizontal, ⟂ run)
-  const vShift = waistM * (len / tStep);                    // vertical drop for a PERP waist
+  // Waist measured PERPENDICULAR below the nosing line → vertical drop below the
+  // re-entrant corners = one rise (nosing sits a rise below them) + waist/cosθ.
+  const soffitDrop = rStep + waistM * (len / tStep);
   const M = (n - 1) + bottomSteps + topSteps;
-  const shape = new THREE.Shape(flightSectionPoints(M, tStep, rStep, vShift));
+  const shape = new THREE.Shape(flightSectionPoints(M, tStep, rStep, soffitDrop));
   const geo = new THREE.ExtrudeGeometry(shape, { depth: widthM, bevelEnabled: false });
   geo.applyMatrix4(new THREE.Matrix4().makeBasis(uh, up, zDir)); // local a/y/width → world
   const origin = c0.clone().addScaledVector(step, -bottomSteps).addScaledVector(zDir, -widthM * 0.5);
