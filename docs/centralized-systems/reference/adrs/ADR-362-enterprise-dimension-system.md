@@ -713,6 +713,12 @@ A1 → A2 → A3 → B1 → B2 → B3 → C1 → C2 → D1 → D2 → D3 → E1 
 
 ## 7. Changelog
 
+- **2026-07-21 (🐛 Style Manager — nested `<button>` hydration error, Phase F1/F4 regression)**
+  - **Σύμπτωμα (Next.js console)**: `In HTML, <button> cannot be a descendant of <button>. This will cause a hydration error.` στο `DimStyleList`. Η γραμμή-στυλ (`<li role="option">`) ήταν η ίδια ένα `<button>` (select), και τα `ActionButton` (Check/Copy/Pencil/Trash, Tooltip `asChild` → πραγματικό `<button>`) render **μέσα** της → φωλιασμένα buttons = άκυρο HTML.
+  - **Fix (`ui/panels/dimensions/DimStyleList.tsx`)**: το `<li role="option">` έγινε ο styled container της γραμμής (padding/rounded/selected-hover bg/`group`)· το select-button (`flex-1`, διάφανο, όνομα + badges) και το `<span>` με τα action buttons είναι πλέον **αδέρφια**, όχι φωλιασμένα. Ίδιο layout & group-hover reveal· `stopPropagation` διατηρήθηκε (αβλαβές — τα actions είναι εκτός του select-button). Semantic HTML, μηδέν div-soup.
+  - **Regression anchor (NEW `__tests__/DimStyleList.test.tsx`, 6/6 PASS)**: κλειδώνει το invariant που έσπασε — `container.querySelectorAll('button button')` **length 0** — πάνω στο αληθινό component με πραγματικά `BUILTIN_DIM_STYLES` (live pin, όχι green-forever)· + select/duplicate/setActive/edit/delete καλούν τον σωστό handler αφού βγήκαν έξω από το select-button. `DimensionsTab.test` 11/11 παραμένει PASS.
+  - **Files**: MOD `ui/panels/dimensions/DimStyleList.tsx`. NEW `ui/panels/dimensions/__tests__/DimStyleList.test.tsx`. Καμία νέα i18n key (reuse). Καμία αλλαγή συμβολαίου — μόνο HTML-validity fix.
+
 - **2026-07-20 (Round 42 — 🐛 «υπερμεγέθη κείμενα διαστάσεων»: ΔΥΟ σφάλματα στοιβαγμένα, το πρώτο έκρυβε το δεύτερο)**
   - **Σύμπτωμα (Giorgio, με screenshot)**: μετά την εισαγωγή του `Αδείας.Κάτοψη ισογείου.dxf` (42MB) τα κείμενα διαστάσεων ζωγραφίζονταν το ένα πάνω στο άλλο («10.9600» πάνω σε «0.8500»)· badge overlap 45 οντότητες. Το ribbon έδειχνε **Ύψος Κειμένου 2.5** ενώ το αρχείο δηλώνει DIMTXT 0.085–0.3. Παρατήρηση-κλειδί: τα κείμενα εμφανίζονταν **λευκά και μεγάλα** και μετά **πράσινα** — η στιγμή που τρέχει το seeding του registry.
   - **Ground truth (μετρημένο από το αρχείο, όχι εικασία — κανόνας 647)**: ο πίνακας DIMSTYLE έχει **6** εγγραφές: `CHRIS` 0.085/1 · `STANDARD` 0.18/1 · `STAIRS_I` 0.09375/96 · `ANNOTATIVE` 0.09375/0 · `CHRIS$0` 0.085/1 · `TEO` 0.3/1. Μονάδες αρχείου = **μέτρα** (`$INSUNITS` απόν, `$EXTMIN/$EXTMAX` 74.66×40.58).

@@ -45,16 +45,21 @@ export function DimStyleList({
         const isSelected = style.id === selectedId;
         const isActive = style.id === activeStyleId;
         return (
-          <li key={style.id} role="option" aria-selected={isSelected}>
+          <li
+            key={style.id}
+            role="option"
+            aria-selected={isSelected}
+            className={[
+              'px-2 py-1.5 rounded text-sm flex items-center gap-1.5 group',
+              isSelected
+                ? `${colors.bg.accent} ${colors.text.primary} font-medium`
+                : `${colors.text.primary} hover:${colors.bg.hover}`,
+            ].join(' ')}
+          >
             <button
               type="button"
               onClick={() => onSelect(style.id)}
-              className={[
-                'w-full text-left px-2 py-1.5 rounded text-sm flex items-center gap-1.5 group',
-                isSelected
-                  ? `${colors.bg.accent} ${colors.text.primary} font-medium`
-                  : `${colors.text.primary} hover:${colors.bg.hover}`,
-              ].join(' ')}
+              className="flex-1 min-w-0 text-left flex items-center gap-1.5 bg-transparent"
             >
               <span className="flex-1 truncate">{style.name}</span>
 
@@ -69,37 +74,37 @@ export function DimStyleList({
                   {t('panels.dimensions.builtInBadge')}
                 </span>
               )}
-
-              <span className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 shrink-0">
-                {!isActive && (
-                  <ActionButton
-                    icon={<Check size={12} />}
-                    label={t('panels.dimensions.setAsDefault')}
-                    onClick={(e) => { e.stopPropagation(); onSetActive(style.id); }}
-                  />
-                )}
-                <ActionButton
-                  icon={<Copy size={12} />}
-                  label={t('panels.dimensions.duplicate')}
-                  onClick={(e) => { e.stopPropagation(); onDuplicate(style.id); }}
-                />
-                {!style.isBuiltIn && (
-                  <>
-                    <ActionButton
-                      icon={<Pencil size={12} />}
-                      label={t('panels.dimensions.edit')}
-                      onClick={(e) => { e.stopPropagation(); onEdit(style.id); }}
-                    />
-                    <ActionButton
-                      icon={<Trash2 size={12} />}
-                      label={t('panels.dimensions.delete')}
-                      onClick={(e) => { e.stopPropagation(); onDelete(style.id); }}
-                      danger
-                    />
-                  </>
-                )}
-              </span>
             </button>
+
+            <span className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 shrink-0">
+              {!isActive && (
+                <ActionButton
+                  icon={<Check size={12} />}
+                  label={t('panels.dimensions.setAsDefault')}
+                  onClick={(e) => { e.stopPropagation(); onSetActive(style.id); }}
+                />
+              )}
+              <ActionButton
+                icon={<Copy size={12} />}
+                label={t('panels.dimensions.duplicate')}
+                onClick={(e) => { e.stopPropagation(); onDuplicate(style.id); }}
+              />
+              {!style.isBuiltIn && (
+                <>
+                  <ActionButton
+                    icon={<Pencil size={12} />}
+                    label={t('panels.dimensions.edit')}
+                    onClick={(e) => { e.stopPropagation(); onEdit(style.id); }}
+                  />
+                  <ActionButton
+                    icon={<Trash2 size={12} />}
+                    label={t('panels.dimensions.delete')}
+                    onClick={(e) => { e.stopPropagation(); onDelete(style.id); }}
+                    danger
+                  />
+                </>
+              )}
+            </span>
           </li>
         );
       })}
