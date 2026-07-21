@@ -35,10 +35,14 @@ import { importGltfAppearance } from '../../io/mesh3d-roundtrip/import-gltf-appe
 import {
   importColladaAppearance,
   type ColladaTextureImporter,
+  type KnownMaterialHealthProbe,
 } from '../../io/mesh3d-material-import/import-collada-appearance';
 import { importForeignTextures } from '../../io/mesh3d-material-import/import-foreign-textures';
 import { sha256HexOfFile } from '../../io/mesh3d-material-import/texture-content-hash';
-import { uploadMaterialTextureMap } from '../../bim/services/bim-material-texture-upload.service';
+import {
+  uploadMaterialTextureMap,
+  isMaterialTextureReachable,
+} from '../../bim/services/bim-material-texture-upload.service';
 import { buildKnownMaterialResolver } from '../../io/mesh3d-material-import/known-import-materials';
 import type { GltfObjectRecord } from '../../io/mesh3d-roundtrip/gltf-scene-parse';
 import { isImportableNode } from '../../io/mesh3d-roundtrip/import-gltf-meshes';
@@ -215,14 +219,15 @@ export function C4dMaterialImportButton() {
       } else if (payload.kind === 'dae') {
         // ADR-678 Φ4/Βήμα 3 — COLLADA per-face: parse → (async) upload ξένων υφών → βαφή. Ο
         // textureImporter injected ώστε ο io wrapper να μένει καθαρός από Firebase (DI).
-        // Toast ΜΟΝΟ όταν όντως θα τρέξει upload (companyId + εικόνες): αλλιώς θα έλεγε ψευδώς
-        // «ανεβάζω» ενώ ο textureImporter είναι undefined (χωρίς companyId δεν φτιάχνεται υλικό).
-        if (companyId && payload.imageFiles.length > 0) notifications.info(t('c4dMaterialImport.uploadingTextures'));
         // Οι υφές που το `.dae` αναφέρει αλλά ο χρήστης δεν επέλεξε (ο C4D γράφει absolute path άλλου
         // δίσκου) — τις μαζεύουμε για actionable warning (Revit «missing assets»).
         let missingTextures: readonly string[] = [];
         const textureImporter: ColladaTextureImporter | undefined = companyId
-          ? async (textures) => {
+          ? async (textures, repairIds) => {
+              // Toast ΜΟΝΟ όταν όντως θα τρέξει upload: ο wrapper καλεί εδώ ΜΟΝΟ αν foreign.size>0
+              // (ground-truth 2026-07-22: το παλιό `imageFiles>0` gate έλεγε ψευδώς «ανεβάζω» ακόμη
+              // κι όταν όλες οι υφές ήταν γνωστές & υγιείς → μηδέν upload).
+              notifications.info(t('c4dMaterialImport.uploadingTextures'));
               const { created, missing } = await importForeignTextures(textures, payload.imageFiles, {
                 existingMaterials: materials,
                 saveMaterial: save,
@@ -232,14 +237,25 @@ export function C4dMaterialImportButton() {
                     .then((r) => r.downloadUrl),
                 hashFile: sha256HexOfFile,
                 deleteMaterial: remove,
-              });
+                // Self-heal probe: content-hash dedup δεν κάνει reuse ενός ghost (URL χωρίς αρχείο).
+                isAlbedoReachable: (m) =>
+                  m.pbrTextures?.albedoUrl
+                    ? isMaterialTextureReachable(m.pbrTextures.albedoUrl)
+                    : Promise.resolve(true),
+              }, repairIds);
               missingTextures = missing;
               return created;
             }
           : undefined;
+        // Self-heal probe (ADR-678): ένα «γνωστό» υλικό με απρόσιτο albedo (ghost → 403) ξανα-ανεβαίνει
+        // στο ίδιο id αντί να προσπεραστεί σιωπηλά. Μόνο με companyId (χωρίς αυτό δεν γίνεται upload).
+        const isKnownBroken: KnownMaterialHealthProbe = async (materialId) => {
+          const url = materials.find((m) => m.id === materialId)?.pbrTextures?.albedoUrl;
+          return url ? !(await isMaterialTextureReachable(url)) : false;
+        };
         result = await importColladaAppearance(
           levels, payload.daeText, resolveKnownId, payload.baseline,
-          payload.materialBaselineByMesh, textureImporter,
+          payload.materialBaselineByMesh, textureImporter, companyId ? isKnownBroken : undefined,
         );
         if (missingTextures.length > 0) {
           notifications.warning(t('c4dMaterialImport.missingTextures', { files: missingTextures.join(', ') }));

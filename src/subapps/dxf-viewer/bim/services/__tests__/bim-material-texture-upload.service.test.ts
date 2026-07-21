@@ -8,6 +8,7 @@
 import {
   validateMaterialTextureFile,
   uploadMaterialTextureMap,
+  isMaterialTextureReachable,
   MaterialTextureUploadError,
   MATERIAL_TEXTURE_MAX_BYTES,
 } from '../bim-material-texture-upload.service';
@@ -15,6 +16,7 @@ import {
 // ── Firebase storage mocks ────────────────────────────────────────────────────
 const uploadBytesMock = jest.fn();
 const getDownloadURLMock = jest.fn();
+const getMetadataMock = jest.fn();
 const refMock = jest.fn((_storage: unknown, path: string) => ({ path }));
 
 jest.mock('@/lib/firebase', () => ({ storage: { __mock: true } }));
@@ -22,6 +24,7 @@ jest.mock('firebase/storage', () => ({
   ref: (storage: unknown, path: string) => refMock(storage, path),
   uploadBytes: (...args: unknown[]) => uploadBytesMock(...args),
   getDownloadURL: (...args: unknown[]) => getDownloadURLMock(...args),
+  getMetadata: (...args: unknown[]) => getMetadataMock(...args),
 }));
 
 function fileOfSize(name: string, bytes: number, type = 'image/png'): File {
@@ -32,6 +35,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   uploadBytesMock.mockResolvedValue(undefined);
   getDownloadURLMock.mockResolvedValue('https://storage.example/albedo.jpg');
+  getMetadataMock.mockResolvedValue({ size: 10 }); // durable by default
 });
 
 describe('validateMaterialTextureFile', () => {
@@ -97,5 +101,31 @@ describe('uploadMaterialTextureMap', () => {
     await expect(
       uploadMaterialTextureMap({ ...baseInput, file: fileOfSize('a.png', 10) }),
     ).rejects.toBeInstanceOf(MaterialTextureUploadError);
+  });
+
+  it('throws "upload-failed" when the object is not durable after write (verify-after-write)', async () => {
+    // uploadBytes + getDownloadURL «succeed», but the object is gone → ghost-doc guard fires.
+    getMetadataMock.mockRejectedValueOnce({ code: 'storage/object-not-found' });
+    await expect(
+      uploadMaterialTextureMap({ ...baseInput, file: fileOfSize('a.png', 10) }),
+    ).rejects.toMatchObject({ code: 'upload-failed' });
+    expect(uploadBytesMock).toHaveBeenCalled(); // the write was attempted
+  });
+});
+
+describe('isMaterialTextureReachable', () => {
+  it('returns true when the object exists', async () => {
+    getMetadataMock.mockResolvedValueOnce({ size: 10 });
+    await expect(isMaterialTextureReachable('companies/c/bim-material-textures/m/albedo.jpg')).resolves.toBe(true);
+  });
+
+  it('returns false ONLY on a definitive object-not-found (→ safe to repair)', async () => {
+    getMetadataMock.mockRejectedValueOnce({ code: 'storage/object-not-found' });
+    await expect(isMaterialTextureReachable('https://s/x.jpg')).resolves.toBe(false);
+  });
+
+  it('returns true on an ambiguous error (permission/network) to avoid a false repair loop', async () => {
+    getMetadataMock.mockRejectedValueOnce({ code: 'storage/unauthorized' });
+    await expect(isMaterialTextureReachable('https://s/x.jpg')).resolves.toBe(true);
   });
 });
