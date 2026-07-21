@@ -231,14 +231,21 @@ export function useRotationTool(props: UseRotationToolProps): UseRotationToolRet
     }
 
     if (phase === 'awaiting-reference' && basePoint) {
-      // Set reference direction (0° angle) and transition to angle picking
-      const dx = worldPoint.x - basePoint.x;
-      const dy = worldPoint.y - basePoint.y;
+      // ORTHO(F8)/POLAR(F10) lock the reference DIRECTION (the orange rubber band) to the
+      // H/V axis (or polar increment) from the pivot — SAME SSoT `resolveOrthoPolarStep` the
+      // angle phase (handleRotationMouseMove) + the preview rubber band (useRotationPreview)
+      // use, so the committed reference matches the snapped line (WYSIWYG). No-op when both off.
+      const stepped = resolveOrthoPolarStep(
+        worldPoint, basePoint,
+        { ortho: cadToggleState.isOrthoOn(), polar: cadToggleState.isPolarOn() },
+      ).stepped;
+      const dx = stepped.x - basePoint.x;
+      const dy = stepped.y - basePoint.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
       if (dist < 0.001) return; // Too close to base point — ignore
 
-      setReferencePoint(worldPoint);
-      startAngleRef.current = angleBetweenPointsDeg(basePoint, worldPoint);
+      setReferencePoint(stepped);
+      startAngleRef.current = angleBetweenPointsDeg(basePoint, stepped);
       setCurrentAngle(0);
       setPhase('awaiting-angle');
       return;

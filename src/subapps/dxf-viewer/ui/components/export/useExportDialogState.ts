@@ -104,9 +104,9 @@ export function useExportDialogState(): ExportDialogState {
       dxfImageFillMode: format === 'dxf' ? dxfImageFillMode : undefined,
       tekSymbolMode: format === 'tek' ? tekSymbolMode : undefined,
       tekHatchMode: format === 'tek' ? tekHatchMode : undefined,
-      // ADR-668 — OBJ only: glTF is spec-locked to metres, so sending a unit would imply a
-      // choice the exporter is bound to ignore.
-      mesh3dUnit: format === 'obj' ? mesh3dUnit : undefined,
+      // ADR-668/678 — OBJ & COLLADA carry an explicit unit; glTF is spec-locked to metres, so
+      // sending a unit there would imply a choice the exporter is bound to ignore.
+      mesh3dUnit: format === 'obj' || format === 'dae' ? mesh3dUnit : undefined,
     }),
     [
       format, entityScope, floorScope, dxfVersion, dxfUnit, dxfLineMode, dxfImageFillMode,

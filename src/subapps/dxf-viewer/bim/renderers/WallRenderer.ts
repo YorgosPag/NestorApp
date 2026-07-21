@@ -33,12 +33,12 @@ import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveSubcategoryStyle, type BimLayerOverride } from '../../config/bim-line-weight-resolver';
 import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
 import { isStructuralComponentVisible } from '../visibility/structural-component-visibility';
-import { resolveBimBodyFill, fillBimBodyPath } from '../utils/bim-body-fill';
+import { resolveBimBodyFill, fillBimBodyPath, isArmedSelectedHighlight } from '../utils/bim-body-fill';
 import { bimDashPx } from '../../config/bim-dash-resolver';
 import { resolveCutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
-import { HOVER_HIGHLIGHT } from '../../config/color-config';
+import { drawBimHoverHalo } from './bim-hover-halo';
 // ADR-509 — background-adaptive entity color (near-black wall visible on dark canvas).
 import { adaptEntityColorForCanvas, adaptStructuralLineColorForCanvas } from '../../config/adaptive-entity-color';
 import { getWallGrips, wallGripGlyphShape } from '../walls/wall-grips';
@@ -144,25 +144,16 @@ export class WallRenderer extends BaseEntityRenderer {
 
     // Hover halo via OBB outline (stair pattern). Per-edge glow loses to the
     // category fill rectangle in the main pass, so a dedicated outline pass
-    // guarantees a continuous halo around the wall footprint.
+    // guarantees a continuous halo around the wall footprint. Shared glow-context
+    // SSoT (drawBimHoverHalo) — only the outline shape differs from the stair.
     const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
     if (phaseState.phase === 'highlighted') {
-      const entityLineWidth = Math.max(
-        1,
-        (entity as EntityModel & { lineWidth?: number }).lineWidth || 1,
+      drawBimHoverHalo(this.ctx, entity, () =>
+        strokePerimeterOutline(
+          this.ctx, (p) => this.worldToScreen(p),
+          wall.geometry.outerEdge.points, wall.geometry.innerEdge.points,
+        ),
       );
-      this.ctx.save();
-      this.ctx.shadowBlur = 0;
-      this.ctx.shadowColor = 'transparent';
-      this.ctx.strokeStyle = HOVER_HIGHLIGHT.ENTITY.glowColor;
-      this.ctx.lineWidth = entityLineWidth + HOVER_HIGHLIGHT.ENTITY.glowExtraWidth;
-      this.ctx.globalAlpha = HOVER_HIGHLIGHT.ENTITY.glowOpacity;
-      this.ctx.setLineDash([]);
-      strokePerimeterOutline(
-        this.ctx, (p) => this.worldToScreen(p),
-        wall.geometry.outerEdge.points, wall.geometry.innerEdge.points,
-      );
-      this.ctx.restore();
     }
 
     // Main pass — phase style + fill + hatch + stroke.
@@ -171,7 +162,7 @@ export class WallRenderer extends BaseEntityRenderer {
       lineweightMm: isConcreteLineweight(_wLayer.lineweight) ? _wLayer.lineweight : undefined,
       color: _wLayer.color ?? undefined,
     } : undefined;
-    const _edgeColorRaw = this.drawFootprint(wall, _wLayerOverride);
+    const _edgeColorRaw = this.drawFootprint(wall, _wLayerOverride, isArmedSelectedHighlight(options));
     this.drawMaterialHatch(wall, _wLayerOverride);
     this.drawDnaLayerLines(wall);
     this.drawAxis(wall, _edgeColorRaw);
@@ -262,7 +253,7 @@ export class WallRenderer extends BaseEntityRenderer {
    * neighbouring renderers see the temporary composite mode. Strokes follow
    * the cutout so the wall outline stays intact around the opening jambs.
    */
-  private drawFootprint(wall: WallEntity, layerOverride?: BimLayerOverride): string | null {
+  private drawFootprint(wall: WallEntity, layerOverride?: BimLayerOverride, armedHighlight = false): string | null {
     const outer = wall.geometry.outerEdge.points;
     const inner = wall.geometry.innerEdge.points;
     // ADR-458 — DERIVED footprint κομμένο στις παρειές τεμνόντων κολωνών («η κολόνα νικάει»).
@@ -297,7 +288,7 @@ export class WallRenderer extends BaseEntityRenderer {
     // BIM: V/G tint ?? παλέτα → background-adaptive boost ⇒ ΙΔΙΑ διαφάνεια σε κάθε φόντο.
     // Revit background+foreground pattern (bim-body-fill) — opaque sheet-coloured
     // base under the poché so drawing aids beneath the wall are occluded.
-    const _bodyFill = resolveBimBodyFill('wall', _cutState, _styles, WALL_CATEGORY_FILL[cat]);
+    const _bodyFill = resolveBimBodyFill('wall', _cutState, _styles, WALL_CATEGORY_FILL[cat], undefined, armedHighlight);
     this.ctx.lineWidth = _edgePx;
     this.ctx.setLineDash(bimDashPx(_edgePattern, this.transform.scale));
 
@@ -318,7 +309,9 @@ export class WallRenderer extends BaseEntityRenderer {
     traceWallBody(this.ctx, (p) => this.worldToScreen(p), outer, inner, pieces);
     // ADR-509 — background-adaptive + σαφώς φωτεινό δομικό γκρι (WALL_LINE_CONTRAST), χωρίς
     // ξέπλυμα ζωηρών V/G overrides: near-black #2b2f36 → ανοιχτό γκρι· κόκκινο override → μένει.
-    if (_edgeColor !== null) this.ctx.strokeStyle = adaptStructuralLineColorForCanvas(_edgeColor, WALL_LINE_CONTRAST);
+    // Armed-selection keeps the ORANGE stroke that applyPhaseStyle already set — skip the
+    // category-colour override so the whole member reads orange (fill + edge). Giorgio 2026-07-21.
+    if (_edgeColor !== null && !armedHighlight) this.ctx.strokeStyle = adaptStructuralLineColorForCanvas(_edgeColor, WALL_LINE_CONTRAST);
     this.ctx.stroke();
     return _edgeColor;
   }

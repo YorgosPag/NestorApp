@@ -35,6 +35,10 @@ import i18next from 'i18next';
 import { useSceneManagerAdapter, type SceneAdapterLevelManager } from '../../systems/entity-creation/useSceneManagerAdapter';
 import { useModifyToolActivation } from '../../systems/tools/useModifyToolActivation';
 import { buildEntityCloneCommand } from '../../bim/transforms/build-entity-clone-command';
+// ADR-363 — ORTHO (F8) axis-lock for the AutoCAD COPY delta (no-op when OFF). SAME SSoT
+// the Move tool uses; applied at BOTH the commit (here) and the live ghost (useCopyPreview)
+// so the rubber band, ghost and committed clone all land on one point (WYSIWYG, ADR-577).
+import { applyOrthoToDelta } from '../../bim/grips/grip-move-constraints';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import type { Point2D } from '../../rendering/types/Types';
 import type { ICommand, SceneEntity } from '../../core/commands/interfaces';
@@ -118,10 +122,12 @@ export function useCopyTool({
     if (phase === 'awaiting-target-point' && basePoint) {
       const sm = getSceneManager();
       if (!sm) return;
-      const delta: Point2D = {
+      // ORTHO (F8) locks the clone delta to the H/V axis from the base point
+      // (AutoCAD COPY+ORTHO). No-op when OFF. Matches the live ghost (useCopyPreview).
+      const delta: Point2D = applyOrthoToDelta({
         x: worldPoint.x - basePoint.x,
         y: worldPoint.y - basePoint.y,
-      };
+      });
       // Resolve the LIVE selection to entities, then clone through the shared
       // BIM+DXF SSoT (id regeneration + host rewire + persistence inside).
       const sources = selectedEntityIds

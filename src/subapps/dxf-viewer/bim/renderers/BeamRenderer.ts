@@ -37,7 +37,7 @@ import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
 import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
 import { isStructuralComponentVisible } from '../visibility/structural-component-visibility';
-import { resolveBimBodyFill } from '../utils/bim-body-fill';
+import { resolveBimBodyFill, isArmedSelectedHighlight } from '../utils/bim-body-fill';
 import { bimDashPx } from '../../config/bim-dash-resolver';
 import { resolveCutState, type CutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
@@ -149,7 +149,8 @@ export class BeamRenderer extends BaseEntityRenderer {
     // Revit/ArchiCAD: ό,τι είναι ΠΑΝΩ από τον παρατηρητή ΔΕΝ παίρνει αδιαφανές
     // background pattern — δεν κρύβει το πάτωμα ούτε τα drawing aids από κάτω.
     // ΜΗΝ το «ευθυγραμμίσεις» με wall/column/slab: η διαφορά είναι το σχέδιο.
-    this.ctx.fillStyle = resolveBimBodyFill('beam', _beamStyleCut, _beamDs.objectStyles, KIND_FILL[beam.kind]);
+    const _beamArmed = isArmedSelectedHighlight(options);
+    this.ctx.fillStyle = resolveBimBodyFill('beam', _beamStyleCut, _beamDs.objectStyles, KIND_FILL[beam.kind], undefined, _beamArmed);
     this.buildPiecesPath(drawable);
     this.ctx.fill();
 
@@ -167,10 +168,13 @@ export class BeamRenderer extends BaseEntityRenderer {
       dpi: 96, objectStyles: _beamDs.objectStyles,
       elementOverride: beam.styleOverride, layerOverride: _beamLayerOverride,
     });
-    this.ctx.strokeStyle = KIND_STROKE[beam.kind];
+    // Armed-selection keeps the ORANGE stroke from applyPhaseStyle (skip both category overrides).
+    if (!_beamArmed) {
+      this.ctx.strokeStyle = KIND_STROKE[beam.kind];
+      if (_beamCol !== null) this.ctx.strokeStyle = _beamCol;
+    }
     this.ctx.lineWidth = _beamPx;
     this.ctx.setLineDash(bimDashPx(_beamPat, this.transform.scale));
-    if (_beamCol !== null) this.ctx.strokeStyle = _beamCol;
     this.buildPiecesPath(drawable);
     this.ctx.stroke();
 

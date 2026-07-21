@@ -21,6 +21,8 @@ import { assignExportMaterials, buildMaterialBaseline, writeMtl } from '../core/
 import { applyExportUnit, nameMeshesForExport } from '../core/mesh3d/mesh3d-prepare';
 import type { MeshNameCharset } from '../core/mesh3d/mesh3d-naming';
 import { injectMtlLib, serialiseGlb, serialiseObj } from '../core/mesh3d/mesh3d-serialise';
+import { serialiseCollada } from '../core/mesh3d/mesh3d-collada-writer';
+import { nowISO } from '@/lib/date-local';
 // ADR-683 §7 — sidecar manifest· ταξιδεύει με ΚΑΘΕ 3Δ export (OBJ και GLB).
 import {
   buildExportManifest,
@@ -52,9 +54,9 @@ export interface Mesh3dExportOutput {
   readonly warnings: string[];
 }
 
-/** OBJ = χωρίς προδιαγραφή encoding (C4D R15 ⇒ latin)· glTF = UTF-8 by spec. */
+/** OBJ = χωρίς προδιαγραφή encoding (C4D R15 ⇒ latin)· glTF & COLLADA = UTF-8 XML by spec. */
 function charsetFor(format: Mesh3dFormat): MeshNameCharset {
-  return format === 'gltf' ? 'unicode' : 'latin';
+  return format === 'obj' ? 'latin' : 'unicode';
 }
 
 /**
@@ -109,8 +111,27 @@ export async function exportFloorsToMesh3d(
     };
   }
 
-  // OBJ: το format δεν κουβαλά μονάδα — την προσθέτουμε εμείς (τα υλικά ονοματίστηκαν παραπάνω).
+  // OBJ & COLLADA: το format χρειάζεται ρητή μονάδα — την ψήνουμε στις κορυφές (τα υλικά
+  // ονοματίστηκαν παραπάνω). Το COLLADA επιπλέον **δηλώνει** την ίδια μονάδα στο `<unit>` — διπλή
+  // ασφάλεια είτε ο R15 τιμά το `<unit>` είτε το αγνοεί (ADR-678).
   applyExportUnit(root, options.unit);
+
+  // ADR-678 Φ3.1 — COLLADA 1.4.1: το ΜΟΝΟ εγγράψιμο format που το C4D R15 διαβάζει ΜΕ χρώματα
+  // (per-face). Ένα `.dae` (XML) + το ίδιο sidecar manifest — κανένα συνοδό αρχείο υλικών.
+  if (options.format === 'dae') {
+    const daeName = buildFloorFilename(options.baseName, options.filenamePart, 'dae');
+    const daeText = serialiseCollada(root, materials, {
+      unit: options.unit,
+      createdIso: nowISO(),
+    });
+    return {
+      artifacts: [
+        { filename: daeName, blob: new Blob([daeText], { type: 'model/vnd.collada+xml' }) },
+        manifestArtifact,
+      ],
+      warnings,
+    };
+  }
 
   const objName = buildFloorFilename(options.baseName, options.filenamePart, 'obj');
   const mtlName = buildFloorFilename(options.baseName, options.filenamePart, 'mtl');
@@ -142,7 +163,7 @@ function buildManifestArtifact(
   materialBaseline: ReadonlyMap<string, string>,
 ): ExportArtifact {
   const manifest = buildExportManifest(root, {
-    exportedAt: new Date().toISOString(),
+    exportedAt: nowISO(),
     projectName: options.baseName,
     buildingId: deps.activeBuildingId ?? null,
     unit: options.format === 'gltf' ? 'meters' : options.unit,

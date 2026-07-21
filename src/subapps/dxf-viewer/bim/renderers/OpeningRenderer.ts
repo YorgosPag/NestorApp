@@ -29,6 +29,7 @@ import { isOpeningEntity } from '../../types/entities';
 import type { OpeningEntity, OpeningKind } from '../types/opening-types';
 import { isWindowKind, isSlidingKind } from '../types/opening-types';
 import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
+import { isArmedSelectedHighlight } from '../utils/bim-body-fill';
 import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
 import { bimDashPx } from '../../config/bim-dash-resolver';
 import { resolveCutState } from '../../config/bim-view-range';
@@ -95,7 +96,10 @@ export class OpeningRenderer extends BaseEntityRenderer {
     );
 
     this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
-    this.ctx.strokeStyle = OPENING_KIND_STROKE[opening.kind];
+    // Armed-transform selection keeps the ORANGE stroke from applyPhaseStyle throughout the
+    // opening's outline + overlay passes (skip every category-colour override). Giorgio 2026-07-21.
+    const _opArmed = isArmedSelectedHighlight(options);
+    if (!_opArmed) this.ctx.strokeStyle = OPENING_KIND_STROKE[opening.kind];
     const _opLayerOverride = _opLayer ? {
       lineweightMm: isConcreteLineweight(_opLayer.lineweight) ? _opLayer.lineweight : undefined,
       color: _opLayer.color ?? undefined,
@@ -150,7 +154,7 @@ export class OpeningRenderer extends BaseEntityRenderer {
     this.ctx.setLineDash(
       _isCut ? bimDashPx(_outlineS.linePattern, this.transform.scale) : (BEYOND_DASH as number[]),
     );
-    if (_outlineS.color !== null) this.ctx.strokeStyle = _outlineS.color;
+    if (_outlineS.color !== null && !_opArmed) this.ctx.strokeStyle = _outlineS.color;
     this.drawOutline(opening);
     // ADR-611 — constant-cross-section κάσα jambs, drawn with the resolved opening
     // outline style (reuse — no dedicated frame subcategory). Cut symbol only.
@@ -163,7 +167,7 @@ export class OpeningRenderer extends BaseEntityRenderer {
     // material is set keeps the exact current single-stroke-inherits-from-
     // outline code path (byte-identical legacy behaviour).
     if (_isCut) {
-      if (_hasMaterialOverride && _overlayS.color !== null) {
+      if (_hasMaterialOverride && _overlayS.color !== null && !_opArmed) {
         this.ctx.strokeStyle = _overlayS.color;
       }
       this.drawKindOverlay(opening, _overlayS.lineWidthPx);

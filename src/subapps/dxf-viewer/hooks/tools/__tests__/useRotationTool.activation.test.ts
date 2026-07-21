@@ -4,8 +4,9 @@
  * the shared `useModifyToolActivation` hook (Rotation had no test before). The
  * previously-dead selection-lost branch now works (behavior alignment).
  */
-import { renderHook } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
 import { useRotationTool } from '../useRotationTool';
+import { cadToggleState } from '../../../systems/constraints/cad-toggle-state';
 
 jest.mock('../../../systems/entity-creation/LevelSceneManagerAdapter', () => ({
   createLevelSceneManagerAdapter: jest.fn(() => ({ getEntity: jest.fn() })),
@@ -67,5 +68,33 @@ describe('useRotationTool — activation FSM (shared SSoT)', () => {
     });
     rerender(defaultProps({ activeTool: 'select', selectedEntityIds: ['e1'] }));
     expect(result.current.phase).toBe('idle');
+  });
+});
+
+describe('useRotationTool — ORTHO (F8) reference-direction lock', () => {
+  afterEach(() => { cadToggleState.set(false, false); }); // reset the shared store
+
+  it('locks the reference direction (orange line) to the H axis when ORTHO is ON', () => {
+    const { result } = renderHook(() => useRotationTool(defaultProps({ activeTool: 'rotate', selectedEntityIds: ['e1'] })));
+    expect(result.current.phase).toBe('awaiting-base-point');
+
+    act(() => { result.current.handleRotationClick({ x: 0, y: 0 }); }); // pivot
+    expect(result.current.phase).toBe('awaiting-reference');
+
+    cadToggleState.set(true, false); // ORTHO ON
+    // Diagonal reference pick {10,3}: |dx|=10 ≥ |dy|=3 → H-axis lock → {10,0}.
+    act(() => { result.current.handleRotationClick({ x: 10, y: 3 }); });
+
+    expect(result.current.phase).toBe('awaiting-angle');
+    expect(result.current.referencePoint).toEqual({ x: 10, y: 0 });
+  });
+
+  it('leaves the reference direction RAW (diagonal) when ORTHO is OFF', () => {
+    const { result } = renderHook(() => useRotationTool(defaultProps({ activeTool: 'rotate', selectedEntityIds: ['e1'] })));
+    act(() => { result.current.handleRotationClick({ x: 0, y: 0 }); }); // pivot
+    cadToggleState.set(false, false); // ORTHO OFF (explicit)
+    act(() => { result.current.handleRotationClick({ x: 10, y: 3 }); });
+
+    expect(result.current.referencePoint).toEqual({ x: 10, y: 3 });
   });
 });

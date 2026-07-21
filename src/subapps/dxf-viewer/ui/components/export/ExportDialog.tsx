@@ -36,9 +36,9 @@ import { useExportDialogState } from './useExportDialogState';
 
 const logger = createModuleLogger('DXF_EXPORT_DIALOG');
 
-// ADR-668 — 'obj' + 'gltf' = 3Δ mesh εξαγωγή. Το OBJ είναι το ΜΟΝΟ που ανοίγει σε Cinema 4D
-// R15 (ο glTF importer μπήκε στο R2024)· το glTF είναι για Blender / C4D 2024+ / σύγχρονα DCC.
-const FORMAT_OPTIONS = ['dxf', 'ifc', 'pdf', 'tek', 'obj', 'gltf'] as const;
+// ADR-668/678 — 'obj'/'gltf'/'dae' = 3Δ mesh εξαγωγή. OBJ ανοίγει σε C4D R15 αλλά άχρωμο· glTF
+// για Blender / C4D 2024+· COLLADA (.dae) = το ΜΟΝΟ που το R15 διαβάζει ΜΕ χρώματα (per-face).
+const FORMAT_OPTIONS = ['dxf', 'ifc', 'pdf', 'tek', 'obj', 'gltf', 'dae'] as const;
 const ENTITY_SCOPE_OPTIONS = ['both', 'dxf-only', 'bim-only'] as const;
 const FLOOR_SCOPE_OPTIONS = ['active', 'all-zip', 'all-single'] as const;
 const UNIT_OPTIONS = ['millimeters', 'centimeters', 'meters'] as const;
@@ -82,9 +82,11 @@ export function ExportDialog({ open, onOpenChange, onSubmit }: ExportDialogProps
 
   const isDxf = state.format === 'dxf';
   const isTek = state.format === 'tek';
-  // ADR-668 — μονάδα ΜΟΝΟ για OBJ: το glTF είναι spec-locked σε μέτρα, οπότε ένα πεδίο εκεί θα
-  // υποσχόταν επιλογή που ο exporter αγνοεί by design.
+  // ADR-668/678 — μονάδα για OBJ & COLLADA (κουβαλούν ρητή μονάδα)· το glTF είναι spec-locked σε
+  // μέτρα, οπότε ένα πεδίο εκεί θα υποσχόταν επιλογή που ο exporter αγνοεί by design.
   const isObj = state.format === 'obj';
+  const isDae = state.format === 'dae';
+  const showMeshUnit = isObj || isDae;
   const blocked = state.scopeConflictsWithFormat;
 
   return (
@@ -200,15 +202,18 @@ export function ExportDialog({ open, onOpenChange, onSubmit }: ExportDialogProps
             </Field>
           )}
 
-          {/* ADR-668 — το OBJ δεν αποθηκεύει μονάδα· default εκατοστά ⇒ ανοίγει σωστά στο C4D
-              με Scale 1. Ίδιο picker με το DXF — μία μονάδα-ένωση, ένα SSoT. */}
-          {isObj && (
+          {/* ADR-668/678 — OBJ & COLLADA χρειάζονται ρητή μονάδα· default εκατοστά ⇒ ανοίγει σωστά
+              στο C4D με Scale 1. Ίδιο picker με το DXF — μία μονάδα-ένωση, ένα SSoT. */}
+          {showMeshUnit && (
             <UnitField label={t('export.mesh3dUnit')} value={state.mesh3dUnit} onChange={state.setMesh3dUnit} />
           )}
         </section>
 
         {isObj && (
           <p className="text-sm text-muted-foreground">{t('export.mesh3dUnitHint')}</p>
+        )}
+        {isDae && (
+          <p className="text-sm text-muted-foreground">{t('export.mesh3dDaeNote')}</p>
         )}
         {state.format === 'gltf' && (
           <p className="text-sm text-muted-foreground">{t('export.mesh3dGltfUnitNote')}</p>

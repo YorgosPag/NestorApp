@@ -40,7 +40,7 @@ import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
 import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
 import { isStructuralComponentVisible } from '../visibility/structural-component-visibility';
 import { resolveCutState } from '../../config/bim-view-range';
-import { resolveBimBodyFill, fillBimBodyPath } from '../utils/bim-body-fill';
+import { resolveBimBodyFill, fillBimBodyPath, isArmedSelectedHighlight, BIM_ARMED_BODY_FILL } from '../utils/bim-body-fill';
 import { topFacePlanFill } from '../utils/bim-face-plan-fill';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
@@ -131,7 +131,11 @@ export class ColumnRenderer extends BimFootprintRenderer {
     // στην κάτοψη (top cap = ό,τι βλέπουμε από πάνω)· αλλιώς το legacy V/G body fill.
     // Revit background+foreground pattern (bim-body-fill) — opaque base occludes
     // drawing aids beneath the column, poché tint on top.
-    const _colBodyFill = topFacePlanFill(column) ?? resolveBimBodyFill('column', _colCutState, _colStyles, KIND_FILL[column.kind]);
+    // Armed-transform selection wins over the top-face paint + V/G tint → orange poché.
+    const _colArmed = isArmedSelectedHighlight(options);
+    const _colBodyFill = _colArmed
+      ? BIM_ARMED_BODY_FILL
+      : (topFacePlanFill(column) ?? resolveBimBodyFill('column', _colCutState, _colStyles, KIND_FILL[column.kind]));
     this.drawPolygonPath(verts);
     fillBimBodyPath(this.ctx, _colBodyFill, _colCutState);
 
@@ -153,7 +157,8 @@ export class ColumnRenderer extends BimFootprintRenderer {
       elementOverride: column.styleOverride, layerOverride: _colLayerOverride,
     });
     this.ctx.lineWidth = _colLwPx;
-    if (_colColor !== null) this.ctx.strokeStyle = _colColor;
+    // Armed-selection keeps the ORANGE stroke from applyPhaseStyle (skip category override).
+    if (_colColor !== null && !_colArmed) this.ctx.strokeStyle = _colColor;
     // Solid footprint outline (continuous linetype, ίδιο με committed). Ρητό reset
     // ώστε ο renderer να είναι self-contained: στο shared PreviewCanvas ένα
     // προηγούμενο tracking/polar paint αφήνει ενεργό dash pattern στο context, που

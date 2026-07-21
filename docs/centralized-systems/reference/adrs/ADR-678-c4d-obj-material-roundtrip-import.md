@@ -109,8 +109,39 @@ SyncContext). Το single-building/single-user project το θέλει έτσι.
 | **Φ3.1α** | **Per-face OBJ export**: δικός μας group-aware OBJ writer (`mesh3d-obj-writer.ts`) — ΕΝΑ `o <object>` με **πολλά `usemtl` blocks** (ένα ανά `geometry.group`, σειρά = `buildFacedIndex`), όπως Blender/C4D. Single-material = byte-identical με stock. | 🟢 **DONE (export)** |
 | **Φ3.1β** | **Per-face OBJ re-import**: το OBJ **δεν** κουβαλά την αρίθμηση όψεων όπως το glTF (`userData.faceKeyByMaterialIndex`)· μόνο όνομα υλικού + σειρά επιβιώνουν στο C4D. Blocked σε **πραγματικό C4D-round-tripped OBJ** για μέτρηση αν το C4D διατηρεί τη σειρά όψεων (order-based) ή χρειάζεται geometry-based αντιστοίχιση («ground-truth ΠΡΙΝ parser»). | ⬜ TODO (evidence-first) |
 | **Φ3.1γ** | per-building/per-side σοβάς (πέρα από το ομοιόμορφο-ζώνης της Φ1.1) | ⬜ TODO |
+| **Φ3.1 (COLLADA)** | **Per-face COLLADA `.dae` export** — το ΜΟΝΟ εγγράψιμο format που ο C4D **R15 διαβάζει ΜΕ χρώματα** (ο R15 OBJ importer δεν διαβάζει υλικά, μετρημένο). Δικός μας 1.4.1 writer, per-group `<triangles>` + `<bind_material>` + `<bind_vertex_input>` (native C4D δομή, Φ3.1δ). Βλ. ADR-668 changelog 2026-07-21. | ✅ **DONE — ΕΠΙΒΕΒΑΙΩΜΕΝΟ στον R15** (per-face χρώμα κολώνας ορατό, ground-truth Giorgio 2026-07-21) |
 
 ## 6. Changelog
+
+- **2026-07-21 (Φ3.1δ — COLLADA binding: αντιγραφή native C4D δομής)** — **Bug:** ο R15 φόρτωνε τα
+  υλικά με σωστά χρώματα στο Material Manager αλλά άφηνε τη γεωμετρία **γκρι** — **ακόμα και single-
+  material κύβος** (άρα ο R15 δεν εφάρμοζε **ΚΑΜΙΑ** ανάθεση, ούτε per-object). Αποκλείστηκε η διαφάνεια
+  (καθαρό opaque = πάλι γκρι). **Ground-truth:** ο Giorgio εξήγαγε native `.dae` από τον ίδιο τον C4D
+  R15.037 (`CINEMA4D 15.037 COLLADA Exporter`) → σύγκριση byte-δομικά με το δικό μας. **Ρίζα:** ο
+  αυστηρός (FBX-SDK) importer του R15 τιμά το `bind_material` **ΜΟΝΟ** όταν κάθε `<instance_material>`
+  κουβαλά `<bind_vertex_input>` προς **υπαρκτό UV set** — το spec-valid binding μας (χωρίς UV/
+  bind_vertex_input) αγνοούνταν. **Fix (αντιγραφή native C4D):** (1) `<source>` UV `(0,0)` ανά geometry
+  + `<input semantic="TEXCOORD" set="0" offset=last>` σε κάθε `<triangles>` + τρίτος ordinal `0` ανά
+  κορυφή στο `<p>`· (2) `<bind_vertex_input semantic="UVSET0" input_semantic="TEXCOORD" input_set="0"/>`
+  σε κάθε `<instance_material>`· (3) shader `<lambert>`→**`<blinn>`** + `sid="common"`→**`sid="COMMON"`**
+  (όπως τα colored υλικά του native). Flat χρώμα ⇒ η τιμή UV αδιάφορη (ένα μοναδικό `(0,0)`, μηδέν
+  παραμόρφωση). Αρχεία: `mesh3d-collada-geometry.ts`, `mesh3d-collada-writer.ts` + tests. **84
+  mesh3d+formats tests ✅**, `jscpd:diff` **καθαρό**, ≤500/≤40 ✅. **✅ ΕΠΙΒΕΒΑΙΩΘΗΚΕ (ground-truth
+  Giorgio, R15.037):** πραγματική εξαγωγή κολώνας με per-face χρώμα από τον Νέστωρ → **τα 2 χρώματα
+  εμφανίζονται στις 2 όψεις της κολώνας μέσα στο C4D**. Το binding διαβάζεται σωστά. Bug closed.
+
+- **2026-07-21 (Φ3.1 — COLLADA `.dae` export)** — **Κρίσιμο ground-truth: ο native OBJ importer του
+  C4D R15 ΔΕΝ διαβάζει υλικά** (Preferences → Wavefront OBJ Import = μόνο Scale/Normals/Optimize· ούτε
+  single red cube δεν βγήκε κόκκινο). Άρα ο group-aware OBJ writer (Φ3.1α) είναι **σωστός αλλά ανεπαρκής
+  για R15**. Λύση: **νέο 3Δ format COLLADA 1.4.1** (`format: 'dae'`) — η τομή «γράφουμε» × «R15 με
+  χρώματα» (FBX=κλειστό, 3DS=8.3, η three δεν έχει DAE exporter). Δικός μας writer
+  (`mesh3d-collada-writer.ts` + `mesh3d-collada-geometry.ts`): per-face `<triangles material="sym_i">`
+  ανά `geometry.group` + `<bind_material>` — **ίδιο group model με τον OBJ writer**. SSoT reuse:
+  `assignExportMaterials`, `applyExportUnit`, `escapeXml`. Χρώμα **sRGB** (διορθώνει το linear bug του
+  `.mtl`)· μονάδα ψημένη **ΚΑΙ** δηλωμένη στο `<unit>` (διπλή ασφάλεια R15)· `up_axis=Y_UP`. Wiring
+  types/adapter/service/dialog/i18n(el+en). **84 mesh3d+formats tests ✅**, `jscpd:diff` **καθαρό**.
+  **Πλήρες τεκμήριο στο ADR-668** (owner του 3Δ format-set). **Ground-truth e2e:** red cube `.dae` στο
+  R15 → πρέπει καθαρό κόκκινο ανά όψη (στον Giorgio).
 
 - **2026-07-21 (Φ3.1α — per-face OBJ export, group-aware writer)** — Ο **στόχος** του χρήστη είναι
   Cinema 4D **R15 (2013)** που ανοίγει **μόνο OBJ** (ο glTF importer μπήκε στο R2024)· άρα το per-face

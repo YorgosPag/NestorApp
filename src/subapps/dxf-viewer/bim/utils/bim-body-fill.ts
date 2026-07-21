@@ -21,6 +21,26 @@ import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
 import { resolveDxfCanvasBackgroundHex } from '../../config/color-config';
 
 /**
+ * Translucent ORANGE poché for an armed-selected BIM body (GRIP_ARMED_COLOR #FF6A00 @ 45%).
+ * Giorgio 2026-07-21 — a transform tool (Move/Copy/Rotate/Mirror) is armed with a selection
+ * before the base point is picked, so the selected BIM members read ORANGE just like the DXF
+ * entities do (which get it via PhaseManager). Kept translucent so geometry stays legible.
+ */
+export const BIM_ARMED_BODY_FILL = 'rgba(255, 106, 0, 0.45)';
+
+/**
+ * True when a transform tool is armed (base point not yet picked) on THIS selected entity.
+ * SSoT predicate shared by every BIM renderer so the armed-orange rule cannot drift (N.18).
+ * Structural param (not RenderOptions) to avoid a rendering-types import in this bim util.
+ */
+export function isArmedSelectedHighlight(options: {
+  selected?: boolean;
+  armedTransformHighlight?: boolean;
+}): boolean {
+  return !!options.selected && !!options.armedTransformHighlight;
+}
+
+/**
  * Resolve the final canvas `fillStyle` string for a BIM member's translucent body
  * fill: the V/G category tint (when the user set one) else the renderer's own
  * palette `fallbackFill`, then the shared ADR-509 background-adaptive boost. ONE
@@ -36,7 +56,11 @@ export function resolveBimBodyFill(
   objectStyles: Partial<Record<BimCategory, ObjectStyle>> | undefined,
   fallbackFill: string,
   bgHex?: string,
+  armedHighlight?: boolean,
 ): string {
+  // Armed-transform selection wins over the V/G tint + palette — the whole body reads ORANGE
+  // (Giorgio 2026-07-21). One branch here → every BIM renderer inherits it via the shared SSoT.
+  if (armedHighlight) return BIM_ARMED_BODY_FILL;
   return adaptFillTintForCanvas(resolveVgFillTint(category, cutState, objectStyles) ?? fallbackFill, bgHex);
 }
 

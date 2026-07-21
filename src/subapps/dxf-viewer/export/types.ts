@@ -20,18 +20,20 @@ import type { BuildingRef, FloorRef } from '../bim/utils/bim-floor-utils';
 // ============================================================================
 
 /** Target file format. */
-export type ExportFormat = 'dxf' | 'ifc' | 'pdf' | 'tek' | 'obj' | 'gltf';
+export type ExportFormat = 'dxf' | 'ifc' | 'pdf' | 'tek' | 'obj' | 'gltf' | 'dae';
 
 /**
- * ADR-668 — τα δύο 3Δ mesh formats. Ένας adapter, δύο serialisers.
- *   'obj'  → Wavefront OBJ (+ συνοδό `.mtl`) — το ΜΟΝΟ 3Δ format που διαβάζει το
- *            Cinema 4D **R15** (ο glTF importer μπήκε στο R2024).
+ * ADR-668/678 — τα τρία 3Δ mesh formats. Ένας adapter, τρεις serialisers.
+ *   'obj'  → Wavefront OBJ (+ συνοδό `.mtl`) — ανοίγει σε Cinema 4D **R15**, αλλά **άχρωμο**
+ *            (ο R15 OBJ importer δεν διαβάζει υλικά — ground-truth ADR-678).
  *   'gltf' → glTF 2.0 binary (.glb) — Blender / C4D 2024+ / κάθε σύγχρονο DCC.
+ *   'dae'  → COLLADA 1.4.1 (XML) — το ΜΟΝΟ εγγράψιμο format που το **R15 διαβάζει ΜΕ χρώματα**
+ *            (per-face). Ίδια σκηνή/υλικά με τα άλλα δύο, serialiser XML.
  */
-export type Mesh3dFormat = Extract<ExportFormat, 'obj' | 'gltf'>;
+export type Mesh3dFormat = Extract<ExportFormat, 'obj' | 'gltf' | 'dae'>;
 
 export function isMesh3dFormat(format: ExportFormat): format is Mesh3dFormat {
-  return format === 'obj' || format === 'gltf';
+  return format === 'obj' || format === 'gltf' || format === 'dae';
 }
 
 /**

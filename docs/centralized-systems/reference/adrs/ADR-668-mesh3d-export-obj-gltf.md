@@ -1,4 +1,4 @@
-# ADR-668 — Εξαγωγή 3Δ (OBJ + glTF) στο dialog «Εξαγωγή Σχεδίου»
+# ADR-668 — Εξαγωγή 3Δ (OBJ + glTF + COLLADA) στο dialog «Εξαγωγή Σχεδίου»
 
 **Κατάσταση:** Υλοποιημένο (routing + UI + tests) — εκκρεμεί το e2e του Giorgio στο C4D R15
 **Ημερομηνία:** 2026-07-17
@@ -383,3 +383,38 @@ OBJ → import στο **C4D R15 με Scale 1**: τοίχοι/κολώνες/πλ
   από MeshStandard → ο crimson (`MeshBasicMaterial`) γινόταν γκρι· γενίκευση σε `materialColor()`.
   6 νέα tests (`mesh3d-instancing.test.ts` 4 + `mesh3d-materials.test.ts` 2). Gates: 6 mesh3d suites
   **31 tests ✅**, `jscpd:diff` **καθαρό**. Το οπτικό e2e με οπλισμό ON παραμένει στον Giorgio.
+- **2026-07-21 (τρίτος serialiser — COLLADA `.dae`, ADR-678 Φ3.1)** — **Νέο 3Δ format: COLLADA
+  1.4.1** (`format: 'dae'`). Ρίζα (ground-truth ADR-678): ο native OBJ importer του **C4D R15 ΔΕΝ
+  διαβάζει υλικά** (οι Preferences έχουν μόνο Scale/Normals/Optimize) → το OBJ ανοίγει άχρωμο όσο
+  σωστό κι αν είναι. Η **τομή** «format που γράφουμε» × «format που ο R15 διαβάζει ΜΕ χρώματα» δίνει
+  πρακτικά **COLLADA** (FBX=κλειστό binary, 3DS=8.3 όρια· η three δεν έχει DAE exporter). **Δικός μας
+  writer** (`mesh3d-collada-writer.ts` + `mesh3d-collada-geometry.ts`): per-face = ένα
+  `<triangles material="sym_i">` ανά `geometry.group` + `<bind_material>` binding — **ίδιο group model
+  με τον OBJ writer**, serialiser XML. **SSoT reuse:** `assignExportMaterials` (υλικά/ονόματα),
+  `applyExportUnit`+`unitScaleFromMeters` (μονάδα), `escapeXml` (`src/lib/xml`). **Χρώμα σε sRGB**
+  (`getHexString()`, ίδιος χώρος με το manifest baseline) — διορθώνει by construction το linear bug
+  του `.mtl`. **Μονάδα διπλή ασφάλεια:** ψημένη στις κορυφές (default cm, όπως OBJ) **ΚΑΙ** δηλωμένη
+  αληθής στο `<unit meter>` → σωστό μέγεθος είτε ο R15 τιμά το `<unit>` είτε το αγνοεί. `up_axis=Y_UP`
+  (ίδιος προσανατολισμός με το OBJ). Wiring: `types.ts` (`+'dae'`), adapter (dae branch, charset
+  unicode), `export-service` (route), dialog+state (dae option + μονάδα + note), i18n `formats.dae`/
+  `mesh3dDaeNote` (el+en). 11 νέα tests (`mesh3d-collada-writer.test.ts` 8 + dialog 1 + ήδη καλυμμένο
+  adapter). Gates: mesh3d+formats **84 tests ✅**, `jscpd:diff` **καθαρό**.
+  - **Ground-truth fix (ίδια μέρα, από e2e του Giorgio στο R15):** το πρώτο export φόρτωσε τα υλικά
+    **με σωστά χρώματα** στο Material Manager αλλά η γεωμετρία έμεινε **γκρι** (τα χρώματα δεν
+    εφαρμόστηκαν στις όψεις). Ρίζα (μετρημένη από το import dialog): ο **COLLADA 1.4 Import** του R15
+    έχει επιλογή **«Fix transparency for incompatible files» ON by default**. Ο writer έγραφε
+    `<transparency>` σε **ΚΑΘΕ** υλικό (ακόμα και αδιαφανές) → ο R15 θεώρησε το αρχείο «ασύμβατο»,
+    ενεργοποίησε το fix και «διόρθωσε» τη διαφάνεια → υλικά άβαφα/διάφανα πάνω στη γεωμετρία. **Fix:**
+    `effectElement` γράφει `<transparent>`/`<transparency>` **ΜΟΝΟ** για πραγματικά διάφανα υλικά
+    (`entry.transparent`)· τα αδιαφανή = **σκέτο `<diffuse>`** (πρακτική Blender για opaque). Test:
+    opaque → `not.toContain('<transparency>')`. **Ground-truth e2e:** red/green cube (3+3 όψεις) στον
+    Giorgio, με τις **default** ρυθμίσεις import.
+  - **Binding fix — αντιγραφή native C4D δομής (ίδια μέρα, ADR-678 Φ3.1δ):** το opaque-only fix **δεν
+    έλυσε** το γκρι — **ακόμα και single-material κύβος** έμεινε γκρι → ο R15 δεν εφάρμοζε **καμία**
+    ανάθεση. Ground-truth: native `.dae` εξαγωγή από τον **ίδιο τον C4D R15.037**. Ρίζα: ο αυστηρός
+    (FBX-SDK) importer τιμά το `bind_material` **ΜΟΝΟ** με `<bind_vertex_input>` προς **υπαρκτό UV set**.
+    **Fix (μίμηση C4D):** UV `<source>` `(0,0)` ανά geometry + `<input semantic="TEXCOORD" set="0">` σε
+    κάθε `<triangles>` (τρίτος ordinal `0` στο `<p>`) + `<bind_vertex_input semantic="UVSET0"
+    input_semantic="TEXCOORD" input_set="0"/>` σε κάθε `<instance_material>` + shader
+    `<lambert>`→**`<blinn>`**/`sid="COMMON"`. Flat χρώμα ⇒ τιμή UV αδιάφορη. **7 collada tests ✅**,
+    `jscpd:diff` καθαρό. Πλήρες τεκμήριο: **ADR-678 §6 (Φ3.1δ)**.

@@ -37,12 +37,13 @@ import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
 import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
 import { isStructuralComponentVisible } from '../visibility/structural-component-visibility';
 import { resolveVgFillTint } from '../utils/bim-vg-fill-tint';
+import { isArmedSelectedHighlight, BIM_ARMED_BODY_FILL } from '../utils/bim-body-fill';
 import { type LinePatternKey } from '../../config/bim-line-patterns';
 import { bimDashPx } from '../../config/bim-dash-resolver';
 import { type CutState } from '../../config/bim-view-range';
 import { clipStairGeometryAtSection } from '../geometry/stairs/stair-section-clip';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
-import { HOVER_HIGHLIGHT } from '../../config/color-config';
+import { drawBimHoverHalo } from './bim-hover-halo';
 import { getLayer } from '../../stores/LayerStore';
 import { isConcreteLineweight } from '../../config/lineweight-iso-catalog';
 // ADR-358 Phase 7c — per-structureType plan symbology lives in a dedicated
@@ -118,26 +119,15 @@ export class StairRenderer extends BaseEntityRenderer {
     const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
 
     if (phaseState.phase === 'highlighted') {
-      const entityLineWidth = Math.max(
-        1,
-        (entity as EntityModel & { lineWidth?: number }).lineWidth || 1,
+      // Industry pattern for composite entities (AutoCAD/Revit blocks & groups):
+      // the hover halo is the bounding-box outline rather than a per-primitive glow.
+      // A per-primitive halo on a stair gets clobbered by the next tread's fill before
+      // it reaches the screen — only the outermost ring survives. Drawing the bbox once
+      // gives a guaranteed continuous halo around the whole stair. Shared glow-context
+      // SSoT (drawBimHoverHalo) — only the outline shape differs from the wall.
+      drawBimHoverHalo(this.ctx, entity, () =>
+        drawStairPerimeterOutline(this.ctx, (p) => this.worldToScreen(p), stair),
       );
-      this.ctx.save();
-      this.ctx.shadowBlur = 0;
-      this.ctx.shadowColor = 'transparent';
-      this.ctx.strokeStyle = HOVER_HIGHLIGHT.ENTITY.glowColor;
-      this.ctx.lineWidth = entityLineWidth + HOVER_HIGHLIGHT.ENTITY.glowExtraWidth;
-      this.ctx.globalAlpha = HOVER_HIGHLIGHT.ENTITY.glowOpacity;
-      this.ctx.setLineDash([]);
-      // Industry pattern for composite entities (AutoCAD/Revit blocks &
-      // groups): the hover halo is the bounding-box outline rather than a
-      // per-primitive glow. A per-primitive halo on a stair gets clobbered
-      // by the next tread's fill before it reaches the screen — only the
-      // outermost ring survives. Drawing the bbox once gives a guaranteed
-      // continuous magenta halo around the whole stair, identical in
-      // perceived weight to the per-line glow of simpler entities.
-      drawStairPerimeterOutline(this.ctx, (p) => this.worldToScreen(p), stair);
-      this.ctx.restore();
     }
 
     // Main pass — phase-appropriate style + full fill+stroke render.
@@ -180,7 +170,11 @@ export class StairRenderer extends BaseEntityRenderer {
       treadsLineWidth: _treadsS.lineWidthPx,
       stringersLineWidth: _stringersS.lineWidthPx,
       // ADR-375 v2.12 — V/G category color tints stair treads (SSoT helper).
-      vgFillTint: resolveVgFillTint('stair', cutState, ds.objectStyles),
+      // Armed-transform selection → orange tread fill (the strokes inherit the ORANGE
+      // strokeStyle applyPhaseStyle already set). Giorgio 2026-07-21.
+      vgFillTint: isArmedSelectedHighlight(options)
+        ? BIM_ARMED_BODY_FILL
+        : resolveVgFillTint('stair', cutState, ds.objectStyles),
     };
     // ADR-619 Bug #5 (Giorgio) — ΟΛΑ τα σκαλιά ΙΔΙΑ: solid + γεμάτα + με νούμερα.
     // Το εσωτερικό cut plane (1200 mm, `splitTreadsByCutPlane`) ΔΕΝ διαφοροποιεί

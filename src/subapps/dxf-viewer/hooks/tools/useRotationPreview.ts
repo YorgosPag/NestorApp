@@ -103,8 +103,15 @@ export function useRotationPreview(props: UseRotationPreviewProps): void {
     drawRotationPivotMarker(ctx, basePoint, t, viewport);
 
     // === Rubber band line: pivot → cursor — visible in BOTH phases ===
+    // ORTHO(F8)/POLAR(F10): snap the rubber-band endpoint to the locked direction via the SAME
+    // SSoT the reference commit (useRotationTool) + the angle phase use, so the orange line, the
+    // committed reference direction and the rotated ghost all agree (WYSIWYG). No-op when both off.
     if (effectiveCursor) {
-      const cursorScreen = CoordinateTransforms.worldToScreen(effectiveCursor, t, viewport);
+      const snappedCursor = resolveOrthoPolarStep(
+        effectiveCursor, basePoint,
+        { ortho: cadToggleState.isOrthoOn(), polar: cadToggleState.isPolarOn() },
+      ).stepped;
+      const cursorScreen = CoordinateTransforms.worldToScreen(snappedCursor, t, viewport);
       // Shared SSoT paint (CHECK 3.28 de-dup with the Move preview).
       drawRubberBandLine(ctx, pivotScreen, cursorScreen);
     }

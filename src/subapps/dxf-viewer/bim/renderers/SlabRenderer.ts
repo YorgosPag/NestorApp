@@ -39,7 +39,7 @@ import type { SlabOpeningEntity } from '../types/slab-opening-types';
 import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
 import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
 import { isStructuralComponentVisible } from '../visibility/structural-component-visibility';
-import { resolveBimBodyFill, fillBimBodyPath } from '../utils/bim-body-fill';
+import { resolveBimBodyFill, fillBimBodyPath, isArmedSelectedHighlight, BIM_ARMED_BODY_FILL } from '../utils/bim-body-fill';
 import { topFacePlanFill } from '../utils/bim-face-plan-fill';
 import { bimDashPx } from '../../config/bim-dash-resolver';
 import { resolveCutState } from '../../config/bim-view-range';
@@ -142,7 +142,11 @@ export class SlabRenderer extends BimFootprintRenderer {
     // στην κάτοψη (top cap = ό,τι βλέπουμε από πάνω)· αλλιώς το legacy V/G body fill.
     // Revit background+foreground pattern (bim-body-fill) — opaque base occludes
     // drawing aids beneath the slab, poché tint on top.
-    const _slabBodyFill = topFacePlanFill(slab) ?? resolveBimBodyFill('slab', _slabCutState, _slabStyles, KIND_FILL[slab.kind]);
+    // Armed-transform selection wins over the top-face paint + V/G tint → orange poché.
+    const _slabArmed = isArmedSelectedHighlight(options);
+    const _slabBodyFill = _slabArmed
+      ? BIM_ARMED_BODY_FILL
+      : (topFacePlanFill(slab) ?? resolveBimBodyFill('slab', _slabCutState, _slabStyles, KIND_FILL[slab.kind]));
     this.drawPolygonPath(verts);
     fillBimBodyPath(this.ctx, _slabBodyFill, _slabCutState);
 
@@ -168,7 +172,8 @@ export class SlabRenderer extends BimFootprintRenderer {
     });
     this.ctx.lineWidth = _slabLwPx;
     this.ctx.setLineDash(bimDashPx(_slabPattern, this.transform.scale));
-    this.ctx.strokeStyle = _slabColor ?? KIND_STROKE[slab.kind];
+    // Armed-selection keeps the ORANGE stroke from applyPhaseStyle (skip category override).
+    if (!_slabArmed) this.ctx.strokeStyle = _slabColor ?? KIND_STROKE[slab.kind];
     this.drawPolygonPath(verts);
     this.ctx.stroke();
     this.ctx.restore();

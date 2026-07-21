@@ -7,6 +7,7 @@
  */
 import { renderHook, act } from '@testing-library/react';
 import { useCopyTool } from '../useCopyTool';
+import { cadToggleState } from '../../../systems/constraints/cad-toggle-state';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
@@ -158,6 +159,49 @@ describe('useCopyTool', () => {
       const { result } = renderHook(() => useCopyTool(props));
       act(() => { result.current.handleCopyClick({ x: 0, y: 0 }); });
       expect(executeCommand).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('ORTHO (F8) axis-lock — ADR-577/ADR-363', () => {
+    afterEach(() => { cadToggleState.set(false, false); }); // reset the shared store
+
+    it('locks the clone delta to the dominant axis when ORTHO is ON', () => {
+      const executeCommand = jest.fn();
+      const { buildEntityCloneCommand } = jest.requireMock('../../../bim/transforms/build-entity-clone-command');
+      buildEntityCloneCommand.mockClear();
+      cadToggleState.set(true, false); // ORTHO ON
+
+      const props = defaultProps({ activeTool: 'copy', selectedEntityIds: ['wall_1'], executeCommand });
+      const { result } = renderHook(() => useCopyTool(props));
+
+      act(() => { result.current.handleCopyClick({ x: 10, y: 20 }); }); // base
+      act(() => { result.current.handleCopyClick({ x: 30, y: 50 }); }); // target (raw Δ {20,30})
+
+      // |dx|=20 < |dy|=30 → Y wins, X zeroed (vertical lock).
+      expect(buildEntityCloneCommand).toHaveBeenCalledWith(
+        expect.any(Array),
+        { x: 0, y: 30 },
+        expect.anything(),
+      );
+    });
+
+    it('leaves the clone delta RAW (diagonal) when ORTHO is OFF', () => {
+      const executeCommand = jest.fn();
+      const { buildEntityCloneCommand } = jest.requireMock('../../../bim/transforms/build-entity-clone-command');
+      buildEntityCloneCommand.mockClear();
+      cadToggleState.set(false, false); // ORTHO OFF (explicit)
+
+      const props = defaultProps({ activeTool: 'copy', selectedEntityIds: ['wall_1'], executeCommand });
+      const { result } = renderHook(() => useCopyTool(props));
+
+      act(() => { result.current.handleCopyClick({ x: 10, y: 20 }); });
+      act(() => { result.current.handleCopyClick({ x: 30, y: 50 }); });
+
+      expect(buildEntityCloneCommand).toHaveBeenCalledWith(
+        expect.any(Array),
+        { x: 20, y: 30 },
+        expect.anything(),
+      );
     });
   });
 

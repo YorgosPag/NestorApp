@@ -6716,7 +6716,8 @@
       "pdf": "PDF (σχέδιο)",
       "tek": "TEK (Τέκτων — αρχιτεκτονικά)",
       "obj": "OBJ (3Δ — Cinema 4D)",
-      "gltf": "glTF (3Δ — Blender/C4D 2024+)"
+      "gltf": "glTF (3Δ — Blender/C4D 2024+)",
+      "dae": "COLLADA (3Δ — Cinema 4D R15 με χρώματα)"
     },
     "content": "Περιεχόμενο",
     "contentScopes": {
@@ -6735,6 +6736,7 @@
     "mesh3dUnit": "Μονάδες",
     "mesh3dUnitHint": "Το OBJ δεν αποθηκεύει μονάδα μέτρησης. Τα εκατοστά ανοίγουν σωστά στο Cinema 4D χωρίς αλλαγή κλίμακας.",
     "mesh3dGltfUnitNote": "Το glTF ορίζει πάντα μέτρα — δεν χρειάζεται επιλογή.",
+    "mesh3dDaeNote": "Το COLLADA (.dae) είναι το μόνο 3Δ αρχείο που το Cinema 4D R15 ανοίγει με τα χρώματα των υλικών (ανά όψη). Τα εκατοστά ανοίγουν σωστά χωρίς αλλαγή κλίμακας.",
     "units": {
       "millimeters": "Χιλιοστά (mm)",
       "centimeters": "Εκατοστά (cm)",

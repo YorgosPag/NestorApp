@@ -57,6 +57,7 @@ export async function runExport(
       return runTekExport(request, deps);
     case 'obj':
     case 'gltf':
+    case 'dae':
       // `request.format` narrows to `Mesh3dFormat` here — passed explicitly so the adapter
       // never has to re-derive (or cast) what the switch already proved.
       return runMesh3dExport(request, deps, request.format);

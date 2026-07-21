@@ -138,4 +138,14 @@ describe('ExportDialog — per-format fields', () => {
     expect(screen.queryByText('export.mesh3dUnit')).not.toBeInTheDocument();
     expect(screen.getByText('export.mesh3dGltfUnitNote')).toBeInTheDocument();
   });
+
+  // ADR-678 — COLLADA carries a real unit (baked + declared) → same picker as OBJ, plus a
+  // dae-specific note (not the OBJ hint, not the glTF note).
+  it('shows the «Μονάδες» field + dae note when format = dae', () => {
+    renderDialog('dae');
+    expect(screen.getByText('export.mesh3dUnit')).toBeInTheDocument();
+    expect(screen.getByText('export.mesh3dDaeNote')).toBeInTheDocument();
+    expect(screen.queryByText('export.mesh3dUnitHint')).not.toBeInTheDocument();
+    expect(screen.queryByText('export.mesh3dGltfUnitNote')).not.toBeInTheDocument();
+  });
 });

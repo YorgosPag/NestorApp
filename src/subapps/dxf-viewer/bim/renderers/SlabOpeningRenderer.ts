@@ -36,7 +36,7 @@ import type {
 import { paintPolygonHoverHalo, polygonBboxHitTest, tracePolygonScreenPath, mapBimGrips } from './bim-polygon-render';
 import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
 import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
-import { resolveBimBodyFill } from '../utils/bim-body-fill';
+import { resolveBimBodyFill, isArmedSelectedHighlight } from '../utils/bim-body-fill';
 import { bimDashPx } from '../../config/bim-dash-resolver';
 import { resolveCutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
@@ -106,7 +106,8 @@ export class SlabOpeningRenderer extends BaseEntityRenderer {
     );
     // FULL SSoT (bim-body-fill) — ίδιος κώδικας body-fill με όλα τα BIM (V/G tint ??
     // παλέτα → background-adaptive boost ⇒ ΙΔΙΑ διαφάνεια σε κάθε φόντο).
-    this.ctx.fillStyle = resolveBimBodyFill('slab-opening', _soCutState, _soStyles, KIND_FILL[opening.kind]);
+    const _soArmed = isArmedSelectedHighlight(options);
+    this.ctx.fillStyle = resolveBimBodyFill('slab-opening', _soCutState, _soStyles, KIND_FILL[opening.kind], undefined, _soArmed);
     tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), verts);
     this.ctx.fill();
 
@@ -125,7 +126,8 @@ export class SlabOpeningRenderer extends BaseEntityRenderer {
       ? bimDashPx(_soPattern, this.transform.scale)
       : KIND_DASH[opening.kind];
     this.ctx.setLineDash(_soDash as number[]);
-    this.ctx.strokeStyle = _soColor ?? KIND_STROKE[opening.kind];
+    // Armed-selection keeps the ORANGE stroke from applyPhaseStyle (skip category override).
+    if (!_soArmed) this.ctx.strokeStyle = _soColor ?? KIND_STROKE[opening.kind];
     tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), verts);
     this.ctx.stroke();
     this.ctx.restore();
