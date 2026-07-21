@@ -114,6 +114,50 @@ SyncContext). Το single-building/single-user project το θέλει έτσι.
 
 ## 6. Changelog
 
+- **2026-07-22 (Φ2 Βήμα 3 🅰️ — texture durability + self-heal ghost `bmat_*`· enterprise safety layer)** —
+  **Ground-truth (bamboo import, `Ξερό-bark-21.jpg` → κολώνα `col_bb83d00a`):** το import δούλεψε (faceAppearance
+  σωστό, ροζ έφυγε) αλλά η κολώνα βγήκε **γκρι**. Ρίζα: το `uploadAlbedo` (SDK `uploadBytes`+`getDownloadURL`)
+  «πέτυχε» — το `bmat_*` doc πήρε valid `albedoUrl`+token+`albedoHash` — μα το **αρχείο ΛΕΙΠΕΙ** από το Storage
+  (`storage_list_files …/bim-material-textures/` = 0· 403 στο render). **Δύο διαψεύσεις προηγούμενου handoff (κώδικας
+  = source of truth):** (1) **ΔΕΝ** υπάρχει «SDK vs custom-XHR» διάκριση — και το `dxf-firestore-storage.impl.ts:181`
+  (scenes, persist-άρουν) και το `bim-material-texture-upload.service.ts:109` (textures) καλούν το **ίδιο** `uploadBytes`
+  από `firebase/storage`, **ίδιο** `storage` instance, **ίδιο** bucket (`pagonis-87766.firebasestorage.app`, hardcoded
+  και στο `mcp-server/src/storage-client.ts:21` → ο admin ΔΕΝ είναι τυφλός). (2) Δεν είναι bucket-alias (client URL +
+  admin συμφωνούν). Άρα: upload «πέτυχε» → αρχείο εξαφανίστηκε, **χωρίς κώδικα διαγραφής** (`deleteMaterial` = μόνο
+  Firestore doc). Η ακριβής runtime αιτία του **delayed vanish** δεν προκύπτει από static analysis — απαιτεί Network
+  tab του albedo PUT (εκκρεμεί).
+  - **Enterprise safety layer (ανεξάρτητο από τη runtime ρίζα — «όπως οι μεγάλοι: verify asset durability»):**
+    - **Durability SSoT** (`bim-material-texture-upload.service.ts`): νέο `isMaterialTextureReachable(urlOrPath)` —
+      `getMetadata` (authenticated read-rule path, ΟΧΙ download token)· `false` ΜΟΝΟ σε definitive
+      `storage/object-not-found` (→ ασφαλές repair)· κάθε άλλο σφάλμα → `true` (κανένα false repair loop).
+    - **Verify-after-write**: το `uploadMaterialTextureMap` κάνει `assertTextureDurable` μετά το `getDownloadURL` →
+      typed `upload-failed` αν το object δεν είναι durable → ο io `createTextureMaterial` κάνει ήδη rollback
+      (μηδέν νέο ghost doc για genuine write-failures). ⚠️ **Ειλικρίνεια:** αφού το `getDownloadURL` ΗΔΗ αποδεικνύει
+      στιγμιαία ύπαρξη, το verify **δεν** πιάνει ένα *delayed* vanish — γι' αυτό ο πραγματικός durable μηχανισμός
+      είναι το self-heal (κάτω).
+    - **Self-heal reachability-gated dedup** (`import-collada-appearance.ts` + `import-foreign-textures.ts`): το
+      `foreignTexturesOnly` → `foreignAndBrokenTextures` (async). Ένα **γνωστό** υλικό (π.χ. `Trunk.1`) του οποίου το
+      albedo είναι απρόσιτο ΔΕΝ γίνεται πλέον skip (sticky ghost) — μπαίνει σε `repairIds` → η υφή **ξανα-ανεβαίνει
+      στο ίδιο id** (σταθερό, idempotent, μηδέν διπλότυπο, οι όψεις δείχνουν ήδη εκεί). Ίδιο και στο content-hash
+      dedup: hash-match σε broken υλικό → repair αντί σιωπηλού reuse (`isAlbedoReachable` probe, injected DI).
+    - **Toast fix**: το «ανεβάζω υφές» μετακινήθηκε **μέσα** στον `textureImporter` (καλείται μόνο όταν
+      `foreign.size>0`) — το παλιό `imageFiles.length>0` gate έλεγε ψευδώς «ανεβάζω» ακόμη κι όταν όλες οι υφές ήταν
+      γνωστές & υγιείς.
+  - **Tests**: `bim-material-texture-upload.service.test.ts` +verify-after-write + `isMaterialTextureReachable` (3
+    cases)· `dae-texture-import.test.ts` +self-heal (repairIds / hash-match broken / healthy) + `foreignAndBrokenTextures`
+    (foreign/skip/repair). **32/32 pass.** N.17: ΟΧΙ tsc. N.18: `jscpd:diff` 4 αρχεία → 0 clones.
+  - **ΑΠΟΤΕΛΕΣΜΑ (ground-truth Giorgio 2026-07-22): ΤΟ BAMBOO ΕΜΦΑΝΙΣΤΗΚΕ.** Το self-heal έτρεξε στο ghost
+    `bmat_8bddb84b-c21f-43c9-8121-6e902540e516` (κολώνα `col_bb83d00a`): re-import → `getMetadata` βρήκε το albedo
+    απρόσιτο → **repair στο ίδιο id** → **νέο token** (`c20b99a7…` αντί `312f2857…`, `updatedAt` +~33′) → ο browser
+    φορτώνει την υφή, η κολώνα βγήκε bamboo. Κανένα διπλότυπο, κανένα manual delete.
+  - **⚠️ Διόρθωση προηγούμενης υπόθεσης (100% ειλικρίνεια):** ο admin `mcp__firestore__storage_list_files` έδειχνε
+    **0 files** στο `…/bim-material-textures/` **ΚΑΙ** μετά την επιτυχή repair, ενώ ο browser φορτώνει κανονικά. Άρα
+    το `storage_list_files` ήταν **false negative** για αυτό το bucket/path σε ΟΛΗ τη διερεύνηση — το «file truly
+    absent» στηρίχτηκε σ' αυτό και ήταν **αναξιόπιστο**. Το έγκυρο σήμα ήταν το client `getMetadata` (που οδήγησε το
+    self-heal). Η αρχική 403 ήταν πιθανότατα **stale/invalid download token** (ή absent first-upload) που έμενε
+    sticky επειδή το re-import προσπερνούσε το γνωστό υλικό· το σπάσιμο της stickiness (self-heal) το έλυσε. Το
+    Network tab **δεν** είναι πλέον blocker — το σύμπτωμα λύθηκε.
+
 - **2026-07-21 (Φ2 Βήμα 3 🅰️ — texture upload ξένων υφών: `<library_images>` → νέο `bmat_*` → per-face βαφή)** —
   **Πρόβλημα (μετρημένο):** ο συνεργάτης βάζει **νέα υφή** από τον δίσκο του (π.χ. `Ξερό-bark-21.jpg`) σε μια όψη
   στον C4D. Ο browser δεν διαβάζει `file://`· ο `.dae` parser **αγνοούσε** τις υφές (textured effect → `colorHex:
