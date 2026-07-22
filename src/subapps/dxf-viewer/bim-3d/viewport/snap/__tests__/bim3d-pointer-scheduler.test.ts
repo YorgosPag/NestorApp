@@ -139,27 +139,26 @@ describe('bim3d-pointer-scheduler — ADR-040 Φ-3D-pointer decoupling', () => {
     expect(mockRegisteredIsDirty?.()).toBe(false); // dirty cleared after a settled run
   });
 
-  it('DECOUPLED (ADR-549 Φ2): the unified hover id updates LIVE while sweeping; only the BIM silhouette defers (ADR-366 §B.5)', () => {
+  it('LIVE silhouette (Giorgio 2026-07-22 «Β»): the BIM silhouette paints IMMEDIATELY on hover-id change — no refine-on-settle', () => {
     mockBimHit = { bimId: 'c1', bimType: 'column', worldPoint: WORLD };
 
-    // Pick FIRES right after a move (cursor still sweeping). The cheap unified hover id (drives the
-    // Canvas2D glow) updates LIVE — like the snap glyph — so the highlight never sticks on a stale
-    // entity. The heavy BIM silhouette WebGL re-render is DEFERRED and the slot stays armed.
+    // Pick FIRES right after a move (cursor still sweeping). With the LIVE silhouette the heavy BIM
+    // silhouette WebGL re-render is applied ON THE SPOT — no deferral, no 350ms SHADOW_SETTLE wait.
+    // Throttled only by HOVER_HITTEST (50ms) → the slot disarms after each pick (nothing pending).
     requestPointerPick({ manager, clientX: 50, clientY: 50 });
     mockRegisteredCb?.();
-    expect(mockSetSnap).toHaveBeenCalledWith({ view: {}, elevMm: 0 }); // snap live while sweeping
-    expect(mockSetHoveredEntity).toHaveBeenCalledWith('c1');           // hover id LIVE while sweeping
-    expect(mockApplyBimHover).not.toHaveBeenCalled();                  // silhouette deferred
-    expect(markSceneDirty).not.toHaveBeenCalled();                     // no WebGL re-render while sweeping
-    expect(mockRegisteredIsDirty?.()).toBe(true);                      // re-armed → waits for settle
+    expect(mockSetSnap).toHaveBeenCalledWith({ view: {}, elevMm: 0 }); // snap live
+    expect(mockSetHoveredEntity).toHaveBeenCalledWith('c1');           // hover id live
+    expect(mockApplyBimHover).toHaveBeenCalledWith(hoverHighlighter, 'c1'); // silhouette LIVE
+    expect(markSceneDirty).toHaveBeenCalledTimes(1);                   // one WebGL re-render, immediately
+    expect(mockRegisteredIsDirty?.()).toBe(false);                     // nothing deferred → slot disarmed
 
-    // Cursor settles (no further moves): the next pick past SHADOW_SETTLE applies the silhouette once.
+    // A later pick with the SAME id → no redundant re-render (id-change guard holds).
     nowMs += SETTLE_MS + 50;
     mockRegisteredCb?.();
-    expect(mockApplyBimHover).toHaveBeenCalledWith(hoverHighlighter, 'c1');
+    expect(mockApplyBimHover).toHaveBeenCalledTimes(1);
     expect(markSceneDirty).toHaveBeenCalledTimes(1);
     expect(mockSetHoveredEntity).toHaveBeenCalledTimes(1); // id unchanged → not written again
-    expect(mockRegisteredIsDirty?.()).toBe(false); // settled → slot disarmed
   });
 
   it('DXF-only hover updates the glow id live with ZERO WebGL re-render (Canvas2D overlay — ADR-549 Φ2)', () => {

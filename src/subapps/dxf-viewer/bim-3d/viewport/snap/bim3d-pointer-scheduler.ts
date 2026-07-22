@@ -11,7 +11,7 @@
  * latest cursor position (cheap: store + flag) and returns immediately — the crosshair (driven
  * imperatively by `BimCrosshairOverlay3D`'s window listener) stays 1:1. The heavy pick then runs in
  * a SEPARATE frame slot on the EXISTING RAF SSoT (`UnifiedFrameScheduler`), at most once per
- * `HOVER_HITTEST` window, coalescing intermediate moves. The pick is UNIFIED: ONE BVH-accelerated
+ * `BIM3D_HOVER_PICK` window, coalescing intermediate moves. The pick is UNIFIED: ONE BVH-accelerated
  * raycast (`raycastBimHitAndWorld`) drives BOTH the hover silhouette (ADR-538) AND the snap marker
  * (ADR-542, reusing the same world point — no second raycast).
  *
@@ -32,7 +32,7 @@ import { getDxfFloorScope } from '../../scene/dxf-3d-floor-scope';
 import { pickDxfEntityAcrossFloors } from '../../grips/dxf-wireframe-hit-test';
 import { raycastBimHitAndWorld } from '../../systems/raycaster/BimEntityRaycaster';
 import { ensureBoundsTrees } from '../../systems/raycaster/bvh-setup';
-import { markPointerMoved, isPointerActive } from '../../systems/pointer-activity';
+import { markPointerMoved } from '../../systems/pointer-activity';
 import { computeSnap3DHover } from './bim-3d-snap-hover';
 // ADR-366 §B.2.Q1 follow-up — live X/Y/Z status-bar readout, fed from THIS pick's hit world point.
 import { updateBim3DCursorReadout } from '../bim3d-cursor-readout-writer';
@@ -63,8 +63,9 @@ let lastBimHoverId: string | null = null;
 
 /**
  * The heavy work — runs in the RAF slot, NEVER inside the mousemove handler.
- * Returns `true` when a hover-highlight refresh is PENDING (deferred because the cursor is
- * still sweeping) so the scheduler keeps ticking until the cursor settles — see `onPickFrame`.
+ * Always returns `false`: with the LIVE silhouette (Giorgio 2026-07-22 «Β») each pick paints
+ * immediately, so there is no deferred refresh to keep the scheduler ticking. The boolean is
+ * kept so `onPickFrame` can re-arm if a future refine-on-settle mode returns.
  */
 function runPick(input: Bim3DPickInput): boolean {
   const { manager, clientX, clientY } = input;
@@ -130,32 +131,25 @@ function runPick(input: Bim3DPickInput): boolean {
     setHoveredEntity(hoverId);
   }
 
-  // ADR-366 §B.5 — REFINE-ON-SETTLE for the BIM SILHOUETTE ONLY: `applyBimHover` + `markSceneDirty`
-  // are a FULL-scene WebGL re-render (heavy at fullscreen on a weak GPU). While the cursor is still
-  // sweeping we DEFER it — we do NOT advance `lastBimHoverId`, so the change stays pending and is
-  // applied once the cursor settles. Big-player CAD (Revit/Cinema4D): the silhouette resolves on
-  // settle, not on every entity flown over. (Pure-DXF hover keeps `bimHoverId` null → no WebGL
-  // re-render at all, since the glow is Canvas2D.)
-  //
-  // COALESCE WITH SHADOW SETTLE (2026-06-28): the settle window is SHADOW_SETTLE (not the shorter
-  // POINTER_SETTLE) so this deferred render fires at the SAME moment the adaptive shadows turn back
-  // ON — collapsing an unshadowed hover frame + a later shadowed frame into ONE shadowed render.
-  let resettlePending = false;
+  // LIVE BIM SILHOUETTE (Giorgio 2026-07-22, «Β» — αντικαθιστά το refine-on-settle των ADR-549 Φ2 /
+  // ADR-366 §B.5): the hover silhouette now paints IMMEDIATELY on every hover-id change — no 350ms
+  // SHADOW_SETTLE wait, so το κίτρινο περίγραμμα ανάβει ακαριαία. `applyBimHover` + `markSceneDirty`
+  // are a FULL-scene WebGL re-render, but the scheduler's BIM3D_HOVER_PICK throttle (16ms / 60fps)
+  // caps it to the RAF cadence even during a fast sweep. Trades the old «coalesce with shadow-on»
+  // single settle frame for instant response. (Pure-DXF hover keeps `bimHoverId` null → no WebGL
+  // re-render; the glow is Canvas2D and already live.) REVERTIBLE: restore the refine-on-settle
+  // block + `isPointerActive(now, SHADOW_SETTLE)` gate for option «Α» (dedicated short settle).
   if (bimHoverId !== lastBimHoverId) {
-    if (isPointerActive(performance.now(), DXF_TIMING.gesture.SHADOW_SETTLE)) {
-      resettlePending = true; // keep ticking; apply once the cursor stops
-    } else {
-      lastBimHoverId = bimHoverId;
-      applyBimHover(manager.hoverHighlighter, bimHoverId);
-      manager.markSceneDirty();
-    }
+    lastBimHoverId = bimHoverId;
+    applyBimHover(manager.hoverHighlighter, bimHoverId);
+    manager.markSceneDirty();
   }
 
   // ADR-544 — while a placement/measure tool owns the snap glyph, the hover-handler yields. ADR-680:
   // `dist` (3D «Μέτρηση») is the sole snap-glyph owner while active — its hook raycasts the DXF
   // FLOOR plane too (not just the BIM group), so it snaps to DXF endpoint/midpoint on the plan
   // underlay, which THIS BIM-only raycast would miss (→ null clobbering the correct floor snap).
-  if (placing === 'column' || placing === 'wall' || placing === 'dist') return resettlePending;
+  if (placing === 'column' || placing === 'wall' || placing === 'dist') return false;
 
   // ADR-542 — snap marker reuses the SAME world point from the unified raycast (no 2nd raycast).
   const tSnap = performance.now(); // 🔬 ADR-549 Phase 0.3
@@ -164,20 +158,20 @@ function runPick(input: Bim3DPickInput): boolean {
     : null;
   recordOverlayDraw('pick:snap', performance.now() - tSnap); // 🔬
   useSnap3DOverlayStore.getState().setSnap(snap);
-  return resettlePending;
+  return false;
 }
 
 /**
  * Frame callback registered ONCE with the UnifiedFrameScheduler. Runs only while `dirty`; applies
- * the `HOVER_HITTEST` throttle (same ~20fps cadence as the old inline pick) and keeps `dirty` set
- * when throttled so the scheduler retries next frame. Errors are swallowed — a pick must never
- * break the shared frame loop.
+ * the `BIM3D_HOVER_PICK` throttle (60fps — follows the refresh rate for instant hover) and keeps
+ * `dirty` set when throttled so the scheduler retries next frame. Errors are swallowed — a pick must
+ * never break the shared frame loop.
  */
 function onPickFrame(): void {
   const input = latest;
   if (!input) { dirty = false; return; }
   const now = performance.now();
-  if (now - lastRunMs < DXF_TIMING.frame.HOVER_HITTEST) return; // retry next frame
+  if (now - lastRunMs < DXF_TIMING.frame.BIM3D_HOVER_PICK) return; // retry next frame
   lastRunMs = now;
   dirty = false;
   try {

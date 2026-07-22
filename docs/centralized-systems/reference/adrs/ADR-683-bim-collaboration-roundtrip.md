@@ -377,6 +377,26 @@ SketchUp mm/cm/in/ft/m, C4D scale multiplier) — **ΠΟΤΕ silent bbox auto-re
 
 ## 11. Changelog
 
+- **2026-07-22 (§mesh-load-orphan-race — ΕΠΙΒΕΒΑΙΩΜΕΝΟ RACE: ο query provider σωστός αλλά ανεπαρκής μόνος του → grace-window στο finalize)** —
+  Μετά το §mesh-load-orphan-cleanup, fresh re-import (uploadId `imesh_5c47f521`) **ξανασβήστηκε**: MCP → νέα
+  `ORPHAN_FILE_DELETED` (`performedBy system_onFinalize`) + `imported-meshes/` folder **εντελώς άδειο** (0 αρχεία),
+  ενώ οι 10 οντότητες της καρέκλας υπάρχουν κανονικά (όλες `params.uploadId = imesh_5c47f521`).
+  - **Το race-check του §mesh-load-orphan-cleanup ήταν ΛΑΘΟΣ:** σύγκρινε entity `createdAt` με deletion
+    `performedAt`, αλλά το `performedAt` γράφεται στο **ΤΕΛΟΣ** του CF (μετά query+delete) → **δεν** αποδεικνύει
+    ότι η οντότητα υπήρχε τη στιγμή του **query**. Πραγματική σειρά (`import-gltf-meshes.ts:103`):
+    `uploadImportedMeshFile` (→ `onFinalize` πυροδοτείται ΑΜΕΣΩΣ) → `appendEntitiesToScene` (in-memory) →
+    auto-save → Firestore write. Το query του `findFileOwner` τρέχει **πριν** committarιστεί οποιαδήποτε οντότητα
+    → `params.uploadId == fileId` = μηδέν → «orphan» → delete. **Δομικό race**, όχι απλώς «δεν έγινε deploy».
+  - **Fix (belt-and-suspenders, εντοπισμένο ΜΟΝΟ στο CF — προστατεύει ΟΛΟΥΣ τους providers):** το
+    `orphan-cleanup.ts` δεν σβήνει πλέον στο πρώτο null. `findFileOwnerWithGrace(fileId)` re-check με backoff
+    `[2000, 4000, 6000]ms` (≤12s, εντός του 30s timeout) πριν το delete → ο debounced client write προλαβαίνει
+    να landαρει. Αρχεία με eager claim (canonical `FILES` record γραμμένο μαζί με το upload) χτυπούν στο πρώτο
+    zero-delay lookup → μηδέν κόστος· μόνο τα racing async-claims + τα **γνήσια** orphans περιμένουν (τα δεύτερα
+    σβήνονται κανονικά αφού κλείσει το window). Ο `findFileOwner` **παραμένει pure lookup** (μόνος caller = το CF).
+  - **⚠️ ΑΠΑΙΤΕΙ (ξανά) DEPLOY functions** (`firebase deploy --only functions:onStorageFinalize`) — ο Giorgio.
+    Το επόμενο deploy περιέχει **και** τον query provider **και** το grace-window → οριστικό. Μετά: fresh re-import
+    → επαλήθευση μέσω MCP (καμία νέα `ORPHAN_FILE_DELETED` με το νέο uploadId + `storage_get_metadata` βρίσκει το `.glb`).
+
 - **2026-07-22 (§mesh-load-orphan-cleanup — Η ΟΡΙΣΤΙΚΗ ΡΙΖΑ: Cloud Function έσβηνε το `.glb` δευτερόλεπτα μετά το upload)** —
   Το «λείπει το αρχείο» των προηγούμενων entries **δεν** ήταν Storage wipe ούτε bucket mismatch. Το HAR
   (`localhost-2.har`) έδειξε το upload: `POST 200`, bucket `pagonis-87766.firebasestorage.app`, path
@@ -400,10 +420,10 @@ SketchUp mm/cm/in/ft/m, C4D scale multiplier) — **ΠΟΤΕ silent bbox auto-re
   - **⚠️ ΑΠΑΙΤΕΙ DEPLOY functions** (`firebase deploy --only functions:onStorageFinalize`) — ο Giorgio.
     Μέχρι τότε κάθε νέο import συνεχίζει να σβήνεται. Μετά το deploy: fresh re-import → το `.glb` επιβιώνει →
     η καρέκλα σμιλεύεται. Οι παλιές ορφανές οντότητες (με ήδη σβησμένα αρχεία) διαγράφονται από το UI.
-  - **Residual (παρακολούθηση):** το `onStorageFinalize` τρέχει μόλις ολοκληρωθεί το upload· η οντότητα
-    γράφεται στο Firestore αμέσως μετά (append→persist). Αν σε edge περίπτωση ο έλεγχος προηγηθεί του
-    entity write, ο query provider δεν θα βρει claim (race). Τα timestamps δείχνουν το entity write να
-    προηγείται· αν εμφανιστεί race, follow-up = claim-first ordering ή grace-period στο finalize.
+  - **Residual → ΕΠΙΒΕΒΑΙΩΘΗΚΕ:** αυτή ακριβώς η race («ο έλεγχος προηγείται του entity write») **συνέβη** στο
+    επόμενο re-import. Λύθηκε με grace-period στο finalize — βλ. την καταχώρηση **§mesh-load-orphan-race** στην
+    κορυφή αυτού του §11. (Το «τα timestamps δείχνουν το entity write να προηγείται» ήταν λανθασμένη ανάγνωση:
+    το deletion `performedAt` γράφεται μετά το delete, όχι στη στιγμή του query.)
 
 - **2026-07-22 (§mesh-load-missing-file — η ΠΡΑΓΜΑΤΙΚΗ αιτία του placeholder κουτιού: το `.glb` λείπει από το Storage)** —
   Μετά τα §mesh-load + §mesh-load-nesting η καρέκλα **έμεινε κουτί**. Ground-truth από τη βάση (όχι υπόθεση):

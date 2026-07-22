@@ -127,14 +127,19 @@ describe('PlacementGhostOverlay', () => {
   it('ADR-550 orderIndependent → depth-primed smooth translucency (colour blends once per pixel, no accumulation, no dots)', () => {
     const scene = new THREE.Scene();
     const overlay = new PlacementGhostOverlay(scene, 0x808080, 0.45, false, /* orderIndependent */ true);
-    // Colour material stays a translucent blend, but with depthFunc EQUAL matched to the depth prime.
+    // Colour material stays a translucent blend, but with depthFunc EQUAL matched to the depth prime
+    // AND a stencil one-write guard (NotEqual(1) → Replace 1) so coplanar faces blend only once.
     expect(overlay.material.transparent).toBe(true);
     expect(overlay.material.depthWrite).toBe(false);
     expect(overlay.material.depthFunc).toBe(THREE.EqualDepth);
     expect(overlay.material.opacity).toBe(0.45);
+    expect(overlay.material.stencilWrite).toBe(true);
+    expect(overlay.material.stencilFunc).toBe(THREE.NotEqualStencilFunc);
+    expect(overlay.material.stencilRef).toBe(1);
+    expect(overlay.material.stencilZPass).toBe(THREE.ReplaceStencilOp);
 
-    // setObject adds a depth-prime twin per mesh (opaque, colorWrite OFF, depthWrite ON) so the
-    // colour pass has a nearest-depth to match — the single-render two-pass that kills accumulation.
+    // setObject adds a depth-prime twin per mesh (opaque, colorWrite OFF, depthWrite ON) that also
+    // resets the ghost region's stencil to 0 (Always → Replace 0) so the colour pass starts clean.
     const { root } = buildTree(); // one Mesh (body) + one LineSegments (not a mesh)
     overlay.setObject(root);
     const twins: THREE.Object3D[] = [];
@@ -143,6 +148,9 @@ describe('PlacementGhostOverlay', () => {
     const twinMat = (twins[0] as THREE.Mesh).material as THREE.MeshBasicMaterial;
     expect(twinMat.colorWrite).toBe(false);
     expect(twinMat.depthWrite).toBe(true);
+    expect(twinMat.stencilWrite).toBe(true);
+    expect(twinMat.stencilFunc).toBe(THREE.AlwaysStencilFunc);
+    expect(twinMat.stencilRef).toBe(0);
   });
 
   it('default (blend) path is unchanged — translucent, non-depth-writing, default depthFunc, no twins', () => {
@@ -156,6 +164,30 @@ describe('PlacementGhostOverlay', () => {
     const twins: THREE.Object3D[] = [];
     root.traverse((o) => { if ((o.userData as Record<string, unknown>)['ghostDepthPrimeTwin'] === true) twins.push(o); });
     expect(twins).toHaveLength(0);
+  });
+
+  it('ADR-668 — screen-space decorations (edge overlays) are HIDDEN, never painted as ghost fill (σκουπίδι guard)', () => {
+    const scene = new THREE.Scene();
+    const overlay = new PlacementGhostOverlay(scene, 0x808080, 0.45);
+    const root = new THREE.Group();
+    const solid = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial());
+    // A BIM edge overlay (ADR-375 `attachEdgeOverlay`) — tagged, and a fat-line primitive.
+    const taggedEdge = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial());
+    taggedEdge.userData['bimEdgeOverlay'] = true;
+    const fatLine = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial());
+    (fatLine as unknown as { isLineSegments2: boolean }).isLineSegments2 = true;
+    root.add(solid, taggedEdge, fatLine);
+
+    overlay.setObject(root);
+
+    // Real solid: painted with the ghost fill, stays visible.
+    expect(solid.material).toBe(overlay.material);
+    expect(solid.visible).toBe(true);
+    // Decorations: hidden (so they never render as «σκουπίδι») and NOT repainted with the fill.
+    expect(taggedEdge.visible).toBe(false);
+    expect(taggedEdge.material).not.toBe(overlay.material);
+    expect(fatLine.visible).toBe(false);
+    expect(fatLine.material).not.toBe(overlay.material);
   });
 
   it('dispose unregisters the provider and clears the scene', () => {

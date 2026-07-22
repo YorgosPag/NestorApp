@@ -18,10 +18,15 @@
 import type * as THREE from 'three';
 
 /**
- * Screen-space decoration; ΠΟΤΕ εξαγώγιμο solid. Ο ρητός marker (`bimEdgeOverlay`) καλύπτει τα BIM
- * edge overlays· τα line-primitive flags πιάνουν κάθε άλλη γραμμή/ακμή που θα κληρονομούσε `isMesh`.
+ * Screen-space decoration; ΠΟΤΕ εξαγώγιμο solid ΟΥΤΕ ghost-fill. Ο ρητός marker (`bimEdgeOverlay`)
+ * καλύπτει τα BIM edge overlays· τα line-primitive flags πιάνουν κάθε άλλη γραμμή/ακμή που θα
+ * κληρονομούσε `isMesh` (`LineSegments2`/`Line2` extend `THREE.Mesh`).
+ *
+ * SSoT (ADR-668 §4.7) — μοιράζεται με το edit «original-stays-behind» ghost (ADR-550): το ghost
+ * έβαφε αυτά τα line-overlays με το translucent `MeshBasicMaterial` του → render-άρονταν ως «σκουπίδι»
+ * (μια λεπτή κάθετη επιφάνεια). Ίδιο root cause με το C4D export twin· μία πηγή αλήθειας.
  */
-function isExportDecoration(node: THREE.Object3D): boolean {
+export function isScreenSpaceDecoration(node: THREE.Object3D): boolean {
   return (
     node.userData['bimEdgeOverlay'] === true ||
     (node as { isLine?: boolean }).isLine === true ||
@@ -42,7 +47,7 @@ export function stripExportDecorations(root: THREE.Object3D): number {
   // Συλλογή ΠΡΩΤΑ (μη μεταλλάσσεις το δέντρο μέσα σε traverse).
   const doomed: THREE.Object3D[] = [];
   root.traverse((node) => {
-    if (isExportDecoration(node)) doomed.push(node);
+    if (isScreenSpaceDecoration(node)) doomed.push(node);
   });
 
   for (const node of doomed) {

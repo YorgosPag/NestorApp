@@ -32,6 +32,10 @@
 import * as THREE from 'three';
 import { registerPostFxOverlay } from '../scene/post-fx-overlay-pass';
 import { disposeObjectTree } from '../scene/dispose-object-tree';
+// ADR-668 §4.7 SSoT — «is this a screen-space edge/line decoration, not a real solid?». Shared with
+// the mesh3d export (`stripExportDecorations`): the SAME `LineSegments2`-extends-`Mesh` trap that
+// leaked garbage twins into C4D exports also made this ghost paint edge overlays as «σκουπίδι».
+import { isScreenSpaceDecoration } from '../../export/core/mesh3d/mesh3d-decorations';
 // Cross-backend ghost opacity policy (shared with the 2D `GHOST_DEFAULTS.alpha`) — SSoT.
 import { GHOST_ALPHA } from '../../rendering/ghost/ghost-policy';
 
@@ -82,17 +86,29 @@ export class PlacementGhostOverlay {
     // ADR-550 — a plain translucent-blend ghost of a MULTI-LAYER solid (a stair = many stacked
     // treads/risers/waist faces along the view ray) ACCUMULATES to opaque white with
     // `depthWrite:false` (documented `post-fx-overlay-pass` failure mode: «translucent fragments
-    // accumulate to white»). The ORDER-INDEPENDENT path renders each pixel EXACTLY ONCE via a
-    // two-material depth-prime, both drawn in a SINGLE `renderer.render(root)`:
+    // accumulate to white»). The ORDER-INDEPENDENT path colours each pixel EXACTLY ONCE via a
+    // two-material depth-prime + a stencil one-write guard, both drawn in a SINGLE
+    // `renderer.render(root)`:
     //   1. depth-prime twins (`depthPrimeMaterial`, colorWrite OFF, depthWrite ON) → OPAQUE queue,
-    //      drawn FIRST (three renders opaque before transparent), writing the ghost's NEAREST depth.
-    //   2. the colour material (`depthFunc: EqualDepth`) → TRANSPARENT queue, blends ONLY where a
-    //      fragment's depth equals the primed nearest depth → each pixel is coloured once, smooth,
-    //      no accumulation, correctly occluded. `setObject` adds the twins (see `addDepthPrimeTwins`).
-    // Default (convex placement ghosts: column/wall/segment) keeps the cheaper single-material blend.
+    //      drawn FIRST (three renders opaque before transparent): write the ghost's NEAREST depth AND
+    //      reset the ghost region's stencil to 0 (`Always → Replace 0`) — self-clearing, so a prior
+    //      section-cap stencil can never wrongly gate the ghost.
+    //   2. the colour material → TRANSPARENT queue: `depthFunc:EqualDepth` keeps only the nearest
+    //      layer, and `stencil NotEqual(1) → Replace 1` blends the FIRST fragment at each pixel then
+    //      LOCKS it — so even COPLANAR flush-seated faces (a stair's waist slab + its flush tread/
+    //      riser finishes, ADR-685, all at ~one depth → the «λευκή σφήνα») can never re-accumulate.
+    //   `setObject` adds the twins (see `addDepthPrimeTwins`). Result: smooth translucency, correct
+    //   occlusion, no white blob, no dots, robust for any geometry. Default (convex placement ghosts:
+    //   column/wall/segment) keeps the cheaper single-material blend.
     if (orderIndependent) {
-      this.material = new THREE.MeshBasicMaterial({ color: colorHex, transparent: true, opacity, depthWrite: false, depthFunc: THREE.EqualDepth });
-      this.depthPrimeMaterial = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: true });
+      this.material = new THREE.MeshBasicMaterial({
+        color: colorHex, transparent: true, opacity, depthWrite: false, depthFunc: THREE.EqualDepth,
+        stencilWrite: true, stencilRef: 1, stencilFunc: THREE.NotEqualStencilFunc, stencilZPass: THREE.ReplaceStencilOp,
+      });
+      this.depthPrimeMaterial = new THREE.MeshBasicMaterial({
+        colorWrite: false, depthWrite: true,
+        stencilWrite: true, stencilRef: 0, stencilFunc: THREE.AlwaysStencilFunc, stencilZPass: THREE.ReplaceStencilOp,
+      });
     } else {
       this.material = new THREE.MeshBasicMaterial({ color: colorHex, transparent: true, opacity, depthWrite: false });
       this.depthPrimeMaterial = null;
@@ -120,15 +136,21 @@ export class PlacementGhostOverlay {
     if (this.disposed || !object) return;
     const disposePrev = opts?.disposePrevMaterials ?? false;
     object.traverse((child) => {
+      // ADR-668 §4.7 SSoT — check BEFORE wiping userData (`bimEdgeOverlay` lives there). Edge
+      // overlays (`attachEdgeOverlay` → `LineSegments2`) report `isMesh === true` (they extend
+      // THREE.Mesh) but their geometry is an instanced LINE buffer; forcing the ghost's triangle
+      // `MeshBasicMaterial` onto them renders «σκουπίδι» (a stray thin plane — «η κάθετη λεπτή
+      // οντότητα»). The ghost is a solid fill, so HIDE decorations instead of painting them.
+      const decoration = isScreenSpaceDecoration(child);
       child.userData = {};
       child.raycast = () => {};
+      if (decoration) { child.visible = false; return; }
       const mesh = child as THREE.Mesh;
-      if (mesh.isMesh) {
-        const prev = mesh.material;
-        mesh.material = this.material;
-        if (disposePrev && prev && prev !== this.material) {
-          (Array.isArray(prev) ? prev : [prev]).forEach((m) => m.dispose());
-        }
+      if (!mesh.isMesh) return;
+      const prev = mesh.material;
+      mesh.material = this.material;
+      if (disposePrev && prev && prev !== this.material) {
+        (Array.isArray(prev) ? prev : [prev]).forEach((m) => m.dispose());
       }
     });
     // ADR-550 — order-independent mode: add a depth-prime twin per mesh (drawn opaque-first) so the
@@ -147,7 +169,9 @@ export class PlacementGhostOverlay {
    */
   private addDepthPrimeTwins(root: THREE.Object3D): void {
     const meshes: THREE.Mesh[] = [];
-    root.traverse((child) => { if ((child as THREE.Mesh).isMesh) meshes.push(child as THREE.Mesh); });
+    // Only VISIBLE solid meshes get a depth-prime twin — `setObject` has already hidden every
+    // screen-space decoration (`visible=false`), so this skips edge overlays without re-checking.
+    root.traverse((child) => { if ((child as THREE.Mesh).isMesh && child.visible) meshes.push(child as THREE.Mesh); });
     for (const m of meshes) {
       const twin = new THREE.Mesh(m.geometry, this.depthPrimeMaterial ?? undefined);
       twin.position.copy(m.position);

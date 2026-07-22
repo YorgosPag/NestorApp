@@ -45,6 +45,11 @@ export const DXF_TIMING = {
     SNAP_DETECTION: 32,
     /** Entity/overlay hover hit-test throttle (20fps). */
     HOVER_HITTEST: 50,
+    /** 3D BIM hover pick throttle (60fps) — dedicated so it can follow the refresh rate for
+     *  ακαριαία κίτρινο περίγραμμα (Giorgio 2026-07-22 «Β»/pick-faster) WITHOUT slowing the shared
+     *  2D `HOVER_HITTEST`. BVH-accelerated raycast makes the per-pick cost cheap; the live silhouette
+     *  re-render is capped by the RAF loop, so 60fps pick = smoother tracking without extra renders. */
+    BIM3D_HOVER_PICK: 16,
     /** Grip hover detection throttle (10fps). */
     GRIP_HOVER: 100,
     /** Collaboration cursor broadcast inner throttle. */

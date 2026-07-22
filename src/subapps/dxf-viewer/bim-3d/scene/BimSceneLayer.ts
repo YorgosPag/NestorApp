@@ -155,7 +155,20 @@ export class BimSceneLayer {
     scope: FloorVisibilityScope,
     nextFloorElevationMm: number | undefined,
   ): SyncContext {
-    const { floors, buildings, activeBuildingId, buildingVisModes, floorVisModes } = scope;
+    // Defensive per-field normalization (big-player option-bag convention — Three.js
+    // `set(options)`, Revit API bags): a partial/absent/mis-typed scope must NEVER crash the
+    // whole render loop. Restores the resilience the pre-scope-bag signature had via per-param
+    // defaults — a stray `undefined` in `buildingVisModes.size` once took down the entire
+    // <BimViewport3D> behind its ErrorBoundary (HMR desync during the 5-param→scope-bag refactor).
+    // Defaults come from the SSoT empty scope, so `scope = []`/`{}` degrades to empty-visibility,
+    // not a throw. ADR-382 Phase C / ADR-584.
+    const {
+      floors = EMPTY_FLOOR_VIS_SCOPE.floors,
+      buildings = EMPTY_FLOOR_VIS_SCOPE.buildings,
+      activeBuildingId = EMPTY_FLOOR_VIS_SCOPE.activeBuildingId,
+      buildingVisModes = EMPTY_FLOOR_VIS_SCOPE.buildingVisModes,
+      floorVisModes = EMPTY_FLOOR_VIS_SCOPE.floorVisModes,
+    } = scope ?? EMPTY_FLOOR_VIS_SCOPE;
     const { objectStyles, disciplineVisibility, colorBySystem } = useDrawingScaleStore.getState();
     const useNewSystem = buildingVisModes.size > 0;
     const floorMode = activeLevelId ? floorVisModes.get(activeLevelId) : undefined;
