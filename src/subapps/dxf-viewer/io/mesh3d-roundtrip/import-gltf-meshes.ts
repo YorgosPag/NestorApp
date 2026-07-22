@@ -35,6 +35,7 @@ import {
 } from '../../bim-3d/library/bim-mesh-library/imported-mesh-assets';
 import type { GltfObjectRecord } from './gltf-scene-parse';
 import { gltfNodeToPlacement, type GltfPlacementContext } from './gltf-node-placement';
+import { DEFAULT_UNIT_SCALE_FACTOR, scaleWorldBoxByFactor } from './import-unit-scale';
 
 /** Ο τύπος εργαλείου που καταγράφεται στο undo/audit για αυτή τη δημιουργία. */
 const IMPORTED_MESH_TOOL = 'imported-mesh';
@@ -50,6 +51,12 @@ export interface ImportGltfMeshesInput {
   readonly projectId: string;
   /** Ο όροφος υποδοχής + η σύμβαση συντεταγμένων του (ίδια με του exporter). */
   readonly placement: GltfPlacementContext;
+  /**
+   * ADR-683 §units — πολλαπλασιαστής μονάδας του αρχείου (ρητή επιλογή χρήστη). Το glTF ορίζει μέτρα,
+   * οπότε η προεπιλογή `1` αφήνει σωστά αρχεία ανέγγιχτα· ίντσες → `0.0254`, χιλιοστά → `0.001` κ.λπ.
+   * Εφαρμόζεται στη θέση (εδώ, μέσω `scaleWorldBoxByFactor`) **και** στις μετρήσεις (στον builder).
+   */
+  readonly unitScaleFactor?: number;
   readonly layerId: string;
   readonly floorId?: string;
   readonly storeyId?: string;
@@ -100,13 +107,19 @@ export async function importGltfMeshes(
     uploadId,
   });
 
+  // ADR-683 §units — μία τιμή, κάθε owner κλιμακώνει ό,τι κατέχει: εδώ η **θέση** (worldBox × factor
+  // πριν την αντιστροφή του placement), στον builder οι **μετρήσεις**. Default 1 → μηδενική αλλαγή.
+  const factor = input.unitScaleFactor ?? DEFAULT_UNIT_SCALE_FACTOR;
+
   const sources: ImportedMeshSource[] = importable.map((record) => {
-    const { position, mountingElevationMm } = gltfNodeToPlacement(record.worldBoxM, input.placement);
+    const scaledBox = scaleWorldBoxByFactor(record.worldBoxM, factor);
+    const { position, mountingElevationMm } = gltfNodeToPlacement(scaledBox, input.placement);
     return {
       uploadId,
       storagePath,
       sourceFileName: input.sourceFileName,
       nodeName: record.objectName,
+      unitScaleFactor: factor,
       // ADR-683 Φ3.1β — το όνομα υλικού ζει ΜΟΝΟ στο φορτωμένο glTF· εδώ είναι η τελευταία στιγμή
       // που μπορεί να διασωθεί για την (μεταγενέστερη) ανάθεση κοστολόγησης.
       sourceMaterialName: record.materialName,

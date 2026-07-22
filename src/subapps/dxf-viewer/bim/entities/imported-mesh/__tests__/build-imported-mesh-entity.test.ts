@@ -108,6 +108,35 @@ describe('buildImportedMeshEntity', () => {
   });
 });
 
+describe('buildImportedMeshParams — unitScaleFactor (ADR-683 §units)', () => {
+  // Κλειστό κέλυφος ώστε να ελεγχθεί και ο όγκος (·f³). areaM2 = 4 (·f²).
+  const closedSolid: MeshSolidMeasure = { isWatertight: true, volumeM3: 0.2 };
+
+  it('ίντσες (f=0.0254): dims ×f, area ×f², volume ×f³', () => {
+    const inches: ImportedMeshSource = { ...source, solid: closedSolid, unitScaleFactor: 0.0254 };
+    const e = buildImportedMeshEntity(inches)!;
+    // sizeM = [2, 1, 0.1] «μέτρα-εξ-υποθέσεως» → width←x, depth←z, height←y, ×0.0254 ×1000 mm.
+    expect(e.params.measuredWidthMm).toBeCloseTo(2 * 0.0254 * 1000, 4);   // 50.8
+    expect(e.params.measuredDepthMm).toBeCloseTo(0.1 * 0.0254 * 1000, 4); // 2.54
+    expect(e.params.measuredHeightMm).toBeCloseTo(1 * 0.0254 * 1000, 4);  // 25.4
+    expect(e.params.measuredSurfaceAreaM2).toBeCloseTo(4 * 0.0254 ** 2, 9);
+    expect(e.params.measuredVolumeM3).toBeCloseTo(0.2 * 0.0254 ** 3, 12);
+  });
+
+  it('απών factor → 1 (καμία αλλαγή, back-compat με σωστά glTF)', () => {
+    const e = buildImportedMeshEntity({ ...source, solid: closedSolid })!;
+    expect(e.params.measuredWidthMm).toBeCloseTo(2000);
+    expect(e.params.measuredSurfaceAreaM2).toBeCloseTo(4);
+    expect(e.params.measuredVolumeM3).toBeCloseTo(0.2);
+  });
+
+  it('όγκος null παραμένει null ανεξαρτήτως factor (ανοιχτό πλέγμα)', () => {
+    // factor 0.0254 κρατά τις διαστάσεις πάνω από το MIN (βάθος 0.1m → 2.54mm)· εδώ ελέγχουμε τον όγκο.
+    const e = buildImportedMeshEntity({ ...source, unitScaleFactor: 0.0254 })!;
+    expect(e.params.measuredVolumeM3).toBeNull();
+  });
+});
+
 describe('buildImportedMeshEntities', () => {
   it('χτίζει τα καλά και ΑΝΑΦΕΡΕΙ τα παραλειφθέντα (καμία σιωπηλή απώλεια)', () => {
     const good = { ...source, nodeName: 'Rail_01' };

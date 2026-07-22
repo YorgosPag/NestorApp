@@ -1,6 +1,6 @@
 # ADR-683 — Συνεργατικό round-trip: παράδοση project σε εξωτερικό μηχανικό και επιστροφή
 
-**Status:** 🟡 IN PROGRESS — Φ1 (ADR-678) DONE · **Φ2 DONE** (glTF import + geometry fingerprint + manifest + **UI καλωδίωση**) · **per-face round-trip (ADR-678 Φ3, ΜΟΝΟ glTF) DONE 2026-07-21** (κλείνει το «🔴 ΓΝΩΣΤΟ ΟΡΙΟ» του Φ2 hotfix, βλ. §11) · **Φ3α DONE** (τύπος `imported-mesh`: 2Δ+3Δ+move/rotate, 20 anchors) · **Φ3β DONE** (καλωδίωση εισαγωγής) · **Φ3.1α DONE** (μοντέλο κοστολόγησης) · **Φ3.1β DONE** (διεπαφή ανάθεσης — ⚠️ **καμία επαλήθευση στον browser**) · Φ3.1γ (μνήμη κανόνων) / Φ4 TODO
+**Status:** 🟡 IN PROGRESS — Φ1 (ADR-678) DONE · **Φ2 DONE** (glTF import + geometry fingerprint + manifest + **UI καλωδίωση**) · **per-face round-trip (ADR-678 Φ3, ΜΟΝΟ glTF) DONE 2026-07-21** (κλείνει το «🔴 ΓΝΩΣΤΟ ΟΡΙΟ» του Φ2 hotfix, βλ. §11) · **Φ3α DONE** (τύπος `imported-mesh`: 2Δ+3Δ+move/rotate, 20 anchors) · **Φ3β DONE** (καλωδίωση εισαγωγής) · **Φ3.1α DONE** (μοντέλο κοστολόγησης) · **Φ3.1β DONE** (διεπαφή ανάθεσης — ⚠️ **καμία επαλήθευση στον browser**) · **§units DONE** (ρητή μονάδα εισαγωγής glTF, §10.5 — ⚠️ **καμία επαλήθευση στον browser**) · Φ3.1γ (μνήμη κανόνων) / Φ4 TODO
 **Date:** 2026-07-20
 **Owner:** Giorgio
 **Σχετικά:** ADR-678 (C4D material round-trip — **γίνεται η Φ1 αυτού του σχεδίου**) · **ADR-679 (PBR full parity — ιδιοκτήτης όλου του PBR/υφών· αυτό το ADR ΔΕΝ το επαναλαμβάνει)** · ADR-668 (mesh3d export OBJ/glTF) · ADR-413 (BimMaterial library + PBR textures) · ADR-539 (per-face appearance) · ADR-449 (structural finish skin) · ADR-511 (material catalog SSoT)
@@ -352,7 +352,65 @@ mapping). Ερώτημα: τα εισαγόμενα κάγκελα να προτ
 Το **ADR-679** το κατέχει ήδη (PBR channels, `PbrMaterialTextures`, texture registry,
 `pbr-material-builder`, Φ2a DONE). Η Φ5 εδώ είναι μόνο η **καλωδίωση** στο round-trip.
 
+### 10.5 ✅ Μονάδες εισαγωγής — **ρητή επιλογή, όχι auto-detect** (§units)
+
+**Πρόβλημα (μετρημένο 2026-07-22):** το `untitled.glb` (καρέκλα Aeron σε **ίντσες**, bbox ~44 units)
+εισήχθη αόρατο. Ο importer υπέθετε glTF = μέτρα → 44 units διαβάστηκαν ως **44 μέτρα** →
+`measuredHeightMm≈44180`, θέση δεκάδες χιλιάδες scene units → τερατώδες & εκτός frustum. Το
+`HMI_Aeron_Chair_3D.glb` (εξήχθη από C4D σε μέτρα) μπήκε σωστά — άρα **μόνο η κλίμακα** έφταιγε.
+
+**Research verdict (πρακτική μεγάλων — ζητήθηκε ρητά):** το glTF ορίζει 1 unit = 1 μέτρο (Khronos·
+το units-field απορρίφθηκε επίσημα, glTF #2425). Λάθος κλίμακα = bug του exporter. Ο enterprise χειρισμός
+ambiguous μονάδων είναι **ρητό dropdown μονάδας + scale factor + live preview** (Revit «Import Units»,
+SketchUp mm/cm/in/ft/m, C4D scale multiplier) — **ΠΟΤΕ silent bbox auto-rescale** (ρητό anti-pattern:
+αποτυγχάνει σε βίδες/πλοία/κτήρια). Default = μέτρα → σωστά αρχεία μένουν ανέγγιχτα.
+
+**Ροή του factor (μία τιμή, κάθε owner κλιμακώνει ό,τι κατέχει):**
+- SSoT `io/mesh3d-roundtrip/import-unit-scale.ts` — presets + `resolveUnitScaleFactor` + `scaleWorldBoxByFactor`.
+  Ο πίνακας factor **δεν** ξαναγράφεται: `unitScaleFactor(unit)` = `sceneUnitsToMeters(unit)` (SSoT `scene-units.ts`).
+- **Θέση** (owner: `import-gltf-meshes.ts`) — `scaleWorldBoxByFactor(worldBoxM, f)` πριν το `gltfNodeToPlacement`
+  (η pure placement μένει ανέγγιχτη).
+- **Μετρήσεις** (owner: `build-imported-mesh-entity.ts`) — dims ×f, εμβαδόν ×f², όγκος ×f³ (null-safe).
+  Το `signature`/fingerprint hash **δεν** αγγίζεται → σωστό reconcile στον επόμενο roundtrip.
+- **UI**: `ImportedMeshImportDialog` + `ImportUnitScaleControl` (canonical `@/components/ui/select`, ADR-001)·
+  ονόματα μονάδων από `common:units.*`· η λίστα διαστάσεων ενημερώνεται **live** καθώς αλλάζει η μονάδα.
+
 ## 11. Changelog
+
+- **2026-07-22 (§render-gate — τα εισαγόμενα πλέγματα δεν έφταναν ΠΟΤΕ στον 3Δ manager)** — Μετά τη λύση
+  των μονάδων (§units) αποκαλύφθηκε ξεχωριστό bug: τα `imported-mesh` εμφανίζονταν στο 2Δ **ως ορθογώνιο
+  κουτί** (όχι σμιλεμένο silhouette) και στο 3Δ **καθόλου**.
+  - **Ρίζα (γειωμένη με grep SSOT audit, όχι το building gate που υποψιαζόταν το handoff):** το single-floor
+    `resyncBimScene` (`bim-3d/scene/bim3d-resync.ts`) ξανάγραφε **με το χέρι** το object literal των entity
+    slices που περνά στο `manager.syncBimEntities(...)` και είχε **ξεχάσει το `importedMeshes`** (προστέθηκε
+    στο Φ3· τα `furnitures`/`genericSolids`/… υπήρχαν). Άρα `entities.importedMeshes` = undefined → ο point-
+    contract (`bim-scene-point-contracts.ts:114`) δεν χτίζε τίποτα → **3Δ κενό**. Και επειδή ο 3Δ converter
+    (`meshToObject3D`) είναι ο **μόνος** που καλεί `bimMeshCache.preload()`, ο cache δεν γέμιζε ποτέ → το 2Δ
+    `ImportedMeshRenderer` δεν έβρισκε silhouette → **κολλούσε στο bbox κουτί**. Ένα κενό, δύο συμπτώματα.
+  - **Fix (full SSoT):** αντικατάσταση του drift-prone hand-literal με τον υπάρχοντα typed selector
+    `selectBim3DEntities(s)` (`Bim3DEntitiesStore.ts`). Ο selector απαιτεί **ΟΛΑ** τα slices του
+    `Bim3DEntities`, άρα καμία μελλοντική οικογένεια οντοτήτων δεν μπορεί να ξεχαστεί ξανά — ίδια anti-drift
+    εγγύηση με το `EMPTY_BIM_ENTITIES` (N.18). Το multi-floor path (`extract-bim3d-entities.ts:48`) περιλάμβανε
+    ήδη τα imported meshes → μόνο το single-floor είχε σπάσει· τώρα τα δύο μονοπάτια συμφωνούν.
+  - **Διερευνήθηκαν & απορρίφθηκαν ως αίτια (τίμια):** (α) το 3Δ building/floor visibility gate
+    (`shouldRender`/`activeBuildingId`) — το furniture χρησιμοποιεί **ίδιο** floor-chain (`floorId`→floor→
+    building) και δουλεύει, άρα το gate δεν φταίει· καμία αλλαγή σε shared visibility logic. (β) threading
+    `storeyId` — το `floorId` ήδη περνά και είναι η ίδια τιμή (`resolveEntityBuilding` κάνει `storeyId ?? floorId`).
+    (γ) category `'imported-mesh'` vs `'imported'` — δύο διαφορετικοί άξονες (V/G vs storage folder), και οι δύο
+    σωστοί· latent type-hygiene ήδη τεκμηριωμένο στο `resolve-entity-bim-category.ts`, άσχετο εδώ.
+  - **Test:** νέο `bim-3d/scene/__tests__/bim3d-resync.test.ts` (3 tests, πράσινα) — regression anchor με τον
+    ΠΡΑΓΜΑΤΙΚΟ store+selector: single-floor resync προωθεί το `importedMeshes` slice + κάθε κλειδί του
+    `EMPTY_BIM_ENTITIES`. Το 2Δ preload δεν αποκλίνει: ο `FurnitureRenderer` επίσης δεν preload-άρει (κοινό
+    pattern — ο 3Δ converter preload-άρει, 2Δ+3Δ καταναλώνουν τον ίδιο cache).
+
+- **2026-07-22 (§units — ρητή μονάδα εισαγωγής glTF/GLB)** — Λύση του «εισαγόμενο αόρατο λόγω μονάδων»
+  (καρέκλα Aeron σε ίντσες, βλ. §10.5). Νέο SSoT `import-unit-scale.ts` (reuse `sceneUnitsToMeters` — κανένας
+  δεύτερος πίνακας factor)· ο factor ρέει σε **θέση** (`import-gltf-meshes` → `scaleWorldBoxByFactor` πριν το
+  placement) και **μετρήσεις** (`build-imported-mesh-entity`: dims ×f, area ×f², volume ×f³ null-safe, χωρίς
+  να αγγίζει το fingerprint hash). UI: `ImportUnitScaleControl` (dropdown 5 μονάδες + custom + live preview)
+  στο `ImportedMeshImportDialog`, default = μέτρα. i18n: ονόματα από `common:units.*`, context κλειδιά στο
+  `c4dMaterialImport.importMeshes.*` (el+en). **Auto-detect απορρίφθηκε ρητά** (anti-pattern των μεγάλων).
+  Το `untitled.glb` δεν πειράχτηκε — το αρχείο είναι έγκυρο, ο χειρισμός μονάδων ήταν το κενό.
 
 - **2026-07-21 (ADR-678 Φ3 — per-face material round-trip, ΜΟΝΟ glTF· κλείνει το «🔴 ΓΝΩΣΤΟ ΟΡΙΟ»
   του hotfix παρακάτω)** — Ιδιοκτησία αυτής της φάσης: **ADR-678** (πώς ταξιδεύει ένα υλικό),

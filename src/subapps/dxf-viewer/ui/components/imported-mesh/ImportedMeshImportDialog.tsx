@@ -34,6 +34,13 @@ import { useLevels } from '../../../systems/levels';
 import { useNotifications } from '../../../../../providers/NotificationProvider';
 import type { GltfObjectRecord } from '../../../io/mesh3d-roundtrip/gltf-scene-parse';
 import { importGltfMeshes, isImportableNode } from '../../../io/mesh3d-roundtrip/import-gltf-meshes';
+import {
+  DEFAULT_IMPORT_UNIT,
+  DEFAULT_UNIT_SCALE_FACTOR,
+  resolveUnitScaleFactor,
+  type ImportUnitSelection,
+} from '../../../io/mesh3d-roundtrip/import-unit-scale';
+import { ImportUnitScaleControl } from './ImportUnitScaleControl';
 import { useImportedMeshPlacementContext } from './useImportedMeshPlacementContext';
 
 const M_TO_MM = 1000;
@@ -48,12 +55,18 @@ export interface ImportedMeshImportDialogProps {
   readonly onClose: () => void;
 }
 
-/** «2000 × 100 × 900 mm» — από το ήδη μετρημένο `sizeM` (tuple m), χωρίς νέα γεωμετρία. */
-function formatSize(record: GltfObjectRecord): string {
+/**
+ * «2000 × 100 × 900 mm» — από το ήδη μετρημένο `sizeM` (tuple m), χωρίς νέα γεωμετρία.
+ *
+ * Ο `factor` κλιμακώνει **live**: το `sizeM` μετρήθηκε ως μέτρα (glTF standard), οπότε με μονάδα «Ίντσες»
+ * (factor 0.0254) ο χρήστης βλέπει αμέσως «1117 mm» = «μοιάζει σωστό», πριν πατήσει Εισαγωγή (ADR-683 §units).
+ */
+function formatSize(record: GltfObjectRecord, factor: number): string {
   const size = record.fingerprint?.signature.sizeM;
   if (!size) return '—';
   const [x, y, z] = size;
-  return `${Math.round(x * M_TO_MM)} × ${Math.round(z * M_TO_MM)} × ${Math.round(y * M_TO_MM)} mm`;
+  const mm = (v: number) => Math.round(v * factor * M_TO_MM);
+  return `${mm(x)} × ${mm(z)} × ${mm(y)} mm`;
 }
 
 export function ImportedMeshImportDialog({
@@ -76,6 +89,15 @@ export function ImportedMeshImportDialog({
     () => new Set(importable.map((r) => r.objectName)),
   );
   const [busy, setBusy] = useState(false);
+
+  // ADR-683 §units — ρητή μονάδα αρχείου. Default = μέτρα (glTF standard) → σωστά αρχεία δεν χρειάζονται
+  // καμία ενέργεια· η επιλογή τροφοδοτεί ΚΑΙ τη live προεπισκόπηση διαστάσεων ΚΑΙ την τελική εισαγωγή.
+  const [unitSelection, setUnitSelection] = useState<ImportUnitSelection>(DEFAULT_IMPORT_UNIT);
+  const [customFactor, setCustomFactor] = useState<number>(DEFAULT_UNIT_SCALE_FACTOR);
+  const unitScaleFactor = useMemo(
+    () => resolveUnitScaleFactor(unitSelection, customFactor),
+    [unitSelection, customFactor],
+  );
 
   const toggle = useCallback((name: string) => {
     setSelected((prev) => {
@@ -111,6 +133,7 @@ export function ImportedMeshImportDialog({
         companyId,
         projectId,
         placement,
+        unitScaleFactor,
         layerId,
         floorId,
       });
@@ -128,7 +151,7 @@ export function ImportedMeshImportDialog({
     }
   }, [
     projectId, companyId, layerId, floorId, importable, selected, levels, data,
-    sourceFileName, placement, notifications, t, onClose,
+    sourceFileName, placement, unitScaleFactor, notifications, t, onClose,
   ]);
 
   const allSelected = selected.size === importable.length && importable.length > 0;
@@ -142,6 +165,14 @@ export function ImportedMeshImportDialog({
             {t('c4dMaterialImport.importMeshes.description')}
           </p>
         </DialogHeader>
+
+        <ImportUnitScaleControl
+          selection={unitSelection}
+          customFactor={customFactor}
+          onSelectionChange={setUnitSelection}
+          onCustomFactorChange={setCustomFactor}
+          disabled={busy}
+        />
 
         <label className="flex items-center gap-2 px-2 py-1.5 text-xs text-muted-foreground cursor-pointer">
           <Checkbox
@@ -162,7 +193,7 @@ export function ImportedMeshImportDialog({
                   aria-label={record.objectName}
                 />
                 <span className="flex-1 truncate">{record.objectName}</span>
-                <span className="text-xs text-muted-foreground tabular-nums">{formatSize(record)}</span>
+                <span className="text-xs text-muted-foreground tabular-nums">{formatSize(record, unitScaleFactor)}</span>
               </label>
             </li>
           ))}

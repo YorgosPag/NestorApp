@@ -50,6 +50,15 @@ export interface ImportedMeshSource {
   /** Ο περιγραφέας γεωμετρίας της Φ2 — από εδώ βγαίνουν οι διαστάσεις **και** το εμβαδόν. */
   readonly signature: GeometrySignature;
   /**
+   * ADR-683 §units — πολλαπλασιαστής μονάδας του αρχείου (ρητή επιλογή χρήστη). Το `signature` μετρήθηκε
+   * υποθέτοντας glTF = μέτρα· ο factor το διορθώνει σε πραγματικά μέτρα: γραμμικά για διαστάσεις (·f),
+   * τετραγωνικά για εμβαδόν (·f²), κυβικά για όγκο (·f³). Απόν → `1` (σωστό glTF, καμία αλλαγή).
+   *
+   * ⚠️ Αγγίζει **μόνο** τις μετρήσεις — ΠΟΤΕ το `signature.signature` (το fingerprint hash μένει
+   * ανεξάρτητο κλίμακας, ώστε το reconcile του επόμενου roundtrip να ταιριάζει το ίδιο σχήμα).
+   */
+  readonly unitScaleFactor?: number;
+  /**
    * ADR-683 Φ3.1 — όγκος/στεγανότητα από τα τρίγωνα (`io/mesh3d-roundtrip/mesh-solid-measure`).
    * Το μόνο μέγεθος που δεν προκύπτει από το `signature`, γιατί απαιτεί τοπολογία και όχι μόνο bbox.
    */
@@ -81,6 +90,11 @@ export function buildImportedMeshParams(source: ImportedMeshSource): ImportedMes
   // `.x/.y/.z` δίνει `undefined → NaN` και **κάθε** κόμβος απορρίπτεται σιωπηλά ως εκφυλισμένος:
   // η εισαγωγή «δουλεύει» και δεν μπαίνει τίποτα. Αποσυνθέτουμε με θέση, μία φορά, εδώ.
   const [sizeXm, sizeYm, sizeZm] = source.signature.sizeM;
+  // ADR-683 §units — ο factor διορθώνει τις «μέτρα-εξ-υποθέσεως» μετρήσεις σε πραγματικά μέτρα:
+  // γραμμικά οι διαστάσεις, τετραγωνικά το εμβαδόν, κυβικά ο όγκος. Default 1 → καμία αλλαγή.
+  const factor = source.unitScaleFactor ?? 1;
+  const areaFactor = factor * factor;
+  const volumeM3 = source.solid.volumeM3;
   const mounting = source.mountingElevationMm;
   // Το κλειδί **παραλείπεται** όταν δεν υπάρχει όνομα υλικού — ποτέ `undefined` τιμή: το Firestore
   // την απορρίπτει και το `params` γράφεται ως ενιαίο map (`updateImportedMesh`).
@@ -95,13 +109,13 @@ export function buildImportedMeshParams(source: ImportedMeshSource): ImportedMes
     position: source.position,
     // Ο συνεργάτης έδωσε τον προσανατολισμό μέσα στη γεωμετρία· δεν «διορθώνουμε» γωνία.
     rotationDeg: 0,
-    measuredWidthMm: sizeXm * M_TO_MM,
-    measuredDepthMm: sizeZm * M_TO_MM,
-    measuredHeightMm: sizeYm * M_TO_MM,
+    measuredWidthMm: sizeXm * factor * M_TO_MM,
+    measuredDepthMm: sizeZm * factor * M_TO_MM,
+    measuredHeightMm: sizeYm * factor * M_TO_MM,
     // Το εμβαδόν είναι ήδη μετρημένο στη Φ2· ο όγκος είναι `null` για ό,τι δεν είναι κλειστό
     // κέλυφος — δηλαδή για κάθε ανοιχτή γεωμετρία, όπου το κουτί θα υπερεκτιμούσε δραματικά.
-    measuredSurfaceAreaM2: source.signature.areaM2,
-    measuredVolumeM3: source.solid.volumeM3,
+    measuredSurfaceAreaM2: source.signature.areaM2 * areaFactor,
+    measuredVolumeM3: volumeM3 === null ? null : volumeM3 * factor * areaFactor,
     mountingElevationMm:
       typeof mounting === 'number' && Number.isFinite(mounting)
         ? mounting

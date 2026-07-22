@@ -19,6 +19,7 @@
 import { useViewMode3DStore } from '../stores/ViewMode3DStore';
 import {
   useBim3DEntitiesStore,
+  selectBim3DEntities,
   EMPTY_BIM_ENTITIES,
   type Bim3DEntities,
 } from '../stores/Bim3DEntitiesStore';
@@ -86,11 +87,13 @@ export function resyncBimScene(
   // `storey-ceiling` walls/columns. Read once from the dedicated store; both fall
   // back (0 / undefined) when no floor is linked, preserving legacy behaviour.
   const storey = useActiveStoreyStore.getState().context;
+  // ADR-683 §render-gate — ΜΙΑ πηγή για το πλήρες snapshot: το `selectBim3DEntities` SSoT αντί για
+  // χειρόγραφη λίστα slices. Το παλιό literal είχε ξεχάσει το `importedMeshes` (ADR-683 Φ3) → τα
+  // εισαγόμενα πλέγματα δεν έφταναν ΠΟΤΕ στον 3Δ manager (3Δ κενό) και ο cache δεν preload-άρε ποτέ
+  // (→ 2Δ κολλημένο στο bbox κουτί). Ο typed selector απαιτεί ΟΛΑ τα slices, άρα κανένα μελλοντικό
+  // slice δεν μπορεί να ξεχαστεί ξανά — ίδια εγγύηση με το EMPTY_BIM_ENTITIES (N.18 anti-drift).
   manager.syncBimEntities(
-    { walls: s.walls, columns: s.columns, beams: s.beams, foundations: s.foundations, slabs: s.slabs,
-      slabOpenings: s.slabOpenings, openings: s.openings, stairs: s.stairs,
-      fixtures: s.fixtures, panels: s.panels, manifolds: s.manifolds, radiators: s.radiators, boilers: s.boilers, waterHeaters: s.waterHeaters, railings: s.railings,
-      furnitures: s.furnitures, genericSolids: s.genericSolids, roofs: s.roofs, floorFinishes: s.floorFinishes, underfloors: s.underfloors, mepSegments: s.mepSegments, mepFittings: s.mepFittings },
+    selectBim3DEntities(s),
     storey?.floorElevationMm ?? 0,
     s.activeLevelId ?? undefined,
     buildFloorVisibilityScope(s, floorModes),
