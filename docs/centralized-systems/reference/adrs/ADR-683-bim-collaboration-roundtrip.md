@@ -403,16 +403,60 @@ vertex color**. Επιβίωσαν ΜΟΝΟ τα **ονόματα** (`HMI-_Polis
 - 2Δ: ο `ImportedMeshRenderer` παράγει παλέτα σιλουέτας από το `sourceMaterialName` (dominant) μέσω του
   **ίδιου** resolver → χρώμα υλικού αντί ουδέτερου γκρι. Άγνωστο όνομα → ουδέτερο γκρι (ως πριν).
 
-**Όρια (μελλοντικές φάσεις):** η 2Δ χρησιμοποιεί το **dominant** υλικό (per-slot 2Δ χρώμα = Φ5, απαιτεί
-per-primitive capture — τώρα κρατιέται 1 `sourceMaterialName`)· manual override UI (bind slot → `BimMaterial`
-βιβλιοθήκης, πρακτική Revit Material Mapping) = Φ6· σχηματικό βάθος/σκίαση κατ' ύψος στην κάτοψη = χωριστό.
+**Όρια (μελλοντικές φάσεις):** ~~η 2Δ χρησιμοποιεί το **dominant** υλικό (per-slot 2Δ χρώμα = Φ5)~~ →
+**Φ5 DONE, βλ. §10.7**· manual override UI (bind slot → `BimMaterial` βιβλιοθήκης, πρακτική Revit
+Material Mapping) = Φ6· σχηματικό βάθος/σκίαση κατ' ύψος στην κάτοψη = **απορρίφθηκε** (απόφαση Giorgio
+2026-07-22: κανείς μεγάλος δεν το κάνει στην κάτοψη — ακολουθούμε την πρακτική τους, poché μόνο).
 
 **Tests:** `imported-material-presets.test.ts` (26 assertions: πραγματικά ονόματα καρέκλας + σειρά + null +
 color helpers), `imported-mesh-material-enhance.test.ts` (gate με πραγματικά three.js materials: default→βάφεται,
 authored/textured→ανέγγιχτο, multi-slot ανά slot). Και τα δύο πράσινα.
 
+### 10.7 ✅ Φ5 — Per-slot 2Δ material poché (Revit/ArchiCAD κάτοψη, 2026-07-22)
+
+**Πρόβλημα:** η Φ4 έβαφε **όλη** τη σιλουέτα με το **dominant** (πρώτο) υλικό — η καρέκλα Aeron = δέρμα →
+όλο το σχήμα σκούρο. Ο Giorgio ήθελε κάθε κομμάτι στο δικό του χρώμα (βάση=μέταλλο, κάθισμα=πλέγμα,
+μπράτσα=δέρμα).
+
+**Big-player απόφαση (Giorgio: «όπως οι μεγάλοι, όσο πιο ρεαλιστικό»):** ο ρεαλισμός ζει στο **3Δ**
+(ήδη per-slot PBR από Φ4). Στην **2Δ κάτοψη** Revit/ArchiCAD κάνουν **material poché** — συμπαγές χρώμα
+υλικού ανά περιοχή, **καμία** σκίαση κατ' ύψος (αυτό ανήκει στο 3Δ/όψη/render). Επιλέχθηκε **flat solid
+color** ανά slot: το πιο ρεαλιστικό που κάνει κάτοψη, καθαρό, χωρίς οπτικό θόρυβο. Depth-shading =
+απορρίφθηκε ρητά.
+
+**Υλοποίηση (SSoT, reuse-first, μηδέν διπλότυπα, N.18 clean):**
+- **Per-slot capture στο import:** `gltf-scene-parse.ts` → νέο `collectMaterialSlots(mesh)` κρατά **όλα**
+  τα distinct ονόματα υλικών (material array + faced solids), πεδίο `GltfObjectRecord.materialSlots`. Το
+  `resolveMaterialName` (dominant) μένει για το BOQ. Ροή → `ImportedMeshSource.materialSlots` →
+  `ImportedMeshParams.materialSlots` (persisted, θεμέλιο και για Φ6).
+- **Per-slot silhouette:** `mesh-silhouette.ts` — refactor: εξήχθη ο **κοινός** πυρήνας
+  `silhouetteFromTriangles` + `collectProjectedTrisTagged` (τρίγωνα tagged ανά material slot + ύψος) +
+  `contoursFromTriangles` (**multi-component** — flood-fill συνιστωσών, τα δύο μπράτσα = δύο δαχτυλίδια).
+  Νέο `mesh-silhouette-slots.ts` → `computeTopSilhouettePerSlot(obj)`: ομαδοποιεί ανά slot, ταξινομεί
+  **painters order** (χαμηλότερο πρώτο → ψηλά καλύπτουν χαμηλά = top-down occlusion, ΟΧΙ σκίαση).
+- **Cache:** `bim-mesh-cache.ts` — `getSlotSilhouettes`, υπολογισμός **μία φορά** στο `indexTemplate`
+  (μόνο για multi-slot κόμβους· single-slot → ο renderer πέφτει στο mono μονοπάτι). Φθηνό per-frame.
+- **2Δ draw:** `mesh-silhouette-draw.ts` — νέο `drawMeshSlotSilhouettes` (reuse `makePlanToWorld` +
+  `tracePolygon`, ίδιος alignment SSoT). `ImportedMeshRenderer` → per-slot poché → mono silhouette →
+  ορθογώνιο bbox (τριπλό fallback). Κάθε slot παίρνει χρώμα από τον **ίδιο** `resolveImportedMaterialPreset`
+  με το 3Δ.
+
+**Tests:** `mesh-silhouette-slots.test.ts` (per-slot split + painters order + multi-component + single +
+empty), `gltf-scene-parse.test.ts` (+3 assertions materialSlots: multi/single/faced). Regression-clean
+(34 πράσινα στο silhouette/parse/import cluster), jscpd:diff clean.
+
 ## 11. Changelog
 
+- **2026-07-22 (§10.7 Φ5 — Per-slot 2Δ material poché)** — Η Φ4 έβαφε όλη τη σιλουέτα με το dominant
+  υλικό· τώρα κάθε material slot παίρνει το δικό του χρώμα στην κάτοψη (βάση=μέταλλο, κάθισμα=πλέγμα,
+  μπράτσα=δέρμα). Big-player απόφαση Giorgio: flat solid color poché (Revit/ArchiCAD), **όχι** σκίαση
+  κατ' ύψος (απορρίφθηκε — κανείς μεγάλος δεν το κάνει στην κάτοψη· ο ρεαλισμός ζει στο 3Δ). Per-slot
+  capture στο import (`materialSlots` σε record→source→params), refactor του `mesh-silhouette` σε κοινό
+  πυρήνα (`silhouetteFromTriangles`/`collectProjectedTrisTagged`/`contoursFromTriangles` **multi-component**),
+  νέο `mesh-silhouette-slots.ts` (`computeTopSilhouettePerSlot`, painters order), cache `getSlotSilhouettes`
+  (μία φορά στο load), `drawMeshSlotSilhouettes` + τριπλό fallback στον `ImportedMeshRenderer`. Ίδιος SSoT
+  χρώματος με το 3Δ (`resolveImportedMaterialPreset`). 34 tests πράσινα, jscpd:diff clean. Εκκρεμεί: browser
+  verify + Φ6 (manual override UI). (NO tsc, N.17.)
 - **2026-07-22 (§10.6 Φ4 — Safety-net υλικών εισαγόμενων, C4D parity)** — Επιθεώρηση partner `.glb`
   (Blender glTF I/O) απέδειξε ότι τα υλικά της καρέκλας HMI Aeron κατέρρευσαν σε default 0.8 γκρι (μόνο
   ονόματα επιβίωσαν). Νέο keyword→PBR preset SSoT (`imported-material-presets.ts`, pure, κοινό 2Δ+3Δ) +

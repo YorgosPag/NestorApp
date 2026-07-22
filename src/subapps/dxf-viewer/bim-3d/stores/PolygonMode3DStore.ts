@@ -31,16 +31,25 @@ function faceIdentity(face: SelectedFace3D): string {
 }
 
 /**
- * ADR-449 PART B Slice C — ποιο **layer** βάφει το paint: το δομικό **σώμα** (`FaceAppearance`,
- * ADR-539) ή το **δέρμα/σοβάς** (`faceOverrides`, ADR-449). ΕΝΑ picking/panel, δύο στόχοι —
- * το `PolygonMaterialPanel` δίνει toggle, το apply route-άρει ανάλογα. Default `body` (539 parity).
+ * ADR-449 Slice C / ADR-539 (Giorgio 2026-07-22) — ο τρόπος βαφής, ΤΡΙΑ mutually-exclusive modes
+ * που το `PolygonMaterialPanel` δείχνει ως τρία κουμπιά (ΣΩΜΑ | ΣΟΒΑΣ | ΠΟΛΥΓΩΝΑ):
+ *   - `body`   → **σώμα**, entity-level: drag-drop/swatch βάφει ΟΛΟ το στοιχείο (`FaceAppearance`
+ *                base `'*'`)· το κλικ στον κάμβα μένει **κανονική επιλογή οντότητας** (grips/props).
+ *   - `finish` → **σοβάς**, entity-level: βάφει ΟΛΕΣ τις κάθετες όψεις σοβά (`faceOverrides`)·
+ *                το κλικ μένει κανονική επιλογή.
+ *   - `polygon`→ **per-face** (Cinema 4D Polygon Mode): το κλικ επιλέγει όψη/τρίγωνο/υποπεριοχή,
+ *                το drag-drop βάφει τη μεμονωμένη όψη του σώματος. ΜΟΝΟ εδώ γίνεται faced render.
+ *
+ * `active` = derived (`targetLayer === 'polygon'`): κρατά ΟΛΑ τα υπάρχοντα face-picking call-sites
+ * (`shouldRenderFaced`, pointer handlers, snap scheduler, clipboard, 2D context-menu) αμετάβλητα —
+ * ενεργά μόνο σε per-face mode. Default `body` (το panel είναι πλέον ΠΑΝΤΑ ορατό στον 3D κάμβα).
  */
-export type PolygonTargetLayer = 'body' | 'finish';
+export type PolygonTargetLayer = 'body' | 'finish' | 'polygon';
 
 interface PolygonMode3DState {
-  /** True όταν το Polygon Mode είναι ενεργό (κλικ → επιλογή όψης αντί entity). */
+  /** Derived: per-face picking ενεργό (`targetLayer === 'polygon'`). Οδηγεί faced render + face pick. */
   readonly active: boolean;
-  /** ADR-449 Slice C — στόχος βαφής: σώμα (539) ή σοβάς (449). Default `body`. */
+  /** Τρόπος βαφής: σώμα (539 entity) / σοβάς (449 entity) / πολύγωνα (539 per-face). Default `body`. */
   readonly targetLayer: PolygonTargetLayer;
   /**
    * Το solid πάνω στο οποίο **άνοιξε** το Polygon Mode (primary anchor, π.χ. για framing/UX).
@@ -53,9 +62,12 @@ interface PolygonMode3DState {
   readonly selectedFaces: readonly SelectedFace3D[];
   /** Άγκυρα = η τελευταία προστιθέμενη/επιλεγμένη όψη (primary), ή null. */
   readonly selectedFace: SelectedFace3D | null;
-  /** Ρητό set του active + target solid (καθαρίζει επιλογή/target όταν off). */
+  /**
+   * Backward-compat helper (converter tests / faced-render): `true` → μπες σε per-face `polygon`
+   * mode πάνω στο `bimId`· `false` → επίστρεψε σε entity-level `body` (καθαρίζει επιλογή/target).
+   */
   setActive(active: boolean, bimId?: string | null): void;
-  /** ADR-449 Slice C — εναλλαγή στόχου βαφής (σώμα ↔ σοβάς). */
+  /** Επιλογή mode βαφής (σώμα / σοβάς / πολύγωνα). Έξοδος από `polygon` καθαρίζει τις επιλεγμένες όψεις. */
   setTargetLayer(layer: PolygonTargetLayer): void;
   /** Replace-select: αντικαθιστά το set με ΜΙΑ όψη (ή το αδειάζει με null). */
   selectFace(face: SelectedFace3D | null): void;
@@ -75,11 +87,21 @@ export const usePolygonMode3DStore = create<PolygonMode3DState>((set) => ({
   selectedFace: null,
   setActive: (active, bimId) => set((s) => ({
     active,
+    targetLayer: active ? 'polygon' : 'body',
     targetBimId: active ? (bimId ?? s.targetBimId) : null,
     selectedFaces: active ? s.selectedFaces : [],
     selectedFace: active ? s.selectedFace : null,
   })),
-  setTargetLayer: (layer) => set({ targetLayer: layer }),
+  setTargetLayer: (layer) => set((s) => {
+    const isPolygon = layer === 'polygon';
+    return {
+      targetLayer: layer,
+      active: isPolygon,
+      // Τα entity-level modes (σώμα/σοβάς) δεν κρατούν per-face επιλογή — καθάρισέ την στην έξοδο.
+      selectedFaces: isPolygon ? s.selectedFaces : [],
+      selectedFace: isPolygon ? s.selectedFace : null,
+    };
+  }),
   selectFace: (face) => set({
     selectedFaces: face ? [face] : [],
     selectedFace: face,
@@ -95,5 +117,5 @@ export const usePolygonMode3DStore = create<PolygonMode3DState>((set) => ({
     return { selectedFaces: next, selectedFace: face };
   }),
   clearFaces: () => set({ selectedFaces: [], selectedFace: null }),
-  reset: () => set({ active: false, targetBimId: null, selectedFaces: [], selectedFace: null }),
+  reset: () => set({ active: false, targetLayer: 'body', targetBimId: null, selectedFaces: [], selectedFace: null }),
 }));

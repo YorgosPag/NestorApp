@@ -87,6 +87,48 @@ describe('applyImportedMeshMaterials — multi-slot mesh (η καρέκλα = 4 
   });
 });
 
+// ADR-686 — user appearance override νικά το preset/embedded (κοινό `resolveFaceMaterial` SSoT).
+describe('applyImportedMeshMaterials — appearance override (ADR-686)', () => {
+  it('base override (*) βάφει ΟΛΑ τα slots με το χρώμα (ΣΩΜΑ)', () => {
+    const metal = defaultGray('HMI-_Polished_Al');
+    const leather = defaultGray('HMI-Aeron-Leathe');
+    const mesh = meshWith([metal, leather]);
+    applyImportedMeshMaterials(mesh, { '*': { colorHex: '#ff0000' } });
+    const slots = mesh.material as THREE.MeshStandardMaterial[];
+    expect(slots[0]).not.toBe(metal);
+    expect(slots[0].color.getHexString()).toBe('ff0000');
+    expect(slots[1].color.getHexString()).toBe('ff0000');
+  });
+
+  it('per-slot override (slot:name) βάφει ΜΟΝΟ το matching slot (ΠΟΛΥΓΩΝΑ)', () => {
+    const arm = defaultGray('Arm');
+    // authored σκούρο + άγνωστο όνομα → χωρίς override + gate #1 false → μένει ανέγγιχτο.
+    const seat = new THREE.MeshStandardMaterial({ name: 'ZZ_Unknown', color: 0x141210, metalness: 0, roughness: 0.5 });
+    const mesh = meshWith([arm, seat]);
+    applyImportedMeshMaterials(mesh, { 'slot:Arm': { colorHex: '#00ff00' } });
+    const slots = mesh.material as THREE.MeshStandardMaterial[];
+    expect(slots[0].color.getHexString()).toBe('00ff00'); // Arm βάφτηκε (override)
+    expect(slots[1]).toBe(seat);                          // Seat ανέγγιχτο (χωρίς override)
+  });
+
+  it('override κλωνοποιεί κρατώντας το side της πηγής (partner DoubleSide → όχι τρύπες)', () => {
+    const src = defaultGray('Arm');
+    src.side = THREE.DoubleSide;
+    const mesh = meshWith(src);
+    applyImportedMeshMaterials(mesh, { 'slot:Arm': { colorHex: '#123456' } });
+    const result = mesh.material as THREE.MeshStandardMaterial;
+    expect(result).not.toBe(src);
+    expect(result.side).toBe(THREE.DoubleSide);
+  });
+
+  it('χωρίς override → αμετάβλητη preset συμπεριφορά (undefined faceAppearance)', () => {
+    const metal = defaultGray('HMI-_Polished_Al');
+    const mesh = meshWith(metal);
+    applyImportedMeshMaterials(mesh, undefined);
+    expect((mesh.material as THREE.MeshStandardMaterial).metalness).toBeCloseTo(0.9, 5);
+  });
+});
+
 describe('applyImportedMeshMaterials — placeholder / κενά', () => {
   it('no-op σε mesh χωρίς όνομα υλικού (placeholder κουτί)', () => {
     const placeholder = defaultGray('');

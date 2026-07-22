@@ -44,6 +44,7 @@ function record(overrides: Partial<GltfObjectRecord> = {}): GltfObjectRecord {
   return {
     objectName: 'Rail_01',
     materialName: 'Aluminium',
+    materialSlots: ['Aluminium'],
     fingerprint: {
       hash: 'abcdef0123456789',
       signature: {

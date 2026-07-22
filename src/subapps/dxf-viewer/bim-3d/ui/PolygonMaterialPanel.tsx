@@ -40,10 +40,11 @@ import { applyFaceAppearanceToFaces } from './apply-face-appearance';
 import { applyEntityFaceAppearanceMap } from './apply-entity-face-appearance-map';
 import { BIM_MATERIAL_MIME, serializeFaceAppearanceDrag } from './polygon-material-dnd';
 // ADR-449 PART B Slice C — «Σοβάς» layer: ίδιο picking/panel/dialog, route στο faceOverrides.
-import { applyFinishFaceOverrideToFaces } from './apply-finish-face-override';
+import { applyFinishToWholeElement, faceAppearanceToFinishOverride } from './apply-finish-face-override';
+// ADR-539 (Giorgio 2026-07-22) — entity-level modes (ΣΩΜΑ/ΣΟΒΑΣ) βάφουν την ΕΠΙΛΕΓΜΕΝΗ οντότητα.
+import { useSelection3DStore } from '../stores/Selection3DStore';
 import { FINISH_MATERIAL_OPTIONS } from '../../ui/ribbon/hooks/bridge/finish-param';
 import { getMaterialFlatColorHex } from '../../bim/materials/material-catalog-defs';
-import type { FinishFaceOverride } from '../../bim/finishes/structural-finish-types';
 // ADR-679 Φ2b / ADR-539 Φ4d — BODY layer textured swatches (catalog + user bmat_* library).
 import { useMaterialLibrary } from '../../ui/panels/materials/hooks/useMaterialLibrary';
 import { constructionMaterialLabelKey } from '../../bim/materials/construction-materials';
@@ -116,15 +117,6 @@ function buildBodySwatches(library: readonly BimMaterial[], t: TFunction): Swatc
   return [...catalog, ...fromLibrary, ...flatPaints];
 }
 
-/**
- * ADR-449 Slice C — `FaceAppearance` (panel) → `FinishFaceOverride` (σοβάς). `colorHex` του
- * panel = `colorOverride` του σοβά· `materialId` περνά αυτούσιο. `null` → clear.
- */
-function toFinishOverride(value: FaceAppearance | null): FinishFaceOverride | null {
-  if (!value) return null;
-  return value.colorHex ? { colorOverride: value.colorHex } : { materialId: value.materialId };
-}
-
 export function PolygonMaterialPanel() {
   const { t } = useTranslation(['bim3d', 'dxf-viewer-shell']);
   const levels = useLevelsOptional();
@@ -139,46 +131,50 @@ export function PolygonMaterialPanel() {
     userId: user?.uid,
     projectId: hierarchy?.selectedProject?.id ?? undefined,
   });
-  const active = usePolygonMode3DStore((s) => s.active);
   const selectedFaces = usePolygonMode3DStore((s) => s.selectedFaces);
-  const targetBimId = usePolygonMode3DStore((s) => s.targetBimId);
   const targetLayer = usePolygonMode3DStore((s) => s.targetLayer);
   const setTargetLayer = usePolygonMode3DStore((s) => s.setTargetLayer);
+  // ADR-539 (Giorgio 2026-07-22) — στα entity-level modes (ΣΩΜΑ/ΣΟΒΑΣ) το swatch click βάφει την
+  // κανονική 3D επιλογή· στο ΠΟΛΥΓΩΝΑ mode χρησιμεύει ως «όλο το στοιχείο» fallback (καμία όψη).
+  const selectedBimId = useSelection3DStore((s) => s.selectedBimId);
   const [colorOpen, setColorOpen] = useState(false);
   const [customHex, setCustomHex] = useState(DEFAULT_CUSTOM_COLOR);
 
-  if (!active) return null;
-
+  // Panel ΠΑΝΤΑ ορατό στον 3D κάμβα (Giorgio 2026-07-22): κανένα `active` gate — μπαίνεις στο 3D
+  // και τα υλικά είναι αμέσως εκεί (Cinema 4D Material Manager), χωρίς επιλογή/κουμπί «Όψεις».
+  const isPolygon = targetLayer === 'polygon';
   const isFinish = targetLayer === 'finish';
 
   /**
-   * Apply — Revit/Cinema 4D «base + override» μοντέλο, ΕΝΑ tool, δύο layers (Slice C):
-   *   - **Σώμα** (539): N όψεις → per-face· καμία όψη → ΟΛΟ το στοιχείο (base `'*'`).
-   *   - **Σοβάς** (449): ΜΟΝΟ per-face (το override είναι ανά ακμή· δεν υπάρχει base «όλο»)
-   *     → route στο `applyFinishFaceOverrideToFaces` (γράφει `spec.faceOverrides[ref]`).
-   * Και τα δύο μέσω batch SSoT = ΕΝΑ undo.
+   * Apply — Revit/Cinema 4D «base + override» μοντέλο, ΕΝΑ tool, ΤΡΙΑ modes (Giorgio 2026-07-22):
+   *   - **ΠΟΛΥΓΩΝΑ** (539 per-face): N επιλεγμένες όψεις → per-face· καμία → ΟΛΟ το σώμα (base `'*'`).
+   *   - **ΣΩΜΑ** (539 entity): βάφει ΟΛΟ το σώμα της επιλεγμένης οντότητας (base `'*'`).
+   *   - **ΣΟΒΑΣ** (449 entity): βάφει τον σοβά σε ΟΛΕΣ τις κάθετες όψεις της οντότητας.
+   * Όλα μέσω batch SSoT = ΕΝΑ undo.
    *
    * ADR-678 Εύρημα A — το «όλο το στοιχείο» χρησιμοποιεί **replace semantics**
    * (`applyEntityFaceAppearanceMap` + `entireElementFaceMap`), ώστε να καθαρίζει τυχόν
-   * προϋπάρχοντα per-face overrides — αλλιώς «βάψε όλο» άφηνε βαμμένες όψεις αναλλοίωτες
-   * (ίδιο cascade bug με το file-import· ένα SSoT «όλο το στοιχείο» για τα δύο μονοπάτια).
+   * προϋπάρχοντα per-face overrides — αλλιώς «βάψε όλο» άφηνε βαμμένες όψεις αναλλοίωτες.
    */
   const apply = (value: FaceAppearance | null): void => {
-    const faces = usePolygonMode3DStore.getState().selectedFaces;
-    if (usePolygonMode3DStore.getState().targetLayer === 'finish') {
-      if (faces.length > 0) applyFinishFaceOverrideToFaces(levels, faces, toFinishOverride(value));
+    const store = usePolygonMode3DStore.getState();
+    const target = useSelection3DStore.getState().selectedBimId;
+    if (store.targetLayer === 'polygon') {
+      const faces = store.selectedFaces;
+      if (faces.length > 0) applyFaceAppearanceToFaces(levels, faces, value);
+      else if (target) applyEntityFaceAppearanceMap(levels, target, entireElementFaceMap(value));
       return;
     }
-    const target = usePolygonMode3DStore.getState().targetBimId;
-    if (faces.length > 0) applyFaceAppearanceToFaces(levels, faces, value);
-    else if (target) applyEntityFaceAppearanceMap(levels, target, entireElementFaceMap(value));
+    if (!target) return;
+    if (store.targetLayer === 'finish') applyFinishToWholeElement(levels, target, faceAppearanceToFinishOverride(value));
+    else applyEntityFaceAppearanceMap(levels, target, entireElementFaceMap(value));
   };
 
   const faceCount = selectedFaces.length;
-  /** Σώμα: όψεις Ή «όλο το στοιχείο». Σοβάς: μόνο επιλεγμένες όψεις (per-face override). */
-  const canApply = faceCount > 0 || (!isFinish && targetBimId !== null);
+  /** ΠΟΛΥΓΩΝΑ: επιλεγμένες όψεις Ή (fallback) η 3D επιλογή. ΣΩΜΑ/ΣΟΒΑΣ: η 3D επιλογή. */
+  const canApply = (isPolygon && faceCount > 0) || selectedBimId !== null;
   /**
-   * Swatches ανά layer: σώμα = textured catalog + user library + wall coverings (draggable,
+   * Swatches ανά mode: σώμα/πολύγωνα = textured catalog + user library + wall coverings (draggable,
    * ADR-679 Φ2b)· σοβάς = finish materials (click-only, flat — αμετάβλητο).
    */
   const swatches: SwatchItem[] = isFinish
@@ -192,33 +188,38 @@ export function PolygonMaterialPanel() {
       className="absolute inset-x-0 bottom-0 z-[60] flex select-none items-stretch gap-3 border-t border-white/20 bg-black/70 px-3 py-2 text-white/90 backdrop-blur-sm"
       aria-label={t('polygonMode.title')}
     >
-      {/* Αριστερό cluster: τίτλος + hint + layer toggle (σώμα/σοβάς). */}
+      {/* Αριστερό cluster: τίτλος + hint + mode toggle (σώμα/σοβάς/πολύγωνα). */}
       <header className="flex min-w-[190px] shrink-0 flex-col justify-center gap-1 border-r border-white/10 pr-3">
         <h3 className="text-xs font-semibold">{t('polygonMode.title')}</h3>
         <p className="text-[10px] leading-tight text-white/60">
-          {faceCount > 1
-            ? t('polygonMode.hintMultiFace', { count: faceCount })
-            : faceCount === 1
-              ? t('polygonMode.hintApply')
-              : isFinish
-                ? t('polygonMode.hintFinishPickFace')
-                : targetBimId
-                  ? t('polygonMode.hintWholeElement')
-                  : t('polygonMode.hintPickFace')}
+          {isPolygon
+            ? faceCount > 1
+              ? t('polygonMode.hintMultiFace', { count: faceCount })
+              : faceCount === 1
+                ? t('polygonMode.hintApply')
+                : t('polygonMode.hintPickFace')
+            : isFinish
+              ? t('polygonMode.hintFinishWhole')
+              : t('polygonMode.hintBodyWhole')}
         </p>
-        {/* ADR-449 Slice C — layer toggle: σώμα (539 FaceAppearance) ↔ σοβάς (449 faceOverrides). */}
-        <fieldset className="grid grid-cols-2 gap-1" aria-label={t('polygonMode.layerLabel')}>
-          {(['body', 'finish'] as PolygonTargetLayer[]).map((layer) => (
+        {/* Mode toggle (Giorgio 2026-07-22): ΣΩΜΑ (539 entity) · ΣΟΒΑΣ (449 entity) · ΠΟΛΥΓΩΝΑ
+            (539 per-face). Τα δύο πρώτα μικρότερα· το ΠΟΛΥΓΩΝΑ ανοίγει το per-face picking. */}
+        <fieldset className="grid grid-cols-3 gap-1" aria-label={t('polygonMode.layerLabel')}>
+          {(['body', 'finish', 'polygon'] as PolygonTargetLayer[]).map((layer) => (
             <button
               key={layer}
               type="button"
               aria-pressed={targetLayer === layer}
               onClick={() => setTargetLayer(layer)}
-              className={`rounded border px-1.5 py-1 text-[10px] transition-colors ${
+              className={`rounded border px-1 py-0.5 text-[9px] leading-tight transition-colors ${
                 targetLayer === layer ? 'border-white/60 bg-white/20' : 'border-white/15 hover:bg-white/10'
               }`}
             >
-              {t(layer === 'body' ? 'polygonMode.layerBody' : 'polygonMode.layerFinish')}
+              {t(layer === 'body'
+                ? 'polygonMode.layerBody'
+                : layer === 'finish'
+                  ? 'polygonMode.layerFinish'
+                  : 'polygonMode.layerPolygon')}
             </button>
           ))}
         </fieldset>

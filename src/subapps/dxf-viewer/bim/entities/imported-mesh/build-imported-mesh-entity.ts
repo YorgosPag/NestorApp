@@ -47,6 +47,11 @@ export interface ImportedMeshSource {
    * φορτωμένο (βλ. `ImportedMeshParams.sourceMaterialName`).
    */
   readonly sourceMaterialName?: string | null;
+  /**
+   * ADR-683 Φ5 — όλα τα ονόματα υλικών (slots) του κόμβου (`record.materialSlots`). Ταξιδεύει ως τα
+   * params για την per-slot 2Δ poché + το manual override (Φ6). Κενό/απόν → single-material κόμβος.
+   */
+  readonly materialSlots?: readonly string[];
   /** Ο περιγραφέας γεωμετρίας της Φ2 — από εδώ βγαίνουν οι διαστάσεις **και** το εμβαδόν. */
   readonly signature: GeometrySignature;
   /**
@@ -99,11 +104,15 @@ export function buildImportedMeshParams(source: ImportedMeshSource): ImportedMes
   // Το κλειδί **παραλείπεται** όταν δεν υπάρχει όνομα υλικού — ποτέ `undefined` τιμή: το Firestore
   // την απορρίπτει και το `params` γράφεται ως ενιαίο map (`updateImportedMesh`).
   const materialName = source.sourceMaterialName;
+  // ADR-683 Φ5 — ίδιος κανόνας: κρατάμε το πεδίο μόνο όταν υπάρχουν slots (κενό array = single/ανώνυμο
+  // → παράλειψη, όχι κενή τιμή στο Firestore).
+  const materialSlots = source.materialSlots;
   return {
     kind: 'imported',
     uploadId: source.uploadId,
     nodeName: source.nodeName,
     ...(materialName ? { sourceMaterialName: materialName } : {}),
+    ...(materialSlots && materialSlots.length > 0 ? { materialSlots } : {}),
     storagePath: source.storagePath,
     sourceFileName: source.sourceFileName,
     position: source.position,

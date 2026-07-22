@@ -62,6 +62,27 @@ describe('collectGltfObjects', () => {
     expect(collectGltfObjects(root)[0].materialName).toBe('Aluminium');
   });
 
+  it('ADR-683 Φ5 — captures ALL distinct slot names of a multi-material mesh (η καρέκλα)', () => {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), [
+      Object.assign(new THREE.MeshStandardMaterial(), { name: 'HMI-_Polished_Al' }),
+      Object.assign(new THREE.MeshStandardMaterial(), { name: 'HMI-Aeron-Leathe' }),
+      new THREE.MeshStandardMaterial(), // ανώνυμο → παραλείπεται
+      Object.assign(new THREE.MeshStandardMaterial(), { name: 'HMI-_Polished_Al' }), // διπλότυπο → μία φορά
+    ]);
+    mesh.name = 'Chair';
+    const root = new THREE.Group();
+    root.add(mesh);
+
+    expect(collectGltfObjects(root)[0].materialSlots).toEqual(['HMI-_Polished_Al', 'HMI-Aeron-Leathe']);
+  });
+
+  it('ADR-683 Φ5 — single-material mesh → ένα slot', () => {
+    const root = new THREE.Group();
+    root.add(namedMesh('Wall_w-1', 'concrete'));
+
+    expect(collectGltfObjects(root)[0].materialSlots).toEqual(['concrete']);
+  });
+
   it('carries a geometry fingerprint — αυτό είναι που ΔΕΝ μπορεί να δώσει το OBJ μονοπάτι', () => {
     const root = new THREE.Group();
     root.add(namedMesh('Wall_w-1', 'mat-concrete-c25'));
@@ -124,6 +145,8 @@ describe('collectGltfObjects', () => {
           ['side:0', 'mat_778899'],
         ]),
       );
+      // ADR-683 Φ5 — τα distinct ονόματα υλικών ως slots, με σειρά εμφάνισης.
+      expect(record.materialSlots).toEqual(['mat_112233', 'mat_445566', 'mat_778899']);
     });
 
     it('uses the first named child material as the dominant materialName (back-compat field)', () => {

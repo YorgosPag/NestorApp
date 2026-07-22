@@ -34,6 +34,7 @@ import { generateImportedMeshId } from '@/services/enterprise-id-convenience';
 import { firestoreQueryService } from '@/services/firestore';
 import { buildBimScopeConstraints, bimScopeWriteFields } from '../../persistence/bim-floor-scope';
 import type { BimValidation } from '../../types/bim-base';
+import type { FaceAppearanceMap } from '../../types/face-appearance-types';
 import type {
   ImportedMeshEntity,
   ImportedMeshGeometry,
@@ -59,6 +60,8 @@ export interface ImportedMeshDoc {
   readonly buildingId?: string;
   readonly floorId?: string;
   readonly layerId?: string;
+  /** ADR-686 — user appearance override (`slot:${name}` per-slot ή `'*'` όλο) — επιβιώνει reload. */
+  readonly faceAppearance?: FaceAppearanceMap;
   readonly createdAt: Timestamp;
   readonly createdBy: string;
   readonly updatedAt: Timestamp;
@@ -83,6 +86,8 @@ export interface ImportedMeshSaveInput {
   readonly buildingId?: string;
   readonly floorId?: string;
   readonly layerId?: string;
+  /** ADR-686 — appearance override περνά αυτούσιο στο doc. */
+  readonly faceAppearance?: FaceAppearanceMap;
 }
 
 export interface ImportedMeshUpdateInput {
@@ -91,6 +96,8 @@ export interface ImportedMeshUpdateInput {
   readonly geometry?: ImportedMeshGeometry;
   readonly name?: string;
   readonly layerId?: string;
+  /** ADR-686 — appearance override (per-slot / base) persist στο live update. */
+  readonly faceAppearance?: FaceAppearanceMap;
 }
 
 export class ImportedMeshFirestoreService {
@@ -137,6 +144,7 @@ export class ImportedMeshFirestoreService {
     if (input.name !== undefined) base.name = input.name;
     if (input.buildingId !== undefined) base.buildingId = input.buildingId;
     if (input.layerId !== undefined) base.layerId = input.layerId;
+    if (input.faceAppearance !== undefined) base.faceAppearance = input.faceAppearance; // ADR-686
 
     await setDoc(ref, base);
     return base as unknown as ImportedMeshDoc;
@@ -152,6 +160,7 @@ export class ImportedMeshFirestoreService {
     if (patch.geometry !== undefined) payload.geometry = patch.geometry;
     if (patch.name !== undefined) payload.name = patch.name;
     if (patch.layerId !== undefined) payload.layerId = patch.layerId;
+    if (patch.faceAppearance !== undefined) payload.faceAppearance = patch.faceAppearance; // ADR-686
 
     await updateDoc(this.docRef(importedMeshId), payload);
   }
@@ -180,5 +189,6 @@ export function importedMeshEntityToSaveInput(entity: ImportedMeshEntity): Impor
     name: entity.name,
     layerId: entity.layerId,
     floorId: entity.floorId,
+    faceAppearance: entity.faceAppearance, // ADR-686 — persist appearance override
   };
 }

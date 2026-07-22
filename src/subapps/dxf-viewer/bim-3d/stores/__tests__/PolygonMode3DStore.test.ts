@@ -77,3 +77,36 @@ describe('PolygonMode3DStore — multi-face select', () => {
     expect(usePolygonMode3DStore.getState().selectedFace).toBeNull();
   });
 });
+
+// ADR-539 (Giorgio 2026-07-22) — τρία modes βαφής (ΣΩΜΑ/ΣΟΒΑΣ/ΠΟΛΥΓΩΝΑ)· `active` = derived
+// (`targetLayer === 'polygon'`), ώστε το per-face picking/faced-render να ισχύει ΜΟΝΟ στο polygon.
+describe('PolygonMode3DStore — paint mode (body/finish/polygon)', () => {
+  it('setTargetLayer("polygon") activates per-face picking', () => {
+    usePolygonMode3DStore.getState().setTargetLayer('polygon');
+    expect(usePolygonMode3DStore.getState().targetLayer).toBe('polygon');
+    expect(usePolygonMode3DStore.getState().active).toBe(true);
+  });
+
+  it('setTargetLayer("body"/"finish") is entity-level → active is false', () => {
+    usePolygonMode3DStore.getState().setTargetLayer('body');
+    expect(usePolygonMode3DStore.getState().active).toBe(false);
+    usePolygonMode3DStore.getState().setTargetLayer('finish');
+    expect(usePolygonMode3DStore.getState().active).toBe(false);
+  });
+
+  it('leaving polygon mode clears the per-face selection', () => {
+    usePolygonMode3DStore.getState().setTargetLayer('polygon');
+    usePolygonMode3DStore.getState().selectFace(face('col-1', 'top'));
+    usePolygonMode3DStore.getState().setTargetLayer('finish');
+    expect(usePolygonMode3DStore.getState().selectedFaces).toEqual([]);
+    expect(usePolygonMode3DStore.getState().selectedFace).toBeNull();
+  });
+
+  it('setActive(true) maps to polygon mode; reset returns to body', () => {
+    usePolygonMode3DStore.getState().setActive(true, 'col-9');
+    expect(usePolygonMode3DStore.getState().targetLayer).toBe('polygon');
+    usePolygonMode3DStore.getState().reset();
+    expect(usePolygonMode3DStore.getState().targetLayer).toBe('body');
+    expect(usePolygonMode3DStore.getState().active).toBe(false);
+  });
+});

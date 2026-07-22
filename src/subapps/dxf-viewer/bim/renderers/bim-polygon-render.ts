@@ -57,6 +57,31 @@ export function fillPolygonScreen(
   ctx.fill();
 }
 
+/**
+ * Trace + fill a set of rings with the EVEN-ODD rule (screen space): `rings[0]` is
+ * the outer boundary, any further rings are punched as HOLES. A torus / annulus plan
+ * then reads as a genuinely empty centre, not a filled disc. Rings with < 3 points
+ * are skipped. Caller owns `fillStyle` + save/composite state.
+ */
+export function fillRingsEvenOdd(
+  ctx: CanvasRenderingContext2D,
+  toScreen: ToScreen,
+  rings: ReadonlyArray<Vertices>,
+): void {
+  ctx.beginPath();
+  for (const ring of rings) {
+    if (ring.length < 3) continue;
+    const first = toScreen(ring[0]);
+    ctx.moveTo(first.x, first.y);
+    for (let i = 1; i < ring.length; i++) {
+      const s = toScreen(ring[i]);
+      ctx.lineTo(s.x, s.y);
+    }
+    ctx.closePath();
+  }
+  ctx.fill('evenodd');
+}
+
 /** Bare plan-line outline: save → thin dashless stroke in `strokeStyle` → restore. */
 export function strokePolygonOutline(
   ctx: CanvasRenderingContext2D,

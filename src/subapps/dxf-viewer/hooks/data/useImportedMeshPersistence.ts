@@ -112,6 +112,7 @@ const useImportedMeshPersistenceBase = createBimEntityPersistenceHook<
         geometry: e.geometry,
         name: e.name,
         layerId: e.layerId,
+        faceAppearance: e.faceAppearance, // ADR-686 — persist appearance override on live edits
       }),
     remove: (svc, id) => svc.deleteImportedMesh(id),
     subscribe: (svc, onDocs, onErr) =>

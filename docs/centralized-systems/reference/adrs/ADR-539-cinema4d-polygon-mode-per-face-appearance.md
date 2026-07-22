@@ -113,6 +113,7 @@ single-material (byte-for-byte, zero regression για τα ~30 slab tests).
 | **Φ4b** | multi-face select (Shift) + N overlays + batch command (ένα undo) | 🟢 IMPLEMENTED UNCOMMITTED |
 | **Φ4c** | `bmat_*` library drag swatches + `faceAppearanceColorHex` resolve extend | ⬜ PLANNED |
 | **Φ4d** | per-face PBR textures (γέφυρα `MaterialCatalog3D`, ADR-413) — `resolveFaceMaterial` delegate σε `getFaceMaterial3D`/`getFaceColorMaterial3D` (reuse `getMaterial3D`) + `buildFacedPrism` UVs | ✅ DONE (2026-07-21, βλ. ADR-679 Φ2b) |
+| **Φ5** | **panel πάντα ορατό + entity-level drag-drop** (Giorgio 2026-07-22): το `PolygonMaterialPanel` δεν κρύβεται πια πίσω από κουμπί «Όψεις» + επιλογή· τρία modes (ΣΩΜΑ/ΣΟΒΑΣ entity-level, ΠΟΛΥΓΩΝΑ per-face)· drag-drop βάφει ΟΛΗ την οντότητα (C4D) | 🟢 IMPLEMENTED UNCOMMITTED |
 
 ## 5. Συνέπειες
 
@@ -159,6 +160,31 @@ anchor `selectedFace`) · `bim-3d/systems/selection/FaceSelectionHighlighter.ts`
 slab persistence serialize path (αν whitelist).
 
 ## 7. Changelog
+
+- **2026-07-22 (Φ5 — PANEL ΠΑΝΤΑ ΟΡΑΤΟ + ENTITY-LEVEL DRAG-DROP, IMPLEMENTED UNCOMMITTED)** — Giorgio:
+  «όταν μπαίνω στον 3D κάμβα να ανοίγει ΑΜΕΣΩΣ το πάνελ υλικών, χωρίς να επιλέξω οντότητα + πατήσω
+  Όψεις». Ανασχεδιασμός του mode μοντέλου σε **τρία** modes (το panel toggle δείχνει τρία κουμπιά):
+  - **ΣΩΜΑ** (`body`, entity-level): drag-drop/swatch βάφει ΟΛΟ το σώμα (`applyEntityFaceAppearanceMap`
+    + `entireElementFaceMap`, base `'*'`)· το κλικ στον κάμβα μένει **κανονική επιλογή οντότητας**
+    (grips/properties παίζουν κανονικά).
+  - **ΣΟΒΑΣ** (`finish`, entity-level): βάφει τον σοβά σε ΟΛΕΣ τις κάθετες όψεις — νέο SSoT
+    `applyFinishToWholeElement` (διαβάζει `finishFootprintVertices` → `side:0..n-1` →
+    `applyFinishFaceOverrideToFaces`, ΕΝΑ undo). Κλικ = κανονική επιλογή.
+  - **ΠΟΛΥΓΩΝΑ** (`polygon`, per-face): το παλιό «active» Polygon Mode — κλικ επιλέγει όψη/τρίγωνο,
+    drag-drop βάφει μεμονωμένη όψη. **Μόνο εδώ** γίνεται faced resync.
+
+  **Κλειδί ελάχιστου ρίσκου:** `active` = derived (`targetLayer === 'polygon'`), ώστε ΟΛΑ τα υπάρχοντα
+  face-picking call-sites (`shouldRenderFaced`, pointer handlers, snap scheduler, clipboard, 2D
+  context-menu) να μείνουν αμετάβλητα — ενεργά μόνο σε per-face mode. Το κουμπί «Όψεις»
+  **αφαιρέθηκε** (το `PolygonModeToggle3D` κρατά μόνο faced-render lifecycle + store reset)· το panel
+  render-άρει πάντα (αφαιρέθηκε το `if (!active) return null`). Τα κουμπιά ΣΩΜΑ/ΣΟΒΑΣ έγιναν μικρότερα
+  (grid-cols-3). Boy-Scout SSoT: `finishFootprintVertices`/`FinishPaintableEntity` μετακινήθηκαν στο
+  `finish-face-override-ops.ts` (το command τα κάνει import)· `faceAppearanceToFinishOverride`
+  εξήχθη κοινό (panel + drag-drop). Νέα i18n: `polygonMode.layerPolygon`/`hintBodyWhole`/`hintFinishWhole`.
+  **Files:** `PolygonMode3DStore.ts` · `PolygonMaterialPanel.tsx` · `use-polygon-drag-drop.ts` ·
+  `PolygonModeToggle3D.tsx` · `apply-finish-face-override.ts` · `finish-face-override-ops.ts` ·
+  `SetFinishFaceOverrideCommand.ts` · `bim3d.json` (el+en). Tests: store 3-mode + finish-ops whole-element.
+  Pending: browser verify + commit.
 
 - **2026-07-21 (Φ4d — cross-ref → ADR-679 Φ2b — PER-FACE PBR TEXTURES, DONE)** — Το `resolveFaceMaterial`
   (`bim-3d/materials/face-appearance-material.ts`) ήταν flat-colour-only ακόμη κι όταν το `FaceAppearance`

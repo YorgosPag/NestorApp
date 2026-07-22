@@ -49,5 +49,7 @@ export function importedMeshDocToEntity(doc: ImportedMeshDoc): ImportedMeshEntit
     validation,
     visible: true,
     ifcType: 'IfcBuildingElementProxy',
+    // ADR-686 — re-hydrate appearance override so a painted imported mesh survives reload.
+    ...(doc.faceAppearance !== undefined ? { faceAppearance: doc.faceAppearance } : {}),
   } as ImportedMeshEntity;
 }

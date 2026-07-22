@@ -123,6 +123,8 @@ export async function importGltfMeshes(
       // ADR-683 Φ3.1β — το όνομα υλικού ζει ΜΟΝΟ στο φορτωμένο glTF· εδώ είναι η τελευταία στιγμή
       // που μπορεί να διασωθεί για την (μεταγενέστερη) ανάθεση κοστολόγησης.
       sourceMaterialName: record.materialName,
+      // ADR-683 Φ5 — και ΟΛΑ τα slot ονόματα, για την per-slot 2Δ poché + το override (Φ6).
+      materialSlots: record.materialSlots,
       signature: record.fingerprint.signature,
       solid: record.solid,
       position,

@@ -86,8 +86,28 @@ export function computeTopEdges(obj: THREE.Object3D): SilSegment[] {
  */
 export function computeTopSilhouette(obj: THREE.Object3D): SilPoint[] {
   obj.updateMatrixWorld(true);
-  const tris = collectProjectedTriangles(obj);
-  if (tris.length < MIN_TRIS) return [];
+  return silhouetteFromTriangles(collectProjectedTrisTagged(obj).map((t) => t.xz));
+}
+
+/** Rasterised plan grid of a projected triangle set (plan meters ↔ cell mapping). */
+interface RasterGrid {
+  readonly grid: Uint8Array;
+  readonly cols: number;
+  readonly rows: number;
+  readonly ox: number;
+  readonly oy: number;
+  readonly cell: number;
+  readonly span: number;
+}
+
+/**
+ * Rasterise a projected-triangle set (`[ax,az, bx,bz, cx,cz]` each, plan space)
+ * into a binary occupancy grid sized to its aspect ratio. `null` when the set is
+ * too sparse / degenerate to trace. The ONE grid builder shared by the single
+ * silhouette and the per-component tracer.
+ */
+function buildRasterGrid(tris: readonly Float32Array[]): RasterGrid | null {
+  if (tris.length < MIN_TRIS) return null;
 
   // Plan-space bbox of the projection (u = worldX, v = worldZ).
   let minU = Infinity, maxU = -Infinity, minV = Infinity, maxV = -Infinity;
@@ -99,7 +119,7 @@ export function computeTopSilhouette(obj: THREE.Object3D): SilPoint[] {
   }
   const spanU = maxU - minU, spanV = maxV - minV;
   const span = Math.max(spanU, spanV);
-  if (!(span > 0)) return [];
+  if (!(span > 0)) return null;
 
   // Grid sized to the aspect ratio (+1 cell padding each side for clean borders).
   const cell = span / GRID_LONG;
@@ -107,29 +127,100 @@ export function computeTopSilhouette(obj: THREE.Object3D): SilPoint[] {
   const rows = Math.max(3, Math.ceil(spanV / cell) + 2);
   const ox = minU - cell, oy = minV - cell; // grid origin (cell col/row 0)
   const grid = new Uint8Array(cols * rows);
+  for (const t of tris) rasteriseTriangle(grid, cols, rows, ox, oy, cell, t);
 
-  for (const t of tris) {
-    rasteriseTriangle(grid, cols, rows, ox, oy, cell, t);
-  }
-
-  const contourCells = traceOuterContour(grid, cols, rows);
-  if (contourCells.length < 4) return [];
-
-  // Grid cell → plan meters: u = worldX, v = worldZ → plan (x = u, y = -v).
-  const ring: SilPoint[] = contourCells.map(([ci, ri]) => ({
-    x: ox + (ci + 0.5) * cell,
-    y: -(oy + (ri + 0.5) * cell),
-  }));
-
-  return simplify(ring, span * SIMPLIFY_FRAC);
+  return { grid, cols, rows, ox, oy, cell, span };
 }
 
-// ─── Triangle collection (world → plan projection) ──────────────────────────
+/** Grid contour cells → plan meters: u = worldX, v = worldZ → plan (x = u, y = -v). */
+function cellsToPlan(cells: ReadonlyArray<[number, number]>, g: RasterGrid): SilPoint[] {
+  return cells.map(([ci, ri]) => ({
+    x: g.ox + (ci + 0.5) * g.cell,
+    y: -(g.oy + (ri + 0.5) * g.cell),
+  }));
+}
 
-/** Flat array of [ax,az, bx,bz, cx,cz] per triangle, in mesh world (=local) space. */
-function collectProjectedTriangles(obj: THREE.Object3D): Float32Array[] {
-  const out: Float32Array[] = [];
-  const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3();
+/**
+ * Trace ONE closed plan outline (the primary connected component) from a set of
+ * already-projected triangles. The rasterise → Moore-trace → Douglas–Peucker
+ * pipeline lives here as a **single** implementation, shared by the whole-object
+ * silhouette above and (via {@link contoursFromTriangles}) the per-slot poché.
+ * Empty when the triangles are too sparse to trace.
+ */
+export function silhouetteFromTriangles(tris: readonly Float32Array[]): SilPoint[] {
+  const g = buildRasterGrid(tris);
+  if (!g) return [];
+  const contour = traceOuterContour(g.grid, g.cols, g.rows);
+  if (contour.length < 4) return [];
+  return simplify(cellsToPlan(contour, g), g.span * SIMPLIFY_FRAC);
+}
+
+/**
+ * Trace **every** connected component of a projected-triangle set (ADR-683 Φ5).
+ * A single material slot can project to disjoint regions (the two leather arm
+ * pads of a chair are one `leather` slot but two blobs); a single outer contour
+ * would colour only one. This returns one simplified ring per component so the
+ * per-slot poché paints them all. Empty when nothing traces.
+ */
+export function contoursFromTriangles(tris: readonly Float32Array[]): SilPoint[][] {
+  const g = buildRasterGrid(tris);
+  if (!g) return [];
+  const out: SilPoint[][] = [];
+  for (const comp of traceComponentContours(g.grid, g.cols, g.rows)) {
+    if (comp.length < 4) continue;
+    const ring = simplify(cellsToPlan(comp, g), g.span * SIMPLIFY_FRAC);
+    if (ring.length >= 3) out.push(ring);
+  }
+  return out;
+}
+
+// ─── Triangle collection (world → plan projection, slot-tagged) ──────────────
+
+/** A projected triangle tagged with its material slot + height (ADR-683 Φ5). */
+export interface ProjectedTri {
+  /** `[ax,az, bx,bz, cx,cz]` — plan projection (worldX, worldZ) of the triangle. */
+  readonly xz: Float32Array;
+  /** Mean world Y (height) of the triangle — painters ordering for per-slot poché. */
+  readonly y: number;
+  /** Material-slot name (`mesh.material[materialIndex].name`); `null` if unnamed/single. */
+  readonly slot: string | null;
+}
+
+// Module scratch vectors — reused per triangle (single-threaded, no allocation churn).
+const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _c = new THREE.Vector3();
+
+/** Name of a material slot, or `null` when unnamed/absent. */
+function materialSlotName(mat: THREE.Material | undefined): string | null {
+  const name = mat?.name;
+  return typeof name === 'string' && name.length > 0 ? name : null;
+}
+
+/** Project one triangle (by index) of a mesh straight down; reuses module scratch vectors. */
+function projectTriangle(
+  pos: THREE.BufferAttribute,
+  idx: THREE.BufferAttribute | null,
+  m: THREE.Matrix4,
+  triIndex: number,
+): { xz: Float32Array; y: number } {
+  const i0 = idx ? idx.getX(triIndex * 3) : triIndex * 3;
+  const i1 = idx ? idx.getX(triIndex * 3 + 1) : triIndex * 3 + 1;
+  const i2 = idx ? idx.getX(triIndex * 3 + 2) : triIndex * 3 + 2;
+  _a.fromBufferAttribute(pos, i0).applyMatrix4(m);
+  _b.fromBufferAttribute(pos, i1).applyMatrix4(m);
+  _c.fromBufferAttribute(pos, i2).applyMatrix4(m);
+  return { xz: Float32Array.from([_a.x, _a.z, _b.x, _b.z, _c.x, _c.z]), y: (_a.y + _b.y + _c.y) / 3 };
+}
+
+/**
+ * Every projected triangle of `obj`, tagged with its material slot + height. A
+ * multi-material mesh (material **array** + `geometry.groups`) is split per group
+ * → one slot per material index. A single-material mesh stays ONE slot even when
+ * its geometry carries auto-groups (e.g. `BoxGeometry` = 6 groups) — else it would
+ * falsely fragment. Feeds both `computeTopSilhouette` (all `.xz`) and the per-slot
+ * silhouettes (ADR-683 Φ5).
+ */
+export function collectProjectedTrisTagged(obj: THREE.Object3D): ProjectedTri[] {
+  const out: ProjectedTri[] = [];
   obj.traverse((child) => {
     const mesh = child as THREE.Mesh;
     if (!mesh.isMesh || !mesh.geometry) return;
@@ -138,15 +229,20 @@ function collectProjectedTriangles(obj: THREE.Object3D): Float32Array[] {
     if (!pos) return;
     const idx = geo.getIndex();
     const m = mesh.matrixWorld;
-    const triCount = idx ? idx.count / 3 : pos.count / 3;
-    for (let i = 0; i < triCount; i++) {
-      const i0 = idx ? idx.getX(i * 3) : i * 3;
-      const i1 = idx ? idx.getX(i * 3 + 1) : i * 3 + 1;
-      const i2 = idx ? idx.getX(i * 3 + 2) : i * 3 + 2;
-      a.fromBufferAttribute(pos, i0).applyMatrix4(m);
-      b.fromBufferAttribute(pos, i1).applyMatrix4(m);
-      c.fromBufferAttribute(pos, i2).applyMatrix4(m);
-      out.push(Float32Array.from([a.x, a.z, b.x, b.z, c.x, c.z]));
+    const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    const groups = Array.isArray(mesh.material) && geo.groups.length > 0 ? geo.groups : null;
+    if (groups) {
+      for (const g of groups) {
+        const slot = materialSlotName(materials[g.materialIndex ?? 0]);
+        const end = Math.floor((g.start + g.count) / 3);
+        for (let ti = Math.floor(g.start / 3); ti < end; ti++) {
+          out.push({ ...projectTriangle(pos, idx, m, ti), slot });
+        }
+      }
+    } else {
+      const slot = materialSlotName(materials[0]);
+      const triCount = idx ? idx.count / 3 : pos.count / 3;
+      for (let ti = 0; ti < triCount; ti++) out.push({ ...projectTriangle(pos, idx, m, ti), slot });
     }
   });
   return out;
@@ -233,6 +329,45 @@ function traceOuterContour(grid: Uint8Array, cols: number, rows: number): Array<
   } while (!(cc === sc && cr === sr));
 
   return dedupeConsecutive(contour);
+}
+
+/**
+ * Trace the outer contour of EVERY connected component (8-connectivity) of the
+ * grid (ADR-683 Φ5). Each component is flood-filled into its own mask first, so
+ * {@link traceOuterContour} (which follows a single region from its first filled
+ * cell) traces exactly that component — disjoint same-slot blobs each get a ring.
+ */
+function traceComponentContours(
+  grid: Uint8Array, cols: number, rows: number,
+): Array<Array<[number, number]>> {
+  const visited = new Uint8Array(cols * rows);
+  const contours: Array<Array<[number, number]>> = [];
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      if (grid[r * cols + c] !== 1 || visited[r * cols + c]) continue;
+      const mask = floodComponent(grid, cols, rows, c, r, visited);
+      const contour = traceOuterContour(mask, cols, rows);
+      if (contour.length >= 4) contours.push(contour);
+    }
+  }
+  return contours;
+}
+
+/** Flood-fill (8-conn) the filled component at (sc,sr) into a fresh mask; marks `visited`. */
+function floodComponent(
+  grid: Uint8Array, cols: number, rows: number, sc: number, sr: number, visited: Uint8Array,
+): Uint8Array {
+  const mask = new Uint8Array(cols * rows);
+  const stack: Array<[number, number]> = [[sc, sr]];
+  while (stack.length) {
+    const [c, r] = stack.pop()!;
+    if (c < 0 || c >= cols || r < 0 || r >= rows) continue;
+    const i = r * cols + c;
+    if (grid[i] !== 1 || visited[i]) continue;
+    visited[i] = 1; mask[i] = 1;
+    for (const [dc, dr] of N8) stack.push([c + dc, r + dr]);
+  }
+  return mask;
 }
 
 function dedupeConsecutive(pts: Array<[number, number]>): Array<[number, number]> {

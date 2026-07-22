@@ -36,12 +36,20 @@ import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
 import { getLayer } from '../../stores/LayerStore';
 import { bimMeshCache } from '../../bim-3d/library/bim-mesh-library/bim-mesh-cache';
-import { drawMeshSilhouette, type MeshSilhouettePalette } from './mesh-silhouette-draw';
+import {
+  drawMeshSilhouette,
+  drawMeshSlotSilhouettes,
+  type MeshSilhouettePalette,
+} from './mesh-silhouette-draw';
 import {
   resolveImportedMaterialPreset,
   importedPresetHex,
   importedPresetRgba,
 } from '../materials/imported-material-presets';
+// ADR-686 — user override (χρώμα/υλικό) πάνω από το preset, ΙΔΙΟ SSoT με το 2D plan fill + το 3D.
+import { faceAppearanceColorHex } from '../utils/face-appearance-color';
+import { slotFaceKey, BASE_FACE_KEY, type FaceAppearanceMap } from '../types/face-appearance-types';
+import { hexToRgba } from '../../config/color-math';
 import { getImportedMeshGrips } from '../entities/imported-mesh/imported-mesh-grips';
 import { gripGlyphShape } from '../grips/grip-glyph-registry';
 import { gripKindOf } from '../../hooks/grip-kinds';
@@ -76,6 +84,27 @@ function resolveImportedMeshPalette(sourceMaterialName?: string): MeshSilhouette
   };
 }
 
+/**
+ * ADR-686 — παλέτα slot με **user override** να νικά το preset: αν το `faceAppearance` έχει override
+ * για αυτό το slot (`slot:${name}`) ή base (`'*'`) και δίνει χρώμα (`faceAppearanceColorHex`, ΙΔΙΟ
+ * SSoT με το 3D + το 2D plan fill), βάφει με αυτό· αλλιώς πέφτει στο ADR-683 preset-by-name.
+ */
+function slotPaletteWithOverride(
+  materialName: string | undefined,
+  faceAppearance: FaceAppearanceMap | undefined,
+): MeshSilhouettePalette {
+  const override = faceAppearance
+    ? faceAppearance[slotFaceKey(materialName ?? '')] ?? faceAppearance[BASE_FACE_KEY]
+    : undefined;
+  const hex = override ? faceAppearanceColorHex(override) : null;
+  if (!hex) return resolveImportedMeshPalette(materialName);
+  return {
+    stroke: hex,
+    fill: hexToRgba(hex, SILHOUETTE_FILL_ALPHA),
+    edge: hexToRgba(hex, SILHOUETTE_EDGE_ALPHA),
+  };
+}
+
 /** Type guard — το `EntityModel` είναι δομικό, οπότε ελέγχουμε τον διακριτή τύπου. */
 function isImportedMeshEntity(entity: EntityModel): boolean {
   return entity.type === 'imported-mesh';
@@ -103,21 +132,12 @@ export class ImportedMeshRenderer extends BimFootprintRenderer {
 
     this.beginPhasedBodyRender(entity, verts, options);
 
-    const { uploadId, nodeName, position, rotationDeg, sceneUnits, sourceMaterialName } = mesh.params;
+    const { uploadId, nodeName } = mesh.params;
     const assetId = importedMeshAssetId(uploadId, nodeName);
-    const palette = resolveImportedMeshPalette(sourceMaterialName);
-    const drew = drawMeshSilhouette({
-      ctx: this.ctx,
-      worldToScreen: (p) => this.worldToScreen(p),
-      silhouette: bimMeshCache.getSilhouette(IMPORTED_MESH_CATEGORY, assetId),
-      edges: bimMeshCache.getTopEdges(IMPORTED_MESH_CATEGORY, assetId),
-      transform: { position, rotationDeg, sceneUnits: sceneUnits ?? 'mm' },
-      palette,
-      lineWidth: RENDER_LINE_WIDTHS.NORMAL,
-    });
 
-    if (!drew) {
+    if (!this.drawImportedSilhouette(mesh, assetId)) {
       // Το ορθογώνιο του μετρημένου bbox — «εδώ είναι, το σχήμα έρχεται».
+      const palette = slotPaletteWithOverride(mesh.params.sourceMaterialName, mesh.faceAppearance);
       this.ctx.fillStyle = adaptFillTintForCanvas(palette.fill);
       this.drawPolygonPath(verts);
       this.ctx.fill();
@@ -129,6 +149,45 @@ export class ImportedMeshRenderer extends BimFootprintRenderer {
 
     this.ctx.restore();
     this.finalizeRender(entity, options);
+  }
+
+  /**
+   * ADR-683 Φ5 — per-slot material poché (multi-material κόμβος: βάση=μέταλλο, κάθισμα=πλέγμα,
+   * μπράτσα=δέρμα), αλλιώς single silhouette (dominant υλικό), αλλιώς `false` (ο caller βάφει το
+   * ορθογώνιο). Το κάθε slot παίρνει χρώμα από τον ΙΔΙΟ SSoT resolver με το 3Δ.
+   */
+  private drawImportedSilhouette(mesh: ImportedMeshEntity, assetId: string): boolean {
+    const { position, rotationDeg, sceneUnits, sourceMaterialName } = mesh.params;
+    const transform = { position, rotationDeg, sceneUnits: sceneUnits ?? 'mm' } as const;
+    const worldToScreen = (p: Point2D): Point2D => this.worldToScreen(p);
+    const appearance = mesh.faceAppearance; // ADR-686 — user override per slot / base.
+
+    const slots = bimMeshCache.getSlotSilhouettes(IMPORTED_MESH_CATEGORY, assetId);
+    if (
+      slots &&
+      drawMeshSlotSilhouettes({
+        ctx: this.ctx,
+        worldToScreen,
+        slots: slots.map((s) => ({
+          contours: s.contours,
+          palette: slotPaletteWithOverride(s.materialName ?? undefined, appearance),
+        })),
+        transform,
+        lineWidth: RENDER_LINE_WIDTHS.NORMAL,
+      })
+    ) {
+      return true;
+    }
+
+    return drawMeshSilhouette({
+      ctx: this.ctx,
+      worldToScreen,
+      silhouette: bimMeshCache.getSilhouette(IMPORTED_MESH_CATEGORY, assetId),
+      edges: bimMeshCache.getTopEdges(IMPORTED_MESH_CATEGORY, assetId),
+      transform,
+      palette: slotPaletteWithOverride(sourceMaterialName, appearance),
+      lineWidth: RENDER_LINE_WIDTHS.NORMAL,
+    });
   }
 
   /**

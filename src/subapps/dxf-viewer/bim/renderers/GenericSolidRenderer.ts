@@ -13,7 +13,7 @@
  */
 
 import { BimFootprintRenderer } from './bim-footprint-renderer';
-import { polygonBboxHitTest } from './bim-polygon-render';
+import { polygonBboxHitTest, fillRingsEvenOdd, strokePolylinePaths } from './bim-polygon-render';
 import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
 import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../rendering/types/Types';
 import type { GenericSolidEntity } from '../entities/generic-solid/generic-solid-types';
@@ -26,6 +26,8 @@ import { getLayer } from '../../stores/LayerStore';
 const GENERIC_SOLID_PALETTE = {
   stroke: '#7b6cff',
   fill: 'rgba(123, 108, 255, 0.14)',
+  /** Εσωτερικές χαρακτηριστικές ακμές (πυραμίδα «Χ») — πιο αχνό από το περίγραμμα. */
+  edge: 'rgba(123, 108, 255, 0.6)',
 } as const;
 
 /** Type guard — το `EntityModel` είναι δομικό, οπότε ελέγχουμε τον διακριτή τύπου. */
@@ -55,27 +57,32 @@ export class GenericSolidRenderer extends BimFootprintRenderer {
 
     this.beginPhasedBodyRender(entity, verts, options);
 
+    // Πλήρες περίγραμμα κάτοψης: εξωτερικό όριο + τυχόν τρύπες (torus) + εσωτερικές ακμές (πυραμίδα «Χ»).
+    const outline = computeGenericSolidPlanOutline(
+      solid.params.shape,
+      solid.params.position,
+      solid.params.rotationDeg,
+      solid.params.sceneUnits,
+    );
+    const toScreen = (p: Point2D): Point2D => this.worldToScreen(p);
+
+    // Fill even-odd: η τρύπα του torus διαβάζεται ως πραγματικά άδειο κέντρο (όχι γεμάτος δίσκος).
     this.ctx.fillStyle = adaptFillTintForCanvas(GENERIC_SOLID_PALETTE.fill);
-    this.drawPolygonPath(verts);
-    this.ctx.fill();
+    fillRingsEvenOdd(this.ctx, toScreen, outline.rings);
+
+    // Περίγραμμα κάθε δαχτυλιδιού (εξωτερικό + τρύπες = κλασικό plan σύμβολο δακτυλίου).
     this.ctx.strokeStyle = GENERIC_SOLID_PALETTE.stroke;
     this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
-    this.drawPolygonPath(verts);
-    this.ctx.stroke();
+    for (const ring of outline.rings) {
+      this.drawPolygonPath(ring);
+      this.ctx.stroke();
+    }
 
-    // Εσωτερικά δαχτυλίδια (τρύπα του torus): δύο ομόκεντροι κύκλοι = κλασικό plan σύμβολο.
-    // Το `footprint` (outer) καλύπτει τα υπόλοιπα σχήματα· μόνο ο torus έχει inner ring.
-    if (solid.params.shape.kind === 'torus') {
-      const rings = computeGenericSolidPlanOutline(
-        solid.params.shape,
-        solid.params.position,
-        solid.params.rotationDeg,
-        solid.params.sceneUnits,
-      ).rings;
-      for (let i = 1; i < rings.length; i++) {
-        this.drawPolygonPath(rings[i]);
-        this.ctx.stroke();
-      }
+    // Εσωτερικές χαρακτηριστικές ακμές (top-view feature edges): οι 4 ακμές γωνία→κορυφή της πυραμίδας.
+    if (outline.interiorEdges.length > 0) {
+      this.ctx.strokeStyle = GENERIC_SOLID_PALETTE.edge;
+      this.ctx.lineWidth = Math.max(1, RENDER_LINE_WIDTHS.NORMAL - 1);
+      strokePolylinePaths(this.ctx, toScreen, outline.interiorEdges);
     }
 
     this.ctx.restore();

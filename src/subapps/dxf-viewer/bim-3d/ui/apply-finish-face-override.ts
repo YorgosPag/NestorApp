@@ -20,6 +20,21 @@ import { CompositeCommand } from '../../core/commands/CompositeCommand';
 import { SetFinishFaceOverrideCommand } from '../../core/commands/entity-commands/SetFinishFaceOverrideCommand';
 import type { ISceneManager } from '../../core/commands/interfaces';
 import type { FinishFaceOverride } from '../../bim/finishes/structural-finish-types';
+import type { FaceAppearance } from '../../bim/types/face-appearance-types';
+import {
+  wholeElementFinishFaceKeys,
+  type FinishPaintableEntity,
+} from '../../bim/finishes/finish-face-override-ops';
+
+/**
+ * ADR-449 Slice C — `FaceAppearance` (panel/drag swatch) → `FinishFaceOverride` (σοβάς). `colorHex`
+ * του panel = `colorOverride` του σοβά· `materialId` περνά αυτούσιο. `null` → clear. SSoT κοινό για
+ * το panel (swatch click) ΚΑΙ το drag-drop (ώστε το ΣΟΒΑΣ drop να μεταφράζεται ίδια).
+ */
+export function faceAppearanceToFinishOverride(value: FaceAppearance | null): FinishFaceOverride | null {
+  if (!value) return null;
+  return value.colorHex ? { colorOverride: value.colorHex } : { materialId: value.materialId };
+}
 
 /** Κοινό level-scene adapter (current level), ή null όταν δεν υπάρχει ενεργό επίπεδο. */
 function levelAdapter(levels: LevelsHookReturn | null): ISceneManager | null {
@@ -46,4 +61,24 @@ export function applyFinishFaceOverrideToFaces(
   getGlobalCommandHistory().execute(
     children.length === 1 ? children[0] : new CompositeCommand(children),
   );
+}
+
+/**
+ * ADR-539 (Giorgio 2026-07-22) — «ΣΟΒΑΣ» entity-level: βάφει τον σοβά σε ΟΛΕΣ τις κάθετες όψεις
+ * του στοιχείου με ΕΝΑ atomic undo (mirror του `applyEntityFaceAppearanceMap` του σώματος). Το
+ * drag-drop/swatch χωρίς per-face επιλογή (modes ΣΩΜΑ/ΣΟΒΑΣ) διαβάζει το stored footprint του
+ * entity → `side:0..n-1` → delegate στο `applyFinishFaceOverrideToFaces`. No-op όταν λείπει
+ * ενεργό επίπεδο, το entity δεν βρέθηκε, ή το footprint είναι εκφυλισμένο (<3 κορυφές).
+ */
+export function applyFinishToWholeElement(
+  levels: LevelsHookReturn | null,
+  bimId: string,
+  value: FinishFaceOverride | null,
+): void {
+  const adapter = levelAdapter(levels);
+  if (!adapter) return;
+  const entity = adapter.getEntity(bimId) as unknown as FinishPaintableEntity | undefined;
+  if (!entity) return;
+  const faces = wholeElementFinishFaceKeys(entity).map((faceKey) => ({ bimId, faceKey }));
+  applyFinishFaceOverrideToFaces(levels, faces, value);
 }

@@ -1,16 +1,20 @@
 /**
- * use-polygon-drag-drop — ADR-539 Φ2. HTML5 drop target για το Cinema 4D «Polygon Mode»
- * drag-drop υλικού πάνω σε όψη. Επιστρέφει `onDragOver`/`onDrop` που μπαίνουν στο root div
+ * use-polygon-drag-drop — ADR-539 Φ2 + Giorgio 2026-07-22. HTML5 drop target για το Cinema 4D
+ * drag-drop υλικού πάνω στον 3D κάμβα. Επιστρέφει `onDragOver`/`onDrop` που μπαίνουν στο root div
  * του `BimViewport3D` (κρατά το component κάτω από το 500-line SRP όριο — N.7.1).
  *
- * - `onDragOver`: μόνο σε Polygon Mode → `preventDefault` (επιτρέπει το drop) + live yellow
- *   face-highlight κάτω από τον κέρσορα (Cinema 4D «το υλικό κουμπώνει στην όψη»).
- * - `onDrop`: parse το `application/x-bim-material` payload → `raycastBimFace` → εφαρμογή
- *   μέσω του shared `applyFaceAppearance` SSoT (ίδιο command με το click-to-apply panel).
+ * Ο στόχος εξαρτάται από το ενεργό mode του `PolygonMaterialPanel` (πάντα ορατό):
+ *   - **ΣΩΜΑ** (`body`)   → entity raycast· drop βάφει ΟΛΟ το σώμα (`entireElementFaceMap`, base `'*'`).
+ *   - **ΣΟΒΑΣ** (`finish`)→ entity raycast· drop βάφει τον σοβά σε ΟΛΕΣ τις κάθετες όψεις.
+ *   - **ΠΟΛΥΓΩΝΑ** (`polygon`, `active`) → face raycast· drop βάφει τη ΜΕΜΟΝΩΜΕΝΗ όψη (per-face).
  *
- * Το drag ξεκινά ΕΚΤΟΣ canvas (στο `PolygonMaterialPanel`) → καμία σύγκρουση με OrbitControls.
+ * Το `onDragOver` δείχνει live preview κάτω από τον κέρσορα (Cinema 4D «το υλικό κουμπώνει»):
+ * entity silhouette στα ΣΩΜΑ/ΣΟΒΑΣ, per-face highlight στο ΠΟΛΥΓΩΝΑ. Το drag ξεκινά ΕΚΤΟΣ
+ * canvas (στο panel) → καμία σύγκρουση με OrbitControls.
  *
- * @see ../ui/apply-face-appearance.ts — apply SSoT
+ * @see ../ui/apply-face-appearance.ts — per-face apply SSoT
+ * @see ../ui/apply-entity-face-appearance-map.ts — «όλο το σώμα» apply SSoT
+ * @see ../ui/apply-finish-face-override.ts — «όλος ο σοβάς» apply SSoT
  * @see ../ui/polygon-material-dnd.ts — MIME + parse SSoT
  * @see docs/centralized-systems/reference/adrs/ADR-539-cinema4d-polygon-mode-per-face-appearance.md
  */
@@ -21,11 +25,22 @@ import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 import { useLevelsOptional } from '../../systems/levels/useLevels';
 import { usePolygonMode3DStore } from '../stores/PolygonMode3DStore';
 import { applyFaceAppearance } from '../ui/apply-face-appearance';
-import { parseFaceAppearanceDrag } from '../ui/polygon-material-dnd';
+import { applyEntityFaceAppearanceMap } from '../ui/apply-entity-face-appearance-map';
+import { applyFinishToWholeElement, faceAppearanceToFinishOverride } from '../ui/apply-finish-face-override';
+import { entireElementFaceMap } from '../../bim/types/face-appearance-types';
+import { applyBimHover } from '../scene/scene-manager-actions';
+import { BIM_MATERIAL_MIME, parseFaceAppearanceDrag } from '../ui/polygon-material-dnd';
 
 interface PolygonDragDropHandlers {
   readonly onDragOver: (e: ReactDragEvent) => void;
   readonly onDrop: (e: ReactDragEvent) => void;
+}
+
+/** Καθαρίζει κάθε drag preview (per-face + entity silhouette). */
+function clearDragPreview(manager: ThreeJsSceneManager): void {
+  manager.setHoveredFace(null, null);
+  applyBimHover(manager.hoverHighlighter, null);
+  manager.markSceneDirty();
 }
 
 export function usePolygonDragDrop(
@@ -34,30 +49,55 @@ export function usePolygonDragDrop(
   const levels = useLevelsOptional();
 
   const onDragOver = useCallback((e: ReactDragEvent) => {
-    if (!usePolygonMode3DStore.getState().active) return;
+    const manager = managerRef.current;
+    if (!manager) return;
+    // Το panel είναι πάντα ορατό → φίλτραρε: μόνο swatch drags (BIM material MIME) είναι valid drop
+    // target· τυχαία drags (π.χ. αρχεία) περνούν στο default browser behavior.
+    if (!e.dataTransfer.types.includes(BIM_MATERIAL_MIME)) return;
     // preventDefault marks this a valid drop target; dropEffect shows the copy cursor.
     e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
-    const manager = managerRef.current;
-    if (!manager) return;
-    const hit = manager.raycastBimFace(e.clientX, e.clientY);
-    manager.setHoveredFace(hit?.bimId ?? null, hit?.faceKey ?? null);
+    if (usePolygonMode3DStore.getState().active) {
+      // ΠΟΛΥΓΩΝΑ — per-face highlight κάτω από τον κέρσορα.
+      const hit = manager.raycastBimFace(e.clientX, e.clientY);
+      manager.setHoveredFace(hit?.bimId ?? null, hit?.faceKey ?? null);
+    } else {
+      // ΣΩΜΑ/ΣΟΒΑΣ — entity silhouette («φωτίζεται» ΟΛΗ η οντότητα, Giorgio 2026-07-22).
+      const hit = manager.raycastBimEntities(e.clientX, e.clientY);
+      applyBimHover(manager.hoverHighlighter, hit?.bimId ?? null);
+      manager.markSceneDirty();
+    }
   }, [managerRef]);
 
   const onDrop = useCallback((e: ReactDragEvent) => {
-    if (!usePolygonMode3DStore.getState().active) return;
     const value = parseFaceAppearanceDrag(e.dataTransfer);
     if (!value) return;
     e.preventDefault();
     const manager = managerRef.current;
     if (!manager) return;
-    const hit = manager.raycastBimFace(e.clientX, e.clientY);
-    manager.setHoveredFace(null, null); // clear the drag-hover preview
-    if (!hit?.bimId || !hit.faceKey) return;
-    // Anchor the selection highlight on the dropped face too (panel stays on this solid).
-    usePolygonMode3DStore.getState().selectFace({ bimId: hit.bimId, faceKey: hit.faceKey });
-    manager.setSelectedFace(hit.bimId, hit.faceKey);
-    applyFaceAppearance(levels, hit.bimId, hit.faceKey, value);
+    const store = usePolygonMode3DStore.getState();
+
+    if (store.active) {
+      // ΠΟΛΥΓΩΝΑ — βάψε τη μεμονωμένη όψη κάτω από τον κέρσορα.
+      const hit = manager.raycastBimFace(e.clientX, e.clientY);
+      clearDragPreview(manager);
+      if (!hit?.bimId || !hit.faceKey) return;
+      // Anchor the selection highlight on the dropped face too (panel stays on this solid).
+      store.selectFace({ bimId: hit.bimId, faceKey: hit.faceKey });
+      manager.setSelectedFace(hit.bimId, hit.faceKey);
+      applyFaceAppearance(levels, hit.bimId, hit.faceKey, value);
+      return;
+    }
+
+    // ΣΩΜΑ/ΣΟΒΑΣ — βάψε ΟΛΗ την οντότητα κάτω από τον κέρσορα (entity raycast, χωρίς προ-επιλογή).
+    const hit = manager.raycastBimEntities(e.clientX, e.clientY);
+    clearDragPreview(manager);
+    if (!hit?.bimId) return;
+    if (store.targetLayer === 'finish') {
+      applyFinishToWholeElement(levels, hit.bimId, faceAppearanceToFinishOverride(value));
+    } else {
+      applyEntityFaceAppearanceMap(levels, hit.bimId, entireElementFaceMap(value));
+    }
   }, [managerRef, levels]);
 
   return { onDragOver, onDrop };

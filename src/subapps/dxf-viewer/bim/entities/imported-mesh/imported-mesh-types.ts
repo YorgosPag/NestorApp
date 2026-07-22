@@ -150,6 +150,17 @@ export interface ImportedMeshParams {
    * μέτρο θα ήταν δηλωμένο και ανενεργό.
    */
   readonly sourceMaterialName?: string;
+  /**
+   * ADR-683 Φ5 — **ΟΛΑ** τα ονόματα υλικών (slots) του κόμβου, με σειρά material-index, χωρίς
+   * διπλότυπα. Ενώ το {@link sourceMaterialName} κρατά **μόνο** το dominant (πρώτο) — αρκετό για μία
+   * γραμμή BOQ — η per-slot 2Δ poché (Φ5) και το manual material-override (Φ6) χρειάζονται **όλα**
+   * τα ονόματα (βάση=μέταλλο, κάθισμα=πλέγμα, μπράτσα=δέρμα).
+   *
+   * ⚠️ Αποθηκεύεται για τον **ίδιο** λόγο με το `sourceMaterialName`: τα ονόματα ζουν μόνο στο
+   * φορτωμένο glTF, και η ανάθεση/override γίνεται σε άλλη συνεδρία όπου το `.glb` δεν είναι πια
+   * φορτωμένο. Απόν → mesh single-material ή ανώνυμο (τότε ισχύει το `sourceMaterialName` μόνο).
+   */
+  readonly materialSlots?: readonly string[];
   /** Σημείο εισαγωγής (κάτοψη). Το `z` προκύπτει από το `mountingElevationMm`. */
   readonly position: Point3D;
   /** Μοίρες CCW γύρω από το `position` (κάτοψη, περί τον κατακόρυφο άξονα). */

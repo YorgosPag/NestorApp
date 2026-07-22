@@ -9,6 +9,8 @@ import {
   edgeIndexFromFaceKey,
   finishFaceRefForFaceKey,
   withFinishFaceOverride,
+  finishFootprintVertices,
+  wholeElementFinishFaceKeys,
 } from '../finish-face-override-ops';
 import { finishFaceRef } from '../structural-finish-face-ref';
 import type { StructuralFinishSpec } from '../structural-finish-types';
@@ -52,6 +54,33 @@ describe('finishFaceRefForFaceKey', () => {
     expect(finishFaceRefForFaceKey(rect, 'top')).toBeNull();
     expect(finishFaceRefForFaceKey(rect, 'side:9')).toBeNull();
     expect(finishFaceRefForFaceKey([{ x: 0, y: 0 }, { x: 1, y: 1 }], 'side:0')).toBeNull();
+  });
+});
+
+// ADR-539 (Giorgio 2026-07-22) — entity-level «ΣΟΒΑΣ» drag-drop reads these to paint EVERY side.
+describe('finishFootprintVertices', () => {
+  it('πλάκα → params.outline', () => {
+    expect(finishFootprintVertices({ params: { outline: { vertices: rect } } })).toBe(rect);
+  });
+  it('κολόνα → geometry.footprint', () => {
+    expect(finishFootprintVertices({ geometry: { footprint: { vertices: rect } } })).toBe(rect);
+  });
+  it('δοκάρι → geometry.outline', () => {
+    expect(finishFootprintVertices({ geometry: { outline: { vertices: rect } } })).toBe(rect);
+  });
+  it('κανένα footprint → undefined', () => {
+    expect(finishFootprintVertices({})).toBeUndefined();
+  });
+});
+
+describe('wholeElementFinishFaceKeys', () => {
+  it('n κορυφές → side:0..n-1', () => {
+    expect(wholeElementFinishFaceKeys({ params: { outline: { vertices: rect } } }))
+      .toEqual(['side:0', 'side:1', 'side:2', 'side:3']);
+  });
+  it('εκφυλισμένο footprint (<3) → κενό', () => {
+    expect(wholeElementFinishFaceKeys({ geometry: { footprint: { vertices: [{ x: 0, y: 0 }, { x: 1, y: 1 }] } } })).toEqual([]);
+    expect(wholeElementFinishFaceKeys({})).toEqual([]);
   });
 });
 

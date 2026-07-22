@@ -103,6 +103,50 @@ export function drawMeshSilhouette(args: DrawMeshSilhouetteArgs): boolean {
   return true;
 }
 
+/** One material slot to paint: its (multi-component) contours + its palette (ADR-683 Φ5). */
+export interface MeshSlotFill {
+  readonly contours: readonly (readonly SilPoint[])[];
+  readonly palette: MeshSilhouettePalette;
+}
+
+export interface DrawMeshSlotSilhouettesArgs {
+  readonly ctx: CanvasRenderingContext2D;
+  readonly worldToScreen: (p: { x: number; y: number }) => { x: number; y: number };
+  /** Slots pre-ordered lowest→highest so higher parts paint over lower (top-down occlusion). */
+  readonly slots: readonly MeshSlotFill[];
+  readonly transform: MeshSilhouetteTransform;
+  readonly lineWidth: number;
+}
+
+/**
+ * ADR-683 Φ5 — draw **per-slot material poché**: fill + outline each material region in its own
+ * palette, in the given (lowest→highest) order so overlaps read as the top-down view. Shares the
+ * exact plan→world mapper + polygon tracer with {@link drawMeshSilhouette} (one alignment SSoT).
+ * Returns `true` if anything was drawn.
+ */
+export function drawMeshSlotSilhouettes(args: DrawMeshSlotSilhouettesArgs): boolean {
+  const { ctx, worldToScreen, slots, transform, lineWidth } = args;
+  if (slots.length === 0) return false;
+
+  const toWorld = makePlanToWorld(transform);
+  let drew = false;
+  for (const slot of slots) {
+    for (const contour of slot.contours) {
+      if (contour.length < 3) continue;
+      const outline = contour.map((p) => toWorld(p.x, p.y));
+      ctx.fillStyle = adaptFillTintForCanvas(slot.palette.fill);
+      tracePolygon(ctx, worldToScreen, outline);
+      ctx.fill();
+      ctx.strokeStyle = slot.palette.stroke;
+      ctx.lineWidth = lineWidth;
+      tracePolygon(ctx, worldToScreen, outline);
+      ctx.stroke();
+      drew = true;
+    }
+  }
+  return drew;
+}
+
 function tracePolygon(
   ctx: CanvasRenderingContext2D,
   worldToScreen: (p: { x: number; y: number }) => { x: number; y: number },

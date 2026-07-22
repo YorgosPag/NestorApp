@@ -32,10 +32,22 @@ const CIRCLE_SEGMENTS = 64;
 /** Γωνία (μοίρες) της πρώτης κορυφής πρίσματος — στο +Y (βορράς) ώστε το n-γωνο να «κάθεται» φυσικά. */
 const PRISM_FIRST_VERTEX_DEG = 90;
 
+/** Μια εσωτερική χαρακτηριστική ακμή κάτοψης — προβολή πραγματικής 3Δ ακμής, σε canvas units. */
+export type GenericSolidPlanEdge = readonly [Point3D, Point3D];
+
+/** Καμία εσωτερική ακμή — μοιραζόμενη σταθερά για τα σχήματα που το περίγραμμα τα περιγράφει πλήρως. */
+const NO_EDGES: readonly GenericSolidPlanEdge[] = [];
+
 /** Το περίγραμμα κάτοψης ως κλειστά δαχτυλίδια σε **canvas units**. */
 export interface GenericSolidPlanOutline {
   /** `rings[0]` = εξωτερικό όριο· τυχόν επόμενα = τρύπες (μόνο ο torus έχει έναν εσωτερικό δακτύλιο). */
   readonly rings: readonly (readonly Point3D[])[];
+  /**
+   * Εσωτερικές χαρακτηριστικές ακμές (top-view feature edges) — π.χ. οι 4 ακμές γωνία→κορυφή της
+   * πυραμίδας που, ειδωμένες από πάνω, σχηματίζουν το «Χ» (Revit/ArchiCAD/C4D κάτοψη). Κενό για τα
+   * σχήματα που το εξωτερικό περίγραμμα (κύκλος/n-γωνο/ορθογώνιο) τα περιγράφει ήδη πλήρως.
+   */
+  readonly interiorEdges: readonly GenericSolidPlanEdge[];
 }
 
 /** Περιστροφή (CCW, μοίρες) περί την αρχή + μεταφορά στο `position` — τοπικό → world. */
@@ -102,28 +114,40 @@ export function computeGenericSolidPlanOutline(
   const s = mmToSceneUnits(sceneUnits ?? 'mm');
   switch (shape.kind) {
     case 'box':
-      return { rings: [rectangleRing(shape.widthMm, shape.depthMm, position, rotationDeg, sceneUnits)] };
-    case 'pyramid':
-      return { rings: [rectangleRing(shape.baseWidthMm, shape.baseDepthMm, position, rotationDeg, sceneUnits)] };
+      return { rings: [rectangleRing(shape.widthMm, shape.depthMm, position, rotationDeg, sceneUnits)], interiorEdges: NO_EDGES };
+    case 'pyramid': {
+      const base = rectangleRing(shape.baseWidthMm, shape.baseDepthMm, position, rotationDeg, sceneUnits);
+      return { rings: [base], interiorEdges: pyramidApexEdges(base, position) };
+    }
     case 'sphere':
-      return { rings: [circleRing(shape.radiusMm, s, position, rotationDeg)] };
+      return { rings: [circleRing(shape.radiusMm, s, position, rotationDeg)], interiorEdges: NO_EDGES };
     case 'cylinder':
-      return { rings: [circleRing(shape.radiusMm, s, position, rotationDeg)] };
+      return { rings: [circleRing(shape.radiusMm, s, position, rotationDeg)], interiorEdges: NO_EDGES };
     case 'disc':
-      return { rings: [circleRing(shape.radiusMm, s, position, rotationDeg)] };
+      return { rings: [circleRing(shape.radiusMm, s, position, rotationDeg)], interiorEdges: NO_EDGES };
     case 'cone':
-      return { rings: [circleRing(Math.max(shape.radiusBottomMm, shape.radiusTopMm), s, position, rotationDeg)] };
+      return { rings: [circleRing(Math.max(shape.radiusBottomMm, shape.radiusTopMm), s, position, rotationDeg)], interiorEdges: NO_EDGES };
     case 'prism': {
       const sides = Math.max(MIN_PRISM_SIDES, Math.floor(shape.sides));
       const local = regularPolygonLocal(shape.radiusMm * s, sides, PRISM_FIRST_VERTEX_DEG);
-      return { rings: [placeRing(local, position, rotationDeg)] };
+      return { rings: [placeRing(local, position, rotationDeg)], interiorEdges: NO_EDGES };
     }
     case 'torus': {
       const outer = circleRing(shape.majorRadiusMm + shape.tubeRadiusMm, s, position, rotationDeg);
       const innerRadiusMm = shape.majorRadiusMm - shape.tubeRadiusMm;
       return innerRadiusMm > 0
-        ? { rings: [outer, circleRing(innerRadiusMm, s, position, rotationDeg)] }
-        : { rings: [outer] };
+        ? { rings: [outer, circleRing(innerRadiusMm, s, position, rotationDeg)], interiorEdges: NO_EDGES }
+        : { rings: [outer], interiorEdges: NO_EDGES };
     }
   }
+}
+
+/**
+ * Οι 4 «ακμές-γωνίες» (hip edges) της πυραμίδας προβεβλημένες στην κάτοψη: η κορυφή κάθεται πάνω από
+ * το κέντρο βάσης (= `position`), άρα κάθε ακμή γωνία→κορυφή προβάλλεται σε γωνία→κέντρο. Τα 4 τμήματα
+ * (2 πλήρεις διαγώνιοι) = το «Χ» που δείχνει η C4D/Revit όταν κοιτάς την πυραμίδα από πάνω.
+ */
+function pyramidApexEdges(base: readonly Point3D[], position: Readonly<Point3D>): GenericSolidPlanEdge[] {
+  const apex: Point3D = { x: position.x, y: position.y, z: 0 };
+  return base.map((corner) => [corner, apex] as const);
 }

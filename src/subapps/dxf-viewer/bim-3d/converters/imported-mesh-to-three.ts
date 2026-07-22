@@ -66,6 +66,8 @@ export function importedMeshToObject3D(
   // ADR-683 Φ4 — safety-net υλικών: όταν το partner `.glb` ήρθε με χαμένα υλικά (Blender default
   // γκρι), βάψε ανά όνομα σε PBR preset. No-op σε placeholder κουτί (cache miss) και σε authored
   // υλικά (belt-and-suspenders gate) — ένα σωστό export περνά ανέγγιχτο.
-  applyImportedMeshMaterials(object);
+  // ADR-686 — user override (`mesh.faceAppearance`: `slot:${name}` per-slot ή `'*'` όλο) νικά πάνω
+  // από embedded/preset, ώστε ο χρήστης να αλλάζει χρώμα/υλικό/υφή στο εισαγόμενο έπιπλο.
+  applyImportedMeshMaterials(object, mesh.faceAppearance);
   return object;
 }

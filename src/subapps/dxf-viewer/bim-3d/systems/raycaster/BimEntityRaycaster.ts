@@ -9,6 +9,7 @@
  */
 
 import * as THREE from 'three';
+import { slotFaceKey } from '../../../bim/types/face-appearance-types';
 
 export interface RaycastHit {
   readonly bimId: string;
@@ -138,6 +139,19 @@ function stairSubElementFields(
   return idx === undefined ? { stairPart } : { stairPart, stairSubIndex: idx };
 }
 
+/**
+ * ADR-686 — το όνομα υλικού του slot που χτυπήθηκε σε ΕΙΣΑΓΟΜΕΝΟ mesh (καρέκλα = μπράτσα/κάθισμα/
+ * πλάτη). Τα imported δεν έχουν `faceKeyByMaterialIndex` (structural-only)· το slot addressing
+ * γίνεται by-material-name, ίδιο SSoT με το `materialSlots` + το 2D `SlotSilhouette`. `null` όταν
+ * το χτυπημένο material δεν έχει όνομα (unaddressable slot).
+ */
+function hitMeshSlotName(object: THREE.Object3D, matIndex: number | undefined): string | null {
+  if (!(object instanceof THREE.Mesh)) return null;
+  const m = object.material;
+  const mat = Array.isArray(m) ? (matIndex !== undefined ? m[matIndex] : undefined) : m;
+  return mat?.name ? mat.name : null;
+}
+
 /** ADR-040 Φ-3D-pointer — one-pass result: hover entity (nullable) + front-most world point. */
 export interface BimHitAndWorld {
   /** Tagged entity id of the first hit carrying `userData.bimId`, or null (untagged/helper mesh). */
@@ -211,6 +225,12 @@ export function raycastBimFace(
     const matIndex = hit.face?.materialIndex;
     const faceKey = faceKeys && matIndex !== undefined ? faceKeys[matIndex] : undefined;
     if (faceKey !== undefined) return { bimId, bimType, faceKey }; // faced face wins immediately
+    // ADR-686 — imported mesh: per-slot faceKey από το material name του χτυπημένου slot (front-most
+    // slot κερδίζει, mirror του faced). Ο χρήστης στοχεύει το κομμάτι (μπράτσο) κάτω απ' τον κέρσορα.
+    if (bimType === 'imported-mesh') {
+      const slotName = hitMeshSlotName(hit.object, matIndex);
+      if (slotName) return { bimId, bimType, faceKey: slotFaceKey(slotName) };
+    }
     entityFallback ??= { bimId, bimType }; // remember the nearest non-faced hit
   }
   return entityFallback;

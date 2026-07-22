@@ -22,30 +22,17 @@
 import type { ISceneManager, SceneEntity } from '../interfaces';
 import type { FinishFaceOverride, StructuralFinishSpec } from '../../../bim/finishes/structural-finish-types';
 import { isFinishActive } from '../../../bim/finishes/structural-finish-types';
-import { finishFaceRefForFaceKey, withFinishFaceOverride } from '../../../bim/finishes/finish-face-override-ops';
+import {
+  finishFaceRefForFaceKey,
+  withFinishFaceOverride,
+  finishFootprintVertices,
+  type FinishPaintableEntity,
+} from '../../../bim/finishes/finish-face-override-ops';
 import {
   EntityFieldOverrideCommand,
   validateFaceKeyOverride,
   faceKeyOverrideData,
 } from './entity-field-override-command';
-
-/** Minimal shape: stored footprint (κολόνα) / outline (δοκάρι geometry· πλάκα params) + params.finish. */
-interface FinishPaintableEntity {
-  readonly params?: {
-    readonly finish?: StructuralFinishSpec;
-    /** ADR-534 Φ6b — outline πλάκας (SlabParams.outline): το stored footprint για finishFaceRef. */
-    readonly outline?: { readonly vertices?: readonly { x: number; y: number }[] };
-  };
-  readonly geometry?: {
-    readonly footprint?: { readonly vertices?: readonly { x: number; y: number }[] };
-    readonly outline?: { readonly vertices?: readonly { x: number; y: number }[] };
-  };
-}
-
-/** Το stored footprint για finishFaceRef: κολόνα → footprint, δοκάρι → geometry.outline, πλάκα → params.outline. */
-function finishFootprintVertices(entity: FinishPaintableEntity): readonly { x: number; y: number }[] | undefined {
-  return entity.geometry?.footprint?.vertices ?? entity.geometry?.outline?.vertices ?? entity.params?.outline?.vertices;
-}
 
 export class SetFinishFaceOverrideCommand extends EntityFieldOverrideCommand<StructuralFinishSpec> {
   readonly name = 'SetFinishFaceOverride';

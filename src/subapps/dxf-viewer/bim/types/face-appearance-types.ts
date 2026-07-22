@@ -21,13 +21,18 @@
  *   - `side:${i}` — η i-οστή περιμετρική πλευρά (edge ordering του `buildFacedPrism`).
  *   - `hole:${h}:${k}` — το k-οστό τοίχωμα του h-οστού ανοίγματος (slab opening, Φ2).
  *   - `sub:${i}:${string}` — per-«νερό» roof sub-solid (Φ3· δηλωμένο τώρα για σταθερό SSoT).
+ *   - `slot:${materialName}` — ADR-686: material slot ΕΙΣΑΓΟΜΕΝΟΥ mesh (καρέκλα = μπράτσα/κάθισμα/
+ *     πλάτη). Το imported δεν έχει `side:i` γεωμετρία· addressing by **όνομα υλικού** (dedup SSoT με
+ *     `ImportedMeshParams.materialSlots` + το 2D `SlotSilhouette.materialName`). Το `'*'` (base) βάφει
+ *     ΟΛΑ τα slots (ΣΩΜΑ). Ένα override concept, δύο resolvers (structural `side:i` ↔ imported `slot:`).
  */
 export type FaceKey =
   | 'top'
   | 'bottom'
   | `side:${number}`
   | `hole:${number}:${number}`
-  | `sub:${number}:${string}`;
+  | `sub:${number}:${string}`
+  | `slot:${string}`;
 
 /**
  * Η εμφάνιση μιας όψης: είτε υλικό από κατάλογο (`materialId`) είτε σκέτο χρώμα
@@ -53,6 +58,15 @@ export interface FaceAppearance {
  *   resolve(face) = appearance[face]  ??  appearance['*']  ??  base entity material
  */
 export const BASE_FACE_KEY = '*';
+
+/**
+ * ADR-686 — SSoT format του imported-mesh slot faceKey (`slot:${materialName}`). Κοινό για τον
+ * 3D enhancer (γράφει το override), τον `raycastBimFace` (per-slot pick) και τον 2D renderer. Ένα
+ * σημείο ορισμού ώστε τα τρία μονοπάτια να μη διαφωνήσουν ποτέ στο prefix.
+ */
+export function slotFaceKey(materialName: string): string {
+  return `slot:${materialName}`;
+}
 
 /**
  * Map όψη → εμφάνιση. Όψεις που λείπουν = κανένα override (πέφτουν στο `'*'` base, αλλιώς

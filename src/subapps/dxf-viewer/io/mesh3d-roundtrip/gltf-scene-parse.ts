@@ -48,6 +48,12 @@ import { measureMeshSolid, type MeshSolidMeasure } from './mesh-solid-measure';
  * με το σχήμα, ώστε ο ίδιος reconciler να τρέχει και για τα δύο formats.
  */
 export interface GltfObjectRecord extends ObjectMaterialAssignment {
+  /**
+   * ADR-683 Φ5 — **ΟΛΑ** τα ονόματα υλικών (slots) του κόμβου, με σειρά material-index, χωρίς
+   * διπλότυπα. Το `materialName` κρατά μόνο το dominant (πρώτο)· η per-slot 2Δ poché + το override
+   * (Φ6) θέλουν όλα τα ονόματα. Κενό array για ανώνυμα/χωρίς-υλικό meshes.
+   */
+  readonly materialSlots: readonly string[];
   /** `null` όταν το mesh δεν έχει αξιοποιήσιμες κορυφές — ποτέ «ίδιο» εξ ορισμού. */
   readonly fingerprint: GeometryFingerprint | null;
   /**
@@ -78,6 +84,31 @@ function resolveMaterialName(mesh: THREE.Mesh): string | null {
     if (typeof name === 'string' && name.length > 0) return name;
   }
   return null;
+}
+
+/**
+ * ADR-683 Φ5 — όλα τα ονόματα υλικών (slots) ενός mesh, με σειρά material-index, χωρίς διπλότυπα.
+ * Η καρέκλα Aeron έρχεται ως **ένα** Mesh με 4-slot material array· εδώ διασώζονται και τα 4 ονόματα
+ * (το `resolveMaterialName` κρατά μόνο το πρώτο). Ανώνυμα slots παραλείπονται (δεν αναζητούνται).
+ */
+function collectMaterialSlots(mesh: THREE.Mesh): readonly string[] {
+  const material = mesh.material;
+  const list = Array.isArray(material) ? material : [material];
+  const slots: string[] = [];
+  for (const m of list) {
+    const name = m?.name;
+    if (typeof name === 'string' && name.length > 0 && !slots.includes(name)) slots.push(name);
+  }
+  return slots;
+}
+
+/** ADR-683 Φ5 — τα distinct ονόματα υλικών ενός faced solid (per-face βάψιμο), με σειρά εμφάνισης. */
+function facedMaterialSlots(faceMaterials: ReadonlyMap<string, string | null>): readonly string[] {
+  const slots: string[] = [];
+  for (const name of faceMaterials.values()) {
+    if (typeof name === 'string' && name.length > 0 && !slots.includes(name)) slots.push(name);
+  }
+  return slots;
 }
 
 /**
@@ -163,10 +194,12 @@ function facedRepresentative(children: readonly THREE.Mesh[]): THREE.Mesh | null
 function buildFacedRecord(node: THREE.Object3D, faceKeys: readonly string[]): GltfObjectRecord {
   const children = facedChildMeshes(node);
   const representative = facedRepresentative(children);
+  const faceMaterials = collectFaceMaterials(faceKeys, children);
   return {
     objectName: node.name,
     materialName: dominantMaterialName(children),
-    faceMaterials: collectFaceMaterials(faceKeys, children),
+    materialSlots: facedMaterialSlots(faceMaterials),
+    faceMaterials,
     fingerprint: representative ? computeGeometryFingerprint(representative) : null,
     worldBoxM: readWorldBox(node),
     solid: representative ? measureMeshSolid(representative) : UNKNOWN_SOLID,
@@ -178,6 +211,7 @@ function buildMeshRecord(mesh: THREE.Mesh): GltfObjectRecord {
   return {
     objectName: mesh.name,
     materialName: resolveMaterialName(mesh),
+    materialSlots: collectMaterialSlots(mesh),
     fingerprint: computeGeometryFingerprint(mesh),
     worldBoxM: readWorldBox(mesh),
     solid: measureMeshSolid(mesh),

@@ -37,6 +37,10 @@ import {
   type SilPoint,
   type SilSegment,
 } from '../../../bim/mesh-library/mesh-silhouette';
+import {
+  computeTopSilhouettePerSlot,
+  type SlotSilhouette,
+} from '../../../bim/mesh-library/mesh-silhouette-slots';
 import { markAllCanvasDirty } from '../../../rendering/core/frame-scheduler-api';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -63,6 +67,8 @@ const status = new Map<string, CacheState>();
 const silhouettes = new Map<string, readonly SilPoint[]>();
 /** key → top-view feature edges (plan meters) for 2D interior detail. */
 const edges = new Map<string, readonly SilSegment[]>();
+/** key → per-material-slot silhouettes (ADR-683 Φ5) for the 2D material poché. */
+const slotSilhouettes = new Map<string, readonly SlotSilhouette[]>();
 
 /**
  * Kick off (or no-op) an async load. Resolves silently; the loaded mesh becomes
@@ -129,6 +135,10 @@ function indexTemplate(key: string, object: THREE.Object3D): void {
     if (sil.length >= 3) silhouettes.set(key, sil);
     const eg = computeTopEdges(template);
     if (eg.length > 0) edges.set(key, eg);
+    // ADR-683 Φ5 — per-slot material poché (μόνο για multi-material κόμβους· single-slot → 1 entry
+    // ισοδύναμο με τη single silhouette, οπότε ο renderer πέφτει στο mono μονοπάτι).
+    const slots = computeTopSilhouettePerSlot(template);
+    if (slots.length > 1) slotSilhouettes.set(key, slots);
   } catch {
     /* non-fatal — renderer falls back to the authored/measured rectangle */
   }
@@ -233,6 +243,14 @@ function getTopEdges(category: string, assetId: string): readonly SilSegment[] |
 }
 
 /**
+ * ADR-683 Φ5 — per-material-slot silhouettes (plan meters) for the 2D material poché, ordered
+ * lowest→highest for painters draw. `null` for single-material assets (caller uses the mono path).
+ */
+function getSlotSilhouettes(category: string, assetId: string): readonly SlotSilhouette[] | null {
+  return slotSilhouettes.get(meshAssetKey(category, assetId)) ?? null;
+}
+
+/**
  * ADR-683 §mesh-load-missing-file — η κατάσταση φόρτωσης ενός asset, ώστε το UI να **σημάνει** ένα
  * πλέγμα του οποίου το `.glb` λείπει (`'error'`) αντί να δείχνει σιωπηλά μόνιμο κουτί. Σύγχρονο,
  * χωρίς παρενέργεια — ασφαλές για κλήση σε render. Αντανακλά αλλαγές μέσω του `meshAssetVersion`.
@@ -248,6 +266,7 @@ export const bimMeshCache = {
   getInstance,
   getSilhouette,
   getTopEdges,
+  getSlotSilhouettes,
   getLoadState,
 };
 
@@ -257,5 +276,6 @@ export function __resetBimMeshCacheForTests(): void {
   status.clear();
   silhouettes.clear();
   edges.clear();
+  slotSilhouettes.clear();
   inFlightScenes.clear();
 }

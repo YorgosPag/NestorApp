@@ -38,6 +38,9 @@ import {
   resolveImportedMaterialPreset,
   type ImportedMaterialPreset,
 } from '../../bim/materials/imported-material-presets';
+// ADR-686 — user appearance override (χρώμα/υλικό/υφή) πάνω από το embedded/preset υλικό.
+import { resolveFaceMaterial } from '../materials/face-appearance-material';
+import { slotFaceKey, type FaceAppearanceMap } from '../../bim/types/face-appearance-types';
 
 /** Πάνω από αυτό το metalness το υλικό θεωρείται authored (μη-default) → δεν αγγίζεται. */
 const AUTHORED_METALNESS = 0.1;
@@ -97,16 +100,46 @@ function enhanceSlot(material: THREE.Material): THREE.Material {
 }
 
 /**
- * Αναβαθμίζει επί τόπου όλα τα mesh materials ενός εισαγόμενου Object3D. No-op σε placeholder
- * κουτί (cache miss) — το όνομα υλικού του δεν ταιριάζει keyword, οπότε το gate #2 το αφήνει.
- * Χειρίζεται και single material και material array (multi-slot meshes, π.χ. η καρέκλα = 4 slots).
+ * ADR-686 — το υλικό ΕΝΟΣ slot με το **user override** να νικά (Revit/C4D base+override):
+ *   1. αν το `faceAppearance` έχει override για αυτό το slot (`slot:${name}`) ή base (`'*'`) →
+ *      το επιλυμένο material (χρώμα/flat catalog/textured PBR) μέσω του κοινού `resolveFaceMaterial`
+ *      SSoT — ΙΔΙΟ resolver με τα δομικά, μηδέν δεύτερος μηχανισμός βαφής (η απάντηση στο «διπλοτυπία;»)·
+ *   2. αλλιώς → ADR-683 preset safety-net (αμετάβλητο).
+ *
+ * Το override material **κλωνοποιείται** από το κοινό cached singleton για να διατηρήσει το `side`
+ * (τα partner meshes είναι συχνά `DoubleSide` με ασυνεπές winding· το FrontSide του shared θα άφηνε
+ * τρύπες) + να σβήσει το `polygonOffset` — χωρίς να μολύνει το cached που μοιράζονται τα δομικά.
  */
-export function applyImportedMeshMaterials(object: THREE.Object3D): void {
+function resolveSlotMaterial(
+  source: THREE.Material,
+  faceAppearance: FaceAppearanceMap | undefined,
+): THREE.Material {
+  if (faceAppearance) {
+    const resolved = resolveFaceMaterial(slotFaceKey(source.name), faceAppearance, source);
+    if (resolved !== source) {
+      const mat = resolved.clone();
+      mat.side = source.side;
+      if (mat instanceof THREE.MeshStandardMaterial) mat.polygonOffset = false;
+      return mat;
+    }
+  }
+  return enhanceSlot(source);
+}
+
+/**
+ * Χτίζει επί τόπου όλα τα mesh materials ενός εισαγόμενου Object3D με προτεραιότητα: **user override**
+ * (ADR-686) → **preset safety-net** (ADR-683) → **embedded**. No-op override σε placeholder κουτί
+ * (cache miss). Χειρίζεται single material και material array (multi-slot meshes, π.χ. καρέκλα = 4 slots).
+ */
+export function applyImportedMeshMaterials(
+  object: THREE.Object3D,
+  faceAppearance?: FaceAppearanceMap,
+): void {
   object.traverse((child) => {
     if (!(child instanceof THREE.Mesh)) return;
     const material = child.material;
     child.material = Array.isArray(material)
-      ? material.map(enhanceSlot)
-      : enhanceSlot(material);
+      ? material.map((m) => resolveSlotMaterial(m, faceAppearance))
+      : resolveSlotMaterial(material, faceAppearance);
   });
 }

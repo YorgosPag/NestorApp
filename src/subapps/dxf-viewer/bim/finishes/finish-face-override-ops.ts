@@ -19,6 +19,39 @@ import { finishFaceRef, type FinishFaceRef } from './structural-finish-face-ref'
 import type { FinishFaceOverride, StructuralFinishSpec } from './structural-finish-types';
 import type { Pt2 } from '../geometry/shared/segment-polygon-coverage';
 
+/**
+ * Ελάχιστο σχήμα ενός finish-paintable δομικού στοιχείου: stored footprint (κολόνα) /
+ * outline (δοκάρι geometry· πλάκα params) + `params.finish`. Κοινό SSoT για τον writer
+ * (`SetFinishFaceOverrideCommand`) ΚΑΙ το entity-level «όλος ο σοβάς» (drag-drop, ADR-539).
+ */
+export interface FinishPaintableEntity {
+  readonly params?: {
+    readonly finish?: StructuralFinishSpec;
+    /** ADR-534 Φ6b — outline πλάκας (SlabParams.outline): το stored footprint για finishFaceRef. */
+    readonly outline?: { readonly vertices?: readonly { x: number; y: number }[] };
+  };
+  readonly geometry?: {
+    readonly footprint?: { readonly vertices?: readonly { x: number; y: number }[] };
+    readonly outline?: { readonly vertices?: readonly { x: number; y: number }[] };
+  };
+}
+
+/** Το stored footprint για finishFaceRef: κολόνα → footprint, δοκάρι → geometry.outline, πλάκα → params.outline. */
+export function finishFootprintVertices(entity: FinishPaintableEntity): readonly Pt2[] | undefined {
+  return entity.geometry?.footprint?.vertices ?? entity.geometry?.outline?.vertices ?? entity.params?.outline?.vertices;
+}
+
+/**
+ * ADR-539 (Giorgio 2026-07-22) — τα `side:i` faceKeys ΟΛΩΝ των κάθετων όψεων του footprint,
+ * ώστε το entity-level «ΣΟΒΑΣ» drag-drop να βάφει ολόκληρο το κέλυφος με ΕΝΑ undo (mirror του
+ * `entireElementFaceMap` του σώματος). Επιστρέφει κενό όταν το footprint είναι εκφυλισμένο (<3).
+ */
+export function wholeElementFinishFaceKeys(entity: FinishPaintableEntity): readonly string[] {
+  const verts = finishFootprintVertices(entity);
+  if (!verts || verts.length < 3) return [];
+  return verts.map((_, i) => `side:${i}`);
+}
+
 /** `side:i` → δείκτης ακμής i· κάθε άλλο faceKey (`top`/`bottom`/`hole:*`/base) → `null`. */
 export function edgeIndexFromFaceKey(faceKey: string): number | null {
   const m = /^side:(\d+)$/.exec(faceKey);
