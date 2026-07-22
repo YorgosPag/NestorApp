@@ -27,6 +27,7 @@
 import { getWallCoveringMaterial } from '../wall-coverings/wall-covering-material-catalog';
 import type { WallCoveringMaterialId } from '../types/wall-covering-types';
 import { getFloorFinishMaterial } from '../floor-finishes/floor-finish-material-catalog';
+import { catalogFlatColorOrNull } from './material-catalog-defs';
 
 /**
  * Λύνει το CSS hex ενός material id, ή `null` αν ο provider ΔΕΝ κατέχει αυτό το id
@@ -42,6 +43,10 @@ function staticProviders(): MaterialColorProvider[] {
     (id) => getWallCoveringMaterial(id as WallCoveringMaterialId)?.color ?? null,
     // Floor-finish (ADR-419) — getFloorFinishMaterial → undefined για ξένο id.
     (id) => getFloorFinishMaterial(id)?.color ?? null,
+    // Construction catalog (ADR-686) — `mat-*`/`elem-*` cladding (τούβλο/πέτρα/ξύλο/μέταλλο…). Τελευταίο:
+    // ξένα ids → null (δεν αρπάζει wall-covering/floor-finish/`bmat_*`). Δίνει flat χρώμα όταν realistic
+    // OFF ή η υφή δεν φόρτωσε ακόμη — αλλιώς μια όψη με catalog υλικό έβγαινε άβαφη (base look).
+    catalogFlatColorOrNull,
   ];
 }
 

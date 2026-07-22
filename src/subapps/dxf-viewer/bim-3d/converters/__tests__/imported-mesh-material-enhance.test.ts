@@ -100,6 +100,16 @@ describe('applyImportedMeshMaterials — appearance override (ADR-686)', () => {
     expect(slots[1].color.getHexString()).toBe('ff0000');
   });
 
+  // ADR-686 Φ5 — το πραγματικό σενάριο του Material Mapping dialog: ο χρήστης διαλέγει catalog υλικό
+  // (τούβλο) όχι σκέτο χρώμα. Πριν το registry fix, σε realistic OFF το `mat-brick` έβγαινε base look
+  // (κανένας color provider δεν το γνώριζε) → η βαφή δεν φαινόταν.
+  it('base override (*) με catalog materialId (τούβλο) βάφει — δεν μένει base look', () => {
+    const src = defaultGray('HMI-_Polished_Al');
+    const mesh = meshWith(src);
+    applyImportedMeshMaterials(mesh, { '*': { materialId: 'mat-brick' } });
+    expect(mesh.material).not.toBe(src); // αντικαταστάθηκε (βάφτηκε) αντί για base/preset
+  });
+
   it('per-slot override (slot:name) βάφει ΜΟΝΟ το matching slot (ΠΟΛΥΓΩΝΑ)', () => {
     const arm = defaultGray('Arm');
     // authored σκούρο + άγνωστο όνομα → χωρίς override + gate #1 false → μένει ανέγγιχτο.

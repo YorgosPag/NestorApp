@@ -171,6 +171,20 @@ export function getMaterialFlatColorHex(materialId: string): string {
 }
 
 /**
+ * ADR-686 — flat χρώμα ΜΟΝΟ για γνωστό construction-catalog id (`mat-*`/`elem-*` που ταιριάζει σε
+ * `MATERIAL_DEFS` prefix)· αλλιώς `null`. Provider-shaped, σε αντίθεση με το {@link getMaterialFlatColorHex}
+ * που δίνει ΠΑΝΤΑ fallback χρώμα: έτσι δηλώνεται ΑΣΦΑΛΩΣ ως `MaterialColorProvider` στο
+ * `material-color-registry` — δεν «αρπάζει» ξένα ids (wall-covering/floor-finish/`bmat_*` μένουν στους
+ * δικούς τους providers). Χωρίς αυτό, μια όψη βαμμένη με catalog υλικό (τούβλο/ξύλο/μέταλλο) σε
+ * realistic OFF έβγαινε άβαφη: `getFaceMaterial3D`→null (realistic OFF) και κανένας color provider δεν
+ * γνώριζε το `mat-*` id → base look.
+ */
+export function catalogFlatColorOrNull(materialId: string): string | null {
+  const known = Object.keys(MATERIAL_DEFS).some((prefix) => materialId.startsWith(prefix));
+  return known ? getMaterialFlatColorHex(materialId) : null;
+}
+
+/**
  * ADR-413 §2D Phase 3 — library material category → `MATERIAL_DEFS` key. For
  * `bim_materials` library docs (`bmat_*` ids that carry no DNA prefix) the flat 3D
  * appearance is derived from the doc's `category`. Mirrors `CATEGORY_SLUG` in

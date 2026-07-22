@@ -8,6 +8,7 @@ import {
   registerMaterialColorProvider,
   __resetMaterialColorProvidersForTests,
 } from '../material-color-registry';
+import { getMaterialFlatColorHex } from '../material-catalog-defs';
 
 describe('getMaterialColorById — static catalog providers', () => {
   afterEach(() => __resetMaterialColorProvidersForTests());
@@ -23,6 +24,31 @@ describe('getMaterialColorById — static catalog providers', () => {
   it('returns null for an id no catalog owns (→ base look)', () => {
     expect(getMaterialColorById('bmat_unknown')).toBeNull();
     expect(getMaterialColorById('totally-made-up')).toBeNull();
+  });
+});
+
+// ADR-686 — construction catalog cladding (`mat-*`/`elem-*`) πρέπει να δίνει flat χρώμα ώστε μια
+// imported/structural όψη βαμμένη με τούβλο/ξύλο/μέταλλο να βάφεται και σε realistic OFF (πριν → base look).
+describe('getMaterialColorById — construction catalog (ADR-686)', () => {
+  afterEach(() => __resetMaterialColorProvidersForTests());
+
+  it('resolves catalog cladding ids (brick/wood/metal) → flat hex (ίδιο με το 2D swatch)', () => {
+    expect(getMaterialColorById('mat-brick')).toBe(getMaterialFlatColorHex('mat-brick'));
+    expect(getMaterialColorById('mat-wood')).not.toBeNull();
+    expect(getMaterialColorById('mat-metal')).not.toBeNull();
+  });
+
+  it('resolves DNA preset ids (mat-concrete-c25 → concrete flat)', () => {
+    expect(getMaterialColorById('mat-concrete-c25')).toBe(getMaterialFlatColorHex('mat-concrete-c25'));
+  });
+
+  it('does NOT grab foreign ids (null → bmat_/wall-covering κρατούν τους providers τους)', () => {
+    expect(getMaterialColorById('bmat_unknown')).toBeNull();
+    expect(getMaterialColorById('totally-made-up')).toBeNull();
+  });
+
+  it('wall-covering ακόμη κερδίζει το δικό του id (σειρά providers)', () => {
+    expect(getMaterialColorById('paint-red')).toBe('#C0392B');
   });
 });
 

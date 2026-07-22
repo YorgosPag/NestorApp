@@ -158,3 +158,15 @@ dialog + ribbon labels).
   (catalog cladding `FACE_TEXTURE_MATERIAL_IDS` + user library + flat wall-covering χρώματα) από το
   `PolygonMaterialPanel` (τοπικό) → κοινό `bim-3d/ui/polygon-material-swatches.ts`, reuse από panel **και**
   dialog (ίδια λίστα υλικών με το 3D Polygon panel, μηδέν clone — N.18). Tests 11/11, jscpd clean.
+- **2026-07-22 (Φ5 fix — browser: δεν βάφονται τα catalog υλικά)** — Ο χρήστης διάλεγε catalog υλικό
+  (τούβλο/ξύλο/μέταλλο, `mat-*`) αλλά το mesh δεν έβαφε. **Root cause** (εντοπίστηκε με debugging, όχι εικασία):
+  σε realistic OFF (default) το `getFaceMaterial3D('mat-*')` → `null`, και ο `material-color-registry` είχε
+  providers **μόνο** για wall-covering + floor-finish + `bmat_*` — **κανέναν για τα construction catalog
+  `mat-*`/`elem-*`** → `getMaterialColorById('mat-brick')` = `null` → `resolveFaceMaterial` → base look
+  (αμετάβλητο). Το store-update/rebuild path είναι σωστό (version-gated `getSceneEntitiesByType`, rebuild-all).
+  **Fix (SSoT, ακριβώς ο σκοπός του registry — ADR-679):** νέος provider `catalogFlatColorOrNull`
+  (`material-catalog-defs.ts`, provider-safe: γνωστό prefix → flat hex, ξένο → `null`) δηλωμένος τελευταίος
+  στο `material-color-registry`. Καλύπτει ΚΑΙ realistic OFF (flat) ΚΑΙ ON (textured). Tests: registry +4,
+  enhance +1 (catalog materialId base override), 40/40 πράσινα, jscpd clean.
+- **2026-07-22 (Φ5 fix — unbalanced `TooltipProvider` JSX)** — Συμπληρώθηκε το closing tag (node-name tooltips
+  στον πίνακα)· το αρχείο δεν έκανε compile.

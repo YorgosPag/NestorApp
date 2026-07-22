@@ -71,8 +71,6 @@ const templates = new Map<string, THREE.Group>();
 const status = new Map<string, CacheState>();
 /** key → top-view silhouette (plan meters) for the 2D footprint. */
 const silhouettes = new Map<string, readonly SilPoint[]>();
-/** key → faithful top-view fill triangles (flat CCW plan coords) — ADR-683 §10.9 (legacy raw path). */
-const fillTriangles = new Map<string, Float32Array>();
 /** key → cached simplified fill contours (outer components + holes) — ADR-683 §10.9 (cheap-zoom path). */
 const fillContours = new Map<string, readonly (readonly SilPoint[])[]>();
 /** key → top-view feature edges (plan meters) for 2D interior detail. */
@@ -145,14 +143,11 @@ function indexTemplate(key: string, object: THREE.Object3D): void {
     // + hole-aware raster fill contours (few points → cheap even-odd fill on every zoom).
     const contours = computeTopFillContours(template);
     if (contours.length > 0) fillContours.set(key, contours);
-    // Legacy raw projected-triangle fill (exact shadow, up to ~42k triangles) — kept as a temporary
-    // fallback below the contour fill until the new path is verified in the browser (Giorgio 2026-07-22).
+    // ADR-683 §10.9.2 — project the triangles ONCE (main thread, THREE) and kick the EXACT vector union
+    // on a worker thread (big-player precision without freezing the load). When it resolves, swap the
+    // raster placeholder → exact contours + repaint. Fire-and-forget: failure → raster placeholder stays.
     const fill = computeTopFillTriangles(template);
     if (fill.length >= 6) {
-      fillTriangles.set(key, fill);
-      // ADR-683 §10.9.2 — kick the EXACT vector union on a worker thread (big-player precision without
-      // freezing the load). When it resolves, swap the raster placeholder → exact contours + repaint.
-      // Fire-and-forget: any failure resolves null and the raster placeholder simply stays.
       requestExactFillRings(key, fill)
         .then((rings) => {
           if (!rings || rings.length === 0) return;
@@ -276,18 +271,9 @@ function getTopEdges(category: string, assetId: string): readonly SilSegment[] |
 }
 
 /**
- * ADR-683 §10.9 — faithful top-view fill triangles (flat CCW plan coords) for an asset, or null if
- * not computed. The exact projected footprint (all disjoint regions + holes); the 2D renderer fills
- * these instead of the lossy single-contour silhouette.
- */
-function getFillTriangles(category: string, assetId: string): Float32Array | null {
-  return fillTriangles.get(meshAssetKey(category, assetId)) ?? null;
-}
-
-/**
- * ADR-683 §10.9 (revised) — cached simplified fill contours (outer components + holes, plan meters)
- * for an asset, or null if not computed. The cheap-zoom PRIMARY 2D footprint: the renderer fills these
- * few-point rings with even-odd on every zoom instead of ~42k raw triangles.
+ * ADR-683 §10.9 — cached simplified fill contours (outer components + holes, plan meters) for an asset,
+ * or null if not computed. The PRIMARY 2D footprint: an instant raster placeholder swapped for the exact
+ * worker union (§10.9.2); the renderer fills these few-point rings with even-odd on every zoom.
  */
 function getFillContours(category: string, assetId: string): readonly (readonly SilPoint[])[] | null {
   return fillContours.get(meshAssetKey(category, assetId)) ?? null;
@@ -316,7 +302,6 @@ export const bimMeshCache = {
   preload,
   getInstance,
   getSilhouette,
-  getFillTriangles,
   getFillContours,
   getTopEdges,
   getSlotSilhouettes,
@@ -328,7 +313,6 @@ export function __resetBimMeshCacheForTests(): void {
   templates.clear();
   status.clear();
   silhouettes.clear();
-  fillTriangles.clear();
   fillContours.clear();
   edges.clear();
   slotSilhouettes.clear();

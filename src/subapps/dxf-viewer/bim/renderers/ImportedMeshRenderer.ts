@@ -39,7 +39,6 @@ import { bimMeshCache } from '../../bim-3d/library/bim-mesh-library/bim-mesh-cac
 import {
   drawMeshSilhouette,
   drawMeshContourFill,
-  drawMeshFill,
   drawMeshSlotSilhouettes,
   type MeshSilhouettePalette,
 } from './mesh-silhouette-draw';
@@ -163,16 +162,15 @@ export class ImportedMeshRenderer extends BimFootprintRenderer {
   }
 
   /**
-   * Πενταπλό fallback (πρώτο που πετυχαίνει κερδίζει):
+   * Τριπλό fallback (πρώτο που πετυχαίνει κερδίζει):
    *  1. **ADR-683 Φ5 per-slot poché** — multi-material κόμβος (βάση=μέταλλο, κάθισμα=πλέγμα): κάθε slot
    *     δικό του χρώμα. (Για single-material imports = null → επόμενο.)
-   *  2. **ADR-683 §10.9 (revised) contour fill** — cached, simplified, multi-component + hole-aware
-   *     περίγραμμα, φθηνό fill σε κάθε zoom (big-player practice). **Το κύριο μονοπάτι** για εισαγόμενα.
-   *  3. **§10.9 legacy faithful fill** — τα ΩΜΑ projected triangles (~42k, ακριβό στο zoom). Προσωρινό
-   *     fallback μέχρι να επιβεβαιωθεί το (2) στον browser (Giorgio 2026-07-22)· θα αποσυρθεί μετά.
-   *  4. **raster silhouette** — robust fallback αν λείπουν τα fill contours/triangles.
-   *  5. `false` → ο caller βάφει το ορθογώνιο του bbox.
-   * Το χρώμα βγαίνει από τον ΙΔΙΟ SSoT (`slotPaletteWithOverride`) με το 3Δ (override → preset → ουδέτερο).
+   *  2. **ADR-683 §10.9 contour fill** — cached, simplified, multi-component + hole-aware περίγραμμα
+   *     (raster placeholder → exact worker union, §10.9.2), φθηνό fill σε κάθε zoom. **Το κύριο μονοπάτι**.
+   *  3. **raster silhouette** — robust fallback αν λείπουν τα fill contours.
+   *  4. `false` → ο caller βάφει το ορθογώνιο του bbox.
+   * Όλα τα μονοπάτια βάφουν fill + **ίδιο** outline stroke + feature edges → ομοιόμορφη εμφάνιση. Το χρώμα
+   * βγαίνει από τον ΙΔΙΟ SSoT (`slotPaletteWithOverride`) με το 3Δ (override → preset → ουδέτερο).
    */
   private drawImportedSilhouette(mesh: ImportedMeshEntity, assetId: string): boolean {
     const { position, rotationDeg, sceneUnits, sourceMaterialName, nodeName } = mesh.params;
@@ -204,21 +202,6 @@ export class ImportedMeshRenderer extends BimFootprintRenderer {
         ctx: this.ctx,
         worldToScreen,
         contours: bimMeshCache.getFillContours(IMPORTED_MESH_CATEGORY, assetId),
-        edges,
-        transform,
-        palette,
-        lineWidth: RENDER_LINE_WIDTHS.NORMAL,
-      })
-    ) {
-      return true;
-    }
-
-    // Προσωρινό legacy fallback (θα αποσυρθεί μετά την επιβεβαίωση του contour fill στον browser).
-    if (
-      drawMeshFill({
-        ctx: this.ctx,
-        worldToScreen,
-        triangles: bimMeshCache.getFillTriangles(IMPORTED_MESH_CATEGORY, assetId),
         edges,
         transform,
         palette,
