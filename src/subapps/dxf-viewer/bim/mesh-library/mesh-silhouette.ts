@@ -89,8 +89,41 @@ export function computeTopSilhouette(obj: THREE.Object3D): SilPoint[] {
   return silhouetteFromTriangles(collectProjectedTrisTagged(obj).map((t) => t.xz));
 }
 
+/**
+ * ADR-683 §10.9 — **faithful top-view fill**: the mesh's ACTUAL projected triangles in plan meters,
+ * `[x1,y1, x2,y2, x3,y3]` per triangle, flat-packed. Unlike {@link computeTopSilhouette} (a lossy
+ * 110-cell raster traced as a SINGLE outer contour), this is the exact top-down shadow of the mesh —
+ * the same geometry the 3D view draws. Filling every triangle (one path, nonzero winding) yields the
+ * union footprint with **every** disjoint region (star base spokes, mirror-symmetric halves) and
+ * **holes** reproduced for free — no raster resolution loss, no missing components (Giorgio 2026-07-22:
+ * «πιστή προβολή του mesh, όπως το 3Δ»).
+ *
+ * **Winding is normalised to CCW here** so the caller can nonzero-fill the whole set in ONE path:
+ * partner meshes are often double-sided with inconsistent winding, and mixing CW+CCW triangles under
+ * a nonzero fill would let overlaps cancel into phantom holes. Normalising once (cheap, cached) makes
+ * every triangle add, never subtract. Empty when the object has no mesh geometry.
+ */
+export function computeTopFillTriangles(obj: THREE.Object3D): Float32Array {
+  obj.updateMatrixWorld(true);
+  const tris = collectProjectedTrisTagged(obj);
+  const flat = new Float32Array(tris.length * 6);
+  for (let i = 0; i < tris.length; i++) {
+    const xz = tris[i].xz; // [ax,az, bx,bz, cx,cz] — plan y = -worldZ
+    const ax = xz[0], ay = -xz[1], bx = xz[2], by = -xz[3], cx = xz[4], cy = -xz[5];
+    const o = i * 6;
+    flat[o] = ax; flat[o + 1] = ay;
+    // Signed area < 0 ⇒ CW after the z-flip → swap b/c so every stored triangle is CCW.
+    if ((bx - ax) * (cy - ay) - (cx - ax) * (by - ay) < 0) {
+      flat[o + 2] = cx; flat[o + 3] = cy; flat[o + 4] = bx; flat[o + 5] = by;
+    } else {
+      flat[o + 2] = bx; flat[o + 3] = by; flat[o + 4] = cx; flat[o + 5] = cy;
+    }
+  }
+  return flat;
+}
+
 /** Rasterised plan grid of a projected triangle set (plan meters ↔ cell mapping). */
-interface RasterGrid {
+export interface RasterGrid {
   readonly grid: Uint8Array;
   readonly cols: number;
   readonly rows: number;
@@ -104,9 +137,14 @@ interface RasterGrid {
  * Rasterise a projected-triangle set (`[ax,az, bx,bz, cx,cz]` each, plan space)
  * into a binary occupancy grid sized to its aspect ratio. `null` when the set is
  * too sparse / degenerate to trace. The ONE grid builder shared by the single
- * silhouette and the per-component tracer.
+ * silhouette and the per-component tracer. `gridLong` overrides the default long-axis
+ * resolution (the faithful fill traces at a higher resolution — the raster runs ONCE at
+ * load, so extra cells cost nothing per-zoom while resolving thin plan features).
  */
-function buildRasterGrid(tris: readonly Float32Array[]): RasterGrid | null {
+export function buildRasterGrid(
+  tris: readonly Float32Array[],
+  gridLong: number = GRID_LONG,
+): RasterGrid | null {
   if (tris.length < MIN_TRIS) return null;
 
   // Plan-space bbox of the projection (u = worldX, v = worldZ).
@@ -122,7 +160,7 @@ function buildRasterGrid(tris: readonly Float32Array[]): RasterGrid | null {
   if (!(span > 0)) return null;
 
   // Grid sized to the aspect ratio (+1 cell padding each side for clean borders).
-  const cell = span / GRID_LONG;
+  const cell = span / gridLong;
   const cols = Math.max(3, Math.ceil(spanU / cell) + 2);
   const rows = Math.max(3, Math.ceil(spanV / cell) + 2);
   const ox = minU - cell, oy = minV - cell; // grid origin (cell col/row 0)
@@ -133,7 +171,7 @@ function buildRasterGrid(tris: readonly Float32Array[]): RasterGrid | null {
 }
 
 /** Grid contour cells → plan meters: u = worldX, v = worldZ → plan (x = u, y = -v). */
-function cellsToPlan(cells: ReadonlyArray<[number, number]>, g: RasterGrid): SilPoint[] {
+export function cellsToPlan(cells: ReadonlyArray<[number, number]>, g: RasterGrid): SilPoint[] {
   return cells.map(([ci, ri]) => ({
     x: g.ox + (ci + 0.5) * g.cell,
     y: -(g.oy + (ri + 0.5) * g.cell),
@@ -284,7 +322,7 @@ const N8: ReadonlyArray<readonly [number, number]> = [
  * Moore-neighbour boundary tracing with explicit backtrack-cell bookkeeping.
  * Returns the ordered outer contour cells of the filled region (one loop).
  */
-function traceOuterContour(grid: Uint8Array, cols: number, rows: number): Array<[number, number]> {
+export function traceOuterContour(grid: Uint8Array, cols: number, rows: number): Array<[number, number]> {
   const at = (c: number, r: number): boolean =>
     c >= 0 && c < cols && r >= 0 && r < rows && grid[r * cols + c] === 1;
 
@@ -337,7 +375,7 @@ function traceOuterContour(grid: Uint8Array, cols: number, rows: number): Array<
  * {@link traceOuterContour} (which follows a single region from its first filled
  * cell) traces exactly that component — disjoint same-slot blobs each get a ring.
  */
-function traceComponentContours(
+export function traceComponentContours(
   grid: Uint8Array, cols: number, rows: number,
 ): Array<Array<[number, number]>> {
   const visited = new Uint8Array(cols * rows);
@@ -381,7 +419,7 @@ function dedupeConsecutive(pts: Array<[number, number]>): Array<[number, number]
 
 // ─── Douglas–Peucker polyline simplification (closed ring) ───────────────────
 
-function simplify(ring: SilPoint[], eps: number): SilPoint[] {
+export function simplify(ring: SilPoint[], eps: number): SilPoint[] {
   if (ring.length <= 4 || eps <= 0) return ring;
   const keep = new Array<boolean>(ring.length).fill(false);
   keep[0] = true; keep[ring.length - 1] = true;

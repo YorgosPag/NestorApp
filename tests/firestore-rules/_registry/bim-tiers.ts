@@ -89,6 +89,8 @@ export const BIM_AUTHORING_COLLECTIONS: readonly BimTierEntry[] = [
   { collection: 'floorplan_furniture', requiredKeys: ['companyId', 'projectId', 'floorplanId', 'kind', 'params'] },
   // ADR-683 Φ3β — εισαγόμενο ψημένο πλέγμα από glTF συνεργάτη (ίδιο συμβόλαιο με το furniture).
   { collection: 'floorplan_imported_meshes', requiredKeys: ['companyId', 'projectId', 'floorplanId', 'kind', 'params'] },
+  // ADR-684 — παραμετρικό γεωμετρικό στερεό (procedural· ίδιο συμβόλαιο με το imported-mesh).
+  { collection: 'floorplan_generic_solids', requiredKeys: ['companyId', 'projectId', 'floorplanId', 'kind', 'params'] },
   { collection: 'floorplan_symbols', requiredKeys: ['companyId', 'projectId', 'floorplanId', 'category', 'kind', 'params'] },
   { collection: 'floorplan_floor_finishes', requiredKeys: ['companyId', 'projectId', 'floorplanId', 'params'] },
   { collection: 'floorplan_wall_coverings', requiredKeys: ['companyId', 'projectId', 'floorplanId', 'params'] },

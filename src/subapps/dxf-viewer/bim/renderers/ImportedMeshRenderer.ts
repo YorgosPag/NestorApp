@@ -38,11 +38,13 @@ import { getLayer } from '../../stores/LayerStore';
 import { bimMeshCache } from '../../bim-3d/library/bim-mesh-library/bim-mesh-cache';
 import {
   drawMeshSilhouette,
+  drawMeshContourFill,
+  drawMeshFill,
   drawMeshSlotSilhouettes,
   type MeshSilhouettePalette,
 } from './mesh-silhouette-draw';
 import {
-  resolveImportedMaterialPreset,
+  resolveImportedMaterialPresetFor,
   importedPresetHex,
   importedPresetRgba,
 } from '../materials/imported-material-presets';
@@ -60,12 +62,17 @@ import { gripKindOf } from '../../hooks/grip-kinds';
  */
 const IMPORTED_MESH_PALETTE: MeshSilhouettePalette = {
   stroke: '#5b6b7a',
-  fill: 'rgba(91, 107, 122, 0.14)',
+  fill: 'rgba(91, 107, 122, 0.28)',
   edge: 'rgba(91, 107, 122, 0.5)',
 };
 
-/** Ημιδιαφάνειες 2Δ σιλουέτας — καθρέφτης των alpha του ουδέτερου {@link IMPORTED_MESH_PALETTE}. */
-const SILHOUETTE_FILL_ALPHA = 0.16;
+/**
+ * Ημιδιαφάνειες 2Δ σιλουέτας — καθρέφτης των alpha του ουδέτερου {@link IMPORTED_MESH_PALETTE}.
+ * ADR-683 Φ4 (readability): το fill ήταν `0.16` → σκούρα υλικά (δέρμα `#2b2723`, ύφασμα `#3a3d42`)
+ * σχεδόν αόρατα σε λευκό φόντο. `0.28` = συμπαγέστερο material poché (πρακτική Revit/ArchiCAD),
+ * ώστε το χρώμα υλικού να **διαβάζεται** στην κάτοψη χωρίς να πνίγει τα εγγενή στοιχεία.
+ */
+const SILHOUETTE_FILL_ALPHA = 0.28;
 const SILHOUETTE_EDGE_ALPHA = 0.5;
 
 /**
@@ -74,8 +81,11 @@ const SILHOUETTE_EDGE_ALPHA = 0.5;
  * γκρι — σχηματικός πλούτος Revit/ArchiCAD-style, ΙΔΙΟ SSoT με το 3Δ (`imported-material-presets`).
  * Άγνωστο/απόν όνομα → το ουδέτερο γκρι (σκόπιμα διακριτό «ήρθε απ' έξω»).
  */
-function resolveImportedMeshPalette(sourceMaterialName?: string): MeshSilhouettePalette {
-  const preset = resolveImportedMaterialPreset(sourceMaterialName);
+function resolveImportedMeshPalette(
+  sourceMaterialName: string | undefined,
+  nodeName: string | undefined,
+): MeshSilhouettePalette {
+  const preset = resolveImportedMaterialPresetFor(sourceMaterialName, nodeName);
   if (!preset) return IMPORTED_MESH_PALETTE;
   return {
     stroke: importedPresetHex(preset),
@@ -91,13 +101,14 @@ function resolveImportedMeshPalette(sourceMaterialName?: string): MeshSilhouette
  */
 function slotPaletteWithOverride(
   materialName: string | undefined,
+  nodeName: string | undefined,
   faceAppearance: FaceAppearanceMap | undefined,
 ): MeshSilhouettePalette {
   const override = faceAppearance
     ? faceAppearance[slotFaceKey(materialName ?? '')] ?? faceAppearance[BASE_FACE_KEY]
     : undefined;
   const hex = override ? faceAppearanceColorHex(override) : null;
-  if (!hex) return resolveImportedMeshPalette(materialName);
+  if (!hex) return resolveImportedMeshPalette(materialName, nodeName);
   return {
     stroke: hex,
     fill: hexToRgba(hex, SILHOUETTE_FILL_ALPHA),
@@ -137,7 +148,7 @@ export class ImportedMeshRenderer extends BimFootprintRenderer {
 
     if (!this.drawImportedSilhouette(mesh, assetId)) {
       // Το ορθογώνιο του μετρημένου bbox — «εδώ είναι, το σχήμα έρχεται».
-      const palette = slotPaletteWithOverride(mesh.params.sourceMaterialName, mesh.faceAppearance);
+      const palette = slotPaletteWithOverride(mesh.params.sourceMaterialName, nodeName, mesh.faceAppearance);
       this.ctx.fillStyle = adaptFillTintForCanvas(palette.fill);
       this.drawPolygonPath(verts);
       this.ctx.fill();
@@ -152,15 +163,24 @@ export class ImportedMeshRenderer extends BimFootprintRenderer {
   }
 
   /**
-   * ADR-683 Φ5 — per-slot material poché (multi-material κόμβος: βάση=μέταλλο, κάθισμα=πλέγμα,
-   * μπράτσα=δέρμα), αλλιώς single silhouette (dominant υλικό), αλλιώς `false` (ο caller βάφει το
-   * ορθογώνιο). Το κάθε slot παίρνει χρώμα από τον ΙΔΙΟ SSoT resolver με το 3Δ.
+   * Πενταπλό fallback (πρώτο που πετυχαίνει κερδίζει):
+   *  1. **ADR-683 Φ5 per-slot poché** — multi-material κόμβος (βάση=μέταλλο, κάθισμα=πλέγμα): κάθε slot
+   *     δικό του χρώμα. (Για single-material imports = null → επόμενο.)
+   *  2. **ADR-683 §10.9 (revised) contour fill** — cached, simplified, multi-component + hole-aware
+   *     περίγραμμα, φθηνό fill σε κάθε zoom (big-player practice). **Το κύριο μονοπάτι** για εισαγόμενα.
+   *  3. **§10.9 legacy faithful fill** — τα ΩΜΑ projected triangles (~42k, ακριβό στο zoom). Προσωρινό
+   *     fallback μέχρι να επιβεβαιωθεί το (2) στον browser (Giorgio 2026-07-22)· θα αποσυρθεί μετά.
+   *  4. **raster silhouette** — robust fallback αν λείπουν τα fill contours/triangles.
+   *  5. `false` → ο caller βάφει το ορθογώνιο του bbox.
+   * Το χρώμα βγαίνει από τον ΙΔΙΟ SSoT (`slotPaletteWithOverride`) με το 3Δ (override → preset → ουδέτερο).
    */
   private drawImportedSilhouette(mesh: ImportedMeshEntity, assetId: string): boolean {
-    const { position, rotationDeg, sceneUnits, sourceMaterialName } = mesh.params;
+    const { position, rotationDeg, sceneUnits, sourceMaterialName, nodeName } = mesh.params;
     const transform = { position, rotationDeg, sceneUnits: sceneUnits ?? 'mm' } as const;
     const worldToScreen = (p: Point2D): Point2D => this.worldToScreen(p);
     const appearance = mesh.faceAppearance; // ADR-686 — user override per slot / base.
+    const edges = bimMeshCache.getTopEdges(IMPORTED_MESH_CATEGORY, assetId);
+    const palette = slotPaletteWithOverride(sourceMaterialName, nodeName, appearance);
 
     const slots = bimMeshCache.getSlotSilhouettes(IMPORTED_MESH_CATEGORY, assetId);
     if (
@@ -170,9 +190,38 @@ export class ImportedMeshRenderer extends BimFootprintRenderer {
         worldToScreen,
         slots: slots.map((s) => ({
           contours: s.contours,
-          palette: slotPaletteWithOverride(s.materialName ?? undefined, appearance),
+          palette: slotPaletteWithOverride(s.materialName ?? undefined, nodeName, appearance),
         })),
         transform,
+        lineWidth: RENDER_LINE_WIDTHS.NORMAL,
+      })
+    ) {
+      return true;
+    }
+
+    if (
+      drawMeshContourFill({
+        ctx: this.ctx,
+        worldToScreen,
+        contours: bimMeshCache.getFillContours(IMPORTED_MESH_CATEGORY, assetId),
+        edges,
+        transform,
+        palette,
+        lineWidth: RENDER_LINE_WIDTHS.NORMAL,
+      })
+    ) {
+      return true;
+    }
+
+    // Προσωρινό legacy fallback (θα αποσυρθεί μετά την επιβεβαίωση του contour fill στον browser).
+    if (
+      drawMeshFill({
+        ctx: this.ctx,
+        worldToScreen,
+        triangles: bimMeshCache.getFillTriangles(IMPORTED_MESH_CATEGORY, assetId),
+        edges,
+        transform,
+        palette,
         lineWidth: RENDER_LINE_WIDTHS.NORMAL,
       })
     ) {
@@ -183,9 +232,9 @@ export class ImportedMeshRenderer extends BimFootprintRenderer {
       ctx: this.ctx,
       worldToScreen,
       silhouette: bimMeshCache.getSilhouette(IMPORTED_MESH_CATEGORY, assetId),
-      edges: bimMeshCache.getTopEdges(IMPORTED_MESH_CATEGORY, assetId),
+      edges,
       transform,
-      palette: slotPaletteWithOverride(sourceMaterialName, appearance),
+      palette,
       lineWidth: RENDER_LINE_WIDTHS.NORMAL,
     });
   }

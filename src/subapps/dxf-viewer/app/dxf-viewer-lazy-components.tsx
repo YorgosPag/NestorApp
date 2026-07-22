@@ -49,6 +49,7 @@ export const SlabDetailHost = React.lazy(() => import('../ui/components/slab-det
 export const AdminLayerManagerDialogHost = React.lazy(() => import('./AdminLayerManagerDialogHost').then(mod => ({ default: mod.AdminLayerManagerDialogHost })));
 // ADR-683 Φ3.1β — «Ανάθεση προμέτρησης» dialog host (εισαγόμενο πλέγμα → άρθρο ΑΤΟΕ + μονάδα)
 export const ImportedMeshBoqHost = React.lazy(() => import('./ImportedMeshBoqHost').then(mod => ({ default: mod.ImportedMeshBoqHost })));
+export const ImportedMeshMaterialMapHost = React.lazy(() => import('./ImportedMeshMaterialMapHost').then(mod => ({ default: mod.ImportedMeshMaterialMapHost })));
 // Floor management («Όροφοι Κτιρίου») dialog host — open from Levels panel ⚙️ / floor-tab right-click
 export const FloorManagementDialogHost = React.lazy(() => import('./FloorManagementDialogHost').then(mod => ({ default: mod.FloorManagementDialogHost })));
 // ADR-581 — «Αντιγραφή Ιδιοτήτων» (Match/Transfer Properties) dialog host — open from multi-selection contextual tab

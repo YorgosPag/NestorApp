@@ -129,6 +129,38 @@ describe('applyImportedMeshMaterials — appearance override (ADR-686)', () => {
   });
 });
 
+// ADR-683 Φ4 — auto-tier από ΟΝΟΜΑ ΚΟΜΒΟΥ όταν το υλικό είναι ανώνυμο (πραγματικό HMI_Aeron:
+// materials:[undefined], σημασιολογία μόνο στα node names HBase/HPellBk/HArmPads).
+describe('applyImportedMeshMaterials — nodeName fallback (ανώνυμο partner υλικό)', () => {
+  it('ανώνυμο default-γκρι + nodeName «HBase» → metal preset (μεταλλικό)', () => {
+    const anonymous = defaultGray(''); // κανένα όνομα υλικού (πραγματικό HMI_Aeron)
+    const mesh = meshWith(anonymous);
+    applyImportedMeshMaterials(mesh, undefined, 'HBase');
+    expect(mesh.material).not.toBe(anonymous); // αντικαταστάθηκε (νέο instance)
+    expect((mesh.material as THREE.MeshStandardMaterial).metalness).toBeCloseTo(0.9, 5);
+  });
+
+  it('ανώνυμο default-γκρι + nodeName «HPellBk» → fabric (ύφασμα, non-metal)', () => {
+    const mesh = meshWith(defaultGray(''));
+    applyImportedMeshMaterials(mesh, undefined, 'HPellBk');
+    expect((mesh.material as THREE.MeshStandardMaterial).metalness).toBe(0);
+    expect((mesh.material as THREE.MeshStandardMaterial).color.getHexString()).toBe('3a3d42');
+  });
+
+  it('όνομα υλικού κερδίζει το nodeName όταν αναγνωρίζεται', () => {
+    const mesh = meshWith(defaultGray('HMI-_Polished_Al')); // υλικό=μέταλλο, κόμβος=ύφασμα
+    applyImportedMeshMaterials(mesh, undefined, 'HPellBk');
+    expect((mesh.material as THREE.MeshStandardMaterial).metalness).toBeCloseTo(0.9, 5);
+  });
+
+  it('χωρίς nodeName ΚΑΙ χωρίς όνομα υλικού → no-op (placeholder)', () => {
+    const placeholder = defaultGray('');
+    const mesh = meshWith(placeholder);
+    applyImportedMeshMaterials(mesh, undefined, undefined);
+    expect(mesh.material).toBe(placeholder);
+  });
+});
+
 describe('applyImportedMeshMaterials — placeholder / κενά', () => {
   it('no-op σε mesh χωρίς όνομα υλικού (placeholder κουτί)', () => {
     const placeholder = defaultGray('');

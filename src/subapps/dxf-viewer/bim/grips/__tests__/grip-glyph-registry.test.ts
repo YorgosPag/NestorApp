@@ -22,6 +22,16 @@ describe('gripGlyphShape', () => {
     expect(gripGlyphShape('column-rotation')).toBe('rotation');
   });
 
+  it("placeable point entities (imported-mesh / generic-solid) → move + rotation glyphs", () => {
+    expect(gripGlyphShape('imported-mesh-move')).toBe('move');
+    expect(gripGlyphShape('imported-mesh-rotation')).toBe('rotation');
+    expect(gripGlyphShape('generic-solid-move')).toBe('move');
+    expect(gripGlyphShape('generic-solid-rotation')).toBe('rotation');
+    // Οι λαβές σχήματος (γωνίες box / radial στρογγυλών) μένουν στο default 'square'.
+    expect(gripGlyphShape('generic-solid-corner-ne')).toBe('square');
+    expect(gripGlyphShape('generic-solid-radius')).toBe('square');
+  });
+
   it("unknown / resize / variant kinds → 'square'", () => {
     for (const k of ['wall-start', 'wall-thickness', 'column-width', 'column-depth', 'stair-width', 'bogus']) {
       expect(gripGlyphShape(k)).toBe('square');

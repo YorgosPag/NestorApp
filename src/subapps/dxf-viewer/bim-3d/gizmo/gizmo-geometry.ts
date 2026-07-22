@@ -281,8 +281,13 @@ export function createGizmoMeshes(): GizmoMeshSet {
         transparent: false,
         opacity: 1.0,
         side: THREE.DoubleSide,
-        depthTest: true,
-        depthWrite: true,
+        // Giorgio 2026-07-22 — always-on-top manipulator contract (όπως ΟΛΑ τα άλλα gizmo
+        // handles μέσω `makeMaterial`): `depthTest:false`. Με `depthTest:true` το ring γινόταν
+        // occlude από τη geometry στο depth buffer· ανώδυνο σε λεπτά στοιχεία (τοίχος/κολώνα)
+        // όπου προβάλλεται γύρω τους, αλλά ΑΟΡΑΤΟ όταν το gizmo anchor (κέντρο bbox) πέφτει
+        // ΜΕΣΑ σε ογκώδες στοιχείο (generic solid «Στερεό») → η μπροστινή όψη έκρυβε το ring.
+        depthTest: false,
+        depthWrite: false,
       }),
     );
     // Opposite width direction vs flat ring band: stretch along local normal axis.

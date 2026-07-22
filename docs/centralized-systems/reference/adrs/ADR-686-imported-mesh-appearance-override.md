@@ -36,6 +36,27 @@
   **ΕΝΑ ενιαίο** material system: το imported έρχεται με προ-γεμισμένα slots και τα αλλάζεις με τον
   ΙΔΙΟ μηχανισμό. Νέο ξεχωριστό σύστημα βαφής μόνο για imported = **αυτό** θα ήταν η διπλοτυπία.
 
+### SSoT απόφαση 2026-07-22 — `faceAppearance` vs ADR-678 (ΟΧΙ σύγκρουση)
+
+Δεύτερο SSoT audit (grep) έκρινε αν το ADR-678 μηχανισμός (`resolveImportAppearance` / `buildKnownMaterialResolver`)
+είναι **ανταγωνιστική αποθήκευση**. **Δεν είναι.** Ο `applyImportedAppearance` (ADR-678) χτίζει
+`SetFaceAppearanceCommand` και **γράφει μέσα στο `faceAppearance`**:
+
+- **`faceAppearance` (ADR-539) = ο ΕΝΑΣ SSoT** αποθήκευσης/επίλυσης/render (63 αρχεία, όλα τα entity types).
+- **ADR-678 `resolveImportAppearance` = παραγωγός** τιμών `FaceAppearance` (import-time name→id/color match).
+- **node-name presets (ADR-683 Φ4) = παραγωγός** (auto-tier).
+- **Manual Material Mapping dialog (Φ5) = παραγωγός** (χειροκίνητη επιλογή χρήστη).
+
+Και οι τρεις παραγωγοί καταλήγουν στο ίδιο `faceAppearance` → μηδέν δεύτερο σύστημα υλικών.
+
+### Ground truth (μετρημένο) — per-ENTITY, όχι per-slot
+
+Το πραγματικό `HMI_Aeron_Chair_3D.glb` = **10 ξεχωριστές `imported-mesh` οντότητες** (ο `GLTFLoader` σπάει
+κάθε node σε δικό του addressable mesh), κάθε μία με **ένα ΑΝΩΝΥΜΟ** υλικό. Άρα το per-slot-ΜΕΣΑ-σε-entity
+είναι **αδύνατο** (κανένα named material) και η αντιστοίχιση είναι **per-ENTITY**: το Φ5 γράφει
+`faceAppearance['*']` (base) ανά κομμάτι. Το `slot:${name}` machinery μένει έγκυρο για αρχεία με ονομασμένα
+υλικά, αλλά στην πράξη δεν πυροδοτείται.
+
 ---
 
 ## 3. Απόφαση (ενιαίο SSoT, δύο resolvers)
@@ -68,10 +89,12 @@ apply-helpers είναι **entity-agnostic** → **δουλεύουν αυτού
 
 | Φάση | Περιεχόμενο | Κατάσταση |
 |------|-------------|-----------|
-| **Φ1** | 3D: `FaceKey += slot:${name}` · enhancer διαβάζει override (χρώμα/flat catalog/textured PBR) · raycast per-slot · converter περνά `faceAppearance` | 🟢 IMPLEMENTED UNCOMMITTED |
-| **Φ2** | 2D: ο override νικά το preset-by-name στην κάτοψη (`slotPaletteWithOverride`) | 🟢 IMPLEMENTED UNCOMMITTED |
-| **Φ3** | Persistence: `faceAppearance` στο `ImportedMeshDoc`/save/update/hydrate (επιβιώνει reload) | 🟢 IMPLEMENTED UNCOMMITTED |
+| **Φ1** | 3D: `FaceKey += slot:${name}` · enhancer διαβάζει override (χρώμα/flat catalog/textured PBR) · raycast per-slot · converter περνά `faceAppearance` | 🟢 COMMITTED (0da6503a) |
+| **Φ2** | 2D: ο override νικά το preset-by-name στην κάτοψη (`slotPaletteWithOverride`) | 🟢 COMMITTED (0da6503a) |
+| **Φ3** | Persistence: `faceAppearance` στο `ImportedMeshDoc`/save/update/hydrate (επιβιώνει reload) | 🟢 COMMITTED (0da6503a) |
 | **Φ4** | (μελλοντικό) per-slot selection highlight στο ΠΟΛΥΓΩΝΑ (FaceSelectionHighlighter για imported) | ⬜ PLANNED |
+| **Φ4b** | auto-tier από **node name** (`resolveImportedMaterialPresetFor` + furniture stems) + 2D poché readability (alpha 0.28) | 🟢 IMPLEMENTED UNCOMMITTED |
+| **Φ5** | **Manual per-entity Material Mapping dialog** (Revit-style): πίνακας κομματιών ανά `uploadId`, dropdown υλικού βιβλιοθήκης, batch apply σε ΕΝΑ undo βήμα → `faceAppearance['*']` ανά entity | 🟢 IMPLEMENTED UNCOMMITTED |
 
 ---
 
@@ -87,6 +110,16 @@ apply-helpers είναι **entity-agnostic** → **δουλεύουν αυτού
 **Reused αυτούσια (καμία αλλαγή):** `resolveFaceMaterial`, `SetFaceAppearanceCommand`,
 `SetEntityFaceAppearanceMapCommand`, `apply-face-appearance`, `apply-entity-face-appearance-map`,
 `use-polygon-drag-drop` (ADR-539 Φ5).
+
+**Φ5 — Manual Material Mapping dialog** (mirror του `ImportedMeshBoq*` τρίπτυχου):
+`stores/ImportedMeshMaterialMapDialogStore.ts` (νέο) · `app/ImportedMeshMaterialMapHost.tsx` (νέο, group by
+`uploadId` + `useMaterialLibrary` + batch) · `ui/components/imported-mesh/ImportedMeshMaterialMapDialog.tsx`
+(νέο, πίνακας rows + Radix `Select` + `MaterialSwatch`) · `bim-3d/ui/apply-imported-mesh-material-map.ts`
+(νέο, `executeAsAtomicBatch([SetEntityFaceAppearanceMapCommand ανά κομμάτι])`, base `'*'` per-entity).
+**Wiring:** `contextual-imported-mesh-tab.ts` (+action `imported-mesh.assign-materials` + panel «Υλικά») ·
+`dxf-special-actions.ts` (+κλάδος → `open`) · `DxfViewerDialogs.tsx` + `dxf-viewer-lazy-components.tsx`
+(+mount) · `RibbonButtonIcon.tsx` (+`material-map` icon) · `dxf-viewer-shell.json` el/en (+`importedMeshMaterialMap`
+dialog + ribbon labels).
 
 ---
 
@@ -108,3 +141,20 @@ apply-helpers είναι **entity-agnostic** → **δουλεύουν αυτού
   raycast per-slot + 2D palette override + full persistence wiring. Reuse `resolveFaceMaterial` +
   ADR-539 commands/drag-drop. Tests: enhance override (base/per-slot/side-preservation/no-override).
   Pending: browser verify (βαφή + reload persist) + commit.
+- **2026-07-22 (Φ1+Φ2+Φ3 — COMMITTED 0da6503a)** — Ο πυρήνας έγινε commit.
+- **2026-07-22 (Φ4b — IMPLEMENTED UNCOMMITTED)** — auto-tier από **node name** (`resolveImportedMaterialPresetFor`
+  + furniture stems: `base/frame/spndle/edg`→μέταλλο, `pell/aeron`→ύφασμα, `armpad`→δέρμα) στο 3D+2D +
+  2D poché readability alpha `0.16→0.28`. Ground truth: πραγματικό HMI_Aeron = ανώνυμα υλικά → node name
+  η μόνη σημασιολογία. Tests +38 (imported-material-presets). Pending browser + commit.
+- **2026-07-22 (SSoT audit + Φ5 — IMPLEMENTED UNCOMMITTED)** — 2ος SSoT audit επιβεβαίωσε: `faceAppearance`
+  = ο ΕΝΑΣ SSoT· ADR-678/presets/manual = **παραγωγοί** (γράφουν μέσω `SetFaceAppearanceCommand`), μηδέν
+  σύγκρουση. **Manual per-entity Material Mapping dialog** (Revit-style) — mirror του `ImportedMeshBoq*`
+  τρίπτυχου: store + host (group by `uploadId` + `useMaterialLibrary`) + dialog (πίνακας rows + `Select` +
+  `MaterialSwatch`) + batch write `applyImportedMeshMaterialMap` (`executeAsAtomicBatch`, base `'*'` per-entity,
+  ένα undo). Ribbon panel «Υλικά» + action `imported-mesh.assign-materials`. Tests: batch helper 5/5 πράσινα,
+  jscpd clean. Pending: browser verify + commit.
+- **2026-07-22 (Φ5 fix — browser: άδειο dropdown)** — Το dropdown έδειχνε μόνο «— Αυτόματο —» (χρησιμοποιούσε
+  μόνο το user library `useMaterialLibrary`, συχνά άδειο). Fix: **κεντρικοποίηση** του `buildBodySwatches`
+  (catalog cladding `FACE_TEXTURE_MATERIAL_IDS` + user library + flat wall-covering χρώματα) από το
+  `PolygonMaterialPanel` (τοπικό) → κοινό `bim-3d/ui/polygon-material-swatches.ts`, reuse από panel **και**
+  dialog (ίδια λίστα υλικών με το 3D Polygon panel, μηδέν clone — N.18). Tests 11/11, jscpd clean.

@@ -37,7 +37,11 @@ import { usePerformanceHUDStore } from '../bim-3d/performance/PerformanceHUDStor
 // ADR-391 — open AdminLayerManager dialog via store SSoT
 import { AdminLayerManagerDialogStore } from '../stores/AdminLayerManagerDialogStore';
 import { ImportedMeshBoqDialogStore } from '../stores/ImportedMeshBoqDialogStore';
-import { IMPORTED_MESH_ASSIGN_BOQ_ACTION } from '../ui/ribbon/data/contextual-imported-mesh-tab';
+import { ImportedMeshMaterialMapDialogStore } from '../stores/ImportedMeshMaterialMapDialogStore';
+import {
+  IMPORTED_MESH_ASSIGN_BOQ_ACTION,
+  IMPORTED_MESH_ASSIGN_MATERIALS_ACTION,
+} from '../ui/ribbon/data/contextual-imported-mesh-tab';
 // ADR-563 — auto-dimension command flow (dialog → engine → batch commit)
 import { runAutoDimensionFlow } from '../systems/dimensions/auto/run-auto-dimension-flow';
 // ADR-362 §7 — «Ιδιότητες…»: open the F11/Ctrl+1 Full Properties Palette (self-follows selection).
@@ -121,6 +125,13 @@ export function dispatchDxfSpecialAction(action: string, deps: DxfSpecialActionD
   if (action === IMPORTED_MESH_ASSIGN_BOQ_ACTION) {
     const [importedMeshId] = selectedEntityIds;
     if (importedMeshId) ImportedMeshBoqDialogStore.open(importedMeshId);
+    return true;
+  }
+  // ADR-686 Φ5: «Αντιστοίχιση Υλικών» για το επιλεγμένο εισαγόμενο μοντέλο. Το id διαβάζεται εδώ,
+  // τη στιγμή του κλικ — το store κρατά την άγκυρα (όλα τα κομμάτια του uploadId) όσο είναι ανοιχτό.
+  if (action === IMPORTED_MESH_ASSIGN_MATERIALS_ACTION) {
+    const [importedMeshId] = selectedEntityIds;
+    if (importedMeshId) ImportedMeshMaterialMapDialogStore.open(importedMeshId);
     return true;
   }
   // ADR-391: Open AdminLayerManager modal dialog (Revit View > Layer Manager pattern)

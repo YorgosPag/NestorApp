@@ -2043,6 +2043,7 @@
       "vehiclePlan": "Vehicles",
       "plantsPlan": "Plants",
       "importedMeshBoq": "Bill of quantities",
+      "importedMeshMaterials": "Materials",
       "genericSolidShape": "Shape",
       "genericSolidPlacement": "Placement",
       "genericSolidClassification": "Classification",
@@ -5252,6 +5253,9 @@
       "importedMesh": {
         "assignBoq": {
           "label": "Assign to BOQ"
+        },
+        "assignMaterials": {
+          "label": "Material Mapping"
         }
       },
       "genericSolidEditor": {
@@ -7060,5 +7064,14 @@
     "cancel": "Cancel",
     "save": "Save",
     "remainingUnassigned": "{count, plural, one {# more object is still unassigned.} other {# more objects are still unassigned.}}"
+  },
+  "importedMeshMaterialMap": {
+    "title": "Material Mapping",
+    "description": "Assign a material to each part of the model “{file}”. Changes apply in both 3D and plan.",
+    "descriptionGeneric": "Assign a material to each part of the imported model. Changes apply in both 3D and plan.",
+    "materialPlaceholder": "Select material",
+    "none": "— Automatic —",
+    "cancel": "Cancel",
+    "apply": "Apply"
   }
 }

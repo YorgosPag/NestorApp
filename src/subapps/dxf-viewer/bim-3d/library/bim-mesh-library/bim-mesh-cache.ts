@@ -33,10 +33,16 @@ import { collectAddressableGltfNodes } from '../../scene/gltf-addressable-nodes'
 import { useBim3DEntitiesStore } from '../../stores/Bim3DEntitiesStore';
 import {
   computeTopSilhouette,
+  computeTopFillTriangles,
   computeTopEdges,
   type SilPoint,
   type SilSegment,
 } from '../../../bim/mesh-library/mesh-silhouette';
+import {
+  computeTopFillContours,
+  flatRingsToFilteredContours,
+} from '../../../bim/mesh-library/mesh-fill-contours';
+import { requestExactFillRings } from './mesh-fill-union-client';
 import {
   computeTopSilhouettePerSlot,
   type SlotSilhouette,
@@ -65,6 +71,10 @@ const templates = new Map<string, THREE.Group>();
 const status = new Map<string, CacheState>();
 /** key → top-view silhouette (plan meters) for the 2D footprint. */
 const silhouettes = new Map<string, readonly SilPoint[]>();
+/** key → faithful top-view fill triangles (flat CCW plan coords) — ADR-683 §10.9 (legacy raw path). */
+const fillTriangles = new Map<string, Float32Array>();
+/** key → cached simplified fill contours (outer components + holes) — ADR-683 §10.9 (cheap-zoom path). */
+const fillContours = new Map<string, readonly (readonly SilPoint[])[]>();
 /** key → top-view feature edges (plan meters) for 2D interior detail. */
 const edges = new Map<string, readonly SilSegment[]>();
 /** key → per-material-slot silhouettes (ADR-683 Φ5) for the 2D material poché. */
@@ -131,6 +141,29 @@ function indexTemplate(key: string, object: THREE.Object3D): void {
   // Derive the 2D plan silhouette + interior edges from the actual mesh (per-asset
   // representative footprint). Computed once; failures fall back to the rectangle in the renderer.
   try {
+    // ADR-683 §10.9 (revised) — INSTANT cheap-zoom placeholder: simplified, cached, multi-component
+    // + hole-aware raster fill contours (few points → cheap even-odd fill on every zoom).
+    const contours = computeTopFillContours(template);
+    if (contours.length > 0) fillContours.set(key, contours);
+    // Legacy raw projected-triangle fill (exact shadow, up to ~42k triangles) — kept as a temporary
+    // fallback below the contour fill until the new path is verified in the browser (Giorgio 2026-07-22).
+    const fill = computeTopFillTriangles(template);
+    if (fill.length >= 6) {
+      fillTriangles.set(key, fill);
+      // ADR-683 §10.9.2 — kick the EXACT vector union on a worker thread (big-player precision without
+      // freezing the load). When it resolves, swap the raster placeholder → exact contours + repaint.
+      // Fire-and-forget: any failure resolves null and the raster placeholder simply stays.
+      requestExactFillRings(key, fill)
+        .then((rings) => {
+          if (!rings || rings.length === 0) return;
+          const exact = flatRingsToFilteredContours(rings);
+          if (exact.length === 0) return;
+          fillContours.set(key, exact);
+          useBim3DEntitiesStore.getState().bumpMeshAssetVersion();
+          markAllCanvasDirty();
+        })
+        .catch(() => { /* keep the raster placeholder */ });
+    }
     const sil = computeTopSilhouette(template);
     if (sil.length >= 3) silhouettes.set(key, sil);
     const eg = computeTopEdges(template);
@@ -243,6 +276,24 @@ function getTopEdges(category: string, assetId: string): readonly SilSegment[] |
 }
 
 /**
+ * ADR-683 §10.9 — faithful top-view fill triangles (flat CCW plan coords) for an asset, or null if
+ * not computed. The exact projected footprint (all disjoint regions + holes); the 2D renderer fills
+ * these instead of the lossy single-contour silhouette.
+ */
+function getFillTriangles(category: string, assetId: string): Float32Array | null {
+  return fillTriangles.get(meshAssetKey(category, assetId)) ?? null;
+}
+
+/**
+ * ADR-683 §10.9 (revised) — cached simplified fill contours (outer components + holes, plan meters)
+ * for an asset, or null if not computed. The cheap-zoom PRIMARY 2D footprint: the renderer fills these
+ * few-point rings with even-odd on every zoom instead of ~42k raw triangles.
+ */
+function getFillContours(category: string, assetId: string): readonly (readonly SilPoint[])[] | null {
+  return fillContours.get(meshAssetKey(category, assetId)) ?? null;
+}
+
+/**
  * ADR-683 Φ5 — per-material-slot silhouettes (plan meters) for the 2D material poché, ordered
  * lowest→highest for painters draw. `null` for single-material assets (caller uses the mono path).
  */
@@ -265,6 +316,8 @@ export const bimMeshCache = {
   preload,
   getInstance,
   getSilhouette,
+  getFillTriangles,
+  getFillContours,
   getTopEdges,
   getSlotSilhouettes,
   getLoadState,
@@ -275,6 +328,8 @@ export function __resetBimMeshCacheForTests(): void {
   templates.clear();
   status.clear();
   silhouettes.clear();
+  fillTriangles.clear();
+  fillContours.clear();
   edges.clear();
   slotSilhouettes.clear();
   inFlightScenes.clear();

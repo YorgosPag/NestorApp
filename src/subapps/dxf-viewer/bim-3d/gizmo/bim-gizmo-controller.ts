@@ -146,12 +146,10 @@ export class BimGizmoController {
     if (changed && constraint?.kind === 'endpoint') {
       this.overlay.setDraggedEndpoint(constraint.endpoint, this.startAnchor.clone().add(this.bridge.getLiveTranslation()));
     }
-    // ADR-402 Phase B — surface the live snap target as a 3D marker (square frame).
-    if (changed) {
-      const snapWorld = this.bridge.getActiveSnapWorld();
-      if (snapWorld) this.overlay.showSnapMarker(snapWorld, camera);
-      else this.overlay.hideSnapMarker();
-    }
+    // Giorgio 2026-07-22 — ο 3D snap marker (κύβος) ΔΕΝ εμφανίζεται στο gizmo edit drag
+    // (οπτικός θόρυβος). Το snapping παραμένει ενεργό· απλά δεν ζωγραφίζουμε τον marker —
+    // κρατάμε τον κρυμμένο (`showSnapMarker` διατηρείται για το placement/άλλα contexts).
+    if (changed) this.overlay.hideSnapMarker();
     return changed;
   }
 

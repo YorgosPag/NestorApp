@@ -26,6 +26,9 @@ export const IMPORTED_MESH_CONTEXTUAL_TRIGGER = 'imported-mesh-selected';
 /** Το action token που ανοίγει τον dialog ανάθεσης (`dxf-special-actions`). */
 export const IMPORTED_MESH_ASSIGN_BOQ_ACTION = 'imported-mesh.assign-boq';
 
+/** ADR-686 Φ5 — action token που ανοίγει τον dialog «Αντιστοίχιση Υλικών» (`dxf-special-actions`). */
+export const IMPORTED_MESH_ASSIGN_MATERIALS_ACTION = 'imported-mesh.assign-materials';
+
 const K = 'ribbon.commands.importedMesh';
 
 export const CONTEXTUAL_IMPORTED_MESH_TAB: RibbonTab = {
@@ -48,6 +51,24 @@ export const CONTEXTUAL_IMPORTED_MESH_TAB: RibbonTab = {
               'boq-assign',
               IMPORTED_MESH_ASSIGN_BOQ_ACTION,
               IMPORTED_MESH_ASSIGN_BOQ_ACTION,
+            ),
+          ],
+        },
+      ],
+    },
+    {
+      id: 'imported-mesh-materials',
+      labelKey: 'ribbon.panels.importedMeshMaterials',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            actionBtn(
+              'importedMeshTools.assignMaterials',
+              `${K}.assignMaterials.label`,
+              'material-map',
+              IMPORTED_MESH_ASSIGN_MATERIALS_ACTION,
+              IMPORTED_MESH_ASSIGN_MATERIALS_ACTION,
             ),
           ],
         },

@@ -67,8 +67,13 @@ interface PresetRule {
 const PRESET_RULES: readonly PresetRule[] = [
   // Μέταλλο — γυαλισμένο/ματ. Το HDRI `scene.environment` δίνει αυτόματα αντανακλάσεις σε
   // κάθε metallic MeshStandardMaterial, άρα αρκεί σωστό metalness/roughness.
+  //
+  // ⚠️ Furniture-part stems (`base|frame|frm|spndle|spindle|edg`) — δες σχόλιο αρχείου
+  // «auto-tier από node name»: όταν το εισαγόμενο δεν έχει ονομασμένο υλικό, το ΟΝΟΜΑ ΚΟΜΒΟΥ
+  // (π.χ. `HBase`, `HFrame`, `HSpndle`, `HSeatFrm`, `HSFrmEdg`) είναι η μόνη σημασιολογία. Οι
+  // σκελετοί/βάσεις/άξονες/πλαίσια/ακμές επίπλων είναι τυπικά μέταλλο — καλή default αίσθηση.
   {
-    test: /alumin|aluminium|\bsteel\b|\binox\b|chrome|chrom|metal|\biron\b|brass|bronze|copper|nickel|\bsilver\b|polish/i,
+    test: /alumin|aluminium|\bsteel\b|\binox\b|chrome|chrom|metal|\biron\b|brass|bronze|copper|nickel|\bsilver\b|polish|\bbase\b|base$|frame|frm|spndle|spindle|edg/i,
     preset: { key: 'metal', color: 0xb9bdc6, metalness: 0.9, roughness: 0.28 },
   },
   // Γυαλί — διάφανο, χαμηλό roughness.
@@ -77,9 +82,10 @@ const PRESET_RULES: readonly PresetRule[] = [
     preset: { key: 'glass', color: 0xaecad8, metalness: 0, roughness: 0.06, transparent: true, opacity: 0.34 },
   },
   // Δέρμα — ΠΡΙΝ το ύφασμα (βλ. σχόλιο σειράς). `leath` (όχι `leather`) γιατί το C4D κόβει τα
-  // ονόματα υλικών στους ~16 χαρακτήρες (μετρημένο: `HMI-Aeron-Leathe`).
+  // ονόματα υλικών στους ~16 χαρακτήρες (μετρημένο: `HMI-Aeron-Leathe`). `armpad`/`armrest` =
+  // furniture-part stem από node name (`HArmPads` = μπράτσα καρέκλας, δέρμα/μαλακό).
   {
-    test: /leath|\bpelle\b|cuero|\bhide\b|nappa/i,
+    test: /leath|\bpelle\b|cuero|\bhide\b|nappa|armpad|armrest/i,
     preset: { key: 'leather', color: 0x2b2723, metalness: 0, roughness: 0.5 },
   },
   // Ξύλο.
@@ -87,10 +93,10 @@ const PRESET_RULES: readonly PresetRule[] = [
     test: /\bwood\b|\boak\b|walnut|timber|legno|birch|beech|plywood|\bmdf\b|mahog|teak/i,
     preset: { key: 'wood', color: 0x8a5a2e, metalness: 0, roughness: 0.6 },
   },
-  // Ύφασμα / πλέγμα καθίσματος (Aeron «Pellicle» = mesh της Herman Miller) / αφρός. `pellic` για
-  // truncated ονόματα (`HMI-3D01__Pellic`).
+  // Ύφασμα / πλέγμα καθίσματος (Aeron «Pellicle» = mesh της Herman Miller) / αφρός. `pell` (όχι
+  // `pellic`) πιάνει ΚΑΙ truncated υλικά (`HMI-3D01__Pellic`) ΚΑΙ node names (`HPellBk`/`HPellSt`).
   {
-    test: /fabric|textile|cloth|\bmesh\b|pellic|aeron|weave|upholster|\bfoam\b|cushion|felt|\bseat\b/i,
+    test: /fabric|textile|cloth|\bmesh\b|pell|aeron|weave|upholster|\bfoam\b|cushion|felt|\bseat\b/i,
     preset: { key: 'fabric', color: 0x3a3d42, metalness: 0, roughness: 0.78 },
   },
   // Ελαστικό / πλαστικό / ροδάκια.
@@ -130,6 +136,22 @@ export function resolveImportedMaterialPreset(
     if (rule.test.test(normalized)) return rule.preset;
   }
   return null;
+}
+
+/**
+ * ADR-683 Φ4 (auto-tier από node name) — λύνει το preset με **προτεραιότητα**: πρώτα το ονομασμένο
+ * υλικό (authored intent του συνεργάτη), και μόνο αν αυτό δεν δίνει τίποτα, πέφτει στο **όνομα
+ * κόμβου** (`HBase`, `HPellBk`, `HArmPads`…). Πολλά partner `.glb` (μετρημένο: το πραγματικό
+ * HMI_Aeron) φτάνουν με **ανώνυμα** υλικά — τότε το όνομα κόμβου είναι η μόνη σημασιολογία.
+ *
+ * Κοινός για τους **δύο** καταναλωτές (3Δ enhancer + 2Δ σιλουέτα) → ένα σημείο προτεραιότητας,
+ * μηδέν διπλότυπη λογική fallback (N.18). `null` όταν ΚΑΝΕΝΑ από τα δύο δεν αναγνωρίζεται.
+ */
+export function resolveImportedMaterialPresetFor(
+  materialName: string | null | undefined,
+  nodeName: string | null | undefined,
+): ImportedMaterialPreset | null {
+  return resolveImportedMaterialPreset(materialName) ?? resolveImportedMaterialPreset(nodeName);
 }
 
 /** CSS hex (`#rrggbb`) ενός preset — για την 2Δ παλέτα σιλουέτας (canvas fill/stroke). */

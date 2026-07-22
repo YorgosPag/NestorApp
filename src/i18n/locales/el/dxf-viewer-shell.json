@@ -2043,6 +2043,7 @@
       "vehiclePlan": "Οχήματα",
       "plantsPlan": "Φυτά",
       "importedMeshBoq": "Προμέτρηση",
+      "importedMeshMaterials": "Υλικά",
       "genericSolidShape": "Σχήμα",
       "genericSolidPlacement": "Τοποθέτηση",
       "genericSolidClassification": "Ταξινόμηση",
@@ -5252,6 +5253,9 @@
       "importedMesh": {
         "assignBoq": {
           "label": "Ανάθεση προμέτρησης"
+        },
+        "assignMaterials": {
+          "label": "Αντιστοίχιση Υλικών"
         }
       },
       "genericSolidEditor": {
@@ -7060,5 +7064,14 @@
     "cancel": "Ακύρωση",
     "save": "Αποθήκευση",
     "remainingUnassigned": "{count, plural, one {Μένει # ακόμη χωρίς ανάθεση.} other {Μένουν # ακόμη χωρίς ανάθεση.}}"
+  },
+  "importedMeshMaterialMap": {
+    "title": "Αντιστοίχιση Υλικών",
+    "description": "Αντιστοιχίστε ένα υλικό σε κάθε κομμάτι του μοντέλου «{file}». Οι αλλαγές εφαρμόζονται σε 3Δ και κάτοψη.",
+    "descriptionGeneric": "Αντιστοιχίστε ένα υλικό σε κάθε κομμάτι του εισαγόμενου μοντέλου. Οι αλλαγές εφαρμόζονται σε 3Δ και κάτοψη.",
+    "materialPlaceholder": "Επιλέξτε υλικό",
+    "none": "— Αυτόματο —",
+    "cancel": "Ακύρωση",
+    "apply": "Εφαρμογή"
   }
 }

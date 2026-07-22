@@ -445,8 +445,185 @@ color** ανά slot: το πιο ρεαλιστικό που κάνει κάτο
 empty), `gltf-scene-parse.test.ts` (+3 assertions materialSlots: multi/single/faced). Regression-clean
 (34 πράσινα στο silhouette/parse/import cluster), jscpd:diff clean.
 
+### 10.8 ✅ Φ6 — Per-ENTITY material mapping (Revit «Material Mapping», 2026-07-22)
+
+**🔴 Διόρθωση premise (μετρημένο από το ΠΡΑΓΜΑΤΙΚΟ `C:\Users\user\Downloads\HMI_Aeron_Chair_3D.glb`):**
+οι Φ4/Φ5 χτίστηκαν στην υπόθεση «**1 mesh, 4 ονομασμένα υλικά** `HMI-*`». Το πραγματικό αρχείο είναι
+**10 ξεχωριστά meshes → 10 ξεχωριστές `imported-mesh` οντότητες**, `materials: [undefined]` (**ΕΝΑ
+ανώνυμο** υλικό, κανένα named), 9/10 primitives χωρίς υλικό. Η σημασιολογία ζει **ΜΟΝΟ στα node names**:
+`HBase`(μέταλλο), `HFrame`/`HSpndle`/`HSeatFrm`/`HSFrmEdg`/`HBkFrame`/`HBFrmEdg`(σκελετός=μέταλλο),
+`HPellBk`/`HPellSt`(Pellicle=ύφασμα), `HArmPads`(μπράτσα=δέρμα). Ο προηγούμενος agent είδε παλιότερο export.
+
+**Συνέπεια για το Φ5 (per-slot):** αποδεδειγμένα **ανεφάρμοστο** για πραγματικά imports — κάθε οντότητα =
+ένας addressable κόμβος = ένα glTF primitive = **ΕΝΑ** υλικό. Ο `GLTFLoader` ΠΟΤΕ δεν φτιάχνει
+material-array mesh (σπάει τα primitives σε ξεχωριστά children· ο walker τα σπάει σε ξεχωριστές οντότητες).
+Άρα το `getSlotSilhouettes` γυρίζει null → ο renderer πέφτει πάντα στο mono μονοπάτι. Ο per-slot κώδικας
+(§10.7) μένει committed ως **αβλαβής νεκρός** (guard-gated)· δεν αφαιρέθηκε (θα ήταν ξεχωριστό cleanup commit).
+
+**Big-player επιβεβαίωση (Giorgio: «όπως οι μεγάλοι· αν δεν το προτείνουν, ακολούθα τους»):** Revit
+(εισαγόμενο mesh/DirectShape → υλικό **ανά αντικείμενο**, Material Browser), ArchiCAD (Surface **ανά
+αντικείμενο**), Cinema 4D (material tag **ανά αντικείμενο**· per-polygon selection tag μόνο όταν ΕΝΑ
+αντικείμενο έχει εσωτερικά group). Η καρέκλα ήρθε **ήδη σπασμένη σε 10 αντικείμενα** → **per-ENTITY
+mapping είναι ακριβώς η πρακτική τους**. Δεν χτίστηκε νέο σύστημα υλικών.
+
+**Υλοποίηση (reuse του ADR-686 `FaceAppearanceMap` + base `'*'`, μηδέν διπλότυπα):**
+- **Άξονας 1 — Manual (PRIMARY):** ήδη καλωδιωμένο από το ADR-686 commit. Ο χρήστης κάνει drop/κλικ σε ένα
+  κομμάτι → `raycastBimEntities` → `applyEntityFaceAppearanceMap(bimId, entireElementFaceMap(value))` γράφει
+  `faceAppearance['*'] = {materialId|colorHex}`. Το ΙΔΙΟ override τροφοδοτεί **3Δ** (`resolveFaceMaterial`) ΚΑΙ
+  **2Δ** (`slotPaletteWithOverride`) — ένα υλικό ανά οντότητα, SSoT.
+- **Άξονας 2 — Auto-tier από node name (SECONDARY, το βασικό bug):** ΠΡΙΝ όλα έβγαιναν γκρι γιατί οι resolvers
+  τροφοδοτούνταν με **όνομα υλικού που ΛΕΙΠΕΙ**. Νέος κοινός SSoT `resolveImportedMaterialPresetFor(materialName,
+  nodeName)` (`imported-material-presets.ts`): προτεραιότητα όνομα υλικού → **όνομα κόμβου** ως fallback. Ένα
+  σημείο προτεραιότητας, καλωδιωμένο ΚΑΙ στον 3Δ enhancer (`applyImportedMeshMaterials(object, faceAppearance,
+  nodeName)`) ΚΑΙ στον 2Δ `ImportedMeshRenderer`. Furniture-part stems στα PRESET_RULES: `base$`/`frame`/`frm`/
+  `spndle`/`spindle`/`edg`→metal, `pell`→fabric, `armpad`/`armrest`→leather.
+- **Άξονας 3 — 2Δ readability:** το fill alpha `0.16`→`0.28` (σκούρα υλικά ήταν σχεδόν αόρατα σε λευκό φόντο·
+  συμπαγέστερο material poché, πρακτική Revit/ArchiCAD).
+
+**Tests:** `imported-material-presets.test.ts` (+node-name stems 10 κόμβοι + `resolveImportedMaterialPresetFor`
+προτεραιότητα/fallback/null), `imported-mesh-material-enhance.test.ts` (+nodeName fallback: ανώνυμο→βάφεται από
+κόμβο, υλικό κερδίζει κόμβο, no-op χωρίς κανένα). 47 πράσινα. Εκκρεμεί: browser verify. (NO tsc, N.17.)
+
+### 10.9 ✅ Φ7 — Πιστή 2Δ προβολή του mesh (faithful projected-triangle fill, 2026-07-22)
+
+**Πρόβλημα (μετρημένο, browser verify Giorgio):** στην κάτοψη τα κομμάτια της καρέκλας εμφανίζονταν
+**ασύμμετρα/λάθος** ενώ στο 3Δ είναι τέλεια συμμετρικά. Ρίζα: το 2Δ **δεν** χρησιμοποιούσε τη γεωμετρία —
+χρησιμοποιούσε προσεγγιστική **raster σιλουέτα** (`computeTopSilhouette`): (α) πλέγμα 110 κελιών χάνει λεπτά
+features (π.χ. τις ακτίνες της αστεροειδούς βάσης `HSpndle`), (β) `traceOuterContour` ιχνηλατεί **ΜΟΝΟ ΜΙΑ**
+συνιστώσα — μετρημένο: το `HSpndle` προβάλλεται top-down σε **2** κομμάτια, γέμιζε μόνο το ένα. Το 3Δ αντίθετα
+ζωγραφίζει τα **πραγματικά τρίγωνα** → σωστό.
+
+**Big-player απόφαση (Giorgio: «πιστή προβολή του mesh, όπως το 3Δ»):** Revit/ArchiCAD παράγουν την κάτοψη
+από την **πραγματική 3Δ γεωμετρία** (projection/cut), όχι raster σκιά. Άρα το 2Δ fill γίνεται τα **ίδια
+projected triangles** που βλέπει το 3Δ — μηδέν προσέγγιση.
+
+**Υλοποίηση (SSoT, reuse-first, N.18 clean):**
+- `mesh-silhouette.ts` → νέα `computeTopFillTriangles(obj)`: όλα τα projected triangles σε plan coords,
+  flat-packed, **winding κανονικοποιημένο σε CCW** (τα partner meshes είναι συχνά double-sided με ασυνεπές
+  winding — χωρίς normalize το nonzero-fill θα ακύρωνε overlaps σε phantom holes). Reuse του υπάρχοντος
+  `collectProjectedTrisTagged`.
+- `bim-mesh-cache.ts` → cache `fillTriangles` (μία φορά στο `indexTemplate`, μαζί με silhouette/edges) +
+  `getFillTriangles`. Η raster σιλουέτα μένει ως **robust fallback**.
+- `mesh-silhouette-draw.ts` → νέα `drawMeshFill`: ΟΛΑ τα triangles σε **ΕΝΑ** path + single `ctx.fill()`
+  (nonzero winding → ακριβής ένωση footprint με **όλες** τις συνιστώσες + τρύπες· single fill = AA μόνο στο
+  εξωτερικό όριο, μηδέν εσωτερικά seams). Το edge-draw εξήχθη σε κοινό `drawFeatureEdges` (μοιράζεται με
+  `drawMeshSilhouette` — N.18, jscpd έπιασε το clone, διορθώθηκε).
+- `ImportedMeshRenderer.ts` → τετραπλό fallback: per-slot poché → **faithful fill (primary)** → raster
+  silhouette → ορθογώνιο bbox. Ίδιος SSoT χρώματος (`slotPaletteWithOverride`) με το 3Δ.
+
+**Performance:** το fill (έως ~42k triangles/part, μετρημένο HSeatFrm) τρέχει **μόνο σε bitmap-cache rebuild**
+(`DxfBitmapCache.rebuild` σε dirty· pan/zoom = blit) — occasional, ~ms. Όχι per-frame.
+
+**Tests:** `mesh-silhouette.test.ts` (+`computeTopFillTriangles`: CCW winding, **two-component mesh καλύπτει
+ΚΑΙ τα δύο μισά** — το ακριβές failure της single-contour σιλουέτας, empty object). 60 πράσινα, jscpd clean.
+
+### 10.9.1 ⚡ Perf revision — cached simplified contour fill αντί για ωμά triangles (2026-07-22)
+
+**Πρόβλημα (browser verify Giorgio):** μετά το Φ7 η κάτοψη ήταν **σωστή & συμμετρική**, ΑΛΛΑ το **zoom κόλλαγε
+πάρα πολύ**. Ρίζα — το performance claim του §10.9 («fill τρέχει μόνο σε rebuild, occasional ~ms») ήταν **λάθος**:
+το **zoom προκαλεί `DxfBitmapCache.rebuild`** (το bitmap ξανα-render-άρει στο νέο zoom για crispness), άρα το
+`drawMeshFill` ζωγράφιζε τα **~42.240 ωμά triangles** (`HSeatFrm`, μετρημένο) → ~126k `worldToScreen`/part σε
+**κάθε βήμα zoom** → jank.
+
+**Big-player απόφαση (Giorgio: «όπως Revit/ArchiCAD, χωρίς εκπτώσεις»):** οι μεγάλοι **δεν** ζωγραφίζουν 42k
+triangles στην κάτοψη — προ-υπολογίζουν **simplified plan curves** (λίγα σημεία) και τα γεμίζουν. Το κόστος πέφτει
+στο **draw** (few-point fill), όχι στη συχνότητα των rebuilds. Το raster→trace→simplify είναι ακριβώς ο μηχανισμός
+που ήδη κάνει η σιλουέτα (SSoT) — reuse σε **υψηλότερη ανάλυση** + **hole detection**.
+
+**Υλοποίηση (SSoT, reuse-first, N.18 clean — 0 clones):**
+- `mesh-fill-contours.ts` (νέο) → `contoursWithHolesFromTriangles` / `computeTopFillContours`: raster σε
+  `FILL_GRID_LONG=200` (μία φορά στο load· λεπτά features επιβιώνουν), `traceComponentContours` (outer
+  συνιστώσες, reuse) + νέα `traceHoleContours` (exterior 4-conn flood → ό,τι background μένει εγκλωβισμένο =
+  τρύπα), Douglas–Peucker (reuse), **area-filter** για mesh-weave noise (specks + tiny holes). Έξοδος = flat
+  rings (outer + holes). Τα primitives (`buildRasterGrid` με `gridLong` param, `traceOuterContour`, `cellsToPlan`,
+  `simplify`) **εξήχθησαν** από το `mesh-silhouette.ts` — ΕΝΑΣ πυρήνας, κανένα δεύτερο trace path.
+- `bim-mesh-cache.ts` → cache `fillContours` (μία φορά στο `indexTemplate`) + `getFillContours`.
+- `mesh-silhouette-draw.ts` → νέα `drawMeshContourFill`: even-odd fill μέσω του **υπάρχοντος SSoT
+  `fillRingsEvenOdd`** (ADR-684 torus — outer γεμίζει, holes τρυπιούνται) + κοινό `drawFeatureEdges`.
+- `ImportedMeshRenderer.ts` → το «fill» βήμα καλεί `drawMeshContourFill` **πριν** το `drawMeshFill`.
+
+**Cost:** ~λίγες εκατοντάδες σημεία αντί 42k triangles → **~300× λιγότεροι** `worldToScreen`/zoom. Η πιστότητα που
+ενέκρινε ο Giorgio (όλες οι συνιστώσες + πραγματικές τρύπες) διατηρείται· το όριο απλώς ελαφρώς εξομαλυμένο.
+
+**Symmetry tuning (browser verify #2 — Giorgio: «ταχύτητα OK αλλά χάλασε η συμμετρία»):** το mesh είναι
+συμμετρικό αλλά (α) το raster 200 κελιών κβάντιζε τα δύο μισά διαφορετικά, (β) το greedy Douglas–Peucker (μη
+mirror-symmetric) απλοποιούσε αλλιώς αριστερά/δεξιά. Fix με δύο knobs (μηδέν κόστος στο zoom — μόνο στο load):
+`FILL_GRID_LONG` 200→**320**, dedicated `FILL_SIMPLIFY_FRAC`=**0.0025** (tighter από το silhouette 0.012).
+**Γιατί όχι ακριβής διανυσματική ένωση** (`safeUnion`/`polygon-clipping`, που θα ήταν τέλεια συμμετρική):
+μετρήθηκε — 88k τρίγωνα → 7,6s· 42k ≈ 3-4s **ανά part × 10 parts** σύγχρονα στο `indexTemplate` → freeze στο load,
++ ρίσκο O(n²) recovery σε double-sided/degenerate. Απορρίφθηκε για **σύγχρονο** load-time· βιώσιμη **μόνο σε Web
+Worker** → υλοποιήθηκε στο **§10.9.2**. Το high-res raster μένει ως instant placeholder μέχρι να έρθει το exact.
+
+**⚠️ Παλιά μηχανή ΖΩΝΤΑΝΗ (εντολή Giorgio):** `computeTopFillTriangles` + `getFillTriangles` + `drawMeshFill`
+**ΔΕΝ αφαιρέθηκαν** — μένουν ως προσωρινό fallback **κάτω** από το contour fill μέχρι ο Giorgio επιβεβαιώσει
+οπτικά το νέο μονοπάτι στον browser. Μετά την έγκριση → χειρουργική αφαίρεσή τους (+ Φ7 test) σε επόμενο βήμα.
+
+**Tests:** `mesh-fill-contours.test.ts` (box → 1 simplified ring few-point· two-component → 2 rings· **torus →
+outer + hole ring**· empty → []). 5 πράσινα· τα Φ7 tests παραμένουν πράσινα (14 συνολικά)· jscpd 0 clones.
+
+### 10.9.2 🎯 EXACT vector fill via Web Worker — precision χωρίς freeze (2026-07-22)
+
+**Πρόβλημα (browser verify #3 — Giorgio: «καλύτερα αλλά όχι καλά· μπορούμε ακριβέστατη αποτύπωση χωρίς να χάσουμε
+ταχύτητα;»):** το high-res raster (§10.9.1) βελτίωσε τη συμμετρία αλλά **παραμένει προσέγγιση** — staircase + greedy
+Douglas–Peucker ποτέ δεν δίνουν το ακριβές, τέλεια συμμετρικό όριο.
+
+**Big-player απόφαση:** το **μαθηματικά ακριβές** plan footprint = boolean **UNION** των projected triangles (λίγα
+σημεία, τέλεια συμμετρικό — spike: frame-με-τρύπα → 1 polygon / outer 5pts + hole 5pts, exact). Κόστος ~4s/42k tris
+→ θα **πάγωνε** το load σύγχρονα. Λύση **Web Worker** (non-blocking) + **instant raster placeholder**.
+
+**Ροή (mirror του preload→bump→repaint):** load → raster contours **αμέσως** ορατά → `requestExactFillRings` →
+worker scaled/snapped union → flat rings → `flatRingsToFilteredContours` → **swap** `fillContours` → exact +
+`bumpMeshAssetVersion` + `markAllCanvasDirty`. Από εκεί zoom = **exact ΚΑΙ ακαριαίο** (~200 σημεία).
+
+**Υλοποίηση (SSoT, N.18 clean — 0 clones):**
+- `mesh-fill-union.worker.ts` (νέο) → **framework-free** (μόνο `polygon-clipping`, doctrine ADR-639): projected
+  triangles → scaled/snapped union → flat plan rings. Η προβολή (THREE) μένει main-thread· ο worker παίρνει έτοιμο
+  `Float32Array`. Robustness scale/snap όπως `safe-polygon-boolean`, inlined για pure closure.
+- `mesh-fill-union-client.ts` (νέο) → main-thread singleton RPC. **Ποτέ reject**: no-worker/crash/throw → `null` →
+  ο caller κρατά το raster placeholder (belt-and-suspenders).
+- `bim-mesh-cache.ts` → fire-and-forget kick μετά το placeholder· swap στο result.
+- `mesh-fill-contours.ts` → `flatRingsToFilteredContours` + exported `ringArea` (ΙΔΙΟ cleaning με το raster).
+- **Renderer αμετάβλητος**: το exact μπαίνει στο ΙΔΙΟ `getFillContours`→`drawMeshContourFill`→`fillRingsEvenOdd`·
+  αλλάζει μόνο η **πηγή** των contours (worker union αντί raster).
+
+**Tests:** `mesh-fill-contours.test.ts` (+`flatRingsToFilteredContours`: keep outer+hole, drop speck· degenerate →
+[]). 7 πράσινα. Worker union core spike: exact 2 rings, συμμετρικό. jscpd 0 clones. Εκκρεμεί: browser verify #4
+(placeholder→exact swap + zoom).
+
 ## 11. Changelog
 
+- **2026-07-22 (§10.9.2 🎯 EXACT vector fill via Web Worker)** — Το raster έμενε προσέγγιση (staircase + greedy DP).
+  Big-player precision χωρίς freeze: νέος **framework-free** `mesh-fill-union.worker.ts` (`polygon-clipping` union
+  των projected triangles → exact few-point symmetric rings, scaled/snapped robustness) + `mesh-fill-union-client.ts`
+  (main-thread RPC, ποτέ reject → raster placeholder ως fallback). `bim-mesh-cache` δείχνει **αμέσως** το raster
+  (§10.9.1) και κάνει **swap → exact** όταν ο worker τελειώσει (~4s/42k tris, non-blocking). Renderer αμετάβλητος
+  (ΙΔΙΟ `getFillContours`→`fillRingsEvenOdd`, αλλάζει μόνο η πηγή). `flatRingsToFilteredContours`+exported `ringArea`
+  (κοινό cleaning). Spike: frame-με-τρύπα → exact outer+hole. Tests 7 πράσινα, jscpd 0. Εκκρεμεί: browser verify #4.
+- **2026-07-22 (§10.9.1 ⚡ Perf — cached simplified contour fill αντί για ωμά triangles)** — Το zoom κόλλαγε: το
+  `drawMeshFill` ζωγράφιζε ~42.240 ωμά projected triangles (`HSeatFrm`) σε **κάθε** `DxfBitmapCache.rebuild` (το
+  zoom προκαλεί rebuild) → ~126k `worldToScreen`/part/zoom. Big-player fix: νέο `mesh-fill-contours.ts`
+  (`computeTopFillContours`) — cached, simplified, multi-component **+ hole-aware** contours (raster υψηλής
+  ανάλυσης + `traceHoleContours` + Douglas–Peucker + area-filter noise), fill μέσω του υπάρχοντος SSoT
+  `fillRingsEvenOdd` (ADR-684). Primitives εξήχθησαν από `mesh-silhouette.ts` (ΕΝΑΣ πυρήνας). Cache `fillContours`
+  + `getFillContours`· νέα `drawMeshContourFill` **πριν** το legacy `drawMeshFill` (που μένει ΖΩΝΤΑΝΟ ως προσωρινό
+  fallback μέχρι browser-approve, εντολή Giorgio). ~300× λιγότεροι μετασχηματισμοί/zoom. Symmetry tuning:
+  `FILL_GRID_LONG`=320 + `FILL_SIMPLIFY_FRAC`=0.0025 (μετά το «χάλασε η συμμετρία»). Ακριβής `polygon-clipping`
+  union απορρίφθηκε (μετρημένο 7,6s/88k tris → freeze στο load). Tests `mesh-fill-contours.test.ts` (5, incl.
+  torus hole), jscpd 0 clones. Εκκρεμεί: browser verify #3.
+- **2026-07-22 (§10.9 Φ7 — Πιστή 2Δ προβολή του mesh)** — Η κάτοψη έδειχνε ασύμμετρα/ελλιπή κομμάτια (raster
+  σιλουέτα 110 κελιών + single-component trace· μετρημένο: `HSpndle`=2 top-view components, γέμιζε 1). Big-player
+  (Revit/ArchiCAD = κάτοψη από πραγματική γεωμετρία): νέα `computeTopFillTriangles` (projected triangles, CCW
+  normalized) + cache `getFillTriangles` + `drawMeshFill` (ΕΝΑ path/single fill, όλες οι συνιστώσες + τρύπες) +
+  primary path στον `ImportedMeshRenderer`. Edge-draw σε κοινό `drawFeatureEdges` (N.18). Bitmap-cache amortized.
+  60 tests πράσινα. Εκκρεμεί browser verify. (NO tsc, N.17.)
+- **2026-07-22 (§10.8 Φ6 — Per-ENTITY material mapping + διόρθωση premise Φ4/Φ5)** — Το πραγματικό
+  HMI_Aeron `.glb` = **10 ξεχωριστές οντότητες, κανένα ονομασμένο υλικό** (σημασιολογία μόνο σε node names) —
+  η υπόθεση «1 mesh/4 named materials» των Φ4/Φ5 ήταν λάθος (παλιότερο export). Per-slot (Φ5) αποδεδειγμένα
+  ανεφάρμοστο (1 entity=1 primitive=1 υλικό)· μένει committed ως αβλαβής νεκρός. Big-player επιβεβαίωση
+  (Revit/ArchiCAD/C4D = υλικό ανά αντικείμενο) → **per-ENTITY mapping** πάνω στον υπάρχοντα ADR-686 `'*'`
+  base. Άξονας 1 (manual) ήδη καλωδιωμένος· Άξονας 2 (auto από **nodeName** — νέος κοινός
+  `resolveImportedMaterialPresetFor` + furniture-part stems) διορθώνει το «όλα γκρι»· Άξονας 3 (2Δ fill
+  `0.16`→`0.28` readability). 47 tests πράσινα. Εκκρεμεί browser verify. (NO tsc, N.17.)
 - **2026-07-22 (§10.7 Φ5 — Per-slot 2Δ material poché)** — Η Φ4 έβαφε όλη τη σιλουέτα με το dominant
   υλικό· τώρα κάθε material slot παίρνει το δικό του χρώμα στην κάτοψη (βάση=μέταλλο, κάθισμα=πλέγμα,
   μπράτσα=δέρμα). Big-player απόφαση Giorgio: flat solid color poché (Revit/ArchiCAD), **όχι** σκίαση

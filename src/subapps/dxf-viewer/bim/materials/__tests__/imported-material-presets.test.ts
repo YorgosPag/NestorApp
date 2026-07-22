@@ -6,6 +6,7 @@
 
 import {
   resolveImportedMaterialPreset,
+  resolveImportedMaterialPresetFor,
   importedPresetHex,
   importedPresetRgba,
 } from '../imported-material-presets';
@@ -60,6 +61,43 @@ describe('resolveImportedMaterialPreset — null όρια', () => {
       expect(resolveImportedMaterialPreset(name as string | null | undefined)).toBeNull();
     },
   );
+});
+
+// ADR-683 Φ4 — auto-tier από ΟΝΟΜΑ ΚΟΜΒΟΥ όταν το υλικό είναι ανώνυμο (πραγματικό HMI_Aeron:
+// 10 κόμβοι, κανένα ονομασμένο υλικό, σημασιολογία μόνο στα node names).
+describe('resolveImportedMaterialPreset — node-name stems (πραγματικοί κόμβοι HMI_Aeron)', () => {
+  it.each([
+    ['HBase', 'metal'],     // βάση → μέταλλο (`base$`)
+    ['HFrame', 'metal'],    // σκελετός
+    ['HBkFrame', 'metal'],  // πλαίσιο πλάτης
+    ['HSeatFrm', 'metal'],  // πλαίσιο καθίσματος (`frm`)
+    ['HSFrmEdg', 'metal'],  // ακμή πλαισίου (`frm`/`edg`)
+    ['HBFrmEdg', 'metal'],
+    ['HSpndle', 'metal'],   // άξονας (`spndle`)
+    ['HPellBk', 'fabric'],  // Pellicle πλάτης (`pell`)
+    ['HPellSt', 'fabric'],  // Pellicle καθίσματος
+    ['HArmPads', 'leather'],// μπράτσα (`armpad`)
+  ])('%s → %s', (node, key) => {
+    expect(resolveImportedMaterialPreset(node)?.key).toBe(key);
+  });
+});
+
+describe('resolveImportedMaterialPresetFor — προτεραιότητα υλικό → κόμβος', () => {
+  it('όνομα υλικού κερδίζει όταν αναγνωρίζεται (authored intent)', () => {
+    // υλικό «Oak» (ξύλο) σε κόμβο «HBase» (μέταλλο) → κερδίζει το ξύλο.
+    expect(resolveImportedMaterialPresetFor('Oak_Natural', 'HBase')?.key).toBe('wood');
+  });
+
+  it('πέφτει στο όνομα κόμβου όταν το υλικό είναι ανώνυμο/άγνωστο', () => {
+    expect(resolveImportedMaterialPresetFor(null, 'HPellBk')?.key).toBe('fabric');
+    expect(resolveImportedMaterialPresetFor('', 'HArmPads')?.key).toBe('leather');
+    expect(resolveImportedMaterialPresetFor('XyzUnknown42', 'HBase')?.key).toBe('metal');
+  });
+
+  it('null και στα δύο → null (καμία μαντεψιά)', () => {
+    expect(resolveImportedMaterialPresetFor(null, null)).toBeNull();
+    expect(resolveImportedMaterialPresetFor('XyzUnknown42', 'AlsoUnknown')).toBeNull();
+  });
 });
 
 describe('color helpers', () => {

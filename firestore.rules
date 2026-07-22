@@ -3700,6 +3700,19 @@ service cloud.firestore {
       allow delete: if isAuthenticated() && canDeleteBimEntity();
     }
 
+    // ADR-684 — parametric geometric solids (box/sphere/cylinder/cone/torus/pyramid/disc/prism).
+    // Exact mirror of floorplan_imported_meshes: same AUTHORING tier, same company scope, same
+    // create contract. Procedural geometry (rebuilt from params) — no Storage bytes.
+    // ⚠️ Χωρίς αυτόν τον κανόνα το default-deny απέρριπτε ΚΑΘΕ write → τα στερεά εξαφανίζονταν
+    // στο πρώτο reload (0 docs στο floorplan_generic_solids).
+    match /floorplan_generic_solids/{genericSolidId} {
+      // ADR-657 AUTHORING tier — editor-only (/dxf/viewer). external_user denied.
+      allow read:   if isAuthenticated() && canReadBimAuthoring(resource.data.companyId);
+      allow create: if isAuthenticated() && canCreateBimEntity(['companyId', 'projectId', 'floorplanId', 'kind', 'params']);
+      allow update: if isAuthenticated() && canUpdateBimEntity();
+      allow delete: if isAuthenticated() && canDeleteBimEntity();
+    }
+
     // ADR-415 — pure-vector 2D floorplan symbols (WC/sanitary first). Mirror of
     // floorplan_furniture (company-scoped, owner/admin writes). Create requires
     // the category-driven `category` field alongside kind/params.

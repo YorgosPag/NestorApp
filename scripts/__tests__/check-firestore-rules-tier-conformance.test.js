@@ -305,8 +305,9 @@ describe('parseBimTiers (real SSoT)', () => {
   const tiers = parseBimTiers();
 
   // ADR-683 Φ3β — 22→23 authoring: + floorplan_imported_meshes.
-  test('parses 23 authoring / 14 presentation / 5 legacy', () => {
-    expect(tiers.authoring).toHaveLength(23);
+  // ADR-684 — 23→24 authoring: + floorplan_generic_solids.
+  test('parses 24 authoring / 14 presentation / 5 legacy', () => {
+    expect(tiers.authoring).toHaveLength(24);
     expect(tiers.presentation).toHaveLength(14);
     expect(tiers.legacy).toHaveLength(5);
   });
@@ -332,14 +333,15 @@ describe('deployed rules integration', () => {
   const RULES_FILE = path.resolve(__dirname, '..', '..', 'firestore.rules');
 
   // ADR-683 Φ3β — 36→37 blocks: + floorplan_imported_meshes.
-  test('all 37 deployed BIM blocks are tier-conformant', () => {
+  // ADR-684 — 37→38 blocks: + floorplan_generic_solids.
+  test('all 38 deployed BIM blocks are tier-conformant', () => {
     const rulesContent = fs.readFileSync(RULES_FILE, 'utf8');
     const rulesLines = rulesContent.split('\n');
     const blocks = parseFirestoreRules(rulesContent);
     const tiers = parseBimTiers();
 
     const bimBlockCount = blocks.filter((b) => isBimFloorplanBlock(b.collection)).length;
-    expect(bimBlockCount).toBe(37);
+    expect(bimBlockCount).toBe(38);
 
     const violations = validateBimTierConformance(blocks, tiers, rulesLines);
     if (violations.length > 0) {

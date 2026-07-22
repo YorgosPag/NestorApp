@@ -160,6 +160,24 @@ describe('BimGizmoDragBridge — snap injection (ADR-402 Phase B)', () => {
     expect(m?.z).toBeCloseTo(7, 6); // DXF y -7000 → world z +7
   });
 
+  it('axis-X drag drops the perpendicular component of an off-axis snap (no zig-zag)', () => {
+    // ADR-402 — regression: dragging the X arrow while a snap target sits off-axis
+    // (DXF y = -3000) must NOT pull the object sideways. Only the on-axis (X)
+    // component of the snap survives; the north (DXF y) stays 0. Before the fix the
+    // full 2D snap was applied → the object oscillated perpendicular to the arrow.
+    const b = new BimGizmoDragBridge();
+    const s = vertRay(0, 0);
+    b.start({ kind: 'axis', axis: 'x' }, anchor, s.o, s.d, camDir);
+    // Free X end = 5000mm; the snap tries to force an off-axis corner (5200, -3000).
+    b.setSnapFn(() => ({ snappedMm: { x: 5200, y: -3000 }, markerMm: { x: 5200, y: -3000 } }));
+    const u = vertRay(5, 9);
+    b.update(u.o, u.d, camDir);
+    const out = b.getOutcome();
+    if (out.kind !== 'move') throw new Error('expected move');
+    expect(out.deltaDxf.x).toBeCloseTo(5200, 3); // on-axis snap kept
+    expect(out.deltaDxf.y).toBeCloseTo(0, 3); // perpendicular component dropped
+  });
+
   it('keeps the free drag (no marker) when the snap callback returns null', () => {
     const b = new BimGizmoDragBridge();
     const s = vertRay(0, 0);

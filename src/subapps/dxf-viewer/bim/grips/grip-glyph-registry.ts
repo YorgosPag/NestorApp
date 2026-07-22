@@ -74,6 +74,13 @@ export const GRIP_GLYPH_REGISTRY: Readonly<Record<string, GripShape>> = {
   // Furniture (ADR-410) — corners render the default 'square' glyph.
   'furniture-move': 'move',
   'furniture-rotation': 'rotation',
+  // Imported mesh (ADR-683 Φ3) — move cross + rotation handle, ΚΑΜΙΑ λαβή σχήματος (§3).
+  'imported-mesh-move': 'move',
+  'imported-mesh-rotation': 'rotation',
+  // Generic solid (ADR-684) — move cross + rotation handle· οι 4 γωνίες (box) + οι radial λαβές
+  // (ακτίνα/major/tube στρογγυλών, Φ4-A) render το default 'square' (parity furniture/κολόνας).
+  'generic-solid-move': 'move',
+  'generic-solid-rotation': 'rotation',
   // Floorplan symbols (ADR-415) — corners render the default 'square' glyph.
   'floorplan-symbol-move': 'move',
   'floorplan-symbol-rotation': 'rotation',

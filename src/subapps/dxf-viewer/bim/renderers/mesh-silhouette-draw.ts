@@ -18,6 +18,7 @@
 
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
+import { fillRingsEvenOdd } from './bim-polygon-render';
 import type { SilPoint, SilSegment } from '../mesh-library/mesh-silhouette';
 
 const M_TO_MM = 1000;
@@ -68,6 +69,32 @@ function makePlanToWorld(
 }
 
 /**
+ * Draw the projected top-view feature edges (crease/boundary lines) — the interior detail + crisp
+ * outline. Shared by {@link drawMeshSilhouette} (over the raster fill) and {@link drawMeshFill} (over
+ * the faithful triangle fill), so the edge-draw lives in ONE place (N.18, no parallel twin).
+ */
+function drawFeatureEdges(
+  ctx: CanvasRenderingContext2D,
+  worldToScreen: (p: { x: number; y: number }) => { x: number; y: number },
+  toWorld: (mx: number, my: number) => { x: number; y: number },
+  edges: readonly SilSegment[] | null | undefined,
+  edgeColor: string,
+  lineWidth: number,
+): void {
+  if (!edges || edges.length === 0) return;
+  ctx.strokeStyle = edgeColor;
+  ctx.lineWidth = Math.max(1, lineWidth - 1);
+  ctx.beginPath();
+  for (const seg of edges) {
+    const a = worldToScreen(toWorld(seg.x1, seg.y1));
+    const b = worldToScreen(toWorld(seg.x2, seg.y2));
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+  }
+  ctx.stroke();
+}
+
+/**
  * Draw the mesh silhouette (fill + outline) and interior top-view edges.
  * Returns `true` if a silhouette was drawn, `false` if none was cached.
  */
@@ -88,18 +115,87 @@ export function drawMeshSilhouette(args: DrawMeshSilhouetteArgs): boolean {
   ctx.stroke();
 
   // Interior top-view feature edges (seat/back/legs / reflector detail).
-  if (edges && edges.length > 0) {
-    ctx.strokeStyle = palette.edge;
-    ctx.lineWidth = Math.max(1, lineWidth - 1);
-    ctx.beginPath();
-    for (const seg of edges) {
-      const a = worldToScreen(toWorld(seg.x1, seg.y1));
-      const b = worldToScreen(toWorld(seg.x2, seg.y2));
-      ctx.moveTo(a.x, a.y);
-      ctx.lineTo(b.x, b.y);
-    }
-    ctx.stroke();
+  drawFeatureEdges(ctx, worldToScreen, toWorld, edges, palette.edge, lineWidth);
+  return true;
+}
+
+export interface DrawMeshFillArgs {
+  readonly ctx: CanvasRenderingContext2D;
+  readonly worldToScreen: (p: { x: number; y: number }) => { x: number; y: number };
+  /** Flat-packed CCW plan triangles `[x1,y1,x2,y2,x3,y3,…]` (from `computeTopFillTriangles`). */
+  readonly triangles: Float32Array | null;
+  readonly edges: readonly SilSegment[] | null;
+  readonly transform: MeshSilhouetteTransform;
+  readonly palette: MeshSilhouettePalette;
+  readonly lineWidth: number;
+}
+
+/**
+ * ADR-683 §10.9 — draw the **faithful top-view fill**: the mesh's actual projected triangles as ONE
+ * filled path (nonzero winding → exact union footprint, incl. every disjoint region + holes), then
+ * the projected feature edges on top for the crisp outline/detail. Shares the exact plan→world mapper
+ * with {@link drawMeshSilhouette} (one alignment SSoT). Returns `true` if anything was drawn.
+ *
+ * Why one path + single fill (not per-triangle fill): a single `ctx.fill()` anti-aliases only the
+ * OUTER boundary — internal shared triangle edges tile seamlessly. Per-triangle fills would leave
+ * faint AA seams across the whole footprint. All triangles are pre-normalised CCW upstream, so nonzero
+ * winding never cancels overlaps into phantom holes.
+ */
+export function drawMeshFill(args: DrawMeshFillArgs): boolean {
+  const { ctx, worldToScreen, triangles, edges, transform, palette, lineWidth } = args;
+  if (!triangles || triangles.length < 6) return false;
+
+  const toWorld = makePlanToWorld(transform);
+  ctx.fillStyle = adaptFillTintForCanvas(palette.fill);
+  ctx.beginPath();
+  for (let i = 0; i + 5 < triangles.length; i += 6) {
+    const a = worldToScreen(toWorld(triangles[i], triangles[i + 1]));
+    const b = worldToScreen(toWorld(triangles[i + 2], triangles[i + 3]));
+    const c = worldToScreen(toWorld(triangles[i + 4], triangles[i + 5]));
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.lineTo(c.x, c.y);
+    ctx.closePath();
   }
+  ctx.fill();
+
+  // Projected top-view feature edges (crease/boundary) on top — the crisp outline + interior detail.
+  drawFeatureEdges(ctx, worldToScreen, toWorld, edges, palette.edge, lineWidth);
+  return true;
+}
+
+export interface DrawMeshContourFillArgs {
+  readonly ctx: CanvasRenderingContext2D;
+  readonly worldToScreen: (p: { x: number; y: number }) => { x: number; y: number };
+  /** Flat rings — outer components + holes (from `computeTopFillContours`) — one even-odd fill. */
+  readonly contours: readonly (readonly SilPoint[])[] | null;
+  readonly edges: readonly SilSegment[] | null;
+  readonly transform: MeshSilhouetteTransform;
+  readonly palette: MeshSilhouettePalette;
+  readonly lineWidth: number;
+}
+
+/**
+ * ADR-683 §10.9 (revised) — draw the **cached, simplified** top-view fill: a few-point,
+ * multi-component + hole-aware footprint filled with the shared even-odd painter
+ * ({@link fillRingsEvenOdd}, ADR-684), then the projected feature edges on top for the crisp
+ * outline/detail. Big-player practice: the fidelity Giorgio approved (every disjoint region +
+ * real holes) at a **fraction** of the per-zoom draw cost of the raw-triangle path
+ * ({@link drawMeshFill}). Shares the exact plan→world mapper with the whole mesh-draw family
+ * (one alignment SSoT). Returns `true` if anything was drawn.
+ */
+export function drawMeshContourFill(args: DrawMeshContourFillArgs): boolean {
+  const { ctx, worldToScreen, contours, edges, transform, palette, lineWidth } = args;
+  if (!contours || contours.length === 0) return false;
+
+  const toWorld = makePlanToWorld(transform);
+  const toScreen = (p: { x: number; y: number }): { x: number; y: number } =>
+    worldToScreen(toWorld(p.x, p.y));
+  ctx.fillStyle = adaptFillTintForCanvas(palette.fill);
+  fillRingsEvenOdd(ctx, toScreen, contours);
+
+  // Projected top-view feature edges (crease/boundary) on top — the crisp outline + interior detail.
+  drawFeatureEdges(ctx, worldToScreen, toWorld, edges, palette.edge, lineWidth);
   return true;
 }
 

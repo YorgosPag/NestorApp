@@ -1290,6 +1290,7 @@ export const FIRESTORE_RULES_PENDING: readonly string[] = [
   'floorplan_electrical_panels', // ADR-408 Φ3 — tenant-scoped CRUD (mirror mep_fixtures); full matrix with the BIM batch
   'floorplan_furniture',        // ADR-410 — tenant-scoped CRUD (mirror mep_fixtures); full matrix with the BIM batch
   'floorplan_imported_meshes',  // ADR-683 Φ3β — tenant-scoped CRUD (exact mirror of furniture); full matrix with the BIM batch
+  'floorplan_generic_solids',   // ADR-684 — tenant-scoped CRUD (exact mirror of imported_meshes); full matrix with the BIM batch
   'floorplan_mep_segments',     // ADR-408 Φ8 — tenant-scoped CRUD (duct/pipe linear element, mirror mep_fixtures); full matrix with the BIM batch
   'floorplan_mep_fittings',     // ADR-408 Φ11 — tenant-scoped CRUD (auto pipe fittings, mirror mep_segments); full matrix with the BIM batch
   'floorplan_mep_manifolds',    // ADR-408 Φ12 — tenant-scoped CRUD (plumbing manifold / συλλέκτης, mirror electrical_panels); full matrix with the BIM batch

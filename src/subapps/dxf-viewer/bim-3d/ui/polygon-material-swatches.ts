@@ -13,7 +13,10 @@
  * @see docs/centralized-systems/reference/adrs/ADR-679-pbr-material-full-parity.md
  */
 
+import type { TFunction } from 'i18next';
 import type { BimMaterial, BimMaterialCategory } from '../../bim/types/bim-material-types';
+import { constructionMaterialLabelKey } from '../../bim/materials/construction-materials';
+import { listWallCoveringMaterials } from '../../bim/wall-coverings/wall-covering-material-catalog';
 
 /**
  * Curated textured "cladding" materials for face paint — the `mat-*` keys of
@@ -60,4 +63,69 @@ export function buildLibraryMaterialSwatches(
     thumbnailUrl: m.thumbnailUrl,
     albedoUrl: m.pbrTextures?.albedoUrl ?? null,
   }));
+}
+
+/**
+ * Textured swatch reference (ADR-679 Φ2b) — catalog `mat-*` id OR user-library `bmat_*`
+ * category+urls. Rendered via the shared `<MaterialSwatch>` (real photo/albedo), not a flat span.
+ */
+export interface SwatchTextureRef {
+  readonly materialId?: string;
+  readonly category?: BimMaterialCategory;
+  readonly thumbnailUrl?: string | null;
+  readonly albedoUrl?: string | null;
+}
+
+/**
+ * Ένα swatch υλικού «σώματος» (layer-agnostic: label + id), σε ΔΥΟ σχήματα:
+ *   - flat χρώμα (legacy wall-covering paints) → `color` hex, καμία υφή·
+ *   - textured (catalog cladding + user library) → `swatch` ref, render μέσω `<MaterialSwatch>`.
+ * Discriminated ώστε το render branch να είναι type-safe (όχι optional-both, όχι `!`).
+ */
+export type SwatchItem =
+  | {
+      readonly id: string;
+      readonly label: string;
+      /** Body swatches είναι draggable (drag-drop 539)· finish = click-only. */
+      readonly draggable: boolean;
+      readonly color: string;
+      readonly swatch?: undefined;
+    }
+  | {
+      readonly id: string;
+      readonly label: string;
+      readonly draggable: boolean;
+      readonly swatch: SwatchTextureRef;
+      readonly color?: undefined;
+    };
+
+/**
+ * ADR-679 Φ2b — BODY layer swatch groups, Cinema 4D Material Manager order:
+ *   1. textured catalog cladding materials (`FACE_TEXTURE_MATERIAL_IDS`) — brick/stone/wood/…
+ *   2. the user's own material library (`bmat_*`, `useMaterialLibrary`)
+ *   3. legacy flat wall-covering paints (`listWallCoveringMaterials`)
+ *
+ * SSoT της λίστας «τι υλικά μπορεί να διαλέξει ο χρήστης για σώμα» — κοινό για το
+ * `PolygonMaterialPanel` (swatch grid) και το `ImportedMeshMaterialMapDialog` (dropdown, ADR-686 Φ5).
+ */
+export function buildBodySwatches(library: readonly BimMaterial[], t: TFunction): SwatchItem[] {
+  const catalog: SwatchItem[] = FACE_TEXTURE_MATERIAL_IDS.map((id) => ({
+    id,
+    label: t(`dxf-viewer-shell:${constructionMaterialLabelKey(id)}`),
+    draggable: true,
+    swatch: { materialId: id },
+  }));
+  const fromLibrary: SwatchItem[] = buildLibraryMaterialSwatches(library).map((d) => ({
+    id: d.id,
+    label: d.label,
+    draggable: true,
+    swatch: { category: d.category, thumbnailUrl: d.thumbnailUrl, albedoUrl: d.albedoUrl },
+  }));
+  const flatPaints: SwatchItem[] = listWallCoveringMaterials().map((m) => ({
+    id: m.id,
+    color: m.color,
+    label: t(`dxf-viewer-shell:wallCovering.materials.${m.labelKeySuffix}`),
+    draggable: true,
+  }));
+  return [...catalog, ...fromLibrary, ...flatPaints];
 }

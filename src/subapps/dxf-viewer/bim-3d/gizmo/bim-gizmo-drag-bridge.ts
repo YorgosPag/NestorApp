@@ -242,7 +242,19 @@ export class BimGizmoDragBridge {
     if (!res) return;
     // Keep the element's elevation (endPlan.z): snapping only shifts the plan.
     const corrected = dxfPlanToWorld(res.snappedMm.x, res.snappedMm.y, endPlan.z);
-    this.liveTranslation.copy(corrected).sub(this.anchorWorld);
+    const snappedTranslation = corrected.sub(this.anchorWorld);
+    // ADR-402 — ένα single-axis (X/Z) MOVE βέλος / RESIZE handle ΠΡΕΠΕΙ να μένει ΠΑΝΩ
+    // στον άξονά του. Το snap engine όμως επιστρέφει ολόκληρο το 2D plan σημείο, οπότε η
+    // κάθετη-στον-άξονα συνιστώσα ενός off-axis snap target τραβούσε το αντικείμενο εγκάρσια:
+    // μπαινοβγαίνοντας στο tolerance γειτονικών features → εγκάρσιο ζικ-ζακ (jitter). Κρατάμε
+    // ΜΟΝΟ την on-axis προβολή της διόρθωσης — object-snap + ortho/polar tracking (AutoCAD/Revit).
+    // (plane/endpoint drags θέλουν το πλήρες 2D snap· axis-Y / resize-Y έχουν ήδη γίνει return.)
+    if (this.constraint.kind === 'axis' || this.constraint.kind === 'resize') {
+      const axisDir = AXIS_VEC[this.constraint.axis];
+      const along = snappedTranslation.dot(axisDir);
+      snappedTranslation.copy(axisDir).multiplyScalar(along);
+    }
+    this.liveTranslation.copy(snappedTranslation);
     this.activeSnapWorld = dxfPlanToWorld(res.markerMm.x, res.markerMm.y, endPlan.z);
     if (res.snapDescription || res.snapType) {
       this.activeSnapLabel = { description: res.snapDescription, type: res.snapType };
@@ -255,6 +267,21 @@ export class BimGizmoDragBridge {
         b: dxfPlanToWorld(res.alignmentRef.b.x, res.alignmentRef.b.y, endPlan.z),
       };
     }
+  }
+
+  /**
+   * Shared horizontal-slide delta for resize + endpoint drags: the DXF-plan mm delta,
+   * the vertical (world-Y) mm delta, and the absolute cursor on the floor plane. Returns
+   * `null` on a no-op drag (both deltas zero) so callers can short-circuit to `none`.
+   */
+  private planarSlideOrNull(
+    end: THREE.Vector3,
+  ): { deltaMm: Point2D; deltaUpMm: number; cursorMm: Point2D } | null {
+    const deltaMm = worldDeltaToDxfDelta(this.anchorWorld, end);
+    const deltaUpMm = worldUpDeltaToMm(this.anchorWorld, end);
+    if (deltaMm.x === 0 && deltaMm.y === 0 && deltaUpMm === 0) return null;
+    const c = worldToDxfPlan(end);
+    return { deltaMm, deltaUpMm, cursorMm: { x: c.x, y: c.y } };
   }
 
   /** Command-ready outcome to dispatch on pointer-up. */
@@ -277,33 +304,29 @@ export class BimGizmoDragBridge {
     // its horizontal `deltaDxf` is (0,0). The move guard below would mis-classify
     // that as a no-op, so resize gets its own guard that also considers `deltaUpMm`.
     if (this.constraint.kind === 'resize') {
-      const deltaMm = worldDeltaToDxfDelta(this.anchorWorld, end);
-      const deltaUpMm = worldUpDeltaToMm(this.anchorWorld, end);
-      if (deltaMm.x === 0 && deltaMm.y === 0 && deltaUpMm === 0) return { kind: 'none' };
-      const c = worldToDxfPlan(end);
+      const d = this.planarSlideOrNull(end);
+      if (!d) return { kind: 'none' };
       return {
         kind: 'resize',
         axis: this.constraint.axis,
         mode: this.constraint.mode,
-        deltaMm,
-        deltaUpMm,
-        cursorMm: { x: c.x, y: c.y },
+        deltaMm: d.deltaMm,
+        deltaUpMm: d.deltaUpMm,
+        cursorMm: d.cursorMm,
       };
     }
     // ADR-408 Φ-D — endpoint move: a camera-plane slide of ONE end → carries both a
     // horizontal DXF-plan delta and a vertical mm delta (mirror of the resize guard,
     // since a pure-elevation drag has deltaMm 0,0). The anchor IS the endpoint world.
     if (this.constraint.kind === 'endpoint') {
-      const deltaMm = worldDeltaToDxfDelta(this.anchorWorld, end);
-      const deltaUpMm = worldUpDeltaToMm(this.anchorWorld, end);
-      if (deltaMm.x === 0 && deltaMm.y === 0 && deltaUpMm === 0) return { kind: 'none' };
-      const c = worldToDxfPlan(end);
+      const d = this.planarSlideOrNull(end);
+      if (!d) return { kind: 'none' };
       return {
         kind: 'endpoint-move',
         endpoint: this.constraint.endpoint,
-        deltaMm,
-        deltaUpMm,
-        cursorMm: { x: c.x, y: c.y },
+        deltaMm: d.deltaMm,
+        deltaUpMm: d.deltaUpMm,
+        cursorMm: d.cursorMm,
       };
     }
     // ADR-402 — the axis-Y arrow yields a purely vertical slide (deltaDxf 0,0), so

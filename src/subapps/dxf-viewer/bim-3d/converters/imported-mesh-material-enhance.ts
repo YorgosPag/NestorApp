@@ -35,7 +35,7 @@
 import * as THREE from 'three';
 import { buildMat } from '../materials/pbr-material-builder';
 import {
-  resolveImportedMaterialPreset,
+  resolveImportedMaterialPresetFor,
   type ImportedMaterialPreset,
 } from '../../bim/materials/imported-material-presets';
 // ADR-686 — user appearance override (χρώμα/υλικό/υφή) πάνω από το embedded/preset υλικό.
@@ -89,12 +89,13 @@ function buildPresetMaterial(
 
 /**
  * Επιστρέφει το αναβαθμισμένο material για ΕΝΑ slot, ή το **ίδιο** αν δεν πληρούνται τα gates.
- * Το όνομα ζει πάνω στο ίδιο το three material (ο `GLTFLoader` το μεταφέρει από το glTF).
+ * Το όνομα υλικού ζει πάνω στο ίδιο το three material (ο `GLTFLoader` το μεταφέρει από το glTF)·
+ * όταν λείπει (ανώνυμο partner υλικό), πέφτουμε στο `nodeName` — η μόνη σημασιολογία που μένει.
  */
-function enhanceSlot(material: THREE.Material): THREE.Material {
+function enhanceSlot(material: THREE.Material, nodeName?: string): THREE.Material {
   if (!(material instanceof THREE.MeshStandardMaterial)) return material;
   if (!looksUnauthoredDefault(material)) return material;
-  const preset = resolveImportedMaterialPreset(material.name);
+  const preset = resolveImportedMaterialPresetFor(material.name, nodeName);
   if (!preset) return material;
   return buildPresetMaterial(preset, material);
 }
@@ -113,6 +114,7 @@ function enhanceSlot(material: THREE.Material): THREE.Material {
 function resolveSlotMaterial(
   source: THREE.Material,
   faceAppearance: FaceAppearanceMap | undefined,
+  nodeName: string | undefined,
 ): THREE.Material {
   if (faceAppearance) {
     const resolved = resolveFaceMaterial(slotFaceKey(source.name), faceAppearance, source);
@@ -123,23 +125,25 @@ function resolveSlotMaterial(
       return mat;
     }
   }
-  return enhanceSlot(source);
+  return enhanceSlot(source, nodeName);
 }
 
 /**
  * Χτίζει επί τόπου όλα τα mesh materials ενός εισαγόμενου Object3D με προτεραιότητα: **user override**
- * (ADR-686) → **preset safety-net** (ADR-683) → **embedded**. No-op override σε placeholder κουτί
- * (cache miss). Χειρίζεται single material και material array (multi-slot meshes, π.χ. καρέκλα = 4 slots).
+ * (ADR-686) → **preset safety-net** (ADR-683, όνομα υλικού → `nodeName`) → **embedded**. No-op override
+ * σε placeholder κουτί (cache miss). Χειρίζεται single material και material array. Το `nodeName`
+ * (`params.nodeName`) είναι το fallback keyword όταν το υλικό είναι ανώνυμο (partner glTF).
  */
 export function applyImportedMeshMaterials(
   object: THREE.Object3D,
   faceAppearance?: FaceAppearanceMap,
+  nodeName?: string,
 ): void {
   object.traverse((child) => {
     if (!(child instanceof THREE.Mesh)) return;
     const material = child.material;
     child.material = Array.isArray(material)
-      ? material.map((m) => resolveSlotMaterial(m, faceAppearance))
-      : resolveSlotMaterial(material, faceAppearance);
+      ? material.map((m) => resolveSlotMaterial(m, faceAppearance, nodeName))
+      : resolveSlotMaterial(material, faceAppearance, nodeName);
   });
 }

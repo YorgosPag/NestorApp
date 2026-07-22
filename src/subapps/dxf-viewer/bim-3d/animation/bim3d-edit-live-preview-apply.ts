@@ -33,6 +33,7 @@ import { buildCircuitWirePreviewObjects } from './bim3d-wire-preview-rebuild';
 import {
   buildPipeFollowPreviewObjects,
   buildFittingFollowPreviewObjects,
+  type PipeDragXform,
 } from './bim3d-pipe-follow-preview-rebuild';
 // ADR-535 Φ10 / ADR-516 — keep the per-vertex reshape grips glued to the entity during a move.
 import { setGrip3DLiveMoveWorld } from '../stores/Grip3DOverlayStore';
@@ -119,14 +120,13 @@ export function applyLivePreview(ctx: EditInteractionCtx): void {
     // ADR-363 Φ1G.5 Slice 2h — a single dragged WALL shows Revit temporary dimensions:
     // its perpendicular clearance to the nearest parallel reference wall on each side.
     updateWallMoveDims(ctx, t);
-    // ADR-363 Φ1G.5 Slice 2i — and a dashed alignment line along the reference face when a
-    // face snap is active (the "feel" of the magnetism), plus the snap-type label
-    // ("Παρειά τοίχου" / "Γωνία τοίχου"). Both driven by the live snap result.
+    // ADR-363 Φ1G.5 Slice 2i — a dashed alignment line along the reference face when a
+    // face snap is active (the "feel" of the magnetism), driven by the live snap result.
     updateAlignmentLine(ctx);
-    updateSnapLabel(ctx);
-    // ADR-363 — the live move-distance readout (line from the gizmo anchor to the moved
-    // position + the distance label) for ANY dragged entity, not just walls.
-    updateMoveReadout(ctx, t);
+    // Giorgio 2026-07-22 — ο snap-type label («Κάθετος» κ.λπ.) + το live move-distance
+    // readout («130,15 cm») ΔΕΝ εμφανίζονται πλέον στο 3D edit drag (οπτικός θόρυβος). Το
+    // snapping/η ευθυγράμμιση παραμένουν ενεργά· κρύβουμε μόνο το κειμενικό feedback. Τα
+    // overlays ξεκινούν κρυμμένα + το teardown τα κάνει hide → μηδέν residual.
     return;
   }
   if (live.kind === 'rotate') {
@@ -170,24 +170,20 @@ export function applyLivePreview(ctx: EditInteractionCtx): void {
     ctx.preview.applyResize(
       buildEndpointMovePreviewObject(epId, live.endpoint, live.outcome.deltaMm, live.outcome.deltaUpMm),
     );
+    // Pipes + fittings both follow the moved endpoint under the SAME xform/scene (ADR-408 Φ-D/Φ-E).
+    const epDraggedIds = new Set(useBim3DEditStore.getState().editEntityIds);
+    const epXform: PipeDragXform = {
+      kind: 'endpoint',
+      endpoint: live.endpoint,
+      deltaMm: live.outcome.deltaMm,
+      deltaUpMm: live.outcome.deltaUpMm,
+    };
+    const epScene = sceneEntitiesForEdit(ctx);
     if (ctx.preview.connectedPipeSegmentIds.length > 0) {
-      ctx.preview.applyPipes(
-        buildPipeFollowPreviewObjects(
-          new Set(useBim3DEditStore.getState().editEntityIds),
-          { kind: 'endpoint', endpoint: live.endpoint, deltaMm: live.outcome.deltaMm, deltaUpMm: live.outcome.deltaUpMm },
-          sceneEntitiesForEdit(ctx),
-        ),
-      );
+      ctx.preview.applyPipes(buildPipeFollowPreviewObjects(epDraggedIds, epXform, epScene));
     }
-    // ADR-408 Φ-D/Φ-E — the cap (and any elbow/tee) at the dragged end follows live.
     if (ctx.preview.incidentFittingIds.length > 0) {
-      ctx.preview.applyFittings(
-        buildFittingFollowPreviewObjects(
-          new Set(useBim3DEditStore.getState().editEntityIds),
-          { kind: 'endpoint', endpoint: live.endpoint, deltaMm: live.outcome.deltaMm, deltaUpMm: live.outcome.deltaUpMm },
-          sceneEntitiesForEdit(ctx),
-        ),
-      );
+      ctx.preview.applyFittings(buildFittingFollowPreviewObjects(epDraggedIds, epXform, epScene));
     }
     return;
   }
@@ -238,18 +234,6 @@ function updateWallMoveDims(ctx: EditInteractionCtx, t: THREE.Vector3): void {
 }
 
 /**
- * ADR-363 — drive the live move-distance readout for the gizmo move: a discreet line from
- * the gizmo anchor (the base point) to the moved position (anchor + the applied, axis-locked
- * translation `t`) plus the distance label. Works for every dragged entity type; the overlay
- * hides itself on a (near-)zero move.
- */
-function updateMoveReadout(ctx: EditInteractionCtx, t: THREE.Vector3): void {
-  const base = ctx.overlay.getPosition();
-  const current = base.clone().add(t);
-  ctx.moveReadout.update(base, current, ctx.manager.getCamera(), ctx.manager.getRendererCanvas());
-}
-
-/**
  * ADR-363 Φ1G.5 Slice 2i — draw / hide the Revit dashed alignment line along the wall
  * face the active snap projected onto. The reference comes from the ONE snap engine
  * (`WallFaceSnapEngine` → bridge `alignmentRef`); this only renders it. No active face
@@ -262,21 +246,4 @@ function updateAlignmentLine(ctx: EditInteractionCtx): void {
     return;
   }
   ctx.alignmentLine.update(ref.a, ref.b);
-}
-
-/**
- * ADR-363 Φ1G.5 Slice 2i — show the Revit snap-type label ("Παρειά τοίχου" / "Γωνία τοίχου")
- * next to the snap marker while a wall is dragged, so the user reads WHICH snap fired. The
- * description/type come from the live snap result; the React hook localised them via the
- * `snap-description-keys` SSoT (`ctx.resolveSnapLabel`). No active snap → hide.
- */
-function updateSnapLabel(ctx: EditInteractionCtx): void {
-  const label = ctx.controller.getActiveSnapLabel();
-  const world = ctx.controller.getActiveSnapWorld();
-  if (!label || !world) {
-    ctx.snapLabel.hide();
-    return;
-  }
-  const text = ctx.resolveSnapLabel(label.type, label.description);
-  ctx.snapLabel.update(text, world, ctx.manager.getCamera(), ctx.manager.getRendererCanvas());
 }

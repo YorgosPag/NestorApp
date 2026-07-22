@@ -13,11 +13,14 @@
  */
 
 import { BimFootprintRenderer } from './bim-footprint-renderer';
-import { polygonBboxHitTest, fillRingsEvenOdd, strokePolylinePaths } from './bim-polygon-render';
+import { polygonBboxHitTest, fillRingsEvenOdd, strokePolylinePaths, mapBimGrips } from './bim-polygon-render';
 import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
 import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../rendering/types/Types';
 import type { GenericSolidEntity } from '../entities/generic-solid/generic-solid-types';
 import { computeGenericSolidPlanOutline } from '../entities/generic-solid/generic-solid-plan-outline';
+import { getGenericSolidGrips } from '../entities/generic-solid/generic-solid-grips';
+import { gripGlyphShape } from '../grips/grip-glyph-registry';
+import { gripKindOf } from '../../hooks/grip-kinds';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
 import { getLayer } from '../../stores/LayerStore';
@@ -89,9 +92,19 @@ export class GenericSolidRenderer extends BimFootprintRenderer {
     this.finalizeRender(entity, options);
   }
 
-  /** Φ2 — καμία λαβή ακόμη (move/rotate/reshape έρχονται στη Φ3 μαζί με το grip wiring). */
-  getGrips(_entity: EntityModel): GripInfo[] {
-    return [];
+  /**
+   * Οι λαβές ΖΩΓΡΑΦΙΖΟΝΤΑΙ από εδώ (render path — `BaseEntityRenderer.getGrips`), με τον **ΙΔΙΟ**
+   * SSoT `getGenericSolidGrips` που τροφοδοτεί το interaction path (`computeDxfEntityGrips` /
+   * `GRIP_PRODUCERS['generic-solid']`) → drawn ≡ pickable, μηδέν απόκλιση (mirror `ImportedMeshRenderer`).
+   * Πριν επέστρεφε `[]` (Φ2 placeholder) → οι λαβές υπολογίζονταν για interaction αλλά ΔΕΝ φαίνονταν.
+   * move/rotation πάντα· 4 γωνίες για box· radial (ακτίνα/major/tube) για τα στρογγυλά (Φ4-A).
+   */
+  getGrips(entity: EntityModel): GripInfo[] {
+    if (!isGenericSolid(entity)) return [];
+    return mapBimGrips(
+      getGenericSolidGrips(entity as unknown as GenericSolidEntity),
+      (g) => gripGlyphShape(gripKindOf(g, 'generic-solid')),
+    );
   }
 
   hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {
