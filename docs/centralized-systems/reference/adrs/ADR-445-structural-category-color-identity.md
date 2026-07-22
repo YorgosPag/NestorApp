@@ -1,6 +1,6 @@
 # ADR-445 — Per-Category Structural Colour Identity (Revit-grade)
 
-**Status:** 🟢 v1.4 implemented — pending browser-verify + commit (last: 2026-07-03 beam-edge identity under finish skin)
+**Status:** 🟢 v1.5 implemented — pending browser-verify + commit (last: 2026-07-22 imported-mesh category type-lie crash fix)
 **Discipline:** DXF Viewer · BIM rendering (2D plan + 3D)
 **Related:** ADR-375 C.9 (Object Styles SSoT / `BIM_CATEGORY_LINE_COLORS`), ADR-363 (BIM drawing mode / per-entity render palettes), ADR-436 (foundation discipline)
 
@@ -108,6 +108,19 @@ This auto-heals every level/user on next open without wiping genuine V/G edits.
 
 ## Changelog
 
+- **2026-07-22** — v1.5 (Opus 4.8). **Crash fix: `imported-mesh` type-lie στο category resolver.**
+  Runtime `TypeError: Cannot read properties of undefined (reading 'visible')` στο
+  `resolveSubcategoryStyle` (`parent.visible`, bim-line-weight-resolver.ts) όταν το column
+  batch-fill same-colour scan (`findSameColorRects` → `colorOf` σε **ΚΑΘΕ** entity) πέφτει σε
+  `imported-mesh`. **Root cause:** το `DIRECT_CATEGORY_TYPES` (resolve-entity-bim-category.ts,
+  ADR-382 SSoT) περιείχε το `'imported-mesh'`, που γίνεται cast σε `BimCategory` — αλλά ΔΕΝ είναι
+  `BimCategory`, δεν έχει entry στο `DEFAULT_OBJECT_STYLES`, ούτε στο `BIM_CATEGORIES` (άρα ούτε
+  Isolate target). `styles['imported-mesh']` = `undefined` → crash. Το set είναι `Set<string>` με
+  `as BimCategory`, οπότε το TS δεν το έπιανε (type-lie). **Fix:** (1) αφαιρέθηκε το `'imported-mesh'`
+  από το `DIRECT_CATEGORY_TYPES` → επιστρέφει `null` (raw DXF cascade, όπως κάθε primitive)·
+  (2) belt-and-suspenders guard στο `resolveBimEntityColorHex` (`if (!(category in DEFAULT_OBJECT_STYLES)) return null`)
+  ώστε μελλοντικό drift να υποβαθμίζεται ήπια αντί να σκάει. Regression test:
+  `resolve-entity-bim-category.test.ts` (imported-mesh → null). UNCOMMITTED.
 - **2026-07-07** — cross-check (Opus 4.8, ADR-559 §3b-bis). **Grip warm (hover) colour re-value — colour-identity check.** Ο Giorgio άλλαξε το **grip hover (warm)** χρώμα από orange `#FF7F00` σε **ροζ/magenta `#ff00ff`** (= `UI_COLORS.SNAP_INTERSECTION`), αλλάζοντας την τιμή της named σταθεράς `GRIP_WARM_COLOR` (config/color-config.ts). Αυτό είναι **grip-UI χρώμα, ΟΧΙ structural** — επιβεβαιώθηκε ότι **δεν** αγγίζει το structural palette αυτού του ADR: **δοκός amber `#b07d1f`** (`BIM_CATEGORY_LINE_COLORS.beam`), κολώνα μπλε, foundation sienna — όλα ξεχωριστές σταθερές, **άθικτα**. Επίσης το grip **armed** (ADR-501 `GRIP_ARMED_COLOR #FF6A00`) μένει orange (distinct identity). Καμία αλλαγή στο structural color system εδώ — μόνο καταγραφή του cross-check. Λεπτομέρειες: ADR-559 §3b-bis. UNCOMMITTED.
 - **2026-07-03** — v1.4 (Opus 4.8). **«Το δοκάρι καταπίνεται από τον τοίχο» — structural
   framing reads by its category edges (Giorgio 2026-07-03).** Πρόβλημα: δοκάρι flush ΠΑΝΩ σε

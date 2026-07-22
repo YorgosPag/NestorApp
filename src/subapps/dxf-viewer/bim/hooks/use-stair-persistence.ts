@@ -42,6 +42,7 @@ import { recordStairChange } from '../stairs/stair-audit-client';
 import { useBimEntityRestoredPersistEffect } from '../../hooks/data/useBimEntityRestoredPersistEffect';
 import { useBimEntityAttachedPersistEffect } from '../../hooks/data/useBimEntityAttachedPersistEffect';
 import { upsertStairBoq, deleteStairBoq } from '../services/stair-boq-sync';
+import { computeStairBaseSlabEmbeddedVolumeM3 } from '../services/stair-slab-embedment';
 import { isStair, mergeStairSnapshot } from '../stairs/stair-snapshot-merge';
 import { isStairCreateTool } from '../stairs/stair-create-tools';
 import { DXF_TIMING } from '../../config/dxf-timing';
@@ -235,6 +236,21 @@ export function useStairPersistence(
     [levelManager],
   );
 
+  // ADR-685 Φ1 (μέρος 3) — BOQ safety-guard: κοινός όγκος σκυροδέματος
+  // σκάλας↔πλάκας βάσης (m³) προς αφαίρεση από το concrete row ΤΗΣ ΣΚΑΛΑΣ (η
+  // πλάκα κρατά τον πλήρη όγκο, ένας ιδιοκτήτης). `undefined` → καμία αφαίρεση
+  // (αιωρούμενη/διαπερνά/χωρίς σκηνή). ΙΔΙΟ scene access με `buildStairHostResolver`.
+  const resolveEmbeddedOverlapVolumeM3 = useCallback(
+    (entity: StairEntity): number | undefined => {
+      const levelId = levelManager.currentLevelId;
+      const scene = levelId ? levelManager.getLevelScene(levelId) : null;
+      return computeStairBaseSlabEmbeddedVolumeM3(entity, scene, {
+        resolveHostInput: buildStairHostResolver(entity),
+      });
+    },
+    [levelManager, buildStairHostResolver],
+  );
+
   // Shared post-save side-effects (audit trail + BoQ upsert) for persist /
   // persistRestore. Action strings differ per caller; the payload shape is identical.
   const recordStairSaveSideEffects = useCallback(
@@ -252,12 +268,19 @@ export function useStairPersistence(
       if (companyId && projectId && buildingId) {
         void upsertStairBoq(
           { id: entity.id, kind: entity.kind, params: entity.params },
-          { companyId, projectId, buildingId, floorId: floorId ?? undefined, resolveHostInput: buildStairHostResolver(entity) },
+          {
+            companyId,
+            projectId,
+            buildingId,
+            floorId: floorId ?? undefined,
+            resolveHostInput: buildStairHostResolver(entity),
+            embeddedOverlapVolumeM3: resolveEmbeddedOverlapVolumeM3(entity),
+          },
           boqAction,
         );
       }
     },
-    [companyId, projectId, buildingId, floorId, buildStairHostResolver],
+    [companyId, projectId, buildingId, floorId, buildStairHostResolver, resolveEmbeddedOverlapVolumeM3],
   );
 
   // Shared save orchestration for both persist (create/update) and persistRestore.

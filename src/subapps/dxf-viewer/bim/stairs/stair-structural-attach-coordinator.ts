@@ -38,6 +38,7 @@ import {
   type HostFootprintInput,
 } from '../geometry/wall-host-plan-builder';
 import { stairPlanSamples } from '../geometry/stair-vertical-profile';
+import { classifyStairBaseRelation } from '../geometry/stairs/stair-base-slab';
 import type { StairParams } from '../types/stair-types';
 import type { EntityAttachSide } from '../entities/entity-attach-detach';
 
@@ -52,6 +53,37 @@ function hostInputOf(host: Entity): HostFootprintInput | null {
   if (isBeamEntity(host)) return beamHostInput(host);
   if (isSlabEntity(host)) return slabHostInput(host);
   return null;
+}
+
+/**
+ * SSoT gate βάσης σκάλας↔host (N.0.2 — τον μοιράζονται και οι δύο φορές). Η βάση
+ * της σκάλας attach-άρει (base) σε έναν host όταν:
+ *   • **pull-down** (ADR-401 Phase G.3): η άνω-παρειά του host είναι ΚΑΤΩ από τη
+ *     βάση (θεμέλιο/landing) → η αιωρούμενη βάση κατεβαίνει· **Ή**
+ *   • **seat** (ADR-685 Φ1): η βάση είναι μέσα/στην κορυφή της πλάκας
+ *     (`underside ≤ base ≤ top`) → η βυθισμένη βάση ανασηκώνεται στο top-face.
+ *
+ * Απορρίπτεται το `pass-through` (η σκάλα διαπερνά κάτω από την κάτω παρειά → opening
+ * Φάσης 2, ΟΧΙ έδραση) και το `floating` πάνω από την πλάκα (δεν είναι πλάκα βάσης).
+ * Απαιτεί `topsideZmm` ορισμένο (base-attach ικανός host).
+ */
+function stairBaseAttachesToHost(baseZmm: number, hostInput: HostFootprintInput): boolean {
+  if (hostInput.topsideZmm === undefined) return false;
+  const pullsDown = hostInput.topsideZmm < baseZmm - AUTO_ATTACH_Z_GATE_MM;
+  const seats =
+    classifyStairBaseRelation(
+      baseZmm,
+      hostInput.topsideZmm,
+      hostInput.undersideZmm,
+      AUTO_ATTACH_Z_GATE_MM,
+    ) === 'seat';
+  return pullsDown || seats;
+}
+
+/** True όταν η βάση της σκάλας είναι eligible για (re-)auto-attach (default binding). */
+function stairBaseEligibleForAutoAttach(params: StairParams): boolean {
+  // base default = 'storey-floor' (undefined → εξ ορισμού, ΗΔΗ-υπάρχουσες σκάλες).
+  return params.baseBinding === undefined || params.baseBinding === 'storey-floor';
 }
 
 /**
@@ -93,12 +125,13 @@ export function findStairsToAutoAttachToHost(host: Entity, entities: readonly En
 }
 
 /**
- * ADR-401 Phase G.3 — mirror του παραπάνω για **base** auto-attach. Όταν
- * δημιουργείται δοκός/πλάκα-θεμέλιο/landing, βρες τις σκάλες που πρέπει να
- * «κατεβάσουν» τη βάση τους πάνω της. Pure detection.
+ * ADR-401 Phase G.3 + ADR-685 Φ1 — mirror του παραπάνω για **base** auto-attach.
+ * Όταν δημιουργείται δοκός/πλάκα-θεμέλιο/landing/**δάπεδο**, βρες τις σκάλες που
+ * πρέπει να συνδέσουν τη βάση τους πάνω της. Pure detection.
  *
  * Κριτήρια: (1) `baseBinding==='storey-floor'`, (2) plan overlap στο base-edge,
- * (3) inverted Z gate — η άνω-παρειά του host είναι ΚΑΤΩ από τη βάση της σκάλας.
+ * (3) `stairBaseAttachesToHost` — **pull-down** (αιωρούμενη→κάτω, ADR-401) **Ή**
+ * **seat** (βυθισμένη→ανασήκωση, ADR-685). Το `pass-through` (διαπερνά) εξαιρείται.
  */
 export function findStairsToAutoAttachBaseToHost(host: Entity, entities: readonly Entity[]): string[] {
   const hostInput = hostInputOf(host);
@@ -107,12 +140,38 @@ export function findStairsToAutoAttachBaseToHost(host: Entity, entities: readonl
   const out: string[] = [];
   for (const e of entities) {
     if (!isStairEntity(e)) continue;
-    // base default = 'storey-floor' (undefined → εξ ορισμού, ΗΔΗ-υπάρχουσες σκάλες).
-    if (e.params.baseBinding !== undefined && e.params.baseBinding !== 'storey-floor') continue;
+    if (!stairBaseEligibleForAutoAttach(e.params)) continue;
     if (!hostCoversStair(hostInput.footprint, e.params, 'base')) continue;
-    const baseZmm = e.params.basePoint.z;
-    if (hostInput.topsideZmm >= baseZmm - AUTO_ATTACH_Z_GATE_MM) continue;
+    if (!stairBaseAttachesToHost(e.params.basePoint.z, hostInput)) continue;
     out.push(e.id);
+  }
+  return out;
+}
+
+/**
+ * ADR-685 Φ1 (αντίστροφη φορά) — όταν δημιουργείται **ΣΚΑΛΑ** πάνω σε υπάρχον
+ * δάπεδο/θεμέλιο, βρες τους hosts (πλάκα/δοκός) στους οποίους πρέπει να εδράσει/
+ * κατέβει η βάση της. Mirror του `findHostsToAttachWallBase` (wall coordinator):
+ * το host-created path (παραπάνω) δεν πιάνει τη σκάλα που σχεδιάζεται ΜΕΤΑ την
+ * πλάκα, οπότε η βυθισμένη βάση δεν θα εδραζόταν ποτέ χωρίς αυτή τη φορά. Pure.
+ *
+ * Επιστρέφει host ids (ένα `AttachStairsCommand('base', hostId, [stair])` ανά host).
+ */
+export function findHostsToSeatStairBase(stair: Entity, entities: readonly Entity[]): string[] {
+  if (!isStairEntity(stair)) return [];
+  if (!stairBaseEligibleForAutoAttach(stair.params)) return [];
+  const baseZmm = stair.params.basePoint.z;
+
+  const out: string[] = [];
+  for (const e of entities) {
+    // ADR-441 — raft/εδαφόπλακα θεμελίωσης ΔΕΝ εδράζει storey-floor σκάλες (attach σε
+    // αυτήν = explicit, mirror του host-created raft guard στο useStructuralAutoAttach).
+    if (isSlabEntity(e) && e.kind === 'foundation') continue;
+    const hostInput = hostInputOf(e);
+    if (!hostInput || hostInput.topsideZmm === undefined) continue;
+    if (!hostCoversStair(hostInput.footprint, stair.params, 'base')) continue;
+    if (!stairBaseAttachesToHost(baseZmm, hostInput)) continue;
+    out.push(hostInput.hostId);
   }
   return out;
 }

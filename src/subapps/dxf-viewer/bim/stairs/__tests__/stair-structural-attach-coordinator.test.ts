@@ -9,6 +9,7 @@
 import {
   findStairsToAutoAttachToHost,
   findStairsToAutoAttachBaseToHost,
+  findHostsToSeatStairBase,
 } from '../stair-structural-attach-coordinator';
 import type { Entity } from '../../../types/entities';
 import type { BeamEntity } from '../../types/beam-types';
@@ -134,5 +135,68 @@ describe('findStairsToAutoAttachBaseToHost (base, inverted Z gate)', () => {
   it('returns [] for a non-host entity', () => {
     const line = { id: 'l1', type: 'line' } as unknown as Entity;
     expect(findStairsToAutoAttachBaseToHost(line, [stair('s1', { x: 0, y: 0, z: 0 })])).toEqual([]);
+  });
+
+  // ADR-685 Φ1 — seat: βυθισμένη/co-planar βάση σε πλάκα δαπέδου → ανασήκωση (νέο).
+  it('ADR-685: seats a co-planar base on a FLOOR slab (top == base)', () => {
+    const slab = slabAt(0); // top 0, underside -150· base 0 → seat
+    const s = stair('s1', { x: 1000, y: 1000, z: 0 });
+    expect(findStairsToAutoAttachBaseToHost(slab as unknown as Entity, [s])).toEqual(['s1']);
+  });
+
+  it('ADR-685: seats an embedded base inside the slab core', () => {
+    const slab = slabAt(0); // top 0, underside -150
+    const s = stair('s1', { x: 1000, y: 1000, z: -100 }); // -150 <= -100 <= 0 → seat
+    expect(findStairsToAutoAttachBaseToHost(slab as unknown as Entity, [s])).toEqual(['s1']);
+  });
+
+  it('ADR-685: does NOT seat a pass-through base (pierces below underside)', () => {
+    const slab = slabAt(0); // underside -150
+    const s = stair('s1', { x: 1000, y: 1000, z: -300 }); // -300 < -150 → pass-through
+    expect(findStairsToAutoAttachBaseToHost(slab as unknown as Entity, [s])).toEqual([]);
+  });
+});
+
+describe('findHostsToSeatStairBase (ADR-685 reverse: νέα σκάλα → seat στο δάπεδο)', () => {
+  it('seats a new stair base on an existing FLOOR slab it overlaps', () => {
+    const slab = slabAt(0);
+    const s = stair('s1', { x: 1000, y: 1000, z: 0 });
+    expect(findHostsToSeatStairBase(s, [slab as unknown as Entity])).toEqual(['slab_1']);
+  });
+
+  it('pulls a floating stair base down onto a foundation beam', () => {
+    const beam = beamOver(-100); // topside -100 < base 0
+    const s = stair('s1', { x: 0, y: 0, z: 0 });
+    expect(findHostsToSeatStairBase(s, [beam as unknown as Entity])).toEqual(['beam_1']);
+  });
+
+  it('does NOT seat a pass-through stair (goes to basement)', () => {
+    const slab = slabAt(0);
+    const s = stair('s1', { x: 1000, y: 1000, z: -300 });
+    expect(findHostsToSeatStairBase(s, [slab as unknown as Entity])).toEqual([]);
+  });
+
+  it('excludes foundation raft slabs (ADR-441)', () => {
+    const raft = {
+      id: 'raft_1', type: 'slab', kind: 'foundation',
+      params: {
+        kind: 'foundation',
+        outline: { vertices: [{ x: 0, y: 0 }, { x: 5000, y: 0 }, { x: 5000, y: 5000 }, { x: 0, y: 5000 }] },
+        levelElevation: 0, heightOffsetFromLevel: 0, thickness: 300, geometryType: 'box',
+      },
+    } as unknown as Entity;
+    const s = stair('s1', { x: 1000, y: 1000, z: 0 });
+    expect(findHostsToSeatStairBase(s, [raft])).toEqual([]);
+  });
+
+  it('ignores stairs whose baseBinding is explicitly not "storey-floor"', () => {
+    const slab = slabAt(0);
+    const s = stair('s1', { x: 1000, y: 1000, z: 0 }, { baseBinding: 'absolute' });
+    expect(findHostsToSeatStairBase(s, [slab as unknown as Entity])).toEqual([]);
+  });
+
+  it('returns [] for a non-stair entity', () => {
+    const slab = slabAt(0);
+    expect(findHostsToSeatStairBase(slab as unknown as Entity, [slab as unknown as Entity])).toEqual([]);
   });
 });

@@ -68,6 +68,15 @@ export interface StairBoqContext {
    * resolved μοντέλο. Απών → nominal params (μη-attached / no host context).
    */
   readonly resolveHostInput?: (id: string) => HostFootprintInput | null;
+  /**
+   * ADR-685 Φάση 1 (μέρος 3) — BOQ safety-guard: κοινός όγκος σκυροδέματος
+   * σκάλας↔πλάκας βάσης (m³) προς αφαίρεση από τη γραμμή σκυροδέματος ΤΗΣ
+   * ΣΚΑΛΑΣ. Η πλάκα βάσης κρατά τον πλήρη όγκο της (ένας ιδιοκτήτης — Revit
+   * Join Geometry parity), οπότε ο κοινός στύλος σκυροδέματος αφαιρείται εδώ
+   * ώστε να μη μετρηθεί διπλά. Clamp ≥0 στο `upsertStairBoq`. Απών/`0` → καμία
+   * αφαίρεση (byte-for-byte το nominal concrete volume).
+   */
+  readonly embeddedOverlapVolumeM3?: number;
 }
 
 // ============================================================================
@@ -143,8 +152,16 @@ export async function upsertStairBoq(
     resolveHostInput: context.resolveHostInput,
   });
   const q = computeStairBoqQuantities(effectiveParams);
+  // ADR-685 Φ1 (μέρος 3) — BOQ safety-guard: αφαίρεσε το κοινό σκάλα↔πλάκα-βάσης
+  // σκυρόδεμα από τη γραμμή ΤΗΣ ΣΚΑΛΑΣ (η πλάκα κρατά τον πλήρη όγκο, ένας
+  // ιδιοκτήτης). Clamp ≥0 — μη-concrete σκάλες έχουν ήδη μηδενικό concrete volume,
+  // ασφαλές να αφαιρεθεί 0.
+  const concreteVolumeM3 = Math.max(
+    0,
+    q.concreteVolumeM3 - (context.embeddedOverlapVolumeM3 ?? 0),
+  );
   const byComponent: Readonly<Record<StairBoqComponent, number>> = {
-    concrete: q.concreteVolumeM3,
+    concrete: concreteVolumeM3,
     cladding: q.treadCladdingAreaM2,
     handrail: q.handrailLinearM,
   };

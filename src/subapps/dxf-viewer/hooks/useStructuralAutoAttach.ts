@@ -41,6 +41,7 @@ import { AttachColumnFootingCommand } from '../core/commands/entity-commands/Att
 import {
   findStairsToAutoAttachToHost,
   findStairsToAutoAttachBaseToHost,
+  findHostsToSeatStairBase,
 } from '../bim/stairs/stair-structural-attach-coordinator';
 import {
   AttachWallsTopCommand,
@@ -180,6 +181,25 @@ function attachWallToSurroundingHosts(
 }
 
 /**
+ * ADR-685 Φ1 (αντίστροφη φορά) — όταν δημιουργείται **ΣΚΑΛΑ** πάνω σε υπάρχον
+ * δάπεδο/θεμέλιο, κάνε auto-attach/seat τη βάση της στους hosts από κάτω. Λύνει την
+ * ασυμμετρία πλάκα-πρώτα→σκάλα-μετά (το host-created path πιάνει μόνο την αντίστροφη).
+ * Ένα command ανά hostId. Idempotent: ο detector φιλτράρει το ήδη-attached.
+ */
+function attachStairBaseToSurroundingHosts(
+  stair: Entity, entities: readonly Entity[], sm: ISceneManager, execute: ExecuteFn,
+): void {
+  const kind = (stair as StairEntity).kind;
+  const hostIds = findHostsToSeatStairBase(stair, entities);
+  for (const hostId of hostIds) {
+    execute(new AttachStairsCommand('base', hostId, [{ stairId: stair.id, kind }], sm));
+  }
+  if (hostIds.length > 0) {
+    EventBus.emit('bim:stairs-auto-attached-base', { stairIds: [stair.id], hostId: hostIds[0] });
+  }
+}
+
+/**
  * ADR-459 Phase 2 (αμφίδρομα) — εδραίωση του αναλυτικού FK `footingId`:
  *   (α) νέο **footing element** (πέδιλο/πεδιλοδοκός/εδαφόπλακα) → attach όσες
  *       κολόνες (χωρίς footingId) εδράζονται από πάνω.
@@ -234,6 +254,8 @@ export function useStructuralAutoAttach(props: { levelManager: LevelSceneWriter 
       if (!isFoundationRaft) attachEntitiesUnderHost(created, entities, sm, execute);
       // Φορά 2 (αντίστροφη): νέος τοίχος → attach κορυφή/βάση στους γύρω hosts.
       if (isWallEntity(created)) attachWallToSurroundingHosts(created, entities, sm, execute);
+      // ADR-685 Φ1 (αντίστροφη): νέα σκάλα → seat/attach βάση στο δάπεδο από κάτω.
+      if (isStairEntity(created)) attachStairBaseToSurroundingHosts(created, entities, sm, execute);
       // ADR-459 Phase 2 — αναλυτικό FK πεδίλου↔κολόνας (αμφίδρομα).
       attachFootingColumnFK(created, entities, sm, execute);
     });

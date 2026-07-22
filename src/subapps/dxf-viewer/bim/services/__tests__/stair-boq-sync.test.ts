@@ -251,6 +251,55 @@ describe('upsertStairBoq — ADR-401 attach-to-structural (profile-aware)', () =
 });
 
 // ---------------------------------------------------------------------------
+// ADR-685 Φ1 (μέρος 3) — embeddedOverlapVolumeM3 BOQ safety-guard
+// ---------------------------------------------------------------------------
+
+describe('upsertStairBoq — ADR-685 embeddedOverlapVolumeM3 safety-guard', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockGetDoc.mockResolvedValue(makeSnap(false));
+    mockSetDoc.mockResolvedValue(undefined);
+    mockDeleteDoc.mockResolvedValue(undefined);
+  });
+
+  // nominal concreteVolumeM3 for makeParams monolithic defaults (stepCount=10,
+  // tread=280, rise=175, width=1000, default waistThickness=150) — see
+  // stair-boq-quantities.ts formula: waist volume + step wedges.
+  const NOMINAL_CONCRETE_M3 = 0.7402840094329718;
+
+  it('αφαιρεί τον κοινό όγκο από τη γραμμή σκυροδέματος (cladding/handrail αμετάβλητα)', async () => {
+    await upsertStairBoq(makeStair(), { ...context, embeddedOverlapVolumeM3: 0.2 }, 'created');
+
+    const concrete = payloadById('boq_bim_stair-001_concrete')!;
+    expect(concrete.estimatedQuantity).toBeCloseTo(NOMINAL_CONCRETE_M3 - 0.2, 6);
+
+    // Δεν αγγίζει cladding/handrail (μόνο η γραμμή σκυροδέματος).
+    expect(payloadById('boq_bim_stair-001_cladding')!.estimatedQuantity).toBeCloseTo(2.8, 6);
+  });
+
+  it('clamp ≥0: αφαίρεση ≥ concrete volume → 0 → row διαγράφεται (delete-instead-of-write)', async () => {
+    mockGetDoc.mockImplementation((ref: { id?: string }) => {
+      if (ref.id === 'boq_bim_stair-001_concrete') {
+        return Promise.resolve(makeSnap(true, { detached: false }));
+      }
+      return Promise.resolve(makeSnap(false));
+    });
+
+    await upsertStairBoq(makeStair(), { ...context, embeddedOverlapVolumeM3: 999 }, 'updated');
+
+    expect(payloadById('boq_bim_stair-001_concrete')).toBeUndefined();
+    expect(mockDeleteDoc).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'boq_bim_stair-001_concrete' }),
+    );
+  });
+
+  it('undefined/absent embeddedOverlapVolumeM3 → nominal concrete volume (byte-for-byte, no regression)', async () => {
+    await upsertStairBoq(makeStair(), context, 'created');
+    expect(payloadById('boq_bim_stair-001_concrete')!.estimatedQuantity).toBeCloseTo(NOMINAL_CONCRETE_M3, 6);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // deleteStairBoq
 // ---------------------------------------------------------------------------
 

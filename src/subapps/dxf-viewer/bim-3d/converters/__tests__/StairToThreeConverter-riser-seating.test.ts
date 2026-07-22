@@ -1,14 +1,16 @@
 /**
- * Riser flush-seating (Giorgio 2026-07-21) — the closed-riser panel must sit
- * BETWEEN the two treads (its face flush with the tread edge), NOT centred on the
- * edge. `buildRiserBox` shifts the box by half its thickness along the ascent
- * (travel) direction, derived from the adjacent tread's centroid.
+ * Riser seating — the closed-riser panel tucks UNDER the tread (Giorgio 2026-07-22),
+ * extending the earlier flush-behind seating (2026-07-21):
+ *   • ALONG ascent: start at flush-behind (+thickness/2) then pull BACK by the nosing
+ *     overhang (`params.nosing`) → the front face sits behind the nose, under the tread.
+ *   • VERTICAL: drop by one tread thickness (`DEFAULT_TREAD_THICKNESS_MM`) → the riser
+ *     TOP face meets the tread BOTTOM face (the tread rests ON the riser), not level
+ *     with the walking surface.
  *
- * Without the shift a riser at plan edge `xEdge` renders centred at `xEdge`, so
- * half its 20 mm thickness buries under the tread. With it, the panel is offset by
- * +thickness/2 toward the upper tread.
+ * Paired change (same builder): each TREAD slides BACKWARD away from the nose by
+ * `TREAD_BACK_SHIFT_MM` (Giorgio 2026-07-22).
  *
- * @see ../StairToThreeConverter.ts (buildRiserBox / riserAscentDir)
+ * @see ../StairToThreeConverter.ts (buildRiserBox / riserAscentDir / treadForwardDir)
  */
 
 import { stairToMeshes } from '../StairToThreeConverter';
@@ -17,6 +19,10 @@ import type { StairEntity } from '../../../bim/types/stair-types';
 
 const P = (x: number, y: number, z: number) => ({ x, y, z });
 const RISER_THICKNESS_MM = 20; // DEFAULT_RISER_THICKNESS_MM (converter-private)
+const TREAD_THICKNESS_MM = 40; // DEFAULT_TREAD_THICKNESS_MM (converter-private)
+const TREAD_BACK_SHIFT_MM = 40; // TREAD_BACK_SHIFT_MM (converter-private)
+const WAIST_DROP_MM = 40; // WAIST_DROP_MM (converter-private)
+const NOSING_MM = 20; // params.nosing below
 const WIDTH = 900;
 
 /**
@@ -43,6 +49,7 @@ function makeStraightStairPlusX(): StairEntity {
       direction: 0,
       rise: 175,
       tread: 270,
+      nosing: NOSING_MM,
       width: WIDTH,
       stepCount: 3,
       riserType: 'closed',
@@ -64,30 +71,86 @@ function makeStraightStairPlusX(): StairEntity {
   } as unknown as StairEntity;
 }
 
-describe('StairToThreeConverter — riser flush seating', () => {
+describe('StairToThreeConverter — riser tuck-under-tread seating', () => {
   const sceneToM = sceneUnitsToMeters(inferSceneUnitsFromWidth(WIDTH));
   const halfThickM = RISER_THICKNESS_MM * 0.001 * 0.5;
+  const nosingBackM = NOSING_MM * sceneToM;
+  const treadDropM = TREAD_THICKNESS_MM * 0.001; // absolute mm, not scene-scaled
+  const alongM = halfThickM - nosingBackM; // flush-behind, then pulled back by the nose
 
-  it('shifts each riser panel by +half-thickness along the ascent direction (+X)', () => {
+  it('pulls each riser BACK along ascent by (half-thickness − nosing) (+X run)', () => {
     const risers = stairToMeshes(makeStraightStairPlusX()).filter(
       (m) => m.userData['stairComponent'] === 'riser',
     );
     expect(risers).toHaveLength(2);
-    // riser i sits on edge x=(i+1)·270; ascent = +X → position.x = edge·sceneToM + halfThick.
+    // riser i sits on edge x=(i+1)·270; ascent = +X → position.x = edge·sceneToM + alongM.
     risers.forEach((mesh, i) => {
       const edgeX = (i + 1) * 270;
-      expect(mesh.position.x).toBeCloseTo(edgeX * sceneToM + halfThickM, 9);
+      expect(mesh.position.x).toBeCloseTo(edgeX * sceneToM + alongM, 9);
       // width axis is along Y → no Z shift (ascent has no Y component here).
       expect(mesh.position.z).toBeCloseTo(-450 * sceneToM, 9);
     });
   });
 
-  it('offset is a real shift, not zero (panel no longer centred on the edge)', () => {
+  it('nosing pull-back exceeds the flush-behind offset → net BACKWARD shift', () => {
     const risers = stairToMeshes(makeStraightStairPlusX()).filter(
       (m) => m.userData['stairComponent'] === 'riser',
     );
-    // Centred (old) x would be exactly edge·sceneToM; the shift must be > 0.
-    expect(risers[0]!.position.x - 270 * sceneToM).toBeCloseTo(halfThickM, 9);
-    expect(halfThickM).toBeGreaterThan(0);
+    // nosing (20) > half-thickness (10) → the panel ends up behind the plan edge.
+    expect(alongM).toBeLessThan(0);
+    expect(risers[0]!.position.x).toBeLessThan(270 * sceneToM);
+  });
+
+  it('drops each riser by one tread thickness → top face meets tread underside', () => {
+    const risers = stairToMeshes(makeStraightStairPlusX()).filter(
+      (m) => m.userData['stairComponent'] === 'riser',
+    );
+    // baseY = 0; riser i spans z∈[i·175,(i+1)·175] → mid z = (2i+1)·87.5, dropped by treadDrop.
+    risers.forEach((mesh, i) => {
+      const midZScene = (i * 175 + (i + 1) * 175) * 0.5;
+      expect(mesh.position.y).toBeCloseTo(midZScene * sceneToM - treadDropM, 9);
+    });
+  });
+});
+
+describe('StairToThreeConverter — tread backward nudge', () => {
+  const sceneToM = sceneUnitsToMeters(inferSceneUnitsFromWidth(WIDTH));
+  const treadBackM = TREAD_BACK_SHIFT_MM * 0.001; // absolute mm, not scene-scaled
+
+  it('slides each tread BACKWARD away from the nose (−X) by TREAD_BACK_SHIFT_MM', () => {
+    const treads = stairToMeshes(makeStraightStairPlusX()).filter(
+      (m) => m.userData['stairComponent'] === 'tread',
+    );
+    expect(treads).toHaveLength(3);
+    // extrudeFlatSlab bakes world xy into geometry (position.xz start at 0), so the
+    // backward nudge shows up directly as position.x; ascent = +X → shift is −X, zero Z.
+    treads.forEach((mesh) => {
+      expect(mesh.position.x).toBeCloseTo(-treadBackM, 9);
+      expect(mesh.position.z).toBeCloseTo(0, 9);
+    });
+  });
+
+  it('nudge is a real backward (down-slope) shift, not zero', () => {
+    const treads = stairToMeshes(makeStraightStairPlusX()).filter(
+      (m) => m.userData['stairComponent'] === 'tread',
+    );
+    // treads move −X (away from the +X nose) → strictly negative.
+    expect(treads[0]!.position.x).toBeLessThan(0);
+  });
+});
+
+describe('StairToThreeConverter — waist slab drop', () => {
+  const waistDropM = WAIST_DROP_MM * 0.001; // absolute mm, not scene-scaled
+
+  it('lowers the monolithic waist slab toward the floor by WAIST_DROP_MM', () => {
+    const waist = stairToMeshes(makeStraightStairPlusX()).filter(
+      (m) => m.userData['stairComponent'] === 'waist',
+    );
+    // buildFlightWaist bakes all geometry (incl. origin) into the buffer → mesh
+    // position starts at 0; the converter drop shows up directly as position.y.
+    expect(waist.length).toBeGreaterThan(0);
+    waist.forEach((mesh) => {
+      expect(mesh.position.y).toBeCloseTo(-waistDropM, 9);
+    });
   });
 });

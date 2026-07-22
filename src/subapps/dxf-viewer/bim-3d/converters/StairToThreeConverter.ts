@@ -20,7 +20,7 @@
  */
 
 import * as THREE from 'three';
-import type { StairEntity, Polygon3D, Polyline3D, Segment3D } from '../../bim/types/stair-types';
+import type { StairEntity, Polygon3D, Polyline3D } from '../../bim/types/stair-types';
 import { resolveStairMaterial } from '../materials/stair-material-resolver';
 import { resolveTreadNosing } from '../../bim/geometry/stairs/stair-tread-overrides';
 import { buildTreadNosingMesh } from './stair-tread-nosing-3d';
@@ -31,6 +31,11 @@ import { stampBimIdentity } from './bim-three-shape-helpers';
 import { polygonCentroid } from '../../bim/geometry/shared/polygon-utils';
 import { DEFAULT_WAIST_SLAB_THICKNESS_MM } from '../../bim/stairs/stair-boq-quantities';
 import { buildWaistSlabMeshes } from './stair-waist-slabs';
+import {
+  buildRiserBox,
+  riserAscentDir,
+  treadForwardDir,
+} from './stair-part-seating-3d';
 
 // ADR-375 Phase C.7 — stair subcategory wiring (ADR-377 SUBCATEGORY_TAXONOMY).
 // ADR-377 Phase E — unified onto the shared `attachEdgesProjection` SSoT (was a
@@ -58,6 +63,15 @@ const DEFAULT_HANDRAIL_RADIUS_MM = 25;
 const DEFAULT_HANDRAIL_HEIGHT_MM = 900;
 const HANDRAIL_TUBE_SEGMENTS = 8;
 const MM_TO_M = 0.001;
+
+// Tread horizontal nudge BACKWARD (away from the nose / down-slope), applied along
+// each tread's own ascent axis (Giorgio 2026-07-22). Explicit design offset, not
+// tied to a section dim. Net result relative to the plan polygon: 40 mm back.
+const TREAD_BACK_SHIFT_MM = 40;
+
+// Waist slab (μηρός) vertical drop toward the building floor (Giorgio 2026-07-22).
+// Explicit design offset applied as a world translation on the finished slab mesh.
+const WAIST_DROP_MM = 40;
 
 function shapeFromPolygon(poly: Polygon3D, sceneToM: number): THREE.Shape | null {
   if (poly.length < 3) return null;
@@ -134,6 +148,14 @@ function buildTreadMeshes(
     ...stair.geometry.treadsBelowCut,
     ...stair.geometry.treadsAboveCut,
   ];
+  // Backward nudge (Giorgio 2026-07-22): each tread slides AWAY from the nose by
+  // TREAD_BACK_SHIFT_MM. Direction is per-tread (turn-safe) from adjacent-tread
+  // centroids; the shift is a world translation on the finished mesh (geometry
+  // bakes world xy, position.xz = 0). `treadForwardDir` gives the nose (ascent)
+  // axis; we subtract it to move down-slope.
+  const treadBackM = TREAD_BACK_SHIFT_MM * MM_TO_M;
+  const riseScene = stair.params.rise;
+  const treadInfo = allTreads.map((t) => ({ z: t[0]?.z ?? 0, c: polygonCentroid(t) }));
   for (let i = 0; i < allTreads.length; i++) {
     const mat = resolveStairMaterial(stair, 'stair-tread', i);
     // ADR-358 Q19 Φ4b — a per-tread `customProfile` (Revit Nosing Profile) sweeps
@@ -145,6 +167,11 @@ function buildTreadMeshes(
         ?? extrudeFlatSlab(allTreads[i]!, sceneToM, thicknessM, mat, baseY)
       : extrudeFlatSlab(allTreads[i]!, sceneToM, thicknessM, mat, baseY);
     if (!mesh) continue;
+    const fwd = treadForwardDir(i, treadInfo, riseScene, stair.params.direction);
+    if (fwd) {
+      mesh.position.x -= fwd.x * treadBackM; // move opposite the nose (down-slope)
+      mesh.position.z += fwd.y * treadBackM; // DXF Y → world -Z, negated for backward
+    }
     const tagged = tagStairMesh(mesh, stair, 'tread', levelId, i);
     attachStairEdges(tagged, 'treads');
     out.push(tagged);
@@ -164,6 +191,14 @@ function buildRiserMeshes(
   const out: THREE.Mesh[] = [];
   const riseM = stair.params.rise * sceneToM;
   const thicknessM = DEFAULT_RISER_THICKNESS_MM * MM_TO_M;
+  // Tuck the riser panel UNDER the tread instead of level with it (Giorgio 2026-07-22):
+  //   • drop by the tread thickness → riser TOP face meets the tread BOTTOM face.
+  //   • pull back by the nosing overhang → riser front sits behind the nose, under
+  //     the tread — NOT flush with the tread front edge.
+  // Derived from the SSoT dims (tread-slab thickness + `nosing`), never hardcoded,
+  // so the seat stays correct if either changes.
+  const treadDropM = DEFAULT_TREAD_THICKNESS_MM * MM_TO_M;
+  const nosingBackM = (stair.params.nosing ?? 0) * sceneToM;
   const risers = stair.geometry.risers;
   // Tread centroids (scene units) for the flush-seating ascent direction.
   const treadInfo = [...stair.geometry.treadsBelowCut, ...stair.geometry.treadsAboveCut]
@@ -172,7 +207,7 @@ function buildRiserMeshes(
     // ADR-358 Q19 Φ7 — per-riser material override (0-based, matches the `stairComponentIndex` tag).
     const mat = resolveStairMaterial(stair, 'stair-riser', i);
     const ascent = riserAscentDir(risers[i]!, treadInfo);
-    const mesh = buildRiserBox(risers[i]!, sceneToM, riseM, thicknessM, mat, baseY, ascent);
+    const mesh = buildRiserBox(risers[i]!, sceneToM, riseM, thicknessM, mat, baseY, ascent, treadDropM, nosingBackM);
     if (mesh) {
       const tagged = tagStairMesh(mesh, stair, 'riser', levelId, i);
       attachStairEdges(tagged, 'risers');
@@ -180,101 +215,6 @@ function buildRiserMeshes(
     }
   }
   return out;
-}
-
-interface Vec2Scene { readonly x: number; readonly y: number; }
-
-/**
- * Unit ascent (travel) direction at a riser, derived from the adjacent TREAD:
- * the upper tread (dir = treadCentroid − riserMid) when present, else the lower
- * (dir = riserMid − treadCentroid). Landings are deliberately skipped — a
- * landing's centroid sits off the travel axis (e.g. a 2·width switchback landing)
- * and would skew the direction. Used to seat the riser panel flush BEHIND the
- * tread edge (Giorgio 2026-07-21) instead of centred on it.
- */
-function riserAscentDir(
-  seg: Segment3D,
-  treadInfo: readonly { z: number; c: Vec2Scene }[],
-): Vec2Scene | null {
-  const midX = (seg.start.x + seg.end.x) * 0.5;
-  const midY = (seg.start.y + seg.end.y) * 0.5;
-  const zLow = Math.min(seg.start.z, seg.end.z);
-  const zHigh = Math.max(seg.start.z, seg.end.z);
-  const zTol = (zHigh - zLow) * 0.5 + 1e-6;
-  const upper = nearestTreadCentroid(treadInfo, zHigh, zTol, midX, midY);
-  if (upper) return unitVec(upper.x - midX, upper.y - midY);
-  const lower = nearestTreadCentroid(treadInfo, zLow, zTol, midX, midY);
-  if (lower) return unitVec(midX - lower.x, midY - lower.y);
-  return null;
-}
-
-/** Nearest tread centroid (xy) among treads whose z is within `zTol` of `targetZ`. */
-function nearestTreadCentroid(
-  treadInfo: readonly { z: number; c: Vec2Scene }[],
-  targetZ: number,
-  zTol: number,
-  midX: number,
-  midY: number,
-): Vec2Scene | null {
-  let best: Vec2Scene | null = null;
-  let bestD = Infinity;
-  for (const t of treadInfo) {
-    if (Math.abs(t.z - targetZ) > zTol) continue;
-    const dx = t.c.x - midX;
-    const dy = t.c.y - midY;
-    const d = dx * dx + dy * dy;
-    if (d < bestD) { bestD = d; best = t.c; }
-  }
-  return best;
-}
-
-function unitVec(x: number, y: number): Vec2Scene | null {
-  const m = Math.hypot(x, y);
-  return m < 1e-9 ? null : { x: x / m, y: y / m };
-}
-
-function buildRiserBox(
-  seg: Segment3D,
-  sceneToM: number,
-  riseM: number,
-  thicknessM: number,
-  mat: THREE.MeshStandardMaterial,
-  baseY: number,
-  ascentDir: Vec2Scene | null,
-): THREE.Mesh | null {
-  // ADR-370 Phase 5.3 (2026-05-25) — riser Segment3D uses DIAGONAL encoding:
-  // start = corner A @zLow on one width edge, end = OPPOSITE corner B @zHigh
-  // on the other width edge. The xy diagonal yields midpoint, width axis, and
-  // width magnitude — no need to consult `stair.params.direction/width`.
-  const dxScene = seg.end.x - seg.start.x;
-  const dyScene = seg.end.y - seg.start.y;
-  const widthScene = Math.hypot(dxScene, dyScene);
-  if (widthScene < 1e-9) return null; // degenerate (zero-width riser)
-  const widthM = widthScene * sceneToM;
-  const midXScene = (seg.start.x + seg.end.x) * 0.5;
-  const midYScene = (seg.start.y + seg.end.y) * 0.5;
-  const geo = new THREE.BoxGeometry(thicknessM, riseM, widthM);
-  ensureWorldUvs(geo); // ADR-413 — aoMap uv2 (BoxGeometry auto-UVs).
-  const mesh = new THREE.Mesh(geo, mat);
-  // Seat the panel flush BEHIND the tread edge: shift it half its thickness along
-  // the ascent direction, so it sits BETWEEN the two treads (face flush with the
-  // tread edge) rather than centred ON the edge — which buried half the panel
-  // under the tread and left half poking out (Giorgio 2026-07-21). `ascentDir` is
-  // a scene-frame unit vector; the offset magnitude is in meters (thickness/2).
-  const halfThickM = thicknessM * 0.5;
-  const offXM = ascentDir ? ascentDir.x * halfThickM : 0;
-  const offZM = ascentDir ? -ascentDir.y * halfThickM : 0; // DXF Y → world -Z
-  mesh.position.set(
-    midXScene * sceneToM + offXM,
-    baseY + (seg.start.z + seg.end.z) * 0.5 * sceneToM,
-    -midYScene * sceneToM + offZM, // DXF Y → world -Z
-  );
-  // BoxGeometry width axis = local +Z. Three.js Y-rotation by θ maps (0,0,1) →
-  // (sin θ, 0, cos θ). Target world XZ direction = (dxScene, -dyScene)/widthScene
-  // (DXF Y → world -Z). Solve: sin θ = dxScene/W, cos θ = -dyScene/W
-  // ⇒ θ = atan2(dxScene, -dyScene).
-  mesh.rotation.y = Math.atan2(dxScene, -dyScene);
-  return mesh;
 }
 
 // ── Stringers ─────────────────────────────────────────────────────────────────
@@ -447,7 +387,9 @@ function buildWaistMeshes(
   levelId?: string,
 ): THREE.Mesh[] {
   const out: THREE.Mesh[] = [];
+  const waistDropM = WAIST_DROP_MM * MM_TO_M;
   for (const mesh of buildWaistSlabMeshes(stair, baseY, sceneToM)) {
+    mesh.position.y -= waistDropM; // lower the slab toward the building floor
     const tagged = tagStairMesh(mesh, stair, 'waist', levelId);
     attachStairEdges(tagged); // no subcategory → parent stair style (like landings)
     out.push(tagged);
