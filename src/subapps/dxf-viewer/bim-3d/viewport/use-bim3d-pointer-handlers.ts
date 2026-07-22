@@ -9,6 +9,7 @@
 
 import { useCallback, useEffect } from 'react';
 import type { MouseEvent as ReactMouseEvent, RefObject } from 'react';
+import { toolStateStore } from '../../stores/ToolStateStore';
 import { useQuickProperties3DStore } from '../stores/QuickProperties3DStore';
 import { useBim3DEditStore } from '../stores/Bim3DEditStore';
 import { useSelection3DStore } from '../stores/Selection3DStore';
@@ -85,6 +86,10 @@ export function useBim3DPointerHandlers(
     // genuine scene AND grip clicks still land on the renderer canvas — only true chrome is filtered.
     const rendererCanvas = managerRef.current?.getRendererCanvas();
     if (rendererCanvas && e.target !== rendererCanvas) return;
+    // ADR-680 (3D) — όσο το «Μέτρηση» (dist) είναι ενεργό, το κλικ ανήκει ΑΠΟΚΛΕΙΣΤΙΚΑ στο
+    // `useBim3DDistMeasure` (mirror του 2D PRIORITY 0.35): μην τρέξεις selection/pivot εδώ, αλλιώς
+    // το κλικ-μέτρημα θα καθάριζε/άλλαζε την επιλογή (event-time read, ADR-040).
+    if (toolStateStore.get().activeTool === 'dist') return;
     // ADR-408 — while a 3D edit gizmo is mounted, Ctrl+click is reserved for relocating
     // its base point / rotation centre (handled by the edit interaction); never let it
     // change the selection. No gizmo → Ctrl is free (left for future use).

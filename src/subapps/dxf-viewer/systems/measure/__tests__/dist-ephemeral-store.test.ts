@@ -66,6 +66,20 @@ describe('dist-ephemeral-store', () => {
     expect(s.clearToken).toBe(1);
   });
 
+  it('keeps the z component for 3D points (true 3D measure)', () => {
+    addDistPoint({ x: 0, y: 0, z: 0 });
+    addDistPoint({ x: 0, y: 0, z: 3 });
+    expect(getDistSnapshot().active).toEqual([{ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 3 }]);
+  });
+
+  it('dedupes only when coincident in ALL three axes (same x,y but different z stays)', () => {
+    addDistPoint({ x: 1, y: 1, z: 0 });
+    addDistPoint({ x: 1, y: 1, z: 2.5 }); // same plan, different elevation → NOT a dupe
+    expect(getDistSnapshot().active).toHaveLength(2);
+    addDistPoint({ x: 1, y: 1, z: 2.5 }); // full 3D coincidence → dedupe
+    expect(getDistSnapshot().active).toHaveLength(2);
+  });
+
   it('notifies subscribers on mutation, but not on a dedupe no-op', () => {
     let n = 0;
     const unsub = subscribeDist(() => { n++; });

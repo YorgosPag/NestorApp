@@ -16,12 +16,25 @@
 import type { Point2D } from '../../rendering/types/Types';
 import { createExternalStore } from '../../stores/createExternalStore';
 
+/**
+ * Σημείο μέτρησης σε scene units. ΕΝΑ SSoT για 2D **και** 3D (ADR-680): ο 2D resolver γράφει/διαβάζει
+ * μόνο x,y (το `z` απουσιάζει → 0)· ο 3D resolver γράφει/διαβάζει και το `z` (υψόμετρο), ώστε να
+ * μετριέται αληθινή 3D απόσταση (ύψος/διαγώνιος), όχι μόνο κάτοψη. Το `Point2D` είναι δομικά
+ * assignable (unified store + dual resolvers).
+ */
+export interface DistPoint {
+  readonly x: number;
+  readonly y: number;
+  /** Υψόμετρο σε scene units. Απουσία ⇒ 0 (2D επίπεδο). */
+  readonly z?: number;
+}
+
 /** Αμετάβλητο snapshot της εφήμερης DIST κατάστασης. */
 export interface DistSnapshot {
   /** Η διαδρομή που μετριέται τώρα (μεγαλώνει ανά κλικ· το τελευταίο σημείο είναι το ζωντανό). */
-  readonly active: readonly Point2D[];
+  readonly active: readonly DistPoint[];
   /** Ολοκληρωμένες διαδρομές — μένουν ζωγραφισμένες μέχρι το clear. */
-  readonly committed: readonly (readonly Point2D[])[];
+  readonly committed: readonly (readonly DistPoint[])[];
   /** Αυξάνεται σε κάθε clear ώστε το leaf να μηδενίζει transient UI. */
   readonly clearToken: number;
 }
@@ -47,12 +60,22 @@ export function getDistSnapshot(): DistSnapshot {
   return store.get();
 }
 
-/** Προσθήκη σημείου στην ενεργή διαδρομή. Παραλείπει coincident επανάληψη (double-click). */
-export function addDistPoint(point: Point2D): void {
+/**
+ * Προσθήκη σημείου στην ενεργή διαδρομή. Παραλείπει coincident επανάληψη (double-click).
+ * Δέχεται 2D (`Point2D`) ή 3D (`DistPoint` με `z`) — το `z` κρατιέται μόνο όταν δίνεται.
+ */
+export function addDistPoint(point: Point2D | DistPoint): void {
   const prev = store.get();
   const last = prev.active[prev.active.length - 1];
-  if (last && Math.hypot(point.x - last.x, point.y - last.y) < DEDUPE_EPSILON) return;
-  store.set({ ...prev, active: [...prev.active, { x: point.x, y: point.y }] });
+  const z = 'z' in point && point.z !== undefined ? point.z : 0;
+  if (last) {
+    const lz = last.z ?? 0;
+    if (Math.hypot(point.x - last.x, point.y - last.y, z - lz) < DEDUPE_EPSILON) return;
+  }
+  const next: DistPoint = 'z' in point && point.z !== undefined
+    ? { x: point.x, y: point.y, z: point.z }
+    : { x: point.x, y: point.y };
+  store.set({ ...prev, active: [...prev.active, next] });
 }
 
 /** Πάγωμα της ενεργής διαδρομής στο `committed` + έναρξη νέας ενεργής (Enter / double-click). */

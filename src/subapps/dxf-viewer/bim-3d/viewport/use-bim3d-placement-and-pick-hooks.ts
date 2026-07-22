@@ -16,6 +16,7 @@
 import type { RefObject } from 'react';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 import { useBim3DColumnPlacement } from '../placement/use-bim3d-column-placement';
+import { useBim3DDistMeasure } from '../measure/use-bim3d-dist-measure';
 import { useBim3DWallPlacement } from '../placement/use-bim3d-wall-placement';
 import { useBim3DMepFixturePlacement } from '../placement/use-bim3d-mep-fixture-placement';
 import { useBim3DFurniturePlacement } from '../placement/use-bim3d-furniture-placement';
@@ -52,6 +53,12 @@ export function useBim3DPlacementAndPickHooks({
   // existing 2D column FSM (`useColumnTool.onCanvasClick`) via the
   // `bim:place-column-3d` EventBus bridge (zero duplication, full commit path).
   useBim3DColumnPlacement({ managerRef, canvasEl });
+
+  // ADR-680 (3D) — «Μέτρηση» (dist) στον 3D καμβά. Armed μόνο όσο το εργαλείο dist είναι ενεργό
+  // ΚΑΙ 3D: κλικ raycast-άρει την επιφάνεια (BIM/DXF/MEP), OSNAP διορθώνει την κάτοψη, και το
+  // scene-unit 3D σημείο γράφεται στον ΚΟΙΝΟ (με 2D) `dist-ephemeral-store` — εφήμερο, μηδέν
+  // entity/DB. Ζωγραφική = πραγματική always-on-top 3D πολυγραμμή + screen-space labels.
+  useBim3DDistMeasure({ managerRef, canvasEl });
 
   // ADR-543 — 3D wall drawing. Armed only while the wall tool is active AND the
   // viewport is in 3D: raycasts the active floor plane, shows a WYSIWYG wall ghost

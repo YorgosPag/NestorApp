@@ -1,7 +1,8 @@
 # ADR-680 — Εφήμερο «Μέτρημα Απόστασης» (tape measure / DIST) στον DXF Viewer Editor
 
 **Status:** Accepted · **Date:** 2026-07-19 · **Owner:** DXF Viewer / Measure
-**Related:** ADR-040 (micro-leaf), ADR-357 (status bar), ADR-340 (public-gallery ephemeral measure)
+**Related:** ADR-040 (micro-leaf), ADR-357 (status bar), ADR-340 (public-gallery ephemeral measure),
+ADR-618 (bim3d placement SSoT), ADR-542 (3D OSNAP glyph), ADR-544 (3D placement parity)
 
 ---
 
@@ -59,7 +60,35 @@ AutoCAD DIST)· **Enter**/double-click → κλείνει τη διαδρομή 
 `/dxf/viewer` → «ΜΕΤΡΗΣΗ» → κλικ 2 γωνίες: «Χ,ΧΧ μ» με snap· συνέχεια → διαδρομή + ΣΥΝΟΛΟ· Enter κλείνει·
 ESC καθαρίζει· reload → φεύγει (καμία εγγραφή στη σκηνή/DB, καμία undo entry).
 
+## 6. Επέκταση 3D (BIM Viewport) — ίδιο κουμπί, αληθινή 3D μέτρηση
+
+Το **ίδιο** κουμπί «ΜΕΤΡΗΣΗ» δουλεύει και στον 3D καμβά (Revit/ArchiCAD/Cinema-4D measure): μετράς
+αποστάσεις πάνω σε DXF + BIM + MEP + κάθε ορατή οντότητα, σε **αληθινό 3D χώρο** (ύψος υποστυλώματος,
+διαγώνιος — όχι μόνο κάτοψη). Παραμένει **εφήμερο** (μηδέν entity/DB).
+
+**Αρχιτεκτονική απόφαση — unified SSoT + dual resolvers:** ο **ΕΝΑΣ** store/readout γενικεύτηκε σε 3D
+αντί για δεύτερο μηχανισμό. Το `DistPoint = {x, y, z?}` (scene units): 2D = ειδική περίπτωση `z=0`
+(πλήρως backward-compatible)· `computeDistReadout` = 3D `hypot(dx,dy,dz)` (dz⇒0). Δύο resolvers
+ζωγραφικής (2D SVG leaf διαβάζει x,y· 3D scene overlay διαβάζει x,y,z).
+
+| Layer | Αρχείο | Ρόλος |
+|---|---|---|
+| Store/readout (γενίκευση) | `systems/measure/dist-ephemeral-store.ts` + `dist-readout.ts` | `DistPoint` με προαιρετικό `z`· 3D μήκος. Κοινός SSoT 2D+3D. |
+| 3D overlay (resolver) | `bim-3d/measure/Dist3DOverlay.ts` | Πραγματική 3D `LineSegments` + `Points` + label `Sprite`s, **always-on-top** (`depthTest:false`, `renderOrder` 1998–2000), σταθερό on-screen μέγεθος (`getPixelWorldSize`), labels μέσω SSoT `createLabelTexture` (cached), scene→world μέσω `dxfPlanToWorld`. Καθαρή Three.js, μηδέν React. |
+| 3D click bridge | `bim-3d/measure/use-bim3d-dist-measure.ts` | Mirror του `use-bim3d-column-placement`: `usePlacementInteractionEffect({tools:['dist']})` (ADR-618). Κλικ → `raycastWorldPointOrPlane` (ΕΠΙΦΑΝΕΙΑ→floor→camera-plane) → OSNAP `resolvePlacementSnapWithView` (κάτοψη x,y, κρατά z επιφάνειας) → scene-unit `DistPoint` → `addDistPoint`. `subscribeDist` re-render για Enter/Backspace/Esc. |
+| Mount | `bim-3d/viewport/use-bim3d-placement-and-pick-hooks.ts` | Μία γραμμή, δίπλα στα placement hooks. |
+| Click guard | `bim-3d/viewport/use-bim3d-pointer-handlers.ts` | Early-return `activeTool==='dist'` (mirror 2D PRIORITY 0.35) → το κλικ-μέτρημα δεν αγγίζει selection/pivot. |
+
+**Πληκτρολόγιο = mode-agnostic (μηδέν duplication):** Enter/Backspace/double-click/Escape/finish/undo/
+clear χειρίζονται **ήδη** από τον `DistMeasureOverlayLeaf` (window listeners + escape-bus), που μένει
+mounted όσο `activeTool==='dist'` ανεξαρτήτως 2D/3D, πάνω στον **κοινό** store. Ο 3D overlay τα
+αντικατοπτρίζει μέσω `subscribeDist`. Το `activeTool` επιβιώνει το 2D↔3D toggle (ανεξάρτητα stores).
+
+**Perf (ADR-040):** ο 3D bridge δεν κάνει `useSyncExternalStore` (store reads at event time)· ο overlay
+είναι imperative (`markSceneDirty` μετά από κάθε mutation, label textures cached ανά κείμενο).
+
 ## Changelog
 | Date | Change |
 |------|--------|
 | 2026-07-19 | Αρχική υλοποίηση (Opus 4.8, GOL+SSOT, Plan-approved). 5 νέα αρχεία + 6 μονόγραμμα anchors. category `'editing'` για αποφυγή measurement auto-start. ESC = clear-in-mode / exit-on-empty. |
+| 2026-07-22 | **Επέκταση 3D** (Opus 4.8, GOL+SSOT, Plan-approved). Γενίκευση store/readout σε `DistPoint {x,y,z?}` (2D=z0, backward-compatible) → αληθινή 3D μέτρηση. Νέα: `bim-3d/measure/Dist3DOverlay.ts` (always-on-top 3D line + labels) + `use-bim3d-dist-measure.ts` (click bridge, mirror column placement). Κοινός store → πληκτρολόγιο/Esc δωρεάν/mode-agnostic. Guard στον 3D pointer handler. |
