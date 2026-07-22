@@ -106,13 +106,19 @@ function runPick(input: Bim3DPickInput): boolean {
   // plane (Z = floor elevation). Reuses `hit.worldPoint` — no second raycast.
   updateBim3DCursorReadout(manager, clientX, clientY, hit?.worldPoint ?? null);
 
+  // ADR-680 — «Μέτρηση» (dist): ΚΑΝΕΝΑ hover silhouette/DXF glow (Giorgio 2026-07-22): στη μέτρηση
+  // θέλουμε καθαρή εικόνα με ΜΟΝΟ τα διακριτά snap σημεία-γωνίες — όχι κίτρινο περίγραμμα σε όλο το
+  // μήκος της ακμής της οντότητας. Το snap glyph το κατέχει αποκλειστικά ο dist hook (yield παρακάτω).
+  const placing = toolStateStore.get().activeTool;
+  const distActive = placing === 'dist';
+
   // ADR-538 — unified hover: BIM silhouette when a tagged entity is hit, else the raw-DXF glow.
   const tDxf = performance.now(); // 🔬 ADR-549 Phase 0.3 (DXF wireframe pick only runs on a BIM miss)
-  const hoverId = hit?.bimId
+  const hoverId = distActive ? null : (hit?.bimId
     ?? pickDxfEntityAcrossFloors(getDxfFloorScope(), camera, dom, clientX, clientY)?.entityId
-    ?? null;
+    ?? null);
   recordOverlayDraw('pick:dxf-resolve', performance.now() - tDxf); // 🔬
-  const bimHoverId = hit?.bimId ?? null;
+  const bimHoverId = distActive ? null : (hit?.bimId ?? null);
 
   // ADR-549 Φ2 (2026-06-29) — DECOUPLE the cheap hover id from the heavy silhouette. The unified
   // hover id drives the DXF glow, which is a Canvas2D overlay (NO WebGL render) → like the snap
@@ -145,9 +151,11 @@ function runPick(input: Bim3DPickInput): boolean {
     }
   }
 
-  // ADR-544 — while a placement tool (column/wall) owns the snap glyph, the hover-handler yields.
-  const placing = toolStateStore.get().activeTool;
-  if (placing === 'column' || placing === 'wall') return resettlePending;
+  // ADR-544 — while a placement/measure tool owns the snap glyph, the hover-handler yields. ADR-680:
+  // `dist` (3D «Μέτρηση») is the sole snap-glyph owner while active — its hook raycasts the DXF
+  // FLOOR plane too (not just the BIM group), so it snaps to DXF endpoint/midpoint on the plan
+  // underlay, which THIS BIM-only raycast would miss (→ null clobbering the correct floor snap).
+  if (placing === 'column' || placing === 'wall' || placing === 'dist') return resettlePending;
 
   // ADR-542 — snap marker reuses the SAME world point from the unified raycast (no 2nd raycast).
   const tSnap = performance.now(); // 🔬 ADR-549 Phase 0.3

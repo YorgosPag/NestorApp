@@ -58,4 +58,9 @@ export const COLLECTIONS = {
   // onDeleteFloorplanBackground trigger for fileId reference counting.
   FLOORPLAN_BACKGROUNDS: 'floorplan_backgrounds',
   FLOORPLAN_OVERLAYS: 'floorplan_overlays',
+
+  // 🪑 IMPORTED MESHES (ADR-683 Φ3) — read by onStorageFinalize orphan-cleanup to
+  // recognise a `.glb` claim. Ownership is by `params.uploadId` (many entities → one
+  // file), NOT by doc-id → needs a QUERY provider (see file-ownership-resolver).
+  FLOORPLAN_IMPORTED_MESHES: 'floorplan_imported_meshes',
 } as const;

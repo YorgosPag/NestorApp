@@ -31,6 +31,10 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 import { finiteBox3FromObject } from '../../bim-3d/scene/finite-bounds';
+import {
+  collectAddressableGltfNodes,
+  readGltfFaceKeys,
+} from '../../bim-3d/scene/gltf-addressable-nodes';
 import type {
   ObjectMaterialAssignment,
   ImportedMaterial,
@@ -90,17 +94,6 @@ function readWorldBox(node: THREE.Object3D): GltfNodeWorldBox | null {
 
 /** `MeshSolidMeasure` fallback όταν δεν χτίζεται representative (ίδιο σχήμα με το module NOT_SOLID). */
 const UNKNOWN_SOLID: MeshSolidMeasure = { isWatertight: false, volumeM3: null };
-
-/**
- * ADR-678 Φ3 — η αρίθμηση όψεων (`faceKeyByMaterialIndex`) όπως ταξιδεύει **node-level** στο glTF
- * (μετρημένο: επιβιώνει αυτούσια στο round-trip, προσκολλημένη στο reconstructed node). `null` όταν
- * το node δεν είναι faced solid (legacy single-material) ή το πεδίο δεν είναι έγκυρος πίνακας strings.
- */
-function readFaceKeys(node: THREE.Object3D | null | undefined): readonly string[] | null {
-  const raw = node?.userData?.['faceKeyByMaterialIndex'];
-  if (!Array.isArray(raw) || raw.length === 0) return null;
-  return raw.every((k) => typeof k === 'string') ? (raw as string[]) : null;
-}
 
 /**
  * Τα per-primitive child meshes ενός faced solid. Ο GLTFLoader τυλίγει πολλαπλά primitives σε
@@ -180,6 +173,17 @@ function buildFacedRecord(node: THREE.Object3D, faceKeys: readonly string[]): Gl
   };
 }
 
+/** Ένα legacy single-material record από ένα σκέτο Mesh (μη-faced). */
+function buildMeshRecord(mesh: THREE.Mesh): GltfObjectRecord {
+  return {
+    objectName: mesh.name,
+    materialName: resolveMaterialName(mesh),
+    fingerprint: computeGeometryFingerprint(mesh),
+    worldBoxM: readWorldBox(mesh),
+    solid: measureMeshSolid(mesh),
+  };
+}
+
 /**
  * **Pure** — από ένα φορτωμένο δέντρο three σε εγγραφές. Χωρισμένο από τη φόρτωση ώστε να είναι
  * testable χωρίς GLTFLoader/αρχείο (ίδιο μοτίβο με τα pure parsers του ADR-678).
@@ -190,30 +194,16 @@ function buildFacedRecord(node: THREE.Object3D, faceKeys: readonly string[]): Gl
  *
  * Ανώνυμα legacy meshes **δεν** πετιούνται: επιστρέφονται με κενό `objectName` → πέφτουν στα «χωρίς
  * αντιστοίχιση» (κατάσταση D) αντί να εξαφανιστούν σιωπηλά από την αναφορά.
+ *
+ * **Ποιοι κόμβοι** μετρούν = `collectAddressableGltfNodes` (SSoT, ADR-683 §mesh-load-nesting): ο ίδιος
+ * walker καθορίζει και τι ευρετηριάζει ο `bim-mesh-cache`, ώστε το `nodeName` της οντότητας να μη
+ * μπορεί ποτέ να δείξει σε κόμβο που ο cache δεν έχει template.
  */
 export function collectGltfObjects(root: THREE.Object3D): GltfObjectRecord[] {
-  const records: GltfObjectRecord[] = [];
-
-  root.traverse((node) => {
-    const faceKeys = readFaceKeys(node);
-    if (faceKeys) {
-      records.push(buildFacedRecord(node, faceKeys));
-      return;  // children = per-face primitives, owned by this record
-    }
-    const mesh = node as THREE.Mesh;
-    if (mesh.isMesh !== true) return;
-    if (readFaceKeys(mesh.parent) !== null) return;  // per-face child — already in its faced record
-
-    records.push({
-      objectName: mesh.name,
-      materialName: resolveMaterialName(mesh),
-      fingerprint: computeGeometryFingerprint(mesh),
-      worldBoxM: readWorldBox(mesh),
-      solid: measureMeshSolid(mesh),
-    });
+  return collectAddressableGltfNodes(root).map((node) => {
+    const faceKeys = readGltfFaceKeys(node);
+    return faceKeys ? buildFacedRecord(node, faceKeys) : buildMeshRecord(node as THREE.Mesh);
   });
-
-  return records;
 }
 
 /**

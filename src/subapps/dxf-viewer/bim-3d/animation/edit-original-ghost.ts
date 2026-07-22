@@ -56,14 +56,24 @@ export class EditOriginalGhost {
    * Park a frozen, dimmed clone of `sourceMeshes` at their CURRENT pose. Call BEFORE the
    * source meshes are transformed (so the clones capture the pre-drag pose). No-op for an
    * empty set or when the meshes are not yet parented under a scene.
+   *
+   * ADR-550 — `reapplyClip` re-asserts the ACTIVE section clip planes onto the ghost subtree
+   * after it is built. The ghost gets a FRESH unlit material (`PlacementGhostOverlay`), so it
+   * starts with `clippingPlanes = null` and — under an active Επίπεδο Τομής — would draw at
+   * FULL height on top of the cut frame (an opaque white silhouette above the cut). Clipping it
+   * matches the real, already-clipped meshes (Revit/ArchiCAD: the drag ghost respects the
+   * section too). Omitted → no clip (view/section-agnostic default, keeps the class testable).
    */
-  show(sourceMeshes: readonly THREE.Object3D[]): void {
+  show(sourceMeshes: readonly THREE.Object3D[], reapplyClip?: (root: THREE.Object3D) => void): void {
     if (sourceMeshes.length === 0) return;
     const scene = rootSceneOf(sourceMeshes[0]);
     if (!scene) return;
     const colorHex = pickGhostColor(sourceMeshes);
     if (!this.overlay) {
-      this.overlay = new PlacementGhostOverlay(scene, colorHex, GHOST_ALPHA, /* borrowedGeometry */ true);
+      // ADR-550 — `orderIndependent: true`: the edited entity can be a MULTI-LAYER solid (a stair),
+      // whose stacked faces would accumulate a plain translucent-blend ghost to opaque white. The
+      // depth-prime (colour blended once per pixel) path keeps a SMOOTH translucent ghost, no dots.
+      this.overlay = new PlacementGhostOverlay(scene, colorHex, GHOST_ALPHA, /* borrowedGeometry */ true, /* orderIndependent */ true);
     } else {
       this.overlay.setColor(colorHex);
     }
@@ -72,6 +82,9 @@ export class EditOriginalGhost {
     // — exactly what we want: a cheap frozen snapshot at the source pose (borrowed geometry).
     for (const src of sourceMeshes) group.add(src.clone());
     this.overlay.setObject(group);
+    // ADR-550 — the ghost material is the overlay's own (applied by `setObject`), so re-assert
+    // AFTER the swap so the clip planes land on THAT material (idempotent, self-heals off-section).
+    reapplyClip?.(group);
     this.overlay.setVisible(true);
   }
 

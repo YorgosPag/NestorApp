@@ -63,21 +63,40 @@ export class PlacementGhostOverlay {
    * Default `false` — a freshly-built placement ghost OWNS its geometry and must free it.
    */
   private readonly borrowedGeometry: boolean;
+  /**
+   * ADR-550 — depth-prime companion material for the ORDER-INDEPENDENT ghost (the edit
+   * «original-stays-behind» clone). `null` in the default translucent-blend mode. See the
+   * constructor note for why the order-independent path needs a second material.
+   */
+  private readonly depthPrimeMaterial: THREE.MeshBasicMaterial | null;
 
   constructor(
     scene: THREE.Scene,
     colorHex: THREE.ColorRepresentation,
     opacity = GHOST_ALPHA,
     borrowedGeometry = false,
+    orderIndependent = false,
   ) {
     this.scene = scene;
     this.borrowedGeometry = borrowedGeometry;
-    this.material = new THREE.MeshBasicMaterial({
-      color: colorHex,
-      transparent: true,
-      opacity,
-      depthWrite: false,
-    });
+    // ADR-550 — a plain translucent-blend ghost of a MULTI-LAYER solid (a stair = many stacked
+    // treads/risers/waist faces along the view ray) ACCUMULATES to opaque white with
+    // `depthWrite:false` (documented `post-fx-overlay-pass` failure mode: «translucent fragments
+    // accumulate to white»). The ORDER-INDEPENDENT path renders each pixel EXACTLY ONCE via a
+    // two-material depth-prime, both drawn in a SINGLE `renderer.render(root)`:
+    //   1. depth-prime twins (`depthPrimeMaterial`, colorWrite OFF, depthWrite ON) → OPAQUE queue,
+    //      drawn FIRST (three renders opaque before transparent), writing the ghost's NEAREST depth.
+    //   2. the colour material (`depthFunc: EqualDepth`) → TRANSPARENT queue, blends ONLY where a
+    //      fragment's depth equals the primed nearest depth → each pixel is coloured once, smooth,
+    //      no accumulation, correctly occluded. `setObject` adds the twins (see `addDepthPrimeTwins`).
+    // Default (convex placement ghosts: column/wall/segment) keeps the cheaper single-material blend.
+    if (orderIndependent) {
+      this.material = new THREE.MeshBasicMaterial({ color: colorHex, transparent: true, opacity, depthWrite: false, depthFunc: THREE.EqualDepth });
+      this.depthPrimeMaterial = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: true });
+    } else {
+      this.material = new THREE.MeshBasicMaterial({ color: colorHex, transparent: true, opacity, depthWrite: false });
+      this.depthPrimeMaterial = null;
+    }
     // Register: expose the live root ONLY while shown (root kept visible=false for the main render).
     this.unregister = registerPostFxOverlay(scene, () => (this.shown && this.object ? [this.object] : []));
   }
@@ -112,9 +131,33 @@ export class PlacementGhostOverlay {
         }
       }
     });
+    // ADR-550 — order-independent mode: add a depth-prime twin per mesh (drawn opaque-first) so the
+    // colour material (depthFunc EQUAL) blends each pixel once. Built AFTER the colour material is
+    // applied above (the twins must NOT get the colour material).
+    if (this.depthPrimeMaterial) this.addDepthPrimeTwins(object);
     object.visible = false;
     this.object = object;
     this.scene.add(object);
+  }
+
+  /**
+   * ADR-550 — for each mesh in the ghost subtree, add a sibling «twin» that renders only DEPTH
+   * (`depthPrimeMaterial`, opaque queue), sharing the twin's `BufferGeometry` (borrowed → never
+   * disposed here). The twin primes the ghost's nearest depth so the colour pass blends once.
+   */
+  private addDepthPrimeTwins(root: THREE.Object3D): void {
+    const meshes: THREE.Mesh[] = [];
+    root.traverse((child) => { if ((child as THREE.Mesh).isMesh) meshes.push(child as THREE.Mesh); });
+    for (const m of meshes) {
+      const twin = new THREE.Mesh(m.geometry, this.depthPrimeMaterial ?? undefined);
+      twin.position.copy(m.position);
+      twin.quaternion.copy(m.quaternion);
+      twin.scale.copy(m.scale);
+      twin.renderOrder = m.renderOrder;
+      twin.raycast = () => {};
+      twin.userData = { ghostDepthPrimeTwin: true };
+      m.parent?.add(twin);
+    }
   }
 
   /** Recolour the ghost (e.g. MEP classification / palette) — preview tracks the committed colour. */
@@ -133,6 +176,7 @@ export class PlacementGhostOverlay {
     this.unregister();
     this.removeObject();
     this.material.dispose();
+    this.depthPrimeMaterial?.dispose();
   }
 
   private removeObject(): void {

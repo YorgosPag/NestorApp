@@ -42,7 +42,12 @@ export function ImportedMeshUploadSection({ group, onSelect }: ImportedMeshUploa
       </Tooltip>
       <ul className="flex flex-col">
         {group.rows.map((row) => (
-          <ImportedMeshListRow key={row.entityId} row={row} onSelect={onSelect} />
+          <ImportedMeshListRow
+            key={row.entityId}
+            row={row}
+            uploadId={group.uploadId}
+            onSelect={onSelect}
+          />
         ))}
       </ul>
     </article>

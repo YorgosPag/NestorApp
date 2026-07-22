@@ -94,6 +94,31 @@ describe('bimMeshCache — bundle assets (ADR-683 Φ3)', () => {
     expect(loadAsync).toHaveBeenCalledTimes(1);
   });
 
+  it('ευρετηριάζει NESTED κόμβους — η καρέκλα δεν μένει κουτί όταν το .glb έχει φωλιές (§mesh-load-nesting)', async () => {
+    // Ο συνεργάτης εξάγει τους κόμβους κάτω από ένα root/armature group — ΟΧΙ top-level.
+    const armature = new THREE.Group();
+    armature.name = 'Armature';
+    armature.position.set(10, 0, 20); // ο γονέας έχει μετασχηματισμό → ελέγχει και το world bake
+    for (const name of ['HArmPads', 'HBase', 'HSpndle']) {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+      m.name = name;
+      armature.add(m);
+    }
+    const scene = new THREE.Group();
+    scene.add(armature);
+    loadAsync.mockResolvedValue({ scene });
+
+    bimMeshCache.preload('imported', 'imesh_a#HArmPads');
+    await flush();
+
+    // Ο shallow index (μόνο scene.children) θα έβλεπε ΜΟΝΟ το 'Armature' → όλα null. Ο deep index
+    // τους βρίσκει όλους, με το bake του γονικού μετασχηματισμού.
+    expect(bimMeshCache.getInstance('imported', 'imesh_a#HArmPads')).not.toBeNull();
+    expect(bimMeshCache.getInstance('imported', 'imesh_a#HBase')).not.toBeNull();
+    expect(bimMeshCache.getInstance('imported', 'imesh_a#HSpndle')).not.toBeNull();
+    expect(loadAsync).toHaveBeenCalledTimes(1);
+  });
+
   it('το URL ζητείται για το ΑΡΧΕΙΟ (uploadId), όχι για τον κόμβο', async () => {
     loadAsync.mockResolvedValue({ scene: makeBundleScene(['Rail_01']) });
     bimMeshCache.preload('imported', 'imesh_a#Rail_01');
@@ -112,6 +137,27 @@ describe('bimMeshCache — bundle assets (ADR-683 Φ3)', () => {
     bimMeshCache.preload('imported', 'imesh_a#Deleted_Node');
     await flush();
     expect(loadAsync).toHaveBeenCalledTimes(2);
+  });
+
+  it('getLoadState: idle → ready σε επιτυχία (ADR-683 §mesh-load-missing-file)', async () => {
+    loadAsync.mockResolvedValue({ scene: makeBundleScene(['Rail_01']) });
+    expect(bimMeshCache.getLoadState('imported', 'imesh_a#Rail_01')).toBe('idle');
+
+    bimMeshCache.preload('imported', 'imesh_a#Rail_01');
+    await flush();
+
+    expect(bimMeshCache.getLoadState('imported', 'imesh_a#Rail_01')).toBe('ready');
+  });
+
+  it('getLoadState = "error" όταν λείπει το .glb (404) — ΟΧΙ σιωπηλό κουτί', async () => {
+    loadAsync.mockRejectedValue(new Error('storage/object-not-found'));
+
+    bimMeshCache.preload('imported', 'imesh_missing#Rail_01');
+    await flush();
+
+    // Το UI διαβάζει αυτό για να δείξει «Αρχείο μη διαθέσιμο» αντί για αόρατο μόνιμο placeholder.
+    expect(bimMeshCache.getLoadState('imported', 'imesh_missing#Rail_01')).toBe('error');
+    expect(bimMeshCache.getInstance('imported', 'imesh_missing#Rail_01')).toBeNull();
   });
 
   it('τα απλά (μη-bundle) assets δουλεύουν όπως πριν — καμία παλινδρόμηση ADR-411', async () => {

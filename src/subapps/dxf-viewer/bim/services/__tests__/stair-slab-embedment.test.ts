@@ -8,7 +8,10 @@ import type { StairEntity } from '../../types/stair-types';
 import type { SlabEntity } from '../../types/slab-types';
 import type { SceneModel } from '../../../types/entities';
 import type { Entity } from '../../../types/entities';
-import { computeStairBaseSlabEmbeddedVolumeM3 } from '../stair-slab-embedment';
+import {
+  computeStairBaseSlabEmbeddedVolumeM3,
+  resolveStairBaseSlabSeat,
+} from '../stair-slab-embedment';
 
 function stairParams(basePointZ: number) {
   return {
@@ -113,5 +116,28 @@ describe('computeStairBaseSlabEmbeddedVolumeM3', () => {
     expect(
       computeStairBaseSlabEmbeddedVolumeM3(stair(0), sceneWith([farSlab]), {}),
     ).toBeUndefined();
+  });
+});
+
+describe('resolveStairBaseSlabSeat (ADR-685 Φ2 — 3D terminating trim SSoT)', () => {
+  it('εκθέτει top/underside/thickness/όγκο της πλάκας-έδρασης (ίδιο detection με το BOQ)', () => {
+    const seat = resolveStairBaseSlabSeat(stair(0), [baseSlab(285)], {});
+    expect(seat).toBeDefined();
+    // top=0 (levelElevation), underside=−thickness → το επίπεδο trim του μηρού.
+    expect(seat!.slabTopZmm).toBeCloseTo(0, 6);
+    expect(seat!.slabUndersideZmm).toBeCloseTo(-285, 6);
+    expect(seat!.slabThicknessMm).toBeCloseTo(285, 6);
+    expect(seat!.baseZmm).toBeCloseTo(0, 6);
+    // Ο όγκος = ΙΔΙΟΣ SSoT με το wrapper (μηδέν απόκλιση).
+    expect(seat!.embeddedVolumeM3).toBeCloseTo(
+      computeStairBaseSlabEmbeddedVolumeM3(stair(0), sceneWith([baseSlab(285)]), {})!,
+      6,
+    );
+  });
+
+  it('undefined χωρίς πλάκες / floating / pass-through (κανένα trim)', () => {
+    expect(resolveStairBaseSlabSeat(stair(0), [], {})).toBeUndefined();
+    expect(resolveStairBaseSlabSeat(stair(500), [baseSlab(200)], {})).toBeUndefined();
+    expect(resolveStairBaseSlabSeat(stair(-250), [baseSlab(200)], {})).toBeUndefined();
   });
 });

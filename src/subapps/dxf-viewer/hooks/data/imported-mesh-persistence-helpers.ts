@@ -31,9 +31,10 @@ export function importedMeshDocToEntity(doc: ImportedMeshDoc): ImportedMeshEntit
   const validation = doc.validation ?? validateImportedMeshParams(doc.params).bimValidation;
 
   // Η δήλωση γίνεται ΕΔΩ και όχι στον 3Δ converter: ο converter τρέχει ανά καρέ και δεν έχει
-  // πρόσβαση στο έγγραφο — μόνο το hydrate ξέρει το πραγματικό `storagePath`.
-  if (doc.params.uploadId && doc.params.nodeName && doc.params.storagePath) {
-    registerImportedMeshAsset(doc.params.uploadId, doc.params.nodeName, doc.params.storagePath);
+  // πρόσβαση στο έγγραφο — μόνο το hydrate ξέρει το πραγματικό `storagePath`. Ανά αρχείο
+  // (`uploadId`)· πολλά έγγραφα του ίδιου upload → idempotent no-op στον resolver.
+  if (doc.params.uploadId && doc.params.storagePath) {
+    registerImportedMeshAsset(doc.params.uploadId, doc.params.storagePath);
   }
 
   return {

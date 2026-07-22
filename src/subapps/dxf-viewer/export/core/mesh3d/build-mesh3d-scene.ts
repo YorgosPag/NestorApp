@@ -21,6 +21,7 @@
 
 import * as THREE from 'three';
 import { BimSceneLayer } from '../../../bim-3d/scene/BimSceneLayer';
+import { EMPTY_FLOOR_VIS_SCOPE } from '../../../bim-3d/scene/floor-visibility-scope';
 import { extractBim3DEntities } from '../../../bim-3d/scene/extract-bim3d-entities';
 import {
   resolveBuildingDatumElevationM,
@@ -119,7 +120,11 @@ export function buildMesh3dScene(
   // scope is decided by WHICH floors populate `entries`, not by building focus. This is
   // belt-and-suspenders — a future forgotten `deps.buildings` can never again blank an export.
   // `deps.buildings` is still forwarded so each entity resolves its building for correct baseElevation.
-  layer.syncMultiFloor(entries, deps.floors ?? [], deps.buildings ?? [], null);
+  layer.syncMultiFloor(entries, {
+    ...EMPTY_FLOOR_VIS_SCOPE,
+    floors: deps.floors ?? [],
+    buildings: deps.buildings ?? [],
+  });
 
   // ADR-668 §4.7 — οι converters προσαρτούν screen-space edge overlays (`LineSegments2`, ADR-375) ως
   // παιδιά κάθε σώματος· επειδή κληρονομούν `isMesh`, θα εξάγονταν ως εκφυλισμένα συμπίπτοντα δίδυμα

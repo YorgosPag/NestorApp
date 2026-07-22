@@ -139,6 +139,7 @@ function buildTreadMeshes(
   baseY: number,
   sceneToM: number,
   levelId?: string,
+  skipBaseTread = false,
 ): THREE.Mesh[] {
   const out: THREE.Mesh[] = [];
   const thicknessM = DEFAULT_TREAD_THICKNESS_MM * MM_TO_M;
@@ -156,7 +157,14 @@ function buildTreadMeshes(
   const treadBackM = TREAD_BACK_SHIFT_MM * MM_TO_M;
   const riseScene = stair.params.rise;
   const treadInfo = allTreads.map((t) => ({ z: t[0]?.z ?? 0, c: polygonCentroid(t) }));
+  // ADR-685 Φ1b (Giorgio 2026-07-22) — when the stair seats on a base slab, the floor
+  // finish (tiles) covers the starting step's footprint, so its 40 mm tread finish is
+  // redundant. Skip ONLY the base (lowest-z) tread; the riser and every other step stay.
+  const baseTreadIndex = skipBaseTread && treadInfo.length > 0
+    ? treadInfo.reduce((lo, info, idx) => (info.z < treadInfo[lo]!.z ? idx : lo), 0)
+    : -1;
   for (let i = 0; i < allTreads.length; i++) {
+    if (i === baseTreadIndex) continue;
     const mat = resolveStairMaterial(stair, 'stair-tread', i);
     // ADR-358 Q19 Φ4b — a per-tread `customProfile` (Revit Nosing Profile) sweeps
     // a shaped nose; without one, `resolveTreadNosing` yields no section and we
@@ -385,10 +393,21 @@ function buildWaistMeshes(
   baseY: number,
   sceneToM: number,
   levelId?: string,
+  baseSlabUndersideZmm?: number,
 ): THREE.Mesh[] {
   const out: THREE.Mesh[] = [];
   const waistDropM = WAIST_DROP_MM * MM_TO_M;
-  for (const mesh of buildWaistSlabMeshes(stair, baseY, sceneToM)) {
+  // ADR-685 Φ2 — terminating seat: trim the base flight's soffit at the seating slab's
+  // UNDERSIDE so the monolithic waist fills the slab band but never hangs below it (Revit
+  // "Join Geometry" parity). `baseSlabUndersideZmm` is level-relative mm (same datum as
+  // `basePoint.z`), converted to world via `sceneToM` exactly like the step corners. The
+  // clip is pre-compensated by `+waistDropM` so that AFTER the `-= waistDropM` shift below
+  // the trimmed flat base lands flush at the slab underside, not one drop beneath it.
+  const soffitClipWorldY =
+    baseSlabUndersideZmm !== undefined
+      ? baseY + baseSlabUndersideZmm * sceneToM + waistDropM
+      : undefined;
+  for (const mesh of buildWaistSlabMeshes(stair, baseY, sceneToM, soffitClipWorldY)) {
     mesh.position.y -= waistDropM; // lower the slab toward the building floor
     const tagged = tagStairMesh(mesh, stair, 'waist', levelId);
     attachStairEdges(tagged); // no subcategory → parent stair style (like landings)
@@ -404,6 +423,7 @@ export function stairToMeshes(
   floorElevationMm = 0,
   levelId?: string,
   buildingBaseElevationM = 0,
+  baseSlabUndersideZmm?: number,
 ): readonly THREE.Mesh[] {
   // SSoT: scene-units inference + Three.js meters conversion live in
   // utils/scene-units.ts. Stair params/geometry are in scene units (m/cm/mm
@@ -412,9 +432,10 @@ export function stairToMeshes(
   const sceneToM = sceneUnitsToMeters(sceneUnits);
   const baseY = floorElevationMm * MM_TO_M + buildingBaseElevationM;
   return [
-    ...buildWaistMeshes(stair, baseY, sceneToM, levelId),
+    ...buildWaistMeshes(stair, baseY, sceneToM, levelId, baseSlabUndersideZmm),
     ...buildLandingMeshes(stair, baseY, sceneToM, levelId),
-    ...buildTreadMeshes(stair, baseY, sceneToM, levelId),
+    // Seated on a base slab → the floor finish covers the starting step → skip its tread.
+    ...buildTreadMeshes(stair, baseY, sceneToM, levelId, baseSlabUndersideZmm !== undefined),
     ...buildRiserMeshes(stair, baseY, sceneToM, levelId),
     ...buildStringerMeshes(stair, baseY, sceneToM, levelId),
     ...buildHandrailMeshes(stair, baseY, sceneToM, levelId),

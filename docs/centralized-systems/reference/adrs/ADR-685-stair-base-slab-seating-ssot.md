@@ -1,7 +1,8 @@
 # ADR-685 — Έδραση βάσης σκάλας στην πλάκα δαπέδου + SSoT μηδενικής διπλομέτρησης σκυροδέματος
 
-- **Status**: 🟡 Φ1 ΜΕΡΙΚΩΣ DONE (ανίχνευση/ταξινόμηση + attach-coordinator seat gate ✅ · BOQ
-  διπλομέτρηση-guard function ✅ αλλά **ΜΗ wired** ⚠️ · **uncommitted**) — Φ2 (pass-through opening) 🔵 PROPOSED
+- **Status**: 🟡 Φ1 DONE (ανίχνευση/ταξινόμηση + attach-coordinator seat gate ✅ · BOQ
+  διπλομέτρηση-guard wired ✅) + **Φ1b DONE** (3D terminating trim του μηρού στην underside της
+  πλάκας-έδρασης, §4.3 · **uncommitted**) — Φ2 (pass-through opening) 🔵 PROPOSED
 - **Ημερομηνία**: 2026-07-22
 - **Domain**: DXF Viewer / BIM 3D (σκάλες · πλάκες · BOQ)
 - **Σχετικά**: ADR-632 (stairwell auto-opening — ο mirror/δίδυμος αυτού του ADR) · ADR-401 Phase G
@@ -101,6 +102,31 @@ belt-and-suspenders, είναι **απαραίτητος**.
 - **Wiring (`bim/hooks/use-stair-persistence.ts`):** `resolveEmbeddedOverlapVolumeM3(entity)` (ΙΔΙΟ
   scene access με `buildStairHostResolver`) → περνά στο context του `upsertStairBoq` σε κάθε save.
 
+### 4.3 3D terminating trim — Φ1b (η σκάλα ΠΑΤΑΕΙ στην πλάκα, δεν κρέμεται από κάτω)
+
+**Πρόβλημα:** η έδραση της Φ1 (`basePoint.z` στο slab top) είναι Z/οπτική ΜΟΝΟ και **δεν κόβει τον
+μονολιθικό μηρό**. Ο waist βυθίζεται `rise + waist/cosθ (+40mm WAIST_DROP) ≈ 430mm` κάτω από το
+top-face → με πλάκα 285mm **διαπερνά και κρέμεται κάτω από την κάτω παρειά** (screenshot 2026-07-22).
+Big-player parity (Revit *Join Geometry*): ο μηρός **γεμίζει μονολιθικά τη ζώνη πλάκας** και κόβεται
+flush με το **soffit** της — ποτέ δεν προεξέχει από κάτω· ο κοινός όγκος μετριέται μία φορά (= το Φ1
+BOQ dedup).
+
+**Λύση (reuse-first, ΕΝΑΣ detector):** επέκταση του bridge `stair-slab-embedment.ts` με
+`resolveStairBaseSlabSeat(stair, slabs, ctx) → { slabTopZmm, slabUndersideZmm, slabThicknessMm,
+baseZmm, embeddedVolumeM3 }`. **ΙΔΙΟ** `findSlabToSeatStairBase` με το BOQ → μηδέν απόκλιση. Το
+`computeStairBaseSlabEmbeddedVolumeM3` έγινε thin wrapper (`?.embeddedVolumeM3`).
+
+| Αρχείο | Ρόλος |
+|---|---|
+| `bim/services/stair-slab-embedment.ts` **(MODIFIED)** | Νέα `resolveStairBaseSlabSeat` (ΕΝΑ detection → BOQ όγκος + underside για trim)· volume-fn = wrapper. |
+| `bim-3d/converters/stair-waist-slabs.ts` **(MODIFIED)** | `flightSectionPoints(…, soffitFloorY?)` κόβει τον soffit της **base flight** επίπεδα στο `soffitFloorY` (εισάγει την κορυφή τομής → επίπεδη έδραση, ο upper soffit αμετάβλητος). `buildFlightWaist`/`buildWaistSlabMeshes` δέχονται world-Y clip (μόνο gi===0). Νέο SSoT predicate `stairHasSolidWaist` (gate μονολιθικού μηρού, μοιράζεται με το seat resolution). |
+| `bim-3d/converters/StairToThreeConverter.ts` **(MODIFIED)** | `stairToMeshes(…, baseSlabUndersideZmm?)` → `buildWaistMeshes` υπολογίζει `soffitClipWorldY = baseY + underside·sceneToM + waistDropM` (**pre-compensate** το επακόλουθο `−=WAIST_DROP` ώστε το επίπεδο base να προσγειώνεται flush στην underside). **+ base-tread skip:** όταν εδράζεται (`baseSlabUndersideZmm !== undefined`), το `buildTreadMeshes(…, skipBaseTread)` παραλείπει **μόνο** το finish πάτημα (40mm) της **χαμηλότερης** βαθμίδας — το δάπεδο (πλακίδια) το καλύπτει· το ρίχτι + οι υπόλοιπες βαθμίδες μένουν (Giorgio 2026-07-22). pass-through → κρατά το πάτημα. |
+| `bim-3d/scene/BimSceneLayer.ts` **(MODIFIED)** | `syncStairs`: `stairHasSolidWaist(stair) ? resolveStairBaseSlabSeat(stair, entities.slabs, {resolveHostInput}) : undefined` → περνά `seat?.slabUndersideZmm`. Ίδιο slab set με τον host resolver· **ανεξάρτητο του attach** (self-correcting για ήδη-σχεδιασμένες σκάλες). |
+
+**Datum:** `slabUndersideZmm` level-relative mm (ίδιο datum με `basePoint.z`)· ρέει μέσα από `sceneToM`
+πανομοιότυπα με τις re-entrant corners → μηδέν μετατροπή. **pass-through / floating / no-slab → `undefined`
+→ κανένα trim** (ο μηρός διαπερνά σωστά προς την τρύπα Φ2).
+
 ## 5. Tests (Φ1, uncommitted)
 
 - `bim/geometry/stairs/__tests__/stair-base-slab.test.ts` — **14/14 πράσινα** (ταξινόμηση seat/
@@ -141,6 +167,7 @@ dxf-viewer subapp).
 | Φ | Τι | Status |
 |---|---|---|
 | **1** | Ανίχνευση/ταξινόμηση σχέσης βάσης↔πλάκας (`stair-base-slab.ts`) + attach-coordinator seat gate (και οι δύο κατευθύνσεις) + BOQ waist-prism guard (wired) | ✅ DONE |
+| **1b** | 3D terminating trim — ο μονολιθικός μηρός κόβεται flush στην underside της πλάκας-έδρασης (Revit *Join Geometry*), ίδιος detector με το BOQ (§4.3) | ✅ DONE (uncommitted) |
 | **2** | Pass-through → άνοιγμα σε πλάκα/δάπεδο βάσης όταν η σκάλα συνδέει λειτουργικά κατώτερο όροφο | 🔵 PROPOSED (§8) |
 
 ## 8. Φάση 2 (pending — ΔΕΝ υλοποιείται τώρα)
@@ -166,6 +193,28 @@ slab.ts`). Αν μια **άλλη** σκάλα ήδη εξυπηρετεί το 
 
 ## 9. Changelog
 
+- **2026-07-22** — **Φάση 1b DONE (3D terminating trim), uncommitted.** Ο μονολιθικός μηρός κρεμόταν
+  ~430mm κάτω από την πλάκα δαπέδου (285mm) → διαπερνούσε την κάτω παρειά (η Φ1 έδραση είναι Z/οπτική,
+  δεν κόβει τον μηρό). Big-player parity (Revit *Join Geometry*): trim του base-flight soffit **flush
+  στην underside** της πλάκας-έδρασης (§4.3). Επέκταση `stair-slab-embedment.ts` με
+  `resolveStairBaseSlabSeat` (**ΕΝΑΣ** `findSlabToSeatStairBase` detector → BOQ όγκος + underside· το
+  volume-fn έγινε wrapper → μηδέν drift). Geometry trim στο `stair-waist-slabs.ts`
+  (`flightSectionPoints(…, soffitFloorY?)` επίπεδη έδραση + νέο SSoT gate `stairHasSolidWaist`)·
+  threading `StairToThreeConverter.stairToMeshes(…, baseSlabUndersideZmm?)` με **WAIST_DROP
+  pre-compensation** **+ base-tread skip** (seated → το finish πάτημα της χαμηλότερης βαθμίδας
+  παραλείπεται, το δάπεδο το καλύπτει· ρίχτι/υπόλοιπα ανέπαφα, Giorgio 2026-07-22 screenshot)·
+  `BimSceneLayer.syncStairs` resolve seat (ίδιο slab set με host resolver,
+  **ανεξάρτητο του attach** → self-correcting για ήδη-σχεδιασμένες σκάλες). pass-through/floating/no-slab
+  → κανένα trim (διαπερνά προς τρύπα Φ2). **Tests: νέα/επεκταμένα πράσινα** (`stair-waist-slabs.test.ts`
+  +5 terminating-trim +2 base-tread-skip, `stair-slab-embedment.test.ts` +2 `resolveStairBaseSlabSeat`)·
+  **regression πράσινα** (converters+scene 93 suites/707· stairs/embedment). N.17: tsc SKIP. N.6: καμία νέα οντότητα.
+  ✅ N.18 `jscpd:diff` clone **ΚΕΝΤΡΙΚΟΠΟΙΗΘΗΚΕ** (Giorgio 2026-07-22): ο προϋπάρχων clone στο param-tail
+  `BimSceneLayer.sync`/`syncMultiFloor` (γρ. 110-115 vs 141-146) λύθηκε ομαδοποιώντας τα 5 κοινά
+  visibility params σε **ένα** options-object `FloorVisibilityScope` — το SSoT type έβγηκε από το
+  `scene-manager-actions.ts` σε δικό του leaf module `bim-3d/scene/floor-visibility-scope.ts` (ώστε ο
+  low-level `BimSceneLayer` να μην εξαρτάται από το actions module· re-export για backward-compat).
+  `sync`/`syncMultiFloor`/`buildContext` + callers (`scene-manager-actions`, export `build-mesh3d-scene`,
+  2 test suites) περνούν πλέον το scope bag. `jscpd:diff` → **no new clones**· 32/32 BimSceneLayer tests πράσινα.
 - **2026-07-22** — **Φάση 1 DONE (γεωμετρία + BOQ guard), uncommitted.** Νέο pure module
   `bim/geometry/stairs/stair-base-slab.ts` (`classifyStairBaseRelation` / `findSlabToSeatStairBase` /
   `computeStairWaistSlabOverlapVolumeM3`, mirror του ADR-632 `stair-slab-overlap.ts` αλλά για την πλάκα

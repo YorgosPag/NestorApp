@@ -31,6 +31,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { useLevels } from '../../../systems/levels';
+import { resolveActiveProjectId } from '../../../systems/levels/level-floor-resolution';
 import { useNotifications } from '../../../../../providers/NotificationProvider';
 import type { GltfObjectRecord } from '../../../io/mesh3d-roundtrip/gltf-scene-parse';
 import { importGltfMeshes, isImportableNode } from '../../../io/mesh3d-roundtrip/import-gltf-meshes';
@@ -114,7 +115,13 @@ export function ImportedMeshImportDialog({
     );
   }, [importable]);
 
-  const projectId = levels.saveContext?.projectId ?? '';
+  // ADR-683 §project-scope — το `saveContext.projectId` υπάρχει ΜΟΝΟ όταν το ενεργό επίπεδο έχει
+  // φορτώσει σκηνή από persisted file record (`useLevelSceneLoader`). Σε floor-derived ή ειδικά
+  // επίπεδα (π.χ. Θεμελίωση) που δεν πέρασαν από τον import wizard, είναι κενό → «Δεν βρέθηκε ενεργό
+  // έργο», παρότι το έργο υπάρχει. Fallback στον durable SSoT `resolveActiveProjectId` (ADR-650 M10):
+  // το projectId ενός αδελφού linked level — ίδιο για ΟΛΟ το κτήριο, διαθέσιμο από το load. Mirror
+  // της λύσης του topo survey scope· κανένας δεύτερος resolver.
+  const projectId = levels.saveContext?.projectId ?? resolveActiveProjectId(levels.levels) ?? '';
   const companyId = user?.companyId ?? '';
 
   const handleConfirm = useCallback(async (): Promise<void> => {

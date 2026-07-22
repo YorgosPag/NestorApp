@@ -23,7 +23,7 @@ import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 import { raycastWorldPointOrPlane } from '../systems/raycaster/BimEntityRaycaster';
 import { worldToDxfPlan } from '../viewport/coordinate-transforms';
 import { computeDxfGroundY } from '../scene/scene-manager-framing';
-import { resolvePlacementSnapWithView } from '../placement/placement-snap';
+import { computeSnap3DHover } from '../viewport/snap/bim-3d-snap-hover';
 import { useDxfOverlay3DStore } from '../stores/DxfOverlay3DStore';
 import { useSnap3DOverlayStore } from '../stores/Snap3DOverlayStore';
 import {
@@ -57,24 +57,30 @@ export function useBim3DDistMeasure({ managerRef, canvasEl }: UseBim3DDistMeasur
 
       /**
        * Screen point → snapped scene-unit 3D σημείο. Raycast της ΕΠΙΦΑΝΕΙΑΣ (geometry hit →
-       * fallback επίπεδο ορόφου → camera-facing plane) ώστε να μετριέται αληθινό 3D (ύψος/διαγώνιος)·
-       * OSNAP διορθώνει MONO x,y (κάτοψη), κρατώντας το z της επιφάνειας. Ίδιο glyph με 2D/κολόνα.
+       * fallback επίπεδο ορόφου → camera-facing plane) ώστε να μετριέται αληθινό 3D (ύψος/διαγώνιος).
+       *
+       * OSNAP: ο ΙΔΙΟΣ SSoT με το 3D hover marker + το 2D — `computeSnap3DHover` (viewport-synced
+       * tolerance, ίδια global engine, ίδιο glyph). Το ταΐζουμε με ΤΟ ΔΙΚΟ ΜΑΣ world point (που πέφτει
+       * και στο DXF floor plane) ώστε να πιάνει άκρα/μέσα ΚΑΙ σε DXF οντότητες, όχι μόνο σε BIM solids
+       * (ο scheduler raycast-άρει μόνο BIM → θα τα έχανε). Ο scheduler παραχωρεί το glyph στο `dist`,
+       * οπότε αυτός ο hook είναι ο μοναδικός writer του `Snap3DOverlayStore` όσο μετράμε (μηδέν race).
        */
       const resolveScenePoint = (clientX: number, clientY: number): DistPoint | null => {
         const camera = manager.getCamera();
+        const dom = manager.renderer.domElement;
+        const group = manager.bimLayer.group;
         const world = raycastWorldPointOrPlane(
-          manager.bimLayer.group, camera, manager.renderer.domElement, clientX, clientY,
+          group, camera, dom, clientX, clientY,
           manager.viewport.target, computeDxfGroundY(manager.dxfConverter.getBounds()),
         );
         if (!world) return null;
-        const planMm = worldToDxfPlan(world);
-        const snap = resolvePlacementSnapWithView({ x: planMm.x, y: planMm.y });
-        // Glyph μόνο όταν υπάρχει renderable view (Snap3DMarker.view = non-nullable)· το snappedMm
-        // ισχύει ακόμη κι όταν το view είναι null (η έλξη έγινε, απλώς δεν ζωγραφίζεται σύμβολο).
-        useSnap3DOverlayStore.getState().setSnap(snap?.view ? { view: snap.view, elevMm: planMm.z } : null);
+        // Ίδιο σήμα εμφάνισης/έλξης με 2D+3D hover (glyph ┘/▲/⊕ στα άκρα/μέσα DXF+BIM).
+        const marker = computeSnap3DHover(group, camera, dom, clientX, clientY, world);
+        useSnap3DOverlayStore.getState().setSnap(marker);
         const f = mmToSceneUnits(unitsNow());
-        const mm = snap ? snap.snappedMm : planMm;
-        return { x: mm.x * f, y: mm.y * f, z: planMm.z * f };
+        // Snapped χαρακτηριστικό σημείο (WYSIWYG με το glyph) → αλλιώς το raw σημείο επιφάνειας.
+        const mm = marker ? { x: marker.view.point.x, y: marker.view.point.y, z: marker.elevMm } : worldToDxfPlan(world);
+        return { x: mm.x * f, y: mm.y * f, z: mm.z * f };
       };
 
       const render = (): void => {

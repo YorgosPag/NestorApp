@@ -56,15 +56,17 @@ const FREE_3D_MOVE_TYPES: ReadonlySet<string> = new Set([
  *              grips (top/bottom faces, mirror slab/wall); depth → Type; top elevation →
  *              the vertical move arrow. (Endpoint rings removed — see ENDPOINT_HANDLES_BY_TYPE.)
  *   - slab   → NO resize handle. Thickness → Type; footprint → 2D per-vertex sketch.
- *   - stair  → KEEPS plan + vertical handles (incline is a parametric run, not a section).
+ *   - stair  → NO resize handle. ADR-402 §gizmo-cleanup (Giorgio 2026-07-22): the plan +
+ *              vertical octahedra («διαμαντάκια») read as confusing clutter here too — the
+ *              LAST type still exposing them. Width/Πλάτος, run/Πλήθος Σκαλιών, height/Ύψος
+ *              and base offset are ALL edited in the «Ιδιότητες Κλίμακας» contextual panel,
+ *              so the 3D drag handles were redundant. Now EVERY BIM type is diamond-free.
+ *
+ * Result: `RESIZE_HANDLES_BY_TYPE` is intentionally EMPTY — no element type shows a resize
+ * octahedron. The geometry is still built once (`gizmo-geometry.ts`) but `applyActiveHandles`
+ * keeps every resize visual + hitbox hidden for all selections.
  */
-const RESIZE_HANDLES_BY_TYPE: Readonly<Record<string, readonly GizmoHandleId[]>> = {
-  // ADR-402 Sub-Phase 1 — stair: plan handles (perp → width, axial → run/stepCount).
-  // ADR-401 Phase G.3 — + vertical top/base octahedra: dragging re-steps to the new
-  // height (Revit «Desired number of risers») and detaches the side if attached.
-  // Unchanged by ADR-408 Φ1 (a stair's incline IS its parametric run, not a section).
-  stair: ['resize-x', 'resize-z', 'resize-y', 'resize-m-y'],
-};
+const RESIZE_HANDLES_BY_TYPE: Readonly<Record<string, readonly GizmoHandleId[]>> = {};
 
 /**
  * ADR-404 Phase 2 — X/Z rotate rings shown per entity type so the user can TILT

@@ -10,6 +10,7 @@
 
 import * as THREE from 'three';
 import { BimGizmoOverlay, activeHandlesFor, isPlanarMoveType } from '../bim-gizmo-overlay';
+import type { GizmoHandleId } from '../gizmo-types';
 // ADR-537 — the base-point ⊙ & snap markers keep `root.visible = false` (main render skips them);
 // their real shown-state lives in the post-FX overlay roots, so assert via `collectPostFxOverlayRoots`.
 import { collectPostFxOverlayRoots } from '../../scene/post-fx-overlay-pass';
@@ -23,17 +24,18 @@ function findByName(scene: THREE.Scene, name: string): THREE.Object3D | null {
 }
 
 describe('BimGizmoOverlay — active-handle visibility', () => {
-  // Shared-visual regression lock (`resize-x`/`resize-m-x` map to ONE octahedron):
-  // exercised through STAIR, the only type that still exposes the plan resize handles
-  // after the Revit-faithful ADR-408 Φ1 cleanup (structural section → Type, no drag).
-  it('shows the resize-x / resize-z visuals for a stair selection', () => {
+  // Shared-visual regression lock (`resize-x`/`resize-m-x` map to ONE octahedron): the visual
+  // must stay visible when only `resize-x` is active. ADR-402 §gizmo-cleanup (2026-07-22)
+  // removed resize handles from EVERY type (incl. stair) so this drives the overlay's
+  // visibility mechanism DIRECTLY with an explicit id set — decoupled from the per-type table.
+  it('keeps a shared resize octahedron visible when only one of its ids is active', () => {
     const scene = new THREE.Scene();
     const overlay = new BimGizmoOverlay(scene);
 
-    overlay.setActiveHandles(activeHandlesFor('stair'));
+    overlay.setActiveHandles(new Set<GizmoHandleId>(['resize-x', 'axis-x']));
 
-    expect(findByName(scene, 'gizmo-resize-x')?.visible).toBe(true);
-    expect(findByName(scene, 'gizmo-resize-z')?.visible).toBe(true);
+    expect(findByName(scene, 'gizmo-resize-x')?.visible).toBe(true); // shared visual stays on
+    expect(findByName(scene, 'gizmo-resize-z')?.visible).toBe(false); // unrelated stays hidden
     // Base move handle stays visible too.
     expect(findByName(scene, 'gizmo-arrow-x')?.visible).toBe(true);
 
@@ -95,17 +97,19 @@ describe('BimGizmoOverlay — active-handle visibility', () => {
     overlay.dispose();
   });
 
-  it('exposes the resize-x / resize-z hitboxes for a stair (hittable)', () => {
+  it('exposes a resize hitbox only when its id is explicitly active (hittable)', () => {
     const scene = new THREE.Scene();
     const overlay = new BimGizmoOverlay(scene);
 
-    overlay.setActiveHandles(activeHandlesFor('stair'));
+    // Drive the mechanism directly: after ADR-402 §gizmo-cleanup no BIM type activates resize,
+    // so `activeHandlesFor('stair')` would expose none — assert the hitbox gate itself instead.
+    overlay.setActiveHandles(new Set<GizmoHandleId>(['resize-x', 'axis-x']));
     const ids = new Set(
       overlay.hitTestView.hitboxes.map((hb) => overlay.hitTestView.hitboxToId.get(hb)),
     );
 
     expect(ids.has('resize-x')).toBe(true);
-    expect(ids.has('resize-z')).toBe(true);
+    expect(ids.has('resize-z')).toBe(false);
 
     overlay.dispose();
   });
@@ -181,12 +185,12 @@ describe('activeHandlesFor — per-type resize handles (ADR-408 Φ1 / ADR-402 §
     expect(ids.has('resize-m-y')).toBe(false);
   });
 
-  it('stair KEEPS its plan + vertical resize handles (incline is parametric run, not a section)', () => {
+  it('stair exposes NO resize handles — all sizes edit via the «Ιδιότητες Κλίμακας» panel (ADR-402 §gizmo-cleanup 2026-07-22)', () => {
     const ids = activeHandlesFor('stair');
-    expect(ids.has('resize-x')).toBe(true);
-    expect(ids.has('resize-z')).toBe(true);
-    expect(ids.has('resize-y')).toBe(true);
-    expect(ids.has('resize-m-y')).toBe(true);
+    expect(ids.has('resize-x')).toBe(false);
+    expect(ids.has('resize-z')).toBe(false);
+    expect(ids.has('resize-y')).toBe(false);
+    expect(ids.has('resize-m-y')).toBe(false);
   });
 
   it('a base-only / unknown selection exposes no resize handles', () => {
@@ -266,9 +270,10 @@ describe('BimGizmoOverlay — collapse to move handles during a drag (ADR-363 Φ
   it('hides the resize/shape handles while keeping the move arrows, then restores them', () => {
     const scene = new THREE.Scene();
     const overlay = new BimGizmoOverlay(scene);
-    // ADR-402 §gizmo-cleanup — column/wall no longer expose resize handles; stair still does, so it is
-    // the type that exercises the collapse-to-move-arrows clutter-hide path.
-    overlay.setActiveHandles(activeHandlesFor('stair')); // stair: resize-y + move arrows
+    // ADR-402 §gizmo-cleanup (2026-07-22) — NO BIM type exposes resize handles now, so drive
+    // the collapse mechanism with an explicit id set that includes a resize handle + the move
+    // arrows (exercises the clutter-hide path independent of the per-type table).
+    overlay.setActiveHandles(new Set<GizmoHandleId>(['resize-y', 'axis-x', 'axis-z', 'plane-xz', 'rotate-y']));
 
     expect(findByName(scene, 'gizmo-resize-y')?.visible).toBe(true);
 

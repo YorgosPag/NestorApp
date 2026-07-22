@@ -124,7 +124,8 @@
       "title": "Imported",
       "empty": "No imported meshes on this floor.",
       "unassigned": "Unassigned",
-      "unassignedBadge": "{count, plural, one {# unassigned} other {# unassigned}}"
+      "unassignedBadge": "{count, plural, one {# unassigned} other {# unassigned}}",
+      "fileUnavailable": "File unavailable"
     },
     "frameProfiles": {
       "title": "Frame Profiles",

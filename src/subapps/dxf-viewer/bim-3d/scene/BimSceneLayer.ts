@@ -26,6 +26,7 @@ import { syncStructuralFinishSkin } from './bim-scene-structural-finish-sync';
 // ADR-473 — joint rebar post-pass (dowels / laps / anchorages at structural joints).
 import { syncJointRebar, buildStructuralEntitySet } from './bim-scene-joint-rebar-sync';
 import { stairToMeshes } from '../converters/StairToThreeConverter';
+import { stairHasSolidWaist } from '../converters/stair-waist-slabs';
 import { mepFixtureToObject3D } from '../converters/mep-fixture-to-mesh';
 import { resolveFixtureBimCategory } from '../../bim/types/mep-fixture-types';
 import { syncCircuitWires } from './sync-circuit-wires';
@@ -33,14 +34,14 @@ import { syncMepSegments, syncFittings } from './sync-mep-elements';
 import { buildWallHostInputs, type HostFootprintInput } from '../../bim/geometry/wall-host-plan-builder';
 import { makeStairHostResolver } from '../../bim/geometry/stair-vertical-profile';
 import { resolveEffectiveStairParams } from '../../bim/geometry/stairs/stair-effective-params';
+import { resolveStairBaseSlabSeat } from '../../bim/services/stair-slab-embedment';
 import { computeStairGeometry } from '../../bim/geometry/stairs/StairGeometryService';
 import type { StairEntity } from '../../bim/types/stair-types';
 import { addEnvelopeToScene } from './bim-envelope-scene-builder';
 import type { SyncContext } from './bim-scene-context';
+import { EMPTY_FLOOR_VIS_SCOPE, type FloorVisibilityScope } from './floor-visibility-scope';
 import { resolveEntityBuilding } from '../../bim/utils/bim-floor-utils';
-import type { BuildingRef, FloorRef } from '../../bim/utils/bim-floor-utils';
 import type { BuildingVisMode } from '../utils/building-visibility-state';
-import type { FloorVisMode } from '../utils/floor-visibility-state';
 import { resolveIsEntityVisible } from '../../bim/visibility/visibility-resolver';
 import { getIsolateEffectsSnapshot } from '../../systems/isolate/IsolateEffectsStore';
 import type { Discipline } from '../../bim/discipline/bim-discipline';
@@ -106,18 +107,11 @@ export class BimSceneLayer {
     entities: Bim3DEntities,
     floorElevationMm = 0,
     activeLevelId?: string,
-    floors: readonly FloorRef[] = [],
-    buildings: readonly BuildingRef[] = [],
-    activeBuildingId: string | null = null,
-    buildingVisModes: ReadonlyMap<string, BuildingVisMode> = new Map(),
-    floorVisModes: ReadonlyMap<string, FloorVisMode> = new Map(),
+    scope: FloorVisibilityScope = EMPTY_FLOOR_VIS_SCOPE,
     nextFloorElevationMm: number | undefined = undefined,
   ): void {
     this.clearGroup();
-    const ctx = this.buildContext(
-      floorElevationMm, activeLevelId, floors, buildings,
-      activeBuildingId, buildingVisModes, floorVisModes, nextFloorElevationMm,
-    );
+    const ctx = this.buildContext(floorElevationMm, activeLevelId, scope, nextFloorElevationMm);
     this.syncFloorEntities(entities, ctx);
     // ADR-473 — joint rebar: single-floor path. buildStructuralEntitySet passes the
     // correct floorElevationMm so graph nodes get proper absolute Z coordinates.
@@ -137,18 +131,11 @@ export class BimSceneLayer {
    */
   syncMultiFloor(
     stack: readonly FloorStackEntry[],
-    floors: readonly FloorRef[] = [],
-    buildings: readonly BuildingRef[] = [],
-    activeBuildingId: string | null = null,
-    buildingVisModes: ReadonlyMap<string, BuildingVisMode> = new Map(),
-    floorVisModes: ReadonlyMap<string, FloorVisMode> = new Map(),
+    scope: FloorVisibilityScope = EMPTY_FLOOR_VIS_SCOPE,
   ): void {
     this.clearGroup();
     for (const floor of stack) {
-      const ctx = this.buildContext(
-        floor.floorElevationMm, floor.levelId, floors, buildings,
-        activeBuildingId, buildingVisModes, floorVisModes, floor.nextFloorElevationMm,
-      );
+      const ctx = this.buildContext(floor.floorElevationMm, floor.levelId, scope, floor.nextFloorElevationMm);
       this.syncFloorEntities(floor.entities, ctx);
     }
     // ADR-473 — joint rebar: multi-floor path. Aggregates ALL floors so the graph
@@ -165,13 +152,10 @@ export class BimSceneLayer {
   private buildContext(
     floorElevationMm: number,
     activeLevelId: string | undefined,
-    floors: readonly FloorRef[],
-    buildings: readonly BuildingRef[],
-    activeBuildingId: string | null,
-    buildingVisModes: ReadonlyMap<string, BuildingVisMode>,
-    floorVisModes: ReadonlyMap<string, FloorVisMode>,
+    scope: FloorVisibilityScope,
     nextFloorElevationMm: number | undefined,
   ): SyncContext {
+    const { floors, buildings, activeBuildingId, buildingVisModes, floorVisModes } = scope;
     const { objectStyles, disciplineVisibility, colorBySystem } = useDrawingScaleStore.getState();
     const useNewSystem = buildingVisModes.size > 0;
     const floorMode = activeLevelId ? floorVisModes.get(activeLevelId) : undefined;
@@ -347,11 +331,21 @@ export class BimSceneLayer {
     for (const stair of entities.stairs) {
       const r = this.resolveEntity(stair, 'stair', ctx);
       if (!r) continue;
+      // ADR-685 Φ2 — terminating seat: the monolithic waist must bear on its base slab, not
+      // hang below the floor. Resolve the seating slab with the SAME detector as the Φ1 BOQ
+      // dedup (`resolveStairBaseSlabSeat`) → zero drift; its underside trims the base flight.
+      // `pass-through` (opening, Φ2) / floating / no-slab → undefined → no trim. Runs on the
+      // same slab set as the host resolver, independent of whether base-attach fired. Only
+      // monolithic/cantilever stairs have a waist that can hang (SSoT gate) → skip the rest.
+      const seat = stairHasSolidWaist(stair)
+        ? resolveStairBaseSlabSeat(stair, entities.slabs, { resolveHostInput })
+        : undefined;
       const meshes = stairToMeshes(
         this.toEffectiveStair(stair, resolveHostInput),
         ctx.floorElevationMm,
         ctx.activeLevelId,
         r.baseElevation,
+        seat?.slabUndersideZmm,
       );
       for (const mesh of meshes) {
         mesh.userData['buildingId'] = r.buildingId;

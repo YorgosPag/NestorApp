@@ -138,9 +138,9 @@ export async function importGltfMeshes(
 
   // Δήλωση ΠΡΙΝ την προσθήκη: μόλις η οντότητα μπει στη σκηνή, ο 3Δ converter θα ζητήσει αμέσως
   // το URL της. Δήλωση μετά = πρώτο resolve στο λάθος (library) path.
-  for (const entity of entities) {
-    registerImportedMeshAsset(uploadId, entity.params.nodeName, storagePath);
-  }
+  // Ένα upload = ένα αρχείο = μία δήλωση (linked-model): ο cache ευρετηριάζει τους N κόμβους
+  // μετά τη λήψη· η registration είναι ανά αρχείο (`uploadId`), όχι ανά κόμβο.
+  registerImportedMeshAsset(uploadId, storagePath);
 
   appendEntitiesToScene(accessor, entities, IMPORTED_MESH_TOOL, 'Import meshes');
 

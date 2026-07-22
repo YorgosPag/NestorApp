@@ -24,7 +24,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-685-stair-base-slab-seating-ssot.md
  */
 
-import type { SceneModel } from '../../types/entities';
+import type { SceneModel, SlabEntity } from '../../types/entities';
 import { isSlabEntity } from '../../types/entities';
 import type { StairEntity } from '../types/stair-types';
 import type { Point3D, Polygon3D } from '../types/bim-base';
@@ -56,18 +56,38 @@ function stairBboxFootprint(stair: StairEntity): Polygon3D {
 }
 
 /**
- * BOQ safety-guard όγκος (m³) προς αφαίρεση από το concrete row ΤΗΣ ΣΚΑΛΑΣ: το
- * κοινό σκυρόδεμα σκάλας↔πλάκας βάσης. `undefined` όταν η σκηνή λείπει ή καμία
- * πλάκα δεν εδράζει τη σκάλα — ο caller τότε αφήνει το nominal concrete volume
- * αμετάβλητο (καμία αφαίρεση).
+ * Πλήρης «έδραση σκάλας↔πλάκας βάσης» (ADR-685) — ΕΝΑ detection, δύο καταναλωτές:
+ *   • **BOQ dedup** (Φ1) → `embeddedVolumeM3` (κοινό σκυρόδεμα προς αφαίρεση).
+ *   • **3D terminating trim** (Φ2) → `slabUndersideZmm` (επίπεδο κοπής του μηρού).
+ *
+ * `undefined` όταν δεν υπάρχουν πλάκες ή καμία δεν εδράζει τη σκάλα (αιωρούμενη /
+ * διαπερνά / χωρίς οριζόντια επικάλυψη) — ο caller τότε ΔΕΝ εδράζει/αφαιρεί τίποτα.
+ * Και τα δύο z σε mm (level-relative, ίδιο datum με `basePoint.z`).
  */
-export function computeStairBaseSlabEmbeddedVolumeM3(
+export interface StairBaseSlabSeat {
+  /** Απόλυτο Z άνω παρειάς πλάκας-έδρασης (mm). */
+  readonly slabTopZmm: number;
+  /** Απόλυτο Z κάτω παρειάς πλάκας-έδρασης (mm) — το επίπεδο trim του μηρού. */
+  readonly slabUndersideZmm: number;
+  /** Πάχος πλάκας-έδρασης (mm) = `top − underside`. */
+  readonly slabThicknessMm: number;
+  /** Effective Z βάσης σκάλας (mm) — resolved profile (ίδιο SSoT με το BOQ). */
+  readonly baseZmm: number;
+  /** Κοινό σκυρόδεμα μηρού↔πλάκας στη ζώνη βάσης (m³) — BOQ dedup. */
+  readonly embeddedVolumeM3: number;
+}
+
+/**
+ * Βρίσκει την πλάκα-έδρασης της σκάλας (`findSlabToSeatStairBase` SSoT) και επιστρέφει
+ * ό,τι χρειάζονται ΚΑΙ οι δύο καταναλωτές (BOQ όγκος + 3D underside). Ίδιο effective
+ * params SSoT με το BOQ (ADR-401 Phase G.2). `undefined` όταν καμία πλάκα δεν εδράζει.
+ * `slabs` = level-scoped set (ο caller περνά τις ίδιες πλάκες με τον host resolver).
+ */
+export function resolveStairBaseSlabSeat(
   stair: StairEntity,
-  scene: SceneModel | null,
+  slabs: readonly SlabEntity[],
   ctx: StairVerticalContext,
-): number | undefined {
-  if (!scene) return undefined;
-  const slabs = scene.entities.filter(isSlabEntity);
+): StairBaseSlabSeat | undefined {
   if (slabs.length === 0) return undefined;
 
   // ΙΔΙΑ effective params με το BOQ concrete (ADR-401 Phase G.2 SSoT): attach → re-step
@@ -80,7 +100,7 @@ export function computeStairBaseSlabEmbeddedVolumeM3(
     topZmm: profile.topZmm,
   };
 
-  const seat = findSlabToSeatStairBase(stairInput, buildStairwellSlabCandidates(slabs));
+  const seat = findSlabToSeatStairBase(stairInput, buildStairwellSlabCandidates([...slabs]));
   if (!seat) return undefined;
 
   const slabThicknessMm = seat.slab.topZmm - seat.slab.undersideZmm;
@@ -91,5 +111,26 @@ export function computeStairBaseSlabEmbeddedVolumeM3(
     goingMm: eff.tread,
     stepCount: eff.stepCount,
   };
-  return computeStairWaistSlabOverlapVolumeM3(section, slabThicknessMm);
+  return {
+    slabTopZmm: seat.slab.topZmm,
+    slabUndersideZmm: seat.slab.undersideZmm,
+    slabThicknessMm,
+    baseZmm: profile.baseZmm,
+    embeddedVolumeM3: computeStairWaistSlabOverlapVolumeM3(section, slabThicknessMm),
+  };
+}
+
+/**
+ * BOQ safety-guard όγκος (m³) προς αφαίρεση από το concrete row ΤΗΣ ΣΚΑΛΑΣ: το
+ * κοινό σκυρόδεμα σκάλας↔πλάκας βάσης. Thin wrapper του `resolveStairBaseSlabSeat`
+ * (ΕΝΑ detection SSoT). `undefined` όταν η σκηνή λείπει ή καμία πλάκα δεν εδράζει τη
+ * σκάλα — ο caller τότε αφήνει το nominal concrete volume αμετάβλητο (καμία αφαίρεση).
+ */
+export function computeStairBaseSlabEmbeddedVolumeM3(
+  stair: StairEntity,
+  scene: SceneModel | null,
+  ctx: StairVerticalContext,
+): number | undefined {
+  if (!scene) return undefined;
+  return resolveStairBaseSlabSeat(stair, scene.entities.filter(isSlabEntity), ctx)?.embeddedVolumeM3;
 }

@@ -88,7 +88,11 @@ export function useBim3DEditInteraction({ managerRef, canvasEl }: UseBim3DEditIn
     const gripController = new BimGripController3D();
     // ADR-516 — one predictor per interaction session; reset at each drag begin.
     const pointerPredictor = createPointerPredictor(DXF_TIMING.prediction);
-    const preview = new Bim3DEditLivePreview();
+    // ADR-550 — the live-preview objects (move ghost / resize / dependent / wire / pipe / fitting)
+    // are built fresh mid-drag, so they must inherit the ACTIVE section clip planes; otherwise
+    // they render unclipped over a cut frame (the ghost's stacked translucent faces read as an
+    // opaque white silhouette above the cut). Delegates to the section controller's SSoT.
+    const preview = new Bim3DEditLivePreview((root) => manager.reapplySectionClip(root));
     // ADR-363 Φ1G.5 Slice 2h — transient temp-dimensions overlay for a dragged wall.
     const wallMoveDim = new TempWallMoveDimOverlay(manager.scene);
     // ADR-363 Φ1G.5 Slice 2i — transient dashed alignment line + snap-type label for face magnetism.

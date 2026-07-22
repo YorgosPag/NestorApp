@@ -29,6 +29,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { resolveMeshUrl, meshAssetKey } from './bim-mesh-url-resolver';
 import { recentreMeshFootprint } from './mesh-footprint-recentre';
+import { collectAddressableGltfNodes } from '../../scene/gltf-addressable-nodes';
 import { useBim3DEntitiesStore } from '../../stores/Bim3DEntitiesStore';
 import {
   computeTopSilhouette,
@@ -37,8 +38,20 @@ import {
   type SilSegment,
 } from '../../../bim/mesh-library/mesh-silhouette';
 import { markAllCanvasDirty } from '../../../rendering/core/frame-scheduler-api';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('BimMeshCache');
 
 type CacheState = 'loading' | 'error';
+
+/**
+ * Η κατάσταση φόρτωσης ενός asset, όπως τη βλέπει το UI (ADR-683 §mesh-load-missing-file):
+ *  - `ready`   → template φορτωμένο (κανονικό πλέγμα)·
+ *  - `loading` → σε εξέλιξη (placeholder κουτί προσωρινά)·
+ *  - `error`   → η λήψη απέτυχε, π.χ. **λείπει το `.glb`** (placeholder κουτί ΜΟΝΙΜΑ → το UI το σημαίνει)·
+ *  - `idle`    → δεν ζητήθηκε ακόμη.
+ */
+export type MeshAssetLoadState = 'idle' | 'loading' | 'error' | 'ready';
 
 const loader = new GLTFLoader();
 
@@ -78,10 +91,23 @@ function preload(category: string, assetId: string): void {
       useBim3DEntitiesStore.getState().bumpMeshAssetVersion();
       markAllCanvasDirty();
     })
-    .catch(() => {
+    .catch((err) => {
       // Leave an 'error' marker so we don't hammer Storage on every resync; the
       // bbox placeholder remains as the visible fallback.
       status.set(key, 'error');
+      // ADR-683 §mesh-load-missing-file — ΟΧΙ σιωπηλή αποτυχία. Ένα εισαγόμενο πλέγμα του οποίου το
+      // `.glb` λείπει (404 / Storage wiped) αλλιώς γινόταν αόρατο μόνιμο κουτί, χωρίς κανένα ίχνος —
+      // ώρες debugging στη βάση. Τώρα ΦΩΝΑΖΕΙ στο console (πρακτική Revit «linked model not found»).
+      logger.warn('mesh asset unavailable — placeholder box shown', {
+        category,
+        assetId,
+        key,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      // Ίδιο σήμα με το success path, ώστε το πάνελ/renderer να αντικατοπτρίσει την κατάσταση (badge
+      // «αρχείο μη διαθέσιμο»). Μία φορά ανά asset: το `status='error'` μπλοκάρει επόμενο preload → no loop.
+      useBim3DEntitiesStore.getState().bumpMeshAssetVersion();
+      markAllCanvasDirty();
     });
 }
 
@@ -109,23 +135,48 @@ function indexTemplate(key: string, object: THREE.Object3D): void {
 }
 
 /**
- * ADR-683 Φ3 — σπάει ένα φορτωμένο bundle σε **ένα template ανά top-level κόμβο**, με κλειδί
+ * ADR-683 Φ3 — σπάει ένα φορτωμένο bundle σε **ένα template ανά κόμβο**, με κλειδί
  * `category/<bundleId>#<nodeName>`.
  *
  * Ευρετηριάζονται ΟΛΟΙ οι κόμβοι, όχι μόνο ο ζητούμενος: το αρχείο κατέβηκε ήδη ολόκληρο, οπότε
  * τα υπόλοιπα 11 κάγκελα είναι δωρεάν — και η επόμενη `preload` τους βρίσκει σε cache hit χωρίς
  * δεύτερη διαδρομή δικτύου. Αυτό είναι όλο το νόημα του linked-model μοντέλου.
+ *
+ * **Deep, όχι top-level** (ADR-683 §mesh-load-nesting): οι κόμβοι λαμβάνονται από τον **ίδιο** SSoT
+ * walker (`collectAddressableGltfNodes`) που παράγει τα `nodeName` κατά το parse. Αν ευρετηρίαζε μόνο
+ * `scene.children`, ένας nested κόμβος (π.χ. κάτω από armature/root group του συνεργάτη) θα αποκτούσε
+ * `nodeName` αλλά **καμία** template → μόνιμο placeholder κουτί ακόμη και με σωστό URL. Οι δύο άξονες
+ * (parse ↔ index) μένουν συνεπείς εξ ορισμού, γιατί περνούν από τον ίδιο walker.
  */
 function indexBundleNodes(category: string, bundleId: string, scene: THREE.Object3D): void {
-  for (const child of [...scene.children]) {
-    const nodeName = child.name;
+  scene.updateMatrixWorld(true);
+  for (const node of collectAddressableGltfNodes(scene)) {
+    const nodeName = node.name;
     if (!nodeName) continue;
     const key = meshAssetKey(category, `${bundleId}${BUNDLE_SEPARATOR}${nodeName}`);
     if (templates.has(key)) continue;
-    // Ο κόμβος αποσπάται από τη σκηνή: το `recentreMeshFootprint` μέσα στο `indexTemplate`
-    // πρέπει να δουλέψει σε τοπικό σύστημα, χωρίς τον μετασχηματισμό του γονέα.
-    indexTemplate(key, child);
+    // Ο κόμβος αποσπάται από το δέντρο: ψήνουμε τον world μετασχηματισμό του (γονείς
+    // συμπεριλαμβανομένων) στο τοπικό του σύστημα, ώστε ένας nested κόμβος να στέκει σωστά μόνος
+    // του. Top-level κόμβος υπό identity scene root → ταυτόσημο με την παλιά συμπεριφορά.
+    indexTemplate(key, bakeNodeWorldTransform(node));
   }
+}
+
+/**
+ * Κλώνος ενός (πιθανώς nested) κόμβου με τον **world** μετασχηματισμό του ψημένο στο τοπικό σύστημα,
+ * τυλιγμένος σε φρέσκο Group στην αρχή των αξόνων. Έτσι το `recentreMeshFootprint` (μέσα στο
+ * `indexTemplate`) και το clone του `getInstance` βλέπουν τη γεωμετρία στον σωστό προσανατολισμό/θέση
+ * ανεξάρτητα από το πού την τοποθέτησε ο γονέας του στη σκηνή. Idempotent για top-level (world == local).
+ */
+function bakeNodeWorldTransform(node: THREE.Object3D): THREE.Group {
+  const baked = node.clone(true);
+  baked.matrix.copy(node.matrixWorld);
+  baked.matrix.decompose(baked.position, baked.quaternion, baked.scale);
+  baked.matrixAutoUpdate = true;
+  const group = new THREE.Group();
+  group.add(baked);
+  group.updateMatrixWorld(true);
+  return group;
 }
 
 /** Διαχωριστικό κλειδιού bundle (καθρέφτης του `IMPORTED_MESH_NODE_SEPARATOR`). */
@@ -181,11 +232,23 @@ function getTopEdges(category: string, assetId: string): readonly SilSegment[] |
   return edges.get(meshAssetKey(category, assetId)) ?? null;
 }
 
+/**
+ * ADR-683 §mesh-load-missing-file — η κατάσταση φόρτωσης ενός asset, ώστε το UI να **σημάνει** ένα
+ * πλέγμα του οποίου το `.glb` λείπει (`'error'`) αντί να δείχνει σιωπηλά μόνιμο κουτί. Σύγχρονο,
+ * χωρίς παρενέργεια — ασφαλές για κλήση σε render. Αντανακλά αλλαγές μέσω του `meshAssetVersion`.
+ */
+function getLoadState(category: string, assetId: string): MeshAssetLoadState {
+  const key = meshAssetKey(category, assetId);
+  if (templates.has(key)) return 'ready';
+  return status.get(key) ?? 'idle';
+}
+
 export const bimMeshCache = {
   preload,
   getInstance,
   getSilhouette,
   getTopEdges,
+  getLoadState,
 };
 
 /** Test-only — reset cache between specs. */

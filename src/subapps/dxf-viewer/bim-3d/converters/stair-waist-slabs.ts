@@ -49,6 +49,15 @@ const EPS = 1e-6;
 /** Structures rendered as one solid concrete body (a waist slab under the steps). */
 const SOLID_BODY_STRUCTURES: ReadonlySet<string> = new Set(['monolithic', 'cantilever']);
 
+/**
+ * True when the stair renders a solid monolithic waist body (→ a soffit that can hang
+ * below its base slab). SSoT gate shared by {@link buildWaistSlabMeshes} and the 3D
+ * terminating-trim seat resolution (ADR-685 Φ2) so both skip open/stringer stairs alike.
+ */
+export function stairHasSolidWaist(stair: StairEntity): boolean {
+  return SOLID_BODY_STRUCTURES.has(stair.params?.structureType ?? '');
+}
+
 /** DXF scene point (x East, y North, z up-in-plan) → Three world (x, y=up, z=-North). */
 function toWorldPoint(p: Point3D, sceneToM: number, baseY: number): THREE.Vector3 {
   return new THREE.Vector3(p.x * sceneToM, baseY + p.z * sceneToM, -p.y * sceneToM);
@@ -100,25 +109,51 @@ function groupIntoFlights(sorted: readonly ReentrantCorner[], riseScene: number)
 }
 
 /**
+ * SOFFIT vertices (base → top), optionally TRIMMED by a flat-bottom `soffitFloorY`
+ * (ADR-685 Φ2 — terminating seat). The natural soffit is one straight sloped line from
+ * `(0, −soffitDrop)` (base, lowest) up to `(M·t, M·r − soffitDrop)` (top). When the base
+ * flight would hang below the seating slab, `soffitFloorY` clamps it: the portion below
+ * the floor becomes a horizontal base at `soffitFloorY` (the stair bears flat on the
+ * slab), then the sloped soffit RESUMES exactly where it crosses the floor — so the
+ * upper soffit is byte-for-byte unchanged and the section stays simple (no self-cut).
+ */
+function soffitPoints(
+  M: number, tStep: number, rStep: number, soffitDrop: number, soffitFloorY?: number,
+): THREE.Vector2[] {
+  const baseSoffitY = -soffitDrop;
+  const topSoffit = new THREE.Vector2(M * tStep, M * rStep - soffitDrop);
+  // No trim, or the slab underside is at/below the natural soffit → nothing to clamp.
+  if (soffitFloorY === undefined || soffitFloorY <= baseSoffitY + EPS) {
+    return [new THREE.Vector2(0, baseSoffitY), topSoffit];
+  }
+  const span = M * tStep;
+  // Crossing: soffit(a) = −soffitDrop + (rStep/tStep)·a = soffitFloorY.
+  const aCross = rStep > EPS ? ((soffitFloorY - baseSoffitY) * tStep) / rStep : span;
+  // Floor above the whole soffit (rare, very shallow flight) → flat bottom across the span.
+  if (aCross >= span - EPS) return [new THREE.Vector2(0, soffitFloorY), new THREE.Vector2(span, soffitFloorY)];
+  return [new THREE.Vector2(0, soffitFloorY), new THREE.Vector2(aCross, soffitFloorY), topSoffit];
+}
+
+/**
  * Section outline (in the flight's own vertical plane, `a` = horizontal along the run,
  * `y` = height) of a monolithic flight of `M` steps: the stepped TOP (tread + riser per
  * step, tops on the re-entrant line) closed by a parallel SOFFIT `soffitDrop` vertically
  * below the re-entrant corners, with vertical end faces. `soffitDrop = rise + waist/cosθ`
  * so the soffit clears the NOSING line (lowest step envelope) → the section never
- * self-intersects. Traced CCW: soffit L→R, up the top end, staircase R→L. Exported for
- * the geometry regression (the seat / no-poke / soffit-clearance invariants live here).
+ * self-intersects. Optional `soffitFloorY` (ADR-685 Φ2) trims the base soffit flat at the
+ * seating slab's underside so a terminating stair bears on the slab instead of hanging
+ * below it. Traced CCW: soffit base→top, staircase R→L. Exported for the geometry
+ * regression (seat / no-poke / soffit-clearance / terminating-trim invariants live here).
  */
 export function flightSectionPoints(
-  M: number, tStep: number, rStep: number, soffitDrop: number,
+  M: number, tStep: number, rStep: number, soffitDrop: number, soffitFloorY?: number,
 ): THREE.Vector2[] {
   const stair: THREE.Vector2[] = [new THREE.Vector2(0, 0)];
   for (let k = 0; k < M; k++) {
     stair.push(new THREE.Vector2((k + 1) * tStep, k * rStep));       // tread top → riser foot
     stair.push(new THREE.Vector2((k + 1) * tStep, (k + 1) * rStep)); // riser → next corner
   }
-  const pts: THREE.Vector2[] = [
-    new THREE.Vector2(0, -soffitDrop), new THREE.Vector2(M * tStep, M * rStep - soffitDrop),
-  ];
+  const pts: THREE.Vector2[] = soffitPoints(M, tStep, rStep, soffitDrop, soffitFloorY);
   for (let i = stair.length - 1; i >= 0; i--) pts.push(stair[i]!);
   return pts;
 }
@@ -131,7 +166,7 @@ export function flightSectionPoints(
  */
 function buildFlightWaist(
   flight: readonly ReentrantCorner[], bottomSteps: number, topSteps: number,
-  waistM: number, mat: THREE.MeshStandardMaterial,
+  waistM: number, mat: THREE.MeshStandardMaterial, soffitClipWorldY?: number,
 ): THREE.Mesh | null {
   const n = flight.length;
   if (n < 2) return null;
@@ -149,10 +184,13 @@ function buildFlightWaist(
   // re-entrant corners = one rise (nosing sits a rise below them) + waist/cosθ.
   const soffitDrop = rStep + waistM * (len / tStep);
   const M = (n - 1) + bottomSteps + topSteps;
-  const shape = new THREE.Shape(flightSectionPoints(M, tStep, rStep, soffitDrop));
+  const origin = c0.clone().addScaledVector(step, -bottomSteps).addScaledVector(zDir, -widthM * 0.5);
+  // ADR-685 Φ2 — the section's local `y` maps 1:1 to world Y offset by `origin.y` (basis
+  // `up` = world +Y), so a world-Y trim floor becomes a local-y floor by subtracting origin.y.
+  const soffitFloorY = soffitClipWorldY !== undefined ? soffitClipWorldY - origin.y : undefined;
+  const shape = new THREE.Shape(flightSectionPoints(M, tStep, rStep, soffitDrop, soffitFloorY));
   const geo = new THREE.ExtrudeGeometry(shape, { depth: widthM, bevelEnabled: false });
   geo.applyMatrix4(new THREE.Matrix4().makeBasis(uh, up, zDir)); // local a/y/width → world
-  const origin = c0.clone().addScaledVector(step, -bottomSteps).addScaledVector(zDir, -widthM * 0.5);
   geo.translate(origin.x, origin.y, origin.z);              // seat on the flight centreline
   ensureWorldUvs(geo); // ADR-413 — aoMap uv2.
   return new THREE.Mesh(geo, mat);
@@ -172,8 +210,9 @@ export function buildWaistSlabMeshes(
   stair: StairEntity,
   baseY: number,
   sceneToM: number,
+  soffitClipWorldY?: number,
 ): THREE.Mesh[] {
-  if (!SOLID_BODY_STRUCTURES.has(stair.params.structureType)) return [];
+  if (!stairHasSolidWaist(stair)) return [];
   // Full tread list (2D-cut splits it by section plane; the waist spans every step).
   const treads = [...stair.geometry.treadsBelowCut, ...stair.geometry.treadsAboveCut];
   const corners = collectReentrantCorners(treads, sceneToM, baseY);
@@ -195,7 +234,10 @@ export function buildWaistSlabMeshes(
     const bottomSteps = gi === 0 ? clampStep(Math.round((firstZ - baseZ) / rise)) : 1;
     const topSteps = gi === flights.length - 1
       ? clampStep(Math.round((topFloorZ - lastZ) / rise)) : 1;
-    const mesh = buildFlightWaist(flight, bottomSteps, topSteps, waistM, mat);
+    // ADR-685 Φ2 — terminating trim on the BASE flight only (where the stair meets the
+    // seating slab); upper flights rise clear above it, no clamp.
+    const clip = gi === 0 ? soffitClipWorldY : undefined;
+    const mesh = buildFlightWaist(flight, bottomSteps, topSteps, waistM, mat, clip);
     if (mesh) out.push(mesh);
   });
   return out;

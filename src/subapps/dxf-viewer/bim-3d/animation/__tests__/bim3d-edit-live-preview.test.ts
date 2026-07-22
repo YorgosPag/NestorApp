@@ -380,3 +380,73 @@ describe('Bim3DEditLivePreview — ADR-408 Φ7 P2 live circuit-wire re-route on 
     expect(p.isActive).toBe(false);
   });
 });
+
+describe('Bim3DEditLivePreview — ADR-550 section clip on preview objects', () => {
+  function scenedGroup(...children: THREE.Object3D[]): { scene: THREE.Scene; group: THREE.Group } {
+    const scene = new THREE.Scene();
+    const g = new THREE.Group();
+    for (const c of children) g.add(c);
+    scene.add(g);
+    return { scene, group: g };
+  }
+
+  it('reapplyClip is invoked on the ghost subtree at move-capture (so the ghost is section-clipped)', () => {
+    const a = taggedMesh('a', [0, 0, 0]);
+    const { group: g } = scenedGroup(a);
+    const clipped: THREE.Object3D[] = [];
+    const p = new Bim3DEditLivePreview((root) => clipped.push(root));
+
+    p.captureTransform(g, new Set(['a']));
+
+    // The ghost root is built + parented + clip re-asserted: exactly one clipped subtree,
+    // and it carries the frozen clone (a real Mesh) — the thing that must not draw above the cut.
+    expect(clipped).toHaveLength(1);
+    let hasMesh = false;
+    clipped[0].traverse((n) => { if ((n as THREE.Mesh).isMesh) hasMesh = true; });
+    expect(hasMesh).toBe(true);
+  });
+
+  it('reapplyClip is invoked with the freshly-swapped resize object', () => {
+    const orig = taggedMesh('w1', [0, 0, 0]);
+    const { group: g } = scenedGroup(orig);
+    const rebuilt = taggedMesh('w1', [0, 0, 0]);
+    const clipped: THREE.Object3D[] = [];
+    const p = new Bim3DEditLivePreview((root) => clipped.push(root));
+
+    p.captureResize(g, 'w1');
+    p.applyResize(rebuilt);
+    // The rebuilt object itself must be re-clipped (ghost may also clip; the rebuilt must be present).
+    expect(clipped).toContain(rebuilt);
+  });
+
+  it('reapplyClip is invoked for each swapped dependent / wire / pipe / fitting object', () => {
+    const g = group();
+    const dep = taggedMesh('wall1', [0, 0, 0]);
+    const wire = wireMesh('sys1');
+    const pipe = taggedMesh('pipe1', [0, 0, 0]);
+    const fitting = taggedMesh('fit1', [0, 0, 0]);
+    const clipped: THREE.Object3D[] = [];
+    const p = new Bim3DEditLivePreview((root) => clipped.push(root));
+
+    p.captureDependents(g, ['wall1'], new Set(['beam1']));
+    p.applyDependents([dep]);
+    p.applyWires([wire]);
+    p.applyPipes([pipe]);
+    p.applyFittings([fitting]);
+
+    for (const o of [dep, wire, pipe, fitting]) expect(clipped).toContain(o);
+  });
+
+  it('no reapplyClip callback (default) → swaps still work without throwing', () => {
+    const orig = taggedMesh('w1', [0, 0, 0]);
+    const g = group(orig);
+    const rebuilt = taggedMesh('w1', [0, 0, 0]);
+    const p = new Bim3DEditLivePreview();
+
+    expect(() => {
+      p.captureResize(g, 'w1');
+      p.applyResize(rebuilt);
+    }).not.toThrow();
+    expect(g.children).toContain(rebuilt);
+  });
+});

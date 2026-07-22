@@ -96,6 +96,20 @@ export class Bim3DEditLivePreview {
   /** Parks a dimmed clone of the edited meshes at the source pose during a rigid move/rotate. */
   private readonly originalGhost = new EditOriginalGhost();
 
+  /**
+   * ADR-550 — re-assert the ACTIVE section clip planes onto a subtree this preview adds to the
+   * scene mid-drag (the ghost + every swapped-in rebuilt object). Freshly-built materials start
+   * `clippingPlanes = null`, so under an active Επίπεδο Τομής they render UNCLIPPED (full height)
+   * over the cut frame → the ghost's stacked translucent faces read as an opaque white silhouette
+   * above the cut. Wired to `ThreeJsSceneManager.reapplySectionClip` (the section controller's SSoT);
+   * omitted (tests / no-section callers) → no-op, so this stays a pure THREE class.
+   */
+  private readonly reapplyClip?: (root: THREE.Object3D) => void;
+
+  constructor(reapplyClip?: (root: THREE.Object3D) => void) {
+    this.reapplyClip = reapplyClip;
+  }
+
   /** True while a preview is in effect (capture done, not yet committed/reset). */
   get isActive(): boolean {
     return (
@@ -158,7 +172,8 @@ export class Bim3DEditLivePreview {
     // ADR-550 — park a dimmed clone of the captured meshes at the source pose, BEFORE any
     // applyMove/applyRotate transforms them. The real meshes follow the cursor (ghost === commit)
     // while the original "stays behind" as a ghost — the 3D mirror of the 2D `movePreviewActive`.
-    this.originalGhost.show(this.transforms.map((t) => t.obj));
+    // `reapplyClip` clips the ghost by the active section so it never shows above the cut.
+    this.originalGhost.show(this.transforms.map((t) => t.obj), this.reapplyClip);
   }
 
   /** Live move: each captured mesh sits at `original + translation` (world space). */
@@ -217,6 +232,7 @@ export class Bim3DEditLivePreview {
       if (!o) continue;
       this.dependentObjects.push(o);
       this.parent.add(o);
+      this.reapplyClip?.(o); // ADR-550 — clip the fresh dependent-wall object by the active section.
     }
   }
 
@@ -252,6 +268,7 @@ export class Bim3DEditLivePreview {
     for (const o of rebuilt) {
       this.wireObjects.push(o);
       this.parent.add(o);
+      this.reapplyClip?.(o); // ADR-550 — clip the fresh re-routed conduit by the active section.
     }
   }
 
@@ -287,6 +304,7 @@ export class Bim3DEditLivePreview {
     for (const o of rebuilt) {
       this.pipeObjects.push(o);
       this.parent.add(o);
+      this.reapplyClip?.(o); // ADR-550 — clip the fresh stretched pipe segment by the active section.
     }
   }
 
@@ -321,6 +339,7 @@ export class Bim3DEditLivePreview {
     for (const o of rebuilt) {
       this.fittingObjects.push(o);
       this.parent.add(o);
+      this.reapplyClip?.(o); // ADR-550 — clip the fresh incident fitting by the active section.
     }
   }
 
@@ -340,7 +359,7 @@ export class Bim3DEditLivePreview {
     // path (ADR-535) hides the original in `applyResize` and swaps in the rebuilt REAL preview;
     // the parked ghost is what the user sees at the source. Captured while still visible (BEFORE
     // `applyResize` hides them), so the clone takes the real on-screen colour. View-agnostic.
-    this.originalGhost.show(this.hidden);
+    this.originalGhost.show(this.hidden, this.reapplyClip);
   }
 
   /**
@@ -357,6 +376,7 @@ export class Bim3DEditLivePreview {
     }
     this.previewObject = rebuilt;
     this.parent.add(rebuilt);
+    this.reapplyClip?.(rebuilt); // ADR-550 — clip the fresh resize object by the active section.
   }
 
   /**

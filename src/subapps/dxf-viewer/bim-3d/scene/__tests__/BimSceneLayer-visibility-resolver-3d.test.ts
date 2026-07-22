@@ -48,6 +48,7 @@ jest.mock('../../../state/drawing-scale-store', () => ({
 
 import { useDrawingScaleStore } from '../../../state/drawing-scale-store';
 import { BimSceneLayer } from '../BimSceneLayer';
+import { EMPTY_FLOOR_VIS_SCOPE } from '../floor-visibility-scope';
 import type { Bim3DEntities } from '../../stores/Bim3DEntitiesStore';
 // SSoT minimal-but-realistic fixtures shared with the other BimSceneLayer suites (N.0.2).
 import { makeMinimalBimEntities } from './minimal-bim-entities';
@@ -145,7 +146,7 @@ describe('BimSceneLayer ADR-382 Phase C — Floor source', () => {
   it('floor mode=hide → all category meshes skipped (pre-mesh filter)', () => {
     const floorModes = new Map<string, FloorVisMode>([['level-1', 'hide']]);
     const scene = new THREE.Scene();
-    new BimSceneLayer(scene).sync(makeEntities(), 0, 'level-1', [], [], null, new Map(), floorModes);
+    new BimSceneLayer(scene).sync(makeEntities(), 0, 'level-1', { ...EMPTY_FLOOR_VIS_SCOPE, floorVisModes: floorModes });
     expect(wallToMesh).not.toHaveBeenCalled();
     expect(columnToMesh).not.toHaveBeenCalled();
     expect(beamToMesh).not.toHaveBeenCalled();
@@ -156,7 +157,7 @@ describe('BimSceneLayer ADR-382 Phase C — Floor source', () => {
   it('floor mode=ghost → meshes built (Q4 ghost is stylistic only)', () => {
     const floorModes = new Map<string, FloorVisMode>([['level-1', 'ghost']]);
     const scene = new THREE.Scene();
-    new BimSceneLayer(scene).sync(makeEntities(), 0, 'level-1', [], [], null, new Map(), floorModes);
+    new BimSceneLayer(scene).sync(makeEntities(), 0, 'level-1', { ...EMPTY_FLOOR_VIS_SCOPE, floorVisModes: floorModes });
     expect(wallToMesh).toHaveBeenCalledTimes(1);
     expect(columnToMesh).toHaveBeenCalledTimes(1);
   });
@@ -164,14 +165,14 @@ describe('BimSceneLayer ADR-382 Phase C — Floor source', () => {
   it('floor mode=show → meshes built normally', () => {
     const floorModes = new Map<string, FloorVisMode>([['level-1', 'show']]);
     const scene = new THREE.Scene();
-    new BimSceneLayer(scene).sync(makeEntities(), 0, 'level-1', [], [], null, new Map(), floorModes);
+    new BimSceneLayer(scene).sync(makeEntities(), 0, 'level-1', { ...EMPTY_FLOOR_VIS_SCOPE, floorVisModes: floorModes });
     expect(wallToMesh).toHaveBeenCalledTimes(1);
   });
 
   it('floor mode unset (no entry in map) → defaults visible', () => {
     const floorModes = new Map<string, FloorVisMode>(); // empty
     const scene = new THREE.Scene();
-    new BimSceneLayer(scene).sync(makeEntities(), 0, 'level-1', [], [], null, new Map(), floorModes);
+    new BimSceneLayer(scene).sync(makeEntities(), 0, 'level-1', { ...EMPTY_FLOOR_VIS_SCOPE, floorVisModes: floorModes });
     expect(wallToMesh).toHaveBeenCalledTimes(1);
   });
 });
@@ -181,7 +182,7 @@ describe('BimSceneLayer ADR-382 Phase C — Building source (#18 — building hi
     setBuildingResolution({ w1: 'bldg-A', c1: 'bldg-B' });
     const buildingModes = new Map<string, BuildingVisMode>([['bldg-A', 'hide'], ['bldg-B', 'show']]);
     const scene = new THREE.Scene();
-    new BimSceneLayer(scene).sync(makeEntities(), 0, undefined, [], [], null, buildingModes);
+    new BimSceneLayer(scene).sync(makeEntities(), 0, undefined, { ...EMPTY_FLOOR_VIS_SCOPE, buildingVisModes: buildingModes });
     expect(wallToMesh).not.toHaveBeenCalled();
     expect(columnToMesh).toHaveBeenCalledTimes(1);
   });
@@ -190,7 +191,7 @@ describe('BimSceneLayer ADR-382 Phase C — Building source (#18 — building hi
     setBuildingResolution({ w1: 'bldg-A' });
     const buildingModes = new Map<string, BuildingVisMode>([['bldg-A', 'ghost']]);
     const scene = new THREE.Scene();
-    new BimSceneLayer(scene).sync(makeEntities(), 0, undefined, [], [], null, buildingModes);
+    new BimSceneLayer(scene).sync(makeEntities(), 0, undefined, { ...EMPTY_FLOOR_VIS_SCOPE, buildingVisModes: buildingModes });
     expect(wallToMesh).toHaveBeenCalledTimes(1);
   });
 });
@@ -216,7 +217,7 @@ describe('BimSceneLayer ADR-382 Phase C — Intersection (#17 — ANY-hides-wins
     setObjectStyles({ wall: { visible: false } });
     const floorModes = new Map<string, FloorVisMode>([['level-1', 'ghost']]);
     const scene = new THREE.Scene();
-    new BimSceneLayer(scene).sync(makeEntities(), 0, 'level-1', [], [], null, new Map(), floorModes);
+    new BimSceneLayer(scene).sync(makeEntities(), 0, 'level-1', { ...EMPTY_FLOOR_VIS_SCOPE, floorVisModes: floorModes });
     expect(wallToMesh).not.toHaveBeenCalled();
     expect(columnToMesh).toHaveBeenCalledTimes(1);
   });
@@ -228,7 +229,7 @@ describe('BimSceneLayer ADR-382 Phase C — Intersection (#17 — ANY-hides-wins
     const buildingModes = new Map<string, BuildingVisMode>([['bldg-A', 'show']]);
     const floorModes = new Map<string, FloorVisMode>([['level-1', 'show']]);
     const scene = new THREE.Scene();
-    new BimSceneLayer(scene).sync(makeEntities(), 0, 'level-1', [], [], null, buildingModes, floorModes);
+    new BimSceneLayer(scene).sync(makeEntities(), 0, 'level-1', { ...EMPTY_FLOOR_VIS_SCOPE, buildingVisModes: buildingModes, floorVisModes: floorModes });
     expect(wallToMesh).toHaveBeenCalledTimes(1);
   });
 });

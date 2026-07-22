@@ -313,11 +313,7 @@ export class ThreeJsSceneManager {
     nextFloorElevationMm: number | undefined = undefined,
   ): void {
     if (this.disposed) return;
-    runSyncBimEntities(
-      this.bimSyncDeps(),
-      { entities, floorElevationMm, nextFloorElevationMm, activeLevelId, ...scope },
-      this.syncSideEffects(),
-    );
+    runSyncBimEntities(this.bimSyncDeps(), { entities, floorElevationMm, nextFloorElevationMm, activeLevelId, ...scope }, this.syncSideEffects());
     this.ensureInitialCameraFit();
   }
 
@@ -337,11 +333,7 @@ export class ThreeJsSceneManager {
     scope: FloorVisibilityScope = EMPTY_FLOOR_VIS_SCOPE,
   ): void {
     if (this.disposed) return;
-    runSyncBimEntitiesMultiFloor(
-      this.bimSyncDeps(),
-      { stack, ...scope },
-      this.syncSideEffects(),
-    );
+    runSyncBimEntitiesMultiFloor(this.bimSyncDeps(), { stack, ...scope }, this.syncSideEffects());
     this.ensureInitialCameraFit();
   }
 
@@ -438,7 +430,8 @@ export class ThreeJsSceneManager {
 
   /** Public bridge για το ADR-366 §A.3 Section controller (BimViewport3D safety effect). */
   initSectionBox(): void { if (!this.disposed) { this.sectionController.ensureInit(); this.sectionController.applyState(); this.markSceneDirty(); } }
-
+  /** ADR-550 — re-assert current section clip planes on a subtree built mid-drag (edit live-preview ghost/rebuilds); reuses the controller's `reapplyClipPlanesUnder` SSoT so they never draw unclipped over a cut. */
+  reapplySectionClip(root: THREE.Object3D): void { if (!this.disposed) this.sectionController.reapplyClipPlanesUnder(root); }
   async loadHdriEnvironment(url: string): Promise<void> { if (!this.disposed) await loadHdriIntoStore(url, this.envmapGenerator, this.pathTracerRenderer, () => this.markSceneDirty()); }
 
   applyLightPreset(preset: LightPreset): void { if (!this.disposed) { applyLightPresetToScene({ sun: this.sun, ambient: this.ambient, hemi: this.hemi }, preset, this.envmapGenerator); this.shadowModulator.invalidateShadowMap(); this.markSceneDirty(); } }

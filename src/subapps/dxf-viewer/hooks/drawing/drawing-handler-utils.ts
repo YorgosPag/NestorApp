@@ -352,14 +352,22 @@ export function resolveCommittedDrawingPoint(
   },
 ): Pt {
   let finalPoint = snappedPoint;
-  const ambientOn = ambientAlignmentConfigStore.getSnapshot().enabled;
-  const committedTracking = resolveAlignmentTracking(snappedPoint, {
-    scale: opts.scale,
-    polarEnabled: opts.polar && !opts.ortho,
-    sceneEntities: ambientOn ? (opts.sceneEntities ?? null) : null,
-    segmentBase: opts.segmentBase ?? null,
-  });
-  if (committedTracking) finalPoint = committedTracking.point;
+  // ADR-363 §ortho-wins — ORTHO (F8) is a HARD override: object-snap / AutoAlign
+  // tracking must NOT pull the committed point off the H/V axis (real OSNAP still
+  // wins, upstream via `applySnap`). Skipping tracking here keeps the generic line
+  // commit identical to the preview (which now also yields to ORTHO) AND to the BIM
+  // commit (`applyBimDrawingConstraint`, tracking-free by construction). Without this
+  // the diagonal trace overrode the ortho lock → «ORTHO ignored».
+  if (!opts.ortho) {
+    const ambientOn = ambientAlignmentConfigStore.getSnapshot().enabled;
+    const committedTracking = resolveAlignmentTracking(snappedPoint, {
+      scale: opts.scale,
+      polarEnabled: opts.polar,
+      sceneEntities: ambientOn ? (opts.sceneEntities ?? null) : null,
+      segmentBase: opts.segmentBase ?? null,
+    });
+    if (committedTracking) finalPoint = committedTracking.point;
+  }
   return resolveLineFamilyCommitPoint(
     opts.activeTool, finalPoint, opts.tempPointsLength, opts.segmentBase, opts.sceneUnits,
   );

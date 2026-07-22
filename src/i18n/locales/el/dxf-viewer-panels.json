@@ -124,7 +124,8 @@
       "title": "Εισαγόμενα",
       "empty": "Δεν υπάρχουν εισαγόμενα πλέγματα σε αυτόν τον όροφο.",
       "unassigned": "Χωρίς ανάθεση",
-      "unassignedBadge": "{count, plural, one {# χωρίς ανάθεση} other {# χωρίς ανάθεση}}"
+      "unassignedBadge": "{count, plural, one {# χωρίς ανάθεση} other {# χωρίς ανάθεση}}",
+      "fileUnavailable": "Αρχείο μη διαθέσιμο"
     },
     "frameProfiles": {
       "title": "Διατομές Κάσας",

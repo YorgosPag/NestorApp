@@ -13,9 +13,6 @@ import { applyDxfOverlayFraming } from './scene-sync-dxf-overlay';
 import type { BimSceneLayer } from './BimSceneLayer';
 import type { FloorStackEntry } from './multi-floor-3d-source';
 import type { Bim3DEntities } from '../stores/Bim3DEntitiesStore';
-import type { BuildingRef, FloorRef } from '../../bim/utils/bim-floor-utils';
-import type { BuildingVisMode } from '../utils/building-visibility-state';
-import type { FloorVisMode } from '../utils/floor-visibility-state';
 import type { BimSelectionHighlighter } from '../systems/selection/BimSelectionHighlighter';
 import type { KeyboardFocusManagerApi } from '../accessibility/KeyboardFocusManager';
 import type { EnvmapGenerator } from '../lighting/envmap-generator';
@@ -38,33 +35,11 @@ export interface SyncBimEntitiesDeps {
   readonly sectionController: SectionSceneController;
 }
 
-/**
- * ADR-399 Phase B / ADR-382 Phase C — the floor/building visibility bundle that
- * travels together through every BIM scene-sync path. Extracted as ONE named
- * options object (big-player option-bag convention: Three.js `set(options)`,
- * Revit API option bags, Figma plugin params) so both public `ThreeJsSceneManager`
- * wrappers, both Args below, and all three `bim3d-resync` call sites compose it
- * instead of unrolling the same 5 params with the same defaults (CHECK 3.28
- * clone, ADR-584). Flat by design — the sync internals read `args.floors`/
- * `args.buildingVisModes`/… directly, so this intersects into the Args unchanged.
- */
-export type FloorVisibilityScope = {
-  readonly floors: readonly FloorRef[];
-  readonly buildings: readonly BuildingRef[];
-  readonly activeBuildingId: string | null;
-  readonly buildingVisModes: ReadonlyMap<string, BuildingVisMode>;
-  /** ADR-382 Phase C — per-level visibility modes for pre-mesh hide filter. */
-  readonly floorVisModes: ReadonlyMap<string, FloorVisMode>;
-};
-
-/** The empty-scope default (no floors/buildings, all-default visibility) shared by every wrapper's default param. */
-export const EMPTY_FLOOR_VIS_SCOPE: FloorVisibilityScope = {
-  floors: [],
-  buildings: [],
-  activeBuildingId: null,
-  buildingVisModes: new Map(),
-  floorVisModes: new Map(),
-};
+// ADR-399 Phase B / ADR-382 Phase C — the floor/building visibility bundle now lives in
+// its own leaf module (`floor-visibility-scope.ts`) so the core BimSceneLayer can depend on
+// it directly. Re-exported here for backward-compatible import paths (CHECK 3.28, ADR-584).
+export { EMPTY_FLOOR_VIS_SCOPE, type FloorVisibilityScope } from './floor-visibility-scope';
+import type { FloorVisibilityScope } from './floor-visibility-scope';
 
 export type SyncBimEntitiesArgs = {
   readonly entities: Bim3DEntities;
@@ -116,15 +91,12 @@ export function syncBimEntitiesIntoScene(
   deps: SyncBimEntitiesDeps,
   args: SyncBimEntitiesArgs,
 ): void {
+  // `args` intersects FloorVisibilityScope, so it IS a valid scope bag (extra fields ignored).
   rebuildBimMeshes(deps, args, () => deps.bimLayer.sync(
     args.entities,
     args.floorElevationMm,
     args.activeLevelId,
-    args.floors,
-    args.buildings,
-    args.activeBuildingId,
-    args.buildingVisModes,
-    args.floorVisModes,
+    args,
     args.nextFloorElevationMm,
   ));
 }
@@ -143,14 +115,8 @@ export function syncMultiFloorBimEntitiesIntoScene(
   deps: SyncBimEntitiesDeps,
   args: SyncMultiFloorBimEntitiesArgs,
 ): void {
-  rebuildBimMeshes(deps, args, () => deps.bimLayer.syncMultiFloor(
-    args.stack,
-    args.floors,
-    args.buildings,
-    args.activeBuildingId,
-    args.buildingVisModes,
-    args.floorVisModes,
-  ));
+  // `args` intersects FloorVisibilityScope → passes straight through as the scope bag.
+  rebuildBimMeshes(deps, args, () => deps.bimLayer.syncMultiFloor(args.stack, args));
 }
 
 export interface SyncDxfOverlayDeps {

@@ -37,17 +37,26 @@ export interface FileOwnershipClaim {
   readonly docId: string;
 }
 
-interface OwnershipProvider {
-  readonly name: string;
-  readonly collection: string;
-  readonly idFrom: (fileId: string) => string;
-}
+/**
+ * Δύο τρόποι διεκδίκησης:
+ *  - `docId`: το `fileId` ΕΙΝΑΙ το doc id (ή προκύπτει από αυτό) — μία ανάγνωση `.doc().get()`.
+ *  - `queryField`: το `fileId` ζει σε **πεδίο** μιας οντότητας, όχι στο doc id — π.χ. τα εισαγόμενα
+ *    πλέγματα (ADR-683): Ν οντότητες μοιράζονται ΕΝΑ `.glb` μέσω `params.uploadId`, οπότε το doc id
+ *    (enterprise id της οντότητας) ΔΕΝ ισούται με το fileId του αρχείου. Απαιτεί equality query.
+ */
+type OwnershipProvider =
+  | { readonly name: string; readonly collection: string; readonly idFrom: (fileId: string) => string }
+  | { readonly name: string; readonly collection: string; readonly queryField: string };
 
 const OWNERSHIP_CLAIM_PROVIDERS: ReadonlyArray<OwnershipProvider> = [
   // PRIMARY: canonical FileRecord (ADR-031 — Canonical File Storage System)
   { name: 'files', collection: COLLECTIONS.FILES, idFrom: (id) => id },
   // SECONDARY: showcase PDF shares — no FileRecord by design (ADR-312)
   { name: 'file_shares', collection: COLLECTIONS.FILE_SHARES, idFrom: (id) => id },
+  // IMPORTED MESHES (ADR-683 Φ3): fileId = `params.uploadId`, shared by N entities → QUERY, not doc-id.
+  // Χωρίς αυτόν, το onStorageFinalize έβλεπε το μόλις-ανεβασμένο `.glb` ως orphan και το ΕΣΒΗΝΕ
+  // δευτερόλεπτα μετά το upload (ίδιο class με το incident 2026-04-17 των showcase PDFs).
+  { name: 'imported_meshes', collection: COLLECTIONS.FLOORPLAN_IMPORTED_MESHES, queryField: 'params.uploadId' },
 ];
 
 export async function findFileOwner(
@@ -55,14 +64,21 @@ export async function findFileOwner(
   fileId: string
 ): Promise<FileOwnershipClaim | null> {
   for (const provider of OWNERSHIP_CLAIM_PROVIDERS) {
-    const docId = provider.idFrom(fileId);
-    const snap = await db.collection(provider.collection).doc(docId).get();
-    if (snap.exists) {
-      return {
-        provider: provider.name,
-        collection: provider.collection,
-        docId,
-      };
+    if ('idFrom' in provider) {
+      const docId = provider.idFrom(fileId);
+      const snap = await db.collection(provider.collection).doc(docId).get();
+      if (snap.exists) {
+        return { provider: provider.name, collection: provider.collection, docId };
+      }
+    } else {
+      const snap = await db
+        .collection(provider.collection)
+        .where(provider.queryField, '==', fileId)
+        .limit(1)
+        .get();
+      if (!snap.empty) {
+        return { provider: provider.name, collection: provider.collection, docId: snap.docs[0].id };
+      }
     }
   }
   return null;

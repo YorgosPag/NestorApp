@@ -1,6 +1,6 @@
 # ADR-683 — Συνεργατικό round-trip: παράδοση project σε εξωτερικό μηχανικό και επιστροφή
 
-**Status:** 🟡 IN PROGRESS — Φ1 (ADR-678) DONE · **Φ2 DONE** (glTF import + geometry fingerprint + manifest + **UI καλωδίωση**) · **per-face round-trip (ADR-678 Φ3, ΜΟΝΟ glTF) DONE 2026-07-21** (κλείνει το «🔴 ΓΝΩΣΤΟ ΟΡΙΟ» του Φ2 hotfix, βλ. §11) · **Φ3α DONE** (τύπος `imported-mesh`: 2Δ+3Δ+move/rotate, 20 anchors) · **Φ3β DONE** (καλωδίωση εισαγωγής) · **Φ3.1α DONE** (μοντέλο κοστολόγησης) · **Φ3.1β DONE** (διεπαφή ανάθεσης — ⚠️ **καμία επαλήθευση στον browser**) · **§units DONE** (ρητή μονάδα εισαγωγής glTF, §10.5 — ⚠️ **καμία επαλήθευση στον browser**) · Φ3.1γ (μνήμη κανόνων) / Φ4 TODO
+**Status:** 🟡 IN PROGRESS — Φ1 (ADR-678) DONE · **Φ2 DONE** (glTF import + geometry fingerprint + manifest + **UI καλωδίωση**) · **per-face round-trip (ADR-678 Φ3, ΜΟΝΟ glTF) DONE 2026-07-21** (κλείνει το «🔴 ΓΝΩΣΤΟ ΟΡΙΟ» του Φ2 hotfix, βλ. §11) · **Φ3α DONE** (τύπος `imported-mesh`: 2Δ+3Δ+move/rotate, 20 anchors) · **Φ3β DONE** (καλωδίωση εισαγωγής) · **Φ3.1α DONE** (μοντέλο κοστολόγησης) · **Φ3.1β DONE** (διεπαφή ανάθεσης — ⚠️ **καμία επαλήθευση στον browser**) · **§units DONE** (ρητή μονάδα εισαγωγής glTF, §10.5 — ⚠️ **καμία επαλήθευση στον browser**) · **§render-gate DONE** · **§project-scope DONE** · **§mesh-load DONE** (register ανά αρχείο) · **§mesh-load-nesting DONE** (κοινός deep walker parse↔index· η καρέκλα σμιλεύεται — ⚠️ **εκκρεμεί τελική επαλήθευση browser**, βλ. §11) · Φ3.1γ (μνήμη κανόνων) / Φ4 TODO
 **Date:** 2026-07-20
 **Owner:** Giorgio
 **Σχετικά:** ADR-678 (C4D material round-trip — **γίνεται η Φ1 αυτού του σχεδίου**) · **ADR-679 (PBR full parity — ιδιοκτήτης όλου του PBR/υφών· αυτό το ADR ΔΕΝ το επαναλαμβάνει)** · ADR-668 (mesh3d export OBJ/glTF) · ADR-413 (BimMaterial library + PBR textures) · ADR-539 (per-face appearance) · ADR-449 (structural finish skin) · ADR-511 (material catalog SSoT)
@@ -376,6 +376,133 @@ SketchUp mm/cm/in/ft/m, C4D scale multiplier) — **ΠΟΤΕ silent bbox auto-re
   ονόματα μονάδων από `common:units.*`· η λίστα διαστάσεων ενημερώνεται **live** καθώς αλλάζει η μονάδα.
 
 ## 11. Changelog
+
+- **2026-07-22 (§mesh-load-orphan-cleanup — Η ΟΡΙΣΤΙΚΗ ΡΙΖΑ: Cloud Function έσβηνε το `.glb` δευτερόλεπτα μετά το upload)** —
+  Το «λείπει το αρχείο» των προηγούμενων entries **δεν** ήταν Storage wipe ούτε bucket mismatch. Το HAR
+  (`localhost-2.har`) έδειξε το upload: `POST 200`, bucket `pagonis-87766.firebasestorage.app`, path
+  `.../imported-meshes/<uploadId>.glb`, **2.2MB body** → το αρχείο **γράφτηκε σωστά**. Και όμως λείπει
+  δευτερόλεπτα μετά. Ο client επιβεβαίωσε ίδιο bucket (το `scene.json` persists εκεί)· το MCP βρήκε το
+  `scene.json` στο ίδιο bucket → **όχι** bucket mismatch.
+  - **Ρίζα (functions):** η Cloud Function `onStorageFinalize` (`functions/src/storage/orphan-cleanup.ts`)
+    τρέχει σε **κάθε** upload κάτω από `companies/…`. Βγάζει `fileId` από το όνομα (`<uploadId>.glb` →
+    `uploadId`), ρωτά `findFileOwner()` (`functions/src/shared/file-ownership-resolver.ts`) — ο οποίος
+    ήξερε **μόνο** τους providers `FILES` (doc-id) και `FILE_SHARES` (doc-id). Τα imported meshes ανήκουν
+    στο `floorplan_imported_meshes` **μέσω `params.uploadId`** (Ν οντότητες → ΕΝΑ αρχείο· doc-id ≠ fileId),
+    οπότε **κανείς provider δεν το διεκδικούσε** → «orphan» → `bucket.file().delete()` + audit
+    `ORPHAN_FILE_DELETED`. Ίδια ΑΚΡΙΒΩΣ κλάση bug με το incident **2026-04-17** (showcase PDFs σβήνονταν ms
+    μετά το upload, λύθηκε προσθέτοντας τον `FILE_SHARES` provider — το σχόλιο του αρχείου το τεκμηριώνει).
+  - **Fix (SSoT, μηδέν νέος μηχανισμός — επέκταση του καθιερωμένου registry):** ο `file-ownership-resolver`
+    υποστηρίζει πλέον **query-based** providers (όχι μόνο doc-id) και προστέθηκε ο provider
+    `imported_meshes` → `floorplan_imported_meshes` where `params.uploadId == fileId`. Νέο collection key
+    `FLOORPLAN_IMPORTED_MESHES` στο functions config. Πλέον το `.glb` αναγνωρίζεται ως owned → **δεν
+    σβήνεται**. Test (regression anchor): `functions/src/shared/__tests__/file-ownership-resolver.test.ts`
+    (doc-id claim / imported-mesh query claim / genuine orphan → null).
+  - **⚠️ ΑΠΑΙΤΕΙ DEPLOY functions** (`firebase deploy --only functions:onStorageFinalize`) — ο Giorgio.
+    Μέχρι τότε κάθε νέο import συνεχίζει να σβήνεται. Μετά το deploy: fresh re-import → το `.glb` επιβιώνει →
+    η καρέκλα σμιλεύεται. Οι παλιές ορφανές οντότητες (με ήδη σβησμένα αρχεία) διαγράφονται από το UI.
+  - **Residual (παρακολούθηση):** το `onStorageFinalize` τρέχει μόλις ολοκληρωθεί το upload· η οντότητα
+    γράφεται στο Firestore αμέσως μετά (append→persist). Αν σε edge περίπτωση ο έλεγχος προηγηθεί του
+    entity write, ο query provider δεν θα βρει claim (race). Τα timestamps δείχνουν το entity write να
+    προηγείται· αν εμφανιστεί race, follow-up = claim-first ordering ή grace-period στο finalize.
+
+- **2026-07-22 (§mesh-load-missing-file — η ΠΡΑΓΜΑΤΙΚΗ αιτία του placeholder κουτιού: το `.glb` λείπει από το Storage)** —
+  Μετά τα §mesh-load + §mesh-load-nesting η καρέκλα **έμεινε κουτί**. Ground-truth από τη βάση (όχι υπόθεση):
+  - Το εισαγόμενο `.glb` (`HMI_Aeron_Chair_3D.glb`) παρήχθη από **trimesh** (Python), με **10 κόμβους top-level**
+    (`HArmPads … HSpndle`, scene.nodes = [1..10]) — **flat, ΟΧΙ nested**. Άρα το §mesh-load-nesting **δεν ήταν**
+    η αιτία για αυτό το αρχείο (τα ονόματα ταιριάζουν 1:1, top-level).
+  - Οι 14 `floorplan_imported_meshes` οντότητες του `proj_04a6b4bb` έχουν σωστά `nodeName` + `storagePath`
+    (`companies/…/projects/proj_04a6b4bb/imported-meshes/<uploadId>.glb`). **ΑΛΛΑ** το `imported-meshes/`
+    folder στο cloud Storage είναι **εντελώς άδειο** (0 αρχεία· μόνο `entities/` υπάρχει στο project). Το app
+    τρέχει σε **cloud** (όχι emulator — το MCP βλέπει τα entities στο cloud Firestore).
+  - **Ρίζα:** `resolveMeshUrl` → `getDownloadURL(<storagePath>)` → **404** (αρχείο ανύπαρκτο) → `bim-mesh-cache`
+    κλειδώνει `status='error'` → μόνιμο placeholder κουτί. `buildImportedMeshPath` είναι ντετερμινιστικό
+    (write-path == stored == read-path) → **δεν** είναι path bug· το αρχείο ανέβηκε στο import (το upload είναι
+    `await` πριν δημιουργηθεί οποιαδήποτε οντότητα) και **χάθηκε αργότερα** (Storage wipe σε pre-production
+    single-user env), αφήνοντας **ορφανές** οντότητες.
+  - **Συμπέρασμα:** τα §mesh-load (register per-file) + §mesh-load-nesting (deep walker) είναι **σωστές**
+    διορθώσεις — αλλά **δεν μπορούν** να φορτώσουν αρχείο που δεν υπάρχει. Το ορατό κουτί εδώ είναι
+    **data-integrity issue** (ορφανές οντότητες), όχι code bug. Fix: re-import (fresh upload) ή restore του
+    αρχείου στο ακριβές path.
+  - **✅ Google-level robustness (υλοποιήθηκε, έγκριση Giorgio):** ένα missing linked-file δεν είναι πλέον
+    **σιωπηλό** κουτί. (1) Ο `bim-mesh-cache.preload` σε 404/load-fail κάνει `logger.warn` με `category/assetId/
+    error` (ήταν κενό `.catch` — γι' αυτό χρειάστηκε σκάψιμο στη βάση). (2) Νέος `bimMeshCache.getLoadState(
+    category, assetId)` → `'idle'|'loading'|'error'|'ready'`. (3) Bump του `meshAssetVersion` **και** σε αποτυχία
+    (μία φορά ανά asset· `status='error'` μπλοκάρει re-preload → no loop), ώστε το UI να αντιδρά. (4) Το πάνελ
+    «Εισαγόμενα» (`ImportedMeshListRow`) δείχνει badge **«⚠ Αρχείο μη διαθέσιμο»** όταν `getLoadState==='error'`
+    — πρακτική Revit «Manage Links → Not Found». i18n: `panels.importedMeshes.fileUnavailable` (el+en). Ο pure
+    row-builder (`imported-mesh-panel-rows`) **δεν** μολύνθηκε — το state διαβάζεται React-side στο row.
+    Tests: +2 στο `bim-mesh-cache-bundle.test.ts` (getLoadState idle→ready· error σε 404). jscpd καθαρό.
+
+- **2026-07-22 (§mesh-load — τα εισαγόμενα εμφανίζονται ΑΛΛΑ ως placeholder κουτιά· το `.glb` δεν φορτώνει ποτέ)** —
+  Μετά το §render-gate οι οντότητες έφταναν στο 2Δ+3Δ, αλλά **πάντα** ως ορθογώνιο bbox κουτί (σωστή
+  θέση/κλίμακα) και **ποτέ** ως το σμιλευμένο πλέγμα — σε fresh import ΚΑΙ μετά από reload. Το πραγματικό
+  `.glb` δεν έφτανε ποτέ στον `bimMeshCache`.
+  - **Ρίζα (grep SSOT audit, code = source of truth):** ασυνέπεια των **δύο αξόνων** του linked-model. Το
+    URL λύνεται **ανά αρχείο** (`bim-mesh-cache.loadScene` → `resolveMeshUrl('imported', bundleId=uploadId)`,
+    ΧΩΡΙΣ `#node`) — αλλά το `registerImportedMeshAsset` δήλωνε **ανά κόμβο**
+    (`registerMeshAssetPath('imported', '<uploadId>#<nodeName>', path)`). Ο resolver έψαχνε κλειδί
+    `imported/<uploadId>`, το registry είχε `imported/<uploadId>#<node>` → **miss** → curated library
+    fallback (`bim-mesh-library/imported/<uploadId>.glb`, ανύπαρκτο για project-scoped εισαγόμενα) → **404**
+    → `bim-mesh-cache` κλείδωνε `status='error'` **μόνιμα** → placeholder κουτί για πάντα, χωρίς κανένα
+    σφάλμα ορατό. Επιβεβαιωμένο και από το ίδιο το test `bim-mesh-cache-bundle.test.ts:101` («το URL
+    ζητείται για το ΑΡΧΕΙΟ, όχι για τον κόμβο»).
+  - **Fix (full SSoT, μηδέν νέος resolver/registry):** το `registerImportedMeshAsset` γίνεται **file-scoped** —
+    `registerImportedMeshAsset(uploadId, storagePath)` → `registerMeshAssetPath(IMPORTED_MESH_CATEGORY,
+    uploadId, storagePath)`. Πλέον register-axis == resolve-axis (`imported/<uploadId>`). Idempotent (N κόμβοι
+    ίδιου upload → ίδιο key). Καθαρίστηκε το πλέον αχρησιμοποίητο `nodeName` param + `importedMeshAssetId`
+    import· τα δύο call sites (`import-gltf-meshes.ts` → μία κλήση ανά upload αντί για loop· `imported-mesh-
+    persistence-helpers.ts` → ανά έγγραφο, idempotent) απλοποιήθηκαν. Η node-axis ζει **αποκλειστικά** στον
+    cache (`indexBundleNodes` σπάει το φορτωμένο αρχείο σε N templates μετά τη λήψη — Revit/C4D linked-model).
+  - **Tests (jest):** νέο `imported-mesh-asset-resolution.test.ts` (2 tests) — regression guard ότι
+    register-axis ↔ resolve-axis ταιριάζουν (δήλωση ανά αρχείο → ο resolver βρίσκει το project path με
+    κλειδί `uploadId`, όχι το library fallback· και ότι το curated μονοπάτι μένει άθικτο). Update
+    `import-gltf-meshes.test.ts` → 2-arg + «μία δήλωση ανά αρχείο, όχι ανά κόμβο». Σύνολο 14/14 πράσινα.
+    `jscpd:diff` καθαρό.
+  - **Πρακτική των μεγάλων (Revit linked model / C4D proxy):** ένα αρχείο εντοπίζεται/κατεβαίνει **μία φορά
+    ανά αρχείο** (κλειδί = file/upload id)· η ανάθεση σε κόμβο γίνεται **μετά** τη φόρτωση. Οι δύο άξονες
+    πρέπει να είναι συνεπείς — το bug ήταν ακριβώς η ασυνέπεια (register per-node, resolve per-file).
+- **2026-07-22 (§mesh-load-nesting — η καρέκλα έμεινε κουτί ΚΑΙ μετά το §mesh-load: nested κόμβοι)** —
+  Μετά το file-scoped register (πάνω), ο Giorgio επιβεβαίωσε στον browser: το `.glb` πλέον λύνει URL σωστά,
+  αλλά το πλέγμα **έμεινε placeholder κουτί**. Δεύτερη, ανεξάρτητη ρίζα.
+  - **Ρίζα (grep SSOT audit):** ασυμμετρία **deep vs shallow** traversal. Ο parser `collectGltfObjects`
+    (`io/mesh3d-roundtrip/gltf-scene-parse`) κάνει **deep** `root.traverse` → το `nodeName` της οντότητας
+    μπορεί να είναι mesh **βαθιά** στην ιεραρχία (ο συνεργάτης C4D εξήγαγε τους κόμβους κάτω από
+    armature/root group). Αλλά ο cache `indexBundleNodes` (`bim-mesh-cache`) ευρετηρίαζε **μόνο** top-level
+    `scene.children` → ο nested κόμβος αποκτούσε `nodeName` αλλά **καμία** template → `getInstance` null →
+    ο renderer έπεφτε στο ορθογώνιο, **παρότι** το αρχείο είχε κατέβει σωστά.
+  - **Fix (full SSoT — ΕΝΑΣ walker, όχι δύο traversals που αποκλίνουν):** νέο pure module
+    `bim-3d/scene/gltf-addressable-nodes.ts` (`collectAddressableGltfNodes` + `readGltfFaceKeys`), που
+    ορίζει **μία φορά** ποιοι κόμβοι είναι διευθυνσιοδοτήσιμοι (deep, faced-solid-aware, ανώνυμα κρατιούνται).
+    Τον καταναλώνουν **και** ο `collectGltfObjects` (refactor behavior-preserving — το παλιό `readFaceKeys`
+    μεταφέρθηκε εκεί ως SSoT) **και** το `indexBundleNodes` (deep). Οι δύο άξονες (parse ↔ index) **δεν
+    μπορούν** πλέον να αποκλίνουν εξ ορισμού. Ο nested κόμβος ευρετηριάζεται με **bake του world
+    μετασχηματισμού** (`bakeNodeWorldTransform`) ώστε να στέκει σωστά αποσπασμένος από τον γονέα του·
+    top-level κόμβος υπό identity root → ταυτόσημο με την παλιά συμπεριφορά (μηδέν παλινδρόμηση).
+  - **Layering:** ο walker ζει στο `bim-3d/scene/` (όχι στο io/) γιατί ο parser (io) **ήδη** importει από
+    εκεί (`finiteBox3FromObject`)· το αντίστροφο (cache bim-3d → io) θα δημιουργούσε κύκλο io ↔ bim-3d.
+  - **Tests (jest):** νέο `gltf-addressable-nodes.test.ts` (7 tests: nested/flat/faced/single-faced/ανώνυμα/
+    non-mesh/readGltfFaceKeys) + νέο case στο `bim-mesh-cache-bundle.test.ts` (nested σκηνή με μετασχηματισμένο
+    γονέα → οι 3 κόμβοι δίνουν template). Τα 12 υπάρχοντα `gltf-scene-parse` tests **αμετάβλητα** πράσινα
+    (behavior-preserving refactor). Σύνολο 41/41. `jscpd:diff` καθαρό (η διπλή λογική traversal **αφαιρέθηκε**,
+    δεν αντιγράφηκε).
+
+- **2026-07-22 (§project-scope — «Δεν βρέθηκε ενεργό έργο» ενώ το έργο υπάρχει)** — Ο import dialog
+  διάβαζε το `projectId` **μόνο** από το `levels.saveContext?.projectId`, που τίθεται **μόνο** όταν το
+  ενεργό επίπεδο έχει φορτώσει σκηνή από persisted file record (`useLevelSceneLoader`). Σε floor-derived
+  ή ειδικά επίπεδα (Θεμελίωση, ή επίπεδο του οποίου η σκηνή δεν έχει φορτωθεί ακόμη) το `saveContext`
+  είναι `null` → `projectId=''` → ο guard `if (!projectId || !companyId || !layerId)` έκοβε την εισαγωγή
+  με toast «Δεν βρέθηκε ενεργό έργο», **παρότι** εταιρεία/έργο/κτήριο/όροφοι υπάρχουν κανονικά (μετρημένο
+  στη βάση: `proj_04a6b4bb` «ΕΡΓΟ Α», DXF Ισογείου linked σωστά).
+  - **Fix (full SSoT, μηδέν νέος resolver):** fallback στον υπάρχοντα durable SSoT
+    `resolveActiveProjectId(levels)` (`systems/levels/level-floor-resolution.ts`, ADR-650 M10) —
+    επιστρέφει το `projectId` του πρώτου linked level (ίδιο για όλο το κτήριο, διαθέσιμο από το load,
+    δεν κάνει flip `null→value`). Ο ίδιος resolver φτιάχτηκε για ΤΑΥΤΟ πρόβλημα στο topo-survey scope
+    (ειδικοί όροφοι χωρίς δικό τους projectId). Νέα γραμμή: `saveContext?.projectId ??
+    resolveActiveProjectId(levels.levels) ?? ''`. Ο `resolveActiveProjectId` έχει ήδη κάλυψη
+    (`resolve-active-project-id.test.ts`, 4 tests πράσινα). jscpd καθαρό.
+  - **Πρακτική των μεγάλων (Revit-grade):** το project scope είναι durable ιδιότητα της ιεραρχίας
+    (project→building→floor→level), όχι εφήμερη κατάσταση της φορτωμένης σκηνής· η εισαγωγή δεν πρέπει
+    να αποτυγχάνει επειδή το ενεργό επίπεδο δεν έχει ακόμη hydrate-άρει τη σκηνή του.
 
 - **2026-07-22 (§render-gate — τα εισαγόμενα πλέγματα δεν έφταναν ΠΟΤΕ στον 3Δ manager)** — Μετά τη λύση
   των μονάδων (§units) αποκαλύφθηκε ξεχωριστό bug: τα `imported-mesh` εμφανίζονταν στο 2Δ **ως ορθογώνιο

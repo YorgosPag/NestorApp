@@ -38,6 +38,7 @@ jest.mock('../../../state/drawing-scale-store', () => ({
 
 import { useDrawingScaleStore } from '../../../state/drawing-scale-store';
 import { BimSceneLayer } from '../BimSceneLayer';
+import { EMPTY_FLOOR_VIS_SCOPE } from '../floor-visibility-scope';
 // SSoT minimal-but-realistic fixtures shared with the other BimSceneLayer suites (N.0.2).
 import { makeMinimalWallFloor } from './minimal-bim-entities';
 import type { FloorStackEntry } from '../multi-floor-3d-source';
@@ -93,7 +94,7 @@ describe('BimSceneLayer.syncMultiFloor — ADR-399 Phase B', () => {
 
   it('skips a floor whose visibility mode is hide (pre-mesh gate)', () => {
     const floorModes = new Map<string, FloorVisMode>([['L2', 'hide']]);
-    new BimSceneLayer(new THREE.Scene()).syncMultiFloor(stack, [], [], null, new Map(), floorModes);
+    new BimSceneLayer(new THREE.Scene()).syncMultiFloor(stack, { ...EMPTY_FLOOR_VIS_SCOPE, floorVisModes: floorModes });
     expect(wallToMesh).toHaveBeenCalledTimes(1);
     expect(wallToMesh).toHaveBeenCalledWith(expect.objectContaining({ id: 'w1' }), expect.anything(), 0, 'L1', expect.anything(), undefined, undefined, undefined, undefined, [], []);
   });

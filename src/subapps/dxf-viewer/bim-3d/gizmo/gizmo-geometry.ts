@@ -190,9 +190,10 @@ export function createGizmoMeshes(): GizmoMeshSet {
   }
 
   // --- BASE grip: a second Y resize octahedron BELOW the centroid (ADR-401 E.3/F.3) -
-  // The top Y handle (above) edits the HEIGHT (top face); this one edits the
-  // BASE offset (bottom face). Walls + columns activate `resize-m-y`
-  // (see `RESIZE_HANDLES_BY_TYPE`), so it stays hidden for other element types.
+  // The top Y handle (above) edits the HEIGHT (top face); this one edits the BASE
+  // offset (bottom face). ADR-402 §gizmo-cleanup (2026-07-22): NO element type activates
+  // `resize-m-y` any more (`RESIZE_HANDLES_BY_TYPE` is empty) — it is still built here but
+  // `applyActiveHandles` keeps it hidden for every selection. Kept for a future opt-in.
   {
     const color = RESIZE_IDLE_COLORS['y'];
     const { visual, hitbox, cornerHitboxes } = buildResizeHandle(color);

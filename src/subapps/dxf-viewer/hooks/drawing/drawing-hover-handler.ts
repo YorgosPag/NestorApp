@@ -280,26 +280,34 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
       // members near the cursor — a SECOND source merged with the acquired (AutoCAD)
       // points into the SAME resolver. Gate the (perf-sensitive) scene read behind the
       // AutoAlign toggle so it stays lazy (resolved once for the collector + the trace).
+      // ADR-363 §ortho-wins — ORTHO (F8) is a HARD override: object-snap / AutoAlign
+      // tracking must NOT drag the ghost off the H/V axis (real OSNAP still wins,
+      // resolved above). Skipping the resolver under ORTHO keeps the rubber-band ≡ the
+      // committed geometry (BIM commit `applyBimDrawingConstraint` + generic commit
+      // `resolveCommittedDrawingPoint` are BOTH tracking-free under ORTHO). Before this,
+      // the diagonal trace overrode the ortho lock → the slab «did not respect ORTHO».
       const ambientCfg = ambientAlignmentConfigStore.getSnapshot();
-      ambientEntities = (isDrawingTool && ambientCfg.enabled) ? getSceneEntities() : null;
-      // ADR-357 / ADR-397 — merge (acquired ⊕ ambient) → resolve alignment path →
-      // adaptive-distance quantize, via the SHARED tracking SSoT (`resolveAlignmentTracking`),
-      // the EXACT same brain the rotation overlay (ADR-397) reuses → preview ≡ rotation parity.
-      // Returns null when no anchor / no path within tolerance (caller keeps the raw cursor).
-      const _trkT0 = performance.now();
-      const composedTracking = resolveAlignmentTracking(previewPt, {
-        scale: getTransformScale(),
-        polarEnabled: polarOnRef.current && !orthoOnRef.current,
-        sceneEntities: ambientEntities,
-        // OTRACK clean-corner: the segment's start ray × an anchor trace (e.g. the
-        // rectangle corner). null on the free first point. (2026-07-04)
-        segmentBase: lastRefPt ?? null,
-      });
-      _trkMs = performance.now() - _trkT0;
-      trackingResult = composedTracking?.result ?? null;
-      trackingPoint = composedTracking?.point ?? null;
-      if (trackingResult && trackingPoint) {
-        previewPt = trackingPoint;
+      ambientEntities = (isDrawingTool && ambientCfg.enabled && !orthoOnRef.current) ? getSceneEntities() : null;
+      if (!orthoOnRef.current) {
+        // ADR-357 / ADR-397 — merge (acquired ⊕ ambient) → resolve alignment path →
+        // adaptive-distance quantize, via the SHARED tracking SSoT (`resolveAlignmentTracking`),
+        // the EXACT same brain the rotation overlay (ADR-397) reuses → preview ≡ rotation parity.
+        // Returns null when no anchor / no path within tolerance (caller keeps the raw cursor).
+        const _trkT0 = performance.now();
+        const composedTracking = resolveAlignmentTracking(previewPt, {
+          scale: getTransformScale(),
+          polarEnabled: polarOnRef.current,
+          sceneEntities: ambientEntities,
+          // OTRACK clean-corner: the segment's start ray × an anchor trace (e.g. the
+          // rectangle corner). null on the free first point. (2026-07-04)
+          segmentBase: lastRefPt ?? null,
+        });
+        _trkMs = performance.now() - _trkT0;
+        trackingResult = composedTracking?.result ?? null;
+        trackingPoint = composedTracking?.point ?? null;
+        if (trackingResult && trackingPoint) {
+          previewPt = trackingPoint;
+        }
       }
 
       // ADR-513 / ADR-357 Phase 13 G14: length/angle lock — constrain preview geometry to

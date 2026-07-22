@@ -132,4 +132,79 @@ describe('stair-waist-slabs (μηρός)', () => {
     expect(waist).toHaveLength(1);
     expect(waist[0]!.userData['bimId']).toBe('stair_waist');
   });
+
+  // ── ADR-685 Φ2 — terminating trim (η σκάλα πατά στην πλάκα, δεν κρέμεται από κάτω) ──
+  describe('terminating soffit trim (Revit "Join Geometry" parity)', () => {
+    const cosT = TREAD / Math.hypot(TREAD, RISE);
+    const naturalDrop = RISE + WAIST_MM / cosT; // vertical drop below the base re-entrant corner
+
+    it('flightSectionPoints: no floor → unchanged 2-point soffit (byte-for-byte)', () => {
+      expect(flightSectionPoints(3, TREAD, RISE, naturalDrop)).toHaveLength(2 + 7);
+    });
+
+    it('flightSectionPoints: a floor above the natural soffit → flat base + resumed slope', () => {
+      const floorY = -naturalDrop / 2; // between base soffit (−drop) and 0
+      const pts = flightSectionPoints(3, TREAD, RISE, naturalDrop, floorY);
+      // 3 soffit points (flat base (0,floor)→(aCross,floor) then top) + staircase (2·M+1).
+      expect(pts).toHaveLength(3 + 7);
+      expect(pts[0]!.x).toBeCloseTo(0, 9);
+      expect(pts[0]!.y).toBeCloseTo(floorY, 9);
+      expect(pts[1]!.y).toBeCloseTo(floorY, 9); // flat base at the floor level
+      const aCross = ((floorY + naturalDrop) * TREAD) / RISE;
+      expect(pts[1]!.x).toBeCloseTo(aCross, 6);
+      // The resumed vertex lies exactly on the original soffit line (no self-cut).
+      expect(pts[2]!.y).toBeCloseTo(-naturalDrop + (RISE / TREAD) * pts[2]!.x, 6);
+      // Nothing dips below the floor.
+      for (const p of pts) expect(p.y).toBeGreaterThanOrEqual(floorY - 1e-6);
+    });
+
+    it('flightSectionPoints: a floor at/below the natural soffit → no trim', () => {
+      expect(flightSectionPoints(3, TREAD, RISE, naturalDrop, -naturalDrop)).toHaveLength(2 + 7);
+      expect(flightSectionPoints(3, TREAD, RISE, naturalDrop, -naturalDrop - 100)).toHaveLength(2 + 7);
+    });
+
+    it('buildWaistSlabMeshes: clip raises the base soffit to the slab underside (no hang)', () => {
+      const naturalMinY = -(RISE * sceneToM + WAIST_MM * 0.001 / cosT);
+      const clipWorldY = naturalMinY / 2; // seat slab underside, above the natural soffit
+      const mesh = buildWaistSlabMeshes(makeStraightMonolithic(), 0, sceneToM, clipWorldY)[0]!;
+      mesh.geometry.computeBoundingBox();
+      // The deepest point is now the trimmed flat base at the clip, not the natural soffit.
+      expect(mesh.geometry.boundingBox!.min.y).toBeCloseTo(clipWorldY, 6);
+      expect(mesh.geometry.boundingBox!.min.y).toBeGreaterThan(naturalMinY + 1e-6);
+    });
+
+    it('buildWaistSlabMeshes: clip below the natural soffit is a no-op', () => {
+      const naturalMinY = -(RISE * sceneToM + WAIST_MM * 0.001 / cosT);
+      const clipped = buildWaistSlabMeshes(makeStraightMonolithic(), 0, sceneToM, naturalMinY - 1)[0]!;
+      clipped.geometry.computeBoundingBox();
+      expect(clipped.geometry.boundingBox!.min.y).toBeCloseTo(naturalMinY, 5);
+    });
+
+    const treads = (meshes: readonly THREE.Mesh[]) =>
+      meshes.filter((m) => m.userData['stairComponent'] === 'tread');
+    const lowestTreadY = (meshes: readonly THREE.Mesh[]) =>
+      Math.min(...treads(meshes).map((m) => {
+        m.geometry.computeBoundingBox();
+        return m.geometry.boundingBox!.min.y + m.position.y;
+      }));
+
+    it('seated on base slab → the STARTING (base) tread is skipped (floor tiles cover it)', () => {
+      const stair = makeStraightMonolithic();
+      const noSeat = stairToMeshes(stair); // no base slab → every tread kept
+      const seated = stairToMeshes(stair, 0, undefined, 0, -285); // slab underside defined → seat
+      expect(treads(seated)).toHaveLength(treads(noSeat).length - 1);
+      // The one removed is the lowest step; the remaining base rises by one rise.
+      expect(lowestTreadY(seated)).toBeGreaterThan(lowestTreadY(noSeat) + 1e-6);
+    });
+
+    it('NOT seated (pass-through / no slab) → every tread kept (riser untouched either way)', () => {
+      const stair = makeStraightMonolithic();
+      expect(treads(stairToMeshes(stair))).toHaveLength(3);
+      expect(stairToMeshes(stair, 0, undefined, 0, -285).filter(
+        (m) => m.userData['stairComponent'] === 'riser',
+      ).length).toBe(stairToMeshes(stair).filter(
+        (m) => m.userData['stairComponent'] === 'riser',
+      ).length);
+    });
+  });
 });

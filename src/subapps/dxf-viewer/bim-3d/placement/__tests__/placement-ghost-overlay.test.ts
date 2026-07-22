@@ -124,6 +124,40 @@ describe('PlacementGhostOverlay', () => {
     expect(overlay.material.opacity).toBe(GHOST_ALPHA);
   });
 
+  it('ADR-550 orderIndependent → depth-primed smooth translucency (colour blends once per pixel, no accumulation, no dots)', () => {
+    const scene = new THREE.Scene();
+    const overlay = new PlacementGhostOverlay(scene, 0x808080, 0.45, false, /* orderIndependent */ true);
+    // Colour material stays a translucent blend, but with depthFunc EQUAL matched to the depth prime.
+    expect(overlay.material.transparent).toBe(true);
+    expect(overlay.material.depthWrite).toBe(false);
+    expect(overlay.material.depthFunc).toBe(THREE.EqualDepth);
+    expect(overlay.material.opacity).toBe(0.45);
+
+    // setObject adds a depth-prime twin per mesh (opaque, colorWrite OFF, depthWrite ON) so the
+    // colour pass has a nearest-depth to match — the single-render two-pass that kills accumulation.
+    const { root } = buildTree(); // one Mesh (body) + one LineSegments (not a mesh)
+    overlay.setObject(root);
+    const twins: THREE.Object3D[] = [];
+    root.traverse((o) => { if ((o.userData as Record<string, unknown>)['ghostDepthPrimeTwin'] === true) twins.push(o); });
+    expect(twins).toHaveLength(1);
+    const twinMat = (twins[0] as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    expect(twinMat.colorWrite).toBe(false);
+    expect(twinMat.depthWrite).toBe(true);
+  });
+
+  it('default (blend) path is unchanged — translucent, non-depth-writing, default depthFunc, no twins', () => {
+    const scene = new THREE.Scene();
+    const overlay = new PlacementGhostOverlay(scene, 0x808080, 0.45);
+    expect(overlay.material.transparent).toBe(true);
+    expect(overlay.material.depthWrite).toBe(false);
+    expect(overlay.material.depthFunc).toBe(THREE.LessEqualDepth);
+    const { root } = buildTree();
+    overlay.setObject(root);
+    const twins: THREE.Object3D[] = [];
+    root.traverse((o) => { if ((o.userData as Record<string, unknown>)['ghostDepthPrimeTwin'] === true) twins.push(o); });
+    expect(twins).toHaveLength(0);
+  });
+
   it('dispose unregisters the provider and clears the scene', () => {
     const scene = new THREE.Scene();
     const overlay = new PlacementGhostOverlay(scene, 0x333333);

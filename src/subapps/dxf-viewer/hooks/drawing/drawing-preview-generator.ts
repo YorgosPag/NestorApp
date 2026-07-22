@@ -36,6 +36,10 @@ import { generateSlabPreview } from './slab-preview-helpers';
 // ADR-514 Φ6 — face-snap κορυφών στο preview (flush + edge-slide): ΙΔΙΟΣ resolver + ΙΔΙΟ store με
 // το commit (`useSlabTool`/`useRoofTool.onCanvasClick`) → preview ≡ commit by construction.
 import { resolveEffectivePreviewCursor, toWysiwygPreviewEntity } from './wysiwyg-preview-shared';
+// ADR-363 §ortho-wins — apply the SAME F8/F10 constraint SSoT the commit uses so the
+// polygon-sketch ghost (slab/roof/column-from-polygon) honours ORTHO. `resolveEffectivePreviewCursor`
+// re-reads the immediate OSNAP/grid snap and would otherwise discard the ortho lock → diagonal ghost.
+import { applyBimDrawingConstraint } from './bim-ortho-reference';
 // ADR-583 Φ2.3 — scale-bar WYSIWYG rubber-band ghost: SAME builder as commit (SSoT
 // mapping lives in the store module — N.18, never cloned).
 import { buildScaleBarEntityFromLiveOptions } from '../../state/scale-bar-options-store';
@@ -108,8 +112,15 @@ function makeRubberBandPolyline(id: string, vertices: Point2D[]): ExtendedPolyli
  * `bimPoint`) και μετά από τον ΙΔΙΟ polygon-vertex resolver + ΙΔΙΟ lock store με το commit → flush
  * + edge-slide ΑΚΡΙΒΩΣ όπως θα κλειδώσει το κλικ (preview ≡ commit). Στόχοι από το κοινό store.
  */
-function resolvePolygonPreviewCursor(cursorPoint: Point2D, sceneUnits: SceneUnits): Point2D {
-  const eff = resolveEffectivePreviewCursor(cursorPoint);
+function resolvePolygonPreviewCursor(cursorPoint: Point2D, sceneUnits: SceneUnits, activeTool: DrawingTool): Point2D {
+  // ADR-363 §ortho-wins — commit order is ORTHO/POLAR → vertex face-snap
+  // (`applyBimDrawingConstraint` → `snapVertex`). Mirror it EXACTLY so preview ≡ commit:
+  // `resolveEffectivePreviewCursor` promotes the ghost to the live OSNAP/grid point (as the
+  // commit's snapped click does), THEN re-apply the F8/F10 constraint relative to the tool's
+  // anchor (last vertex). Without this the immediate-snap read discarded the ortho lock baked
+  // into `cursorPoint` upstream → the slab ghost went diagonal despite F8. No-op for tools
+  // outside BIM_ORTHO_TOOLS or before the first vertex (no anchor) — identical to the commit.
+  const eff = applyBimDrawingConstraint(activeTool, resolveEffectivePreviewCursor(cursorPoint));
   const snap = resolvePolygonVertexSnap(eff, sceneSnapTargetsStore.get(), sceneUnits, polygonVertexLockStore.get() ?? undefined);
   return snap.point;
 }
@@ -185,12 +196,12 @@ export function generatePreviewEntity(
   // ADR-514 Φ6 — η ζωντανή κορυφή κουμπώνει flush σε παρειά μέλους (+ edge-slide) πριν χτιστεί το
   // ghost outline → preview ≡ commit. (Μόνο slab/roof· floor-finish/hatch/underfloor αμετάβλητα.)
   if (tool === 'slab') {
-    return generateSlabPreview(tempPoints, resolvePolygonPreviewCursor(cursorPoint, sceneUnits));
+    return generateSlabPreview(tempPoints, resolvePolygonPreviewCursor(cursorPoint, sceneUnits, tool));
   }
   // ── ADR-417 — Roof tool preview branch (footprint polygon ghost, reuses the
   //    slab polygon-outline preview — both are closed footprints). ───────────
   if (tool === 'roof') {
-    return generateSlabPreview(tempPoints, resolvePolygonPreviewCursor(cursorPoint, sceneUnits));
+    return generateSlabPreview(tempPoints, resolvePolygonPreviewCursor(cursorPoint, sceneUnits, tool));
   }
   // ── ADR-419 — Floor Finish tool preview branch (closed footprint polygon,
   //    same rubber-band outline as slab/roof). ───────────────────────────────
@@ -222,7 +233,7 @@ export function generatePreviewEntity(
   //    face-snap cursor (`resolvePolygonPreviewCursor`) → preview ≡ commit. Ελέγχεται
   //    ΠΡΙΝ το single-click 'column' branch (διαφορετικό placement mode).
   if (tool === 'column-from-polygon') {
-    return generateSlabPreview(tempPoints, resolvePolygonPreviewCursor(cursorPoint, sceneUnits));
+    return generateSlabPreview(tempPoints, resolvePolygonPreviewCursor(cursorPoint, sceneUnits, tool));
   }
   // NOTE (ADR-619): «Σκάλα από περιοχή» δεν έχει δικό της branch εδώ — το `updatePreview`
   // route-άρει το currentTool σε 'slab' (βλ. `isStairRegion`), οπότε το κλειστό πολύγωνο

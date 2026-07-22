@@ -27,11 +27,11 @@
 
 import { ref as makeStorageRef, uploadBytes } from 'firebase/storage';
 import { storage } from '@/lib/firebase';
-import {
-  IMPORTED_MESH_CATEGORY,
-  importedMeshAssetId,
-} from '../../../bim/entities/imported-mesh/imported-mesh-types';
+import { createModuleLogger } from '@/lib/telemetry';
+import { IMPORTED_MESH_CATEGORY } from '../../../bim/entities/imported-mesh/imported-mesh-types';
 import { importedMeshStoragePath, registerMeshAssetPath } from './bim-mesh-url-resolver';
+
+const logger = createModuleLogger('ImportedMeshUpload');
 
 /** Το `storage.rules` επιβάλλει το σκληρό όριο· εδώ κόβουμε νωρίς με σαφές μήνυμα. */
 export const IMPORTED_MESH_MAX_BYTES = 100 * 1024 * 1024;
@@ -95,11 +95,26 @@ export async function uploadImportedMeshFile(
   const storagePath = importedMeshStoragePath(companyId, projectId, uploadId);
 
   try {
-    await uploadBytes(makeStorageRef(storage, storagePath), data, {
+    // ADR-683 §mesh-load-missing-file diagnostic — καταγράφουμε ΤΙ αποθηκεύτηκε πραγματικά (bucket,
+    // path, μέγεθος από τη ΜΕΤΑΔΕΔΟΜΕΝΗ απάντηση του GCS), γιατί το `.glb` έλειπε 9s μετά από «επιτυχές»
+    // upload — η απάντηση του server λέει αν πράγματι γράφτηκε, πού, και με πόσα bytes.
+    const result = await uploadBytes(makeStorageRef(storage, storagePath), data, {
       contentType: GLB_CONTENT_TYPE,
+    });
+    logger.info('imported mesh uploaded', {
+      requestedPath: storagePath,
+      sentBytes: size,
+      bucket: result.metadata.bucket,
+      fullPath: result.metadata.fullPath,
+      storedBytes: result.metadata.size,
     });
     return { uploadId, storagePath };
   } catch (err) {
+    logger.error('imported mesh upload failed', {
+      requestedPath: storagePath,
+      sentBytes: size,
+      error: err instanceof Error ? err.message : String(err),
+    });
     throw new ImportedMeshUploadError(
       'upload-failed',
       err instanceof Error ? err.message : String(err),
@@ -108,20 +123,22 @@ export async function uploadImportedMeshFile(
 }
 
 /**
- * Δηλώνει έναν **κόμβο** εισαγωγής στον resolver.
+ * Δηλώνει το **αρχείο** μιας εισαγωγής στον resolver — **ένα κλειδί ανά αρχείο** (`uploadId`).
  *
  * 🔴 **Χωρίς αυτή την κλήση το πλέγμα δεν βρίσκεται ποτέ — σιωπηλά.** Το μητρώο του resolver είναι
  * in-memory module singleton: μετά από refresh είναι άδειο, οπότε ο `resolveMeshUrl` πέφτει στη
- * σύμβαση της **βιβλιοθήκης** (`bim-mesh-library/imported/<uploadId>#<node>.glb`) — path που δεν
- * υπάρχει. Ο χρήστης βλέπει το placeholder κουτί στη θέση του και τίποτα άλλο· κανένα σφάλμα.
+ * σύμβαση της **βιβλιοθήκης** (`bim-mesh-library/imported/<uploadId>.glb`) — path που δεν υπάρχει
+ * (τα εισαγόμενα ζουν project-scoped). Ο χρήστης βλέπει το placeholder κουτί και τίποτα άλλο.
  *
- * Γι' αυτό καλείται σε **δύο** σημεία, και τα δύο υποχρεωτικά: στην εισαγωγή (νέοι κόμβοι) και στο
- * hydrate της persistence (κόμβοι που ήρθαν από το Firestore μετά από reload).
+ * **Γιατί ανά αρχείο και όχι ανά κόμβο** (linked-model, Revit/C4D proxy): ένα `.glb` κουβαλά N
+ * αντικείμενα αλλά κατεβαίνει **μία** φορά· ο `resolveMeshUrl` λύνει URL **ανά αρχείο** (`bundleId =
+ * uploadId`, βλ. `bim-mesh-cache.loadScene`), η ανάθεση σε κόμβο γίνεται **μετά** τη φόρτωση
+ * (`indexBundleNodes`). Registration ανά κόμβο θα γραφόταν σε κλειδί που **κανείς δεν διαβάζει** →
+ * miss → 404. Οι δύο άξονες (file-resolve ↔ node-index) οφείλουν να μένουν συνεπείς.
+ *
+ * Idempotent: N κόμβοι της ίδιας εισαγωγής → ίδιο `uploadId` → ίδιο path → no-op. Καλείται σε **δύο**
+ * σημεία: στην εισαγωγή (μία φορά ανά upload) και στο hydrate της persistence (ανά έγγραφο· idempotent).
  */
-export function registerImportedMeshAsset(
-  uploadId: string,
-  nodeName: string,
-  storagePath: string,
-): void {
-  registerMeshAssetPath(IMPORTED_MESH_CATEGORY, importedMeshAssetId(uploadId, nodeName), storagePath);
+export function registerImportedMeshAsset(uploadId: string, storagePath: string): void {
+  registerMeshAssetPath(IMPORTED_MESH_CATEGORY, uploadId, storagePath);
 }

@@ -102,13 +102,15 @@ describe('importGltfMeshes', () => {
     expect(order).toEqual(['register', 'append']);
   });
 
-  it('το ίδιο uploadId πάει ΚΑΙ στο upload ΚΑΙ στη δήλωση asset', async () => {
-    await importGltfMeshes(accessor, input([record()]));
+  it('το ίδιο uploadId πάει ΚΑΙ στο upload ΚΑΙ στη δήλωση asset (ανά αρχείο, όχι ανά κόμβο)', async () => {
+    await importGltfMeshes(accessor, input([record(), record({ objectName: 'Rail_02' })]));
 
     expect(uploadImportedMeshFile).toHaveBeenCalledWith(
       expect.objectContaining({ uploadId: 'imesh_x', companyId: 'comp_1', projectId: 'proj_1' }),
     );
-    expect(registerImportedMeshAsset).toHaveBeenCalledWith('imesh_x', 'Rail_01', 'companies/c/p.glb');
+    // Linked-model: ΜΙΑ δήλωση ανά αρχείο (`uploadId`, storagePath) — όχι ανά κόμβο, όσοι κι αν είναι.
+    expect(registerImportedMeshAsset).toHaveBeenCalledTimes(1);
+    expect(registerImportedMeshAsset).toHaveBeenCalledWith('imesh_x', 'companies/c/p.glb');
   });
 
   it('μεταφράζει τη θέση του κόμβου σε θέση κάτοψης (three +z → κάτοψη −y)', async () => {
