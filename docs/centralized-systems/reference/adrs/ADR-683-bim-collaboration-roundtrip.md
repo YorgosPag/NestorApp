@@ -396,6 +396,12 @@ SketchUp mm/cm/in/ft/m, C4D scale multiplier) — **ΠΟΤΕ silent bbox auto-re
   - **⚠️ ΑΠΑΙΤΕΙ (ξανά) DEPLOY functions** (`firebase deploy --only functions:onStorageFinalize`) — ο Giorgio.
     Το επόμενο deploy περιέχει **και** τον query provider **και** το grace-window → οριστικό. Μετά: fresh re-import
     → επαλήθευση μέσω MCP (καμία νέα `ORPHAN_FILE_DELETED` με το νέο uploadId + `storage_get_metadata` βρίσκει το `.glb`).
+  - **✅ ΕΠΑΛΗΘΕΥΘΗΚΕ (2026-07-22, deployed + MCP-verified):** `firebase deploy --only functions:onStorageFinalize`
+    → `Deploy complete!` (predeploy `tsc` καθαρό). Fresh re-import → uploadId `imesh_70982b4d`: **καμία** `ORPHAN_FILE_DELETED`
+    γι' αυτό (και οι 7 του audit αφορούν παλιά αρχεία, η πιο πρόσφατη ~18′ πριν), και `storage_get_metadata` βρίσκει το
+    `.glb` (1.5MB) ζωντανό. Μετά από hard reload (καθαρισμός του error-locked `bim-mesh-cache` + HMR-crashed viewport) η
+    καρέκλα **σμιλεύεται** (2D+3D). Το CF-deletion κεφάλαιο ΕΚΛΕΙΣΕ. Το wipe-and-reimport του Giorgio καθάρισε και τις
+    παλιές ορφανές οντότητες (η συλλογή έχει πλέον 10 entities, όλα στο έγκυρο `imesh_70982b4d`).
 
 - **2026-07-22 (§mesh-load-orphan-cleanup — Η ΟΡΙΣΤΙΚΗ ΡΙΖΑ: Cloud Function έσβηνε το `.glb` δευτερόλεπτα μετά το upload)** —
   Το «λείπει το αρχείο» των προηγούμενων entries **δεν** ήταν Storage wipe ούτε bucket mismatch. Το HAR
