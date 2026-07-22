@@ -17,6 +17,7 @@ import type { SlabOpeningEntity } from '../../types/slab-opening-types';
 import type { ColumnEntity } from '../../types/column-types';
 import type { BeamEntity } from '../../types/beam-types';
 import type { StairEntity } from '../../types/stair-types';
+import type { GenericSolidEntity } from '../../entities/generic-solid/generic-solid-types';
 import type { Point2D } from '../../../rendering/types/Types';
 
 const ORIGIN: Point2D = { x: 0, y: 0 };
@@ -205,6 +206,30 @@ function makeStair(): StairEntity {
       lastValidatedAt: { seconds: 0, nanoseconds: 0 },
     },
   } as unknown as StairEntity;
+}
+
+function makeGenericSolid(): GenericSolidEntity {
+  return {
+    id: 'gsolid_1',
+    type: 'generic-solid',
+    kind: 'generic',
+    ifcType: 'IfcBuildingElementProxy',
+    layerId: 'L',
+    params: {
+      kind: 'generic',
+      shape: { kind: 'box', widthMm: 500, depthMm: 500, heightMm: 500 },
+      position: { x: 1000, y: 0, z: 0 },
+      rotationDeg: 30,
+      mountingElevationMm: 0,
+    },
+    geometry: {
+      footprint: { vertices: [] },
+      bbox: { min: { x: 0, y: 0, z: 0 }, max: { x: 0, y: 0, z: 0 } },
+      area: 0,
+      height: 500,
+    },
+    validation: { hasCodeViolations: false, violationKeys: [], lastValidatedAt: null },
+  } as unknown as GenericSolidEntity;
 }
 
 // ─── Tests ─────────────────────────────────────────────────────────────────
@@ -407,6 +432,28 @@ describe('ADR-363 Phase 7.2 — calculateBimRotatedGeometry', () => {
     expect(patch.params.position.x).toBeCloseTo(0, 4);
     expect(patch.params.position.y).toBeCloseTo(1000, 4);
     expect(patch.params.rotation).toBeCloseTo(90, 4);
+  });
+
+  // ── ADR-684 (3D gizmo) — generic solid rotate persistence (was a no-op → revert) ──
+  it('generic-solid: rotates position around pivot AND accumulates rotationDeg', () => {
+    const patch = calculateBimRotatedGeometry(makeGenericSolid() as unknown as Entity, ORIGIN, 60) as {
+      params: { position: { x: number; y: number; z: number }; rotationDeg: number };
+    };
+    // position (1000, 0) rotated by 60° CCW ≈ (500, 866).
+    expect(patch.params.position.x).toBeCloseTo(500, 0);
+    expect(patch.params.position.y).toBeCloseTo(866, 0);
+    expect(patch.params.position.z).toBe(0); // planar rotation preserves z
+    // rotationDeg field 30° + 60° = 90°.
+    expect(patch.params.rotationDeg).toBeCloseTo(90, 4);
+  });
+
+  it('generic-solid: rotationDeg normalizes past 360° (350 + 30 = 20)', () => {
+    const solid = makeGenericSolid();
+    (solid.params as { rotationDeg: number }).rotationDeg = 350;
+    const patch = calculateBimRotatedGeometry(solid as unknown as Entity, ORIGIN, 30) as {
+      params: { rotationDeg: number };
+    };
+    expect(patch.params.rotationDeg).toBeCloseTo(20, 4);
   });
 
   it('returns null for non-BIM types', () => {

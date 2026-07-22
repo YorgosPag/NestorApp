@@ -58,6 +58,7 @@ import type {
 import type { BeamEntity, BeamParams } from '../types/beam-types';
 import type { StairEntity, StairParams } from '../types/stair-types';
 import type { MepSegmentEntity, MepSegmentParams } from '../types/mep-segment-types';
+import type { GenericSolidEntity, GenericSolidParams } from '../entities/generic-solid/generic-solid-types';
 import type { Polygon3D as BimPolygon3D, Point3D as BimPoint3D } from '../types/bim-base';
 import type { Point3D as RenderPoint3D } from '../../rendering/types/Types';
 import { computeWallGeometry } from '../geometry/wall-geometry';
@@ -73,6 +74,7 @@ import { computeMepManifoldGeometry } from '../mep-manifolds/mep-manifold-geomet
 import { computeMepRadiatorGeometry } from '../mep-radiators/mep-radiator-geometry';
 import { computeMepBoilerGeometry } from '../mep-boilers/mep-boiler-geometry';
 import { computeMepWaterHeaterGeometry } from '../mep-water-heaters/mep-water-heater-geometry';
+import { computeGenericSolidGeometry } from '../entities/generic-solid/generic-solid-geometry';
 import { rotatePoint } from '../../utils/rotation-math';
 import { normalizeAngleDeg } from '../../rendering/entities/shared/geometry-utils';
 
@@ -175,6 +177,29 @@ function rotateColumn(
       : entity.params.tilt,
   };
   const geometry = computeColumnGeometry(newParams);
+  return { params: newParams, geometry } as unknown as Partial<SceneEntity>;
+}
+
+/**
+ * ADR-684 (generic solid «Στερεό») — 3D gizmo rotate. Mirror του `rotateColumn`
+ * + `moveGenericSolid`: το σημείο εισαγωγής (`position`) περιστρέφεται γύρω από το
+ * pivot και το intrinsic `rotationDeg` (CCW περί τον κατακόρυφο άξονα) συσσωρεύεται
+ * κατά `+angleDeg`. Το σχήμα (`shape`) δεν αλλάζει· η γεωμετρία (ίχνος/bbox)
+ * ξαναϋπολογίζεται από το SSoT ώστε ο renderer/converter να διαβάζει συνεπή τιμή.
+ * ΧΩΡΙΣ αυτό το case ο rotate patch έβγαινε `{}` (fallback non-BIM) → το `rotationDeg`
+ * δεν άλλαζε ποτέ → το re-sync ξαναέχτιζε το αρχικό (φαινόταν σαν «επαναφορά»).
+ */
+function rotateGenericSolid(
+  entity: GenericSolidEntity,
+  pivot: Point2D,
+  angleDeg: number,
+): Partial<SceneEntity> {
+  const newParams: GenericSolidParams = {
+    ...entity.params,
+    position: rotatePoint3D(entity.params.position, pivot, angleDeg),
+    rotationDeg: normalizeAngleDeg(entity.params.rotationDeg + angleDeg),
+  };
+  const geometry = computeGenericSolidGeometry(newParams);
   return { params: newParams, geometry } as unknown as Partial<SceneEntity>;
 }
 
@@ -291,6 +316,9 @@ export function calculateBimRotatedGeometry(
       return rotateBeam(entity, pivot, angleDeg);
     case 'stair':
       return rotateStair(entity, pivot, angleDeg);
+    // ADR-684 (3D gizmo) — παραμετρικό στερεό: position rotate + rotationDeg accumulate.
+    case 'generic-solid':
+      return rotateGenericSolid(entity, pivot, angleDeg);
     // ADR-408 Φ-C (3D gizmo) — MEP entities. Segment rotates its two endpoints;
     // the point hosts rotate position + accumulate `rotation` (connectors follow).
     case 'mep-segment':
