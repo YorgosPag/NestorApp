@@ -142,7 +142,9 @@ function runPick(input: Bim3DPickInput): boolean {
   if (bimHoverId !== lastBimHoverId) {
     lastBimHoverId = bimHoverId;
     applyBimHover(manager.hoverHighlighter, bimHoverId);
-    manager.markSceneDirty();
+    // ADR-549 Φ3 — HOVER-ONLY redraw: the beauty is unchanged, so blit the cached snapshot + redraw
+    // just the outline (~1-2ms) instead of the ~40ms full `markSceneDirty` re-render.
+    manager.markHoverDirty();
   }
 
   // ADR-544 — while a placement/measure tool owns the snap glyph, the hover-handler yields. ADR-680:

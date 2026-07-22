@@ -375,7 +375,51 @@ SketchUp mm/cm/in/ft/m, C4D scale multiplier) — **ΠΟΤΕ silent bbox auto-re
 - **UI**: `ImportedMeshImportDialog` + `ImportUnitScaleControl` (canonical `@/components/ui/select`, ADR-001)·
   ονόματα μονάδων από `common:units.*`· η λίστα διαστάσεων ενημερώνεται **live** καθώς αλλάζει η μονάδα.
 
+### 10.6 ✅ Φ4 — Safety-net υλικών εισαγόμενων (parity προς Cinema 4D, 2026-07-22)
+
+**Πρόβλημα (μετρημένο από το `.glb`):** ο Giorgio ζήτησε τα εισαγόμενα να δείχνουν ζωντανά/ρεαλιστικά
+όσο στο C4D, όχι «χοντροκομμένα/άσπρο πλαστικό». Η επιθεώρηση του partner `.glb` (καρέκλα HMI Aeron,
+generator **Blender glTF I/O v3.6.28**) έδειξε την οριστική ρίζα: **και τα 4 υλικά κατέρρευσαν σε
+Blender default** — `baseColorFactor = [0.8,0.8,0.8]`, `metallic=0`, `roughness=1`, **καμία υφή, κανένα
+vertex color**. Επιβίωσαν ΜΟΝΟ τα **ονόματα** (`HMI-_Polished_Al`, `HMI-Aeron-Leathe`, `HMI-3D01__Pellic`,
+`HMI-Aeron-G1__Gr`). Άρα το γκρι **δεν** είναι bug του Νέστορα renderer (ο `GLTFLoader` δείχνει πιστά ό,τι
+υπάρχει) — είναι **export-side απώλεια**. Ίδια ρίζα για ΚΑΙ το 3Δ (χλωμό) ΚΑΙ την 2Δ κάτοψη (γκρι σιλουέτα).
+
+**Απόφαση (Giorgio: «και τα δύο»):** δύο άξονες, όχι είτε/είτε:
+1. **Export guidance** (μηδέν κώδικας): ο συνεργάτης να αναθέτει σωστό Base Color/Metallic/Roughness (ή
+   texture — τα UVs υπάρχουν ήδη) πριν το glTF export. Μέγιστη πιστότητα, αλλά ανά-export εύθραυστο.
+2. **Nestor safety-net** (κώδικας, SSoT): keyword-based «όνομα → PBR preset» — πρακτική Revit/ArchiCAD
+   material-mapping. Robust σε κάθε import, ανεξάρτητο από την ποιότητα του export.
+
+**Υλοποίηση (SSoT, μηδέν διπλότυπα):**
+- `bim/materials/imported-material-presets.ts` — **pure** resolver `resolveImportedMaterialPreset(name)`
+  → `{color,metalness,roughness,…}` (μέταλλο/γυαλί/δέρμα/ξύλο/ύφασμα/πλαστικό/πέτρα). Κοινός για 2Δ+3Δ.
+  Χαλαρά stems (`leath`, `pellic`) για τα truncated ονόματα του C4D (~16 chars). Σειρά: δέρμα ΠΡΙΝ ύφασμα.
+- `bim-3d/converters/imported-mesh-material-enhance.ts` — `applyImportedMeshMaterials(object)` στο 3Δ,
+  reuse της **μοναδικής** factory `buildMat` (N.18). **Belt-and-suspenders gate:** εφαρμόζει preset ΜΟΝΟ
+  όταν (α) το πηγαίο υλικό μοιάζει αδιαμόρφωτο-default (γκρι, non-metal, χωρίς υφή) ΚΑΙ (β) το όνομα
+  λύνεται σε preset. Έτσι ένα **σωστό export περνά ανέγγιχτο** — το net δεν μάχεται καλά υλικά. Χτίζει
+  ΝΕΟ material (δεν μεταλλάσσει το κοινό template του clone). Wired στο `imported-mesh-to-three.ts`.
+- 2Δ: ο `ImportedMeshRenderer` παράγει παλέτα σιλουέτας από το `sourceMaterialName` (dominant) μέσω του
+  **ίδιου** resolver → χρώμα υλικού αντί ουδέτερου γκρι. Άγνωστο όνομα → ουδέτερο γκρι (ως πριν).
+
+**Όρια (μελλοντικές φάσεις):** η 2Δ χρησιμοποιεί το **dominant** υλικό (per-slot 2Δ χρώμα = Φ5, απαιτεί
+per-primitive capture — τώρα κρατιέται 1 `sourceMaterialName`)· manual override UI (bind slot → `BimMaterial`
+βιβλιοθήκης, πρακτική Revit Material Mapping) = Φ6· σχηματικό βάθος/σκίαση κατ' ύψος στην κάτοψη = χωριστό.
+
+**Tests:** `imported-material-presets.test.ts` (26 assertions: πραγματικά ονόματα καρέκλας + σειρά + null +
+color helpers), `imported-mesh-material-enhance.test.ts` (gate με πραγματικά three.js materials: default→βάφεται,
+authored/textured→ανέγγιχτο, multi-slot ανά slot). Και τα δύο πράσινα.
+
 ## 11. Changelog
+
+- **2026-07-22 (§10.6 Φ4 — Safety-net υλικών εισαγόμενων, C4D parity)** — Επιθεώρηση partner `.glb`
+  (Blender glTF I/O) απέδειξε ότι τα υλικά της καρέκλας HMI Aeron κατέρρευσαν σε default 0.8 γκρι (μόνο
+  ονόματα επιβίωσαν). Νέο keyword→PBR preset SSoT (`imported-material-presets.ts`, pure, κοινό 2Δ+3Δ) +
+  3Δ enhancer (`imported-mesh-material-enhance.ts`, reuse `buildMat`, belt-and-suspenders gate ώστε καλό
+  export να περνά ανέγγιχτο) wired στο `imported-mesh-to-three.ts` + 2Δ παλέτα σιλουέτας στον
+  `ImportedMeshRenderer` από το dominant `sourceMaterialName`. 26+... tests πράσινα. Export guidance
+  δόθηκε στον Giorgio χωριστά. Per-slot 2Δ + manual override UI = Φ5/Φ6.
 
 - **2026-07-22 (§mesh-load-orphan-race — ΕΠΙΒΕΒΑΙΩΜΕΝΟ RACE: ο query provider σωστός αλλά ανεπαρκής μόνος του → grace-window στο finalize)** —
   Μετά το §mesh-load-orphan-cleanup, fresh re-import (uploadId `imesh_5c47f521`) **ξανασβήστηκε**: MCP → νέα
@@ -688,6 +732,16 @@ SketchUp mm/cm/in/ft/m, C4D scale multiplier) — **ΠΟΤΕ silent bbox auto-re
   - **Έλεγχοι:** 83 tests στο imported-mesh (+8), 126 suites / 1268 tests σε `app`+`ui`, capability
     anchors 329/21 αμετάβλητα, `jscpd:diff` καθαρό. ⚠️ **Καμία επαλήθευση στην οθόνη** — βλ. §11 της
     Φ3β· ισχύει ακόμη.
+
+- **2026-07-22 (marquee gap fix — `imported-mesh` window/crossing selection)** — Αφορμή (Giorgio):
+  «γιατί οι mesh δεν σέβονται window & crossing;». Το `imported-mesh` ήταν rendered + click-selectable
+  αλλά **όχι** marquee-selectable: το registry `ENTITY_BOUNDS_PROVIDERS` το δρομολογούσε σωστά →
+  `calculateBimEntity2DBounds`, αλλά ο delegate ήταν **whitelist `switch`** που **δεν** είχε case γι' αυτό
+  → σιωπηλά `null`. Το click path (`bounds-primitives.ts`) δεν είχε το bug γιατί ήταν ήδη type-agnostic.
+  **Fix (ADR-587 Φ9 BIM-delegate convergence):** ο `bim-bounds.ts` delegate έγινε type-agnostic
+  `geometry.bbox` reader (κατάργηση whitelist, big-player idiom) → κάθε BIM type με `geometry.bbox` (incl.
+  `imported-mesh`) γίνεται αυτόματα marquee-selectable. Live pins στο `bounds-twins-coverage`. Λεπτομέρειες:
+  ADR-587 changelog 2026-07-22. (NO tsc, N.17.)
 
 - **2026-07-20 (Φ3.1β — η διεπαφή ανάθεσης· η κοστολόγηση γίνεται πράξη του χρήστη)** — Το μοντέλο
   της Φ3.1α απέκτησε χειριστήριο. **Η μνήμη κανόνων (§2.4 του σχεδίου) ΔΕΝ έγινε** — αποσπάστηκε ως

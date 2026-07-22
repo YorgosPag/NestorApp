@@ -191,6 +191,22 @@ describe('Bounds-twins coverage — δύο twins ↔ descriptor domain (ADR-587 
     expect(bounds).not.toBeNull();
   });
 
+  // ADR-587 Φ9 (2026-07-22) — BIM delegate convergence: `calculateBimEntity2DBounds` έγινε
+  // type-agnostic geometry.bbox reader (κατάργηση whitelist). Τα imported-mesh/generic-solid
+  // ήταν "optimistic B_HANDLED" (στη golden λίστα ΧΩΡΙΣ live pin → σιωπηλά null → όχι
+  // marquee-selectable ενώ click-selectable). ΡΗΤΟΙ live pins ΚΑΙ στα δύο twins: πιάνουν
+  // regression αν κάποιος ξαναβάλει per-type whitelist στον delegate.
+  const BIM_MESH_CONVERGED = ['imported-mesh', 'generic-solid'] as const;
+
+  it.each(BIM_MESH_CONVERGED)('Φ9 convergence: BIM "%s" (geometry.bbox) → non-null Twin B (ήταν σιωπηλά null)', (type) => {
+    expect(calculateEntityBounds(mk(type, BBOX) as unknown as AnySceneEntity))
+      .toEqual({ min: { x: 1, y: 2 }, max: { x: 3, y: 4 } });
+  });
+
+  it.each(BIM_MESH_CONVERGED)('Φ9 convergence: BIM "%s" (geometry.bbox) → NON-EMPTY footprint στο Twin A', (type) => {
+    expect(getEntityRenderBounds(mk(type, BBOX))).toEqual({ minX: 1, minY: 2, maxX: 3, maxY: 4 });
+  });
+
   it('provider completeness: ENTITY_BOUNDS_SUPPORTED_TYPES ⊇ RENDERABLE_ENTITY_TYPES', () => {
     // Κάθε renderable type ΠΡΕΠΕΙ να έχει bounds provider (αλλιώς σιωπηλά μη-marquee-selectable).
     const supported = new Set<string>(ENTITY_BOUNDS_SUPPORTED_TYPES);

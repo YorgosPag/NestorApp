@@ -25,6 +25,7 @@ import {
   importedMeshAssetId,
 } from '../../bim/entities/imported-mesh/imported-mesh-types';
 import { meshToObject3D } from './mesh-to-object3d';
+import { applyImportedMeshMaterials } from './imported-mesh-material-enhance';
 
 /**
  * Χτίζει την 3Δ αναπαράσταση ενός εισαγόμενου πλέγματος. Επιστρέφει τοποθετημένο κλώνο του glTF σε
@@ -40,7 +41,7 @@ export function importedMeshToObject3D(
   const { params } = mesh;
   if (!params) return null;
 
-  return meshToObject3D({
+  const object = meshToObject3D({
     category: IMPORTED_MESH_CATEGORY,
     assetId: importedMeshAssetId(params.uploadId, params.nodeName),
     bimId: mesh.id,
@@ -61,4 +62,10 @@ export function importedMeshToObject3D(
     buildingBaseElevationM,
     levelId,
   });
+
+  // ADR-683 Φ4 — safety-net υλικών: όταν το partner `.glb` ήρθε με χαμένα υλικά (Blender default
+  // γκρι), βάψε ανά όνομα σε PBR preset. No-op σε placeholder κουτί (cache miss) και σε authored
+  // υλικά (belt-and-suspenders gate) — ένα σωστό export περνά ανέγγιχτο.
+  applyImportedMeshMaterials(object);
+  return object;
 }

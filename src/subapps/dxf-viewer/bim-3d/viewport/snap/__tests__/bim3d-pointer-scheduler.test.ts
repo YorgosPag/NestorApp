@@ -69,6 +69,7 @@ let mockInteracting = false;
 const raycastBimFace = jest.fn<{ bimId: string; faceKey: string } | null, []>(() => null);
 const setHoveredFace = jest.fn();
 const markSceneDirty = jest.fn();
+const markHoverDirty = jest.fn(); // ADR-549 Φ3 — hover-only fast-path flag (blit cache + outline).
 const hoverHighlighter = {};
 const manager = {
   getCamera: () => camera,
@@ -81,6 +82,7 @@ const manager = {
   raycastBimFace: () => raycastBimFace(),
   setHoveredFace: (...a: unknown[]) => setHoveredFace(...a),
   markSceneDirty: () => markSceneDirty(),
+  markHoverDirty: () => markHoverDirty(),
 } as unknown as ThreeJsSceneManager;
 
 const WORLD = new THREE.Vector3(1, 2, 3);
@@ -132,7 +134,7 @@ describe('bim3d-pointer-scheduler — ADR-040 Φ-3D-pointer decoupling', () => {
     expect(mockEnsureBoundsTrees).toHaveBeenCalledWith(group);
     expect(mockSetHoveredEntity).toHaveBeenCalledWith('c1');
     expect(mockApplyBimHover).toHaveBeenCalledWith(hoverHighlighter, 'c1');
-    expect(markSceneDirty).toHaveBeenCalled();
+    expect(markHoverDirty).toHaveBeenCalled(); // ADR-549 Φ3 — hover-only fast path, not a full markSceneDirty
     // Snap reuses the SAME world point — 6th arg — no second raycast.
     expect(mockComputeSnap).toHaveBeenCalledWith(group, camera, dom, 50, 50, WORLD);
     expect(mockSetSnap).toHaveBeenCalledWith({ view: {}, elevMm: 0 });
@@ -150,14 +152,14 @@ describe('bim3d-pointer-scheduler — ADR-040 Φ-3D-pointer decoupling', () => {
     expect(mockSetSnap).toHaveBeenCalledWith({ view: {}, elevMm: 0 }); // snap live
     expect(mockSetHoveredEntity).toHaveBeenCalledWith('c1');           // hover id live
     expect(mockApplyBimHover).toHaveBeenCalledWith(hoverHighlighter, 'c1'); // silhouette LIVE
-    expect(markSceneDirty).toHaveBeenCalledTimes(1);                   // one WebGL re-render, immediately
+    expect(markHoverDirty).toHaveBeenCalledTimes(1);                  // one hover-only fast-path frame, immediately
     expect(mockRegisteredIsDirty?.()).toBe(false);                     // nothing deferred → slot disarmed
 
     // A later pick with the SAME id → no redundant re-render (id-change guard holds).
     nowMs += SETTLE_MS + 50;
     mockRegisteredCb?.();
     expect(mockApplyBimHover).toHaveBeenCalledTimes(1);
-    expect(markSceneDirty).toHaveBeenCalledTimes(1);
+    expect(markHoverDirty).toHaveBeenCalledTimes(1);
     expect(mockSetHoveredEntity).toHaveBeenCalledTimes(1); // id unchanged → not written again
   });
 
@@ -267,19 +269,19 @@ describe('bim3d-pointer-scheduler — ADR-040 Φ-3D-pointer decoupling', () => {
   it('re-renders the scene ONLY when the hover target changes (no swim — ADR-040 Φ-3D-pointer)', () => {
     mockBimHit = { bimId: 'c1', bimType: 'column', worldPoint: WORLD };
     settledPick(50, 50);
-    expect(markSceneDirty).toHaveBeenCalledTimes(1);
+    expect(markHoverDirty).toHaveBeenCalledTimes(1);
     expect(mockSetHoveredEntity).toHaveBeenCalledTimes(1);
 
     // Second settled pick over the SAME entity → NO extra render / hover write.
     settledPick(51, 51);
-    expect(markSceneDirty).toHaveBeenCalledTimes(1);
+    expect(markHoverDirty).toHaveBeenCalledTimes(1);
     expect(mockSetHoveredEntity).toHaveBeenCalledTimes(1);
 
-    // Hover changes to empty space → exactly one more render + a null hover write.
+    // Hover changes to empty space → exactly one more hover-only frame + a null hover write.
     mockBimHit = null;
     mockDxfPick = null;
     settledPick(300, 300);
-    expect(markSceneDirty).toHaveBeenCalledTimes(2);
+    expect(markHoverDirty).toHaveBeenCalledTimes(2);
     expect(mockSetHoveredEntity).toHaveBeenLastCalledWith(null);
   });
 

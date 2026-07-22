@@ -36,7 +36,12 @@ import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
 import { getLayer } from '../../stores/LayerStore';
 import { bimMeshCache } from '../../bim-3d/library/bim-mesh-library/bim-mesh-cache';
-import { drawMeshSilhouette } from './mesh-silhouette-draw';
+import { drawMeshSilhouette, type MeshSilhouettePalette } from './mesh-silhouette-draw';
+import {
+  resolveImportedMaterialPreset,
+  importedPresetHex,
+  importedPresetRgba,
+} from '../materials/imported-material-presets';
 import { getImportedMeshGrips } from '../entities/imported-mesh/imported-mesh-grips';
 import { gripGlyphShape } from '../grips/grip-glyph-registry';
 import { gripKindOf } from '../../hooks/grip-kinds';
@@ -45,11 +50,31 @@ import { gripKindOf } from '../../hooks/grip-kinds';
  * Παλέτα κάτοψης — ουδέτερο γκρι-μπλε, **σκόπιμα διακριτό** από τις παλέτες των εγγενών BIM
  * στοιχείων: ο χρήστης πρέπει να βλέπει με μια ματιά τι είναι δικό του μοντέλο και τι ήρθε από έξω.
  */
-const IMPORTED_MESH_PALETTE = {
+const IMPORTED_MESH_PALETTE: MeshSilhouettePalette = {
   stroke: '#5b6b7a',
   fill: 'rgba(91, 107, 122, 0.14)',
   edge: 'rgba(91, 107, 122, 0.5)',
-} as const;
+};
+
+/** Ημιδιαφάνειες 2Δ σιλουέτας — καθρέφτης των alpha του ουδέτερου {@link IMPORTED_MESH_PALETTE}. */
+const SILHOUETTE_FILL_ALPHA = 0.16;
+const SILHOUETTE_EDGE_ALPHA = 0.5;
+
+/**
+ * ADR-683 Φ4 — παλέτα 2Δ σιλουέτας από το **όνομα υλικού** του κόμβου (dominant). Αν το όνομα
+ * λύνεται σε PBR preset (μέταλλο/ύφασμα/δέρμα…), η κάτοψη παίρνει χρώμα υλικού αντί για ουδέτερο
+ * γκρι — σχηματικός πλούτος Revit/ArchiCAD-style, ΙΔΙΟ SSoT με το 3Δ (`imported-material-presets`).
+ * Άγνωστο/απόν όνομα → το ουδέτερο γκρι (σκόπιμα διακριτό «ήρθε απ' έξω»).
+ */
+function resolveImportedMeshPalette(sourceMaterialName?: string): MeshSilhouettePalette {
+  const preset = resolveImportedMaterialPreset(sourceMaterialName);
+  if (!preset) return IMPORTED_MESH_PALETTE;
+  return {
+    stroke: importedPresetHex(preset),
+    fill: importedPresetRgba(preset, SILHOUETTE_FILL_ALPHA),
+    edge: importedPresetRgba(preset, SILHOUETTE_EDGE_ALPHA),
+  };
+}
 
 /** Type guard — το `EntityModel` είναι δομικό, οπότε ελέγχουμε τον διακριτή τύπου. */
 function isImportedMeshEntity(entity: EntityModel): boolean {
@@ -78,24 +103,25 @@ export class ImportedMeshRenderer extends BimFootprintRenderer {
 
     this.beginPhasedBodyRender(entity, verts, options);
 
-    const { uploadId, nodeName, position, rotationDeg, sceneUnits } = mesh.params;
+    const { uploadId, nodeName, position, rotationDeg, sceneUnits, sourceMaterialName } = mesh.params;
     const assetId = importedMeshAssetId(uploadId, nodeName);
+    const palette = resolveImportedMeshPalette(sourceMaterialName);
     const drew = drawMeshSilhouette({
       ctx: this.ctx,
       worldToScreen: (p) => this.worldToScreen(p),
       silhouette: bimMeshCache.getSilhouette(IMPORTED_MESH_CATEGORY, assetId),
       edges: bimMeshCache.getTopEdges(IMPORTED_MESH_CATEGORY, assetId),
       transform: { position, rotationDeg, sceneUnits: sceneUnits ?? 'mm' },
-      palette: IMPORTED_MESH_PALETTE,
+      palette,
       lineWidth: RENDER_LINE_WIDTHS.NORMAL,
     });
 
     if (!drew) {
       // Το ορθογώνιο του μετρημένου bbox — «εδώ είναι, το σχήμα έρχεται».
-      this.ctx.fillStyle = adaptFillTintForCanvas(IMPORTED_MESH_PALETTE.fill);
+      this.ctx.fillStyle = adaptFillTintForCanvas(palette.fill);
       this.drawPolygonPath(verts);
       this.ctx.fill();
-      this.ctx.strokeStyle = IMPORTED_MESH_PALETTE.stroke;
+      this.ctx.strokeStyle = palette.stroke;
       this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
       this.drawPolygonPath(verts);
       this.ctx.stroke();

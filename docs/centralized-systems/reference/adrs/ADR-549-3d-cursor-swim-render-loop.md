@@ -508,3 +508,32 @@ compositing — αν big-player πρακτική το διαψεύδει, ακο
   production impact, ΔΕΝ μπλοκάρει commit· shared-tree risk → δική του εστιασμένη συνεδρία.
   CHECK 6B/6D → stage αυτό το ADR + ADR-545 + canvas-ui.ts + CanvasLayerStack.tsx + τις διαγραφές. 🔴 browser-verify
   (2D 1:1 όπως το «χέρι» του ViewCube) + commit (Giorgio).
+- **2026-07-22** — ✅ **Φ3 — INSTANT hover κίτρινο περίγραμμα: live silhouette + 60fps pick + HoverBeautyCache (UNCOMMITTED).**
+  Παράπονο Giorgio: στο 3D το κίτρινο hover περίγραμμα «καθυστερεί πολύ» ενώ στο 2D είναι ακαριαίο.
+  **Διάγνωση (3 στρώματα):**
+  1. **Refine-on-settle**: το silhouette (`applyBimHover`+`markSceneDirty`) ΑΝΑΒΑΛΛΟΤΑΝ κατά `SHADOW_SETTLE`
+     (**350ms** ακινησίας) για να coalesce-άρει με το shadow-on frame → φαινόταν «αργό». **FIX:** LIVE — βάφεται
+     αμέσως σε κάθε hover-id change (`bim3d-pointer-scheduler.runPick`). Το DXF glow ήταν ήδη live (Canvas2D).
+  2. **Throttle 20fps**: ο pick έτρεχε max κάθε `HOVER_HITTEST`=50ms. **FIX:** νέα σταθερά `BIM3D_HOVER_PICK`=**16ms**
+     (60fps) στο `dxf-timing.ts` — dedicated ώστε να ΜΗΝ επηρεάζει το κοινό 2D `HOVER_HITTEST`.
+  3. **Το πραγματικό κόστος** (μετρημένο με `window.__bim3dPerf`, 2 sweeps): το `bim-3d-scene` render **avg 37-44ms,
+     max 187ms** — κάθε live hover-change πυροδοτούσε **full-scene raster** (dirty-reason=`explicitDirty`, SSAO off).
+     Ο raycast pick ήταν **0.4-2.6ms** (BVH — ο εντοπισμός ΔΕΝ ήταν το πρόβλημα). Το shadow map είναι ήδη static
+     (ADR-366 §B.5), οπότε δεν υπήρχε φθηνό «static-shadows» win.
+  **ΛΥΣΗ — `HoverBeautyCache`** (καθρέφτης του `DxfBackdropCache`/ADR-516 + του 2D bitmap cache/ADR-040): όταν
+  αλλάζει ΜΟΝΟ το hover (camera+geometry+lights+selection static), snapshot του καθαρού beauty framebuffer
+  (`copyFramebufferToTexture`, three 0.170) **ΜΕΤΑ** το beauty / **ΠΡΙΝ** το outline overlay· σε hover-only frame
+  → **blit το cached beauty + redraw μόνο το outline** (~1-2ms αντί 40ms). Νέο flag `_hoverDirty` (≠ `markSceneDirty`)
+  → `markHoverDirty()`· το `tick()` παίρνει fast-path όταν `_hoverDirty && !_sceneDirty && hasCapture`. Invalidation
+  κληρονομεί το υπάρχον `_sceneDirty` SSoT: κάθε non-cacheable frame (backdrop-drag/section/path-trace/camera-
+  interaction/animation) κάνει `invalidate()` → ποτέ stale blit.
+  **SCOPE (Giorgio ενέκρινε «χωρίς section»):** section-cut → fallback στο τωρινό full render (cacheable=false),
+  καμία οπισθοδρόμηση· section σε δεύτερη φάση αν χρειαστεί.
+  **Αρχεία:** νέο `scene/hover-beauty-cache.ts` (+colocated test) · `scene-render-frame.ts` (capture hook +
+  `renderHoverOnlyFrame`) · `ThreeJsSceneManager.ts` (`_hoverDirty`/`markHoverDirty`/tick fast-path· 500/500 μετά
+  blank-line/comment μάζεμα) · `scene-manager-construct.ts` (wire) · `bim3d-pointer-scheduler.ts` (hover→`markHoverDirty`).
+  **Tests:** `hover-beauty-cache.test.ts` (state machine 3/3) + scheduler 12/12 (markSceneDirty→markHoverDirty στα BIM
+  hover assertions) + dxf-backdrop/scene-dirty regression green. **REVERTIBLE:** τα σχόλια στον scheduler δείχνουν
+  το refine-on-settle path (επιλογή «Α»: dedicated μικρό settle) αν το live αποδειχθεί βαρύ.
+  CHECK 6D → stage αυτό το ADR + τα 5 αρχεία. 🔴 browser-verify (hover 60fps, όχι FPS drop σε πυκνά mesh π.χ. σκάλα)
+  + commit (Giorgio).

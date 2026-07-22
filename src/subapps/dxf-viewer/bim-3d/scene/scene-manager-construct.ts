@@ -11,6 +11,7 @@ import type * as THREE from 'three';
 import { createPoi } from '../viewport/viewport-poi';
 import type { RenderFrameContext } from './scene-render-frame';
 import { DxfBackdropCache } from './dxf-backdrop-cache';
+import { HoverBeautyCache } from './hover-beauty-cache';
 import type { BimSceneLayer } from './BimSceneLayer';
 import { Cinema4DGridFloor } from './grid/cinema4d-grid-floor'; // ADR-558 — Cinema-4D-style ground grid
 import type { IdleDetector } from '../lighting/idle-detector';
@@ -85,6 +86,7 @@ export interface SceneManagerParts {
   readonly sectionController: SectionSceneController;
   readonly waypointDragHandleRenderer: WaypointDragHandleRenderer;
   readonly dxfBackdrop: DxfBackdropCache;
+  readonly hoverBeautyCache: HoverBeautyCache;
   readonly frameContext: RenderFrameContext;
 }
 
@@ -191,10 +193,12 @@ export function buildSceneManagerParts(deps: SceneManagerConstructDeps): SceneMa
   const waypointDragHandleRenderer = new WaypointDragHandleRenderer(scene);
   // ADR-516 Phase 2 — frozen DXF backdrop. Gated OFF while section-cut / path-trace own the frame.
   const dxfBackdrop = new DxfBackdropCache({ isSectionActive: () => sectionController.isStencilActive(), isPathTracerActive: () => pathTracerRenderer.isActive });
+  // ADR-549 Φ3 — beauty snapshot cache for the instant hover-only fast path.
+  const hoverBeautyCache = new HoverBeautyCache();
 
   // ADR-040 Phase XXIII — cache render-frame context once. Scheduler drives tick().
   const frameContext: RenderFrameContext = {
-    renderer, scene, dxfBackdrop,
+    renderer, scene, dxfBackdrop, hoverBeautyCache,
     viewport, viewCube,
     animationManager, focusOutlineRenderer,
     idleDetector, ssaoModulator,
@@ -209,6 +213,6 @@ export function buildSceneManagerParts(deps: SceneManagerConstructDeps): SceneMa
     poi, gridFloor, terrainLayer, terrainContourLayer, pointCloudLayer, animationManager, canonicalViewService,
     keyboardFocusManager, focusOutlineRenderer, focusUnsub, viewCube,
     envStoreUnsub, bgModeUnsub, sectionController, waypointDragHandleRenderer,
-    dxfBackdrop, frameContext,
+    dxfBackdrop, hoverBeautyCache, frameContext,
   };
 }

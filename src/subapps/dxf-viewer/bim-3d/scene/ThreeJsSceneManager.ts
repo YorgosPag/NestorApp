@@ -2,8 +2,8 @@
 
 import * as THREE from 'three';
 import { createPoi } from '../viewport/viewport-poi';
-import { renderSceneFrame, type RenderFrameContext } from './scene-render-frame';
-import { DxfBackdropCache } from './dxf-backdrop-cache';
+import { renderSceneFrame, renderHoverOnlyFrame, type RenderFrameContext } from './scene-render-frame';
+import { DxfBackdropCache } from './dxf-backdrop-cache'; import type { HoverBeautyCache } from './hover-beauty-cache';
 import { BimSceneLayer } from './BimSceneLayer';
 import { Cinema4DGridFloor } from './grid/cinema4d-grid-floor'; // ADR-558 — Cinema-4D-style ground grid
 import type { TerrainSceneLayer } from './terrain/TerrainSceneLayer'; // ADR-650 M4 — topographic surface
@@ -109,9 +109,10 @@ export class ThreeJsSceneManager {
   private readonly focusUnsub: () => void;
   private readonly waypointDragHandleRenderer: WaypointDragHandleRenderer;
   private readonly dxfBackdrop: DxfBackdropCache; // ADR-516 Phase 2 — frozen DXF backdrop (armed on entity drag).
-  // ADR-040 Phase XXIII — render-frame ctx cached once; `_sceneDirty` set by mutators, cleared per tick.
-  private readonly frameContext: RenderFrameContext;
+  private readonly hoverBeautyCache: HoverBeautyCache; // ADR-549 Φ3 — beauty snapshot for instant hover.
+  private readonly frameContext: RenderFrameContext; // ADR-040 XXIII — ctx cached once; dirty flags cleared per tick.
   private _sceneDirty = true;
+  private _hoverDirty = false; // ADR-549 Φ3 — hover pick sets this (not `markSceneDirty`); hover-only frame blits cache.
   private lastTickTime = performance.now();
   private disposed = false;
   private reducedMotionOverride: ReducedMotionOverride = 'auto';
@@ -190,7 +191,7 @@ export class ThreeJsSceneManager {
     this.focusUnsub = parts.focusUnsub; this.viewCube = parts.viewCube;
     this.envStoreUnsub = parts.envStoreUnsub; this.bgModeUnsub = parts.bgModeUnsub;
     this.sectionController = parts.sectionController; this.waypointDragHandleRenderer = parts.waypointDragHandleRenderer;
-    this.dxfBackdrop = parts.dxfBackdrop; this.frameContext = parts.frameContext;
+    this.dxfBackdrop = parts.dxfBackdrop; this.hoverBeautyCache = parts.hoverBeautyCache; this.frameContext = parts.frameContext;
   }
 
   /** ADR-366 Phase 9 / C.5.Q5 — update override; viewport reads it at animation-call time. */
@@ -262,15 +263,19 @@ export class ThreeJsSceneManager {
       this._sceneDirty = false;
       return;
     }
-    // Scheduler may pass deltaTime=0 on first frame; derive locally as safety net.
-    const delta = scheduledDelta > 0 ? scheduledDelta : now - this.lastTickTime;
+    const delta = scheduledDelta > 0 ? scheduledDelta : now - this.lastTickTime; // deltaTime=0 on first frame → derive.
     this.lastTickTime = now;
-    // 🔬 ADR-549 Phase 0 (REVERTIBLE) — capture dirty-reason BEFORE clearing + time the render.
-    const diagSample = { ...this.dirtyState(), ssaoActive: this.ssaoModulator.isSsaoActive() };
+    // ADR-549 Φ3 — HOVER-ONLY fast path: blit cached beauty + redraw outline (~1-2ms), else full render.
+    if (this._hoverDirty && !this._sceneDirty && renderHoverOnlyFrame(this.frameContext)) {
+      this._hoverDirty = false;
+      return;
+    }
+    const diagSample = { ...this.dirtyState(), ssaoActive: this.ssaoModulator.isSsaoActive() }; // 🔬 ADR-549 Φ0 (revertible) — dirty-reason + time.
     const diagStart = performance.now();
     renderSceneFrame(this.frameContext, now, delta);
     diagRecordRender(performance.now() - diagStart, diagSample);
     this._sceneDirty = false;
+    this._hoverDirty = false;
   }
 
   /** ADR-040 Phase XXIII — render-gating state (SSoT for isSceneDirty + ADR-549 diag sample). */
@@ -282,6 +287,8 @@ export class ThreeJsSceneManager {
   isSceneDirty(): boolean { return this.disposed ? false : isSceneDirtyFromState(this.dirtyState()); }
 
   markSceneDirty(): void { if (!this.disposed) { diagRecordMarkDirty(); this._sceneDirty = true; } } // ADR-040 — flag for redraw. (🔬 ADR-549 Phase 0 trace, revertible)
+  /** ADR-549 Φ3 — flag a HOVER-ONLY redraw (outline changed, beauty unchanged → blit cache + outline). */
+  markHoverDirty(): void { if (!this.disposed) this._hoverDirty = true; }
 
   /**
    * ADR-516 — INTERACTION GATE for NON-camera drags (gizmo/grip entity edit). The render
@@ -463,7 +470,7 @@ export class ThreeJsSceneManager {
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
-    this.faceHighlighter.dispose(); this.faceHoverHighlighter.dispose(); this.dxfBackdrop.dispose(); // ADR-539 + ADR-516 Phase 2 — release face overlays + backdrop cache.
+    this.faceHighlighter.dispose(); this.faceHoverHighlighter.dispose(); this.dxfBackdrop.dispose(); this.hoverBeautyCache.dispose(); // ADR-539 + ADR-516 Phase 2 + ADR-549 Φ3 — release face overlays + caches.
     this.stairSubUnsub(); this.stairSubElementHighlighter.dispose(); // ADR-358 Q19 — drop store subs + release the sub-element overlay.
     this.gridFloor.dispose(); // ADR-558 — unregister overlay + free grid geometry/material.
     this.terrainLayer.dispose(); // ADR-650 M4 — drop store subs + free the terrain mesh geometry.

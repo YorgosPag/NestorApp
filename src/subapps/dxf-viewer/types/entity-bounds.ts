@@ -116,7 +116,12 @@ export const getEntityBounds = getEntityRenderBounds;
 /**
  * Union of BIM entity type strings that use pre-computed `geometry.bbox` for
  * spatial bounds. Used for type-narrowing in downstream consumers.
- * Mirror of the `calculateBimEntity2DBounds` supported set.
+ *
+ * NOTE (ADR-587 Φ9, 2026-07-22): `calculateBimEntity2DBounds` is now a
+ * type-agnostic `geometry.bbox` reader — it no longer maintains a per-type
+ * whitelist, so this union is NOT an authoritative "supported set" (any BIM
+ * type carrying `geometry.bbox` resolves). It remains a convenience narrow for
+ * consumers that want a named BIM subset; extend as needed.
  */
 export type BimEntityWithBounds =
   | 'wall' | 'opening' | 'slab' | 'slab-opening' | 'column' | 'beam' | 'stair'
@@ -130,6 +135,8 @@ export type BimEntityWithBounds =
   | 'furniture'
   // ADR-683 Φ3 — εισαγόμενο ψημένο πλέγμα (bbox του μετρημένου κουτιού)
   | 'imported-mesh'
+  // ADR-684 Φ2 — παραμετρικό στερεό (bbox του ίχνους)
+  | 'generic-solid'
   // ADR-408 Φ8 — MEP segment
   | 'mep-segment'
   // ADR-408 Φ11 — MEP fitting

@@ -19,12 +19,15 @@ import type { SSAOModulator } from '../lighting/ssao-modulator';
 import type { PathTracerRenderer } from '../render/PathTracerRenderer';
 import type { SectionSceneController } from './section-scene-controller';
 import type { DxfBackdropCache } from './dxf-backdrop-cache';
+import type { HoverBeautyCache } from './hover-beauty-cache';
 
 export interface RenderFrameContext {
   readonly renderer: THREE.WebGLRenderer;
   readonly scene: THREE.Scene;
   /** ADR-516 Phase 2 — frozen DXF backdrop (entity-drag 1:1 follow); inert until armed. */
   readonly dxfBackdrop: DxfBackdropCache;
+  /** ADR-549 Φ3 — beauty snapshot for the instant hover-only fast path (blit + outline, no re-render). */
+  readonly hoverBeautyCache: HoverBeautyCache;
   readonly viewport: ViewportCamera;
   readonly viewCube: ViewCubeEngine;
   readonly animationManager: AnimationManager;
@@ -101,6 +104,14 @@ export function renderSceneFrame(ctx: RenderFrameContext, now: number, delta: nu
     // composer FBO round-trip + program churn that caused zoom/orbit lag.
     ssaoModulator.renderRaster();
   }
+  // ADR-549 Φ3 — snapshot the CLEAN beauty (pre-outline) for the hover-only fast path, but ONLY on a
+  // cacheable static frame. Any backdrop-drag / section / path-trace / camera-interaction / animation
+  // frame INVALIDATES instead, so a later hover-only blit can never show a stale beauty.
+  const cacheable = !ctx.dxfBackdrop.isActive() && !pathTracerRenderer.isActive
+    && !sectionController.isStencilActive() && !interacting && !viewport.isAnimating;
+  if (cacheable) ctx.hoverBeautyCache.capture(ctx.renderer);
+  else ctx.hoverBeautyCache.invalidate();
+
   // ADR-536 — composite the selection silhouette ON TOP of whatever the scene path
   // rendered (raster / SSAO / section caps), so the outline looks identical on every
   // interactive path. No-op when nothing is selected. (Path-tracer is handled above
@@ -114,4 +125,17 @@ export function renderSceneFrame(ctx: RenderFrameContext, now: number, delta: nu
   // (AO-immune by construction, like the outline overlay above). Runs on every path incl. path-trace
   // (writes the screen AFTER the accumulation blit → no accumulation corruption).
   viewCube.composite();
+}
+
+/**
+ * ADR-549 Φ3 — HOVER-ONLY fast path. When nothing but the hover changed, blit the cached beauty
+ * (from a prior cacheable {@link renderSceneFrame}) and redraw ONLY the outline overlay (selection
+ * gold + hover yellow) + the ViewCube — skipping the whole ~40ms beauty render. Returns false on a
+ * cache MISS (no snapshot yet), so the caller falls back to a full `renderSceneFrame`.
+ */
+export function renderHoverOnlyFrame(ctx: RenderFrameContext): boolean {
+  if (!ctx.hoverBeautyCache.blit(ctx.renderer)) return false;
+  if (!ctx.pathTracerRenderer.isActive) ctx.ssaoModulator.renderOutlineOverlayToScreen();
+  ctx.viewCube.composite();
+  return true;
 }
