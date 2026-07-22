@@ -42,12 +42,7 @@ import {
   drawMeshSlotSilhouettes,
   type MeshSilhouettePalette,
 } from './mesh-silhouette-draw';
-import {
-  resolveImportedMaterialPresetFor,
-  importedPresetHex,
-  importedPresetRgba,
-} from '../materials/imported-material-presets';
-// ADR-686 — user override (χρώμα/υλικό) πάνω από το preset, ΙΔΙΟ SSoT με το 2D plan fill + το 3D.
+// ADR-686 — user override (χρώμα/υλικό) πάνω από το ουδέτερο γκρι, ΙΔΙΟ SSoT με το 2D plan fill + το 3D.
 import { faceAppearanceColorHex } from '../utils/face-appearance-color';
 import { slotFaceKey, BASE_FACE_KEY, type FaceAppearanceMap } from '../types/face-appearance-types';
 import { hexToRgba } from '../../config/color-math';
@@ -65,49 +60,27 @@ const IMPORTED_MESH_PALETTE: MeshSilhouettePalette = {
   edge: 'rgba(91, 107, 122, 0.5)',
 };
 
-/**
- * Ημιδιαφάνειες 2Δ σιλουέτας — καθρέφτης των alpha του ουδέτερου {@link IMPORTED_MESH_PALETTE}.
- * ADR-683 Φ4 (readability): το fill ήταν `0.16` → σκούρα υλικά (δέρμα `#2b2723`, ύφασμα `#3a3d42`)
- * σχεδόν αόρατα σε λευκό φόντο. `0.28` = συμπαγέστερο material poché (πρακτική Revit/ArchiCAD),
- * ώστε το χρώμα υλικού να **διαβάζεται** στην κάτοψη χωρίς να πνίγει τα εγγενή στοιχεία.
- */
+/** Ημιδιαφάνειες 2Δ — καθρέφτης των alpha του ουδέτερου {@link IMPORTED_MESH_PALETTE} (ADR-686 override). */
 const SILHOUETTE_FILL_ALPHA = 0.28;
 const SILHOUETTE_EDGE_ALPHA = 0.5;
 
 /**
- * ADR-683 Φ4 — παλέτα 2Δ σιλουέτας από το **όνομα υλικού** του κόμβου (dominant). Αν το όνομα
- * λύνεται σε PBR preset (μέταλλο/ύφασμα/δέρμα…), η κάτοψη παίρνει χρώμα υλικού αντί για ουδέτερο
- * γκρι — σχηματικός πλούτος Revit/ArchiCAD-style, ΙΔΙΟ SSoT με το 3Δ (`imported-material-presets`).
- * Άγνωστο/απόν όνομα → το ουδέτερο γκρι (σκόπιμα διακριτό «ήρθε απ' έξω»).
- */
-function resolveImportedMeshPalette(
-  sourceMaterialName: string | undefined,
-  nodeName: string | undefined,
-): MeshSilhouettePalette {
-  const preset = resolveImportedMaterialPresetFor(sourceMaterialName, nodeName);
-  if (!preset) return IMPORTED_MESH_PALETTE;
-  return {
-    stroke: importedPresetHex(preset),
-    fill: importedPresetRgba(preset, SILHOUETTE_FILL_ALPHA),
-    edge: importedPresetRgba(preset, SILHOUETTE_EDGE_ALPHA),
-  };
-}
-
-/**
- * ADR-686 — παλέτα slot με **user override** να νικά το preset: αν το `faceAppearance` έχει override
- * για αυτό το slot (`slot:${name}`) ή base (`'*'`) και δίνει χρώμα (`faceAppearanceColorHex`, ΙΔΙΟ
- * SSoT με το 3D + το 2D plan fill), βάφει με αυτό· αλλιώς πέφτει στο ADR-683 preset-by-name.
+ * ADR-683 §10.9.3 (Giorgio 2026-07-22, «Β»): η 2Δ κάτοψη των εισαγόμενων βάφεται **ομοιόμορφα** με το
+ * ουδέτερο γκρι {@link IMPORTED_MESH_PALETTE} — ΟΧΙ πλέον χρώμα-ανά-υλικό (Revit-style poché). Απόφαση
+ * μόνο για το 2Δ· το 3Δ κρατά τα πραγματικά υλικά (`imported-material-presets`, αμετάβλητο).
+ *
+ * ADR-686 — ο **user override** εξαιρείται: αν ο χρήστης έβαψε ρητά αυτό το slot (`slot:${name}`) ή base
+ * (`'*'`), αυτό το χρώμα νικά (deliberate action, όχι auto poché). Αλλιώς → ουδέτερο γκρι.
  */
 function slotPaletteWithOverride(
   materialName: string | undefined,
-  nodeName: string | undefined,
   faceAppearance: FaceAppearanceMap | undefined,
 ): MeshSilhouettePalette {
   const override = faceAppearance
     ? faceAppearance[slotFaceKey(materialName ?? '')] ?? faceAppearance[BASE_FACE_KEY]
     : undefined;
   const hex = override ? faceAppearanceColorHex(override) : null;
-  if (!hex) return resolveImportedMeshPalette(materialName, nodeName);
+  if (!hex) return IMPORTED_MESH_PALETTE;
   return {
     stroke: hex,
     fill: hexToRgba(hex, SILHOUETTE_FILL_ALPHA),
@@ -147,7 +120,7 @@ export class ImportedMeshRenderer extends BimFootprintRenderer {
 
     if (!this.drawImportedSilhouette(mesh, assetId)) {
       // Το ορθογώνιο του μετρημένου bbox — «εδώ είναι, το σχήμα έρχεται».
-      const palette = slotPaletteWithOverride(mesh.params.sourceMaterialName, nodeName, mesh.faceAppearance);
+      const palette = slotPaletteWithOverride(mesh.params.sourceMaterialName, mesh.faceAppearance);
       this.ctx.fillStyle = adaptFillTintForCanvas(palette.fill);
       this.drawPolygonPath(verts);
       this.ctx.fill();
@@ -173,12 +146,12 @@ export class ImportedMeshRenderer extends BimFootprintRenderer {
    * βγαίνει από τον ΙΔΙΟ SSoT (`slotPaletteWithOverride`) με το 3Δ (override → preset → ουδέτερο).
    */
   private drawImportedSilhouette(mesh: ImportedMeshEntity, assetId: string): boolean {
-    const { position, rotationDeg, sceneUnits, sourceMaterialName, nodeName } = mesh.params;
+    const { position, rotationDeg, sceneUnits, sourceMaterialName } = mesh.params;
     const transform = { position, rotationDeg, sceneUnits: sceneUnits ?? 'mm' } as const;
     const worldToScreen = (p: Point2D): Point2D => this.worldToScreen(p);
     const appearance = mesh.faceAppearance; // ADR-686 — user override per slot / base.
     const edges = bimMeshCache.getTopEdges(IMPORTED_MESH_CATEGORY, assetId);
-    const palette = slotPaletteWithOverride(sourceMaterialName, nodeName, appearance);
+    const palette = slotPaletteWithOverride(sourceMaterialName, appearance);
 
     const slots = bimMeshCache.getSlotSilhouettes(IMPORTED_MESH_CATEGORY, assetId);
     if (
@@ -188,7 +161,7 @@ export class ImportedMeshRenderer extends BimFootprintRenderer {
         worldToScreen,
         slots: slots.map((s) => ({
           contours: s.contours,
-          palette: slotPaletteWithOverride(s.materialName ?? undefined, nodeName, appearance),
+          palette: slotPaletteWithOverride(s.materialName ?? undefined, appearance),
         })),
         transform,
         lineWidth: RENDER_LINE_WIDTHS.NORMAL,

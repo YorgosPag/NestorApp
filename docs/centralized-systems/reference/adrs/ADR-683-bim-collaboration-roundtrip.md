@@ -590,8 +590,24 @@ worker scaled/snapped union → flat rings → `flatRingsToFilteredContours` →
 []). 7 πράσινα. Worker union core spike: exact 2 rings, συμμετρικό. jscpd 0 clones. Εκκρεμεί: browser verify #4
 (placeholder→exact swap + zoom).
 
+### 10.9.3 🎨 2Δ κάτοψη = ομοιόμορφο ουδέτερο γκρι (preview, Giorgio «Β», 2026-07-22)
+
+**Απόφαση Giorgio (preview — «θα σου πω αν το κρατήσω»):** στην **2Δ κάτοψη** τα εισαγόμενα βάφονται πλέον
+**ομοιόμορφα** με το ουδέτερο γκρι, **όχι** χρώμα-ανά-υλικό (το Φ4 material poché). Αφορά **μόνο το 2Δ** — το **3Δ
+κρατά τα πραγματικά υλικά** (`imported-material-presets`, textures) αμετάβλητα.
+
+- `ImportedMeshRenderer.slotPaletteWithOverride`: no-override → `IMPORTED_MESH_PALETTE` (γκρι) αντί για
+  `resolveImportedMeshPalette` (preset-by-name, **αφαιρέθηκε** από το 2Δ path μαζί με τα preset imports).
+- **User override (ADR-686) εξαιρείται**: αν ο χρήστης έβαψε ρητά ένα slot/base, αυτό νικά (deliberate, όχι poché).
+- **Αναστρέψιμο**: το `resolveImportedMaterialPresetFor`/`importedPresetHex/Rgba` μένουν στο
+  `imported-material-presets` (3Δ + tests)· επαναφορά «Α» = ξανα-wire στο 2Δ path.
+
 ## 11. Changelog
 
+- **2026-07-22 (§10.9.3 🎨 2Δ ομοιόμορφο γκρι — preview «Β»)** — Ο Giorgio διάλεξε ομοιόμορφο ουδέτερο γκρι στην
+  2Δ κάτοψη (όχι χρώμα-ανά-υλικό) — preview, εκκρεμεί τελική έγκριση. Μόνο 2Δ· 3Δ αμετάβλητο (πραγματικά υλικά).
+  `slotPaletteWithOverride` → neutral default· `resolveImportedMeshPalette` + preset imports αφαιρέθηκαν από τον
+  renderer (μένουν στο `imported-material-presets` για 3Δ/tests → αναστρέψιμο). User override (ADR-686) εξαιρείται.
 - **2026-07-22 (§10.9.2b — αφαίρεση παλιάς μηχανής + ενοποίηση εμφάνισης)** — Giorgio approve (verify #4). (α)
   Χειρουργική αφαίρεση του legacy raw-triangle draw: `drawMeshFill` + `getFillTriangles` + `fillTriangles` cache
   σβήστηκαν (το `computeTopFillTriangles` μένει ως **worker input**). (β) Ο Giorgio παρατήρησε ότι sibling
