@@ -20,6 +20,7 @@ import { getGlobalCommandHistory } from '../../core/commands';
 import { SetEntityFaceAppearanceMapCommand } from '../../core/commands/entity-commands/SetEntityFaceAppearanceMapCommand';
 import { entireElementFaceMap, type FaceAppearance, type FaceAppearanceMap } from '../../bim/types/face-appearance-types';
 import { applyStairWholeAppearance } from './apply-stair-sub-element-appearance';
+import { applyRailingWholeAppearance } from './apply-railing-appearance';
 
 export function applyEntityFaceAppearanceMap(
   levels: LevelsHookReturn | null,
@@ -34,10 +35,12 @@ export function applyEntityFaceAppearanceMap(
 }
 
 /**
- * ADR-539 Φ7 — «βάψε ΟΛΟ το στοιχείο» (mode ΣΩΜΑ), ένα call-site για panel + drag-drop. Επιλύει τον
- * τύπο του entity και δρομολογεί: **σκάλα** → `applyStairWholeAppearance` (params.materials.appearance,
- * γιατί η σκάλα ΔΕΝ διαβάζει `FaceAppearance` base)· **οτιδήποτε άλλο** (solid) → `entireElementFaceMap`
- * base `'*'` (αμετάβλητη συμπεριφορά). `value=null` → clear. No-op όταν λείπει επίπεδο/entity.
+ * ADR-539 Φ7 / ADR-407 Φ8 — «βάψε ΟΛΟ το στοιχείο» (mode ΣΩΜΑ), ένα call-site για panel + drag-drop.
+ * Επιλύει τον τύπο του entity και δρομολογεί: **σκάλα** → `applyStairWholeAppearance`
+ * (params.materials.appearance)· **κάγκελο** → `applyRailingWholeAppearance` (params.appearance) —
+ * και τα δύο render-άρονται ΑΠΟ params, όχι `FaceAppearance` base· **οτιδήποτε άλλο** (solid) →
+ * `entireElementFaceMap` base `'*'` (αμετάβλητη συμπεριφορά). `value=null` → clear. No-op όταν λείπει
+ * επίπεδο/entity.
  */
 export function applyWholeElementBodyAppearance(
   levels: LevelsHookReturn | null,
@@ -49,6 +52,10 @@ export function applyWholeElementBodyAppearance(
   const entity = adapter.getEntity(bimId);
   if (entity?.type === 'stair') {
     applyStairWholeAppearance(levels, bimId, value);
+    return;
+  }
+  if (entity?.type === 'railing') {
+    applyRailingWholeAppearance(levels, bimId, value);
     return;
   }
   applyEntityFaceAppearanceMap(levels, bimId, entireElementFaceMap(value));

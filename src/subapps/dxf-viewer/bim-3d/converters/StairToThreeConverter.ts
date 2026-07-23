@@ -409,10 +409,15 @@ function buildWaistMeshes(
     baseSlabUndersideZmm !== undefined
       ? baseY + baseSlabUndersideZmm * sceneToM + waistDropM
       : undefined;
+  // ADR-358 (2026-07-23) — every UPPER flight bears FLAT on the underside of the landing it
+  // rises from (Revit "waist spans across landings"): the μηρός soffit meets the landing
+  // underside so the thin landing doesn't fly AND the flight no longer sinks through it. Same
+  // terminating-trim as the base slab, pre-compensated by `waistDropM` for the shift below.
+  const landingClip = { thicknessM: resolveLandingThicknessMm(stair), dropM: waistDropM };
   // ADR-539 Φ6 — 0-based index per waist slab (a Γάμμα/Ζ stair has one per flight), so each is
   // individually pickable under «ΠΟΛΥΓΩΝΑ» via the SAME `stairComponentIndex` sub-element gesture.
   let waistIndex = 0;
-  for (const mesh of buildWaistSlabMeshes(stair, baseY, sceneToM, soffitClipWorldY)) {
+  for (const mesh of buildWaistSlabMeshes(stair, baseY, sceneToM, soffitClipWorldY, landingClip)) {
     mesh.position.y -= waistDropM; // lower the slab toward the building floor
     const tagged = tagStairMesh(mesh, stair, 'waist', levelId, waistIndex++);
     attachStairEdges(tagged); // no subcategory → parent stair style (like landings)
@@ -429,6 +434,11 @@ export function stairToMeshes(
   levelId?: string,
   buildingBaseElevationM = 0,
   baseSlabUndersideZmm?: number,
+  // ADR-407 Φ7 — όταν η σκάλα φιλοξενεί ΗΔΗ hosted `RailingEntity` (posts+balusters+κουπαστή),
+  // ο γυμνός handrail-σωλήνας της σκάλας παραλείπεται ώστε να ΜΗΝ διπλασιάζεται η κουπαστή. Ο
+  // caller (`BimSceneLayer.syncStairs`) το θέτει από τη λίστα railings. Default false → legacy
+  // σκάλες χωρίς κάγκελο κρατούν τον σωλήνα τους (μηδέν regression).
+  suppressHandrail = false,
 ): readonly THREE.Mesh[] {
   // SSoT: scene-units inference + Three.js meters conversion live in
   // utils/scene-units.ts. Stair params/geometry are in scene units (m/cm/mm
@@ -443,6 +453,6 @@ export function stairToMeshes(
     ...buildTreadMeshes(stair, baseY, sceneToM, levelId, baseSlabUndersideZmm !== undefined),
     ...buildRiserMeshes(stair, baseY, sceneToM, levelId),
     ...buildStringerMeshes(stair, baseY, sceneToM, levelId),
-    ...buildHandrailMeshes(stair, baseY, sceneToM, levelId),
+    ...(suppressHandrail ? [] : buildHandrailMeshes(stair, baseY, sceneToM, levelId)),
   ];
 }

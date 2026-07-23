@@ -32,6 +32,12 @@ export interface RaycastHit {
    * `treadIndex`. Present with `stairPart` on tread/riser hits.
    */
   readonly stairSubIndex?: number;
+  /**
+   * ADR-407 Φ8 — present only on a RAILING sub-mesh hit: `userData.railingComponent`
+   * (`post`|`baluster`|`rail`), stamped by `railing-to-three`. Enables «click-into
+   * components» per-component paint of a κιγκλίδωμα (mirror `stairPart`).
+   */
+  readonly railingComponent?: string;
 }
 
 const _raycaster = new THREE.Raycaster();
@@ -118,7 +124,12 @@ export function raycastBimGroup(
   for (const hit of hits) {
     const tagged = resolveTaggedBim(hit.object);
     if (tagged) {
-      return { bimId: tagged.bimId, bimType: tagged.bimType, ...stairSubElementFields(tagged.obj) };
+      return {
+        bimId: tagged.bimId,
+        bimType: tagged.bimType,
+        ...stairSubElementFields(tagged.obj),
+        ...railingComponentField(tagged.obj),
+      };
     }
   }
   return null;
@@ -137,6 +148,16 @@ function stairSubElementFields(
   if (stairPart === undefined) return {};
   const idx = obj.userData['stairComponentIndex'] as number | undefined;
   return idx === undefined ? { stairPart } : { stairPart, stairSubIndex: idx };
+}
+
+/**
+ * ADR-407 Φ8 — read the optional railing component tag (`railingComponent` = post/baluster/rail)
+ * off the tagged mesh, enabling «click-into components» per-component paint. Returns `{}` for
+ * non-railing meshes (no key spread onto the `RaycastHit`).
+ */
+function railingComponentField(obj: THREE.Object3D): { railingComponent?: string } {
+  const railingComponent = obj.userData['railingComponent'] as string | undefined;
+  return railingComponent === undefined ? {} : { railingComponent };
 }
 
 /**
@@ -235,7 +256,12 @@ export function raycastBimFace(
     // κρατά τα δικά της tread/riser/landing/waist meshes (`stairComponent` tags). Μεταφέρουμε αυτά
     // τα fields στο fallback ώστε, μέσα στο «ΠΟΛΥΓΩΝΑ», το κλικ σε σκαλί να επιλέγει το sub-element
     // (mirror του `raycastBimGroup`), αντί για ολόκληρη τη σκάλα.
-    entityFallback ??= { bimId, bimType, ...stairSubElementFields(tagged.obj) }; // nearest non-faced hit
+    // nearest non-faced hit — carry stair/railing sub-component fields for «click-into» paint.
+    entityFallback ??= {
+      bimId, bimType,
+      ...stairSubElementFields(tagged.obj),
+      ...railingComponentField(tagged.obj),
+    };
   }
   return entityFallback;
 }

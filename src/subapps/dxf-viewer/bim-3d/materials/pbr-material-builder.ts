@@ -22,6 +22,10 @@ export function buildMat(def: PbrMaterialDef): THREE.MeshStandardMaterial {
     metalness: def.metalness,
     transparent: def.transparent ?? false,
     opacity: def.opacity ?? 1,
+    // ADR-687 Φ4 — self-illumination (Revit «Self-illumination»): emissive colour × strength.
+    // Default black/1 = no glow (emissive black makes emissiveIntensity a no-op).
+    emissive: def.emissive ?? 0x000000,
+    emissiveIntensity: def.emissiveIntensity ?? 1,
     // ADR-366 §B.5 perf — FrontSide (backface culling) on the SOLE face factory. BIM
     // solids (walls/columns/slabs/beams/roofs/mep) are CLOSED extrusions with outward
     // CCW winding, so the inner faces are never seen from outside; DoubleSide doubled

@@ -64,6 +64,15 @@ function makeWithLanding(): StairEntity {
   } as unknown as StairEntity;
 }
 
+/** makeWithLanding + a real landing footprint polygon @ z = 2·RISE (between the two runs)
+ *  — the "flying landing" case: the thin landing needs a waist pad underneath it. */
+function makeWithLandingPoly(): StairEntity {
+  const s = makeWithLanding();
+  const zL = 2 * RISE; // landing top: one rise above flight1 (z=175), one below flight2 (z=525)
+  const landing = [P(0, 0, zL), P(TREAD, 0, zL), P(TREAD, WIDTH, zL), P(0, WIDTH, zL)];
+  return { ...s, geometry: { ...s.geometry, landings: [landing] } } as unknown as StairEntity;
+}
+
 describe('stair-waist-slabs (μηρός)', () => {
   const sceneToM = sceneUnitsToMeters(inferSceneUnitsFromWidth(WIDTH));
 
@@ -220,6 +229,80 @@ describe('stair-waist-slabs (μηρός)', () => {
       ).length).toBe(stairToMeshes(stair).filter(
         (m) => m.userData['stairComponent'] === 'riser',
       ).length);
+    });
+  });
+
+  // ── ADR-358 (2026-07-23) — ο μηρός τερματίζει FLUSH στην κάτω παρειά του πλατισκάλου
+  //    (Revit "waist spans across landings"): δεν "πετάει" το πλατύσκαλο, δεν βυθίζεται ο κλάδος. ──
+  describe('upper flight bears flat on the landing underside (no flying, no sinking)', () => {
+    const landingThk = WAIST_MM * 0.001;      // "Same as Run" (no landingThickness override)
+    const landingTop = 2 * RISE * sceneToM;    // one rise below flight-2's first tread (525 → 350)
+    const underside = landingTop - landingThk; // 0.190 m — the thin landing's bottom face
+
+    const waistByIndex = (stair: StairEntity, idx: number) =>
+      stairToMeshes(stair).find(
+        (m) => m.userData['stairComponent'] === 'waist' && m.userData['stairComponentIndex'] === idx,
+      ) as THREE.Mesh;
+    const worldMinY = (mesh: THREE.Mesh) => {
+      mesh.geometry.computeBoundingBox();
+      return mesh.geometry.boundingBox!.min.y + mesh.position.y;
+    };
+
+    it('the upper flight soffit meets the landing underside — not the deep natural soffit', () => {
+      // Clamped FLAT at the landing underside, NOT hanging a full soffitDrop below (≈ −0.06 m,
+      // which was the flight "sinking through" the thin landing).
+      expect(worldMinY(waistByIndex(makeWithLandingPoly(), 1))).toBeCloseTo(underside, 5);
+    });
+
+    it('no separate pad body is emitted — only the thin landing itself sits over the flight', () => {
+      const comps = stairToMeshes(makeWithLandingPoly()).map((m) => m.userData['stairComponent']);
+      expect(comps).not.toContain('landing-waist');
+      expect(comps.filter((c) => c === 'landing')).toHaveLength(1);
+    });
+
+    it('the thin landing seats flush on the flight (landing underside === clamped soffit)', () => {
+      const landing = stairToMeshes(makeWithLandingPoly()).find(
+        (m) => m.userData['stairComponent'] === 'landing',
+      )! as THREE.Mesh;
+      expect(worldMinY(landing)).toBeCloseTo(underside, 5);
+      expect(worldMinY(waistByIndex(makeWithLandingPoly(), 1))).toBeCloseTo(underside, 5);
+    });
+
+    it('the BASE flight base soffit still reaches the floor deep soffit (not raised by the landing above)', () => {
+      // gi 0 dives to its natural base soffit (≈ −0.41 m) at the FLOOR end, far below the landing.
+      expect(worldMinY(waistByIndex(makeWithLandingPoly(), 0))).toBeLessThan(underside - 0.1);
+    });
+
+    it('the LOWER flight is PROLONGED under the landing until its soffit meets the underside', () => {
+      // The lower flight's TOP meets the landing above it → its μηρός extends under the landing
+      // with a cap AT the landing underside (0.190 m). No other vertex of that flight sits there.
+      const flight1 = waistByIndex(makeWithLandingPoly(), 0);
+      const pos = flight1.geometry.getAttribute('position') as THREE.BufferAttribute;
+      let meetsUnderside = false;
+      for (let i = 0; i < pos.count; i++) {
+        if (Math.abs(pos.getY(i) + flight1.position.y - underside) < 1e-4) { meetsUnderside = true; break; }
+      }
+      expect(meetsUnderside).toBe(true);
+    });
+
+    it('flightSectionPoints: TOP landing extension prolongs the soffit to meet the underside', () => {
+      const M = 2, span = M * TREAD;
+      const drop = RISE + WAIST_MM / (TREAD / Math.hypot(TREAD, RISE)); // rise + waist/cosθ
+      const topSoffitY = M * RISE - drop;
+      const underY = topSoffitY + 120;                    // above the natural top soffit → extend
+      const aMeet = span + ((underY - topSoffitY) * TREAD) / RISE;
+      const pts = flightSectionPoints(M, TREAD, RISE, drop, undefined, underY);
+      const has = (x: number, y: number) => pts.some((p) => Math.abs(p.x - x) < 1e-6 && Math.abs(p.y - y) < 1e-6);
+      expect(has(aMeet, underY)).toBe(true);              // soffit meets the underside, past the edge
+      expect(has(span, underY)).toBe(true);               // flat cap back to the flight edge
+      expect(aMeet).toBeGreaterThan(span);                // prolonged BEYOND the flight
+    });
+
+    it('flightSectionPoints: no extension when the landing underside is at/below the top soffit', () => {
+      const M = 2;
+      const drop = RISE + WAIST_MM / (TREAD / Math.hypot(TREAD, RISE));
+      const topSoffitY = M * RISE - drop;
+      expect(flightSectionPoints(M, TREAD, RISE, drop, undefined, topSoffitY - 30)).toHaveLength(2 + (2 * M + 1));
     });
   });
 });

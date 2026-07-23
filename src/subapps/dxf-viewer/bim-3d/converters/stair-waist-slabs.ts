@@ -142,11 +142,15 @@ function soffitPoints(
  * so the soffit clears the NOSING line (lowest step envelope) → the section never
  * self-intersects. Optional `soffitFloorY` (ADR-685 Φ2) trims the base soffit flat at the
  * seating slab's underside so a terminating stair bears on the slab instead of hanging
- * below it. Traced CCW: soffit base→top, staircase R→L. Exported for the geometry
- * regression (seat / no-poke / soffit-clearance / terminating-trim invariants live here).
+ * below it. Optional `topLandingUndersideY` (ADR-358, Giorgio 2026-07-23) PROLONGS the
+ * μηρός past the top edge under the landing until the inclined soffit rises to meet the
+ * landing underside — so the thin landing bears on continuous concrete (one monolithic
+ * organism), instead of flying. Traced CCW: soffit base→top(→landing wedge), staircase R→L.
+ * Exported for the geometry regression (seat / no-poke / soffit-clearance / trim invariants).
  */
 export function flightSectionPoints(
-  M: number, tStep: number, rStep: number, soffitDrop: number, soffitFloorY?: number,
+  M: number, tStep: number, rStep: number, soffitDrop: number,
+  soffitFloorY?: number, topLandingUndersideY?: number,
 ): THREE.Vector2[] {
   const stair: THREE.Vector2[] = [new THREE.Vector2(0, 0)];
   for (let k = 0; k < M; k++) {
@@ -154,6 +158,18 @@ export function flightSectionPoints(
     stair.push(new THREE.Vector2((k + 1) * tStep, (k + 1) * rStep)); // riser → next corner
   }
   const pts: THREE.Vector2[] = soffitPoints(M, tStep, rStep, soffitDrop, soffitFloorY);
+  // TOP-of-flight landing extension: the flight's top meets a landing whose UNDERSIDE sits
+  // ABOVE the natural top soffit → the thin landing would "fly". Prolong the μηρός under the
+  // landing: the inclined soffit continues PAST the edge until it rises to the underside
+  // (`aMeet`), then a flat cap AT the underside carries the landing. A closed wedge — the
+  // landing keeps its thickness, ZERO concrete added below it (Giorgio 2026-07-23).
+  const span = M * tStep;
+  const topSoffitY = M * rStep - soffitDrop;
+  if (topLandingUndersideY !== undefined && topLandingUndersideY > topSoffitY + EPS && rStep > EPS) {
+    const aMeet = span + ((topLandingUndersideY - topSoffitY) * tStep) / rStep;
+    pts.push(new THREE.Vector2(aMeet, topLandingUndersideY)); // soffit rises to the landing underside
+    pts.push(new THREE.Vector2(span, topLandingUndersideY));  // flat cap back to the flight edge
+  }
   for (let i = stair.length - 1; i >= 0; i--) pts.push(stair[i]!);
   return pts;
 }
@@ -166,7 +182,8 @@ export function flightSectionPoints(
  */
 function buildFlightWaist(
   flight: readonly ReentrantCorner[], bottomSteps: number, topSteps: number,
-  waistM: number, mat: THREE.MeshStandardMaterial, soffitClipWorldY?: number,
+  waistM: number, mat: THREE.MeshStandardMaterial,
+  soffitClipWorldY?: number, topLandingClipWorldY?: number,
 ): THREE.Mesh | null {
   const n = flight.length;
   if (n < 2) return null;
@@ -188,7 +205,8 @@ function buildFlightWaist(
   // ADR-685 Φ2 — the section's local `y` maps 1:1 to world Y offset by `origin.y` (basis
   // `up` = world +Y), so a world-Y trim floor becomes a local-y floor by subtracting origin.y.
   const soffitFloorY = soffitClipWorldY !== undefined ? soffitClipWorldY - origin.y : undefined;
-  const shape = new THREE.Shape(flightSectionPoints(M, tStep, rStep, soffitDrop, soffitFloorY));
+  const topUndersideY = topLandingClipWorldY !== undefined ? topLandingClipWorldY - origin.y : undefined;
+  const shape = new THREE.Shape(flightSectionPoints(M, tStep, rStep, soffitDrop, soffitFloorY, topUndersideY));
   const geo = new THREE.ExtrudeGeometry(shape, { depth: widthM, bevelEnabled: false });
   geo.applyMatrix4(new THREE.Matrix4().makeBasis(uh, up, zDir)); // local a/y/width → world
   geo.translate(origin.x, origin.y, origin.z);              // seat on the flight centreline
@@ -202,15 +220,33 @@ function clampStep(steps: number): number {
 }
 
 /**
+ * A flight that starts ON an interior landing must bear FLAT on the landing's underside,
+ * not hang below it (Revit "waist spans across landings" — the μηρός soffit meets the
+ * landing underside, no separate pad, no sinking through the thin landing). This is the
+ * SAME terminating-trim as the base slab (ADR-685 Φ2), just at each landing:
+ *   • `thicknessM` — the landing slab depth (`resolveLandingThicknessMm`), so the clamp
+ *     lands on its UNDERSIDE (`landingTop − thickness`).
+ *   • `dropM` — the caller's `WAIST_DROP_MM` pre-compensation (the whole waist is lowered
+ *     by it afterwards), mirroring the base-slab clip.
+ */
+interface LandingClip {
+  readonly thicknessM: number;
+  readonly dropM: number;
+}
+
+/**
  * Untagged waist-slab meshes for a stair (empty for open/stringer structures or when
  * the tread geometry is absent). The caller stamps identity + edges. Thickness =
- * `params.waistThickness` (the μηρός SSoT, ADR-395), default 150 mm.
+ * `params.waistThickness` (the μηρός SSoT, ADR-395), default 150 mm. `soffitClipWorldY`
+ * trims the BASE flight at the seating slab (ADR-685); `landingClip` trims every UPPER
+ * flight flat at the landing it rises from (ADR-358 — no flying landing, no sinking).
  */
 export function buildWaistSlabMeshes(
   stair: StairEntity,
   baseY: number,
   sceneToM: number,
   soffitClipWorldY?: number,
+  landingClip?: LandingClip,
 ): THREE.Mesh[] {
   if (!stairHasSolidWaist(stair)) return [];
   // Full tread list (2D-cut splits it by section plane; the waist spans every step).
@@ -241,13 +277,23 @@ export function buildWaistSlabMeshes(
     const bottomSteps = gi === 0 ? clampStep(Math.round((firstZ - baseZ) / rise)) : 1;
     const topSteps = gi === flights.length - 1
       ? clampStep(Math.round((topFloorZ - lastZ) / rise)) : 1;
-    // ADR-685 Φ2 — terminating trim on the BASE flight only (where the stair meets the
-    // seating slab); upper flights rise clear above it, no clamp.
-    const clip = gi === 0 ? soffitClipWorldY : undefined;
+    // Landing underside (world Y, pre-drop) for a landing whose top face is at scene-z
+    // `landingTopZ`. SSoT for BOTH trims below so the μηρός forms ONE organism with the
+    // landings — poured & reinforced together (Giorgio 2026-07-23), no flying, no sinking.
+    const landingUndersideAt = (landingTopZ: number): number | undefined =>
+      landingClip
+        ? baseY + landingTopZ * sceneToM - landingClip.thicknessM + landingClip.dropM
+        : undefined;
+    // BASE trim: gi 0 seats FLAT on the building slab (ADR-685 Φ2); every UPPER flight bears
+    // FLAT on the landing it RISES FROM (top one rise below its first tread) → no sinking.
+    const baseClip = gi === 0 ? soffitClipWorldY : landingUndersideAt(firstZ - rise);
+    // TOP extension: every flight EXCEPT the last meets a landing ABOVE (one rise above its
+    // last tread); prolong the μηρός until its soffit meets that landing underside → no flying.
+    const topClip = gi === flights.length - 1 ? undefined : landingUndersideAt(lastZ + rise);
     // ADR-539 Φ7 — per-waist material: `perWaistOverrides[gi].appearance` painted υπό «ΠΟΛΥΓΩΝΑ»
     // (keyed by the 0-based flight index = `stairComponentIndex`)· χωρίς override = structural default.
     const mat = resolveStairAppearanceMaterial(stair.params.perWaistOverrides?.[gi]?.appearance) ?? defaultMat;
-    const mesh = buildFlightWaist(flight, bottomSteps, topSteps, waistM, mat, clip);
+    const mesh = buildFlightWaist(flight, bottomSteps, topSteps, waistM, mat, baseClip, topClip);
     if (mesh) out.push(mesh);
   });
   return out;

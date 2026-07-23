@@ -124,9 +124,35 @@ export const RailingPathSourceSchema = z.discriminatedUnion('kind', [
       hostId: z.string().min(1),
       hostType: z.enum(['stair', 'slab-edge', 'ramp']),
       side: z.enum(['inner', 'outer']).optional(),
+      // ADR-407 Φ7 — baked snapshot (self-hydrating hosted railing; sole writer = cascade).
+      resolvedPath: z.array(Point3DSchema).optional(),
+      // ADR-407 Φ7b — scalar tread count (baluster positions derived live from resolvedPath).
+      treadCount: z.number().int().nonnegative().optional(),
+      // @deprecated ADR-407 Φ7b — legacy baked anchor positions (still parsed for old docs).
+      perTreadAnchors: z.array(Point3DSchema).optional(),
+      slopeRatio: z.number().optional(),
     })
     .strict(),
 ]);
+
+// ─── Appearance (ADR-407 Φ8) ─────────────────────────────────────────────────
+
+/** `FaceAppearance` (materialId | colorHex) — cosmetic paint override, ADR-539 SSoT shape. */
+export const FaceAppearanceSchema = z
+  .object({
+    materialId: z.string().min(1).optional(),
+    colorHex: z.string().min(1).optional(),
+  })
+  .strict();
+
+/** Per-component railing appearance (κουπαστή / κάγκελα / κολόνες), κάθε πεδίο optional. */
+export const RailingComponentAppearanceSchema = z
+  .object({
+    post: FaceAppearanceSchema.optional(),
+    baluster: FaceAppearanceSchema.optional(),
+    rail: FaceAppearanceSchema.optional(),
+  })
+  .strict();
 
 // ─── Params schema ──────────────────────────────────────────────────────────
 
@@ -138,6 +164,9 @@ export const RailingParamsSchema = z
     baseElevationMm: z.number().finite(),
     sceneUnits: z.string().optional(),
     storeyId: z.string().min(1).optional(),
+    // ADR-407 Φ8 — whole-railing base + per-component paint (Revit «Paint» / Cinema 4D tag).
+    appearance: FaceAppearanceSchema.optional(),
+    componentAppearance: RailingComponentAppearanceSchema.optional(),
   })
   .strict();
 

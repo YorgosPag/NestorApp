@@ -299,6 +299,9 @@ export const generateMepBoilerId = () => enterpriseIdService.generateMepBoilerId
 export const generateMepWaterHeaterId = () => enterpriseIdService.generateMepWaterHeaterId();
 export const generateMepUnderfloorId = () => enterpriseIdService.generateMepUnderfloorId();
 export const generateRailingId = () => enterpriseIdService.generateRailingId();
+// ADR-407 Φ7 — deterministic railing id (σταθερό ανά seed· auto stair-hosted railing).
+export const generateDeterministicRailingId = (seed: string) =>
+  enterpriseIdService.generateDeterministicRailingId(seed);
 export const generateFurnitureId = () => enterpriseIdService.generateFurnitureId();
 export const generateImportedMeshId = () => enterpriseIdService.generateImportedMeshId();
 export const generateGenericSolidId = () => enterpriseIdService.generateGenericSolidId();

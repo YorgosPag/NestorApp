@@ -34,6 +34,11 @@ import {
   useStairSubElementSelectionStore,
   isStairSubPart,
 } from '../../bim/stairs/stair-sub-element-selection-store';
+// ADR-407 Φ8 — «click-into» per-component paint κιγκλιδώματος (κουπαστή/κάγκελα/κολόνες), mirror σκάλας.
+import {
+  useRailingComponentSelectionStore,
+  isRailingComponent,
+} from '../../bim/railings/railing-component-selection-store';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 import { DXF_TIMING } from '../../config/dxf-timing';
 // ADR-040 Φ-3D-pointer — hover+snap pick decoupled to a RAF slot (mirror the 2D snap-scheduler).
@@ -114,6 +119,7 @@ export function useBim3DPointerHandlers(
     if (usePolygonMode3DStore.getState().active) {
       const store = usePolygonMode3DStore.getState();
       const subStore = useStairSubElementSelectionStore.getState();
+      const railStore = useRailingComponentSelectionStore.getState();
       const faceHit = manager.raycastBimFace(e.clientX, e.clientY);
       // (α) Faced solid (τοίχος/υποστύλωμα/πλάκα/…): per-face επιλογή για βαφή (Cinema 4D).
       if (faceHit?.bimId && faceHit.faceKey) {
@@ -122,6 +128,7 @@ export function useBim3DPointerHandlers(
         else store.selectFace(face);
         manager.setSelectedFaces(usePolygonMode3DStore.getState().selectedFaces);
         subStore.clear(); // face pick εξ ορισμού βγαίνει από κάθε sub-element σκάλας
+        railStore.clear(); // …και από κάθε component κιγκλιδώματος
         return;
       }
       // (β) ADR-358 Q19 «click-into» — μια σκάλα ΔΕΝ είναι faced-prism· ένα χτύπημα σε πάτημα/ρίχτι/
@@ -139,7 +146,25 @@ export function useBim3DPointerHandlers(
         if (!useSelection3DStore.getState().selectedBimIds.includes(faceHit.bimId)) {
           manager.selectBimEntity(faceHit.bimId);
         }
+        railStore.clear(); // stair sub εξ ορισμού βγαίνει από κάθε component κιγκλιδώματος
         subStore.selectSub({ stairId: faceHit.bimId, part: faceHit.stairPart, index: faceHit.stairSubIndex });
+        return;
+      }
+      // (β2) ADR-407 Φ8 «click-into» — ένα κάγκελο ΔΕΝ είναι faced-prism· χτύπημα σε κουπαστή/κάγκελα/
+      // κολόνα φέρνει `railingComponent` (χωρίς faceKey). Επίλεξε το μεμονωμένο component (για per-role
+      // paint) αντί για ολόκληρο το κάγκελο. Εξασφάλισε πρώτα ότι το host κάγκελο είναι επιλεγμένο.
+      if (
+        faceHit?.bimId &&
+        faceHit.bimType === 'railing' &&
+        isRailingComponent(faceHit.railingComponent)
+      ) {
+        store.clearFaces();
+        manager.setSelectedFaces([]);
+        if (!useSelection3DStore.getState().selectedBimIds.includes(faceHit.bimId)) {
+          manager.selectBimEntity(faceHit.bimId);
+        }
+        subStore.clear(); // component κιγκλιδώματος εξ ορισμού βγαίνει από κάθε sub-element σκάλας
+        railStore.selectComponent({ railingId: faceHit.bimId, component: faceHit.railingComponent });
         return;
       }
       // (γ) Κενό/μη-επιλέξιμο: καθάρισε (Cinema 4D — plain miss αδειάζει, Shift+miss κρατά).
@@ -147,6 +172,7 @@ export function useBim3DPointerHandlers(
         store.clearFaces();
         manager.setSelectedFaces([]);
         subStore.clear();
+        railStore.clear();
       }
       return;
     }
@@ -158,6 +184,7 @@ export function useBim3DPointerHandlers(
       // overlay is exclusively BIM's.
       SelectedEntitiesStore.clearByType('dxf-entity');
       const subStore = useStairSubElementSelectionStore.getState();
+      useRailingComponentSelectionStore.getState().clear(); // exit any railing component selection
       if (e.shiftKey) {
         subStore.clear(); // ADR-358 — multi-select never enters a sub-element.
         manager.toggleBimEntity(hit.bimId);
@@ -182,6 +209,7 @@ export function useBim3DPointerHandlers(
       : null;
     if (dxfId) {
       useStairSubElementSelectionStore.getState().clear(); // ADR-358 — DXF pick exits any stair sub-selection.
+      useRailingComponentSelectionStore.getState().clear(); // …and any railing component selection.
       // ADR-543 — only clear the BIM selection when it actually holds something. Calling
       // clearSelection() when already empty fires the universal bridge → replaceEntitySelection([])
       // which WIPES the accumulated DXF multi-selection on every click (blocked 3D multi-select).
@@ -199,8 +227,9 @@ export function useBim3DPointerHandlers(
       });
       return;
     }
-    // Empty space → clear both selections (+ any stair sub-selection).
+    // Empty space → clear both selections (+ any stair sub / railing component selection).
     useStairSubElementSelectionStore.getState().clear();
+    useRailingComponentSelectionStore.getState().clear();
     manager.selectBimEntity(null);
     SelectedEntitiesStore.clearByType('dxf-entity');
   }, [managerRef]);

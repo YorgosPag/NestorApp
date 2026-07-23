@@ -29,6 +29,9 @@ import { applyWholeElementBodyAppearance } from '../ui/apply-entity-face-appeara
 // ADR-539 Φ7 — drop σε υποενότητα σκάλας (πάτημα/ρίχτι/πλατύσκαλο/πλάκα) → stair params appearance.
 import { applyStairSubElementAppearance } from '../ui/apply-stair-sub-element-appearance';
 import { useStairSubElementSelectionStore, isStairSubPart } from '../../bim/stairs/stair-sub-element-selection-store';
+// ADR-407 Φ8 — drop σε component κιγκλιδώματος (κουπαστή/κάγκελα/κολόνες) → railing params appearance.
+import { applyRailingComponentAppearance } from '../ui/apply-railing-appearance';
+import { useRailingComponentSelectionStore, isRailingComponent } from '../../bim/railings/railing-component-selection-store';
 import { applyFinishToWholeElement, faceAppearanceToFinishOverride } from '../ui/apply-finish-face-override';
 import { applyBimHover } from '../scene/scene-manager-actions';
 import { BIM_MATERIAL_MIME, parseFaceAppearanceDrag } from '../ui/polygon-material-dnd';
@@ -99,6 +102,17 @@ export function usePolygonDragDrop(
           stairId: hit.bimId, part: hit.stairPart, index: hit.stairSubIndex,
         });
         applyStairSubElementAppearance(levels, hit.bimId, hit.stairPart, hit.stairSubIndex, value);
+        return;
+      }
+      // ADR-407 Φ8 — drop σε component κιγκλιδώματος (χωρίς faceKey): γράψε το per-component appearance
+      // στα railing params + άγκυρωσε την επιλογή στο ίδιο component (mirror σκάλας).
+      if (hit?.bimId && hit.bimType === 'railing' && isRailingComponent(hit.railingComponent)) {
+        store.clearFaces();
+        manager.setSelectedFaces([]);
+        useRailingComponentSelectionStore.getState().selectComponent({
+          railingId: hit.bimId, component: hit.railingComponent,
+        });
+        applyRailingComponentAppearance(levels, hit.bimId, hit.railingComponent, value);
       }
       return;
     }

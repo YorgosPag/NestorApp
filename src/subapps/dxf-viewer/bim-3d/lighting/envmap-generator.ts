@@ -87,6 +87,21 @@ export class EnvmapGenerator {
     prev?.dispose();
   }
 
+  /**
+   * ADR-687 — set `scene.environment` from an arbitrary equirect source (e.g. the procedural
+   * HDR studio env of the Material Editor preview) WITHOUT touching the visible background or
+   * the HDRI/gradient state. PMREM SSoT + previous-env disposal, mirroring `buildGradientEnvmap`.
+   * The passed equirect is a TRANSIENT source (PMREM captures it) → disposed here.
+   */
+  applyEquirectEnvironment(equirect: THREE.Texture): void {
+    const prev = this.currentEnvmap;
+    const pmrem = this.pmremGenerator.fromEquirectangular(equirect);
+    equirect.dispose();
+    this.currentEnvmap = pmrem.texture;
+    this.scene.environment = this.currentEnvmap;
+    prev?.dispose();
+  }
+
   async loadHdri(url: string): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       const loader = new RGBELoader();

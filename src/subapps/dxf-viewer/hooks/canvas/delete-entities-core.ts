@@ -41,6 +41,7 @@ import {
   findHostedOpenings,
   findHostedSlabOpenings,
   findHostedStairwellOpenings,
+  findHostedStairRailings,
 } from '../../bim/cascade/bim-cascade-resolver';
 import { isManagedSlabOpening } from '../../bim/stairs/managed-slab-opening-lock';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -115,6 +116,12 @@ export async function deleteEntitiesById(
     sceneEntities,
     selectionSet,
   );
+  // ADR-407 Φ7 — σκάλα → auto hosted κάγκελα που κατέχει· cascade σιωπηλά (auto-derived).
+  const orphanedStairRailingIds = findHostedStairRailings(
+    deletingStairIds,
+    sceneEntities,
+    selectionSet,
+  );
 
   let idsToDelete: string[] = [...effectiveIds];
   if (orphanedOpeningIds.length > 0) {
@@ -127,6 +134,9 @@ export async function deleteEntitiesById(
   }
   if (orphanedStairwellOpeningIds.length > 0) {
     idsToDelete = [...idsToDelete, ...orphanedStairwellOpeningIds];
+  }
+  if (orphanedStairRailingIds.length > 0) {
+    idsToDelete = [...idsToDelete, ...orphanedStairRailingIds];
   }
 
   // Collect BIM IDs by type BEFORE executeCommand removes them from the scene

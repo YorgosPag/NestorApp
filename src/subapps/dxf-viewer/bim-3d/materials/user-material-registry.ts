@@ -29,6 +29,7 @@ import * as THREE from 'three';
 import type { BimMaterial, PbrMaterialTextures } from '../../bim/types/bim-material-types';
 import {
   getCategoryMaterialDef,
+  appearanceToDef,
   type PbrMaterialDef,
 } from '../../bim/materials/material-catalog-defs';
 import { configurePbrTexture } from './pbr-texture-config';
@@ -71,8 +72,28 @@ function texturesSignature(t: PbrMaterialTextures | null): string {
   return [t.albedoUrl, t.normalUrl, t.roughnessUrl, t.aoUrl, t.tileSizeM].join('|');
 }
 
+/** ADR-687 Φ1/Φ4 — appearance fingerprint: any change re-bumps the material version. */
+function appearanceSignature(material: BimMaterial): string {
+  const a = material.appearance;
+  return a
+    ? `${a.baseColorHex}|${a.metalness}|${a.roughness}|${a.emissiveHex ?? ''}|${a.emissiveIntensity ?? 0}|${a.opacity ?? 1}`
+    : '∅';
+}
+
+/**
+ * ADR-687 Φ1 — the flat def a library material renders with: its OWN per-material
+ * appearance (χρώμα/γυαλάδα/μεταλλικότητα) when set, else the category fallback.
+ * ONE resolution point — the 3D catalog, the 2D color provider and the swatch all
+ * read this `def`, so a user-authored material paints consistently everywhere.
+ */
+function resolveMaterialDef(material: BimMaterial): PbrMaterialDef {
+  return material.appearance
+    ? appearanceToDef(material.appearance)
+    : getCategoryMaterialDef(material.category);
+}
+
 function fullSignature(material: BimMaterial): string {
-  return `${material.category}::${texturesSignature(material.pbrTextures)}`;
+  return `${material.category}::${appearanceSignature(material)}::${texturesSignature(material.pbrTextures)}`;
 }
 
 function bumpVersion(id: string): void {
@@ -122,7 +143,7 @@ export function setUserMaterials(materials: readonly BimMaterial[]): void {
       disposeSet(m.id);
     }
     entries.set(m.id, {
-      def: getCategoryMaterialDef(m.category),
+      def: resolveMaterialDef(m),
       textures: m.pbrTextures,
       signature: sig,
     });

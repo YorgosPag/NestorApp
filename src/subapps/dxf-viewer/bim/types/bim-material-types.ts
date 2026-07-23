@@ -62,6 +62,36 @@ export interface PbrMaterialTextures {
 }
 
 /**
+ * ADR-687 Φ1 — per-material PBR visual appearance (C4D Material Editor «Εμφάνιση»):
+ * ο χρήστης ορίζει ΤΟ δικό του χρώμα + γυαλάδα + μεταλλικότητα, ανεξάρτητα από την
+ * κατηγορία. Χαρτογραφείται 1-1 στο three.js `MeshStandardMaterial` (μέσω
+ * `appearanceToDef` → `buildMat`). `emissive`/`opacity` = Φ4.
+ *
+ * Firestore-safe: ολόκληρο το object είναι `null` (καμία ρητή εμφάνιση → fallback
+ * στην κατηγορία, `getCategoryMaterialDef`) ή πλήρες — mirror του `pbrTextures`.
+ */
+export interface BimMaterialAppearance {
+  /** User base colour ως `#rrggbb` (εκατομμύρια χρώματα, όχι preset swatch). */
+  readonly baseColorHex: string;
+  /** Μεταλλικότητα 0..1 (0 = μη μεταλλικό, 1 = μέταλλο). */
+  readonly metalness: number;
+  /** Τραχύτητα 0..1 (0 = γυαλιστερό, 1 = ματ). */
+  readonly roughness: number;
+  /**
+   * ADR-687 Φ4 — αυτοφωτισμός (Revit «Self-illumination»): χρώμα `#rrggbb` που εκπέμπει το
+   * υλικό (φώτα/LED/οθόνες). `emissiveIntensity` = ένταση (0 = σβηστό). Optional για
+   * back-compat: παλιά persisted appearance objects (Φ1) δεν τα έχουν → default μαύρο/0.
+   */
+  readonly emissiveHex?: string;
+  readonly emissiveIntensity?: number;
+  /**
+   * ADR-687 Φ4 — αδιαφάνεια 0..1 (Revit «Transparency»): 1 = αδιαφανές (default), <1 =
+   * διαφανές (γυαλί/νερό/πλεξιγκλάς). Optional για back-compat (undefined → 1).
+   */
+  readonly opacity?: number;
+}
+
+/**
  * Persisted shape σε Firestore. Mirror του ADR-363 §Q8 schema 1:1.
  *
  * Firestore rejects `undefined` — optional fields are stored as `null` ή
@@ -95,6 +125,12 @@ export interface BimMaterial {
    * (όχι μόνο 2D thumbnail). `null` = καμία υφή → flat κατά κατηγορία στο 3D.
    */
   readonly pbrTextures: PbrMaterialTextures | null;
+  /**
+   * ADR-687 Φ1 — per-material PBR appearance (χρώμα/γυαλάδα/μεταλλικότητα).
+   * `null` = καμία ρητή εμφάνιση → fallback στην κατηγορία (`getCategoryMaterialDef`,
+   * back-compat με τα system seeds + όλα τα υπάρχοντα υλικά).
+   */
+  readonly appearance: BimMaterialAppearance | null;
   /** System seed = non-deletable + non-editable από client. */
   readonly builtin: boolean;
   /** Scope-dependent: null για system, populated για company/project. */
@@ -131,6 +167,8 @@ export interface SaveBimMaterialInput {
   readonly thumbnailUrl?: string;
   /** ADR-413 §2D Phase 3 — user-uploaded 3D PBR texture set (omit = none). */
   readonly pbrTextures?: PbrMaterialTextures;
+  /** ADR-687 Φ1 — per-material PBR appearance (omit = category fallback). */
+  readonly appearance?: BimMaterialAppearance;
 }
 
 /**
@@ -139,11 +177,13 @@ export interface SaveBimMaterialInput {
  * στο albedo fallback).
  */
 export type UpdateBimMaterialPatch = Partial<
-  Omit<SaveBimMaterialInput, 'scope' | 'thumbnailUrl' | 'pbrTextures'>
+  Omit<SaveBimMaterialInput, 'scope' | 'thumbnailUrl' | 'pbrTextures' | 'appearance'>
 > & {
   readonly thumbnailUrl?: string | null;
   /** ADR-413 §2D Phase 3 — `null` αφαιρεί ολόκληρο το texture set (επιστροφή flat). */
   readonly pbrTextures?: PbrMaterialTextures | null;
+  /** ADR-687 Φ1 — `null` αφαιρεί την εμφάνιση (επιστροφή στην κατηγορία). */
+  readonly appearance?: BimMaterialAppearance | null;
 };
 
 /** Library query filters για list/subscribe. */

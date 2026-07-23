@@ -521,6 +521,8 @@
     "clearWhole": "Καθαρισμός στοιχείου",
     "customColor": "Προσαρμοσμένο χρώμα",
     "customColorTitle": "Επιλογή χρώματος όψης",
+    "newMaterial": "＋ Νέο Υλικό",
+    "newMaterialTooltip": "Δημιουργία νέου υλικού (χρώμα, γυαλάδα, μεταλλικότητα, υφή) — όπως στο Cinema 4D",
     "dragHint": "Σύρε υλικό πάνω στην όψη",
     "contextMenu": {
       "title": "Όψη",

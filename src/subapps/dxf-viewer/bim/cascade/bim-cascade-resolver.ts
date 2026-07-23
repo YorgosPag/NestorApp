@@ -39,6 +39,7 @@ import {
   isSlabEntity,
   isColumnEntity,
   isStairEntity,
+  isRailingEntity,
 } from '../../types/entities';
 import { isWallHostedOpening } from '../types/opening-types';
 import {
@@ -129,6 +130,29 @@ export function findHostedStairwellOpenings(
       && o.params.autoStairId != null
       && stairIds.has(o.params.autoStairId),
   );
+}
+
+/**
+ * Finds auto (stair-hosted) railing ids that would be orphaned by deleting the given stair ids
+ * (ADR-407 Φ7). "Orphaned" = `railing.params.pathSource` is `{ kind: 'hosted', hostType: 'stair' }`
+ * pointing at a deleted stair AND not already in the deletion set. Mirror of
+ * {@link findHostedStairwellOpenings}, keyed on the hosted `hostId` link — a stair delete sweeps
+ * the auto railings it owns (Revit: the railing is created with the stair and dies with it).
+ */
+export function findHostedStairRailings(
+  stairIds: ReadonlySet<string>,
+  entities: readonly Entity[],
+  exclude: ReadonlySet<string> = new Set(),
+): string[] {
+  if (stairIds.size === 0) return [];
+  const out: string[] = [];
+  for (const e of entities) {
+    if (!isRailingEntity(e)) continue;
+    if (exclude.has(e.id)) continue;
+    const src = e.params.pathSource;
+    if (src.kind === 'hosted' && src.hostType === 'stair' && stairIds.has(src.hostId)) out.push(e.id);
+  }
+  return out;
 }
 
 /** Any BIM entity whose vertical extent can attach to a structural host (ADR-401). */

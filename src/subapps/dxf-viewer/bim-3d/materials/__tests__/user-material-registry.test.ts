@@ -80,6 +80,82 @@ describe('setUserMaterials — appearance resolution', () => {
   });
 });
 
+describe('ADR-687 Φ1 — per-material appearance override', () => {
+  const appearance = { baseColorHex: '#ff8800', metalness: 0.9, roughness: 0.2 };
+  function matAppear(
+    id: string,
+    category: string,
+    ap: { baseColorHex: string; metalness: number; roughness: number } | null,
+  ): BimMaterial {
+    return { id, category, pbrTextures: null, appearance: ap } as unknown as BimMaterial;
+  }
+
+  it('appearance overrides the category def (colour + metalness + roughness)', () => {
+    setUserMaterials([matAppear('bmat_o', 'concrete', appearance)]);
+    const def = getUserMaterialAppearance('bmat_o')?.def;
+    expect(def?.color).toBe(0xff8800); // user colour, NOT concrete 0xb0b0b0
+    expect(def?.metalness).toBeCloseTo(0.9);
+    expect(def?.roughness).toBeCloseTo(0.2);
+  });
+
+  it('falls back to the category def when appearance is null (back-compat)', () => {
+    setUserMaterials([matAppear('bmat_c', 'concrete', null)]);
+    expect(getUserMaterialAppearance('bmat_c')?.def.color).toBe(0xb0b0b0);
+  });
+
+  it('re-bumps the version + re-resolves when only the appearance changes', () => {
+    setUserMaterials([matAppear('bmat_o', 'concrete', appearance)]);
+    const v1 = getUserMaterialSetVersion('bmat_o');
+    setUserMaterials([matAppear('bmat_o', 'concrete', { ...appearance, baseColorHex: '#00ff00' })]);
+    expect(getUserMaterialSetVersion('bmat_o')).toBe(v1 + 1);
+    expect(getUserMaterialAppearance('bmat_o')?.def.color).toBe(0x00ff00);
+  });
+
+  it('clamps out-of-range persisted metalness/roughness into 0..1', () => {
+    setUserMaterials([matAppear('bmat_x', 'concrete', { baseColorHex: '#ffffff', metalness: 5, roughness: -3 })]);
+    const def = getUserMaterialAppearance('bmat_x')?.def;
+    expect(def?.metalness).toBe(1);
+    expect(def?.roughness).toBe(0);
+  });
+});
+
+describe('ADR-687 Φ4 — emissive + opacity override', () => {
+  function matAp(id: string, ap: Record<string, unknown>): BimMaterial {
+    return { id, category: 'concrete', pbrTextures: null, appearance: ap } as unknown as BimMaterial;
+  }
+
+  it('maps emissive colour + intensity into the def', () => {
+    setUserMaterials([matAp('bmat_e', { baseColorHex: '#222222', metalness: 0, roughness: 0.5, emissiveHex: '#ff0000', emissiveIntensity: 0.8 })]);
+    const def = getUserMaterialAppearance('bmat_e')?.def;
+    expect(def?.emissive).toBe(0xff0000);
+    expect(def?.emissiveIntensity).toBeCloseTo(0.8);
+  });
+
+  it('maps opacity < 1 into opacity + transparent', () => {
+    setUserMaterials([matAp('bmat_t2', { baseColorHex: '#88ccff', metalness: 0, roughness: 0.1, opacity: 0.3 })]);
+    const def = getUserMaterialAppearance('bmat_t2')?.def;
+    expect(def?.opacity).toBeCloseTo(0.3);
+    expect(def?.transparent).toBe(true);
+  });
+
+  it('defaults to opaque + no emissive when Φ4 fields are absent (back-compat with Φ1 docs)', () => {
+    setUserMaterials([matAp('bmat_bc', { baseColorHex: '#ffffff', metalness: 0, roughness: 0.5 })]);
+    const def = getUserMaterialAppearance('bmat_bc')?.def;
+    expect(def?.opacity).toBe(1);
+    expect(def?.transparent).toBe(false);
+    expect(def?.emissive).toBe(0x000000);
+    expect(def?.emissiveIntensity).toBe(0);
+  });
+
+  it('re-bumps the version when only opacity changes', () => {
+    setUserMaterials([matAp('bmat_e2', { baseColorHex: '#222222', metalness: 0, roughness: 0.5, opacity: 1 })]);
+    const v1 = getUserMaterialSetVersion('bmat_e2');
+    setUserMaterials([matAp('bmat_e2', { baseColorHex: '#222222', metalness: 0, roughness: 0.5, opacity: 0.4 })]);
+    expect(getUserMaterialSetVersion('bmat_e2')).toBe(v1 + 1);
+    expect(getUserMaterialAppearance('bmat_e2')?.def.opacity).toBeCloseTo(0.4);
+  });
+});
+
 describe('change-versioning + resync bump', () => {
   it('bumps version + resync on change, but NOT on an unchanged snapshot', () => {
     const v0 = useBim3DEntitiesStore.getState().textureAssetVersion;

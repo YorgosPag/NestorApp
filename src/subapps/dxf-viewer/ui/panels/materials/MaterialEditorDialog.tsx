@@ -28,12 +28,16 @@ import {
 } from '../../../bim/services/bim-material-thumbnail-upload.service';
 import {
   RequiredSection,
+  AppearancePreviewSection,
+  AppearanceColorSection,
   DimensionsSection,
   MetadataSection,
   ThumbnailSection,
   type FormState,
 } from './MaterialEditorSections';
 import { PbrTexturesSection } from './MaterialPbrTexturesSection';
+import { getCategoryMaterialDef } from '../../../bim/materials/material-catalog-defs';
+import { trueColorToHex } from '../../../utils/dxf-true-color';
 import {
   useMaterialPbrTextureUpload,
   type StagedPbrMaps,
@@ -42,6 +46,8 @@ import {
 import type { BimMaterialTextureMapName } from '@/services/upload/utils/storage-path';
 import type {
   BimMaterial,
+  BimMaterialAppearance,
+  BimMaterialCategory,
   PbrMaterialTextures,
   SaveBimMaterialInput,
   UpdateBimMaterialPatch,
@@ -71,12 +77,68 @@ export interface MaterialEditorDialogProps {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+/**
+ * ADR-687 Φ1 — the appearance form seed: the material's OWN appearance when it has
+ * one, else the flat def of its category (so a legacy material opens showing its
+ * real category colour, and saving it — override === category — is a no-op visually,
+ * zero regression). Values are strings (form convention).
+ */
+function appearanceSeed(
+  category: BimMaterialCategory,
+  appearance: BimMaterialAppearance | null | undefined,
+): {
+  baseColorHex: string;
+  metalness: string;
+  roughness: string;
+  emissiveHex: string;
+  emissiveIntensity: string;
+  emissiveCustom: boolean;
+  opacity: string;
+} {
+  if (appearance) {
+    return {
+      baseColorHex: appearance.baseColorHex,
+      metalness: String(appearance.metalness),
+      roughness: String(appearance.roughness),
+      // ADR-687 Φ4 — emissive colour defaults to the BASE colour (Revit/C4D-intuitive: raising
+      // just the intensity makes the surface glow IN ITS OWN colour, like a lit LED panel — a
+      // black default would make the intensity slider a silent no-op). Intensity 0 = off.
+      emissiveHex: appearance.emissiveHex ?? appearance.baseColorHex,
+      emissiveIntensity: String(appearance.emissiveIntensity ?? 0),
+      // Customised only if a distinct emissive colour was persisted (else it live-tracks the base).
+      emissiveCustom: appearance.emissiveHex != null && appearance.emissiveHex !== appearance.baseColorHex,
+      opacity: String(appearance.opacity ?? 1),
+    };
+  }
+  const def = getCategoryMaterialDef(category);
+  const baseColorHex = trueColorToHex(def.color).toLowerCase();
+  return {
+    baseColorHex,
+    metalness: String(def.metalness),
+    roughness: String(def.roughness),
+    // Emissive colour = base (off by intensity 0), tracking the base until customised;
+    // opacity from the category def (e.g. glass 0.35).
+    emissiveHex: baseColorHex,
+    emissiveIntensity: '0',
+    emissiveCustom: false,
+    opacity: String(def.opacity ?? 1),
+  };
+}
+
 function buildInitialState(initial: BimMaterial | undefined, projectId?: string): FormState {
   if (initial) {
+    const appear = appearanceSeed(initial.category, initial.appearance);
     return {
       nameEl: initial.nameEl,
       nameEn: initial.nameEn,
       category: initial.category,
+      baseColorHex: appear.baseColorHex,
+      metalness: appear.metalness,
+      roughness: appear.roughness,
+      emissiveHex: appear.emissiveHex,
+      emissiveIntensity: appear.emissiveIntensity,
+      emissiveCustom: appear.emissiveCustom,
+      opacity: appear.opacity,
       density: initial.density != null ? String(initial.density) : '',
       defaultThickness: initial.defaultThickness != null ? String(initial.defaultThickness) : '',
       fireRating: initial.fireRating,
@@ -96,13 +158,38 @@ function buildInitialState(initial: BimMaterial | undefined, projectId?: string)
       scope: initial.scope === 'system' ? 'company' : initial.scope,
     };
   }
+  const appear = appearanceSeed('concrete', undefined);
   return {
     nameEl: '', nameEn: '', category: 'concrete', density: '',
     defaultThickness: '', fireRating: 'none', atoeCategory: '',
     atoeArticle: '', defaultUnitCost: '', defaultUnit: 'm2',
     brand: '', brandModel: '', notes: '', thumbnailUrl: '',
+    baseColorHex: appear.baseColorHex, metalness: appear.metalness, roughness: appear.roughness,
+    emissiveHex: appear.emissiveHex, emissiveIntensity: appear.emissiveIntensity,
+    emissiveCustom: appear.emissiveCustom, opacity: appear.opacity,
     albedoUrl: '', normalUrl: '', roughnessUrl: '', aoUrl: '', tileSizeM: '1',
     scope: projectId ? 'project' : 'company',
+  };
+}
+
+/**
+ * ADR-687 Φ1 — build the persisted appearance from the form. Every authored/edited
+ * material owns an explicit appearance (big-player: Revit/ArchiCAD/C4D materials
+ * always carry appearance). Out-of-range guards mirror `appearanceToDef`.
+ */
+function buildAppearance(form: FormState): BimMaterialAppearance {
+  const m = Number(form.metalness);
+  const r = Number(form.roughness);
+  const ei = Number(form.emissiveIntensity);
+  const op = Number(form.opacity);
+  return {
+    baseColorHex: form.baseColorHex,
+    metalness: isNaN(m) ? 0 : m,
+    roughness: isNaN(r) ? 0.5 : r,
+    // ADR-687 Φ4 — concrete values only (never undefined → Firestore-safe).
+    emissiveHex: form.emissiveHex,
+    emissiveIntensity: isNaN(ei) ? 0 : ei,
+    opacity: isNaN(op) ? 1 : op,
   };
 }
 
@@ -167,6 +254,8 @@ function buildSaveInput(form: FormState): SaveBimMaterialInput {
     ...(form.notes.trim() ? { notes: form.notes.trim() } : {}),
     ...(form.thumbnailUrl ? { thumbnailUrl: form.thumbnailUrl } : {}),
     ...(buildPbrTextures(form) ? { pbrTextures: buildPbrTextures(form)! } : {}),
+    // ADR-687 Φ1 — every new material carries an explicit appearance.
+    appearance: buildAppearance(form),
   };
 }
 
@@ -189,6 +278,8 @@ function buildUpdatePatch(form: FormState): UpdateBimMaterialPatch {
     thumbnailUrl: form.thumbnailUrl || null,
     // Empty albedo → null removes the whole texture set (back to flat by category).
     pbrTextures: buildPbrTextures(form),
+    // ADR-687 Φ1 — persist the edited appearance (never undefined → Firestore-safe).
+    appearance: buildAppearance(form),
   };
 }
 
@@ -294,7 +385,7 @@ export function MaterialEditorDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent size="lg" className="max-h-[90vh] overflow-y-auto">
+      <DialogContent size="2xl" className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-sm font-semibold">
             {mode === 'create' ? t('form.createTitle') : t('form.editTitle')}
@@ -307,41 +398,61 @@ export function MaterialEditorDialog({
           </aside>
         )}
 
-        <fieldset disabled={isBuiltin || saving} className="flex flex-col gap-3 border-0 p-0 m-0">
-          <RequiredSection
-            form={form} setField={setField}
-            projectId={projectId} mode={mode}
-            inputClass={inputClass} labelClass={labelClass} t={t}
-          />
-          <DimensionsSection form={form} setField={setField} inputClass={inputClass} labelClass={labelClass} t={t} />
-          <MetadataSection form={form} setField={setField} inputClass={inputClass} labelClass={labelClass} t={t} />
-          <PbrTexturesSection
-            getUrl={(map) => form[`${map}Url`]}
-            staged={pbr.staged}
-            busyMap={pbr.busyMap}
-            error={pbr.error}
-            tileSizeM={form.tileSizeM}
-            mode={mode}
-            onSelect={pbr.onSelect}
-            onRemove={pbr.onRemove}
-            onTileSizeChange={(v) => setField('tileSizeM', v)}
-            inputClass={inputClass}
-            labelClass={labelClass}
-            colors={colors}
-            t={t}
-          />
-          <ThumbnailSection
-            form={form}
-            mode={mode}
-            pendingThumb={pendingThumb}
-            busy={thumbBusy}
-            error={thumbError}
-            onSelect={handleSelectThumbnail}
-            onRemove={handleRemoveThumbnail}
-            labelClass={labelClass}
-            colors={colors}
-            t={t}
-          />
+        {/* ADR-687 Φ1 — ρητό 4-column grid, σειρά Giorgio (2026-07-23): (1) πεδία υλικού · (2) σφαίρα
+            + PBR sliders · (3) επιλογέας χρώματος (κάθετος) · (4) υφές 3D + μικρογραφία. grid (ΠΟΤΕ
+            δεν σπάει section, σε αντίθεση με CSS columns). */}
+        <fieldset
+          disabled={isBuiltin || saving}
+          className="grid grid-cols-1 gap-x-6 gap-y-4 border-0 p-0 m-0 md:grid-cols-2 lg:grid-cols-4"
+        >
+          {/* Στήλη 1 — πεδία υλικού */}
+          <div className="flex min-w-0 flex-col gap-4">
+            <RequiredSection
+              form={form} setField={setField}
+              projectId={projectId} mode={mode}
+              inputClass={inputClass} labelClass={labelClass} t={t}
+            />
+            <DimensionsSection form={form} setField={setField} inputClass={inputClass} labelClass={labelClass} t={t} />
+            <MetadataSection form={form} setField={setField} inputClass={inputClass} labelClass={labelClass} t={t} />
+          </div>
+          {/* Στήλη 2 — σφαίρα-preview + PBR sliders */}
+          <div className="min-w-0">
+            <AppearancePreviewSection form={form} setField={setField} labelClass={labelClass} colors={colors} t={t} />
+          </div>
+          {/* Στήλη 3 — επιλογέας χρώματος */}
+          <div className="min-w-0">
+            <AppearanceColorSection form={form} setField={setField} labelClass={labelClass} t={t} />
+          </div>
+          {/* Στήλη 4 — υφές 3D + μικρογραφία */}
+          <div className="flex min-w-0 flex-col gap-4">
+            <PbrTexturesSection
+              getUrl={(map) => form[`${map}Url`]}
+              staged={pbr.staged}
+              busyMap={pbr.busyMap}
+              error={pbr.error}
+              tileSizeM={form.tileSizeM}
+              mode={mode}
+              onSelect={pbr.onSelect}
+              onRemove={pbr.onRemove}
+              onTileSizeChange={(v) => setField('tileSizeM', v)}
+              inputClass={inputClass}
+              labelClass={labelClass}
+              colors={colors}
+              t={t}
+            />
+            <ThumbnailSection
+              form={form}
+              mode={mode}
+              pendingThumb={pendingThumb}
+              busy={thumbBusy}
+              error={thumbError}
+              onSelect={handleSelectThumbnail}
+              onRemove={handleRemoveThumbnail}
+              labelClass={labelClass}
+              colors={colors}
+              t={t}
+            />
+          </div>
         </fieldset>
 
         {fieldError && (

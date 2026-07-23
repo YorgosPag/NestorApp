@@ -378,6 +378,8 @@ export class EnterpriseIdService {
   generateMepWaterHeaterId(): string { return this.generateId(P.MEP_WATER_HEATER).id; }
   generateMepUnderfloorId(): string { return this.generateId(P.MEP_UNDERFLOOR).id; }
   generateRailingId(): string { return this.generateId(P.RAILING).id; }
+  /** ADR-407 Φ7 — σταθερό railing id ανά seed (auto stair-hosted railing: `stairId::side`). */
+  generateDeterministicRailingId(seed: string): string { return this.generateDeterministicId(P.RAILING, seed); }
   generateRoofId(): string { return this.generateId(P.ROOF).id; }
   generateFloorFinishId(): string { return this.generateId(P.FLOOR_FINISH).id; }
   generateWallCoveringId(): string { return this.generateId(P.WALL_COVERING).id; }

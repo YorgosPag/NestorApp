@@ -341,6 +341,15 @@ export class BimSceneLayer {
       ? makeStairHostResolver(buildWallHostInputs(entities.beams, entities.slabs))
       : undefined;
 
+    // ADR-407 Φ7 — σκάλες που φιλοξενούν ήδη hosted κάγκελο: ο γυμνός handrail-σωλήνας τους
+    // παραλείπεται (το κάγκελο render-άρει την κουπαστή) ώστε να μη διπλασιάζεται. Legacy σκάλες
+    // χωρίς κάγκελο δεν είναι εδώ → κρατούν τον σωλήνα (μηδέν regression).
+    const stairIdsWithHostedRailing = new Set<string>();
+    for (const rail of entities.railings ?? []) {
+      const src = rail.params?.pathSource;
+      if (src?.kind === 'hosted' && src.hostType === 'stair') stairIdsWithHostedRailing.add(src.hostId);
+    }
+
     for (const stair of entities.stairs) {
       const r = this.resolveEntity(stair, 'stair', ctx);
       if (!r) continue;
@@ -359,6 +368,7 @@ export class BimSceneLayer {
         ctx.activeLevelId,
         r.baseElevation,
         seat?.slabUndersideZmm,
+        stairIdsWithHostedRailing.has(stair.id),
       );
       for (const mesh of meshes) {
         mesh.userData['buildingId'] = r.buildingId;

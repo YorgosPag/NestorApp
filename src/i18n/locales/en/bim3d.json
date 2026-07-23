@@ -521,6 +521,8 @@
     "clearWhole": "Clear element",
     "customColor": "Custom colour",
     "customColorTitle": "Pick face colour",
+    "newMaterial": "＋ New Material",
+    "newMaterialTooltip": "Create a new material (colour, gloss, metalness, texture) — like Cinema 4D",
     "dragHint": "Drag a material onto the face",
     "contextMenu": {
       "title": "Face",

@@ -122,6 +122,8 @@ export class MaterialLibraryService {
       notes: input.notes ?? null,
       thumbnailUrl: input.thumbnailUrl ?? null,
       pbrTextures: input.pbrTextures ?? null,
+      // ADR-687 Φ1 — per-material appearance (null → category fallback, back-compat).
+      appearance: input.appearance ?? null,
       projectId: input.scope === 'project' ? (this.config.projectId ?? null) : null,
     });
 

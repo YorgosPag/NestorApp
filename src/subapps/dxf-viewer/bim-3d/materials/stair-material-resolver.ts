@@ -23,13 +23,18 @@ import type { FaceAppearance } from '../../bim/types/face-appearance-types';
 import {
   getMaterial3D,
   getElementMaterial3D,
-  getFaceMaterial3D,
-  getFaceColorMaterial3D,
   type Stair3DComponent,
 } from './MaterialCatalog3D';
-// ADR-539 Φ7 — ίδιο SSoT με το per-face solid resolve (`resolveFaceMaterial`): textured/color.
-import { faceAppearanceColorHex } from '../../bim/utils/face-appearance-color';
+// ADR-539 Φ7 / ADR-407 Φ8 — appearance→material κοινό SSoT (textured/color), μοιρασμένο με το κάγκελο.
+import { resolveAppearanceMaterial } from './appearance-material';
 import { resolveStructureComponentMaterialKey } from './stair-structure-material-defaults';
+
+/**
+ * ADR-539 Φ7 — ιστορικό stair-named alias του κοινού appearance→material SSoT (τώρα στο
+ * `appearance-material.ts`, μοιρασμένο με το railing). Διατηρείται για τους υπάρχοντες importers
+ * (`stair-waist-slabs`) χωρίς clone (N.18).
+ */
+export { resolveAppearanceMaterial as resolveStairAppearanceMaterial } from './appearance-material';
 
 type ComponentField = 'tread' | 'riser' | 'stringer' | 'landing';
 
@@ -97,25 +102,6 @@ function resolveSubElementAppearance(
   return undefined;
 }
 
-/**
- * ADR-539 Φ7 SSoT — `FaceAppearance` → THREE material, ΤΟ ΙΔΙΟ path με το per-face solid resolve
- * (`resolveFaceMaterial`): textured PBR όταν το `materialId` έχει όντως υφή, αλλιώς flat χρώμα
- * (`colorHex` ή `materialId`→catalog color). `null` όταν το appearance δεν δίνει καμία πηγή χρώματος
- * (→ ο caller πέφτει στο preset/structure default). Κοινό helper: resolver (tread/riser/landing) +
- * `buildWaistSlabMeshes` (waist) — μηδέν δεύτερη υλοποίηση (N.18).
- */
-export function resolveStairAppearanceMaterial(
-  appearance: FaceAppearance | undefined,
-): THREE.MeshStandardMaterial | null {
-  if (!appearance) return null;
-  if (appearance.materialId) {
-    const textured = getFaceMaterial3D(appearance.materialId);
-    if (textured) return textured;
-  }
-  const hex = faceAppearanceColorHex(appearance);
-  return hex ? getFaceColorMaterial3D(hex) : null;
-}
-
 export function resolveStairMaterial(
   stair: StairEntity,
   component: Stair3DComponent,
@@ -123,7 +109,7 @@ export function resolveStairMaterial(
 ): THREE.MeshStandardMaterial {
   // 0. ADR-539 Φ7 — full per-sub-element appearance (Polygon «Paint») ΚΕΡΔΙΖΕΙ: Revit «Paint on
   //    face» / Cinema 4D material tag. Ίδιο `FaceAppearance` SSoT με τα solids (textured/color).
-  const appearanceMat = resolveStairAppearanceMaterial(
+  const appearanceMat = resolveAppearanceMaterial(
     resolveSubElementAppearance(stair, component, subIndex),
   );
   if (appearanceMat) return appearanceMat;
@@ -139,7 +125,7 @@ export function resolveStairMaterial(
   // 1.5 ADR-539 Φ7 — whole-stair «base» appearance (ΣΩΜΑ paint): ισχύει σε ΟΛΑ τα components, ΜΕΤΑ
   //     από κάθε per-sub-element override (πιο ειδικό κερδίζει) αλλά ΠΡΙΝ τα preset defaults. Cinema 4D
   //     object material tag / Revit type material. Waist: μέσω `resolveStairMaterial('stair-landing')`.
-  const wholeStairMat = resolveStairAppearanceMaterial(stair.params.materials?.appearance);
+  const wholeStairMat = resolveAppearanceMaterial(stair.params.materials?.appearance);
   if (wholeStairMat) return wholeStairMat;
 
   // 2. Stair-level component material.

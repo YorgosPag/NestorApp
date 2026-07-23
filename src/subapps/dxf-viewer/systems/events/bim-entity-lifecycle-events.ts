@@ -48,6 +48,10 @@ export function emitBimEntityDeleteRequested(type: string, id: string): void {
     case 'beam': EventBus.emit('bim:beam-delete-requested', { beamId: id }); break;
     case 'foundation': EventBus.emit('bim:foundation-delete-requested', { foundationId: id }); break;
     case 'stair': EventBus.emit('bim:stair-delete-requested', { stairId: id }); break;
+    // ADR-407 Φ7 — κάγκελο (standalone Ή auto stair-hosted): delete → Firestore deleteDoc + tombstone
+    // μέσω useRailingPersistence. Πριν έλειπε → smart-delete έβγαζε το κάγκελο από τη σκηνή αλλά όχι
+    // από το Firestore (επέστρεφε στο reload).
+    case 'railing': EventBus.emit('bim:railing-delete-requested', { railingId: id }); break;
     case 'opening': EventBus.emit('bim:opening-delete-requested', { openingId: id }); break;
     case 'slab-opening': EventBus.emit('bim:slab-opening-delete-requested', { slabOpeningId: id }); break;
     case 'mep-fixture': EventBus.emit('bim:mep-fixture-delete-requested', { fixtureId: id }); break;

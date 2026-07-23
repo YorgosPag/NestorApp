@@ -27,10 +27,9 @@ import type {
   UpdateBimMaterialPatch,
 } from '../../../bim/types/bim-material-types';
 import { MaterialSwatch } from '../../components/shared/MaterialSwatch';
-import { uploadMaterialThumbnail } from '../../../bim/services/bim-material-thumbnail-upload.service';
-import { uploadPendingPbrMaps } from './hooks/useMaterialPbrTextureUpload';
 import { useMaterialLibrary } from './hooks/useMaterialLibrary';
 import { MaterialEditorDialog, type PendingPbrUpload } from './MaterialEditorDialog';
+import { persistMaterialFromEditor } from './persist-material-from-editor';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -95,35 +94,9 @@ export function MaterialsLibraryPanel({ projectId }: MaterialsLibraryPanelProps)
     pendingThumbnail?: File | null,
     pendingPbr?: PendingPbrUpload | null,
   ) => {
-    if (mode === 'create') {
-      // Create the doc first → then upload the staged appearance assets keyed by
-      // the new materialId, and persist their URLs (Revit-grade seamless flow).
-      // Race-safe: if an upload fails the material is already saved; the user can
-      // retry from edit. Lifecycle owner = panel (holds the service + new id).
-      const saved = await save(payload as SaveBimMaterialInput);
-      if (pendingThumbnail && companyId) {
-        try {
-          const { downloadUrl } = await uploadMaterialThumbnail({
-            file: pendingThumbnail, companyId, materialId: saved.id,
-          });
-          await update(saved.id, { thumbnailUrl: downloadUrl });
-        } catch {
-          // Graceful degradation — material saved without thumbnail; retry in edit.
-        }
-      }
-      if (pendingPbr && companyId && Object.keys(pendingPbr.maps).length > 0) {
-        try {
-          const pbrTextures = await uploadPendingPbrMaps(
-            pendingPbr.maps, companyId, saved.id, pendingPbr.tileSizeM,
-          );
-          if (pbrTextures) await update(saved.id, { pbrTextures });
-        } catch {
-          // Graceful degradation — material saved without 3D textures; retry in edit.
-        }
-      }
-    } else if (editTarget) {
-      await update(editTarget.id, payload as UpdateBimMaterialPatch);
-    }
+    await persistMaterialFromEditor(
+      { companyId, save, update }, payload, mode, editTarget?.id, pendingThumbnail, pendingPbr,
+    );
     setEditorOpen(false);
   }, [save, update, editTarget, companyId]);
 

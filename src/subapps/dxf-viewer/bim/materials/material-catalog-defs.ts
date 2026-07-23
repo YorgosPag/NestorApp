@@ -20,6 +20,7 @@ import type { BimMaterialCategory } from '../types/bim-material-types';
 // 🏢 ADR-571: MEP water/plumbing cyan SSoT + hex→int SSoT (utils/dxf-true-color.ts)
 import { MEP_WATER_COLOR } from '../../config/color-config';
 import { hexToTrueColor, trueColorToHex } from '../../utils/dxf-true-color';
+import { clamp01 } from '../../utils/scalar-math';
 
 /** Flat PBR appearance definition for a resolved material key. */
 export interface PbrMaterialDef {
@@ -28,6 +29,10 @@ export interface PbrMaterialDef {
   readonly metalness: number;
   readonly transparent?: boolean;
   readonly opacity?: number;
+  /** ADR-687 Φ4 — self-illumination colour (true-colour int); default black = off. */
+  readonly emissive?: number;
+  /** ADR-687 Φ4 — self-illumination strength 0..1; default 0 = off. */
+  readonly emissiveIntensity?: number;
 }
 
 /**
@@ -212,4 +217,36 @@ const CATEGORY_FLAT_KEY: Record<BimMaterialCategory, string> = {
  */
 export function getCategoryMaterialDef(category: BimMaterialCategory): PbrMaterialDef {
   return MATERIAL_DEFS[CATEGORY_FLAT_KEY[category]] ?? MATERIAL_DEFS[DEFAULT_MATERIAL_KEY]!;
+}
+
+/**
+ * ADR-687 Φ1 — per-material user appearance → flat `PbrMaterialDef` (SSoT mapping,
+ * NO three.js). Χαρτογραφεί το `{baseColorHex, metalness, roughness}` του χρήστη σε
+ * `{color, roughness, metalness}` του καταλόγου — ώστε ΟΛΟΙ οι καταναλωτές (3D
+ * `buildMat`, ο 2D color provider, το swatch chip) να διαβάζουν ΤΟ ΙΔΙΟ override
+ * αντί της κατηγορίας. Το `clamp01` προστατεύει από εκτός-ορίων persisted τιμές.
+ * `metalness`/`roughness` = flat PBR. ADR-687 Φ4: `emissiveHex`/`emissiveIntensity` →
+ * `emissive`/`emissiveIntensity` (self-illumination), `opacity` → `opacity` + `transparent`
+ * (when < 1). Όλα τα Φ4 πεδία optional (back-compat με τα Φ1 appearance objects → defaults).
+ */
+export function appearanceToDef(
+  appearance: {
+    baseColorHex: string;
+    metalness: number;
+    roughness: number;
+    emissiveHex?: string;
+    emissiveIntensity?: number;
+    opacity?: number;
+  },
+): PbrMaterialDef {
+  const opacity = clamp01(appearance.opacity ?? 1);
+  return {
+    color: hexToTrueColor(appearance.baseColorHex),
+    roughness: clamp01(appearance.roughness),
+    metalness: clamp01(appearance.metalness),
+    transparent: opacity < 1,
+    opacity,
+    emissive: hexToTrueColor(appearance.emissiveHex ?? '#000000'),
+    emissiveIntensity: clamp01(appearance.emissiveIntensity ?? 0),
+  };
 }

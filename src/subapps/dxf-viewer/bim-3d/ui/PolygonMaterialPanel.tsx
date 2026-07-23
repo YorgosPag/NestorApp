@@ -4,17 +4,21 @@
  * PolygonMaterialPanel — ADR-539 (Cinema 4D «Polygon Mode» material library).
  *
  * Floating βιβλιοθήκη υλικών/χρωμάτων στον 3D κάμβα. Όταν το Polygon Mode είναι ενεργό,
- * εφαρμόζεις χρώμα/υλικό με ΔΥΟ τρόπους (Cinema 4D parity):
- *   1. **click-to-apply** — επίλεξε όψη/όψεις (κλικ· Shift+κλικ multi, Φ4b) → κλικ σε swatch /
- *      «Προσαρμοσμένο χρώμα». Εφαρμόζεται σε ΟΛΕΣ τις επιλεγμένες όψεις με ΕΝΑ undo.
+ * εφαρμόζεις υλικό με ΔΥΟ τρόπους (Cinema 4D parity):
+ *   1. **click-to-apply** — επίλεξε όψη/όψεις (κλικ· Shift+κλικ multi, Φ4b) → κλικ σε swatch.
+ *      Εφαρμόζεται σε ΟΛΕΣ τις επιλεγμένες όψεις με ΕΝΑ undo.
  *   2. **drag-drop (Φ2)** — σύρε ένα swatch πάνω στην όψη (HTML5 `application/x-bim-material`·
  *      ο drop handler ζει στο `use-polygon-drag-drop`). Το drag δουλεύει χωρίς προ-επιλογή όψης.
  *
+ * ADR-687 Φ1 — «＋ Νέο Υλικό» (αντικατέστησε το «Προσαρμοσμένο χρώμα»): ανοίγει το πλήρες
+ * `MaterialEditorDialog` σε create-mode (χρώμα+γυαλάδα+μέταλλο+υφή+3D σφαίρα-preview)· μετά την
+ * αποθήκευση το υλικό εμφανίζεται αμέσως ως swatch (feed always-on). Big-player: όλα είναι υλικά·
+ * το low-level `colorHex` per-face override μένει εσωτερικό (drag-drop/ADR-539/686).
+ *
  * Οι εφαρμογές περνούν από το shared `applyFaceAppearanceToFaces` SSoT (Φ4b batch = `CompositeCommand`
  * → ΕΝΑ undo, cross-entity· το drag-drop μένει per-face `applyFaceAppearance`). Reuse:
- * `listWallCoveringMaterials()` (catalog SSoT) + i18n labels
- * του ribbon (`dxf-viewer-shell:wallCovering.materials.*`) + `EnterpriseColorDialog` (custom
- * colour). ADR-040: leaf React component.
+ * `listWallCoveringMaterials()` (catalog SSoT) + i18n labels του ribbon
+ * (`dxf-viewer-shell:wallCovering.materials.*`). ADR-040: leaf React component.
  *
  * @see ./apply-face-appearance.ts — apply SSoT (κοινό με drag-drop)
  * @see ./polygon-material-dnd.ts — drag MIME + serialize SSoT
@@ -22,12 +26,17 @@
  * @see docs/centralized-systems/reference/adrs/ADR-539-cinema4d-polygon-mode-per-face-appearance.md
  */
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { useCompanyId } from '@/hooks/useCompanyId';
-import { EnterpriseColorDialog } from '../../ui/color/EnterpriseColorDialog';
+import { MaterialEditorDialog, type PendingPbrUpload } from '../../ui/panels/materials/MaterialEditorDialog';
+import { persistMaterialFromEditor } from '../../ui/panels/materials/persist-material-from-editor';
+import type {
+  SaveBimMaterialInput,
+  UpdateBimMaterialPatch,
+} from '../../bim/types/bim-material-types';
 import { MaterialSwatch } from '../../ui/components/shared/MaterialSwatch';
 import { useLevelsOptional } from '../../systems/levels/useLevels';
 import { useProjectHierarchyOptional } from '../../contexts/ProjectHierarchyContext';
@@ -43,15 +52,15 @@ import { useSelection3DStore } from '../stores/Selection3DStore';
 // ADR-539 Φ7 — per-sub-element paint σκάλας (πάτημα/ρίχτι/πλατύσκαλο/πλάκα) στο ΙΔΙΟ swatch flow.
 import { useStairSubElementSelectionStore } from '../../bim/stairs/stair-sub-element-selection-store';
 import { applyStairSubElementAppearance } from './apply-stair-sub-element-appearance';
+// ADR-407 Φ8 — per-component paint κιγκλιδώματος (κουπαστή/κάγκελα/κολόνες) στο ΙΔΙΟ swatch flow.
+import { useRailingComponentSelectionStore } from '../../bim/railings/railing-component-selection-store';
+import { applyRailingComponentAppearance } from './apply-railing-appearance';
 import { FINISH_MATERIAL_OPTIONS } from '../../ui/ribbon/hooks/bridge/finish-param';
 import { getMaterialFlatColorHex } from '../../bim/materials/material-catalog-defs';
 // ADR-679 Φ2b / ADR-539 Φ4d — BODY layer textured swatches (catalog + user bmat_* library).
 import { useMaterialLibrary } from '../../ui/panels/materials/hooks/useMaterialLibrary';
 // ADR-686 Φ5 — `buildBodySwatches`/`SwatchItem` κεντρικοποιημένα (κοινά με το Material Mapping dialog).
 import { buildBodySwatches, type SwatchItem } from './polygon-material-swatches';
-
-/** Default seed for the custom-colour dialog (a warm Cinema 4D red). */
-const DEFAULT_CUSTOM_COLOR = '#C0392B';
 
 export function PolygonMaterialPanel() {
   const { t } = useTranslation(['bim3d', 'dxf-viewer-shell']);
@@ -62,10 +71,13 @@ export function PolygonMaterialPanel() {
   const { user } = useAuth();
   const companyResult = useCompanyId();
   const hierarchy = useProjectHierarchyOptional();
-  const { materials: libraryMaterials } = useMaterialLibrary({
+  const projectId = hierarchy?.selectedProject?.id ?? undefined;
+  // ADR-687 Φ1 — same library hook as MaterialsLibraryPanel; here we also drive
+  // create (save/update) so «＋ Νέο Υλικό» authors a material straight from the bar.
+  const { materials: libraryMaterials, save, update } = useMaterialLibrary({
     companyId: companyResult?.companyId,
     userId: user?.uid,
-    projectId: hierarchy?.selectedProject?.id ?? undefined,
+    projectId,
   });
   const selectedFaces = usePolygonMode3DStore((s) => s.selectedFaces);
   const targetLayer = usePolygonMode3DStore((s) => s.targetLayer);
@@ -73,8 +85,24 @@ export function PolygonMaterialPanel() {
   // ADR-539 (Giorgio 2026-07-22) — στα entity-level modes (ΣΩΜΑ/ΣΟΒΑΣ) το swatch click βάφει την
   // κανονική 3D επιλογή· στο ΠΟΛΥΓΩΝΑ mode χρησιμεύει ως «όλο το στοιχείο» fallback (καμία όψη).
   const selectedBimId = useSelection3DStore((s) => s.selectedBimId);
-  const [colorOpen, setColorOpen] = useState(false);
-  const [customHex, setCustomHex] = useState(DEFAULT_CUSTOM_COLOR);
+  // ADR-687 Φ1 — «＋ Νέο Υλικό»: opens the full Material Editor in create-mode. After
+  // save the new material auto-appears in this bar (the user-material feed is always-on).
+  const [editorOpen, setEditorOpen] = useState(false);
+  const handleEditorSave = useCallback(
+    async (
+      payload: SaveBimMaterialInput | UpdateBimMaterialPatch,
+      mode: 'create' | 'edit',
+      pendingThumbnail?: File | null,
+      pendingPbr?: PendingPbrUpload | null,
+    ) => {
+      await persistMaterialFromEditor(
+        { companyId: companyResult?.companyId, save, update },
+        payload, mode, undefined, pendingThumbnail, pendingPbr,
+      );
+      setEditorOpen(false);
+    },
+    [companyResult?.companyId, save, update],
+  );
 
   // Panel ΠΑΝΤΑ ορατό στον 3D κάμβα (Giorgio 2026-07-22): κανένα `active` gate — μπαίνεις στο 3D
   // και τα υλικά είναι αμέσως εκεί (Cinema 4D Material Manager), χωρίς επιλογή/κουμπί «Όψεις».
@@ -102,6 +130,10 @@ export function PolygonMaterialPanel() {
       // με το `selectedFaces` (το pointer handler καθαρίζει το ένα όταν επιλέγει το άλλο).
       const sub = useStairSubElementSelectionStore.getState().selected;
       if (sub) { applyStairSubElementAppearance(levels, sub.stairId, sub.part, sub.index, value); return; }
+      // ADR-407 Φ8 — επιλεγμένο component κιγκλιδώματος (κουπαστή/κάγκελα/κολόνες) κερδίζει: γράψε το
+      // per-component appearance στα railing params (mirror σκάλας). Mutually-exclusive με stair sub/faces.
+      const railComp = useRailingComponentSelectionStore.getState().selected;
+      if (railComp) { applyRailingComponentAppearance(levels, railComp.railingId, railComp.component, value); return; }
       const faces = store.selectedFaces;
       if (faces.length > 0) applyFaceAppearanceToFaces(levels, faces, value);
       else if (target) applyWholeElementBodyAppearance(levels, target, value);
@@ -167,6 +199,24 @@ export function PolygonMaterialPanel() {
         </fieldset>
       </header>
 
+      {/* ADR-687 Φ1 — «＋ Νέο Υλικό» στην ΑΡΧΗ της μπάρας (αμέσως μετά το mode toggle «Πολύγωνα»),
+          όπως το C4D Material Manager. Prominent, ΠΑΝΤΑ ενεργό (δημιουργείς υλικό ανεξάρτητα από
+          επιλεγμένη όψη). Αντικατέστησε το παλιό «Προσαρμοσμένο χρώμα» (big-player: όλα είναι υλικά). */}
+      <div className="flex shrink-0 items-center border-r border-white/10 pr-3">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              onClick={() => setEditorOpen(true)}
+              className="flex items-center justify-center gap-1.5 rounded border border-[hsl(var(--bg-info)/0.5)] bg-[hsl(var(--bg-info)/0.2)] px-3 py-2 text-[11px] font-semibold transition-colors hover:bg-[hsl(var(--bg-info)/0.3)]"
+            >
+              <span className="whitespace-nowrap">{t('polygonMode.newMaterial')}</span>
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>{t('polygonMode.newMaterialTooltip')}</TooltipContent>
+        </Tooltip>
+      </div>
+
       {/* Κεντρικό cluster: οριζόντια σειρά υλικών (C4D thumbnails), scroll όταν δεν χωράνε. */}
       <ul className="flex flex-1 items-center gap-2 overflow-x-auto py-1">
         {swatches.map((m) => (
@@ -210,22 +260,8 @@ export function PolygonMaterialPanel() {
         ))}
       </ul>
 
-      {/* Δεξί cluster: προσαρμοσμένο χρώμα + καθαρισμός. */}
-      <div className="flex min-w-[170px] shrink-0 flex-col justify-center gap-1 border-l border-white/10 pl-3">
-        {/* Custom colour (EnterpriseColorDialog) → apply({ colorHex }) to the faces, or whole solid. */}
-        <button
-          type="button"
-          disabled={!canApply}
-          onClick={() => setColorOpen(true)}
-          className="flex w-full items-center gap-1.5 rounded border border-white/15 px-1.5 py-1 text-[10px] transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          <span
-            className="h-3 w-3 shrink-0 rounded-sm border border-white/30"
-            style={{ backgroundColor: customHex }}
-            aria-hidden="true"
-          />
-          <span className="truncate">{t('polygonMode.customColor')}</span>
-        </button>
+      {/* Δεξί cluster: καθαρισμός εμφάνισης. */}
+      <div className="flex min-w-[120px] shrink-0 flex-col justify-center gap-1 border-l border-white/10 pl-3">
         <button
           type="button"
           disabled={!canApply}
@@ -236,13 +272,12 @@ export function PolygonMaterialPanel() {
         </button>
       </div>
 
-      <EnterpriseColorDialog
-        isOpen={colorOpen}
-        onClose={() => setColorOpen(false)}
-        value={customHex}
-        onChange={setCustomHex}
-        onChangeEnd={(hex) => apply({ colorHex: hex })}
-        title={t('polygonMode.customColorTitle')}
+      <MaterialEditorDialog
+        open={editorOpen}
+        mode="create"
+        projectId={projectId}
+        onSave={handleEditorSave}
+        onCancel={() => setEditorOpen(false)}
       />
     </section>
   );

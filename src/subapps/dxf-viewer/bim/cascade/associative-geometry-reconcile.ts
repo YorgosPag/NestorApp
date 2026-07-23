@@ -43,6 +43,7 @@ import { isSlabEntity, isStairEntity, type Entity } from '../../types/entities';
 import { cascadeHostedOpeningsForWalls } from '../walls/wall-opening-coordinator';
 import { cascadeBeamReframe } from '../beams/beam-column-reframe-cascade';
 import { cascadeStairwellOpenings } from '../stairs/stairwell-opening-coordinator';
+import { cascadeStairRailings } from '../stairs/stair-railing-coordinator';
 import { EventBus } from '../../systems/events/EventBus';
 
 /**
@@ -90,6 +91,12 @@ export function reconcileAssociativeGeometry(
   //      Idempotent + changedIds gate (skip αν το command δεν άγγιξε σκάλα/πλάκα)· εκπέμπει
   //      μόνο του τα `drawing:entity-created`/`bim:slab-opening-delete-requested` (persist+BOQ).
   cascadeStairwellOpenings(sceneManager, { changedIds });
+
+  // (1c) σκάλα → auto hosted railing (ADR-407 Φ7): lifecycle (create/update/delete) auto κάγκελο
+  //      (κουπαστή + ορθοστάτες + κάθετα) ανά ενεργή πλευρά handrail. Idempotent + changedIds gate
+  //      (skip αν το command δεν άγγιξε σκάλα)· εκπέμπει μόνο του τα `drawing:entity-created`
+  //      (tool `'railing'`) / `bim:railing-delete-requested` → persist+BOQ μέσω useRailingPersistence.
+  cascadeStairRailings(sceneManager, { changedIds });
 
   // (2) beams → column faces: τα `startPoint/endPoint` (persisted params) αλλάζουν → πρέπει να
   //     ταξιδέψουν σε `bim:entities-moved` (per-entity Firestore persist + organism re-derive).
@@ -146,4 +153,7 @@ export function reconcileAssociativeGeometryOnCreate(
 ): void {
   if (!isStairEntity(createdEntity) && !isSlabEntity(createdEntity)) return;
   cascadeStairwellOpenings(sceneManager);
+  // ADR-407 Φ7 — μια νέα σκάλα γεννά αυτόματα το/τα hosted κάγκελό της on-creation (Revit parity:
+  // το Railing δημιουργείται μαζί με τη σκάλα, όχι μόνο on host-change). Type-gated στη σκάλα.
+  if (isStairEntity(createdEntity)) cascadeStairRailings(sceneManager);
 }

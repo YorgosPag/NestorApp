@@ -85,6 +85,60 @@ function angleAtDistance(path: RailingPath, d: number): number {
   return Math.atan2(frame.tangent.y, frame.tangent.x) * RAD_TO_DEG;
 }
 
+/**
+ * Interpolated z (mm) at running xy distance `d` along the path. The SSoT `samplePolylineFrame`
+ * runs on the xy projection (dropping z); here we lerp z from the containing segment so a member
+ * placed by along-path distance sits on the **sloped** host path (ADR-407 Φ7).
+ */
+function zAtDistance(path: RailingPath, d: number): number {
+  if (path.length === 0) return 0;
+  if (d <= 0) return path[0]!.z ?? 0;
+  let acc = 0;
+  for (let i = 1; i < path.length; i++) {
+    const a = path[i - 1]!;
+    const b = path[i]!;
+    const segLen = Math.hypot(b.x - a.x, b.y - a.y);
+    if (acc + segLen >= d) {
+      const t = segLen > 0 ? (d - acc) / segLen : 0;
+      return (a.z ?? 0) + ((b.z ?? 0) - (a.z ?? 0)) * t;
+    }
+    acc += segLen;
+  }
+  return path[path.length - 1]!.z ?? 0;
+}
+
+/**
+ * Sample a point on the railing path at running xy distance `d`, carrying the interpolated
+ * slope z (mm). SSoT for along-path placement — shared by the baluster spacing pattern AND the
+ * stair host builder's «Baluster Per Tread» anchor sampling (N.0.2 — one walk, no sibling clone).
+ */
+export function sampleRailingPath(path: RailingPath, d: number): Point3D {
+  return pointAtDistance(path, d, zAtDistance(path, d));
+}
+
+/** Plan angle (deg CCW) of the path segment nearest to `p` — aligns a member profile at a baked anchor. */
+function nearestSegmentAngleDeg(path: RailingPath, p: Point3D): number {
+  if (path.length < 2) return 0;
+  let best = Infinity;
+  let angle = 0;
+  for (let i = 1; i < path.length; i++) {
+    const a = path[i - 1]!;
+    const b = path[i]!;
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const len2 = dx * dx + dy * dy || 1;
+    const t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2));
+    const cx = a.x + dx * t;
+    const cy = a.y + dy * t;
+    const dist = Math.hypot(p.x - cx, p.y - cy);
+    if (dist < best) {
+      best = dist;
+      angle = Math.atan2(dy, dx) * RAD_TO_DEG;
+    }
+  }
+  return angle;
+}
+
 // ─── Posts ───────────────────────────────────────────────────────────────────
 
 /** Posts at start / corners / end per the placement rule. Φ1 straight → 2 posts. */
@@ -106,7 +160,8 @@ function buildPosts(
     const refB = isEnd ? path[i] : path[i + 1];
     out.push({
       role: 'post',
-      basePoint: { x: path[i].x, y: path[i].y, z: params.baseElevationMm },
+      // ADR-407 Φ7 — base z from the vertex's own z (flat for sketch = baseElevationMm; sloped for a hosted stair path).
+      basePoint: { x: path[i].x, y: path[i].y, z: path[i].z ?? params.baseElevationMm },
       heightMm: params.totalHeightMm,
       rotationDeg: segmentAngleDeg(refA, refB),
       profile: cfg.profile,
@@ -135,23 +190,66 @@ function balusterDistances(totalLen: number, spacing: number, justification: 'st
   return dists;
 }
 
-/** Round balusters along the path at the ball-rule spacing, up to the top-rail underside. */
+/**
+ * Baluster count for «Baluster Per Tread» (ADR-407 Φ7b). The host bakes only the SCALAR
+ * `treadCount`; the multiplier lives in the Type. Falls back to a pre-Φ7b doc's baked anchor
+ * count (its `.length`, NOT its stale positions) so legacy railings self-heal on reload.
+ */
+function perTreadBalusterCount(host: RailingHostContext | undefined, perTreadCount: number): number {
+  if (!host) return 0;
+  if (host.treadCount && host.treadCount > 0) return host.treadCount * perTreadCount;
+  return host.perTreadAnchors?.length ?? 0; // legacy: count only; z re-derived below
+}
+
+/**
+ * Balusters up to the top-rail underside. Two placement modes (Revit parity):
+ *  - **Baluster Per Tread** (ADR-407 Φ7b): `treadCount × perTread.count` balusters, each
+ *    placed by sampling `resolvedPath` LIVE (position + slope z from the SAME path the rail
+ *    uses). SSoT — the baluster base and the rail can never drift, and a persisted railing
+ *    re-derives correct z on every reload (no stale baked anchor positions to float above).
+ *  - **Along-path spacing** (Φ1 default): interior balusters at the 10cm-ball-rule spacing,
+ *    each lifted to the interpolated path z so it stays plumb on a sloped host.
+ * In both modes the baluster HEIGHT is measured above the local base z, so a plumb baluster
+ * top meets the sloped rail underside without per-member height math.
+ */
 function buildBalusters(
   path: RailingPath,
   type: RailingType,
   params: RailingParams,
   s: number,
+  host?: RailingHostContext,
 ): RailMemberSolid[] {
   const pattern = type.balusterPlacement.pattern;
   if (path.length < 2) return [];
-  const spacingCanvas = pattern.spacingMm * s;
-  const totalLen = pathLength(path);
   const topRailHeight = type.topRail.enabled ? type.topRail.heightMm : params.totalHeightMm;
   const balHeight = Math.max(0, topRailHeight - type.topRail.profile.heightMm / 2);
+
+  // Revit «Baluster Per Tread» — derive every baluster from `path` (the rail's own path).
+  const perTread = type.balusterPlacement.perTread;
+  if (perTread) {
+    const count = perTreadBalusterCount(host, perTread.count);
+    const totalLen = pathLength(path);
+    if (count > 0 && totalLen > 0) {
+      return Array.from({ length: count }, (_, i) => {
+        const p = sampleRailingPath(path, (totalLen * (i + 0.5)) / count);
+        return {
+          role: 'baluster' as const,
+          basePoint: { x: p.x, y: p.y, z: p.z ?? params.baseElevationMm },
+          heightMm: balHeight,
+          rotationDeg: nearestSegmentAngleDeg(path, p),
+          profile: pattern.profile,
+          material: pattern.material,
+        };
+      });
+    }
+  }
+
+  const spacingCanvas = pattern.spacingMm * s;
+  const totalLen = pathLength(path);
   const dists = balusterDistances(totalLen, spacingCanvas, pattern.justification);
   return dists.map((d) => ({
     role: 'baluster' as const,
-    basePoint: pointAtDistance(path, d, params.baseElevationMm),
+    basePoint: sampleRailingPath(path, d),
     heightMm: balHeight,
     rotationDeg: angleAtDistance(path, d),
     profile: pattern.profile,
@@ -161,28 +259,32 @@ function buildBalusters(
 
 // ─── Rails ─────────────────────────────────────────────────────────────────────
 
-/** Lift a path to a member centreline elevation (datum + heightMm). */
-function liftPath(path: RailingPath, baseElevationMm: number, heightMm: number): RailingPath {
-  const z = baseElevationMm + heightMm;
-  return path.map((p) => ({ x: p.x, y: p.y, z }));
+/**
+ * Lift a path to a member centreline elevation, `heightMm` **above each vertex's own z**.
+ * Sketch paths carry a flat z (= `baseElevationMm`), so the result is a flat rail exactly
+ * as before; a hosted (stair) path carries per-vertex slope z, so the rail follows the
+ * incline automatically (ADR-407 Φ7 — sloped rail, zero extra code at the render layer).
+ */
+function liftPath(path: RailingPath, heightMm: number): RailingPath {
+  return path.map((p) => ({ x: p.x, y: p.y, z: (p.z ?? 0) + heightMm }));
 }
 
 /** Top rail + (Φ4) intermediate rails + handrail. Φ1: one centred top rail. */
-function buildRails(path: RailingPath, type: RailingType, params: RailingParams): RailSweep[] {
+function buildRails(path: RailingPath, type: RailingType): RailSweep[] {
   const rails: RailSweep[] = [];
   if (type.topRail.enabled) {
     rails.push({
       role: 'top-rail',
-      path: liftPath(path, params.baseElevationMm, type.topRail.heightMm),
+      path: liftPath(path, type.topRail.heightMm),
       profile: type.topRail.profile,
       material: type.topRail.material,
     });
   }
   for (const rs of type.railStructure) {
-    rails.push({ role: 'intermediate', path: liftPath(path, params.baseElevationMm, rs.heightMm), profile: rs.profile, material: rs.material });
+    rails.push({ role: 'intermediate', path: liftPath(path, rs.heightMm), profile: rs.profile, material: rs.material });
   }
   if (type.handrail.enabled) {
-    rails.push({ role: 'handrail', path: liftPath(path, params.baseElevationMm, type.handrail.heightMm), profile: type.handrail.profile, material: type.handrail.material });
+    rails.push({ role: 'handrail', path: liftPath(path, type.handrail.heightMm), profile: type.handrail.profile, material: type.handrail.material });
   }
   return rails;
 }
@@ -195,35 +297,62 @@ function computeBbox(path: RailingPath, params: RailingParams) {
     return { min: o, max: o };
   }
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  let minZ = Infinity, maxZ = -Infinity;
   for (const p of path) {
     minX = Math.min(minX, p.x); minY = Math.min(minY, p.y);
     maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y);
+    // ADR-407 Φ7 — z spans the (possibly sloped) host path, not a single flat datum.
+    const z = p.z ?? params.baseElevationMm;
+    minZ = Math.min(minZ, z); maxZ = Math.max(maxZ, z);
   }
   return {
-    min: { x: minX, y: minY, z: params.baseElevationMm },
-    max: { x: maxX, y: maxY, z: params.baseElevationMm + params.totalHeightMm },
+    min: { x: minX, y: minY, z: minZ },
+    max: { x: maxX, y: maxY, z: maxZ + params.totalHeightMm },
   };
 }
 
 // ─── Engine ────────────────────────────────────────────────────────────────────
 
 /**
+ * Synthesize a `RailingHostContext` from a hosted path source's **baked snapshot** (ADR-407 Φ7).
+ * This is what lets a persisted hosted railing hydrate with NO live host — `railingDocToEntity`
+ * calls `computeRailingGeometry(params)` with no `host`, and the baked `resolvedPath` /
+ * `treadCount` carry it through. `undefined` for sketch sources or an un-baked hosted source.
+ */
+function hostFromSnapshot(source: RailingParams['pathSource']): RailingHostContext | undefined {
+  if (source.kind !== 'hosted' || !source.resolvedPath) return undefined;
+  return {
+    hostId: source.hostId,
+    hostType: source.hostType,
+    resolvedPath: source.resolvedPath,
+    ...(source.slopeRatio !== undefined ? { slopeRatio: source.slopeRatio } : {}),
+    ...(source.treadCount !== undefined ? { treadCount: source.treadCount } : {}),
+    // @deprecated legacy count fallback (positions ignored; z re-derived from resolvedPath).
+    ...(source.perTreadAnchors ? { perTreadAnchors: source.perTreadAnchors } : {}),
+  };
+}
+
+/**
  * Compute `RailingGeometry` from `RailingParams` (+ resolved host context). Pure
  * SSoT. Returns a degenerate (empty-member) geometry for a sub-2-point path —
  * the validator guards this upstream. Throws nothing.
+ *
+ * A live `host` (passed by the stair→railing cascade after a stair edit) always wins; when
+ * absent (hydrate) the baked snapshot on a hosted `pathSource` is used instead (ADR-407 Φ7).
  */
 export function computeRailingGeometry(
   params: RailingParams,
   host?: RailingHostContext,
 ): RailingGeometry {
   const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
-  const resolvedPath = resolveRailingPath(params, host);
+  const effectiveHost = host ?? hostFromSnapshot(params.pathSource);
+  const resolvedPath = resolveRailingPath(params, effectiveHost);
   const lengthM = (pathLength(resolvedPath) / s) * MM_TO_M;
   return {
     resolvedPath,
     posts: buildPosts(resolvedPath, params.type, params),
-    balusters: buildBalusters(resolvedPath, params.type, params, s),
-    rails: buildRails(resolvedPath, params.type, params),
+    balusters: buildBalusters(resolvedPath, params.type, params, s, effectiveHost),
+    rails: buildRails(resolvedPath, params.type),
     panels: [],
     bbox: computeBbox(resolvedPath, params),
     lengthM,

@@ -20,6 +20,8 @@ export interface CollectedBimDeleteIds {
   columnIds: string[];
   beamIds: string[];
   stairIds: string[];
+  // ADR-407 Φ7 — κάγκελο (standalone + auto stair-hosted orphans).
+  railingIds: string[];
   openingIds: string[];
   slabOpeningIds: string[];
   foundationIds: string[];
@@ -61,6 +63,7 @@ export function collectBimDeleteIds(
     columnIds: byType('column'),
     beamIds: byType('beam'),
     stairIds: byType('stair'),
+    railingIds: byType('railing'),
     openingIds: byType('opening'),
     slabOpeningIds: byType('slab-opening'),
     foundationIds: byType('foundation'),
@@ -96,6 +99,7 @@ export function emitBimDeleteEvents(ids: CollectedBimDeleteIds): void {
     [ids.beamIds, 'beam'],
     [ids.foundationIds, 'foundation'],
     [ids.stairIds, 'stair'],
+    [ids.railingIds, 'railing'],
     [ids.openingIds, 'opening'],
     [ids.slabOpeningIds, 'slab-opening'],
     [ids.fixtureIds, 'mep-fixture'],

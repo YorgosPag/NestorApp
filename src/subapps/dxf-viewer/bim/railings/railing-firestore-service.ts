@@ -28,6 +28,10 @@ import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateRailingId } from '@/services/enterprise-id-convenience';
 import { firestoreQueryService } from '@/services/firestore';
+// ADR-407 Φ8 — strip nested `undefined` πριν το write (mirror stair-firestore-service): το Firestore
+// (χωρίς `ignoreUndefinedProperties`) απορρίπτει undefined πεδία. Χρειάζεται όταν το appearance clear
+// (value=null → `params.appearance = undefined`) περνά wholesale· διατηρεί timestamps/sentinels.
+import { stripUndefinedDeep } from '@/utils/firestore-sanitize';
 import { buildBimScopeConstraints, bimScopeWriteFields } from '../persistence/bim-floor-scope';
 import type {
   RailingEntity,
@@ -136,8 +140,8 @@ export class RailingFirestoreService {
       // ADR-420 — floorplanId (provenance) + floorId (stable scope), from config SSoT.
       ...bimScopeWriteFields(this.config),
       kind: input.kind,
-      params: input.params,
-      validation: input.validation,
+      params: stripUndefinedDeep(input.params),
+      validation: stripUndefinedDeep(input.validation),
       createdBy: this.config.userId,
       createdAt: serverTimestamp(),
       updatedBy: this.config.userId,
@@ -145,7 +149,7 @@ export class RailingFirestoreService {
     };
 
     // Firestore rejects `undefined` — include optional fields only when set.
-    if (input.geometry !== undefined) base.geometry = input.geometry;
+    if (input.geometry !== undefined) base.geometry = stripUndefinedDeep(input.geometry);
     if (input.buildingId !== undefined) base.buildingId = input.buildingId;
     if (input.layerId !== undefined) base.layerId = input.layerId;
 
@@ -159,9 +163,9 @@ export class RailingFirestoreService {
       updatedBy: this.config.userId,
       updatedAt: serverTimestamp(),
     };
-    if (patch.params !== undefined) payload.params = patch.params;
-    if (patch.validation !== undefined) payload.validation = patch.validation;
-    if (patch.geometry !== undefined) payload.geometry = patch.geometry;
+    if (patch.params !== undefined) payload.params = stripUndefinedDeep(patch.params);
+    if (patch.validation !== undefined) payload.validation = stripUndefinedDeep(patch.validation);
+    if (patch.geometry !== undefined) payload.geometry = stripUndefinedDeep(patch.geometry);
     if (patch.layerId !== undefined) payload.layerId = patch.layerId;
 
     await updateDoc(ref, payload);

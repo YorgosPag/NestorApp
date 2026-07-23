@@ -23,6 +23,7 @@ import type { Entity } from '../../types/entities';
 import { isRailingEntity } from '../../types/entities';
 import type { RailingEntity } from '../types/railing-types';
 import { buildRailingSymbol, balusterDotRadiusMm } from '../railings/railing-symbol';
+import { railingComponentColorHex } from '../railings/railing-appearance-color';
 import { clamp01 } from '../../utils/scalar-math';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
@@ -63,14 +64,18 @@ export class RailingRenderer extends BaseEntityRenderer {
     this.ctx.save();
     this.ctx.setLineDash([]);
 
+    // ADR-407 Φ8 — 2D parity: το βαμμένο appearance (per-component → whole) κερδίζει του default
+    // palette (Revit/ArchiCAD plan convention: υφή → αντιπροσωπευτικό χρώμα). rail→stroke.
+    const params = railing.params;
+
     // Path centreline.
-    this.ctx.strokeStyle = RAILING_STROKE;
+    this.ctx.strokeStyle = railingComponentColorHex(params, 'rail') ?? RAILING_STROKE;
     this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
     this.strokePolyline(symbol.pathStroke);
 
     // Post plan footprints (rotated squares / circles).
     // FULL SSoT (bim-body-fill) — κοινό adaptive layer με όλα τα BIM body fills.
-    this.ctx.fillStyle = adaptFillTintForCanvas(RAILING_POST_FILL);
+    this.ctx.fillStyle = adaptFillTintForCanvas(railingComponentColorHex(params, 'post') ?? RAILING_POST_FILL);
     for (const mark of symbol.postMarks) {
       if (mark.length < 3) continue;
       this.drawClosedPath(mark);
@@ -83,7 +88,7 @@ export class RailingRenderer extends BaseEntityRenderer {
     const dotWorldRadius = balusterDotRadiusMm(railing.params.type.balusterPlacement.pattern.profile) * s;
     const dotScreenRadius = Math.max(MIN_BALUSTER_DOT_PX, dotWorldRadius * this.transform.scale);
     // FULL SSoT (bim-body-fill) — κοινό adaptive layer με όλα τα BIM body fills.
-    this.ctx.fillStyle = adaptFillTintForCanvas(RAILING_BALUSTER_FILL);
+    this.ctx.fillStyle = adaptFillTintForCanvas(railingComponentColorHex(params, 'baluster') ?? RAILING_BALUSTER_FILL);
     for (const c of symbol.balusterMarks) {
       const p = this.worldToScreen({ x: c.x, y: c.y });
       this.ctx.beginPath();

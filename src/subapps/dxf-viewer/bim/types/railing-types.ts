@@ -28,6 +28,29 @@ import type {
 } from './bim-base';
 import type { SceneUnits } from '../../utils/scene-units';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
+import type { FaceAppearance } from './face-appearance-types';
+
+// ─── Appearance (ADR-407 Φ8 — χρώμα / υλικό / υφή, Revit «Paint» / Cinema 4D tag) ─
+
+/**
+ * Τα βαφόμενα components ενός κιγκλιδώματος (Revit railing-type materials):
+ *   - `rail`     — κουπαστές (top rail / handrail / intermediate = ΟΛΑ τα οριζόντια sweeps).
+ *   - `baluster` — τα κάθετα κάγκελα (InstancedMesh).
+ *   - `post`     — οι κολόνες / ορθοστάτες στις άκρες/γωνίες.
+ * Revit/ArchiCAD δίνουν χωριστό surface ανά component· εμείς mirror-άρουμε τα 3 πυρηνικά.
+ */
+export type RailingComponent = 'post' | 'baluster' | 'rail';
+
+/**
+ * Per-component εμφάνιση (Revit railing-type: ξεχωριστό υλικό ανά component). Κάθε πεδίο optional
+ * — ό,τι λείπει πέφτει στο whole-railing `appearance`, μετά στο element default. Ίδιο `FaceAppearance`
+ * SSoT με τα solids/σκάλα (textured/color).
+ */
+export interface RailingComponentAppearance {
+  readonly post?: FaceAppearance;
+  readonly baluster?: FaceAppearance;
+  readonly rail?: FaceAppearance;
+}
 
 // ─── Sub-type discriminator (ADR-407) ────────────────────────────────────────
 
@@ -67,6 +90,32 @@ export type RailingPathSource =
       readonly hostId: string;
       readonly hostType: 'stair' | 'slab-edge' | 'ramp';
       readonly side?: 'inner' | 'outer';
+      /**
+       * ADR-407 Φ7 — **baked** resolved path snapshot (canvas-unit xy, per-vertex mm z
+       * following the host slope). SOLE writer = the stair→railing cascade
+       * (`cascadeStairRailings`). It makes a persisted hosted railing **self-hydrating**:
+       * `railingDocToEntity` re-derives geometry from params with NO live host, so without
+       * a baked path a hosted railing would resolve to an empty path and vanish on reload.
+       * A live `RailingHostContext` (cascade re-run after a stair edit) always wins over it.
+       */
+      readonly resolvedPath?: RailingPath;
+      /**
+       * ADR-407 Φ7b — baked **scalar** tread count of the host flight. «Baluster Per Tread»
+       * places `treadCount × type.perTread.count` balusters, but their POSITION + z are
+       * derived LIVE from `resolvedPath` in the engine (SSoT: one path feeds both rail and
+       * balusters → they can never drift, and a persisted railing self-heals its baluster z
+       * on every reload). Only the count is baked, because it cannot be inferred from the path.
+       */
+      readonly treadCount?: number;
+      /**
+       * @deprecated ADR-407 Φ7b — legacy baked per-tread anchor POSITIONS (pre-scalar). No
+       * longer written; kept optional so pre-Φ7b docs still hydrate (the engine reads only
+       * their `.length` as a count fallback and re-derives z from `resolvedPath`). Remove
+       * once no persisted doc carries it.
+       */
+      readonly perTreadAnchors?: readonly Point3D[];
+      /** ADR-407 Φ7 — host run rise/length ratio (baked with the snapshot; diagnostics + future ADA extensions). */
+      readonly slopeRatio?: number;
     };
 
 // ─── RailingType: 3 orthogonal sub-systems (Revit) ───────────────────────────
@@ -157,6 +206,18 @@ export interface RailingParams {
   readonly sceneUnits?: SceneUnits;
   /** FK → Floor.id (storey reference). Semantic alias for entity-level floorId. */
   readonly storeyId?: string;
+  /**
+   * ADR-407 Φ8 — whole-railing «base» εμφάνιση (Cinema 4D object material tag / Revit type
+   * material): βάφει ΟΛΟ το κάγκελο (post + baluster + rail) εκτός όσων components έχουν δικό τους
+   * override. Ζει στα `params` (όχι per-face) γιατί το κάγκελο render-άρεται ΑΠΟ τα params —
+   * mirror του `StairMaterials.appearance`.
+   */
+  readonly appearance?: FaceAppearance;
+  /**
+   * ADR-407 Φ8 — per-component override (Revit railing-type materials): κερδίζει του whole-railing
+   * `appearance`. «Διαφορετικό υλικό σε κουπαστή / κάγκελα / κολόνες».
+   */
+  readonly componentAppearance?: RailingComponentAppearance;
 }
 
 // ─── Host context (Φ2-Φ3 hosting; reserved, unused in the sketch slice) ──────
@@ -172,7 +233,13 @@ export interface RailingHostContext {
   readonly resolvedPath: RailingPath;
   /** Run rise/length for sloped balusters (Φ2). */
   readonly slopeRatio?: number;
-  /** Per-tread anchor points for "Baluster Per Tread" (Φ2). */
+  /**
+   * ADR-407 Φ7b — tread count of the host flight (scalar). The engine places
+   * `treadCount × type.perTread.count` balusters, deriving each position + z LIVE from
+   * `resolvedPath` (SSoT — balusters share the rail's exact path, can never float above it).
+   */
+  readonly treadCount?: number;
+  /** @deprecated ADR-407 Φ7b — legacy baked anchor positions; superseded by `treadCount`. */
   readonly perTreadAnchors?: readonly Point3D[];
 }
 

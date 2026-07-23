@@ -21,7 +21,7 @@
 import * as THREE from 'three';
 import type { RailingEntity, RailMemberSolid, RailProfile, RailSweep } from '../../bim/types/railing-types';
 import type { Point3D } from '../../bim/types/bim-base';
-import { getElementMaterial3D } from '../materials/MaterialCatalog3D';
+import { resolveRailingMaterial } from '../materials/railing-material-resolver';
 import { sceneUnitsToMeters } from '../../utils/scene-units';
 import { stampBimIdentity } from './bim-three-shape-helpers';
 
@@ -76,11 +76,17 @@ function buildBalusterInstances(
   const balusters = railing.geometry.balusters;
   if (balusters.length === 0) return null;
   const geo = unitMemberGeometry(railing.params.type.balusterPlacement.pattern.profile);
-  const inst = new THREE.InstancedMesh(geo, getElementMaterial3D('railing'), balusters.length);
+  const inst = new THREE.InstancedMesh(geo, resolveRailingMaterial(railing, 'baluster'), balusters.length);
   balusters.forEach((b, i) => {
     inst.setMatrixAt(i, memberMatrix(b, sceneToM, floorElevationMm, buildingBaseElevationM));
   });
   inst.instanceMatrix.needsUpdate = true;
+  // ADR-407 Φ8 (Giorgio 2026-07-23) — «όλα τα κάθετα εξαφανίζονται»: η InstancedMesh κρατά by
+  // default το boundingSphere της BASE geometry (unit box στο world origin)· όταν τα instances
+  // κάθονται μακριά από το origin (το κάγκελο σχεδόν πάντα), το frustum culling τα κόβει μόλις το
+  // origin βγει εκτός κάδρου → όλα τα κάγκελα «χάνονται». Ο σωστός fix: recompute από τα instance
+  // matrices ώστε το culling sphere να τυλίγει την ΠΡΑΓΜΑΤΙΚΗ θέση των balusters (THREE gotcha).
+  inst.computeBoundingSphere();
   inst.castShadow = true;
   inst.receiveShadow = true;
   tagComponent(inst, railing.id, 'baluster', levelId);
@@ -95,8 +101,9 @@ function buildPosts(
   buildingBaseElevationM: number,
   levelId?: string,
 ): THREE.Mesh[] {
+  const material = resolveRailingMaterial(railing, 'post');
   return railing.geometry.posts.map((p) => {
-    const mesh = new THREE.Mesh(unitMemberGeometry(p.profile), getElementMaterial3D('railing'));
+    const mesh = new THREE.Mesh(unitMemberGeometry(p.profile), material);
     mesh.applyMatrix4(memberMatrix(p, sceneToM, floorElevationMm, buildingBaseElevationM));
     mesh.castShadow = true;
     mesh.receiveShadow = true;
@@ -145,11 +152,16 @@ function extendRailEndsToPosts(
  * member. `at` = the end point, `from` = the previous point — the cap normal
  * points outward (away from the tube), perpendicular to the terminal tangent.
  */
-function buildTubeCap(at: THREE.Vector3, from: THREE.Vector3, radiusM: number): THREE.Mesh {
+function buildTubeCap(
+  at: THREE.Vector3,
+  from: THREE.Vector3,
+  radiusM: number,
+  material: THREE.Material,
+): THREE.Mesh {
   const normal = new THREE.Vector3().subVectors(at, from).normalize();
   const cap = new THREE.Mesh(
     new THREE.CircleGeometry(radiusM, TUBE_RADIAL_SEGMENTS),
-    getElementMaterial3D('railing'),
+    material,
   );
   cap.position.copy(at);
   cap.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal);
@@ -184,14 +196,16 @@ function buildRailTube(
   const curve = new THREE.CatmullRomCurve3(pts, false, 'catmullrom', 0);
   const radiusM = Math.max(0.001, (rail.profile.widthMm / 2) * MM_TO_M);
   const geo = new THREE.TubeGeometry(curve, Math.max(1, pts.length - 1), radiusM, TUBE_RADIAL_SEGMENTS, false);
-  const tube = new THREE.Mesh(geo, getElementMaterial3D('railing'));
+  // ADR-407 Φ8 — κοινό rail material για tube + caps (ένα resolve, ίδια εμφάνιση σε ΟΛΗ την κουπαστή).
+  const material = resolveRailingMaterial(railing, 'rail');
+  const tube = new THREE.Mesh(geo, material);
   tube.castShadow = true;
   tube.receiveShadow = true;
 
   const out = new THREE.Group();
   out.add(tube);
-  out.add(buildTubeCap(pts[0], pts[1], radiusM));
-  out.add(buildTubeCap(pts[pts.length - 1], pts[pts.length - 2], radiusM));
+  out.add(buildTubeCap(pts[0], pts[1], radiusM, material));
+  out.add(buildTubeCap(pts[pts.length - 1], pts[pts.length - 2], radiusM, material));
   // Tag the group + every child so picking resolves any sub-mesh to the railing.
   tagComponent(out, railing.id, 'rail', levelId);
   out.children.forEach((c) => tagComponent(c, railing.id, 'rail', levelId));

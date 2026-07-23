@@ -56,6 +56,20 @@
     "selectFireRating": "Select fire rating...",
     "selectUnit": "Select unit..."
   },
+  "appearance": {
+    "label": "Appearance",
+    "color": "Color",
+    "metalness": "Metalness",
+    "roughness": "Roughness",
+    "roughnessHint": "0 = glossy · 1 = matte",
+    "metalnessHint": "0 = non-metal · 1 = metal",
+    "previewAlt": "Material preview",
+    "emissiveColor": "Self-illumination color",
+    "emissive": "Self-illumination",
+    "emissiveHint": "0 = off · lights/LEDs/screens",
+    "opacity": "Opacity",
+    "opacityHint": "1 = opaque · <1 = transparent (glass/water)"
+  },
   "validation": {
     "nameRequired": "Both Greek and English names are required.",
     "densityPositive": "Density must be a positive number.",
