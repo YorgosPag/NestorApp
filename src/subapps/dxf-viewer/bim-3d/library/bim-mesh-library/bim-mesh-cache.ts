@@ -29,6 +29,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { resolveMeshUrl, meshAssetKey } from './bim-mesh-url-resolver';
 import { recentreMeshFootprint } from './mesh-footprint-recentre';
+import { ensureMeshVertexNormals } from './mesh-normals-ensure';
 import { collectAddressableGltfNodes } from '../../scene/gltf-addressable-nodes';
 import { useBim3DEntitiesStore } from '../../stores/Bim3DEntitiesStore';
 import {
@@ -135,6 +136,10 @@ function preload(category: string, assetId: string): void {
  */
 function indexTemplate(key: string, object: THREE.Object3D): void {
   const template = recentreMeshFootprint(object);
+  // ADR-686 — εγγύηση normals ΠΡΙΝ την ευρετηρίαση: ένα partner `.glb` χωρίς `NORMAL`
+  // attribute (C4D→glTF export) αποδίδει ΜΑΥΡΟ κάτω από lit υλικό (user override / preset
+  // safety-net). If-missing → curated έπιπλα με authored normals μένουν ανέγγιχτα.
+  ensureMeshVertexNormals(template);
   templates.set(key, template);
   // Derive the 2D plan silhouette + interior edges from the actual mesh (per-asset
   // representative footprint). Computed once; failures fall back to the rectangle in the renderer.

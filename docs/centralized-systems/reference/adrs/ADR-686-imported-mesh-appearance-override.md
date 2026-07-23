@@ -95,6 +95,7 @@ apply-helpers είναι **entity-agnostic** → **δουλεύουν αυτού
 | **Φ4** | (μελλοντικό) per-slot selection highlight στο ΠΟΛΥΓΩΝΑ (FaceSelectionHighlighter για imported) | ⬜ PLANNED |
 | **Φ4b** | auto-tier από **node name** (`resolveImportedMaterialPresetFor` + furniture stems) + 2D poché readability (alpha 0.28) | 🟢 IMPLEMENTED UNCOMMITTED |
 | **Φ5** | **Manual per-entity Material Mapping dialog** (Revit-style): πίνακας κομματιών ανά `uploadId`, dropdown υλικού βιβλιοθήκης, batch apply σε ΕΝΑ undo βήμα → `faceAppearance['*']` ανά entity | 🟢 IMPLEMENTED UNCOMMITTED |
+| **Φ6** | 3D render fix: εγγύηση vertex normals σε partner `.glb` χωρίς `NORMAL` (lit override/preset απέδιδε ΜΑΥΡΟ) — `ensureMeshVertexNormals` στο asset-prep, if-missing | 🟢 IMPLEMENTED UNCOMMITTED |
 
 ---
 
@@ -105,6 +106,8 @@ apply-helpers είναι **entity-agnostic** → **δουλεύουν αυτού
 · `bim-3d/converters/imported-mesh-to-three.ts` (περνά `mesh.faceAppearance`)
 · `bim-3d/systems/raycaster/BimEntityRaycaster.ts` (`hitMeshSlotName` → `slot:${name}` για imported).
 **2D:** `bim/renderers/ImportedMeshRenderer.ts` (`slotPaletteWithOverride` — override hex νικά preset).
+**Φ6 render fix:** `bim-3d/library/bim-mesh-library/mesh-normals-ensure.ts` (νέο, `ensureMeshVertexNormals`
+if-missing) · `bim-3d/library/bim-mesh-library/bim-mesh-cache.ts` (`indexTemplate` καλεί τον helper μετά το recentre).
 **Persistence:** `bim/entities/imported-mesh/imported-mesh-firestore-service.ts` (Doc/Save/Update +`faceAppearance`)
 · `hooks/data/useImportedMeshPersistence.ts` (update call) · `hooks/data/imported-mesh-persistence-helpers.ts` (hydrate).
 **Reused αυτούσια (καμία αλλαγή):** `resolveFaceMaterial`, `SetFaceAppearanceCommand`,
@@ -170,3 +173,18 @@ dialog + ribbon labels).
   enhance +1 (catalog materialId base override), 40/40 πράσινα, jscpd clean.
 - **2026-07-22 (Φ5 fix — unbalanced `TooltipProvider` JSX)** — Συμπληρώθηκε το closing tag (node-name tooltips
   στον πίνακα)· το αρχείο δεν έκανε compile.
+- **2026-07-22 (Φ6 fix — browser: κόκκινο/τούβλο → ΜΑΥΡΟ στο 3D)** — Ο χρήστης έβαφε (colorHex ή catalog
+  `mat-*`) και το εισαγόμενο mesh αποδιδόταν **ΜΑΥΡΟ** (όχι το χρώμα). **Root cause με εξάλειψη** (όχι
+  εικασία): (α) MCP Firestore query → τα docs **έχουν** το `faceAppearance` (persist OK)· (β) το ίδιο
+  `getFaceColorMaterial3D('#…')` βάφει σωστά τις **δομικές** όψεις (ADR-539) → το υλικό είναι έγκυρο· (γ)
+  τα δομικά χρωματίζονται (φωτισμός OK) ενώ ΜΟΝΟ το imported βγαίνει μαύρο → **ίδιο υλικό, διαφορετική
+  γεωμετρία**. Το partner `.glb` (HMI_Aeron, C4D→glTF) ήρθε **χωρίς `NORMAL` attribute**· τα embedded
+  υλικά ήταν unlit/emissive (φαίνονταν μπλε ούτως ή άλλως), αλλά ένα **lit** `MeshStandardMaterial` (user
+  override / ADR-683 preset safety-net) χωρίς normals → αποδίδεται μαύρο. Στο mesh pipeline δεν υπήρχε
+  πουθενά `computeVertexNormals`. **Fix (big-player «recompute normals on import», SSoT):** νέος pure helper
+  `ensureMeshVertexNormals` (`bim-3d/library/bim-mesh-library/mesh-normals-ensure.ts`) καλείται **μία φορά**
+  στο asset-prep (`bim-mesh-cache.indexTemplate`, μετά το recentre), **if-missing** → curated έπιπλα με
+  authored normals μένουν ανέγγιχτα, μηδέν παλινδρόμηση shading· τα per-instance clones κληρονομούν τα
+  normals της κοινής template geometry δωρεάν. Καλύπτει ΚΑΙ τον override ΚΑΙ το preset safety-net. Tests:
+  `mesh-normals-ensure` 4/4 (missing→computed, authored→untouched, nested/skip, idempotent) + cache-bundle
+  8/8 πράσινα, jscpd clean. ✅ **Browser-verified (Giorgio 2026-07-22): κόκκινο/τούβλο βάφουν σωστά.** Pending: commit.

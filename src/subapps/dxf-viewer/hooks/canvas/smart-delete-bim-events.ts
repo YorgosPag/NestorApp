@@ -37,6 +37,11 @@ export interface CollectedBimDeleteIds {
   spaceSeparatorIds: string[];
   // ADR-507 — FLAT DXF hatch (Firestore deleteDoc + tombstone on delete-tool).
   hatchIds: string[];
+  // ADR-683 Φ3β — imported mesh (Firestore deleteDoc + tombstone; without this the
+  // delete removed it from the scene but not Firestore → reload re-added it).
+  importedMeshIds: string[];
+  // ADR-684 — parametric generic solid (same deleteDoc + tombstone path).
+  genericSolidIds: string[];
 }
 
 /**
@@ -72,6 +77,8 @@ export function collectBimDeleteIds(
     underfloorIds: byType('mep-underfloor'),
     spaceSeparatorIds: byType('space-separator'),
     hatchIds: byType('hatch'),
+    importedMeshIds: byType('imported-mesh'),
+    genericSolidIds: byType('generic-solid'),
   };
 }
 
@@ -104,6 +111,8 @@ export function emitBimDeleteEvents(ids: CollectedBimDeleteIds): void {
     [ids.underfloorIds, 'mep-underfloor'],
     [ids.spaceSeparatorIds, 'space-separator'],
     [ids.hatchIds, 'hatch'],
+    [ids.importedMeshIds, 'imported-mesh'],
+    [ids.genericSolidIds, 'generic-solid'],
   ];
   for (const [arr, type] of groups) {
     for (const id of arr) emitBimEntityDeleteRequested(type, id);
