@@ -161,19 +161,32 @@ slab persistence serialize path (αν whitelist).
 
 ## 7. Changelog
 
-- **2026-07-23 (Φ6 — STAIR SUB-ELEMENT «CLICK-INTO» GATED ΠΙΣΩ ΑΠΟ «ΠΟΛΥΓΩΝΑ», IMPLEMENTED UNCOMMITTED)** —
-  Bug report Giorgio: «αν και ΔΕΝ έχω πατήσει το κουμπί ΠΟΛΥΓΩΝΑ, μπορώ να επιλέξω πολύγωνα» (screenshot:
-  ένα μπλε tread σε παραμετρική σκάλα). Ρίζα: το μπλε ΔΕΝ ήταν per-face επιλογή (το per-face picking είναι
-  σωστά κλειδωμένο σε `active` παντού: `use-bim3d-pointer-handlers` κλικ/δεξί-κλικ, `bim3d-pointer-scheduler`
-  hover, `use-polygon-drag-drop`, `use-polygon-clipboard-shortcuts`). Ήταν το **ADR-358 Q19 stair
-  sub-element «click-into»** (2ο κλικ σε ήδη-επιλεγμένη σκάλα → επιλογή tread), που χρησιμοποιεί **ΤΟ ΙΔΙΟ
-  μπλε** `0x2ea1ff` (`StairSubElementHighlighter.ts` = `FaceSelectionHighlighter.ts`) → φαινόταν σαν να
-  «διέρρεε» το Polygon Mode. **Απόφαση (Giorgio):** το 3D click-into γίνεται Polygon-Mode-gated — αφού το
-  face branch (`active`) κάνει return νωρίτερα, το drill-in ζούσε αποκλειστικά στο body branch· αφαιρέθηκε
-  από εκεί → **εκτός «ΠΟΛΥΓΩΝΑ» το κλικ επιλέγει ΠΑΝΤΑ ολόκληρη τη σκάλα**, ποτέ μεμονωμένο tread/riser.
-  Μέσα στο «ΠΟΛΥΓΩΝΑ» το tread παραμένει επιλέξιμο ως όψη (per-face pick). Ένα αρχείο
-  (`use-bim3d-pointer-handlers.ts`: αφαίρεση `isStairSubPart` import + του `alreadySole`/sub-element block).
-  Το 2D click-into (δικός του handler, canonical `ToolStateStore`) αμετάβλητο. ⚠️ Το **ADR-358** ΔΕΝ
+- **2026-07-23 (Φ6 — STAIR SUB-ELEMENT SELECTION ΕΝΟΠΟΙΗΜΕΝΟ ΚΑΤΩ ΑΠΟ «ΠΟΛΥΓΩΝΑ», IMPLEMENTED UNCOMMITTED)** —
+  Bug report Giorgio (2 iterations):
+  - **(1)** «αν και ΔΕΝ έχω πατήσει ΠΟΛΥΓΩΝΑ, μπορώ να επιλέξω πολύγωνα» — το μπλε tread ΔΕΝ ήταν per-face
+    (το per-face picking είναι σωστά κλειδωμένο σε `active` παντού: `use-bim3d-pointer-handlers` κλικ/δεξί,
+    `bim3d-pointer-scheduler` hover, `use-polygon-drag-drop`, `use-polygon-clipboard-shortcuts`). Ήταν το
+    **ADR-358 Q19 stair sub-element «click-into»** (body-mode, 2ο κλικ), που χρησιμοποιεί **ΤΟ ΙΔΙΟ μπλε**
+    `0x2ea1ff` (`StairSubElementHighlighter.ts` = `FaceSelectionHighlighter.ts`) → φαινόταν σαν διαρροή.
+  - **(2)** Με ΠΟΛΥΓΩΝΑ πατημένο, ΔΕΝ επιλεγόταν μεμονωμένο πάτημα/ρίχτι/πλατύσκαλο/πλάκα — μόνο ολόκληρη
+    η σκάλα. Ρίζα: μια παραμετρική σκάλα ΔΕΝ είναι faced-prism (`StairToThreeConverter` κρατά ξεχωριστά
+    tread/riser/landing/waist meshes με `stairComponent` tags), άρα το `raycastBimFace` δεν έβρισκε
+    `faceKey` → κλικ = clear.
+
+  **Απόφαση (Giorgio):** ΟΛΗ η sub-element επιλογή ζει **κάτω από «ΠΟΛΥΓΩΝΑ»** (solids → per-face· σκάλα →
+  per-component). Εκτός «ΠΟΛΥΓΩΝΑ» το κλικ επιλέγει ΠΑΝΤΑ ολόκληρη τη σκάλα. Υλοποίηση (4 code files):
+  - `BimEntityRaycaster.ts` — το `raycastBimFace` μεταφέρει πλέον τα `stairSubElementFields` (stairPart +
+    index) στο entityFallback (mirror `raycastBimGroup`), ώστε ένα non-faced stair hit να είναι drill-able.
+  - `use-bim3d-pointer-handlers.ts` — polygon branch: (α) faceKey → per-face· (β) stair sub-part → επιλογή
+    sub-element (host stair ensured-selected → `subStore.selectSub`)· (γ) miss → clear. **Αφαιρέθηκε** το
+    body-mode `alreadySole` drill-in → εκτός Πολυγώνων = ολόκληρη σκάλα.
+  - `stair-sub-element-selection-store.ts` — `StairSubPart` += `'waist'` (πλάκα σκάλας) + `isStairSubPart`.
+  - `StairToThreeConverter.ts` — waist meshes ταγκάρονται με 0-based `stairComponentIndex` (1/flight),
+    ώστε να είναι individually pickable όπως tread/riser/landing.
+
+  Το `waist` έχει **3D-only** halo (όπως το `riser`: κανένα plan-polygon → καμία 2D fill). Το 2D click-into
+  (δικός του handler, canonical `ToolStateStore`) αμετάβλητο. Hover-preview της σκάλας υπό «ΠΟΛΥΓΩΝΑ» =
+  follow-up (selection δουλεύει· δεν υπάρχει ακόμη yellow sub-element hover). ⚠️ Το **ADR-358** ΔΕΝ
   ενημερώθηκε: το αρχείο του έχει **committed git merge markers** (`>>>>>>> Stashed changes`, 9 markers) —
   χρειάζεται χειροκίνητο cleanup από Giorgio πριν αγγιχτεί.
 - **2026-07-22 (Φ5 — PANEL ΠΑΝΤΑ ΟΡΑΤΟ + ENTITY-LEVEL DRAG-DROP, IMPLEMENTED UNCOMMITTED)** — Giorgio:

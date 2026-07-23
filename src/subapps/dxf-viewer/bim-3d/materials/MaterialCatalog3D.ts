@@ -27,6 +27,8 @@ import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store
 import { withDepthPriority } from './material-depth-priority';
 // N.7.1 size split (ADR-665) — the sole PBR face factory, shared with `terrain-materials-3d`.
 import { buildMat } from './pbr-material-builder';
+// N.18 SSoT — η ΜΟΝΑΔΙΚΗ «κάνε double-sided χωρίς να μολύνεις την πηγή» (WeakMap-cached).
+import { ensureDoubleSided } from './ensure-double-sided';
 // N.7.1 size split (ADR-665) — ADR-446 Visual Style FACES axis.
 import { withFaceMode, disposeFaceModeMaterials } from './face-mode-materials';
 // ADR-665 — terrain materials live in their own module (exclusivity is a load-bearing invariant
@@ -290,23 +292,8 @@ export function getFinishColorOverrideMaterial3D(colorHex: string): THREE.MeshSt
 // cache (N.18 / ADR-584). Το μόνο per-face-specific είναι το `THREE.DoubleSide`: μια βαμμένη
 // όψη μπορεί να είναι τοίχωμα ανοίγματος (slab hole) με flat normal προς το κενό, άρα πρέπει
 // να render-άρει + raycast-άρει από μέσα (ADR-539 Φ2). Το `getMaterial3D` επιστρέφει FrontSide
-// singletons (backface culling κλειστού solid), οπότε κρατάμε cached double-sided VARIANT
-// κλειδωμένο στο ΙΔΙΟ instance της πηγής. WeakMap → auto-invalidate στο preload→resync swap:
-// όταν το texture φορτώσει, το `getMaterial3D` επιστρέφει ΝΕΟ textured instance → miss → νέο
-// double-sided clone· το παλιό source+clone γίνονται GC. Το clone ΜΟΙΡΑΖΕΤΑΙ τα texture objects
-// της πηγής (`Material.clone` αντιγράφει map refs, ΠΟΤΕ το GPU texture) → ΠΟΤΕ dispose per-mesh.
-const FACE_DOUBLE_SIDED = new WeakMap<THREE.Material, THREE.MeshStandardMaterial>();
-
-function doubleSidedVariant(source: THREE.MeshStandardMaterial): THREE.MeshStandardMaterial {
-  if (source.side === THREE.DoubleSide) return source;
-  let clone = FACE_DOUBLE_SIDED.get(source);
-  if (!clone) {
-    clone = source.clone();
-    clone.side = THREE.DoubleSide;
-    FACE_DOUBLE_SIDED.set(source, clone);
-  }
-  return clone;
-}
+// singletons (backface culling κλειστού solid), οπότε τυλίγουμε με το `ensureDoubleSided` SSoT
+// (WeakMap-cached clone, N.18 — κοινό με prism + imported-mesh enhancer).
 
 /**
  * ADR-539 Φ4d — έχει το υλικό όψης ΠΡΑΓΜΑΤΙΚΗ υφή σε αυτό το μονοπάτι; ΜΟΝΟ τα library
@@ -339,7 +326,7 @@ function hasFaceTexture(materialId: string): boolean {
 export function getFaceMaterial3D(materialId: string): THREE.MeshStandardMaterial | null {
   if (!useBimRenderSettingsStore.getState().realisticMaterials) return null;
   if (!hasFaceTexture(materialId)) return null;
-  const mat = doubleSidedVariant(getMaterial3D(materialId));
+  const mat = ensureDoubleSided(getMaterial3D(materialId));
   // ADR-678 Φ2 (round-trip identity): σφραγίζει το Nestor material id ώστε το export να ονομάζει το
   // per-face υλικό με ΤΗΝ ΤΑΥΤΟΤΗΤΑ ΤΟΥ (`bmat_*`/`mat-*`) — όχι texture-derived `tex_*` — για να το
   // αναγνωρίζει το re-import. Σταθερό ανά `bmat_*` (μοναδικό source→clone)· catalog `mat-*` που

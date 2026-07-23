@@ -34,6 +34,8 @@
 
 import * as THREE from 'three';
 import { buildMat } from '../materials/pbr-material-builder';
+// N.18 SSoT — imported meshes render DoubleSide (αναξιόπιστο winding partner .glb). Κοινό helper.
+import { ensureDoubleSided } from '../materials/ensure-double-sided';
 import {
   resolveImportedMaterialPresetFor,
   type ImportedMaterialPreset,
@@ -66,9 +68,10 @@ function looksUnauthoredDefault(mat: THREE.MeshStandardMaterial): boolean {
 
 /**
  * Χτίζει το preset material μέσω της ΜΟΝΑΔΙΚΗΣ factory (`buildMat`, N.18) και προσαρμόζει τα δύο
- * πεδία που διαφέρουν για ΞΕΝΑ πλέγματα: (α) διατηρεί το `side` της πηγής (τα partner meshes είναι
- * συχνά `DoubleSide` με ασυνεπές winding — το FrontSide του `buildMat` θα άφηνε τρύπες), και (β)
- * απενεργοποιεί το `polygonOffset` (είναι για coplanar BIM overlays, άσχετο με μεμονωμένο mesh).
+ * πεδία που διαφέρουν για ΞΕΝΑ πλέγματα: (α) `THREE.DoubleSide` (το winding των εισαγόμενων .glb
+ * είναι αναξιόπιστο — mirror/negative-scale nodes, ασυνεπείς exporters — άρα render-άρουμε double-
+ * sided όπως Revit/C4D/Sketchfab, αντί να «διορθώνουμε» winding ανά face· FrontSide → τρύπες camera-
+ * relative), και (β) απενεργοποιεί το `polygonOffset` (είναι για coplanar BIM overlays, άσχετο εδώ).
  */
 function buildPresetMaterial(
   preset: ImportedMaterialPreset,
@@ -81,7 +84,7 @@ function buildPresetMaterial(
     transparent: preset.transparent,
     opacity: preset.opacity,
   });
-  mat.side = source.side;
+  mat.side = THREE.DoubleSide;
   mat.polygonOffset = false;
   mat.name = source.name; // ιχνηλασιμότητα + idempotency (2η διέλευση δεν το ξαναπιάνει)
   return mat;
@@ -94,9 +97,12 @@ function buildPresetMaterial(
  */
 function enhanceSlot(material: THREE.Material, nodeName?: string): THREE.Material {
   if (!(material instanceof THREE.MeshStandardMaterial)) return material;
-  if (!looksUnauthoredDefault(material)) return material;
+  // Embedded pass-through: το authored/textured (ή άγνωστο) υλικό μένει ΕΜΦΑΝΙΣΙΑΚΑ ανέγγιχτο,
+  // αλλά γίνεται DoubleSide μέσω του κοινού SSoT — το winding του partner .glb είναι αναξιόπιστο
+  // ανεξάρτητα από το αν το υλικό ήρθε σωστό. Cached clone (δεν μολύνει το shared template).
+  if (!looksUnauthoredDefault(material)) return ensureDoubleSided(material);
   const preset = resolveImportedMaterialPresetFor(material.name, nodeName);
-  if (!preset) return material;
+  if (!preset) return ensureDoubleSided(material);
   return buildPresetMaterial(preset, material);
 }
 
@@ -107,9 +113,9 @@ function enhanceSlot(material: THREE.Material, nodeName?: string): THREE.Materia
  *      SSoT — ΙΔΙΟ resolver με τα δομικά, μηδέν δεύτερος μηχανισμός βαφής (η απάντηση στο «διπλοτυπία;»)·
  *   2. αλλιώς → ADR-683 preset safety-net (αμετάβλητο).
  *
- * Το override material **κλωνοποιείται** από το κοινό cached singleton για να διατηρήσει το `side`
- * (τα partner meshes είναι συχνά `DoubleSide` με ασυνεπές winding· το FrontSide του shared θα άφηνε
- * τρύπες) + να σβήσει το `polygonOffset` — χωρίς να μολύνει το cached που μοιράζονται τα δομικά.
+ * Το override material **κλωνοποιείται** από το κοινό cached singleton και render-άρεται
+ * `THREE.DoubleSide` (το winding των εισαγόμενων .glb είναι αναξιόπιστο· FrontSide → τρύπες camera-
+ * relative) + σβήνει το `polygonOffset` — χωρίς να μολύνει το cached που μοιράζονται τα δομικά.
  */
 function resolveSlotMaterial(
   source: THREE.Material,
@@ -120,7 +126,7 @@ function resolveSlotMaterial(
     const resolved = resolveFaceMaterial(slotFaceKey(source.name), faceAppearance, source);
     if (resolved !== source) {
       const mat = resolved.clone();
-      mat.side = source.side;
+      mat.side = THREE.DoubleSide;
       if (mat instanceof THREE.MeshStandardMaterial) mat.polygonOffset = false;
       return mat;
     }

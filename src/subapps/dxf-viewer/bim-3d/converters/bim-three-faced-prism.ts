@@ -21,6 +21,7 @@
 import * as THREE from 'three';
 import type { FaceKey, FaceAppearanceMap } from '../../bim/types/face-appearance-types';
 import { resolveFaceMaterial } from '../materials/face-appearance-material';
+import { ensureDoubleSided } from '../materials/ensure-double-sided';
 import { setBoxWorldUvs } from './bim-uv-helpers';
 
 /** Αποτέλεσμα: geometry με per-face groups + ο πίνακας materialIndex → FaceKey. */
@@ -202,12 +203,4 @@ export function buildFacedSolidBody(
   const mesh = new THREE.Mesh(prism.geometry, materials);
   mesh.userData['faceKeyByMaterialIndex'] = [...prism.faceKeyByMaterialIndex];
   return mesh;
-}
-
-/** Return `mat` if already double-sided, else a double-sided clone (shared base look, both faces). */
-function ensureDoubleSided(mat: THREE.Material): THREE.Material {
-  if (mat.side === THREE.DoubleSide) return mat;
-  const clone = mat.clone();
-  clone.side = THREE.DoubleSide;
-  return clone;
 }
