@@ -33,9 +33,8 @@ import { useLevelsOptional } from '../../systems/levels/useLevels';
 import { useProjectHierarchyOptional } from '../../contexts/ProjectHierarchyContext';
 import { usePolygonMode3DStore, type PolygonTargetLayer } from '../stores/PolygonMode3DStore';
 import type { FaceAppearance } from '../../bim/types/face-appearance-types';
-import { entireElementFaceMap } from '../../bim/types/face-appearance-types';
 import { applyFaceAppearanceToFaces } from './apply-face-appearance';
-import { applyEntityFaceAppearanceMap } from './apply-entity-face-appearance-map';
+import { applyWholeElementBodyAppearance } from './apply-entity-face-appearance-map';
 import { BIM_MATERIAL_MIME, serializeFaceAppearanceDrag } from './polygon-material-dnd';
 // ADR-449 PART B Slice C — «Σοβάς» layer: ίδιο picking/panel/dialog, route στο faceOverrides.
 import { applyFinishToWholeElement, faceAppearanceToFinishOverride } from './apply-finish-face-override';
@@ -89,9 +88,10 @@ export function PolygonMaterialPanel() {
    *   - **ΣΟΒΑΣ** (449 entity): βάφει τον σοβά σε ΟΛΕΣ τις κάθετες όψεις της οντότητας.
    * Όλα μέσω batch SSoT = ΕΝΑ undo.
    *
-   * ADR-678 Εύρημα A — το «όλο το στοιχείο» χρησιμοποιεί **replace semantics**
-   * (`applyEntityFaceAppearanceMap` + `entireElementFaceMap`), ώστε να καθαρίζει τυχόν
-   * προϋπάρχοντα per-face overrides — αλλιώς «βάψε όλο» άφηνε βαμμένες όψεις αναλλοίωτες.
+   * ADR-678 Εύρημα A — το «όλο το στοιχείο» χρησιμοποιεί **replace semantics** μέσω του
+   * `applyWholeElementBodyAppearance` (solid → `entireElementFaceMap` base `'*'`· ΣΚΑΛΑ → Φ7
+   * `params.materials.appearance`), ώστε να καθαρίζει τυχόν προϋπάρχοντα per-face overrides —
+   * αλλιώς «βάψε όλο» άφηνε βαμμένες όψεις αναλλοίωτες.
    */
   const apply = (value: FaceAppearance | null): void => {
     const store = usePolygonMode3DStore.getState();
@@ -104,12 +104,12 @@ export function PolygonMaterialPanel() {
       if (sub) { applyStairSubElementAppearance(levels, sub.stairId, sub.part, sub.index, value); return; }
       const faces = store.selectedFaces;
       if (faces.length > 0) applyFaceAppearanceToFaces(levels, faces, value);
-      else if (target) applyEntityFaceAppearanceMap(levels, target, entireElementFaceMap(value));
+      else if (target) applyWholeElementBodyAppearance(levels, target, value);
       return;
     }
     if (!target) return;
     if (store.targetLayer === 'finish') applyFinishToWholeElement(levels, target, faceAppearanceToFinishOverride(value));
-    else applyEntityFaceAppearanceMap(levels, target, entireElementFaceMap(value));
+    else applyWholeElementBodyAppearance(levels, target, value);
   };
 
   const faceCount = selectedFaces.length;

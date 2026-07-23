@@ -26,7 +26,7 @@ jest.mock('../../../systems/entity-creation/LevelSceneManagerAdapter', () => ({
   createLevelSceneManagerAdapter: () => ({ getEntity: () => mockState.stair }),
 }));
 
-import { applyStairSubElementAppearance } from '../apply-stair-sub-element-appearance';
+import { applyStairSubElementAppearance, applyStairWholeAppearance } from '../apply-stair-sub-element-appearance';
 
 const levels = {
   currentLevelId: 'lvl1',
@@ -94,6 +94,30 @@ describe('applyStairSubElementAppearance', () => {
     mockState.stair = fakeStair({});
     const noLevel = { currentLevelId: undefined } as unknown as LevelsHookReturn;
     applyStairSubElementAppearance(noLevel, 'stair_1', 'tread', 0, { colorHex: '#000' });
+    expect(mockExecute).not.toHaveBeenCalled();
+  });
+});
+
+describe('applyStairWholeAppearance', () => {
+  it('γράφει materials.appearance, διατηρώντας τα preset component materials', () => {
+    mockState.stair = fakeStair({ materials: { tread: 'oak', riser: 'steel' } });
+    applyStairWholeAppearance(levels, 'stair_1', { colorHex: '#654321' });
+    expect(mockExecute).toHaveBeenCalledTimes(1);
+    const { next } = mockCommandArgs[0]!;
+    expect(next.materials?.appearance).toEqual({ colorHex: '#654321' });
+    expect(next.materials?.tread).toBe('oak'); // δεν χάθηκε
+    expect(next.materials?.riser).toBe('steel');
+  });
+
+  it('clear (value=null) → materials.appearance undefined', () => {
+    mockState.stair = fakeStair({ materials: { appearance: { colorHex: '#fff' } } });
+    applyStairWholeAppearance(levels, 'stair_1', null);
+    expect(mockCommandArgs[0]!.next.materials?.appearance).toBeUndefined();
+  });
+
+  it('no-op όταν το entity δεν είναι σκάλα', () => {
+    mockState.stair = { id: 'x', type: 'wall', params: {} } as unknown as typeof mockState.stair;
+    applyStairWholeAppearance(levels, 'stair_1', { colorHex: '#000' });
     expect(mockExecute).not.toHaveBeenCalled();
   });
 });

@@ -189,10 +189,19 @@ slab persistence serialize path (αν whitelist).
     κεντρικοποιήθηκε σε `current-level-adapter.ts` (`currentLevelAdapter`), και τα 3 το εισάγουν.
 
   Persistence: τα stair params serializ-άρονται **wholesale** (`stripUndefinedDeep`, stair-firestore-service)
-  → τα νέα πεδία persist αυτόματα, το clear→undefined αφαιρείται. Tests: resolver appearance (8) + writer
-  merge/routing (7) πράσινα· regression 47/47· jscpd clean. **Follow-up:** yellow hover-preview σκάλας υπό
-  «ΠΟΛΥΓΩΝΑ»· ΣΩΜΑ/ΣΟΒΑΣ paint ολόκληρης σκάλας (τώρα μόνο per-sub-element υπό ΠΟΛΥΓΩΝΑ). ⚠️ ADR-358 ΔΕΝ
-  ενημερώθηκε (committed merge markers).
+  → τα νέα πεδία persist αυτόματα, το clear→undefined αφαιρείται.
+
+  **Follow-up ΥΛΟΠΟΙΗΘΗΚΕ ίδια μέρα (whole-stair ΣΩΜΑ paint):** bug report Giorgio «σε υποενότητα βάφεται,
+  σε ΟΛΗ τη σκάλα όχι». Ρίζα: mode ΣΩΜΑ → `applyEntityFaceAppearanceMap` γράφει `FaceAppearance['*']` base
+  που η σκάλα ΔΕΝ διαβάζει. Λύση: `StairMaterials` += `appearance?: FaceAppearance` (whole-stair «base»,
+  Cinema 4D object material tag / Revit type material)· `resolveStairMaterial` step-1.5 (ΜΕΤΑ κάθε
+  per-sub-element override, ΠΡΙΝ τα preset defaults) → ισχύει σε ΟΛΑ τα components (+ waist μέσω του
+  `'stair-landing'` default). Νέος writer `applyStairWholeAppearance` + stair-aware router
+  `applyWholeElementBodyAppearance` (σκάλα → whole-stair· solid → base `'*'` αμετάβλητο) = ΕΝΑ call-site για
+  panel.apply (ΣΩΜΑ + polygon-fallback) + drag-drop.onDrop. Κοινό `commitStairParams` helper (dedup των δύο
+  writers, N.18). Tests: resolver appearance+whole (11) + writer sub+whole (10) + router (4) πράσινα·
+  regression 58/58· jscpd clean. **Απομένει follow-up:** yellow hover-preview σκάλας υπό «ΠΟΛΥΓΩΝΑ»· ΣΟΒΑΣ
+  σε σκάλα = no-op (σωστό — δεν σοβατίζεται). ⚠️ ADR-358 ΔΕΝ ενημερώθηκε (committed merge markers).
 - **2026-07-23 (Φ6 — STAIR SUB-ELEMENT SELECTION ΕΝΟΠΟΙΗΜΕΝΟ ΚΑΤΩ ΑΠΟ «ΠΟΛΥΓΩΝΑ», IMPLEMENTED UNCOMMITTED)** —
   Bug report Giorgio (2 iterations):
   - **(1)** «αν και ΔΕΝ έχω πατήσει ΠΟΛΥΓΩΝΑ, μπορώ να επιλέξω πολύγωνα» — το μπλε tread ΔΕΝ ήταν per-face

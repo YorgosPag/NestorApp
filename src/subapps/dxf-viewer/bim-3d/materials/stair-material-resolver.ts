@@ -136,6 +136,12 @@ export function resolveStairMaterial(
     if (matKey) return getMaterial3D(matKey);
   }
 
+  // 1.5 ADR-539 Φ7 — whole-stair «base» appearance (ΣΩΜΑ paint): ισχύει σε ΟΛΑ τα components, ΜΕΤΑ
+  //     από κάθε per-sub-element override (πιο ειδικό κερδίζει) αλλά ΠΡΙΝ τα preset defaults. Cinema 4D
+  //     object material tag / Revit type material. Waist: μέσω `resolveStairMaterial('stair-landing')`.
+  const wholeStairMat = resolveStairAppearanceMaterial(stair.params.materials?.appearance);
+  if (wholeStairMat) return wholeStairMat;
+
   // 2. Stair-level component material.
   const field = COMPONENT_TO_FIELD[component];
   if (field) {

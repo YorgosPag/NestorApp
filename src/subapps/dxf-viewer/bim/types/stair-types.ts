@@ -157,6 +157,13 @@ export interface StairMaterials {
   readonly riser?: string;
   readonly stringer?: string;
   readonly landing?: string;
+  /**
+   * ADR-539 Φ7 — whole-stair «base» appearance (Cinema 4D object material tag / Revit type material):
+   * βαμμένο από την παλέτα «ΠΟΛΥΓΩΝΑ» σε mode **ΣΩΜΑ** πάνω σε ΟΛΗ τη σκάλα. Ισχύει για ΟΛΑ τα
+   * components (πάτημα/ρίχτι/σκαλομέρι/πλατύσκαλο/πλάκα/κουπαστή) ΕΚΤΟΣ όσων έχουν per-sub-element
+   * override (πιο ειδικό → κερδίζει). Κοινό `FaceAppearance` SSoT· resolved στο `resolveStairMaterial`.
+   */
+  readonly appearance?: FaceAppearance;
 }
 
 export interface StairPerTreadOverride {

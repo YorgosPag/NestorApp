@@ -25,12 +25,11 @@ import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 import { useLevelsOptional } from '../../systems/levels/useLevels';
 import { usePolygonMode3DStore } from '../stores/PolygonMode3DStore';
 import { applyFaceAppearance } from '../ui/apply-face-appearance';
-import { applyEntityFaceAppearanceMap } from '../ui/apply-entity-face-appearance-map';
+import { applyWholeElementBodyAppearance } from '../ui/apply-entity-face-appearance-map';
 // ADR-539 Φ7 — drop σε υποενότητα σκάλας (πάτημα/ρίχτι/πλατύσκαλο/πλάκα) → stair params appearance.
 import { applyStairSubElementAppearance } from '../ui/apply-stair-sub-element-appearance';
 import { useStairSubElementSelectionStore, isStairSubPart } from '../../bim/stairs/stair-sub-element-selection-store';
 import { applyFinishToWholeElement, faceAppearanceToFinishOverride } from '../ui/apply-finish-face-override';
-import { entireElementFaceMap } from '../../bim/types/face-appearance-types';
 import { applyBimHover } from '../scene/scene-manager-actions';
 import { BIM_MATERIAL_MIME, parseFaceAppearanceDrag } from '../ui/polygon-material-dnd';
 
@@ -111,7 +110,8 @@ export function usePolygonDragDrop(
     if (store.targetLayer === 'finish') {
       applyFinishToWholeElement(levels, hit.bimId, faceAppearanceToFinishOverride(value));
     } else {
-      applyEntityFaceAppearanceMap(levels, hit.bimId, entireElementFaceMap(value));
+      // ΣΩΜΑ — Φ7 stair-aware: solid → base `'*'`· σκάλα → `params.materials.appearance`.
+      applyWholeElementBodyAppearance(levels, hit.bimId, value);
     }
   }, [managerRef, levels]);
 
