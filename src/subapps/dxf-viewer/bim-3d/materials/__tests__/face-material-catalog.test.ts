@@ -25,7 +25,7 @@
  * NOT covered here: the `bmat_*` + uploaded-albedo non-null branch. That would require
  * faking the user-material-registry's texture-set cache (a loaded albedo asset), which is
  * out of scope for this unit and belongs to that registry's own suite — not fabricated here.
- * The catalog `mat-brick` case below drives the SAME `doubleSidedVariant` gate/wrapping logic
+ * The catalog `mat-brick` case below drives the SAME `ensureDoubleSided` gate/wrapping logic
  * (`getMaterial3D` returns its flat singleton because no texture is actually loaded — that's
  * fine; the point under test is that the gate itself returns a non-null DoubleSide variant).
  */
