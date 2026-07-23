@@ -237,7 +237,10 @@ export interface BimEventMap {
       | 'furniture' | 'floorplan-symbol' | 'floor-finish' | 'wall-covering' | 'roof'
       | 'thermal-space' | 'space-separator' | 'hatch'
       // ADR-684 — παραμετρικό γεωμετρικό στερεό (authored parametric → restore-able).
-      | 'generic-solid';
+      | 'generic-solid'
+      // ADR-683 Φ3β — εισαγόμενο mesh (undo-of-delete → Firestore doc re-create, αλλιώς
+      // το Ctrl+Z το ξαναφέρνει στην οθόνη αλλά χάνεται στο επόμενο reload).
+      | 'imported-mesh';
     entitySnapshot: AnySceneEntity;
     source: 'undo-delete' | 'redo-restore';
   };

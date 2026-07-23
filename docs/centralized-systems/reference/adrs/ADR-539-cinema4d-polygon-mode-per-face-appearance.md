@@ -161,6 +161,21 @@ slab persistence serialize path (αν whitelist).
 
 ## 7. Changelog
 
+- **2026-07-23 (Φ6 — STAIR SUB-ELEMENT «CLICK-INTO» GATED ΠΙΣΩ ΑΠΟ «ΠΟΛΥΓΩΝΑ», IMPLEMENTED UNCOMMITTED)** —
+  Bug report Giorgio: «αν και ΔΕΝ έχω πατήσει το κουμπί ΠΟΛΥΓΩΝΑ, μπορώ να επιλέξω πολύγωνα» (screenshot:
+  ένα μπλε tread σε παραμετρική σκάλα). Ρίζα: το μπλε ΔΕΝ ήταν per-face επιλογή (το per-face picking είναι
+  σωστά κλειδωμένο σε `active` παντού: `use-bim3d-pointer-handlers` κλικ/δεξί-κλικ, `bim3d-pointer-scheduler`
+  hover, `use-polygon-drag-drop`, `use-polygon-clipboard-shortcuts`). Ήταν το **ADR-358 Q19 stair
+  sub-element «click-into»** (2ο κλικ σε ήδη-επιλεγμένη σκάλα → επιλογή tread), που χρησιμοποιεί **ΤΟ ΙΔΙΟ
+  μπλε** `0x2ea1ff` (`StairSubElementHighlighter.ts` = `FaceSelectionHighlighter.ts`) → φαινόταν σαν να
+  «διέρρεε» το Polygon Mode. **Απόφαση (Giorgio):** το 3D click-into γίνεται Polygon-Mode-gated — αφού το
+  face branch (`active`) κάνει return νωρίτερα, το drill-in ζούσε αποκλειστικά στο body branch· αφαιρέθηκε
+  από εκεί → **εκτός «ΠΟΛΥΓΩΝΑ» το κλικ επιλέγει ΠΑΝΤΑ ολόκληρη τη σκάλα**, ποτέ μεμονωμένο tread/riser.
+  Μέσα στο «ΠΟΛΥΓΩΝΑ» το tread παραμένει επιλέξιμο ως όψη (per-face pick). Ένα αρχείο
+  (`use-bim3d-pointer-handlers.ts`: αφαίρεση `isStairSubPart` import + του `alreadySole`/sub-element block).
+  Το 2D click-into (δικός του handler, canonical `ToolStateStore`) αμετάβλητο. ⚠️ Το **ADR-358** ΔΕΝ
+  ενημερώθηκε: το αρχείο του έχει **committed git merge markers** (`>>>>>>> Stashed changes`, 9 markers) —
+  χρειάζεται χειροκίνητο cleanup από Giorgio πριν αγγιχτεί.
 - **2026-07-22 (Φ5 — PANEL ΠΑΝΤΑ ΟΡΑΤΟ + ENTITY-LEVEL DRAG-DROP, IMPLEMENTED UNCOMMITTED)** — Giorgio:
   «όταν μπαίνω στον 3D κάμβα να ανοίγει ΑΜΕΣΩΣ το πάνελ υλικών, χωρίς να επιλέξω οντότητα + πατήσω
   Όψεις». Ανασχεδιασμός του mode μοντέλου σε **τρία** modes (το panel toggle δείχνει τρία κουμπιά):

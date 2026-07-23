@@ -28,10 +28,9 @@ import { pickDxfEntityAcrossFloors } from '../grips/dxf-wireframe-hit-test';
 import { getDxfFloorScope } from '../scene/dxf-3d-floor-scope';
 import { applyBimHover } from '../scene/scene-manager-actions';
 // ADR-358 Q19 — per-tread/per-riser «click-into» sub-element selection (SSoT store, 2D+3D).
-import {
-  useStairSubElementSelectionStore,
-  isStairSubPart,
-} from '../../bim/stairs/stair-sub-element-selection-store';
+// Giorgio 2026-07-23 — το 3D click-into είναι πλέον Polygon-Mode-gated (βλ. handleClick): εκτός
+// «ΠΟΛΥΓΩΝΑ» δεν μπαίνουμε ποτέ σε sub-element, άρα το `isStairSubPart` δεν χρειάζεται εδώ.
+import { useStairSubElementSelectionStore } from '../../bim/stairs/stair-sub-element-selection-store';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 import { DXF_TIMING } from '../../config/dxf-timing';
 // ADR-040 Φ-3D-pointer — hover+snap pick decoupled to a RAF slot (mirror the 2D snap-scheduler).
@@ -136,21 +135,11 @@ export function useBim3DPointerHandlers(
         manager.toggleBimEntity(hit.bimId);
         return;
       }
-      // ADR-358 Q19 — «click-into»: a 2nd plain click on the ALREADY-sole-selected stair,
-      // over a tagged tread/riser, selects that sub-element instead of re-selecting the
-      // whole stair (Revit component selection). The stair stays the selected host.
-      const sole = useSelection3DStore.getState().selectedBimIds;
-      const alreadySole = sole.length === 1 && sole[0] === hit.bimId;
-      if (
-        hit.bimType === 'stair' &&
-        alreadySole &&
-        isStairSubPart(hit.stairPart) &&
-        hit.stairSubIndex !== undefined
-      ) {
-        subStore.selectSub({ stairId: hit.bimId, part: hit.stairPart, index: hit.stairSubIndex });
-        return;
-      }
-      // 1st click (or a different entity) → whole-entity select; drop any stale sub-selection.
+      // ADR-358 Q19 «click-into» — Polygon-Mode-gated (Giorgio 2026-07-23): ΕΚΤΟΣ «ΠΟΛΥΓΩΝΑ» ένα
+      // κλικ επιλέγει ΠΑΝΤΑ ολόκληρη τη σκάλα — ΠΟΤΕ μεμονωμένο tread/riser. Το per-tread sub-element
+      // βάφει το ΙΔΙΟ μπλε με το per-face pick (`StairSubElementHighlighter`=`FaceSelectionHighlighter`
+      // 0x2ea1ff), οπότε το να το επιτρέπαμε χωρίς πατημένο το κουμπί ΠΟΛΥΓΩΝΑ έδειχνε σαν να «διέρρεε»
+      // το Polygon Mode. Μέσα στο «ΠΟΛΥΓΩΝΑ» το tread παραμένει επιλέξιμο μέσω του face branch παραπάνω.
       subStore.clear();
       manager.selectBimEntity(hit.bimId);
       return;

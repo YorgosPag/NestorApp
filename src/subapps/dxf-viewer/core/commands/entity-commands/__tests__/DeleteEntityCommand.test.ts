@@ -8,7 +8,9 @@ import type { ISceneManager, SceneEntity } from '../../interfaces';
 import { createMockSceneManager } from '../../__tests__/mock-scene-manager';
 
 type RestorePayload = {
-  entityType: 'wall' | 'opening' | 'slab' | 'slab-opening' | 'column' | 'beam' | 'stair';
+  entityType:
+    | 'wall' | 'opening' | 'slab' | 'slab-opening' | 'column' | 'beam' | 'stair'
+    | 'imported-mesh' | 'generic-solid';
   entitySnapshot: SceneEntity;
   source: 'undo-delete' | 'redo-restore';
 };
@@ -58,6 +60,36 @@ describe('DeleteEntityCommand — ADR-390 symmetric restore emit', () => {
     expect(events).toHaveLength(1);
     expect(events[0].entityType).toBe('slab');
     expect(events[0].entitySnapshot.id).toBe('slab_1');
+    expect(events[0].source).toBe('undo-delete');
+  });
+
+  it('undo() emits restore for imported-mesh (ADR-683 Φ3β symmetric persist)', () => {
+    const mesh = { id: 'imesh_1', type: 'imported-mesh' } as unknown as SceneEntity;
+    const { sm } = makeMockScene([mesh]);
+    const { events, cleanup } = captureRestoreEvents();
+
+    const cmd = new DeleteEntityCommand(mesh.id, sm);
+    cmd.execute();
+    cmd.undo();
+
+    cleanup();
+    expect(events).toHaveLength(1);
+    expect(events[0].entityType).toBe('imported-mesh');
+    expect(events[0].source).toBe('undo-delete');
+  });
+
+  it('undo() emits restore for generic-solid (ADR-684 symmetric persist)', () => {
+    const solid = { id: 'gsol_1', type: 'generic-solid' } as unknown as SceneEntity;
+    const { sm } = makeMockScene([solid]);
+    const { events, cleanup } = captureRestoreEvents();
+
+    const cmd = new DeleteEntityCommand(solid.id, sm);
+    cmd.execute();
+    cmd.undo();
+
+    cleanup();
+    expect(events).toHaveLength(1);
+    expect(events[0].entityType).toBe('generic-solid');
     expect(events[0].source).toBe('undo-delete');
   });
 

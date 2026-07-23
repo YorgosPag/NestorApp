@@ -41,6 +41,10 @@ const BIM_RESTORE_VIA_DELETE_COMMAND = [
   'space-separator',
   // ADR-507 — FLAT DXF hatch (symmetric undo→Firestore restore, mirror BIM entities).
   'hatch',
+  // ADR-683 Φ3β / ADR-684 — imported mesh + parametric generic solid: no dedicated
+  // delete command (routed through this generic one), so their undo-restore MUST be
+  // emitted here, symmetric with the forward delete in smart-delete-bim-events.
+  'imported-mesh', 'generic-solid',
 ] as const;
 
 type BimEntityType = typeof BIM_RESTORE_VIA_DELETE_COMMAND[number];
