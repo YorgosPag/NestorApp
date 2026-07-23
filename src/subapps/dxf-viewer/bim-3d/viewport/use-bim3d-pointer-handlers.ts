@@ -27,10 +27,13 @@ import { pickDxfEntityAcrossFloors } from '../grips/dxf-wireframe-hit-test';
 // ADR-537 δ — pick over the active floor scope (single active floor, or every stacked floor).
 import { getDxfFloorScope } from '../scene/dxf-3d-floor-scope';
 import { applyBimHover } from '../scene/scene-manager-actions';
-// ADR-358 Q19 — per-tread/per-riser «click-into» sub-element selection (SSoT store, 2D+3D).
-// Giorgio 2026-07-23 — το 3D click-into είναι πλέον Polygon-Mode-gated (βλ. handleClick): εκτός
-// «ΠΟΛΥΓΩΝΑ» δεν μπαίνουμε ποτέ σε sub-element, άρα το `isStairSubPart` δεν χρειάζεται εδώ.
-import { useStairSubElementSelectionStore } from '../../bim/stairs/stair-sub-element-selection-store';
+// ADR-358 Q19 — per-tread/per-riser/landing/waist «click-into» sub-element selection (SSoT store,
+// 2D+3D). Giorgio 2026-07-23 — το 3D click-into είναι πλέον Polygon-Mode-gated (βλ. handleClick):
+// εκτός «ΠΟΛΥΓΩΝΑ» κλικ=ΟΛΗ η σκάλα· μέσα στο «ΠΟΛΥΓΩΝΑ» κλικ σε σκαλί=το μεμονωμένο sub-element.
+import {
+  useStairSubElementSelectionStore,
+  isStairSubPart,
+} from '../../bim/stairs/stair-sub-element-selection-store';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 import { DXF_TIMING } from '../../config/dxf-timing';
 // ADR-040 Φ-3D-pointer — hover+snap pick decoupled to a RAF slot (mirror the 2D snap-scheduler).
@@ -110,15 +113,40 @@ export function useBim3DPointerHandlers(
     // click replaces it. Shift+miss keeps the set (Cinema 4D); a plain miss clears it.
     if (usePolygonMode3DStore.getState().active) {
       const store = usePolygonMode3DStore.getState();
+      const subStore = useStairSubElementSelectionStore.getState();
       const faceHit = manager.raycastBimFace(e.clientX, e.clientY);
+      // (α) Faced solid (τοίχος/υποστύλωμα/πλάκα/…): per-face επιλογή για βαφή (Cinema 4D).
       if (faceHit?.bimId && faceHit.faceKey) {
         const face = { bimId: faceHit.bimId, faceKey: faceHit.faceKey };
         if (e.shiftKey) store.toggleFace(face);
         else store.selectFace(face);
         manager.setSelectedFaces(usePolygonMode3DStore.getState().selectedFaces);
-      } else if (!e.shiftKey) {
+        subStore.clear(); // face pick εξ ορισμού βγαίνει από κάθε sub-element σκάλας
+        return;
+      }
+      // (β) ADR-358 Q19 «click-into» — μια σκάλα ΔΕΝ είναι faced-prism· ένα χτύπημα σε πάτημα/ρίχτι/
+      // πλατύσκαλο/πλάκα (waist) φέρνει `stairPart` (χωρίς faceKey). Επίλεξε το μεμονωμένο sub-element
+      // (μπλε overlay) αντί για ολόκληρη τη σκάλα. Εξασφάλισε πρώτα ότι η host σκάλα είναι επιλεγμένη
+      // (context για property panel/overrides) — ο lifecycle guard καθαρίζει τυχόν stale sub πρώτα.
+      if (
+        faceHit?.bimId &&
+        faceHit.bimType === 'stair' &&
+        isStairSubPart(faceHit.stairPart) &&
+        faceHit.stairSubIndex !== undefined
+      ) {
         store.clearFaces();
         manager.setSelectedFaces([]);
+        if (!useSelection3DStore.getState().selectedBimIds.includes(faceHit.bimId)) {
+          manager.selectBimEntity(faceHit.bimId);
+        }
+        subStore.selectSub({ stairId: faceHit.bimId, part: faceHit.stairPart, index: faceHit.stairSubIndex });
+        return;
+      }
+      // (γ) Κενό/μη-επιλέξιμο: καθάρισε (Cinema 4D — plain miss αδειάζει, Shift+miss κρατά).
+      if (!e.shiftKey) {
+        store.clearFaces();
+        manager.setSelectedFaces([]);
+        subStore.clear();
       }
       return;
     }

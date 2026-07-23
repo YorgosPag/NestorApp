@@ -407,9 +407,12 @@ function buildWaistMeshes(
     baseSlabUndersideZmm !== undefined
       ? baseY + baseSlabUndersideZmm * sceneToM + waistDropM
       : undefined;
+  // ADR-539 Φ6 — 0-based index per waist slab (a Γάμμα/Ζ stair has one per flight), so each is
+  // individually pickable under «ΠΟΛΥΓΩΝΑ» via the SAME `stairComponentIndex` sub-element gesture.
+  let waistIndex = 0;
   for (const mesh of buildWaistSlabMeshes(stair, baseY, sceneToM, soffitClipWorldY)) {
     mesh.position.y -= waistDropM; // lower the slab toward the building floor
-    const tagged = tagStairMesh(mesh, stair, 'waist', levelId);
+    const tagged = tagStairMesh(mesh, stair, 'waist', levelId, waistIndex++);
     attachStairEdges(tagged); // no subcategory → parent stair style (like landings)
     out.push(tagged);
   }

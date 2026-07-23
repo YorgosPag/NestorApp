@@ -231,7 +231,11 @@ export function raycastBimFace(
       const slotName = hitMeshSlotName(hit.object, matIndex);
       if (slotName) return { bimId, bimType, faceKey: slotFaceKey(slotName) };
     }
-    entityFallback ??= { bimId, bimType }; // remember the nearest non-faced hit
+    // ADR-358 Q19 / ADR-539 Φ6 (Giorgio 2026-07-23) — μια παραμετρική σκάλα ΔΕΝ είναι faced-prism·
+    // κρατά τα δικά της tread/riser/landing/waist meshes (`stairComponent` tags). Μεταφέρουμε αυτά
+    // τα fields στο fallback ώστε, μέσα στο «ΠΟΛΥΓΩΝΑ», το κλικ σε σκαλί να επιλέγει το sub-element
+    // (mirror του `raycastBimGroup`), αντί για ολόκληρη τη σκάλα.
+    entityFallback ??= { bimId, bimType, ...stairSubElementFields(tagged.obj) }; // nearest non-faced hit
   }
   return entityFallback;
 }
