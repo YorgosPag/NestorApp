@@ -72,7 +72,7 @@ export function computeGamma(
 ): StairGeometry {
   assertGammaCornerSupported(variant);
   const { basePoint, direction, rise, width } = params;
-  const { u1, v1, u2, v2, u3, turnSign1, turnSign2 } = resolveGammaFrame(direction, variant);
+  const { u1, v1, u2, u3, turnSign1 } = resolveGammaFrame(direction, variant);
   const [n1, n2, n3] = variant.flightSplit;
   const landing1Depth = resolveDepth(variant.landings[0], width);
   const landing2Depth = resolveDepth(variant.landings[1], width);
@@ -91,7 +91,16 @@ export function computeGamma(
   );
 
   // Flight 3 — edge origin off the landing-2 corner, along u3, cross-width u2.
-  const flight3Origin = offsetAlong(run2.endXY, v2, turnSign2 * halfW);
+  // run2 ends on an EDGE (edge-origin flight), NOT the centreline — so, unlike
+  // flight 2 (which offsets flight 1's CENTRELINE end by turnSign·halfW to reach the
+  // edge), flight 3's origin sits on whichever u1-aligned edge of landing 2 it
+  // departs from: the near edge (offset 0) when flight 3 travels −u1, the far edge
+  // (offset `width`) when it travels +u1. Landing 2 spans `u1·[0, width]` from
+  // `run2.endXY` (buildCornerLanding, not centred), so these two offsets land flight
+  // 3 flush against it. The old `v2·turnSign2·halfW` offset was a blanket half-width
+  // shift that left a constant halfW GAP between flight 3 and landing 2 (ADR-358).
+  const flight3StartOffset = u1.x * u3.x + u1.y * u3.y > 0 ? width : 0;
+  const flight3Origin = offsetAlong(run2.endXY, u1, flight3StartOffset);
   const run3 = edgeRun(common, flight3Origin, u3, u2, n1 + n2 + 2, n3, per[2]);
 
   // Transition risers around both turn landings. Turn 1: flight 1 centreline (u1)
@@ -203,8 +212,14 @@ function buildGammaWalkline(
   const halfW = width * 0.5;
   const a1 = n1 * tread;
   const a3 = a1 + halfW;
-  const flight2InnerRun = halfW + (n2 - 1) * tread;
-  const flight3Run = halfW + (n3 - 1) * tread;
+  // Centreline run from a turn corner to the NEXT corner: the half-width miter into
+  // the flight's first tread (`halfW`) + the flight's full run (`n·tread`). The old
+  // `(n−1)·tread` dropped one tread, pulling the landing-2 corner + flight-3 leg
+  // 1 tread short of the run-built treads, so stringers/handrails (offset off this
+  // walkline) sat ~1 tread off the steps (ADR-358). `n·tread` matches the run-stitched
+  // walkline used once any rest landing is present.
+  const flight2InnerRun = halfW + n2 * tread;
+  const flight3Run = halfW + n3 * tread;
   const zL1 = basePoint.z + rise * n1;
   const zL2 = basePoint.z + rise * (n1 + n2 + 1);
   const zTop = basePoint.z + rise * (n1 + n2 + n3 + 1);

@@ -41,6 +41,9 @@ import { BIM_MATERIAL_MIME, serializeFaceAppearanceDrag } from './polygon-materi
 import { applyFinishToWholeElement, faceAppearanceToFinishOverride } from './apply-finish-face-override';
 // ADR-539 (Giorgio 2026-07-22) — entity-level modes (ΣΩΜΑ/ΣΟΒΑΣ) βάφουν την ΕΠΙΛΕΓΜΕΝΗ οντότητα.
 import { useSelection3DStore } from '../stores/Selection3DStore';
+// ADR-539 Φ7 — per-sub-element paint σκάλας (πάτημα/ρίχτι/πλατύσκαλο/πλάκα) στο ΙΔΙΟ swatch flow.
+import { useStairSubElementSelectionStore } from '../../bim/stairs/stair-sub-element-selection-store';
+import { applyStairSubElementAppearance } from './apply-stair-sub-element-appearance';
 import { FINISH_MATERIAL_OPTIONS } from '../../ui/ribbon/hooks/bridge/finish-param';
 import { getMaterialFlatColorHex } from '../../bim/materials/material-catalog-defs';
 // ADR-679 Φ2b / ADR-539 Φ4d — BODY layer textured swatches (catalog + user bmat_* library).
@@ -94,6 +97,11 @@ export function PolygonMaterialPanel() {
     const store = usePolygonMode3DStore.getState();
     const target = useSelection3DStore.getState().selectedBimId;
     if (store.targetLayer === 'polygon') {
+      // ADR-539 Φ7 — μια επιλεγμένη υποενότητα σκάλας (Revit «Paint») κερδίζει: γράψε το appearance
+      // στα stair params (το per-face override δεν ισχύει σε παραμετρική σκάλα). Mutually-exclusive
+      // με το `selectedFaces` (το pointer handler καθαρίζει το ένα όταν επιλέγει το άλλο).
+      const sub = useStairSubElementSelectionStore.getState().selected;
+      if (sub) { applyStairSubElementAppearance(levels, sub.stairId, sub.part, sub.index, value); return; }
       const faces = store.selectedFaces;
       if (faces.length > 0) applyFaceAppearanceToFaces(levels, faces, value);
       else if (target) applyEntityFaceAppearanceMap(levels, target, entireElementFaceMap(value));

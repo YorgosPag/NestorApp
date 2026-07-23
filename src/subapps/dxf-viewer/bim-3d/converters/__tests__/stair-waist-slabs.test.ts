@@ -87,6 +87,21 @@ describe('stair-waist-slabs (μηρός)', () => {
     expect(buildWaistSlabMeshes(makeWithLanding(), 0, sceneToM)).toHaveLength(2);
   });
 
+  // ADR-358 — the top flight's waist must reach the FLOOR (one rise above the top tread).
+  // Regression: `topFloorZ = baseZ + stepCount·rise` ignored the rise each turn landing
+  // adds, so on a landing kind the top flight got `topSteps=0` and the waist stopped one
+  // tread short of the floor (a visible undercut, gamma-obvious with its two landings).
+  it('multi-landing: top flight waist reaches the top floor, not one tread short', () => {
+    const meshes = buildWaistSlabMeshes(makeWithLanding(), 0, sceneToM);
+    const maxY = Math.max(...meshes.map((m) => {
+      m.geometry.computeBoundingBox();
+      return m.geometry.boundingBox!.max.y;
+    }));
+    // treads at z = 0/175/525/700 → top tread = 4·rise; the floor sits one rise above it.
+    expect(maxY).toBeCloseTo(5 * RISE * sceneToM, 5);
+    expect(maxY).toBeGreaterThan(4 * RISE * sceneToM + 1e-6); // pre-fix stopped here
+  });
+
   it('the solid NEVER rises above the re-entrant line (no intersection with the thin treads/risers)', () => {
     const mesh = buildWaistSlabMeshes(makeStraightMonolithic(), 0, sceneToM)[0]!;
     const pos = mesh.geometry.getAttribute('position') as THREE.BufferAttribute;

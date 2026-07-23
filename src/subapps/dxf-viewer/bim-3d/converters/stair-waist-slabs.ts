@@ -39,7 +39,7 @@
 
 import * as THREE from 'three';
 import type { StairEntity, Point3D, Polygon3D } from '../../bim/types/stair-types';
-import { resolveStairMaterial } from '../materials/stair-material-resolver';
+import { resolveStairMaterial, resolveStairAppearanceMaterial } from '../materials/stair-material-resolver';
 import { ensureWorldUvs } from './bim-uv-helpers';
 import { DEFAULT_WAIST_SLAB_THICKNESS_MM } from '../../bim/stairs/stair-boq-quantities';
 
@@ -223,8 +223,15 @@ export function buildWaistSlabMeshes(
   const flights = groupIntoFlights(corners, rise);
   const waistM = (stair.params.waistThickness ?? DEFAULT_WAIST_SLAB_THICKNESS_MM) * MM_TO_M;
   const baseZ = stair.params.basePoint.z;
-  const topFloorZ = baseZ + stair.params.stepCount * rise; // where the last riser lands
-  const mat = resolveStairMaterial(stair, 'stair-landing'); // structural concrete (monolithic default)
+  // Top-floor elevation = one rise above the actual HIGHEST tread. Derived from the
+  // sorted corners (last = top tread), NOT `baseZ + stepCount·rise`: on multi-landing
+  // kinds (gamma/L/U/multi-flight) each turn landing adds a rise the tread-count
+  // `stepCount` doesn't include, so that formula undershot topFloorZ by one rise per
+  // landing → the top flight's waist got `topSteps=0` and stopped ~1 tread short of
+  // the floor. For a straight stair (no landings) this equals `baseZ + stepCount·rise`
+  // exactly, so it is byte-identical there (ADR-358).
+  const topFloorZ = corners[corners.length - 1]!.z + rise; // one rise above the top tread
+  const defaultMat = resolveStairMaterial(stair, 'stair-landing'); // structural concrete (monolithic default)
 
   const out: THREE.Mesh[] = [];
   flights.forEach((flight, gi) => {
@@ -237,6 +244,9 @@ export function buildWaistSlabMeshes(
     // ADR-685 Φ2 — terminating trim on the BASE flight only (where the stair meets the
     // seating slab); upper flights rise clear above it, no clamp.
     const clip = gi === 0 ? soffitClipWorldY : undefined;
+    // ADR-539 Φ7 — per-waist material: `perWaistOverrides[gi].appearance` painted υπό «ΠΟΛΥΓΩΝΑ»
+    // (keyed by the 0-based flight index = `stairComponentIndex`)· χωρίς override = structural default.
+    const mat = resolveStairAppearanceMaterial(stair.params.perWaistOverrides?.[gi]?.appearance) ?? defaultMat;
     const mesh = buildFlightWaist(flight, bottomSteps, topSteps, waistM, mat, clip);
     if (mesh) out.push(mesh);
   });

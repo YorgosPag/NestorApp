@@ -364,9 +364,11 @@ function buildLandingMeshes(
 ): THREE.Mesh[] {
   const out: THREE.Mesh[] = [];
   const thicknessM = resolveLandingThicknessMm(stair);
-  const mat = resolveStairMaterial(stair, 'stair-landing');
   const landings = stair.geometry.landings;
   for (let i = 0; i < landings.length; i++) {
+    // ADR-539 Φ7 — per-landing material (honours `perLandingOverrides[i].appearance` painted υπό
+    // «ΠΟΛΥΓΩΝΑ»)· χωρίς override = ίδιο structural default με πριν (μηδέν παλινδρόμηση).
+    const mat = resolveStairMaterial(stair, 'stair-landing', i);
     // Same convention as treads: poly.z = walkable top face (shared SSoT extrude, ADR-584).
     const mesh = extrudeFlatSlab(landings[i]!, sceneToM, thicknessM, mat, baseY);
     if (!mesh) continue;

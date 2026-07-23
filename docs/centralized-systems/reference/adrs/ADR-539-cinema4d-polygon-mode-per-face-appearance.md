@@ -161,6 +161,38 @@ slab persistence serialize path (αν whitelist).
 
 ## 7. Changelog
 
+- **2026-07-23 (Φ7 — STAIR SUB-ELEMENT FULL-APPEARANCE PAINT, Revit «Paint»/C4D parity, IMPLEMENTED UNCOMMITTED)** —
+  Bug report Giorgio (3ο iteration): οι υποενότητες σκάλας ΕΠΙΛΕΓΟΝΤΑΙ (Φ6) αλλά το **drag-drop / swatch
+  χρώματος/υλικού/υφής ΔΕΝ τις άλλαζε**. Ρίζα: η σκάλα έχει **δικό της, περιορισμένο** μοντέλο υλικών —
+  `params.materials`/`perTreadOverrides[i].material` = **`string` preset id** (`oak`/`marble`/`mat-*`),
+  ΟΧΙ `FaceAppearance`· κανένα colorHex/textured, κανένα slot για waist. Το per-face apply path γράφει
+  `FaceAppearance` που η σκάλα δεν διαβάζει → «δεν το αντιλαμβάνεται».
+
+  **Απόφαση (Giorgio):** FULL ENTERPRISE + FULL SSOT, όπως οι μεγάλοι (Revit «Paint on face» βάφει
+  μεμονωμένες όψεις σκάλας με ΠΛΗΡΕΣ material· Cinema 4D material tag σε polygon selection). →
+  **Ενοποίηση του stair material model με το per-face `FaceAppearance` SSoT.** Υλοποίηση (7 code + 1 helper):
+  - `stair-types.ts` — `StairPerTreadOverride`/`StairPerRiserOverride` += `appearance?: FaceAppearance`·
+    νέο `StairPerComponentAppearanceOverride` + params `perLandingOverrides`/`perWaistOverrides` (keyed by
+    `stairComponentIndex`). Legacy `material: string` διατηρείται (back-compat).
+  - `stair-material-resolver.ts` — step-0 cascade: appearance override ΚΕΡΔΙΖΕΙ, resolved μέσω νέου κοινού
+    `resolveStairAppearanceMaterial` (= ΤΟ ΙΔΙΟ SSoT με το per-face solid resolve: `getFaceMaterial3D`
+    textured / `getFaceColorMaterial3D`+`faceAppearanceColorHex` color)· αλλιώς → υπάρχον preset/structure
+    cascade **αμετάβλητο**. Επέκταση override lookup για landing.
+  - `StairToThreeConverter.ts` (landing per-index mat) + `stair-waist-slabs.ts` (waist per-flight mat μέσω
+    `resolveStairAppearanceMaterial(perWaistOverrides[gi])`, fallback structural default).
+  - **Νέος writer `apply-stair-sub-element-appearance.ts`** — γράφει το appearance στο σωστό override
+    record (immutable merge, διατηρεί material/nosing + άλλα indices) → `UpdateStairParamsCommand` (ΕΝΑ undo,
+    geometry recompute). `value=null` → clear.
+  - Routing: `PolygonMaterialPanel.apply()` (επιλεγμένο sub-element → writer) + `use-polygon-drag-drop.onDrop`
+    (stair sub-part hit → writer + anchor selection).
+  - **SSoT cleanup (Boy-Scout, N.18):** το inline `levelAdapter` ήταν διπλό ×3 (apply-face/finish/stair) →
+    κεντρικοποιήθηκε σε `current-level-adapter.ts` (`currentLevelAdapter`), και τα 3 το εισάγουν.
+
+  Persistence: τα stair params serializ-άρονται **wholesale** (`stripUndefinedDeep`, stair-firestore-service)
+  → τα νέα πεδία persist αυτόματα, το clear→undefined αφαιρείται. Tests: resolver appearance (8) + writer
+  merge/routing (7) πράσινα· regression 47/47· jscpd clean. **Follow-up:** yellow hover-preview σκάλας υπό
+  «ΠΟΛΥΓΩΝΑ»· ΣΩΜΑ/ΣΟΒΑΣ paint ολόκληρης σκάλας (τώρα μόνο per-sub-element υπό ΠΟΛΥΓΩΝΑ). ⚠️ ADR-358 ΔΕΝ
+  ενημερώθηκε (committed merge markers).
 - **2026-07-23 (Φ6 — STAIR SUB-ELEMENT SELECTION ΕΝΟΠΟΙΗΜΕΝΟ ΚΑΤΩ ΑΠΟ «ΠΟΛΥΓΩΝΑ», IMPLEMENTED UNCOMMITTED)** —
   Bug report Giorgio (2 iterations):
   - **(1)** «αν και ΔΕΝ έχω πατήσει ΠΟΛΥΓΩΝΑ, μπορώ να επιλέξω πολύγωνα» — το μπλε tread ΔΕΝ ήταν per-face

@@ -20,20 +20,11 @@
 
 import type { LevelsHookReturn } from '../../systems/levels/useLevels';
 import type { SelectedFace3D } from '../stores/PolygonMode3DStore';
-import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { currentLevelAdapter } from './current-level-adapter';
 import { getGlobalCommandHistory } from '../../core/commands';
 import { SetFaceAppearanceCommand } from '../../core/commands/entity-commands/SetFaceAppearanceCommand';
 import { executeAsAtomicBatch } from '../../core/commands/execute-atomic-batch';
-import type { ISceneManager } from '../../core/commands/interfaces';
 import type { FaceAppearance } from '../../bim/types/face-appearance-types';
-
-/** Κοινό level-scene adapter (current level), ή null όταν δεν υπάρχει ενεργό επίπεδο. */
-function levelAdapter(levels: LevelsHookReturn | null): ISceneManager | null {
-  if (!levels?.currentLevelId) return null;
-  return createLevelSceneManagerAdapter(
-    levels.getLevelScene, levels.setLevelScene, levels.currentLevelId,
-  );
-}
 
 export function applyFaceAppearance(
   levels: LevelsHookReturn | null,
@@ -41,7 +32,7 @@ export function applyFaceAppearance(
   faceKey: string,
   value: FaceAppearance | null,
 ): void {
-  const adapter = levelAdapter(levels);
+  const adapter = currentLevelAdapter(levels);
   if (!adapter) return;
   getGlobalCommandHistory().execute(
     new SetFaceAppearanceCommand(bimId, faceKey, value, adapter),
@@ -58,7 +49,7 @@ export function applyFaceAppearanceToFaces(
   faces: readonly SelectedFace3D[],
   value: FaceAppearance | null,
 ): void {
-  const adapter = levelAdapter(levels);
+  const adapter = currentLevelAdapter(levels);
   if (!adapter || faces.length === 0) return;
   const children = faces.map(
     (f) => new SetFaceAppearanceCommand(f.bimId, f.faceKey, value, adapter),

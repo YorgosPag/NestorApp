@@ -210,4 +210,47 @@ describe('StairGeometryService — Gamma (Γ)', () => {
       /Phase 3c/,
     );
   });
+
+  // ADR-358 — flight 3 is edge-origin off flight 2's EDGE end (not a centreline).
+  // Regression for the constant halfW gap: flight 3 was offset by `v2·turnSign2·halfW`
+  // as if run2 ended on the centreline, leaving it a half-width away from landing 2
+  // (visible as a disconnected 3rd flight in plan AND 3D).
+  it('Test 13: flight 3 first tread is FLUSH against landing 2 (no gap) — all 4 turn combos', () => {
+    const combos: readonly (readonly [StairTurnDirectionLR, StairTurnDirectionLR])[] = [
+      ['right', 'right'], ['right', 'left'], ['left', 'right'], ['left', 'left'],
+    ];
+    for (const turnSequence of combos) {
+      const g = computeStairGeometry(makeGammaParams({ turnSequence }));
+      const all: readonly Polygon3D[] = [...g.treadsBelowCut, ...g.treadsAboveCut];
+      const flight3First = all[7]; // idx: n1(3) + n2(4) = 7 → first flight-3 tread
+      const landing2 = g.landings[1];
+      // The tread's back width-edge shares BOTH its vertices with landing 2's boundary
+      // → zero gap. Pre-fix these were halfW=500 apart.
+      let shared = 0;
+      for (const a of flight3First) {
+        for (const b of landing2) {
+          if (Math.hypot(a.x - b.x, a.y - b.y) < COORD_TOL) shared++;
+        }
+      }
+      expect(shared).toBeGreaterThanOrEqual(2);
+    }
+  });
+
+  // ADR-358 — the bespoke 6-vertex walkline (→ stringers + handrails) must track the
+  // run-built treads. Regression for the `(n−1)·tread` leg length that pulled the
+  // walkline ~1 tread off the steps, mis-seating stringers/handrails by one tread.
+  it('Test 14: walkline flight-3 segment is collinear with the flight-3 tread centreline', () => {
+    const g = computeStairGeometry(makeGammaParams());
+    const all: readonly Polygon3D[] = [...g.treadsBelowCut, ...g.treadsAboveCut];
+    const flight3 = all.slice(7, 10).map(centroidXY); // n3 = 3
+    const wStart = g.walkline[g.walkline.length - 2];
+    const wEnd = g.walkline[g.walkline.length - 1];
+    const dx = wEnd.x - wStart.x;
+    const dy = wEnd.y - wStart.y;
+    const len = Math.hypot(dx, dy);
+    for (const c of flight3) {
+      const dist = Math.abs((c.x - wStart.x) * dy - (c.y - wStart.y) * dx) / len;
+      expect(dist).toBeLessThan(COORD_TOL);
+    }
+  });
 });

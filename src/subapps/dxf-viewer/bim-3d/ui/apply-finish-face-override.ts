@@ -14,11 +14,10 @@
 
 import type { LevelsHookReturn } from '../../systems/levels/useLevels';
 import type { SelectedFace3D } from '../stores/PolygonMode3DStore';
-import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { currentLevelAdapter } from './current-level-adapter';
 import { getGlobalCommandHistory } from '../../core/commands';
 import { CompositeCommand } from '../../core/commands/CompositeCommand';
 import { SetFinishFaceOverrideCommand } from '../../core/commands/entity-commands/SetFinishFaceOverrideCommand';
-import type { ISceneManager } from '../../core/commands/interfaces';
 import type { FinishFaceOverride } from '../../bim/finishes/structural-finish-types';
 import type { FaceAppearance } from '../../bim/types/face-appearance-types';
 import {

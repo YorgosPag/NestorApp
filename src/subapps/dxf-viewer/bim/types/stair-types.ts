@@ -18,6 +18,8 @@ import type { Point2D, Point3D } from '../../rendering/types/Types';
 export type { Point2D, Point3D };
 import type { BimEntity, BimLock } from './bim-base';
 import type { StairTopBinding, StairBaseBinding } from './bim-binding';
+// ADR-539 Φ7 — per-sub-element full appearance (Polygon paint parity με τα solids).
+import type { FaceAppearance } from './face-appearance-types';
 
 // ============================================================================
 // 3D GEOMETRY PRIMITIVES (stair-local; z required — uses rendering Point3D)
@@ -161,6 +163,13 @@ export interface StairPerTreadOverride {
   readonly material?: string;
   readonly nosing?: number; // mm
   readonly customProfile?: readonly Point2D[];
+  /**
+   * ADR-539 Φ7 — full per-face appearance (materialId textured/catalog Ή colorHex), βαμμένο από
+   * την παλέτα «ΠΟΛΥΓΩΝΑ» ΑΚΡΙΒΩΣ όπως τα solids (Revit «Paint» / Cinema 4D material tag). Κερδίζει
+   * του legacy `material` preset string στο `resolveStairMaterial`. Απών → πέφτει στο `material`
+   * → structure default. Κοινό `FaceAppearance` SSoT με τα δομικά solids (μηδέν δεύτερο μοντέλο).
+   */
+  readonly appearance?: FaceAppearance;
 }
 
 /**
@@ -171,6 +180,17 @@ export interface StairPerTreadOverride {
  */
 export interface StairPerRiserOverride {
   readonly material?: string;
+  /** ADR-539 Φ7 — full per-face appearance (βλ. {@link StairPerTreadOverride.appearance}). */
+  readonly appearance?: FaceAppearance;
+}
+
+/**
+ * ADR-539 Φ7 — per-landing / per-waist appearance override («πλατύσκαλο» / «πλάκα σκάλας»),
+ * pickable & paintable per-index υπό «ΠΟΛΥΓΩΝΑ». Keyed by the 0-based `stairComponentIndex`
+ * tag (== waist-slab / landing build order). Μόνο appearance (καμία geometry/nosing έννοια).
+ */
+export interface StairPerComponentAppearanceOverride {
+  readonly appearance?: FaceAppearance;
 }
 
 /**
@@ -533,6 +553,17 @@ export interface StairParams extends StairSharedParams {
 
   /** ADR-358 Q19 Φ7 — per-riser material overrides (0-based global build-order key). */
   readonly perRiserOverrides?: Readonly<Record<number, StairPerRiserOverride>>;
+
+  /**
+   * ADR-539 Φ7 — per-landing («πλατύσκαλο») appearance overrides, keyed by the 0-based
+   * landing build order (== `stairComponentIndex` του landing mesh). Painted υπό «ΠΟΛΥΓΩΝΑ».
+   */
+  readonly perLandingOverrides?: Readonly<Record<number, StairPerComponentAppearanceOverride>>;
+  /**
+   * ADR-539 Φ7 — per-waist («πλάκα σκάλας», ο κεκλιμένος μηρός) appearance overrides, keyed by
+   * the 0-based waist-slab build order (1 ανά σκέλος). Painted υπό «ΠΟΛΥΓΩΝΑ».
+   */
+  readonly perWaistOverrides?: Readonly<Record<number, StairPerComponentAppearanceOverride>>;
 
   /**
    * ADR-637 — kind-independent intermediate rest landings (πλατύσκαλα). Optional

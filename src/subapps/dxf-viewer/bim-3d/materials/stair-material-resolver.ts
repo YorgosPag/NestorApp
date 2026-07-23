@@ -19,7 +19,16 @@
 
 import type * as THREE from 'three';
 import type { StairEntity } from '../../bim/types/stair-types';
-import { getMaterial3D, getElementMaterial3D, type Stair3DComponent } from './MaterialCatalog3D';
+import type { FaceAppearance } from '../../bim/types/face-appearance-types';
+import {
+  getMaterial3D,
+  getElementMaterial3D,
+  getFaceMaterial3D,
+  getFaceColorMaterial3D,
+  type Stair3DComponent,
+} from './MaterialCatalog3D';
+// ADR-539 Φ7 — ίδιο SSoT με το per-face solid resolve (`resolveFaceMaterial`): textured/color.
+import { faceAppearanceColorHex } from '../../bim/utils/face-appearance-color';
 import { resolveStructureComponentMaterialKey } from './stair-structure-material-defaults';
 
 type ComponentField = 'tread' | 'riser' | 'stringer' | 'landing';
@@ -70,11 +79,55 @@ function resolveSubElementOverride(
   return undefined;
 }
 
+/**
+ * ADR-539 Φ7 — per-sub-element FULL appearance override (`FaceAppearance`, βαμμένο από την παλέτα
+ * «ΠΟΛΥΓΩΝΑ»). tread/riser/landing keyed by `subIndex`. Το waist («πλάκα σκάλας») δεν είναι
+ * `Stair3DComponent`· το χειρίζεται ο `buildWaistSlabMeshes` μέσω {@link resolveStairAppearanceMaterial}.
+ */
+function resolveSubElementAppearance(
+  stair: StairEntity,
+  component: Stair3DComponent,
+  subIndex?: number,
+): FaceAppearance | undefined {
+  if (subIndex === undefined) return undefined;
+  const p = stair.params;
+  if (component === 'stair-tread') return p.perTreadOverrides?.[subIndex]?.appearance;
+  if (component === 'stair-riser') return p.perRiserOverrides?.[subIndex]?.appearance;
+  if (component === 'stair-landing') return p.perLandingOverrides?.[subIndex]?.appearance;
+  return undefined;
+}
+
+/**
+ * ADR-539 Φ7 SSoT — `FaceAppearance` → THREE material, ΤΟ ΙΔΙΟ path με το per-face solid resolve
+ * (`resolveFaceMaterial`): textured PBR όταν το `materialId` έχει όντως υφή, αλλιώς flat χρώμα
+ * (`colorHex` ή `materialId`→catalog color). `null` όταν το appearance δεν δίνει καμία πηγή χρώματος
+ * (→ ο caller πέφτει στο preset/structure default). Κοινό helper: resolver (tread/riser/landing) +
+ * `buildWaistSlabMeshes` (waist) — μηδέν δεύτερη υλοποίηση (N.18).
+ */
+export function resolveStairAppearanceMaterial(
+  appearance: FaceAppearance | undefined,
+): THREE.MeshStandardMaterial | null {
+  if (!appearance) return null;
+  if (appearance.materialId) {
+    const textured = getFaceMaterial3D(appearance.materialId);
+    if (textured) return textured;
+  }
+  const hex = faceAppearanceColorHex(appearance);
+  return hex ? getFaceColorMaterial3D(hex) : null;
+}
+
 export function resolveStairMaterial(
   stair: StairEntity,
   component: Stair3DComponent,
   subIndex?: number,
 ): THREE.MeshStandardMaterial {
+  // 0. ADR-539 Φ7 — full per-sub-element appearance (Polygon «Paint») ΚΕΡΔΙΖΕΙ: Revit «Paint on
+  //    face» / Cinema 4D material tag. Ίδιο `FaceAppearance` SSoT με τα solids (textured/color).
+  const appearanceMat = resolveStairAppearanceMaterial(
+    resolveSubElementAppearance(stair, component, subIndex),
+  );
+  if (appearanceMat) return appearanceMat;
+
   // 1. Per-sub-element override (ADR-358 Q19): tread OR riser, keyed by the 0-based
   //    global build-order index (== the 3D `stairComponentIndex` tag).
   const overrideMat = resolveSubElementOverride(stair, component, subIndex);

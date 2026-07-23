@@ -26,6 +26,9 @@ import { useLevelsOptional } from '../../systems/levels/useLevels';
 import { usePolygonMode3DStore } from '../stores/PolygonMode3DStore';
 import { applyFaceAppearance } from '../ui/apply-face-appearance';
 import { applyEntityFaceAppearanceMap } from '../ui/apply-entity-face-appearance-map';
+// ADR-539 Φ7 — drop σε υποενότητα σκάλας (πάτημα/ρίχτι/πλατύσκαλο/πλάκα) → stair params appearance.
+import { applyStairSubElementAppearance } from '../ui/apply-stair-sub-element-appearance';
+import { useStairSubElementSelectionStore, isStairSubPart } from '../../bim/stairs/stair-sub-element-selection-store';
 import { applyFinishToWholeElement, faceAppearanceToFinishOverride } from '../ui/apply-finish-face-override';
 import { entireElementFaceMap } from '../../bim/types/face-appearance-types';
 import { applyBimHover } from '../scene/scene-manager-actions';
@@ -81,11 +84,23 @@ export function usePolygonDragDrop(
       // ΠΟΛΥΓΩΝΑ — βάψε τη μεμονωμένη όψη κάτω από τον κέρσορα.
       const hit = manager.raycastBimFace(e.clientX, e.clientY);
       clearDragPreview(manager);
-      if (!hit?.bimId || !hit.faceKey) return;
-      // Anchor the selection highlight on the dropped face too (panel stays on this solid).
-      store.selectFace({ bimId: hit.bimId, faceKey: hit.faceKey });
-      manager.setSelectedFace(hit.bimId, hit.faceKey);
-      applyFaceAppearance(levels, hit.bimId, hit.faceKey, value);
+      if (hit?.bimId && hit.faceKey) {
+        // Faced solid — anchor the selection highlight on the dropped face (panel stays on this solid).
+        store.selectFace({ bimId: hit.bimId, faceKey: hit.faceKey });
+        manager.setSelectedFace(hit.bimId, hit.faceKey);
+        applyFaceAppearance(levels, hit.bimId, hit.faceKey, value);
+        return;
+      }
+      // ADR-539 Φ7 — παραμετρική σκάλα (χωρίς faceKey): drop σε πάτημα/ρίχτι/πλατύσκαλο/πλάκα →
+      // γράψε το appearance στα stair params + άγκυρωσε την επιλογή στο ίδιο sub-element.
+      if (hit?.bimId && hit.bimType === 'stair' && isStairSubPart(hit.stairPart) && hit.stairSubIndex !== undefined) {
+        store.clearFaces();
+        manager.setSelectedFaces([]);
+        useStairSubElementSelectionStore.getState().selectSub({
+          stairId: hit.bimId, part: hit.stairPart, index: hit.stairSubIndex,
+        });
+        applyStairSubElementAppearance(levels, hit.bimId, hit.stairPart, hit.stairSubIndex, value);
+      }
       return;
     }
 
