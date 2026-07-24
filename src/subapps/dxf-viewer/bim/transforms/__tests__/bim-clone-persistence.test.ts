@@ -15,10 +15,28 @@ import {
 import { EventBus } from '../../../systems/events/EventBus';
 
 describe('bim-clone-persistence — ADR-363 §7.2', () => {
+  // ADR-688 — the full clone-coverage set (aligned with calculateBimMovedGeometry
+  // non-null cases). Host-derived types (railing / wall-covering / thermal-space /
+  // mep-fitting / floorplan-symbol) are deliberately EXCLUDED — they clone via host.
+  const ADR688_COVERED_TYPES = [
+    'wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'stair', 'floor-finish',
+    'foundation', 'roof', 'space-separator', 'furniture', 'imported-mesh', 'generic-solid',
+    'mep-fixture', 'electrical-panel', 'mep-manifold', 'mep-segment', 'mep-radiator',
+    'mep-boiler', 'mep-water-heater', 'mep-underfloor',
+  ] as const;
+  const ADR688_HOST_DERIVED_EXCLUDED = [
+    'railing', 'wall-covering', 'thermal-space', 'mep-fitting', 'floorplan-symbol',
+  ] as const;
+
   describe('isBimPersistedType', () => {
-    it('accepts all 7 persisted BIM types', () => {
-      for (const t of ['wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'stair']) {
+    it('accepts every ADR-688 move-capable persisted BIM type', () => {
+      for (const t of ADR688_COVERED_TYPES) {
         expect(isBimPersistedType(t)).toBe(true);
+      }
+    });
+    it('rejects host-derived BIM types (clone via host, not independently)', () => {
+      for (const t of ADR688_HOST_DERIVED_EXCLUDED) {
+        expect(isBimPersistedType(t)).toBe(false);
       }
     });
     it('rejects non-BIM / undefined', () => {
@@ -48,6 +66,21 @@ describe('bim-clone-persistence — ADR-363 §7.2', () => {
     it('returns null for non-BIM entities', () => {
       expect(mintBimCloneIdentity('line')).toBeNull();
       expect(mintBimCloneIdentity(undefined)).toBeNull();
+    });
+    // ADR-688 — the regression the feature closes: MEP / mesh / solid used to mint
+    // null → skipped → silently dropped on copy/paste (2D clipboard AND 3D canvas).
+    it('mints identity for EVERY ADR-688 covered type (no silent skip)', () => {
+      for (const t of ADR688_COVERED_TYPES) {
+        const identity = mintBimCloneIdentity(t);
+        expect(identity).not.toBeNull();
+        expect(identity!.id.length).toBeGreaterThan(0);
+        expect(identity!.ifcGuid.length).toBeGreaterThan(0);
+      }
+    });
+    it('returns null for host-derived types (skipped → cloned via host)', () => {
+      for (const t of ADR688_HOST_DERIVED_EXCLUDED) {
+        expect(mintBimCloneIdentity(t)).toBeNull();
+      }
     });
   });
 

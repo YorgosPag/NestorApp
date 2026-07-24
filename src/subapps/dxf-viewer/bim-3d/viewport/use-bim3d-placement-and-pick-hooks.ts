@@ -31,6 +31,7 @@ import { useBim3DAttachPick } from './use-bim3d-attach-pick';
 import { useBim3DBeamFromWallPick } from './use-bim3d-beam-from-wall-pick';
 import { useBim3DOpeningMove } from './use-bim3d-opening-move';
 import { useBim3DWireWaypointInteraction } from '../animation/use-bim3d-wire-waypoint-interaction-3d';
+import { useBim3DEntityClipboard } from './use-bim3d-entity-clipboard';
 
 interface UseBim3DPlacementAndPickHooksParams {
   managerRef: RefObject<ThreeJsSceneManager | null>;
@@ -119,4 +120,9 @@ export function useBim3DPlacementAndPickHooks({
   // sphere handles on the active circuit's waypoints; drag a node / a segment to
   // insert+move, right-click a node to delete — reusing the 2D plan-space SSoT.
   useBim3DWireWaypointInteraction({ managerRef, canvasEl });
+
+  // ADR-688 — 3D entity copy / paste-at-pick / duplicate (Ctrl+C / Ctrl+V / Ctrl+D).
+  // Active only when Polygon Mode is INACTIVE (face-appearance owns Ctrl+C/V while
+  // active). Reuses the clone SSoT + the placement pick machinery; zero new clone.
+  useBim3DEntityClipboard({ managerRef, canvasEl });
 }

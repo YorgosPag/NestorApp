@@ -11,6 +11,9 @@ import {
   type FallbackDefinition,
 } from '../keyboard/MultiCharKeySequence';
 import { EventBus } from '../systems/events/EventBus';
+// ADR-688 — in 3D the entity clipboard is owned by use-bim3d-entity-clipboard
+// (Ctrl+C / paste-at-pick / Ctrl+D). Guard the 2D in-place clipboard off in 3D.
+import { useViewMode3DStore, selectIs3D } from '../bim-3d/stores/ViewMode3DStore';
 
 // ADR-363 Phase 7: BIM multi-char hotkeys — AutoCAD command-line pattern.
 // Leader keys open a 350ms window; second key within window resolves to a tool.
@@ -164,8 +167,11 @@ export function useDxfToolbarShortcuts(
       if (matchesShortcut(e, 'redo')) { e.preventDefault(); onAction('redo'); return; }
       if (matchesShortcut(e, 'redoAlt')) { e.preventDefault(); onAction('redo'); return; }
       // ADR-466 — Ctrl+C / Ctrl+V clipboard (works in selection-capable tools).
-      if (matchesShortcut(e, 'copy') && (activeTool === 'select' || activeTool === 'grip-edit')) { e.preventDefault(); onAction('clipboard-copy'); return; }
-      if (matchesShortcut(e, 'paste')) { e.preventDefault(); onAction('clipboard-paste'); return; }
+      // ADR-688 — skip in 3D: the 3D entity clipboard (paste-at-pick / duplicate)
+      // owns Ctrl+C/V there, so this 2D in-place path must not double-fire.
+      const is3D = selectIs3D(useViewMode3DStore.getState());
+      if (!is3D && matchesShortcut(e, 'copy') && (activeTool === 'select' || activeTool === 'grip-edit')) { e.preventDefault(); onAction('clipboard-copy'); return; }
+      if (!is3D && matchesShortcut(e, 'paste')) { e.preventDefault(); onAction('clipboard-paste'); return; }
       if (matchesShortcut(e, 'selectAll')) { e.preventDefault(); onAction('select-all'); return; }
       if (matchesShortcut(e, 'toggleLayers')) { e.preventDefault(); onAction('toggle-layers'); return; }
       if (matchesShortcut(e, 'toggleProperties')) { e.preventDefault(); onAction('toggle-properties'); return; }

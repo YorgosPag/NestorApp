@@ -39,10 +39,40 @@ import {
   generateBeamId,
   generateStairId,
   generateFloorFinishId,
+  // ADR-688 — full clone coverage: every BIM type the move-geometry SSoT supports.
+  generateFoundationId,
+  generateRoofId,
+  generateSpaceSeparatorId,
+  generateFurnitureId,
+  generateImportedMeshId,
+  generateGenericSolidId,
+  generateMepFixtureId,
+  generateElectricalPanelId,
+  generateMepManifoldId,
+  generateMepSegmentId,
+  generateMepRadiatorId,
+  generateMepBoilerId,
+  generateMepWaterHeaterId,
+  generateMepUnderfloorId,
   generateIfcGuid,
 } from '@/services/enterprise-id-convenience';
 
-/** BIM entity types that persist to Firestore via a `use*Persistence` hook. */
+/**
+ * BIM entity types that persist to Firestore via a `use*Persistence` hook AND
+ * clone independently.
+ *
+ * ADR-688 — this list MUST stay aligned with the non-null cases of
+ * `calculateBimMovedGeometry` (`bim/utils/bim-move-geometry.ts`): the clone SSoT
+ * (`buildClonesFromEntities`) transforms each source THEN mints identity, so a
+ * type needs BOTH a mover case AND an entry here to survive. Types the mover
+ * intentionally leaves to their host — `railing` (auto-hosted on stair, ADR-407),
+ * `wall-covering` (follows wall), `thermal-space` (derived region),
+ * `mep-fitting` (derived from segment endpoints), `floorplan-symbol` — are
+ * therefore NOT here: they clone via their host, not independently (Revit parity).
+ * Before 688 only the first 8 structural types were covered, so copy/paste of a
+ * MEP fixture / imported mesh / generic solid silently dropped it (skipped) in
+ * BOTH the 2D clipboard and the 3D canvas.
+ */
 export type BimPersistedType =
   | 'wall'
   | 'opening'
@@ -52,7 +82,22 @@ export type BimPersistedType =
   | 'beam'
   | 'stair'
   // ADR-419 — floor-finish persists via useFloorFinishPersistence.
-  | 'floor-finish';
+  | 'floor-finish'
+  // ADR-688 — remaining move-capable BIM types (structural / MEP / mesh / solid).
+  | 'foundation'
+  | 'roof'
+  | 'space-separator'
+  | 'furniture'
+  | 'imported-mesh'
+  | 'generic-solid'
+  | 'mep-fixture'
+  | 'electrical-panel'
+  | 'mep-manifold'
+  | 'mep-segment'
+  | 'mep-radiator'
+  | 'mep-boiler'
+  | 'mep-water-heater'
+  | 'mep-underfloor';
 
 /** Per-type enterprise-id generator (N.6 — never `generateEntityId()` for BIM). */
 const BIM_ID_GENERATORS: Record<BimPersistedType, () => string> = {
@@ -64,6 +109,21 @@ const BIM_ID_GENERATORS: Record<BimPersistedType, () => string> = {
   beam: generateBeamId,
   stair: generateStairId,
   'floor-finish': generateFloorFinishId,
+  // ADR-688 — full coverage (aligned with calculateBimMovedGeometry).
+  foundation: generateFoundationId,
+  roof: generateRoofId,
+  'space-separator': generateSpaceSeparatorId,
+  furniture: generateFurnitureId,
+  'imported-mesh': generateImportedMeshId,
+  'generic-solid': generateGenericSolidId,
+  'mep-fixture': generateMepFixtureId,
+  'electrical-panel': generateElectricalPanelId,
+  'mep-manifold': generateMepManifoldId,
+  'mep-segment': generateMepSegmentId,
+  'mep-radiator': generateMepRadiatorId,
+  'mep-boiler': generateMepBoilerId,
+  'mep-water-heater': generateMepWaterHeaterId,
+  'mep-underfloor': generateMepUnderfloorId,
 };
 
 /** Minimal shape a clone helper needs — satisfied by SceneEntity / AnySceneEntity. */
