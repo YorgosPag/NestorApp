@@ -12,10 +12,12 @@
  * όπως ο αληθινός: itemStart → resolveURL → itemEnd) και ο `serialiseGlb` (καθαρή THREE→bytes SSoT).
  */
 
-const serialiseGlbMock = jest.fn<Promise<ArrayBuffer>, [unknown]>();
+import * as THREE from 'three';
+
+const serialiseGlbMock = jest.fn<Promise<ArrayBuffer>, [THREE.Object3D]>();
 
 jest.mock('../../../export/core/mesh3d/mesh3d-serialise', () => ({
-  serialiseGlb: (root: unknown) => serialiseGlbMock(root),
+  serialiseGlb: (root: THREE.Object3D) => serialiseGlbMock(root),
 }));
 
 interface FakeManager {
@@ -24,26 +26,48 @@ interface FakeManager {
   resolveURL(url: string): string;
 }
 
-jest.mock('three/examples/jsm/loaders/ColladaLoader.js', () => ({
-  ColladaLoader: class {
-    private readonly manager: FakeManager;
-    constructor(manager: FakeManager) {
-      this.manager = manager;
-    }
-    // Το `text` κωδικοποιεί ποιες υφές θα «φόρτωνε» ο loader — οδηγούμε τον ΠΡΑΓΜΑΤΙΚΟ manager
-    // ακριβώς όπως ο αληθινός ColladaLoader (TextureLoader.load → itemStart + resolveURL).
-    parse(text: string) {
-      const names: string[] = JSON.parse(text).textures ?? [];
-      for (const name of names) {
-        this.manager.itemStart(name);
-        this.manager.resolveURL(name);
+interface DaeSpec {
+  textures?: string[];
+  /** Ένα mesh με texture slots· κάθε τιμή = πλάτος εικόνας (0 = broken/δεν φόρτωσε, >0 = OK). */
+  maps?: Record<string, number>;
+}
+
+jest.mock('three/examples/jsm/loaders/ColladaLoader.js', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const three = require('three') as typeof THREE;
+  return {
+    ColladaLoader: class {
+      private readonly manager: FakeManager;
+      constructor(manager: FakeManager) {
+        this.manager = manager;
       }
-      // Το πέρας φόρτωσης είναι ασύγχρονο — αλλιώς το onLoad θα πυροδοτούσε πριν το await.
-      void Promise.resolve().then(() => names.forEach((name) => this.manager.itemEnd(name)));
-      return { scene: { isScene: true, textures: names }, library: {}, kinematics: {} };
-    }
-  },
-}));
+      // Οδηγούμε τον ΠΡΑΓΜΑΤΙΚΟ manager ακριβώς όπως ο αληθινός ColladaLoader (TextureLoader.load →
+      // itemStart + resolveURL) και επιστρέφουμε ΠΡΑΓΜΑΤΙΚΗ THREE.Scene ώστε το `traverse` να δουλεύει.
+      parse(text: string) {
+        const spec: DaeSpec = JSON.parse(text);
+        const names = spec.textures ?? [];
+        for (const name of names) {
+          this.manager.itemStart(name);
+          this.manager.resolveURL(name);
+        }
+        const scene = new three.Scene();
+        if (spec.maps) {
+          const material = new three.MeshStandardMaterial();
+          const slots = material as unknown as Record<string, THREE.Texture>;
+          for (const [slot, width] of Object.entries(spec.maps)) {
+            const texture = new three.Texture();
+            texture.image = { naturalWidth: width, width };
+            slots[slot] = texture;
+          }
+          scene.add(new three.Mesh(new three.BufferGeometry(), material));
+        }
+        // Το πέρας φόρτωσης είναι ασύγχρονο — αλλιώς το onLoad θα πυροδοτούσε πριν το await.
+        void Promise.resolve().then(() => names.forEach((name) => this.manager.itemEnd(name)));
+        return { scene, library: {}, kinematics: {} };
+      }
+    },
+  };
+});
 
 import {
   colladaToGlb,
@@ -53,6 +77,10 @@ import {
 
 function dae(...textures: string[]): string {
   return JSON.stringify({ textures });
+}
+
+function daeWithMaps(maps: Record<string, number>, ...textures: string[]): string {
+  return JSON.stringify({ textures, maps });
 }
 
 const GLB = new ArrayBuffer(8);
@@ -113,5 +141,17 @@ describe('colladaToGlb', () => {
     expect(result.missingTextures).toEqual([]);
     expect(result.glb).toBe(GLB);
     expect(serialiseGlbMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('αφαιρεί το broken texture slot ΠΡΙΝ τη σειριοποίηση (αλλιώς ο GLTFExporter σκάει)', async () => {
+    // map = broken (width 0, ο χρήστης δεν έδωσε την υφή), normalMap = OK (width 4).
+    await colladaToGlb(daeWithMaps({ map: 0, normalMap: 4 }), []);
+
+    const scene = serialiseGlbMock.mock.calls[0][0];
+    const mesh = scene.children[0] as THREE.Mesh;
+    const material = mesh.material as THREE.MeshStandardMaterial;
+    // Το broken map καθαρίστηκε (→ null), το υγιές normalMap διατηρήθηκε → η γεωμετρία επιβιώνει.
+    expect(material.map).toBeNull();
+    expect(material.normalMap).not.toBeNull();
   });
 });

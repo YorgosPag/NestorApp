@@ -241,7 +241,42 @@ the existing `EnvmapGenerator` (imperative, zero React). Section-stencil save/re
 
 ---
 
+## 9. §3 — Τα ΠΛΕΓΜΑΤΑ υπακούν κι αυτά (ADR-689 Φ3, 2026-07-24)
+
+**Το κενό:** οι δύο άξονες αυτού του ADR δρομολογούνται μέσω `withFaceMode` (όψεις) και
+`attachEdgesProjection` (ακμές) — αλλά **μόνο** για τα δομικά. Ό,τι έρχεται από τη βιβλιοθήκη
+πλεγμάτων περνά από τον `meshToObject3D` (εισαγόμενα `.glb` ADR-683, έπιπλα ADR-410, εξαρτήματα Η/Μ
+ADR-406/408) και έχει **ξεχωριστό δρόμο υλικών**, οπότε στα `faceMode:'none'` (Συρμάτινο) και
+`faceMode:'hidden-line'` (Κρυφή Γραμμή) έμενε **γεμάτο και χρωματιστό**. Δηλαδή δύο από τα οκτώ
+presets ήταν σιωπηλά σπασμένα για μια ολόκληρη οικογένεια οντοτήτων.
+
+**Η λύση:** `bim-3d/wireframe/attach-mesh-wireframe.ts`, καλούμενο από το `meshToObject3D::finalize`
+— **ένα call site** που καλύπτει και τις τρεις οικογένειες. Δεν προσθέτει αντικείμενα: το ίδιο το
+mesh παίρνει barycentric γεωμετρία + ένα `MeshBasicMaterial` που ζωγραφίζει τις ακμές στο fragment
+stage. Πλήρης τεκμηρίωση: **ADR-689 §7**.
+
+**Δύο ΝΕΟΙ ορθογώνιοι άξονες** (όπως το `backgroundMode` §2 και το `glassQuality` του ADR-687 Φ9 —
+δικά τους per-view πεδία, όχι διεύρυνση του `VisualStylePreset`), στο ίδιο SSoT
+`config/bim-visual-style.ts`:
+
+| Άξονας | Τιμές | Default | Τι κάνει |
+|---|---|---|---|
+| `meshWireMode` | `feature` / `full` | `feature` | crease 30° (Revit/ArchiCAD/C4D) ⟷ κάθε τριγωνάκι (AutoCAD) |
+| `meshWireWidthPx` | 0.5–4 CSS px | `1` | πάχος γραμμής, σταθερό σε κάθε εστίαση (screen-space) |
+
+Ισχύουν **μόνο** στα δύο παραπάνω face modes· στα υπόλοιπα η τιμή περιμένει. Persisted per-view ως
+**optional** πεδία → **χωρίς** `BIM_SETTINGS_VERSION` bump (absent ⇒ default). Rebuild μέσω του
+ΥΠΑΡΧΟΝΤΟΣ block (f) του `use-bim3d-vg-resync` (το `aWireCode` και το πάχος ψήνονται build-time).
+UI: `MeshWireWidgets.tsx` στο ίδιο ribbon panel «Στυλ Προβολής».
+
+---
+
 ## Changelog
+- **2026-07-24** — §3 (ADR-689 Φ3): τα πλέγματα (εισαγόμενα + έπιπλα + Η/Μ) υπακούν πλέον στα
+  `faceMode` `none`/`hidden-line` μέσω barycentric GPU wireframe στο `meshToObject3D`. Δύο νέοι
+  ορθογώνιοι άξονες `meshWireMode` / `meshWireWidthPx` (optional persisted, χωρίς version bump) +
+  ribbon UI. Το χρώμα ακμής ενοποιήθηκε στο νέο `bim-3d/edges/bim-edge-colors.ts` (ήταν copy-paste
+  σε 3 αρχεία). 37 νέα jest.
 - **2026-06-30** — §2.1 EXACT-gradient theme support (Cinema 4D «σχήμα» parity): the studio
   background now accepts EXPLICIT per-theme stops, not just a symmetric base±delta derivation.
   NEW `resolveDxfCanvasGradientStops()` (color-config) reads `--canvas-gradient-top/bottom`;

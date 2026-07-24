@@ -96,8 +96,107 @@ regression). Ξανατρέχει στο rebuild-on-`visualStyle` (`use-bim3d-vg
 
 ---
 
+## 7. Φ3 — Barycentric GPU wireframe, single-pass (2026-07-24)
+
+> ⚠️ **Η Φ2 αντικαταστάθηκε ΟΛΟΚΛΗΡΩΤΙΚΑ.** Το `imported-mesh-wireframe.ts` και το test του
+> **διαγράφηκαν**. Ό,τι λέει η §6 είναι ιστορικό.
+
+**Ζητούμενο (Giorgio):** τα τριγωνάκια φάνηκαν, **αλλά η πλοήγηση βάρυνε**. Ζήτησε state-of-the-art
+«όπως οι μεγάλοι, και καλύτερα» — χωρίς εκπτώσεις, χωρίς όριο χρόνου.
+
+### 7.1 Root cause της Φ2
+
+Ο `bimMeshCache.getInstance` επιστρέφει `template.clone(true)`, και το three **δεν** κλωνοποιεί
+γεωμετρίες — 40 καρέκλες δείχνουν στο ΙΔΙΟ buffer. Το `WireframeGeometry` όμως έχτιζε **νέο line
+buffer + νέο draw call ανά instance ανά child mesh**. Επιπλέον το WebGL αγνοεί το
+`LineBasicMaterial.linewidth` → aliased 1px, και φαίνονταν οι εσωτερικές διαγώνιες τριγωνοποίησης.
+
+### 7.2 Απόφαση: βαρυκεντρικές συντεταγμένες στο fragment stage
+
+Δίνοντας στις τρεις κορυφές κάθε τριγώνου τη βάση (1,0,0)/(0,1,0)/(0,0,1), το `min(b)` που
+παρεμβάλλει η κάρτα **ΕΙΝΑΙ** η απόσταση του pixel από την πλησιέστερη ακμή. Άρα το wireframe
+ζωγραφίζεται μέσα στο ίδιο pass των επιφανειών:
+
+| | Φ2 | Φ3 |
+|---|---|---|
+| Buffers | 1 line buffer ανά instance ανά child | **1 attribute ανά asset** (memoised) |
+| Draw calls | +1 ανά mesh | **−1 ανά mesh** (το mesh ΕΙΝΑΙ το wireframe) |
+| Γραμμή | aliased 1px, μη ρυθμιζόμενη | anti-aliased, screen-space, ρυθμιζόμενη |
+| Ακμές | κάθε τριγωνάκι | crease 30° ή πλήρης (επιλογή χρήστη) |
+| Bytes/κορυφή | — | **4** (ένα packed float) |
+
+### 7.3 Οι τρεις περιορισμοί που όρισαν την υλοποίηση (μετρημένοι)
+
+1. **`MeshBasicMaterial` + `onBeforeCompile`, ΟΧΙ `ShaderMaterial`.** Το
+   `section-clip-applicator.ts` δέχεται clipping planes μόνο σε built-in mesh materials (ADR-452
+   allowlist)· ένα `ShaderMaterial` θα σταματούσε το Section Box να κόβει τα πλέγματα.
+2. **Ρητό attribute, ΟΧΙ `gl_VertexID`.** three `0.170` τρέχει WebGL2 αλλά με πηγή GLSL ES 1.00.
+   (Το `fwidth` δουλεύει: το WebGL2 ενεργοποιεί σιωπηρά το `OES_standard_derivatives` σε ESSL1.)
+3. **`customProgramCacheKey` υποχρεωτικό.** Χωρίς αυτό το three θεωρεί δύο `MeshBasicMaterial` με
+   ίδια defines ισοδύναμα και μπορεί να δώσει στο wire material το πρόγραμμα ενός ΑΛΛΟΥ basic
+   material της σκηνής (π.χ. snap marker) — δηλαδή wireframe χωρίς τον κώδικα του wireframe.
+
+### 7.4 Adaptive degradation — **ΔΕΝ έγινε, σκόπιμα**
+
+Το SSoT audit βρήκε πλήρες σύστημα ήδη στη θέση του: `IdleDetector` → `QualityModulator` /
+`SSAOModulator`, και `isInteracting` → `renderRaster()` που παρακάμπτει τον composer στην πλοήγηση.
+Το barycentric wireframe έχει **μηδενικό** επιπλέον κόστος ανά frame, άρα δεν υπάρχει τίποτα να
+υποβαθμιστεί. Δεύτερος μηχανισμός = διπλότυπο.
+
+### 7.5 Εμβέλεια: ΟΛΑ τα πλέγματα (ο SSoT ανέβηκε ένα επίπεδο)
+
+Η Φ2 κάλυπτε μόνο τα εισαγόμενα. Το audit έδειξε ότι **έπιπλα** (ADR-410) και **εξαρτήματα Η/Μ**
+(ADR-406/408) περνούν από τον ΙΔΙΟ `meshToObject3D` και έμεναν κι αυτά γεμάτα στο Συρμάτινο — δύο
+σιωπηλά bugs. Το `attachMeshWireframe` κλήθηκε στο `meshToObject3D::finalize`: **ένα call site**,
+καμία οντότητα δεν μπορεί να ξεχαστεί.
+
+### 7.6 «Κρυφή Γραμμή» δωρεάν, σε ΕΝΑ pass
+
+Το `faceMode:'hidden-line'` αγνοούνταν εξίσου από τα πλέγματα. Ένα uniform (`uWireFillMode`) το
+λύνει μέσα στο ίδιο material: `mix(λευκό, χρώμα ακμής, κάλυψη)` με `depthWrite` — αδιαφανείς
+όψεις-occluder **μαζί** με τις ακμές τους, εκεί που η κλασική υλοποίηση θέλει δύο περάσματα.
+
+### 7.7 Αρχεία
+
+**Νέος φάκελος `bim-3d/wireframe/`** (SSoT):
+- `mesh-wire-adjacency.ts` — δίεδρη γωνία → μάσκα ορατών ακμών ανά τρίγωνο (ίδιο κατώφλι 30° με το
+  `EdgesGeometry` των δομικών· κβαντισμός κορυφών 1e-4 όπως το three).
+- `mesh-wire-encoding.ts` — packing σε **ένα** float `aWireCode` (γωνία + μάσκα), η αναδιάταξη
+  ακμή→βαρυκεντρική συνιστώσα (γίνεται στη CPU, όχι ανά pixel), και ο **JS καθρέφτης**
+  `wireEdgeAlpha` του fragment υπολογισμού.
+- `mesh-wire-geometry.ts` — `WeakMap` memo ανά πηγή × mode → ΕΝΑ παράγωγο ανά asset· μηδενική
+  αντιγραφή attributes για non-indexed πηγή.
+- `mesh-wire-shader.ts` — τα GLSL κομμάτια (σχόλια μόνο ASCII).
+- `mesh-wire-material.ts` — αποκλειστικό `MeshBasicMaterial` ανά mesh (ADR-665 clipping), `toneMapped:false`.
+- `attach-mesh-wireframe.ts` — η εφαρμογή + το `isMeshWireframeActive()` predicate.
+
+**Νέο `bim-3d/edges/bim-edge-colors.ts`** (N.0.2 boy scout): το `#1a1a1a` ήταν copy-paste σε **τρία**
+αρχεία· τώρα ζει σε ένα και τα τρία το διαβάζουν.
+
+**Ρυθμίσεις** (πρότυπο ADR-687 Φ9, optional πεδία → **χωρίς** `BIM_SETTINGS_VERSION` bump):
+`meshWireMode` (`feature` default / `full`) + `meshWireWidthPx` (1.0, clamped 0.5–4) στο
+`bim-visual-style.ts` → `bim-render-settings-types.ts` → store → `use-bim3d-vg-resync` block (f).
+
+**UI:** `MeshWireWidgets.tsx` («Ακμές Πλέγματος» Radix select + «Πάχος Ακμών» πάνω στο υπάρχον
+`RibbonNumericFieldWidget`), στο View tab δίπλα στο «Στυλ Προβολής». i18n el+en.
+
+### 7.8 Verification
+
+jest **37/37** στο `bim-3d/wireframe/` + **774** regression σε converters/edges/materials. jscpd
+καθαρό. Δεν τρέχει tsc (N.17). Το `face-material-catalog.test.ts` αποτυγχάνει **προϋπάρχοντα**
+(ADR-687 Φ9: το τεστ περιμένει `transmission` ενώ το `glassQuality` default είναι `light`) — άσχετο
+με τη Φ3, το `bim-3d/materials/` δεν αγγίχτηκε.
+
+---
+
 ## Changelog
 
+- **2026-07-24 (Φ3)** — Barycentric single-pass GPU wireframe. **Αντικαθιστά τη Φ2** (το
+  `imported-mesh-wireframe.ts` + test διαγράφηκαν). Νέος φάκελος `bim-3d/wireframe/` (6 modules) +
+  `bim-edge-colors.ts` SSoT. Εμβέλεια ανέβηκε στο `meshToObject3D` → καλύπτει και έπιπλα + Η/Μ (δύο
+  σιωπηλά bugs). «Κρυφή Γραμμή» στα πλέγματα σε ένα pass. Νέοι άξονες `meshWireMode` /
+  `meshWireWidthPx` + ribbon UI + i18n. Adaptive degradation ΔΕΝ έγινε — περιττό (§7.4).
+  jest 37 νέα ✓, jscpd ✓.
 - **2026-07-24 (Φ1)** — Εξαγωγή. Νέο `imported-mesh-faces.ts` + `awaitInFlightScenes` +
   `makeSolidFacesHatch` SSoT + `dxfMeshDetail` UI/i18n + `DxfFlattenContext` threading. Root cause: το
   footprint ήταν bbox, τα τρίγωνα ζούσαν μόνο στο `bimMeshCache`.

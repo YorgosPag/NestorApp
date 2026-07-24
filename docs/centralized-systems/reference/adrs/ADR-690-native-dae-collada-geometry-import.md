@@ -1,6 +1,6 @@
 # ADR-690 — Native `.dae` (COLLADA) geometry import: το `.dae` κάνει ό,τι το `.glb`
 
-**Status:** 🟢 Φ2 DONE (code + jest 11/11 ✓ + jscpd ✓) — **🔴 καμία επαλήθευση στον browser** (test asset: `HMI_Aeron_Chair_3D.dae` + 2 jpg· verification = Giorgio). Commit = Giorgio.
+**Status:** 🟢 Φ2 DONE + **broken-texture hotfix** (browser test #1 root-caused: missing υφή → GLTFExporter crash → fix `stripBrokenTextures`) · code + jest ✓ (collada-to-glb 6/6, import-collada 6/6) + jscpd ✓ — **🔴 εκκρεμεί re-test στον browser** (asset: `HMI_Aeron_Chair_3D.dae` + 2 jpg). Commit = Giorgio.
 **Date:** 2026-07-24
 **Owner:** Giorgio
 **Σχετικά (parents):** **ADR-683** (συνεργατικό round-trip — κλείνει το κενό **Κ6**: «Καμία εξαγωγή/εισαγωγή DAE») · **ADR-678** (C4D material round-trip — ιδιοκτήτης του υπάρχοντος `.dae` material path) · ADR-668 (mesh3d export OBJ/glTF — ιδιοκτήτης του `serialiseGlb`) · ADR-679 (PBR/υφές) · ADR-511 (material catalog SSoT)
@@ -108,6 +108,11 @@ Firebase** για τα **matched** στοιχεία. Το glTF appearance path *
   στο glb → τα εισαγόμενα renderάρονται με τις υφές τους.
 - Υφές που το `.dae` αναφέρει αλλά ο χρήστης δεν επέλεξε → **actionable warning** (reuse
   `c4dMaterialImport.missingTextures`), **ποτέ** σιωπηλό γκρι.
+- **⚠️ Broken-image robustness (ground-truth 2026-07-24, browser test #1):** ο `GLTFExporter`
+  (`embedImages:true`) καλεί `ctx.drawImage(brokenImage)` → `InvalidStateError` **αν έστω μία υφή
+  λείπει** → σκάει ΟΛΗ η μετατροπή, η γεωμετρία χάνεται (`daeConvertError`). Fix: `stripBrokenTextures`
+  αφαιρεί (null-out + dispose) κάθε texture slot με `naturalWidth === 0` **πριν** τον `serialiseGlb`.
+  Έτσι η υφή που λείπει παραλείπεται (warning), αλλά **το mesh μπαίνει** (Revit «missing assets»).
 - Τα object URLs γίνονται `revoke` μετά τη σειριοποίηση (χωρίς leak).
 
 ---
@@ -178,3 +183,9 @@ Firebase** για τα **matched** στοιχεία. Το glTF appearance path *
   - **ΑΜΕΤΑΒΛΗΤΑ:** `serialiseGlb`, `parseGltfScene`, `importGltfMeshes`, `ImportedMeshImportDialog`,
     `importColladaAppearance`, `dae-material-parse`, `import-foreign-textures`.
   - 🔴 Εκκρεμεί μόνο η browser επαλήθευση (Giorgio).
+- **2026-07-24 — Φ2 hotfix (browser test #1 → `daeConvertError` όταν λείπει υφή):** root cause = ο
+  `GLTFExporter` σκάει σε broken image (missing texture 404). **NEW** `stripBrokenTextures` στο
+  `collada-to-glb.ts` (generic διάσχιση όλων των `THREE.Texture` slots, null-out+dispose όσα έχουν
+  `naturalWidth===0`) πριν τον `serialiseGlb` → η γεωμετρία μπαίνει ακόμη και χωρίς τις υφές. `+1` test
+  (broken map καθαρίζεται, υγιές normalMap μένει) → 6/6 ✓. `console.error` στο catch του button για
+  διάγνωση μελλοντικών edge cases. jscpd ✓. 🔴 re-test στον browser.

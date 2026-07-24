@@ -318,8 +318,10 @@ export function C4dMaterialImportButton() {
           });
           return;
         }
-      } catch {
+      } catch (error) {
         // Η βαφή εφαρμόστηκε ήδη· μόνο η μετατροπή γεωμετρίας απέτυχε → ρητό μήνυμα, όχι σιωπηλή απώλεια.
+        // Το πραγματικό σφάλμα στο console για διάγνωση (το toast είναι για τον χρήστη, όχι developer).
+        console.error('[ADR-690] COLLADA→glb geometry conversion failed:', error);
         notifications.error(t('c4dMaterialImport.daeConvertError'));
       }
     }
