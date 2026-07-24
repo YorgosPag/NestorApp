@@ -13,10 +13,24 @@
 
 import * as THREE from 'three';
 import type { PbrMaterialDef } from '../../bim/materials/material-catalog-defs';
+import type { LoadedTextureSet } from './bim-texture-cache';
 import { FACE_POLYGON_OFFSET_FACTOR, FACE_POLYGON_OFFSET_UNITS } from './material-depth-priority';
 
+/**
+ * ADR-687 Φ5 — a def needs the (heavier) `MeshPhysicalMaterial` ONLY when it has an
+ * ACTIVE physical effect: clearcoat (βερνίκι/λούστρο) or transmission (γυαλί/refraction).
+ * `ior`/`thickness` on their own are no-ops without transmission, and `appearanceToDef`
+ * always fills `ior: 1.5` — so presence alone must NOT trigger physical, or every user
+ * material would upgrade. The thousands of BIM solids (κατηγορία-driven defs, no clearcoat/
+ * transmission) stay on the cheaper `MeshStandardMaterial` → zero live-viewport perf regression.
+ */
+function needsPhysical(def: PbrMaterialDef): boolean {
+  return (def.clearcoat ?? 0) > 0 || (def.transmission ?? 0) > 0;
+}
+
 export function buildMat(def: PbrMaterialDef): THREE.MeshStandardMaterial {
-  return new THREE.MeshStandardMaterial({
+  // Shared base config — ONE object for both material tiers (N.18: no duplicated params).
+  const base: THREE.MeshStandardMaterialParameters = {
     color: def.color,
     roughness: def.roughness,
     metalness: def.metalness,
@@ -39,5 +53,44 @@ export function buildMat(def: PbrMaterialDef): THREE.MeshStandardMaterial {
     polygonOffset: true,
     polygonOffsetFactor: FACE_POLYGON_OFFSET_FACTOR,
     polygonOffsetUnits: FACE_POLYGON_OFFSET_UNITS,
-  });
+  };
+
+  // ADR-687 Φ5 — clearcoat (car-paint/lacquer) + transmission (γυαλί/refraction) need
+  // `MeshPhysicalMaterial` (superset of Standard). Built ONLY when active (see needsPhysical),
+  // so the return-type contract (MeshStandardMaterial) holds and consumers stay unchanged.
+  if (needsPhysical(def)) {
+    return new THREE.MeshPhysicalMaterial({
+      ...base,
+      clearcoat: def.clearcoat ?? 0,
+      clearcoatRoughness: def.clearcoatRoughness ?? 0,
+      transmission: def.transmission ?? 0,
+      ior: def.ior ?? 1.5,
+      thickness: def.thickness ?? 0,
+    });
+  }
+
+  return new THREE.MeshStandardMaterial(base);
+}
+
+/**
+ * Attach a loaded PBR texture set onto a flat material def → textured material. SSoT
+ * shared by the 3D catalog (`MaterialCatalog3D`) and the offscreen material-thumbnail
+ * sphere (ADR-687 Φ7) — ONE apply path (N.18 / N.0.2), extracted verbatim from the catalog.
+ */
+export function applyTextureSet(def: PbrMaterialDef, set: LoadedTextureSet): THREE.MeshStandardMaterial {
+  const mat = buildMat(def);
+  mat.map = set.map;
+  // PBR contract: when an albedo map is present the base color must be white so
+  // the texture shows its natural colour (no double-tinting). The def.color is the
+  // flat-mode colour; with a texture it would multiply and incorrectly darken.
+  mat.color.set(0xffffff);
+  if (set.normalMap) mat.normalMap = set.normalMap;
+  if (set.roughnessMap) mat.roughnessMap = set.roughnessMap;
+  // aoMap needs uv2 — the geometry layer ensures one; three ignores it gracefully
+  // when absent (ADR-413 contract).
+  // aoMapIntensity < 1 because our gradient env has no bounce light; full
+  // intensity (1.0) creates pitch-black crevices without a real HDRI fill.
+  if (set.aoMap) { mat.aoMap = set.aoMap; mat.aoMapIntensity = 0.5; }
+  mat.needsUpdate = true;
+  return mat;
 }

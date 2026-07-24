@@ -20,7 +20,7 @@ import type { BimMaterialCategory } from '../types/bim-material-types';
 // 🏢 ADR-571: MEP water/plumbing cyan SSoT + hex→int SSoT (utils/dxf-true-color.ts)
 import { MEP_WATER_COLOR } from '../../config/color-config';
 import { hexToTrueColor, trueColorToHex } from '../../utils/dxf-true-color';
-import { clamp01 } from '../../utils/scalar-math';
+import { clamp, clamp01 } from '../../utils/scalar-math';
 
 /** Flat PBR appearance definition for a resolved material key. */
 export interface PbrMaterialDef {
@@ -33,6 +33,16 @@ export interface PbrMaterialDef {
   readonly emissive?: number;
   /** ADR-687 Φ4 — self-illumination strength 0..1; default 0 = off. */
   readonly emissiveIntensity?: number;
+  /** ADR-687 Φ5 — clearcoat layer strength 0..1; default 0 = off (needs MeshPhysicalMaterial). */
+  readonly clearcoat?: number;
+  /** ADR-687 Φ5 — clearcoat glossiness 0..1 (0 = mirror). */
+  readonly clearcoatRoughness?: number;
+  /** ADR-687 Φ5 — transmission 0..1 (glass/water refraction); default 0 = off (needs MeshPhysicalMaterial). */
+  readonly transmission?: number;
+  /** ADR-687 Φ5 — index of refraction 1.0..2.333; default 1.5 (glass). */
+  readonly ior?: number;
+  /** ADR-687 Φ5 — volume thickness for transmission tint; default 0. */
+  readonly thickness?: number;
 }
 
 /**
@@ -165,6 +175,24 @@ export function resolveMaterialKey(materialId: string): string {
 }
 
 /**
+ * ADR-687 Φ7 — the flat `PbrMaterialDef` behind a catalog materialId (`mat-*`/`elem-*`),
+ * via the same prefix resolver the 3D catalog uses. Pure (no three.js). Used by the
+ * offscreen material-thumbnail sphere to render a catalog material's real appearance.
+ */
+export function catalogDefForMaterialId(materialId: string): PbrMaterialDef {
+  return MATERIAL_DEFS[resolveMaterialKey(materialId)] ?? MATERIAL_DEFS[DEFAULT_MATERIAL_KEY]!;
+}
+
+/**
+ * ADR-687 Φ7 — a flat `PbrMaterialDef` from a `#rrggbb` colour, for the legacy flat
+ * wall-covering paints (which carry only a colour). Matte-ish default so the paint reads
+ * as a painted surface, not plastic. Pure (no three.js).
+ */
+export function flatColorDef(hex: string): PbrMaterialDef {
+  return { color: hexToTrueColor(hex), roughness: 0.7, metalness: 0 };
+}
+
+/**
  * The flat appearance colour of a materialId as a `#rrggbb` CSS hex — SSoT for the
  * 2D fallback swatch chip (matches the 3D flat material colour for the same key).
  */
@@ -228,6 +256,9 @@ export function getCategoryMaterialDef(category: BimMaterialCategory): PbrMateri
  * `metalness`/`roughness` = flat PBR. ADR-687 Φ4: `emissiveHex`/`emissiveIntensity` →
  * `emissive`/`emissiveIntensity` (self-illumination), `opacity` → `opacity` + `transparent`
  * (when < 1). Όλα τα Φ4 πεδία optional (back-compat με τα Φ1 appearance objects → defaults).
+ * ADR-687 Φ5: `clearcoat`/`clearcoatRoughness`/`transmission` (clamp01), `ior` (clamp
+ * [1, 2.333]), `thickness` (≥0) → physical props· undefined → σβηστά (buildMat μένει
+ * MeshStandardMaterial).
  */
 export function appearanceToDef(
   appearance: {
@@ -237,6 +268,11 @@ export function appearanceToDef(
     emissiveHex?: string;
     emissiveIntensity?: number;
     opacity?: number;
+    clearcoat?: number;
+    clearcoatRoughness?: number;
+    transmission?: number;
+    ior?: number;
+    thickness?: number;
   },
 ): PbrMaterialDef {
   const opacity = clamp01(appearance.opacity ?? 1);
@@ -248,5 +284,11 @@ export function appearanceToDef(
     opacity,
     emissive: hexToTrueColor(appearance.emissiveHex ?? '#000000'),
     emissiveIntensity: clamp01(appearance.emissiveIntensity ?? 0),
+    clearcoat: clamp01(appearance.clearcoat ?? 0),
+    clearcoatRoughness: clamp01(appearance.clearcoatRoughness ?? 0),
+    transmission: clamp01(appearance.transmission ?? 0),
+    // IOR physical range (three.js MeshPhysicalMaterial.ior): air→diamond.
+    ior: clamp(appearance.ior ?? 1.5, 1, 2.333),
+    thickness: Math.max(0, appearance.thickness ?? 0),
   };
 }

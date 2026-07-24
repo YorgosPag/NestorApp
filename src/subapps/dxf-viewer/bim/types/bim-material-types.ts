@@ -89,6 +89,24 @@ export interface BimMaterialAppearance {
    * διαφανές (γυαλί/νερό/πλεξιγκλάς). Optional για back-compat (undefined → 1).
    */
   readonly opacity?: number;
+  /**
+   * ADR-687 Φ5 — clearcoat (βερνίκι/λούστρο/car-paint): δεύτερο λεπτό γυαλιστερό στρώμα
+   * πάνω από τη βάση (Blender Principled «Clearcoat» / C4D). `clearcoat` 0..1 = ένταση
+   * στρώματος· `clearcoatRoughness` 0..1 = γυαλάδα του (0 = καθρέφτης). Απαιτούν
+   * `MeshPhysicalMaterial`. Optional για back-compat (undefined → 0 = σβηστό).
+   */
+  readonly clearcoat?: number;
+  readonly clearcoatRoughness?: number;
+  /**
+   * ADR-687 Φ5 — transmission (αληθινό γυαλί/νερό με refraction, όχι απλό opacity):
+   * `transmission` 0..1 = ποσοστό φωτός που περνά μέσα από τον όγκο· `ior` 1.0..2.333 =
+   * δείκτης διάθλασης (γυαλί 1.5, νερό 1.33, διαμάντι 2.42)· `thickness` = πάχος όγκου για
+   * volume-tint. Απαιτούν `MeshPhysicalMaterial`. Optional (undefined → transmission 0 /
+   * ior 1.5 / thickness 0 = σβηστό).
+   */
+  readonly transmission?: number;
+  readonly ior?: number;
+  readonly thickness?: number;
 }
 
 /**

@@ -34,7 +34,8 @@
 
 import * as THREE from 'three';
 import type { PbrMaterialDef } from '../../bim/materials/material-catalog-defs';
-import { buildMat } from '../materials/pbr-material-builder';
+import { buildMat, applyTextureSet } from '../materials/pbr-material-builder';
+import type { LoadedTextureSet } from '../materials/bim-texture-cache';
 import { createBimLights } from '../scene/scene-setup';
 import { EnvmapGenerator } from '../lighting/envmap-generator';
 import { buildStudioPreviewEnvTexture } from '../lighting/studio-preview-environment';
@@ -55,8 +56,18 @@ export class MaterialPreviewSphereRenderer {
   /** In-scene diagonal-stripe backdrop plane (behind the sphere; a transparent material reveals it). */
   private readonly backdrop: THREE.Mesh;
 
-  constructor(container: HTMLElement) {
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  /**
+   * @param container host element (append the canvas· a detached div for offscreen thumbnails).
+   * @param opts.preserveDrawingBuffer keep the drawing buffer readable AFTER compositing — REQUIRED
+   *   for `toDataURL` readback (offscreen thumbnail singleton). The live editor sphere leaves it
+   *   false (default) → zero perf hit; it only ever renders to the visible canvas.
+   */
+  constructor(container: HTMLElement, opts?: { preserveDrawingBuffer?: boolean }) {
+    this.renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: true,
+      preserveDrawingBuffer: opts?.preserveDrawingBuffer ?? false,
+    });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setSize(container.clientWidth || FALLBACK_PX, container.clientHeight || FALLBACK_PX);
     this.renderer.setClearColor(0x1a1a1a, 1); // fallback dark — the in-scene stripe backdrop covers it
@@ -117,13 +128,31 @@ export class MaterialPreviewSphereRenderer {
     this.render();
   }
 
-  /** Rebuild the preview material from a flat PBR def (live slider / colour change). */
-  setDef(def: PbrMaterialDef): void {
-    const next = buildMat(def);
+  /** Swap the sphere material to a fresh instance (freeing the previous own clone) + render. */
+  private swapMaterial(next: THREE.MeshStandardMaterial): void {
     this.mesh.material = next;
     this.material.dispose(); // free the previous instance (own clone, safe to dispose)
     this.material = next;
     this.render();
+  }
+
+  /** Rebuild the preview material from a flat PBR def (live slider / colour change). */
+  setDef(def: PbrMaterialDef): void {
+    this.swapMaterial(buildMat(def));
+  }
+
+  /**
+   * ADR-687 Φ6/Φ7 — render `def` (optionally WITH a loaded PBR texture set) at a square
+   * `size` and return a PNG data URL (offscreen material thumbnail). Requires
+   * `preserveDrawingBuffer:true` at construction for a reliable cross-browser readback.
+   * `set` reuses the ALREADY-loaded catalog/user textures (`applyTextureSet` SSoT) so a
+   * brick swatch shows real brick on the sphere — full C4D/Revit parity. Reuses the exact
+   * same sphere/env/backdrop as the live editor preview (SSoT look).
+   */
+  toDataURL(def: PbrMaterialDef, set: LoadedTextureSet | null = null, size = 64): string {
+    this.resize(size, size);
+    this.swapMaterial(set ? applyTextureSet(def, set) : buildMat(def));
+    return this.renderer.domElement.toDataURL('image/png');
   }
 
   /** Re-fit the renderer + camera to the container size. */

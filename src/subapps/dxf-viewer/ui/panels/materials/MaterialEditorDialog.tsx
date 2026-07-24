@@ -28,13 +28,12 @@ import {
 } from '../../../bim/services/bim-material-thumbnail-upload.service';
 import {
   RequiredSection,
-  AppearancePreviewSection,
-  AppearanceColorSection,
   DimensionsSection,
   MetadataSection,
   ThumbnailSection,
   type FormState,
 } from './MaterialEditorSections';
+import { AppearancePreviewSection, AppearanceColorSection } from './MaterialEditorAppearanceSections';
 import { PbrTexturesSection } from './MaterialPbrTexturesSection';
 import { getCategoryMaterialDef } from '../../../bim/materials/material-catalog-defs';
 import { trueColorToHex } from '../../../utils/dxf-true-color';
@@ -94,6 +93,11 @@ function appearanceSeed(
   emissiveIntensity: string;
   emissiveCustom: boolean;
   opacity: string;
+  clearcoat: string;
+  clearcoatRoughness: string;
+  transmission: string;
+  ior: string;
+  thickness: string;
 } {
   if (appearance) {
     return {
@@ -108,6 +112,12 @@ function appearanceSeed(
       // Customised only if a distinct emissive colour was persisted (else it live-tracks the base).
       emissiveCustom: appearance.emissiveHex != null && appearance.emissiveHex !== appearance.baseColorHex,
       opacity: String(appearance.opacity ?? 1),
+      // ADR-687 Φ5 — physical props (off/1.5 defaults for pre-Φ5 persisted appearance).
+      clearcoat: String(appearance.clearcoat ?? 0),
+      clearcoatRoughness: String(appearance.clearcoatRoughness ?? 0),
+      transmission: String(appearance.transmission ?? 0),
+      ior: String(appearance.ior ?? 1.5),
+      thickness: String(appearance.thickness ?? 0),
     };
   }
   const def = getCategoryMaterialDef(category);
@@ -122,6 +132,12 @@ function appearanceSeed(
     emissiveIntensity: '0',
     emissiveCustom: false,
     opacity: String(def.opacity ?? 1),
+    // ADR-687 Φ5 — physical off by default (category defs carry no clearcoat/transmission).
+    clearcoat: '0',
+    clearcoatRoughness: '0',
+    transmission: '0',
+    ior: '1.5',
+    thickness: '0',
   };
 }
 
@@ -132,13 +148,9 @@ function buildInitialState(initial: BimMaterial | undefined, projectId?: string)
       nameEl: initial.nameEl,
       nameEn: initial.nameEn,
       category: initial.category,
-      baseColorHex: appear.baseColorHex,
-      metalness: appear.metalness,
-      roughness: appear.roughness,
-      emissiveHex: appear.emissiveHex,
-      emissiveIntensity: appear.emissiveIntensity,
-      emissiveCustom: appear.emissiveCustom,
-      opacity: appear.opacity,
+      // `appearanceSeed` returns exactly the FormState appearance keys (Φ1/Φ4/Φ5) → spread
+      // as ONE unit, so a new appearance field needs no change here (SSoT, N.18 anti-clone).
+      ...appear,
       density: initial.density != null ? String(initial.density) : '',
       defaultThickness: initial.defaultThickness != null ? String(initial.defaultThickness) : '',
       fireRating: initial.fireRating,
@@ -164,9 +176,8 @@ function buildInitialState(initial: BimMaterial | undefined, projectId?: string)
     defaultThickness: '', fireRating: 'none', atoeCategory: '',
     atoeArticle: '', defaultUnitCost: '', defaultUnit: 'm2',
     brand: '', brandModel: '', notes: '', thumbnailUrl: '',
-    baseColorHex: appear.baseColorHex, metalness: appear.metalness, roughness: appear.roughness,
-    emissiveHex: appear.emissiveHex, emissiveIntensity: appear.emissiveIntensity,
-    emissiveCustom: appear.emissiveCustom, opacity: appear.opacity,
+    // ...appear = all appearance fields (Φ1/Φ4/Φ5) as ONE unit — see the initial branch above.
+    ...appear,
     albedoUrl: '', normalUrl: '', roughnessUrl: '', aoUrl: '', tileSizeM: '1',
     scope: projectId ? 'project' : 'company',
   };
@@ -182,6 +193,11 @@ function buildAppearance(form: FormState): BimMaterialAppearance {
   const r = Number(form.roughness);
   const ei = Number(form.emissiveIntensity);
   const op = Number(form.opacity);
+  const cc = Number(form.clearcoat);
+  const ccr = Number(form.clearcoatRoughness);
+  const tr = Number(form.transmission);
+  const ir = Number(form.ior);
+  const th = Number(form.thickness);
   return {
     baseColorHex: form.baseColorHex,
     metalness: isNaN(m) ? 0 : m,
@@ -190,6 +206,12 @@ function buildAppearance(form: FormState): BimMaterialAppearance {
     emissiveHex: form.emissiveHex,
     emissiveIntensity: isNaN(ei) ? 0 : ei,
     opacity: isNaN(op) ? 1 : op,
+    // ADR-687 Φ5 — physical props (concrete values → Firestore-safe; off/1.5 defaults).
+    clearcoat: isNaN(cc) ? 0 : cc,
+    clearcoatRoughness: isNaN(ccr) ? 0 : ccr,
+    transmission: isNaN(tr) ? 0 : tr,
+    ior: isNaN(ir) ? 1.5 : ir,
+    thickness: isNaN(th) ? 0 : th,
   };
 }
 

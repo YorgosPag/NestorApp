@@ -14,7 +14,7 @@
  */
 
 import type { TFunction } from 'i18next';
-import type { BimMaterial, BimMaterialCategory } from '../../bim/types/bim-material-types';
+import type { BimMaterial, BimMaterialAppearance, BimMaterialCategory } from '../../bim/types/bim-material-types';
 import { constructionMaterialLabelKey } from '../../bim/materials/construction-materials';
 import { listWallCoveringMaterials } from '../../bim/wall-coverings/wall-covering-material-catalog';
 
@@ -45,6 +45,8 @@ export interface LibraryMaterialSwatchDescriptor {
   readonly category: BimMaterialCategory;
   readonly thumbnailUrl: string | null;
   readonly albedoUrl: string | null;
+  /** ADR-687 Φ6 — per-material appearance → rendered sphere thumbnail in the swatch. */
+  readonly appearance: BimMaterialAppearance | null;
 }
 
 /**
@@ -62,6 +64,7 @@ export function buildLibraryMaterialSwatches(
     category: m.category,
     thumbnailUrl: m.thumbnailUrl,
     albedoUrl: m.pbrTextures?.albedoUrl ?? null,
+    appearance: m.appearance,
   }));
 }
 
@@ -74,6 +77,8 @@ export interface SwatchTextureRef {
   readonly category?: BimMaterialCategory;
   readonly thumbnailUrl?: string | null;
   readonly albedoUrl?: string | null;
+  /** ADR-687 Φ6 — per-material appearance → rendered sphere thumbnail (user-library swatches). */
+  readonly appearance?: BimMaterialAppearance | null;
 }
 
 /**
@@ -119,7 +124,8 @@ export function buildBodySwatches(library: readonly BimMaterial[], t: TFunction)
     id: d.id,
     label: d.label,
     draggable: true,
-    swatch: { category: d.category, thumbnailUrl: d.thumbnailUrl, albedoUrl: d.albedoUrl },
+    // ADR-687 Φ7 — pass the `bmat_*` id so the sphere thumbnail loads the material's own PBR texture set.
+    swatch: { materialId: d.id, category: d.category, thumbnailUrl: d.thumbnailUrl, albedoUrl: d.albedoUrl, appearance: d.appearance },
   }));
   const flatPaints: SwatchItem[] = listWallCoveringMaterials().map((m) => ({
     id: m.id,

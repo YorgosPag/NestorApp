@@ -207,9 +207,12 @@ function MaterialCard({ material, onEdit, onDelete, t, colors }: MaterialCardPro
     >
       <header className="flex items-center gap-1.5">
         <MaterialSwatch
+          sphere
+          materialId={material.id}
           category={material.category}
           thumbnailUrl={material.thumbnailUrl}
           albedoUrl={material.pbrTextures?.albedoUrl}
+          appearance={material.appearance}
         />
         <span className={`text-xs font-medium truncate flex-1 ${colors.text.primary}`}>{material.nameEl}</span>
         <span className={`text-[10px] px-1.5 py-0.5 rounded-full shrink-0 ${scopeBadgeClass(material.scope, colors)}`}>

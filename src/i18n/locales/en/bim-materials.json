@@ -68,7 +68,17 @@
     "emissive": "Self-illumination",
     "emissiveHint": "0 = off · lights/LEDs/screens",
     "opacity": "Opacity",
-    "opacityHint": "1 = opaque · <1 = transparent (glass/water)"
+    "opacityHint": "1 = opaque · <1 = transparent (glass/water)",
+    "clearcoat": "Clearcoat",
+    "clearcoatHint": "0 = none · lacquer/car-paint (glossy layer)",
+    "clearcoatRoughness": "Clearcoat roughness",
+    "clearcoatRoughnessHint": "0 = mirror · 1 = matte clearcoat",
+    "transmission": "Transmission (glass)",
+    "transmissionHint": "0 = opaque · 1 = real glass with refraction",
+    "ior": "Index of refraction",
+    "iorHint": "glass 1.5 · water 1.33 · diamond 2.42",
+    "thickness": "Volume thickness",
+    "thicknessHint": "0 = thin · higher = deeper glass tint"
   },
   "validation": {
     "nameRequired": "Both Greek and English names are required.",

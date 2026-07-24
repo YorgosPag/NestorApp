@@ -10,7 +10,7 @@
  * @see ./MaterialEditorDialog.tsx — the container
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Select,
   SelectContent,
@@ -18,13 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Slider } from '@/components/ui/slider';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { MaterialSwatch } from '../../components/shared/MaterialSwatch';
-import { EnterpriseColorPicker } from '../../color/EnterpriseColorPicker';
-import { EnterpriseColorDialog } from '../../color/EnterpriseColorDialog';
-import { appearanceToDef } from '../../../bim/materials/material-catalog-defs';
-import { MaterialPreviewSphere } from './MaterialPreviewSphere';
 import type {
   BimMaterialCategory,
   BimMaterialFireRating,
@@ -62,6 +56,14 @@ export interface FormState {
   emissiveIntensity: string;
   emissiveCustom: boolean;
   opacity: string;
+  // ADR-687 Φ5 — physical (MeshPhysicalMaterial) props. `clearcoat`/`clearcoatRoughness`/
+  // `transmission` are '0'..'1'; `ior` is '1'..'2.333'; `thickness` is '0'..'5' (all strings,
+  // form convention). Off by default → buildMat stays MeshStandardMaterial.
+  clearcoat: string;
+  clearcoatRoughness: string;
+  transmission: string;
+  ior: string;
+  thickness: string;
   // ADR-413 §2D Phase 3 — user-uploaded 3D PBR texture maps + physical tile size.
   albedoUrl: string;
   normalUrl: string;
@@ -150,176 +152,6 @@ export function RequiredSection({
             </SelectContent>
           </Select>
         </label>
-      )}
-    </section>
-  );
-}
-
-// ─── Appearance (ADR-687 Φ1 — C4D «Εμφάνιση», 2 ξεχωριστές στήλες: σφαίρα + χρώμα) ──
-
-interface AppearanceSectionProps {
-  form: FormState;
-  setField: <K extends keyof FormState>(key: K, value: FormState[K]) => void;
-  labelClass: string;
-  colors: ReturnType<typeof useSemanticColors>;
-  t: (k: string) => string;
-}
-
-/**
- * SSoT 0..1 PBR slider (label + live value + hint) — ONE markup for μεταλλικότητα, τραχύτητα,
- * αδιαφάνεια, αυτοφωτισμός (ADR-687 Φ1/Φ4), so the four near-identical rows never diverge
- * (N.18 anti-clone). `display` is the caller-formatted numeric readout (NaN-guarded).
- */
-function PbrSlider({
-  label, hint, value, display, labelClass, mutedClass, onChange,
-}: {
-  label: string;
-  hint: string;
-  value: string;
-  display: string;
-  labelClass: string;
-  mutedClass: string;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <label className="flex flex-col gap-0.5">
-      <span className={`${labelClass} flex justify-between`}>
-        <span>{label}</span>
-        <span className={mutedClass}>{display}</span>
-      </span>
-      <Slider
-        min={0}
-        max={1}
-        step={0.01}
-        value={[isNaN(parseFloat(value)) ? 0 : parseFloat(value)]}
-        onValueChange={([next]) => onChange(String(next))}
-        thumbAriaLabel={label}
-        className="w-full"
-      />
-      <span className={`text-[10px] ${mutedClass}`}>{hint}</span>
-    </label>
-  );
-}
-
-/** NaN-guarded '0.00'..'1.00' readout for a slider's numeric value. */
-function sliderDisplay(value: number, fallback: number): string {
-  return (isNaN(value) ? fallback : value).toFixed(2);
-}
-
-/**
- * Στήλη «Σφαίρα»: real 3D preview (το ΑΚΡΙΒΕΣ `MeshStandardMaterial` που θα βαφτεί σε όψη) + οι
- * PBR sliders (μεταλλικότητα/τραχύτητα + ADR-687 Φ4 αδιαφάνεια/αυτοφωτισμός). `def` memoised → η
- * σφαίρα ξαναχτίζεται μόνο σε αλλαγή εμφάνισης. Ζωντανή στην αλλαγή χρώματος/emissive από τη
- * διπλανή στήλη (κοινό `form.*`).
- */
-export function AppearancePreviewSection({ form, setField, labelClass, colors, t }: AppearanceSectionProps) {
-  const metalness = Number(form.metalness);
-  const roughness = Number(form.roughness);
-  const opacity = Number(form.opacity);
-  const emissiveIntensity = Number(form.emissiveIntensity);
-  const def = useMemo(
-    () =>
-      appearanceToDef({
-        baseColorHex: form.baseColorHex,
-        metalness: isNaN(metalness) ? 0 : metalness,
-        roughness: isNaN(roughness) ? 0.5 : roughness,
-        emissiveHex: form.emissiveHex,
-        emissiveIntensity: isNaN(emissiveIntensity) ? 0 : emissiveIntensity,
-        opacity: isNaN(opacity) ? 1 : opacity,
-      }),
-    [form.baseColorHex, metalness, roughness, form.emissiveHex, emissiveIntensity, opacity],
-  );
-  const muted = colors.text.muted;
-
-  return (
-    <section className="flex flex-col gap-3">
-      <span className={labelClass}>{t('appearance.label')}</span>
-      {/* The «ριγωτό» diagonal-stripe backdrop is rendered IN-SCENE by the sphere renderer
-          (preview-backdrop-texture.ts), so the container itself just needs a neutral fill. */}
-      <MaterialPreviewSphere
-        def={def}
-        ariaLabel={t('appearance.previewAlt')}
-        className="aspect-square w-full overflow-hidden rounded border border-border bg-[hsl(var(--bg-canvas,0_0%_10%))]"
-      />
-      <PbrSlider
-        label={t('appearance.metalness')} hint={t('appearance.metalnessHint')}
-        value={form.metalness} display={sliderDisplay(metalness, 0)}
-        labelClass={labelClass} mutedClass={muted} onChange={(v) => setField('metalness', v)}
-      />
-      <PbrSlider
-        label={t('appearance.roughness')} hint={t('appearance.roughnessHint')}
-        value={form.roughness} display={sliderDisplay(roughness, 0.5)}
-        labelClass={labelClass} mutedClass={muted} onChange={(v) => setField('roughness', v)}
-      />
-      <PbrSlider
-        label={t('appearance.opacity')} hint={t('appearance.opacityHint')}
-        value={form.opacity} display={sliderDisplay(opacity, 1)}
-        labelClass={labelClass} mutedClass={muted} onChange={(v) => setField('opacity', v)}
-      />
-      <PbrSlider
-        label={t('appearance.emissive')} hint={t('appearance.emissiveHint')}
-        value={form.emissiveIntensity} display={sliderDisplay(emissiveIntensity, 0)}
-        labelClass={labelClass} mutedClass={muted} onChange={(v) => setField('emissiveIntensity', v)}
-      />
-    </section>
-  );
-}
-
-/**
- * Στήλη «Χρώμα»: ο ΚΑΘΕΤΟΣ `EnterpriseColorPicker` (area + sliders + hex + παλέτες, ~260px) ώστε να
- * κάθεται άνετα σε ΜΙΑ στήλη του 4-column grid — ο οριζόντιος θα χρειαζόταν δύο.
- */
-export function AppearanceColorSection({
-  form, setField, labelClass, t,
-}: Omit<AppearanceSectionProps, 'colors'>) {
-  const [emissiveOpen, setEmissiveOpen] = useState(false);
-  // Base colour change: while the emissive colour hasn't been customised, keep it in sync with the
-  // base so «Αυτοφωτισμός ↑» always glows in the material's own colour (the intuitive default).
-  const setBaseColor = (hex: string) => {
-    setField('baseColorHex', hex);
-    if (!form.emissiveCustom) setField('emissiveHex', hex);
-  };
-  // Emissive colour change: freeze it (stop tracking the base) so a deliberate glow colour sticks.
-  const setEmissiveColor = (hex: string) => {
-    setField('emissiveHex', hex);
-    setField('emissiveCustom', true);
-  };
-  return (
-    <section className="flex flex-col gap-2">
-      <span className={labelClass}>{t('appearance.color')}</span>
-      <EnterpriseColorPicker
-        value={form.baseColorHex}
-        onChange={setBaseColor}
-        alpha={false}
-        showContrast={false}
-        variant="inline"
-      />
-      {/* ADR-687 Φ4 — emissive colour: a compact swatch that opens the SHARED
-          `EnterpriseColorDialog` (no second inline picker → no layout blow-out, SSoT). */}
-      <span className={labelClass}>{t('appearance.emissiveColor')}</span>
-      <button
-        type="button"
-        onClick={() => setEmissiveOpen(true)}
-        className="flex items-center gap-2 rounded border border-border px-2 py-1 text-left hover:bg-muted/40"
-      >
-        {/* Data-driven colour chip — accepted inline-style exception (CLAUDE.md N.3, cf. MaterialSwatch). */}
-        <span
-          aria-hidden="true"
-          className="inline-block h-5 w-5 shrink-0 rounded-sm border border-black/20"
-          style={{ backgroundColor: form.emissiveHex }}
-        />
-        <span className="text-xs">{form.emissiveHex}</span>
-      </button>
-      {emissiveOpen && (
-        <EnterpriseColorDialog
-          isOpen={emissiveOpen}
-          onClose={() => setEmissiveOpen(false)}
-          title={t('appearance.emissiveColor')}
-          value={form.emissiveHex}
-          onChange={setEmissiveColor}
-          alpha={false}
-          showContrast={false}
-        />
       )}
     </section>
   );

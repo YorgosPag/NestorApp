@@ -235,20 +235,22 @@ export function PolygonMaterialPanel() {
                   className={`flex w-14 flex-col items-center gap-1 rounded border border-white/15 p-1 text-[9px] transition-colors hover:bg-white/10 ${m.draggable ? 'cursor-grab active:cursor-grabbing' : ''}`}
                 >
                   {m.swatch ? (
-                    // ADR-679 Φ2b — textured catalog/library swatch: real photo/albedo image.
+                    // ADR-687 Φ7 — textured catalog/library swatch: real 3D sphere WITH its texture.
                     <MaterialSwatch
+                      sphere
                       materialId={m.swatch.materialId}
                       category={m.swatch.category}
                       thumbnailUrl={m.swatch.thumbnailUrl}
                       albedoUrl={m.swatch.albedoUrl}
+                      appearance={m.swatch.appearance}
                       className="h-9 w-9 shrink-0 rounded-sm border border-white/30"
                     />
                   ) : (
-                    // Data-driven catalog colour → inline style (accepted N.3 exception, mirror MaterialSwatch).
-                    <span
+                    // ADR-687 Φ7 — legacy flat paint → coloured 3D sphere (uniform C4D look).
+                    <MaterialSwatch
+                      sphere
+                      color={m.color}
                       className="h-9 w-9 shrink-0 rounded-sm border border-white/30"
-                      style={{ backgroundColor: m.color }}
-                      aria-hidden="true"
                     />
                   )}
                   <span className="w-full truncate text-center">{m.label}</span>

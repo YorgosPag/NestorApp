@@ -26,7 +26,8 @@ import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store
 // N.7.1 size split — coplanar-face depth-bias SSoT (ADR-375 offsets + ADR-366 §B.5 per-category priority).
 import { withDepthPriority } from './material-depth-priority';
 // N.7.1 size split (ADR-665) — the sole PBR face factory, shared with `terrain-materials-3d`.
-import { buildMat } from './pbr-material-builder';
+// applyTextureSet — SSoT texture-apply, shared with the ADR-687 Φ7 offscreen thumbnail sphere.
+import { buildMat, applyTextureSet } from './pbr-material-builder';
 // N.18 SSoT — η ΜΟΝΑΔΙΚΗ «κάνε double-sided χωρίς να μολύνεις την πηγή» (WeakMap-cached).
 import { ensureDoubleSided } from './ensure-double-sided';
 // N.7.1 size split (ADR-665) — ADR-446 Visual Style FACES axis.
@@ -65,24 +66,8 @@ function getFlatMaterial(key: string): THREE.MeshStandardMaterial {
   return mat;
 }
 
-/** Attach a loaded PBR texture set onto a flat material def → textured material. */
-function applyTextureSet(def: PbrMaterialDef, set: LoadedTextureSet): THREE.MeshStandardMaterial {
-  const mat = buildMat(def);
-  mat.map = set.map;
-  // PBR contract: when an albedo map is present the base color must be white so
-  // the texture shows its natural colour (no double-tinting). The def.color is the
-  // flat-mode colour; with a texture it would multiply and incorrectly darken.
-  mat.color.set(0xffffff);
-  if (set.normalMap) mat.normalMap = set.normalMap;
-  if (set.roughnessMap) mat.roughnessMap = set.roughnessMap;
-  // aoMap needs uv2 — the geometry layer ensures one; three ignores it gracefully
-  // when absent (ADR-413 contract).
-  // aoMapIntensity < 1 because our gradient env has no bounce light; full
-  // intensity (1.0) creates pitch-black crevices without a real HDRI fill.
-  if (set.aoMap) { mat.aoMap = set.aoMap; mat.aoMapIntensity = 0.5; }
-  mat.needsUpdate = true;
-  return mat;
-}
+// applyTextureSet moved to `pbr-material-builder.ts` (ADR-687 Φ7 SSoT) — shared with the
+// offscreen material-thumbnail sphere. Imported above; behaviour identical.
 
 /** Build a textured clone of a key's flat material, attaching the loaded PBR maps. */
 function buildTexturedMaterial(key: string, set: LoadedTextureSet): THREE.MeshStandardMaterial {

@@ -156,6 +156,52 @@ describe('ADR-687 Φ4 — emissive + opacity override', () => {
   });
 });
 
+describe('ADR-687 Φ5 — clearcoat + transmission override', () => {
+  function matAp(id: string, ap: Record<string, unknown>): BimMaterial {
+    return { id, category: 'concrete', pbrTextures: null, appearance: ap } as unknown as BimMaterial;
+  }
+
+  it('maps clearcoat + transmission + ior + thickness into the def', () => {
+    setUserMaterials([matAp('bmat_p', {
+      baseColorHex: '#88ccff', metalness: 0, roughness: 0.1,
+      clearcoat: 1, clearcoatRoughness: 0.2, transmission: 0.9, ior: 1.5, thickness: 2,
+    })]);
+    const def = getUserMaterialAppearance('bmat_p')?.def;
+    expect(def?.clearcoat).toBeCloseTo(1);
+    expect(def?.clearcoatRoughness).toBeCloseTo(0.2);
+    expect(def?.transmission).toBeCloseTo(0.9);
+    expect(def?.ior).toBeCloseTo(1.5);
+    expect(def?.thickness).toBeCloseTo(2);
+  });
+
+  it('defaults physical props to off / ior 1.5 when absent (back-compat with Φ1/Φ4 docs)', () => {
+    setUserMaterials([matAp('bmat_p0', { baseColorHex: '#ffffff', metalness: 0, roughness: 0.5 })]);
+    const def = getUserMaterialAppearance('bmat_p0')?.def;
+    expect(def?.clearcoat).toBe(0);
+    expect(def?.clearcoatRoughness).toBe(0);
+    expect(def?.transmission).toBe(0);
+    expect(def?.ior).toBe(1.5);
+    expect(def?.thickness).toBe(0);
+  });
+
+  it('clamps ior into [1, 2.333] and thickness to ≥ 0', () => {
+    setUserMaterials([matAp('bmat_pc', {
+      baseColorHex: '#ffffff', metalness: 0, roughness: 0.5, ior: 9, thickness: -4,
+    })]);
+    const def = getUserMaterialAppearance('bmat_pc')?.def;
+    expect(def?.ior).toBeCloseTo(2.333);
+    expect(def?.thickness).toBe(0);
+  });
+
+  it('re-bumps the version when only transmission changes', () => {
+    setUserMaterials([matAp('bmat_p2', { baseColorHex: '#88ccff', metalness: 0, roughness: 0.1, transmission: 0 })]);
+    const v1 = getUserMaterialSetVersion('bmat_p2');
+    setUserMaterials([matAp('bmat_p2', { baseColorHex: '#88ccff', metalness: 0, roughness: 0.1, transmission: 1 })]);
+    expect(getUserMaterialSetVersion('bmat_p2')).toBe(v1 + 1);
+    expect(getUserMaterialAppearance('bmat_p2')?.def.transmission).toBeCloseTo(1);
+  });
+});
+
 describe('change-versioning + resync bump', () => {
   it('bumps version + resync on change, but NOT on an unchanged snapshot', () => {
     const v0 = useBim3DEntitiesStore.getState().textureAssetVersion;

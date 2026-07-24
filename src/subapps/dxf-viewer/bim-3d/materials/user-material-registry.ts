@@ -72,11 +72,12 @@ function texturesSignature(t: PbrMaterialTextures | null): string {
   return [t.albedoUrl, t.normalUrl, t.roughnessUrl, t.aoUrl, t.tileSizeM].join('|');
 }
 
-/** ADR-687 Φ1/Φ4 — appearance fingerprint: any change re-bumps the material version. */
+/** ADR-687 Φ1/Φ4/Φ5 — appearance fingerprint: any change re-bumps the material version. */
 function appearanceSignature(material: BimMaterial): string {
   const a = material.appearance;
   return a
-    ? `${a.baseColorHex}|${a.metalness}|${a.roughness}|${a.emissiveHex ?? ''}|${a.emissiveIntensity ?? 0}|${a.opacity ?? 1}`
+    ? `${a.baseColorHex}|${a.metalness}|${a.roughness}|${a.emissiveHex ?? ''}|${a.emissiveIntensity ?? 0}|${a.opacity ?? 1}` +
+        `|${a.clearcoat ?? 0}|${a.clearcoatRoughness ?? 0}|${a.transmission ?? 0}|${a.ior ?? 1.5}|${a.thickness ?? 0}`
     : '∅';
 }
 
