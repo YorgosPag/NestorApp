@@ -17,16 +17,18 @@
  * **Χρωματικός χώρος:** το glTF `baseColorFactor` είναι **linear**. Το `colorHex` που βλέπει ο
  * χρήστης πρέπει να είναι **sRGB** (ίδια σύμβαση με το `collectGltfMaterials` που καλεί
  * `THREE.Color.getHexString()` — αυτό κάνει ακριβώς linear-working-space → sRGB κάτω από την
- * κουκούλα). Εδώ εφαρμόζεται η ίδια μετάβαση με το χέρι (χωρίς `THREE.Color`) και μετά
- * επαναχρησιμοποιείται το υπάρχον SSoT {@link rgbUnitToHex} για το τελικό hex string (N.18: μηδέν
- * δεύτερη υλοποίηση μετατροπής RGB→hex).
+ * κουκούλα). Εδώ η ίδια μετάβαση γίνεται **χωρίς** `THREE.Color`, μέσω των δύο υπαρχόντων SSoT:
+ * {@link linearToSrgbUnit} για τον χρωματικό χώρο (ADR-694 Φ10) και {@link rgbUnitToHex} για το
+ * τελικό hex string (N.18: μηδέν δεύτερη υλοποίηση, ούτε της μεταφοράς ούτε του RGB→hex).
  *
  * @see ./collada-to-glb — ο άλλος καταναλωτής container-επιπέδου (ίδιο πνεύμα: pure, καμία THREE εξάρτηση στο core)
+ * @see ../../config/color-math — SSoT των συναρτήσεων μεταφοράς sRGB↔linear (IEC 61966-2-1)
  * @see ../mesh3d-material-import/rgb-unit-hex — SSoT μετατροπής RGB μονάδας → hex
  * @see ./gltf-scene-parse — `collectGltfMaterials` (το ανάλογο μέσω THREE, για render-time χρώματα)
  * @see docs/centralized-systems/reference/adrs/ADR-691-imported-mesh-embedded-material-extraction.md §4.1, §5
  */
 
+import { linearToSrgbUnit } from '../../config/color-math';
 import { rgbUnitToHex } from '../mesh3d-material-import/rgb-unit-hex';
 
 /** Μια εικόνα ενσωματωμένη σε glTF/GLB — αυθεντικά bytes + mime, όπως ακριβώς είναι στον container. */
@@ -263,15 +265,19 @@ function buildImagesTable(doc: GltfJsonDocument, bin: Uint8Array | null): Readon
 // Υλικά: linear→sRGB χρώμα + PBR factors + albedo texture
 // ============================================================================
 
-/** Standard linear→sRGB transfer function, ανά κανάλι (0..1 → 0..1). */
-function linearToSrgbUnit(component: number): number {
-  const c = Math.min(1, Math.max(0, component));
-  return c <= 0.0031308 ? c * 12.92 : 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
-}
-
-/** `baseColorFactor` (linear, glTF default `[1,1,1,1]`) → `#rrggbb` sRGB, μέσω του SSoT {@link rgbUnitToHex}. */
+/**
+ * `baseColorFactor` (linear, glTF default `[1,1,1,1]`) → `#rrggbb` sRGB, μέσω του SSoT της
+ * μεταφοράς ({@link linearToSrgbUnit}, ADR-694 Φ10) και μετά του SSoT του hex ({@link rgbUnitToHex}).
+ *
+ * **Ο φρουρός πεπερασμένου είναι σκόπιμος:** το `baseColorFactor` έρχεται από **ξένο JSON** — ο
+ * τύπος `number[]` είναι υπόσχεση του parser, όχι εγγύηση του αρχείου. Το SSoT της μεταφοράς
+ * χαρτογραφεί `NaN → 0` (σωστό για τον δικό του ρόλο: ποτέ `NaN` στον χρωματικό αγωγό), που εδώ
+ * όμως θα σήμαινε σιωπηλά **μαύρο** υλικό. Ο έλεγχος πριν τη μεταφορά διατηρεί το ιστορικό
+ * `#ffffff` fallback: «δεν ξέρω το χρώμα» ≠ «το χρώμα είναι μαύρο».
+ */
 function materialColorHex(baseColorFactor: readonly number[] | undefined): string {
   const [r, g, b] = baseColorFactor ?? [1, 1, 1, 1];
+  if (![r, g, b].every((n) => Number.isFinite(n))) return '#ffffff';
   return rgbUnitToHex([r, g, b].map(linearToSrgbUnit)) ?? '#ffffff';
 }
 

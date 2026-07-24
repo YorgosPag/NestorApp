@@ -6,7 +6,11 @@
  * (Phase 8F) share identical visual constants.
  *
  * Pure canvas helpers — no React, no stores (ADR-040 compliant).
+ *
+ * @see ../../config/color-math — colour parse + WCAG luminance SSoT (ADR-694 Φ10)
  */
+
+import { parseColor, srgbRelativeLuminance } from '../../config/color-math';
 
 export const PILL_FONT = '9px sans-serif';
 /**
@@ -28,27 +32,20 @@ export const PILL_RADIUS = 3;
  * luminance of `bgColor`. Guarantees readable text regardless of user-chosen
  * pill background. Parses `rgba(...)` / `rgb(...)` / `#rrggbb` / `#rgb`.
  * Falls back to `PILL_TEXT_COLOR` (dark) when the colour cannot be parsed.
+ *
+ * ADR-694 Φ10 — both the parse and the luminance now come from the `color-math`
+ * SSoT. This file previously carried a private `parseColorRgb` (a strict subset
+ * of `parseColor`) plus its own inline sRGB linearisation; both are gone.
+ *
+ * Alpha is deliberately ignored: the pill is painted over arbitrary canvas
+ * content, so there is no known backdrop to composite against. The decision is
+ * made on the pill's own base colour — unchanged from the original behaviour.
  */
 export function contrastTextColor(bgColor: string): string {
-  const rgb = parseColorRgb(bgColor);
+  const rgb = parseColor(bgColor);
   if (!rgb) return PILL_TEXT_COLOR;
-  const lin = (c: number): number => {
-    const s = c / 255;
-    return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
-  };
-  const L = 0.2126 * lin(rgb.r) + 0.7152 * lin(rgb.g) + 0.0722 * lin(rgb.b);
   // Threshold 0.179: equal-contrast switching point between black and white text.
-  return L > 0.179 ? PILL_TEXT_COLOR : '#ffffff';
-}
-
-function parseColorRgb(color: string): { r: number; g: number; b: number } | null {
-  const rgba = color.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
-  if (rgba) return { r: +rgba[1]!, g: +rgba[2]!, b: +rgba[3]! };
-  const h6 = color.match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
-  if (h6) return { r: parseInt(h6[1]!, 16), g: parseInt(h6[2]!, 16), b: parseInt(h6[3]!, 16) };
-  const h3 = color.match(/^#([0-9a-f])([0-9a-f])([0-9a-f])$/i);
-  if (h3) return { r: parseInt(h3[1]! + h3[1]!, 16), g: parseInt(h3[2]! + h3[2]!, 16), b: parseInt(h3[3]! + h3[3]!, 16) };
-  return null;
+  return srgbRelativeLuminance(rgb) > 0.179 ? PILL_TEXT_COLOR : '#ffffff';
 }
 
 /**

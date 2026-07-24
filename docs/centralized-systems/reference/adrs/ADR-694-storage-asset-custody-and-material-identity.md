@@ -292,6 +292,87 @@ block-library/blklib_13697df4-4b38-4e8b-8dc4-8a44f9bb7814.json
 **ΥΠΟΧΡΕΩΤΙΚΗ ΣΕΙΡΑ:** πρώτα deploy του Α1, μετά restore. Αντίστροφα, ο GC θα τα ξανασβήσει.
 Τα υπάρχοντα download tokens παραμένουν έγκυρα → τα swatches ζωντανεύουν χωρίς re-import.
 
+### Ζ — Φ10: ΕΝΟΠΟΙΗΣΗ ΤΗΣ ΣΥΝΑΡΤΗΣΗΣ ΜΕΤΑΦΟΡΑΣ sRGB
+
+Το Γ3 δημιούργησε το `srgb-linear-unit.ts` σε **λάθος φάκελο** (`io/mesh3d-material-import/`, δίπλα
+σε έναν importer) ενώ **υπήρχε ήδη** κεντρικό `config/color-math.ts` (25 καταναλωτές) με το ίδιο
+μαθηματικό μέσα του. Δηλαδή το Γ3 **αύξησε** τη διασπορά αντί να τη μειώσει.
+
+#### Ζ0. ΔΙΟΡΘΩΣΗ ΤΟΥ GROUND TRUTH — το «δύο σωστά πρότυπα» ΔΕΝ ισχύει
+
+Η αρχική καταγραφή (handoff Φ10 §2/§3) έλεγε ότι οι δύο σταθερές που βρέθηκαν στον κώδικα
+(`0.03928` και `0.04045`) είναι **και οι δύο σωστές**, για διαφορετικό πρότυπο — `0.03928` «ό,τι
+γράφει ρητά το WCAG 2.x», `0.04045` το IEC 61966-2-1. **Αυτό είναι λάθος, και ήταν λάθος από το
+2021.** Από την ίδια την κανονιστική σελίδα του W3C:
+
+> «Before May 2021 the value of **0.04045** in the definition was different (0.03928). It was taken
+> from an older version of the specification and has been updated.»
+> — <https://www.w3.org/WAI/WCAG22/Understanding/relative-luminance.html>
+
+Άρα δεν υπάρχουν δύο πρότυπα: υπάρχει **ένα** (IEC 61966-2-1, `0.04045`) και ένα **τυπογραφικό
+λάθος που το W3C απέσυρε**. Το `0.03928` στον κώδικά μας ήταν απλώς μπαγιάτικο.
+
+*(Μοτίβο ήδη καταγεγραμμένο στο CLAUDE.md N.12: αριθμός αντιγράφηκε σε handoff → σε ανάλυση →
+σε συμπέρασμα, χωρίς κανείς να ανοίξει την πηγή. Άνοιξε την πηγή.)*
+
+#### Ζ1. Η απόφαση — ΕΝΑ primitive, ΜΙΑ σταθερά, ΔΥΟ στρώματα
+
+Ο πυρήνας του αρχικού σκεπτικού **στέκει**: WCAG contrast και χρωματομετρία είναι διαφορετικά
+*συμβόλαια* (αν αύριο περάσουμε σε APCA/WCAG 3, το πρώτο αλλάζει ριζικά, το δεύτερο ποτέ). Αυτό
+όμως επιβάλλει **χωριστές συναρτήσεις**, όχι χωριστό αντίγραφο των ίδιων μαθηματικών:
+
+- `srgbToLinearUnit` / `linearToSrgbUnit` = **χρωματομετρία** (EOTF/OETF, IEC 61966-2-1)
+- `srgbRelativeLuminance` / `contrastRatio` / `contrastRatioRgb` = **WCAG**, χτισμένα **πάνω** στο EOTF
+
+Ίδια δομή με τους μεγάλους: το **colorjs.io** (των editors του CSS Color spec) και το **three.js**
+έχουν **ένα** ζεύγος μεταφοράς και παράγουν το WCAG luminance από αυτό — δεν κρατούν δεύτερο
+αντίγραφο με το αποσυρμένο `0.03928`.
+
+#### Ζ2. Η αλλαγή είναι ΜΕΤΡΗΜΕΝΑ μηδενικού ρίσκου
+
+Για **κάθε** ακέραιο κανάλι `0..255` οι δύο σταθερές δίνουν **bit-for-bit ταυτόσημο** αποτέλεσμα:
+
+```
+bytes που διαφέρουν (0..255):  []      ← ΚΑΝΕΝΑ
+max |ΔL| ανά κανάλι:           0.000
+```
+
+Ο λόγος είναι αριθμητικός: byte 10 → `0.039216` (**κάτω** κι από τα δύο κατώφλια)· byte 11 →
+`0.043137` (**πάνω** κι από τα δύο). Κανένα byte δεν πέφτει στη ζώνη διαφωνίας `(0.03928, 0.04045]`,
+άρα κανένα δεν αλλάζει κλάδο. Ισχύει και για τους 25 καταναλωτές του `color-math`.
+
+Αυτό **δεν** μένει σχόλιο: το `config/__tests__/color-math-srgb-transfer.test.ts` κρατά τη **παλιά**
+υλοποίηση ως μάρτυρα και απαιτεί ταυτότητα (`toBe`, όχι `toBeCloseTo`) σε κάθε εκτέλεση.
+
+#### Ζ3. Τι έγινε στον κώδικα
+
+| # | Αρχείο | Αλλαγή |
+|---|---|---|
+| 1 | `config/color-math.ts` | +`srgbToLinearUnit`/`linearToSrgbUnit` (μεταφορά) · `linearizeChannel` **διαγράφηκε** — το `srgbRelativeLuminance` καλεί πλέον το EOTF · +`contrastRatioRgb` · **σχόλιο-φρουρός** με το W3C erratum |
+| 2 | `io/mesh3d-material-import/srgb-linear-unit.ts` | **ΔΙΑΓΡΑΦΗΚΕ** |
+| 3 | `io/mesh3d-material-import/texture-average-color.ts` | import → `config/color-math` |
+| 4 | `io/mesh3d-roundtrip/glb-embedded-materials.ts` | ιδιωτικό `linearToSrgbUnit` **διαγράφηκε** · +φρουρός πεπερασμένου ώστε το ιστορικό `#ffffff` fallback να μη γίνει σιωπηλά **μαύρο** (το SSoT χαρτογραφεί `NaN→0`) |
+| 5 | `rendering/utils/canvas-pill.ts` | inline linearization **και** ιδιωτικός `parseColorRgb` **διαγράφηκαν** → `parseColor` + `srgbRelativeLuminance`. Διορθώνεται και η ασυνέπεια της σταθεράς |
+| 6 | `ui/color/hooks/useContrast.ts` | `getRelativeLuminance` **διαγράφηκε** → `contrastRatioRgb`. Το δικό του συμβόλαιο σφάλματος (throw → `ratio: 0`) **διατηρήθηκε ακέραιο** — γι' αυτό χρειάστηκε η `Rgb` παραλλαγή, το `contrastRatio(hex)` επιστρέφει `1` |
+
+**6ο εύρημα (επαληθευμένο):** ο `parseColorRgb` του `canvas-pill` ήταν **γνήσιο υποσύνολο** του
+`parseColor` του `color-math` → διαγράφηκε.
+
+**7ο εύρημα (κατά τη διόρθωση, N.18):** το `jscpd:diff` εντόπισε **προϋπάρχον** structural clone
+μέσα στο `useContrast` — ο κορμός του hook ήταν αντίγραφο του `calculateContrast`. Ενοποιήθηκε: το
+hook είναι πλέον **memoisation** του `calculateContrast`, όχι δεύτερη υλοποίησή του.
+
+**Καθαρό αποτέλεσμα:** 5 υλοποιήσεις μεταφοράς sRGB → **1**· 3 υλοποιήσεις WCAG luminance → **1**·
+2 colour parsers → **1**.
+
+#### Ζ4. Εντοπίστηκαν και ΔΕΝ πειράχτηκαν (εκτός εύρους Φ10)
+
+- `subapps/geo-canvas/config/color-config.ts` `getContrastTextColor` — σημασιολογικός αδελφός του
+  `contrastTextColor`, με BT.601 αντί WCAG. **Άλλο subapp** → η ενοποίηση εισάγει cross-subapp
+  coupling· αρχιτεκτονική απόφαση, όχι μηχανική.
+- `canvas-v2/webgl-lines/webgl-line-buffer-builder.ts` `hexToLinearRgb` — **δεν** είναι διπλότυπο:
+  delegateάρει στο `THREE.Color`/ColorManagement, που είναι ο σωστός ιδιοκτήτης στο GPU μονοπάτι.
+
 ---
 
 ## 5. ΤΙ ΡΗΤΑ ΔΕΝ ΑΛΛΑΖΕΙ
@@ -308,5 +389,7 @@ block-library/blklib_13697df4-4b38-4e8b-8dc4-8a44f9bb7814.json
 
 | Version | Date | Author | Changes |
 |---|---|---|---|
+| v1.2 | 2026-07-25 | Claude (Opus 5) | **Φ10 — ΕΝΟΠΟΙΗΣΗ ΤΗΣ ΣΥΝΑΡΤΗΣΗΣ ΜΕΤΑΦΟΡΑΣ sRGB (νέα ενότητα Ζ).** **Ζ0 — διόρθωση ground truth:** το καταγεγραμμένο «δύο σταθερές, και οι δύο σωστές για διαφορετικό πρότυπο» **ΔΕΝ ισχύει**· το W3C **απέσυρε** το `0.03928` τον **Μάιο 2021** («It was taken from an older version of the specification and has been updated») — υπάρχει **ΕΝΑ** πρότυπο (IEC 61966-2-1, `0.04045`) και ένα διορθωμένο τυπογραφικό λάθος. **Ζ1:** ΕΝΑ primitive, ΜΙΑ σταθερά, ΔΥΟ στρώματα — το WCAG (`srgbRelativeLuminance`/`contrastRatio`) χτίζεται **πάνω** στο EOTF, όπως colorjs.io + three.js· οι συναρτήσεις μένουν χωριστές ώστε μια μελλοντική μετάβαση σε APCA να μην αγγίζει τη χρωματομετρία. **Ζ2 — μετρημένο μηδενικό ρίσκο:** για **κάθε** byte `0..255` οι δύο σταθερές είναι **bit-for-bit ταυτόσημες** (κανένα byte δεν πέφτει στη ζώνη `(0.03928, 0.04045]`: byte 10 κάτω κι από τα δύο, byte 11 πάνω κι από τα δύο) — κλειδωμένο εκτελεστικά με τη **παλιά** υλοποίηση ως μάρτυρα σε `config/__tests__/color-math-srgb-transfer.test.ts`. **Ζ3:** 5 υλοποιήσεις μεταφοράς → **1**, 3 υλοποιήσεις WCAG luminance → **1**, 2 parsers → **1**· `srgb-linear-unit.ts` **διαγράφηκε** (τα anchors του μετακόμισαν, δεν χάθηκαν)· διατηρήθηκαν ακέραια δύο διακριτά συμβόλαια σφάλματος (`#ffffff` fallback στο glTF μέσω φρουρού πεπερασμένου· `ratio: 0` στο `useContrast` μέσω `contrastRatioRgb`). **6ο εύρημα επαληθευμένο** (`parseColorRgb` = υποσύνολο του `parseColor` → διαγράφηκε). **7ο εύρημα** από το `jscpd:diff`: **προϋπάρχον** clone μέσα στο `useContrast` (ο κορμός του hook = αντίγραφο του `calculateContrast`) → το hook είναι πλέον **memoisation**, όχι δίδυμο. **Επαλήθευση: 1642 tests / 147 suites πράσινα** στο εύρος `config`+`ui/color`+`rendering`+`io`· **mutation-verified** (`0.04045`→`0.05045` → **2 κόκκινα**, revert → πράσινο)· `jscpd:diff` **καθαρό**. **ΟΧΙ tsc (N.17).** ⚠️ **Προϋπάρχον κόκκινο, ΑΣΧΕΤΟ με το Φ10:** `config/__tests__/bim-object-styles.test.ts` — `BIM_CATEGORY_LINE_COLORS` έχει 20 εγγραφές / 19 μοναδικά χρώματα, επειδή `electricalPanel` και `thermalSpace` δείχνουν **και τα δύο** στο `MEP_TEAL_COLOR`. Το αρχείο είναι αμετάβλητο στο working tree (HEAD, commit `887c1588` 2026-07-22, ADR-684) → το κόκκινο προϋπάρχει· χρειάζεται απόφαση Giorgio (είναι σκόπιμη η επαναχρήστη του analytical teal → λάθος **το test**· αλλιώς λείπει χρώμα). |
+| v1.1 | 2026-07-25 | Claude (Opus 5) | **Ε1 BACKFILL ΟΛΟΚΛΗΡΩΘΗΚΕ + deploy + επαλήθευση παραγωγής.** Deployed: `firestore:indexes` (2 νέα, `CREATING`→`READY`) και `functions:onStorageFinalize,orphanSweeper,orphanSpikeAlert` (**το `tsc` predeploy πέρασε καθαρό**). Restore 5 αντικειμένων από soft-delete (4 υφές + η γεωμετρία «Πόρτα 01»). **ΑΠΟΔΕΙΞΗ ΟΤΙ ΤΟ Α1 ΔΟΥΛΕΥΕΙ ΣΤΗΝ ΠΑΡΑΓΩΓΗ:** στις 22:15Z (πριν ολοκληρωθεί το deploy) το ΠΑΛΙΟ function κατέγραψε ακόμη 4× «Orphan file detected — Deleting»· στις 22:31Z το ΝΕΟ κατέγραψε «**Storage custody: candidate recorded (no deletion)**» με `custodyKind=orphaned` — **μηδέν διαγραφή**, όπως σχεδιάστηκε. ⚠️ **Δύο ευρήματα του backfill:** (α) το self-heal των 22:15 (Γ1/Γ2) **δούλεψε** — τα `Mat.1`/`Mat`/`Scene_Material3` απέκτησαν πραγματικά `appearance` από gamma-correct μέσο χρώμα υφής (**#94a785 πράσινο**, **#dd8b30** & **#e29032 πορτοκαλί** — ακριβώς το αρχικό παράπονο του Giorgio) **αλλά** τα νέα uploads σβήστηκαν από το παλιό function, οπότε τα `albedoUrl` έδειχναν σε **νεκρά tokens (403)**· διορθώθηκαν τα 3 `pbrTextures.albedoUrl` ώστε να δείχνουν στα restored generations — **και τα 4 URL → HTTP 200**, το `appearance` διατηρήθηκε ακέραιο. (β) Το `bmat_af231b75` (`Mat#ID12`) **δεν υπάρχει πλέον** στο Firestore (9→8 docs), οπότε το restored αρχείο του είναι **γνήσια ορφανό** — το custody το χαρακτήρισε σωστά `orphaned` και είναι ο 1ος καταχωρημένος υποψήφιος· ο sweeper (dry-run) θα το αναφέρει, όχι θα το σβήσει. **Το σύστημα απέδειξε ότι λειτουργεί ακριβώς όπως σχεδιάστηκε: ένα γνήσια ορφανό αναγνωρίστηκε, καταγράφηκε, και ΔΕΝ διαγράφηκε αυτόματα.** 🔴 Εκκρεμεί: **Φ10** (ενοποίηση sRGB transfer — 5 σημεία, βλ. HANDOFF 2026-07-25 Φ10) + commit από Giorgio. |
 | v1.0 | 2026-07-25 | Claude (Opus 5) | **ΥΛΟΠΟΙΗΣΗ Α/Β/Γ/Δ (εγκεκριμένο «προχώρα», orchestrator 3 agents).** **Α1** `orphan-cleanup.ts` → mark-only· μηδέν `delete()` στο real-time μονοπάτι· υποψήφιοι σε `storage_orphan_candidates` με σταθερό base64url doc id (idempotent). **Α2** NEW `storage-path-custody.ts` — 5 ρητοί κανόνες κηδεμονίας· το κλειδί της υφής είναι ο **φάκελος** (`materialId`), όχι το basename (`albedo`)· `unknown` → **ποτέ** διαγραφή· ο `findFileOwner` επαναχρησιμοποιείται ως **positive-only** ανιχνευτής (μηδέν διπλότυπο, N.18 — δεν έγινε dead code). **Α3** NEW `orphan-sweeper.ts` — ο ΜΟΝΟΣ destructive δρόμος, 4 φράγματα (ρητή άδεια `ORPHAN_SWEEP_ENABLED` αλλιώς **dry-run** · θετική απόδειξη ορφανότητας · ωρίμανση 7 ημερών από την ΠΡΩΤΗ παρατήρηση · **επανέλεγχος** τη στιγμή της διαγραφής) + cap 50/εκτέλεση. **Α5** +2 composite indexes (ανάσταση Layer 3). **Β1** badge «λείπει η υφή» + Radix tooltip (CHECK 3.23-safe) + a11y· διακρίνει «απέτυχε η φόρτωση» από «δεν υπήρξε ποτέ εικόνα». **Γ1** self-heal στο GLB μονοπάτι — η `foreignAndBrokenTextures` καλείται **αυτούσια** (μόνο προσαρμογή σχήματος)· `classifyMaterials` μένει sync/pure. **Γ2** NEW `embedded-appearance-backfill.ts` — γεμίζει `appearance` μόνο όταν **αποδεικνύεται** `null`, ποτέ overwrite. **Γ3** gamma-correct μέσο χρώμα + NEW `srgb-linear-unit.ts` (ακριβές IEC 61966-2-1)· δείγμα 16×16→64×64· alpha-weighted. **Δ1** NEW `resolveEntityRenderedMaterialIds` — override → αλλιώς embedded· οι 4 υπάρχουσες συναρτήσεις **αμετάβλητες**. **Επαλήθευση: 484 tests / 44 suites πράσινα**· mutation-verified (επαναφορά του θανάσιμου default → **5 κόκκινα**, revert → πράσινο)· `jscpd:diff` καθαρό σε όλα τα batches. **ΟΧΙ tsc (N.17).** Εκκρεμεί Ε1 (backfill, **μετά** το deploy) + browser verification. |
 | v0.1 | 2026-07-25 | Claude (Opus 5) | Αρχική σύνταξη. Ground truth: το `onStorageFinalize` (`orphan-cleanup.ts`) διέγραψε **61 νόμιμα αρχεία σε 4 υποσυστήματα / 13 ημέρες** — αποδεδειγμένο από Cloud Function logs + soft-delete generations + Firebase Rules API. Απορρίφθηκε τεκμηριωμένα η #1 υποψία του handoff (storage rules deploy). Εντοπίστηκε **2ο άγνωστο θύμα**: `block_library` «Πόρτα 01» με διαγραμμένη γεωμετρία. Αποφάσεις Α (fail-safe custody GC, Kubernetes `ownerReferences` μοντέλο), Β (fail-loud badge, Revit/Blender), Γ (self-heal + gamma-correct χρώμα), Δ (ταυτότητα embedded), Ε (backfill από soft-delete πριν τις 31/07). |

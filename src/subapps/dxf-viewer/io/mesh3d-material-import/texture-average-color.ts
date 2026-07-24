@@ -21,7 +21,7 @@
  * sRGB `128` δεν είναι 50% φως αλλά **~21.8%**, άρα ο μέσος όρος έβγαινε συστηματικά
  * **σκουρότερος/λασπωμένος**. Απόδειξη: μισή μαύρη / μισή λευκή υφή έδινε `#808080`, ενώ το
  * πραγματικό μέσο φως (0.5) είναι `#bcbcbc`. Η αλυσίδα τώρα είναι
- * `sRGB → linear (EOTF) → μέσος όρος → sRGB (OETF)` μέσω του SSoT {@link ./srgb-linear-unit}.
+ * `sRGB → linear (EOTF) → μέσος όρος → sRGB (OETF)` μέσω του SSoT `config/color-math`.
  *
  * ## ADR-694 Φ7 — alpha ως **βάρος**, όχι ως διακόπτης
  *
@@ -39,14 +39,14 @@
  *
  * **Μηδέν dependency (N.5):** `createImageBitmap` + `OffscreenCanvas`, native και τα δύο.
  *
- * @see ./srgb-linear-unit — οι ακριβείς sRGB ↔ linear συναρτήσεις μεταφοράς (SSoT, Φ7)
+ * @see ../../config/color-math — οι ακριβείς sRGB ↔ linear συναρτήσεις μεταφοράς (SSoT, ADR-694 Φ10)
  * @see ./import-embedded-materials — ο καταναλωτής (γράφει το αποτέλεσμα στο `appearance`)
  * @see ./texture-content-hash — ο αδελφός browser-only helper (ίδιο μοτίβο DI)
  * @see docs/centralized-systems/reference/adrs/ADR-691-imported-mesh-embedded-material-extraction.md
  */
 
 import { rgbUnitToHex } from './rgb-unit-hex';
-import { srgbToLinearUnit, linearToSrgbUnit } from './srgb-linear-unit';
+import { srgbToLinearUnit, linearToSrgbUnit } from '../../config/color-math';
 
 /**
  * Πλευρά του καμβά υποδειγματοληψίας (`SAMPLE_SIZE²` δείγματα).

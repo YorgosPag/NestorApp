@@ -23,6 +23,13 @@ import type { ContrastResult, RGBColor, TextSize } from '../types';
 import { parseHex, rgbToHex as centralizedRgbToHex } from '../utils';
 // 🏢 ADR: Centralized Clamp Function
 import { clamp255 } from '../../../rendering/entities/shared/geometry-utils';
+// 🏢 ADR-694 Φ10: WCAG luminance + contrast-ratio SSoT (`config/color-math`). This module used to
+// carry verbatim copies of both; the sRGB linearisation there is built on the single IEC 61966-2-1
+// transfer function shared with the colorimetric path. `contrastRatioRgb` (not `contrastRatio`) is
+// the right seam here: this module owns a *different* error contract — `parseHex` THROWS on invalid
+// input and the catch below reports `ratio: 0`, whereas `contrastRatio(hex, hex)` would swallow it
+// and return `1`. Same math, contract preserved.
+import { contrastRatioRgb } from '../../../config/color-math';
 
 // ===== CONSTANTS =====
 
@@ -37,38 +44,16 @@ const WCAG_THRESHOLDS = {
 } as const;
 
 /**
- * Calculate relative luminance (WCAG formula)
+ * Calculate contrast ratio between two colors.
  *
- * @see https://www.w3.org/WAI/GL/wiki/Relative_luminance
- */
-function getRelativeLuminance(rgb: RGBColor): number {
-  const { r, g, b } = rgb;
-
-  // Normalize to 0-1
-  const [rs, gs, bs] = [r, g, b].map((c) => c / 255);
-
-  // Apply sRGB gamma correction
-  const [rLin, gLin, bLin] = [rs, gs, bs].map((c) =>
-    c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
-  );
-
-  // Calculate luminance
-  return 0.2126 * rLin + 0.7152 * gLin + 0.0722 * bLin;
-}
-
-/**
- * Calculate contrast ratio between two colors
+ * 🏢 ADR-694 Φ10: thin adapter over the `color-math` SSoT. The local
+ * `getRelativeLuminance` + `getContrastRatio` pair (a verbatim copy of the same
+ * WCAG math, with the obsolete `0.03928` threshold W3C retired in May 2021) is gone.
  *
  * @see https://www.w3.org/WAI/GL/wiki/Contrast_ratio
  */
 function getContrastRatio(color1: RGBColor, color2: RGBColor): number {
-  const lum1 = getRelativeLuminance(color1);
-  const lum2 = getRelativeLuminance(color2);
-
-  const lighter = Math.max(lum1, lum2);
-  const darker = Math.min(lum1, lum2);
-
-  return (lighter + 0.05) / (darker + 0.05);
+  return contrastRatioRgb(color1, color2);
 }
 
 /**
@@ -101,34 +86,14 @@ export function useContrast(
   background: string,
   textSize: TextSize = 'normal'
 ): ContrastResult {
-  return useMemo(() => {
-    try {
-      // 🏢 ADR-076: Use centralized parseHex
-      const fg = parseHex(foreground);
-      const bg = parseHex(background);
-
-      const ratio = getContrastRatio(fg, bg);
-
-      return {
-        ratio,
-        passAA: ratio >= WCAG_THRESHOLDS.AA_NORMAL,
-        passAAA: ratio >= WCAG_THRESHOLDS.AAA_NORMAL,
-        passAALarge: ratio >= WCAG_THRESHOLDS.AA_LARGE,
-        passAAALarge: ratio >= WCAG_THRESHOLDS.AAA_LARGE,
-        ratioString: formatRatio(ratio),
-      };
-    } catch (error) {
-      console.warn('[useContrast] Failed to calculate contrast:', error);
-      return {
-        ratio: 0,
-        passAA: false,
-        passAAA: false,
-        passAALarge: false,
-        passAAALarge: false,
-        ratioString: '0:1',
-      };
-    }
-  }, [foreground, background, textSize]);
+  // 🏢 ADR-694 Φ10 / N.18: the hook is a *memoisation* of `calculateContrast`, not a second copy
+  // of it. The two used to hold byte-identical bodies (parse → ratio → same 6-field result, same
+  // zeroed fallback) — jscpd flagged them as a structural clone. One implementation, two entry
+  // points: `calculateContrast` for callers outside React, this hook for those inside it.
+  return useMemo(
+    () => calculateContrast(foreground, background),
+    [foreground, background, textSize],
+  );
 }
 
 /**
@@ -152,7 +117,12 @@ export function useContrastCheck(
 // ===== UTILITY FUNCTIONS =====
 
 /**
- * Calculate contrast ratio (non-hook version)
+ * Calculate contrast ratio (non-hook version).
+ *
+ * 🏢 ADR-694 Φ10: **the** single implementation — {@link useContrast} memoises this rather than
+ * repeating it. Invalid input is reported as `ratio: 0` / `'0:1'` (this module's own error
+ * contract: `parseHex` throws, we catch), deliberately *not* the `1` that `contrastRatio(hex, hex)`
+ * returns. The warning moved here from the hook so both entry points surface bad colours.
  */
 export function calculateContrast(foreground: string, background: string): ContrastResult {
   try {
@@ -171,6 +141,7 @@ export function calculateContrast(foreground: string, background: string): Contr
       ratioString: formatRatio(ratio),
     };
   } catch (error) {
+    console.warn('[calculateContrast] Failed to calculate contrast:', error);
     return {
       ratio: 0,
       passAA: false,

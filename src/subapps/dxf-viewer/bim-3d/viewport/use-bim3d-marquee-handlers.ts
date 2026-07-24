@@ -58,6 +58,12 @@ export function useBim3DMarqueeHandlers(
 
   const endGesture = useCallback((restoreControls: boolean) => {
     if (restoreControls) managerRef.current?.viewport.setControlsEnabled(true);
+    // ΤΟ ΚΑΤΑΠΙΝΟΥΜΕ ΕΔΩ, ΟΧΙ ΣΤΟ mouseup: ΚΑΘΕ τερματισμός ανοιχτού ορθογωνίου γεννά trailing
+    // `click` όταν ο χρήστης σηκώσει το κουμπί — και στην ΑΚΥΡΩΣΗ (ESC / mouse-leave) εξίσου με
+    // την ολοκλήρωση. Χωρίς αυτό, ο `handleClick` έβλεπε κενό χώρο και ΚΑΘΑΡΙΖΕ την επιλογή, ενώ
+    // η ακύρωση οφείλει να μην αλλάζει τίποτα (browser-μετρημένο 2026-07-25: ESC κρατούσε σωστά
+    // την επιλογή, το click που ακολουθούσε τη διέγραφε).
+    if (downRef.current?.dragging) suppressClickRef.current = true;
     Marquee3DStore.end();
     downRef.current = null;
   }, [managerRef]);
@@ -112,9 +118,8 @@ export function useBim3DMarqueeHandlers(
         { x: e.clientX, y: e.clientY },
         d.mode,
       );
-      suppressClickRef.current = true; // swallow the trailing click
     }
-    endGesture(true);
+    endGesture(true); // …και καταπίνει το trailing click (ένα σημείο, βλ. endGesture)
   }, [managerRef, endGesture]);
 
   const handleMouseLeave = useCallback(() => {

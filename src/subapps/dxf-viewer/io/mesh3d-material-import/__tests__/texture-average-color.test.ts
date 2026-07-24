@@ -4,10 +4,13 @@
  * Τα maths ελέγχονται **χωρίς DOM**: ο καθαρός πυρήνας {@link averageColorHexOfPixels} δέχεται
  * ωμά RGBA bytes (ό,τι δίνει το `getImageData().data`) και επιστρέφει hex. Το decode
  * ({@link averageColorHexOfImage}) ελέγχεται μόνο ως προς το συμβόλαιό του (ποτέ throw).
+ *
+ * **ADR-694 Φ10:** οι έλεγχοι των ίδιων των συναρτήσεων μεταφοράς sRGB↔linear μετακόμισαν μαζί με
+ * τον κώδικά τους στο `config/__tests__/color-math-srgb-transfer.test.ts`. Εδώ μένουν **μόνο** τα
+ * anchors του καταναλωτή — δηλαδή το χρωματομετρικό συμβόλαιο του μέσου χρώματος υφής.
  */
 
 import { averageColorHexOfPixels, averageColorHexOfImage } from '../texture-average-color';
-import { srgbToLinearUnit, linearToSrgbUnit } from '../srgb-linear-unit';
 
 /** `[r,g,b,a]` ανά pixel → επίπεδο RGBA buffer (όπως το `ImageData.data`). */
 function pixels(...rgba: readonly (readonly [number, number, number, number])[]): Uint8ClampedArray {
@@ -103,36 +106,6 @@ describe('averageColorHexOfPixels — alpha ως βάρος (ADR-694 Φ7β)', ()
 
   it('κενό buffer → null', () => {
     expect(averageColorHexOfPixels(new Uint8ClampedArray(0))).toBeNull();
-  });
-});
-
-describe('srgb-linear-unit — ακριβής IEC 61966-2-1 (SSoT, ADR-694 Φ7α)', () => {
-  it('τα άκρα είναι ακριβή και το κατώφλι είναι το γραμμικό τμήμα, όχι pow(x,2.2)', () => {
-    expect(srgbToLinearUnit(0)).toBe(0);
-    expect(srgbToLinearUnit(1)).toBeCloseTo(1, 12);
-    expect(linearToSrgbUnit(0)).toBe(0);
-    expect(linearToSrgbUnit(1)).toBeCloseTo(1, 12);
-    // sRGB 0.02 είναι στο γραμμικό τμήμα: 0.02/12.92, ΟΧΙ 0.02^2.4 (η προσέγγιση 2.2 αστοχεί εδώ).
-    expect(srgbToLinearUnit(0.02)).toBeCloseTo(0.02 / 12.92, 12);
-    expect(srgbToLinearUnit(0.02)).not.toBeCloseTo(0.02 ** 2.2, 6);
-  });
-
-  it('sRGB 128 = ~21.8% φως (η ρίζα ολόκληρου του Φ7)', () => {
-    expect(srgbToLinearUnit(128 / 255)).toBeCloseTo(0.2159, 4);
-    expect(srgbToLinearUnit(128 / 255)).toBeLessThan(0.5); // ΟΧΙ «μισό φως»
-  });
-
-  it('round-trip ταυτότητα + clamp σε ακραία/μη-έγκυρη είσοδο', () => {
-    // precision 6: στο ίδιο το σημείο θραύσης (0.04045) οι δύο στρογγυλεμένες σταθερές του προτύπου
-    // δεν είναι ακριβώς αντίστροφες (~3e-8) — γνωστό artifact της IEC, αδιάφορο σε 8-bit έξοδο.
-    for (const v of [0, 0.001, 0.04045, 0.2, 0.5, 0.9, 1]) {
-      expect(linearToSrgbUnit(srgbToLinearUnit(v))).toBeCloseTo(v, 6);
-    }
-    expect(srgbToLinearUnit(Number.NaN)).toBe(0);
-    expect(linearToSrgbUnit(Number.NaN)).toBe(0);
-    expect(srgbToLinearUnit(-5)).toBe(0);
-    expect(linearToSrgbUnit(5)).toBeCloseTo(1, 12);
-    expect(linearToSrgbUnit(Number.POSITIVE_INFINITY)).toBeCloseTo(1, 12);
   });
 });
 
