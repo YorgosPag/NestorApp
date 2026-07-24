@@ -133,3 +133,19 @@ highlight πλέον διαβάζουν ΑΠΟ ΕΚΕΙ αντί για το bas
   `MaterialCatalog3D.ts`/`pbr-material-builder.ts`/`bim-visual-style.ts`/render-settings stores/
   ADR-687-glass files (εκτός scope). Pending: jscpd:diff + jest run αυτού του follow-up, browser verify,
   commit.
+- **2026-07-24 (Φ-A + Φ-B «ορατό highlight» + ad-hoc colorHex parity — IMPLEMENTED UNCOMMITTED, Opus
+  4.8)** — Recognition/SSoT-audit (+ Firestore ground truth: όλα τα βαμμένα imported meshes της καρέκλας
+  HMI_Aeron χρησιμοποιούν `materialId` — `mat-metal`/`paint-yellow`/`paint-red`/`bmat_*` — ΚΑΝΕΝΑ ωμό
+  `colorHex`) επιβεβαίωσε ότι το matching ΔΕΝ ήταν σπασμένο· η αναφορά «δεν φωτίζει ορατά» ήταν **οπτική**
+  (το `ring-2 ring-…/ring-offset-1` μόλις φαινόταν στη γεμάτη σκούρα μπάρα). **Φ-A** (`MaterialEntryButton.tsx`):
+  αντικαταστάθηκε με big-player active treatment (`ACTIVE_HIGHLIGHT_CLASSES`, C4D Material Manager / Revit
+  «current material»): φωτεινό `ring-2` + `ring-offset-2` + απαλό glow (`shadow-[…hsl(var(--bg-info)…)]`) +
+  χρωματικό tint + **corner «σε χρήση» badge** (lucide `Check`, `aria-hidden`· `aria-current`/`aria-label`
+  αναλλοίωτα). **Φ-B** (parity «χρώμα/υλικό/υφή»): νέος `resolveEntityAppearanceRefs(entity): {materialIds,
+  colorHexes}` στο `resolve-entity-current-material.ts` (mirror του `scene-material-usage.ts::SceneAppearanceRefs`,
+  ΕΝΑΣ loop)· ο `resolveEntityMaterialIdSet` έγινε thin προβολή του (SSoT delegation, μηδέν clone N.18)·
+  το `PolygonMaterialPanel` whole-entity branch διαβάζει πλέον και τα δύο σύνολα, active =
+  `materialIds.includes(entry.id) || (entry.color && colorHexes.includes(entry.color))` — ίδιο μοντέλο με
+  το `useSceneMaterials` filter, ώστε να φωτίζει ΚΑΙ ad-hoc βαμμένα χρώματα. Single-face branch ΑΝΑΛΛΟΙΩΤΟ
+  (materialId-only). Tests: resolver **18/18** (6 νέα cases για `resolveEntityAppearanceRefs` + SSoT-delegation).
+  NO tsc (N.17). Καμία αλλαγή σε ADR-686/687 files (εκτός scope). Pending: jscpd:diff, browser verify, commit.

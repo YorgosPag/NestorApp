@@ -2,6 +2,7 @@ import {
   resolveEntityCurrentMaterialId,
   resolveFaceCurrentMaterialId,
   resolveEntityMaterialIdSet,
+  resolveEntityAppearanceRefs,
 } from '../resolve-entity-current-material';
 import { BASE_FACE_KEY } from '../../../bim/types/face-appearance-types';
 
@@ -92,5 +93,55 @@ describe('resolveEntityMaterialIdSet', () => {
       },
     };
     expect(resolveEntityMaterialIdSet(entity)).toEqual(['bmat_glass', 'bmat_steel']);
+  });
+});
+
+describe('resolveEntityAppearanceRefs', () => {
+  it('returns two empty arrays when faceAppearance is absent entirely', () => {
+    expect(resolveEntityAppearanceRefs({})).toEqual({ materialIds: [], colorHexes: [] });
+  });
+
+  it('collects a base materialId into materialIds', () => {
+    const entity = { faceAppearance: { [BASE_FACE_KEY]: { materialId: 'bmat_oak' } } };
+    expect(resolveEntityAppearanceRefs(entity)).toEqual({
+      materialIds: ['bmat_oak'],
+      colorHexes: [],
+    });
+  });
+
+  it('collects a raw base colorHex into colorHexes (ad-hoc paint)', () => {
+    const entity = { faceAppearance: { [BASE_FACE_KEY]: { colorHex: '#3B82F6' } } };
+    expect(resolveEntityAppearanceRefs(entity)).toEqual({
+      materialIds: [],
+      colorHexes: ['#3B82F6'],
+    });
+  });
+
+  it('collects both materialIds and colorHexes across mixed slots, order-stable + deduped', () => {
+    const entity = {
+      faceAppearance: {
+        [BASE_FACE_KEY]: { materialId: 'bmat_oak' },
+        'slot:seat': { colorHex: '#FF0000' },
+        'slot:legs': { materialId: 'bmat_oak' }, // dup materialId
+        'slot:arm': { colorHex: '#FF0000' }, // dup colorHex
+        'slot:back': { colorHex: '#00FF00' },
+      },
+    };
+    expect(resolveEntityAppearanceRefs(entity)).toEqual({
+      materialIds: ['bmat_oak'],
+      colorHexes: ['#FF0000', '#00FF00'],
+    });
+  });
+
+  it('keeps resolveEntityMaterialIdSet as the materialIds projection (SSoT delegation)', () => {
+    const entity = {
+      faceAppearance: {
+        [BASE_FACE_KEY]: { materialId: 'bmat_oak' },
+        'slot:seat': { colorHex: '#FF0000' },
+      },
+    };
+    expect(resolveEntityMaterialIdSet(entity)).toEqual(
+      resolveEntityAppearanceRefs(entity).materialIds,
+    );
   });
 });

@@ -12,13 +12,17 @@
  *   - `resolveFaceCurrentMaterialId` — per-face override με fallback στο base (ο ίδιος cascade με
  *     `bim-3d/materials/face-appearance-material.ts::resolveFaceMaterial`, αλλά επιστρέφει
  *     `materialId` string αντί για κατασκευασμένο `Material` — δεν χρειάζεται THREE εδώ).
- *   - `resolveEntityMaterialIdSet` (ADR-688 follow-up) — το ΣΥΝΟΛΟ των distinct materialIds που ο
- *     3D renderer ΟΝΤΩΣ εφαρμόζει σε αυτό το στοιχείο, σε όλα τα faceAppearance keys (base `'*'`
- *     ΚΑΙ κάθε per-face/per-slot override) — όχι μόνο το base. Αναγκαίο γιατί ο renderer
- *     (`imported-mesh-material-enhance.ts::resolveSlotMaterial`) εφαρμόζει `appearance[slot:name]
- *     ?? appearance['*'] ?? embedded` ΑΝΑ slot — ένα πολυ-slot imported mesh με βαμμένο ΕΝΑ slot
- *     έχει faceAppearance `{ '*': …, 'slot:seat': … }`, και το «τρέχον υλικό» πρέπει να δείχνει
- *     ΚΑΙ τα δύο, όχι μόνο το base (αλλιώς panel/highlight διαφωνούν με τον καμβά).
+ *   - `resolveEntityAppearanceRefs` (ADR-688 follow-up) — το ΣΥΝΟΛΟ των distinct refs (materialIds
+ *     ΚΑΙ ad-hoc colorHexes) που ο 3D renderer ΟΝΤΩΣ εφαρμόζει σε αυτό το στοιχείο, σε όλα τα
+ *     faceAppearance keys (base `'*'` ΚΑΙ κάθε per-face/per-slot override) — όχι μόνο το base.
+ *     Αναγκαίο γιατί ο renderer (`imported-mesh-material-enhance.ts::resolveSlotMaterial`) εφαρμόζει
+ *     `appearance[slot:name] ?? appearance['*'] ?? embedded` ΑΝΑ slot — ένα πολυ-slot imported mesh
+ *     με βαμμένο ΕΝΑ slot έχει faceAppearance `{ '*': …, 'slot:seat': … }`, και το «τρέχον υλικό»
+ *     πρέπει να δείχνει ΚΑΙ τα δύο, όχι μόνο το base (αλλιώς panel/highlight διαφωνούν με τον καμβά).
+ *     Οι colorHexes χρειάζονται γιατί το drag-drop/imported βάψιμο μπορεί να είναι ωμό `colorHex`
+ *     (χωρίς catalog materialId), και το κάτω panel «Υλικά όψης» πρέπει να φωτίζει ΚΑΙ αυτό το
+ *     swatch (ad-hoc), ίδιο μοντέλο με το `scene-material-usage.ts::SceneAppearanceRefs`.
+ *   - `resolveEntityMaterialIdSet` — thin προβολή του παραπάνω σε μόνο τα materialIds (back-compat).
  *
  * @see bim/types/face-appearance-types.ts — BASE_FACE_KEY, FaceAppearanceMap, FaceKey, slotFaceKey()
  * @see bim-3d/materials/face-appearance-material.ts — ίδιο cascade, resolve σε THREE Material
@@ -57,26 +61,51 @@ export function resolveFaceCurrentMaterialId(
   return appearance[faceKey]?.materialId ?? appearance[BASE_FACE_KEY]?.materialId ?? null;
 }
 
+/** Τα distinct appearance refs ενός στοιχείου — mirror του `SceneAppearanceRefs` (per-entity). */
+export interface EntityAppearanceRefs {
+  /** Distinct catalog/user/paint materialIds (base `'*'` + κάθε per-face/slot override). */
+  readonly materialIds: string[];
+  /** Distinct ad-hoc colorHexes (ωμό βάψιμο drag-drop/imported χωρίς catalog materialId). */
+  readonly colorHexes: string[];
+}
+
 /**
- * Το ΣΥΝΟΛΟ των distinct materialIds πραγματικά εφαρμοσμένων σε αυτό το στοιχείο — ένα ανά
- * `faceAppearance` κλειδί (base `'*'` + κάθε per-face/per-slot override), deduplicated,
- * order-stable (σειρά πρώτης εμφάνισης στο map). Άδειο array = κανένα override (καθαρό
- * embedded/auto look). Καθρεφτίζει ΑΚΡΙΒΩΣ ό,τι ο renderer εφαρμόζει ανά slot
+ * Το ΣΥΝΟΛΟ των distinct refs πραγματικά εφαρμοσμένων σε αυτό το στοιχείο — ένα ανά `faceAppearance`
+ * κλειδί (base `'*'` + κάθε per-face/per-slot override), deduplicated, order-stable (σειρά πρώτης
+ * εμφάνισης στο map), χωριστά σε `materialIds` + `colorHexes`. Και τα δύο άδεια = κανένα override
+ * (καθαρό embedded/auto look). Καθρεφτίζει ΑΚΡΙΒΩΣ ό,τι ο renderer εφαρμόζει ανά slot
  * (`imported-mesh-material-enhance.ts::resolveSlotMaterial`'s `appearance[slot] ?? appearance['*']`
- * cascade) — γι' αυτό panel/highlight πρέπει να διαβάζουν ΑΠΟ ΕΔΩ όταν θέλουν «όλα τα εφαρμοσμένα
- * υλικά», όχι μόνο το base. Καμία εξάρτηση σε entity-type — δουλεύει για ΚΑΘΕ solid/imported mesh.
+ * cascade) ΚΑΙ ό,τι ο συλλέκτης σκηνής `collectSceneAppearanceRefs` απαριθμεί — γι' αυτό panel/
+ * highlight πρέπει να διαβάζουν ΑΠΟ ΕΔΩ όταν θέλουν «όλα τα εφαρμοσμένα», όχι μόνο το base.
+ * Καμία εξάρτηση σε entity-type — δουλεύει για ΚΑΘΕ solid/imported mesh.
  */
-export function resolveEntityMaterialIdSet(entity: EntityWithFaceAppearance): string[] {
+export function resolveEntityAppearanceRefs(entity: EntityWithFaceAppearance): EntityAppearanceRefs {
   const appearance = entity.faceAppearance;
-  if (!appearance) return [];
-  const seen = new Set<string>();
-  const result: string[] = [];
+  if (!appearance) return { materialIds: [], colorHexes: [] };
+  const seenMat = new Set<string>();
+  const seenColor = new Set<string>();
+  const materialIds: string[] = [];
+  const colorHexes: string[] = [];
   for (const key of Object.keys(appearance)) {
-    const materialId = appearance[key]?.materialId;
-    if (materialId && !seen.has(materialId)) {
-      seen.add(materialId);
-      result.push(materialId);
+    const ref = appearance[key];
+    const materialId = ref?.materialId;
+    if (materialId && !seenMat.has(materialId)) {
+      seenMat.add(materialId);
+      materialIds.push(materialId);
+    }
+    const colorHex = ref?.colorHex;
+    if (colorHex && !seenColor.has(colorHex)) {
+      seenColor.add(colorHex);
+      colorHexes.push(colorHex);
     }
   }
-  return result;
+  return { materialIds, colorHexes };
+}
+
+/**
+ * Thin προβολή του `resolveEntityAppearanceRefs` σε μόνο τα materialIds (back-compat για callers που
+ * δεν χειρίζονται ad-hoc χρώματα). ΕΝΑΣ loop (SSoT) — καμία διπλή απαρίθμηση.
+ */
+export function resolveEntityMaterialIdSet(entity: EntityWithFaceAppearance): string[] {
+  return resolveEntityAppearanceRefs(entity).materialIds;
 }

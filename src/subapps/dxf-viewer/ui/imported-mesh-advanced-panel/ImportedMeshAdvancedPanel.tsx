@@ -206,14 +206,15 @@ function MaterialSection({
           {t('importedMeshAdvancedPanel.section.material')}
         </h4>
       </header>
-      <div className="flex items-center justify-between gap-2 py-0.5">
+      <div className="flex flex-col gap-1 py-0.5">
         <span className="truncate text-xs text-muted-foreground">
           {t('importedMeshAdvancedPanel.field.currentMaterial')}
         </span>
-        <span className="flex shrink-0 items-center gap-1.5">
+        <div className="flex items-center gap-2">
           {!isMultiple && (
             <MaterialSwatch
               sphere
+              className="!h-16 !w-16 rounded-md"
               materialId={entry?.materialId ?? singleMaterialId}
               category={entry?.category}
               thumbnailUrl={entry?.thumbnailUrl}
@@ -222,8 +223,8 @@ function MaterialSection({
               color={entry?.color}
             />
           )}
-          <span className="text-xs font-medium text-foreground">{displayLabel}</span>
-        </span>
+          <span className="truncate text-xs font-medium text-foreground">{displayLabel}</span>
+        </div>
       </div>
     </section>
   );
