@@ -21,6 +21,7 @@ import {
   CONTEXTUAL_ARRAY_RECT_TAB, CONTEXTUAL_ARRAY_POLAR_TAB, CONTEXTUAL_ARRAY_PATH_TAB,
 } from './contextual-array-tab';
 import { CONTEXTUAL_STAIR_TAB } from './contextual-stair-tab';
+import { CONTEXTUAL_RAILING_TAB } from './contextual-railing-tab';
 import { CONTEXTUAL_WALL_TAB } from './contextual-wall-tab';
 import { CONTEXTUAL_OPENING_TAB } from './contextual-opening-tab';
 import { CONTEXTUAL_SLAB_TAB } from './contextual-slab-tab';
@@ -83,6 +84,7 @@ export const RAW_RIBBON_CONTEXTUAL_TABS: readonly RibbonTab[] = [
   CONTEXTUAL_ARRAY_POLAR_TAB,
   CONTEXTUAL_ARRAY_PATH_TAB,
   CONTEXTUAL_STAIR_TAB,
+  CONTEXTUAL_RAILING_TAB,
   CONTEXTUAL_WALL_TAB,
   CONTEXTUAL_OPENING_TAB,
   CONTEXTUAL_SLAB_TAB,

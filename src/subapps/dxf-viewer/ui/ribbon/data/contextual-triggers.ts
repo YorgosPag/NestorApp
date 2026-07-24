@@ -17,6 +17,7 @@ export {
   ARRAY_PATH_CONTEXTUAL_TRIGGER,
 } from './contextual-array-tab';
 export { STAIR_CONTEXTUAL_TRIGGER } from './contextual-stair-tab';
+export { RAILING_CONTEXTUAL_TRIGGER } from './contextual-railing-tab';
 export { WALL_CONTEXTUAL_TRIGGER } from './contextual-wall-tab';
 export { OPENING_CONTEXTUAL_TRIGGER } from './contextual-opening-tab';
 export { SLAB_CONTEXTUAL_TRIGGER } from './contextual-slab-tab';

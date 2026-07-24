@@ -4,6 +4,7 @@
  * under the 500-line SRP limit. Each bridge is a thin contextual-tab wire-up.
  */
 import { useRibbonStairBridge, type UseRibbonStairBridgeProps } from '../bim/hooks/use-ribbon-stair-bridge';
+import { useRibbonRailingBridge, type UseRibbonRailingBridgeProps } from '../bim/hooks/use-ribbon-railing-bridge';
 import { useRibbonWallBridge, type UseRibbonWallBridgeProps } from '../ui/ribbon/hooks/useRibbonWallBridge';
 import { useRibbonOpeningBridge, type UseRibbonOpeningBridgeProps } from '../ui/ribbon/hooks/useRibbonOpeningBridge';
 import { useRibbonSlabBridge, type UseRibbonSlabBridgeProps } from '../ui/ribbon/hooks/useRibbonSlabBridge';
@@ -48,6 +49,7 @@ import { useBimMaterialCycler } from '../hooks/useBimMaterialCycler';
 
 export type UseDxfBimBridgesProps =
   & UseRibbonStairBridgeProps
+  & UseRibbonRailingBridgeProps
   & UseRibbonWallBridgeProps
   & UseRibbonOpeningBridgeProps
   & UseRibbonSlabBridgeProps
@@ -72,6 +74,8 @@ export type UseDxfBimBridgesProps =
 
 export function useDxfBimBridges(p: UseDxfBimBridgesProps) {
   const stairBridge = useRibbonStairBridge(p);
+  // ADR-407 Φ9 — railing (κάγκελο) contextual properties bridge.
+  const railingBridge = useRibbonRailingBridge(p);
   const wallBridge = useRibbonWallBridge(p);
   const openingBridge = useRibbonOpeningBridge(p);
   const slabBridge = useRibbonSlabBridge(p);
@@ -152,5 +156,5 @@ export function useDxfBimBridges(p: UseDxfBimBridgesProps) {
   const thermalSpaceBridge = useRibbonThermalSpaceBridge(p);
   // ADR-363 Phase 4.5e+ — Tab/Shift+Tab material cycling for selected BIM entities.
   useBimMaterialCycler(p);
-  return { stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, columnBridge, beamBridge, foundationBridge, slabOpeningBridge, mepCircuitBridge, mepPipeNetworkBridge, mepFixtureBridge, mepManifoldBridge, electricalPanelBridge, mepRadiatorBridge, mepBoilerBridge, mepWaterHeaterBridge, mepUnderfloorBridge, mepSegmentBridge, waterAutoSupplyBridge, drainageAutoBridge, heatingAutoBridge, electricalAutoBridge, electricalWeakAutoBridge, hvacAutoBridge, fireAutoBridge, gasAutoBridge, clashDetectionBridge, furnitureBridge, genericSolidBridge, blockLibraryBridge, titleBlockBridge, floorplanSymbolBridge, annotationSymbolBridge, scaleBarBridge, mepFixtureLibraryBridge, mepRiserBridge, floorFinishBridge, wallCoveringBridge, hatchBridge, thermalSpaceBridge };
+  return { stairBridge, railingBridge, wallBridge, openingBridge, slabBridge, roofBridge, columnBridge, beamBridge, foundationBridge, slabOpeningBridge, mepCircuitBridge, mepPipeNetworkBridge, mepFixtureBridge, mepManifoldBridge, electricalPanelBridge, mepRadiatorBridge, mepBoilerBridge, mepWaterHeaterBridge, mepUnderfloorBridge, mepSegmentBridge, waterAutoSupplyBridge, drainageAutoBridge, heatingAutoBridge, electricalAutoBridge, electricalWeakAutoBridge, hvacAutoBridge, fireAutoBridge, gasAutoBridge, clashDetectionBridge, furnitureBridge, genericSolidBridge, blockLibraryBridge, titleBlockBridge, floorplanSymbolBridge, annotationSymbolBridge, scaleBarBridge, mepFixtureLibraryBridge, mepRiserBridge, floorFinishBridge, wallCoveringBridge, hatchBridge, thermalSpaceBridge };
 }

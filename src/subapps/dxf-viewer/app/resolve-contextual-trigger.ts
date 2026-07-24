@@ -32,6 +32,7 @@ import {
   ARRAY_POLAR_CONTEXTUAL_TRIGGER,
   ARRAY_PATH_CONTEXTUAL_TRIGGER,
   STAIR_CONTEXTUAL_TRIGGER,
+  RAILING_CONTEXTUAL_TRIGGER,
   WALL_CONTEXTUAL_TRIGGER,
   OPENING_CONTEXTUAL_TRIGGER,
   SLAB_CONTEXTUAL_TRIGGER,
@@ -103,6 +104,8 @@ function readParamsKind(params: unknown): string | undefined {
 export const ENTITY_CONTEXTUAL_TRIGGER: Partial<Record<EntityType, string>> = {
   dimension: DIMENSION_CONTEXTUAL_TRIGGER,
   stair: STAIR_CONTEXTUAL_TRIGGER,
+  // ADR-407 Φ9 — a selected railing (κάγκελο) surfaces its «Ιδιότητες Κάγκελου» tab.
+  railing: RAILING_CONTEXTUAL_TRIGGER,
   wall: WALL_CONTEXTUAL_TRIGGER,
   opening: OPENING_CONTEXTUAL_TRIGGER,
   slab: SLAB_CONTEXTUAL_TRIGGER,
@@ -159,7 +162,7 @@ export const ENTITY_CONTEXTUAL_TRIGGER: Partial<Record<EntityType, string>> = {
 
 /**
  * Ποιο contextual tab ανοίγει όταν επιλέγεται η δοσμένη οντότητα, ή `null` αν καμία (π.χ.
- * point/xline/railing/furniture — no per-selection editor tab).
+ * point/xline/furniture — no per-selection editor tab).
  *
  * Σειρά: (1) οι kind-refined τύποι λύνονται ρητά ΠΡΩΤΑ (ένας τύπος → πολλά tabs μέσω
  * `params.kind`, δεν χωρά σε plain lookup) → (2) `ENTITY_CONTEXTUAL_TRIGGER` 1:1 map →

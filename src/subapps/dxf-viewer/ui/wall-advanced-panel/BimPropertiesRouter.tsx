@@ -18,10 +18,11 @@
 
 import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { isWallEntity, isStairEntity, isColumnEntity, isBeamEntity, isFoundationEntity, isSlabEntity, isSlabOpeningEntity, isHatchEntity, isBlockEntity, isImageEntity, isTopoSurfaceEntity } from '../../types/entities';
+import { isWallEntity, isStairEntity, isRailingEntity, isColumnEntity, isBeamEntity, isFoundationEntity, isSlabEntity, isSlabOpeningEntity, isHatchEntity, isBlockEntity, isImageEntity, isTopoSurfaceEntity } from '../../types/entities';
 import { isWallDrawingTool } from '../../systems/tools/region-tool-ids';
 import { useResolvedSelectedEntity } from '../../hooks/selection/useResolvedSelectedEntity';
 import { StairPropertiesTab } from '../stair-advanced-panel/StairPropertiesTab';
+import { RailingPropertiesTab } from '../railing-advanced-panel/RailingPropertiesTab';
 import { WallPropertiesTab } from './WallPropertiesTab';
 import { ColumnPropertiesTab } from '../column-advanced-panel/ColumnPropertiesTab';
 import { BeamPropertiesTab } from '../beam-advanced-panel/BeamPropertiesTab';
@@ -123,6 +124,11 @@ export function BimPropertiesRouter(
 
   if (selected && isStairEntity(selected)) {
     return <StairPropertiesTab {...props} />;
+  }
+
+  // ADR-407 Φ9 — railing Properties palette (γεωμετρία/κάγκελα/κιγκλιδώματα/πλήρωση).
+  if (selected && isRailingEntity(selected)) {
+    return <RailingPropertiesTab {...props} />;
   }
 
   // ADR-510 Φ2E #4 — a selected generic primitive (line/polyline/circle/arc/…)

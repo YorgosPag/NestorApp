@@ -14,6 +14,7 @@ import type { RibbonActionPayload } from '../context/RibbonCommandContext';
 import type { RibbonTextEditorBridge } from './useRibbonTextEditorBridge';
 import type { RibbonArrayBridge } from './useRibbonArrayBridge';
 import type { RibbonStairBridge } from '../../../bim/hooks/use-ribbon-stair-bridge';
+import type { RibbonRailingBridge } from '../../../bim/hooks/use-ribbon-railing-bridge';
 import type { RibbonWallBridge } from './useRibbonWallBridge';
 import type { RibbonOpeningBridge } from './useRibbonOpeningBridge';
 import type { RibbonSlabBridge } from './useRibbonSlabBridge';
@@ -76,6 +77,7 @@ export interface UseRibbonCommandsProps {
   textEditorBridge: RibbonTextEditorBridge;
   arrayBridge: RibbonArrayBridge;
   stairBridge: RibbonStairBridge;
+  railingBridge: RibbonRailingBridge;
   wallBridge: RibbonWallBridge;
   openingBridge: RibbonOpeningBridge;
   slabBridge: RibbonSlabBridge;

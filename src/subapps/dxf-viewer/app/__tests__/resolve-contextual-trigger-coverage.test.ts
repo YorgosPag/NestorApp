@@ -36,6 +36,7 @@ import {
 import { RENDERABLE_ENTITY_TYPES } from '../../rendering/contract/renderable-entity-type';
 import { STYLE_EDITABLE_PRIMITIVE_TYPES } from '../../types/style-editable-primitives';
 import { WALL_CONTEXTUAL_TRIGGER } from '../../ui/ribbon/data/contextual-wall-tab';
+import { RAILING_CONTEXTUAL_TRIGGER } from '../../ui/ribbon/data/contextual-railing-tab';
 import { HATCH_CONTEXTUAL_TRIGGER } from '../../ui/ribbon/data/contextual-hatch-tab';
 import { ANNOTATION_SYMBOL_CONTEXTUAL_TRIGGER } from '../../ui/ribbon/data/contextual-annotation-symbol-tab';
 import { GENERIC_SOLID_CONTEXTUAL_TRIGGER } from '../../ui/ribbon/data/contextual-generic-solid-tab';
@@ -70,7 +71,6 @@ const NO_SELECTION_TAB_TYPES = [
   'angle-measurement',
   'xline',
   'ray',
-  'railing',
   'space-separator',
   'furniture',
   // ADR-684 Φ4-B — το `generic-solid` ΜΕΤΑΚΙΝΗΘΗΚΕ στο `ENTITY_CONTEXTUAL_TRIGGER` map: μια
@@ -161,6 +161,8 @@ describe('Selection contextual-trigger coverage — map ↔ resolver ↔ descrip
   describe('Golden pins — type → πραγματική tab σταθερά', () => {
     it('αντιπροσωπευτικά simple mappings δεν αποκλίνουν από τα tab constants', () => {
       expect(resolveContextualTrigger({ type: 'wall' })).toBe(WALL_CONTEXTUAL_TRIGGER);
+      // ADR-407 Φ9 — a selected railing surfaces the «Ιδιότητες Κάγκελου» tab.
+      expect(resolveContextualTrigger({ type: 'railing' })).toBe(RAILING_CONTEXTUAL_TRIGGER);
       expect(resolveContextualTrigger({ type: 'hatch' })).toBe(HATCH_CONTEXTUAL_TRIGGER);
       expect(resolveContextualTrigger({ type: 'annotation-symbol' })).toBe(
         ANNOTATION_SYMBOL_CONTEXTUAL_TRIGGER,
