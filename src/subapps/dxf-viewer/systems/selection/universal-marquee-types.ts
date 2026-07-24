@@ -24,6 +24,12 @@ export interface UniversalSelectionInput {
   currentPosition?: Point2D; // Current cursor position for callbacks
 }
 
+export interface SelectionBreakdown {
+  entityIds: string[];
+  overlayIds: string[];
+  layerIds: string[];
+}
+
 export interface UniversalSelectionResult {
   selectedIds: string[]; // Όλα τα επιλεγμένα IDs μαζί
   selectionType: 'window' | 'crossing';
@@ -31,11 +37,7 @@ export interface UniversalSelectionResult {
   callbacksExecuted: number; // 🎯 ADD: Πόσα callbacks εκτελέστηκαν
 
   // Breakdown αν χρειάζεται (optional)
-  breakdown?: {
-    entityIds: string[];
-    overlayIds: string[];
-    layerIds: string[];
-  };
+  breakdown?: SelectionBreakdown;
 
   debugInfo?: {
     testedEntities: number;

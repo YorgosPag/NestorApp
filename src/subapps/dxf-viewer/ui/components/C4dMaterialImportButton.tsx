@@ -309,12 +309,6 @@ export function C4dMaterialImportButton() {
         const geometryRecords = result.appliedCount === 0
           ? daeImportable
           : daeImportable.filter((o) => unmatchedNames.has(o.objectName));
-        console.info('[ADR-690] dae geometry:', {
-          objects: objects.length,
-          importable: daeImportable.length,
-          applied: result.appliedCount,
-          offered: geometryRecords.length,
-        });
         if (geometryRecords.length > 0) {
           if (missingTextures.length > 0) {
             notifications.warning(

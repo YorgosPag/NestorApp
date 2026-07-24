@@ -1,6 +1,6 @@
 # ADR-690 — Native `.dae` (COLLADA) geometry import: το `.dae` κάνει ό,τι το `.glb`
 
-**Status:** 🟢 Φ2 DONE + **broken-texture hotfix** (browser test #1 root-caused: missing υφή → GLTFExporter crash → fix `stripBrokenTextures`) · code + jest ✓ (collada-to-glb 6/6, import-collada 6/6) + jscpd ✓ — **🔴 εκκρεμεί re-test στον browser** (asset: `HMI_Aeron_Chair_3D.dae` + 2 jpg). Commit = Giorgio.
+**Status:** 🟢 **Φ2 DONE + BROWSER-VERIFIED** (2026-07-24, `abricos_gerbera.dae` + 3 jpg → γεωμετρία **+ υλικά + υφές** μπήκαν σωστά ως `imported-mesh`). 2 hotfixes μετά από browser tests: (#1 missing υφή → `stripBrokenTextures`· #2 ανώνυμα ColladaLoader meshes → `ensureUniqueMeshNames` + ξένο μοντέλο → πρόσφερε όλα). jest 7/7 + jscpd ✓. Commit = Giorgio. ⚠️ Ανοιχτό: τα embedded υλικά **δεν** μπαίνουν στο panel «Υλικά όψης» — **by-design, ίδιο με `.glb`** (βλ. §9).
 **Date:** 2026-07-24
 **Owner:** Giorgio
 **Σχετικά (parents):** **ADR-683** (συνεργατικό round-trip — κλείνει το κενό **Κ6**: «Καμία εξαγωγή/εισαγωγή DAE») · **ADR-678** (C4D material round-trip — ιδιοκτήτης του υπάρχοντος `.dae` material path) · ADR-668 (mesh3d export OBJ/glTF — ιδιοκτήτης του `serialiseGlb`) · ADR-679 (PBR/υφές) · ADR-511 (material catalog SSoT)
@@ -156,6 +156,22 @@ Firebase** για τα **matched** στοιχεία. Το glTF appearance path *
   υπάρχον `ImportUnitScaleControl` του dialog (ίδιο UX με glTF).
 
 ---
+
+## 9. Ανοιχτό: τα embedded υλικά ΔΕΝ μπαίνουν στο panel «Υλικά όψης» (by-design, ίδιο με `.glb`)
+
+Μετά από επιτυχή εισαγωγή ξένου μοντέλου, το κάτω panel «Υλικά όψης» (`useSceneMaterials`, ADR-687)
+μένει άδειο, παρότι το mesh renderάρεται με τα υλικά/υφές του. **Δεν είναι bug:**
+
+- Το panel δείχνει `collectSceneAppearanceRefs` = υλικά **βαμμένα σε όψεις BIM στοιχείων** (faceAppearance
+  `materialIds`/`colorHexes` μέσω της βιβλιοθήκης Nestor).
+- Τα υλικά ενός εισαγόμενου `imported-mesh` (είτε `.glb` είτε τώρα `.dae`) ζουν **embedded πάνω στη
+  γεωμετρία** (THREE materials στο glb) και renderάρονται από εκεί — **δεν** είναι faceAppearance refs.
+- Ο material path (`importColladaAppearance`) βάφει **μόνο matched** Nestor στοιχεία· ξένο μοντέλο =
+  μηδέν matches → τίποτα στο panel.
+
+Άρα το `.dae` συμπεριφέρεται **ακριβώς όπως το `.glb`** (ο στόχος του ADR). Το «να μπαίνουν τα embedded
+υλικά και στη βιβλιοθήκη/panel» θα ήταν **ξεχωριστό feature** (material extraction imported-mesh →
+`BimMaterial` library) που θα ίσχυε **και** για `.glb` — εκτός scope ADR-690. TODO αν το θελήσει ο Giorgio.
 
 ## 8. Changelog
 

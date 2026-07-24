@@ -4,6 +4,21 @@ import type { ColorLayer } from '../../canvas-v2/layer-canvas/layer-types';
 import { calculateVerticesBounds, isPointInPolygon, segmentsIntersect } from '../../utils/geometry/GeometryUtils';
 // 🏢 ADR-089: Centralized Point-In-Bounds
 import { SpatialUtils } from '../../core/spatial/SpatialUtils';
+import type { SelectionBreakdown } from './universal-marquee-types';
+
+/**
+ * SSoT accumulator για marquee/lasso selection — κοινό `allSelectedIds` + `breakdown`
+ * (αποφεύγει διπλή αρχικοποίηση σε performSelection/performLassoSelection).
+ */
+export function createSelectionAccumulator(): {
+  allSelectedIds: string[];
+  breakdown: SelectionBreakdown;
+} {
+  return {
+    allSelectedIds: [],
+    breakdown: { entityIds: [], overlayIds: [], layerIds: [] },
+  };
+}
 
 export function selectItemsInMarquee(
   items: Array<{ id: string, vertices: Point2D[] }>,

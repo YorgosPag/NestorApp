@@ -17,7 +17,9 @@ import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 import {
   selectItemsInMarquee,
   selectColorLayersInMarquee,
+  createSelectionAccumulator,
 } from './universal-marquee-geometry';
+import { getMarqueeSelectionType } from './marquee-direction';
 
 export type { UniversalSelectionInput, UniversalSelectionResult } from './universal-marquee-types';
 import type { UniversalSelectionInput, UniversalSelectionResult } from './universal-marquee-types';
@@ -71,8 +73,9 @@ export class UniversalMarqueeSelector {
       max: { x: Math.max(marqueeWorldStart.x, marqueeWorldEnd.x), y: Math.max(marqueeWorldStart.y, marqueeWorldEnd.y) }
     };
 
-    const isCrossing = startPoint.x > endPoint.x;
-    const selectionType = isCrossing ? 'crossing' : 'window';
+    // ADR-691 — window/crossing verdict is now a shared SSoT (2D + 3D marquee).
+    const selectionType = getMarqueeSelectionType(startPoint.x, endPoint.x);
+    const isCrossing = selectionType === 'crossing';
 
     if (enableDebugLogs) {
       console.log('🎯 UNIVERSAL MARQUEE SELECTOR (CSS COORDS):', {
@@ -83,12 +86,7 @@ export class UniversalMarqueeSelector {
       });
     }
 
-    const allSelectedIds: string[] = [];
-    const breakdown = {
-      entityIds: [] as string[],
-      overlayIds: [] as string[],
-      layerIds: [] as string[]
-    };
+    const { allSelectedIds, breakdown } = createSelectionAccumulator();
 
     // 1. ENTITY SELECTION
     if (entities.length > 0) {
@@ -176,8 +174,7 @@ export class UniversalMarqueeSelector {
     const viewport: Viewport = { width: canvasRect.width, height: canvasRect.height };
     const lassoMutable = lassoScreenPath as Point2D[];
 
-    const allSelectedIds: string[] = [];
-    const breakdown = { entityIds: [] as string[], overlayIds: [] as string[], layerIds: [] as string[] };
+    const { allSelectedIds, breakdown } = createSelectionAccumulator();
 
     // 1. Entity selection — window/crossing via UnifiedEntitySelection (world-space).
     if (entities.length > 0) {
