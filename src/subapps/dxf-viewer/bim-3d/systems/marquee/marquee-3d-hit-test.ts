@@ -47,13 +47,17 @@ export interface MarqueeHitResult {
   selectionType: MarqueeSelectionType;
 }
 
-interface BimTag {
+export interface BimTag {
   id: string;
   type: string;
 }
 
-/** Walk the parent chain to the nearest `userData.bimId` owner (mirrors the raycaster). */
-function resolveBimTag(obj: THREE.Object3D): BimTag | null {
+/**
+ * Walk the parent chain to the nearest `userData.bimId` owner (mirrors the raycaster).
+ * Exported for the GPU id-pass (`marquee-gpu-id-pass`), which must tag the EXACT same
+ * subtrees this CPU test tags — a second copy there would silently drift (N.18).
+ */
+export function resolveBimTag(obj: THREE.Object3D): BimTag | null {
   let node: THREE.Object3D | null = obj;
   while (node) {
     const id = node.userData?.['bimId'];

@@ -106,6 +106,15 @@ interface ViewMode3DState {
   showAllFloors: boolean;
   /** ADR-399 Phase B — 3D floor source scope ('single' active level | 'all' stacked). */
   floor3DScope: Floor3DScope;
+  /**
+   * ADR-692 Φ2 — «διαμπερής επιλογή» του 3D marquee (X-ray).
+   *
+   * `true` (default, CAD σύμβαση AutoCAD/Revit): το ορθογώνιο πιάνει ΚΑΙ ό,τι κρύβεται πίσω
+   * από άλλη γεωμετρία — η απόφαση παίρνεται στη CPU από την προβολή του όγκου.
+   * `false`: μόνο ό,τι ΦΑΙΝΕΤΑΙ πραγματικά — ένα GPU id-pass (`marquee-gpu-id-pass`) κόβει
+   * όσα δεν έχουν ούτε ένα ορατό pixel μέσα στο ορθογώνιο.
+   */
+  marqueeSelectThrough: boolean;
   /** Per-level visibility mode (B.3): 'show' | 'ghost' | 'hide'. */
   floorVisibilityModes: ReadonlyMap<string, FloorVisMode>;
   /** Active lighting preset (B.1 Phase 5A) */
@@ -141,6 +150,8 @@ interface ViewMode3DActions {
   toggleShowAllFloors(): void;
   /** ADR-399 Phase B — set the 3D floor source scope ('single' | 'all'). */
   setFloor3DScope(scope: Floor3DScope): void;
+  /** ADR-692 Φ2 — άναψε/σβήσε τη διαμπερή επιλογή του 3D marquee (X-ray). */
+  setMarqueeSelectThrough(selectThrough: boolean): void;
   /** Seed initial floor when project loads */
   setActiveFloor(floorId: string | null): void;
   /** Set show/ghost/hide for a single level (B.3). */
@@ -179,6 +190,7 @@ export const useViewMode3DStore = create<ViewMode3DStoreType>()(
         visibleFloors: new Set<string>(),
         showAllFloors: false,
         floor3DScope: 'single' as Floor3DScope,
+        marqueeSelectThrough: true, // CAD default (ADR-692 Φ2)
         floorVisibilityModes: new Map<string, FloorVisMode>(),
         sunPreset: DEFAULT_PRESET,
         sunAzimuthDeg: LIGHT_PRESETS[DEFAULT_PRESET].azimuthDeg,
@@ -271,6 +283,12 @@ export const useViewMode3DStore = create<ViewMode3DStoreType>()(
           });
         },
 
+        setMarqueeSelectThrough(selectThrough) {
+          set((draft) => {
+            draft.marqueeSelectThrough = selectThrough;
+          });
+        },
+
         setActiveFloor(floorId) {
           set((draft) => {
             if (!get().showAllFloors && floorId) {
@@ -352,3 +370,4 @@ export const selectAutoPreviewEnabled = (s: ViewMode3DState) => s.autoPreviewEna
 export const selectViewMode = (s: ViewMode3DState) => s.mode;
 export const selectVisibleFloors = (s: ViewMode3DState) => s.visibleFloors;
 export const selectFloor3DScope = (s: ViewMode3DState) => s.floor3DScope;
+export const selectMarqueeSelectThrough = (s: ViewMode3DState) => s.marqueeSelectThrough;

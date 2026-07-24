@@ -17,7 +17,7 @@
  * the thin `Marquee3DOverlay` leaf repaints (ADR-040 micro-leaf rule).
  */
 
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import type { MouseEvent as ReactMouseEvent, RefObject } from 'react';
 import { useEscapeHandler, ESC_PRIORITY } from '../../systems/escape-bus';
 import { toolStateStore } from '../../stores/ToolStateStore';
@@ -26,6 +26,7 @@ import { usePolygonMode3DStore } from '../stores/PolygonMode3DStore';
 import { Marquee3DStore } from '../systems/marquee/Marquee3DStore';
 import type { MarqueeCombineMode } from '../../systems/selection/marquee-combine';
 import { resolveAndApplyMarquee3D } from '../systems/marquee/marquee-3d-apply';
+import { disposeMarqueeIdPass } from '../systems/marquee/marquee-gpu-id-pass';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 
 /** Squared px the pointer must travel before a click becomes a marquee (mirrors 2D MIN_MARQUEE_SIZE). */
@@ -121,6 +122,10 @@ export function useBim3DMarqueeHandlers(
     suppressClickRef.current = false;
     return s;
   }, []);
+
+  // ADR-692 Φ2 — ο GPU id-pass κρατά render target + id υλικά σε module scope (ένα ανά session,
+  // όχι ανά χειρονομία). Ο marquee είναι ο ιδιοκτήτης του, άρα τα ελευθερώνει όταν φεύγει το 3D.
+  useEffect(() => disposeMarqueeIdPass, []);
 
   // Escape cancels an in-flight marquee without changing the selection (CAD convention).
   // Routed through the ADR-364 escape bus — no raw window keydown listener (SSoT: escape-command-bus).

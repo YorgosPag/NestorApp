@@ -34,6 +34,7 @@ import { DrainPipeToggle } from './DrainPipeToggle';
 import { ColorBySystemToggle } from './ColorBySystemToggle';
 import { ShowHeatLoadToggle } from './ShowHeatLoadToggle';
 import { ShowFinishSkinToggle } from './ShowFinishSkinToggle';
+import { MarqueeSelectThroughToggle } from './MarqueeSelectThroughToggle';
 import { ShowReinforcementToggle } from './ShowReinforcementToggle';
 import { ShowPipeSizingToggle } from './ShowPipeSizingToggle';
 import { ShowAnalysisDiagramsToggle } from './ShowAnalysisDiagramsToggle';
@@ -185,6 +186,9 @@ function renderButton(button: RibbonButton): React.ReactNode {
     }
     if (button.widgetId === 'show-finish-skin-toggle') {
       return <ShowFinishSkinToggle key="show-finish-skin-toggle-widget" />;
+    }
+    if (button.widgetId === 'marquee-select-through-toggle') {
+      return <MarqueeSelectThroughToggle key="marquee-select-through-toggle-widget" />;
     }
     if (button.widgetId === 'show-reinforcement-toggle') {
       return <ShowReinforcementToggle key="show-reinforcement-toggle-widget" />;

@@ -4895,6 +4895,13 @@
         "tooltipEnable": "Show analytical heat load per space (heat-map + Φ in W)",
         "tooltipDisable": "Hide analytical heat load"
       },
+      "marqueeSelectThrough": {
+        "label": "Select Through",
+        "enable": "Turn on",
+        "disable": "Turn off",
+        "tooltipEnable": "Turn on: the 3D selection rectangle will also catch geometry hidden behind other objects (CAD default)",
+        "tooltipDisable": "Turn off: the 3D selection rectangle will catch only what is actually visible on screen"
+      },
       "finishSkin": {
         "label": "Finished Face",
         "enable": "Show",
