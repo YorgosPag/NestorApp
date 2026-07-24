@@ -522,6 +522,17 @@
       "linetype": "Linetype"
     }
   },
+  "railingAdvancedPanel": {
+    "title": "Railing Properties",
+    "emptyState": "Select a railing to view its properties.",
+    "sections": {
+      "geometry": { "title": "Geometry" },
+      "baluster": { "title": "Balusters" },
+      "posts": { "title": "Posts" },
+      "rails": { "title": "Rails" },
+      "infill": { "title": "Infill" }
+    }
+  },
   "propertiesPalette": {
     "title": "Properties",
     "entityLine": "LINE",
@@ -1682,6 +1693,7 @@
       "textEditor": "Text Editor",
       "arrayEditor": "Array",
       "stairProperties": "Stair Properties",
+      "railingProperties": "Railing Properties",
       "wallProperties": "Wall Properties",
       "openingProperties": "Opening Properties",
       "slabProperties": "Slab Properties",
@@ -1787,6 +1799,11 @@
       "stairShapeEdit": "Shape Editing",
       "stairStructuralAttach": "Structural Attach",
       "stairActions": "Actions",
+      "railingGeometry": "Geometry",
+      "railingBaluster": "Balusters",
+      "railingPosts": "Posts",
+      "railingRails": "Rails",
+      "railingInfill": "Infill",
       "wallTools": "Wall Tools",
       "wallDraw": "Draw",
       "wallCategory": "Category",
@@ -2987,6 +3004,52 @@
           "internal": "Internal Apartment Stair",
           "auxiliary": "Auxiliary Stair"
         }
+      },
+      "railingEditor": {
+        "predefinedType": {
+          "section": { "title": "Railing Type" },
+          "guardrail": "Guardrail",
+          "handrail": "Handrail",
+          "balustrade": "Balustrade"
+        },
+        "shape": {
+          "round": "Round",
+          "rectangular": "Rectangular"
+        },
+        "balusterShape": {
+          "section": { "title": "Baluster Profile" }
+        },
+        "justification": {
+          "section": { "title": "Justification" },
+          "center": "Center",
+          "start": "Start",
+          "end": "End"
+        },
+        "onOff": {
+          "on": "Yes",
+          "off": "No"
+        },
+        "infillKind": {
+          "section": { "title": "Infill" },
+          "none": "None",
+          "glass": "Glass",
+          "mesh": "Mesh",
+          "solid": "Solid"
+        },
+        "totalHeight": "Total Height",
+        "baseElevation": "Base Elevation",
+        "balusterWidth": "Baluster Width",
+        "balusterSpacing": "Baluster Spacing",
+        "postsEnabled": "Posts",
+        "postsWidth": "Post Width",
+        "postsAtStart": "Post at Start",
+        "postsAtCorners": "Posts at Corners",
+        "postsAtEnd": "Post at End",
+        "topRailEnabled": "Top Rail",
+        "topRailWidth": "Top Rail Width",
+        "topRailHeight": "Top Rail Height",
+        "handrailEnabled": "Handrail",
+        "handrailHeight": "Handrail Height"
       },
       "wallEditor": {
         "drawMode": {
@@ -5333,6 +5396,17 @@
       "spacingCannotBeZero": "Spacing cannot be zero.",
       "fillAngleCannotBeZero": "Fill angle cannot be zero.",
       "pathEntityRequired": "Path entity is required."
+    }
+  },
+  "railingAdvancedPanel": {
+    "title": "Railing Advanced Properties",
+    "emptyState": "Select a railing to see its properties.",
+    "sections": {
+      "geometry": { "title": "Geometry" },
+      "baluster": { "title": "Balusters" },
+      "posts": { "title": "Posts" },
+      "rails": { "title": "Rails" },
+      "infill": { "title": "Infill" }
     }
   },
   "stairAdvancedPanel": {

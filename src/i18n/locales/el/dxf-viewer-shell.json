@@ -522,6 +522,17 @@
       "linetype": "Τύπος γραμμής"
     }
   },
+  "railingAdvancedPanel": {
+    "title": "Ιδιότητες Κιγκλιδώματος",
+    "emptyState": "Επιλέξτε ένα κιγκλίδωμα για να δείτε τις ιδιότητές του.",
+    "sections": {
+      "geometry": { "title": "Γεωμετρία" },
+      "baluster": { "title": "Κάγκελα" },
+      "posts": { "title": "Ορθοστάτες" },
+      "rails": { "title": "Κουπαστές" },
+      "infill": { "title": "Πλήρωση" }
+    }
+  },
   "propertiesPalette": {
     "title": "Ιδιότητες",
     "entityLine": "ΓΡΑΜΜΗ",
@@ -1682,6 +1693,7 @@
       "textEditor": "Επεξεργαστής Κειμένου",
       "arrayEditor": "Πίνακας",
       "stairProperties": "Ιδιότητες Κλίμακας",
+      "railingProperties": "Ιδιότητες Κιγκλιδώματος",
       "wallProperties": "Ιδιότητες Τοίχου",
       "openingProperties": "Ιδιότητες Ανοίγματος",
       "slabProperties": "Ιδιότητες Πλάκας",
@@ -1787,6 +1799,11 @@
       "stairShapeEdit": "Επεξεργασία Σχήματος",
       "stairStructuralAttach": "Σύνδεση δομικού",
       "stairActions": "Ενέργειες",
+      "railingGeometry": "Γεωμετρία",
+      "railingBaluster": "Κάγκελα",
+      "railingPosts": "Ορθοστάτες",
+      "railingRails": "Κουπαστές",
+      "railingInfill": "Πλήρωση",
       "wallTools": "Εργαλεία τοίχου",
       "wallDraw": "Σχεδίαση",
       "wallCategory": "Κατηγορία",
@@ -2987,6 +3004,52 @@
           "internal": "Εσωτερική Σκάλα Κατοικίας",
           "auxiliary": "Βοηθητική Σκάλα"
         }
+      },
+      "railingEditor": {
+        "predefinedType": {
+          "section": { "title": "Τύπος Κιγκλιδώματος" },
+          "guardrail": "Κιγκλίδωμα Ασφαλείας",
+          "handrail": "Χειρολισθήρας",
+          "balustrade": "Κάγκελο (Μπαλούστρα)"
+        },
+        "shape": {
+          "round": "Κυκλική",
+          "rectangular": "Ορθογωνική"
+        },
+        "balusterShape": {
+          "section": { "title": "Διατομή Κάγκελου" }
+        },
+        "justification": {
+          "section": { "title": "Στοίχιση" },
+          "center": "Κέντρο",
+          "start": "Αρχή",
+          "end": "Τέλος"
+        },
+        "onOff": {
+          "on": "Ναι",
+          "off": "Όχι"
+        },
+        "infillKind": {
+          "section": { "title": "Πλήρωση" },
+          "none": "Καμία",
+          "glass": "Γυαλί",
+          "mesh": "Πλέγμα",
+          "solid": "Συμπαγής"
+        },
+        "totalHeight": "Συνολικό Ύψος",
+        "baseElevation": "Υψόμετρο Βάσης",
+        "balusterWidth": "Πάχος Κάγκελου",
+        "balusterSpacing": "Απόσταση Κάγκελων",
+        "postsEnabled": "Ορθοστάτες",
+        "postsWidth": "Πάχος Ορθοστάτη",
+        "postsAtStart": "Ορθοστάτης στην Αρχή",
+        "postsAtCorners": "Ορθοστάτες στις Γωνίες",
+        "postsAtEnd": "Ορθοστάτης στο Τέλος",
+        "topRailEnabled": "Κουπαστή",
+        "topRailWidth": "Πάχος Κουπαστής",
+        "topRailHeight": "Ύψος Κουπαστής",
+        "handrailEnabled": "Χειρολισθήρας",
+        "handrailHeight": "Ύψος Χειρολισθήρα"
       },
       "wallEditor": {
         "drawMode": {
@@ -5333,6 +5396,17 @@
       "spacingCannotBeZero": "Η απόσταση δεν μπορεί να είναι μηδέν.",
       "fillAngleCannotBeZero": "Η γωνία γεμίσματος δεν μπορεί να είναι μηδέν.",
       "pathEntityRequired": "Απαιτείται η επιλογή διαδρομής."
+    }
+  },
+  "railingAdvancedPanel": {
+    "title": "Προηγμένες Ιδιότητες Κιγκλιδώματος",
+    "emptyState": "Επίλεξε ένα κιγκλίδωμα για να δεις τις ιδιότητες.",
+    "sections": {
+      "geometry": { "title": "Γεωμετρία" },
+      "baluster": { "title": "Κάγκελα" },
+      "posts": { "title": "Ορθοστάτες" },
+      "rails": { "title": "Κουπαστές" },
+      "infill": { "title": "Πλήρωση" }
     }
   },
   "stairAdvancedPanel": {
