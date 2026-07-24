@@ -790,6 +790,7 @@
     "noSource": "Select a .glb or .gltf file, or a .obj file together with its companion .mtl.",
     "parseError": "The 3D file could not be read. If it is a .gltf with external files (.bin / textures), ask for a .glb — it carries everything in one file.",
     "readError": "Failed to read the file.",
+    "daeConvertError": "The .dae was read for materials, but converting its geometry to 3D failed. Try again or, if possible, export the model as .glb.",
     "importMeshes": {
       "title": "Import objects from your collaborator",
       "description": "These objects do not match any element in the project — they are new geometry. Choose which ones to place on the plan.",
@@ -4984,6 +4985,18 @@
           "light": "Light",
           "accurate": "Accurate"
         }
+      },
+      "meshWireMode": {
+        "label": "Mesh Edges",
+        "tooltip": "Which edges «Wireframe» and «Hidden Line» show on meshes (imported, furniture, MEP fixtures): «Feature» = only real edges, hiding the internal triangulation diagonals; «Full triangulation» = every triangle.",
+        "options": {
+          "feature": "Feature",
+          "full": "Full triangulation"
+        }
+      },
+      "meshWireWidth": {
+        "label": "Edge Width",
+        "tooltip": "Mesh edge line width in screen pixels. Constant at any zoom and crisp on high-resolution displays."
       },
       "realisticMaterials": {
         "label": "Realistic Materials",

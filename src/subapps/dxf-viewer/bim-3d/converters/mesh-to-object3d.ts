@@ -34,6 +34,8 @@ import { sceneUnitsToMeters, type SceneUnits } from '../../utils/scene-units';
 import { getMaterial3D } from '../materials/MaterialCatalog3D';
 import { bimMeshCache } from '../library/bim-mesh-library/bim-mesh-cache';
 import { stampBimIdentity } from './bim-three-shape-helpers';
+// ADR-689 Φ3 — Visual Style «Συρμάτινο»/«Κρυφή Γραμμή» για ΚΑΘΕ mesh-based οντότητα. No-op αλλού.
+import { attachMeshWireframe } from '../wireframe/attach-mesh-wireframe';
 
 const MM_TO_M = 0.001;
 const DEG_TO_RAD = Math.PI / 180;
@@ -97,8 +99,7 @@ export function meshToObject3D(p: MeshPlacement): THREE.Object3D {
     const box = finiteBox3FromObject(cached);
     const anchorY = box ? (p.verticalAnchor === 'top' ? box.max.y : box.min.y) : 0;
     cached.position.y = mountingY - anchorY;
-    tagObject(cached, p);
-    return cached;
+    return finalize(cached, p);
   }
 
   // Cache miss → bbox placeholder + start the async load.
@@ -110,8 +111,22 @@ export function meshToObject3D(p: MeshPlacement): THREE.Object3D {
   const halfOffset = p.verticalAnchor === 'top' ? -heightM / 2 : heightM / 2;
   placeholder.position.set(worldX, mountingY + halfOffset, worldZ);
   placeholder.rotation.y = rotY;
-  tagObject(placeholder, p);
-  return placeholder;
+  return finalize(placeholder, p);
+}
+
+/**
+ * Το κοινό τελείωμα και των δύο διαδρομών (cache hit + placeholder): ταυτότητα οντότητας, μετά
+ * Visual Style.
+ *
+ * ADR-689 Φ3 — το `attachMeshWireframe` ζει ΕΔΩ και όχι στους επιμέρους converters, επειδή αυτό
+ * είναι το σημείο απ' όπου περνούν ΟΛΕΣ οι mesh-based οντότητες (εισαγόμενα πλέγματα, έπιπλα
+ * ADR-410, εξαρτήματα Η/Μ ADR-406/408). Ένα call site → καμία οντότητα δεν μπορεί να ξεχαστεί εκτός
+ * του «Συρμάτινου», όπως είχε συμβεί στη Φ2 (μόνο τα εισαγόμενα υπάκουαν).
+ */
+function finalize(obj: THREE.Object3D, p: MeshPlacement): THREE.Object3D {
+  tagObject(obj, p);
+  attachMeshWireframe(obj);
+  return obj;
 }
 
 /** Bounding-box placeholder mesh (category-coloured fallback material). */

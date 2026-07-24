@@ -75,12 +75,24 @@ export function useBim3DVgResync(
     // flips (σαν 2Δ ↔ environment) the edge COLOUR swaps (uniform silhouette ⟷ 2D
     // per-category), baked at edge-build time → rebuild. Both live on the SAME store, so
     // one subscription covers them. (Supersedes the ADR-413 realisticMaterials-only sub.)
+    // ADR-689 Φ3 — ΤΟ ΙΔΙΟ ισχύει για τους δύο άξονες του mesh wireframe: το `aWireCode` και το
+    // πάχος ψήνονται στη γεωμετρία/υλικό τη στιγμή του build (`attachMeshWireframe`), άρα η αλλαγή
+    // τους χρειάζεται rebuild ακριβώς όπως η αλλαγή στυλ. Ίδιο per-field idempotent guard.
     let prevVisualStyle = useBimRenderSettingsStore.getState().visualStyle;
     let prevBgMode = useBimRenderSettingsStore.getState().backgroundMode;
+    let prevWireMode = useBimRenderSettingsStore.getState().meshWireMode;
+    let prevWireWidth = useBimRenderSettingsStore.getState().meshWireWidthPx;
     const unsubVisualStyle = useBimRenderSettingsStore.subscribe((state) => {
-      if (state.visualStyle === prevVisualStyle && state.backgroundMode === prevBgMode) return;
+      if (
+        state.visualStyle === prevVisualStyle &&
+        state.backgroundMode === prevBgMode &&
+        state.meshWireMode === prevWireMode &&
+        state.meshWireWidthPx === prevWireWidth
+      ) return;
       prevVisualStyle = state.visualStyle;
       prevBgMode = state.backgroundMode;
+      prevWireMode = state.meshWireMode;
+      prevWireWidth = state.meshWireWidthPx;
       resync();
     });
 

@@ -118,6 +118,56 @@ export function isGlassQuality(v: unknown): v is GlassQuality {
 }
 
 /**
+ * ADR-689 Φ3 — ποιες ακμές δείχνει το GPU wireframe των ΠΛΕΓΜΑΤΩΝ (εισαγόμενα, έπιπλα, εξαρτήματα
+ * Η/Μ — ό,τι περνά από `meshToObject3D`). ORTHOGONAL στον `visualStyle`/`backgroundMode`, οπότε δικό
+ * του per-view πεδίο στο `BimRenderSettings`. Ενεργό μόνο στα face modes `none` (Συρμάτινο) και
+ * `hidden-line` (Κρυφή Γραμμή):
+ *   - `feature` → μόνο οι ΠΡΑΓΜΑΤΙΚΕΣ ακμές: μια ακμή δείχνεται όταν είναι σύνορο ή όταν η δίεδρη
+ *     γωνία με το γειτονικό τρίγωνο ξεπερνά το {@link MESH_WIRE_FEATURE_ANGLE_DEG}. Κρύβει τις
+ *     εσωτερικές διαγώνιες τριγωνοποίησης — η ματιά των Revit / ArchiCAD / Cinema 4D. Προεπιλογή.
+ *   - `full` → κάθε τριγωνάκι (η ματιά του AutoCAD Wireframe· η συμπεριφορά της Φ2).
+ */
+export type MeshWireMode = 'feature' | 'full';
+
+/** ADR-689 Φ3 — προεπιλογή = χαρακτηριστικές ακμές (Giorgio 2026-07-24). */
+export const DEFAULT_MESH_WIRE_MODE: MeshWireMode = 'feature';
+
+/** ADR-689 Φ3 — όλες οι επιλογές σε σειρά εμφάνισης στο ribbon dropdown. */
+export const MESH_WIRE_MODES: readonly MeshWireMode[] = ['feature', 'full'] as const;
+
+/** ADR-689 Φ3 — type guard για persisted/UI input. */
+export function isMeshWireMode(v: unknown): v is MeshWireMode {
+  return v === 'feature' || v === 'full';
+}
+
+/**
+ * ADR-689 Φ3 — κατώφλι δίεδρης γωνίας (μοίρες) για τις «χαρακτηριστικές» ακμές. **Ίδια τιμή** με το
+ * `EdgesGeometry(geo, 30)` του `bim-3d-edge-overlay-builder` (Revit silhouette), ώστε ένα πλέγμα και
+ * ένα δομικό στερεό να συμφωνούν στο τι θεωρείται ακμή.
+ */
+export const MESH_WIRE_FEATURE_ANGLE_DEG = 30;
+
+/**
+ * ADR-689 Φ3 — πάχος γραμμής ακμών σε CSS pixels (πριν το DPR). Το 1.0 είναι η καθαρή, ευκρινής
+ * γραμμή που κρατούν Revit / AutoCAD / Cinema 4D· σε High-DPI πολλαπλασιάζεται με το
+ * `devicePixelRatio` ώστε να μένει οπτικά ίδια.
+ */
+export const DEFAULT_MESH_WIRE_WIDTH_PX = 1;
+
+/** ADR-689 Φ3 — όρια του ρυθμιστικού πάχους (κάτω από 0.5px η γραμμή σβήνει, πάνω από 4px «λασπώνει»). */
+export const MESH_WIRE_WIDTH_MIN_PX = 0.5;
+export const MESH_WIRE_WIDTH_MAX_PX = 4;
+
+/** ADR-689 Φ3 — προτεινόμενες τιμές στο dropdown του αριθμητικού πεδίου. */
+export const MESH_WIRE_WIDTH_PRESETS_PX: readonly number[] = [0.5, 1, 1.5, 2, 3] as const;
+
+/** ADR-689 Φ3 — περιορίζει μια τιμή πάχους στο έγκυρο εύρος (μη-πεπερασμένη → προεπιλογή). */
+export function clampMeshWireWidthPx(v: number): number {
+  if (!Number.isFinite(v)) return DEFAULT_MESH_WIRE_WIDTH_PX;
+  return Math.max(MESH_WIRE_WIDTH_MIN_PX, Math.min(MESH_WIRE_WIDTH_MAX_PX, v));
+}
+
+/**
  * Default visual style = «Shaded with Edges» (Σκιασμένο με Ακμές): lit flat-colour
  * faces + the always-built visible model edge overlay (ADR-375). Giorgio's chosen
  * default (2026-06-13) — every NEW view opens shaded-with-edges; views that already

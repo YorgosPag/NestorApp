@@ -20,6 +20,7 @@
 import * as THREE from 'three';
 import { resolve3DEdgeStyle } from '../edges/bim-3d-edge-resolver';
 import { buildEdgeOverlay, attachEdgeOverlay } from '../edges/bim-3d-edge-overlay-builder';
+import { BIM_EDGE_COLOR_LIGHT_BG } from '../edges/bim-edge-colors';
 import type { BimCategory } from '../../config/bim-object-styles';
 import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
 
@@ -38,8 +39,11 @@ const EDGE_DEFAULT_DPI = 96;
  * wants consistent discreet BLACK edges, so we override the resolver colour here
  * with a single near-black. The resolver still drives width / pattern / visibility
  * (pen table, V/G eye toggle, per-element/layer overrides all keep working in 3D).
+ *
+ * ADR-689 Φ3 — the literal now lives in the `bim-edge-colors` SSoT (it used to be copy-pasted
+ * across three files); this alias keeps the local name meaningful at the use site.
  */
-const BIM_3D_EDGE_COLOR = '#1a1a1a';
+const BIM_3D_EDGE_COLOR = BIM_EDGE_COLOR_LIGHT_BG;
 
 /**
  * ADR-445 §structural-framing-reads-by-edges (Giorgio 2026-07-03) — «το δοκάρι

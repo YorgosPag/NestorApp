@@ -8,7 +8,12 @@
  */
 
 import type { BimRenderSettings, ResolvedBimSettings, AxisCutKey } from '../config/bim-render-settings-types';
-import type { VisualStylePreset, BackgroundMode, GlassQuality } from '../config/bim-visual-style';
+import type {
+  VisualStylePreset,
+  BackgroundMode,
+  GlassQuality,
+  MeshWireMode,
+} from '../config/bim-visual-style';
 import type { ViewRange } from '../config/bim-view-range';
 import type { BimCategory, ObjectStyle, SubcategoryStyle } from '../config/bim-object-styles';
 import type { Discipline } from '../bim/discipline/bim-discipline';
@@ -107,6 +112,17 @@ export interface BimRenderSettingsState extends ResolvedBimSettings {
    * `setBackgroundMode`. Single state update + single debounced write (idempotent).
    */
   setGlassQuality: (glassQuality: GlassQuality) => void;
+  /**
+   * ADR-689 Φ3 — set which edges the mesh wireframe shows (`feature` crease-only ↔ `full`
+   * triangulation). ORTHOGONAL to `setVisualStyle`; takes effect in the «Συρμάτινο» /
+   * «Κρυφή Γραμμή» styles. Single state update + single debounced write (idempotent).
+   */
+  setMeshWireMode: (mode: MeshWireMode) => void;
+  /**
+   * ADR-689 Φ3 — set the mesh wireframe line width in CSS px (clamped to the valid range).
+   * Single state update + single debounced write (idempotent).
+   */
+  setMeshWireWidthPx: (widthPx: number) => void;
   /**
    * ADR-413/446 — LEGACY alias: maps the realistic boolean onto the equivalent
    * Visual Style preset (`true`→'realistic-edges', `false`→'shaded-edges'). Kept

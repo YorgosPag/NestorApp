@@ -20,12 +20,16 @@ import {
   DEFAULT_VISUAL_STYLE,
   DEFAULT_BACKGROUND_MODE,
   DEFAULT_GLASS_QUALITY,
+  DEFAULT_MESH_WIRE_MODE,
+  DEFAULT_MESH_WIRE_WIDTH_PX,
+  clampMeshWireWidthPx,
   resolveVisualStyleAxes,
   type VisualStylePreset,
   type FaceMode,
   type EdgeMode,
   type BackgroundMode,
   type GlassQuality,
+  type MeshWireMode,
 } from './bim-visual-style';
 
 // ── Drawing scale constants (re-exported by drawing-scale-store for compat) ──
@@ -130,6 +134,18 @@ export interface BimRenderSettings {
    * sphere/swatches/export stay always accurate. Persisted per-view.
    */
   glassQuality?: GlassQuality;
+  /**
+   * ADR-689 Φ3 — ποιες ακμές δείχνει το GPU wireframe των πλεγμάτων στα στυλ «Συρμάτινο» /
+   * «Κρυφή Γραμμή». ORTHOGONAL σε `visualStyle`/`backgroundMode`. Absent ⇒ `feature` (μόνο
+   * πραγματικές ακμές — Revit/ArchiCAD/C4D). Persisted per-view.
+   */
+  meshWireMode?: MeshWireMode;
+  /**
+   * ADR-689 Φ3 — πάχος γραμμής των ακμών πλέγματος σε CSS pixels (πριν το DPR). Absent ⇒ 1.
+   * Περιορίζεται στο [{@link MESH_WIRE_WIDTH_MIN_PX}, {@link MESH_WIRE_WIDTH_MAX_PX}] κατά την
+   * ανάγνωση, ώστε ένα κατεστραμμένο persisted doc να μη σβήσει τις γραμμές.
+   */
+  meshWireWidthPx?: number;
   /**
    * ADR-413 — LEGACY realistic-materials bit. Superseded by {@link visualStyle}
    * (ADR-446): `realisticMaterials === (faceMode === 'realistic')`. Retained ONLY
@@ -242,6 +258,10 @@ export interface ResolvedBimSettings {
   backgroundMode: BackgroundMode;
   /** ADR-687 Φ9 — resolved live-viewport glass quality (default `light`). */
   glassQuality: GlassQuality;
+  /** ADR-689 Φ3 — resolved mesh wireframe edge set (default `feature`). */
+  meshWireMode: MeshWireMode;
+  /** ADR-689 Φ3 — resolved mesh wireframe line width, CSS px (default 1, clamped). */
+  meshWireWidthPx: number;
   /**
    * ADR-413/446 — DERIVED convenience flag `faceMode === 'realistic'`, kept so
    * existing realistic-only consumers (e.g. roof relief) need no faceMode logic.
@@ -314,6 +334,11 @@ export function resolveBimSettings(s?: BimRenderSettings | null): ResolvedBimSet
     backgroundMode: s?.backgroundMode ?? DEFAULT_BACKGROUND_MODE,
     // ADR-687 Φ9 — absent ⇒ light (performance-first glass; accurate is opt-in per-view).
     glassQuality: s?.glassQuality ?? DEFAULT_GLASS_QUALITY,
+    // ADR-689 Φ3 — absent ⇒ χαρακτηριστικές ακμές (η ματιά των μεγάλων· η πλήρης τριγωνοποίηση
+    // είναι opt-in ανά προβολή). Το πάχος περιορίζεται, ώστε ένα κακό persisted doc να μη σβήσει
+    // τις γραμμές ή να τις κάνει «λάσπη».
+    meshWireMode: s?.meshWireMode ?? DEFAULT_MESH_WIRE_MODE,
+    meshWireWidthPx: clampMeshWireWidthPx(s?.meshWireWidthPx ?? DEFAULT_MESH_WIRE_WIDTH_PX),
     // ADR-413/446 — DERIVED from the face mode (no longer a free-standing bit).
     realisticMaterials: axes.faceMode === 'realistic',
     // ADR-422 L1 — absent ⇒ false (analytical heat-load overlay off by default).

@@ -48,7 +48,7 @@
 | **Κ3** | Textures (`map_Kd`) αγνοούνται στο import. | 🟡 ADR-678 Φ2 |
 | **Κ4** | PBR ανά όψη (γυαλί/καθρέφτης/υφές) — **ιδιοκτησία ADR-679**, Φ2a ήδη DONE (library + textures + render + ενοποιημένος color registry)· εκκρεμούν Φ2b/Φ2c. | 🟢 Καλύπτεται αλλού |
 | **Κ5** | Καμία ανίχνευση αλλαγής γεωμετρίας — αν ο εξωτερικός σηκώσει στηθαίο, ο Νέστωρ **δεν το μαθαίνει ποτέ**. | 🟡 |
-| **Κ6** | Καμία εξαγωγή/εισαγωγή DAE. | 🟢 Χαμηλή (βλ. §6) |
+| **Κ6** | ~~Καμία εξαγωγή/**εισαγωγή** DAE~~ → **DAE geometry import ΛΥΘΗΚΕ** (ADR-690, 2026-07-24): `.dae`→in-memory `.glb`→**το ίδιο** glTF geometry pipeline (`serialiseGlb`+`parseGltfScene`+`importGltfMeshes`), coexist με το material round-trip. Το `.dae` πλέον κάνει ό,τι το `.glb`. DAE **εξαγωγή** ακόμη εκτός scope. | 🟢 Import DONE (ADR-690) |
 
 ## 3. Το θεμελιώδες όριο (100% ειλικρίνεια)
 

@@ -45,6 +45,8 @@ import {
 } from '../../bim/services/bim-material-texture-upload.service';
 import { buildKnownMaterialResolver } from '../../io/mesh3d-material-import/known-import-materials';
 import type { GltfObjectRecord } from '../../io/mesh3d-roundtrip/gltf-scene-parse';
+import { parseGltfScene } from '../../io/mesh3d-roundtrip/gltf-scene-parse';
+import { colladaToGlb } from '../../io/mesh3d-roundtrip/collada-to-glb';
 import { isImportableNode } from '../../io/mesh3d-roundtrip/import-gltf-meshes';
 import { parseExportManifest, indexManifestMaterials, indexManifestByMeshName } from '../../io/mesh3d-roundtrip/export-manifest';
 import { ImportedMeshImportDialog } from './imported-mesh/ImportedMeshImportDialog';
@@ -64,6 +66,8 @@ type ImportPayload =
       /** ADR-678 Φ4 — COLLADA `.dae` (C4D R15, per-face). */
       readonly kind: 'dae';
       readonly daeText: string;
+      /** ADR-690 — το όνομα του `.dae` για ιχνηλασιμότητα της εισαγόμενης γεωμετρίας. */
+      readonly fileName: string;
       readonly baseline?: ReadonlyMap<string, string>;
       /** ADR-678 Βήμα 2 — per-entity/per-face baseline (το `.dae` είναι το κύριο per-face μονοπάτι). */
       readonly materialBaselineByMesh?: ReadonlyMap<string, Readonly<Record<string, string>>>;
@@ -78,10 +82,15 @@ type ImportPayload =
       readonly materialBaselineByMesh?: ReadonlyMap<string, Readonly<Record<string, string>>>;
     };
 
-/** ADR-683 Φ3β — τι περιμένει απόφαση του χρήστη μετά το parse (κατάσταση D του §5). */
+/**
+ * ADR-683 Φ3β — τι περιμένει απόφαση του χρήστη μετά το parse (κατάσταση D του §5). ADR-690: το
+ * `data` κρατά τα bytes που θα ανέβουν — `File` για glTF, in-memory `ArrayBuffer` για το `.dae` που
+ * μετατράπηκε σε glb — άρα και οι δύο δρόμοι τροφοδοτούν το ίδιο dialog χωρίς διακλάδωση κάτω.
+ */
 interface PendingMeshImport {
   readonly records: readonly GltfObjectRecord[];
-  readonly file: File;
+  readonly data: ArrayBuffer | Blob;
+  readonly sourceFileName: string;
 }
 
 /**
@@ -114,6 +123,7 @@ async function readImportFiles(files: FileList): Promise<ImportPayload | null> {
     return {
       kind: 'dae',
       daeText: await dae.text(),
+      fileName: dae.name,
       baseline: await readManifestBaseline(list),
       materialBaselineByMesh: await readMaterialBaselineByMesh(list),
       // ADR-678 Βήμα 3 — οι εικόνες υφών που ήρθαν μαζί (Maxon «Save with Assets»).
@@ -274,8 +284,44 @@ export function C4dMaterialImportButton() {
     // `appliedCount === 0` → θα έπεφτε στο early return του «καμία αλλαγή» και ο χρήστης δεν θα
     // έβλεπε ΠΟΤΕ τα αντικείμενά του. Δηλαδή ακριβώς η περίπτωση για την οποία φτιάχτηκε η Φ3β.
     if (payload.kind === 'gltf' && importableRecords.length > 0) {
-      setPendingImport({ records: importableRecords, file: payload.file });
+      setPendingImport({
+        records: importableRecords,
+        data: payload.file,
+        sourceFileName: payload.file.name,
+      });
       return;
+    }
+
+    // ADR-690 — COLLADA γεωμετρία: αν το `.dae` έφερε αντικείμενα που ΔΕΝ ταίριαξαν σε ζωντανή
+    // οντότητα (π.χ. ξένη καρέκλα → όλα unmatched), τα εισάγουμε ως νέα γεωμετρία — μετατρέποντας το
+    // `.dae` σε in-memory glb και περνώντας το από το ΙΔΙΟ dialog με το glTF (ΜΗΔΕΝ διπλότυπο
+    // μονοπάτι). Pure round-trip (μηδέν unmatched) δεν πληρώνει τη μετατροπή. Η βαφή των matched
+    // εφαρμόστηκε ήδη από το importColladaAppearance — τα δύο συνυπάρχουν (ADR-690 §3.2).
+    if (payload.kind === 'dae' && result.unmatched.length > 0) {
+      try {
+        const { glb, missingTextures } = await colladaToGlb(payload.daeText, payload.imageFiles);
+        const { objects } = await parseGltfScene(glb);
+        const unmatchedNames = new Set(result.unmatched);
+        const geometryRecords = objects.filter(
+          (o) => unmatchedNames.has(o.objectName) && isImportableNode(o),
+        );
+        if (geometryRecords.length > 0) {
+          if (missingTextures.length > 0) {
+            notifications.warning(
+              t('c4dMaterialImport.missingTextures', { files: missingTextures.join(', ') }),
+            );
+          }
+          setPendingImport({
+            records: geometryRecords,
+            data: glb,
+            sourceFileName: payload.fileName,
+          });
+          return;
+        }
+      } catch {
+        // Η βαφή εφαρμόστηκε ήδη· μόνο η μετατροπή γεωμετρίας απέτυχε → ρητό μήνυμα, όχι σιωπηλή απώλεια.
+        notifications.error(t('c4dMaterialImport.daeConvertError'));
+      }
     }
 
     if (result.appliedCount === 0 && result.finishMemberCount === 0) {
@@ -310,8 +356,8 @@ export function C4dMaterialImportButton() {
         <ImportedMeshImportDialog
           open
           records={pendingImport.records}
-          data={pendingImport.file}
-          sourceFileName={pendingImport.file.name}
+          data={pendingImport.data}
+          sourceFileName={pendingImport.sourceFileName}
           onClose={() => setPendingImport(null)}
         />
       )}

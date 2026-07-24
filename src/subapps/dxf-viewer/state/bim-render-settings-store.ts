@@ -28,7 +28,7 @@ import {
   migrateBimRenderSettings,
   type BimRenderSettings,
 } from '../config/bim-render-settings-types';
-import { resolveVisualStyleAxes } from '../config/bim-visual-style';
+import { resolveVisualStyleAxes, clampMeshWireWidthPx } from '../config/bim-visual-style';
 import { type ViewRange } from '../config/bim-view-range';
 import {
   STRUCTURAL_BIM_CATEGORIES,
@@ -71,6 +71,9 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
       backgroundMode: state.backgroundMode,
       // ADR-687 Φ9 — persist the live-viewport glass quality (Ελαφρό/Ακριβές) per-view.
       glassQuality: state.glassQuality,
+      // ADR-689 Φ3 — persist the mesh wireframe edge set + line width per-view.
+      meshWireMode: state.meshWireMode,
+      meshWireWidthPx: state.meshWireWidthPx,
       showHeatLoad: state.showHeatLoad,
       // ADR-470 — persist the concrete-core toggle per-view.
       showStructuralCore: state.showStructuralCore,
@@ -124,6 +127,8 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
         edgeMode: resolved.edgeMode,
         backgroundMode: resolved.backgroundMode,
         glassQuality: resolved.glassQuality,
+        meshWireMode: resolved.meshWireMode,
+        meshWireWidthPx: resolved.meshWireWidthPx,
         realisticMaterials: resolved.realisticMaterials,
         showHeatLoad: resolved.showHeatLoad,
         showStructuralCore: resolved.showStructuralCore,
@@ -274,6 +279,25 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
       set({ glassQuality, lastLocalMutationAt: Date.now() });
       if (state.currentLevelId)
         debounceWrite(state.currentLevelId, buildRaw({ ...get(), glassQuality }));
+    },
+
+    setMeshWireMode(meshWireMode) {
+      const state = get();
+      if (state.meshWireMode === meshWireMode) return; // idempotent — no-op write
+      set({ meshWireMode, lastLocalMutationAt: Date.now() });
+      if (state.currentLevelId)
+        debounceWrite(state.currentLevelId, buildRaw({ ...get(), meshWireMode }));
+    },
+
+    setMeshWireWidthPx(widthPx) {
+      const state = get();
+      // ADR-689 Φ3 — περιορισμός ΠΡΙΝ τη σύγκριση, ώστε μια εκτός ορίων τιμή που «πέφτει» στο ίδιο
+      // clamp να μένει no-op αντί να γράφει διαρκώς την ίδια τιμή στο Firestore.
+      const meshWireWidthPx = clampMeshWireWidthPx(widthPx);
+      if (state.meshWireWidthPx === meshWireWidthPx) return; // idempotent — no-op write
+      set({ meshWireWidthPx, lastLocalMutationAt: Date.now() });
+      if (state.currentLevelId)
+        debounceWrite(state.currentLevelId, buildRaw({ ...get(), meshWireWidthPx }));
     },
 
     setShowHeatLoad(showHeatLoad) {

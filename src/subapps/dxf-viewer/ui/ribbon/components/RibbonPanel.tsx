@@ -43,6 +43,8 @@ import { ShowBalancingToggle } from './ShowBalancingToggle';
 import { ExportThermalStudyButton } from './ExportThermalStudyButton';
 import { VisualStyleSelect } from './VisualStyleSelect';
 import { GlassQualitySelect } from './GlassQualitySelect';
+// ADR-689 Φ3 — «Ακμές Πλέγματος» + «Πάχος Ακμών» (mesh wireframe άξονες).
+import { MeshWireModeSelect, MeshWireWidthField } from './MeshWireWidgets';
 import { StructuralComponentVisibilitySelect } from './StructuralComponentVisibilitySelect';
 import { DisciplineVisibilityToggle } from './DisciplineVisibilityToggle';
 import { RibbonInsertTokenWidget } from './RibbonInsertTokenWidget';
@@ -210,6 +212,12 @@ function renderButton(button: RibbonButton): React.ReactNode {
     }
     if (button.widgetId === 'glass-quality-select') {
       return <GlassQualitySelect key="glass-quality-select-widget" />;
+    }
+    if (button.widgetId === 'mesh-wire-mode-select') {
+      return <MeshWireModeSelect key="mesh-wire-mode-select-widget" />;
+    }
+    if (button.widgetId === 'mesh-wire-width-field') {
+      return <MeshWireWidthField key="mesh-wire-width-field-widget" />;
     }
     if (button.widgetId === 'structural-component-visibility') {
       return <StructuralComponentVisibilitySelect key="structural-component-visibility-widget" />;

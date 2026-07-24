@@ -56,6 +56,31 @@ export const VIEW_VISUAL_STYLES_PANEL: RibbonPanelDef = {
             commandKey: 'glass-quality-select',
           },
         },
+        // ADR-689 Φ3 — «Ακμές Πλέγματος» + «Πάχος Ακμών»: ποιες ακμές δείχνει το GPU wireframe των
+        // πλεγμάτων στα στυλ «Συρμάτινο»/«Κρυφή Γραμμή» και με τι πάχος. Ορθογώνιοι άξονες του
+        // ADR-446, οπότε ζουν στο ίδιο panel με το «Στυλ Προβολής».
+        {
+          type: 'widget',
+          size: 'small',
+          widgetId: 'mesh-wire-mode-select',
+          command: {
+            id: 'view.meshWireMode',
+            labelKey: 'ribbon.commands.meshWireMode.label',
+            icon: '',
+            commandKey: 'mesh-wire-mode-select',
+          },
+        },
+        {
+          type: 'widget',
+          size: 'small',
+          widgetId: 'mesh-wire-width-field',
+          command: {
+            id: 'view.meshWireWidth',
+            labelKey: 'ribbon.commands.meshWireWidth.label',
+            icon: '',
+            commandKey: 'mesh-wire-width-field',
+          },
+        },
       ],
     },
   ],

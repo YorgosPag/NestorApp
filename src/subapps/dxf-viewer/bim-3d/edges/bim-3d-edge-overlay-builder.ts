@@ -28,8 +28,9 @@ import { type LinePatternKey } from '../../config/bim-line-patterns';
 // ADR-510 Φ2C — 3D edges read the SAME unified mm catalog as 2D (SSoT), via the alias bridge.
 import { bimDashMm } from '../../config/bim-dash-resolver';
 
-/** Fallback color when the resolver returns null (= token-driven). */
-const DEFAULT_EDGE_COLOR = '#1a1a1a';
+// ADR-689 Φ3 — the near-black silhouette colour now lives in ONE place (it used to be copy-pasted
+// across three files). Fallback when the resolver returns null (= token-driven).
+import { BIM_EDGE_COLOR_LIGHT_BG as DEFAULT_EDGE_COLOR } from './bim-edge-colors';
 
 /**
  * ADR-375 Phase C.7 (v2.21) — render the edge overlays AFTER the solid faces
