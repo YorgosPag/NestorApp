@@ -275,7 +275,9 @@ function MaterialCard({ entry, onEdit, onDuplicate, onDelete, t, colors }: Mater
       onClick={handleClick}
       aria-label={t('list.cardAriaLabel', { name: entry.label })}
     >
-      <header className="flex items-center gap-1.5">
+      <header className="flex items-center gap-2">
+        {/* ADR-687 Φ8 (Giorgio 2026-07-24) — μεγάλες μικρογραφίες (Revit Material Browser): 48px,
+            μεγαλύτερες από τα 36px της κάτω μπάρας «Υλικά όψης». */}
         <MaterialSwatch
           sphere
           materialId={entry.materialId}
@@ -284,6 +286,7 @@ function MaterialCard({ entry, onEdit, onDuplicate, onDelete, t, colors }: Mater
           albedoUrl={entry.albedoUrl}
           appearance={entry.appearance}
           color={entry.color}
+          className="h-12 w-12 rounded-md"
         />
         <span className={`text-xs font-medium truncate flex-1 ${colors.text.primary}`}>{entry.label}</span>
         <span className={`text-[10px] px-1.5 py-0.5 rounded-full shrink-0 ${badge.className}`}>
