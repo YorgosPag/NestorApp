@@ -12,6 +12,7 @@ import { readImportedMeshField, patchImportedMeshField } from '../imported-mesh-
 import {
   IMPORTED_MESH_NUMBER_KEYS as N,
   IMPORTED_MESH_READONLY_KEYS as R,
+  IMPORTED_MESH_STRING_KEYS as S,
   isImportedMeshRibbonKey,
   isImportedMeshRibbonStringKey,
   isAnyImportedMeshRibbonKey,
@@ -87,6 +88,17 @@ describe('readImportedMeshField — read-only measured/identity fields', () => {
   });
 });
 
+describe('readImportedMeshField — displayName (ADR-683 Φ3.1γ follow-up)', () => {
+  it('χωρίς label → fallback στο nodeName', () => {
+    expect(readImportedMeshField(S.displayName, baseParams)).toBe('Rail_01');
+  });
+
+  it('με label → η επεξεργάσιμη ετικέτα, όχι το nodeName', () => {
+    const named: ImportedMeshParams = { ...baseParams, label: 'Κάγκελο βεράντας' };
+    expect(readImportedMeshField(S.displayName, named)).toBe('Κάγκελο βεράντας');
+  });
+});
+
 describe('readImportedMeshField — άγνωστο κλειδί', () => {
   it('επιστρέφει null για key εκτός σχήματος', () => {
     expect(readImportedMeshField('not-a-real-key', baseParams)).toBeNull();
@@ -119,6 +131,36 @@ describe('patchImportedMeshField — writable numeric keys', () => {
   it('ΠΟΤΕ δεν μεταλλάσσει το αρχικό params (immutability)', () => {
     const snapshot = { ...baseParams, position: { ...baseParams.position } };
     patchImportedMeshField(N.posY, baseParams, '999');
+    expect(baseParams).toEqual(snapshot);
+  });
+});
+
+describe('patchImportedMeshField — displayName (the ONE writable string key)', () => {
+  it('γράφει το label (trim), αφήνει το nodeName άθικτο', () => {
+    const next = patchImportedMeshField(S.displayName, baseParams, '  Κάγκελο βεράντας  ');
+    expect(next.label).toBe('Κάγκελο βεράντας');
+    expect(next.nodeName).toBe(baseParams.nodeName);
+    expect(next).not.toBe(baseParams);
+  });
+
+  it('κενό/whitespace ΚΑΘΑΡΙΖΕΙ το label — το κλειδί ΛΕΙΠΕΙ, ΔΕΝ γίνεται undefined (Firestore-safe)', () => {
+    const named: ImportedMeshParams = { ...baseParams, label: 'Παλιό όνομα' };
+    const cleared = patchImportedMeshField(S.displayName, named, '   ');
+    expect('label' in cleared).toBe(false);
+  });
+
+  it('καθάρισμα σε ήδη-ανώνυμο = no-op, ίδια αναφορά (ιδεμποτεντικό)', () => {
+    expect(patchImportedMeshField(S.displayName, baseParams, '')).toBe(baseParams);
+  });
+
+  it('ίδια τιμή με το τρέχον label = no-op, ίδια αναφορά', () => {
+    const named: ImportedMeshParams = { ...baseParams, label: 'Ίδιο' };
+    expect(patchImportedMeshField(S.displayName, named, 'Ίδιο')).toBe(named);
+  });
+
+  it('ΠΟΤΕ δεν μεταλλάσσει το αρχικό params (immutability)', () => {
+    const snapshot = { ...baseParams };
+    patchImportedMeshField(S.displayName, baseParams, 'Νέο όνομα');
     expect(baseParams).toEqual(snapshot);
   });
 });
@@ -159,6 +201,12 @@ describe('guards — isImportedMeshRibbonKey / isImportedMeshRibbonStringKey / i
       expect(isImportedMeshRibbonStringKey(key)).toBe(true);
       expect(isAnyImportedMeshRibbonKey(key)).toBe(true);
     }
+  });
+
+  it('displayName (writable string key) περνά ΜΟΝΟ το δεύτερο guard — ίδιο σχήμα με τα read-only', () => {
+    expect(isImportedMeshRibbonKey(S.displayName)).toBe(false);
+    expect(isImportedMeshRibbonStringKey(S.displayName)).toBe(true);
+    expect(isAnyImportedMeshRibbonKey(S.displayName)).toBe(true);
   });
 
   it('άγνωστο κλειδί δεν περνά κανένα guard', () => {

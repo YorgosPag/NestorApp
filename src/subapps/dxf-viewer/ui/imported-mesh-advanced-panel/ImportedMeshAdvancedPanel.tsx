@@ -27,16 +27,33 @@
  * descriptor table — a swatch + fallback text, a literal per-slot name list,
  * and a literal identity summary respectively don't fit the single
  * label+value row shape, so they render as small dedicated sections below.
+ *
+ * ADR-683 Φ3.1γ follow-up (6 fixes on top of the original B1 panel):
+ *  - `displayName` (click-to-edit, `control:'rename'`) is a NEW writable identity row — separate
+ *    from the still-read-only `nodeName` (labelled "source name" here to disambiguate the two).
+ *  - The `level` readout now shows the resolved `Level.name` (threaded in as `levelName` by
+ *    `ImportedMeshPropertiesTab`), not the raw `storeyId`.
+ *  - «Υλικό» resolves the LIVE override label (via `libraryEntries`, ADR-687 Φ8 general library),
+ *    not just the raw embedded `.glb` material name — reading the FULL applied-material SET
+ *    (`resolveEntityMaterialIdSet`, ADR-688 follow-up) so a multi-slot mesh with only one part
+ *    painted shows «multiple materials» instead of silently reporting just the base slot.
+ *  - Position/elevation now go through the SAME display-unit boundary (`toDisp`/`fromDisp`) and
+ *    rotation the same `formatAngleValue` rounding `BlockAdvancedPanel` uses for its INSERT
+ *    transform — the SSoT (`readImportedMeshField`/`patchImportedMeshField`) itself stays
+ *    canonical-mm; the conversion happens ONLY at this UI boundary, exactly like Block's bridge.
  */
 
 import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { EntityPropertySection } from '../entity-properties/EntityPropertyRow';
 import { MaterialSwatch } from '../components/shared/MaterialSwatch';
-import { resolveEntityCurrentMaterialId } from '../../bim-3d/materials/resolve-entity-current-material';
+import { resolveEntityMaterialIdSet } from '../../bim-3d/materials/resolve-entity-current-material';
+import { toDisp, fromDisp } from '../ribbon/units/ribbon-display-unit';
+import { formatAngleValue } from '../../config/units';
 import {
   IMPORTED_MESH_NUMBER_KEYS,
   IMPORTED_MESH_READONLY_KEYS,
+  IMPORTED_MESH_STRING_KEYS,
 } from '../../bim/entities/imported-mesh/imported-mesh-param-keys';
 import {
   readImportedMeshField,
@@ -47,11 +64,40 @@ import type { DispatchImportedMeshParamPatch } from './commands/dispatchImported
 import type { EntityPropertyField, EntityPropertyGroup } from '../entity-properties/entity-property-fields';
 import type { RibbonComboboxState } from '../ribbon/context/RibbonCommandContext';
 import type { RibbonNumericInputConfig } from '../ribbon/types/ribbon-types';
+import type { LibraryEntry } from '../../bim-3d/ui/material-library-index';
 
 /** Editable signed continuous coordinate/elevation (mirror block's COORD_INPUT). */
 const COORD_INPUT: RibbonNumericInputConfig = { editable: true, allowNegative: true, allowDecimal: true };
 /** Editable rotation in degrees (signed). */
 const ANGLE_INPUT: RibbonNumericInputConfig = { editable: true, allowNegative: true, allowDecimal: true };
+
+/** Placeholder dash for an unresolved readout — same glyph `InlineRenameRow` already falls back to. */
+const UNKNOWN_READOUT = '—';
+
+/** posX/posY/elevation are model-length mm — the fields that flow through the display unit. */
+const DISPLAY_UNIT_KEYS: ReadonlySet<string> = new Set([
+  IMPORTED_MESH_NUMBER_KEYS.posX,
+  IMPORTED_MESH_NUMBER_KEYS.posY,
+  IMPORTED_MESH_NUMBER_KEYS.elevation,
+]);
+
+/**
+ * SSoT canonical-mm string (from `readImportedMeshField`) → what the palette shows. Mirrors
+ * `useBlockPropertyBridge.getComboboxState`'s manual `toDisp`/`formatAngleValue` calls — the
+ * `EntityPropertyRow` engine itself has no `quantityKind` concept (that's a ribbon-combobox-only
+ * mechanism), so Block does the conversion at the bridge boundary, and this panel does the same.
+ */
+function formatTransformDisplay(commandKey: string, raw: string | null): string | null {
+  if (raw === null) return null;
+  if (DISPLAY_UNIT_KEYS.has(commandKey)) return toDisp(Number(raw));
+  if (commandKey === IMPORTED_MESH_NUMBER_KEYS.rotation) return formatAngleValue(Number(raw));
+  return raw;
+}
+
+/** Typed display-unit string → canonical mm string for `patchImportedMeshField`. Inverse of the above. */
+function parseTransformInput(commandKey: string, value: string): string {
+  return DISPLAY_UNIT_KEYS.has(commandKey) ? String(fromDisp(value)) : value;
+}
 
 const field = (
   commandKey: string,
@@ -64,7 +110,11 @@ const IDENTITY_GROUP: EntityPropertyGroup = {
   id: 'identity',
   titleKey: 'importedMeshAdvancedPanel.section.identity',
   fields: [
-    field(IMPORTED_MESH_READONLY_KEYS.name, 'importedMeshAdvancedPanel.field.name', 'readout'),
+    // Click-to-edit display identity (NEW, ADR-683 Φ3.1γ follow-up) — falls back to nodeName.
+    field(IMPORTED_MESH_STRING_KEYS.displayName, 'importedMeshAdvancedPanel.field.displayName', 'rename'),
+    // The immutable `.glb` node identity — labelled "source name" now that `displayName` owns
+    // the primary "name" row (avoids two rows both reading "Name").
+    field(IMPORTED_MESH_READONLY_KEYS.name, 'importedMeshAdvancedPanel.field.sourceName', 'readout'),
     field(IMPORTED_MESH_READONLY_KEYS.level, 'importedMeshAdvancedPanel.field.level', 'readout'),
   ],
 };
@@ -75,7 +125,10 @@ const TRANSFORM_GROUP: EntityPropertyGroup = {
   fields: [
     field(IMPORTED_MESH_NUMBER_KEYS.posX, 'importedMeshAdvancedPanel.field.posX', 'numeric', COORD_INPUT),
     field(IMPORTED_MESH_NUMBER_KEYS.posY, 'importedMeshAdvancedPanel.field.posY', 'numeric', COORD_INPUT),
-    field(IMPORTED_MESH_NUMBER_KEYS.elevation, 'importedMeshAdvancedPanel.field.posZ', 'numeric', COORD_INPUT),
+    // `field.elevation` (not the old `field.posZ`) — matches the label the contextual ribbon tab
+    // already uses for this same commandKey (`contextual-imported-mesh-tab.ts`), so palette and
+    // ribbon never disagree about what this field is called.
+    field(IMPORTED_MESH_NUMBER_KEYS.elevation, 'importedMeshAdvancedPanel.field.elevation', 'numeric', COORD_INPUT),
     field(IMPORTED_MESH_NUMBER_KEYS.rotation, 'importedMeshAdvancedPanel.field.rotation', 'numeric', ANGLE_INPUT),
   ],
 };
@@ -95,12 +148,55 @@ export interface ImportedMeshAdvancedPanelProps {
   readonly dispatchPatch: DispatchImportedMeshParamPatch;
   /** Override container className (sidebar-tab mode passes a flow-layout class). */
   readonly containerClassName?: string;
+  /**
+   * ADR-683 Φ3.1γ follow-up — resolved `Level.name` for the identity readout (threaded from
+   * `ImportedMeshPropertiesTab`, mirror of how `level` is resolved everywhere else in the shell —
+   * see `overlay-store.tsx` / `useFloorplanBackgroundForLevel`). `undefined`/`null` → «—».
+   */
+  readonly levelName?: string | null;
+  /**
+   * ADR-687 Φ8 — the general material library (catalog + user Firestore + paints), ONE union, so
+   * «Υλικό» can resolve the LIVE override's display label instead of just its raw id. Optional:
+   * when the caller cannot supply it yet, the section falls back to the embedded `.glb` name.
+   */
+  readonly libraryEntries?: readonly LibraryEntry[];
 }
 
-/** «Υλικό» — dominant source material as a swatch (live override, ADR-687 Φ8) + name/fallback text. */
-function MaterialSection({ mesh, t }: { mesh: ImportedMeshEntity; t: (key: string) => string }): React.ReactElement {
-  const materialId = resolveEntityCurrentMaterialId(mesh) ?? undefined;
+/** Resolve the override materialId → its library LABEL, or `undefined` when not found/no override. */
+function resolveOverrideLabel(
+  materialId: string | undefined,
+  libraryEntries: readonly LibraryEntry[] | undefined,
+): string | undefined {
+  if (!materialId || !libraryEntries) return undefined;
+  return libraryEntries.find((entry) => entry.id === materialId)?.label;
+}
+
+/**
+ * «Υλικό» — the CURRENT material(s) as a swatch + display name. Reads the FULL applied-material
+ * set (`resolveEntityMaterialIdSet`, ADR-688 follow-up) — the same set the 3D renderer's per-slot
+ * cascade (`resolveSlotMaterial`: `appearance[slot:name] ?? appearance['*'] ?? embedded`) actually
+ * paints — instead of just the base `'*'` slot. For a named-multi-slot `.glb` with only ONE part
+ * painted, the base-only read used to disagree with the canvas; this panel now matches it exactly:
+ *   - 0 overrides → embedded `.glb` source material name → «no material».
+ *   - 1 override → its library label + swatch (unchanged single-material UX).
+ *   - 2+ overrides (different materials on different slots) → «multiple materials», no single swatch
+ *     (a single swatch would misrepresent a mesh painted with more than one material).
+ */
+function MaterialSection({
+  mesh, t, libraryEntries,
+}: {
+  mesh: ImportedMeshEntity;
+  t: (key: string) => string;
+  libraryEntries?: readonly LibraryEntry[];
+}): React.ReactElement {
+  const materialIds = resolveEntityMaterialIdSet(mesh);
   const sourceName = readImportedMeshField(IMPORTED_MESH_READONLY_KEYS.currentMaterial, mesh.params);
+  const isMultiple = materialIds.length > 1;
+  const singleMaterialId = materialIds.length === 1 ? materialIds[0] : undefined;
+  const overrideLabel = resolveOverrideLabel(singleMaterialId, libraryEntries);
+  const displayLabel = isMultiple
+    ? t('importedMeshAdvancedPanel.field.multipleMaterials')
+    : overrideLabel ?? sourceName ?? t('importedMeshAdvancedPanel.field.noMaterial');
   return (
     <section className="flex flex-col gap-1">
       <header>
@@ -113,10 +209,8 @@ function MaterialSection({ mesh, t }: { mesh: ImportedMeshEntity; t: (key: strin
           {t('importedMeshAdvancedPanel.field.currentMaterial')}
         </span>
         <span className="flex shrink-0 items-center gap-1.5">
-          <MaterialSwatch materialId={materialId} />
-          <span className="text-xs font-medium text-foreground">
-            {sourceName ?? t('importedMeshAdvancedPanel.field.noMaterial')}
-          </span>
+          {!isMultiple && <MaterialSwatch materialId={singleMaterialId} />}
+          <span className="text-xs font-medium text-foreground">{displayLabel}</span>
         </span>
       </div>
     </section>
@@ -165,15 +259,25 @@ export function ImportedMeshAdvancedPanel({
   mesh,
   dispatchPatch,
   containerClassName,
+  levelName,
+  libraryEntries,
 }: ImportedMeshAdvancedPanelProps): React.ReactElement {
   const { t } = useTranslation('dxf-viewer-shell');
   const resolvedClassName = containerClassName ?? 'flex flex-col gap-3 p-2';
 
-  const getComboboxState = (commandKey: string): RibbonComboboxState | null => (
-    { value: readImportedMeshField(commandKey, mesh.params), options: [] }
-  );
+  const getComboboxState = (commandKey: string): RibbonComboboxState | null => {
+    // The `level` readout shows the resolved Level NAME (threaded in from the tab), not the raw
+    // `storeyId` the SSoT stores — special-cased here, same as `useBlockPropertyBridge` special-
+    // cases `layer` (id → live name) before falling through to the generic SSoT read.
+    if (commandKey === IMPORTED_MESH_READONLY_KEYS.level) {
+      return { value: levelName && levelName.length > 0 ? levelName : UNKNOWN_READOUT, options: [] };
+    }
+    const raw = readImportedMeshField(commandKey, mesh.params);
+    return { value: formatTransformDisplay(commandKey, raw), options: [] };
+  };
   const onComboboxChange = (commandKey: string, value: string): void => {
-    dispatchPatch(mesh, patchImportedMeshField(commandKey, mesh.params, value));
+    const mmValue = parseTransformInput(commandKey, value);
+    dispatchPatch(mesh, patchImportedMeshField(commandKey, mesh.params, mmValue));
   };
 
   return (
@@ -187,7 +291,7 @@ export function ImportedMeshAdvancedPanel({
           onComboboxChange={onComboboxChange}
         />
       ))}
-      <MaterialSection mesh={mesh} t={t} />
+      <MaterialSection mesh={mesh} t={t} libraryEntries={libraryEntries} />
       <PartsSection mesh={mesh} t={t} />
       <BoqSection mesh={mesh} t={t} />
     </section>

@@ -29,6 +29,18 @@
  * ladders**. A future numeric-typed-input row (not `BimPropertyRow`'s select-only model) is the
  * right widget; that choice belongs to the consumer, not this data layer.
  *
+ * ## `displayName` — the ONE writable string field (ADR-683 Φ3.1γ follow-up)
+ *
+ * Everything above (and the file's original header note "No editable `name` key") predates the
+ * Properties-palette click-to-edit identity row. `nodeName` stays read-only for the reason
+ * documented there (mesh-cache key half); `displayName` is a NEW, separate, purely presentational
+ * field (`ImportedMeshParams.label`) added specifically so the palette can offer an AutoCAD/Revit
+ * "Rename" affordance without touching the `.glb` identity. It is grouped into the SAME
+ * `isImportedMeshRibbonStringKey` guard as the read-only readouts (both resolve through
+ * `readImportedMeshField`, so `getComboboxState` treats them uniformly) — the write-side asymmetry
+ * survives at the `patchImportedMeshField` level, which now routes `displayName` to an actual
+ * mutation instead of the read-only no-op every other member of that bucket gets.
+ *
  * ## ⚠️ Read before wiring `posX/posY/elevation/rotation` into the ribbon (for B1/B2)
  *
  * `contextual-imported-mesh-tab.ts` (ADR-683 Φ3.1β) is **explicitly actions-only** — its own header
@@ -102,10 +114,21 @@ export const IMPORTED_MESH_READONLY_KEYS = {
   boqUnit: 'importedMesh.readonly.boqUnit',
 } as const;
 
+/**
+ * ADR-683 Φ3.1γ (follow-up) — the ONE writable string field. Separate constant (not folded into
+ * `IMPORTED_MESH_READONLY_KEYS`, which stays a truthful "read-only" bucket) — see file header for
+ * why `displayName` exists and how it differs from `name`/`nodeName`.
+ */
+export const IMPORTED_MESH_STRING_KEYS = {
+  /** `label` — click-to-edit display identity (`control:'rename'`); falls back to `nodeName`. */
+  displayName: 'importedMesh.string.displayName',
+} as const;
+
 /** Convenience aggregate (mirror `RAILING_RIBBON_KEYS`). */
 export const IMPORTED_MESH_RIBBON_KEYS = {
   number: IMPORTED_MESH_NUMBER_KEYS,
   readonly: IMPORTED_MESH_READONLY_KEYS,
+  string: IMPORTED_MESH_STRING_KEYS,
 } as const;
 
 /**
@@ -119,6 +142,7 @@ export const IMPORTED_MESH_LABEL_KEYS = {
   elevation: 'ribbon.commands.importedMesh.elevation',
   rotation: 'ribbon.commands.importedMesh.rotation',
   name: 'ribbon.commands.importedMesh.name',
+  displayName: 'ribbon.commands.importedMesh.displayName',
   width: 'ribbon.commands.importedMesh.width',
   depth: 'ribbon.commands.importedMesh.depth',
   height: 'ribbon.commands.importedMesh.height',
@@ -131,7 +155,13 @@ export const IMPORTED_MESH_LABEL_KEYS = {
 } as const;
 
 const NUMBER_KEY_SET: ReadonlySet<string> = new Set(Object.values(IMPORTED_MESH_NUMBER_KEYS));
-const READONLY_KEY_SET: ReadonlySet<string> = new Set(Object.values(IMPORTED_MESH_READONLY_KEYS));
+// Both flavours resolve through `readImportedMeshField` the same way (a non-numeric readout), so
+// the "string key" guard covers the read-only bucket AND the one writable `displayName` field —
+// the write-side distinction (readout vs. real mutation) lives in `patchImportedMeshField`, not here.
+const STRING_KEY_SET: ReadonlySet<string> = new Set([
+  ...Object.values(IMPORTED_MESH_READONLY_KEYS),
+  ...Object.values(IMPORTED_MESH_STRING_KEYS),
+]);
 
 /** `true` when `key` is a numeric, writable imported-mesh field (posX/posY/elevation/rotation). */
 export function isImportedMeshRibbonKey(key: string): boolean {
@@ -139,12 +169,14 @@ export function isImportedMeshRibbonKey(key: string): boolean {
 }
 
 /**
- * `true` when `key` is one of the read-only imported-mesh display fields. NOTE the asymmetry with
- * `isRailingRibbonStringKey`: railing's string keys are writable enums, these are readouts only —
- * see the file header for why this entity has no writable string/enum field at all.
+ * `true` when `key` is a non-numeric imported-mesh display field — the read-only readouts
+ * (`IMPORTED_MESH_READONLY_KEYS`) PLUS the one writable `displayName` (`IMPORTED_MESH_STRING_KEYS`).
+ * Mirrors railing's dual-gate shape (`getComboboxState` resolves both families uniformly); unlike
+ * railing, most members here are still read-only — `patchImportedMeshField` is what actually
+ * distinguishes "no-op" from "real mutation" for a given key in this bucket.
  */
 export function isImportedMeshRibbonStringKey(key: string): boolean {
-  return READONLY_KEY_SET.has(key);
+  return STRING_KEY_SET.has(key);
 }
 
 /** `true` when `key` belongs to the imported-mesh surface at all (either flavour). */

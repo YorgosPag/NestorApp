@@ -46,6 +46,8 @@ import {
   selectEditEntityKey,
 } from '../stores/Bim3DEditStore';
 import { useSelection3DStore } from '../stores/Selection3DStore';
+// ADR-688 Φ3 — universal-selection SSoT to re-select the freshly dropped Ctrl copy-drag clones.
+import { useUniversalSelectionStable } from '../../systems/selection/SelectionSystem';
 import { useBim3DEntitiesStore } from '../stores/Bim3DEntitiesStore';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 import {
@@ -76,6 +78,11 @@ export function useBim3DEditInteraction({ managerRef, canvasEl }: UseBim3DEditIn
   const { t } = useTranslation('dxf-viewer-shell');
   const tRef = useRef(t);
   tRef.current = t;
+  // ADR-688 Φ3 — `reselect` for the copy-drag clones via a ref, so the drag effect never
+  // re-runs on a selection change (mirror of `levelsRef`/`tRef`).
+  const universal = useUniversalSelectionStable();
+  const universalRef = useRef(universal);
+  universalRef.current = universal;
 
   useEffect(() => {
     const manager = managerRef.current;
@@ -109,6 +116,9 @@ export function useBim3DEditInteraction({ managerRef, canvasEl }: UseBim3DEditIn
       manager, canvasEl, overlay, controller, gripController, pointerPredictor, preview,
       wallMoveDim, alignmentLine, snapLabel, moveReadout, resolveSnapLabel,
       getLevels: () => levelsRef.current,
+      // ADR-688 Φ3 — copy-drag intent holder (frozen at press) + clone re-selection.
+      copyDrag: { active: false },
+      reselect: (ids) => universalRef.current.replaceEntitySelection(ids),
     };
     let activeAbort: AbortController | null = null;
 

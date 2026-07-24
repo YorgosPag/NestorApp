@@ -20,41 +20,32 @@
 
 import * as THREE from 'three';
 import type { WallEntity } from '../../bim/types/wall-types';
-import { createSceneManagerAdapter } from '../../hooks/grips/grip-commit-adapters';
-import { getGlobalCommandHistory } from '../../core/commands';
 import { useBim3DEditStore } from '../stores/Bim3DEditStore';
 import type { BimGizmoOverlay } from '../gizmo/bim-gizmo-overlay';
 // ADR-363 Φ1G.5 Slice 2h — planar move/rotate drag → collapse gizmo to move arrows.
 // ADR-535 Φ8/Φ9 — `hasEndpointHandles` = SSoT gate for which types expose endpoint rings.
 import { isPlanarMoveType, hasEndpointHandles } from '../gizmo/bim-gizmo-overlay';
 import type { BimGizmoController } from '../gizmo/bim-gizmo-controller';
-import type { BridgeOutcome } from '../gizmo/bim-gizmo-drag-bridge';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 import type { LevelsHookReturn } from '../../systems/levels/useLevels';
 import { Bim3DEditLivePreview } from './bim3d-edit-live-preview';
-// ADR-402 — live-preview application + scene-lookup leaves (extracted, file-size N.7.1).
-import {
-  applyLivePreview,
-  sceneEntitiesForEdit,
-  resolveEntityLevelId,
-} from './bim3d-edit-live-preview-apply';
+// ADR-402 — live-preview application (extracted, file-size N.7.1).
+import { applyLivePreview } from './bim3d-edit-live-preview-apply';
 import { useBim3DEntitiesStore } from '../stores/Bim3DEntitiesStore';
 // ADR-535 Φ10 / ADR-516 — drop the live rigid-move grip offset when a drag settles.
 import { setGrip3DLiveMoveWorld } from '../stores/Grip3DOverlayStore';
-// Capture helpers + buildDeps + findBimEntityWorldBox (extracted for file-size N.7.1).
+// Capture helpers + findBimEntityWorldBox (extracted for file-size N.7.1).
 import {
   captureMoveDependents,
   captureCircuitWires,
   captureConnectedPipes,
   captureIncidentFittings,
-  buildDeps,
   findBimEntityWorldBox,
 } from './bim3d-edit-interaction-helpers';
 // ADR-408 Φ-D/Φ1 — per-endpoint shape handles (segment + wall/beam), extracted (file-size N.7.1).
 import { refreshSegmentEndpointHandles } from './bim3d-edit-endpoint-handles';
-// ADR-404 — drag outcome → view-agnostic command (extracted for file size, N.7.1).
-import { buildEditCommand } from './bim3d-edit-command-builders';
-import { emitStructuralChangeAfterEdit } from './bim3d-edit-structural-emit';
+// ADR-402/688 — finished-drag → command dispatch (move/copy), extracted (file-size N.7.1).
+import { dispatchOutcome } from './bim3d-edit-drag-commit';
 // ADR-408 — Ctrl+click relocatable base point / rotation centre (snap-pick SSoT).
 import { pickEntityBasePoint } from './bim3d-base-point';
 // ADR-363 Φ1G.5 Slice 2h — Revit temporary dimensions while a wall is dragged.
@@ -99,6 +90,14 @@ export interface EditInteractionCtx {
   readonly pointerPredictor: PointerPredictor;
   /** Latest levels context (null = read-only, ADR-371). */
   readonly getLevels: () => LevelsHookReturn | null;
+  /**
+   * ADR-688 Φ3 — Ctrl copy-drag intent, FROZEN at press time (mirror the 2D body-drag
+   * `CtrlKeyTracker` freeze). Mutable holder (event-time only, NOT reactive) read on
+   * pointer-up: a move outcome clones instead of moving. Reset on every drag settle.
+   */
+  readonly copyDrag: { active: boolean };
+  /** ADR-688 Φ3 — re-select the freshly dropped clones (universal-selection SSoT, shared with Φ1). */
+  readonly reselect: (ids: string[]) => void;
 }
 
 /**
@@ -153,18 +152,26 @@ export function refreshLinearEndpointHandles(
 
 export function onEditPointerDown(ctx: EditInteractionCtx, e: PointerEvent): void {
   if (e.button !== 0 || !ctx.overlay.visible) return;
-  // ADR-408 — Ctrl+click relocates the gizmo base point / rotation centre (Revit
-  // «specify base point»): snap-pick a point on the selected entity, NOT a drag.
-  if (e.ctrlKey && !ctx.controller.isDragging()) {
-    trySetBasePoint(ctx, e);
-    e.preventDefault();
-    e.stopPropagation();
-    return;
+  // ADR-688 Φ3 — under Ctrl/⌘: grabbing a gizmo MOVE handle COPIES (the original stays and a
+  // clone follows on release); a Ctrl press that grabs NO handle keeps the ADR-408 «set base
+  // point» (Revit «specify base point»). The base-point pick therefore runs only AFTER the
+  // gizmo `beginDrag` misses — it used to short-circuit here before any drag could start.
+  const copyModifier = e.ctrlKey || e.metaKey;
+  let copyDragHandle = false;
+  if (copyModifier && !ctx.controller.isDragging()) {
+    if (!ctx.controller.beginDrag(ctx.manager.getCamera(), ctx.canvasEl, e.clientX, e.clientY)) {
+      trySetBasePoint(ctx, e);
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    copyDragHandle = true; // grabbed a handle under Ctrl → copy-drag (frozen for this gesture)
   }
   // ADR-535 — try a 3D reshape grip FIRST (small, specific perimeter targets that
   // would otherwise be shadowed by the gizmo). A hit starts a grip drag (commit on
   // release) and bypasses the gizmo path entirely. Coexists with the gizmo (centre).
-  if (ctx.gripController.beginDrag(ctx.manager.getCamera(), ctx.canvasEl, e.clientX, e.clientY)) {
+  // Skipped when the Ctrl copy-drag already grabbed a gizmo handle above.
+  if (!copyDragHandle && ctx.gripController.beginDrag(ctx.manager.getCamera(), ctx.canvasEl, e.clientX, e.clientY)) {
     e.preventDefault();
     e.stopPropagation();
     ctx.manager.viewport.setControlsEnabled(false);
@@ -195,8 +202,11 @@ export function onEditPointerDown(ctx: EditInteractionCtx, e: PointerEvent): voi
     ctx.manager.markSceneDirty();
     return;
   }
-  const started = ctx.controller.beginDrag(ctx.manager.getCamera(), ctx.canvasEl, e.clientX, e.clientY);
-  if (!started) return; // missed the gizmo → leave the event for selection / orbit
+  // Begin the gizmo drag unless the Ctrl copy-drag branch already grabbed a handle above.
+  if (!copyDragHandle && !ctx.controller.beginDrag(ctx.manager.getCamera(), ctx.canvasEl, e.clientX, e.clientY)) {
+    return; // missed the gizmo → leave the event for selection / orbit
+  }
+  ctx.copyDrag.active = copyDragHandle; // ADR-688 Φ3 — freeze copy intent for this drag
   ctx.pointerPredictor.reset(); // ADR-516 — fresh velocity history for this drag.
   ctx.manager.setInteracting(true); // ADR-516 — cheap raster path while dragging (see grip branch).
   // ADR-402 Phase B — build the snap callback for this drag from the snap-engine
@@ -317,6 +327,7 @@ export function onEditPointerMove(ctx: EditInteractionCtx, e: PointerEvent): voi
  * permanently (see ADR-516 §8 bugfix). SSoT for the drag-end teardown (was inlined ×4).
  */
 function settleAfterEditDrag(ctx: EditInteractionCtx): void {
+  ctx.copyDrag.active = false; // ADR-688 Φ3 — drop the copy intent (single exit, belt-and-suspenders).
   // ADR-535 Φ10 — drop any live rigid-move grip offset. On a committed move the re-sync has
   // already re-seated the grips at the new position (resetGrip3DInteraction → offset null);
   // on cancel / no-op this returns the static grips to the entity's original footprint.
@@ -324,6 +335,34 @@ function settleAfterEditDrag(ctx: EditInteractionCtx): void {
   ctx.manager.viewport.setControlsEnabled(true);
   ctx.manager.setInteracting(false);
   ctx.manager.markSceneDirty();
+}
+
+/**
+ * Drop the transient drag overlays (ADR-363 Φ1G.5 Slice 2h/2i — temp dims / dashed
+ * alignment line / snap-type label / move-distance readout) and restore the configured
+ * shape handles. Shared by the pointer-up and pointer-cancel teardown — both end a gizmo
+ * drag the same way (SSoT, was inlined ×2).
+ */
+function hideTransientOverlays(ctx: EditInteractionCtx): void {
+  ctx.wallMoveDim.hide();
+  ctx.alignmentLine.hide();
+  ctx.snapLabel.hide();
+  ctx.moveReadout.hide();
+  ctx.overlay.restoreConfiguredHandles();
+}
+
+/**
+ * ADR-516 — belt-and-suspenders guard shared by the pointer-up and pointer-cancel
+ * teardown (was inlined ×2): a drag may have been lost mid-gesture (a second
+ * pointerdown, remount, or OS pointer-capture loss can null the controller before
+ * pointer-up/cancel fires). Never leave `isInteracting` stuck true, or the silhouette
+ * outline + 3D grips stay suppressed forever (scene-render-frame `&& !interacting`).
+ * Returns true when no drag was active and the caller should bail out.
+ */
+function settleIfNoActiveDrag(ctx: EditInteractionCtx): boolean {
+  if (ctx.controller.isDragging()) return false;
+  settleAfterEditDrag(ctx); // ADR-516 — single exit (controls on, flag off, dirty).
+  return true;
 }
 
 export function onEditPointerUp(ctx: EditInteractionCtx, e: PointerEvent): void {
@@ -344,14 +383,7 @@ export function onEditPointerUp(ctx: EditInteractionCtx, e: PointerEvent): void 
     settleAfterEditDrag(ctx); // ADR-516 — single exit (controls on, flag off, dirty).
     return;
   }
-  if (!ctx.controller.isDragging()) {
-    // ADR-516 — belt-and-suspenders: a drag may have been lost mid-gesture (a second
-    // pointerdown, remount, or OS pointer-capture loss can null the controller before
-    // pointer-up fires). Never leave `isInteracting` stuck true, or the silhouette
-    // outline + 3D grips stay suppressed forever (scene-render-frame `&& !interacting`).
-    settleAfterEditDrag(ctx);
-    return;
-  }
+  if (settleIfNoActiveDrag(ctx)) return;
   e.preventDefault();
   e.stopPropagation();
   ctx.canvasEl.releasePointerCapture?.(e.pointerId);
@@ -359,17 +391,14 @@ export function onEditPointerUp(ctx: EditInteractionCtx, e: PointerEvent): void 
   // ADR-363 Φ1G.5 Slice 2c — the wall under the cursor at release is the reliable
   // re-host target for a dragged opening (used only by the opening move builder).
   const pickedWall = resolveWallUnderCursor(ctx, e.clientX, e.clientY);
-  const committed = dispatchOutcome(ctx, ctx.controller.endDrag(), pickedWall);
-  // ADR-402 — committed: the preview already shows the final pose, so just drop the
-  // refs and let the command's re-sync replace the meshes (no jump). No command
-  // (no-op drag): restore the originals, since no re-sync is coming.
-  if (committed) ctx.preview.commit();
+  const result = dispatchOutcome(ctx, ctx.controller.endDrag(), pickedWall);
+  // ADR-402/688 — 'move': the preview already shows the final pose, so drop the refs and
+  // let the command's re-sync replace the meshes (no jump). 'copy' OR no-op: restore the
+  // originals to the source — a Ctrl copy-drag leaves the original untouched, and the clone
+  // command's own re-sync adds the new meshes at the destination.
+  if (result === 'move') ctx.preview.commit();
   else ctx.preview.reset();
-  ctx.wallMoveDim.hide(); // ADR-363 Φ1G.5 Slice 2h — transient dims vanish on release.
-  ctx.alignmentLine.hide(); // ADR-363 Φ1G.5 Slice 2i — dashed alignment line vanishes too.
-  ctx.snapLabel.hide(); // …and the snap-type label.
-  ctx.moveReadout.hide(); // ADR-363 — and the move-distance readout.
-  ctx.overlay.restoreConfiguredHandles(); // …and the shape handles come back.
+  hideTransientOverlays(ctx); // transient dims/alignment/label/readout vanish; handles restored.
   settleAfterEditDrag(ctx); // ADR-516 — single exit (controls on, flag off, dirty).
 }
 
@@ -385,20 +414,10 @@ export function onEditPointerCancel(ctx: EditInteractionCtx): void {
     settleAfterEditDrag(ctx); // ADR-516 — single exit (controls on, flag off, dirty).
     return;
   }
-  if (!ctx.controller.isDragging()) {
-    // ADR-516 — belt-and-suspenders (mirror of onEditPointerUp): never leave
-    // `isInteracting` stuck true on a cancel where no drag was active, or the
-    // silhouette outline + 3D grips stay suppressed forever.
-    settleAfterEditDrag(ctx);
-    return;
-  }
+  if (settleIfNoActiveDrag(ctx)) return; // ADR-516 — mirror of onEditPointerUp.
   ctx.controller.cancelDrag();
   ctx.preview.reset(); // Esc / cancel → entity snaps back, no command (ADR-402).
-  ctx.wallMoveDim.hide(); // ADR-363 Φ1G.5 Slice 2h — transient dims vanish on cancel.
-  ctx.alignmentLine.hide(); // ADR-363 Φ1G.5 Slice 2i — dashed alignment line vanishes too.
-  ctx.snapLabel.hide(); // …and the snap-type label.
-  ctx.moveReadout.hide(); // ADR-363 — and the move-distance readout.
-  ctx.overlay.restoreConfiguredHandles(); // …and the shape handles come back.
+  hideTransientOverlays(ctx); // transient dims/alignment/label/readout vanish; handles restored.
   settleAfterEditDrag(ctx); // ADR-516 — single exit (controls on, flag off, dirty).
 }
 
@@ -438,41 +457,4 @@ function resolveWallUnderCursor(ctx: EditInteractionCtx, clientX: number, client
   return useBim3DEntitiesStore.getState().walls.find((w) => w.id === hit.bimId);
 }
 
-/**
- * Dispatch ONE view-agnostic command from the drag outcome (one undo step).
- * Returns true when a command actually executed (the caller keeps the live preview
- * and lets the re-sync replace the meshes; false → it restores the originals).
- * ADR-402 Phase C — move/rotate apply to the whole multi-selection; the adapter
- * resolves the primary element's level (same-floor multi is the common case —
- * cross-floor multi falls back to the active level, see ADR-402 limitations).
- */
-function dispatchOutcome(ctx: EditInteractionCtx, outcome: BridgeOutcome, pickedWall?: WallEntity): boolean {
-  if (outcome.kind === 'none') return false;
-  const edit = useBim3DEditStore.getState();
-  const levels = ctx.getLevels();
-  const entityIds = edit.editEntityIds;
-  const entityId = entityIds[0];
-  if (!levels || !entityId) return false;
-  const levelId = resolveEntityLevelId(levels, entityId) ?? levels.currentLevelId;
-  if (!levelId) return false;
-  const sm = createSceneManagerAdapter(buildDeps(levels, levelId));
-  if (!sm) return false;
-  const cmd = buildEditCommand(outcome, { entityIds, entityId, edit, sm, levels, levelId, pickedWall });
-  if (!cmd) return false;
-  // `validate` is optional on ICommand (CompoundCommand has none — it validates each
-  // child at execute time and rolls back on failure). Only block on a real error.
-  if ('validate' in cmd && cmd.validate() !== null) return false;
-  // ADR-408 — a relocated base point is CONSUMED by any non-rotate transform (Revit
-  // «specify base point» is per-command); rotate keeps the invariant pivot. Clear
-  // BEFORE execute so the entity-resync re-anchors the gizmo on the centroid.
-  if (outcome.kind !== 'rotate') useBim3DEditStore.getState().setBasePointOverride(null);
-  getGlobalCommandHistory().execute(cmd);
-  // ADR-459 Φ7 — announce the edit as a structural-change event (mirror the 2D grip
-  // commit layer) so the auto-foundation designer / organism / persistence react. Must
-  // run AFTER execute so the edited command is the last on the stack when the coalesced
-  // reactor microtask groups the derived footing update into the same atomic undo step.
-  emitStructuralChangeAfterEdit(cmd, entityIds, sm);
-  useBim3DEditStore.getState().setTargetLevel(levelId);
-  return true;
-}
 

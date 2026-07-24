@@ -65,7 +65,7 @@ import { MaterialEntryButton } from './MaterialEntryButton';
 import { MaterialLibraryPopover } from './MaterialLibraryPopover';
 // ADR-687 Φ8 — «τρέχον υλικό» highlight: γενικό resolver (ΟΛΑ τα entity types) + reactive lookup.
 import {
-  resolveEntityCurrentMaterialId,
+  resolveEntityMaterialIdSet,
   resolveFaceCurrentMaterialId,
 } from '../materials/resolve-entity-current-material';
 import { useSceneEntityById } from '../../systems/scene/useSceneSelectors';
@@ -183,17 +183,24 @@ export function PolygonMaterialPanel() {
   );
   const barEntries = isFinish ? finishEntries : sceneEntries;
 
-  // ADR-687 Φ8 — «τρέχον υλικό» highlight (Revit «current material» / C4D active tag), γενικό για
-  // ΚΑΘΕ entity type: μία επιλεγμένη όψη → per-face lookup (η όψη έχει το ΔΙΚΟ της bimId, μπορεί να
-  // διαφέρει από selectedBimId)· καμία/πολλαπλές όψεις → «όλο το στοιχείο» (base '*') της 3D επιλογής.
+  // ADR-687/688 Φ8 — «τρέχον υλικό» highlight (Revit «current material» / C4D active tag), γενικό
+  // για ΚΑΘΕ entity type: μία επιλεγμένη όψη → per-face lookup (η όψη έχει το ΔΙΚΟ της bimId, μπορεί
+  // να διαφέρει από selectedBimId)· καμία/πολλαπλές όψεις → «όλο το στοιχείο» της 3D επιλογής.
+  // Whole-entity branch διαβάζει το ΠΛΗΡΕΣ applied-material SET (`resolveEntityMaterialIdSet`),
+  // ΟΧΙ μόνο το base '*' — ένα imported mesh πολλαπλών slots με βαμμένο ΕΝΑ slot έχει
+  // faceAppearance `{'*':…, 'slot:x':…}`· ο renderer εφαρμόζει ΚΑΙ τα δύο ανά slot, άρα ΚΑΙ τα δύο
+  // swatches πρέπει να φωτίζονται, αλλιώς highlight/κάμβας διαφωνούν. Single-face branch παραμένει
+  // ΑΝΑΛΛΟΙΩΤΟ (ήδη σωστό per-slot μέσω `resolveFaceCurrentMaterialId`).
   const singleFace = isPolygon && faceCount === 1 ? selectedFaces[0] : null;
   const activeEntityId = singleFace ? singleFace.bimId : selectedBimId;
   const activeEntity = useSceneEntityById(levels?.currentLevelId ?? null, activeEntityId);
-  const activeMaterialId = useMemo(() => {
-    if (!activeEntity) return null;
-    return singleFace
-      ? resolveFaceCurrentMaterialId(activeEntity, singleFace.faceKey)
-      : resolveEntityCurrentMaterialId(activeEntity);
+  const activeMaterialIds = useMemo((): readonly string[] => {
+    if (!activeEntity) return [];
+    if (singleFace) {
+      const faceMaterialId = resolveFaceCurrentMaterialId(activeEntity, singleFace.faceKey);
+      return faceMaterialId ? [faceMaterialId] : [];
+    }
+    return resolveEntityMaterialIdSet(activeEntity);
   }, [activeEntity, singleFace]);
 
   return (
@@ -289,7 +296,7 @@ export function PolygonMaterialPanel() {
               entry={entry}
               onApply={apply}
               draggable={!isFinish}
-              active={entry.id === activeMaterialId}
+              active={activeMaterialIds.includes(entry.id)}
               className={`flex w-14 flex-col items-center gap-1 rounded border border-white/15 p-1 text-[9px] transition-colors hover:bg-white/10 ${
                 isFinish ? '' : 'cursor-grab active:cursor-grabbing'
               }`}

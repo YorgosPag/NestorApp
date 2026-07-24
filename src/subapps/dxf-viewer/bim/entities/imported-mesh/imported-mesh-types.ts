@@ -151,6 +151,16 @@ export interface ImportedMeshParams {
    */
   readonly sourceMaterialName?: string;
   /**
+   * ADR-683 Φ3.1γ (follow-up) — προαιρετική **επεξεργάσιμη** ετικέτα εμφάνισης (click-to-edit στο
+   * Properties palette, `control:'rename'`). Ξεχωριστή από το {@link nodeName}: το `nodeName`
+   * είναι ταυτότητα `.glb` (μισό του mesh-cache κλειδιού· ΠΟΤΕ δεν αλλάζει), ενώ το `label` είναι
+   * **παρουσίαση μόνο** — «πώς λέει ο χρήστης αυτό το αντικείμενο», ό,τι θα ήταν το AutoCAD/Revit
+   * "Rename" σε ένα block instance. Απόν → η οθόνη δείχνει το `nodeName` (βλ.
+   * `readImportedMeshField(K.displayName, …)`). Άδειο/whitespace input στο commit **καθαρίζει**
+   * το πεδίο (επιστροφή στο fallback) — δεν αποθηκεύεται ποτέ κενό string.
+   */
+  readonly label?: string;
+  /**
    * ADR-683 Φ5 — **ΟΛΑ** τα ονόματα υλικών (slots) του κόμβου, με σειρά material-index, χωρίς
    * διπλότυπα. Ενώ το {@link sourceMaterialName} κρατά **μόνο** το dominant (πρώτο) — αρκετό για μία
    * γραμμή BOQ — η per-slot 2Δ poché (Φ5) και το manual material-override (Φ6) χρειάζονται **όλα**

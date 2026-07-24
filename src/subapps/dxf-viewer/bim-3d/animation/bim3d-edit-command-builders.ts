@@ -84,6 +84,26 @@ export type EditCommand =
   | CompoundCommand;
 export type SceneManager = NonNullable<ReturnType<typeof createSceneManagerAdapter>>;
 type EndpointMoveOutcome = Extract<BridgeOutcome, { kind: 'endpoint-move' }>;
+type MoveOutcome = Extract<BridgeOutcome, { kind: 'move' }>;
+
+/**
+ * ADR-402/049/688 — the horizontal (plan) delta of a move outcome, in the primary
+ * entity's NATIVE canvas units. Masks by the keyboard axis lock (X/Z), then scales
+ * the DXF-mm delta by `mmToEntityUnitFactor` (1 for an mm drawing, 0.001 for a meter
+ * scene, the inferred factor for stairs) — without it a non-mm drawing flings the
+ * element 1000× off-screen (the "vanish" bug). SSoT shared by the move command
+ * builder (below) AND the Ctrl copy-drag commit (`bim3d-edit-copy-commit.ts`), so the
+ * moved element and the dropped copy land at the EXACT same displacement.
+ */
+export function resolveMovePlanDeltaCanvas(
+  outcome: MoveOutcome,
+  primary: Entity | undefined,
+  axisLock: 'X' | 'Z' | null,
+): Point2D {
+  const masked = maskByAxisLock(outcome.deltaDxf, axisLock);
+  const f = primary ? mmToEntityUnitFactor(primary) : 1;
+  return { x: f === 1 ? masked.x : masked.x * f, y: f === 1 ? masked.y : masked.y * f };
+}
 
 /** Inputs shared by every command builder for the active edit target. */
 export interface CommandBuildCtx {
@@ -163,13 +183,13 @@ export function buildEditCommand(outcome: BridgeOutcome, c: CommandBuildCtx): Ed
     // connected pipes inside execute/undo/redo and announces ONE `bim:entities-moved`
     // (persist + organism in one pass), so the vertical no longer needs a separate
     // `Update*ParamsCommand` path nor a `withConnectedPipeFollow` wrap.
-    const masked = maskByAxisLock(outcome.deltaDxf, c.edit.axisLock);
     const entitiesAll = c.levels.getLevelScene(c.levelId)?.entities ?? [];
     const primary = entitiesAll.find((e) => e.id === c.entityId);
-    const f = primary ? mmToEntityUnitFactor(primary) : 1;
+    // ADR-688 — SSoT plan delta (axis-lock + native-units scaling), shared with copy-drag.
+    const plan = resolveMovePlanDeltaCanvas(outcome, primary, c.edit.axisLock);
     const delta: Point3D = {
-      x: f === 1 ? masked.x : masked.x * f,
-      y: f === 1 ? masked.y : masked.y * f,
+      x: plan.x,
+      y: plan.y,
       ...(outcome.deltaUpMm !== 0 ? { z: outcome.deltaUpMm } : {}),
     };
     if (delta.x === 0 && delta.y === 0 && !delta.z) return null;

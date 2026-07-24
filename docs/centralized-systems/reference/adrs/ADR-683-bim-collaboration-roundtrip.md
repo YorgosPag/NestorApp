@@ -647,6 +647,48 @@ embedded/textured/anonymous → `side === DoubleSide` + look preserved· overrid
 
 ## 11. Changelog
 
+- **2026-07-24 (§properties-panel-6fixes — imported-mesh Properties panel, 6 follow-up fixes on
+  §properties-panel-sync below — IMPLEMENTED UNCOMMITTED, 🔴 browser verify).** (1) **Editable display
+  name (Ν.4):** new `readonly label?: string` on `ImportedMeshParams` + new writable string key
+  `IMPORTED_MESH_STRING_KEYS.displayName` (`imported-mesh-param-keys.ts`) — grouped into the SAME
+  `isImportedMeshRibbonStringKey` guard as the read-only readouts (both resolve through
+  `readImportedMeshField` uniformly; the write-side asymmetry lives in `patchImportedMeshField`, which
+  now gates on `isAnyImportedMeshRibbonKey` then dispatches numeric-vs-string instead of the old
+  numeric-only gate). `nodeName` stays read-only (unchanged rationale). (2) **Panel identity:**
+  `displayName` → `control:'rename'` (click-to-edit, top row); `nodeName` → `control:'readout'`
+  relabelled `field.sourceName` (disambiguates from the new primary "name" row); `level` readout now
+  shows the resolved `Level.name`. (3) **Material name (Ν.3):** `MaterialSection` now resolves the LIVE
+  override's *label* via `libraryEntries` (ADR-687 Φ8 `buildMaterialLibraryEntries`, threaded in from
+  the tab) before falling back to the embedded `.glb` `sourceMaterialName` — the swatch itself was
+  already correct (`resolveEntityCurrentMaterialId`), only the adjoining text was a raw id/embedded-name
+  before. (4) **Level name:** `ImportedMeshPropertiesTab` resolves `params.storeyId` (else
+  `currentLevelId`) against the live `levels` array (same `.find(l => l.id === …)` idiom as
+  `overlay-store.tsx`), passes `levelName` down; fallback «—». (5) **Ribbon-key unify + formatting:**
+  `field.posZ` → `field.elevation` (now matches what `contextual-imported-mesh-tab.ts` already used —
+  palette and ribbon no longer disagree on the label); new locale keys `field.elevation`/
+  `field.displayName`/`field.sourceName` (el/en); position/elevation now format through the SAME
+  `toDisp`/`fromDisp` display-unit boundary and rotation through the same `formatAngleValue` rounding
+  `BlockAdvancedPanel`'s bridge uses for its INSERT transform — done at the UI boundary in the panel's
+  `getComboboxState`/`onComboboxChange` (mirrors Block exactly; `EntityPropertyRow` itself has no
+  `quantityKind` concept, that's a ribbon-combobox-only mechanism, confirmed by reading Block's bridge
+  source, not assumed). (6) **Persistence (verified, no wiring needed):** `ImportedMeshParams` is
+  persisted **wholesale** (`imported-mesh-firestore-service.ts` `params: input.params`/`patch.params`;
+  hydrate reads `doc.params` wholesale) — `label` rides for free like every other optional param field.
+  The ONE real risk: Firestore's web SDK rejects a literal `undefined` field value (no
+  `ignoreUndefinedProperties`, `@/lib/firebase`) — so the clear-to-empty branch of
+  `patchImportedMeshField`'s string patch DROPS the `label` key (destructure-rest) instead of writing
+  `label: undefined`, the SAME idiom `withImportedMeshIdentity` already established for
+  `importedMeshIdentity` (`imported-mesh-boq.ts`) — a deliberate deviation from a more naive
+  `{...p, label: value || undefined}` patch, which would have silently broken the NEXT autosave, not
+  just the rename. **Files:** 3 SSoT (types/keys/access) + 1 test (+9 cases, 33/33 green) + 2 UI
+  (panel/tab) + 2 locale JSON (el/en) — 8 total, all ≤500 lines. **Tests:** full imported-mesh entity
+  suite 121/121 green, ribbon dispatch route-count 10/10 green, `material-library-index` 7/7 green,
+  `jscpd:diff` clean on all touched files. NO tsc (N.17). ✅ Google-level: YES — one SSoT still owns
+  read/write, Firestore-undefined class of bug caught and fixed BEFORE it shipped (not after a
+  vanish-on-reload report), zero new sibling clones. 🔴 Pending: browser verify (rename commits +
+  survives reload · level shows a real name · material row shows the override's real label · position/
+  rotation show rounded display-unit values, not raw mm floats) + commit.
+
 - **2026-07-24 (§properties-panel-sync — imported-mesh selection sync, mirror railing Φ9 — IMPLEMENTED
   UNCOMMITTED, 🔴 browser verify).** Το imported-mesh δεν είχε properties-panel/ribbon sync όταν επιλέγεται
   (μόνο move/rotate grips + BOQ/material-map action panels υπήρχαν). Νέο **shared param schema SSoT**
