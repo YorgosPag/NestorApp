@@ -26,8 +26,9 @@
  * @see docs/centralized-systems/reference/adrs/ADR-539-cinema4d-polygon-mode-per-face-appearance.md
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Library } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { useCompanyId } from '@/hooks/useCompanyId';
@@ -37,14 +38,12 @@ import type {
   SaveBimMaterialInput,
   UpdateBimMaterialPatch,
 } from '../../bim/types/bim-material-types';
-import { MaterialSwatch } from '../../ui/components/shared/MaterialSwatch';
 import { useLevelsOptional } from '../../systems/levels/useLevels';
 import { useProjectHierarchyOptional } from '../../contexts/ProjectHierarchyContext';
 import { usePolygonMode3DStore, type PolygonTargetLayer } from '../stores/PolygonMode3DStore';
 import type { FaceAppearance } from '../../bim/types/face-appearance-types';
 import { applyFaceAppearanceToFaces } from './apply-face-appearance';
 import { applyWholeElementBodyAppearance } from './apply-entity-face-appearance-map';
-import { BIM_MATERIAL_MIME, serializeFaceAppearanceDrag } from './polygon-material-dnd';
 // ADR-449 PART B Slice C — «Σοβάς» layer: ίδιο picking/panel/dialog, route στο faceOverrides.
 import { applyFinishToWholeElement, faceAppearanceToFinishOverride } from './apply-finish-face-override';
 // ADR-539 (Giorgio 2026-07-22) — entity-level modes (ΣΩΜΑ/ΣΟΒΑΣ) βάφουν την ΕΠΙΛΕΓΜΕΝΗ οντότητα.
@@ -59,8 +58,11 @@ import { FINISH_MATERIAL_OPTIONS } from '../../ui/ribbon/hooks/bridge/finish-par
 import { getMaterialFlatColorHex } from '../../bim/materials/material-catalog-defs';
 // ADR-679 Φ2b / ADR-539 Φ4d — BODY layer textured swatches (catalog + user bmat_* library).
 import { useMaterialLibrary } from '../../ui/panels/materials/hooks/useMaterialLibrary';
-// ADR-686 Φ5 — `buildBodySwatches`/`SwatchItem` κεντρικοποιημένα (κοινά με το Material Mapping dialog).
-import { buildBodySwatches, type SwatchItem } from './polygon-material-swatches';
+// ADR-687 Φ8 — η μπάρα δείχνει ΜΟΝΟ υλικά σκηνής (useSceneMaterials)· το popover «Βιβλιοθήκη» δείχνει ΟΛΑ.
+import type { LibraryEntry } from './material-library-index';
+import { useSceneMaterials } from './useSceneMaterials';
+import { MaterialEntryButton } from './MaterialEntryButton';
+import { MaterialLibraryPopover } from './MaterialLibraryPopover';
 
 export function PolygonMaterialPanel() {
   const { t } = useTranslation(['bim3d', 'dxf-viewer-shell']);
@@ -88,6 +90,9 @@ export function PolygonMaterialPanel() {
   // ADR-687 Φ1 — «＋ Νέο Υλικό»: opens the full Material Editor in create-mode. After
   // save the new material auto-appears in this bar (the user-material feed is always-on).
   const [editorOpen, setEditorOpen] = useState(false);
+  // ADR-687 Φ8 — «Βιβλιοθήκη»: popover με ΟΛΑ τα υλικά (η μπάρα δείχνει μόνο σκηνή), για να βάψεις
+  // υλικό που δεν υπάρχει ακόμη στη σκηνή (Revit «Paint → Material Browser» / C4D Content Browser).
+  const [libraryOpen, setLibraryOpen] = useState(false);
   const handleEditorSave = useCallback(
     async (
       payload: SaveBimMaterialInput | UpdateBimMaterialPatch,
@@ -144,16 +149,33 @@ export function PolygonMaterialPanel() {
     else applyWholeElementBodyAppearance(levels, target, value);
   };
 
+  /** ADR-687 Φ8 — «Βιβλιοθήκη» apply: εφάρμοσε + κλείσε το popover (το υλικό μπαίνει στη σκηνή). */
+  const applyFromLibrary = (value: FaceAppearance): void => {
+    apply(value);
+    setLibraryOpen(false);
+  };
+
   const faceCount = selectedFaces.length;
   /** ΠΟΛΥΓΩΝΑ: επιλεγμένες όψεις Ή (fallback) η 3D επιλογή. ΣΩΜΑ/ΣΟΒΑΣ: η 3D επιλογή. */
   const canApply = (isPolygon && faceCount > 0) || selectedBimId !== null;
-  /**
-   * Swatches ανά mode: σώμα/πολύγωνα = textured catalog + user library + wall coverings (draggable,
-   * ADR-679 Φ2b)· σοβάς = finish materials (click-only, flat — αμετάβλητο).
-   */
-  const swatches: SwatchItem[] = isFinish
-    ? FINISH_MATERIAL_OPTIONS.map((o) => ({ id: o.value, color: getMaterialFlatColorHex(o.value), label: t(o.labelKey), draggable: false }))
-    : buildBodySwatches(libraryMaterials, t);
+
+  // ADR-687 Φ8 — η μπάρα σώμα/πολύγωνα δείχνει ΜΟΝΟ τα ρητά βαμμένα υλικά της σκηνής (C4D Material
+  // Manager). Ο σοβάς μένει fixed finish palette (click-only, flat — αμετάβλητο).
+  const sceneEntries = useSceneMaterials(libraryMaterials, t);
+  const finishEntries: LibraryEntry[] = useMemo(
+    () =>
+      FINISH_MATERIAL_OPTIONS.map((o): LibraryEntry => ({
+        id: o.value,
+        label: t(o.labelKey),
+        source: 'paint',
+        apply: { materialId: o.value },
+        color: getMaterialFlatColorHex(o.value),
+        editable: false,
+        deletable: false,
+      })),
+    [t],
+  );
+  const barEntries = isFinish ? finishEntries : sceneEntries;
 
   return (
     // ADR-539 — Cinema 4D «Material Manager»: φαρδιά μπάρα υλικών στη ΒΑΣΗ του 3D κάμβα
@@ -202,7 +224,7 @@ export function PolygonMaterialPanel() {
       {/* ADR-687 Φ1 — «＋ Νέο Υλικό» στην ΑΡΧΗ της μπάρας (αμέσως μετά το mode toggle «Πολύγωνα»),
           όπως το C4D Material Manager. Prominent, ΠΑΝΤΑ ενεργό (δημιουργείς υλικό ανεξάρτητα από
           επιλεγμένη όψη). Αντικατέστησε το παλιό «Προσαρμοσμένο χρώμα» (big-player: όλα είναι υλικά). */}
-      <div className="flex shrink-0 items-center border-r border-white/10 pr-3">
+      <div className="flex shrink-0 items-center gap-2 border-r border-white/10 pr-3">
         <Tooltip>
           <TooltipTrigger asChild>
             <button
@@ -215,49 +237,44 @@ export function PolygonMaterialPanel() {
           </TooltipTrigger>
           <TooltipContent>{t('polygonMode.newMaterialTooltip')}</TooltipContent>
         </Tooltip>
+        {/* ADR-687 Φ8 — «Βιβλιοθήκη»: άνοιξε το popover με ΟΛΑ τα υλικά (η μπάρα δείχνει μόνο σκηνή).
+            Big-player: Revit «Paint → Material Browser» / C4D Content Browser. */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              aria-pressed={libraryOpen}
+              onClick={() => setLibraryOpen((o) => !o)}
+              className={`flex items-center justify-center gap-1.5 rounded border px-3 py-2 text-[11px] font-semibold transition-colors ${
+                libraryOpen ? 'border-white/60 bg-white/20' : 'border-white/15 hover:bg-white/10'
+              }`}
+            >
+              <Library size={14} />
+              <span className="whitespace-nowrap">{t('polygonMode.library')}</span>
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>{t('polygonMode.libraryTooltip')}</TooltipContent>
+        </Tooltip>
       </div>
 
-      {/* Κεντρικό cluster: οριζόντια σειρά υλικών (C4D thumbnails), scroll όταν δεν χωράνε. */}
+      {/* Κεντρικό cluster: οριζόντια σειρά υλικών ΣΚΗΝΗΣ (C4D Material Manager), scroll όταν δεν χωράνε. */}
       <ul className="flex flex-1 items-center gap-2 overflow-x-auto py-1">
-        {swatches.map((m) => (
-          <li key={m.id} className="shrink-0">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                {/* Body swatches: draggable (Cinema 4D drag-drop). Finish: click-only. */}
-                <button
-                  type="button"
-                  draggable={m.draggable}
-                  onDragStart={m.draggable ? (e) => {
-                    e.dataTransfer.setData(BIM_MATERIAL_MIME, serializeFaceAppearanceDrag({ materialId: m.id }));
-                    e.dataTransfer.effectAllowed = 'copy';
-                  } : undefined}
-                  onClick={() => apply({ materialId: m.id })}
-                  className={`flex w-14 flex-col items-center gap-1 rounded border border-white/15 p-1 text-[9px] transition-colors hover:bg-white/10 ${m.draggable ? 'cursor-grab active:cursor-grabbing' : ''}`}
-                >
-                  {m.swatch ? (
-                    // ADR-687 Φ7 — textured catalog/library swatch: real 3D sphere WITH its texture.
-                    <MaterialSwatch
-                      sphere
-                      materialId={m.swatch.materialId}
-                      category={m.swatch.category}
-                      thumbnailUrl={m.swatch.thumbnailUrl}
-                      albedoUrl={m.swatch.albedoUrl}
-                      appearance={m.swatch.appearance}
-                      className="h-9 w-9 shrink-0 rounded-sm border border-white/30"
-                    />
-                  ) : (
-                    // ADR-687 Φ7 — legacy flat paint → coloured 3D sphere (uniform C4D look).
-                    <MaterialSwatch
-                      sphere
-                      color={m.color}
-                      className="h-9 w-9 shrink-0 rounded-sm border border-white/30"
-                    />
-                  )}
-                  <span className="w-full truncate text-center">{m.label}</span>
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>{m.label}</TooltipContent>
-            </Tooltip>
+        {!isFinish && barEntries.length === 0 && (
+          <li className="px-2 text-[10px] leading-tight text-white/50">
+            {t('polygonMode.sceneEmptyHint')}
+          </li>
+        )}
+        {barEntries.map((entry) => (
+          <li key={entry.id} className="shrink-0">
+            <MaterialEntryButton
+              entry={entry}
+              onApply={apply}
+              draggable={!isFinish}
+              className={`flex w-14 flex-col items-center gap-1 rounded border border-white/15 p-1 text-[9px] transition-colors hover:bg-white/10 ${
+                isFinish ? '' : 'cursor-grab active:cursor-grabbing'
+              }`}
+              swatchClassName="h-9 w-9 shrink-0 rounded-sm border border-white/30"
+            />
           </li>
         ))}
       </ul>
@@ -273,6 +290,16 @@ export function PolygonMaterialPanel() {
           {faceCount > 0 ? t('polygonMode.clearFace') : t('polygonMode.clearWhole')}
         </button>
       </div>
+
+      {/* ADR-687 Φ8 — popover «Βιβλιοθήκη» (όλα τα υλικά) πάνω από τη μπάρα· κλικ = apply στη σκηνή. */}
+      {libraryOpen && (
+        <MaterialLibraryPopover
+          library={libraryMaterials}
+          t={t}
+          onApply={applyFromLibrary}
+          onClose={() => setLibraryOpen(false)}
+        />
+      )}
 
       <MaterialEditorDialog
         open={editorOpen}

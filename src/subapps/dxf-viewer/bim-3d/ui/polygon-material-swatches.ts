@@ -13,30 +13,20 @@
  * @see docs/centralized-systems/reference/adrs/ADR-679-pbr-material-full-parity.md
  */
 
-import type { TFunction } from 'i18next';
 import type { BimMaterial, BimMaterialAppearance, BimMaterialCategory } from '../../bim/types/bim-material-types';
-import { constructionMaterialLabelKey } from '../../bim/materials/construction-materials';
-import { listWallCoveringMaterials } from '../../bim/wall-coverings/wall-covering-material-catalog';
+// ADR-687 Φ8 — η ένωση catalog+library+μπογιές είναι SSoT στο `material-library-index`. Το
+// `buildBodySwatches` είναι πλέον projection του (μηδέν δεύτερη ένωση, N.18). Ο κατάλογος
+// `FACE_TEXTURE_MATERIAL_IDS` ζει εκεί (catalog side)· εδώ re-exported για back-compat.
+import type { TFunction } from 'i18next';
+import {
+  FACE_TEXTURE_MATERIAL_IDS,
+  buildMaterialLibraryEntries,
+  type FaceTextureMaterialId,
+  type LibraryEntry,
+} from './material-library-index';
 
-/**
- * Curated textured "cladding" materials for face paint — the `mat-*` keys of
- * `MATERIAL_TEXTURE_MAP` (`bim/materials/bim-texture-registry.ts`) that read as a real face
- * FINISH (brick / stone / wood / tile / concrete / metal / plaster / roof-tile). Build-up-layer
- * DNA materials (`mat-screed`, `mat-insulation`, `mat-membrane`, `mat-gravel`, `mat-finish`) are
- * deliberately EXCLUDED — those are Revit Floor-Type layers, not a paintable face finish.
- */
-export const FACE_TEXTURE_MATERIAL_IDS = [
-  'mat-brick',
-  'mat-stone',
-  'mat-wood',
-  'mat-tile',
-  'mat-concrete',
-  'mat-metal',
-  'mat-plaster',
-  'mat-roof-tile',
-] as const;
-
-export type FaceTextureMaterialId = (typeof FACE_TEXTURE_MATERIAL_IDS)[number];
+export { FACE_TEXTURE_MATERIAL_IDS };
+export type { FaceTextureMaterialId };
 
 /** Lightweight render descriptor for a user-library (`bmat_*`) swatch — no Firestore/React types. */
 export interface LibraryMaterialSwatchDescriptor {
@@ -105,33 +95,35 @@ export type SwatchItem =
     };
 
 /**
- * ADR-679 Φ2b — BODY layer swatch groups, Cinema 4D Material Manager order:
- *   1. textured catalog cladding materials (`FACE_TEXTURE_MATERIAL_IDS`) — brick/stone/wood/…
- *   2. the user's own material library (`bmat_*`, `useMaterialLibrary`)
- *   3. legacy flat wall-covering paints (`listWallCoveringMaterials`)
- *
- * SSoT της λίστας «τι υλικά μπορεί να διαλέξει ο χρήστης για σώμα» — κοινό για το
- * `PolygonMaterialPanel` (swatch grid) και το `ImportedMeshMaterialMapDialog` (dropdown, ADR-686 Φ5).
+ * ADR-687 Φ8 — projection ενός `LibraryEntry` (γενική βιβλιοθήκη SSoT) → `SwatchItem`. Μπογιά (flat
+ * `color`) → `color` branch· catalog/user (materialId) → `swatch` ref (textured σφαίρα). Το
+ * `color !== undefined` discriminant είναι type-safe (χωρίς `!`/`as`).
+ */
+export function entryToSwatchItem(entry: LibraryEntry): SwatchItem {
+  if (entry.color !== undefined) {
+    return { id: entry.id, label: entry.label, draggable: true, color: entry.color };
+  }
+  return {
+    id: entry.id,
+    label: entry.label,
+    draggable: true,
+    swatch: {
+      materialId: entry.materialId,
+      category: entry.category,
+      thumbnailUrl: entry.thumbnailUrl,
+      albedoUrl: entry.albedoUrl,
+      appearance: entry.appearance,
+    },
+  };
+}
+
+/**
+ * ADR-679 Φ2b / ADR-687 Φ8 — «τι υλικά μπορεί να διαλέξει ο χρήστης για σώμα» = projection της
+ * γενικής βιβλιοθήκης (`buildMaterialLibraryEntries`) σε `SwatchItem[]`, Cinema 4D Material Manager
+ * order (catalog → user library → μπογιές). ΜΙΑ ένωση (SSoT στο `material-library-index`), μηδέν
+ * διπλότυπο (N.18). Consumer: `ImportedMeshMaterialMapDialog` (dropdown, ADR-686 Φ5) + το popover
+ * «Βιβλιοθήκη» της κάτω μπάρας (ADR-687 Φ8).
  */
 export function buildBodySwatches(library: readonly BimMaterial[], t: TFunction): SwatchItem[] {
-  const catalog: SwatchItem[] = FACE_TEXTURE_MATERIAL_IDS.map((id) => ({
-    id,
-    label: t(`dxf-viewer-shell:${constructionMaterialLabelKey(id)}`),
-    draggable: true,
-    swatch: { materialId: id },
-  }));
-  const fromLibrary: SwatchItem[] = buildLibraryMaterialSwatches(library).map((d) => ({
-    id: d.id,
-    label: d.label,
-    draggable: true,
-    // ADR-687 Φ7 — pass the `bmat_*` id so the sphere thumbnail loads the material's own PBR texture set.
-    swatch: { materialId: d.id, category: d.category, thumbnailUrl: d.thumbnailUrl, albedoUrl: d.albedoUrl, appearance: d.appearance },
-  }));
-  const flatPaints: SwatchItem[] = listWallCoveringMaterials().map((m) => ({
-    id: m.id,
-    color: m.color,
-    label: t(`dxf-viewer-shell:wallCovering.materials.${m.labelKeySuffix}`),
-    draggable: true,
-  }));
-  return [...catalog, ...fromLibrary, ...flatPaints];
+  return buildMaterialLibraryEntries(library, t).map(entryToSwatchItem);
 }

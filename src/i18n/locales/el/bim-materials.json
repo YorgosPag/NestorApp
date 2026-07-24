@@ -30,7 +30,9 @@
     "company": "Εταιρεία",
     "project": "Έργο",
     "system": "Σύστημα",
-    "all": "Όλα"
+    "all": "Όλα",
+    "catalog": "Κατάλογος",
+    "paint": "Μπογιές"
   },
   "form": {
     "createTitle": "Νέο Υλικό",
@@ -96,7 +98,9 @@
     "emptyHint": "Δημιουργήστε το πρώτο υλικό εταιρείας.",
     "systemBadge": "Σύστημα",
     "companyBadge": "Εταιρεία",
-    "projectBadge": "Έργο"
+    "projectBadge": "Έργο",
+    "catalogBadge": "Κατάλογος",
+    "paintBadge": "Μπογιά"
   },
   "delete": {
     "title": "Διαγραφή Υλικού",

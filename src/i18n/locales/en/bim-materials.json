@@ -30,7 +30,9 @@
     "company": "Company",
     "project": "Project",
     "system": "System",
-    "all": "All"
+    "all": "All",
+    "catalog": "Catalog",
+    "paint": "Paints"
   },
   "form": {
     "createTitle": "New Material",
@@ -96,7 +98,9 @@
     "emptyHint": "Create your first company material.",
     "systemBadge": "System",
     "companyBadge": "Company",
-    "projectBadge": "Project"
+    "projectBadge": "Project",
+    "catalogBadge": "Catalog",
+    "paintBadge": "Paint"
   },
   "delete": {
     "title": "Delete Material",

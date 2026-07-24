@@ -16,7 +16,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-413-pbr-textures.md
  */
 
-import type { BimMaterialCategory } from '../types/bim-material-types';
+import type { BimMaterialAppearance, BimMaterialCategory } from '../types/bim-material-types';
 // 🏢 ADR-571: MEP water/plumbing cyan SSoT + hex→int SSoT (utils/dxf-true-color.ts)
 import { MEP_WATER_COLOR } from '../../config/color-config';
 import { hexToTrueColor, trueColorToHex } from '../../utils/dxf-true-color';
@@ -190,6 +190,23 @@ export function catalogDefForMaterialId(materialId: string): PbrMaterialDef {
  */
 export function flatColorDef(hex: string): PbrMaterialDef {
   return { color: hexToTrueColor(hex), roughness: 0.7, metalness: 0 };
+}
+
+/**
+ * ADR-687 Φ8 — inverse του `appearanceToDef`: `PbrMaterialDef` → `BimMaterialAppearance` (SSoT
+ * mapping, NO three.js). Χρησιμοποιείται από το «Διπλασίασε» της βιβλιοθήκης (Ν.1): ένα catalog/
+ * μπογιά υλικό (`mat-*`/`paint-*`) → seed appearance ενός νέου project υλικού, ώστε ο editor να
+ * ανοίγει με το ΠΡΑΓΜΑΤΙΚΟ χρώμα/γυαλάδα του καταλόγου (Revit «Duplicate» του Material Browser).
+ * Μόνο τα βασικά PBR πεδία (opacity όταν <1)· τα υπόλοιπα appearance πεδία = editor defaults.
+ */
+export function defToAppearance(def: PbrMaterialDef): BimMaterialAppearance {
+  const opacity = def.opacity ?? 1;
+  return {
+    baseColorHex: trueColorToHex(def.color).toLowerCase(),
+    metalness: def.metalness,
+    roughness: def.roughness,
+    ...(opacity < 1 ? { opacity } : {}),
+  };
 }
 
 /**

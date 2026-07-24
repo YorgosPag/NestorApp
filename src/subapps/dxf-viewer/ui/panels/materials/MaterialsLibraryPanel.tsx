@@ -1,8 +1,13 @@
 'use client';
 
 /**
- * ADR-363 Phase 6.5.B — Floating panel "Υλικά" (5η tab στο left sidebar).
- * List + filter + search + CRUD modal. System materials read-only.
+ * ADR-363 Phase 6.5.B / ADR-687 Φ8 — Floating panel "Διαχείριση Υλικών" (5η tab στο left sidebar).
+ *
+ * ΓΕΝΙΚΗ βιβλιοθήκη (Revit *Material Browser* / Cinema 4D *Content Browser* / ArchiCAD *Attribute
+ * Manager*): δείχνει ΟΛΑ τα υλικά — built-in catalog (Τούβλο/Πέτρα/Ξύλο/…) + system/company/project
+ * Firestore library + legacy μπογιές — μέσω του κοινού `buildMaterialLibraryEntries` (SSoT). Τα
+ * Firestore υλικά έχουν CRUD· τα catalog/μπογιές είναι read-only reference cards με «Διπλασίασε»
+ * (Revit «Duplicate»). Ξεχωριστό από την κάτω μπάρα «Υλικά όψης» (Ν.2) που δείχνει μόνο τη σκηνή.
  */
 
 import React, { useState, useCallback, useMemo } from 'react';
@@ -26,9 +31,24 @@ import type {
   SaveBimMaterialInput,
   UpdateBimMaterialPatch,
 } from '../../../bim/types/bim-material-types';
+import {
+  catalogDefForMaterialId,
+  flatColorDef,
+  defToAppearance,
+} from '../../../bim/materials/material-catalog-defs';
+import {
+  buildMaterialLibraryEntries,
+  entryFilterScope,
+  type LibraryEntry,
+} from '../../../bim-3d/ui/material-library-index';
+import { BIM_MATERIAL_MIME, serializeFaceAppearanceDrag } from '../../../bim-3d/ui/polygon-material-dnd';
 import { MaterialSwatch } from '../../components/shared/MaterialSwatch';
 import { useMaterialLibrary } from './hooks/useMaterialLibrary';
-import { MaterialEditorDialog, type PendingPbrUpload } from './MaterialEditorDialog';
+import {
+  MaterialEditorDialog,
+  type PendingPbrUpload,
+} from './MaterialEditorDialog';
+import { type MaterialEditorSeed } from './material-editor-form-model';
 import { persistMaterialFromEditor } from './persist-material-from-editor';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -42,12 +62,29 @@ const CATEGORIES: readonly BimMaterialCategory[] = [
   'plaster', 'masonry', 'concrete', 'insulation', 'flooring',
   'window-frame', 'door-frame', 'paint', 'roofing', 'waterproofing', 'other',
 ];
-const SCOPES: readonly BimMaterialScope[] = ['system', 'company', 'project'];
+/** Firestore scopes + ADR-687 Φ8 ψευδο-scopes (catalog/paint) για το scope φίλτρο της βιβλιοθήκης. */
+const SCOPE_FILTERS: readonly (BimMaterialScope | 'catalog' | 'paint')[] = [
+  'system', 'company', 'project', 'catalog', 'paint',
+];
+
+/**
+ * ADR-687 Φ8 — seed για «Διπλασίασε»: catalog id → catalog def· μπογιά → flat χρώμα def· → appearance.
+ * Ανοίγει τον editor create-mode με το πραγματικό χρώμα/γυαλάδα του καταλόγου (κατηγορία 'other',
+ * ο χρήστης την αλλάζει). Το όνομα προ-συμπληρώνεται από την ετικέτα (και el/en — ο χρήστης το ρυθμίζει).
+ */
+function duplicateSeed(entry: LibraryEntry): MaterialEditorSeed {
+  const def = entry.color !== undefined
+    ? flatColorDef(entry.color)
+    : catalogDefForMaterialId(entry.materialId ?? entry.id);
+  return { nameEl: entry.label, nameEn: entry.label, category: 'other', appearance: defToAppearance(def) };
+}
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function MaterialsLibraryPanel({ projectId }: MaterialsLibraryPanelProps) {
-  const { t } = useTranslation('bim-materials');
+  // ADR-687 Φ8 — `dxf-viewer-shell` ns φορτωμένο ρητά: ο index αντλεί τις catalog/μπογιά ετικέτες
+  // από `dxf-viewer-shell:` (constructionMaterials/wallCovering) — αλλιώς θα φαινόταν το raw key.
+  const { t } = useTranslation(['bim-materials', 'dxf-viewer-shell']);
   const colors = useSemanticColors();
   const { user } = useAuth();
   const companyResult = useCompanyId();
@@ -56,23 +93,31 @@ export function MaterialsLibraryPanel({ projectId }: MaterialsLibraryPanelProps)
 
   const { materials, loading, save, update, remove } = useMaterialLibrary({ companyId, userId, projectId });
 
+  // ADR-687 Φ8 — γενική βιβλιοθήκη (catalog + Firestore + μπογιές) ως ΕΝΑ index (SSoT).
+  const entries = useMemo(() => buildMaterialLibraryEntries(materials, t), [materials, t]);
+
   // ADR-652 M3 — το φιλτράρισμα βιβλιοθήκης είναι κοινό SSoT (το μοιράζεται με το palette
   // των block): ίδιο state, ίδιος pure κανόνας, ίδια μπάρα.
   const [filter, setFilter] = useState<LibraryFilterState>(EMPTY_LIBRARY_FILTER);
 
   const [editorOpen, setEditorOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<BimMaterial | undefined>(undefined);
+  const [createSeed, setCreateSeed] = useState<MaterialEditorSeed | undefined>(undefined);
   const [deleteTarget, setDeleteTarget] = useState<BimMaterial | null>(null);
 
   const filtered = useMemo(
     () =>
-      materials.filter((m) =>
+      entries.filter((e) =>
         matchesLibraryFilter(
-          { names: [m.nameEl, m.nameEn], category: m.category, scope: m.scope },
+          {
+            names: e.bimMaterial ? [e.bimMaterial.nameEl, e.bimMaterial.nameEn] : [e.label],
+            category: e.category ?? null,
+            scope: entryFilterScope(e),
+          },
           filter,
         ),
       ),
-    [materials, filter],
+    [entries, filter],
   );
 
   const categoryOptions = useMemo(
@@ -80,12 +125,19 @@ export function MaterialsLibraryPanel({ projectId }: MaterialsLibraryPanelProps)
     [t],
   );
   const scopeOptions = useMemo(
-    () => SCOPES.map((s) => ({ value: s, label: t(`scopes.${s}`) })),
+    () => SCOPE_FILTERS.map((s) => ({ value: s, label: t(`scopes.${s}`) })),
     [t],
   );
 
-  const openCreate = useCallback(() => { setEditTarget(undefined); setEditorOpen(true); }, []);
-  const openEdit = useCallback((m: BimMaterial) => { setEditTarget(m); setEditorOpen(true); }, []);
+  const openCreate = useCallback(() => {
+    setEditTarget(undefined); setCreateSeed(undefined); setEditorOpen(true);
+  }, []);
+  const openEdit = useCallback((m: BimMaterial) => {
+    setEditTarget(m); setCreateSeed(undefined); setEditorOpen(true);
+  }, []);
+  const openDuplicate = useCallback((entry: LibraryEntry) => {
+    setEditTarget(undefined); setCreateSeed(duplicateSeed(entry)); setEditorOpen(true);
+  }, []);
   const closeEditor = useCallback(() => setEditorOpen(false), []);
 
   const handleSave = useCallback(async (
@@ -137,14 +189,14 @@ export function MaterialsLibraryPanel({ projectId }: MaterialsLibraryPanelProps)
         {!loading && filtered.length === 0 && (
           <aside className={`text-xs ${colors.text.muted} text-center py-6 flex flex-col gap-1`}>
             <p>{t('list.emptyList')}</p>
-            {materials.length === 0 && <p className="opacity-70">{t('list.emptyHint')}</p>}
           </aside>
         )}
-        {filtered.map((m) => (
+        {filtered.map((entry) => (
           <MaterialCard
-            key={m.id}
-            material={m}
+            key={entry.id}
+            entry={entry}
             onEdit={openEdit}
+            onDuplicate={openDuplicate}
             onDelete={setDeleteTarget}
             t={t}
             colors={colors}
@@ -156,6 +208,7 @@ export function MaterialsLibraryPanel({ projectId }: MaterialsLibraryPanelProps)
         open={editorOpen}
         mode={editTarget ? 'edit' : 'create'}
         initial={editTarget}
+        seed={createSeed}
         projectId={projectId}
         onSave={handleSave}
         onCancel={closeEditor}
@@ -174,60 +227,78 @@ export function MaterialsLibraryPanel({ projectId }: MaterialsLibraryPanelProps)
 // ─── MaterialCard ─────────────────────────────────────────────────────────────
 
 interface MaterialCardProps {
-  material: BimMaterial;
+  entry: LibraryEntry;
   onEdit: (m: BimMaterial) => void;
+  onDuplicate: (entry: LibraryEntry) => void;
   onDelete: (m: BimMaterial) => void;
   t: (k: string, opts?: Record<string, string>) => string;
   colors: ReturnType<typeof useSemanticColors>;
 }
 
-function scopeBadgeClass(
-  scope: BimMaterialScope,
+/** Badge class + i18n key ανά πηγή/scope της εγγραφής. */
+function sourceBadge(
+  entry: LibraryEntry,
   colors: ReturnType<typeof useSemanticColors>,
-): string {
-  switch (scope) {
-    case 'system': return `bg-muted ${colors.text.muted}`;
-    case 'company': return `${colors.bg.infoSubtle} ${colors.text.info}`;
-    case 'project': return `${colors.bg.successSubtle} ${colors.text.success}`;
+): { className: string; labelKey: string } {
+  if (entry.source === 'catalog') return { className: `bg-muted ${colors.text.muted}`, labelKey: 'list.catalogBadge' };
+  if (entry.source === 'paint') return { className: `bg-muted ${colors.text.muted}`, labelKey: 'list.paintBadge' };
+  switch (entry.scope) {
+    case 'company': return { className: `${colors.bg.infoSubtle} ${colors.text.info}`, labelKey: 'list.companyBadge' };
+    case 'project': return { className: `${colors.bg.successSubtle} ${colors.text.success}`, labelKey: 'list.projectBadge' };
+    default: return { className: `bg-muted ${colors.text.muted}`, labelKey: 'list.systemBadge' };
   }
 }
 
-function MaterialCard({ material, onEdit, onDelete, t, colors }: MaterialCardProps) {
-  const isBuiltin = material.builtin;
+function MaterialCard({ entry, onEdit, onDuplicate, onDelete, t, colors }: MaterialCardProps) {
+  const isUser = entry.source === 'user';
+  const readOnly = !entry.editable;
+  const badge = sourceBadge(entry, colors);
+  // Captured const → narrows into the delete-button closure without a non-null assertion.
+  const deletableMat = entry.deletable ? entry.bimMaterial : undefined;
+
+  const handleClick = () => {
+    if (isUser && entry.bimMaterial) onEdit(entry.bimMaterial);
+    else onDuplicate(entry);
+  };
+
   return (
     <article
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.setData(BIM_MATERIAL_MIME, serializeFaceAppearanceDrag(entry.apply));
+        e.dataTransfer.effectAllowed = 'copy';
+      }}
       className={[
-        'flex flex-col gap-0.5 px-2 py-1.5 rounded cursor-pointer transition-colors',
-        isBuiltin
-          ? `${colors.bg.secondary} opacity-80`
-          : `${colors.bg.secondary} hover:${colors.bg.hover}`,
+        'flex flex-col gap-0.5 px-2 py-1.5 rounded cursor-grab active:cursor-grabbing transition-colors',
+        readOnly ? `${colors.bg.secondary} opacity-80` : `${colors.bg.secondary} hover:${colors.bg.hover}`,
       ].join(' ')}
-      onClick={() => onEdit(material)}
-      aria-label={t('list.cardAriaLabel', { name: material.nameEl })}
+      onClick={handleClick}
+      aria-label={t('list.cardAriaLabel', { name: entry.label })}
     >
       <header className="flex items-center gap-1.5">
         <MaterialSwatch
           sphere
-          materialId={material.id}
-          category={material.category}
-          thumbnailUrl={material.thumbnailUrl}
-          albedoUrl={material.pbrTextures?.albedoUrl}
-          appearance={material.appearance}
+          materialId={entry.materialId}
+          category={entry.category}
+          thumbnailUrl={entry.thumbnailUrl}
+          albedoUrl={entry.albedoUrl}
+          appearance={entry.appearance}
+          color={entry.color}
         />
-        <span className={`text-xs font-medium truncate flex-1 ${colors.text.primary}`}>{material.nameEl}</span>
-        <span className={`text-[10px] px-1.5 py-0.5 rounded-full shrink-0 ${scopeBadgeClass(material.scope, colors)}`}>
-          {t(`list.${material.scope}Badge`)}
+        <span className={`text-xs font-medium truncate flex-1 ${colors.text.primary}`}>{entry.label}</span>
+        <span className={`text-[10px] px-1.5 py-0.5 rounded-full shrink-0 ${badge.className}`}>
+          {t(badge.labelKey)}
         </span>
       </header>
       <footer className="flex items-center gap-2 justify-between">
         <span className={`text-[10px] ${colors.text.muted} truncate`}>
-          {t(`categories.${material.category}`)}
-          {material.density != null && ` · ${material.density} kg/m³`}
+          {entry.category ? t(`categories.${entry.category}`) : t(badge.labelKey)}
+          {entry.bimMaterial?.density != null && ` · ${entry.bimMaterial.density} kg/m³`}
         </span>
-        {!isBuiltin && (
+        {deletableMat && (
           <button
             type="button"
-            onClick={(e) => { e.stopPropagation(); onDelete(material); }}
+            onClick={(e) => { e.stopPropagation(); onDelete(deletableMat); }}
             className={`text-[10px] ${colors.text.muted} hover:text-destructive transition-colors shrink-0`}
           >
             {t('delete.confirm')}
