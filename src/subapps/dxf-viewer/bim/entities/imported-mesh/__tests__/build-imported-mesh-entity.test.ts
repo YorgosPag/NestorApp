@@ -137,6 +137,32 @@ describe('buildImportedMeshParams — unitScaleFactor (ADR-683 §units)', () => 
   });
 });
 
+/**
+ * ADR-691 §4.1 #1 — τα `bmat_*` της βιβλιοθήκης που αντιστοιχούν στα embedded υλικά. Καταγραφή
+ * χρήσης, ΟΧΙ βαφή: ελέγχεται μόνο ότι το πεδίο ταξιδεύει σωστά από το source στα params, με τον
+ * ίδιο κανόνα «κενό/απόν → παράλειψη» που ήδη ισχύει για το `materialSlots`.
+ */
+describe('buildImportedMeshParams — ADR-691 embeddedMaterialIds', () => {
+  it('περνά τα embeddedMaterialIds του source στα params', () => {
+    const withMaterials: ImportedMeshSource = { ...source, embeddedMaterialIds: ['bmat_oak_x', 'bmat_steel_y'] };
+
+    expect(buildImportedMeshEntity(withMaterials)!.params.embeddedMaterialIds).toEqual([
+      'bmat_oak_x',
+      'bmat_steel_y',
+    ]);
+  });
+
+  it('απόν → undefined (προ-ADR-691 συμπεριφορά, καμία καταγραφή)', () => {
+    expect(buildImportedMeshEntity(source)!.params.embeddedMaterialIds).toBeUndefined();
+  });
+
+  it('κενό array → παραλείπεται (ποτέ κενή τιμή στο Firestore, ίδιος κανόνας με materialSlots)', () => {
+    const emptyMaterials: ImportedMeshSource = { ...source, embeddedMaterialIds: [] };
+
+    expect(buildImportedMeshEntity(emptyMaterials)!.params.embeddedMaterialIds).toBeUndefined();
+  });
+});
+
 describe('buildImportedMeshEntities', () => {
   it('χτίζει τα καλά και ΑΝΑΦΕΡΕΙ τα παραλειφθέντα (καμία σιωπηλή απώλεια)', () => {
     const good = { ...source, nodeName: 'Rail_01' };

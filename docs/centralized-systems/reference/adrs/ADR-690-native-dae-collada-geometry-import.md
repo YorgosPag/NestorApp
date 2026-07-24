@@ -1,6 +1,6 @@
 # ADR-690 — Native `.dae` (COLLADA) geometry import: το `.dae` κάνει ό,τι το `.glb`
 
-**Status:** 🟢 **Φ2 DONE + BROWSER-VERIFIED** (2026-07-24, `abricos_gerbera.dae` + 3 jpg → γεωμετρία **+ υλικά + υφές** μπήκαν σωστά ως `imported-mesh`). 2 hotfixes μετά από browser tests: (#1 missing υφή → `stripBrokenTextures`· #2 ανώνυμα ColladaLoader meshes → `ensureUniqueMeshNames` + ξένο μοντέλο → πρόσφερε όλα). jest 7/7 + jscpd ✓. Commit = Giorgio. ⚠️ Ανοιχτό: τα embedded υλικά **δεν** μπαίνουν στο panel «Υλικά όψης» — **by-design, ίδιο με `.glb`** (βλ. §9).
+**Status:** 🟢 **Φ2 DONE + BROWSER-VERIFIED** (2026-07-24, `abricos_gerbera.dae` + 3 jpg → γεωμετρία **+ υλικά + υφές** μπήκαν σωστά ως `imported-mesh`). 2 hotfixes μετά από browser tests: (#1 missing υφή → `stripBrokenTextures`· #2 ανώνυμα ColladaLoader meshes → `ensureUniqueMeshNames` + ξένο μοντέλο → πρόσφερε όλα). jest 7/7 + jscpd ✓. Commit = Giorgio. ✅ **Το §9 ΕΚΛΕΙΣΕ από το ADR-691** (2026-07-24): τα embedded υλικά προάγονται πλέον σε `bmat_*` της βιβλιοθήκης και εμφανίζονται στο panel «Υλικά όψης» — **χωρίς** να ξαναβάφεται η γεωμετρία. Το §9 παρακάτω παραμένει ως **ιστορική ανάλυση της αιτίας**.
 **Date:** 2026-07-24
 **Owner:** Giorgio
 **Σχετικά (parents):** **ADR-683** (συνεργατικό round-trip — κλείνει το κενό **Κ6**: «Καμία εξαγωγή/εισαγωγή DAE») · **ADR-678** (C4D material round-trip — ιδιοκτήτης του υπάρχοντος `.dae` material path) · ADR-668 (mesh3d export OBJ/glTF — ιδιοκτήτης του `serialiseGlb`) · ADR-679 (PBR/υφές) · ADR-511 (material catalog SSoT)
@@ -157,7 +157,12 @@ Firebase** για τα **matched** στοιχεία. Το glTF appearance path *
 
 ---
 
-## 9. Ανοιχτό: τα embedded υλικά ΔΕΝ μπαίνουν στο panel «Υλικά όψης» (by-design, ίδιο με `.glb`)
+## 9. ~~Ανοιχτό~~ **ΕΚΛΕΙΣΕ (ADR-691)**: τα embedded υλικά και το panel «Υλικά όψης»
+
+> ✅ **Λύθηκε από το ADR-691** (2026-07-24). Η ανάλυση παρακάτω παραμένει έγκυρη ως **διάγνωση**: εξηγεί
+> γιατί ο συλλέκτης δεν έβλεπε τίποτα. Η λύση **δεν** ήταν να βαφτούν οι όψεις (αυτό θα κατέστρεφε τα
+> authored UVs του ξένου μοντέλου — ADR-691 §3.α) αλλά η **προαγωγή** των υλικών σε `bmat_*` +
+> καταγραφή τους στο `params.embeddedMaterialIds`, με τη γεωμετρία να renderάρεται αμετάβλητη.
 
 Μετά από επιτυχή εισαγωγή ξένου μοντέλου, το κάτω panel «Υλικά όψης» (`useSceneMaterials`, ADR-687)
 μένει άδειο, παρότι το mesh renderάρεται με τα υλικά/υφές του. **Δεν είναι bug:**

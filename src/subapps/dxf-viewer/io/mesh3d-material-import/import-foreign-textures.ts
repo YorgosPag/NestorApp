@@ -35,7 +35,7 @@ import type {
  * Generic best-fit ΑΤΟΕ για αυτόματα υλικά υφής (επιφανειακή επίστρωση/χρωματισμός). Ο χρήστης το
  * διορθώνει στο material editor αν το υλικό αφορά κοστολόγηση — η κατηγορία μπαίνει ρητά ως 'other'.
  */
-const IMPORTED_TEXTURE_ATOE_CATEGORY = 'OIK-77.01';
+export const IMPORTED_TEXTURE_ATOE_CATEGORY = 'OIK-77.01';
 
 /** Οι εξαρτήσεις (injected) που χρειάζεται ο pre-pass — μηδέν άμεση εξάρτηση σε Firebase/React. */
 export interface ForeignTextureImporterDeps {

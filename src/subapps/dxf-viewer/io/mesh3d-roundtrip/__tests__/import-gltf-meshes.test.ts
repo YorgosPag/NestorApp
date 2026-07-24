@@ -45,6 +45,7 @@ function record(overrides: Partial<GltfObjectRecord> = {}): GltfObjectRecord {
     objectName: 'Rail_01',
     materialName: 'Aluminium',
     materialSlots: ['Aluminium'],
+    materialIndices: [2],
     fingerprint: {
       hash: 'abcdef0123456789',
       signature: {
@@ -139,6 +140,41 @@ describe('importGltfMeshes', () => {
     expect(appendEntitiesToScene).not.toHaveBeenCalled();
     expect(result.created).toHaveLength(0);
     expect(result.skipped).toEqual(['Rail_01', 'Ghost']);
+  });
+});
+
+/**
+ * ADR-691 §4.1 #9 — τα `bmat_*` που προήχθησαν στη βιβλιοθήκη ΠΡΙΝ από αυτή την κλήση περνούν ως
+ * `materialIdByGltfIndex` (glTF material-index → bmat_*) και καταλήγουν στο `embeddedMaterialIds`
+ * της οντότητας. Καμία καταγραφή χωρίς χάρτη — back-compat με το προ-ADR-691 συμβόλαιο.
+ */
+describe('importGltfMeshes — ADR-691 embeddedMaterialIds', () => {
+  it('με materialIdByGltfIndex → η οντότητα παίρνει τα σωστά embeddedMaterialIds', async () => {
+    const materialIdByGltfIndex = new Map([[2, 'bmat_aluminium_x']]);
+
+    const result = await importGltfMeshes(
+      accessor,
+      { ...input([record()]), materialIdByGltfIndex },
+    );
+
+    expect(result.created[0].params.embeddedMaterialIds).toEqual(['bmat_aluminium_x']);
+  });
+
+  it('χωρίς materialIdByGltfIndex → undefined (καμία καταγραφή, προ-ADR-691 συμπεριφορά)', async () => {
+    const result = await importGltfMeshes(accessor, input([record()]));
+
+    expect(result.created[0].params.embeddedMaterialIds).toBeUndefined();
+  });
+
+  it('δείκτης χωρίς αντιστοιχία στον χάρτη → παραλείπεται, όχι undefined-in-array', async () => {
+    const materialIdByGltfIndex = new Map([[99, 'bmat_unrelated']]); // δεν ταιριάζει με materialIndices: [2]
+
+    const result = await importGltfMeshes(
+      accessor,
+      { ...input([record()]), materialIdByGltfIndex },
+    );
+
+    expect(result.created[0].params.embeddedMaterialIds).toBeUndefined();
   });
 });
 

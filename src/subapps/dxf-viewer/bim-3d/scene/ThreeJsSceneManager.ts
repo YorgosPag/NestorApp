@@ -375,7 +375,7 @@ export class ThreeJsSceneManager {
     if (!this.disposed) { this.markSceneDirty(); applyBimSelection({ bimGroup: this.bimLayer.group, selectionHighlighter: this.selectionHighlighter }, bimId, mode); }
   }
 
-  /** ADR-691 — apply a window/crossing MARQUEE result (bulk bimIds) with a combine mode. */
+  /** ADR-692 — apply a window/crossing MARQUEE result (bulk bimIds) with a combine mode. */
   applyBimMarqueeSelection(ids: readonly string[], mode: 'replace' | 'add' | 'subtract'): void {
     if (!this.disposed) { this.markSceneDirty(); applyBimMarqueeSelection({ bimGroup: this.bimLayer.group, selectionHighlighter: this.selectionHighlighter }, ids, mode); }
   }

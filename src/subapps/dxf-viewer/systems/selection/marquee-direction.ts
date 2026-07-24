@@ -7,7 +7,7 @@
  *
  * Historically this `startX > endX` comparison lived inline in
  * `UniversalMarqueeSelection.performSelection` (the 2D path). The 3D marquee
- * (ADR-691) needs the EXACT same verdict; extracting it here keeps a single
+ * (ADR-692) needs the EXACT same verdict; extracting it here keeps a single
  * source of truth instead of a second, drifting copy (N.18 anti-clone).
  */
 

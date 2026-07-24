@@ -24,7 +24,7 @@ import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { raycastWorldPointOrPlane } from '../systems/raycaster/BimEntityRaycaster';
 import { markBvhDirty } from '../systems/raycaster/bvh-setup';
 import { withSuppressed3DToUniversalSync } from '../systems/selection/use-3d-selection-universal-bridge';
-// ADR-691 — 3D window/crossing marquee: bulk selection combine modes.
+// ADR-692 — 3D window/crossing marquee: bulk selection combine modes.
 import type { MarqueeCombineMode } from '../systems/marquee/Marquee3DStore';
 
 export interface SyncBimEntitiesDeps {
@@ -253,7 +253,7 @@ export function applyBimSelection(
 }
 
 /**
- * ADR-691 — apply a 3D window/crossing MARQUEE result (a set of bimIds) to the selection.
+ * ADR-692 — apply a 3D window/crossing MARQUEE result (a set of bimIds) to the selection.
  *
  * Sibling of {@link applyBimSelection} but for the bulk drag-rectangle path:
  *   • `replace`  — selection becomes exactly the marquee hits (plain drag);

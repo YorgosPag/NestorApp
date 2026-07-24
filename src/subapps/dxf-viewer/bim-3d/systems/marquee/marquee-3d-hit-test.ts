@@ -1,5 +1,5 @@
 /**
- * marquee-3d-hit-test.ts — window/crossing hit resolution for the 3D marquee (ADR-691).
+ * marquee-3d-hit-test.ts — window/crossing hit resolution for the 3D marquee (ADR-692).
  *
  * The verdict rule and the screen-space intersection primitives are REUSED from the 2D
  * marquee SSoT (`systems/selection/marquee-direction` + `universal-marquee-geometry`) —
@@ -16,7 +16,7 @@
  *
  * This is a "select-through" test (occlusion-agnostic): an entity hidden behind another is
  * still selected if its projection falls in the box — the CAD default (Revit/AutoCAD). The
- * pixel-exact "visible-only" variant arrives in ADR-691 Φ2 (GPU id-pass).
+ * pixel-exact "visible-only" variant arrives in ADR-692 Φ2 (GPU id-pass).
  */
 
 import * as THREE from 'three';

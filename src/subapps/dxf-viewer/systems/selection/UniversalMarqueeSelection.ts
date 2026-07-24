@@ -73,7 +73,7 @@ export class UniversalMarqueeSelector {
       max: { x: Math.max(marqueeWorldStart.x, marqueeWorldEnd.x), y: Math.max(marqueeWorldStart.y, marqueeWorldEnd.y) }
     };
 
-    // ADR-691 — window/crossing verdict is now a shared SSoT (2D + 3D marquee).
+    // ADR-692 — window/crossing verdict is now a shared SSoT (2D + 3D marquee).
     const selectionType = getMarqueeSelectionType(startPoint.x, endPoint.x);
     const isCrossing = selectionType === 'crossing';
 

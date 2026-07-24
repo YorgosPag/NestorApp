@@ -43,6 +43,7 @@ import {
 } from '../../../io/mesh3d-roundtrip/import-unit-scale';
 import { ImportUnitScaleControl } from './ImportUnitScaleControl';
 import { useImportedMeshPlacementContext } from './useImportedMeshPlacementContext';
+import { useEmbeddedMaterialImport, materialSourceLabel } from './useEmbeddedMaterialImport';
 
 const M_TO_MM = 1000;
 
@@ -124,6 +125,29 @@ export function ImportedMeshImportDialog({
   const projectId = levels.saveContext?.projectId ?? resolveActiveProjectId(levels.levels) ?? '';
   const companyId = user?.companyId ?? '';
 
+  // ADR-691 — τα embedded υλικά του μοντέλου προάγονται σε υλικά της βιβλιοθήκης. Default ΟΝ: η κοινή
+  // περίπτωση είναι «ναι, θέλω τα υλικά του»· ο χρήστης το κλείνει για μοντέλα σκηνογραφίας.
+  const [extractMaterials, setExtractMaterials] = useState(true);
+  const materialImport = useEmbeddedMaterialImport(projectId || undefined);
+
+  /**
+   * ADR-691 §4.1 #9 — τρέχει **πριν** το `importGltfMeshes` ώστε οι οντότητες να γεννηθούν πλήρεις
+   * (μηδέν δεύτερο command, μηδέν race). Επιστρέφει `undefined` όταν ο χρήστης το έκλεισε ή δεν
+   * υπάρχει scope — τότε η εισαγωγή είναι ακριβώς η προ-ADR-691 συμπεριφορά.
+   */
+  const runMaterialImport = useCallback(async (): Promise<ReadonlyMap<number, string> | undefined> => {
+    if (!extractMaterials || !materialImport.available) return undefined;
+    notifications.info(t('c4dMaterialImport.importMeshes.extractingMaterials'));
+    const outcome = await materialImport.run(data, materialSourceLabel(sourceFileName));
+    if (outcome.createdCount + outcome.reusedCount > 0) {
+      notifications.success(t('c4dMaterialImport.importMeshes.materialsExtracted', {
+        created: outcome.createdCount,
+        reused: outcome.reusedCount,
+      }));
+    }
+    return outcome.idByIndex;
+  }, [extractMaterials, materialImport, data, sourceFileName, notifications, t]);
+
   const handleConfirm = useCallback(async (): Promise<void> => {
     if (!projectId || !companyId || !layerId) {
       notifications.warning(t('c4dMaterialImport.importMeshes.missingProject'));
@@ -133,6 +157,7 @@ export function ImportedMeshImportDialog({
     setBusy(true);
     try {
       const chosen = importable.filter((r) => selected.has(r.objectName));
+      const materialIdByGltfIndex = await runMaterialImport();
       const result = await importGltfMeshes(levels, {
         records: chosen,
         data,
@@ -143,6 +168,7 @@ export function ImportedMeshImportDialog({
         unitScaleFactor,
         layerId,
         floorId,
+        materialIdByGltfIndex,
       });
 
       notifications.success(t('c4dMaterialImport.importMeshes.success', { count: result.created.length }));
@@ -158,7 +184,7 @@ export function ImportedMeshImportDialog({
     }
   }, [
     projectId, companyId, layerId, floorId, importable, selected, levels, data,
-    sourceFileName, placement, unitScaleFactor, notifications, t, onClose,
+    sourceFileName, placement, unitScaleFactor, notifications, t, onClose, runMaterialImport,
   ]);
 
   const allSelected = selected.size === importable.length && importable.length > 0;
@@ -180,6 +206,25 @@ export function ImportedMeshImportDialog({
           onCustomFactorChange={setCustomFactor}
           disabled={busy}
         />
+
+        {/* ADR-691 — τα υλικά του μοντέλου γίνονται υλικά της βιβλιοθήκης. Κρύβεται όταν λείπει
+            company/user scope: επιλογή που δεν μπορεί να τηρηθεί είναι χειρότερη από απούσα. */}
+        {materialImport.available && (
+          <section className="flex flex-col gap-0.5 px-2 py-1.5">
+            <label className="flex items-center gap-2 text-xs cursor-pointer">
+              <Checkbox
+                checked={extractMaterials}
+                onCheckedChange={(v) => setExtractMaterials(v === true)}
+                disabled={busy}
+                aria-label={t('c4dMaterialImport.importMeshes.extractMaterials')}
+              />
+              <span>{t('c4dMaterialImport.importMeshes.extractMaterials')}</span>
+            </label>
+            <p className="pl-6 text-xs text-muted-foreground">
+              {t('c4dMaterialImport.importMeshes.extractMaterialsHint')}
+            </p>
+          </section>
+        )}
 
         <label className="flex items-center gap-2 px-2 py-1.5 text-xs text-muted-foreground cursor-pointer">
           <Checkbox

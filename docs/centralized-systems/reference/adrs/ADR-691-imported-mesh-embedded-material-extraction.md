@@ -1,6 +1,6 @@
 # ADR-691 — Extraction embedded υλικών/υφών ενός `imported-mesh` → βιβλιοθήκη + panel «Υλικά όψης»
 
-**Status:** 🟡 **Φ1 (ΠΛΑΝΟ) — γραμμένο, ΔΕΝ έχει υλοποιηθεί.** Αναμονή έγκρισης Giorgio (N.8).
+**Status:** 🟢 **Φ2 DONE (κώδικας + tests)** — 2026-07-24. jest **418/418 πράσινα σε 38 suites** (όλα τα σχετικά domains), jscpd (N.18) **καθαρό σε 12 αρχεία**. Υλοποιήθηκε με **orchestrator 5 παράλληλων agents** (απόφαση Giorgio, N.8). Commit = Giorgio. 🔴 **Εκκρεμεί browser επαλήθευση** (βλ. §9).
 **Date:** 2026-07-24
 **Owner:** Giorgio
 **Σχετικά (parents):** **ADR-683** Φ3β/Φ5 (imported-mesh οντότητα, `materialSlots`) · **ADR-690** (native `.dae` → glb· §9 του οποίου *τεκμηρίωσε* το κενό που κλείνει εδώ) · **ADR-687** Φ8 (panel «Υλικά όψης» / `useSceneMaterials`) · **ADR-678** Βήμα 3 (ξένες υφές → `bmat_*`, content-hash dedup) · **ADR-679** (PBR υφές) · **ADR-686** (imported-mesh appearance override) · **ADR-363** §Q8 (BimMaterial schema)
@@ -139,23 +139,27 @@ dae-specific (το `.dae` περνά ήδη από `colladaToGlb` → ίδιο p
 
 ## 5. Αρχεία (πλάνο Φ2)
 
-**NEW**
+**NEW** (όπως υλοποιήθηκαν)
 | Αρχείο | Ρόλος |
 |---|---|
-| `io/mesh3d-roundtrip/glb-embedded-materials.ts` | **Pure**: GLB (ArrayBuffer) ή glTF (JSON string) → `EmbeddedGltfMaterial[]` (index, name, colorHex sRGB, opacity, metalness, roughness, albedo bytes+mime). Μηδέν THREE, μηδέν DOM → πλήρως testable |
-| `io/mesh3d-material-import/import-embedded-materials.ts` | **DI orchestrator**: φίλτρα idempotency → delegate υφών στο `importForeignTextures` → color-only creation → `Map<index, bmat_*>` |
-| `__tests__` × 2 | jest anchors (βλ. §7) |
+| `io/mesh3d-roundtrip/glb-embedded-materials.ts` | **Pure**: GLB (ArrayBuffer) ή glTF (JSON string **ή κείμενο ως bytes**) → `EmbeddedGltfMaterial[]` (index, name, colorHex sRGB, opacity, metalness, roughness, albedo bytes+mime). Μηδέν THREE, μηδέν DOM, δικός του base64 decoder → 100% testable· ποτέ throw |
+| `io/mesh3d-material-import/import-embedded-materials.ts` | **DI orchestrator**: `assignUniqueLabels` → `classifyMaterials` (skip/reuse/textured/color-only) → **μία** batch κλήση `importForeignTextures` → color-only creation → `Map<index, bmat_*>` |
+| `io/mesh3d-material-import/foreign-texture-deps.ts` | **ΕΝΑ** σημείο καλωδίωσης των `ForeignTextureImporterDeps` με τα SSoT (upload/hash/reachability). Δημιουργήθηκε επειδή ο **δεύτερος** καλών θα έκανε το inline literal structural clone (N.18) |
+| `ui/components/imported-mesh/useEmbeddedMaterialImport.ts` | Ο hook που ενώνει τα παραπάνω για το dialog· **ποτέ δεν πετά** (αποτυχία υλικών ≠ αποτυχία γεωμετρίας) |
+| `__tests__` × 2 (13 tests) | `glb-embedded-materials` 6/6 · `import-embedded-materials` 7/7 |
 
-**EDIT**
+**EDIT** (όπως υλοποιήθηκαν)
 | Αρχείο | Αλλαγή |
 |---|---|
-| `io/mesh3d-roundtrip/gltf-scene-parse.ts` | `GltfObjectRecord.materialIndices: readonly number[]` (από `parser.associations`) — το join key του §4.1 #3 |
-| `io/mesh3d-roundtrip/import-gltf-meshes.ts` | input `materialIdByGltfIndex?: ReadonlyMap<number,string>` → περνά στα `sources` |
-| `bim/entities/imported-mesh/build-imported-mesh-entity.ts` | γράφει `embeddedMaterialIds` |
+| `io/mesh3d-roundtrip/gltf-scene-parse.ts` | `GltfObjectRecord.materialIndices` + `buildMaterialIndexLookup()` πάνω στο `gltf.parser.associations` (χρησιμοποιεί το τυποποιημένο `GLTFReference` της three — όχι επινοημένο interface) + κοινό `distinctInOrder<T>()` (απέτρεψε τρίτο copy-paste dedup) |
+| `io/mesh3d-roundtrip/import-gltf-meshes.ts` | input `materialIdByGltfIndex?` + `resolveEmbeddedMaterialIds()` (dedup, `undefined` όταν κενό → Firestore-safe) |
+| `bim/entities/imported-mesh/build-imported-mesh-entity.ts` | `ImportedMeshSource.embeddedMaterialIds` + **ίδιο conditional-spread μοτίβο** με το `materialSlots` |
 | `bim/entities/imported-mesh/imported-mesh-types.ts` | νέο optional param `embeddedMaterialIds?: readonly string[]` |
-| `bim-3d/ui/scene-material-usage.ts` | **+1 ρητός extractor** για `imported-mesh` |
-| `ui/components/imported-mesh/ImportedMeshImportDialog.tsx` | checkbox + καλωδίωση DI (useMaterialLibrary / uploadMaterialTextureMap / sha256HexOfFile) |
-| `i18n el+en/dxf-viewer-shell.json` | κλειδιά checkbox + toast αποτελέσματος (N.11: **πρώτα** τα locales) |
+| `bim-3d/ui/scene-material-usage.ts` | **+1 ρητός extractor** (`isImportedMeshEntity` SSoT guard, **μηδέν cast**) + διόρθωση κεφαλίδας σε «ρητά βαμμένα **+ ρητά εισαγμένα**» |
+| `ui/components/imported-mesh/ImportedMeshImportDialog.tsx` | checkbox (default ΟΝ, κρύβεται χωρίς scope) + `runMaterialImport()` **πριν** το `importGltfMeshes` |
+| `ui/components/C4dMaterialImportButton.tsx` | **Boy Scout (N.0.2):** το inline deps literal → `buildForeignTextureDeps` |
+| `io/mesh3d-material-import/import-foreign-textures.ts` | μόνο `export` της `IMPORTED_TEXTURE_ATOE_CATEGORY` (κοινή ΑΤΟΕ κατηγορία, μηδέν δεύτερο literal) |
+| `i18n el+en/dxf-viewer-shell.json` | 4 κλειδιά `importMeshes.extractMaterials*` / `materialsExtracted` (N.11: πρώτα τα locales) |
 
 **ΑΜΕΤΑΒΛΗΤΑ (κρίσιμο):** `imported-mesh-material-enhance.ts`, `imported-mesh-to-three.ts`,
 `useSceneMaterials.ts`, `material-library-index.ts`, `MaterialLibraryService`,
@@ -193,3 +197,32 @@ dae-specific (το `.dae` περνά ήδη από `colladaToGlb` → ίδιο p
   ξένου μοντέλου. Επιλέγεται η προαγωγή-χωρίς-βαφή (§3.β), που είναι και η πρακτική Revit/ArchiCAD/C4D.
   Δεύτερο εύρημα: το join πρέπει να γίνει με **glTF material index**, όχι όνομα (ανώνυμα υλικά).
   🔴 Αναμονή έγκρισης Giorgio (N.8) πριν τη Φ2.
+- **2026-07-24 — Φ2 DONE (υλοποίηση):** ο Giorgio επέλεξε **orchestrator**· η δουλειά έτρεξε σε **5
+  παράλληλους agents** με **καρφωμένα συμβόλαια τύπων εκ των προτέρων** (pure extractor · parse+
+  plumbing · collector · DI orchestrator · i18n) και partition **ανά αρχείο** ώστε να μη συγκρουστούν
+  στο κοινό working tree. Τα δύο σημεία συναρμογής (dialog + deps wiring) γράφτηκαν κεντρικά.
+  Αποτέλεσμα: **418/418 jest** σε 38 suites (καμία παλινδρόμηση σε OBJ/DAE/glTF round-trip, σκάλα,
+  κάγκελο, BOQ), **jscpd καθαρό** σε 12 αρχεία.
+  - **3 διορθώσεις κατά τη συναρμογή:** (1) `.gltf` **κείμενο διαβασμένο ως bytes** επέστρεφε σιωπηλά
+    μηδέν υλικά (ο caller κρατά `File`, δεν ξέρει αν είναι binary ή JSON) → `parseAnyContainer`
+    fallback· (2) ο collector είχε ακόμη τοπικό cast για το param που έγραφε παράλληλος agent →
+    αντικαταστάθηκε με τον πραγματικό `ImportedMeshEntity` (μηδέν cast, N.2)· (3) Boy Scout N.0.2 —
+    κεντρικοποίηση του deps literal που ο δεύτερος καλών θα είχε κλωνοποιήσει.
+  - **Απόφαση που άλλαξε στην πράξη:** καμία. Και τα 10 σημεία του §4.1 υλοποιήθηκαν όπως γράφτηκαν.
+
+---
+
+## 9. 🔴 Τι πρέπει να ελεγχθεί στον browser (Giorgio)
+
+Δοκιμαστικό: `abricos_gerbera.dae` + τα 3 jpg (το ίδιο του ADR-690) **και** ένα `.glb` με υφές.
+
+| # | Έλεγχος | Αναμενόμενο |
+|---|---|---|
+| 1 | Το dialog εισαγωγής | Νέο checkbox «Εισαγωγή υλικών στη βιβλιοθήκη», **τσεκαρισμένο** |
+| 2 | Μετά την εισαγωγή | Toast «Δημιουργήθηκαν N υλικά, M επαναχρησιμοποιήθησαν» |
+| 3 | **Η όψη του μοντέλου** | **ΑΜΕΤΑΒΛΗΤΗ** — ίδια υφή/χρώμα με το ADR-690 (αν άλλαξε κάτι, κάτι βάφτηκε: bug) |
+| 4 | Κάτω μπάρα «Υλικά όψης» | Εμφανίζονται τα υλικά του μοντέλου |
+| 5 | Βιβλιοθήκη (Ν.1) | Τα ίδια υλικά ως `bmat_*` company scope, με τη σωστή υφή στο swatch |
+| 6 | Drag υλικού σε τοίχο | Βάφει κανονικά (η υφή τότε ακολουθεί τη σύμβαση world-meter UV — αναμενόμενο) |
+| 7 | **Δεύτερη εισαγωγή** ίδιου αρχείου | Toast «0 νέα, N επαναχρησιμοποιήθησαν» — **κανένα διπλότυπο** στη βιβλιοθήκη |
+| 8 | Reload | Τα `embeddedMaterialIds` persist → η μπάρα δείχνει τα ίδια υλικά |

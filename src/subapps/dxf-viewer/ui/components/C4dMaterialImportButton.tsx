@@ -38,11 +38,8 @@ import {
   type KnownMaterialHealthProbe,
 } from '../../io/mesh3d-material-import/import-collada-appearance';
 import { importForeignTextures } from '../../io/mesh3d-material-import/import-foreign-textures';
-import { sha256HexOfFile } from '../../io/mesh3d-material-import/texture-content-hash';
-import {
-  uploadMaterialTextureMap,
-  isMaterialTextureReachable,
-} from '../../bim/services/bim-material-texture-upload.service';
+import { buildForeignTextureDeps } from '../../io/mesh3d-material-import/foreign-texture-deps';
+import { isMaterialTextureReachable } from '../../bim/services/bim-material-texture-upload.service';
 import { buildKnownMaterialResolver } from '../../io/mesh3d-material-import/known-import-materials';
 import type { GltfObjectRecord } from '../../io/mesh3d-roundtrip/gltf-scene-parse';
 import { parseGltfScene } from '../../io/mesh3d-roundtrip/gltf-scene-parse';
@@ -238,21 +235,14 @@ export function C4dMaterialImportButton() {
               // (ground-truth 2026-07-22: το παλιό `imageFiles>0` gate έλεγε ψευδώς «ανεβάζω» ακόμη
               // κι όταν όλες οι υφές ήταν γνωστές & υγιείς → μηδέν upload).
               notifications.info(t('c4dMaterialImport.uploadingTextures'));
-              const { created, missing } = await importForeignTextures(textures, payload.imageFiles, {
-                existingMaterials: materials,
-                saveMaterial: save,
-                updateMaterial: update,
-                uploadAlbedo: (file, materialId) =>
-                  uploadMaterialTextureMap({ file, companyId, materialId, map: 'albedo' })
-                    .then((r) => r.downloadUrl),
-                hashFile: sha256HexOfFile,
-                deleteMaterial: remove,
-                // Self-heal probe: content-hash dedup δεν κάνει reuse ενός ghost (URL χωρίς αρχείο).
-                isAlbedoReachable: (m) =>
-                  m.pbrTextures?.albedoUrl
-                    ? isMaterialTextureReachable(m.pbrTextures.albedoUrl)
-                    : Promise.resolve(true),
-              }, repairIds);
+              // ADR-691 — η καλωδίωση των deps (upload/hash/reachability) ζει σε ΕΝΑ σημείο: με τον
+              // δεύτερο καλούντα (εισαγωγή embedded υλικών) το inline literal θα γινόταν clone (N.18).
+              const { created, missing } = await importForeignTextures(
+                textures,
+                payload.imageFiles,
+                buildForeignTextureDeps({ companyId, materials, save, update, remove }),
+                repairIds,
+              );
               missingTextures = missing;
               return created;
             }

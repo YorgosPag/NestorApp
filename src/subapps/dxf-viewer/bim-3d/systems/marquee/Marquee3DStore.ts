@@ -1,5 +1,5 @@
 /**
- * Marquee3DStore — drag state for the 3D window/crossing marquee (ADR-691).
+ * Marquee3DStore — drag state for the 3D window/crossing marquee (ADR-692).
  *
  * Mirrors the 2D `systems/cursor/SelectionStore` (ADR-040 Phase III): a zero-React
  * external store so the ~60fps `mousemove` during a rubber-band drag NEVER dispatches
