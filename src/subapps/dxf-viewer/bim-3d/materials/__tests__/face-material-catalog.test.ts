@@ -36,6 +36,8 @@ import {
   getFaceMaterial3D,
   getFaceColorMaterial3D,
 } from '../MaterialCatalog3D';
+import { setUserMaterials, __resetUserMaterialRegistryForTests } from '../user-material-registry';
+import type { BimMaterial } from '../../../bim/types/bim-material-types';
 
 jest.mock('../../../services/bim-render-settings.service', () => ({
   saveBimRenderSettings: jest.fn().mockResolvedValue(undefined),
@@ -100,5 +102,44 @@ describe('getFaceMaterial3D — realistic ON (catalog-textured branch, ADR-679 �
 
   it('paint-red (foreign id, not mat-/elem- prefixed) → null, even with realistic ON', () => {
     expect(getFaceMaterial3D('paint-red')).toBeNull();
+  });
+});
+
+// ADR-687 Φ8 — μια όψη βαμμένη με library `bmat_*` που κουβαλά appearance ΧΩΡΙΣ υφή (π.χ. γυαλί:
+// transmission/opacity) πρέπει να render-άρει το ΠΡΑΓΜΑΤΙΚΟ υλικό (MeshPhysicalMaterial), όχι flat
+// opaque χρώμα. Πριν το Φ8 το `getFaceMaterial3D` επέστρεφε null (no-texture) → συμπαγής κολώνα.
+describe('getFaceMaterial3D — realistic ON, bmat_* appearance-only (ADR-687 Φ8 glass/metal)', () => {
+  const glass: BimMaterial = {
+    id: 'bmat_glass_test',
+    scope: 'company',
+    nameEl: 'Γυαλί', nameEn: 'Glass',
+    category: 'other',
+    density: null, defaultThickness: null, fireRating: 'none',
+    atoeCategory: 'X', atoeArticle: null, defaultUnitCost: null, defaultUnit: 'm2',
+    brand: null, brandModel: null, notes: null,
+    thumbnailUrl: null, pbrTextures: null,
+    appearance: { baseColorHex: '#27ae60', metalness: 0, roughness: 0.05, opacity: 0.4, transmission: 1, ior: 1.5 },
+    builtin: false, companyId: 'c1', projectId: null,
+    createdBy: 'u1', createdAt: null as unknown as BimMaterial['createdAt'],
+    updatedBy: 'u1', updatedAt: null as unknown as BimMaterial['updatedAt'],
+  };
+
+  beforeEach(() => {
+    __resetUserMaterialRegistryForTests();
+    setUserMaterials([glass]);
+    useBimRenderSettingsStore.getState().setRealisticMaterials(true);
+  });
+  afterEach(() => {
+    useBimRenderSettingsStore.getState().setRealisticMaterials(false);
+    __resetUserMaterialRegistryForTests();
+  });
+
+  it('→ non-null DoubleSide MeshPhysicalMaterial with transmission (not flat opaque)', () => {
+    const mat = getFaceMaterial3D('bmat_glass_test');
+    expect(mat).not.toBeNull();
+    expect(mat?.side).toBe(THREE.DoubleSide);
+    // Φ5: transmission>0 → η όψη είναι γυαλί, όχι flat χρώμα (roughness 0.92 opaque).
+    expect((mat as THREE.MeshPhysicalMaterial).transmission).toBeGreaterThan(0);
+    expect(mat?.userData['nestorMaterialId']).toBe('bmat_glass_test');
   });
 });

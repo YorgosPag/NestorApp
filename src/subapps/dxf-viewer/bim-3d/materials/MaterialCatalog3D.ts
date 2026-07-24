@@ -302,15 +302,24 @@ function hasFaceTexture(materialId: string): boolean {
 }
 
 /**
- * ADR-539 Φ4d — textured double-sided υλικό όψης, ή `null` όταν το υλικό ΔΕΝ έχει υφή σε
- * αυτό το μονοπάτι (wall-covering/floor-finish flat κατάλογοι, χωρίς uploaded texture, ή
- * realistic OFF) ώστε ο caller να κρατά το legacy flat-χρώμα path — ΠΟΤΕ concrete fallback
- * για ξένο id. Όταν επιστρέφει υλικό: reuse `getMaterial3D` (texture-aware, cached, preload→
- * resync wired) + DoubleSide variant (hole-wall visibility). Cached — ΠΟΤΕ dispose το result.
+ * ADR-539 Φ4d / ADR-687 Φ8 — double-sided υλικό όψης, ή `null` ώστε ο caller να κρατά το legacy
+ * flat-χρώμα path. Επιστρέφει υλικό όταν: (α) library `bmat_*` (ΠΑΝΤΑ, realistic ON) → το ΠΛΗΡΕΣ
+ * appearance υλικό του (textured Ή MeshPhysicalMaterial: γυαλί/μέταλλο/opacity/transmission, Φ4/Φ5)·
+ * (β) catalog `mat-*`/`elem-*` με χαρτογραφημένο texture slug. `null` όταν: realistic OFF, ξένο flat
+ * id (`paint-*`/wall-covering/floor-finish → ΠΟΤΕ concrete fallback), ή catalog χωρίς texture slug.
+ * Όταν επιστρέφει: reuse `getMaterial3D` (appearance+texture-aware, cached, preload→resync wired) +
+ * DoubleSide variant (hole-wall visibility). Cached — ΠΟΤΕ dispose το result.
  */
 export function getFaceMaterial3D(materialId: string): THREE.MeshStandardMaterial | null {
   if (!useBimRenderSettingsStore.getState().realisticMaterials) return null;
-  if (!hasFaceTexture(materialId)) return null;
+  // ADR-687 Φ8 — τα library `bmat_*` κουβαλούν ΠΛΗΡΕΣ appearance (χρώμα+γυαλάδα+μέταλλο+opacity+
+  // transmission/clearcoat, Φ4/Φ5)· το `getMaterial3D('bmat_*')` το χτίζει ΗΔΗ μέσω `buildMat`
+  // (→ MeshPhysicalMaterial όταν needsPhysical) — άρα το επιστρέφουμε ΚΑΙ χωρίς υφή, ώστε μια όψη
+  // βαμμένη με «γυαλί»/«μέταλλο» να render-άρει το ΠΡΑΓΜΑΤΙΚΟ υλικό (διάφανο/refraction/opacity),
+  // όχι flat opaque χρώμα — το κενό που έβγαζε συμπαγή την κολώνα με γυαλί. Catalog `mat-*`/`elem-*`
+  // μένουν στο texture-slug gate· ξένα flat ids (`paint-*`) μένουν στο flat-colour path (null εδώ).
+  const isUserMaterial = materialId.startsWith(USER_MATERIAL_ID_PREFIX);
+  if (!isUserMaterial && !hasFaceTexture(materialId)) return null;
   const mat = ensureDoubleSided(getMaterial3D(materialId));
   // ADR-678 Φ2 (round-trip identity): σφραγίζει το Nestor material id ώστε το export να ονομάζει το
   // per-face υλικό με ΤΗΝ ΤΑΥΤΟΤΗΤΑ ΤΟΥ (`bmat_*`/`mat-*`) — όχι texture-derived `tex_*` — για να το
