@@ -51,21 +51,47 @@ ADR-539 (Polygon Mode per-face appearance, `faceAppearance` SSoT), ADR-686 (impo
   δεν έγινε τώρα).
 - Ad-hoc synth-color entries (`id = adhoc-color:...`) δεν ταιριάζουν ποτέ με `activeMaterialId`
   (materialId-based) — σωστό, αντιπροσωπεύουν raw `colorHex`, όχι κατάλογο υλικού.
+- **[ΔΙΟΡΘΩΘΗΚΕ 2026-07-24, βλ. §7]** Το §3/§5 αρχικό σχήμα διάβαζε ΜΟΝΟ το base `'*'` στο
+  whole-entity branch (`resolveEntityCurrentMaterialId`) — για ένα named-multi-slot `.glb` με ΕΝΑ
+  βαμμένο slot (`faceAppearance = {'*':…, 'slot:x':…}`), ο renderer (`resolveSlotMaterial`) εφαρμόζει
+  ΚΑΙ τα δύο ανά slot, αλλά panel/highlight έδειχναν ΜΟΝΟ το base → διαφωνία με τον καμβά. Δες §7.
+
+## 4.1 Λανθάνουσα απόκλιση με τον renderer (εντοπίστηκε 2026-07-24)
+
+Ο 3D renderer (`bim-3d/converters/imported-mesh-material-enhance.ts::resolveSlotMaterial`) εφαρμόζει
+υλικό **ανά slot**: `appearance[slot:name] ?? appearance['*'] ?? embedded`. Το panel (§3, imported-mesh
+«Τρέχον υλικό») και το swatch highlight (whole-entity branch) διάβαζαν ΜΟΝΟ το base `'*'`
+(`resolveEntityCurrentMaterialId`) — σωστό όσο ΟΛΑ τα slots μοιράζονται το ίδιο υλικό (base-only
+faceAppearance), αλλά **λάθος** μόλις ένα slot βαφτεί ξεχωριστά: ο καμβάς δείχνει 2 υλικά, το panel/
+highlight έδειχναν μόνο το ένα. Fix (§7): νέος `resolveEntityMaterialIdSet(entity)` επιστρέφει το
+ΠΛΗΡΕΣ σύνολο distinct materialIds σε ΟΛΑ τα faceAppearance keys (base + κάθε slot), και panel/
+highlight πλέον διαβάζουν ΑΠΟ ΕΚΕΙ αντί για το base-only resolver στο whole-entity branch.
 
 ## 5. Critical files
 
-- **ΝΕΟ** `src/subapps/dxf-viewer/bim-3d/materials/resolve-entity-current-material.ts` —
-  `resolveEntityCurrentMaterialId`, `resolveFaceCurrentMaterialId` (pure, zero React, zero `any`).
-- **ΝΕΟ** `src/subapps/dxf-viewer/bim-3d/materials/__tests__/resolve-entity-current-material.test.ts` (7/7 πράσινα).
+- **ΕΠΕΞΕΡΓΑΣΙΑ** `src/subapps/dxf-viewer/bim-3d/materials/resolve-entity-current-material.ts` —
+  `resolveEntityCurrentMaterialId`, `resolveFaceCurrentMaterialId` (pure, zero React, zero `any`), + ΝΕΟ
+  `resolveEntityMaterialIdSet(entity): string[]` (§7, 2026-07-24) — το πλήρες applied-material SET
+  (base + κάθε per-face/per-slot override), order-stable, deduplicated.
+- **ΕΠΕΞΕΡΓΑΣΙΑ** `src/subapps/dxf-viewer/bim-3d/materials/__tests__/resolve-entity-current-material.test.ts`
+  (12/12 πράσινα μετά το §7 — 5 νέα cases για το `resolveEntityMaterialIdSet`).
 - **ΕΠΕΞΕΡΓΑΣΙΑ** `src/subapps/dxf-viewer/bim-3d/ui/MaterialEntryButton.tsx` — `+active?: boolean` prop,
-  ring-highlight + `aria-current` + i18n label.
-- **ΕΠΕΞΕΡΓΑΣΙΑ** `src/subapps/dxf-viewer/bim-3d/ui/PolygonMaterialPanel.tsx` — `activeMaterialId` computation
-  (single-face owning-entity lookup μέσω `useSceneEntityById` + `levels?.currentLevelId` υπάρχον scope) και
-  `active={entry.id === activeMaterialId}` στο `barEntries.map`.
+  ring-highlight + `aria-current` + i18n label (αναλλοίωτο στο §7).
+- **ΕΠΕΞΕΡΓΑΣΙΑ** `src/subapps/dxf-viewer/bim-3d/ui/PolygonMaterialPanel.tsx` — whole-entity branch
+  πλέον υπολογίζει `activeMaterialIds: readonly string[]` (μέσω `resolveEntityMaterialIdSet`) αντί για
+  μονό `activeMaterialId`· `active={activeMaterialIds.includes(entry.id)}` στο `barEntries.map`.
+  Single-face branch αναλλοίωτο (`resolveFaceCurrentMaterialId`, wrapped σε 0/1-length array).
+- **ΕΠΕΞΕΡΓΑΣΙΑ** `src/subapps/dxf-viewer/ui/imported-mesh-advanced-panel/ImportedMeshAdvancedPanel.tsx` —
+  `MaterialSection` πλέον διαβάζει `resolveEntityMaterialIdSet(mesh)`: 0 → embedded/no-material (ίδιο),
+  1 → library label + swatch (ίδιο), 2+ → `importedMeshAdvancedPanel.field.multipleMaterials`, χωρίς
+  swatch (θα παραπλανούσε).
+- **i18n:** `importedMeshAdvancedPanel.field.multipleMaterials` προστέθηκε στο
+  `src/i18n/locales/{el,en}/dxf-viewer-shell.json`. (`polygonMode.activeMaterialLabel` ήδη υπήρχε στο
+  `bim3d.json` από την αρχική §3/§5 εκδοχή.)
 - **Reused αυτούσια (καμία αλλαγή):** `useSceneEntityById` (`systems/scene/useSceneSelectors.ts`),
   `FaceAppearanceMap` (`bim/types/face-appearance-types.ts`), `resolveFaceMaterial` (cascade semantics mirror).
-- **i18n:** `polygonMode.activeMaterialLabel` προστέθηκε στο `src/i18n/locales/{el,en}/bim3d.json` (μέσα στο
-  υπάρχον `polygonMode` block).
+- **ΔΕΝ αγγίχτηκαν (out of scope):** `ImportedMeshMaterialMapHost.tsx`, `MaterialCatalog3D.ts`,
+  `pbr-material-builder.ts`, `bim-visual-style.ts`, render-settings stores, ADR-687-glass files.
 
 ## 6. Συνέπειες
 
@@ -90,3 +116,20 @@ ADR-539 (Polygon Mode per-face appearance, `faceAppearance` SSoT), ADR-686 (impo
   κλωνοποίηση, N.18). Καμία αλλαγή σε `MaterialCatalog3D.ts`/`pbr-material-builder.ts`/`bim-visual-style.ts`/
   render-settings stores/`ImportedMeshMaterialMapHost.tsx` (εκτός scope, ADR-686/687 άλλου agent). NO tsc
   (N.17). Pending: browser verify + commit.
+- **2026-07-24 (follow-up — per-slot applied-material SET, IMPLEMENTED UNCOMMITTED)** — Διορθώθηκε η
+  λανθάνουσα απόκλιση της §4.1: το imported-mesh «Τρέχον υλικό» panel και το whole-entity swatch
+  highlight διάβαζαν ΜΟΝΟ το base `'*'`, ενώ ο renderer (`resolveSlotMaterial`) εφαρμόζει
+  `appearance[slot:name] ?? appearance['*'] ?? embedded` ΑΝΑ slot — για ένα named-multi-slot `.glb`
+  με ΕΝΑ βαμμένο slot το panel/highlight διαφωνούσαν με τον καμβά. Fix: νέος
+  `resolveEntityMaterialIdSet(entity): string[]` (distinct materialIds σε ΟΛΑ τα faceAppearance keys,
+  order-stable) σε `resolve-entity-current-material.ts`· `ImportedMeshAdvancedPanel.tsx` `MaterialSection`
+  και `PolygonMaterialPanel.tsx` whole-entity branch διαβάζουν πλέον από εκεί (single-face branch
+  αναλλοίωτο). 0 υλικά → embedded/no-material (ίδιο)· 1 → label+swatch (ίδιο)· 2+ → νέο i18n key
+  `importedMeshAdvancedPanel.field.multipleMaterials` (el/en), χωρίς single swatch· highlight πλέον
+  φωτίζει ΟΛΑ τα εφαρμοσμένα swatches (`activeMaterialIds.includes(entry.id)`). Ground-truth data
+  (η καρέκλα, `faceAppearance = {'*': {...}}` anonymous/all-base) → συμπεριφορά ΑΝΑΛΛΟΙΩΤΗ (set = 1
+  στοιχείο) — το fix αλλάζει μόνο το πραγματικά multi-slot-painted σενάριο. Tests: resolver
+  12/12 (5 νέα cases). NO tsc (N.17). Καμία αλλαγή σε `ImportedMeshMaterialMapHost.tsx`/
+  `MaterialCatalog3D.ts`/`pbr-material-builder.ts`/`bim-visual-style.ts`/render-settings stores/
+  ADR-687-glass files (εκτός scope). Pending: jscpd:diff + jest run αυτού του follow-up, browser verify,
+  commit.

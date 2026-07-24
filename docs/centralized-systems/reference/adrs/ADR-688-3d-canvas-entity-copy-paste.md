@@ -1,6 +1,6 @@
 # ADR-688 — Αντιγραφή / Επικόλληση-στο-σημείο / Διπλασιασμός ΟΝΤΟΤΗΤΑΣ μέσα στον 3D κάμβα
 
-**Status:** 🟢 Φ0 (full clone coverage) + Φ1 (Ctrl+C / paste-at-pick / Ctrl+D) IMPLEMENTED (2026-07-24, Opus 4.8). jest ✓ (13 + 8 tests) · jscpd ✓. 🔴 εκκρεμεί browser verify (Giorgio). Φ2 (context menu) / Φ3 (Alt/Ctrl+drag) = PROPOSED.
+**Status:** 🟢 Φ0 (full clone coverage) + Φ1 (Ctrl+C / paste-at-pick / Ctrl+D) + **Φ3 (Ctrl+drag move-copy)** IMPLEMENTED (2026-07-24, Opus 4.8). jest ✓ (13 + 8 + 10 tests) · jscpd ✓. 🔴 εκκρεμεί browser verify (Giorgio). Φ2 (context menu) = PROPOSED.
 **Μοντέλο:** Opus 4.8 · **Γλώσσα:** Ελληνικά
 **Σχετικά:** ADR-466 (cross-floor entity clipboard), ADR-577 (unified copy tool), ADR-363 §7.2 (BIM clone persistence), ADR-402 (3D→universal selection bridge), ADR-403/605/618 (3D placement pick machinery), ADR-539 (Polygon-Mode face-appearance clipboard), ADR-040 (leaf subscriber pattern)
 
@@ -89,6 +89,38 @@ keydown (capture, window)  — gate: 3D active · Polygon Mode OFF · όχι σ�
   του `broadcastBimCloneCreated` (BIM) / scene autosave (DXF, ADR-420).
 - **DXF:** raw DXF geometry κλωνοποιείται με id-swap (υπάρχον μονοπάτι) — καλύπτεται όπου είναι επιλέξιμο.
 
+## 5.1 Ροή (Φ3 — Ctrl+drag move-copy, CAD-style)
+
+**Απόφαση modifier (Giorgio, Plan Mode):** **Ctrl** (CAD-standard, ίδιο με το 2D body-drag copy — Revit «Copy»
+με drag, C4D/SketchUp/ArchiCAD Ctrl+drag). **Όχι** Alt: το Ctrl είναι η πρακτική των μεγάλων παικτών ΚΑΙ
+συνεπές με το 2D `CtrlKeyTracker`. Disambiguation vs το ADR-408 base-point (που ήταν στο ίδιο Ctrl+pointerdown).
+
+```
+onEditPointerDown  (gizmo drag lifecycle, ADR-402):
+  copyModifier = Ctrl || ⌘
+  αν copyModifier && controller.beginDrag() ΠΙΑΣΕΙ λαβή gizmo → copyDrag.active = true (COPY, frozen at press)
+  αν copyModifier && ΔΕΝ πιάσει λαβή          → trySetBasePoint (ADR-408, ΑΝΕΠΑΦΟ)
+  αλλιώς (non-Ctrl)                            → grip reshape → gizmo beginDrag (ως έχει)
+onEditPointerMove:  applyLivePreview (τα real meshes ακολουθούν τον κέρσορα· το original μένει ήδη ως dim ghost)
+onEditPointerUp  → dispatchOutcome:
+  αν copyDrag.active && outcome.kind==='move':
+     delta = resolveMovePlanDeltaCanvas(outcome, primary, axisLock)   // ΚΟΙΝΟ SSoT με το move command
+     αν delta==(0,0) (pure-vertical) → false → πέφτει σε κανονικό vertical move
+     αλλιώς → buildEntityCloneCommand(sources, delta, sm) → execute → reselect clones → return 'copy'
+  αλλιώς → buildEditCommand(...) → execute → return 'move'
+  caller: 'move' → preview.commit()· 'copy'/no-op → preview.reset() (το original ΓΥΡΝΑ στην πηγή)
+```
+
+- **Reuse-only:** μηδέν νέο clone/ghost/drag/command. Ο `EditOriginalGhost` (ADR-550) εμφανίζεται **ήδη** σε
+  κάθε drag· το clone SSoT (`buildEntityCloneCommand`) + το unit-scaled plan delta (`resolveMovePlanDeltaCanvas`,
+  ΚΟΙΝΟ με το move command → ghost≡commit≡copy) + το `sceneEntitiesForEdit` + το `reselect` (universal SSoT, Φ1).
+- **Undo:** ένα βήμα (`PasteEntitiesCommand`). **Persistence:** αυτόματη (Φ0 broadcast). **Multi-select:** κλωνοποιεί
+  όλη την επιλογή. **OSNAP:** από το υπάρχον gizmo snap (το outcome delta είναι ήδη snapped).
+- **Όρια Φ3:** plan-only (καθαρά κατακόρυφο Ctrl+drag → κανονικό vertical move· elevation-copy = μελλοντικό)·
+  μεμονωμένο opening (dedicated drag, gizmo suppressed) → όχι copy-drag (κλώνος μέσω Ctrl+C/V/D)· rotate/resize-copy
+  εκτός scope. Drag-time το original φαίνεται dim (υπάρχων ghost)· λειτουργικά το αποτέλεσμα σωστό (original στην
+  πηγή + αντίγραφο στον προορισμό).
+
 ## 6. Αρχεία
 
 - `bim/transforms/bim-clone-persistence.ts` — Φ0: `BimPersistedType` + `BIM_ID_GENERATORS` → 22 τύποι.
@@ -97,16 +129,33 @@ keydown (capture, window)  — gate: 3D active · Polygon Mode OFF · όχι σ�
 - `hooks/useDxfToolbarShortcuts.ts` — 3D guard στο 2D clipboard block.
 - Tests: `bim/transforms/__tests__/bim-clone-persistence.test.ts` (+coverage), `bim-3d/viewport/__tests__/use-bim3d-entity-clipboard.test.ts` (**ΝΕΟ**, 8 tests).
 
+**Φ3 (Ctrl+drag move-copy):**
+- `bim-3d/animation/bim3d-edit-copy-commit.ts` — **ΝΕΟ** (`commitCopyDrag`: move outcome → clone SSoT + reselect).
+- `bim-3d/animation/bim3d-edit-drag-commit.ts` — **ΝΕΟ** (extracted `dispatchOutcome`, tri-state 'move'/'copy'/false — file-size N.7.1).
+- `bim-3d/animation/bim3d-edit-command-builders.ts` — export `resolveMovePlanDeltaCanvas` (SSoT plan delta) + move branch το χρησιμοποιεί.
+- `bim-3d/animation/bim3d-edit-interaction-handlers.ts` — `EditInteractionCtx` (+`copyDrag`,+`reselect`), `onEditPointerDown` Ctrl disambiguation, preview-disposition tri-state, `settleAfterEditDrag` reset, `hideTransientOverlays` helper (de-dup up/cancel).
+- `bim-3d/animation/use-bim3d-edit-interaction.ts` — wire `copyDrag` + `reselect` (universal selection, ref).
+- Tests: `bim-3d/animation/__tests__/bim3d-edit-copy-commit.test.ts` (**ΝΕΟ**, 5) + `bim3d-edit-move-delta.test.ts` (**ΝΕΟ**, 5).
+
 ## 7. Follow-ups
 
 - **Φ2:** 3D context-menu «Αντιγραφή / Επικόλληση / Διπλασιασμός» εκτός Polygon Mode (i18n keys ΠΡΩΤΑ, N.11).
-- **Φ3:** Alt/Ctrl+drag move-copy με 3D ghost preview (εντολή Giorgio, επόμενη συνεδρία).
-- **Verify (Giorgio):** 3D → επίλεξε wall/column/MEP/imported-mesh/generic-solid → Ctrl+C → κίνησε κέρσορα →
+- **Φ3 elevation-copy:** κατακόρυφο copy-drag (axis-Y) — χρειάζεται το clone SSoT να δέχεται z-delta.
+- **Verify (Giorgio) Φ1:** 3D → επίλεξε wall/column/MEP/imported-mesh/generic-solid → Ctrl+C → κίνησε κέρσορα →
   Ctrl+V (αντίγραφο στο σημείο)· Ctrl+D (offset)· σε Polygon Mode το Ctrl+C/V μένει face-appearance· reload →
   persist. Ειδικά επιβεβαίωσε τα divergent-persistence types (mep-segment) ότι επιβιώνουν reload.
+- **Verify (Giorgio) Φ3:** 3D → επίλεξε wall/column/MEP → κράτα **Ctrl** + σύρε λαβή gizmo (οριζόντια) → άφησε →
+  αντίγραφο στον προορισμό, πρωτότυπο στην πηγή, τα clones επιλεγμένα· undo = ένα βήμα· χωρίς Ctrl = κανονικό move·
+  **Ctrl+κλικ στο σώμα** (χωρίς σύρσιμο λαβής) = base-point (ADR-408 ανέπαφο)· multi-select copy-drag· reload → persist.
 
 ## 8. Changelog
 
 - **2026-07-24 (Opus 4.8):** Φ0 (full clone coverage, 8→22 τύποι· διορθώνει latent 2D+3D drop) + Φ1 (3D
   entity clipboard: Ctrl+C reuse / paste-at-pick / Ctrl+D duplicate, priority vs Polygon-Mode, 2D double-fire
   guard). jest 13+8 ✓, jscpd ✓. 🔴 browser verify εκκρεμεί.
+- **2026-07-24 (Opus 4.8):** Φ3 (Ctrl+drag move-copy, CAD-style). Modifier = **Ctrl** (απόφαση Giorgio, ίδιο με
+  2D· Alt απορρίφθηκε). Copy-flag frozen at press στο `onEditPointerDown` (Ctrl+λαβή gizmo → copy· Ctrl+σώμα →
+  ADR-408 base-point ανέπαφο)· commit μέσω κοινού `resolveMovePlanDeltaCanvas` (SSoT με το move) + clone SSoT +
+  universal reselect· preview-disposition tri-state ('copy' → original γυρνά στην πηγή). Extracted `dispatchOutcome`
+  → `bim3d-edit-drag-commit.ts` + `commitCopyDrag` → `bim3d-edit-copy-commit.ts` (N.7.1)· de-dup teardown
+  (`hideTransientOverlays`). jest +10 ✓, jscpd ✓. Plan-only (vertical/rotate/resize-copy = follow-up). 🔴 browser verify εκκρεμεί.
