@@ -236,8 +236,9 @@ describe('stair-waist-slabs (μηρός)', () => {
   //    (Revit "waist spans across landings"): δεν "πετάει" το πλατύσκαλο, δεν βυθίζεται ο κλάδος. ──
   describe('upper flight bears flat on the landing underside (no flying, no sinking)', () => {
     const landingThk = WAIST_MM * 0.001;      // "Same as Run" (no landingThickness override)
+    const treadDrop = 40 * 0.001;             // landing concrete drops one tread-thickness (finish on top)
     const landingTop = 2 * RISE * sceneToM;    // one rise below flight-2's first tread (525 → 350)
-    const underside = landingTop - landingThk; // 0.190 m — the thin landing's bottom face
+    const underside = landingTop - landingThk - treadDrop; // 0.150 m — the DROPPED landing's bottom face
 
     const waistByIndex = (stair: StairEntity, idx: number) =>
       stairToMeshes(stair).find(
@@ -303,6 +304,28 @@ describe('stair-waist-slabs (μηρός)', () => {
       const drop = RISE + WAIST_MM / (TREAD / Math.hypot(TREAD, RISE));
       const topSoffitY = M * RISE - drop;
       expect(flightSectionPoints(M, TREAD, RISE, drop, undefined, topSoffitY - 30)).toHaveLength(2 + (2 * M + 1));
+    });
+
+    // ── ADR-358 (Giorgio 2026-07-23) — landing gets a claddable finish tread (same as steps) ──
+    it('the landing gets a FINISH tread on top at the walk level, 40 mm thick', () => {
+      const treads = stairToMeshes(makeWithLandingPoly()).filter(
+        (m) => m.userData['stairComponent'] === 'landing-tread',
+      ) as THREE.Mesh[];
+      expect(treads).toHaveLength(1);
+      treads[0]!.geometry.computeBoundingBox();
+      const b = treads[0]!.geometry.boundingBox!;
+      expect(b.max.y + treads[0]!.position.y).toBeCloseTo(landingTop, 5); // top face at the walk level
+      expect(b.max.y - b.min.y).toBeCloseTo(treadDrop, 5);                // one tread-thickness finish
+    });
+
+    it('the landing CONCRETE drops one tread-thickness so the finish seats flush on it', () => {
+      const landing = stairToMeshes(makeWithLandingPoly()).find(
+        (m) => m.userData['stairComponent'] === 'landing',
+      )! as THREE.Mesh;
+      landing.geometry.computeBoundingBox();
+      const b = landing.geometry.boundingBox!;
+      expect(b.max.y + landing.position.y).toBeCloseTo(landingTop - treadDrop, 5); // concrete top dropped
+      expect(worldMinY(landing)).toBeCloseTo(underside, 5);                         // === μηρός meet level
     });
   });
 });

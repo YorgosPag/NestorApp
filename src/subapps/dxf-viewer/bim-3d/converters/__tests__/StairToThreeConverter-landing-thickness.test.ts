@@ -76,32 +76,35 @@ function makeStairWithLanding(opts: ThicknessOpts = {}): StairEntity {
 
 describe('StairToThreeConverter — landing thickness (Same as Run)', () => {
   const sceneToM = sceneUnitsToMeters(inferSceneUnitsFromWidth(WIDTH));
+  // ADR-358 (Giorgio 2026-07-23) — the landing CONCRETE drops one tread-thickness so a finish
+  // tread seats on top at the walk level (like the steps). So `position.y` = the DROPPED bottom.
+  const TREAD_DROP_M = 0.040;
   const landingOf = (stair: StairEntity) =>
     stairToMeshes(stair).filter((m) => m.userData['stairComponent'] === 'landing');
 
   it('default (no waistThickness) → 150 mm structural depth, not the legacy 200 mm', () => {
     const landings = landingOf(makeStairWithLanding());
     expect(landings).toHaveLength(1);
-    const bottomY = landings[0]!.position.y; // world bottom face
-    expect(bottomY).toBeCloseTo(LANDING_Z * sceneToM - 0.150, 9);
-    // Regression guard: the old hardcoded 200 mm would have put it at 0.675.
+    const bottomY = landings[0]!.position.y; // world bottom face (dropped one tread-thickness)
+    expect(bottomY).toBeCloseTo(LANDING_Z * sceneToM - 0.150 - TREAD_DROP_M, 9);
+    // Regression guard: the old hardcoded 200 mm (no drop) would have put it at 0.675.
     expect(bottomY).not.toBeCloseTo(LANDING_Z * sceneToM - 0.200, 4);
   });
 
   it('Π2 — waistThickness drives it parametric ("Same as Run"): 40 mm → thin landing', () => {
     const bottomY = landingOf(makeStairWithLanding({ waistThickness: 40 }))[0]!.position.y;
-    expect(bottomY).toBeCloseTo(LANDING_Z * sceneToM - 0.040, 9);
+    expect(bottomY).toBeCloseTo(LANDING_Z * sceneToM - 0.040 - TREAD_DROP_M, 9);
   });
 
-  it('Π1 — default slab bottom stays ABOVE the lower tread top → riser not buried', () => {
+  it('Π1 — landing concrete drops one tread-thickness so the finish tread seats on top', () => {
     const bottomY = landingOf(makeStairWithLanding())[0]!.position.y;
-    // 150 mm < 175 mm rise ⇒ bottom (0.725) above the lower tread top (0.700).
-    expect(bottomY).toBeGreaterThan(LOWER_TREAD_TOP_Z * sceneToM);
+    // The walk surface stays at LANDING_Z; the concrete top is one tread-thickness below it.
+    expect(bottomY).toBeCloseTo(LANDING_Z * sceneToM - 0.150 - TREAD_DROP_M, 9);
   });
 
-  it('a landing thicker than the rise would still bury it (documents the invariant)', () => {
+  it('a landing thicker than the rise sits well below the lower tread top (documents the depth)', () => {
     const bottomY = landingOf(makeStairWithLanding({ waistThickness: 200 }))[0]!.position.y;
-    // waistThickness 200 > 175 rise ⇒ bottom (0.675) below the lower tread top (0.700).
+    // waistThickness 200 (+ drop) ⇒ bottom (0.635) below the lower tread top (0.700).
     expect(bottomY).toBeLessThan(LOWER_TREAD_TOP_Z * sceneToM);
   });
 
@@ -111,13 +114,13 @@ describe('StairToThreeConverter — landing thickness (Same as Run)', () => {
     const bottomY = landingOf(
       makeStairWithLanding({ waistThickness: 200, landingThickness: 40 }),
     )[0]!.position.y;
-    expect(bottomY).toBeCloseTo(LANDING_Z * sceneToM - 0.040, 9);
+    expect(bottomY).toBeCloseTo(LANDING_Z * sceneToM - 0.040 - TREAD_DROP_M, 9);
   });
 
   it('landingThickness 40 mm → thin timber landing reachable below the RC waist floor', () => {
     const bottomY = landingOf(makeStairWithLanding({ landingThickness: 40 }))[0]!.position.y;
-    expect(bottomY).toBeCloseTo(LANDING_Z * sceneToM - 0.040, 9);
-    // And it clears the lower tread top ⇒ no burial.
+    expect(bottomY).toBeCloseTo(LANDING_Z * sceneToM - 0.040 - TREAD_DROP_M, 9);
+    // Even dropped, a 40 mm landing clears the lower tread top ⇒ no burial.
     expect(bottomY).toBeGreaterThan(LOWER_TREAD_TOP_Z * sceneToM);
   });
 });

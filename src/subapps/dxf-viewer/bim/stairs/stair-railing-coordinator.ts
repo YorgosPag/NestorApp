@@ -132,7 +132,7 @@ function buildHostedParams(
       hostType: 'stair',
       side,
       resolvedPath: host.resolvedPath,
-      ...(host.treadCount !== undefined ? { treadCount: host.treadCount } : {}),
+      ...(host.perTreadAnchors ? { perTreadAnchors: host.perTreadAnchors } : {}),
       ...(host.slopeRatio !== undefined ? { slopeRatio: host.slopeRatio } : {}),
     },
     totalHeightMm: DEFAULT_RAILING_TOTAL_HEIGHT_MM,
@@ -195,21 +195,21 @@ function materializeUpdate(
   if (!host || host.resolvedPath.length < 2) return null;
   const src = cur.params.pathSource;
   if (src.kind !== 'hosted') return null;
-  // Re-bake when the path moved OR the baked count is stale (a pre-Φ7b doc still carrying
-  // `perTreadAnchors` instead of `treadCount` → refresh so it drops the legacy field + self-heals).
-  const countStale = src.treadCount !== host.treadCount;
-  if (src.resolvedPath && !pathChanged(src.resolvedPath, host.resolvedPath) && !countStale) return null;
+  // Re-bake when the path moved OR the baked anchor COUNT is stale (a pre-Φ7c doc with the old
+  // even-along-path anchors has a different count than one-per-tread → refresh so it migrates to
+  // tread-seated balusters on the next cascade run over the stair).
+  const anchorCountStale = (src.perTreadAnchors?.length ?? 0) !== (host.perTreadAnchors?.length ?? 0);
+  if (src.resolvedPath && !pathChanged(src.resolvedPath, host.resolvedPath) && !anchorCountStale) return null;
 
   const params: RailingParams = {
     ...cur.params,
-    // Rebuilt explicitly (drops the deprecated baked `perTreadAnchors` for pre-Φ7b docs).
     pathSource: {
       kind: 'hosted',
       hostId: src.hostId,
       hostType: src.hostType,
       ...(src.side ? { side: src.side } : {}),
       resolvedPath: host.resolvedPath,
-      ...(host.treadCount !== undefined ? { treadCount: host.treadCount } : {}),
+      ...(host.perTreadAnchors ? { perTreadAnchors: host.perTreadAnchors } : {}),
       ...(host.slopeRatio !== undefined ? { slopeRatio: host.slopeRatio } : {}),
     },
   };

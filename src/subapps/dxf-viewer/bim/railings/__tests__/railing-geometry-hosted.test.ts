@@ -21,7 +21,6 @@ const SLOPED_PATH: RailingPath = [
 
 function hostedParams(overrides: {
   resolvedPath?: RailingPath;
-  treadCount?: number;
   perTreadAnchors?: RailingPath;
   type?: RailingType;
 } = {}): RailingParams {
@@ -33,7 +32,6 @@ function hostedParams(overrides: {
       hostType: 'stair',
       side: 'outer',
       resolvedPath: overrides.resolvedPath ?? SLOPED_PATH,
-      ...(overrides.treadCount !== undefined ? { treadCount: overrides.treadCount } : {}),
       ...(overrides.perTreadAnchors ? { perTreadAnchors: overrides.perTreadAnchors } : {}),
     },
     totalHeightMm: DEFAULT_RAILING_TOTAL_HEIGHT_MM,
@@ -71,50 +69,62 @@ describe('computeRailingGeometry — hosted stair path (baked snapshot, no live 
   });
 });
 
-describe('computeRailingGeometry — Baluster Per Tread (ADR-407 Φ7b, derive-from-path SSoT)', () => {
-  it('places treadCount × perTread.count balusters, positions + z derived from resolvedPath', () => {
-    const g = computeRailingGeometry(hostedParams({ treadCount: 4, type: PER_TREAD_TYPE }));
-    expect(g.balusters).toHaveLength(4); // 4 treads × 1
-    // Even samples of the 45° SLOPED_PATH (len √2·1000) at (i+0.5)/4 → x == z (rides the slope).
-    for (const b of g.balusters) {
-      expect(b.basePoint.z).toBeCloseTo(b.basePoint.x, 6); // 45° flight: z === x on the path
-    }
-    // Monotonic ascent, none flat at the datum (the pre-Φ7b stale-anchor float bug).
-    const zs = g.balusters.map((b) => b.basePoint.z ?? 0);
-    expect(zs[0]).toBeGreaterThan(0);
-    expect(zs[3]).toBeGreaterThan(zs[0]);
+describe('computeRailingGeometry — Baluster Per Tread (ADR-407 Φ7c, tread-seated)', () => {
+  // 4 tread anchors seated on the 45° SLOPED_PATH (x == z), one per tread.
+  const TREAD_ANCHORS: RailingPath = [
+    { x: 200, y: 0, z: 200 },
+    { x: 400, y: 0, z: 400 },
+    { x: 600, y: 0, z: 600 },
+    { x: 800, y: 0, z: 800 },
+  ];
+
+  it('places ONE baluster per tread anchor, base seated on the tread-top z', () => {
+    const g = computeRailingGeometry(hostedParams({ perTreadAnchors: TREAD_ANCHORS, type: PER_TREAD_TYPE }));
+    expect(g.balusters).toHaveLength(4); // one per tread (no landing on this straight flight)
+    expect(g.balusters.map((b) => b.basePoint.x)).toEqual([200, 400, 600, 800]);
+    expect(g.balusters[0].basePoint.z).toBeCloseTo(200); // base = tread top (stepped)
+    expect(g.balusters[3].basePoint.z).toBeCloseTo(800);
   });
 
-  it('LEGACY self-heal: a pre-Φ7b doc with only perTreadAnchors uses their COUNT but re-derives z', () => {
-    // Stale baked anchors sitting FLAT at the datum (the exact old-code float bug).
-    const STALE_FLAT: RailingPath = [
-      { x: 250, y: 0, z: 0 },
-      { x: 750, y: 0, z: 0 },
-    ];
-    const g = computeRailingGeometry(hostedParams({ perTreadAnchors: STALE_FLAT, type: PER_TREAD_TYPE }));
-    expect(g.balusters).toHaveLength(2); // count from anchors.length
-    // z is re-derived from resolvedPath (the 45° slope) — NOT the stale flat 0.
-    expect(g.balusters[0].basePoint.z).toBeGreaterThan(0);
-    expect(g.balusters[1].basePoint.z).toBeGreaterThan(g.balusters[0].basePoint.z ?? 0);
+  it('STEPPED base: a baluster whose tread top is BELOW the walkline grows to reach the rail', () => {
+    // Tread top z=300 at x=600, but the smooth walkline z there is 600 → the baluster must span
+    // from 300 up to the rail underside (600 + 975), i.e. height 1275, not the flat 975.
+    const g = computeRailingGeometry(hostedParams({ perTreadAnchors: [{ x: 600, y: 0, z: 300 }], type: PER_TREAD_TYPE }));
+    expect(g.balusters).toHaveLength(1);
+    expect(g.balusters[0].basePoint.z).toBeCloseTo(300); // sits on the (low) tread
+    expect(g.balusters[0].basePoint.z + g.balusters[0].heightMm).toBeCloseTo(600 + 975); // top meets rail
   });
 
-  it('falls back to along-path spacing when neither treadCount nor anchors are present', () => {
-    const g = computeRailingGeometry(hostedParams({ type: PER_TREAD_TYPE }));
-    // No count signal → the 100mm ball-rule spacing over the sloped path length (~1414 units).
-    expect(g.balusters.length).toBeGreaterThan(2);
-  });
-
-  it('REGRESSION (float guard): every baluster top sits at the top-rail underside on the sloped path', () => {
-    const g = computeRailingGeometry(hostedParams({ treadCount: 6, type: PER_TREAD_TYPE }));
-    const topRail = g.rails.find((r) => r.role === 'top-rail')!;
+  it('REGRESSION (float guard): every baluster top sits at the top-rail underside', () => {
+    const g = computeRailingGeometry(hostedParams({ perTreadAnchors: TREAD_ANCHORS, type: PER_TREAD_TYPE }));
     const railRadius = PER_TREAD_TYPE.topRail.profile.heightMm / 2;
-    // The rail path is resolvedPath lifted by topRail.heightMm; balusters sample the SAME path,
-    // so at each baluster the rail-underside z (railCentre − radius) equals the baluster top.
     for (const b of g.balusters) {
-      const t = (b.basePoint.x ?? 0) / 1000; // 45° path param from x
-      const railCentreZ = topRail.path[0].z! + (topRail.path[1].z! - topRail.path[0].z!) * t;
+      const walklineZ = b.basePoint.x; // 45° path: walkline z == x
       const balusterTop = (b.basePoint.z ?? 0) + b.heightMm;
-      expect(balusterTop).toBeCloseTo(railCentreZ - railRadius, 3); // touching (≤1mm)
+      expect(balusterTop).toBeCloseTo(walklineZ + DEFAULT_RAILING_TOTAL_HEIGHT_MM - railRadius, 3);
     }
+  });
+
+  it('fills a FLAT landing segment with ball-rule spacing balusters', () => {
+    // Flight up, then a 500-long flat landing at z=1000 (spacing 100 → interior balusters).
+    const withLanding: RailingPath = [
+      { x: 0, y: 0, z: 0 },
+      { x: 1000, y: 0, z: 1000 },
+      { x: 1500, y: 0, z: 1000 },
+    ];
+    const g = computeRailingGeometry(hostedParams({
+      resolvedPath: withLanding,
+      perTreadAnchors: [{ x: 500, y: 0, z: 500 }],
+      type: PER_TREAD_TYPE,
+    }));
+    // 1 flight baluster + landing infill (500 / 100 = 5 gaps → 4 interior) sitting flat at z=1000.
+    const landing = g.balusters.filter((b) => Math.abs((b.basePoint.z ?? 0) - 1000) < 1e-6);
+    expect(landing.length).toBeGreaterThanOrEqual(3);
+    for (const b of landing) expect(b.heightMm).toBeCloseTo(975); // flat rail directly above
+  });
+
+  it('falls back to along-path spacing when no anchors are present', () => {
+    const g = computeRailingGeometry(hostedParams({ type: PER_TREAD_TYPE }));
+    expect(g.balusters.length).toBeGreaterThan(2);
   });
 });

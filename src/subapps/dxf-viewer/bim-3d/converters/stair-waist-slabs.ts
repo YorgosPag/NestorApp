@@ -232,6 +232,9 @@ function clampStep(steps: number): number {
 interface LandingClip {
   readonly thicknessM: number;
   readonly dropM: number;
+  /** The landing concrete's own vertical drop (one tread-thickness) — the finish tread seats
+   *  on top, so the soffit must meet the LOWERED landing underside (ADR-358, 2026-07-23). */
+  readonly landingDropM: number;
 }
 
 /**
@@ -282,7 +285,8 @@ export function buildWaistSlabMeshes(
     // landings — poured & reinforced together (Giorgio 2026-07-23), no flying, no sinking.
     const landingUndersideAt = (landingTopZ: number): number | undefined =>
       landingClip
-        ? baseY + landingTopZ * sceneToM - landingClip.thicknessM + landingClip.dropM
+        ? baseY + landingTopZ * sceneToM
+          - landingClip.thicknessM - landingClip.landingDropM + landingClip.dropM
         : undefined;
     // BASE trim: gi 0 seats FLAT on the building slab (ADR-685 Φ2); every UPPER flight bears
     // FLAT on the landing it RISES FROM (top one rise below its first tread) → no sinking.

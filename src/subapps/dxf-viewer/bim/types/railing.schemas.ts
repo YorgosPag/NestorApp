@@ -126,9 +126,7 @@ export const RailingPathSourceSchema = z.discriminatedUnion('kind', [
       side: z.enum(['inner', 'outer']).optional(),
       // ADR-407 Φ7 — baked snapshot (self-hydrating hosted railing; sole writer = cascade).
       resolvedPath: z.array(Point3DSchema).optional(),
-      // ADR-407 Φ7b — scalar tread count (baluster positions derived live from resolvedPath).
-      treadCount: z.number().int().nonnegative().optional(),
-      // @deprecated ADR-407 Φ7b — legacy baked anchor positions (still parsed for old docs).
+      // ADR-407 Φ7c — «Baluster Per Tread» anchors (one railing-line point per tread, stepped z).
       perTreadAnchors: z.array(Point3DSchema).optional(),
       slopeRatio: z.number().optional(),
     })

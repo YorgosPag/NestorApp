@@ -46,6 +46,8 @@ import { samplePolylineFrame, polylineLength } from '../geometry/shared/polyline
 
 const MM_TO_M = 1 / 1000;
 const RAD_TO_DEG = 180 / Math.PI;
+/** |Δz| (mm) below which a path segment counts as a FLAT landing (vs a sloped flight). */
+const FLAT_SEGMENT_EPS_MM = 1;
 
 // ─── Path helpers ────────────────────────────────────────────────────────────
 
@@ -116,27 +118,55 @@ export function sampleRailingPath(path: RailingPath, d: number): Point3D {
   return pointAtDistance(path, d, zAtDistance(path, d));
 }
 
-/** Plan angle (deg CCW) of the path segment nearest to `p` — aligns a member profile at a baked anchor. */
-function nearestSegmentAngleDeg(path: RailingPath, p: Point3D): number {
-  if (path.length < 2) return 0;
+/** Nearest point on the path to `(x, y)`: the containing segment index + parametric `t` + foot xy. */
+function nearestOnPath(
+  path: RailingPath,
+  x: number,
+  y: number,
+): { readonly i: number; readonly t: number; readonly x: number; readonly y: number } | null {
+  if (path.length < 2) return null;
   let best = Infinity;
-  let angle = 0;
+  let out = { i: 1, t: 0, x: path[0]!.x, y: path[0]!.y };
   for (let i = 1; i < path.length; i++) {
     const a = path[i - 1]!;
     const b = path[i]!;
     const dx = b.x - a.x;
     const dy = b.y - a.y;
-    const len2 = dx * dx + dy * dy || 1;
-    const t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2));
+    const len2 = dx * dx + dy * dy;
+    const t = len2 > 0 ? Math.max(0, Math.min(1, ((x - a.x) * dx + (y - a.y) * dy) / len2)) : 0;
     const cx = a.x + dx * t;
     const cy = a.y + dy * t;
-    const dist = Math.hypot(p.x - cx, p.y - cy);
+    const dist = Math.hypot(x - cx, y - cy);
     if (dist < best) {
       best = dist;
-      angle = Math.atan2(dy, dx) * RAD_TO_DEG;
+      out = { i, t, x: cx, y: cy };
     }
   }
-  return angle;
+  return out;
+}
+
+/**
+ * Project `(x, y)` onto the path and return the nearest point ON it — xy plus the z linearly
+ * interpolated along the containing segment. SSoT for «where is this stair-tread point on the
+ * railing line, and what is the SMOOTH walkline z there» (ADR-407 Φ7c): the host uses it to seat
+ * a baluster on the railing line at each tread; the engine uses it to find the smooth rail z above
+ * a baluster so the member reaches the (sloped) rail underside from its stepped tread base.
+ */
+export function projectOntoPath(path: RailingPath, x: number, y: number): Point3D {
+  const n = nearestOnPath(path, x, y);
+  if (!n) return path.length === 1 ? { x: path[0]!.x, y: path[0]!.y, z: path[0]!.z ?? 0 } : { x, y, z: 0 };
+  const a = path[n.i - 1]!;
+  const b = path[n.i]!;
+  return { x: n.x, y: n.y, z: (a.z ?? 0) + ((b.z ?? 0) - (a.z ?? 0)) * n.t };
+}
+
+/** Plan angle (deg CCW) of the path segment nearest to `p` — aligns a member profile at a baked anchor. */
+function nearestSegmentAngleDeg(path: RailingPath, p: Point3D): number {
+  const n = nearestOnPath(path, p.x, p.y);
+  if (!n) return 0;
+  const a = path[n.i - 1]!;
+  const b = path[n.i]!;
+  return Math.atan2(b.y - a.y, b.x - a.x) * RAD_TO_DEG;
 }
 
 // ─── Posts ───────────────────────────────────────────────────────────────────
@@ -190,27 +220,81 @@ function balusterDistances(totalLen: number, spacing: number, justification: 'st
   return dists;
 }
 
+/** Pattern (profile + spacing) sub-shape of a baluster placement — used by the per-tread builders. */
+type BalusterPattern = RailingType['balusterPlacement']['pattern'];
+
 /**
- * Baluster count for «Baluster Per Tread» (ADR-407 Φ7b). The host bakes only the SCALAR
- * `treadCount`; the multiplier lives in the Type. Falls back to a pre-Φ7b doc's baked anchor
- * count (its `.length`, NOT its stale positions) so legacy railings self-heal on reload.
+ * Revit «Baluster Per Tread» flight balusters (ADR-407 Φ7c): ONE plumb baluster on EACH stair
+ * tread. Base sits on the tread top (`anchor.z`, STEPPED — so it «πατάει στη σκάλα»), and the
+ * member is exactly tall enough to reach the SMOOTH rail underside above it (`projectOntoPath`
+ * gives the walkline z at the anchor xy, + `railOffsetMm`). So every top meets the sloped rail
+ * («η κουπαστή ακολουθεί τις κορυφές») — impossible with even/along-path spacing on a stepped run.
  */
-function perTreadBalusterCount(host: RailingHostContext | undefined, perTreadCount: number): number {
-  if (!host) return 0;
-  if (host.treadCount && host.treadCount > 0) return host.treadCount * perTreadCount;
-  return host.perTreadAnchors?.length ?? 0; // legacy: count only; z re-derived below
+function treadBalusters(
+  anchors: readonly Point3D[],
+  path: RailingPath,
+  params: RailingParams,
+  pattern: BalusterPattern,
+  railOffsetMm: number,
+): RailMemberSolid[] {
+  return anchors.map((a) => {
+    const baseZ = a.z ?? params.baseElevationMm;
+    const railUndersideZ = projectOntoPath(path, a.x, a.y).z + railOffsetMm;
+    return {
+      role: 'baluster' as const,
+      basePoint: { x: a.x, y: a.y, z: baseZ },
+      heightMm: Math.max(0, railUndersideZ - baseZ),
+      rotationDeg: nearestSegmentAngleDeg(path, a),
+      profile: pattern.profile,
+      material: pattern.material,
+    };
+  });
+}
+
+/**
+ * Landing balusters (ADR-407 Φ7c): the tread anchors cover only the sloped flights, so FLAT
+ * segments (rest landings) would be bare. Fill each with the 10cm-ball-rule spacing, base on the
+ * flat landing surface (segment z), height = `railOffsetMm` (flat rail directly above) — the
+ * landing mirror of the flight rule. Interior only; segment ends are covered by posts.
+ */
+function landingBalusters(
+  path: RailingPath,
+  pattern: BalusterPattern,
+  s: number,
+  railOffsetMm: number,
+): RailMemberSolid[] {
+  const spacing = pattern.spacingMm * s;
+  if (spacing <= 0) return [];
+  const out: RailMemberSolid[] = [];
+  for (let i = 1; i < path.length; i++) {
+    const a = path[i - 1]!;
+    const b = path[i]!;
+    if (Math.abs((b.z ?? 0) - (a.z ?? 0)) > FLAT_SEGMENT_EPS_MM) continue; // sloped flight → skip
+    const segLen = Math.hypot(b.x - a.x, b.y - a.y);
+    const n = Math.floor(segLen / spacing);
+    for (let k = 1; k < n; k++) {
+      const t = k / n;
+      out.push({
+        role: 'baluster',
+        basePoint: { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, z: a.z ?? 0 },
+        heightMm: railOffsetMm,
+        rotationDeg: segmentAngleDeg(a, b),
+        profile: pattern.profile,
+        material: pattern.material,
+      });
+    }
+  }
+  return out;
 }
 
 /**
  * Balusters up to the top-rail underside. Two placement modes (Revit parity):
- *  - **Baluster Per Tread** (ADR-407 Φ7b): `treadCount × perTread.count` balusters, each
- *    placed by sampling `resolvedPath` LIVE (position + slope z from the SAME path the rail
- *    uses). SSoT — the baluster base and the rail can never drift, and a persisted railing
- *    re-derives correct z on every reload (no stale baked anchor positions to float above).
+ *  - **Baluster Per Tread** (ADR-407 Φ7c): when the host bakes `perTreadAnchors` (one per stair
+ *    tread, xy on the railing line + STEPPED tread-top z), one baluster seats on each tread and
+ *    reaches the smooth rail; flat landings are filled at the ball-rule spacing. Bases «πατάνε
+ *    στη σκάλα», tops meet the sloped rail — the Revit «Baluster Per Tread» guarantee.
  *  - **Along-path spacing** (Φ1 default): interior balusters at the 10cm-ball-rule spacing,
  *    each lifted to the interpolated path z so it stays plumb on a sloped host.
- * In both modes the baluster HEIGHT is measured above the local base z, so a plumb baluster
- * top meets the sloped rail underside without per-member height math.
  */
 function buildBalusters(
   path: RailingPath,
@@ -224,24 +308,13 @@ function buildBalusters(
   const topRailHeight = type.topRail.enabled ? type.topRail.heightMm : params.totalHeightMm;
   const balHeight = Math.max(0, topRailHeight - type.topRail.profile.heightMm / 2);
 
-  // Revit «Baluster Per Tread» — derive every baluster from `path` (the rail's own path).
-  const perTread = type.balusterPlacement.perTread;
-  if (perTread) {
-    const count = perTreadBalusterCount(host, perTread.count);
-    const totalLen = pathLength(path);
-    if (count > 0 && totalLen > 0) {
-      return Array.from({ length: count }, (_, i) => {
-        const p = sampleRailingPath(path, (totalLen * (i + 0.5)) / count);
-        return {
-          role: 'baluster' as const,
-          basePoint: { x: p.x, y: p.y, z: p.z ?? params.baseElevationMm },
-          heightMm: balHeight,
-          rotationDeg: nearestSegmentAngleDeg(path, p),
-          profile: pattern.profile,
-          material: pattern.material,
-        };
-      });
-    }
+  // Revit «Baluster Per Tread» — one baluster per baked tread anchor + landing infill.
+  const anchors = host?.perTreadAnchors;
+  if (type.balusterPlacement.perTread && anchors && anchors.length > 0) {
+    return [
+      ...treadBalusters(anchors, path, params, pattern, balHeight),
+      ...landingBalusters(path, pattern, s, balHeight),
+    ];
   }
 
   const spacingCanvas = pattern.spacingMm * s;
@@ -326,8 +399,6 @@ function hostFromSnapshot(source: RailingParams['pathSource']): RailingHostConte
     hostType: source.hostType,
     resolvedPath: source.resolvedPath,
     ...(source.slopeRatio !== undefined ? { slopeRatio: source.slopeRatio } : {}),
-    ...(source.treadCount !== undefined ? { treadCount: source.treadCount } : {}),
-    // @deprecated legacy count fallback (positions ignored; z re-derived from resolvedPath).
     ...(source.perTreadAnchors ? { perTreadAnchors: source.perTreadAnchors } : {}),
   };
 }

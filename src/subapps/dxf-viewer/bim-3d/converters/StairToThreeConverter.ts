@@ -31,6 +31,7 @@ import { stampBimIdentity } from './bim-three-shape-helpers';
 import { polygonCentroid } from '../../bim/geometry/shared/polygon-utils';
 import { DEFAULT_WAIST_SLAB_THICKNESS_MM } from '../../bim/stairs/stair-boq-quantities';
 import { buildWaistSlabMeshes } from './stair-waist-slabs';
+import { projectLandingTreadTowardDownFlight } from './stair-landing-tread-projection';
 import {
   buildRiserBox,
   riserAscentDir,
@@ -372,11 +373,47 @@ function buildLandingMeshes(
     // Same convention as treads: poly.z = walkable top face (shared SSoT extrude, ADR-584).
     const mesh = extrudeFlatSlab(landings[i]!, sceneToM, thicknessM, mat, baseY);
     if (!mesh) continue;
+    // ADR-358 (Giorgio 2026-07-23) — drop the CONCRETE one tread-thickness so the finish tread
+    // (`buildLandingTreadMeshes`) seats on top at the walk level, exactly like the steps.
+    mesh.position.y -= DEFAULT_TREAD_THICKNESS_MM * MM_TO_M;
     // ADR-637 Φ5 — 0-based index into `geometry.landings` = the `stairComponentIndex`
     // the 2D hit-test, raycaster and sub-element highlighter pick landings by.
     const tagged = tagStairMesh(mesh, stair, 'landing', levelId, i);
     // landing has no canonical subcategory in ADR-377 taxonomy → parent stair style.
     attachStairEdges(tagged);
+    out.push(tagged);
+  }
+  return out;
+}
+
+/**
+ * ADR-358 (Giorgio 2026-07-23) — the landing's walkable FINISH tread. The landing concrete
+ * dropped one tread-thickness (see `buildLandingMeshes`) so this 40 mm finish — the SAME
+ * material as the step treads — sits on top with its face at the walk level. Its edge toward
+ * the flight BELOW is nosed by the tread nosing (`projectLandingTreadTowardDownFlight`) so the
+ * whole stair, steps and landings alike, clads continuously with one tread material. Empty
+ * when there are no landings.
+ */
+function buildLandingTreadMeshes(
+  stair: StairEntity,
+  baseY: number,
+  sceneToM: number,
+  levelId?: string,
+): THREE.Mesh[] {
+  const landings = stair.geometry.landings;
+  if (landings.length === 0) return [];
+  const thicknessM = DEFAULT_TREAD_THICKNESS_MM * MM_TO_M;
+  const allTreads = [...stair.geometry.treadsBelowCut, ...stair.geometry.treadsAboveCut];
+  // +20 mm BEYOND the plan nosing (which alone lands flush with the riser) → real overhang for cladding (Giorgio 2026-07-23).
+  const nosingScene = (stair.params.nosing ?? 0) + 0.02 / sceneToM; // 0.02 m → scene units
+  const mat = resolveStairMaterial(stair, 'stair-tread'); // same finish as the step treads
+  const out: THREE.Mesh[] = [];
+  for (let i = 0; i < landings.length; i++) {
+    const poly = projectLandingTreadTowardDownFlight(landings[i]!, allTreads, nosingScene);
+    const mesh = extrudeFlatSlab(poly, sceneToM, thicknessM, mat, baseY); // top face at the walk level
+    if (!mesh) continue;
+    const tagged = tagStairMesh(mesh, stair, 'landing-tread', levelId, i);
+    attachStairEdges(tagged, 'treads'); // clads as a tread
     out.push(tagged);
   }
   return out;
@@ -413,7 +450,9 @@ function buildWaistMeshes(
   // rises from (Revit "waist spans across landings"): the μηρός soffit meets the landing
   // underside so the thin landing doesn't fly AND the flight no longer sinks through it. Same
   // terminating-trim as the base slab, pre-compensated by `waistDropM` for the shift below.
-  const landingClip = { thicknessM: resolveLandingThicknessMm(stair), dropM: waistDropM };
+  // `landingDropM` — the landing concrete now drops one tread-thickness (finish tread on top,
+  // Giorgio 2026-07-23), so the soffit must meet the LOWERED landing underside (earlier).
+  const landingClip = { thicknessM: resolveLandingThicknessMm(stair), dropM: waistDropM, landingDropM: DEFAULT_TREAD_THICKNESS_MM * MM_TO_M };
   // ADR-539 Φ6 — 0-based index per waist slab (a Γάμμα/Ζ stair has one per flight), so each is
   // individually pickable under «ΠΟΛΥΓΩΝΑ» via the SAME `stairComponentIndex` sub-element gesture.
   let waistIndex = 0;
@@ -449,6 +488,8 @@ export function stairToMeshes(
   return [
     ...buildWaistMeshes(stair, baseY, sceneToM, levelId, baseSlabUndersideZmm),
     ...buildLandingMeshes(stair, baseY, sceneToM, levelId),
+    // Landing finish tread (same material as steps), so the whole stair clads continuously.
+    ...buildLandingTreadMeshes(stair, baseY, sceneToM, levelId),
     // Seated on a base slab → the floor finish covers the starting step → skip its tread.
     ...buildTreadMeshes(stair, baseY, sceneToM, levelId, baseSlabUndersideZmm !== undefined),
     ...buildRiserMeshes(stair, baseY, sceneToM, levelId),

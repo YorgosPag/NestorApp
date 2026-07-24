@@ -100,18 +100,12 @@ export type RailingPathSource =
        */
       readonly resolvedPath?: RailingPath;
       /**
-       * ADR-407 Φ7b — baked **scalar** tread count of the host flight. «Baluster Per Tread»
-       * places `treadCount × type.perTread.count` balusters, but their POSITION + z are
-       * derived LIVE from `resolvedPath` in the engine (SSoT: one path feeds both rail and
-       * balusters → they can never drift, and a persisted railing self-heals its baluster z
-       * on every reload). Only the count is baked, because it cannot be inferred from the path.
-       */
-      readonly treadCount?: number;
-      /**
-       * @deprecated ADR-407 Φ7b — legacy baked per-tread anchor POSITIONS (pre-scalar). No
-       * longer written; kept optional so pre-Φ7b docs still hydrate (the engine reads only
-       * their `.length` as a count fallback and re-derives z from `resolvedPath`). Remove
-       * once no persisted doc carries it.
+       * ADR-407 Φ7c — baked «Baluster Per Tread» anchors: ONE point per stair tread, seated on
+       * the railing line at the tread's plan position and carrying the tread's TOP z (stepped,
+       * mm). The engine puts a baluster on each — base on the tread, height derived LIVE to reach
+       * the smooth rail. Only the tread PLAN positions are baked (they need the stair's tread
+       * geometry); the rail + every baluster height stay derived from `resolvedPath`, so a stale
+       * bake can never float the rail off the members. Sole writer = the cascade.
        */
       readonly perTreadAnchors?: readonly Point3D[];
       /** ADR-407 Φ7 — host run rise/length ratio (baked with the snapshot; diagnostics + future ADA extensions). */
@@ -234,12 +228,10 @@ export interface RailingHostContext {
   /** Run rise/length for sloped balusters (Φ2). */
   readonly slopeRatio?: number;
   /**
-   * ADR-407 Φ7b — tread count of the host flight (scalar). The engine places
-   * `treadCount × type.perTread.count` balusters, deriving each position + z LIVE from
-   * `resolvedPath` (SSoT — balusters share the rail's exact path, can never float above it).
+   * ADR-407 Φ7c — «Baluster Per Tread» anchors: one railing-line point per stair tread carrying
+   * the tread-top z (stepped, mm). The engine seats a baluster on each tread; heights derive
+   * live from `resolvedPath` to reach the smooth rail.
    */
-  readonly treadCount?: number;
-  /** @deprecated ADR-407 Φ7b — legacy baked anchor positions; superseded by `treadCount`. */
   readonly perTreadAnchors?: readonly Point3D[];
 }
 
