@@ -4,7 +4,16 @@
  * with the documented precedence (appearance → catalog id → category → flat colour).
  */
 
-import { resolveThumbnailDef } from '../material-thumbnail-spec';
+// Το texture cache mock-άρεται ώστε να ελεγχθεί ΑΝ ρωτήθηκε καθόλου (ADR-693 Α2): το βασικό
+// συμβόλαιο δεν είναι μόνο «τι επιστρέφει», αλλά ότι ένα ξένο id δεν αγγίζει καν τον cache.
+const getTextureSet = jest.fn();
+const preloadTextureSet = jest.fn();
+jest.mock('../../materials/bim-texture-cache', () => ({
+  getTextureSet: (...a: unknown[]) => getTextureSet(...a),
+  preloadTextureSet: (...a: unknown[]) => preloadTextureSet(...a),
+}));
+
+import { resolveThumbnailDef, resolveThumbnailTextureSet, preloadThumbnailTextures } from '../material-thumbnail-spec';
 import { hexToTrueColor } from '../../../utils/dxf-true-color';
 
 describe('resolveThumbnailDef', () => {
@@ -41,5 +50,39 @@ describe('resolveThumbnailDef', () => {
 
   it('returns null when nothing resolves', () => {
     expect(resolveThumbnailDef({})).toBeNull();
+  });
+});
+
+/**
+ * ADR-693 Α2 — το sibling gap. Το `resolveThumbnailDef` εξαιρούσε ΗΔΗ ρητά τα `bmat_*`, αλλά οι δύο
+ * αδελφές συναρτήσεις περνούσαν κάθε ξένο id από τον `resolveMaterialKey` → σκυρόδεμα. Αποτέλεσμα:
+ * η σφαίρα ενός `paint-*` / άγνωστου id έπαιρνε την ΥΦΗ ΣΚΥΡΟΔΕΜΑΤΟΣ, και το `preload` κατέβαζε
+ * άσκοπα το texture set για να το κάνει.
+ */
+describe('texture-set resolution — ξένο id δεν παίρνει υφή σκυροδέματος (ADR-693 Α2)', () => {
+  beforeEach(() => {
+    getTextureSet.mockReset();
+    preloadTextureSet.mockReset();
+  });
+
+  it.each(['paint-red', 'mat-marble', 'totally-unknown'])(
+    'το «%s» δεν λύνει σε κανένα texture set',
+    (id) => {
+      expect(resolveThumbnailTextureSet(id, 0)).toBeNull();
+      expect(getTextureSet).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(['paint-red', 'mat-marble', 'totally-unknown'])(
+    'το «%s» δεν πυροδοτεί καμία φόρτωση υφής',
+    (id) => {
+      preloadThumbnailTextures(id);
+      expect(preloadTextureSet).not.toHaveBeenCalled();
+    },
+  );
+
+  it('ένα ΓΝΩΣΤΟ catalog id συνεχίζει κανονικά — καμία παλινδρόμηση', () => {
+    preloadThumbnailTextures('mat-brick-solid');
+    expect(preloadTextureSet).toHaveBeenCalledWith('brick');
   });
 });

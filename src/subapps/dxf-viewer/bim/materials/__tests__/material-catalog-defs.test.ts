@@ -10,8 +10,11 @@ import {
   MATERIAL_DEFS,
   DEFAULT_MATERIAL_KEY,
   resolveMaterialKey,
+  resolveMaterialKeyOrNull,
+  catalogFlatColorOrNull,
   getMaterialFlatColorHex,
 } from '../material-catalog-defs';
+import { textureSlugForKey } from '../bim-texture-registry';
 
 describe('resolveMaterialKey', () => {
   it('returns an exact key unchanged', () => {
@@ -69,5 +72,58 @@ describe('MATERIAL_DEFS', () => {
     const tie = MATERIAL_DEFS['elem-foundation-tie-beam']?.color;
     expect([pad, strip, tie]).toEqual([0x8a5a3c, 0x2f7d6a, 0xb5651d]);
     expect(new Set([pad, strip, tie]).size).toBe(3);
+  });
+});
+
+/**
+ * ADR-693 Α1 — ο ρητός διαχωρισμός «άγνωστο» vs «σκυρόδεμα». Ο `resolveMaterialKey` ΔΙΑΤΗΡΕΙ το
+ * fallback του (τοίχοι/πλάκες/DNA layers βασίζονται σιωπηλά πάνω του)· το `…OrNull` είναι η νέα,
+ * ειλικρινής απάντηση για τα μονοπάτια όπου το σκυρόδεμα είναι λάθος (swatch, thumbnail, ghost).
+ */
+describe('resolveMaterialKeyOrNull (ADR-693 Α1)', () => {
+  it('συμφωνεί με τον resolveMaterialKey σε ΚΑΘΕ γνωστό id', () => {
+    for (const key of Object.keys(MATERIAL_DEFS)) {
+      expect(resolveMaterialKeyOrNull(key)).toBe(resolveMaterialKey(key));
+    }
+    expect(resolveMaterialKeyOrNull('mat-concrete-c25')).toBe('mat-concrete');
+  });
+
+  it('επιστρέφει null — ΟΧΙ σκυρόδεμα — για id εκτός καταλόγου', () => {
+    expect(resolveMaterialKeyOrNull('mat-marble')).toBeNull();
+    expect(resolveMaterialKeyOrNull('bmat_01HQ')).toBeNull();
+    expect(resolveMaterialKeyOrNull('paint-red')).toBeNull();
+    expect(resolveMaterialKeyOrNull('totally-unknown')).toBeNull();
+  });
+
+  it('ο resolveMaterialKey μένει ΑΝΕΠΑΦΟΣ (καμία παλινδρόμηση στους 8 καλούντες)', () => {
+    expect(resolveMaterialKey('mat-marble')).toBe(DEFAULT_MATERIAL_KEY);
+    expect(resolveMaterialKey('totally-unknown')).toBe(DEFAULT_MATERIAL_KEY);
+  });
+
+  it('catalogFlatColorOrNull διαβάζει τον ΙΔΙΟ matcher (N.18 — ένας βρόχος)', () => {
+    expect(catalogFlatColorOrNull('mat-wood')).toBe('#8b5e3c');
+    expect(catalogFlatColorOrNull('bmat_01HQ')).toBeNull();
+    expect(catalogFlatColorOrNull('paint-red')).toBeNull();
+  });
+});
+
+/**
+ * ADR-693 Α3 — το εισαγόμενο πλέγμα (ADR-683) δεν είχε ΚΑΝΕΝΑ def, οπότε έπεφτε στο
+ * `DEFAULT_MATERIAL_KEY` → σκυρόδεμα → **φωτογραφία σκυροδέματος** πάνω σε ξένο μοντέλο.
+ */
+describe('elem-imported-mesh (ADR-693 Α3)', () => {
+  it('έχει ρητό ουδέτερο def — δεν πέφτει στο σκυρόδεμα', () => {
+    expect(resolveMaterialKeyOrNull('elem-imported-mesh')).toBe('elem-imported-mesh');
+    expect(resolveMaterialKey('elem-imported-mesh')).not.toBe(DEFAULT_MATERIAL_KEY);
+  });
+
+  it('ΔΕΝ έχει texture slug — ένα ξένο μοντέλο δεν ντύνεται ποτέ με υφή καταλόγου', () => {
+    expect(textureSlugForKey('elem-imported-mesh')).toBeNull();
+  });
+
+  it('δεν σπάει τη σειρά του prefix match (κανένα κλειδί δεν το σκιάζει)', () => {
+    const keys = Object.keys(MATERIAL_DEFS);
+    const shadowing = keys.filter((k) => k !== 'elem-imported-mesh' && 'elem-imported-mesh'.startsWith(k));
+    expect(shadowing).toEqual([]);
   });
 });

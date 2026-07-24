@@ -82,6 +82,61 @@ describe('meshToObject3D — cache miss (placeholder)', () => {
   });
 });
 
+/**
+ * ADR-693 Άξονας Β — το placeholder είναι «φορτώνει» ghost, ΟΧΙ υλικό καταλόγου.
+ *
+ * Η παλινδρόμηση που φυλάνε αυτά: το `elem-imported-mesh` δεν ταίριαζε με κανένα prefix του
+ * `MATERIAL_DEFS`, οπότε το παλιό `getMaterial3D(matId)` κατέληγε στο `DEFAULT_MATERIAL_KEY`
+ * (= σκυρόδεμα) και ΝΤΥΝΕ τα κουτιά φόρτωσης με τη φωτογραφία σκυροδέματος, με σκιές. Ο χρήστης
+ * δεν μπορούσε να ξεχωρίσει «φορτώνει» από «αυτό ΕΙΝΑΙ σκυρόδεμα» (Giorgio, browser 2026-07-24).
+ */
+describe('meshToObject3D — «φορτώνει» ghost (ADR-693)', () => {
+  const IMPORTED = { matId: 'elem-imported-mesh', bimType: 'imported-mesh', category: 'imported' };
+
+  it('το placeholder είναι ημιδιάφανο ghost χωρίς υφή — ποτέ φωτογραφία υλικού', () => {
+    getInstance.mockReturnValue(null);
+    const obj = meshToObject3D(placement(IMPORTED)) as THREE.Mesh;
+    const mat = obj.material as THREE.MeshStandardMaterial;
+    expect(mat.transparent).toBe(true);
+    expect(mat.map).toBeNull();
+  });
+
+  it('ΔΕΝ ρίχνει σκιά — ούτε αφού περάσει από το tagObject traverse', () => {
+    getInstance.mockReturnValue(null);
+    const obj = meshToObject3D(placement(IMPORTED)) as THREE.Mesh;
+    expect(obj.castShadow).toBe(false);
+    expect(obj.receiveShadow).toBe(false);
+  });
+
+  it('κρατά την ταυτότητα οντότητας + το matId για τις τομές', () => {
+    getInstance.mockReturnValue(null);
+    const obj = meshToObject3D(placement(IMPORTED));
+    expect(obj.userData['bimType']).toBe('imported-mesh');
+    expect(obj.userData['matId']).toBe('elem-imported-mesh');
+  });
+
+  it('έχει τις ΜΕΤΡΗΜΕΝΕΣ διαστάσεις από το πρώτο καρέ (πλεονέκτημα έναντι Revit, §3.1)', () => {
+    getInstance.mockReturnValue(null);
+    const obj = meshToObject3D(
+      placement({ ...IMPORTED, widthMm: 800, heightMm: 1200, depthMm: 400 }),
+    ) as THREE.Mesh;
+    const params = (obj.geometry as THREE.BoxGeometry).parameters;
+    expect(params.width).toBeCloseTo(0.8, 6);
+    expect(params.height).toBeCloseTo(1.2, 6);
+    expect(params.depth).toBeCloseTo(0.4, 6);
+  });
+
+  it('ένα ΠΡΑΓΜΑΤΙΚΟ mesh (cache hit) κρατά τις σκιές του — καμία παλινδρόμηση', () => {
+    const tmpl = new THREE.Group();
+    tmpl.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1)));
+    getInstance.mockReturnValue(tmpl);
+    const obj = meshToObject3D(placement(IMPORTED));
+    const child = obj.children[0] as THREE.Mesh;
+    expect(child.castShadow).toBe(true);
+    expect(child.receiveShadow).toBe(true);
+  });
+});
+
 describe('meshToObject3D — cache hit (real mesh)', () => {
   it('clones-in-place, applies rotation + scale, never calls preload', () => {
     const tmpl = new THREE.Group();
