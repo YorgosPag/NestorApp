@@ -1,6 +1,6 @@
 # ADR-694 — Κηδεμονία αρχείων Storage (fail-safe GC) + ταυτότητα υλικού εισαγόμενου πλέγματος
 
-**Status:** IMPLEMENTED (Α/Β/Γ/Δ) · 🔴 **ΕΚΚΡΕΜΕΙ Ε1 (backfill) — ΜΕΤΑ το deploy, ΠΡΙΝ τις 31/07**
+**Status:** IMPLEMENTED — Α/Β/Γ/Δ/Ε deployed & browser-verified · **Ζ/Φ10 committed (`253a8e35`)**
 **Ημερομηνία:** 2026-07-25
 **Σχετικά:** ADR-031 (canonical files), ADR-312 (showcase PDFs), ADR-413 §2D (PBR υφές), ADR-678
 (C4D round-trip), ADR-683 §11 (imported meshes ownership), ADR-687 Φ8 (βιβλιοθήκη υλικών),
@@ -365,13 +365,68 @@ hook είναι πλέον **memoisation** του `calculateContrast`, όχι δ
 **Καθαρό αποτέλεσμα:** 5 υλοποιήσεις μεταφοράς sRGB → **1**· 3 υλοποιήσεις WCAG luminance → **1**·
 2 colour parsers → **1**.
 
-#### Ζ4. Εντοπίστηκαν και ΔΕΝ πειράχτηκαν (εκτός εύρους Φ10)
+#### Ζ4. Τα δύο «εκτός εύρους» — επανεξετάστηκαν και ΚΛΕΙΣΑΝ (Φ10β)
 
-- `subapps/geo-canvas/config/color-config.ts` `getContrastTextColor` — σημασιολογικός αδελφός του
-  `contrastTextColor`, με BT.601 αντί WCAG. **Άλλο subapp** → η ενοποίηση εισάγει cross-subapp
-  coupling· αρχιτεκτονική απόφαση, όχι μηχανική.
-- `canvas-v2/webgl-lines/webgl-line-buffer-builder.ts` `hexToLinearRgb` — **δεν** είναι διπλότυπο:
-  delegateάρει στο `THREE.Color`/ColorManagement, που είναι ο σωστός ιδιοκτήτης στο GPU μονοπάτι.
+Είχαν αρχικά σημειωθεί ως «εντοπίστηκαν, δεν πειράχτηκαν». Μετά από ένσταση του Giorgio
+(«έτσι θα το έκαναν οι μεγάλοι παίχτες;») επανεξετάστηκαν — **και οι δύο δικαιολογίες ήταν λάθος.**
+
+**α) `geo-canvas/config/color-config.ts` — η δικαιολογία «cross-subapp coupling» ήταν άκυρη.**
+Το geo-canvas **ήδη** εισάγει από το dxf-viewer σε 8+ σημεία (`@/subapps/dxf-viewer/…`). Η σύζευξη
+υπάρχει και είναι καθιερωμένη πρακτική του repo. Με τον φραγμό να πέφτει, το αρχείο ξανακοιτάχτηκε
+σωστά και βρέθηκαν **δύο** ευρήματα, όχι ένα:
+
+| Εύρημα | Κατάσταση | Ενέργεια |
+|---|---|---|
+| `getContrastTextColor` (BT.601) | **ΝΕΚΡΟΣ ΚΩΔΙΚΑΣ** — μηδέν call sites σε όλο το repo· μόνο ο ορισμός + η εγγραφή στο `GEO_COLORS` | **ΔΙΑΓΡΑΦΗΚΕ.** Δεν κεντρικοποιείς νεκρό κώδικα — τον σβήνεις |
+| `withOpacity` (8ο εύρημα) | **ΖΩΝΤΑΝΟ** διπλότυπο του `hexToRgba` (SSoT, ADR-573), **10+ call sites** | **Delegate** στο SSoT |
+
+Το `withOpacity` δεν ήταν απλώς διπλότυπο — ήταν **διπλότυπο με σφάλμα**. Έκοβε τυφλά
+`substring(0,2)/(2,4)/(4,6)`, άρα **έσπαγε σιωπηλά σε 3-ψήφιο hex**, και η ίδια η παλέτα του
+αρχείου περιέχει `#DDD` / `#ddd`:
+
+```
+withOpacity('#ddd', 0.5)          → 'rgba(221, NaN, NaN, 0.5)'   ← άκυρο CSS
+withOpacity('rgba(1,2,3,1)', 0.5) → 'rgba(NaN, 186, NaN, 0.5)'
+```
+
+Ο browser πετά **αθόρυβα** την άκυρη δήλωση → το στοιχείο μένει άβαφο, χωρίς κανένα σφάλμα
+πουθενά. Το SSoT `hexToRgba` δέχεται `#rgb`/`#rrggbb`, κάνει clamp το alpha, και σε άκυρη είσοδο
+επιστρέφει το ίδιο το hex ως ασφαλές fallback. Το ίδιο `substring` σφάλμα είχε και ο διαγραμμένος
+`getContrastTextColor` (3-ψήφιο hex → `NaN` → `NaN > 0.5` = `false` → σιωπηλά **λευκό** κείμενο).
+
+**β) `webgl-line-buffer-builder.hexToLinearRgb` — η ανάθεση στο THREE είναι ΣΩΣΤΗ· το test της ήταν ΨΕΥΤΙΚΟ.**
+
+Η ανάθεση **επιβεβαιώθηκε ως η σωστή επιλογή** και διατηρήθηκε: το `setStyle` δεν μετατρέπει
+«sRGB → linear-sRGB» αλλά «sRGB → **τον working χώρο του renderer**». Σήμερα ταυτίζονται· αν αύριο
+το `workingColorSpace` γίνει Linear-Display-P3, το `setStyle` μένει σωστό ενώ δική μας συνάρτηση θα
+ανέβαζε **λάθος primaries** στο GPU. Ο κινητήρας είναι ο ιδιοκτήτης του working χώρου.
+
+**Το πραγματικό πρόβλημα ήταν αλλού** — και ήταν σοβαρότερο. Το test που υποτίθεται ότι
+προστάτευε αυτό το μονοπάτι ήταν **ταυτολογία**:
+
+```js
+const expected = new THREE.Color().setStyle('#808080');  // ...και η υλοποίηση είναι
+// ακριβώς `_color.setStyle(hex)` → σύγκριση της THREE με τον ΕΑΥΤΟ της
+```
+
+Με `ColorManagement.enabled = false` **και οι δύο** πλευρές θα γύριζαν μαζί σε ωμό sRGB, το test θα
+έμενε **πράσινο**, και οι γραμμές θα σχεδιάζονταν ορατά ξεπλυμένες. Χειρότερα: το
+`ColorManagement.enabled` **πουθενά στον κώδικά μας δεν ορίζεται** — κληρονομούμε το default
+`true` της three r152+ (είμαστε σε 0.170). Μια αναβάθμιση που θα το άλλαζε θα περνούσε αθόρυβα.
+
+*(Ίδια αρχή με ADR-587 §6.1: «ένα anchor χωρίς gate δεν είναι anchor — είναι σχόλιο». Εδώ το gate
+υπήρχε αλλά δεν μπορούσε να αποτύχει.)*
+
+**Διόρθωση — το αδήλωτο καθολικό γίνεται εκτελεστό συμβόλαιο:**
+1. Η αναμενόμενη τιμή έρχεται πλέον από **ανεξάρτητο μάρτυρα** — το δικό μας `srgbToLinearUnit`,
+   καμία σχέση με THREE. Ρητό `expect(c[0]).not.toBeCloseTo(0x80/255)` = «όχι ωμό sRGB».
+2. +test κορεσμένου χρώματος (πιάνει μπέρδεμα καναλιών, που το γκρι `#808080` δεν μπορεί).
+3. +ρητό `expect(THREE.ColorManagement.enabled).toBe(true)` με τεκμηριωμένο blast radius.
+4. +διασταύρωση THREE ↔ SSoT σε 5 χρώματα.
+
+**Αυτό είναι το σημείο όπου ξεπερνάμε τη συνήθη πρακτική:** τα three-based επαγγελματικά εργαλεία
+βασίζονται στη *σύμβαση* ότι το ColorManagement είναι ON. Εμείς το **επαληθεύουμε εκτελεστικά**,
+διασταυρώνοντας τον κινητήρα με ανεξάρτητη υλοποίηση του προτύπου.
 
 ---
 
@@ -389,6 +444,7 @@ hook είναι πλέον **memoisation** του `calculateContrast`, όχι δ
 
 | Version | Date | Author | Changes |
 |---|---|---|---|
+| v1.3 | 2026-07-25 | Claude (Opus 5) | **Φ10β — ΤΑ ΔΥΟ «ΕΚΤΟΣ ΕΥΡΟΥΣ» ΕΠΑΝΕΞΕΤΑΣΤΗΚΑΝ ΚΑΙ ΕΚΛΕΙΣΑΝ (§Ζ4 ξαναγράφτηκε).** Μετά από ένσταση του Giorgio («έτσι θα το έκαναν οι μεγάλοι παίχτες;») — **και οι δύο δικαιολογίες της v1.2 ήταν λάθος**. **(α) geo-canvas:** η δικαιολογία «cross-subapp coupling» ήταν **άκυρη** — το geo-canvas ήδη εισάγει από dxf-viewer σε **8+ σημεία**. Με τον φραγμό να πέφτει βρέθηκαν **δύο** ευρήματα: το `getContrastTextColor` είναι **ΝΕΚΡΟΣ ΚΩΔΙΚΑΣ** (μηδέν call sites) → **ΔΙΑΓΡΑΦΗΚΕ** (δεν κεντρικοποιείς νεκρό κώδικα)· και **8ο ΕΥΡΗΜΑ — ΖΩΝΤΑΝΟ**: το `withOpacity` (**10+ call sites**) ήταν διπλότυπο του `hexToRgba` (SSoT ADR-573) **με σφάλμα** — τυφλό `substring(0,2)/(2,4)/(4,6)` που **έσπαγε σιωπηλά σε 3-ψήφιο hex**, ενώ η ίδια η παλέτα περιέχει `#DDD`/`#ddd`: `withOpacity('#ddd',0.5)` → `rgba(221, NaN, NaN, 0.5)` = **άκυρο CSS που ο browser πετά αθόρυβα** (στοιχείο άβαφο, μηδέν σφάλμα πουθενά) → **delegate στο SSoT**. **(β) webgl:** η **ανάθεση** στο `THREE.Color` **επιβεβαιώθηκε σωστή και διατηρήθηκε** (το `setStyle` μετατρέπει sRGB → **working χώρο του renderer**, όχι linear-sRGB· αν αλλάξει σε Linear-Display-P3 δική μας συνάρτηση θα ανέβαζε **λάθος primaries** — ο κινητήρας είναι ο ιδιοκτήτης). **Το πραγματικό πρόβλημα ήταν το test: ταυτολογία** — `expected = new THREE.Color().setStyle(hex)` έναντι υλοποίησης που **είναι** `setStyle(hex)`, δηλαδή σύγκριση της THREE με τον εαυτό της· με `ColorManagement.enabled=false` **και οι δύο** πλευρές θα γύριζαν μαζί σε ωμό sRGB, **το test θα έμενε πράσινο** και οι γραμμές θα σχεδιάζονταν ξεπλυμένες. Επιπλέον το `ColorManagement.enabled` **πουθενά δεν ορίζεται** στον κώδικά μας (default `true` της r152+· three 0.170). **Διόρθωση:** ανεξάρτητος μάρτυρας (`srgbToLinearUnit`, όχι THREE) + ρητό «ΟΧΙ ωμό sRGB» + test κορεσμένου χρώματος (πιάνει μπέρδεμα καναλιών που το γκρι δεν μπορεί) + ρητό `expect(ColorManagement.enabled).toBe(true)` + διασταύρωση THREE↔SSoT σε 5 χρώματα. Ίδια αρχή με ADR-587 §6.1 — «anchor χωρίς gate δεν είναι anchor»· εδώ το gate υπήρχε αλλά **δεν μπορούσε να αποτύχει**. **Επαλήθευση:** webgl-lines + geo-canvas suites πράσινα (69 tests)· `jscpd:diff` **καθαρό**· **ΟΧΙ tsc (N.17)**. ⚠️ Προϋπάρχον/άσχετο: `geo-canvas/__tests__/DxfGeoTransform.test.ts` (1 test) — η αλυσίδα imports του δεν αγγίζει χρώματα. 🔜 Προτεινόμενο (δεν έγινε — απαιτεί απόφαση): προαγωγή του `color-math` σε ουδέτερο `src/lib/color/`, τώρα που έχει καταναλωτή σε **δύο** subapps· ~30 import sites, σε **μοιραζόμενο** working tree. |
 | v1.2 | 2026-07-25 | Claude (Opus 5) | **Φ10 — ΕΝΟΠΟΙΗΣΗ ΤΗΣ ΣΥΝΑΡΤΗΣΗΣ ΜΕΤΑΦΟΡΑΣ sRGB (νέα ενότητα Ζ).** **Ζ0 — διόρθωση ground truth:** το καταγεγραμμένο «δύο σταθερές, και οι δύο σωστές για διαφορετικό πρότυπο» **ΔΕΝ ισχύει**· το W3C **απέσυρε** το `0.03928` τον **Μάιο 2021** («It was taken from an older version of the specification and has been updated») — υπάρχει **ΕΝΑ** πρότυπο (IEC 61966-2-1, `0.04045`) και ένα διορθωμένο τυπογραφικό λάθος. **Ζ1:** ΕΝΑ primitive, ΜΙΑ σταθερά, ΔΥΟ στρώματα — το WCAG (`srgbRelativeLuminance`/`contrastRatio`) χτίζεται **πάνω** στο EOTF, όπως colorjs.io + three.js· οι συναρτήσεις μένουν χωριστές ώστε μια μελλοντική μετάβαση σε APCA να μην αγγίζει τη χρωματομετρία. **Ζ2 — μετρημένο μηδενικό ρίσκο:** για **κάθε** byte `0..255` οι δύο σταθερές είναι **bit-for-bit ταυτόσημες** (κανένα byte δεν πέφτει στη ζώνη `(0.03928, 0.04045]`: byte 10 κάτω κι από τα δύο, byte 11 πάνω κι από τα δύο) — κλειδωμένο εκτελεστικά με τη **παλιά** υλοποίηση ως μάρτυρα σε `config/__tests__/color-math-srgb-transfer.test.ts`. **Ζ3:** 5 υλοποιήσεις μεταφοράς → **1**, 3 υλοποιήσεις WCAG luminance → **1**, 2 parsers → **1**· `srgb-linear-unit.ts` **διαγράφηκε** (τα anchors του μετακόμισαν, δεν χάθηκαν)· διατηρήθηκαν ακέραια δύο διακριτά συμβόλαια σφάλματος (`#ffffff` fallback στο glTF μέσω φρουρού πεπερασμένου· `ratio: 0` στο `useContrast` μέσω `contrastRatioRgb`). **6ο εύρημα επαληθευμένο** (`parseColorRgb` = υποσύνολο του `parseColor` → διαγράφηκε). **7ο εύρημα** από το `jscpd:diff`: **προϋπάρχον** clone μέσα στο `useContrast` (ο κορμός του hook = αντίγραφο του `calculateContrast`) → το hook είναι πλέον **memoisation**, όχι δίδυμο. **Επαλήθευση: 1642 tests / 147 suites πράσινα** στο εύρος `config`+`ui/color`+`rendering`+`io`· **mutation-verified** (`0.04045`→`0.05045` → **2 κόκκινα**, revert → πράσινο)· `jscpd:diff` **καθαρό**. **ΟΧΙ tsc (N.17).** ⚠️ **Προϋπάρχον κόκκινο, ΑΣΧΕΤΟ με το Φ10:** `config/__tests__/bim-object-styles.test.ts` — `BIM_CATEGORY_LINE_COLORS` έχει 20 εγγραφές / 19 μοναδικά χρώματα, επειδή `electricalPanel` και `thermalSpace` δείχνουν **και τα δύο** στο `MEP_TEAL_COLOR`. Το αρχείο είναι αμετάβλητο στο working tree (HEAD, commit `887c1588` 2026-07-22, ADR-684) → το κόκκινο προϋπάρχει· χρειάζεται απόφαση Giorgio (είναι σκόπιμη η επαναχρήστη του analytical teal → λάθος **το test**· αλλιώς λείπει χρώμα). |
 | v1.1 | 2026-07-25 | Claude (Opus 5) | **Ε1 BACKFILL ΟΛΟΚΛΗΡΩΘΗΚΕ + deploy + επαλήθευση παραγωγής.** Deployed: `firestore:indexes` (2 νέα, `CREATING`→`READY`) και `functions:onStorageFinalize,orphanSweeper,orphanSpikeAlert` (**το `tsc` predeploy πέρασε καθαρό**). Restore 5 αντικειμένων από soft-delete (4 υφές + η γεωμετρία «Πόρτα 01»). **ΑΠΟΔΕΙΞΗ ΟΤΙ ΤΟ Α1 ΔΟΥΛΕΥΕΙ ΣΤΗΝ ΠΑΡΑΓΩΓΗ:** στις 22:15Z (πριν ολοκληρωθεί το deploy) το ΠΑΛΙΟ function κατέγραψε ακόμη 4× «Orphan file detected — Deleting»· στις 22:31Z το ΝΕΟ κατέγραψε «**Storage custody: candidate recorded (no deletion)**» με `custodyKind=orphaned` — **μηδέν διαγραφή**, όπως σχεδιάστηκε. ⚠️ **Δύο ευρήματα του backfill:** (α) το self-heal των 22:15 (Γ1/Γ2) **δούλεψε** — τα `Mat.1`/`Mat`/`Scene_Material3` απέκτησαν πραγματικά `appearance` από gamma-correct μέσο χρώμα υφής (**#94a785 πράσινο**, **#dd8b30** & **#e29032 πορτοκαλί** — ακριβώς το αρχικό παράπονο του Giorgio) **αλλά** τα νέα uploads σβήστηκαν από το παλιό function, οπότε τα `albedoUrl` έδειχναν σε **νεκρά tokens (403)**· διορθώθηκαν τα 3 `pbrTextures.albedoUrl` ώστε να δείχνουν στα restored generations — **και τα 4 URL → HTTP 200**, το `appearance` διατηρήθηκε ακέραιο. (β) Το `bmat_af231b75` (`Mat#ID12`) **δεν υπάρχει πλέον** στο Firestore (9→8 docs), οπότε το restored αρχείο του είναι **γνήσια ορφανό** — το custody το χαρακτήρισε σωστά `orphaned` και είναι ο 1ος καταχωρημένος υποψήφιος· ο sweeper (dry-run) θα το αναφέρει, όχι θα το σβήσει. **Το σύστημα απέδειξε ότι λειτουργεί ακριβώς όπως σχεδιάστηκε: ένα γνήσια ορφανό αναγνωρίστηκε, καταγράφηκε, και ΔΕΝ διαγράφηκε αυτόματα.** 🔴 Εκκρεμεί: **Φ10** (ενοποίηση sRGB transfer — 5 σημεία, βλ. HANDOFF 2026-07-25 Φ10) + commit από Giorgio. |
 | v1.0 | 2026-07-25 | Claude (Opus 5) | **ΥΛΟΠΟΙΗΣΗ Α/Β/Γ/Δ (εγκεκριμένο «προχώρα», orchestrator 3 agents).** **Α1** `orphan-cleanup.ts` → mark-only· μηδέν `delete()` στο real-time μονοπάτι· υποψήφιοι σε `storage_orphan_candidates` με σταθερό base64url doc id (idempotent). **Α2** NEW `storage-path-custody.ts` — 5 ρητοί κανόνες κηδεμονίας· το κλειδί της υφής είναι ο **φάκελος** (`materialId`), όχι το basename (`albedo`)· `unknown` → **ποτέ** διαγραφή· ο `findFileOwner` επαναχρησιμοποιείται ως **positive-only** ανιχνευτής (μηδέν διπλότυπο, N.18 — δεν έγινε dead code). **Α3** NEW `orphan-sweeper.ts` — ο ΜΟΝΟΣ destructive δρόμος, 4 φράγματα (ρητή άδεια `ORPHAN_SWEEP_ENABLED` αλλιώς **dry-run** · θετική απόδειξη ορφανότητας · ωρίμανση 7 ημερών από την ΠΡΩΤΗ παρατήρηση · **επανέλεγχος** τη στιγμή της διαγραφής) + cap 50/εκτέλεση. **Α5** +2 composite indexes (ανάσταση Layer 3). **Β1** badge «λείπει η υφή» + Radix tooltip (CHECK 3.23-safe) + a11y· διακρίνει «απέτυχε η φόρτωση» από «δεν υπήρξε ποτέ εικόνα». **Γ1** self-heal στο GLB μονοπάτι — η `foreignAndBrokenTextures` καλείται **αυτούσια** (μόνο προσαρμογή σχήματος)· `classifyMaterials` μένει sync/pure. **Γ2** NEW `embedded-appearance-backfill.ts` — γεμίζει `appearance` μόνο όταν **αποδεικνύεται** `null`, ποτέ overwrite. **Γ3** gamma-correct μέσο χρώμα + NEW `srgb-linear-unit.ts` (ακριβές IEC 61966-2-1)· δείγμα 16×16→64×64· alpha-weighted. **Δ1** NEW `resolveEntityRenderedMaterialIds` — override → αλλιώς embedded· οι 4 υπάρχουσες συναρτήσεις **αμετάβλητες**. **Επαλήθευση: 484 tests / 44 suites πράσινα**· mutation-verified (επαναφορά του θανάσιμου default → **5 κόκκινα**, revert → πράσινο)· `jscpd:diff` καθαρό σε όλα τα batches. **ΟΧΙ tsc (N.17).** Εκκρεμεί Ε1 (backfill, **μετά** το deploy) + browser verification. |

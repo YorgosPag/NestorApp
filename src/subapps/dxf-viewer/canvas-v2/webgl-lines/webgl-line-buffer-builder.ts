@@ -73,7 +73,27 @@ function bucketKey(lineWidthPx: number, alpha: number): string {
 }
 
 const _color = new THREE.Color();
-/** sRGB hex → linear rgb (ColorManagement ON converts the input on `setStyle`). */
+/**
+ * sRGB hex → linear rgb (ColorManagement ON converts the input on `setStyle`).
+ *
+ * **ADR-694 Φ10 — γιατί ΔΕΝ καλεί το `color-math.srgbToLinearUnit` παρότι εκείνο είναι το SSoT
+ * της μεταφοράς.** Δεν είναι παράλειψη· είναι η σωστή επιλογή για το GPU μονοπάτι:
+ *
+ * Το `setStyle` δεν μετατρέπει «sRGB → linear-sRGB» — μετατρέπει **sRGB → τον working χώρο του
+ * renderer**. Σήμερα οι δύο ταυτίζονται (Linear-sRGB). Αν όμως το `ColorManagement.workingColorSpace`
+ * αλλάξει (π.χ. Linear-Display-P3), το `setStyle` παραμένει σωστό ενώ μια δική μας συνάρτηση θα
+ * ανέβαζε σιωπηλά **λάθος primaries** στο GPU. Ο κινητήρας είναι ο ιδιοκτήτης του working χώρου —
+ * αυτό κάνουν και τα επαγγελματικά three-based εργαλεία.
+ *
+ * Το τίμημα: η ορθότητα κρέμεται από ένα THREE-global που **πουθενά δεν ορίζουμε** (κληρονομούμε
+ * το default `true` της r152+). Γι' αυτό το αμετάβλητο είναι πλέον **εκτελεστό**, όχι σχόλιο: το
+ * `__tests__/webgl-line-buffer-builder.test.ts` (α) ελέγχει ρητά ότι το `ColorManagement.enabled`
+ * είναι `true`, και (β) διασταυρώνει την έξοδο με το ανεξάρτητο `srgbToLinearUnit`. Αν το global
+ * γυρίσει, τα tests κοκκινίζουν **πριν** το δει ο χρήστης ως ξεπλυμένες γραμμές.
+ *
+ * @see ../../config/color-math — το CPU SSoT της μεταφοράς (χρησιμοποιείται ως μάρτυρας στα tests)
+ * @see ./webgl-line-renderer-setup — γιατί δεν πειράζουμε ποτέ το THREE-global
+ */
 function hexToLinearRgb(hex: string): [number, number, number] {
   _color.setStyle(hex);
   return [_color.r, _color.g, _color.b];

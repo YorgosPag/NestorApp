@@ -9,6 +9,8 @@
 
 import * as THREE from 'three';
 import { buildWebglLineBuffers, MAX_BUCKETS } from '../webgl-line-buffer-builder';
+// ADR-694 Φ10 — ανεξάρτητος μάρτυρας για τη μεταφορά sRGB→linear (δικό μας SSoT, όχι THREE).
+import { srgbToLinearUnit } from '../../../config/color-math';
 import type { DxfEntityUnion } from '../../dxf-canvas/dxf-types';
 import type { ResolvedRenderStyle } from '../../dxf-canvas/dxf-renderer-style-resolve';
 
@@ -69,15 +71,67 @@ describe('buildWebglLineBuffers — bucketing & sort', () => {
   });
 });
 
+/**
+ * ADR-694 Φ10 — ΓΙΑΤΙ ΑΥΤΟ ΤΟ describe ΞΑΝΑΓΡΑΦΤΗΚΕ.
+ *
+ * Η προηγούμενη μορφή ήταν **ταυτολογία**:
+ *
+ *     const expected = new THREE.Color().setStyle('#808080');   // ...και η υλοποίηση κάνει
+ *     // ακριβώς `_color.setStyle(hex)` → σύγκριση της THREE με τον ΕΑΥΤΟ της.
+ *
+ * Αν κάποιος γύριζε το `THREE.ColorManagement.enabled` σε `false`, **και οι δύο** πλευρές θα
+ * γύριζαν μαζί σε ωμό sRGB, το test θα έμενε **πράσινο**, και οι γραμμές του DXF θα σχεδιάζονταν
+ * ορατά ξεπλυμένες στην οθόνη. Ένα test που δεν μπορεί να αποτύχει για την ιδιότητα που
+ * υποτίθεται ότι προστατεύει δεν είναι test — είναι σχόλιο.
+ *
+ * Τώρα η αναμενόμενη τιμή έρχεται από **ανεξάρτητη** υλοποίηση: το `srgbToLinearUnit` του
+ * `config/color-math` (IEC 61966-2-1, δικό μας SSoT, καμία σχέση με THREE). Οι δύο δρόμοι
+ * συμφωνούν **μόνο** όσο το ColorManagement είναι ON και ο working χώρος είναι Linear-sRGB —
+ * που είναι ακριβώς η αδήλωτη παραδοχή όλου του χρωματικού αγωγού του layer.
+ */
 describe('buildWebglLineBuffers — colour (linear)', () => {
   it('uploads LINEAR rgb for the entity hex (both endpoints share it)', () => {
     const r = buildWebglLineBuffers([line('l', 0, 0, 1, 0)], () => SOLID('#808080'), NEVER_SKIP);
-    const expected = new THREE.Color().setStyle('#808080'); // linear under ColorManagement
+    // Ανεξάρτητος μάρτυρας — ΟΧΙ THREE. sRGB 0x80 → ~0.2159 γραμμικό φως, όχι 0.502.
+    const expected = srgbToLinearUnit(0x80 / 255);
     const c = r.buckets[0].colors;
-    expect(c[0]).toBeCloseTo(expected.r, 5);
-    expect(c[1]).toBeCloseTo(expected.g, 5);
-    expect(c[2]).toBeCloseTo(expected.b, 5);
-    expect(c[3]).toBeCloseTo(expected.r, 5); // second vertex, same colour
+    expect(c[0]).toBeCloseTo(expected, 5);
+    expect(c[1]).toBeCloseTo(expected, 5);
+    expect(c[2]).toBeCloseTo(expected, 5);
+    expect(c[3]).toBeCloseTo(expected, 5); // second vertex, same colour
+    // Ρητά: ΔΕΝ ανεβαίνει η ωμή sRGB τιμή (αυτό θα σήμαινε ColorManagement OFF).
+    expect(c[0]).not.toBeCloseTo(0x80 / 255, 3);
+  });
+
+  it('κρατά τα κανάλια στη σωστή σειρά (κορεσμένο χρώμα, όχι γκρι)', () => {
+    const r = buildWebglLineBuffers([line('l', 0, 0, 1, 0)], () => SOLID('#e29032'), NEVER_SKIP);
+    const c = r.buckets[0].colors;
+    expect(c[0]).toBeCloseTo(srgbToLinearUnit(0xe2 / 255), 5);
+    expect(c[1]).toBeCloseTo(srgbToLinearUnit(0x90 / 255), 5);
+    expect(c[2]).toBeCloseTo(srgbToLinearUnit(0x32 / 255), 5);
+  });
+});
+
+/**
+ * ADR-694 Φ10 — Ο ΑΔΗΛΩΤΟΣ ΚΑΘΟΛΙΚΟΣ ΓΙΝΕΤΑΙ ΡΗΤΟΣ.
+ *
+ * Το `webgl-line-renderer-setup.ts` τεκμηριώνει ρητά ότι **δεν** πειράζει το
+ * `ColorManagement.enabled` (είναι THREE-global, κοινό με τον BIM 3D renderer — flip θα
+ * κατέστρεφε κάθε PBR χρώμα). Άρα ολόκληρος ο αγωγός στηρίζεται σε ένα καθολικό που
+ * **πουθενά στον κώδικά μας δεν ορίζεται** — κληρονομείται από το default της βιβλιοθήκης
+ * (`true` από r152· είμαστε σε three 0.170). Ένα αναβάθμιση/regression που θα το γύριζε αλλού
+ * θα περνούσε αθόρυβα. Εδώ γίνεται εκτελεστό συμβόλαιο.
+ */
+describe('χρωματικός αγωγός — αμετάβλητο του περιβάλλοντος (ADR-694 Φ10)', () => {
+  it('THREE.ColorManagement είναι ON — αλλιώς κάθε ανέβασμα γραμμικού χρώματος είναι λάθος', () => {
+    expect(THREE.ColorManagement.enabled).toBe(true);
+  });
+
+  it('το THREE και το δικό μας SSoT συμφωνούν στη μεταφορά sRGB→linear', () => {
+    for (const hex of ['#000000', '#0b0b0b', '#808080', '#e29032', '#ffffff']) {
+      const three = new THREE.Color().setStyle(hex);
+      expect(three.r).toBeCloseTo(srgbToLinearUnit(parseInt(hex.slice(1, 3), 16) / 255), 5);
+    }
   });
 });
 

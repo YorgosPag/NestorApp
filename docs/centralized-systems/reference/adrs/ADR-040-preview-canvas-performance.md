@@ -72,6 +72,20 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-07-25 (β) — 🎨 WebGL line color transfer: εκτελεστό αμετάβλητο, όχι σχόλιο (ADR-694 Φ10)
+
+Το `webgl-line-buffer-builder.hexToLinearRgb` **σκόπιμα ΔΕΝ** καλεί το CPU SSoT της μεταφοράς
+(`config/color-math.srgbToLinearUnit`): στο GPU μονοπάτι, το `THREE.Color.setStyle` μετατρέπει sRGB
+→ **τον working χώρο του renderer** (όχι σκέτο Linear-sRGB), οπότε παραμένει σωστό ακόμα κι αν το
+`ColorManagement.workingColorSpace` αλλάξει — μια δική μας συνάρτηση θα ανέβαζε σιωπηλά λάθος
+primaries. Το τίμημα (ορθότητα κρεμασμένη από το THREE-global `ColorManagement.enabled`, που
+κληρονομούμε ως default `true`) γίνεται πλέον **εκτελεστό**: το test suite ελέγχει ρητά ότι το global
+είναι `true` και διασταυρώνει την έξοδο με το ανεξάρτητο `srgbToLinearUnit` — αν γυρίσει, κοκκινίζει
+πριν το δει ο χρήστης ως ξεπλυμένες γραμμές. Μηδέν αλλαγή στο GPU buffer/rebuild-key (selection-agnostic).
+
+Αρχεία: `canvas-v2/webgl-lines/webgl-line-buffer-builder.ts` (+ doc-invariant) · `__tests__/
+webgl-line-buffer-builder.test.ts` (color-management guard). Πλήρες σκεπτικό: **ADR-694 §Φ10**.
+
 ### 2026-07-25 — ➕ 6η είσοδος στο 3Δ scene-dirty predicate: `meshRevealActive` (ADR-693 Φ2)
 
 Το `SceneDirtyState` (`bim-3d/scene/scene-dirty-state.ts`) απέκτησε **έκτη** είσοδο,

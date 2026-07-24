@@ -13,7 +13,14 @@
  * ✅ ACCESSIBILITY: WCAG 2.1 AA compliant color contrasts
  *
  * 🚨 ΑΥΣΤΗΡΗ ΑΠΑΓΟΡΕΥΣΗ: Χρήση σκληρών χρωμάτων εκτός αυτού του αρχείου
+ *
+ * 🏢 ADR-573 / ADR-694 Φ10: αυτό το αρχείο κρατά την **παλέτα** του geo-canvas, όχι χρωματικά
+ * μαθηματικά. Κάθε μετατροπή/υπολογισμός delegateάρει στο SSoT `config/color-math` του dxf-viewer
+ * (pure module — μηδέν React/DOM/THREE, μόνο `scalar-math` από κάτω).
  */
+
+// 🏢 Color-Conversion SSoT (ADR-573) — μία υλοποίηση hex→rgba για όλο το repo.
+import { hexToRgba } from '@/subapps/dxf-viewer/config/color-math';
 
 // ============================================================================
 // CORE BASE COLORS - Foundation
@@ -276,38 +283,26 @@ export const CHART_COLORS = [
  * withOpacity('#FF0000', 0.5) // Returns 'rgba(255, 0, 0, 0.5)'
  */
 export function withOpacity(hexColor: string, opacity: number): string {
-  // Remove # if present
-  const hex = hexColor.replace('#', '');
-
-  // Parse hex to RGB
-  const r = parseInt(hex.substring(0, 2), 16);
-  const g = parseInt(hex.substring(2, 4), 16);
-  const b = parseInt(hex.substring(4, 6), 16);
-
-  // Return rgba string
-  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+  // 🏢 ADR-694 Φ10 — delegate στο SSoT (`config/color-math.hexToRgba`, ADR-573).
+  //
+  // Η προηγούμενη τοπική υλοποίηση έκοβε τυφλά `substring(0,2)/(2,4)/(4,6)`, οπότε **έσπαγε
+  // σιωπηλά σε 3-ψήφιο hex** — και η ίδια αυτή παλέτα περιέχει `#DDD` / `#ddd`:
+  //     withOpacity('#ddd', 0.5) → 'rgba(221, NaN, NaN, 0.5)'  ← άκυρο CSS
+  // Ο browser πετά αθόρυβα την άκυρη δήλωση → το στοιχείο μένει άβαφο, χωρίς κανένα σφάλμα να
+  // εμφανιστεί πουθενά. Το SSoT δέχεται `#rgb`/`#rrggbb`, κάνει clamp το alpha, και σε άκυρη
+  // είσοδο επιστρέφει το ίδιο το hex ως ασφαλές fallback αντί για `NaN`.
+  return hexToRgba(hexColor, opacity);
 }
 
-/**
- * Get contrasting text color (black or white) for a given background
- * @param backgroundColor - Background hex color
- * @returns '#000000' or '#FFFFFF'
- */
-export function getContrastTextColor(backgroundColor: string): string {
-  // Remove # if present
-  const hex = backgroundColor.replace('#', '');
-
-  // Parse hex to RGB
-  const r = parseInt(hex.substring(0, 2), 16);
-  const g = parseInt(hex.substring(2, 4), 16);
-  const b = parseInt(hex.substring(4, 6), 16);
-
-  // Calculate luminance using standard formula
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-
-  // Return black for light backgrounds, white for dark backgrounds
-  return luminance > 0.5 ? BASE_COLORS.BLACK : BASE_COLORS.WHITE;
-}
+// 🗑️ ADR-694 Φ10 — `getContrastTextColor` ΔΙΑΓΡΑΦΗΚΕ (ήταν **νεκρός κώδικας**: μηδέν call sites
+// σε όλο το repo, μόνο ο ορισμός του και η εγγραφή του στο `GEO_COLORS`).
+//
+// Δεν κεντρικοποιείται νεκρός κώδικας — διαγράφεται. Αν ποτέ το geo-canvas χρειαστεί «μαύρο ή
+// λευκό από πάνω;», εισάγει το SSoT `contrastTextColor` (`dxf-viewer/rendering/utils/canvas-pill`)
+// ή χτίζει πάνω στο `srgbRelativeLuminance` του `color-math`. Και τα δύο είναι **WCAG relative
+// luminance**· η διαγραμμένη υλοποίηση χρησιμοποιούσε την προσέγγιση BT.601 `(0.299r+0.587g+0.114b)`,
+// που είναι perceptual weighting για video luma — **όχι** το πρότυπο αναγνωσιμότητας — και επιπλέον
+// είχε το ίδιο `substring` σφάλμα με το `withOpacity` (3-ψήφιο hex → `NaN` → σιωπηλά ΛΕΥΚΟ κείμενο).
 
 // ============================================================================
 // LEGACY COLOR MAPPINGS - Backward Compatibility
@@ -371,7 +366,6 @@ export const GEO_COLORS = {
 
   // Utilities
   withOpacity,
-  getContrastTextColor,
 
   // Legacy (TEMPORARY)
   LEGACY: LEGACY_MAPPINGS,
