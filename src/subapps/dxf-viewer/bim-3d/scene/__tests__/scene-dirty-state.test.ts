@@ -14,6 +14,7 @@ const allClean: SceneDirtyState = {
   viewportAnimating: false,
   animationManagerActive: false,
   pathTracerActive: false,
+  meshRevealActive: false,
   explicitDirty: false,
 };
 
@@ -38,6 +39,12 @@ describe('isSceneDirtyFromState — ADR-040 Phase XXIII', () => {
     expect(isSceneDirtyFromState({ ...allClean, pathTracerActive: true })).toBe(true);
   });
 
+  // ADR-693 Φ2 — η σκηνή είναι on-demand: χωρίς αυτή την είσοδο το fade αποκάλυψης θα πάγωνε
+  // στο πρώτο καρέ, αφού καμία άλλη μεταβολή δεν ζητά redraw στα ~260ms που διαρκεί.
+  it('returns true while a mesh reveal veil is fading (ADR-693 Φ2)', () => {
+    expect(isSceneDirtyFromState({ ...allClean, meshRevealActive: true })).toBe(true);
+  });
+
   it('returns true on explicit dirty flag (mutation path)', () => {
     expect(isSceneDirtyFromState({ ...allClean, explicitDirty: true })).toBe(true);
   });
@@ -49,6 +56,7 @@ describe('isSceneDirtyFromState — ADR-040 Phase XXIII', () => {
         viewportAnimating: true,
         animationManagerActive: false,
         pathTracerActive: false,
+        meshRevealActive: false,
         explicitDirty: true,
       }),
     ).toBe(true);

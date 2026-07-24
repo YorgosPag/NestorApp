@@ -9,16 +9,22 @@ import * as THREE from 'three';
 
 const getInstance = jest.fn();
 const preload = jest.fn();
+// ADR-693 Φ2 — η ηλικία φόρτωσης οδηγεί το progressive reveal· `null` = δεν φορτώθηκε ποτέ σε
+// αυτή τη συνεδρία → κανένα πέπλο (η προεπιλογή για όλα τα προϋπάρχοντα specs).
+const getReadyAgeMs = jest.fn<number | null, unknown[]>(() => null);
 jest.mock('../../library/bim-mesh-library/bim-mesh-cache', () => ({
   bimMeshCache: {
     getInstance: (...a: unknown[]) => getInstance(...a),
     preload: (...a: unknown[]) => preload(...a),
+    getReadyAgeMs: (...a: unknown[]) => getReadyAgeMs(...a),
     getSilhouette: jest.fn(),
     getTopEdges: jest.fn(),
   },
 }));
 
 import { meshToObject3D, type MeshPlacement } from '../mesh-to-object3d';
+import { disposeMeshReveal, isMeshRevealActive } from '../../reveal/mesh-reveal-fade';
+import { isLoadingGhost } from '../../materials/loading-placeholder-material';
 
 function placement(overrides: Partial<MeshPlacement> = {}): MeshPlacement {
   return {
@@ -45,6 +51,9 @@ function placement(overrides: Partial<MeshPlacement> = {}): MeshPlacement {
 beforeEach(() => {
   getInstance.mockReset();
   preload.mockReset();
+  getReadyAgeMs.mockReset();
+  getReadyAgeMs.mockReturnValue(null);
+  disposeMeshReveal();
 });
 
 describe('meshToObject3D — cache miss (placeholder)', () => {
@@ -134,6 +143,72 @@ describe('meshToObject3D — «φορτώνει» ghost (ADR-693)', () => {
     const child = obj.children[0] as THREE.Mesh;
     expect(child.castShadow).toBe(true);
     expect(child.receiveShadow).toBe(true);
+  });
+});
+
+/**
+ * ADR-693 Φ2 — progressive reveal. Το πέπλο μπαίνει ΜΟΝΟ όταν το asset μόλις φορτώθηκε, και
+ * ποτέ πάνω στα υλικά του πραγματικού πλέγματος (`getInstance` δίνει `clone(true)` = ΜΟΙΡΑΖΕΤΑΙ
+ * υλικά με το cached template· μετάλλαξη εκεί θα άφηνε το template μόνιμα ημιδιάφανο).
+ */
+describe('meshToObject3D — progressive reveal (ADR-693 Φ2)', () => {
+  function loadedTemplate(): THREE.Group {
+    const tmpl = new THREE.Group();
+    tmpl.add(new THREE.Mesh(new THREE.BoxGeometry(1, 2, 3), new THREE.MeshStandardMaterial()));
+    return tmpl;
+  }
+
+  function veilOf(obj: THREE.Object3D): THREE.Mesh | undefined {
+    return obj.children.find((c): c is THREE.Mesh => c instanceof THREE.Mesh && isLoadingGhost(c));
+  }
+
+  it('μόλις φορτώθηκε → κρεμά πέπλο πάνω στο πλέγμα και το καταχωρεί', () => {
+    getInstance.mockReturnValue(loadedTemplate());
+    getReadyAgeMs.mockReturnValue(0);
+    const obj = meshToObject3D(placement());
+    expect(veilOf(obj)).toBeDefined();
+    expect(isMeshRevealActive()).toBe(true);
+  });
+
+  it('φορτωμένο εδώ και ώρα → ΚΑΝΕΝΑ πέπλο (δεν ξανα-αποκαλύπτεται σε κάθε resync)', () => {
+    getInstance.mockReturnValue(loadedTemplate());
+    getReadyAgeMs.mockReturnValue(5000);
+    const obj = meshToObject3D(placement());
+    expect(veilOf(obj)).toBeUndefined();
+    expect(isMeshRevealActive()).toBe(false);
+  });
+
+  it('asset που δεν φορτώθηκε ποτέ σε αυτή τη συνεδρία → κανένα πέπλο', () => {
+    getInstance.mockReturnValue(loadedTemplate());
+    getReadyAgeMs.mockReturnValue(null);
+    expect(veilOf(meshToObject3D(placement()))).toBeUndefined();
+  });
+
+  it('το πέπλο ΔΕΝ είναι επιλέξιμο — στόχος μένει το πραγματικό πλέγμα', () => {
+    getInstance.mockReturnValue(loadedTemplate());
+    getReadyAgeMs.mockReturnValue(0);
+    const veil = veilOf(meshToObject3D(placement()));
+    const hits: THREE.Intersection[] = [];
+    veil?.raycast(new THREE.Raycaster(), hits);
+    expect(hits).toEqual([]);
+  });
+
+  it('το πέπλο ΔΕΝ αγγίζει τα (μοιραζόμενα) υλικά του πραγματικού πλέγματος', () => {
+    const tmpl = loadedTemplate();
+    const realMat = (tmpl.children[0] as THREE.Mesh).material as THREE.MeshStandardMaterial;
+    getInstance.mockReturnValue(tmpl);
+    getReadyAgeMs.mockReturnValue(0);
+    meshToObject3D(placement());
+    expect(realMat.transparent).toBe(false);
+    expect(realMat.opacity).toBe(1);
+  });
+
+  it('το πέπλο έχει το μέγεθος του ΠΡΑΓΜΑΤΙΚΟΥ πλέγματος, όχι των μετρημένων διαστάσεων', () => {
+    getInstance.mockReturnValue(loadedTemplate());
+    getReadyAgeMs.mockReturnValue(0);
+    const veil = veilOf(meshToObject3D(placement({ widthMm: 9999, heightMm: 9999, depthMm: 9999 })));
+    const params = (veil?.geometry as THREE.BoxGeometry).parameters;
+    expect([params.width, params.height, params.depth]).toEqual([1, 2, 3]);
   });
 });
 

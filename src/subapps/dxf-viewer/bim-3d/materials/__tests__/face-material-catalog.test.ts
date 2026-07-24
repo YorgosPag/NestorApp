@@ -35,9 +35,11 @@ import { useBimRenderSettingsStore } from '../../../state/bim-render-settings-st
 import {
   getFaceMaterial3D,
   getFaceColorMaterial3D,
+  withAccurateGlassForExport,
 } from '../MaterialCatalog3D';
 import { setUserMaterials, __resetUserMaterialRegistryForTests } from '../user-material-registry';
 import type { BimMaterial } from '../../../bim/types/bim-material-types';
+import { DEFAULT_GLASS_QUALITY } from '../../../config/bim-visual-style';
 
 jest.mock('../../../services/bim-render-settings.service', () => ({
   saveBimRenderSettings: jest.fn().mockResolvedValue(undefined),
@@ -131,15 +133,49 @@ describe('getFaceMaterial3D — realistic ON, bmat_* appearance-only (ADR-687 Φ
   });
   afterEach(() => {
     useBimRenderSettingsStore.getState().setRealisticMaterials(false);
+    useBimRenderSettingsStore.getState().setGlassQuality(DEFAULT_GLASS_QUALITY);
     __resetUserMaterialRegistryForTests();
   });
 
-  it('→ non-null DoubleSide MeshPhysicalMaterial with transmission (not flat opaque)', () => {
+  it('→ non-null DoubleSide υλικό με ΤΑΥΤΟΤΗΤΑ, όχι flat opaque χρώμα', () => {
     const mat = getFaceMaterial3D('bmat_glass_test');
     expect(mat).not.toBeNull();
     expect(mat?.side).toBe(THREE.DoubleSide);
-    // Φ5: transmission>0 → η όψη είναι γυαλί, όχι flat χρώμα (roughness 0.92 opaque).
-    expect((mat as THREE.MeshPhysicalMaterial).transmission).toBeGreaterThan(0);
     expect(mat?.userData['nestorMaterialId']).toBe('bmat_glass_test');
+    // Το κρίσιμο του Φ8: ΔΕΝ είναι το legacy flat-χρώμα υλικό (roughness 0.92 opaque).
+    expect(mat?.transparent).toBe(true);
+    expect(mat?.opacity).toBeLessThan(1);
+  });
+
+  /**
+   * ADR-687 **Φ9** — ο άξονας `glassQuality`, που το Φ8 δεν γνώριζε.
+   *
+   * ⚠️ ΙΣΤΟΡΙΚΟ (ADR-693): το test παραπάνω απαιτούσε αρχικά `transmission > 0` **χωρίς** να
+   * ορίζει ποιότητα γυαλιού. Όταν η Φ9 πρόσθεσε το `glassQuality` με **default `'light'`** — που
+   * ΣΚΟΠΙΜΑ ανταλλάσσει το ακριβό transmission με φθηνό `opacity` alpha-blend στο ζωντανό
+   * viewport — το test έγινε κόκκινο στο main και έμεινε έτσι, χαρακτηρισμένο ως «προϋπάρχον».
+   * **Δεν ήταν σπασμένος κώδικας· ήταν test που δεν ενημερώθηκε.** Πλέον ελέγχονται ΚΑΙ ΟΙ ΔΥΟ
+   * ποιότητες ρητά, ώστε ένα μελλοντικό default flip να μη σκοτώσει ξανά σιωπηλά την κάλυψη.
+   */
+  it('light (default) → φθηνό alpha-blend: transmission ΣΒΗΣΤΟ, opacity ενεργό', () => {
+    useBimRenderSettingsStore.getState().setGlassQuality('light');
+    const mat = getFaceMaterial3D('bmat_glass_test');
+    expect((mat as THREE.MeshPhysicalMaterial).transmission ?? 0).toBe(0);
+    expect(mat?.opacity).toBeCloseTo(0.4, 5); // το ρητό appearance.opacity διατηρείται
+  });
+
+  it('accurate → πλήρες MeshPhysicalMaterial refraction', () => {
+    useBimRenderSettingsStore.getState().setGlassQuality('accurate');
+    const mat = getFaceMaterial3D('bmat_glass_test');
+    expect(mat).toBeInstanceOf(THREE.MeshPhysicalMaterial);
+    expect((mat as THREE.MeshPhysicalMaterial).transmission).toBeGreaterThan(0);
+  });
+
+  it('το export μένει ΠΑΝΤΑ accurate, ακόμη κι όταν το viewport είναι light', () => {
+    useBimRenderSettingsStore.getState().setGlassQuality('light');
+    const exported = withAccurateGlassForExport(() => getFaceMaterial3D('bmat_glass_test'));
+    expect((exported as THREE.MeshPhysicalMaterial).transmission).toBeGreaterThan(0);
+    // ...και δεν μολύνει το cache του ζωντανού viewport (ADR-687 Φ9).
+    expect((getFaceMaterial3D('bmat_glass_test') as THREE.MeshPhysicalMaterial).transmission ?? 0).toBe(0);
   });
 });

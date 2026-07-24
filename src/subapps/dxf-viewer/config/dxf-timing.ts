@@ -191,6 +191,8 @@ export const DXF_TIMING = {
     OVERLAY_TTL: 6000,
     /** Preview pivot crosshair flash duration after Alt+click (bim-3d, ADR-516 Group 6). */
     MARKER_FLASH: 900,
+    /** Loading-ghost → real mesh reveal crossfade duration (bim-3d, ADR-693 Phase 2). */
+    MESH_REVEAL: 260,
   },
 
   // ──────────────────────────────────────────────────────────────────────────

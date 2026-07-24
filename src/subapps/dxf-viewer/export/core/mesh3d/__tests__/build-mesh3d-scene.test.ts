@@ -24,6 +24,7 @@ import type { ResolvedExportFloor } from '../../export-floor-scope';
 import type { ExportDeps } from '../../types';
 import type { Level } from '../../../../systems/levels/config';
 import type { BuildingRef } from '../../../../bim/utils/bim-floor-utils';
+import type { FloorVisibilityScope } from '../../../../bim-3d/scene/floor-visibility-scope';
 
 const BASE_DEPS: ExportDeps = {
   levelScenes: [],
@@ -42,6 +43,19 @@ function makeFloor(): ResolvedExportFloor {
 }
 
 let syncSpy: jest.SpyInstance;
+
+/**
+ * Το scope option-bag που πήρε ο layer.
+ *
+ * ⚠️ ΙΣΤΟΡΙΚΟ (ADR-693): οι έλεγχοι διάβαζαν ΘΕΣΕΙΣ ορισμάτων — `calls[0][2]`/`calls[0][3]` —
+ * από την παλιά υπογραφή `syncMultiFloor(entries, floors, buildings, activeBuildingId)`. Όταν
+ * το ADR-399 Φ.Β/ADR-382 Φ.Γ τα μάζεψαν σε ΕΝΑ `FloorVisibilityScope` αντικείμενο, οι θέσεις 2/3
+ * έγιναν `undefined` και το suite κοκκίνισε στο main. Διαβάζοντας πλέον **ονόματα πεδίων** αντί
+ * για θέσεις, ο έλεγχος επιβιώνει σε κάθε μελλοντική αναδιάταξη του option-bag.
+ */
+function scopeArg(): FloorVisibilityScope {
+  return syncSpy.mock.calls[0][1] as FloorVisibilityScope;
+}
 
 beforeEach(() => {
   // Intercept the real stacked build (converters + joint rebar) — we only inspect the wiring.
@@ -64,8 +78,7 @@ describe('buildMesh3dScene — building gate (ADR-668)', () => {
     buildMesh3dScene([makeFloor()], deps);
 
     expect(syncSpy).toHaveBeenCalledTimes(1);
-    // syncMultiFloor(entries, floors, buildings, activeBuildingId)
-    expect(syncSpy.mock.calls[0][3]).toBeNull();
+    expect(scopeArg().activeBuildingId).toBeNull();
   });
 
   it('A: forwards deps.buildings so each entity can resolve its building (baseElevation + not HIDDEN_)', () => {
@@ -74,14 +87,14 @@ describe('buildMesh3dScene — building gate (ADR-668)', () => {
 
     buildMesh3dScene([makeFloor()], deps);
 
-    expect(syncSpy.mock.calls[0][2]).toBe(buildings);
+    expect(scopeArg().buildings).toBe(buildings);
   });
 
   it('stays robust when deps.buildings is absent — empty array + null gate, never a throw', () => {
     // DXF/TEK never populate buildings; a single-floor mesh export must still build (no stacking).
     expect(() => buildMesh3dScene([makeFloor()], BASE_DEPS)).not.toThrow();
 
-    expect(syncSpy.mock.calls[0][2]).toEqual([]);
-    expect(syncSpy.mock.calls[0][3]).toBeNull();
+    expect(scopeArg().buildings).toEqual([]);
+    expect(scopeArg().activeBuildingId).toBeNull();
   });
 });

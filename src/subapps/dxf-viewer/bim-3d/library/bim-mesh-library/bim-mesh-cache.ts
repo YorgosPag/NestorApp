@@ -78,6 +78,13 @@ const fillContours = new Map<string, readonly (readonly SilPoint[])[]>();
 const edges = new Map<string, readonly SilSegment[]>();
 /** key → per-material-slot silhouettes (ADR-683 Φ5) for the 2D material poché. */
 const slotSilhouettes = new Map<string, readonly SlotSilhouette[]>();
+/**
+ * ADR-693 Φ2 — key → η στιγμή (`performance.now()`) που το template έγινε διαθέσιμο. Ο ΜΟΝΟΣ
+ * ρόλος του: το progressive reveal διαβάζει «πόσο πρόσφατα φορτώθηκε αυτό» ώστε η αδιαφάνεια του
+ * ghost να είναι **καθαρή συνάρτηση του χρόνου** — άρα idempotent απέναντι στα resync, χωρίς καμία
+ * μηχανή καταστάσεων και χωρίς να μολύνεται ο cache με UI κατάσταση.
+ */
+const readyAt = new Map<string, number>();
 
 /**
  * Kick off (or no-op) an async load. Resolves silently; the loaded mesh becomes
@@ -141,6 +148,9 @@ function indexTemplate(key: string, object: THREE.Object3D): void {
   // safety-net). If-missing → curated έπιπλα με authored normals μένουν ανέγγιχτα.
   ensureMeshVertexNormals(template);
   templates.set(key, template);
+  // ADR-693 Φ2 — σφράγιση της στιγμής διαθεσιμότητας ΕΔΩ: είναι το ΕΝΑ σημείο απ' όπου περνούν και
+  // τα δύο μονοπάτια (μονό asset + κόμβος bundle), άρα κανένα δεν μπορεί να ξεχαστεί εκτός reveal.
+  readyAt.set(key, performance.now());
   // Derive the 2D plan silhouette + interior edges from the actual mesh (per-asset
   // representative footprint). Computed once; failures fall back to the rectangle in the renderer.
   try {
@@ -270,6 +280,15 @@ function getSilhouette(category: string, assetId: string): readonly SilPoint[] |
   return silhouettes.get(meshAssetKey(category, assetId)) ?? null;
 }
 
+/**
+ * ADR-693 Φ2 — πόσα ms πέρασαν από τη στιγμή που το asset έγινε διαθέσιμο, ή `null` αν δεν φορτώθηκε
+ * ποτέ σε αυτή τη συνεδρία (άρα δεν υπήρξε μετάβαση «φορτώνει → φορτώθηκε» για να αποκαλυφθεί).
+ */
+function getReadyAgeMs(category: string, assetId: string): number | null {
+  const at = readyAt.get(meshAssetKey(category, assetId));
+  return at === undefined ? null : performance.now() - at;
+}
+
 /** Top-view feature edges (plan meters) for an asset, or null if not computed. */
 function getTopEdges(category: string, assetId: string): readonly SilSegment[] | null {
   return edges.get(meshAssetKey(category, assetId)) ?? null;
@@ -325,6 +344,7 @@ export const bimMeshCache = {
   getFillContours,
   getTopEdges,
   getSlotSilhouettes,
+  getReadyAgeMs,
   getLoadState,
   awaitInFlightScenes,
 };
@@ -337,5 +357,6 @@ export function __resetBimMeshCacheForTests(): void {
   fillContours.clear();
   edges.clear();
   slotSilhouettes.clear();
+  readyAt.clear();
   inFlightScenes.clear();
 }

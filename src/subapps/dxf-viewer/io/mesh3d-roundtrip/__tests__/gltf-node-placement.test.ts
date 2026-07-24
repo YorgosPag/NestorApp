@@ -20,6 +20,8 @@ jest.mock('../../../bim-3d/library/bim-mesh-library/bim-mesh-cache', () => ({
   bimMeshCache: {
     getInstance: (...a: unknown[]) => getInstance(...a),
     preload: (...a: unknown[]) => preload(...a),
+    // ADR-693 Φ2 — null = το asset δεν φορτώθηκε σε αυτή τη συνεδρία → κανένα πέπλο αποκάλυψης.
+    getReadyAgeMs: () => null,
     getSilhouette: jest.fn(),
     getTopEdges: jest.fn(),
   },

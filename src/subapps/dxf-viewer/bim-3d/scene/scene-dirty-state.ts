@@ -19,6 +19,12 @@ export interface SceneDirtyState {
   readonly animationManagerActive: boolean;
   /** True while path tracer renders progressive samples. */
   readonly pathTracerActive: boolean;
+  /**
+   * ADR-693 Φ2 — true όσο διαλύεται το πέπλο ενός μόλις-φορτωμένου πλέγματος. Η σκηνή είναι
+   * on-demand: χωρίς αυτή την είσοδο το fade θα «πάγωνε» στο πρώτο καρέ, αφού καμία άλλη
+   * μεταβολή δεν θα ζητούσε redraw για τα ~260ms που διαρκεί.
+   */
+  readonly meshRevealActive: boolean;
   /** Sticky flag set by mutation paths; cleared after a successful tick. */
   readonly explicitDirty: boolean;
 }
@@ -35,20 +41,22 @@ export function buildSceneDirtyState(
   animationManager: { readonly isAnimating: boolean },
   pathTracerRenderer: { readonly isActive: boolean },
   explicitDirty: boolean,
+  meshRevealActive = false,
 ): SceneDirtyState {
   return {
     isInteracting,
     viewportAnimating: viewport.isAnimating,
     animationManagerActive: animationManager.isAnimating,
     pathTracerActive: pathTracerRenderer.isActive,
+    meshRevealActive,
     explicitDirty,
   };
 }
 
 /**
  * Returns true when the BIM 3D scene must be redrawn this frame.
- * Five-input OR — order chosen for short-circuit evaluation against the
- * most common case (user input).
+ * Six-input OR — order chosen for short-circuit evaluation against the
+ * most common case (user input). ADR-693 Φ2 added `meshRevealActive`.
  */
 export function isSceneDirtyFromState(state: SceneDirtyState): boolean {
   return (
@@ -56,6 +64,7 @@ export function isSceneDirtyFromState(state: SceneDirtyState): boolean {
     state.viewportAnimating ||
     state.animationManagerActive ||
     state.pathTracerActive ||
+    state.meshRevealActive ||
     state.explicitDirty
   );
 }

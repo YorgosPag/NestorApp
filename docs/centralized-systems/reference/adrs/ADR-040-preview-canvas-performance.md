@@ -72,6 +72,29 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-07-25 — ➕ 6η είσοδος στο 3Δ scene-dirty predicate: `meshRevealActive` (ADR-693 Φ2)
+
+Το `SceneDirtyState` (`bim-3d/scene/scene-dirty-state.ts`) απέκτησε **έκτη** είσοδο,
+`meshRevealActive`, και το `buildSceneDirtyState` έκτη (προαιρετική, default `false`) παράμετρο.
+
+**Γιατί ήταν απαραίτητο:** η 3Δ σκηνή είναι **on-demand** — ζωγραφίζει μόνο όταν κάποια είσοδος
+του predicate είναι αληθής. Το progressive reveal του ADR-693 Φ2 σβήνει το πέπλο ενός
+μόλις-φορτωμένου πλέγματος σε ~260ms **χωρίς καμία άλλη μεταβολή στη σκηνή**: χωρίς αυτή την
+είσοδο το fade θα πάγωνε στο πρώτο καρέ και το πέπλο θα έμενε μισοσβησμένο πάνω στο μοντέλο.
+
+**Συμμόρφωση με τον κανόνα «ένας RAF»:** το reveal **δεν** έχει δικό του `requestAnimationFrame`.
+Ο `ThreeJsSceneManager.tick` (που οδηγείται ήδη από τον `UnifiedFrameScheduler`) καλεί
+`tickMeshReveal(now)` πριν το render, ακριβώς όπως ήδη οδηγεί τον `animationManager` και τον
+`viewport` — μηδέν δεύτερος scheduler, μηδέν νέα React subscription, μηδέν άγγιγμα orchestrator.
+
+**Αυτο-τερματισμός (κρίσιμο για την on-demand εγγύηση):** το μητρώο του reveal αδειάζει μόνο του —
+ένα πέπλο που το resync αποσύνδεσε (`parent === null`) πέφτει στο επόμενο tick. Χωρίς αυτό, το
+`meshRevealActive` θα έμενε `true` για πάντα και η σκηνή θα render-αρε **κάθε καρέ, για πάντα**
+(ακριβώς η παλινδρόμηση που φυλάει η Phase XXIII). Κλειδωμένο με test.
+
+Αρχεία: `bim-3d/scene/scene-dirty-state.ts` · `bim-3d/scene/ThreeJsSceneManager.ts` (tick + dispose)
+· NEW `bim-3d/reveal/mesh-reveal-fade.ts`. Πλήρες σκεπτικό: **ADR-693 §10**.
+
 ### 2026-07-21 (β) — ➕ armed-transform selection highlight (πορτοκαλί)
 
 `CanvasLayerStack.dxfRenderOptionsBase` υπολογίζει νέο flag `armedTransformHighlight` (twin του

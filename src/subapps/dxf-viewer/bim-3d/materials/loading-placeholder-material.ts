@@ -133,6 +133,37 @@ function buildOutline(box: THREE.BoxGeometry, mode: BackgroundMode): THREE.LineS
   return outline;
 }
 
+/**
+ * ADR-693 Φ2 — ghost **αποκάλυψης**: ίδια εμφάνιση με το ghost φόρτωσης, αλλά με **δικό του**
+ * υλικό ώστε η αδιαφάνειά του να σβήνει ανεξάρτητα (το `mesh-reveal-fade` το μεταλλάσσει και το
+ * κάνει dispose). Χωρίς περίγραμμα: στην αποκάλυψη το πραγματικό πλέγμα είναι ήδη ορατό από κάτω
+ * και μια γραμμή που σβήνει πάνω του διαβάζεται ως τεχνούργημα.
+ *
+ * **Μη επιλέξιμο** (`raycast` σβηστό): στόχος επιλογής είναι το πραγματικό πλέγμα, όχι το πέπλο
+ * που σβήνει από πάνω του — αλλιώς για ~260ms μετά τη φόρτωση τα κλικ/marquee θα χτυπούσαν ένα
+ * αντικείμενο-φάντασμα.
+ *
+ * Επιστρέφει το mesh ΚΑΙ το υλικό του, ώστε ο καλών να τα δώσει στο `registerRevealGhost` χωρίς
+ * casts (το `Mesh.material` είναι union τύπος).
+ */
+export function buildRevealGhostBox(
+  widthM: number,
+  heightM: number,
+  depthM: number,
+): { readonly mesh: THREE.Mesh; readonly material: THREE.MeshStandardMaterial } {
+  const mode = useBimRenderSettingsStore.getState().backgroundMode;
+  const material = bodyMaterial(mode).clone();
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(widthM, heightM, depthM), material);
+  mesh.castShadow = false;
+  mesh.receiveShadow = false;
+  mesh.userData[BIM_LOADING_GHOST_FLAG] = true;
+  mesh.raycast = () => {};
+  // Το πέπλο ζωγραφίζεται ΜΕΤΑ το πλέγμα (ημιδιάφανο πάνω από αδιαφανές), αλλιώς το alpha-blend
+  // γίνεται με ό,τι υπήρχε πριν στο framebuffer αντί για το ίδιο το μοντέλο.
+  mesh.renderOrder = 1;
+  return { mesh, material };
+}
+
 /** Είναι αυτό το αντικείμενο (ή παιδί ghost) placeholder φόρτωσης; */
 export function isLoadingGhost(object: THREE.Object3D): boolean {
   return object.userData[BIM_LOADING_GHOST_FLAG] === true;

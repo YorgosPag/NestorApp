@@ -34,7 +34,13 @@ import { sceneUnitsToMeters, type SceneUnits } from '../../utils/scene-units';
 import { bimMeshCache } from '../library/bim-mesh-library/bim-mesh-cache';
 // ADR-693 Άξονας Β — το «φορτώνει» ghost SSoT. Το placeholder ΔΕΝ ζωγραφίζεται πια με υλικό
 // καταλόγου (`getMaterial3D`): ένα άγνωστο matId κατέρρεε σε ΣΚΥΡΟΔΕΜΑ με σκιές (ADR-693 §2.1).
-import { buildLoadingGhostBox, isLoadingGhost } from '../materials/loading-placeholder-material';
+import {
+  buildLoadingGhostBox,
+  buildRevealGhostBox,
+  isLoadingGhost,
+} from '../materials/loading-placeholder-material';
+// ADR-693 Φ2 — progressive reveal: το ghost δεν εξαφανίζεται απότομα, διαλύεται πάνω από το πλέγμα.
+import { isRevealing, registerRevealGhost } from '../reveal/mesh-reveal-fade';
 import { stampBimIdentity } from './bim-three-shape-helpers';
 // ADR-689 Φ3 — Visual Style «Συρμάτινο»/«Κρυφή Γραμμή» για ΚΑΘΕ mesh-based οντότητα. No-op αλλού.
 import { attachMeshWireframe } from '../wireframe/attach-mesh-wireframe';
@@ -92,6 +98,12 @@ export function meshToObject3D(p: MeshPlacement): THREE.Object3D {
 
   const cached = bimMeshCache.getInstance(p.category, p.assetId);
   if (cached) {
+    // ADR-693 Φ2 — μόλις φορτώθηκε; Το τοπικό bbox διαβάζεται ΠΡΙΝ τους μετασχηματισμούς (ο κλώνος
+    // είναι ακόμη σε identity), ώστε το πέπλο να μπει ως παιδί και να ακολουθεί θέση/στροφή/κλίμακα
+    // αυτόματα. Υπολογίζεται ΜΟΝΟ όταν όντως αποκαλύπτουμε → μηδέν κόστος στη συνήθη περίπτωση.
+    const revealAgeMs = bimMeshCache.getReadyAgeMs(p.category, p.assetId);
+    const localBox = isRevealing(revealAgeMs) ? localBoxOf(cached) : null;
+
     cached.position.set(worldX, 0, worldZ);
     cached.rotation.y = rotY;
     cached.scale.setScalar(scale);
@@ -101,6 +113,7 @@ export function meshToObject3D(p: MeshPlacement): THREE.Object3D {
     const box = finiteBox3FromObject(cached);
     const anchorY = box ? (p.verticalAnchor === 'top' ? box.max.y : box.min.y) : 0;
     cached.position.y = mountingY - anchorY;
+    if (localBox && revealAgeMs !== null) attachRevealGhost(cached, localBox, revealAgeMs);
     return finalize(cached, p);
   }
 
@@ -129,6 +142,26 @@ function finalize(obj: THREE.Object3D, p: MeshPlacement): THREE.Object3D {
   tagObject(obj, p);
   attachMeshWireframe(obj);
   return obj;
+}
+
+/** Το bbox του κλώνου στο ΤΟΠΙΚΟ του σύστημα (καλείται όσο είναι ακόμη σε identity). */
+function localBoxOf(object: THREE.Object3D): THREE.Box3 | null {
+  object.updateMatrixWorld(true);
+  return finiteBox3FromObject(object);
+}
+
+/**
+ * ADR-693 Φ2 — κρεμά το πέπλο αποκάλυψης πάνω στο μόλις-φορτωμένο πλέγμα και το καταχωρεί για
+ * σβήσιμο. Παιδί του πλέγματος → κληρονομεί θέση/στροφή/κλίμακα, οπότε το πέπλο δεν μπορεί ΠΟΤΕ να
+ * ξεφύγει από το μοντέλο (καμία δεύτερη τοποθέτηση να μείνει πίσω σε μελλοντική αλλαγή placement).
+ */
+function attachRevealGhost(parent: THREE.Object3D, localBox: THREE.Box3, ageMs: number): void {
+  const size = localBox.getSize(new THREE.Vector3());
+  if (size.x <= 0 || size.y <= 0 || size.z <= 0) return;
+  const { mesh, material } = buildRevealGhostBox(size.x, size.y, size.z);
+  mesh.position.copy(localBox.getCenter(new THREE.Vector3()));
+  parent.add(mesh);
+  registerRevealGhost(mesh, material, ageMs);
 }
 
 /**

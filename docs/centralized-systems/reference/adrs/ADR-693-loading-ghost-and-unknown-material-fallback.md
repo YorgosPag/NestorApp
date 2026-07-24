@@ -1,6 +1,6 @@
 # ADR-693 — Το σιωπηλό «σκυρόδεμα» ως default υλικό + η κατάσταση φόρτωσης εισαγόμενου μοντέλου
 
-**Status:** 🟢 **Φ1 DONE (κώδικας + tests)** — 2026-07-24. jest **1205/1206** στα 4 θιγόμενα domains (131 suites)· η μοναδική αποτυχία (`face-material-catalog.test.ts`, ADR-687 Φ9 glassQuality) είναι **προϋπάρχουσα** και άσχετη. jscpd (N.18) **καθαρό σε 8 αρχεία**. Commit = Giorgio. 🔴 **Εκκρεμεί browser επαλήθευση** (βλ. §8).
+**Status:** 🟢 **Φ1 + Φ2 DONE (κώδικας + tests)** — 2026-07-25. jest **πράσινο σε 418 suites / 3905 tests** στα θιγόμενα domains — **μηδέν** γνωστές αποτυχίες (τα δύο προϋπάρχοντα κόκκινα του main διορθώθηκαν, βλ. changelog). jscpd (N.18) **καθαρό**. Commit = Giorgio. 🔴 **Εκκρεμεί browser επαλήθευση** (βλ. §8).
 **Date:** 2026-07-24
 **Owner:** Giorgio
 **Execution mode:** Plan Mode (N.8: ~9 αρχεία / 3 domains — απόφαση Giorgio 2026-07-24)
@@ -257,9 +257,57 @@ chip. Ό,τι κι αν σπάσει στο μέλλον (404 Storage URL, expir
 
 ---
 
-## 9. Changelog
+## 10. Φ2 — Progressive fade-in reveal
+
+Η Φ1 άφησε ένα σκαλοπάτι: το ghost **εξαφανιζόταν απότομα** και το πλέγμα εμφανιζόταν με pop. Η Φ2
+το κάνει crossfade ~260ms (Speckle / Autodesk APS progressive streaming· Figma skeleton→περιεχόμενο).
+
+### 10.1 Η κρίσιμη απόφαση: σβήνει το ΠΕΠΛΟ, δεν εμφανίζεται το πλέγμα
+
+Το προφανές — αδιαφάνεια του πραγματικού mesh 0→1 — είναι **λάθος εδώ, μετρημένα**:
+
+```
+bim-mesh-cache.ts:265   return template ? (template.clone(true) as THREE.Group) : null;
+```
+
+Το three.js `clone()` **ΜΟΙΡΑΖΕΤΑΙ τα υλικά** με το template. Μετάλλαξη `opacity` σε ένα instance:
+1. αλλάζει **όλα** τα instances του asset·
+2. αν το fade διακοπεί από resync, αφήνει το **cached template μόνιμα ημιδιάφανο** — μη ανακτήσιμο
+   για όλη τη συνεδρία.
+
+Το ghost αντίθετα είναι **δικό μας, per-instance, εφήμερο**. Άρα το πέπλο μπαίνει **πάνω** από το
+πλέγμα και διαλύεται. **Το πραγματικό πλέγμα δεν αγγίζεται ποτέ** (κλειδωμένο με test).
+
+### 10.2 Καμία μηχανή καταστάσεων
+
+Η αδιαφάνεια είναι **καθαρή συνάρτηση του χρόνου**: ο cache σφραγίζει `readyAt` μία φορά στο
+`indexTemplate` (το ΕΝΑ σημείο απ' όπου περνούν και το μονό asset και οι κόμβοι bundle) → ηλικία →
+πρόοδος. Ένα resync στη μέση του fade ξαναχτίζει το πέπλο με τη **σωστή υπολειπόμενη** αδιαφάνεια
+αντί να ξεκινά από την αρχή ή να κολλάει. Idempotent by construction.
+
+### 10.3 ADR-040
+
+Έκτη είσοδος `meshRevealActive` στο scene-dirty predicate + `tickMeshReveal(now)` μέσα στον
+υπάρχοντα `ThreeJsSceneManager.tick`. **Κανένα δεύτερο RAF.** Το μητρώο αυτο-αδειάζει (πέπλο με
+`parent === null` → drop), αλλιώς η on-demand σκηνή θα render-αρε για πάντα. Βλ. ADR-040 changelog
+2026-07-25.
+
+### 10.4 Λεπτομέρειες
+
+- Το πέπλο έχει το μέγεθος του **πραγματικού** bbox (τοπικό, πριν τους μετασχηματισμούς), όχι των
+  μετρημένων διαστάσεων — παιδί του πλέγματος, άρα κληρονομεί θέση/στροφή/κλίμακα.
+- `raycast` σβηστό: για ~260ms μετά τη φόρτωση τα κλικ/marquee θα χτυπούσαν αντικείμενο-φάντασμα.
+- `renderOrder = 1`: ημιδιάφανο πάνω από αδιαφανές, αλλιώς το alpha-blend γίνεται με ό,τι υπήρχε
+  πριν στο framebuffer αντί για το ίδιο το μοντέλο.
+- Χωρίς περίγραμμα (σε αντίθεση με το ghost φόρτωσης): το πλέγμα είναι ήδη ορατό από κάτω και μια
+  γραμμή που σβήνει διαβάζεται ως τεχνούργημα.
+
+---
+
+## 11. Changelog
 
 | Ημ/νία | Φάση | Τι |
 |---|---|---|
 | 2026-07-24 | — | ADR δημιουργήθηκε (Plan Mode). SSoT audit των 8 καλούντων του `resolveMaterialKey`· πρόβλημα #2 αποδείχθηκε πλήρως στον κώδικα· πρόβλημα #1 περιορίστηκε σε 2 υποψήφιους μηχανισμούς + ελεγκτής DevTools. Αναμονή «προχώρα». |
+| 2026-07-25 | **Φ2 + καθαρισμός** | **Progressive fade-in reveal (§10).** NEW `bim-3d/reveal/mesh-reveal-fade.ts` (μητρώο + tick + `isMeshRevealActive`, **αυτο-αδειάζον**)· `bim-mesh-cache` σφραγίζει `readyAt` στο `indexTemplate` + εκθέτει `getReadyAgeMs`· NEW `buildRevealGhostBox` (per-instance υλικό, `raycast` σβηστό, `renderOrder 1`)· `mesh-to-object3d` κρεμά το πέπλο σε cache hit εντός παραθύρου, στο **τοπικό bbox του πραγματικού πλέγματος**· **ADR-040:** 6η είσοδος `meshRevealActive` στο scene-dirty predicate + `tickMeshReveal` στον υπάρχοντα tick (κανένα δεύτερο RAF) + `disposeMeshReveal` στο teardown. **Δύο ΠΡΟΫΠΑΡΧΟΝΤΑ κόκκινα του main διορθώθηκαν** (εντολή Giorgio) — και τα δύο **stale tests, όχι σπασμένος κώδικας**, ίδιας οικογένειας «το συμβόλαιο άλλαξε, το test δεν ενημερώθηκε»: (α) `face-material-catalog.test.ts` απαιτούσε `transmission > 0` χωρίς να ορίζει ποιότητα γυαλιού — η ADR-687 **Φ9** πρόσθεσε `glassQuality` default `'light'` που ΣΚΟΠΙΜΑ ανταλλάσσει transmission↔opacity· τώρα ελέγχονται **και οι δύο** ποιότητες + η αποσύζευξη του export (9→**13 tests**)· (β) `build-mesh3d-scene.test.ts` διάβαζε **θέσεις ορισμάτων** (`calls[0][2]/[3]`) ενώ το `syncMultiFloor` είχε μαζέψει τα 4 params σε ΕΝΑ `FloorVisibilityScope` option-bag → διαβάζει πλέον **ονόματα πεδίων** (επιβιώνει σε κάθε μελλοντική αναδιάταξη). +4 mocks του `bimMeshCache` απέκτησαν `getReadyAgeMs`. Tests: +19. |
 | 2026-07-24 | **Φ1** | **Υλοποιήθηκε πλήρως (Άξονες Α+Β+Γ).** **Α:** NEW `resolveMaterialKeyOrNull` (ΕΝΑΣ prefix matcher· `resolveMaterialKey` + `catalogFlatColorOrNull` = wrappers, N.18) · ρητό def `elem-imported-mesh` (ουδέτερο, εκτός `MATERIAL_TEXTURE_MAP`) · τα 3 αφρούρητα σημεία (`slugForMaterialId`, `resolveThumbnailTextureSet`, `preloadThumbnailTextures`) → `null` για ξένο id. **Β:** NEW `loading-placeholder-material.ts` (ghost SSoT: ημιδιάφανο ουδέτερο ανά background mode + περίγραμμα με `raycast = () => {}`, cached, teardown μέσω `disposeMaterialCatalog3D`)· `buildPlaceholder` το καταναλώνει και έχασε την παράμετρο `matId`· `tagObject` σέβεται τη σημαία `bimLoadingGhost` αντί να ξαναγράφει σκιές. **Γ:** επικύρωση readback + **φραγμένη** ανάκτηση χαμένου GL context (μία επανάληψη μέσα στο `renderAppearanceThumbnail` — υποχρεωτικά σύγχρονη, γιατί ο καλών blacklist-άρει κάθε `null` μόνιμα)· `MaterialSwatch` `onError` → flat chip· flat fallback διαβάζει `appearance.baseColorHex` πριν το χρώμα καταλόγου. **Tests:** +37 (`material-catalog-defs` +11, `material-thumbnail-resolver` +6, `material-thumbnail-spec` +7, `mesh-to-object3d` +5, νέο `loading-placeholder-material` +12, `MaterialSwatch` +5). Ένα υπάρχον test (`slugForMaterialId('mat-marble')` → `'concrete'`) **αντικαταστάθηκε σκόπιμα** — κατοχύρωνε ρητά τη συμπεριφορά που είναι η ρίζα του σφάλματος. Pointers σε ADR-411 v1.6 + ADR-413 v1.7. |

@@ -49,6 +49,7 @@ import { WaypointDragHandleRenderer } from '../animation/WaypointDragHandle';
 import { disposeSceneManagerResources } from './scene-dispose';
 import { getWaypointHandlesRoot as wpHandlesRoot, setWaypointHoverState as wpHoverState, setWaypointDragAxisLock as wpAxisLock, pickWaypointAxisArrow as wpPickAxisArrow } from './scene-manager-waypoint';
 import { isSceneDirtyFromState, buildSceneDirtyState } from './scene-dirty-state';
+import { tickMeshReveal, isMeshRevealActive, disposeMeshReveal } from '../reveal/mesh-reveal-fade'; // ADR-693 Φ2
 import { recordRender as diagRecordRender, recordMarkDirty as diagRecordMarkDirty } from './bim3d-perf-diag'; // 🔬 ADR-549 Phase 0 (revertible)
 import { createSceneRenderingSubsystems } from './scene-rendering-subsystems';
 import { buildSceneManagerParts } from './scene-manager-construct';
@@ -260,6 +261,7 @@ export class ThreeJsSceneManager {
     }
     const delta = scheduledDelta > 0 ? scheduledDelta : now - this.lastTickTime; // deltaTime=0 on first frame → derive.
     this.lastTickTime = now;
+    tickMeshReveal(now); // ADR-693 Φ2 — πέπλο αποκάλυψης ΠΡΙΝ το render· κανένα δικό του RAF (ADR-040).
     // ADR-549 Φ3 — HOVER-ONLY fast path: blit cached beauty + redraw outline (~1-2ms), else full render.
     if (this._hoverDirty && !this._sceneDirty && renderHoverOnlyFrame(this.frameContext)) {
       this._hoverDirty = false;
@@ -275,7 +277,7 @@ export class ThreeJsSceneManager {
 
   /** ADR-040 Phase XXIII — render-gating state (SSoT for isSceneDirty + ADR-549 diag sample). */
   private dirtyState() {
-    return buildSceneDirtyState(this.isInteracting, this.viewport, this.animationManager, this.pathTracerRenderer, this._sceneDirty);
+    return buildSceneDirtyState(this.isInteracting, this.viewport, this.animationManager, this.pathTracerRenderer, this._sceneDirty, isMeshRevealActive());
   }
 
   /** ADR-040 Phase XXIII — true when the scene must be redrawn this frame (on-demand SSoT). */
@@ -476,18 +478,16 @@ export class ThreeJsSceneManager {
     this.terrainLayer.dispose(); // ADR-650 M4 — drop store subs + free the terrain mesh geometry.
     this.terrainContourLayer.dispose(); // ADR-650 M10d — drop store subs + free the contour line geometry.
     this.pointCloudLayer.dispose(); // ADR-650 M8β/Β — drop store sub + free the cloud buffers + material.
-    // ADR-040 Phase XXIII — no rafHandle: scheduler unregister happens in BimViewport3D
-    // BEFORE dispose() is invoked, guaranteeing no in-flight tick can race with teardown.
+    disposeMeshReveal(); // ADR-693 Φ2 — free any in-flight reveal veil (per-instance material + geometry).
+    // ADR-040 Phase XXIII — no rafHandle: BimViewport3D unregisters the scheduler BEFORE dispose(), so no in-flight tick races teardown.
     disposeSceneManagerResources({
       renderer: this.renderer,
       envStoreUnsub: this.envStoreUnsub, bgModeUnsub: this.bgModeUnsub, focusUnsub: this.focusUnsub,
       sectionController: this.sectionController,
       waypointDragHandleRenderer: this.waypointDragHandleRenderer,
       animationManager: this.animationManager,
-      focusOutlineRenderer: this.focusOutlineRenderer,
-      keyboardFocusManager: this.keyboardFocusManager,
-      idleDetector: this.idleDetector, qualityModulator: this.qualityModulator,
-      shadowModulator: this.shadowModulator,
+      focusOutlineRenderer: this.focusOutlineRenderer, keyboardFocusManager: this.keyboardFocusManager,
+      idleDetector: this.idleDetector, qualityModulator: this.qualityModulator, shadowModulator: this.shadowModulator,
       pathTracerRenderer: this.pathTracerRenderer, ssaoModulator: this.ssaoModulator,
       envmapGenerator: this.envmapGenerator,
       performanceCollector: this.performanceCollector,
