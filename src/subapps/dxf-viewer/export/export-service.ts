@@ -32,6 +32,9 @@ import {
   type DxfExportOptions,
 } from './formats/dxf-export-adapter';
 import { resolveImageFillsForDxf } from './core/image-fill-export';
+// ADR-689 — async pre-pass: εισαγόμενα πλέγματα → πραγματικά `3DFACE` (τα τρίγωνα ζουν στο async
+// `bimMeshCache`, όχι στο entity). Καθρέφτης του image-fill pre-pass παρακάτω.
+import { buildImportedMeshFaceCarriers } from './core/imported-mesh-faces';
 // ADR-651 Φάση Ε — δεύτερος async pre-pass (ImageEntity, «γυμνή» εικόνα)· τρέχει ΜΕΤΑ το hatch
 // image-fill pre-pass ώστε να συνθέτονται (κάθε ένα αγγίζει μόνο το δικό του entity type — μηδέν
 // αλληλοεπικάλυψη marker).
@@ -42,9 +45,10 @@ import { exportFloorsToMesh3d } from './formats/mesh3d-export-adapter';
 import { useDrawingScaleStore } from '../state/drawing-scale-store';
 import type { DxfExportSceneRequest } from '../types/dxf-export.types';
 import type {
-  DxfImageFillMode, DxfLineMode, ExportArtifact, ExportDeps, ExportRequest, ExportResult,
-  Mesh3dFormat,
+  DxfImageFillMode, DxfLineMode, DxfMeshDetailMode, ExportArtifact, ExportDeps, ExportRequest,
+  ExportResult, Mesh3dFormat,
 } from './types';
+import type { Entity } from '../types/entities';
 
 export async function runExport(
   request: ExportRequest,
@@ -185,6 +189,14 @@ async function runDxfExport(
   deps: ExportDeps,
 ): Promise<ExportResult> {
   const floors = resolveExportFloors(deps.levelScenes, deps.activeLevelId, request.floorScope);
+  // ADR-689 — εισαγόμενα πλέγματα → σμιλεμένα `3DFACE` (default) vs bounding-box. Στο mesh mode
+  // ένας async pre-pass φορτώνει τα glTF ΜΙΑ φορά για ΟΛΟΥΣ τους ορόφους και χτίζει τα carriers
+  // (τα τρίγωνα ζουν στο async `bimMeshCache`)· ο decompose μετά τα εγχέει sync.
+  const meshDetail: DxfMeshDetailMode = request.dxfMeshDetail ?? 'mesh';
+  const meshFaceCarriersById: ReadonlyMap<string, Entity[]> = meshDetail === 'mesh'
+    ? await buildImportedMeshFaceCarriers(floors.flatMap((f) => f.scene.entities))
+    : new Map<string, Entity[]>();
+
   const dxfOptions: DxfExportOptions = {
     entityScope: request.entityScope,
     version: request.dxfVersion,
@@ -193,13 +205,17 @@ async function runDxfExport(
     baseName: deps.projectName,
     // ADR-583/608 — live annotation scale so exported symbols keep their printed size.
     drawingScale: useDrawingScaleStore.getState().drawingScale,
+    meshDetail,
+    meshFaceCarriersById,
   };
   // ADR-643 Φ5b — image-fill hatch export mode (solid-downgrade default / faithful IMAGE + zip raster).
   const imageMode: DxfImageFillMode = request.dxfImageFillMode ?? 'solid';
 
   // all-single → one merged DXF across every floor.
   if (request.floorScope === 'all-single') {
-    const merged = mergeFloorsToSingleDxfScene(floors, request.entityScope, request.dxfLineMode);
+    const merged = mergeFloorsToSingleDxfScene(floors, request.entityScope, request.dxfLineMode, {
+      meshDetail, meshFaceCarriersById,
+    });
     const { request: dxfReq, warnings } = buildDxfExportRequest(merged.scene, dxfOptions);
     const rendered = await renderDxfWithImages(dxfReq, request.dxfLineMode, imageMode);
     const finalName = buildFloorFilename(deps.projectName, 'all-floors', 'dxf');

@@ -24,6 +24,7 @@
 
 import * as THREE from 'three';
 import type { Point2D } from '../../rendering/types/Types';
+import type { HatchEntity } from '../../types/entities';
 
 /** Μία κορυφή 3D face: x/y σε scene units, z σε χιλιοστά (mm). */
 export interface Fill3DCorner {
@@ -34,6 +35,42 @@ export interface Fill3DCorner {
 
 /** Ένα planar face (3 ή 4 κορυφές) έτοιμο για DXF `3DFACE`. */
 export type Fill3DFace = readonly Fill3DCorner[];
+
+/**
+ * HATCH carrier (patternType:'solid') + προ-υπολογισμένα 3D faces (ADR-505 §C). Ο writer
+ * (`dxf-ascii-entity-dispatch`) εκπέμπει ΕΝΑ `3DFACE` ανά face όταν βλέπει `dxfFaces`, αγνοώντας
+ * τα `boundaryPaths` — αυτά μένουν έγκυρα μόνο για το PDF/vector fill path.
+ */
+export interface SolidFacesHatch extends HatchEntity {
+  readonly dxfFaces: readonly Fill3DFace[];
+}
+
+/**
+ * ΕΝΑ SSoT για το «solid HATCH που κουβαλά έτοιμα 3D faces» — καταναλώνεται και από το
+ * structural body/finish fill (`overlay-dxf-collector`) και από την εξαγωγή εισαγόμενου πλέγματος
+ * (`imported-mesh-faces`, ADR-689), ώστε τα δύο να μη γίνουν sibling clones (N.18). Το `boundary`
+ * είναι πληροφοριακό (ο writer χρησιμοποιεί τα `faces`).
+ */
+export function makeSolidFacesHatch(
+  id: string,
+  layerId: string,
+  color: string,
+  boundary: readonly Point2D[],
+  faces: readonly Fill3DFace[],
+): SolidFacesHatch {
+  return {
+    id,
+    type: 'hatch',
+    layerId,
+    color,
+    fillColor: color,
+    visible: true,
+    patternType: 'solid',
+    patternName: 'SOLID',
+    boundaryPaths: [boundary],
+    dxfFaces: faces,
+  };
+}
 
 /** Drop a trailing point that duplicates the first (closed ring → open contour). */
 function openRing(ring: readonly Point2D[]): Point2D[] {

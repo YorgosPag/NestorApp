@@ -25,6 +25,7 @@ import type {
   ExportRequest,
   DxfLineMode,
   DxfImageFillMode,
+  DxfMeshDetailMode,
   TekSymbolMode,
   TekHatchMode,
   ExportLengthUnit,
@@ -54,6 +55,8 @@ export interface ExportDialogState {
   setDxfLineMode: (m: DxfLineMode) => void;
   dxfImageFillMode: DxfImageFillMode;
   setDxfImageFillMode: (m: DxfImageFillMode) => void;
+  dxfMeshDetail: DxfMeshDetailMode;
+  setDxfMeshDetail: (m: DxfMeshDetailMode) => void;
   tekSymbolMode: TekSymbolMode;
   setTekSymbolMode: (m: TekSymbolMode) => void;
   tekHatchMode: TekHatchMode;
@@ -78,6 +81,9 @@ export function useExportDialogState(): ExportDialogState {
   // ADR-643 Φ5b — image-fill hatch export mode. Default 'solid' (Ελαφρύ: μέσο χρώμα, πάντα
   // ανοίγει, single-file). Switch to 'image' για πιστό tiled IMAGE + raster bundled σε zip.
   const [dxfImageFillMode, setDxfImageFillMode] = React.useState<DxfImageFillMode>('solid');
+  // ADR-689 — εισαγόμενο πλέγμα: default 'mesh' (σμιλεμένα 3Δ τρίγωνα → 3DFACE, όπως στον 3Δ καμβά).
+  // 'bbox' → το ιστορικό bounding-box κουτί (ελαφρύ, διαφυγή για πολύ πυκνά πλέγματα).
+  const [dxfMeshDetail, setDxfMeshDetail] = React.useState<DxfMeshDetailMode>('mesh');
   // Default 'native' — annotation symbols → ΕΝΑ built-in Tekton object (ενιαίο πακέτο).
   // Switch to 'geometry' to keep our exact glyph geometry (grouped with tags).
   const [tekSymbolMode, setTekSymbolMode] = React.useState<TekSymbolMode>('native');
@@ -102,6 +108,7 @@ export function useExportDialogState(): ExportDialogState {
       dxfUnit: format === 'dxf' ? dxfUnit : undefined,
       dxfLineMode: format === 'dxf' ? dxfLineMode : undefined,
       dxfImageFillMode: format === 'dxf' ? dxfImageFillMode : undefined,
+      dxfMeshDetail: format === 'dxf' ? dxfMeshDetail : undefined,
       tekSymbolMode: format === 'tek' ? tekSymbolMode : undefined,
       tekHatchMode: format === 'tek' ? tekHatchMode : undefined,
       // ADR-668/678 — OBJ & COLLADA carry an explicit unit; glTF is spec-locked to metres, so
@@ -110,7 +117,7 @@ export function useExportDialogState(): ExportDialogState {
     }),
     [
       format, entityScope, floorScope, dxfVersion, dxfUnit, dxfLineMode, dxfImageFillMode,
-      tekSymbolMode, tekHatchMode, mesh3dUnit,
+      dxfMeshDetail, tekSymbolMode, tekHatchMode, mesh3dUnit,
     ],
   );
 
@@ -129,6 +136,8 @@ export function useExportDialogState(): ExportDialogState {
     setDxfLineMode,
     dxfImageFillMode,
     setDxfImageFillMode,
+    dxfMeshDetail,
+    setDxfMeshDetail,
     tekSymbolMode,
     setTekSymbolMode,
     tekHatchMode,

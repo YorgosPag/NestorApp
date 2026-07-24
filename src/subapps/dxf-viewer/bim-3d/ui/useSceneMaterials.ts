@@ -7,44 +7,69 @@
  * `setLevelScene`) με `useSyncExternalStore` + version-gate (mirror `systems/scene/scene-selectors.ts`):
  * ο συλλέκτης `collectSceneAppearanceRefs` τρέχει το πολύ ΜΙΑ φορά ανά mutation, όχι ανά render.
  *
+ * **Floor scope (ADR-687 Φ8 follow-up):** η μπάρα είναι scoped στην ενεργή προβολή, όπως Revit «Project
+ * Materials in use» / C4D Material Manager / ArchiCAD Attribute Manager. Το SSoT signal είναι το
+ * `ViewMode3DStore.floor3DScope`:
+ *   - `'single'` → μόνο τα υλικά των οντοτήτων του τρέχοντος ορόφου (`getSceneForLevel(currentLevelId)`).
+ *   - `'all'` → όλα τα υλικά όλων των ορόφων (`getSceneRecord()`).
+ * Ο collector μένει ΕΝΑΣ (SSoT) — του δίνουμε scoped record (thin wrap), δεν τον διπλασιάζουμε.
+ *
  * Το αποτέλεσμα = ο κοινός `LibraryEntry` index (SSoT, `material-library-index.ts`) φιλτραρισμένος σε
  * ό,τι είναι ρητά βαμμένο στη σκηνή, + synth entries για ad-hoc `colorHex` (raw drag/imported χρώματα
  * εκτός καταλόγου) ώστε κάθε βαμμένη όψη να έχει το swatch της. Έτσι το render/apply/drag της μπάρας
- * μένει το ΙΔΙΟ με πριν — αλλάζει μόνο ΠΟΙΑ υλικά τροφοδοτεί (σκηνή αντί όλο το palette).
+ * μένει το ΙΔΙΟ με πριν — αλλάζει μόνο ΠΟΙΑ υλικά τροφοδοτεί (σκηνή scoped αντί όλο το palette).
  *
  * @see ./material-library-index.ts — ο index (γενική βιβλιοθήκη)
  * @see ./scene-material-usage.ts — ο pure συλλέκτης refs
+ * @see ../stores/ViewMode3DStore.ts — `floor3DScope` SSoT signal
  */
 
-import { useMemo, useSyncExternalStore } from 'react';
+import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import type { TFunction } from 'i18next';
-import { subscribeScene, getSceneRecord, getSceneVersion } from '../../systems/scene/SceneStore';
-import type { BimMaterial } from '../../bim/types/bim-material-types';
 import {
-  collectSceneAppearanceRefs,
-  EMPTY_SCENE_REFS,
-  type SceneAppearanceRefs,
-} from './scene-material-usage';
+  subscribeScene,
+  getSceneRecord,
+  getSceneForLevel,
+  getSceneVersion,
+} from '../../systems/scene/SceneStore';
+import type { SceneModel } from '../../types/scene';
+import type { BimMaterial } from '../../bim/types/bim-material-types';
+import { useViewMode3DStore, selectFloor3DScope, type Floor3DScope } from '../stores/ViewMode3DStore';
+import { collectSceneAppearanceRefs, type SceneAppearanceRefs } from './scene-material-usage';
 import { buildMaterialLibraryEntries, type LibraryEntry } from './material-library-index';
 
-// Version-gated snapshot cache (mirror scene-selectors.ts): recompute only when the store's
-// mutation counter advanced, and return the SAME ref otherwise so useSyncExternalStore is stable.
-let cachedVersion = -1;
-let cachedRefs: SceneAppearanceRefs = EMPTY_SCENE_REFS;
+// Version-gated snapshot cache keyed by scope+level (mirror scene-selectors.ts::byIdCache): recompute
+// only when the store's mutation counter advanced OR the scope/active level changed, and return the
+// SAME ref otherwise so useSyncExternalStore stays stable. Any scene mutation bumps getSceneVersion(),
+// invalidating every key — so a stale «other floor» key can never survive an edit.
+const refsCache = new Map<string, { version: number; refs: SceneAppearanceRefs }>();
 
-function getRefsSnapshot(): SceneAppearanceRefs {
+/** Cache key: μόνο ο scope+level επηρεάζουν ΠΟΙΟΝ record απαριθμούμε. */
+function scopeKey(scope: Floor3DScope, currentLevelId: string | null): string {
+  return scope === 'all' ? 'all' : `single|${currentLevelId ?? ''}`;
+}
+
+/** Τα refs για το ενεργό scope — `all` = όλοι οι όροφοι· `single` = μόνο ο τρέχων. */
+function getScopedRefs(scope: Floor3DScope, currentLevelId: string | null): SceneAppearanceRefs {
   const version = getSceneVersion();
-  if (version !== cachedVersion) {
-    cachedRefs = collectSceneAppearanceRefs(getSceneRecord());
-    cachedVersion = version;
-  }
-  return cachedRefs;
+  const key = scopeKey(scope, currentLevelId);
+  const cached = refsCache.get(key);
+  if (cached && cached.version === version) return cached.refs;
+
+  const record: Readonly<Record<string, SceneModel | null>> =
+    scope === 'all'
+      ? getSceneRecord()
+      : currentLevelId
+        ? { [currentLevelId]: getSceneForLevel(currentLevelId) }
+        : {};
+  const refs = collectSceneAppearanceRefs(record);
+  refsCache.set(key, { version, refs });
+  return refs;
 }
 
 /** Test-only: reset the module cache (the store version resets to 0 between tests). */
 export function _resetSceneMaterialsCacheForTests(): void {
-  cachedVersion = -1;
-  cachedRefs = EMPTY_SCENE_REFS;
+  refsCache.clear();
 }
 
 /** synth entry για ένα ad-hoc χρώμα (colorHex χωρίς αντίστοιχο catalog/paint id). */
@@ -62,13 +87,22 @@ function adhocColorEntry(colorHex: string): LibraryEntry {
 
 /**
  * Τα υλικά που περιέχει η σκηνή, ως `LibraryEntry[]` (ίδιο render/apply με τη βιβλιοθήκη). Reactive
- * και στη σκηνή (paint) και στη βιβλιοθήκη (`library`) — ένα νέο υλικό βαμμένο εμφανίζεται αμέσως.
+ * στη σκηνή (paint), στη βιβλιοθήκη (`library`) ΚΑΙ στο floor scope — αλλαγή ορόφου ή `single`↔`all`
+ * επαναφιλτράρει άμεσα. `currentLevelId`: ο ενεργός όροφος (αγνοείται όταν το scope είναι `'all'`).
  */
 export function useSceneMaterials(
   library: readonly BimMaterial[],
   t: TFunction,
+  currentLevelId: string | null,
 ): LibraryEntry[] {
-  const refs = useSyncExternalStore(subscribeScene, getRefsSnapshot, getRefsSnapshot);
+  const scope = useViewMode3DStore(selectFloor3DScope);
+  // getSnapshot κλείνει πάνω στο (scope, currentLevelId): αλλαγή τους → νέα ταυτότητα → το
+  // useSyncExternalStore ξαναδιαβάζει τα scoped refs (χωρίς να περιμένει scene mutation).
+  const getSnapshot = useCallback(
+    () => getScopedRefs(scope, currentLevelId),
+    [scope, currentLevelId],
+  );
+  const refs = useSyncExternalStore(subscribeScene, getSnapshot, getSnapshot);
 
   return useMemo(() => {
     const index = buildMaterialLibraryEntries(library, t);

@@ -46,6 +46,9 @@ const LINE_MODE_OPTIONS = ['polyline', 'lines'] as const;
 // ADR-643 Φ5b — image-fill hatch export: 'solid' (Ελαφρύ, μέσο χρώμα, single-file) / 'image'
 // (Πιστό, tiled IMAGE + raster bundled σε ZIP). Default 'solid' (πάντα ανοίγει).
 const IMAGE_FILL_MODE_OPTIONS = ['solid', 'image'] as const;
+// ADR-689 — εισαγόμενο πλέγμα: 'mesh' (Λεπτομερής μορφή, σμιλεμένα 3DFACE — default) / 'bbox'
+// (Απλό κουτί, ελαφρύ bounding-box). Default 'mesh' (σμιλεμένος όγκος όπως στον 3Δ καμβά).
+const MESH_DETAIL_OPTIONS = ['mesh', 'bbox'] as const;
 const TEK_SYMBOL_MODE_OPTIONS = ['native', 'geometry'] as const;
 /** ADR-648 Στάδιο Ε — native μοτίβο Τέκτονα (ελαφρύ) vs αποδομημένες γραμμές (πλήρης ταύτιση). */
 const TEK_HATCH_MODE_OPTIONS = ['native', 'exploded'] as const;
@@ -168,6 +171,20 @@ export function ExportDialog({ open, onOpenChange, onSubmit }: ExportDialogProps
                 <SelectContent>
                   {IMAGE_FILL_MODE_OPTIONS.map((m) => (
                     <SelectItem key={m} value={m}>{t(`export.imageFillModes.${m}`)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+          )}
+
+          {/* ADR-689 — εισαγόμενο 3Δ πλέγμα: «Λεπτομερής μορφή» (σμιλεμένα 3DFACE) vs «Απλό κουτί». */}
+          {isDxf && (
+            <Field label={t('export.dxfMeshDetail')}>
+              <Select value={state.dxfMeshDetail} onValueChange={(v) => state.setDxfMeshDetail(v as NonNullable<ExportRequest['dxfMeshDetail']>)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {MESH_DETAIL_OPTIONS.map((m) => (
+                    <SelectItem key={m} value={m}>{t(`export.meshDetailModes.${m}`)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

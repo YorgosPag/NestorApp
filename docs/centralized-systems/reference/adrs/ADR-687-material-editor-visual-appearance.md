@@ -439,3 +439,27 @@ dispose pattern) σε νέο μικρό `MaterialPreviewSphereRenderer`, χωρ�
     stashes σε backup tags). **Μάθημα: ΠΟΤΕ `git stash pop`.**
   - 🔴 **Εκκρεμεί browser verify Giorgio:** βάψε γυαλί σε κολώνα → (α) Ελαφρό = διάφανο χωρίς refraction, ομαλή περιστροφή·
     (β) Ακριβές = refraction, βαρύτερο· (γ) editor swatch/σφαίρα = πάντα refraction· (δ) export = ακριβές ανεξάρτητα από toggle.
+- **2026-07-24 (Opus 4.8) — Φ8 follow-up: κάτω μπάρα «Υλικά όψης» scoped ανά όροφο (floor scope, UNCOMMITTED).**
+  Πρόβλημα (Giorgio, repro `KAREKLA-3.glb` στον 1ο όροφο): η μπάρα έδειχνε **όλα** τα υλικά **όλων** των ορόφων, ανεξάρτητα
+  από τον επιλεγμένο όροφο (π.χ. `bmat_*`/`paint-*` της καρέκλας HMI_Aeron που ζει στο Ισόγειο εμφανίζονταν και στον 1ο).
+  **Big-player parity:** Revit «Project Materials in use» / C4D Material Manager / ArchiCAD Attribute Manager είναι **πάντα
+  scoped στην ενεργή προβολή**. **Root cause:** το `useSceneMaterials` καλούσε `collectSceneAppearanceRefs(getSceneRecord())`
+  — ΟΛΟ το `Record<levelId, SceneModel>`, με module cache keyed **μόνο** στο `getSceneVersion()` (καμία επίγνωση ορόφου).
+  **SSoT signal (υπάρχον, ΟΧΙ νέο flag):** `ViewMode3DStore.floor3DScope` (`'single'|'all'`, ήδη καταναλώνεται από
+  cut-plane/terrain/dxf-overlay). **Fix — scope-aware feed, μηδέν διπλότυπο του collector:**
+  1. `bim-3d/ui/useSceneMaterials.ts` — 3η παράμετρος `currentLevelId`· subscribe στο `floor3DScope`
+     (`useViewMode3DStore(selectFloor3DScope)`)· `getSnapshot` γίνεται `useCallback([scope, currentLevelId])` ώστε αλλαγή
+     scope/ορόφου να επαναδιαβάζει scoped refs **χωρίς** να περιμένει scene mutation. Το module cache έγινε
+     `Map<key,{version,refs}>` keyed `all` ή `single|<levelId>` (μίμηση `scene-selectors.ts::byIdCache` — υπάρχον
+     version-gate pattern). Scoped record: `all` → `getSceneRecord()`· `single` → `{ [currentLevelId]: getSceneForLevel(...) }`
+     (thin wrap — **ο collector μένει ΕΝΑΣ SSoT**, δεν διπλασιάστηκε). Κάθε scene mutation bump-άρει το version →
+     invalidate όλων των keys (stale «άλλου ορόφου» ref αδύνατο μετά από edit).
+  2. `bim-3d/ui/PolygonMaterialPanel.tsx` — πέρασε `levels?.currentLevelId ?? null` στο `useSceneMaterials` (το panel το είχε ήδη).
+  3. `bim-3d/ui/scene-material-usage.ts` — **ΚΑΜΙΑ αλλαγή** (collector = SSoT απαρίθμηση, τροφοδοτείται scoped record).
+  - **Big-player σημείωση:** μόνο το scene-materials feed (`sceneEntries`) φιλτράρεται· το finish palette (`finishEntries`)
+    μένει fixed (δεν είναι «in-use», είναι διαθέσιμες μπογιές). Το ADR-688 highlight (`resolveEntityAppearanceRefs` via
+    `useSceneEntityById(currentLevelId,…)`) ήταν ήδη current-level scoped → **ανέπαφο**.
+  - **Tests:** NEW `bim-3d/ui/__tests__/useSceneMaterials.floor-scope.test.tsx` (5: single→μόνο τρέχων· all→όλα· scope
+    switch invalidation χωρίς mutation· αλλαγή ορόφου· null level→κενό) **5/5**· `scene-material-usage.test.ts` αμετάβλητο.
+    `jscpd:diff` καθαρό (2). **ΟΧΙ tsc (N.17).** 🔴 Εκκρεμεί browser verify Giorgio (import στον 1ο όροφο → η μπάρα δεν
+    δείχνει πια υλικά Ισογείου· «Όλοι οι όροφοι» → όλα).

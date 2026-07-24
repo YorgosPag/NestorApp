@@ -18,10 +18,16 @@
 
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
-import { fillRingsEvenOdd } from './bim-polygon-render';
+import { fillRingsEvenOdd, tracePolygonScreenPath } from './bim-polygon-render';
 import type { SilPoint, SilSegment } from '../mesh-library/mesh-silhouette';
 
 const M_TO_MM = 1000;
+
+/**
+ * Dash pattern (px) του «loading» provisional outline — διακριτικός, σκόπιμα διαφορετικός από το solid
+ * τελικό περίγραμμα. Σημαίνει «το πλέγμα φορτώνει, το σχήμα έρχεται» (ADR-683 render-driven preload).
+ */
+const LOADING_DASH: readonly number[] = [6, 4];
 
 /** Plan transform of the placed entity (insertion point + rotation + units). */
 export interface MeshSilhouetteTransform {
@@ -207,6 +213,46 @@ export function drawMeshSlotSilhouettes(args: DrawMeshSlotSilhouettesArgs): bool
     }
   }
   return drew;
+}
+
+export interface DrawMeshFallbackBoxArgs {
+  readonly ctx: CanvasRenderingContext2D;
+  readonly worldToScreen: (p: { x: number; y: number }) => { x: number; y: number };
+  /** The measured/authored footprint polygon (world coords). */
+  readonly vertices: ReadonlyArray<{ x: number; y: number }>;
+  /** Only the outline stroke + translucent fill are used here (no interior edges). */
+  readonly palette: Pick<MeshSilhouettePalette, 'stroke' | 'fill'>;
+  readonly lineWidth: number;
+  /**
+   * `true` ⇒ το `.glb` **φορτώνει τώρα** (cache-miss + preload σε εξέλιξη): το περίγραμμα βάφεται
+   * **dashed** (provisional «το σχήμα έρχεται»). `false` ⇒ solid (idle/error/unknown-shape κουτί).
+   */
+  readonly loading: boolean;
+}
+
+/**
+ * ADR-683 — placeholder του **μετρημένου** bbox όσο δεν υπάρχει ακόμη cached silhouette. Κοινός SSoT για
+ * `ImportedMeshRenderer` + `FurnitureRenderer` (πριν ήταν δύο σχεδόν ταυτόσημα inline blocks, N.18):
+ * translucent fill + outline stroke. Όταν το πλέγμα φορτώνει (`loading`), το outline γίνεται **dashed** —
+ * διακριτικό «loading» affordance μέχρι το `bimMeshCache.preload` να λύσει και το `markAllCanvasDirty` να
+ * ξαναβάψει με το πραγματικό silhouette (μηδέν 3Δ roundtrip). Pure drawing — καμία store subscription (ADR-040).
+ */
+export function drawMeshFallbackBox(args: DrawMeshFallbackBoxArgs): void {
+  const { ctx, worldToScreen, vertices, palette, lineWidth, loading } = args;
+  if (vertices.length < 3) return;
+
+  // Fill. FULL SSoT (bim-body-fill) — κοινό adaptive layer με όλα τα BIM body fills.
+  ctx.fillStyle = adaptFillTintForCanvas(palette.fill);
+  tracePolygonScreenPath(ctx, worldToScreen, vertices);
+  ctx.fill();
+
+  // Outline — dashed provisional όσο φορτώνει, αλλιώς solid.
+  ctx.strokeStyle = palette.stroke;
+  ctx.lineWidth = lineWidth;
+  ctx.setLineDash(loading ? [...LOADING_DASH] : []);
+  tracePolygonScreenPath(ctx, worldToScreen, vertices);
+  ctx.stroke();
+  ctx.setLineDash([]);
 }
 
 function tracePolygon(

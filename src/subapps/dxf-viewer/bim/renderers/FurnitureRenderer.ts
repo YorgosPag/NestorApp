@@ -16,7 +16,6 @@
 
 import { BimFootprintRenderer } from './bim-footprint-renderer';
 import { polygonBboxHitTest, mapBimGrips } from './bim-polygon-render';
-import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
 import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../rendering/types/Types';
 import { isFurnitureEntity } from '../../types/entities';
 import type { FurnitureEntity } from '../types/furniture-types';
@@ -26,7 +25,7 @@ import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { getLayer } from '../../stores/LayerStore';
 import { bimMeshCache } from '../../bim-3d/library/bim-mesh-library/bim-mesh-cache';
-import { drawMeshSilhouette } from './mesh-silhouette-draw';
+import { drawMeshSilhouette, drawMeshFallbackBox } from './mesh-silhouette-draw';
 import { getFurnitureGrips } from '../furniture/furniture-grips';
 import { gripGlyphShape } from '../grips/grip-glyph-registry';
 import { gripKindOf } from '../../hooks/grip-kinds';
@@ -71,15 +70,19 @@ export class FurnitureRenderer extends BimFootprintRenderer {
     });
 
     if (!drew) {
-      // Authored footprint rectangle + generic glyph (diagonal cross).
-      // FULL SSoT (bim-body-fill) — κοινό adaptive layer με όλα τα BIM body fills.
-      this.ctx.fillStyle = adaptFillTintForCanvas(FURNITURE_PALETTE.fill);
-      this.drawPolygonPath(verts);
-      this.ctx.fill();
-      this.ctx.strokeStyle = FURNITURE_PALETTE.stroke;
-      this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
-      this.drawPolygonPath(verts);
-      this.ctx.stroke();
+      // Cache-miss → πυροδότησε το lazy glTF load (καθρέφτης `MepFixtureRenderer.ts:111` / ImportedMesh).
+      // Idempotent + de-duped· το `markAllCanvasDirty` του cache ξαναβάφει το 2Δ μόλις φορτώσει το silhouette →
+      // μηδέν 3Δ roundtrip. Authored rectangle (dashed όσο φορτώνει) + generic glyph μέχρι τότε.
+      if (assetId) bimMeshCache.preload(FURNITURE_MESH_CATEGORY, assetId);
+      const loading = bimMeshCache.getLoadState(FURNITURE_MESH_CATEGORY, assetId) === 'loading';
+      drawMeshFallbackBox({
+        ctx: this.ctx,
+        worldToScreen: (p) => this.worldToScreen(p),
+        vertices: verts,
+        palette: FURNITURE_PALETTE,
+        lineWidth: RENDER_LINE_WIDTHS.NORMAL,
+        loading,
+      });
       this.drawDiagonals(verts);
     }
 

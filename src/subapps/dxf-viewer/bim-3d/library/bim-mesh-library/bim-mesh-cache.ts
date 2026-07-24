@@ -303,6 +303,21 @@ function getLoadState(category: string, assetId: string): MeshAssetLoadState {
   return status.get(key) ?? 'idle';
 }
 
+/**
+ * ADR-689 — headless prewarm drain (καθρέφτης του `awaitInFlightTextureSets`, ADR-679). Resolves
+ * όταν κάθε ΤΡΕΧΟΥΣΑ λήψη αρχείου έχει ολοκληρωθεί (success ή error), επιστρέφοντας το πλήθος. Zero
+ * ⇒ τίποτα δεν φόρτωνε (όλα cached ή κανένα). Ποτέ δεν κάνει reject — κάθε λήψη εξουδετερώνεται εδώ,
+ * και ο caller αντιμετωπίζει ένα cache miss ως fallback (bbox), όχι σφάλμα.
+ *
+ * Χρήση (DXF export, ADR-689): `preload(...)` για κάθε εισαγόμενο πλέγμα → `await awaitInFlightScenes()`
+ * → `getInstance(...)` επιστρέφει το πραγματικό πλέγμα (τα `.then(indexTemplate)` του `preload` τρέχουν
+ * ΠΡΙΝ αυτό το drain, αφού καταχωρήθηκαν νωρίτερα στο ΙΔΙΟ promise).
+ */
+function awaitInFlightScenes(): Promise<number> {
+  const pending = [...inFlightScenes.values()];
+  return Promise.all(pending.map((p) => p.catch(() => undefined))).then(() => pending.length);
+}
+
 export const bimMeshCache = {
   preload,
   getInstance,
@@ -311,6 +326,7 @@ export const bimMeshCache = {
   getTopEdges,
   getSlotSilhouettes,
   getLoadState,
+  awaitInFlightScenes,
 };
 
 /** Test-only — reset cache between specs. */

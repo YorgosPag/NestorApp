@@ -85,6 +85,16 @@ export type DxfLineMode = 'polyline' | 'lines';
 export type DxfImageFillMode = 'solid' | 'image';
 
 /**
+ * ADR-689 — πώς εξάγεται ένα ΕΙΣΑΓΟΜΕΝΟ πλέγμα (glb/obj/gltf) στο DXF. Τα πραγματικά τρίγωνά του
+ * ζουν στο `bimMeshCache`, όχι στο entity· ο default exporter έβγαζε μόνο το bounding-box footprint
+ * (ένα κουτί). Απόφαση Giorgio (2026-07-24): διακόπτης χρήστη, default «σμιλεμένο».
+ *   'mesh' → **Λεπτομερής μορφή (default)**: τα πραγματικά 3Δ τρίγωνα του πλέγματος ως `3DFACE`
+ *            (σμιλεμένος όγκος, όπως στον 3Δ καμβά)· βαρύτερο αρχείο (χιλιάδες `3DFACE`).
+ *   'bbox' → **Απλό κουτί**: το ιστορικό footprint bounding-box (ελαφρύ)· διαφυγή για πυκνά πλέγματα.
+ */
+export type DxfMeshDetailMode = 'mesh' | 'bbox';
+
+/**
  * ADR-608 — πώς μεταφέρονται τα annotation symbols στο `.tek`:
  *   'native'   → σύμβολα με built-in Tekton equivalent γίνονται ΕΝΑ type-7 `<object>`
  *                (ενιαίο επιλέξιμο πακέτο, native εμφάνιση Τέκτονα, portable).
@@ -127,6 +137,8 @@ export interface ExportRequest {
   readonly dxfLineMode?: DxfLineMode;
   /** ADR-643 Φ5b — image-fill hatch export mode (solid-downgrade default / faithful IMAGE). */
   readonly dxfImageFillMode?: DxfImageFillMode;
+  /** ADR-689 — εισαγόμενο πλέγμα: σμιλεμένα 3Δ τρίγωνα (`mesh`, default) vs bounding-box (`bbox`). */
+  readonly dxfMeshDetail?: DxfMeshDetailMode;
 
   /** TEK-specific — annotation symbol transfer mode (native objects vs geometry). */
   readonly tekSymbolMode?: TekSymbolMode;

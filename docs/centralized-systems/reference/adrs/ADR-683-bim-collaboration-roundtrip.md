@@ -647,6 +647,35 @@ embedded/textured/anonymous → `side === DoubleSide` + look preserved· overrid
 
 ## 11. Changelog
 
+- **2026-07-24 (§2d-silhouette-no-3d-roundtrip — φρέσκια εισαγωγή δείχνει σμιλεμένο 2Δ **αμέσως**, χωρίς
+  3Δ roundtrip — IMPLEMENTED UNCOMMITTED, 🔴 browser verify).** **Bug:** μετά την εισαγωγή ενός `.glb`
+  (π.χ. `KAREKLA-3.glb`), αν ο χρήστης έμενε στον 2Δ καμβά, τα mesh εμφανίζονταν ως ορθογώνια **κουτιά**
+  (bbox)· σμιλεύονταν μόνο αφού πήγαινε 3Δ και ξαναγύριζε. **Ρίζα (grep-verified):** το 2Δ silhouette ζει
+  στο `bimMeshCache` και γεμίζει **μόνο** μέσω του async `preload()` (που στο resolve καλεί
+  `markAllCanvasDirty()` → auto-repaint, ADR-040). Στην παραγωγή, `preload` το καλούσαν **μόνο** ο 3Δ
+  converter (`bim-3d/converters/mesh-to-object3d.ts:105`) και ο `MepFixtureRenderer.ts:111`. Οι
+  `ImportedMeshRenderer` + `FurnitureRenderer` **μόνο διάβαζαν** το cache, ποτέ δεν πυροδοτούσαν `preload`
+  (και κανένα import/hydrate prewarm δεν υπήρχε αλλού) → φρέσκια εισαγωγή + παραμονή στο 2Δ = cache άδειο
+  = bbox μέχρι το 3Δ visit. **Λύση (καθρέφτης υπάρχοντος big-player SSoT pattern, ΟΧΙ νέος μηχανισμός):**
+  render-driven lazy `preload` σε cache-miss, ακριβώς όπως `MepFixtureRenderer.ts:111`. Σε miss ο renderer
+  καλεί `bimMeshCache.preload(category, assetId)` (idempotent + de-duped μέσα στο `preload`· `status=
+  'loading'/'error'` guard μπλοκάρει hammering, missing-`.glb` = κουτί μόνιμα χωρίς re-fetch loop)· το
+  `markAllCanvasDirty()` του cache ξαναβάφει το 2Δ μόλις φορτώσει το silhouette → **μηδέν 3Δ roundtrip**.
+  Εφαρμόστηκε **και** στους δύο renderers (imported + furniture — ίδιο ακριβώς gap). **Loading affordance:**
+  νέος κοινός pure SSoT `drawMeshFallbackBox` (`mesh-silhouette-draw.ts`) αντικαθιστά τα δύο σχεδόν-ταυτόσημα
+  inline fallback blocks (N.18, jscpd net-negative): translucent fill + outline, **dashed** όσο φορτώνει
+  (`getLoadState()==='loading'`, «το σχήμα έρχεται»), solid αλλιώς. **ADR-040:** καμία νέα subscription/
+  lifecycle hook — reuse `preload`+`markAllCanvasDirty` (fire-and-forget). **Files:** `mesh-silhouette-draw.ts`
+  (+helper), `ImportedMeshRenderer.ts` (+doc-block fix — το παλιό «καμία συνδρομή, repaint μόνο του» ίσχυε
+  για το repaint αλλά έκρυβε ότι κανείς δεν ξεκινούσε το load), `FurnitureRenderer.ts` — και τα τρία
+  ≤500 γρ, dead `adaptFillTintForCanvas` import αφαιρέθηκε από τους δύο renderers. **Tests:** 2 νέα jest
+  (`mesh-fallback-box-loading` 3/3 — dashed/solid/no-op· `imported-furniture-preload-on-miss` 3/3 —
+  preload-on-miss + no-preload-on-hit), `bim-mesh-cache-bundle` 8/8 πράσινο, **14/14** συνολικά.
+  `jscpd:diff` clean. NO tsc (N.17). ✅ Google-level: YES — reuse υπάρχοντος de-duped preload SSoT, μηδέν
+  νέος μηχανισμός, ένας κοινός fallback helper (μηδέν sibling clone), belt-and-suspenders (render-driven
+  καλύπτει reload/paste/undo). 🔴 Pending: browser verify (εισαγωγή `KAREKLA-3.glb` → dashed κουτί
+  στιγμιαία → αυτόματα σμιλεμένο silhouette χωρίς 3Δ· επανάληψη με έπιπλο catalog) + commit (Giorgio).
+
 - **2026-07-24 (§properties-panel-6fixes — imported-mesh Properties panel, 6 follow-up fixes on
   §properties-panel-sync below — IMPLEMENTED UNCOMMITTED, 🔴 browser verify).** (1) **Editable display
   name (Ν.4):** new `readonly label?: string` on `ImportedMeshParams` + new writable string key

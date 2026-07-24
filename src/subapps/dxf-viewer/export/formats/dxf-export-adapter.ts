@@ -27,6 +27,7 @@ import {
   type DxfEncoding,
 } from '../../types/dxf-export.types';
 import { mmToSceneUnits, resolveSceneUnits, type SceneUnits } from '../../utils/scene-units';
+import type { DxfMeshDetailMode } from '../types';
 import { DEFAULT_DRAWING_SCALE } from '../../config/bim-render-settings-types';
 import type { DimStyle } from '../../types/dimension';
 import { getDimStyleRegistry } from '../../systems/dimensions/dim-style-registry';
@@ -99,6 +100,12 @@ export interface DxfExportOptions {
    * pure (no store read). Defaults to `DEFAULT_DRAWING_SCALE`.
    */
   readonly drawingScale?: number;
+  /**
+   * ADR-689 — εισαγόμενο πλέγμα: σμιλεμένα `3DFACE` (`mesh`, default) vs bounding-box (`bbox`).
+   * Τα προ-υπολογισμένα carriers έρχονται από τον async pre-pass του export-service.
+   */
+  readonly meshDetail?: DxfMeshDetailMode;
+  readonly meshFaceCarriersById?: ReadonlyMap<string, Entity[]>;
 }
 
 export interface BuiltDxfRequest {
@@ -112,11 +119,17 @@ export interface BuiltDxfRequest {
  */
 export function buildDxfExportRequest(
   scene: SceneModel,
-  options: Pick<DxfExportOptions, 'entityScope' | 'version' | 'unit' | 'lineMode' | 'drawingScale'>,
+  options: Pick<
+    DxfExportOptions,
+    'entityScope' | 'version' | 'unit' | 'lineMode' | 'drawingScale' | 'meshDetail' | 'meshFaceCarriersById'
+  >,
 ): BuiltDxfRequest {
   const selected = resolveExportEntities(scene.entities, options.entityScope);
   const colored = stampRenderedColors(selected, scene.layersById);
-  const { entities: flat, warnings } = flattenSceneEntitiesForDxf(colored);
+  const { entities: flat, warnings } = flattenSceneEntitiesForDxf(colored, {
+    meshDetail: options.meshDetail,
+    meshFaceCarriersById: options.meshFaceCarriersById,
+  });
 
   // ADR-583/608 — explode annotation symbols + scale-bars into neutral primitives
   // so they land in the `.dxf` (Tekton/AutoCAD), mirroring the vector-PDF path.
@@ -365,6 +378,7 @@ export function mergeFloorsToSingleDxfScene(
   floors: readonly ResolvedExportFloor[],
   entityScope: ExportEntityScope,
   lineMode?: DxfLineMode,
+  meshCtx?: { meshDetail?: DxfMeshDetailMode; meshFaceCarriersById?: ReadonlyMap<string, Entity[]> },
 ): { scene: SceneModel; warnings: string[] } {
   const entities: Entity[] = [];
   const layersById: Record<string, SceneLayer> = {};
@@ -375,7 +389,7 @@ export function mergeFloorsToSingleDxfScene(
   for (const floor of floors) {
     const selected = resolveExportEntities(floor.scene.entities, entityScope);
     const colored = stampRenderedColors(selected, floor.scene.layersById);
-    const flat = flattenSceneEntitiesForDxf(colored);
+    const flat = flattenSceneEntitiesForDxf(colored, meshCtx);
     warnings.push(...flat.warnings);
 
     // ADR-505 (finish/rebar + §C fill) — overlays ανά όροφο, με το ΙΔΙΟ FLnn_ namespacing.

@@ -8,9 +8,12 @@
  *
  * **Δύο καταστάσεις, και οι δύο χρήσιμες:**
  *  1. Πριν φορτώσει το `.glb` (ή αν αποτύχει) → ορθογώνιο του **μετρημένου** bbox. Ο χρήστης βλέπει
- *     αμέσως πού βρίσκεται το αντικείμενο, χωρίς να περιμένει δίκτυο.
+ *     αμέσως πού βρίσκεται το αντικείμενο, χωρίς να περιμένει δίκτυο. Σε cache-miss ο renderer
+ *     **πυροδοτεί ο ίδιος** το `bimMeshCache.preload` (καθρέφτης `MepFixtureRenderer`) ώστε το πλέγμα να
+ *     φορτώσει **χωρίς 3Δ roundtrip· ενόσω φορτώνει το κουτί βάφεται dashed («loading» affordance).
  *  2. Μόλις φορτώσει → το ακριβές περίγραμμα. Το `bumpMeshAssetVersion()` + `markAllCanvasDirty()`
- *     του cache προκαλεί το repaint μόνο του — καμία συνδρομή εδώ.
+ *     του cache προκαλεί το **repaint** μόνο του — καμία συνδρομή εδώ (ADR-040)· ο renderer απλώς
+ *     ξεκινά το load (fire-and-forget, idempotent + de-duped μέσα στο `preload`).
  *
  * ⚠️ **Καμία διαγώνιος** στο fallback, σε αντίθεση με το `FurnitureRenderer`: εκείνο το γλυφό
  * σημαίνει «έπιπλο» σε μια κάτοψη. Εδώ το ορθογώνιο σημαίνει «δεν ξέρω ακόμη το σχήμα» — ένα
@@ -25,7 +28,6 @@
 
 import { BimFootprintRenderer } from './bim-footprint-renderer';
 import { polygonBboxHitTest, mapBimGrips } from './bim-polygon-render';
-import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
 import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../rendering/types/Types';
 import type { ImportedMeshEntity } from '../entities/imported-mesh/imported-mesh-types';
 import {
@@ -40,6 +42,7 @@ import {
   drawMeshSilhouette,
   drawMeshContourFill,
   drawMeshSlotSilhouettes,
+  drawMeshFallbackBox,
   type MeshSilhouettePalette,
 } from './mesh-silhouette-draw';
 // ADR-686 — user override (χρώμα/υλικό) πάνω από το ουδέτερο γκρι, ΙΔΙΟ SSoT με το 2D plan fill + το 3D.
@@ -119,15 +122,21 @@ export class ImportedMeshRenderer extends BimFootprintRenderer {
     const assetId = importedMeshAssetId(uploadId, nodeName);
 
     if (!this.drawImportedSilhouette(mesh, assetId)) {
-      // Το ορθογώνιο του μετρημένου bbox — «εδώ είναι, το σχήμα έρχεται».
+      // Cache-miss → πυροδότησε το lazy glTF load (καθρέφτης `MepFixtureRenderer.ts:111`). Idempotent +
+      // de-duped μέσα στο `preload`· το `markAllCanvasDirty` του cache ξαναβάφει το 2Δ μόλις φορτώσει →
+      // μηδέν 3Δ roundtrip. Το `status='loading'/'error'` guard μπλοκάρει επαναφόρτωση (missing-.glb = κουτί).
+      if (assetId) bimMeshCache.preload(IMPORTED_MESH_CATEGORY, assetId);
+      // Το ορθογώνιο του μετρημένου bbox — dashed όσο φορτώνει («loading»), solid αλλιώς («εδώ είναι»).
+      const loading = bimMeshCache.getLoadState(IMPORTED_MESH_CATEGORY, assetId) === 'loading';
       const palette = slotPaletteWithOverride(mesh.params.sourceMaterialName, mesh.faceAppearance);
-      this.ctx.fillStyle = adaptFillTintForCanvas(palette.fill);
-      this.drawPolygonPath(verts);
-      this.ctx.fill();
-      this.ctx.strokeStyle = palette.stroke;
-      this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
-      this.drawPolygonPath(verts);
-      this.ctx.stroke();
+      drawMeshFallbackBox({
+        ctx: this.ctx,
+        worldToScreen: (p) => this.worldToScreen(p),
+        vertices: verts,
+        palette,
+        lineWidth: RENDER_LINE_WIDTHS.NORMAL,
+        loading,
+      });
     }
 
     this.ctx.restore();

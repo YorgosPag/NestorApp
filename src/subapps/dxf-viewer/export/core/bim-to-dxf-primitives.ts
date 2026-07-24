@@ -22,8 +22,18 @@ import type { Entity, LWPolylineEntity } from '../../types/entities';
 import { isBimEntity } from '../../types/entities';
 import type { Point3D } from '../../bim/types/bim-base';
 import { closedRingFromEdges, projectVerticesTo2D } from '../../bim/geometry/shared/polygon-utils';
-import type { DxfFlattenResult } from '../types';
+import type { DxfFlattenResult, DxfMeshDetailMode } from '../types';
 import { resolveDxfBodyLayer } from './dxf-category-layers';
+
+/**
+ * ADR-689 — context για την αποδόμηση εισαγόμενων πλεγμάτων: ο τρόπος εξαγωγής (`mesh` = σμιλεμένα
+ * `3DFACE` / `bbox` = bounding-box) + τα προ-υπολογισμένα `3DFACE` carriers ανά entity id (χτισμένα
+ * async στο export-service, γιατί τα τρίγωνα ζουν στο async `bimMeshCache`).
+ */
+export interface DxfFlattenContext {
+  readonly meshDetail?: DxfMeshDetailMode;
+  readonly meshFaceCarriersById?: ReadonlyMap<string, Entity[]>;
+}
 
 /**
  * Flatten a scope-filtered entity list into entities the DXF writer accepts:
@@ -33,6 +43,7 @@ import { resolveDxfBodyLayer } from './dxf-category-layers';
  */
 export function flattenSceneEntitiesForDxf(
   entities: readonly Entity[],
+  ctx?: DxfFlattenContext,
 ): DxfFlattenResult {
   const out: Entity[] = [];
   const warnings: string[] = [];
@@ -42,7 +53,7 @@ export function flattenSceneEntitiesForDxf(
       out.push(entity);
       continue;
     }
-    const primitives = decomposeBimEntityToDxfPrimitives(entity);
+    const primitives = decomposeBimEntityToDxfPrimitives(entity, ctx);
     if (primitives.length === 0) {
       warnings.push(
         `Δεν υποστηρίζεται ακόμη εξαγωγή DXF για τύπο "${entity.type}" (id: ${entity.id}) — παραλείφθηκε.`,
@@ -59,7 +70,15 @@ export function flattenSceneEntitiesForDxf(
  * Decompose a single BIM entity into native-DXF primitives. Returns `[]` for
  * BIM types that have no DXF representation yet (caller decides to warn/skip).
  */
-export function decomposeBimEntityToDxfPrimitives(entity: Entity): Entity[] {
+export function decomposeBimEntityToDxfPrimitives(entity: Entity, ctx?: DxfFlattenContext): Entity[] {
+  // ADR-689 — εισαγόμενο πλέγμα σε «σμιλεμένη» λειτουργία: αν ο async pre-pass έχτισε `3DFACE`
+  // carriers (φορτωμένο glTF) → βγάλ' τα. Αλλιώς (cache miss / bbox mode) πέφτει στο footprint
+  // path παρακάτω → bounding-box (belt-and-suspenders, ίδιο με το ιστορικό).
+  if (entity.type === 'imported-mesh' && ctx?.meshDetail === 'mesh') {
+    const carriers = ctx.meshFaceCarriersById?.get(entity.id);
+    if (carriers && carriers.length > 0) return [...carriers];
+  }
+
   // Wall is special — its plan footprint is the outer face + reversed inner
   // face joined into one closed loop (a hollow band, not a single polygon).
   if (entity.type === 'wall') {

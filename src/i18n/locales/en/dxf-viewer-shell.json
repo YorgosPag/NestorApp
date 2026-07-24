@@ -6940,6 +6940,11 @@
       "solid": "Light (average colour)",
       "image": "Faithful (image in ZIP)"
     },
+    "dxfMeshDetail": "Imported mesh",
+    "meshDetailModes": {
+      "mesh": "Detailed (sculpted)",
+      "bbox": "Simple box (light)"
+    },
     "tekSymbolMode": "Symbols",
     "tekSymbolModes": {
       "native": "Tekton symbols (single object)",

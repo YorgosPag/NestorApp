@@ -181,3 +181,44 @@ describe('flattenSceneEntitiesForDxf', () => {
     expect(r.warnings).toEqual([]);
   });
 });
+
+// ADR-689 — εισαγόμενο πλέγμα: mesh mode → precomputed 3DFACE carriers· bbox/missing → bounding-box.
+describe('imported-mesh (ADR-689 σμιλεμένη εξαγωγή)', () => {
+  function importedMesh(id: string): Entity {
+    return {
+      id, type: 'imported-mesh', layerId: 'lyr_im', color: '#123456',
+      geometry: { footprint: { vertices: [
+        { x: 0, y: 0 }, { x: 2, y: 0 }, { x: 2, y: 2 }, { x: 0, y: 2 },
+      ] } },
+    } as unknown as Entity;
+  }
+  function faceCarrier(sourceId: string): Entity {
+    return { id: `${sourceId}__mesh3dfaces`, type: 'hatch', layerId: 'lyr_im', color: '#123456' } as unknown as Entity;
+  }
+
+  it('χωρίς ctx → bounding-box lwpolyline (backwards compat)', () => {
+    const out = decomposeBimEntityToDxfPrimitives(importedMesh('im1'));
+    expect(out).toHaveLength(1);
+    expect(out[0].type).toBe('lwpolyline');
+  });
+
+  it("meshDetail 'bbox' → bounding-box lwpolyline (αγνοεί carriers)", () => {
+    const ctx = { meshDetail: 'bbox' as const, meshFaceCarriersById: new Map([['im1', [faceCarrier('im1')]]]) };
+    const out = decomposeBimEntityToDxfPrimitives(importedMesh('im1'), ctx);
+    expect(out[0].type).toBe('lwpolyline');
+  });
+
+  it("meshDetail 'mesh' + carrier → επιστρέφει το 3DFACE carrier (όχι bbox)", () => {
+    const ctx = { meshDetail: 'mesh' as const, meshFaceCarriersById: new Map([['im1', [faceCarrier('im1')]]]) };
+    const out = decomposeBimEntityToDxfPrimitives(importedMesh('im1'), ctx);
+    expect(out).toHaveLength(1);
+    expect(out[0].type).toBe('hatch');
+    expect(out[0].id).toBe('im1__mesh3dfaces');
+  });
+
+  it("meshDetail 'mesh' αλλά carrier λείπει (cache miss) → fallback bounding-box", () => {
+    const ctx = { meshDetail: 'mesh' as const, meshFaceCarriersById: new Map<string, Entity[]>() };
+    const out = decomposeBimEntityToDxfPrimitives(importedMesh('im1'), ctx);
+    expect(out[0].type).toBe('lwpolyline');
+  });
+});

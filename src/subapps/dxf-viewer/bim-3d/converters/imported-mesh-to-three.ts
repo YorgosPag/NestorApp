@@ -26,6 +26,8 @@ import {
 } from '../../bim/entities/imported-mesh/imported-mesh-types';
 import { meshToObject3D } from './mesh-to-object3d';
 import { applyImportedMeshMaterials } from './imported-mesh-material-enhance';
+// ADR-689 Φ2 — Wireframe view style: κάθε τριγωνάκι ως γραμμή (όπως AutoCAD). No-op στα άλλα styles.
+import { attachImportedMeshWireframe } from './imported-mesh-wireframe';
 
 /**
  * Χτίζει την 3Δ αναπαράσταση ενός εισαγόμενου πλέγματος. Επιστρέφει τοποθετημένο κλώνο του glTF σε
@@ -70,5 +72,8 @@ export function importedMeshToObject3D(
   // ADR-686 — user override (`mesh.faceAppearance`: `slot:${name}` per-slot ή `'*'` όλο) νικά πάνω
   // από embedded/preset, ώστε ο χρήστης να αλλάζει χρώμα/υλικό/υφή στο εισαγόμενο έπιπλο.
   applyImportedMeshMaterials(object, mesh.faceAppearance, params.nodeName);
+  // ADR-689 Φ2 — στο Wireframe view style κρύψε επιφάνειες + δείξε ΟΛΑ τα τριγωνάκια (όπως AutoCAD).
+  // No-op στα υπόλοιπα styles· ξανατρέχει στο rebuild-on-visualStyle (use-bim3d-vg-resync block f).
+  attachImportedMeshWireframe(object);
   return object;
 }

@@ -167,7 +167,7 @@ export function PolygonMaterialPanel() {
 
   // ADR-687 Φ8 — η μπάρα σώμα/πολύγωνα δείχνει ΜΟΝΟ τα ρητά βαμμένα υλικά της σκηνής (C4D Material
   // Manager). Ο σοβάς μένει fixed finish palette (click-only, flat — αμετάβλητο).
-  const sceneEntries = useSceneMaterials(libraryMaterials, t);
+  const sceneEntries = useSceneMaterials(libraryMaterials, t, levels?.currentLevelId ?? null);
   const finishEntries: LibraryEntry[] = useMemo(
     () =>
       FINISH_MATERIAL_OPTIONS.map((o): LibraryEntry => ({

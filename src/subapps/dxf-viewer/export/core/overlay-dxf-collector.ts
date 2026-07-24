@@ -25,7 +25,7 @@
  * ADR-505 §C (finish/rebar phase).
  */
 
-import type { Entity, LWPolylineEntity, CircleEntity, LineEntity, HatchEntity } from '../../types/entities';
+import type { Entity, LWPolylineEntity, CircleEntity, LineEntity } from '../../types/entities';
 import {
   isColumnEntity,
   isBeamEntity,
@@ -65,7 +65,7 @@ import type { RebarPlanGeometry, RebarSeg3D } from '../../bim/structural/reinfor
 import { REBAR_COLOR_HEX } from '../../bim/structural/rebar-catalog';
 import type { ExtrudedLwpolyline } from './bim-to-dxf-primitives';
 import { extractEntityFootprintRing, extractHeightMm } from './bim-to-dxf-primitives';
-import { buildPrismFaces, type Fill3DFace } from './solid-fill-geometry';
+import { buildPrismFaces, makeSolidFacesHatch, type SolidFacesHatch } from './solid-fill-geometry';
 import { resolveDxfFillLayer, CATEGORY_LAYER_DEFS } from './dxf-category-layers';
 import type { DxfLineMode } from '../types';
 
@@ -103,11 +103,6 @@ export interface OverlayCollectorOptions {
 interface Rebar3DLine extends LineEntity {
   readonly dxfStartZMm?: number;
   readonly dxfEndZMm?: number;
-}
-
-/** HatchEntity carrier (patternType:'solid') + προ-υπολογισμένα 3D faces (ADR-505 §C). */
-interface SolidFillHatch extends HatchEntity {
-  readonly dxfFaces: readonly Fill3DFace[];
 }
 
 export interface OverlayCollectResult {
@@ -155,19 +150,14 @@ export function collectOverlayDxfEntities(
   return { entities: out, layers };
 }
 
-/** Χτίζει SolidFillHatch carrier (footprint+ύψος → 3D faces). `null` αν degenerate. */
+/** Χτίζει solid-fill HATCH carrier (footprint+ύψος → 3D faces, κοινό SSoT). `null` αν degenerate. */
 function makeFillHatch(
   id: string, layerId: string, color: string,
   ring: readonly Point2D[], baseZMm: number, heightMm: number,
-): SolidFillHatch | null {
+): SolidFacesHatch | null {
   const faces = buildPrismFaces(ring, baseZMm, heightMm);
   if (faces.length === 0) return null;
-  return {
-    id, type: 'hatch', layerId, color, fillColor: color, visible: true,
-    patternType: 'solid', patternName: 'SOLID',
-    boundaryPaths: [projectVerticesTo2D(ring)],
-    dxfFaces: faces,
-  };
+  return makeSolidFacesHatch(id, layerId, color, projectVerticesTo2D(ring), faces);
 }
 
 /**
