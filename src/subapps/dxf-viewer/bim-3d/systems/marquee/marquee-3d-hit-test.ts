@@ -25,11 +25,9 @@ import {
   getMarqueeSelectionType,
   type MarqueeSelectionType,
 } from '../../../systems/selection/marquee-direction';
-import {
-  polygonIntersectsRectangle,
-  isFullyInsideWithTolerance,
-} from '../../../systems/selection/universal-marquee-geometry';
+import { isFullyInsideWithTolerance } from '../../../systems/selection/universal-marquee-geometry';
 import { worldToScreen } from '../../viewport/coordinate-transforms';
+import { screenBounds, polylineIntersectsRect, screenRectFromPoints } from './marquee-screen-geometry';
 
 export interface MarqueeHitInput {
   /** `manager.bimLayer.group` (or any tagged root). */
@@ -147,17 +145,6 @@ function convexHull(points: Point2D[]): Point2D[] {
   return lower.concat(upper);
 }
 
-function screenBounds(points: Point2D[]): { min: Point2D; max: Point2D } {
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  for (const p of points) {
-    if (p.x < minX) minX = p.x;
-    if (p.y < minY) minY = p.y;
-    if (p.x > maxX) maxX = p.x;
-    if (p.y > maxY) maxY = p.y;
-  }
-  return { min: { x: minX, y: minY }, max: { x: maxX, y: maxY } };
-}
-
 /**
  * Resolve the set of BIM entity ids whose projected geometry satisfies the marquee.
  * Pure/read-only — the caller applies the ids to the selection store.
@@ -166,10 +153,7 @@ export function collectBimMarqueeHits(input: MarqueeHitInput): MarqueeHitResult 
   const { group, camera, canvas, startPt, endPt, tolerance = 0.5 } = input;
   const selectionType = getMarqueeSelectionType(startPt.x, endPt.x);
   const isCrossing = selectionType === 'crossing';
-  const marqueeBounds = {
-    min: { x: Math.min(startPt.x, endPt.x), y: Math.min(startPt.y, endPt.y) },
-    max: { x: Math.max(startPt.x, endPt.x), y: Math.max(startPt.y, endPt.y) },
-  };
+  const marqueeBounds = screenRectFromPoints(startPt, endPt);
 
   const ids: string[] = [];
   const boxes = collectEntityBoxes(group);
@@ -177,11 +161,12 @@ export function collectBimMarqueeHits(input: MarqueeHitInput): MarqueeHitResult 
     const corners = projectBoxCorners(box, camera, canvas);
     if (!corners) continue; // partially/fully behind camera → not selectable this drag
     if (isCrossing) {
-      const hull = convexHull(corners);
-      if (polygonIntersectsRectangle(hull, marqueeBounds)) ids.push(id);
+      // Το κυρτό περίβλημα ΕΙΝΑΙ κλειστό σχήμα → πλήρες polygon-vs-rect (κοινό primitive με το DXF).
+      if (polylineIntersectsRect(convexHull(corners), true, marqueeBounds)) ids.push(id);
     } else {
       // WINDOW: every projected corner inside ⇒ convex silhouette fully enclosed.
-      if (isFullyInsideWithTolerance(screenBounds(corners), marqueeBounds, tolerance)) ids.push(id);
+      const bounds = screenBounds(corners);
+      if (bounds && isFullyInsideWithTolerance(bounds, marqueeBounds, tolerance)) ids.push(id);
     }
   }
   return { ids, selectionType };

@@ -36,6 +36,18 @@ export function screenToWorld(
   return ndc.unproject(camera);
 }
 
+/** NDC → client px inside `rect`. The ONE home of the viewport mapping (see below). */
+function ndcToScreenPx(ndc: THREE.Vector3, rect: DOMRect): { x: number; y: number } | null {
+  if (ndc.z > 1) return null; // behind camera
+  return {
+    x: ((ndc.x + 1) / 2) * rect.width + rect.left,
+    y: ((-ndc.y + 1) / 2) * rect.height + rect.top,
+  };
+}
+
+/** Scratch — `worldToScreen` never mutates its input and returns a plain object. */
+const _worldToScreenScratch = new THREE.Vector3();
+
 /**
  * Convert world position to screen pixel coordinates.
  * Returns null if the point is behind the camera.
@@ -45,13 +57,25 @@ export function worldToScreen(
   camera: THREE.Camera,
   canvas: HTMLElement,
 ): { x: number; y: number } | null {
+  return ndcToScreenPx(_worldToScreenScratch.copy(pos).project(camera), canvas.getBoundingClientRect());
+}
+
+/**
+ * ADR-692 Φ2 — BULK variant of {@link worldToScreen}: capture the canvas rect + a scratch
+ * vector ONCE, then project many points through the returned closure.
+ *
+ * Same math, same convention (it calls the same `ndcToScreenPx`) — the difference is purely
+ * that a one-shot pass over thousands of points (the raw-DXF marquee projects every wireframe
+ * vertex on mouseup) must NOT call `getBoundingClientRect()` per point: that is a forced layout
+ * flush per vertex. Use this whenever the camera + canvas are fixed for the whole loop.
+ */
+export function createWorldToScreenProjector(
+  camera: THREE.Camera,
+  canvas: HTMLElement,
+): (pos: THREE.Vector3) => { x: number; y: number } | null {
   const rect = canvas.getBoundingClientRect();
-  const ndc = pos.clone().project(camera);
-  if (ndc.z > 1) return null; // behind camera
-  return {
-    x: ((ndc.x + 1) / 2) * rect.width + rect.left,
-    y: ((-ndc.y + 1) / 2) * rect.height + rect.top,
-  };
+  const scratch = new THREE.Vector3();
+  return (pos) => ndcToScreenPx(scratch.copy(pos).project(camera), rect);
 }
 
 /**

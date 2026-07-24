@@ -23,8 +23,9 @@ import { useEscapeHandler, ESC_PRIORITY } from '../../systems/escape-bus';
 import { toolStateStore } from '../../stores/ToolStateStore';
 import { useBim3DEditStore } from '../stores/Bim3DEditStore';
 import { usePolygonMode3DStore } from '../stores/PolygonMode3DStore';
-import { Marquee3DStore, type MarqueeCombineMode } from '../systems/marquee/Marquee3DStore';
-import { collectBimMarqueeHits } from '../systems/marquee/marquee-3d-hit-test';
+import { Marquee3DStore } from '../systems/marquee/Marquee3DStore';
+import type { MarqueeCombineMode } from '../../systems/selection/marquee-combine';
+import { resolveAndApplyMarquee3D } from '../systems/marquee/marquee-3d-apply';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 
 /** Squared px the pointer must travel before a click becomes a marquee (mirrors 2D MIN_MARQUEE_SIZE). */
@@ -98,14 +99,14 @@ export function useBim3DMarqueeHandlers(
     if (!d) return;
     const manager = managerRef.current;
     if (d.dragging && manager) {
-      const hits = collectBimMarqueeHits({
-        group: manager.bimLayer.group,
-        camera: manager.getCamera(),
-        canvas: manager.getRendererCanvas(),
-        startPt: { x: d.x, y: d.y },
-        endPt: { x: e.clientX, y: e.clientY },
-      });
-      manager.applyBimMarqueeSelection(hits.ids, d.mode);
+      // ADR-692 Φ2 — BIM meshes ΚΑΙ raw DXF wireframe (όλοι οι ορατοί όροφοι) σε μία ανάλυση·
+      // η σειρά εφαρμογής (BIM πρώτα, DXF προσθετικά) ζει στον ενορχηστρωτή.
+      resolveAndApplyMarquee3D(
+        manager,
+        { x: d.x, y: d.y },
+        { x: e.clientX, y: e.clientY },
+        d.mode,
+      );
       suppressClickRef.current = true; // swallow the trailing click
     }
     endGesture(true);

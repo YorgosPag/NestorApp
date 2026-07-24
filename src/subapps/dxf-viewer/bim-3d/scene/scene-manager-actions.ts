@@ -24,8 +24,11 @@ import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { raycastWorldPointOrPlane } from '../systems/raycaster/BimEntityRaycaster';
 import { markBvhDirty } from '../systems/raycaster/bvh-setup';
 import { withSuppressed3DToUniversalSync } from '../systems/selection/use-3d-selection-universal-bridge';
-// ADR-692 — 3D window/crossing marquee: bulk selection combine modes.
-import type { MarqueeCombineMode } from '../systems/marquee/Marquee3DStore';
+// ADR-692 — 3D window/crossing marquee: bulk selection combine modes (κοινό SSoT με το raw-DXF marquee).
+import {
+  combineMarqueeSelection,
+  type MarqueeCombineMode,
+} from '../../systems/selection/marquee-combine';
 
 export interface SyncBimEntitiesDeps {
   readonly bimLayer: BimSceneLayer;
@@ -270,19 +273,8 @@ export function applyBimMarqueeSelection(
   mode: MarqueeCombineMode,
 ): void {
   const store = useSelection3DStore.getState();
-  const current = store.selectedBimIds;
-
-  let finalIds: string[];
-  if (mode === 'add') {
-    const set = new Set(current);
-    for (const id of hitIds) set.add(id);
-    finalIds = [...set];
-  } else if (mode === 'subtract') {
-    const remove = new Set(hitIds);
-    finalIds = current.filter((id) => !remove.has(id));
-  } else {
-    finalIds = [...new Set(hitIds)];
-  }
+  // Η add/subtract/replace πράξη είναι ΚΟΙΝΗ με το raw-DXF marquee (ADR-692 Φ2) → ένα SSoT.
+  const finalIds = combineMarqueeSelection(store.selectedBimIds, hitIds, mode);
 
   const types: Record<string, string> = {};
   for (const id of finalIds) types[id] = resolveBimEntityType(deps.bimGroup, id) ?? '';

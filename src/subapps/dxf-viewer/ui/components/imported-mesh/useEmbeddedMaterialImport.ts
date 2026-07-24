@@ -37,6 +37,7 @@ import {
 } from '../../../io/mesh3d-material-import/import-embedded-materials';
 import { buildKnownMaterialResolver } from '../../../io/mesh3d-material-import/known-import-materials';
 import { buildForeignTextureDeps } from '../../../io/mesh3d-material-import/foreign-texture-deps';
+import { averageColorHexOfImage } from '../../../io/mesh3d-material-import/texture-average-color';
 
 /** Τίποτα δεν έγινε — σταθερή ταυτότητα ώστε ο caller να μη διακρίνει «άκυρο» από «κενό». */
 const NOTHING_IMPORTED: EmbeddedMaterialImportResult = {
@@ -94,6 +95,9 @@ export function useEmbeddedMaterialImport(projectId: string | undefined): Embedd
           sourceLabel,
           resolveKnownId,
           deps,
+          // ADR-691 Φ3 — το «χρώμα» ενός textured υλικού είναι ο μέσος όρος της υφής του
+          // (Revit/C4D)· το `baseColorFactor` του αρχείου είναι γκρι 204 και άχρηστο.
+          averageColorOf: averageColorHexOfImage,
         });
       } catch (error) {
         // Η γεωμετρία είναι το κύριο παραδοτέο· ένα σπασμένο υλικό δεν ακυρώνει την εισαγωγή.

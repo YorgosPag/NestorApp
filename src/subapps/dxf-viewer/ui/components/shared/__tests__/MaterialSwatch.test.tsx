@@ -33,3 +33,25 @@ describe('MaterialSwatch — thumbnailUrl override', () => {
     expect(container.querySelector('span')).not.toBeNull();
   });
 });
+
+/**
+ * ADR-691 Φ3 — μετρημένο σε πραγματική εισαγωγή (`abricos_gerbera`, 2026-07-24): ένα `bmat_*` με
+ * ανεβασμένη υφή αλλά `appearance: null` έδειχνε **γκρι μπαλάκι** στη μπάρα «Υλικά όψης», επειδή η
+ * σφαίρα-fallback του χρώματος κατηγορίας προηγούνταν της πραγματικής φωτογραφίας της υφής.
+ */
+describe('MaterialSwatch — άχρωμη σφαίρα δεν κρύβει πραγματική υφή (ADR-691 Φ3)', () => {
+  const ALBEDO = 'https://storage.example/bmat_1/albedo.jpg';
+
+  it('sphere + χωρίς appearance + χωρίς φορτωμένη υφή → δείχνει το albedo, όχι τη γκρι σφαίρα', () => {
+    const { container } = render(
+      <MaterialSwatch sphere materialId="bmat_1" category="other" albedoUrl={ALBEDO} />,
+    );
+    expect(container.querySelector('img')?.getAttribute('src')).toBe(ALBEDO);
+  });
+
+  it('χωρίς albedo και χωρίς τίποτα να λυθεί → flat chip όπως πριν, καμία παλινδρόμηση', () => {
+    const { container } = render(<MaterialSwatch sphere category="other" />);
+    expect(container.querySelector('img')).toBeNull();
+    expect(container.querySelector('span')).not.toBeNull();
+  });
+});

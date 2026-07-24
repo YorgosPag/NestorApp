@@ -13,9 +13,10 @@
 import type { Point2D } from '../../../rendering/types/Types';
 import { pointsEqual } from '../../../rendering/entities/shared/geometry-vector-utils';
 import { createExternalStore } from '../../../stores/createExternalStore';
+// ADR-692 Φ2 — ο τύπος + η πράξη του συνδυασμού ζουν στο κοινό selection SSoT (BIM + raw DXF).
+import type { MarqueeCombineMode } from '../../../systems/selection/marquee-combine';
 
-/** How the marquee result combines with the existing selection. */
-export type MarqueeCombineMode = 'replace' | 'add' | 'subtract';
+export type { MarqueeCombineMode };
 
 export interface Marquee3DState {
   isSelecting: boolean;

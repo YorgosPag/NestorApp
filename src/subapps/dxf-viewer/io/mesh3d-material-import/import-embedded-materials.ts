@@ -65,7 +65,16 @@ export interface ImportEmbeddedMaterialsInput {
   readonly sourceLabel: string;
   readonly resolveKnownId: KnownMaterialResolver;
   readonly deps: ForeignTextureImporterDeps;
+  /**
+   * ADR-691 Φ3 — το αντιπροσωπευτικό χρώμα μιας υφής (βλ. `./texture-average-color`). Injected
+   * γιατί απαιτεί browser image decoding· απών → τα textured υλικά μένουν χωρίς `appearance`
+   * (η προ-Φ3 συμπεριφορά), ώστε τα tests να τρέχουν χωρίς DOM.
+   */
+  readonly averageColorOf?: TextureAverageColorProbe;
 }
+
+/** Bytes εικόνας → αντιπροσωπευτικό `#rrggbb`, ή `null` όταν δεν υπολογίζεται. Ποτέ δεν πετά. */
+export type TextureAverageColorProbe = (image: Blob) => Promise<string | null>;
 
 /** `material.name` αν υπάρχει, αλλιώς ντετερμινιστικό όνομα βασισμένο στο πηγαίο αρχείο + index. */
 function embeddedMaterialLabel(material: EmbeddedGltfMaterial, sourceLabel: string): string {
@@ -109,9 +118,11 @@ async function importTexturedMaterials(
   labelByIndex: ReadonlyMap<number, string>,
   deps: ForeignTextureImporterDeps,
   idByIndex: Map<number, string>,
+  averageColorOf: TextureAverageColorProbe | undefined,
 ): Promise<{ readonly createdCount: number; readonly reusedCount: number }> {
   const indexByLabel = new Map<string, number>();
   const texturesByMaterialName = new Map<string, string>();
+  const fileByIndex = new Map<number, File>();
   const imageFiles: File[] = [];
 
   for (const material of textured) {
@@ -120,7 +131,9 @@ async function importTexturedMaterials(
     const label = labelByIndex.get(material.index) ?? `${material.index}`;
     indexByLabel.set(label, material.index);
     texturesByMaterialName.set(label, albedo.fileName);
-    imageFiles.push(new File([new Uint8Array(albedo.bytes)], albedo.fileName, { type: albedo.mimeType }));
+    const file = new File([new Uint8Array(albedo.bytes)], albedo.fileName, { type: albedo.mimeType });
+    fileByIndex.set(material.index, file);
+    imageFiles.push(file);
   }
 
   const existingIdsBefore = new Set(deps.existingMaterials.map((m) => m.id));
@@ -129,6 +142,7 @@ async function importTexturedMaterials(
   let createdCount = 0;
   let reusedCount = 0;
   const seenThisBatch = new Set<string>();
+  const freshlyCreated: { readonly index: number; readonly id: string }[] = [];
   for (const [label, id] of result.created) {
     const index = indexByLabel.get(label);
     if (index === undefined) continue;
@@ -138,9 +152,55 @@ async function importTexturedMaterials(
     } else {
       createdCount += 1;
       seenThisBatch.add(id);
+      freshlyCreated.push({ index, id });
     }
   }
+  await paintTexturedAppearance(freshlyCreated, textured, fileByIndex, deps, averageColorOf);
   return { createdCount, reusedCount };
+}
+
+/**
+ * ADR-691 Φ3 — δίνει στα **νεοδημιουργημένα** textured υλικά ένα πραγματικό `appearance` με
+ * `baseColorHex` = το **μέσο χρώμα της υφής τους**.
+ *
+ * **Γιατί (ground truth 2026-07-24):** το `importForeignTextures` (ADR-678) ξέρει μόνο από υφές και
+ * γράφει `appearance: null`· και το χρώμα που *υπάρχει* στο αρχείο είναι άχρηστο (ο C4D γράφει
+ * `Color 204,204,204` και αφήνει το πορτοκαλί στο jpg). Αποτέλεσμα: κάθε καταναλωτής που ρωτά «τι
+ * χρώμα είναι;» — το swatch της μπάρας, ο 2Δ color resolver, το flat fallback — έπαιρνε **γκρι**.
+ * Το μέσο χρώμα της υφής είναι η απάντηση που δίνουν Revit/C4D στο ίδιο ερώτημα.
+ *
+ * **Μόνο τα νέα:** ένα υλικό που επαναχρησιμοποιήθηκε μπορεί να έχει `appearance` που ρύθμισε ο
+ * χρήστης — δεν το πατάμε ποτέ. Αποτυχία probe/update → το υλικό μένει όπως ήταν (μηδέν regression).
+ */
+async function paintTexturedAppearance(
+  created: readonly { readonly index: number; readonly id: string }[],
+  textured: readonly EmbeddedGltfMaterial[],
+  fileByIndex: ReadonlyMap<number, File>,
+  deps: ForeignTextureImporterDeps,
+  averageColorOf: TextureAverageColorProbe | undefined,
+): Promise<void> {
+  if (!averageColorOf || created.length === 0) return;
+  const byIndex = new Map(textured.map((m) => [m.index, m] as const));
+
+  for (const { index, id } of created) {
+    const file = fileByIndex.get(index);
+    const material = byIndex.get(index);
+    if (!file || !material) continue;
+    try {
+      const baseColorHex = await averageColorOf(file);
+      if (!baseColorHex) continue;
+      await deps.updateMaterial(id, {
+        appearance: {
+          baseColorHex,
+          metalness: material.metalness,
+          roughness: material.roughness,
+          opacity: material.opacity,
+        },
+      });
+    } catch {
+      // Per-material isolation — η υφή ανέβηκε ήδη· μόνο το χρώμα λείπει.
+    }
+  }
 }
 
 /**
@@ -218,7 +278,7 @@ function classifyMaterials(
 export async function importEmbeddedMeshMaterials(
   input: ImportEmbeddedMaterialsInput,
 ): Promise<EmbeddedMaterialImportResult> {
-  const { materials, sourceLabel, resolveKnownId, deps } = input;
+  const { materials, sourceLabel, resolveKnownId, deps, averageColorOf } = input;
   if (materials.length === 0) return { idByIndex: new Map(), createdCount: 0, reusedCount: 0 };
 
   const labelByIndex = assignUniqueLabels(materials, sourceLabel);
@@ -229,7 +289,9 @@ export async function importEmbeddedMeshMaterials(
   let reusedCount = knownReusedCount;
 
   if (textured.length > 0) {
-    const textureCounts = await importTexturedMaterials(textured, labelByIndex, deps, idByIndex);
+    const textureCounts = await importTexturedMaterials(
+      textured, labelByIndex, deps, idByIndex, averageColorOf,
+    );
     createdCount += textureCounts.createdCount;
     reusedCount += textureCounts.reusedCount;
   }

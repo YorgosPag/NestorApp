@@ -210,6 +210,38 @@ dae-specific (το `.dae` περνά ήδη από `colladaToGlb` → ίδιο p
     κεντρικοποίηση του deps literal που ο δεύτερος καλών θα είχε κλωνοποιήσει.
   - **Απόφαση που άλλαξε στην πράξη:** καμία. Και τα 10 σημεία του §4.1 υλοποιήθηκαν όπως γράφτηκαν.
 
+- **2026-07-24 — Φ3 (browser ground truth → «γιατί είναι όλα γκρι;»):** ο Giorgio εισήγαγε το
+  `abricos_gerbera` και τα 6 υλικά **μπήκαν σωστά**, αλλά στη μπάρα «Υλικά όψης» μόνο το κόκκινο
+  βάζο είχε χρώμα. Query στο `bim_materials` (ground truth, όχι εικασία) έδειξε τον διαχωρισμό:
+
+  | υλικό | `appearance` | `albedoUrl` | swatch |
+  |---|---|---|---|
+  | Mat.2 / Mat.3 / Mat #4 (color-only) | ✅ `#e83030` / `#ffffff` / `#cccccc` | — | σωστό |
+  | Mat.1 / Mat / Scene_Material3 (textured) | **null** | ✅ | **γκρι** |
+
+  **Δύο αιτίες, και οι δύο πραγματικές:**
+  1. Τα textured περνούν από το `importForeignTextures` (ADR-678, reused αυτούσιο) που ξέρει **μόνο
+     από υφές** → `appearance: null` → το swatch έπεφτε στο χρώμα κατηγορίας `other` = γκρι.
+  2. **Το χρώμα του αρχείου δεν σώζει:** ο C4D γράφει `Color 204,204,204` και αφήνει το πορτοκαλί
+     στο `Abricos_full_color.jpg` (φαίνεται στο ίδιο το C4D UI του screenshot). Άρα το glTF
+     `baseColorFactor` **δεν είναι** το χρώμα ενός textured υλικού — ποτέ.
+  3. Επιπλέον, στο `MaterialSwatch` η **γκρι σφαίρα-fallback προηγούνταν του πραγματικού albedo**,
+     οπότε δεν φαινόταν ούτε καν η φωτογραφία της υφής.
+
+  **Λύση (πρακτική Revit «image appearance asset» / C4D Material Manager preview):** το «χρώμα» ενός
+  textured υλικού είναι ο **μέσος όρος της υφής του**.
+  - **NEW** `io/mesh3d-material-import/texture-average-color.ts` — `averageColorHexOfImage` (16×16
+    downsample, αγνοεί διάφανα pixel· `createImageBitmap`+`OffscreenCanvas`, μηδέν dependency).
+    Injected probe → ο orchestrator μένει testable χωρίς DOM.
+  - **EDIT** `import-embedded-materials.ts` — `paintTexturedAppearance`: patch `appearance` **μόνο
+    στα νεοδημιουργημένα** (ένα reused υλικό μπορεί να έχει χρώμα που όρισε ο χρήστης — ποτέ overwrite).
+  - **EDIT** `MaterialSwatch.tsx` — μια σφαίρα **χωρίς appearance ΚΑΙ χωρίς φορτωμένη υφή** δεν
+    προηγείται πια του πραγματικού albedo. **Αυτό διορθώνει και τα ΗΔΗ δημιουργημένα** υλικά
+    (δείχνουν τη φωτογραφία της υφής τους) χωρίς migration.
+  - +6 tests (4 orchestrator Φ3 + 2 swatch). 194/194 πράσινα σε 21 suites· jscpd καθαρό.
+  - ⚠️ **Τα 3 υπάρχοντα textured `bmat_*` δεν αποκτούν `appearance` αναδρομικά** (το re-import τα
+    βρίσκει by-name → reuse). Θέλουν διαγραφή+επανεισαγωγή αν χρειάζεται το χρώμα και στο 2Δ.
+
 ---
 
 ## 9. 🔴 Τι πρέπει να ελεγχθεί στον browser (Giorgio)

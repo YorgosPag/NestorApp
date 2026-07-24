@@ -112,9 +112,16 @@ export function MaterialSwatch({
   }, [wantSphere, materialId]);
   const sphereThumb = useMaterialAppearanceThumbnail(sphereDef, sphereSet);
 
+  // ADR-691 Φ3 — μια σφαίρα **χωρίς δικό της χρώμα ΚΑΙ χωρίς υφή** (υλικό με `appearance: null`
+  // που πέφτει στο γενικό χρώμα κατηγορίας) είναι κυριολεκτικά ένα γκρι μπαλάκι: δεν λέει τίποτα
+  // για το υλικό. Όταν υπάρχει πραγματική ανεβασμένη υφή, ΕΚΕΙΝΗ προηγείται. Μετρημένο σε
+  // εισαγόμενα μοντέλα (ADR-691): η γκρι σφαίρα έκρυβε τη φωτογραφία της υφής.
+  const colourlessFallbackSphere = wantSphere && !appearance && !sphereSet;
+  const preferredSphere = colourlessFallbackSphere ? null : sphereThumb;
+
   // Precedence: user thumbnail (Phase 2) → rendered sphere (Φ6/Φ7) → user 3D albedo photo
   // (Phase 3) → resolved slug albedo → flat colour chip.
-  const url = thumbnailUrl || sphereThumb || albedoUrl || resolvedAlbedoUrl;
+  const url = thumbnailUrl || preferredSphere || albedoUrl || sphereThumb || resolvedAlbedoUrl;
   const base = `inline-block h-5 w-5 shrink-0 rounded-sm border border-black/20 ${className ?? ''}`;
 
   if (url) {

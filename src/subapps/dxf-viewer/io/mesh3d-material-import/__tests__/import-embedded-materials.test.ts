@@ -6,7 +6,11 @@
 import { importEmbeddedMeshMaterials } from '../import-embedded-materials';
 import type { ForeignTextureImporterDeps } from '../import-foreign-textures';
 import type { KnownMaterialResolver } from '../known-import-materials';
-import type { BimMaterial, SaveBimMaterialInput } from '../../../bim/types/bim-material-types';
+import type {
+  BimMaterial,
+  SaveBimMaterialInput,
+  UpdateBimMaterialPatch,
+} from '../../../bim/types/bim-material-types';
 import type { EmbeddedGltfMaterial } from '../../mesh3d-roundtrip/glb-embedded-materials';
 
 function embeddedMaterial(overrides: { readonly index: number } & Partial<EmbeddedGltfMaterial>): EmbeddedGltfMaterial {
@@ -35,6 +39,8 @@ function fakeMaterial(id: string): BimMaterial {
 interface Spy {
   readonly saved: SaveBimMaterialInput[];
   readonly uploads: string[];
+  /** ADR-691 Φ3 — τα patches του `updateMaterial` (υφή → `pbrTextures`, μέσο χρώμα → `appearance`). */
+  readonly patched: { readonly id: string; readonly patch: UpdateBimMaterialPatch }[];
 }
 
 interface DepsOptions {
@@ -44,7 +50,7 @@ interface DepsOptions {
 
 /** Χειρόγραφο (μη-jest.fn) DI stub — mirror του pattern του `dae-texture-import.test.ts`. */
 function makeDeps(options: DepsOptions = {}): { readonly deps: ForeignTextureImporterDeps; readonly spy: Spy } {
-  const spy: Spy = { saved: [], uploads: [] };
+  const spy: Spy = { saved: [], uploads: [], patched: [] };
   let n = 0;
   const deps: ForeignTextureImporterDeps = {
     existingMaterials: [],
@@ -54,7 +60,7 @@ function makeDeps(options: DepsOptions = {}): { readonly deps: ForeignTextureImp
       n += 1;
       return fakeMaterial(`bmat_${n}`);
     },
-    updateMaterial: async () => { /* no-op */ },
+    updateMaterial: async (id, patch) => { spy.patched.push({ id, patch }); },
     uploadAlbedo: async (_file, materialId) => {
       spy.uploads.push(materialId);
       return `https://storage/${materialId}/albedo.jpg`;
@@ -194,5 +200,85 @@ describe('importEmbeddedMeshMaterials (ADR-691 §4.1)', () => {
     expect(out).toEqual({ idByIndex: new Map(), createdCount: 0, reusedCount: 0 });
     expect(saveMaterial).not.toHaveBeenCalled();
     expect(resolveKnownId).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * ADR-691 Φ3 — ground truth 2026-07-24: τα textured υλικά έβγαιναν με `appearance: null` (το
+ * `importForeignTextures` ξέρει μόνο από υφές) → η μπάρα «Υλικά όψης» έδειχνε **γκρι μπαλάκι**
+ * αντί για το πορτοκαλί/πράσινο του μοντέλου. Και το χρώμα του ίδιου του αρχείου δεν βοηθά: ο C4D
+ * γράφει `Color 204,204,204` και αφήνει το χρώμα στην υφή. Λύση (Revit/C4D): **μέσο χρώμα υφής**.
+ */
+describe('importEmbeddedMeshMaterials — appearance από τη μέση τιμή της υφής (Φ3)', () => {
+  const texturedMaterial = embeddedMaterial({
+    index: 0,
+    name: 'Scene_Material3',
+    colorHex: '#cccccc', // ό,τι γράφει ο C4D — άχρηστο ως «χρώμα υλικού»
+    metalness: 0,
+    roughness: 0.8,
+    opacity: 1,
+    albedo: { bytes: new Uint8Array([1, 2, 3]), mimeType: 'image/jpeg', fileName: 'abricos.jpg' },
+  });
+
+  it('νέο textured υλικό → updateMaterial με appearance = μέσο χρώμα υφής (ΟΧΙ το γκρι του αρχείου)', async () => {
+    const { deps, spy } = makeDeps();
+
+    await importEmbeddedMeshMaterials({
+      materials: [texturedMaterial],
+      sourceLabel: 'abricos_gerbera',
+      resolveKnownId: resolveNothing,
+      deps,
+      averageColorOf: async () => '#e8934a',
+    });
+
+    const appearancePatch = spy.patched.find((p) => p.patch.appearance);
+    expect(appearancePatch?.patch.appearance).toEqual({
+      baseColorHex: '#e8934a',
+      metalness: 0,
+      roughness: 0.8,
+      opacity: 1,
+    });
+  });
+
+  it('χωρίς probe → καμία appearance (προ-Φ3 συμπεριφορά, μηδέν παλινδρόμηση)', async () => {
+    const { deps, spy } = makeDeps();
+
+    await importEmbeddedMeshMaterials({
+      materials: [texturedMaterial], sourceLabel: 'model', resolveKnownId: resolveNothing, deps,
+    });
+
+    expect(spy.patched.some((p) => p.patch.appearance)).toBe(false);
+  });
+
+  it('επαναχρησιμοποιημένο υλικό → ΔΕΝ πατιέται το appearance που έβαλε ο χρήστης', async () => {
+    const { deps, spy } = makeDeps();
+    const resolveKnownId: KnownMaterialResolver = (name) =>
+      (name === 'Scene_Material3' ? 'bmat_known' : null);
+
+    await importEmbeddedMeshMaterials({
+      materials: [texturedMaterial],
+      sourceLabel: 'model',
+      resolveKnownId,
+      deps,
+      averageColorOf: async () => '#e8934a',
+    });
+
+    expect(spy.patched).toHaveLength(0);
+    expect(spy.saved).toHaveLength(0);
+  });
+
+  it('αποτυχία του probe → η υφή μένει ανεβασμένη, καμία εξαίρεση προς τα έξω', async () => {
+    const { deps } = makeDeps();
+
+    const out = await importEmbeddedMeshMaterials({
+      materials: [texturedMaterial],
+      sourceLabel: 'model',
+      resolveKnownId: resolveNothing,
+      deps,
+      averageColorOf: async () => { throw new Error('decode boom'); },
+    });
+
+    expect(out.createdCount).toBe(1);
+    expect(out.idByIndex.get(0)).toBe('bmat_1');
   });
 });
