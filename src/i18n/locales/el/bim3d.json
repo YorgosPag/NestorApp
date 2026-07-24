@@ -15,7 +15,8 @@
     "dimension": "Διάσταση",
     "xline": "Άπειρη γραμμή",
     "ray": "Ακτίνα",
-    "angleMeasurement": "Μέτρηση γωνίας"
+    "angleMeasurement": "Μέτρηση γωνίας",
+    "importedMesh": "Εισαγόμενο πλέγμα"
   },
   "wallCategories": {
     "exterior": "Εξωτερικός",

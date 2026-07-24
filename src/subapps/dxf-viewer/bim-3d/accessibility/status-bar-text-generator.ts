@@ -14,7 +14,8 @@
 export type EntityTypeKey =
   | 'wall' | 'column' | 'beam' | 'slab'
   | 'line' | 'circle' | 'arc' | 'polyline' | 'text' | 'dimension'
-  | 'opening' | 'slabOpening' | 'stair' | 'xline' | 'ray' | 'angleMeasurement';
+  | 'opening' | 'slabOpening' | 'stair' | 'xline' | 'ray' | 'angleMeasurement'
+  | 'importedMesh';
 
 /** Minimal i18n contract — matches react-i18next's `t` (key + optional vars). */
 export type TFn = (key: string, vars?: Record<string, unknown>) => string;
@@ -31,6 +32,7 @@ export function normalizeEntityType(rawType: string | null | undefined): EntityT
   if (lower === 'opening') return 'opening';
   if (lower === 'slab-opening') return 'slabOpening';
   if (lower === 'stair') return 'stair';
+  if (lower === 'imported-mesh') return 'importedMesh';
   // Pure 2D DXF primitives.
   if (lower === 'line') return 'line';
   if (lower === 'circle') return 'circle';

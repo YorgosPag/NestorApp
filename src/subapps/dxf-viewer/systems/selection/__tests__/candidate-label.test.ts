@@ -359,6 +359,39 @@ describe('buildCandidateLabel — foundation (dimensions + absolute top elevatio
   });
 });
 
+describe('buildCandidateLabel — named entities (imported-mesh / block, ADR-659 Phase 3)', () => {
+  it('imported mesh without a rename → source name as primary, no secondary/tertiary', () => {
+    const label = buildCandidateLabel(
+      { entityType: 'imported-mesh', layer: 'default', semantics: { named: { displayName: 'HBFrmEdg' } } },
+      fakeT, fakeT,
+    );
+    expect(label).toEqual({ primary: 'HBFrmEdg', secondary: '', tertiary: '' });
+  });
+
+  it('renamed imported mesh → user name primary, source name secondary', () => {
+    const label = buildCandidateLabel(
+      { entityType: 'imported-mesh', layer: 'default', semantics: { named: { displayName: 'Πλάτη', sourceName: 'HPellSt' } } },
+      fakeT, fakeT,
+    );
+    expect(label.primary).toBe('Πλάτη');
+    expect(label.secondary).toBe('HPellSt');
+  });
+
+  it('genuine duplicate → #n tertiary (localized via selectionCycling.duplicateOrdinal)', () => {
+    const label = buildCandidateLabel(
+      { entityType: 'imported-mesh', layer: 'default', semantics: { named: { displayName: 'HPellSt' } }, duplicateOrdinal: 2 },
+      fakeT, fakeT,
+    );
+    expect(label.primary).toBe('HPellSt');
+    expect(label.tertiary).toBe('selectionCycling.duplicateOrdinal{index=2}');
+  });
+
+  it('buildCandidateSemantics resolves an imported-mesh entity into a named identity', () => {
+    const mesh = { id: 'im1', type: 'imported-mesh', params: { kind: 'imported', nodeName: 'HSeat' } } as unknown as Entity;
+    expect(buildCandidateSemantics(mesh)).toEqual({ named: { displayName: 'HSeat' } });
+  });
+});
+
 // The core of the 2026-07-17 fix (Revit-grade consistency): slab/wall/column/beam store
 // FLOOR-RELATIVE elevations; the 3D converters add the active storey FFL at render time. The
 // popover must add the SAME FFL so a wall/slab on the 3rd storey reads its real elevation

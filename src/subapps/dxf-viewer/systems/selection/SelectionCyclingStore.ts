@@ -10,6 +10,7 @@ import { createExternalStore } from '../../stores/createExternalStore';
 import type { HitTestResult } from '../../services/HitTestingService';
 import type { Entity } from '../../types/entities';
 import { buildCandidateSemantics, type CandidateSemantics } from './candidate-label';
+import { assignDuplicateOrdinals } from './candidate-named-identity';
 // ADR-448 — active storey FFL (datum-relative absolute) so popover elevations match the 3D render
 // datum. Zero-React zustand singleton, safe to read from any context; read ONCE per build (ADR-040).
 import { useActiveStoreyStore } from '../levels/active-storey-store';
@@ -31,6 +32,12 @@ export interface CyclingCandidate {
    * @see candidate-label.ts — buildCandidateSemantics / buildCandidateLabel
    */
   readonly semantics?: CandidateSemantics;
+  /**
+   * ADR-659 Phase 3 — 1-based disambiguator appended (`#n`) to genuine duplicates: named entities
+   * whose row would otherwise be identical to a sibling's. Set ONCE by `assignDuplicateOrdinals`
+   * at build time; absent for unique / non-named candidates.
+   */
+  readonly duplicateOrdinal?: number;
 }
 
 /**
@@ -66,7 +73,9 @@ export function buildCandidatesFromHits(
       });
     }
   }
-  return candidates;
+  // ADR-659 Phase 3 — second build-time pass (ADR-040: never at render): append `#n` to genuine
+  // duplicates (named rows that would otherwise be identical). No-op for unique / non-named lists.
+  return assignDuplicateOrdinals(candidates);
 }
 
 export interface CyclingState {

@@ -424,7 +424,8 @@
       "ground": "Πλάκα εδάφους",
       "foundation": "Πλάκα θεμελίωσης"
     },
-    "heightLabel": "ύψος {value}"
+    "heightLabel": "ύψος {value}",
+    "duplicateOrdinal": "#{index}"
   },
   "groupSelection": {
     "label": "Ομάδα · {count, plural, one {# αντικείμενο} other {# αντικείμενα}}",

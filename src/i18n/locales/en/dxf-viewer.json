@@ -424,7 +424,8 @@
       "ground": "Slab-on-grade",
       "foundation": "Foundation slab"
     },
-    "heightLabel": "height {value}"
+    "heightLabel": "height {value}",
+    "duplicateOrdinal": "#{index}"
   },
   "groupSelection": {
     "label": "Group · {count, plural, one {# object} other {# objects}}",

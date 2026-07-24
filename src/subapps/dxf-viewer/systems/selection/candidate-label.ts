@@ -65,6 +65,7 @@ import { unwrapDxfSubEntity } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { entityTypeLabel, type TFn } from '../../bim-3d/accessibility/status-bar-text-generator';
 import { formatLengthForDisplay, formatCoordinateForDisplay } from '../../config/display-length-format';
 import { resolveWallBaseZmm } from '../../bim/geometry/wall-top-profile';
+import { buildNamedIdentitySemantics, type NamedIdentitySemantics } from './candidate-named-identity';
 
 // ─── Stage 1 — raw semantics (built once, at candidate build time) ────────────
 
@@ -123,6 +124,10 @@ export interface CandidateSemantics {
   readonly foundationThicknessMm?: number;
   /** mm — `FoundationCommonParams.topElevationMm` (absolute, project origin; typically negative). */
   readonly foundationTopElevationMm?: number;
+
+  // ─── Named entities (ADR-659 Phase 3 — imported-mesh / block) ────────────────
+  /** Instance-name identity (user + source name). Selects the named-row format branch. */
+  readonly named?: NamedIdentitySemantics;
 }
 
 /**
@@ -236,6 +241,12 @@ function buildFoundationSemantics(entity: Entity): CandidateSemantics | undefine
   };
 }
 
+/** Named-entity identity (imported-mesh / block) wrapped as `CandidateSemantics` — see candidate-named-identity.ts. */
+function buildNamedSemantics(entity: Entity): CandidateSemantics | undefined {
+  const named = buildNamedIdentitySemantics(entity);
+  return named ? { named } : undefined;
+}
+
 /**
  * Extracts the semantic fields the label builder needs from a resolved entity.
  * `undefined` ⇒ no known semantics (generic fallback at render time). Pure —
@@ -256,7 +267,8 @@ export function buildCandidateSemantics(
     buildWallSemantics(entity, storeyFloorElevationMm) ??
     buildColumnSemantics(entity, storeyFloorElevationMm) ??
     buildBeamSemantics(entity, storeyFloorElevationMm) ??
-    buildFoundationSemantics(entity)
+    buildFoundationSemantics(entity) ??
+    buildNamedSemantics(entity)
   );
 }
 
@@ -276,6 +288,8 @@ export interface CandidateLabelInput {
   readonly entityType: string;
   readonly layer: string;
   readonly semantics?: CandidateSemantics;
+  /** 1-based disambiguator for genuine duplicates (identical named rows) — set by `assignDuplicateOrdinals`. */
+  readonly duplicateOrdinal?: number;
 }
 
 const SLAB_KIND_I18N_KEY: Record<SlabKind, string> = {
@@ -426,6 +440,18 @@ export function buildCandidateLabel(
     ? buildStructuralLabelParts(candidate, semantics, t, tEntityType)
     : undefined;
   if (structural) return structural;
+
+  // Named entities (imported-mesh / block) — instance name row (Revit/C4D-grade). `#n` only when
+  // `assignDuplicateOrdinals` flagged this row as a genuine duplicate of a sibling.
+  if (semantics?.named) {
+    return {
+      primary: semantics.named.displayName,
+      secondary: semantics.named.sourceName ?? '',
+      tertiary: candidate.duplicateOrdinal
+        ? t('selectionCycling.duplicateOrdinal', { index: candidate.duplicateOrdinal })
+        : '',
+    };
+  }
 
   return {
     primary: entityTypeLabel(candidate.entityType, tEntityType) || candidate.entityType,

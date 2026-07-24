@@ -15,7 +15,8 @@
     "dimension": "Dimension",
     "xline": "Construction line",
     "ray": "Ray",
-    "angleMeasurement": "Angle measurement"
+    "angleMeasurement": "Angle measurement",
+    "importedMesh": "Imported mesh"
   },
   "wallCategories": {
     "exterior": "Exterior",
