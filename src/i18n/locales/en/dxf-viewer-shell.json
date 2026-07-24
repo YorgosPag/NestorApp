@@ -7216,5 +7216,8 @@
   },
   "importedMeshParams": {
     "panelTitle": "Parameters & Settings"
+  },
+  "materialSwatch": {
+    "textureMissing": "The texture “{asset}” failed to load — showing the material's colour instead. The file was likely deleted from storage; try re-importing the texture."
   }
 }

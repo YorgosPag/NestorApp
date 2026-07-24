@@ -4,22 +4,25 @@
  * =============================================================================
  *
  * Layer 3 of the ADR-327 defense-in-depth: observability backstop for
- * orphan-cleanup regressions.
+ * storage-reclamation regressions.
  *
- * The `onStorageFinalize` Cloud Function (`storage/orphan-cleanup.ts`) deletes
- * any file in `companies/...` whose fileId has no claim in `FILES` /
- * `FILE_SHARES`. The 2026-04-27 incident hid for hours because deletions
- * were silent — the UI showed broken images with no audit trail surfacing
- * the cause.
+ * ⚠️ **ADR-694 — ΑΥΤΟ ΤΟ LAYER ΗΤΑΝ ΝΕΚΡΟ.** Μετρημένο 2026-07-25: κάθε εκτέλεση
+ * απέτυχε με `9 FAILED_PRECONDITION: The query requires an index` επειδή έλειπε το
+ * composite index `audit_log (action, performedAt)`. Το τελευταίο σκάσιμο στις
+ * 2026-07-24T21:00:09Z — **19 λεπτά μετά** από 25 διαγραφές, δηλαδή ακριβώς όταν
+ * όφειλε να χτυπήσει συναγερμός. Ο producer έγραφε σωστά· ο **consumer** έσκαγε.
+ * Το index προστέθηκε στο `firestore.indexes.json` (ADR-694 Φ3β) και απαιτεί
+ * `firebase deploy --only firestore:indexes`.
  *
- * This scheduled function runs every hour, counts `ORPHAN_FILE_DELETED`
- * audit entries from the last 60 minutes, and pings the super-admin Telegram
- * chat if the count exceeds the configured threshold. A spike indicates
- * either:
- *   - a new storage consumer was added without `uploadPublicFile()` /
- *     pre-claim (regression — Layer 1 failed),
- *   - the orphan-cleanup logic itself is mis-firing (resolver gap),
- *   - genuine traffic spike (rare).
+ * Μάθημα: ένα safety net χωρίς δικό του gate δεν είναι safety net — είναι σχόλιο.
+ *
+ * Μετά το ADR-694 ο **μόνος** παραγωγός `ORPHAN_FILE_DELETED` είναι ο
+ * `orphanSweeper` (ημερήσιος, 4 φράγματα). Το `onStorageFinalize` δεν διαγράφει
+ * πλέον τίποτα. Άρα μια αιχμή εδώ σημαίνει πλέον κάτι **πολύ** πιο συγκεκριμένο:
+ *   - ένα υποσύστημα σταμάτησε να γράφει τις owning εγγραφές του (τα αρχεία του
+ *     ωριμάζουν ως `orphaned` και ανακτώνται μαζικά μετά από 7 ημέρες),
+ *   - ένας κανόνας custody δείχνει σε λάθος collection (ψευδώς ορφανά), ή
+ *   - γνήσιος μαζικός καθαρισμός μετά από διαγραφή έργου (σπάνιο, αναμενόμενο).
  *
  * # Idempotency
  *

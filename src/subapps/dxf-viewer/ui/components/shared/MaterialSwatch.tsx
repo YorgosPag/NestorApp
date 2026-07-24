@@ -23,6 +23,13 @@
  */
 
 import React, { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from '@/i18n';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import type { BimMaterialAppearance, BimMaterialCategory } from '../../../bim/types/bim-material-types';
 import { catalogFlatColorOrNull } from '../../../bim/materials/material-catalog-defs';
 import {
@@ -40,6 +47,23 @@ import { useBim3DEntitiesStore } from '../../../bim-3d/stores/Bim3DEntitiesStore
 
 /** Neutral grey when neither materialId nor category yields a colour. */
 const NEUTRAL_FALLBACK = '#b0b0b0';
+
+/**
+ * ADR-694 Β1 — fail-loud identity για το tooltip/aria-label: το «τι λείπει», όχι μόνο «κάτι λείπει»
+ * (Revit tooltip contract: δείχνει το search path/όνομα αρχείου). Παίρνει το τελευταίο τμήμα του
+ * path χωρίς query string (π.χ. signed URL token) — αρκετό για να αναγνωρίσει ο χρήστης ΠΟΙΟ asset
+ * αγνοήθηκε, χωρίς να ξεχειλίζει το tooltip με ολόκληρο το signed URL.
+ */
+function assetNameFromUrl(url: string): string {
+  const withoutQuery = url.split('?')[0] ?? url;
+  const segments = withoutQuery.split('/');
+  const last = segments[segments.length - 1] || url;
+  try {
+    return decodeURIComponent(last);
+  } catch {
+    return last;
+  }
+}
 
 export interface MaterialSwatchProps {
   /** DNA materialId (e.g. 'mat-concrete-c25'). Drives the image + fallback colour. */
@@ -131,6 +155,12 @@ export function MaterialSwatch({
   const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
   const handleError = useCallback(() => { setBrokenUrl(url || null); }, [url]);
 
+  // ADR-694 Β1 — «loadFailed» είναι η μόνη σωστή διάκριση για το badge: πραγματική αποτυχία φόρτωσης
+  // (`brokenUrl === url`, δηλ. ΥΠΗΡΧΕ url και ο browser έριξε onError) ΔΕΝ είναι το ίδιο με «δεν
+  // υπήρξε ποτέ url» (μπογιά/catalog flat). Το δεύτερο είναι σκόπιμη σχεδιαστική επιλογή, όχι σφάλμα
+  // — badge ΜΟΝΟ στο πρώτο, αλλιώς κάθε flat swatch θα έδειχνε ψευδές «λείπει κάτι».
+  const loadFailed = Boolean(url) && url === brokenUrl;
+
   const base = `inline-block h-5 w-5 shrink-0 rounded-sm border border-black/20 ${className ?? ''}`;
 
   if (url && url !== brokenUrl) {
@@ -160,5 +190,62 @@ export function MaterialSwatch({
     || appearance?.baseColorHex
     || (materialId ? catalogFlatColorOrNull(materialId) : null)
     || NEUTRAL_FALLBACK;
-  return <span aria-hidden="true" className={base} style={{ backgroundColor: fallbackColor }} />;
+
+  if (!loadFailed) {
+    return <span aria-hidden="true" className={base} style={{ backgroundColor: fallbackColor }} />;
+  }
+
+  return <FailedTextureSwatch base={base} fallbackColor={fallbackColor} url={url as string} />;
+}
+
+/**
+ * ADR-694 Β1 — «fail loud, fail visible, fail actionable» (Revit/Blender συμβόλαιο, §3.2 του ADR):
+ * το flat-colour δίχτυ (ADR-693 Γ3) παραμένει ΑΚΕΡΑΙΟ — το χρώμα του υλικού είναι σωστή πληροφορία,
+ * καλύτερη από ένα panic-colour. Αυτό που ΔΕΝ ήταν σωστό είναι η ΣΙΩΠΗ: ο Giorgio έκανε 8 imports
+ * χωρίς να καταλάβει ότι ο GC έσβηνε αρχεία (ADR-694 §3.2). Το ορατό badge + tooltip + η αλλαγή
+ * `aria-hidden` → `role="img"`/`aria-label` κάνουν την αποτυχία αδύνατο να μη γίνει αντιληπτή, σε
+ * ΟΠΟΙΟΔΗΠΟΤΕ μέγεθος chip (20px μπάρα ή 64px «Τρέχον υλικό» panel) και σε ΟΠΟΙΟΔΗΠΟΤΕ input mode
+ * (ποντίκι via tooltip, πληκτρολόγιο via focus, screen reader via aria-label — πάντα παρόν, όχι μόνο
+ * σε hover, γιατί το Radix tooltip content δεν μονταρίζεται πριν το hover/focus).
+ *
+ * Ξεχωριστό component (όχι inline JSX στο κύριο σώμα) ώστε το `TooltipProvider` να μένει
+ * αυτοτελές — δεν υποθέτει ότι ο καταναλωτής βρίσκεται ήδη μέσα σε ένα (π.χ. σε jest tests χωρίς
+ * `ConditionalAppShell`), χωρίς να μπλέκει τη λογική επιλογής url/χρώματος παραπάνω.
+ */
+function FailedTextureSwatch({
+  base,
+  fallbackColor,
+  url,
+}: {
+  readonly base: string;
+  readonly fallbackColor: string;
+  readonly url: string;
+}): React.ReactElement {
+  const { t } = useTranslation('dxf-viewer-shell');
+  const message = t('materialSwatch.textureMissing', { asset: assetNameFromUrl(url) });
+
+  const chip = (
+    <span
+      role="img"
+      aria-label={message}
+      className={`${base} relative`}
+      style={{ backgroundColor: fallbackColor }}
+    >
+      <span
+        aria-hidden="true"
+        className="absolute -right-1 -top-1 flex h-2.5 w-2.5 items-center justify-center rounded-full bg-destructive text-[7px] font-bold leading-none text-destructive-foreground"
+      >
+        !
+      </span>
+    </span>
+  );
+
+  return (
+    <TooltipProvider delayDuration={200}>
+      <Tooltip>
+        <TooltipTrigger asChild>{chip}</TooltipTrigger>
+        <TooltipContent className="max-w-xs text-xs">{message}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
 }

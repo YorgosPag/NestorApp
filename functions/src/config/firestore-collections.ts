@@ -63,4 +63,18 @@ export const COLLECTIONS = {
   // recognise a `.glb` claim. Ownership is by `params.uploadId` (many entities → one
   // file), NOT by doc-id → needs a QUERY provider (see file-ownership-resolver).
   FLOORPLAN_IMPORTED_MESHES: 'floorplan_imported_meshes',
+
+  // 🎨 BIM MATERIALS (ADR-413 §2D) — owner of `bim-material-textures/{materialId}/{map}.{ext}`
+  // and `bim-material-thumbnails/{materialId}.{ext}`. Added by ADR-694 Α2: the texture path
+  // keys custody on the FOLDER (materialId), not the basename (which is the map channel).
+  BIM_MATERIALS: 'bim_materials',
+
+  // 🧱 BLOCK LIBRARY (ADR-652) — owner of `block-library/{blockId}.json` geometry blobs.
+  // Added by ADR-694 Α2 after 10 legitimate blobs were deleted 18–21/07 (§2.3).
+  BLOCK_LIBRARY: 'block_library',
+
+  // 🗂️ ORPHAN CANDIDATES (ADR-694 Α1/Α3) — the mark side of mark-and-sweep. `onStorageFinalize`
+  // records here instead of deleting; `orphanSweeper` reclaims only entries that still prove
+  // orphanhood after the retention window. Doc id = base64url of the storage path.
+  STORAGE_ORPHAN_CANDIDATES: 'storage_orphan_candidates',
 } as const;

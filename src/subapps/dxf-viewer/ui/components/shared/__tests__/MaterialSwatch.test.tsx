@@ -103,6 +103,58 @@ describe('MaterialSwatch — καμία σπασμένη εικόνα ποτέ (
 });
 
 /**
+ * ADR-694 Β1 — «fail loud, fail visible, fail actionable» (Revit/Blender συμβόλαιο). Το flat-colour
+ * δίχτυ (ADR-693 Γ3) ΠΑΡΑΜΕΝΕΙ, αλλά η αποτυχία φόρτωσης δεν πρέπει πλέον να περνά σιωπηλά: ορατό
+ * badge + tooltip/aria-label που ονομάζει το asset. Ο διαχωρισμός «αποτυχία φόρτωσης» vs. «δεν
+ * υπήρξε ποτέ εικόνα» είναι το κρίσιμο σημείο — μόνο το πρώτο παίρνει badge.
+ */
+describe('MaterialSwatch — fail-loud badge σε αποτυχία φόρτωσης (ADR-694 Β1)', () => {
+  it('εικόνα φορτώνει κανονικά → ΚΑΝΕΝΑ badge, το chip παραμένει διακοσμητικό (aria-hidden)', () => {
+    const { container } = render(
+      <MaterialSwatch category="concrete" thumbnailUrl="https://storage.example/ok.png" />,
+    );
+    const img = container.querySelector('img');
+    expect(img).not.toBeNull();
+    expect(img?.getAttribute('aria-hidden')).toBe('true');
+    expect(container.querySelector('[role="img"]')).toBeNull();
+    expect(container.querySelector('.bg-destructive')).toBeNull();
+  });
+
+  it('ποτέ δεν υπήρξε url (σκόπιμο flat/μπογιά) → flat χρώμα, ΚΑΝΕΝΑ badge', () => {
+    const { container } = render(<MaterialSwatch color="#123456" />);
+    const chip = container.querySelector('span');
+    expect(chip).not.toBeNull();
+    expect(chip).toHaveStyle({ backgroundColor: '#123456' });
+    expect(chip?.getAttribute('role')).not.toBe('img');
+    expect(chip?.getAttribute('aria-hidden')).toBe('true');
+    expect(container.querySelector('.bg-destructive')).toBeNull();
+  });
+
+  it('onError → flat χρώμα ΚΑΙ ορατό badge + ανακοινώσιμο aria-label με το όνομα του asset', () => {
+    const { container } = render(
+      <MaterialSwatch
+        category="other"
+        color="#e83030"
+        thumbnailUrl="https://storage.example/bmat_1/albedo.jpg?token=abc"
+      />,
+    );
+    fireEvent.error(container.querySelector('img')!);
+
+    // Το flat χρώμα δεν αλλάζει — μένει ΑΚΕΡΑΙΟ (ADR-693 Γ3).
+    const chip = container.querySelector('[role="img"]');
+    expect(chip).not.toBeNull();
+    expect(chip).toHaveStyle({ backgroundColor: '#e83030' });
+
+    // Ανακοινώσιμο σε screen reader — όχι πια aria-hidden.
+    expect(chip?.getAttribute('aria-hidden')).toBeNull();
+    expect(chip?.getAttribute('aria-label')).toContain('albedo.jpg');
+
+    // Ορατό badge στο chip.
+    expect(container.querySelector('.bg-destructive')).not.toBeNull();
+  });
+});
+
+/**
  * ADR-693 §2.2 — ένα `bmat_*` δεν έχει ΠΟΤΕ DNA prefix, οπότε ο παλιός `resolveMaterialKey`
  * το κατέρριπτε σε σκυρόδεμα: ζητούσε την υφή του σκυροδέματος ως swatch, και το flat fallback
  * έδινε το ΓΚΡΙ του σκυροδέματος ενώ το υλικό κουβαλούσε δικό του χρώμα.

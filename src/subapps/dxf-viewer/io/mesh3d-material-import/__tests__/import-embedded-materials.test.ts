@@ -25,14 +25,23 @@ function embeddedMaterial(overrides: { readonly index: number } & Partial<Embedd
   };
 }
 
-function fakeMaterial(id: string): BimMaterial {
+function fakeMaterial(id: string, overrides: Partial<BimMaterial> = {}): BimMaterial {
   return {
     id, scope: 'company', nameEl: id, nameEn: id, category: 'other',
     density: null, defaultThickness: null, fireRating: 'none', atoeCategory: 'OIK-77.01',
     atoeArticle: null, defaultUnitCost: null, defaultUnit: 'm2', brand: null, brandModel: null,
-    notes: null, thumbnailUrl: null, pbrTextures: null,
+    notes: null, thumbnailUrl: null, pbrTextures: null, appearance: null,
     builtin: false, companyId: 'co-1', projectId: null,
     createdBy: 'u', createdAt: {} as never, updatedBy: 'u', updatedAt: {} as never,
+    ...overrides,
+  };
+}
+
+/** Ένα ήδη ανεβασμένο albedo (το `albedoHash` σκόπιμα ΔΕΝ ταιριάζει με τον stub hasher). */
+function ghostAlbedo(): BimMaterial['pbrTextures'] {
+  return {
+    albedoUrl: 'https://storage/ghost/albedo.jpg',
+    normalUrl: null, roughnessUrl: null, aoUrl: null, tileSizeM: 1, albedoHash: 'h-old',
   };
 }
 
@@ -46,14 +55,25 @@ interface Spy {
 interface DepsOptions {
   readonly hashByFileName?: Record<string, string>;
   readonly failNameEl?: string;
+  /** Το live snapshot της βιβλιοθήκης (ADR-694 Φ6 — self-heal + appearance backfill). */
+  readonly existingMaterials?: readonly BimMaterial[];
+  /**
+   * ADR-694 Φ6α — καλωδιώνει τον **προαιρετικό** health probe. `undefined` (default) = ΚΑΝΕΝΑΣ
+   * probe, δηλαδή η προ-Φ6 συμπεριφορά· `[]` = probe που λέει «όλα υγιή».
+   */
+  readonly unreachableAlbedoIds?: readonly string[];
 }
 
 /** Χειρόγραφο (μη-jest.fn) DI stub — mirror του pattern του `dae-texture-import.test.ts`. */
 function makeDeps(options: DepsOptions = {}): { readonly deps: ForeignTextureImporterDeps; readonly spy: Spy } {
   const spy: Spy = { saved: [], uploads: [], patched: [] };
   let n = 0;
+  const unreachable = options.unreachableAlbedoIds;
   const deps: ForeignTextureImporterDeps = {
-    existingMaterials: [],
+    existingMaterials: options.existingMaterials ?? [],
+    ...(unreachable
+      ? { isAlbedoReachable: async (m: BimMaterial) => !unreachable.includes(m.id) }
+      : {}),
     saveMaterial: async (input) => {
       if (options.failNameEl && input.nameEl === options.failNameEl) throw new Error('save boom');
       spy.saved.push(input);
@@ -280,5 +300,161 @@ describe('importEmbeddedMeshMaterials — appearance από τη μέση τιμ
 
     expect(out.createdCount).toBe(1);
     expect(out.idByIndex.get(0)).toBe('bmat_1');
+  });
+});
+
+/**
+ * ADR-694 Φ6 — ground truth 2026-07-25: τέσσερα υπάρχοντα υλικά (`Mat.1`, `Mat`, `Mat#ID12`,
+ * `Scene_Material3`) είχαν `albedoUrl` προς **ανύπαρκτο** αρχείο (403) και `appearance: null` →
+ * μόνιμο γκρι πλακίδιο στη μπάρα «Υλικά όψης». Ρίζα: το by-name reuse έκανε `continue` **πριν**
+ * από κάθε έλεγχο υγείας, άρα το υλικό δεν έφτανε ποτέ στο `importForeignTextures` — sticky για
+ * πάντα, όσα re-imports κι αν γίνονταν.
+ */
+describe('importEmbeddedMeshMaterials — self-heal γνωστού υλικού με σπασμένο albedo (Φ6α)', () => {
+  const ALBEDO = { bytes: new Uint8Array([9, 9, 9]), mimeType: 'image/jpeg', fileName: 'mat1.jpg' };
+  const knownBroken: KnownMaterialResolver = (name) => (name === 'Mat.1' ? 'bmat_broken' : null);
+  const materials = [embeddedMaterial({ index: 0, name: 'Mat.1', albedo: ALBEDO })];
+
+  it('γνωστό όνομα + σπασμένο albedo → repair ΣΤΟ ΙΔΙΟ id, μηδέν διπλότυπο', async () => {
+    const existing = fakeMaterial('bmat_broken', { nameEl: 'Mat.1', pbrTextures: ghostAlbedo() });
+    const { deps, spy } = makeDeps({
+      existingMaterials: [existing], unreachableAlbedoIds: ['bmat_broken'],
+    });
+
+    const out = await importEmbeddedMeshMaterials({
+      materials, sourceLabel: 'model', resolveKnownId: knownBroken, deps,
+    });
+
+    expect(spy.saved).toHaveLength(0); // ΠΟΤΕ νέο bmat_* — repair in-place
+    expect(spy.uploads).toEqual(['bmat_broken']); // η υφή ξανα-ανέβηκε στο ίδιο id
+    expect(spy.patched.some((p) => p.patch.pbrTextures?.albedoUrl)).toBe(true);
+    expect(out.idByIndex.get(0)).toBe('bmat_broken'); // σταθερό id → οι όψεις δεν αλλάζουν
+    expect(out.createdCount).toBe(0);
+    expect(out.reusedCount).toBe(1);
+  });
+
+  it('γνωστό όνομα + ΥΓΙΕΣ albedo → σκέτο reuse, μηδέν upload (καμία περιττή κίνηση)', async () => {
+    const existing = fakeMaterial('bmat_broken', { nameEl: 'Mat.1', pbrTextures: ghostAlbedo() });
+    const { deps, spy } = makeDeps({ existingMaterials: [existing], unreachableAlbedoIds: [] });
+
+    const out = await importEmbeddedMeshMaterials({
+      materials, sourceLabel: 'model', resolveKnownId: knownBroken, deps,
+    });
+
+    expect(spy.uploads).toHaveLength(0);
+    expect(spy.saved).toHaveLength(0);
+    expect(out.idByIndex.get(0)).toBe('bmat_broken');
+    expect(out.reusedCount).toBe(1);
+  });
+
+  it('ΧΩΡΙΣ probe (deps.isAlbedoReachable απών) → ακριβώς η προ-Φ6 συμπεριφορά', async () => {
+    const existing = fakeMaterial('bmat_broken', { nameEl: 'Mat.1', pbrTextures: ghostAlbedo() });
+    const { deps, spy } = makeDeps({ existingMaterials: [existing] }); // κανένα unreachableAlbedoIds
+
+    const out = await importEmbeddedMeshMaterials({
+      materials, sourceLabel: 'model', resolveKnownId: knownBroken, deps,
+    });
+
+    expect(spy.uploads).toHaveLength(0);
+    expect(spy.patched).toHaveLength(0);
+    expect(out.reusedCount).toBe(1);
+    expect(out.createdCount).toBe(0);
+  });
+
+  it('γνωστό υλικό ΧΩΡΙΣ albedoUrl → τετριμμένα υγιές, κανένα repair', async () => {
+    const existing = fakeMaterial('bmat_broken', { nameEl: 'Mat.1' }); // pbrTextures: null
+    const { deps, spy } = makeDeps({
+      existingMaterials: [existing], unreachableAlbedoIds: ['bmat_broken'],
+    });
+
+    const out = await importEmbeddedMeshMaterials({
+      materials, sourceLabel: 'model', resolveKnownId: knownBroken, deps,
+    });
+
+    expect(spy.uploads).toHaveLength(0);
+    expect(out.reusedCount).toBe(1);
+  });
+});
+
+/**
+ * ADR-694 Φ6β — ένα *reused/repaired* textured υλικό με `appearance: null` δεν αποκτούσε ΠΟΤΕ χρώμα
+ * (η βαφή έτρεχε μόνο στα νεοδημιουργημένα). 🔴 Ο αντίστροφος κανόνας είναι απαράβατος: υπάρχον
+ * `appearance` (το όρισε ο χρήστης) ΔΕΝ πατιέται ποτέ.
+ */
+describe('importEmbeddedMeshMaterials — appearance backfill σε reused/repaired (Φ6β)', () => {
+  const ALBEDO = { bytes: new Uint8Array([9, 9, 9]), mimeType: 'image/jpeg', fileName: 'mat1.jpg' };
+  const knownBroken: KnownMaterialResolver = (name) => (name === 'Mat.1' ? 'bmat_broken' : null);
+  const materials = [
+    embeddedMaterial({ index: 0, name: 'Mat.1', albedo: ALBEDO, metalness: 0, roughness: 0.8 }),
+  ];
+
+  it('θεραπευμένο υλικό με appearance:null → αποκτά το μέσο χρώμα της υφής του', async () => {
+    const existing = fakeMaterial('bmat_broken', {
+      nameEl: 'Mat.1', pbrTextures: ghostAlbedo(), appearance: null,
+    });
+    const { deps, spy } = makeDeps({
+      existingMaterials: [existing], unreachableAlbedoIds: ['bmat_broken'],
+    });
+
+    await importEmbeddedMeshMaterials({
+      materials, sourceLabel: 'model', resolveKnownId: knownBroken, deps,
+      averageColorOf: async () => '#e8934a',
+    });
+
+    const painted = spy.patched.find((p) => p.patch.appearance);
+    expect(painted?.id).toBe('bmat_broken');
+    expect(painted?.patch.appearance).toEqual({
+      baseColorHex: '#e8934a', metalness: 0, roughness: 0.8, opacity: 1,
+    });
+  });
+
+  it('🔴 υπάρχον appearance (το όρισε ο χρήστης) → ΠΟΤΕ overwrite, παρότι έγινε repair', async () => {
+    const existing = fakeMaterial('bmat_broken', {
+      nameEl: 'Mat.1',
+      pbrTextures: ghostAlbedo(),
+      appearance: { baseColorHex: '#123456', metalness: 0.4, roughness: 0.1, opacity: 1 },
+    });
+    const { deps, spy } = makeDeps({
+      existingMaterials: [existing], unreachableAlbedoIds: ['bmat_broken'],
+    });
+
+    await importEmbeddedMeshMaterials({
+      materials, sourceLabel: 'model', resolveKnownId: knownBroken, deps,
+      averageColorOf: async () => '#e8934a',
+    });
+
+    expect(spy.uploads).toEqual(['bmat_broken']); // η θεραπεία της υφής έγινε κανονικά…
+    expect(spy.patched.some((p) => p.patch.appearance)).toBe(false); // …αλλά το χρώμα δεν πειράχτηκε
+  });
+
+  it('υγιές reused υλικό με appearance:null → backfill ΧΩΡΙΣ κανένα upload', async () => {
+    const existing = fakeMaterial('bmat_broken', {
+      nameEl: 'Mat.1', pbrTextures: ghostAlbedo(), appearance: null,
+    });
+    const { deps, spy } = makeDeps({ existingMaterials: [existing], unreachableAlbedoIds: [] });
+
+    await importEmbeddedMeshMaterials({
+      materials, sourceLabel: 'model', resolveKnownId: knownBroken, deps,
+      averageColorOf: async () => '#e8934a',
+    });
+
+    expect(spy.uploads).toHaveLength(0);
+    expect(spy.patched.find((p) => p.patch.appearance)?.patch.appearance).toMatchObject({
+      baseColorHex: '#e8934a',
+    });
+  });
+
+  it('υλικό ΑΟΡΑΤΟ στο snapshot → άγνοια ≠ άδειο, κανένα άγγιγμα', async () => {
+    // `resolveKnownId` το ξέρει, αλλά δεν υπάρχει στα `existingMaterials` → δεν μπορούμε να
+    // αποδείξουμε ότι το `appearance` λείπει, άρα δεν γράφουμε τίποτα.
+    const { deps, spy } = makeDeps({ unreachableAlbedoIds: [] });
+
+    await importEmbeddedMeshMaterials({
+      materials, sourceLabel: 'model', resolveKnownId: knownBroken, deps,
+      averageColorOf: async () => '#e8934a',
+    });
+
+    expect(spy.patched).toHaveLength(0);
+    expect(spy.saved).toHaveLength(0);
   });
 });

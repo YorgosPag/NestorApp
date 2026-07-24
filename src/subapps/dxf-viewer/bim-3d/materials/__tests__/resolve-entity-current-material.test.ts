@@ -3,6 +3,7 @@ import {
   resolveFaceCurrentMaterialId,
   resolveEntityMaterialIdSet,
   resolveEntityAppearanceRefs,
+  resolveEntityRenderedMaterialIds,
 } from '../resolve-entity-current-material';
 import { BASE_FACE_KEY } from '../../../bim/types/face-appearance-types';
 
@@ -143,5 +144,80 @@ describe('resolveEntityAppearanceRefs', () => {
     expect(resolveEntityMaterialIdSet(entity)).toEqual(
       resolveEntityAppearanceRefs(entity).materialIds,
     );
+  });
+});
+
+/**
+ * ADR-694 Δ1 — «τι βλέπει ΟΝΤΩΣ ο χρήστης»: ρητό override → αλλιώς embedded (ADR-691).
+ * Το bug που διορθώνει: εισαγόμενο πλέγμα ΧΩΡΙΣ faceAppearance (ADR-691 §3.α: δεν βάφεται η
+ * γεωμετρία) επέστρεφε `[]` → ουδέτερο γκρι swatch στο αριστερό panel, ενώ η κάτω μπάρα
+ * «Υλικά όψης» έδειχνε το ίδιο `bmat_*` με το πραγματικό του χρώμα.
+ */
+describe('resolveEntityRenderedMaterialIds (ADR-694 Δ1)', () => {
+  it('override μόνο (χωρίς embedded) → επιστρέφει το override', () => {
+    const entity = { faceAppearance: { [BASE_FACE_KEY]: { materialId: 'bmat_oak' } } };
+    expect(resolveEntityRenderedMaterialIds(entity)).toEqual(['bmat_oak']);
+    expect(resolveEntityRenderedMaterialIds(entity, [])).toEqual(['bmat_oak']);
+  });
+
+  it('embedded μόνο (καθόλου faceAppearance) → επιστρέφει το embedded ← ΤΟ BUG', () => {
+    expect(resolveEntityRenderedMaterialIds({}, ['bmat_red_vase'])).toEqual(['bmat_red_vase']);
+  });
+
+  it('embedded μόνο, με ΥΠΑΡΚΤΟ αλλά κενό faceAppearance → επιστρέφει το embedded', () => {
+    expect(resolveEntityRenderedMaterialIds({ faceAppearance: {} }, ['bmat_red_vase'])).toEqual([
+      'bmat_red_vase',
+    ]);
+  });
+
+  it('override ΚΑΙ embedded → κερδίζει το override (ο χρήστης έβαψε ρητά)', () => {
+    const entity = { faceAppearance: { [BASE_FACE_KEY]: { materialId: 'bmat_paint' } } };
+    expect(resolveEntityRenderedMaterialIds(entity, ['bmat_embedded'])).toEqual(['bmat_paint']);
+  });
+
+  it('ωμό colorHex override (ad-hoc βαφή) → ΔΕΝ πέφτει στα embedded', () => {
+    const entity = { faceAppearance: { [BASE_FACE_KEY]: { colorHex: '#FF0000' } } };
+    expect(resolveEntityRenderedMaterialIds(entity, ['bmat_embedded'])).toEqual([]);
+  });
+
+  it('legacy imported mesh χωρίς embeddedMaterialIds → κενό, χωρίς crash', () => {
+    expect(resolveEntityRenderedMaterialIds({}, undefined)).toEqual([]);
+    expect(resolveEntityRenderedMaterialIds({})).toEqual([]);
+    expect(resolveEntityRenderedMaterialIds({ faceAppearance: {} }, [])).toEqual([]);
+  });
+
+  it('πολλαπλά embedded → «multiple» (ο caller βλέπει length > 1), order-stable', () => {
+    expect(resolveEntityRenderedMaterialIds({}, ['bmat_a', 'bmat_b', 'bmat_c'])).toEqual([
+      'bmat_a',
+      'bmat_b',
+      'bmat_c',
+    ]);
+  });
+
+  it('dedup + αγνόηση κενών ids στα embedded (defensive, partial import)', () => {
+    expect(resolveEntityRenderedMaterialIds({}, ['bmat_a', 'bmat_a', '', 'bmat_b'])).toEqual([
+      'bmat_a',
+      'bmat_b',
+    ]);
+  });
+
+  it('πολλαπλά per-slot overrides → κερδίζουν όλα τα overrides, όχι τα embedded', () => {
+    const entity = {
+      faceAppearance: {
+        'slot:seat': { materialId: 'bmat_glass' },
+        'slot:legs': { materialId: 'bmat_steel' },
+      },
+    };
+    expect(resolveEntityRenderedMaterialIds(entity, ['bmat_embedded'])).toEqual([
+      'bmat_glass',
+      'bmat_steel',
+    ]);
+  });
+
+  it('ΔΕΝ αλλάζει τη συμπεριφορά των παλιών resolvers (back-compat)', () => {
+    const entity = { faceAppearance: { [BASE_FACE_KEY]: { materialId: 'bmat_oak' } } };
+    expect(resolveEntityMaterialIdSet(entity)).toEqual(['bmat_oak']);
+    expect(resolveEntityMaterialIdSet({})).toEqual([]);
+    expect(resolveEntityCurrentMaterialId({})).toBeNull();
   });
 });

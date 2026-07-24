@@ -93,6 +93,23 @@ Left-drag is claimed for the marquee, so controls are suspended for the gesture'
 (same `setControlsEnabled(false/true)` pattern as `use-bim3d-opening-move`). This makes the
 gesture identical in perspective and ortho; pan stays on middle/right per OrbitControls.
 
+### Press ownership — ποιος κρατάει το πάτημα (Φ2 fix, 2026-07-25)
+
+Ο 3D καμβάς έχει **πολλούς** πιθανούς ιδιοκτήτες ενός αριστερού πατήματος: BIM gizmo handle,
+reshape grip (ADR-535), raw-DXF grip (ADR-537), σύρσιμο ανοίγματος (ADR-363) και ο marquee.
+Ο κανόνας είναι **«όποιος το άρπαξε ΟΝΤΩΣ»**, ποτέ «όποιος είναι ανεβασμένος»:
+
+- οι ιδιοκτήτες ακούνε `pointerdown` (native, στον καμβά) και δηλώνουν έναν probe στο
+  `bim-3d/systems/press-ownership.ts` — «σέρνω εγώ **τώρα**;»
+- ο marquee ακούει `mousedown` (React, στη ρίζα) και ρωτά `isBim3DPressOwned()` πριν οπλίσει.
+
+Είναι race-free επειδή το DOM στέλνει **πάντα** `pointerdown` πριν το `mousedown`: όταν ρωτάει ο
+marquee, η απάντηση είναι ήδη οριστική.
+
+> ⚠️ **ΜΗΝ** ξαναγυρίσεις σε έλεγχο τύπου `editToolActive` / «υπάρχει επιλογή;». Το gizmo είναι
+> **auto-on-selection** (ADR-402 `syncFromSelection`) — τέτοιος έλεγχος ακυρώνει κάθε δεύτερο
+> marquee (βλ. §6, 2026-07-25).
+
 ## 4. Phasing
 
 - **Φ1 (this ADR, implemented):** foundation + select-through CPU marquee for BIM entities;
@@ -130,6 +147,25 @@ gesture identical in perspective and ortho; pan stays on middle/right per OrbitC
   crossing test now uses the shared `polylineIntersectsRect`; `worldToScreen` refactored onto
   a shared `ndcToScreenPx` + new bulk `createWorldToScreenProjector`. jest 29 new (marquee
   folder) / 203 in the touched areas ✓, jscpd:diff clean. 🔴 browser-untested.
+- **2026-07-25** — **Φ2 browser test #1** (Claude-in-Chrome, σκηνή «Ισόγειο 1.dxf»): §7 σημεία
+  **1 ✅, 2 ✅** (μεικτό BIM+DXF επιβιώνει — η σειρά του §3 δουλεύει στην πράξη), toggle στη σωστή
+  θέση με σωστό default. Σημεία **3–6 αμέτρητα**. 🔴 Εντοπίστηκε: **κάθε δεύτερο drag ακυρωνόταν**
+  (✅❌✅❌, ίδιο drag ×4 ⇒ 2→0→2→0).
+- **2026-07-25** — **Φ2 fix «κάθε δεύτερο marquee»** (uncommitted). **Αιτία:** ο marquee
+  παραχωρούσε το drag με `useBim3DEditStore.getState().editToolActive`, αλλά το gizmo είναι
+  **auto-on-selection** (ADR-402 `use-bim3d-edit-interaction.syncFromSelection`) — άρα κάθε
+  επιτυχημένο marquee πάνω σε BIM οντότητα άναβε τη σημαία, το **επόμενο** `mousedown` έβγαινε
+  στο guard, ο marquee δεν οπλιζόταν, δεν έμπαινε `suppressClickRef`, και το trailing `click`
+  έπεφτε στον `handleClick` → κενός χώρος → `selectBimEntity(null)` + `clearByType('dxf-entity')`
+  ⇒ **0**. Με άδεια επιλογή το gizmo έσβηνε ⇒ το μεθεπόμενο drag δούλευε. Η σημαία εναλλασσόταν
+  **με την επιλογή**, όχι με τη χειρονομία — γι' αυτό κάθε γεωμετρική υποψία έβγαινε αθώα.
+  **Διόρθωση:** νέο SSoT `bim-3d/systems/press-ownership.ts` (probe registry, zero-dependency
+  leaf σαν το `pointer-activity.ts`)· probes δηλώνουν οι `use-bim3d-edit-interaction`
+  (gizmo + reshape grip), `use-bim3d-dxf-edit-interaction` (raw-DXF grip),
+  `use-bim3d-opening-move` (σύρσιμο ανοίγματος)· ο marquee ρωτά `isBim3DPressOwned()`.
+  Race-free: `pointerdown` (ιδιοκτήτες) → `mousedown` (marquee). **Παρενέργεια-δώρο:** πλέον
+  τραβάς νέο marquee ενώ υπάρχει ήδη επιλογή — που είναι και η σύμβαση CAD. jest 5 νέα
+  (`press-ownership.test.ts`) + 35 στα γειτονικά ✓, jscpd:diff καθαρό. 🔴 browser-unverified.
 
 ## 7. Browser verification checklist (Φ2)
 1. 3D + DXF underlay loaded → drag L→R around a group of plan lines ⇒ only fully-enclosed
@@ -141,3 +177,7 @@ gesture identical in perspective and ortho; pan stays on middle/right per OrbitC
    NOT selected by a box over it; ON ⇒ it is.
 6. With the toggle OFF, confirm the viewport image does not flicker after the drag (the id pass
    renders to an off-screen target and restores the previous render target).
+7. **(2026-07-25)** Το ΙΔΙΟ drag πάνω σε BIM οντότητες **×4 συνεχόμενα** ⇒ **ίδιο πλήθος και τις
+   4 φορές** (regression «κάθε δεύτερο drag»). Μετά, με την επιλογή ζωντανή, τράβα **νέο**
+   marquee αλλού ⇒ αντικαθιστά την επιλογή· και τράβα από **λαβή gizmo** ⇒ μετακινεί, **δεν**
+   ανοίγει ορθογώνιο.

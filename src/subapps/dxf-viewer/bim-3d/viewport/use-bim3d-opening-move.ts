@@ -52,6 +52,8 @@ import type { DxfCommitDeps } from '../../hooks/grips/unified-grip-types';
 import { getGlobalCommandHistory } from '../../core/commands';
 import { UpdateOpeningParamsCommand } from '../../core/commands/entity-commands/UpdateOpeningParamsCommand';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
+// ADR-692 Φ2 — όσο σέρνεται άνοιγμα, το πάτημα είναι δικό μας (ο marquee δεν οπλίζεται).
+import { registerBim3DPressOwner } from '../systems/press-ownership';
 
 /** A press whose pointer moved less than this (px) before release was a click, not a
  *  drag — don't commit (and let the selection click through). */
@@ -134,6 +136,8 @@ export function useBim3DOpeningMove({ managerRef, canvasEl }: UseBim3DOpeningMov
     const moveReadout = new TempMoveReadoutOverlay(manager.scene);
     let abort: AbortController | null = null;
     let drag: OpeningDrag | null = null;
+    // ADR-692 Φ2 — ένα ζωντανό σύρσιμο ανοίγματος κατέχει το πάτημα (ο marquee υποχωρεί).
+    const unregisterPressOwner = registerBim3DPressOwner(() => drag !== null);
     let justDragged = false;
     /** Last `host:offset(mm)` rendered — skips redundant wall rebuilds on idle frames. */
     let lastPreviewKey: string | null = null;
@@ -313,6 +317,7 @@ export function useBim3DOpeningMove({ managerRef, canvasEl }: UseBim3DOpeningMov
     return () => {
       unsubSelection();
       unsubView();
+      unregisterPressOwner(); // ADR-692 Φ2 — αλλιώς ο probe απαντά για ξεφορτωμένο viewport.
       teardown();
       wallPreview.dispose();
       dimOverlay.dispose();

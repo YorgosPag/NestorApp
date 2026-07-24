@@ -35,8 +35,10 @@
  *    `ImportedMeshPropertiesTab`), not the raw `storeyId`.
  *  - «Υλικό» resolves the LIVE override label (via `libraryEntries`, ADR-687 Φ8 general library),
  *    not just the raw embedded `.glb` material name — reading the FULL applied-material SET
- *    (`resolveEntityMaterialIdSet`, ADR-688 follow-up) so a multi-slot mesh with only one part
- *    painted shows «multiple materials» instead of silently reporting just the base slot.
+ *    (`resolveEntityRenderedMaterialIds`, ADR-688 follow-up + ADR-694 Δ1) so a multi-slot mesh with
+ *    only one part painted shows «multiple materials» instead of silently reporting just the base
+ *    slot, and an unpainted imported mesh shows its EMBEDDED material (ADR-691) instead of a
+ *    neutral-grey swatch.
  *  - Position/elevation now go through the SAME display-unit boundary (`toDisp`/`fromDisp`) and
  *    rotation the same `formatAngleValue` rounding `BlockAdvancedPanel` uses for its INSERT
  *    transform — the SSoT (`readImportedMeshField`/`patchImportedMeshField`) itself stays
@@ -47,7 +49,7 @@ import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { EntityPropertySection } from '../entity-properties/EntityPropertyRow';
 import { MaterialSwatch } from '../components/shared/MaterialSwatch';
-import { resolveEntityMaterialIdSet } from '../../bim-3d/materials/resolve-entity-current-material';
+import { resolveEntityRenderedMaterialIds } from '../../bim-3d/materials/resolve-entity-current-material';
 import { toDisp, fromDisp } from '../ribbon/units/ribbon-display-unit';
 import { formatAngleValue } from '../../config/units';
 import {
@@ -175,13 +177,22 @@ function findOverrideEntry(
 
 /**
  * «Υλικό» — the CURRENT material(s) as a swatch + display name. Reads the FULL applied-material
- * set (`resolveEntityMaterialIdSet`, ADR-688 follow-up) — the same set the 3D renderer's per-slot
- * cascade (`resolveSlotMaterial`: `appearance[slot:name] ?? appearance['*'] ?? embedded`) actually
- * paints — instead of just the base `'*'` slot. For a named-multi-slot `.glb` with only ONE part
- * painted, the base-only read used to disagree with the canvas; this panel now matches it exactly:
- *   - 0 overrides → embedded `.glb` source material name → «no material».
- *   - 1 override → its library label + swatch (unchanged single-material UX).
- *   - 2+ overrides (different materials on different slots) → «multiple materials», no single swatch
+ * set (`resolveEntityRenderedMaterialIds`, ADR-688 follow-up + ADR-694 Δ1) — the same set the 3D
+ * renderer's per-slot cascade (`resolveSlotMaterial`: `appearance[slot:name] ?? appearance['*'] ??
+ * embedded`) actually paints — instead of just the base `'*'` slot. For a named-multi-slot `.glb`
+ * with only ONE part painted, the base-only read used to disagree with the canvas; this panel now
+ * matches it exactly.
+ *
+ * ADR-694 Δ1 — ο cascade φτάνει πλέον ΚΑΙ στα embedded (`params.embeddedMaterialIds`, ADR-691):
+ * ένα εισαγόμενο πλέγμα που ΔΕΝ έχει βαφτεί ρητά (το σύνηθες — ADR-691 §3.α δεν βάφει τη
+ * γεωμετρία) έδειχνε ουδέτερο γκρι swatch ενώ η κάτω μπάρα «Υλικά όψης» έδειχνε το ΙΔΙΟ υλικό
+ * με το πραγματικό του χρώμα. Τώρα και οι δύο επιφάνειες διαβάζουν την ίδια πηγή.
+ * ⚠️ Μόνο ΑΝΑΓΝΩΣΗ — καμία εγγραφή `faceAppearance`, καμία βαφή γεωμετρίας.
+ *
+ * Η σημασιολογία μένει ακέραιη:
+ *   - 0 υλικά → embedded `.glb` source material name → «no material».
+ *   - 1 υλικό (override ή embedded) → its library label + swatch (unchanged single-material UX).
+ *   - 2+ υλικά (different materials on different slots) → «multiple materials», no single swatch
  *     (a single swatch would misrepresent a mesh painted with more than one material).
  */
 function MaterialSection({
@@ -191,7 +202,8 @@ function MaterialSection({
   t: (key: string) => string;
   libraryEntries?: readonly LibraryEntry[];
 }): React.ReactElement {
-  const materialIds = resolveEntityMaterialIdSet(mesh);
+  // Τα embedded ids περνιούνται ρητά: ο resolver είναι entity-type-agnostic (βλ. τεκμηρίωση εκεί).
+  const materialIds = resolveEntityRenderedMaterialIds(mesh, mesh.params.embeddedMaterialIds);
   const sourceName = readImportedMeshField(IMPORTED_MESH_READONLY_KEYS.currentMaterial, mesh.params);
   const isMultiple = materialIds.length > 1;
   const singleMaterialId = materialIds.length === 1 ? materialIds[0] : undefined;

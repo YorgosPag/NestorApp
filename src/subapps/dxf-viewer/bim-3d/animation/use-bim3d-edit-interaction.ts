@@ -46,6 +46,9 @@ import {
   selectEditEntityKey,
 } from '../stores/Bim3DEditStore';
 import { useSelection3DStore } from '../stores/Selection3DStore';
+// ADR-692 Φ2 — δήλωσε ότι ΕΜΕΙΣ κρατάμε το πάτημα όσο τρέχει gizmo/reshape-grip drag, ώστε ο
+// marquee να παραχωρεί ΜΟΝΟ τότε (και ΟΧΙ επειδή απλώς υπάρχει επιλογή — auto-on-selection).
+import { registerBim3DPressOwner } from '../systems/press-ownership';
 // ADR-688 Φ3 — universal-selection SSoT to re-select the freshly dropped Ctrl copy-drag clones.
 import { useUniversalSelectionStable } from '../../systems/selection/SelectionSystem';
 import { useBim3DEntitiesStore } from '../stores/Bim3DEntitiesStore';
@@ -121,6 +124,10 @@ export function useBim3DEditInteraction({ managerRef, canvasEl }: UseBim3DEditIn
       reselect: (ids) => universalRef.current.replaceEntitySelection(ids),
     };
     let activeAbort: AbortController | null = null;
+    // ADR-692 Φ2 — ένα ζωντανό gizmo/grip drag κατέχει το πάτημα (ο marquee υποχωρεί).
+    const unregisterPressOwner = registerBim3DPressOwner(
+      () => controller.isDragging() || gripController.isDragging(),
+    );
 
     const teardownListeners = (): void => {
       activeAbort?.abort();
@@ -242,6 +249,7 @@ export function useBim3DEditInteraction({ managerRef, canvasEl }: UseBim3DEditIn
       unsubEntity();
       unsubSelection();
       unsubEntities();
+      unregisterPressOwner(); // ADR-692 Φ2 — αλλιώς ο probe απαντά για ξεφορτωμένο viewport.
       teardownListeners();
       preview.dispose(); // ADR-550 — free the original-stays-as-ghost overlay.
       overlay.dispose();

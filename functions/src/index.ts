@@ -486,8 +486,13 @@ export const getTrashStats = functions
     };
   });
 
-// STORAGE TRIGGERS — onStorageFinalize (orphan cleanup, ADR-032+312),
-// onDxfProcessedFinalize (DXF thumbnail), orphanSpikeAlert (ADR-327 Layer 3).
+// STORAGE TRIGGERS (ADR-694 mark-and-sweep — ΜΟΝΟ ο sweeper διαγράφει):
+//  - onStorageFinalize  → mark-only παρατηρητής, ΜΗΔΕΝ διαγραφή (Α1)
+//  - orphanSweeper      → ο μοναδικός destructive δρόμος· dry-run χωρίς
+//                         `ORPHAN_SWEEP_ENABLED=true` (Α3)
+//  - orphanSpikeAlert   → ADR-327 Layer 3 observability
+//  - onDxfProcessedFinalize → DXF thumbnail (άσχετο με custody)
 export { onStorageFinalize } from './storage/orphan-cleanup';
+export { orphanSweeper } from './storage/orphan-sweeper';
 export { onDxfProcessedFinalize } from './storage/dxf-thumbnail-onfinalize';
 export { orphanSpikeAlert } from './storage/orphan-spike-alert';

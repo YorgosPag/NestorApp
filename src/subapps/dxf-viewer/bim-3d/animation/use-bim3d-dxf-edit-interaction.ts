@@ -46,6 +46,8 @@ import { dxfPlanToWorld } from '../viewport/coordinate-transforms';
 import { syncSnapEngineViewport3D } from './bim3d-edit-drag-snap';
 import { resolveEntityLevelId } from './bim3d-edit-live-preview-apply';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
+// ADR-692 Φ2 — ένα ζωντανό raw-DXF grip drag κατέχει το πάτημα (ο marquee υποχωρεί).
+import { registerBim3DPressOwner } from '../systems/press-ownership';
 
 export interface UseBim3DDxfEditInteractionParams {
   readonly managerRef: MutableRefObject<ThreeJsSceneManager | null>;
@@ -111,6 +113,8 @@ export function useBim3DDxfEditInteraction({ managerRef, canvasEl }: UseBim3DDxf
     if (!canvasEl || !manager) return;
     const gripController = new BimGripController3D();
     let activeAbort: AbortController | null = null;
+    // ADR-692 Φ2 — όσο σέρνεται λαβή raw DXF, το πάτημα είναι δικό μας (ο marquee δεν οπλίζεται).
+    const unregisterPressOwner = registerBim3DPressOwner(() => gripController.isDragging());
     // ADR-537 δ — the elevation (mm) of the floor whose entity is currently seated, so the
     // drag's snap viewport anchors on the right plane (the grips/ghost already ride it via
     // the elevation closures stored on `setGrips`).
@@ -264,6 +268,7 @@ export function useBim3DDxfEditInteraction({ managerRef, canvasEl }: UseBim3DDxf
       unsubScene();
       unsubScope();
       unsubStack();
+      unregisterPressOwner(); // ADR-692 Φ2 — αλλιώς ο probe απαντά για ξεφορτωμένο viewport.
       teardownListeners();
       if (ownsGrips()) store().clear();
     };

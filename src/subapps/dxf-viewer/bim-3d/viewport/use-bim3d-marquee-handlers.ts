@@ -21,8 +21,9 @@ import { useCallback, useEffect, useRef } from 'react';
 import type { MouseEvent as ReactMouseEvent, RefObject } from 'react';
 import { useEscapeHandler, ESC_PRIORITY } from '../../systems/escape-bus';
 import { toolStateStore } from '../../stores/ToolStateStore';
-import { useBim3DEditStore } from '../stores/Bim3DEditStore';
 import { usePolygonMode3DStore } from '../stores/PolygonMode3DStore';
+// ADR-692 Φ2 — «κρατάει ήδη κάποιος αυτό το πάτημα;» (gizmo / grips / σύρσιμο ανοίγματος).
+import { isBim3DPressOwned } from '../systems/press-ownership';
 import { Marquee3DStore } from '../systems/marquee/Marquee3DStore';
 import type { MarqueeCombineMode } from '../../systems/selection/marquee-combine';
 import { resolveAndApplyMarquee3D } from '../systems/marquee/marquee-3d-apply';
@@ -69,7 +70,10 @@ export function useBim3DMarqueeHandlers(
     if (!manager) return;
     if (e.target !== manager.getRendererCanvas()) return; // only genuine scene canvas (not chrome)
     if (toolStateStore.get().activeTool === 'dist') return; // ADR-680 — «Μέτρηση» owns clicks
-    if (useBim3DEditStore.getState().editToolActive) return; // ADR-408 — gizmo owns drags
+    // ADR-408/537/363 — παραχώρησε το drag ΜΟΝΟ αν κάποιος το άρπαξε ΟΝΤΩΣ στο `pointerdown`
+    // (gizmo handle / reshape grip / raw-DXF grip / σύρσιμο ανοίγματος). ΠΟΤΕ «υπάρχει επιλογή»:
+    // το gizmo είναι auto-on-selection, οπότε αυτό ακύρωνε κάθε δεύτερο marquee (βλ. press-ownership).
+    if (isBim3DPressOwned()) return;
     if (usePolygonMode3DStore.getState().active) return;     // ADR-539 — face picking owns clicks
 
     const mode: MarqueeCombineMode = e.shiftKey
