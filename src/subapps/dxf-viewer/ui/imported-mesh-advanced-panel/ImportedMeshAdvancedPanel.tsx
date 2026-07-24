@@ -211,7 +211,17 @@ function MaterialSection({
           {t('importedMeshAdvancedPanel.field.currentMaterial')}
         </span>
         <span className="flex shrink-0 items-center gap-1.5">
-          {!isMultiple && <MaterialSwatch materialId={singleMaterialId} />}
+          {!isMultiple && (
+            <MaterialSwatch
+              sphere
+              materialId={entry?.materialId ?? singleMaterialId}
+              category={entry?.category}
+              thumbnailUrl={entry?.thumbnailUrl}
+              albedoUrl={entry?.albedoUrl}
+              appearance={entry?.appearance}
+              color={entry?.color}
+            />
+          )}
           <span className="text-xs font-medium text-foreground">{displayLabel}</span>
         </span>
       </div>
