@@ -15,6 +15,8 @@ import * as THREE from 'three';
 import type { PbrMaterialDef } from '../../bim/materials/material-catalog-defs';
 import type { LoadedTextureSet } from './bim-texture-cache';
 import { FACE_POLYGON_OFFSET_FACTOR, FACE_POLYGON_OFFSET_UNITS } from './material-depth-priority';
+import type { GlassQuality } from '../../config/bim-visual-style';
+import { clamp } from '../../utils/scalar-math';
 
 /**
  * ADR-687 Φ5 — a def needs the (heavier) `MeshPhysicalMaterial` ONLY when it has an
@@ -70,6 +72,35 @@ export function buildMat(def: PbrMaterialDef): THREE.MeshStandardMaterial {
   }
 
   return new THREE.MeshStandardMaterial(base);
+}
+
+/**
+ * ADR-687 Φ9 — map a material def to the **live-viewport** def under a glass-quality
+ * setting. Pure (`PbrMaterialDef → PbrMaterialDef`), zero side-effects.
+ *
+ * `accurate` (or any non-glass def, `transmission <= 0`) → the def is returned **by
+ * identity** (same reference) — so the thousands of non-glass BIM solids build EXACTLY
+ * as before (zero allocation, zero behavioural change). Only a real glass material under
+ * `light` is transformed: its (expensive, extra-render-pass) `transmission` refraction is
+ * swapped for a cheap `opacity` alpha-blend, dropping the material back to
+ * `MeshStandardMaterial` (`needsPhysical` → false). Revit's realistic viewport does the
+ * same — refraction is a render-quality option, not always-on.
+ *
+ * Opacity: a glass material that already carries an explicit `opacity < 1` (e.g. the Φ4
+ * glass seed 0.35) keeps it; otherwise it is derived from the transmission strength
+ * (`1 - transmission*0.6`, clamped to a visible-but-transparent 0.2..0.85). Every other
+ * channel (clearcoat/emissive/metalness/roughness/colour) is preserved verbatim.
+ *
+ * NOTE: viewport-only. The material-editor preview sphere, the swatches and the 3Δ export
+ * bypass this (they build from the raw def / force accurate) → always full refraction.
+ */
+export function viewportGlassDef(def: PbrMaterialDef, glass: GlassQuality): PbrMaterialDef {
+  const transmission = def.transmission ?? 0;
+  if (glass === 'accurate' || transmission <= 0) return def;
+  const opacity = def.opacity != null && def.opacity < 1
+    ? def.opacity
+    : clamp(1 - transmission * 0.6, 0.2, 0.85);
+  return { ...def, transmission: 0, opacity, transparent: true };
 }
 
 /**

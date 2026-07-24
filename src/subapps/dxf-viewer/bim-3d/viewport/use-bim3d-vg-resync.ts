@@ -98,6 +98,16 @@ export function useBim3DVgResync(
       resync();
     });
 
+    // (h) ADR-687 Φ9 — «Ποιότητα γυαλιού» (Ελαφρό ↔ Ακριβές): a glass material builds
+    // differently under each mode (opacity vs transmission), so a flip must rebuild the
+    // scene to swap the cached materials on the placed meshes. Idempotent guard (mirror (f)).
+    let prevGlass = useBimRenderSettingsStore.getState().glassQuality;
+    const unsubGlass = useBimRenderSettingsStore.subscribe((state) => {
+      if (state.glassQuality === prevGlass) return;
+      prevGlass = state.glassQuality;
+      resync();
+    });
+
     return () => {
       unsubVg();
       unsubEnvelope();
@@ -106,6 +116,7 @@ export function useBim3DVgResync(
       unsubTextures();
       unsubVisualStyle();
       unsubStructuralOverlays();
+      unsubGlass();
     };
   }, [managerRef, externalEntitiesMode, bimEntities]);
 }

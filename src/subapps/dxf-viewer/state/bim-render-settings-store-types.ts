@@ -8,7 +8,7 @@
  */
 
 import type { BimRenderSettings, ResolvedBimSettings, AxisCutKey } from '../config/bim-render-settings-types';
-import type { VisualStylePreset, BackgroundMode } from '../config/bim-visual-style';
+import type { VisualStylePreset, BackgroundMode, GlassQuality } from '../config/bim-visual-style';
 import type { ViewRange } from '../config/bim-view-range';
 import type { BimCategory, ObjectStyle, SubcategoryStyle } from '../config/bim-object-styles';
 import type { Discipline } from '../bim/discipline/bim-discipline';
@@ -101,6 +101,12 @@ export interface BimRenderSettingsState extends ResolvedBimSettings {
    * debounced write (idempotent).
    */
   setBackgroundMode: (mode: BackgroundMode) => void;
+  /**
+   * ADR-687 Φ9 — set the per-view live-viewport glass quality (`light` opacity ↔
+   * `accurate` transmission/refraction). ORTHOGONAL to `setVisualStyle`/
+   * `setBackgroundMode`. Single state update + single debounced write (idempotent).
+   */
+  setGlassQuality: (glassQuality: GlassQuality) => void;
   /**
    * ADR-413/446 — LEGACY alias: maps the realistic boolean onto the equivalent
    * Visual Style preset (`true`→'realistic-edges', `false`→'shaded-edges'). Kept

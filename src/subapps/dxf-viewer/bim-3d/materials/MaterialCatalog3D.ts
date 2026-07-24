@@ -21,13 +21,16 @@ import {
   getUserMaterialTextureSet,
   preloadUserMaterialTextures,
   getUserMaterialSetVersion,
+  type UserMaterialAppearance,
 } from './user-material-registry';
 import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
 // N.7.1 size split — coplanar-face depth-bias SSoT (ADR-375 offsets + ADR-366 §B.5 per-category priority).
 import { withDepthPriority } from './material-depth-priority';
 // N.7.1 size split (ADR-665) — the sole PBR face factory, shared with `terrain-materials-3d`.
 // applyTextureSet — SSoT texture-apply, shared with the ADR-687 Φ7 offscreen thumbnail sphere.
-import { buildMat, applyTextureSet } from './pbr-material-builder';
+// viewportGlassDef — ADR-687 Φ9 live-viewport glass-quality map (transmission → opacity when light).
+import { buildMat, applyTextureSet, viewportGlassDef } from './pbr-material-builder';
+import type { GlassQuality } from '../../config/bim-visual-style';
 // N.18 SSoT — η ΜΟΝΑΔΙΚΗ «κάνε double-sided χωρίς να μολύνεις την πηγή» (WeakMap-cached).
 import { ensureDoubleSided } from './ensure-double-sided';
 // N.7.1 size split (ADR-665) — ADR-446 Visual Style FACES axis.
@@ -124,17 +127,65 @@ export function getResolvedTextureKeyForMaterialId(materialId: string): string {
  * Cached per id WITH the registry's change-version, so a re-upload / category
  * change / deletion rebuilds the material (and disposes the stale one).
  */
-const USER_TEX_CACHE = new Map<string, { mat: THREE.MeshStandardMaterial; version: number }>();
+// ADR-687 Φ9 — cache is keyed by id but ALSO validated by `glass`: a glass material
+// builds differently under `light` (opacity) vs `accurate` (transmission), so a live
+// glass-quality flip must miss the cache and rebuild (the resync re-fetches meshes).
+const USER_TEX_CACHE = new Map<string, { mat: THREE.MeshStandardMaterial; version: number; glass: GlassQuality }>();
+
+/**
+ * ADR-687 Φ9 — force-accurate override for the headless 3Δ export. `null` in the live
+ * viewport (reads the per-view store). `withAccurateGlassForExport` sets it to `'accurate'`
+ * for the SYNCHRONOUS duration of an export build so the exported material carries the TRUE
+ * transmission, DECOUPLED from whatever draft-quality the viewport is showing (Revit/
+ * ArchiCAD/C4D: viewport render-quality never bleeds into an export). Sole owner of the flag.
+ */
+let glassQualityOverride: GlassQuality | null = null;
+
+export function withAccurateGlassForExport<T>(build: () => T): T {
+  const prev = glassQualityOverride;
+  glassQualityOverride = 'accurate';
+  try {
+    return build();
+  } finally {
+    glassQualityOverride = prev;
+  }
+}
+
+/** The effective live glass quality (export override wins over the per-view store). */
+function effectiveGlassQuality(): GlassQuality {
+  return glassQualityOverride ?? useBimRenderSettingsStore.getState().glassQuality;
+}
 
 function commitUserMaterial(
   id: string,
   version: number,
+  glass: GlassQuality,
   mat: THREE.MeshStandardMaterial,
 ): THREE.MeshStandardMaterial {
   const prev = USER_TEX_CACHE.get(id);
   if (prev && prev.mat !== mat) prev.mat.dispose();
-  USER_TEX_CACHE.set(id, { mat, version });
+  USER_TEX_CACHE.set(id, { mat, version, glass });
   return mat;
+}
+
+/** Build the (glass-aware) material for a fed library material — textured or flat. */
+function buildUserMaterial(
+  id: string,
+  appearance: UserMaterialAppearance,
+  glass: GlassQuality,
+): THREE.MeshStandardMaterial {
+  // ADR-687 Φ9 — map the def to the viewport-effective def (glass light → opacity). Non-glass
+  // defs / accurate return by identity, so textured & flat build EXACTLY as before.
+  const def = viewportGlassDef(appearance.def, glass);
+  const realistic = useBimRenderSettingsStore.getState().realisticMaterials;
+  const wantTextured = realistic && !!appearance.textures?.albedoUrl;
+  if (!wantTextured) return buildMat(def);
+  const set = getUserMaterialTextureSet(id);
+  if (!set) {
+    preloadUserMaterialTextures(id);
+    return buildMat(def);
+  }
+  return applyTextureSet(def, set);
 }
 
 function resolveUserMaterial(id: string): THREE.MeshStandardMaterial {
@@ -149,22 +200,19 @@ function resolveUserMaterial(id: string): THREE.MeshStandardMaterial {
     return getFlatMaterial(DEFAULT_MATERIAL_KEY);
   }
 
+  const glass = effectiveGlassQuality();
+
+  // ADR-687 Φ9 — export (override active): build a FRESH accurate material WITHOUT touching
+  // `USER_TEX_CACHE`, so an export never disposes/overwrites the live viewport's cached
+  // (possibly light) material → zero cache corruption. The export scene is headless (no GL
+  // context) and its materials are cloned downstream + discarded, so the fresh build is free.
+  if (glassQualityOverride !== null) return buildUserMaterial(id, appearance, glass);
+
   const version = getUserMaterialSetVersion(id);
   const cached = USER_TEX_CACHE.get(id);
-  if (cached && cached.version === version) return cached.mat;
+  if (cached && cached.version === version && cached.glass === glass) return cached.mat;
 
-  const realistic = useBimRenderSettingsStore.getState().realisticMaterials;
-  const wantTextured = realistic && !!appearance.textures?.albedoUrl;
-  if (!wantTextured) {
-    return commitUserMaterial(id, version, buildMat(appearance.def));
-  }
-
-  const set = getUserMaterialTextureSet(id);
-  if (!set) {
-    preloadUserMaterialTextures(id);
-    return commitUserMaterial(id, version, buildMat(appearance.def));
-  }
-  return commitUserMaterial(id, version, applyTextureSet(appearance.def, set));
+  return commitUserMaterial(id, version, glass, buildUserMaterial(id, appearance, glass));
 }
 
 /** Resolve MeshStandardMaterial from a DNA materialId (e.g. 'mat-concrete-c25'). */

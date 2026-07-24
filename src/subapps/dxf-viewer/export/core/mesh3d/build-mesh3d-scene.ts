@@ -30,6 +30,7 @@ import {
 import type { FloorStackEntry } from '../../../bim-3d/scene/multi-floor-3d-source';
 import { stripExportDecorations } from './mesh3d-decorations';
 import { bakeInstancedMeshesForExport } from './mesh3d-instancing';
+import { withAccurateGlassForExport } from '../../../bim-3d/materials/MaterialCatalog3D';
 import type { ResolvedExportFloor } from '../export-floor-scope';
 import type { ExportDeps } from '../../types';
 
@@ -120,10 +121,16 @@ export function buildMesh3dScene(
   // scope is decided by WHICH floors populate `entries`, not by building focus. This is
   // belt-and-suspenders — a future forgotten `deps.buildings` can never again blank an export.
   // `deps.buildings` is still forwarded so each entity resolves its building for correct baseElevation.
-  layer.syncMultiFloor(entries, {
-    ...EMPTY_FLOOR_VIS_SCOPE,
-    floors: deps.floors ?? [],
-    buildings: deps.buildings ?? [],
+  // ADR-687 Φ9 — force ACCURATE glass while the converters build materials: the export must carry the
+  // authoritative refraction regardless of the live viewport's «Ποιότητα γυαλιού» draft setting (big-
+  // player rule — viewport render-quality never bleeds into an export). Synchronous → the override is
+  // safely cleared before this returns; the live cache is never touched (fresh uncached export builds).
+  withAccurateGlassForExport(() => {
+    layer.syncMultiFloor(entries, {
+      ...EMPTY_FLOOR_VIS_SCOPE,
+      floors: deps.floors ?? [],
+      buildings: deps.buildings ?? [],
+    });
   });
 
   // ADR-668 §4.7 — οι converters προσαρτούν screen-space edge overlays (`LineSegments2`, ADR-375) ως

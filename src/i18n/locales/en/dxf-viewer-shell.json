@@ -4977,6 +4977,14 @@
           "realistic-edges": "Realistic with Edges"
         }
       },
+      "glassQuality": {
+        "label": "Glass Quality",
+        "tooltip": "Live 3D glass rendering quality: «Light» = transparency without refraction (lightweight, for smooth rotation); «Accurate» = full refraction (photoreal but heavier). The preview and export always stay accurate.",
+        "options": {
+          "light": "Light",
+          "accurate": "Accurate"
+        }
+      },
       "realisticMaterials": {
         "label": "Realistic Materials",
         "enable": "Enable Materials",

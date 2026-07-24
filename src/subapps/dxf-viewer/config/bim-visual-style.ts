@@ -92,6 +92,32 @@ export type BackgroundMode = 'environment' | 'dark';
 export const DEFAULT_BACKGROUND_MODE: BackgroundMode = 'environment';
 
 /**
+ * ADR-687 Φ9 — live-viewport glass rendering quality. ORTHOGONAL to the FACES/EDGES
+ * preset AND to `backgroundMode` (any combination), so its own per-view field on
+ * `BimRenderSettings`. Affects ONLY the live 3D viewport — the material-editor preview
+ * sphere, the swatches AND the 3Δ export stay ALWAYS accurate (Revit/ArchiCAD/C4D:
+ * viewport draft-quality never bleeds into an export):
+ *   - `light` → transmission (screen-space refraction) is swapped for cheap `opacity`
+ *     alpha-blend, so a glass material renders as a plain `MeshStandardMaterial` with
+ *     NO extra render pass per frame (Revit «realistic» viewport does not refract).
+ *     Default — smooth rotation on a weak GPU.
+ *   - `accurate` → full `MeshPhysicalMaterial.transmission`/refraction (photoreal, but
+ *     an extra framebuffer copy per frame → heavier rotation).
+ */
+export type GlassQuality = 'light' | 'accurate';
+
+/** ADR-687 Φ9 — default glass quality = `light` (performance-first, Giorgio 2026-07-24). */
+export const DEFAULT_GLASS_QUALITY: GlassQuality = 'light';
+
+/** ADR-687 Φ9 — all glass-quality options in ribbon-dropdown display order. */
+export const GLASS_QUALITY_OPTIONS: readonly GlassQuality[] = ['light', 'accurate'] as const;
+
+/** ADR-687 Φ9 — type guard for persisted/UI glass-quality input. */
+export function isGlassQuality(v: unknown): v is GlassQuality {
+  return v === 'light' || v === 'accurate';
+}
+
+/**
  * Default visual style = «Shaded with Edges» (Σκιασμένο με Ακμές): lit flat-colour
  * faces + the always-built visible model edge overlay (ADR-375). Giorgio's chosen
  * default (2026-06-13) — every NEW view opens shaded-with-edges; views that already

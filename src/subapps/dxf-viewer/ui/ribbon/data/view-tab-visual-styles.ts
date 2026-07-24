@@ -43,6 +43,19 @@ export const VIEW_VISUAL_STYLES_PANEL: RibbonPanelDef = {
             commandKey: 'structural-component-visibility',
           },
         },
+        // ADR-687 Φ9 — «Ποιότητα Γυαλιού» (Ελαφρό/Ακριβές): per-view live-viewport glass
+        // render quality, δίπλα στο «Στυλ Προβολής» (big-player render-quality grouping).
+        {
+          type: 'widget',
+          size: 'small',
+          widgetId: 'glass-quality-select',
+          command: {
+            id: 'view.glassQuality',
+            labelKey: 'ribbon.commands.glassQuality.label',
+            icon: '',
+            commandKey: 'glass-quality-select',
+          },
+        },
       ],
     },
   ],

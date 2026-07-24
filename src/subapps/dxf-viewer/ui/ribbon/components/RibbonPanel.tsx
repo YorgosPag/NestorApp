@@ -42,6 +42,7 @@ import { ShowUtilizationToggle } from './ShowUtilizationToggle';
 import { ShowBalancingToggle } from './ShowBalancingToggle';
 import { ExportThermalStudyButton } from './ExportThermalStudyButton';
 import { VisualStyleSelect } from './VisualStyleSelect';
+import { GlassQualitySelect } from './GlassQualitySelect';
 import { StructuralComponentVisibilitySelect } from './StructuralComponentVisibilitySelect';
 import { DisciplineVisibilityToggle } from './DisciplineVisibilityToggle';
 import { RibbonInsertTokenWidget } from './RibbonInsertTokenWidget';
@@ -206,6 +207,9 @@ function renderButton(button: RibbonButton): React.ReactNode {
     }
     if (button.widgetId === 'visual-style-select') {
       return <VisualStyleSelect key="visual-style-select-widget" />;
+    }
+    if (button.widgetId === 'glass-quality-select') {
+      return <GlassQualitySelect key="glass-quality-select-widget" />;
     }
     if (button.widgetId === 'structural-component-visibility') {
       return <StructuralComponentVisibilitySelect key="structural-component-visibility-widget" />;

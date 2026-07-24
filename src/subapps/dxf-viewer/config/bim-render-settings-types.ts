@@ -19,11 +19,13 @@ import type { Discipline } from '../bim/discipline/bim-discipline';
 import {
   DEFAULT_VISUAL_STYLE,
   DEFAULT_BACKGROUND_MODE,
+  DEFAULT_GLASS_QUALITY,
   resolveVisualStyleAxes,
   type VisualStylePreset,
   type FaceMode,
   type EdgeMode,
   type BackgroundMode,
+  type GlassQuality,
 } from './bim-visual-style';
 
 // ── Drawing scale constants (re-exported by drawing-scale-store for compat) ──
@@ -121,6 +123,13 @@ export interface BimRenderSettings {
    * 2D per-category edge colours. Persisted per-view.
    */
   backgroundMode?: BackgroundMode;
+  /**
+   * ADR-687 Φ9 — live-viewport glass rendering quality (Ελαφρό opacity ↔ Ακριβές
+   * transmission/refraction). ORTHOGONAL to `visualStyle`/`backgroundMode`. Absent ⇒
+   * `light` (performance-first default). Affects ONLY the live viewport — preview
+   * sphere/swatches/export stay always accurate. Persisted per-view.
+   */
+  glassQuality?: GlassQuality;
   /**
    * ADR-413 — LEGACY realistic-materials bit. Superseded by {@link visualStyle}
    * (ADR-446): `realisticMaterials === (faceMode === 'realistic')`. Retained ONLY
@@ -231,6 +240,8 @@ export interface ResolvedBimSettings {
   edgeMode: EdgeMode;
   /** ADR-446 §2 — resolved visible-background mode (default `environment`). */
   backgroundMode: BackgroundMode;
+  /** ADR-687 Φ9 — resolved live-viewport glass quality (default `light`). */
+  glassQuality: GlassQuality;
   /**
    * ADR-413/446 — DERIVED convenience flag `faceMode === 'realistic'`, kept so
    * existing realistic-only consumers (e.g. roof relief) need no faceMode logic.
@@ -301,6 +312,8 @@ export function resolveBimSettings(s?: BimRenderSettings | null): ResolvedBimSet
     edgeMode: axes.edgeMode,
     // ADR-446 §2 — absent ⇒ environment (photoreal sky/HDRI, the pre-§2 look).
     backgroundMode: s?.backgroundMode ?? DEFAULT_BACKGROUND_MODE,
+    // ADR-687 Φ9 — absent ⇒ light (performance-first glass; accurate is opt-in per-view).
+    glassQuality: s?.glassQuality ?? DEFAULT_GLASS_QUALITY,
     // ADR-413/446 — DERIVED from the face mode (no longer a free-standing bit).
     realisticMaterials: axes.faceMode === 'realistic',
     // ADR-422 L1 — absent ⇒ false (analytical heat-load overlay off by default).

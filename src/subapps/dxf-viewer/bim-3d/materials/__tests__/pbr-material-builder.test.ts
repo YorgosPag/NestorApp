@@ -10,7 +10,7 @@
  */
 
 import * as THREE from 'three';
-import { buildMat, applyTextureSet } from '../pbr-material-builder';
+import { buildMat, applyTextureSet, viewportGlassDef } from '../pbr-material-builder';
 import type { PbrMaterialDef } from '../../../bim/materials/material-catalog-defs';
 import type { LoadedTextureSet } from '../bim-texture-cache';
 
@@ -79,5 +79,46 @@ describe('applyTextureSet — ADR-687 Φ7 shared texture-apply (extracted SSoT)'
     expect(mat.map).not.toBeNull();
     expect(mat.normalMap).toBeNull();
     expect(mat.aoMap).toBeNull();
+  });
+});
+
+describe('viewportGlassDef — ADR-687 Φ9 live-viewport glass quality map', () => {
+  const glassDef: PbrMaterialDef = { ...baseDef, transmission: 1, ior: 1.5, thickness: 2 };
+
+  it('returns the def BY IDENTITY under accurate (zero allocation / zero change)', () => {
+    expect(viewportGlassDef(glassDef, 'accurate')).toBe(glassDef);
+  });
+
+  it('returns a NON-glass def by identity even under light (transmission <= 0)', () => {
+    expect(viewportGlassDef(baseDef, 'light')).toBe(baseDef);
+  });
+
+  it('swaps transmission for opacity under light (drops back to a cheap Standard material)', () => {
+    const light = viewportGlassDef(glassDef, 'light');
+    expect(light).not.toBe(glassDef);       // a new object
+    expect(light.transmission).toBe(0);      // refraction dropped
+    expect(light.transparent).toBe(true);
+    expect(light.opacity).toBeGreaterThanOrEqual(0.2);
+    expect(light.opacity).toBeLessThanOrEqual(0.85);
+    // buildMat must NOT upgrade to the physical tier (no transmission/clearcoat left).
+    expect(buildMat(light).type).toBe('MeshStandardMaterial');
+  });
+
+  it('honours an explicit low opacity on the glass def instead of deriving one', () => {
+    const light = viewportGlassDef({ ...glassDef, opacity: 0.3 }, 'light');
+    expect(light.opacity).toBeCloseTo(0.3);
+  });
+
+  it('preserves clearcoat/emissive/colour/roughness/metalness on the light glass def', () => {
+    const light = viewportGlassDef(
+      { ...glassDef, clearcoat: 0.5, emissive: 0xff0000, emissiveIntensity: 0.4 },
+      'light',
+    );
+    expect(light.clearcoat).toBeCloseTo(0.5);
+    expect(light.emissive).toBe(0xff0000);
+    expect(light.emissiveIntensity).toBeCloseTo(0.4);
+    expect(light.color).toBe(baseDef.color);
+    expect(light.roughness).toBeCloseTo(0.5);
+    expect(light.metalness).toBeCloseTo(0.2);
   });
 });
