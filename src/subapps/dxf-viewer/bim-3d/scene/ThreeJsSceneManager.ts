@@ -55,6 +55,7 @@ import { buildSceneManagerParts } from './scene-manager-construct';
 import {
   setBimOrbitPivot,
   applyBimSelection,
+  applyBimMarqueeSelection,
   hydrateBimSelectionFromUniversal,
   loadHdriIntoStore,
   EMPTY_FLOOR_VIS_SCOPE,
@@ -220,22 +221,16 @@ export class ThreeJsSceneManager {
   // ── Phase 4.5 / A.7 — Accessibility public surface (logic in scene-manager-a11y) ──
   /** A.7.Q4 — screen-space pan (dxPx > 0 = view right, dyPx > 0 = view up). */
   panViewportByPixels(dxPx: number, dyPx: number): void { if (!this.disposed) this.viewport.pan(dxPx, dyPx); }
-
   /** C.5.Q3 — current frustum-culled entity order for keyboard navigator. */
   getEntityFocusOrder(): readonly string[] { return this.disposed ? [] : computeFocusOrder(this.bimLayer.group, this.viewport.camera); }
-
   /** A.7.Q1 — Tab/Shift+Tab cycle through visible entities. */
   cycleKeyboardFocus(direction: 'next' | 'prev'): void { if (!this.disposed) a11yCycleFocus(this.bimLayer.group, this.viewport.camera, this.keyboardFocusManager, direction); }
-
   /** A.7.Q1 — Enter on focused entity → toggle selection (ADR-030 integration). */
   selectFocusedEntity(): void { if (!this.disposed) a11ySelectFocused(this.keyboardFocusManager, (id) => this.selectBimEntity(id)); }
-
   /** A.7.Q1 — Esc clears focus ring (selection untouched). */
   clearKeyboardFocus(): void { if (!this.disposed) this.keyboardFocusManager.clear(); }
-
   /** Read-only handle for FocusIndicator3D React subscriber. */
   getKeyboardFocusManager(): KeyboardFocusManagerApi { return this.keyboardFocusManager; }
-
   /** Resolve label data for the floating focus label (entity type + name + world center). */
   getFocusedEntityData(bimId: string): FocusEntityLabelData | null { return this.disposed ? null : findFocusedEntityData(this.bimLayer.group, bimId); }
 
@@ -378,6 +373,11 @@ export class ThreeJsSceneManager {
   toggleBimEntity(bimId: string | null): void { this.applyBimSelectionMode(bimId, 'toggle'); }
   private applyBimSelectionMode(bimId: string | null, mode: 'replace' | 'toggle'): void {
     if (!this.disposed) { this.markSceneDirty(); applyBimSelection({ bimGroup: this.bimLayer.group, selectionHighlighter: this.selectionHighlighter }, bimId, mode); }
+  }
+
+  /** ADR-691 — apply a window/crossing MARQUEE result (bulk bimIds) with a combine mode. */
+  applyBimMarqueeSelection(ids: readonly string[], mode: 'replace' | 'add' | 'subtract'): void {
+    if (!this.disposed) { this.markSceneDirty(); applyBimMarqueeSelection({ bimGroup: this.bimLayer.group, selectionHighlighter: this.selectionHighlighter }, ids, mode); }
   }
 
   /** ADR-402/532 — cross-mode hydration: mirror the universal 2D selection into 3D on entry (called after the scene is built). */

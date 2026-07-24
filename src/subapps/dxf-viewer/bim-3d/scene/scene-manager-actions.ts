@@ -24,6 +24,8 @@ import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { raycastWorldPointOrPlane } from '../systems/raycaster/BimEntityRaycaster';
 import { markBvhDirty } from '../systems/raycaster/bvh-setup';
 import { withSuppressed3DToUniversalSync } from '../systems/selection/use-3d-selection-universal-bridge';
+// ADR-691 — 3D window/crossing marquee: bulk selection combine modes.
+import type { MarqueeCombineMode } from '../systems/marquee/Marquee3DStore';
 
 export interface SyncBimEntitiesDeps {
   readonly bimLayer: BimSceneLayer;
@@ -248,6 +250,46 @@ export function applyBimSelection(
   const ids = useSelection3DStore.getState().selectedBimIds;
   if (ids.length === 0) deps.selectionHighlighter.onClear();
   else deps.selectionHighlighter.onSelect(new Set(ids));
+}
+
+/**
+ * ADR-691 — apply a 3D window/crossing MARQUEE result (a set of bimIds) to the selection.
+ *
+ * Sibling of {@link applyBimSelection} but for the bulk drag-rectangle path:
+ *   • `replace`  — selection becomes exactly the marquee hits (plain drag);
+ *   • `add`      — union with the current selection (Shift+drag);
+ *   • `subtract` — remove the hits from the current selection (Alt/Ctrl+drag).
+ *
+ * The store write is NOT suppressed, so the 3D→universal bridge mirrors the new set into the
+ * universal selection (parity with `applyBimSelection`). The highlighter is re-synced to the
+ * resulting multi-selection; an empty result clears it.
+ */
+export function applyBimMarqueeSelection(
+  deps: BimSelectionDeps,
+  hitIds: readonly string[],
+  mode: MarqueeCombineMode,
+): void {
+  const store = useSelection3DStore.getState();
+  const current = store.selectedBimIds;
+
+  let finalIds: string[];
+  if (mode === 'add') {
+    const set = new Set(current);
+    for (const id of hitIds) set.add(id);
+    finalIds = [...set];
+  } else if (mode === 'subtract') {
+    const remove = new Set(hitIds);
+    finalIds = current.filter((id) => !remove.has(id));
+  } else {
+    finalIds = [...new Set(hitIds)];
+  }
+
+  const types: Record<string, string> = {};
+  for (const id of finalIds) types[id] = resolveBimEntityType(deps.bimGroup, id) ?? '';
+
+  store.setSelection(finalIds, types);
+  if (finalIds.length === 0) deps.selectionHighlighter.onClear();
+  else deps.selectionHighlighter.onSelect(new Set(finalIds));
 }
 
 /**
