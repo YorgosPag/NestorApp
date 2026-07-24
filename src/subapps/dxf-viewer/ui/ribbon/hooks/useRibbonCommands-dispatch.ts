@@ -30,6 +30,7 @@ import { isStoreyRibbonKey } from './bridge/storey-command-keys';
 // Combobox guard sets (per-entity key predicates — Φ3b-1 `makeKeySetGuard` outputs).
 import { isStairRibbonKey, isStairRibbonStringKey } from './bridge/stair-command-keys';
 import { isRailingRibbonKey, isRailingRibbonStringKey } from '../../../bim/railings/railing-param-keys';
+import { isImportedMeshRibbonKey, isImportedMeshRibbonStringKey } from '../../../bim/entities/imported-mesh/imported-mesh-param-keys';
 import { isWallRibbonKey, isWallRibbonStringKey, isWallRibbonToggleKey, isWallTiltKey } from './bridge/wall-command-keys';
 import { isOpeningRibbonKey, isOpeningRibbonStringKey, isOpeningTagStyleComboboxKey } from './bridge/opening-command-keys';
 import { isSlabRibbonKey, isSlabRibbonStringKey, isSlabSlopeKey } from './bridge/slab-command-keys';
@@ -121,6 +122,7 @@ export interface SimpleRoute {
 export interface ComboboxRouteDeps {
   readonly stairBridge: ComboboxCapable;
   readonly railingBridge: ComboboxCapable;
+  readonly importedMeshBridge: ComboboxCapable;
   readonly wallBridge: ComboboxCapable;
   readonly openingBridge: ComboboxCapable;
   readonly slabBridge: ComboboxCapable;
@@ -210,6 +212,7 @@ const anyOf = (...gs: readonly KeyGuard[]): KeyGuard => (k) => gs.some((g) => g(
 export function buildComboboxRoutes(d: ComboboxRouteDeps): readonly ComboboxRoute[] {
   const stairG = anyOf(isStairRibbonKey, isStairRibbonStringKey);
   const railingG = anyOf(isRailingRibbonKey, isRailingRibbonStringKey);
+  const importedMeshG = anyOf(isImportedMeshRibbonKey, isImportedMeshRibbonStringKey);
   const wallG = anyOf(isWallRibbonKey, isWallRibbonStringKey, isWallRibbonToggleKey, isWallTiltKey);
   const openingG = anyOf(isOpeningRibbonKey, isOpeningRibbonStringKey, isOpeningTagStyleComboboxKey);
   const slabG = anyOf(isSlabRibbonKey, isSlabRibbonStringKey, isSlabSlopeKey);
@@ -240,6 +243,7 @@ export function buildComboboxRoutes(d: ComboboxRouteDeps): readonly ComboboxRout
   return [
     { ...both(stairG), ...boundCombobox(d.stairBridge) },
     { ...both(railingG), ...boundCombobox(d.railingBridge) },
+    { ...both(importedMeshG), ...boundCombobox(d.importedMeshBridge) },
     { ...both(wallG), ...boundCombobox(d.wallBridge) },
     { ...both(openingG), ...boundCombobox(d.openingBridge) },
     { ...both(slabG), ...boundCombobox(d.slabBridge) },

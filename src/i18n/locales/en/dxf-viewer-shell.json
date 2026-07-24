@@ -5637,6 +5637,31 @@
       "rotation": "Rotation"
     }
   },
+  "importedMeshAdvancedPanel": {
+    "emptyState": "Select an imported mesh to view its properties",
+    "section": {
+      "identity": "Identity",
+      "transform": "Transform",
+      "material": "Material",
+      "dimensions": "Dimensions",
+      "parts": "Materials per part",
+      "boq": "Bill of quantities"
+    },
+    "field": {
+      "name": "Name",
+      "posX": "Position X",
+      "posY": "Position Y",
+      "posZ": "Position Z",
+      "rotation": "Rotation",
+      "scale": "Scale",
+      "currentMaterial": "Current material",
+      "noMaterial": "No override (embedded)",
+      "width": "Width",
+      "depth": "Depth",
+      "height": "Height",
+      "level": "Level"
+    }
+  },
   "hatchAdvancedPanel": {
     "title": "Hatch Properties",
     "emptyState": "Select a hatch to see its properties.",
@@ -7155,5 +7180,8 @@
     "none": "— Automatic —",
     "cancel": "Cancel",
     "apply": "Apply"
+  },
+  "importedMeshParams": {
+    "panelTitle": "Parameters & Settings"
   }
 }

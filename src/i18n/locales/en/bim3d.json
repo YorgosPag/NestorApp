@@ -535,7 +535,8 @@
     "libraryTooltip": "Open the library with all materials",
     "libraryTitle": "Material library",
     "libraryClose": "Close",
-    "sceneEmptyHint": "No materials in the scene yet — paint a face from the Library"
+    "sceneEmptyHint": "No materials in the scene yet — paint a face from the Library",
+    "activeMaterialLabel": "Applied material"
   },
   "shortcuts": {
     "view3d": {

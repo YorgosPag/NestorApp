@@ -18,11 +18,12 @@
 
 import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { isWallEntity, isStairEntity, isRailingEntity, isColumnEntity, isBeamEntity, isFoundationEntity, isSlabEntity, isSlabOpeningEntity, isHatchEntity, isBlockEntity, isImageEntity, isTopoSurfaceEntity } from '../../types/entities';
+import { isWallEntity, isStairEntity, isRailingEntity, isColumnEntity, isBeamEntity, isFoundationEntity, isSlabEntity, isSlabOpeningEntity, isHatchEntity, isBlockEntity, isImageEntity, isTopoSurfaceEntity, isImportedMeshEntity } from '../../types/entities';
 import { isWallDrawingTool } from '../../systems/tools/region-tool-ids';
 import { useResolvedSelectedEntity } from '../../hooks/selection/useResolvedSelectedEntity';
 import { StairPropertiesTab } from '../stair-advanced-panel/StairPropertiesTab';
 import { RailingPropertiesTab } from '../railing-advanced-panel/RailingPropertiesTab';
+import { ImportedMeshPropertiesTab } from '../imported-mesh-advanced-panel/ImportedMeshPropertiesTab';
 import { WallPropertiesTab } from './WallPropertiesTab';
 import { ColumnPropertiesTab } from '../column-advanced-panel/ColumnPropertiesTab';
 import { BeamPropertiesTab } from '../beam-advanced-panel/BeamPropertiesTab';
@@ -129,6 +130,12 @@ export function BimPropertiesRouter(
   // ADR-407 Φ9 — railing Properties palette (γεωμετρία/κάγκελα/κιγκλιδώματα/πλήρωση).
   if (selected && isRailingEntity(selected)) {
     return <RailingPropertiesTab {...props} />;
+  }
+
+  // ADR-683 Φ3.1γ (B1) — imported-mesh Properties palette (ταυτότητα/μετασχηματισμός/
+  // υλικό/διαστάσεις/υλικά ανά κομμάτι/προμέτρηση). Πριν το generic primitive fallback.
+  if (selected && isImportedMeshEntity(selected)) {
+    return <ImportedMeshPropertiesTab {...props} />;
   }
 
   // ADR-510 Φ2E #4 — a selected generic primitive (line/polyline/circle/arc/…)

@@ -5637,6 +5637,31 @@
       "rotation": "Γωνία"
     }
   },
+  "importedMeshAdvancedPanel": {
+    "emptyState": "Επίλεξε ένα εισαγόμενο πλέγμα για να δεις τις ιδιότητες",
+    "section": {
+      "identity": "Ταυτότητα",
+      "transform": "Μετασχηματισμός",
+      "material": "Υλικό",
+      "dimensions": "Διαστάσεις",
+      "parts": "Υλικά ανά κομμάτι",
+      "boq": "Προμέτρηση"
+    },
+    "field": {
+      "name": "Όνομα",
+      "posX": "Θέση X",
+      "posY": "Θέση Y",
+      "posZ": "Θέση Z",
+      "rotation": "Περιστροφή",
+      "scale": "Κλίμακα",
+      "currentMaterial": "Τρέχον υλικό",
+      "noMaterial": "Χωρίς override (embedded)",
+      "width": "Πλάτος",
+      "depth": "Βάθος",
+      "height": "Ύψος",
+      "level": "Όροφος"
+    }
+  },
   "hatchAdvancedPanel": {
     "title": "Ιδιότητες Γραμμοσκίασης",
     "emptyState": "Επίλεξε μια γραμμοσκίαση για να δεις τις ιδιότητες.",
@@ -7155,5 +7180,8 @@
     "none": "— Αυτόματο —",
     "cancel": "Ακύρωση",
     "apply": "Εφαρμογή"
+  },
+  "importedMeshParams": {
+    "panelTitle": "Παράμετροι & Ρυθμίσεις"
   }
 }

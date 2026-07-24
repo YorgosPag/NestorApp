@@ -15,6 +15,7 @@ import type { RibbonTextEditorBridge } from './useRibbonTextEditorBridge';
 import type { RibbonArrayBridge } from './useRibbonArrayBridge';
 import type { RibbonStairBridge } from '../../../bim/hooks/use-ribbon-stair-bridge';
 import type { RibbonRailingBridge } from '../../../bim/hooks/use-ribbon-railing-bridge';
+import type { RibbonImportedMeshBridge } from '../../../bim/hooks/use-ribbon-imported-mesh-bridge';
 import type { RibbonWallBridge } from './useRibbonWallBridge';
 import type { RibbonOpeningBridge } from './useRibbonOpeningBridge';
 import type { RibbonSlabBridge } from './useRibbonSlabBridge';
@@ -78,6 +79,7 @@ export interface UseRibbonCommandsProps {
   arrayBridge: RibbonArrayBridge;
   stairBridge: RibbonStairBridge;
   railingBridge: RibbonRailingBridge;
+  importedMeshBridge: RibbonImportedMeshBridge;
   wallBridge: RibbonWallBridge;
   openingBridge: RibbonOpeningBridge;
   slabBridge: RibbonSlabBridge;

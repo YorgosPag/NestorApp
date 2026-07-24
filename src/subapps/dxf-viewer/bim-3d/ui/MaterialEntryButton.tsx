@@ -10,6 +10,7 @@
  * @see ./polygon-material-dnd.ts — drag MIME/serialize SSoT
  */
 
+import { useTranslation } from 'react-i18next';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { MaterialSwatch } from '../../ui/components/shared/MaterialSwatch';
 import type { FaceAppearance } from '../../bim/types/face-appearance-types';
@@ -21,6 +22,13 @@ interface MaterialEntryButtonProps {
   readonly onApply: (value: FaceAppearance) => void;
   /** Body/library swatches = draggable (Cinema 4D drag-drop)· finish = click-only. Default true. */
   readonly draggable?: boolean;
+  /**
+   * ADR-687 Φ8 — this entry is the CURRENTLY applied material of the selected entity/face
+   * (`resolveEntityCurrentMaterialId`/`resolveFaceCurrentMaterialId`). Renders a highlight ring
+   * (Revit "current material" / C4D active tag). Optional, defaults false — back-compat for
+   * existing callers that don't compute an active id.
+   */
+  readonly active?: boolean;
   readonly className?: string;
   readonly swatchClassName?: string;
 }
@@ -29,9 +37,11 @@ export function MaterialEntryButton({
   entry,
   onApply,
   draggable = true,
+  active = false,
   className,
   swatchClassName,
 }: MaterialEntryButtonProps) {
+  const { t } = useTranslation('bim3d');
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -47,7 +57,13 @@ export function MaterialEntryButton({
               : undefined
           }
           onClick={() => onApply(entry.apply)}
-          className={className}
+          aria-current={active ? 'true' : undefined}
+          aria-label={active ? t('polygonMode.activeMaterialLabel') : undefined}
+          className={
+            active
+              ? `${className ?? ''} ring-2 ring-[hsl(var(--bg-info))] ring-offset-1 ring-offset-black/70`
+              : className
+          }
         >
           <MaterialSwatch
             sphere

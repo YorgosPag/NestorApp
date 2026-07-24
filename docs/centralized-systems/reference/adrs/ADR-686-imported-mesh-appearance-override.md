@@ -140,6 +140,12 @@ dialog + ribbon labels).
 
 ## 7. Changelog
 
+- **2026-07-24 — Φ4 (per-slot selection highlight) μερικώς καλυμμένο από το ADR-688.** Το ADR-688
+  («Γενικό highlight εφαρμοσμένου υλικού στο swatch») πρόσθεσε entity-agnostic `resolveEntityCurrentMaterialId`/
+  `resolveFaceCurrentMaterialId` + `active` prop στο `MaterialEntryButton`/`PolygonMaterialPanel` — δείχνει
+  ποιο υλικό είναι ήδη εφαρμοσμένο στο **swatch grid** για ΟΛΑ τα entity types (incl. imported-mesh). Αυτό
+  **ΔΕΝ** είναι το ίδιο με το εδώ Φ4 roadmap item (geometry-level outline πάνω στο ΠΟΛΥΓΩΝΟ/mesh στο 3D
+  viewport) — εκείνο παραμένει ⬜ PLANNED. Δες ADR-688 §3-§5 για λεπτομέρειες.
 - **2026-07-22 (Φ1+Φ2+Φ3 — IMPLEMENTED UNCOMMITTED)** — Αρχική υλοποίηση. 3D enhancer override +
   raycast per-slot + 2D palette override + full persistence wiring. Reuse `resolveFaceMaterial` +
   ADR-539 commands/drag-drop. Tests: enhance override (base/per-slot/side-preservation/no-override).

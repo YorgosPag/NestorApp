@@ -41,6 +41,7 @@ export function useRibbonCommands({
   arrayBridge,
   stairBridge,
   railingBridge,
+  importedMeshBridge,
   wallBridge,
   openingBridge,
   slabBridge,
@@ -105,7 +106,7 @@ export function useRibbonCommands({
   // holds BOTH the write (`onComboboxChange`) and read (`getComboboxState`) matchers
   // per bridge, so the two can no longer silently drift (the ADR-449 finish-key bug).
   const bridges = {
-    stairBridge, railingBridge, wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge,
+    stairBridge, railingBridge, importedMeshBridge, wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge,
     wallCoveringBridge, hatchBridge, thermalSpaceBridge, columnBridge, beamBridge,
     foundationBridge, slabOpeningBridge, mepFixtureBridge, mepManifoldBridge,
     electricalPanelBridge, mepRadiatorBridge, mepBoilerBridge, mepWaterHeaterBridge,

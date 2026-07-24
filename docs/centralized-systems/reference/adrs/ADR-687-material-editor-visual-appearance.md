@@ -1,6 +1,6 @@
 # ADR-687 — Material Editor «Εμφάνιση»: C4D-parity visual appearance (χρώμα + γυαλάδα + μέταλλο + υφή, ανά υλικό)
 
-**Status:** 🟢 Φ1 + HDR-studio-preview + Φ4 + Φ5 (clearcoat/transmission) + Φ6 (rendered swatch thumbnail) + Φ7 (textured sphere thumbnails για ΟΛΑ τα swatches) + Φ8 (διαχωρισμός γενικής βιβλιοθήκης Ν.1 vs υλικών σκηνής Ν.2) IMPLEMENTED (2026-07-23/24, Opus 4.8· **UNCOMMITTED** — εκκρεμεί browser verify + commit Giorgio). Φ2/Φ3 = PROPOSED.
+**Status:** 🟢 Φ1 + HDR-studio-preview + Φ4 + Φ5 (clearcoat/transmission) + Φ6 (rendered swatch thumbnail) + Φ7 (textured sphere thumbnails για ΟΛΑ τα swatches) + Φ8 (διαχωρισμός γενικής βιβλιοθήκης Ν.1 vs υλικών σκηνής Ν.2) + Φ9 (toggle «Ποιότητα Γυαλιού» live viewport) IMPLEMENTED (2026-07-23/24, Opus 4.8). Φ9 code = **COMMITTED + PUSHED** (`bc3320e9`)· εκκρεμεί browser verify. Φ2/Φ3 = PROPOSED.
 **Μοντέλο:** Opus 4.8 · **Γλώσσα:** Ελληνικά
 **Σχετικά:** ADR-363 (Material Library), ADR-413 (PBR textures), ADR-539 (per-face paint), ADR-686 (imported appearance override), ADR-683 §10.10 (imported DoubleSide)
 
@@ -105,6 +105,7 @@ export interface BimMaterialAppearance {
 | **Φ6 ✅** | Rendered swatch thumbnail: το μικρό εικονίδιο (library list + «Υλικά όψης» bar) δείχνει την ΠΡΑΓΜΑΤΙΚΗ σφαίρα-preview του appearance (offscreen singleton + cache) αντί flat γκρι | **DONE** (βλ. changelog 2026-07-24 Φ6) |
 | **Φ7 ✅** | ΟΛΑ τα swatches σφαίρες (full C4D parity): textured catalog (Τούβλο = σφαίρα ΜΕ brick υφή, reuse loaded textures cross-context) + legacy μπογιές (χρωματιστές σφαίρες)· extract `applyTextureSet` SSoT | **DONE** (βλ. changelog 2026-07-24 Φ7) |
 | **Φ8 ✅** | Διαχωρισμός δύο εννοιών (big-player): Ν.1 αριστερό «Διαχείριση Υλικών» = ΓΕΝΙΚΗ βιβλιοθήκη (catalog+system+user+μπογιές, read-only+Διπλασίασε στα code-defined)· Ν.2 κάτω μπάρα «Υλικά όψης» = ΜΟΝΟ σκηνή (ρητά βαμμένα) + popover «Βιβλιοθήκη» + drag. ΜΙΑ ένωση index, δύο προβολές· ΕΝΑΣ scene collector | **DONE** (βλ. changelog 2026-07-24 Φ8) |
+| **Φ9 ✅** | Toggle «Ποιότητα Γυαλιού» (Ελαφρό opacity ↔ Ακριβές transmission) per-view στο live viewport — big-player: το viewport draft-quality ΔΕΝ διαρρέει στο export/preview. Store field + `viewportGlassDef` + export force-accurate + ribbon Select | **DONE** (βλ. changelog 2026-07-24 Φ9) |
 
 **⚠️ N.8:** Φ1 = 6-8 αρχεία / 2 domains (types+UI+render) → **Plan Mode ή Orchestrator** την ώρα της
 υλοποίησης, με έγκριση Giorgio. Το παρόν ADR είναι μόνο το blueprint.
@@ -401,3 +402,40 @@ dispose pattern) σε νέο μικρό `MaterialPreviewSphereRenderer`, χωρ�
   **Tests:** `face-material-catalog.test.ts` +1 (bmat_* glass → non-null MeshPhysicalMaterial transmission>0, DoubleSide, sealed
   id) → 10/10· face-appearance-material/stair-resolver-appearance/MaterialCatalog3D-user-material 32/32 (μηδέν regression).
   `jscpd:diff` καθαρό. **ΟΧΙ tsc (N.17).** 🔴 Εκκρεμεί browser re-verify (βάψε γυαλί σε κολώνα → διάφανη).
+- **2026-07-24 (Opus 4.8) — Φ9 IMPLEMENTED: toggle «Ποιότητα Γυαλιού» (Ελαφρό ↔ Ακριβές) στο live viewport
+  (COMMITTED `bc3320e9`).** Πρόβλημα (Giorgio): το βαμμένο «γυαλί» (`bmat_*` με `transmission>0`) render-άρει σωστά
+  διάφανο (Φ8 fix), ΑΛΛΑ το `MeshPhysicalMaterial.transmission` κάνει **επιπλέον render pass ανά frame** (framebuffer
+  copy για screen-space refraction) → βαριά περιστροφή σε αδύναμο PC. **Δεν είναι bug** — εγγενές κόστος (Blender/
+  C4D/Revit). **Απόφαση Giorgio (AskUserQuestion 2026-07-24): per-view «Toggle ρύθμιση».** **Big-player απόφαση
+  (επιβεβαιωμένη):** το viewport draft-quality είναι **ανεξάρτητο** από preview/export — Revit/ArchiCAD/C4D εξάγουν
+  ΠΑΝΤΑ το authoritative υλικό, ποτέ το performance-downgraded viewport approximation. Άρα το toggle αφορά ΜΟΝΟ το
+  live viewport· preview-σφαίρα + swatches + 3Δ export = ΠΑΝΤΑ ακριβή. **Αρχεία (11 src + 2 i18n + 2 tests):**
+  1. `config/bim-visual-style.ts` — NEW `GlassQuality = 'light'|'accurate'` + `DEFAULT_GLASS_QUALITY = 'light'` +
+     `GLASS_QUALITY_OPTIONS` + `isGlassQuality` (co-location με `BackgroundMode`, ίδιο per-view appearance axis).
+  2. `config/bim-render-settings-types.ts` — `BimRenderSettings`/`ResolvedBimSettings` += `glassQuality`·
+     `resolveBimSettings` default `light` (absent → default via `??`, **ΟΧΙ** version bump — back-compat όπως backgroundMode).
+  3. `state/bim-render-settings-store-types.ts` + `-store.ts` — `setGlassQuality` = verbatim mirror του `setBackgroundMode`
+     (idempotent + `debounceWrite`)· persist στο `buildRaw` + set στο `loadForLevel`.
+  4. `bim-3d/materials/pbr-material-builder.ts` — NEW pure `viewportGlassDef(def, glass)`: `accurate` ή μη-γυαλί
+     (`transmission<=0`) → def **by identity** (μηδέν allocation για τα χιλιάδες μη-γυάλινα)· `light` & γυαλί →
+     `{...def, transmission:0, opacity, transparent:true}` (→ φθηνό MeshStandardMaterial, κρατά clearcoat/emissive).
+  5. `bim-3d/materials/MaterialCatalog3D.ts` — `resolveUserMaterial` glass-aware (`USER_TEX_CACHE` += `glass` field ώστε
+     flip να rebuild-άρει)· `buildUserMaterial` helper (μηδέν διπλασιασμός textured/flat)· NEW scoped SSoT
+     `withAccurateGlassForExport(build)` (module-local override, sync-only) — **export bypass-άρει το cache**
+     (fresh accurate build, μηδέν corruption του live light cache).
+  6. `bim-3d/viewport/use-bim3d-vg-resync.ts` — NEW subscription (h) σε `glassQuality` → `resyncBimScene` (mirror (f)/(g)).
+  7. `export/core/mesh3d/build-mesh3d-scene.ts` — τύλιξε το `syncMultiFloor` σε `withAccurateGlassForExport` (force-accurate).
+  8. `ui/ribbon/components/GlassQualitySelect.tsx` (NEW, mirror `VisualStyleSelect`, Radix Select ADR-001) +
+     `RibbonPanel.tsx` (dispatch) + `view-tab-visual-styles.ts` (3ο widget δίπλα στο «Στυλ Προβολής») + i18n `el|en/
+     dxf-viewer-shell.json` (`ribbon.commands.glassQuality.{label,tooltip,options.light/accurate}`).
+  - **Tests:** `pbr-material-builder.test.ts` +5 (viewportGlassDef identity/opacity/clearcoat-preserve)·
+    `MaterialCatalog3D-user-material.test.ts` +4 (light→transmission 0· export force-accurate→transmission>0· **cache
+    isolation**: export build δεν διαφθείρει το live· flip→rebuild). Targeted suite **58/58**· `jscpd:diff` καθαρό (6).
+    **ΟΧΙ tsc (N.17).**
+  - **Intended behavior change:** υπάρχοντα views (χωρίς persisted `glassQuality`) → default `light` → το υπάρχον γυαλί
+    γίνεται opacity-based μέχρι ο χρήστης να βάλει «Ακριβές» per-view (performance-first, per Giorgio).
+  - ⚠️ **Incident (2026-07-24):** ο agent έτρεξε `git stash pop` για να ελέγξει pre-existing test → άνοιξε προϋπάρχον
+    μπαγιάτικο stash (34 conflicts σε ξένα αρχεία). Λύθηκε από άλλον agent (working tree clean, HEAD `bc3320e9` pushed,
+    stashes σε backup tags). **Μάθημα: ΠΟΤΕ `git stash pop`.**
+  - 🔴 **Εκκρεμεί browser verify Giorgio:** βάψε γυαλί σε κολώνα → (α) Ελαφρό = διάφανο χωρίς refraction, ομαλή περιστροφή·
+    (β) Ακριβές = refraction, βαρύτερο· (γ) editor swatch/σφαίρα = πάντα refraction· (δ) export = ακριβές ανεξάρτητα από toggle.

@@ -63,6 +63,12 @@ import type { LibraryEntry } from './material-library-index';
 import { useSceneMaterials } from './useSceneMaterials';
 import { MaterialEntryButton } from './MaterialEntryButton';
 import { MaterialLibraryPopover } from './MaterialLibraryPopover';
+// ADR-687 Φ8 — «τρέχον υλικό» highlight: γενικό resolver (ΟΛΑ τα entity types) + reactive lookup.
+import {
+  resolveEntityCurrentMaterialId,
+  resolveFaceCurrentMaterialId,
+} from '../materials/resolve-entity-current-material';
+import { useSceneEntityById } from '../../systems/scene/useSceneSelectors';
 
 export function PolygonMaterialPanel() {
   const { t } = useTranslation(['bim3d', 'dxf-viewer-shell']);
@@ -177,6 +183,19 @@ export function PolygonMaterialPanel() {
   );
   const barEntries = isFinish ? finishEntries : sceneEntries;
 
+  // ADR-687 Φ8 — «τρέχον υλικό» highlight (Revit «current material» / C4D active tag), γενικό για
+  // ΚΑΘΕ entity type: μία επιλεγμένη όψη → per-face lookup (η όψη έχει το ΔΙΚΟ της bimId, μπορεί να
+  // διαφέρει από selectedBimId)· καμία/πολλαπλές όψεις → «όλο το στοιχείο» (base '*') της 3D επιλογής.
+  const singleFace = isPolygon && faceCount === 1 ? selectedFaces[0] : null;
+  const activeEntityId = singleFace ? singleFace.bimId : selectedBimId;
+  const activeEntity = useSceneEntityById(levels?.currentLevelId ?? null, activeEntityId);
+  const activeMaterialId = useMemo(() => {
+    if (!activeEntity) return null;
+    return singleFace
+      ? resolveFaceCurrentMaterialId(activeEntity, singleFace.faceKey)
+      : resolveEntityCurrentMaterialId(activeEntity);
+  }, [activeEntity, singleFace]);
+
   return (
     // ADR-539 — Cinema 4D «Material Manager»: φαρδιά μπάρα υλικών στη ΒΑΣΗ του 3D κάμβα
     // (full-width, οριζόντια swatches), όχι πλαϊνό panel πάνω δεξιά (Giorgio 2026-07-19).
@@ -270,6 +289,7 @@ export function PolygonMaterialPanel() {
               entry={entry}
               onApply={apply}
               draggable={!isFinish}
+              active={entry.id === activeMaterialId}
               className={`flex w-14 flex-col items-center gap-1 rounded border border-white/15 p-1 text-[9px] transition-colors hover:bg-white/10 ${
                 isFinish ? '' : 'cursor-grab active:cursor-grabbing'
               }`}
