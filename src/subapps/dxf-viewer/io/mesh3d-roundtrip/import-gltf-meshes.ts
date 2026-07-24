@@ -40,6 +40,25 @@ import { DEFAULT_UNIT_SCALE_FACTOR, scaleWorldBoxByFactor } from './import-unit-
 /** Ο τύπος εργαλείου που καταγράφεται στο undo/audit για αυτή τη δημιουργία. */
 const IMPORTED_MESH_TOOL = 'imported-mesh';
 
+/**
+ * ADR-691 — `record.materialIndices` → `bmat_*`, μέσω του χάρτη που έφτιαξε η extraction ΠΡΙΝ από
+ * αυτή την κλήση. Κρατά **μόνο** ό,τι λύθηκε (ένα embedded υλικό μπορεί να μην προήχθη — π.χ.
+ * απέτυχε το upload της υφής του, §4.1 #10), χωρίς διπλότυπα, με σειρά index. Επιστρέφει
+ * `undefined` για κενό αποτέλεσμα — ποτέ `[]` (Firestore-safe, ίδιος κανόνας με το `materialSlots`).
+ */
+function resolveEmbeddedMaterialIds(
+  materialIndices: readonly number[],
+  materialIdByGltfIndex: ReadonlyMap<number, string> | undefined,
+): readonly string[] | undefined {
+  if (!materialIdByGltfIndex) return undefined;
+  const ids: string[] = [];
+  for (const index of materialIndices) {
+    const id = materialIdByGltfIndex.get(index);
+    if (id !== undefined && !ids.includes(id)) ids.push(id);
+  }
+  return ids.length > 0 ? ids : undefined;
+}
+
 export interface ImportGltfMeshesInput {
   /** Οι επιλεγμένοι από τον χρήστη κόμβοι (υποσύνολο των unmatched). */
   readonly records: readonly GltfObjectRecord[];
@@ -60,6 +79,13 @@ export interface ImportGltfMeshesInput {
   readonly layerId: string;
   readonly floorId?: string;
   readonly storeyId?: string;
+  /**
+   * ADR-691 — `glTF material index → bmat_*` για τα embedded υλικά που προήχθησαν στη βιβλιοθήκη
+   * **πριν** από αυτή την κλήση (`importEmbeddedMaterials`, §4.1 #9 — ΠΡΙΝ το `importGltfMeshes`,
+   * ώστε το αποτέλεσμα να περνά ως input, μηδέν race, μία γραφή). Απόν → η οντότητα δεν καταγράφει
+   * υλικά (προ-ADR-691 συμπεριφορά, back-compat).
+   */
+  readonly materialIdByGltfIndex?: ReadonlyMap<number, string>;
 }
 
 export interface ImportGltfMeshesResult {
@@ -125,6 +151,10 @@ export async function importGltfMeshes(
       sourceMaterialName: record.materialName,
       // ADR-683 Φ5 — και ΟΛΑ τα slot ονόματα, για την per-slot 2Δ poché + το override (Φ6).
       materialSlots: record.materialSlots,
+      // ADR-691 — τα `bmat_*` που αντιστοιχούν στα embedded υλικά αυτού του κόμβου, όταν η
+      // extraction έτρεξε πριν από αυτή την κλήση (§4.1 #9). Απόν χάρτης → `undefined` (καμία
+      // καταγραφή, προ-ADR-691 συμπεριφορά).
+      embeddedMaterialIds: resolveEmbeddedMaterialIds(record.materialIndices, input.materialIdByGltfIndex),
       signature: record.fingerprint.signature,
       solid: record.solid,
       position,

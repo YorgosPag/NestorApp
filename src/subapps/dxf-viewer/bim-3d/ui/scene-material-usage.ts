@@ -1,14 +1,21 @@
 /**
- * scene-material-usage — ADR-687 Φ8 SSoT. Απαριθμεί τα υλικά που ΠΕΡΙΕΧΕΙ Η ΣΚΗΝΗ (ρητά βαμμένα),
- * ώστε η κάτω μπάρα «Υλικά όψης» (Ν.2) να δείχνει μόνο αυτά — Cinema 4D *Material Manager* (document
- * materials) / Revit *Project Materials* (in-use), σε αντίθεση με τη γενική βιβλιοθήκη (Ν.1).
+ * scene-material-usage — ADR-687 Φ8 SSoT (+ ADR-691 imported-mesh extractor). Απαριθμεί τα υλικά που
+ * ΠΕΡΙΕΧΕΙ Η ΣΚΗΝΗ — ρητά βαμμένα (χρήστης βαφή) + ρητά εισαγμένα (embedded στο glTF, προαγόμενα σε
+ * `bmat_*`) — ώστε η κάτω μπάρα «Υλικά όψης» (Ν.2) να δείχνει μόνο αυτά — Cinema 4D *Material Manager*
+ * (document materials) / Revit *Project Materials* (in-use), σε αντίθεση με τη γενική βιβλιοθήκη (Ν.1).
  *
  * Πηγή = `SceneStore.getRecord()` (όλα τα επίπεδα). Ρητοί extractors ανά τύπο (ΟΧΙ blind deep-scan —
  * enterprise: γνωρίζουμε πού ζει κάθε appearance):
  *   - δομικά solids → `entity.faceAppearance` (base `'*'` + per-face, ADR-539)
  *   - σκάλα → `params.materials.appearance` (whole) + perTread/Riser/Landing/Waist overrides (Φ7)
  *   - κάγκελο → `params.appearance` (whole) + `params.componentAppearance` (post/baluster/rail, ADR-407 Φ8)
- * Κάθε τιμή είναι `FaceAppearance {materialId?, colorHex?}` — dedup σε δύο σύνολα.
+ *   - εισαγόμενο πλέγμα → `entity.faceAppearance` (ADR-686 override, ήδη καλύπτεται παραπάνω) +
+ *     `params.embeddedMaterialIds` (ADR-691): τα υλικά ήρθαν ψημένα μέσα στο `.glb` και renderάρονται
+ *     από εκεί (η γεωμετρία ΔΕΝ ξαναβάφεται) — απλώς προάγονται σε πραγματικά `bmat_*` της βιβλιοθήκης
+ *     ώστε να εμφανίζονται στη μπάρα και να είναι επαναχρησιμοποιήσιμα. Πρότυπο: Revit
+ *     «Imported Material : X» στο Material Browser / C4D Material Manager.
+ * Κάθε τιμή είναι `FaceAppearance {materialId?, colorHex?}` (ή γυμνό `materialId` string για το
+ * imported-mesh) — dedup σε δύο σύνολα.
  *
  * Pure module — no React, no three.js. Διαβάζει ΜΟΝΟ types (κανένας resolver → δεν αγγίζει τα foreign
  * `stair-material-resolver`/`railing-material-resolver`).
@@ -18,7 +25,8 @@
  */
 
 import type { SceneModel } from '../../types/scene';
-import { type Entity, isStairEntity, isRailingEntity } from '../../types/entities';
+import { type Entity, isStairEntity, isRailingEntity, isImportedMeshEntity } from '../../types/entities';
+import type { ImportedMeshEntity } from '../../bim/entities/imported-mesh/imported-mesh-types';
 import type { FaceAppearance, FaceAppearanceMap } from '../../bim/types/face-appearance-types';
 
 /** Τα distinct appearance refs που περιέχει η σκηνή. */
@@ -51,9 +59,18 @@ function collect(
 }
 
 /**
+ * ADR-691 — τα ids των embedded (ψημένων στο glTF) υλικών ενός εισαγόμενου πλέγματος, προαγόμενα
+ * σε `bmat_*`. Απόν/legacy import (πριν το ADR-691) → `[]`, χωρίς crash.
+ */
+function embeddedMaterialIdsOf(entity: ImportedMeshEntity): readonly string[] {
+  return entity.params.embeddedMaterialIds ?? [];
+}
+
+/**
  * ADR-687 Φ8 — walk όλα τα entities όλων των επιπέδων → distinct materialIds + colorHexes που
- * είναι ΡΗΤΑ βαμμένα (appearance overrides). Δεν περιλαμβάνει implicit category defaults (Giorgio
- * 2026-07-24): μόνο ό,τι ο χρήστης έβαψε ρητά, όπως το C4D Material Manager.
+ * είναι ΡΗΤΑ βαμμένα (appearance overrides) ή ΡΗΤΑ εισαγμένα (embedded υλικά, ADR-691). Δεν
+ * περιλαμβάνει implicit category defaults (Giorgio 2026-07-24): μόνο ό,τι ο χρήστης έβαψε ρητά ή
+ * ό,τι ήρθε ρητά μέσα στο αρχείο, όπως το C4D Material Manager.
  */
 export function collectSceneAppearanceRefs(
   record: Readonly<Record<string, SceneModel | null>>,
@@ -86,6 +103,12 @@ export function collectSceneAppearanceRefs(
         collect(p.componentAppearance?.post, materialIds, colorHexes);
         collect(p.componentAppearance?.baluster, materialIds, colorHexes);
         collect(p.componentAppearance?.rail, materialIds, colorHexes);
+        continue;
+      }
+      // Εισαγόμενο πλέγμα — το faceAppearance (ADR-686 override) συλλέχθηκε ήδη παραπάνω· εδώ
+      // προστίθενται τα embedded υλικά του .glb (ADR-691), προαγόμενα σε bmat_* της βιβλιοθήκης.
+      if (isImportedMeshEntity(entity)) {
+        for (const id of embeddedMaterialIdsOf(entity)) materialIds.add(id);
       }
     }
   }

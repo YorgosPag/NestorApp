@@ -118,6 +118,86 @@ function facedMaterialSlots(faceMaterials: ReadonlyMap<string, string | null>): 
 }
 
 /**
+ * ADR-691 — συνάρτηση αναζήτησης «THREE material → glTF material index», χτισμένη **μία** φορά
+ * ανά parse πάνω στο `gltf.parser.associations` (three r170: `associations.set(material,
+ * { materials: materialIndex })`, GLTFLoader.js:3644). Περνιέται ως όρισμα αντί να διαβάζεται
+ * κατευθείαν το `GLTFParser` εδώ, ώστε το `collectGltfObjects` να μείνει **pure/testable** χωρίς
+ * φορτωμένο loader (ίδιο μοτίβο με τα υπόλοιπα pure parsers του module).
+ */
+export type GltfMaterialIndexLookup = (material: THREE.Material) => number | null;
+
+/**
+ * Χτίζει το {@link GltfMaterialIndexLookup} πάνω στο `associations` map ενός φορτωμένου glTF.
+ * Ρητός τύπος για το `GLTFReference` (όχι `any`/cast) — το `.materials` λείπει για textures/nodes,
+ * γι' αυτό ο guard `typeof === 'number'`.
+ */
+function buildMaterialIndexLookup(
+  associations: ReadonlyMap<THREE.Object3D | THREE.Material | THREE.Texture, GLTFReference>,
+): GltfMaterialIndexLookup {
+  return (material) => {
+    const index = associations.get(material)?.materials;
+    return typeof index === 'number' ? index : null;
+  };
+}
+
+/**
+ * Distinct στοιχεία με σειρά πρώτης εμφάνισης. ADR-691 N.18 — κοινό helper αντί για τρίτο
+ * copy-paste της ίδιας λογικής dedup που ήδη κάνουν το `collectMaterialSlots`/`facedMaterialSlots`
+ * (εκεί με strings· εδώ με αριθμούς materialIndex, ίδιο σχήμα).
+ */
+function distinctInOrder<T>(items: Iterable<T>): readonly T[] {
+  const seen = new Set<T>();
+  const out: T[] = [];
+  for (const item of items) {
+    if (!seen.has(item)) {
+      seen.add(item);
+      out.push(item);
+    }
+  }
+  return out;
+}
+
+/**
+ * ADR-691 — οι glTF material-indices ενός (μη-faced) mesh, χωρίς διπλότυπα, με σειρά εμφάνισης.
+ * Απόν `materialIndexOf` (π.χ. tests χωρίς φορτωμένο glTF) → `[]`, back-compat.
+ */
+function collectMaterialIndices(
+  mesh: THREE.Mesh,
+  materialIndexOf: GltfMaterialIndexLookup | undefined,
+): readonly number[] {
+  if (!materialIndexOf) return [];
+  const material = mesh.material;
+  const list = Array.isArray(material) ? material : [material];
+  const indices: number[] = [];
+  for (const m of list) {
+    if (!m) continue;
+    const index = materialIndexOf(m);
+    if (index !== null) indices.push(index);
+  }
+  return distinctInOrder(indices);
+}
+
+/**
+ * ADR-691 — οι glTF material-indices ενός faced solid, ένας ανά child primitive (ίδιο ζευγάρωμα
+ * θέσης με το {@link meshMaterialName}: κάθε child έχει single material μετά το round-trip).
+ */
+function facedMaterialIndices(
+  children: readonly THREE.Mesh[],
+  materialIndexOf: GltfMaterialIndexLookup | undefined,
+): readonly number[] {
+  if (!materialIndexOf) return [];
+  const indices: number[] = [];
+  for (const child of children) {
+    const material = child.material;
+    const single = Array.isArray(material) ? material[0] : material;
+    if (!single) continue;
+    const index = materialIndexOf(single);
+    if (index !== null) indices.push(index);
+  }
+  return distinctInOrder(indices);
+}
+
+/**
  * Το παγκόσμιο κουτί ενός mesh (m). Επιστρέφει `null` για κενή/μη-πεπερασμένη γεωμετρία, ώστε ο
  * καλών να μην πάρει ποτέ `Infinity` ως «θέση» — ένα `Box3` χωρίς σημεία είναι εξ ορισμού άπειρο.
  */
@@ -197,7 +277,11 @@ function facedRepresentative(children: readonly THREE.Mesh[]): THREE.Mesh | null
 }
 
 /** Ένα faced-solid record: per-face υλικά + shape/solid από το ΕΝΩΜΕΝΟ κέλυφος + bounds του node. */
-function buildFacedRecord(node: THREE.Object3D, faceKeys: readonly string[]): GltfObjectRecord {
+function buildFacedRecord(
+  node: THREE.Object3D,
+  faceKeys: readonly string[],
+  materialIndexOf: GltfMaterialIndexLookup | undefined,
+): GltfObjectRecord {
   const children = facedChildMeshes(node);
   const representative = facedRepresentative(children);
   const faceMaterials = collectFaceMaterials(faceKeys, children);
@@ -205,6 +289,7 @@ function buildFacedRecord(node: THREE.Object3D, faceKeys: readonly string[]): Gl
     objectName: node.name,
     materialName: dominantMaterialName(children),
     materialSlots: facedMaterialSlots(faceMaterials),
+    materialIndices: facedMaterialIndices(children, materialIndexOf),
     faceMaterials,
     fingerprint: representative ? computeGeometryFingerprint(representative) : null,
     worldBoxM: readWorldBox(node),
@@ -213,11 +298,15 @@ function buildFacedRecord(node: THREE.Object3D, faceKeys: readonly string[]): Gl
 }
 
 /** Ένα legacy single-material record από ένα σκέτο Mesh (μη-faced). */
-function buildMeshRecord(mesh: THREE.Mesh): GltfObjectRecord {
+function buildMeshRecord(
+  mesh: THREE.Mesh,
+  materialIndexOf: GltfMaterialIndexLookup | undefined,
+): GltfObjectRecord {
   return {
     objectName: mesh.name,
     materialName: resolveMaterialName(mesh),
     materialSlots: collectMaterialSlots(mesh),
+    materialIndices: collectMaterialIndices(mesh, materialIndexOf),
     fingerprint: computeGeometryFingerprint(mesh),
     worldBoxM: readWorldBox(mesh),
     solid: measureMeshSolid(mesh),
@@ -238,11 +327,20 @@ function buildMeshRecord(mesh: THREE.Mesh): GltfObjectRecord {
  * **Ποιοι κόμβοι** μετρούν = `collectAddressableGltfNodes` (SSoT, ADR-683 §mesh-load-nesting): ο ίδιος
  * walker καθορίζει και τι ευρετηριάζει ο `bim-mesh-cache`, ώστε το `nodeName` της οντότητας να μη
  * μπορεί ποτέ να δείξει σε κόμβο που ο cache δεν έχει template.
+ *
+ * `materialIndexOf` (ADR-691, προαιρετικό) — απόν όταν ο καλών δεν έχει (ή δεν χρειάζεται) το
+ * `gltf.parser.associations` (π.χ. τα υπάρχοντα tests που χτίζουν δέντρα με το χέρι, χωρίς
+ * φορτωμένο loader) → κάθε `materialIndices` γίνεται `[]`, back-compat.
  */
-export function collectGltfObjects(root: THREE.Object3D): GltfObjectRecord[] {
+export function collectGltfObjects(
+  root: THREE.Object3D,
+  materialIndexOf?: GltfMaterialIndexLookup,
+): GltfObjectRecord[] {
   return collectAddressableGltfNodes(root).map((node) => {
     const faceKeys = readGltfFaceKeys(node);
-    return faceKeys ? buildFacedRecord(node, faceKeys) : buildMeshRecord(node as THREE.Mesh);
+    return faceKeys
+      ? buildFacedRecord(node, faceKeys, materialIndexOf)
+      : buildMeshRecord(node as THREE.Mesh, materialIndexOf);
   });
 }
 
@@ -316,11 +414,16 @@ export async function parseGltfScene(data: ArrayBuffer | string): Promise<GltfSc
     loader.parse(
       data,
       '',
-      (gltf) =>
+      (gltf) => {
+        // ADR-691 §4.1 #3 — το join key των embedded υλικών είναι ο glTF material index, όχι το
+        // όνομα (συχνά ανώνυμο). Ο lookup χτίζεται εδώ, μία φορά, πάνω στο `parser.associations`
+        // του ΑΥΤΟΥ φορτωμένου δέντρου — ποτέ ξαναχτισμένος ανά κόμβο.
+        const materialIndexOf = buildMaterialIndexLookup(gltf.parser.associations);
         resolve({
-          objects: collectGltfObjects(gltf.scene),
+          objects: collectGltfObjects(gltf.scene, materialIndexOf),
           materials: collectGltfMaterials(gltf.scene),
-        }),
+        });
+      },
       () => reject(new Error('MESH3D_GLTF_PARSE_FAILED')),
     );
   });

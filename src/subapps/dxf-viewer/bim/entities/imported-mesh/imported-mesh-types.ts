@@ -171,6 +171,17 @@ export interface ImportedMeshParams {
    * φορτωμένο. Απόν → mesh single-material ή ανώνυμο (τότε ισχύει το `sourceMaterialName` μόνο).
    */
   readonly materialSlots?: readonly string[];
+  /**
+   * ADR-691 — τα `bmat_*` της **βιβλιοθήκης υλικών** που αντιστοιχούν στα embedded υλικά αυτού του
+   * κόμβου, σε σειρά glTF material-index, χωρίς διπλότυπα.
+   *
+   * ⚠️ **ΔΕΝ είναι βαφή.** Η γεωμετρία renderάρεται με τα δικά της embedded υλικά, αμετάβλητη — αυτό
+   * το πεδίο είναι **καταγραφή χρήσης** (Revit «Imported Material» / C4D Material Manager): ο
+   * `collectSceneAppearanceRefs` το διαβάζει ώστε τα υλικά του μοντέλου να εμφανίζονται στην κάτω
+   * μπάρα «Υλικά όψης» και να είναι επαναχρησιμοποιήσιμα σε native στοιχεία. Βαφή = `faceAppearance`
+   * (ADR-686), ξεχωριστό και ανεξάρτητο. Απόν → μοντέλο εισαγμένο πριν το ADR-691, ή χωρίς υλικά.
+   */
+  readonly embeddedMaterialIds?: readonly string[];
   /** Σημείο εισαγωγής (κάτοψη). Το `z` προκύπτει από το `mountingElevationMm`. */
   readonly position: Point3D;
   /** Μοίρες CCW γύρω από το `position` (κάτοψη, περί τον κατακόρυφο άξονα). */

@@ -809,7 +809,11 @@
       "unitSectionLabel": "File unit",
       "unitCustom": "Custom factor",
       "customFactorLabel": "Scale factor",
-      "unitHint": "glTF is always defined in meters — change this only if your collaborator exported the file in a different unit (e.g. inches)."
+      "unitHint": "glTF is always defined in meters — change this only if your collaborator exported the file in a different unit (e.g. inches).",
+      "extractMaterials": "Import materials into the library",
+      "extractMaterialsHint": "Materials and textures from the imported model become library materials — the model's appearance does not change.",
+      "extractingMaterials": "Importing materials…",
+      "materialsExtracted": "Created {created} materials, {reused} reused."
     }
   },
   "floorTabs": {

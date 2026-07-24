@@ -1,7 +1,8 @@
 /**
- * scene-material-usage — ADR-687 Φ8 unit tests. Pure collector (no React/three). Καλύπτει: solids
- * faceAppearance (base + per-face), σκάλα (whole + perTread/Riser/Landing/Waist), κάγκελο (whole +
- * componentAppearance), dedup, null level, empty.
+ * scene-material-usage — ADR-687 Φ8 unit tests (+ ADR-691 imported-mesh). Pure collector (no
+ * React/three). Καλύπτει: solids faceAppearance (base + per-face), σκάλα (whole +
+ * perTread/Riser/Landing/Waist), κάγκελο (whole + componentAppearance), imported-mesh
+ * (embeddedMaterialIds + faceAppearance override μαζί, legacy χωρίς το πεδίο), dedup, null level, empty.
  */
 import type { SceneModel } from '../../../types/scene';
 import { collectSceneAppearanceRefs } from '../scene-material-usage';
@@ -73,6 +74,43 @@ describe('collectSceneAppearanceRefs', () => {
     );
     expect(refs.materialIds).toEqual(new Set(['mat-metal', 'bmat_y']));
     expect(refs.colorHexes).toEqual(new Set(['#0f0f0f']));
+  });
+
+  it('collects imported-mesh embeddedMaterialIds', () => {
+    const refs = collectSceneAppearanceRefs(
+      record({
+        L1: scene([
+          { id: 'm1', type: 'imported-mesh', params: { embeddedMaterialIds: ['bmat_a', 'bmat_b'] } },
+        ]),
+      }),
+    );
+    expect(refs.materialIds).toEqual(new Set(['bmat_a', 'bmat_b']));
+  });
+
+  it('handles legacy imported-mesh without embeddedMaterialIds (pre-ADR-691) without crashing', () => {
+    const refs = collectSceneAppearanceRefs(
+      record({
+        L1: scene([{ id: 'm1', type: 'imported-mesh', params: { uploadId: 'imesh_x' } }]),
+      }),
+    );
+    expect(refs.materialIds.size).toBe(0);
+    expect(refs.colorHexes.size).toBe(0);
+  });
+
+  it('collects both faceAppearance override (ADR-686) and embeddedMaterialIds (ADR-691) on the same imported-mesh, deduped', () => {
+    const refs = collectSceneAppearanceRefs(
+      record({
+        L1: scene([
+          {
+            id: 'm1',
+            type: 'imported-mesh',
+            faceAppearance: { '*': { materialId: 'bmat_a' } },
+            params: { embeddedMaterialIds: ['bmat_a', 'bmat_b'] },
+          },
+        ]),
+      }),
+    );
+    expect(refs.materialIds).toEqual(new Set(['bmat_a', 'bmat_b']));
   });
 
   it('dedups across levels and skips null level scenes', () => {

@@ -52,6 +52,13 @@ export interface ImportedMeshSource {
    * params για την per-slot 2Δ poché + το manual override (Φ6). Κενό/απόν → single-material κόμβος.
    */
   readonly materialSlots?: readonly string[];
+  /**
+   * ADR-691 — τα `bmat_*` της βιβλιοθήκης υλικών που αντιστοιχούν στα embedded υλικά του κόμβου
+   * (`record.materialIndices` → λυμένα μέσω `materialIdByGltfIndex`). Ταξιδεύει ως τα params ώστε
+   * ο `scene-material-usage` collector να τα εμφανίσει στο panel «Υλικά όψης» — **καταγραφή
+   * χρήσης**, όχι βαφή (βλ. `ImportedMeshParams.embeddedMaterialIds`). Απόν/κενό → καμία καταγραφή.
+   */
+  readonly embeddedMaterialIds?: readonly string[];
   /** Ο περιγραφέας γεωμετρίας της Φ2 — από εδώ βγαίνουν οι διαστάσεις **και** το εμβαδόν. */
   readonly signature: GeometrySignature;
   /**
@@ -107,12 +114,16 @@ export function buildImportedMeshParams(source: ImportedMeshSource): ImportedMes
   // ADR-683 Φ5 — ίδιος κανόνας: κρατάμε το πεδίο μόνο όταν υπάρχουν slots (κενό array = single/ανώνυμο
   // → παράλειψη, όχι κενή τιμή στο Firestore).
   const materialSlots = source.materialSlots;
+  // ADR-691 — ίδιος κανόνας ξανά: το πεδίο παραλείπεται όταν δεν υπάρχουν προαχθέντα υλικά (κανένα
+  // embedded υλικό λύθηκε, ή ο orchestrator δεν έτρεξε την extraction) — ποτέ κενό array στο Firestore.
+  const embeddedMaterialIds = source.embeddedMaterialIds;
   return {
     kind: 'imported',
     uploadId: source.uploadId,
     nodeName: source.nodeName,
     ...(materialName ? { sourceMaterialName: materialName } : {}),
     ...(materialSlots && materialSlots.length > 0 ? { materialSlots } : {}),
+    ...(embeddedMaterialIds && embeddedMaterialIds.length > 0 ? { embeddedMaterialIds } : {}),
     storagePath: source.storagePath,
     sourceFileName: source.sourceFileName,
     position: source.position,

@@ -83,6 +83,54 @@ describe('collectGltfObjects', () => {
     expect(collectGltfObjects(root)[0].materialSlots).toEqual(['concrete']);
   });
 
+  /**
+   * ADR-691 §4.1 #3 — το join key των embedded υλικών είναι ο glTF material index (μέσω
+   * `gltf.parser.associations`), όχι το όνομα: τα ξένα υλικά είναι συχνά ανώνυμα και το name-join
+   * θα τα έχανε σιωπηλά. Ο `materialIndexOf` lookup περνά ως προαιρετικό δεύτερο όρισμα.
+   */
+  describe('ADR-691 — materialIndices (glTF material-index join key)', () => {
+    it('χωρίς lookup → materialIndices: [] (back-compat, tests χωρίς φορτωμένο glTF)', () => {
+      const root = new THREE.Group();
+      root.add(namedMesh('Wall_w-1', 'concrete'));
+
+      expect(collectGltfObjects(root)[0].materialIndices).toEqual([]);
+    });
+
+    it('με lookup → σωστοί δείκτες σε multi-slot mesh (η καρέκλα), χωρίς διπλότυπα', () => {
+      const alu = Object.assign(new THREE.MeshStandardMaterial(), { name: 'HMI-_Polished_Al' });
+      const leather = Object.assign(new THREE.MeshStandardMaterial(), { name: 'HMI-Aeron-Leathe' });
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), [alu, leather, alu]);
+      mesh.name = 'Chair';
+      const root = new THREE.Group();
+      root.add(mesh);
+
+      // Προσομοιώνει `gltf.parser.associations`: material instance → glTF material-index.
+      const indexByMaterial = new Map<THREE.Material, number>([[alu, 3], [leather, 7]]);
+      const materialIndexOf = (m: THREE.Material): number | null => indexByMaterial.get(m) ?? null;
+
+      expect(collectGltfObjects(root, materialIndexOf)[0].materialIndices).toEqual([3, 7]);
+    });
+
+    it('faced solid — ένας δείκτης ανά child primitive, με lookup', () => {
+      const bottom = namedMesh('bottom-child', 'mat_112233');
+      const top = namedMesh('top-child', 'mat_445566');
+      const group = new THREE.Group();
+      group.name = 'Roof_r-9';
+      group.userData = { faceKeyByMaterialIndex: ['bottom', 'top'] };
+      group.add(bottom, top);
+
+      const bottomMat = (bottom.material as THREE.Material);
+      const topMat = (top.material as THREE.Material);
+      const indexByMaterial = new Map<THREE.Material, number>([[bottomMat, 0], [topMat, 1]]);
+      const materialIndexOf = (m: THREE.Material): number | null => indexByMaterial.get(m) ?? null;
+
+      const root = new THREE.Group();
+      root.add(group);
+
+      expect(collectGltfObjects(root, materialIndexOf)[0].materialIndices).toEqual([0, 1]);
+    });
+  });
+
   it('carries a geometry fingerprint — αυτό είναι που ΔΕΝ μπορεί να δώσει το OBJ μονοπάτι', () => {
     const root = new THREE.Group();
     root.add(namedMesh('Wall_w-1', 'mat-concrete-c25'));

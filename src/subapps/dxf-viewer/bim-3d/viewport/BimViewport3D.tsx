@@ -44,10 +44,11 @@ import { useBim3DPlacementAndPickHooks } from './use-bim3d-placement-and-pick-ho
 import { BimViewport3DProjectedOverlays } from './BimViewport3DProjectedOverlays';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { useBim3DStoreSync } from './use-bim3d-store-sync'; import { useBim3DVgResync } from './use-bim3d-vg-resync'; import { useBim3DMultiFloorSync } from './use-bim3d-multifloor-sync';
-import { resyncBimScene } from '../scene/bim3d-resync';
-import { resyncDxfOverlay } from '../scene/dxf-overlay-resync';
+import { resyncBimScene } from '../scene/bim3d-resync'; import { resyncDxfOverlay } from '../scene/dxf-overlay-resync';
 import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { useBim3DPointerHandlers } from './use-bim3d-pointer-handlers';
+// ADR-692 — window/crossing marquee selection (drag-rectangle) for the 3D viewport.
+import { useBim3DMarqueeHandlers } from './use-bim3d-marquee-handlers'; import { Marquee3DOverlay } from './Marquee3DOverlay';
 // ADR-539 Φ2 — Cinema 4D «Polygon Mode» HTML5 drag-drop υλικού πάνω σε όψη (drop target).
 import { usePolygonDragDrop } from './use-polygon-drag-drop';
 // ADR-539 Φ4a — Cinema 4D «Polygon Mode» keyboard copy/paste εμφάνισης όψης (face + entity).
@@ -352,6 +353,8 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
     managerRef,
     debounceTimerRef,
   );
+  // ADR-692 — the drag-rectangle FSM (owns mousedown/up + threshold); hover/click stay above.
+  const marquee = useBim3DMarqueeHandlers(managerRef);
   // ADR-539 Φ2 — drop-target handlers for dragging a material onto a face (no-op outside Polygon Mode).
   const { onDragOver: handlePolygonDragOver, onDrop: handlePolygonDrop } = usePolygonDragDrop(managerRef);
   // ADR-539 Φ4a — keyboard copy/paste face appearance (Ctrl+C/V face, Ctrl+Shift+C/V entity).
@@ -385,13 +388,13 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
       className="absolute inset-0 z-50 cursor-default"
       role="application"
       aria-label={t('aria.canvas.rootLabel')}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
-      onClick={handleClick}
+      onMouseMove={(e) => { if (!marquee.handleMouseMove(e)) handleMouseMove(e); }}
+      onMouseLeave={() => { marquee.handleMouseLeave(); handleMouseLeave(); }}
+      onClick={(e) => { if (marquee.shouldSuppressClick()) return; handleClick(e); }}
       onDragOver={handlePolygonDragOver}
       onDrop={handlePolygonDrop}
-      onMouseDown={(e) => e.stopPropagation()}
-      onMouseUp={(e) => e.stopPropagation()}
+      onMouseDown={marquee.handleMouseDown}
+      onMouseUp={marquee.handleMouseUp}
       onContextMenu={(e) => { handleContextMenu(e); e.stopPropagation(); }}
       onDoubleClick={(e) => e.stopPropagation()}
       onWheel={(e) => e.stopPropagation()}
@@ -408,6 +411,8 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
         role="presentation"
       />
       <CropRegionOverlay />
+      {/* ADR-692 Φ1 — window/crossing rubber-band rectangle (thin leaf; subscribes to Marquee3DStore). */}
+      <Marquee3DOverlay />
       {/* ADR-535/538/542/543/544/545 — Canvas2D overlay cluster (grips, DXF hover glow, CAD crosshair,
           snap marker, wall HUD, ambient tracking, column placement), each drawn with the SAME 2D
           painter projected through the perspective camera. */}
