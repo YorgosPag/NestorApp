@@ -162,13 +162,15 @@ export interface ImportedMeshAdvancedPanelProps {
   readonly libraryEntries?: readonly LibraryEntry[];
 }
 
-/** Resolve the override materialId → its library LABEL, or `undefined` when not found/no override. */
-function resolveOverrideLabel(
+/** The library entry for the applied override materialId — drives BOTH the display label AND the
+ * swatch appearance (`appearance`/`thumbnailUrl`/`color`), so the panel chip renders the SAME real
+ * material as the «Υλικά όψης» bar instead of the neutral-grey `materialId`-only fallback. */
+function findOverrideEntry(
   materialId: string | undefined,
   libraryEntries: readonly LibraryEntry[] | undefined,
-): string | undefined {
+): LibraryEntry | undefined {
   if (!materialId || !libraryEntries) return undefined;
-  return libraryEntries.find((entry) => entry.id === materialId)?.label;
+  return libraryEntries.find((entry) => entry.id === materialId);
 }
 
 /**
@@ -193,10 +195,10 @@ function MaterialSection({
   const sourceName = readImportedMeshField(IMPORTED_MESH_READONLY_KEYS.currentMaterial, mesh.params);
   const isMultiple = materialIds.length > 1;
   const singleMaterialId = materialIds.length === 1 ? materialIds[0] : undefined;
-  const overrideLabel = resolveOverrideLabel(singleMaterialId, libraryEntries);
+  const entry = findOverrideEntry(singleMaterialId, libraryEntries);
   const displayLabel = isMultiple
     ? t('importedMeshAdvancedPanel.field.multipleMaterials')
-    : overrideLabel ?? sourceName ?? t('importedMeshAdvancedPanel.field.noMaterial');
+    : entry?.label ?? sourceName ?? t('importedMeshAdvancedPanel.field.noMaterial');
   return (
     <section className="flex flex-col gap-1">
       <header>
