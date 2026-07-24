@@ -31,8 +31,10 @@
 import * as THREE from 'three';
 import { finiteBox3FromObject } from '../scene/finite-bounds';
 import { sceneUnitsToMeters, type SceneUnits } from '../../utils/scene-units';
-import { getMaterial3D } from '../materials/MaterialCatalog3D';
 import { bimMeshCache } from '../library/bim-mesh-library/bim-mesh-cache';
+// ADR-693 Άξονας Β — το «φορτώνει» ghost SSoT. Το placeholder ΔΕΝ ζωγραφίζεται πια με υλικό
+// καταλόγου (`getMaterial3D`): ένα άγνωστο matId κατέρρεε σε ΣΚΥΡΟΔΕΜΑ με σκιές (ADR-693 §2.1).
+import { buildLoadingGhostBox, isLoadingGhost } from '../materials/loading-placeholder-material';
 import { stampBimIdentity } from './bim-three-shape-helpers';
 // ADR-689 Φ3 — Visual Style «Συρμάτινο»/«Κρυφή Γραμμή» για ΚΑΘΕ mesh-based οντότητα. No-op αλλού.
 import { attachMeshWireframe } from '../wireframe/attach-mesh-wireframe';
@@ -105,7 +107,7 @@ export function meshToObject3D(p: MeshPlacement): THREE.Object3D {
   // Cache miss → bbox placeholder + start the async load.
   bimMeshCache.preload(p.category, p.assetId);
   const heightM = p.heightMm * MM_TO_M * scale;
-  const placeholder = buildPlaceholder(p.widthMm, p.depthMm, p.heightMm, scale, p.matId);
+  const placeholder = buildPlaceholder(p.widthMm, p.depthMm, p.heightMm, scale);
   // Box geometry is centred on its own origin → offset by half-height so the
   // chosen anchor edge sits on the mounting plane.
   const halfOffset = p.verticalAnchor === 'top' ? -heightM / 2 : heightM / 2;
@@ -129,19 +131,23 @@ function finalize(obj: THREE.Object3D, p: MeshPlacement): THREE.Object3D {
   return obj;
 }
 
-/** Bounding-box placeholder mesh (category-coloured fallback material). */
+/**
+ * ADR-693 Άξονας Β — bounding-box «φορτώνει» ghost: ημιδιάφανο ουδέτερο σώμα + περίγραμμα, στις
+ * ΠΡΑΓΜΑΤΙΚΕΣ διαστάσεις της οντότητας. Καμία σκιά, καμία υφή, κανένα υλικό καταλόγου.
+ *
+ * ΠΡΙΝ (ADR-411): `new THREE.Mesh(geo, getMaterial3D(matId))` με σκιές. Για το `elem-imported-mesh`
+ * — που δεν υπήρχε στο `MATERIAL_DEFS` — αυτό κατέληγε στη ΦΩΤΟΓΡΑΦΙΑ ΣΚΥΡΟΔΕΜΑΤΟΣ, οπότε ένα ξένο
+ * μοντέλο φαινόταν ως τσιμεντένιοι όγκοι όσο κατέβαινε (ADR-693 §2.1). Το `matId` εξακολουθεί να
+ * σφραγίζεται στο `userData` από το `tagObject` (το διαβάζουν οι τομές) — αλλάζει μόνο τι φαίνεται.
+ */
 function buildPlaceholder(
-  widthMm: number, depthMm: number, heightMm: number, scale: number, matId: string,
+  widthMm: number, depthMm: number, heightMm: number, scale: number,
 ): THREE.Mesh {
-  const geo = new THREE.BoxGeometry(
+  return buildLoadingGhostBox(
     widthMm * MM_TO_M * scale,
     heightMm * MM_TO_M * scale,
     depthMm * MM_TO_M * scale,
   );
-  const mesh = new THREE.Mesh(geo, getMaterial3D(matId));
-  mesh.castShadow = true;
-  mesh.receiveShadow = true;
-  return mesh;
 }
 
 /**
@@ -150,12 +156,17 @@ function buildPlaceholder(
  * the `stampBimIdentity` SSoT rather than `tagMesh`. Descendants carry the entity keys only:
  * `matId`/`levelId` stay on the root, and the SSoT skips `undefined` so the root's own
  * values survive its pass through `traverse` (which visits `obj` itself first).
+ *
+ * ADR-693 Β2 — τα «φορτώνει» ghosts ΕΞΑΙΡΟΥΝΤΑΙ από τις σκιές. Χωρίς αυτόν τον έλεγχο το traverse
+ * ξανάγραφε `castShadow = true` πάνω στο ghost που μόλις είχε δηλώσει το αντίθετο, και ένα
+ * ημιδιάφανο κουτί φόρτωσης έριχνε συμπαγή σκιά — δηλαδή διαβαζόταν ως πραγματικός όγκος. Ίδια
+ * επιλογή με το wireframe (`attach-mesh-wireframe`): σχεδιαστική ένδειξη, όχι φωτορεαλιστικό σώμα.
  */
 function tagObject(obj: THREE.Object3D, p: MeshPlacement): void {
   stampBimIdentity(obj, { bimId: p.bimId, bimType: p.bimType, matId: p.matId, levelId: p.levelId });
   obj.traverse((child) => {
     stampBimIdentity(child, { bimId: p.bimId, bimType: p.bimType });
-    if (child instanceof THREE.Mesh) {
+    if (child instanceof THREE.Mesh && !isLoadingGhost(child)) {
       child.castShadow = true;
       child.receiveShadow = true;
     }

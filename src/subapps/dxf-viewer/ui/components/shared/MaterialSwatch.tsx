@@ -22,9 +22,9 @@
  * @see ../../../bim/materials/material-catalog-defs.ts
  */
 
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import type { BimMaterialAppearance, BimMaterialCategory } from '../../../bim/types/bim-material-types';
-import { getMaterialFlatColorHex } from '../../../bim/materials/material-catalog-defs';
+import { catalogFlatColorOrNull } from '../../../bim/materials/material-catalog-defs';
 import {
   slugForMaterialId,
   slugForMaterialCategory,
@@ -122,24 +122,43 @@ export function MaterialSwatch({
   // Precedence: user thumbnail (Phase 2) → rendered sphere (Φ6/Φ7) → user 3D albedo photo
   // (Phase 3) → resolved slug albedo → flat colour chip.
   const url = thumbnailUrl || preferredSphere || albedoUrl || sphereThumb || resolvedAlbedoUrl;
+
+  // ADR-693 Γ3 — τελευταίο δίχτυ: αν η επιλεγμένη εικόνα ΔΕΝ φορτώσει (ληγμένο signed URL, σβησμένο
+  // αρχείο στο Storage, εκφυλισμένο data URL από χαμένο GL context), πέφτουμε στο flat colour chip
+  // αντί να δείξουμε το broken-image icon του browser. Ο χρήστης πρέπει ΠΑΝΤΑ να βλέπει χρώμα —
+  // ένα σπασμένο εικονίδιο διαβάζεται ως κατεστραμμένο υλικό, ενώ το υλικό είναι μια χαρά (Revit/
+  // Figma συμβόλαιο). Το κλειδί στο `key` επαναφέρει τη δοκιμή όταν αλλάξει το url.
+  const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
+  const handleError = useCallback(() => { setBrokenUrl(url || null); }, [url]);
+
   const base = `inline-block h-5 w-5 shrink-0 rounded-sm border border-black/20 ${className ?? ''}`;
 
-  if (url) {
+  if (url && url !== brokenUrl) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
+        key={url}
         src={url}
         alt=""
         aria-hidden="true"
         loading="lazy"
+        onError={handleError}
         className={`${base} object-cover`}
       />
     );
   }
 
   // Flat colour fallback — data-driven colour requires an inline style (the same
-  // accepted exception as the MEP circuit colour chip; CLAUDE.md N.3). A wall-covering
-  // paint carries its own `color`; else derive from the materialId; else neutral grey.
-  const fallbackColor = color || (materialId ? getMaterialFlatColorHex(materialId) : NEUTRAL_FALLBACK);
+  // accepted exception as the MEP circuit colour chip; CLAUDE.md N.3).
+  //
+  // ADR-693 — σειρά: μπογιά (`color`) → το ΠΡΑΓΜΑΤΙΚΟ χρώμα του υλικού (`appearance.baseColorHex`)
+  // → catalog flat χρώμα ΜΟΝΟ για γνωστό `mat-*`/`elem-*` id → ουδέτερο γκρι. Πριν, ένα υλικό
+  // βιβλιοθήκης (`bmat_*`) περνούσε από `getMaterialFlatColorHex` → `resolveMaterialKey` → concrete,
+  // δηλαδή έπαιρνε το ΓΚΡΙ ΤΟΥ ΣΚΥΡΟΔΕΜΑΤΟΣ ενώ κουβαλούσε δικό του χρώμα (ADR-693 §2.2).
+  const fallbackColor =
+    color
+    || appearance?.baseColorHex
+    || (materialId ? catalogFlatColorOrNull(materialId) : null)
+    || NEUTRAL_FALLBACK;
   return <span aria-hidden="true" className={base} style={{ backgroundColor: fallbackColor }} />;
 }

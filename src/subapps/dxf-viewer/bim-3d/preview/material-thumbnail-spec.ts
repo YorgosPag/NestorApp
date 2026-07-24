@@ -22,10 +22,10 @@ import {
   catalogDefForMaterialId,
   flatColorDef,
   getCategoryMaterialDef,
-  resolveMaterialKey,
+  resolveMaterialKeyOrNull,
   type PbrMaterialDef,
 } from '../../bim/materials/material-catalog-defs';
-import { textureSlugForKey } from '../../bim/materials/bim-texture-registry';
+import { textureSlugForKey, type PbrTextureSlug } from '../../bim/materials/bim-texture-registry';
 import type { BimMaterialAppearance, BimMaterialCategory } from '../../bim/types/bim-material-types';
 import { getTextureSet, preloadTextureSet, type LoadedTextureSet } from '../materials/bim-texture-cache';
 import { getUserMaterialTextureSet, preloadUserMaterialTextures } from '../materials/user-material-registry';
@@ -55,6 +55,17 @@ export function resolveThumbnailDef(input: ThumbnailSpecInput): PbrMaterialDef |
 }
 
 /**
+ * ADR-693 Α2 — ο slug ΜΟΝΟ για γνωστό catalog id. `resolveMaterialKeyOrNull` και όχι
+ * `resolveMaterialKey`: ένα ξένο id (`paint-*` μπογιά, ξένο materialId) ΔΕΝ έχει υφή, ενώ το
+ * concrete fallback του παλιού resolver έβαζε τη ΦΩΤΟΓΡΑΦΙΑ σκυροδέματος πάνω στη σφαίρα του
+ * — και φόρτωνε το texture set για να το κάνει (ADR-693 §2.2, καλούντες #7/#8).
+ */
+function catalogSlugOrNull(materialId: string): PbrTextureSlug | null {
+  const key = resolveMaterialKeyOrNull(materialId);
+  return key ? textureSlugForKey(key) : null;
+}
+
+/**
  * The ALREADY-loaded PBR texture set for a swatch's material, or `null` (flat sphere). Reads
  * the caches synchronously; `version` (the store's `textureAssetVersion`) is only a
  * recompute trigger. Catalog ids read the slug cache; `bmat_*` ids read the user registry.
@@ -62,7 +73,7 @@ export function resolveThumbnailDef(input: ThumbnailSpecInput): PbrMaterialDef |
 export function resolveThumbnailTextureSet(materialId: string | undefined, _version: number): LoadedTextureSet | null {
   if (!materialId) return null;
   if (materialId.startsWith(USER_MATERIAL_ID_PREFIX)) return getUserMaterialTextureSet(materialId);
-  const slug = textureSlugForKey(resolveMaterialKey(materialId));
+  const slug = catalogSlugOrNull(materialId);
   return slug ? getTextureSet(slug) : null;
 }
 
@@ -73,6 +84,6 @@ export function preloadThumbnailTextures(materialId: string | undefined): void {
     preloadUserMaterialTextures(materialId);
     return;
   }
-  const slug = textureSlugForKey(resolveMaterialKey(materialId));
+  const slug = catalogSlugOrNull(materialId);
   if (slug) preloadTextureSet(slug);
 }

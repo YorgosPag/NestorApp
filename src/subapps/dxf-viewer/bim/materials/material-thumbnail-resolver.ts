@@ -33,16 +33,23 @@
 
 import { useEffect, useSyncExternalStore } from 'react';
 import { textureSlugForKey, type PbrTextureSlug } from './bim-texture-registry';
-import { resolveMaterialKey } from './material-catalog-defs';
+import { resolveMaterialKeyOrNull } from './material-catalog-defs';
 import { resolveTextureUrl } from '../../bim-3d/materials/texture-source';
 import type { BimMaterialCategory } from '../types/bim-material-types';
 
 /**
  * DNA materialId → texture slug, via the SAME resolution the 3D catalog uses
  * (prefix key + registry). `null` when the resolved key has no textured variant.
+ *
+ * ADR-693 Α2 — `resolveMaterialKeyOrNull`, **όχι** `resolveMaterialKey`: ένα id εκτός καταλόγου
+ * (`bmat_*` βιβλιοθήκης, `paint-*` μπογιά, ξένο) **δεν έχει** texture slug. Πριν, το concrete
+ * fallback του `resolveMaterialKey` έκανε ΚΑΘΕ τέτοιο swatch να ζητά την υφή του σκυροδέματος —
+ * λάθος εικόνα όταν λυνόταν, **σπασμένη** εικόνα όταν δεν λυνόταν (ADR-693 §2.3 υπόθεση Β).
+ * Το αδελφό `resolveThumbnailDef` ήδη εξαιρούσε ρητά τα `bmat_*`· εδώ έλειπε η ίδια εξαίρεση.
  */
 export function slugForMaterialId(materialId: string): PbrTextureSlug | null {
-  return textureSlugForKey(resolveMaterialKey(materialId));
+  const key = resolveMaterialKeyOrNull(materialId);
+  return key ? textureSlugForKey(key) : null;
 }
 
 /**

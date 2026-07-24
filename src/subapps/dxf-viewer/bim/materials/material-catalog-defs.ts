@@ -125,6 +125,14 @@ export const MATERIAL_DEFS: Record<string, PbrMaterialDef> = {
   // glTF carries no own materials). Warm wood-tan, matte. The real CC0 mesh keeps
   // its own glTF materials; this only paints the placeholder box.
   'elem-furniture':      { color: 0xb48250, roughness: 0.65, metalness: 0.05 },
+  // ADR-693 Α3 — εισαγόμενο πλέγμα (ADR-683). ΡΗΤΟ ουδέτερο def, ΕΠΙΤΗΔΕΣ εκτός
+  // `MATERIAL_TEXTURE_MAP` (→ ποτέ υφή). Χωρίς αυτό, το `elem-imported-mesh` δεν ταίριαζε
+  // με ΚΑΝΕΝΑ prefix και έπεφτε στο `DEFAULT_MATERIAL_KEY` = σκυρόδεμα — δηλαδή ένα ξένο
+  // μοντέλο ζωγραφιζόταν με τη ΦΩΤΟΓΡΑΦΙΑ σκυροδέματος (μετρημένο, ADR-693 §2.1). Η ταυτότητα
+  // ενός εισαγόμενου είναι «άγνωστη», και η άγνωστη ταυτότητα είναι ουδέτερη, όχι δομικό υλικό.
+  // Δίχτυ για κάθε μονοπάτι που ρωτά το υλικό του μέσω `userData.matId` (π.χ. τομές, 2Δ χρώμα)·
+  // το ίδιο το placeholder της φόρτωσης ζωγραφίζεται με το ghost SSoT (ADR-693 Άξονας Β).
+  'elem-imported-mesh':  { color: 0xc8c8c8, roughness: 0.85, metalness: 0.00 },
   // ADR-408 Φ8 — MEP duct (rectangular/round HVAC duct): galvanised sheet-steel
   // grey (similar to RAL 9006 / zinc-coated surface). Low roughness (smooth
   // sheet metal), mid metalness.
@@ -164,14 +172,32 @@ export const MATERIAL_DEFS: Record<string, PbrMaterialDef> = {
 export const DEFAULT_MATERIAL_KEY = 'mat-concrete';
 
 /**
- * The resolved MaterialCatalog key behind a DNA materialId (e.g. 'mat-concrete-c25'
- * → 'mat-concrete'). Prefix match against `MATERIAL_DEFS` keys; default to concrete.
+ * ADR-693 Α1 — ο ΜΟΝΑΔΙΚΟΣ prefix matcher: το `MATERIAL_DEFS` κλειδί πίσω από ένα materialId,
+ * ή `null` όταν το id **δεν ανήκει** στον κατάλογο (`bmat_*` της βιβλιοθήκης, `paint-*` μπογιές,
+ * ξένα ids). Η διάκριση «άγνωστο» vs «σκυρόδεμα» υπάρχει επειδή σε αρκετά μονοπάτια — κυρίως στα
+ * swatches/thumbnails — το σιωπηλό fallback σε σκυρόδεμα είναι ΛΑΘΟΣ ΕΞ ΟΡΙΣΜΟΥ: ένα υλικό
+ * βιβλιοθήκης δεν έχει ποτέ DNA prefix, οπότε ΟΛΑ κατέρρεαν στην υφή του σκυροδέματος (ADR-693 §2.2).
+ *
+ * Σκόπιμα ΜΙΑ υλοποίηση του βρόχου (N.18): το {@link resolveMaterialKey} και το
+ * {@link catalogFlatColorOrNull} είναι λεπτά wrappers πάνω της.
  */
-export function resolveMaterialKey(materialId: string): string {
+export function resolveMaterialKeyOrNull(materialId: string): string | null {
   for (const prefix of Object.keys(MATERIAL_DEFS)) {
     if (materialId.startsWith(prefix)) return prefix;
   }
-  return DEFAULT_MATERIAL_KEY;
+  return null;
+}
+
+/**
+ * The resolved MaterialCatalog key behind a DNA materialId (e.g. 'mat-concrete-c25'
+ * → 'mat-concrete'). Prefix match against `MATERIAL_DEFS` keys; default to concrete.
+ *
+ * ⚠️ ADR-693 — το fallback σε σκυρόδεμα ΔΙΑΤΗΡΕΙΤΑΙ σκόπιμα: τοίχοι/πλάκες/θεμελιώσεις με DNA
+ * layer χωρίς ρητό υλικό βασίζονται σιωπηλά πάνω του. Αν χρειάζεσαι «άγνωστο ≠ σκυρόδεμα»
+ * (swatch, thumbnail, placeholder), κάλεσε το {@link resolveMaterialKeyOrNull}.
+ */
+export function resolveMaterialKey(materialId: string): string {
+  return resolveMaterialKeyOrNull(materialId) ?? DEFAULT_MATERIAL_KEY;
 }
 
 /**
@@ -230,8 +256,8 @@ export function getMaterialFlatColorHex(materialId: string): string {
  * γνώριζε το `mat-*` id → base look.
  */
 export function catalogFlatColorOrNull(materialId: string): string | null {
-  const known = Object.keys(MATERIAL_DEFS).some((prefix) => materialId.startsWith(prefix));
-  return known ? getMaterialFlatColorHex(materialId) : null;
+  // ADR-693 Α1 — ΕΝΑΣ prefix matcher (N.18): ήταν δεύτερος βρόχος πάνω στα ίδια κλειδιά.
+  return resolveMaterialKeyOrNull(materialId) ? getMaterialFlatColorHex(materialId) : null;
 }
 
 /**

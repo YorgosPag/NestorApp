@@ -38,6 +38,9 @@ import { withFaceMode, disposeFaceModeMaterials } from './face-mode-materials';
 // ADR-665 — terrain materials live in their own module (exclusivity is a load-bearing invariant
 // for per-material clipping). Imported ONLY for teardown; N.18 — do not re-export them from here.
 import { disposeTerrainMaterials3D } from './terrain-materials-3d';
+// ADR-693 Άξονας Β — τα «φορτώνει» ghost υλικά. Imported ΜΟΝΟ για teardown (ίδια σύμβαση με τα
+// terrain υλικά): το ghost δεν είναι υλικό καταλόγου και δεν επιλύεται ποτέ μέσω materialId.
+import { disposeLoadingPlaceholderMaterials } from './loading-placeholder-material';
 
 /** ADR-363 — prefix of `bim_materials` library document ids (enterprise id). */
 const USER_MATERIAL_ID_PREFIX = 'bmat_';
@@ -423,4 +426,6 @@ export function disposeMaterialCatalog3D(): void {
   // ADR-650 M10c/M10d + ADR-665 — terrain-exclusive materials (shaded base, analysis styles,
   // contour lines, terrain face-mode variants).
   disposeTerrainMaterials3D();
+  // ADR-693 — τα ghost σώμα/περίγραμμα ανά background mode.
+  disposeLoadingPlaceholderMaterials();
 }

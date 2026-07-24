@@ -30,8 +30,22 @@ describe('slugForMaterialId', () => {
     expect(slugForMaterialId('mat-glass')).toBeNull();
   });
 
-  it('matches the 3D-render fallback for unmapped ids (default → concrete)', () => {
-    expect(slugForMaterialId('mat-marble')).toBe('concrete');
+  /**
+   * ADR-693 Α2 — ΑΛΛΑΓΗ ΣΥΜΠΕΡΙΦΟΡΑΣ (σκόπιμη· αντικαθιστά το «unmapped → concrete»). Πριν, το
+   * fallback του `resolveMaterialKey` έκανε ΚΑΘΕ άγνωστο id να ζητά την υφή του **σκυροδέματος**.
+   * Μετρημένο στον browser (Giorgio 2026-07-24): τα υλικά βιβλιοθήκης `bmat_*` — που δεν έχουν
+   * ΠΟΤΕ DNA prefix — ζητούσαν όλα τη φωτογραφία σκυροδέματος, και όταν το URL δεν λυνόταν,
+   * **σπασμένη εικόνα**. Ένα id εκτός καταλόγου δεν έχει υφή· έχει «άγνωστο» → `null` → flat chip.
+   */
+  it('ADR-693: ξένο/άγνωστο id ΔΕΝ πέφτει πια σε σκυρόδεμα — επιστρέφει null', () => {
+    expect(slugForMaterialId('mat-marble')).toBeNull();
+    expect(slugForMaterialId('bmat_01HQ')).toBeNull();
+    expect(slugForMaterialId('paint-red')).toBeNull();
+    expect(slugForMaterialId('totally-unknown')).toBeNull();
+  });
+
+  it('ADR-693: το εισαγόμενο πλέγμα έχει ρητό def, χωρίς υφή', () => {
+    expect(slugForMaterialId('elem-imported-mesh')).toBeNull();
   });
 });
 
