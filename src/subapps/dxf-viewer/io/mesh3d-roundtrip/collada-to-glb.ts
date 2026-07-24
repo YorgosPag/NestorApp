@@ -113,6 +113,42 @@ function buildTextureManager(
   return manager;
 }
 
+/** Το όνομα του κοντινότερου named ancestor (ο ColladaLoader ονομάζει τους Groups, όχι τα Meshes). */
+function nearestNamedAncestorName(node: THREE.Object3D): string {
+  let parent = node.parent;
+  while (parent) {
+    if (parent.name) return parent.name;
+    parent = parent.parent;
+  }
+  return '';
+}
+
+/**
+ * **Κρίσιμο (ADR-690 §3.2 / bim-mesh-cache):** ο `ColladaLoader` βάζει τα `<node name>` στους
+ * ενδιάμεσους Groups αφήνοντας τα Meshes **ανώνυμα**. Όμως το Nestor pipeline διευθυνσιοδοτεί **ανά
+ * mesh** με βάση το `node.name`: και ο `parseGltfScene` (record ανά κόμβο) και ο `bim-mesh-cache`
+ * (`indexBundleNodes`, κλειδί `<bundleId>#<nodeName>`) το θέλουν. Κενά/διπλά names → το name-join
+ * αποτυγχάνει **και** ο cache δεν βρίσκει template → placeholder κουτιά αντί για γεωμετρία.
+ *
+ * Εδώ δίνουμε σε κάθε mesh **μοναδικό** όνομα (own → κοντινότερος named ancestor → `'mesh'`, με
+ * counter για συγκρούσεις), ΠΡΙΝ τη σειριοποίηση — ώστε parse ↔ index να δουν τα ίδια σταθερά names.
+ */
+function ensureUniqueMeshNames(root: THREE.Object3D): void {
+  const used = new Set<string>();
+  root.traverse((node) => {
+    if ((node as THREE.Mesh).isMesh !== true) return;
+    const base = node.name || nearestNamedAncestorName(node) || 'mesh';
+    let name = base;
+    let counter = 1;
+    while (used.has(name)) {
+      name = `${base}_${counter}`;
+      counter += 1;
+    }
+    used.add(name);
+    node.name = name;
+  });
+}
+
 /**
  * Μετατρέπει το κείμενο ενός `.dae` σε `.glb` (ArrayBuffer). Οι υφές φορτώνονται από τα `imageFiles`
  * του χρήστη μέσω `setURLModifier` και ενσωματώνονται στο glb από τον `serialiseGlb`.
@@ -145,6 +181,8 @@ export async function colladaToGlb(
     // ADR-690 §4 — υφές που δεν φορτώθηκαν (ο χρήστης δεν τις έδωσε) αφαιρούνται ΠΡΙΝ τη σειριοποίηση,
     // αλλιώς ο GLTFExporter σκάει σε broken image και χάνεται όλη η γεωμετρία.
     stripBrokenTextures(collada.scene);
+    // Κάθε mesh αποκτά μοναδικό όνομα ώστε parse ↔ bim-mesh-cache να το βρίσκουν (αλλιώς placeholder).
+    ensureUniqueMeshNames(collada.scene);
     const glb = await serialiseGlb(collada.scene);
     return { glb, missingTextures: [...missing] };
   } finally {

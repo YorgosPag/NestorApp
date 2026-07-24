@@ -188,4 +188,18 @@ Firebase** για τα **matched** στοιχεία. Το glTF appearance path *
   `collada-to-glb.ts` (generic διάσχιση όλων των `THREE.Texture` slots, null-out+dispose όσα έχουν
   `naturalWidth===0`) πριν τον `serialiseGlb` → η γεωμετρία μπαίνει ακόμη και χωρίς τις υφές. `+1` test
   (broken map καθαρίζεται, υγιές normalMap μένει) → 6/6 ✓. `console.error` στο catch του button για
-  διάγνωση μελλοντικών edge cases. jscpd ✓. 🔴 re-test στον browser.
+  διάγνωση μελλοντικών edge cases. jscpd ✓.
+- **2026-07-24 — Φ2 hotfix #2 (browser test #2 → `noChanges`, κανένα dialog γεωμετρίας):** ground-truth
+  σε πραγματικό `.dae` (`abricos_gerbera`, nested hierarchy). **Δύο root causes:**
+  1. Ο `ColladaLoader` βάζει τα `<node name>` στους ενδιάμεσους **Groups** αφήνοντας τα **Meshes
+     ανώνυμα** → τα glb records βγαίνουν με `objectName=''` → το name-join με τον material parser
+     (`unmatched`=`polymsh1`…) αποτυγχάνει → 0 records· **και** ο `bim-mesh-cache` (`indexBundleNodes`,
+     κλειδί `<bundleId>#<nodeName>`) δεν βρίσκει template → placeholder κουτιά. Fix: **NEW**
+     `ensureUniqueMeshNames` (own → κοντινότερος named ancestor → `'mesh'`, + counter) πριν τον
+     `serialiseGlb`. `+1` test (`polymsh1`/`polymsh1_1`/`polymsh1_2`).
+  2. Το geometry detection βασιζόταν στο cross-parse name-join ακόμη και για **πλήρως ξένο** μοντέλο
+     (μηδέν Nestor matches). Fix (button): `appliedCount === 0` → πρόσφερε **ΟΛΑ** τα importable (τα
+     ξένα ονόματα δεν ταιριάζουν ποτέ σε bimId)· μεικτό round-trip → best-effort join. Guard χαλάρωσε
+     σε «skip μόνο σε καθαρό round-trip». Προστέθηκε `console.info('[ADR-690] dae geometry:',…)` για
+     διάγνωση counts (objects/importable/applied/offered).
+  - jest 7/7 ✓ · jscpd ✓. 🔴 re-test στον browser (`abricos_gerbera.dae` + 3 jpg).

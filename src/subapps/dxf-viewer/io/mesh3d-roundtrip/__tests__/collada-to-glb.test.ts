@@ -30,6 +30,8 @@ interface DaeSpec {
   textures?: string[];
   /** Ένα mesh με texture slots· κάθε τιμή = πλάτος εικόνας (0 = broken/δεν φόρτωσε, >0 = OK). */
   maps?: Record<string, number>;
+  /** Named Groups με N ανώνυμα mesh children (μιμείται το nested hierarchy του ColladaLoader). */
+  groups?: Array<{ name: string; anonMeshes: number }>;
 }
 
 jest.mock('three/examples/jsm/loaders/ColladaLoader.js', () => {
@@ -61,6 +63,14 @@ jest.mock('three/examples/jsm/loaders/ColladaLoader.js', () => {
           }
           scene.add(new three.Mesh(new three.BufferGeometry(), material));
         }
+        for (const group of spec.groups ?? []) {
+          const parent = new three.Group();
+          parent.name = group.name; // ο ColladaLoader ονομάζει τον Group, όχι τα mesh children
+          for (let i = 0; i < group.anonMeshes; i += 1) {
+            parent.add(new three.Mesh(new three.BufferGeometry(), new three.MeshStandardMaterial()));
+          }
+          scene.add(parent);
+        }
         // Το πέρας φόρτωσης είναι ασύγχρονο — αλλιώς το onLoad θα πυροδοτούσε πριν το await.
         void Promise.resolve().then(() => names.forEach((name) => this.manager.itemEnd(name)));
         return { scene, library: {}, kinematics: {} };
@@ -81,6 +91,10 @@ function dae(...textures: string[]): string {
 
 function daeWithMaps(maps: Record<string, number>, ...textures: string[]): string {
   return JSON.stringify({ textures, maps });
+}
+
+function daeWithGroups(groups: Array<{ name: string; anonMeshes: number }>): string {
+  return JSON.stringify({ groups });
 }
 
 const GLB = new ArrayBuffer(8);
@@ -153,5 +167,17 @@ describe('colladaToGlb', () => {
     // Το broken map καθαρίστηκε (→ null), το υγιές normalMap διατηρήθηκε → η γεωμετρία επιβιώνει.
     expect(material.map).toBeNull();
     expect(material.normalMap).not.toBeNull();
+  });
+
+  it('δίνει μοναδικά ονόματα στα ανώνυμα meshes (ο ColladaLoader ονομάζει Groups) → parse+cache τα βρίσκουν', async () => {
+    await colladaToGlb(daeWithGroups([{ name: 'polymsh1', anonMeshes: 3 }]), []);
+
+    const scene = serialiseGlbMock.mock.calls[0][0];
+    const names: string[] = [];
+    scene.traverse((node) => {
+      if ((node as THREE.Mesh).isMesh === true) names.push(node.name);
+    });
+    // Παίρνουν το όνομα του named ancestor + counter → μοναδικά, σταθερά (όχι κενά → όχι placeholder).
+    expect(names).toEqual(['polymsh1', 'polymsh1_1', 'polymsh1_2']);
   });
 });

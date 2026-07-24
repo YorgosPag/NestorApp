@@ -292,19 +292,29 @@ export function C4dMaterialImportButton() {
       return;
     }
 
-    // ADR-690 — COLLADA γεωμετρία: αν το `.dae` έφερε αντικείμενα που ΔΕΝ ταίριαξαν σε ζωντανή
-    // οντότητα (π.χ. ξένη καρέκλα → όλα unmatched), τα εισάγουμε ως νέα γεωμετρία — μετατρέποντας το
-    // `.dae` σε in-memory glb και περνώντας το από το ΙΔΙΟ dialog με το glTF (ΜΗΔΕΝ διπλότυπο
-    // μονοπάτι). Pure round-trip (μηδέν unmatched) δεν πληρώνει τη μετατροπή. Η βαφή των matched
-    // εφαρμόστηκε ήδη από το importColladaAppearance — τα δύο συνυπάρχουν (ADR-690 §3.2).
-    if (payload.kind === 'dae' && result.unmatched.length > 0) {
+    // ADR-690 — COLLADA γεωμετρία: το `.dae` μετατρέπεται σε in-memory glb και περνά από το ΙΔΙΟ
+    // dialog με το glTF (ΜΗΔΕΝ διπλότυπο μονοπάτι). Skip μόνο σε καθαρό round-trip (όλα βάφτηκαν,
+    // τίποτα δεν περισσεύει). Η βαφή των matched εφαρμόστηκε ήδη από το importColladaAppearance — τα
+    // δύο συνυπάρχουν (ADR-690 §3.2).
+    const isPureRoundTrip = result.appliedCount > 0 && result.unmatched.length === 0;
+    if (payload.kind === 'dae' && !isPureRoundTrip) {
       try {
         const { glb, missingTextures } = await colladaToGlb(payload.daeText, payload.imageFiles);
         const { objects } = await parseGltfScene(glb);
+        const daeImportable = objects.filter(isImportableNode);
+        // Πλήρως ξένο μοντέλο (κανένα Nestor στοιχείο δεν βάφτηκε) → πρόσφερε ΟΛΑ — τα ξένα ονόματα
+        // (`polymsh1`, `Sphere008`) δεν ταιριάζουν ποτέ σε bimId, οπότε το name-join θα τα έκοβε άδικα.
+        // Μεικτό round-trip → εξαίρεσε όσα ήδη ταίριαξαν (best-effort join στα Nestor ονόματα).
         const unmatchedNames = new Set(result.unmatched);
-        const geometryRecords = objects.filter(
-          (o) => unmatchedNames.has(o.objectName) && isImportableNode(o),
-        );
+        const geometryRecords = result.appliedCount === 0
+          ? daeImportable
+          : daeImportable.filter((o) => unmatchedNames.has(o.objectName));
+        console.info('[ADR-690] dae geometry:', {
+          objects: objects.length,
+          importable: daeImportable.length,
+          applied: result.appliedCount,
+          offered: geometryRecords.length,
+        });
         if (geometryRecords.length > 0) {
           if (missingTextures.length > 0) {
             notifications.warning(
