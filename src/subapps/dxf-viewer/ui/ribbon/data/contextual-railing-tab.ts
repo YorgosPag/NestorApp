@@ -42,7 +42,7 @@ import {
   RAILING_TOP_RAIL_WIDTH_OPTIONS,
   RAILING_TOP_RAIL_HEIGHT_OPTIONS,
   RAILING_HANDRAIL_HEIGHT_OPTIONS,
-} from '../../bim/railings/railing-param-keys';
+} from '../../../bim/railings/railing-param-keys';
 
 export const RAILING_CONTEXTUAL_TRIGGER = 'railing-selected';
 

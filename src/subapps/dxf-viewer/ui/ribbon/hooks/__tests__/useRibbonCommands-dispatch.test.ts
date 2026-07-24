@@ -60,7 +60,7 @@ function comboboxMock(tag: string): ComboboxMock {
 /** All 34 combobox bridges, each a tagged mock keyed by the bridge prop name. */
 function comboboxDeps(): Record<string, ComboboxMock> {
   const names = [
-    'stairBridge', 'wallBridge', 'openingBridge', 'slabBridge', 'roofBridge', 'floorFinishBridge',
+    'stairBridge', 'railingBridge', 'wallBridge', 'openingBridge', 'slabBridge', 'roofBridge', 'floorFinishBridge',
     'wallCoveringBridge', 'hatchBridge', 'thermalSpaceBridge', 'columnBridge', 'beamBridge',
     'foundationBridge', 'slabOpeningBridge', 'mepFixtureBridge', 'mepManifoldBridge',
     'electricalPanelBridge', 'mepRadiatorBridge', 'mepBoilerBridge', 'mepWaterHeaterBridge',
@@ -89,9 +89,9 @@ function boolDeps(method: 'getBadgeState' | 'getPanelVisibility', names: readonl
 }
 
 describe('dispatch tables — completeness', () => {
-  it('combobox = 37 routes (36 bridges + storey module-handler), badge = 9, visibility = 16', () => {
+  it('combobox = 38 routes (37 bridges + storey module-handler), badge = 9, visibility = 16', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect(buildComboboxRoutes(comboboxDeps() as any)).toHaveLength(37);
+    expect(buildComboboxRoutes(comboboxDeps() as any)).toHaveLength(38);
     expect(buildBadgeRoutes(boolDeps('getBadgeState',
       ['stairBridge', 'wallBridge', 'openingBridge', 'slabBridge', 'roofBridge', 'columnBridge',
         'beamBridge', 'foundationBridge', 'slabOpeningBridge']) as never)).toHaveLength(9);
@@ -113,7 +113,7 @@ describe('dispatch tables — no-drift invariant (write ≡ read except readouts
 
   it('every other route shares ONE matcher for write & read (cannot drift)', () => {
     const same = routes.filter((r) => r.matchWrite === r.matchRead);
-    expect(same).toHaveLength(33); // 37 total − 4 readout routes
+    expect(same).toHaveLength(34); // 38 total − 4 readout routes
   });
 });
 
