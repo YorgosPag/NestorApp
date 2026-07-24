@@ -1,6 +1,6 @@
 # ADR-693 — Το σιωπηλό «σκυρόδεμα» ως default υλικό + η κατάσταση φόρτωσης εισαγόμενου μοντέλου
 
-**Status:** 🟡 **ΠΛΑΝΟ (Φ1 προτεινόμενο)** — 2026-07-24. Αναμονή «προχώρα» από Giorgio. Commit = Giorgio.
+**Status:** 🟢 **Φ1 DONE (κώδικας + tests)** — 2026-07-24. jest **1205/1206** στα 4 θιγόμενα domains (131 suites)· η μοναδική αποτυχία (`face-material-catalog.test.ts`, ADR-687 Φ9 glassQuality) είναι **προϋπάρχουσα** και άσχετη. jscpd (N.18) **καθαρό σε 8 αρχεία**. Commit = Giorgio. 🔴 **Εκκρεμεί browser επαλήθευση** (βλ. §8).
 **Date:** 2026-07-24
 **Owner:** Giorgio
 **Execution mode:** Plan Mode (N.8: ~9 αρχεία / 3 domains — απόφαση Giorgio 2026-07-24)
@@ -262,3 +262,4 @@ chip. Ό,τι κι αν σπάσει στο μέλλον (404 Storage URL, expir
 | Ημ/νία | Φάση | Τι |
 |---|---|---|
 | 2026-07-24 | — | ADR δημιουργήθηκε (Plan Mode). SSoT audit των 8 καλούντων του `resolveMaterialKey`· πρόβλημα #2 αποδείχθηκε πλήρως στον κώδικα· πρόβλημα #1 περιορίστηκε σε 2 υποψήφιους μηχανισμούς + ελεγκτής DevTools. Αναμονή «προχώρα». |
+| 2026-07-24 | **Φ1** | **Υλοποιήθηκε πλήρως (Άξονες Α+Β+Γ).** **Α:** NEW `resolveMaterialKeyOrNull` (ΕΝΑΣ prefix matcher· `resolveMaterialKey` + `catalogFlatColorOrNull` = wrappers, N.18) · ρητό def `elem-imported-mesh` (ουδέτερο, εκτός `MATERIAL_TEXTURE_MAP`) · τα 3 αφρούρητα σημεία (`slugForMaterialId`, `resolveThumbnailTextureSet`, `preloadThumbnailTextures`) → `null` για ξένο id. **Β:** NEW `loading-placeholder-material.ts` (ghost SSoT: ημιδιάφανο ουδέτερο ανά background mode + περίγραμμα με `raycast = () => {}`, cached, teardown μέσω `disposeMaterialCatalog3D`)· `buildPlaceholder` το καταναλώνει και έχασε την παράμετρο `matId`· `tagObject` σέβεται τη σημαία `bimLoadingGhost` αντί να ξαναγράφει σκιές. **Γ:** επικύρωση readback + **φραγμένη** ανάκτηση χαμένου GL context (μία επανάληψη μέσα στο `renderAppearanceThumbnail` — υποχρεωτικά σύγχρονη, γιατί ο καλών blacklist-άρει κάθε `null` μόνιμα)· `MaterialSwatch` `onError` → flat chip· flat fallback διαβάζει `appearance.baseColorHex` πριν το χρώμα καταλόγου. **Tests:** +37 (`material-catalog-defs` +11, `material-thumbnail-resolver` +6, `material-thumbnail-spec` +7, `mesh-to-object3d` +5, νέο `loading-placeholder-material` +12, `MaterialSwatch` +5). Ένα υπάρχον test (`slugForMaterialId('mat-marble')` → `'concrete'`) **αντικαταστάθηκε σκόπιμα** — κατοχύρωνε ρητά τη συμπεριφορά που είναι η ρίζα του σφάλματος. Pointers σε ADR-411 v1.6 + ADR-413 v1.7. |
