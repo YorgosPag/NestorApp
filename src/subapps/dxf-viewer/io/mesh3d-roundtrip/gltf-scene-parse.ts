@@ -27,7 +27,7 @@
  */
 
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { GLTFLoader, type GLTFReference } from 'three/addons/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 import { finiteBox3FromObject } from '../../bim-3d/scene/finite-bounds';
@@ -54,6 +54,12 @@ export interface GltfObjectRecord extends ObjectMaterialAssignment {
    * (Φ6) θέλουν όλα τα ονόματα. Κενό array για ανώνυμα/χωρίς-υλικό meshes.
    */
   readonly materialSlots: readonly string[];
+  /**
+   * ADR-691 — οι δείκτες `materials[]` του glTF για τα slots αυτού του κόμβου, χωρίς διπλότυπα.
+   * Ξεχωριστό από το {@link materialSlots} (ονόματα) επειδή τα ξένα υλικά είναι **συχνά ανώνυμα**:
+   * το name-join θα τα έχανε σιωπηλά, ενώ ο δείκτης υπάρχει πάντα. Κενό όταν δεν είναι γνωστός.
+   */
+  readonly materialIndices: readonly number[];
   /** `null` όταν το mesh δεν έχει αξιοποιήσιμες κορυφές — ποτέ «ίδιο» εξ ορισμού. */
   readonly fingerprint: GeometryFingerprint | null;
   /**
