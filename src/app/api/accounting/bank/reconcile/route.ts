@@ -31,6 +31,7 @@ import {
   type BankMatchProblem,
 } from '@/subapps/accounting/services/bank/bank-match-errors';
 import { nowISO } from '@/lib/date-local';
+import { isRoleBypass } from '@/lib/auth/roles';
 
 // =============================================================================
 // HELPERS
@@ -100,8 +101,8 @@ export const POST = defineRoute({
     }
 
     // ── Segregation of duties (Q8) ──────────────────────────────
-    // matchedBy !== reconciledBy, EXCEPT super_admin
-    if (auth.globalRole !== 'super_admin') {
+    // matchedBy !== reconciledBy, EXCEPT bypass roles
+    if (!isRoleBypass(auth.globalRole)) {
       // Check who matched this transaction
       // matchedByName stores the email of the matcher
       if (txn.matchedByName === auth.email) {

@@ -36,6 +36,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { nowISO } from '@/lib/date-local';
 import { accountingDocId } from '@/subapps/accounting/services/repository/accounting-doc-ids';
+import { bypassRoleGuard } from '@/lib/auth/bypass-role-guard';
 
 const logger = createModuleLogger('MigrateAccountingSingletonsRoute');
 
@@ -81,12 +82,8 @@ function resolveStatus(sourceExists: boolean, targetExists: boolean): SingletonS
 
 export const GET = withAuth(
   async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-    if (ctx.globalRole !== 'super_admin') {
-      return NextResponse.json(
-        { success: false, error: 'Forbidden: super_admin required', code: 'SUPER_ADMIN_REQUIRED' },
-        { status: 403 }
-      );
-    }
+    const forbidden = bypassRoleGuard(ctx);
+    if (forbidden) return forbidden;
 
     try {
       const companyId = LEGACY_TENANT_COMPANY_ID;
@@ -145,12 +142,8 @@ export const GET = withAuth(
 export const POST = withSensitiveRateLimit(
   withAuth(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      if (ctx.globalRole !== 'super_admin') {
-        return NextResponse.json(
-          { success: false, error: 'Forbidden: super_admin required', code: 'SUPER_ADMIN_REQUIRED' },
-          { status: 403 }
-        );
-      }
+      const forbidden = bypassRoleGuard(ctx);
+      if (forbidden) return forbidden;
 
       try {
         const companyId = LEGACY_TENANT_COMPANY_ID;

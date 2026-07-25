@@ -21,6 +21,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { handleAutoFixExecute, type AutoFixResult } from './fix-handler';
+import { isRoleBypass } from '@/lib/auth/roles';
 
 /**
  * POST — Execute auto-fix.
@@ -55,7 +56,7 @@ export const GET = withAuth(
       requester: {
         email: ctx.email,
         globalRole: ctx.globalRole,
-        hasAccess: ctx.globalRole === 'super_admin',
+        hasAccess: isRoleBypass(ctx.globalRole),
       },
     });
   },

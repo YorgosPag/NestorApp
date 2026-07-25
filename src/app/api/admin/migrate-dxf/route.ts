@@ -4,6 +4,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { isRoleBypass } from '@/lib/auth/roles';
 import {
   createDryRunReport,
   createLiveMigrationReport,
@@ -30,7 +31,7 @@ const createForbiddenResponse = (action: 'preview' | 'execute'): NextResponse =>
 };
 
 const ensureSuperAdmin = (ctx: AuthContext, action: 'preview' | 'execute'): NextResponse | null => {
-  if (ctx.globalRole === 'super_admin') {
+  if (isRoleBypass(ctx.globalRole)) {
     return null;
   }
 

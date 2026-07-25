@@ -11,9 +11,10 @@ import { COLLECTIONS, SYSTEM_DOCS } from '@/config/firestore-collections';
 import { nowISO } from '@/lib/date-local';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext } from '@/lib/auth';
+import { isRoleBypass } from '@/lib/auth/roles';
 
 export const POST = withAuth<{ success: boolean; updated: string[] }>(async (_req: Request, ctx: AuthContext) => {
-  if (ctx.globalRole !== 'super_admin') {
+  if (!isRoleBypass(ctx.globalRole)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 

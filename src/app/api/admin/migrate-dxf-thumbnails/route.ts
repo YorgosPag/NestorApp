@@ -23,6 +23,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { apiSuccess, ApiError, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { isRoleBypass } from '@/lib/auth/roles';
 import { runDxfThumbnailMigration, type MigrationReport } from './helpers';
 
 const logger = createModuleLogger('MigrateDxfThumbnailsRoute');
@@ -42,7 +43,7 @@ async function handle(
   req: NextRequest,
   ctx: AuthContext
 ): Promise<NextResponse<ApiSuccessResponse<MigrationReport>>> {
-  if (ctx.globalRole !== 'super_admin') {
+  if (!isRoleBypass(ctx.globalRole)) {
     throw new ApiError(403, 'Only super_admin can run this migration');
   }
 

@@ -12,6 +12,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { isRoleBypass } from '@/lib/auth/roles';
 import {
   createForbiddenPayload,
   executeBuildingFeaturesMigration,
@@ -25,7 +26,7 @@ import {
 const logger = createModuleLogger('MigrateBuildingFeaturesRoute');
 
 const ensureSuperAdmin = (ctx: AuthContext, action: 'preview' | 'migration'): NextResponse | null => {
-  if (ctx.globalRole === 'super_admin') {
+  if (isRoleBypass(ctx.globalRole)) {
     return null;
   }
 

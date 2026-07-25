@@ -35,6 +35,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { isRoleBypass } from '@/lib/auth/roles';
 
 const logger = createModuleLogger('FirebaseCollectionsRoute');
 
@@ -58,8 +59,8 @@ export const POST = withSensitiveRateLimit(withAuth(
 async function handleFirebaseCollectionsSetup(request: NextRequest, ctx: AuthContext): Promise<NextResponse> {
   const startTime = Date.now();
 
-  // 🏢 ENTERPRISE: Super_admin-only check (explicit)
-  if (ctx.globalRole !== 'super_admin') {
+  // 🏢 ENTERPRISE: bypass-role-only check (explicit)
+  if (!isRoleBypass(ctx.globalRole)) {
     logger.warn('[POST /api/setup/firebase-collections] BLOCKED: Non-super_admin attempted Firebase setup', { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole });
     return NextResponse.json(
       {

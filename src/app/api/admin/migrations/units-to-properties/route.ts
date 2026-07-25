@@ -24,6 +24,7 @@ import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { nowISO } from '@/lib/date-local';
+import { isRoleBypass } from '@/lib/auth/roles';
 
 const logger = createModuleLogger('MigrateUnitsToProperties');
 
@@ -41,7 +42,7 @@ interface MigrationRecord {
  */
 export const GET = withSensitiveRateLimit(withAuth(
   async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-    if (ctx.globalRole !== 'super_admin') {
+    if (!isRoleBypass(ctx.globalRole)) {
       return NextResponse.json(
         { success: false, error: 'super_admin required' },
         { status: 403 }
@@ -100,7 +101,7 @@ export const GET = withSensitiveRateLimit(withAuth(
  */
 export const POST = withSensitiveRateLimit(withAuth(
   async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-    if (ctx.globalRole !== 'super_admin') {
+    if (!isRoleBypass(ctx.globalRole)) {
       return NextResponse.json(
         { success: false, error: 'super_admin required' },
         { status: 403 }

@@ -20,6 +20,7 @@ import { processAdminBatch, BATCH_SIZE_READ } from '@/lib/admin-batch-utils';
 import { getErrorMessage } from '@/lib/error-utils';
 import { FLOOR_TEMPLATES, TARGET_BUILDING, TARGET_COMPANY_ID } from './seed-floors.config';
 import { EntityAuditService } from '@/services/entity-audit.service';
+import { isRoleBypass } from '@/lib/auth/roles';
 
 const logger = createModuleLogger('SeedFloorsHandlers');
 
@@ -38,7 +39,7 @@ export async function handleSeedFloorsPreview(
   _request: NextRequest,
   ctx: AuthContext
 ): Promise<NextResponse> {
-  if (ctx.globalRole !== 'super_admin') {
+  if (!isRoleBypass(ctx.globalRole)) {
     logger.warn('BLOCKED: Non-super_admin attempted seeding preview', {
       email: ctx.email,
       globalRole: ctx.globalRole,
@@ -110,7 +111,7 @@ export async function handleSeedFloorsExecute(
 ): Promise<NextResponse> {
   const startTime = Date.now();
 
-  if (ctx.globalRole !== 'super_admin') {
+  if (!isRoleBypass(ctx.globalRole)) {
     logger.warn('BLOCKED: Non-super_admin attempted seeding execution', {
       email: ctx.email,
       globalRole: ctx.globalRole,
@@ -220,7 +221,7 @@ export async function handleSeedFloorsDelete(
 ): Promise<NextResponse> {
   const startTime = Date.now();
 
-  if (ctx.globalRole !== 'super_admin') {
+  if (!isRoleBypass(ctx.globalRole)) {
     logger.warn('BLOCKED: Non-super_admin attempted mass deletion', {
       email: ctx.email,
       globalRole: ctx.globalRole,

@@ -31,6 +31,7 @@ import { EntityAuditService } from '@/services/entity-audit.service';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
 import { nowISO } from '@/lib/date-local';
+import { isRoleBypass } from '@/lib/auth/roles';
 import { canTransition, TRIAGE_STATUSES } from '@/app/admin/bim-diagnostics/lib/triage-fsm';
 import type {
   PerformanceDiagnostic,
@@ -121,7 +122,7 @@ const handlePatch: AuthenticatedHandler<PatchResponse | ErrorBody, RouteContext>
   _cache,
   routeContext,
 ) => {
-  if (ctx.globalRole !== 'super_admin') {
+  if (!isRoleBypass(ctx.globalRole)) {
     return NextResponse.json({ error: 'Forbidden: super-admin only' }, { status: 403 });
   }
 

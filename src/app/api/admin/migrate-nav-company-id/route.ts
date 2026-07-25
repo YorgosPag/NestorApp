@@ -23,6 +23,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { isRoleBypass } from '@/lib/auth/roles';
 
 const logger = createModuleLogger('MigrateNavCompanyId');
 
@@ -91,7 +92,7 @@ async function runMigration(dryRun: boolean): Promise<MigrationResult> {
 export const GET = withSensitiveRateLimit(
   withAuth(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      if (ctx.globalRole !== 'super_admin') {
+      if (!isRoleBypass(ctx.globalRole)) {
         return NextResponse.json(
           { success: false, error: 'Forbidden: super_admin required' },
           { status: 403 }
@@ -119,7 +120,7 @@ export const GET = withSensitiveRateLimit(
 export const POST = withSensitiveRateLimit(
   withAuth(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      if (ctx.globalRole !== 'super_admin') {
+      if (!isRoleBypass(ctx.globalRole)) {
         return NextResponse.json(
           { success: false, error: 'Forbidden: super_admin required' },
           { status: 403 }

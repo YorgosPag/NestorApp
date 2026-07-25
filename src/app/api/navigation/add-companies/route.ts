@@ -35,6 +35,7 @@ import { withAuth, logDataFix, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { isRoleBypass } from '@/lib/auth/roles';
 
 const logger = createModuleLogger('NavigationAddCompaniesRoute');
 
@@ -57,8 +58,8 @@ export const POST = withAuth(
 async function handleAddCompaniesExecute(request: NextRequest, ctx: AuthContext): Promise<NextResponse> {
   const startTime = Date.now();
 
-  // ENTERPRISE: Super_admin-only check (explicit)
-  if (ctx.globalRole !== 'super_admin') {
+  // ENTERPRISE: bypass-role-only check (explicit)
+  if (!isRoleBypass(ctx.globalRole)) {
     logger.warn('[Navigation/AddCompanies] BLOCKED: Non-super_admin attempted bulk company add', { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole });
     return NextResponse.json(
       {

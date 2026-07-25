@@ -26,6 +26,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
+import { isRoleBypass } from '@/lib/auth/roles';
 import type { PerformanceDiagnostic } from '@/types/performance-diagnostic';
 
 const logger = createModuleLogger('ADMIN_BIM_DIAGNOSTICS_NOTES');
@@ -67,7 +68,7 @@ const handlePut: AuthenticatedHandler<PutResponse | ErrorBody, RouteContext> = a
   _cache,
   routeContext,
 ) => {
-  if (ctx.globalRole !== 'super_admin') {
+  if (!isRoleBypass(ctx.globalRole)) {
     return NextResponse.json({ error: 'Forbidden: super-admin only' }, { status: 403 });
   }
 

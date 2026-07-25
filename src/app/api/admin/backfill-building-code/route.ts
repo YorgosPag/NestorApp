@@ -35,6 +35,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { ENTITY_TYPES } from '@/config/domain-constants';
+import { isRoleBypass } from '@/lib/auth/roles';
 import {
   planProjectCodes,
   type BuildingRow,
@@ -64,7 +65,7 @@ async function handleMigration(
 ): Promise<NextResponse> {
   const startTime = Date.now();
 
-  if (ctx.globalRole !== 'super_admin') {
+  if (!isRoleBypass(ctx.globalRole)) {
     logger.warn('BLOCKED: Non-super_admin attempted building code backfill', {
       email: ctx.email,
       globalRole: ctx.globalRole,

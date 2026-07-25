@@ -9,6 +9,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { nowISO } from '@/lib/date-local';
+import { isRoleBypass } from '@/lib/auth/roles';
 
 const logger = createModuleLogger('NormalizeFloorsRoute');
 
@@ -59,7 +60,7 @@ export async function handleFloorsNormalization(
 ): Promise<NextResponse> {
   const startTime = Date.now();
 
-  if (ctx.globalRole !== 'super_admin') {
+  if (!isRoleBypass(ctx.globalRole)) {
     logger.warn('BLOCKED: Non-super_admin attempted database normalization', { email: ctx.email, globalRole: ctx.globalRole });
     return NextResponse.json(
       {

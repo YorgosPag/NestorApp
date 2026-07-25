@@ -19,6 +19,7 @@ import type { AuthContext } from '@/lib/auth';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { resolveCompanyDisplayName } from '@/services/company/company-name-resolver';
+import { isRoleBypass } from '@/lib/auth/roles';
 
 const logger = createModuleLogger('NavigationAutoFixHandler');
 
@@ -55,8 +56,8 @@ export async function handleAutoFixExecute(
 ): Promise<NextResponse<AutoFixResult>> {
   const startTime = Date.now();
 
-  // 🏢 ENTERPRISE: Super_admin-only check (explicit)
-  if (ctx.globalRole !== 'super_admin') {
+  // 🏢 ENTERPRISE: bypass-role-only check (explicit)
+  if (!isRoleBypass(ctx.globalRole)) {
     logger.warn('[Navigation/AutoFix] BLOCKED: Non-super_admin attempted navigation auto-fix', {
       userId: ctx.uid,
       email: ctx.email,

@@ -39,6 +39,7 @@ import { withAuth, logDataFix, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { isRoleBypass } from '@/lib/auth/roles';
 
 const logger = createModuleLogger('NavigationFixContactIdRoute');
 
@@ -78,8 +79,8 @@ export const POST = withAuth(
 async function handleFixContactIdExecute(request: NextRequest, ctx: AuthContext): Promise<NextResponse<ContactIdFixResult>> {
   const startTime = Date.now();
 
-  // 🏢 ENTERPRISE: Super_admin-only check (explicit)
-  if (ctx.globalRole !== 'super_admin') {
+  // 🏢 ENTERPRISE: bypass-role-only check (explicit)
+  if (!isRoleBypass(ctx.globalRole)) {
     logger.warn('[Navigation/FixContactId] BLOCKED: Non-super_admin attempted contactId fix', { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole });
 
     const errorResult: ContactIdFixResult = {
@@ -279,7 +280,7 @@ export const GET = withAuth(
       requester: {
         email: ctx.email,
         globalRole: ctx.globalRole,
-        hasAccess: ctx.globalRole === 'super_admin'
+        hasAccess: isRoleBypass(ctx.globalRole)
       }
     });
   },
