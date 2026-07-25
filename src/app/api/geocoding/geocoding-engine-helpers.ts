@@ -44,6 +44,8 @@ export interface NominatimAddress {
   state?: string;
   postcode?: string;
   country?: string;
+  /** ISO-3166-1 alpha-2, lowercase. The reliable signal for country integrity. */
+  country_code?: string;
 }
 
 export interface NominatimResult {
@@ -167,50 +169,24 @@ export function computePartialMatch(matches: FieldMatchMap): boolean {
 // FORMATTERS — top result + alternatives
 // =============================================================================
 
-export function formatTopResult(
-  result: NominatimResult,
-  params: GeocodingRequestBody,
-  attempts: GeocodingAttempt[],
-  alternativeCandidates: NominatimResult[],
-  variantUsed: GeocodingVariant,
-): GeocodingApiResponse {
-  const resolvedFields = extractResolvedFields(result.address);
-  const fieldMatches = buildFieldMatches(params, resolvedFields);
-  const { breakdown, total: confidence } = computeConfidenceBreakdown(result, params);
-
-  const alternatives: GeocodingAlternative[] = alternativeCandidates.map((alt) =>
-    formatAlternative(alt, params, variantUsed),
-  );
-
-  return {
-    lat: parseFloat(result.lat),
-    lng: parseFloat(result.lon),
-    accuracy: determineAccuracy(result),
-    confidence,
-    displayName: result.display_name,
-    resolvedCity: resolvedFields.city,
-    resolvedFields,
-    partialMatch: computePartialMatch(fieldMatches),
-    reasoning: {
-      fieldMatches,
-      attemptsLog: attempts,
-      confidenceBreakdown: breakdown,
-    },
-    alternatives,
-    source: {
-      provider: 'nominatim',
-      osmType: result.osm_type,
-      osmId: result.osm_id != null ? String(result.osm_id) : undefined,
-      importance: result.importance,
-      variantUsed,
-    },
-  };
-}
-
-export function formatAlternative(
+/**
+ * The shape every Nominatim hit turns into — top result and alternative alike.
+ *
+ * `GeocodingAlternative` is literally `Omit<GeocodingApiResponse, 'alternatives'>`,
+ * so the two formatters below differ in exactly two things: whether the attempts
+ * log is carried, and whether alternatives are attached. Everything else — the
+ * coordinate parsing, the accuracy call, the confidence breakdown, the source
+ * provenance — is one computation with one owner.
+ *
+ * It previously lived twice, verbatim, in the two formatters; a field added to
+ * one and forgotten in the other would have silently made alternatives disagree
+ * with the top result they are compared against.
+ */
+function buildBaseResponse(
   result: NominatimResult,
   params: GeocodingRequestBody,
   variantUsed: GeocodingVariant,
+  attemptsLog: GeocodingAttempt[],
 ): GeocodingAlternative {
   const resolvedFields = extractResolvedFields(result.address);
   const fieldMatches = buildFieldMatches(params, resolvedFields);
@@ -227,7 +203,7 @@ export function formatAlternative(
     partialMatch: computePartialMatch(fieldMatches),
     reasoning: {
       fieldMatches,
-      attemptsLog: [],
+      attemptsLog,
       confidenceBreakdown: breakdown,
     },
     source: {
@@ -238,4 +214,28 @@ export function formatAlternative(
       variantUsed,
     },
   };
+}
+
+export function formatTopResult(
+  result: NominatimResult,
+  params: GeocodingRequestBody,
+  attempts: GeocodingAttempt[],
+  alternativeCandidates: NominatimResult[],
+  variantUsed: GeocodingVariant,
+): GeocodingApiResponse {
+  return {
+    ...buildBaseResponse(result, params, variantUsed, attempts),
+    alternatives: alternativeCandidates.map((alt) =>
+      formatAlternative(alt, params, variantUsed),
+    ),
+  };
+}
+
+/** An alternative carries no attempts log — the log describes the search, not the candidate. */
+export function formatAlternative(
+  result: NominatimResult,
+  params: GeocodingRequestBody,
+  variantUsed: GeocodingVariant,
+): GeocodingAlternative {
+  return buildBaseResponse(result, params, variantUsed, []);
 }

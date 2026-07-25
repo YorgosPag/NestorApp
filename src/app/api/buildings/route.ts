@@ -8,12 +8,9 @@ import { FIELDS } from '@/config/firestore-field-constants';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
-import { resolveTenantScopeFromUrl, resolveTenantListScopeFromUrl, tenantScopeLabel } from '@/lib/auth/tenant-scope';
-import { tenantScopedCollection } from '@/lib/firestore/tenant-scoped-query';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { normalizeProjectIdForQuery } from '@/utils/firestore-helpers';
-import { normalizeToMillis } from '@/lib/date-local';
 import { createEntity } from '@/lib/firestore/entity-creation.service';
 import { getErrorMessage } from '@/lib/error-utils';
 import { POLICY_ERROR_CODES } from '@/lib/policy';
@@ -47,113 +44,13 @@ const CreateBuildingSchema = z.object({
 
 const logger = createModuleLogger('BuildingsRoute');
 
-/** Building document with optional createdAt for sorting */
-interface BuildingDocument {
-  id: string;
-  createdAt?: string | Date | { seconds: number; nanoseconds: number };
-  [key: string]: unknown;
-}
-
-/** 🏢 ENTERPRISE: Response data type (for apiSuccess wrapper) */
-interface BuildingsResponseData {
-  buildings: BuildingDocument[];
-  count: number;
-  projectId?: string;
-}
-
-export const GET = withStandardRateLimit(
-  withAuth<ApiSuccessResponse<BuildingsResponseData>>(
-    async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-    // 🔐 ADMIN SDK: Get server-side Firestore instance
-    const adminDb = getAdminFirestore();
-    if (!adminDb) {
-      logger.error('Firebase Admin not initialized');
-      throw new Error('Database unavailable: Firebase Admin not initialized');
-    }
-
-    // Extract query parameters
-    const { searchParams } = new URL(request.url);
-    const projectId = searchParams.get('projectId');
-    // ADR-233 §3.4: codesOnly=true → return ALL buildings (incl. soft-deleted)
-    // with only {id, code} fields so the client can skip reserved codes when
-    // suggesting the next building code. Codes are permanent identifiers —
-    // they must not be reissued even after a building is moved to trash.
-    const codesOnly = searchParams.get('codesOnly') === 'true';
-
-    // 🔒 ADR-702: browse doctrine — a super admin who named no company sees the
-    // whole estate (`all-tenants`); everyone else sees their own, request ignored.
-    const listScope = resolveTenantListScopeFromUrl(request.url, ctx);
-    // 🔒 ADR-702: the project fallback below deliberately uses the *strict company*
-    // doctrine instead. "Pick a building for this project" with no project match
-    // should offer one company's buildings — never every tenant's.
-    const fallbackScope = resolveTenantScopeFromUrl(request.url, ctx);
-
-    if (projectId) {
-      logger.info('[Buildings] Loading for project', { projectId, companyId: fallbackScope.companyId, isSuperAdmin: listScope.isSuperAdmin });
-    } else {
-      logger.info('[Buildings] Loading all buildings for tenant', { companyId: tenantScopeLabel(listScope) });
-    }
-
-    // 🎯 ENTERPRISE: Build query — projectId + fallback to companyId
-    let snapshot;
-    if (projectId) {
-      // 🏢 ADR-209: Single query with normalized projectId (handles string/number mismatch)
-      const projectQuery = adminDb.collection(COLLECTIONS.BUILDINGS)
-        .where(FIELDS.PROJECT_ID, '==', normalizeProjectIdForQuery(projectId));
-      snapshot = await projectQuery.get();
-
-      // Step 3: Fallback — many buildings have no projectId field.
-      // Load ALL buildings for the same companyId so the user can pick one.
-      if (snapshot.empty && fallbackScope.companyId) {
-        logger.info('[Buildings] No buildings with projectId, falling back to companyId', { projectId, companyId: fallbackScope.companyId });
-        snapshot = await tenantScopedCollection(COLLECTIONS.BUILDINGS, fallbackScope).get();
-      }
-    } else {
-      // 🏢 ADR-232: super admin without a named company → every tenant's buildings.
-      // ADR-702: previously this branch dropped `?companyId=` on the floor while
-      // /api/properties and /api/floors honoured it — same rule, two behaviours.
-      snapshot = await tenantScopedCollection(COLLECTIONS.BUILDINGS, listScope).get();
-    }
-
-    // ADR-233 §3.4: codesOnly mode — return all buildings (incl. deleted) with
-    // minimal fields so the client can compute the next available code without
-    // exposing full deleted-building data or polluting the normal list view.
-    if (codesOnly) {
-      const codes = snapshot.docs.map(doc => ({
-        id: doc.id,
-        code: (doc.data().code as string | undefined) ?? '',
-      }));
-      logger.info('[Buildings] codesOnly query', { count: codes.length, projectId: projectId || undefined });
-      return apiSuccess<BuildingsResponseData>(
-        { buildings: codes as BuildingDocument[], count: codes.length, projectId: projectId || undefined },
-        `Loaded ${codes.length} building codes`
-      );
-    }
-
-    // 🏢 ENTERPRISE: Ensure Firestore document ID is preserved
-    // ADR-281: Exclude soft-deleted records from normal list
-    const buildings: BuildingDocument[] = snapshot.docs
-      .filter(doc => doc.data().status !== 'deleted')
-      .map(doc => ({
-        ...doc.data(),
-        id: doc.id,  // ✅ Firestore document ID (always last to prevent override)
-      })) as BuildingDocument[];
-    // 🔄 ENTERPRISE: Server-side sort by createdAt (desc order)
-    buildings.sort((a, b) => normalizeToMillis(b.createdAt) - normalizeToMillis(a.createdAt));
-    logger.info('[Buildings] Found buildings for tenant', { count: buildings.length, companyId: tenantScopeLabel(listScope), projectId: projectId || undefined });
-    // 🏢 ENTERPRISE: Return standard apiSuccess format
-    return apiSuccess<BuildingsResponseData>(
-      {
-        buildings,
-        count: buildings.length,
-        projectId: projectId || undefined
-      },
-      `Loaded ${buildings.length} buildings`
-    );
-    },
-    { permissions: 'buildings:buildings:view' }
-  )
-);
+// GET — Building list (extracted for SRP, same pattern as PATCH below)
+export { GET } from './buildings-list.handler';
+export type {
+  BuildingDocument,
+  BuildingsListScope,
+  BuildingsResponseData,
+} from './buildings-list.handler';
 
 /**
  * 🏗️ ENTERPRISE: Create new building via Admin SDK

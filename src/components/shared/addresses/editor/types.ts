@@ -16,6 +16,7 @@
 
 import type {
   GeocodingApiResponse,
+  GeocodingFailureReason,
   ResolvedAddressFields,
   GeocodingReasoning,
 } from '@/lib/geocoding/geocoding-types';
@@ -27,6 +28,8 @@ export type {
   GeocodingAttempt,
   GeocodingAttemptStatus,
   GeocodingAccuracy,
+  GeocodingFailureReason,
+  GeocodingOutcome,
   GeocodingProvider,
   GeocodingReasoning,
   GeocodingRequestBody,
@@ -185,8 +188,20 @@ export type AddressEditorState =
       reason: 'field-changed';
     }
   | {
+      /**
+       * The provider answered, and the address simply is not in its data. This
+       * is a *result*, not a fault — it was previously folded into `error`,
+       * which made every typo and every fictional street read as a broken
+       * geocoder.
+       *
+       * @see ADR-332 D10
+       */
+      phase: 'not-found';
+      searchedAtMs: number;
+    }
+  | {
       phase: 'error';
-      reason: 'no-results' | 'timeout' | 'rate-limit' | 'network';
+      reason: GeocodingFailureReason;
       canRetry: boolean;
     };
 
@@ -207,6 +222,9 @@ export type AddressEditorEvent =
   | { type: 'DEBOUNCE_TICK'; nowMs: number }
   | { type: 'GEOCODE_STARTED'; attempt: number; totalAttempts: number; variantI18nKey: string }
   | { type: 'GEOCODE_SUCCESS'; result: GeocodingApiResponse; nowMs: number }
+  /** Provider answered, address absent from its data. Not a fault — see ADR-332 D10. */
+  | { type: 'GEOCODE_EMPTY'; nowMs: number }
+  /** The call itself failed (timeout, rate limit, network, server). */
   | { type: 'GEOCODE_FAILED'; reason: AddressEditorErrorReason }
   | { type: 'CONFLICT_DETECTED'; conflicts: AddressFieldConflict[] }
   | { type: 'SUGGESTIONS_TRIGGERED'; candidates: GeocodingApiResponse[]; reason: SuggestionTrigger }

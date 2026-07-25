@@ -96,29 +96,59 @@ function sanitizeStr(v: string | undefined): string | undefined {
 
 export function sanitizeQuery(body: GeocodingRequestBody): GeocodingRequestBody {
   return {
-    street: sanitizeStr(body.street), city: sanitizeStr(body.city),
+    street: sanitizeStr(body.street), number: sanitizeStr(body.number),
+    city: sanitizeStr(body.city),
     neighborhood: sanitizeStr(body.neighborhood), postalCode: sanitizeStr(body.postalCode),
     county: sanitizeStr(body.county), municipality: sanitizeStr(body.municipality),
     region: sanitizeStr(body.region), country: sanitizeStr(body.country),
   };
 }
 
+/**
+ * Join street name and house number. Nominatim's structured `street` slot wants
+ * "<number> <name>", while free-form text follows the local written convention —
+ * in Greek, "<name> <number>" («Τσιμισκή 43»). One composer so the two orders
+ * cannot drift apart.
+ *
+ * Kept out of the caller's `street` field, which must stay the bare street name.
+ */
+function composeStreet(
+  params: GeocodingRequestBody,
+  order: 'number-first' | 'number-last',
+): string | undefined {
+  if (!params.street) return undefined;
+  if (!params.number) return params.street;
+  return order === 'number-first'
+    ? `${params.number} ${params.street}`
+    : `${params.street} ${params.number}`;
+}
+
 // =============================================================================
 // NOMINATIM URL BUILDERS
 // =============================================================================
 
+/**
+ * Structured search URL.
+ *
+ * `postalcode` is deliberately **omitted**. Measured against live Nominatim
+ * (2026-07-26): `street=Τσιμισκή 43 & city=Θεσσαλονίκη` returns a match, and
+ * adding `postalcode` — in either `54623` or the Greek-canonical `546 23` form —
+ * returns an empty set. As a structured filter it only ever subtracts, so the
+ * postal code is used for free-form queries and for verifying the answer
+ * instead. See ADR-332 D12.
+ */
 function buildStructuredUrl(params: GeocodingRequestBody, countryCode: string | null): string {
   const searchParams = new URLSearchParams({
     format: 'json', addressdetails: '1',
     limit: GEOCODING.NOMINATIM_RESULT_LIMIT, 'accept-language': GEOCODING.ACCEPT_LANGUAGE,
   });
   if (countryCode) searchParams.set('countrycodes', countryCode);
-  if (params.street) searchParams.set('street', params.street);
+  const street = composeStreet(params, 'number-first');
+  if (street) searchParams.set('street', street);
   if (params.neighborhood) searchParams.set('city', params.neighborhood);
   else if (params.city) searchParams.set('city', params.city);
   if (params.county) searchParams.set('county', params.county);
   if (params.region) searchParams.set('state', params.region);
-  if (params.postalCode) searchParams.set('postalcode', params.postalCode);
   return `${NOMINATIM_BASE_URL}/search?${searchParams.toString()}`;
 }
 
@@ -186,25 +216,78 @@ function skippedAttempt(variant: GeocodingVariant): GeocodingAttempt {
 }
 
 // =============================================================================
+// RESULT FINALIZATION — country integrity (ADR-332 D11)
+// =============================================================================
+
+/**
+ * The late variants drop the country restriction to rescue typo'd input, which
+ * can surface a same-named place on another continent. Measured (2026-07-26):
+ * `{street: "Ονειροπόλων", postalCode: "54624", country: "Ελλάδα"}` returned
+ * Town of Wheatland, Wisconsin, USA at confidence 0.55.
+ *
+ * Such a candidate is still worth showing — it explains what the provider
+ * matched — but it must never read as verified, so it is flagged and its
+ * confidence is zeroed.
+ */
+function enforceCountryIntegrity(
+  response: GeocodingApiResponse,
+  result: NominatimResult,
+  declaredCountryCode: string | null,
+): GeocodingApiResponse {
+  if (!declaredCountryCode) return response;
+  const resolved = result.address?.country_code?.toLowerCase();
+  if (!resolved || resolved === declaredCountryCode) return response;
+  logger.warn('Geocoding result outside declared country', {
+    data: { declared: declaredCountryCode, resolved, variant: response.source.variantUsed },
+  });
+  return { ...response, outOfDeclaredCountry: true, confidence: 0 };
+}
+
+/** Single exit path for every variant — one place that formats and validates. */
+function finishWith(
+  results: NominatimResult[],
+  params: GeocodingRequestBody,
+  attempts: GeocodingAttempt[],
+  variant: GeocodingVariant,
+  declaredCountryCode: string | null,
+): GeocodingApiResponse {
+  const top = results[0];
+  return enforceCountryIntegrity(
+    formatTopResult(top, params, attempts, results.slice(1, 5), variant),
+    top,
+    declaredCountryCode,
+  );
+}
+
+// =============================================================================
 // SEARCH VARIANTS (query builders)
 // =============================================================================
 
+/**
+ * Tight first-pass query: street + number, locality, postal code — comma
+ * separated. Measured (2026-07-26): space-joining these, as this builder used to
+ * do, returns an empty set where the comma-separated form matches.
+ */
 function toOsmStyleQuery(params: GeocodingRequestBody): string {
-  if (params.street) return [params.street, params.postalCode].filter(Boolean).join(' ');
-  const locality = params.neighborhood || params.city;
-  return [locality?.replace(/-/g, ' '), params.postalCode].filter(Boolean).join(', ');
+  const locality = (params.neighborhood || params.city)?.replace(/-/g, ' ');
+  return [composeStreet(params, 'number-last'), locality, params.postalCode]
+    .filter(Boolean).join(', ');
 }
 
+/** Widest query: the full administrative chain, for when the tight one misses. */
 function toFreeformQuery(params: GeocodingRequestBody): string {
   const locality = params.neighborhood || params.city;
-  return [params.street, locality, params.municipality, params.county, params.postalCode, params.region]
-    .filter(Boolean).join(', ');
+  return [
+    composeStreet(params, 'number-last'), locality, params.municipality,
+    params.county, params.postalCode, params.region,
+  ].filter(Boolean).join(', ');
 }
 
 function createAccentStrippedVariant(params: GeocodingRequestBody): GeocodingRequestBody {
   const n = (v: string | undefined) => v ? normalizeGreekText(v) : undefined;
   return {
-    street: n(params.street), city: n(params.city), neighborhood: n(params.neighborhood),
+    street: n(params.street), number: params.number,
+    city: n(params.city), neighborhood: n(params.neighborhood),
     postalCode: params.postalCode, county: n(params.county),
     municipality: n(params.municipality), region: n(params.region), country: params.country,
   };
@@ -218,7 +301,8 @@ function createGreeklishVariant(params: GeocodingRequestBody): GeocodingRequestB
   if (!hasNonGreek) return null;
   const tr = (v: string | undefined) => v && !containsGreek(v) ? transliterateGreeklish(v) : v;
   return {
-    street: tr(params.street), city: tr(params.city), neighborhood: tr(params.neighborhood),
+    street: tr(params.street), number: params.number,
+    city: tr(params.city), neighborhood: tr(params.neighborhood),
     postalCode: params.postalCode, county: params.county, municipality: params.municipality,
     region: tr(params.region), country: params.country,
   };
@@ -245,7 +329,7 @@ export async function geocode(rawParams: GeocodingRequestBody): Promise<Geocodin
     const out = await fetchNominatim(buildFreeformUrl(osmQuery, cc), 1);
     attempts.push(out.attempt);
     if (out.results.length > 0) {
-      return formatTopResult(out.results[0], params, attempts, out.results.slice(1, 5), 1);
+      return finishWith(out.results, params, attempts, 1, cc);
     }
   } else {
     attempts.push(skippedAttempt(1));
@@ -256,7 +340,7 @@ export async function geocode(rawParams: GeocodingRequestBody): Promise<Geocodin
   const v2 = await fetchNominatim(buildStructuredUrl(params, cc), 2);
   attempts.push(v2.attempt);
   if (v2.results.length > 0) {
-    return formatTopResult(v2.results[0], params, attempts, v2.results.slice(1, 5), 2);
+    return finishWith(v2.results, params, attempts, 2, cc);
   }
 
   if (params.city?.includes('-') || params.neighborhood?.includes('-')) {
@@ -270,7 +354,7 @@ export async function geocode(rawParams: GeocodingRequestBody): Promise<Geocodin
     const v3 = await fetchNominatim(buildStructuredUrl(dh, cc), 3);
     attempts.push(v3.attempt);
     if (v3.results.length > 0) {
-      return formatTopResult(v3.results[0], params, attempts, v3.results.slice(1, 5), 3);
+      return finishWith(v3.results, params, attempts, 3, cc);
     }
   } else {
     attempts.push(skippedAttempt(3));
@@ -281,7 +365,7 @@ export async function geocode(rawParams: GeocodingRequestBody): Promise<Geocodin
   const v4 = await fetchNominatim(buildStructuredUrl(createAccentStrippedVariant(params), cc), 4);
   attempts.push(v4.attempt);
   if (v4.results.length > 0) {
-    return formatTopResult(v4.results[0], params, attempts, v4.results.slice(1, 5), 4);
+    return finishWith(v4.results, params, attempts, 4, cc);
   }
 
   if (!params.country || cc === 'gr') {
@@ -292,7 +376,7 @@ export async function geocode(rawParams: GeocodingRequestBody): Promise<Geocodin
       const v5 = await fetchNominatim(buildStructuredUrl(gv, cc), 5);
       attempts.push(v5.attempt);
       if (v5.results.length > 0) {
-        return formatTopResult(v5.results[0], params, attempts, v5.results.slice(1, 5), 5);
+        return finishWith(v5.results, params, attempts, 5, cc);
       }
     } else {
       attempts.push(skippedAttempt(5));
@@ -308,7 +392,7 @@ export async function geocode(rawParams: GeocodingRequestBody): Promise<Geocodin
     const v6 = await fetchNominatim(buildFreeformUrl(freeformQuery, cc), 6);
     attempts.push(v6.attempt);
     if (v6.results.length > 0) {
-      return formatTopResult(v6.results[0], params, attempts, v6.results.slice(1, 5), 6);
+      return finishWith(v6.results, params, attempts, 6, cc);
     }
   } else {
     attempts.push(skippedAttempt(6));
@@ -322,7 +406,7 @@ export async function geocode(rawParams: GeocodingRequestBody): Promise<Geocodin
       const v7 = await fetchNominatim(buildFreeformUrl(globalQuery, null), 7);
       attempts.push(v7.attempt);
       if (v7.results.length > 0) {
-        return formatTopResult(v7.results[0], params, attempts, v7.results.slice(1, 5), 7);
+        return finishWith(v7.results, params, attempts, 7, cc);
       }
     } else {
       attempts.push(skippedAttempt(7));
@@ -335,7 +419,7 @@ export async function geocode(rawParams: GeocodingRequestBody): Promise<Geocodin
       const v8 = await fetchNominatim(buildFreeformUrl(cityOnly, null), 8);
       attempts.push(v8.attempt);
       if (v8.results.length > 0) {
-        return formatTopResult(v8.results[0], params, attempts, v8.results.slice(1, 5), 8);
+        return finishWith(v8.results, params, attempts, 8, cc);
       }
     } else {
       attempts.push(skippedAttempt(8));

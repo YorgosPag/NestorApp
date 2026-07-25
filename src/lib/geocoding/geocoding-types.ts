@@ -29,6 +29,12 @@
  */
 export interface GeocodingRequestBody {
   street?: string;
+  /**
+   * House number, kept separate from `street` because the editor collects it in
+   * its own input. Without it no query can ever reach `accuracy: 'exact'` — the
+   * best attainable answer is the street centreline.
+   */
+  number?: string;
   city?: string;
   /** Neighborhood/area — more specific than city (e.g. "Εύοσμος" within "Θεσσαλονίκη") */
   neighborhood?: string;
@@ -84,6 +90,16 @@ export interface GeocodingApiResponse {
   alternatives: GeocodingAlternative[];
   /** Provenance metadata. */
   source: GeocodingSource;
+  /**
+   * True when the user declared a country but the winning candidate lies outside
+   * it. The late fallback variants deliberately drop the country restriction to
+   * salvage typo'd input, which can surface a same-named street on another
+   * continent; flagging it (and zeroing `confidence`) keeps that rescue from
+   * masquerading as a verified answer.
+   *
+   * @see ADR-332 D11 — country integrity
+   */
+  outOfDeclaredCountry?: boolean;
 }
 
 /**
@@ -91,6 +107,27 @@ export interface GeocodingApiResponse {
  * payload depth bounded at 1 level.
  */
 export type GeocodingAlternative = Omit<GeocodingApiResponse, 'alternatives'>;
+
+// =============================================================================
+// SERVICE OUTCOME — "not found" is not an error (ADR-332 D10)
+// =============================================================================
+
+/**
+ * Why a geocoding call failed. Deliberately excludes "no results": an address
+ * the provider does not know is a *legitimate answer*, not a malfunction, and
+ * conflating the two is what made a working geocoder look dead.
+ */
+export type GeocodingFailureReason = 'timeout' | 'rate-limit' | 'network' | 'server';
+
+/**
+ * Discriminated outcome of a geocoding call. Replaces the `T | null` contract,
+ * which collapsed "address does not exist" and "the request blew up" into the
+ * same value and left every caller unable to tell them apart.
+ */
+export type GeocodingOutcome =
+  | { kind: 'found'; result: GeocodingApiResponse }
+  | { kind: 'not-found' }
+  | { kind: 'error'; reason: GeocodingFailureReason };
 
 export type GeocodingAccuracy = 'exact' | 'interpolated' | 'approximate' | 'center';
 

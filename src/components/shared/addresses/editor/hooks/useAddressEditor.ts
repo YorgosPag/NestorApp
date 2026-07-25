@@ -19,7 +19,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
-import { geocodeAddress } from '@/lib/geocoding/geocoding-service';
+import { geocodeAddressDetailed } from '@/lib/geocoding/geocoding-service';
 import type { StructuredGeocodingQuery } from '@/lib/geocoding/geocoding-service';
 import {
   DEFAULT_CONFIG,
@@ -32,7 +32,6 @@ import { useAddressActivity } from './useAddressActivity';
 import { useAddressFieldStatus, type AddressFieldStatusMap } from './useAddressFieldStatus';
 import type {
   ActivityVerbosity,
-  AddressEditorErrorReason,
   AddressEditorEvent,
   AddressEditorState,
   AddressFieldConflict,
@@ -82,6 +81,9 @@ export interface UseAddressEditorResult {
 function toQuery(input: ResolvedAddressFields): StructuredGeocodingQuery {
   return {
     street: input.street,
+    // The editor collects the house number in its own input; forwarding it is
+    // the only way a query can resolve past the street centreline.
+    number: input.number,
     city: input.city,
     neighborhood: input.neighborhood,
     postalCode: input.postalCode,
@@ -97,16 +99,6 @@ function hasAnyValue(input: ResolvedAddressFields): boolean {
 
 function mergeConfig(partial?: Partial<MachineConfig>): MachineConfig {
   return { ...DEFAULT_CONFIG, ...(partial ?? {}) };
-}
-
-function classifyError(err: unknown): AddressEditorErrorReason {
-  if (err instanceof Error) {
-    const msg = err.message.toLowerCase();
-    if (msg.includes('timeout')) return 'timeout';
-    if (msg.includes('rate')) return 'rate-limit';
-    if (msg.includes('network') || msg.includes('fetch')) return 'network';
-  }
-  return 'network';
 }
 
 export function useAddressEditor(
@@ -140,40 +132,45 @@ export function useAddressEditor(
       variantI18nKey: 'addresses.geocoding.attempts.engine',
     });
     activity.record({ level: 'info', category: 'request', i18nKey: I18N.requestStarted });
-    try {
-      const result = await geocodeAddress(toQuery(snapshot));
-      if (seq !== requestSeqRef.current) return; // superseded
-      if (!result) {
-        dispatch({ type: 'GEOCODE_FAILED', reason: 'no-results' });
-        activity.record({ level: 'warn', category: 'response', i18nKey: I18N.responseEmpty });
-        return;
-      }
-      dispatch({ type: 'GEOCODE_SUCCESS', result, nowMs: Date.now() });
-      activity.record({
-        level: 'success',
-        category: 'response',
-        i18nKey: I18N.responseSuccess,
-        i18nParams: { confidence: Math.round(result.confidence * 100) },
-      });
-      const conflicts = diffAddressFields(snapshot, result.resolvedFields);
-      if (conflicts.length > 0) {
-        dispatch({ type: 'CONFLICT_DETECTED', conflicts });
-        activity.record({
-          level: 'warn',
-          category: 'conflict',
-          i18nKey: I18N.conflictDetected,
-          i18nParams: { count: conflicts.length },
-        });
-      }
-    } catch (err) {
-      if (seq !== requestSeqRef.current) return;
-      const reason = classifyError(err);
-      dispatch({ type: 'GEOCODE_FAILED', reason });
+
+    // `geocodeAddressDetailed` never throws — it reports failure in the outcome,
+    // so the reason survives instead of being guessed from an error message.
+    const outcome = await geocodeAddressDetailed(toQuery(snapshot));
+    if (seq !== requestSeqRef.current) return; // superseded
+
+    if (outcome.kind === 'not-found') {
+      dispatch({ type: 'GEOCODE_EMPTY', nowMs: Date.now() });
+      activity.record({ level: 'warn', category: 'response', i18nKey: I18N.responseEmpty });
+      return;
+    }
+
+    if (outcome.kind === 'error') {
+      dispatch({ type: 'GEOCODE_FAILED', reason: outcome.reason });
       activity.record({
         level: 'error',
         category: 'response',
         i18nKey: I18N.responseError,
-        i18nParams: { reason },
+        i18nParams: { reason: outcome.reason },
+      });
+      return;
+    }
+
+    const { result } = outcome;
+    dispatch({ type: 'GEOCODE_SUCCESS', result, nowMs: Date.now() });
+    activity.record({
+      level: 'success',
+      category: 'response',
+      i18nKey: I18N.responseSuccess,
+      i18nParams: { confidence: Math.round(result.confidence * 100) },
+    });
+    const conflicts = diffAddressFields(snapshot, result.resolvedFields);
+    if (conflicts.length > 0) {
+      dispatch({ type: 'CONFLICT_DETECTED', conflicts });
+      activity.record({
+        level: 'warn',
+        category: 'conflict',
+        i18nKey: I18N.conflictDetected,
+        i18nParams: { count: conflicts.length },
       });
     }
   }, [activity]);

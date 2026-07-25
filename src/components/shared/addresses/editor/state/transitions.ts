@@ -171,12 +171,12 @@ export function computeNextState(
       return reduceGeocodeStarted(event);
     case 'GEOCODE_SUCCESS':
       return reduceGeocodeSuccess(event, config);
+    case 'GEOCODE_EMPTY':
+      return { phase: 'not-found', searchedAtMs: event.nowMs };
     case 'GEOCODE_FAILED':
-      return {
-        phase: 'error',
-        reason: event.reason,
-        canRetry: event.reason !== 'no-results',
-      };
+      // Every reason that reaches here is a genuine malfunction, so retrying is
+      // always meaningful. "No results" no longer travels this path.
+      return { phase: 'error', reason: event.reason, canRetry: true };
     case 'CONFLICT_DETECTED':
       return reduceConflictDetected(state, event);
     case 'SUGGESTIONS_TRIGGERED':
