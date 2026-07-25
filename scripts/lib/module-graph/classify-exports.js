@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * ADR-364 §10.9 — Five-bucket verdict for every declared export.
+ * ADR-700 §1 — Five-bucket verdict for every declared export.
  *
  *   live         — reachable from a real root and imported by name.
  *   testOnly     — reachable only once test files are seeded as roots.

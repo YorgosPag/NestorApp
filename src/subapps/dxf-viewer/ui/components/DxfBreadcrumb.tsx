@@ -21,7 +21,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
  * Αν δεν υπάρχουν δεδομένα → return null (μηδενικό visual footprint).
  *
  * @pattern Το πρότυπο προερχόταν από το HierarchicalDestinationSelector, που
- *          διαγράφηκε ως νεκρό (ADR-364 §10.9.3, 2026-07-25). Αυτό είναι πλέον το SSoT.
+ *          διαγράφηκε ως νεκρό (ADR-700 §4, 2026-07-25). Αυτό είναι πλέον το SSoT.
  */
 export function DxfBreadcrumb(): React.ReactElement | null {
   const { selectedCompany, selectedProject, selectedBuilding, selectedFloor } = useProjectHierarchy();

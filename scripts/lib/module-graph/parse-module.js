@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * ADR-364 §10.9 — Single-file parse for the barrel-aware dead-export gate.
+ * ADR-700 §1 — Single-file parse for the barrel-aware dead-export gate.
  *
  * THE DISTINCTION THIS FILE EXISTS TO MAKE (§10.7.1):
  *   an `import` CONSUMES a symbol · an `export … from` FORWARDS it.

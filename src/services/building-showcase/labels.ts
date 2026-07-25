@@ -12,21 +12,22 @@
  * @module services/building-showcase/labels
  */
 
-import elShowcase from '@/i18n/locales/el/showcase.json';
-import enShowcase from '@/i18n/locales/en/showcase.json';
 import type { EnumLocale } from '@/services/property-enum-labels/property-enum-labels.service';
 import {
   createLocaleFallback,
-  resolveHeaderContactLabels,
   showcaseCtaLabelDefault,
   showcaseDescriptionSectionDefault,
-  showcaseFloorplansTitleDefault,
   showcaseGeneratedOnDefault,
-  showcasePhotosTitleDefault,
   showcasePoweredByDefault,
   type ShowcaseHeaderContactLabels,
   type ShowcaseHeaderLabels,
 } from '@/services/showcase-core/labels-shared';
+import {
+  createEnumLabelTranslator,
+  readShowcaseCatalogSections,
+  resolveShowcaseHeaderLabels,
+  resolveShowcaseMediaTitles,
+} from '@/services/showcase-core/labels-catalog';
 import type { BuildingType } from '@/constants/building-types';
 import type { BuildingStatus } from '@/constants/building-statuses';
 import type { RenovationStatus } from '@/constants/renovation-statuses';
@@ -86,38 +87,14 @@ const RENOVATION_STATUS_LABELS: Record<EnumLocale, Record<RenovationStatus, stri
   },
 };
 
-export function translateBuildingType(
-  type: string | undefined,
-  locale: EnumLocale,
-): string | undefined {
-  if (!type) return undefined;
-  const map = BUILDING_TYPE_LABELS[locale] as Record<string, string>;
-  return map[type] ?? type;
-}
-
-export function translateBuildingStatus(
-  status: string | undefined,
-  locale: EnumLocale,
-): string | undefined {
-  if (!status) return undefined;
-  const map = BUILDING_STATUS_LABELS[locale] as Record<string, string>;
-  return map[status] ?? status;
-}
-
-export function translateRenovationStatus(
-  status: string | undefined,
-  locale: EnumLocale,
-): string | undefined {
-  if (!status) return undefined;
-  const map = RENOVATION_STATUS_LABELS[locale] as Record<string, string>;
-  return map[status] ?? status;
-}
+export const translateBuildingType = createEnumLabelTranslator(BUILDING_TYPE_LABELS);
+export const translateBuildingStatus = createEnumLabelTranslator(BUILDING_STATUS_LABELS);
+export const translateRenovationStatus = createEnumLabelTranslator(RENOVATION_STATUS_LABELS);
 
 // ============================================================================
 // PDF LABEL TYPES
 // ============================================================================
 
-type ElShowcase = typeof elShowcase;
 
 export interface BuildingShowcaseSpecLabels {
   title: string;
@@ -187,30 +164,18 @@ export type { ShowcaseHeaderContactLabels };
 // LOADER
 // ============================================================================
 
-const CATALOGS: Record<EnumLocale, ElShowcase> = {
-  el: elShowcase as ElShowcase,
-  en: enShowcase as unknown as ElShowcase,
-};
-
 export function loadBuildingShowcasePdfLabels(
   locale: EnumLocale = 'el',
 ): BuildingShowcasePDFLabels {
-  const c = CATALOGS[locale];
-  const bs = (c as unknown as { buildingShowcase?: Record<string, unknown> }).buildingShowcase ?? {};
-
-  const specs = (bs.specs ?? {}) as Record<string, string>;
-  const description = (bs.description ?? {}) as Record<string, string>;
-  const photos = (bs.photos ?? {}) as Record<string, string>;
-  const floorplans = (bs.floorplans ?? {}) as Record<string, string>;
-  const pdf = (bs.pdf ?? {}) as Record<string, string>;
-  const email = (bs.email ?? {}) as Record<string, string>;
-  const header = (bs.header ?? {}) as Record<string, string>;
-  const headerContacts = (c as unknown as { header?: { contacts?: Record<string, string> } })
-    .header?.contacts;
+  const sections = readShowcaseCatalogSections('buildingShowcase', locale);
+  const { specs, email, namespace } = sections;
+  const description = (namespace.description ?? {}) as Record<string, string>;
+  const pdf = (namespace.pdf ?? {}) as Record<string, string>;
 
   const fb = createLocaleFallback(locale);
-  const photosTitle = photos.title ?? showcasePhotosTitleDefault(locale);
-  const floorplansTitle = floorplans.title ?? showcaseFloorplansTitleDefault(locale);
+  const media = resolveShowcaseMediaTitles(sections, locale);
+  const photosTitle = media.photos.title;
+  const floorplansTitle = media.floorplans.title;
 
   return {
     specs: {
@@ -237,8 +202,8 @@ export function loadBuildingShowcasePdfLabels(
     description: {
       sectionTitle: description.sectionTitle ?? showcaseDescriptionSectionDefault(locale),
     },
-    photos: { title: photosTitle },
-    floorplans: { title: floorplansTitle },
+    photos: media.photos,
+    floorplans: media.floorplans,
     chrome: {
       title:              pdf.title              ?? fb('Παρουσίαση Κτηρίου', 'Building Showcase'),
       generatedOn:        pdf.generatedOn        ?? showcaseGeneratedOnDefault(locale),
@@ -256,9 +221,10 @@ export function loadBuildingShowcasePdfLabels(
       ),
       ctaLabel:      email.ctaLabel      ?? showcaseCtaLabelDefault(locale),
     },
-    header: {
-      subtitle: (header.subtitle as string | undefined) ?? fb('Παρουσίαση κτηρίου', 'Building showcase'),
-      contacts: resolveHeaderContactLabels(headerContacts, locale),
-    },
+    header: resolveShowcaseHeaderLabels(
+      sections,
+      locale,
+      fb('Παρουσίαση κτηρίου', 'Building showcase'),
+    ),
   };
 }

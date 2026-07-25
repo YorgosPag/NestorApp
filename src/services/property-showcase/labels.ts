@@ -8,9 +8,8 @@
  * @module services/property-showcase/labels
  */
 
-import elShowcase from '@/i18n/locales/el/showcase.json';
-import enShowcase from '@/i18n/locales/en/showcase.json';
 import type { EnumLocale } from '@/services/property-enum-labels/property-enum-labels.service';
+import { getShowcaseCatalog } from '@/services/showcase-core/labels-catalog';
 import {
   createLocaleFallback,
   resolveHeaderContactLabels,
@@ -26,12 +25,6 @@ import {
 
 export type { ShowcaseHeaderContactLabels, ShowcaseHeaderLabels };
 
-type ElShowcase = typeof elShowcase;
-
-const CATALOGS: Record<EnumLocale, ElShowcase> = {
-  el: elShowcase as ElShowcase,
-  en: enShowcase as unknown as ElShowcase,
-};
 
 export interface ShowcaseSpecLabels {
   title: string;

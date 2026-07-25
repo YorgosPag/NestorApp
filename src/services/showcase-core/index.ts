@@ -23,6 +23,31 @@ export type {
   ShowcaseSnapshotBuilderConfig,
 } from './snapshot-builder-factory';
 
+// ADR-700 — snapshot field primitives + label catalog access
+export {
+  buildShowcaseIdentityFields,
+  buildShowcaseMetricFields,
+  createShowcaseRelationLoader,
+  formatShowcaseFloorLabel,
+  pickShowcaseNumber,
+  pickShowcaseNumberOrUndefined,
+  pickShowcaseString,
+  pickShowcaseStringOrUndefined,
+} from './snapshot-field-primitives';
+export type { ShowcaseRelationLoaderConfig } from './snapshot-field-primitives';
+
+export {
+  createEnumLabelTranslator,
+  getShowcaseCatalog,
+  readShowcaseCatalogSections,
+  resolveShowcaseHeaderLabels,
+  resolveShowcaseMediaTitles,
+} from './labels-catalog';
+export type {
+  ShowcaseCatalogSections,
+  ShowcaseEnumTranslator,
+} from './labels-catalog';
+
 export { createShowcaseShareResolver } from './share-resolver-factory';
 export type {
   ShowcaseResolvedData,

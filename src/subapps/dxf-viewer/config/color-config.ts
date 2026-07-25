@@ -712,7 +712,7 @@ export function resolveCssVarColor(ref: string): string {
  * Pattern: Red → Orange → Green (1st → 2nd → 3rd click)
  *
  * @see LineIcon.tsx, CircleIcon.tsx, ArcIcon.tsx
- * @see ADR-364 §10.9.3 — τα Angle*Icon components διαγράφηκαν (2026-07-25)· τα
+ * @see ADR-700 §4 — τα Angle*Icon components διαγράφηκαν (2026-07-25)· τα
  *      γωνιακά εικονίδια ζωγραφίζονται πλέον από MEASURE_ANGLE_*_PATH στο RibbonButtonIcon.
  * @see ADR-142: Icon Click Sequence Colors Centralization
  * @since 2026-02-01

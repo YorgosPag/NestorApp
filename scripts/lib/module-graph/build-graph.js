@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * ADR-364 §10.9 — Import graph + barrel-aware liveness for the dead-export gate.
+ * ADR-700 §1 — Import graph + barrel-aware liveness for the dead-export gate.
  *
  * Answers the one question no configured tool answers (§10.7.1):
  *   «ποιος εισάγει αυτό το σύμβολο ΕΚΤΟΣ από barrel;»

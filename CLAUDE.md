@@ -319,7 +319,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 | **3.22** | Dead-code Ratchet (knip + smart-skip + Layer 2 CI) | RATCHET | `.deadcode-baseline.json` (10 files, 2026-07-08) |
 | **3.23** | Native HTML Tooltip — `title=` on HTML JSX elements (AST-based) | RATCHET | `.native-tooltip-baseline.json` (39 violations / 28 files, 2026-04-28) |
 | **3.29** | DXF Viewer tsc errors (ADR-663) — hook = baseline smoke only· **CI** = full per-file ratchet | RATCHET | `.dxf-tsc-baseline.json` (381 errors: 117 source / 264 test) |
-| **3.30** | Barrel-only dead exports (ADR-364 §10.9) — hook = baseline smoke only· **CI** = full graph scan | RATCHET | `.barrel-deadcode-baseline.json` (1.625 dead exports / 332 νεκρά αρχεία, 2026-07-25) |
+| **3.30** | Barrel-only dead exports (**ADR-700**) — hook = baseline smoke only· **CI** = full graph scan | RATCHET | `.barrel-deadcode-baseline.json` (**1.587 dead exports / 309 νεκρά αρχεία**, 2026-07-25 — άνοιξε το JSON, μην αντιγράψεις τον αριθμό) |
 | **3.31** | **Auto-memory index limit** — το `MEMORY.md` πάνω από **17.510 bytes** αποκόπτεται σιωπηλά από τον harness (hard: 24.985). Phase 0· κλιμακωτό: κάθε commit = 1 statSync (~0ms)· staged `scripts/memory-*` ή `scripts/lib/memory/**` = **+BFS γράφου** (~1,1s). Skip-safe χωρίς φάκελο. **ΠΟΤΕ `--verify`** (εκτελεί 96 εντολές). Escape: `SKIP_MEMORY_GATE=1` | ZERO TOL | no baseline |
 
 **📘 Full details (incidents, why, commands, relationships)**: `docs/centralized-systems/reference/precommit-checks.md`

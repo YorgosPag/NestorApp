@@ -1,6 +1,6 @@
 {
   "generated": "2026-07-25T13:02:44.706Z",
-  "adr": "ADR-364 §10.9 (CHECK 3.30)",
+  "adr": "ADR-700 §1 (CHECK 3.30)",
   "scopes": [
     "src/subapps/dxf-viewer"
   ],

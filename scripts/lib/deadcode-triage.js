@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * ADR-364 §10.9.2 — Provenance triage for the dead-code family.
+ * ADR-700 §3 — Provenance triage for the dead-code family.
  *
  * WHY THIS EXISTS
  * ---------------

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * ADR-364 §10.9 — Module specifier resolution for the barrel-aware dead-export gate.
+ * ADR-700 §1 — Module specifier resolution for the barrel-aware dead-export gate.
  *
  * Pure + injectable: never touches the filesystem itself. The caller passes the
  * set of every file it enumerated, so a lookup is a Set hit instead of an

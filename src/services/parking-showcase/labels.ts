@@ -10,18 +10,19 @@
 
 import 'server-only';
 
-import elShowcase from '@/i18n/locales/el/showcase.json';
-import enShowcase from '@/i18n/locales/en/showcase.json';
 import type { EnumLocale } from '@/services/property-enum-labels/property-enum-labels.service';
 import {
   createLocaleFallback,
-  resolveHeaderContactLabels,
   showcaseCtaLabelDefault,
-  showcaseFloorplansTitleDefault,
-  showcasePhotosTitleDefault,
   type ShowcaseHeaderContactLabels,
   type ShowcaseHeaderLabels,
 } from '@/services/showcase-core/labels-shared';
+import {
+  createEnumLabelTranslator,
+  readShowcaseCatalogSections,
+  resolveShowcaseHeaderLabels,
+  resolveShowcaseMediaTitles,
+} from '@/services/showcase-core/labels-catalog';
 import type { ParkingSpotType, ParkingSpotStatus, ParkingLocationZone } from '@/types/parking';
 
 // ============================================================================
@@ -81,32 +82,9 @@ const PARKING_ZONE_LABELS: Record<EnumLocale, Record<ParkingLocationZone, string
   },
 };
 
-export function translateParkingType(
-  type: string | undefined,
-  locale: EnumLocale,
-): string | undefined {
-  if (!type) return undefined;
-  const map = PARKING_TYPE_LABELS[locale] as Record<string, string>;
-  return map[type] ?? type;
-}
-
-export function translateParkingStatus(
-  status: string | undefined,
-  locale: EnumLocale,
-): string | undefined {
-  if (!status) return undefined;
-  const map = PARKING_STATUS_LABELS[locale] as Record<string, string>;
-  return map[status] ?? status;
-}
-
-export function translateParkingZone(
-  zone: string | undefined,
-  locale: EnumLocale,
-): string | undefined {
-  if (!zone) return undefined;
-  const map = PARKING_ZONE_LABELS[locale] as Record<string, string>;
-  return map[zone] ?? zone;
-}
+export const translateParkingType = createEnumLabelTranslator(PARKING_TYPE_LABELS);
+export const translateParkingStatus = createEnumLabelTranslator(PARKING_STATUS_LABELS);
+export const translateParkingZone = createEnumLabelTranslator(PARKING_ZONE_LABELS);
 
 // ============================================================================
 // LABEL TYPES
@@ -145,26 +123,11 @@ export type { ShowcaseHeaderContactLabels };
 // LOADER
 // ============================================================================
 
-type ElShowcase = typeof elShowcase;
-const CATALOGS: Record<EnumLocale, ElShowcase> = {
-  el: elShowcase as ElShowcase,
-  en: enShowcase as unknown as ElShowcase,
-};
-
 export function loadParkingShowcasePdfLabels(
   locale: EnumLocale = 'el',
 ): ParkingShowcasePDFLabels {
-  const c = CATALOGS[locale];
-  const ps = (c as unknown as { parkingShowcase?: Record<string, unknown> }).parkingShowcase ?? {};
-
-  const specs      = (ps.specs     ?? {}) as Record<string, string>;
-  const emailData  = (ps.email     ?? {}) as Record<string, string>;
-  const header     = (ps.header    ?? {}) as Record<string, string>;
-  const photos     = (ps.photos    ?? {}) as Record<string, string>;
-  const floorplans = (ps.floorplans ?? {}) as Record<string, string>;
-  const headerContacts = (c as unknown as { header?: { contacts?: Record<string, string> } })
-    .header?.contacts;
-
+  const sections = readShowcaseCatalogSections('parkingShowcase', locale);
+  const { specs, email: emailData } = sections;
   const fb = createLocaleFallback(locale);
 
   return {
@@ -188,11 +151,11 @@ export function loadParkingShowcasePdfLabels(
       ),
       ctaLabel: emailData.ctaLabel ?? showcaseCtaLabelDefault(locale),
     },
-    header: {
-      subtitle: (header.subtitle as string | undefined) ?? fb('Παρουσίαση θέσης στάθμευσης', 'Parking spot showcase'),
-      contacts: resolveHeaderContactLabels(headerContacts, locale),
-    },
-    photos:     { title: photos.title      ?? showcasePhotosTitleDefault(locale) },
-    floorplans: { title: floorplans.title  ?? showcaseFloorplansTitleDefault(locale) },
+    header: resolveShowcaseHeaderLabels(
+      sections,
+      locale,
+      fb('Παρουσίαση θέσης στάθμευσης', 'Parking spot showcase'),
+    ),
+    ...resolveShowcaseMediaTitles(sections, locale),
   };
 }

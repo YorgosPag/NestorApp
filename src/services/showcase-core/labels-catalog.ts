@@ -72,6 +72,18 @@ const CATALOGS: Record<EnumLocale, ShowcaseCatalog> = {
   en: enShowcase as unknown as ShowcaseCatalog,
 };
 
+/**
+ * The whole `showcase.json` catalog for a locale.
+ *
+ * Four surfaces namespace their labels (`buildingShowcase`, `parkingShowcase`,
+ * …) and should use {@link readShowcaseCatalogSections}. The property showcase
+ * is the exception: it predates namespacing and keeps its sections at the
+ * catalog **root** (`specs`, `pdf`, `views`, …), so it reads the catalog whole.
+ */
+export function getShowcaseCatalog(locale: EnumLocale): ShowcaseCatalog {
+  return CATALOGS[locale];
+}
+
 export interface ShowcaseCatalogSections {
   specs: Record<string, string>;
   email: Record<string, string>;

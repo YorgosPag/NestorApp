@@ -1,5 +1,5 @@
 /**
- * CHECK 3.30 — barrel-aware dead-export gate (ADR-364 §10.9).
+ * CHECK 3.30 — barrel-aware dead-export gate (ADR-700 §1).
  *
  * Fixtures are in-memory module graphs, not files on disk: the gate's whole
  * job is graph reasoning, and a gate whose own reasoning is untested is exactly
@@ -368,7 +368,7 @@ describe('ratchet plumbing', () => {
 });
 
 /**
- * ADR-364 §10.9.2 — provenance triage. The reachability graph cannot tell "dead"
+ * ADR-700 §3 — provenance triage. The reachability graph cannot tell "dead"
  * from "not finished yet"; these buckets can, and the whole point is that a file
  * from an OPEN ADR must never be presentable as a deletion candidate.
  */
@@ -484,7 +484,7 @@ describe('provenance triage (dead vs unfinished)', () => {
 });
 
 /**
- * Layer 1 (pre-commit) — ADR-364 §10.9.1. The hook must NOT pay for the ~30s
+ * Layer 1 (pre-commit) — ADR-700 §2. The hook must NOT pay for the ~30s
  * graph scan, so it runs `--smoke`, which only proves the baseline is there and
  * usable. These tests pin exactly that: the smoke reads a baseline, never a tree.
  */

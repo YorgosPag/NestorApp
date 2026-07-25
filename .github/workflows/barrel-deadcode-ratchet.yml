@@ -2,7 +2,7 @@ name: 🪵 Barrel-aware Dead-export Ratchet (CHECK 3.30)
 
 # =============================================================================
 # Layer 2 of Defense in Depth — CI-authoritative barrel-aware dead-export gate
-# for the DXF Viewer subapp. ADR-364 §10.9.
+# for the DXF Viewer subapp. ADR-700 §1.
 #
 # Why this exists
 # ---------------
@@ -30,7 +30,7 @@ name: 🪵 Barrel-aware Dead-export Ratchet (CHECK 3.30)
 #      CACM 2018 / SWE-at-Google ch.20). Dead code is hygiene and this gate has a
 #      known FP class, so it is disqualified from blocking a commit. It DOES meet
 #      the review-tier bar (<10% effective false positives — 12/12 hand-checked,
-#      10/10 negative control, ADR-364 §10.9), which is precisely a CI signal a
+#      10/10 negative control, ADR-700 §1), which is precisely a CI signal a
 #      human reads. Meta's SCARF ships the same shape: a DAILY background sweep
 #      that files change requests for human review, never a presubmit gate
 #      (engineering.fb.com, 2023-10-24; ESEC/FSE 2023). JetBrains Qodana likewise
@@ -141,7 +141,7 @@ jobs:
             echo "   (ADR-364 §10.7 · incident 2026-04-24: a batch deletion that trusted a tool"
             echo "   destroyed 13 scaffolding files / 2,338 lines of ADR-321)."
             echo "3. **It is a new feature not wired up yet** → deliberate debt. Record it:"
-            echo '   `npm run barrel-deadcode:baseline`, and say so in ADR-364 §10.9.'
+            echo '   `npm run barrel-deadcode:baseline`, and say so in ADR-700 §1.'
             echo ""
             echo 'Investigate a single symbol: `npm run barrel-deadcode:explain -- <symbol>`'
             echo ""

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * CHECK 3.30 — Barrel-aware dead-export ratchet (ADR-364 §10.9).
+ * CHECK 3.30 — Barrel-aware dead-export ratchet (ADR-700 §1).
  *
  * WHY THIS EXISTS (measured, ADR-364 §10.7.1): of 4 hand-verified dead symbols
  * in the DXF viewer, knip 6.6.2 found 1 — and still 1 with
@@ -16,7 +16,7 @@
  * NOT a type-check (N.17): `ts.createSourceFile` parses, it does not build a
  * Program and never runs diagnostics.
  *
- * WHERE IT RUNS — CI, not the commit hot path (ADR-364 §10.9.1):
+ * WHERE IT RUNS — CI, not the commit hot path (ADR-700 §2):
  *   --check builds two reachability fixpoints over ~13k files (~30s). That is a
  *   Layer 2 (CI) cost, exactly like CHECK 3.29 (ADR-663). Worse, the ratchet has
  *   a KNOWN false-positive class in its blocking direction: a brand-new file that
@@ -30,7 +30,7 @@
  * CLI:
  *   node scripts/check-barrel-deadcode-ratchet.js                    # ratchet check
  *   node scripts/check-barrel-deadcode-ratchet.js --smoke            # baseline present + sane (~ms, hook)
- *   node scripts/check-barrel-deadcode-ratchet.js --triage           # dead vs UNFINISHED (ADR-364 §10.9.2)
+ *   node scripts/check-barrel-deadcode-ratchet.js --triage           # dead vs UNFINISHED (ADR-700 §3)
  *   node scripts/check-barrel-deadcode-ratchet.js --report           # human list
  *   node scripts/check-barrel-deadcode-ratchet.js --write-baseline
  *   node scripts/check-barrel-deadcode-ratchet.js --explain useFoo
@@ -130,7 +130,7 @@ function analyse(options) {
 const idOf = (relOf, entry) => `${relOf(entry.file)}#${entry.name}`;
 
 function printSummary({ result, relOf, parseErrors, files, options }) {
-  console.log(`\n📐 CHECK 3.30 — barrel-aware dead exports (ADR-364 §10.9)`);
+  console.log(`\n📐 CHECK 3.30 — barrel-aware dead exports (ADR-700 §1)`);
   console.log(`   scope: ${options.scopes.join(', ')}   parsed: ${files.length} files`);
   console.log(`   scanned in scope: ${result.scanned} modules`);
   console.log(`   ☠️  dead        ${result.dead.length}   (nothing imports it, name unseen anywhere else)`);
@@ -217,7 +217,7 @@ function buildPayload(analysis, options) {
   const { result, relOf } = analysis;
   return {
     generated: new Date().toISOString(),
-    adr: 'ADR-364 §10.9 (CHECK 3.30)',
+    adr: 'ADR-700 §1 (CHECK 3.30)',
     scopes: options.scopes,
     note: 'Evidence list. Deletion requires manual proof per file — see ADR-364 §10.7.',
     deadExportCount: result.dead.length,
@@ -270,7 +270,7 @@ function runSmoke(_analysis, options) {
 }
 
 /**
- * Provenance triage (ADR-364 §10.9.2). Answers the question the reachability
+ * Provenance triage (ADR-700 §3). Answers the question the reachability
  * graph cannot: is a dead file DEAD, or merely NOT FINISHED YET? Reads the
  * frozen baseline + git birth commits + the referenced ADRs' own status lines.
  * No graph build — this is about history, not reachability.
@@ -295,7 +295,7 @@ function runTriage(_analysis, options) {
   const t = triage(baseline.deadFiles || [], { history, statusOf });
   const pct = n => `${((n / t.total) * 100).toFixed(0)}%`.padStart(4);
 
-  console.log(`\n📐 CHECK 3.30 — provenance triage of ${t.total} dead files (ADR-364 §10.9.2)`);
+  console.log(`\n📐 CHECK 3.30 — provenance triage of ${t.total} dead files (ADR-700 §3)`);
   console.log(`   baseline: ${path.relative(PROJECT_ROOT, options.baseline)}   scope: ${options.scopes.join(', ')}`);
   console.log(`\n   🔴 DO NOT TOUCH  ${String(t.notouch.length).padStart(4)} ${pct(t.notouch.length)}  born under a still-open ADR — unfinished, not dead`);
   console.log(`   🟡 NEEDS A LOOK  ${String(t.look.length).padStart(4)} ${pct(t.look.length)}  recent, or the ADR status could not be read`);
@@ -304,7 +304,7 @@ function runTriage(_analysis, options) {
   t.reasons.slice(0, 12).forEach(r => console.log(`     ${String(r.count).padStart(4)}  ${r.reason}`));
 
   if (options.json) {
-    writeBaselineFile(options.json, { generated: new Date().toISOString(), adr: 'ADR-364 §10.9.2', ...t });
+    writeBaselineFile(options.json, { generated: new Date().toISOString(), adr: 'ADR-700 §3', ...t });
     console.log(`\n📝 JSON written: ${options.json}`);
   }
   console.log(`\n⚠️  A bucket is NOT a licence. 🟢 means "look here first", never "delete these".`);

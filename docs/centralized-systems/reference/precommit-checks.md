@@ -468,7 +468,7 @@ if (loading && filteredQuotes.length === 0 && !showArchived) {
 
 ---
 
-## CHECK 3.30 — Barrel-aware Dead-export Ratchet (ADR-364 §10.9)
+## CHECK 3.30 — Barrel-aware Dead-export Ratchet (ADR-700 §1)
 
 > ⚠️ Οι CHECK 3.28 (jscpd) και 3.29 (dxf tsc) **λείπουν** από αυτό το αρχείο — ζουν στον πίνακα του
 > `CLAUDE.md` N.11 και στα ADR-583 / ADR-663. Δεν τα συμπλήρωσα εδώ γιατί δεν τα μέτρησα.
@@ -518,7 +518,9 @@ export, οπότε ο skip δεν θα σκίπαρε ποτέ.
 - **Δεν είναι type-check** (N.17): `ts.createSourceFile` = AST χωρίς Program, χωρίς διαγνωστικά.
 
 ### Baseline
-`.barrel-deadcode-baseline.json` — **1.625 dead exports / 332 νεκρά αρχεία** (2026-07-25). Καταγράφει
+`.barrel-deadcode-baseline.json` — **1.587 dead exports / 309 νεκρά αρχεία** (2026-07-25, μετά την
+Προτεραιότητα 1 του ADR-700 §4· ήταν 1.625/332 στη γέννησή του). ⚠️ **Άνοιξε το JSON πριν
+επικαλεστείς αριθμό** — αυτή η γραμμή μπαγιατεύει σε κάθε καθαρισμό. Καταγράφει
 επίσης `unusedExport: 3625`, `suspect: 444`, `testOnly: 1408` ως **πληροφορία**· το ratchet συγκρίνει
 **μόνο** `deadExports` + `deadFiles`. Τα `deadExportCount`/`deadFileCount` είναι **υποχρεωτικά**:
 κολοβό baseline που τυχαίνει να είναι έγκυρο JSON θα διάβαζε άδειο σύνολο και θα ανέφερε και τις
@@ -541,7 +543,7 @@ export, οπότε ο skip δεν θα σκίπαρε ποτέ.
    Περιστατικό 2026-04-24: μαζική διαγραφή που εμπιστεύτηκε το εργαλείο κατέστρεψε 13 scaffolding
    αρχεία / 2.338 γραμμές του ADR-321.
 3. **Νέο χαρακτηριστικό ασύνδετο ακόμα** → **συνειδητό χρέος**: `npm run barrel-deadcode:baseline`
-   και γράψ' το στο ADR-364 §10.9.
+   και γράψ' το στο ADR-700 §1.
 
 ### Relationship with other checks
 - **CHECK 3.22** (knip) → νέα αχρησιμοποίητα **αρχεία**· barrels = entry points ⇒ τυφλό στα barrel-only

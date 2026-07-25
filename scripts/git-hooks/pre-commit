@@ -193,7 +193,7 @@ fi
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # PHASE 0.8: SYNC — CHECK 3.30 barrel-aware dead-export ratchet, SMOKE only
-# (ADR-364 §10.9). knip (CHECK 3.22) treats every barrel as an entry point, so a
+# (ADR-700 §1). knip (CHECK 3.22) treats every barrel as an entry point, so a
 # symbol re-exported only through `index.ts` counts as used by construction —
 # measured 1/4 on hand-verified dead symbols. This gate asks "who imports it
 # OUTSIDE a barrel?" instead.
@@ -214,7 +214,7 @@ if [[ -z "${SKIP_BARREL_DEADCODE_SMOKE:-}" ]] && [[ -f "scripts/check-barrel-dea
         node scripts/check-barrel-deadcode-ratchet.js --smoke
         if [[ $? -ne 0 ]]; then
             echo ""
-            echo -e "${YELLOW}  CHECK 3.30 — the barrel-aware dead-export baseline is missing or invalid (ADR-364 §10.9).${NC}"
+            echo -e "${YELLOW}  CHECK 3.30 — the barrel-aware dead-export baseline is missing or invalid (ADR-700 §1).${NC}"
             echo -e "${YELLOW}  Regenerate it: npm run barrel-deadcode:baseline${NC}"
             echo -e "${YELLOW}  Emergency skip (justify to Giorgio): SKIP_BARREL_DEADCODE_SMOKE=1 git commit ...${NC}"
             exit 1
@@ -688,52 +688,10 @@ if [[ -n "$DXF_CANVAS_DRAW_FILES" && -z "$DOC_FILES" ]]; then
     exit 1
 fi
 
-# CHECK 11: Install commit-msg hook (Conventional Commits) if missing
-COMMIT_MSG_HOOK=".git/hooks/commit-msg"
-if [[ ! -f "$COMMIT_MSG_HOOK" ]]; then
-    cat > "$COMMIT_MSG_HOOK" << 'HOOK_EOF'
-#!/bin/bash
-# Conventional Commits validation (Google/Angular pattern)
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m'
-
-COMMIT_MSG_FILE="$1"
-FIRST_LINE=$(head -1 "$COMMIT_MSG_FILE")
-
-# Allow merge commits and reverts
-if echo "$FIRST_LINE" | grep -qE "^(Merge|Revert) "; then
-    exit 0
-fi
-
-# Conventional commit pattern: type(optional-scope): description
-if ! echo "$FIRST_LINE" | grep -qE "^(fix|feat|refactor|docs|chore|test|perf|ci|style|build)(\([a-zA-Z0-9_-]+\))?: .{3,}"; then
-    echo ""
-    echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
-    echo -e "${RED}  🚫 COMMIT BLOCKED — Invalid commit message format${NC}"
-    echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
-    echo ""
-    echo -e "${YELLOW}  Required: type(scope): description${NC}"
-    echo -e "${YELLOW}  Types: fix, feat, refactor, docs, chore, test, perf, ci, style, build${NC}"
-    echo -e "${YELLOW}  Example: fix(auth): resolve token expiration race condition${NC}"
-    echo ""
-    echo -e "  Your message: ${RED}${FIRST_LINE}${NC}"
-    echo ""
-    exit 1
-fi
-
-if [[ ${#FIRST_LINE} -gt 100 ]]; then
-    echo ""
-    echo -e "${YELLOW}  ⚠️  Commit title is ${#FIRST_LINE} chars (recommended: <70, max: 100)${NC}"
-    echo ""
-fi
-
-exit 0
-HOOK_EOF
-    chmod +x "$COMMIT_MSG_HOOK"
-    echo -e "${GREEN}  ✅ Installed commit-msg hook (Conventional Commits)${NC}"
-fi
+# CHECK 11: commit-msg hook (Conventional Commits) — ΔΕΝ εγκαθίσταται από εδώ πλέον.
+# Ζει ως tracked αρχείο: scripts/git-hooks/commit-msg (core.hooksPath το βλέπει άμεσα).
+# Ο παλιός self-install έγραφε στο .git/hooks/ — φάκελο που το git ΑΓΝΟΕΙ όταν υπάρχει
+# hooksPath → δεν έτρεξε ΠΟΤΕ, ενώ τύπωνε «✅ Installed» σε κάθε commit. Fix 2026-07-26.
 
 # CHECK 12: License Compliance (CLAUDE.md N.5 — no GPL/AGPL) — ADR-598 G13
 # Fires when the dependency manifest OR the lockfile changes (transitive deps

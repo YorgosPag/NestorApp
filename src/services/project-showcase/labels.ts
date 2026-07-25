@@ -12,21 +12,22 @@
  * @module services/project-showcase/labels
  */
 
-import elShowcase from '@/i18n/locales/el/showcase.json';
-import enShowcase from '@/i18n/locales/en/showcase.json';
 import type { EnumLocale } from '@/services/property-enum-labels/property-enum-labels.service';
 import {
   createLocaleFallback,
-  resolveHeaderContactLabels,
   showcaseCtaLabelDefault,
   showcaseDescriptionSectionDefault,
-  showcaseFloorplansTitleDefault,
   showcaseGeneratedOnDefault,
-  showcasePhotosTitleDefault,
   showcasePoweredByDefault,
   type ShowcaseHeaderContactLabels,
   type ShowcaseHeaderLabels,
 } from '@/services/showcase-core/labels-shared';
+import {
+  createEnumLabelTranslator,
+  readShowcaseCatalogSections,
+  resolveShowcaseHeaderLabels,
+  resolveShowcaseMediaTitles,
+} from '@/services/showcase-core/labels-catalog';
 
 export type { ShowcaseHeaderContactLabels };
 
@@ -76,21 +77,13 @@ const PROJECT_STATUS_LABELS: Record<EnumLocale, Record<string, string>> = {
   },
 };
 
-export function translateProjectType(type: string | undefined, locale: EnumLocale): string | undefined {
-  if (!type) return undefined;
-  return PROJECT_TYPE_LABELS[locale][type] ?? type;
-}
-
-export function translateProjectStatus(status: string | undefined, locale: EnumLocale): string | undefined {
-  if (!status) return undefined;
-  return PROJECT_STATUS_LABELS[locale][status] ?? status;
-}
+export const translateProjectType = createEnumLabelTranslator(PROJECT_TYPE_LABELS);
+export const translateProjectStatus = createEnumLabelTranslator(PROJECT_STATUS_LABELS);
 
 // ============================================================================
 // PDF LABEL TYPES
 // ============================================================================
 
-type ElShowcase = typeof elShowcase;
 
 export interface ProjectShowcaseSpecLabels {
   title: string;
@@ -149,23 +142,14 @@ export interface ProjectShowcasePDFLabels {
 // LOADER
 // ============================================================================
 
-const CATALOGS: Record<EnumLocale, ElShowcase> = {
-  el: elShowcase as ElShowcase,
-  en: enShowcase as unknown as ElShowcase,
-};
-
 export function loadProjectShowcasePdfLabels(locale: EnumLocale = 'el'): ProjectShowcasePDFLabels {
-  const c = CATALOGS[locale];
-  const ps = (c as unknown as { projectShowcase?: Record<string, unknown> }).projectShowcase ?? {};
-  const fb = createLocaleFallback(locale);
+  const sections = readShowcaseCatalogSections('projectShowcase', locale);
+  const { specs, email, namespace } = sections;
+  const description = (namespace.description ?? {}) as Record<string, string>;
+  const pdf = (namespace.pdf ?? {}) as Record<string, string>;
 
-  const specs = (ps.specs ?? {}) as Record<string, string>;
-  const description = (ps.description ?? {}) as Record<string, string>;
-  const photos = (ps.photos ?? {}) as Record<string, string>;
-  const floorplans = (ps.floorplans ?? {}) as Record<string, string>;
-  const pdf = (ps.pdf ?? {}) as Record<string, string>;
-  const email = (ps.email ?? {}) as Record<string, string>;
-  const header = (ps.header ?? {}) as Record<string, string>;
+  const fb = createLocaleFallback(locale);
+  const media = resolveShowcaseMediaTitles(sections, locale);
 
   return {
     specs: {
@@ -185,19 +169,15 @@ export function loadProjectShowcasePdfLabels(locale: EnumLocale = 'el'): Project
     description: {
       sectionTitle: description.sectionTitle ?? showcaseDescriptionSectionDefault(locale),
     },
-    photos: {
-      title: photos.title ?? showcasePhotosTitleDefault(locale),
-    },
-    floorplans: {
-      title: floorplans.title ?? showcaseFloorplansTitleDefault(locale),
-    },
+    photos: media.photos,
+    floorplans: media.floorplans,
     chrome: {
       title:              pdf.title              ?? fb('Παρουσίαση Έργου', 'Project Showcase'),
       generatedOn:        pdf.generatedOn        ?? showcaseGeneratedOnDefault(locale),
       descriptionSection: pdf.descriptionSection ?? showcaseDescriptionSectionDefault(locale),
       footerNote:         pdf.footerNote         ?? fb('Παρουσίαση έργου', 'Project showcase'),
-      photosTitle:        photos.title           ?? showcasePhotosTitleDefault(locale),
-      floorplansTitle:    floorplans.title       ?? showcaseFloorplansTitleDefault(locale),
+      photosTitle:        media.photos.title,
+      floorplansTitle:    media.floorplans.title,
       poweredBy:          showcasePoweredByDefault(locale),
     },
     email: {
@@ -205,12 +185,10 @@ export function loadProjectShowcasePdfLabels(locale: EnumLocale = 'el'): Project
       introText:     email.introText     ?? fb('Σας προωθούμε την αναλυτική παρουσίαση του έργου.', 'We are sharing the detailed presentation of the project.'),
       ctaLabel:      email.ctaLabel      ?? showcaseCtaLabelDefault(locale),
     },
-    header: {
-      subtitle: (header.subtitle as string | undefined) ?? fb('Παρουσίαση έργου', 'Project showcase'),
-      contacts: resolveHeaderContactLabels(
-        (c as unknown as { header?: { contacts?: Record<string, unknown> } }).header?.contacts,
-        locale,
-      ),
-    },
+    header: resolveShowcaseHeaderLabels(
+      sections,
+      locale,
+      fb('Παρουσίαση έργου', 'Project showcase'),
+    ),
   };
 }

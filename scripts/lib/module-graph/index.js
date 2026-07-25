@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * ADR-364 §10.9 — barrel-aware module graph (SSoT re-export surface).
+ * ADR-700 §1 — barrel-aware module graph (SSoT re-export surface).
  */
 
 'use strict';

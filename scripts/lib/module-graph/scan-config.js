@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * ADR-364 §10.9 — What to read, and what counts as a root.
+ * ADR-700 §1 — What to read, and what counts as a root.
  *
  * DIVERGENCE FROM knip.json — deliberate, and the entire point of this gate:
  *   knip.json:14 declares `src/**\/index.ts` an ENTRY POINT, so every barrel is

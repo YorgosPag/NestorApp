@@ -261,7 +261,7 @@ export const dxfImportService = new DxfImportService();
 // ============================================================================
 // Single source of truth για DXF import result processing
 // Replaces duplicate inline utilities in useDxfImport.ts
-// (ADR-364 §10.9.3 — ο δεύτερος καταναλωτής, useDxfPipeline.ts, διαγράφηκε 2026-07-25)
+// (ADR-700 §4 — ο δεύτερος καταναλωτής, useDxfPipeline.ts, διαγράφηκε 2026-07-25)
 // ============================================================================
 
 /**
