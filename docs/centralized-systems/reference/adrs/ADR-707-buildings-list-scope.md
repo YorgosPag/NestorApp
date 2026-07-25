@@ -2,10 +2,10 @@
 
 | Metadata | Value |
 |----------|-------|
-| **Status** | ✅ IMPLEMENTED (UNCOMMITTED) |
+| **Status** | ✅ IMPLEMENTED (commit `80f7dbfc`) |
 | **Date** | 2026-07-26 |
 | **Domain** | API · Buildings · Projects · Navigation · Floorplan import |
-| **Canonical Location** | `src/app/api/buildings/route.ts` (GET) |
+| **Canonical Location** | `src/app/api/buildings/buildings-list.handler.ts` (GET· εξήχθη από το `route.ts` στο ίδιο commit για το όριο 300 γρ. των API routes) |
 | **Anchor** | `src/app/api/buildings/__tests__/buildings-list-scope.route.test.ts` (7 tests, mutation-verified) |
 | **Related** | ADR-209 (normalized `projectId`) · ADR-233 §3.4 (`codesOnly`) · ADR-281 (soft-delete) · ADR-232/ADR-702 (tenant scoping — **διαφορετικό επίπεδο**, βλ. §6) · ADR-284 (building↔project link) |
 
@@ -115,7 +115,9 @@ type BuildingsListScope = 'project' | 'company-fallback' | 'tenant';
 
 ## 4. Implementation
 
-**Ένα αρχείο κώδικα** (`src/app/api/buildings/route.ts`):
+**Ένα αρχείο κώδικα.** Γράφτηκε στο `src/app/api/buildings/route.ts` και στο **ίδιο commit**
+μετακινήθηκε αυτούσιο στο `buildings-list.handler.ts` (SRP split, `route.ts` 315→186 γρ.).
+Το anchor πέρασε **7/7 και μετά τη μετακίνηση** — αυτό ακριβώς κάνει ένα anchor:
 
 ```ts
 // 🔒 ADR-707: `?projectId=X` means "buildings OF project X" — nothing else.
@@ -178,4 +180,5 @@ company-strict· το θέμα δεν ήταν ποτέ *ποιανού tenant* 
 
 | Ημ/νία | Αλλαγή |
 |---|---|
+| 2026-07-26 | GET εξήχθη σε `buildings-list.handler.ts` (SRP· όριο 300 γρ. API routes). Λογική **αμετάβλητη**· anchor 7/7 πράσινο μετά τη μετακίνηση. |
 | 2026-07-26 | Δημιουργία. Fallback → opt-in `?fallback=company`· νέο πεδίο `scope`· `info`→`warn` στο fallback· anchor 7 tests (mutation-verified). Βρέθηκε στο E2E verify Έργων Φάση 3 (Ε-8), αναπαραγώγιμο 2/2 σε API **και** UI. |
