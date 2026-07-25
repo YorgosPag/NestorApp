@@ -4485,6 +4485,36 @@
         "src/app/demo/floorplan-background-image/page.tsx"
       ],
       "tier": 2
+    },
+    "dxf-scene-fit-transform": {
+      "ssotFile": "src/lib/dxf-scene/scene-fit-transform.ts",
+      "description": "TIER A duplicate-audit (2026-07-25) — the «aspect-fit a Y-UP CAD drawing into a Y-DOWN raster viewport» math lives ONCE in the neutral, dependency-free src/lib/dxf-scene/. Six surfaces had each re-inlined the SAME four formulas (baseScale/zoom/centering offsets + the (bounds.max.y - y) * scale Y-flip): floorplan-dxf-renderer (gallery canvas), services/thumbnail-generator (upload thumbnail), bim-canvas-transform (ADR-370 BIM bridge), FloorplanViewerTab (project tab), floorplan-pdf-renderer (raster page) and overlay-renderer/transform (which even documented itself as 'Mirrors the math used by renderDxfToCanvas'). Drift was already real: the project tab fed DXF degrees into ctx.arc() with swapped angles, and the thumbnail bounds walk ignored lwpolyline/rectangle/text-descender that the gallery measured. Import computeFitTransform/projectX/projectY/worldToScreen/screenToWorld/rectBoundsToScene instead of re-deriving. Companion SSoTs in the same folder: scene-bounds.ts (entity walk), canvas-scene-painter.ts (line/polyline/circle/arc stroke pass), scene-text-content.ts (flat text + textNode AST flattening). GUARD SCOPE: text PAINTING is deliberately NOT centralized — the font floor genuinely differs per surface (gallery has none per ADR-370, thumbnail clamps 6px, project tab clamps 8px). ALLOWLIST covers the SSoT itself, the overlay-renderer re-export shim, and the svg-from-dxf-scene pair — that serializer is deliberately dependency-free because it is mirrored byte-for-byte into functions/src/shared/ (Firebase deploys functions/lib/**, which cannot resolve the Next.js tree), so its copy is a documented deployment mirror, not a violation.",
+      "forbiddenPatterns": [
+        "baseScale = Math\\.min\\(",
+        "bounds\\.max\\.y - [A-Za-z0-9_.]+\\) \\* (fit\\.)?scale"
+      ],
+      "allowlist": [
+        "src/lib/dxf-scene/scene-fit-transform.ts",
+        "src/components/shared/files/media/overlay-renderer/transform.ts",
+        "src/components/shared/files/media/floorplan-overlay-system.ts",
+        "src/services/dxf-raster/svg-from-dxf-scene.ts",
+        "functions/src/shared/svg-from-dxf-scene.ts"
+      ]
+    },
+    "space-entity-route": {
+      "ssotFile": "src/lib/api/space-entity-route.ts",
+      "description": "TIER A duplicate-audit (2026-07-25, ADR-696) — the building-space [id] route pipeline (tenant guard -> doc read -> schema parse -> updateData -> withVersionCheck -> allocationCode cascade -> linkEntity -> logAuditEvent -> envelope) lives ONCE in createSpaceEntityRoutes(). api/parking/[id]/route.ts and api/storages/[id]/route.ts were structural twins with NINE token-identical clone blocks (~750 tokens, jscpd/CHECK 3.28); they are now ~65-line config declarations. The pure part (SPACE_COMMON_UPDATE_FIELDS zod shape + mapCommonSpaceFields + resolveAllocationCodeChange) lives in the sibling src/lib/api/space-entity-fields.ts, kept separate because this module is server-only and its Next/Firebase-Admin graph makes the pure logic untestable in plain jest. GUARD PATTERNS are the two service calls that define the pipeline's identity: propagateSpaceAllocationCodeChange( (ADR-247 F-4 cascade) and softDelete(<db>, 'parking'|'storage', (ADR-281 space soft-delete). A new caller of either outside the allowlist is re-implementing the space route pipeline — call createSpaceEntityRoutes() instead. ALLOWLIST = the SSoT itself plus the cascade/soft-delete engines that legitimately declare or dispatch these operations. WIRE CONTRACT NOTE: response message strings and audit payload keys are injected verbatim per entity (SpaceEntityMessages) because the two routes were already inconsistent ('Parking spot ID is required' vs 'Storage ID is required'); centralizing must not silently rewrite what clients receive.",
+      "forbiddenPatterns": [
+        "propagateSpaceAllocationCodeChange\\(",
+        "require(Parking|Storage)InTenant\\("
+      ],
+      "allowlist": [
+        "src/lib/api/space-entity-route.ts",
+        "src/lib/firestore/cascade-propagation.service.ts",
+        "src/lib/auth/tenant-isolation.ts",
+        "src/app/api/parking/[id]/route.ts",
+        "src/app/api/storages/[id]/route.ts"
+      ]
     }
   }
 }
