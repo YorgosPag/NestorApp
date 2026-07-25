@@ -76,7 +76,7 @@ export interface BrandingResolutionParams {
   /**
    * The entity's own id. Surfaces whose entity *is* the branding project
    * (project showcase) resolve branding from this rather than from a
-   * `raw.projectId` foreign key, which such a doc does not carry (ADR-700).
+   * `raw.projectId` foreign key, which such a doc does not carry (ADR-701).
    */
   entityId: string;
 }

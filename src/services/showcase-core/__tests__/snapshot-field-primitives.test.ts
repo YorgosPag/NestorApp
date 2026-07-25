@@ -1,5 +1,5 @@
 /**
- * Showcase snapshot field primitives (ADR-700).
+ * Showcase snapshot field primitives (ADR-701).
  *
  * The load-bearing test here is the **picker contract** pair: four surfaces
  * serialise absent values as `null`, the property showcase serialises them by
@@ -88,7 +88,7 @@ describe('picker contracts', () => {
 });
 
 // ============================================================================
-// Floor labels — pinned against the pre-ADR-700 parking/storage output
+// Floor labels — pinned against the pre-ADR-701 parking/storage output
 // ============================================================================
 
 describe('formatShowcaseFloorLabel', () => {
@@ -110,7 +110,7 @@ describe('formatShowcaseFloorLabel', () => {
     expect(formatShowcaseFloorLabel('11', 'en')).toBe('11th Floor');
   });
 
-  it('keeps the inherited "3nd Basement" wording (ADR-700 §8 — known, deferred)', () => {
+  it('keeps the inherited "3nd Basement" wording (ADR-701 §8 — known, deferred)', () => {
     expect(formatShowcaseFloorLabel('-3', 'en')).toBe('3nd Basement');
   });
 

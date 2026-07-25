@@ -1,11 +1,11 @@
 /**
  * Project Showcase Snapshot Builder — SSoT (ADR-316, migrated to the core
- * factory in ADR-700).
+ * factory in ADR-701).
  *
  * Builds a `ProjectShowcaseSnapshot` from a Firestore project document.
  * Used by: PDF API route, email route, public showcase API route.
  *
- * Until ADR-700 this file re-implemented the whole orchestration by hand —
+ * Until ADR-701 this file re-implemented the whole orchestration by hand —
  * doc fetch, not-found, tenant check, mapping, branding, wrap — and declared
  * its own `Error` subclasses that did **not** descend from the core ones, so
  * `instanceof ShowcaseEntityNotFoundError` was false for exactly one of the

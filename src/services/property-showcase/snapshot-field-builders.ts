@@ -57,7 +57,7 @@ import type {
  * contract, not the `null` one its four sibling surfaces use: absent fields
  * must vanish from the serialised payload rather than appear as explicit
  * `null`. Both contracts live in `showcase-core/snapshot-field-primitives`
- * (ADR-700); these local names stay so the ~40 call sites below read unchanged.
+ * (ADR-701); these local names stay so the ~40 call sites below read unchanged.
  */
 export const pickString = pickShowcaseStringOrUndefined;
 export const pickNumber = pickShowcaseNumberOrUndefined;

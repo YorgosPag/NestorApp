@@ -85,7 +85,7 @@ export const translateProjectStatus = createEnumLabelTranslator(PROJECT_STATUS_L
 // ============================================================================
 
 
-/** Spec rows this surface renders, in display order (ADR-700). */
+/** Spec rows this surface renders, in display order (ADR-701). */
 const PROJECT_SPEC_ROWS = [
   'code',
   'type',

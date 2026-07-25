@@ -23,7 +23,7 @@ export type {
   ShowcaseSnapshotBuilderConfig,
 } from './snapshot-builder-factory';
 
-// ADR-700 — snapshot field primitives + label catalog access
+// ADR-701 — snapshot field primitives + label catalog access
 export {
   buildShowcaseIdentityFields,
   buildShowcaseMetricFields,

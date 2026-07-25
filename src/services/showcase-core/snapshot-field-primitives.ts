@@ -1,10 +1,10 @@
 /**
  * =============================================================================
- * SHOWCASE CORE — Snapshot field primitives (ADR-700)
+ * SHOWCASE CORE — Snapshot field primitives (ADR-701)
  * =============================================================================
  *
  * The raw-value pickers, the floor formatter and the related-name loader that
- * every showcase snapshot builder needs. Before ADR-700 each surface carried
+ * every showcase snapshot builder needs. Before ADR-701 each surface carried
  * its own private copy: `pickString`/`pickNumber` existed verbatim in four
  * files (building / parking / project / storage), `formatFloor` in two, and
  * the "read a foreign key, fetch that doc, pick its name" loader in three.
@@ -28,7 +28,7 @@
  * snapshot-field-primitives.test.ts` pins both contracts.
  *
  * @module services/showcase-core/snapshot-field-primitives
- * @see adrs/ADR-700-showcase-snapshot-primitives.md
+ * @see adrs/ADR-701-showcase-snapshot-primitives.md
  */
 
 import type { Firestore } from 'firebase-admin/firestore';
@@ -78,9 +78,9 @@ const FLOOR_ORDINAL_SUFFIX_EN: Record<number, string> = { 1: 'st', 2: 'nd', 3: '
 function formatBasementLabel(num: number, locale: EnumLocale): string {
   if (num === -1) return locale === 'el' ? 'Υπόγειο' : 'Basement';
   const depth = Math.abs(num);
-  // NOTE (ADR-700 §8): the EN branch reads "3nd Basement" for depths past 2 —
+  // NOTE (ADR-701 §8): the EN branch reads "3nd Basement" for depths past 2 —
   // a wrong ordinal inherited verbatim from the parking/storage originals.
-  // Preserved so this refactor stays output-identical; see ADR-700 for the
+  // Preserved so this refactor stays output-identical; see ADR-701 for the
   // pending decision to correct it.
   return locale === 'el' ? `${depth}ο Υπόγειο` : `${depth}nd Basement`;
 }
@@ -119,7 +119,7 @@ export function formatShowcaseFloorLabel(
  * card is never nameless. Spread first in the literal to keep wire key order.
  *
  * Parking is deliberately NOT a caller — its identity leads with `number`
- * instead of `name`, so it keeps its own literal (see ADR-700 §9).
+ * instead of `name`, so it keeps its own literal (see ADR-701 §9).
  */
 export function buildShowcaseIdentityFields(
   entityId: string,

@@ -91,7 +91,7 @@ export const translateParkingZone = createEnumLabelTranslator(PARKING_ZONE_LABEL
 // LABEL TYPES
 // ============================================================================
 
-/** Spec rows this surface renders, in display order (ADR-700). */
+/** Spec rows this surface renders, in display order (ADR-701). */
 const PARKING_SPEC_ROWS = [
   'code',
   'type',

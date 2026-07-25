@@ -1,5 +1,5 @@
 /**
- * Parking Showcase Snapshot Builder (ADR-315 + ADR-321 pattern, ADR-700 primitives).
+ * Parking Showcase Snapshot Builder (ADR-315 + ADR-321 pattern, ADR-701 primitives).
  *
  * Delegates orchestration to `createShowcaseSnapshotBuilder` and the raw-value
  * pickers / floor formatter / building-name loader to

@@ -83,7 +83,7 @@ export const translateStorageStatus = createEnumLabelTranslator(STORAGE_STATUS_L
 // LABEL TYPES
 // ============================================================================
 
-/** Spec rows this surface renders, in display order (ADR-700). */
+/** Spec rows this surface renders, in display order (ADR-701). */
 const STORAGE_SPEC_ROWS = [
   'code',
   'type',

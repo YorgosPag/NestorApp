@@ -96,7 +96,7 @@ export const translateRenovationStatus = createEnumLabelTranslator(RENOVATION_ST
 // ============================================================================
 
 
-/** Spec rows this surface renders, in display order (ADR-700). */
+/** Spec rows this surface renders, in display order (ADR-701). */
 const BUILDING_SPEC_ROWS = [
   'code',
   'type',

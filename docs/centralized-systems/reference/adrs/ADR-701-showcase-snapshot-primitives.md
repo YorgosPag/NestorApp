@@ -1,4 +1,4 @@
-# ADR-700 — Showcase snapshot primitives + label catalog (`showcase-core`)
+# ADR-701 — Showcase snapshot primitives + label catalog (`showcase-core`)
 
 **Status**: Accepted
 **Date**: 2026-07-25

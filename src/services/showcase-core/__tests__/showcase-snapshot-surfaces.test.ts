@@ -1,7 +1,7 @@
 /**
- * Snapshot-builder surface anchors (ADR-700).
+ * Snapshot-builder surface anchors (ADR-701).
  *
- * ADR-700 moved the project showcase off 46 lines of hand-written
+ * ADR-701 moved the project showcase off 46 lines of hand-written
  * orchestration onto `createShowcaseSnapshotBuilder`. Two things could have
  * broken silently and neither shows up in a type error:
  *
@@ -67,7 +67,7 @@ beforeEach(() => {
 // Project showcase — the migrated surface
 // ============================================================================
 
-describe('project showcase snapshot (ADR-700 migration)', () => {
+describe('project showcase snapshot (ADR-701 migration)', () => {
   const db = () =>
     fakeDb({
       'P-1': {
@@ -219,7 +219,7 @@ describe('createEnumLabelTranslator', () => {
 // Loaders still produce complete label sets after the catalog swap
 // ============================================================================
 
-describe('label loaders after the ADR-700 catalog swap', () => {
+describe('label loaders after the ADR-701 catalog swap', () => {
   it('project loader fills specs, chrome, email and header contacts', () => {
     const labels = loadProjectShowcasePdfLabels('el');
     expect(labels.specs.title).toBeTruthy();

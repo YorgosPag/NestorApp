@@ -1,5 +1,5 @@
 /**
- * Building Showcase Snapshot Builder — SSoT (ADR-320 + ADR-321 Phase 2, ADR-700 primitives).
+ * Building Showcase Snapshot Builder — SSoT (ADR-320 + ADR-321 Phase 2, ADR-701 primitives).
  *
  * Delegates orchestration to `createShowcaseSnapshotBuilder` and the raw-value
  * pickers / project-name loader to `showcase-core/snapshot-field-primitives`;

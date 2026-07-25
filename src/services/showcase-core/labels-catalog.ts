@@ -1,6 +1,6 @@
 /**
  * =============================================================================
- * SHOWCASE CORE — Label catalog access + enum translators (ADR-700)
+ * SHOWCASE CORE — Label catalog access + enum translators (ADR-701)
  * =============================================================================
  *
  * The two pieces of boilerplate that survived ADR-321's `labels-shared`
@@ -22,7 +22,7 @@
  * constrain three modules that never asked for the restriction.
  *
  * @module services/showcase-core/labels-catalog
- * @see adrs/ADR-700-showcase-snapshot-primitives.md
+ * @see adrs/ADR-701-showcase-snapshot-primitives.md
  */
 
 import elShowcase from '@/i18n/locales/el/showcase.json';
@@ -212,7 +212,7 @@ export function resolveShowcaseSpecLabels<K extends string>(
     if (fallback === undefined) {
       throw new Error(
         `[showcase-core] No shared wording for spec row "${key}". `
-        + 'Add it to SHOWCASE_SPEC_FALLBACKS in labels-catalog.ts (ADR-700).',
+        + 'Add it to SHOWCASE_SPEC_FALLBACKS in labels-catalog.ts (ADR-701).',
       );
     }
     resolved[key] = specs[key] ?? (locale === 'el' ? fallback[0] : fallback[1]);
