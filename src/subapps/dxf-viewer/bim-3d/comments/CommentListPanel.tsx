@@ -27,6 +27,7 @@ import {
 } from '../stores/BimCommentsStore';
 import { BimCommentsService } from './bim-comments.service';
 import { CommentBadgeIcon } from './CommentBadgeIcon';
+import { BimCommentDetailsPanel } from './BimCommentDetailsPanel';
 import type { BimComment, CommentStatus, CommentType } from './bim-comment-types';
 
 type StatusFilter = 'all' | CommentStatus;
@@ -45,6 +46,7 @@ export function CommentListPanel() {
   const filters = useBimCommentsStore((s) => s.filters);
   const setFilters = useBimCommentsStore((s) => s.setFilters);
   const selectComment = useBimCommentsStore((s) => s.selectComment);
+  const selectedCommentId = useBimCommentsStore((s) => s.selectedCommentId);
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [showForm, setShowForm] = useState(false);
@@ -59,6 +61,18 @@ export function CommentListPanel() {
   }, [statusFilter, setFilters]);
 
   const filtered = selectFilteredComments(comments, filters);
+
+  // Master-detail (ADR-366 §C.2): the detail view REPLACES the list in the same panel
+  // rather than opening a second surface — the practice for narrow docked issue panels
+  // (Autodesk Construction Cloud Issues, Solibri). Figma's popover model does not apply
+  // here: its thread is anchored to a canvas pin, not reached from a list.
+  // The header's ✕ calls `selectComment(null)`, which is the "back to list" affordance.
+  //
+  // Every hook above runs unconditionally before this branch, so the project subscription
+  // stays mounted while the detail is open — returning to the list needs no refetch.
+  if (selectedCommentId) {
+    return <BimCommentDetailsPanel commentId={selectedCommentId} companyId={companyId} />;
+  }
 
   return (
     <section className="flex flex-col gap-0" aria-label={t('comments.panelTitle')}>

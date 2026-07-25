@@ -615,7 +615,8 @@
       "close": "Close",
       "previousAttachment": "Previous image",
       "nextAttachment": "Next image",
-      "attachmentViewer": "Image {current} of {total}: {name}"
+      "attachmentViewer": "Image {current} of {total}: {name}",
+      "title": "Comment details"
     },
     "actions": {
       "markInReview": "Send for Review",
@@ -817,7 +818,9 @@
       "export": "Export",
       "addAtCurrentCamera": "Add at current camera",
       "snapToggle": "Snap to grid",
-      "snapStep": "Grid step"
+      "snapStep": "Grid step",
+      "activate": "Activate",
+      "activateHint": "Activate the tool to show the path handles in 3D"
     },
     "snapStepOptions": {
       "1": "1 u",

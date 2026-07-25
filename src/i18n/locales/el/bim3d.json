@@ -615,7 +615,8 @@
       "close": "Κλείσιμο",
       "previousAttachment": "Προηγούμενη εικόνα",
       "nextAttachment": "Επόμενη εικόνα",
-      "attachmentViewer": "Εικόνα {current} από {total}: {name}"
+      "attachmentViewer": "Εικόνα {current} από {total}: {name}",
+      "title": "Λεπτομέρειες σχολίου"
     },
     "actions": {
       "markInReview": "Αποστολή για Ανασκόπηση",
@@ -817,7 +818,9 @@
       "export": "Εξαγωγή",
       "addAtCurrentCamera": "Προσθήκη στην τρέχουσα κάμερα",
       "snapToggle": "Μαγνήτης πλέγματος",
-      "snapStep": "Βήμα πλέγματος"
+      "snapStep": "Βήμα πλέγματος",
+      "activate": "Ενεργοποίηση",
+      "activateHint": "Ενεργοποίησε το εργαλείο για να εμφανιστούν οι λαβές διαδρομής στο 3D"
     },
     "snapStepOptions": {
       "1": "1 μον.",

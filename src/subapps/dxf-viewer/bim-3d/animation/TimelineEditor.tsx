@@ -58,6 +58,14 @@ export function TimelineEditor() {
   const setFps = useAnimationStore((s) => s.setFps);
   const setAxis = useAnimationStore((s) => s.setAxis);
   const setDirection = useAnimationStore((s) => s.setDirection);
+  // ADR-366 §C.1.b — the tool gate. `AnimationStore.toolActive` drives the 3D waypoint
+  // handles, the contextual ribbon tab AND the ESC slot `bim3d/waypoint-axis-lock-clear`
+  // (ADR-364 §10.14 Κ2 #3). Until 2026-07-26 the ONLY writer was the ribbon action
+  // `animation.tool-toggle`, whose only button lives inside the contextual tab that
+  // `toolActive` itself gates — so nothing could ever turn the tool on. This toggle is
+  // the entry point; it writes the same store action, so the store stays the single owner.
+  const toolActive = useAnimationStore((s) => s.toolActive);
+  const setToolActive = useAnimationStore((s) => s.setToolActive);
 
   const [scrubberSec, setScrubberSec] = useState(0);
 
@@ -88,11 +96,30 @@ export function TimelineEditor() {
       aria-label={t('animation.title')}
       className="flex flex-col gap-3 p-3 text-xs text-white"
     >
-      <header className="flex items-center justify-between">
+      <header className="flex items-center justify-between gap-2">
         <h3 className="text-[11px] font-semibold uppercase tracking-wide text-white/70">
           {t('animation.title')}
         </h3>
+        <button
+          type="button"
+          aria-pressed={toolActive}
+          onClick={() => setToolActive(!toolActive)}
+          className={[
+            'shrink-0 rounded px-2 py-0.5 text-[11px] font-medium transition-colors',
+            toolActive
+              ? 'bg-primary text-primary-foreground hover:bg-primary/80'
+              : 'border border-white/20 text-white/70 hover:border-white/40 hover:text-white',
+          ].join(' ')}
+        >
+          {t(toolActive ? 'animation.toolbar.deactivate' : 'animation.toolbar.activate')}
+        </button>
       </header>
+
+      {!toolActive && (
+        <p className="text-[11px] leading-snug text-white/50">
+          {t('animation.toolbar.activateHint')}
+        </p>
+      )}
 
       <ConfigRow
         durationSec={durationSec}

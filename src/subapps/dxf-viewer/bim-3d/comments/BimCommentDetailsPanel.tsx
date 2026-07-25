@@ -74,8 +74,11 @@ export function BimCommentDetailsPanel({ commentId, companyId }: BimCommentDetai
 
   return (
     <aside
-      className="flex h-full w-72 flex-col overflow-hidden border-l border-border bg-background"
-      aria-label={t('comments.details.close')}
+      // Layout-neutral: the host decides the width. Was `w-72 border-l` from the original
+      // right-side-drawer design; as the detail half of the master-detail inside the
+      // "Σχόλια" sidebar tab it must fill its host instead of overflowing it.
+      className="flex h-full w-full flex-col overflow-hidden bg-background"
+      aria-label={t('comments.details.title')}
     >
       <CommentDetailsPanelHeader
         comment={comment}
