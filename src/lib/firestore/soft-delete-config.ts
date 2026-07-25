@@ -13,6 +13,31 @@ import "server-only";
 import { COLLECTIONS } from "@/config/firestore-collections";
 import type { SoftDeletableEntityType } from "@/types/soft-deletable";
 
+/** The single status value that means "in the trash". */
+export const TRASHED_STATUS = "deleted";
+
+/**
+ * What the `GET /api/{entity}/trash` endpoint needs on top of the lifecycle
+ * config — present only for entities that actually publish such an endpoint.
+ *
+ * Every field here is a **wire contract**: the response key is what
+ * `EntityTrashSpec.selectItems` unwraps on the client, and `labelPluralEn` is
+ * spliced into the 500 error message the endpoint has always returned. They are
+ * data, not defaults to be tidied up.
+ */
+export interface TrashListConfig {
+  /** Envelope key holding the rows, e.g. `{ success: true, buildings: [...] }`. */
+  responseKey: string;
+  /** Permission guarding the bin — the *view* permission, same as the normal list. */
+  viewPermission: string;
+  /** Document field the bin is ordered by (locale-aware string compare). */
+  sortField: string;
+  /** English plural spliced into log lines and the 500 message. */
+  labelPluralEn: string;
+  /** Logger module name, preserved per entity so server logs stay greppable. */
+  loggerName: string;
+}
+
 export interface SoftDeleteEntityConfig {
   /** Firestore collection name (from COLLECTIONS) */
   collection: string;
@@ -24,6 +49,12 @@ export interface SoftDeleteEntityConfig {
   labelEl: string;
   /** English label (for API responses) */
   labelEn: string;
+  /**
+   * Trash-list endpoint contract. Absent for entities whose bin is filtered
+   * client-side and therefore have no `/trash` route — `contact` is the only
+   * such entity today, and its absence here is the assertion of that fact.
+   */
+  trashList?: TrashListConfig;
 }
 
 /**
@@ -53,6 +84,13 @@ export const SOFT_DELETE_CONFIG: Record<
     permission: "properties:properties:delete",
     labelEl: "Akinito",
     labelEn: "Property",
+    trashList: {
+      responseKey: "properties",
+      viewPermission: "properties:properties:view",
+      sortField: "name",
+      labelPluralEn: "properties",
+      loggerName: "PropertiesTrashRoute",
+    },
   },
   building: {
     collection: COLLECTIONS.BUILDINGS,
@@ -60,6 +98,13 @@ export const SOFT_DELETE_CONFIG: Record<
     permission: "buildings:buildings:delete",
     labelEl: "Ktirio",
     labelEn: "Building",
+    trashList: {
+      responseKey: "buildings",
+      viewPermission: "buildings:buildings:view",
+      sortField: "name",
+      labelPluralEn: "buildings",
+      loggerName: "BuildingsTrashRoute",
+    },
   },
   project: {
     collection: COLLECTIONS.PROJECTS,
@@ -67,6 +112,13 @@ export const SOFT_DELETE_CONFIG: Record<
     permission: "projects:projects:delete",
     labelEl: "Ergo",
     labelEn: "Project",
+    trashList: {
+      responseKey: "projects",
+      viewPermission: "projects:projects:view",
+      sortField: "name",
+      labelPluralEn: "projects",
+      loggerName: "ProjectsTrashRoute",
+    },
   },
   parking: {
     collection: COLLECTIONS.PARKING_SPACES,
@@ -74,6 +126,13 @@ export const SOFT_DELETE_CONFIG: Record<
     permission: "units:units:delete",
     labelEl: "Thesi stathmeysis",
     labelEn: "Parking Spot",
+    trashList: {
+      responseKey: "parkingSpots",
+      viewPermission: "units:units:view",
+      sortField: "number",
+      labelPluralEn: "parking spots",
+      loggerName: "ParkingTrashRoute",
+    },
   },
   storage: {
     collection: COLLECTIONS.STORAGE,
@@ -81,8 +140,35 @@ export const SOFT_DELETE_CONFIG: Record<
     permission: "units:units:delete",
     labelEl: "Apothiki",
     labelEn: "Storage Unit",
+    trashList: {
+      responseKey: "storages",
+      viewPermission: "units:units:view",
+      sortField: "name",
+      labelPluralEn: "storage units",
+      loggerName: "StoragesTrashRoute",
+    },
   },
 };
+
+/**
+ * Trash-list contract for an entity, or `undefined` when it publishes no
+ * `/trash` endpoint.
+ *
+ * Returns the config rather than a boolean so a caller that needs the contract
+ * gets it in the same step — no `!` assertion and no second lookup.
+ */
+export function getTrashListConfig(
+  entityType: SoftDeletableEntityType,
+): TrashListConfig | undefined {
+  return SOFT_DELETE_CONFIG[entityType].trashList;
+}
+
+/** Entity types that publish a `GET /api/{entity}/trash` endpoint. */
+export function listTrashListableEntities(): SoftDeletableEntityType[] {
+  return (Object.keys(SOFT_DELETE_CONFIG) as SoftDeletableEntityType[]).filter(
+    entityType => SOFT_DELETE_CONFIG[entityType].trashList !== undefined,
+  );
+}
 
 /** Validate that an entity type is soft-deletable */
 export function isSoftDeletableEntity(
