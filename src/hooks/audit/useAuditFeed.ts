@@ -24,7 +24,8 @@
  *
  * @module hooks/audit/useAuditFeed
  * @enterprise ADR-195 — Entity Audit Trail (Phase 12: shared feed plumbing)
- * @ssot ADR-584 — de-duplication of the two canonical audit hooks
+ * @ssot ADR-195 — de-duplication of the two canonical audit hooks.
+ *   (Ήταν `ADR-584`, που είναι το jscpd clone ratchet — άσχετο· λάθος αναφορά.)
  */
 
 'use client';

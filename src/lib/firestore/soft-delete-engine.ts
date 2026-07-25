@@ -20,6 +20,7 @@ import type { SoftDeleteEntityConfig } from "./soft-delete-config";
 import { executeDeletion } from "./deletion-guard";
 import { FIELDS } from "@/config/firestore-field-constants";
 import { EntityAuditService, resolveUserDisplayName } from "@/services/entity-audit.service";
+import { isCdcAuditDuplicate } from "@/config/audit-cdc-coverage";
 // Imported from its defining module rather than through `ApiErrorHandler`,
 // which re-exports it but pulls in the whole `next/server` surface with it.
 import { ApiError } from "@/lib/api/api-error-types";
@@ -28,6 +29,39 @@ import { getErrorMessage } from "@/lib/error-utils";
 import type { SoftDeletableEntityType } from "@/types/soft-deletable";
 
 const logger = createModuleLogger("SoftDeleteEngine");
+
+/**
+ * Καταγραφή αλλαγής κύκλου ζωής στο audit trail (fire-and-forget).
+ *
+ * ADR-195 Phase 3 — αυτός ο engine εξυπηρετεί **όλες** τις soft-deletable
+ * οντότητες, αλλά μόνο οι επαφές έχουν CDC Firestore trigger. Για εκείνες, μια
+ * service-side εγγραφή `soft_deleted`/`restored` θα ήταν καθαρό διπλότυπο του
+ * `cdc` record. Το μητρώο `audit-cdc-coverage` είναι η ΜΟΝΑΔΙΚΗ πηγή αυτής της
+ * γνώσης — μην βάλεις `if (entityType === 'contact')` εδώ.
+ *
+ * Το `deleted` (οριστική διαγραφή) δεν σιγάζεται ΠΟΤΕ: εκεί η service εγγραφή
+ * μεταφέρει forensic δεδομένα που ο CDC δεν μπορεί να παραγάγει.
+ */
+function recordLifecycleAudit(
+  input: Parameters<typeof EntityAuditService.recordChange>[0],
+): void {
+  if (isCdcAuditDuplicate(input.entityType, input.action)) {
+    logger.debug("Audit skipped — CDC trigger already records this event", {
+      entityType: input.entityType,
+      entityId: input.entityId,
+      action: input.action,
+    });
+    return;
+  }
+
+  EntityAuditService.recordChange(input).catch((err) => {
+    logger.error("Audit trail failed (non-blocking)", {
+      entityType: input.entityType,
+      entityId: input.entityId,
+      error: getErrorMessage(err),
+    });
+  });
+}
 
 // ============================================================================
 // SOFT DELETE — Move to trash
@@ -91,8 +125,8 @@ export async function softDelete(
     _lastModifiedAt: FieldValue.serverTimestamp(),
   });
 
-  // Audit trail (fire-and-forget)
-  EntityAuditService.recordChange({
+  // Audit trail (fire-and-forget· σιγάζεται όταν το καλύπτει ήδη ο CDC)
+  recordLifecycleAudit({
     entityType,
     entityId,
     entityName: extractEntityName(data),
@@ -108,12 +142,6 @@ export async function softDelete(
     performedBy: deletedBy,
     performedByName: performedByName ?? null,
     companyId: (data?.companyId as string | undefined) ?? companyId,
-  }).catch((err) => {
-    logger.error("Audit trail failed (non-blocking)", {
-      entityType,
-      entityId,
-      error: getErrorMessage(err),
-    });
   });
 
   logger.info(`${entityType} soft-deleted`, { entityId });
@@ -174,8 +202,8 @@ export async function restoreFromTrash(
     _lastModifiedAt: FieldValue.serverTimestamp(),
   });
 
-  // Audit trail (fire-and-forget)
-  EntityAuditService.recordChange({
+  // Audit trail (fire-and-forget· σιγάζεται όταν το καλύπτει ήδη ο CDC)
+  recordLifecycleAudit({
     entityType,
     entityId,
     entityName: extractEntityName(data),
@@ -191,12 +219,6 @@ export async function restoreFromTrash(
     performedBy: restoredBy,
     performedByName: performedByName ?? null,
     companyId,
-  }).catch((err) => {
-    logger.error("Audit trail failed (non-blocking)", {
-      entityType,
-      entityId,
-      error: getErrorMessage(err),
-    });
   });
 
   return { success: true, entityId, restoredStatus };
