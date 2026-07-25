@@ -27,6 +27,7 @@ import {
   AddressCoordsBadge,
   computeFreshness,
 } from '@/components/shared/addresses/editor';
+import { renderStoredAddressLabel } from '@/components/contacts/addresses/contactAddressLabel';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import '@/lib/design-system';
@@ -68,6 +69,10 @@ export function AddressCard({ address, onEdit, className, hideEnrichment }: Addr
   const hasCoords = !!address.coordinates;
   const sourceType = address.source ?? 'unknown';
 
+  // Το αποθηκευμένο `label` μπορεί να είναι slug, ελεύθερο κείμενο ή legacy raw
+  // i18n key — η απόδοση περνά πάντα από τον SSoT resolver.
+  const storedLabel = renderStoredAddressLabel(address.label, t);
+
   return (
     <Card className={className}>
       <CardContent className="p-4">
@@ -89,8 +94,8 @@ export function AddressCard({ address, onEdit, className, hideEnrichment }: Addr
           <MapPin className={cn(iconSizes.sm, 'shrink-0 mt-0.5', colors.text.muted)} />
           <div className="flex-1">
             <p className="text-sm font-medium">{formatAddressLine(address)}</p>
-            {address.label && (
-              <p className={cn('text-xs mt-1', colors.text.muted)}>{address.label}</p>
+            {storedLabel && (
+              <p className={cn('text-xs mt-1', colors.text.muted)}>{storedLabel}</p>
             )}
           </div>
         </div>

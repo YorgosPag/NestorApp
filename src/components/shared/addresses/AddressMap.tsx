@@ -53,6 +53,7 @@ import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { getStatusColor } from '@/lib/design-system';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { renderStoredAddressLabel } from '@/components/contacts/addresses/contactAddressLabel';
 import { cn } from '@/lib/utils';
 
 // Extracted modules (SRP split)
@@ -318,7 +319,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
                   const geocoded = geocodedAddresses.get(addr.id);
                   const dragPos = dragPositions.get(addr.id);
                   const isReadOnly = readOnlyAddressIds?.has(addr.id) === true;
-                  const translatedLabel = addr.label || t(`types.${addr.type}`);
+                  const translatedLabel = renderStoredAddressLabel(addr.label, t) ?? t(`types.${addr.type}`);
 
                   const isActiveEdit = activeEditingAddressId === addr.id;
 
@@ -386,7 +387,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
                 const geocoded = geocodedAddresses.get(addr.id);
                 if (!geocoded) return null;
 
-                const translatedLabel = addr.label || t(`types.${addr.type}`);
+                const translatedLabel = renderStoredAddressLabel(addr.label, t) ?? t(`types.${addr.type}`);
 
                 return (
                   <Marker

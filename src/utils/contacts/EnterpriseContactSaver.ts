@@ -14,6 +14,7 @@
 import type { ContactFormData, CompanyAddress } from '@/types/ContactFormTypes';
 import type { Contact, AddressInfo, WebsiteInfo, PhoneInfo, EmailInfo, SocialMediaInfo } from '@/types/contacts';
 
+import { getPrimaryAddressType } from '@/types/contacts/address-types';
 import { createModuleLogger } from '@/lib/telemetry';
 import { isNonEmptyArray } from '@/lib/type-guards';
 import { stripTypeExclusiveFields } from './contact-type-fields';
@@ -68,7 +69,17 @@ export class EnterpriseContactSaver {
                           formData.municipality || formData.settlement;
 
     if (hasAddressData) {
-      // 🌐 i18n: Labels converted to i18n keys - 2026-01-18
+      // ADR-319: το `label` αποθηκεύει ΣΗΜΑΣΙΟΛΟΓΙΚΟ slug (`home`, `headquarters`, …),
+      // ποτέ i18n key. Ένα raw key στη βάση σημαίνει ότι μια μετονομασία κλειδιού
+      // στα locales σπάει ΑΠΟΘΗΚΕΥΜΕΝΑ δεδομένα — παραβίαση N.11 σε επίπεδο
+      // persistence, όχι απλού UI string. Η μετάφραση γίνεται στο render.
+      // Ίδιος κανόνας με τον κλάδο εταιρειών (`buildAddressesFromCompany`).
+      const primaryAddressType = formData.primaryAddressType ?? getPrimaryAddressType(formData.type);
+      const primaryAddressLabel =
+        primaryAddressType === 'other' && formData.primaryAddressCustomLabel?.trim()
+          ? formData.primaryAddressCustomLabel.trim()
+          : primaryAddressType;
+
       const primaryAddress: AddressInfo = {
         street: formData.street || '',
         number: formData.streetNumber || '', // Note: flat uses streetNumber, array uses number
@@ -77,7 +88,7 @@ export class EnterpriseContactSaver {
         country: 'GR', // Default to Greece
         type: this.getAddressTypeForContactType(formData.type || 'individual'),
         isPrimary: true,
-        label: 'contacts.address.primary',
+        label: primaryAddressLabel,
         // Administrative Hierarchy fields (conditional spread — omit empty strings)
         ...(formData.municipality ? { municipality: formData.municipality } : {}),
         ...(formData.municipalityId != null ? { municipalityId: formData.municipalityId } : {}),
@@ -89,6 +100,9 @@ export class EnterpriseContactSaver {
         ...(formData.settlementId != null ? { settlementId: formData.settlementId } : {}),
         ...(formData.community ? { community: formData.community } : {}),
         ...(formData.municipalUnit ? { municipalUnit: formData.municipalUnit } : {}),
+        // Περιοχή / Συνοικία — ελεύθερο κείμενο του χρήστη. Έλειπε από το
+        // whitelist, οπότε ό,τι πληκτρολογούσε ο χρήστης χανόταν σιωπηλά.
+        ...(formData.neighborhood ? { neighborhood: formData.neighborhood } : {}),
       };
 
       enterpriseData.addresses = [primaryAddress];
@@ -342,6 +356,7 @@ export class EnterpriseContactSaver {
       isPrimary: i === 0 || ca.type === 'headquarters' || ca.type === 'home',
       // ADR-319: persist semantic key; `other` carries user-provided custom label.
       label: (ca.type === 'other' && ca.customLabel?.trim()) ? ca.customLabel.trim() : ca.type,
+      ...(ca.neighborhood ? { neighborhood: ca.neighborhood } : {}),
     }));
   }
 
