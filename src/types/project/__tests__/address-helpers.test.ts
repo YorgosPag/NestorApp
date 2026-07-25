@@ -67,7 +67,9 @@ describe('Address Helpers (ADR-167)', () => {
       };
 
       const formatted = formatAddressLine(address);
-      expect(formatted).toBe('Σαμοθράκης 16, Θεσσαλονίκη, 54636');
+      // ADR-332 D16: η βάση κρατά «54636» (κλειδί σύγκρισης), η οθόνη δείχνει
+      // την επίσημη ελληνική γραφή ΕΛΤΑ «546 36».
+      expect(formatted).toBe('Σαμοθράκης 16, Θεσσαλονίκη, 546 36');
     });
 
     it('should format address without number', () => {
@@ -82,7 +84,22 @@ describe('Address Helpers (ADR-167)', () => {
       };
 
       const formatted = formatAddressLine(address);
-      expect(formatted).toBe('Σαμοθράκης, Θεσσαλονίκη, 54636');
+      expect(formatted).toBe('Σαμοθράκης, Θεσσαλονίκη, 546 36');
+    });
+
+    it('αφήνει ανέπαφο τον Τ.Κ. ξένης διεύθυνσης', () => {
+      const address: ProjectAddress = {
+        id: 'addr_uk',
+        street: 'Downing Street',
+        number: '10',
+        city: 'London',
+        postalCode: 'SW1A 2AA',
+        country: 'United Kingdom',
+        type: 'site',
+        isPrimary: true,
+      };
+
+      expect(formatAddressLine(address)).toBe('Downing Street 10, London, SW1A 2AA');
     });
 
     it('should format address without postal code', () => {
