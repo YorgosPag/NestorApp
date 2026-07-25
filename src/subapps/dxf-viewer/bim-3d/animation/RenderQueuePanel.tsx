@@ -3,7 +3,7 @@
 /**
  * ADR-366 Phase 9 / C.1.c — RenderQueuePanel.
  *
- * Floating3DPanel 8th tab. Visible only when RenderQueueStore.jobs.length > 0
+ * Bim3DFloatingTab 8th tab. Visible only when RenderQueueStore.jobs.length > 0
  * (the parent panel gates rendering via selectAnyJobs). Each job row
  * presents:
  *  - Animation name

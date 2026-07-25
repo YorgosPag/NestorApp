@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * ADR-366 §C.1.b — Timeline editor (Floating3DPanel "animation" tab).
+ * ADR-366 §C.1.b — Timeline editor (Bim3DFloatingTab "animation" tab).
  *
  * Vertical adaptation του single-track strip (ADR-366 §C.1.Q3). Inside a
  * w-72 sidebar tab:

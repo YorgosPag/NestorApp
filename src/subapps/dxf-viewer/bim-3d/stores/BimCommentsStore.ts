@@ -7,7 +7,7 @@
  *  - comments       : keyed by commentId, populated by subscribeByProject
  *  - replies        : keyed by commentId, populated per selected comment
  *  - selectedCommentId : drives BimCommentDetailsPanel open/close
- *  - panelOpen      : CommentListPanel (Floating3DPanel "Σχόλια" tab) visibility
+ *  - panelOpen      : CommentListPanel (Bim3DFloatingTab "Σχόλια" tab) visibility
  *  - filters        : CommentListPanel filter bar state
  *
  * Subscribe calls live here; leaf UI components read filtered slices only.

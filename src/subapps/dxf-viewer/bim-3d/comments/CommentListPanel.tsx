@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * ADR-366 Phase 9 / C.2 — Floating3DPanel "Σχόλια" tab content.
+ * ADR-366 Phase 9 / C.2 — Bim3DFloatingTab "Σχόλια" tab content.
  * Filter bar, search, comment list, and new-comment inline form.
  * Mounts project subscription via BimCommentsStore.
  */

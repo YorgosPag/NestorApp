@@ -63,7 +63,7 @@ interface AnimationActions {
 
   setActiveWaypointIndex(index: number | null): void;
 
-  /** ADR-366 §C.1.b — flip ribbon-contextual-tab + Floating3DPanel + 3D handles. */
+  /** ADR-366 §C.1.b — flip ribbon-contextual-tab + Bim3DFloatingTab + 3D handles. */
   setToolActive(active: boolean): void;
   /** ADR-366 §C.1.b snap-to-grid — toggle snap on/off. */
   setSnapEnabled(enabled: boolean): void;
