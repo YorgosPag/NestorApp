@@ -119,6 +119,7 @@ function branchToResolvedFields(addr: CompanyAddress): ResolvedAddressFields {
     number: addr.number || undefined,
     postalCode: addr.postalCode || undefined,
     city: addr.city || undefined,
+    neighborhood: addr.neighborhood || undefined,
     region: addr.regionName || addr.region || undefined,
     country: addr.country || undefined,
   };
@@ -131,6 +132,9 @@ function applyResolvedToBranch(resolved: ResolvedAddressFields, existing: Compan
     number: resolved.number ?? existing.number,
     postalCode: resolved.postalCode ?? existing.postalCode,
     city: resolved.city ?? existing.city,
+    // Χωρίς αυτό, η «Περιοχή / Συνοικία» του υποκαταστήματος χανόταν σιωπηλά
+    // στον πρώτο κύκλο onChange — ίδιο σφάλμα με την έδρα.
+    neighborhood: resolved.neighborhood ?? existing.neighborhood,
   };
 }
 
@@ -147,7 +151,7 @@ function BranchEditorWrapper({ addr, branchVisualIndex, disabled, onUpdate }: Br
     () => branchToResolvedFields(addr),
     // Only re-compute when basic fields change (keeps AddressEditor.value stable).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [addr.street, addr.number, addr.postalCode, addr.city, addr.region, addr.regionName, addr.country],
+    [addr.street, addr.number, addr.postalCode, addr.city, addr.neighborhood, addr.region, addr.regionName, addr.country],
   );
   const handleResolvedChange = useCallback(
     (resolved: ResolvedAddressFields) => onUpdate(branchVisualIndex, applyResolvedToBranch(resolved, addr)),

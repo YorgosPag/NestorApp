@@ -21,8 +21,7 @@ import { AddressFieldBadge } from './components/AddressFieldBadge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { AddressConfidenceMeter } from './components/AddressConfidenceMeter';
 import { AddressActivityLog } from './components/AddressActivityLog';
-import { AddressReconciliationPanel } from './components/AddressReconciliationPanel';
-import { AddressSuggestionsPanel } from './components/AddressSuggestionsPanel';
+import { AddressResolutionSlot } from './components/AddressResolutionSlot';
 import { AddressDragConfirmDialog } from './components/AddressDragConfirmDialog';
 import { AddressEditorContext } from './AddressEditorContext';
 import type { AddressEditorProps, AddressEditorHandle } from './AddressEditor.types';
@@ -318,6 +317,13 @@ export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>
   }, [pendingDrag, undoHook, onChange, onDragApplied, editor, telemetryHook, resolvedFields, currentResult]);
   const showReconciliation =
     editor.state.phase === 'conflict' || editor.state.phase === 'partial';
+  // The FSM reaches these phases while the caret is still in a field, which is
+  // when the resolution band must claim its space — reflowing then costs the
+  // user nothing, reflowing two seconds later steals their click.
+  const reserving =
+    editor.state.phase === 'typing' ||
+    editor.state.phase === 'debouncing' ||
+    editor.state.phase === 'loading';
   const showSuggestions =
     !dismissedSuggestions && suggestions.trigger !== null && suggestions.candidates.length > 0;
   const showActivityLog = (activityLogOpts?.enabled ?? true) && mode === 'edit';
@@ -432,40 +438,33 @@ export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>
           </div>
         )}
 
-        {/* Reconciliation panel */}
-        {showReconciliation && (
-          <div className="space-y-2">
-            <AddressReconciliationPanel
-              conflicts={reconciliation.conflicts}
-              pending={reconciliation.pending}
-              decisions={reconciliation.decisions}
-              resolved={reconciliation.resolved}
-              applyField={handleApplyField}
-              keepField={reconciliation.keepField}
-              applyAll={reconciliation.applyAll}
-              keepAll={reconciliation.keepAll}
-              onTrySuggestions={showSuggestions ? undefined : undefined}
-            />
-            {reconciliation.resolved && (
-              <Button size="sm" onClick={handleMergeConfirm}>
-                {t('editor.reconciliation.applyAll')}
-              </Button>
-            )}
-          </div>
-        )}
-
-        {/* Suggestions panel */}
-        {showSuggestions && (
-          <AddressSuggestionsPanel
-            trigger={suggestions.trigger}
-            candidates={suggestions.candidates}
-            nextOmitField={suggestions.nextOmitField}
-            retryExhausted={suggestions.retryExhausted}
-            onSelect={handleSuggestionSelect}
-            onRetry={suggestions.nextOmitField ? handleSuggestionRetry : undefined}
-            onDismiss={() => setDismissedSuggestions(true)}
-          />
-        )}
+        {/* Async resolution band — reserves its own space so arriving panels
+            never move the controls below them (see AddressResolutionSlot). */}
+        <AddressResolutionSlot
+          reserving={reserving}
+          showReconciliation={showReconciliation}
+          showSuggestions={showSuggestions}
+          onMergeConfirm={handleMergeConfirm}
+          reconciliation={{
+            conflicts: reconciliation.conflicts,
+            pending: reconciliation.pending,
+            decisions: reconciliation.decisions,
+            resolved: reconciliation.resolved,
+            applyField: handleApplyField,
+            keepField: reconciliation.keepField,
+            applyAll: reconciliation.applyAll,
+            keepAll: reconciliation.keepAll,
+          }}
+          suggestions={{
+            trigger: suggestions.trigger,
+            candidates: suggestions.candidates,
+            nextOmitField: suggestions.nextOmitField,
+            retryExhausted: suggestions.retryExhausted,
+            onSelect: handleSuggestionSelect,
+            onRetry: suggestions.nextOmitField ? handleSuggestionRetry : undefined,
+            onDismiss: () => setDismissedSuggestions(true),
+          }}
+        />
 
         {/* Activity log */}
         {showActivityLog && (

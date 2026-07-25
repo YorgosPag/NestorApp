@@ -162,6 +162,7 @@ export function mapIndividualContactToFormData(contact: Contact): ContactFormDat
     settlementId: contact.addresses?.[0]?.settlementId ?? null,
     community: contact.addresses?.[0]?.community || '',
     municipalUnit: contact.addresses?.[0]?.municipalUnit || '',
+    neighborhood: contact.addresses?.[0]?.neighborhood || '',
 
     // 🚀 DYNAMIC ARRAYS: Pass full arrays for dynamic management
     phones: contact.phones || [],

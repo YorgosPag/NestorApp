@@ -71,6 +71,24 @@ export function SearchableCombobox({
   const listRef = useRef<HTMLUListElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // ---------------------------------------------------------------------------
+  // Ιδιοκτησία του πεδίου (field ownership).
+  //
+  // Το περιεχόμενο του input προέρχεται από ΔΥΟ πηγές: τον χρήστη (πληκτρολόγηση
+  // / επιλογή) ή το σύστημα (sync effect — reverse-geocoding auto-fill, φόρτωση
+  // φόρμας, map drag). Όταν το γράφει το σύστημα, ο χρήστης που εστιάζει μετά
+  // περιμένει να ΑΝΤΙΚΑΤΑΣΤΗΣΕΙ την πρόταση, όχι να γράψει στη συνέχειά της.
+  //
+  // Χωρίς αυτό: auto-fill «Θεσαλονίκης» → ο χρήστης πληκτρολογεί «Θεσσαλονί» →
+  // ο δρομέας είναι στο τέλος → «ΘεσαλονίκηςΘεσσαλονί». Παρατηρήθηκε live
+  // 2026-07-25 στο AddressWithHierarchy.
+  //
+  // Ίδια πειθαρχία με Chrome autofill / Google Maps: τιμή του συστήματος =
+  // πρόταση, επιλέγεται ολόκληρη στο focus. Τιμή του χρήστη = δική του, ο
+  // δρομέας μένει εκεί που έκανε κλικ.
+  // ---------------------------------------------------------------------------
+  const isSystemProvidedRef = useRef(false);
+
   // Sync input value from external value (e.g. when form resets or contact auto-fills)
   // Skip sync while popover is open — user is actively typing, don't override their input
   useEffect(() => {
@@ -85,6 +103,8 @@ export function SearchableCombobox({
     } else {
       setInputValue('');
     }
+    // Ό,τι γράφτηκε εδώ ήρθε από έξω — δεν το κατέχει ο χρήστης.
+    isSystemProvidedRef.current = true;
   }, [value, options, open]);
 
   // Debounced filtering
@@ -166,6 +186,8 @@ export function SearchableCombobox({
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const newValue = e.target.value;
       setInputValue(newValue);
+      // Ο χρήστης πήρε την ιδιοκτησία του πεδίου — μην ξαναεπιλέξεις το κείμενο.
+      isSystemProvidedRef.current = false;
 
       if (!open) {
         setOpen(true);
@@ -182,6 +204,8 @@ export function SearchableCombobox({
   const handleSelect = useCallback(
     (option: ComboboxOption) => {
       setInputValue(option.label);
+      // Ρητή επιλογή χρήστη — δική του τιμή, όχι πρόταση του συστήματος.
+      isSystemProvidedRef.current = false;
       onValueChange(option.value, option);
       setOpen(false);
       setHighlightedIndex(-1);
@@ -191,6 +215,7 @@ export function SearchableCombobox({
 
   const handleClear = useCallback(() => {
     setInputValue('');
+    isSystemProvidedRef.current = false;
     onValueChange('', null);
     setOpen(false);
     inputRef.current?.focus();
@@ -260,11 +285,29 @@ export function SearchableCombobox({
     [open, filtered, highlightedIndex, handleSelect],
   );
 
+  // Το `select()` μέσα στο onFocus ακυρώνεται από το mouseup που ακολουθεί ένα
+  // κλικ (ο browser επανατοποθετεί τον δρομέα). Κρατάμε σημαία ώστε ΕΚΕΙΝΟ το
+  // mouseup —και μόνο αυτό— να μην χαλάσει την επιλογή.
+  const pendingSelectAllRef = useRef(false);
+
   const handleFocus = useCallback(() => {
-    if (!disabled && options.length > 0) {
+    if (disabled) return;
+    if (options.length > 0) {
       setOpen(true);
     }
+    // Πρόταση συστήματος → επιλέγεται ολόκληρη, ώστε η πληκτρολόγηση να την
+    // αντικαταστήσει αντί να προσκολληθεί στο τέλος της.
+    if (isSystemProvidedRef.current && inputRef.current?.value) {
+      inputRef.current.select();
+      pendingSelectAllRef.current = true;
+    }
   }, [disabled, options.length]);
+
+  const handleMouseUp = useCallback((e: React.MouseEvent<HTMLInputElement>) => {
+    if (!pendingSelectAllRef.current) return;
+    pendingSelectAllRef.current = false;
+    e.preventDefault();
+  }, []);
 
   // ========================================================================
   // RENDER
@@ -284,6 +327,7 @@ export function SearchableCombobox({
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
             onFocus={handleFocus}
+            onMouseUp={handleMouseUp}
             onBlur={handleBlur}
             placeholder={placeholder}
             disabled={disabled}

@@ -29,6 +29,7 @@ import {
   PATH_TO_VALUE,
   HIERARCHY_FIELDS,
   type AddressWithHierarchyProps,
+  type AddressWithHierarchyValue,
 } from './address-with-hierarchy-config';
 import { ChevronDown, ChevronUp, MapPin } from 'lucide-react';
 import { geocodeAddress } from '@/lib/geocoding/geocoding-service';
@@ -40,42 +41,14 @@ import { AddressEditorContext, AddressFieldBadge } from '@/components/shared/add
 // Re-exports for backward compatibility — consumers can still import from this file
 export type { AddressWithHierarchyValue, AddressWithHierarchyProps } from './address-with-hierarchy-config';
 
-// =============================================================================
-// POSTAL CODE HELPERS
-// =============================================================================
-/** Format Greek postal code as "XXX YY" (e.g. "56334" → "563 34"). */
-function formatGreekPostalCode(value: string): string {
-  const digits = value.replace(/\D/g, '').substring(0, 5);
-  if (digits.length > 3) return `${digits.substring(0, 3)} ${digits.substring(3)}`;
-  return digits;
-}
-
-/** Strip space from postal code for numeric comparisons ("563 34" → "56334"). */
-function normalizePostalCode(value: string): string {
-  return value.replace(/\s/g, '').trim();
-}
-
-/**
- * Strip Greek administrative prefixes from geocoded city names.
- * Nominatim returns e.g. "Δημοτική Ενότητα Ελευθερίου - Κορδελιού" but the
- * hierarchy DB stores "Ελευθέριο-Κορδελιό". Strip prefix so nameMatches can work.
- * Works on the NFC string — splits by space and drops known prefix words.
- */
-const GREEK_ADMIN_PREFIX_WORDS = new Set([
-  'δημοτική', 'δημοτικη', 'ενότητα', 'ενοτητα',
-  'κοινότητα', 'κοινοτητα', 'δήμος', 'δημος',
-]);
-
-function stripGreekAdminPrefix(name: string): string {
-  const words = name.trim().split(/\s+/);
-  const normalizeWord = (w: string) =>
-    w.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^α-ωa-z]/gi, '');
-  let start = 0;
-  while (start < words.length && GREEK_ADMIN_PREFIX_WORDS.has(normalizeWord(words[start]))) {
-    start++;
-  }
-  return start > 0 && start < words.length ? words.slice(start).join(' ') : name;
-}
+// Pure field/format primitives — εξήχθησαν στο address-hierarchy-field-ops (N.7.1)
+import {
+  formatGreekPostalCode,
+  normalizePostalCode,
+  stripGreekAdminPrefix,
+  applyResolvedPath,
+  clearHierarchyLevels,
+} from './address-hierarchy-field-ops';
 
 // =============================================================================
 // COMPONENT
@@ -100,6 +73,25 @@ export function AddressWithHierarchy({
     () => ({ ...EMPTY_VALUE, ...value }),
     [value],
   );
+
+  // ---------------------------------------------------------------------------
+  // Άμυνα έναντι stale closures σε καθυστερημένα αποτελέσματα geocoding.
+  //
+  // Το `clearTimeout` ακυρώνει τον χρονιστή, ΟΧΙ ένα fetch που έχει ήδη φύγει.
+  // Όταν το promise λυνόταν αργότερα, διάβαζε το closure της στιγμής που ξεκίνησε
+  // — δηλαδή κατάσταση ΠΡΙΝ την επιλογή του χρήστη — και (α) περνούσε τον έλεγχο
+  // «δεν υπάρχει οικισμός», (β) με το stale spread πετούσε το μόλις τεθέν
+  // `settlementId` και όλη την ιεραρχία. Αποτέλεσμα: γραφόταν το διοικητικό όνομα
+  // του geocoder αντί για την ετικέτα που είχε επιλέξει ο χρήστης.
+  //
+  // `currentRef`  → ζωντανή κατάσταση τη στιγμή της άφιξης του αποτελέσματος.
+  // `autoFillEpochRef` → κάθε νέα ενέργεια ακυρώνει ό,τι είναι σε πτήση.
+  // ---------------------------------------------------------------------------
+  const currentRef = useRef(current);
+  currentRef.current = current;
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+  const autoFillEpochRef = useRef(0);
 
   // Settlement options (level 8 = most specific)
   const settlementOptions = useMemo(() => {
@@ -146,31 +138,18 @@ export function AddressWithHierarchy({
    */
   const handleSettlementChange = useCallback(
     (newValue: string, option?: ComboboxOption | null) => {
+      // Ρητή πρόθεση χρήστη: ακύρωσε κάθε auto-fill σε πτήση. Ό,τι επέλεξε ο
+      // χρήστης νικά πάντα μια εξωτερική πηγή (πειθαρχία `buildSelected`, ADR-601).
+      autoFillEpochRef.current += 1;
       const updated = { ...current };
       if (option?.value) {
         // Entity selected — resolve full parent chain
-        const path = resolvePath(option.value);
-        for (const mapping of PATH_TO_VALUE) {
-          const entity = path[mapping.pathKey];
-          if (entity) {
-            (updated[mapping.idField] as string | null) = entity.id;
-            (updated[mapping.nameField] as string) = entity.name;
-            // Auto-fill postal code from settlement
-            if (mapping.level === 8 && entity.postalCode) {
-              updated.postalCode = formatGreekPostalCode(entity.postalCode);
-            }
-          }
-        }
+        applyResolvedPath(updated, resolvePath(option.value));
       } else {
         // Free text — set settlement name, clear hierarchy
         updated.settlementId = null;
         updated.settlementName = newValue;
-        for (const mapping of PATH_TO_VALUE) {
-          if (mapping.level !== 8) {
-            (updated[mapping.idField] as string | null) = null;
-            (updated[mapping.nameField] as string) = '';
-          }
-        }
+        clearHierarchyLevels(updated, level => level !== 8);
       }
       onChange(updated);
     },
@@ -183,23 +162,12 @@ export function AddressWithHierarchy({
    */
   const handleHierarchyChange = useCallback(
     (level: AdminLevel, newValue: string, option?: ComboboxOption | null) => {
+      // Ρητή πρόθεση χρήστη — ακύρωσε κάθε auto-fill σε πτήση (βλ. handleSettlementChange).
+      autoFillEpochRef.current += 1;
       const updated = { ...current };
       if (option?.value) {
-        const path = resolvePath(option.value);
-        for (const mapping of PATH_TO_VALUE) {
-          const entity = path[mapping.pathKey];
-          if (entity) {
-            (updated[mapping.idField] as string | null) = entity.id;
-            (updated[mapping.nameField] as string) = entity.name;
-            if (mapping.level === 8 && entity.postalCode) {
-              updated.postalCode = formatGreekPostalCode(entity.postalCode);
-            }
-          } else if (mapping.level > level) {
-            // Clear more-specific levels (higher number = more specific)
-            (updated[mapping.idField] as string | null) = null;
-            (updated[mapping.nameField] as string) = '';
-          }
-        }
+        // Ό,τι δεν καλύπτεται από τη διαδρομή και είναι πιο ειδικό, καθαρίζεται.
+        applyResolvedPath(updated, resolvePath(option.value), level);
       } else {
         // Free text at this level
         const fieldDef = PATH_TO_VALUE.find(m => m.level === level);
@@ -207,13 +175,7 @@ export function AddressWithHierarchy({
           (updated[fieldDef.idField] as string | null) = null;
           (updated[fieldDef.nameField] as string) = newValue;
         }
-        // Clear more-specific levels
-        for (const mapping of PATH_TO_VALUE) {
-          if (mapping.level > level) {
-            (updated[mapping.idField] as string | null) = null;
-            (updated[mapping.nameField] as string) = '';
-          }
-        }
+        clearHierarchyLevels(updated, l => l > level);
       }
       onChange(updated);
     },
@@ -225,6 +187,9 @@ export function AddressWithHierarchy({
   // =========================================================================
   const autoFillTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
+    // Κάθε επαναξιολόγηση ακυρώνει προηγούμενο αίτημα σε πτήση.
+    const epoch = ++autoFillEpochRef.current;
+
     // Only auto-fill when: street + postalCode exist, but settlement is empty
     const hasStreet = current.street.trim().length > 2;
     const hasPostalCode = normalizePostalCode(current.postalCode).length === 5;
@@ -242,17 +207,24 @@ export function AddressWithHierarchy({
 
     autoFillTimerRef.current = setTimeout(async () => {
       try {
-        const streetWithNumber = [current.street, current.number].filter(Boolean).join(' ');
+        const atRequest = currentRef.current;
+        const streetWithNumber = [atRequest.street, atRequest.number].filter(Boolean).join(' ');
         const result = await geocodeAddress({
           street: streetWithNumber,
-          postalCode: current.postalCode,
+          postalCode: atRequest.postalCode,
           country: 'gr',
         });
 
-        if (result?.resolvedCity && !current.settlementName.trim()) {
-          // Strip Greek admin prefixes before setting (Nominatim returns "Δημοτική Ενότητα X")
-          onChange({ ...current, settlementName: stripGreekAdminPrefix(result.resolvedCity) });
-        }
+        // ⚠️ Από εδώ και κάτω μπορεί να έχουν περάσει δευτερόλεπτα και ο χρήστης
+        // να έχει ήδη επιλέξει οικισμό. ΠΟΤΕ μην διαβάσεις το closure — μόνο
+        // ζωντανή κατάσταση, και μόνο αν το αίτημα είναι ακόμη το τρέχον.
+        if (epoch !== autoFillEpochRef.current) return;
+
+        const live = currentRef.current;
+        if (!result?.resolvedCity || live.settlementName.trim()) return;
+
+        // Strip Greek admin prefixes before setting (Nominatim returns "Δημοτική Ενότητα X")
+        onChangeRef.current({ ...live, settlementName: stripGreekAdminPrefix(result.resolvedCity) });
       } catch {
         // Silent fail — auto-fill is best-effort
       }

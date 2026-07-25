@@ -57,7 +57,9 @@ describe('AddressFieldBadge', () => {
     renderBadge({ kind: 'pending' });
     expect(screen.getByText('editor.field.badge.pending')).toBeInTheDocument();
     const svg = document.querySelector('svg');
-    expect(svg?.className).toContain('animate-spin');
+    // Σε SVG το `className` είναι SVGAnimatedString, ΟΧΙ string — το `toContain`
+    // πάνω του σκάει με «received is not iterable». Διάβασε το attribute.
+    expect(svg?.getAttribute('class')).toContain('animate-spin');
   });
 
   it('resolves notProvidedEmpty tooltip when resolvedValue absent', () => {

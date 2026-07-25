@@ -294,6 +294,13 @@ export interface AddressInfo {
   settlementId?: string | null;
   community?: string;
   municipalUnit?: string;
+  /**
+   * Περιοχή / Συνοικία — ελεύθερο κείμενο κάτω από τον οικισμό (π.χ. «Κέντρο»).
+   * Δεν ανήκει στη διοικητική ιεραρχία (ΕΛΣΤΑΤ/Καλλικράτης): είναι καθημερινός
+   * τοπωνυμικός προσδιορισμός. Ίδιο όνομα πεδίου με το `ProjectAddress.neighborhood`
+   * ώστε να υπάρχει ΕΝΑ λεξιλόγιο διευθύνσεων σε όλη την εφαρμογή.
+   */
+  neighborhood?: string;
   // Address enrichment (ADR-332 Phase 10 — additive, retro-compatible)
   source?: AddressSourceType;
   verifiedAt?: number;

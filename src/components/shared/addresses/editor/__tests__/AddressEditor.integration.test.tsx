@@ -11,6 +11,7 @@
 
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { AddressEditor } from '../AddressEditor';
 import { useAddressEditorContext } from '../AddressEditorContext';
 
@@ -52,33 +53,46 @@ const INITIAL_ADDRESS = {
 
 // --- Helpers ---
 
+/**
+ * Ο `AddressEditor` χρησιμοποιεί Radix `Tooltip` (undo / redo / retry-geocode),
+ * που απαιτεί `TooltipProvider` πρόγονο. Στην εφαρμογή τον παρέχει το
+ * `ConditionalAppShell` («wraps EVERYTHING at the top level»). Το test render-άρει
+ * τον editor απομονωμένο, οπότε πρέπει να αναπαραστήσει την ίδια συνθήκη —
+ * αλλιώς σκάει με «`Tooltip` must be used within `TooltipProvider`», σφάλμα του
+ * harness και όχι του κώδικα.
+ */
 function renderEditor(
   props: Partial<React.ComponentProps<typeof AddressEditor>> = {},
 ) {
   const onChange = jest.fn();
-  const { rerender } = render(
-    <AddressEditor
-      value={INITIAL_ADDRESS}
-      onChange={onChange}
-      {...props}
-    />,
+  const { rerender, container } = render(
+    <TooltipProvider>
+      <AddressEditor
+        value={INITIAL_ADDRESS}
+        onChange={onChange}
+        {...props}
+      />
+    </TooltipProvider>,
   );
-  return { onChange, rerender };
+  return { onChange, rerender, container };
 }
 
 // --- Tests ---
 
 describe('AddressEditor — coordinator', () => {
+  // Το ορατό label είναι μετάφραση (`t` = identity στα mocks), άρα ΔΕΝ περιέχει
+  // ποτέ «addr-street». Το σταθερό συμβόλαιο είναι το `id` του input
+  // (`addr-${field}`, AddressEditor.tsx) — αυτό δένει και το <Label htmlFor>.
+  const FIELD_IDS = [
+    'street', 'number', 'postalCode', 'neighborhood',
+    'city', 'county', 'region', 'country',
+  ] as const;
+
   it('renders all 8 address fields', () => {
-    renderEditor();
-    expect(screen.getByLabelText(/addr-street/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/addr-number/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/addr-postalCode/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/addr-neighborhood/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/addr-city/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/addr-county/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/addr-region/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/addr-country/i)).toBeInTheDocument();
+    const { container } = renderEditor();
+    for (const field of FIELD_IDS) {
+      expect(container.querySelector(`input#addr-${field}`)).toBeInTheDocument();
+    }
   });
 
   it('calls onChange when a field is edited', () => {
@@ -107,8 +121,11 @@ describe('AddressEditor — coordinator', () => {
 
   it('renders undo/redo toolbar buttons', () => {
     renderEditor();
-    expect(screen.getByRole('button', { name: 'Undo' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Redo' })).toBeInTheDocument();
+    // Το `t` είναι mock-αρισμένο ως identity — το aria-label ΕΙΝΑΙ το κλειδί i18n.
+    // (Το component πέρασε σε i18n· η προσδοκία «Undo»/«Redo» ήταν κατάλοιπο των
+    // hardcoded labels και άφηνε το test κόκκινο.)
+    expect(screen.getByRole('button', { name: 'editor.coordinator.undo' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'editor.coordinator.redo' })).toBeInTheDocument();
   });
 
   it('hides activity log in view mode', () => {
@@ -127,9 +144,11 @@ function ContextConsumer() {
 describe('AddressEditorContext', () => {
   it('exposes editorState via context', () => {
     render(
-      <AddressEditor value={EMPTY_ADDRESS} onChange={jest.fn()}>
-        <ContextConsumer />
-      </AddressEditor>,
+      <TooltipProvider>
+        <AddressEditor value={EMPTY_ADDRESS} onChange={jest.fn()}>
+          <ContextConsumer />
+        </AddressEditor>
+      </TooltipProvider>,
     );
     expect(screen.getByTestId('phase')).toHaveTextContent('idle');
   });

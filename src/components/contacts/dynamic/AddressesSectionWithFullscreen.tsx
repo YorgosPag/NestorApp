@@ -39,25 +39,12 @@ interface AddressesSectionWithFullscreenProps {
   disabled: boolean;
 }
 
-function formatHqStreetLine(formData: ContactFormData): string {
-  const parts = [
-    formData.street,
-    formData.streetNumber,
-    formData.city,
-    formData.postalCode,
-  ].filter(Boolean);
-  return parts.join(', ');
-}
-
-function formDataToResolvedFields(fd: ContactFormData): ResolvedAddressFields {
-  return {
-    street: (fd.street as string) || undefined,
-    number: (fd.streetNumber as string) || undefined,
-    postalCode: (fd.postalCode as string) || undefined,
-    city: (fd.city as string) || (fd.settlement as string) || undefined,
-    region: (fd.region as string) || undefined,
-  };
-}
+// Καθαρές συναρτήσεις χαρτογράφησης — εξήχθησαν (N.7.1)
+import {
+  formatHqStreetLine,
+  DRAG_RESOLVED_HIERARCHY_RESET,
+  formDataToResolvedFields,
+} from './addresses-section-form-mapping';
 
 export function AddressesSectionWithFullscreen({
   formData,
@@ -113,7 +100,8 @@ export function AddressesSectionWithFullscreen({
   const hqResolvedFields = useMemo(
     () => formDataToResolvedFields(formData),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [formData.street, formData.streetNumber, formData.postalCode, formData.city, formData.region],
+    [formData.street, formData.streetNumber, formData.postalCode, formData.city,
+     formData.settlement, formData.neighborhood, formData.region],
   );
 
   // Called by AddressEditor when reconciliation/suggestion changes basic fields — keeps hierarchy.
@@ -124,13 +112,26 @@ export function AddressesSectionWithFullscreen({
       const updatedAddresses = existing.length > 0
         ? [{ ...existing[0], street: addr.street ?? existing[0].street, number: addr.number ?? existing[0].number, postalCode: addr.postalCode ?? existing[0].postalCode, city: addr.city ?? existing[0].city }, ...existing.slice(1)]
         : existing;
+
+      // Η «Πόλη» του editor αντιστοιχεί στο ορατό πεδίο «Οικισμός / Πόλη», το
+      // οποίο διαβάζει `settlement || city`. Αν γράψουμε μόνο το `city`, η
+      // διόρθωση καταλήγει σε σκιώδες πεδίο και η οθόνη μένει με την παλιά τιμή.
+      const cityApplied = addr.city !== undefined;
+      const settlementRenamed = cityApplied && addr.city !== ((prev.settlement as string) ?? '');
+
       return {
         ...prev,
         street: addr.street ?? (prev.street as string) ?? '',
         streetNumber: addr.number ?? (prev.streetNumber as string) ?? '',
         postalCode: addr.postalCode ?? (prev.postalCode as string) ?? '',
         city: addr.city ?? (prev.city as string) ?? '',
+        neighborhood: addr.neighborhood ?? (prev.neighborhood as string) ?? '',
         region: addr.region ?? (prev.region as string) ?? '',
+        ...(cityApplied ? { settlement: addr.city } : {}),
+        // Το όνομα άλλαξε από πηγή εκτός ιεραρχίας → το προηγούμενο settlementId
+        // δεν αντιστοιχεί πλέον στο εμφανιζόμενο όνομα. Ταυτότητα και ετικέτα
+        // δεν επιτρέπεται να αποκλίνουν.
+        ...(settlementRenamed ? { settlementId: null } : {}),
         ...(addr.country !== undefined ? { hqAddressCountry: addr.country } : {}),
         ...(updatedAddresses.length > 0 ? { companyAddresses: updatedAddresses } : {}),
       };
@@ -194,15 +195,8 @@ export function AddressesSectionWithFullscreen({
         postalCode: addr.postalCode,
         city: addr.city,
         settlement: addr.city,
-        settlementId: null,
-        community: '',
-        municipalUnit: '',
-        municipality: '',
-        municipalityId: null,
-        regionalUnit: '',
-        region: '',
-        decentAdmin: '',
-        majorGeo: '',
+        neighborhood: addr.neighborhood,
+        ...DRAG_RESOLVED_HIERARCHY_RESET,
       });
       maybeWarnMissingNumber(addr);
       return;
@@ -228,15 +222,8 @@ export function AddressesSectionWithFullscreen({
       postalCode: hq?.postalCode ?? '',
       city: hq?.city ?? '',
       settlement: hq?.city ?? '',
-      settlementId: null,
-      community: '',
-      municipalUnit: '',
-      municipality: '',
-      municipalityId: null,
-      regionalUnit: '',
-      region: '',
-      decentAdmin: '',
-      majorGeo: '',
+      neighborhood: addr.neighborhood,
+      ...DRAG_RESOLVED_HIERARCHY_RESET,
     });
     maybeWarnMissingNumber(addr);
   }, [formData, setFormData, maybeWarnMissingNumber]);
@@ -248,7 +235,9 @@ export function AddressesSectionWithFullscreen({
       number: addr.number ?? '',
       postalCode: addr.postalCode ?? '',
       city: addr.city ?? '',
-      neighborhood: '',
+      // Το reverse-geocoding ΕΠΙΣΤΡΕΦΕΙ συνοικία· παλαιότερα σβηνόταν εδώ με
+      // σκέτο '' και η τιμή χανόταν σιωπηλά πριν καν φτάσει στο formData.
+      neighborhood: addr.neighborhood ?? '',
       region: addr.region ?? '',
       country: addr.country ?? '',
     }, 0);

@@ -27,14 +27,27 @@ import type { Contact } from '@/types/contacts';
 /** Individual address types */
 export type IndividualAddressType = 'home' | 'work' | 'vacation' | 'other';
 
-/** Single individual address entry */
-export interface IndividualAddress {
-  type: IndividualAddressType;
+/**
+ * Κοινά πεδία ταχυδρομικής διεύθυνσης — ό,τι γράφει ο ταχυδρόμος στον φάκελο.
+ * Ξεχωριστά από τη διοικητική ιεραρχία, που είναι κρατική ταξινόμηση.
+ */
+export interface PostalAddressFields {
   street: string;
   number: string;
   postalCode: string;
   city: string;
   region?: string;
+}
+
+/**
+ * Ελληνική διοικητική ιεραρχία (ΕΛΣΤΑΤ / Καλλικράτης) — auto-filled από το
+ * `AddressWithHierarchy`.
+ *
+ * ⚠️ ΕΝΑ λεξιλόγιο για κάθε μορφή διεύθυνσης. Ήταν αντιγραμμένο αυτούσιο σε
+ * `IndividualAddress` και `CompanyAddress`· κάθε νέο επίπεδο έπρεπε να προστεθεί
+ * δύο φορές και μια ξεχασμένη προσθήκη περνούσε αθόρυβα.
+ */
+export interface GreekAdministrativeHierarchyFields {
   settlementId?: string | null;
   communityName?: string;
   municipalUnitName?: string;
@@ -46,8 +59,15 @@ export interface IndividualAddress {
   majorGeoName?: string;
 }
 
+/** Single individual address entry */
+export interface IndividualAddress
+  extends PostalAddressFields, GreekAdministrativeHierarchyFields {
+  type: IndividualAddressType;
+}
+
 /** Single company address entry */
-export interface CompanyAddress {
+export interface CompanyAddress
+  extends PostalAddressFields, GreekAdministrativeHierarchyFields {
   /**
    * Address semantic type (ADR-319 SSoT: `ContactAddressType`).
    * Wider than the legacy `headquarters | branch` pair so individuals can
@@ -59,22 +79,9 @@ export interface CompanyAddress {
   type: ContactAddressType;
   /** Free-text label when `type === 'other'`. Ignored otherwise. */
   customLabel?: string;
-  street: string;
-  number: string;
-  postalCode: string;
-  city: string;
   country?: string;
-  region?: string;
-  /** Greek administrative hierarchy (optional — auto-filled from AddressWithHierarchy) */
-  settlementId?: string | null;
-  communityName?: string;
-  municipalUnitName?: string;
-  municipalityName?: string;
-  municipalityId?: string | null;
-  regionalUnitName?: string;
-  regionName?: string;
-  decentAdminName?: string;
-  majorGeoName?: string;
+  /** Περιοχή / Συνοικία — ελεύθερο κείμενο, εκτός διοικητικής ιεραρχίας. */
+  neighborhood?: string;
 }
 
 /** Single KAD activity entry — primary or secondary */
@@ -198,6 +205,8 @@ export interface ContactFormData {
   settlementId: string | null;
   community: string;
   municipalUnit: string;
+  /** Περιοχή / Συνοικία — ελεύθερο κείμενο, εκτός διοικητικής ιεραρχίας. */
+  neighborhood: string;
   activityCodeKAD: string; // ΚΑΔ κωδικός (legacy singular)
   activityDescription: string; // Περιγραφή δραστηριότητας (legacy singular)
   activityType: 'main' | 'secondary'; // Κύρια/Δευτερεύουσα (legacy singular)
@@ -447,6 +456,7 @@ export const initialFormData: ContactFormData = {
   settlementId: null,
   community: '',
   municipalUnit: '',
+  neighborhood: '',
   activityCodeKAD: '',
   activityDescription: '',
   activityType: 'main',
