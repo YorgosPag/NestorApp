@@ -112,3 +112,48 @@ export type {
   PublicShowcasePdfHandler,
   ResolvedPublicPdfShare,
 } from './api/create-public-pdf-route';
+
+// =============================================================================
+// ADR-698 — Public showcase token surface: declarations instead of hooks
+// =============================================================================
+
+export { createUnifiedPublicShowcasePayloadRoute } from './api/create-unified-public-payload-route';
+export type { UnifiedPublicPayloadRouteConfig } from './api/create-unified-public-payload-route';
+
+export { assembleUnifiedShowcasePayload } from './unified-showcase-payload';
+export type {
+  UnifiedShowcasePayload,
+  UnifiedShowcasePayloadShareFacts,
+} from './unified-showcase-payload';
+
+export { createUnifiedPublicShowcasePdfRoute } from './api/create-unified-public-pdf-route';
+export type { UnifiedPublicPdfRouteConfig } from './api/create-unified-public-pdf-route';
+
+export { sanitizeShowcaseFilenameStem } from './showcase-filename';
+
+export { createPublicTokenRouteExport } from './api/create-token-route-export';
+export type {
+  PublicTokenHandler,
+  PublicTokenRateLimit,
+  TokenSegmentData,
+} from './api/create-token-route-export';
+
+export {
+  incrementPublicShareAccess,
+  lookupPublicShowcaseShare,
+} from './api/public-share-lookup';
+export type {
+  LookupPublicShowcaseShareParams,
+  PublicShowcaseShare,
+} from './api/public-share-lookup';
+
+export {
+  SHOWCASE_MEDIA_LIMIT,
+  loadShowcaseMedia,
+  loadShowcaseMediaBuckets,
+} from './public-media';
+export type {
+  LoadShowcaseMediaParams,
+  ShowcaseMediaBuckets,
+  ShowcaseMediaItem,
+} from './public-media';

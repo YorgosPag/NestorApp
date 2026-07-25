@@ -13,9 +13,10 @@
  */
 
 import type { ShowcaseCompanyBranding } from '@/services/company/company-branding-resolver';
+import type { ShowcaseMediaItem } from '@/services/showcase-core/public-media';
 
 // Re-export for downstream consumers
-export type { ShowcaseCompanyBranding };
+export type { ShowcaseCompanyBranding, ShowcaseMediaItem };
 
 // ============================================================================
 // SNAPSHOT — server-side wire format (snapshot-builder → PDF + public API)
@@ -56,12 +57,13 @@ export interface BuildingShowcaseSnapshot {
 // MEDIA — shared shape with property / project showcases
 // ============================================================================
 
-export interface BuildingShowcaseMedia {
-  id: string;
-  url: string;
-  displayName?: string | null;
-  contentType?: string | null;
-}
+/**
+ * @deprecated Name kept for consumers; the shape is
+ * {@link ShowcaseMediaItem} — declared once in showcase-core (ADR-698). This
+ * interface, its project/parking/storage twins and the four `loadXMedia`
+ * helpers that filled them were byte-identical.
+ */
+export type BuildingShowcaseMedia = ShowcaseMediaItem;
 
 // ============================================================================
 // PAYLOAD — public API response (GET /api/building-showcase/[token])

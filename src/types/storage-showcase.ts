@@ -12,15 +12,17 @@
  */
 
 import type { ShowcaseCompanyBranding } from '@/services/company/company-branding-resolver';
+import type { ShowcaseMediaItem } from '@/services/showcase-core/public-media';
 
-export type { ShowcaseCompanyBranding };
+export type { ShowcaseCompanyBranding, ShowcaseMediaItem };
 
-export interface StorageShowcaseMedia {
-  id: string;
-  url: string;
-  displayName?: string | null;
-  contentType?: string | null;
-}
+/**
+ * @deprecated Name kept for consumers; the shape is
+ * {@link ShowcaseMediaItem} — declared once in showcase-core (ADR-698). This
+ * interface, its sibling twins and the four `loadXMedia` helpers that filled
+ * them were byte-identical.
+ */
+export type StorageShowcaseMedia = ShowcaseMediaItem;
 
 export interface StorageShowcasePayload {
   storage: {
