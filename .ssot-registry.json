@@ -2,7 +2,7 @@
   "_meta": {
     "description": "SSoT Ratchet Registry — centralized module patterns (ADR-294)",
     "version": "2.0.0",
-    "lastUpdated": "2026-05-19",
+    "lastUpdated": "2026-07-25",
     "howToAdd": "Add module entry under 'modules', then run: npm run ssot:baseline"
   },
   "exemptPatterns": "(__tests__/|\\.test\\.|\\.spec\\.|\\.d\\.ts$|\\.config\\.|\\.stories\\.|\\.qa\\.|^docs/|/docs/|^adrs/|/adrs/|^scripts/|/scripts/|/i18n/locales/|node_modules/|^functions/|^tests/firestore-rules/)",
@@ -4558,6 +4558,21 @@
         "src/app/api/projects/[projectId]/showcase/email/route.ts",
         "src/components/property-showcase/types.ts",
         "src/components/shared/pages/useSharedFilePageState.ts"
+      ]
+    },
+    "share-resolver-core": {
+      "ssotFile": "src/services/sharing/resolver-core/share-resolver-primitives.ts",
+      "description": "TIER A duplicate-audit (2026-07-25, ADR-699) — the policy every ShareEntityDefinition repeats (public projection, base create-input validation, tenant ownership, the entity read) lives ONCE in sharing/resolver-core, and the five showcase surfaces are DECLARATIONS in sharing/resolvers/showcase-surfaces.resolvers.ts. ADR-321 had already shipped createShowcaseShareResolver, yet property-showcase and project-showcase never migrated (338t clone) and contact re-typed the same three methods (128t vs project) — because the factory asked for a buildResolvedData HOOK and all five implementations were the same object literal with renamed keys, plus parking/storage re-writing validateCreateInput just to drop the pdfStoragePath check. Same over-parameterised-factory trap as ADR-698. The factory now takes DATA: idField / titleField / titleSourceFields / requiresPdfPath, with ShowcaseResolvedData<TIdKey,TTitleKey> deriving the shape from the same two keys and the logger name derived from entityType. GUARD PATTERNS: (1) `requiresPassword: share.requiresPassword` is the fingerprint of a hand-rolled safePublicProjection — the ONE place that must build it is buildSafePublicProjection, which takes the meta bag as a PARAMETER so a file share cannot publish a contact's includedFields (a spread would); (2) the `Wrong resolver ... expected entityType=` reason string is the hand-rolled base validator; (3) `buildResolvedData:` is the removed hook returning — pass data, not code; (4) `companyId === user.companyId` is a hand-rolled ownership check — call createTenantOwnershipGuard(collection). NOT A GAP: lib/auth/tenant-isolation.ts (ADR-255) answers the same question on the SERVER side (Admin SDK, AuthContext, throws, audit) while resolvers run client-side against an AuthorizedUser and must return a boolean — two doctrines on purpose, exactly like tenant-scope vs super-admin-scope; merging them would drag firebase-admin into a client bundle. WIRE CONTRACT: every validateCreateInput reason string, every PublicShareData key and every *ResolvedData key set is reproduced byte-identical and pinned by 59 tests; vendor_rfq_invite has NO resolver on purpose (pre-generated HMAC URL, no token lifecycle) and the exhaustiveness anchor reads the ShareEntityType union from src/types/sharing.ts so a new share type without a resolver goes red.",
+      "forbiddenPatterns": [
+        "requiresPassword: share.requiresPassword",
+        "Wrong resolver .* expected entityType=",
+        "buildResolvedData:",
+        "companyId === user.companyId"
+      ],
+      "allowlist": [
+        "src/services/sharing/resolver-core/share-resolver-primitives.ts",
+        "src/services/sharing/resolver-core/share-entity-access.ts",
+        "src/services/showcase-core/share-resolver-factory.ts"
       ]
     }
   }

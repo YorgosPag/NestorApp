@@ -24,7 +24,10 @@ export type {
 } from './snapshot-builder-factory';
 
 export { createShowcaseShareResolver } from './share-resolver-factory';
-export type { ShowcaseShareResolverConfig } from './share-resolver-factory';
+export type {
+  ShowcaseResolvedData,
+  ShowcaseShareResolverConfig,
+} from './share-resolver-factory';
 
 export {
   createLocaleFallback,

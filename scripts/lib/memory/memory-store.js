@@ -25,6 +25,30 @@ const MEMORY_DIR =
 /** Το ευρετήριο — ρίζα του γράφου, ΔΕΝ είναι το ίδιο memory. */
 const INDEX = 'MEMORY.md';
 
+/**
+ * Όρια μεγέθους ευρετηρίου — ΔΕΝ είναι δικά μας, τα επιβάλλει ο harness.
+ *
+ * Το μήνυμα που εκπέμπει το `PostToolUse` hook είναι αυτολεξεί:
+ *   «approaching the 24.4KB read limit. Compact it to under 17.1KB now»
+ *
+ * Άρα υπάρχουν ΔΥΟ κατώφλια, όχι ένα, και η διαφορά τους έχει σημασία:
+ *   • SOFT (17.1 KB) — το σημείο που ζητά συμπύκνωση. Ανακτήσιμο, κανένα κόστος.
+ *   • HARD (24.4 KB) — το ευρετήριο **ΑΠΟΚΟΠΤΕΤΑΙ ΣΙΩΠΗΛΑ**. Το κάτω μισό απλώς
+ *     δεν φορτώνεται· καμία προειδοποίηση, πουθενά. Ό,τι κόπηκε δεν υπάρχει.
+ *
+ * ΓΙΑΤΙ σταθερές εδώ και όχι στην αναφορά: το όριο είναι ιδιότητα ΤΟΥ ΕΥΡΕΤΗΡΙΟΥ,
+ * όπως το `INDEX` και το `indexBytes()`. Ένα δεύτερο εργαλείο που θα θελήσει να το
+ * ελέγξει (gate, CI) πρέπει να βρει τον ΙΔΙΟ αριθμό — όχι αντίγραφο που θα αποκλίνει.
+ *
+ * ⚠️ ΣΕ BYTES, ΠΟΤΕ ΣΕ ΧΑΡΑΚΤΗΡΕΣ: το ευρετήριο είναι ελληνικά, 2 bytes/χαρακτήρα
+ * σε UTF-8. Μέτρηση με `.length` δίνει ~μισό του πραγματικού και «περνά» ενώ κόβεται.
+ */
+const KB = 1024;
+const INDEX_SOFT_LIMIT = Math.floor(17.1 * KB); // 17.510 — «compact it to under»
+const INDEX_HARD_LIMIT = Math.floor(24.4 * KB); // 24.985 — σιωπηλή αποκοπή
+/** Προειδοποίηση πριν την υπέρβαση: ένα gate που χτυπά μόνο αφού σπάσει αργεί. */
+const INDEX_WARN_RATIO = 0.9;
+
 /** Ο αρχειακός βαθμίδα δεν σαρώνεται (μη-recursive) — by design, βλ. contract. */
 function listSlugs() {
   if (!fs.existsSync(MEMORY_DIR)) {
@@ -39,6 +63,14 @@ function listSlugs() {
       .map((f) => f.slice(0, -3)),
   );
 }
+
+/**
+ * Υπάρχει ο φάκελος; Το gate ΠΡΕΠΕΙ να το ρωτήσει πριν κάνει οτιδήποτε: ο φάκελος
+ * είναι user-level και **δεν είναι git-tracked** → σε CI ή σε άλλο μηχάνημα απλώς
+ * δεν υπάρχει. Εκεί το σωστό είναι **skip**, όχι fail (ένα gate που κοκκινίζει
+ * επειδή λείπει κάτι που δεν όφειλε να υπάρχει, γίνεται θόρυβος και το αγνοούν).
+ */
+const memoryDirExists = () => fs.existsSync(MEMORY_DIR);
 
 const pathOf = (slug) => path.join(MEMORY_DIR, `${slug}.md`);
 
@@ -103,9 +135,36 @@ function upsertField(raw, key, value, afterKey = 'description') {
   return raw.slice(0, fm.start) + updated + raw.slice(fm.end);
 }
 
+/**
+ * Ταξινομεί το μέγεθος του ευρετηρίου σε ΕΝΑ από 4 επίπεδα. Ζει εδώ (όχι στην
+ * αναφορά) ώστε report, gate και CI να δίνουν την ΙΔΙΑ απάντηση για τα ίδια bytes.
+ *
+ *   ok       — άνετα κάτω από το soft limit
+ *   warn     — ≥90% του soft· δεν μπλοκάρει, αλλά το περιθώριο τελειώνει
+ *   over     — πάνω από το soft· ο harness ζητά ήδη συμπύκνωση    → ΜΠΛΟΚ
+ *   critical — πάνω από το hard· **ήδη αποκόπτεται σιωπηλά**      → ΜΠΛΟΚ
+ */
+function classifyIndexSize(bytes) {
+  const margin = INDEX_SOFT_LIMIT - bytes;
+  const level =
+    bytes > INDEX_HARD_LIMIT
+      ? 'critical'
+      : bytes > INDEX_SOFT_LIMIT
+        ? 'over'
+        : bytes >= INDEX_SOFT_LIMIT * INDEX_WARN_RATIO
+          ? 'warn'
+          : 'ok';
+  return { bytes, margin, level, blocking: level === 'over' || level === 'critical' };
+}
+
 module.exports = {
   MEMORY_DIR,
   INDEX,
+  INDEX_SOFT_LIMIT,
+  INDEX_HARD_LIMIT,
+  INDEX_WARN_RATIO,
+  classifyIndexSize,
+  memoryDirExists,
   listSlugs,
   pathOf,
   readRaw,

@@ -70,6 +70,42 @@ if [[ -f "$CUSTOM_SCRIPT" && -n "$TS_FILES" ]]; then
     echo -e "${GREEN}  ✅ Project rules passed${NC}"
 fi
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 0: SYNC — CHECK 3.31: Auto-memory index limit (ADR/contract: memory-health)
+#
+# ΚΛΙΜΑΚΩΤΟ ΚΟΣΤΟΣ — το κόστος του check ταιριάζει με τη συχνότητα της αστοχίας:
+#   κάθε commit   → ένα statSync (~0ms): το ευρετήριο πάνω από 17.510 bytes
+#                   ΑΠΟΚΟΠΤΕΤΑΙ ΣΙΩΠΗΛΑ από τον harness. Συνέβη ήδη 2 φορές.
+#   memory tools  → + BFS γράφου (~1.1s), μόνο όταν αλλάζει ο κώδικας που τον γράφει.
+#
+# ΓΙΑΤΙ σε ΚΑΘΕ commit και όχι μόνο σε staged memory files: ο φάκελος memory ΔΕΝ
+# είναι git-tracked — δεν υπάρχει staged-file trigger. Η αιτία της σαπίλας είναι η
+# εγγραφή στη μνήμη από οποιοδήποτε task (στη Φ2 συνέβη ενώ ο agent δούλευε σε DXF).
+# Skip-safe: αν λείπει ο φάκελος (CI, άλλο μηχάνημα) → exit 0, δεν μπλοκάρει.
+# Escape hatch: SKIP_MEMORY_GATE=1 git commit …  (δικαιολόγησέ το στον Giorgio)
+# ═══════════════════════════════════════════════════════════════════════════════
+if [[ -z "$SKIP_MEMORY_GATE" ]]; then
+    MEMORY_TOOL_FILES=$(echo "$STAGED_FILES" | grep -E '^scripts/(memory-|lib/memory/)' || true)
+    if [[ -n "$MEMORY_TOOL_FILES" ]]; then
+        MEMORY_GATE_OUTPUT=$(node scripts/memory-health.js --gate --full 2>&1)
+        MEMORY_GATE_EXIT=$?
+    else
+        MEMORY_GATE_OUTPUT=$(node scripts/memory-health.js --gate 2>&1)
+        MEMORY_GATE_EXIT=$?
+    fi
+    if [[ $MEMORY_GATE_EXIT -ne 0 ]]; then
+        echo ""
+        echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
+        echo -e "${RED}  🚫 COMMIT BLOCKED - CHECK 3.31 Auto-memory${NC}"
+        echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
+        echo "$MEMORY_GATE_OUTPUT"
+        echo -e "${YELLOW}  Παράκαμψη (με λόγο): SKIP_MEMORY_GATE=1 git commit …${NC}"
+        echo ""
+        exit 1
+    fi
+    echo -e "${GREEN}  ${MEMORY_GATE_OUTPUT}${NC}"
+fi
+
 # ─── Precompute trigger variables ─────────────────────────────────────────────
 NAV_TRIGGER_FILES=$(echo "$STAGED_FILES" | grep -E '(src/config/smart-navigation-factory\.ts|src/i18n/locales/(el|en)/navigation\.json)$' || true)
 RULES_COVERAGE_TRIGGERS=$(echo "$STAGED_FILES" | grep -E '^firestore\.rules$|^tests/firestore-rules/' || true)

@@ -1,31 +1,31 @@
 /**
  * =============================================================================
- * FILE SHARE RESOLVER (ADR-315)
+ * FILE SHARE RESOLVER (ADR-315, primitives per ADR-699)
  * =============================================================================
  *
- * Resolves `entityType: 'file'` shares. Owns the policy for:
- *   - canShare: only the file owner / same-tenant user with write access
- *   - validateCreateInput: require `fileId`, enforce fileMeta presence
- *   - resolve: fetch file metadata from `files` collection
- *   - safePublicProjection: strip tenant PII from the record
- *   - renderPublic: defers to `SharedFilePageContent` via public route (Step D)
+ * Resolves `entityType: 'file'` shares. Everything shared with the other
+ * resolvers — public projection, base input validation, tenant ownership, the
+ * entity read — comes from `sharing/resolver-core`. What stays here is the only
+ * genuinely file-specific rule: the resolved shape prefers the share's own
+ * `fileMeta` over the document, and falls back to the id when the file has no
+ * name (a missing file must still render a download page).
  *
  * @module services/sharing/resolvers/file.resolver
  * @see adrs/ADR-315-unified-sharing.md §3.3
+ * @see adrs/ADR-699-share-resolver-declarations.md
  */
 
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
-import type {
-  AuthorizedUser,
-  CreateShareInput,
-  PublicShareData,
-  ShareEntityDefinition,
-  ShareRecord,
-  ValidationResult,
-} from '@/types/sharing';
+import {
+  createTenantOwnershipGuard,
+  loadSharedEntityDoc,
+} from '@/services/sharing/resolver-core/share-entity-access';
+import {
+  buildSafePublicProjection,
+  validateShareBaseInput,
+} from '@/services/sharing/resolver-core/share-resolver-primitives';
+import type { ShareEntityDefinition, ShareRecord } from '@/types/sharing';
 
 const logger = createModuleLogger('FileShareResolver');
 
@@ -40,15 +40,13 @@ export interface FileShareResolvedData {
 }
 
 async function resolveFile(share: ShareRecord): Promise<FileShareResolvedData> {
-  const fileRef = doc(db, COLLECTIONS.FILES, share.entityId);
-  const fileSnap = await getDoc(fileRef);
-  if (!fileSnap.exists()) {
-    logger.warn('File share points to missing file', {
-      shareId: share.id,
-      fileId: share.entityId,
-    });
-  }
-  const data = fileSnap.exists() ? fileSnap.data() : null;
+  const data = await loadSharedEntityDoc({
+    collection: COLLECTIONS.FILES,
+    share,
+    logger,
+    missingMessage: 'File share points to missing file',
+  });
+
   return {
     shareId: share.id,
     token: share.token,
@@ -60,49 +58,11 @@ async function resolveFile(share: ShareRecord): Promise<FileShareResolvedData> {
   };
 }
 
-function safePublicProjection(share: ShareRecord): PublicShareData {
-  return {
-    entityType: share.entityType,
-    entityId: share.entityId,
-    requiresPassword: share.requiresPassword,
-    expiresAt: share.expiresAt,
-    isActive: share.isActive,
-    accessCount: share.accessCount,
-    maxAccesses: share.maxAccesses,
-    note: share.note ?? null,
-    fileMeta: share.fileMeta ?? null,
-  };
-}
-
-function validateCreateInput(input: CreateShareInput): ValidationResult {
-  if (input.entityType !== 'file') {
-    return { valid: false, reason: 'Wrong resolver — expected entityType=file' };
-  }
-  if (!input.entityId?.trim()) {
-    return { valid: false, reason: 'fileId required' };
-  }
-  if (!input.companyId?.trim()) {
-    return { valid: false, reason: 'companyId required' };
-  }
-  if (!input.createdBy?.trim()) {
-    return { valid: false, reason: 'createdBy required' };
-  }
-  return { valid: true };
-}
-
-async function canShare(user: AuthorizedUser, entityId: string): Promise<boolean> {
-  if (!user?.uid || !user?.companyId) return false;
-  const fileRef = doc(db, COLLECTIONS.FILES, entityId);
-  const snap = await getDoc(fileRef);
-  if (!snap.exists()) return false;
-  const fileCompanyId = snap.data().companyId as string | undefined;
-  return fileCompanyId === user.companyId;
-}
-
 export const fileShareResolver: ShareEntityDefinition<FileShareResolvedData> = {
   resolve: resolveFile,
-  safePublicProjection,
-  validateCreateInput,
-  canShare,
+  safePublicProjection: share => buildSafePublicProjection(share, 'fileMeta'),
+  validateCreateInput: input =>
+    validateShareBaseInput(input, { entityType: 'file', entityIdLabel: 'fileId' }),
+  canShare: createTenantOwnershipGuard(COLLECTIONS.FILES),
   renderPublic: () => null, // Wired in Step D (public route dispatcher)
 };

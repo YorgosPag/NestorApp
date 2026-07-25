@@ -1,149 +1,184 @@
 /**
  * =============================================================================
- * SHOWCASE CORE — Share Resolver Factory (ADR-321)
+ * SHOWCASE CORE — Share Resolver Factory (ADR-699, supersedes ADR-321 Phase 1.1)
  * =============================================================================
  *
- * Config-driven generic lifted from `sharing/resolvers/property-showcase.
- * resolver.ts` (canonical baseline per ADR-321). The three legacy resolvers
- * (property / project / building) are 95 % identical — they differ only in:
+ * A showcase share resolver is now a **declaration**: name the collection, the
+ * two keys the resolved shape exposes, the document fields the title is read
+ * from, and whether a PDF path is mandatory. No callbacks.
  *
- *   1. `entityType` discriminator (`'property_showcase'` / `'project_showcase'`
- *      / `'building_showcase'`).
- *   2. Firestore collection under `COLLECTIONS.*`.
- *   3. Resolved-data shape (property has `propertyId` + `propertyTitle`,
- *      project has `projectId` + `projectTitle`, building has `buildingId` +
- *      `buildingTitle`).
- *   4. Error messages.
+ * ## Why the `buildResolvedData` hook was removed
  *
- * The factory captures the shared 95 % and exposes the 5 % as config +
- * `buildResolvedData` hook.
+ * The previous factory (ADR-321) already owned resolve/projection/validate/
+ * canShare and every surface called it — yet the five resolver files were still
+ * near-identical, because the hook it asked for was the *same object literal*
+ * five times with different key names. Two of the five (property, project)
+ * never migrated at all and stayed 338 duplicate tokens apart.
+ *
+ * That is the "over-parameterised factory" of ADR-698 §3: a factory that takes
+ * code where it could take data has not centralised anything, it has moved the
+ * boilerplate one level down — and static tooling reports it as clean, because
+ * everyone does import the SSoT. Only jscpd sees the clone living inside the
+ * config object.
+ *
+ * So the hook became four data fields, and the surfaces became declarations.
  *
  * @module services/showcase-core/share-resolver-factory
+ * @see adrs/ADR-699-share-resolver-declarations.md
  */
 
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { createModuleLogger } from '@/lib/telemetry';
+import {
+  createTenantOwnershipGuard,
+  loadSharedEntityDoc,
+} from '@/services/sharing/resolver-core/share-entity-access';
+import {
+  buildSafePublicProjection,
+  normalizeRegenTimestamp,
+  pickFirstStringField,
+  validateShareBaseInput,
+} from '@/services/sharing/resolver-core/share-resolver-primitives';
 import type {
-  AuthorizedUser,
   CreateShareInput,
-  PublicShareData,
   ShareEntityDefinition,
   ShareEntityType,
   ShareRecord,
   ValidationResult,
 } from '@/types/sharing';
 
-export interface ShowcaseShareResolverConfig<TData> {
-  /** Share entityType discriminator (e.g. `'property_showcase'`). */
+// ============================================================================
+// SHAPE
+// ============================================================================
+
+/**
+ * What every showcase surface resolves to: five shared facts plus the two keys
+ * that carry the surface's own vocabulary (`buildingId` / `buildingTitle`, …).
+ */
+export type ShowcaseResolvedData<
+  TIdKey extends string,
+  TTitleKey extends string,
+> = {
+  shareId: string;
+  token: string;
+  pdfStoragePath: string | null;
+  pdfRegeneratedAt: string | null;
+  note: string | null;
+} & { [K in TIdKey]: string } & { [K in TTitleKey]: string | null };
+
+export interface ShowcaseShareResolverConfig<
+  TIdKey extends string,
+  TTitleKey extends string,
+> {
+  /** Share entityType discriminator (e.g. `'building_showcase'`). */
   entityType: ShareEntityType;
-  /** Firestore collection constant (e.g. `COLLECTIONS.PROPERTIES`). */
+  /** Firestore collection constant (e.g. `COLLECTIONS.BUILDINGS`). */
   collection: string;
-  /** Human entity label for validation error messages (e.g. `'propertyId'`). */
-  entityIdLabel: string;
-  /** Module logger name (e.g. `'PropertyShowcaseShareResolver'`). */
-  loggerName: string;
+  /** Key carrying the entity id, and the label used in validation messages. */
+  idField: TIdKey;
+  /** Key carrying the human title. */
+  titleField: TTitleKey;
+  /** Document fields tried, in order, for the title. First non-empty wins. */
+  titleSourceFields: readonly string[];
   /**
-   * Build the resolver-specific resolved-data shape from the share record +
-   * Firestore doc. Called once per `resolve`. Kept pure — no I/O.
+   * Whether creating a share requires `showcaseMeta.pdfStoragePath`.
+   *
+   * `false` for parking and storage — those surfaces publish a payload but have
+   * no PDF generator yet, and demanding a path would make them unshareable.
    */
-  buildResolvedData: (params: {
-    share: ShareRecord;
-    data: Record<string, unknown> | null;
+  requiresPdfPath: boolean;
+}
+
+// ============================================================================
+// FACTORY
+// ============================================================================
+
+/** `'building_showcase'` → `'BuildingShowcaseShareResolver'`. */
+function loggerNameFor(entityType: ShareEntityType): string {
+  const pascal = entityType
+    .split('_')
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+    .join('');
+  return `${pascal}ShareResolver`;
+}
+
+/**
+ * Attach the two declared keys to the shared facts.
+ *
+ * TypeScript cannot infer a mapped type from a computed key whose name is a
+ * generic parameter, so the assertion is unavoidable — it is confined to this
+ * one function, and the anchor suite asserts the real key set at runtime.
+ */
+function withDeclaredKeys<TIdKey extends string, TTitleKey extends string>(
+  shared: {
+    shareId: string;
+    token: string;
     pdfStoragePath: string | null;
     pdfRegeneratedAt: string | null;
-  }) => TData;
+    note: string | null;
+  },
+  idField: TIdKey,
+  entityId: string,
+  titleField: TTitleKey,
+  title: string | null,
+): ShowcaseResolvedData<TIdKey, TTitleKey> {
+  return {
+    ...shared,
+    [idField]: entityId,
+    [titleField]: title,
+  } as ShowcaseResolvedData<TIdKey, TTitleKey>;
 }
 
-function normalizeRegenTimestamp(
-  regen: unknown,
-): string | null {
-  if (!regen) return null;
-  if (typeof regen === 'string') return regen;
-  if (typeof regen === 'object' && regen !== null && 'toDate' in regen) {
-    try {
-      return (regen as { toDate: () => Date }).toDate().toISOString();
-    } catch {
-      return null;
-    }
-  }
-  return null;
-}
+export function createShowcaseShareResolver<
+  TIdKey extends string,
+  TTitleKey extends string,
+>(
+  config: ShowcaseShareResolverConfig<TIdKey, TTitleKey>,
+): ShareEntityDefinition<ShowcaseResolvedData<TIdKey, TTitleKey>> {
+  const logger = createModuleLogger(loggerNameFor(config.entityType));
 
-export function createShowcaseShareResolver<TData>(
-  config: ShowcaseShareResolverConfig<TData>,
-): ShareEntityDefinition<TData> {
-  const logger = createModuleLogger(config.loggerName);
-
-  async function resolve(share: ShareRecord): Promise<TData> {
-    const ref = doc(db, config.collection, share.entityId);
-    const snap = await getDoc(ref);
-    if (!snap.exists()) {
-      logger.warn('Showcase share points to missing entity', {
-        shareId: share.id,
-        entityType: config.entityType,
-        entityId: share.entityId,
-      });
-    }
-    const data = snap.exists() ? (snap.data() as Record<string, unknown>) : null;
-
-    return config.buildResolvedData({
+  async function resolve(
+    share: ShareRecord,
+  ): Promise<ShowcaseResolvedData<TIdKey, TTitleKey>> {
+    const data = await loadSharedEntityDoc({
+      collection: config.collection,
       share,
-      data,
-      pdfStoragePath: share.showcaseMeta?.pdfStoragePath ?? null,
-      pdfRegeneratedAt: normalizeRegenTimestamp(share.showcaseMeta?.pdfRegeneratedAt),
+      logger,
+      missingMessage: 'Showcase share points to missing entity',
     });
-  }
 
-  function safePublicProjection(share: ShareRecord): PublicShareData {
-    return {
-      entityType: share.entityType,
-      entityId: share.entityId,
-      requiresPassword: share.requiresPassword,
-      expiresAt: share.expiresAt,
-      isActive: share.isActive,
-      accessCount: share.accessCount,
-      maxAccesses: share.maxAccesses,
-      note: share.note ?? null,
-      showcaseMeta: share.showcaseMeta ?? null,
-    };
+    return withDeclaredKeys(
+      {
+        shareId: share.id,
+        token: share.token,
+        pdfStoragePath: share.showcaseMeta?.pdfStoragePath ?? null,
+        pdfRegeneratedAt: normalizeRegenTimestamp(share.showcaseMeta?.pdfRegeneratedAt),
+        note: share.note ?? null,
+      },
+      config.idField,
+      share.entityId,
+      config.titleField,
+      pickFirstStringField(data, config.titleSourceFields),
+    );
   }
 
   function validateCreateInput(input: CreateShareInput): ValidationResult {
-    if (input.entityType !== config.entityType) {
-      return {
-        valid: false,
-        reason: `Wrong resolver — expected entityType=${config.entityType}`,
-      };
-    }
-    if (!input.entityId?.trim()) {
-      return { valid: false, reason: `${config.entityIdLabel} required` };
-    }
-    if (!input.companyId?.trim()) return { valid: false, reason: 'companyId required' };
-    if (!input.createdBy?.trim()) return { valid: false, reason: 'createdBy required' };
-    if (!input.showcaseMeta?.pdfStoragePath?.trim()) {
-      return {
-        valid: false,
-        reason: 'showcaseMeta.pdfStoragePath required',
-      };
+    const base = validateShareBaseInput(input, {
+      entityType: config.entityType,
+      entityIdLabel: config.idField,
+    });
+    if (!base.valid) return base;
+
+    if (config.requiresPdfPath && !input.showcaseMeta?.pdfStoragePath?.trim()) {
+      return { valid: false, reason: 'showcaseMeta.pdfStoragePath required' };
     }
     return { valid: true };
   }
 
-  async function canShare(user: AuthorizedUser, entityId: string): Promise<boolean> {
-    if (!user?.uid || !user?.companyId) return false;
-    const ref = doc(db, config.collection, entityId);
-    const snap = await getDoc(ref);
-    if (!snap.exists()) return false;
-    const entityCompanyId = (snap.data() as { companyId?: string }).companyId;
-    return entityCompanyId === user.companyId;
-  }
-
   return {
     resolve,
-    safePublicProjection,
+    safePublicProjection: share => buildSafePublicProjection(share, 'showcaseMeta'),
     validateCreateInput,
-    canShare,
+    canShare: createTenantOwnershipGuard(config.collection),
     renderPublic: () => null,
   };
 }

@@ -122,6 +122,36 @@ function classifySizes(files) {
   return { bloated: bloated.sort(bySize), archive: archive.sort(bySize) };
 }
 
+/**
+ * Πόσοι ΖΩΝΤΑΝΟΙ δείκτες οδηγούν σε κάθε αρχείο. inbound === 1 σημαίνει ότι μία
+ * μόνο διαγραφή γραμμής το κάνει απρόσιτο — και αν είναι κόμβος αλυσίδας, παίρνει
+ * μαζί του ΟΛΟΥΣ τους κατιόντες. Συνέβη: ένας δείκτης κρατούσε 6 memories.
+ *
+ * ⚠️ Δεν είναι μετρική ευθραυστότητας από μόνο του: δείκτης από το ευρετήριο ή από
+ * hub είναι **by design** (index-rooted). Γνήσια εύθραυστο = κρέμεται από ΕΝΑ απλό memory.
+ */
+function countInbound(files, alias) {
+  const inbound = new Map([...files].map((f) => [f, 0]));
+  for (const text of [store.readIndex(), ...[...files].map(readFile)]) {
+    for (const raw of extractLinks(text)) {
+      const t = resolveLink(raw, alias);
+      if (t) inbound.set(t, (inbound.get(t) ?? 0) + 1);
+    }
+  }
+  return inbound;
+}
+
+/** Χωρίζει τους άλυτους δείκτες σε typo (σφάλμα) και intent (θεμιτό «γράψ' το αργότερα»). */
+function splitBrokenLinks(broken, files) {
+  const typos = [];
+  const intents = [];
+  for (const [link, srcs] of broken) {
+    const c = classifyBroken(link, files);
+    (c.kind === 'typo' ? typos : intents).push({ link, srcs, suggest: c.suggest });
+  }
+  return { typos, intents };
+}
+
 function analyze() {
   const files = readMemoryFiles();
   const alias = aliasMapFor(files);
@@ -131,24 +161,14 @@ function analyze() {
     .filter(([, d]) => d > DEPTH_PRACTICAL)
     .map(([slug]) => slug)
     .sort();
-  /**
-   * Πόσοι ΖΩΝΤΑΝΟΙ δείκτες οδηγούν σε κάθε αρχείο. inbound === 1 σημαίνει ότι μία
-   * μόνο διαγραφή γραμμής το κάνει απρόσιτο — και αν είναι κόμβος αλυσίδας, παίρνει
-   * μαζί του ΟΛΟΥΣ τους κατιόντες. Συνέβη: ένας δείκτης κρατούσε 6 memories.
-   */
-  const inbound = new Map([...files].map((f) => [f, 0]));
-  for (const text of [store.readIndex(), ...[...files].map(readFile)]) {
-    for (const raw of extractLinks(text)) {
-      const t = resolveLink(raw, alias);
-      if (t) inbound.set(t, (inbound.get(t) ?? 0) + 1);
-    }
-  }
-  const totalBytes = [...files].reduce((n, f) => n + sizeOf(f), 0);
-  const deadBytes = unreachable.reduce((n, f) => n + sizeOf(f), 0);
+  const inbound = countInbound(files, alias);
+  const broken = findBrokenLinks(files, alias); // ΜΙΑ σάρωση — τη μοιράζονται και οι δύο πελάτες
+  const indexBytes = store.indexBytes();
 
   return {
     memoryDir: MEMORY_DIR,
-    indexBytes: store.indexBytes(),
+    indexBytes,
+    index: store.classifyIndexSize(indexBytes),
     total: files.size,
     indexed: rootSlugs.size,
     reachable: depth.size,
@@ -157,18 +177,10 @@ function analyze() {
     depthOf: depth,
     inbound,
     fragile: [...inbound.entries()].filter(([, n]) => n === 1).map(([s]) => s).sort(),
-    totalBytes,
-    deadBytes,
-    broken: findBrokenLinks(files, alias),
-    brokenKind: (() => {
-      const typos = [];
-      const intents = [];
-      for (const [link, srcs] of findBrokenLinks(files, alias)) {
-        const c = classifyBroken(link, files);
-        (c.kind === 'typo' ? typos : intents).push({ link, srcs, suggest: c.suggest });
-      }
-      return { typos, intents };
-    })(),
+    totalBytes: [...files].reduce((n, f) => n + sizeOf(f), 0),
+    deadBytes: unreachable.reduce((n, f) => n + sizeOf(f), 0),
+    broken,
+    brokenKind: splitBrokenLinks(broken, files),
     identity: auditIdentity(files),
     ...classifySizes(files),
   };
@@ -223,16 +235,33 @@ const kb = (n) => `${(n / 1024).toFixed(1)} KB`;
 
 function verdict(r) {
   const dead = pct(r.unreachable.length, r.total);
+  // Το ευρετήριο πάνω από το όριο υπερισχύει κάθε άλλης μετρικής: αν αποκοπεί,
+  // το 100% προσβασιμότητας δεν σημαίνει τίποτα — κανείς δεν θα το διαβάσει.
+  if (r.index.blocking) return ['🔴', 'ΝΟΣΕΙ'];
   if (dead <= 10 && r.brokenKind.typos.length === 0) return ['✅', 'ΥΓΙΕΣ'];
   if (dead <= 25) return ['⚠️', 'ΟΡΙΑΚΟ'];
   return ['🔴', 'ΝΟΣΕΙ'];
 }
 
-function report(r) {
-  const [icon, label] = verdict(r);
-  console.log(`\n📊 ΥΓΕΙΑ AUTO-MEMORY — ${icon} ${label}`);
-  console.log(`   ${r.memoryDir}\n`);
+/** Η μία γραμμή που έλειπε: πόσο περιθώριο έμεινε πριν κοπεί σιωπηλά το ευρετήριο. */
+function reportIndex(idx) {
+  const { INDEX_SOFT_LIMIT: soft, INDEX_HARD_LIMIT: hard } = store;
+  const of = `${idx.bytes} / ${soft} bytes`;
+  console.log('\nΕΥΡΕΤΗΡΙΟ — φορτώνεται σε ΚΑΘΕ session');
+  if (idx.level === 'critical') {
+    console.log(`  🔴 ${of} — ΠΑΝΩ ΚΑΙ ΑΠΟ ΤΟ HARD ΟΡΙΟ (${hard}): ΑΠΟΚΟΠΤΕΤΑΙ ΤΩΡΑ.`);
+    console.log('     Ό,τι είναι κάτω από το σημείο κοπής ΔΕΝ φορτώνεται. Καμία προειδοποίηση.');
+  } else if (idx.level === 'over') {
+    console.log(`  🔴 ${of} — ΥΠΕΡΒΑΣΗ κατά ${-idx.margin} bytes.`);
+    console.log(`     Hard όριο (σιωπηλή αποκοπή): ${hard} bytes.`);
+  } else if (idx.level === 'warn') {
+    console.log(`  ⚠️  ${of} — περιθώριο ${idx.margin} bytes (<${pct(1 - store.INDEX_WARN_RATIO, 1)}%).`);
+  } else {
+    console.log(`  ✅ ${of} — περιθώριο ${idx.margin} bytes.`);
+  }
+}
 
+function reportRecall(r) {
   console.log('ΑΝΑΚΛΗΣΗ (το μόνο που μετράει)');
   console.log(`  Σύνολο memories        : ${r.total}`);
   console.log(`  Στο ευρετήριο (depth 1): ${r.indexed}  (${pct(r.indexed, r.total)}%)`);
@@ -244,9 +273,9 @@ function report(r) {
   if (r.deepOnly.length) {
     console.log(`  ⚠️  Βάθος >${DEPTH_PRACTICAL} (de facto αόρατα): ${r.deepOnly.length}`);
   }
+}
 
-  console.log(`\nΕΥΡΕΤΗΡΙΟ: ${kb(r.indexBytes)} — φορτώνεται σε ΚΑΘΕ session`);
-
+function reportSizeAndIdentity(r) {
   console.log('\nΜΕΓΕΘΟΣ (ένα memory = ένα γεγονός)');
   console.log(`  >${SIZE_ARCHIVE / 1000}KB  αρχείο, όχι memory : ${r.archive.length}`);
   console.log(`  >${SIZE_BLOATED / 1000}KB   φουσκωμένο         : ${r.bloated.length}`);
@@ -255,14 +284,16 @@ function report(r) {
   }
 
   const id = r.identity;
-  const idBad = id.mismatched.length + id.missing.length + id.notSlug.length;
   console.log('\nΤΑΥΤΟΤΗΤΑ (ρίζα-αίτιο· χωρίς σταθερά ids ο γράφος είναι τύχη)');
   console.log(`  name: ≠ filename        : ${id.mismatched.length}`);
   console.log(`  name: ελεύθερος τίτλος  : ${id.notSlug.length}`);
   console.log(`  name: λείπει            : ${id.missing.length}`);
-  if (idBad === 0) console.log('  ✅ κάθε αρχείο έχει ΕΝΑ προβλέψιμο αναγνωριστικό');
+  if (id.mismatched.length + id.missing.length + id.notSlug.length === 0) {
+    console.log('  ✅ κάθε αρχείο έχει ΕΝΑ προβλέψιμο αναγνωριστικό');
+  }
+}
 
-  const { typos, intents } = r.brokenKind;
+function reportBrokenLinks({ typos, intents }) {
   if (typos.length) {
     console.log(`\n🔴 TYPO ΔΕΙΚΤΕΣ (μοιάζουν με υπαρκτό αρχείο → διόρθωσε): ${typos.length}`);
     for (const { link, srcs, suggest } of typos.slice(0, 10)) {
@@ -270,13 +301,26 @@ function report(r) {
     }
   }
   if (intents.length) {
-    console.log(
-      `\n📝 ΑΓΡΑΦΑ (θεμιτά — «worth writing later», δεν μπλοκάρουν): ${intents.length}`,
-    );
+    console.log(`\n📝 ΑΓΡΑΦΑ (θεμιτά — «worth writing later», δεν μπλοκάρουν): ${intents.length}`);
     for (const { link } of intents.slice(0, 8)) console.log(`     [[${link}]]`);
   }
+}
+
+function report(r) {
+  const [icon, label] = verdict(r);
+  console.log(`\n📊 ΥΓΕΙΑ AUTO-MEMORY — ${icon} ${label}`);
+  console.log(`   ${r.memoryDir}\n`);
+  reportRecall(r);
+  reportIndex(r.index);
+  reportSizeAndIdentity(r);
+  reportBrokenLinks(r.brokenKind);
 
   console.log('\nΤΙ ΝΑ ΚΑΝΕΙΣ');
+  if (r.index.blocking) {
+    console.log('  • 🔴 ΕΥΡΕΤΗΡΙΟ ΠΑΝΩ ΑΠΟ ΤΟ ΟΡΙΟ → ανάκτησε περιθώριο ΤΩΡΑ:');
+    console.log('    πρόζα WIP → memory ή HANDOFFS/ (το ευρετήριο δείχνει, δεν αφηγείται)·');
+    console.log('    τομέας >6 γραμμών → hub με ΕΝΑ link (κανόνας κλιμάκωσης του συμβολαίου).');
+  }
   if (r.unreachable.length > 0) {
     console.log(`  • ${r.unreachable.length} απρόσιτα → αρχειοθέτησε ή σύνδεσε από το ευρετήριο.`);
     console.log('    Λίστα: node scripts/memory-health.js --list-unreachable');
@@ -285,13 +329,66 @@ function report(r) {
     console.log(`  • ${r.archive.length} >10KB → implementation log· ανήκει σε ADR + git, όχι εδώ.`);
   }
   if (r.brokenKind.typos.length > 0) console.log('  • Typo δείκτες → διόρθωσε στο όνομα που προτείνεται.');
-  if (!r.unreachable.length && !r.brokenKind.typos.length && !r.archive.length) {
+  if (!r.unreachable.length && !r.brokenKind.typos.length && !r.archive.length && !r.index.blocking) {
     console.log('  • Τίποτα. Το ευρετήριο οδηγεί σε όλα, όλα είναι γεγονότα. 🎯');
   }
   console.log();
 }
 
+// ── gate ────────────────────────────────────────────────────────────────────
+
+/**
+ * `--gate` — presubmit mode. ΚΛΙΜΑΚΩΤΟ ΚΟΣΤΟΣ, by design:
+ *
+ *   φθηνό (πάντα)   ένα statSync στο ευρετήριο, ~0ms. Αυτό είναι που σαπίζει
+ *                   ΚΑΘΗΜΕΡΙΝΑ — κάθε εγγραφή memory το μεγαλώνει, από οποιονδήποτε
+ *                   agent, σε οποιοδήποτε task. Δύο φορές ήδη ξεπεράστηκε σιωπηλά.
+ *   `--full` (σπάνιο) BFS σε 458 αρχεία, ~1.1s. Ο γράφος χαλάει μόνο όταν αλλάζει
+ *                   ο κώδικας που τον γράφει → τρέχει όταν αγγίζονται τα memory tools.
+ *
+ * ΓΙΑΤΙ ΟΧΙ «μόνο όταν αγγίζεις scripts/memory-*»: η αιτία της σαπίλας είναι η
+ * **εγγραφή στη μνήμη**, όχι η αλλαγή στα scripts. Στη Φ2 ο άλλος agent ξεπέρασε
+ * το όριο ενώ δούλευε σε DXF — κανένα memory script δεν είχε σταλεί. Ένα trigger
+ * που δεν συσχετίζεται με την αιτία δεν είναι gate, είναι διακόσμηση.
+ *
+ * ΠΟΤΕ `--verify` εδώ: εκτελεί 96 εντολές του χρήστη. Presubmit δεν εκτελεί εντολές.
+ */
+function runGate() {
+  if (!store.memoryDirExists()) {
+    console.log(`⏭️  memory gate: skip — δεν υπάρχει ${MEMORY_DIR}`);
+    process.exit(0);
+  }
+  const idx = store.classifyIndexSize(store.indexBytes());
+  if (idx.blocking) {
+    console.error(`\n🚫 ΕΥΡΕΤΗΡΙΟ ΜΝΗΜΗΣ: ${idx.bytes} bytes > όριο ${store.INDEX_SOFT_LIMIT}`);
+    console.error(
+      idx.level === 'critical'
+        ? '   ΑΠΟΚΟΠΤΕΤΑΙ ΗΔΗ ΣΙΩΠΗΛΑ — το κάτω μισό δεν φορτώνεται σε καμία session.'
+        : `   Υπέρβαση κατά ${-idx.margin} bytes· hard όριο (σιωπηλή αποκοπή): ${store.INDEX_HARD_LIMIT}.`,
+    );
+    console.error('   Θεραπεία: πρόζα WIP → memory ή HANDOFFS/· τομέας >6 γραμμών → hub.');
+    console.error('   ΠΟΤΕ διαγραφή εγγραφής για να χωρέσει.\n');
+    process.exit(1);
+  }
+  const warn = idx.level === 'warn' ? `  ⚠️ περιθώριο ${idx.margin} bytes` : '';
+  if (!process.argv.includes('--full')) {
+    console.log(`✅ memory gate: ευρετήριο ${idx.bytes}/${store.INDEX_SOFT_LIMIT} bytes${warn}`);
+    process.exit(0);
+  }
+  const r = analyze();
+  const dead = pct(r.unreachable.length, r.total);
+  if (dead > 25 || r.brokenKind.typos.length > 0) {
+    console.error(`\n🚫 ΓΡΑΦΟΣ ΜΝΗΜΗΣ: απρόσιτα ${dead}% · typo δείκτες ${r.brokenKind.typos.length}`);
+    console.error('   Τρέξε: npm run memory:health\n');
+    process.exit(1);
+  }
+  console.log(`✅ memory gate (full): ${r.reachable}/${r.total} προσβάσιμα${warn}`);
+  process.exit(0);
+}
+
 // ── main ────────────────────────────────────────────────────────────────────
+
+if (process.argv.includes('--gate')) runGate();
 
 const result = analyze();
 
@@ -339,6 +436,21 @@ if (process.argv.includes('--list-deep')) {
   report(result);
 }
 
-/** Exit 1 όταν νοσεί → μπορεί να μπει σε gate όποτε το αποφασίσει ο Giorgio. */
+/**
+ * Exit 1 όταν νοσεί → μπορεί να μπει σε gate όποτε το αποφασίσει ο Giorgio.
+ * Ο λόγος τυπώνεται ΠΑΝΤΑ σε stderr: τα modes `--json` / `--list-*` δεν βγάζουν
+ * αναφορά, και ένα σκέτο exit 1 χωρίς αιτία είναι ακριβώς η σιωπηλή αστοχία
+ * που πολεμά αυτό το εργαλείο.
+ */
 const dead = pct(result.unreachable.length, result.total);
-process.exit(dead > 25 || result.brokenKind.typos.length > 0 ? 1 : 0);
+const failures = [];
+if (dead > 25) failures.push(`απρόσιτα ${dead}% > 25%`);
+if (result.brokenKind.typos.length > 0) failures.push(`${result.brokenKind.typos.length} typo δείκτες`);
+if (result.index.blocking) {
+  failures.push(
+    `ευρετήριο ${result.index.bytes} bytes > όριο ${store.INDEX_SOFT_LIMIT}` +
+      (result.index.level === 'critical' ? ' (ΑΠΟΚΟΠΤΕΤΑΙ ΗΔΗ)' : ''),
+  );
+}
+if (failures.length) console.error(`✖ ΜΠΛΟΚ: ${failures.join(' · ')}\n`);
+process.exit(failures.length ? 1 : 0);

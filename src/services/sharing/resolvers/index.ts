@@ -7,17 +7,24 @@
  * `ShareEntityRegistry`. Must be imported once, early, at app bootstrap
  * (and by the public share route + the unified share dialog host).
  *
+ * `vendor_rfq_invite` is deliberately absent: it carries a pre-generated HMAC
+ * URL and never passes through the share-token lifecycle. The exhaustiveness
+ * anchor pins that exclusion so it stays a decision, not an omission.
+ *
  * @module services/sharing/resolvers
+ * @see adrs/ADR-699-share-resolver-declarations.md
  */
 
 import { ShareEntityRegistry } from '@/services/sharing/share-entity-registry';
 import { fileShareResolver } from './file.resolver';
 import { contactShareResolver } from './contact.resolver';
-import { propertyShowcaseShareResolver } from './property-showcase.resolver';
-import { projectShowcaseShareResolver } from './project-showcase.resolver';
-import { buildingShowcaseShareResolver } from './building-showcase.resolver';
-import { storageShowcaseShareResolver } from './storage-showcase.resolver';
-import { parkingShowcaseShareResolver } from './parking-showcase.resolver';
+import {
+  buildingShowcaseShareResolver,
+  parkingShowcaseShareResolver,
+  projectShowcaseShareResolver,
+  propertyShowcaseShareResolver,
+  storageShowcaseShareResolver,
+} from './showcase-surfaces.resolvers';
 
 let registered = false;
 
@@ -47,8 +54,10 @@ export {
 };
 export type { FileShareResolvedData } from './file.resolver';
 export type { ContactShareResolvedData } from './contact.resolver';
-export type { PropertyShowcaseResolvedData } from './property-showcase.resolver';
-export type { ProjectShowcaseResolvedData } from './project-showcase.resolver';
-export type { BuildingShowcaseResolvedData } from './building-showcase.resolver';
-export type { StorageShowcaseResolvedData } from './storage-showcase.resolver';
-export type { ParkingShowcaseResolvedData } from './parking-showcase.resolver';
+export type {
+  PropertyShowcaseResolvedData,
+  ProjectShowcaseResolvedData,
+  BuildingShowcaseResolvedData,
+  StorageShowcaseResolvedData,
+  ParkingShowcaseResolvedData,
+} from './showcase-surfaces.resolvers';

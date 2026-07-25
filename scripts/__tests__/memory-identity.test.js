@@ -218,7 +218,183 @@ describe('--verify (executable provenance)', () => {
   });
 });
 
-// ── 6. reachability BFS ─────────────────────────────────────────────────────
+// ── 6. όριο ευρετηρίου: η σιωπηλή αποκοπή αποκτά σήμα ───────────────────────
+
+describe('όριο μεγέθους ευρετηρίου', () => {
+  const { INDEX_SOFT_LIMIT: SOFT, INDEX_HARD_LIMIT: HARD } = store;
+
+  /**
+   * Γράφει ευρετήριο ΑΚΡΙΒΩΣ n bytes. Γεμίζει με ελληνικά (2 bytes/χαρ. σε UTF-8)
+   * επίτηδες: αν κάποιος μετρήσει `.length` αντί για bytes, τα tests κοκκινίζουν.
+   */
+  const writeIndex = (bytes, head = '# Index\n') => {
+    const headBytes = Buffer.byteLength(head);
+    const fill = 'μ'.repeat(Math.floor((bytes - headBytes) / 2));
+    const raw = head + fill + ' '.repeat(bytes - headBytes - Buffer.byteLength(fill));
+    fs.writeFileSync(path.join(dir, 'MEMORY.md'), raw, 'utf8');
+    expect(Buffer.byteLength(raw)).toBe(bytes); // το fixture αποδεικνύει τον εαυτό του
+  };
+
+  it('τα δύο όρια είναι ΤΑ ΟΡΙΑ ΤΟΥ HARNESS σε bytes (17.1 KB / 24.4 KB)', () => {
+    expect(SOFT).toBe(Math.floor(17.1 * 1024));
+    expect(HARD).toBe(Math.floor(24.4 * 1024));
+    expect(SOFT).toBeLessThan(HARD);
+  });
+
+  it.each([
+    ['ok', 1_000, false],
+    ['warn', Math.ceil(SOFT * 0.9) + 10, false],
+    ['over', SOFT + 1, true],
+    ['critical', HARD + 1, true],
+  ])('classifyIndexSize: %s στα %i bytes → blocking=%s', (level, bytes, blocking) => {
+    const c = store.classifyIndexSize(bytes);
+    expect(c.level).toBe(level);
+    expect(c.blocking).toBe(blocking);
+  });
+
+  it('το περιθώριο μετράει από το SOFT όριο και γίνεται αρνητικό στην υπέρβαση', () => {
+    expect(store.classifyIndexSize(SOFT - 500).margin).toBe(500);
+    expect(store.classifyIndexSize(SOFT + 500).margin).toBe(-500);
+  });
+
+  it('✅ ΠΡΑΣΙΝΟ: ευρετήριο εντός ορίου → exit 0 + περιθώριο στην αναφορά', () => {
+    writeIndex(1_000);
+    const { code, out } = run(HEALTH, []);
+    expect(code).toBe(0);
+    expect(out).toContain('✅');
+    expect(out).toContain(`${SOFT} bytes`);
+    expect(out).not.toContain('ΜΠΛΟΚ');
+  });
+
+  it('⚠️ ΠΡΟΕΙΔΟΠΟΙΗΣΗ: ≥90% του ορίου → σήμα, αλλά ΔΕΝ μπλοκάρει (exit 0)', () => {
+    writeIndex(Math.ceil(SOFT * 0.9) + 10);
+    const { code, out } = run(HEALTH, []);
+    expect(code).toBe(0);
+    expect(out).toContain('περιθώριο');
+    expect(out).not.toContain('ΜΠΛΟΚ');
+  });
+
+  it('🔴 ΚΟΚΚΙΝΟ: 1 byte πάνω από το όριο → exit 1 + αιτία', () => {
+    writeIndex(SOFT + 1);
+    const { code, out } = run(HEALTH, []);
+    expect(code).toBe(1);
+    expect(out).toContain('ΥΠΕΡΒΑΣΗ');
+    expect(out).toMatch(/ΜΠΛΟΚ.*ευρετήριο/);
+  });
+
+  it('🔴 ΚΟΚΚΙΝΟ: πάνω από το hard όριο → δηλώνει ρητά ότι ΑΠΟΚΟΠΤΕΤΑΙ ΗΔΗ', () => {
+    writeIndex(HARD + 1);
+    const { code, out } = run(HEALTH, []);
+    expect(code).toBe(1);
+    expect(out).toContain('ΑΠΟΚΟΠΤΕΤΑΙ');
+  });
+
+  it('🔴 η αιτία φαίνεται ΚΑΙ στα modes χωρίς αναφορά (--json)', () => {
+    writeIndex(SOFT + 1);
+    const { code, out } = run(HEALTH, ['--json']);
+    expect(code).toBe(1);
+    expect(out).toMatch(/ΜΠΛΟΚ.*ευρετήριο/);
+  });
+
+  it('το verdict γίνεται 🔴 ακόμα κι όταν ΟΛΑ τα άλλα είναι τέλεια', () => {
+    // Το memory είναι ΣΥΝΔΕΔΕΜΕΝΟ από το ευρετήριο: 100% προσβάσιμα, 0 typos.
+    // Χωρίς αυτό, το 🔴 θα ερχόταν από τα απρόσιτα και το test δεν θα απεδείκνυε τίποτα.
+    writeMemory('reference_solo', { name: 'reference-solo' });
+    writeIndex(SOFT + 1, '# Index\n- [[reference_solo]]\n');
+    const { code, out } = run(HEALTH, []);
+    expect(out).toContain('Προσβάσιμα (BFS)       : 1  (100%)');
+    expect(out).toContain('🔴 ΝΟΣΕΙ');
+    expect(code).toBe(1);
+    // ...και η ΜΟΝΗ αιτία είναι το ευρετήριο.
+    expect(out).toMatch(/ΜΠΛΟΚ: ευρετήριο[^·]*$/m);
+  });
+});
+
+// ── 7. presubmit gate (CHECK 3.31) ──────────────────────────────────────────
+
+describe('--gate (presubmit, CHECK 3.31)', () => {
+  const { INDEX_SOFT_LIMIT: SOFT, INDEX_HARD_LIMIT: HARD } = store;
+  const fillIndex = (bytes) =>
+    fs.writeFileSync(path.join(dir, 'MEMORY.md'), 'μ'.repeat(Math.ceil(bytes / 2)), 'utf8');
+
+  it('✅ ΠΡΑΣΙΝΟ: εντός ορίου → exit 0, μία γραμμή', () => {
+    fillIndex(1_000);
+    const { code, out } = run(HEALTH, ['--gate']);
+    expect(code).toBe(0);
+    expect(out).toContain('✅ memory gate');
+  });
+
+  it('🔴 ΚΟΚΚΙΝΟ: πάνω από soft → exit 1 + θεραπεία', () => {
+    fillIndex(SOFT + 500);
+    const { code, out } = run(HEALTH, ['--gate']);
+    expect(code).toBe(1);
+    expect(out).toContain('🚫 ΕΥΡΕΤΗΡΙΟ ΜΝΗΜΗΣ');
+    expect(out).toContain('Θεραπεία');
+    expect(out).not.toContain('ΑΠΟΚΟΠΤΕΤΑΙ ΗΔΗ'); // soft ≠ critical
+  });
+
+  it('🔴 ΚΟΚΚΙΝΟ: πάνω από hard → λέει ρητά ότι αποκόπτεται ΗΔΗ', () => {
+    fillIndex(HARD + 500);
+    const { code, out } = run(HEALTH, ['--gate']);
+    expect(code).toBe(1);
+    expect(out).toContain('ΑΠΟΚΟΠΤΕΤΑΙ ΗΔΗ');
+  });
+
+  /**
+   * Ο φάκελος memory ΔΕΝ είναι git-tracked → σε CI/άλλο μηχάνημα λείπει.
+   * Skip, ΟΧΙ fail: αλλιώς το gate κοκκινίζει παντού και το παρακάμπτουν μόνιμα.
+   */
+  it('⏭️ SKIP: χωρίς φάκελο → exit 0, δεν μπλοκάρει (CI-safe)', () => {
+    const missing = path.join(os.tmpdir(), 'memtest-does-not-exist-12345');
+    expect(fs.existsSync(missing)).toBe(false);
+    const { code, out } = (() => {
+      try {
+        return {
+          code: 0,
+          out: execFileSync('node', [HEALTH, '--gate'], {
+            cwd: REPO,
+            env: { ...process.env, CLAUDE_MEMORY_DIR: missing },
+            encoding: 'utf8',
+          }),
+        };
+      } catch (err) {
+        return { code: err.status, out: `${err.stdout || ''}${err.stderr || ''}` };
+      }
+    })();
+    expect(code).toBe(0);
+    expect(out).toContain('skip');
+  });
+
+  it('🔴 --full: γράφος σπασμένος (απρόσιτα >25%) → exit 1', () => {
+    writeMemory('reference_orphan_a', { name: 'reference-orphan-a' });
+    writeMemory('reference_orphan_b', { name: 'reference-orphan-b' });
+    fs.writeFileSync(path.join(dir, 'MEMORY.md'), '# Index\n', 'utf8');
+    const { code, out } = run(HEALTH, ['--gate', '--full']);
+    expect(code).toBe(1);
+    expect(out).toContain('ΓΡΑΦΟΣ ΜΝΗΜΗΣ');
+  });
+
+  it('το φθηνό gate ΔΕΝ κοιτά τον γράφο (γι αυτό τρέχει σε κάθε commit)', () => {
+    writeMemory('reference_orphan_a', { name: 'reference-orphan-a' }); // 100% απρόσιτο
+    fs.writeFileSync(path.join(dir, 'MEMORY.md'), '# Index\n', 'utf8');
+    expect(run(HEALTH, ['--gate']).code).toBe(0); // ...και όμως περνά: μόνο μέγεθος
+    expect(run(HEALTH, ['--gate', '--full']).code).toBe(1);
+  });
+
+  /** Presubmit ΔΕΝ εκτελεί εντολές του χρήστη. Ούτε σε --full. */
+  it('🔒 ΠΟΤΕ δεν εκτελεί `verify:` — ούτε ψευδές assertion δεν το κοκκινίζει', () => {
+    fs.writeFileSync(
+      path.join(dir, 'reference_liar.md'),
+      ['---', 'name: reference-liar', 'description: fixture με επαρκές μήκος περιγραφής', 'verify: "node -e \\"process.exit(3)\\""', 'type: reference', '---', '', 'σώμα', ''].join('\n'),
+      'utf8',
+    );
+    fs.writeFileSync(path.join(dir, 'MEMORY.md'), '# Index\n- [[reference_liar]]\n', 'utf8');
+    expect(run(HEALTH, ['--gate', '--full']).code).toBe(0);
+    expect(run(HEALTH, ['--verify']).code).toBe(1); // το ίδιο fixture, με ρητό --verify
+  });
+});
+
+// ── 8. reachability BFS ─────────────────────────────────────────────────────
 
 describe('computeReachability', () => {
   it('μετράει βάθος σωστά και εκθέτει τα απρόσιτα', () => {

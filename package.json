@@ -55,6 +55,8 @@
     "nav:audit": "node scripts/check-navigation-labels.js",
     "search-config:sync": "node scripts/check-search-config-sync.js",
     "memory:health": "node scripts/memory-health.js",
+    "memory:gate": "node scripts/memory-health.js --gate",
+    "memory:gate:full": "node scripts/memory-health.js --gate --full",
     "memory:unreachable": "node scripts/memory-health.js --list-unreachable",
     "memory:verify": "node scripts/memory-health.js --verify",
     "memory:ids": "node scripts/memory-normalize-ids.js",
