@@ -1,0 +1,207 @@
+/**
+ * memory-identity.test.js — presubmit anchors για το SSoT ταυτότητας του auto-memory.
+ *
+ * ΓΙΑΤΙ ΥΠΑΡΧΕΙ: ο φάκελος `memory/` **δεν είναι git-tracked** — δεν υπάρχει
+ * `git checkout` να γυρίσει πίσω μια λάθος μαζική εγγραφή σε 451 αρχεία. Το μόνο
+ * δίχτυ είναι να αποδεικνύεται η λογική ΠΡΙΝ αγγίξει δίσκο. Κάθε test εδώ δοκιμάζει
+ * και το ΘΕΤΙΚΟ και το ΑΡΝΗΤΙΚΟ σκέλος: ένα gate που δεν αποδείχθηκε ότι κοκκινίζει
+ * δεν είναι gate, είναι σχόλιο (CLAUDE.md, ADR-587 §6.1).
+ *
+ * Τρέξιμο: npm run test:memory-identity
+ */
+
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const { execFileSync } = require('child_process');
+
+const REPO = path.resolve(__dirname, '..', '..');
+const NORMALIZER = path.join(REPO, 'scripts', 'memory-normalize-ids.js');
+
+const store = require('../lib/memory/memory-store');
+const graph = require('../lib/memory/memory-graph');
+
+// ── fixtures ────────────────────────────────────────────────────────────────
+
+let dir;
+
+/** Γράφει fixture memory. `eol` εκτίθεται επίτηδες: 14/451 πραγματικά αρχεία είναι CRLF. */
+function writeMemory(slug, { name, description = 'μια επαρκώς μεγάλη περιγραφή γεγονότος', body = '', extra = '', eol = '\n' }) {
+  const lines = ['---', `name: ${name}`, `description: ${description}`, 'type: reference'];
+  if (extra) lines.push(extra);
+  lines.push('---', '', body, '');
+  fs.writeFileSync(path.join(dir, `${slug}.md`), lines.join(eol), 'utf8');
+}
+
+const runNormalizer = (args) => {
+  try {
+    return {
+      code: 0,
+      out: execFileSync('node', [NORMALIZER, ...args], {
+        cwd: REPO,
+        env: { ...process.env, CLAUDE_MEMORY_DIR: dir },
+        encoding: 'utf8',
+      }),
+    };
+  } catch (err) {
+    return { code: err.status, out: `${err.stdout || ''}${err.stderr || ''}` };
+  }
+};
+
+const nameOf = (slug) =>
+  store.readField(fs.readFileSync(path.join(dir, `${slug}.md`), 'utf8'), 'name');
+
+beforeEach(() => {
+  dir = fs.mkdtempSync(path.join(os.tmpdir(), 'memtest-'));
+  fs.writeFileSync(path.join(dir, 'MEMORY.md'), '# Index\n', 'utf8');
+});
+
+afterEach(() => fs.rmSync(dir, { recursive: true, force: true }));
+
+// ── 1. ταυτότητα: normalizeId / canonicalName ───────────────────────────────
+
+describe('normalizeId — το πρόθεμα τύπου φεύγει και από τα ΔΥΟ σκέλη', () => {
+  it('εξισώνει filename και name με/χωρίς πρόθεμα', () => {
+    expect(graph.normalizeId('feedback_3d_mirror_2d_ssot')).toBe('3d_mirror_2d_ssot');
+    expect(graph.normalizeId('3d-mirror-2d-ssot')).toBe('3d_mirror_2d_ssot');
+    expect(graph.normalizeId('feedback-3d-mirror-2d-ssot')).toBe('3d_mirror_2d_ssot');
+  });
+
+  it('ΔΕΝ ισοπεδώνει διαφορετικά memories (αρνητικό)', () => {
+    expect(graph.normalizeId('reference_alpha')).not.toBe(graph.normalizeId('reference_beta'));
+  });
+
+  it('δεν κόβει πρόθεμα που δεν είναι τύπος', () => {
+    expect(graph.normalizeId('projectile_x')).toBe('projectile_x');
+  });
+
+  it('canonicalName = filename με παύλες', () => {
+    expect(graph.canonicalName('reference_grip_size_default_ssot')).toBe(
+      'reference-grip-size-default-ssot',
+    );
+  });
+});
+
+// ── 2. CRLF: η παγίδα που εξαφάνιζε αρχεία σιωπηλά ──────────────────────────
+
+describe('frontmatter parsing — CRLF ισότιμο με LF', () => {
+  it.each([['LF', '\n'], ['CRLF', '\r\n']])('διαβάζει %s', (_label, eol) => {
+    writeMemory('reference_eol_case', { name: 'ελεύθερος τίτλος', eol });
+    expect(nameOf('reference_eol_case')).toBe('ελεύθερος τίτλος');
+  });
+
+  it('η εγγραφή ΔΙΑΤΗΡΕΙ CRLF (δεν κάνει σιωπηλή μετατροπή γραμμών)', () => {
+    writeMemory('reference_eol_keep', { name: 'παλιός τίτλος', eol: '\r\n' });
+    runNormalizer(['--write']);
+    const raw = fs.readFileSync(path.join(dir, 'reference_eol_keep.md'), 'utf8');
+    expect(raw).toContain('\r\n');
+    expect(raw).not.toMatch(/[^\r]\n/);
+    expect(nameOf('reference_eol_keep')).toBe('reference-eol-keep');
+  });
+
+  it('επιστρέφει null όταν ΔΕΝ υπάρχει frontmatter (όχι σιωπηλό κενό)', () => {
+    expect(store.splitFrontmatter('σκέτο σώμα χωρίς frontmatter')).toBeNull();
+    expect(store.readField('σκέτο σώμα', 'name')).toBeNull();
+  });
+});
+
+// ── 3. setField: μόνο frontmatter, ποτέ σώμα ────────────────────────────────
+
+describe('setField — αγγίζει ΜΟΝΟ το frontmatter', () => {
+  it('δεν πειράζει `name:` που ζει σε παράδειγμα τεκμηρίωσης στο σώμα', () => {
+    writeMemory('reference_body_guard', {
+      name: 'παλιός τίτλος',
+      body: 'Παράδειγμα:\n```yaml\nname: μην-με-αγγίξεις\n```',
+    });
+    runNormalizer(['--write']);
+    const raw = fs.readFileSync(path.join(dir, 'reference_body_guard.md'), 'utf8');
+    expect(raw).toContain('name: μην-με-αγγίξεις');
+    expect(nameOf('reference_body_guard')).toBe('reference-body-guard');
+  });
+
+  it('διατηρεί τα πεδία που γράφει το σύστημα auto-memory', () => {
+    writeMemory('reference_keep_fields', {
+      name: 'παλιός τίτλος',
+      extra: 'originSessionId: abc-123',
+    });
+    runNormalizer(['--write']);
+    const raw = fs.readFileSync(path.join(dir, 'reference_keep_fields.md'), 'utf8');
+    expect(raw).toContain('originSessionId: abc-123');
+    expect(raw).toContain('type: reference');
+  });
+
+  it('επιστρέφει null αν το πεδίο δεν υπάρχει — δεν εφευρίσκει πεδία (αρνητικό)', () => {
+    expect(store.setField('---\nname: x\n---\n', 'verify', 'grep -q x')).toBeNull();
+  });
+});
+
+// ── 4. Η ΑΠΟΔΕΙΞΗ: alias-only δείκτης μπλοκάρει την εγγραφή ─────────────────
+
+describe('απόδειξη ασφάλειας δεικτών', () => {
+  it('ΠΡΑΣΙΝΟ: δείκτης που λύνεται μέσω filename επιβιώνει της μετονομασίας', () => {
+    writeMemory('reference_target', { name: 'Κάποιος Ελεύθερος Τίτλος' });
+    writeMemory('reference_source', { name: 'Άλλος Τίτλος', body: '[[reference_target]]' });
+    const { code, out } = runNormalizer(['--write']);
+    expect(code).toBe(0);
+    expect(out).toContain('0 regressions');
+    expect(nameOf('reference_target')).toBe('reference-target');
+  });
+
+  it('🔴 ΚΟΚΚΙΝΟ: δείκτης που λύνεται ΜΟΝΟ μέσω ελεύθερου τίτλου μπλοκάρει το --write', () => {
+    writeMemory('reference_target', { name: 'Ζήτα Μοναδικός Τίτλος' });
+    writeMemory('reference_source', { name: 'Πηγή', body: '[[Ζήτα Μοναδικός Τίτλος]]' });
+    const { code, out } = runNormalizer(['--write']);
+    expect(code).toBe(1);
+    expect(out).toContain('REGRESSIONS');
+    // Και το κρίσιμο: ΤΙΠΟΤΑ δεν γράφτηκε στον δίσκο.
+    expect(nameOf('reference_target')).toBe('Ζήτα Μοναδικός Τίτλος');
+    expect(nameOf('reference_source')).toBe('Πηγή');
+  });
+
+  it('🔴 ΚΟΚΚΙΝΟ: ανιχνεύει δείκτη που θα άλλαζε ΠΡΟΟΡΙΣΜΟ (χειρότερο από νεκρό)', () => {
+    // `reference_alpha` έχει τίτλο που δείχνει στο ΑΛΛΟ αρχείο· μετά τη
+    // μετονομασία ο δείκτης [[beta]] θα άλλαζε σιωπηλά προορισμό.
+    writeMemory('reference_alpha', { name: 'beta' });
+    writeMemory('reference_beta', { name: 'Κάτι Άλλο' });
+    writeMemory('reference_src', { name: 'Πηγή', body: '[[beta]]' });
+    const { code, out } = runNormalizer(['--write']);
+    expect(code).toBe(1);
+    expect(out).toMatch(/REGRESSIONS/);
+  });
+
+  it('idempotent: δεύτερη εκτέλεση δεν έχει τίποτα να αλλάξει', () => {
+    writeMemory('reference_idem', { name: 'Τίτλος' });
+    expect(runNormalizer(['--write']).code).toBe(0);
+    const { out } = runNormalizer([]);
+    expect(out).toContain('0 αρχεία προς αλλαγή');
+  });
+});
+
+// ── 5. reachability BFS ─────────────────────────────────────────────────────
+
+describe('computeReachability', () => {
+  it('μετράει βάθος σωστά και εκθέτει τα απρόσιτα', () => {
+    writeMemory('reference_a', { name: 'reference-a', body: '[[reference_b]]' });
+    writeMemory('reference_b', { name: 'reference-b', body: '' });
+    writeMemory('reference_orphan', { name: 'reference-orphan', body: '' });
+    fs.writeFileSync(path.join(dir, 'MEMORY.md'), '# Index\n- [[reference_a]]\n', 'utf8');
+
+    const slugs = new Set(['reference_a', 'reference_b', 'reference_orphan']);
+    const read = (s) => fs.readFileSync(path.join(dir, `${s}.md`), 'utf8');
+    const alias = graph.buildAliasMap(slugs, (s) => store.readField(read(s), 'name'));
+    const { depth } = graph.computeReachability(
+      fs.readFileSync(path.join(dir, 'MEMORY.md'), 'utf8'),
+      alias,
+      read,
+    );
+
+    expect(depth.get('reference_a')).toBe(1);
+    expect(depth.get('reference_b')).toBe(2);
+    expect(depth.has('reference_orphan')).toBe(false);
+  });
+
+  it('extractLinks πιάνει και wikilink και markdown link, όχι σκέτο κείμενο', () => {
+    const links = graph.extractLinks('δες [[alpha]] και [κείμενο](beta.md) αλλά όχι gamma');
+    expect([...links].sort()).toEqual(['alpha', 'beta']);
+  });
+});
