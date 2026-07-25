@@ -9,15 +9,14 @@
  */
 
 import type { PanOffset } from '@/hooks/useZoomPan';
+import { computeFitTransform, type SceneBounds } from '@/lib/dxf-scene/scene-fit-transform';
 import { COORDINATE_LAYOUT } from '@/subapps/dxf-viewer/rendering/core/CoordinateTransforms';
 import type { ViewTransform, Viewport } from '@/subapps/dxf-viewer/rendering/types/Types';
 
 type ViewTransformLocal = ViewTransform;
 
-export interface SceneBounds {
-  readonly min: { x: number; y: number };
-  readonly max: { x: number; y: number };
-}
+/** Re-exported from the fit-transform SSoT — this module must not own a second shape. */
+export type { SceneBounds };
 
 export interface BimCanvasTransform {
   readonly transform: ViewTransformLocal;
@@ -32,14 +31,9 @@ export function buildBimViewTransform(
   zoom: number,
   panOffset: PanOffset,
 ): BimCanvasTransform {
-  const drawingWidth = Math.max(1e-9, bounds.max.x - bounds.min.x);
-  const drawingHeight = Math.max(1e-9, bounds.max.y - bounds.min.y);
-
-  const baseScale = Math.min(canvasWidth / drawingWidth, canvasHeight / drawingHeight);
-  const scale = baseScale * zoom;
-
-  const dxfOffsetX = (canvasWidth - drawingWidth * scale) / 2 + panOffset.x;
-  const dxfOffsetY = (canvasHeight - drawingHeight * scale) / 2 + panOffset.y;
+  // Same fit the DXF geometry pass uses (SSoT) — the two must agree to the pixel.
+  const fit = computeFitTransform(canvasWidth, canvasHeight, bounds, zoom, panOffset);
+  const { scale, offsetX: dxfOffsetX, offsetY: dxfOffsetY } = fit;
 
   const { left: marginLeft, top: marginTop } = COORDINATE_LAYOUT.MARGINS;
 

@@ -16,6 +16,7 @@
  */
 
 import type { PanOffset } from '@/hooks/useZoomPan';
+import { computeFitTransform, rectBoundsToScene } from '@/lib/dxf-scene/scene-fit-transform';
 import { PdfRenderer } from '@/subapps/dxf-viewer/pdf-background/services/PdfRenderer';
 
 /** Render scale for sharpness — image is rendered at this multiple of PDF points. */
@@ -108,10 +109,16 @@ export function renderPdfImageToCanvas(
   const drawingHeight = pdfDimensions.height;
   if (drawingWidth <= 0 || drawingHeight <= 0) return;
 
-  const baseScale = Math.min(canvas.width / drawingWidth, canvas.height / drawingHeight);
-  const scale = baseScale * zoom;
-  const offsetX = (canvas.width - drawingWidth * scale) / 2 + panOffset.x;
-  const offsetY = (canvas.height - drawingHeight * scale) / 2 + panOffset.y;
+  // Same fit SSoT the DXF geometry pass and the overlay pass use — a raster page is
+  // just a scene whose bounds are its own pixel dimensions anchored at world (0,0).
+  const bounds = rectBoundsToScene(drawingWidth, drawingHeight);
+  const { scale, offsetX, offsetY } = computeFitTransform(
+    canvas.width,
+    canvas.height,
+    bounds,
+    zoom,
+    panOffset,
+  );
 
   ctx.drawImage(image, offsetX, offsetY, drawingWidth * scale, drawingHeight * scale);
 }

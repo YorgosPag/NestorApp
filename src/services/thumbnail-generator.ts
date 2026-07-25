@@ -17,6 +17,17 @@
  * - Called once at upload time, result stored in Firebase Storage
  */
 
+import { computeSceneBounds } from '@/lib/dxf-scene/scene-bounds';
+import { paintSceneEntityGeometry } from '@/lib/dxf-scene/canvas-scene-painter';
+import { readSceneTextContent } from '@/lib/dxf-scene/scene-text-content';
+import {
+  computeFitTransform,
+  projectX,
+  projectY,
+  type FitTransform,
+  type SceneBounds,
+} from '@/lib/dxf-scene/scene-fit-transform';
+
 // ============================================================================
 // TYPES — Minimal input contract, compatible with both DxfSceneData and SceneModel
 // ============================================================================
@@ -25,7 +36,7 @@
 interface ThumbnailSceneInput {
   entities: ReadonlyArray<{ type: string; layer?: string }>;
   layers?: Record<string, { color?: string; visible?: boolean }>;
-  bounds?: { min: { x: number; y: number }; max: { x: number; y: number } };
+  bounds?: SceneBounds;
 }
 
 // ============================================================================
@@ -38,6 +49,9 @@ const DEFAULT_HEIGHT = 200;
 
 /** Background color for thumbnail (light theme) */
 const THUMB_BACKGROUND = '#f8f9fa';
+
+/** Background behind a rasterized PDF page — PDF pages are white by definition */
+const PDF_PAGE_BACKGROUND = '#ffffff';
 
 /** Padding ratio — keep 5% margin around drawing */
 const PADDING_RATIO = 0.05;
@@ -69,33 +83,16 @@ export async function generateDxfThumbnail(
     throw new Error('DXF scene has no entities — cannot generate thumbnail');
   }
 
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
-
-  const ctx = canvas.getContext('2d');
-  if (!ctx) {
-    throw new Error('Failed to get 2D canvas context');
-  }
-
-  // Background
-  ctx.fillStyle = THUMB_BACKGROUND;
-  ctx.fillRect(0, 0, width, height);
+  const { canvas, ctx } = createFilledCanvas(width, height, THUMB_BACKGROUND);
 
   // Calculate bounds + scale with padding
-  const bounds = scene.bounds || calculateBounds(scene);
-  const drawingWidth = bounds.max.x - bounds.min.x;
-  const drawingHeight = bounds.max.y - bounds.min.y;
+  const bounds = scene.bounds || computeSceneBounds(scene.entities);
 
-  if (drawingWidth <= 0 || drawingHeight <= 0) {
+  if (bounds.max.x - bounds.min.x <= 0 || bounds.max.y - bounds.min.y <= 0) {
     throw new Error('DXF scene has zero-size bounds');
   }
 
-  const paddedWidth = width * (1 - 2 * PADDING_RATIO);
-  const paddedHeight = height * (1 - 2 * PADDING_RATIO);
-  const scale = Math.min(paddedWidth / drawingWidth, paddedHeight / drawingHeight);
-  const offsetX = (width - drawingWidth * scale) / 2;
-  const offsetY = (height - drawingHeight * scale) / 2;
+  const fit = computeFitTransform(width, height, bounds, 1, undefined, PADDING_RATIO);
 
   // Layer color helper
   const getLayerColor = (layerName: string): string =>
@@ -103,7 +100,9 @@ export async function generateDxfThumbnail(
 
   ctx.lineWidth = 1;
 
-  // Render entities
+  // Render entities. Primitive geometry goes through the `canvas-scene-painter` SSoT;
+  // only text stays local (this surface keeps a 6px font floor so labels stay legible
+  // at thumbnail scale — the gallery deliberately has NO floor, see ADR-370).
   for (const entity of scene.entities) {
     const layerName = entity.layer || '0';
     if (scene.layers?.[layerName]?.visible === false) continue;
@@ -111,121 +110,37 @@ export async function generateDxfThumbnail(
     const layerColor = getLayerColor(layerName);
     ctx.strokeStyle = layerColor;
 
-    const e = entityProps(entity);
+    if (paintSceneEntityGeometry(ctx, entity, bounds, fit)) continue;
 
-    switch (entity.type) {
-      case 'line': {
-        const start = e.start as { x: number; y: number } | undefined;
-        const end = e.end as { x: number; y: number } | undefined;
-        if (start && end) {
-          ctx.beginPath();
-          ctx.moveTo(
-            (start.x - bounds.min.x) * scale + offsetX,
-            (bounds.max.y - start.y) * scale + offsetY,
-          );
-          ctx.lineTo(
-            (end.x - bounds.min.x) * scale + offsetX,
-            (bounds.max.y - end.y) * scale + offsetY,
-          );
-          ctx.stroke();
-        }
-        break;
-      }
-
-      case 'polyline': {
-        const vertices = e.vertices as Array<{ x: number; y: number }> | undefined;
-        const closed = e.closed as boolean | undefined;
-        if (vertices && Array.isArray(vertices) && vertices.length > 1) {
-          ctx.beginPath();
-          const first = vertices[0];
-          ctx.moveTo(
-            (first.x - bounds.min.x) * scale + offsetX,
-            (bounds.max.y - first.y) * scale + offsetY,
-          );
-          for (const v of vertices.slice(1)) {
-            ctx.lineTo(
-              (v.x - bounds.min.x) * scale + offsetX,
-              (bounds.max.y - v.y) * scale + offsetY,
-            );
-          }
-          if (closed) ctx.closePath();
-          ctx.stroke();
-        }
-        break;
-      }
-
-      case 'circle': {
-        const center = e.center as { x: number; y: number } | undefined;
-        const radius = e.radius as number | undefined;
-        if (center && radius) {
-          ctx.beginPath();
-          ctx.arc(
-            (center.x - bounds.min.x) * scale + offsetX,
-            (bounds.max.y - center.y) * scale + offsetY,
-            radius * scale,
-            0,
-            2 * Math.PI,
-          );
-          ctx.stroke();
-        }
-        break;
-      }
-
-      case 'arc': {
-        const arcCenter = e.center as { x: number; y: number } | undefined;
-        const arcRadius = e.radius as number | undefined;
-        const startAngleDeg = e.startAngle as number | undefined;
-        const endAngleDeg = e.endAngle as number | undefined;
-        if (arcCenter && arcRadius && startAngleDeg !== undefined && endAngleDeg !== undefined) {
-          // DXF arcs: angles in degrees, CCW from East, Y+ up
-          // Canvas arcs: angles in radians, CW from East, Y+ down
-          // Fix: deg→rad, negate angles, flip direction for Y-axis inversion
-          const startRad = startAngleDeg * Math.PI / 180;
-          const endRad = endAngleDeg * Math.PI / 180;
-          ctx.beginPath();
-          ctx.arc(
-            (arcCenter.x - bounds.min.x) * scale + offsetX,
-            (bounds.max.y - arcCenter.y) * scale + offsetY,
-            arcRadius * scale,
-            -startRad,
-            -endRad,
-            true,
-          );
-          ctx.stroke();
-        }
-        break;
-      }
-
-      case 'text':
-      case 'mtext': {
-        const position = e.position as { x: number; y: number } | undefined;
-        let text = e.text as string | undefined;
-        if (!text) {
-          type TextNodeShape = { paragraphs?: Array<{ runs?: Array<{ text?: string }> }> };
-          const textNode = e.textNode as TextNodeShape | undefined;
-          if (textNode?.paragraphs) {
-            text = textNode.paragraphs
-              .map(p => (p.runs ?? []).map(r => r.text ?? '').join(''))
-              .join('\n')
-              .trim() || undefined;
-          }
-        }
-        const textHeight = e.height as number | undefined;
-        if (position && text) {
-          ctx.fillStyle = layerColor;
-          ctx.font = `${Math.max(6, (textHeight || 10) * scale)}px Arial`;
-          ctx.fillText(
-            text,
-            (position.x - bounds.min.x) * scale + offsetX,
-            (bounds.max.y - position.y) * scale + offsetY,
-          );
-        }
-        break;
-      }
+    if (entity.type === 'text' || entity.type === 'mtext') {
+      paintThumbnailText(ctx, entityProps(entity), bounds, fit, layerColor);
     }
   }
 
   return canvasToBlob(canvas);
+}
+
+/**
+ * Thumbnail text pass. Kept OUT of the shared painter: at 300×200 a purely
+ * zoom-scaled font collapses to sub-pixel, so this surface clamps to a 6px floor.
+ * The gallery renderer must NOT clamp (ADR-370) — that divergence is the reason
+ * text is not centralized alongside the primitive geometry.
+ */
+function paintThumbnailText(
+  ctx: CanvasRenderingContext2D,
+  e: Record<string, unknown>,
+  bounds: SceneBounds,
+  fit: FitTransform,
+  color: string,
+): void {
+  const position = e.position as { x: number; y: number } | undefined;
+  const text = readSceneTextContent(e);
+  if (!position || !text) return;
+
+  const textHeight = e.height as number | undefined;
+  ctx.fillStyle = color;
+  ctx.font = `${Math.max(6, (textHeight || 10) * fit.scale)}px Arial`;
+  ctx.fillText(text, projectX(position.x, bounds, fit), projectY(position.y, bounds, fit));
 }
 
 // ============================================================================
@@ -269,18 +184,8 @@ export async function generatePdfThumbnail(
 
     const viewport = page.getViewport({ scale: renderScale });
 
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) {
-      throw new Error('Failed to get 2D canvas context');
-    }
-
     // White background (PDF pages are white)
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, width, height);
+    const { canvas, ctx } = createFilledCanvas(width, height, PDF_PAGE_BACKGROUND);
 
     // Center the rendered page
     const pageOffsetX = (width - viewport.width) / 2;
@@ -312,6 +217,31 @@ function entityProps(entity: object): Record<string, unknown> {
 }
 
 /**
+ * Create an offscreen canvas of the requested size with its background pre-filled.
+ * ONE owner of the «create + size + get 2D context + fill» sequence, shared by the
+ * DXF and PDF thumbnail paths (they used to carry byte-identical copies).
+ */
+function createFilledCanvas(
+  width: number,
+  height: number,
+  background: string,
+): { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D } {
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    throw new Error('Failed to get 2D canvas context');
+  }
+
+  ctx.fillStyle = background;
+  ctx.fillRect(0, 0, width, height);
+
+  return { canvas, ctx };
+}
+
+/**
  * Convert canvas to PNG Blob via Promise wrapper around canvas.toBlob()
  */
 function canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob> {
@@ -327,74 +257,4 @@ function canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob> {
       'image/png',
     );
   });
-}
-
-/**
- * Calculate bounds from entities when scene.bounds is missing.
- * Iterates through entity coordinates to find min/max.
- */
-function calculateBounds(scene: ThumbnailSceneInput): { min: { x: number; y: number }; max: { x: number; y: number } } {
-  let minX = Infinity;
-  let minY = Infinity;
-  let maxX = -Infinity;
-  let maxY = -Infinity;
-
-  const expand = (x: number, y: number) => {
-    if (x < minX) minX = x;
-    if (y < minY) minY = y;
-    if (x > maxX) maxX = x;
-    if (y > maxY) maxY = y;
-  };
-
-  for (const entity of scene.entities) {
-    const e = entityProps(entity);
-
-    switch (entity.type) {
-      case 'line': {
-        const start = e.start as { x: number; y: number } | undefined;
-        const end = e.end as { x: number; y: number } | undefined;
-        if (start) expand(start.x, start.y);
-        if (end) expand(end.x, end.y);
-        break;
-      }
-      case 'polyline': {
-        const vertices = e.vertices as Array<{ x: number; y: number }> | undefined;
-        if (vertices) {
-          for (const v of vertices) expand(v.x, v.y);
-        }
-        break;
-      }
-      case 'circle': {
-        const center = e.center as { x: number; y: number } | undefined;
-        const radius = e.radius as number | undefined;
-        if (center && radius) {
-          expand(center.x - radius, center.y - radius);
-          expand(center.x + radius, center.y + radius);
-        }
-        break;
-      }
-      case 'arc': {
-        const arcCenter = e.center as { x: number; y: number } | undefined;
-        const arcRadius = e.radius as number | undefined;
-        if (arcCenter && arcRadius) {
-          expand(arcCenter.x - arcRadius, arcCenter.y - arcRadius);
-          expand(arcCenter.x + arcRadius, arcCenter.y + arcRadius);
-        }
-        break;
-      }
-      case 'text':
-      case 'mtext': {
-        const position = e.position as { x: number; y: number } | undefined;
-        if (position) expand(position.x, position.y);
-        break;
-      }
-    }
-  }
-
-  // Fallback if no valid coordinates found
-  if (!isFinite(minX)) {
-    return { min: { x: 0, y: 0 }, max: { x: 100, y: 100 } };
-  }
-
-  return { min: { x: minX, y: minY }, max: { x: maxX, y: maxY } };
 }

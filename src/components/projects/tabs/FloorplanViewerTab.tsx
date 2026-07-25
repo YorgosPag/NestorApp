@@ -15,6 +15,13 @@ import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 // 🏢 ENTERPRISE: Import FloorplanData type for proper typing
 import type { FloorplanData, DxfSceneData, FloorplanFileType } from '@/services/floorplans/FloorplanService';
 import { cn } from '@/lib/utils';
+import { paintSceneEntityGeometry } from '@/lib/dxf-scene/canvas-scene-painter';
+import {
+  computeFitTransform,
+  projectX,
+  projectY,
+  type FitTransform,
+} from '@/lib/dxf-scene/scene-fit-transform';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Centralized typography tokens
@@ -101,22 +108,17 @@ export function FloorplanViewerTab({
 
     // Calculate bounds and scale - align TOP-LEFT with canvas TOP-LEFT (different from main canvas)
     const bounds = scene.bounds || { min: { x: 0, y: 0 }, max: { x: 100, y: 100 } };
-    const drawingWidth = bounds.max.x - bounds.min.x;
-    const drawingHeight = bounds.max.y - bounds.min.y;
 
-    // Calculate scale to fill entire canvas completely
-    const availableWidth = canvas.width;
-    const availableHeight = canvas.height;
-    const scaleX = availableWidth / drawingWidth;
-    const scaleY = availableHeight / drawingHeight;
-
-    // Use the LARGER scale to fill the entire canvas (may crop some content)
-    // Or use smaller scale to fit entirely - let's try fitting first
-    const scale = Math.min(scaleX, scaleY);
-
-    // Position TOP-LEFT corner of drawing at TOP-LEFT corner of canvas (0,0)
-    const offsetX = 0;
-    const offsetY = 0;
+    // Aspect-fit scale comes from the SSoT so this tab can never drift from the
+    // gallery/thumbnail. Only the ALIGNMENT differs: this surface deliberately pins
+    // the drawing's top-left to the canvas origin instead of centering it, so the
+    // centering offsets are dropped rather than re-derived.
+    const fit: FitTransform = {
+      scale: computeFitTransform(canvas.width, canvas.height, bounds).scale,
+      offsetX: 0,
+      offsetY: 0,
+    };
+    const { scale } = fit;
 
     // Use original layer colors from DXF (same as main canvas)
     const getLayerColor = (layerName: string): string => {
@@ -126,7 +128,9 @@ export function FloorplanViewerTab({
 
     ctx.lineWidth = 1;
 
-    // Render all entity types with TOP-LEFT alignment using original layer colors
+    // Render all entity types with TOP-LEFT alignment using original layer colors.
+    // Primitive geometry goes through the `canvas-scene-painter` SSoT; only text stays
+    // local, because this surface keeps its own 8px font floor.
     scene.entities.forEach((entity) => {
       // Skip invisible layers
       if (scene.layers?.[entity.layer]?.visible === false) {
@@ -137,106 +141,19 @@ export function FloorplanViewerTab({
       const layerColor = getLayerColor(entity.layer);
       ctx.strokeStyle = layerColor;
 
+      if (paintSceneEntityGeometry(ctx, entity, bounds, fit)) return;
+
+      if (entity.type !== 'text') return;
+
       // 🏢 ENTERPRISE: Type-safe property access for entity rendering
       const e = entity as Record<string, unknown>;
-
-      switch (entity.type) {
-        case 'line': {
-          const start = e.start as { x: number; y: number } | undefined;
-          const end = e.end as { x: number; y: number } | undefined;
-          if (start && end) {
-            ctx.beginPath();
-            ctx.moveTo(
-              (start.x - bounds.min.x) * scale + offsetX,
-              (bounds.max.y - start.y) * scale + offsetY
-            );
-            ctx.lineTo(
-              (end.x - bounds.min.x) * scale + offsetX,
-              (bounds.max.y - end.y) * scale + offsetY
-            );
-            ctx.stroke();
-          }
-          break;
-        }
-
-        case 'polyline': {
-          const vertices = e.vertices as Array<{ x: number; y: number }> | undefined;
-          const closed = e.closed as boolean | undefined;
-          if (vertices && Array.isArray(vertices) && vertices.length > 1) {
-            ctx.beginPath();
-            const firstVertex = vertices[0];
-            ctx.moveTo(
-              (firstVertex.x - bounds.min.x) * scale + offsetX,
-              (bounds.max.y - firstVertex.y) * scale + offsetY
-            );
-
-            vertices.slice(1).forEach((vertex) => {
-              ctx.lineTo(
-                (vertex.x - bounds.min.x) * scale + offsetX,
-                (bounds.max.y - vertex.y) * scale + offsetY
-              );
-            });
-
-            if (closed) {
-              ctx.closePath();
-            }
-            ctx.stroke();
-          }
-          break;
-        }
-
-        case 'circle': {
-          const center = e.center as { x: number; y: number } | undefined;
-          const radius = e.radius as number | undefined;
-          if (center && radius) {
-            ctx.beginPath();
-            ctx.arc(
-              (center.x - bounds.min.x) * scale + offsetX,
-              (bounds.max.y - center.y) * scale + offsetY,
-              radius * scale,
-              0,
-              2 * Math.PI
-            );
-            ctx.stroke();
-          }
-          break;
-        }
-
-        case 'arc': {
-          const arcCenter = e.center as { x: number; y: number } | undefined;
-          const arcRadius = e.radius as number | undefined;
-          const startAngle = e.startAngle as number | undefined;
-          const endAngle = e.endAngle as number | undefined;
-          if (arcCenter && arcRadius && startAngle !== undefined && endAngle !== undefined) {
-            ctx.beginPath();
-            ctx.arc(
-              (arcCenter.x - bounds.min.x) * scale + offsetX,
-              (bounds.max.y - arcCenter.y) * scale + offsetY,
-              arcRadius * scale,
-              endAngle,
-              startAngle,
-              false
-            );
-            ctx.stroke();
-          }
-          break;
-        }
-
-        case 'text': {
-          const position = e.position as { x: number; y: number } | undefined;
-          const text = e.text as string | undefined;
-          const height = e.height as number | undefined;
-          if (position && text) {
-            ctx.fillStyle = layerColor;
-            ctx.font = `${Math.max(8, (height || 10) * scale)}px Arial`;
-            ctx.fillText(
-              text,
-              (position.x - bounds.min.x) * scale + offsetX,
-              (bounds.max.y - position.y) * scale + offsetY
-            );
-          }
-          break;
-        }
+      const position = e.position as { x: number; y: number } | undefined;
+      const text = e.text as string | undefined;
+      const height = e.height as number | undefined;
+      if (position && text) {
+        ctx.fillStyle = layerColor;
+        ctx.font = `${Math.max(8, (height || 10) * scale)}px Arial`;
+        ctx.fillText(text, projectX(position.x, bounds, fit), projectY(position.y, bounds, fit));
       }
     });
   }, [floorplanData, isDxf]);
