@@ -1,0 +1,56 @@
+#!/bin/bash
+# Conventional Commits validation (Google/Angular pattern)
+#
+# ΓΙΑΤΙ ΕΙΝΑΙ ΕΔΩ ΚΑΙ ΟΧΙ ΣΤΟ .git/hooks/ (διόρθωση 2026-07-26):
+# Το repo ορίζει `core.hooksPath=scripts/git-hooks` (βλ. scripts/install-hooks.sh).
+# Όταν το core.hooksPath είναι ορισμένο, το git **αγνοεί εντελώς** το .git/hooks/.
+# Ο παλιός CHECK 11 του pre-commit έγραφε αυτό το αρχείο στο `.git/hooks/commit-msg`
+# — φάκελο που το git δεν κοιτά ποτέ — και τύπωνε «✅ Installed commit-msg hook».
+# Αποτέλεσμα: **δεν έτρεξε ούτε μία φορά**, ενώ δήλωνε κάλυψη σε κάθε commit.
+# Ένα ψεύτικο ✅ είναι χειρότερο από κανένα check: σε κάνει να μην ψάξεις.
+#
+# Δεύτερο κέρδος του να είναι tracked αρχείο αντί για runtime-generated: το
+# self-install έτρεχε ΜΕΣΑ στο pre-commit, άρα ο έλεγχος υπήρχε μόνο ΜΕΤΑ το πρώτο
+# commit — το πρώτο commit κάθε clone δεν ελεγχόταν ποτέ. Τώρα ισχύει από το clone.
+
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+COMMIT_MSG_FILE="$1"
+FIRST_LINE=$(head -1 "$COMMIT_MSG_FILE")
+
+# Allow merge commits and reverts
+if echo "$FIRST_LINE" | grep -qE "^(Merge|Revert) "; then
+    exit 0
+fi
+
+# Conventional commit pattern: type(optional-scope): description
+# `i18n` προστέθηκε 2026-07-26: χρησιμοποιείται ήδη νόμιμα στο ιστορικό
+# (`i18n(mesh3d): keys for the BOQ identity dialog`) — ήταν το ΜΟΝΟ από τα
+# τελευταία 200 commits που θα μπλοκαριζόταν. Το enforcement δεν επιτρέπεται
+# να ακυρώνει καθιερωμένο, ορθό στυλ του ίδιου του repo.
+TYPES="fix|feat|refactor|docs|chore|test|perf|ci|style|build|i18n"
+
+if ! echo "$FIRST_LINE" | grep -qE "^($TYPES)(\([a-zA-Z0-9_-]+\))?: .{3,}"; then
+    echo ""
+    echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
+    echo -e "${RED}  🚫 COMMIT BLOCKED — Invalid commit message format${NC}"
+    echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
+    echo ""
+    echo -e "${YELLOW}  Required: type(scope): description${NC}"
+    echo -e "${YELLOW}  Types: ${TYPES//|/, }${NC}"
+    echo -e "${YELLOW}  Example: fix(auth): resolve token expiration race condition${NC}"
+    echo ""
+    echo -e "  Your message: ${RED}${FIRST_LINE}${NC}"
+    echo ""
+    exit 1
+fi
+
+if [[ ${#FIRST_LINE} -gt 100 ]]; then
+    echo ""
+    echo -e "${YELLOW}  ⚠️  Commit title is ${#FIRST_LINE} chars (recommended: <70, max: 100)${NC}"
+    echo ""
+fi
+
+exit 0

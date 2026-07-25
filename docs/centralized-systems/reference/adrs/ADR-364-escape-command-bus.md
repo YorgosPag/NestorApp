@@ -545,6 +545,11 @@ if (scaleIsActive && handleScaleKeyDown) { const consumed = handleScaleKeyDown(e
 
 ### 10.6 Τι σημαίνει αυτό για τη Φ2 (επιβολή) — αναθεωρημένο
 
+> ⚠️ **ΑΝΑΘΕΩΡΗΘΗΚΕ ΑΠΟ ΜΕΤΡΗΣΗ — διάβασε το §10.10 πριν εφαρμόσεις το §1 ή το §2 παρακάτω.**
+> Η τοπολογία των listeners (στόχος + φάση) έδειξε ότι το `stopImmediatePropagation` αφορά **5**
+> αρχεία, όχι 21· και ότι ο ανιχνευτής του §2 έχει **δύο δομικά τυφλά σημεία** (σειρά mount,
+> λιμοκτονία). Η παρακάτω λίστα κρατιέται ως ιστορικό της Φ1.
+
 Η σειρά του αρχικού σχεδίου παραμένει, με τρεις διορθώσεις από τα ευρήματα:
 
 1. **`stopImmediatePropagation()` στον bus όταν ένας handler καταναλώνει.** Τώρα ξέρουμε
@@ -663,6 +668,75 @@ browser**, μειώνοντας την επιφάνεια σε **17 Κ2**.
 regression test του ADR-700 (`scripts/__tests__/check-barrel-deadcode-ratchet.test.js:567`) — εκεί
 μετρήθηκε ότι το knip πιάνει 1 από τα 4. **Ό,τι ακολουθεί εδώ αφορά μόνο το ESC.**
 
+### 10.10 Φ2 Μηχανισμός 1 — dev-time audit (ΥΛΟΠΟΙΗΘΗΚΕ 2026-07-25)
+
+> **Αυτή η ενότητα αναθεωρεί το §10.6.** Το §10.6 γράφτηκε από ταξινόμηση· εδώ μετρήθηκε η
+> **τοπολογία** των listeners. Δύο ισχυρισμοί του δεν επιβίωσαν. N.0.1: ο κώδικας κερδίζει.
+
+#### Α. Η μέτρηση που αλλάζει το σχέδιο — δεν είναι «17 Κ2», είναι δύο ζώνες
+
+Μετρήθηκε ο **στόχος και η φάση** κάθε ανταγωνιστή (`grep -oE "(window|document)\.addEventListener\('keydown'…"`).
+Το `stopImmediatePropagation()` επηρεάζει **μόνο** listeners στον **ίδιο κόμβο και την ίδια φάση**:
+
+| Ζώνη | Ποιοι | Τι τους σταματά |
+|---|---|---|
+| **Α — `window` capture, αδελφοί του bus (5)** | `useCanvasKeyboardShortcuts` · `use3DShortcuts` (→ `shortcut-dispatcher`, **το gizmo bug**) · `useDxfViewerEffects` · `useColorMenuState` · `use-waypoint-drag-interaction` | **ΜΟΝΟ** `stopImmediatePropagation()` (Μηχ. 2). Το `stopPropagation()` δεν τους αγγίζει |
+| **Β — κατάντη του bus (12)** | `eyedropper` (document capture) · `ToolButton` (document bubble) · `useDxfToolbarShortcuts`, `RibbonContextMenu`, `useZoomWindowTool` (window bubble) · `ZoomControls`, `TextEditorOverlay`, `PromptDialog` (React bubble) | **ΗΔΗ** το υπάρχον `stopPropagation()` — τρέχουν μόνο όταν ο bus **δεν** καταναλώνει |
+
+⇒ Το §10.6 §1 λέει «αφορά τα 21 Κ2». **Αφορά 5.** Τα 12 της Ζώνης Β δεν είναι παρακάμψεις του
+μηχανισμού — είναι **ελλείπουσες εγγραφές**: ενεργούν στη σιωπή που αφήνει ο bus όταν κανένα slot
+δεν διεκδικεί. Η θεραπεία τους είναι **μετανάστευση (Φ3)**, όχι `stopImmediatePropagation`.
+Επιβεβαιώνει το §10.2: «η μόνη πραγματικά επικίνδυνη κατηγορία είναι ο global capture handler».
+
+#### Β. Ο ανιχνευτής του §10.6 είχε δύο τυφλά σημεία — και τα δύο δομικά
+
+Το §10.6 §2 πρότεινε «ο bus βλέπει ESC που ήρθε ήδη `defaultPrevented`» και ισχυρίστηκε ότι
+**«πιάνει και τα 3 ιδιώματα και τη διπλή αποστολή»**. Μετρημένα, δεν πιάνει:
+
+1. **Σειρά.** Ο bus **δεν είναι εγγυημένα πρώτος** — η σειρά των window-capture listeners είναι
+   σειρά mount. Ανταγωνιστής που εγγράφεται **μετά** τον bus είναι αόρατος σε έλεγχο εισόδου.
+2. **Λιμοκτονία.** Ανταγωνιστής που καλεί `stopImmediatePropagation()` **πριν** τον bus τον
+   αποκλείει τελείως — ο bus δεν καλείται, άρα δεν ελέγχει τίποτα. Δεν είναι θεωρητικό:
+   `useCanvasKeyboardShortcuts.ts:145` ήδη το καλεί.
+
+**Η λύση: σεντινέλα σε χρόνο import.** Ένας listener που εγκαθίσταται κατά την **αξιολόγηση του
+module** — πριν τρέξει οποιοδήποτε effect — άρα **πρώτος**. Στιγματίζει το συμβάν, και κρίνει σε
+`setTimeout(0)`, δηλαδή **αφού τελειώσει η διάδοση**, όταν το `defaultPrevented` έχει την τελική του
+τιμή. (`queueMicrotask` θα ήταν λάθος: ο microtask checkpoint τρέχει **ανάμεσα** στους listeners.)
+
+Τέσσερις ετυμηγορίες: `ok` · **`starved`** (ο bus δεν κλήθηκε) · **`preempted`** (καταναλώθηκε πριν
+τον bus) · **`shadow-owner`** (ο bus δεν διεκδίκησε, κάποιος άλλος κατανάλωσε — ιδιοκτήτης ESC εκτός
+SSoT). Οι `starved` και `shadow-owner` είναι **ακριβώς** ό,τι ο αρχικός ανιχνευτής δεν έβλεπε.
+
+#### Γ. Τι ΔΕΝ βλέπει — καρφωμένο σε test, όχι σε σχόλιο
+
+Ανταγωνιστής που δεν καλεί **ούτε** `preventDefault` **ούτε** `stopImmediatePropagation` ενεργεί
+χωρίς να αφήσει ίχνος στο DOM. Μετρημένοι: `eyedropper.ts:132`, `ZoomControls.tsx:82`,
+`useZoomWindowTool.ts:70` — **3 από τα 17 Κ2**. Για αυτούς ο έλεγχος βγάζει `ok`.
+
+Το ψευδώς αρνητικό είναι **καρφωμένο ως test** (`escape-dev-audit.test.ts`, group «ΤΥΦΛΟ ΣΗΜΕΙΟ»)
+ώστε κανείς να μη διαβάσει το `ok` ως «καθαρό» — η παθολογία των «0» των N.11/N.12. ⇒ **Οι
+Μηχανισμοί 1 και 3 είναι συμπληρωματικοί, όχι εναλλακτικοί**· ο στατικός ratchet είναι ο **μόνος**
+που βλέπει τους σιωπηλούς.
+
+#### Δ. Υλοποίηση + επαλήθευση
+
+| Αρχείο | Τι |
+|---|---|
+| `systems/escape-bus/escape-dev-audit.ts` (νέο, 170 γρ.) | σεντινέλα + κριτήριο + αναφορά· `NODE_ENV !== 'production'`, SSR-safe, `WeakMap` (μηδέν διαρροή) |
+| `systems/escape-bus/EscapeCommandBus.ts` | +3 γραμμές: install σε χρόνο import· `preemptedAtEntry` **πριν** την αλυσίδα· `noteBusDispatch` μετά |
+| `systems/escape-bus/__tests__/escape-dev-audit.test.ts` (νέο) | 8 tests — και οι 4 ετυμηγορίες + το τυφλό σημείο |
+
+**Καμία αλλαγή στη σημασιολογία δρομολόγησης** — ο έλεγχος παρατηρεί, δεν αποφασίζει.
+**jest: 32/32** (24 προϋπάρχοντα `EscapeCommandBus` αμετάβλητα + 8 νέα)· `jscpd:diff` καθαρό (N.18).
+⚠️ **Εκκρεμεί browser** — το ESC αποδεικνύεται με πάτημα πλήκτρου. Το ζητούμενο της πρώτης συνεδρίας
+στον browser: **ποιες ετυμηγορίες βγαίνουν στην πράξη** — αυτό απαντά εμπειρικά το ερώτημα σειράς
+mount που κανένα static tool δεν μπορεί.
+
+✅ **Google-level: ΝΑΙ** για τον Μηχανισμό 1 — παρατηρητής μηδενικού ρίσκου, order-independent,
+με τα όριά του μετρημένα και καρφωμένα σε test αντί να δηλώνονται σε σχόλιο.
+⚠️ Το **σύνολο** της Φ2 παραμένει PARTIAL: Μηχανισμοί 2–4 δεν ξεκίνησαν.
+
 ---
 
 ## 11. Changelog
@@ -676,4 +750,5 @@ regression test του ADR-700 (`scripts/__tests__/check-barrel-deadcode-ratchet
 | 2026-07-18 | **CreateBlockDialogHost pick-base-point → bus + inline-rename false-positive fix.** (1) `CreateBlockDialogHost` (ADR-652 M6): το ιδιωτικό `window.addEventListener('keydown', …Escape…)` για ακύρωση του «pick base point» armed mode αντικαταστάθηκε με `useEscapeHandler` (priority `MODAL_DIALOG`, `canHandle: () => armed`). Ο tool-hint override έμεινε σε ξεχωριστό effect. (2) Νέο SSoT helper `ui/utils/inline-rename-keyboard.ts` (`handleInlineRenameKey`) για local rename `<input>` Enter/Escape — το bus σκιπάρει editable focus, οπότε τα εστιασμένα rename inputs χειρίζονται το δικό τους Escape τοπικά· ΕΝΑ allowlisted σημείο κρατά πλέον το `'Escape'` literal. Καταναλωτές: `FrameProfileCard` (νέο, ADR-676) + `EntityCard` (layers, 2→0 ratchet). Allowlist + description του `escape-command-bus` module ενημερώθηκαν. | Claude Opus 4.8 + Γιώργος Παγώνης |
 | 2026-06-03 | **Boy-Scout Group 4 — 10 secondary components migrated.** PropertiesPalette + QuickPropertiesMiniPanel: window listeners αντικαταστάθηκαν με `useEscapeHandler` (bus, GROUP A). DimStyleCreateDialog + LayerStateDropdown (LayerStateSaveButton): τοπικό `e.key==='Escape'` αφαιρέθηκε — Radix Dialog/Popover onEscapeKeyDown → onOpenChange αρκεί (GROUP B). LayerItem, ColorGroupItem, LayerStateDropdownPopover, LayerStateManageRow (hook στο LayerStateManagePanel parent), TextOverrideEditor (FieldTokenInput sub-component), StairPresetsSection: bus hook με `allowWhenEditable: true` + `canHandle` gate (GROUP C). GripContextMenu + useGripContextMenuController ελέγχθηκαν — μόνο `contextmenu` listener, χωρίς `keydown`/Escape — εκτός scope. SSoT baseline: 149→129 violations (−20), 99→88 files (−11). tsc: 0 errors. Jest EscapeCommandBus: 24/24 PASS. | Claude Sonnet 4.6 |
 | 2026-07-25 | **Φ1 ENFORCEMENT — κριτήριο διάκρισης + ταξινόμηση (νέο §10). ΚΑΜΙΑ αλλαγή κώδικα.** Αφορμή: μετρημένο στο browser test του ADR-692 — ένα ESC ακύρωσε marquee **και** έκλεισε gizmo, επειδή `stopPropagation()` δεν σταματά sibling listeners στον **ίδιο** κόμβο (`window`, capture). **(1) Κριτήριο T1/T2/T3** («υπάρχει ανταγωνιστής;», όχι «είναι input field;»), που συμβιβάζει δύο αντικρουόμενα προηγούμενα του ίδιου ADR — Group 4 GROUP C (bus) vs `inline-rename-keyboard.ts` (τοπικό): και τα δύο σωστά, διακριτικό ο ανταγωνιστής. **(2) Ταξινομία ανταγωνιστών** (bus capture, Radix `DismissableLayer` σε document capture, react-aria `useOverlay`, `HOT_GRIP_OP` P975). **(3) Το «24» ήταν λάθος φακός**: τρία ανεξάρτητα ιδιώματα — G (global listener + `Escape`) = 24, R (ratchet regex) = 23, **G∩R = 7**, + I (`matchesShortcut(e,'escape')`, πεζό, αόρατο σε **αμφότερα**) = 2 ⇒ **42 αρχεία**. Νέα κενά regex: `e.code === 'Escape'` (**το gizmo bug**, `shortcut-dispatcher.ts:232`) και `e.key !== 'Escape'` (`useZoomWindowTool.ts:70`). **(4) Ταξινόμηση 19 Κ1 / 21 Κ2 / 2 Κ3.** Κ3 ήταν εξ ορισμού αδύνατο να βρεθεί στα 24 (το grep έψαχνε global listeners). **(5) Νέα ζωντανά bugs**: `eyedropper.ts:133` (ένα ESC ακυρώνει eyedropper **και** κλείνει όλο τον color picker μέσω react-aria ancestor)· `PromptDialog.tsx:124` (το `HOT_GRIP_OP` κλέβει το ESC σε grip flow)· **διπλή αποστολή** — ο regex-καθαρός `useCanvasKeyboardShortcuts.ts:351` προωθεί ωμό `e.key` στα trim/scale/stretch/extend, που συγκρίνουν εσωτερικά, ενώ τα **ίδια** `handleXEscape` είναι ήδη εγγεγραμμένα σε `MODIFY_TOOL` ⇒ εκτελούνται **δύο φορές** ανά πάτημα. **Ο ratchet μετρά το string, όχι τη συμπεριφορά.** **(6) CHECK 3.7 αποκωδικοποιημένο**: staged-only (`check-ssot-imports.js:317`), per-file άθροισμα, `current === baseline` ⇒ `same` ⇒ περνά σιωπηλά για πάντα — γι' αυτό ζει το `useTrimTool.ts` (baseline 1 / τρέχον 1, εκτός allowlist). Baseline: **41** dxf-viewer αρχεία (όχι 0). **(7) Διόρθωση drift §6** (N.0.1 — ο κώδικας κερδίζει): το §6 τεκμηριώνει 2 άλλα patterns + 5 allowlist entries· το πραγματικό registry έχει 2 patterns + **8** entries, και το `addEventListener…Escape` αφαιρέθηκε σωστά (γραμμικό grep, δεν έπιανε τίποτα). **(8) Νεκρός κώδικας** προς διαγραφή αντί μετανάστευσης: `useEntityDrag` chain (barrel-only, αντικαταστάθηκε από `EntityBodyDragStore` που είναι σωστά στον bus), `useDrawingKeyboardShortcuts`, `createKeyboardHandler`, `CommentMentionsPicker` keydown (τίποτα δεν εστιάζει το listbox — και bug προσβασιμότητας). Το knip αγνοεί το dxf-viewer. **(9) Allowlist μπορεί να στενέψει**: 3 από 4 keyboard-core entries δεν έχουν πλέον matching literal· μένει το `useDimToolRouting.ts:140`. ⚠️ Αλλά η αφαίρεση του `useCanvasKeyboardShortcuts.ts` θα «πράσινιζε» αρχείο που είναι **Κ2 δομικά**. Φ2 απαιτεί ratchet-down των 41 baseline entries, όχι μόνο νέο pattern. Έρευνα Revit/VS Code από το handoff — δεν επαναλήφθηκε. | Claude Opus 5 + Γιώργος Παγώνης |
+| 2026-07-25 | **§10.10 — Φ2 Μηχανισμός 1 ΥΛΟΠΟΙΗΘΗΚΕ (dev-time audit). Καμία αλλαγή στη δρομολόγηση.** Πριν τον κώδικα μετρήθηκε η **τοπολογία** των ανταγωνιστών (στόχος + φάση ανά listener) και **δύο ισχυρισμοί του §10.6 δεν επιβίωσαν**. **(1) Δεν είναι «17 Κ2», είναι δύο ζώνες**: το `stopImmediatePropagation()` αγγίζει **μόνο** τους 5 αδελφούς σε `window` capture (`useCanvasKeyboardShortcuts`, `use3DShortcuts`→gizmo, `useDxfViewerEffects`, `useColorMenuState`, `use-waypoint-drag-interaction`)· οι υπόλοιποι **12 είναι κατάντη** (document capture / bubble / React bubble) και τους σταματά **ήδη** το υπάρχον `stopPropagation()` — δεν είναι παρακάμψεις του μηχανισμού αλλά **ελλείπουσες εγγραφές**, άρα θεραπεία = Φ3 μετανάστευση, ΟΧΙ Μηχ. 2. Επιβεβαιώνει το §10.2 («μόνη επικίνδυνη κατηγορία = global capture»). **(2) Ο ανιχνευτής που πρότεινε το §10.6 έχει δύο δομικά τυφλά σημεία**: ο bus **δεν είναι εγγυημένα πρώτος** (σειρά = σειρά mount ⇒ ανταγωνιστής που εγγράφεται μετά είναι αόρατος) και **λιμοκτονείται** από `stopImmediatePropagation()` προγενέστερου listener (`useCanvasKeyboardShortcuts.ts:145` το καλεί ήδη) ⇒ ο ισχυρισμός «πιάνει και τα 3 ιδιώματα και τη διπλή αποστολή» **δεν ισχύει**. **Λύση: σεντινέλα σε χρόνο import** (πριν κάθε effect ⇒ πρώτη) που στιγματίζει το συμβάν και κρίνει σε `setTimeout(0)` — **αφού** τελειώσει η διάδοση, όταν το `defaultPrevented` είναι τελικό (`queueMicrotask` λάθος: ο checkpoint τρέχει **ανάμεσα** στους listeners). 4 ετυμηγορίες: `ok` / **`starved`** / **`preempted`** / **`shadow-owner`** — οι δύο τελευταίες είναι ακριβώς ό,τι ο αρχικός ανιχνευτής έχανε. **Τυφλό σημείο ΚΑΡΦΩΜΕΝΟ ΣΕ TEST**: σιωπηλός ανταγωνιστής (ούτε `preventDefault` ούτε `stop*`) βγάζει `ok` — μετρημένοι `eyedropper.ts:132`, `ZoomControls.tsx:82`, `useZoomWindowTool.ts:70` (3/17) ⇒ **Μηχ. 1 και 3 συμπληρωματικοί, όχι εναλλακτικοί**· το test υπάρχει ώστε το `ok` να μη διαβαστεί ως «καθαρό» (παθολογία N.11/N.12). **Νέα**: `escape-dev-audit.ts` (170 γρ., dev-only, SSR-safe, `WeakMap`) + 8 tests· `EscapeCommandBus.ts` +3 γραμμές (install σε import· `preemptedAtEntry` **πριν** την αλυσίδα). **jest 32/32** (24 προϋπάρχοντα αμετάβλητα)· `jscpd:diff` καθαρό (N.18). ⚠️ **Εκκρεμεί browser** — το ESC αποδεικνύεται με πάτημα πλήκτρου, και οι ζωντανές ετυμηγορίες απαντούν εμπειρικά το ερώτημα σειράς mount. Μηχανισμοί 2–4 δεν ξεκίνησαν. | Claude Opus 5 + Γιώργος Παγώνης |
 | 2026-07-25 | **SPLIT — τα §10.9–§10.9.3 έφυγαν στο ADR-700.** Το record είχε φτάσει **1.170 γραμμές με δύο ανεξάρτητες αποφάσεις**: τον Escape Command Bus (§1–§10.8) και το barrel-aware dead-export gate / CHECK 3.30 (§10.9.x), που ήταν παρακλάδι του §10.7.1 — νόμιμο βήμα-βήμα, scope creep στο άθροισμα. Η πρακτική είναι ομόφωνη (**μία απόφαση ανά record**· ADR πάνω από μία σελίδα ⇒ τεκμηριώνει πολλαπλές, σπάσ' τες). Μεταφέρθηκαν **507 γραμμές + 5 εγγραφές changelog, αυτούσια**· ό,τι μένει εδώ αφορά **μόνο** το ESC. Στη θέση τους έμεινε pointer με πίνακα αντιστοίχισης §10.9→§1 … §10.9.3→§4. **Καμία αλλαγή στο CHECK 3.30** (ελεγκτής / γράφος / workflow / hook PHASE 0.8 / baseline δεδομένα άθικτα) — ενημερώθηκαν **μόνο** οι συμβολοσειρές αναφοράς ADR, ώστε να μη μείνει dangling παραπομπή. | Claude Opus 5 + Γιώργος Παγώνης |

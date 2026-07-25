@@ -21,11 +21,17 @@
  *     when focus is in INPUT / TEXTAREA / contentEditable.
  */
 
+import { installEscapeAuditSentinel, noteBusDispatch } from './escape-dev-audit';
 import type {
   EscapeBusInspection,
   EscapeDispatchResult,
   EscapeHandler,
 } from './types';
+
+// ADR-364 §10.6 Φ2 Μηχανισμός 1 — dev-only. Σε χρόνο import ώστε η σεντινέλα να
+// είναι ΠΡΩΤΗ στους window-capture listeners: μόνο έτσι βλέπει και τα πατήματα
+// στα οποία ο ίδιος ο bus λιμοκτονεί από stopImmediatePropagation ανταγωνιστή.
+installEscapeAuditSentinel();
 
 interface InternalRegistry {
   readonly entries: Map<string, EscapeHandler>;
@@ -96,12 +102,16 @@ function safeHandle(handler: EscapeHandler): boolean {
 
 function dispatch(e: KeyboardEvent): EscapeDispatchResult {
   if (e.key !== 'Escape') return { consumed: false, consumedBy: null };
+  // Διαβάζεται ΠΡΙΝ την αλυσίδα: μετά, το preventDefault του ίδιου του bus θα
+  // το είχε μολύνει και ο έλεγχος δεν θα ξεχώριζε ποιος προηγήθηκε.
+  const preemptedAtEntry = e.defaultPrevented;
   const snapshot = sortBySnapshot(registry.entries.values());
   const result = runHandlerChain(snapshot);
   if (result.consumed) {
     e.preventDefault();
     e.stopPropagation();
   }
+  noteBusDispatch(e, result, preemptedAtEntry);
   return result;
 }
 
