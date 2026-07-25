@@ -54,6 +54,12 @@ interface KeyboardShortcutsConfig {
   currentScene: SceneModel | null;
   onNudgeSelection: (dx: number, dy: number) => void;
   onColorMenuClose: () => void;
+  /**
+   * ADR-364 §10.12 — ΤΟ GATE ΤΟΥ ΤΕΛΕΥΤΑΙΟΥ SLOT. Χωρίς αυτό το `COLOR_MENU` (100)
+   * κατανάλωνε **κάθε** ESC της εφαρμογής (`canHandle: () => true`), δηλαδή η
+   * αλυσίδα ESC δεν έφτανε ποτέ σε «κανείς δεν διεκδίκησε».
+   */
+  isColorMenuOpen: boolean;
   onDrawingCancel?: () => void; // 🎯 ADR-047: Cancel drawing on Escape
   onSelectAll?: () => void;    // Ctrl+A → select all DXF entities
   activeTool: string;
@@ -81,6 +87,7 @@ export const useKeyboardShortcuts = ({
   currentScene,
   onNudgeSelection,
   onColorMenuClose,
+  isColorMenuOpen,
   onDrawingCancel, // 🎯 ADR-047: Cancel drawing on Escape
   onSelectAll,
   activeTool,
@@ -298,7 +305,20 @@ export const useKeyboardShortcuts = ({
   useEscapeHandler({
     id: 'use-keyboard-shortcuts/color-menu-close',
     priority: ESC_PRIORITY.COLOR_MENU,
-    canHandle: () => true,
+    // ADR-364 §10.12 — ΜΟΝΟ όταν η παλέτα είναι όντως ανοιχτή.
+    //
+    // Ήταν `() => true`. Επειδή αυτό είναι το ΤΕΛΕΥΤΑΙΟ slot της αλυσίδας (100),
+    // το «πάντα ναι» σήμαινε ότι ο bus **κατανάλωνε κάθε ESC της εφαρμογής** και
+    // επέστρεφε `consumed: true` χωρίς να έχει συμβεί τίποτα. Τρεις μετρημένες
+    // συνέπειες (browser 2026-07-25):
+    //   1. Η σκάλα ESC κολλούσε — τίποτα κάτω από αυτό δεν έτρεχε ποτέ.
+    //   2. Η ετυμηγορία `shadow-owner` του Μηχ. 1 ήταν πρακτικά ανέφικτη.
+    //   3. Με τον Μηχ. 2 (`stopImmediatePropagation`) σιωπούσε ΟΛΗ τη Ζώνη Α σε
+    //      **κάθε** πάτημα — γι' αυτό «χάθηκε» το κλείσιμο του 3D gizmo.
+    //
+    // Το `useEscapeHandler` κρατά ref που ανανεώνεται σε κάθε render, άρα η
+    // τιμή που διαβάζεται εδώ είναι πάντα η τρέχουσα (όχι stale closure).
+    canHandle: () => isColorMenuOpen,
     handle: () => { onColorMenuClose(); return true; },
   });
 

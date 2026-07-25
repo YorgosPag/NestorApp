@@ -94,21 +94,16 @@ export function useColorMenuState() {
     });
   }, []);
 
-  // ✅ ENTERPRISE: Keyboard shortcuts (ESC to close)
-  useEffect(() => {
-    if (!state.open) return;
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        event.stopPropagation();
-        close();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown, true);
-    return () => window.removeEventListener('keydown', handleKeyDown, true);
-  }, [state.open, close]);
+  // ✅ ESC → EscapeCommandBus SSoT (ADR-364 §10.12, Κ2 #8 μετανάστευση).
+  //
+  // Εδώ υπήρχε ιδιωτικός `window` keydown listener σε capture. Ήταν **διπλότυπο**:
+  // το slot `ESC_PRIORITY.COLOR_MENU` (100) στο `useKeyboardShortcuts` καλεί ήδη
+  // το ίδιο `close()`. Δύο ιδιοκτήτες για το ίδιο ESC — και ο ένας από αυτούς ήταν
+  // «Ζώνη Α» (window capture), δηλαδή αόρατος στο `stopPropagation()` του bus.
+  //
+  // Ο listener αφαιρέθηκε· ο bus είναι ο μόνος ιδιοκτήτης. Το `close()` μένει
+  // εκτεθειμένο ως `closeColorMenu` και το `open` ταξιδεύει ως `isColorMenuOpen`
+  // στο gate του slot, ώστε το slot να διεκδικεί ΜΟΝΟ όταν η παλέτα είναι ανοιχτή.
 
   // ✅ ENTERPRISE: Click outside to close (delayed activation to avoid immediate close)
   // 🏢 ADR-098: Using UI_TIMING.MENU_CLICK_GUARD for delayed guard

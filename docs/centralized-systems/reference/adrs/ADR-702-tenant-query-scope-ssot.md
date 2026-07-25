@@ -238,10 +238,10 @@ server-only imports για να είναι unit-testable. Η κλάση μετα
 
 | έλεγχος | αποτέλεσμα |
 |---|---|
-| `npx jest src/lib/{auth,api,firestore}` | ✅ 215/215 (13 suites) |
-| `npx jest src/app/api` | ✅ 344/349 — 5 προϋπάρχοντα κόκκινα, βλ. §7.2 |
+| `npx jest src/lib/{auth,api,firestore} src/app/api` | ✅ **569/569** (40 suites) — μηδέν κόκκινα |
 | `npm run jscpd:diff` (14 αρχεία) | ✅ καθαρό, 4ος γύρος |
-| νέα tests | **63** (32 doctrine + 12 applier + 13 HTTP/ταξινόμηση + 6 anchor) |
+| `npm run test:registry-golden` | ✅ 96/96 |
+| νέα tests | **68** (32 doctrine + 12 applier + 13 HTTP/ταξινόμηση + 6 anchor + 5 ADR-461 §7.2) |
 | `tsc` | ❌ δεν έτρεξε — N.17 |
 
 ### 5.1 Το anchor
@@ -302,11 +302,33 @@ Super admin που περιηγείται **όλα** τα tenants παίρνει
 κάτοψη». **Προϋπάρχον** (δεν εισήχθη εδώ). Διόρθωση = νέο index
 `entityType + purpose + entityId` + `firebase deploy --only firestore:indexes`.
 
-### 7.2 🔴 Προϋπάρχον κόκκινο — `floors.handlers.create-kind.test.ts`
+### 7.2 ✅ ΕΚΛΕΙΣΕ — `floors.handlers.create-kind.test.ts`
 
-5 tests, `handleCreateFloor`. Το `siblingsSnap` μπήκε στο `5ab8033d`, **νεότερο**
-από το commit του test (`4418d623`): το fake db double δεν το ξέρει. Άσχετο με
-αυτόν τον κύκλο· επιβεβαιώθηκε ότι ο κώδικας που σκάει υπάρχει αυτούσιος στο HEAD.
+Ήταν 5 κόκκινα, **προϋπάρχοντα**: το `siblingsSnap` μπήκε στο `5ab8033d`,
+**νεότερο** από το commit του test (`4418d623`), και το fake Firestore double δεν
+επέστρεφε `docs` — `.map` of undefined. Επίσης έλειπε το
+`reconcileSpecialLevelPlacement` από το mock (το κάλυπτε try/catch, άρα αποτύγχανε
+**σιωπηλά** ως warning).
+
+Αρχικά το κατέγραψα ως «άσχετο, δεν είναι δικό μου». **Λάθος στάση**: το αρχείο
+ήταν μέσα στη διαδρομή αυτού του κύκλου, άρα ο N.0.2 ισχύει.
+
+Το επιδιορθωμένο double δέχεται πλέον τους siblings ως παράμετρο, και προστέθηκαν
+**5 tests που καρφώνουν τον ίδιο τον κανόνα ADR-461** — ο οποίος είχε φύγει στην
+παραγωγή **ανεπαλήθευτος**, αφού η σουίτα έσκαγε πριν τον φτάσει:
+
+| περίπτωση | αναμενόμενο |
+|---|---|
+| counted storey σε κατειλημμένο νούμερο | **409** |
+| legacy όροφος **χωρίς** `kind` μετρά ως counted | **409** |
+| δεύτερη ειδική στάθμη ίδιου `kind` | **409** |
+| ειδική στάθμη **μοιράζεται** νούμερο με counted (θεμελίωση −1 + υπόγειο −1) | ✅ περνά |
+| counted storey σε νούμερο που κρατά μόνο ειδική στάθμη | ✅ περνά |
+
+Οι πέντε περιπτώσεις είναι **αμοιβαία διακριτικές**: κανόνας μόνο-με-νούμερο θα
+έκοβε τις δύο τελευταίες, κανόνας μόνο-με-kind θα έκοβε την πρώτη. Δεν έτρεξα
+mutation στον production κώδικα — σε κοινό δέντρο με ενεργούς πράκτορες, το να
+σπάσω σκόπιμα κώδικα έστω για λίγα δευτερόλεπτα δεν αξίζει το ρίσκο.
 
 ### 7.4 🔴 Νέο ratchet — ο bypass έλεγχος είναι ο ίδιος διπλογραμμένος
 
@@ -346,4 +368,4 @@ Super admin που περιηγείται **όλα** τα tenants παίρνει
 
 | Ημ/νία | Αλλαγή |
 |---|---|
-| 2026-07-25 | **Δημιουργία.** Κύκλος #4 της εκστρατείας (μετά 697/698/699). `resolveTenantListScope` + `requireTenantScope` + `tenantScopedCollection` + `tenant-scope-http` + `asApiError`. Διορθώθηκε η απόκλιση buildings↔properties/floors (§1.3) και το ανεξέλεγκτο `?companyId=` στα iso19650 (§1.4). Boy Scout: `loadFloorInTenant`, `guardParentScope`, `tenantIsolationResponse`, πρώτη χρήση `defineRoute` (ADR-602). 63 νέα tests + anchor με self-test. Registry module `tenant-query-scope`. |
+| 2026-07-25 | **Δημιουργία.** Κύκλος #4 της εκστρατείας (μετά 697/698/699). `resolveTenantListScope` + `requireTenantScope` + `tenantScopedCollection` + `tenant-scope-http` + `asApiError`. Διορθώθηκε η απόκλιση buildings↔properties/floors (§1.3) και το ανεξέλεγκτο `?companyId=` στα iso19650 (§1.4). Boy Scout: `loadFloorInTenant`, `guardParentScope`, `tenantIsolationResponse`, πρώτη χρήση `defineRoute` (ADR-602). 68 νέα tests + anchor με self-test· επιδιορθώθηκε και το προϋπάρχον κόκκινο `floors.handlers.create-kind` (§7.2) — ο κανόνας ADR-461 ήταν ανεπαλήθευτος γιατί η σουίτα έσκαγε πριν τον φτάσει. Registry module `tenant-query-scope`. |

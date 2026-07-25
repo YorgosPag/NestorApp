@@ -37,14 +37,20 @@ jest.mock('../floors.shared', () => ({
   resolveFloorsListParams: jest.fn(),
   sortFloors: jest.fn(),
 }));
-jest.mock('../floor-stack-reconcile.service', () => ({ reconcileFloorStackAfterEdit: jest.fn() }));
+jest.mock('../floor-stack-reconcile.service', () => ({
+  reconcileFloorStackAfterEdit: jest.fn(),
+  // ADR-461 satellite placement — called after every successful create. The
+  // handler wraps it in try/catch, so a missing double failed silently as a
+  // logged warning instead of a test failure.
+  reconcileSpecialLevelPlacement: jest.fn(),
+}));
 
 const createEntityMock = jest.fn().mockResolvedValue({ id: 'floor_new_1' });
 jest.mock('@/lib/firestore/entity-creation.service', () => ({
   createEntity: (...args: unknown[]) => createEntityMock(...args),
 }));
 
-// Minimal Firestore Admin double: building lookup + empty duplicate-number check.
+// Minimal Firestore Admin double: building lookup + the ADR-461 sibling scan.
 const getAdminFirestoreMock = jest.fn();
 jest.mock('@/lib/firebaseAdmin', () => ({
   getAdminFirestore: () => getAdminFirestoreMock(),
@@ -53,19 +59,36 @@ jest.mock('@/lib/firebaseAdmin', () => ({
 import { handleCreateFloor } from '../floors.handlers';
 import type { AuthContext } from '@/lib/auth';
 
-function makeDb() {
-  const duplicateQuery = {
-    where: () => duplicateQuery,
-    select: () => duplicateQuery,
-    limit: () => duplicateQuery,
-    get: async () => ({ empty: true }),
+/** A floor already present in the building, as the sibling scan sees it. */
+interface SiblingRow {
+  number: number;
+  kind?: string;
+}
+
+/**
+ * @param siblings floors the building already holds — drives the ADR-461
+ *                 kind-aware uniqueness decision the handler makes in memory
+ */
+function makeDb(siblings: SiblingRow[] = []) {
+  const floorsQuery = {
+    where: () => floorsQuery,
+    select: () => floorsQuery,
+    limit: () => floorsQuery,
+    get: async () => ({
+      empty: siblings.length === 0,
+      docs: siblings.map((row) => ({ data: () => row })),
+    }),
   };
   return {
     collection: (name: string) => ({
       doc: () => ({
-        get: async () => ({ data: () => (name.includes('building') ? { name: 'Κτήριο Α' } : {}) }),
+        exists: true,
+        get: async () => ({
+          exists: true,
+          data: () => (name.includes('building') ? { name: 'Κτήριο Α' } : {}),
+        }),
       }),
-      where: () => duplicateQuery,
+      where: () => floorsQuery,
     }),
   };
 }
@@ -140,5 +163,69 @@ describe('handleCreateFloor — ADR-461 kind persistence', () => {
     const fields = createEntityMock.mock.calls[0][1].entitySpecificFields as Record<string, unknown>;
     expect('finishThickness' in fields).toBe(false);
     expect('mezzanineParentNumber' in fields).toBe(false);
+  });
+});
+
+/**
+ * ADR-461 kind-aware uniqueness — the rule that broke this file's Firestore
+ * double when it landed (`5ab8033d`) and that nothing pinned until now: the
+ * suite failed on `siblingsSnap.docs` being undefined, so the rule itself shipped
+ * unverified. Counted storeys must keep unique numbers among themselves; a
+ * special level may share a number with one, but there may be only ONE per kind.
+ */
+describe('handleCreateFloor — ADR-461 kind-aware uniqueness', () => {
+  async function expectRejection(body: Record<string, unknown>): Promise<{ statusCode?: number; message: string }> {
+    try {
+      await handleCreateFloor(makeRequest(body), ctx);
+      throw new Error('expected the create to be rejected');
+    } catch (error) {
+      const typed = error as { statusCode?: number; message: string };
+      if (typed.message === 'expected the create to be rejected') throw error;
+      return typed;
+    }
+  }
+
+  it('rejects a counted storey whose number is already taken by a counted storey', async () => {
+    getAdminFirestoreMock.mockReturnValue(makeDb([{ number: 0, kind: 'ground' }]));
+
+    const error = await expectRejection(baseBody);
+
+    expect(error.statusCode).toBe(409);
+    expect(error.message).toContain('already exists in building');
+    expect(createEntityMock).not.toHaveBeenCalled();
+  });
+
+  it('treats a legacy floor with NO kind as a counted storey', async () => {
+    // Pre-ADR-461 documents carry no `kind`; they must still block a clashing number.
+    getAdminFirestoreMock.mockReturnValue(makeDb([{ number: 0 }]));
+
+    expect((await expectRejection(baseBody)).statusCode).toBe(409);
+  });
+
+  it('rejects a SECOND special level of the same kind', async () => {
+    getAdminFirestoreMock.mockReturnValue(makeDb([{ number: -1, kind: 'foundation' }]));
+
+    const error = await expectRejection({ ...baseBody, number: -5, kind: 'foundation' });
+
+    expect(error.statusCode).toBe(409);
+    expect(error.message).toContain('special level already exists');
+  });
+
+  it('ALLOWS a special level to share a number with a counted storey', async () => {
+    // The Revit-true case: a foundation auto-numbered −1 co-existing with a
+    // manually created basement −1. A number-only check would have refused this.
+    getAdminFirestoreMock.mockReturnValue(makeDb([{ number: -1, kind: 'basement' }]));
+
+    await handleCreateFloor(makeRequest({ ...baseBody, number: -1, kind: 'foundation' }), ctx);
+
+    expect(createEntityMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('ALLOWS a counted storey whose number is only taken by a special level', async () => {
+    getAdminFirestoreMock.mockReturnValue(makeDb([{ number: 3, kind: 'stair-penthouse' }]));
+
+    await handleCreateFloor(makeRequest({ ...baseBody, number: 3, kind: 'standard' }), ctx);
+
+    expect(createEntityMock).toHaveBeenCalledTimes(1);
   });
 });

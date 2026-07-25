@@ -288,6 +288,8 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
     selectedEntityIds: SelectedEntitiesStore.getSelectedEntityIds(), currentScene,
     onNudgeSelection: nudgeSelection,
     onColorMenuClose: closeColorMenu,
+    // ADR-364 §10.12 — gate του τελευταίου ESC slot (COLOR_MENU 100).
+    isColorMenuOpen: colorMenu.open,
     onDrawingCancel: state.onDrawingCancel,
     onSelectAll: handleSelectAll,
     activeTool, overlayMode, overlayStore
