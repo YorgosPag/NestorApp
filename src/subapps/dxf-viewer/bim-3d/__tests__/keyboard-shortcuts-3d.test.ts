@@ -70,7 +70,7 @@ function mkCtx(overrides: Partial<ShortcutDispatchContext> = {}): ShortcutDispat
     onFocusNext3D: () => undefined,
     onFocusPrev3D: () => undefined,
     onFocusSelect3D: () => undefined,
-    onFocusClear3D: () => undefined,
+    // ADR-364 §10.13 — no `onFocusClear3D`: Escape left the dispatcher for the escape bus.
     ...overrides,
   };
   return Object.assign(ctx, { calls }) as never;

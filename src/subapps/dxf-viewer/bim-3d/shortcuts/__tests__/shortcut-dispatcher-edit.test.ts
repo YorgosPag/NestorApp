@@ -1,5 +1,10 @@
 /**
  * ADR-402 §Sub-Phase 2 — 3D edit-gizmo key routing in the shortcut dispatcher.
+ *
+ * ADR-364 §10.13 (Φ2 Μηχ. 4): Escape LEFT this dispatcher. The gizmo teardown is now a
+ * gated escape-bus slot (`use3DEscapeRegistrations`, ESC_PRIORITY.EDIT_GIZMO_3D), so the
+ * Escape assertions below pin the INVERSE of what they used to: the dispatcher must keep
+ * its hands off Escape, whatever the edit state. G / X / Z are unchanged.
  */
 
 import { dispatchShortcut, type ShortcutDispatchContext } from '../shortcut-dispatcher';
@@ -16,7 +21,6 @@ function makeCtx(over: Partial<ShortcutDispatchContext>): ShortcutDispatchContex
     onFocusNext3D: () => {},
     onFocusPrev3D: () => {},
     onFocusSelect3D: () => {},
-    onFocusClear3D: () => {},
     ...over,
   };
 }
@@ -57,15 +61,31 @@ describe('dispatchShortcut — BIM edit gizmo keys', () => {
     expect(toggled).toBe(0);
   });
 
-  it('Escape tears down the gizmo only while editing', () => {
-    let escaped = 0;
-    const active = dispatchShortcut(key('Escape'), makeCtx({ editActive: true, onEditEscape3D: () => { escaped++; } }));
-    expect(active.handled).toBe(true);
-    expect(escaped).toBe(1);
+  // ADR-364 §10.13 — ΦΥΛΑΚΑΣ: the dispatcher must NEVER claim Escape again.
+  //
+  // Before Μηχ. 4 this returned `handled: true` while editing, which made the dispatcher
+  // the sole owner of the gizmo teardown — invisible to the escape bus, and the exact
+  // reason Μηχ. 2 (`stopImmediatePropagation`) regressed the 3D gizmo (§10.11.Γ). If this
+  // test goes red, someone re-added an Escape branch and Μηχ. 2 is unsafe again.
+  it('Escape is NOT routed by the dispatcher — editing or not (bus owns it)', () => {
+    const editing = dispatchShortcut(key('Escape'), makeCtx({ editActive: true }));
+    expect(editing.handled).toBe(false);
 
-    // Not editing → Escape is NOT routed to the gizmo (falls through to focus-clear).
-    dispatchShortcut(key('Escape'), makeCtx({ editActive: false, onEditEscape3D: () => { escaped++; } }));
-    expect(escaped).toBe(1);
+    const idle = dispatchShortcut(key('Escape'), makeCtx({ editActive: false }));
+    expect(idle.handled).toBe(false);
+  });
+
+  it('Escape does not reach ANY dispatcher branch, incl. focus-clear', () => {
+    let focusSelect = 0;
+    // `focusClear`'s registry key IS Escape; before §10.13 it returned HANDLED
+    // unconditionally in 3D — an ungated consumer of every 3D Escape.
+    const res = dispatchShortcut(
+      key('Escape'),
+      makeCtx({ is3D: true, onFocusSelect3D: () => { focusSelect++; } }),
+    );
+    expect(res.handled).toBe(false);
+    expect(res.autoSwitched).toBe(false);
+    expect(focusSelect).toBe(0);
   });
 
   it('X / Z toggle the axis lock only while editing', () => {

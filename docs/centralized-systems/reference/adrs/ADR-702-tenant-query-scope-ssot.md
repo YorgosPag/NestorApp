@@ -338,10 +338,50 @@ mutation στον production κώδικα — σε κοινό δέντρο με 
 στα iso19650. Καταγράφηκε στο `.claude-rules/pending-ratchet-work.md`.
 **ΟΧΙ blanket sed** — κάποια σημεία θέλουν όντως τον *συγκεκριμένο* ρόλο.
 
-### 7.3 Smoke test
+### 7.5 🔴 ΝΕΟ ΕΥΡΗΜΑ — το `iso19650/costs` **δεν δούλεψε ποτέ** (λείπει index)
 
-Άλλαξαν 5 production auth routes + 2 error renderers. Τα tests καλύπτουν λογική,
-όχι το Next wiring: θέλει άνοιγμα λίστας κτιρίων / ακινήτων / ορόφων.
+Βρέθηκε **στο browser verification**, όχι σε test. Με έγκυρο `?companyId=` το
+endpoint επιστρέφει **500** `{"success":false,"error":"Internal server error"}`.
+
+**Δεν είναι regression αυτού του κύκλου** — και το αποδεικνύει το ίδιο το σχήμα
+της απόκρισης. Αυτό το μήνυμα παράγεται **μόνο** από το `catch` *μέσα* στο
+`handleGetCosts`. Για να φτάσει εκεί, πέρασαν ήδη επιτυχώς **και οι δύο** δικοί
+μου έλεγχοι (αλλιώς θα έβλεπα 403 «Cross-tenant access denied» ή 403 «Forbidden:
+Only super_admin»). Δηλαδή το verification **επιβεβαιώνει** το happy path του
+ADR-702 και ξεσκεπάζει προϋπάρχον σφάλμα από κάτω.
+
+**Αιτία, μετρημένη**: το query είναι
+`where('companyId','==') + orderBy('createdAt','desc')` → απαιτεί composite index
+`companyId + createdAt`. Στο `firestore.indexes.json` υπάρχουν **μηδέν** indexes
+για το `iso19650_cost_log` → `FAILED_PRECONDITION`.
+
+**Διόρθωση (απόφαση Giorgio)**: index `iso19650_cost_log: companyId ASC +
+createdAt DESC` + `firebase deploy --only firestore:indexes`. Ίδια οικογένεια με
+το §7.1. **ΔΕΝ** το πρόσθεσα μόνος μου: το ADR-373 P2.5 είναι ξένο πεδίο, και
+ένα index χωρίς deploy είναι νεκρό γράμμα.
+
+### 7.3 ✅ Smoke test — ΕΓΙΝΕ (Chrome, `localhost:3000`, 2026-07-25)
+
+Επαληθεύτηκε στον **πραγματικό** dev server ως super admin, με ανάγνωση των
+network responses (όχι μόνο του UI):
+
+| έλεγχος | απόκριση | τι αποδεικνύει |
+|---|---|---|
+| σελίδα Κτίρια | «Κτίρια (1)», Κτήριο Α | το UI δεν έσπασε |
+| `GET /api/buildings` | 200, `count 1` | βασικό μονοπάτι |
+| `GET /api/buildings?companyId=<ανύπαρκτη>` | 200, **`count 0`** | **η διόρθωση §1.3** — πριν επέστρεφε ΟΛΑ |
+| `GET /api/properties?companyId=<ανύπαρκτη>` | 200, `units: [], count 0` | ίδιο δόγμα, envelope (`units`) αμετάβλητο |
+| `GET /api/floors?companyId=<ανύπαρκτη>` | 200, `floors: [], totalFloors 0` | ίδιο δόγμα, envelope αμετάβλητο |
+| `GET /api/admin/iso19650/costs` (χωρίς param) | **400** `{"success":false,"error":"companyId query param required"}` | το `defineRoute` envelope είναι **byte-identical** με το χειροποίητο που αντικατέστησε |
+| `GET /api/buildings/trash` | 200 | το ADR-697 SSoT δεν επηρεάστηκε |
+
+Το `count 0` στο δεύτερο είναι **διπλή** απόδειξη: ότι το φίλτρο εφαρμόζεται
+**και** ότι ο καλών είναι bypass ρόλος — για κανονικό χρήστη το param θα
+αγνοούνταν και θα επέστρεφε `count 1`.
+
+**Δεν επαληθεύτηκε στον browser**: η διαδρομή **403** του `requireTenantScope`
+(θέλει session μη-super-admin, που δεν υπάρχει σε single-user pre-production).
+Καλύπτεται από 8 unit tests.
 
 ---
 

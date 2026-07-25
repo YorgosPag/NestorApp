@@ -128,9 +128,62 @@ export const ESC_PRIORITY = {
   BODY_DRAG: 425,
 
   /**
+   * P420 — 3D BIM edit gizmo mounted (ADR-402 §Sub-Phase 2 → ADR-364 §10.13).
+   *
+   * First rung of the 3D ladder: ESC tears the move/rotate gizmo down and LEAVES the
+   * selection intact, so the next ESC deselects (Revit «Modify» parity — Esc backs out
+   * one context at a time). Below {@link BODY_DRAG} (425) so an in-flight 3D marquee
+   * still aborts first.
+   *
+   * ⚠️ WHY 420 AND NOT THE 250-300 BAND (measured 2026-07-25, ADR-364 §10.13):
+   * the gizmo is **auto-on-selection** (`use-bim3d-edit-interaction.ts` §syncFromSelection:
+   * «a 3D BIM selection mounts the gizmo»). Gizmo mounted ⟹ a selection exists ⟹ the
+   * composite deselect `canvas/fallback-deselect` at {@link DRAFT_POLYGON} (400) always
+   * reports `canHandle === true` — and it is mounted in 3D too (`BimViewport3D` is a leaf
+   * INSIDE `CanvasLayerStack`). Any gizmo slot below 400 is therefore **structurally
+   * unreachable**: it would be dead code from birth. Measured, not assumed.
+   */
+  EDIT_GIZMO_3D: 420,
+
+  /**
+   * P415 — Stair sub-element drill-in active (ADR-358 Q19 «click-into components»).
+   *
+   * ESC steps OUT of the selected tread/riser/landing/waist back to the whole stair —
+   * same «exit one level» semantics as {@link GROUP_EXIT} / {@link BLOCK_EDITOR_EXIT}.
+   * Runs after {@link EDIT_GIZMO_3D}, preserving the legacy dispatcher order (the edit
+   * branch ran before the stair-sub branch in `dispatchShortcut`).
+   *
+   * ⚠️ WHY NOT NEXT TO GROUP_EXIT (275) despite the identical semantics: the stair-sub
+   * store is documented as «Cleared whenever the whole-entity selection moves away from
+   * `stairId` or is dropped» — a sub-selection therefore ALWAYS coexists with the stair
+   * being selected, so the 400 composite deselect would shadow it exactly as it would
+   * shadow the gizmo. GROUP_EXIT/BLOCK_EDITOR_EXIT survive at 274/275 only because
+   * entering a group / block editor does not by itself leave an entity selected.
+   */
+  STAIR_SUB_EXIT: 415,
+
+  /**
+   * P410 — 3D selection non-empty (ADR-402 / ADR-364 §10.13).
+   *
+   * Last rung of the 3D ladder: clears `Selection3DStore`, which cascades to the
+   * universal selection through the EXISTING one-way bridge
+   * (`use-3d-selection-universal-bridge`) — one action, both stores, zero new sync path.
+   *
+   * Sits just above the 2D composite deselect at {@link DRAFT_POLYGON} (400) and is
+   * mode-gated to 3D, so in 2D the composite keeps owning deselect unchanged; there is
+   * no tie and no double-clear.
+   */
+  SELECTION_3D_CLEAR: 410,
+
+  /**
    * P400 — Draft polygon non-empty.
    *
-   * Clears in-progress polygon points that aren't yet a saved overlay.
+   * ⚠️ Despite the name this is the LIVE canonical deselect: `canvas/fallback-deselect`
+   * (`useCanvasEscapeRegistrations`) is a COMPOSITE handler — draft polygon + overlay
+   * draw-mode + grip selection + **entity selection**, all on one press, mirroring the
+   * legacy switch. {@link ENTITY_SELECTION} (250) below is documentation only; nothing
+   * registers against it (verified 2026-07-25). Read this before assuming the deselect
+   * rung lives at 250.
    */
   DRAFT_POLYGON: 400,
 
@@ -174,6 +227,12 @@ export const ESC_PRIORITY = {
    * P250 — Entity selection non-empty (DXF + overlays).
    *
    * AutoCAD/BricsCAD pattern: ESC deselects after all higher contexts cleared.
+   *
+   * ⚠️ **NO REGISTRATION USES THIS** (verified by grep 2026-07-25). The live deselect is
+   * the composite `canvas/fallback-deselect` at {@link DRAFT_POLYGON} (400). The constant
+   * is kept because several handler docs describe their own placement relative to it, but
+   * it is a documentation landmark, NOT the rung the chain actually executes. Do not
+   * derive a new handler's priority from it — derive it from 400.
    */
   ENTITY_SELECTION: 250,
 

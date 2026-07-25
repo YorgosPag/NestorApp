@@ -1,10 +1,16 @@
 /**
  * ADR-358 Q19 — stair «click-into» sub-element key routing in the shortcut dispatcher.
- * Tab cycles treads/risers and Escape steps out, but ONLY while a sub-element is selected;
- * otherwise the events fall through to the whole-entity focus navigation.
+ * Tab cycles treads/risers ONLY while a sub-element is selected; otherwise it falls through
+ * to the whole-entity focus navigation.
+ *
+ * ADR-364 §10.13 (Φ2 Μηχ. 4): the Escape «step out one level» rung LEFT this dispatcher and
+ * became a gated escape-bus slot (ESC_PRIORITY.STAIR_SUB_EXIT, below EDIT_GIZMO_3D so the
+ * gizmo still wins first — the legacy branch order is preserved by priority instead of by
+ * statement order). The Escape assertions below pin that the dispatcher stays out of it.
  */
 
 import { dispatchShortcut, type ShortcutDispatchContext } from '../shortcut-dispatcher';
+import { ESC_PRIORITY } from '../../../systems/escape-bus';
 
 function makeCtx(over: Partial<ShortcutDispatchContext>): ShortcutDispatchContext {
   return {
@@ -18,7 +24,6 @@ function makeCtx(over: Partial<ShortcutDispatchContext>): ShortcutDispatchContex
     onFocusNext3D: () => {},
     onFocusPrev3D: () => {},
     onFocusSelect3D: () => {},
-    onFocusClear3D: () => {},
     ...over,
   };
 }
@@ -52,41 +57,18 @@ describe('dispatchShortcut — stair sub-element keys (ADR-358 Q19)', () => {
     expect(focusNext).toBe(1);
   });
 
-  it('Escape steps out of the sub-element (wins over focusClear) when drilled in', () => {
-    let cleared = 0;
-    let focusClear = 0;
-    const res = dispatchShortcut(
-      key('Escape'),
-      makeCtx({ hasStairSubSelection: true, onStairSubClear: () => { cleared++; }, onFocusClear3D: () => { focusClear++; } }),
-    );
-    expect(res.handled).toBe(true);
-    expect(cleared).toBe(1);
-    expect(focusClear).toBe(0);
+  // ADR-364 §10.13 — ΦΥΛΑΚΑΣ: Escape belongs to the bus, drilled in or not.
+  it('Escape is NOT routed by the dispatcher — drilled in or not (bus owns it)', () => {
+    expect(dispatchShortcut(key('Escape'), makeCtx({ hasStairSubSelection: true })).handled).toBe(false);
+    expect(dispatchShortcut(key('Escape'), makeCtx({ hasStairSubSelection: false })).handled).toBe(false);
   });
 
-  it('Escape falls through to focusClear with no sub-selection', () => {
-    let cleared = 0;
-    let focusClear = 0;
-    dispatchShortcut(
-      key('Escape'),
-      makeCtx({ hasStairSubSelection: false, onStairSubClear: () => { cleared++; }, onFocusClear3D: () => { focusClear++; } }),
-    );
-    expect(cleared).toBe(0);
-    expect(focusClear).toBe(1);
-  });
-
-  it('an active edit gizmo Escape wins over the sub-element clear (edit branch runs first)', () => {
-    let escaped = 0;
-    let cleared = 0;
-    dispatchShortcut(
-      key('Escape'),
-      makeCtx({
-        editActive: true, onEditEscape3D: () => { escaped++; },
-        hasStairSubSelection: true, onStairSubClear: () => { cleared++; },
-      }),
-    );
-    expect(escaped).toBe(1);
-    expect(cleared).toBe(0);
+  // The «gizmo wins over sub-element» ordering did not disappear — it moved from statement
+  // order in `dispatchShortcut` to priority order on the bus. Pinned here so the two facts
+  // stay tied together: whoever changes the constants sees this test.
+  it('the gizmo→sub-element→deselect ladder is encoded in the ESC priorities', () => {
+    expect(ESC_PRIORITY.EDIT_GIZMO_3D).toBeGreaterThan(ESC_PRIORITY.STAIR_SUB_EXIT);
+    expect(ESC_PRIORITY.STAIR_SUB_EXIT).toBeGreaterThan(ESC_PRIORITY.SELECTION_3D_CLEAR);
   });
 
   it('Ctrl+Tab is not a sub-element cycle (modifier not owned)', () => {

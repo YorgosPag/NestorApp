@@ -19,9 +19,10 @@
  *   - SSR-safe — no-op when `window` is undefined.
  *   - Editable-focus guard: handlers without `allowWhenEditable` are skipped
  *     when focus is in INPUT / TEXTAREA / contentEditable.
- *   - Consumption stops DOWNSTREAM only (`stopPropagation`). Sibling
- *     `window`-capture listeners still run — deliberately, until the 3D gizmo
- *     owns an ESC_PRIORITY slot. See ADR-364 §10.11 for the measured reason.
+ *   - Consumption is TERMINAL (`stopImmediatePropagation`): downstream nodes AND
+ *     sibling `window`-capture listeners are both cut off, so one ESC performs
+ *     exactly one action. Unblocked by ADR-364 §10.13 (Μηχ. 4) — see the comment
+ *     at the call site for the regression this used to cause.
  */
 
 import { installEscapeAuditSentinel, noteBusDispatch } from './escape-dev-audit';
@@ -112,21 +113,26 @@ function dispatch(e: KeyboardEvent): EscapeDispatchResult {
   const result = runHandlerChain(snapshot);
   if (result.consumed) {
     e.preventDefault();
-    // ADR-364 §10.11 — ΓΙΑΤΙ `stopPropagation` ΚΑΙ ΟΧΙ `stopImmediatePropagation`.
+    // ADR-364 §10.13 — Μηχ. 2: ΕΝΑ ESC = ΜΙΑ ΕΝΕΡΓΕΙΑ.
     //
     // Το `stopPropagation()` σταματά μόνο τους ΚΑΤΑΝΤΗ κόμβους (document capture,
     // bubble, React onKeyDown). ΔΕΝ αγγίζει τους **αδελφούς** του ίδιου κόμβου και
-    // της ίδιας φάσης (`window` + capture) — τη «Ζώνη Α» του §10.10.
+    // της ίδιας φάσης (`window` + capture) — τη «Ζώνη Α» του §10.10. Το
+    // `stopImmediatePropagation()` τους σταματά κι αυτούς (θέτει κατά προδιαγραφή
+    // ΚΑΙ τη σημαία του `stopPropagation` — μία κλήση αρκεί).
     //
-    // Το §10.6/§10.10 πρότεινε αναβάθμιση σε `stopImmediatePropagation()` (Μηχ. 2)
-    // ώστε ένα ESC = μία ενέργεια. **Μετρήθηκε στον browser 2026-07-25 και είναι
-    // ΠΑΛΙΝΔΡΟΜΗΣΗ αν μπει μόνο του**: σιωπά τον `shortcut-dispatcher.ts:232`, που
-    // σήμερα είναι ο ΜΟΝΟΣ που κλείνει το 3D gizmo ⇒ το gizmo δεν κλείνει ποτέ.
+    // ΓΙΑΤΙ ΜΠΑΙΝΕΙ ΤΩΡΑ ΚΑΙ ΟΧΙ ΝΩΡΙΤΕΡΑ: μπήκε μία φορά μόνος του (§10.11.Γ) και
+    // ήταν ΠΑΛΙΝΔΡΟΜΗΣΗ — σιωπούσε τους τρεις κλάδους ESC του
+    // `bim-3d/shortcuts/shortcut-dispatcher.ts`, τους ΜΟΝΟΥΣ που έκλειναν τότε το 3D
+    // gizmo, χωρίς να υπάρχει slot να τους παραλάβει ⇒ το gizmo δεν έκλεινε ποτέ.
+    // Ο Μηχ. 4 (§10.13) τους μετανάστευσε σε gated slots
+    // (`bim-3d/shortcuts/use3DEscapeRegistrations.ts`), άρα η προϋπόθεση ικανοποιείται
+    // και η Ζώνη Α δεν έχει πια τίποτα να χάσει στη διαδρομή ESC.
     //
-    // ⇒ Ο Μηχ. 2 μπαίνει ΜΑΖΙ με τον Μηχ. 4 (slot `EDIT_GIZMO_3D`), ποτέ πριν.
-    // Ο φύλακας αυτής της εξάρτησης είναι test — βλ. `EscapeCommandBus.test.ts`,
-    // «ΦΥΛΑΚΑΣ ΕΞΑΡΤΗΣΗΣ Μηχ. 2 ⇄ Μηχ. 4».
-    e.stopPropagation();
+    // ⚠️ ΠΡΟΫΠΟΘΕΣΗ ΠΟΥ ΠΑΡΑΜΕΝΕΙ: ο bus πρέπει να εγγράφεται ΠΡΙΝ τους αδελφούς του
+    // (μετρημένο §10.11.Β — σειρά mount, άρα αναδυόμενη). Φύλακας = ο Μηχ. 1: αν
+    // κάποιο refactor την αντιστρέψει, το dev audit φωνάζει `preempted`.
+    e.stopImmediatePropagation();
   }
   noteBusDispatch(e, result, preemptedAtEntry);
   return result;

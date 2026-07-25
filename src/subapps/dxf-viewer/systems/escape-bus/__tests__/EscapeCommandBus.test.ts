@@ -112,21 +112,25 @@ describe('event consumption', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
-// ADR-364 §10.11 — ΦΥΛΑΚΑΣ ΕΞΑΡΤΗΣΗΣ Μηχ. 2 ⇄ Μηχ. 4
+// ADR-364 §10.13 — Μηχ. 2 ΕΝΕΡΓΟΣ: ΕΝΑ ESC = ΜΙΑ ΕΝΕΡΓΕΙΑ
 //
 // Η διαφορά `stopPropagation` vs `stopImmediatePropagation` ΔΕΝ φαίνεται σε
 // κατάντη listener — φαίνεται ΜΟΝΟ σε **αδελφό** του ίδιου κόμβου και φάσης
-// (`window` + capture). Αυτά τα tests καρφώνουν αυτόν ακριβώς τον αδελφό, και
-// κοκκινίζουν αν κάποιος αναβαθμίσει τον bus σε `stopImmediatePropagation()`
-// (Μηχ. 2) ΧΩΡΙΣ να έχει προηγηθεί το slot `EDIT_GIZMO_3D` (Μηχ. 4).
+// (`window` + capture). Αυτά τα tests καρφώνουν αυτόν ακριβώς τον αδελφό.
 //
-// ΓΙΑΤΙ: μετρημένο στον browser 2026-07-25. Με τον Μηχ. 2 μόνο του, ο
-// `bim-3d/shortcuts/shortcut-dispatcher.ts:232` — ο ΜΟΝΟΣ που κλείνει σήμερα
-// το 3D gizmo — σιωπά, και το gizmo δεν κλείνει με κανέναν αριθμό πατημάτων.
-// Δεν είναι θεωρητικό: επαληθεύτηκε A/B στον ίδιο browser, ίδια συνεδρία.
+// ΙΣΤΟΡΙΚΟ (μη το ξαναχάσεις): μέχρι τον Μηχ. 4 τα ίδια tests καρφώνανε το
+// ΑΝΤΙΘΕΤΟ — ότι ο αδελφός ΕΞΑΚΟΛΟΥΘΕΙ να τρέχει. Ήταν σκόπιμο: ο Μηχ. 2 μόνος
+// του σιωπούσε τους τρεις κλάδους ESC του `shortcut-dispatcher.ts`, τους ΜΟΝΟΥΣ
+// που έκλειναν τότε το 3D gizmo, και το gizmo δεν έκλεινε με κανέναν αριθμό
+// πατημάτων (A/B στον ίδιο browser, §10.11.Γ). Ο Μηχ. 4 τους μετέφερε σε gated
+// slots, οπότε ο αδελφός δεν έχει πια τίποτα να χάσει και η σιώπηση είναι σωστή.
+//
+// Η ΠΡΟΫΠΟΘΕΣΗ που μένει είναι η ΣΕΙΡΑ: ο bus πρέπει να εγγράφεται ΠΡΙΝ τους
+// αδελφούς του. Δεν επιβάλλεται από τύπο — είναι σειρά mount. Φύλακας στην
+// παραγωγή = ο Μηχ. 1 (dev audit), που φωνάζει `preempted` αν αντιστραφεί.
 // ────────────────────────────────────────────────────────────────────────────
 
-describe('window-capture siblings — ο φύλακας της εξάρτησης Μηχ. 2 ⇄ Μηχ. 4', () => {
+describe('window-capture siblings — ένα ESC, μία ενέργεια (Μηχ. 2)', () => {
   const siblings: Array<(e: KeyboardEvent) => void> = [];
 
   /** Αδελφός στο `window` capture, εγγεγραμμένος ΜΕΤΑ τον bus (όπως στην πράξη). */
@@ -141,16 +145,17 @@ describe('window-capture siblings — ο φύλακας της εξάρτηση�
     });
   });
 
-  it('ο αδελφός ΕΞΑΚΟΛΟΥΘΕΙ να τρέχει όταν ο bus καταναλώνει — αυτό κρατά ζωντανό το 3D gizmo', () => {
+  it('ο αδελφός ΔΕΝ τρέχει όταν ο bus καταναλώνει — ένα ESC δεν κάνει δύο πράγματα', () => {
     escapeBus.register(makeHandler({ id: 'consume', priority: ESC_PRIORITY.MODAL_DIALOG }));
-    const gizmoCloser = jest.fn(); // ≙ shortcut-dispatcher.ts:232
-    addWindowCaptureSibling((e) => { if (e.key === 'Escape') gizmoCloser(); });
+    const sibling = jest.fn(); // ≙ οποιοσδήποτε window-capture της Ζώνης Α
+    addWindowCaptureSibling((e) => { if (e.key === 'Escape') sibling(); });
 
     fireKey('Escape');
 
-    // ⚠️ ΑΝ ΑΥΤΟ ΓΙΝΕΙ 0: κάποιος έβαλε `stopImmediatePropagation()` στον bus.
-    // Πρώτα ο Μηχ. 4 (EDIT_GIZMO_3D slot) — αλλιώς το gizmo μένει ανοιχτό.
-    expect(gizmoCloser).toHaveBeenCalledTimes(1);
+    // ⚠️ ΑΝ ΑΥΤΟ ΓΙΝΕΙ 1: κάποιος υποβάθμισε τον bus πίσω σε `stopPropagation()`.
+    // Τότε ένα ESC ξαναεκτελεί ΚΑΙ το slot ΚΑΙ τον αδελφό (§10.5 Κ2-β: το
+    // `handleTrimEscape()` έτρεχε ΔΥΟ φορές σε ένα πάτημα).
+    expect(sibling).not.toHaveBeenCalled();
   });
 
   it('ο αδελφός τρέχει και όταν κανένα slot δεν διεκδικεί — η σιωπή του bus μένει σιωπή', () => {

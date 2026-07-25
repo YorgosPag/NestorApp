@@ -26,7 +26,6 @@ import {
   ACTION_FOCUS_NEXT_3D,
   ACTION_FOCUS_PREV_3D,
   ACTION_FOCUS_SELECT_3D,
-  ACTION_FOCUS_CLEAR_3D,
   ACTION_CROP_REGION_TOGGLE,
   PAN_STEP_NORMAL_PX,
   PAN_STEP_FINE_PX,
@@ -57,27 +56,26 @@ export interface ShortcutDispatchContext {
   readonly onAutoSwitchToast: (shortcutLabel: string) => void;
   /** ADR-366 Phase 4.5 / A.7.Q4 — screen-space pan (Ctrl+Arrow / Ctrl+Shift+Arrow). */
   readonly onPan3D: (direction: PanDirection, step: PanStep) => void;
-  /** ADR-366 Phase 4.5 / A.7.Q1 — keyboard focus navigation (Tab cycle / Enter / Esc). */
+  /**
+   * ADR-366 Phase 4.5 / A.7.Q1 — keyboard focus navigation (Tab cycle / Enter).
+   * The Esc rung moved to the escape bus (ADR-364 §10.13), so there is no
+   * `onFocusClear3D` here any more — see `use3DEscapeRegistrations.ts`.
+   */
   readonly onFocusNext3D: () => void;
   readonly onFocusPrev3D: () => void;
   readonly onFocusSelect3D: () => void;
-  readonly onFocusClear3D: () => void;
   /** ADR-366 §C.6.Q4 — Crop region tool toggle (Ctrl+Alt+R). Optional. */
   readonly onCropRegionToggle?: () => void;
   /** ADR-402 §Sub-Phase 2 — true while a 3D BIM edit gizmo is mounted. */
   readonly editActive?: boolean;
   /** ADR-402 §Sub-Phase 2 — G toggles the move gizmo on the selected element. */
   readonly onMoveGizmoToggle3D?: () => void;
-  /** ADR-402 §Sub-Phase 2 — Escape tears the active gizmo down. */
-  readonly onEditEscape3D?: () => void;
   /** ADR-402 §Sub-Phase 2 — X/Z toggle the floor-plane axis lock during edit. */
   readonly onEditAxisLock3D?: (axis: 'X' | 'Z') => void;
   /** ADR-358 Q19 — true while a stair tread/riser sub-element is selected (click-into). */
   readonly hasStairSubSelection?: boolean;
   /** ADR-358 Q19 — Tab cycles to the next tread/riser of the drilled-into stair. */
   readonly onStairSubCycle?: () => void;
-  /** ADR-358 Q19 — Escape steps OUT of the sub-element (back to the whole stair). */
-  readonly onStairSubClear?: () => void;
 }
 
 export interface DispatchResult {
@@ -105,16 +103,28 @@ export function dispatchShortcut(
   event: KeyboardEvent,
   ctx: ShortcutDispatchContext,
 ): DispatchResult {
+  // ── ADR-364 §10.13 — ESCAPE DOES NOT BELONG TO THIS DISPATCHER ────────────
+  // Every 3D ESC rung (gizmo teardown / stair-sub exit / selection clear / focus clear)
+  // is a gated slot on the escape bus now — see `use3DEscapeRegistrations.ts`. This bail
+  // is the SINGLE point that keeps it that way, and it must stay first.
+  //
+  // It matters most for `focusClear`, whose registry entry is literally `key: 'Escape'`
+  // and whose old branch returned HANDLED **unconditionally** whenever the viewport was
+  // 3D — an ungated consumer of every 3D ESC, structurally identical to the COLOR_MENU
+  // root cause of §10.12. The registry definition stays put (the shortcuts help panel
+  // still lists Esc → clear focus); only the dispatch is withdrawn. Same precedent as
+  // `useDimensionKeyboardRouting.mapKey()`, which drops ESC explicitly (§10.5 Κ1).
+  if (event.code === 'Escape' || event.key === 'Escape') return NOT_HANDLED;
+
   // ── Branch 0: 3D BIM edit gizmo keys (ADR-402 §Sub-Phase 2) ───────────────
   // Must run BEFORE the view/focus/auto-switch branches: G would otherwise
-  // auto-switch to 2D (grip-edit tool), Escape would hit focus-clear, and X/Z
-  // could collide with canonical views.
+  // auto-switch to 2D (grip-edit tool), and X/Z could collide with canonical views.
   if (ctx.is3D) {
     const edit = dispatchEditKeys(event, ctx);
     if (edit) return edit;
-    // ADR-358 Q19 — while drilled INTO a stair sub-element, Tab cycles treads/risers and
-    // Escape steps back out. Runs BEFORE the focus branch so it wins Tab (`focusNext`) and
-    // Escape (`focusClear`); with no sub-selection it falls through unchanged.
+    // ADR-358 Q19 — while drilled INTO a stair sub-element, Tab cycles treads/risers.
+    // Runs BEFORE the focus branch so it wins Tab (`focusNext`); with no sub-selection it
+    // falls through unchanged.
     const stairSub = dispatchStairSubKeys(event, ctx);
     if (stairSub) return stairSub;
   }
@@ -178,10 +188,9 @@ function dispatchMatched3D(
     ctx.onFocusSelect3D();
     return HANDLED;
   }
-  if (shortcut.action === ACTION_FOCUS_CLEAR_3D) {
-    ctx.onFocusClear3D();
-    return HANDLED;
-  }
+  // ACTION_FOCUS_CLEAR_3D is deliberately absent: its key IS Escape, and Escape never
+  // reaches this function (see the bail in `dispatchShortcut`). The rung lives on the
+  // escape bus at ESC_PRIORITY.FOCUS_CLEAR — ADR-364 §10.13.
 
   // ADR-366 Phase 4.5 / A.7.Q4 — keyboard pan (Ctrl+Arrow / Ctrl+Shift+Arrow).
   const pan = parsePan3dAction(shortcut.action);
@@ -213,8 +222,10 @@ function dispatchMatched3D(
 /**
  * Route the move-gizmo keys, all plain (no modifier):
  *   G        → toggle the move gizmo on the selected element (always).
- *   Escape   → tear the gizmo down            (only while editing).
  *   X / Z    → toggle the floor-plane axis lock (only while editing).
+ *
+ * Escape is NOT here — the gizmo teardown is a bus slot at ESC_PRIORITY.EDIT_GIZMO_3D
+ * (ADR-364 §10.13).
  *
  * Returns a DispatchResult when consumed, or null to fall through. Uses
  * `event.code` (layout-independent — works on Greek keyboards like Ctrl+Z does).
@@ -229,10 +240,6 @@ function dispatchEditKeys(
     return HANDLED;
   }
   if (!ctx.editActive) return null;
-  if (event.code === 'Escape') {
-    ctx.onEditEscape3D?.();
-    return HANDLED;
-  }
   if (event.code === 'KeyX') {
     ctx.onEditAxisLock3D?.('X');
     return HANDLED;
@@ -252,7 +259,9 @@ function dispatchEditKeys(
  * Route the sub-element keys while a stair tread/riser is selected (all plain, no modifier
  * except Tab which ignores Shift — the sub-store cycles forward only):
  *   Tab      → cycle to the next tread/riser of the drilled-into stair.
- *   Escape   → step OUT one level (back to the whole stair).
+ *
+ * Escape is NOT here — stepping OUT one level is a bus slot at
+ * ESC_PRIORITY.STAIR_SUB_EXIT (ADR-364 §10.13).
  *
  * Returns a DispatchResult when consumed, or null to fall through (no sub-selection, or a
  * modifier the sub-element mode does not own). Uses `event.code` (layout-independent).
@@ -265,10 +274,6 @@ function dispatchStairSubKeys(
   if (event.ctrlKey || event.altKey || event.metaKey) return null;
   if (event.code === 'Tab') {
     ctx.onStairSubCycle?.();
-    return HANDLED;
-  }
-  if (event.code === 'Escape' && !event.shiftKey) {
-    ctx.onStairSubClear?.();
     return HANDLED;
   }
   return null;

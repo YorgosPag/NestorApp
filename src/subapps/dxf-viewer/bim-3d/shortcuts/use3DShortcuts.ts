@@ -20,6 +20,9 @@ import { useBim3DEditStore } from '../stores/Bim3DEditStore';
 import { useStairSubElementSelectionStore } from '../../bim/stairs/stair-sub-element-selection-store';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 import { isTypingInFormField } from '../ui/is-typing-in-form-field';
+// ADR-364 §10.13 (Φ2 Μηχ. 4) — ESC left this dispatcher entirely; the 3D rungs are bus slots
+// now. Mirrors `useCanvasKeyboardShortcuts` → `useCanvasEscapeRegistrations` on the 2D side.
+import { use3DEscapeRegistrations } from './use3DEscapeRegistrations';
 import {
   dispatchShortcut,
   panStepToScreenDelta,
@@ -44,6 +47,10 @@ interface Use3DShortcutsConfig {
  */
 export function use3DShortcuts({ getManager, active, onCropRegionToggle }: Use3DShortcutsConfig): void {
   const { t } = useTranslation('bim3d');
+
+  // ADR-364 §10.13 — the four 3D ESC rungs (gizmo teardown / stair-sub exit / selection
+  // clear / focus clear) are registered with the escape bus, NOT handled below.
+  use3DEscapeRegistrations({ getManager, active });
 
   useEffect(() => {
     if (!active) return undefined;
@@ -70,7 +77,6 @@ export function use3DShortcuts({ getManager, active, onCropRegionToggle }: Use3D
         onFocusNext3D: () => manager.cycleKeyboardFocus('next'),
         onFocusPrev3D: () => manager.cycleKeyboardFocus('prev'),
         onFocusSelect3D: () => manager.selectFocusedEntity(),
-        onFocusClear3D: () => manager.clearKeyboardFocus(),
         onCropRegionToggle,
         // ADR-402 §Sub-Phase 2 — BIM move gizmo keys (read stores at keydown time).
         editActive: useBim3DEditStore.getState().editToolActive,
@@ -83,7 +89,6 @@ export function use3DShortcuts({ getManager, active, onCropRegionToggle }: Use3D
             edit.activateMove([...sel.selectedBimIds], type);
           }
         },
-        onEditEscape3D: () => useBim3DEditStore.getState().deactivate(),
         onEditAxisLock3D: (axis) => useBim3DEditStore.getState().toggleAxisLock(axis),
         // ADR-358 Q19 — stair «click-into» sub-element keys (read the store at keydown time).
         hasStairSubSelection: useStairSubElementSelectionStore.getState().selected !== null,
@@ -92,7 +97,6 @@ export function use3DShortcuts({ getManager, active, onCropRegionToggle }: Use3D
           if (!sub) return;
           useStairSubElementSelectionStore.getState().cycleNext(manager.countStairSubElements(sub.stairId, sub.part));
         },
-        onStairSubClear: () => useStairSubElementSelectionStore.getState().clear(),
       };
 
       const result = dispatchShortcut(event, ctx);
