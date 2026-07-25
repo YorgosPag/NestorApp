@@ -94,7 +94,11 @@ describe('extractResult', () => {
   });
 
   it('returns null for error phase', () => {
-    expect(extractResult({ phase: 'error', reason: 'no-results', canRetry: true })).toBeNull();
+    expect(extractResult({ phase: 'error', reason: 'network', canRetry: true })).toBeNull();
+  });
+
+  it('returns null for not-found phase', () => {
+    expect(extractResult({ phase: 'not-found', searchedAtMs: 0 })).toBeNull();
   });
 });
 

@@ -285,6 +285,7 @@
         "conflict": "Resolution required",
         "suggestions": "Select a location",
         "stale": "Stale data",
+        "not-found": "Not found",
         "error": "Search error"
       },
       "retryGeocode": "Retry",

@@ -57,6 +57,9 @@ const PHASE_STATUS_CLASS: Record<AddressEditorState['phase'], string> = {
   conflict: 'text-[hsl(var(--text-warning))]',
   suggestions: 'text-primary',
   stale: 'text-muted-foreground',
+  // Not an error: the provider answered, the address just isn't in its data.
+  // Warning tone, not destructive — nothing is broken and retrying won't help.
+  'not-found': 'text-[hsl(var(--text-warning))]',
   error: 'text-destructive',
 };
 

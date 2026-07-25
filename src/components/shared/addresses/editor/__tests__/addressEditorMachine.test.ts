@@ -148,15 +148,33 @@ describe('GEOCODE_SUCCESS', () => {
   });
 });
 
+describe('GEOCODE_EMPTY', () => {
+  it('lands on not-found — an absent address is an answer, not a fault', () => {
+    const out = computeNextState(INITIAL_STATE, { type: 'GEOCODE_EMPTY', nowMs: 7000 });
+    expect(out).toEqual({ phase: 'not-found', searchedAtMs: 7000 });
+  });
+
+  it('never produces the error phase', () => {
+    const out = computeNextState(INITIAL_STATE, { type: 'GEOCODE_EMPTY', nowMs: 1 });
+    expect(out.phase).not.toBe('error');
+  });
+});
+
 describe('GEOCODE_FAILED', () => {
   it.each([
-    ['no-results', false],
-    ['timeout', true],
-    ['rate-limit', true],
-    ['network', true],
-  ] as const)('reason=%s → canRetry=%s', (reason, canRetry) => {
+    'timeout',
+    'rate-limit',
+    'network',
+    'server',
+  ] as const)('reason=%s → error phase, retryable', (reason) => {
     const out = computeNextState(INITIAL_STATE, { type: 'GEOCODE_FAILED', reason });
-    expect(out).toEqual({ phase: 'error', reason, canRetry });
+    expect(out).toEqual({ phase: 'error', reason, canRetry: true });
+  });
+
+  it('every failure reaching this path is retryable — "no results" no longer travels it', () => {
+    const out = computeNextState(INITIAL_STATE, { type: 'GEOCODE_FAILED', reason: 'network' });
+    if (out.phase !== 'error') throw new Error('expected error');
+    expect(out.canRetry).toBe(true);
   });
 });
 

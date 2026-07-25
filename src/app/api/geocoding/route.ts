@@ -37,7 +37,7 @@ function validateRequestBody(body: unknown): body is GeocodingRequestBody {
 
   if (!hasSearchField) return false;
 
-  for (const key of ['street', 'city', 'neighborhood', 'postalCode', 'county', 'municipality', 'region', 'country']) {
+  for (const key of ['street', 'number', 'city', 'neighborhood', 'postalCode', 'county', 'municipality', 'region', 'country']) {
     if (b[key] !== undefined && typeof b[key] !== 'string') return false;
   }
 
