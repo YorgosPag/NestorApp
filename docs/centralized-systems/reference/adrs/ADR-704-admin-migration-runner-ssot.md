@@ -100,38 +100,96 @@ runMigration(ctx, { dryRun, steps, name }): Promise<NextResponse>  // envelope: 
 
 ---
 
+## 3.2 Recognition — τι έδειξε η χαρτογράφηση (2026-07-25)
+
+Πλήρης ανάλυση των 9 routes (Explore agent + web research state-of-the-art). **Η αρχική
+υπόθεση «9 routes, κοινό pattern» ΑΝΑΤΡΑΠΗΚΕ** — ακριβώς η παγίδα ADR-698/699 που αποφύγαμε:
+
+| Route | Πραγματικό pattern | Ετυμηγορία |
+|---|---|---|
+| `backfill-file-companyid` (#1) | GET/POST dispatch· cursor scan· idempotent skip· `db.batch()` flush· report· audit | 🟢 **SSoT** |
+| `fix-floorplan-companyid` (#2) | Ίδιο σχήμα· lookup via floor→building→unit maps· batch chunks 400 | 🟢 **SSoT** |
+| `search-backfill` (#3) | Bundle 3 ασύνδετων ops· εξωτερικό engine· **ΚΑΝΕΝΑ audit** (gap) | 🔵 ξεχωριστό split |
+| `migrations/execute` (#4) | Meta-router πάνω σε ετερόκλητα migration modules | 🔵 ξεχωριστό split |
+| `migrations/execute-admin` (#5) | Χωρίς dry-run/pagination· έχει self-verification step | 🔵 ξεχωριστό split |
+| `force-uniform-schema` (#6) | Schema-rewrite σε `navigation`· `.update()` per-doc· **δεν καλείται από πουθενά** | 🔴 **dead/superseded** |
+| `normalize-schema` (#7) | Πιο ήπια εκδοχή του #6· `.update()` per-doc· **δεν καλείται** | 🔴 **dead/superseded** |
+| `radical-clean-schema` (#8) | `.delete()`+`.set()` — φτιάχτηκε επειδή τα #6/#7 απέτυχαν να καθαρίσουν legacy πεδία | 🔴 **το «τελικό» — αλλά dead** |
+| `seed-parking` (#9) | Seed από static templates, ΟΧΙ backfill πεδίου | 🟠 ξεχωριστό split |
+
+**Κρίσιμο εύρημα #6/#7/#8:** ΔΕΝ είναι 3 features — είναι **3 διαδοχικές προσπάθειες στο ίδιο
+bug** (schema inconsistency στο `navigation`). Το docblock του #8 το ομολογεί. Και τα 3 **δεν
+καλούνται από κανένα caller** (ούτε import ούτε HTTP `fetch` string στο `src`). Η σωστή ενέργεια
+ΔΕΝ είναι ενοποίηση — είναι **deprecation/διαγραφή** (μετά από έλεγχο ποιο, αν κάποιο, χρειάζεται
+να τρέξει άλλη μία φορά).
+
+## 3.3 SSoT-first — υπάρχει ήδη μισό SSoT (N.0)
+
+Το `src/lib/admin-batch-utils.ts` (**ADR-214 Phase 8**) έχει ήδη το **read/scan** primitive:
+`processAdminBatch(queryRef, batchSize, onBatch)` — cursor pagination με `startAfter`. **Αλλά τα
+backfill routes ΔΕΝ το χρησιμοποιούν** — έχουν δικά τους inline pagination loops (= το duplication
+που είδε το jscpd). Λείπουν από το module: **write** primitive (batched flush), **dry-run
+envelope**, **lookup-cache** helper.
+
+---
+
 ## 4. Decision
 
-> 🚧 **TODO — απόφαση Giorgio.** Σκελετός· η τελική μορφή του SSoT εξαρτάται από τα Q1–Q4 (§6).
+**Επέκταση του υπάρχοντος `src/lib/admin-batch-utils.ts`** (ΟΧΙ νέος φάκελος — N.0 SSoT-first·
+απαντά Q1) με τα primitives που λείπουν. **Composable building blocks + thin envelope** (layered,
+απαντά Q2 — επιβεβαιωμένο από Rails/Django/Flyway + Stripe/Firestore research):
 
-Κατεύθυνση: extract **συμπεριφοράς** (functions), ΟΧΙ option-bag factory (ADR-698/699).
+```
+// ΥΠΑΡΧΕΙ (ADR-214):
+processAdminBatch(queryRef, batchSize, onBatch)      // cursor scan
 
-### Τι ΔΕΝ θα αποφασιστεί εδώ
-- Το `telegram/webhook` (άλλο domain).
-- Οι 3 `navigation/*-schema` routes **ίσως** έχουν διαφορετικό pattern (schema-rewrite, όχι
-  companyId-backfill) — χρειάζονται δικό τους έλεγχο πριν μπουν στο ίδιο SSoT (κίνδυνος: να τα
-  χώσουμε σε λάθος αφαίρεση → ακριβώς η παγίδα ADR-698/699).
+// ΝΕΑ primitives:
+buildLookupCache(queryRef, keyField, valueField)     // thin: processAdminBatch + .select()
+flushInBatches(db, updates, batchSize)               // batched writer, flush σε όριο + per-batch retry
+runBackfill(ctx, { name, dryRun, steps })            // envelope: guard(ADR-703)+dry-run+audit+report+try/catch
+```
+
+Enterprise αναβαθμίσεις (από research, ως **opt-in** στο envelope):
+- **Checkpoint/resumability** — persist last cursor· resume αντί να ξεκινά απ' την αρχή (το #1 σε
+  μεγάλο `files` collection το χρειάζεται· σήμερα λείπει).
+- **Per-batch retry** — ένα batch αποτυγχάνει, δεν πέφτει όλο το migration.
+
+Scope μετάπτωσης SSoT: **μόνο #1 + #2**. Το `runBackfill` γίνεται διαθέσιμο και στα #3/#5 να το
+υιοθετήσουν **επιλεκτικά** — όχι υποχρεωτικά (αποφυγή wrong abstraction).
+
+### Τι ΔΕΝ ενοποιείται (τεκμηριωμένο, όχι υπόθεση)
+- **#6/#7/#8** → deprecation/διαγραφή (dead code), όχι SSoT.
+- **#3/#4/#5** → ατομικό split ο καθένας (extract handlers/modules), προαιρετική υιοθέτηση primitives.
+- **#9** → ατομικό split (ήδη delegates σε `parking-seed-operations`).
+- **`telegram/webhook`** → εκτός scope (Q4: αργότερα, ξεχωριστά).
 
 ---
 
-## 5. Πλάνο υλοποίησης (προτεινόμενες φάσεις)
+## 5. Πλάνο υλοποίησης (αναθεωρημένο μετά το recognition)
 
-- **Φ0** — Επιβεβαίωση pattern: διάβασε πλήρως τα 3 🟢 backfill routes + τα 3 🟡 navigation
-  routes· επιβεβαίωσε ποια μοιράζονται πραγματικά το pattern (jscpd + χειροκίνητο).
-- **Φ1** — Δημιούργησε το `migration-runner` SSoT + tests (Google presubmit-grade).
-- **Φ2** — Μετέγραψε τα 🟢 backfill routes (reference-first) → κάτω από 300, ADR-703 guard μαζί.
-- **Φ3** — Αξιολόγησε 🟡 navigation + 🟠 seed ξεχωριστά (μπορεί να μη χωρούν στο ίδιο SSoT).
-- **Φ4** — Πρόσθεσε στο `.ssot-registry.json` + `npm run ssot:baseline` + `jscpd:baseline`.
+- **Φ0 — Dead-code επιβεβαίωση (navigation #6/#7/#8):** git log + έλεγχος αν κάποιο πρέπει να
+  ξανατρέξει. Αν superseded → **διαγραφή** (⚠️ απόφαση Giorgio — irreversible/outward-facing).
+  Λύνει το CHECK 4 για 3 routes «δωρεάν».
+- **Φ1 — SSoT primitives:** επέκτεινε `admin-batch-utils.ts` με `flushInBatches` +
+  `buildLookupCache` + `runBackfill` (+ opt-in checkpoint/retry) + tests (Google presubmit-grade).
+- **Φ2 — Μετάπτωση #1 + #2:** reference-first· χρήση των primitives → κάτω από 300, με τον
+  ADR-703 guard μαζί. `jscpd:diff` καθαρό.
+- **Φ3 — Ατομικό split #3/#5 (+#9):** extract handlers· προαιρετική υιοθέτηση `runBackfill` όπου
+  ταιριάζει· #4 (meta-router) πιθανόν μόνο split χωρίς primitives.
+- **Φ4 — Registry:** `.ssot-registry.json` + `npm run ssot:baseline` + `jscpd:baseline`.
+- **Φ5 (ξεχωριστό ADR):** `telegram/webhook` handler extract.
 
 ---
 
-## 6. Ανοιχτά ερωτήματα (απόφαση Giorgio)
+## 6. Ερωτήματα — απαντήθηκαν (Giorgio 2026-07-25: «enterprise, full SSoT, ερεύνησε, καμία έκπτωση»)
 
-- **Q1** — Πού ζει το SSoT; `src/lib/admin/migration-runner.ts` ή `src/services/migrations/`;
-- **Q2** — Ένα ενιαίο `runMigration` envelope, ή μόνο τα building blocks (cache/scan/flush) και
-  κάθε route κρατά το δικό του envelope; (Ισορροπία: DRY vs wrong-abstraction.)
-- **Q3** — Μπαίνουν τα 3 `navigation/*-schema` στο ίδιο SSoT ή είναι διαφορετικό pattern;
-- **Q4** — Το `telegram/webhook` γίνεται ξεχωριστό ADR ή απλό inline extract handler;
+- **Q1 — Πού ζει το SSoT;** → **Επέκταση `src/lib/admin-batch-utils.ts`** (υπάρχον ADR-214 SSoT· N.0 SSoT-first, όχι νέος φάκελος).
+- **Q2 — Ένα envelope ή building blocks;** → **Layered — και τα δύο** (composable primitives + thin `runBackfill`), όπως Rails/Django/Flyway. Επιβεβαιωμένο από research.
+- **Q3 — Μπαίνουν τα navigation στο ίδιο SSoT;** → **ΟΧΙ.** Είναι dead/superseded code (§3.2) → deprecation, όχι ενοποίηση.
+- **Q4 — `telegram/webhook`;** → **Αργότερα, ξεχωριστά** (Φ5, εκτός αυτού του ADR).
+
+### Ανοιχτό — χρειάζεται απόφαση Giorgio
+- **Διαγραφή navigation #6/#7/#8** (Φ0): irreversible + outward-facing → επιβεβαίωση πριν προχωρήσω.
 
 ---
 
