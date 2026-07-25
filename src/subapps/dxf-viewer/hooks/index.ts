@@ -37,19 +37,11 @@ export { useMoveEntities, useMoveEntity, type UseMoveEntitiesReturn, type MoveOp
 // Enhanced Selection Hook (Phase 2)
 export { useEnhancedSelection, useSelectAll, type UseEnhancedSelectionReturn } from './useEnhancedSelection';
 
-// Entity Drag Hook (Phase 3)
-export { useEntityDrag, useDragEntities, type UseEntityDragOptions, type UseEntityDragReturn } from './useEntityDrag';
-
-// Unified Movement Operations Hook (Phase 3)
-export {
-  useMovementOperations,
-  useMoveOperations,
-  NUDGE_CONFIG,
-  type NudgeDirection,
-  type NudgeModifier,
-  type UseMovementOperationsOptions,
-  type UseMovementOperationsReturn,
-} from './useMovementOperations';
+// ADR-364 §10.5 (2026-07-25): useEntityDrag + useMovementOperations ΔΙΑΓΡΑΦΗΚΑΝ.
+// Ήταν barrel-only exports (κανένας πραγματικός καταναλωτής, μηδέν tests) με δικό τους
+// window ESC listener — δηλαδή νεκρός κώδικας που φούσκωνε την επιφάνεια του Escape.
+// Διάδοχος για το body-drag: systems/drag/EntityBodyDragStore.ts, σωστά στον escape-bus
+// (ESC_PRIORITY.BODY_DRAG). Το NUDGE_CONFIG ζει τοπικά στο useKeyboardShortcuts.ts.
 
 // Grip Movement Hook (Phase 4)
 export {

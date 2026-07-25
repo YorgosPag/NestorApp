@@ -78,7 +78,6 @@ export {
 // React hooks
 export {
   useDrawingMachine,
-  useDrawingKeyboardShortcuts,
   useDrawingStateInfo,
   useDrawingStateHistory,
   type UseDrawingMachineOptions,

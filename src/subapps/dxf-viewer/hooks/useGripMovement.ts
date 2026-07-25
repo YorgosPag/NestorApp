@@ -49,9 +49,9 @@ import { buildClosureZOrderMethods } from '../systems/entity-creation/closure-zo
 import { calculateDistance } from '../rendering/entities/shared/geometry-rendering-utils';
 // 🏢 ADR-118: Centralized Zero Point Pattern
 import { createZeroPoint } from '../config/geometry-constants';
-// 🏢 ADR-049: SSoT grid-snap leaf (shared with useEntityDrag)
+// 🏢 ADR-049: SSoT grid-snap leaf
 import { snapToGrid as snapDeltaToGrid } from '../systems/grid/grid-snap';
-// 🏢 ADR-516: Timing SSoT + shared zero-lag throttle (shared with useEntityDrag)
+// 🏢 ADR-516: Timing SSoT + zero-lag throttle
 import { DXF_TIMING } from '../config/dxf-timing';
 import { createRafCoalescedThrottle } from './raf-coalesced-throttle';
 // ============================================================================

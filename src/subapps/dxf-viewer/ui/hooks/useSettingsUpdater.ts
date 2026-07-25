@@ -113,27 +113,10 @@ export function useSettingsUpdater<T = Record<string, SettingsValue>>(config: Se
     }
   }, [updateSettings, processValue]);
 
-  // Utility για keyboard navigation σε dropdowns
-  const createKeyboardHandler = useCallback((
-    key: keyof T,
-    options: SettingsValue[],
-    currentValue: SettingsValue,
-    closeDropdown?: () => void
-  ) => {
-    return (e: React.KeyboardEvent) => {
-      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-        e.preventDefault();
-        const currentIndex = options.findIndex(option => option === currentValue);
-        const nextIndex = e.key === 'ArrowDown'
-          ? Math.min(currentIndex + 1, options.length - 1)
-          : Math.max(currentIndex - 1, 0);
-
-        updateSetting(key, options[nextIndex]);
-      } else if (e.key === 'Escape' && closeDropdown) {
-        closeDropdown();
-      }
-    };
-  }, [updateSetting]);
+  // ADR-364 §10.5 (2026-07-25): το createKeyboardHandler ΑΦΑΙΡΕΘΗΚΕ — μηδέν καταναλωτές σε
+  // όλο το src/. Είχε δικό του κλαδί Escape για κλείσιμο dropdown, δηλαδή θα αναπαρήγαγε το
+  // anti-pattern του ZoomControls (Radix DismissableLayer κλείνει πρώτο) σε κάθε μελλοντικό
+  // χρήστη. Το σωστό πρότυπο είναι useEscapeHandler(POPOVER_DROPDOWN) — δες DrawingScaleWidget.
 
   return {
     // Core functionality
@@ -147,7 +130,6 @@ export function useSettingsUpdater<T = Record<string, SettingsValue>>(config: Se
     createColorHandler,
     createSelectHandler,
     createValueSetter,
-    createKeyboardHandler,
 
     // Utility functions
     processValue

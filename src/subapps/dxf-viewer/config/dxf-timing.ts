@@ -361,7 +361,7 @@ export const DXF_TIMING = {
 // For dragged *objects* the rule is: the visual ghost follows instant (per-frame
 // coalesced, never time-dropped); only the command/persist may be throttled
 // (DXF_TIMING.frame.THROTTLE_60). Enforced via the shared raf-coalesced-throttle
-// helper used by useEntityDrag + useGripMovement.
+// helper used by useGripMovement (useEntityDrag deleted — ADR-364 §10.5).
 // ============================================================================
 
 /** Category keys for type-safe access. */

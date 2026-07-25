@@ -12,7 +12,7 @@
  * - Keyboard shortcut integration
  */
 
-import { useCallback, useEffect, useSyncExternalStore, useRef } from 'react';
+import { useCallback, useSyncExternalStore, useRef } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import type {
   DrawingStateType,
@@ -37,9 +37,6 @@ export interface UseDrawingMachineOptions {
 
   /** Custom configuration (ignored if useGlobal=true) */
   config?: DrawingStateMachineConfig;
-
-  /** Enable keyboard shortcuts (ESC to cancel, Enter to complete) */
-  enableKeyboardShortcuts?: boolean;
 }
 
 export interface UseDrawingMachineReturn {
@@ -115,7 +112,6 @@ export function useDrawingMachine(
   const {
     useGlobal = true,
     config,
-    enableKeyboardShortcuts = false,
   } = options;
 
   // Get or create machine instance
@@ -200,27 +196,10 @@ export function useDrawingMachine(
     [machine]
   );
 
-  // Keyboard shortcuts
-  useEffect(() => {
-    if (!enableKeyboardShortcuts) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // ESC to cancel
-      if (e.key === 'Escape' && canCancel) {
-        e.preventDefault();
-        cancel('ESC key pressed');
-      }
-
-      // Enter to complete
-      if (e.key === 'Enter' && canComplete) {
-        e.preventDefault();
-        complete();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [enableKeyboardShortcuts, canCancel, canComplete, cancel, complete]);
+  // ADR-364 §10.5 (2026-07-25): ο τοπικός ESC/Enter listener ΑΦΑΙΡΕΘΗΚΕ.
+  // Ήταν νεκρός (`enableKeyboardShortcuts` default false, κανένα call-site δεν το άναβε)
+  // και παράλληλος window listener — δηλαδή παράκαμψη του EscapeCommandBus αν άνοιγε ποτέ.
+  // Το ESC για ενεργό drawing tool ανήκει στο DRAW_TOOL slot του bus (useKeyboardShortcuts).
 
   return {
     // State
@@ -257,35 +236,6 @@ export function useDrawingMachine(
 // ============================================================================
 // SPECIALIZED HOOKS
 // ============================================================================
-
-/**
- * Hook for keyboard shortcuts only
- * Use when you need keyboard integration without full state management
- */
-export function useDrawingKeyboardShortcuts(
-  onCancel: () => void,
-  onComplete: () => void,
-  enabled = true
-): void {
-  useEffect(() => {
-    if (!enabled) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        onCancel();
-      }
-
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        onComplete();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [enabled, onCancel, onComplete]);
-}
 
 /**
  * Hook for state info display
