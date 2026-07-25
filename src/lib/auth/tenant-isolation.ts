@@ -15,21 +15,12 @@ import { logAuditEvent } from './audit';
 import { isRoleBypass } from './roles';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { TenantIsolationError } from './tenant-isolation-error';
 
-/**
- * Typed tenant isolation error (NO string parsing for status codes).
- * @enterprise Replaces brittle `errorMessage.includes('not found')` pattern
- */
-export class TenantIsolationError extends Error {
-  constructor(
-    message: string,
-    public readonly status: 404 | 403,
-    public readonly code: 'NOT_FOUND' | 'FORBIDDEN'
-  ) {
-    super(message);
-    this.name = 'TenantIsolationError';
-  }
-}
+// ADR-701: the class now lives in a leaf module so `tenant-scope.ts` can throw
+// it without pulling the Admin SDK in. Re-exported here — this is still the
+// canonical import path for every existing consumer.
+export { TenantIsolationError } from './tenant-isolation-error';
 
 /**
  * Minimal project data required for tenant verification.
