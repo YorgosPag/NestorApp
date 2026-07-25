@@ -24,6 +24,7 @@ import { SharedAddressActionCard } from '@/components/shared/addresses/SharedAdd
 import type { CompanyAddress } from '@/types/ContactFormTypes';
 import type { ContactType } from '@/types/contacts';
 import { getDefaultSecondaryAddressType, type ContactAddressType } from '@/types/contacts/address-types';
+import { formatContactAddressLine } from '@/utils/address/address-line';
 import { AddressTypeSelector } from '@/components/contacts/addresses/AddressTypeSelector';
 import { resolveContactAddressLabel } from '@/components/contacts/addresses/contactAddressLabel';
 import { cn } from '@/lib/utils';
@@ -109,8 +110,7 @@ function fromHierarchyValue(existing: CompanyAddress, val: AddressWithHierarchyV
 }
 
 function formatBranchStreetLine(addr: CompanyAddress): string {
-  const parts = [addr.street, addr.number, addr.city, addr.postalCode].filter(Boolean);
-  return parts.join(', ');
+  return formatContactAddressLine(addr);
 }
 
 function branchToResolvedFields(addr: CompanyAddress): ResolvedAddressFields {

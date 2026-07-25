@@ -28,6 +28,8 @@ import type { ShareData } from '@/components/ui/email-sharing/EmailShareForm';
 import type { ContactShareMeta } from '@/types/sharing';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { formatPhoneDisplay } from '@/utils/contacts/formatPhoneDisplay';
+import { isGreekAddressCountry } from '@/utils/address/country-codes';
+import { formatGreekPostalCode } from '@/utils/address/postal-code';
 // 🏢 ENTERPRISE: Centralized data exchange (SSoT - DataExportService/DataImportService)
 import { exportContacts } from '@/utils/contacts/contact-data-exchange';
 import { ImportContactsDialog } from '@/components/contacts/dialogs/ImportContactsDialog';
@@ -275,7 +277,11 @@ export function ContactsList({
     // Primary address
     const primaryAddress = selectedContact.addresses?.find(a => a.isPrimary) || selectedContact.addresses?.[0];
     if (primaryAddress) {
-      const addressParts = [primaryAddress.street, primaryAddress.city, primaryAddress.postalCode].filter(Boolean);
+      // Κείμενο προς άνθρωπο ➜ επίσημη ελληνική γραφή Τ.Κ. (ADR-332 D16).
+      const postalCode = isGreekAddressCountry(primaryAddress.country)
+        ? formatGreekPostalCode(primaryAddress.postalCode)
+        : primaryAddress.postalCode;
+      const addressParts = [primaryAddress.street, primaryAddress.city, postalCode].filter(Boolean);
       if (addressParts.length > 0) {
         lines.push(`📍 ${t('list.share.address')}: ${addressParts.join(', ')}`);
       }
@@ -305,6 +311,35 @@ export function ContactsList({
     setShareModalOpen(true);
   };
 
+  // Ένα και μόνο toolbar — το desktop και το mobile slot δείχνουν το ΙΔΙΟ
+  // element, ώστε ένα νέο prop να μην μπορεί να μπει στο ένα και να λείψει
+  // από το άλλο (ADR-583 / CHECK 3.28).
+  const compactToolbar = (
+    <CompactToolbar
+      config={contactsConfig}
+      selectedItems={selectedItems}
+      onSelectionChange={setSelectedItems}
+      searchTerm={searchTerm}
+      onSearchChange={setSearchTerm}
+      activeFilters={activeFilters}
+      onFiltersChange={setActiveFilters}
+      sortBy={sortBy}
+      onSortChange={(newSortBy, newSortOrder) => {
+        // Type narrowing: CompactToolbar sends SortField, hook expects narrower type
+        if (newSortBy === 'name' || newSortBy === 'date' || newSortBy === 'status' || newSortBy === 'type') {
+          onSortChange(newSortBy, newSortOrder);
+        }
+      }}
+      hasSelectedContact={selectedContact !== null}
+      onNewItem={onNewContact}
+      onEditItem={(_id) => selectedContact && onEditContact?.()}
+      onDeleteItems={(_ids) => selectedContact && onDeleteContact?.([selectedContact.id!])}
+      onExport={handleExportContact}
+      onImport={handleImportContacts}
+      onShare={handleShareContact}
+    />
+  );
+
   return (
     <EntityListColumn hasBorder aria-label={t('list.ariaLabel')}>
 
@@ -323,61 +358,10 @@ export function ContactsList({
           hideSearch  // 🏢 ENTERPRISE: Κρύβουμε το search - χρησιμοποιούμε το CompactToolbar search
         />
 
-        {/* CompactToolbar - Always visible on Desktop, Toggleable on Mobile */}
-        <div className="hidden md:block">
-          <CompactToolbar
-            config={contactsConfig}
-            selectedItems={selectedItems}
-            onSelectionChange={setSelectedItems}
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            activeFilters={activeFilters}
-            onFiltersChange={setActiveFilters}
-            sortBy={sortBy}
-            onSortChange={(newSortBy, newSortOrder) => {
-              // Type narrowing: CompactToolbar sends SortField, hook expects narrower type
-              if (newSortBy === 'name' || newSortBy === 'date' || newSortBy === 'status' || newSortBy === 'type') {
-                onSortChange(newSortBy, newSortOrder);
-              }
-            }}
-          hasSelectedContact={selectedContact !== null}
-          onNewItem={onNewContact}
-          onEditItem={(_id) => selectedContact && onEditContact?.()}
-          onDeleteItems={(_ids) => selectedContact && onDeleteContact?.([selectedContact.id!])}
-          onExport={handleExportContact}
-          onImport={handleImportContacts}
-          onShare={handleShareContact}
-        />
-        </div>
-
-        {/* CompactToolbar - Toggleable on Mobile */}
-        <div className="md:hidden">
-          {showToolbar && (
-          <CompactToolbar
-            config={contactsConfig}
-            selectedItems={selectedItems}
-            onSelectionChange={setSelectedItems}
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            activeFilters={activeFilters}
-            onFiltersChange={setActiveFilters}
-            sortBy={sortBy}
-            onSortChange={(newSortBy, newSortOrder) => {
-              // Type narrowing: CompactToolbar sends SortField, hook expects narrower type
-              if (newSortBy === 'name' || newSortBy === 'date' || newSortBy === 'status' || newSortBy === 'type') {
-                onSortChange(newSortBy, newSortOrder);
-              }
-            }}
-          hasSelectedContact={selectedContact !== null}
-          onNewItem={onNewContact}
-          onEditItem={(_id) => selectedContact && onEditContact?.()}
-          onDeleteItems={(_ids) => selectedContact && onDeleteContact?.([selectedContact.id!])}
-          onExport={handleExportContact}
-          onImport={handleImportContacts}
-          onShare={handleShareContact}
-        />
-          )}
-        </div>
+        {/* Desktop: πάντα ορατό. Mobile: με toggle. ΕΝΑ element, δύο θέσεις —
+            τα δύο πανομοιότυπα αντίγραφα αποκλίναν σιωπηλά (CHECK 3.28). */}
+        <div className="hidden md:block">{compactToolbar}</div>
+        <div className="md:hidden">{showToolbar && compactToolbar}</div>
       </div>
 
       {/* 🏢 ENTERPRISE: Quick Filters για τύπους επαφών */}

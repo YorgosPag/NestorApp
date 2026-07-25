@@ -1292,6 +1292,41 @@
         "src/config/address-config.ts"
       ]
     },
+    "greek-postal-code": {
+      "ssotFile": "src/utils/address/postal-code.ts",
+      "description": "Greek postal code normalise/format/validate primitives. ADR-332 D16 — canonical '54624' in storage, ELTA mask '546 24' on screen. Re-implementing these locally is how the two forms diverged: the hierarchy dataset stores 949 postal codes with NO space, so a spaced value matched nothing.",
+      "forbiddenPatterns": [
+        "function\\s+(formatGreekPostalCode|normalizePostalCode|toCanonicalGreekPostalCode|parseGreekPostalCodeInput|isValidGreekPostalCode|postalCodeAppearsIn)\\s*\\("
+      ],
+      "allowlist": [
+        "src/utils/address/postal-code.ts"
+      ],
+      "tier": 3
+    },
+    "address-country-codes": {
+      "ssotFile": "src/utils/address/country-codes.ts",
+      "description": "Country name → ISO alpha-2 map + the 'is this address Greek?' predicate. ADR-332 D12 — the geocoding engine had the full accent-insensitive map while AddressWithHierarchy had an inline 6-value || chain; a spelling added to one was silently missing from the other.",
+      "forbiddenPatterns": [
+        "function\\s+(countryNameToCode|isGreekAddressCountry)\\s*\\(",
+        "(COUNTRY_CODE_MAP|COUNTRY_CODE_INDEX)\\s*(=|:)\\s*(\\{|new Map|Record|ReadonlyMap)"
+      ],
+      "allowlist": [
+        "src/utils/address/country-codes.ts"
+      ],
+      "tier": 3
+    },
+    "contact-address-info-builder": {
+      "ssotFile": "src/utils/contacts/address-info-builder.ts",
+      "description": "The ONE producer of the derived contact addresses[]. ADR-332 D15 — this conversion existed three times (EnterpriseContactSaver flat, buildAddressesFromCompany, mappers/company buildAddresses); two dropped the whole administrative hierarchy and one also dropped neighborhood. Different function names made it invisible to name-based discovery.",
+      "forbiddenPatterns": [
+        "function\\s+(buildAddressInfoFromFlatFields|buildAddressInfoListFromCompanyAddresses)\\s*\\(",
+        "buildAddressesFromCompany\\s*\\("
+      ],
+      "allowlist": [
+        "src/utils/contacts/address-info-builder.ts"
+      ],
+      "tier": 3
+    },
     "company-config": {
       "ssotFile": "src/config/company-config.ts",
       "description": "Company sections must use centralized config — no inline section definitions",
