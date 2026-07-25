@@ -214,8 +214,9 @@ export function useStretchTool(props: UseStretchToolProps): UseStretchToolReturn
 
   const handleStretchKeyDown = useCallback((key: string): boolean => {
     if (!isActive) return false;
-    if (key === 'Escape') { handleStretchEscape(); return true; }
-
+    // ADR-364 §10.14 (Κ2-β) — the ESC comparison branch was removed: it called
+    // `handleStretchEscape()`, the same function already on the bus at MODIFY_TOOL (600)
+    // ⇒ double execution per press. The bus is now the single owner.
     const s = StretchToolStore.getState();
     if (s.phase !== 'displacement') return false;
 
@@ -231,7 +232,9 @@ export function useStretchTool(props: UseStretchToolProps): UseStretchToolReturn
       return true;
     }
     return false;
-  }, [isActive, handleStretchEscape, executeStretch]);
+    // `handleStretchEscape` left this list with the ESC branch (ADR-364 §10.14) — it is
+    // still exported and still registered on the bus, just not read here any more.
+  }, [isActive, executeStretch]);
 
   // ── Prompt sync ───────────────────────────────────────────────────────────
 

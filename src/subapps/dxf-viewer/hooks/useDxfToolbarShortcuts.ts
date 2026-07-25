@@ -11,6 +11,8 @@ import {
   type FallbackDefinition,
 } from '../keyboard/MultiCharKeySequence';
 import { EventBus } from '../systems/events/EventBus';
+// ADR-364 — Escape Command Bus SSoT (no raw ESC branch on this hook's listener)
+import { useEscapeHandler, ESC_PRIORITY } from '../systems/escape-bus';
 // ADR-688 — in 3D the entity clipboard is owned by use-bim3d-entity-clipboard
 // (Ctrl+C / paste-at-pick / Ctrl+D). Guard the 2D in-place clipboard off in 3D.
 import { useViewMode3DStore, selectIs3D } from '../bim-3d/stores/ViewMode3DStore';
@@ -212,15 +214,48 @@ export function useDxfToolbarShortcuts(
       if (matchesShortcut(e, 'grid')) { e.preventDefault(); onAction('grid'); return; }
       if (matchesShortcut(e, 'fit')) { e.preventDefault(); onAction('fit'); return; }
       if (matchesShortcut(e, 'autocrop')) { e.preventDefault(); onAction('autocrop'); return; }
-      if (matchesShortcut(e, 'escape')) {
-        e.preventDefault();
-        handleToolChange('select');
-        onAction('clear-selection');
-        return;
-      }
+      // ADR-364 §10.14 — ESC is NOT handled here any more; see the bus slot below.
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [activeTool, handleToolChange, onAction]);
+
+  // ADR-364 §10.14 (Κ2 #13) — «ESC returns to the select tool», on the central bus.
+  //
+  // WHAT THIS REPLACED, and why it mattered enough to be the first migration of Φ3:
+  // a raw shortcut-table ESC branch (the `matchesShortcut` helper, ESC entry) on this
+  // hook's `window` BUBBLE listener, running `e.preventDefault()` +
+  // `handleToolChange('select')` + `onAction('clear-selection')`.
+  // ⚠️ The literal call form is deliberately NOT spelled out above: CHECK 3.7 now carries
+  // a pattern for it (§10.14 Mechanism 3), and that pattern matches text, not code — a
+  // comment quoting the call verbatim would register as a violation in this very file.
+  // Measured live 2026-07-25 (browser, dev audit + `Event.prototype.preventDefault` stack
+  // trace): it was THE `shadow-owner` the Mechanism-1 sentinel reported on every ESC in an
+  // idle 2D viewer — a consumer the bus could not see, account for, or order.
+  //
+  // TWO SEPARATE DEFECTS WERE FOLDED IN HERE, and only one of them survives as behaviour:
+  //
+  //  1. `handleToolChange('select')` — REAL and load-bearing. It is the only thing that
+  //     returns the toolbar to 'select' for the tool categories that own no ESC slot
+  //     ('editing' / 'utility' / 'zoom' / 'selection'). Kept, as TOOL_RESET (50) — the
+  //     bottom of the chain, which is exactly where the bubble listener effectively sat
+  //     (it ran only when the bus had consumed nothing). See the TOOL_RESET doc.
+  //
+  //  2. `onAction('clear-selection')` — DELETED, not migrated. `'clear-selection'` is an
+  //     ORPHAN string: `grep -rn "clear-selection" src/` returns this one emit and ZERO
+  //     handlers, so it fell through to the `default:` of `useDxfViewerState.handleAction`
+  //     and logged `Unknown action: clear-selection` on every press. It has been clearing
+  //     nothing for as long as it has existed. Nothing is lost by dropping it: the real
+  //     deselect is the composite `canvas/fallback-deselect` at DRAFT_POLYGON (400), which
+  //     is *above* this slot — so whenever a selection exists, 400 consumes the press and
+  //     this slot is never reached. The intent was already covered, correctly, elsewhere.
+  //
+  // The gate is mandatory (§10.12): an ungated bottom slot consumes every ESC in the app.
+  useEscapeHandler({
+    id: 'toolbar/reset-to-select-tool',
+    priority: ESC_PRIORITY.TOOL_RESET,
+    canHandle: () => activeTool !== 'select',
+    handle: () => { handleToolChange('select'); return true; },
+  });
 }

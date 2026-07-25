@@ -126,6 +126,29 @@ export function useCanvasKeyboardShortcuts({
   // Handle keyboard shortcuts for drawing, delete, and local operations
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
+      // ADR-364 §10.14 (Κ2-β) — ONE bail closes the «laundered» ESC channel.
+      //
+      // This listener carried no ESC comparison of its own and is on the ratchet allowlist
+      // for exactly that reason — yet it was still an ESC router: it forwarded the RAW
+      // `e.key` into `handleTrimKeyDown` / `handleScaleKeyDown` / `handleStretchKeyDown` /
+      // `handleExtendKeyDown`, and the comparison happened THERE. Those four hooks
+      // answered ESC by calling their own
+      // `handleXEscape` — the very same function references already registered on the bus
+      // at MODIFY_TOOL (600) by `useCanvasEscapeRegistrations`. Two independent `window`
+      // capture listeners, one action, executed twice per press.
+      //
+      // Mechanism 2 (`stopImmediatePropagation`, §10.13) already stops the second call —
+      // but ONLY while the bus happens to be registered first, and registration order here
+      // is mount order: emergent, not guaranteed by any type or test. This bail removes the
+      // dependency instead of relying on it. Same shape as the Mechanism-4 fix in
+      // `bim-3d/shortcuts/shortcut-dispatcher.ts`: one early bail replacing scattered
+      // branches, with the bus left as the single owner.
+      //
+      // The now-unreachable `key === 'Escape'` branches were deleted from all four tool
+      // hooks in the same commit — `useCanvasKeyboardShortcuts` is their ONLY caller
+      // (verified by grep), apart from the keyup effects below which pass a literal 'Shift'.
+      if (e.key === 'Escape') return;
+
       // Prevent shortcuts when typing in inputs
       const target = e.target as HTMLElement;
       // ADR-397/513 (Giorgio 2026-07-06) — hot-grip ΠΕΡΙΣΤΡΟΦΗ: τα ψηφία/Enter/Backspace/«R» οδηγούν τη

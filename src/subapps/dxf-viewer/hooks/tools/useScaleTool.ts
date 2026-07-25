@@ -246,13 +246,16 @@ export function useScaleTool(props: UseScaleToolProps): UseScaleToolReturn {
 
   const handleScaleKeyDown = useCallback((key: string): boolean => {
     if (!isActive) return false;
-    if (key === 'Escape') { handleScaleEscape(); return true; }
-
+    // ADR-364 §10.14 (Κ2-β) — the ESC comparison branch was removed: it called
+    // `handleScaleEscape()`, the same function already on the bus at MODIFY_TOOL (600)
+    // ⇒ double execution per press. The bus is now the single owner.
     const s = ScaleToolStore.getState();
     if (s.phase !== 'scale_input') return false;
 
     return dispatchScaleKey(key, s, executeScale);
-  }, [isActive, handleScaleEscape, executeScale]);
+    // `handleScaleEscape` left this list with the ESC branch (ADR-364 §10.14) — it is
+    // still exported and still registered on the bus, just not read here any more.
+  }, [isActive, executeScale]);
 
   // ── Ribbon factor commit-sink (ADR-646 Φ4 #6) ──────────────────────────────
   // Register `executeScale` so the contextual «Κλιμάκωση» tab's factor field can

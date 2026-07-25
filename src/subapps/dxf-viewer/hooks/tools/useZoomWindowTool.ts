@@ -8,11 +8,12 @@
  * via FitToViewService and applies it through `onTransformChange`. After a
  * successful zoom the tool returns to 'select' (AutoCAD ZOOM W one-shot).
  *
- * Also wires Escape to cancel a half-finished drag and exit the tool.
+ * Also wires Escape to cancel a half-finished drag and exit the tool — through the
+ * central EscapeCommandBus (ADR-364 §10.14), not a private window listener.
  *
  * ADR-040 compliance:
  *   §1 — does not call useSyncExternalStore (uses useEffect + EventBus.on /
- *        window keydown). CanvasSection orchestrator stays subscription-free.
+ *        an ESC bus slot). CanvasSection orchestrator stays subscription-free.
  *   §2 — callback references stored in refs; reads are at event time.
  *   §3 — never touches dxf-bitmap-cache state.
  */
@@ -23,6 +24,8 @@ import { EventBus } from '../../systems/events/EventBus';
 import { FitToViewService } from '../../services/FitToViewService';
 import { ZoomWindowStore } from '../../systems/zoom-window/ZoomWindowStore';
 import { UI_ZOOM_LIMITS } from '../../config/transform-config';
+// ADR-364 — Escape Command Bus SSoT (no private window keydown listener)
+import { useEscapeHandler, ESC_PRIORITY } from '../../systems/escape-bus';
 import type { ViewTransform } from '../../rendering/types/Types';
 
 export interface UseZoomWindowToolProps {
@@ -60,21 +63,33 @@ export function useZoomWindowTool({
     return cleanup;
   }, []);
 
-  // ── Escape — abort drag and exit tool ───────────────────────────────────
+  // ── Tool deactivation — always drop a half-finished rect ────────────────
+  // Unchanged behaviour, minus the ESC listener (see the bus registration below):
+  // leaving the tool by ANY route (toolbar click, another shortcut, unmount) must
+  // not leave a stale rectangle in the store.
   useEffect(() => {
     if (activeTool !== 'zoom-window') {
       ZoomWindowStore.cancel();
       return;
     }
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return;
+    return () => { ZoomWindowStore.cancel(); };
+  }, [activeTool]);
+
+  // ── ESC — abort drag and exit tool (ADR-364 §10.14, Κ2 #11) ─────────────
+  // Was a private `window` keydown listener — Zone-A, invisible to the bus and to
+  // `stopImmediatePropagation`, so it fired even when a higher context had already
+  // claimed the press.
+  //
+  // Its own slot rather than DRAW_TOOL: see the ZOOM_WINDOW_TOOL doc in
+  // `escape-priority.ts` for why widening `isInteractiveTool` would be wrong.
+  useEscapeHandler({
+    id: 'tools/zoom-window',
+    priority: ESC_PRIORITY.ZOOM_WINDOW_TOOL,
+    canHandle: () => activeTool === 'zoom-window',
+    handle: () => {
       ZoomWindowStore.cancel();
       onToolChangeRef.current?.('select');
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      ZoomWindowStore.cancel();
-    };
-  }, [activeTool]);
+      return true;
+    },
+  });
 }

@@ -17,6 +17,8 @@ import { dxfPerformanceOptimizer } from '../performance/DxfPerformanceOptimizer'
 import { useEventBus, EventBus } from '../systems/events/EventBus';
 import type { DrawingEventPayload } from '../systems/events/EventBus';
 import { preservesOverlayMode } from '../systems/tools/ToolStateManager';
+// ADR-364 — Escape Command Bus SSoT (no raw ESC branch on this hook's listener)
+import { useEscapeHandler, ESC_PRIORITY } from '../systems/escape-bus';
 import { dlog } from '../debug';
 import type { Point2D } from '../rendering/types/Types';
 import type { SceneModel } from '../types/scene';
@@ -43,6 +45,26 @@ interface WorkflowTestResult {
   steps: WorkflowStepResult[];
   layerDisplayed: boolean;
   reportTime: string;
+}
+
+/**
+ * Single owner of the Ctrl+F2 layering-workflow report (N.0.2 / N.18, ADR-364 §10.14).
+ *
+ * The two ways of obtaining the runner (QA global vs dynamic import) used to carry a
+ * verbatim copy of this summary each — a real 62-token clone that `jscpd --diff` flagged
+ * the first time this file was staged. Debug-only output, so no i18n (N.11 exempts
+ * developer diagnostics, same as `logger.*`).
+ */
+function reportLayeringWorkflowResult(
+  result: WorkflowTestResult,
+  notify: (message: string, kind: 'success' | 'error') => void,
+): void {
+  const successSteps = result.steps.filter(s => s.status === 'success').length;
+  const summary =
+    `Workflow: ${result.success ? '✅ SUCCESS' : '❌ FAILED'}\n` +
+    `Steps: ${successSteps}/${result.steps.length}\n` +
+    `Layer Displayed: ${result.layerDisplayed ? '✅ YES' : '❌ NO'}`;
+  notify(summary, result.success ? 'success' : 'error');
 }
 
 /** Params for useDxfViewerEffects */
@@ -174,25 +196,14 @@ export function useDxfViewerEffects(params: DxfViewerEffectsParams): void {
         event.preventDefault();
         event.stopPropagation();
 
-        if (window.runLayeringWorkflowTest) {
-          window.runLayeringWorkflowTest().then((rawResult: unknown) => {
-            const result = rawResult as WorkflowTestResult;
-            const successSteps = result.steps.filter((s: WorkflowStepResult) => s.status === 'success').length;
-            const totalSteps = result.steps.length;
-            const summary = `Workflow: ${result.success ? '✅ SUCCESS' : '❌ FAILED'}\nSteps: ${successSteps}/${totalSteps}\nLayer Displayed: ${result.layerDisplayed ? '✅ YES' : '❌ NO'}`;
-            showCopyableNotification(summary, result.success ? 'success' : 'error');
-          });
-        } else {
-          import('../debug/layering-workflow-test.qa').then(module => {
-            const runLayeringWorkflowTest = module.runLayeringWorkflowTest;
-            runLayeringWorkflowTest().then((result) => {
-              const successSteps = result.steps.filter((s) => s.status === 'success').length;
-              const totalSteps = result.steps.length;
-              const summary = `Workflow: ${result.success ? '✅ SUCCESS' : '❌ FAILED'}\nSteps: ${successSteps}/${totalSteps}\nLayer Displayed: ${result.layerDisplayed ? '✅ YES' : '❌ NO'}`;
-              showCopyableNotification(summary, result.success ? 'success' : 'error');
-            });
-          });
-        }
+        // N.0.2 / N.18 (ADR-364 §10.14) — the two branches below differ ONLY in where the
+        // runner comes from (a global installed by the QA bundle vs a dynamic import).
+        // Their reporting was duplicated verbatim (jscpd: 62 tokens); it now lives in
+        // `reportLayeringWorkflowResult` below, so the summary format has one owner.
+        const run: Promise<WorkflowTestResult> = window.runLayeringWorkflowTest
+          ? window.runLayeringWorkflowTest().then((raw: unknown) => raw as WorkflowTestResult)
+          : import('../debug/layering-workflow-test.qa').then(m => m.runLayeringWorkflowTest());
+        run.then(result => reportLayeringWorkflowResult(result, showCopyableNotification));
         return;
       }
 
@@ -219,14 +230,7 @@ Check console for detailed metrics`;
         return;
       }
 
-      // ⌨️ ESC to exit layering mode — full cleanup in one press
-      if (matchesShortcut(event, 'escape') && activeTool === 'layering') {
-        if (overlayMode === 'draw') {
-          setOverlayMode('select');
-          eventBus.emit('overlay:cancel-polygon', undefined as unknown as void);
-        }
-        handleToolChange('select');
-      }
+      // ADR-364 §10.14 — ESC is NOT handled here any more; see the bus slot below.
     };
 
     document.addEventListener('keydown', handleKeyDown, true);
@@ -235,7 +239,39 @@ Check console for detailed metrics`;
       document.removeEventListener('keydown', handleKeyDown, true);
       window.removeEventListener('keydown', handleKeyDown, true);
     };
-  }, [activeTool, handleToolChange, overlayMode, setOverlayMode, eventBus, showCopyableNotification]);
+    // ADR-364 §10.14 — `activeTool`, `handleToolChange`, `overlayMode`, `setOverlayMode`
+    // and `eventBus` left this dependency list together with the ESC branch: they were
+    // read ONLY there. The listener now re-registers only when the notifier changes,
+    // instead of on every tool change and every overlay-mode flip.
+  }, [showCopyableNotification]);
+
+  // ADR-364 §10.14 (Κ2 #12) — ESC exits the layering tool, on the central bus.
+  //
+  // The listener above registers the SAME handler on both `document` and `window` in
+  // capture, so its ESC branch was a doubly-registered Zone-A owner. Measured live
+  // 2026-07-25: it fires only when no bus slot consumed (`command-line/dismiss` claimed
+  // a press and the tool correctly stayed «Επίπεδα»), which is why LAYERING_EXIT (270)
+  // sits BELOW the composite deselect at 400 — see the constant's doc for the full
+  // reasoning and for why GROUP_EXIT went the other way.
+  //
+  // N.0.2 — the old branch open-coded `if (overlayMode === 'draw') setOverlayMode('select')`,
+  // which is character-for-character `handleExitDrawMode` in `useCanvasEditActions.ts` —
+  // already wired into the bus at OVERLAY_DRAW_MODE (350) and inside the 400 composite.
+  // Both of those run BEFORE this slot in the same dispatch (350 deliberately returns
+  // `false` so the chain continues), so overlay draw-mode is already back to 'select' by
+  // the time we get here. The duplicate is dropped; only the two things nobody else does
+  // remain: cancelling the draft overlay polygon and returning the toolbar to 'select'.
+  useEscapeHandler({
+    id: 'app/layering-exit',
+    priority: ESC_PRIORITY.LAYERING_EXIT,
+    canHandle: () => activeTool === 'layering',
+    handle: () => {
+      // Live consumer: `hooks/canvas/usePolygonCompletion.ts` (`eventBus.on('overlay:cancel-polygon')`).
+      eventBus.emit('overlay:cancel-polygon', undefined as unknown as void);
+      handleToolChange('select');
+      return true;
+    },
+  });
 
   // ADR-040 Phase XIII: canvas transform initialization, ref sync, and zoom
   // listener are owned by `useCanvasTransformState` (TransformStore-backed).

@@ -2,7 +2,7 @@
 
 | Πεδίο | Τιμή |
 |---|---|
-| **Status** | 🟢 **APPROVED** 2026-05-18 — Group 1+2+3 (BIM tools) implemented; Boy-Scout Group 4 (10 secondary components) migrated 2026-06-03 |
+| **Status** | 🟢 **APPROVED** 2026-05-18 — Groups 1+2+3 + Boy-Scout Group 4 (2026-06-03). **Φ2 Μηχανισμοί 1/2/4 (§10.10–§10.13) + Φ3 μεταναστεύσεις Κ2/Κ2-β + Μηχ. 3 ratchet (§10.14) ολοκληρώθηκαν 2026-07-25.** Ζώνη Α άδεια στη διαδρομή ESC· ο Μηχ. 1 βγάζει `ok` σε αδρανή viewer έναντι επικυρωμένου θετικού control. ⚠️ Εκκρεμεί **ζωντανή επαλήθευση οθόνης** για 7 μεταναστεύσεις + τη νέα σκάλα group — βλ. **§10.14.ΣΤ.3** |
 | **Date** | 2026-05-18 |
 | **Category** | DXF Viewer — Tools & Keyboard |
 | **Location** | `docs/centralized-systems/reference/adrs/ADR-364-escape-command-bus.md` |
@@ -1053,6 +1053,190 @@ early-return στο `ok` — «η σιωπή δεν είναι απόδειξη�
 
 ---
 
+### 10.14 Φ3 — οι 10 μεταναστεύσεις Κ2, το Κ2-β, ο Μηχανισμός 3 (2026-07-25)
+
+> **Κλείσιμο του έργου ESC.** Η Ζώνη Α αδειάζει στη διαδρομή ESC, ο τελευταίος
+> `shadow-owner` εξαφανίζεται, και ο στατικός φύλακας μπαίνει με **γραμμένα** τα τυφλά
+> του σημεία. Δύο ισχυρισμοί προηγούμενων ενοτήτων καταρρίφθηκαν με μέτρηση.
+
+#### Α. Τι ακύρωσε το SSoT audit πριν γραφτεί γραμμή
+
+| # | Ισχυρισμός εγγράφου | Τι έδειξε ο κώδικας / η μέτρηση |
+|---|---|---|
+| 1 | «`GROUP_EXIT` (275) / `BLOCK_EDITOR_EXIT` (274) επιβιώνουν κάτω από το 400 επειδή η είσοδος σε group/block δεν αφήνει επιλεγμένη οντότητα» (§10.13, `escape-priority.ts`) | **ΨΕΥΔΕΣ.** Η είσοδος απαιτεί **ακριβώς μία** επιλεγμένη οντότητα (`useCanvasSectionUI.ts` — `ids.length === 1`, διπλό κλικ σε **επιλεγμένο** group/block) και **ούτε** το `enterGroup` **ούτε** το `enterBlockEdit` αγγίζουν την επιλογή (μόνο οι διαδρομές **εξόδου** γράφουν selection). |
+| 2 | «Το #12 (`useDxfViewerEffects.ts:223`) είναι υποψήφιο για <400 — μέτρα πρώτα» (handoff) | Επιβεβαιώθηκε **και** εξηγήθηκε: ο listener του πυροδοτείται **μόνο** όταν κανένα slot δεν κατανάλωσε (μετρημένο: το `command-line/dismiss` κατανάλωσε και το εργαλείο **έμεινε** «Επίπεδα»). Είναι επίσης gated σε `activeTool === 'layering'` — ο πίνακας του §10.5 δεν το ανέφερε. |
+| 3 | «Το `onAction('clear-selection')` πρέπει να μεταναστεύσει» | **Δεν μεταναστεύει — διαγράφεται.** Είναι **ορφανό string**: `grep -rn "clear-selection" src/` δίνει **μία** εκπομπή και **μηδέν** handlers. Έπεφτε στο `default:` του `useDxfViewerState.handleAction` (γρ. 456) και τύπωνε `Unknown action: clear-selection` σε κάθε πάτημα. |
+
+#### Β. Η ζωντανή μέτρηση του §1.Γ — το ανοιχτό ερώτημα απαντήθηκε
+
+Πραγματικό group **131 αντικειμένων**, είσοδος με διπλό κλικ, `window.__escapeAudit`:
+
+| Πάτημα | `consumedBy` | Ορατό αποτέλεσμα |
+|---|---|---|
+| 1ο | `canvas/fallback-deselect` (400) | **Η μπάρα εξακολουθεί να λέει «Επεξεργασία ομάδας · Esc για έξοδο»** — δεν βγήκε |
+| 2ο | `group/exit-active-group` (275) | τώρα βγαίνει |
+| 3ο | `canvas/fallback-deselect` | αποεπιλογή του group που ξανα-επιλέχθηκε |
+| 4ο | `null` → `shadow-owner` | το #13 |
+
+⇒ Δεν ήταν «αποδεκτή 2-βήματη σκάλα Figma»: η ενδιάμεση κατάσταση είναι **«μέσα στο group
+χωρίς επιλογή»**, δεν εξυπηρετεί τίποτα, και **αντιφάσκει με τη ρητή οδηγία που δείχνει η
+ίδια η εφαρμογή**. Ίδιο σφάλμα σχεδίασης με το 290 του §10.13, απλώς όχι εντελώς νεκρό.
+
+**Διόρθωση**: `GROUP_EXIT` **275 → 408**, `BLOCK_EDITOR_EXIT` **274 → 407** (πάνω από το 400,
+κάτω από τη σκάλα 3D). Ευθυγράμμιση με Revit «Edit Group», Figma frame step-out, AutoCAD
+REFEDIT — και στα τρία **ένα** Esc βγάζει από τον περιέκτη.
+
+#### Γ. Οι 10 μεταναστεύσεις
+
+| # | Αρχείο | Slot | Σημείωση |
+|---|---|---|---|
+| 3 | `bim-3d/animation/use-waypoint-drag-interaction.ts` | `GRIP_DRAG` (450) | imperative· τα X/Y/Z **μένουν** τοπικά (κανένας ανταγωνιστής, §10.2)· unregister δεμένο στον ίδιο `AbortController` |
+| 4 | `ui/color/eyedropper.ts` | `MODAL_DIALOG` (1000) | imperative (πρότυπο `CropRegionTool`)· **Firefox-only** — σε Chrome τρέχει το native branch |
+| 5 | `ui/text-toolbar/TextEditorOverlay.tsx` | `MODAL_DIALOG` + `allowWhenEditable` | το `escape-priority.ts` το ονόμαζε ήδη κανονικό παράδειγμα MODAL_DIALOG |
+| 6 | `systems/prompt-dialog/PromptDialog.tsx` | `MODAL_DIALOG` + `allowWhenEditable` | ⚠️ **μόνιμα mounted** (αποδίδει `null`) ⇒ η διάρκεια ζωής **δεν** είναι πύλη· το `canHandle: () => isOpen` είναι το μόνο που το χωρίζει από την παλινδρόμηση του §10.12 |
+| 7 | `ui/toolbar/ZoomControls.tsx` | `POPOVER_DROPDOWN` + `allowWhenEditable` | αντιγραφή του **δομικά πανομοιότυπου** `DrawingScaleWidget` |
+| 9 | `ui/ribbon/components/RibbonContextMenu.tsx` | `POPOVER_DROPDOWN` (800) | `canHandle: () => true` **νόμιμο**: αποδίδεται μόνο υπό `{menuPos && …}` ⇒ η διάρκεια ζωής ΕΙΝΑΙ η πύλη |
+| 10 | `ui/toolbar/ToolButton.tsx` | `POPOVER_DROPDOWN` (800) | πύλη = η ίδια συνθήκη που ο παλιός listener είχε ως early-return |
+| 11 | `hooks/tools/useZoomWindowTool.ts` | **`ZOOM_WINDOW_TOOL` (505)** νέο | το `DRAW_TOOL` gate είναι `isInteractiveTool` = drawing+measurement· το `zoom-window` είναι `category:'zoom'` ⇒ **ρητά εκτός**. Διεύρυνση του gate θα έδινε ESC-cancel και στα zoom-in/out/extents |
+| 12 | `app/useDxfViewerEffects.ts` | **`LAYERING_EXIT` (270)** νέο | **σκόπιμα <400** (βλ. Α.2)· το ανοιγμένο `if (overlayMode==='draw') setOverlayMode('select')` **διαγράφηκε** — είναι κατά λέξη το `handleExitDrawMode`, ήδη στον bus σε 350 + μέσα στο 400 |
+| 13 | `hooks/useDxfToolbarShortcuts.ts` | **`TOOL_RESET` (50)** νέο | ο μετρημένος shadow-owner· δίχτυ ασφαλείας για τα ~46 εργαλεία των κατηγοριών editing/utility/zoom/selection που δεν έχουν slot |
+
+**Παράπλευρα (N.0.2)**: 5 stale deps έφυγαν από το effect του `useDxfViewerEffects` (ο
+listener ξαναγραφόταν σε κάθε αλλαγή εργαλείου και κάθε overlay-mode flip)· 2 νεκρές
+παράμετροι από το `onAxisLockKey`· 2 stale deps από scale/stretch.
+
+#### Δ. Κ2-β — η αλυσίδα προώθησης έκλεισε δομικά
+
+Η **διπλή εκτέλεση** είχε θεραπευτεί από τον Μηχ. 2, αλλά **μόνο όσο ο bus εγγράφεται πρώτος**
+— σειρά mount, αναδυόμενη. Μετρήθηκε ζωντανά ότι σήμερα ισχύει (`modify-tool/trim` κατανάλωσε,
+`preemptedAtEntry: false`), και **έπειτα αφαιρέθηκε η εξάρτηση**: **ένα** bail
+`if (e.key === 'Escape') return;` στην κορυφή του `useCanvasKeyboardShortcuts.handleKeyDown`
+— ίδιο σχήμα με το bail που ο Μηχ. 4 έβαλε στον `shortcut-dispatcher.ts`.
+
+Οι 4 πλέον ανέφικτοι κλάδοι διαγράφηκαν από `useTrimTool` / `useScaleTool` /
+`useStretchTool` / `useExtendTool`. Ήταν **αποδεδειγμένα** πλεοναστικοί: καλούσαν το **ίδιο
+`handleXEscape` reference** που το `useCanvasEscapeRegistrations` έχει ήδη στο `MODIFY_TOOL`.
+Ο μόνος καλών των `handleXKeyDown` είναι το `useCanvasKeyboardShortcuts` (επιβεβαιωμένο με
+grep)· τα keyup effects περνούν σταθερό `'Shift'`.
+
+#### Ε. Μηχανισμός 3 — στατικός φύλακας, ΧΩΡΙΣ νέα μηχανή
+
+**Καμία νέα μηχανή ratchet, κανένα νέο CHECK.** Επεκτάθηκε το **υπάρχον** module
+`escape-command-bus` του `.ssot-registry.json` (CHECK 3.7) με **δύο patterns, το καθένα από
+μετρημένο κενό που είχε αφήσει ζωντανό ιδιοκτήτη να περάσει**:
+
+| Pattern | Ποιον έχανε |
+|---|---|
+| `\.code\s*===\s*['"]Escape['"]` | `use-waypoint-drag-interaction.ts` (#3) — αόρατο και στα δύο `key ===` patterns |
+| `matchesShortcut\([^)]*['"]escape['"]` | `useDxfToolbarShortcuts.ts` (#13, **ο shadow-owner όλης της εφαρμογής**) και `useDxfViewerEffects.ts` (#12) |
+
+##### Ε.1 🚨 ΤΙ ΔΕΝ ΠΙΑΝΕΙ — γραμμένο, όχι υπονοούμενο
+
+1. **Την αλυσίδα προώθησης (Κ2-β).** Listener που περνά ωμό `e.key` σε άλλο module που κάνει
+   εκεί τη σύγκριση. Κανένα regex δεν διαβάζει διαδρομές κλήσης. Το `useCanvasKeyboardShortcuts`
+   πέρασε ως «καθαρό» επί δύο μήνες ενώ δρομολογούσε ESC.
+2. **Άλλο alias του πίνακα συντομεύσεων** πέρα από το literal `'escape'`.
+3. **Σιωπηλό ιδιοκτήτη** που δεν κάνει ούτε `preventDefault` ούτε `stop*` — τον χάνει και ο
+   Μηχ. 1 (καρφωμένο σε test εκεί).
+4. **Το ίδιο το CHECK 3.7**: σαρώνει **μόνο staged** αρχεία, per-file, και `current === baseline`
+   ⇒ `same` ⇒ περνά **σιωπηλά για πάντα** (§10.4.2). Δεν είναι σαρωτής υγείας του repo.
+
+⇒ Μηχ. 1 (runtime) και Μηχ. 3 (static) είναι **συμπληρωματικοί**. Κανένας δεν είναι πλήρης.
+
+##### Ε.2 Παγίδα που δημιουργήθηκε και εξουδετερώθηκε: **η τεκμηρίωση μιμείται κώδικα**
+
+Ο ratchet μετρά **κείμενο**. Τα πρώτα επεξηγηματικά σχόλια αυτής της φάσης παρέθεταν αυτούσιες
+τις μορφές που μόλις είχαν απαγορευτεί ⇒ **θα μετρούσαν ως παραβάσεις στα ίδια τα αρχεία που
+μόλις καθαρίστηκαν**, κρατώντας τον μετρητή στο baseline αντί να πέσει στο 0. Όλα ξαναδιατυπώθηκαν.
+
+📌 **Προϋπάρχον, μη διορθωμένο (εκτός εύρους — δεν αγγίχθηκαν τα αρχεία)**: το
+`ui/ribbon/components/DrawingScaleWidget.tsx:37` και το
+`ui/opening-info-tag/OpeningInfoTagEditorOverlay.tsx:78` έχουν **σχόλια** που πιάνονται από τα
+παλιά patterns ενώ το baseline τους είναι **0**. Είναι αόρατο σήμερα (staged-only), αλλά **ο
+επόμενος που θα αγγίξει οποιοδήποτε από τα δύο θα δει το commit του να μπλοκάρει από ένα
+σχόλιο**. Επιδιόρθωση = επαναδιατύπωση, όπως εδώ.
+
+##### Ε.3 Αποτέλεσμα ratchet
+
+Προσομοίωση του CHECK 3.7 με τα 4 patterns πάνω στα 16 αρχεία της αλλαγής:
+**0 αρχεία μπλοκάρουν· −16 παραβάσεις.** (`ToolButton` 2→0, `RibbonContextMenu` 2→0,
+`eyedropper` 2→0, trim/scale/stretch/extend 1→0 έκαστο, ZoomControls / TextEditorOverlay /
+PromptDialog 2→0.)
+
+⚠️ **ΔΕΝ έτρεξε `npm run ssot:baseline`** — και δεν πρέπει να τρέξει τώρα. Το working tree
+**μοιράζεται** με άλλον πράκτορα (tenant-scope / ADR-702/703, 30+ σταδιοποιημένα αρχεία), και
+το `ssot:baseline` ξαναγράφει **ολόκληρο** το `.ssot-violations-baseline.json`, απορροφώντας
+και τις δικές του εν πτήσει αλλαγές. **Ο Giorgio να τρέξει `npm run ssot:baseline` αφού
+προσγειωθούν και οι δύο εργασίες**, ώστε να κλειδωθεί το κέρδος προς τα κάτω.
+
+#### ΣΤ. Επαλήθευση
+
+**jest**: **470 suites / 4673 tests** πράσινα (`systems` + `bim-3d/shortcuts` + `__tests__` +
+`ui`), με τη βάση ESC **81/81** αμετάβλητη. **jscpd (N.18)**: καθαρό στα 16 αρχεία — ο πρώτος
+έλεγχος βρήκε **3 clones**, όλα **προϋπάρχοντα** σε αρχεία που άγγιξε αυτή η εργασία, και
+διορθώθηκαν (N.0.2): `readCanvasPixelAt`/`readImagePixelAt` → κοινό `readSourcePixelAt`·
+οι δύο κλάδοι του Ctrl+F2 → κοινό `reportLayeringWorkflowResult`.
+
+##### ΣΤ.1 Ζωντανά στον browser (dev, Chrome, επικυρωμένο όργανο)
+
+| Σενάριο | Αποτέλεσμα |
+|---|---|
+| **Αδρανές 2D, εργαλείο=select** | **3/3 `ok`, `consumedBy: null`** — ο `shadow-owner` **εξαφανίστηκε** (ήταν 3/3 πριν). Στόχος τερματισμού §7 του handoff ✅ |
+| Θετικό control (3 θέσεις) | `shadow-owner` και στις 3 ⇒ **το `ok` παραπάνω είναι αληθινό**, όχι σιωπή |
+| #13 `TOOL_RESET` | `match-properties` → `toolbar/reset-to-select-tool` → «Επιλογή» ✅ |
+| #12 `LAYERING_EXIT` | «Επίπεδα» → `app/layering-exit` → «Επιλογή» ✅ |
+| Σκάλα με command line ανοιχτό | `command-line/dismiss` (750) κατανάλωσε, το εργαλείο **έμεινε** — σωστή σκάλα ✅ |
+| Κονσόλα | **`Unknown action: clear-selection` έπαψε** ✅ |
+| Σταθερές στο ζωντανό bundle | `ZOOM_WINDOW_TOOL 505 · GROUP_EXIT 408 · BLOCK_EDITOR_EXIT 407 · LAYERING_EXIT 270 · TOOL_RESET 50` ✅ |
+
+##### ΣΤ.2 🔴 ΔΥΟ ΔΙΟΡΘΩΣΕΙΣ ΣΤΟ ΙΔΙΟ ΤΟ ΟΡΓΑΝΟ (το μοτίβο του §2 του handoff ήταν ελαττωματικό)
+
+1. **`window.dispatchEvent` έχει διαδρομή ΜΟΝΟ το `window`.** Το τεκμηριωμένο μοτίβο μέτρησης
+   στέλνει το συνθετικό ESC στο `window`, οπότε **κανένας listener σε `document` ή `body` δεν
+   εκτελείται ποτέ** — δηλαδή ολόκληρη η «Ζώνη B» ήταν αόρατη στη μέτρηση, και ένα θετικό
+   control σε `document` capture **δεν έλεγχε τίποτα**. Σωστό: `document.body.dispatchEvent`,
+   που δίνει `window→document→body→…→window` όπως πραγματικό πάτημα.
+2. **Το `activeElement` πρέπει να μην είναι editable.** Το συνθετικό συμβάν δίνει `target=body`
+   ενώ το `document.activeElement` μπορεί να έχει μείνει `<input>` (η γραμμή εντολών το αρπάζει
+   με το πρώτο γράμμα). Ο bus κρίνει με `activeElement`, οι παλιοί ωμοί listeners έκριναν με
+   `e.target` ⇒ **η μέτρηση έδειχνε ψευδώς «το slot δεν δουλεύει»**. Το `__press()` κάνει πλέον
+   `blur()` πρώτα. *Χάθηκε ουσιαστικός χρόνος σε αυτό· καταγράφεται ώστε να μη ξαναχαθεί.*
+
+##### ΣΤ.3 ⚠️ ΤΙ ΔΕΝ ΕΠΑΛΗΘΕΥΤΗΚΕ ΖΩΝΤΑΝΑ (τιμιότητα, όχι παράλειψη)
+
+Το input subsystem της επέκτασης υποβαθμίστηκε στο τέλος της συνεδρίας (screenshots
+`viewport 0x0`, τα drags έπαψαν να προσγειώνονται), και ο dev server ξαναξεκίνησε από μόνος του
+στη μέση (PID 19108 → 13116). **Δεν επαληθεύτηκαν στην οθόνη:**
+
+- **η σκάλα του group ΜΕΤΑ τη μετακίνηση 275→408** — μετρήθηκε ενδελεχώς **πριν**· η αλλαγή
+  είναι καθαρή αναδιάταξη σταθεράς στο ίδιο αρχείο που **επιβεβαιώθηκε ζωντανά** ότι φορτώνει
+  με τις νέες τιμές, αλλά **το «1ο ESC βγάζει από το group» δεν ειδώθηκε σε οθόνη**·
+- #11 zoom-window, #7 ZoomControls, #9 RibbonContextMenu, #10 ToolButton, #5 TextEditorOverlay,
+  #6 PromptDialog, #3 waypoint — καλύπτονται από jest + τον ίδιο μηχανισμό που επαληθεύτηκε
+  end-to-end σε #12/#13, **αλλά όχι από ξεχωριστό πάτημα πλήκτρου το καθένα**·
+- #4 eyedropper — **μη προσπελάσιμο σε Chrome εκ κατασκευής** (native branch, §10.11.Ε).
+
+Ο επόμενος που θα ανοίξει τον viewer: αυτά είναι τα πρώτα που πρέπει να πατηθούν.
+
+#### Ζ. Δήλωση Google-level
+
+⚠️ **Google-level: ΜΕΡΙΚΩΣ** — η αρχιτεκτονική είναι πλήρης, η επαλήθευση όχι.
+
+- **SSoT**: μηδέν νέες μηχανές — επεκτάθηκε το υπάρχον registry module· αντιγράφηκε ο δίδυμος
+  αντί να εφευρεθεί πρότυπο· διαγράφηκαν 2 πραγματικά διπλότυπα αντί να μετακομίσουν.
+- **Ιδιοκτησία**: κάθε slot έχει ρητή πύλη· καμία `() => true` χωρίς η διάρκεια ζωής να είναι
+  η πύλη (τεκμηριωμένο ανά περίπτωση) — το μάθημα του §10.12 εφαρμόστηκε.
+- **Προληπτικό**: το audit ακύρωσε 3 ισχυρισμούς **πριν** γραφτεί κώδικας, και η μέτρηση του
+  §1.Γ ανέτρεψε τεκμηρίωση που είχε γραφτεί την ίδια μέρα.
+- **Χωρίς race**: όλες οι πύλες διαβάζουν σε χρόνο συμβάντος· το Κ2-β έπαψε να εξαρτάται από
+  σειρά mount.
+- **Τιμιότητα μέτρησης**: ο ratchet συνοδεύεται από γραπτή λίστα τυφλών σημείων (Ε.1) — «0»
+  σημαίνει «κανείς δεν κοίταξε», όχι «καθαρό».
+- **❌ Το κενό**: §ΣΤ.3 — 7 μεταναστεύσεις και η νέα σκάλα group δεν πατήθηκαν σε οθόνη.
+  Το §1.Δ αυτού του ADR είναι κατηγορηματικό ότι πράσινο jest δεν αρκεί για ό,τι ζει σε canvas.
+
+---
+
 ## 11. Changelog
 
 | Date | Change | Author |
@@ -1069,4 +1253,5 @@ early-return στο `ok` — «η σιωπή δεν είναι απόδειξη�
 | 2026-07-25 | **§10.11 — Φ2 Μηχανισμός 2 ΜΕΤΡΗΘΗΚΕ ΣΤΟΝ BROWSER, ΠΡΟΚΑΛΕΣΕ ΠΑΛΙΝΔΡΟΜΗΣΗ, ΕΠΑΝΑΦΕΡΘΗΚΕ. Καμία αλλαγή δρομολόγησης στο δέντρο.** **(1) Ο Μηχ. 1 διαβάστηκε επιτέλους ζωντανά** — αλλά **πρώτα επικυρώθηκε το όργανο**: το `report()` κάνει early-return στο `ok`, άρα η σιωπή δεν είναι απόδειξη· στήθηκε θετικό control (listener σε `document` capture που κάνει `preventDefault` ενώ ο bus δεν διεκδικεί ⇒ όφειλε να βγει `shadow-owner`, και βγήκε). 7 σενάρια: γραμμή · marquee · 3D gizmo ×3 · color dialog · dropdown κλίμακας · editable input · **ενεργό trim** ⇒ **όλα `ok`· καμία `starved`, καμία `preempted`**. **(2) Το `trim` απάντησε το ερώτημα σειράς mount που κανένα static tool δεν μπορεί**: το `useCanvasKeyboardShortcuts:165` κάνει `preventDefault()` όταν το `handleTrimKeyDown('Escape')` καταναλώσει (`useTrimTool.ts:305`)· αν έτρεχε πρώτο, ο bus θα έβλεπε `preemptedAtEntry=true` ⇒ `preempted`. Βγήκε `ok` ⇒ **ο bus είναι ΠΡΩΤΟΣ**, άρα ο Μηχ. 2 όντως κόβει την αλυσίδα Κ2-β. ⚠️ Η σειρά είναι σειρά mount, δηλαδή **αναδυόμενη**· φύλακας ο Μηχ. 1. **(3) 🔴 Ο Μηχ. 2 ΜΟΝΟΣ ΤΟΥ ΕΙΝΑΙ ΠΑΛΙΝΔΡΟΜΗΣΗ** — υλοποιήθηκε, jest 36/36, και σε A/B στον ίδιο browser: **πριν** = 2ο ESC κλείνει το 3D gizmo· **μετά** = το gizmo **δεν κλείνει με κανέναν αριθμό πατημάτων** (μετρήθηκε ώς 4), επειδή σιωπά τον `shortcut-dispatcher.ts:232` (Ζώνη Α) που είναι ο **ΜΟΝΟΣ** που το κλείνει, και **δεν υπάρχει slot `EDIT_GIZMO_3D`**. Κατάσταση χειρότερη από την αρχική: επιλογή καθαρή, gizmo **ορφανό**. ⇒ **Η εξάρτηση είναι αντίστροφη από το §10.6/§10.10: ο Μηχ. 4 είναι ΠΡΟΫΠΟΘΕΣΗ του Μηχ. 2**, όχι «τελευταίος». **(4) Επαναφορά + φύλακας**: ο bus ξαναγύρισε σε `stopPropagation()` με σχόλιο που δείχνει εδώ, και τα **4 νέα tests** (36/36) καρφώνουν ότι ο αδελφός `window`-capture **εξακολουθεί** να τρέχει όταν ο bus καταναλώνει ⇒ γίνονται **κόκκινα** αν κάποιος ξαναβάλει `stopImmediatePropagation()` χωρίς τον Μηχ. 4. **(5) Διόρθωση §10.5 Κ2 #4**: το `eyedropper.ts:133` είναι **Firefox-only** — σε Chrome/Edge το `openEyedropper()` (γρ. 51-54) παίρνει το native `EyeDropper` branch και η `openDomEyedropper()` δεν καλείται ποτέ (επαληθεύτηκε ζωντανά). Δεν είναι «ζωντανό bug» στον κύριο browser· χαμηλότερη προτεραιότητα. **(6) Νέο ζωντανό εύρημα (Φ3)**: στο 3D η σκάλα σταματά στο 2ο σκαλί — 3ο ESC δεν κάνει τίποτα και το στοιχείο **μένει επιλεγμένο** (δείκτης μακριά, όχι hover), ενώ ο bus **κατανάλωσε** και στα τρία ⇒ handler του bus καταναλώνει **χωρίς ορατή ενέργεια**, μπλοκάροντας χαμηλότερες προτεραιότητες. | Claude Opus 5 + Γιώργος Παγώνης |
 | 2026-07-25 | **SPLIT — τα §10.9–§10.9.3 έφυγαν στο ADR-700.** Το record είχε φτάσει **1.170 γραμμές με δύο ανεξάρτητες αποφάσεις**: τον Escape Command Bus (§1–§10.8) και το barrel-aware dead-export gate / CHECK 3.30 (§10.9.x), που ήταν παρακλάδι του §10.7.1 — νόμιμο βήμα-βήμα, scope creep στο άθροισμα. Η πρακτική είναι ομόφωνη (**μία απόφαση ανά record**· ADR πάνω από μία σελίδα ⇒ τεκμηριώνει πολλαπλές, σπάσ' τες). Μεταφέρθηκαν **507 γραμμές + 5 εγγραφές changelog, αυτούσια**· ό,τι μένει εδώ αφορά **μόνο** το ESC. Στη θέση τους έμεινε pointer με πίνακα αντιστοίχισης §10.9→§1 … §10.9.3→§4. **Καμία αλλαγή στο CHECK 3.30** (ελεγκτής / γράφος / workflow / hook PHASE 0.8 / baseline δεδομένα άθικτα) — ενημερώθηκαν **μόνο** οι συμβολοσειρές αναφοράς ADR, ώστε να μη μείνει dangling παραπομπή. | Claude Opus 5 + Γιώργος Παγώνης |
 | 2026-07-25 | **§10.13 follow-up — CHECK 3.7 allowlist για τον `shortcut-dispatcher.ts`.** Το ένα εναπομείναν bail του §10.13 (`dispatchShortcut` γρ. 117: `if (event.code === 'Escape' \|\| event.key === 'Escape') return NOT_HANDLED;`) πιάστηκε από το CHECK 3.7 (`escape-command-bus` module, pattern `key === 'Escape'`) ως NEW-FILE zero-tolerance παραβίαση. **Δεν είναι παραβίαση αλλά ο ΦΥΛΑΚΑΣ του SSoT**: είναι το single point που κρατά κάθε 3D ESC ρήγα ως gated escape-bus slot (βγάζει το ESC έξω από τον pure dispatcher). Ίδια ακριβώς κατηγορία drop-ESC με το ήδη-allowlisted `useDimensionKeyboardRouting.mapKey()`. Προστέθηκε το `bim-3d/shortcuts/shortcut-dispatcher.ts` στο allowlist του module + ενημερώθηκε η description. Καμία αλλαγή κώδικα/συμπεριφοράς — μόνο registry. CHECK 3.7 → EXIT 0. | Claude Opus 4.8 + Γιώργος Παγώνης |
+| 2026-07-25 | **§10.14 — Φ3: οι 10 μεταναστεύσεις Κ2, το Κ2-β, ο Μηχανισμός 3. ΤΟ ΕΡΓΟ ESC ΚΛΕΙΝΕΙ.** **(1) Ο μετρημένος `shadow-owner` εξαλείφθηκε**: το `useDxfToolbarShortcuts.ts:215` έγινε gated slot `TOOL_RESET` (**50**, νέο — πάτος της αλυσίδας, ακριβώς όπου βρισκόταν ο bubble listener του, που έτρεχε μόνο όταν ο bus δεν κατανάλωνε). Το `onAction('clear-selection')` **διαγράφηκε αντί να μεταναστεύσει**: είναι **ορφανό string** (μία εκπομπή, **μηδέν** handlers σε όλο το `src/`) που τύπωνε `Unknown action: clear-selection` σε κάθε πάτημα — «καθάριζε την επιλογή» χωρίς να κάνει τίποτα· ο πραγματικός αποεπιλογέας είναι το σύνθετο 400, **πάνω** από το νέο slot. **(2) 🔴 Το ανοιχτό ερώτημα του §1.Γ απαντήθηκε ΖΩΝΤΑΝΑ και ανέτρεψε το §10.13**: με πραγματικό group 131 αντικειμένων, 1ο ESC → `canvas/fallback-deselect` **ενώ η μπάρα λέει «Επεξεργασία ομάδας · Esc για έξοδο»**, 2ο → `group/exit-active-group`. Ο ισχυρισμός του `escape-priority.ts` («η είσοδος σε group/block δεν αφήνει επιλεγμένη οντότητα») είναι **ψευδής** — η είσοδος **απαιτεί** `ids.length === 1` και καμία από τις δύο διαδρομές δεν καθαρίζει την επιλογή. **`GROUP_EXIT` 275→408, `BLOCK_EDITOR_EXIT` 274→407** (Revit «Edit Group» / Figma / AutoCAD REFEDIT: **ένα** Esc βγάζει από τον περιέκτη). **(3) 10 μεταναστεύσεις**: #3 waypoint→`GRIP_DRAG` (imperative, X/Y/Z μένουν τοπικά)· #4 eyedropper→`MODAL_DIALOG` (Firefox-only)· #5 TextEditorOverlay + #6 PromptDialog→`MODAL_DIALOG`+`allowWhenEditable` (⚠️ ο PromptDialog είναι **μόνιμα mounted** ⇒ το `canHandle: () => isOpen` είναι η **μόνη** πύλη)· #7 ZoomControls (αντιγραφή του δομικά πανομοιότυπου `DrawingScaleWidget`) + #9 RibbonContextMenu + #10 ToolButton→`POPOVER_DROPDOWN`· #11 zoom-window→**`ZOOM_WINDOW_TOOL` (505)** νέο, γιατί το `isInteractiveTool` gate του `DRAW_TOOL` αποκλείει ρητά το `category:'zoom'`· #12 layering→**`LAYERING_EXIT` (270)** νέο, **σκόπιμα <400** (μετρήθηκε ότι ο παλιός listener πυροδοτούνταν μόνο όταν κανείς δεν κατανάλωνε). **(4) Κ2-β έκλεισε δομικά**: **ένα** bail `if (e.key === 'Escape') return;` στο `useCanvasKeyboardShortcuts` (ίδιο σχήμα με τον Μηχ. 4) αφαιρεί την εξάρτηση από **σειρά mount**· οι 4 κλάδοι σε trim/scale/stretch/extend διαγράφηκαν ως **αποδεδειγμένα** πλεοναστικοί (καλούσαν το ίδιο `handleXEscape` reference που ήδη ζει στο `MODIFY_TOOL`). **(5) Μηχ. 3 — ΚΑΜΙΑ νέα μηχανή**: επεκτάθηκε το υπάρχον module `escape-command-bus` (CHECK 3.7) με 2 patterns, **το καθένα από μετρημένο κενό** — `.code === 'Escape'` (#3) και `matchesShortcut(…,'escape')` (#12/#13, ο shadow-owner). **Τα τυφλά σημεία είναι ΓΡΑΜΜΕΝΑ** στο registry και στο §10.14.Ε.1: δεν πιάνει την αλυσίδα προώθησης, άλλα alias, σιωπηλούς ιδιοκτήτες, και το ίδιο το CHECK 3.7 είναι staged-only με `same ⇒ περνά σιωπηλά`. **0 αρχεία μπλοκάρουν, −16 παραβάσεις.** ⚠️ **ΔΕΝ έτρεξε `ssot:baseline`** (κοινό working tree με τον πράκτορα του ADR-702/703) — ο Giorgio να το τρέξει αφού προσγειωθούν και οι δύο εργασίες. **(6) Παγίδα που εντοπίστηκε: η τεκμηρίωση μιμείται κώδικα** — ο ratchet μετρά κείμενο, άρα σχόλιο που παραθέτει αυτούσια την απαγορευμένη μορφή μετρά ως παράβαση· όλα ξαναδιατυπώθηκαν. Προϋπάρχον, **μη διορθωμένο**: `DrawingScaleWidget.tsx:37` και `OpeningInfoTagEditorOverlay.tsx:78` έχουν τέτοια σχόλια με baseline 0 ⇒ **ο επόμενος που θα τα αγγίξει θα δει το commit του να μπλοκάρει από σχόλιο**. **(7) 🔴 ΔΥΟ ΔΙΟΡΘΩΣΕΙΣ ΣΤΟ ΙΔΙΟ ΤΟ ΟΡΓΑΝΟ**: το τεκμηριωμένο μοτίβο του §2 του handoff έστελνε το συνθετικό ESC με `window.dispatchEvent`, που έχει διαδρομή **μόνο** το `window` ⇒ κάθε listener σε `document`/`body` ήταν αόρατος **και το θετικό control σε `document` capture δεν έλεγχε τίποτα**· και το `activeElement` πρέπει να γίνει `blur()` πρώτα, αλλιώς ο editable guard του bus σκιπάρει τα slots ενώ οι παλιοί ωμοί listeners (που έκριναν με `e.target`) θα είχαν τρέξει — έδειχνε ψευδώς «το slot δεν δουλεύει». **(8) N.0.2**: 5 stale deps, 2 νεκρές παράμετροι, 2 πραγματικά clones (`readSourcePixelAt`, `reportLayeringWorkflowResult`). **jest 470 suites / 4673 tests** πράσινα (βάση ESC 81/81)· jscpd καθαρό. **Ζωντανά**: αδρανές 2D **3/3 `ok` με `consumedBy: null`** (ήταν 3/3 `shadow-owner`) — **στόχος τερματισμού επιτεύχθηκε**, με θετικό control σε 3 θέσεις να αποδεικνύει ότι το `ok` δεν είναι σιωπή· `toolbar/reset-to-select-tool` και `app/layering-exit` επαληθεύτηκαν end-to-end· `Unknown action: clear-selection` έπαψε. ⚠️ **ΔΕΝ επαληθεύτηκαν σε οθόνη** (υποβάθμιση του browser automation στο τέλος + αυτόματη επανεκκίνηση του dev server): η σκάλα του group **μετά** τη μετακίνηση 275→408, και τα #3/#5/#6/#7/#9/#10/#11 ξεχωριστά — βλ. §10.14.ΣΤ.3. Δήλωση: **Google-level ΜΕΡΙΚΩΣ** — αρχιτεκτονική πλήρης, επαλήθευση όχι. | Claude Opus 5 + Γιώργος Παγώνης |
 | 2026-07-25 | **§10.13 — Φ2 Μηχανισμός 4 (σκάλα 3D → bus) + ΞΕΜΠΛΟΚΑΡΙΣΜΑ Μηχανισμού 2.** Το SSoT audit πριν τον κώδικα **ακύρωσε το σχέδιο του §10.12**: τα προτεινόμενα `EDIT_GIZMO_3D = 290` / stair-sub `~273` θα ήταν **ανεκτέλεστα**, επειδή (α) το `ENTITY_SELECTION` (250) **δεν το χρησιμοποιεί καμία εγγραφή** — ο πραγματικός αποεπιλογέας είναι το σύνθετο `canvas/fallback-deselect` στο `DRAFT_POLYGON` (400), (β) το `BimViewport3D` είναι leaf **μέσα** στο `CanvasLayerStack`, άρα οι 2D εγγραφές τρέχουν και στο 3D, και (γ) το gizmo είναι auto-on-selection ⇒ όσο είναι πάνω, το 400 διεκδικεί πάντα. Νέες σταθερές στη ζώνη **420 / 415 / 410** (κάτω από `BODY_DRAG` 425, πάνω από το 400). Οι κλάδοι ESC του dispatcher ήταν **τρεις, όχι δύο** — ο τρίτος (`focusClear`, `key: 'Escape'`) επέστρεφε `HANDLED` **χωρίς gate** σε κάθε 3D ESC, ίδιο σφάλμα με τη ρίζα του §10.12. Και οι τρεις αντικαταστάθηκαν από **ένα** bail στον `dispatchShortcut` + 4 gated slots στο νέο `bim-3d/shortcuts/use3DEscapeRegistrations.ts` (καθρέφτης του `useCanvasEscapeRegistrations`). **Το τρίτο κενό ήταν όντως SSoT εύρημα**: `SelectedEntitiesStore` και `Selection3DStore` κρατούν την ίδια έννοια με **μονόδρομη** γέφυρα 3D→universal, οπότε ο ESC καθαρίζει πλέον τη **3D** πλευρά και η υπάρχουσα γέφυρα κατεβάζει το universal — μία ενέργεια, δύο stores, κανένα νέο μονοπάτι. Με τη Ζώνη Α άδεια, μπήκε ο **Μηχ. 2** (`stopPropagation` → `stopImmediatePropagation`): το 1ο από τα 4 tests-φύλακες **αντιστράφηκε** κατά σχέδιο, τα άλλα 3 έμειναν έγκυρα· θεραπεύτηκε παράπλευρα και η **διπλή αποστολή του §10.5 Κ2-β** (`handleTrimEscape` ×2 ανά πάτημα). Ο έλεγχος έγινε **αναγνώσιμος**: `window.__escapeAudit` (dev-only) εκθέτει `consumedBy` — αναγκαίο αφού ο Μηχ. 2 κόβει κάθε εξωτερικό παρατηρητή. **Αρχεία**: +2 νέα (`use3DEscapeRegistrations.ts`, `use3DEscapeRegistrations.test.ts`), 6 τροποποιημένα. **jest 81/81** (βάση 58 + 23 νέα· 396/396 σε ευρύτερο σάρωμα 33 suites). jscpd καθαρό. **Ζωντανή επαλήθευση στον browser με επικυρωμένο όργανο**: 1ο ESC → `bim3d/edit-gizmo-teardown` (gizmo κλείνει, επιλογή μένει), 2ο → `bim3d/selection-clear` (αποεπιλογή + άμεσο repaint), 3ο → κανένα slot. Μια πρώτη εκδοχή του 3ου rung καλούσε σκέτο `clearSelection()` και **άφηνε το περίγραμμα στην οθόνη** (πράσινο jest, χαλασμένη οθόνη) — διορθώθηκε ώστε να περνά από τον κανονικό `manager.selectBimEntity(null)` (store + highlighter + markSceneDirty μαζί)· βλ. §10.13.Β.1. **Νέο ταυτοποιημένο shadow-owner** με stack trace: `useDxfToolbarShortcuts.ts:215` (Κ2-α #13) — ήταν δομικά αόρατο πριν το §10.12, παραμένει εκκρεμότητα Φ3. | Claude Opus 5 + Γιώργος Παγώνης |

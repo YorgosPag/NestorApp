@@ -27,6 +27,8 @@ import {
 } from './waypoint-drag-controller';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 import type { WaypointHandleRole } from './WaypointDragHandle';
+// ADR-364 — Escape Command Bus SSoT (imperative registration; this hook is DOM glue)
+import { escapeBus, ESC_PRIORITY } from '../../systems/escape-bus';
 
 export interface UseWaypointDragInteractionParams {
   readonly managerRef: MutableRefObject<ThreeJsSceneManager | null>;
@@ -62,7 +64,29 @@ export function useWaypointDragInteraction(params: UseWaypointDragInteractionPar
       canvasEl.addEventListener('pointercancel', () => onPointerCancel(controller, events, canvasEl), { signal });
       canvasEl.addEventListener('pointerleave', () => onPointerLeave(controller, events), { signal });
 
-      window.addEventListener('keydown', (e) => onAxisLockKey(e, controller, events), { signal, capture: true });
+      window.addEventListener('keydown', onAxisLockKey, { signal, capture: true });
+
+      // ADR-364 §10.14 (Κ2 #3) — the ESC branch moved out of `onAxisLockKey` into
+      // the central bus. The X/Y/Z axis-lock keys stay on the local listener: they
+      // are not contested by anything else, so §10.2 keeps them local.
+      //
+      // Registered imperatively (this hook is DOM glue, not a render path) — same
+      // pattern as `bim-3d/render/crop-region/CropRegionTool.ts`. The unregister is
+      // bound to the same AbortController that owns the DOM listeners, so the slot
+      // lives exactly as long as `AnimationStore.toolActive`.
+      const unregisterEscape = escapeBus.register({
+        id: 'bim3d/waypoint-axis-lock-clear',
+        priority: ESC_PRIORITY.GRIP_DRAG,
+        // Same three conditions the old branch checked, unchanged: the tool must be
+        // active, an axis lock must exist, and we must NOT be mid-drag (a drag is
+        // cancelled by the controller's own path, not by clearing the lock).
+        canHandle: () => {
+          const store = useAnimationStore.getState();
+          return store.toolActive && store.dragAxisLock !== null && controller.getState() !== 'dragging';
+        },
+        handle: () => { useAnimationStore.getState().setDragAxisLock(null); return true; },
+      });
+      signal.addEventListener('abort', unregisterEscape, { once: true });
     };
 
     const syncFromStore = (): void => {
@@ -202,24 +226,15 @@ function makeEvents(
   };
 }
 
-function onAxisLockKey(
-  e: KeyboardEvent,
-  controller: WaypointDragController,
-  events: DragControllerEvents,
-): void {
+// ADR-364 §10.14 — ESC is NOT handled here any more; it is a bus slot registered in
+// `setupListeners` (`bim3d/waypoint-axis-lock-clear`). This listener owns X/Y/Z only.
+// (`controller`/`events` were already dead parameters before the ESC branch left —
+// the body never touched `events`, and `controller` was only read by the ESC branch.)
+function onAxisLockKey(e: KeyboardEvent): void {
   const isAxisKey = e.code === 'KeyX' || e.code === 'KeyY' || e.code === 'KeyZ';
-  const isEscape = e.code === 'Escape';
-  if (!isAxisKey && !isEscape) return;
+  if (!isAxisKey) return;
   const store = useAnimationStore.getState();
   if (!store.toolActive) return;
-  if (isEscape) {
-    if (store.dragAxisLock !== null && controller.getState() !== 'dragging') {
-      store.setDragAxisLock(null);
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    return;
-  }
   const axis = e.code.slice(-1) as 'X' | 'Y' | 'Z';
   store.setDragAxisLock(store.dragAxisLock === axis ? null : axis);
   e.preventDefault();

@@ -193,10 +193,10 @@ export function useExtendTool(props: UseExtendToolProps): UseExtendToolReturn {
   const handleExtendKeyDown = useCallback(
     (key: string, shiftKey: boolean): boolean => {
       if (!isActive) return false;
-      if (key === 'Escape') {
-        handleExtendEscape();
-        return true;
-      }
+      // ADR-364 §10.14 (Κ2-β) — the ESC comparison branch was removed: it called
+      // `handleExtendEscape()`, the same function already on the bus at MODIFY_TOOL (600)
+      // ⇒ double execution per press. The `Enter` branch below still calls it (a different
+      // trigger, single owner), so the function itself stays.
       if (key === 'Shift') {
         ExtendToolStore.setInverseMode(shiftKey);
         ToolCursorStore.set(shiftKey ? 'trim-pickbox' : 'extend-arrow');
