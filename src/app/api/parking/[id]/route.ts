@@ -1,246 +1,71 @@
 /**
- * Parking Spot PATCH / DELETE endpoint
+ * Parking Spot PATCH / DELETE / GET endpoint
+ *
+ * Thin configuration over the `createSpaceEntityRoutes` SSoT — the whole
+ * pipeline (tenant guard → parse → version-checked write → allocationCode
+ * cascade → building link → audit → envelope) lives once in
+ * `@/lib/api/space-entity-route`. Only what genuinely differs from the storage
+ * twin is declared here.
  *
  * @module api/parking/[id]
- * @permission units:units:edit (PATCH), units:units:delete (DELETE)
+ * @permission units:units:update (PATCH), units:units:delete (DELETE), units:units:view (GET)
  * @rateLimit STANDARD (60 req/min)
- * @see ADR-184 (Building Spaces Tabs)
+ * @see ADR-184 (Building Spaces Tabs), ADR-696 (space-entity route SSoT)
  */
 
 import { z } from 'zod';
-import { NextRequest, NextResponse } from 'next/server';
-import { withAuth, logAuditEvent } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
-import { extractIdFromUrl } from '@/lib/api/route-helpers';
 import { createModuleLogger } from '@/lib/telemetry';
-import { softDelete } from '@/lib/firestore/soft-delete-engine';
-import { linkEntity } from '@/lib/firestore/entity-linking.service';
-import { propagateSpaceAllocationCodeChange } from '@/lib/firestore/cascade-propagation.service';
+import { requireParkingInTenant } from '@/lib/auth/tenant-isolation';
+import { createSpaceEntityRoutes } from '@/lib/api/space-entity-route';
+import { SPACE_COMMON_UPDATE_FIELDS } from '@/lib/api/space-entity-fields';
 
 const logger = createModuleLogger('ParkingIdRoute');
 
-// ============================================================================
-// TYPES
-// ============================================================================
-
-import type { ParkingSpotType, ParkingSpotStatus, ParkingLocationZone } from '@/types/parking';
-import { getErrorMessage } from '@/lib/error-utils';
-import { requireParkingInTenant } from '@/lib/auth/tenant-isolation';
-import { withVersionCheck, ConflictError } from '@/lib/firestore/version-check';
-import { safeParseBody } from '@/lib/validation/shared-schemas';
-
+/** Parking-only fields on top of the shared building-space shape. */
 const UpdateParkingSchema = z.object({
   number: z.string().max(50).optional(),
-  /** ADR-233: Entity coding system identifier */
-  code: z.string().max(50).nullable().optional(),
-  type: z.string().max(50).optional(),
-  status: z.string().max(50).optional(),
   locationZone: z.string().max(100).nullable().optional(),
-  floor: z.union([z.string().max(50), z.number()]).nullable().optional(),
   location: z.string().max(200).nullable().optional(),
-  area: z.number().min(0).max(999_999).nullable().optional(),
-  price: z.number().min(0).max(999_999_999).nullable().optional(),
-  description: z.string().max(2000).nullable().optional(),
-  notes: z.string().max(5000).nullable().optional(),
-  buildingId: z.string().max(128).nullable().optional(),
   projectId: z.string().max(128).optional(),
-  _v: z.number().int().optional(),
+  ...SPACE_COMMON_UPDATE_FIELDS,
 }).passthrough();
 
-interface ParkingPatchPayload {
-  number?: string;
-  type?: ParkingSpotType;
-  status?: ParkingSpotStatus;
-  locationZone?: ParkingLocationZone | null;
-  floor?: string;
-  location?: string;
-  area?: number;
-  price?: number;
-  description?: string;
-  notes?: string;
-  /** Set to null to unlink from building, or string to link */
-  buildingId?: string | null;
-  projectId?: string;
-}
+type UpdateParkingBody = z.infer<typeof UpdateParkingSchema>;
 
-interface ParkingMutationResult {
-  id: string;
-  _v?: number;
-}
+export const { PATCH, DELETE, GET } = createSpaceEntityRoutes<UpdateParkingBody>({
+  collection: COLLECTIONS.PARKING_SPACES,
+  entityKind: 'parking',
+  apiPath: '/api/parking/[id]',
+  logger,
+  auditResource: 'parking_spot',
+  auditIdKey: 'parkingSpotId',
+  displayField: 'number',
+  requireInTenant: ({ ctx, id, path }) => requireParkingInTenant({ ctx, parkingId: id, path }),
+  updateSchema: UpdateParkingSchema,
 
-// ============================================================================
-// PATCH — Update Parking Spot
-// ============================================================================
+  /** Parking-only fields — the shared mapper covers the rest. */
+  mapExtraFields: (body) => {
+    const extra: Record<string, unknown> = {};
+    if (body.location !== undefined) extra.location = body.location?.trim() || null;
+    if (body.locationZone !== undefined) extra.locationZone = body.locationZone ?? null;
+    if (body.projectId?.trim()) extra.projectId = body.projectId.trim();
+    return extra;
+  },
 
-export const PATCH = withStandardRateLimit(
-  withAuth<ApiSuccessResponse<ParkingMutationResult>>(
-    async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-      const adminDb = getAdminFirestore();
-      if (!adminDb) throw new ApiError(503, 'Database unavailable');
-
-      const id = extractIdFromUrl(request.url);
-      if (!id) throw new ApiError(400, 'Parking spot ID is required');
-
-      try {
-        // 🔒 ADR: Centralized tenant isolation (existence + companyId + audit logging)
-        await requireParkingInTenant({ ctx, parkingId: id, path: '/api/parking/[id]' });
-
-        const docRef = adminDb.collection(COLLECTIONS.PARKING_SPACES).doc(id);
-        const doc = await docRef.get();
-        const existing = doc.data() as Record<string, unknown>;
-
-        const parsed = safeParseBody(UpdateParkingSchema, await request.json());
-        if (parsed.error) throw new ApiError(400, 'Validation failed');
-        const { _v: expectedVersion, ...body } = parsed.data;
-
-        // Build update object — only include provided fields
-        // SPEC-256A: updatedAt + updatedBy injected by withVersionCheck
-        const updateData: Record<string, unknown> = {};
-
-        if (body.number?.trim()) updateData.number = body.number.trim();
-        if (body.code !== undefined) updateData.code = body.code?.trim() || null;
-        if (body.type) updateData.type = body.type;
-        if (body.status) updateData.status = body.status;
-        if (body.floor !== undefined) updateData.floor = typeof body.floor === 'number' ? body.floor : (body.floor?.trim() || null);
-        if (body.location !== undefined) updateData.location = body.location?.trim() || null;
-        if (body.area !== undefined) updateData.area = typeof body.area === 'number' ? body.area : null;
-        if (body.price !== undefined) updateData.price = typeof body.price === 'number' ? body.price : null;
-        if (body.description !== undefined) updateData.description = body.description?.trim() || null;
-        if (body.notes !== undefined) updateData.notes = body.notes?.trim() || null;
-        if (body.buildingId !== undefined) updateData.buildingId = body.buildingId ?? null;
-        if (body.locationZone !== undefined) updateData.locationZone = body.locationZone ?? null;
-        if (body.projectId?.trim()) updateData.projectId = body.projectId.trim();
-
-        // SPEC-256A: Version-checked write
-        const versionResult = await withVersionCheck({
-          db: adminDb,
-          collection: COLLECTIONS.PARKING_SPACES,
-          docId: id,
-          expectedVersion,
-          updates: updateData,
-          userId: ctx.uid,
-        });
-
-        // 🔗 ADR-247 F-4: Cascade allocationCode to linkedSpaces on units
-        // ADR-233: Prefer code field; fall back to number for legacy
-        const newDisplayCode = body.code?.trim() || body.number?.trim();
-        const oldDisplayCode = (existing.code as string) || (existing.number as string);
-        if (newDisplayCode && newDisplayCode !== oldDisplayCode) {
-          propagateSpaceAllocationCodeChange(id, newDisplayCode, (existing.buildingId as string) ?? null)
-            .catch((err) => logger.warn('allocationCode cascade failed (non-blocking)', {
-              id, error: getErrorMessage(err),
-            }));
-        }
-
-        // 🔗 ADR-239: Centralized linking — change detection + cascade + entity audit
-        if (body.buildingId !== undefined) {
-          linkEntity('parking:buildingId', {
-            auth: ctx,
-            entityId: id,
-            newLinkValue: body.buildingId ?? null,
-            existingDoc: existing,
-            apiPath: '/api/parking/[id] (PATCH)',
-          }).catch((err) => {
-            logger.warn('linkEntity failed (non-blocking)', {
-              id, error: getErrorMessage(err),
-            });
-          });
-        }
-
-        // ADR-029 Phase D: search_documents written by Cloud Function onParkingWrite.
-
-        logger.info('Parking spot updated', { id, companyId: ctx.companyId });
-
-        await logAuditEvent(ctx, 'data_updated', 'parking_spot', 'api', {
-          newValue: { type: 'status', value: { parkingSpotId: id, updates: Object.keys(updateData) } },
-          metadata: { reason: 'Parking spot updated via API' },
-        });
-
-        return apiSuccess<ParkingMutationResult>({ id, _v: versionResult.newVersion }, 'Parking spot updated');
-      } catch (error) {
-        if (error instanceof ConflictError) {
-          return NextResponse.json(error.body, { status: error.statusCode });
-        }
-        if (error instanceof ApiError) throw error;
-        logger.error('Error updating parking spot', { id, error: getErrorMessage(error) });
-        throw new ApiError(500, getErrorMessage(error, 'Failed to update parking spot'));
-      }
-    },
-    { permissions: 'units:units:update' }
-  )
-);
-
-// ============================================================================
-// DELETE — Delete Parking Spot
-// ============================================================================
-
-export const DELETE = withStandardRateLimit(
-  withAuth<ApiSuccessResponse<ParkingMutationResult>>(
-    async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-      const adminDb = getAdminFirestore();
-      if (!adminDb) throw new ApiError(503, 'Database unavailable');
-
-      const id = extractIdFromUrl(request.url);
-      if (!id) throw new ApiError(400, 'Parking spot ID is required');
-
-      try {
-        // 🔒 ADR: Centralized tenant isolation (existence + companyId + audit logging)
-        await requireParkingInTenant({ ctx, parkingId: id, path: '/api/parking/[id]' });
-
-        const docRef = adminDb.collection(COLLECTIONS.PARKING_SPACES).doc(id);
-        const existing = (await docRef.get()).data() as Record<string, unknown>;
-
-        // 🗑️ ADR-281: Soft-delete — move to trash (status='deleted')
-        await softDelete(adminDb, 'parking', id, ctx.uid, ctx.companyId, ctx.email ?? undefined);
-
-        logger.info('Parking spot moved to trash', { id, companyId: ctx.companyId });
-
-        // Auth audit (soft-delete engine handles entity audit)
-        await logAuditEvent(ctx, 'soft_deleted', 'parking_spot', 'api', {
-          newValue: { type: 'status', value: { parkingSpotId: id, number: existing.number } },
-          metadata: { reason: 'Parking spot moved to trash via API' },
-        });
-
-        return apiSuccess<ParkingMutationResult>({ id }, 'Parking spot moved to trash');
-      } catch (error) {
-        if (error instanceof ApiError) throw error;
-        logger.error('Error deleting parking spot', { id, error: getErrorMessage(error) });
-        throw new ApiError(500, getErrorMessage(error, 'Failed to delete parking spot'));
-      }
-    },
-    { permissions: 'units:units:delete' }
-  )
-);
-
-// ============================================================================
-// GET — Fetch Single Parking Spot
-// ============================================================================
-
-export const GET = withStandardRateLimit(
-  withAuth<ApiSuccessResponse<Record<string, unknown>>>(
-    async (request: NextRequest, ctx: AuthContext) => {
-      const adminDb = getAdminFirestore();
-      if (!adminDb) throw new ApiError(503, 'Database unavailable');
-
-      const id = extractIdFromUrl(request.url);
-      if (!id) throw new ApiError(400, 'Parking spot ID is required');
-
-      // 🔒 ADR: Centralized tenant isolation
-      await requireParkingInTenant({ ctx, parkingId: id, path: '/api/parking/[id]' });
-
-      const docRef = adminDb.collection(COLLECTIONS.PARKING_SPACES).doc(id);
-      const doc = await docRef.get();
-
-      if (!doc.exists) throw new ApiError(404, 'Parking spot not found');
-
-      return apiSuccess({ id: doc.id, ...doc.data() }, 'Parking spot loaded');
-    },
-    { permissions: 'units:units:view' }
-  )
-);
-
-// Helper: extractIdFromUrl → centralized in @/lib/api/route-helpers
+  messages: {
+    idRequired: 'Parking spot ID is required',
+    updated: 'Parking spot updated',
+    movedToTrash: 'Parking spot moved to trash',
+    loaded: 'Parking spot loaded',
+    notFound: 'Parking spot not found',
+    updateFailed: 'Failed to update parking spot',
+    deleteFailed: 'Failed to delete parking spot',
+    logUpdateError: 'Error updating parking spot',
+    logDeleteError: 'Error deleting parking spot',
+    logUpdated: 'Parking spot updated',
+    logMovedToTrash: 'Parking spot moved to trash',
+    auditUpdateReason: 'Parking spot updated via API',
+    auditDeleteReason: 'Parking spot moved to trash via API',
+  },
+});

@@ -4510,6 +4510,7 @@
       ],
       "allowlist": [
         "src/lib/api/space-entity-route.ts",
+        "src/lib/api/space-entity-handlers.ts",
         "src/lib/firestore/cascade-propagation.service.ts",
         "src/lib/auth/tenant-isolation.ts",
         "src/app/api/parking/[id]/route.ts",
