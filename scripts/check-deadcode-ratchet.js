@@ -7,6 +7,7 @@
 const { spawnSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const { compareSets } = require('./lib/ratchet-baseline');
 
 const BASELINE_FILE = path.join(__dirname, '..', '.deadcode-baseline.json');
 const ROOT = path.join(__dirname, '..');
@@ -51,8 +52,10 @@ const currentFiles = new Set(
     .map(issue => issue.file)
 );
 
-const newDeadFiles = [...currentFiles].filter(f => !baselineSet.has(f));
-const cleaned = [...baselineSet].filter(f => !currentFiles.has(f)).length;
+// Set-diff lives in scripts/lib/ratchet-baseline.js so the dead-code family
+// (CHECK 3.22 here, CHECK 3.30 barrel-aware) shares ONE comparison (N.18).
+const { added: newDeadFiles, removed } = compareSets([...currentFiles], [...baselineSet]);
+const cleaned = removed.length;
 
 if (newDeadFiles.length === 0) {
   const msg = cleaned > 0

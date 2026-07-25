@@ -172,6 +172,23 @@ Direction: ${descriptor.direction === 'up' ? 'higher is better (block on drop)' 
 `);
 }
 
+// Set-shaped ratchet. Some gates measure a LIST of offending identities (dead
+// files, dead exports) rather than one number: there, "5 → 5" can still hide a
+// swap of one offender for another, so the compare must be by identity, not by
+// count. Added ⇒ regression; removed ⇒ progress worth locking in.
+// Shared so the dead-code family (CHECK 3.22 / 3.30) keeps ONE diff, not one
+// per script — the same reason G5/G6/G14 share `isRegression` above (N.18).
+function compareSets(currentIds, baselineIds) {
+  const baselineSet = new Set(baselineIds);
+  const currentSet = new Set(currentIds);
+  return {
+    added: [...currentSet].filter(id => !baselineSet.has(id)).sort(),
+    removed: [...baselineSet].filter(id => !currentSet.has(id)).sort(),
+    currentCount: currentSet.size,
+    baselineCount: baselineSet.size,
+  };
+}
+
 module.exports = {
   PROJECT_ROOT,
   rel,
@@ -179,6 +196,7 @@ module.exports = {
   loadBaseline,
   writeBaselineFile,
   isRegression,
+  compareSets,
   runRatchetCli,
   printHelp,
 };
