@@ -20,6 +20,7 @@ import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { findNearestHouseNumber } from '@/lib/geocoding/overpass-housenumber';
+import { toCanonicalGreekPostalCode } from '@/utils/address/postal-code';
 
 const logger = createModuleLogger('reverse-geocoding-api');
 
@@ -161,7 +162,9 @@ function formatReverseResult(result: NominatimReverseResult): ReverseGeocodingAp
     number: addr.house_number ?? '',
     city: cleanNominatimName(rawCity),
     neighborhood: cleanNominatimName(rawNeighborhood),
-    postalCode: addr.postcode ?? '',
+    // Κανονική μορφή στο σύνορο του παρόχου — το OSM Ελλάδας γράφει «546 24»
+    // και η τιμή κατέληγε αυτούσια στη φόρμα και στη βάση (ADR-332 D16).
+    postalCode: toCanonicalGreekPostalCode(addr.postcode),
     region: addr.state ?? '',
     country: addr.country ?? '',
     displayName: result.display_name,

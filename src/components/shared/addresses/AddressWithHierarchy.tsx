@@ -43,12 +43,17 @@ export type { AddressWithHierarchyValue, AddressWithHierarchyProps } from './add
 
 // Pure field/format primitives — εξήχθησαν στο address-hierarchy-field-ops (N.7.1)
 import {
-  formatGreekPostalCode,
-  normalizePostalCode,
   stripGreekAdminPrefix,
   applyResolvedPath,
   clearHierarchyLevels,
 } from './address-hierarchy-field-ops';
+// Τ.Κ. + χώρα: SSoT εκτός components (ADR-332 D16 / D12)
+import {
+  formatGreekPostalCode,
+  parseGreekPostalCodeInput,
+  toCanonicalGreekPostalCode,
+} from '@/utils/address/postal-code';
+import { isGreekAddressCountry } from '@/utils/address/country-codes';
 
 // =============================================================================
 // COMPONENT
@@ -115,21 +120,24 @@ export function AddressWithHierarchy({
     [hierarchyLevels],
   );
 
+  // Το ερώτημα «είναι ελληνική;» απαντιόταν εδώ με inline αλυσίδα `||` και
+  // ξεχωριστά στο geocoding engine με πλήρη accent-insensitive χάρτη. Ένα σημείο
+  // πλέον (ADR-332 D12) — αλλιώς κάθε νέα ορθογραφία έπρεπε να μπει δύο φορές.
+  const isGreekAddress = isGreekAddressCountry(current.country);
+
   const handleBasicChange = useCallback(
     (field: 'street' | 'number' | 'postalCode' | 'country', val: string) => {
-      const formatted = field === 'postalCode' ? formatGreekPostalCode(val) : val;
-      onChange({ ...current, [field]: formatted });
+      // Ο Τ.Κ. μπαίνει στο μοντέλο ΚΑΝΟΝΙΚΟΣ («54624»)· η μάσκα «546 24» είναι
+      // μόνο εμφάνιση (ADR-332 D16). Σε μη-ελληνική διεύθυνση το πεδίο μένει
+      // διαφανές — το παλιό `replace(/\D/g,'')` ακρωτηρίαζε σιωπηλά ξένους Τ.Κ.
+      // («SW1A 1AA» ➜ «11»).
+      const next = field === 'postalCode'
+        ? (isGreekAddress ? parseGreekPostalCodeInput(val) : val)
+        : val;
+      onChange({ ...current, [field]: next });
     },
-    [current, onChange],
+    [current, onChange, isGreekAddress],
   );
-  const normalizedCountry = current.country.trim().toLowerCase();
-  const isGreekAddress = !normalizedCountry
-    || normalizedCountry === 'gr'
-    || normalizedCountry === 'greece'
-    || normalizedCountry === 'ελλάδα'
-    || normalizedCountry === 'ελλάς'
-    || normalizedCountry === 'ελλας'
-    || normalizedCountry === 'hellas';
 
   /**
    * Handle settlement selection — auto-fills entire hierarchy.
@@ -192,7 +200,7 @@ export function AddressWithHierarchy({
 
     // Only auto-fill when: street + postalCode exist, but settlement is empty
     const hasStreet = current.street.trim().length > 2;
-    const hasPostalCode = normalizePostalCode(current.postalCode).length === 5;
+    const hasPostalCode = toCanonicalGreekPostalCode(current.postalCode).length === 5;
     const hasSettlement = current.settlementName.trim().length > 0;
 
     // Skip geocoding for non-Greek addresses — the Greek admin hierarchy is hidden anyway
@@ -251,7 +259,7 @@ export function AddressWithHierarchy({
 
     const cleanedName = stripGreekAdminPrefix(current.settlementName.trim()).replace(/-/g, ' ');
     const normalizedTarget = normalize(cleanedName);
-    const postalCode = normalizePostalCode(current.postalCode);
+    const postalCode = toCanonicalGreekPostalCode(current.postalCode);
 
     // Helper: fuzzy name match (exact or prefix-based for genitive handling)
     const nameMatches = (entityName: string): boolean => {
@@ -284,19 +292,19 @@ export function AddressWithHierarchy({
       const allSettlements = getByLevel(8);
       // Step 1: Exact postal code + name match
       bestMatch = allSettlements.find(
-        e => normalizePostalCode(e.postalCode ?? '') === postalCode && nameMatches(e.name)
+        e => toCanonicalGreekPostalCode(e.postalCode ?? '') === postalCode && nameMatches(e.name)
       ) ?? null;
       // Step 2: Same postal zone (first 3 digits) + name match
       if (!bestMatch) {
         bestMatch = allSettlements.find(
-          e => normalizePostalCode(e.postalCode ?? '').startsWith(postalZone) && nameMatches(e.name)
+          e => toCanonicalGreekPostalCode(e.postalCode ?? '').startsWith(postalZone) && nameMatches(e.name)
         ) ?? null;
       }
       // Step 3: Same broad zone (first 2 digits) + name match
       if (!bestMatch) {
         const broadZone = postalCode.substring(0, 2);
         bestMatch = allSettlements.find(
-          e => normalizePostalCode(e.postalCode ?? '').startsWith(broadZone) && nameMatches(e.name)
+          e => toCanonicalGreekPostalCode(e.postalCode ?? '').startsWith(broadZone) && nameMatches(e.name)
         ) ?? null;
       }
     }
@@ -368,12 +376,14 @@ export function AddressWithHierarchy({
           <fieldset className="space-y-1">
             <Label className={cn("text-xs font-medium", colors.text.muted)}>{t('form.postalCode')}</Label>
             <div className="flex items-center gap-1.5">
+              {/* Μάσκα εμφάνισης: το μοντέλο κρατά «54624», η οθόνη δείχνει
+                  «546 24» (ADR-332 D16). Σε ξένη διεύθυνση περνά αυτούσιο. */}
               <Input
-                value={current.postalCode}
+                value={isGreekAddress ? formatGreekPostalCode(current.postalCode) : current.postalCode}
                 onChange={e => handleBasicChange('postalCode', e.target.value)}
                 placeholder={t('form.postalCodePlaceholder')}
-                maxLength={6}
-                inputMode="numeric"
+                maxLength={isGreekAddress ? 6 : undefined}
+                inputMode={isGreekAddress ? 'numeric' : 'text'}
                 disabled={disabled}
                 className="flex-1"
               />

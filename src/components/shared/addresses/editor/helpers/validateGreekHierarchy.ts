@@ -25,6 +25,10 @@
 
 import type { AdminEntity } from '@/hooks/useAdministrativeHierarchy';
 import type { ResolvedAddressFields } from '@/lib/geocoding/geocoding-types';
+import {
+  isValidGreekPostalCode,
+  toCanonicalGreekPostalCode,
+} from '@/utils/address/postal-code';
 import { ADMIN_LEVELS, type HierarchyLookup } from './hierarchyLookup';
 
 export type HierarchyMismatchSeverity = 'warning' | 'error';
@@ -78,8 +82,10 @@ function pushPostalCodeMismatches(
   lookup: HierarchyLookup,
   out: HierarchyMismatch[],
 ): void {
-  const pc = fields.postalCode!.trim();
-  if (!/^[1-9]\d{4}$/.test(pc)) {
+  // Κανονική μορφή πρώτα: παλιά αποθηκευμένη τιμή «546 24» δεν πρέπει να
+  // αναφέρεται ως άκυρη μέχρι να τρέξει η μετάπτωση (ADR-332 D16).
+  const pc = toCanonicalGreekPostalCode(fields.postalCode);
+  if (!isValidGreekPostalCode(pc)) {
     out.push({
       kind: 'postal-code-invalid',
       field: 'postalCode',

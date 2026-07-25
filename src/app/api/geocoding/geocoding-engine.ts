@@ -21,6 +21,7 @@ import { normalizeGreekText } from '@/services/ai-pipeline/shared/greek-text-uti
 import { transliterateGreeklish, containsGreek } from '@/services/ai-pipeline/shared/greek-nlp';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { countryNameToCode } from '@/utils/address/country-codes';
 import type {
   GeocodingRequestBody,
   GeocodingApiResponse,
@@ -57,18 +58,6 @@ const USER_AGENT = process.env.GEOCODING_USER_AGENT || 'NestorPagonisApp/1.0 (ge
 const NOMINATIM_TIMEOUT_MS = parseInt(process.env.GEOCODING_TIMEOUT_MS || '8000', 10);
 const { GEOCODING } = GEOGRAPHIC_CONFIG;
 
-const COUNTRY_CODE_MAP: Record<string, string> = {
-  gr: 'gr', bg: 'bg', cy: 'cy', al: 'al', mk: 'mk', ro: 'ro',
-  de: 'de', it: 'it', fr: 'fr', gb: 'gb', uk: 'gb', tr: 'tr', rs: 'rs',
-  greece: 'gr', 'ελλάδα': 'gr', 'ελλας': 'gr', hellas: 'gr',
-  bulgaria: 'bg', 'βουλγαρία': 'bg', 'βουλγαρια': 'bg',
-  cyprus: 'cy', 'κύπρος': 'cy', 'κυπρος': 'cy',
-  albania: 'al', 'αλβανία': 'al', 'north macedonia': 'mk', 'βόρεια μακεδονία': 'mk',
-  romania: 'ro', 'ρουμανία': 'ro', germany: 'de', 'γερμανία': 'de',
-  italy: 'it', 'ιταλία': 'it', france: 'fr', 'γαλλία': 'fr',
-  'united kingdom': 'gb', turkey: 'tr', 'τουρκία': 'tr', serbia: 'rs',
-};
-
 // i18n keys (resolved at UI layer — engine never produces raw user-facing strings).
 const VARIANT_I18N_KEYS: Record<GeocodingVariant, string> = {
   1: 'addresses.geocoding.attempts.osmStyle',
@@ -82,28 +71,19 @@ const VARIANT_I18N_KEYS: Record<GeocodingVariant, string> = {
 };
 
 /**
- * Accent- and case-insensitive index over {@link COUNTRY_CODE_MAP}.
+ * Ο χάρτης χωρών + το accent-insensitive ευρετήριο μετακόμισαν στο
+ * `@/utils/address/country-codes`.
  *
- * A country name reaches us from typing, from paste, and from stored records:
- * "Ελλάδα", "ΕΛΛΑΔΑ" and the decomposed form macOS puts on the clipboard all
- * denote Greece, but only the first matched a raw `toLowerCase()` lookup.
+ * ΓΙΑΤΙ: το ίδιο ερώτημα το έκανε και το UI (`AddressWithHierarchy`) με **inline
+ * αλυσίδα `||`** έξι τιμών. Δύο απαντήσεις για το «είναι ελληνική;» σημαίνει ότι
+ * μια νέα ορθογραφία («ΕΛΛΑΣ», NFD από clipboard) διορθωνόταν στη μία πλευρά και
+ * όχι στην άλλη — ο engine περιόριζε τη χώρα, το UI όχι.
  *
- * The miss is not cosmetic. An unresolved name drops `countrycodes` from every
- * variant, and an unrestricted search answers a Greek address with a foreign
- * one — measured 2026-07-26: «Τσιμισκή 43, Θεσσαλονίκη, 54623» returned Viale
- * Ungheria, Milan without the restriction, and the correct building with it.
- *
- * Entries that differ only by accent collapse onto the same key; they already
- * carry the same code, so the map above stays the readable source of truth.
+ * Η αστοχία δεν ήταν καλλωπιστική: ένα άλυτο όνομα έριχνε το `countrycodes` από
+ * κάθε variant, και μια ανεξέλεγκτη αναζήτηση απαντούσε ελληνική διεύθυνση με
+ * ξένη — μετρημένο 2026-07-26: «Τσιμισκή 43, Θεσσαλονίκη, 54623» επέστρεφε Viale
+ * Ungheria, Μιλάνο χωρίς τον περιορισμό.
  */
-const COUNTRY_CODE_INDEX: ReadonlyMap<string, string> = new Map(
-  Object.entries(COUNTRY_CODE_MAP).map(([name, code]) => [normalizeGreekText(name), code]),
-);
-
-function countryNameToCode(country: string | undefined): string | null {
-  if (!country) return null;
-  return COUNTRY_CODE_INDEX.get(normalizeGreekText(country.trim())) ?? null;
-}
 
 // =============================================================================
 // SANITIZATION

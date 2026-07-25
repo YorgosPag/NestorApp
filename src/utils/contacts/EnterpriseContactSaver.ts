@@ -11,13 +11,16 @@
 //
 // ============================================================================
 
-import type { ContactFormData, CompanyAddress } from '@/types/ContactFormTypes';
+import type { ContactFormData } from '@/types/ContactFormTypes';
 import type { Contact, AddressInfo, WebsiteInfo, PhoneInfo, EmailInfo, SocialMediaInfo } from '@/types/contacts';
 
-import { getPrimaryAddressType } from '@/types/contacts/address-types';
 import { createModuleLogger } from '@/lib/telemetry';
 import { isNonEmptyArray } from '@/lib/type-guards';
 import { stripTypeExclusiveFields } from './contact-type-fields';
+import {
+  buildAddressInfoFromFlatFields,
+  buildAddressInfoListFromCompanyAddresses,
+} from './address-info-builder';
 const logger = createModuleLogger('EnterpriseContactSaver');
 
 // ============================================================================
@@ -69,41 +72,11 @@ export class EnterpriseContactSaver {
                           formData.municipality || formData.settlement;
 
     if (hasAddressData) {
-      // ADR-319: το `label` αποθηκεύει ΣΗΜΑΣΙΟΛΟΓΙΚΟ slug (`home`, `headquarters`, …),
-      // ποτέ i18n key. Ένα raw key στη βάση σημαίνει ότι μια μετονομασία κλειδιού
-      // στα locales σπάει ΑΠΟΘΗΚΕΥΜΕΝΑ δεδομένα — παραβίαση N.11 σε επίπεδο
-      // persistence, όχι απλού UI string. Η μετάφραση γίνεται στο render.
-      // Ίδιος κανόνας με τον κλάδο εταιρειών (`buildAddressesFromCompany`).
-      const primaryAddressType = formData.primaryAddressType ?? getPrimaryAddressType(formData.type);
-      const primaryAddressLabel =
-        primaryAddressType === 'other' && formData.primaryAddressCustomLabel?.trim()
-          ? formData.primaryAddressCustomLabel.trim()
-          : primaryAddressType;
-
-      const primaryAddress: AddressInfo = {
-        street: formData.street || '',
-        number: formData.streetNumber || '', // Note: flat uses streetNumber, array uses number
-        city: formData.city || '',
-        postalCode: formData.postalCode || '',
-        country: 'GR', // Default to Greece
-        type: this.getAddressTypeForContactType(formData.type || 'individual'),
-        isPrimary: true,
-        label: primaryAddressLabel,
-        // Administrative Hierarchy fields (conditional spread — omit empty strings)
-        ...(formData.municipality ? { municipality: formData.municipality } : {}),
-        ...(formData.municipalityId != null ? { municipalityId: formData.municipalityId } : {}),
-        ...(formData.regionalUnit ? { regionalUnit: formData.regionalUnit } : {}),
-        ...(formData.region ? { region: formData.region } : {}),
-        ...(formData.decentAdmin ? { decentAdmin: formData.decentAdmin } : {}),
-        ...(formData.majorGeo ? { majorGeo: formData.majorGeo } : {}),
-        ...(formData.settlement ? { settlement: formData.settlement } : {}),
-        ...(formData.settlementId != null ? { settlementId: formData.settlementId } : {}),
-        ...(formData.community ? { community: formData.community } : {}),
-        ...(formData.municipalUnit ? { municipalUnit: formData.municipalUnit } : {}),
-        // Περιοχή / Συνοικία — ελεύθερο κείμενο του χρήστη. Έλειπε από το
-        // whitelist, οπότε ό,τι πληκτρολογούσε ο χρήστης χανόταν σιωπηλά.
-        ...(formData.neighborhood ? { neighborhood: formData.neighborhood } : {}),
-      };
+      // Η ΠΑΡΑΓΩΓΗ ΖΕΙ ΣΕ ΕΝΑ ΣΗΜΕΙΟ (ADR-332 D15): ταξινομία ADR-319 για το
+      // `label`, προβολή ιεραρχίας και προεπιλογή χώρας απαντιούνται μία φορά
+      // στο `address-info-builder`, ώστε flat έδρα και `companyAddresses` να μη
+      // μπορούν να αποκλίνουν ξανά.
+      const primaryAddress: AddressInfo = buildAddressInfoFromFlatFields(formData);
 
       enterpriseData.addresses = [primaryAddress];
       logger.info('ENTERPRISE SAVER: Created primary address', { street: primaryAddress.street, city: primaryAddress.city, type: primaryAddress.type });
@@ -171,7 +144,7 @@ export class EnterpriseContactSaver {
         customFields.companyAddresses = companyAddresses;
 
         // Override top-level addresses[] with converted company addresses
-        enterpriseData.addresses = this.buildAddressesFromCompany(companyAddresses);
+        enterpriseData.addresses = buildAddressInfoListFromCompanyAddresses(companyAddresses);
       }
 
       // Multi-KAD activities
@@ -294,21 +267,6 @@ export class EnterpriseContactSaver {
   }
 
   /**
-   * Get appropriate address type based on contact type
-   */
-  private static getAddressTypeForContactType(contactType: string): 'home' | 'work' | 'other' {
-    switch (contactType) {
-      case 'individual':
-        return 'home';
-      case 'company':
-      case 'service':
-        return 'work';
-      default:
-        return 'other';
-    }
-  }
-
-  /**
    * Get appropriate website type based on contact type
    */
   private static getWebsiteTypeForContactType(contactType: string): 'personal' | 'company' | 'other' {
@@ -338,26 +296,6 @@ export class EnterpriseContactSaver {
       default:
         return 'contacts.website.default';
     }
-  }
-
-  /**
-   * Convert CompanyAddress[] to AddressInfo[] for Firestore top-level addresses field.
-   * Same logic as mappers/company.ts buildAddresses.
-   */
-  private static buildAddressesFromCompany(companyAddresses: CompanyAddress[]): AddressInfo[] {
-    return companyAddresses.map((ca, i) => ({
-      street: ca.street,
-      number: ca.number,
-      city: ca.city,
-      postalCode: ca.postalCode,
-      region: ca.region ?? '',
-      country: 'GR',
-      type: 'work' as const,
-      isPrimary: i === 0 || ca.type === 'headquarters' || ca.type === 'home',
-      // ADR-319: persist semantic key; `other` carries user-provided custom label.
-      label: (ca.type === 'other' && ca.customLabel?.trim()) ? ca.customLabel.trim() : ca.type,
-      ...(ca.neighborhood ? { neighborhood: ca.neighborhood } : {}),
-    }));
   }
 
   /**

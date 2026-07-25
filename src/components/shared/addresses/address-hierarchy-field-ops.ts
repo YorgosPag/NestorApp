@@ -5,8 +5,12 @@
  *
  * Εξήχθη από το `AddressWithHierarchy.tsx` (N.7.1: το component ξεπέρασε τις
  * 500 γραμμές). Εδώ ζει ό,τι είναι **καθαρή συνάρτηση πάνω στην τιμή** —
- * μορφοποίηση Τ.Κ., κανονικοποίηση ονομάτων από geocoding, και τα δύο
- * primitives εγγραφής της ιεραρχίας. Καμία εξάρτηση από React.
+ * κανονικοποίηση ονομάτων από geocoding και τα δύο primitives εγγραφής της
+ * ιεραρχίας. Καμία εξάρτηση από React.
+ *
+ * ⚠️ Οι συναρτήσεις Τ.Κ. **μετακόμισαν** στο `@/utils/address/postal-code`:
+ * τις χρειάζονται πλέον και `types/`, και server-only μετάπτωση, και ένα
+ * `types/ → components/` import θα ήταν ανάποδα (ADR-332 D16).
  *
  * ΓΙΑΤΙ ΕΝΑ ΣΗΜΕΙΟ: και οι δύο handlers επιλογής (οικισμός / επίπεδο ιεραρχίας)
  * έγραφαν τον ίδιο βρόχο πάνω στο `PATH_TO_VALUE`. Ο κανόνας «ταυτότητα και
@@ -18,23 +22,8 @@
  */
 
 import type { AdminLevel, AdminPath } from '@/hooks/useAdministrativeHierarchy';
+import { toCanonicalGreekPostalCode } from '@/utils/address/postal-code';
 import { PATH_TO_VALUE, type AddressWithHierarchyValue } from './address-with-hierarchy-config';
-
-// =============================================================================
-// POSTAL CODE HELPERS
-// =============================================================================
-
-/** Format Greek postal code as "XXX YY" (e.g. "56334" → "563 34"). */
-export function formatGreekPostalCode(value: string): string {
-  const digits = value.replace(/\D/g, '').substring(0, 5);
-  if (digits.length > 3) return `${digits.substring(0, 3)} ${digits.substring(3)}`;
-  return digits;
-}
-
-/** Strip space from postal code for numeric comparisons ("563 34" → "56334"). */
-export function normalizePostalCode(value: string): string {
-  return value.replace(/\s/g, '').trim();
-}
 
 // =============================================================================
 // GEOCODED NAME NORMALISATION
@@ -84,7 +73,10 @@ export function applyResolvedPath(
       (target[mapping.idField] as string | null) = entity.id;
       (target[mapping.nameField] as string) = entity.name;
       if (mapping.level === 8 && entity.postalCode) {
-        target.postalCode = formatGreekPostalCode(entity.postalCode);
+        // ΚΑΝΟΝΙΚΗ μορφή στο μοντέλο (ADR-332 D16) — η μορφοποίηση «546 24»
+        // ανήκει στο render. Γραμμένη εδώ, κατέληγε αυτούσια στο Firestore και
+        // έσπαγε κάθε σύγκριση με το dataset ιεραρχίας (0 εγγραφές με κενό).
+        target.postalCode = toCanonicalGreekPostalCode(entity.postalCode);
       }
     } else if (clearLevelsDeeperThan !== undefined && mapping.level > clearLevelsDeeperThan) {
       (target[mapping.idField] as string | null) = null;

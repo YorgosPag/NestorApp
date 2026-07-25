@@ -57,30 +57,6 @@ interface MappedCompanyContactData {
 }
 
 /**
- * Build addresses array from companyAddresses (if present) or fallback to enterprise structure.
- */
-function buildAddresses(formData: ContactFormData, fallbackAddresses?: AddressInfo[]): AddressInfo[] {
-  const companyAddresses = formData.companyAddresses;
-  if (companyAddresses && companyAddresses.length > 0) {
-    return companyAddresses.map((ca, i) => ({
-      street: ca.street,
-      number: ca.number,
-      city: ca.city,
-      postalCode: ca.postalCode,
-      region: ca.region ?? '',
-      country: 'GR',
-      type: 'work' as const,
-      isPrimary: i === 0 || ca.type === 'headquarters' || ca.type === 'home',
-      // ADR-319: persist the semantic key (`headquarters`/`branch`/`home`/...)
-      // or the user-provided custom label for `other`. UI resolves the
-      // display string from `addresses.types.<key>`.
-      label: (ca.type === 'other' && ca.customLabel?.trim()) ? ca.customLabel.trim() : ca.type,
-    }));
-  }
-  return fallbackAddresses ?? [];
-}
-
-/**
  * Map Company Contact form data to Contact object
  *
  * @param formData - Contact form data
@@ -108,7 +84,12 @@ export function mapCompanyFormData(formData: ContactFormData): MappedCompanyCont
     multiplePhotoURLs,
     emails,
     phones,
-    addresses: buildAddresses(formData, enterpriseData.addresses),
+    // Το `convertToEnterpriseStructure` ΕΧΕΙ ΗΔΗ παράγει το `addresses[]` από τα
+    // `companyAddresses` (ή από τα flat πεδία όταν δεν υπάρχουν). Η παλιά τοπική
+    // `buildAddresses` ξαναέκανε την ίδια μετατροπή και **κέρδιζε** — έχοντας
+    // όμως αποκλίνει: πετούσε σιωπηλά το `neighborhood`. Ίδιο μοτίβο με τα
+    // αδέλφια `individual.ts` / `service.ts` (ADR-332 D15).
+    addresses: enterpriseData.addresses,
     websites: enterpriseData.websites,
     isFavorite: false,
     status: 'active',

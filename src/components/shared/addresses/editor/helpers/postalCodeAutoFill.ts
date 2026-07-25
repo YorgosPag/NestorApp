@@ -25,6 +25,10 @@
 
 import type { AdminEntity } from '@/hooks/useAdministrativeHierarchy';
 import type { ResolvedAddressFields } from '@/lib/geocoding/geocoding-types';
+import {
+  isValidGreekPostalCode,
+  toCanonicalGreekPostalCode,
+} from '@/utils/address/postal-code';
 import { ADMIN_LEVELS, type HierarchyLookup } from './hierarchyLookup';
 
 export interface PostalCodeAutoFillResult {
@@ -35,20 +39,20 @@ export interface PostalCodeAutoFillResult {
   fields: Partial<Pick<ResolvedAddressFields, 'city' | 'county' | 'region' | 'country'>>;
 }
 
-/** Minimal validity check for a Greek postal code (5 digits, first digit 1-9). */
-export function isValidGreekPostalCode(postalCode: string): boolean {
-  return /^[1-9]\d{4}$/.test(postalCode);
-}
-
 /**
  * Resolve a postal code to its administrative chain, returning only ancestors
  * shared by every settlement that matches. Returns `null` if the postal code
  * is malformed or no settlement matches.
+ *
+ * ⚠️ Το ευρετήριο κλειδώνεται στην **κανονική** μορφή: το
+ * `administrative-hierarchy.json` αποθηκεύει και τους 949 Τ.Κ. χωρίς κενό, οπότε
+ * αναζήτηση με «546 24» δεν επέστρεφε ΠΟΤΕ τίποτα (ADR-332 D16).
  */
 export function autoFillFromPostalCode(
-  postalCode: string,
+  rawPostalCode: string,
   lookup: HierarchyLookup,
 ): PostalCodeAutoFillResult | null {
+  const postalCode = toCanonicalGreekPostalCode(rawPostalCode);
   if (!isValidGreekPostalCode(postalCode)) return null;
 
   const settlements = lookup.findSettlementsByPostalCode(postalCode);

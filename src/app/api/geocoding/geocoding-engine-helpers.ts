@@ -13,6 +13,7 @@
 
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { normalizeGreekText } from '@/services/ai-pipeline/shared/greek-text-utils';
+import { postalCodeAppearsIn, toCanonicalGreekPostalCode } from '@/utils/address/postal-code';
 import type {
   GeocodingRequestBody,
   GeocodingApiResponse,
@@ -82,7 +83,10 @@ export function extractResolvedFields(addr: NominatimAddress | undefined): Resol
   return {
     street: addr.road,
     number: addr.house_number,
-    postalCode: addr.postcode,
+    // Το OSM Ελλάδας γράφει τον Τ.Κ. στην επίσημη μορφή ΕΛΤΑ («546 24»). Αυτή η
+    // τιμή έφτανε αυτούσια στη φόρμα και από εκεί στη βάση. Κανονικοποιείται στο
+    // σύνορο, ώστε καμία μορφή παρόχου να μη γίνεται σχήμα δεδομένων (D16).
+    postalCode: addr.postcode ? toCanonicalGreekPostalCode(addr.postcode) : addr.postcode,
     neighborhood: addr.suburb,
     city: addr.city || addr.town || addr.village || addr.hamlet,
     county: addr.county,
@@ -119,7 +123,10 @@ export function computeConfidenceBreakdown(
   if (params.municipality && display.includes(normalizeGreekText(params.municipality))) {
     breakdown.municipalityMatch = GEOCODING.CONFIDENCE.CITY_MATCH * 0.3;
   }
-  if (params.postalCode && display.includes(params.postalCode)) {
+  // Ανεξάρτητο μορφής: το `display_name` γράφει «546 24», το ερώτημα στέλνει
+  // «54624». Σκέτο `includes` θα έχανε το ταίριασμα ΜΕΤΑ την κανονικοποίηση —
+  // παλινδρόμηση εμπιστοσύνης από τη διόρθωση, όχι από τα δεδομένα (D16).
+  if (postalCodeAppearsIn(display, params.postalCode)) {
     breakdown.postalMatch = GEOCODING.CONFIDENCE.POSTAL_MATCH;
   }
 
@@ -149,10 +156,20 @@ export function buildFieldMatches(
       : 'mismatch';
   };
 
+  // Ο Τ.Κ. συγκρίνεται σε κανονική μορφή και από τις δύο πλευρές: μια
+  // αποθηκευμένη τιμή «546 24» (πριν τη μετάπτωση) δεν είναι mismatch με «54624».
+  const matchPostalCode = (): FieldMatchKind => {
+    if (!params.postalCode) return 'not-provided';
+    if (!resolved.postalCode) return 'unknown';
+    return toCanonicalGreekPostalCode(params.postalCode) === toCanonicalGreekPostalCode(resolved.postalCode)
+      ? 'match'
+      : 'mismatch';
+  };
+
   return {
     street: matchKey('street'),
     number: matchKey('number'),
-    postalCode: matchKey('postalCode'),
+    postalCode: matchPostalCode(),
     neighborhood: matchKey('neighborhood'),
     city: matchKey('city'),
     county: matchKey('county'),

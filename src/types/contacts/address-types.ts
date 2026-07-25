@@ -15,7 +15,7 @@
  * Labels live in `src/i18n/locales/{el,en}/addresses.json` under `types.*`.
  */
 
-import type { ContactType } from '@/types/contacts';
+import type { AddressInfo, ContactType } from '@/types/contacts';
 
 export type ContactAddressType =
   // Company-scope semantics
@@ -102,4 +102,27 @@ export function getDefaultSecondaryAddressType(contactType: ContactType | undefi
 
 export function isValidContactAddressType(value: unknown): value is ContactAddressType {
   return typeof value === 'string' && (CONTACT_ADDRESS_TYPES as string[]).includes(value);
+}
+
+/**
+ * Προβολή του σημασιολογικού slug ADR-319 στο **ταχυδρομικό είδος** του
+ * `AddressInfo` (`home | work | billing | shipping | other`).
+ *
+ * ΔΥΟ ΔΙΑΦΟΡΕΤΙΚΑ ΛΕΞΙΛΟΓΙΑ, ΟΧΙ ΔΙΠΛΟΤΥΠΟ
+ * Το `AddressInfo.type` απαντά «τι είδους ταχυδρομείο πάει εδώ», ενώ το
+ * `ContactAddressType` απαντά «τι ρόλο έχει αυτή η διεύθυνση για την οντότητα».
+ * Ο φορέας της σημασιολογίας ADR-319 στο παράγωγο είναι το `AddressInfo.label`,
+ * όχι το `type` — γι' αυτό `branch` και `warehouse` καταλήγουν και τα δύο `work`
+ * χωρίς να χαθεί πληροφορία.
+ *
+ * ΓΙΑΤΙ ΠΑΡΑΓΩΓΟ ΚΑΙ ΟΧΙ ΣΤΑΘΕΡΑ `'work'`
+ * Η προηγούμενη υλοποίηση έγραφε `type: 'work' as const` για **κάθε** διεύθυνση.
+ * Είναι σωστό όσο το `companyAddresses` μένει company/service-scope, αλλά μια
+ * μελλοντική διεύρυνση του λεξιλογίου (π.χ. `home` σε φυσικά πρόσωπα) θα
+ * παρήγαγε **σιωπηλά** λάθος ταχυδρομικό είδος. Ο πίνακας απαντά μία φορά.
+ */
+export function toAddressInfoType(type: ContactAddressType): AddressInfo['type'] {
+  if (type === 'other') return 'other';
+  if (type === 'home' || type === 'vacation') return 'home';
+  return 'work';
 }
