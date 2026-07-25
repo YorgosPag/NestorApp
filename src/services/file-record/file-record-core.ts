@@ -276,9 +276,11 @@ export function buildPendingFileRecordData(
   const ext = input.ext || getFileExtension(input.originalFilename);
 
   // 4. Build canonical storage path (IDs only, no names)
+  // ADR-709: `input.projectId` is deliberately NOT passed. Project membership is
+  // a mutable relationship and lives on the FileRecord (step 7), never in the
+  // immutable object key — re-parenting must not require moving bytes.
   const { path: storagePath } = buildStoragePath({
     companyId: input.companyId,
-    projectId: input.projectId,
     entityType: input.entityType,
     entityId: input.entityId,
     domain: input.domain,

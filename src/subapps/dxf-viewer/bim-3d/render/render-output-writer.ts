@@ -78,9 +78,10 @@ export async function writeRenderOutput(
 
   if (config.destProject) {
     const renderId = generateBimRenderId();
+    // ADR-709: entityType/entityId already identify the project — passing it a
+    // second time as a path scope produced `projects/<p>/entities/project/<p>/`.
     const { path: storagePath } = buildStoragePath({
       companyId: config.companyId,
-      projectId: config.projectId,
       entityType: ENTITY_TYPES.PROJECT,
       entityId: config.projectId,
       domain: FILE_DOMAINS.CONSTRUCTION,

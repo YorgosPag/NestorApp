@@ -12,6 +12,9 @@
 // Jest - no import needed, globals are available
 import {
   buildStoragePath,
+  buildEntityStoragePrefix,
+  buildCategoryStoragePrefix,
+  buildLegacyProjectScopedPrefix,
   validateStoragePathParams,
   generateFileId,
   getFileExtension,
@@ -25,29 +28,7 @@ import { ENTITY_TYPES, FILE_DOMAINS, FILE_CATEGORIES } from '@/config/domain-con
 // ============================================================================
 
 describe('buildStoragePath', () => {
-  it('should build full enterprise path with company and project', () => {
-    const params: StoragePathParams = {
-      companyId: 'company_xyz',
-      projectId: 'project_456',
-      entityType: ENTITY_TYPES.CONTACT,
-      entityId: 'contact_789',
-      domain: FILE_DOMAINS.ADMIN,
-      category: FILE_CATEGORIES.PHOTOS,
-      fileId: 'file_abc123',
-      ext: 'jpg',
-    };
-
-    const result = buildStoragePath(params);
-
-    expect(result.path).toBe(
-      'companies/company_xyz/projects/project_456/entities/contact/contact_789/domains/admin/categories/photos/files/file_abc123.jpg'
-    );
-    expect(result.segments.companyId).toBe('company_xyz');
-    expect(result.segments.projectId).toBe('project_456');
-    expect(result.segments.entityType).toBe('contact');
-  });
-
-  it('should build path without project scope', () => {
+  it('should build the ONE canonical path (ADR-709)', () => {
     const params: StoragePathParams = {
       companyId: 'company_xyz',
       entityType: ENTITY_TYPES.CONTACT,
@@ -63,7 +44,49 @@ describe('buildStoragePath', () => {
     expect(result.path).toBe(
       'companies/company_xyz/entities/contact/contact_789/domains/admin/categories/photos/files/file_abc123.jpg'
     );
-    expect(result.segments.projectId).toBeUndefined();
+    expect(result.segments.companyId).toBe('company_xyz');
+    expect(result.segments.entityType).toBe('contact');
+  });
+
+  it('ADR-709 ANCHOR: a project scope is not expressible, whatever the caller passes', () => {
+    // The type system already forbids `projectId`. This anchor covers the
+    // runtime: an untyped caller (JS, `as any`-free object spread from an older
+    // shape, a rehydrated payload) must not be able to reintroduce the segment.
+    const smuggled = {
+      companyId: 'company_xyz',
+      projectId: 'project_456',
+      entityType: ENTITY_TYPES.CONTACT,
+      entityId: 'contact_789',
+      domain: FILE_DOMAINS.ADMIN,
+      category: FILE_CATEGORIES.PHOTOS,
+      fileId: 'file_abc123',
+      ext: 'jpg',
+    } as StoragePathParams;
+
+    const result = buildStoragePath(smuggled);
+
+    expect(result.path).not.toContain('/projects/');
+    expect(result.path).toBe(
+      'companies/company_xyz/entities/contact/contact_789/domains/admin/categories/photos/files/file_abc123.jpg'
+    );
+  });
+
+  it('ADR-709 ANCHOR: a project entity never repeats its own id', () => {
+    const result = buildStoragePath({
+      companyId: 'company_xyz',
+      entityType: ENTITY_TYPES.PROJECT,
+      entityId: 'proj_1',
+      domain: FILE_DOMAINS.CONSTRUCTION,
+      category: FILE_CATEGORIES.FLOORPLANS,
+      fileId: 'file_1',
+      ext: 'pdf',
+    });
+
+    expect(result.path).toBe(
+      'companies/company_xyz/entities/project/proj_1/domains/construction/categories/floorplans/files/file_1.pdf'
+    );
+    // The pre-ADR-709 defect: `projects/proj_1/entities/project/proj_1/`
+    expect(result.path.match(/proj_1/g)).toHaveLength(1);
   });
 
   it('should require companyId (throws error if missing)', () => {
@@ -251,7 +274,9 @@ describe('getFileExtension', () => {
 });
 
 describe('parseStoragePath', () => {
-  it('should parse full enterprise path', () => {
+  it('ADR-709 ANCHOR: tolerant reader still parses the legacy project-scoped path', () => {
+    // Objects written before ADR-709 must stay reachable forever — otherwise
+    // they become invisible garbage that no sweeper can bill for or delete.
     const path =
       'companies/company_xyz/projects/project_456/entities/contact/contact_789/domains/admin/categories/photos/files/file_abc123.jpg';
 
@@ -259,7 +284,7 @@ describe('parseStoragePath', () => {
 
     expect(result).not.toBeNull();
     expect(result?.companyId).toBe('company_xyz');
-    expect(result?.projectId).toBe('project_456');
+    expect(result?.legacyProjectId).toBe('project_456');
     expect(result?.entityType).toBe('contact');
     expect(result?.entityId).toBe('contact_789');
     expect(result?.domain).toBe('admin');
@@ -268,7 +293,7 @@ describe('parseStoragePath', () => {
     expect(result?.ext).toBe('jpg');
   });
 
-  it('should parse path without project', () => {
+  it('should parse the canonical path and flag it as non-legacy', () => {
     const path =
       'companies/company_xyz/entities/contact/contact_789/domains/admin/categories/photos/files/file_abc123.jpg';
 
@@ -276,7 +301,7 @@ describe('parseStoragePath', () => {
 
     expect(result).not.toBeNull();
     expect(result?.companyId).toBe('company_xyz');
-    expect(result?.projectId).toBeUndefined();
+    expect(result?.legacyProjectId).toBeUndefined();
   });
 
   it('should return null for system-level path (not supported)', () => {
@@ -297,7 +322,6 @@ describe('parseStoragePath', () => {
   it('should be reversible with buildStoragePath', () => {
     const original: StoragePathParams = {
       companyId: 'company_xyz',
-      projectId: 'project_456',
       entityType: ENTITY_TYPES.CONTACT,
       entityId: 'contact_789',
       domain: FILE_DOMAINS.ADMIN,
@@ -310,5 +334,80 @@ describe('parseStoragePath', () => {
     const parsed = parseStoragePath(path);
 
     expect(parsed).toEqual(original);
+  });
+});
+
+// ============================================================================
+// PREFIX BUILDERS — the SSoT every sweeper must derive from (ADR-709)
+// ============================================================================
+
+describe('storage prefixes (ADR-709)', () => {
+  const entity = {
+    companyId: 'company_xyz',
+    entityType: ENTITY_TYPES.PROJECT,
+    entityId: 'proj_1',
+  } as const;
+
+  it('entity prefix owns every object of that entity', () => {
+    expect(buildEntityStoragePrefix(entity)).toBe(
+      'companies/company_xyz/entities/project/proj_1/'
+    );
+  });
+
+  it('category prefix narrows to one domain+category folder', () => {
+    expect(
+      buildCategoryStoragePrefix({
+        ...entity,
+        domain: FILE_DOMAINS.CONSTRUCTION,
+        category: FILE_CATEGORIES.FLOORPLANS,
+      })
+    ).toBe(
+      'companies/company_xyz/entities/project/proj_1/domains/construction/categories/floorplans/files/'
+    );
+  });
+
+  it('ANCHOR: every built path lives under its own entity prefix', () => {
+    // This is the invariant that lets a prefix sweep be complete. If a builder
+    // ever emits a path outside this prefix, deletion silently leaks objects —
+    // exactly the pre-ADR-709 failure.
+    const { path } = buildStoragePath({
+      ...entity,
+      domain: FILE_DOMAINS.CONSTRUCTION,
+      category: FILE_CATEGORIES.FLOORPLANS,
+      fileId: 'file_1',
+      ext: 'pdf',
+    });
+
+    expect(path.startsWith(buildEntityStoragePrefix(entity))).toBe(true);
+  });
+
+  it('legacy prefix reaches the pre-ADR-709 tree, at entity and category depth', () => {
+    expect(buildLegacyProjectScopedPrefix('proj_9', entity)).toBe(
+      'companies/company_xyz/projects/proj_9/entities/project/proj_1/'
+    );
+    expect(
+      buildLegacyProjectScopedPrefix('proj_9', {
+        ...entity,
+        domain: FILE_DOMAINS.CONSTRUCTION,
+        category: FILE_CATEGORIES.FLOORPLANS,
+      })
+    ).toBe(
+      'companies/company_xyz/projects/proj_9/entities/project/proj_1/domains/construction/categories/floorplans/files/'
+    );
+  });
+
+  it('ANCHOR: a legacy path parses back to the legacy project id', () => {
+    // Closes the loop: what the legacy builder emits, the tolerant reader must
+    // recognise — otherwise migration tooling cannot find what the sweeper walks.
+    const prefix = buildLegacyProjectScopedPrefix('proj_9', {
+      ...entity,
+      domain: FILE_DOMAINS.CONSTRUCTION,
+      category: FILE_CATEGORIES.FLOORPLANS,
+    });
+
+    const parsed = parseStoragePath(`${prefix}file_1.pdf`);
+
+    expect(parsed?.legacyProjectId).toBe('proj_9');
+    expect(parsed?.entityId).toBe('proj_1');
   });
 });

@@ -11,11 +11,72 @@
  *
  * @module config/deletion-registry
  * @enterprise ADR-226 — Deletion Guard (Phase 1)
+ * @enterprise ADR-709 — Immutable Storage Path (cleanup templates derived, not typed)
  */
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { deriveDeletionDependencies } from '@/config/contact-dependency-registry';
 import { normalizeProjectIdForQuery } from '@/utils/firestore-helpers';
+import { buildEntityStoragePrefix } from '@/services/upload/utils/storage-path';
+import type { EntityType as StorageEntityType } from '@/config/domain-constants';
+
+/**
+ * ADR-709: derive a cleanup template from the storage-path SSoT instead of
+ * hand-writing `companies/{companyId}/entities/…`.
+ *
+ * The placeholders are fed through the real builder as ordinary segments, so a
+ * future change to the path scheme rewrites these templates automatically. A
+ * hand-written template is exactly how the sweepers drifted apart in the first
+ * place; this makes drift unrepresentable.
+ */
+function entityCleanupTemplate(entityType: StorageEntityType): string {
+  return buildEntityStoragePrefix({
+    companyId: '{companyId}',
+    entityType,
+    entityId: '{entityId}',
+  });
+}
+
+/**
+ * Deletion rules shared by the sellable auxiliary spaces (parking, storage).
+ *
+ * They differ in exactly one thing — the Greek message shown when the space is
+ * already sold — so they are one config with one parameter, not two configs
+ * that happen to agree today. (N.0.2 / CHECK 3.28: these were literal twins.)
+ *
+ * TODO: ADR-AUDIT — add a check for `unit.linkedSpaces[]` referencing this
+ * space. Firestore cannot query array-of-objects by nested field (`spaceId`).
+ * Options: (1) denormalize `linkedUnitId` on the space doc, (2) Cloud Function
+ * trigger. Current protection: `conditionalBlock` catches sold spaces (owners
+ * set by appurtenance-sync).
+ */
+function sellableSpaceDeletionConfig(soldMessage: string): EntityDeletionConfig {
+  return {
+    strategy: 'BLOCK',
+    conditionalBlock: {
+      field: 'commercial.owners',
+      condition: 'exists',
+      message: soldMessage,
+    },
+    cascadeDependencies: [
+      {
+        collection: COLLECTIONS.SEARCH_DOCUMENTS,
+        foreignKey: 'entityId',
+        label: 'Search index',
+        queryType: 'equals',
+        skipCompanyFilter: true,
+      },
+    ],
+    dependencies: [
+      {
+        collection: COLLECTIONS.CONTACT_LINKS,
+        foreignKey: 'targetEntityId',
+        label: 'Συνδέσεις με επαφές',
+        queryType: 'equals',
+      },
+    ],
+  };
+}
 
 // ============================================================================
 // TYPES
@@ -213,7 +274,7 @@ export const DELETION_REGISTRY: Record<EntityType, EntityDeletionConfig> = {
     dependencies: deriveDeletionDependencies(),
     storageCleanup: [
       {
-        pathTemplate: 'companies/{companyId}/entities/contact/{entityId}/',
+        pathTemplate: entityCleanupTemplate('contact'),
         label: 'Storage επαφής (φωτογραφίες)',
       },
     ],
@@ -264,7 +325,7 @@ export const DELETION_REGISTRY: Record<EntityType, EntityDeletionConfig> = {
     ],
     storageCleanup: [
       {
-        pathTemplate: 'companies/{companyId}/entities/property/{entityId}/',
+        pathTemplate: entityCleanupTemplate('property'),
         label: 'Storage ακινήτου (φωτογραφίες, κατόψεις, share PDFs)',
       },
     ],
@@ -354,6 +415,23 @@ export const DELETION_REGISTRY: Record<EntityType, EntityDeletionConfig> = {
         label: 'Search index',
         queryType: 'equals',
         skipCompanyFilter: true,
+      },
+      {
+        // ADR-709: projects own files exactly like contacts and properties do
+        // (floorplans, parking plans, BIM renders, attendance photos). This
+        // cascade was absent, so deleting a project orphaned every FileRecord.
+        collection: COLLECTIONS.FILES,
+        foreignKey: 'entityId',
+        label: 'Αρχεία έργου',
+        queryType: 'equals',
+      },
+    ],
+    // ADR-709: was entirely missing — the binaries survived project deletion
+    // with no Firestore record left to find them by.
+    storageCleanup: [
+      {
+        pathTemplate: entityCleanupTemplate('project'),
+        label: 'Storage έργου (κατόψεις, renders, φωτογραφίες παρουσίας)',
       },
     ],
     dependencies: [
@@ -478,63 +556,14 @@ export const DELETION_REGISTRY: Record<EntityType, EntityDeletionConfig> = {
   },
 
   // ─── PARKING ────────────────────────────────────────────────────────
-  parking: {
-    strategy: 'BLOCK',
-    conditionalBlock: {
-      field: 'commercial.owners',
-      condition: 'exists',
-      message: 'Η θέση στάθμευσης έχει πωληθεί και δεν μπορεί να διαγραφεί.',
-    },
-    cascadeDependencies: [
-      {
-        collection: COLLECTIONS.SEARCH_DOCUMENTS,
-        foreignKey: 'entityId',
-        label: 'Search index',
-        queryType: 'equals',
-        skipCompanyFilter: true,
-      },
-    ],
-    // TODO: ADR-AUDIT — Add check for unit.linkedSpaces[] referencing this parking spot.
-    // Firestore cannot query array-of-objects by nested field (spaceId).
-    // Options: (1) denormalize linkedUnitId on parking doc, (2) Cloud Function trigger.
-    // Current protection: conditionalBlock catches sold spots (owners set by appurtenance-sync).
-    dependencies: [
-      {
-        collection: COLLECTIONS.CONTACT_LINKS,
-        foreignKey: 'targetEntityId',
-        label: 'Συνδέσεις με επαφές',
-        queryType: 'equals',
-      },
-    ],
-  },
+  parking: sellableSpaceDeletionConfig(
+    'Η θέση στάθμευσης έχει πωληθεί και δεν μπορεί να διαγραφεί.'
+  ),
 
   // ─── STORAGE ────────────────────────────────────────────────────────
-  storage: {
-    strategy: 'BLOCK',
-    conditionalBlock: {
-      field: 'commercial.owners',
-      condition: 'exists',
-      message: 'Η αποθήκη έχει πωληθεί και δεν μπορεί να διαγραφεί.',
-    },
-    cascadeDependencies: [
-      {
-        collection: COLLECTIONS.SEARCH_DOCUMENTS,
-        foreignKey: 'entityId',
-        label: 'Search index',
-        queryType: 'equals',
-        skipCompanyFilter: true,
-      },
-    ],
-    // TODO: ADR-AUDIT — Same as parking: add check for unit.linkedSpaces[] referencing this storage.
-    dependencies: [
-      {
-        collection: COLLECTIONS.CONTACT_LINKS,
-        foreignKey: 'targetEntityId',
-        label: 'Συνδέσεις με επαφές',
-        queryType: 'equals',
-      },
-    ],
-  },
+  storage: sellableSpaceDeletionConfig(
+    'Η αποθήκη έχει πωληθεί και δεν μπορεί να διαγραφεί.'
+  ),
 } as const;
 
 // ============================================================================

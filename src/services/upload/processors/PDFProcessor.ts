@@ -229,7 +229,6 @@ export class PDFProcessor implements FileProcessor {
     entityType: EntityType;
     entityId: string;
     fileId: string;
-    projectId?: string;
   }): string {
     const { path } = buildStoragePath({
       companyId: params.companyId,
@@ -239,7 +238,6 @@ export class PDFProcessor implements FileProcessor {
       category: FILE_CATEGORIES.FLOORPLANS,
       fileId: params.fileId,
       ext: 'pdf',
-      projectId: params.projectId,
     });
     return path;
   }

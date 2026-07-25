@@ -186,9 +186,10 @@ export async function uploadAttendancePhoto(
       logger.error('companyId is required for attendance photo upload (ADR-293)');
       throw new Error('companyId is required for attendance photo upload');
     }
+    // ADR-709: entityType/entityId already identify the project — a separate
+    // `projectId` scope would repeat the same id inside the same key.
     const { path: storagePath } = buildStoragePath({
       companyId,
-      projectId,
       entityType: ENTITY_TYPES.PROJECT,
       entityId: projectId,
       domain: FILE_DOMAINS.ADMIN,

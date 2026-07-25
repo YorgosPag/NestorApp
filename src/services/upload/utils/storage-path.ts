@@ -8,14 +8,26 @@
  *
  * @module upload/utils/storage-path
  * @enterprise ADR-031 - Canonical File Storage System
+ * @enterprise ADR-709 - Immutable Storage Path (single scheme)
  *
- * Path Scheme (Full - with project scope):
- * /companies/{companyId}/projects/{projectId}/entities/{entityType}/{entityId}/
- *   domains/{domain}/categories/{category}/files/{fileId}.{ext}
- *
- * Path Scheme (Simplified - no project scope):
+ * THE ONE PATH SCHEME (ADR-709 — no variants, no optional segments):
  * /companies/{companyId}/entities/{entityType}/{entityId}/
  *   domains/{domain}/categories/{category}/files/{fileId}.{ext}
+ *
+ * WHY exactly one: object-storage keys are immutable by design (renaming an
+ * object means COPY + DELETE of every byte). A key may therefore only encode
+ * facts that can never change. `companyId` / `entityType` / `entityId` are
+ * immutable identities of the file's OWN entity. A *relationship* such as
+ * "which project does this building belong to" is mutable — re-parenting a
+ * building would silently invalidate every path already written. Relationships
+ * live in Firestore (`FileRecord.projectId`), where they can change for free.
+ *
+ * This is the Autodesk APS split (flat OSS object keys + hierarchy in the Data
+ * Management API) and the reason `projectId` is ABSENT from StoragePathParams:
+ * the rule is enforced by the type system, not by convention.
+ *
+ * Reading legacy paths that still carry `projects/{projectId}/` is supported by
+ * `parseStoragePath` (tolerant reader). Writing them is not expressible.
  *
  * NOTE: companyId is REQUIRED - all files must belong to a company for proper
  * multi-tenant isolation. System-level paths without company are NOT supported.
@@ -26,10 +38,25 @@ import {
   type FileDomain,
   type FileCategory,
   STORAGE_PATH_SEGMENTS,
-  ENTITY_TYPES,
-  FILE_DOMAINS,
-  FILE_CATEGORIES,
 } from '@/config/domain-constants';
+import {
+  isValidCategory,
+  isValidDomain,
+  isValidEntityType,
+  validateStoragePathParams,
+} from './storage-path-validation';
+
+// Validation lives in `storage-path-validation.ts` (N.7.1 split) — re-exported
+// so every existing importer of this module keeps working unchanged.
+export {
+  isValidCategory,
+  isValidDomain,
+  isValidEntityType,
+  isValidExtension,
+  isValidPathSegment,
+  validateStoragePathParams,
+} from './storage-path-validation';
+export type { StoragePathValidationError } from './storage-path-validation';
 
 // ============================================================================
 // TYPES
@@ -59,9 +86,6 @@ export interface StoragePathParams {
 
   /** File extension without dot (jpg, pdf, dxf, etc.) */
   ext: string;
-
-  /** Project ID for project-scoped files (optional) */
-  projectId?: string;
 }
 
 /**
@@ -81,142 +105,19 @@ export interface StoragePathResult {
     category: FileCategory;
     fileId: string;
     ext: string;
-    projectId?: string;
   };
 }
 
 /**
- * Validation error with specific field information
+ * Result of `parseStoragePath` — canonical components plus a legacy marker.
+ *
+ * `legacyProjectId` is populated ONLY when the parsed path still carries the
+ * pre-ADR-709 `projects/{projectId}/` segment. It exists so migration tooling
+ * and prefix sweeps can recognise old objects; it is never an input anywhere.
  */
-export interface StoragePathValidationError {
-  field: keyof StoragePathParams;
-  message: string;
-  value: unknown;
-}
-
-// ============================================================================
-// VALIDATION
-// ============================================================================
-
-/**
- * Validates that a string contains only safe path characters (IDs)
- * 🏢 ENTERPRISE: Supports Unicode (Greek IDs like Α-101, ΤΕΣΤ) and dots (A_D0.1)
- * Allows: Unicode letters, digits, underscore, hyphen, dot
- */
-function isValidPathSegment(value: string): boolean {
-  if (!value || typeof value !== 'string') return false;
-  // Unicode-aware: \p{L} = any letter, \p{N} = any digit
-  return /^[\p{L}\p{N}_.\-]+$/u.test(value);
-}
-
-/**
- * Validates file extension (allows alphanumeric only)
- */
-function isValidExtension(ext: string): boolean {
-  if (!ext || typeof ext !== 'string') return false;
-  // Remove leading dot if present
-  const cleanExt = ext.startsWith('.') ? ext.slice(1) : ext;
-  return /^[a-zA-Z0-9]+$/.test(cleanExt);
-}
-
-/**
- * Validates entityType against ENTITY_TYPES enum
- */
-function isValidEntityType(value: string): value is EntityType {
-  return Object.values(ENTITY_TYPES).includes(value as EntityType);
-}
-
-/**
- * Validates domain against FILE_DOMAINS enum
- */
-function isValidDomain(value: string): value is FileDomain {
-  return Object.values(FILE_DOMAINS).includes(value as FileDomain);
-}
-
-/**
- * Validates category against FILE_CATEGORIES enum
- */
-function isValidCategory(value: string): value is FileCategory {
-  return Object.values(FILE_CATEGORIES).includes(value as FileCategory);
-}
-
-/**
- * Validates all storage path parameters
- * @returns Array of validation errors (empty if valid)
- */
-export function validateStoragePathParams(
-  params: StoragePathParams
-): StoragePathValidationError[] {
-  const errors: StoragePathValidationError[] = [];
-
-  // Required fields validation
-  if (!isValidEntityType(params.entityType)) {
-    errors.push({
-      field: 'entityType',
-      message: `Invalid entityType. Must be one of: ${Object.values(ENTITY_TYPES).join(', ')}`,
-      value: params.entityType,
-    });
-  }
-
-  if (!isValidPathSegment(params.entityId)) {
-    errors.push({
-      field: 'entityId',
-      message: 'Invalid entityId. Must contain only alphanumeric, underscore, or hyphen characters.',
-      value: params.entityId,
-    });
-  }
-
-  if (!isValidDomain(params.domain)) {
-    errors.push({
-      field: 'domain',
-      message: `Invalid domain. Must be one of: ${Object.values(FILE_DOMAINS).join(', ')}`,
-      value: params.domain,
-    });
-  }
-
-  if (!isValidCategory(params.category)) {
-    errors.push({
-      field: 'category',
-      message: `Invalid category. Must be one of: ${Object.values(FILE_CATEGORIES).join(', ')}`,
-      value: params.category,
-    });
-  }
-
-  if (!isValidPathSegment(params.fileId)) {
-    errors.push({
-      field: 'fileId',
-      message: 'Invalid fileId. Must contain only alphanumeric, underscore, or hyphen characters.',
-      value: params.fileId,
-    });
-  }
-
-  if (!isValidExtension(params.ext)) {
-    errors.push({
-      field: 'ext',
-      message: 'Invalid extension. Must contain only alphanumeric characters.',
-      value: params.ext,
-    });
-  }
-
-  // companyId is REQUIRED for multi-tenant isolation
-  if (!isValidPathSegment(params.companyId)) {
-    errors.push({
-      field: 'companyId',
-      message: 'companyId is REQUIRED. Must contain only alphanumeric, underscore, or hyphen characters.',
-      value: params.companyId,
-    });
-  }
-
-  // Optional projectId validation (only if provided)
-  if (params.projectId !== undefined && !isValidPathSegment(params.projectId)) {
-    errors.push({
-      field: 'projectId',
-      message: 'Invalid projectId. Must contain only alphanumeric, underscore, or hyphen characters.',
-      value: params.projectId,
-    });
-  }
-
-  return errors;
+export interface ParsedStoragePath extends StoragePathParams {
+  /** Set when the path uses the legacy project-scoped scheme (ADR-709). */
+  legacyProjectId?: string;
 }
 
 // ============================================================================
@@ -231,12 +132,13 @@ export function validateStoragePathParams(
  *
  * companyId is REQUIRED for multi-tenant isolation.
  *
+ * ADR-709: there is exactly ONE scheme. A file's project membership is NOT
+ * expressible here — it belongs to `FileRecord.projectId` in Firestore.
+ *
  * @example
  * ```typescript
- * // Full enterprise path (with company + project)
  * const result = buildStoragePath({
  *   companyId: 'company_xyz',
- *   projectId: 'project_456',
  *   entityType: 'contact',
  *   entityId: 'contact_789',
  *   domain: 'admin',
@@ -244,19 +146,7 @@ export function validateStoragePathParams(
  *   fileId: 'file_abc123',
  *   ext: 'jpg',
  * });
- * // result.path = 'companies/company_xyz/projects/project_456/entities/contact/contact_789/domains/admin/categories/photos/files/file_abc123.jpg'
- *
- * // Simplified path (no project)
- * const result2 = buildStoragePath({
- *   companyId: 'company_xyz',
- *   entityType: 'contact',
- *   entityId: 'contact_789',
- *   domain: 'admin',
- *   category: 'photos',
- *   fileId: 'file_abc123',
- *   ext: 'jpg',
- * });
- * // result2.path = 'companies/company_xyz/entities/contact/contact_789/domains/admin/categories/photos/files/file_abc123.jpg'
+ * // result.path = 'companies/company_xyz/entities/contact/contact_789/domains/admin/categories/photos/files/file_abc123.jpg'
  * ```
  *
  * @throws Error if validation fails (with detailed error messages)
@@ -274,36 +164,16 @@ export function buildStoragePath(params: StoragePathParams): StoragePathResult {
   // Normalize extension (remove leading dot if present)
   const cleanExt = params.ext.startsWith('.') ? params.ext.slice(1) : params.ext;
 
-  // Build path segments array
-  const pathSegments: string[] = [];
-
-  // Root segment: companies/{companyId} (REQUIRED)
-  pathSegments.push(STORAGE_PATH_SEGMENTS.COMPANIES);
-  pathSegments.push(params.companyId);
-
-  // Optional project scope
-  if (params.projectId) {
-    pathSegments.push(STORAGE_PATH_SEGMENTS.PROJECTS);
-    pathSegments.push(params.projectId);
-  }
-
-  // Entity path
-  pathSegments.push(STORAGE_PATH_SEGMENTS.ENTITIES);
-  pathSegments.push(params.entityType);
-  pathSegments.push(params.entityId);
-
-  // Domain & Category
-  pathSegments.push(STORAGE_PATH_SEGMENTS.DOMAINS);
-  pathSegments.push(params.domain);
-  pathSegments.push(STORAGE_PATH_SEGMENTS.CATEGORIES);
-  pathSegments.push(params.category);
-
-  // File
-  pathSegments.push(STORAGE_PATH_SEGMENTS.FILES);
-  pathSegments.push(`${params.fileId}.${cleanExt}`);
-
-  // Join with forward slash (Storage paths use forward slash)
-  const path = pathSegments.join('/');
+  // Entity root (SSoT — shared with prefix sweeps, see buildEntityStoragePrefix)
+  const path = [
+    buildEntityStoragePrefix(params).replace(/\/$/, ''),
+    STORAGE_PATH_SEGMENTS.DOMAINS,
+    params.domain,
+    STORAGE_PATH_SEGMENTS.CATEGORIES,
+    params.category,
+    STORAGE_PATH_SEGMENTS.FILES,
+    `${params.fileId}.${cleanExt}`,
+  ].join('/');
 
   return {
     path,
@@ -316,9 +186,97 @@ export function buildStoragePath(params: StoragePathParams): StoragePathResult {
       category: params.category,
       fileId: params.fileId,
       ext: cleanExt,
-      projectId: params.projectId,
     },
   };
+}
+
+/**
+ * 🏢 ENTERPRISE (ADR-709): Canonical Storage prefix that owns EVERY object of
+ * one entity, across all domains and categories.
+ *
+ * SINGLE SOURCE OF TRUTH for prefix-based sweeps (deletion cleanup, floor wipe,
+ * orphan GC). Every sweep must derive its prefix from here so that a change to
+ * the path scheme can never leave one sweeper walking a tree that no longer
+ * exists — the failure mode that made ADR-709 necessary.
+ *
+ * @example
+ * buildEntityStoragePrefix({ companyId: 'c1', entityType: 'project', entityId: 'p1' })
+ * // 'companies/c1/entities/project/p1/'
+ */
+export function buildEntityStoragePrefix(params: {
+  companyId: string;
+  entityType: EntityType;
+  entityId: string;
+}): string {
+  return [
+    STORAGE_PATH_SEGMENTS.COMPANIES,
+    params.companyId,
+    STORAGE_PATH_SEGMENTS.ENTITIES,
+    params.entityType,
+    params.entityId,
+    '',
+  ].join('/');
+}
+
+/**
+ * 🏢 ENTERPRISE (ADR-709): Prefix of ONE domain+category folder of an entity.
+ *
+ * Narrower than `buildEntityStoragePrefix` — used by sweeps that must delete a
+ * single category (e.g. wiping a floor's floorplans) without touching the rest.
+ */
+export function buildCategoryStoragePrefix(params: {
+  companyId: string;
+  entityType: EntityType;
+  entityId: string;
+  domain: FileDomain;
+  category: FileCategory;
+}): string {
+  return [
+    buildEntityStoragePrefix(params).replace(/\/$/, ''),
+    STORAGE_PATH_SEGMENTS.DOMAINS,
+    params.domain,
+    STORAGE_PATH_SEGMENTS.CATEGORIES,
+    params.category,
+    STORAGE_PATH_SEGMENTS.FILES,
+    '',
+  ].join('/');
+}
+
+/**
+ * 🏢 ENTERPRISE (ADR-709): LEGACY prefix — the pre-ADR-709 project-scoped tree.
+ *
+ * SINGLE SOURCE OF TRUTH for reaching objects written before the scheme was
+ * unified. Sweepers and migration tooling call this INSTEAD of hand-assembling
+ * `projects/{projectId}/`, so the legacy shape is described in exactly one
+ * place and can be deleted in exactly one edit once migration completes.
+ *
+ * NOT a builder for new writes — `buildStoragePath` cannot express this shape,
+ * and that is deliberate.
+ *
+ * @param projectId The project the legacy object was scoped under
+ * @param params Entity coordinates; omit domain+category for the entity-wide prefix
+ */
+export function buildLegacyProjectScopedPrefix(
+  projectId: string,
+  params: {
+    companyId: string;
+    entityType: EntityType;
+    entityId: string;
+    domain?: FileDomain;
+    category?: FileCategory;
+  }
+): string {
+  const canonical =
+    params.domain && params.category
+      ? buildCategoryStoragePrefix({ ...params, domain: params.domain, category: params.category })
+      : buildEntityStoragePrefix(params);
+
+  // Inject `projects/{projectId}` right after `companies/{companyId}`.
+  const projectScope = `${STORAGE_PATH_SEGMENTS.COMPANIES}/${params.companyId}/${STORAGE_PATH_SEGMENTS.PROJECTS}/${projectId}`;
+  return canonical.replace(
+    `${STORAGE_PATH_SEGMENTS.COMPANIES}/${params.companyId}`,
+    projectScope
+  );
 }
 
 // ============================================================================
@@ -357,23 +315,30 @@ export function getFileExtension(filename: string): string {
 export * from './storage-path-bim';
 
 /**
- * Parses a storage path back to its components
- * Useful for debugging and migration tools
+ * 🏢 ENTERPRISE (ADR-709): TOLERANT READER — parses a storage path back to its
+ * components.
+ *
+ * Deliberately asymmetric with `buildStoragePath`: writing accepts exactly one
+ * scheme, reading accepts two. Objects already in the bucket under the legacy
+ * `companies/{c}/projects/{p}/entities/...` scheme must stay readable and
+ * sweepable forever, or they become invisible garbage nobody can bill for or
+ * delete. Their `projectId` is surfaced as `legacyProjectId` so migration
+ * tooling can find them; it is never fed back into a builder.
  *
  * @returns Parsed components or null if path is invalid
  */
 export function parseStoragePath(
   path: string
-): StoragePathParams | null {
+): ParsedStoragePath | null {
   try {
     const segments = path.split('/');
 
-    // Path must start with companies/{companyId}
-    // companies/{companyId}/entities/{entityType}/{entityId}/domains/{domain}/categories/{category}/files/{filename}
-    // OR with project:
-    // companies/{companyId}/projects/{projectId}/entities/...
+    // Canonical (ADR-709):
+    //   companies/{companyId}/entities/{entityType}/{entityId}/domains/{domain}/categories/{category}/files/{filename}
+    // Legacy (pre-ADR-709, read-only):
+    //   companies/{companyId}/projects/{projectId}/entities/...
 
-    let projectId: string | undefined;
+    let legacyProjectId: string | undefined;
     let currentIndex = 0;
 
     // Must start with 'companies'
@@ -387,9 +352,9 @@ export function parseStoragePath(
     }
     currentIndex = 2;
 
-    // Check for optional project scope
+    // Legacy project scope (pre-ADR-709) — recognised, never produced
     if (segments[currentIndex] === STORAGE_PATH_SEGMENTS.PROJECTS) {
-      projectId = segments[currentIndex + 1];
+      legacyProjectId = segments[currentIndex + 1];
       currentIndex += 2;
     }
 
@@ -426,13 +391,13 @@ export function parseStoragePath(
 
     return {
       companyId,
-      projectId,
       entityType,
       entityId,
       domain,
       category,
       fileId,
       ext,
+      ...(legacyProjectId ? { legacyProjectId } : {}),
     };
   } catch {
     return null;

@@ -33,7 +33,10 @@ import {
   type Firestore,
 } from '@/lib/firebaseAdmin';
 import { FILE_DOMAINS, FILE_CATEGORIES } from '@/config/domain-constants';
-import { buildStoragePath } from '@/services/upload/utils/storage-path';
+import {
+  buildCategoryStoragePrefix,
+  buildLegacyProjectScopedPrefix,
+} from '@/services/upload/utils/storage-path';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { FloorplanCascadeDeleteService } from './floorplan-cascade-delete.service';
@@ -155,18 +158,14 @@ async function clearDxfLevelsInChunks(
   return cleared;
 }
 
+/**
+ * ADR-709: sweep ONE prefix. Callers pass both the canonical prefix and — when
+ * the floor's project is known — the legacy project-scoped one, so objects
+ * written before ADR-709 are still reachable.
+ */
 async function sweepFloorCategoryPath(
-  companyId: string,
-  projectId: string,
-  floorId: string,
+  prefix: string,
 ): Promise<{ deleted: number; failed: number }> {
-  const canonicalPath = buildStoragePath({
-    companyId, projectId, entityType: 'floor', entityId: floorId,
-    domain: FILE_DOMAINS.CONSTRUCTION, category: FILE_CATEGORIES.FLOORPLANS,
-    fileId: '_sweep_', ext: 'bin',
-  }).path;
-  // Strip `_sweep_.bin` to get the `files/` directory prefix.
-  const prefix = canonicalPath.slice(0, canonicalPath.lastIndexOf('/') + 1);
   const bucket = getAdminStorage().bucket();
   let deleted = 0;
   let failed = 0;
@@ -351,13 +350,31 @@ async function executeWipe(
     .filter((p): p is string => typeof p === 'string' && p.length > 0);
   const storage = await deleteStorageObjects(storagePaths);
 
-  // Extra sweep: catch orphan binaries left under the canonical floor-category
-  // prefix (derivations whose parent FileRecord was already deleted by an
-  // earlier wipe that lacked prefix-list logic). Skipped silently for legacy
-  // floors without a Firestore floor doc / projectId.
-  const sweep = projectId
-    ? await sweepFloorCategoryPath(companyId, projectId, floorId)
-    : { deleted: 0, failed: 0 };
+  // Extra sweep: catch orphan binaries left under the floor-category prefix
+  // (derivations whose parent FileRecord was already deleted by an earlier wipe
+  // that lacked prefix-list logic).
+  //
+  // ADR-709: the canonical prefix is ALWAYS swept — it no longer depends on the
+  // floor's project being resolvable, which is what previously made this sweep
+  // skip itself silently. The legacy project-scoped prefix is swept in addition
+  // whenever the project IS known, so pre-ADR-709 objects are not stranded.
+  const sweepPrefixes = [
+    buildCategoryStoragePrefix({
+      companyId, entityType: 'floor', entityId: floorId,
+      domain: FILE_DOMAINS.CONSTRUCTION, category: FILE_CATEGORIES.FLOORPLANS,
+    }),
+    ...(projectId
+      ? [buildLegacyProjectScopedPrefix(projectId, {
+          companyId, entityType: 'floor', entityId: floorId,
+          domain: FILE_DOMAINS.CONSTRUCTION, category: FILE_CATEGORIES.FLOORPLANS,
+        })]
+      : []),
+  ];
+  const sweepResults = await Promise.all(sweepPrefixes.map(sweepFloorCategoryPath));
+  const sweep = sweepResults.reduce(
+    (acc, r) => ({ deleted: acc.deleted + r.deleted, failed: acc.failed + r.failed }),
+    { deleted: 0, failed: 0 },
+  );
 
   return {
     floorplanOverlaysDeleted: cascade.floorplanOverlaysDeleted,
