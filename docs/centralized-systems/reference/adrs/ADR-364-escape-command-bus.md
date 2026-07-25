@@ -638,6 +638,155 @@ browser**, μειώνοντας την επιφάνεια σε **17 Κ2**.
 λανθασμένη συμπεριφορά (gizmo, eyedropper), και το dead-code gate του subapp παραμένει κλειστό
 (§10.7.1). Κλείνει στη Φ2/Φ3.
 
+> **Ενημέρωση 2026-07-25**: το τυφλό σημείο του §10.7.1 έχει πλέον **όργανο** — §10.9. Το όργανο
+> είναι επικυρωμένο (3/4 vs 1/4 του knip, 50 tests, browser). Η **επιβολή** του παραμένει ανοιχτή:
+> baseline άγραφο, hook ασύνδετος, μηδέν διαγραφές. Όργανο ≠ gate.
+
+### 10.9 CHECK 3.30 — barrel-aware dead-export gate (2026-07-25)
+
+Απάντηση στο κενό που κατέγραψε το §10.7.1. **Δεν** είναι ρύθμιση του knip — είναι διαφορετική
+ερώτηση, που το knip δεν μπορεί να κάνει όσο τα barrels είναι entry points.
+
+| Αρχείο | Ρόλος |
+|---|---|
+| `scripts/lib/module-graph/resolve-specifier.js` | Ανάλυση specifier· alias table από `tsconfig.base.json` (SSoT), **μεγαλύτερο prefix κερδίζει** (`@/systems/*` πριν το `@/*`) |
+| `scripts/lib/module-graph/parse-module.js` | Ένα αρχείο → exports / imports / re-exports / μετρητές ταυτοτήτων |
+| `scripts/lib/module-graph/build-graph.js` | Γράφος + **fixpoint προσπελασιμότητας** από τις ρίζες |
+| `scripts/lib/module-graph/classify-exports.js` | Οι 5 κάδοι |
+| `scripts/lib/module-graph/scan-config.js` | Τι διαβάζεται, τι μετρά ως ρίζα |
+| `scripts/check-barrel-deadcode-ratchet.js` | CLI + ratchet (`--report` / `--explain` / `--check` / `--write-baseline`) |
+| `scripts/__tests__/check-barrel-deadcode-ratchet.test.js` | **50 tests** — το σενάριο §10.7 καρφωμένο ως regression |
+
+#### Οι δύο κανόνες που κάνουν τη διαφορά
+
+**1. Το είδος της δήλωσης αποφασίζει, όχι το όνομα του αρχείου.**
+`import` **καταναλώνει**· `export … from` **προωθεί**. Άρα μια αλυσίδα barrels προσθέτει **μηδέν**
+καταναλωτές, και η χρήση πιστώνεται στο αρχείο που **δηλώνει** το σύμβολο. Το `export { X }` χωρίς
+`from` διορθώνεται **πάντα** ως προώθηση για την απόδοση προέλευσης (αλλιώς η χρήση πιστώνεται σε
+λάθος module και η πραγματική δήλωση φαίνεται αζήτητη), αλλά αφαιρείται από την κατανάλωση **μόνο**
+σε καθαρό barrel. Πλευρικό όφελος: πιάνει και τα **non-index barrels** — π.χ. το
+`ui/DxfViewerComponents.styles.ts:281` («Sub-module re-exports (backward compat)»), που κρύβει
+10 σύμβολα χωρίς να λέγεται `index.ts`.
+
+**2. Προσπελασιμότητα, όχι «έχει importer».**
+Το βρήκε το ίδιο το εργαλείο πάνω στα δεδομένα του §10.7: το `useEntityDrag` είχε **ακριβώς έναν**
+importer — το `useMovementOperations`, που ήταν κι αυτό νεκρό. **Νεκρό νησί.** Με κανόνα ενός
+βήματος τα μέλη κρατούν το ένα το άλλο ζωντανό για πάντα. Άρα η ζωντάνια είναι fixpoint από τις
+ρίζες που **όντως** καλεί το framework (Next `page`/`layout`/`route`/`middleware`, `*.worker.ts`) —
+και τα barrels **δεν** είναι ρίζες, σε αντίθεση με το `knip.json:14`.
+
+#### Οι 5 κάδοι — γιατί όχι δύο
+
+| Κάδος | Σημασία | Ενέργεια |
+|---|---|---|
+| `live` | Προσπελάσιμο και εισαγόμενο ονομαστικά | — |
+| `testOnly` | Ζει μόνο όταν σπείρουμε τα tests ως ρίζες | **ΠΟΤΕ στο ratchet** — διαγραφή αφαιρεί το συμβόλαιο, όχι τον καλούντα |
+| `suspect` | Απροσπέλαστο, αλλά το όνομα εμφανίζεται σε **ζωντανό** module | Άνθρωπος αποφασίζει |
+| `unusedExport` | Απροσπέλαστο απ' έξω, **ζωντανό μέσα στο αρχείο του** | Πέταξε τη λέξη `export`, **όχι** τον κώδικα |
+| `dead` | Απροσπέλαστο, και το όνομά του δεν εμφανίζεται σε κανένα ζωντανό module | Ο **μόνος** κάδος που μετρά το ratchet |
+
+Χωρίς το `unusedExport` ο κάδος `dead` ήταν **5.067**· με αυτό **1.625**. Ένα `interface Opts` που
+χρησιμοποιείται ως τύπος παραμέτρου στο ίδιο αρχείο **δεν** είναι νεκρός κώδικας — είναι υπερβολικά
+πλατύ export. Το `unusedExport` δίνεται **μόνο** σε προσπελάσιμο module: σε νεκρό module η «τοπική
+χρήση» είναι μια νεκρή γραμμή που καλεί μια άλλη.
+
+Το δίχτυ ασφαλείας (`suspect`) διαβάζει **AST ταυτότητες, όχι grep**: το `Floating3DPanel`
+αναφέρεται σε 5 αρχεία — **όλα σε σχόλια**. Το grep θα το έλεγε ζωντανό· ο parser όχι. Και ρωτά
+«εμφανίζεται σε **ζωντανό** module;» — αλλιώς κάθε νεκρό νησί θα αυτο-πιστοποιούνταν ως `suspect`.
+
+#### Επαλήθευση
+
+**Α. Έναντι των 4 του §10.7** — τρέξιμο πάνω σε `git archive 90c351a5` (το commit **πριν** τη
+διαγραφή) σε scratchpad, χωρίς άγγιγμα του κοινού tree:
+
+| Σύμβολο | knip 6.6.2 | CHECK 3.30 |
+|---|---|---|
+| `useEntityDrag` | ❌ | ✅ `dead` (+ dead file) |
+| `useMovementOperations` | ❌ | ✅ `dead` |
+| `useDrawingKeyboardShortcuts` | ✅ | ✅ `dead` |
+| `createKeyboardHandler` | ❌ | ⚠️ **εκτός εμβέλειας** |
+| | **1 / 4** | **3 / 4** |
+
+Το 4ο **δεν** είναι module-level export: είναι `const` **μέσα** στο hook, που επιστρέφεται ως πεδίο
+του object API (`useSettingsUpdater.ts:117` → `:150`). Αυτό είναι «νεκρό μέλος επιστρεφόμενου
+αντικειμένου» — άλλη, δυσκολότερη ερώτηση, που απαιτεί type-level ανάλυση. **Το εργαλείο δεν το
+βλέπει και δεν προσποιείται ότι το βλέπει.**
+
+Παρεμπιπτόντως, το `useMovementOperations.ts` **δεν** αναφέρεται ως ολόκληρο νεκρό αρχείο: εξάγει
+`NUDGE_CONFIG`, όνομα που ζει και στο `useKeyboardShortcuts.ts` → `suspect`. Το δίχτυ δούλεψε
+ακριβώς όπως σχεδιάστηκε — σύγκρουση ονομάτων ⇒ άνθρωπος, όχι διαγραφή.
+
+**Β. Ακρίβεια σε δείγμα** — 14 εγγραφές κατανεμημένες στη λίστα, ελεγμένες με το χέρι:
+**12/12 σωστές** (2 από τις 14 ήταν διπλότυπα ονόματος). Ενδεικτικά επιβεβαιωμένα barrel-only:
+`ViewerModeSchema` (μόνο μέσω `settings/index.ts`), `getKindButtonStyles` (μέσω non-index barrel),
+`useCanvasContext` (οι καταναλωτές καλούν `useContext(CanvasContext)` κατευθείαν).
+
+**Γ. Αρνητικός έλεγχος** — 10 πυρηνικά σύμβολα (`DxfRenderer`, `HoverStore`, `EscapeCommandBus`,
+`ImmediateTransformStore`, `getImmediateTransform`, `UnifiedFrameScheduler`, `pickTopEntityAt`,
+`WebglLineLayerManager`, `useViewportManager`, `DxfCanvas`): **κανένα** δεν χαρακτηρίστηκε νεκρό.
+
+**Δ. jest** — 50/50 PASS (`npm run test:barrel-deadcode`, ~3s).
+
+**Δ2. Και οι τρεις διαδρομές του ratchet, end-to-end** (ένα gate που δεν έχει δει ποτέ κόκκινο δεν
+είναι gate). Με πειραγμένα baselines στο scratchpad μέσω `--baseline`, χωρίς άγγιγμα του αληθινού:
+
+| Διαδρομή | Σενάριο | Αποτέλεσμα |
+|---|---|---|
+| 🟢 σταθερό | αληθινό baseline | `✅ no new barrel-only dead exports (1625 / 332)`, exit 0 |
+| 🔴 οπισθοδρόμηση | αφαιρέθηκαν 2 exports + 1 αρχείο από το baseline | `❌ FAIL — 2 new dead export(s)` + `1 new dead file(s)`, **ονομαστικά**, exit 1 |
+| 🔵 πρόοδος | προστέθηκε φάντασμα στο baseline | `✅ 1 entr(ies) cleaned … Lock it in`, exit 0 |
+
+**Ε. Πραγματικός browser** (`localhost:3000/dxf/viewer`): πλήρες φόρτωμα Ισογείου (550 στοιχεία),
+καρτέλα **Τοπογραφικό**, διακόπτης **Βορράς → Εμφάνιση/Απόκρυψη** ✅, **μηδέν** σφάλματα κονσόλας
+από την εφαρμογή. Διασταύρωση με το εύρημα: το `toggleNorthArrowVisible` αναφέρθηκε `dead` ενώ το
+module του είναι ζωντανό — και όντως το UI καλεί `setNorthArrowVisible(!opts.visible)`
+(`NorthArrowSection.tsx:66`). **Στατική ανάλυση και ζωντανό UI συμφωνούν στο ίδιο σύμβολο.**
+
+#### Μέτρηση στο τρέχον δέντρο (2026-07-25)
+
+13.192 αρχεία αναλυμένα, 5.697 modules στην εμβέλεια `src/subapps/dxf-viewer`, **~29s**:
+
+| dead | unusedExport | suspect | testOnly | live | dead files |
+|---|---|---|---|---|---|
+| **1.625** | 3.625 | 444 | 1.408 | 14.406 | **332** |
+
+Έναντι knip χωρίς το `ignore`: 831 exports + 305 types + 252 αρχεία. Οι διαφορές είναι το barrel
+τυφλό σημείο συν τα νεκρά νησιά. **501 από τα 1.625 dead exports ζουν σε αρχεία ολόκληρα νεκρά.**
+
+#### Κατάσταση επιβολής — ρητά
+
+- ✅ Εργαλείο, tests, CLI, ratchet μηχανή: **έτοιμα**.
+- ✅ **Baseline γεννήθηκε** (2026-07-25, τρίτο βήμα κατ' εντολή Giorgio — ώστε να προέλθει από
+  εργαλείο που ξέρουμε ότι βλέπει σωστά): `.barrel-deadcode-baseline.json`, **156 KB**,
+  **1.625 dead exports / 332 νεκρά αρχεία** στο `src/subapps/dxf-viewer`. Καταγράφει επίσης
+  `unusedExport: 3625`, `suspect: 444`, `testOnly: 1408` ως **πληροφορία** — το ratchet συγκρίνει
+  **μόνο** `deadExports` + `deadFiles`.
+- ⛔ **ΔΕΝ** συνδέθηκε στο pre-commit hook. Δεν υπάρχει CHECK 3.30 στον hook σήμερα· ο αριθμός
+  δεσμεύεται εδώ. ⚠️ **~30s ανά εκτέλεση** — αυτό είναι βάρος **CI (Layer 2)**, όχι hook, όπως
+  ακριβώς το CHECK 3.29 (ADR-663). Η απόφαση εκκρεμεί.
+- ⛔ **Καμία διαγραφή.** Η λίστα είναι **αποδεικτικό υλικό, όχι άδεια**. Περιστατικό 2026-04-24
+  (13 scaffolding αρχεία / 2.338 γρ. του ADR-321 σβήστηκαν από μαζικό batch που εμπιστεύτηκε το
+  εργαλείο) — ένα αρχείο τη φορά, με χειροκίνητη απόδειξη, όπως στο §10.7.
+
+#### Όρια — τι ΔΕΝ βλέπει
+
+1. **Μέλη επιστρεφόμενου object** (η περίπτωση `createKeyboardHandler`). Χρειάζεται type-level ανάλυση.
+2. **Αναφορές μέσω string** σε registries. Πέφτουν σε `suspect` μόνο αν το string συμπίπτει με
+   ταυτότητα σε ζωντανό module· αλλιώς αόρατες.
+3. **Καταναλωτές εκτός `src`/`packages`** (`scripts/`, `functions/`). Δεν σαρώνονται· το δίχτυ
+   ταυτοτήτων τα μαλακώνει, δεν τα εξαλείφει.
+4. **Ρίζα που δεν δηλώθηκε** στο `scan-config.js` ⇒ ολόκληρο υποδέντρο φαίνεται νεκρό. Ο κατάλογος
+   ριζών είναι SSoT και ελέγχεται από tests· κάθε νέο file convention του Next πάει **εκεί**.
+5. **Δεν είναι tsc** (N.17): `ts.createSourceFile` χτίζει AST χωρίς Program και χωρίς διαγνωστικά.
+
+#### SSoT
+
+Το set-diff του ratchet μπήκε ως `compareSets` στο **υπάρχον** `scripts/lib/ratchet-baseline.js`
+(δίπλα στο αριθμητικό `isRegression`), και το `check-deadcode-ratchet.js` (CHECK 3.22) **μετακινήθηκε
+σε αυτό** — μία σύγκριση για την οικογένεια dead-code, όχι μία ανά script (N.18). Επαληθεύτηκε:
+`node scripts/check-deadcode-ratchet.js` → `✅ Dead-code OK (baseline: 10)`. **Δεν** φτιάχτηκε νέα
+μηχανή ratchet.
+
 ---
 
 ## 11. Changelog
@@ -651,3 +800,5 @@ browser**, μειώνοντας την επιφάνεια σε **17 Κ2**.
 | 2026-07-18 | **CreateBlockDialogHost pick-base-point → bus + inline-rename false-positive fix.** (1) `CreateBlockDialogHost` (ADR-652 M6): το ιδιωτικό `window.addEventListener('keydown', …Escape…)` για ακύρωση του «pick base point» armed mode αντικαταστάθηκε με `useEscapeHandler` (priority `MODAL_DIALOG`, `canHandle: () => armed`). Ο tool-hint override έμεινε σε ξεχωριστό effect. (2) Νέο SSoT helper `ui/utils/inline-rename-keyboard.ts` (`handleInlineRenameKey`) για local rename `<input>` Enter/Escape — το bus σκιπάρει editable focus, οπότε τα εστιασμένα rename inputs χειρίζονται το δικό τους Escape τοπικά· ΕΝΑ allowlisted σημείο κρατά πλέον το `'Escape'` literal. Καταναλωτές: `FrameProfileCard` (νέο, ADR-676) + `EntityCard` (layers, 2→0 ratchet). Allowlist + description του `escape-command-bus` module ενημερώθηκαν. | Claude Opus 4.8 + Γιώργος Παγώνης |
 | 2026-06-03 | **Boy-Scout Group 4 — 10 secondary components migrated.** PropertiesPalette + QuickPropertiesMiniPanel: window listeners αντικαταστάθηκαν με `useEscapeHandler` (bus, GROUP A). DimStyleCreateDialog + LayerStateDropdown (LayerStateSaveButton): τοπικό `e.key==='Escape'` αφαιρέθηκε — Radix Dialog/Popover onEscapeKeyDown → onOpenChange αρκεί (GROUP B). LayerItem, ColorGroupItem, LayerStateDropdownPopover, LayerStateManageRow (hook στο LayerStateManagePanel parent), TextOverrideEditor (FieldTokenInput sub-component), StairPresetsSection: bus hook με `allowWhenEditable: true` + `canHandle` gate (GROUP C). GripContextMenu + useGripContextMenuController ελέγχθηκαν — μόνο `contextmenu` listener, χωρίς `keydown`/Escape — εκτός scope. SSoT baseline: 149→129 violations (−20), 99→88 files (−11). tsc: 0 errors. Jest EscapeCommandBus: 24/24 PASS. | Claude Sonnet 4.6 |
 | 2026-07-25 | **Φ1 ENFORCEMENT — κριτήριο διάκρισης + ταξινόμηση (νέο §10). ΚΑΜΙΑ αλλαγή κώδικα.** Αφορμή: μετρημένο στο browser test του ADR-692 — ένα ESC ακύρωσε marquee **και** έκλεισε gizmo, επειδή `stopPropagation()` δεν σταματά sibling listeners στον **ίδιο** κόμβο (`window`, capture). **(1) Κριτήριο T1/T2/T3** («υπάρχει ανταγωνιστής;», όχι «είναι input field;»), που συμβιβάζει δύο αντικρουόμενα προηγούμενα του ίδιου ADR — Group 4 GROUP C (bus) vs `inline-rename-keyboard.ts` (τοπικό): και τα δύο σωστά, διακριτικό ο ανταγωνιστής. **(2) Ταξινομία ανταγωνιστών** (bus capture, Radix `DismissableLayer` σε document capture, react-aria `useOverlay`, `HOT_GRIP_OP` P975). **(3) Το «24» ήταν λάθος φακός**: τρία ανεξάρτητα ιδιώματα — G (global listener + `Escape`) = 24, R (ratchet regex) = 23, **G∩R = 7**, + I (`matchesShortcut(e,'escape')`, πεζό, αόρατο σε **αμφότερα**) = 2 ⇒ **42 αρχεία**. Νέα κενά regex: `e.code === 'Escape'` (**το gizmo bug**, `shortcut-dispatcher.ts:232`) και `e.key !== 'Escape'` (`useZoomWindowTool.ts:70`). **(4) Ταξινόμηση 19 Κ1 / 21 Κ2 / 2 Κ3.** Κ3 ήταν εξ ορισμού αδύνατο να βρεθεί στα 24 (το grep έψαχνε global listeners). **(5) Νέα ζωντανά bugs**: `eyedropper.ts:133` (ένα ESC ακυρώνει eyedropper **και** κλείνει όλο τον color picker μέσω react-aria ancestor)· `PromptDialog.tsx:124` (το `HOT_GRIP_OP` κλέβει το ESC σε grip flow)· **διπλή αποστολή** — ο regex-καθαρός `useCanvasKeyboardShortcuts.ts:351` προωθεί ωμό `e.key` στα trim/scale/stretch/extend, που συγκρίνουν εσωτερικά, ενώ τα **ίδια** `handleXEscape` είναι ήδη εγγεγραμμένα σε `MODIFY_TOOL` ⇒ εκτελούνται **δύο φορές** ανά πάτημα. **Ο ratchet μετρά το string, όχι τη συμπεριφορά.** **(6) CHECK 3.7 αποκωδικοποιημένο**: staged-only (`check-ssot-imports.js:317`), per-file άθροισμα, `current === baseline` ⇒ `same` ⇒ περνά σιωπηλά για πάντα — γι' αυτό ζει το `useTrimTool.ts` (baseline 1 / τρέχον 1, εκτός allowlist). Baseline: **41** dxf-viewer αρχεία (όχι 0). **(7) Διόρθωση drift §6** (N.0.1 — ο κώδικας κερδίζει): το §6 τεκμηριώνει 2 άλλα patterns + 5 allowlist entries· το πραγματικό registry έχει 2 patterns + **8** entries, και το `addEventListener…Escape` αφαιρέθηκε σωστά (γραμμικό grep, δεν έπιανε τίποτα). **(8) Νεκρός κώδικας** προς διαγραφή αντί μετανάστευσης: `useEntityDrag` chain (barrel-only, αντικαταστάθηκε από `EntityBodyDragStore` που είναι σωστά στον bus), `useDrawingKeyboardShortcuts`, `createKeyboardHandler`, `CommentMentionsPicker` keydown (τίποτα δεν εστιάζει το listbox — και bug προσβασιμότητας). Το knip αγνοεί το dxf-viewer. **(9) Allowlist μπορεί να στενέψει**: 3 από 4 keyboard-core entries δεν έχουν πλέον matching literal· μένει το `useDimToolRouting.ts:140`. ⚠️ Αλλά η αφαίρεση του `useCanvasKeyboardShortcuts.ts` θα «πράσινιζε» αρχείο που είναι **Κ2 δομικά**. Φ2 απαιτεί ratchet-down των 41 baseline entries, όχι μόνο νέο pattern. Έρευνα Revit/VS Code από το handoff — δεν επαναλήφθηκε. | Claude Opus 5 + Γιώργος Παγώνης |
+| 2026-07-25 | **§10.9 — CHECK 3.30, barrel-aware dead-export gate. Απάντηση στο §10.7.1.** Το knip 6.6.2 είναι **δομικά** τυφλό στα barrel-only exports (`knip.json:14` δηλώνει `src/**/index.ts` entry point ⇒ ό,τι προωθεί ένα barrel μετρά ως χρησιμοποιούμενο)· μετρημένα **1/4** στα χειροκίνητα επαληθευμένα σύμβολα του §10.7, και **1/4** ακόμα με `--include-entry-exports`. Νέο εργαλείο: `scripts/lib/module-graph/` (5 modules) + `scripts/check-barrel-deadcode-ratchet.js`. **Δύο κανόνες**: (1) *το είδος της δήλωσης αποφασίζει* — `import` καταναλώνει, `export … from` προωθεί, άρα αλυσίδα barrels = μηδέν καταναλωτές και η χρήση πιστώνεται στο αρχείο που **δηλώνει**· πιάνει και non-index barrels (`DxfViewerComponents.styles.ts`). (2) *προσπελασιμότητα, όχι «έχει importer»* — το ίδιο το εργαλείο βρήκε ότι το `useEntityDrag` είχε ακριβώς έναν importer, το επίσης νεκρό `useMovementOperations`: **νεκρό νησί** που αυτοσυντηρείται σε κανόνα ενός βήματος. Άρα fixpoint από τις πραγματικές ρίζες (Next page/layout/route/middleware, `*.worker.ts`)· τα barrels **δεν** είναι ρίζες. **5 κάδοι** αντί για 2: το `unusedExport` (ζωντανό μέσα στο αρχείο του) κόβει τα `dead` από 5.067 σε **1.625** — ένα `interface Opts` ως τύπος παραμέτρου δεν είναι νεκρός κώδικας. Το δίχτυ `suspect` διαβάζει **AST ταυτότητες, όχι grep** (το `Floating3DPanel` αναφέρεται σε 5 αρχεία, **όλα σε σχόλια**) και ρωτά «σε **ζωντανό** module;», αλλιώς κάθε νεκρό νησί αυτο-πιστοποιείται. **Επαλήθευση**: 3/4 έναντι 1/4 του knip πάνω σε `git archive 90c351a5` σε scratchpad (το 4ο, `createKeyboardHandler`, είναι μέλος επιστρεφόμενου object — **ρητά** εκτός εμβέλειας)· δείγμα **12/12** σωστά με το χέρι· αρνητικός έλεγχος 10/10 πυρηνικά σύμβολα όχι-νεκρά· **50/50 jest**· **browser** (Ισόγειο 550 στοιχεία, Τοπογραφικό → Βορράς toggle ✅, μηδέν σφάλματα εφαρμογής) με διασταύρωση: το `toggleNorthArrowVisible` είναι `dead` ενώ το UI καλεί `setNorthArrowVisible` — στατική ανάλυση και ζωντανό UI συμφωνούν. **Τρέχον δέντρο**: 1.625 dead / 3.625 unusedExport / 444 suspect / 1.408 testOnly / **332 νεκρά αρχεία** σε 5.697 modules, ~29s. **SSoT**: το set-diff μπήκε ως `compareSets` στο υπάρχον `scripts/lib/ratchet-baseline.js` και το CHECK 3.22 μετακινήθηκε σε αυτό (επαληθεύτηκε πράσινο) — καμία νέα μηχανή ratchet (N.18). **Κατάσταση**: όργανο ✅ · baseline **άγραφο** (3ο βήμα κατ' εντολή) · hook **ασύνδετος** · **μηδέν διαγραφές** (περιστατικό 2026-04-24). Όρια ρητά καταγεγραμμένα στο §10.9. | Claude Opus 5 + Γιώργος Παγώνης |
+| 2026-07-25 | **§10.9 βήμα 3 — baseline γεννήθηκε + ratchet αποδεδειγμένο και στις 3 διαδρομές.** `.barrel-deadcode-baseline.json` (156 KB): **1.625 dead exports / 332 νεκρά αρχεία** στο `src/subapps/dxf-viewer`, + `unusedExport: 3625`, `suspect: 444`, `testOnly: 1408` ως πληροφορία (το ratchet συγκρίνει **μόνο** `deadExports` + `deadFiles`). **Καταγραφή, μηδέν άγγιγμα κώδικα.** Επαληθεύτηκαν και οι 3 διαδρομές με πειραγμένα baselines στο scratchpad μέσω `--baseline` (χωρίς άγγιγμα του αληθινού): 🟢 σταθερό → exit 0 · 🔴 αφαίρεσα 2 exports + 1 αρχείο από το baseline → `FAIL — 2 new dead export(s)` + `1 new dead file(s)` **ονομαστικά**, exit 1 · 🔵 πρόσθεσα φάντασμα → `1 entr(ies) cleaned … Lock it in`, exit 0. Ένα gate που δεν έχει δει ποτέ κόκκινο δεν είναι gate. **Εκκρεμεί απόφαση**: ~30s ανά εκτέλεση ⇒ ανήκει σε **CI (Layer 2)** όπως το CHECK 3.29, **όχι** στο pre-commit hook. Καμία διαγραφή· η διαλογή των 1.625 είναι ξεχωριστή δουλειά, ένα αρχείο τη φορά με χειροκίνητη απόδειξη. | Claude Opus 5 + Γιώργος Παγώνης |
