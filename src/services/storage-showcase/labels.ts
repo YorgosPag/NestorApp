@@ -10,18 +10,19 @@
 
 import 'server-only';
 
-import elShowcase from '@/i18n/locales/el/showcase.json';
-import enShowcase from '@/i18n/locales/en/showcase.json';
 import type { EnumLocale } from '@/services/property-enum-labels/property-enum-labels.service';
 import {
   createLocaleFallback,
-  resolveHeaderContactLabels,
   showcaseCtaLabelDefault,
-  showcaseFloorplansTitleDefault,
-  showcasePhotosTitleDefault,
   type ShowcaseHeaderContactLabels,
   type ShowcaseHeaderLabels,
 } from '@/services/showcase-core/labels-shared';
+import {
+  createEnumLabelTranslator,
+  readShowcaseCatalogSections,
+  resolveShowcaseHeaderLabels,
+  resolveShowcaseMediaTitles,
+} from '@/services/showcase-core/labels-catalog';
 import type { StorageType, StorageStatus } from '@/types/storage/contracts';
 
 // ============================================================================
@@ -74,23 +75,8 @@ const STORAGE_STATUS_LABELS: Record<EnumLocale, Record<StorageStatus, string>> =
   },
 };
 
-export function translateStorageType(
-  type: string | undefined,
-  locale: EnumLocale,
-): string | undefined {
-  if (!type) return undefined;
-  const map = STORAGE_TYPE_LABELS[locale] as Record<string, string>;
-  return map[type] ?? type;
-}
-
-export function translateStorageStatus(
-  status: string | undefined,
-  locale: EnumLocale,
-): string | undefined {
-  if (!status) return undefined;
-  const map = STORAGE_STATUS_LABELS[locale] as Record<string, string>;
-  return map[status] ?? status;
-}
+export const translateStorageType = createEnumLabelTranslator(STORAGE_TYPE_LABELS);
+export const translateStorageStatus = createEnumLabelTranslator(STORAGE_STATUS_LABELS);
 
 // ============================================================================
 // LABEL TYPES
@@ -128,26 +114,11 @@ export type { ShowcaseHeaderContactLabels };
 // LOADER
 // ============================================================================
 
-type ElShowcase = typeof elShowcase;
-const CATALOGS: Record<EnumLocale, ElShowcase> = {
-  el: elShowcase as ElShowcase,
-  en: enShowcase as unknown as ElShowcase,
-};
-
 export function loadStorageShowcasePdfLabels(
   locale: EnumLocale = 'el',
 ): StorageShowcasePDFLabels {
-  const c = CATALOGS[locale];
-  const ss = (c as unknown as { storageShowcase?: Record<string, unknown> }).storageShowcase ?? {};
-
-  const specs     = (ss.specs    ?? {}) as Record<string, string>;
-  const emailData = (ss.email    ?? {}) as Record<string, string>;
-  const header    = (ss.header   ?? {}) as Record<string, string>;
-  const photos    = (ss.photos   ?? {}) as Record<string, string>;
-  const floorplans= (ss.floorplans ?? {}) as Record<string, string>;
-  const headerContacts = (c as unknown as { header?: { contacts?: Record<string, string> } })
-    .header?.contacts;
-
+  const sections = readShowcaseCatalogSections('storageShowcase', locale);
+  const { specs, email } = sections;
   const fb = createLocaleFallback(locale);
 
   return {
@@ -163,18 +134,18 @@ export function loadStorageShowcasePdfLabels(
       areaUnit: specs.areaUnit ?? 'm²',
     },
     email: {
-      subjectPrefix: emailData.subjectPrefix ?? fb('Παρουσίαση Αποθήκης', 'Storage Showcase'),
-      introText:     emailData.introText     ?? fb(
+      subjectPrefix: email.subjectPrefix ?? fb('Παρουσίαση Αποθήκης', 'Storage Showcase'),
+      introText:     email.introText     ?? fb(
         'Σας προωθούμε την αναλυτική παρουσίαση της αποθήκης.',
         'We are sharing the detailed presentation of the storage unit.',
       ),
-      ctaLabel: emailData.ctaLabel ?? showcaseCtaLabelDefault(locale),
+      ctaLabel: email.ctaLabel ?? showcaseCtaLabelDefault(locale),
     },
-    header: {
-      subtitle: (header.subtitle as string | undefined) ?? fb('Παρουσίαση αποθήκης', 'Storage showcase'),
-      contacts: resolveHeaderContactLabels(headerContacts, locale),
-    },
-    photos:    { title: photos.title      ?? showcasePhotosTitleDefault(locale) },
-    floorplans:{ title: floorplans.title  ?? showcaseFloorplansTitleDefault(locale) },
+    header: resolveShowcaseHeaderLabels(
+      sections,
+      locale,
+      fb('Παρουσίαση αποθήκης', 'Storage showcase'),
+    ),
+    ...resolveShowcaseMediaTitles(sections, locale),
   };
 }

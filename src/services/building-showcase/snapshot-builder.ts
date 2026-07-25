@@ -1,10 +1,10 @@
 /**
- * Building Showcase Snapshot Builder — SSoT (ADR-320 + ADR-321 Phase 2).
+ * Building Showcase Snapshot Builder — SSoT (ADR-320 + ADR-321 Phase 2, ADR-700 primitives).
  *
- * Delegates orchestration to `createShowcaseSnapshotBuilder` (Phase 1.1);
- * this file now owns only the Building-specific field mapping (`buildInfo`)
- * + the project-name relation loader. Tenant isolation + branding resolution
- * move into the core factory (belt-and-suspenders).
+ * Delegates orchestration to `createShowcaseSnapshotBuilder` and the raw-value
+ * pickers / project-name loader to `showcase-core/snapshot-field-primitives`;
+ * this file owns only the Building-specific field mapping. Tenant isolation +
+ * branding resolution live in the core factory (belt-and-suspenders).
  *
  * @module services/building-showcase/snapshot-builder
  */
@@ -15,6 +15,12 @@ import {
   ShowcaseEntityNotFoundError,
   ShowcaseTenantMismatchError,
 } from '@/services/showcase-core/snapshot-builder-factory';
+import {
+  buildShowcaseIdentityFields,
+  createShowcaseRelationLoader,
+  pickShowcaseNumber,
+  pickShowcaseString,
+} from '@/services/showcase-core/snapshot-field-primitives';
 import type {
   BuildingShowcaseInfo,
   BuildingShowcaseSnapshot,
@@ -24,16 +30,6 @@ import {
   translateBuildingStatus,
   translateRenovationStatus,
 } from './labels';
-
-function pickString(v: unknown): string | null {
-  if (typeof v === 'string' && v.trim().length > 0) return v.trim();
-  return null;
-}
-
-function pickNumber(v: unknown): number | null {
-  if (typeof v === 'number' && isFinite(v)) return v;
-  return null;
-}
 
 // Legacy error aliases kept so downstream catches keep working unchanged.
 export class BuildingNotFoundError extends ShowcaseEntityNotFoundError {
@@ -60,40 +56,33 @@ export const buildBuildingShowcaseSnapshot = createShowcaseSnapshotBuilder<
 >({
   collection: COLLECTIONS.BUILDINGS,
   entityLabel: 'Building',
-  loadRelations: async (adminDb, _buildingId, raw) => {
-    const projectId = pickString(raw.projectId);
-    if (!projectId) return { projectName: null };
-    const snap = await adminDb.collection(COLLECTIONS.PROJECTS).doc(projectId).get();
-    if (!snap.exists) return { projectName: null };
-    const pRaw = snap.data() ?? {};
-    return {
-      projectName: pickString(pRaw.name) ?? pickString(pRaw.title),
-    };
-  },
+  loadRelations: createShowcaseRelationLoader({
+    foreignKeyField: 'projectId',
+    collection: COLLECTIONS.PROJECTS,
+    resultKey: 'projectName',
+    nameFields: ['name', 'title'],
+  }),
   buildInfo: ({ entityId, raw, relations, locale }) => ({
-    id:                entityId,
-    code:              pickString(raw.code),
-    name:              pickString(raw.name) ?? entityId,
-    description:       pickString(raw.description),
-    typeLabel:         translateBuildingType(pickString(raw.type) ?? undefined, locale) ?? null,
-    statusLabel:       translateBuildingStatus(pickString(raw.status) ?? undefined, locale) ?? null,
-    energyClassLabel:  pickString(raw.energyClass),
-    renovationLabel:   translateRenovationStatus(pickString(raw.renovation) ?? undefined, locale) ?? null,
-    progress:          pickNumber(raw.progress) ?? 0,
-    totalValue:        pickNumber(raw.totalValue),
-    totalArea:         pickNumber(raw.totalArea),
-    builtArea:         pickNumber(raw.builtArea),
-    floors:            pickNumber(raw.floors),
-    units:             pickNumber(raw.units),
-    constructionYear:  pickNumber(raw.constructionYear),
-    startDate:         pickString(raw.startDate),
-    completionDate:    pickString(raw.completionDate),
-    address:           pickString(raw.address),
-    city:              pickString(raw.city),
-    location:          pickString(raw.location),
-    projectId:         pickString(raw.projectId),
+    ...buildShowcaseIdentityFields(entityId, raw),
+    typeLabel:         translateBuildingType(pickShowcaseString(raw.type) ?? undefined, locale) ?? null,
+    statusLabel:       translateBuildingStatus(pickShowcaseString(raw.status) ?? undefined, locale) ?? null,
+    energyClassLabel:  pickShowcaseString(raw.energyClass),
+    renovationLabel:   translateRenovationStatus(pickShowcaseString(raw.renovation) ?? undefined, locale) ?? null,
+    progress:          pickShowcaseNumber(raw.progress) ?? 0,
+    totalValue:        pickShowcaseNumber(raw.totalValue),
+    totalArea:         pickShowcaseNumber(raw.totalArea),
+    builtArea:         pickShowcaseNumber(raw.builtArea),
+    floors:            pickShowcaseNumber(raw.floors),
+    units:             pickShowcaseNumber(raw.units),
+    constructionYear:  pickShowcaseNumber(raw.constructionYear),
+    startDate:         pickShowcaseString(raw.startDate),
+    completionDate:    pickShowcaseString(raw.completionDate),
+    address:           pickShowcaseString(raw.address),
+    city:              pickShowcaseString(raw.city),
+    location:          pickShowcaseString(raw.location),
+    projectId:         pickShowcaseString(raw.projectId),
     projectName:       relations.projectName,
-    linkedCompanyName: pickString(raw.linkedCompanyName),
+    linkedCompanyName: pickShowcaseString(raw.linkedCompanyName),
   }),
   wrapSnapshot: (building, company) => ({ building, company }),
 });

@@ -73,6 +73,12 @@ export interface BrandingResolutionParams {
   adminDb: Firestore;
   raw: Record<string, unknown>;
   companyId: string;
+  /**
+   * The entity's own id. Surfaces whose entity *is* the branding project
+   * (project showcase) resolve branding from this rather than from a
+   * `raw.projectId` foreign key, which such a doc does not carry (ADR-700).
+   */
+  entityId: string;
 }
 
 export interface ShowcaseSnapshotBuilderConfig<
@@ -176,7 +182,7 @@ export function createShowcaseSnapshotBuilder<TInfo, TRelations, TSnapshot>(
 
     const info = config.buildInfo({ entityId, raw, relations, locale });
 
-    const company = await resolveBranding({ adminDb, raw, companyId });
+    const company = await resolveBranding({ adminDb, raw, companyId, entityId });
 
     return config.wrapSnapshot(info, company);
   };

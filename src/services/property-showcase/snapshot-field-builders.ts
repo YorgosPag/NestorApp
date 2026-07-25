@@ -24,6 +24,10 @@ import {
   translateSecurityFeatures,
   type EnumLocale,
 } from '@/services/property-enum-labels/property-enum-labels.service';
+import {
+  pickShowcaseNumberOrUndefined,
+  pickShowcaseStringOrUndefined,
+} from '@/services/showcase-core/snapshot-field-primitives';
 import type { ProjectAddress } from '@/types/project/addresses';
 import {
   getPrimaryAddress,
@@ -48,15 +52,15 @@ import type {
 // Primitive pickers
 // =============================================================================
 
-export function pickString(value: unknown): string | undefined {
-  if (typeof value !== 'string') return undefined;
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : undefined;
-}
-
-export function pickNumber(value: unknown): number | undefined {
-  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
-}
+/**
+ * ⚠️ The property showcase deliberately uses the **`undefined`** picker
+ * contract, not the `null` one its four sibling surfaces use: absent fields
+ * must vanish from the serialised payload rather than appear as explicit
+ * `null`. Both contracts live in `showcase-core/snapshot-field-primitives`
+ * (ADR-700); these local names stay so the ~40 call sites below read unchanged.
+ */
+export const pickString = pickShowcaseStringOrUndefined;
+export const pickNumber = pickShowcaseNumberOrUndefined;
 
 export function normalizeDate(value: unknown): string | undefined {
   if (!value) return undefined;
