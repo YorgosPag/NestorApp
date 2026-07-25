@@ -30,6 +30,7 @@
  * CLI:
  *   node scripts/check-barrel-deadcode-ratchet.js                    # ratchet check
  *   node scripts/check-barrel-deadcode-ratchet.js --smoke            # baseline present + sane (~ms, hook)
+ *   node scripts/check-barrel-deadcode-ratchet.js --triage           # dead vs UNFINISHED (ADR-364 §10.9.2)
  *   node scripts/check-barrel-deadcode-ratchet.js --report           # human list
  *   node scripts/check-barrel-deadcode-ratchet.js --write-baseline
  *   node scripts/check-barrel-deadcode-ratchet.js --explain useFoo
@@ -51,10 +52,12 @@ const { classifyExports, BUCKETS } = require('./lib/module-graph/classify-export
 const { collectSourceFiles, isEntryFile } = require('./lib/module-graph/scan-config');
 const { TEST_PATTERN } = require('./lib/module-graph/parse-module');
 const { loadBaseline, writeBaselineFile, compareSets } = require('./lib/ratchet-baseline');
+const { readAddHistory, readAdrStatus, triage } = require('./lib/deadcode-triage');
 
 const PROJECT_ROOT = toPosix(path.resolve(__dirname, '..'));
 const DEFAULT_BASELINE = path.join(PROJECT_ROOT, '.barrel-deadcode-baseline.json');
 const DEFAULT_SCOPE = 'src/subapps/dxf-viewer';
+const ADR_DIR = path.join(PROJECT_ROOT, 'docs/centralized-systems/reference/adrs');
 
 const OPTIONS_WITH_VALUE = new Set(['--scope', '--root', '--baseline', '--explain', '--json', '--limit']);
 
@@ -84,6 +87,7 @@ function parseCliArgs(argv) {
     else if (arg === '--write-baseline') out.mode = 'write-baseline';
     else if (arg === '--check') out.mode = 'check';
     else if (arg === '--smoke') out.mode = 'smoke';
+    else if (arg === '--triage') out.mode = 'triage';
     else if (arg === '--help' || arg === '-h') out.mode = 'help';
     else throw new Error(`Unknown argument: ${arg}`);
   }
@@ -265,6 +269,49 @@ function runSmoke(_analysis, options) {
   return 0;
 }
 
+/**
+ * Provenance triage (ADR-364 §10.9.2). Answers the question the reachability
+ * graph cannot: is a dead file DEAD, or merely NOT FINISHED YET? Reads the
+ * frozen baseline + git birth commits + the referenced ADRs' own status lines.
+ * No graph build — this is about history, not reachability.
+ */
+function runTriage(_analysis, options) {
+  const baseline = readBaseline(options);
+  if (!baseline) return 1;
+
+  let history;
+  try {
+    history = readAddHistory({ root: PROJECT_ROOT, scope: options.scopes[0] });
+  } catch (e) {
+    console.error(`❌ CHECK 3.30 triage — ${e.message}`);
+    return 1;
+  }
+  const statusCache = new Map();
+  const statusOf = num => {
+    if (!statusCache.has(num)) statusCache.set(num, readAdrStatus(ADR_DIR, num));
+    return statusCache.get(num);
+  };
+
+  const t = triage(baseline.deadFiles || [], { history, statusOf });
+  const pct = n => `${((n / t.total) * 100).toFixed(0)}%`.padStart(4);
+
+  console.log(`\n📐 CHECK 3.30 — provenance triage of ${t.total} dead files (ADR-364 §10.9.2)`);
+  console.log(`   baseline: ${path.relative(PROJECT_ROOT, options.baseline)}   scope: ${options.scopes.join(', ')}`);
+  console.log(`\n   🔴 DO NOT TOUCH  ${String(t.notouch.length).padStart(4)} ${pct(t.notouch.length)}  born under a still-open ADR — unfinished, not dead`);
+  console.log(`   🟡 NEEDS A LOOK  ${String(t.look.length).padStart(4)} ${pct(t.look.length)}  recent, or the ADR status could not be read`);
+  console.log(`   🟢 LEGACY        ${String(t.legacy.length).padStart(4)} ${pct(t.legacy.length)}  old + closed/pre-ADR — start looking HERE`);
+  console.log(`\n   why:`);
+  t.reasons.slice(0, 12).forEach(r => console.log(`     ${String(r.count).padStart(4)}  ${r.reason}`));
+
+  if (options.json) {
+    writeBaselineFile(options.json, { generated: new Date().toISOString(), adr: 'ADR-364 §10.9.2', ...t });
+    console.log(`\n📝 JSON written: ${options.json}`);
+  }
+  console.log(`\n⚠️  A bucket is NOT a licence. 🟢 means "look here first", never "delete these".`);
+  console.log(`   Per-file protocol: ADR-364 §10.7. Incident 2026-04-24 is why.`);
+  return 0;
+}
+
 function runCheck(analysis, options) {
   const baseline = readBaseline(options);
   if (!baseline) return 1;
@@ -302,8 +349,10 @@ function main() {
   }
   if (options.mode === 'help') { printHelp(); process.exit(0); }
 
-  // Smoke must never pay for the graph — that is the entire reason it exists.
+  // Neither smoke nor triage needs the graph: smoke reads a file, triage reads
+  // history. Both would otherwise pay ~30s for an answer they never consult.
   if (options.mode === 'smoke') process.exit(runSmoke(null, options));
+  if (options.mode === 'triage') process.exit(runTriage(null, options));
 
   const started = Date.now();
   const analysis = analyse(options);

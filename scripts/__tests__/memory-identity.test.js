@@ -17,6 +17,7 @@ const { execFileSync } = require('child_process');
 
 const REPO = path.resolve(__dirname, '..', '..');
 const NORMALIZER = path.join(REPO, 'scripts', 'memory-normalize-ids.js');
+const HEALTH = path.join(REPO, 'scripts', 'memory-health.js');
 
 const store = require('../lib/memory/memory-store');
 const graph = require('../lib/memory/memory-graph');
@@ -33,11 +34,11 @@ function writeMemory(slug, { name, description = 'μια επαρκώς μεγά
   fs.writeFileSync(path.join(dir, `${slug}.md`), lines.join(eol), 'utf8');
 }
 
-const runNormalizer = (args) => {
+const run = (script, args) => {
   try {
     return {
       code: 0,
-      out: execFileSync('node', [NORMALIZER, ...args], {
+      out: execFileSync('node', [script, ...args], {
         cwd: REPO,
         env: { ...process.env, CLAUDE_MEMORY_DIR: dir },
         encoding: 'utf8',
@@ -47,6 +48,8 @@ const runNormalizer = (args) => {
     return { code: err.status, out: `${err.stdout || ''}${err.stderr || ''}` };
   }
 };
+
+const runNormalizer = (args) => run(NORMALIZER, args);
 
 const nameOf = (slug) =>
   store.readField(fs.readFileSync(path.join(dir, `${slug}.md`), 'utf8'), 'name');
@@ -177,7 +180,45 @@ describe('απόδειξη ασφάλειας δεικτών', () => {
   });
 });
 
-// ── 5. reachability BFS ─────────────────────────────────────────────────────
+// ── 5. executable provenance: το gate ΠΡΕΠΕΙ να μπορεί να κοκκινίσει ────────
+
+describe('--verify (executable provenance)', () => {
+  /** Γράφει memory με `verify:` σε top-level frontmatter (η κανονική θέση). */
+  const withVerify = (slug, cmd) =>
+    fs.writeFileSync(
+      path.join(dir, `${slug}.md`),
+      ['---', `name: ${slug.replace(/_/g, '-')}`, 'description: fixture με επαρκές μήκος περιγραφής', `verify: "${cmd}"`, 'type: reference', '---', '', 'σώμα', ''].join('\n'),
+      'utf8',
+    );
+
+  it('✅ ΠΡΑΣΙΝΟ: αληθής ισχυρισμός περνά, exit 0', () => {
+    withVerify('reference_true_claim', 'node -e "process.exit(0)"');
+    const { code, out } = run(HEALTH, ['--verify']);
+    expect(code).toBe(0);
+    expect(out).toContain('0 ΑΠΟΔΕΔΕΙΓΜΕΝΑ ΨΕΥΔΗ');
+  });
+
+  it('🔴 ΚΟΚΚΙΝΟ: ψευδής ισχυρισμός → ❌ + exit 1', () => {
+    withVerify('reference_false_claim', 'node -e "process.exit(3)"');
+    const { code, out } = run(HEALTH, ['--verify']);
+    expect(code).toBe(1);
+    expect(out).toContain('❌ reference_false_claim');
+    expect(out).toContain('1 ΑΠΟΔΕΔΕΙΓΜΕΝΑ ΨΕΥΔΗ');
+  });
+
+  it('αγνοεί `verify:` που ζει στο ΣΩΜΑ (παράδειγμα τεκμηρίωσης, όχι assertion)', () => {
+    fs.writeFileSync(
+      path.join(dir, 'reference_doc_example.md'),
+      ['---', 'name: reference-doc-example', 'description: fixture με επαρκές μήκος περιγραφής', 'type: reference', '---', '', 'Παράδειγμα:', '```yaml', 'verify: "node -e \\"process.exit(3)\\""', '```', ''].join('\n'),
+      'utf8',
+    );
+    const { code, out } = run(HEALTH, ['--verify']);
+    expect(code).toBe(0);
+    expect(out).toContain('0 memories με');
+  });
+});
+
+// ── 6. reachability BFS ─────────────────────────────────────────────────────
 
 describe('computeReachability', () => {
   it('μετράει βάθος σωστά και εκθέτει τα απρόσιτα', () => {

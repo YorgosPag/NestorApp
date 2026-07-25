@@ -27,6 +27,9 @@ const { compareSets } = require('../lib/ratchet-baseline');
 const {
   parseCliArgs, runSmoke, REQUIRED_BASELINE_KEYS, PROJECT_ROOT,
 } = require('../check-barrel-deadcode-ratchet');
+const {
+  parseAddHistory, readAdrStatus, triage, OPEN, CLOSED, UNCLEAR, MISSING,
+} = require('../lib/deadcode-triage');
 
 // Anchored through path.resolve so the fixture paths match what the resolver
 // produces on Windows ('C:/repo') and on POSIX ('/repo') alike.
@@ -357,6 +360,126 @@ describe('ratchet plumbing', () => {
 
   it('recognises --smoke as its own mode', () => {
     expect(parseCliArgs(['node', 'x', '--smoke']).mode).toBe('smoke');
+  });
+
+  it('recognises --triage as its own mode', () => {
+    expect(parseCliArgs(['node', 'x', '--triage']).mode).toBe('triage');
+  });
+});
+
+/**
+ * ADR-364 §10.9.2 — provenance triage. The reachability graph cannot tell "dead"
+ * from "not finished yet"; these buckets can, and the whole point is that a file
+ * from an OPEN ADR must never be presentable as a deletion candidate.
+ */
+describe('provenance triage (dead vs unfinished)', () => {
+  const HISTORY = [
+    'C|2026-05-11|feat(dxf/text-engine): ADR-344 Phase 7.D — TextTemplateManager',
+    'src/a/OpenAdrFeature.tsx',
+    '',
+    'C|2026-05-16|feat: ADR-353 array commands',
+    'src/a/RecentClosed.ts',
+    'C|2025-10-04|Initial commit - DXF Viewer current state',
+    'src/a/OriginalImport.ts',
+    'src/a/AlsoOriginal.ts',
+    'C|2025-12-01|chore: some cleanup with no adr reference',
+    'src/a/OldNoAdr.ts',
+    'C|2026-06-02|wip: quick patch',
+    'src/a/RecentNoAdr.ts',
+  ].join('\n');
+
+  const statusOf = num => ({ 344: OPEN, 353: CLOSED, 999: UNCLEAR }[num] || MISSING);
+  const history = parseAddHistory(HISTORY);
+  const files = [
+    'src/a/OpenAdrFeature.tsx', 'src/a/RecentClosed.ts', 'src/a/OriginalImport.ts',
+    'src/a/AlsoOriginal.ts', 'src/a/OldNoAdr.ts', 'src/a/RecentNoAdr.ts', 'src/a/NeverBorn.ts',
+  ];
+  const t = triage(files, { history, statusOf });
+  const bucketOf = f => ['notouch', 'look', 'legacy'].find(b => t[b].some(e => e.file === f));
+
+  it('parses a git add-history into birth records', () => {
+    expect(history.get('src/a/OriginalImport.ts')).toEqual({
+      date: '2025-10-04', subject: 'Initial commit - DXF Viewer current state',
+    });
+    expect(history.size).toBe(6);
+  });
+
+  it('keeps the OLDEST add when a file was deleted and re-added', () => {
+    // git log walks newest→oldest, so the last write wins and that is the birth.
+    const h = parseAddHistory([
+      'C|2026-07-01|feat: re-added', 'src/x.ts', 'C|2025-01-01|feat: originally added', 'src/x.ts',
+    ].join('\n'));
+    expect(h.get('src/x.ts').date).toBe('2025-01-01');
+  });
+
+  it('never files an open-ADR file as a deletion candidate', () => {
+    expect(bucketOf('src/a/OpenAdrFeature.tsx')).toBe('notouch');
+  });
+
+  it('treats a closed ADR as legacy only when the file is also old', () => {
+    expect(bucketOf('src/a/RecentClosed.ts')).toBe('look');   // closed, but born recently
+    expect(bucketOf('src/a/OldNoAdr.ts')).toBe('legacy');     // old, no ADR
+  });
+
+  it('files the original 2025 import as legacy', () => {
+    expect(bucketOf('src/a/OriginalImport.ts')).toBe('legacy');
+    expect(bucketOf('src/a/AlsoOriginal.ts')).toBe('legacy');
+  });
+
+  it('will not call a recent file legacy just because no ADR is named', () => {
+    expect(bucketOf('src/a/RecentNoAdr.ts')).toBe('look');
+  });
+
+  it('sends a file with no birth commit to manual judgement, not to legacy', () => {
+    expect(bucketOf('src/a/NeverBorn.ts')).toBe('look');
+  });
+
+  // The invariant that makes the whole thing safe to act on.
+  it('INVARIANT — no file from an open or unreadable ADR ever lands in legacy', () => {
+    const risky = [OPEN, UNCLEAR, MISSING];
+    for (const entry of t.legacy) {
+      if (!entry.adr) continue;
+      expect(risky).not.toContain(statusOf(entry.adr));
+    }
+  });
+
+  it('counts every file exactly once and reports why', () => {
+    expect(t.notouch.length + t.look.length + t.legacy.length).toBe(files.length);
+    expect(t.total).toBe(files.length);
+    expect(t.reasons.reduce((s, r) => s + r.count, 0)).toBe(files.length);
+  });
+
+  describe('reading an ADR status line', () => {
+    let dir;
+    const write = (name, body) => fs.writeFileSync(path.join(dir, name), body);
+    beforeEach(() => { dir = fs.mkdtempSync(path.join(os.tmpdir(), 'adr330-')); });
+    afterEach(() => fs.rmSync(dir, { recursive: true, force: true }));
+
+    it('reads a closed status', () => {
+      write('ADR-353-array.md', '# ADR-353\n**Status:** ✅ COMPLETE — shipped\n');
+      expect(readAdrStatus(dir, '353')).toBe(CLOSED);
+    });
+
+    it('reads an open status', () => {
+      write('ADR-344-text.md', '# ADR-344\n- **Status**: ✅ FULLY APPROVED — Ready for Phase 0 kickoff.\n');
+      expect(readAdrStatus(dir, '344')).toBe(OPEN);
+    });
+
+    // Fail-open: calling live work "finished" is the expensive direction.
+    it('returns UNCLEAR rather than guessing when the line is unrecognisable', () => {
+      write('ADR-900-x.md', '# ADR-900\n**Status:** 🤷 whatever\n');
+      expect(readAdrStatus(dir, '900')).toBe(UNCLEAR);
+    });
+
+    it('does not mistake prose for a status line', () => {
+      write('ADR-901-x.md', '# ADR-901\n## 1. Context\n- **Status bar text**: extends with "+1 added"\n');
+      expect([UNCLEAR, MISSING]).toContain(readAdrStatus(dir, '901'));
+    });
+
+    it('reports a missing ADR file instead of throwing', () => {
+      expect(readAdrStatus(dir, '404')).toBe(MISSING);
+      expect(readAdrStatus(path.join(dir, 'nope'), '404')).toBe(MISSING);
+    });
   });
 });
 

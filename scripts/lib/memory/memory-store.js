@@ -86,6 +86,23 @@ function setField(raw, key, value) {
   return raw.slice(0, fm.start) + updated + raw.slice(fm.end);
 }
 
+/**
+ * Σαν το `setField`, αλλά ΠΡΟΣΘΕΤΕΙ το πεδίο αν λείπει (αμέσως μετά το `afterKey`).
+ * ΓΙΑΤΙ ξεχωριστή συνάρτηση: το `setField` αρνείται επίτηδες να εφευρίσκει πεδία — μια
+ * μαζική εγγραφή που «διορθώνει» με το να προσθέτει άγνωστα κλειδιά είναι επικίνδυνη.
+ * Η εισαγωγή είναι ρητή πρόθεση του καλούντος, όχι σιωπηλή παρενέργεια.
+ */
+function upsertField(raw, key, value, afterKey = 'description') {
+  const existing = setField(raw, key, value);
+  if (existing !== null) return existing;
+  const fm = splitFrontmatter(raw);
+  if (!fm) return null;
+  const anchor = new RegExp(`^${afterKey}:.*$`, 'm');
+  if (!anchor.test(fm.frontmatter)) return null;
+  const updated = fm.frontmatter.replace(anchor, (line) => `${line}${fm.eol}${key}: ${value}`);
+  return raw.slice(0, fm.start) + updated + raw.slice(fm.end);
+}
+
 module.exports = {
   MEMORY_DIR,
   INDEX,
@@ -99,4 +116,5 @@ module.exports = {
   splitFrontmatter,
   readField,
   setField,
+  upsertField,
 };

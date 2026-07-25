@@ -131,6 +131,18 @@ function analyze() {
     .filter(([, d]) => d > DEPTH_PRACTICAL)
     .map(([slug]) => slug)
     .sort();
+  /**
+   * Πόσοι ΖΩΝΤΑΝΟΙ δείκτες οδηγούν σε κάθε αρχείο. inbound === 1 σημαίνει ότι μία
+   * μόνο διαγραφή γραμμής το κάνει απρόσιτο — και αν είναι κόμβος αλυσίδας, παίρνει
+   * μαζί του ΟΛΟΥΣ τους κατιόντες. Συνέβη: ένας δείκτης κρατούσε 6 memories.
+   */
+  const inbound = new Map([...files].map((f) => [f, 0]));
+  for (const text of [store.readIndex(), ...[...files].map(readFile)]) {
+    for (const raw of extractLinks(text)) {
+      const t = resolveLink(raw, alias);
+      if (t) inbound.set(t, (inbound.get(t) ?? 0) + 1);
+    }
+  }
   const totalBytes = [...files].reduce((n, f) => n + sizeOf(f), 0);
   const deadBytes = unreachable.reduce((n, f) => n + sizeOf(f), 0);
 
@@ -142,6 +154,9 @@ function analyze() {
     reachable: depth.size,
     unreachable,
     deepOnly,
+    depthOf: depth,
+    inbound,
+    fragile: [...inbound.entries()].filter(([, n]) => n === 1).map(([s]) => s).sort(),
     totalBytes,
     deadBytes,
     broken: findBrokenLinks(files, alias),
@@ -300,7 +315,17 @@ if (process.argv.includes('--verify')) {
   process.exit(v.failed.length ? 1 : 0);
 }
 
-if (process.argv.includes('--list-unreachable')) {
+if (process.argv.includes('--list-deep')) {
+  // Βάθος + εισερχόμενοι δείκτες + μέγεθος: αρκετά για να κριθεί «ανέβασέ το ή άσ' το».
+  console.log('βάθος  inbound  μέγεθος  slug');
+  for (const slug of result.deepOnly) {
+    console.log(
+      `${String(result.depthOf.get(slug)).padStart(5)}  ${String(result.inbound.get(slug)).padStart(7)}  ` +
+        `${kb(sizeOf(slug)).padStart(7)}  ${slug}`,
+    );
+  }
+  console.log(`\nΕΥΘΡΑΥΣΤΑ (inbound === 1, μία διαγραφή τα εξαφανίζει): ${result.fragile.length}`);
+} else if (process.argv.includes('--list-unreachable')) {
   console.log(result.unreachable.join('\n'));
 } else if (process.argv.includes('--json')) {
   console.log(
