@@ -31,6 +31,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { SalesDashboardRequirementsAlert } from '@/components/properties/shared/SalesDashboardRequirementsAlert';
 import { PricePlausibilityWarning } from '@/components/properties/shared/PricePlausibilityWarning';
 import { normalizeDecimalString } from '@/lib/number/locale-number';
+import { formatForDisplay, resolveDecimalSeparator } from '@/components/ui/numeric-field';
+import { getCurrentLocale } from '@/lib/intl-utils';
 import '@/lib/design-system';
 import type { TFunction } from 'i18next';
 import type { PropertyFieldsFormData } from './property-fields-form-types';
@@ -51,10 +53,20 @@ interface PriceInputFieldProps {
 function PriceInputField({ id, label, value, onValueChange, disabled, placeholder }: PriceInputFieldProps) {
   const colors = useSemanticColors();
   const [isFocused, setIsFocused] = useState(false);
+  const decimalSeparator = resolveDecimalSeparator(getCurrentLocale());
 
-  const displayValue = isFocused
-    ? value.replace('.', ',')
-    : value ? Number(value).toLocaleString('el-GR') : '';
+  // Display semantics follow the numeric-field SSoT (ADR-706): raw with the
+  // locale decimal mark while focused, locale-grouped once blurred. Empty stays
+  // empty — a price field must be able to hold "no price", unlike a coefficient.
+  //
+  // While focused the RAW string is shown, never a re-formatted number: a
+  // half-typed "12," must survive the round-trip, otherwise the decimal mark is
+  // swallowed and the field commits the wrong value (the type="number" defect).
+  const displayValue = value === ''
+    ? ''
+    : isFocused
+      ? value.replace('.', decimalSeparator)
+      : formatForDisplay(Number(value));
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = normalizeDecimalString(e.target.value);

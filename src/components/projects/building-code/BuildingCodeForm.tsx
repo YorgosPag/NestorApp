@@ -1,7 +1,7 @@
 'use client';
 
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { NumericField } from '@/components/ui/numeric-field';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { UseProjectBuildingCodeResult } from '@/hooks/useProjectBuildingCode';
 import { PlotTypeSelector } from './PlotTypeSelector';
@@ -14,17 +14,12 @@ import {
   FieldIssues,
   ValidationSummary,
 } from './BuildingCodeValidationDisplay';
-import { parseLocaleNumber } from '@/lib/number/locale-number';
 import type { Project } from '@/types/project';
 
 interface BuildingCodeFormProps {
   hook: UseProjectBuildingCodeResult;
   isEditing: boolean;
   project?: Project | null;
-}
-
-function parseNumber(raw: string): number {
-  return parseLocaleNumber(raw) ?? 0;
 }
 
 export function BuildingCodeForm({ hook, isEditing, project }: BuildingCodeFormProps) {
@@ -58,15 +53,14 @@ export function BuildingCodeForm({ hook, isEditing, project }: BuildingCodeFormP
 
       <fieldset className="grid gap-4 md:grid-cols-3" disabled={fieldDisabled}>
         <div className="space-y-2">
-          <Label htmlFor="bc-sd">{t('sd.label')}</Label>
-          <Input
+          <NumericField
             id="bc-sd"
-            type="number"
-            inputMode="decimal"
-            step="0.01"
+            label={t('sd.label')}
+            step={0.01}
+            min={0}
             disabled={fieldDisabled}
-            value={Number.isFinite(draft.sd) ? draft.sd : 0}
-            onChange={(e) => hook.setSd(parseNumber(e.target.value))}
+            value={draft.sd}
+            onValueChange={hook.setSd}
           />
           <div className="flex items-center justify-between">
             <ProvenanceBadge provenance={draft.provenance.sd} zoneId={draft.zoneId} />
@@ -82,17 +76,15 @@ export function BuildingCodeForm({ hook, isEditing, project }: BuildingCodeFormP
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="bc-coverage">{t('coverage.label')}</Label>
-          <Input
+          <NumericField
             id="bc-coverage"
-            type="number"
-            inputMode="decimal"
-            step="1"
+            label={t('coverage.label')}
+            step={1}
             min={0}
             max={100}
             disabled={fieldDisabled}
-            value={Number.isFinite(draft.coveragePct) ? draft.coveragePct : 0}
-            onChange={(e) => hook.setCoveragePct(parseNumber(e.target.value))}
+            value={draft.coveragePct}
+            onValueChange={hook.setCoveragePct}
           />
           <div className="flex items-center justify-between">
             <ProvenanceBadge provenance={draft.provenance.coveragePct} zoneId={draft.zoneId} />
@@ -108,16 +100,14 @@ export function BuildingCodeForm({ hook, isEditing, project }: BuildingCodeFormP
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="bc-height">{t('maxHeight.label')}</Label>
-          <Input
+          <NumericField
             id="bc-height"
-            type="number"
-            inputMode="decimal"
-            step="0.5"
+            label={t('maxHeight.label')}
+            step={0.5}
             min={0}
             disabled={fieldDisabled}
-            value={Number.isFinite(draft.maxHeight) ? draft.maxHeight : 0}
-            onChange={(e) => hook.setMaxHeight(parseNumber(e.target.value))}
+            value={draft.maxHeight}
+            onValueChange={hook.setMaxHeight}
           />
           <div className="flex items-center justify-between">
             <ProvenanceBadge provenance={draft.provenance.maxHeight} zoneId={draft.zoneId} />

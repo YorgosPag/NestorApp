@@ -26,6 +26,7 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 // 🏢 ENTERPRISE: Import from canonical location
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 import { formatCurrency, formatNumber, formatPercentage } from '@/lib/intl-utils';
+import { FormFieldNumericInput } from './FormFieldNumericInput';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import '@/lib/design-system';
 import type {
@@ -266,12 +267,24 @@ export const UnifiedFormField = forwardRef<HTMLElement, UnifiedFormFieldProps>((
                 {unit}
               </span>
             )}
-            <Input
-              {...baseInputProps}
-              type="number"
+            {/* ADR-706: never `type="number"` for a decimal — see FormFieldNumericInput. */}
+            <FormFieldNumericInput
+              id={id}
+              name={name}
+              value={typeof value === 'number' ? value : undefined}
+              onValueChange={handleChange}
+              onBlur={onBlur as React.FocusEventHandler<HTMLInputElement> | undefined}
+              onFocus={onFocus as React.FocusEventHandler<HTMLInputElement> | undefined}
               min={min}
               max={max}
               step={step}
+              disabled={disabled || loading}
+              readOnly={readOnly}
+              required={required}
+              placeholder={placeholder}
+              aria-label={props['aria-label']}
+              aria-describedby={props['aria-describedby']}
+              data-testid={props['data-testid']}
               className={cn(
                 baseInputProps.className,
                 unit && unitPosition === 'left' && 'rounded-l-none',

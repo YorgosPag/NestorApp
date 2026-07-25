@@ -4076,7 +4076,7 @@
     },
     "escape-command-bus": {
       "ssotFile": "src/subapps/dxf-viewer/systems/escape-bus/EscapeCommandBus.ts",
-      "description": "All Escape-key dispatch in the DXF viewer MUST go through escapeBus.register() or the useEscapeHandler() hook (ADR-364). Direct window/document keydown listeners that branch on e.key === 'Escape' are forbidden outside the escape-bus folder. Allowlist contains the three legacy capture hooks that retain non-ESC keys + the registrations shim + tooling that needs to synthesize a fake Escape event for Strategy-handler routing + the inline-rename-keyboard helper (local <input> Enter/Escape, which the bus intentionally skips under editable focus) + the pure 3D shortcut dispatcher, whose FIRST line bails on ESC (returns NOT_HANDLED) so every 3D ESC rung stays a gated escape-bus slot (ADR-364 §10.13) — same drop-ESC precedent as useDimensionKeyboardRouting.mapKey(). ADR-364 §10.14 (Mechanism 3) added two patterns for gaps MEASURED during the Φ3 migrations, each of which had let a live ESC owner through: (a) `.code === 'Escape'` — how bim-3d/animation/use-waypoint-drag-interaction.ts compared, invisible to the two `key ===` patterns; (b) `matchesShortcut(..., 'escape')` — the shortcut-table indirection used by hooks/useDxfToolbarShortcuts.ts and app/useDxfViewerEffects.ts, the first of which was the measured `shadow-owner` of the whole application. WHAT THIS STILL CANNOT SEE (write it down, do not claim clean): a listener that forwards a raw `e.key` into another module which does the comparison there (the §10.5 Κ2-β 'laundered channel'); any new shortcut-table alias other than the literal 'escape'; and any owner that neither preventDefaults nor stops propagation. Those need Mechanism 1 (runtime audit) — the two mechanisms are COMPLEMENTARY, not alternatives. use3DEscapeRegistrations.ts is allowlisted for the same reason as useCanvasEscapeRegistrations.ts: it IS the bus-registration SSoT for its mode, and its ESC references are documentation of the rungs it owns.",
+      "description": "All Escape-key dispatch in the DXF viewer MUST go through escapeBus.register() or the useEscapeHandler() hook (ADR-364). Direct window/document keydown listeners that branch on e.key === 'Escape' are forbidden outside the escape-bus folder. Allowlist contains the three legacy capture hooks that retain non-ESC keys + the registrations shim + tooling that needs to synthesize a fake Escape event for Strategy-handler routing + the inline-rename-keyboard helper (local <input> Enter/Escape, which the bus intentionally skips under editable focus) + the pure 3D shortcut dispatcher, whose FIRST line bails on ESC (returns NOT_HANDLED) so every 3D ESC rung stays a gated escape-bus slot (ADR-364 §10.13) — same drop-ESC precedent as useDimensionKeyboardRouting.mapKey(). ADR-364 §10.14 (Mechanism 3) added two patterns for gaps MEASURED during the Φ3 migrations, each of which had let a live ESC owner through: (a) `.code === 'Escape'` — how bim-3d/animation/use-waypoint-drag-interaction.ts compared, invisible to the two `key ===` patterns; (b) `matchesShortcut(..., 'escape')` — the shortcut-table indirection used by hooks/useDxfToolbarShortcuts.ts and app/useDxfViewerEffects.ts, the first of which was the measured `shadow-owner` of the whole application. WHAT THIS STILL CANNOT SEE (write it down, do not claim clean): a listener that forwards a raw `e.key` into another module which does the comparison there (the §10.5 Κ2-β 'laundered channel'); any new shortcut-table alias other than the literal 'escape'; and any owner that neither preventDefaults nor stops propagation. Those need Mechanism 1 (runtime audit) — the two mechanisms are COMPLEMENTARY, not alternatives. use3DEscapeRegistrations.ts is allowlisted for the same reason as useCanvasEscapeRegistrations.ts: it IS the bus-registration SSoT for its mode, and its ESC references are documentation of the rungs it owns. NEW 2026-07-26 (ADR-706): src/components/ui/numeric-field/use-numeric-field.ts is allowlisted on the SAME editable-focus precedent as inline-rename-keyboard.ts, extended to the MAIN APP. The bus lives in the dxf-viewer subapp (excluded from the root tsconfig) so main-app components cannot import it; useNumericField is itself a registered SSoT (module `numeric-field`), so this remains ONE literal-holding point for every decimal input in the app, not a per-form copy. Applying the ADR-364 §10 T1/T2/T3 criterion honestly: the BUS is not a competitor (it skips INPUT/TEXTAREA focus by design), but the host dialog's Radix DismissableLayer on `document` IS — so the handler consumes ESC only while a pending draft exists and calls stopPropagation(); with nothing left to revert the key bubbles on and closes the dialog (Figma / VS Code / Revit two-stage semantics).",
       "forbiddenPatterns": [
         "e\\.key\\s*===\\s*['\"]Escape['\"]",
         "key\\s*===\\s*['\"]Escape['\"]",
@@ -4093,7 +4093,8 @@
         "src/subapps/dxf-viewer/systems/dynamic-input/keyboard-handlers/",
         "src/subapps/dxf-viewer/ui/utils/inline-rename-keyboard.ts",
         "src/subapps/dxf-viewer/bim-3d/shortcuts/shortcut-dispatcher.ts",
-        "src/subapps/dxf-viewer/bim-3d/shortcuts/use3DEscapeRegistrations.ts"
+        "src/subapps/dxf-viewer/bim-3d/shortcuts/use3DEscapeRegistrations.ts",
+        "src/components/ui/numeric-field/use-numeric-field.ts"
       ],
       "addedDate": "2026-05-18",
       "addedByAdr": "ADR-364",
@@ -4629,6 +4630,28 @@
       "allowlist": [
         "src/services/showcase-core/labels-catalog.ts"
       ]
+    },
+    "numeric-field": {
+      "ssotFile": "src/components/ui/numeric-field/NumericField.tsx",
+      "description": "ADR-706 (2026-07-25) — the app's ONE decimal input lives in src/components/ui/numeric-field/. Found during the Projects E2E verify: `<Input type=\"number\">` bound to a NUMBER state silently commits the wrong value for decimals. Typing 2.4 stored 4, 21.5 stored 5, 70.5 stored 5 (reproduced 5/5 across all three Όροι Δόμησης fields). Mechanism: while the user types `2.`, an input of type number reports e.target.value as the EMPTY STRING, so the controlled parse yields 0, re-renders \"0\", and the next keystroke reads back \"04\". A comma survived only because Chrome accepts it as a valid decimal char under an el locale. ADR-576 had already fixed the PARSE layer (parseLocaleNumber handles both `.` and `,`) — the character never reached the parser. The fix is view/model separation at the INPUT layer: type=\"text\" inputMode=\"decimal\", a STRING draft while focused, a NUMBER model, reconciled on commit — the same conclusion React #11877/#17609, Adobe Spectrum, GOV.UK and MDN all reach. Forbidden: re-implementing NumericField / useNumericField / evaluateNumericExpression anywhere else — import from @/components/ui/numeric-field. This module is a THIN CONSUMER of the existing SSoTs and adds no parse or format rule of its own: parsing delegates to lib/number/locale-number.ts (ADR-576), display to lib/intl-formatting.ts formatNumber (ADR-314). ⚠️ DELIBERATELY NOT GUARDED HERE: a blanket `type=\"number\"` pattern would flag all 187 occurrences across 81 files, most of which are INTEGER fields (floor count, piece count) where type=number is perfectly correct — that is the zero-signal trap CLAUDE.md N.12 warns about. The decimal-field migration is tracked in .claude-rules/pending-ratchet-work.md and needs per-site reading, never a blanket sed. NOT A GAP: PriceInputField in features/property-details stays its own component — its model is a NULLABLE STRING (a price can be \"no price\", a building coefficient cannot), so folding it in would produce an over-parameterised factory (the ADR-698/699/702 failure mode); it shares the display semantics and jscpd:diff confirms zero clones. NOT A GAP: the DXF viewer's FormatterRegistry (ADR-082) and dynamic-input normalizeNumber (ADR-397/513) are a different domain with a different contract, exactly as the comma-normalize module already documents.",
+      "forbiddenPatterns": [
+        "function useNumericField",
+        "function evaluateNumericExpression",
+        "(function|const) NumericField"
+      ],
+      "allowlist": [
+        "src/components/ui/numeric-field/NumericField.tsx",
+        "src/components/ui/numeric-field/use-numeric-field.ts",
+        "src/components/ui/numeric-field/numeric-expression.ts",
+        "src/components/ui/numeric-field/numeric-field-core.ts",
+        "src/components/ui/numeric-field/index.ts",
+        "src/components/ui/numeric-field/__tests__/NumericField.test.tsx",
+        "src/components/ui/numeric-field/__tests__/numeric-expression.test.ts",
+        "src/components/core/FormFields/FormFieldNumericInput.tsx"
+      ],
+      "addedDate": "2026-07-25",
+      "addedByAdr": "ADR-706",
+      "tier": 3
     }
   }
 }
