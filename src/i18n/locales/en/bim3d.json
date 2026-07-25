@@ -580,6 +580,7 @@
     "newComment": "New Comment",
     "placeholder": "Describe the comment...",
     "searchPlaceholder": "Search comments...",
+    "submitFailed": "Could not submit the comment. Please try again.",
     "filter": {
       "all": "All",
       "open": "Open",
@@ -630,7 +631,8 @@
       "maxSize": "Max 5MB per image",
       "invalidType": "Only PNG/JPG allowed",
       "tooLarge": "File exceeds 5MB",
-      "tooMany": "Maximum 5 images allowed"
+      "tooMany": "Maximum 5 images allowed",
+      "uploadFailed": "Attachment upload failed. Please try again."
     },
     "mention": {
       "placeholder": "Search users...",

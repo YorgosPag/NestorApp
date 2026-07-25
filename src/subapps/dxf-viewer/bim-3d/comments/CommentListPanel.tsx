@@ -25,7 +25,8 @@ import {
   useBimCommentsStore,
   selectFilteredComments,
 } from '../stores/BimCommentsStore';
-import { BimCommentsService } from './bim-comments.service';
+import { CommentAttachmentUploader } from './CommentAttachmentUploader';
+import { useNewCommentSubmit } from './use-new-comment-submit';
 import { CommentBadgeIcon } from './CommentBadgeIcon';
 import { BimCommentDetailsPanel } from './BimCommentDetailsPanel';
 import type { BimComment, CommentStatus, CommentType } from './bim-comment-types';
@@ -184,28 +185,13 @@ interface NewCommentFormProps {
 }
 
 function NewCommentForm({ companyId, projectId, userId, userName, onClose, t }: NewCommentFormProps) {
-  const [type, setType] = useState<CommentType>('issue');
-  const [content, setContent] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-
-  async function handleSubmit(): Promise<void> {
-    if (!content.trim() || submitting) return;
-    setSubmitting(true);
-    try {
-      await BimCommentsService.createComment({
-        projectId,
-        companyId,
-        authorId: userId,
-        authorName: userName,
-        type,
-        content: content.trim(),
-        anchor: { type: 'world', position: { x: 0, y: 0, z: 0 } },
-      });
-      onClose();
-    } finally {
-      setSubmitting(false);
-    }
-  }
+  const form = useNewCommentSubmit({
+    companyId,
+    projectId,
+    userId,
+    userName,
+    onSuccess: onClose,
+  });
 
   return (
     <div className="flex flex-col gap-2 border-t border-white/10 p-2">
@@ -216,7 +202,7 @@ function NewCommentForm({ companyId, projectId, userId, userName, onClose, t }: 
         </Button>
       </div>
 
-      <Select value={type} onValueChange={(v) => setType(v as CommentType)}>
+      <Select value={form.type} onValueChange={(v) => form.setType(v as CommentType)}>
         <SelectTrigger className="h-7 text-xs">
           <SelectValue />
         </SelectTrigger>
@@ -230,13 +216,21 @@ function NewCommentForm({ companyId, projectId, userId, userName, onClose, t }: 
       </Select>
 
       <Textarea
-        value={content}
-        onChange={(e) => setContent(e.target.value)}
+        value={form.content}
+        onChange={(e) => form.setContent(e.target.value)}
         placeholder={t('comments.placeholder')}
         rows={3}
         className="resize-none text-xs"
-        disabled={submitting}
+        disabled={form.submitting}
       />
+
+      <CommentAttachmentUploader value={form.staged} onChange={form.setStaged} />
+
+      {form.errorKey && (
+        <p role="alert" className="text-xs text-destructive">
+          {t(form.errorKey)}
+        </p>
+      )}
 
       <div className="flex gap-1.5">
         <Button
@@ -245,7 +239,7 @@ function NewCommentForm({ companyId, projectId, userId, userName, onClose, t }: 
           variant="ghost"
           className="flex-1 text-xs"
           onClick={onClose}
-          disabled={submitting}
+          disabled={form.submitting}
         >
           {t('comments.details.cancel')}
         </Button>
@@ -253,8 +247,8 @@ function NewCommentForm({ companyId, projectId, userId, userName, onClose, t }: 
           type="button"
           size="sm"
           className="flex-1 text-xs"
-          onClick={() => void handleSubmit()}
-          disabled={!content.trim() || submitting}
+          onClick={() => void form.submit()}
+          disabled={!form.canSubmit}
         >
           {t('comments.details.submit')}
         </Button>

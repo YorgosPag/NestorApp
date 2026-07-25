@@ -118,6 +118,22 @@ const CUSTODY_RULES: readonly CustodyRule[] = [
         ? stripExtension(tail[1])
         : null,
   },
+  // 💬 Συνημμένα σχολίων BIM (ADR-366 Φ9/C.2) —
+  // `bim-comment-attachments/{commentId}/{attachmentId}[-thumb].{ext}`.
+  // Το κλειδί είναι ο ΦΑΚΕΛΟΣ: ένα σχόλιο κρατά έως 5 συνημμένα × 2 objects (πλήρες +
+  // μικρογραφία), οπότε το basename είναι το συνημμένο, ποτέ ο ιδιοκτήτης — ίδια
+  // διάκριση με τα `bim-material-textures`.
+  //
+  // Ο κανόνας υπάρχει επειδή η γραφή ανεβάζει ΠΡΙΝ γράψει το σχόλιο (ένα write, καμία
+  // ενδιάμεση κατάσταση): αν το Firestore write αποτύχει μετά από πετυχημένο ανέβασμα,
+  // αυτά ακριβώς τα objects μένουν χωρίς ιδιοκτήτη. Χωρίς κανόνα θα ήταν `unknown` —
+  // ασφαλή, αλλά αθάνατα.
+  {
+    name: 'bim-comment-attachments',
+    collection: COLLECTIONS.BIM_COMMENTS,
+    ownerIdOf: (tail) =>
+      tail.length === 3 && tail[0] === 'bim-comment-attachments' ? tail[1] : null,
+  },
   // 🧱 Γεωμετρία μπλοκ βιβλιοθήκης — `block-library/{blockId}.json`.
   {
     name: 'block-library',

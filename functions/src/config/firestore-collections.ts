@@ -69,6 +69,12 @@ export const COLLECTIONS = {
   // keys custody on the FOLDER (materialId), not the basename (which is the map channel).
   BIM_MATERIALS: 'bim_materials',
 
+  // 💬 BIM COMMENTS (ADR-366 Φ9/C.2) — owner of
+  // `bim-comment-attachments/{commentId}/{attachmentId}[-thumb].{ext}`. Custody keys on the
+  // FOLDER (commentId): one comment holds up to 5 attachments × 2 objects, so the basename is
+  // the attachment, never the owner — the exact distinction ADR-694 was written for.
+  BIM_COMMENTS: 'bim_comments',
+
   // 🧱 BLOCK LIBRARY (ADR-652) — owner of `block-library/{blockId}.json` geometry blobs.
   // Added by ADR-694 Α2 after 10 legitimate blobs were deleted 18–21/07 (§2.3).
   BLOCK_LIBRARY: 'block_library',

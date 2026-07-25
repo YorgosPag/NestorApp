@@ -89,6 +89,36 @@ export function buildEngineerStampPath(params: {
   return `companies/${params.companyId}/engineer-stamps/${params.userId}.${params.ext}`;
 }
 
+/** Ποιο από τα **δύο** objects ενός συνημμένου χτίζεται: το πλήρες ή η μικρογραφία. */
+export type BimCommentAttachmentVariant = 'full' | 'thumb';
+
+/**
+ * Storage path **συνημμένης εικόνας σχολίου BIM** (ADR-366 Φ9/C.2 — wiring 2026-07-26).
+ *
+ * Path scheme:
+ *   `companies/{companyId}/bim-comment-attachments/{commentId}/{attachmentId}[-thumb].{ext}`
+ *
+ * Το `commentId` είναι **φάκελος**, όχι μέρος του basename — και αυτό είναι το μάθημα-ρίζα του
+ * ADR-694: ένα σχόλιο κρατά έως 5 συνημμένα × 2 objects, οπότε η ταυτότητα του ιδιοκτήτη πρέπει
+ * να ζει σε δικό της τμήμα του path. Αν έμπαινε στο basename, ο custody GC θα διάβαζε ως κλειδί
+ * το `{attachmentId}` και θα επαναλάμβανε ακριβώς το σφάλμα του
+ * `bim-material-textures/{materialId}/albedo.jpg` → «albedo».
+ *
+ * Company-scoped ⇒ tenant isolation, όπως το επιβάλλουν οι `storage.rules`
+ * (`@pathId: bim_comment_attachments`). Ντετερμινιστικό ⇒ idempotent: επανάληψη του
+ * ανεβάσματος αντικαθιστά το object, δεν φτιάχνει δεύτερο αντίγραφο.
+ */
+export function buildBimCommentAttachmentPath(params: {
+  companyId: string;
+  commentId: string;
+  attachmentId: string;
+  ext: BimMaterialThumbnailExt;
+  variant: BimCommentAttachmentVariant;
+}): string {
+  const suffix = params.variant === 'thumb' ? '-thumb' : '';
+  return `companies/${params.companyId}/bim-comment-attachments/${params.commentId}/${params.attachmentId}${suffix}.${params.ext}`;
+}
+
 /** PBR texture map channel of a user-uploaded BIM material appearance asset. */
 export type BimMaterialTextureMapName = 'albedo' | 'normal' | 'roughness' | 'ao';
 

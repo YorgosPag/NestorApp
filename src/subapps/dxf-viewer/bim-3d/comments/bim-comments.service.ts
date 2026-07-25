@@ -42,6 +42,17 @@ import type {
 } from './bim-comment-types';
 
 export interface CreateCommentInput {
+  /**
+   * Προ-δεσμευμένο id από `generateBimCommentId()` (ΙΔΙΑ πηγή — N.6, καμία δεύτερη διαδρομή id).
+   *
+   * Το χρειάζεται ο καλών όταν ανεβάζει συνημμένα: το storage path περιέχει το `commentId`,
+   * άρα πρέπει να είναι γνωστό ΠΡΙΝ γραφτεί το έγγραφο. Έτσι το σχόλιο γεννιέται με **ένα**
+   * write, ήδη πλήρες — αντί για create → upload → update, που αφήνει παράθυρο όπου το σχόλιο
+   * φαίνεται χωρίς τα συνημμένα του (ADR-366, απόφαση 2026-07-26).
+   *
+   * Παραλείπεται ⇒ το id παράγεται εδώ, όπως πάντα.
+   */
+  readonly id?: string;
   readonly projectId: string;
   readonly companyId: string;
   readonly authorId: string;
@@ -51,6 +62,8 @@ export interface CreateCommentInput {
   readonly anchor: CommentAnchor;
   readonly mentionedUserIds?: readonly string[];
   readonly assigneeId?: string;
+  /** Ήδη ανεβασμένα στο Storage από τον καλούντα (`uploadCommentAttachments`). */
+  readonly attachments?: readonly CommentAttachment[];
 }
 
 export interface UpdateCommentInput {
@@ -71,7 +84,7 @@ export interface CreateReplyInput {
 
 export const BimCommentsService = {
   async createComment(input: CreateCommentInput): Promise<BimComment> {
-    const id = generateBimCommentId();
+    const id = input.id ?? generateBimCommentId();
     const now = nowISO();
     const payload: BimComment = {
       id,
@@ -85,7 +98,7 @@ export const BimCommentsService = {
       anchor: input.anchor,
       ...(input.assigneeId ? { assigneeId: input.assigneeId } : {}),
       mentionedUserIds: input.mentionedUserIds ?? [],
-      attachments: [],
+      attachments: input.attachments ?? [],
       createdAt: now,
       updatedAt: now,
     };

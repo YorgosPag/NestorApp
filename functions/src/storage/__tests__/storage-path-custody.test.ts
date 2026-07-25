@@ -49,6 +49,36 @@ describe('resolveCustody — κλειδί ιδιοκτησίας ανά σχήμ
     expect(out).toEqual({ kind: 'claimed', rule: 'bim-material-thumbnails', ownerId: MATERIAL });
   });
 
+  it('συνημμένο σχολίου: κλειδί = ο ΦΑΚΕΛΟΣ (commentId) — 5 συνημμένα × 2 objects ανά σχόλιο', async () => {
+    const commentId = 'cmt_bim_4a10edd4-1b0e-4d1e-9a2f-2b3c4d5e6f70';
+    const db = candidateKeyFixtures({ docs: { [`bim_comments/${commentId}`]: true } });
+    const out = await resolveCustody(
+      db,
+      `companies/${COMPANY}/bim-comment-attachments/${commentId}/att_9f2c1d3e.png`,
+    );
+    expect(out).toEqual({ kind: 'claimed', rule: 'bim-comment-attachments', ownerId: commentId });
+  });
+
+  it('μικρογραφία συνημμένου (-thumb) → ΙΔΙΟΣ ιδιοκτήτης· το suffix δεν αλλάζει κλειδί', async () => {
+    const commentId = 'cmt_bim_8676c811-77aa-4b2c-8d1e-0f9a8b7c6d5e';
+    const db = candidateKeyFixtures({ docs: { [`bim_comments/${commentId}`]: true } });
+    const out = await resolveCustody(
+      db,
+      `companies/${COMPANY}/bim-comment-attachments/${commentId}/att_9f2c1d3e-thumb.jpg`,
+    );
+    expect(out).toEqual({ kind: 'claimed', rule: 'bim-comment-attachments', ownerId: commentId });
+  });
+
+  it('συνημμένο με ΔΙΑΓΡΑΜΜΕΝΟ σχόλιο → orphaned (το σενάριο upload-πέτυχε/create-απέτυχε)', async () => {
+    const commentId = 'cmt_bim_10b153e4-3c5d-4e6f-9a0b-1c2d3e4f5a6b';
+    const db = candidateKeyFixtures({ docs: {} });
+    const out = await resolveCustody(
+      db,
+      `companies/${COMPANY}/bim-comment-attachments/${commentId}/att_9f2c1d3e.png`,
+    );
+    expect(out).toEqual({ kind: 'orphaned', rule: 'bim-comment-attachments', ownerId: commentId });
+  });
+
   it('γεωμετρία μπλοκ: κλειδί = blockId (10 τέτοια διαγράφηκαν 18–21/07)', async () => {
     const blockId = 'blklib_13697df4-4b38-4e8b-8dc4-8a44f9bb7814';
     const db = candidateKeyFixtures({ docs: { [`block_library/${blockId}`]: true } });

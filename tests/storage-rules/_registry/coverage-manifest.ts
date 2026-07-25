@@ -347,6 +347,31 @@ export const STORAGE_RULES_COVERAGE: readonly StorageCoverageEntry[] = [
     testFile: 'tests/storage-rules/suites/imported-meshes.storage.test.ts',
     matrix: companyScopedMatrix(),
   },
+
+  // -------------------------------------------------------------------------
+  // 💬 ΣΥΝΗΜΜΕΝΑ ΣΧΟΛΙΩΝ BIM — ADR-366 Φ9/C.2
+  // storage.rules lines 363-377
+  //
+  // Company-scoped με **δεύτερο τμήμα** (`{commentId}`) που ΔΕΝ είναι projectId: το
+  // σχόλιο, όχι το έργο, είναι ο ιδιοκτήτης του αρχείου. Το `company_scoped_with_project`
+  // περιγράφει ακριβώς την ίδια λογική κανόνων (ίδιος gate, ένα επιπλέον τμήμα path),
+  // οπότε δεν προστίθεται νέο pattern για μια διαφορά που ζει μόνο στο όνομα.
+  //
+  // Το συμβόλαιο που φυλάει το suite: **ο απλός μηχανικός ανεβάζει συνημμένο**. Ο
+  // σχολιασμός είναι καθημερινή ενέργεια όποιου βλέπει το μοντέλο — αν κάποιος
+  // «σφίξει» αυτό το path σε super-admin-only (όπως τους curated καταλόγους δίπλα),
+  // τα συνημμένα σταματούν σιωπηλά και το σχόλιο γράφεται χωρίς αυτά.
+  //
+  // Το write έχει δύο επιπλέον σκέλη (μέγεθος + contentType) που δεν εξαρτώνται από
+  // την persona, οπότε δεν προσθέτουν γραμμή στη μήτρα.
+  // -------------------------------------------------------------------------
+  {
+    pathId: 'bim_comment_attachments',
+    pattern: 'company_scoped_with_project',
+    rulesRange: [363, 377],
+    testFile: 'tests/storage-rules/suites/bim-comment-attachments.storage.test.ts',
+    matrix: companyScopedMatrix(),
+  },
 ] as const;
 
 /**

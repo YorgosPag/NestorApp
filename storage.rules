@@ -340,6 +340,43 @@ service firebase.storage {
     }
 
     // =========================================================================
+    // 💬 ΣΥΝΗΜΜΕΝΑ ΣΧΟΛΙΩΝ BIM — ADR-366 Φ9/C.2
+    // =========================================================================
+    // Path: /companies/{companyId}/bim-comment-attachments/{commentId}/{fileName}
+    //
+    // Εικόνες (PNG/JPG) που επισυνάπτει ο μηχανικός σε σχόλιο/issue του 3D. Δύο
+    // objects ανά συνημμένο: `{attachmentId}.{ext}` (πλήρες) + `{attachmentId}-thumb.jpg`
+    // (μικρογραφία που δείχνει η λίστα). Τα download URLs ζουν στο πεδίο `attachments`
+    // του `bim_comments/{commentId}`.
+    //
+    // ΓΙΑΤΙ ΤΟ `{commentId}` ΕΙΝΑΙ ΦΑΚΕΛΟΣ: ένα σχόλιο κρατά έως 5 συνημμένα, άρα ο
+    // ιδιοκτήτης δεν χωράει στο basename. Αν έμπαινε εκεί, ο custody GC θα διάβαζε ως
+    // κλειδί το attachmentId — ακριβώς το σφάλμα που γέννησε το ADR-694 (61 νόμιμα
+    // αρχεία διαγραμμένα). Ο custody κανόνας `bim-comment-attachments` διαβάζει το
+    // δεύτερο τμήμα του path.
+    //
+    // ΓΡΑΨΙΜΟ ΑΠΟ ΤΟΝ ΑΠΛΟ ΜΗΧΑΝΙΚΟ (όχι super-admin-only): το σχολιασμό τον κάνει
+    // όποιος βλέπει το μοντέλο — ίδιο συμβόλαιο με τα imported-meshes, όχι με τους
+    // curated καταλόγους. 5 MB cap, ίδιο με το όριο του client uploader.
+    // =========================================================================
+
+    // @pathId: bim_comment_attachments
+    match /companies/{companyId}/bim-comment-attachments/{commentId}/{fileName} {
+
+      // 📖 READ: μέλη της εταιρείας (η λίστα σχολίων φορτώνει τις μικρογραφίες)
+      allow read: if isAuthenticated() && (belongsToCompany(companyId) || isSuperAdmin());
+
+      // ✍️ WRITE: μέλη της εταιρείας + εικόνα ≤ 5 MB
+      allow write: if isAuthenticated()
+                   && (belongsToCompany(companyId) || isSuperAdmin())
+                   && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/(png|jpe?g)');
+
+      // 🗑️ DELETE: μέλη της εταιρείας (αφαίρεση συνημμένου / διαγραφή σχολίου)
+      allow delete: if isAuthenticated() && (belongsToCompany(companyId) || isSuperAdmin());
+    }
+
+    // =========================================================================
     // 🧱 BLOCK LIBRARY GEOMETRY BLOBS — ADR-652 M2
     // =========================================================================
     // Path: /companies/{companyId}/block-library/{fileName}
