@@ -1,0 +1,324 @@
+# ADR-701 — Tenant Query Scope SSoT (ποιανού εταιρείας γραμμές διαβάζει ένα route)
+
+**Status**: Accepted
+**Date**: 2026-07-25
+**Σχετικά**: ADR-232 (Super-admin entities), ADR-255 (Tenant isolation), ADR-294 (SSoT Ratchet), ADR-298 (Firestore rules coverage), ADR-356 (Super-admin project scope), ADR-373 (ISO 19650 enrichment), ADR-461 (Special levels), ADR-584 (jscpd Anti-Duplication), ADR-602 (API Route-Handler Factory), ADR-697 (Trash-List Route SSoT)
+
+---
+
+## 1. Context
+
+### 1.1 Τι έμεινε από το ADR-697
+
+Το ADR-697 εξήγαγε το `resolveTenantScope` επειδή ο ίδιος κανόνας ήταν
+ξαναγραμμένος στο χέρι σε πολλά route αρχεία:
+
+```ts
+const isSuperAdmin = isRoleBypass(ctx.globalRole);
+const tenantCompanyId = isSuperAdmin && queryCompanyId ? queryCompanyId : ctx.companyId;
+```
+
+Κεντρικοποίησε **πέντε** trash routes και σταμάτησε εκεί — ρητά, ως
+security-sensitive υπόλοιπο για δικό του κύκλο. Αυτό είναι ο κύκλος.
+
+### 1.2 Το «31 αρχεία» ήταν λάθος μέτρηση — και το σωστό νούμερο είναι χειρότερο
+
+Το handoff του #3 κατέγραψε «31 αρχεία ξαναγράφουν το μοτίβο». Η επαναμέτρηση
+(2026-07-25) δείχνει ότι το 31 μετρούσε **κάθε** κλήση `isRoleBypass()`, δηλαδή
+ανακάτευε δύο διαφορετικά ερωτήματα:
+
+| | πλήθος | ερώτημα |
+|---|---|---|
+| διαβάζουν `?companyId=` και σκοπάρουν query | **5** | «ποιανού γραμμές να επιστρέψω;» |
+| ελέγχουν bypass για **ένα** έγγραφο | ~25 | «επιτρέπεται να πειράξει *αυτό*;» — ήδη σωστά μέσω `tenant-isolation` |
+
+Άρα το υπόλοιπο ήταν **5 σημεία, όχι 26**. Το χειρότερο δεν ήταν το πλήθος:
+είναι ότι τα πέντε αντίγραφα **είχαν ήδη αποκλίνει**.
+
+### 1.3 Το εύρημα: τρία αντίγραφα, δύο συμπεριφορές
+
+Ο ίδιος «ένας κανόνας», όπως έτρεχε στην παραγωγή:
+
+| endpoint | super admin **χωρίς** `?companyId=` | super admin **με** `?companyId=X` |
+|---|---|---|
+| `GET /api/properties` | όλα τα tenants (χωρίς φίλτρο) | φιλτράρει σε X ✅ |
+| `GET /api/floors` | όλα τα tenants (χωρίς φίλτρο) | φιλτράρει σε X ✅ |
+| `GET /api/buildings` | όλα τα tenants (χωρίς φίλτρο) | **αγνοεί το X** ❌ |
+
+Το `buildings/route.ts` **υπολόγιζε** το `tenantCompanyId`, το **κατέγραφε** στα
+logs, και μετά ρωτούσε το collection **χωρίς κανένα φίλτρο**:
+
+```ts
+const tenantCompanyId = isSuperAdmin && queryCompanyId ? queryCompanyId : ctx.companyId;
+…
+} else if (isSuperAdmin) {
+  const queryRef = adminDb.collection(COLLECTIONS.BUILDINGS);   // ← το scope δεν έφτασε ποτέ εδώ
+  snapshot = await queryRef.get();
+}
+```
+
+**Αυτό είναι το πραγματικό εύρημα του κύκλου**, και αλλάζει τι πρέπει να χτιστεί:
+ένας resolver δεν αρκεί. Το `resolveTenantScope` ήταν ήδη σωστό — αυτό που
+απέτυχε ήταν ότι το route το υπολόγισε και **δεν το χρησιμοποίησε**.
+
+### 1.4 Δύο ακόμη σημεία: `?companyId=` χωρίς κανέναν έλεγχο
+
+`api/admin/iso19650/costs` και `api/admin/iso19650/backfill` δέχονταν
+οποιοδήποτε `companyId` (query **και** body στο POST) χωρίς να ρωτούν καν αν ο
+καλών δικαιούται. Στηρίζονταν σιωπηλά στο ότι το `admin:migrations:execute` το
+έχει μόνο ο super admin. Αυτό είναι υπόθεση, όχι επιβολή: το permission είναι
+απονεμήσιμο σε custom role. Κλασικός **confused deputy** — ο κώδικας ενεργεί με
+τα δικαιώματά του πάνω σε στόχο που όρισε ο καλών.
+
+### 1.5 Γιατί εδώ δεν υπάρχει δεύτερο δίχτυ
+
+Η βιομηχανική απάντηση στο «ξέχασα το `where(tenant_id)`» είναι **δύο** στρώματα:
+φίλτρο στην εφαρμογή **και** Row-Level Security στη βάση (OWASP Multi-Tenant
+Security Cheat Sheet· Postgres RLS· Azure SQL RLS). Τα routes μας διαβάζουν με το
+**Firebase Admin SDK**, το οποίο **παρακάμπτει by design** τους
+`firestore.rules`. Άρα το δεύτερο στρώμα **δεν υπάρχει** σε αυτό το μονοπάτι.
+
+Όταν το δίχτυ λείπει, η μόνη σωστή απάντηση είναι αυτή που διατυπώνει η
+βιβλιογραφία: *«οποιοσδήποτε πειθαρχημένος developer θυμάται να γράψει
+`where(tenant_id: …)`. Η πρόκληση είναι να σχεδιάσεις σύστημα όπου το να
+**ξεχάσεις** να το γράψεις δεν μπορεί να παραβιάσει την αρχιτεκτονική.»*
+
+---
+
+## 2. Decision
+
+### 2.1 Τρία ερωτήματα, τρεις ονομασμένες συναρτήσεις — όχι flag
+
+Το copy-paste τα έκανε να μοιάζουν ένα. Είναι τρία, και η λάθος επιλογή είναι
+security bug, όχι θέμα στυλ. Ζουν όλα στο `src/lib/auth/tenant-scope.ts`:
+
+| συνάρτηση | super admin, χωρίς `?companyId=` | μη-προνομιούχος ζητά ξένη εταιρεία | χρήση |
+|---|---|---|---|
+| `resolveTenantScope` | η δική του εταιρεία | **αγνοείται** σιωπηλά | κάδοι (ADR-697) |
+| `resolveTenantListScope` | **όλα** τα tenants | **αγνοείται** σιωπηλά | browse endpoints |
+| `requireTenantScope` | η δική του εταιρεία | **403** | ενέργειες *πάνω* σε εταιρεία |
+
+**Γιατί όχι ένα option-bag** (`{ superAdminDefault: 'own' | 'all' }`): flag σε
+συνάρτηση ασφαλείας είναι ακριβώς το πράγμα που μπαίνει λάθος σε ένα review.
+Επιπλέον, το [[reference_over_parameterised_factory_clone]] (ADR-698/699) έδειξε
+ότι το παραμετροποιημένο factory απλώς **μετακομίζει** το clone στο config.
+Ονομασμένες συναρτήσεις: το call site δηλώνει ποιο δόγμα διάλεξε.
+
+### 2.2 `TenantListScope` = discriminated union, όχι nullable companyId
+
+```ts
+export type TenantListScope =
+  | { kind: 'company'; companyId: string; isSuperAdmin: boolean; isCrossTenant: boolean }
+  | { kind: 'all-tenants'; isSuperAdmin: true; isCrossTenant: true };
+```
+
+Στον κλάδο `all-tenants` **δεν υπάρχει πεδίο `companyId`**. Ένα `companyId:
+string | null` θα επέτρεπε σε ένα call site να γράψει
+`where(COMPANY_ID, '==', scope.companyId)` και να φιλτράρει σε `null` — δηλαδή
+σιωπηλά κενή λίστα. Εδώ αυτό δεν γράφεται καν.
+
+### 2.3 Η εφαρμογή ανήκει στο SSoT, όχι στο route
+
+`src/lib/firestore/tenant-scoped-query.ts`:
+
+```ts
+tenantScopedCollection(collectionPath, scope)   // ΔΕΝ παίρνεις collection χωρίς scope
+scopeQueryToTenant(query, scope)                // για query που ήδη υπάρχει
+tenantScopeCompanyId(scope)                     // για logging / σπάνιο branch
+```
+
+Το `tenantScopedCollection` είναι η απάντηση στο §1.3: το scope δεν είναι κάτι
+που *μπορείς* να εφαρμόσεις — είναι ο **τρόπος** που παίρνεις το query. Ίδια
+ιδέα με το `TenantScopedRepository` του OWASP (δέσε το tenant στην κατασκευή),
+προσαρμοσμένη σε Firestore.
+
+### 2.4 Άρνηση, όχι σιωπηλή αλλαγή στόχου (§1.4)
+
+Για migration / cost report, το «σε ξαναστρέφω στη δική σου εταιρεία» είναι
+**χειρότερο** από σφάλμα: το backfill τρέχει σε λάθος tenant και αναφέρει
+επιτυχία. `requireTenantScope` → 403. Συμφωνεί με το OWASP cheat sheet, που σε
+cross-tenant αίτημα σηκώνει `SecurityException`, δεν περιορίζει σιωπηλά.
+
+Το μήνυμα είναι σκόπιμα ουδέτερο και **δεν** επιβεβαιώνει ότι η άλλη εταιρεία
+υπάρχει.
+
+### 2.5 Μία ταξινόμηση σφάλματος για δύο wrappers
+
+Το `TenantIsolationError` δεν αναγνωριζόταν από κανέναν από τους δύο error
+renderers → έπεφτε σε message-matching → **500** αντί για αποφασισμένο 403/404.
+Νέο `asApiError(error)` στο `api-error-types.ts`, το καλούν **και** ο
+`ApiErrorHandler` (μονοπάτι `withAuth`) **και** το `toErrorResponse` του
+`defineRoute`. Το status ενός route δεν πρέπει να εξαρτάται από το ποιο wrapper
+έτυχε να το τυλίξει.
+
+Παρενέργεια: **κάθε** route που πετάει `requireXInTenant` refusal χωρίς δικό του
+`catch` απαντά πλέον σωστά — όχι μόνο τα routes αυτού του κύκλου.
+
+### 2.6 `TenantIsolationError` → δικό του leaf module
+
+Το `tenant-isolation.ts` κάνει `import { getAdminFirestore }` σε module scope.
+Το `tenant-scope.ts` διαφημίζει (και χρειάζεται) να μένει καθαρό από
+server-only imports για να είναι unit-testable. Η κλάση μετακόμισε σε
+`tenant-isolation-error.ts` και **re-exported** από το `tenant-isolation.ts` —
+μηδέν αλλαγή για τους ~20 υπάρχοντες importers.
+
+---
+
+## 3. Τι άλλαξε ανά αρχείο
+
+| αρχείο | πριν | μετά |
+|---|---|---|
+| `lib/auth/tenant-scope.ts` | 1 resolver | 3 δόγματα + `TenantListScope` + `tenantScopeLabel` |
+| `lib/auth/tenant-isolation-error.ts` | — | **νέο** leaf module (η κλάση) |
+| `lib/firestore/tenant-scoped-query.ts` | — | **νέο** — η εφαρμογή του scope |
+| `lib/api/tenant-scope-http.ts` | — | **νέο** — HTTP boundary (query/body → scope, refusal → response) |
+| `lib/api/api-error-types.ts` | — | `asApiError()` — κοινή ταξινόμηση |
+| `lib/api/ApiErrorHandler.ts` + `define-route.ts` | δύο διαφορετικές ταξινομήσεις | και οι δύο μέσω `asApiError` |
+| `api/buildings/route.ts` | scope υπολογιζόταν, **δεν** εφαρμοζόταν | `tenantScopedCollection` |
+| `api/properties/route.ts` | χειρόγραφο μοτίβο | `resolveTenantListScopeFromUrl` |
+| `api/floors/floors.shared.ts` | ντόπιο `resolveTenantCompanyId` (δίδυμο του SSoT) | διαγράφηκε· scope μέσα στα params |
+| `api/admin/iso19650/{costs,backfill}` | `?companyId=` χωρίς έλεγχο | `requireTenantScopeFrom{Query,Body}` + `defineRoute` |
+
+### 3.1 Αλλαγές συμπεριφοράς (ρητές, όχι σιωπηλές)
+
+1. **`GET /api/buildings?companyId=X` (super admin, χωρίς `projectId`)** — πριν
+   αγνοούσε το `X` κι επέστρεφε τα πάντα· τώρα φιλτράρει σε `X`, όπως ήδη έκαναν
+   τα properties/floors. Αφορά **μόνο** bypass ρόλο.
+2. **iso19650**: μη-bypass καλών που ονομάζει ξένη εταιρεία → **403** (πριν:
+   εκτελούνταν). Για τον super admin: καμία αλλαγή.
+3. **iso19650 400-envelope**: από χειροποίητο `NextResponse.json` σε
+   `ApiError(400)` μέσω `defineRoute` — **ίδιο σχήμα** `{ success:false, error }`,
+   ίδιο μήνυμα. Μηδέν in-repo consumers (μετρημένο με grep).
+4. `floors.handlers`: το `isSuperAdmin` υπολογιζόταν με `ctx.globalRole ===
+   'super_admin'` (ωμό string) — τώρα μέσω `isRoleBypass`. Δεύτερος bypass ρόλος
+   θα καταγραφόταν λανθασμένα ως `false`.
+
+---
+
+## 4. Boy Scout (N.0.2) — τι βρέθηκε στη διαδρομή
+
+1. **`floors.handlers`: `loadFloorInTenant`** — το *διάβασε έγγραφο → 404 → 403
+   εκτός αν δικό μου* ήταν γραμμένο **δύο φορές** στο ίδιο αρχείο (update +
+   delete), και **και οι δύο** έγραφαν `ctx.globalRole !== 'super_admin'` αντί
+   για `isRoleBypass`. Ένα αντίγραφο, μέσω του roles SSoT, χωρίς επιπλέον read.
+2. **`floors.shared`: `guardParentScope`** — `verifyBuildingScope` και
+   `verifyProjectScope` διέφεραν σε έναν guard και ένα ουσιαστικό.
+3. **`tenantIsolationResponse`** — το ίδιο mapping refusal→response ήταν
+   γραμμένο στο floors **και** στο properties.
+4. **`defineRoute` (ADR-602) επιτέλους σε χρήση** — καταγεγραμμένο ως «υπάρχει,
+   αχρησιμοποίητο». Τα δύο iso19650 routes είναι οι πρώτοι καταναλωτές.
+5. `costs/route.ts`: αχρησιμοποίητα imports (`extractRequestMetadata`,
+   `NextRequest`) — προϋπήρχαν.
+
+**Ο κύκλος jscpd χρειάστηκε 4 γύρους** (86t+58t → 56t+94t → 94t → καθαρό), όπως
+προβλέπει το [[feedback_jscpd_diff_catches_own_sibling_clones]]. Οι γύροι 2-3
+αποκάλυψαν clones που **δεν** είχα γράψει εγώ — τα ξεσκέπασε το ότι μίκρυναν τα
+σώματα γύρω τους.
+
+---
+
+## 5. Επαλήθευση
+
+| έλεγχος | αποτέλεσμα |
+|---|---|
+| `npx jest src/lib/{auth,api,firestore}` | ✅ 215/215 (13 suites) |
+| `npx jest src/app/api` | ✅ 344/349 — 5 προϋπάρχοντα κόκκινα, βλ. §7.2 |
+| `npm run jscpd:diff` (14 αρχεία) | ✅ καθαρό, 4ος γύρος |
+| νέα tests | **63** (32 doctrine + 12 applier + 13 HTTP/ταξινόμηση + 6 anchor) |
+| `tsc` | ❌ δεν έτρεξε — N.17 |
+
+### 5.1 Το anchor
+
+`src/lib/auth/__tests__/tenant-scope-anchor.test.ts` διαβάζει τα **567** αρχεία
+του `src/app/api` από το filesystem και απαιτεί: κανένα να μη διαβάζει
+`companyId` από query string χωρίς να το δίνει σε resolver του SSoT, και κανένα
+να μην ξαναχτίζει το `isRoleBypass(…) && requested` με το χέρι.
+
+**Τι ΔΕΝ βλέπει** (δηλωμένο, γιατί το «0» χωρίς αυτή τη γραμμή διαβάζεται ως
+«καθαρό» — N.11/N.12):
+
+- `companyId` από **request body** — νόμιμο σε creation endpoints, οπότε το
+  μοτίβο δεν ξεχωρίζει. Η μία περίπτωση που *είναι* απόφαση scope (backfill
+  POST) καρφώνεται ονομαστικά.
+- route params (`/by-company/[companyId]`) — άλλος μηχανισμός.
+- Οτιδήποτε εκτός `src/app/api`.
+
+Ο ίδιος ο detector έχει **self-test** (θετικά + αρνητικά δείγματα), ώστε ένα
+σπασμένο regex να μη γίνει σιωπηλά πράσινο.
+
+---
+
+## 6. Τι ΔΕΝ ενοποιήθηκε — και γιατί
+
+### 6.1 `super-admin-scope.ts` (ADR-356) — **ΠΟΤΕ** μαζί
+
+| | οδηγείται από | super admin χωρίς επιλογή |
+|---|---|---|
+| `resolveSuperAdminProjectScope` (356) | **header switcher** (`ctx.superAdminOverride`) | `filterCompanyId: null` |
+| `tenant-scope` (697/701) | **query string** `?companyId=` | βλ. πίνακα §2.1 |
+
+Διαφορετική **είσοδος**. Ενοποίηση = αλλαγή στο ποιος βλέπει τι.
+Βλ. [[reference_two_tenant_scoping_doctrines]].
+
+### 6.2 `tenant-isolation.ts` (ADR-255)
+
+Απαντά «επιτρέπεται σε **αυτό** το έγγραφο;» — per-document, μετά το read. Άλλο
+ερώτημα από «ποιανού γραμμές να φέρω;», που τίθεται **πριν** χτιστεί το query.
+
+### 6.3 Το companyId φίλτρο στο `hasFloorplan` του floors
+
+Το enrichment query φιλτράρει `files` σε `companyId + entityType + purpose +
+entityId` και **μόνο** αυτός ο συνδυασμός είναι indexed. Στο μονοπάτι
+`all-tenants` θα έπρεπε να πέσει το `companyId`, που απαιτεί **νέο composite
+index deployed πριν** μπορέσει καν να τρέξει — αλλιώς `FAILED_PRECONDITION`.
+Διατηρήθηκε αυτούσια η προ-701 συμπεριφορά μέσω ρητού πεδίου
+`floorplanLookupScope`. Βλ. §7.1.
+
+---
+
+## 7. Εκκρεμότητες
+
+### 7.1 🔴 Απόφαση Giorgio — `hasFloorplan` σε all-tenants browse
+
+Super admin που περιηγείται **όλα** τα tenants παίρνει `hasFloorplan` υπολογισμένο
+μόνο για τη **δική του** εταιρεία· ξένοι όροφοι εμφανίζονται πάντα ως «χωρίς
+κάτοψη». **Προϋπάρχον** (δεν εισήχθη εδώ). Διόρθωση = νέο index
+`entityType + purpose + entityId` + `firebase deploy --only firestore:indexes`.
+
+### 7.2 🔴 Προϋπάρχον κόκκινο — `floors.handlers.create-kind.test.ts`
+
+5 tests, `handleCreateFloor`. Το `siblingsSnap` μπήκε στο `5ab8033d`, **νεότερο**
+από το commit του test (`4418d623`): το fake db double δεν το ξέρει. Άσχετο με
+αυτόν τον κύκλο· επιβεβαιώθηκε ότι ο κώδικας που σκάει υπάρχει αυτούσιος στο HEAD.
+
+### 7.3 Smoke test
+
+Άλλαξαν 5 production auth routes + 2 error renderers. Τα tests καλύπτουν λογική,
+όχι το Next wiring: θέλει άνοιγμα λίστας κτιρίων / ακινήτων / ορόφων.
+
+---
+
+## 8. Google-level δήλωση (N.7.2)
+
+| # | Ερώτημα | Απάντηση |
+|---|---|---|
+| 1 | Proactive ή reactive? | **Proactive** — το scope είναι προϋπόθεση για να αποκτήσεις query, όχι έλεγχος μετά |
+| 2 | Race condition? | **Όχι** — pure resolution, χωρίς state |
+| 3 | Idempotent? | **Ναι** — καθαρές συναρτήσεις |
+| 4 | Belt-and-suspenders? | **Ναι** — resolver + applier + anchor + κοινή ταξινόμηση σφάλματος |
+| 5 | SSoT? | **Ναι** — ένα δόγμα ανά ερώτημα, ένα σημείο εφαρμογής, ένα leaf error |
+| 6 | Await ή fire-and-forget? | **Await** — το scope μπαίνει στο query πριν το read |
+| 7 | Ποιος κατέχει τον κύκλο ζωής? | **Ρητά**: `tenant-scope` αποφασίζει, `tenant-scoped-query` εφαρμόζει, `tenant-scope-http` μεταφράζει |
+
+✅ **Google-level: ΝΑΙ** — το εύρημα δεν ήταν «5 αντίγραφα μιας γραμμής» αλλά
+«τρία αντίγραφα, δύο συμπεριφορές, ένα από τα οποία υπολόγιζε το φίλτρο και δεν
+το εφάρμοζε ποτέ». Η απάντηση δεν είναι ακόμη ένας resolver — είναι ότι το
+ανεφάρμοστο scope έπαψε να είναι γραπτό.
+
+---
+
+## 9. Changelog
+
+| Ημ/νία | Αλλαγή |
+|---|---|
+| 2026-07-25 | **Δημιουργία.** Κύκλος #4 της εκστρατείας (μετά 697/698/699). `resolveTenantListScope` + `requireTenantScope` + `tenantScopedCollection` + `tenant-scope-http` + `asApiError`. Διορθώθηκε η απόκλιση buildings↔properties/floors (§1.3) και το ανεξέλεγκτο `?companyId=` στα iso19650 (§1.4). Boy Scout: `loadFloorInTenant`, `guardParentScope`, `tenantIsolationResponse`, πρώτη χρήση `defineRoute` (ADR-602). 63 νέα tests + anchor με self-test. Registry module `tenant-query-scope`. |

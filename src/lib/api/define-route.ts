@@ -42,7 +42,7 @@ import {
 } from '@/lib/middleware/with-rate-limit';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 import { getErrorMessage } from '@/lib/error-utils';
-import { ApiError } from '@/lib/api/api-error-types';
+import { ApiError, asApiError } from '@/lib/api/api-error-types';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 
 const logger = createModuleLogger('API_ROUTE');
@@ -238,11 +238,14 @@ function toErrorResponse(
   req: NextRequest,
   fallbackError?: string,
 ): NextResponse {
-  // Expected business errors (404/409/400/…) — NOT logged, details spread.
-  if (error instanceof ApiError) {
+  // Expected business errors (404/409/400/403…) — NOT logged, details spread.
+  // ADR-701: classification is shared with ApiErrorHandler so a route's status
+  // does not depend on which wrapper it was built with.
+  const apiError = asApiError(error);
+  if (apiError) {
     return NextResponse.json(
-      { success: false, error: error.message, ...(error.details ?? {}) },
-      { status: error.statusCode },
+      { success: false, error: apiError.message, ...(apiError.details ?? {}) },
+      { status: apiError.statusCode },
     );
   }
 

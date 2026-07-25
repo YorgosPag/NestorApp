@@ -35,7 +35,6 @@ jest.mock('@/lib/firestore/version-check', () => ({
 jest.mock('../floors.shared', () => ({
   buildFloorsQuery: jest.fn(),
   resolveFloorsListParams: jest.fn(),
-  resolveTenantCompanyId: jest.fn(),
   sortFloors: jest.fn(),
 }));
 jest.mock('../floor-stack-reconcile.service', () => ({ reconcileFloorStackAfterEdit: jest.fn() }));

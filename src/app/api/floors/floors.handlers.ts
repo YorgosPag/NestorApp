@@ -25,10 +25,11 @@ import { EntityAuditService } from '@/services/entity-audit.service';
 import type { AuditFieldChange } from '@/types/audit-trail';
 import {
   buildFloorsQuery,
+  loadFloorInTenant,
   resolveFloorsListParams,
-  resolveTenantCompanyId,
   sortFloors,
 } from './floors.shared';
+import { tenantScopeLabel } from '@/lib/auth/tenant-scope';
 import { reconcileFloorStackAfterEdit, reconcileSpecialLevelPlacement } from './floor-stack-reconcile.service';
 
 const logger = createModuleLogger('FloorsRoute');
@@ -38,16 +39,18 @@ export async function handleListFloors(
   ctx: AuthContext
 ): Promise<NextResponse<FloorsListResponse>> {
   try {
-    const params = resolveFloorsListParams(request.url);
-    const tenantCompanyId = resolveTenantCompanyId(ctx, params.queryCompanyId);
-    const isSuperAdmin = ctx.globalRole === 'super_admin';
+    // 🔒 ADR-701: one resolution for logging AND for the query — previously the
+    // logged company and the filtered company were computed by separate code
+    // paths, and `super_admin` was compared as a raw string instead of asking
+    // `isRoleBypass`, so any second bypass role would have logged `false`.
+    const params = resolveFloorsListParams(request.url, ctx);
 
     logger.info('[Floors/List] Fetching floors', {
-      companyId: tenantCompanyId,
+      companyId: tenantScopeLabel(params.scope),
       userId: ctx.uid,
       buildingId: params.buildingId || 'all',
       projectId: params.projectId || 'all',
-      isSuperAdmin,
+      isSuperAdmin: params.scope.isSuperAdmin,
     });
 
     const queryOrResponse = await buildFloorsQuery(ctx, params);
@@ -71,7 +74,7 @@ export async function handleListFloors(
     const floorplanSet = new Set<string>();
     if (floorIds.length > 0) {
       const filesSnap = await db.collection(COLLECTIONS.FILES)
-        .where(FIELDS.COMPANY_ID, '==', tenantCompanyId)
+        .where(FIELDS.COMPANY_ID, '==', params.floorplanLookupScope.companyId)
         .where(FIELDS.ENTITY_TYPE, '==', 'floor')
         .where('purpose', '==', FLOORPLAN_PURPOSES.FLOOR)
         .where(FIELDS.ENTITY_ID, 'in', floorIds.slice(0, 30))
@@ -257,17 +260,11 @@ export async function handleUpdateFloor(
     const { _v: expectedVersion, ...body } = parsedFloor.data;
 
     const db = getAdminFirestore();
-    const floorRef = db.collection(COLLECTIONS.FLOORS).doc(body.floorId);
-    const floorDoc = await floorRef.get();
-
-    if (!floorDoc.exists) {
-      return NextResponse.json({ success: false, error: 'Floor not found' }, { status: 404 });
+    const loaded = await loadFloorInTenant(db, body.floorId, ctx);
+    if (loaded instanceof NextResponse) {
+      return loaded as NextResponse<FloorUpdateResponse>;
     }
-
-    const floorData = floorDoc.data();
-    if (floorData?.companyId !== ctx.companyId && ctx.globalRole !== 'super_admin') {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
-    }
+    const { ref: floorRef, data: floorData } = loaded;
 
     const updates: Record<string, unknown> = {};
     if (body.name !== undefined) updates.name = body.name;
@@ -369,17 +366,11 @@ export async function handleDeleteFloor(
     }
 
     const db = getAdminFirestore();
-    const floorRef = db.collection(COLLECTIONS.FLOORS).doc(floorId);
-    const floorDoc = await floorRef.get();
-
-    if (!floorDoc.exists) {
-      return NextResponse.json({ success: false, error: 'Floor not found' }, { status: 404 });
+    const loaded = await loadFloorInTenant(db, floorId, ctx);
+    if (loaded instanceof NextResponse) {
+      return loaded as NextResponse<FloorDeleteResponse>;
     }
-
-    const floorData = floorDoc.data();
-    if (floorData?.companyId !== ctx.companyId && ctx.globalRole !== 'super_admin') {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
-    }
+    const { ref: floorRef, data: floorData } = loaded;
 
     const siblingsSnap = await db.collection(COLLECTIONS.FLOORS)
       .where(FIELDS.BUILDING_ID, '==', floorData?.buildingId)

@@ -17,7 +17,9 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
-import { isRoleBypass } from '@/lib/auth/roles';
+import { resolveTenantListScopeFromUrl, tenantScopeLabel } from '@/lib/auth/tenant-scope';
+import { tenantScopedCollection } from '@/lib/firestore/tenant-scoped-query';
+import { tenantIsolationResponse } from '@/lib/api/tenant-scope-http';
 import { compareByLocale } from '@/lib/intl-formatting';
 import { requireBuildingInTenant, TenantIsolationError } from '@/lib/auth/tenant-isolation';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
@@ -55,26 +57,19 @@ export const GET = withStandardRateLimit(
         const { searchParams } = new URL(request.url);
         const buildingId = searchParams.get('buildingId');
         const floorId = searchParams.get('floorId');
-        const queryCompanyId = searchParams.get('companyId');
 
-        // 🏢 ENTERPRISE: Super admin can access any company's properties
-        const isSuperAdmin = isRoleBypass(ctx.globalRole);
-        const tenantCompanyId = isSuperAdmin && queryCompanyId
-          ? queryCompanyId
-          : ctx.companyId;
+        // 🔒 ADR-701: browse doctrine, resolved once — see lib/auth/tenant-scope
+        const scope = resolveTenantListScopeFromUrl(request.url, ctx);
 
-        logger.info('[Properties/List] Fetching properties', { companyId: tenantCompanyId, userId: ctx.uid, buildingId: buildingId || 'all', floorId: floorId || 'all', isSuperAdmin });
+        logger.info('[Properties/List] Fetching properties', { companyId: tenantScopeLabel(scope), userId: ctx.uid, buildingId: buildingId || 'all', floorId: floorId || 'all', isSuperAdmin: scope.isSuperAdmin });
 
         // ============================================================================
         // TENANT-SCOPED QUERY (Admin SDK + Tenant Isolation)
-        // Super admin with buildingId: query by buildingId directly (units may
-        // have different companyId than the building's companyId)
         // ============================================================================
 
-        const db = getAdminFirestore();
-        let unitsQuery: FirebaseFirestore.Query = db.collection(COLLECTIONS.PROPERTIES);
+        let unitsQuery: FirebaseFirestore.Query;
 
-        if (buildingId && !isSuperAdmin) {
+        if (buildingId && !scope.isSuperAdmin) {
           try {
             await requireBuildingInTenant({
               ctx,
@@ -83,25 +78,21 @@ export const GET = withStandardRateLimit(
             });
           } catch (error) {
             if (error instanceof TenantIsolationError) {
-              return NextResponse.json({
-                success: false,
-                error: error.code === 'NOT_FOUND' ? 'Building not found' : 'Access denied',
-                details: error.message,
-              }, { status: error.status });
+              return tenantIsolationResponse(error, 'Building not found');
             }
             throw error;
           }
 
-          unitsQuery = unitsQuery.where(FIELDS.BUILDING_ID, '==', buildingId);
-        } else if (isSuperAdmin) {
-          if (queryCompanyId) {
-            unitsQuery = unitsQuery.where(FIELDS.COMPANY_ID, '==', queryCompanyId);
-          }
+          // Isolation here is the ownership check above, NOT a companyId filter:
+          // a unit may legitimately carry a different companyId than its building.
+          unitsQuery = getAdminFirestore()
+            .collection(COLLECTIONS.PROPERTIES)
+            .where(FIELDS.BUILDING_ID, '==', buildingId);
+        } else {
+          unitsQuery = tenantScopedCollection(COLLECTIONS.PROPERTIES, scope);
           if (buildingId) {
             unitsQuery = unitsQuery.where(FIELDS.BUILDING_ID, '==', buildingId);
           }
-        } else {
-          unitsQuery = unitsQuery.where(FIELDS.COMPANY_ID, '==', tenantCompanyId);
         }
 
         if (floorId) {
@@ -125,7 +116,7 @@ export const GET = withStandardRateLimit(
 
         filteredDocs.sort((a, b) => compareByLocale(a.name, b.name));
 
-        logger.info('[Properties/List] Found properties', { count: filteredDocs.length, companyId: tenantCompanyId, buildingId: buildingId || 'all' });
+        logger.info('[Properties/List] Found properties', { count: filteredDocs.length, companyId: tenantScopeLabel(scope), buildingId: buildingId || 'all' });
 
         logger.info('[Properties/List] Complete', { count: filteredDocs.length });
 

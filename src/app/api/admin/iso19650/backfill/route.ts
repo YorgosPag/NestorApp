@@ -20,9 +20,13 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth, extractRequestMetadata, logMigrationExecuted } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+import { extractRequestMetadata, logMigrationExecuted } from '@/lib/auth';
+import type { AuthContext } from '@/lib/auth';
+import { defineRoute } from '@/lib/api/define-route';
+import { requireTenantScopeFromBody, requireTenantScopeFromQuery } from '@/lib/api/tenant-scope-http';
+
+/** Permission both entry points require — declared once so they cannot drift apart. */
+const MIGRATION_PERMISSION = 'admin:migrations:execute' as const;
 import { getAdminFirestore, FieldValue } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -244,38 +248,33 @@ async function handleBackfill(
 // ROUTES
 // ============================================================================
 
-export async function GET(request: NextRequest): Promise<Response> {
-  const handler = withSensitiveRateLimit(
-    withAuth(
-      async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-        const companyId = req.nextUrl.searchParams.get('companyId') ?? '';
-        if (!companyId) {
-          return NextResponse.json({ success: false, error: 'companyId query param required' }, { status: 400 });
-        }
-        return handleBackfill(ctx, companyId, true, DEFAULT_LIMIT);
-      },
-      { permissions: 'admin:migrations:execute' }
-    )
-  );
-  return handler(request);
-}
+export const GET = defineRoute({
+  rateLimit: 'sensitive',
+  auth: { permissions: MIGRATION_PERMISSION },
+  handler: async ({ req, auth }) => {
+    // 🔒 ADR-701 — see the POST below: dry-run or not, the caller may only
+    // name a company it is entitled to.
+    const { companyId } = requireTenantScopeFromQuery(req, auth);
+    return handleBackfill(auth, companyId, true, DEFAULT_LIMIT);
+  },
+});
 
-export async function POST(request: NextRequest): Promise<Response> {
-  const handler = withSensitiveRateLimit(
-    withAuth(
-      async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-        let body: { companyId?: string; limit?: number } = {};
-        try { body = await req.json(); } catch { /* empty body */ }
+export const POST = defineRoute({
+  rateLimit: 'sensitive',
+  auth: { permissions: MIGRATION_PERMISSION },
+  handler: async ({ req, auth }) => {
+    // Body stays hand-parsed rather than schema-parsed: an empty body is a
+    // legal call here, which `safeParseBody` would reject.
+    let body: { companyId?: string; limit?: number } = {};
+    try { body = await req.json(); } catch { /* empty body */ }
 
-        const companyId = body.companyId ?? '';
-        if (!companyId) {
-          return NextResponse.json({ success: false, error: 'companyId required in body' }, { status: 400 });
-        }
-        const limit = Math.min(Math.max(1, body.limit ?? DEFAULT_LIMIT), MAX_LIMIT);
-        return handleBackfill(ctx, companyId, false, limit, req);
-      },
-      { permissions: 'admin:migrations:execute' }
-    )
-  );
-  return handler(request);
-}
+    // 🔒 ADR-701: this one *writes*. A caller that names someone else's
+    // company must be refused, never quietly redirected onto its own —
+    // a backfill that reports success against the wrong tenant is the
+    // worst of the three outcomes. Same rule whether the company arrives
+    // in the query string or, as here, in the body.
+    const { companyId } = requireTenantScopeFromBody(body, auth);
+    const limit = Math.min(Math.max(1, body.limit ?? DEFAULT_LIMIT), MAX_LIMIT);
+    return handleBackfill(auth, companyId, false, limit, req);
+  },
+});

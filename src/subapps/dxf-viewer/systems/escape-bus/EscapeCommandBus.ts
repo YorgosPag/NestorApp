@@ -19,6 +19,11 @@
  *   - SSR-safe — no-op when `window` is undefined.
  *   - Editable-focus guard: handlers without `allowWhenEditable` are skipped
  *     when focus is in INPUT / TEXTAREA / contentEditable.
+ *   - Exclusive consumption: when a handler consumes, the bus calls
+ *     `stopImmediatePropagation()` — sibling `window`-capture listeners are
+ *     silenced too, not just downstream ones (ADR-364 §10.10 Μηχ. 2).
+ *     ⇒ ONE ESC = ONE action. Handlers that do NOT consume leave the press
+ *     untouched, so legitimate downstream owners still see it.
  */
 
 import { installEscapeAuditSentinel, noteBusDispatch } from './escape-dev-audit';
@@ -109,7 +114,30 @@ function dispatch(e: KeyboardEvent): EscapeDispatchResult {
   const result = runHandlerChain(snapshot);
   if (result.consumed) {
     e.preventDefault();
-    e.stopPropagation();
+    // ADR-364 §10.10 Φ2 Μηχανισμός 2 — `stopImmediatePropagation`, ΟΧΙ `stopPropagation`.
+    //
+    // Το `stopPropagation()` σταματά μόνο τους ΚΑΤΑΝΤΗ κόμβους (document capture,
+    // bubble, React onKeyDown). ΔΕΝ αγγίζει τους **αδελφούς** listeners του ίδιου
+    // κόμβου και της ίδιας φάσης — `window` + capture — που είναι ακριβώς η μόνη
+    // πραγματικά επικίνδυνη κατηγορία (§10.2, «Ζώνη Α», 5 αρχεία):
+    //   useCanvasKeyboardShortcuts · use3DShortcuts (→ shortcut-dispatcher)
+    //   useDxfViewerEffects · useColorMenuState · use-waypoint-drag-interaction
+    //
+    // Χωρίς αυτό, ο `useCanvasKeyboardShortcuts` προωθεί ωμό `e.key` στα
+    // trim/scale/stretch/extend (§10.5 Κ2-β), που συγκρίνουν εσωτερικά με
+    // `'Escape'` — ενώ τα ΙΔΙΑ `handleXEscape` έχουν ήδη τρέξει από το
+    // `MODIFY_TOOL` slot ⇒ **διπλή αποστολή σε ένα πάτημα**.
+    //
+    // Ισχύει μόνο επειδή ο bus τρέχει ΠΡΙΝ από αυτούς. Μετρημένο στον browser
+    // (2026-07-25): με ενεργό `trim`, ένα ESC έβγαλε ετυμηγορία `ok` και ΟΧΙ
+    // `preempted` — δηλαδή το `preventDefault()` του `useCanvasKeyboardShortcuts:165`
+    // ΔΕΝ είχε προηγηθεί. ⚠️ Η σειρά είναι σειρά mount, δηλαδή αναδυόμενη· ο
+    // Μηχανισμός 1 (`escape-dev-audit`) είναι ο φύλακας που θα φωνάξει `preempted`
+    // αν κάποιο μελλοντικό refactor την αντιστρέψει.
+    //
+    // Κατά προδιαγραφή το `stopImmediatePropagation()` θέτει ΚΑΙ τη σημαία του
+    // `stopPropagation()` — δεύτερη κλήση θα ήταν νεκρός κώδικας.
+    e.stopImmediatePropagation();
   }
   noteBusDispatch(e, result, preemptedAtEntry);
   return result;

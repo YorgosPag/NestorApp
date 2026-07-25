@@ -21,7 +21,7 @@ export type { ApiErrorContext, ApiErrorResponse, ApiSuccessResponse, ApiResponse
 export { ApiError } from './api-error-types';
 
 import type { ApiErrorContext, ApiErrorResponse, ApiSuccessResponse, ErrorMappingRule } from './api-error-types';
-import { ApiError } from './api-error-types';
+import { ApiError, asApiError } from './api-error-types';
 import { ERROR_MAPPING_RULES } from './api-error-rules';
 import { nowISO } from '@/lib/date-local';
 
@@ -51,20 +51,25 @@ export class ApiErrorHandler {
     const startTime = Date.now();
 
     try {
-      if (ApiError.isApiError(error)) {
+      // ADR-701: a typed tenant refusal is an HTTP answer, not an unknown
+      // failure. `asApiError` is shared with `defineRoute` so both wrappers
+      // classify identically — see api-error-types.
+      const apiError = asApiError(error);
+
+      if (apiError) {
         const requestId = this.generateRequestId();
         const errorResponse: ApiErrorResponse = {
           success: false,
-          error: error.message,
-          errorCode: error.errorCode || `HTTP_${error.statusCode}`,
+          error: apiError.message,
+          errorCode: apiError.errorCode || `HTTP_${apiError.statusCode}`,
           timestamp: nowISO(),
           requestId,
         };
 
-        logger.info(`[API] ${error.statusCode}: ${error.message}`);
+        logger.info(`[API] ${apiError.statusCode}: ${apiError.message}`);
 
         return NextResponse.json(errorResponse, {
-          status: error.statusCode,
+          status: apiError.statusCode,
           headers: {
             'X-Request-ID': requestId,
             'X-Error-Code': errorResponse.errorCode || '',

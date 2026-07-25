@@ -17,10 +17,10 @@
  * 🔒 SECURITY: super_admin ONLY + withSensitiveRateLimit
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { withAuth, extractRequestMetadata } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+import { NextResponse } from 'next/server';
+import type { AuthContext } from '@/lib/auth';
+import { defineRoute } from '@/lib/api/define-route';
+import { requireTenantScopeFromQuery } from '@/lib/api/tenant-scope-http';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -175,22 +175,18 @@ async function handleGetCosts(
 // ROUTE
 // ============================================================================
 
-export async function GET(request: NextRequest): Promise<Response> {
-  const handler = withSensitiveRateLimit(
-    withAuth(
-      async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-        const companyId = req.nextUrl.searchParams.get('companyId') ?? '';
-        if (!companyId) {
-          return NextResponse.json(
-            { success: false, error: 'companyId query param required' },
-            { status: 400 },
-          );
-        }
-        const month = req.nextUrl.searchParams.get('month');
-        return handleGetCosts(ctx, companyId, month);
-      },
-      { permissions: 'admin:migrations:execute' },
-    ),
-  );
-  return handler(request);
-}
+export const GET = defineRoute({
+  rateLimit: 'sensitive',
+  auth: { permissions: 'admin:migrations:execute' },
+  handler: async ({ req, auth }) => {
+    // 🔒 ADR-701: the caller does not get to name any company it likes. A
+    // bypass role may target anyone; anyone else may target only itself and is
+    // refused (403) rather than silently retargeted — reporting another
+    // company's costs as your own is worse than an error. Missing (400) and
+    // refused (403) are both thrown and rendered by defineRoute, in the same
+    // `{ success, error }` envelope this route already returned.
+    const { companyId } = requireTenantScopeFromQuery(req, auth);
+    const month = req.nextUrl.searchParams.get('month');
+    return handleGetCosts(auth, companyId, month);
+  },
+});

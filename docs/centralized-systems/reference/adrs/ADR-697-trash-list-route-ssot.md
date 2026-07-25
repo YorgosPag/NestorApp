@@ -305,4 +305,5 @@ thin specs πάνω στο `useEntityTrashState` (50-70 γρ.), ενώ το `use
 
 | Ημ/νία | Αλλαγή |
 |---|---|
+| 2026-07-25 | **Φάση 3 — το tenant-scope υπόλοιπο έκλεισε στο [ADR-701](ADR-701-tenant-query-scope-ssot.md).** Το «31 αρχεία» αυτού του ADR ήταν υπερμέτρηση (μετρούσε κάθε `isRoleBypass()`): τα πραγματικά δίδυμα ήταν **5**, και είχαν ήδη αποκλίνει σε **δύο** συμπεριφορές. Το `resolveTenantScope` παραμένει ό,τι χρησιμοποιούν οι κάδοι· τα browse endpoints πήραν το `resolveTenantListScope` (το `all-tenants` είναι νόμιμη απάντηση) και οι admin ενέργειες το `requireTenantScope` (403, όχι σιωπηλή αλλαγή στόχου). |
 | 2026-07-25 | **Δημιουργία.** Κύκλος #3 της εκστρατείας κεντρικοποίησης (μετά ADR-695, ADR-696). `createTrashListRoute` + `listTrashed` + `SOFT_DELETE_CONFIG.trashList` + `resolveTenantScope`. 5 routes → 17γραμμα declarations. Boy Scout: `TRASHED_STATUS`, `loadLifecycleTarget`, `ApiError` import. Registry module `trash-list-route` (370 modules). 32 νέα tests. |
