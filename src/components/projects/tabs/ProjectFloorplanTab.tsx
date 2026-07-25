@@ -13,9 +13,14 @@
  * @module components/projects/tabs/ProjectFloorplanTab
  * @enterprise ADR-031 - Canonical File Storage System
  * @enterprise ADR-033 - Floorplan Processing Pipeline
+ * @enterprise ADR-709 - Immutable Storage Path
  *
  * Storage Path:
  * companies/{companyId}/entities/project/{projectId}/domains/construction/categories/floorplans/files/
+ *
+ * ADR-709: `projectId` below is FileRecord metadata only — it no longer reaches
+ * the storage path. Until then this docblock and the prop below disagreed, and
+ * the prop won: files landed under `projects/{id}/entities/project/{id}/`.
  */
 
 'use client';
