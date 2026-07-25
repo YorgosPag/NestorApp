@@ -75,7 +75,7 @@ function OpeningInfoTagCellInput({ state }: { readonly state: OpeningInfoTagEdit
 
   // ADR-364 — Esc cancels the cell edit through the centralized escape-bus (MODAL_DIALOG priority,
   // like TextEditorOverlay; `allowWhenEditable` since the numeric input holds focus), mirroring
-  // every other DXF ESC dispatch. Never an inline `e.key === 'Escape'` branch (escape-command-bus
+  // every other DXF ESC dispatch. Never an inline ESC key comparison (escape-command-bus
   // SSoT / CHECK 3.7). The handler is registered only while this input is mounted (edit in flight).
   useEscapeHandler({
     id: 'opening-info-tag-cell-editor',

@@ -614,7 +614,8 @@
       "deleteConfirm": "Διαγραφή σχολίου;",
       "close": "Κλείσιμο",
       "previousAttachment": "Προηγούμενη εικόνα",
-      "nextAttachment": "Επόμενη εικόνα"
+      "nextAttachment": "Επόμενη εικόνα",
+      "attachmentViewer": "Εικόνα {current} από {total}: {name}"
     },
     "actions": {
       "markInReview": "Αποστολή για Ανασκόπηση",
@@ -632,7 +633,8 @@
     },
     "mention": {
       "placeholder": "Αναζήτηση χρήστη...",
-      "noUsers": "Δεν βρέθηκαν χρήστες"
+      "noUsers": "Δεν βρέθηκαν χρήστες",
+      "instructions": "Πληκτρολογήστε @ για αναφορά σε χρήστη. Με τη λίστα ανοιχτή, χρησιμοποιήστε τα βέλη πάνω και κάτω για πλοήγηση, Enter για επιλογή και Escape για κλείσιμο."
     },
     "anchor": {
       "entity": "Στοιχείο",

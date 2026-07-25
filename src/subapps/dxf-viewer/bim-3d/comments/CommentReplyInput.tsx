@@ -3,14 +3,27 @@
 /**
  * ADR-366 Phase 9 / C.2 — Textarea input for BIM comment replies.
  * @-trigger opens CommentMentionsPicker. Ctrl+Enter submits.
+ *
+ * ADR-364 §10.5 Κ3 / §10.14 — this textarea owns ALL mention keys. The picker
+ * used to carry its own arrow/Enter/Escape handler on an unfocusable
+ * `role="listbox"`, so none of them ever fired; the keys now live on the
+ * element that actually holds focus. The ESC branch below is unchanged and
+ * remains a legitimate local Κ3 handler: while the textarea has focus the bus
+ * skips every slot that is not `allowWhenEditable`, so there is no competitor
+ * to arbitrate and no reason to register with it.
+ *
+ * ARIA: `aria-activedescendant` publishes the active option while DOM focus
+ * stays here — see `CommentMentionsPicker` for why this is the GitHub
+ * `combobox-nav` model and not `role="combobox"`.
  */
 
-import { useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react';
+import { useEffect, useId, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { CommentMentionsPicker } from './CommentMentionsPicker';
+import { useMentionCandidates } from './use-mention-candidates';
 
 interface CommentReplyInputProps {
   readonly onSubmit: (content: string, mentionedIds: readonly string[]) => Promise<void>;
@@ -19,10 +32,27 @@ interface CommentReplyInputProps {
   readonly disabled?: boolean;
 }
 
-function detectMentionQuery(value: string, cursorPos: number): string | null {
+interface MentionContext {
+  /** Text between `@` and the caret. */
+  readonly query: string;
+  /** Index of the `@` itself — the splice anchor. */
+  readonly start: number;
+}
+
+/**
+ * Detects an in-progress mention at the caret.
+ *
+ * Returns the `@` offset alongside the query so the replacement can be spliced
+ * at the caret. The previous implementation returned the query alone and the
+ * caller fell back to `text.replace(/@\w*$/, …)`, which rewrites the LAST
+ * mention in the whole string — editing an earlier `@` in a multi-mention reply
+ * silently corrupted a different one.
+ */
+function detectMentionContext(value: string, cursorPos: number): MentionContext | null {
   const before = value.slice(0, cursorPos);
   const match = before.match(/@(\w*)$/);
-  return match ? match[1] : null;
+  if (!match) return null;
+  return { query: match[1], start: cursorPos - match[0].length };
 }
 
 export function CommentReplyInput({
@@ -34,21 +64,51 @@ export function CommentReplyInput({
   const { t } = useTranslation('bim3d');
   const [text, setText] = useState('');
   const [mentionedIds, setMentionedIds] = useState<readonly string[]>([]);
-  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [mention, setMention] = useState<MentionContext | null>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const caretRef = useRef<number | null>(null);
+
+  const domId = useId();
+  const listboxId = `${domId}-mentions`;
+  const optionIdPrefix = `${domId}-mention-option`;
+  const instructionsId = `${domId}-mention-instructions`;
+
+  const candidates = useMentionCandidates(mention?.query ?? null);
+  const isPickerOpen = mention !== null;
+  const activeOptionId =
+    isPickerOpen && candidates.length > 0 ? `${optionIdPrefix}-${activeIndex}` : undefined;
+
+  useEffect(() => {
+    setActiveIndex(0);
+  }, [mention?.query]);
+
+  // Restore the caret after a mention splice — React re-renders with the new
+  // value and would otherwise leave the caret at the end of the textarea.
+  useEffect(() => {
+    const caret = caretRef.current;
+    if (caret === null) return;
+    caretRef.current = null;
+    textareaRef.current?.setSelectionRange(caret, caret);
+  }, [text]);
 
   function handleChange(e: ChangeEvent<HTMLTextAreaElement>): void {
     const { value } = e.target;
     setText(value);
-    const query = detectMentionQuery(value, e.target.selectionStart ?? value.length);
-    setMentionQuery(query);
+    setMention(detectMentionContext(value, e.target.selectionStart ?? value.length));
   }
 
   function handleMentionSelect(userId: string, userName: string): void {
+    if (!mention) return;
+    const caretPos = textareaRef.current?.selectionStart ?? text.length;
+    const insert = `@${userName} `;
+    const next = text.slice(0, mention.start) + insert + text.slice(caretPos);
+
     setMentionedIds((ids) => (ids.includes(userId) ? ids : [...ids, userId]));
-    setText((prev) => prev.replace(/@\w*$/, `@${userName} `));
-    setMentionQuery(null);
+    caretRef.current = mention.start + insert.length;
+    setText(next);
+    setMention(null);
     textareaRef.current?.focus();
   }
 
@@ -65,24 +125,57 @@ export function CommentReplyInput({
     }
   }
 
+  /** Mention-list navigation. Returns true when the key was consumed. */
+  function handleMentionKey(e: KeyboardEvent<HTMLTextAreaElement>): boolean {
+    if (!isPickerOpen) return false;
+
+    if (e.key === 'Escape') {
+      setMention(null);
+      return true;
+    }
+    if (candidates.length === 0) return false;
+
+    if (e.key === 'ArrowDown') {
+      setActiveIndex((i) => (i + 1) % candidates.length);
+      return true;
+    }
+    if (e.key === 'ArrowUp') {
+      setActiveIndex((i) => (i - 1 + candidates.length) % candidates.length);
+      return true;
+    }
+    if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey) {
+      const picked = candidates[activeIndex];
+      if (!picked) return false;
+      handleMentionSelect(picked.uid, picked.displayName ?? picked.email);
+      return true;
+    }
+    return false;
+  }
+
   function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>): void {
+    // The open mention list claims its keys first — plain Enter must pick a user
+    // rather than insert a newline while the list is showing.
+    if (handleMentionKey(e)) {
+      e.preventDefault();
+      return;
+    }
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       void handleSubmit();
-    }
-    if (e.key === 'Escape' && mentionQuery !== null) {
-      setMentionQuery(null);
     }
   }
 
   return (
     <div className="relative flex flex-col gap-2">
-      {mentionQuery !== null && (
+      {isPickerOpen && (
         <div className="absolute bottom-full left-0 z-10 w-64">
           <CommentMentionsPicker
-            query={mentionQuery}
+            candidates={candidates}
+            activeIndex={activeIndex}
+            onActiveIndexChange={setActiveIndex}
             onSelect={handleMentionSelect}
-            onClose={() => setMentionQuery(null)}
+            listboxId={listboxId}
+            optionIdPrefix={optionIdPrefix}
           />
         </div>
       )}
@@ -96,7 +189,14 @@ export function CommentReplyInput({
         disabled={disabled || submitting}
         rows={2}
         className="resize-none text-xs"
+        aria-autocomplete="list"
+        aria-controls={isPickerOpen ? listboxId : undefined}
+        aria-activedescendant={activeOptionId}
+        aria-describedby={instructionsId}
       />
+      <span id={instructionsId} className="sr-only">
+        {t('comments.mention.instructions')}
+      </span>
 
       <div className="flex justify-end gap-2">
         {onCancel && (

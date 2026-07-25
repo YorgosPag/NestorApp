@@ -34,7 +34,7 @@ import {
   DRAWING_SCALE_MIN,
   DRAWING_SCALE_MAX,
 } from '../../../state/drawing-scale-store';
-// ADR-364 — Escape Command Bus SSoT (no inline e.key === 'Escape' checks)
+// ADR-364 — Escape Command Bus SSoT (no inline ESC key comparison)
 import { useEscapeHandler, ESC_PRIORITY } from '../../../systems/escape-bus';
 // ADR-375 Phase B.4 — «Auto-fit» emits to the scene-aware fit handler (useFitToView).
 import { EventBus } from '../../../systems/events';

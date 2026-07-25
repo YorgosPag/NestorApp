@@ -614,7 +614,8 @@
       "deleteConfirm": "Delete this comment?",
       "close": "Close",
       "previousAttachment": "Previous image",
-      "nextAttachment": "Next image"
+      "nextAttachment": "Next image",
+      "attachmentViewer": "Image {current} of {total}: {name}"
     },
     "actions": {
       "markInReview": "Send for Review",
@@ -632,7 +633,8 @@
     },
     "mention": {
       "placeholder": "Search users...",
-      "noUsers": "No users found"
+      "noUsers": "No users found",
+      "instructions": "Type @ to mention a user. While the list is open, use the up and down arrow keys to navigate, Enter to select and Escape to dismiss."
     },
     "anchor": {
       "entity": "Entity",
