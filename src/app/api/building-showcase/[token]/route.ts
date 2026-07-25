@@ -10,6 +10,11 @@
  * Token lookup: unified `shares` collection only — building showcases are
  * always created via UnifiedSharingService (ADR-315).
  *
+ *
+ * ⚠️ `'none'` rate limit — inherited, not chosen here: the four payload routes
+ * have always been unlimited while the PDF proxies wrap in
+ * `withStandardRateLimit`. Stated explicitly so the gap is reviewable
+ * (ADR-698 §8.2), not closed as a side effect of de-duplication.
  * @module app/api/building-showcase/[token]/route
  */
 

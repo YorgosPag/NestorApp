@@ -351,4 +351,33 @@ describe('public showcase routes ↔ factories (anchor)', () => {
       }
     }
   });
+
+  it('makes every route STATE its rate-limit posture', () => {
+    for (const route of readTokenRoutes()) {
+      const source = fs.readFileSync(path.join(API_DIR, route.file), 'utf8');
+
+      expect(source).toMatch(/createPublicTokenRouteExport\(route, '(standard|none)'\)/);
+    }
+  });
+
+  it('pins the current posture: PDF proxies limited, payload routes not (ADR-698 §8.2)', () => {
+    const posture = Object.fromEntries(
+      readTokenRoutes().map(route => {
+        const source = fs.readFileSync(path.join(API_DIR, route.file), 'utf8');
+        const match = source.match(/createPublicTokenRouteExport\(route, '(\w+)'\)/);
+        return [route.file.replace(/\\/g, '/'), match?.[1]];
+      }),
+    );
+
+    // Not an endorsement — a tripwire. Closing the gap should update this test
+    // deliberately, and nothing should widen it silently.
+    expect(posture).toEqual({
+      'building-showcase/[token]/route.ts': 'none',
+      'building-showcase/[token]/pdf/route.ts': 'standard',
+      'project-showcase/[token]/route.ts': 'none',
+      'project-showcase/[token]/pdf/route.ts': 'standard',
+      'parking-showcase/[token]/route.ts': 'none',
+      'storage-showcase/[token]/route.ts': 'none',
+    });
+  });
 });
