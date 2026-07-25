@@ -42,8 +42,11 @@ export function BuildingDetailsHeader({
     onDeleteBuilding,
     onShowcaseBuilding,
 }: BuildingDetailsHeaderProps) {
-    // ENTERPRISE: i18n hook for translations with namespace readiness check
-    const { t, isNamespaceReady } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline', 'showcase']);
+    // 🏢 ENTERPRISE: every namespace below is in CRITICAL_NAMESPACES (lazy-config.ts),
+    // so it is resolved before this header can mount. The `isNamespaceReady ? t(…) : 'Save'`
+    // guards this file used to carry were a workaround for `showcase` loading lazily —
+    // they showed English literals to a Greek user for one frame and violated N.11.
+    const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline', 'showcase']);
 
     // 🏢 ENTERPRISE: Actions via centralized presets
     // Edit mode: Save (🟢), Cancel (⚪)
@@ -52,36 +55,34 @@ export function BuildingDetailsHeader({
         ? [
             createEntityAction(
                 'save',
-                isSaving
-                    ? (isNamespaceReady ? t('details.saving') : 'Saving...')
-                    : (isNamespaceReady ? t('details.saveBuilding') : 'Save'),
+                isSaving ? t('details.saving') : t('details.saveBuilding'),
                 isSaving ? () => {} : onSave
             ),
             createEntityAction(
                 'cancel',
-                isNamespaceReady ? t('details.cancelEdit') : 'Cancel',
+                t('details.cancelEdit'),
                 onCancel
             ),
         ]
         : [
             ...(onShowcaseBuilding ? [createEntityAction(
                 'showcase',
-                isNamespaceReady ? t('showcase:buildingShowcase.actions.showcase') : 'Showcase',
+                t('showcase:buildingShowcase.actions.showcase'),
                 onShowcaseBuilding
             )] : []),
             ...(onNewBuilding ? [createEntityAction(
                 'new',
-                isNamespaceReady ? t('details.newBuilding') : 'New',
+                t('details.newBuilding'),
                 onNewBuilding
             )] : []),
             ...(onStartEdit ? [createEntityAction(
                 'edit',
-                isNamespaceReady ? t('details.editBuilding') : 'Edit',
+                t('details.editBuilding'),
                 onStartEdit
             )] : []),
             ...(onDeleteBuilding ? [createEntityAction(
                 'delete',
-                isNamespaceReady ? t('details.deleteBuilding') : 'Delete',
+                t('details.deleteBuilding'),
                 onDeleteBuilding
             )] : []),
         ];

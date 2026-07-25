@@ -6,7 +6,7 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import ICU from 'i18next-icu';
-import { loadNamespace, type Namespace, type Language, SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE } from './lazy-config';
+import { loadNamespace, CRITICAL_NAMESPACES, type Language, SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE } from './lazy-config';
 import { remapLegacyTranslationKey } from './namespace-compat';
 import { pseudoPostProcessor, PSEUDO_LANGUAGE } from './pseudo-post-processor';
 
@@ -80,82 +80,16 @@ i18n
 if (typeof window !== 'undefined') {
   // Client-side only - 🏢 ENTERPRISE: Immediate preload (no delay)
   (async () => {
-    // 🏢 ENTERPRISE: Core namespaces - loaded at startup (SAP/Salesforce pattern)
-    const criticalNamespaces: Namespace[] = [
-      'errors',
-      'toasts',
-      'navigation',
-      'navigation-entities',  // 🏢 Split from navigation (ADR-280)
-      'filters',       // 🏢 ENTERPRISE: Generic filter labels (domain separation)
-      'auth',          // 🏢 Auth screens - critical for UX
-      'forms',         // 🏢 ENTERPRISE: Form labels, sections, help texts (company-gemi, service forms)
-      'admin',         // 🏢 ENTERPRISE: Admin pages (AI Inbox, RBAC) - prevents hydration mismatch
-      'crm',           // 🏢 CRM module - tasks, opportunities, inbox
-      'crm-inbox',     // 🏢 Split from crm (ADR-280)
-      'building',      // Building management - core module
-      'building-storage',   // 🏢 Split from building (ADR-280)
-      'building-address',   // 🏢 Split from building (ADR-280)
-      'building-filters',   // 🏢 Split from building (ADR-280)
-      'building-timeline',  // 🏢 Split from building (ADR-280)
-      'building-tabs',      // 🏢 Split from building (ADR-280)
-      'buildingCode',       // 🏢 Building Code Module — ΝΟΚ Phase 2 (ADR-186)
-      'projects',      // Projects module
-      'projects-data',      // 🏢 Split from projects (ADR-280)
-      'projects-ika',       // 🏢 Split from projects (ADR-280)
-      'contacts',      // Contacts module
-      'contacts-core',      // 🏢 Split from contacts (ADR-280)
-      'contacts-form',      // 🏢 Split from contacts (ADR-280)
-      'contacts-relationships', // 🏢 Split from contacts (ADR-280)
-      'contacts-banking',   // 🏢 Split from contacts (ADR-280)
-      'contacts-lifecycle', // 🏢 Split from contacts (ADR-280)
-      'properties',    // 🏢 Properties module (renamed from units — ADR-269)
-      'properties-detail', // 🏢 Read/detail surface split from properties SSOT
-      'properties-enums', // 🏢 Domain vocabulary split from properties SSOT
-      'properties-viewer', // 🏢 Floorplan/viewer surface split from properties SSOT
-      'storage',       // 🏢 Storage module - added 2026-01-24
-      'parking',       // 🏢 Parking module - added 2026-01-24
-      'dxf-viewer',
-      'dxf-viewer-shell',   // 🏢 Split from dxf-viewer (ADR-280)
-      'dxf-viewer-panels',  // 🏢 Split from dxf-viewer (ADR-280)
-      'dxf-viewer-settings', // 🏢 Split from dxf-viewer (ADR-280)
-      'dxf-viewer-wizard',  // 🏢 Split from dxf-viewer (ADR-280)
-      'dxf-viewer-guides',  // 🏢 Split from dxf-viewer (ADR-280)
-      'dxf-schedule',       // 🏢 BIM schedule headers + entity labels (ADR-363 §6) — preloaded to avoid first-selection lazy-merge (ADR-547)
-      'tool-hints',         // 🏢 DXF step-by-step tool hints (ADR-082) — preloaded to avoid first-selection lazy-merge (ADR-547)
-      'bim3d',              // 🏢 BIM 3D Viewer toggle + viewport (ADR-366)
-      'bim-3d-aria',        // 🏢 BIM 3D ARIA entity descriptions (ADR-366 Phase 8.1)
-      'bim-materials',      // 🏢 BIM Material Library editor (ADR-363 Phase 6.5)
-      'geo-canvas',
-      'geo-canvas-drawing', // 🏢 Split from geo-canvas (ADR-280)
-      'accounting',    // 🏢 Accounting subapp - invoices, journal, VAT, tax, assets
-      'accounting-setup',   // 🏢 Split from accounting (ADR-280)
-      'accounting-tax-offices', // 🏢 ΔΟΥ names + regions (DoyPicker — used in contacts)
-      'obligations',   // 🏢 Obligations workspace translations
-      'payments',      // 🏢 Payments module
-      'payments-loans',     // 🏢 Split from payments (ADR-280)
-      'payments-cost-calc', // 🏢 Split from payments (ADR-280)
-      'reports',       // 🏢 Enterprise Reports System (ADR-265)
-      'reports-extended',   // 🏢 Split from reports (ADR-280)
-      'files',         // 🏢 File management
-      'files-media',        // 🏢 Split from files (ADR-280)
-      'procurement',   // 🏢 Procurement module (ADR-267)
-      'common-sales',       // 🏢 Split from common (ADR-280)
-      'common-account',     // 🏢 Split from common (ADR-280)
-      'common-photos',      // 🏢 Split from common (ADR-280)
-      'common-shared',      // 🏢 Split from common (ADR-280)
-      'settings',           // 🏢 Settings pages (shortcuts, etc.)
-      'textToolbar',        // 🏢 DXF text toolbar / Properties panel (ADR-344)
-      'textFindReplace',    // 🏢 DXF text Find & Replace dialog (ADR-344 Phase 9)
-    ];
-
     const saved = safeGetItem(STORAGE_KEYS.PREFERRED_LANGUAGE, '');
     const browser = navigator.language.split('-')[0];
     const preferred = (saved || browser) as Language;
     const validLang: Language = SUPPORTED_LANGUAGES.includes(preferred) ? preferred : DEFAULT_LANGUAGE;
 
     try {
+      // 🏢 SSoT: CRITICAL_NAMESPACES lives in lazy-config.ts and is shared with
+      // preloadCriticalNamespaces() (language switch). Do not restate it here.
       await Promise.all(
-        criticalNamespaces.map(async (ns) => {
+        CRITICAL_NAMESPACES.map(async (ns) => {
           await loadNamespace(ns, validLang);
         })
       );

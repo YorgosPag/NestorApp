@@ -184,79 +184,129 @@ export async function loadNamespace(namespace: Namespace, language?: Language, f
 }
 
 /**
+ * 🏢 SSoT — namespaces loaded eagerly at app boot (SAP/Salesforce pattern).
+ *
+ * ⚠️ THIS IS THE ONLY LIST. `config.ts` (boot preload) and
+ * {@link preloadCriticalNamespaces} (language switch) both read it. Until
+ * 2026-07-25 the two kept **separate** literal arrays which had silently
+ * diverged by 5 entries — `admin`/`procurement`/`settings` were missing from
+ * the language-switch path, so those surfaces fell back to raw keys after a
+ * language change. Never reintroduce a second array. (ADR-547 Boy-Scout flag.)
+ *
+ * ## Admission rule (ADR-279 §9 — raw keys must never reach the user)
+ *
+ * A namespace belongs here when its strings can appear inside a surface that is
+ * **already mounted** — a tab, card, or dialog reached without a route change.
+ * Those renders have no loading boundary, so a lazy fetch paints the raw key
+ * (`locations.newAddress`) for one frame. Gating the render instead is
+ * forbidden: `if (!isNamespaceReady) return …` trades the key flash for a blank
+ * flash on every remount and is blocked by CHECK 3.25 (ADR-267/ADR-300).
+ *
+ * A namespace scoped to its own route stays lazy — route transitions carry
+ * their own loading state, and eager-loading all 94 would defeat code
+ * splitting.
+ */
+export const CRITICAL_NAMESPACES: readonly Namespace[] = [
+  // Shared UI shell — every screen renders these
+  'common',
+  'common-sales',
+  'common-account',
+  'common-photos',
+  'common-shared',
+  'filters',
+  'errors',
+  'toasts',
+  'auth',
+  'forms',
+  'navigation',
+  'navigation-entities',
+  'settings',
+  'admin',
+  'toolbars',           // ⬅️ 2026-07-25: ActionButtons/ToolbarButtons — shared UI primitives
+  'trash',              // ⬅️ 2026-07-25: soft-delete dialogs on projects/storage/parking (ADR-281)
+
+  // Buildings
+  'building',
+  'building-storage',
+  'building-address',
+  'building-filters',
+  'building-timeline',
+  'building-tabs',
+  'buildingCode',
+  'showcase',           // ⬅️ 2026-07-25: BuildingDetailsHeader action + storage/parking details
+
+  // Projects & obligations
+  'projects',
+  'projects-data',
+  'projects-ika',
+  'obligations',
+
+  // Contacts
+  'contacts',
+  'contacts-core',
+  'contacts-form',
+  'contacts-relationships',
+  'contacts-banking',
+  'contacts-lifecycle',
+  'communications',
+  'banking',            // ⬅️ 2026-07-25: ContactBankingTab + sales payment dialogs
+
+  // Properties & spaces
+  'properties',
+  'properties-detail',
+  'properties-enums',
+  'properties-viewer',
+  'storage',
+  'parking',
+  'addresses',          // ⬅️ 2026-07-25: address cards/editor embedded in contacts, projects, buildings, POs
+
+  // DXF viewer + BIM
+  'dxf-viewer',
+  'dxf-viewer-shell',
+  'dxf-viewer-panels',
+  'dxf-viewer-settings',
+  'dxf-viewer-wizard',
+  'dxf-viewer-guides',
+  'dxf-schedule',       // 🏢 BIM schedule headers + entity labels (ADR-363 §6)
+  'tool-hints',         // 🏢 DXF step-by-step tool hints (ADR-082)
+  'bim3d',
+  'bim-3d-aria',
+  'bim-materials',
+  'textToolbar',
+  'textFindReplace',
+  'geo-canvas',
+  'geo-canvas-drawing',
+
+  // Files
+  'files',
+  'files-media',
+
+  // Accounting & payments
+  'accounting',
+  'accounting-setup',
+  'accounting-tax-offices',
+  'payments',
+  'payments-loans',
+  'payments-cost-calc',
+
+  // CRM & reports
+  'crm',
+  'crm-inbox',
+  'reports',
+  'reports-extended',
+
+  // Procurement
+  'procurement',
+  'quotes',             // ⬅️ 2026-07-25: ContactQuotesSection/RfqInvites — tabs inside the contact card
+];
+
+/**
  * Preload critical namespaces
  * 🏢 ENTERPRISE: These namespaces are loaded at app startup for instant availability
  */
 export async function preloadCriticalNamespaces(language: Language = 'el') {
-  // 🏢 ENTERPRISE: Core namespaces loaded at startup (SAP/Salesforce pattern)
-  const critical: Namespace[] = [
-    'common',
-    'common-sales',
-    'common-account',
-    'common-photos',
-    'common-shared',
-    'filters',
-    'errors',
-    'toasts',
-    'auth',
-    'forms',
-    'building',
-    'building-storage',
-    'building-address',
-    'building-filters',
-    'building-timeline',
-    'building-tabs',
-    'buildingCode',
-    'navigation',
-    'navigation-entities',
-    'projects',
-    'projects-data',
-    'projects-ika',
-    'obligations',
-    'contacts',
-    'contacts-core',
-    'contacts-form',
-    'contacts-relationships',
-    'contacts-banking',
-    'contacts-lifecycle',
-    'communications',
-    'properties',
-    'properties-detail',
-    'properties-enums',
-    'properties-viewer',
-    'storage',
-    'parking',
-    'dxf-viewer',
-    'dxf-viewer-shell',
-    'dxf-viewer-panels',
-    'dxf-viewer-settings',
-    'dxf-viewer-wizard',
-    'dxf-viewer-guides',
-    'dxf-schedule',       // 🏢 BIM schedule headers + entity labels (ADR-363 §6) — keep in sync with config.ts boot list
-    'tool-hints',         // 🏢 DXF step-by-step tool hints (ADR-082) — keep in sync with config.ts boot list
-    'bim3d',
-    'bim-3d-aria',
-    'bim-materials',
-    'textToolbar',
-    'textFindReplace',
-    'geo-canvas',
-    'geo-canvas-drawing',
-    'files',
-    'files-media',
-    'accounting',
-    'accounting-setup',
-    'accounting-tax-offices',
-    'payments',
-    'payments-loans',
-    'payments-cost-calc',
-    'crm',
-    'crm-inbox',
-    'reports',
-    'reports-extended',
-  ];
-
   await Promise.all(
-    critical.map(namespace => loadNamespace(namespace, language))
+    CRITICAL_NAMESPACES.map(namespace => loadNamespace(namespace, language))
   );
 }
 

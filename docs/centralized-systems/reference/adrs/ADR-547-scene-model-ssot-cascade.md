@@ -268,8 +268,11 @@ parity για το panel. **Tests:** 33/33 (9 store + 17 combobox + 7 action). �
   **~92ms** (`loadNamespace ← lazy-config:580`) — τα namespaces `dxf-schedule` + `tool-hints` ΔΕΝ ήταν στη boot
   preload λίστα → lazy deep-merge την ώρα του mouseup (**εφάπαξ**· cached μετά). Fix (proactive vs reactive,
   N.7.2 Q1, μηδέν νέος κώδικας): προστέθηκαν στις ΔΥΟ preload λίστες (`config.ts` boot + `lazy-config.ts`
-  `preloadCriticalNamespaces`). ⚠️ **Boy-Scout flag (N.0.2):** οι δύο λίστες είναι **διπλότυπες** (overlapping
-  arrays) — υποψήφια ενοποίηση σε ΕΝΑ SSoT (ξεχωριστό task). Τα recurring κόστη του trace (Radix Select open
+  `preloadCriticalNamespaces`). ✅ **Boy-Scout flag ΕΚΛΕΙΣΕ 2026-07-25** (ADR-279 Phase 4): οι δύο διπλότυπες
+  λίστες ενοποιήθηκαν στο `CRITICAL_NAMESPACES` (`lazy-config.ts`). Είχαν ήδη **αποκλίνει κατά 5** entries —
+  `admin`/`procurement`/`settings` έλειπαν από το μονοπάτι αλλαγής γλώσσας → ωμά κλειδιά μετά από language
+  switch. Gate: `src/i18n/__tests__/critical-namespaces.test.ts` (textual assertion ότι το `config.ts` δεν
+  ξαναδηλώνει τη λίστα). Τα recurring κόστη του trace (Radix Select open
   ~227ms, React commit ~578ms) κυριαρχούνται από **dev-instrumentation** (`run`/`createTask`/installHook) →
   χρειάζεται **production-build trace** για πραγματικό recurring bottleneck.
 - **2026-06-28** — Stage 4 **Option B** IMPLEMENTED (UNCOMMITTED, Opus 4.8): full retained-mode / per-key field
