@@ -19,11 +19,9 @@
  *   - SSR-safe — no-op when `window` is undefined.
  *   - Editable-focus guard: handlers without `allowWhenEditable` are skipped
  *     when focus is in INPUT / TEXTAREA / contentEditable.
- *   - Exclusive consumption: when a handler consumes, the bus calls
- *     `stopImmediatePropagation()` — sibling `window`-capture listeners are
- *     silenced too, not just downstream ones (ADR-364 §10.10 Μηχ. 2).
- *     ⇒ ONE ESC = ONE action. Handlers that do NOT consume leave the press
- *     untouched, so legitimate downstream owners still see it.
+ *   - Consumption stops DOWNSTREAM only (`stopPropagation`). Sibling
+ *     `window`-capture listeners still run — deliberately, until the 3D gizmo
+ *     owns an ESC_PRIORITY slot. See ADR-364 §10.11 for the measured reason.
  */
 
 import { installEscapeAuditSentinel, noteBusDispatch } from './escape-dev-audit';
@@ -114,30 +112,21 @@ function dispatch(e: KeyboardEvent): EscapeDispatchResult {
   const result = runHandlerChain(snapshot);
   if (result.consumed) {
     e.preventDefault();
-    // ADR-364 §10.10 Φ2 Μηχανισμός 2 — `stopImmediatePropagation`, ΟΧΙ `stopPropagation`.
+    // ADR-364 §10.11 — ΓΙΑΤΙ `stopPropagation` ΚΑΙ ΟΧΙ `stopImmediatePropagation`.
     //
     // Το `stopPropagation()` σταματά μόνο τους ΚΑΤΑΝΤΗ κόμβους (document capture,
-    // bubble, React onKeyDown). ΔΕΝ αγγίζει τους **αδελφούς** listeners του ίδιου
-    // κόμβου και της ίδιας φάσης — `window` + capture — που είναι ακριβώς η μόνη
-    // πραγματικά επικίνδυνη κατηγορία (§10.2, «Ζώνη Α», 5 αρχεία):
-    //   useCanvasKeyboardShortcuts · use3DShortcuts (→ shortcut-dispatcher)
-    //   useDxfViewerEffects · useColorMenuState · use-waypoint-drag-interaction
+    // bubble, React onKeyDown). ΔΕΝ αγγίζει τους **αδελφούς** του ίδιου κόμβου και
+    // της ίδιας φάσης (`window` + capture) — τη «Ζώνη Α» του §10.10.
     //
-    // Χωρίς αυτό, ο `useCanvasKeyboardShortcuts` προωθεί ωμό `e.key` στα
-    // trim/scale/stretch/extend (§10.5 Κ2-β), που συγκρίνουν εσωτερικά με
-    // `'Escape'` — ενώ τα ΙΔΙΑ `handleXEscape` έχουν ήδη τρέξει από το
-    // `MODIFY_TOOL` slot ⇒ **διπλή αποστολή σε ένα πάτημα**.
+    // Το §10.6/§10.10 πρότεινε αναβάθμιση σε `stopImmediatePropagation()` (Μηχ. 2)
+    // ώστε ένα ESC = μία ενέργεια. **Μετρήθηκε στον browser 2026-07-25 και είναι
+    // ΠΑΛΙΝΔΡΟΜΗΣΗ αν μπει μόνο του**: σιωπά τον `shortcut-dispatcher.ts:232`, που
+    // σήμερα είναι ο ΜΟΝΟΣ που κλείνει το 3D gizmo ⇒ το gizmo δεν κλείνει ποτέ.
     //
-    // Ισχύει μόνο επειδή ο bus τρέχει ΠΡΙΝ από αυτούς. Μετρημένο στον browser
-    // (2026-07-25): με ενεργό `trim`, ένα ESC έβγαλε ετυμηγορία `ok` και ΟΧΙ
-    // `preempted` — δηλαδή το `preventDefault()` του `useCanvasKeyboardShortcuts:165`
-    // ΔΕΝ είχε προηγηθεί. ⚠️ Η σειρά είναι σειρά mount, δηλαδή αναδυόμενη· ο
-    // Μηχανισμός 1 (`escape-dev-audit`) είναι ο φύλακας που θα φωνάξει `preempted`
-    // αν κάποιο μελλοντικό refactor την αντιστρέψει.
-    //
-    // Κατά προδιαγραφή το `stopImmediatePropagation()` θέτει ΚΑΙ τη σημαία του
-    // `stopPropagation()` — δεύτερη κλήση θα ήταν νεκρός κώδικας.
-    e.stopImmediatePropagation();
+    // ⇒ Ο Μηχ. 2 μπαίνει ΜΑΖΙ με τον Μηχ. 4 (slot `EDIT_GIZMO_3D`), ποτέ πριν.
+    // Ο φύλακας αυτής της εξάρτησης είναι test — βλ. `EscapeCommandBus.test.ts`,
+    // «ΦΥΛΑΚΑΣ ΕΞΑΡΤΗΣΗΣ Μηχ. 2 ⇄ Μηχ. 4».
+    e.stopPropagation();
   }
   noteBusDispatch(e, result, preemptedAtEntry);
   return result;

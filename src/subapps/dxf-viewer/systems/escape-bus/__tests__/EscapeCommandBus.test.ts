@@ -112,6 +112,82 @@ describe('event consumption', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
+// ADR-364 §10.11 — ΦΥΛΑΚΑΣ ΕΞΑΡΤΗΣΗΣ Μηχ. 2 ⇄ Μηχ. 4
+//
+// Η διαφορά `stopPropagation` vs `stopImmediatePropagation` ΔΕΝ φαίνεται σε
+// κατάντη listener — φαίνεται ΜΟΝΟ σε **αδελφό** του ίδιου κόμβου και φάσης
+// (`window` + capture). Αυτά τα tests καρφώνουν αυτόν ακριβώς τον αδελφό, και
+// κοκκινίζουν αν κάποιος αναβαθμίσει τον bus σε `stopImmediatePropagation()`
+// (Μηχ. 2) ΧΩΡΙΣ να έχει προηγηθεί το slot `EDIT_GIZMO_3D` (Μηχ. 4).
+//
+// ΓΙΑΤΙ: μετρημένο στον browser 2026-07-25. Με τον Μηχ. 2 μόνο του, ο
+// `bim-3d/shortcuts/shortcut-dispatcher.ts:232` — ο ΜΟΝΟΣ που κλείνει σήμερα
+// το 3D gizmo — σιωπά, και το gizmo δεν κλείνει με κανέναν αριθμό πατημάτων.
+// Δεν είναι θεωρητικό: επαληθεύτηκε A/B στον ίδιο browser, ίδια συνεδρία.
+// ────────────────────────────────────────────────────────────────────────────
+
+describe('window-capture siblings — ο φύλακας της εξάρτησης Μηχ. 2 ⇄ Μηχ. 4', () => {
+  const siblings: Array<(e: KeyboardEvent) => void> = [];
+
+  /** Αδελφός στο `window` capture, εγγεγραμμένος ΜΕΤΑ τον bus (όπως στην πράξη). */
+  function addWindowCaptureSibling(fn: (e: KeyboardEvent) => void): void {
+    siblings.push(fn);
+    window.addEventListener('keydown', fn as EventListener, { capture: true });
+  }
+
+  afterEach(() => {
+    siblings.splice(0).forEach((fn) => {
+      window.removeEventListener('keydown', fn as EventListener, { capture: true });
+    });
+  });
+
+  it('ο αδελφός ΕΞΑΚΟΛΟΥΘΕΙ να τρέχει όταν ο bus καταναλώνει — αυτό κρατά ζωντανό το 3D gizmo', () => {
+    escapeBus.register(makeHandler({ id: 'consume', priority: ESC_PRIORITY.MODAL_DIALOG }));
+    const gizmoCloser = jest.fn(); // ≙ shortcut-dispatcher.ts:232
+    addWindowCaptureSibling((e) => { if (e.key === 'Escape') gizmoCloser(); });
+
+    fireKey('Escape');
+
+    // ⚠️ ΑΝ ΑΥΤΟ ΓΙΝΕΙ 0: κάποιος έβαλε `stopImmediatePropagation()` στον bus.
+    // Πρώτα ο Μηχ. 4 (EDIT_GIZMO_3D slot) — αλλιώς το gizmo μένει ανοιχτό.
+    expect(gizmoCloser).toHaveBeenCalledTimes(1);
+  });
+
+  it('ο αδελφός τρέχει και όταν κανένα slot δεν διεκδικεί — η σιωπή του bus μένει σιωπή', () => {
+    escapeBus.register({ id: 'pass', priority: 500, canHandle: () => true, handle: () => false });
+    const sibling = jest.fn();
+    addWindowCaptureSibling(sibling);
+
+    fireKey('Escape');
+
+    // Ζώνη Β (§10.10.Α): ελλείπουσες εγγραφές, ΟΧΙ παρακάμψεις — ενεργούν στη
+    // σιωπή που αφήνει ο bus. Θεραπεία = μετανάστευση (Φ3), όχι σιώπηση.
+    expect(sibling).toHaveBeenCalledTimes(1);
+  });
+
+  it('η κατανάλωση σταματά τους ΚΑΤΑΝΤΗ — εκεί το stopPropagation δουλεύει ήδη', () => {
+    escapeBus.register(makeHandler({ id: 'consume', priority: 500 }));
+    const downstream = jest.fn();
+    document.addEventListener('keydown', downstream, { capture: true });
+
+    fireKey('Escape');
+
+    document.removeEventListener('keydown', downstream, { capture: true });
+    expect(downstream).not.toHaveBeenCalled();
+  });
+
+  it('πλήκτρο εκτός ESC δεν αγγίζεται ποτέ', () => {
+    escapeBus.register(makeHandler({ id: 'consume', priority: 500 }));
+    const sibling = jest.fn();
+    addWindowCaptureSibling(sibling);
+
+    fireKey('Enter');
+
+    expect(sibling).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
 // Registration lifecycle
 // ────────────────────────────────────────────────────────────────────────────
 

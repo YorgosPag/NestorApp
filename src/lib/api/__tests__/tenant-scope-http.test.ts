@@ -1,5 +1,5 @@
 /**
- * Tenant scope at the HTTP boundary (ADR-701).
+ * Tenant scope at the HTTP boundary (ADR-702).
  *
  * The doctrine itself is tested in `lib/auth/__tests__/tenant-scope.test.ts`.
  * These cases cover the translation layer: that a missing company is a 400 and

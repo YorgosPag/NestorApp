@@ -23,7 +23,7 @@ export interface FloorsListParams {
   buildingId: string | null;
   projectId: string | null;
   /**
-   * 🔒 ADR-701: resolved once, here — the route never re-derives who may read
+   * 🔒 ADR-702: resolved once, here — the route never re-derives who may read
    * whose floors. Carried in the params object so `buildFloorsQuery` cannot be
    * called without it.
    */
@@ -35,9 +35,9 @@ export interface FloorsListParams {
    * That lookup filters `files` by `companyId + entityType + purpose + entityId`,
    * and only that field combination is indexed. Dropping `companyId` on the
    * all-tenants browse path would need a new composite index deployed before it
-   * could run at all, so the pre-ADR-701 behaviour is preserved verbatim: a
+   * could run at all, so the pre-ADR-702 behaviour is preserved verbatim: a
    * super admin browsing every tenant gets `hasFloorplan` computed against their
-   * own company. Known gap, recorded in ADR-701 §7 — not introduced here.
+   * own company. Known gap, recorded in ADR-702 §7 — not introduced here.
    */
   floorplanLookupScope: TenantScope;
 }
@@ -125,7 +125,7 @@ export interface LoadedFloor {
 /**
  * Load a floor and confirm the caller may act on it.
  *
- * ADR-701 — the update and delete handlers each carried their own copy of
+ * ADR-702 — the update and delete handlers each carried their own copy of
  * *read document → 404 if missing → 403 unless mine*, and both spelled the
  * privileged escape as `ctx.globalRole !== 'super_admin'`: a raw string, not
  * `isRoleBypass`. Any second bypass role would have been refused access to its

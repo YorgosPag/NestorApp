@@ -1,5 +1,5 @@
 /**
- * ⚓ ADR-701 anchor — no route may hand-derive its own tenant scope.
+ * ⚓ ADR-702 anchor — no route may hand-derive its own tenant scope.
  *
  * The rule this guards is one line long, which is why it spread to a dozen route
  * files in the first place and why three copies of it had already drifted into
@@ -22,7 +22,7 @@
  *   body-sourced case that *is* a scope decision (ISO-19650 backfill POST) is
  *   pinned by name below instead.
  * - Route params (`/by-company/[companyId]`) — a different mechanism, out of
- *   scope for ADR-701.
+ *   scope for ADR-702.
  * - Anything outside `src/app/api`.
  */
 
@@ -34,7 +34,7 @@ const API_ROOT = join(process.cwd(), 'src', 'app', 'api');
 /** Reads `companyId` straight out of a URL's query string. */
 const QUERY_READ = /searchParams\s*\.\s*get\(\s*['"]companyId['"]\s*\)/;
 
-/** Any resolver from the ADR-697/701 family. */
+/** Any resolver from the ADR-697/702 family. */
 const SSOT_RESOLVER = /resolveTenantScope|resolveTenantListScope|requireTenantScope/;
 
 /** The hand-rolled derivation the ADR replaced, in its canonical shape. */
@@ -59,13 +59,13 @@ const API_FILES = listTypeScriptFiles(API_ROOT).map((file) => ({
   source: readFileSync(file, 'utf8'),
 }));
 
-describe('ADR-701 anchor — tenant scope is resolved, never re-derived', () => {
+describe('ADR-702 anchor — tenant scope is resolved, never re-derived', () => {
   it('finds route files to check at all (guards against a silently empty scan)', () => {
     expect(API_FILES.length).toBeGreaterThan(100);
   });
 
   it('still detects the pattern it polices — a regex that matches nothing proves nothing', () => {
-    // Self-test, not a codebase count: after ADR-701 the API tree legitimately
+    // Self-test, not a codebase count: after ADR-702 the API tree legitimately
     // contains zero raw reads, so counting matches would assert nothing. What
     // must stay true is that the detector would still fire if one came back.
     expect(QUERY_READ.test("const c = searchParams.get('companyId');")).toBe(true);
@@ -102,7 +102,7 @@ describe('ADR-701 anchor — tenant scope is resolved, never re-derived', () => 
   });
 });
 
-describe('ADR-701 anchor — the endpoints that carried the duplicate', () => {
+describe('ADR-702 anchor — the endpoints that carried the duplicate', () => {
   function sourceOf(path: string): string {
     const found = API_FILES.find((file) => file.path === path);
     if (!found) throw new Error(`Anchor is stale: ${path} no longer exists`);

@@ -223,7 +223,7 @@ export type { SuperAdminProjectScope, SuperAdminScopeMode } from './super-admin-
 export { resolveSuperAdminProjectScope } from './super-admin-scope';
 
 // =============================================================================
-// TENANT SCOPE — `?companyId=` list scoping (ADR-697 / ADR-701)
+// TENANT SCOPE — `?companyId=` list scoping (ADR-697 / ADR-702)
 // =============================================================================
 
 export type { TenantScope, TenantListScope } from './tenant-scope';

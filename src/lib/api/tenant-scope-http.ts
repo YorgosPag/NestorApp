@@ -1,5 +1,5 @@
 /**
- * 🔒 TENANT SCOPE AT THE HTTP BOUNDARY (ADR-701)
+ * 🔒 TENANT SCOPE AT THE HTTP BOUNDARY (ADR-702)
  *
  * `lib/auth/tenant-scope` is deliberately transport-free — it takes an
  * `AuthContext` and a string, so it stays unit-testable without Next.js. This
@@ -14,7 +14,7 @@
  * missing.
  *
  * @module lib/api/tenant-scope-http
- * @enterprise ADR-701 — Tenant Query Scope SSoT
+ * @enterprise ADR-702 — Tenant Query Scope SSoT
  * @see lib/auth/tenant-scope — the doctrine these helpers apply
  */
 

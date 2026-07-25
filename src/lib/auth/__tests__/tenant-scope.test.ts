@@ -129,7 +129,7 @@ describe('resolveTenantScopeFromUrl', () => {
 });
 
 // =============================================================================
-// ADR-701 — the browse doctrine (`all-tenants` is a legal answer)
+// ADR-702 — the browse doctrine (`all-tenants` is a legal answer)
 // =============================================================================
 
 describe('resolveTenantListScope — regular users', () => {
@@ -159,7 +159,7 @@ describe('resolveTenantListScope — regular users', () => {
 });
 
 describe('resolveTenantListScope — super admin', () => {
-  it('spans every tenant when no company is named — the ADR-701 difference', () => {
+  it('spans every tenant when no company is named — the ADR-702 difference', () => {
     const scope = resolveTenantListScope(makeCtx('super_admin'), null);
 
     expect(scope.kind).toBe('all-tenants');
@@ -220,7 +220,7 @@ describe('resolveTenantListScopeFromUrl', () => {
 });
 
 // =============================================================================
-// ADR-701 — the strict doctrine (refuse, never retarget)
+// ADR-702 — the strict doctrine (refuse, never retarget)
 // =============================================================================
 
 describe('requireTenantScope', () => {

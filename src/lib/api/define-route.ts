@@ -239,7 +239,7 @@ function toErrorResponse(
   fallbackError?: string,
 ): NextResponse {
   // Expected business errors (404/409/400/403…) — NOT logged, details spread.
-  // ADR-701: classification is shared with ApiErrorHandler so a route's status
+  // ADR-702: classification is shared with ApiErrorHandler so a route's status
   // does not depend on which wrapper it was built with.
   const apiError = asApiError(error);
   if (apiError) {

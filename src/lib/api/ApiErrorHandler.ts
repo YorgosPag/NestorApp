@@ -51,7 +51,7 @@ export class ApiErrorHandler {
     const startTime = Date.now();
 
     try {
-      // ADR-701: a typed tenant refusal is an HTTP answer, not an unknown
+      // ADR-702: a typed tenant refusal is an HTTP answer, not an unknown
       // failure. `asApiError` is shared with `defineRoute` so both wrappers
       // classify identically — see api-error-types.
       const apiError = asApiError(error);

@@ -31,7 +31,7 @@
  * if (projectId) query = query.where(FIELDS.PROJECT_ID, '==', projectId);
  *
  * @module lib/firestore/tenant-scoped-query
- * @enterprise ADR-701 — Tenant Query Scope SSoT
+ * @enterprise ADR-702 — Tenant Query Scope SSoT
  * @see lib/auth/tenant-scope — resolves the scope this module applies
  */
 

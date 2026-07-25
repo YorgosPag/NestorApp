@@ -102,7 +102,7 @@ export class ApiError extends Error {
  * 403/404. Left unmapped it fell through to message matching and surfaced as a
  * 500, i.e. "we broke" instead of "you may not".
  *
- * @enterprise ADR-701 — Tenant Query Scope SSoT
+ * @enterprise ADR-702 — Tenant Query Scope SSoT
  */
 export function asApiError(error: unknown): ApiError | null {
   if (ApiError.isApiError(error)) {

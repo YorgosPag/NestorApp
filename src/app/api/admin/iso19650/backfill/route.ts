@@ -23,14 +23,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { extractRequestMetadata, logMigrationExecuted } from '@/lib/auth';
 import type { AuthContext } from '@/lib/auth';
 import { defineRoute } from '@/lib/api/define-route';
+import { isRoleBypass } from '@/lib/auth/roles';
 import { requireTenantScopeFromBody, requireTenantScopeFromQuery } from '@/lib/api/tenant-scope-http';
-
-/** Permission both entry points require — declared once so they cannot drift apart. */
-const MIGRATION_PERMISSION = 'admin:migrations:execute' as const;
 import { getAdminFirestore, FieldValue } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+
+/** Permission both entry points require — declared once so they cannot drift apart. */
+const MIGRATION_PERMISSION = 'admin:migrations:execute' as const;
 
 const logger = createModuleLogger('Iso19650Backfill');
 
@@ -128,7 +129,9 @@ async function handleBackfill(
   limit: number,
   request?: NextRequest,
 ): Promise<NextResponse> {
-  if (ctx.globalRole !== 'super_admin') {
+  // ADR-702: was `ctx.globalRole !== 'super_admin'` — a raw string comparison that
+  // would refuse any *other* bypass role its own privileges. Asks the roles SSoT now.
+  if (!isRoleBypass(ctx.globalRole)) {
     logger.warn('BLOCKED: Non-super_admin attempted ISO 19650 backfill', {
       email: ctx.email,
       globalRole: ctx.globalRole,
@@ -252,7 +255,7 @@ export const GET = defineRoute({
   rateLimit: 'sensitive',
   auth: { permissions: MIGRATION_PERMISSION },
   handler: async ({ req, auth }) => {
-    // 🔒 ADR-701 — see the POST below: dry-run or not, the caller may only
+    // 🔒 ADR-702 — see the POST below: dry-run or not, the caller may only
     // name a company it is entitled to.
     const { companyId } = requireTenantScopeFromQuery(req, auth);
     return handleBackfill(auth, companyId, true, DEFAULT_LIMIT);
@@ -268,7 +271,7 @@ export const POST = defineRoute({
     let body: { companyId?: string; limit?: number } = {};
     try { body = await req.json(); } catch { /* empty body */ }
 
-    // 🔒 ADR-701: this one *writes*. A caller that names someone else's
+    // 🔒 ADR-702: this one *writes*. A caller that names someone else's
     // company must be refused, never quietly redirected onto its own —
     // a backfill that reports success against the wrong tenant is the
     // worst of the three outcomes. Same rule whether the company arrives

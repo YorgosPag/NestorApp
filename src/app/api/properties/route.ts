@@ -58,7 +58,7 @@ export const GET = withStandardRateLimit(
         const buildingId = searchParams.get('buildingId');
         const floorId = searchParams.get('floorId');
 
-        // 🔒 ADR-701: browse doctrine, resolved once — see lib/auth/tenant-scope
+        // 🔒 ADR-702: browse doctrine, resolved once — see lib/auth/tenant-scope
         const scope = resolveTenantListScopeFromUrl(request.url, ctx);
 
         logger.info('[Properties/List] Fetching properties', { companyId: tenantScopeLabel(scope), userId: ctx.uid, buildingId: buildingId || 'all', floorId: floorId || 'all', isSuperAdmin: scope.isSuperAdmin });

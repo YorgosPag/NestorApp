@@ -22,7 +22,7 @@
  * the same: the caller never hand-derives its own scope — it asks for a resolved
  * scope object and hands that to the query builder.
  *
- * ## The three questions (ADR-701)
+ * ## The three questions (ADR-702)
  *
  * Copy-pasting made these look like one rule. They are three, and picking the
  * wrong one is a security bug rather than a style choice:
@@ -61,7 +61,7 @@
  *
  * @module lib/auth/tenant-scope
  * @enterprise ADR-697 — Trash-List Route SSoT (tenant scoping extracted here)
- * @enterprise ADR-701 — Tenant Query Scope SSoT (list + strict doctrines)
+ * @enterprise ADR-702 — Tenant Query Scope SSoT (list + strict doctrines)
  * @see lib/auth/tenant-isolation — per-document ownership checks (ADR-255)
  * @see lib/auth/super-admin-scope — header-switcher scoping (ADR-356)
  * @see lib/firestore/tenant-scoped-query — applies a resolved scope to a query

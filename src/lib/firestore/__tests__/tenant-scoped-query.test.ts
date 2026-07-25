@@ -1,5 +1,5 @@
 /**
- * Tenant-scoped query — the *applying* half of tenant isolation (ADR-701).
+ * Tenant-scoped query — the *applying* half of tenant isolation (ADR-702).
  *
  * The resolver is tested next door in `lib/auth/__tests__/tenant-scope.test.ts`.
  * What matters here is narrower and, on the evidence of the buildings endpoint,

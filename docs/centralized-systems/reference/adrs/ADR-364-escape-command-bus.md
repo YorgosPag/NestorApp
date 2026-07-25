@@ -737,6 +737,86 @@ mount που κανένα static tool δεν μπορεί.
 με τα όριά του μετρημένα και καρφωμένα σε test αντί να δηλώνονται σε σχόλιο.
 ⚠️ Το **σύνολο** της Φ2 παραμένει PARTIAL: Μηχανισμοί 2–4 δεν ξεκίνησαν.
 
+### 10.11 Φ2 Μηχανισμός 2 — ΜΕΤΡΗΘΗΚΕ ΣΤΟΝ BROWSER ΚΑΙ ΜΠΛΟΚΑΡΕΤΑΙ (2026-07-25)
+
+> **Αυτή η ενότητα αναθεωρεί τη σειρά του §10.10.** Ο Μηχ. 2 υλοποιήθηκε, μετρήθηκε ζωντανά,
+> **προκάλεσε παλινδρόμηση** και επαναφέρθηκε. Ο κώδικας κερδίζει (N.0.1).
+
+#### Α. Οι ζωντανές ετυμηγορίες — ο Μηχ. 1 διαβάστηκε επιτέλους σε browser
+
+`localhost:3000/dxf/viewer`, dev build, Chrome. **Πρώτα επικυρώθηκε το ίδιο το όργανο**: το
+`report()` κάνει early-return στο `ok` (γρ. 104), άρα **η σιωπή δεν είναι απόδειξη**. Στήθηκε
+θετικό control — listener σε `document` capture (δηλαδή **μετά** τους window-capture) που καλεί
+`preventDefault()` ενώ ο bus δεν διεκδικεί ⇒ η σεντινέλα **όφειλε** να πει `shadow-owner`. Το είπε.
+Μόνο μετά από αυτό μετρήθηκαν τα σενάρια.
+
+| Ενέργεια | Ετυμηγορία | Κατανάλωσε ο bus; |
+|---|---|---|
+| Σχεδίαση γραμμής (1ο σημείο) | `ok` | ναι |
+| Marquee / lasso drag | `ok` | ναι |
+| 3D με ανοιχτό gizmo (×3 πατήματα) | `ok` ×3 | ναι ×3 |
+| Color dialog (MODAL) | `ok` | ναι |
+| Dropdown κλίμακας | `ok` | ναι |
+| Εστίαση σε `<input>` | `ok` | όχι (σωστά) |
+| **Ενεργό `trim` (Κ2-β)** | **`ok`** | **ναι** |
+
+**Καμία `starved`, καμία `preempted`, κανένα πραγματικό `shadow-owner`.**
+
+#### Β. Το `trim` απάντησε το ερώτημα σειράς mount — ο bus ΕΙΝΑΙ πρώτος
+
+Το `useCanvasKeyboardShortcuts:165` καλεί `e.preventDefault()` όταν το `handleTrimKeyDown('Escape')`
+καταναλώσει (`useTrimTool.ts:305`). **Αν έτρεχε πριν τον bus, ο bus θα έβλεπε
+`preemptedAtEntry = true` ⇒ ετυμηγορία `preempted`.** Με ενεργό `trim` βγήκε **`ok`**.
+⇒ Ο bus εγγράφεται **πριν** τον `useCanvasKeyboardShortcuts`, άρα το `stopImmediatePropagation()`
+**θα** έκοβε την αλυσίδα προώθησης του §10.5 Κ2-β.
+
+⚠️ Η σειρά είναι **σειρά mount, δηλαδή αναδυόμενη** — όχι εγγύηση. Φύλακας: ο Μηχ. 1 θα φωνάξει
+`preempted` αν κάποιο refactor την αντιστρέψει.
+
+#### Γ. Γιατί ο Μηχ. 2 ΔΕΝ μπαίνει μόνος του — μετρημένη παλινδρόμηση
+
+Ο Μηχ. 2 μπήκε (`stopImmediatePropagation()` στο `dispatch()`), jest **36/36**, και δοκιμάστηκε
+ζωντανά. Αποτέλεσμα, με A/B στον ίδιο browser και ίδια συνεδρία:
+
+| | 1ο ESC | 2ο ESC | 3ο–4ο ESC |
+|---|---|---|---|
+| **Πριν** (`stopPropagation`) | panel + ribbon tab κλείνουν | **gizmo κλείνει** | καμία αλλαγή |
+| **Με Μηχ. 2** (`stopImmediatePropagation`) | panel + ribbon tab κλείνουν | — | **το gizmo ΔΕΝ κλείνει ΠΟΤΕ** |
+
+**Αιτία:** ο `bim-3d/shortcuts/shortcut-dispatcher.ts:232` είναι **Ζώνη Α** και σήμερα ο **ΜΟΝΟΣ**
+που κλείνει το gizmo. Ο Μηχ. 2 τον σιωπά, και **δεν υπάρχει slot `EDIT_GIZMO_3D` να τον παραλάβει**.
+Το αποτέλεσμα είναι χειρότερο από την αρχική κατάσταση: η επιλογή καθαρίζεται αλλά το gizmo μένει
+**ορφανό** στην οθόνη.
+
+> **Η εξάρτηση είναι αντίστροφη από το §10.6/§10.10.** Ο Μηχ. 4 δεν είναι «τελευταίος» — είναι
+> **προϋπόθεση** του Μηχ. 2. Σειρά: **Μηχ. 4 ⇒ Μηχ. 2**, ή και οι δύο στο ίδιο commit.
+
+#### Δ. Τι έμεινε στο δέντρο
+
+- `EscapeCommandBus.ts` — παραμένει `stopPropagation()`. Το σχόλιο τεκμηριώνει **γιατί** και δείχνει
+  εδώ, ώστε να μη «διορθωθεί» ξανά από άγνοια.
+- `EscapeCommandBus.test.ts` — **4 νέα tests ως φύλακας της εξάρτησης** (σύνολο **36/36**). Καρφώνουν
+  ότι ο αδελφός `window`-capture **εξακολουθεί** να τρέχει όταν ο bus καταναλώνει. Γίνονται **κόκκινα**
+  αν κάποιος βάλει `stopImmediatePropagation()` χωρίς τον Μηχ. 4 — δηλαδή η παλινδρόμηση πιάνεται
+  στο presubmit αντί στην οθόνη του Giorgio.
+
+#### Ε. Δύο διορθώσεις στην ταξινόμηση του §10.5
+
+1. **Κ2 #4 `eyedropper.ts:133` είναι Firefox-only, όχι «ΔΕΥΤΕΡΟ ΖΩΝΤΑΝΟ BUG».** Το
+   `openEyedropper()` (γρ. 51-54) παίρνει το **native `EyeDropper`** branch σε Chrome/Edge· η
+   `openDomEyedropper()` — που περιέχει τον handler — **δεν καλείται ποτέ** εκεί. Επαληθεύτηκε
+   ζωντανά (`'EyeDropper' in window === true`). Παραμένει νόμιμος στόχος μετανάστευσης, με
+   **χαμηλότερη** προτεραιότητα.
+2. **Νέο ζωντανό εύρημα, ανεξάρτητο του Μηχ. 2 — η σκάλα του 3D σταματά νωρίς.** Με επιλεγμένη
+   κολώνα: 1ο ESC → panel/ribbon· 2ο → gizmo· **3ο → τίποτα**, και το στοιχείο μένει επιλεγμένο
+   (επιβεβαιωμένο με τον δείκτη μακριά — δεν είναι hover· το status bar κρατά «Στύλος · 500×250mm»).
+   Ο bus **κατανάλωσε** και στα τρία (`ok`, `defaultPrevented` μετά τον bus). Δηλαδή **handler του
+   bus καταναλώνει χωρίς ορατή ενέργεια**, μπλοκάροντας χαμηλότερες προτεραιότητες. Ανήκει στη Φ3.
+
+✅ **Google-level: ΝΑΙ** για τη μέτρηση — θετικό control πριν από κάθε ισχυρισμό, A/B για αιτιότητα,
+και η παλινδρόμηση καρφώθηκε σε test αντί να γραφτεί σε σχόλιο.
+❌ **Google-level: ΟΧΙ** για να μπει ο Μηχ. 2 μόνος του — είναι τεκμηριωμένη παλινδρόμηση.
+
 ---
 
 ## 11. Changelog
@@ -751,4 +831,5 @@ mount που κανένα static tool δεν μπορεί.
 | 2026-06-03 | **Boy-Scout Group 4 — 10 secondary components migrated.** PropertiesPalette + QuickPropertiesMiniPanel: window listeners αντικαταστάθηκαν με `useEscapeHandler` (bus, GROUP A). DimStyleCreateDialog + LayerStateDropdown (LayerStateSaveButton): τοπικό `e.key==='Escape'` αφαιρέθηκε — Radix Dialog/Popover onEscapeKeyDown → onOpenChange αρκεί (GROUP B). LayerItem, ColorGroupItem, LayerStateDropdownPopover, LayerStateManageRow (hook στο LayerStateManagePanel parent), TextOverrideEditor (FieldTokenInput sub-component), StairPresetsSection: bus hook με `allowWhenEditable: true` + `canHandle` gate (GROUP C). GripContextMenu + useGripContextMenuController ελέγχθηκαν — μόνο `contextmenu` listener, χωρίς `keydown`/Escape — εκτός scope. SSoT baseline: 149→129 violations (−20), 99→88 files (−11). tsc: 0 errors. Jest EscapeCommandBus: 24/24 PASS. | Claude Sonnet 4.6 |
 | 2026-07-25 | **Φ1 ENFORCEMENT — κριτήριο διάκρισης + ταξινόμηση (νέο §10). ΚΑΜΙΑ αλλαγή κώδικα.** Αφορμή: μετρημένο στο browser test του ADR-692 — ένα ESC ακύρωσε marquee **και** έκλεισε gizmo, επειδή `stopPropagation()` δεν σταματά sibling listeners στον **ίδιο** κόμβο (`window`, capture). **(1) Κριτήριο T1/T2/T3** («υπάρχει ανταγωνιστής;», όχι «είναι input field;»), που συμβιβάζει δύο αντικρουόμενα προηγούμενα του ίδιου ADR — Group 4 GROUP C (bus) vs `inline-rename-keyboard.ts` (τοπικό): και τα δύο σωστά, διακριτικό ο ανταγωνιστής. **(2) Ταξινομία ανταγωνιστών** (bus capture, Radix `DismissableLayer` σε document capture, react-aria `useOverlay`, `HOT_GRIP_OP` P975). **(3) Το «24» ήταν λάθος φακός**: τρία ανεξάρτητα ιδιώματα — G (global listener + `Escape`) = 24, R (ratchet regex) = 23, **G∩R = 7**, + I (`matchesShortcut(e,'escape')`, πεζό, αόρατο σε **αμφότερα**) = 2 ⇒ **42 αρχεία**. Νέα κενά regex: `e.code === 'Escape'` (**το gizmo bug**, `shortcut-dispatcher.ts:232`) και `e.key !== 'Escape'` (`useZoomWindowTool.ts:70`). **(4) Ταξινόμηση 19 Κ1 / 21 Κ2 / 2 Κ3.** Κ3 ήταν εξ ορισμού αδύνατο να βρεθεί στα 24 (το grep έψαχνε global listeners). **(5) Νέα ζωντανά bugs**: `eyedropper.ts:133` (ένα ESC ακυρώνει eyedropper **και** κλείνει όλο τον color picker μέσω react-aria ancestor)· `PromptDialog.tsx:124` (το `HOT_GRIP_OP` κλέβει το ESC σε grip flow)· **διπλή αποστολή** — ο regex-καθαρός `useCanvasKeyboardShortcuts.ts:351` προωθεί ωμό `e.key` στα trim/scale/stretch/extend, που συγκρίνουν εσωτερικά, ενώ τα **ίδια** `handleXEscape` είναι ήδη εγγεγραμμένα σε `MODIFY_TOOL` ⇒ εκτελούνται **δύο φορές** ανά πάτημα. **Ο ratchet μετρά το string, όχι τη συμπεριφορά.** **(6) CHECK 3.7 αποκωδικοποιημένο**: staged-only (`check-ssot-imports.js:317`), per-file άθροισμα, `current === baseline` ⇒ `same` ⇒ περνά σιωπηλά για πάντα — γι' αυτό ζει το `useTrimTool.ts` (baseline 1 / τρέχον 1, εκτός allowlist). Baseline: **41** dxf-viewer αρχεία (όχι 0). **(7) Διόρθωση drift §6** (N.0.1 — ο κώδικας κερδίζει): το §6 τεκμηριώνει 2 άλλα patterns + 5 allowlist entries· το πραγματικό registry έχει 2 patterns + **8** entries, και το `addEventListener…Escape` αφαιρέθηκε σωστά (γραμμικό grep, δεν έπιανε τίποτα). **(8) Νεκρός κώδικας** προς διαγραφή αντί μετανάστευσης: `useEntityDrag` chain (barrel-only, αντικαταστάθηκε από `EntityBodyDragStore` που είναι σωστά στον bus), `useDrawingKeyboardShortcuts`, `createKeyboardHandler`, `CommentMentionsPicker` keydown (τίποτα δεν εστιάζει το listbox — και bug προσβασιμότητας). Το knip αγνοεί το dxf-viewer. **(9) Allowlist μπορεί να στενέψει**: 3 από 4 keyboard-core entries δεν έχουν πλέον matching literal· μένει το `useDimToolRouting.ts:140`. ⚠️ Αλλά η αφαίρεση του `useCanvasKeyboardShortcuts.ts` θα «πράσινιζε» αρχείο που είναι **Κ2 δομικά**. Φ2 απαιτεί ratchet-down των 41 baseline entries, όχι μόνο νέο pattern. Έρευνα Revit/VS Code από το handoff — δεν επαναλήφθηκε. | Claude Opus 5 + Γιώργος Παγώνης |
 | 2026-07-25 | **§10.10 — Φ2 Μηχανισμός 1 ΥΛΟΠΟΙΗΘΗΚΕ (dev-time audit). Καμία αλλαγή στη δρομολόγηση.** Πριν τον κώδικα μετρήθηκε η **τοπολογία** των ανταγωνιστών (στόχος + φάση ανά listener) και **δύο ισχυρισμοί του §10.6 δεν επιβίωσαν**. **(1) Δεν είναι «17 Κ2», είναι δύο ζώνες**: το `stopImmediatePropagation()` αγγίζει **μόνο** τους 5 αδελφούς σε `window` capture (`useCanvasKeyboardShortcuts`, `use3DShortcuts`→gizmo, `useDxfViewerEffects`, `useColorMenuState`, `use-waypoint-drag-interaction`)· οι υπόλοιποι **12 είναι κατάντη** (document capture / bubble / React bubble) και τους σταματά **ήδη** το υπάρχον `stopPropagation()` — δεν είναι παρακάμψεις του μηχανισμού αλλά **ελλείπουσες εγγραφές**, άρα θεραπεία = Φ3 μετανάστευση, ΟΧΙ Μηχ. 2. Επιβεβαιώνει το §10.2 («μόνη επικίνδυνη κατηγορία = global capture»). **(2) Ο ανιχνευτής που πρότεινε το §10.6 έχει δύο δομικά τυφλά σημεία**: ο bus **δεν είναι εγγυημένα πρώτος** (σειρά = σειρά mount ⇒ ανταγωνιστής που εγγράφεται μετά είναι αόρατος) και **λιμοκτονείται** από `stopImmediatePropagation()` προγενέστερου listener (`useCanvasKeyboardShortcuts.ts:145` το καλεί ήδη) ⇒ ο ισχυρισμός «πιάνει και τα 3 ιδιώματα και τη διπλή αποστολή» **δεν ισχύει**. **Λύση: σεντινέλα σε χρόνο import** (πριν κάθε effect ⇒ πρώτη) που στιγματίζει το συμβάν και κρίνει σε `setTimeout(0)` — **αφού** τελειώσει η διάδοση, όταν το `defaultPrevented` είναι τελικό (`queueMicrotask` λάθος: ο checkpoint τρέχει **ανάμεσα** στους listeners). 4 ετυμηγορίες: `ok` / **`starved`** / **`preempted`** / **`shadow-owner`** — οι δύο τελευταίες είναι ακριβώς ό,τι ο αρχικός ανιχνευτής έχανε. **Τυφλό σημείο ΚΑΡΦΩΜΕΝΟ ΣΕ TEST**: σιωπηλός ανταγωνιστής (ούτε `preventDefault` ούτε `stop*`) βγάζει `ok` — μετρημένοι `eyedropper.ts:132`, `ZoomControls.tsx:82`, `useZoomWindowTool.ts:70` (3/17) ⇒ **Μηχ. 1 και 3 συμπληρωματικοί, όχι εναλλακτικοί**· το test υπάρχει ώστε το `ok` να μη διαβαστεί ως «καθαρό» (παθολογία N.11/N.12). **Νέα**: `escape-dev-audit.ts` (170 γρ., dev-only, SSR-safe, `WeakMap`) + 8 tests· `EscapeCommandBus.ts` +3 γραμμές (install σε import· `preemptedAtEntry` **πριν** την αλυσίδα). **jest 32/32** (24 προϋπάρχοντα αμετάβλητα)· `jscpd:diff` καθαρό (N.18). ⚠️ **Εκκρεμεί browser** — το ESC αποδεικνύεται με πάτημα πλήκτρου, και οι ζωντανές ετυμηγορίες απαντούν εμπειρικά το ερώτημα σειράς mount. Μηχανισμοί 2–4 δεν ξεκίνησαν. | Claude Opus 5 + Γιώργος Παγώνης |
+| 2026-07-25 | **§10.11 — Φ2 Μηχανισμός 2 ΜΕΤΡΗΘΗΚΕ ΣΤΟΝ BROWSER, ΠΡΟΚΑΛΕΣΕ ΠΑΛΙΝΔΡΟΜΗΣΗ, ΕΠΑΝΑΦΕΡΘΗΚΕ. Καμία αλλαγή δρομολόγησης στο δέντρο.** **(1) Ο Μηχ. 1 διαβάστηκε επιτέλους ζωντανά** — αλλά **πρώτα επικυρώθηκε το όργανο**: το `report()` κάνει early-return στο `ok`, άρα η σιωπή δεν είναι απόδειξη· στήθηκε θετικό control (listener σε `document` capture που κάνει `preventDefault` ενώ ο bus δεν διεκδικεί ⇒ όφειλε να βγει `shadow-owner`, και βγήκε). 7 σενάρια: γραμμή · marquee · 3D gizmo ×3 · color dialog · dropdown κλίμακας · editable input · **ενεργό trim** ⇒ **όλα `ok`· καμία `starved`, καμία `preempted`**. **(2) Το `trim` απάντησε το ερώτημα σειράς mount που κανένα static tool δεν μπορεί**: το `useCanvasKeyboardShortcuts:165` κάνει `preventDefault()` όταν το `handleTrimKeyDown('Escape')` καταναλώσει (`useTrimTool.ts:305`)· αν έτρεχε πρώτο, ο bus θα έβλεπε `preemptedAtEntry=true` ⇒ `preempted`. Βγήκε `ok` ⇒ **ο bus είναι ΠΡΩΤΟΣ**, άρα ο Μηχ. 2 όντως κόβει την αλυσίδα Κ2-β. ⚠️ Η σειρά είναι σειρά mount, δηλαδή **αναδυόμενη**· φύλακας ο Μηχ. 1. **(3) 🔴 Ο Μηχ. 2 ΜΟΝΟΣ ΤΟΥ ΕΙΝΑΙ ΠΑΛΙΝΔΡΟΜΗΣΗ** — υλοποιήθηκε, jest 36/36, και σε A/B στον ίδιο browser: **πριν** = 2ο ESC κλείνει το 3D gizmo· **μετά** = το gizmo **δεν κλείνει με κανέναν αριθμό πατημάτων** (μετρήθηκε ώς 4), επειδή σιωπά τον `shortcut-dispatcher.ts:232` (Ζώνη Α) που είναι ο **ΜΟΝΟΣ** που το κλείνει, και **δεν υπάρχει slot `EDIT_GIZMO_3D`**. Κατάσταση χειρότερη από την αρχική: επιλογή καθαρή, gizmo **ορφανό**. ⇒ **Η εξάρτηση είναι αντίστροφη από το §10.6/§10.10: ο Μηχ. 4 είναι ΠΡΟΫΠΟΘΕΣΗ του Μηχ. 2**, όχι «τελευταίος». **(4) Επαναφορά + φύλακας**: ο bus ξαναγύρισε σε `stopPropagation()` με σχόλιο που δείχνει εδώ, και τα **4 νέα tests** (36/36) καρφώνουν ότι ο αδελφός `window`-capture **εξακολουθεί** να τρέχει όταν ο bus καταναλώνει ⇒ γίνονται **κόκκινα** αν κάποιος ξαναβάλει `stopImmediatePropagation()` χωρίς τον Μηχ. 4. **(5) Διόρθωση §10.5 Κ2 #4**: το `eyedropper.ts:133` είναι **Firefox-only** — σε Chrome/Edge το `openEyedropper()` (γρ. 51-54) παίρνει το native `EyeDropper` branch και η `openDomEyedropper()` δεν καλείται ποτέ (επαληθεύτηκε ζωντανά). Δεν είναι «ζωντανό bug» στον κύριο browser· χαμηλότερη προτεραιότητα. **(6) Νέο ζωντανό εύρημα (Φ3)**: στο 3D η σκάλα σταματά στο 2ο σκαλί — 3ο ESC δεν κάνει τίποτα και το στοιχείο **μένει επιλεγμένο** (δείκτης μακριά, όχι hover), ενώ ο bus **κατανάλωσε** και στα τρία ⇒ handler του bus καταναλώνει **χωρίς ορατή ενέργεια**, μπλοκάροντας χαμηλότερες προτεραιότητες. | Claude Opus 5 + Γιώργος Παγώνης |
 | 2026-07-25 | **SPLIT — τα §10.9–§10.9.3 έφυγαν στο ADR-700.** Το record είχε φτάσει **1.170 γραμμές με δύο ανεξάρτητες αποφάσεις**: τον Escape Command Bus (§1–§10.8) και το barrel-aware dead-export gate / CHECK 3.30 (§10.9.x), που ήταν παρακλάδι του §10.7.1 — νόμιμο βήμα-βήμα, scope creep στο άθροισμα. Η πρακτική είναι ομόφωνη (**μία απόφαση ανά record**· ADR πάνω από μία σελίδα ⇒ τεκμηριώνει πολλαπλές, σπάσ' τες). Μεταφέρθηκαν **507 γραμμές + 5 εγγραφές changelog, αυτούσια**· ό,τι μένει εδώ αφορά **μόνο** το ESC. Στη θέση τους έμεινε pointer με πίνακα αντιστοίχισης §10.9→§1 … §10.9.3→§4. **Καμία αλλαγή στο CHECK 3.30** (ελεγκτής / γράφος / workflow / hook PHASE 0.8 / baseline δεδομένα άθικτα) — ενημερώθηκαν **μόνο** οι συμβολοσειρές αναφοράς ADR, ώστε να μη μείνει dangling παραπομπή. | Claude Opus 5 + Γιώργος Παγώνης |

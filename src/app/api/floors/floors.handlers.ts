@@ -39,7 +39,7 @@ export async function handleListFloors(
   ctx: AuthContext
 ): Promise<NextResponse<FloorsListResponse>> {
   try {
-    // 🔒 ADR-701: one resolution for logging AND for the query — previously the
+    // 🔒 ADR-702: one resolution for logging AND for the query — previously the
     // logged company and the filtered company were computed by separate code
     // paths, and `super_admin` was compared as a raw string instead of asking
     // `isRoleBypass`, so any second bypass role would have logged `false`.

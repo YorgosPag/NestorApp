@@ -17,7 +17,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { TenantIsolationError } from './tenant-isolation-error';
 
-// ADR-701: the class now lives in a leaf module so `tenant-scope.ts` can throw
+// ADR-702: the class now lives in a leaf module so `tenant-scope.ts` can throw
 // it without pulling the Admin SDK in. Re-exported here — this is still the
 // canonical import path for every existing consumer.
 export { TenantIsolationError } from './tenant-isolation-error';

@@ -80,10 +80,10 @@ export const GET = withStandardRateLimit(
     // they must not be reissued even after a building is moved to trash.
     const codesOnly = searchParams.get('codesOnly') === 'true';
 
-    // 🔒 ADR-701: browse doctrine — a super admin who named no company sees the
+    // 🔒 ADR-702: browse doctrine — a super admin who named no company sees the
     // whole estate (`all-tenants`); everyone else sees their own, request ignored.
     const listScope = resolveTenantListScopeFromUrl(request.url, ctx);
-    // 🔒 ADR-701: the project fallback below deliberately uses the *strict company*
+    // 🔒 ADR-702: the project fallback below deliberately uses the *strict company*
     // doctrine instead. "Pick a building for this project" with no project match
     // should offer one company's buildings — never every tenant's.
     const fallbackScope = resolveTenantScopeFromUrl(request.url, ctx);
@@ -110,7 +110,7 @@ export const GET = withStandardRateLimit(
       }
     } else {
       // 🏢 ADR-232: super admin without a named company → every tenant's buildings.
-      // ADR-701: previously this branch dropped `?companyId=` on the floor while
+      // ADR-702: previously this branch dropped `?companyId=` on the floor while
       // /api/properties and /api/floors honoured it — same rule, two behaviours.
       snapshot = await tenantScopedCollection(COLLECTIONS.BUILDINGS, listScope).get();
     }
