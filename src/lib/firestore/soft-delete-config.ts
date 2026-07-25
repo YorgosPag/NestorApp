@@ -66,6 +66,10 @@ export interface SoftDeleteEntityConfig {
  * 3. Add SoftDeletableFields to the entity's interface
  * 4. Change DELETE route to call softDelete() instead of executeDeletion()
  * 5. Add .where('status', '!=', 'deleted') to the list route
+ * 6. To publish a bin: add a `trashList` block below, then a route file that is
+ *    nothing but `export const GET = createTrashListRoute('<entity>')`
+ *    (ADR-697). The exhaustiveness anchor in
+ *    `__tests__/soft-delete-trash-list.test.ts` fails on either half alone.
  */
 export const SOFT_DELETE_CONFIG: Record<
   SoftDeletableEntityType,
