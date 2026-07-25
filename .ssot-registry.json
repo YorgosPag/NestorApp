@@ -1903,12 +1903,23 @@
     },
     "admin-batch-utils": {
       "ssotFile": "src/lib/admin-batch-utils.ts",
-      "description": "Firestore batch operation utilities — BATCH_SIZE_READ (500)/BATCH_SIZE_WRITE (200) constants, processClientBatch<T>/processAdminBatch<T> async processors. Canonical SSoT for chunked Firestore reads/writes. ADR-314 Phase D.3b.",
+      "description": "Firestore batch operation data-primitives — BATCH_SIZE_READ (500)/BATCH_SIZE_WRITE (200)/BATCH_WRITE_LIMIT (450) constants, processClientBatch<T>/processAdminBatch<T> processors, buildLookupCache (paginated .select→Map), flushInBatches (chunked batch.update + per-batch resilience). Canonical SSoT for chunked Firestore reads/writes. ADR-314 Phase D.3b, extended ADR-704.",
       "forbiddenPatterns": [
-        "export\\s+(async\\s+function|const)\\s+(BATCH_SIZE_READ|BATCH_SIZE_WRITE|processClientBatch|processAdminBatch)\\b"
+        "export\\s+(async\\s+function|const)\\s+(BATCH_SIZE_READ|BATCH_SIZE_WRITE|BATCH_WRITE_LIMIT|processClientBatch|processAdminBatch|buildLookupCache|flushInBatches)\\b"
       ],
       "allowlist": [
         "src/lib/admin-batch-utils.ts"
+      ],
+      "tier": 3
+    },
+    "admin-migration-runner": {
+      "ssotFile": "src/lib/admin-migration-runner.ts",
+      "description": "Admin migration/backfill HTTP envelope SSoT — createMigrationRoute (GET dry-run/POST execute factory) + runMigration (bypass-role guard + audit + error envelope). Canonical SSoT for admin migration route dispatch. Pairs with admin-batch-utils data-primitives. ADR-704.",
+      "forbiddenPatterns": [
+        "export\\s+(async\\s+function|function|const)\\s+(createMigrationRoute|runMigration)\\b"
+      ],
+      "allowlist": [
+        "src/lib/admin-migration-runner.ts"
       ],
       "tier": 3
     },
@@ -4065,10 +4076,12 @@
     },
     "escape-command-bus": {
       "ssotFile": "src/subapps/dxf-viewer/systems/escape-bus/EscapeCommandBus.ts",
-      "description": "All Escape-key dispatch in the DXF viewer MUST go through escapeBus.register() or the useEscapeHandler() hook (ADR-364). Direct window/document keydown listeners that branch on e.key === 'Escape' are forbidden outside the escape-bus folder. Allowlist contains the three legacy capture hooks that retain non-ESC keys + the registrations shim + tooling that needs to synthesize a fake Escape event for Strategy-handler routing + the inline-rename-keyboard helper (local <input> Enter/Escape, which the bus intentionally skips under editable focus) + the pure 3D shortcut dispatcher, whose FIRST line bails on ESC (returns NOT_HANDLED) so every 3D ESC rung stays a gated escape-bus slot (ADR-364 §10.13) — same drop-ESC precedent as useDimensionKeyboardRouting.mapKey().",
+      "description": "All Escape-key dispatch in the DXF viewer MUST go through escapeBus.register() or the useEscapeHandler() hook (ADR-364). Direct window/document keydown listeners that branch on e.key === 'Escape' are forbidden outside the escape-bus folder. Allowlist contains the three legacy capture hooks that retain non-ESC keys + the registrations shim + tooling that needs to synthesize a fake Escape event for Strategy-handler routing + the inline-rename-keyboard helper (local <input> Enter/Escape, which the bus intentionally skips under editable focus) + the pure 3D shortcut dispatcher, whose FIRST line bails on ESC (returns NOT_HANDLED) so every 3D ESC rung stays a gated escape-bus slot (ADR-364 §10.13) — same drop-ESC precedent as useDimensionKeyboardRouting.mapKey(). ADR-364 §10.14 (Mechanism 3) added two patterns for gaps MEASURED during the Φ3 migrations, each of which had let a live ESC owner through: (a) `.code === 'Escape'` — how bim-3d/animation/use-waypoint-drag-interaction.ts compared, invisible to the two `key ===` patterns; (b) `matchesShortcut(..., 'escape')` — the shortcut-table indirection used by hooks/useDxfToolbarShortcuts.ts and app/useDxfViewerEffects.ts, the first of which was the measured `shadow-owner` of the whole application. WHAT THIS STILL CANNOT SEE (write it down, do not claim clean): a listener that forwards a raw `e.key` into another module which does the comparison there (the §10.5 Κ2-β 'laundered channel'); any new shortcut-table alias other than the literal 'escape'; and any owner that neither preventDefaults nor stops propagation. Those need Mechanism 1 (runtime audit) — the two mechanisms are COMPLEMENTARY, not alternatives. use3DEscapeRegistrations.ts is allowlisted for the same reason as useCanvasEscapeRegistrations.ts: it IS the bus-registration SSoT for its mode, and its ESC references are documentation of the rungs it owns.",
       "forbiddenPatterns": [
         "e\\.key\\s*===\\s*['\"]Escape['\"]",
-        "key\\s*===\\s*['\"]Escape['\"]"
+        "key\\s*===\\s*['\"]Escape['\"]",
+        "\\.code\\s*===\\s*['\"]Escape['\"]",
+        "matchesShortcut\\([^)]*['\"]escape['\"]"
       ],
       "allowlist": [
         "src/subapps/dxf-viewer/systems/escape-bus/",
@@ -4079,7 +4092,8 @@
         "src/subapps/dxf-viewer/systems/dynamic-input/hooks/useDynamicInputKeyboard.ts",
         "src/subapps/dxf-viewer/systems/dynamic-input/keyboard-handlers/",
         "src/subapps/dxf-viewer/ui/utils/inline-rename-keyboard.ts",
-        "src/subapps/dxf-viewer/bim-3d/shortcuts/shortcut-dispatcher.ts"
+        "src/subapps/dxf-viewer/bim-3d/shortcuts/shortcut-dispatcher.ts",
+        "src/subapps/dxf-viewer/bim-3d/shortcuts/use3DEscapeRegistrations.ts"
       ],
       "addedDate": "2026-05-18",
       "addedByAdr": "ADR-364",

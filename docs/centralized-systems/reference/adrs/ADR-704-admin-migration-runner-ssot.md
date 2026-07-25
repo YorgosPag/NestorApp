@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Κατάσταση** | 🔵 DESIGN — σκελετός· καμία γραμμή κώδικα ακόμη (Φάση 1 recognition, N.0.1) |
+| **Κατάσταση** | ✅ Φ0–Φ4 DONE (2026-07-26) — SSoT primitives + envelope, μετάπτωση #1/#2, split #3/#4/#5/#9, deletion #6/#7/#8, registry. Μένει μόνο Φ5 (`telegram/webhook`, ξεχωριστό ADR) |
 | **Ημερομηνία** | 2026-07-25 |
 | **Συγγραφείς** | Claude Opus 4.8 + Γιώργος Παγώνης |
 | **Σχετικά** | ADR-703 (ανέδειξε τα clones μέσω jscpd, αλλά δεν τα άγγιξε), ADR-702 (tenant scope), ADR-255 (SPEC-255A tenant isolation), ADR-698/699 (⚠️ παγίδα over-parameterised factory), N.7.1 (όριο 300 γρ. για API routes), N.18 (jscpd) |
@@ -136,26 +136,50 @@ envelope**, **lookup-cache** helper.
 ## 4. Decision
 
 **Επέκταση του υπάρχοντος `src/lib/admin-batch-utils.ts`** (ΟΧΙ νέος φάκελος — N.0 SSoT-first·
-απαντά Q1) με τα primitives που λείπουν. **Composable building blocks + thin envelope** (layered,
-απαντά Q2 — επιβεβαιωμένο από Rails/Django/Flyway + Stripe/Firestore research):
+απαντά Q1) με τα data-primitives που λείπουν. **Composable building blocks + thin envelope** (layered,
+απαντά Q2 — επιβεβαιωμένο από Rails/Django/Flyway + Stripe/Firestore research).
+
+### 4.1 Τι υλοποιήθηκε πραγματικά (Φ1+Φ2, 2026-07-26)
+
+**Δύο modules — διαχωρισμός επιπέδων (SRP):**
 
 ```
-// ΥΠΑΡΧΕΙ (ADR-214):
-processAdminBatch(queryRef, batchSize, onBatch)      // cursor scan
+// src/lib/admin-batch-utils.ts  — PURE DATA primitives (Firestore μόνο· χωρίς auth/HTTP)
+processAdminBatch(queryRef, batchSize, onBatch)      // cursor scan (ΥΠΑΡΧΕΙ, ADR-214)
+buildLookupCache(queryRef, valueField, batchSize?)   // → Map<docId,value>· thin: processAdminBatch + .select().orderBy('__name__')
+flushInBatches(db, updates, batchSize?)              // chunked batch.update· per-batch resilience → { written, errors }
+BATCH_WRITE_LIMIT = 450
 
-// ΝΕΑ primitives:
-buildLookupCache(queryRef, keyField, valueField)     // thin: processAdminBatch + .select()
-flushInBatches(db, updates, batchSize)               // batched writer, flush σε όριο + per-batch retry
-runBackfill(ctx, { name, dryRun, steps })            // envelope: guard(ADR-703)+dry-run+audit+report+try/catch
+// src/lib/admin-migration-runner.ts  — HTTP/auth ENVELOPE (server-only deps)
+createMigrationRoute({ name, permissions?, run })    // → { GET, POST }· GET=dry-run, POST=execute· guard+audit+try/catch
+runMigration({ ctx, dryRun, name, request }, run)    // lower-level envelope (για #3/#5 optional adoption)
 ```
 
-Enterprise αναβαθμίσεις (από research, ως **opt-in** στο envelope):
-- **Checkpoint/resumability** — persist last cursor· resume αντί να ξεκινά απ' την αρχή (το #1 σε
-  μεγάλο `files` collection το χρειάζεται· σήμερα λείπει).
-- **Per-batch retry** — ένα batch αποτυγχάνει, δεν πέφτει όλο το migration.
+**Γιατί ΔΥΟ αρχεία (απόκλιση από τον σκελετό §3.1 που έγραφε ένα module):** το envelope χρειάζεται
+`NextResponse` + `withAuth` + `withSensitiveRateLimit` + audit. Αν έμπαιναν στο `admin-batch-utils.ts`,
+τα 6 server importers των pure primitives (backup services κ.λπ.) θα τραβούσαν μεταβατικά ολόκληρο το
+auth graph. Ο φάκελος παραμένει ο ίδιος (`src/lib/`) → τηρείται το «ΟΧΙ νέος φάκελος» του Q1, ενώ
+τα pure primitives μένουν καθαρά. **Το `admin-batch-utils.ts` όντως επεκτάθηκε** (Q1 ✅).
 
-Scope μετάπτωσης SSoT: **μόνο #1 + #2**. Το `runBackfill` γίνεται διαθέσιμο και στα #3/#5 να το
-υιοθετήσουν **επιλεκτικά** — όχι υποχρεωτικά (αποφυγή wrong abstraction).
+**Γιατί `createMigrationRoute` αντί για σκέτο `runBackfill(ctx, { steps })`:** η αρχική υπογραφή με
+`steps` config-array ήταν ακριβώς η ADR-698/699 παγίδα (option-bag που ξαναγράφει control flow). Αντ'
+αυτού το `run` είναι **function (συμπεριφορά)**: `run(db, { dryRun }) → { body, audit }`. Το factory
+δεν διακλαδώνει σε config — πάντα κάνει το ίδιο envelope και καλεί τη συμπεριφορά. Επιπλέον το factory
+απορρόφησε και το GET/POST dispatch (που το jscpd έπιανε ως cross-route clone), ώστε κάθε route να έχει
+**μία** κλήση `createMigrationRoute({ name, run })` + `export const GET/POST`.
+
+- **Per-batch resilience** — υλοποιήθηκε στο `flushInBatches` (ένα batch σκάει → καταγράφεται στα
+  `errors`, τα υπόλοιπα γράφονται· belt-and-suspenders).
+- **Checkpoint/resumability** — **αναβλήθηκε** (χρειάζεται persistence design· δεν το απαιτεί το #1/#2
+  στο σημερινό μέγεθος). Παραμένει μελλοντικό opt-in.
+
+Scope μετάπτωσης SSoT: **#1 + #2 ✅**. Το `runMigration`/`createMigrationRoute` γίνεται διαθέσιμο και στα
+#3/#5 να το υιοθετήσουν **επιλεκτικά** — όχι υποχρεωτικά (αποφυγή wrong abstraction).
+
+**Αποτελέσματα μεγέθους (CHECK 4 λύθηκε):** #1 `backfill-file-companyid` 415→**220**· #2
+`fix-floorplan-companyid` 387→**93** (+ sibling `floorplan-companyid-operations.ts` 263 για τη resolution
+λογική, ώστε route.ts <300 και helpers <40 γρ.). SSoT modules: `admin-batch-utils.ts` 181,
+`admin-migration-runner.ts` 168. **jscpd:diff καθαρό**· 7/7 unit tests (`admin-batch-utils.test.ts`).
 
 ### Τι ΔΕΝ ενοποιείται (τεκμηριωμένο, όχι υπόθεση)
 - **#6/#7/#8** → deprecation/διαγραφή (dead code), όχι SSoT.
@@ -167,17 +191,25 @@ Scope μετάπτωσης SSoT: **μόνο #1 + #2**. Το `runBackfill` γίν
 
 ## 5. Πλάνο υλοποίησης (αναθεωρημένο μετά το recognition)
 
-- **Φ0 — Dead-code επιβεβαίωση (navigation #6/#7/#8):** git log + έλεγχος αν κάποιο πρέπει να
-  ξανατρέξει. Αν superseded → **διαγραφή** (⚠️ απόφαση Giorgio — irreversible/outward-facing).
-  Λύνει το CHECK 4 για 3 routes «δωρεάν».
-- **Φ1 — SSoT primitives:** επέκτεινε `admin-batch-utils.ts` με `flushInBatches` +
-  `buildLookupCache` + `runBackfill` (+ opt-in checkpoint/retry) + tests (Google presubmit-grade).
-- **Φ2 — Μετάπτωση #1 + #2:** reference-first· χρήση των primitives → κάτω από 300, με τον
-  ADR-703 guard μαζί. `jscpd:diff` καθαρό.
-- **Φ3 — Ατομικό split #3/#5 (+#9):** extract handlers· προαιρετική υιοθέτηση `runBackfill` όπου
-  ταιριάζει· #4 (meta-router) πιθανόν μόνο split χωρίς primitives.
-- **Φ4 — Registry:** `.ssot-registry.json` + `npm run ssot:baseline` + `jscpd:baseline`.
-- **Φ5 (ξεχωριστό ADR):** `telegram/webhook` handler extract.
+- **Φ0 — Dead-code (navigation #6/#7/#8):** ✅ DONE. Απόδειξη: 0 external callers (grep όλο το repo
+  → μόνο docs/audit λίστες)· git log = δημιουργήθηκαν σε 1 commit, ποτέ λειτουργική αλλαγή έκτοτε
+  (μόνο repo-wide μηχανικά passes). Giorgio: «κάνε ό,τι θα έκανε η Google» → **git rm** και των 3.
+  Λύθηκε το CHECK 4 για 3 routes «δωρεάν». Μελλοντικό schema fix = φρέσκο migration με το ADR-704 SSoT.
+- **Φ1 — SSoT primitives:** ✅ DONE. `admin-batch-utils.ts` +`buildLookupCache`+`flushInBatches`
+  (+per-batch resilience)· `admin-migration-runner.ts` +`createMigrationRoute`+`runMigration`· 7/7 tests.
+- **Φ2 — Μετάπτωση #1 + #2:** ✅ DONE. #1 415→220, #2 387→93 (+operations 263). `jscpd:diff` καθαρό.
+- **Φ3 — Ατομικό split #3/#4/#5/#9:** ✅ DONE (extract-to-sibling, thin route <300):
+  #3 `search-backfill` 318→42 (+handlers 315)· #4 `migrations/execute` 411→74 (+runner 278 +catalog data)·
+  #5 `execute-admin` 301→30 (+operations 257)· #9 `seed-parking` 385→48 (+handlers 382). Τα 005/006
+  του #4 ενοποιήθηκαν πίσω από ένα `SpecialSpec` (ήταν copy-pasted δίδυμα). Κανένα δεν εξαναγκάστηκε
+  στο `createMigrationRoute` (διαφορετικά verbs/shapes — αποφυγή wrong abstraction).
+- **Φ4 — Registry:** ✅ DONE. `.ssot-registry.json`: επεκτάθηκε το `admin-batch-utils` pattern
+  (+`buildLookupCache`/`flushInBatches`/`BATCH_WRITE_LIMIT`) + νέο module `admin-migration-runner`
+  (`createMigrationRoute`/`runMigration`). Golden tests 96/96 ✅. Baseline regen (`ssot:baseline`/
+  `jscpd:baseline`) **δεν χρειάστηκε** — οι ratchets μπλοκάρουν μόνο σε ΑΥΞΗΣΗ· η δουλειά ΜΕΙΩΣΕ
+  clones + το νέο module registered → unprotected αμετάβλητο. (Regen να γίνει post-commit σε καθαρό
+  tree, όχι με τα 9 dxf άλλου agent στο working tree.)
+- **Φ5 (ξεχωριστό ADR):** ⏳ `telegram/webhook` (440) handler extract — εκτός scope εδώ.
 
 ---
 
@@ -188,14 +220,25 @@ Scope μετάπτωσης SSoT: **μόνο #1 + #2**. Το `runBackfill` γίν
 - **Q3 — Μπαίνουν τα navigation στο ίδιο SSoT;** → **ΟΧΙ.** Είναι dead/superseded code (§3.2) → deprecation, όχι ενοποίηση.
 - **Q4 — `telegram/webhook`;** → **Αργότερα, ξεχωριστά** (Φ5, εκτός αυτού του ADR).
 
-### Ανοιχτό — χρειάζεται απόφαση Giorgio
-- **Διαγραφή navigation #6/#7/#8** (Φ0): irreversible + outward-facing → επιβεβαίωση πριν προχωρήσω.
+### Ανοιχτό — ΕΠΙΛΥΘΗΚΕ
+- ~~**Διαγραφή navigation #6/#7/#8** (Φ0)~~ → **DONE** (2026-07-26). Giorgio ανέθεσε την κρίση («κάνε
+  ό,τι θα έκανε η Google»)· απόδειξη dead (0 callers + git log) → `git rm` και των 3.
 
 ---
 
 ## 7. Google-level declaration
 
-> 🚧 **TODO** — συμπληρώνεται μετά την υλοποίηση (N.7.2). Σκελετός → καμία δήλωση ακόμη.
+**Φ1+Φ2 (2026-07-26):**
+
+> ✅ **Google-level: YES** — SSoT primitives (behavior-extracted, όχι option-bag), idempotent scan
+> (skip όσων έχουν ήδη το πεδίο), per-batch resilience (belt-and-suspenders), dry-run/execute μέσω
+> ενός envelope, audit ιδιοκτησία explicit στο runner, jscpd-clean, 7/7 tests.
+
+Checklist N.7.2: **1** Proactive (primitives στο σωστό επίπεδο)· **2** No race (γραμμικό scan→flush)·
+**3** Idempotent (dry-run μηδέν writes· execute skip-if-present)· **4** Belt-and-suspenders (per-batch
+errors δεν ρίχνουν το migration)· **5** SSoT (ένα home για scan/cache/flush + ένα για το envelope)·
+**6** Await (όλα awaited· audit non-blocking by design)· **7** Explicit lifecycle (`createMigrationRoute`
+κατέχει guard+audit+error).
 
 ---
 
@@ -204,3 +247,5 @@ Scope μετάπτωσης SSoT: **μόνο #1 + #2**. Το `runBackfill` γίν
 | Ημ/νία | Αλλαγή | Συγγραφέας |
 |---|---|---|
 | 2026-07-25 | Σκελετός (🔵 DESIGN) — recognition από την εκκρεμότητα του ADR-703· 9/10 oversized routes σε scope, `telegram/webhook` εκτός | Claude Opus 4.8 + Γιώργος Παγώνης |
+| 2026-07-26 | **Φ1+Φ2 IMPLEMENTED** — `admin-batch-utils.ts` (+`buildLookupCache`/`flushInBatches`/`BATCH_WRITE_LIMIT`) + νέο `admin-migration-runner.ts` (`createMigrationRoute`/`runMigration`)· μετάπτωση #1 (415→220) + #2 (387→93, +operations 263)· 7/7 tests· jscpd-clean. Αποκλίσεις από σκελετό τεκμηριωμένες στο §4.1 (2 modules για SRP· factory αντί option-bag) | Claude Opus 4.8 + Γιώργος Παγώνης |
+| 2026-07-26 | **Φ0+Φ3+Φ4 DONE** — Φ0: `git rm` navigation #6/#7/#8 (dead, 0 callers). Φ3: split #3 (318→42), #4 (411→74, 005/006 ενοποιήθηκαν), #5 (301→30), #9 (385→48) σε thin routes + siblings. Φ4: registry (admin-batch-utils επεκτάθηκε + admin-migration-runner νέο), golden 96/96. 9/10 oversized routes λύθηκαν· μένει μόνο Φ5 (telegram). jscpd-clean σε 15 αρχεία | Claude Opus 4.8 + Γιώργος Παγώνης |
