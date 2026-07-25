@@ -12,6 +12,8 @@
 
 'use strict';
 
+const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
 
 const {
@@ -22,7 +24,9 @@ const { buildGraph, computeLiveness, occursInLiveModule, usageKey } = require('.
 const { classifyExports } = require('../lib/module-graph/classify-exports');
 const { isEntryFile, isIgnored } = require('../lib/module-graph/scan-config');
 const { compareSets } = require('../lib/ratchet-baseline');
-const { parseCliArgs } = require('../check-barrel-deadcode-ratchet');
+const {
+  parseCliArgs, runSmoke, REQUIRED_BASELINE_KEYS, PROJECT_ROOT,
+} = require('../check-barrel-deadcode-ratchet');
 
 // Anchored through path.resolve so the fixture paths match what the resolver
 // produces on Windows ('C:/repo') and on POSIX ('/repo') alike.
@@ -349,6 +353,91 @@ describe('ratchet plumbing', () => {
   it('rejects an unknown flag instead of silently ignoring it', () => {
     expect(() => parseCliArgs(['node', 'x', '--baseline'])).toThrow(/needs a value/);
     expect(() => parseCliArgs(['node', 'x', '--save-baseline'])).toThrow(/Unknown argument/);
+  });
+
+  it('recognises --smoke as its own mode', () => {
+    expect(parseCliArgs(['node', 'x', '--smoke']).mode).toBe('smoke');
+  });
+});
+
+/**
+ * Layer 1 (pre-commit) — ADR-364 §10.9.1. The hook must NOT pay for the ~30s
+ * graph scan, so it runs `--smoke`, which only proves the baseline is there and
+ * usable. These tests pin exactly that: the smoke reads a baseline, never a tree.
+ */
+describe('smoke mode (the pre-commit layer)', () => {
+  let tmpDir;
+  let logs;
+  let errors;
+  let logSpy;
+  let errorSpy;
+
+  const writeBaseline = (name, contents) => {
+    const file = path.join(tmpDir, name);
+    fs.writeFileSync(file, typeof contents === 'string' ? contents : JSON.stringify(contents));
+    return file;
+  };
+
+  const smoke = baselinePath => runSmoke(null, { baseline: baselinePath });
+
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'check330-'));
+    logs = [];
+    errors = [];
+    logSpy = jest.spyOn(console, 'log').mockImplementation(m => logs.push(String(m)));
+    errorSpy = jest.spyOn(console, 'error').mockImplementation(m => errors.push(String(m)));
+  });
+
+  afterEach(() => {
+    logSpy.mockRestore();
+    errorSpy.mockRestore();
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it('passes on a well-formed baseline and reports the frozen counts', () => {
+    const file = writeBaseline('ok.json', { deadExportCount: 1625, deadFileCount: 332, deadExports: [], deadFiles: [] });
+    expect(smoke(file)).toBe(0);
+    expect(logs.join('\n')).toMatch(/1625 dead exports \/ 332 dead files/);
+  });
+
+  it('fails when the baseline is missing — never reports a silent pass', () => {
+    expect(smoke(path.join(tmpDir, 'absent.json'))).toBe(1);
+    expect(errors.join('\n')).toMatch(/baseline missing/);
+  });
+
+  it('fails on unparseable JSON', () => {
+    expect(smoke(writeBaseline('broken.json', '{ "deadExportCount": 1,'))).toBe(1);
+    expect(errors.join('\n')).toMatch(/invalid JSON/);
+  });
+
+  // The trap this guards: a truncated baseline still parses, `deadExports || []`
+  // reads as an empty set, and --check would report all 1.625 known entries as
+  // brand-new regressions instead of naming the real fault.
+  it('fails on a baseline that parses but lost its count fields', () => {
+    expect(smoke(writeBaseline('truncated.json', { deadExports: [], deadFiles: [] }))).toBe(1);
+    expect(errors.join('\n')).toMatch(/missing numeric field "deadExportCount"/);
+  });
+
+  it('fails when only half the required fields survived', () => {
+    expect(smoke(writeBaseline('half.json', { deadExportCount: 3 }))).toBe(1);
+    expect(errors.join('\n')).toMatch(/missing numeric field "deadFileCount"/);
+  });
+
+  it('points at the regeneration command rather than a raw node invocation', () => {
+    smoke(path.join(tmpDir, 'absent.json'));
+    expect(errors.join('\n')).toMatch(/npm run barrel-deadcode:baseline/);
+  });
+
+  // A gate whose own shipped baseline would fail its gate is not a gate.
+  it('the committed baseline satisfies every required field', () => {
+    const shipped = path.join(PROJECT_ROOT, '.barrel-deadcode-baseline.json');
+    if (!fs.existsSync(shipped)) return; // not yet seeded in this checkout
+    const parsed = JSON.parse(fs.readFileSync(shipped, 'utf8'));
+    for (const key of REQUIRED_BASELINE_KEYS) expect(typeof parsed[key]).toBe('number');
+    expect(Array.isArray(parsed.deadExports)).toBe(true);
+    expect(Array.isArray(parsed.deadFiles)).toBe(true);
+    expect(parsed.deadExports).toHaveLength(parsed.deadExportCount);
+    expect(parsed.deadFiles).toHaveLength(parsed.deadFileCount);
   });
 });
 

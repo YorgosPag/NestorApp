@@ -319,6 +319,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 | **3.22** | Dead-code Ratchet (knip + smart-skip + Layer 2 CI) | RATCHET | `.deadcode-baseline.json` (10 files, 2026-07-08) |
 | **3.23** | Native HTML Tooltip — `title=` on HTML JSX elements (AST-based) | RATCHET | `.native-tooltip-baseline.json` (39 violations / 28 files, 2026-04-28) |
 | **3.29** | DXF Viewer tsc errors (ADR-663) — hook = baseline smoke only· **CI** = full per-file ratchet | RATCHET | `.dxf-tsc-baseline.json` (381 errors: 117 source / 264 test) |
+| **3.30** | Barrel-only dead exports (ADR-364 §10.9) — hook = baseline smoke only· **CI** = full graph scan | RATCHET | `.barrel-deadcode-baseline.json` (1.625 dead exports / 332 νεκρά αρχεία, 2026-07-25) |
 
 **📘 Full details (incidents, why, commands, relationships)**: `docs/centralized-systems/reference/precommit-checks.md`
 

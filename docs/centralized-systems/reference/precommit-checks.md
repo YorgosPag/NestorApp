@@ -468,6 +468,92 @@ if (loading && filteredQuotes.length === 0 && !showArchived) {
 
 ---
 
+## CHECK 3.30 — Barrel-aware Dead-export Ratchet (ADR-364 §10.9)
+
+> ⚠️ Οι CHECK 3.28 (jscpd) και 3.29 (dxf tsc) **λείπουν** από αυτό το αρχείο — ζουν στον πίνακα του
+> `CLAUDE.md` N.11 και στα ADR-583 / ADR-663. Δεν τα συμπλήρωσα εδώ γιατί δεν τα μέτρησα.
+
+### Rule
+Ένα export στο `src/subapps/dxf-viewer` που **κανείς δεν εισάγει εκτός από barrel** και δεν είναι
+προσπελάσιμο από καμία ρίζα του framework είναι `dead`. Το ratchet συγκρίνει **ταυτότητες**
+(`αρχείο#σύμβολο`), όχι πλήθος — μια ανταλλαγή «ένα καθάρισε / ένα νέο» είναι οπισθοδρόμηση.
+
+### Why
+Το `knip.json:14` δηλώνει `src/**/index.ts` **entry point**: κάθε barrel είναι δημόσιο API, άρα ό,τι
+προωθεί μετρά ως χρησιμοποιούμενο **εξ ορισμού**. Το CHECK 3.22 είναι δομικά τυφλό εκεί — μετρημένα
+**1/4** στα χειροκίνητα επαληθευμένα σύμβολα του ADR-364 §10.7 (και 1/4 ακόμα με
+`--include-entry-exports`). Το 3.30 κάνει την **άλλη** ερώτηση, με fixpoint προσπελασιμότητας ώστε
+ένα «νεκρό νησί» να μην κρατά τον εαυτό του ζωντανό.
+
+### Enforcement (Defense in Depth)
+
+| Layer | Where | Mode | Speed |
+|-------|-------|------|-------|
+| **Layer 1 — pre-commit** | `scripts/git-hooks/pre-commit` Phase 0.8 → `--smoke` | **baseline παρόν + έγκυρο** (καμία ανάλυση) | **~0,7s μετρημένο** |
+| **Layer 2 — CI** | `.github/workflows/barrel-deadcode-ratchet.yml` | **full graph scan** authoritative | ~30s + install |
+| **Layer 3 — local on demand** | `npm run barrel-deadcode:check` | **full** | **~32s μετρημένο** |
+
+**Γιατί ΟΧΙ πλήρες gate στον hook — δύο ανεξάρτητοι λόγοι, και οι δύο αρκετοί:**
+1. **Κόστος**: ~13.192 αρχεία + δύο fixpoints ⇒ ~30s ανά commit. Αυτό ακριβώς αποτρέπει ο N.17
+   (ίδια συναλλαγή με το CHECK 3.29 για το ίδιο subapp).
+2. **False positives στην κατεύθυνση που μπλοκάρει**: ένα **σωστό** αρχείο που δεν συνδέθηκε ακόμα
+   (η περίπτωση `generic-solid` του ADR-684) είναι δυσδιάκριτο από νέο ορφανό. Ο πήχης της Google
+   για blocking check είναι «να μη σταματά ποτέ το build για **σωστό** κώδικα» και να αφορά
+   **ορθότητα**, όχι υγιεινή — άρα το 3.30 **αποκλείεται** από blocking presubmit. Πληροί όμως τον
+   πήχη του review tier (<10% effective FP), που είναι ακριβώς σήμα CI.
+
+**Layer 0 σκόπιμα ΔΕΝ υπάρχει.** Το CHECK 3.22 μπλοκάρει την επεξεργασία baselined αρχείου· εδώ θα
+ήταν **αντίστροφο**: 332 από τα «νεκρά» αρχεία περιλαμβάνουν ημιτελή χαρακτηριστικά, και μπλοκάρισμα
+της επεξεργασίας τους εμποδίζει ακριβώς τη **σύνδεσή** τους. Ούτε smart-skip έχει νόημα: το 3.22
+ρωτά για αρχεία (σπάνιο συμβάν), το 3.30 για **σύμβολα** — σχεδόν κάθε commit στο subapp προσθέτει
+export, οπότε ο skip δεν θα σκίπαρε ποτέ.
+
+### Scope
+- Ανάλυση: **όλο** το `src` + `packages` (η προσπελασιμότητα είναι καθολική)
+- Αναφορά/ratchet: **μόνο** `src/subapps/dxf-viewer` (`--scope`)
+- CI triggers: `src/**`, `packages/**`, `tsconfig.base.json`, `scripts/lib/module-graph/**`,
+  `scripts/lib/ratchet-baseline.js`, το ίδιο το script, το baseline, το workflow.
+  ⚠️ **Όχι** μόνο το subapp: αν αρχείο **εκτός** subapp πάψει να εισάγει σύμβολο του subapp, το
+  σύμβολο πεθαίνει — στενό φίλτρο θα το έχανε.
+- **Δεν είναι type-check** (N.17): `ts.createSourceFile` = AST χωρίς Program, χωρίς διαγνωστικά.
+
+### Baseline
+`.barrel-deadcode-baseline.json` — **1.625 dead exports / 332 νεκρά αρχεία** (2026-07-25). Καταγράφει
+επίσης `unusedExport: 3625`, `suspect: 444`, `testOnly: 1408` ως **πληροφορία**· το ratchet συγκρίνει
+**μόνο** `deadExports` + `deadFiles`. Τα `deadExportCount`/`deadFileCount` είναι **υποχρεωτικά**:
+κολοβό baseline που τυχαίνει να είναι έγκυρο JSON θα διάβαζε άδειο σύνολο και θα ανέφερε και τις
+1.625 εγγραφές ως νέες — τώρα αποτυγχάνει λέγοντας τι έσπασε.
+
+### Commands
+| Command | Purpose |
+|---------|---------|
+| `npm run barrel-deadcode:report` | Ανθρώπινη λίστα και στους 5 κάδους |
+| `npm run barrel-deadcode:explain -- <σύμβολο>` | **ΓΙΑΤΙ**: ρίζες, importers, αν κι αυτοί είναι νεκροί |
+| `npm run barrel-deadcode:check` | Layer 2/3 ratchet vs baseline (exit 1 σε οπισθοδρόμηση) |
+| `npm run barrel-deadcode:smoke` | Layer 1 — μόνο εγκυρότητα baseline (~0,7s) |
+| `npm run barrel-deadcode:baseline` | Rebaseline **μόνο** μετά από νόμιμη μείωση ή συνειδητό χρέος |
+| `npm run test:barrel-deadcode` | 58 tests, ~3s |
+| `SKIP_BARREL_DEADCODE_SMOKE=1 git commit …` | Emergency skip (justify to Giorgio) |
+
+### Remediation flow (όταν κοκκινίσει το CI)
+1. **Πρέπει να χρησιμοποιείται** → σύνδεσέ το από πραγματικό κώδικα.
+2. **Είναι όντως νεκρό** → διαγραφή **ένα αρχείο τη φορά με χειροκίνητη απόδειξη** (ADR-364 §10.7).
+   Περιστατικό 2026-04-24: μαζική διαγραφή που εμπιστεύτηκε το εργαλείο κατέστρεψε 13 scaffolding
+   αρχεία / 2.338 γραμμές του ADR-321.
+3. **Νέο χαρακτηριστικό ασύνδετο ακόμα** → **συνειδητό χρέος**: `npm run barrel-deadcode:baseline`
+   και γράψ' το στο ADR-364 §10.9.
+
+### Relationship with other checks
+- **CHECK 3.22** (knip) → νέα αχρησιμοποίητα **αρχεία**· barrels = entry points ⇒ τυφλό στα barrel-only
+- **CHECK 3.30** (αυτό) → barrel-only νεκρά **σύμβολα** + νεκρά νησιά στο dxf-viewer (που το knip αγνοεί)
+- **CHECK 3.28** (jscpd) → διπλότυπα, όχι νεκρός κώδικας
+- Κοινό set-diff: `compareSets` στο `scripts/lib/ratchet-baseline.js` — **μία** σύγκριση για την
+  οικογένεια dead-code, όχι μία ανά script (N.18)
+
+**⚠️ Μια λίστα είναι αποδεικτικό υλικό, όχι άδεια διαγραφής.**
+
+---
+
 ## Boy Scout Rule (applies to all RATCHET checks)
 
 Όταν αγγίζεις legacy file → καθάρισε όσα violations μπορείς. Δεν είναι υποχρεωτικό, αλλά σταδιακά φτάνουμε στο 0.

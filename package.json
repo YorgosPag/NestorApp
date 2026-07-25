@@ -118,6 +118,7 @@
     "barrel-deadcode:report": "node --max-old-space-size=4096 scripts/check-barrel-deadcode-ratchet.js --report",
     "barrel-deadcode:explain": "node --max-old-space-size=4096 scripts/check-barrel-deadcode-ratchet.js --explain",
     "barrel-deadcode:check": "node --max-old-space-size=4096 scripts/check-barrel-deadcode-ratchet.js --check",
+    "barrel-deadcode:smoke": "node scripts/check-barrel-deadcode-ratchet.js --smoke",
     "barrel-deadcode:baseline": "node --max-old-space-size=4096 scripts/check-barrel-deadcode-ratchet.js --write-baseline",
     "test:barrel-deadcode": "jest scripts/__tests__/check-barrel-deadcode-ratchet.test.js",
     "deadcode:delete": "node scripts/delete-deadcode.js",

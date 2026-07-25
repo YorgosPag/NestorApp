@@ -1,0 +1,149 @@
+name: 🪵 Barrel-aware Dead-export Ratchet (CHECK 3.30)
+
+# =============================================================================
+# Layer 2 of Defense in Depth — CI-authoritative barrel-aware dead-export gate
+# for the DXF Viewer subapp. ADR-364 §10.9.
+#
+# Why this exists
+# ---------------
+# knip 6.6.2 declares `src/**/index.ts` an entry point (knip.json:14), so every
+# barrel is public API and everything it re-exports counts as used BY DESIGN.
+# Barrel-only dead exports are structurally invisible to CHECK 3.22 — measured
+# 1/4 on hand-verified symbols, and still 1/4 with --include-entry-exports.
+# This gate asks the other question: "who imports this symbol OUTSIDE a barrel?"
+#
+# Why CI and not the pre-commit hook
+# ----------------------------------
+# Two independent reasons, both decisive:
+#
+#   1. COST. The scan parses ~13,192 files and runs two reachability fixpoints
+#      (~30s). Paying that per commit is exactly what CLAUDE.md N.17 exists to
+#      prevent — and the same trade CHECK 3.29 (dxf-tsc-ratchet.yml) already made
+#      for this same subapp.
+#
+#   2. FALSE POSITIVES IN THE BLOCKING DIRECTION. A brand-new file that is
+#      correct but not yet wired up (the ADR-684 `generic-solid` case) is
+#      indistinguishable from a new orphan. Google's published bar for a
+#      commit-blocking analysis is that it "should never stop the build for
+#      correct code" and report correctness, not best practice, issues
+#      (Sadowski et al., "Lessons from Building Static Analysis Tools at Google",
+#      CACM 2018 / SWE-at-Google ch.20). Dead code is hygiene and this gate has a
+#      known FP class, so it is disqualified from blocking a commit. It DOES meet
+#      the review-tier bar (<10% effective false positives — 12/12 hand-checked,
+#      10/10 negative control, ADR-364 §10.9), which is precisely a CI signal a
+#      human reads. Meta's SCARF ships the same shape: a DAILY background sweep
+#      that files change requests for human review, never a presubmit gate
+#      (engineering.fb.com, 2023-10-24; ESEC/FSE 2023). JetBrains Qodana likewise
+#      runs unused-declaration inspections in CI with a baseline so pre-existing
+#      debt never fails the build and only NEW findings do.
+#
+# The hook keeps a ~ms smoke (`--smoke`) that only asserts the baseline file is
+# present and sane — the one failure mode that is genuinely local.
+#
+# WHEN THIS GOES RED AND THE CODE IS FINE
+# ---------------------------------------
+# Starting an unwired feature legitimately adds dead exports. That is not a
+# defect to hide: run `npm run barrel-deadcode:explain -- <symbol>` to confirm,
+# then `npm run barrel-deadcode:baseline` to record the debt deliberately, and
+# say so in the ADR. The failure output names every added symbol.
+#
+# SCOPE NOTE — why the path filter is all of src/**, not just the subapp:
+# liveness is a GLOBAL fixpoint. A file anywhere in src/ that drops its import of
+# a dxf-viewer symbol kills that symbol. Narrowing the trigger to the subapp
+# would miss exactly those regressions.
+#
+# Pattern mirrors .github/workflows/deadcode-ratchet.yml (CHECK 3.22) and
+# .github/workflows/dxf-tsc-ratchet.yml (CHECK 3.29). One workflow per CHECK is
+# the repo convention — even same-tool siblings (deadcode-ratchet.yml vs
+# knip-deps-ratchet.yml) get their own file, so a red gate names itself.
+# =============================================================================
+
+on:
+  pull_request:
+    paths:
+      - 'src/**/*.ts'
+      - 'src/**/*.tsx'
+      - 'packages/**/*.ts'
+      - 'packages/**/*.tsx'
+      - 'tsconfig.base.json'
+      - 'scripts/check-barrel-deadcode-ratchet.js'
+      - 'scripts/lib/module-graph/**'
+      - 'scripts/lib/ratchet-baseline.js'
+      - '.barrel-deadcode-baseline.json'
+      - '.github/workflows/barrel-deadcode-ratchet.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/**/*.ts'
+      - 'src/**/*.tsx'
+      - 'packages/**/*.ts'
+      - 'packages/**/*.tsx'
+      - 'tsconfig.base.json'
+      - 'scripts/check-barrel-deadcode-ratchet.js'
+      - 'scripts/lib/module-graph/**'
+      - 'scripts/lib/ratchet-baseline.js'
+      - '.barrel-deadcode-baseline.json'
+      - '.github/workflows/barrel-deadcode-ratchet.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: barrel-deadcode-ratchet-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  barrel-deadcode:
+    name: 🔒 Barrel-aware Dead-export Ratchet (CHECK 3.30)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      # typescript only — the gate parses with ts.createSourceFile and has no
+      # other dependency. It never builds a Program, so this is NOT a type-check
+      # (CLAUDE.md N.17).
+      - name: 📦 Install dependencies (TypeScript parser)
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      # Via the npm script, not `node scripts/…`: the --max-old-space-size=4096
+      # this scan needs is defined ONCE, in package.json (N.18).
+      - name: 🪵 CHECK 3.30 — barrel-aware dead-export ratchet (full graph scan)
+        run: pnpm run barrel-deadcode:check
+
+      - name: ✅ Summary
+        if: success()
+        run: |
+          echo "::notice title=Barrel-aware Dead-export Ratchet::No new barrel-only dead exports vs .barrel-deadcode-baseline.json"
+
+      - name: 🧭 How to resolve
+        if: failure()
+        run: |
+          {
+            echo "### CHECK 3.30 — new barrel-only dead exports"
+            echo ""
+            echo "The symbols named in the log have **no importer outside a barrel** and are"
+            echo "unreachable from any framework root. Three legitimate outcomes:"
+            echo ""
+            echo "1. **It should be used** → wire it up from real code."
+            echo "2. **It is genuinely dead** → delete it, one file at a time, with manual proof"
+            echo "   (ADR-364 §10.7 · incident 2026-04-24: a batch deletion that trusted a tool"
+            echo "   destroyed 13 scaffolding files / 2,338 lines of ADR-321)."
+            echo "3. **It is a new feature not wired up yet** → deliberate debt. Record it:"
+            echo '   `npm run barrel-deadcode:baseline`, and say so in ADR-364 §10.9.'
+            echo ""
+            echo 'Investigate a single symbol: `npm run barrel-deadcode:explain -- <symbol>`'
+            echo ""
+            echo "A listing is evidence, not a licence to delete."
+          } >> "$GITHUB_STEP_SUMMARY"

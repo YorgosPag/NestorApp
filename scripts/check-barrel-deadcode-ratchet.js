@@ -16,16 +16,28 @@
  * NOT a type-check (N.17): `ts.createSourceFile` parses, it does not build a
  * Program and never runs diagnostics.
  *
+ * WHERE IT RUNS — CI, not the commit hot path (ADR-364 §10.9.1):
+ *   --check builds two reachability fixpoints over ~13k files (~30s). That is a
+ *   Layer 2 (CI) cost, exactly like CHECK 3.29 (ADR-663). Worse, the ratchet has
+ *   a KNOWN false-positive class in its blocking direction: a brand-new file that
+ *   is correct but not wired up yet (the ADR-684 `generic-solid` case) is
+ *   indistinguishable from a new orphan. Google's bar for a commit-blocking
+ *   analysis is "never stop the build for correct code" — this gate does not meet
+ *   it, and must not block a commit. It meets the review-tier bar (<10% effective
+ *   false positives: 12/12 hand-checked, 10/10 negative control) so it fails CI,
+ *   where a human reads it. The hook only runs --smoke.
+ *
  * CLI:
  *   node scripts/check-barrel-deadcode-ratchet.js                    # ratchet check
+ *   node scripts/check-barrel-deadcode-ratchet.js --smoke            # baseline present + sane (~ms, hook)
  *   node scripts/check-barrel-deadcode-ratchet.js --report           # human list
  *   node scripts/check-barrel-deadcode-ratchet.js --write-baseline
  *   node scripts/check-barrel-deadcode-ratchet.js --explain useFoo
  *   node scripts/check-barrel-deadcode-ratchet.js --scope src/services --report
  *   node scripts/check-barrel-deadcode-ratchet.js --root <dir>       # analyse another tree
  *
- * Exit codes: 0 = no new dead exports (or report/baseline/explain) · 1 = new
- * dead exports beyond baseline, or a usage error.
+ * Exit codes: 0 = no new dead exports (or report/baseline/explain/smoke) · 1 =
+ * new dead exports beyond baseline, unreadable baseline, or a usage error.
  */
 
 'use strict';
@@ -46,6 +58,15 @@ const DEFAULT_SCOPE = 'src/subapps/dxf-viewer';
 
 const OPTIONS_WITH_VALUE = new Set(['--scope', '--root', '--baseline', '--explain', '--json', '--limit']);
 
+/**
+ * Fields the baseline MUST carry for a comparison to mean anything. Without them
+ * a truncated file still parses as JSON, `baseline.deadExports || []` reads as an
+ * empty set, and every one of the 1.625 known entries is reported as "new" — a
+ * corrupt baseline would look like a catastrophic regression instead of a corrupt
+ * baseline. Shared by --smoke and --check so both fail the same way (N.18).
+ */
+const REQUIRED_BASELINE_KEYS = ['deadExportCount', 'deadFileCount'];
+
 function parseCliArgs(argv) {
   const out = { scopes: [], root: PROJECT_ROOT, baseline: DEFAULT_BASELINE, limit: 60, mode: 'check' };
   const rest = argv.slice(2);
@@ -62,6 +83,7 @@ function parseCliArgs(argv) {
     else if (arg === '--report') out.mode = 'report';
     else if (arg === '--write-baseline') out.mode = 'write-baseline';
     else if (arg === '--check') out.mode = 'check';
+    else if (arg === '--smoke') out.mode = 'smoke';
     else if (arg === '--help' || arg === '-h') out.mode = 'help';
     else throw new Error(`Unknown argument: ${arg}`);
   }
@@ -218,13 +240,34 @@ function reportRegression(label, added, hint) {
   console.error(`\n${hint}`);
 }
 
+/** Fail-closed baseline read shared by --smoke and --check. null ⇒ already reported. */
+function readBaseline(options) {
+  const baseline = loadBaseline(options.baseline, REQUIRED_BASELINE_KEYS);
+  if (baseline && !baseline.__invalid) return baseline;
+  console.error(`❌ CHECK 3.30 — baseline ${baseline ? baseline.__invalid : 'missing'}: ${path.relative(PROJECT_ROOT, options.baseline)}`);
+  console.error(`   Seed it: npm run barrel-deadcode:baseline`);
+  return null;
+}
+
+/**
+ * Layer 1 (pre-commit): assert the baseline is present and structurally sane.
+ * Deliberately does NOT analyse — see the "WHERE IT RUNS" note at the top. This
+ * catches the one failure mode that is genuinely local (a baseline deleted,
+ * truncated or half-merged) in milliseconds; CI owns the real comparison.
+ */
+function runSmoke(_analysis, options) {
+  const baseline = readBaseline(options);
+  if (!baseline) return 1;
+  console.log(
+    `✅ CHECK 3.30 smoke — baseline OK (${baseline.deadExportCount} dead exports / ` +
+      `${baseline.deadFileCount} dead files). Full scan runs in CI — local: npm run barrel-deadcode:check`,
+  );
+  return 0;
+}
+
 function runCheck(analysis, options) {
-  const baseline = loadBaseline(options.baseline);
-  if (!baseline || baseline.__invalid) {
-    console.error(`❌ CHECK 3.30 — baseline ${baseline ? baseline.__invalid : 'missing'}: ${path.relative(PROJECT_ROOT, options.baseline)}`);
-    console.error(`   Seed it: node scripts/check-barrel-deadcode-ratchet.js --write-baseline`);
-    return 1;
-  }
+  const baseline = readBaseline(options);
+  if (!baseline) return 1;
   const { result, relOf } = analysis;
   const exports = compareSets(result.dead.map(e => idOf(relOf, e)), baseline.deadExports || []);
   const deadFiles = compareSets(result.deadFiles.map(relOf), baseline.deadFiles || []);
@@ -259,6 +302,9 @@ function main() {
   }
   if (options.mode === 'help') { printHelp(); process.exit(0); }
 
+  // Smoke must never pay for the graph — that is the entire reason it exists.
+  if (options.mode === 'smoke') process.exit(runSmoke(null, options));
+
   const started = Date.now();
   const analysis = analyse(options);
   const runners = { report: runReport, explain: runExplain, 'write-baseline': runWriteBaseline, check: runCheck };
@@ -274,4 +320,13 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = { parseCliArgs, analyse, buildPayload, PROJECT_ROOT, DEFAULT_SCOPE };
+module.exports = {
+  parseCliArgs,
+  analyse,
+  buildPayload,
+  readBaseline,
+  runSmoke,
+  PROJECT_ROOT,
+  DEFAULT_SCOPE,
+  REQUIRED_BASELINE_KEYS,
+};

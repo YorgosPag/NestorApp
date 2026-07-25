@@ -156,6 +156,37 @@ if [[ -z "${SKIP_DXF_TSC_SMOKE:-}" ]] && [[ -f "scripts/check-dxf-tsc-ratchet.js
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 0.8: SYNC — CHECK 3.30 barrel-aware dead-export ratchet, SMOKE only
+# (ADR-364 §10.9). knip (CHECK 3.22) treats every barrel as an entry point, so a
+# symbol re-exported only through `index.ts` counts as used by construction —
+# measured 1/4 on hand-verified dead symbols. This gate asks "who imports it
+# OUTSIDE a barrel?" instead.
+#
+# The hook does NOT run the real comparison, for two reasons:
+#   1. it parses ~13k files and runs two reachability fixpoints (~30s) — the very
+#      per-commit cost CLAUDE.md N.17 exists to avoid (same trade as CHECK 3.29);
+#   2. a new file that is correct but not wired up yet (ADR-684 `generic-solid`)
+#      is indistinguishable from a new orphan, so blocking a commit on it would
+#      stop correct code — below Google's published bar for a blocking check.
+# The authoritative per-symbol gate is Layer 2 in CI (barrel-deadcode-ratchet.yml).
+# Local full run (opt-in): npm run barrel-deadcode:check
+# ═══════════════════════════════════════════════════════════════════════════════
+
+if [[ -z "${SKIP_BARREL_DEADCODE_SMOKE:-}" ]] && [[ -f "scripts/check-barrel-deadcode-ratchet.js" ]]; then
+    BARREL_DEADCODE_FILES=$(echo "$SRC_TS_FILES" | grep '^src/subapps/dxf-viewer/' || true)
+    if [[ -n "$BARREL_DEADCODE_FILES" ]]; then
+        node scripts/check-barrel-deadcode-ratchet.js --smoke
+        if [[ $? -ne 0 ]]; then
+            echo ""
+            echo -e "${YELLOW}  CHECK 3.30 — the barrel-aware dead-export baseline is missing or invalid (ADR-364 §10.9).${NC}"
+            echo -e "${YELLOW}  Regenerate it: npm run barrel-deadcode:baseline${NC}"
+            echo -e "${YELLOW}  Emergency skip (justify to Giorgio): SKIP_BARREL_DEADCODE_SMOKE=1 git commit ...${NC}"
+            exit 1
+        fi
+    fi
+fi
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # PHASE 1: Node.js worker_threads orchestrator
 # — one node process, all checks run in parallel threads (JS) or processes (.sh)
 # ═══════════════════════════════════════════════════════════════════════════════
