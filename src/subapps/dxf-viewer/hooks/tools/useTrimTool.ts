@@ -302,10 +302,11 @@ export function useTrimTool(props: UseTrimToolProps): UseTrimToolReturn {
   const handleTrimKeyDown = useCallback(
     (key: string, shiftKey: boolean): boolean => {
       if (!isActive) return false;
-      if (key === 'Escape') {
-        handleTrimEscape();
-        return true;
-      }
+      // ADR-364 §10.14 (Κ2-β) — the ESC comparison branch was removed. It called
+      // `handleTrimEscape()`, the SAME function already registered on the Escape bus at
+      // MODIFY_TOOL (600), so one press ran it twice. The caller
+      // (`useCanvasKeyboardShortcuts`) now bails on ESC before forwarding; the bus is the
+      // single owner. ESC behaviour is unchanged.
       // SHIFT keydown / keyup → immediate inverseMode + cursor variant update
       if (key === 'Shift') {
         TrimToolStore.setInverseMode(shiftKey);

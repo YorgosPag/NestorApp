@@ -36,6 +36,8 @@ import { tipTapToDxfText, dxfTextToTipTap } from '../../text-engine/edit';
 import { createYjsTipTapExtension } from '../../text-engine/collab';
 import { useTextEditingStore } from '../../state/text-toolbar';
 import { useVisualViewport } from './responsive';
+// ADR-364 — Escape Command Bus SSoT (no inline ESC key comparison in this file)
+import { useEscapeHandler, ESC_PRIORITY } from '../../systems/escape-bus';
 import type { DxfTextNode } from '../../text-engine/types';
 import type { TipTapDoc } from '../../text-engine/edit';
 
@@ -142,13 +144,30 @@ export function TextEditorOverlay({
       if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
         commit();
-      } else if (e.key === 'Escape') {
-        e.preventDefault();
-        cancel();
       }
     },
-    [commit, cancel],
+    [commit],
   );
+
+  // ADR-364 §10.14 (Κ2 #5) — ESC cancels the text edit through the central bus.
+  //
+  // `escape-priority.ts` names THIS overlay as the canonical MODAL_DIALOG example,
+  // yet it was never registered. The local React `onKeyDown` satisfied T1 (focus
+  // exclusivity) but failed T2 (§10.2): the bus listens on `window` in the CAPTURE
+  // phase, so it runs BEFORE any bubble-phase React handler — every registered slot
+  // carrying `allowWhenEditable` (HOT_GRIP_OP 975, DYNAMIC_INPUT 900, DIM_TOOL 550)
+  // could steal the ESC while this modal was open.
+  //
+  // MODAL_DIALOG (1000) is the top of the chain, so the open editor always wins.
+  // `allowWhenEditable` is mandatory: the TipTap surface is contentEditable, which
+  // is precisely what the bus's editable-focus guard skips by default.
+  useEscapeHandler({
+    id: 'text-toolbar/text-editor-overlay',
+    priority: ESC_PRIORITY.MODAL_DIALOG,
+    allowWhenEditable: true,
+    canHandle: () => !committedRef.current,
+    handle: () => { cancel(); return true; },
+  });
 
   return (
     <div

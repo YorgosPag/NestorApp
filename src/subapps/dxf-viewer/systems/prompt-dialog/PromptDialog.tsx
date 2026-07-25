@@ -31,6 +31,8 @@ import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 SSoT: canonical comma→dot normalizer (comma-normalize ratchet module)
 import { normalizeNumber } from '../dynamic-input/utils/number';
+// ADR-364 — Escape Command Bus SSoT (no inline ESC key comparison in this file)
+import { useEscapeHandler, ESC_PRIORITY } from '../escape-bus';
 
 // ============================================================================
 // COMPONENT
@@ -121,11 +123,31 @@ export const PromptDialog: React.FC = () => {
     if (e.key === 'Enter') {
       e.preventDefault();
       handleConfirm();
-    } else if (e.key === 'Escape') {
-      e.preventDefault();
-      handleCancel();
     }
-  }, [handleConfirm, handleCancel]);
+  }, [handleConfirm]);
+
+  // ADR-364 §10.14 (Κ2 #6) — ESC cancels the dialog through the central bus.
+  //
+  // The local React `onKeyDown` failed T2 (§10.2): the bus listens on `window` in
+  // the CAPTURE phase, so it runs BEFORE this bubble handler. The measured victim
+  // was `canvas/hot-grip-op-cancel` (HOT_GRIP_OP 975, `allowWhenEditable`) — when
+  // a grip flow opens this dialog (`grip-mouse-down-helpers.ts`), that slot ate the
+  // ESC, the grip op was cancelled and the modal stayed open with desynced state.
+  //
+  // MODAL_DIALOG (1000) beats HOT_GRIP_OP, so the open dialog always wins.
+  // `allowWhenEditable` is mandatory: this dialog auto-focuses its `<input>`.
+  //
+  // ⚠️ Unlike the other modals migrated in §10.14, this component is mounted
+  // PERMANENTLY (it renders `null` when closed — see the early return below), so
+  // the registration lifetime is NOT a gate. `canHandle: () => isOpen` is the only
+  // thing standing between this and the §10.12 always-consuming-slot regression.
+  useEscapeHandler({
+    id: 'prompt-dialog/cancel',
+    priority: ESC_PRIORITY.MODAL_DIALOG,
+    allowWhenEditable: true,
+    canHandle: () => isOpen,
+    handle: () => { handleCancel(); return true; },
+  });
 
   const handleInputChange = useCallback((e: FormEvent<HTMLInputElement>) => {
     const newVal = (e.target as HTMLInputElement).value;

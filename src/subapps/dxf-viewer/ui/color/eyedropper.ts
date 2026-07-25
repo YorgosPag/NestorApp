@@ -20,6 +20,8 @@ import { createLoupe, type LoupeHandle } from './eyedropper-loupe';
 import { setupScreenCapture, type ScreenCapture } from './eyedropper-screen-capture';
 // 🏢 Color-Conversion SSoT (ADR-573): rgb→hex via canonical `config/color-math`.
 import { rgbToHex } from '../../config/color-math';
+// ADR-364 — Escape Command Bus SSoT (imperative registration; non-React routine)
+import { escapeBus, ESC_PRIORITY } from '../../systems/escape-bus';
 
 export interface EyedropperResult {
   sRGBHex: string;
@@ -93,12 +95,39 @@ async function openDomEyedropper(): Promise<EyedropperResult> {
     let lastScreenX = 0;
     let lastScreenY = 0;
 
+    // ADR-364 §10.14 (Κ2 #4) — ESC cancels the pick through the central bus.
+    //
+    // Was a private `document` capture listener that did NOT call stopPropagation,
+    // so one ESC cancelled the eyedropper AND closed the whole react-aria colour
+    // picker above it (two actions, one press). Registering at MODAL_DIALOG makes
+    // the bus consume the press, and its `stopImmediatePropagation` stops the
+    // ancestor from ever seeing it.
+    //
+    // Imperative registration (this is a Promise-based DOM routine, not a React
+    // render path) — same pattern as `bim-3d/render/crop-region/CropRegionTool.ts`.
+    // The slot's lifetime is the pick session: registered here, released in cleanup.
+    //
+    // ⚠️ Reachable in FIREFOX ONLY. Chrome/Edge take the native `EyeDropper` branch
+    // in `openEyedropper()` above, where ESC is handled by the browser itself and
+    // never reaches the page. Verified, not assumed — see `prefersCustomFallback()`.
+    const unregisterEscape = escapeBus.register({
+      id: 'ui/eyedropper-cancel',
+      priority: ESC_PRIORITY.MODAL_DIALOG,
+      // The session IS the gate: the slot exists only between here and `cleanup()`.
+      canHandle: () => true,
+      handle: () => {
+        cleanup();
+        reject(new Error('Eyedropper cancelled'));
+        return true;
+      },
+    });
+
     const cleanup = (): void => {
       sessionStyle.remove();
       captureOverlay.remove();
       loupe.destroy();
       capture?.destroy();
-      document.removeEventListener('keydown', onKey, true);
+      unregisterEscape();
     };
 
     const onMouseMove = (e: MouseEvent): void => {
@@ -129,17 +158,9 @@ async function openDomEyedropper(): Promise<EyedropperResult> {
       reject(new Error('Eyedropper cancelled'));
     };
 
-    const onKey = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') {
-        cleanup();
-        reject(new Error('Eyedropper cancelled'));
-      }
-    };
-
     captureOverlay.addEventListener('mousemove', onMouseMove);
     captureOverlay.addEventListener('click', onClick);
     captureOverlay.addEventListener('contextmenu', onContextMenu);
-    document.addEventListener('keydown', onKey, true);
   });
 }
 
@@ -234,21 +255,7 @@ function elementsAtPointFiltered(x: number, y: number): Element[] {
  * Uses 1×1 offscreen copy to avoid willReadFrequently context conflicts.
  */
 function readCanvasPixelAt(canvas: HTMLCanvasElement, cx: number, cy: number): string | null {
-  const x = Math.max(0, Math.min(Math.round(cx), canvas.width - 1));
-  const y = Math.max(0, Math.min(Math.round(cy), canvas.height - 1));
-  try {
-    const offscreen = document.createElement('canvas');
-    offscreen.width = 1;
-    offscreen.height = 1;
-    const ctx = offscreen.getContext('2d');
-    if (!ctx) return null;
-    ctx.drawImage(canvas, x, y, 1, 1, 0, 0, 1, 1);
-    const d = ctx.getImageData(0, 0, 1, 1).data;
-    if (d[3] < 10) return null;
-    return rgbToHex({ r: d[0], g: d[1], b: d[2] });
-  } catch {
-    return null;
-  }
+  return readSourcePixelAt(canvas, cx, cy, canvas.width, canvas.height);
 }
 
 /**
@@ -256,15 +263,38 @@ function readCanvasPixelAt(canvas: HTMLCanvasElement, cx: number, cy: number): s
  * Returns null for transparent pixels or CORS-tainted images.
  */
 function readImagePixelAt(img: HTMLImageElement, ix: number, iy: number): string | null {
-  const x = Math.max(0, Math.min(Math.round(ix), img.naturalWidth - 1));
-  const y = Math.max(0, Math.min(Math.round(iy), img.naturalHeight - 1));
+  return readSourcePixelAt(img, ix, iy, img.naturalWidth, img.naturalHeight);
+}
+
+/**
+ * Shared 1×1 sampler behind {@link readCanvasPixelAt} / {@link readImagePixelAt}.
+ *
+ * N.0.2 / N.18 (ADR-364 §10.14): the two readers above were token-identical twins —
+ * same clamp, same 1×1 offscreen copy, same alpha cutoff, same rgb→hex — differing
+ * only in the source element and which pair of intrinsic-size properties bounds the
+ * clamp. `jscpd --diff` reported them as two clones (51 + 84 tokens) the first time
+ * this file was staged. Extracted rather than left as parallel twins.
+ *
+ * `CanvasImageSource` is the type `drawImage` already accepts, so both call sites pass
+ * through unchanged; the intrinsic size travels as explicit arguments because canvas
+ * and image spell it differently (`width`/`height` vs `naturalWidth`/`naturalHeight`).
+ */
+function readSourcePixelAt(
+  source: CanvasImageSource,
+  px: number,
+  py: number,
+  sourceWidth: number,
+  sourceHeight: number,
+): string | null {
+  const x = Math.max(0, Math.min(Math.round(px), sourceWidth - 1));
+  const y = Math.max(0, Math.min(Math.round(py), sourceHeight - 1));
   try {
     const offscreen = document.createElement('canvas');
     offscreen.width = 1;
     offscreen.height = 1;
     const ctx = offscreen.getContext('2d');
     if (!ctx) return null;
-    ctx.drawImage(img, x, y, 1, 1, 0, 0, 1, 1);
+    ctx.drawImage(source, x, y, 1, 1, 0, 0, 1, 1);
     const d = ctx.getImageData(0, 0, 1, 1).data;
     if (d[3] < 10) return null;
     return rgbToHex({ r: d[0], g: d[1], b: d[2] });

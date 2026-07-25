@@ -30,6 +30,8 @@ import {
   isViewRatioActive,
   formatViewScale,
 } from '../../utils/view-scale';
+// ADR-364 — Escape Command Bus SSoT (no inline ESC key comparison in this file)
+import { useEscapeHandler, ESC_PRIORITY } from '../../systems/escape-bus';
 
 const VALIDATION_OPTIONS = { minValue: 1, maxValue: 99999, defaultValue: 100 };
 
@@ -79,8 +81,24 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({ currentRatioN, onSet
       e.preventDefault();
       applyRatio((e.target as HTMLInputElement).value);
     }
-    if (e.key === 'Escape') setOpen(false);
   }, [applyRatio]);
+
+  // ADR-364 §10.14 (Κ2 #7) — Escape closes the dropdown via the central bus.
+  // Byte-for-byte the same registration as the structural twin
+  // `ribbon/components/DrawingScaleWidget.tsx` (same Radix DropdownMenu, same
+  // `open` state, same numeric input): that twin already solved this correctly,
+  // so the pattern is copied rather than reinvented.
+  //
+  // `allowWhenEditable` is required because focus lives on the numeric input
+  // while the popover is open — without it the bus's editable-focus guard skips
+  // the handler and ESC never reaches it.
+  useEscapeHandler({
+    id: 'toolbar/zoom-controls',
+    priority: ESC_PRIORITY.POPOVER_DROPDOWN,
+    canHandle: () => open,
+    handle: () => { setOpen(false); return true; },
+    allowWhenEditable: true,
+  });
 
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>

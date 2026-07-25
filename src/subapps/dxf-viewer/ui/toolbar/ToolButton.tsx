@@ -13,6 +13,8 @@ import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n';
+// ADR-364 — Escape Command Bus SSoT (no private document keydown listener)
+import { useEscapeHandler, ESC_PRIORITY } from '../../systems/escape-bus';
 
 interface ToolButtonProps {
   tool: ToolDefinition;
@@ -63,15 +65,15 @@ const ToolButtonInner: React.FC<ToolButtonProps> = ({ tool, isActive, onClick, o
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, [showDropdown]);
 
-  // Close on Escape
-  useEffect(() => {
-    if (!showDropdown) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setShowDropdown(false);
-    };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [showDropdown]);
+  // ADR-364 §10.14 (Κ2 #10) — Escape closes the dropdown through the central bus.
+  // Replaces a private `document` keydown listener that fired on every ESC in the
+  // app. The gate is the same condition the old effect used as an early-return.
+  useEscapeHandler({
+    id: 'toolbar/tool-button-dropdown',
+    priority: ESC_PRIORITY.POPOVER_DROPDOWN,
+    canHandle: () => showDropdown,
+    handle: () => { setShowDropdown(false); return true; },
+  });
 
   const handleMainClick = () => {
     onClick();
