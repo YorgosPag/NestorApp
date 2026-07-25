@@ -18,7 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { OwnersList } from '@/components/shared/owners/OwnersList';
 import { LandownerRemovalDialog } from '@/components/shared/owners/LandownerRemovalDialog';
-import { isOwnersValid } from '@/lib/ownership/owner-utils';
+import { isOptionalOwnersValid } from '@/lib/ownership/owner-utils';
 import { updateProjectWithPolicy } from '@/services/projects/project-mutation-gateway';
 import { useLandownerUnlinkGuard } from '@/hooks/useLandownerUnlinkGuard';
 import { useGuardedLandownersSave } from '@/hooks/useGuardedLandownersSave';
@@ -169,8 +169,17 @@ export function ProjectLandownersTab({ project, data }: ProjectLandownersTabProp
   }, [projectData]);
 
   // ── Derived state ──────────────────────────────────────────────────────
-  const canSave = isOwnersValid(owners) && !saving;
+  // `allowEmpty` is passed to OwnersList below: a project may legitimately have
+  // zero landowners while still carrying a bartex percentage, so the gate must
+  // accept an empty list (isOptionalOwnersValid, not isOwnersValid).
+  const canSave = isOptionalOwnersValid(owners) && !saving;
   const isDirty = hasChanges(owners, persisted.entries, bartexPct, persisted.bartexPct);
+
+  // SINGLE submit gate — the button's enabled state and handleSave's guard MUST
+  // read the same value. Deriving them separately is what made the button
+  // clickable while handleSave returned on its first line (bartex-only save was
+  // silently dropped: no request, no toast, no error).
+  const canSubmit = canSave && isDirty;
 
   // ── Removal guard handlers ─────────────────────────────────────────────
 
@@ -264,7 +273,7 @@ export function ProjectLandownersTab({ project, data }: ProjectLandownersTabProp
   }, [projectId, owners, bartexPct, showSuccess, showError, t]);
 
   const handleSave = useCallback(async () => {
-    if (!projectId || !canSave) return;
+    if (!projectId || !canSubmit) return;
 
     const landownersChanged = hasChanges(owners, persisted.entries, bartexPct, persisted.bartexPct)
       && owners.some((o, i) => {
@@ -277,7 +286,7 @@ export function ProjectLandownersTab({ project, data }: ProjectLandownersTabProp
       { landownersChanged, bartexChanged },
       executeSave,
     );
-  }, [projectId, canSave, owners, bartexPct, persisted, runSaveOperation, executeSave]);
+  }, [projectId, canSubmit, owners, bartexPct, persisted, runSaveOperation, executeSave]);
 
   // ── Loading guard ──────────────────────────────────────────────────────
   if (!projectData) {
@@ -344,7 +353,7 @@ export function ProjectLandownersTab({ project, data }: ProjectLandownersTabProp
       <footer className="flex justify-end">
         <Button
           onClick={handleSave}
-          disabled={!(canSave && isDirty) && owners.length > 0}
+          disabled={!canSubmit}
           size="sm"
         >
           <Save className={iconSizes.sm} />

@@ -36,6 +36,21 @@ export function isOwnersValid(owners: readonly PropertyOwnerEntry[]): boolean {
 }
 
 /**
+ * Check if an owners list is valid for submission **when empty is a legitimate state**.
+ *
+ * Counterpart of `isOwnersValid` for domains that render `OwnersList` with
+ * `allowEmpty` (e.g. project landowners: a project may legitimately have none).
+ * Empty ⇒ valid (there is nothing to validate); otherwise the full
+ * `isOwnersValid` rules apply — no rule is restated here.
+ *
+ * Use `isOwnersValid` when at least one owner is mandatory (sale/reservation:
+ * a transaction without a buyer is meaningless).
+ */
+export function isOptionalOwnersValid(owners: readonly PropertyOwnerEntry[]): boolean {
+  return owners.length === 0 || isOwnersValid(owners);
+}
+
+/**
  * Check if ownership percentages sum to 100% (or list is empty/single).
  * UI-only — used by OwnersList validation indicator.
  * Does NOT check contactId selection (use isOwnersValid for full check).
