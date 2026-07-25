@@ -4534,6 +4534,31 @@
         "src/services/realtime/hooks/useRealtimePropertiesTrashCount.ts",
         "src/hooks/usePropertiesTrashState.ts"
       ]
+    },
+    "public-showcase-token-surface": {
+      "ssotFile": "src/services/showcase-core/api/create-unified-public-payload-route.ts",
+      "description": "TIER A duplicate-audit (2026-07-25, ADR-698) — the public `GET /api/{entity}-showcase/[token]` and `.../pdf` surface lives ONCE. ADR-321 already shipped createPublicShowcasePayloadRoute + createPublicShowcasePdfRoute, and all six routes already CALLED them — yet the files stayed 85-104 lines of near-identical code (446t building/project pdf, 322t/320t/233t/94t payload quartet, jscpd/CHECK 3.28) because those factories take HOOKS and every hook implementation was the same code with a different noun. That is the over-parameterised-factory trap: the pipeline was extracted, the mechanics were pushed back onto the callers. ADR-698 adds second-order factories that take DATA — createUnifiedPublicShowcasePayloadRoute / createUnifiedPublicShowcasePdfRoute — plus the three mechanics they share: lookupPublicShowcaseShare (the `shares` token query, written 6x), loadShowcaseMediaBuckets (the listEntityMedia -> filter -> map loader, written 4x) and createPublicTokenRouteExport (the Next `[token]` GET boilerplate, written 6x). The four identical `*ShowcaseMedia` interfaces collapse to one `ShowcaseMediaItem`. Routes are now 30-44 line declarations. GUARD PATTERNS: (1) the `(d.showcaseMeta ?? {}) as { pdfStoragePath?: string }` cast and (2) the `entityType === '<x>_showcase'` post-filter are the two halves of a hand-rolled share lookup; (3) listEntityMedia( outside the allowlist is a hand-rolled media loader. ALLOWLIST = the SSoT modules plus the PROPERTY surface (`app/api/showcase/[token]/**`), which is deliberately NOT migrated: it dual-reads the legacy `file_shares` collection, builds its filename from code+name with NFKD normalisation, and dual-writes its counter — genuinely different, see ADR-698 §4. Also allowlisted: the two `{entity}/[id]/showcase/email` routes and property-media.service itself (legitimate media readers), plus useSharedFilePageState (unrelated `entityType ===` comparison). QUERY-SHAPE NOTE: the unified lookup queries the EXPLICITLY INDEXED `[token + isActive]` pair and discriminates entityType in code — firestore.indexes.json has no `[token + entityType + isActive]`, so the old PDF-route triple survived only on Firestore zigzag merge join. WIRE CONTRACT: per-surface 404 messages, per-surface payload keys and `pdfUrl`/`expiresAt` are reproduced from config; the payload WHITELISTS the entity key + company rather than spreading the snapshot, so a new snapshot field cannot reach an anonymous response.",
+      "forbiddenPatterns": [
+        "showcaseMeta \\?\\? \\{\\}\\) as \\{ pdfStoragePath",
+        "entityType === '[a-z]+_showcase'",
+        "listEntityMedia\\("
+      ],
+      "allowlist": [
+        "src/services/showcase-core/api/public-share-lookup.ts",
+        "src/services/showcase-core/api/create-unified-public-payload-route.ts",
+        "src/services/showcase-core/api/create-unified-public-pdf-route.ts",
+        "src/services/showcase-core/api/create-token-route-export.ts",
+        "src/services/showcase-core/public-media.ts",
+        "src/services/showcase-core/__tests__/public-showcase-surface.test.ts",
+        "src/services/property-media/property-media.service.ts",
+        "src/app/api/showcase/[token]/route.ts",
+        "src/app/api/showcase/[token]/pdf/route.ts",
+        "src/app/api/showcase/[token]/helpers.ts",
+        "src/app/api/buildings/[buildingId]/showcase/email/route.ts",
+        "src/app/api/projects/[projectId]/showcase/email/route.ts",
+        "src/components/property-showcase/types.ts",
+        "src/components/shared/pages/useSharedFilePageState.ts"
+      ]
     }
   }
 }
