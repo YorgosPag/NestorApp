@@ -140,7 +140,7 @@ export const COLOR_BRIDGE = {
     secondary: 'text-muted-foreground',   // Secondary text → --muted-foreground
     muted: 'text-muted-foreground',       // Muted text → --muted-foreground
     inverse: 'text-primary-foreground',   // Text on dark backgrounds
-    inverted: 'text-primary-foreground',  // ✅ ENTERPRISE: Alias for inverse (used in DestinationWizard)
+    inverted: 'text-primary-foreground',  // ✅ ENTERPRISE: Alias for inverse
     foreground: 'text-foreground',        // ✅ ENTERPRISE: Direct foreground mapping
 
     // ✅ ENTERPRISE FIX: Missing text colors for LayersSettings, ProSnapToolbar, ZoomControls

@@ -65,7 +65,6 @@ export { SnapDebugLogger } from './loggers/SnapDebugLogger';
 
 // ═══ DEBUG PANELS ═══
 export { HierarchyDebugPanel } from './panels/HierarchyDebugPanel';
-export { DebugModeTest } from './panels/DebugModeTest';
 
 // ═══ LEGACY COMPATIBILITY ═══
 // Για backward compatibility με υπάρχοντα systems

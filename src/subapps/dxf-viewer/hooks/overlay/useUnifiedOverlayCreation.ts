@@ -9,8 +9,6 @@ import { toolStyleStore } from '../../stores/ToolStyleStore';
 import { useOverlayStore } from '../../overlays/overlay-store';
 import { useUnifiedDrawing } from '../drawing/useUnifiedDrawing';
 import type { Status, OverlayKind } from '../../overlays/types';
-// DISABLED: Legacy Grips import - using Unified Grips System instead
-// import { Grips } from '../../grips/Grips';
 
 type StartOpts = {
   status?: Status;

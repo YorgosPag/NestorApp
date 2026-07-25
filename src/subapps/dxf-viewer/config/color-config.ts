@@ -707,12 +707,13 @@ export function resolveCssVarColor(ref: string): string {
  * 🏢 ENTERPRISE: Icon Click Sequence Colors
  *
  * Unified colors for tool icon click indicators.
- * Used across all drawing tool icons (Line, Circle, Arc, Angle).
+ * Used across all drawing tool icons (Line, Circle, Arc).
  *
  * Pattern: Red → Orange → Green (1st → 2nd → 3rd click)
  *
  * @see LineIcon.tsx, CircleIcon.tsx, ArcIcon.tsx
- * @see AngleIconBase.tsx, AngleTwoArcsIcon.tsx
+ * @see ADR-364 §10.9.3 — τα Angle*Icon components διαγράφηκαν (2026-07-25)· τα
+ *      γωνιακά εικονίδια ζωγραφίζονται πλέον από MEASURE_ANGLE_*_PATH στο RibbonButtonIcon.
  * @see ADR-142: Icon Click Sequence Colors Centralization
  * @since 2026-02-01
  */

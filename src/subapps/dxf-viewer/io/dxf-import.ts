@@ -260,14 +260,15 @@ export const dxfImportService = new DxfImportService();
 // 🏢 ENTERPRISE: CENTRALIZED DXF IMPORT UTILITIES
 // ============================================================================
 // Single source of truth για DXF import result processing
-// Replaces duplicate inline utilities in useDxfImport.ts and useDxfPipeline.ts
+// Replaces duplicate inline utilities in useDxfImport.ts
+// (ADR-364 §10.9.3 — ο δεύτερος καταναλωτής, useDxfPipeline.ts, διαγράφηκε 2026-07-25)
 // ============================================================================
 
 /**
  * 🏢 ENTERPRISE: Type-safe DXF import result processor
  *
  * Centralized utility for processing DXF import results with proper error handling.
- * Used by useDxfImport and useDxfPipeline hooks.
+ * Used by the useDxfImport hook.
  *
  * @param result - The DXF import result from dxfImportService
  * @param onSuccess - Optional callback when import succeeds

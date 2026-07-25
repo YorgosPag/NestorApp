@@ -1012,6 +1012,144 @@ status στην κεφαλίδα του (το πρώτο `**Status**` που σ�
 `node scripts/check-deadcode-ratchet.js` → `✅ Dead-code OK (baseline: 10)`. **Δεν** φτιάχτηκε νέα
 μηχανή ratchet.
 
+### 10.9.3 Βήμα 2 / Προτεραιότητα 1 — η πρώτη πραγματική διαγραφή (2026-07-25)
+
+Πρώτη φορά που το εργαλείο του §10.9 μεταφράζεται σε αφαιρεμένες γραμμές. **23 αρχεία / 2.516
+γραμμές**, όλα από τον κάδο 🟢 `legacy` του §10.9.2.
+
+#### Α. Η μονάδα διαγραφής είναι το **υπογράφημα**, όχι το αρχείο
+
+Η διαλογή ανέτρεψε την αρχική υπόθεση του handoff ότι τα 21 ονομαστικά αρχεία διαγράφονται ένα-ένα.
+**Δύο από τις εννέα συστάδες δεν ήταν ανεξάρτητα διαγράψιμες** — μονή διαγραφή θα έσπαγε μεταγλώττιση:
+
+| Νησί | Αρχεία | Γιατί δεν σπάει σε κομμάτια |
+|---|---|---|
+| `pipeline` | 5 (2 ονομαστικά **+3**) | `DestinationWizard` → `useDxfPipeline` + `pipeline/types`· `HierarchicalDestinationSelector` → `pipeline/types`· `EnhancedImportWizard` = ο μόνος «αναφέρων» του `DestinationWizard`, με **όλα τα imports του σχολιασμένα** |
+| `angle icons` | 6 (1 ονομαστικό **+5**) | `AngleIconBase` ← 4 `Angle*Icon.tsx`, όλα απροσπέλαστα· `AngleTwoArcsIcon` ίδιο νησί χωρίς το base |
+
+Και τα 7 επιπλέον αρχεία επαληθεύτηκαν ανεξάρτητα ως 🟢 `legacy` (`--triage --json`) — **μηδέν
+μόλυνση από 🔴/🟡**. Αυτό **δεν** είναι ερμηνευτική ελευθερία· είναι η πρακτική του
+[Meta SCARF](https://engineering.fb.com/2023/10/24/data-infrastructure/automating-dead-code-cleanup/),
+που διαγράφει *entire subgraphs* ακριβώς επειδή η ανάλυση ολόκληρου του γράφου επιτρέπει τον
+εντοπισμό κύκλων και αμοιβαίων εξαρτήσεων. Η διαγραφή «μόνο του αρχείου που ήταν στη λίστα» αφήνει
+πίσω μη-μεταγλωττίσιμα ορφανά.
+
+#### Β. Απόδειξη ανά συστάδα — «νεότερο σπίτι», όχι «δεν χρησιμοποιείται»
+
+| Συστάδα | Αρχεία | Το σπίτι που το αντικατέστησε |
+|---|---|---|
+| `grips/` | 3 | **Unified Grips System** — `systems/grip/` (40+ modules, δικά του tests), `bim/grips/`, `bim-3d/grips/` (ADR-513/107). Το `Grips.ts` το δηλώνει στη γραμμή 1: *«DISABLED: Legacy Grip System - replaced with UGS»*· τα σώματα είναι no-op / `TODO` |
+| `systems/drawing-orchestrator/` | 2 | `hooks/drawing/useUnifiedDrawing` — **49 καταναλωτές**. Το `index.ts` re-export-άρει τον τύπο `DrawingTool` **από τον ίδιο τον αντικαταστάτη** |
+| `systems/interaction/` | 2 | `systems/cursor/useCentralizedMouseHandlers` + `hooks/canvas/useCanvasMouse`. Κρατούσε `mousePosition` σε React `useState` — **ακριβώς το anti-pattern που κατήργησε το ADR-040** (`ImmediatePositionStore`, zero React state) |
+| `debug/panels/DebugModeTest.tsx` | 1 | Αυτοχαρακτηρίζεται *«TEMPORARY DEBUG COMPONENT»*· μόνη αναφορά = re-export στο barrel `debug/index.tsx` |
+| `dxf-settings/controls/` | 3 | `settings/core/LineSettings(.Sections)` + `settings/shared/LinePreview` (3 ζωντανοί καταναλωτές). ⚠️ Το `LineStyleControl` **δεν** ήταν άθικτο από το 2025-10: μεταναστεύθηκε 2026-01-01 (ADR-001 → Radix Select) και **μετά** εγκαταλείφθηκε |
+| `icons/shared/BaseIcon.tsx` | 1 | Εργοστάσιο (`createIcon`/`createVariantIcon`) **που δεν υιοθέτησε ποτέ κανένα εικονίδιο** — τα ζωντανά `ArcIcon`/`CircleIcon`/`LineIcon` είναι χειρόγραφα. `explain` → `importers: none` |
+| νησί `pipeline` | 5 | `hooks/useDxfImport` (ζωντανό μέσω `hooks/scene/useSceneState`) + το SSoT `io/dxf-import.ts`, που **το έγραφε ήδη**: *«Replaces duplicate inline utilities in useDxfImport.ts and useDxfPipeline.ts»* |
+| νησί `angle icons` | 6 | `ui/ribbon/components/buttons/RibbonButtonIcon.tsx:175-179` — και τα 5 γωνιακά εικονίδια ζωγραφίζονται πλέον με `inlineSvg(size, MEASURE_ANGLE_*_PATH)`. **Components → path constants** |
+
+#### Γ. Η παγίδα που παραλίγο να περάσει — Όριο #2 (αναφορά μέσω string)
+
+Τα `Angle*Icon` **αναφέρονται ονομαστικά** στο `toolbar-measurement-tool-configs.ts`
+(`icon: 'AngleIcon'`, `'AngleLineArcIcon'`, `'AngleMeasureGeomIcon'`, `'AngleConstraintIcon'`,
+`'AngleTwoArcsIcon'`). Αυτό είναι ακριβώς το σχήμα που ο §10.9 «Όρια» #2 δηλώνει **αόρατο** στο
+εργαλείο, και θα ήταν αρκετό για να ακυρώσει τη διαγραφή.
+
+**Ελέγχθηκε χειροκίνητα**: το `MEASUREMENT_TOOL_CONFIGS` **δεν έχει κανέναν καταναλωτή** — υπάρχει
+μόνο ένα re-export στο `ui/toolbar/types.ts:407` και κανείς δεν το εισάγει. Το ζωντανό `ToolButton`
+παίρνει `tool.icon` ως **component reference** από άλλη πηγή. Άρα κανένα string δεν λύνεται ποτέ σε
+αυτά τα components. **Η ίδια η ύπαρξη του ελέγχου είναι το σημείο**: το εργαλείο δεν μπορούσε να
+απαντήσει: το `--triage` δίνει προτεραιότητα, όχι άδεια.
+
+> 🔎 **Παράπλευρο, ΑΘΙΚΤΟ**: το `MEASUREMENT_TOOL_CONFIGS` φαίνεται ολόκληρο νεκρό (μαζί με το
+> re-export του). Δεν αγγίχτηκε — είναι εκτός εμβέλειας των 9 συστάδων και δεν έχει περάσει διαλογή.
+> Υποψήφιο για την Προτεραιότητα 2.
+
+#### Δ. Τι **δεν** διαγράφηκε, και γιατί — 6 αρχεία στον άνθρωπο
+
+Το SCARF κρατά *human review loop* ακριβώς για αυτή την κατηγορία. Τρεις περιπτώσεις όπου η
+τεχνική απόδειξη είναι πλήρης αλλά η απόφαση **δεν είναι μηχανική**:
+
+1. **`collaboration/` (2 αρχεία, 514 γρ.) — η υπόθεση «νεότερο σπίτι» καταρρέει.** Δεν υπάρχει
+   ζωντανό real-time collaboration πουθενά· η μόνη άλλη υλοποίηση
+   (`systems/collaboration/CollaborationEngine.ts`, *«για conference demo»*) είναι **επίσης νεκρή**.
+   Το ADR-683 «collaboration roundtrip» είναι **άλλο πράγμα** (ανταλλαγή αρχείων C4D/glTF).
+   Δηλαδή: **δεν αντικαταστάθηκε — δεν συνδέθηκε ποτέ.** Είναι
+   [Speculative Generality](https://refactoring.guru/smells/speculative-generality) (Fowler), όχι
+   legacy· η βιβλιογραφία λέει «διάγραψε», αλλά **δύο** ανεξάρτητες μισοτελειωμένες υλοποιήσεις
+   σημαίνουν ότι κάποιος το ήθελε δύο φορές. Απόφαση προϊόντος, όχι μηχανικής.
+   *(Το `services/websocket/WebSocketService` **δεν** ορφανεύει — το χρησιμοποιεί το
+   `src/contexts/WebSocketContext.tsx`.)*
+2. **`debug/panels/HierarchyDebugPanel.tsx` (293 γρ.) — ρητή ανθρώπινη απόφαση διατήρησης.**
+   `ui/components/LazyLoadWrapper.tsx:185-186`: *«ADR-309 Phase 1: LazyHierarchyDebugPanel removed
+   (hierarchy tab eliminated) / HierarchyDebugPanel component in ../../debug/panels/ is preserved —
+   not deleted»*. Και **συντηρείται ενεργά** (i18n `useTranslation`, `ListCard` του design-system,
+   `ENTITY_TYPES`). Δεν αγγίζεται.
+3. **`tests-modal/examples/` (3 αρχεία, 878 γρ.) — τεκμηρίωση ζωντανού feature.** Το `TestsModal`
+   ζει (lazy-mounted στο `DxfViewerDialogs.tsx:109`) και το `tests-modal/README.md` **συνδέει ρητά**
+   τα examples (γρ. 75 και 233). **Η προηγμένη λύση δεν είναι η διαγραφή**: σε Rust τα `examples/`
+   [μεταγλωττίζονται από το `cargo test` ώστε να μη σαπίζουν](https://doc.rust-lang.org/cargo/reference/cargo-targets.html),
+   και σε Go τα [testable examples](https://go.dev/blog/examples) τρέχουν ως tests — *«having
+   executable documentation guarantees that the information will not go out of date as the API
+   changes»*. Άρα οι επιλογές είναι **δύο**, όχι μία: (α) προαγωγή σε CI-compiled examples → παύουν
+   να είναι νεκρά και γίνονται φράχτης του API· (β) διαγραφή + διόρθωση 2 γραμμών README. Το
+   «μένουν εκεί άθικτα» **δεν** είναι επιλογή — είναι τεκμηρίωση που σαπίζει σιωπηλά.
+
+#### Ε. Γιατί οκτώ commits και όχι ένα
+
+Google: οι διαγραφές είναι από τις καλύτερες αλλαγές, αλλά **atomic** — «όσο πιο μικρές γίνεται,
+ώστε ένα rollback να μη σύρει μαζί του άσχετες εξαρτήσεις»
+([SWE at Google, ch. 22](https://abseil.io/resources/swe-book/html/ch22.html)). Το SCARF, με 100M+
+γραμμές σε 370.000 change requests, βγάζει **~270 γραμμές ανά diff** — όχι mega-batches. Ένα commit
+ανά συστάδα σημαίνει ότι αν κάτι εμφανιστεί στον browser σε τρεις μέρες, το revert είναι **μία**
+συστάδα, όχι 2.516 γραμμές. Αυτό είναι και η ευθεία απάντηση στο περιστατικό 2026-04-24 (μαζικό
+batch 13 αρχείων που εμπιστεύτηκε το εργαλείο).
+
+#### ΣΤ. Boy Scout — οι αναφορές-φαντάσματα
+
+Πέντε ζωντανά αρχεία κρατούσαν σχόλια που έδειχναν στα διαγραμμένα. Ενημερώθηκαν αντί να μείνουν
+dangling — είναι η ίδια παθολογία «μπαγιάτικη αναφορά που αντιγράφεται ως αλήθεια» που καταγράφουν
+οι προειδοποιήσεις N.11/N.12: `config/color-config.ts` (@see σε Angle icons), `io/dxf-import.ts`
+(×2, `useDxfPipeline`), `design-system/color-bridge.ts` (*«used in DestinationWizard»*),
+`ui/components/DxfBreadcrumb.tsx` (@pattern → `HierarchicalDestinationSelector`), και η σχολιασμένη
+γραμμή `// import { Grips }` στο `hooks/overlay/useUnifiedOverlayCreation.ts`.
+
+#### Ζ. Επαλήθευση
+
+| Έλεγχος | Αποτέλεσμα |
+|---|---|
+| `npm run test:barrel-deadcode` | **73/73** |
+| στοχευμένο jest (`systems/grip`, `hooks/__tests__`, `ui/`) | **155 suites / 1.499 tests πράσινα**, 129s |
+| `npm run barrel-deadcode:check` | `✅ 61 entries cleaned vs baseline` |
+| **diff των baselines** | −23 dead files, −38 dead exports, **+0 προστέθηκαν** ⇒ καμία ζωντανή εξάρτηση δεν αποσυνδέθηκε |
+| `npm run jscpd:diff` (N.18) | `✅ no new clones in 6 staged file(s)` |
+| Test που κάλυπτε κάποιο διαγραμμένο | **κανένα** — ακριβής σάρωση σε path **και** σύμβολο |
+
+⚠️ **Ο πρώτος έλεγχος tests ήταν ψευδώς θετικός**: πρόχειρο grep για τη λέξη `Grips` επέστρεψε
+**65 αρχεία tests** — όλα θόρυβος (`column-grips.test.ts`, `useDimensionGrips`, …). Η ακριβής
+έκδοση, με path **και** word-boundary σύμβολο, επέστρεψε **μηδέν**. Το ίδιο σχήμα με το «0» του
+N.11: το πρώτο νούμερο μετρούσε το ερώτημα, όχι την απάντηση.
+
+⚠️ **Εκκρεμεί browser check** (`localhost:3000/dxf/viewer`): μέτρηση γωνίας, εισαγωγή DXF, ρυθμίσεις
+γραμμής, grips. Καμία από τις διαγραφές δεν έχει ζωντανό μονοπάτι κλήσης — αλλά ο N.17 σημαίνει ότι
+ο πράκτορας δεν έχει τρέξει tsc, άρα η μεταγλώττιση επικυρώνεται στο pre-commit hook του Giorgio.
+
+#### Η. Δήλωση Google-level
+
+**✅ Google-level: ΝΑΙ** — η μονάδα διαγραφής είναι το υπογράφημα (SCARF), η μονάδα commit είναι η
+συστάδα (Google atomic), κάθε διαγραφή φέρει ονομαστικό αντικαταστάτη και όχι απλώς «μηδέν
+αναφορές», η μοναδική string-registry παγίδα ελέγχθηκε χειροκίνητα, και οι τρεις περιπτώσεις όπου η
+απόφαση δεν είναι μηχανική στάλθηκαν στον άνθρωπο αντί να λυθούν με εικασία.
+
+#### Θ. Το ερώτημα που έμεινε ανοιχτό — δύο barrels στον ίδιο φάκελο
+
+Στο `debug/` **συνυπάρχουν** `index.ts` **και** `index.tsx`. Η ανάλυση μονάδων της TypeScript
+προτιμά `.ts` έναντι `.tsx`, άρα οι ~45 ζωντανές εισαγωγές `from '../debug'` (`dlog`/`dwarn`/`derr`)
+λύνονται στο **`index.ts`** — ενώ το εργαλείο θεωρεί λυμένο το **`index.tsx`** (έχει το `index.ts`
+στα `deadFiles` και 19 dead exports στο `.tsx`). **Όποιο κι αν ισχύει, το ένα από τα δύο barrels
+είναι νεκρό**, και το `SnapDebugLogger` που εξάγεται μόνο από το `.tsx` δεν το εισάγει κανείς. Το
+συμπέρασμα για τα δύο panels **δεν εξαρτάται** από τη λύση — αλλά η ασάφεια είναι πραγματική και
+αξίζει δικό της εισιτήριο. **Δεν αγγίχτηκε.**
+
 ---
 
 ## 11. Changelog
@@ -1027,5 +1165,6 @@ status στην κεφαλίδα του (το πρώτο `**Status**` που σ�
 | 2026-07-25 | **Φ1 ENFORCEMENT — κριτήριο διάκρισης + ταξινόμηση (νέο §10). ΚΑΜΙΑ αλλαγή κώδικα.** Αφορμή: μετρημένο στο browser test του ADR-692 — ένα ESC ακύρωσε marquee **και** έκλεισε gizmo, επειδή `stopPropagation()` δεν σταματά sibling listeners στον **ίδιο** κόμβο (`window`, capture). **(1) Κριτήριο T1/T2/T3** («υπάρχει ανταγωνιστής;», όχι «είναι input field;»), που συμβιβάζει δύο αντικρουόμενα προηγούμενα του ίδιου ADR — Group 4 GROUP C (bus) vs `inline-rename-keyboard.ts` (τοπικό): και τα δύο σωστά, διακριτικό ο ανταγωνιστής. **(2) Ταξινομία ανταγωνιστών** (bus capture, Radix `DismissableLayer` σε document capture, react-aria `useOverlay`, `HOT_GRIP_OP` P975). **(3) Το «24» ήταν λάθος φακός**: τρία ανεξάρτητα ιδιώματα — G (global listener + `Escape`) = 24, R (ratchet regex) = 23, **G∩R = 7**, + I (`matchesShortcut(e,'escape')`, πεζό, αόρατο σε **αμφότερα**) = 2 ⇒ **42 αρχεία**. Νέα κενά regex: `e.code === 'Escape'` (**το gizmo bug**, `shortcut-dispatcher.ts:232`) και `e.key !== 'Escape'` (`useZoomWindowTool.ts:70`). **(4) Ταξινόμηση 19 Κ1 / 21 Κ2 / 2 Κ3.** Κ3 ήταν εξ ορισμού αδύνατο να βρεθεί στα 24 (το grep έψαχνε global listeners). **(5) Νέα ζωντανά bugs**: `eyedropper.ts:133` (ένα ESC ακυρώνει eyedropper **και** κλείνει όλο τον color picker μέσω react-aria ancestor)· `PromptDialog.tsx:124` (το `HOT_GRIP_OP` κλέβει το ESC σε grip flow)· **διπλή αποστολή** — ο regex-καθαρός `useCanvasKeyboardShortcuts.ts:351` προωθεί ωμό `e.key` στα trim/scale/stretch/extend, που συγκρίνουν εσωτερικά, ενώ τα **ίδια** `handleXEscape` είναι ήδη εγγεγραμμένα σε `MODIFY_TOOL` ⇒ εκτελούνται **δύο φορές** ανά πάτημα. **Ο ratchet μετρά το string, όχι τη συμπεριφορά.** **(6) CHECK 3.7 αποκωδικοποιημένο**: staged-only (`check-ssot-imports.js:317`), per-file άθροισμα, `current === baseline` ⇒ `same` ⇒ περνά σιωπηλά για πάντα — γι' αυτό ζει το `useTrimTool.ts` (baseline 1 / τρέχον 1, εκτός allowlist). Baseline: **41** dxf-viewer αρχεία (όχι 0). **(7) Διόρθωση drift §6** (N.0.1 — ο κώδικας κερδίζει): το §6 τεκμηριώνει 2 άλλα patterns + 5 allowlist entries· το πραγματικό registry έχει 2 patterns + **8** entries, και το `addEventListener…Escape` αφαιρέθηκε σωστά (γραμμικό grep, δεν έπιανε τίποτα). **(8) Νεκρός κώδικας** προς διαγραφή αντί μετανάστευσης: `useEntityDrag` chain (barrel-only, αντικαταστάθηκε από `EntityBodyDragStore` που είναι σωστά στον bus), `useDrawingKeyboardShortcuts`, `createKeyboardHandler`, `CommentMentionsPicker` keydown (τίποτα δεν εστιάζει το listbox — και bug προσβασιμότητας). Το knip αγνοεί το dxf-viewer. **(9) Allowlist μπορεί να στενέψει**: 3 από 4 keyboard-core entries δεν έχουν πλέον matching literal· μένει το `useDimToolRouting.ts:140`. ⚠️ Αλλά η αφαίρεση του `useCanvasKeyboardShortcuts.ts` θα «πράσινιζε» αρχείο που είναι **Κ2 δομικά**. Φ2 απαιτεί ratchet-down των 41 baseline entries, όχι μόνο νέο pattern. Έρευνα Revit/VS Code από το handoff — δεν επαναλήφθηκε. | Claude Opus 5 + Γιώργος Παγώνης |
 | 2026-07-25 | **§10.9 — CHECK 3.30, barrel-aware dead-export gate. Απάντηση στο §10.7.1.** Το knip 6.6.2 είναι **δομικά** τυφλό στα barrel-only exports (`knip.json:14` δηλώνει `src/**/index.ts` entry point ⇒ ό,τι προωθεί ένα barrel μετρά ως χρησιμοποιούμενο)· μετρημένα **1/4** στα χειροκίνητα επαληθευμένα σύμβολα του §10.7, και **1/4** ακόμα με `--include-entry-exports`. Νέο εργαλείο: `scripts/lib/module-graph/` (5 modules) + `scripts/check-barrel-deadcode-ratchet.js`. **Δύο κανόνες**: (1) *το είδος της δήλωσης αποφασίζει* — `import` καταναλώνει, `export … from` προωθεί, άρα αλυσίδα barrels = μηδέν καταναλωτές και η χρήση πιστώνεται στο αρχείο που **δηλώνει**· πιάνει και non-index barrels (`DxfViewerComponents.styles.ts`). (2) *προσπελασιμότητα, όχι «έχει importer»* — το ίδιο το εργαλείο βρήκε ότι το `useEntityDrag` είχε ακριβώς έναν importer, το επίσης νεκρό `useMovementOperations`: **νεκρό νησί** που αυτοσυντηρείται σε κανόνα ενός βήματος. Άρα fixpoint από τις πραγματικές ρίζες (Next page/layout/route/middleware, `*.worker.ts`)· τα barrels **δεν** είναι ρίζες. **5 κάδοι** αντί για 2: το `unusedExport` (ζωντανό μέσα στο αρχείο του) κόβει τα `dead` από 5.067 σε **1.625** — ένα `interface Opts` ως τύπος παραμέτρου δεν είναι νεκρός κώδικας. Το δίχτυ `suspect` διαβάζει **AST ταυτότητες, όχι grep** (το `Floating3DPanel` αναφέρεται σε 5 αρχεία, **όλα σε σχόλια**) και ρωτά «σε **ζωντανό** module;», αλλιώς κάθε νεκρό νησί αυτο-πιστοποιείται. **Επαλήθευση**: 3/4 έναντι 1/4 του knip πάνω σε `git archive 90c351a5` σε scratchpad (το 4ο, `createKeyboardHandler`, είναι μέλος επιστρεφόμενου object — **ρητά** εκτός εμβέλειας)· δείγμα **12/12** σωστά με το χέρι· αρνητικός έλεγχος 10/10 πυρηνικά σύμβολα όχι-νεκρά· **50/50 jest**· **browser** (Ισόγειο 550 στοιχεία, Τοπογραφικό → Βορράς toggle ✅, μηδέν σφάλματα εφαρμογής) με διασταύρωση: το `toggleNorthArrowVisible` είναι `dead` ενώ το UI καλεί `setNorthArrowVisible` — στατική ανάλυση και ζωντανό UI συμφωνούν. **Τρέχον δέντρο**: 1.625 dead / 3.625 unusedExport / 444 suspect / 1.408 testOnly / **332 νεκρά αρχεία** σε 5.697 modules, ~29s. **SSoT**: το set-diff μπήκε ως `compareSets` στο υπάρχον `scripts/lib/ratchet-baseline.js` και το CHECK 3.22 μετακινήθηκε σε αυτό (επαληθεύτηκε πράσινο) — καμία νέα μηχανή ratchet (N.18). **Κατάσταση**: όργανο ✅ · baseline **άγραφο** (3ο βήμα κατ' εντολή) · hook **ασύνδετος** · **μηδέν διαγραφές** (περιστατικό 2026-04-24). Όρια ρητά καταγεγραμμένα στο §10.9. | Claude Opus 5 + Γιώργος Παγώνης |
 | 2026-07-25 | **§10.9.2 — πέρασμα λογικής των 332: η λίστα ΔΕΝ είναι χαλασμένη, αλλά το 18% της δεν είναι νεκρό — είναι ΗΜΙΤΕΛΕΣ. ΜΗΔΕΝ διαγραφές, μηδέν αλλαγή στο `src/`.** Πριν από διαλογή αρχείο-αρχείο απαντήθηκε το ερώτημα που θα ακύρωνε τα πάντα: «είναι συστημικά χαλασμένη η λίστα;» (Όρια #4 — **μία** αδήλωτη ρίζα ⇒ **ολόκληρο** υποδέντρο φαίνεται νεκρό). **ΟΧΙ, τέσσερις ανεξάρτητες ενδείξεις**: ανεξάρτητη καταμέτρηση **5.698** έναντι **5.697** που ανέφερε το εργαλείο· σχήμα **332 σε 186 φακέλους με 120 μοναχικά** (λείπουσα ρίζα δίνει **ένα** συνεχόμενο υποδέντρο, όχι σκόρπισμα)· **5,8%** συνολικά· **καμία** αδήλωτη σύμβαση Next (δεν υπάρχει `src/pages`, 0 `*.stories.*`). Συν στοχευμένη σάρωση στις 14 πλήρως νεκρές συστάδες: **24 ονομαστικά αρχεία δεν αναφέρονται ΠΟΥΘΕΝΑ** στο `src` — οι γραμμές για `index.ts`/`types.ts` ήταν **θόρυβος του grep** (γενικά ονόματα) και **αγνοήθηκαν** αντί να μετρηθούν. **ΤΟ ΠΡΑΓΜΑΤΙΚΟ ΕΥΡΗΜΑ — δύο πληθυσμοί**: **145 από τα 332 γεννήθηκαν τους τελευταίους 3 μήνες**· πρόσφατος κώδικας δεν πεθαίνει, **δεν συνδέθηκε**. **39 αρχεία ανήκουν στο ADR-344** (`ui/text-templates`, `ui/text-dictionary`, `text-engine/draft`, `text-engine/fonts/font-manager`) — ολόκληρα χαρακτηριστικά **με 5 δικά τους αρχεία tests** — και το ADR-344 γράφει «FULLY APPROVED — Ready for Phase 0 kickoff». **Ενεργή δουλειά, όχι νεκρός κώδικας**· διαγραφή = το περιστατικό 2026-04-24 ξανά. Απέναντι, **121 αρχεία από το «Initial commit» (2025-10)** — `grips/`, `systems/interaction/`, `systems/drawing-orchestrator/`, `collaboration/`, `pipeline/`: υποσυστήματα που **αντικαταστάθηκαν**. Εκεί ζει το πραγματικό νεκρό. **ΠΑΓΙΩΣΗ ΩΣ ΕΡΓΑΛΕΙΟ, ΟΧΙ ΛΙΣΤΑ**: στατικές 332 γραμμές σε έγγραφο μπαγιατεύουν και μετά αντιγράφονται ως αλήθεια (η παθολογία που καταγράφουν οι προειδοποιήσεις N.11/N.12). **SSoT audit με grep πρώτα**: κανένα script δεν διάβαζε status ADR, κανένα δεν χαρτογραφούσε προέλευση αρχείου ⇒ μηδέν διπλότυπο. Νέο `scripts/lib/deadcode-triage.js` (καθαρός ταξινομητής + **ένα** `git log` αντί για 332 — η per-file μορφή κοστίζει 2+ λεπτά στα Windows) ως **mode** του υπάρχοντος CLI (`--triage`), **όχι** δεύτερο script· παρακάμπτει τον γράφο όπως το `--smoke`. **Τρεις κάδοι**: 🔴 `notouch` (ανοιχτό ADR ⇒ ημιτελές, ποτέ υποψήφιο) · 🟡 `look` (πρόσφατο ή ασαφές status) · 🟢 `legacy` (παλαιό **και** κλειστό/προ-ADR — ο **μόνος** όπου επιτρέπεται η λέξη «υποψήφιο»). **Δύο επιλογές που είναι ασφάλεια**: (1) **αποτυγχάνει ανοιχτά** — μη αναγνωρίσιμο status ⇒ 🟡, **ποτέ** 🟢, γιατί το να περάσεις ζωντανή δουλειά για τελειωμένη είναι η ακριβή κατεύθυνση· (2) **αμετάβλητη ιδιότητα καρφωμένη σε test**: κανένα αρχείο ανοιχτού/μη-αναγνώσιμου ADR δεν φτάνει ποτέ στο `legacy`. **Μετρημένο: 🔴 61 (18%) · 🟡 99 (30%) · 🟢 172 (52%)**, ~72s. **Αλλάζει το σχέδιο του Βήματος 2**: ΟΧΙ «οι μεγαλύτερες συστάδες πρώτα» όπως έλεγε το handoff, αλλά **τα 172 του 🟢 πρώτα**· τα 61 του 🔴 **βγαίνουν εκτός εμβέλειας** μέχρι απόφαση Giorgio· τα 99 του 🟡 (47 πρόσφατα χωρίς ADR στο μήνυμα) είναι **ερώτημα προς τον Giorgio**. **Ειλικρίνεια**: το **ADR-366** βγαίνει `UNCLEAR` επειδή **δεν έχει** αναγνωρίσιμη γραμμή status στην κεφαλίδα — πρόβλημα **του ADR**, όχι του εργαλείου· πρόχειρο grep νωρίτερα τα είχε πει «ενεργά» πιάνοντας πρόζα, η αυστηρή έκδοση όχι. Το `jscpd --diff` βγήκε πράσινο αλλά είναι **κενό σήμα** (σαρώνει μόνο ts/tsx, όχι `.js`) — ο N.18 έγινε με το χέρι. **Επαλήθευση: jest 73/73** (από 58)· `barrel-deadcode:check` πράσινο αμετάβλητο (1.625/332, 30,4s). | Claude Opus 5 + Γιώργος Παγώνης |
+| 2026-07-25 | **§10.9.3 — Βήμα 2 / Προτεραιότητα 1: η ΠΡΩΤΗ πραγματική διαγραφή. 23 αρχεία / 2.516 γραμμές, όλα από τον κάδο 🟢 `legacy`.** Το εργαλείο του §10.9 μεταφράστηκε σε αφαιρεμένες γραμμές. **Η μονάδα διαγραφής αποδείχθηκε το ΥΠΟΓΡΑΦΗΜΑ, όχι το αρχείο**: 2 από τις 9 συστάδες **δεν** ήταν ανεξάρτητα διαγράψιμες — μονή διαγραφή θα άφηνε μη-μεταγλωττίσιμα ορφανά (`pipeline` = 2 ονομαστικά **+3** — `DestinationWizard`/`HierarchicalDestinationSelector` εισάγουν `pipeline/types`, ο «αναφέρων» `EnhancedImportWizard` έχει **όλα** τα imports του σχολιασμένα· `angle icons` = 1 ονομαστικό **+5**, το `AngleIconBase` ζει μόνο μέσα σε 4 απροσπέλαστα `Angle*Icon`). Τα 7 επιπλέον επαληθεύτηκαν ανεξάρτητα ως 🟢 μέσω `--triage --json` — **μηδέν μόλυνση 🔴/🟡**. Αυτό είναι η πρακτική του **Meta SCARF** (διαγράφει *entire subgraphs* — 100M+ γραμμές σε 370K change requests, ~270 γρ./diff), και η κατάτμηση σε **8 commits ανά συστάδα** είναι το **Google atomic-change** (SWE at Google ch.22: rollback χωρίς να σύρει άσχετες εξαρτήσεις) — ευθεία απάντηση στο περιστατικό 2026-04-24. **Κάθε συστάδα φέρει ΟΝΟΜΑΣΤΙΚΟ αντικαταστάτη, όχι «μηδέν αναφορές»**: `grips/`→UGS `systems/grip/` (το `Grips.ts` το γράφει στη γρ. 1: *«DISABLED … replaced with UGS»*, σώματα no-op)· `drawing-orchestrator/`→`useUnifiedDrawing` (49 καταναλωτές· το `index.ts` re-export-άρει τον τύπο **από τον ίδιο τον αντικαταστάτη**)· `systems/interaction/`→`useCentralizedMouseHandlers` (κρατούσε `mousePosition` σε React `useState` = **το anti-pattern που κατήργησε το ADR-040**)· `dxf-settings/controls/`→`LineSettings(.Sections)`+`LinePreview`· `BaseIcon.tsx` = εργοστάσιο που **δεν υιοθέτησε ποτέ κανένα εικονίδιο**· `pipeline`→`useDxfImport`+`io/dxf-import.ts` (**που το έγραφε ήδη**: *«Replaces duplicate inline utilities in useDxfImport.ts and useDxfPipeline.ts»*)· `angle icons`→`RibbonButtonIcon:175-179` (`inlineSvg` + `MEASURE_ANGLE_*_PATH`: components→path constants). **Η ΠΑΓΙΔΑ ΠΟΥ ΠΑΡΑΛΙΓΟ ΝΑ ΠΕΡΑΣΕΙ (Όριο #2)**: τα 5 `Angle*Icon` αναφέρονται **ονομαστικά ως strings** στο `toolbar-measurement-tool-configs.ts` (`icon: 'AngleIcon'` κ.λπ.) — αόρατο στο εργαλείο by design. Χειροκίνητος έλεγχος: το `MEASUREMENT_TOOL_CONFIGS` **δεν έχει κανέναν καταναλωτή** (μόνο ένα re-export στο `ui/toolbar/types.ts:407`), το ζωντανό `ToolButton` παίρνει `tool.icon` ως **component** από άλλη πηγή ⇒ κανένα string δεν λύνεται ποτέ. **Το `--triage` δίνει προτεραιότητα, ΟΧΙ άδεια.** **6 αρχεία ΔΕΝ διαγράφηκαν** (SCARF human-review loop): `collaboration/` (514 γρ.) — **η υπόθεση «νεότερο σπίτι» καταρρέει**, δεν αντικαταστάθηκε αλλά **δεν συνδέθηκε ποτέ** (και η 2η υλοποίηση `CollaborationEngine` *«conference demo»* είναι επίσης νεκρή· το ADR-683 «collaboration roundtrip» = **άλλο πράγμα**, C4D/glTF) ⇒ Speculative Generality (Fowler) = απόφαση **προϊόντος**· `HierarchyDebugPanel` (293 γρ.) — **ρητή ανθρώπινη απόφαση** στο `LazyLoadWrapper.tsx:186` *«preserved — not deleted»* + ενεργά συντηρημένο (i18n/ListCard/ENTITY_TYPES)· `tests-modal/examples/` (878 γρ.) — **τεκμηρίωση ζωντανού feature**, linked από README γρ. 75/233, και **η προηγμένη λύση δεν είναι η διαγραφή**: Rust `cargo test` μεταγλωττίζει τα `examples/` και Go τρέχει testable examples ως tests *«so documentation will not go out of date as the API changes»* ⇒ επιλογές = προαγωγή σε CI-compiled examples **ή** διαγραφή+README· το «μένουν άθικτα» δεν είναι επιλογή. **Boy Scout**: 5 ζωντανά αρχεία είχαν σχόλια-φαντάσματα προς τα διαγραμμένα (color-config @see, dxf-import ×2, color-bridge, DxfBreadcrumb @pattern, σχολιασμένο `// import { Grips }`) — ενημερώθηκαν αντί να μείνουν dangling (ίδια παθολογία με τις προειδοποιήσεις N.11/N.12). **Επαλήθευση**: jest **73/73** + στοχευμένο **155 suites / 1.499 tests** πράσινα (129s)· `barrel-deadcode:check` → `61 entries cleaned`· **diff baselines: −23 files / −38 exports, +0 ΠΡΟΣΤΕΘΗΚΑΝ** ⇒ καμία ζωντανή εξάρτηση δεν αποσυνδέθηκε· `jscpd:diff` καθαρό (N.18). ⚠️ **Ο πρώτος έλεγχος tests ήταν ΨΕΥΔΩΣ ΘΕΤΙΚΟΣ**: πρόχειρο grep για τη λέξη `Grips` έβγαλε **65 αρχεία tests**, όλα θόρυβος· η ακριβής έκδοση (path **και** word-boundary) έβγαλε **μηδέν** — ίδιο σχήμα με το «0» του N.11, το νούμερο μετρούσε το ερώτημα όχι την απάντηση. ⚠️ **Εκκρεμεί browser check** (N.17: ο πράκτορας δεν τρέχει tsc — η μεταγλώττιση επικυρώνεται στο pre-commit hook). 🔎 **Δύο ανοιχτά, ΑΘΙΚΤΑ**: (1) το `MEASUREMENT_TOOL_CONFIGS` φαίνεται ολόκληρο νεκρό — υποψήφιο Προτεραιότητας 2· (2) στο `debug/` **συνυπάρχουν `index.ts` ΚΑΙ `index.tsx`** — η TS προτιμά `.ts`, το εργαλείο θεωρεί λυμένο το `.tsx` ⇒ **όποιο κι αν ισχύει, το ένα barrel είναι νεκρό**. | Claude Opus 5 + Γιώργος Παγώνης |
 | 2026-07-25 | **§10.9.1 — CHECK 3.30 συνδέθηκε: CI authoritative, hook = smoke. ΚΑΜΙΑ διαγραφή, καμία διαλογή.** Η εκκρεμής απόφαση του προηγούμενου βήματος έκλεισε με **δύο ανεξάρτητα** επιχειρήματα, καθένα αρκετό. **(Α) Κόστος**: `--check` **32,4s** μετρημένο vs `--smoke` **0,689s** — 30s ανά commit είναι ακριβώς ό,τι αποτρέπει ο N.17· ίδια συναλλαγή με το CHECK 3.29 (ADR-663) για το ίδιο subapp. **(Β) False positives στην κατεύθυνση που μπλοκάρει — το αποφασιστικό**: ένα **σωστό** αρχείο που δεν συνδέθηκε ακόμα (`generic-solid`, ADR-684) είναι δυσδιάκριτο από νέο ορφανό· blocking hook θα αρνιόταν commit σε κώδικα χωρίς τίποτα λάθος. **Έρευνα (εντολή Giorgio)**: η Google απαιτεί από blocking check **μηδέν** effective FPs + **ορθότητα** (όχι hygiene) — «should never stop the build for correct code» — ενώ οι review-tier έλεγχοι έχουν budget **<10%** FP (Sadowski κ.ά., CACM 2018· SWE-at-Google κεφ. 20). Ο νεκρός κώδικας είναι hygiene και το εργαλείο έχει γνωστή κλάση FP ⇒ **αποκλείεται** από presubmit, **πληροί** το review tier (12/12 δείγμα, 10/10 αρνητικός έλεγχος). Ανεξάρτητη σύγκλιση: **Meta SCARF** = **καθημερινό** background sweep με change requests **για άνθρωπο**, ρητά «err on the side of caution… avoids false positives» (ESEC/FSE 2023)· **JetBrains Qodana** = unused declarations σε **CI με baseline**, κόβουν μόνο τα **νέα** — δηλαδή ακριβώς αυτό το ratchet. **Figma: δεν βρέθηκε δημόσια πηγή — δεν επικαλούμαι καμία.** **Αποφάσεις με κριτήριο**: (1) **νέο workflow**, όχι job στο `deadcode-ratchet.yml` — σε 25 workflows η σύμβαση είναι **ένα ανά CHECK**, ακόμα και αδέλφια ίδιου εργαλείου (`deadcode-` vs `knip-deps-ratchet.yml`) έχουν χωριστό αρχείο· plus διαφορετικά path triggers (`scripts/lib/module-graph/**`, `tsconfig.base.json`, `packages/**`) και ένα κόκκινο gate που λέει το όνομά του. (2) **Layer 0 σκόπιμα ΑΠΩΝ**: το ισοδύναμο του 3.22 θα μπλόκαρε την επεξεργασία των 332 «νεκρών» αρχείων — ανάμεσά τους ημιτελή χαρακτηριστικά — δηλαδή θα **τιμωρούσε τη σύνδεσή** τους. (3) **Smart-skip σκόπιμα ΑΠΩΝ**: το 3.22 ρωτά για *αρχεία* (σπάνιο ⇒ skip 70-80%), το 3.30 για *σύμβολα* — σχεδόν κάθε commit στο subapp προσθέτει `export`, ο skip δεν θα σκίπαρε ποτέ. (4) CI **hard-fail** + βήμα `🧭 How to resolve` που γράφει στο job summary τις **τρεις** νόμιμες εκβάσεις (σύνδεσε / διάγραψε με απόδειξη / **κατέγραψε το χρέος**), ώστε το σενάριο `generic-solid` να έχει τεκμηριωμένη έξοδο αντί για πίεση διαγραφής. **Υλοποίηση**: `--smoke` (short-circuit **πριν** το `analyse()`) + `REQUIRED_BASELINE_KEYS` κοινά σε smoke/check — κολοβό baseline που τυχαίνει να είναι έγκυρο JSON έκανε το `deadExports \|\| []` να διαβάζεται ως άδειο σύνολο και ανέφερε και τις **1.625** γνωστές εγγραφές ως νέες· τώρα λέει ποιο πεδίο λείπει. Νέα: `.github/workflows/barrel-deadcode-ratchet.yml`, hook **PHASE 0.8**, `barrel-deadcode:smoke`, γραμμή N.11 + πλήρης ενότητα στο `precommit-checks.md`. **Επαληθεύτηκε τρέχοντας** (9 σενάρια): smoke 0,689s ✅ · check 32,4s ✅ · jest **58/58** (από 50) · smoke red σε απόν/άκυρο/κολοβό baseline → exit 1 με σωστό μήνυμα ✅ · `bash -n` ✅ · PHASE 0.8 τρέχει σε αρχείο subapp, **σιωπηλό** εκτός ✅ · PHASE 0.8 μπλοκάρει σε σπασμένο baseline και το `SKIP_BARREL_DEADCODE_SMOKE=1` περνά ✅ · YAML έγκυρο (7 βήματα) ✅ · το βήμα `How to resolve` **εκτελεσμένο** με `GITHUB_STEP_SUMMARY`, όχι απλώς γραμμένο ✅. Το αληθινό baseline **δεν** πειράχτηκε (159.849 bytes, καθαρό) — όλα τα κόκκινα μέσω `--baseline` σε προσωρινά αρχεία. **Μηδέν διαγραφές· η διαλογή των 1.625 (Βήμα 2) δεν ξεκίνησε.** | Claude Opus 5 + Γιώργος Παγώνης |
 | 2026-07-25 | **§10.9 βήμα 3 — baseline γεννήθηκε + ratchet αποδεδειγμένο και στις 3 διαδρομές.** `.barrel-deadcode-baseline.json` (156 KB): **1.625 dead exports / 332 νεκρά αρχεία** στο `src/subapps/dxf-viewer`, + `unusedExport: 3625`, `suspect: 444`, `testOnly: 1408` ως πληροφορία (το ratchet συγκρίνει **μόνο** `deadExports` + `deadFiles`). **Καταγραφή, μηδέν άγγιγμα κώδικα.** Επαληθεύτηκαν και οι 3 διαδρομές με πειραγμένα baselines στο scratchpad μέσω `--baseline` (χωρίς άγγιγμα του αληθινού): 🟢 σταθερό → exit 0 · 🔴 αφαίρεσα 2 exports + 1 αρχείο από το baseline → `FAIL — 2 new dead export(s)` + `1 new dead file(s)` **ονομαστικά**, exit 1 · 🔵 πρόσθεσα φάντασμα → `1 entr(ies) cleaned … Lock it in`, exit 0. Ένα gate που δεν έχει δει ποτέ κόκκινο δεν είναι gate. **Εκκρεμεί απόφαση**: ~30s ανά εκτέλεση ⇒ ανήκει σε **CI (Layer 2)** όπως το CHECK 3.29, **όχι** στο pre-commit hook. Καμία διαγραφή· η διαλογή των 1.625 είναι ξεχωριστή δουλειά, ένα αρχείο τη φορά με χειροκίνητη απόδειξη. | Claude Opus 5 + Γιώργος Παγώνης |

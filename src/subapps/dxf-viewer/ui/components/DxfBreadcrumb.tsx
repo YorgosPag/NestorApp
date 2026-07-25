@@ -20,7 +20,8 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
  * Informational display — ΟΧΙ clickable (δεν βγαίνουμε από DXF Viewer).
  * Αν δεν υπάρχουν δεδομένα → return null (μηδενικό visual footprint).
  *
- * @pattern Matches HierarchicalDestinationSelector breadcrumb (lines 210-254)
+ * @pattern Το πρότυπο προερχόταν από το HierarchicalDestinationSelector, που
+ *          διαγράφηκε ως νεκρό (ADR-364 §10.9.3, 2026-07-25). Αυτό είναι πλέον το SSoT.
  */
 export function DxfBreadcrumb(): React.ReactElement | null {
   const { selectedCompany, selectedProject, selectedBuilding, selectedFloor } = useProjectHierarchy();
