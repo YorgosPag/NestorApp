@@ -13,15 +13,16 @@
 
 import type { ResolvedAddressFields } from '@/components/shared/addresses/editor';
 import type { ContactFormData } from '@/types/ContactFormTypes';
+import { formatContactAddressLine } from '@/utils/address/address-line';
 
 export function formatHqStreetLine(formData: ContactFormData): string {
-  const parts = [
-    formData.street,
-    formData.streetNumber,
-    formData.city,
-    formData.postalCode,
-  ].filter(Boolean);
-  return parts.join(', ');
+  return formatContactAddressLine({
+    street: formData.street,
+    number: formData.streetNumber, // flat: `streetNumber` — array: `number`
+    city: formData.city,
+    postalCode: formData.postalCode,
+    country: formData.hqAddressCountry,
+  });
 }
 
 /**

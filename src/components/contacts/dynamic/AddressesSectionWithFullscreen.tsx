@@ -45,6 +45,7 @@ import {
   DRAG_RESOLVED_HIERARCHY_RESET,
   formDataToResolvedFields,
 } from './addresses-section-form-mapping';
+import { formatContactAddressLine } from '@/utils/address/address-line';
 
 export function AddressesSectionWithFullscreen({
   formData,
@@ -426,7 +427,7 @@ export function AddressesSectionWithFullscreen({
               <li key={`derived-work-${addr.companyId}-${i}`}>
                 <SharedAddressActionCard
                   id={`derived-work-${addr.companyId}-${i}`}
-                  streetLine={[addr.street, addr.number, addr.city, addr.postalCode].filter(Boolean).join(', ')}
+                  streetLine={formatContactAddressLine(addr)}
                   typeLabel={`${tAddr('types.work')} — ${addr.companyName}`}
                   isEditing={false}
                 />
