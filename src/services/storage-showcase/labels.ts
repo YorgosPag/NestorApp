@@ -13,15 +13,16 @@ import 'server-only';
 import type { EnumLocale } from '@/services/property-enum-labels/property-enum-labels.service';
 import {
   createLocaleFallback,
-  showcaseCtaLabelDefault,
   type ShowcaseHeaderContactLabels,
   type ShowcaseHeaderLabels,
 } from '@/services/showcase-core/labels-shared';
 import {
   createEnumLabelTranslator,
   readShowcaseCatalogSections,
+  resolveShowcaseEmailLabels,
   resolveShowcaseHeaderLabels,
   resolveShowcaseMediaTitles,
+  resolveShowcaseSpecLabels,
 } from '@/services/showcase-core/labels-catalog';
 import type { StorageType, StorageStatus } from '@/types/storage/contracts';
 
@@ -82,17 +83,21 @@ export const translateStorageStatus = createEnumLabelTranslator(STORAGE_STATUS_L
 // LABEL TYPES
 // ============================================================================
 
-export interface StorageShowcaseSpecLabels {
-  title: string;
-  code: string;
-  type: string;
-  status: string;
-  area: string;
-  price: string;
-  floor: string;
-  building: string;
-  areaUnit: string;
-}
+/** Spec rows this surface renders, in display order (ADR-700). */
+const STORAGE_SPEC_ROWS = [
+  'code',
+  'type',
+  'status',
+  'area',
+  'price',
+  'floor',
+  'building',
+] as const;
+
+export type StorageShowcaseSpecLabels = Record<
+  (typeof STORAGE_SPEC_ROWS)[number] | 'title' | 'areaUnit',
+  string
+>;
 
 export interface StorageShowcaseEmailLabels {
   subjectPrefix: string;
@@ -118,29 +123,20 @@ export function loadStorageShowcasePdfLabels(
   locale: EnumLocale = 'el',
 ): StorageShowcasePDFLabels {
   const sections = readShowcaseCatalogSections('storageShowcase', locale);
-  const { specs, email } = sections;
   const fb = createLocaleFallback(locale);
 
   return {
-    specs: {
-      title:    specs.title    ?? fb('Στοιχεία Αποθήκης', 'Storage Details'),
-      code:     specs.code     ?? fb('Κωδικός', 'Code'),
-      type:     specs.type     ?? fb('Τύπος', 'Type'),
-      status:   specs.status   ?? fb('Κατάσταση', 'Status'),
-      area:     specs.area     ?? fb('Εμβαδόν', 'Area'),
-      price:    specs.price    ?? fb('Τιμή', 'Price'),
-      floor:    specs.floor    ?? fb('Όροφος', 'Floor'),
-      building: specs.building ?? fb('Κτήριο', 'Building'),
-      areaUnit: specs.areaUnit ?? 'm²',
-    },
-    email: {
-      subjectPrefix: email.subjectPrefix ?? fb('Παρουσίαση Αποθήκης', 'Storage Showcase'),
-      introText:     email.introText     ?? fb(
+    specs: resolveShowcaseSpecLabels(sections, locale, {
+      title: fb('Στοιχεία Αποθήκης', 'Storage Details'),
+      keys: STORAGE_SPEC_ROWS,
+    }),
+    email: resolveShowcaseEmailLabels(sections, locale, {
+      subjectPrefix: fb('Παρουσίαση Αποθήκης', 'Storage Showcase'),
+      introText: fb(
         'Σας προωθούμε την αναλυτική παρουσίαση της αποθήκης.',
         'We are sharing the detailed presentation of the storage unit.',
       ),
-      ctaLabel: email.ctaLabel ?? showcaseCtaLabelDefault(locale),
-    },
+    }),
     header: resolveShowcaseHeaderLabels(
       sections,
       locale,

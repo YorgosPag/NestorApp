@@ -40,8 +40,12 @@ export {
   createEnumLabelTranslator,
   getShowcaseCatalog,
   readShowcaseCatalogSections,
+  resolveShowcaseChromeLabels,
+  resolveShowcaseDescriptionLabels,
+  resolveShowcaseEmailLabels,
   resolveShowcaseHeaderLabels,
   resolveShowcaseMediaTitles,
+  resolveShowcaseSpecLabels,
 } from './labels-catalog';
 export type {
   ShowcaseCatalogSections,

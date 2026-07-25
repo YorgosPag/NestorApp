@@ -30,9 +30,15 @@ import enShowcase from '@/i18n/locales/en/showcase.json';
 import type { EnumLocale } from '@/services/property-enum-labels/property-enum-labels.service';
 import {
   resolveHeaderContactLabels,
+  showcaseCtaLabelDefault,
+  showcaseDescriptionSectionDefault,
   showcaseFloorplansTitleDefault,
+  showcaseGeneratedOnDefault,
   showcasePhotosTitleDefault,
+  showcasePoweredByDefault,
+  type ShowcaseEmailLabels,
   type ShowcaseHeaderLabels,
+  type ShowcasePdfChromeLabels,
 } from './labels-shared';
 
 // =============================================================================
@@ -142,6 +148,133 @@ export function resolveShowcaseMediaTitles(
     floorplans: {
       title: sections.floorplans.title ?? showcaseFloorplansTitleDefault(locale),
     },
+  };
+}
+
+/**
+ * Every spec-row label wording used by any showcase surface, as `[el, en]`.
+ *
+ * The five loaders each hand-wrote their own `specs.X ?? fb('…', '…')` ladder,
+ * so the eleven rows they have in common carried five copies of the same two
+ * strings. A surface now declares **which** rows it shows; the wording lives
+ * here once. Adding a row to a surface is a one-word change to its key list.
+ */
+const SHOWCASE_SPEC_FALLBACKS: Record<string, readonly [string, string]> = {
+  code:             ['Κωδικός', 'Code'],
+  type:             ['Τύπος', 'Type'],
+  status:           ['Κατάσταση', 'Status'],
+  area:             ['Εμβαδόν', 'Area'],
+  price:            ['Τιμή', 'Price'],
+  floor:            ['Όροφος', 'Floor'],
+  building:         ['Κτήριο', 'Building'],
+  locationZone:     ['Ζώνη', 'Zone'],
+  progress:         ['Πρόοδος', 'Progress'],
+  totalArea:        ['Συνολικό εμβαδόν', 'Total area'],
+  builtArea:        ['Δομημένη επιφάνεια', 'Built area'],
+  floors:           ['Όροφοι', 'Floors'],
+  units:            ['Μονάδες', 'Units'],
+  totalValue:       ['Συνολική αξία', 'Total value'],
+  energyClass:      ['Ενεργειακή κλάση', 'Energy class'],
+  renovation:       ['Ανακαίνιση', 'Renovation'],
+  constructionYear: ['Έτος κατασκευής', 'Construction year'],
+  startDate:        ['Έναρξη', 'Start date'],
+  completionDate:   ['Παράδοση', 'Completion date'],
+  location:         ['Τοποθεσία', 'Location'],
+  project:          ['Έργο', 'Project'],
+  client:           ['Πελάτης', 'Client'],
+  linkedCompany:    ['Συνεργαζόμενη εταιρεία', 'Linked company'],
+};
+
+/** Same glyph in both locales — the catalog may still override it per surface. */
+const SPEC_AREA_UNIT_DEFAULT = 'm²';
+
+/**
+ * Resolve a surface's spec-row labels: catalog value first, shared wording
+ * second.
+ *
+ * `title` stays a parameter because it is the one row whose wording is
+ * genuinely surface-specific ("Στοιχεία Κτηρίου" vs "Στοιχεία Αποθήκης").
+ * `areaUnit` is always emitted — every surface displays one.
+ *
+ * Key order in the result follows `keys`; these objects are read by key by the
+ * PDF renderers, never serialised positionally.
+ */
+export function resolveShowcaseSpecLabels<K extends string>(
+  sections: ShowcaseCatalogSections,
+  locale: EnumLocale,
+  spec: { title: string; keys: readonly K[] },
+): { title: string; areaUnit: string } & Record<K, string> {
+  const { specs } = sections;
+  const resolved = {} as Record<K, string>;
+
+  for (const key of spec.keys) {
+    const fallback = SHOWCASE_SPEC_FALLBACKS[key];
+    if (fallback === undefined) {
+      throw new Error(
+        `[showcase-core] No shared wording for spec row "${key}". `
+        + 'Add it to SHOWCASE_SPEC_FALLBACKS in labels-catalog.ts (ADR-700).',
+      );
+    }
+    resolved[key] = specs[key] ?? (locale === 'el' ? fallback[0] : fallback[1]);
+  }
+
+  return {
+    title: specs.title ?? spec.title,
+    ...resolved,
+    areaUnit: specs.areaUnit ?? SPEC_AREA_UNIT_DEFAULT,
+  };
+}
+
+/**
+ * Email block. All four namespaced surfaces differ only in their subject and
+ * intro wording; the CTA is shared.
+ */
+export function resolveShowcaseEmailLabels(
+  sections: ShowcaseCatalogSections,
+  locale: EnumLocale,
+  fallbacks: { subjectPrefix: string; introText: string },
+): ShowcaseEmailLabels {
+  const { email } = sections;
+  return {
+    subjectPrefix: email.subjectPrefix ?? fallbacks.subjectPrefix,
+    introText: email.introText ?? fallbacks.introText,
+    ctaLabel: email.ctaLabel ?? showcaseCtaLabelDefault(locale),
+  };
+}
+
+/**
+ * PDF chrome block, for the two surfaces that render a full document frame
+ * (building / project). Media titles are threaded through so the chrome
+ * headings can never drift from the section headings they label.
+ */
+export function resolveShowcaseChromeLabels(
+  sections: ShowcaseCatalogSections,
+  locale: EnumLocale,
+  fallbacks: { title: string; footerNote: string },
+): ShowcasePdfChromeLabels {
+  const pdf = (sections.namespace.pdf ?? {}) as Record<string, string>;
+  const media = resolveShowcaseMediaTitles(sections, locale);
+  return {
+    title: pdf.title ?? fallbacks.title,
+    generatedOn: pdf.generatedOn ?? showcaseGeneratedOnDefault(locale),
+    descriptionSection:
+      pdf.descriptionSection ?? showcaseDescriptionSectionDefault(locale),
+    footerNote: pdf.footerNote ?? fallbacks.footerNote,
+    photosTitle: media.photos.title,
+    floorplansTitle: media.floorplans.title,
+    poweredBy: showcasePoweredByDefault(locale),
+  };
+}
+
+/** `description.sectionTitle` with the shared default — identical on both. */
+export function resolveShowcaseDescriptionLabels(
+  sections: ShowcaseCatalogSections,
+  locale: EnumLocale,
+): { sectionTitle: string } {
+  const description = (sections.namespace.description ?? {}) as Record<string, string>;
+  return {
+    sectionTitle:
+      description.sectionTitle ?? showcaseDescriptionSectionDefault(locale),
   };
 }
 
