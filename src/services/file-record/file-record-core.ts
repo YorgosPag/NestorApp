@@ -112,6 +112,15 @@ export interface BuildPendingFileRecordInput {
   projectId?: string;
   ext?: string;
 
+  /**
+   * Προαιρετικό override του fileId για **idempotent** μεταφόρτωση.
+   * Όταν δίνεται ντετερμινιστικό id (βλ. `generateDeterministicFileId`), μια
+   * δεύτερη κλήση με το ίδιο αρχείο γράφει στο ΙΔΙΟ `files/{fileId}` και στο
+   * ΙΔΙΟ storage path (το path εμπεριέχει το fileId) → κανένα διπλότυπο.
+   * Χωρίς αυτό, η συμπεριφορά μένει ακριβώς όπως πριν (τυχαίο id).
+   */
+  fileId?: string;
+
   // Naming context (for displayName generation)
   entityLabel?: string;
   purpose?: string;
@@ -260,8 +269,8 @@ export function buildPendingFileRecordData(
     throw new Error('createdBy is REQUIRED for creating FileRecord');
   }
 
-  // 2. Generate unique file ID
-  const fileId = generateFileId();
+  // 2. File ID — ντετερμινιστικό override αν δόθηκε, αλλιώς τυχαίο (SSoT: N.6)
+  const fileId = input.fileId || generateFileId();
 
   // 3. Get extension from originalFilename if not provided
   const ext = input.ext || getFileExtension(input.originalFilename);

@@ -19,14 +19,13 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { fieldToISO } from '@/lib/date-local';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
+import { runFileRecordQuery, toFileRecord } from '@/services/file-record-queries';
 import {
   type EntityType,
   FILE_STATUS,
 } from '@/config/domain-constants';
 import type { FileRecord } from '@/types/file-record';
-import { isFileRecord } from '@/types/file-record';
 import { createModuleLogger } from '@/lib/telemetry';
 import { RealtimeService } from '@/services/realtime';
 import { FileAuditService } from '@/services/file-audit.service';
@@ -35,19 +34,9 @@ import type { DisciplineCode, DocumentSeries, CdeState, SuitabilityCode } from '
 
 const logger = createModuleLogger('FILE_RECORD_LINKS');
 
-// ============================================================================
-// POST-QUERY NORMALIZATION (shared with main service)
-// ============================================================================
-
-function toFileRecord(raw: DocumentData): FileRecord | null {
-  const record = {
-    ...raw,
-    id: raw.id as string,
-    createdAt: fieldToISO(raw as Record<string, unknown>, 'createdAt') || raw.createdAt,
-    updatedAt: fieldToISO(raw as Record<string, unknown>, 'updatedAt') || raw.updatedAt,
-  };
-  return isFileRecord(record) ? record : null;
-}
+// POST-QUERY NORMALIZATION — SSoT in ./file-record-queries. This file kept a
+// byte-for-byte private copy until 2026-07-25 (N.0.2 Boy Scout): two copies =
+// two places for the Timestamp→ISO rule to drift.
 
 // ============================================================================
 // ENTITY LINKING OPERATIONS
@@ -134,17 +123,7 @@ export async function getLinkedFiles(
     where('isDeleted', '==', false),
   ];
 
-  const result = await firestoreQueryService.getAll<DocumentData>('FILES', { constraints });
-
-  const validRecords: FileRecord[] = [];
-  for (const raw of result.documents) {
-    const record = toFileRecord(raw);
-    if (record) {
-      validRecords.push(record);
-    } else {
-      logger.warn('Skipping invalid FileRecord in getLinkedFiles', { docId: raw.id });
-    }
-  }
+  const validRecords = await runFileRecordQuery(constraints, 'getLinkedFiles');
 
   logger.info('Fetched linked files', { linkTag, count: validRecords.length });
   return validRecords;
@@ -153,6 +132,33 @@ export async function getLinkedFiles(
 // ============================================================================
 // RENAME & DESCRIPTION OPERATIONS
 // ============================================================================
+
+/**
+ * Existence-checked field update on a FileRecord + the realtime dispatch that
+ * must follow it. Every editor of a single field goes through here so that
+ * "does the doc still exist?" is asked in ONE place — `updateDoc` on a deleted
+ * id would otherwise reject with a raw Firestore error instead of our message.
+ */
+async function updateFileRecordFields(
+  fileId: string,
+  updates: Record<string, unknown>,
+  dispatched: Partial<FileRecord>,
+): Promise<void> {
+  const docRef = doc(db, COLLECTIONS.FILES, fileId);
+
+  const docSnap = await getDoc(docRef);
+  if (!docSnap.exists()) {
+    throw new Error(`FileRecord not found: ${fileId}`);
+  }
+
+  await updateDoc(docRef, { ...updates, updatedAt: serverTimestamp() });
+
+  RealtimeService.dispatch('FILE_UPDATED', {
+    fileId,
+    updates: dispatched,
+    timestamp: Date.now(),
+  });
+}
 
 /**
  * Rename file display name
@@ -165,27 +171,12 @@ export async function renameFile(fileId: string, newDisplayName: string, renamed
 
   logger.info('Renaming FileRecord', { fileId, newDisplayName, renamedBy });
 
-  const docRef = doc(db, COLLECTIONS.FILES, fileId);
-
-  const docSnap = await getDoc(docRef);
-  if (!docSnap.exists()) {
-    throw new Error(`FileRecord not found: ${fileId}`);
-  }
-
-  await updateDoc(docRef, {
-    displayName: newDisplayName.trim(),
-    updatedAt: serverTimestamp(),
-  });
+  const displayName = newDisplayName.trim();
+  await updateFileRecordFields(fileId, { displayName }, { displayName });
 
   logger.info('FileRecord renamed successfully', { fileId, newDisplayName });
 
-  RealtimeService.dispatch('FILE_UPDATED', {
-    fileId,
-    updates: { displayName: newDisplayName.trim() },
-    timestamp: Date.now(),
-  });
-
-  safeFireAndForget(FileAuditService.log(fileId, 'rename', renamedBy, undefined, { newDisplayName: newDisplayName.trim() }), 'FileRecord.renameFile', { fileId });
+  safeFireAndForget(FileAuditService.log(fileId, 'rename', renamedBy, undefined, { newDisplayName: displayName }), 'FileRecord.renameFile', { fileId });
 }
 
 /**
@@ -195,25 +186,10 @@ export async function renameFile(fileId: string, newDisplayName: string, renamed
 export async function updateDescription(fileId: string, description: string): Promise<void> {
   logger.info('Updating FileRecord description', { fileId });
 
-  const docRef = doc(db, COLLECTIONS.FILES, fileId);
-
-  const docSnap = await getDoc(docRef);
-  if (!docSnap.exists()) {
-    throw new Error(`FileRecord not found: ${fileId}`);
-  }
-
-  await updateDoc(docRef, {
-    description: description.trim() || null,
-    updatedAt: serverTimestamp(),
-  });
+  const trimmed = description.trim();
+  await updateFileRecordFields(fileId, { description: trimmed || null }, { description: trimmed || undefined });
 
   logger.info('FileRecord description updated', { fileId });
-
-  RealtimeService.dispatch('FILE_UPDATED', {
-    fileId,
-    updates: { description: description.trim() || undefined },
-    timestamp: Date.now(),
-  });
 }
 
 // ============================================================================

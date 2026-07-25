@@ -24,9 +24,33 @@ const logger = createModuleLogger('useMultiplePhotosState');
 // Variants keep ONLY their layout wrapper — no logic branching here.
 // ============================================================================
 
+/**
+ * Ένα slot μαζί με την ΠΡΑΓΜΑΤΙΚΗ του θέση στο `normalizedPhotos`.
+ *
+ * ⚠️ Το `index` είναι SSoT για ΔΥΟ πράγματα ταυτόχρονα: το `photoIndex` που
+ * καταλήγει στο filename (`..._photo_N.jpg`) ΚΑΙ το React `key` του cell.
+ * Ποτέ μην το ξαναϋπολογίσεις με object identity (`findIndex(p => p === photo)`):
+ * τα κενά slots είναι δομικά ισοδύναμα και μια τέτοια αναζήτηση κατέρρεε σε ένα
+ * κοινό index → λάθος όνομα αρχείου + διπλά keys → remount → διπλό upload.
+ */
+export interface PhotoSlotEntry {
+  photo: PhotoSlot;
+  index: number;
+}
+
 export interface UsePhotoSlotStateReturn {
   usedSlots: number;
   availableSlots: number;
+  /**
+   * Τα slots που πρέπει να αποδοθούν, με το πραγματικό τους index.
+   * Χρησιμοποιείται από variants που ΑΦΑΙΡΟΥΝ τα κρυφά slots από το DOM.
+   */
+  visibleSlots: PhotoSlotEntry[];
+  /**
+   * Κοινό κριτήριο ορατότητας. Χρησιμοποιείται από variants που κρατούν τη θέση
+   * και αποδίδουν placeholder αντί να αφαιρούν το slot.
+   */
+  isSlotHidden: (photo: PhotoSlot) => boolean;
   /** Bulk drop handler: fills the next empty slots with dropped image files. */
   handleMultipleDrop: (e: React.DragEvent<HTMLDivElement>) => void;
   /**
@@ -49,6 +73,7 @@ export function usePhotoSlotState(base: MultiplePhotosBaseProps): UsePhotoSlotSt
     showProgress,
     contactData,
     onPhotoClick,
+    showPhotosWhenDisabled = false,
   } = base;
 
   // 🏢 ADR-292: Resolve canonical fields for tenant-isolated upload
@@ -67,6 +92,15 @@ export function usePhotoSlotState(base: MultiplePhotosBaseProps): UsePhotoSlotSt
 
   const usedSlots = normalizedPhotos.filter(photo => photo.file || photo.uploadUrl).length;
   const availableSlots = maxPhotos - usedSlots;
+
+  // Σε disabled (read-only) mode τα κενά slots δεν προσφέρουν τίποτα στον χρήστη.
+  const isSlotHidden = (photo: PhotoSlot): boolean =>
+    !!disabled && !showPhotosWhenDisabled && !photo.file && !photo.uploadUrl;
+
+  // Το index δεσμεύεται ΠΡΙΝ το φιλτράρισμα, ώστε να παραμένει η πραγματική θέση.
+  const visibleSlots: PhotoSlotEntry[] = normalizedPhotos
+    .map((photo, index) => ({ photo, index }))
+    .filter(entry => !isSlotHidden(entry.photo));
 
   const handleMultipleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -169,5 +203,5 @@ export function usePhotoSlotState(base: MultiplePhotosBaseProps): UsePhotoSlotSt
     };
   };
 
-  return { usedSlots, availableSlots, handleMultipleDrop, buildCellProps };
+  return { usedSlots, availableSlots, visibleSlots, isSlotHidden, handleMultipleDrop, buildCellProps };
 }

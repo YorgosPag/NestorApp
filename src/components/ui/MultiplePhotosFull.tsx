@@ -42,13 +42,12 @@ export function MultiplePhotosFull(props: MultiplePhotosFullProps) {
     purpose,
     disabled,
     className = '',
-    showPhotosWhenDisabled = false,
   } = props;
 
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const { t } = useTranslation('common-photos');
-  const { availableSlots, handleMultipleDrop, buildCellProps } = usePhotoSlotState(props);
+  const { availableSlots, isSlotHidden, handleMultipleDrop, buildCellProps } = usePhotoSlotState(props);
 
   // 🎯 Δυναμικά κείμενα ανάλογα με purpose και maxPhotos (full-only copy)
   const getDragDropText = () => {
@@ -97,8 +96,9 @@ export function MultiplePhotosFull(props: MultiplePhotosFullProps) {
             responsiveStyle.maxHeight = 'none';
           }
 
-          // 🚨 CRITICAL: Skip filtering that changes indexes! Always render exactly 6 slots
-          if (disabled && !showPhotosWhenDisabled && !photo.file && !photo.uploadUrl) {
+          // 🚨 CRITICAL: Skip filtering that changes indexes! Always render exactly 6 slots.
+          // Το κριτήριο ορατότητας είναι κοινό με το compact variant (ADR-596 SSoT).
+          if (isSlotHidden(photo)) {
             // Render empty slot placeholder in disabled mode
             return (
               <div

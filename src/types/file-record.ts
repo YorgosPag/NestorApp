@@ -731,6 +731,15 @@ export interface FileRecord {
  * This enforces single naming authority (ADR-031).
  */
 export interface CreateFileRecordInput {
+  /**
+   * Προαιρετικό override του fileId για **idempotent** μεταφόρτωση.
+   *
+   * Όταν δίνεται ντετερμινιστικό id (`generateDeterministicFileId`), δεύτερη
+   * κλήση με το ίδιο αρχείο/θέση γράφει στο ΙΔΙΟ `files/{fileId}` και στο ΙΔΙΟ
+   * storage path (το path εμπεριέχει το fileId) → φυσικά αδύνατο το διπλότυπο.
+   * Αν παραλειφθεί, η συμπεριφορά είναι όπως πάντα (τυχαίο enterprise id).
+   */
+  fileId?: string;
   /** Company ID for tenant isolation (REQUIRED for multi-tenant) */
   companyId: string;
   /** Project ID for project scope */

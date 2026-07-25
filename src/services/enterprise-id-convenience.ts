@@ -132,6 +132,9 @@ export const generateChequeId = () => enterpriseIdService.generateChequeId();
 export const generatePhotoId = () => enterpriseIdService.generatePhotoId();
 export const generateAttachmentId = () => enterpriseIdService.generateAttachmentId();
 export const generateFileId = () => enterpriseIdService.generateFileId();
+/** Idempotent μεταφόρτωση: ίδιο (οντότητα, θέση, αρχείο) ⇒ ίδιο doc id ⇒ καμία διπλή εγγραφή. */
+export const generateDeterministicFileId = (seed: string) =>
+  enterpriseIdService.generateDeterministicFileId(seed);
 export const generateShareId = () => enterpriseIdService.generateShareId();
 export const generateDispatchId = () => enterpriseIdService.generateDispatchId();
 export const generatePendingId = () => enterpriseIdService.generatePendingId();

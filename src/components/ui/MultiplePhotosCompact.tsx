@@ -44,12 +44,11 @@ export function MultiplePhotosCompact(props: MultiplePhotosCompactProps) {
     showProfileSelector = false,
     selectedProfilePhotoIndex,
     onProfilePhotoSelection,
-    showPhotosWhenDisabled = false,
   } = props;
 
   const iconSizes = useIconSizes();
   const { t } = useTranslation('common-photos');
-  const { availableSlots, handleMultipleDrop, buildCellProps } = usePhotoSlotState(props);
+  const { availableSlots, visibleSlots, handleMultipleDrop, buildCellProps } = usePhotoSlotState(props);
 
   return (
     <section className={`space-y-3 ${className}`} role="region" aria-label={t('photos.management.title')}>
@@ -57,18 +56,14 @@ export function MultiplePhotosCompact(props: MultiplePhotosCompactProps) {
 
       {/* Compact Grid - Dynamic Layout */}
       <main className={maxPhotos === 1 ? "flex justify-center" : "flex flex-col space-y-4 sm:grid sm:grid-cols-3 sm:gap-8 sm:p-2 sm:space-y-0"} role="main" aria-label={t('photos.management.gallery')}>
-        {normalizedPhotos
-          // ✅ CRITICAL FIX: Στο disabled mode εμφανίζουμε μόνο τα slots με φωτογραφίες
-          .filter((photo) => {
-            if (!disabled || showPhotosWhenDisabled) {
-              return true; // Normal mode: εμφάνιση όλων
-            }
-            return photo.file || photo.uploadUrl; // Disabled mode: μόνο τα με φωτογραφίες
-          })
-          .map((photo) => {
-            // Βρίσκουμε το πραγματικό index στο original array
-            const index = normalizedPhotos.findIndex(p => p === photo);
-
+        {/*
+          🚨 Το `index` έρχεται από το visibleSlots (ADR-596 SSoT) και είναι η
+          ΠΡΑΓΜΑΤΙΚΗ θέση στο normalizedPhotos. Μην το ξαναϋπολογίσεις εδώ με
+          findIndex σε object identity — τα κενά slots είναι ισοδύναμα και η
+          αναζήτηση κατέρρεε σε ένα κοινό index (λάθος filename + διπλά keys).
+        */}
+        {visibleSlots
+          .map(({ photo, index }) => {
             // 🎯 MOBILE FIX: Fixed 4:3 ratio — Tailwind-only (no inline styles)
             const slotSize = maxPhotos === 1
               ? "h-64 w-64 overflow-hidden"

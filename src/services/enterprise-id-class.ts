@@ -31,6 +31,20 @@ import {
   type IdGenerationConfig,
 } from './enterprise-id-prefixes';
 import { deterministicUuid } from './enterprise-id-deterministic';
+import {
+  aiUsageDocKey,
+  chatHistoryDocKey,
+  ownershipRevisionKey,
+  ownershipTableKey,
+  queryStrategyDocKey,
+  userPreferencesKey,
+  vendorLogoFileKey,
+} from './enterprise-id-composite-keys';
+import {
+  enterpriseIdType,
+  isValidEnterpriseId,
+  parseEnterpriseId,
+} from './enterprise-id-parse';
 
 // Alias for compact generator methods
 const P = ENTERPRISE_ID_PREFIXES;
@@ -241,6 +255,13 @@ export class EnterpriseIdService {
   generatePhotoId(): string { return this.generateId(P.PHOTO).id; }
   generateAttachmentId(): string { return this.generateId(P.ATTACHMENT).id; }
   generateFileId(): string { return this.generateId(P.FILE).id; }
+  /**
+   * Σταθερό id ανά (εταιρεία, οντότητα, domain/category, ταυτότητα αρχείου):
+   * δύο μεταφορτώσεις του ΙΔΙΟΥ αρχείου στην ίδια θέση ⇒ ΕΝΑ `files` doc και
+   * ΕΝΑ Storage object (το path εμπεριέχει το fileId), αντί για δύο ορφανά.
+   * Ίδιο σκεπτικό με το {@link generateDeterministicDrawingRevisionId} (ADR-651 Φ.Η).
+   */
+  generateDeterministicFileId(seed: string): string { return this.generateDeterministicId(P.FILE, seed); }
   generateShareId(): string { return this.generateId(P.SHARE).id; }
   generateDispatchId(): string { return this.generateId(P.DISPATCH).id; }
   generatePendingId(): string { return this.generateId(P.PENDING).id; }
@@ -400,48 +421,35 @@ export class EnterpriseIdService {
   generateOpeningFramePresetId(): string { return this.generateId(P.OPENING_FRAME_PRESET).id; }
 
   // --- Deterministic Composite Key Generators ---
+  // Public surface only; the pure builders live in `./enterprise-id-composite-keys`
+  // (N.7.1 — this class owns stateful generation: retry loop, cache, stats).
 
   generateAiUsageDocId(channel: string, userId: string, month: string): string {
-    return `${P.AI_USAGE}_${channel}_${userId}_${month}`;
+    return aiUsageDocKey(channel, userId, month);
   }
 
   generateQueryStrategyDocId(collection: string, failedFilters: string[]): string {
-    const filterKey = [...failedFilters].sort().join('_');
-    return `${P.QUERY_STRATEGY}_${collection}_${filterKey}`;
+    return queryStrategyDocKey(collection, failedFilters);
   }
 
   generateChatHistoryDocId(channel: string, senderId: string): string {
-    return `${P.AI_CHAT_HISTORY}_${channel}_${senderId}`;
+    return chatHistoryDocKey(channel, senderId);
   }
 
-  /** ADR-235: Deterministic 1:1 key — one ownership table per project */
   generateOwnershipTableId(projectId: string): string {
-    return `${P.OWNERSHIP_TABLE}_${projectId}`;
+    return ownershipTableKey(projectId);
   }
 
-  /**
-   * UserSettings SSoT: deterministic 1:1 key — one preferences blob per
-   * (user, tenant). Used by `user_preferences/{docId}` Firestore collection
-   * and by `userSettingsRepository.bind(userId, companyId)`.
-   */
   generateUserPreferencesId(userId: string, companyId: string): string {
-    if (!userId) throw new Error('generateUserPreferencesId: userId is required');
-    if (!companyId) throw new Error('generateUserPreferencesId: companyId is required');
-    return `${userId}_${companyId}`;
+    return userPreferencesKey(userId, companyId);
   }
 
-  /** ADR-235: Deterministic revision key — one revision per version */
   generateOwnershipRevisionId(version: number): string {
-    return `${P.OWNERSHIP_TABLE}_rev_v${version}`;
+    return ownershipRevisionKey(version);
   }
 
-  /**
-   * ADR-327 §6: Deterministic vendor-logo file ID — one logo claim per quote.
-   * Replaces the legacy literal `'vendor-logo'` shared-claim id which produced
-   * a single mutable Firestore doc serving N quotes (race-prone).
-   */
   generateVendorLogoFileId(quoteId: string): string {
-    return `${P.VENDOR_LOGO}_${quoteId}`;
+    return vendorLogoFileKey(quoteId);
   }
 
   /**
@@ -455,32 +463,22 @@ export class EnterpriseIdService {
 
   // --- Utility Methods ---
 
+  // Pure readers live in `./enterprise-id-parse` — no instance state involved.
+
   parseId(enterpriseId: string): Partial<EnterpriseId> | null {
-    const parts = enterpriseId.split('_');
-    if (parts.length !== 2) return null;
-
-    const [prefix, uuid] = parts;
-    if (!Object.values(ENTERPRISE_ID_PREFIXES).includes(prefix as EnterpriseIdPrefix)) {
-      return null;
-    }
-
-    return { id: enterpriseId, prefix: prefix as EnterpriseIdPrefix, uuid };
+    return parseEnterpriseId(enterpriseId);
   }
 
   validateId(id: string): boolean {
-    const parsed = this.parseId(id);
-    if (!parsed) return false;
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    return uuidRegex.test(parsed.uuid || '');
+    return isValidEnterpriseId(id);
   }
 
   getIdType(id: string): string | null {
-    const parsed = this.parseId(id);
-    return parsed?.prefix || null;
+    return enterpriseIdType(id);
   }
 
   isLegacyId(id: string): boolean {
-    return !this.validateId(id);
+    return !isValidEnterpriseId(id);
   }
 
   getStats(): { totalGenerated: number; cacheSize: number; config: IdGenerationConfig } {

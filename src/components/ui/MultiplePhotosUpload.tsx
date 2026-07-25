@@ -102,27 +102,20 @@ export function MultiplePhotosUpload({
 
   // Ensure photos array has the correct length
   const normalizedPhotos = React.useMemo(() => {
-    const emptySlot: PhotoSlot = { file: null, isUploading: false, uploadProgress: 0 };
-
     // 🚨 CRITICAL: Force exactly maxPhotos slots, no more, no less!
+    //
+    // ⚠️ Κάθε κενό slot ΠΡΕΠΕΙ να είναι ΞΕΧΩΡΙΣΤΟ object. Παλαιότερα μοιράζονταν
+    // ΕΝΑ κοινό `emptySlot` reference, οπότε κάθε αναζήτηση θέσης με object
+    // identity (`findIndex(p => p === photo)`) επέστρεφε το ΙΔΙΟ index για όλα
+    // τα κενά slots → λάθος `photoIndex` στο filename ΚΑΙ διπλά React keys →
+    // απρόβλεπτο remount των cells → μηδενισμός των upload guards → διπλό upload.
     const result: PhotoSlot[] = [];
     for (let i = 0; i < maxPhotos; i++) {
       if (photos && photos[i] && (photos[i].file || photos[i].uploadUrl || photos[i].preview)) {
         result[i] = photos[i];
       } else {
-        result[i] = emptySlot;
+        result[i] = { file: null, isUploading: false, uploadProgress: 0 };
       }
-    }
-
-    // 🔴 BROWSER DEBUG: Verify photos prop reaches MultiplePhotosUpload
-    const filledCount = result.filter(p => p.file || p.uploadUrl || p.preview).length;
-    if (filledCount > 0) {
-      console.log('🔴 PHOTO DEBUG [MultiplePhotosUpload] normalizedPhotos:', {
-        photosIsArray: Array.isArray(photos),
-        photosLength: photos?.length,
-        filledSlots: filledCount,
-        slots: result.map((p, i) => ({ i, f: !!p.file, u: !!p.uploadUrl, p: !!p.preview }))
-      });
     }
 
     // Ensure exactly maxPhotos length - no overflow!

@@ -22,18 +22,13 @@ import {
   setDoc,
   getDoc,
   updateDoc,
-  where,
   serverTimestamp,
-  type DocumentData,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { fieldToISO, nowISO } from '@/lib/date-local';
-import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
+import { nowISO } from '@/lib/date-local';
 import {
   type EntityType,
-  type FileDomain,
-  type FileCategory,
   FILE_LIFECYCLE_STATES,
   FILE_STATUS,
 } from '@/config/domain-constants';
@@ -42,9 +37,7 @@ import type {
   CreateFileRecordInput,
   CreateFileRecordResult,
   FinalizeFileRecordInput,
-  FileRecordQuery,
 } from '@/types/file-record';
-import { isFileRecord } from '@/types/file-record';
 import {
   ensureFilesNamespaceLoaded,
 } from '@/services/upload/utils/file-display-name';
@@ -77,20 +70,17 @@ import {
   updateIso19650Metadata,
   findByHash,
 } from '@/services/file-record-links';
+import {
+  getFileRecord,
+  getFilesByEntity,
+  queryFileRecords,
+} from '@/services/file-record-queries';
 export type { Iso19650MetadataUpdate } from '@/services/file-record-links';
+// Read side lives in ./file-record-queries (ADR-065 SRP split). Re-exported
+// because consumers (e.g. useEntityFiles) import `toFileRecord` from here.
+export { toFileRecord } from '@/services/file-record-queries';
 const logger = createModuleLogger('FILE_RECORD');
-// ============================================================================
-// POST-QUERY NORMALIZATION HELPER (ADR-214 Phase 3)
-// ============================================================================
-export function toFileRecord(raw: DocumentData): FileRecord | null {
-  const record = {
-    ...raw,
-    id: raw.id as string,
-    createdAt: fieldToISO(raw as Record<string, unknown>, 'createdAt') || raw.createdAt,
-    updatedAt: fieldToISO(raw as Record<string, unknown>, 'updatedAt') || raw.updatedAt,
-  };
-  return isFileRecord(record) ? record : null;
-}
+
 // ============================================================================
 // FILE RECORD SERVICE
 // ============================================================================
@@ -133,6 +123,9 @@ export class FileRecordService {
       levelFloorId: input.levelFloorId,
       language: 'el',
       uploaderName: input.uploaderName,
+      // Idempotent upload: όταν ο caller δίνει ντετερμινιστικό id, η δεύτερη
+      // κλήση γράφει στο ίδιο doc/path αντί να δημιουργήσει διπλότυπο.
+      fileId: input.fileId,
     };
 
     const { fileId, storagePath, displayNameResult, recordBase } =
@@ -290,154 +283,18 @@ export class FileRecordService {
   // READ OPERATIONS
   // ==========================================================================
 
-  /**
-   * Get a single FileRecord by ID
-   * 🏢 ADR-214 Phase 3: via FirestoreQueryService
-   */
-  static async getFileRecord(fileId: string): Promise<FileRecord | null> {
-    const raw = await firestoreQueryService.getById<DocumentData>('FILES', fileId);
-    if (!raw) return null;
-
-    const record = toFileRecord(raw);
-    if (!record) {
-      logger.warn('Invalid FileRecord data from Firestore', { fileId });
-      return null;
-    }
-
-    return record;
-  }
-
-  /**
-   * Query FileRecords by entity
-   * 🏢 ADR-214 Phase 3: via FirestoreQueryService
-   */
-  static async getFilesByEntity(
-    entityType: EntityType,
-    entityId: string,
-    options?: {
-      domain?: FileDomain;
-      category?: FileCategory;
-      purpose?: string;
-      levelFloorId?: string;
-      includeDeleted?: boolean;
-      companyId?: string;
-    }
-  ): Promise<FileRecord[]> {
-    const constraints = [
-      where('entityType', '==', entityType),
-      where('entityId', '==', entityId),
-      where('status', '==', FILE_STATUS.READY),
-    ];
-
-    // 🔒 SECURITY: companyId constraint required for Firestore Security Rules
-    // Rules enforce belongsToCompany(resource.data.companyId) — without this
-    // filter, queries fail with PERMISSION_DENIED for non-super-admin users.
-    if (options?.companyId) {
-      constraints.push(where('companyId', '==', options.companyId));
-    }
-
-    if (options?.domain) {
-      constraints.push(where('domain', '==', options.domain));
-    }
-
-    if (options?.category) {
-      constraints.push(where('category', '==', options.category));
-    }
-
-    if (options?.purpose) {
-      constraints.push(where('purpose', '==', options.purpose));
-    }
-
-    if (options?.levelFloorId) {
-      constraints.push(where('levelFloorId', '==', options.levelFloorId));
-    }
-
-    if (!options?.includeDeleted) {
-      constraints.push(where('isDeleted', '==', false));
-      constraints.push(where('lifecycleState', '==', FILE_LIFECYCLE_STATES.ACTIVE));
-    }
-
-    const result = await firestoreQueryService.getAll<DocumentData>('FILES', { constraints });
-
-    const validRecords: FileRecord[] = [];
-    for (const raw of result.documents) {
-      const record = toFileRecord(raw);
-      if (record) {
-        validRecords.push(record);
-      } else {
-        logger.warn('Skipping invalid FileRecord in query results', { docId: raw.id });
-      }
-    }
-
-    // ADR-351: sort by createdAt DESC (most recent first) — client-side to avoid
-    // adding a composite index for every where() combination. Callers that pick
-    // `result[0]` (e.g. FloorFloorplanService.loadFloorplan) MUST receive the
-    // most recently created record, not the lexicographically first UUID.
-    validRecords.sort((a, b) => {
-      const aMs = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-      const bMs = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-      return bMs - aMs;
-    });
-
-    return validRecords;
-  }
-
-  /**
-   * Query FileRecords with flexible parameters
-   * 🏢 ADR-214 Phase 3: via FirestoreQueryService
-   */
-  static async queryFileRecords(
-    queryParams: FileRecordQuery
-  ): Promise<FileRecord[]> {
-    const constraints = [];
-
-    if (queryParams.projectId) {
-      constraints.push(where('projectId', '==', queryParams.projectId));
-    }
-
-    if (queryParams.entityType) {
-      constraints.push(where('entityType', '==', queryParams.entityType));
-    }
-
-    if (queryParams.entityId) {
-      constraints.push(where('entityId', '==', queryParams.entityId));
-    }
-
-    if (queryParams.domain) {
-      constraints.push(where('domain', '==', queryParams.domain));
-    }
-
-    if (queryParams.category) {
-      constraints.push(where('category', '==', queryParams.category));
-    }
-
-    if (queryParams.status) {
-      constraints.push(where('status', '==', queryParams.status));
-    }
-
-    if (!queryParams.includeDeleted) {
-      constraints.push(where('isDeleted', '==', false));
-      constraints.push(where('lifecycleState', '==', FILE_LIFECYCLE_STATES.ACTIVE));
-    }
-
-    const result = await firestoreQueryService.getAll<DocumentData>('FILES', { constraints });
-
-    const validRecords: FileRecord[] = [];
-    for (const raw of result.documents) {
-      const record = toFileRecord(raw);
-      if (record) {
-        validRecords.push(record);
-      } else {
-        logger.warn('Skipping invalid FileRecord in queryFileRecords', { docId: raw.id });
-      }
-    }
-
-    return validRecords;
-  }
-
   // ==========================================================================
   // DELEGATED OPERATIONS (SRP modules — ADR-065)
   // ==========================================================================
+
+  /** 🔍 Get one FileRecord by id — @see file-record-queries.ts */
+  static getFileRecord = getFileRecord;
+
+  /** 🔍 Get an entity's ready files (createdAt DESC) — @see file-record-queries.ts */
+  static getFilesByEntity = getFilesByEntity;
+
+  /** 🔍 Flexible FileRecord query — @see file-record-queries.ts */
+  static queryFileRecords = queryFileRecords;
 
   /** 🗑️ Move file to Trash (soft delete) — @see file-record-lifecycle.ts */
   static moveToTrash = moveToTrash;

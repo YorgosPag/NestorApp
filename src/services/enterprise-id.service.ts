@@ -60,7 +60,7 @@ export {
   generatePipelineQueueId, generateVoiceCommandId, generateBrokerageId,
   generateCommissionId, generatePaymentPlanId, generatePlanGroupId,
   generatePaymentRecordId, generateLoanId, generateChequeId, generatePhotoId,
-  generateAttachmentId, generateFileId, generateShareId, generateDispatchId, generatePendingId,
+  generateAttachmentId, generateFileId, generateDeterministicFileId, generateShareId, generateDispatchId, generatePendingId,
   generateSubscriptionId, generateMilestoneId, generateWebhookId,
   generateLearnedPatternId, generateConstructionPhaseId, generateConstructionTaskId,
   generateConstructionBaselineId, generateConstructionResourceAssignmentId,

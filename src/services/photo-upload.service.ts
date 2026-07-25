@@ -30,6 +30,7 @@ import {
   type FileCategory,
 } from '@/config/domain-constants';
 import type { FileRecord } from '@/types/file-record';
+import { generateDeterministicFileId } from '@/services/enterprise-id.service';
 import { getErrorMessage } from '@/lib/error-utils';
 
 // ✅ ADR-065 SRP: Re-export types for backward compatibility (9 consumers)
@@ -301,8 +302,28 @@ export class PhotoUploadService {
       throw new Error(validation.error || 'Invalid file');
     }
 
+    // 🔒 IDEMPOTENCY (N.7.2 #3): σταθερό fileId ανά (tenant, οντότητα, θέση, αρχείο).
+    // Το `file.name` έχει ήδη κανονικοποιηθεί από το FileNamingService και εμπεριέχει
+    // τη θέση (`..._photo_N.ext`), άρα το seed διακρίνει σωστά διαφορετικά slots.
+    // Επειδή το storage path χτίζεται ΠΑΝΩ στο fileId, μια δεύτερη κλήση με το ίδιο
+    // αρχείο γράφει στο ΙΔΙΟ doc και στο ΙΔΙΟ object — αντί για δεύτερο ορφανό ζεύγος.
+    const idempotentFileId = generateDeterministicFileId(
+      [
+        options.companyId,
+        options.entityType,
+        options.entityId,
+        options.domain,
+        options.category,
+        options.purpose ?? '',
+        file.name,
+        String(file.size),
+        String(file.lastModified),
+      ].join('|')
+    );
+
     // Step A: Create pending FileRecord (via gateway — ADR-292)
     const { fileId, storagePath, fileRecord } = await createPendingFileRecordWithPolicy({
+      fileId: idempotentFileId,
       companyId: options.companyId,
       entityType: options.entityType,
       entityId: options.entityId,

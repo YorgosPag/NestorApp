@@ -8,6 +8,24 @@ import { getErrorMessage } from '@/lib/error-utils';
 const logger = createModuleLogger('useAutoUploadEffect');
 
 // ============================================================================
+// REMOUNT-DURABLE UPLOAD GUARDS (module scope, όχι useRef)
+// ----------------------------------------------------------------------------
+// Τα per-component refs μηδενίζονται σε ΚΑΘΕ remount. Αν το slot ξαναστηθεί ενώ
+// το `file` είναι ακόμη παρόν (π.χ. αλλαγή React key, cache-buster, re-render του
+// γονέα), το effect το έβλεπε ως ολοκαίνουργιο αρχείο και ξανανέβαζε — δεύτερο
+// Storage object + δεύτερο `files` doc + δεύτερο URL.
+//
+// Το κλειδί είναι η ΤΑΥΤΟΤΗΤΑ του `File` object: κάθε νέα επιλογή αρχείου από τον
+// χρήστη παράγει νέο File, άρα δεν μπλοκάρεται ποτέ πραγματική νέα μεταφόρτωση.
+// WeakSet → μηδενική διαρροή μνήμης (το entry φεύγει μαζί με το File).
+//
+// ⚠️ ΜΟΝΟ οι ΕΠΙΤΥΧΙΕΣ είναι durable. Οι αποτυχίες παραμένουν component-local,
+// ώστε ένα remount να εξακολουθεί να επιτρέπει retry μετά από σφάλμα δικτύου.
+// ============================================================================
+const uploadedFiles = new WeakSet<File>();
+const inFlightFiles = new WeakSet<File>();
+
+// ============================================================================
 // TYPES & INTERFACES
 // ============================================================================
 
@@ -91,14 +109,10 @@ export function useAutoUploadEffect({
   purpose = 'photo',
   debug = false,
 }: UseAutoUploadEffectConfig): void {
-  // 🏢 ENTERPRISE: Track uploaded files to prevent re-upload loops.
-  const uploadedFileRef = useRef<File | null>(null);
-
-  // 🏢 ENTERPRISE: Synchronous in-flight guard — immune to React batching/timing.
-  // setState (isUploading) is batched and may not be committed before next effect run.
-  // This ref is set SYNCHRONOUSLY inside the effect body, BEFORE any async call,
-  // so re-entries always see the guard regardless of React render timing.
-  const uploadingFileRef = useRef<File | null>(null);
+  // 🏢 ENTERPRISE: Αποτυχημένα αρχεία — component-local ΕΠΙΤΗΔΕΣ, ώστε ένα
+  // remount να δίνει στον χρήστη νέα ευκαιρία retry (σε αντίθεση με τις
+  // επιτυχίες, που είναι durable στο module-level WeakSet).
+  const failedFileRef = useRef<File | null>(null);
 
   // 🏢 ENTERPRISE: Stable refs for callbacks to prevent re-trigger on handler recreation
   const uploadHandlerRef = useRef(uploadHandler);
@@ -143,18 +157,28 @@ export function useAutoUploadEffect({
       return;
     }
 
-    // 🏢 ENTERPRISE: Prevent re-uploading the same file (post-upload guard)
-    if (file === uploadedFileRef.current) {
+    // 🏢 ENTERPRISE: Prevent re-uploading the same file (post-upload guard).
+    // Durable σε remount — αυτό είναι που σταματά το διπλό upload.
+    if (uploadedFiles.has(file)) {
       if (debug) {
         logger.info('AUTO-UPLOAD: Skipping — same file already uploaded', { fileName: file.name });
       }
       return;
     }
 
-    // 🏢 ENTERPRISE: Prevent duplicate in-flight upload (synchronous ref guard).
+    // Αποτυχημένο σε ΑΥΤΟ το instance → μην ξαναδοκιμάσεις σε loop.
+    if (file === failedFileRef.current) {
+      if (debug) {
+        logger.info('AUTO-UPLOAD: Skipping — same file already failed here', { fileName: file.name });
+      }
+      return;
+    }
+
+    // 🏢 ENTERPRISE: Prevent duplicate in-flight upload (synchronous guard).
     // This catches cases where React re-renders trigger the effect before
-    // upload.isUploading state has been committed (batching timing issue).
-    if (file === uploadingFileRef.current) {
+    // upload.isUploading state has been committed (batching timing issue) —
+    // και επιπλέον καλύπτει remount ΕΝΩ το upload είναι ακόμη σε πτήση.
+    if (inFlightFiles.has(file)) {
       if (debug) {
         logger.info('AUTO-UPLOAD: Skipping — same file already in-flight', { fileName: file.name });
       }
@@ -162,7 +186,7 @@ export function useAutoUploadEffect({
     }
 
     // Mark as in-flight IMMEDIATELY (sync, before any async operation)
-    uploadingFileRef.current = file;
+    inFlightFiles.add(file);
 
     if (debug) {
       logger.info('AUTO-UPLOAD: Starting upload', { fileName: file.name });
@@ -182,8 +206,8 @@ export function useAutoUploadEffect({
         }
 
         if (result?.success || result?.url) {
-          // Mark file as uploaded to prevent re-upload loops
-          uploadedFileRef.current = file;
+          // Mark file as uploaded to prevent re-upload loops (durable σε remount)
+          uploadedFiles.add(file);
 
           if (onUploadCompleteRef.current) {
             const finalResult: FileUploadResult = result.success
@@ -202,7 +226,9 @@ export function useAutoUploadEffect({
         }
       } catch (err) {
         // 🏢 ENTERPRISE: Mark file as attempted to prevent infinite retry loop.
-        uploadedFileRef.current = file;
+        // ΟΧΙ στο durable set — μια αποτυχία δεν πρέπει να αποκλείει το αρχείο
+        // για πάντα· ένα remount ξαναδίνει ευκαιρία retry.
+        failedFileRef.current = file;
 
         logger.error('AUTO-UPLOAD: Failed', { error: err, purpose, fileName: file?.name });
 
@@ -220,11 +246,9 @@ export function useAutoUploadEffect({
           });
         }
       } finally {
-        // Clear in-flight guard only if this file is still the current in-flight file
-        // (a newer file selection may have superseded this upload)
-        if (uploadingFileRef.current === file) {
-          uploadingFileRef.current = null;
-        }
+        // Το in-flight guard αφορά ΑΥΤΟ το File — καθαρίζεται πάντα στο τέλος.
+        // (Το uploadedFiles κρατά πλέον τη μόνιμη «έγινε» πληροφορία.)
+        inFlightFiles.delete(file);
       }
     };
 

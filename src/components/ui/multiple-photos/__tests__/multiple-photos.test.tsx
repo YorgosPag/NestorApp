@@ -133,6 +133,43 @@ describe('MultiplePhotosCompact (ADR-596)', () => {
   });
 });
 
+/**
+ * REGRESSION — ακεραιότητα του slot index (Β1).
+ *
+ * Το `photoIndex` τροφοδοτεί ΔΥΟ πράγματα: το suffix του ονόματος αρχείου
+ * (`..._photo_N.jpg`) και το React `key` του cell. Παλαιότερα το index
+ * υπολογιζόταν με `findIndex(p => p === photo)` — αναζήτηση με object identity —
+ * ενώ ο γονιός γέμιζε ΟΛΑ τα κενά slots με το ΙΔΙΟ object literal. Αποτέλεσμα:
+ * όλα τα κενά slots κατέρρεαν σε ένα κοινό index → λάθος όνομα αρχείου ΚΑΙ
+ * διπλά React keys → απρόβλεπτο remount → διπλό upload.
+ *
+ * ⚠️ Τα υπόλοιπα fixtures εδώ φτιάχνουν ΞΕΧΩΡΙΣΤΟ object ανά slot, γι' αυτό
+ * κανένα προηγούμενο test δεν έπιανε το bug. Εδώ το κοινό reference είναι σκόπιμο.
+ */
+describe('slot index integrity (Β1 regression)', () => {
+  it('δίνει μοναδικό index ανά slot ακόμη κι όταν τα κενά slots μοιράζονται reference', () => {
+    const sharedEmpty: PhotoSlot = { file: null, isUploading: false, uploadProgress: 0 };
+    const photos: PhotoSlot[] = [
+      filled('u0'), sharedEmpty, sharedEmpty, sharedEmpty, sharedEmpty, sharedEmpty,
+    ];
+
+    render(<MultiplePhotosCompact {...baseProps(6, photos)} />);
+
+    const indices = screen.getAllByTestId('cell').map(el => el.getAttribute('data-photo-index'));
+    expect(indices).toEqual(['0', '1', '2', '3', '4', '5']);
+  });
+
+  it('διατηρεί την ΠΡΑΓΜΑΤΙΚΗ θέση όταν κρύβονται κενά slots', () => {
+    // Γεμάτα στις θέσεις 2 και 4 — το φιλτράρισμα δεν επιτρέπεται να τα μετατοπίσει σε 0 και 1.
+    const photos: PhotoSlot[] = [empty(), empty(), filled('u2'), empty(), filled('u4'), empty()];
+
+    render(<MultiplePhotosCompact {...baseProps(6, photos)} disabled />);
+
+    const indices = screen.getAllByTestId('cell').map(el => el.getAttribute('data-photo-index'));
+    expect(indices).toEqual(['2', '4']);
+  });
+});
+
 describe('MultiplePhotosFull (ADR-596)', () => {
   it('renders one cell per slot and the detailed upload zone', () => {
     render(<MultiplePhotosFull {...baseProps(5, slots(1, 5))} />);
