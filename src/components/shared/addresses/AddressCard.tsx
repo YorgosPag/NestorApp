@@ -27,6 +27,7 @@ import {
   AddressCoordsBadge,
   computeFreshness,
 } from '@/components/shared/addresses/editor';
+import { formatAddressLine } from '@/types/project/address-helpers';
 import { renderStoredAddressLabel } from '@/components/contacts/addresses/contactAddressLabel';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -48,17 +49,12 @@ interface AddressCardProps {
 }
 
 // =============================================================================
-// HELPER FUNCTIONS
-// =============================================================================
-
-function formatAddressLine(address: ProjectAddress): string {
-  const parts = [address.street, address.number, address.city, address.postalCode].filter(Boolean);
-  return parts.join(', ');
-}
-
-// =============================================================================
 // COMPONENT
 // =============================================================================
+// Η γραμμή διεύθυνσης έρχεται από το κεντρικό `formatAddressLine`
+// (`@/types/project/address-helpers`). Υπήρχε τοπικό δίδυμο εδώ, με άλλη σειρά
+// πεδίων και **χωρίς** μορφοποίηση Τ.Κ. — κάθε αλλαγή στην εμφάνιση διεύθυνσης
+// έπρεπε να γίνει δύο φορές (N.0.2).
 
 export function AddressCard({ address, onEdit, className, hideEnrichment }: AddressCardProps) {
   const { t } = useTranslation('addresses');

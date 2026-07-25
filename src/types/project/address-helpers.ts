@@ -24,6 +24,12 @@ import type {
 } from './addresses';
 import type { StructuredGeocodingQuery } from '@/lib/geocoding/geocoding-service';
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
+import { isGreekAddressCountry } from '@/utils/address/country-codes';
+import {
+  formatGreekPostalCode,
+  isValidGreekPostalCode,
+  toCanonicalGreekPostalCode,
+} from '@/utils/address/postal-code';
 import { generateAddressId } from '@/services/enterprise-id.service';
 
 import { createModuleLogger } from '@/lib/telemetry';
@@ -84,12 +90,26 @@ export function formatAddressLine(address: ProjectAddress): string {
     parts.push(address.city);
   }
 
-  // Postal Code
+  // Postal Code — η βάση κρατά «54624», η οθόνη δείχνει «546 24» (ADR-332 D16)
   if (address.postalCode) {
-    parts.push(address.postalCode);
+    parts.push(formatPostalCodeForDisplay(address));
   }
 
   return parts.join(', ');
+}
+
+/**
+ * Μορφή εμφάνισης Τ.Κ. για μία διεύθυνση.
+ *
+ * Η κανονική μορφή («54624») είναι κλειδί σύγκρισης, όχι κείμενο για ανθρώπους:
+ * η επίσημη ελληνική γραφή (ΕΛΤΑ) είναι «546 24». Σε μη-ελληνική διεύθυνση η
+ * τιμή περνά αυτούσια — κανένα ελληνικό σχήμα δεν επιβάλλεται σε ξένο Τ.Κ.
+ */
+export function formatPostalCodeForDisplay(
+  address: Pick<ProjectAddress, 'postalCode' | 'country'>,
+): string {
+  const postalCode = address.postalCode ?? '';
+  return isGreekAddressCountry(address.country) ? formatGreekPostalCode(postalCode) : postalCode;
 }
 
 /**
@@ -113,7 +133,7 @@ export function formatFullAddressLine(address: ProjectAddress): string {
   }
 
   // Postal Code + City (Greek convention: ΤΚ before city)
-  const localityParts = [address.postalCode, address.city].filter(Boolean);
+  const localityParts = [formatPostalCodeForDisplay(address), address.city].filter(Boolean);
   if (localityParts.length > 0) {
     parts.push(localityParts.join(' '));
   }
@@ -453,8 +473,14 @@ export function validateAddress(
     errors.push('Ο Τ.Κ. είναι υποχρεωτικός');
   }
 
-  // Postal code format (Greek: 5 digits)
-  if (address.postalCode && !/^\d{5}$/.test(address.postalCode)) {
+  // Postal code format — ελέγχεται ΜΟΝΟ σε ελληνική διεύθυνση· ένας βρετανικός
+  // ή γερμανικός Τ.Κ. δεν οφείλει να είναι 5 ψηφία. Ο έλεγχος δέχεται και τις
+  // δύο ελληνικές μορφές, ώστε εγγραφή πριν τη μετάπτωση να μη βγάζει σφάλμα.
+  if (
+    address.postalCode &&
+    isGreekAddressCountry(address.country) &&
+    !isValidGreekPostalCode(address.postalCode)
+  ) {
     errors.push('Ο Τ.Κ. πρέπει να είναι 5 ψηφία');
   }
 
@@ -560,7 +586,7 @@ export function formatAddressForGeocoding(address: ProjectAddress): StructuredGe
     street: streetParts.length > 0 ? streetParts.join(' ') : undefined,
     city: address.city || undefined,
     neighborhood: address.neighborhood || undefined,
-    postalCode: address.postalCode?.replace(/\s+/g, '') || undefined,
+    postalCode: toCanonicalGreekPostalCode(address.postalCode) || undefined,
     county: stripAdminPrefix(address.regionalUnit),
     municipality: stripAdminPrefix(address.municipality),
     region: stripAdminPrefix(address.region),

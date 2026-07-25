@@ -5,10 +5,10 @@
  * avoid importing the 3.2 MB `administrative-hierarchy.json` payload.
  */
 
-import {
-  autoFillFromPostalCode,
-  isValidGreekPostalCode,
-} from '../helpers/postalCodeAutoFill';
+import { autoFillFromPostalCode } from '../helpers/postalCodeAutoFill';
+// Ο επικυρωτής μετακόμισε στο SSoT Τ.Κ. (ADR-332 D16)· τα σενάρια μένουν εδώ
+// γιατί εδώ ελέγχεται η συμπεριφορά του `autoFillFromPostalCode` που τον καλεί.
+import { isValidGreekPostalCode } from '@/utils/address/postal-code';
 import { buildHierarchyLookup } from '../helpers/hierarchyLookup';
 import type { AdminEntity } from '@/hooks/useAdministrativeHierarchy';
 
@@ -89,6 +89,15 @@ describe('autoFillFromPostalCode', () => {
   it('returns null for malformed postal code', () => {
     expect(autoFillFromPostalCode('1234', lookup)).toBeNull();
     expect(autoFillFromPostalCode('00000', lookup)).toBeNull();
+  });
+
+  it('δέχεται την επίσημη μορφή με κενό — «546 35» = «54635»', () => {
+    // Το dataset ιεραρχίας κρατά 949 Τ.Κ. ΧΩΡΙΣ κενό. Πριν την κανονικοποίηση,
+    // αναζήτηση με τη μορφή ΕΛΤΑ δεν επέστρεφε ποτέ τίποτα.
+    const result = autoFillFromPostalCode('546 35', lookup);
+    expect(result).not.toBeNull();
+    expect(result!.postalCode).toBe('54635');
+    expect(result!.settlementCandidates.map((s) => s.id)).toEqual(['settlement:THES1']);
   });
 
   it('returns null when no settlement matches', () => {
