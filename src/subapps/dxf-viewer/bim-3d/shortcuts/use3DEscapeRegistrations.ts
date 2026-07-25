@@ -69,16 +69,34 @@ export function use3DEscapeRegistrations({ getManager, active }: Use3DEscapeRegi
   // P410 — the rung that was MISSING entirely (ADR-364 §10.11.Ε.2): nothing cleared the 3D
   // selection on ESC, so after the gizmo closed the element stayed selected forever.
   //
-  // Clearing `Selection3DStore` is the correct single action: the existing one-way bridge
-  // (`use-3d-selection-universal-bridge`) mirrors 3D → universal, so this one call empties
-  // BOTH stores. The reverse wiring — clearing the universal selection and expecting 3D to
-  // follow — does not exist, which is precisely why the 2D composite deselect at 400 left
-  // the 3D store stale (and why `useSmartDelete` had to clear both by hand).
+  // Goes through `manager.selectBimEntity(null)` — the CANONICAL clear — and never through
+  // `Selection3DStore.clearSelection()` directly. A 3D selection change is THREE coupled
+  // effects, not one store write: (1) the store, (2) `selectionHighlighter.onClear()`, and
+  // (3) `markSceneDirty()`. Every other mutator (`applyBimSelection`,
+  // `applyBimMarqueeSelection`, the cross-mode hydration) performs all three together.
+  //
+  // ⚠️ Μετρημένο ζωντανά 2026-07-25: μια πρώτη εκδοχή αυτού του slot καλούσε σκέτο
+  // `clearSelection()`. Το store ΚΑΘΑΡΙΖΕ σωστά — ribbon tab και panel έφευγαν — αλλά το
+  // πορτοκαλί περίγραμμα ΕΜΕΝΕ στην οθόνη μέχρι το επόμενο τυχαίο render (επιβεβαιώθηκε με
+  // τον δείκτη μακριά: δεν ήταν hover· ένα μικρό orbit το έσβηνε). Το ESC οφείλει να δείχνει
+  // το αποτέλεσμά του ΑΜΕΣΩΣ.
+  //
+  // Η universal πλευρά ακολουθεί μόνη της μέσω της υπάρχουσας μονόδρομης γέφυρας
+  // (`use-3d-selection-universal-bridge`, 3D → universal). Η αντίστροφη καλωδίωση δεν
+  // υπάρχει — γι' αυτό ακριβώς ο 2D σύνθετος αποεπιλογέας στο 400 άφηνε το 3D store μπαγιάτικο
+  // (και γι' αυτό το `useSmartDelete` αναγκαζόταν να καθαρίζει και τα δύο με το χέρι).
   useEscapeHandler({
     id: 'bim3d/selection-clear',
     priority: ESC_PRIORITY.SELECTION_3D_CLEAR,
     canHandle: () => in3D() && useSelection3DStore.getState().selectedBimIds.length > 0,
-    handle: () => { useSelection3DStore.getState().clearSelection(); return true; },
+    handle: () => {
+      const manager = getManager();
+      // Χωρίς manager δεν υπάρχει σκηνή να ξαναζωγραφιστεί· το store πρέπει πάντως να αδειάσει
+      // ώστε να μη μείνει φάντασμα επιλογής αν το 3D ξαναμπεί.
+      if (manager) manager.selectBimEntity(null);
+      else useSelection3DStore.getState().clearSelection();
+      return true;
+    },
   });
 
   // P150 — keyboard focus ring. Exact twin of `use2DKeyboardFocus`'s FOCUS_CLEAR rung.

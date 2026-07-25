@@ -32,15 +32,26 @@ function pressEscape(): boolean {
   return event.defaultPrevented;
 }
 
-/** Minimal scene-manager double — only the keyboard-focus surface the rung touches. */
+/**
+ * Minimal scene-manager double — the keyboard-focus surface plus `selectBimEntity`, the
+ * CANONICAL selection mutator. `selectBimEntity(null)` is what the real manager uses to keep
+ * store + `selectionHighlighter` + `markSceneDirty` in lockstep; the double mirrors only the
+ * store half, and `selectCalls` lets a test assert the canonical path was taken at all.
+ */
 function makeManager(focused: string | null) {
   let current = focused;
+  const selectCalls: Array<string | null> = [];
   return {
     manager: {
       getKeyboardFocusManager: () => ({ getFocused: () => current }),
       clearKeyboardFocus: () => { current = null; },
+      selectBimEntity: (id: string | null) => {
+        selectCalls.push(id);
+        if (id === null) useSelection3DStore.getState().clearSelection();
+      },
     } as unknown as ThreeJsSceneManager,
     getFocused: () => current,
+    selectCalls,
   };
 }
 
@@ -69,7 +80,7 @@ afterAll(() => {
 
 describe('the 3D Escape ladder — one step per press', () => {
   it('1st ESC closes the gizmo, 2nd deselects, 3rd consumes nothing', () => {
-    const { manager } = makeManager(null);
+    const { manager, selectCalls } = makeManager(null);
     mount(manager);
 
     useSelection3DStore.getState().selectEntity('col-1', 'column');
@@ -84,6 +95,11 @@ describe('the 3D Escape ladder — one step per press', () => {
     // element stayed selected forever once the gizmo had closed).
     expect(pressEscape()).toBe(true);
     expect(useSelection3DStore.getState().selectedBimIds).toEqual([]);
+
+    // …and it went through the CANONICAL mutator, not a raw store write. Μετρημένο ζωντανά:
+    // σκέτο `clearSelection()` άδειαζε το store αλλά ΑΦΗΝΕ το περίγραμμα στην οθόνη, επειδή
+    // ο `selectionHighlighter` + το `markSceneDirty()` ζουν στο `selectBimEntity`.
+    expect(selectCalls).toEqual([null]);
 
     // 3rd — nothing left to do ⇒ the bus must NOT consume, so lower/other owners still
     // get their chance and `defaultPrevented` stays false (the §10.12 invariant).

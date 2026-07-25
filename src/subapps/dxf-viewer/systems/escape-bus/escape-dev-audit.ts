@@ -99,8 +99,43 @@ const EXPLAIN: Readonly<Record<Exclude<EscapeAuditVerdict, 'ok'>, string>> = {
     'ESC_PRIORITY (ADR-364 §10.2).',
 };
 
+/**
+ * Πόσα ευρήματα κρατά το δακτυλιωτό ιστορικό του {@link exposeAuditToDevConsole}.
+ * Αρκετά για μια χειροκίνητη σκάλα ESC· αμελητέο σε μνήμη.
+ */
+const AUDIT_HISTORY_LIMIT = 20;
+const auditHistory: EscapeAuditFinding[] = [];
+
+/**
+ * ADR-364 §10.13 — ΓΙΑΤΙ Ο ΕΛΕΓΧΟΣ ΕΙΝΑΙ ΑΝΑΓΝΩΣΙΜΟΣ ΚΑΙ ΣΤΟ `ok`.
+ *
+ * Το {@link report} κάνει early-return στο `ok`, άρα **η σιωπή της κονσόλας δεν είναι
+ * απόδειξη ορθότητας** — μπορεί να σημαίνει «όλα καλά» ή «η σεντινέλα δεν είδε τίποτα».
+ * Κάθε ζωντανή μέτρηση της Φ2 χρειάστηκε να στήσει χειροκίνητο θετικό control πριν
+ * πιστέψει οτιδήποτε (§10.11.Α, §5 του handoff).
+ *
+ * Το `window.__escapeAudit` λύνει αυτό ακριβώς: dev-only, read-only, μηδέν κόστος σε
+ * production (ο κώδικας δεν καλείται καν), και δίνει το `consumedBy` — δηλαδή **ΠΟΙΟ
+ * slot** κατανάλωσε, που είναι το μόνο πράγμα που δεν μπορεί να συναχθεί από έξω, αφού
+ * ο Μηχ. 2 κόβει πλέον κάθε παρατηρητή κατάντη.
+ *
+ *   window.__escapeAudit.last()     → το τελευταίο εύρημα (και στο `ok`)
+ *   window.__escapeAudit.history()  → τα τελευταία 20, παλαιότερο πρώτο
+ *   window.__escapeAudit.clear()    → μηδενισμός ιστορικού πριν από ένα σενάριο
+ */
+function exposeAuditToDevConsole(): void {
+  if (!AUDIT_ENABLED || !isBrowser()) return;
+  (window as unknown as Record<string, unknown>).__escapeAudit = {
+    last: (): EscapeAuditFinding | null => lastFinding,
+    history: (): readonly EscapeAuditFinding[] => [...auditHistory],
+    clear: (): void => { auditHistory.length = 0; lastFinding = null; },
+  };
+}
+
 function report(finding: EscapeAuditFinding): void {
   const { verdict, record } = finding;
+  auditHistory.push(finding);
+  if (auditHistory.length > AUDIT_HISTORY_LIMIT) auditHistory.shift();
   if (verdict === 'ok') return;
   console.error(
     `[EscapeBus/audit] ${verdict.toUpperCase()} — ${EXPLAIN[verdict]}`,
@@ -150,6 +185,7 @@ function onSentinelKeyDown(e: KeyboardEvent): void {
 export function installEscapeAuditSentinel(): void {
   if (!AUDIT_ENABLED || sentinelInstalled || !isBrowser()) return;
   window.addEventListener('keydown', onSentinelKeyDown, { capture: true });
+  exposeAuditToDevConsole();
   sentinelInstalled = true;
 }
 
@@ -161,6 +197,7 @@ export function __getLastAuditFinding(): EscapeAuditFinding | null {
 /** Test-only — καθαρισμός κατάστασης μεταξύ tests. */
 export function __resetAuditForTests(): void {
   lastFinding = null;
+  auditHistory.length = 0;
   if (sentinelInstalled && isBrowser()) {
     window.removeEventListener('keydown', onSentinelKeyDown, { capture: true });
     sentinelInstalled = false;
