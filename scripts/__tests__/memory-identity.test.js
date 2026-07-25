@@ -394,7 +394,53 @@ describe('--gate (presubmit, CHECK 3.31)', () => {
   });
 });
 
-// ── 8. reachability BFS ─────────────────────────────────────────────────────
+// ── 8. φίλτρο διακριτότητας (memory-suggest-verify) ─────────────────────────
+
+/**
+ * Ένα `verify:` που θα περνούσε ούτως ή άλλως δεν αποδεικνύει τίποτα — είναι
+ * **θόρυβος που μοιάζει με κάλυψη**. Το φίλτρο είναι όλη η επιφάνεια ρίσκου.
+ */
+describe('isDistinctive — τι αξίζει να γίνει verify', () => {
+  const { isDistinctive, backtickedTokens } = require('../memory-suggest-verify');
+
+  it.each([
+    ['GRIP_SIZE_DEFAULT', true, 'CONSTANT_CASE ≥8'],
+    ['MAX_BEVEL_FRACTION', true, 'CONSTANT_CASE ≥8'],
+    ['resolveRegionLoopTolWorld', true, 'camelCase ≥16'],
+    ['BimToThreeConverter', true, 'PascalCase ≥16'],
+  ])('δέχεται %s (%s)', (id, want) => expect(isDistinctive(id)).toBe(want));
+
+  it.each([
+    ['A_B', 'CONSTANT_CASE αλλά <8 χαρακτήρες'],
+    ['getName', 'camelCase αλλά <16'],
+    ['useState', 'camelCase <16'],
+    ['foo', 'ούτε καν camelCase'],
+    ['src/some/path.ts', 'διαδρομή, όχι identifier'],
+    ['UPPERCASE', 'χωρίς underscore → δεν είναι CONSTANT_CASE'],
+  ])('🔴 απορρίπτει %s (%s)', (id) => expect(isDistinctive(id)).toBe(false));
+
+  /**
+   * ΤΟ ΚΡΙΣΙΜΟ: αυτά περνούν ΟΛΑ τα φίλτρα σχήματος/μήκους — μόνο το blacklist τα
+   * κόβει. Αν το blacklist πεθάνει, ΑΥΤΑ τα tests κοκκινίζουν (mutation-verified).
+   */
+  it.each([
+    ['NODE_ENV', 'CONSTANT_CASE ακριβώς 8 — υπάρχει παντού'],
+    ['MAX_SAFE_INTEGER', 'CONSTANT_CASE 16'],
+    ['addEventListener', 'camelCase 16 — DOM API σε εκατοντάδες αρχεία'],
+    ['getBoundingClientRect', 'camelCase 21 — DOM API'],
+    ['requestAnimationFrame', 'camelCase 21 — DOM API'],
+  ])('🔒 blacklist ΖΩΝΤΑΝΟ: κόβει %s (%s)', (id) => {
+    expect(id.length >= 8).toBe(true); // περνά το μήκος...
+    expect(isDistinctive(id)).toBe(false); // ...και όμως απορρίπτεται
+  });
+
+  it('backtickedTokens παίρνει ΜΟΝΟ ό,τι είναι σε backticks', () => {
+    const t = backtickedTokens('κείμενο `FOO_BAR` και `file.ts` αλλά όχι BAZ_QUX');
+    expect(t).toEqual(['FOO_BAR', 'file.ts']);
+  });
+});
+
+// ── 9. reachability BFS ─────────────────────────────────────────────────────
 
 describe('computeReachability', () => {
   it('μετράει βάθος σωστά και εκθέτει τα απρόσιτα', () => {

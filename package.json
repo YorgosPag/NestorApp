@@ -59,6 +59,8 @@
     "memory:gate:full": "node scripts/memory-health.js --gate --full",
     "memory:unreachable": "node scripts/memory-health.js --list-unreachable",
     "memory:verify": "node scripts/memory-health.js --verify",
+    "memory:suggest-verify": "node scripts/memory-suggest-verify.js",
+    "memory:suggest-verify:write": "node scripts/memory-suggest-verify.js --write",
     "memory:ids": "node scripts/memory-normalize-ids.js",
     "memory:ids:write": "node scripts/memory-normalize-ids.js --write",
     "memory:deep": "node scripts/memory-health.js --list-deep",
