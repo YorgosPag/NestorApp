@@ -97,7 +97,7 @@ export interface GeocodingApiResponse {
    * continent; flagging it (and zeroing `confidence`) keeps that rescue from
    * masquerading as a verified answer.
    *
-   * @see ADR-332 D11 — country integrity
+   * @see ADR-332 D12 — country integrity
    */
   outOfDeclaredCountry?: boolean;
 }
@@ -109,7 +109,7 @@ export interface GeocodingApiResponse {
 export type GeocodingAlternative = Omit<GeocodingApiResponse, 'alternatives'>;
 
 // =============================================================================
-// SERVICE OUTCOME — "not found" is not an error (ADR-332 D10)
+// SERVICE OUTCOME — "not found" is not an error (ADR-332 D11)
 // =============================================================================
 
 /**

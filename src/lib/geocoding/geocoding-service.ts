@@ -132,7 +132,7 @@ async function callGeocodingApi(
  *
  * @param query - Structured address fields
  * @returns Discriminated outcome: found / not-found / error
- * @see ADR-332 D10
+ * @see ADR-332 D11
  */
 export async function geocodeAddressDetailed(
   query: StructuredGeocodingQuery,

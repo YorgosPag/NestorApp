@@ -7,7 +7,7 @@
  * honestly about a fictional street was indistinguishable from an outage, and a
  * real rate-limit was indistinguishable from a typo.
  *
- * @see ADR-332 D10
+ * @see ADR-332 D11
  */
 
 /* global describe, it, expect, beforeEach, afterEach, jest */

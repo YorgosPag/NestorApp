@@ -81,9 +81,28 @@ const VARIANT_I18N_KEYS: Record<GeocodingVariant, string> = {
   8: 'addresses.geocoding.attempts.cityOnlyGlobal',
 };
 
+/**
+ * Accent- and case-insensitive index over {@link COUNTRY_CODE_MAP}.
+ *
+ * A country name reaches us from typing, from paste, and from stored records:
+ * "Ελλάδα", "ΕΛΛΑΔΑ" and the decomposed form macOS puts on the clipboard all
+ * denote Greece, but only the first matched a raw `toLowerCase()` lookup.
+ *
+ * The miss is not cosmetic. An unresolved name drops `countrycodes` from every
+ * variant, and an unrestricted search answers a Greek address with a foreign
+ * one — measured 2026-07-26: «Τσιμισκή 43, Θεσσαλονίκη, 54623» returned Viale
+ * Ungheria, Milan without the restriction, and the correct building with it.
+ *
+ * Entries that differ only by accent collapse onto the same key; they already
+ * carry the same code, so the map above stays the readable source of truth.
+ */
+const COUNTRY_CODE_INDEX: ReadonlyMap<string, string> = new Map(
+  Object.entries(COUNTRY_CODE_MAP).map(([name, code]) => [normalizeGreekText(name), code]),
+);
+
 function countryNameToCode(country: string | undefined): string | null {
   if (!country) return null;
-  return COUNTRY_CODE_MAP[country.toLowerCase().trim()] ?? null;
+  return COUNTRY_CODE_INDEX.get(normalizeGreekText(country.trim())) ?? null;
 }
 
 // =============================================================================
@@ -135,7 +154,7 @@ function composeStreet(
  * adding `postalcode` — in either `54623` or the Greek-canonical `546 23` form —
  * returns an empty set. As a structured filter it only ever subtracts, so the
  * postal code is used for free-form queries and for verifying the answer
- * instead. See ADR-332 D12.
+ * instead. See ADR-332 D13.
  */
 function buildStructuredUrl(params: GeocodingRequestBody, countryCode: string | null): string {
   const searchParams = new URLSearchParams({
@@ -216,7 +235,7 @@ function skippedAttempt(variant: GeocodingVariant): GeocodingAttempt {
 }
 
 // =============================================================================
-// RESULT FINALIZATION — country integrity (ADR-332 D11)
+// RESULT FINALIZATION — country integrity (ADR-332 D12)
 // =============================================================================
 
 /**

@@ -194,7 +194,7 @@ export type AddressEditorState =
        * which made every typo and every fictional street read as a broken
        * geocoder.
        *
-       * @see ADR-332 D10
+       * @see ADR-332 D11
        */
       phase: 'not-found';
       searchedAtMs: number;
@@ -222,7 +222,7 @@ export type AddressEditorEvent =
   | { type: 'DEBOUNCE_TICK'; nowMs: number }
   | { type: 'GEOCODE_STARTED'; attempt: number; totalAttempts: number; variantI18nKey: string }
   | { type: 'GEOCODE_SUCCESS'; result: GeocodingApiResponse; nowMs: number }
-  /** Provider answered, address absent from its data. Not a fault — see ADR-332 D10. */
+  /** Provider answered, address absent from its data. Not a fault — see ADR-332 D11. */
   | { type: 'GEOCODE_EMPTY'; nowMs: number }
   /** The call itself failed (timeout, rate limit, network, server). */
   | { type: 'GEOCODE_FAILED'; reason: AddressEditorErrorReason }

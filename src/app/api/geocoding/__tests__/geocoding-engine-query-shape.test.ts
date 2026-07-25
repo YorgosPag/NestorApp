@@ -12,7 +12,8 @@
  *   - a candidate outside the user's declared country must never read as
  *     verified (`{Ονειροπόλων, 54624, Ελλάδα}` returned Wisconsin at 0.55)
  *
- * @see ADR-332 D11 (country integrity), D12 (postal code out of structured params)
+ * @see ADR-332 D12 (country integrity), D13 (postal code out of structured params),
+ *      D14 (house number reaches the provider)
  */
 
 /* global describe, it, expect, beforeEach, afterEach, jest */
@@ -225,6 +226,34 @@ describe('country integrity', () => {
 
     expect(result?.outOfDeclaredCountry).toBeUndefined();
     expect(result?.confidence).toBeGreaterThan(0);
+  });
+
+  it.each([
+    ['accented (NFC)', 'Ελλάδα'],
+    ['all caps, unaccented', 'ΕΛΛΑΔΑ'],
+    ['lowercase, unaccented', 'ελλαδα'],
+    ['archaic', 'ΕΛΛΑΣ'],
+    ['English', 'Greece'],
+    ['ISO code', 'gr'],
+    ['padded', '  Ελλάδα  '],
+    // α + U+0301 combining acute — what macOS and iOS put on the clipboard.
+    ['decomposed (NFD)', 'Ελλάδα'],
+  ])('resolves %s country name, so the restriction is applied', async (_label, country) => {
+    const fetchMock = mockFetchAlways([greekHit()]);
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    await geocode({ ...GREEK_QUERY, country });
+
+    expect(requestedUrls(fetchMock)[0]).toContain('countrycodes=gr');
+  });
+
+  it('leaves an unrecognised country name unrestricted rather than guessing', async () => {
+    const fetchMock = mockFetchAlways([greekHit()]);
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    await geocode({ ...GREEK_QUERY, country: 'Ατλαντίδα' });
+
+    expect(requestedUrls(fetchMock)[0]).not.toContain('countrycodes=');
   });
 
   it('stays silent when the user declared no country — nothing to contradict', async () => {
