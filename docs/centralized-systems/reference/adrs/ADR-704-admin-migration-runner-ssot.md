@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Κατάσταση** | ✅ Φ0–Φ4 DONE (2026-07-26) — SSoT primitives + envelope, μετάπτωση #1/#2, split #3/#4/#5/#9, deletion #6/#7/#8, registry. Μένει μόνο Φ5 (`telegram/webhook`, ξεχωριστό ADR) |
+| **Κατάσταση** | ✅ Φ0–Φ5 DONE (2026-07-26) — SSoT primitives + envelope, μετάπτωση #1/#2, split #3/#4/#5/#9, deletion #6/#7/#8, registry. Φ5 (`telegram/webhook`) ολοκληρώθηκε σε ξεχωριστό record → **[ADR-705](./ADR-705-telegram-webhook-admin-split.md)**. Όλα τα 10 oversized admin routes λύθηκαν |
 | **Ημερομηνία** | 2026-07-25 |
 | **Συγγραφείς** | Claude Opus 4.8 + Γιώργος Παγώνης |
 | **Σχετικά** | ADR-703 (ανέδειξε τα clones μέσω jscpd, αλλά δεν τα άγγιξε), ADR-702 (tenant scope), ADR-255 (SPEC-255A tenant isolation), ADR-698/699 (⚠️ παγίδα over-parameterised factory), N.7.1 (όριο 300 γρ. για API routes), N.18 (jscpd) |
@@ -209,7 +209,10 @@ Scope μετάπτωσης SSoT: **#1 + #2 ✅**. Το `runMigration`/`createMig
   `jscpd:baseline`) **δεν χρειάστηκε** — οι ratchets μπλοκάρουν μόνο σε ΑΥΞΗΣΗ· η δουλειά ΜΕΙΩΣΕ
   clones + το νέο module registered → unprotected αμετάβλητο. (Regen να γίνει post-commit σε καθαρό
   tree, όχι με τα 9 dxf άλλου agent στο working tree.)
-- **Φ5 (ξεχωριστό ADR):** ⏳ `telegram/webhook` (440) handler extract — εκτός scope εδώ.
+- **Φ5 (ξεχωριστό ADR):** ✅ DONE → **[ADR-705](./ADR-705-telegram-webhook-admin-split.md)**. `telegram/webhook`
+  440→49 (thin route + `telegram-webhook.handlers.ts` 316 + `telegram-webhook-client.ts` 109 +
+  `telegram-webhook-types.ts` 37). SSoT για Telegram Bot API webhook-management (getWebhookInfo/
+  setWebhook/deleteWebhook). jscpd-clean. Byte-for-byte response/audit shapes.
 
 ---
 
@@ -249,3 +252,4 @@ errors δεν ρίχνουν το migration)· **5** SSoT (ένα home για sc
 | 2026-07-25 | Σκελετός (🔵 DESIGN) — recognition από την εκκρεμότητα του ADR-703· 9/10 oversized routes σε scope, `telegram/webhook` εκτός | Claude Opus 4.8 + Γιώργος Παγώνης |
 | 2026-07-26 | **Φ1+Φ2 IMPLEMENTED** — `admin-batch-utils.ts` (+`buildLookupCache`/`flushInBatches`/`BATCH_WRITE_LIMIT`) + νέο `admin-migration-runner.ts` (`createMigrationRoute`/`runMigration`)· μετάπτωση #1 (415→220) + #2 (387→93, +operations 263)· 7/7 tests· jscpd-clean. Αποκλίσεις από σκελετό τεκμηριωμένες στο §4.1 (2 modules για SRP· factory αντί option-bag) | Claude Opus 4.8 + Γιώργος Παγώνης |
 | 2026-07-26 | **Φ0+Φ3+Φ4 DONE** — Φ0: `git rm` navigation #6/#7/#8 (dead, 0 callers). Φ3: split #3 (318→42), #4 (411→74, 005/006 ενοποιήθηκαν), #5 (301→30), #9 (385→48) σε thin routes + siblings. Φ4: registry (admin-batch-utils επεκτάθηκε + admin-migration-runner νέο), golden 96/96. 9/10 oversized routes λύθηκαν· μένει μόνο Φ5 (telegram). jscpd-clean σε 15 αρχεία | Claude Opus 4.8 + Γιώργος Παγώνης |
+| 2026-07-26 | **Φ5 DONE → [ADR-705](./ADR-705-telegram-webhook-admin-split.md)** — `telegram/webhook` 440→49 (thin route) + 3 siblings (handlers 316 / client 109 / types 37). SSoT για Telegram Bot API webhook-management. jscpd-clean, byte-for-byte behavior. **10/10 oversized admin routes λύθηκαν — εκστρατεία ADR-704 πλήρης** | Claude Opus 4.8 + Γιώργος Παγώνης |
