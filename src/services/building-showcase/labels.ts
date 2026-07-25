@@ -15,18 +15,18 @@
 import type { EnumLocale } from '@/services/property-enum-labels/property-enum-labels.service';
 import {
   createLocaleFallback,
-  showcaseCtaLabelDefault,
-  showcaseDescriptionSectionDefault,
-  showcaseGeneratedOnDefault,
-  showcasePoweredByDefault,
   type ShowcaseHeaderContactLabels,
   type ShowcaseHeaderLabels,
 } from '@/services/showcase-core/labels-shared';
 import {
   createEnumLabelTranslator,
   readShowcaseCatalogSections,
+  resolveShowcaseChromeLabels,
+  resolveShowcaseDescriptionLabels,
+  resolveShowcaseEmailLabels,
   resolveShowcaseHeaderLabels,
   resolveShowcaseMediaTitles,
+  resolveShowcaseSpecLabels,
 } from '@/services/showcase-core/labels-catalog';
 import type { BuildingType } from '@/constants/building-types';
 import type { BuildingStatus } from '@/constants/building-statuses';
@@ -96,27 +96,31 @@ export const translateRenovationStatus = createEnumLabelTranslator(RENOVATION_ST
 // ============================================================================
 
 
-export interface BuildingShowcaseSpecLabels {
-  title: string;
-  code: string;
-  type: string;
-  status: string;
-  progress: string;
-  totalArea: string;
-  builtArea: string;
-  floors: string;
-  units: string;
-  totalValue: string;
-  energyClass: string;
-  renovation: string;
-  constructionYear: string;
-  startDate: string;
-  completionDate: string;
-  location: string;
-  project: string;
-  linkedCompany: string;
-  areaUnit: string;
-}
+/** Spec rows this surface renders, in display order (ADR-700). */
+const BUILDING_SPEC_ROWS = [
+  'code',
+  'type',
+  'status',
+  'progress',
+  'totalArea',
+  'builtArea',
+  'floors',
+  'units',
+  'totalValue',
+  'energyClass',
+  'renovation',
+  'constructionYear',
+  'startDate',
+  'completionDate',
+  'location',
+  'project',
+  'linkedCompany',
+] as const;
+
+export type BuildingShowcaseSpecLabels = Record<
+  (typeof BUILDING_SPEC_ROWS)[number] | 'title' | 'areaUnit',
+  string
+>;
 
 export interface BuildingShowcaseDescriptionLabels {
   sectionTitle: string;
@@ -168,59 +172,26 @@ export function loadBuildingShowcasePdfLabels(
   locale: EnumLocale = 'el',
 ): BuildingShowcasePDFLabels {
   const sections = readShowcaseCatalogSections('buildingShowcase', locale);
-  const { specs, email, namespace } = sections;
-  const description = (namespace.description ?? {}) as Record<string, string>;
-  const pdf = (namespace.pdf ?? {}) as Record<string, string>;
-
   const fb = createLocaleFallback(locale);
-  const media = resolveShowcaseMediaTitles(sections, locale);
-  const photosTitle = media.photos.title;
-  const floorplansTitle = media.floorplans.title;
 
   return {
-    specs: {
-      title:             specs.title             ?? fb('Στοιχεία Κτηρίου', 'Building Details'),
-      code:              specs.code              ?? fb('Κωδικός', 'Code'),
-      type:              specs.type              ?? fb('Τύπος', 'Type'),
-      status:            specs.status            ?? fb('Κατάσταση', 'Status'),
-      progress:          specs.progress          ?? fb('Πρόοδος', 'Progress'),
-      totalArea:         specs.totalArea         ?? fb('Συνολικό εμβαδόν', 'Total area'),
-      builtArea:         specs.builtArea         ?? fb('Δομημένη επιφάνεια', 'Built area'),
-      floors:            specs.floors            ?? fb('Όροφοι', 'Floors'),
-      units:             specs.units             ?? fb('Μονάδες', 'Units'),
-      totalValue:        specs.totalValue        ?? fb('Συνολική αξία', 'Total value'),
-      energyClass:       specs.energyClass       ?? fb('Ενεργειακή κλάση', 'Energy class'),
-      renovation:        specs.renovation        ?? fb('Ανακαίνιση', 'Renovation'),
-      constructionYear:  specs.constructionYear  ?? fb('Έτος κατασκευής', 'Construction year'),
-      startDate:         specs.startDate         ?? fb('Έναρξη', 'Start date'),
-      completionDate:    specs.completionDate    ?? fb('Παράδοση', 'Completion date'),
-      location:          specs.location          ?? fb('Τοποθεσία', 'Location'),
-      project:           specs.project           ?? fb('Έργο', 'Project'),
-      linkedCompany:     specs.linkedCompany     ?? fb('Συνεργαζόμενη εταιρεία', 'Linked company'),
-      areaUnit:          specs.areaUnit          ?? 'm²',
-    },
-    description: {
-      sectionTitle: description.sectionTitle ?? showcaseDescriptionSectionDefault(locale),
-    },
-    photos: media.photos,
-    floorplans: media.floorplans,
-    chrome: {
-      title:              pdf.title              ?? fb('Παρουσίαση Κτηρίου', 'Building Showcase'),
-      generatedOn:        pdf.generatedOn        ?? showcaseGeneratedOnDefault(locale),
-      descriptionSection: pdf.descriptionSection ?? showcaseDescriptionSectionDefault(locale),
-      footerNote:         pdf.footerNote         ?? fb('Παρουσίαση κτηρίου', 'Building showcase'),
-      photosTitle,
-      floorplansTitle,
-      poweredBy:          showcasePoweredByDefault(locale),
-    },
-    email: {
-      subjectPrefix: email.subjectPrefix ?? fb('Παρουσίαση Κτηρίου', 'Building Showcase'),
-      introText:     email.introText     ?? fb(
+    specs: resolveShowcaseSpecLabels(sections, locale, {
+      title: fb('Στοιχεία Κτηρίου', 'Building Details'),
+      keys: BUILDING_SPEC_ROWS,
+    }),
+    description: resolveShowcaseDescriptionLabels(sections, locale),
+    ...resolveShowcaseMediaTitles(sections, locale),
+    chrome: resolveShowcaseChromeLabels(sections, locale, {
+      title: fb('Παρουσίαση Κτηρίου', 'Building Showcase'),
+      footerNote: fb('Παρουσίαση κτηρίου', 'Building showcase'),
+    }),
+    email: resolveShowcaseEmailLabels(sections, locale, {
+      subjectPrefix: fb('Παρουσίαση Κτηρίου', 'Building Showcase'),
+      introText: fb(
         'Σας προωθούμε την αναλυτική παρουσίαση του κτηρίου.',
         'We are sharing the detailed presentation of the building.',
       ),
-      ctaLabel:      email.ctaLabel      ?? showcaseCtaLabelDefault(locale),
-    },
+    }),
     header: resolveShowcaseHeaderLabels(
       sections,
       locale,

@@ -13,15 +13,16 @@ import 'server-only';
 import type { EnumLocale } from '@/services/property-enum-labels/property-enum-labels.service';
 import {
   createLocaleFallback,
-  showcaseCtaLabelDefault,
   type ShowcaseHeaderContactLabels,
   type ShowcaseHeaderLabels,
 } from '@/services/showcase-core/labels-shared';
 import {
   createEnumLabelTranslator,
   readShowcaseCatalogSections,
+  resolveShowcaseEmailLabels,
   resolveShowcaseHeaderLabels,
   resolveShowcaseMediaTitles,
+  resolveShowcaseSpecLabels,
 } from '@/services/showcase-core/labels-catalog';
 import type { ParkingSpotType, ParkingSpotStatus, ParkingLocationZone } from '@/types/parking';
 
@@ -90,18 +91,22 @@ export const translateParkingZone = createEnumLabelTranslator(PARKING_ZONE_LABEL
 // LABEL TYPES
 // ============================================================================
 
-export interface ParkingShowcaseSpecLabels {
-  title: string;
-  code: string;
-  type: string;
-  status: string;
-  area: string;
-  price: string;
-  floor: string;
-  building: string;
-  locationZone: string;
-  areaUnit: string;
-}
+/** Spec rows this surface renders, in display order (ADR-700). */
+const PARKING_SPEC_ROWS = [
+  'code',
+  'type',
+  'status',
+  'area',
+  'price',
+  'floor',
+  'building',
+  'locationZone',
+] as const;
+
+export type ParkingShowcaseSpecLabels = Record<
+  (typeof PARKING_SPEC_ROWS)[number] | 'title' | 'areaUnit',
+  string
+>;
 
 export interface ParkingShowcaseEmailLabels {
   subjectPrefix: string;
@@ -127,30 +132,20 @@ export function loadParkingShowcasePdfLabels(
   locale: EnumLocale = 'el',
 ): ParkingShowcasePDFLabels {
   const sections = readShowcaseCatalogSections('parkingShowcase', locale);
-  const { specs, email: emailData } = sections;
   const fb = createLocaleFallback(locale);
 
   return {
-    specs: {
-      title:        specs.title        ?? fb('Στοιχεία Θέσης Στάθμευσης', 'Parking Spot Details'),
-      code:         specs.code         ?? fb('Κωδικός', 'Code'),
-      type:         specs.type         ?? fb('Τύπος', 'Type'),
-      status:       specs.status       ?? fb('Κατάσταση', 'Status'),
-      area:         specs.area         ?? fb('Εμβαδόν', 'Area'),
-      price:        specs.price        ?? fb('Τιμή', 'Price'),
-      floor:        specs.floor        ?? fb('Όροφος', 'Floor'),
-      building:     specs.building     ?? fb('Κτήριο', 'Building'),
-      locationZone: specs.locationZone ?? fb('Ζώνη', 'Zone'),
-      areaUnit:     specs.areaUnit     ?? 'm²',
-    },
-    email: {
-      subjectPrefix: emailData.subjectPrefix ?? fb('Παρουσίαση Θέσης Στάθμευσης', 'Parking Spot Showcase'),
-      introText:     emailData.introText     ?? fb(
+    specs: resolveShowcaseSpecLabels(sections, locale, {
+      title: fb('Στοιχεία Θέσης Στάθμευσης', 'Parking Spot Details'),
+      keys: PARKING_SPEC_ROWS,
+    }),
+    email: resolveShowcaseEmailLabels(sections, locale, {
+      subjectPrefix: fb('Παρουσίαση Θέσης Στάθμευσης', 'Parking Spot Showcase'),
+      introText: fb(
         'Σας προωθούμε την αναλυτική παρουσίαση της θέσης στάθμευσης.',
         'We are sharing the detailed presentation of the parking spot.',
       ),
-      ctaLabel: emailData.ctaLabel ?? showcaseCtaLabelDefault(locale),
-    },
+    }),
     header: resolveShowcaseHeaderLabels(
       sections,
       locale,

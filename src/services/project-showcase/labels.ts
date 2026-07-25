@@ -15,18 +15,18 @@
 import type { EnumLocale } from '@/services/property-enum-labels/property-enum-labels.service';
 import {
   createLocaleFallback,
-  showcaseCtaLabelDefault,
-  showcaseDescriptionSectionDefault,
-  showcaseGeneratedOnDefault,
-  showcasePoweredByDefault,
   type ShowcaseHeaderContactLabels,
   type ShowcaseHeaderLabels,
 } from '@/services/showcase-core/labels-shared';
 import {
   createEnumLabelTranslator,
   readShowcaseCatalogSections,
+  resolveShowcaseChromeLabels,
+  resolveShowcaseDescriptionLabels,
+  resolveShowcaseEmailLabels,
   resolveShowcaseHeaderLabels,
   resolveShowcaseMediaTitles,
+  resolveShowcaseSpecLabels,
 } from '@/services/showcase-core/labels-catalog';
 
 export type { ShowcaseHeaderContactLabels };
@@ -85,20 +85,24 @@ export const translateProjectStatus = createEnumLabelTranslator(PROJECT_STATUS_L
 // ============================================================================
 
 
-export interface ProjectShowcaseSpecLabels {
-  title: string;
-  code: string;
-  type: string;
-  status: string;
-  progress: string;
-  totalArea: string;
-  totalValue: string;
-  startDate: string;
-  completionDate: string;
-  areaUnit: string;
-  location: string;
-  client: string;
-}
+/** Spec rows this surface renders, in display order (ADR-700). */
+const PROJECT_SPEC_ROWS = [
+  'code',
+  'type',
+  'status',
+  'progress',
+  'totalArea',
+  'totalValue',
+  'startDate',
+  'completionDate',
+  'location',
+  'client',
+] as const;
+
+export type ProjectShowcaseSpecLabels = Record<
+  (typeof PROJECT_SPEC_ROWS)[number] | 'title' | 'areaUnit',
+  string
+>;
 
 export interface ProjectShowcaseDescriptionLabels {
   sectionTitle: string;
@@ -144,47 +148,26 @@ export interface ProjectShowcasePDFLabels {
 
 export function loadProjectShowcasePdfLabels(locale: EnumLocale = 'el'): ProjectShowcasePDFLabels {
   const sections = readShowcaseCatalogSections('projectShowcase', locale);
-  const { specs, email, namespace } = sections;
-  const description = (namespace.description ?? {}) as Record<string, string>;
-  const pdf = (namespace.pdf ?? {}) as Record<string, string>;
-
   const fb = createLocaleFallback(locale);
-  const media = resolveShowcaseMediaTitles(sections, locale);
 
   return {
-    specs: {
-      title:          specs.title          ?? fb('Στοιχεία Έργου', 'Project Details'),
-      code:           specs.code           ?? fb('Κωδικός', 'Code'),
-      type:           specs.type           ?? fb('Τύπος', 'Type'),
-      status:         specs.status         ?? fb('Κατάσταση', 'Status'),
-      progress:       specs.progress       ?? fb('Πρόοδος', 'Progress'),
-      totalArea:      specs.totalArea      ?? fb('Συνολικό εμβαδόν', 'Total area'),
-      totalValue:     specs.totalValue     ?? fb('Συνολική αξία', 'Total value'),
-      startDate:      specs.startDate      ?? fb('Έναρξη', 'Start date'),
-      completionDate: specs.completionDate ?? fb('Παράδοση', 'Completion date'),
-      areaUnit:       specs.areaUnit       ?? 'm²',
-      location:       specs.location       ?? fb('Τοποθεσία', 'Location'),
-      client:         specs.client         ?? fb('Πελάτης', 'Client'),
-    },
-    description: {
-      sectionTitle: description.sectionTitle ?? showcaseDescriptionSectionDefault(locale),
-    },
-    photos: media.photos,
-    floorplans: media.floorplans,
-    chrome: {
-      title:              pdf.title              ?? fb('Παρουσίαση Έργου', 'Project Showcase'),
-      generatedOn:        pdf.generatedOn        ?? showcaseGeneratedOnDefault(locale),
-      descriptionSection: pdf.descriptionSection ?? showcaseDescriptionSectionDefault(locale),
-      footerNote:         pdf.footerNote         ?? fb('Παρουσίαση έργου', 'Project showcase'),
-      photosTitle:        media.photos.title,
-      floorplansTitle:    media.floorplans.title,
-      poweredBy:          showcasePoweredByDefault(locale),
-    },
-    email: {
-      subjectPrefix: email.subjectPrefix ?? fb('Παρουσίαση Έργου', 'Project Showcase'),
-      introText:     email.introText     ?? fb('Σας προωθούμε την αναλυτική παρουσίαση του έργου.', 'We are sharing the detailed presentation of the project.'),
-      ctaLabel:      email.ctaLabel      ?? showcaseCtaLabelDefault(locale),
-    },
+    specs: resolveShowcaseSpecLabels(sections, locale, {
+      title: fb('Στοιχεία Έργου', 'Project Details'),
+      keys: PROJECT_SPEC_ROWS,
+    }),
+    description: resolveShowcaseDescriptionLabels(sections, locale),
+    ...resolveShowcaseMediaTitles(sections, locale),
+    chrome: resolveShowcaseChromeLabels(sections, locale, {
+      title: fb('Παρουσίαση Έργου', 'Project Showcase'),
+      footerNote: fb('Παρουσίαση έργου', 'Project showcase'),
+    }),
+    email: resolveShowcaseEmailLabels(sections, locale, {
+      subjectPrefix: fb('Παρουσίαση Έργου', 'Project Showcase'),
+      introText: fb(
+        'Σας προωθούμε την αναλυτική παρουσίαση του έργου.',
+        'We are sharing the detailed presentation of the project.',
+      ),
+    }),
     header: resolveShowcaseHeaderLabels(
       sections,
       locale,
