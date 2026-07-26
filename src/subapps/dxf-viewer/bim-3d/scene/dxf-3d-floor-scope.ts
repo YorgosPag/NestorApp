@@ -6,7 +6,13 @@
  * honour the scope): both read the SAME scope flag so what you SEE is what you can pick.
  *   'all'    → the multi-floor DXF stack ({@link multi-floor-dxf-source}), each floor's plan
  *              at its datum-relative elevation.
- *   'single' → just the active overlay scene at Y=0 (legacy single-floor behaviour).
+ *   'single' → the active overlay scene at the ACTIVE STOREY's datum-relative FFL
+ *              (ADR-399 Φάση Ε; was hardcoded Y=0 before).
+ *
+ * ADR-399 Φάση Ε — this module is now the SOLE answer to «which DXF plane, at what Y», for the
+ * render path too: `resyncDxfOverlay` reads its entry instead of re-deriving the elevation. The
+ * «what you SEE is what you can PICK» invariant is therefore MECHANICAL, not merely documented —
+ * one function, one number, structurally impossible to drift apart.
  *
  * Plain functions reading stores via `getState()` — safe to call at event time from the
  * non-React pointer handlers + the edit hook (ADR-040: no subscription here).
@@ -16,6 +22,7 @@ import type { DxfScene, DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-ty
 import type { DxfPickFloor } from '../grips/dxf-wireframe-hit-test';
 import { useViewMode3DStore } from '../stores/ViewMode3DStore';
 import { useDxfOverlay3DStore } from '../stores/DxfOverlay3DStore';
+import { useActiveStoreyStore } from '../../systems/levels/active-storey-store';
 import { getMultiFloorDxfStack } from './multi-floor-dxf-source';
 
 /** One DXF floor in the active scope: its scene + elevation (mm) + linked level id (null = single). */
@@ -32,7 +39,15 @@ export function getDxfFloorScope(): readonly DxfFloorScopeEntry[] {
     return getMultiFloorDxfStack();
   }
   const scene = useDxfOverlay3DStore.getState().dxfScene;
-  return scene ? [{ scene, floorElevationMm: 0, levelId: null }] : [];
+  if (!scene) return [];
+  // ADR-399 Φάση Ε / ADR-448 — the storey datum SSoT: the SAME store+field the single-floor BIM
+  // sync (`bim3d-resync`) and the 3D cut plane (`cut-plane-3d`) already read. Zero new elevation
+  // math here. `0` when no floor is linked (degenerate) = the legacy ground-plane behaviour.
+  return [{
+    scene,
+    floorElevationMm: useActiveStoreyStore.getState().context?.floorElevationMm ?? 0,
+    levelId: null,
+  }];
 }
 
 /**

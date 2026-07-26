@@ -16,6 +16,16 @@ export interface BimPropertyOption {
   readonly labelKey: string;
   /** `true` = το `labelKey` είναι κυριολεκτική ετικέτα (π.χ. «16»), όχι i18n key. */
   readonly isLiteralLabel?: boolean;
+  /**
+   * ADR-715 — i18n key κεφαλίδας **ομάδας** options (Radix `SelectGroup`/`SelectLabel`).
+   * Διαδοχικά options με το ΙΔΙΟ key μπαίνουν στην ίδια ομάδα· απόν = καμία ομαδοποίηση
+   * (byte-for-byte η προηγούμενη flat απόδοση για κάθε υπάρχον πεδίο).
+   *
+   * Μπήκε όταν ο κατάλογος στεγάνωσης έφτασε τα **8** υλικά σε **δύο** τεχνικές κατηγορίες
+   * («Επαλειφόμενα» / «Μεμβράνες»): σε αυτό το μέγεθος μια επίπεδη λίστα παύει να είναι
+   * επιλογή και γίνεται σάρωση. Γενικό (ADR-471) — κάθε panel μπορεί να το χρησιμοποιήσει.
+   */
+  readonly groupLabelKey?: string;
 }
 
 /** Ένα editable πεδίο ή read-only readout μέσα σε group. */

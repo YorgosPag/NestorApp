@@ -82,6 +82,16 @@ export const BuildingElevationPatchSchema = z
      */
     foundationDepthAuto: z.boolean().optional(),
     /**
+     * ADR-713 — METRES — πόσο ΚΑΤΩ από το FFL του χαμηλότερου ορόφου κάθεται η στάθμη
+     * **τελειωμένου εδάφους** (≥0). Ορίζει πού σταματά η όψη και αρχίζει το θαμμένο τμήμα
+     * — **διαφορετικό όριο** από το `foundationDepth` (που είναι ογκομετρικό, ADR-712).
+     *
+     * Είναι ο tier 2 του cascade: όταν υπάρχει τοπογραφικό, η στάθμη δειγματοληπτείται ανά
+     * θέση και αυτό αγνοείται. Default `0` = έδαφος στο FFL, που συμφωνεί με το ADR-489 §6.2
+     * (`FOUNDATION_SOIL_COVER_MM`) και κρατά τα υπάρχοντα έργα οπτικά αμετάβλητα.
+     */
+    gradeDropBelowBase: z.number().finite().min(0).max(99).optional(),
+    /**
      * ADR-461 — building has a stair penthouse (απόληξη κλιμακοστασίου) special
      * level above the top storey (default true when ≥1 storey). Like the
      * foundation it is a special level (Revit «Building Story» OFF), NOT counted.
@@ -104,6 +114,13 @@ export const DEFAULT_BUILDING_HAS_FOUNDATION = true;
 export const DEFAULT_BUILDING_FOUNDATION_DEPTH_M = 1.0;
 /** ADR-489 §6.2 — το βάθος θεμελίωσης παράγεται δυναμικά (Auto) by default. */
 export const DEFAULT_BUILDING_FOUNDATION_DEPTH_AUTO = true;
+/**
+ * ADR-713 — METRES — default στάθμη τελειωμένου εδάφους = **στο FFL** (0).
+ * Απόφαση Giorgio 2026-07-26: fail-safe· συμφωνεί με το §6.2 και δεν μεταβάλλει την όψη
+ * υπαρχόντων έργων πάνω από το FFL. Ο μηχανικός το ανεβάζει (π.χ. 0.15 DPC / 0.30 τυπική
+ * υπερύψωση ισογείου) όταν το κτίριο πατά ψηλότερα από το περιβάλλον έδαφος.
+ */
+export const DEFAULT_BUILDING_GRADE_DROP_BELOW_BASE_M = 0;
 /** ADR-461 — buildings with ≥1 storey have a stair penthouse by default (Greek norm). */
 export const DEFAULT_BUILDING_HAS_STAIR_PENTHOUSE = true;
 /** ADR-461 — METRES — default stair-penthouse (απόληξη κλιμακοστασίου) height. */

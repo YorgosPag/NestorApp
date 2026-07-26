@@ -20,6 +20,9 @@ import { createEntity } from '@/lib/firestore/entity-creation.service';
 import { withVersionCheck, ConflictError } from '@/lib/firestore/version-check';
 import { getErrorMessage } from '@/lib/error-utils';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
+// 🛡️ ADR-714 — ο ΙΔΙΟΣ pure κανόνας που επιβάλλει ο client (ADR-399). Dependency-free
+// (type-only imports), άρα ασφαλής για server bundle.
+import { isCrossFloorSceneLink } from '@/subapps/dxf-viewer/systems/levels/cross-floor-link';
 import { CreateDxfLevelSchema, UpdateDxfLevelSchema } from './dxf-levels.schemas';
 import type {
   DxfLevelCreateResponse,
@@ -43,8 +46,16 @@ async function loadOwnedLevelRef(
   levelId: string,
   ctx: AuthContext,
 ): Promise<
-  | { readonly ref: FirebaseFirestore.DocumentReference; readonly response?: undefined }
-  | { readonly ref?: undefined; readonly response: NextResponse<{ success: false; error: string }> }
+  | {
+      readonly ref: FirebaseFirestore.DocumentReference;
+      readonly data: FirebaseFirestore.DocumentData;
+      readonly response?: undefined;
+    }
+  | {
+      readonly ref?: undefined;
+      readonly data?: undefined;
+      readonly response: NextResponse<{ success: false; error: string }>;
+    }
 > {
   const db = getAdminFirestore();
   const levelRef = db.collection(COLLECTIONS.DXF_VIEWER_LEVELS).doc(levelId);
@@ -63,7 +74,50 @@ async function loadOwnedLevelRef(
     };
   }
 
-  return { ref: levelRef };
+  return { ref: levelRef, data: levelData ?? {} };
+}
+
+/**
+ * 🛡️ ADR-714 — SERVER-SIDE floor-scope guard για το `sceneFileId`.
+ *
+ * ## Γιατί εδώ και όχι μόνο στον client
+ *
+ * Το `sceneFileId` καθορίζει σε ΠΟΙΟ Storage blob γράφει ο επεξεργαστής ενός ορόφου.
+ * Όταν δύο επίπεδα δείξουν στο ίδιο αρχείο, μοιράζονται ένα φυσικό `.scene.json` και
+ * όποιος σώζει τελευταίος σβήνει τον άλλο — αυτό ακριβώς συνέβη στις 2026-07-26
+ * (`lvl_2a7ff5cc` απέκτησε το αρχείο του `lvl_dabeb3bb`). Οι client-side φρουροί
+ * (`isCrossFloorSceneLink` σε load και write path) είναι ταχύτεροι και δίνουν ανάδραση,
+ * αλλά **ο client δεν είναι έμπιστος**: αρκεί ένας νέος καλών, ένα regression ή ένα
+ * απευθείας PATCH για να ξαναγραφτεί ο λάθος σύνδεσμος. Αυτός εδώ είναι ο μόνος
+ * έλεγχος που δεν μπορεί να παρακαμφθεί.
+ *
+ * ## Συντηρητικό εξ ορισμού
+ *
+ * Ο ίδιος ο κανόνας δεν ξαναγράφεται εδώ: χρησιμοποιείται το **υπάρχον pure predicate**
+ * `isCrossFloorSceneLink` (ADR-399, `systems/levels/cross-floor-link.ts`) που είναι
+ * dependency-free (μόνο type imports) και άρα εκτελείται αυτούσιο και στον διακομιστή.
+ * Ένας ορισμός του «ανήκει σε άλλον όροφο», δύο σημεία επιβολής — αν αύριο ο κανόνας
+ * χαλαρώσει ή σφίξει, αλλάζει σε ΕΝΑ αρχείο και ισχύει και στις δύο πλευρές.
+ */
+async function assertSceneFileBelongsToFloor(
+  sceneFileId: string,
+  levelFloorId: unknown,
+): Promise<void> {
+  if (typeof levelFloorId !== 'string' || !levelFloorId) return;
+
+  const db = getAdminFirestore();
+  const fileDoc = await db.collection(COLLECTIONS.FILES).doc(sceneFileId).get();
+  if (!fileDoc.exists) {
+    throw new ApiError(404, `Scene file ${sceneFileId} does not exist`);
+  }
+
+  const file = fileDoc.data() ?? {};
+  if (!isCrossFloorSceneLink(file, levelFloorId)) return;
+
+  throw new ApiError(
+    409,
+    `Scene file ${sceneFileId} belongs to floor ${file.entityId}, not ${levelFloorId} (ADR-714)`,
+  );
 }
 
 export async function handleListDxfLevels(
@@ -150,6 +204,12 @@ export async function handleCreateDxfLevel(
       throw new ApiError(409, `DXF level "${body.name}" already exists for this tenant`);
     }
 
+    // 🛡️ ADR-714 — ίδιος φρουρός και στη δημιουργία: ένα νέο επίπεδο δεν γεννιέται
+    // δείχνοντας στο αρχείο άλλου ορόφου.
+    if (body.sceneFileId) {
+      await assertSceneFileBelongsToFloor(body.sceneFileId, body.floorId);
+    }
+
     const entitySpecificFields: Record<string, unknown> = {
       name: body.name,
       order: body.order,
@@ -204,6 +264,16 @@ export async function handleUpdateDxfLevel(
     if (body.visible !== undefined) updates.visible = body.visible;
     if (body.floorId !== undefined) updates.floorId = body.floorId ?? null;
     if (body.buildingId !== undefined) updates.buildingId = body.buildingId ?? null;
+    // 🛡️ ADR-714 — ένα επίπεδο δεν επιτρέπεται ΠΟΤΕ να δείξει σε αρχείο άλλου ορόφου.
+    // Ο έλεγχος γίνεται με τον όροφο ΟΠΩΣ ΘΑ ΕΙΝΑΙ μετά το PATCH (το ίδιο αίτημα μπορεί
+    // να αλλάζει και τα δύο πεδία), αλλιώς μια ταυτόχρονη αλλαγή ορόφου θα τον παρέκαμπτε.
+    // Το ξε-linkάρισμα (`sceneFileId: null`) είναι πάντα επιτρεπτό — είναι η θεραπεία.
+    if (body.sceneFileId) {
+      await assertSceneFileBelongsToFloor(
+        body.sceneFileId,
+        body.floorId !== undefined ? body.floorId : owned.data.floorId,
+      );
+    }
     if (body.sceneFileId !== undefined) updates.sceneFileId = body.sceneFileId ?? null;
     if (body.sceneFileName !== undefined) updates.sceneFileName = body.sceneFileName ?? null;
     // ADR-309 Phase 3: context-aware level fields
@@ -248,6 +318,11 @@ export async function handleUpdateDxfLevel(
     if (error instanceof ConflictError) {
       return NextResponse.json(error.body, { status: error.statusCode });
     }
+    // 🛡️ ADR-714 — ένα ΤΥΠΟΠΟΙΗΜΕΝΟ σφάλμα είναι απάντηση, όχι αποτυχία. Χωρίς αυτό, το
+    // 409 του cross-floor guard καταπινόταν και ο καλών έπαιρνε αδιάκριτο 500 — δηλαδή
+    // «κάτι έσπασε» αντί για «αυτό απαγορεύεται και να γιατί». Ίδια μεταχείριση με τον
+    // create handler παραπάνω, που ήδη ξαναπετά τα ApiError.
+    if (error instanceof ApiError) throw error;
     logger.error('[DxfLevels/Update] Error', { error: getErrorMessage(error, 'Unknown') });
     return NextResponse.json({
       success: false,

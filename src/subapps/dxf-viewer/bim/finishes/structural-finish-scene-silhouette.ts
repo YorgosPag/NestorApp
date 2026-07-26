@@ -170,11 +170,21 @@ function columnZExtent(
   column: SilhouetteColumnSource,
   floorElevationMm: number,
   extents?: ColumnVerticalExtentLookup,
+  // ADR-713 — στάθμη τελειωμένου εδάφους αυτής της κολώνας (κοινός χάρτης με τον πυρήνα).
+  grades?: ReadonlyMap<string, number>,
 ): { zBotMm: number; zTopMm: number } {
   const resolved = column.id ? extents?.get(column.id) : undefined;
-  if (resolved) return resolved;
-  const zBotMm = floorElevationMm + (column.params.baseOffset ?? 0);
-  return { zBotMm, zTopMm: zBotMm + column.params.height };
+  const base = resolved ?? (() => {
+    const zBotMm = floorElevationMm + (column.params.baseOffset ?? 0);
+    return { zBotMm, zTopMm: zBotMm + column.params.height };
+  })();
+  // ADR-713 — ο σοβάς σταματά στη στάθμη εδάφους: κάτω της το στοιχείο είναι μπαζωμένο και
+  // παίρνει στεγανωτική επάλειψη, όχι επίχρισμα. `Math.max` — ΠΟΤΕ δεν κατεβάζει τη βάση
+  // (μια στάθμη χαμηλότερα από το στερεό δεν «επεκτείνει» σοβά μέσα στο πέδιλο)· ανεβάζει
+  // μόνο όταν το έδαφος είναι ψηλότερα (επικλινές). Απών χάρτης → byte-for-byte το παλιό.
+  const gradeMm = column.id ? grades?.get(column.id) : undefined;
+  if (gradeMm === undefined || !Number.isFinite(gradeMm)) return base;
+  return { zBotMm: Math.min(base.zTopMm, Math.max(base.zBotMm, gradeMm)), zTopMm: base.zTopMm };
 }
 
 /**
@@ -287,6 +297,13 @@ export interface SilhouetteFinishInput {
   /** ADR-449 — pre-resolved (storey-aware) zExtents κολώνας ανά id, ΙΔΙΑ SSoT με τον πυρήνα. */
   readonly columnExtents?: ColumnVerticalExtentLookup;
   /**
+   * ADR-713 — απόλυτη στάθμη τελειωμένου εδάφους ανά κολώνα (`buildColumnGradeLookup`), ο
+   * **ΙΔΙΟΣ** χάρτης που κόβει την επένδυση στον πυρήνα. Ο σοβάς σταματά εκεί: κάτω από τη
+   * στάθμη το στοιχείο είναι μπαζωμένο και στεγανώνεται, δεν σοβατίζεται. Absent / χωρίς
+   * entry → πλήρες ύψος από τη βάση (byte-for-byte· 2Δ plan & DXF export δεν το περνούν).
+   */
+  readonly columnGradeById?: ReadonlyMap<string, number>;
+  /**
    * ADR-449/458 — 2Δ κάτοψη ΜΟΝΟ: αφαιρεί τις κρυμμένες junction-όψεις (όψεις που η plan-προβολή
    * κρύβει πίσω από member από πάνω). Το 3Δ ΔΕΝ το περνά (false/absent) → οι όψεις παραμένουν στις
    * δικές τους z-bands. Default `false`.
@@ -340,6 +357,7 @@ export function computeStructuralFinishSilhouette(input: SilhouetteFinishInput):
     walls,
     floorElevationMm,
     columnExtents,
+    columnGradeById,
     dropPlanHiddenFaces = false,
     beamTopClipById,
     openingsByWallId,
@@ -348,7 +366,11 @@ export function computeStructuralFinishSilhouette(input: SilhouetteFinishInput):
   } = input;
   const members: SilhouetteMember[] = [];
   for (const c of columns) {
-    const m = toMember(c.params.finish, c.geometry?.footprint?.vertices, columnZExtent(c, floorElevationMm, columnExtents));
+    const m = toMember(
+      c.params.finish,
+      c.geometry?.footprint?.vertices,
+      columnZExtent(c, floorElevationMm, columnExtents, columnGradeById),
+    );
     if (m) members.push(m);
   }
   // ADR-449/493 — footprints των finish-κολόνων· το δοκάρι που πλαισιώνεται στην παρειά τους επεκτείνεται

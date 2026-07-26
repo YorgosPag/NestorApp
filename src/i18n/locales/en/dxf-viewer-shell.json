@@ -203,19 +203,27 @@
     }
   },
   "constructionMaterials": {
-    "mat-concrete": "Concrete",
     "mat-brick": "Brick",
-    "mat-stone": "Stone",
-    "mat-screed": "Cement Screed",
-    "mat-insulation": "Thermal Insulation",
-    "mat-tile": "Ceramic Tile",
-    "mat-roof-tile": "Roof Tile",
-    "mat-plaster": "Plaster",
-    "mat-membrane": "Waterproof Membrane",
-    "mat-gravel": "Gravel",
+    "mat-concrete": "Concrete",
     "mat-finish": "Finish Layer",
-    "mat-wood": "Wood",
-    "mat-metal": "Metal"
+    "mat-gravel": "Gravel",
+    "mat-insulation": "Thermal Insulation",
+    "mat-membrane": "Waterproof Membrane",
+    "mat-metal": "Metal",
+    "mat-plaster": "Plaster",
+    "mat-roof-tile": "Roof Tile",
+    "mat-screed": "Cement Screed",
+    "mat-stone": "Stone",
+    "mat-tile": "Ceramic Tile",
+    "mat-waterproof-bentonite": "Bentonite membrane",
+    "mat-waterproof-bitumen": "Bituminous coating",
+    "mat-waterproof-bitumen-emulsion": "Two-component bitumen emulsion",
+    "mat-waterproof-cementitious": "Cementitious waterproofing",
+    "mat-waterproof-cementitious-flex": "Two-component flexible cementitious",
+    "mat-waterproof-crystalline": "Crystalline waterproofing",
+    "mat-waterproof-membrane": "Bituminous membrane (torch-on)",
+    "mat-waterproof-polyurethane": "Polyurethane liquid membrane",
+    "mat-wood": "Wood"
   },
   "common": {
     "confirm": "Confirm",
@@ -523,14 +531,24 @@
     }
   },
   "railingAdvancedPanel": {
-    "title": "Railing Properties",
-    "emptyState": "Select a railing to view its properties.",
+    "title": "Railing Advanced Properties",
+    "emptyState": "Select a railing to see its properties.",
     "sections": {
-      "geometry": { "title": "Geometry" },
-      "baluster": { "title": "Balusters" },
-      "posts": { "title": "Posts" },
-      "rails": { "title": "Rails" },
-      "infill": { "title": "Infill" }
+      "geometry": {
+        "title": "Geometry"
+      },
+      "baluster": {
+        "title": "Balusters"
+      },
+      "posts": {
+        "title": "Posts"
+      },
+      "rails": {
+        "title": "Rails"
+      },
+      "infill": {
+        "title": "Infill"
+      }
     }
   },
   "propertiesPalette": {
@@ -3012,7 +3030,9 @@
       },
       "railingEditor": {
         "predefinedType": {
-          "section": { "title": "Railing Type" },
+          "section": {
+            "title": "Railing Type"
+          },
           "guardrail": "Guardrail",
           "handrail": "Handrail",
           "balustrade": "Balustrade"
@@ -3022,10 +3042,14 @@
           "rectangular": "Rectangular"
         },
         "balusterShape": {
-          "section": { "title": "Baluster Profile" }
+          "section": {
+            "title": "Baluster Profile"
+          }
         },
         "justification": {
-          "section": { "title": "Justification" },
+          "section": {
+            "title": "Justification"
+          },
           "center": "Center",
           "start": "Start",
           "end": "End"
@@ -3035,7 +3059,9 @@
           "off": "No"
         },
         "infillKind": {
-          "section": { "title": "Infill" },
+          "section": {
+            "title": "Infill"
+          },
           "none": "None",
           "glass": "Glass",
           "mesh": "Mesh",
@@ -5430,17 +5456,6 @@
       "pathEntityRequired": "Path entity is required."
     }
   },
-  "railingAdvancedPanel": {
-    "title": "Railing Advanced Properties",
-    "emptyState": "Select a railing to see its properties.",
-    "sections": {
-      "geometry": { "title": "Geometry" },
-      "baluster": { "title": "Balusters" },
-      "posts": { "title": "Posts" },
-      "rails": { "title": "Rails" },
-      "infill": { "title": "Infill" }
-    }
-  },
   "stairAdvancedPanel": {
     "title": "Stair Advanced Properties",
     "closeAriaLabel": "Close panel",
@@ -5610,6 +5625,16 @@
       },
       "finish": {
         "title": "Plaster Finish"
+      },
+      "buriedWaterproofing": {
+        "title": "Buried Part — Waterproofing",
+        "enabled": "Waterproofing",
+        "enabledTooltip": "The part of the column inside the soil, from finished grade down to the footing top face. Enabled by default: whatever is buried gets waterproofed.",
+        "material": "Waterproofing material",
+        "kindCoating": "Coatings",
+        "kindMembrane": "Membranes",
+        "paintDivergence": "Manual face paint",
+        "paintDivergenceTooltip": "Buried faces painted manually with another material in «Polygon» mode. They render on screen but are NOT measured — the take-off follows the waterproofing material."
       },
       "envelope": {
         "title": "Envelope Function"

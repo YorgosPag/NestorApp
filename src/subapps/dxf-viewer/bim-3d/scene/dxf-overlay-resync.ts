@@ -7,15 +7,20 @@
  * while the BIM geometry stacked correctly. This helper makes every overlay
  * trigger honour `floor3DScope`:
  *   'all'    → `syncDxfOverlayMultiFloor(stack)` (every floor at its elevation),
- *   'single' → `syncDxfOverlay(activeScene)` (legacy single-floor behaviour).
+ *   'single' → `syncDxfOverlay(activeScene, storeyFFL)` (ADR-399 Φάση Ε).
+ *
+ * ADR-399 Φάση Ε — the single-floor branch no longer derives ANYTHING itself: it renders exactly
+ * the entry {@link getDxfFloorScope} reports, which is the very same entry the pick / hover /
+ * grip / marquee path consumes. One source for «which plane, at what Y» ⇒ render and pick cannot
+ * drift apart (the old pair of independently-hardcoded zeros was how they silently did).
  *
  * Reads stores synchronously via `getState()` so it is safe to call from the
- * non-React store subscribers (DxfOverlay3DStore / scope / stack).
+ * non-React store subscribers (DxfOverlay3DStore / scope / stack / active storey).
  */
 
 import { useViewMode3DStore } from '../stores/ViewMode3DStore';
-import { useDxfOverlay3DStore } from '../stores/DxfOverlay3DStore';
 import { getMultiFloorDxfStack } from './multi-floor-dxf-source';
+import { getDxfFloorScope } from './dxf-3d-floor-scope';
 import type { ThreeJsSceneManager } from './ThreeJsSceneManager';
 
 /**
@@ -29,5 +34,7 @@ export function resyncDxfOverlay(manager: ThreeJsSceneManager | null): void {
     manager.syncDxfOverlayMultiFloor(getMultiFloorDxfStack());
     return;
   }
-  manager.syncDxfOverlay(useDxfOverlay3DStore.getState().dxfScene);
+  // Single scope → exactly one entry (or none when no plan is loaded → `sync(null)` disposes).
+  const [floor] = getDxfFloorScope();
+  manager.syncDxfOverlay(floor?.scene ?? null, floor?.floorElevationMm ?? 0);
 }

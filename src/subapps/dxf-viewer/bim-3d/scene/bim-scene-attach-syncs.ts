@@ -4,6 +4,10 @@ import { wallToMesh, columnToMesh } from '../converters/BimToThreeConverter';
 import { buildWallHostInputs, makeWallTopContext, makeWallBaseContext } from '../../bim/geometry/wall-host-plan-builder';
 // ADR-534 §monolithic-cut — top-clip κολόνας στο soffit καλύπτουσας πλάκας (μηδέν z-fighting).
 import { buildCeilingSlabHosts, resolveMemberTopClipZmm } from './monolithic-slab-clip';
+// N.0.2 — ο host resolver κολώνας ως ΚΟΙΝΟΣ κώδικας με τον σοβά (πρώην αυτολεξεί δίδυμο).
+import { resolveColumnHostInput } from './column-host-inputs';
+// ADR-713 — κοινός χάρτης στάθμης εδάφους (πυρήνας + σοβάς διαβάζουν το ΙΔΙΟ).
+import { buildColumnGradeLookup } from './column-exposure-grade';
 import { projectPointTo2D, projectVerticesTo2D } from '../../bim/geometry/shared/polygon-utils';
 import { resolveWallTopProfile, resolveWallNominalTopZmm, resolveWallBaseZmm } from '../../bim/geometry/wall-top-profile';
 import { resolveWallBaseProfile } from '../../bim/geometry/wall-base-profile';
@@ -13,7 +17,6 @@ import {
   resolveColumnBaseProfile,
   resolveColumnNominalTopZmm,
   resolveColumnBaseZmm,
-  makeColumnHostResolver,
 } from '../../bim/geometry/column-vertical-profile';
 import { isColumnTilted } from '../../bim/geometry/column-tilt';
 // ADR-489 §6.1/§7 — DERIVED effective βάση κολώνας (στατική συνέχεια κολώνα→πέδιλο).
@@ -114,15 +117,15 @@ export function syncColumns(
   ctx: SyncContext,
   resolveEntity: ResolveEntity,
 ): void {
-  const hasAttached = entities.columns.some(
-    (c) => c.params?.topBinding === 'attached' || c.params?.baseBinding === 'attached',
-  );
-  const resolveHostInput = hasAttached
-    ? makeColumnHostResolver(buildWallHostInputs(entities.beams, entities.slabs))
-    : undefined;
+  // N.0.2 — ΕΝΑ SSoT με τον σοβά (`bim-scene-structural-finish-sync`): αν αποκλίνουν, ο σοβάς
+  // λύνει άλλο ύψος από τον πυρήνα που ντύνει.
+  const resolveHostInput = resolveColumnHostInput(entities);
   // ADR-534 §monolithic-cut — host inputs πλακών (soffit) → η κορυφή κάθε κολόνας κόβεται όπου την
   // καλύπτει πλάκα οροφής (μηδέν z-fighting). Άδειο → no-op (byte-for-byte).
   const slabHosts = buildCeilingSlabHosts(entities.slabs);
+  // ADR-713 — ο ΚΟΙΝΟΣ χάρτης στάθμης εδάφους (τον διαβάζει ΚΑΙ ο ενιαίος σοβάς στο
+  // `syncStructuralFinishSkin`): πυρήνας και επίχρισμα κόβουν στο ΙΔΙΟ ύψος, πάντα.
+  const columnGradeById = buildColumnGradeLookup(entities.columns, ctx);
 
   for (const column of entities.columns) {
     const r = resolveEntity(column, 'column', ctx);
@@ -165,6 +168,7 @@ export function syncColumns(
       !isColumnTilted(column.params),
       effectiveBaseZmm,
       clipTopZmm, // ADR-534 §monolithic-cut
+      columnGradeById.get(column.id), // ADR-713 — στάθμη τελειωμένου εδάφους αυτής της κολώνας
     );
     if (mesh) { mesh.userData['buildingId'] = r.buildingId; group.add(mesh); }
   }

@@ -62,6 +62,10 @@ export function ClashMarkerLayer(props: ClashMarkerLayerProps): React.ReactEleme
           ref={(el) => { refs.current[i] = el; }}
           className="absolute left-0 top-0 will-change-transform"
         >
+          {/* Spread, never a hand-picked list: this layer must stay agnostic about WHICH props
+              the glyph understands. Enumerating them here silently dropped `selected` when the
+              topography QA report added it (ADR-650 M5α.2) — the props arrived, the glyph never
+              saw them, and nothing failed anywhere. */}
           <ClashMarkerGlyph severity={m.severity} soft={m.soft} />
         </div>
       ))}

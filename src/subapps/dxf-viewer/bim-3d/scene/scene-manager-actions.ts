@@ -152,13 +152,18 @@ function finalizeDxfOverlaySync(
   deps.sectionController.applyState();
 }
 
+/**
+ * ADR-399 Φάση Ε — `floorElevationMm` = the active storey's datum-relative FFL (0 for the
+ * read-only Properties pipeline, which has no storey). Same frame as the BIM single-floor sync.
+ */
 export function syncDxfOverlayIntoScene(
   deps: SyncDxfOverlayDeps,
   dxfScene: DxfScene | null,
+  floorElevationMm: number,
   fitDone: boolean,
   onFitApplied: () => void,
 ): void {
-  deps.dxfConverter.sync(dxfScene);
+  deps.dxfConverter.sync(dxfScene, floorElevationMm);
   finalizeDxfOverlaySync(deps, fitDone, onFitApplied);
 }
 

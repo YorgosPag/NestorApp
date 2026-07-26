@@ -41,6 +41,8 @@ import type { IfcEntityMixin } from './ifc-entity-mixin';
 import type { ColumnBaseBinding, ColumnTopBinding } from './bim-binding';
 import type { EnvelopeFunction, EnvelopeLayer } from './thermal-envelope-types';
 import type { StructuralFinishSpec } from '../finishes/structural-finish-types';
+// ADR-713 — στεγάνωση θαμμένης ζώνης (ο αδελφός του `finish`, κάτω από τη στάθμη εδάφους).
+import type { BuriedWaterproofingSpec } from '../finishes/buried-waterproofing';
 import type { ConcreteGrade } from '../structural/concrete-grades';
 import type { ColumnReinforcement } from '../structural/reinforcement/column-reinforcement-types';
 import type { AppliedMemberLoad } from '../structural/loads/structural-loads-types';
@@ -280,6 +282,17 @@ export interface ColumnParams {
    * `structural-finish-resolver`. Συνυπάρχει με `envelopeLayer` (ETICS).
    */
   readonly finish?: StructuralFinishSpec;
+  /**
+   * ADR-713 — Στεγάνωση της **θαμμένης** ζώνης (κάτω από τη στάθμη τελειωμένου εδάφους).
+   * Ο αδελφός του `finish`, για την άλλη πλευρά του ίδιου ορίου: πάνω από τη στάθμη
+   * επένδυση/σοβάς, κάτω της στεγανωτική επάλειψη — ποτέ και τα δύο.
+   *
+   * **Absent = ΕΝΕΡΓΟ με ασφαλτική επάλειψη** (απόφαση Giorgio 2026-07-26: ό,τι θάβεται,
+   * στεγανώνεται). Άρα τα υπάρχοντα έργα παίρνουν τη σωστή συμπεριφορά χωρίς migration· ο
+   * μηχανικός το κλείνει ρητά με `enabled:false`. Εφαρμόζεται ΜΟΝΟ όταν η κολώνα έχει
+   * πραγματική θαμμένη ζώνη (έδραση σε πέδιλο) — αλλιώς αγνοείται σιωπηλά.
+   */
+  readonly buriedWaterproofing?: BuriedWaterproofingSpec;
   /**
    * DXF canvas coordinate unit. Always stored so `computeColumnGeometry` can
    * convert mm scalars (width/depth) → canvas units for 2D footprint offsets.

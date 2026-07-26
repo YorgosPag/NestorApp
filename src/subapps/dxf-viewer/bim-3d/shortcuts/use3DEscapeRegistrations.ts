@@ -12,6 +12,7 @@
  *
  *   P420 EDIT_GIZMO_3D      → tear the move/rotate gizmo down, KEEP the selection
  *   P415 STAIR_SUB_EXIT     → step out of a tread/riser back to the whole stair
+ *   P414 BURIED_PART_EXIT   → step out of the «Τμήμα» (κοντόστυλο) back to the whole column
  *   P410 SELECTION_3D_CLEAR → clear the 3D selection (cascades to universal via the bridge)
  *   P150 FOCUS_CLEAR        → clear the keyboard focus ring (exact twin of `use2DKeyboardFocus`)
  *
@@ -35,6 +36,8 @@ import { useViewMode3DStore } from '../stores/ViewMode3DStore';
 import { useSelection3DStore } from '../stores/Selection3DStore';
 import { useBim3DEditStore } from '../stores/Bim3DEditStore';
 import { useStairSubElementSelectionStore } from '../../bim/stairs/stair-sub-element-selection-store';
+// ADR-715 — «Τμήμα» (κοντόστυλο): δικό του rung ένα σκαλί κάτω από το stair-sub (βλ. BURIED_PART_EXIT).
+import { useBuriedPartSelectionStore } from '../../bim/parts/buried-part-selection-store';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 
 export interface Use3DEscapeRegistrationsConfig {
@@ -64,6 +67,16 @@ export function use3DEscapeRegistrations({ getManager, active }: Use3DEscapeRegi
     priority: ESC_PRIORITY.STAIR_SUB_EXIT,
     canHandle: () => in3D() && useStairSubElementSelectionStore.getState().selected !== null,
     handle: () => { useStairSubElementSelectionStore.getState().clear(); return true; },
+  });
+
+  // P414 — step OUT of the drilled-into «Τμήμα» (κοντόστυλο) back to the whole column (ADR-715).
+  // Mirror του P415: ίδια «exit one level» σημασιολογία, ξεχωριστό slot (βλ. BURIED_PART_EXIT).
+  // Η host κολώνα ΜΕΝΕΙ επιλεγμένη, ώστε το ΕΠΟΜΕΝΟ ESC να την αποεπιλέξει (P410) — Revit «Modify».
+  useEscapeHandler({
+    id: 'bim3d/buried-part-exit',
+    priority: ESC_PRIORITY.BURIED_PART_EXIT,
+    canHandle: () => in3D() && useBuriedPartSelectionStore.getState().selected !== null,
+    handle: () => { useBuriedPartSelectionStore.getState().clear(); return true; },
   });
 
   // P410 — the rung that was MISSING entirely (ADR-364 §10.11.Ε.2): nothing cleared the 3D

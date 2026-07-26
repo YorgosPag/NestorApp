@@ -88,8 +88,39 @@ describe('ADR-375 C.9 — Revit-grade προκαθορισμένα χρώματ�
     }
   });
 
-  it('οι 7 κλειδωμένες αποχρώσεις είναι διακριτές (zero collisions)', () => {
-    const palette = Object.values(BIM_CATEGORY_LINE_COLORS);
-    expect(new Set(palette).size).toBe(palette.length);
+  /**
+   * ADR-375 C.9 — καμία **ΑΚΟΥΣΙΑ** σύγκρουση απόχρωσης. Ο έλεγχος δεν είναι «όλα διαφορετικά»:
+   * υπάρχει **ΜΙΑ σκόπιμη** κοινή απόχρωση, το `MEP_TEAL_COLOR` (`color-config.ts`), που μοιράζονται
+   * ο ηλεκτρικός πίνακας (equipment teal) και ο θερμικός χώρος (analytical teal) — δύο κατηγορίες
+   * που δεν συνυπάρχουν ποτέ στην ίδια όψη (η μία είναι εξοπλισμός, η άλλη αναλυτικό κέλυφος).
+   *
+   * Γι' αυτό η δικλείδα μετρά **ομάδες** αντί για τιμές: κάθε απόχρωση επιτρέπεται να
+   * χρησιμοποιείται από όσα κλειδιά δηλώνει ρητά το {@link SHARED_HUES}. Έτσι μια νέα, **ακούσια**
+   * σύγκρουση (δύο κατηγορίες που κατέληξαν τυχαία στο ίδιο hex) εξακολουθεί να ΚΟΚΚΙΝΙΖΕΙ — που
+   * είναι όλο το νόημα του ελέγχου. Ένα σκέτο `Set(palette).size === palette.length` ήταν
+   * **μονίμως κόκκινο** από το commit `7eb1cc05` (2026-07-12), όταν μπήκε το δεύτερο teal: μια
+   * δικλείδα που αντιφάσκει με τεκμηριωμένη απόφαση δεν προστατεύει τίποτα, απλώς αγνοείται.
+   */
+  const SHARED_HUES: Readonly<Record<string, readonly string[]>> = {
+    // teal — ADR-408 Φ3 (electricalPanel) + ADR-422/571 (thermalSpace). Δηλωμένο στο color-config.
+    '#0d9488': ['electricalPanel', 'thermalSpace'],
+  };
+
+  it('καμία ΑΚΟΥΣΙΑ σύγκρουση απόχρωσης (οι σκόπιμα κοινές δηλώνονται ρητά)', () => {
+    const byHue = new Map<string, string[]>();
+    for (const [key, hue] of Object.entries(BIM_CATEGORY_LINE_COLORS)) {
+      byHue.set(hue, [...(byHue.get(hue) ?? []), key]);
+    }
+    for (const [hue, keys] of byHue) {
+      const allowed = SHARED_HUES[hue];
+      // Χωρίς ρητή δήλωση, μια απόχρωση ανήκει σε ΜΙΑ κατηγορία.
+      expect(keys).toEqual(allowed ? [...allowed] : [keys[0]]);
+    }
+  });
+
+  it('η σκόπιμη κοινή απόχρωση παραμένει τεκμηριωμένη (ΟΧΙ σιωπηλή διαγραφή)', () => {
+    // Αν κάποιος δώσει ξεχωριστό teal στον θερμικό χώρο, ΑΥΤΟ το test κοκκινίζει και ζητά να
+    // αφαιρεθεί η εγγραφή από το `SHARED_HUES` — δηλαδή η απόφαση αλλάζει ρητά, όχι κατά λάθος.
+    expect(BIM_CATEGORY_LINE_COLORS.electricalPanel).toBe(BIM_CATEGORY_LINE_COLORS.thermalSpace);
   });
 });

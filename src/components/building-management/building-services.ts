@@ -53,6 +53,12 @@ export interface BuildingUpdatePayload {
   foundationDepth?: number;
   /** ADR-489 §6.2 — `foundationDepth` παράγεται δυναμικά (Auto, default true) ή χειροκίνητη υπέρβαση. */
   foundationDepthAuto?: boolean;
+  /**
+   * ADR-713 — METRES — πόσο κάτω από το FFL του χαμηλότερου ορόφου είναι η στάθμη
+   * **τελειωμένου εδάφους** (≥0, default 0). Όριο ΟΨΗΣ: πάνω της επένδυση/σοβάς, κάτω της
+   * στεγάνωση. **Διαφορετικό** από το `foundationDepth`, που είναι ογκομετρικό (ADR-712).
+   */
+  gradeDropBelowBase?: number;
   /** ADR-461 — building has a stair-penthouse special level above the top storey (default true when ≥1 storey). */
   hasStairPenthouse?: boolean;
   /** ADR-461 — METRES — stair-penthouse (απόληξη κλιμακοστασίου) storey height (default 2.40). */

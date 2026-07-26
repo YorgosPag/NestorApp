@@ -54,6 +54,13 @@ import { applyStairSubElementAppearance } from './apply-stair-sub-element-appear
 // ADR-407 Φ8 — per-component paint κιγκλιδώματος (κουπαστή/κάγκελα/κολόνες) στο ΙΔΙΟ swatch flow.
 import { useRailingComponentSelectionStore } from '../../bim/railings/railing-component-selection-store';
 import { applyRailingComponentAppearance } from './apply-railing-appearance';
+// ADR-715 — «Τμήμα» (κοντόστυλο): το swatch δρομολογείται κατά την ταυτότητα του υλικού
+// (στεγανωτικό → Part-level SSoT + επιμέτρηση· άλλο → cosmetic per-face).
+import { getSelectedBuriedPart, useBuriedPartSelectionStore } from '../../bim/parts/buried-part-selection-store';
+import { applyBuriedPartAppearance } from './apply-buried-part-waterproofing';
+// Η αρίθμηση θαμμένων όψεων διαβάζεται από τη ΖΩΝΤΑΝΗ σκηνή (SSoT «ό,τι ζωγραφίστηκε»), μέσω
+// του υπάρχοντος registry — μηδέν νέο threading του manager μέσα από React props (ADR-453).
+import { getActiveSceneManager } from '../scene/active-scene-manager-registry';
 import { FINISH_MATERIAL_OPTIONS } from '../../ui/ribbon/hooks/bridge/finish-param';
 import { getMaterialFlatColorHex } from '../../bim/materials/material-catalog-defs';
 // ADR-679 Φ2b / ADR-539 Φ4d — BODY layer textured swatches (catalog + user bmat_* library).
@@ -93,6 +100,10 @@ export function PolygonMaterialPanel() {
   // ADR-539 (Giorgio 2026-07-22) — στα entity-level modes (ΣΩΜΑ/ΣΟΒΑΣ) το swatch click βάφει την
   // κανονική 3D επιλογή· στο ΠΟΛΥΓΩΝΑ mode χρησιμεύει ως «όλο το στοιχείο» fallback (καμία όψη).
   const selectedBimId = useSelection3DStore((s) => s.selectedBimId);
+  // ADR-715 — reactive, ώστε η μπάρα να **δηλώνει** ότι βάφεται το Κοντόστυλο και όχι η κολώνα.
+  // Χωρίς αυτό, ο χρήστης θα έβλεπε «βάψε όλο το στοιχείο» και θα πάτωνε swatch νομίζοντας ότι
+  // βάφει την κολώνα — ενώ ο writer θα έγραφε στη θαμμένη ζώνη. Το hint είναι μέρος του συμβολαίου.
+  const buriedPart = useBuriedPartSelectionStore((s) => s.selected);
   // ADR-687 Φ1 — «＋ Νέο Υλικό»: opens the full Material Editor in create-mode. After
   // save the new material auto-appears in this bar (the user-material feed is always-on).
   const [editorOpen, setEditorOpen] = useState(false);
@@ -119,6 +130,14 @@ export function PolygonMaterialPanel() {
   // και τα υλικά είναι αμέσως εκεί (Cinema 4D Material Manager), χωρίς επιλογή/κουμπί «Όψεις».
   const isPolygon = targetLayer === 'polygon';
   const isFinish = targetLayer === 'finish';
+  /**
+   * ADR-715 — «το swatch θα πάει στο Κοντόστυλο». Ίδιο **κριτήριο** με τον `apply` (Τμήμα
+   * επιλεγμένο ΚΑΙ όχι «ΣΟΒΑΣ»), γραμμένο μία φορά: αν το hint έλεγε «κολώνα» ενώ ο writer
+   * έγραφε στη θαμμένη ζώνη, ο χρήστης θα ανακάλυπτε το λάθος **στην επιμέτρηση**.
+   * (Ο `apply` διαβάζει το store event-time κατά ADR-040· εδώ είναι render-time snapshot — ίδια
+   * συνθήκη, διαφορετική στιγμή ανάγνωσης, όπως παντού στο 3D.)
+   */
+  const isBuriedPartTarget = buriedPart !== null && !isFinish;
 
   /**
    * Apply — Revit/Cinema 4D «base + override» μοντέλο, ΕΝΑ tool, ΤΡΙΑ modes (Giorgio 2026-07-22):
@@ -135,6 +154,26 @@ export function PolygonMaterialPanel() {
   const apply = (value: FaceAppearance | null): void => {
     const store = usePolygonMode3DStore.getState();
     const target = useSelection3DStore.getState().selectedBimId;
+    // ADR-715 — επιλεγμένο «Τμήμα» (κοντόστυλο) κερδίζει ΠΑΝΩ από κάθε layer: ο χρήστης έχει
+    // μπει ΜΕΣΑ στη θαμμένη ζώνη και τη βλέπει φωτισμένη — ένα swatch δεν επιτρέπεται να βάψει
+    // «όλη την κολώνα». Ο writer δρομολογεί μόνος του: υλικό στεγάνωσης → Part-level SSoT
+    // (render + επιμέτρηση)· οτιδήποτε άλλο → cosmetic per-face στις θαμμένες όψεις (§3.1).
+    //
+    // ⚠️ ΕΞΑΙΡΕΣΗ «ΣΟΒΑΣ»: κάτω από τη στάθμη **δεν υπάρχει σοβάς** (ADR-713 §2.1) — το layer
+    // αυτό αφορά εξ ορισμού την ΕΚΤΕΘΕΙΜΕΝΗ ζώνη, οπότε πέφτει στο υπάρχον whole-element path
+    // της host κολώνας. Αλλιώς ένα κλικ σε επίχρισμα θα έγραφε σοβά μέσα στο χώμα.
+    if (store.targetLayer !== 'finish') {
+      const part = getSelectedBuriedPart();
+      if (part) {
+        applyBuriedPartAppearance(
+          levels,
+          part.columnId,
+          getActiveSceneManager()?.getEntityFaceKeys(part.columnId),
+          value,
+        );
+        return;
+      }
+    }
     if (store.targetLayer === 'polygon') {
       // ADR-539 Φ7 — μια επιλεγμένη υποενότητα σκάλας (Revit «Paint») κερδίζει: γράψε το appearance
       // στα stair params (το per-face override δεν ισχύει σε παραμετρική σκάλα). Mutually-exclusive
@@ -163,7 +202,7 @@ export function PolygonMaterialPanel() {
 
   const faceCount = selectedFaces.length;
   /** ΠΟΛΥΓΩΝΑ: επιλεγμένες όψεις Ή (fallback) η 3D επιλογή. ΣΩΜΑ/ΣΟΒΑΣ: η 3D επιλογή. */
-  const canApply = (isPolygon && faceCount > 0) || selectedBimId !== null;
+  const canApply = isBuriedPartTarget || (isPolygon && faceCount > 0) || selectedBimId !== null;
 
   // ADR-687 Φ8 — η μπάρα σώμα/πολύγωνα δείχνει ΜΟΝΟ τα ρητά βαμμένα υλικά της σκηνής (C4D Material
   // Manager). Ο σοβάς μένει fixed finish palette (click-only, flat — αμετάβλητο).
@@ -216,15 +255,18 @@ export function PolygonMaterialPanel() {
       <header className="flex min-w-[190px] shrink-0 flex-col justify-center gap-1 border-r border-white/10 pr-3">
         <h3 className="text-xs font-semibold">{t('polygonMode.title')}</h3>
         <p className="text-[10px] leading-tight text-white/60">
-          {isPolygon
-            ? faceCount > 1
-              ? t('polygonMode.hintMultiFace', { count: faceCount })
-              : faceCount === 1
-                ? t('polygonMode.hintApply')
-                : t('polygonMode.hintPickFace')
-            : isFinish
-              ? t('polygonMode.hintFinishWhole')
-              : t('polygonMode.hintBodyWhole')}
+          {/* ADR-715 — το Τμήμα κερδίζει στο hint όπως και στο routing (εκτός «ΣΟΒΑΣ»). */}
+          {isBuriedPartTarget
+            ? t('polygonMode.hintBuriedPart')
+            : isPolygon
+              ? faceCount > 1
+                ? t('polygonMode.hintMultiFace', { count: faceCount })
+                : faceCount === 1
+                  ? t('polygonMode.hintApply')
+                  : t('polygonMode.hintPickFace')
+              : isFinish
+                ? t('polygonMode.hintFinishWhole')
+                : t('polygonMode.hintBodyWhole')}
         </p>
         {/* Mode toggle (Giorgio 2026-07-22): ΣΩΜΑ (539 entity) · ΣΟΒΑΣ (449 entity) · ΠΟΛΥΓΩΝΑ
             (539 per-face). Τα δύο πρώτα μικρότερα· το ΠΟΛΥΓΩΝΑ ανοίγει το per-face picking. */}
@@ -319,7 +361,14 @@ export function PolygonMaterialPanel() {
           onClick={() => apply(null)}
           className="w-full rounded border border-white/15 px-1.5 py-1 text-[10px] transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {faceCount > 0 ? t('polygonMode.clearFace') : t('polygonMode.clearWhole')}
+          {/* ADR-715 — με επιλεγμένο Τμήμα, το «καθάρισε» αφορά ΜΟΝΟ τη χειροκίνητη βαφή των
+              θαμμένων όψεων — **δεν** καταργεί τη στεγάνωση (αυτό είναι ρητή απόφαση με δικό της
+              διακόπτη στο Properties, γιατί αφαιρεί γραμμή επιμέτρησης). Η ετικέτα το λέει. */}
+          {isBuriedPartTarget
+            ? t('polygonMode.clearBuriedPart')
+            : faceCount > 0
+              ? t('polygonMode.clearFace')
+              : t('polygonMode.clearWhole')}
         </button>
       </div>
 

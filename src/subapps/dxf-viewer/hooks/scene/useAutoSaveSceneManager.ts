@@ -7,12 +7,12 @@ import {
   DEFAULT_SCENE_WRITE_ORIGIN,
   type SceneWriteOrigin,
 } from './scene-write-origin';
-import { DxfFirestoreService } from '../../services/dxf-firestore.service';
 import type { DxfSaveContext } from '../../services/dxf-firestore.service';
 import type { SceneModel } from '../../types/scene';
-// ADR-459 Φ7 — ένα floor snapshot κρατά ΜΟΝΟ τα δικά του entities (foreign-floor BIM
-// guard· αποτρέπει cross-level πέδιλα να «ψηθούν» στο snapshot λάθος ορόφου).
-import { stripForeignFloorBim } from '../../systems/levels/scene-bim-load-policy';
+// 🛡️ ADR-714 — immutable write identity. Το save παγώνει τον προορισμό του στο Τ₀
+// (scheduling) αντί να τον διαβάζει από refs στο Τ₀+2000ms (execution).
+import { executeSceneSave, type SceneSaveBlockReason } from './execute-scene-save';
+import { createSceneSaveTicket, type SceneSaveTicket } from './scene-save-ticket';
 import { useAuth } from '@/auth/hooks/useAuth';
 // 🚀 Ribbon-cascade fix (profiler 2026-06-28): the volatile scene save-status is
 // mirrored into a dedicated zero-React store so the AutoSaveStatus widget can
@@ -30,6 +30,27 @@ export interface AutoSaveSceneManagerState extends SceneManagerState {
   /** 🏢 ENTERPRISE: Inject existing FileRecord ID so cadFiles uses the same ID */
   setFileRecordId: (id: string | null) => void;
   /**
+   * 🛡️ ADR-714 — δηλώνει σε ποιον όροφο ανήκει ένα επίπεδο.
+   *
+   * Ο `useLevelSceneLoader` το καλεί σε κάθε αλλαγή επιπέδου. Το auto-save το διαβάζει
+   * **μόνο τη στιγμή του scheduling**, για να παγώσει τον `floorId` μέσα στο
+   * {@link SceneSaveTicket}. Κρατιέται ως map (levelId → floorId) και όχι ως σκέτο
+   * «τρέχον», ώστε η αντιστοίχιση να μην εξαρτάται από το πότε έτρεξε τελευταία ο loader.
+   */
+  setLevelFloorScope: (levelId: string, floorId: string | null) => void;
+  /**
+   * 🛡️ ADR-714 — καταγράφει πόσες DXF οντότητες έχει ΗΔΗ ο αποθηκευμένος προορισμός.
+   *
+   * Ο `useLevelSceneLoader` το καλεί μετά από κάθε επιτυχή φόρτωση. Είναι το baseline
+   * του φρουρού `isDxfWipe`: χωρίς αυτό, ο φρουρός δεν ξέρει τι θα χαθεί.
+   */
+  setPersistedDxfBaseline: (fileId: string, dxfCount: number) => void;
+  /**
+   * 🛡️ ADR-714 — ειδοποίηση ότι μια εγγραφή ματαιώθηκε από φρουρό δεδομένων.
+   * Ο `useLevelSceneLoader` το συνδέει με το i18n toast.
+   */
+  setOnSaveBlocked: (cb: ((reason: SceneSaveBlockReason) => void) | null) => void;
+  /**
    * 🪜 ADR-358 Phase 8: reactive mirror of the injected FileRecord id so
    * downstream consumers (e.g. `useStairPersistence` via `StairAdvancedPanelHost`)
    * can subscribe to it as state. The setter still updates the internal ref
@@ -44,8 +65,15 @@ export interface AutoSaveSceneManagerState extends SceneManagerState {
    * needing tenant/project scope (Phase 8 stair persistence).
    */
   saveContext: DxfSaveContext | null;
-  /** 🏢 ENTERPRISE: Callback after successful scene save — used by LevelsSystem to link scene→level */
-  setOnSceneSaved: (cb: ((fileId: string, fileName: string) => void) | null) => void;
+  /**
+   * 🏢 ENTERPRISE: Callback after successful scene save — used by LevelsSystem to link scene→level.
+   *
+   * 🛡️ ADR-714 — παίρνει το ΠΑΓΩΜΕΝΟ ticket, όχι σκέτο `fileId`. Πριν, ο δέκτης
+   * linkάριζε το «τρέχον» επίπεδο· αν ο χρήστης άλλαζε όροφο όσο έτρεχε το debounced
+   * save, το save του ορόφου Α linkάριζε τον όροφο Β στο αρχείο του Α. Το
+   * `ticket.levelId` λέει ποιος ΓΕΝΝΗΣΕ την εγγραφή — και αυτός είναι που linkάρεται.
+   */
+  setOnSceneSaved: (cb: ((ticket: SceneSaveTicket, fileId: string) => void) | null) => void;
   /** 🏢 ENTERPRISE: Set loading guard to prevent auto-save during scene load from Storage */
   setIsLoadingFromFirestore: (loading: boolean) => void;
   /**
@@ -68,6 +96,34 @@ export interface AutoSaveSceneManagerState extends SceneManagerState {
    * animation frame so the next genuine scene load from useLevelSceneLoader proceeds.
    */
   resetSceneSession: () => void;
+}
+
+/**
+ * 🛡️ ADR-714 — κλειδί της fileId cache: ο ΟΡΟΦΟΣ μαζί με το όνομα.
+ *
+ * Το σκέτο όνομα δεν ταυτοποιεί κάτοψη: το ίδιο DXF επιτρέπεται (και συνηθίζεται) να
+ * φορτωθεί σε πολλούς ορόφους, οπότε δύο διαφορετικά FileRecords μοιράζονται
+ * `originalFilename`. Χωρίς τον όροφο στο κλειδί, ο ένας όροφος κληρονομούσε το fileId
+ * του άλλου και οι δύο έγραφαν στο ίδιο `.scene.json`.
+ */
+function fileIdCacheKey(floorId: string | null, fileName: string): string {
+  return `${floorId ?? 'no-floor'}::${fileName}`;
+}
+
+/**
+ * Το ήδη γνωστό `canonicalScenePath` στο Τ₀, ή `null` αν πρέπει να επιλυθεί async.
+ * Η cache του path είναι keyed by fileId (μοναδικό), άρα διαβάζεται μόνο όταν υπάρχει.
+ */
+function resolveKnownScenePath(
+  injectedContext: DxfSaveContext | null,
+  fileId: string | null,
+  scenePathCache: ReadonlyMap<string, string>,
+): string | null {
+  return (
+    injectedContext?.canonicalScenePath
+    ?? (fileId ? scenePathCache.get(fileId) : undefined)
+    ?? null
+  );
 }
 
 export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
@@ -94,12 +150,24 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
   const isLoadingFromFirestoreRef = useRef<boolean>(false);
   // Flag to prevent multiple simultaneous loads
   const loadedFilesRef = useRef<Set<string>>(new Set());
-  // Cache fileName → enterpriseId mapping to avoid generating new IDs on every save
+  // Cache `${floorId}::${fileName}` → enterpriseId, ώστε να μη γεννιούνται νέα ids σε κάθε save.
+  // 🛡️ ADR-714 — ΠΡΕΠΕΙ να περιλαμβάνει τον όροφο. Όσο ήταν keyed by σκέτο fileName, δύο
+  // όροφοι με το ΙΔΙΟ αρχείο κάτοψης (νόμιμη πρακτική) μοιράζονταν μία εγγραφή: ο πρώτος
+  // που έσωζε «δίδασκε» στην cache το δικό του fileId και ο δεύτερος το κληρονομούσε —
+  // οπότε έγραφαν στο ίδιο `.scene.json`. Το `scenePathCacheRef` από κάτω είχε ήδη
+  // θωρακιστεί για ακριβώς αυτόν τον λόγο· η cache του fileId είχε μείνει εκτεθειμένη,
+  // αν και είναι η ΠΙΟ κρίσιμη από τις δύο (καθορίζει ΠΟΙΟ αρχείο γράφεται).
   const fileIdCacheRef = useRef<Map<string, string>>(new Map());
   // Cache fileId → canonicalScenePath so subsequent saves don't re-derive it.
   // MUST be keyed by fileId (unique), NOT fileName — two different files can share the same
   // originalFilename, which would cause the wrong scene path to be written to Firestore.
   const scenePathCacheRef = useRef<Map<string, string>>(new Map());
+  // 🛡️ ADR-714 — levelId → floorId. Ο μόνος γραφέας είναι ο `useLevelSceneLoader`.
+  const levelFloorScopeRef = useRef<Map<string, string | null>>(new Map());
+  // 🛡️ ADR-714 — fileId → DXF entity count όπως είναι ΑΠΟΘΗΚΕΥΜΕΝΟ. Baseline του `isDxfWipe`.
+  const persistedDxfBaselineRef = useRef<Map<string, number>>(new Map());
+  // 🛡️ ADR-714 — δέκτης ειδοποίησης ματαιωμένης εγγραφής (i18n toast στο LevelsSystem).
+  const onSaveBlockedRef = useRef<((reason: SceneSaveBlockReason) => void) | null>(null);
   // 🏢 ENTERPRISE: Injected FileRecord ID (from wizard/upload) — ensures cadFiles uses the same ID
   const injectedFileRecordIdRef = useRef<string | null>(null);
   // 🪜 ADR-358 Phase 8: reactive mirror of injectedFileRecordIdRef for downstream consumers.
@@ -109,7 +177,7 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
   // 🪜 ADR-358 Phase 8: reactive mirror of injectedSaveContextRef for downstream consumers.
   const [saveContext, setSaveContextState] = useState<DxfSaveContext | null>(null);
   // 🏢 ENTERPRISE: Callback after successful save — LevelsSystem uses this to persist level→DXF link
-  const onSceneSavedRef = useRef<((fileId: string, fileName: string) => void) | null>(null);
+  const onSceneSavedRef = useRef<((ticket: SceneSaveTicket, fileId: string) => void) | null>(null);
   // 🛡️ ADR-469 v1.2 — SSoT orphaned-target latch: fileIds whose backing files/cadFiles doc
   // is gone. DXF scene auto-save is suppressed for them this session (BIM persists
   // independently via floorId-keyed per-entity collections). A ref/Set — NOT React state —
@@ -130,12 +198,35 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
   const setFileRecordId = useCallback((id: string | null) => {
     injectedFileRecordIdRef.current = id;
     setFileRecordIdState(id);
-    // Cache against current filename (read from ref to avoid stale closure)
+    // Cache against current filename (read from ref to avoid stale closure).
+    // 🛡️ ADR-714 — το κλειδί περιλαμβάνει τον όροφο του injected context, αλλιώς αυτή
+    // ακριβώς η γραμμή μόλυνε την cache για κάθε άλλο όροφο με το ίδιο όνομα αρχείου.
     const fileName = currentFileNameRef.current;
     if (id && fileName) {
-      fileIdCacheRef.current.set(fileName, id);
+      fileIdCacheRef.current.set(
+        fileIdCacheKey(injectedSaveContextRef.current?.floorId ?? null, fileName),
+        id,
+      );
     }
   }, []);
+
+  /** 🛡️ ADR-714 — ο loader δηλώνει σε ποιον όροφο ανήκει κάθε επίπεδο. */
+  const setLevelFloorScope = useCallback((levelId: string, floorId: string | null) => {
+    levelFloorScopeRef.current.set(levelId, floorId);
+  }, []);
+
+  /** 🛡️ ADR-714 — baseline του φρουρού `isDxfWipe` για έναν προορισμό. */
+  const setPersistedDxfBaseline = useCallback((fileId: string, dxfCount: number) => {
+    if (fileId) persistedDxfBaselineRef.current.set(fileId, dxfCount);
+  }, []);
+
+  /** 🛡️ ADR-714 — δέκτης ειδοποίησης ματαιωμένης εγγραφής. */
+  const setOnSaveBlocked = useCallback(
+    (cb: ((reason: SceneSaveBlockReason) => void) | null) => {
+      onSaveBlockedRef.current = cb;
+    },
+    [],
+  );
 
   /** 🏢 ADR-240: Inject DxfSaveContext from Wizard so dual-write uses correct entityType/floorId */
   const setSaveContext = useCallback((ctx: DxfSaveContext | null) => {
@@ -144,9 +235,12 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
   }, []);
 
   /** 🏢 ENTERPRISE: Set callback for after successful save (used by LevelsSystem) */
-  const setOnSceneSaved = useCallback((cb: ((fileId: string, fileName: string) => void) | null) => {
-    onSceneSavedRef.current = cb;
-  }, []);
+  const setOnSceneSaved = useCallback(
+    (cb: ((ticket: SceneSaveTicket, fileId: string) => void) | null) => {
+      onSceneSavedRef.current = cb;
+    },
+    [],
+  );
 
   /** 🏢 ENTERPRISE: External control of loading guard (used by LevelsSystem during scene load) */
   const setIsLoadingFromFirestore = useCallback((loading: boolean) => {
@@ -189,6 +283,10 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
     scenePathCacheRef.current.clear();
     loadedFilesRef.current.clear();
     orphanedFileTargetsRef.current.clear();
+    // 🛡️ ADR-714 — οι floor scopes και τα baselines ανήκουν στον ΠΡΟΗΓΟΥΜΕΝΟ tenant.
+    // Αν επιβίωναν, ένα baseline του παλιού tenant θα έκρινε εγγραφή του νέου.
+    levelFloorScopeRef.current.clear();
+    persistedDxfBaselineRef.current.clear();
     setSaveStatus('idle');
     requestAnimationFrame(() => {
       isLoadingFromFirestoreRef.current = false;
@@ -221,6 +319,12 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
     // FAIL-SAFE — it can only prevent a destructive overwrite, never cause a bad save.
     // A scene the user genuinely emptied simply isn't auto-persisted (rare edge case,
     // far less harmful than silently wiping a populated floorplan).
+    //
+    // 🛡️ ADR-714 — ΑΥΤΟΣ Ο ΦΡΟΥΡΟΣ ΔΕΝ ΑΡΚΕΙ. Ρωτά «είναι ΤΕΛΕΙΩΣ κενό;» και αστόχησε
+    // στο περιστατικό 2026-07-26: η καταστροφική εγγραφή είχε 12 κολόνες (BIM) και ΜΗΔΕΝ
+    // DXF, οπότε `12 > 0` → πέρασε και έγραψε 12 πάνω από 1181. Το δεύτερο στρώμα είναι
+    // ο `isDxfWipe` μέσα στον executor, που ρωτά «μηδενίζεται η DXF γεωμετρία που ήδη
+    // υπάρχει;». Αυτός εδώ μένει ως φθηνό πρώτο φίλτρο (καμία εγγραφή χωρίς περιεχόμενο).
     const isEmptyScene = scene.entities.length === 0;
 
     // 🏢 ADR-040 SSoT GATE (root-cause #2 — auto-save storm): ONLY a `local-edit`
@@ -242,116 +346,74 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
         clearTimeout(saveTimeoutRef.current);
       }
 
+      // 🛡️ ADR-714 — ΠΑΓΩΣΕ ΤΟΝ ΠΡΟΟΡΙΣΜΟ ΤΩΡΑ (Τ₀), όχι σε 2 δευτερόλεπτα.
+      //
+      // Ό,τι ταυτοποιεί αυτή την εγγραφή διαβάζεται ΕΔΩ, τη στιγμή που ο χρήστης
+      // επεξεργάστηκε αυτόν τον όροφο, και κλείνεται μέσα στο ticket. Ο executor δεν
+      // ξαναδιαβάζει κανένα ref. Έτσι μια εναλλαγή ορόφου μέσα στο παράθυρο του
+      // debounce δεν μπορεί πια να ανακατευθύνει την εγγραφή σε άλλο αρχείο — ούτε
+      // χρειάζεται να ακυρώσουμε το pending save (καμία απώλεια δουλειάς).
+      const floorId = levelFloorScopeRef.current.get(levelId) ?? null;
+      const ticket = createSceneSaveTicket({
+        levelId,
+        floorId,
+        companyId: injectedSaveContextRef.current?.companyId ?? user?.companyId ?? null,
+        userUid: user?.uid ?? null,
+        fileId:
+          injectedFileRecordIdRef.current
+          ?? fileIdCacheRef.current.get(fileIdCacheKey(floorId, fileName))
+          ?? null,
+        fileName,
+        canonicalScenePath: resolveKnownScenePath(
+          injectedSaveContextRef.current,
+          injectedFileRecordIdRef.current,
+          scenePathCacheRef.current,
+        ),
+        saveContext: injectedSaveContextRef.current,
+        scene,
+      });
+
+      // Clear existing timeout
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+
       // Set new debounced save
       saveTimeoutRef.current = setTimeout(async () => {
         setSaveStatus('saving');
 
-        try {
-          // 🏢 ENTERPRISE: Resolve file ID with priority:
-          // 1. Injected FileRecord ID (from wizard/upload via setFileRecordId)
-          // 2. Cached ID (from previous save in this session)
-          // 3. Existing FileRecord in `files` collection (wizard uploaded this file before)
-          // 4. New enterprise ID (first standalone save — no wizard involved)
-          let fileId = injectedFileRecordIdRef.current
-            ?? fileIdCacheRef.current.get(fileName);
-          // Pull canonicalScenePath from wizard context or cache first.
-          // Cache is keyed by fileId (unique) — never by fileName to avoid cross-file
-          // contamination when two files share the same originalFilename.
-          let canonicalScenePath: string | undefined =
-            injectedSaveContextRef.current?.canonicalScenePath
-            ?? (fileId ? scenePathCacheRef.current.get(fileId) : undefined);
+        const outcome = await executeSceneSave(ticket, {
+          getBaselineDxfCount: (id) => persistedDxfBaselineRef.current.get(id) ?? 0,
+          markFileTargetOrphaned,
+        });
 
-          // Enter also when canonicalScenePath is missing — even if fileId is already
-          // known (injected by wizard/loader), the scene path may not have been wired
-          // yet (e.g. fresh import where setSaveContext was called without a path).
-          if (!fileId || !canonicalScenePath) {
-            const lookupCompanyId = injectedSaveContextRef.current?.companyId ?? user?.companyId;
-            if (!lookupCompanyId && !fileId) {
-              // No company ID and no fileId — cannot resolve either; abort save
-              setSaveStatus('error');
-              return;
-            }
-            if (fileId && !canonicalScenePath) {
-              // fileId is known but path is not — fetch THIS specific file's storagePath
-              // by ID. Do NOT use findExistingFileRecord (queries by fileName) because
-              // another file with the same originalFilename may be returned, causing
-              // canonicalScenePath to point to a different file's storage path.
-              const storagePath = await DxfFirestoreService.getFileStoragePath(fileId);
-              if (storagePath) {
-                canonicalScenePath = DxfFirestoreService.deriveScenePath(storagePath);
-                fileIdCacheRef.current.set(fileName, fileId);
-              } else {
-                // 🛡️ ADR-469 v1.2 — belt #2 safety net: the backing file doc is gone
-                // (orphaned target). Latch it so the gate suppresses future saves, then
-                // SKIP this save instead of throwing ADR-293 (no canonicalScenePath).
-                // BIM persists independently via floorId-keyed per-entity collections.
-                // Narrow by design: only fires when fileId is KNOWN (injected) yet has no
-                // storagePath — never on the legit new-standalone path (fileId unknown →
-                // generateFileId), so a genuine first save is never suppressed.
-                markFileTargetOrphaned(fileId);
-                setSaveStatus('idle');
-                return;
-              }
-            } else if (lookupCompanyId) {
-              // fileId unknown — fall back to name-based lookup or generate new ID
-              const existing = await DxfFirestoreService.findExistingFileRecord(lookupCompanyId, fileName);
-              if (existing) {
-                fileId = fileId ?? existing.id;
-                if (existing.storagePath && !canonicalScenePath) {
-                  canonicalScenePath = DxfFirestoreService.deriveScenePath(existing.storagePath);
-                }
-              } else if (!fileId) {
-                fileId = DxfFirestoreService.generateFileId(fileName);
-              }
-              fileIdCacheRef.current.set(fileName, fileId!);
-            }
-            // If lookupCompanyId is missing but fileId IS known, fall through —
-            // saveToStorageImpl will surface the missing-path error explicitly.
+        if (outcome.status === 'saved') {
+          // Cache for subsequent saves (fileId → path· `${floorId}::${fileName}` → fileId).
+          if (outcome.canonicalScenePath) {
+            scenePathCacheRef.current.set(outcome.fileId, outcome.canonicalScenePath);
           }
-
-          // Cache for subsequent saves of this file (keyed by fileId, not fileName)
-          if (canonicalScenePath && fileId) {
-            scenePathCacheRef.current.set(fileId, canonicalScenePath);
-          }
-
-          // 🚀 PHASE 4: Use Storage-based auto-save with canonical path
-          // 🏢 ADR-240: Merge injected save context (from Wizard) with canonical path
-          // 🔒 TENANT SCOPING: fall back to authenticated user for companyId/createdBy
-          // when the Wizard did not supply them (standalone DXF saves).
-          const injectedCtx = injectedSaveContextRef.current ?? {};
-          const saveContext: DxfSaveContext = {
-            ...injectedCtx,
-            companyId: injectedCtx.companyId ?? user?.companyId ?? undefined,
-            createdBy: injectedCtx.createdBy ?? user?.uid ?? undefined,
-            ...(canonicalScenePath ? { canonicalScenePath } : {}),
-          };
-          // ADR-459 Φ7 — strip foreign-floor BIM πριν το persist: το snapshot αυτού
-          // του ορόφου δεν πρέπει να περιέχει BIM άλλου ορόφου (cross-level πέδιλο).
-          const sceneToPersist = stripForeignFloorBim(scene, saveContext.floorId);
-          const success = await DxfFirestoreService.autoSaveV2(
-            fileId!, fileName, sceneToPersist,
-            Object.keys(saveContext).length > 0 ? saveContext : undefined
-          );
-
-          if (success) {
-            setSaveStatus('success');
-            setLastSaveTime(new Date());
-            // 🏢 ENTERPRISE: Notify LevelsSystem to persist level→DXF association
-            onSceneSavedRef.current?.(fileId!, fileName);
-          } else {
-            setSaveStatus('error');
-            console.error(`❌ [AutoSave] Failed to save changes to ${fileName}`);
-          }
-        } catch (error) {
+          fileIdCacheRef.current.set(fileIdCacheKey(ticket.floorId, ticket.fileName), outcome.fileId);
+          persistedDxfBaselineRef.current.set(outcome.fileId, outcome.dxfCount);
+          setSaveStatus('success');
+          setLastSaveTime(new Date());
+          // 🏢 ENTERPRISE: Notify LevelsSystem to persist level→DXF association.
+          // 🛡️ ADR-714 — το ticket λέει ΠΟΙΟ επίπεδο γέννησε την εγγραφή.
+          onSceneSavedRef.current?.(ticket, outcome.fileId);
+        } else if (outcome.status === 'blocked') {
           setSaveStatus('error');
-          console.error(`❌ [AutoSave] Exception during save:`, error);
+          onSaveBlockedRef.current?.(outcome.reason);
+        } else if (outcome.status === 'failed') {
+          setSaveStatus('error');
+          console.error('❌ [AutoSave] Exception during save:', outcome.error);
+        } else {
+          setSaveStatus('idle');
         }
 
         // Reset status after delay
         setTimeout(() => setSaveStatus('idle'), PANEL_LAYOUT.TIMING.SAVE_STATUS_RESET);
       }, STORAGE_TIMING.SCENE_AUTOSAVE_DEBOUNCE); // 🏢 ADR-098
     }
-  }, [autoSaveEnabled]);
+  }, [autoSaveEnabled, markFileTargetOrphaned, user?.companyId, user?.uid]);
   
   /**
    * Load scene from Firestore on file change
@@ -405,6 +467,9 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
     saveStatus,
     setFileRecordId,
     fileRecordId,
+    setLevelFloorScope,
+    setPersistedDxfBaseline,
+    setOnSaveBlocked,
     setSaveContext,
     saveContext,
     setOnSceneSaved,
@@ -416,5 +481,8 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
     sceneManager, setLevelSceneWithAutoSave, currentFileName,
     autoSaveEnabled, lastSaveTime, saveStatus,
     fileRecordId, saveContext,
+    setFileRecordId, setLevelFloorScope, setPersistedDxfBaseline, setOnSaveBlocked,
+    setCurrentFileName, setSaveContext, setOnSceneSaved, setIsLoadingFromFirestore,
+    markFileTargetOrphaned, isFileTargetOrphaned, resetSceneSession,
   ]);
 }

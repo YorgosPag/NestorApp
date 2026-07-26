@@ -61,6 +61,9 @@ export function checkDuplicatePoints(points: readonly TopoPoint[]): TopoQaFlag[]
         kind: 'duplicate-point',
         severity,
         at: { x: points[i]!.x, y: points[i]!.y },
+        // The FIRST shot's Z — the one the TIN dedup kept, so the 3D marker lands on the
+        // surface the engineer is actually looking at (the partner's Z is in the message).
+        atZMm: points[i]!.z,
         messageKey: 'topography.qa.flag.duplicatePoint',
         messageParams: { a: i + 1, b: j + 1, deviation: mmToMetreString(dz) },
         dz,

@@ -12,7 +12,8 @@
 
 import { useEffect, useRef, type RefObject } from 'react';
 import { createCombinedBounds } from '../../systems/zoom/utils/bounds';
-import { getPointerSnapshotFromElement } from '../../rendering/core/CoordinateTransforms';
+import { getPointerSnapshotFromElement, COORDINATE_LAYOUT } from '../../rendering/core/CoordinateTransforms';
+import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import { EventBus } from '../../systems/events';
 // ADR-375 Phase B.4 — explicit «Fit annotations» → recompute the fit-to-paper scale.
 import { computeFitToPaperScale } from '../../systems/dimensions/auto-drawing-scale';
@@ -188,6 +189,36 @@ export function useFitToView({
       applyZoomToFit(bounds, 'Z fit-to-selection');
     };
 
+    /**
+     * ADR-650 M5α.2 — pan so a world point lands in the middle, keeping the CURRENT scale.
+     *
+     * Inverts the `worldToScreen` formula (the SSoT in `CoordinateTransforms`) for the one
+     * unknown, the offsets, with `scale` held fixed:
+     *   screenX = left + wx·scale + offsetX          = width/2
+     *   screenY = (height − top) − wy·scale − offsetY = height/2
+     * Reading the live transform through `getImmediateTransform()` (event-time getter, never a
+     * React snapshot) is what makes «current scale» actually current — a snapshot would restore
+     * whatever the scale was when this effect last ran.
+     */
+    const handleCenterOnPoint = (payload: { point: Point2D }) => {
+      const point = payload?.point;
+      if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) return;
+      const snap = getPointerSnapshotFromElement(containerRef.current);
+      if (!snap) {
+        dwarn('useFitToView', 'center-on-point: viewport not ready');
+        return;
+      }
+      const { scale } = getImmediateTransform();
+      if (!Number.isFinite(scale) || scale <= 0) return;
+      const { left, top } = COORDINATE_LAYOUT.MARGINS;
+      const { width, height } = snap.viewport;
+      setTransform({
+        scale,
+        offsetX: width / 2 - left - point.x * scale,
+        offsetY: (height - top) - point.y * scale - height / 2,
+      });
+    };
+
     // ADR-400: Restore a persisted viewport transform (absolute, no bounds calc needed).
     const handleRestoreViewport = (payload: RestoreViewportPayload) => {
       const { scale, offsetX, offsetY } = payload.transform;
@@ -211,9 +242,10 @@ export function useFitToView({
 
     const cleanup = EventBus.on('canvas-fit-to-view', handleFitToView);
     const cleanupSelected = EventBus.on('canvas-fit-to-view-selected', handleFitToViewSelected);
+    const cleanupCenter = EventBus.on('canvas-center-on-point', handleCenterOnPoint);
     const cleanupRestore = EventBus.on('canvas-restore-viewport', handleRestoreViewport);
     const cleanupFitAnnotations = EventBus.on('annotation-fit-to-paper', handleFitAnnotationsToPaper);
-    return () => { cleanup(); cleanupSelected(); cleanupRestore(); cleanupFitAnnotations(); };
+    return () => { cleanup(); cleanupSelected(); cleanupCenter(); cleanupRestore(); cleanupFitAnnotations(); };
   }, [dxfScene, colorLayers, zoomSystem]); // 🚀 Include colorLayers για combined bounds
 
   return { fitToOverlay };

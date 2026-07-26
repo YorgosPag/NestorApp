@@ -10,6 +10,7 @@
  */
 
 import { useBim3DEntitiesStore } from '../stores/Bim3DEntitiesStore';
+import { isBuriedFaceKey } from '../../bim/types/face-appearance-types'; // ADR-715
 import {
   formatWallTooltip,
   formatColumnTooltip,
@@ -19,11 +20,23 @@ import {
   type TooltipLines,
 } from './bim-entity-formatter';
 
-/** Resolve the 3-line tooltip for a hovered BIM entity, or null when not found. */
+/**
+ * Resolve the 3-line tooltip for a hovered BIM entity, or null when not found.
+ *
+ * ADR-715 — `faceKey` (η όψη κάτω από τον κέρσορα) είναι προαιρετικό: όταν δείχνει **θαμμένη**
+ * υπο-όψη κολώνας, η γραμμή τύπου γίνεται «Κοντόστυλο». Ο readout είναι το μόνο σημείο όπου ο
+ * χρήστης μαθαίνει, **πριν** πατήσει, ότι το κλικ θα επιλέξει Τμήμα και όχι την κολώνα.
+ *
+ * Η αντικατάσταση γίνεται **εδώ** και όχι μέσα στον `formatColumnTooltip`: ο formatter είναι
+ * pure «entity → κείμενο» και δεν γνωρίζει (ούτε πρέπει) την έννοια «ποια όψη κοιτάζω». Οι
+ * άλλες δύο γραμμές μένουν οι ίδιες — διαστάσεις και τύπος διατομής **είναι** της host κολώνας,
+ * και είναι χρήσιμο να φαίνονται (Revit: «Parts : Column : 400×400»).
+ */
 export function resolveBim3DHoverLines(
   bimId: string,
   bimType: string,
   t: TFn,
+  faceKey?: string | null,
 ): TooltipLines | null {
   const { walls, columns, beams, slabs } = useBim3DEntitiesStore.getState();
   switch (bimType) {
@@ -33,7 +46,11 @@ export function resolveBim3DHoverLines(
     }
     case 'column': {
       const e = columns.find((c) => c.id === bimId);
-      return e ? formatColumnTooltip(e, t) : null;
+      if (!e) return null;
+      const [typeLine, dimLine, kindLine] = formatColumnTooltip(e, t);
+      return isBuriedFaceKey(faceKey ?? undefined)
+        ? [t('entityTypes.buriedPart'), dimLine, kindLine]
+        : [typeLine, dimLine, kindLine];
     }
     case 'beam': {
       const e = beams.find((b) => b.id === bimId);

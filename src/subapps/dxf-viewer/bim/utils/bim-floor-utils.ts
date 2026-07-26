@@ -45,6 +45,13 @@ export type BuildingRef = {
   readonly id: string;
   /** METRES — building base elevation above site datum (ADR-369 §9.2). */
   readonly baseElevation?: number;
+  /**
+   * ADR-713 — METRES — πόσο κάτω από το FFL του χαμηλότερου ορόφου είναι η στάθμη
+   * **τελειωμένου εδάφους** (≥0). Ορίζει πού σταματά η επένδυση/σοβάς και αρχίζει η
+   * στεγάνωση της θαμμένης ζώνης. Απόν → 0 (έδαφος στο FFL). Παρακάμπτεται όταν το έργο
+   * έχει τοπογραφικό (η στάθμη δειγματοληπτείται ανά θέση).
+   */
+  readonly gradeDropBelowBase?: number;
   /** Display name for building selector UI (ADR-369 Q2.2). */
   readonly name?: string;
 };

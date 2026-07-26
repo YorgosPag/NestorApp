@@ -70,6 +70,32 @@ export const MATERIAL_DEFS: Record<string, PbrMaterialDef> = {
   'mat-membrane':   { color: 0x3a3a3e, roughness: 0.45, metalness: 0.00 },
   // Gravel ballast / protection layer: grey-brown aggregate, fully rough.
   'mat-gravel':     { color: 0x9a948a, roughness: 1.00, metalness: 0.00 },
+  // ADR-713 — στεγάνωση ΘΑΜΜΕΝΩΝ επιφανειών (κολώνα/τοιχείο σε επαφή με χώμα). Τρεις
+  // ΔΙΑΚΡΙΤΕΣ χροιές ώστε ο μηχανικός να ξεχωρίζει την τεχνική με το μάτι στο 3Δ — καθεμιά
+  // τιμολογείται με δικό της άρθρο (βλ. `bim/config/material-to-atoe-mapping.ts`). Ξεχωριστά
+  // κλειδιά από το γενικό `mat-membrane` (στρώση δώματος): άλλη χρήση, άλλο άρθρο, άλλη όψη.
+  // Ασφαλτική επάλειψη: μαύρη, ημι-γυαλιστερή (φρέσκο ασφαλτικό γαλάκτωμα).
+  'mat-waterproof-bitumen':      { color: 0x2b2a2e, roughness: 0.55, metalness: 0.00 },
+  // Τσιμεντοειδές επάλειψης: γκρι τσιμέντου, εντελώς ματ (κονίαμα).
+  'mat-waterproof-cementitious': { color: 0x9a9a92, roughness: 0.93, metalness: 0.00 },
+  // Ασφαλτόπανο/μεμβράνη: σκούρο ανθρακί-πράσινο φύλλο, λείο.
+  'mat-waterproof-membrane':     { color: 0x3c4a42, roughness: 0.40, metalness: 0.00 },
+  // ADR-714 — ο κατάλογος στεγάνωσης επεκτάθηκε σε 8 τεχνικές (Giorgio: «βρες εσύ τα υλικά»).
+  // ΚΑΝΟΝΑΣ ΧΡΟΙΑΣ: κάθε τεχνική πρέπει να ξεχωρίζει **με το μάτι** στο 3Δ, γιατί η θαμμένη ζώνη
+  // είναι μικρή και συχνά μισοκρυμμένη πίσω από πέδιλα — δύο σχεδόν ίδια μαύρα θα ήταν άχρηστα.
+  // Γι' αυτό διαφοροποιούνται ΚΑΙ σε απόχρωση ΚΑΙ σε roughness (ματ κονίαμα ≠ γυαλιστερή ρητίνη).
+  // Ελαστομερές ασφαλτικό γαλάκτωμα: πιο ζεστό/καφετί μαύρο από την ασφαλτική, πιο ματ (νερού).
+  'mat-waterproof-bitumen-emulsion':  { color: 0x33302c, roughness: 0.75, metalness: 0.00 },
+  // Ελαστικό τσιμεντοειδές 2 συστατικών: γκρι με ψυχρή (γαλαζωπή) χροιά, ελαφρώς λιγότερο ματ
+  // από το άκαμπτο κονίαμα — η ρητίνη του δίνει σατινέ επιφάνεια.
+  'mat-waterproof-cementitious-flex': { color: 0x8e9aa0, roughness: 0.85, metalness: 0.00 },
+  // Κρυσταλλικό διεισδυτικό: σχεδόν το χρώμα του σκυροδέματος (δεν σχηματίζει φιλμ) — ανοιχτό
+  // γκρι, πολύ ματ. Η οπτική ομοιότητα με γυμνό σκυρόδεμα είναι ΣΩΣΤΗ, έτσι φαίνεται στο έργο.
+  'mat-waterproof-crystalline':       { color: 0xb0b3ad, roughness: 0.80, metalness: 0.00 },
+  // Πολυουρεθανική υγρή μεμβράνη: χαρακτηριστικό γκρι-μπλε ελαστομερές, ημι-γυαλιστερό (ρητίνη).
+  'mat-waterproof-polyurethane':      { color: 0x5c6b78, roughness: 0.35, metalness: 0.00 },
+  // Μπεντονιτική μεμβράνη: γήινο λαδί-καφέ πάνελ (μπεντονίτης = άργιλος), εντελώς ματ.
+  'mat-waterproof-bentonite':         { color: 0x6b6350, roughness: 0.90, metalness: 0.00 },
   // Generic floor finish (when not ceramic tile): neutral light, semi-matte.
   'mat-finish':     { color: 0xe8e4dc, roughness: 0.50, metalness: 0.00 },
   // ADR-417 — clay roof tile (κεραμίδι) covering layer: terracotta, matte. Maps to

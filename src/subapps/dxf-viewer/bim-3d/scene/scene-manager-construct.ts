@@ -26,6 +26,10 @@ import { BimSelectionHighlighter } from '../systems/selection/BimSelectionHighli
 import { FaceSelectionHighlighter } from '../systems/selection/FaceSelectionHighlighter'; // ADR-539 per-face overlay
 import { StairSubElementHighlighter } from '../systems/selection/StairSubElementHighlighter'; // ADR-358 Q19 per-tread/riser overlay
 import { useStairSubElementSelectionStore } from '../../bim/stairs/stair-sub-element-selection-store';
+// ADR-715 — «Τμήμα» (κοντόστυλο): ένα δεύτερο per-face overlay instance, οδηγούμενο από το δικό του store.
+import { useBuriedPartSelectionStore } from '../../bim/parts/buried-part-selection-store';
+import { buriedFaceTargets } from '../../bim/parts/buried-part';
+import { readEntityFaceKeys } from '../systems/selection/faced-mesh-lookup';
 import { useSelection3DStore } from '../stores/Selection3DStore';
 import type { ViewportCamera } from '../viewport/viewport-types';
 import type { ViewCubeEngine } from '../viewport/view-cube/view-cube';
@@ -70,6 +74,10 @@ export interface SceneManagerParts {
   readonly stairSubElementHighlighter: StairSubElementHighlighter;
   /** Teardown for the two ADR-358 store subscriptions (selection-reflect + host-lifecycle clear). */
   readonly stairSubUnsub: () => void;
+  /** ADR-715 — «Τμήμα» (κοντόστυλο): overlay σε ΟΛΕΣ τις θαμμένες όψεις της host κολώνας. */
+  readonly buriedPartHighlighter: FaceSelectionHighlighter;
+  /** Teardown for the two ADR-715 store subscriptions (selection-reflect + host-lifecycle clear). */
+  readonly buriedPartUnsub: () => void;
   readonly poi: ReturnType<typeof createPoi>;
   readonly gridFloor: Cinema4DGridFloor;
   readonly terrainLayer: TerrainSceneLayer; // ADR-650 M4 — topographic surface (TIN → mesh)
@@ -123,6 +131,35 @@ export function buildSceneManagerParts(deps: SceneManagerConstructDeps): SceneMa
     }
   });
   const stairSubUnsub = (): void => { stairSubReflectUnsub(); stairSubLifecycleUnsub(); };
+
+  // ADR-715 — «Τμήμα» (κοντόστυλο). ΞΕΧΩΡΙΣΤΟ instance από τον `faceHighlighter`, παρότι είναι
+  // η ίδια κλάση: εκείνος ανήκει στην per-face επιλογή του «ΠΟΛΥΓΩΝΑ» (`setSelectedFaces`) και
+  // κάθε sync τον ξαναγράφει από το `PolygonMode3DStore` — μοιράζοντάς τον, το ένα μονοπάτι θα
+  // έσβηνε σιωπηλά το overlay του άλλου. Ίδιο **χρώμα** με το sub-element της σκάλας (0x2ea1ff,
+  // «έχω μπει ΜΕΣΑ σε αυτό»), γιατί τα drill-downs είναι αμοιβαία αποκλειόμενα — δεν βρίσκονται
+  // ποτέ μαζί στην οθόνη, οπότε κοινό χρώμα σημαίνει κοινή **σημασία**, όχι σύγχυση.
+  const buriedPartHighlighter = new FaceSelectionHighlighter(bimLayer.group, 0x2ea1ff, 0.45);
+  const buriedPartReflectUnsub = useBuriedPartSelectionStore.subscribe((s) => {
+    // ΟΛΕΣ οι θαμμένες όψεις μαζί: το κοντόστυλο είναι ΕΝΑ αντικείμενο, όχι μία παρειά. Τα
+    // κλειδιά διαβάζονται από το ζωντανό mesh (`faceKeyByMaterialIndex`) — καμία δεύτερη
+    // παραγωγή που θα μπορούσε να αποκλίνει από ό,τι ζωγραφίστηκε.
+    buriedPartHighlighter.setTargets(
+      s.selected
+        ? buriedFaceTargets(s.selected.columnId, readEntityFaceKeys(bimLayer.group, s.selected.columnId))
+        : [],
+    );
+    markDirty();
+  });
+  // Lifecycle guard (mirror ADR-358 Q19 §2γ): πέφτει η host κολώνα από την whole-entity επιλογή
+  // — από ΟΠΟΙΑΔΗΠΟΤΕ πηγή (2D κάμβας, ribbon, marquee, Esc) — και το Τμήμα δεν έχει πλέον
+  // περιεχόμενο. Χωρίς αυτό, το μπλε overlay θα έμενε κρεμασμένο σε αποεπιλεγμένη κολώνα.
+  const buriedPartLifecycleUnsub = useSelection3DStore.subscribe((s) => {
+    const part = useBuriedPartSelectionStore.getState().selected;
+    if (part && !s.selectedBimIds.includes(part.columnId)) {
+      useBuriedPartSelectionStore.getState().clear();
+    }
+  });
+  const buriedPartUnsub = (): void => { buriedPartReflectUnsub(); buriedPartLifecycleUnsub(); };
 
   const poi = createPoi();
   scene.add(poi.root);
@@ -210,6 +247,7 @@ export function buildSceneManagerParts(deps: SceneManagerConstructDeps): SceneMa
   return {
     selectionHighlighter, hoverHighlighter, faceHighlighter, faceHoverHighlighter,
     stairSubElementHighlighter, stairSubUnsub,
+    buriedPartHighlighter, buriedPartUnsub,
     poi, gridFloor, terrainLayer, terrainContourLayer, pointCloudLayer, animationManager, canonicalViewService,
     keyboardFocusManager, focusOutlineRenderer, focusUnsub, viewCube,
     envStoreUnsub, bgModeUnsub, sectionController, waypointDragHandleRenderer,

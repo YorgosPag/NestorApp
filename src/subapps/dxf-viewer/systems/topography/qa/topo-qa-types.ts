@@ -44,6 +44,17 @@ export interface TopoQaFlag {
   readonly severity: TopoQaSeverity;
   /** Marker + zoom-to position, WORLD canonical mm. */
   readonly at: Point2D;
+  /**
+   * ADR-650 M5α.2 — real WORLD elevation (canonical mm) of the flagged spot, when the check
+   * KNOWS it (a TIN node's Z, a survey point's Z, an edge midpoint's mean Z). The 3D marker
+   * needs a height or it would sit on the datum plane instead of on the hill.
+   *
+   * Deliberately OPTIONAL and never defaulted to `0`: a ring centroid (boundary closure) has
+   * no elevation of its own, and «I don't know» must not become «it is at zero» — the 3D
+   * overlay samples the TIN for those instead (`getTinSampler`), and hides the marker when
+   * even that cannot answer. Same fail-open-to-null discipline as `resolveFinishedGradeAtWorldMm`.
+   */
+  readonly atZMm?: number;
   /** i18n key under `topography.qa.flag.*`. */
   readonly messageKey: string;
   /** Interpolation values, ALREADY in presentation units (metres, degrees, counts). */

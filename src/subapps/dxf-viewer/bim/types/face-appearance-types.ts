@@ -19,6 +19,13 @@
  * Ντετερμινιστικό κλειδί όψης, κοινό για όλα τα solids.
  *   - `top` / `bottom` — οι δύο οριζόντιες παρειές (caps).
  *   - `side:${i}` — η i-οστή περιμετρική πλευρά (edge ordering του `buildFacedPrism`).
+ *   - `buried:${i}` — ADR-713: το **θαμμένο** τμήμα της i-οστής περιμετρικής πλευράς, κάτω
+ *     από τη στάθμη τελειωμένου εδάφους. Υπάρχει ΜΟΝΟ όταν το στοιχείο έχει θαμμένη ζώνη
+ *     (κολώνα ισογείου εδρασμένη σε πέδιλο). Παίρνει στεγανωτική επάλειψη — **ΠΟΤΕ** την
+ *     επένδυση όψης. Ξεχωριστό κλειδί (όχι δεύτερο `side:${i}`) γιατί οι καταναλωτές
+ *     διευθυνσιοδοτούν όψεις **με το κλειδί**: το `faceGroupRange` κάνει `indexOf` (πρώτο
+ *     match) και το export manifest γράφει `materialsByFace[key]` — διπλό κλειδί θα σήμαινε
+ *     λάθος highlight και **σιωπηλή απώλεια υλικού** στο C4D round-trip (ADR-678).
  *   - `hole:${h}:${k}` — το k-οστό τοίχωμα του h-οστού ανοίγματος (slab opening, Φ2).
  *   - `sub:${i}:${string}` — per-«νερό» roof sub-solid (Φ3· δηλωμένο τώρα για σταθερό SSoT).
  *   - `slot:${materialName}` — ADR-686: material slot ΕΙΣΑΓΟΜΕΝΟΥ mesh (καρέκλα = μπράτσα/κάθισμα/
@@ -30,6 +37,7 @@ export type FaceKey =
   | 'top'
   | 'bottom'
   | `side:${number}`
+  | `buried:${number}`
   | `hole:${number}:${number}`
   | `sub:${number}:${string}`
   | `slot:${string}`;
@@ -66,6 +74,35 @@ export const BASE_FACE_KEY = '*';
  */
 export function slotFaceKey(materialName: string): string {
   return `slot:${materialName}`;
+}
+
+/**
+ * ADR-713/715 — SSoT prefix της **θαμμένης** υπο-όψης. Ξεχωριστή σταθερά (και όχι ωμό literal
+ * σε κάθε call site) γιατί το prefix είναι πλέον **σημασιολογικό ερώτημα** και όχι μόνο μορφή:
+ * πάνω του κρίνεται «κλικ = Κοντόστυλο ή κολώνα;» (ADR-715 §3). Τρεις παραγωγοί το έγραφαν
+ * χειροκίνητα (`buriedFaceAppearance`, `buildFacedIndex`) και ένας νέος καταναλωτής θα το
+ * διάβαζε — τέσσερα σημεία που θα μπορούσαν να αποκλίνουν σε ένα rename.
+ */
+const BURIED_FACE_KEY_PREFIX = 'buried:';
+
+/**
+ * Το `FaceKey` της θαμμένης υπο-όψης της i-οστής περιμετρικής πλευράς (ADR-713 §3.1).
+ * Mirror του {@link slotFaceKey}: ΕΝΑ σημείο ορισμού, ώστε ο παραγωγός των material groups
+ * (`buildFacedIndex`), ο παραγωγός του appearance (`buriedFaceAppearance`) και ο καταναλωτής
+ * της επιλογής (ADR-715) να μη διαφωνήσουν ΠΟΤΕ στη μορφή του κλειδιού.
+ */
+export function buriedFaceKey(sideIndex: number): FaceKey {
+  return `${BURIED_FACE_KEY_PREFIX}${sideIndex}` as FaceKey;
+}
+
+/**
+ * True όταν το `faceKey` διευθύνει **θαμμένη** υπο-όψη — δηλαδή όταν το κλικ έπεσε στο
+ * κοντόστυλο και ΟΧΙ στην ανωδομή (ADR-715: ο διαχωριστής επιλογής «Τμήμα vs κολώνα»).
+ * Δέχεται `undefined` ώστε οι call sites να μη διπλασιάζουν null-checks πάνω από ένα
+ * προαιρετικό `RaycastHit.faceKey`.
+ */
+export function isBuriedFaceKey(faceKey: string | undefined): boolean {
+  return faceKey !== undefined && faceKey.startsWith(BURIED_FACE_KEY_PREFIX);
 }
 
 /**

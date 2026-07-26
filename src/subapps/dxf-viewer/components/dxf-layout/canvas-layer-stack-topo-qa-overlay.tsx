@@ -12,10 +12,12 @@
  * overlay — no metre→canvas conversion is needed; the point projects straight through the
  * immediate 2D transform for zero-lag pan/zoom tracking.
  *
- * Hidden while the 3D viewport is active (M5α ships 2D markers only; the report panel's
- * zoom-to still works in either view).
+ * Hidden while the 3D viewport is active — NOT because 3D lacks markers (M5α.2 added them), but
+ * because it has its OWN: `TopoQaMarkers3DOverlay` projects the same flags through the camera.
+ * Both drawing at once would double every ⊙. The guard is load-bearing, not a leftover.
  *
  * @see ./clash-markers/ClashMarkerLayer.tsx — shared layer + glyph
+ * @see ../../bim-3d/coordination/TopoQaMarkers3DOverlay.tsx — the 3D twin
  * @see ../../systems/topography/qa/topo-qa-store.ts — low-freq report store
  */
 
@@ -24,12 +26,12 @@
 import React, { useCallback, useMemo, useSyncExternalStore } from 'react';
 import type { ViewTransform } from '../../rendering/types/Types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
-import { useTopoQaReport } from '../../systems/topography/qa/topo-qa-store';
+import { useTopoQaReport, useTopoQaSelectedFlagId } from '../../systems/topography/qa/topo-qa-store';
+import { topoQaMarkerGlyphs, topoQaMarkerPositions } from '../../systems/topography/qa/topo-qa-marker-set';
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import { subscribeImmediateTransformFrame } from '../../rendering/core/immediate-transform-frame';
 import { useViewMode3DStore, selectIs3D } from '../../bim-3d/stores/ViewMode3DStore';
 import { ClashMarkerLayer } from './clash-markers/ClashMarkerLayer';
-import type { ClashMarkerGlyphProps } from './clash-markers/ClashMarkerGlyph';
 
 export interface TopoQaOverlayMountProps {
   transform: ViewTransform;
@@ -46,18 +48,15 @@ export const TopoQaOverlayMount = React.memo(function TopoQaOverlayMount(props: 
     () => false,
   );
 
-  // Flag positions are already WORLD canonical mm = canvas units (contour-entity frame).
+  // Flag positions are already WORLD canonical mm = canvas units (contour-entity frame) — this
+  // one-liner IS the whole difference between this overlay and the 3D twin.
   const worlds = useMemo(
-    () => (report ? report.flags.map((f) => ({ x: f.at.x, y: f.at.y })) : []),
+    () => topoQaMarkerPositions(report, (f) => ({ x: f.at.x, y: f.at.y })),
     [report],
   );
-
-  // QA severity IS the clash severity vocabulary ('high'|'medium'|'low') — reuse the glyph
-  // verbatim (solid ring; QA has no «clearance» soft variant).
-  const markers = useMemo<ClashMarkerGlyphProps[]>(
-    () => (report ? report.flags.map((f) => ({ severity: f.severity, soft: false })) : []),
-    [report],
-  );
+  // Separate low-frequency subscription (click-driven, like the report itself — ADR-040-safe).
+  const selectedFlagId = useTopoQaSelectedFlagId();
+  const markers = useMemo(() => topoQaMarkerGlyphs(report, selectedFlagId), [report, selectedFlagId]);
 
   // Project via the IMMEDIATE transform (zero-lag, read at call time — not the prop).
   const project = useCallback((i: number): { x: number; y: number } | null => {

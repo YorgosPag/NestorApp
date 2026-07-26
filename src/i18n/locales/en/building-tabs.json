@@ -154,7 +154,9 @@
         "success": "{count} floors created",
         "successSkipped": "Created {created} new floors ({skipped} already existed).",
         "allExist": "All floors already exist — none created.",
-        "error": "Quick setup failed"
+        "error": "Quick setup failed",
+        "gradeDropBelowBase": "Finished grade below ground floor (m)",
+        "gradeDropBelowBaseHint": "Where the facade stops: below this level the element is backfilled and gets waterproofing"
       },
       "stairs": "Floor Stairs",
       "stairsEmpty": "No stairs assigned to this floor",

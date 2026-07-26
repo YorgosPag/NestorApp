@@ -20,8 +20,8 @@ import { raycastBimGroup, raycastBimFace, raycastWorldPointOrPlane, type Raycast
 import { BimSelectionHighlighter } from '../systems/selection/BimSelectionHighlighter';
 import { FaceSelectionHighlighter } from '../systems/selection/FaceSelectionHighlighter'; // ADR-539 per-face overlay
 import { StairSubElementHighlighter, countStairSubElementMeshes } from '../systems/selection/StairSubElementHighlighter'; // ADR-358 Q19 per-tread/riser overlay
+import { readEntityFaceKeys } from '../systems/selection/faced-mesh-lookup'; // ADR-715 — «ό,τι ζωγραφίστηκε» SSoT
 import type { StairSubPart } from '../../bim/stairs/stair-sub-element-selection-store';
-import { useSelection3DStore } from '../stores/Selection3DStore';
 import type { FloorVisMode } from '../utils/floor-visibility-state';
 import type { BuildingVisMode } from '../utils/building-visibility-state';
 import type { Bim3DEntities } from '../stores/Bim3DEntitiesStore';
@@ -34,15 +34,15 @@ import type { CanonicalViewService } from '../viewport/CanonicalViewService';
 import type { CanonicalViewId, ProjectionMode } from '../viewport/viewport-types';
 import type { AnimationManager } from '../viewport/animation-manager';
 import { computeSceneFramingBounds } from './scene-framing-bounds';
-// ADR-537 / ADR-366 A.6.Q4 — BIM (Selection3DStore) ∪ raw-DXF (universal SelectedEntitiesStore) framing.
-import { computeFrameSelectionBounds } from './dxf-selection-framing-bounds';
+// ADR-537 / ADR-366 A.6.Q4 — BIM (Selection3DStore) ∪ raw-DXF (universal SelectedEntitiesStore)
+// framing + Alt-drag orbit pivot + one-shot initial fit (N.7.1 split → scene-manager-camera).
+import { frameSelectionOrFitExtents as runFrameSelectionOrFitExtents, sceneDxfGroundY, ensureInitialCameraFit as runEnsureInitialCameraFit, setSceneOrbitPivotAt } from './scene-manager-camera';
 import { createBimRenderer, createBimLights, createBimScene, initViewportCamera, getRendererViewportSize } from './scene-setup';
 import { applyViewportResize, applyDevicePixelRatioSync, buildSceneResizeDeps, type SceneResizeDeps } from './scene-manager-resize';
 import type { KeyboardFocusManagerApi } from '../accessibility/KeyboardFocusManager';
 import { FocusOutlineRenderer } from '../accessibility/FocusOutlineRenderer'; import type { FocusEntityLabelData } from '../accessibility/FocusIndicator3D';
 import { computeFocusOrder, findFocusedEntityData } from '../accessibility/focus-order';
 import { cycleKeyboardFocus as a11yCycleFocus, selectFocusedEntity as a11ySelectFocused } from './scene-manager-a11y';
-import { ensureInitialCameraFit as runEnsureInitialCameraFit, computeDxfGroundY } from './scene-manager-framing';
 import { applyLightPresetToScene, updateSunDirection } from '../lighting/apply-light-preset';
 import { type ReducedMotionOverride } from '../accessibility/use-reduced-motion';
 import { WaypointDragHandleRenderer } from '../animation/WaypointDragHandle';
@@ -56,7 +56,6 @@ import { recordMarkDirty as diagRecordMarkDirty } from './bim3d-perf-diag'; // �
 import { createSceneRenderingSubsystems } from './scene-rendering-subsystems';
 import { buildSceneManagerParts } from './scene-manager-construct';
 import {
-  setBimOrbitPivot,
   applyBimSelection,
   applyBimMarqueeSelection,
   hydrateBimSelectionFromUniversal,
@@ -91,6 +90,10 @@ export class ThreeJsSceneManager {
   readonly stairSubElementHighlighter: StairSubElementHighlighter;
   /** ADR-358 Q19 — teardown for the two sub-element store subscriptions. */
   private readonly stairSubUnsub: () => void;
+  /** ADR-715 — «Τμήμα» (κοντόστυλο) overlay: ΟΛΕΣ οι θαμμένες όψεις της host κολώνας. */
+  readonly buriedPartHighlighter: FaceSelectionHighlighter;
+  /** ADR-715 — teardown for the two «Τμήμα» store subscriptions. */
+  private readonly buriedPartUnsub: () => void;
   private readonly viewCube: ViewCubeEngine;
   private readonly poi: ReturnType<typeof createPoi>;
   private readonly sun: THREE.DirectionalLight;
@@ -191,6 +194,7 @@ export class ThreeJsSceneManager {
     this.selectionHighlighter = parts.selectionHighlighter; this.hoverHighlighter = parts.hoverHighlighter;
     this.faceHighlighter = parts.faceHighlighter; this.faceHoverHighlighter = parts.faceHoverHighlighter;
     this.stairSubElementHighlighter = parts.stairSubElementHighlighter; this.stairSubUnsub = parts.stairSubUnsub;
+    this.buriedPartHighlighter = parts.buriedPartHighlighter; this.buriedPartUnsub = parts.buriedPartUnsub;
     this.poi = parts.poi; this.gridFloor = parts.gridFloor; this.terrainLayer = parts.terrainLayer;
     this.terrainContourLayer = parts.terrainContourLayer;
     this.pointCloudLayer = parts.pointCloudLayer;
@@ -212,15 +216,7 @@ export class ThreeJsSceneManager {
    * ADR-366 A.6.Q4 selection-aware F / Z — frame the selection keeping the camera angle, else fit
    * extents. BIM ∪ raw-DXF union in `computeFrameSelectionBounds` (dxf-selection-framing-bounds.ts).
    */
-  frameSelectionOrFitExtents(): void {
-    if (this.disposed) return;
-    const bounds = computeFrameSelectionBounds(
-      this.bimLayer.group,
-      useSelection3DStore.getState().selectedBimIds,
-      this.dxfConverter.getBounds(),
-    );
-    if (bounds && !bounds.isEmpty()) this.viewport.frameBounds(bounds.min, bounds.max);
-  }
+  frameSelectionOrFitExtents(): void { if (!this.disposed) runFrameSelectionOrFitExtents(this); }
 
   /** ADR-366 §C.1.b — combined BIM + DXF bounds για animation actions (turntable). */
   getSceneFramingBounds(): THREE.Box3 | null { return this.disposed ? null : computeSceneFramingBounds(this.bimLayer.group, this.dxfConverter.getBounds()); }
@@ -327,7 +323,7 @@ export class ThreeJsSceneManager {
 
   /** ADR-366 §B.5 — post-sync side-effect subsystems handed to scene-manager-sync. */
   private syncSideEffects(): SceneSyncSideEffects {
-    return buildSceneSyncSideEffects(this.faceHighlighter, this.faceHoverHighlighter, this.stairSubElementHighlighter, this.ssaoModulator, this.shadowModulator, this.viewport, () => this.markSceneDirty());
+    return buildSceneSyncSideEffects(this.faceHighlighter, this.faceHoverHighlighter, this.stairSubElementHighlighter, this.buriedPartHighlighter, this.ssaoModulator, this.shadowModulator, this.viewport, () => this.markSceneDirty());
   }
 
   /** ADR-399 Phase B — build the whole building stacked by elevation ("Όλοι οι όροφοι"). */
@@ -344,7 +340,8 @@ export class ThreeJsSceneManager {
 
   applyBuildingVisibility(modes: ReadonlyMap<string, BuildingVisMode>): void { if (!this.disposed) applyBuildingVisibilitySync(this.bimLayer.group, modes, this.shadowModulator, () => this.markSceneDirty()); }
 
-  syncDxfOverlay(dxfScene: DxfScene | null): void { if (!this.disposed) { runSyncDxfOverlay(this.dxfOverlayDeps(), dxfScene, this.dxfFitState(), () => this.markSceneDirty()); this.dxfBackdrop.invalidate(); } }
+  /** ADR-399 Φάση Ε — `floorElevationMm` = active storey datum-relative FFL (0 = read-only pipeline). */
+  syncDxfOverlay(dxfScene: DxfScene | null, floorElevationMm = 0): void { if (!this.disposed) { runSyncDxfOverlay(this.dxfOverlayDeps(), dxfScene, floorElevationMm, this.dxfFitState(), () => this.markSceneDirty()); this.dxfBackdrop.invalidate(); } }
 
   /** ADR-399 Phase B — stacked per-floor DXF overlay («Όλοι οι όροφοι»). */
   syncDxfOverlayMultiFloor(entries: readonly DxfOverlayFloorEntry[]): void { if (!this.disposed) { runSyncDxfOverlayMultiFloor(this.dxfOverlayDeps(), entries, this.dxfFitState(), () => this.markSceneDirty()); this.dxfBackdrop.invalidate(); } }
@@ -359,14 +356,8 @@ export class ThreeJsSceneManager {
 
   /** ADR-537 — one-shot initial camera-fit FALLBACK (logic in scene-manager-framing). */
   private ensureInitialCameraFit(): void {
-    const didFit = runEnsureInitialCameraFit({
-      disposed: this.disposed,
-      initialCameraFitDone: this.initialCameraFitDone,
-      getDxfBounds: () => this.dxfConverter.getBounds(),
-      getSceneBounds: () => this.getSceneFramingBounds(),
-      frameBounds: (min, max) => this.viewport.frameBounds(min, max),
-    });
-    if (didFit) this.initialCameraFitDone = true;
+    if (this.disposed) return;
+    if (runEnsureInitialCameraFit(this, this.initialCameraFitDone)) this.initialCameraFitDone = true;
   }
 
   /** Replace (plain click) or toggle (ADR-402 Φ-C Shift+click) one entity in the selection; null clears. */
@@ -403,20 +394,19 @@ export class ThreeJsSceneManager {
   /** ADR-358 Q19 — number of tagged tread/riser meshes of a stair (Tab-cycle wraparound). */
   countStairSubElements(stairId: string, part: StairSubPart): number { return this.disposed ? 0 : countStairSubElementMeshes(this.bimLayer.group, stairId, part); }
 
-  /** DXF overlay floor-elevation SSoT for wheel-zoom + Alt-drag orbit pivot (logic in scene-manager-framing). */
-  private dxfGroundY(): number | null { return computeDxfGroundY(this.dxfConverter.getBounds()); }
+  /**
+   * ADR-715 — η αρίθμηση όψεων του faced mesh μιας οντότητας, δηλαδή **ό,τι όντως ζωγραφίστηκε**
+   * (mirror του `countStairSubElements`: το UI ρωτά τη ζωντανή σκηνή αντί να ξανα-παράγει κλειδιά).
+   * Ο δρόμος του swatch τη χρειάζεται για να βάψει ΟΛΕΣ τις θαμμένες όψεις του Τμήματος.
+   */
+  getEntityFaceKeys(bimId: string): readonly string[] | undefined { return this.disposed ? undefined : readEntityFaceKeys(this.bimLayer.group, bimId); }
 
-  /** ADR-366 §A.6.Q5 — Alt+click orbit-pivot picking (delegates to `setBimOrbitPivot`). */
+  /** DXF overlay floor-elevation SSoT for wheel-zoom + Alt-drag orbit pivot (logic in scene-manager-framing). */
+  private dxfGroundY(): number | null { return sceneDxfGroundY(this); }
+
+  /** ADR-366 §A.6.Q5 — Alt+click orbit-pivot picking (delegates to `setSceneOrbitPivotAt`). */
   setOrbitPivotAt(clientX: number, clientY: number): boolean {
-    if (this.disposed) return false;
-    return setBimOrbitPivot(
-      { bimGroup: this.bimLayer.group, camera: this.viewport.camera, canvas: this.renderer.domElement,
-        currentTarget: this.viewport.target, groundY: this.dxfGroundY(),
-        setOrbitPivot: (p) => this.viewport.setOrbitPivot(p),
-        onNavigationActive: () => this.poi.onNavigationActive(),
-        markDirty: () => this.markSceneDirty() },
-      clientX, clientY,
-    );
+    return this.disposed ? false : setSceneOrbitPivotAt(this, () => this.poi.onNavigationActive(), clientX, clientY);
   }
 
   updateSunPosition(azimuthDeg: number, elevationDeg: number): void { if (!this.disposed) { updateSunDirection(this.sun, azimuthDeg, elevationDeg); this.shadowModulator.invalidateShadowMap(); this.markSceneDirty(); } }
@@ -474,6 +464,7 @@ export class ThreeJsSceneManager {
     this.disposed = true;
     this.faceHighlighter.dispose(); this.faceHoverHighlighter.dispose(); this.dxfBackdrop.dispose(); this.hoverBeautyCache.dispose(); // ADR-539 + ADR-516 Phase 2 + ADR-549 Φ3 — release face overlays + caches.
     this.stairSubUnsub(); this.stairSubElementHighlighter.dispose(); // ADR-358 Q19 — drop store subs + release the sub-element overlay.
+    this.buriedPartUnsub(); this.buriedPartHighlighter.dispose(); // ADR-715 — ίδιο ζευγάρι για το «Τμήμα».
     this.gridFloor.dispose(); // ADR-558 — unregister overlay + free grid geometry/material.
     this.terrainLayer.dispose(); // ADR-650 M4 — drop store subs + free the terrain mesh geometry.
     this.terrainContourLayer.dispose(); // ADR-650 M10d — drop store subs + free the contour line geometry.

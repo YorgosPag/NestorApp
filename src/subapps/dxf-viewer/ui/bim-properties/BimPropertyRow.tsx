@@ -21,6 +21,8 @@ import {
   SelectValue,
   SelectContent,
   SelectItem,
+  SelectGroup,
+  SelectLabel,
 } from '@/components/ui/select';
 import type { BimPropertyField, BimPropertyOption } from './bim-property-types';
 
@@ -28,6 +30,25 @@ const MIXED_PLACEHOLDER = '—';
 
 function resolveLabel(option: BimPropertyOption, t: (key: string) => string): string {
   return option.isLiteralLabel ? option.labelKey : t(option.labelKey);
+}
+
+/**
+ * ADR-715 — τα options σε **διαδοχικές** ομάδες κατά `groupLabelKey`. Διαδοχικές και όχι
+ * ταξινομημένες: η σειρά των options είναι σημασιολογική (συχνότερο πρώτα) και δεν επιτρέπεται
+ * να αναδιαταχθεί για χάρη της ομαδοποίησης. Options χωρίς key → ομάδα με `label: null`,
+ * που αποδίδεται χωρίς κεφαλίδα (άρα ένα πεδίο χωρίς groups μένει ακριβώς όπως ήταν).
+ */
+function groupOptions(
+  options: readonly BimPropertyOption[],
+): readonly { readonly label: string | null; readonly items: readonly BimPropertyOption[] }[] {
+  const groups: { label: string | null; items: BimPropertyOption[] }[] = [];
+  for (const option of options) {
+    const label = option.groupLabelKey ?? null;
+    const last = groups[groups.length - 1];
+    if (last && last.label === label) last.items.push(option);
+    else groups.push({ label, items: [option] });
+  }
+  return groups;
 }
 
 export interface BimPropertyRowProps {
@@ -86,10 +107,17 @@ export function BimPropertyRow({
           <SelectValue placeholder={MIXED_PLACEHOLDER} />
         </SelectTrigger>
         <SelectContent className="w-auto min-w-[var(--radix-select-trigger-width)] max-w-[24rem]">
-          {options.map((opt) => (
-            <SelectItem key={opt.value} value={opt.value} className="whitespace-nowrap">
-              {resolveLabel(opt, t)}
-            </SelectItem>
+          {groupOptions(options).map((group, groupIndex) => (
+            // key = η ετικέτα της ομάδας· `groupIndex` καλύπτει τις ανώνυμες (label === null),
+            // που μπορούν να είναι πολλές όταν αναμιγνύονται grouped/ungrouped options.
+            <SelectGroup key={group.label ?? `ungrouped-${groupIndex}`}>
+              {group.label !== null && <SelectLabel>{t(group.label)}</SelectLabel>}
+              {group.items.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value} className="whitespace-nowrap">
+                  {resolveLabel(opt, t)}
+                </SelectItem>
+              ))}
+            </SelectGroup>
           ))}
         </SelectContent>
       </Select>

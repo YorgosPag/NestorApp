@@ -112,6 +112,13 @@ export const DISCIPLINE_BY_CATEGORY: Readonly<Record<BimCategory, DisciplineOrAn
   'space-separator': 'architectural',
   // ADR-436 — θεμελίωση (πέδιλα/πεδιλοδοκοί/συνδετήριες δοκοί) ⊂ structural (Revit Structural Foundation).
   foundation:      'structural',
+  // ADR-684 — παραμετρικό στερεό (κύβος/κύλινδρος/σφαίρα…) ⊂ architectural. Ο ίδιος ο ADR-684
+  // το τοποθετεί ρητά ως «Revit: Generic Model / Mass» (§Σύγκριση) — και το Revit κατατάσσει τα
+  // Generic Models / Mass στην Αρχιτεκτονική (Massing & Site), ΟΧΙ στη Στατική: το στερεό είναι
+  // ελεύθερη μορφή/όγκος, χωρίς στατική ταυτότητα (το «structural» θα ήταν flag, όχι κατηγορία).
+  // ⚠️ Απόν κλειδί εδώ σημαίνει `resolveEntityDiscipline` → `undefined` (ΟΧΙ null): το στερεό
+  // ξέφευγε από ΚΑΘΕ discipline toggle — δηλαδή δεν κρυβόταν ποτέ. Ο χάρτης είναι total by design.
+  'generic-solid': 'architectural',
 } as const;
 
 /**

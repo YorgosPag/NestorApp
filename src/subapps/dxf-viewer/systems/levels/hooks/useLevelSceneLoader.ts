@@ -1,8 +1,12 @@
 'use client';
 import * as React from 'react';
 import { useState, useEffect, useCallback } from 'react';
+import { toast } from 'sonner';
+import { useTranslation } from '@/i18n';
 import { DxfFirestoreService } from '../../../services/dxf-firestore.service';
 import { useAutoSaveSceneManager } from '../../../hooks/scene/useAutoSaveSceneManager';
+import { countDxfEntities, type SceneSaveTicket } from '../../../hooks/scene/scene-save-ticket';
+import type { SceneSaveBlockReason } from '../../../hooks/scene/execute-scene-save';
 import { onSuperAdminActiveCompanyChange } from '@/services/firestore/super-admin-active-company';
 import { isCrossFloorSceneLink } from '../cross-floor-link';
 import {
@@ -61,11 +65,41 @@ export function useLevelSceneLoader({
   firestoreCollection,
 }: UseLevelSceneLoaderParams): UseLevelSceneLoaderResult {
   const [sceneLoading, setSceneLoading] = useState(false);
+  const { t } = useTranslation('dxf-viewer');
 
   // 🏢 ENTERPRISE: AbortController ref for cancelling pending scene loads on rapid level switch
   const sceneLoadAbortRef = React.useRef<AbortController | null>(null);
   // Track which levels have had their scenes loaded to prevent duplicate loads
   const loadedSceneLevelsRef = React.useRef<Set<string>>(new Set());
+
+  /**
+   * 🛡️ ADR-714 — σπάει έναν λάθος (cross-floor) σύνδεσμο επιπέδου→αρχείου.
+   *
+   * Καλείται ΜΟΝΟ αφού το `isCrossFloorSceneLink` έχει ήδη αποφανθεί ότι το αρχείο
+   * ανήκει σε άλλον όροφο. Γράφει `sceneFileId: null` ώστε το επίπεδο να επανέλθει στην
+   * καθαρή κατάσταση «δεν έχει κάτοψη» και ο χρήστης να μπορεί να εισάγει ξανά το DXF.
+   * Δεν αγγίζει κανένα Storage blob — μόνο τον σύνδεσμο.
+   */
+  const unlinkCrossFloorScene = useCallback(
+    async (levelId: string, levelName: string | undefined): Promise<void> => {
+      if (!enableFirestore) return;
+      try {
+        const res = await fetch('/api/dxf-levels', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ levelId, sceneFileId: null, sceneFileName: null }),
+        });
+        if (!res.ok) {
+          console.error('[LevelsSystem] Failed to unlink cross-floor scene:', res.status, res.statusText);
+          return;
+        }
+        toast.warning(t('scene.crossFloorLinkCleared', { floor: levelName ?? levelId }));
+      } catch (err) {
+        console.error('[LevelsSystem] Failed to unlink cross-floor scene:', err);
+      }
+    },
+    [enableFirestore, t],
+  );
 
   // 🏢 ENTERPRISE: Auto-load DXF scene from Storage when level changes (CAD-industry standard)
   // This replaces the old "create empty scene" approach with persistent scene loading
@@ -128,6 +162,12 @@ export function useLevelSceneLoader({
     // the sync set below re-pointed the target after the async reset had cleared it.
     const isOrphaned = !!sceneFileId && (sceneManager.isFileTargetOrphaned?.(sceneFileId) ?? false);
 
+    // 🛡️ ADR-714 — δήλωσε σε ποιον όροφο ανήκει αυτό το επίπεδο ΠΡΙΝ από οποιοδήποτε
+    // save μπορεί να προγραμματιστεί. Το auto-save παγώνει αυτόν τον `floorId` μέσα στο
+    // ticket του, ώστε η επίλυση του αρχείου-προορισμού να είναι floor-scoped και ο
+    // φρουρός cross-floor να έχει με τι να συγκρίνει.
+    sceneManager.setLevelFloorScope?.(currentLevelId, level?.floorId ?? null);
+
     if (sceneFileId && !isOrphaned) {
       sceneManager.setFileRecordId?.(sceneFileId);
       sceneManager.setCurrentFileName?.(level?.sceneFileName ?? null);
@@ -138,8 +178,25 @@ export function useLevelSceneLoader({
     // Check if scene is already in memory (fast path — instant render). The auto-save
     // target was already re-pointed above, so this early return no longer leaks the
     // previous level's save target.
+    //
+    // 🛡️ ADR-714 — ΣΩΣΤΗ ΕΡΩΤΗΣΗ: «έχει DXF;», ΟΧΙ «έχει κάτι;».
+    //
+    // Η in-memory σκηνή ενός ορόφου μπορεί κάλλιστα να είναι **μόνο-BIM**: το
+    // `reconcileLoadedSceneBim` πετά το BIM του snapshot ως παράγωγο cache και τα per-entity
+    // Firestore subscriptions (floorId-keyed) το ξαναγεμίζουν ΑΣΥΓΧΡΟΝΑ. Αν αυτά προλάβουν το
+    // load, το παλιό `entities.length > 0` έβλεπε «γεμάτη σκηνή» → early return → **το DXF δεν
+    // κατέβαινε ΠΟΤΕ από το Storage**. Μετά, το auto-save έγραφε αυτή τη μόνο-BIM σκηνή πάνω
+    // από το αρχείο: ακριβώς η εγγραφή που μηδενίζει τη γεωμετρία και την οποία μπλοκάρει ο
+    // `isDxfWipe`. Ο φρουρός ήταν το ΣΥΜΠΤΩΜΑ — εδώ ήταν η αιτία.
+    //
+    // Ίδιο μοτίβο με το ADR-469 («έχει κάτι;» → «έχει BIM;»), κατοπτρικά. Ίδιο SSoT με τον
+    // φρουρό (`countDxfEntities`) — αν αλλάξει ο ορισμός του «DXF», load και guard κινούνται
+    // μαζί· δύο ορισμοί θα ξανάνοιγαν το ίδιο κενό.
+    //
+    // Δεν δημιουργεί re-fetch loop: το `loadedSceneLevelsRef` παρακάτω κρατά την προσπάθεια
+    // one-shot ακόμη κι όταν το αρχείο όντως δεν έχει DXF οντότητες.
     const existingScene = sceneManager.getLevelScene(currentLevelId);
-    if (existingScene && existingScene.entities.length > 0) return;
+    if (existingScene && countDxfEntities(existingScene) > 0) return;
 
     if (!sceneFileId || isOrphaned) {
       // No DXF linked (or a known-orphaned/file-less floor) — create empty scene (target
@@ -190,6 +247,13 @@ export function useLevelSceneLoader({
           );
           resetDxfAutoSaveTarget();
           setEmptyScenePreservingBim();
+          // 🛡️ ADR-714 — ΘΕΡΑΠΕΙΑ, όχι απλή αποφυγή. Μέχρι τώρα ο guard άφηνε τη λάθος
+          // εγγραφή στη βάση, οπότε ο όροφος έμενε μόνιμα «άδειος με προειδοποίηση» και
+          // κάθε επόμενη συνεδρία ξαναέτρεχε το ίδιο αποτυχημένο load. Σπάμε τον λάθος
+          // σύνδεσμο ώστε το επίπεδο να επανέλθει σε καθαρή κατάσταση «χωρίς κάτοψη».
+          // ΚΑΜΙΑ σκηνή δεν διαγράφεται — μόνο ο σύνδεσμος. Το BIM του ορόφου επιβιώνει
+          // μέσω των floorId-keyed per-entity collections.
+          void unlinkCrossFloorScene(currentLevelId, level?.name);
           return;
         }
 
@@ -222,6 +286,12 @@ export function useLevelSceneLoader({
             ),
           );
           sceneManager.setLevelScene(currentLevelId, reconciled, 'load');
+          // 🛡️ ADR-714 — κατέγραψε πόση DXF γεωμετρία ΕΧΕΙ ΗΔΗ ο προορισμός. Χωρίς αυτό
+          // ο φρουρός `isDxfWipe` δεν έχει με τι να συγκρίνει και μια εγγραφή που
+          // μηδενίζει τη γεωμετρία περνά αθόρυβα. Μετράμε το ΦΟΡΤΩΜΕΝΟ snapshot, όχι το
+          // `reconciled` — το τελευταίο έχει ήδη αφαιρέσει BIM (δεν αλλάζει τους DXF
+          // αριθμούς, αλλά το snapshot είναι η αλήθεια του δίσκου).
+          sceneManager.setPersistedDxfBaseline?.(sceneFileId, countDxfEntities(fileRecord.scene));
           // 🛡️ ADR-635 Φ C.18 — first-save the no-doc entities with an EXPLICIT target
           // scope (Φ C.16), so the write lands on THIS floor independently of the
           // persistence host's render timing. `isCrossFloorSceneLink` (above) already
@@ -317,6 +387,25 @@ export function useLevelSceneLoader({
       const level = levels.find(l => l.id === levelId);
       if (level?.sceneFileId === fileId) return;
 
+      // 🛡️ ADR-714 — WRITE-SIDE cross-floor guard.
+      //
+      // Μέχρι τώρα ο έλεγχος ορόφου υπήρχε ΜΟΝΟ στο load path (`isCrossFloorSceneLink`
+      // παραπάνω): η λάθος σύνδεση γραφόταν ελεύθερα στη βάση και ανακαλυπτόταν αργότερα,
+      // όταν το μόνο που μπορούσε να γίνει ήταν να μείνει ο όροφος άδειος. Ο φρουρός ήταν
+      // στη λάθος πλευρά της πόρτας. Επαληθεύουμε ΠΡΙΝ γράψουμε.
+      //
+      // Ο διακομιστής επαναλαμβάνει τον ίδιο έλεγχο (`/api/dxf-levels` PATCH) — αυτός εδώ
+      // γλιτώνει το άσκοπο round-trip και δίνει άμεση ανάδραση στον χρήστη.
+      const scope = await DxfFirestoreService.getFileFloorScope(fileId);
+      if (isCrossFloorSceneLink(scope, level?.floorId)) {
+        console.error(
+          `[LevelsSystem] ADR-714 — άρνηση σύνδεσης: το αρχείο ${fileId} ανήκει στον όροφο ` +
+          `${scope?.entityId} αλλά το επίπεδο ${levelId} είναι στον όροφο ${level?.floorId}.`,
+        );
+        toast.error(t('scene.crossFloorSaveBlocked'));
+        return;
+      }
+
       try {
         const res = await fetch('/api/dxf-levels', {
           method: 'PATCH',
@@ -330,23 +419,48 @@ export function useLevelSceneLoader({
         console.error('[LevelsSystem] Failed to link scene to level:', err);
       }
     },
-    [enableFirestore, levels]
+    [enableFirestore, levels, t]
   );
 
   // 🏢 ENTERPRISE: Wire onSceneSaved callback — auto-save notifies us when scene is persisted
   // Dependency: setOnSceneSaved (stable ref from useCallback) — NOT the full sceneManager object
   // which changes identity every render due to object spread in useAutoSaveSceneManager
+  //
+  // 🛡️ ADR-714 — linkάρουμε το επίπεδο ΤΟΥ TICKET, όχι το «τρέχον».
+  //
+  // Πριν, το callback διάβαζε το `currentLevelId` του closure και είχε το `currentLevelId`
+  // στο dependency array, οπότε ΚΑΘΕ εναλλαγή ορόφου το αντικαθιστούσε. Ένα debounced save
+  // που ξεκίνησε στον όροφο Α και ολοκληρωνόταν μετά την εναλλαγή καλούσε το ΝΕΟ callback
+  // → `linkSceneToLevel(όροφος Β, αρχείο του Α)`. Εκεί ακριβώς γράφτηκε το
+  // `lvl_2a7ff5cc.sceneFileId = file_751f0286` (περιστατικό 2026-07-26).
+  //
+  // Το `ticket.levelId` είναι αμετάβλητο, άρα το callback δεν χρειάζεται πια να ξέρει
+  // ποιος όροφος είναι ενεργός — και δεν εξαρτάται από αυτόν.
   const { setOnSceneSaved } = sceneManager;
   useEffect(() => {
-    setOnSceneSaved((fileId: string, fileName: string) => {
-      if (currentLevelId) {
-        linkSceneToLevel(currentLevelId, fileId, fileName);
-      }
+    setOnSceneSaved((ticket: SceneSaveTicket, fileId: string) => {
+      linkSceneToLevel(ticket.levelId, fileId, ticket.fileName);
     });
     return () => {
       setOnSceneSaved(null);
     };
-  }, [currentLevelId, linkSceneToLevel, setOnSceneSaved]);
+  }, [linkSceneToLevel, setOnSceneSaved]);
+
+  // 🛡️ ADR-714 — ορατή ανάδραση όταν ένας φρουρός δεδομένων ματαιώνει μια εγγραφή.
+  // Σιωπηλή ματαίωση θα ήταν χειρότερη από το bug: ο χρήστης θα νόμιζε ότι σώθηκε.
+  const { setOnSaveBlocked } = sceneManager;
+  useEffect(() => {
+    setOnSaveBlocked?.((reason: SceneSaveBlockReason) => {
+      toast.error(
+        reason === 'cross-floor-target'
+          ? t('scene.crossFloorSaveBlocked')
+          : t('scene.dxfWipeBlocked'),
+      );
+    });
+    return () => {
+      setOnSaveBlocked?.(null);
+    };
+  }, [setOnSaveBlocked, t]);
 
   // 🏢 ADR-354 Entry Point #4: super admin company switcher → DXF scene cache invalidation.
   // Cached scenes + dedupe set belong to the previous tenant and must be evicted before

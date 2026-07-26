@@ -220,6 +220,16 @@ Deterministic IDs: `boq_bim_${id}` / `_finish_int` / `_finish_ext`. Hook στο 
 - ETICS-grade per-element exterior detection (πέρα από outer-ring proximity) = μετέπειτα slice.
 
 ## 6. Changelog
+- **2026-07-26 (ADR-713 — ο σοβάς σταματά στη ΣΤΑΘΜΗ ΤΕΛΕΙΩΜΕΝΟΥ ΕΔΑΦΟΥΣ)** — SSoT audit διαπίστωσε
+  **μετρημένα** ότι ο ενιαίος silhouette **ΔΕΝ** είχε το πρόβλημα που του αποδιδόταν: το `columnZExtent`
+  διαβάζει το `buildColumnVerticalExtentLookup`, που αγνοεί το `baseDropMm` (ADR-489 §6.1) → σταματούσε ήδη
+  στο FFL· ομοίως το BOQ (`geometry.height` = ανωδομή) ⇒ **μηδέν σφάλμα m²**. **Μία πραγματική εξαίρεση:** η
+  **κεκλιμένη** κολώνα εξαιρείται από το flat union (ADR-404) και έπαιρνε per-element σοβά με
+  `effectiveHeightMm` — δηλαδή σοβατιζόταν όντως ως το πέδιλο· διορθώθηκε. Νέο προαιρετικό
+  `columnGradeById` στο `SilhouetteFinishInput` κάνει clamp του `zBotMm` στη στάθμη εδάφους (absent →
+  byte-for-byte). **Ο μηχανισμός group-by-material του PART B επαναχρησιμοποιείται αυτούσιος** για τη
+  στεγανωτική επάλειψη της θαμμένης ζώνης: ένα bucket `mat-waterproof-*` → child row `OIK-10.2x` m², χωρίς
+  καμία νέα διαδρομή BOQ. Βλ. `ADR-713`.
 - **2026-07-21 (cross-ref → ADR-679 Φ2b — per-face PBR, finding: ΚΑΜΙΑ αλλαγή εδώ)** — Κατά την υλοποίηση
   του per-face PBR (ADR-539/ADR-679 Φ2b), SSoT audit βρήκε ότι ο σοβάς **ήδη** αποδίδει υφή: το
   `bim-3d/converters/structural-finish-3d.ts` καλεί `getMaterial3D(materialId)` (texture-aware, ADR-413)

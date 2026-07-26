@@ -203,19 +203,27 @@
     }
   },
   "constructionMaterials": {
-    "mat-concrete": "Σκυρόδεμα",
     "mat-brick": "Τούβλο",
-    "mat-stone": "Πέτρα",
-    "mat-screed": "Τσιμεντοκονία",
-    "mat-insulation": "Θερμομόνωση",
-    "mat-tile": "Κεραμικό πλακάκι",
-    "mat-roof-tile": "Κεραμίδι στέγης",
-    "mat-plaster": "Σοβάς",
-    "mat-membrane": "Μεμβράνη στεγάνωσης",
-    "mat-gravel": "Χαλίκι",
+    "mat-concrete": "Σκυρόδεμα",
     "mat-finish": "Τελική επίστρωση",
-    "mat-wood": "Ξύλο",
-    "mat-metal": "Μέταλλο"
+    "mat-gravel": "Χαλίκι",
+    "mat-insulation": "Θερμομόνωση",
+    "mat-membrane": "Μεμβράνη στεγάνωσης",
+    "mat-metal": "Μέταλλο",
+    "mat-plaster": "Σοβάς",
+    "mat-roof-tile": "Κεραμίδι στέγης",
+    "mat-screed": "Τσιμεντοκονία",
+    "mat-stone": "Πέτρα",
+    "mat-tile": "Κεραμικό πλακάκι",
+    "mat-waterproof-bentonite": "Μπεντονιτική μεμβράνη",
+    "mat-waterproof-bitumen": "Ασφαλτική επάλειψη",
+    "mat-waterproof-bitumen-emulsion": "Ασφαλτικό γαλάκτωμα 2 συστατικών",
+    "mat-waterproof-cementitious": "Τσιμεντοειδές στεγανωτικό",
+    "mat-waterproof-cementitious-flex": "Ελαστικό τσιμεντοειδές 2 συστατικών",
+    "mat-waterproof-crystalline": "Κρυσταλλικό στεγανωτικό",
+    "mat-waterproof-membrane": "Ασφαλτική μεμβράνη (ασφαλτόπανο)",
+    "mat-waterproof-polyurethane": "Πολυουρεθανική επάλειψη",
+    "mat-wood": "Ξύλο"
   },
   "common": {
     "confirm": "Επιβεβαίωση",
@@ -523,14 +531,24 @@
     }
   },
   "railingAdvancedPanel": {
-    "title": "Ιδιότητες Κιγκλιδώματος",
-    "emptyState": "Επιλέξτε ένα κιγκλίδωμα για να δείτε τις ιδιότητές του.",
+    "title": "Προηγμένες Ιδιότητες Κιγκλιδώματος",
+    "emptyState": "Επίλεξε ένα κιγκλίδωμα για να δεις τις ιδιότητες.",
     "sections": {
-      "geometry": { "title": "Γεωμετρία" },
-      "baluster": { "title": "Κάγκελα" },
-      "posts": { "title": "Ορθοστάτες" },
-      "rails": { "title": "Κουπαστές" },
-      "infill": { "title": "Πλήρωση" }
+      "geometry": {
+        "title": "Γεωμετρία"
+      },
+      "baluster": {
+        "title": "Κάγκελα"
+      },
+      "posts": {
+        "title": "Ορθοστάτες"
+      },
+      "rails": {
+        "title": "Κουπαστές"
+      },
+      "infill": {
+        "title": "Πλήρωση"
+      }
     }
   },
   "propertiesPalette": {
@@ -3012,7 +3030,9 @@
       },
       "railingEditor": {
         "predefinedType": {
-          "section": { "title": "Τύπος Κιγκλιδώματος" },
+          "section": {
+            "title": "Τύπος Κιγκλιδώματος"
+          },
           "guardrail": "Κιγκλίδωμα Ασφαλείας",
           "handrail": "Χειρολισθήρας",
           "balustrade": "Κάγκελο (Μπαλούστρα)"
@@ -3022,10 +3042,14 @@
           "rectangular": "Ορθογωνική"
         },
         "balusterShape": {
-          "section": { "title": "Διατομή Κάγκελου" }
+          "section": {
+            "title": "Διατομή Κάγκελου"
+          }
         },
         "justification": {
-          "section": { "title": "Στοίχιση" },
+          "section": {
+            "title": "Στοίχιση"
+          },
           "center": "Κέντρο",
           "start": "Αρχή",
           "end": "Τέλος"
@@ -3035,7 +3059,9 @@
           "off": "Όχι"
         },
         "infillKind": {
-          "section": { "title": "Πλήρωση" },
+          "section": {
+            "title": "Πλήρωση"
+          },
           "none": "Καμία",
           "glass": "Γυαλί",
           "mesh": "Πλέγμα",
@@ -5430,17 +5456,6 @@
       "pathEntityRequired": "Απαιτείται η επιλογή διαδρομής."
     }
   },
-  "railingAdvancedPanel": {
-    "title": "Προηγμένες Ιδιότητες Κιγκλιδώματος",
-    "emptyState": "Επίλεξε ένα κιγκλίδωμα για να δεις τις ιδιότητες.",
-    "sections": {
-      "geometry": { "title": "Γεωμετρία" },
-      "baluster": { "title": "Κάγκελα" },
-      "posts": { "title": "Ορθοστάτες" },
-      "rails": { "title": "Κουπαστές" },
-      "infill": { "title": "Πλήρωση" }
-    }
-  },
   "stairAdvancedPanel": {
     "title": "Προηγμένες Ιδιότητες Κλίμακας",
     "closeAriaLabel": "Κλείσιμο πάνελ",
@@ -5610,6 +5625,16 @@
       },
       "finish": {
         "title": "Σοβάς"
+      },
+      "buriedWaterproofing": {
+        "title": "Κοντόστυλο — Στεγάνωση",
+        "enabled": "Στεγάνωση",
+        "enabledTooltip": "Το τμήμα της κολώνας μέσα στο χώμα, από την στάθμη εδάφους ως την άνω παρειά του πεδίλου. Ενεργό εξ ορισμού: ό,τι θάβεται, στεγανώνεται.",
+        "material": "Υλικό στεγάνωσης",
+        "kindCoating": "Επαλειφόμενα",
+        "kindMembrane": "Μεμβράνες",
+        "paintDivergence": "Χειροκίνητη βαφή όψεων",
+        "paintDivergenceTooltip": "Θαμμένες όψεις που βάφτηκαν χειροκίνητα με άλλο υλικό στη λειτουργία «Πολύγωνα». Αποδίδονται στην οθόνη αλλά ΔΕΝ επιμετρώνται — η επιμέτρηση ακολουθεί το υλικό στεγάνωσης."
       },
       "envelope": {
         "title": "Λειτουργία Κελύφους"

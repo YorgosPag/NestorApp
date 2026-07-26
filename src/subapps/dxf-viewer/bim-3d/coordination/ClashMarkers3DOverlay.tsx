@@ -9,107 +9,47 @@
  * visible (screen-space, never occluded), and screen-constant in size.
  *
  * Mounted by BimViewport3D, so it exists ONLY while the 3D view is active. Driven by
- * the low-frequency {@link useClashReport} store; positions are recomputed
- * **imperatively** on every camera move via a LOW-priority UnifiedFrameScheduler
- * subsystem that runs AFTER `bim-3d-scene` (so the camera is already updated this
- * frame → zero-lag) and ONLY when the camera actually changed (no idle spin).
+ * the low-frequency {@link useClashReport} store; the projection and the camera-move tick
+ * come from the shared {@link useCameraProjectedMarkers} (ADR-650 M5α.2 extracted them when the
+ * topography-QA overlay reproduced both verbatim — see N.18).
  *
- * Also owns "zoom to clash": a panel row click (clash-focus bus) frames the camera.
+ * "Zoom to clash" is NOT owned here either: a panel row click goes through the shared view-focus
+ * bus to `useViewFocus3D`, for the same reason.
  *
  * @see ../../components/dxf-layout/clash-markers/ClashMarkerLayer.tsx — shared layer
+ * @see ./use-camera-projected-markers.ts — shared projection + camera tick
  * @see ./clash-marker-math.ts — plan-metres → world (x, z, −y)
+ * @see ../viewport/use-view-focus-3d.ts — the camera framing this component used to own
  */
 
-import React, { useCallback, useEffect, useMemo, type MutableRefObject } from 'react';
-import * as THREE from 'three';
+import React, { useMemo, type MutableRefObject } from 'react';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 import { clashPointToWorld } from './clash-marker-math';
 import { useClashReport } from '../../systems/coordination/clash-report-store';
-import { subscribeClashFocus } from '../../systems/coordination/clash-focus-bus';
-import { UnifiedFrameScheduler, RENDER_PRIORITIES } from '../../rendering/core/UnifiedFrameScheduler';
+import { useCameraProjectedMarkers } from './use-camera-projected-markers';
 import { ClashMarkerLayer } from '../../components/dxf-layout/clash-markers/ClashMarkerLayer';
 import type { ClashMarkerGlyphProps } from '../../components/dxf-layout/clash-markers/ClashMarkerGlyph';
-
-/** Half-size (m) of the box framed around a clash when "zooming to" it. */
-const CLASH_FOCUS_HALF_EXTENT_M = 0.6;
-
-const _tmp = new THREE.Vector3();
 
 export interface ClashMarkers3DOverlayProps {
   readonly managerRef: MutableRefObject<ThreeJsSceneManager | null>;
 }
 
-/** Camera zoom factor (perspective + ortho both expose `.zoom`); 1 otherwise. */
-function cameraZoom(cam: THREE.Camera): number {
-  return cam instanceof THREE.PerspectiveCamera || cam instanceof THREE.OrthographicCamera ? cam.zoom : 1;
-}
-
 export function ClashMarkers3DOverlay({ managerRef }: ClashMarkers3DOverlayProps): React.ReactElement | null {
   const review = useClashReport();
 
-  const worlds = useMemo(() => {
-    if (!review) return [] as THREE.Vector3[];
-    return review.report.clashes.map((c) => {
-      const w = clashPointToWorld(c.point);
-      return new THREE.Vector3(w.x, w.y, w.z);
-    });
-  }, [review]);
+  const worlds = useMemo(
+    () => (review ? review.report.clashes.map((c) => clashPointToWorld(c.point)) : []),
+    [review],
+  );
 
   const markers = useMemo<ClashMarkerGlyphProps[]>(() => {
     if (!review) return [];
     return review.report.clashes.map((c) => ({ severity: c.severity, soft: c.type === 'clearance' }));
   }, [review]);
 
-  // world → client px via the live camera (null = behind the camera ⇒ hidden).
-  const project = useCallback((i: number): { x: number; y: number } | null => {
-    const manager = managerRef.current;
-    if (!manager) return null;
-    const camera = manager.getCamera();
-    const canvas = manager.getRendererCanvas();
-    const rect = canvas.getBoundingClientRect();
-    _tmp.copy(worlds[i]).project(camera);
-    if (_tmp.z > 1) return null;
-    return {
-      x: rect.left + (_tmp.x * 0.5 + 0.5) * rect.width,
-      y: rect.top + (-_tmp.y * 0.5 + 0.5) * rect.height,
-    };
-  }, [worlds, managerRef]);
-
-  // Reproject after the scene renders (camera current) — only when the camera moved.
-  const subscribe = useCallback((reproject: () => void) => {
-    let lastSig = '';
-    const unregister = UnifiedFrameScheduler.register(
-      'bim-3d-clash-markers',
-      'BIM 3D Clash Markers',
-      RENDER_PRIORITIES.LOW,
-      () => reproject(),
-      () => {
-        const manager = managerRef.current;
-        if (!manager) return false;
-        const c = manager.getCamera();
-        const sig = `${c.position.x},${c.position.y},${c.position.z},${c.quaternion.x},${c.quaternion.y},${c.quaternion.z},${c.quaternion.w},${cameraZoom(c)}`;
-        if (sig === lastSig) return false;
-        lastSig = sig;
-        return true;
-      },
-    );
-    reproject();
-    return unregister;
-  }, [managerRef]);
-
-  // "Zoom to clash" — frame a small box around the point (panel row click).
-  useEffect(() => {
-    return subscribeClashFocus((point) => {
-      const manager = managerRef.current;
-      if (!manager) return;
-      const w = clashPointToWorld(point);
-      const h = CLASH_FOCUS_HALF_EXTENT_M;
-      manager.viewport.frameBounds(
-        new THREE.Vector3(w.x - h, w.y - h, w.z - h),
-        new THREE.Vector3(w.x + h, w.y + h, w.z + h),
-      );
-    });
-  }, [managerRef]);
+  const { project, subscribe } = useCameraProjectedMarkers(
+    managerRef, worlds, 'bim-3d-clash-markers', 'BIM 3D Clash Markers',
+  );
 
   if (!review) return null;
   return <ClashMarkerLayer markers={markers} project={project} subscribe={subscribe} className="z-[60]" />;

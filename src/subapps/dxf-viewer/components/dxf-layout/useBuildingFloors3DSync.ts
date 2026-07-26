@@ -20,6 +20,9 @@ export function useBuildingFloors3DSync(projectId: string | null): void {
     const buildingRefs: BuildingRef[] = projectBuildings.map((b) => ({
       id: b.id,
       baseElevation: b.baseElevation,
+      // ADR-713 — η στάθμη τελειωμένου εδάφους ταξιδεύει μαζί με το baseElevation: και τα δύο
+      // είναι κατακόρυφα data του κτιρίου που χρειάζεται το 3Δ ανά entity.
+      gradeDropBelowBase: b.gradeDropBelowBase,
       name: b.name,
     }));
 

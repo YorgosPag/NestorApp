@@ -57,7 +57,12 @@ export function StatusBarBimHoverLeaf({ className, separatorClassName, activeToo
   let lines: TooltipLines | null = null;
   if (hover3D.hoveredBimId && hover3D.hoveredBimType) {
     // 3D hover wins when present (the 2D store stays cleared in 3D and vice-versa).
-    lines = resolveBim3DHoverLines(hover3D.hoveredBimId, hover3D.hoveredBimType, t);
+    // ADR-715 — το `faceKey` γυρίζει τη γραμμή τύπου σε «Κοντόστυλο» μέσα στη θαμμένη ζώνη.
+    // Το 2D path δεν το περνά: η θαμμένη ζώνη είναι διαχωρισμός **καθ' ύψος**, οπότε σε κάτοψη
+    // δεν υπάρχει ξεχωριστό σχήμα να δείξει hover (ίδιος λόγος με το store — βλ. ADR-715 Φ2).
+    lines = resolveBim3DHoverLines(
+      hover3D.hoveredBimId, hover3D.hoveredBimType, t, hover3D.hoveredFaceKey,
+    );
   } else if (hover2D.entityId && activeTool === 'select') {
     lines = resolveBimHoverLinesById(hover2D.entityId, t);
   }

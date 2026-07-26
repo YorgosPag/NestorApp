@@ -19,7 +19,7 @@
  */
 
 import * as THREE from 'three';
-import type { FaceKey, FaceAppearanceMap } from '../../bim/types/face-appearance-types';
+import { buriedFaceKey, type FaceKey, type FaceAppearanceMap } from '../../bim/types/face-appearance-types';
 import { resolveFaceMaterial } from '../materials/face-appearance-material';
 import { ensureDoubleSided } from '../materials/ensure-double-sided';
 import { setBoxWorldUvs } from './bim-uv-helpers';
@@ -31,13 +31,20 @@ export interface FacedPrism {
   readonly faceKeyByMaterialIndex: readonly FaceKey[];
 }
 
-/** Pack 2N θέσεις: [0..N) top ring, [N..2N) bottom ring (mirror `roof-to-three`). */
-function packRingPositions(top: readonly THREE.Vector3[], bot: readonly THREE.Vector3[]): Float32Array {
-  const N = top.length;
-  const positions = new Float32Array(2 * N * 3);
-  for (let i = 0; i < N; i++) {
-    positions[i * 3] = top[i].x; positions[i * 3 + 1] = top[i].y; positions[i * 3 + 2] = top[i].z;
-    positions[(N + i) * 3] = bot[i].x; positions[(N + i) * 3 + 1] = bot[i].y; positions[(N + i) * 3 + 2] = bot[i].z;
+/**
+ * Pack `rings.length × N` θέσεις, ring-major: το ring `r` καταλαμβάνει `[r·N, (r+1)·N)`.
+ * Σειρά ΠΑΝΩ→ΚΑΤΩ (ring 0 = top, τελευταίο = bottom), mirror `roof-to-three`. Χωρίς
+ * ενδιάμεσο ring δίνει ακριβώς το προηγούμενο 2N layout (top, bottom) — μηδέν μετατόπιση.
+ */
+function packRingPositions(rings: readonly (readonly THREE.Vector3[])[]): Float32Array {
+  const N = rings[0].length;
+  const positions = new Float32Array(rings.length * N * 3);
+  for (let r = 0; r < rings.length; r++) {
+    const ring = rings[r];
+    for (let i = 0; i < N; i++) {
+      const o = (r * N + i) * 3;
+      positions[o] = ring[i].x; positions[o + 1] = ring[i].y; positions[o + 2] = ring[i].z;
+    }
   }
   return positions;
 }
@@ -55,6 +62,9 @@ function packRingPositions(top: readonly THREE.Vector3[], bot: readonly THREE.Ve
 function buildFacedIndex(
   contour2d: readonly THREE.Vector2[],
   holes2d: readonly (readonly THREE.Vector2[])[],
+  // ADR-713 — true όταν παρεμβάλλεται ring στάθμης εδάφους: κάθε περιμετρική πλευρά σπάει
+  // σε `side:i` (πάνω από τη στάθμη) + `buried:i` (κάτω). false → ακριβώς το προηγούμενο.
+  split: boolean,
 ): {
   index: number[];
   groups: readonly { start: number; count: number; materialIndex: number }[];
@@ -66,14 +76,24 @@ function buildFacedIndex(
   let N = n;
   for (const h of holes2d) { holeStart.push(N); N += h.length; }
 
+  // Ring bases (ring-major layout, ΠΑΝΩ→ΚΑΤΩ: [top, (mid,) bottom]).
+  //
+  // `EXPOSED_LO` = το ΚΑΤΩ όριο της εκτεθειμένης ζώνης, δηλαδή το **δεύτερο** ring — που
+  // είναι η στάθμη εδάφους όταν υπάρχει split, αλλιώς η ίδια η βάση του στερεού. Είναι `N`
+  // και στις δύο περιπτώσεις, γι' αυτό ο τύπος της εκτεθειμένης πλευράς είναι **ο ίδιος**
+  // με τον προηγούμενο (`pushWall(N, 0, …)`) χωρίς branch (N.18). Μόνο το `BOT` μετακινείται.
+  const TOP = 0;
+  const EXPOSED_LO = N;
+  const BOT = split ? 2 * N : N;
+
   const tris = THREE.ShapeUtils.triangulateShape([...contour2d], holes2d.map((h) => [...h]));
   const index: number[] = [];
-  // Cap winding verified by `DIAG` test: the bottom ring (N+…) cap must wind a→b→c for a
+  // Cap winding verified by `DIAG` test: the bottom ring cap must wind a→b→c for a
   // DOWN-facing normal (faces the ground), and the top ring a→c→b for an UP-facing normal
   // (faces the sky). The earlier a/b/c order was inverted (top normal pointed down) → clicking
   // the visible top cap was back-face-culled and the click fell through to the bottom cap.
-  for (const [a, b, c] of tris) index.push(N + a, N + b, N + c); // bottom cap → normal −Y (ground)
-  for (const [a, b, c] of tris) index.push(a, c, b); // top cap → normal +Y (sky)
+  for (const [a, b, c] of tris) index.push(BOT + a, BOT + b, BOT + c); // bottom cap → normal −Y (ground)
+  for (const [a, b, c] of tris) index.push(TOP + a, TOP + c, TOP + b); // top cap → normal +Y (sky)
 
   const capLen = tris.length * 3;
   const faceKeyByMaterialIndex: FaceKey[] = ['bottom', 'top'];
@@ -84,30 +104,32 @@ function buildFacedIndex(
   let cursor = 2 * capLen;
   let mat = 2;
 
-  // Outer perimeter side quads (outward normals).
-  for (let i = 0; i < n; i++) {
-    const j = (i + 1) % n;
-    index.push(N + i, N + j, j);
-    index.push(N + i, j, i);
+  /** Ένα περιμετρικό quad ανάμεσα σε δύο rings (`lo` κάτω, `up` πάνω) με outward normal. */
+  const pushWall = (lo: number, up: number, a: number, b: number, faceKey: FaceKey): void => {
+    index.push(lo + a, lo + b, up + b);
+    index.push(lo + a, up + b, up + a);
     groups.push({ start: cursor, count: 6, materialIndex: mat });
-    faceKeyByMaterialIndex.push(`side:${i}`);
+    faceKeyByMaterialIndex.push(faceKey);
     cursor += 6; mat++;
-  }
+  };
 
-  // Hole-wall side quads. The holes are pre-normalised to the OPPOSITE winding of the
-  // contour (see buildFacedPrism), so the SAME wall formula as the outer perimeter yields
-  // normals pointing INTO the void — exactly how ExtrudeGeometry builds hole walls.
+  // Outer perimeter — ΕΚΤΕΘΕΙΜΕΝΗ ζώνη (στάθμη εδάφους → κορυφή). Χωρίς split είναι η
+  // πλήρης πλευρά· τα materialIndex μένουν `2+i` (συμβόλαιο ADR-539, byte-for-byte).
+  for (let i = 0; i < n; i++) pushWall(EXPOSED_LO, TOP, i, (i + 1) % n, `side:${i}`);
+
+  // ADR-713 — ΘΑΜΜΕΝΗ ζώνη (πέδιλο → στάθμη εδάφους). Μπαίνει ΜΕΤΑ όλες τις `side:i` ώστε
+  // η υπάρχουσα αρίθμηση των εκτεθειμένων όψεων να μείνει ανέγγιχτη.
+  if (split) for (let i = 0; i < n; i++) pushWall(BOT, EXPOSED_LO, i, (i + 1) % n, buriedFaceKey(i));
+
+  // Hole-wall side quads (πλήρες ύψος — τα ανοίγματα δεν αφορούν τη ζώνη εδάφους). The holes
+  // are pre-normalised to the OPPOSITE winding of the contour (see buildFacedPrism), so the
+  // SAME wall formula as the outer perimeter yields normals pointing INTO the void — exactly
+  // how ExtrudeGeometry builds hole walls.
   for (let h = 0; h < holes2d.length; h++) {
     const m = holes2d[h].length;
     const off = holeStart[h];
     for (let k = 0; k < m; k++) {
-      const a = off + k;
-      const b = off + ((k + 1) % m);
-      index.push(N + a, N + b, b);
-      index.push(N + a, b, a);
-      groups.push({ start: cursor, count: 6, materialIndex: mat });
-      faceKeyByMaterialIndex.push(`hole:${h}:${k}`);
-      cursor += 6; mat++;
+      pushWall(BOT, TOP, off + k, off + ((k + 1) % m), `hole:${h}:${k}`);
     }
   }
 
@@ -127,6 +149,11 @@ export function buildFacedPrism(
   topRing: readonly THREE.Vector3[],
   depthM: number,
   holes?: readonly (readonly THREE.Vector2[])[],
+  // ADR-713 — ύψος (m) της ΘΑΜΜΕΝΗΣ ζώνης, μετρημένο από την **κάτω** παρειά προς τα πάνω.
+  // Όταν είναι μέσα στο (0, depthM), παρεμβάλλεται ring στη στάθμη εδάφους και κάθε
+  // περιμετρική πλευρά δίνει `side:i` (πάνω) + `buried:i` (κάτω). Εκτός εύρους / απόν →
+  // ΚΑΝΕΝΑ split (byte-for-byte το προηγούμενο prism — κάθε άλλος caller μένει ανέγγιχτος).
+  buriedDepthM?: number,
 ): FacedPrism | null {
   const n = topRing.length;
   if (n < 3) return null;
@@ -150,10 +177,18 @@ export function buildFacedPrism(
   for (const h of holeRings) for (const p of h) topVerts.push(new THREE.Vector3(p.x, capY, p.y));
   const botVerts = topVerts.map((p) => new THREE.Vector3(p.x, p.y - depthM, p.z));
 
-  const { index, groups, faceKeyByMaterialIndex } = buildFacedIndex(contour2d, holeRings);
+  // ADR-713 — το ring στάθμης εδάφους μπαίνει ΜΟΝΟ για γνήσιο split: μια ζώνη 0 ή πλήρους
+  // ύψους δεν σπάει τίποτα, απλώς θα άφηνε εκφυλισμένα (μηδενικού εμβαδού) quads.
+  const split = buriedDepthM !== undefined && Number.isFinite(buriedDepthM)
+    && buriedDepthM > 0 && buriedDepthM < depthM;
+  const rings: THREE.Vector3[][] = split
+    ? [topVerts, botVerts.map((p) => new THREE.Vector3(p.x, p.y + buriedDepthM!, p.z)), botVerts]
+    : [topVerts, botVerts];
+
+  const { index, groups, faceKeyByMaterialIndex } = buildFacedIndex(contour2d, holeRings, split);
 
   const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.BufferAttribute(packRingPositions(topVerts, botVerts), 3));
+  geo.setAttribute('position', new THREE.BufferAttribute(packRingPositions(rings), 3));
   geo.setIndex(index);
   for (const g of groups) geo.addGroup(g.start, g.count, g.materialIndex);
 
@@ -189,9 +224,13 @@ export function buildFacedSolidBody(
   appearance: FaceAppearanceMap,
   baseMat: THREE.Material,
   holes?: readonly (readonly THREE.Vector2[])[],
+  // ADR-713 — ύψος θαμμένης ζώνης (m) από την κάτω παρειά· βλ. {@link buildFacedPrism}.
+  // Ο caller ΠΡΕΠΕΙ να δηλώσει ρητά τα `buried:i` στο `appearance` (βλ. `buriedFaceAppearance`),
+  // αλλιώς ο cascade `appearance[key] ?? appearance['*']` θα έβαφε το θαμμένο με την όψη.
+  buriedDepthM?: number,
 ): THREE.Mesh | null {
   const topRing = verts.map((v) => new THREE.Vector3(v.x, thicknessM, -v.y));
-  const prism = buildFacedPrism(topRing, thicknessM, holes);
+  const prism = buildFacedPrism(topRing, thicknessM, holes, buriedDepthM);
   if (!prism) return null;
   // ADR-539 Φ2 — faced solids render + RAYCAST double-sided so the interior hole-wall faces
   // are both visible and pickable from inside the opening. With FrontSide, a hole wall whose

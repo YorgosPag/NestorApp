@@ -149,6 +149,14 @@ export type {
     /** ADR-489 §6.2 — `foundationDepth` παράγεται δυναμικά (Auto, default true) ή χειροκίνητη υπέρβαση. */
     foundationDepthAuto?: boolean;
 
+    // ─── ADR-713: Στάθμη τελειωμένου εδάφους (όριο ΟΨΗΣ, όχι όγκου) ─────────
+    /**
+     * METRES — πόσο κάτω από το FFL του χαμηλότερου ορόφου είναι το τελειωμένο έδαφος (≥0).
+     * Ορίζει πού σταματά η επένδυση/σοβάς και αρχίζει η στεγάνωση. **Δεν** συγχέεται με το
+     * `foundationDepth` (ογκομετρικό όριο ADR-712). Default 0· παρακάμπτεται από τοπογραφικό.
+     */
+    gradeDropBelowBase?: number;
+
     // ─── ADR-461: Stair penthouse special level (απόληξη κλιμακοστασίου) ────
     /** Building has a stair-penthouse special level above the top storey (default true when ≥1 storey). */
     hasStairPenthouse?: boolean;

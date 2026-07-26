@@ -31,6 +31,9 @@ import {
   computeColumnFoundationStub,
   hasFoundationStub,
 } from '../../bim/geometry/column-foundation-stub';
+// ADR-713 — το όριο ΟΨΗΣ (στάθμη εδάφους) + η στεγάνωση της θαμμένης ζώνης.
+import { resolveColumnExposureZones } from '../../bim/geometry/column-exposure-zone';
+import { buriedWaterproofingBuckets } from '../../bim/finishes/buried-waterproofing-area';
 
 /**
  * ADR-401 F.2 — top + base profiles για `attached` κολώνα (per-corner envelope
@@ -76,21 +79,45 @@ export function columnBoqEntity(
   entity: ColumnEntity,
   scene: SceneModel | null,
   baseDropMap?: ReadonlyMap<string, number>,
+  gradeMap?: ReadonlyMap<string, number>,
 ): BimEntityForBoq {
   const { top, base } = resolveAttachedColumnProfiles(entity, scene);
   const geometry = top !== null || base !== null
     ? computeColumnGeometry(entity.params, top ?? undefined, base ?? undefined)
     : entity.geometry;
-  // ADR-449 — derived σοβάς contribution (interior/exterior εμβαδά, εξαιρώντας
-  // καλυμμένα από τοίχους). `undefined` όταν σοβάς ανενεργός → single-entry path.
-  const finishContribution = computeColumnFinishContribution(entity, geometry, scene);
-  // ADR-712 — gross/net split κατά IFC. Ο σοβάς μετριέται στην ΑΝΩΔΟΜΗ (το κοντόστυλο είναι
-  // θαμμένο) → υπολογίζεται πριν από εδώ, πάνω στο ίδιο `geometry`, και μένει αμετάβλητος.
-  const stub = computeColumnFoundationStub(
-    geometry.volume,
-    geometry.area,
-    baseDropMap?.get(entity.id) ?? 0,
+  const baseDropMm = baseDropMap?.get(entity.id) ?? 0;
+
+  // ADR-713 — το όριο ΟΨΗΣ (στάθμη τελειωμένου εδάφους), διακριτό από το όριο ΟΓΚΟΥ του
+  // ADR-712. Η σκηνή είναι floor-relative (FFL = 0) → nominal βάση = σκέτο το `baseOffset`.
+  const nominalBaseAbsMm = entity.params.baseOffset ?? 0;
+  const exposure = resolveColumnExposureZones({
+    nominalBaseAbsMm,
+    topAbsMm: nominalBaseAbsMm + geometry.height,
+    baseDropMm,
+    gradeAbsMm: gradeMap?.get(entity.id),
+  });
+
+  // ADR-449/713 — ο σοβάς μετριέται στην ΕΚΤΕΘΕΙΜΕΝΗ ζώνη. Στο default (στάθμη στο FFL) το
+  // `exposedHeightMm` ισούται με το `geometry.height` → **byte-for-byte** η προηγούμενη
+  // επιμέτρηση επιχρισμάτων. Με ρητή στάθμη/τοπογραφικό, ο σοβάς κατεβαίνει ως το έδαφος.
+  const finishGeometry = Math.abs(exposure.exposedHeightMm - geometry.height) > 1e-6
+    ? { ...geometry, height: exposure.exposedHeightMm }
+    : geometry;
+  const plaster = computeColumnFinishContribution(entity, finishGeometry, scene);
+
+  // ADR-713 — η ΘΑΜΜΕΝΗ ζώνη στεγανώνεται (m², δικό της άρθρο). Μπαίνει ως ακόμη ένα bucket
+  // στο ΙΔΙΟ group-by-material contribution: το `structural-finish-boq` παράγει ήδη ένα child
+  // row ανά distinct υλικό και λύνει το άρθρο από το `resolveMaterialAtoeMapping` — μηδέν
+  // νέος BOQ μηχανισμός, μηδέν δεύτερη διαδρομή που θα μπορούσε να ξεσυγχρονιστεί.
+  const waterproofing = buriedWaterproofingBuckets(
+    entity, geometry.footprint.vertices, exposure.buriedHeightMm,
   );
+  const byMaterial = [...(plaster?.byMaterial ?? []), ...waterproofing];
+  const finishContribution = byMaterial.length > 0 ? { byMaterial } : undefined;
+
+  // ADR-712 — gross/net split κατά IFC. **Αμετάβλητο από το ADR-713**: το όριο όγκου μένει
+  // η άνω παρειά του πεδίλου, ό,τι κι αν κάνει η στάθμη εδάφους.
+  const stub = computeColumnFoundationStub(geometry.volume, geometry.area, baseDropMm);
   return {
     id: entity.id,
     kind: entity.kind,

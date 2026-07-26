@@ -23,7 +23,8 @@ import {
   TUMBLE_BASE_SPEED,
 } from './viewport-constants';
 import { attachSurfaceWheelZoom } from './viewport-camera-wheel-zoom';
-import { getPixelWorldSize } from './coordinate-transforms';
+// N.7.1 split — the per-projection zoom / screen-pan / roll math lives in its own pure module.
+import { readCameraZoom, applyCameraZoom, computeScreenPanOffset, applyRollAroundForward, applyOrthoFrustum } from './viewport-camera-nav-math';
 import { getAnimationDuration } from '../accessibility/reduced-motion-config';
 
 const _snapDir = new THREE.Vector3();
@@ -92,22 +93,10 @@ export function createViewportCamera(
     onRenderNeeded, onInteractionStart, onInteractionEnd,
   });
 
-  function getZoom(): number {
-    if (activeCamera instanceof THREE.OrthographicCamera) return activeCamera.zoom;
-    const dist = activeCamera.position.distanceTo(controls.target);
-    return dist > 0 ? DEFAULT_CAMERA_DISTANCE / dist : 1;
-  }
+  function getZoom(): number { return readCameraZoom(activeCamera, controls.target); }
 
   function setZoom(zoom: number): void {
-    const clamped = Math.max(zoom, 0.001);
-    if (activeCamera instanceof THREE.OrthographicCamera) {
-      activeCamera.zoom = clamped;
-      activeCamera.updateProjectionMatrix();
-    } else {
-      const newDist = DEFAULT_CAMERA_DISTANCE / clamped;
-      _direction.subVectors(activeCamera.position, controls.target).normalize();
-      activeCamera.position.copy(controls.target).addScaledVector(_direction, newDist);
-    }
+    applyCameraZoom(activeCamera, controls.target, zoom, _direction);
     onRenderNeeded();
   }
 
@@ -150,6 +139,37 @@ export function createViewportCamera(
         () => { controls.enabled = true; },
       );
     }
+    controls.enabled = false;
+  }
+
+  /**
+   * ADR-650 M5α.2 — glide the view onto `point` WITHOUT changing how close we are to it.
+   *
+   * The 3D twin of the 2D `canvas-center-on-point`. Where {@link frameBounds} computes a new
+   * camera distance (and, in ortho, a new zoom) to make a box fill the viewport, this keeps the
+   * camera→target OFFSET vector untouched and simply slides both to the new spot. Distance,
+   * direction and `zoom` all survive, so a user who has dialled in a working scale keeps it while
+   * stepping through findings — the same contract the 2D path honours.
+   *
+   * Non-finite input bails without touching the camera: the ADR-537 rule that a single NaN must
+   * never reach the camera pose, since a NaN view matrix blanks the whole scene.
+   */
+  function centerOn(point: THREE.Vector3): void {
+    if (!Number.isFinite(point.x) || !Number.isFinite(point.y) || !Number.isFinite(point.z)) return;
+    animation.cancel();
+    // The offset IS the zoom in a perspective view — preserving it is the whole point.
+    const offset = _direction.subVectors(activeCamera.position, controls.target).clone();
+    const zoom = getZoom();
+    animation.start(
+      { position: activeCamera.position.clone(), target: controls.target.clone(), zoom },
+      { position: point.clone().add(offset), target: point.clone(), zoom },
+      getAnimationDuration('camera', rm(), FRAME_SCENE_DURATION_MS),
+      (pos, tgt) => {
+        activeCamera.position.copy(pos); controls.target.copy(tgt);
+        activeCamera.lookAt(tgt); onRenderNeeded();
+      },
+      () => { controls.enabled = true; },
+    );
     controls.enabled = false;
   }
 
@@ -332,12 +352,7 @@ export function createViewportCamera(
    */
   function rollView(dirSign: 1 | -1): void {
     animation.cancel();
-    const target = controls.target;
-    const forward = _direction.subVectors(target, activeCamera.position).normalize();
-    if (forward.lengthSq() < 0.001) return;
-    const q = new THREE.Quaternion().setFromAxisAngle(forward, (dirSign * Math.PI) / 2);
-    activeCamera.up.applyQuaternion(q).normalize();
-    activeCamera.lookAt(target);
+    if (!applyRollAroundForward(activeCamera, controls.target, dirSign, _direction)) return;
     controls.update();
     onRenderNeeded();
   }
@@ -356,20 +371,7 @@ export function createViewportCamera(
    * continuous flow while the key is held down.
    */
   function pan(dxScreenPx: number, dyScreenPx: number): void {
-    const right = new THREE.Vector3();
-    const up = new THREE.Vector3();
-    activeCamera.matrixWorld.extractBasis(right, up, new THREE.Vector3());
-
-    // World metres per screen pixel — SSoT `getPixelWorldSize` (mode-aware: ortho ignores
-    // distance, perspective scales by cam→target distance). Distance only matters for perspective.
-    const dist = activeCamera instanceof THREE.PerspectiveCamera
-      ? activeCamera.position.distanceTo(controls.target)
-      : 0;
-    const pxToWorld = getPixelWorldSize(dist, activeCamera, domElement);
-
-    const offset = new THREE.Vector3()
-      .addScaledVector(right, dxScreenPx * pxToWorld)
-      .addScaledVector(up, dyScreenPx * pxToWorld);
+    const offset = computeScreenPanOffset(activeCamera, controls.target, domElement, dxScreenPx, dyScreenPx);
 
     const fromPos = activeCamera.position.clone();
     const fromTgt = controls.target.clone();
@@ -438,13 +440,7 @@ export function createViewportCamera(
   }
 
   function updateOrthoFrustum(width: number, height: number): void {
-    const a = width / Math.max(height, 1);
-    const halfH = DEFAULT_ORTHO_SIZE / orthoCamera.zoom;
-    orthoCamera.left = -halfH * a;
-    orthoCamera.right = halfH * a;
-    orthoCamera.top = halfH;
-    orthoCamera.bottom = -halfH;
-    orthoCamera.updateProjectionMatrix();
+    applyOrthoFrustum(orthoCamera, width, height);
   }
 
   function updateAspect(width: number, height: number): void {
@@ -489,7 +485,7 @@ export function createViewportCamera(
     get isAnimating() { return animation.isAnimating; },
     setProjection, setPose, getZoom, setZoom, setZoomPreset,
     updateAspect, update, dispose,
-    frameBounds, frameHome, cancelAnimation, setSpeedModifier,
+    frameBounds, centerOn, frameHome, cancelAnimation, setSpeedModifier,
     snapToViewDirection, rollView, goHome,
     applyTumble: (dx: number, dy: number) => tumble.applyExternalRotation(dx, dy),
     pan,

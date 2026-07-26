@@ -21,7 +21,7 @@
  */
 
 import type { TinSurface } from './topo-types';
-import { createTinSampler } from './tin-sampler';
+import { getTinSampler } from './tin-sampler';
 import { getTopoSurface } from './topo-surface';
 import { getGeoReference } from '../geo-referencing/geo-reference-store';
 
@@ -49,7 +49,8 @@ export function resolveVerticalDatumMm(
   originWorldYMm: number,
 ): number {
   if (tin.triangles.length === 0) return 0;
-  const groundZ = createTinSampler(tin).zAtMm(originWorldXMm, originWorldYMm);
+  // Memoised sampler: ADR-713 καλεί το datum ανά κολώνα, όχι μία φορά ανά sync.
+  const groundZ = getTinSampler(tin).zAtMm(originWorldXMm, originWorldYMm);
   if (groundZ !== null && Number.isFinite(groundZ)) return groundZ;
   // Origin not over the surveyed area → centre the surface on the building instead of floating.
   return (tin.bounds.minZ + tin.bounds.maxZ) / 2;

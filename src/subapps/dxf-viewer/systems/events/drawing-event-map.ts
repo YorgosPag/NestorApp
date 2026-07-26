@@ -112,6 +112,21 @@ export interface DrawingEventMap extends MepAutoDesignEventMap, BimEventMap, Top
   'canvas-fit-to-view-selected': {
     bounds: { min: Point2D; max: Point2D };
   };
+  /**
+   * ADR-650 M5α.2 — centre the view on a world point WITHOUT touching the zoom level.
+   *
+   * The «next finding» move, as every CAD does it: the first jump sets a scale, and from then on
+   * the user's own scale is theirs to keep. Re-fitting on each row click would silently undo the
+   * zoom they just dialled in — the report would keep yanking the view back out.
+   *
+   * Distinct from `canvas-fit-to-view-selected`, which OWNS the scale by design (the Z key means
+   * «show me all of this»). Two intents, two events — a flag on one of them would make every
+   * caller guess which behaviour it is getting.
+   */
+  'canvas-center-on-point': {
+    /** WORLD canonical mm — the same frame `canvas-fit-to-view-selected` bounds live in. */
+    point: Point2D;
+  };
   // ADR-375 Phase B.4: explicit «Fit annotations» — recompute the fit-to-paper
   // drawing scale from the live scene bounds. Emitted by DrawingScaleWidget (which
   // has no scene access); handled by useFitToView which reads the DXF scene and

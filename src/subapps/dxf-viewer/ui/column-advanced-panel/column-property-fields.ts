@@ -16,9 +16,17 @@ import {
   COLUMN_STRUCTURAL_KEYS,
   COLUMN_STRUCTURAL_READOUT_KEYS,
   COLUMN_FINISH_KEYS,
+  COLUMN_BURIED_KEYS,
+  COLUMN_BURIED_READOUT_KEYS,
   COLUMN_RIBBON_KEYS,
   COLUMN_RIBBON_VISIBILITY_KEYS,
 } from '../ribbon/hooks/bridge/column-command-keys';
+// ADR-715 — τα options είναι ΠΑΡΑΓΩΓΑ του καταλόγου στεγάνωσης (8 υλικά, 2 ομάδες): νέο υλικό
+// εμφανίζεται εδώ αυτόματα, χωρίς να το θυμηθεί κανείς.
+import {
+  BURIED_WATERPROOFING_ENABLED_OPTIONS,
+  BURIED_WATERPROOFING_MATERIAL_OPTIONS,
+} from '../ribbon/hooks/bridge/buried-waterproofing-param';
 import {
   STRUCTURAL_CODE_OPTIONS,
   CONCRETE_GRADE_OPTIONS,
@@ -135,6 +143,32 @@ export const COLUMN_PROPERTY_GROUPS: readonly ColumnPropertyGroup[] = [
       { commandKey: COLUMN_FINISH_KEYS.interiorMaterialId, labelKey: 'ribbon.commands.finishEditor.interiorMaterial', options: FINISH_MATERIAL_OPTIONS },
       { commandKey: COLUMN_FINISH_KEYS.exteriorMaterialId, labelKey: 'ribbon.commands.finishEditor.exteriorMaterial', options: FINISH_MATERIAL_OPTIONS },
       { commandKey: COLUMN_FINISH_KEYS.thickness, labelKey: 'ribbon.commands.finishEditor.thickness', options: FINISH_THICKNESS_OPTIONS },
+    ],
+  },
+  {
+    // ADR-715 — «Κοντόστυλο»: στεγάνωση της ΘΑΜΜΕΝΗΣ ζώνης (ο αδελφός του «Σοβάς», για την
+    // άλλη πλευρά του ορίου εδάφους). Κλείνει το DEFER του ADR-713 §6.
+    //
+    // ⚠️ **ΓΙΑΤΙ ΔΕΝ ΕΙΝΑΙ VISIBILITY-GATED σε «έχει θαμμένη ζώνη;»** — και δεν είναι παράλειψη.
+    // Η ύπαρξη θαμμένης ζώνης εξαρτάται από το `baseDropMm`, που είναι DERIVED από τον στατικό
+    // graph (ποιο πέδιλο στηρίζει την κολώνα) και το **ADR-489 §7 ΑΠΑΓΟΡΕΥΕΙ ΡΗΤΑ** τη μεταφορά
+    // του σε global store — «ο χάρτης πρέπει να καλύπτει κάθε όροφο που σχεδιάζεται, αλλιώς οι
+    // προεκτάσεις εξαφανίζονται σιωπηλά». Το panel δεν έχει (και δεν πρέπει να αποκτήσει) αυτή
+    // την πληροφορία. Ούτε το `params.footingId` είναι έγκυρο υποκατάστατο: το ίδιο του το
+    // σχόλιο λέει «absent = καμία **ρητή** έδραση (ο οργανισμός πέφτει σε spatial fallback)»,
+    // άρα gating σε αυτό θα έκρυβε το control ακριβώς στις κολώνες που εδράζονται σιωπηρά.
+    //
+    // Η συμπεριφορά είναι Revit-parity: η παράμετρος υπάρχει ανεξάρτητα από το αν έχει σήμερα
+    // εφαρμογή (όπως το «Σοβάς» φαίνεται και σε εσωτερική κολώνα). Η εφαρμογή κρίνεται εκεί που
+    // υπάρχει γεωμετρία — αν δεν υπάρχει θαμμένη ζώνη, το spec αγνοείται σιωπηλά (ADR-713).
+    id: 'buriedWaterproofing',
+    titleKey: 'columnAdvancedPanel.sections.buriedWaterproofing.title',
+    fields: [
+      { commandKey: COLUMN_BURIED_KEYS.enabled, labelKey: 'columnAdvancedPanel.sections.buriedWaterproofing.enabled', tooltipKey: 'columnAdvancedPanel.sections.buriedWaterproofing.enabledTooltip', options: BURIED_WATERPROOFING_ENABLED_OPTIONS },
+      { commandKey: COLUMN_BURIED_KEYS.materialId, labelKey: 'columnAdvancedPanel.sections.buriedWaterproofing.material', options: BURIED_WATERPROOFING_MATERIAL_OPTIONS },
+      // ADR-715 §3.1 — η ΡΗΤΗ δήλωση της απόκλισης: χειροκίνητα βαμμένες θαμμένες όψεις
+      // αποδίδονται στην οθόνη αλλά **δεν** επιμετρώνται. Read-only readout, «—» = καμία.
+      { commandKey: COLUMN_BURIED_READOUT_KEYS.paintDivergence, labelKey: 'columnAdvancedPanel.sections.buriedWaterproofing.paintDivergence', tooltipKey: 'columnAdvancedPanel.sections.buriedWaterproofing.paintDivergenceTooltip', options: [], readOnly: true },
     ],
   },
   {

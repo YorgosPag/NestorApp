@@ -20,9 +20,10 @@
  */
 
 import type { Vec3 } from '../../systems/coordination/clash-types';
+import { planMetresToWorld, type WorldTriple } from '../viewport/plan-to-world-math';
 
 /** A clash point (plan-space metres) → Three.js world coordinates (Y-up). */
-export function clashPointToWorld(point: Vec3): { x: number; y: number; z: number } {
-  // `0 - y` (not `-y`) so plan-north 0 maps to +0, never −0.
-  return { x: point.x, y: point.z, z: 0 - point.y };
+export function clashPointToWorld(point: Vec3): WorldTriple {
+  // The axis swap itself is the shared (THREE-free) convention — never re-inlined here.
+  return planMetresToWorld(point.x, point.y, point.z);
 }

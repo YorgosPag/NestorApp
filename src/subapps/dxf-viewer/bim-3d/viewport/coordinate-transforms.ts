@@ -11,6 +11,7 @@
 
 import * as THREE from 'three';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
+import { planMmToWorld } from './plan-to-world-math';
 
 // ── NDC / Screen ↔ World ──────────────────────────────────────────────────────
 
@@ -173,24 +174,23 @@ export function getVisibleWorldSize(
 
 // ── DXF Plan ↔ 3D World ───────────────────────────────────────────────────────
 
-const MM_TO_M = 0.001;
 const M_TO_MM = 1000;
 
 /**
  * Convert DXF plan coordinates (mm, XY plan) to 3D world (m, Y-up).
  * DXF: x_mm = east, y_mm = north, z_mm = elevation
  * Three.js: x = east, y = elevation, z = -north (right-hand Y-up)
+ *
+ * The axis convention itself lives in `plan-to-world-math` (THREE-free) so the DOM-side
+ * consumers share it verbatim — this is only the `Vector3` shape of it.
  */
 export function dxfPlanToWorld(
   x_mm: number,
   y_mm: number,
   elev_mm = 0,
 ): THREE.Vector3 {
-  return new THREE.Vector3(
-    x_mm * MM_TO_M,
-    elev_mm * MM_TO_M,
-    -y_mm * MM_TO_M,
-  );
+  const w = planMmToWorld(x_mm, y_mm, elev_mm);
+  return new THREE.Vector3(w.x, w.y, w.z);
 }
 
 /**
@@ -210,9 +210,10 @@ export function writeDxfPlanToWorld(
   y_mm: number,
   elev_mm: number,
 ): void {
-  out[i] = x_mm * MM_TO_M;
-  out[i + 1] = elev_mm * MM_TO_M;
-  out[i + 2] = -y_mm * MM_TO_M;
+  const w = planMmToWorld(x_mm, y_mm, elev_mm);
+  out[i] = w.x;
+  out[i + 1] = w.y;
+  out[i + 2] = w.z;
 }
 
 /**

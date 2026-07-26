@@ -23,13 +23,19 @@ import type {
 import {
   COLUMN_RIBBON_KEYS,
   COLUMN_FINISH_KEY_TO_FIELD,
+  COLUMN_BURIED_KEY_TO_FIELD,
   isColumnRibbonKey,
   isColumnRibbonStringKey,
   isColumnFinishKey,
+  isColumnBuriedKey,
+  isColumnBuriedReadoutKey,
   isColumnStructuralKey,
   isColumnStructuralReadoutKey,
 } from './column-command-keys';
 import { resolveFinishComboboxState, applyFinishComboboxChange } from './finish-param';
+// ADR-715 — ο αδελφός του finish-param για τη ΘΑΜΜΕΝΗ ζώνη + το pure κριτήριο απόκλισης.
+import { readBuriedWaterproofingValue, applyBuriedWaterproofingParam } from './buried-waterproofing-param';
+import { resolveBuriedPaintDivergence } from '../../../../bim/parts/buried-part';
 import {
   resolveColumnStructuralState,
   resolveColumnStructuralReadout,
@@ -85,6 +91,18 @@ export function resolveColumnComboboxState(
     // ADR-449 Slice 5 — σοβάς per-element override (enabled/υλικά/πάχος).
     if (isColumnFinishKey(commandKey)) {
       return resolveFinishComboboxState(column.params.finish, commandKey, COLUMN_FINISH_KEY_TO_FIELD);
+    }
+    // ADR-715 — στεγάνωση θαμμένης ζώνης («Κοντόστυλο»): διακόπτης + υλικό. Πάντα resolved,
+    // ώστε έργο χωρίς ρητό spec να δείχνει το πραγματικό default (ενεργό/ασφαλτική), όχι κενό.
+    if (isColumnBuriedKey(commandKey)) {
+      const field = COLUMN_BURIED_KEY_TO_FIELD[commandKey];
+      return { value: readBuriedWaterproofingValue(column.params.buriedWaterproofing, field), options: [] };
+    }
+    // ADR-715 §3.1 — readout της απόκλισης: πόσες θαμμένες όψεις έχουν χειροκίνητη βαφή που ΔΕΝ
+    // επιμετράται. `null` value → το row δείχνει «—» (καμία απόκλιση), αλλιώς το πλήθος.
+    if (isColumnBuriedReadoutKey(commandKey)) {
+      const diverging = resolveBuriedPaintDivergence(column);
+      return { value: diverging.length > 0 ? String(diverging.length) : null, options: [] };
     }
     // ADR-456 Slice 2 — δομοστατικά: editable keys (κανονισμός/σκυρ./οπλισμός)
     // + read-only readouts (βάρη/ρ%).
@@ -198,6 +216,15 @@ export function applyColumnComboboxChange(
     if (isColumnFinishKey(commandKey)) {
       const next = applyFinishComboboxChange(column.params, commandKey, value, COLUMN_FINISH_KEY_TO_FIELD);
       if (next) dispatchParams(column, next);
+      return;
+    }
+    // ADR-715 — στεγάνωση θαμμένης ζώνης: merge (αλλαγή υλικού δεν αγγίζει τον διακόπτη), άκυρη
+    // τιμή → no-op. Ο ίδιος `dispatchParams` → `UpdateColumnParamsCommand`, ΕΝΑ undo.
+    if (isColumnBuriedKey(commandKey)) {
+      const next = applyBuriedWaterproofingParam(
+        column.params.buriedWaterproofing, COLUMN_BURIED_KEY_TO_FIELD[commandKey], value,
+      );
+      if (next) dispatchParams(column, { ...column.params, buriedWaterproofing: next });
       return;
     }
     // ADR-456 Slice 2 — δομοστατικά: κανονισμός→building setting, κατηγορία

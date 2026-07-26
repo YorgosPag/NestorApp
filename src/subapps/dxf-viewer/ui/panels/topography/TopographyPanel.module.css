@@ -176,6 +176,16 @@
   background: color-mix(in srgb, currentColor 8%, transparent);
 }
 
+/* Το εύρημα στο οποίο «κοιτάει» ο μηχανικός — ίδια στιγμή που το ⊙ του μεγαλώνει στον καμβά,
+   ώστε λίστα και σχέδιο να λένε πάντα το ΙΔΙΟ «εδώ είμαι». Το severity border-left μένει: η
+   επιλογή δεν κρύβει τη σοβαρότητα. Stronger από το :hover, αλλιώς το ποντίκι θα «έσβηνε» την
+   επιλογή περνώντας από πάνω. */
+.qaItemSelected,
+.qaItemSelected:hover {
+  background: color-mix(in srgb, currentColor 18%, transparent);
+  font-weight: 600;
+}
+
 .qaMessage {
   flex: 1;
   min-width: 0;

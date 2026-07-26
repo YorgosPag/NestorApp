@@ -39,6 +39,13 @@ import {
   useRailingComponentSelectionStore,
   isRailingComponent,
 } from '../../bim/railings/railing-component-selection-store';
+// ADR-715 — «Τμήμα» (Revit Part): κλικ στο ΚΟΝΤΟΣΤΥΛΟ επιλέγει το θαμμένο τμήμα, όχι την κολώνα.
+// Ενεργό σε **ΚΑΝΟΝΙΚΟ** mode (σε αντίθεση με σκάλα/κιγκλίδωμα που είναι Polygon-Mode-gated) —
+// βλ. handleClick για το γιατί τα δύο δεν είναι το ίδιο ερώτημα.
+import { useBuriedPartSelectionStore } from '../../bim/parts/buried-part-selection-store';
+import { isBuriedFaceKey } from '../../bim/types/face-appearance-types';
+// ADR-715 Φ2 — ΕΝΑ σημείο εξόδου από κάθε drill-down (αντικατέστησε 7 χειροκίνητα ζευγάρια).
+import { exitSubElementSelections } from '../systems/selection/exit-sub-element-selections';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 import { DXF_TIMING } from '../../config/dxf-timing';
 // ADR-040 Φ-3D-pointer — hover+snap pick decoupled to a RAF slot (mirror the 2D snap-scheduler).
@@ -74,7 +81,11 @@ export function useBim3DPointerHandlers(
       debounceTimerRef.current = null;
       const hit = managerRef.current?.raycastBimEntities(clientX, clientY);
       if (hit) {
-        useQuickProperties3DStore.getState().setHovered(hit.bimId, hit.bimType, clientX, clientY);
+        // ADR-715 — το `faceKey` ταξιδεύει μαζί, ώστε ο readout να δείχνει «Κοντόστυλο» όταν ο
+        // κέρσορας είναι στη θαμμένη ζώνη (ο χρήστης βλέπει τι θα επιλέξει πριν πατήσει).
+        useQuickProperties3DStore
+          .getState()
+          .setHovered(hit.bimId, hit.bimType, clientX, clientY, hit.faceKey ?? null);
       } else {
         useQuickProperties3DStore.getState().clearHover();
       }
@@ -127,8 +138,11 @@ export function useBim3DPointerHandlers(
         if (e.shiftKey) store.toggleFace(face);
         else store.selectFace(face);
         manager.setSelectedFaces(usePolygonMode3DStore.getState().selectedFaces);
-        subStore.clear(); // face pick εξ ορισμού βγαίνει από κάθε sub-element σκάλας
-        railStore.clear(); // …και από κάθε component κιγκλιδώματος
+        // ADR-715 Φ2 — per-face pick εξ ορισμού βγαίνει από ΚΑΘΕ drill-down (σκάλα/κιγκλίδωμα/Τμήμα).
+        // ⚠️ Ισχύει ΚΑΙ για θαμμένη όψη: μέσα στο «ΠΟΛΥΓΩΝΑ» ένα `buried:i` είναι σκόπιμα
+        // **cosmetic** per-face override (ADR-715 §3.1), ΟΧΙ επιλογή Τμήματος — αλλιώς το mode
+        // θα έχανε τον προχωρημένο δρόμο «βάψε ΜΙΑ παρειά του κοντόστυλου».
+        exitSubElementSelections();
         return;
       }
       // (β) ADR-358 Q19 «click-into» — μια σκάλα ΔΕΝ είναι faced-prism· ένα χτύπημα σε πάτημα/ρίχτι/
@@ -146,7 +160,7 @@ export function useBim3DPointerHandlers(
         if (!useSelection3DStore.getState().selectedBimIds.includes(faceHit.bimId)) {
           manager.selectBimEntity(faceHit.bimId);
         }
-        railStore.clear(); // stair sub εξ ορισμού βγαίνει από κάθε component κιγκλιδώματος
+        exitSubElementSelections(); // ADR-715 Φ2 — βγες από κάθε άλλο drill-down πρώτα
         subStore.selectSub({ stairId: faceHit.bimId, part: faceHit.stairPart, index: faceHit.stairSubIndex });
         return;
       }
@@ -163,7 +177,7 @@ export function useBim3DPointerHandlers(
         if (!useSelection3DStore.getState().selectedBimIds.includes(faceHit.bimId)) {
           manager.selectBimEntity(faceHit.bimId);
         }
-        subStore.clear(); // component κιγκλιδώματος εξ ορισμού βγαίνει από κάθε sub-element σκάλας
+        exitSubElementSelections(); // ADR-715 Φ2 — βγες από κάθε άλλο drill-down πρώτα
         railStore.selectComponent({ railingId: faceHit.bimId, component: faceHit.railingComponent });
         return;
       }
@@ -171,8 +185,7 @@ export function useBim3DPointerHandlers(
       if (!e.shiftKey) {
         store.clearFaces();
         manager.setSelectedFaces([]);
-        subStore.clear();
-        railStore.clear();
+        exitSubElementSelections();
       }
       return;
     }
@@ -183,11 +196,45 @@ export function useBim3DPointerHandlers(
       // ADR-537 — a BIM pick wins; clear any unified DXF selection so the single grip
       // overlay is exclusively BIM's.
       SelectedEntitiesStore.clearByType('dxf-entity');
-      const subStore = useStairSubElementSelectionStore.getState();
-      useRailingComponentSelectionStore.getState().clear(); // exit any railing component selection
       if (e.shiftKey) {
-        subStore.clear(); // ADR-358 — multi-select never enters a sub-element.
+        // ADR-358/715 — multi-select ΠΟΤΕ δεν μπαίνει σε drill-down (σκάλα/κιγκλίδωμα/Τμήμα):
+        // «πολλά στοιχεία» και «μέσα σε ένα στοιχείο» είναι αντίθετες προθέσεις.
+        exitSubElementSelections();
         manager.toggleBimEntity(hit.bimId);
+        return;
+      }
+      // ADR-715 — ΤΟ ΑΙΤΗΜΑ: κλικ στο ΚΟΝΤΟΣΤΥΛΟ επιλέγει **το Τμήμα**, όχι την κολώνα.
+      //
+      // Ο διαχωριστής είναι το `faceKey`: η θαμμένη ζώνη έχει δικές της, ρητά διευθυνσιοδοτήσιμες
+      // όψεις (`buried:i`, ADR-713 §3.1). Πάνω από τη στάθμη το κλικ δίνει `side:i` → κανονική
+      // επιλογή κολώνας, **byte-for-byte** η παλιά συμπεριφορά.
+      //
+      // ⚠️ ΓΙΑΤΙ ΕΔΩ ΔΕΝ ΙΣΧΥΕΙ ΤΟ POLYGON-MODE GATE ΤΗΣ ΣΚΑΛΑΣ (Giorgio 2026-07-23): εκείνο
+      // μπήκε γιατί το per-tread drill-down βάφει το ΙΔΙΟ μπλε με το per-face pick, οπότε εκτός
+      // «ΠΟΛΥΓΩΝΑ» έμοιαζε σαν να «διαρρέει» το Polygon Mode σε στοιχείο που ο χρήστης ήθελε
+      // ΟΛΟΚΛΗΡΟ. Το κοντόστυλο είναι το **αντίστροφο** ερώτημα: ο μηχανικός δεν θέλει «μία
+      // παρειά», θέλει **άλλο δομικό αντικείμενο με δική του εργασία και δικό του άρθρο** — και
+      // το ζήτησε ρητά ως κανονικό κλικ. Γι' αυτό φωτίζεται **ΟΛΗ** η περιμετρική ζώνη (όχι μία
+      // πλευρά): το σχήμα του φωτισμού λέει «Τμήμα», όχι «όψη».
+      //
+      // Η host κολώνα μένει επιλεγμένη ως **context** (mirror σκάλας): δίνει panel/ribbon
+      // περιεχόμενο, κάνει το Esc να βγάζει ένα επίπεδο (Τμήμα → κολώνα) και είναι αυτό που
+      // διαβάζει ο lifecycle guard. Άρα η κολώνα είναι ΠΑΝΤΑ προσβάσιμη — ακόμη και όταν είναι
+      // εξ ολοκλήρου θαμμένη και κάθε κλικ πέφτει σε `buried:i`.
+      //
+      // Fail-closed στο `bimType === 'column'`: σήμερα το `baseDropMm` είναι column-only
+      // (ADR-489 §6.1). Χωρίς αυτόν τον έλεγχο, ένα μελλοντικό στοιχείο με θαμμένη ζώνη θα
+      // έμπαινε στο store και ο writer (`UpdateColumnParamsCommand`) θα έκανε **σιωπηλό no-op».
+      if (hit.bimType === 'column' && isBuriedFaceKey(hit.faceKey)) {
+        // Καθάρισε τυχόν per-face επιλογή που έμεινε από προηγούμενο «ΠΟΛΥΓΩΝΑ»: και τα δύο
+        // ζωγραφίζουν μπλε overlay, οπότε συνυπάρχοντα θα διάβαζαν ως ΕΝΑ ασαφές highlight.
+        usePolygonMode3DStore.getState().clearFaces();
+        manager.setSelectedFaces([]);
+        if (!useSelection3DStore.getState().selectedBimIds.includes(hit.bimId)) {
+          manager.selectBimEntity(hit.bimId);
+        }
+        exitSubElementSelections(); // …και μόνο ΜΕΤΑ μπες στο Τμήμα (ένα drill-down τη φορά)
+        useBuriedPartSelectionStore.getState().selectPart(hit.bimId);
         return;
       }
       // ADR-358 Q19 «click-into» — Polygon-Mode-gated (Giorgio 2026-07-23): ΕΚΤΟΣ «ΠΟΛΥΓΩΝΑ» ένα
@@ -195,7 +242,7 @@ export function useBim3DPointerHandlers(
       // βάφει το ΙΔΙΟ μπλε με το per-face pick (`StairSubElementHighlighter`=`FaceSelectionHighlighter`
       // 0x2ea1ff), οπότε το να το επιτρέπαμε χωρίς πατημένο το κουμπί ΠΟΛΥΓΩΝΑ έδειχνε σαν να «διέρρεε»
       // το Polygon Mode. Μέσα στο «ΠΟΛΥΓΩΝΑ» το tread παραμένει επιλέξιμο μέσω του face branch παραπάνω.
-      subStore.clear();
+      exitSubElementSelections();
       manager.selectBimEntity(hit.bimId);
       return;
     }
@@ -208,8 +255,7 @@ export function useBim3DPointerHandlers(
       ? pickDxfEntityAcrossFloors(getDxfFloorScope(), camera, dom, e.clientX, e.clientY)?.entityId ?? null
       : null;
     if (dxfId) {
-      useStairSubElementSelectionStore.getState().clear(); // ADR-358 — DXF pick exits any stair sub-selection.
-      useRailingComponentSelectionStore.getState().clear(); // …and any railing component selection.
+      exitSubElementSelections(); // ADR-715 Φ2 — DXF pick βγάζει από κάθε drill-down BIM στοιχείου.
       // ADR-543 — only clear the BIM selection when it actually holds something. Calling
       // clearSelection() when already empty fires the universal bridge → replaceEntitySelection([])
       // which WIPES the accumulated DXF multi-selection on every click (blocked 3D multi-select).
@@ -227,9 +273,8 @@ export function useBim3DPointerHandlers(
       });
       return;
     }
-    // Empty space → clear both selections (+ any stair sub / railing component selection).
-    useStairSubElementSelectionStore.getState().clear();
-    useRailingComponentSelectionStore.getState().clear();
+    // Empty space → clear both selections (+ κάθε drill-down: σκάλα / κιγκλίδωμα / Τμήμα).
+    exitSubElementSelections();
     manager.selectBimEntity(null);
     SelectedEntitiesStore.clearByType('dxf-entity');
   }, [managerRef]);

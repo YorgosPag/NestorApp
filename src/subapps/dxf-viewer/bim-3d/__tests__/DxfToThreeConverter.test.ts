@@ -11,9 +11,10 @@
 import * as THREE from 'three';
 import {
   DxfToThreeConverter,
-  resolveEntityColor,
   appendEntitySegments,
 } from '../converters/DxfToThreeConverter';
+// N.7.1 split — the colour cascade moved out of the converter into its own module.
+import { resolveEntityColor } from '../converters/dxf-overlay-entity-color';
 import type { DxfEntityUnion, DxfLine, DxfCircle, DxfArc, DxfPolyline, DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { SceneLayer } from '../../types/entities';
 import { collectPostFxOverlayRoots } from '../scene/post-fx-overlay-pass';
@@ -288,6 +289,47 @@ describe('DxfToThreeConverter', () => {
     expect(second).toBeDefined();
     expect(second).not.toBe(first);
     expect(scene.children.filter((c: { name: string }) => c.name === 'dxf-wireframe')).toHaveLength(1);
+  });
+
+  // ─── ADR-399 Φάση Ε — single-floor storey elevation ────────────────────────
+  // The bug this closes: the single-floor path hardcoded Y=0, so an upper storey's plan
+  // rendered at ground level while its BIM geometry (ADR-448) already sat at the real FFL.
+
+  it('sync defaults to the ground plane (Y=0) when no storey elevation is supplied', () => {
+    converter.sync(makeScene([makeLine({ color: '#ffffff' })]));
+    const group = scene.children.find((c: { name: string }) => c.name === 'dxf-wireframe');
+    expect(group?.position.y).toBe(0);
+  });
+
+  it('sync seats the plan at floorElevationMm × 0.001 (same formula as syncMultiFloor)', () => {
+    converter.sync(makeScene([makeLine({ color: '#ffffff' })]), 3000);
+    const group = scene.children.find((c: { name: string }) => c.name === 'dxf-wireframe');
+    expect(group?.position.y).toBe(3);
+  });
+
+  it('sync seats a defined basement below the datum (negative elevation)', () => {
+    converter.sync(makeScene([makeLine({ color: '#ffffff' })]), -2800);
+    const group = scene.children.find((c: { name: string }) => c.name === 'dxf-wireframe');
+    expect(group?.position.y).toBeCloseTo(-2.8, 10);
+  });
+
+  // The idempotency guard (ADR-040) must treat the elevation as part of the sync identity —
+  // otherwise re-seating an UNCHANGED plan onto another storey would be skipped as "same input"
+  // and the plan would stay at the old height.
+  it('re-syncing the same scene at a NEW elevation rebuilds instead of being skipped', () => {
+    const dxf = makeScene([makeLine({ color: '#ffffff' })]);
+    converter.sync(dxf, 0);
+    converter.sync(dxf, 3000);
+    const group = scene.children.find((c: { name: string }) => c.name === 'dxf-wireframe');
+    expect(group?.position.y).toBe(3);
+  });
+
+  it('re-syncing the same scene at the SAME elevation keeps the existing group (idempotent)', () => {
+    const dxf = makeScene([makeLine({ color: '#ffffff' })]);
+    converter.sync(dxf, 3000);
+    const first = scene.children.find((c: { name: string }) => c.name === 'dxf-wireframe');
+    converter.sync(dxf, 3000);
+    expect(scene.children.find((c: { name: string }) => c.name === 'dxf-wireframe')).toBe(first);
   });
 
   it('entities with different colors → multiple LineSegments children', () => {

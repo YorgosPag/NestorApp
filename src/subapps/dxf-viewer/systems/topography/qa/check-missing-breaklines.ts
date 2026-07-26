@@ -18,10 +18,16 @@ import { TOPO_QA_CONFIG } from './topo-qa-config';
 import { edgeKey } from './topo-qa-topology';
 import { findSteepUnconstrainedEdges } from '../auto-breaklines/detect-feature-edges';
 
-/** WORLD midpoint of an edge (marker + zoom-to). */
-function edgeMidWorld(surface: TinSurface, a: number, b: number): { x: number; y: number } {
+/** WORLD midpoint of an edge (marker + zoom-to), with its mean elevation for the 3D marker. */
+function edgeMidWorld(surface: TinSurface, a: number, b: number): { x: number; y: number; z: number } {
   const pa = surface.positions[a]!; const pb = surface.positions[b]!;
-  return { x: (pa[0] + pb[0]) / 2 + surface.origin.x, y: (pa[1] + pb[1]) / 2 + surface.origin.y };
+  return {
+    x: (pa[0] + pb[0]) / 2 + surface.origin.x,
+    y: (pa[1] + pb[1]) / 2 + surface.origin.y,
+    // The edge is a straight TIN segment, so its midpoint's true elevation IS the mean of the
+    // two endpoints — no sampling needed (and none of the interpolation error one would add).
+    z: ((surface.elevations[a] ?? 0) + (surface.elevations[b] ?? 0)) / 2,
+  };
 }
 
 /** Steep UNCONSTRAINED edges as flags, steepest first (per-kind cap applied by the orchestrator). */
@@ -35,11 +41,13 @@ export function checkMissingBreaklines(
   return findSteepUnconstrainedEdges(surface, breaklines, origin, MISSING_BREAKLINE_ANGLE_DEG)
     .map(({ a, b, foldDeg }) => {
       const severity: TopoQaSeverity = foldDeg >= MISSING_BREAKLINE_HIGH_ANGLE_DEG ? 'medium' : 'low';
+      const mid = edgeMidWorld(surface, a, b);
       return {
         id: `missing-breakline:${edgeKey(a, b)}`,
         kind: 'missing-breakline' as const,
         severity,
-        at: edgeMidWorld(surface, a, b),
+        at: { x: mid.x, y: mid.y },
+        atZMm: mid.z,
         messageKey: 'topography.qa.flag.missingBreakline',
         messageParams: { angle: foldDeg.toFixed(0) },
       };

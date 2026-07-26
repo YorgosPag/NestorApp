@@ -387,19 +387,92 @@ export class DxfFirestoreService {
   }
 
   /**
-   * Fetch storagePath for a known fileId (direct by-ID lookup).
-   * Used by auto-save when fileId is injected but canonicalScenePath is missing.
-   * Avoids findExistingFileRecord which queries by filename and may return a
-   * different file with the same name → wrong canonicalScenePath written to Firestore.
+   * 🛡️ ADR-714 — floor-scoped FileRecord resolution for auto-save.
+   *
+   * ΤΟ ΣΩΣΤΟ ΕΡΩΤΗΜΑ: «ποιο αρχείο κάτοψης ανήκει σε ΑΥΤΟΝ τον όροφο;» — όχι «ποιο
+   * αρχείο λέγεται έτσι;». Το {@link findExistingFileRecord} ψάχνει με
+   * `companyId + originalFilename` και **αγνοεί εντελώς τον όροφο**: όταν το ίδιο DXF
+   * φορτωθεί σε δύο ορόφους (απολύτως νόμιμη πρακτική) υπάρχουν δύο FileRecords με το
+   * ΙΔΙΟ `originalFilename`, οπότε επιστρέφεται αυθαίρετα το ένα από τα δύο. Έτσι ο
+   * ένας όροφος αποκτούσε το αρχείο του άλλου και οι δύο κατέληγαν να γράφουν στο ίδιο
+   * `.scene.json` (περιστατικό 2026-07-26).
+   *
+   * Delegate στο υπάρχον SSoT `getFilesByEntity` (`services/file-record-queries.ts`) —
+   * καμία δεύτερη υλοποίηση query. Εκείνο ταξινομεί ήδη `createdAt` DESC, άρα το `[0]`
+   * είναι το πιο πρόσφατο FileRecord του ορόφου (ADR-351).
+   *
+   * @returns Το πιο πρόσφατο ενεργό floorplan FileRecord του ορόφου, ή null.
    */
-  static async getFileStoragePath(fileId: string): Promise<string | null> {
+  static async findFloorFloorplanFileRecord(
+    companyId: string,
+    floorId: string,
+  ): Promise<{ id: string; storagePath: string | null } | null> {
+    try {
+      const { getFilesByEntity } = await import('@/services/file-record-queries');
+      const records = await getFilesByEntity('floor', floorId, {
+        companyId,
+        category: 'floorplans',
+      });
+      const record = records[0];
+      if (!record) {
+        dxfLogger.debug('No floor-scoped floorplan FileRecord found', { floorId });
+        return null;
+      }
+      return { id: record.id, storagePath: record.storagePath ?? null };
+    } catch (error) {
+      dxfLogger.warn('Could not resolve floor-scoped floorplan FileRecord', {
+        floorId,
+        error: getErrorMessage(error),
+      });
+      return null;
+    }
+  }
+
+  /**
+   * 🛡️ ADR-714 — ένα by-ID read που απαντά ΚΑΙ «πού γράφω» ΚΑΙ «σε ποιον ανήκει».
+   *
+   * Το auto-save χρειάζεται και τα δύο πριν γράψει: το `storagePath` για να παραχθεί το
+   * `canonicalScenePath`, και το `entityType`/`entityId` για να επαληθευτεί ότι ο
+   * προορισμός ανήκει στον όροφο του {@link SceneSaveTicket}. Ένα getDoc, δύο
+   * απαντήσεις — αντί για δύο ξεχωριστά reads ανά save.
+   *
+   * Το σχήμα επιστροφής είναι σκόπιμα δομικά συμβατό με το `FloorScopedFileRecord`
+   * (`systems/levels/cross-floor-link.ts`), ώστε να τροφοδοτεί απευθείας το υπάρχον
+   * `isCrossFloorSceneLink` χωρίς adapter — ένας ορισμός του «σε ποιον όροφο ανήκει
+   * ένα αρχείο», όχι δύο.
+   */
+  static async getFileFloorScope(fileId: string): Promise<{
+    storagePath?: string;
+    entityType?: string;
+    entityId?: string;
+  } | null> {
     try {
       const { doc, getDoc } = await import('firebase/firestore');
       const snap = await getDoc(doc(db, COLLECTIONS.FILES, fileId));
       if (!snap.exists()) return null;
-      return (snap.data().storagePath as string) ?? null;
+      const data = snap.data();
+      return {
+        ...(typeof data.storagePath === 'string' ? { storagePath: data.storagePath } : {}),
+        ...(typeof data.entityType === 'string' ? { entityType: data.entityType } : {}),
+        ...(typeof data.entityId === 'string' ? { entityId: data.entityId } : {}),
+      };
     } catch {
       return null;
     }
+  }
+
+  /**
+   * Fetch storagePath for a known fileId (direct by-ID lookup).
+   * Used by auto-save when fileId is injected but canonicalScenePath is missing.
+   * Avoids findExistingFileRecord which queries by filename and may return a
+   * different file with the same name → wrong canonicalScenePath written to Firestore.
+   *
+   * Thin delegate σε {@link getFileFloorScope} (ADR-714) — ένας μόνο `getDoc` ορισμός
+   * στο αρχείο, ώστε ο κανόνας «πώς διαβάζεται ένα FileRecord by id» να μην διαφύγει
+   * σε δύο αντίγραφα.
+   */
+  static async getFileStoragePath(fileId: string): Promise<string | null> {
+    const scope = await DxfFirestoreService.getFileFloorScope(fileId);
+    return scope?.storagePath ?? null;
   }
 }

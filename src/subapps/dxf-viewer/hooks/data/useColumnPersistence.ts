@@ -30,6 +30,7 @@ import { recordColumnChange } from '../../bim/columns/column-audit-client';
 import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
 import { columnBoqEntity } from './column-boq-feed';
 import { buildColumnBaseDropMap } from './column-continuity-boq-source';
+import { buildColumnGradeMap } from './column-grade-boq-source';
 import { isColumn, mergeColumnDocsIntoScene } from './column-persistence-helpers';
 import { createBimEntityPersistenceHook } from './create-bim-entity-persistence-hook';
 import type {
@@ -85,9 +86,12 @@ function feedColumnBoq(
   const levelId = scope.levelManager.currentLevelId;
   const scene = levelId ? scope.levelManager.getLevelScene(levelId) ?? null : null;
   const baseDropMap = buildColumnBaseDropMap(scene?.entities ?? []);
+  // ADR-713 — η στάθμη τελειωμένου εδάφους ανά κολώνα: πάνω της επίχρισμα, κάτω της
+  // στεγανωτική επάλειψη (δικό της άρθρο m²). Ίδιο on-demand σχήμα με τον χάρτη έδρασης.
+  const gradeMap = buildColumnGradeMap(scene?.entities ?? []);
   void bimToBoqBridge.upsertBoqItemForBim(
     'column',
-    columnBoqEntity(entity, scene, baseDropMap),
+    columnBoqEntity(entity, scene, baseDropMap, gradeMap),
     {
       companyId: scope.companyId,
       projectId: scope.projectId,

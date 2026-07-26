@@ -34,6 +34,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { useFloorsByBuilding } from '@/components/properties/shared/useFloorsByBuilding';
+// ADR-713 — το building doc (στάθμη τελειωμένου εδάφους) για δημοσίευση στον store.
+import { useBuildingById } from './data/useBuildingById';
 import { EventBus, type DrawingEventType } from '../systems/events/EventBus';
 import { DxfFirestoreService } from '../services/dxf-firestore.service';
 import { useFoundationLevelStore } from '../state/foundation-level-store';
@@ -85,6 +87,10 @@ export function useFoundationLevelSync(props: { levelManager: FoundationSyncLeve
     [levels, currentLevelId],
   );
   const { floors } = useFloorsByBuilding(buildingId, !!buildingId);
+  // ADR-713 — το building doc κρατά τη στάθμη τελειωμένου εδάφους (`gradeDropBelowBase`).
+  // Ο owner το διαβάζει ΜΙΑ φορά και το δημοσιεύει, ώστε ο non-React επιμετρητικός
+  // καταναλωτής να μη χρειάζεται δικό του subscription (ίδιο μοτίβο με το ADR-712 flag).
+  const { building } = useBuildingById(buildingId, !!buildingId);
 
   const projectId = useMemo(
     () => levels.find((l) => l.id === currentLevelId)?.projectId ?? null,
@@ -196,12 +202,15 @@ export function useFoundationLevelSync(props: { levelManager: FoundationSyncLeve
       target !== null
       && activeLevelBearsOnFoundation(floors, target.floorElevationMm, activeFloorElevationMm),
     );
+    // ADR-713 — ίδιος λόγος, άλλη τιμή: μόνο εδώ διαβάζεται το building doc, ενώ η
+    // στάθμη τελειωμένου εδάφους χρειάζεται στη ΜΗ-React διαδρομή επιμέτρησης. METRES → mm.
+    store.setBuildingGradeDropBelowBaseMm((building?.gradeDropBelowBase ?? 0) * 1000);
     if (!target) {
       store.setFoundationLevel(null, [], activeFloorElevationMm);
       return;
     }
     store.publishFoundationLevel(target, baseEntities, modelFootings, activeFloorElevationMm);
-  }, [target, baseEntities, modelFootings, activeFloorElevationMm, floors]);
+  }, [target, baseEntities, modelFootings, activeFloorElevationMm, floors, building?.gradeDropBelowBase]);
 
   // Καθαρισμός store στο unmount (single-level / αλλαγή viewer).
   useEffect(() => () => useFoundationLevelStore.getState().clear(), []);

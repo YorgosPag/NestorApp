@@ -88,6 +88,14 @@ interface DialogContentProps extends
   hideCloseButton?: boolean;
 }
 
+/**
+ * ⚠️ A panel that must stay open WHILE the user works on what is behind it (a report whose rows
+ * drive the canvas, an inspector beside a drawing) is **not a dialog** — do not try to make this
+ * one behave like one. Even with `modal={false}` a Radix dialog dismisses on the first outside
+ * click, i.e. the moment you touch the very thing it is talking about. Use `FloatingPanel`
+ * (`@/components/ui/floating`): draggable, no backdrop, no outside-click dismissal.
+ * Precedents: `ClashReportPanel` (ADR-435), the topography QA panel (ADR-650 M5α.2).
+ */
 const DialogContent = React.forwardRef<
   React.ComponentRef<typeof DialogPrimitive.Content>,
   DialogContentProps

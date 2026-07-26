@@ -35,6 +35,8 @@ export interface SceneSyncSideEffects {
   readonly faceHoverHighlighter: FaceSelectionHighlighter;
   /** ADR-358 Q19 — re-attach the per-tread/riser overlay after the mesh rebuild. */
   readonly stairSubElementHighlighter: StairSubElementHighlighter;
+  /** ADR-715 — re-attach the «Τμήμα» (κοντόστυλο) overlay after the mesh rebuild. */
+  readonly buriedPartHighlighter: FaceSelectionHighlighter;
   readonly ssaoModulator: SSAOModulator;
   readonly shadowModulator: ShadowModulator;
   readonly camera: THREE.Camera;
@@ -61,12 +63,16 @@ export function buildSceneSyncSideEffects(
   faceHighlighter: SceneSyncSideEffects['faceHighlighter'],
   faceHoverHighlighter: SceneSyncSideEffects['faceHoverHighlighter'],
   stairSubElementHighlighter: SceneSyncSideEffects['stairSubElementHighlighter'],
+  buriedPartHighlighter: SceneSyncSideEffects['buriedPartHighlighter'],
   ssaoModulator: SceneSyncSideEffects['ssaoModulator'],
   shadowModulator: SceneSyncSideEffects['shadowModulator'],
   viewport: { readonly camera: THREE.Camera },
   markDirty: () => void,
 ): SceneSyncSideEffects {
-  return { faceHighlighter, faceHoverHighlighter, stairSubElementHighlighter, ssaoModulator, shadowModulator, camera: viewport.camera, markDirty };
+  return {
+    faceHighlighter, faceHoverHighlighter, stairSubElementHighlighter, buriedPartHighlighter,
+    ssaoModulator, shadowModulator, camera: viewport.camera, markDirty,
+  };
 }
 
 /** Assemble the DXF-overlay deps bundle (converter + path-tracer + section + viewport). */
@@ -79,11 +85,19 @@ export function buildSyncDxfOverlayDeps(
   return { dxfConverter, pathTracerRenderer, sectionController, viewport };
 }
 
-/** ADR-539 / ADR-358 Q19 — re-attach both per-face overlays + the stair sub-element overlay after rebuild. */
+/**
+ * ADR-539 / ADR-358 Q19 / ADR-715 — re-attach ΚΑΘΕ overlay μετά το rebuild.
+ *
+ * ⚠️ Τα overlays είναι **παιδιά** των target meshes, οπότε το rebuild της σκηνής τα σκοτώνει
+ * μαζί με τους γονείς τους. Κάθε νέο overlay-based highlighter **πρέπει** να προστεθεί εδώ:
+ * ξεχασμένο `refresh()` δεν σπάει τίποτα άμεσα — απλώς το highlight **εξαφανίζεται** στο
+ * επόμενο sync (π.χ. μόλις αλλάξει ο ορατός όροφος), που διαβάζεται ως «η επιλογή χάθηκε».
+ */
 function refreshFaceOverlays(fx: SceneSyncSideEffects): void {
   fx.faceHighlighter.refresh();
   fx.faceHoverHighlighter.refresh();
   fx.stairSubElementHighlighter.refresh();
+  fx.buriedPartHighlighter.refresh();
 }
 
 /** Single-floor BIM sync + ADR-366 §B.5 warm-up/shadow/dirty bookkeeping. */
@@ -146,14 +160,15 @@ export interface DxfOverlayFitState {
   readonly markDone: () => void;
 }
 
-/** Single-floor DXF wireframe overlay sync + dirty flag. */
+/** Single-floor DXF wireframe overlay sync (seated at the storey FFL, ADR-399 Φάση Ε) + dirty flag. */
 export function syncDxfOverlay(
   deps: SyncDxfOverlayDeps,
   dxfScene: DxfScene | null,
+  floorElevationMm: number,
   fit: DxfOverlayFitState,
   markDirty: () => void,
 ): void {
-  syncDxfOverlayIntoScene(deps, dxfScene, fit.done, fit.markDone);
+  syncDxfOverlayIntoScene(deps, dxfScene, floorElevationMm, fit.done, fit.markDone);
   markDirty();
 }
 

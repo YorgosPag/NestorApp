@@ -39,6 +39,7 @@ import {
 import {
   DEFAULT_BUILDING_FOUNDATION_DEPTH_M,
   DEFAULT_BUILDING_FOUNDATION_DEPTH_AUTO,
+  DEFAULT_BUILDING_GRADE_DROP_BELOW_BASE_M,
   DEFAULT_BUILDING_STAIR_PENTHOUSE_HEIGHT_M,
 } from '@/types/building/elevation.schemas';
 // ADR-489 §6.2 — δυναμικό βάθος θεμελίωσης (shared engine· seed στο bootstrap).
@@ -89,6 +90,11 @@ export function BuildingVerticalSetupForm({
   const effectiveFoundationDepthM = foundationDepthIsAuto
     ? derivedFoundationDepthM
     : parseFloat(foundationDepth) || DEFAULT_BUILDING_FOUNDATION_DEPTH_M;
+  // ADR-713 — στάθμη τελειωμένου εδάφους κάτω από το FFL (μέτρα). Default 0 = έδαφος στο
+  // FFL· ο μηχανικός το ανεβάζει όταν το ισόγειο πατά ψηλότερα από το περιβάλλον έδαφος.
+  const [gradeDropBelowBase, setGradeDropBelowBase] = useState(
+    DEFAULT_BUILDING_GRADE_DROP_BELOW_BASE_M.toFixed(2),
+  );
   const [hasStairPenthouse, setHasStairPenthouse] = useState(true);
   const [stairPenthouseHeight, setStairPenthouseHeight] = useState(DEFAULT_BUILDING_STAIR_PENTHOUSE_HEIGHT_M.toFixed(2));
   const [busy, setBusy] = useState(false);
@@ -162,6 +168,8 @@ export function BuildingVerticalSetupForm({
           foundationDepth: hasFoundation ? effectiveFoundationDepthM : 0,
           // ADR-489 §6.2 — διατήρησε αν το βάθος είναι Auto (παράγεται) ή χειροκίνητη υπέρβαση.
           foundationDepthAuto: foundationDepthIsAuto,
+          // ADR-713 — όριο ΟΨΗΣ, ανεξάρτητο από το ογκομετρικό `foundationDepth`.
+          gradeDropBelowBase: Math.max(0, parseFloat(gradeDropBelowBase) || 0),
           hasStairPenthouse,
           stairPenthouseHeight: hasStairPenthouse ? parseFloat(stairPenthouseHeight) || 0 : 0,
         },
@@ -182,7 +190,7 @@ export function BuildingVerticalSetupForm({
     } finally {
       setBusy(false);
     }
-  }, [newSpecs, skippedCount, buildingId, projectId, hasFoundation, effectiveFoundationDepthM, foundationDepthIsAuto, hasStairPenthouse, stairPenthouseHeight, t, success, notifyError, onComplete]);
+  }, [newSpecs, skippedCount, buildingId, projectId, hasFoundation, effectiveFoundationDepthM, foundationDepthIsAuto, gradeDropBelowBase, hasStairPenthouse, stairPenthouseHeight, t, success, notifyError, onComplete]);
 
   return (
     <section className="flex flex-col gap-3 rounded-lg border border-border bg-muted/30 p-3" role="group">
@@ -246,6 +254,27 @@ export function BuildingVerticalSetupForm({
             )}
           </fieldset>
         )}
+        {/* ADR-713 — όριο ΟΨΗΣ (πού σταματά επένδυση/σοβάς και αρχίζει η στεγάνωση).
+            Σκόπιμα ΔΕΝ κρύβεται πίσω από το `hasFoundation`: η στάθμη εδάφους υπάρχει
+            ανεξάρτητα από το αν το κτίριο έχει θεμελίωση datum. */}
+        <fieldset className="flex flex-col gap-1">
+          <label htmlFor="vs-grade-drop" className={cn('text-xs font-medium', colors.text.muted)}>
+            {t('tabs.floors.quickSetup.gradeDropBelowBase')}
+          </label>
+          <Input
+            id="vs-grade-drop"
+            type="number"
+            step="0.01"
+            min="0"
+            value={gradeDropBelowBase}
+            onChange={(e) => setGradeDropBelowBase(e.target.value)}
+            className="h-9 w-28"
+            disabled={busy}
+          />
+          <span className={cn('text-[10px]', colors.text.muted)}>
+            {t('tabs.floors.quickSetup.gradeDropBelowBaseHint')}
+          </span>
+        </fieldset>
         <label htmlFor="vs-has-stair-penthouse" className="flex items-center gap-2 text-xs font-medium cursor-pointer">
           <Checkbox id="vs-has-stair-penthouse" checked={hasStairPenthouse} onCheckedChange={(v) => setHasStairPenthouse(v === true)} disabled={busy} />
           {t('tabs.floors.quickSetup.hasStairPenthouse')}

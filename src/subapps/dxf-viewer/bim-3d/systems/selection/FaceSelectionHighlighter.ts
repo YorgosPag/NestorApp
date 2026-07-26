@@ -18,10 +18,13 @@
  */
 
 import * as THREE from 'three';
+// N.0.2 — το lookup του faced mesh + η ανάγνωση της αρίθμησης όψεων μοιράζονται πλέον με την
+// επιλογή Τμήματος (ADR-715), οπότε ζουν σε κοινό SSoT αντί για private methods εδώ.
+import { findFacedMesh, readMeshFaceKeys } from './faced-mesh-lookup';
 
 /** Vertex range (non-indexed) του group που αντιστοιχεί στο faceKey, ή null. */
 function faceGroupRange(mesh: THREE.Mesh, faceKey: string): { start: number; count: number } | null {
-  const faceKeys = mesh.userData['faceKeyByMaterialIndex'] as readonly string[] | undefined;
+  const faceKeys = readMeshFaceKeys(mesh);
   if (!faceKeys) return null;
   const materialIndex = faceKeys.indexOf(faceKey);
   if (materialIndex < 0) return null;
@@ -106,7 +109,7 @@ export class FaceSelectionHighlighter {
 
   /** Χτίζει ΕΝΑ overlay sub-mesh για μία όψη (slice του group range), ή null αν δεν βρεθεί. */
   private buildOverlay(target: FaceTarget): THREE.Mesh | null {
-    const mesh = this.findFacedMesh(target.bimId);
+    const mesh = findFacedMesh(this.bimGroup, target.bimId);
     if (!mesh) return null;
     const range = faceGroupRange(mesh, target.faceKey);
     if (!range) return null;
@@ -117,16 +120,6 @@ export class FaceSelectionHighlighter {
     overlay.renderOrder = 999;
     mesh.add(overlay); // inherit the target mesh transform (position.y etc.)
     return overlay;
-  }
-
-  private findFacedMesh(bimId: string): THREE.Mesh | null {
-    let found: THREE.Mesh | null = null;
-    this.bimGroup.traverse((o) => {
-      if (found) return;
-      const m = o as THREE.Mesh;
-      if (m.isMesh && o.userData['bimId'] === bimId && o.userData['faceKeyByMaterialIndex']) found = m;
-    });
-    return found;
   }
 
   dispose(): void {

@@ -128,11 +128,13 @@ SSoT requirement: "use the 2D code in 3D") — there is no second shape definiti
   type chip, severity dot, penetration/gap mm) + severity breakdown + scanned/tested footer; Close →
   `clashReportStore.reset()`. Mounted in `CanvasLayerStack`. Row `key` is index-suffixed (a `Clash.id`
   can repeat — see §6 dedup).
-- **Click → zoom to clash** — `systems/coordination/clash-focus-bus.ts` (pure pub/sub). The panel
-  decides by active view: 3D → `requestClashFocus` → `ClashMarkers3DOverlay` → `viewport.frameBounds`
-  (±0.6 m box); 2D → reuses the `canvas-fit-to-view-selected` EventBus SSoT, with the focus box sized
-  in **metres** (×`toCanvas`) so it is scale-correct for mm OR metre units (a fixed canvas-unit pad
-  zoomed a metre-unit drawing out to nothing).
+- **Click → zoom to clash** — `systems/coordination/view-focus-bus.ts` (pure pub/sub; **generalised
+  from the former `clash-focus-bus` in ADR-650 M5α.2**, see changelog). The panel decides by active
+  view: 3D → `requestViewFocus({point: clashPointToWorld(…), halfExtentM: 0.6})` → `useViewFocus3D`
+  → `viewport.frameBounds`; 2D → reuses the `canvas-fit-to-view-selected` EventBus SSoT, with the
+  focus box sized in **metres** (×`toCanvas`) so it is scale-correct for mm OR metre units (a fixed
+  canvas-unit pad zoomed a metre-unit drawing out to nothing). Both views now read the SAME
+  `CLASH_FOCUS_HALF_EXTENT_M` constant, so they cannot drift apart.
 
 ## 6. Tests
 
@@ -187,3 +189,31 @@ offset for 3D markers (v1 = floor-relative) · element highlight on clash select
      twice is defended against by the dedup, but the source is worth a separate look).
   - 27 coordination jest green (19 detection + 5 marker-math + 3 severity). Coordination Phase 1
     complete. Commit pending (Giorgio).
+
+---
+
+- **v-pointer (2026-07-27) — the clash overlay's two general behaviours were extracted (ADR-650 M5α.2).**
+
+  The topography-QA report (ADR-650) became the **second** producer of «frame the camera on this
+  point» and the second consumer of «project these world points and keep doing it while the camera
+  moves». Written as a mirror of the clash overlay, it reproduced both almost verbatim — `jscpd
+  --diff` flagged 2 clone blocks (12 + 18 lines) **inside the same commit** (N.18). So both moved
+  out of `ClashMarkers3DOverlay`; nothing about clash detection changed.
+
+  - `clash-focus-bus.ts` → **`view-focus-bus.ts`** (file deleted, callers updated). The payload is
+    now **three-world metres** + `halfExtentM`, not plan-space metres. That change is load-bearing,
+    not cosmetic: the QA flags live in ΕΓΣΑ canonical mm and additionally pass through the geo
+    projector + vertical datum. A shared bus carrying «some domain's coordinates» would have made
+    the single subscriber apply the CLASH transform to BOTH producers — silently framing the camera
+    on empty space for the other. Each producer now converts via its own pure, THREE-free mapping
+    (`clashPointToWorld` / `topoQaFlagToWorld`), so the panel still imports no viewport.
+  - `useViewFocus3D` (`bim-3d/viewport/`) — the sole subscriber, mounted by
+    `BimViewport3DProjectedOverlays`. The camera framing was never clash-specific.
+  - `useCameraProjectedMarkers` (`bim-3d/coordination/`) — the camera projection + the
+    LOW-priority `UnifiedFrameScheduler` camera-signature tick, shared by both marker overlays.
+    Two copies of an ortho/perspective zoom comparison is exactly the twin that rots apart silently.
+  - `clashPointToWorld` now delegates the axis swap to the new THREE-free `plan-to-world-math`
+    (the convention `(x, elev, −north)` had two copies: here and `coordinate-transforms`).
+
+  **Behaviour unchanged** — the 5 `clash-marker-math` tests stay green as written, and the ±0.6 m
+  focus box is now one constant shared by the 2D and 3D paths instead of two that happened to match.

@@ -161,6 +161,17 @@ slab persistence serialize path (αν whitelist).
 
 ## 7. Changelog
 
+- **2026-07-26 (ADR-713 — νέο `FaceKey` `buried:${i}` + οριζόντιο σπάσιμο prism)** — Η θαμμένη ζώνη κολώνας
+  (κάτω από τη στάθμη εδάφους) απέκτησε **δικές της** υπο-όψεις. Το `buildFacedPrism` δέχεται προαιρετικό
+  `buriedDepthM` → παρεμβάλλει ring στη στάθμη και κάθε περιμετρική πλευρά δίνει `side:i` (πάνω) +
+  `buried:i` (κάτω)· **χωρίς την παράμετρο τίποτα δεν αλλάζει** (ίδια αρίθμηση `2+i`, byte-for-byte για
+  slab/foundation/beam/roof). ⚠️ **Γιατί ξεχωριστό κλειδί και όχι δεύτερο `side:i`:** οι καταναλωτές
+  διευθυνσιοδοτούν όψεις **με το κλειδί** — `FaceSelectionHighlighter.faceGroupRange` κάνει `indexOf`
+  (πρώτο match) και το `export-manifest.buildMaterialsByFace` γράφει `out[faceKey]`, οπότε διπλό κλειδί
+  σημαίνει λάθος highlight και **σιωπηλή απώλεια υλικού** στο C4D round-trip (ADR-678). ⚠️ Ο caller ΠΡΕΠΕΙ
+  να δηλώνει κάθε `buried:i` **ρητά** — ακόμη και ως κενό `{}` — γιατί ο cascade `appearance[faceKey] ??
+  appearance['*']` θα έριχνε ένα απόν κλειδί πίσω στη **βαφή της όψης**. Βλ. `ADR-713`.
+
 - **2026-07-23 (Φ7 — STAIR SUB-ELEMENT FULL-APPEARANCE PAINT, Revit «Paint»/C4D parity, IMPLEMENTED UNCOMMITTED)** —
   Bug report Giorgio (3ο iteration): οι υποενότητες σκάλας ΕΠΙΛΕΓΟΝΤΑΙ (Φ6) αλλά το **drag-drop / swatch
   χρώματος/υλικού/υφής ΔΕΝ τις άλλαζε**. Ρίζα: η σκάλα έχει **δικό της, περιορισμένο** μοντέλο υλικών —

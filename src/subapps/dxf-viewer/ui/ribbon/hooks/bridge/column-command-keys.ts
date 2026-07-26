@@ -11,6 +11,7 @@ import type { ColumnKind, ColumnParams } from '../../../../bim/types/column-type
 import { resolveColumnReinforcementSection } from '../../../../bim/structural/reinforcement/column-section-outline';
 import { CROSS_TIE_PATTERN_ORDER } from '../../../../bim/structural/reinforcement/column-reinforcement-types';
 import type { FinishParamField } from './finish-param';
+import type { BuriedWaterproofingField } from './buried-waterproofing-param'; // ADR-715
 import { makeKeySetGuard } from './make-key-set-guard';
 
 export const COLUMN_RIBBON_KEYS = {
@@ -285,6 +286,38 @@ export const COLUMN_FINISH_KEY_TO_FIELD: Readonly<Record<string, FinishParamFiel
 };
 
 export const isColumnFinishKey = makeKeySetGuard(Object.keys(COLUMN_FINISH_KEY_TO_FIELD));
+
+// ─── ADR-715 — στεγάνωση θαμμένης ζώνης («Κοντόστυλο») per-element ─────────────
+
+/**
+ * Command keys για τα 2 πεδία στεγάνωσης του Τμήματος (διακόπτης + υλικό).
+ *
+ * Ο **αδελφός** των `COLUMN_FINISH_KEYS`, για την άλλη πλευρά του ίδιου ορίου: πάνω από τη
+ * στάθμη εδάφους σοβάς/επένδυση, κάτω της στεγανωτική επάλειψη — **ποτέ και τα δύο** (ADR-713).
+ */
+export const COLUMN_BURIED_KEYS = {
+  enabled: 'column.params.buriedWaterproofing.enabled',
+  materialId: 'column.params.buriedWaterproofing.materialId',
+} as const;
+
+/** commandKey → πεδίο του `BuriedWaterproofingSpec` (καταναλώνεται από buried-waterproofing-param). */
+export const COLUMN_BURIED_KEY_TO_FIELD: Readonly<Record<string, BuriedWaterproofingField>> = {
+  [COLUMN_BURIED_KEYS.enabled]: 'enabled',
+  [COLUMN_BURIED_KEYS.materialId]: 'materialId',
+};
+
+export const isColumnBuriedKey = makeKeySetGuard(Object.keys(COLUMN_BURIED_KEY_TO_FIELD));
+
+/**
+ * ADR-715 §3.1 — read-only readout «πόσες θαμμένες όψεις έχουν χειροκίνητη βαφή που ΔΕΝ
+ * επιμετράται». Δεν είναι πεδίο: είναι η **ρητή δήλωση της απόκλισης** που απαιτεί το ADR-715
+ * (το Revit αφήνει την ίδια απόκλιση σιωπηλή μεταξύ «Paint» και type material).
+ */
+export const COLUMN_BURIED_READOUT_KEYS = {
+  paintDivergence: 'column.buried.readout.paintDivergence',
+} as const;
+
+export const isColumnBuriedReadoutKey = makeKeySetGuard(Object.values(COLUMN_BURIED_READOUT_KEYS));
 
 // ─── ADR-456 Slice 2 — δομοστατικά / οπλισμός (reinforcement) ──────────────────
 

@@ -88,6 +88,22 @@ const MATERIAL_MAPPING: Readonly<Record<string, MaterialAtoeMapping>> = {
   'mat-mineral-wool':  { materialId: 'mat-mineral-wool',  categoryCode: 'OIK-10.06', unit: 'm2', quantityKind: 'area', titleEL: 'Θερμομόνωση πετροβάμβακα (BIM layer)' },
   'mat-vapor-barrier': { materialId: 'mat-vapor-barrier', categoryCode: 'OIK-10.10', unit: 'm2', quantityKind: 'area', titleEL: 'Φράγμα υδρατμών (BIM layer)' },
 
+  // ADR-713 — ΣΤΕΓΑΝΩΣΗ ΘΑΜΜΕΝΩΝ ΕΠΙΦΑΝΕΙΩΝ (area). Τα υλικά της θαμμένης ζώνης δομικών
+  // στοιχείων: ό,τι έρχεται σε επαφή με χώμα στεγανώνεται, δεν επενδύεται και δεν σοβατίζεται.
+  // Χωριστό άρθρο ανά τεχνική — το ΝΕΤ ΟΙΚ τα τιμολογεί χωριστά (επάλειψη ≠ μεμβράνη).
+  'mat-waterproof-bitumen':  { materialId: 'mat-waterproof-bitumen',  categoryCode: 'OIK-10.20', unit: 'm2', quantityKind: 'area', titleEL: 'Στεγανωτική ασφαλτική επάλειψη (BIM layer)' },
+  'mat-waterproof-cementitious': { materialId: 'mat-waterproof-cementitious', categoryCode: 'OIK-10.21', unit: 'm2', quantityKind: 'area', titleEL: 'Στεγανωτικό τσιμεντοειδές επάλειψης (BIM layer)' },
+  'mat-waterproof-membrane': { materialId: 'mat-waterproof-membrane', categoryCode: 'OIK-10.22', unit: 'm2', quantityKind: 'area', titleEL: 'Στεγανωτική μεμβράνη / ασφαλτόπανο (BIM layer)' },
+  // ADR-714 — επέκταση σε 8 τεχνικές. ΚΑΘΕ μία παίρνει ΔΙΚΟ ΤΗΣ άρθρο: στο ελληνικό τιμολόγιο
+  // η τιμή ανά m² διαφέρει ουσιωδώς (ψυχρή ασφαλτική ≠ πολυουρεθανική ≠ μπεντονιτική), οπότε
+  // κοινό άρθρο θα έδινε λάθος προϋπολογισμό — σφάλμα ΤΙΜΗΣ, όχι παρουσίασης.
+  // ⚠️ Οι κωδικοί 10.20/21/22 ΔΕΝ αλλάζουν: υπάρχοντα έργα έχουν ήδη γραμμές πάνω τους.
+  'mat-waterproof-bitumen-emulsion':  { materialId: 'mat-waterproof-bitumen-emulsion',  categoryCode: 'OIK-10.23', unit: 'm2', quantityKind: 'area', titleEL: 'Ελαστομερές ασφαλτικό γαλάκτωμα δύο συστατικών (BIM layer)' },
+  'mat-waterproof-cementitious-flex': { materialId: 'mat-waterproof-cementitious-flex', categoryCode: 'OIK-10.24', unit: 'm2', quantityKind: 'area', titleEL: 'Ελαστικό τσιμεντοειδές δύο συστατικών (BIM layer)' },
+  'mat-waterproof-crystalline':       { materialId: 'mat-waterproof-crystalline',       categoryCode: 'OIK-10.25', unit: 'm2', quantityKind: 'area', titleEL: 'Κρυσταλλικό στεγανωτικό επάλειψης (BIM layer)' },
+  'mat-waterproof-polyurethane':      { materialId: 'mat-waterproof-polyurethane',      categoryCode: 'OIK-10.26', unit: 'm2', quantityKind: 'area', titleEL: 'Πολυουρεθανική στεγανωτική επάλειψη (BIM layer)' },
+  'mat-waterproof-bentonite':         { materialId: 'mat-waterproof-bentonite',         categoryCode: 'OIK-10.27', unit: 'm2', quantityKind: 'area', titleEL: 'Μπεντονιτική στεγανωτική μεμβράνη (BIM layer)' },
+
   // ΟΙΚ-12 Ειδικές κατασκευές (area)
   'mat-aluminum-cladding': { materialId: 'mat-aluminum-cladding', categoryCode: 'OIK-12.10', unit: 'm2', quantityKind: 'area', titleEL: 'Επένδυση αλουμινίου (BIM layer)' },
 };

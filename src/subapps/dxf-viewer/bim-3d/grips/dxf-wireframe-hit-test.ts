@@ -2,8 +2,9 @@
  * dxf-wireframe-hit-test.ts — pick a RAW DXF entity under the cursor in the 3D
  * viewport (ADR-537). The DXF wireframe is batched into per-colour `THREE.LineSegments`
  * with NO per-entity `userData` → it is not raycastable per entity. Instead we project
- * the cursor onto the DXF floor plane (Y=0, where `DxfToThreeConverter` lays the mm
- * wireframe) and run a PLAN-SPACE proximity test over `dxfScene.entities`, reusing the
+ * the cursor onto the DXF floor plane (the storey elevation at which `DxfToThreeConverter`
+ * lays the mm wireframe — see `dxf-3d-floor-scope`, the shared render+pick SSoT; ADR-399
+ * Φάση Ε) and run a PLAN-SPACE proximity test over `dxfScene.entities`, reusing the
  * 2D distance SSoT (`pointToLineDistance` / `pointToArcDistance`). Nearest-within-
  * tolerance wins; the tolerance is the cursor pick radius (px) converted to plan-mm at
  * the hit depth via `getPixelWorldSize` (so it scales with the 3D zoom).

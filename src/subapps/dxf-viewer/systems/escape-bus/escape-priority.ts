@@ -186,6 +186,23 @@ export const ESC_PRIORITY = {
   STAIR_SUB_EXIT: 415,
 
   /**
+   * P414 — «Τμήμα» (κοντόστυλο) drill-in active (ADR-715, Revit Parts).
+   *
+   * ESC βγαίνει από το επιλεγμένο Τμήμα πίσω στην ΟΛΟΚΛΗΡΗ κολώνα — ίδια «exit one level»
+   * σημασιολογία με το {@link STAIR_SUB_EXIT}, και για τον ίδιο λόγο **πάνω από το 400**: το
+   * Τμήμα συνυπάρχει ΠΑΝΤΑ με την host κολώνα επιλεγμένη (ο pointer handler την επιλέγει ως
+   * context· ο lifecycle guard καθαρίζει το Τμήμα μόλις πάψει να είναι), άρα ο σύνθετος
+   * αποεπιλογέας στο {@link DRAFT_POLYGON} (400) θα σκίαζε αυτό το slot στο πρώτο πάτημα.
+   *
+   * ⚠️ Ξεχωριστό slot και όχι επαναχρησιμοποίηση του 415: τα δύο drill-downs είναι αμοιβαία
+   * αποκλειόμενα (`exitSubElementSelections`), οπότε η σχετική τους σειρά δεν παίζει ρόλο
+   * σήμερα — αλλά **δύο consumers στο ΙΔΙΟ priority** είναι ακριβώς το σχήμα που κάνει τη
+   * σειρά εκτέλεσης να εξαρτάται από τη σειρά εγγραφής (mount order), δηλαδή μη-ντετερμινιστική.
+   * Το ADR-364 έχει ήδη πληρώσει αυτό το μάθημα με τον ungated `focusClear`.
+   */
+  BURIED_PART_EXIT: 414,
+
+  /**
    * P410 — 3D selection non-empty (ADR-402 / ADR-364 §10.13).
    *
    * Last rung of the 3D ladder: clears `Selection3DStore`, which cascades to the

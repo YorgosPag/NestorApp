@@ -1,0 +1,19 @@
+{
+  "_comment": "ADR-714 — Object Versioning safety net για τα .scene.json blobs. Το bucket ήταν Suspended, γι' αυτό το περιστατικό της 2026-07-26 δεν είχε τίποτα να ανακτηθεί. Ισοδύναμο του Revit .0001.rvt backup / Figma version history. Εφαρμογή: gsutil versioning set on gs://<bucket> && gsutil lifecycle set scripts/storage-lifecycle-30d.json gs://<bucket>",
+  "rule": [
+    {
+      "action": { "type": "Delete" },
+      "condition": {
+        "daysSinceNoncurrentTime": 30,
+        "isLive": false
+      }
+    },
+    {
+      "action": { "type": "Delete" },
+      "condition": {
+        "numNewerVersions": 50,
+        "isLive": false
+      }
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 # ADR-650 — Τοπογραφικές Αποτυπώσεις & Ισοϋψείς Γραμμές (Έρευνα Αγοράς + Αρχιτεκτονικό Blueprint)
 
-- **Status**: 🟡 IN PROGRESS — **M1 IMPLEMENTED** (πυρήνας σημεία→CDT/TIN→ισοϋψείς· v4) · **M2 IMPLEMENTED** (μέρος Α import wizard· v5 — μέρος Β breakline picking· v6) · **M4 IMPLEMENTED** (3Δ όψη εδάφους: μοναδικό derived TIN → `BufferGeometry` mesh + hypsometric· v7) · **M6 IMPLEMENTED** (όγκοι cut/fill: prisms + daylight split + στάθμη/επιφάνεια/όριο + cross-check + 3Δ cut/fill style· v8, §12.4) · **M7 IMPLEMENTED** (ελληνικό export «ένα κουμπί → φάκελος»: πίνακες στο σχέδιο + ZIP με DXF/PDF/CSV/XLSX + auto tolerance-check §10· v9, §12.5) · **M3 IMPLEMENTED** (ισοϋψείς ακριβείς↔όμορφες + LOD· v10) · **M5α IMPLEMENTED** (AI «καμπανάκι» = deterministic QA rules engine + inline flags, χωρίς LLM· v11) · **M5β IMPLEMENTED** («μίλα στο σχέδιο» = NL editing με LLM tool-calling πάνω στα υπάρχοντα topo commands· 8 tools + destructive spike-removal με confirm· v12 — **M5 ΠΛΗΡΕΣ**) · **M8α IMPLEMENTED** (point-cloud ingestion: LAS + bulk ASCII → in-house CSF bare-earth filter → voxel decimation → ΥΠΑΡΧΟΝ `TopoPointStore`· μηδέν νέα dependency· v13) · **M8β/Α IMPLEMENTED** (**LAZ decode** — ο δρόμος των drones: `laz-perf` **Apache-2.0** (επαληθευμένο, εγκεκριμένο) → ασυμπίεστα records → **ο ΙΔΙΟΣ** `decodeLasRecords` του LAS· lazy WASM πίσω από dynamic import· v14) · **M8β/Γ IMPLEMENTED** (**auto-breakline detection** — differentiator §9 #3: ο ΥΠΑΡΧΩΝ M5α ανιχνευτής dihedral fold εξήχθη σε SSoT· το νέο είναι το **chaining** ακμών σε ordered πολυγραμμές με **stop-at-junction** + φίλτρα θορύβου· preview στον καμβά + **ρητό confirm** πριν το `addBreakline` — καμία αυτόματη εγγραφή· deterministic, μηδέν LLM· v15) · **M8β/Β IMPLEMENTED** (**3Δ point-cloud layer** — το νέφος ζει ως `THREE.Points` πάνω από το έδαφος αντί να πεθαίνει με τον wizard· ο builder υπήρχε ήδη από το M8α, γράφτηκε **μόνο ο καταναλωτής**· κοινό `writeDxfPlanToWorld` με το TIN· **§6 επιβεβλημένο στον κώδικα**: `raycast = () => {}` → ΟΨΗ, ποτέ γεωμετρία μέτρησης· 48 MB μετρημένα + ρητό «Αφαίρεση νέφους»· καμία νέα dependency· v16) · **M8β/Δ IMPLEMENTED** (**id-aware ASCII cloud** — ο reader του νέφους μαθαίνει το `ColumnMapping` που ο δρόμος CSV ήδη ήξερε (M2)· **deterministic sniffer** προτείνει τις στήλες από τα δεδομένα, ο μηχανικός τις πιστοποιεί σε grid **πριν** το φίλτρο· ένα PENZD αρχείο δεν διαβάζεται πια με X = id σημείου· **χωρίς mapping ⇒ σημερινή συμπεριφορά**· καμία νέα dependency· v17) · **M8β/Ε IMPLEMENTED** (**unit-aware binary cloud** — το LAS/LAZ **δεν** δηλώνει μονάδα στο header· ο dropdown μονάδας γίνεται ορατός & επεξεργάσιμος **για ΚΑΘΕ** μορφή νέφους (όχι μόνο ASCII, όπως μετά το M8β/Δ), με **readout έκτασης** ανά μονάδα ώστε η επιλογή να επαληθεύεται με τα μάτια — **καμία σιωπηλή μαντεψιά** (m/ft διαφέρουν ×3.28, όπως PDAL/CloudCompare)· + belt-and-suspenders sanity warning για εξωπραγματικό span σε **όλες** τις μορφές· default `m` αμετάβλητο· καμία νέα dependency· v18). **Εκκρεμεί**: multiplayer, Gaussian-Splat, COPC streaming. Έρευνα §1–§11 & roadmap §12.2 παραμένουν το blueprint.
+- **Status**: 🟡 IN PROGRESS — **M1 IMPLEMENTED** (πυρήνας σημεία→CDT/TIN→ισοϋψείς· v4) · **M2 IMPLEMENTED** (μέρος Α import wizard· v5 — μέρος Β breakline picking· v6) · **M4 IMPLEMENTED** (3Δ όψη εδάφους: μοναδικό derived TIN → `BufferGeometry` mesh + hypsometric· v7) · **M6 IMPLEMENTED** (όγκοι cut/fill: prisms + daylight split + στάθμη/επιφάνεια/όριο + cross-check + 3Δ cut/fill style· v8, §12.4) · **M7 IMPLEMENTED** (ελληνικό export «ένα κουμπί → φάκελος»: πίνακες στο σχέδιο + ZIP με DXF/PDF/CSV/XLSX + auto tolerance-check §10· v9, §12.5) · **M3 IMPLEMENTED** (ισοϋψείς ακριβείς↔όμορφες + LOD· v10) · **M5α IMPLEMENTED** (AI «καμπανάκι» = deterministic QA rules engine + inline flags, χωρίς LLM· v11 — **M5α.2**: ⊙ markers + zoom-to **και στο 3Δ** + non-modal panel· v19) · **M5β IMPLEMENTED** («μίλα στο σχέδιο» = NL editing με LLM tool-calling πάνω στα υπάρχοντα topo commands· 8 tools + destructive spike-removal με confirm· v12 — **M5 ΠΛΗΡΕΣ**) · **M8α IMPLEMENTED** (point-cloud ingestion: LAS + bulk ASCII → in-house CSF bare-earth filter → voxel decimation → ΥΠΑΡΧΟΝ `TopoPointStore`· μηδέν νέα dependency· v13) · **M8β/Α IMPLEMENTED** (**LAZ decode** — ο δρόμος των drones: `laz-perf` **Apache-2.0** (επαληθευμένο, εγκεκριμένο) → ασυμπίεστα records → **ο ΙΔΙΟΣ** `decodeLasRecords` του LAS· lazy WASM πίσω από dynamic import· v14) · **M8β/Γ IMPLEMENTED** (**auto-breakline detection** — differentiator §9 #3: ο ΥΠΑΡΧΩΝ M5α ανιχνευτής dihedral fold εξήχθη σε SSoT· το νέο είναι το **chaining** ακμών σε ordered πολυγραμμές με **stop-at-junction** + φίλτρα θορύβου· preview στον καμβά + **ρητό confirm** πριν το `addBreakline` — καμία αυτόματη εγγραφή· deterministic, μηδέν LLM· v15) · **M8β/Β IMPLEMENTED** (**3Δ point-cloud layer** — το νέφος ζει ως `THREE.Points` πάνω από το έδαφος αντί να πεθαίνει με τον wizard· ο builder υπήρχε ήδη από το M8α, γράφτηκε **μόνο ο καταναλωτής**· κοινό `writeDxfPlanToWorld` με το TIN· **§6 επιβεβλημένο στον κώδικα**: `raycast = () => {}` → ΟΨΗ, ποτέ γεωμετρία μέτρησης· 48 MB μετρημένα + ρητό «Αφαίρεση νέφους»· καμία νέα dependency· v16) · **M8β/Δ IMPLEMENTED** (**id-aware ASCII cloud** — ο reader του νέφους μαθαίνει το `ColumnMapping` που ο δρόμος CSV ήδη ήξερε (M2)· **deterministic sniffer** προτείνει τις στήλες από τα δεδομένα, ο μηχανικός τις πιστοποιεί σε grid **πριν** το φίλτρο· ένα PENZD αρχείο δεν διαβάζεται πια με X = id σημείου· **χωρίς mapping ⇒ σημερινή συμπεριφορά**· καμία νέα dependency· v17) · **M8β/Ε IMPLEMENTED** (**unit-aware binary cloud** — το LAS/LAZ **δεν** δηλώνει μονάδα στο header· ο dropdown μονάδας γίνεται ορατός & επεξεργάσιμος **για ΚΑΘΕ** μορφή νέφους (όχι μόνο ASCII, όπως μετά το M8β/Δ), με **readout έκτασης** ανά μονάδα ώστε η επιλογή να επαληθεύεται με τα μάτια — **καμία σιωπηλή μαντεψιά** (m/ft διαφέρουν ×3.28, όπως PDAL/CloudCompare)· + belt-and-suspenders sanity warning για εξωπραγματικό span σε **όλες** τις μορφές· default `m` αμετάβλητο· καμία νέα dependency· v18). **Εκκρεμεί**: multiplayer, Gaussian-Splat, COPC streaming. Έρευνα §1–§11 & roadmap §12.2 παραμένουν το blueprint.
 - **Date**: 2026-07-13
 - **Category**: DXF Viewer / Topography / Research
 - **Σχετικά**: ADR-635 (culling gap σε geo-referenced συντεταγμένες ±1e6), ADR-462 (canonical mm),
@@ -356,7 +356,7 @@ false-flat handling) → **d3-tricontour** contours (major/minor) → **native P
 | **M2** ✅ | **Import Wizard** (Q9) | Column-mapping CSV/TXT/Excel (PNEZD/PENZD/…, delimiter, units, σειρά στηλών) + DXF POINT/TEXT extraction → `TopoPointStore`. Breakline picking (mark υπάρχουσες polylines ως constraints) — **DONE, changelog v5 (μέρος Α) + v6 (μέρος Β)**. | Civil 3D «Field to Finish» point import· CASS column reorder (§7 pain-point → κάν'το UX win) | υπάρχων DXF parser (`utils/dxf-entity-parser.ts`)· `parse-topo-points.ts` (extend)· `TopoPointStore` | — (SheetJS αν Excel = Apache-2.0 ✅) |
 | **M3** ✅ | **Smoothing switch + LOD** (Q5) | Διακόπτης «ακριβείς↔όμορφες»· smoothing = **non-destructive render-time στυλ** (AutoCAD spline-fit / Civil 3D «Contour Smoothing»): γενικό πεδίο `BaseEntity.smoothDisplay` — ο `PolylineRenderer` ζωγραφίζει cached Catmull-Rom καμπύλη, οι `vertices` (control) μένουν **ΑΚΡΙΒΕΙΣ** → export/Κτηματολόγιο κλειδωμένο δωρεάν. **Self-intersection guard** (windowed· raw fallback ανά span) + **Douglas-Peucker LOD ανά zoom** (bucketed cache → 0 per-frame smoothing, ADR-040). **DONE, changelog v10.** | Civil 3D «Surface Style · Contour Smoothing»· AutoCAD PEDIT spline-fit polyline | `catmullRom`/`tessellateSplinePoints` (`geometry-spline-utils`)· `segmentsIntersect` (`GeometryUtils`)· `simplifyPolyline` RDP (`geometry-polyline-utils`)· `EntityIdsBatchPatchCommand`· `terrain-3d-store` pattern | **καμία νέα** (και οι 3 αλγόριθμοι in-house) |
 | **M4** ✅ | **3D όψη εδάφους** (Q8) | TIN → `BufferGeometry` mesh (Z=υψόμετρο)· «γύρνα τον λόφο»· hypsometric elevation banding. **Παράγωγο του ΙΔΙΟΥ TIN** (μηδέν διπλή πηγή — επιβάλλεται από `topo-surface.ts`). **DONE, changelog v7.** RTIN LOD (martini) **ΔΕΝ** μπήκε: καμία μετρημένη ανάγκη ακόμη (§12.3) — dependency μόνο όταν αποδειχθεί. | Civil 3D Surface + Surface Style· Revit Toposolid· C4D | `bim-3d` engine (three.js, ADR-366/645)· `TinSurface` (M1)· `dxfPlanToWorld` + `MaterialCatalog3D` + `disposeObjectTree` | **καμία νέα** — υπάρχον `three` |
-| **M5α** ✅ | **AI καμπανάκι (QA rules engine)** (Q7 #1) | Background **deterministic** QA (elevation busts = MAD robust· duplicate/outliers· closure = self-intersect/degenerate ring· missing breaklines = dihedral fold χωρίς constraint) με **inline flags**: λίστα panel με zoom-to + ⊙ markers (reuse ADR-435). **Μηδέν LLM/κόστος, offline. AI-accelerant/human-certifier.** **DONE, changelog v11.** | Civil 3D «Surface Statistics»· TBC blunder detection | `getTopoSurface`/`TopoPointStore`· `median` (`utils/statistics`)· `polygon-utils`· `scene-units`· `ClashMarkerLayer`+`canvas-fit-to-view-selected` (ADR-435/394) | **καμία νέα** (in-house, μηδέν LLM) |
+| **M5α** ✅ | **AI καμπανάκι (QA rules engine)** (Q7 #1) | Background **deterministic** QA (elevation busts = MAD robust· duplicate/outliers· closure = self-intersect/degenerate ring· missing breaklines = dihedral fold χωρίς constraint) με **inline flags**: λίστα panel με zoom-to + ⊙ markers (reuse ADR-435), **σε 2Δ ΚΑΙ 3Δ** (M5α.2, v19). **Μηδέν LLM/κόστος, offline. AI-accelerant/human-certifier.** **DONE, changelog v11.** | Civil 3D «Surface Statistics»· TBC blunder detection | `getTopoSurface`/`TopoPointStore`· `median` (`utils/statistics`)· `polygon-utils`· `scene-units`· `ClashMarkerLayer`+`canvas-fit-to-view-selected` (ADR-435/394) | **καμία νέα** (in-house, μηδέν LLM) |
 | **M5β** ✅ | **«Μίλα στο σχέδιο» (NL editing)** (Q7 #2) | NL editing («interval 0.5m», «σβήσε spikes») = **LLM tool-calling** πάνω στο υπάρχον command SSoT (`useTopoContours`/`contour-display-store`/`terrain-3d-store`/`cut-fill-store`/`runTopoQa`/`TopoPointStore`) — **8 topo tools** + executor στο ΥΠΑΡΧΟΝ `ai-assistant/` chat (ό,τι κάνει το `grid-tool-definitions`). Το LLM **ΔΕΝ** γράφει γεωμετρία· καλεί τα ίδια commands. Destructive «σβήσε spikes» = reuse M5α detector + **ρητό confirm** (human-certifier). **DONE, changelog v12.** | SuperMap/Autodesk AI assistant· Speckle NL-CAD | `ai-assistant/` (`grid/match-tool-definitions`, `dxf-openai-call`, `useDxfAiChat`)· command SSoT· M5α `runTopoQa` | **καμία νέα** — υπάρχον gpt-4o-mini |
 | **M6** ✅ | **Όγκοι cut/fill** (Q1) | Triangular-prism πάνω στο TIN + **daylight split** + προαιρετικό **όριο οικοπέδου** + αναφορά **στάθμη Ή μελετημένη επιφάνεια** + **cross-check με κάνναβο** (§7 CASS) + 3Δ **cut/fill analysis style**. **DONE, changelog v8.** BOQ output **ΔΕΝ** μπήκε: το έδαφος δεν είναι entity → δεν υπάρχει `sourceEntityId` να κρεμαστεί γραμμή (βλ. §12.4) — μεταφέρεται σε M4b/M7. | Civil 3D Volumes Dashboard· CASS 3-method cross-check | `TinSurface` (M1)· `polygon-utils` (area/centroid/S-H clip)· `marching-triangles` (crossEdge)· `scene-units` (mm³→m³) | — (in-house, **καμία νέα**) |
 | **M7** ✅ | **Ελληνικό export → «ένα κουμπί → φάκελος»** (Q1, Q7 #3) | Πίνακας συντεταγμένων ΕΓΣΑ'87 + εμβαδομέτρηση οικοπέδου + πίνακας όγκων + **auto tolerance-check** (§10) — **ΚΑΙ** ως entities μέσα στο σχέδιο **ΚΑΙ** ως ZIP (DXF+PDF+CSV+XLSX). **DONE, changelog v9** (§12.5). **ΔΕΝ** μπήκαν: proj4/pdf-lib (**καμία μετρημένη ανάγκη** — βλ. §12.5), ψηφιακή υπογραφή (eIDAS — ο μηχανικός, εκτός εφαρμογής), DXF layer schema Κτηματολογίου (**open gap §10** — λείπει το primary source). | CASS cadastral output· Civil 3D «coordinate table in drawing + report files» | `bim/schedule` exporters (CSV/XLSX/PDF)· `buildScheduleTable`+`detailPrimitivesToEntities` (ADR-622)· `zip-pack` (ADR-505)· DXF export (ADR-648)· `polygon-utils`· `scene-units` | **καμία νέα** |
@@ -956,7 +956,7 @@ technologismiki (Ν.4495/2017), xyz.gr/geodimetro.gr/greenbuilding.gr/cityengine
   **Ρητά ΔΕΝ μπήκαν (ΟΧΙ μαντεμένα):** M8 (point clouds/auto-breakline)· persistent «current interval» store (το
   interval ζει σε React state του `TopographyPanel`· το `generate_contours` παίρνει το interval ως arg, ίδια
   συμπεριφορά με το κουμπί — δεν εφευρέθηκε store)· sync του panel interval field με την AI εντολή (χωριστές
-  επιφάνειες ελέγχου, όπως command-line vs slider). M5α open items (3Δ markers, auto-clear, tuning) παραμένουν.
+  επιφάνειες ελέγχου, όπως command-line vs slider). M5α open items (3Δ markers, auto-clear, tuning) παραμένουν. **[3Δ markers: ΕΓΙΝΑΝ στο v19 / M5α.2]**
 
   **Status: M1 + M2 + M3 + M4 + M5 (α+β) + M6 + M7 IMPLEMENTED· M8 προγραμματισμένο (§12.2).**
 
@@ -1801,3 +1801,102 @@ technologismiki (Ν.4495/2017), xyz.gr/geodimetro.gr/greenbuilding.gr/cityengine
 
   **«Όλοι οι όροφοι» → καμία κοπή** (καμία ενεργή στάθμη· ακολουθεί το ADR-399). **Point cloud
   άκοπο** (δεν καλεί `seatTopoLayerRoot`, `PointsMaterial` εκτός allowlist) — σκόπιμο, §6.
+
+---
+
+- **v19 (2026-07-27) — M5α.2: ο «Έλεγχος ποιότητας» απαντά και στο 3Δ (markers + zoom-to + non-modal panel).**
+
+  **Το πρόβλημα (στιγμιότυπο Giorgio, 2026-07-27):** ο μηχανικός τρέχει «Έλεγχος ποιότητας», η λίστα
+  γεμίζει ευρήματα, κάνει κλικ σε γραμμή — **και δεν βλέπει τίποτα**. Δύο ανεξάρτητες αιτίες, και οι
+  δύο στο ΙΔΙΟ μονοπάτι:
+
+  1. **Το M5α ήταν 2Δ-only.** Το `canvas-layer-stack-topo-qa-overlay` είχε ρητό
+     `if (… || is3D) return null` («M5α ships 2D markers only»), και το `canvas-fit-to-view-selected`
+     είναι 2Δ handler. Στο 3Δ viewport το κλικ **δεν έκανε απολύτως τίποτα ορατό**. Αυτό ήταν ήδη
+     καταγεγραμμένο open item του M5α («3Δ markers») — αλλά ένα QA report που μαυρίζει μόλις
+     περιστρέψεις το οικόπεδο απαντά στη μισή ερώτηση: το elevation bust **ΕΙΝΑΙ** αιχμή στο mesh,
+     και στην κάτοψη είναι αόρατο.
+  2. **Το panel ήταν modal.** Το ADR-662 Φ4 μετέφερε τα review sections σε `section-in-dialog`. Για
+     το QA αυτό είναι λάθος κατηγορία διαλόγου: κάθε γραμμή **μιλάει για ό,τι είναι από πίσω**, και
+     ένα κεντραρισμένο dialog με backdrop κάλυπτε ακριβώς το σημείο στο οποίο μόλις είχε κάνει zoom.
+
+  **Τι μπήκε**
+  - `TopoQaMarkers3DOverlay` — το 3Δ δίδυμο, mounted από `BimViewport3DProjectedOverlays`. Ίδιο
+    `useTopoQaReport()` store, **ίδιο** `ClashMarkerLayer` + ⊙ glyph (ADR-435 SSoT) — ένα σχήμα
+    προσοχής σε όλη την εφαρμογή, σε **δύο** όψεις. Ο 2Δ `is3D` guard γίνεται load-bearing: πλέον
+    αποτρέπει **διπλούς** markers, δεν κρύβει έλλειψη.
+  - `TopoQaFlag.atZMm` (**προαιρετικό**) — τα checks που ξέρουν υψόμετρο το δίνουν (κόμβου Z /
+    στίγματος Z / μέσο ακμής). Το ring centroid (boundary/self-intersection) **δεν ξέρει** → μένει
+    `undefined` και το 3Δ δειγματοληπτεί το TIN (`getTinSampler`). Αν ούτε αυτό απαντά → ο marker
+    **κρύβεται**. «Δεν ξέρω κατακόρυφα» **δεν** γίνεται «είναι στο μηδέν»: marker στο datum plane
+    στέλνει τον μηχανικό σε λάθος σημείο (fail-closed, ίδια πειθαρχία με ADR-713).
+  - `topo-qa-marker-math` + `topo-qa-flag-world` — οι **ίδιοι τρεις** μετασχηματισμοί του
+    `tin-to-three`, με την ίδια σειρά (geo projector M10b → −vertical datum M10c → plan-mm→world),
+    ώστε ο marker να μην μπορεί να καθίσει αλλού από τον λόφο που σημαδεύει. Ο resolver είναι
+    **ΕΝΑΣ** και τον μοιράζονται overlay + panel: αλλιώς ένα ⊙ και το δικό του «zoom to» θα
+    μπορούσαν να δείχνουν διαφορετικά σημεία.
+  - `DialogContent nonModal` (κοινό UI, default `false` ⇒ κανένα υπάρχον dialog δεν αλλάζει) —
+    χωρίς backdrop **και** χωρίς `ModalKeyboardScope`. Ένα panel που δεν κατέχει την οθόνη δεν
+    δικαιούται να κατέχει και το πληκτρολόγιο (ADR-711). Το QA dialog παρκάρει δεξιά, καθαρό από
+    ViewCube / 3D toggle — mirror του `ClashReportPanel`.
+
+  **Κεντρικοποιήσεις που επέβαλε το jscpd (N.18) — πέντε, όλες μέσα στο ίδιο commit** (δύο γύροι:
+  το πρώτο extraction αποκάλυψε το επόμενο clone — αναμενόμενο, βλ. feedback memory)
+  - `view-focus-bus` (γενίκευση του `clash-focus-bus`, το οποίο **διαγράφηκε**). Το bus μεταφέρει
+    πλέον **three-world μέτρα**, όχι «συντεταγμένες κάποιου domain»: με δεύτερο producer σε άλλο
+    frame (ΕΓΣΑ mm + projector + datum), ένα κοινό bus με domain coordinates θα έκανε τον μοναδικό
+    subscriber να εφαρμόσει τον μετασχηματισμό του ΕΝΟΣ και στους ΔΥΟ — σιωπηλά καδράροντας την
+    κάμερα στο κενό για τον άλλο. Το `halfExtentM` ταξιδεύει μαζί (σύγκρουση = 0.6 m, τοπογραφικό
+    σφάλμα = 15 m· μία σταθερά στον subscriber θα ζούμαρε τον έναν άχρηστα).
+  - `use-view-focus-3d` — το camera framing βγήκε από το `ClashMarkers3DOverlay`· δεν ήταν ποτέ
+    clash-specific.
+  - `use-camera-projected-markers` — projection + camera-move tick. Το `jscpd --diff` βρήκε 2 clones
+    (12 + 18 γραμμές) μεταξύ του νέου overlay και του clash· εξήχθησαν αντί να σταλούν δίδυμα.
+  - `plan-to-world-math` (THREE-free) — η σύμβαση αξόνων `(x, elev, −north)` ζούσε σε **δύο**
+    αντίγραφα (`coordinate-transforms` + `clash-marker-math`)· τώρα σε ένα, και τα δύο κάνουν
+    delegate. THREE-free by design: αυτό επιτρέπει σε DOM panel να μετατρέψει το δικό του domain
+    πριν βάλει σημείο στο bus, χωρίς να τραβήξει το three στο module graph του.
+  - `topo-qa-marker-set` — δεύτερος γύρος: μετά την εξαγωγή του camera tick, το jscpd βρήκε clone
+    ανάμεσα στο **2Δ και το 3Δ QA overlay** (flag→glyph mapping + το σχήμα «null report ⇒ κενός
+    πίνακας»). Εξήχθη· στα overlays μένει **μόνο** το δικό τους `map` callback. Το συμβόλαιο που
+    φυλάει: και οι δύο πίνακες είναι index-aligned με το `report.flags` — ο layer τοποθετεί τον
+    marker `i` με `project(i)`, οπότε ένα φιλτράρισμα στη μία πλευρά και όχι στην άλλη θα σχεδίαζε
+    σιωπηλά κάθε marker στη θέση του γείτονά του.
+
+  **Tests:** `plan-to-world-math` (11) + `topo-qa-marker-math` (8) — καρφώνουν πρόσημα, κλίμακα,
+  σειρά projector/datum και το `null` στο μη-πεπερασμένο. Ένα λάθος πρόσημο εδώ καθρεφτίζει όλο το
+  μοντέλο και είναι αόρατο σε review.
+
+  **Εκτός εμβέλειας (καταγράφεται, δεν «διορθώθηκε» σιωπηλά):** ο **2Δ** focus χρησιμοποιεί
+  `flag.at` (WORLD ΕΓΣΑ mm) απευθείας ως canvas units. Σε γεωαναφερμένο έργο όπου οι ισοϋψείς
+  επαναπροβάλλονται (M10b), αυτό ήταν ήδη ύποπτο **πριν** από αυτή τη δουλειά και παραμένει ως έχει
+  — δεν αγγίχθηκε στο ίδιο commit.
+
+  **Το panel έγινε FloatingPanel, όχι «non-modal dialog» (Giorgio, ίδια μέρα).** Πρώτη απόπειρα ήταν
+  `<Dialog modal={false}>` + `nonModal` prop στο κοινό `DialogContent`. **Λάθος primitive**: ένας Radix
+  διάλογος κλείνει στο πρώτο outside click — δηλαδή τη στιγμή που ο μηχανικός αγγίζει το ίδιο το σχέδιο
+  για το οποίο μιλάει ο διάλογος. Ο σωστός μηχανισμός υπήρχε ήδη: το `FloatingPanel` SSoT που
+  χρησιμοποιεί το `ClashReportPanel` — draggable, χωρίς backdrop, χωρίς outside-click dismissal,
+  κλείνει μόνο από το ✕ του. Το `nonModal` prop **αφαιρέθηκε** από το `dialog.tsx` (θα έμενε dead
+  code)· στη θέση του μπήκε σχόλιο-φράκτης που στέλνει τον επόμενο στο `FloatingPanel`.
+
+  **Επιλεγμένο εύρημα (Giorgio, ίδια μέρα).** Το `topo-qa-store` κρατά πλέον `selectedFlagId` **στο
+  ΙΔΙΟ store** με το report (δύο stores θα χρειάζονταν συγχρονισμό από κάθε caller — ο κλασικός τρόπος
+  να επιβιώσει ένα stale id ενός re-run). Δύο ιδιότητες που κλειδώνονται με tests:
+  - `set(report)` **μηδενίζει** την επιλογή — τα flag ids είναι per-report.
+  - `select(id)` περνά το report **by reference** ⇒ κάθε `useTopoQaReport()` κάνει bail-out και τα
+    `useMemo(…, [report])` των overlays **δεν** ξαναϋπολογίζουν θέσεις (στο 3Δ: μία δειγματοληψία TIN
+    ανά flag) σε κάθε κλικ γραμμής.
+
+  Το `ClashMarkerGlyph` πήρε προαιρετικό `selected` (default `false` ⇒ το clash overlay αμετάβλητο):
+  μεγαλύτερος δακτύλιος + άλως στο `UI_COLORS.SELECTION_HIGHLIGHT`, με το severity χρώμα **να μένει**
+  από κάτω — «σε ποιο εύρημα είμαι» και «πόσο σοβαρό είναι» είναι δύο ερωτήσεις. Το μέγεθος μεγαλώνει
+  με `overflow: visible` γύρω από το αμετάβλητο κέντρο (8,8)· αν μεγάλωνε το box, το κέντρο θα
+  μετατοπιζόταν και ο επιλεγμένος marker θα ξέφευγε από το σημείο που δείχνει.
+
+  **Status: M5α ΠΛΗΡΕΣ και στις δύο όψεις (2Δ + 3Δ), με floating panel + selection highlight.
+  Ανοιχτά M5α items: auto-clear, tuning.**
+
+  **Παρατήρηση για μετά (ΔΕΝ έγινε):** το `TopoAutoBreaklineSection` έχει την ΙΔΙΑ σημασιολογία
+  (κλικ → `canvas-fit-to-view-selected`) και είναι ακόμη modal dialog στο `TopoRibbonHost`. Θέλει την
+  ίδια μετατροπή· δεν μπήκε εδώ γιατί δεν ζητήθηκε.

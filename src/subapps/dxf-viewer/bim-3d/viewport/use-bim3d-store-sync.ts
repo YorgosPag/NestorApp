@@ -8,6 +8,7 @@ import { useSectionStore } from '../stores/SectionStore';
 import { LIGHT_PRESETS } from '../lighting/lighting-presets';
 import { getHdriPreset } from '../lighting/hdri-environment';
 import { subscribeLayerStore, getLayerStoreSnapshot } from '../../stores/LayerStore';
+import { useActiveStoreyStore } from '../../systems/levels/active-storey-store';
 import { resyncBimScene } from '../scene/bim3d-resync';
 import { resyncDxfOverlay } from '../scene/dxf-overlay-resync';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
@@ -15,12 +16,33 @@ import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 // ADR-366 store→manager subscription sync. Wires low-frequency store updates
 // into the active ThreeJsSceneManager instance. Mounted once by BimViewport3D.
 export function useBim3DStoreSync(managerRef: RefObject<ThreeJsSceneManager | null>) {
-  // ADR-399 Phase B — scope-aware: 'single' → active-floor overlay at Y=0;
+  // ADR-399 Phase B — scope-aware: 'single' → active-floor overlay at its storey FFL (Φάση Ε);
   // 'all' → stacked per-floor overlay (active floor's live edits re-enter the
   // multi-floor rebuild here too). resyncDxfOverlay reads the current scope.
   useEffect(() => {
     return useDxfOverlay3DStore.subscribe(() => {
       resyncDxfOverlay(managerRef.current);
+    });
+  }, [managerRef]);
+
+  // ADR-399 Φάση Ε — the active storey's FFL resolves ASYNCHRONOUSLY (the building's floors come
+  // from Firestore via `useActiveStoreySync`). The DXF overlay scene routinely lands FIRST, so the
+  // initial resync seats the plan at the `0` fallback — and, unlike the BIM path (which self-heals
+  // on its per-entity subscriptions), NOTHING would ever move it again: an upper storey's plan
+  // would stay sunk at ground level. Also covers editing the elevation in the «Όροφοι» tab while
+  // the floor stays open. Guarded on the datum VALUE, so a same-elevation context object costs zero.
+  useEffect(() => {
+    let prevElevationMm = useActiveStoreyStore.getState().context?.floorElevationMm ?? null;
+    return useActiveStoreyStore.subscribe((s) => {
+      const nextElevationMm = s.context?.floorElevationMm ?? null;
+      if (nextElevationMm === prevElevationMm) return;
+      prevElevationMm = nextElevationMm;
+      const manager = managerRef.current;
+      if (!manager) return;
+      resyncDxfOverlay(manager);
+      // Belt-and-suspenders: the BIM single-floor sync reads the SAME datum (`bim3d-resync`), so
+      // re-seat it from the same signal instead of relying on an entity subscription to fire.
+      resyncBimScene(manager, { externalEntitiesMode: false });
     });
   }, [managerRef]);
 

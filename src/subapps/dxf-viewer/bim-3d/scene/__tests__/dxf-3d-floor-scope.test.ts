@@ -1,7 +1,7 @@
 /**
  * ADR-537 δ — dxf-3d-floor-scope: WHICH DXF floor plane(s) the 3D edit/hover path operates
  * over, honouring `floor3DScope` (the same scope decision as `resyncDxfOverlay`).
- *   'single' → the active overlay scene at Y=0.
+ *   'single' → the active overlay scene at the ACTIVE STOREY's datum-relative FFL (ADR-399 Φάση Ε).
  *   'all'    → the stacked multi-floor DXF set, each at its datum elevation.
  */
 
@@ -9,6 +9,7 @@ import type { DxfScene, DxfEntityUnion } from '../../../canvas-v2/dxf-canvas/dxf
 
 let mockScope: 'single' | 'all' = 'single';
 let mockActiveScene: DxfScene | null = null;
+let mockStoreyElevationMm: number | null = null;
 let mockStack: { scene: DxfScene; floorElevationMm: number; levelId: string }[] = [];
 
 jest.mock('../../stores/ViewMode3DStore', () => ({
@@ -16,6 +17,13 @@ jest.mock('../../stores/ViewMode3DStore', () => ({
 }));
 jest.mock('../../stores/DxfOverlay3DStore', () => ({
   useDxfOverlay3DStore: { getState: () => ({ dxfScene: mockActiveScene }) },
+}));
+jest.mock('../../../systems/levels/active-storey-store', () => ({
+  useActiveStoreyStore: {
+    getState: () => ({
+      context: mockStoreyElevationMm === null ? null : { floorElevationMm: mockStoreyElevationMm },
+    }),
+  },
 }));
 jest.mock('../multi-floor-dxf-source', () => ({
   getMultiFloorDxfStack: () => mockStack,
@@ -32,13 +40,30 @@ const scene = (units: string | null, entities: DxfEntityUnion[]): DxfScene =>
 beforeEach(() => {
   mockScope = 'single';
   mockActiveScene = null;
+  mockStoreyElevationMm = null;
   mockStack = [];
 });
 
 describe('getDxfFloorScope', () => {
-  it('single scope → the active scene at elevation 0 (levelId null)', () => {
+  it('single scope with no linked storey → the active scene at elevation 0 (levelId null)', () => {
     mockActiveScene = scene('mm', [ent('a')]);
     expect(getDxfFloorScope()).toEqual([{ scene: mockActiveScene, floorElevationMm: 0, levelId: null }]);
+  });
+
+  // ADR-399 Φάση Ε — the regression this closes: an upper storey's plan used to pick (and render)
+  // at ground level because this entry hardcoded 0 while the BIM path already used the real FFL.
+  it('single scope → the active scene at the ACTIVE STOREY datum-relative FFL', () => {
+    mockActiveScene = scene('mm', [ent('a')]);
+    mockStoreyElevationMm = 3000;
+    expect(getDxfFloorScope()).toEqual([
+      { scene: mockActiveScene, floorElevationMm: 3000, levelId: null },
+    ]);
+  });
+
+  it('single scope → a defined basement seats BELOW the datum (negative FFL)', () => {
+    mockActiveScene = scene('mm', [ent('a')]);
+    mockStoreyElevationMm = -2800;
+    expect(getDxfFloorScope()[0].floorElevationMm).toBe(-2800);
   });
 
   it('single scope with no active scene → empty', () => {
@@ -75,10 +100,17 @@ describe('findDxfEntityInScope', () => {
     expect(findDxfEntityInScope('zzz')).toBeNull();
   });
 
-  it('single scope resolves from the active scene at elevation 0', () => {
+  it('single scope resolves from the active scene at elevation 0 (no linked storey)', () => {
     mockActiveScene = scene('mm', [ent('a')]);
     const found = findDxfEntityInScope('a');
     expect(found?.floorElevationMm).toBe(0);
     expect(found?.entity.id).toBe('a');
+  });
+
+  // ADR-399 Φάση Ε — grips / ghost / OSNAP anchor on this elevation, so it must follow the storey.
+  it('single scope seats a resolved entity at the active storey FFL', () => {
+    mockActiveScene = scene('mm', [ent('a')]);
+    mockStoreyElevationMm = 6000;
+    expect(findDxfEntityInScope('a')?.floorElevationMm).toBe(6000);
   });
 });

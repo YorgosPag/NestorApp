@@ -22,9 +22,8 @@ import * as THREE from 'three';
 import type { Point2D } from '../../rendering/types/Types';
 import type { DxfScene, DxfEntityUnion, DxfText } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { SceneLayer } from '../../types/entities';
-import { ACI_PALETTE } from '../../settings/standards/aci';
-// 🏢 ADR-571: hex→int SSoT (μηδέν local parseInt duplicate)
-import { hexToTrueColor } from '../../utils/dxf-true-color';
+// N.7.1 split — the ByLayer/ACI/trueColor cascade lives in its own module (ADR-571 SSoT inside).
+import { resolveEntityColor } from './dxf-overlay-entity-color';
 import { sceneUnitsToMeters, resolveSceneUnits } from '../../utils/scene-units';
 import { circlePolyline, arcPolyline } from './dxf-arc-circle-sample';
 // ADR-645 Φάση B — shared glyph atlas + merged, atlas-sampled text mesh (replaces the per-text
@@ -51,64 +50,9 @@ import {
 import { isTopoContourEntity } from '../../systems/topography/contour-entity-ids';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const DEFAULT_COLOR = 0xffffff;
 const WIREFRAME_OPACITY = 0.65;
 /** ADR-645 Φάση A — one active streaming build per converter; a re-sync replaces it under this id. */
 const DXF3D_STREAM_BUILD_ID = 'dxf3d-text-stream';
-
-// ACI_PALETTE values are CSS hex strings '#RRGGBB'. Cast for numeric index access.
-const ACI_MAP = ACI_PALETTE as unknown as Record<number, string | undefined>;
-
-// ── Color helpers ─────────────────────────────────────────────────────────────
-
-function aciToInt(aci: number): number {
-  const hex = ACI_MAP[aci];
-  if (!hex) return DEFAULT_COLOR;
-  return hexToTrueColor(hex); // ADR-571 SSoT
-}
-
-function hexCssToInt(hex: string): number {
-  // ADR-571: delegate το parse στο hexToTrueColor SSoT· κρατά το DEFAULT_COLOR fallback σε άκυρο hex.
-  return /^#?[0-9a-fA-F]{3}([0-9a-fA-F]{3})?$/.test(hex.trim()) ? hexToTrueColor(hex) : DEFAULT_COLOR;
-}
-
-function resolveLayer(
-  entity: DxfEntityUnion,
-  layersById: Record<string, SceneLayer> | undefined,
-): SceneLayer | undefined {
-  // ADR-358 Phase 9D-5a: id-only resolution (entity-layer-id-canonical SSoT).
-  // Legacy `entity.layer` name backref forbidden in new code.
-  if (!layersById || !entity.layerId) return undefined;
-  return layersById[entity.layerId];
-}
-
-function layerColorToInt(layer: SceneLayer): number {
-  if (layer.colorTrueColor != null) return layer.colorTrueColor & 0xFFFFFF;
-  if (layer.colorAci !== undefined) return aciToInt(layer.colorAci);
-  if (layer.color) return hexCssToInt(layer.color);
-  return DEFAULT_COLOR;
-}
-
-/** Resolve final Three.js color integer for a DXF entity.
- *  Exported for unit testing. */
-export function resolveEntityColor(
-  entity: DxfEntityUnion,
-  layersById: Record<string, SceneLayer> | undefined,
-): number {
-  if (entity.colorTrueColor != null) return entity.colorTrueColor & 0xFFFFFF;
-
-  const byLayer = entity.colorMode === 'ByLayer'
-    || entity.colorMode === 'ByBlock'
-    || (!entity.color && entity.colorAci === undefined);
-
-  if (!byLayer) {
-    if (entity.colorAci !== undefined) return aciToInt(entity.colorAci);
-    if (entity.color) return hexCssToInt(entity.color);
-  }
-
-  const layer = resolveLayer(entity, layersById);
-  return layer ? layerColorToInt(layer) : DEFAULT_COLOR;
-}
 
 // ── Geometry helpers ──────────────────────────────────────────────────────────
 
@@ -227,6 +171,10 @@ export class DxfToThreeConverter {
   // (e.g. a BIM column moved but no DXF line/text changed). Cross-mode: each path
   // nulls the OTHER's key so a single↔multi scope switch always rebuilds.
   private lastSyncKey: DxfOverlaySyncKey | null = null;
+  /** ADR-399 Φάση Ε — the elevation the last single-floor `sync` rendered at; part of its
+   *  idempotency identity (mirror of `lastMultiKey`'s per-floor `elev`), so an unchanged plan
+   *  moved to another storey still rebuilds instead of being skipped as "same input". */
+  private lastSyncElevationMm = 0;
   private lastMultiKey: readonly DxfOverlayFloorKey[] | null = null;
 
   constructor(scene: THREE.Scene, onSceneDirty: () => void = () => {}) {
@@ -240,13 +188,29 @@ export class DxfToThreeConverter {
     this.unregisterOverlay = registerPostFxOverlay(scene, () => (this.root ? [this.root] : []), 'underlay');
   }
 
-  /** Single-floor overlay sitting on the floor plane (Y=0). */
-  sync(dxfScene: DxfScene | null): void {
+  /**
+   * Single-floor overlay, seated on its storey's floor plane.
+   *
+   * ADR-399 Φάση Ε — `floorElevationMm` is the **datum-relative** FFL of the active storey
+   * (the SAME frame + the SAME value `BimSceneLayer.sync` already receives via `bim3d-resync`,
+   * and the cut plane via `cut-plane-3d`). Defaults to 0 for the read-only Properties pipeline,
+   * which has no storey context. Applied EXACTLY as in {@link syncMultiFloor} — one convention,
+   * one formula, no second elevation path.
+   *
+   * Before Φάση Ε this path hardcoded Y=0 while every other single-floor consumer had already
+   * migrated to the real FFL (ADR-448) → the plan of an upper storey sank to the ground.
+   */
+  sync(dxfScene: DxfScene | null, floorElevationMm = 0): void {
     // 🚀 PERF (ADR-040) — idempotent: identical overlay input ⇒ identical output ⇒
     // keep the existing geometry + GPU textures (no `texSubImage2D` re-upload).
     const key = toDxfOverlaySyncKey(dxfScene);
-    if (this.lastMultiKey === null && isSameDxfOverlaySync(this.lastSyncKey, key)) return;
+    if (
+      this.lastMultiKey === null
+      && this.lastSyncElevationMm === floorElevationMm
+      && isSameDxfOverlaySync(this.lastSyncKey, key)
+    ) return;
     this.lastSyncKey = key;
+    this.lastSyncElevationMm = floorElevationMm;
     this.lastMultiKey = null; // leaving multi-floor mode
     this.disposeRoot();
     const built = dxfScene ? this.buildLineGroup(dxfScene) : null;
@@ -255,6 +219,9 @@ export class DxfToThreeConverter {
     // Flat structure (named group holds the LineSegments directly) — unchanged
     // from the pre-multi-floor layout so existing consumers / tests keep working.
     built.group.name = 'dxf-wireframe';
+    // ADR-399 Φάση Ε — seat the plan at its storey's real elevation (same line as the stacked
+    // path). `group.scale.y` is 1, so the metre offset is unit-independent.
+    built.group.position.y = floorElevationMm * MM_TO_M;
     // ADR-537 underlay-depth — drawn by the dedicated post-FX overlay pass (`post-fx-overlay-pass.ts`),
     // not the lit scene. `visible=false` hides it from the main render; the pass reads the root
     // via `getRoot()` (the owner accessor, mirror of `getBounds`) and flips it on for its own pass.
@@ -480,6 +447,7 @@ export class DxfToThreeConverter {
     this.atlas = null;
     clearDxf3dStreamProgress(); // defensive: ensure the overlay never lingers after unmount.
     this.lastSyncKey = null;
+    this.lastSyncElevationMm = 0;
     this.lastMultiKey = null;
   }
 }

@@ -10,13 +10,19 @@ import {
 import {
   resolveColumnPanelVisibility,
   COLUMN_RIBBON_VISIBILITY_KEYS,
+  COLUMN_BURIED_READOUT_KEYS,
 } from '../../ribbon/hooks/bridge/column-command-keys';
+import { BURIED_WATERPROOFING_MATERIALS } from '../../../bim/finishes/buried-waterproofing';
 
 describe('column-property-fields descriptor (SSoT)', () => {
-  it('έχει τα 6 αναμενόμενα groups με μοναδικά ids', () => {
+  it('έχει τα 7 αναμενόμενα groups με μοναδικά ids', () => {
     const ids = COLUMN_PROPERTY_GROUPS.map((g) => g.id);
     // ADR-404 Φ5 — `tilt` group (κεκλιμένη κολώνα / Revit "Slanted Column").
-    expect(ids).toEqual(['structural', 'loads', 'tilt', 'finish', 'envelope', 'material']);
+    // ADR-715 — `buriedWaterproofing` ΑΜΕΣΩΣ μετά το `finish`: είναι ο αδελφός του για την άλλη
+    // πλευρά του ορίου εδάφους (πάνω σοβάς, κάτω στεγάνωση), άρα διαβάζονται μαζί.
+    expect(ids).toEqual([
+      'structural', 'loads', 'tilt', 'finish', 'buriedWaterproofing', 'envelope', 'material',
+    ]);
     expect(new Set(ids).size).toBe(ids.length);
   });
 
@@ -57,6 +63,27 @@ describe('column-property-fields descriptor (SSoT)', () => {
     for (const group of COLUMN_PROPERTY_GROUPS) {
       if (group.id !== 'structural') expect(group.visibilityKey).toBeUndefined();
     }
+  });
+
+  /**
+   * ADR-715 — το group στεγάνωσης είναι ΠΑΡΑΓΩΓΟ του καταλόγου, όχι χειρόγραφη λίστα. Αυτό το
+   * test είναι η δικλείδα του: προσθέτοντας 9ο υλικό στον κατάλογο, εμφανίζεται εδώ **μόνο** του.
+   * Αν κάποιος αντικαταστήσει τα options με hardcoded λίστα, το πλήθος αποκλίνει → κόκκινο.
+   */
+  it('το buriedWaterproofing group παράγεται από τον κατάλογο (8 υλικά, 2 ομάδες)', () => {
+    const buried = COLUMN_PROPERTY_GROUPS.find((g) => g.id === 'buriedWaterproofing');
+    const material = buried?.fields.find((f) => f.commandKey.endsWith('materialId'));
+    expect(material?.options.map((o) => o.value)).toEqual(BURIED_WATERPROOFING_MATERIALS);
+    // Κάθε option φέρει ομάδα (αλλιώς η λίστα των 8 αποδίδεται επίπεδη — βλ. ADR-715 §5).
+    expect(material?.options.every((o) => o.groupLabelKey !== undefined)).toBe(true);
+    expect(new Set(material?.options.map((o) => o.groupLabelKey)).size).toBe(2);
+  });
+
+  it('το readout απόκλισης βαφής (ADR-715 §3.1) είναι read-only με options:[]', () => {
+    const buried = COLUMN_PROPERTY_GROUPS.find((g) => g.id === 'buriedWaterproofing');
+    const readout = buried?.fields.find((f) => f.readOnly);
+    expect(readout?.commandKey).toBe(COLUMN_BURIED_READOUT_KEYS.paintDivergence);
+    expect(readout?.options).toHaveLength(0);
   });
 
   it('COLUMN_MATERIAL_OPTIONS = rc/steel/masonry/wood', () => {

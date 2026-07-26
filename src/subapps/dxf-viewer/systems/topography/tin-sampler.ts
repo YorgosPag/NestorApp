@@ -31,6 +31,28 @@ const EPSILON = 1e-9;
 /** Cap the grid so a pathological survey cannot allocate a huge index. */
 const MAX_CELLS_PER_AXIS = 512;
 
+/**
+ * Identity-keyed memo of the built index. ADR-713 added per-ELEMENT sampling (one query per
+ * column, per scene sync), so rebuilding the bucket grid on every call would be O(triangles)
+ * × O(columns) — on a real survey that is the whole index rebuilt a hundred times for a single
+ * redraw. The surfaces themselves are already memoised by definition identity (`topo-surface`),
+ * so keying on the object is exact: a re-triangulated surface is a NEW object and misses.
+ * `WeakMap` → a discarded surface takes its index with it, no manual invalidation to get wrong.
+ */
+const samplerMemo = new WeakMap<TinSurface, TinSampler>();
+
+/**
+ * The shared, memoised sampler for a surface. Prefer this over {@link createTinSampler} in any
+ * path that samples more than once per surface (per-element queries, grid cross-checks).
+ */
+export function getTinSampler(tin: TinSurface): TinSampler {
+  const cached = samplerMemo.get(tin);
+  if (cached) return cached;
+  const sampler = createTinSampler(tin);
+  samplerMemo.set(tin, sampler);
+  return sampler;
+}
+
 export function createTinSampler(tin: TinSurface): TinSampler {
   if (tin.triangles.length === 0) return { zAtMm: () => null };
 

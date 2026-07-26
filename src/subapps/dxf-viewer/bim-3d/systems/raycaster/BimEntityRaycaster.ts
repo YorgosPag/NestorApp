@@ -15,9 +15,14 @@ export interface RaycastHit {
   readonly bimId: string;
   readonly bimType: string;
   /**
-   * ADR-539 — present only on a faced-prism hit (Polygon Mode): the `FaceKey`
-   * of the picked όψη, resolved from `hit.face.materialIndex` via the mesh's
-   * `userData.faceKeyByMaterialIndex`. Absent on legacy single-material meshes.
+   * ADR-539 — the `FaceKey` of the picked όψη, resolved from `hit.face.materialIndex`
+   * via the mesh's `userData.faceKeyByMaterialIndex`. Absent on legacy single-material
+   * meshes.
+   *
+   * ADR-715 — reported by `raycastBimGroup` **as well** (not just `raycastBimFace`), so the
+   * NORMAL-mode click can tell «θαμμένη ζώνη» from «ανωδομή» on the SAME hit it already had.
+   * The information was always present in the intersection; it was simply discarded outside
+   * Polygon Mode. Enriching the hit changes **no** hit ordering — see `raycastBimGroup`.
    */
   readonly faceKey?: string;
   /**
@@ -109,8 +114,34 @@ function resolveTaggedBim(
 }
 
 /**
+ * ADR-539/715 — SSoT «ποια όψη χτυπήθηκε»: `hit.face.materialIndex` → `FaceKey` μέσω του
+ * `userData.faceKeyByMaterialIndex` του **ίδιου** mesh που χτυπήθηκε (όχι του tagged γονέα —
+ * η αρίθμηση όψεων ανήκει στο mesh που κρατά τα geometry groups).
+ *
+ * Εξάχθηκε (N.0.2) γιατί το ίδιο τρίγραμμο χρειάζονται πλέον **δύο** raycasters: ο
+ * `raycastBimFace` (Polygon Mode) και ο `raycastBimGroup` (κανονικό mode, ADR-715). Δύο
+ * αντίγραφα θα μπορούσαν να αποκλίνουν στο πιο λεπτό σημείο — το `matIndex === undefined`,
+ * που σε single-material mesh **δεν** σημαίνει «όψη 0» αλλά «καμία διεύθυνση όψης».
+ */
+function resolveHitFaceKey(hit: THREE.Intersection): string | undefined {
+  const faceKeys = hit.object.userData['faceKeyByMaterialIndex'] as readonly string[] | undefined;
+  const matIndex = hit.face?.materialIndex;
+  return faceKeys && matIndex !== undefined ? faceKeys[matIndex] : undefined;
+}
+
+/**
  * Raycast against all direct children of `group` (BimSceneLayer meshes).
  * Uses the renderer domElement bounding rect for client → NDC conversion.
+ *
+ * ADR-715 — the returned hit now also carries `faceKey` when the picked mesh is faced.
+ *
+ * ⚠️ **Η ΣΕΙΡΑ ΤΩΝ HIT ΜΕΝΕΙ ΑΝΕΓΓΙΧΤΗ — και αυτό είναι σκόπιμο.** Ο `raycastBimFace` δίνει
+ * προτεραιότητα σε faced όψη έναντι πιο κοντινού non-faced hit (για το αόρατο pick-mesh των
+ * ανοιγμάτων). Εδώ κερδίζει πάντα το **πρώτο tagged** hit, ακριβώς όπως πριν: αυτή η συνάρτηση
+ * τροφοδοτεί την επιλογή ΟΛΟΚΛΗΡΩΝ οντοτήτων και το hover, όπου το «τι είναι μπροστά» **είναι**
+ * η σωστή απάντηση. Αν εδώ αντιγραφόταν η προτίμηση του Polygon Mode, ένα κλικ στο pick-mesh
+ * ανοίγματος θα σταματούσε να επιλέγει το άνοιγμα. Προσθέτουμε **πληροφορία** για τον νικητή,
+ * δεν αλλάζουμε **νικητή**.
  */
 export function raycastBimGroup(
   group: THREE.Group,
@@ -124,9 +155,11 @@ export function raycastBimGroup(
   for (const hit of hits) {
     const tagged = resolveTaggedBim(hit.object);
     if (tagged) {
+      const faceKey = resolveHitFaceKey(hit);
       return {
         bimId: tagged.bimId,
         bimType: tagged.bimType,
+        ...(faceKey !== undefined ? { faceKey } : {}),
         ...stairSubElementFields(tagged.obj),
         ...railingComponentField(tagged.obj),
       };
@@ -242,10 +275,9 @@ export function raycastBimFace(
     if (!tagged) continue;
     const { bimId, bimType } = tagged;
     // ADR-539 — faceKey from the hit mesh's group→materialIndex map (faced prism only).
-    const faceKeys = hit.object.userData['faceKeyByMaterialIndex'] as readonly string[] | undefined;
-    const matIndex = hit.face?.materialIndex;
-    const faceKey = faceKeys && matIndex !== undefined ? faceKeys[matIndex] : undefined;
+    const faceKey = resolveHitFaceKey(hit);
     if (faceKey !== undefined) return { bimId, bimType, faceKey }; // faced face wins immediately
+    const matIndex = hit.face?.materialIndex;
     // ADR-686 — imported mesh: per-slot faceKey από το material name του χτυπημένου slot (front-most
     // slot κερδίζει, mirror του faced). Ο χρήστης στοχεύει το κομμάτι (μπράτσο) κάτω απ' τον κέρσορα.
     if (bimType === 'imported-mesh') {

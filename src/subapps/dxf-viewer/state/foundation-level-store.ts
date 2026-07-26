@@ -45,6 +45,20 @@ export interface FoundationLevelState {
   /** Θέτει το ADR-712 flag (owner only· χωριστός setter → μηδέν ripple σε υπάρχοντα callsites). */
   setActiveLevelBearsOnFoundation(bears: boolean): void;
   /**
+   * ADR-713 — mm — η **σταθερά κτιρίου** «πόσο κάτω από το FFL είναι το τελειωμένο έδαφος»
+   * (tier 2 του cascade στάθμης). Ίδιος λόγος με το `activeLevelBearsOnFoundation`: μόνο ο
+   * owner (`useFoundationLevelSync`) διαβάζει το building doc, ενώ ο επιμετρητικός
+   * καταναλωτής (`column-grade-boq-source`) είναι non-React και βλέπει έναν όροφο τη φορά.
+   *
+   * ⚠️ Δεν παραβιάζει το ADR-489 §7 (καμία global δημοσίευση cross-floor **derived** τιμών):
+   * αυτό είναι σκέτη **ρύθμιση** του κτιρίου — δεδομένο, όχι παράγωγο — ακριβώς όπως τα
+   * entities της Θεμελίωσης που ήδη ζουν εδώ. Default `0` = έδαφος στο FFL (fail-safe:
+   * η θαμμένη ζώνη ταυτίζεται με το κοντόστυλο του ADR-712).
+   */
+  readonly buildingGradeDropBelowBaseMm: number;
+  /** Θέτει τη σταθερά στάθμης εδάφους του κτιρίου (owner only). */
+  setBuildingGradeDropBelowBaseMm(mm: number): void;
+  /**
    * ADR-459 Φ7 — tombstones: footing ids που ο writer διέγραψε optimistically αλλά
    * το Firestore delete δεν έχει διαδοθεί ακόμη στο realtime model. Κρατά το πέδιλο
    * **έξω** από τα entities ώστε ένα stale model echo (που ακόμη το περιέχει) να μην
@@ -86,14 +100,21 @@ export interface FoundationLevelState {
 
 const EMPTY_REMOVED: ReadonlySet<string> = new Set();
 
-export const useFoundationLevelStore = create<FoundationLevelState>((set) => ({
+export const useFoundationLevelStore = create<FoundationLevelState>((set, get) => ({
   target: null,
   entities: [],
   activeFloorElevationMm: 0,
   activeLevelBearsOnFoundation: false,
+  buildingGradeDropBelowBaseMm: 0,
   pendingRemovedIds: EMPTY_REMOVED,
   setActiveLevelBearsOnFoundation(activeLevelBearsOnFoundation) {
     set({ activeLevelBearsOnFoundation });
+  },
+  setBuildingGradeDropBelowBaseMm(mm) {
+    // Fail-safe: μη-πεπερασμένο / αρνητικό → 0 (έδαφος στο FFL), ποτέ NaN στην επιμέτρηση.
+    const buildingGradeDropBelowBaseMm = Number.isFinite(mm) ? Math.max(0, mm) : 0;
+    if (buildingGradeDropBelowBaseMm === get().buildingGradeDropBelowBaseMm) return; // idempotent
+    set({ buildingGradeDropBelowBaseMm });
   },
   setFoundationLevel(target, entities, activeFloorElevationMm) {
     // Owner re-seed (αλλαγή ορόφου/κτιρίου) → καθαρές tombstones.

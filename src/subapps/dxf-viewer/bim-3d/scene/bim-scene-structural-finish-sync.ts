@@ -28,8 +28,10 @@ import type { ColumnVerticalExtentLookup } from '../../bim/finishes/structural-f
 import { buildStructuralSilhouetteSkin } from '../converters/structural-finish-silhouette-3d';
 import { computeStructuralHorizontalFinishFaces, computeMergedStructuralTopCap } from '../../bim/finishes/structural-finish-scene-horizontal';
 import { buildHorizontalFinishSkin } from '../converters/structural-finish-horizontal-3d';
-import { buildColumnVerticalExtentLookup, makeColumnHostResolver } from '../../bim/geometry/column-vertical-profile';
-import { buildWallHostInputs } from '../../bim/geometry/wall-host-plan-builder';
+import { buildColumnVerticalExtentLookup } from '../../bim/geometry/column-vertical-profile';
+import { resolveColumnHostInput } from './column-host-inputs';
+// ADR-713 — ο ΚΟΙΝΟΣ χάρτης στάθμης εδάφους (ίδιος με τον πυρήνα στο `bim-scene-attach-syncs`).
+import { buildColumnGradeLookup } from './column-exposure-grade';
 import { buildCeilingSlabHosts, resolveMemberTopClipZmm } from './monolithic-slab-clip';
 import { wallFootprintPolygon } from '../../bim/finishes/structural-finish-scene';
 import { projectVerticesTo2D } from '../../bim/geometry/shared/polygon-utils';
@@ -76,6 +78,9 @@ export function syncStructuralFinishSkin(
   // rendered πυρήνα (`syncColumns`): storey-ceiling κολώνα → top = nextFloorElevationMm,
   // ΟΧΙ raw `params.height`. Έτσι σοβάς (silhouette + caps/soffit) = πυρήνας πάντα.
   const columnExtents = buildColumnVerticalExtents(entities, ctx);
+  // ADR-713 — Ο ΙΔΙΟΣ χάρτης στάθμης εδάφους που κόβει την επένδυση στον πυρήνα
+  // (`syncColumns`): σοβάς και επένδυση σταματούν στο ΙΔΙΟ ύψος, αλλιώς μένει ορατή λωρίδα.
+  const columnGradeById = buildColumnGradeLookup(entities.columns, ctx);
   // ADR-534 Φ3c-B3b — soffit top-clip ανά δοκό (ΙΔΙΑ SSoT με το ορατό στερεό): όπου μονολιθική
   // πλάκα καλύπτει τη δοκό, η κορυφή του σοβά κόβεται στο soffit (μηδέν προεξοχή στην πλάκα).
   const beamTopClipById = buildBeamTopClipById(entities);
@@ -135,6 +140,7 @@ export function syncStructuralFinishSkin(
       walls: g.walls,
       floorElevationMm: ctx.floorElevationMm,
       columnExtents,
+      columnGradeById, // ADR-713 — ο σοβάς σταματά στη στάθμη τελειωμένου εδάφους
       beamTopClipById,
       openingsByWallId,
       wallTopClipById,
@@ -163,12 +169,8 @@ export function syncStructuralFinishSkin(
  * δεν ξανα-υπολογίζει από raw `params.height`.
  */
 function buildColumnVerticalExtents(entities: Bim3DEntities, ctx: SyncContext): ColumnVerticalExtentLookup {
-  const hasAttached = entities.columns.some(
-    (c) => c.params?.topBinding === 'attached' || c.params?.baseBinding === 'attached',
-  );
-  const resolveHostInput = hasAttached
-    ? makeColumnHostResolver(buildWallHostInputs(entities.beams, entities.slabs))
-    : undefined;
+  // N.0.2 — το «ίδιο context με τον πυρήνα» είναι πλέον **κοινός κώδικας**, όχι σχόλιο.
+  const resolveHostInput = resolveColumnHostInput(entities);
   // ADR-449 — ΕΝΑ SSoT lookup builder (μοιραζόμαστε με το 2Δ silhouette path).
   return buildColumnVerticalExtentLookup(entities.columns, {
     floorElevationMm: ctx.floorElevationMm,

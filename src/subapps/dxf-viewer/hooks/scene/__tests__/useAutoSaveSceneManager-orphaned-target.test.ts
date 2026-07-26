@@ -7,9 +7,14 @@
  * DXF scene auto-save must therefore be fully suppressed for it, WITHOUT breaking the
  * normal auto-save of file-linked floorplans. Two belts prove that here:
  *   - belt #1 (gate): a pre-latched fileId never schedules a save.
- *   - belt #2 (resolve safety net): an injected fileId whose `getFileStoragePath`
- *     resolves to null is latched + skipped instead of throwing ADR-293.
+ *   - belt #2 (resolve safety net): an injected fileId whose backing doc is gone is
+ *     latched + skipped instead of throwing ADR-293.
  *   - regression: a file-linked floorplan with a resolvable path still saves.
+ *
+ * 🛡️ ADR-714 — η ΛΥΣΗ δεν άλλαξε, το ΕΡΓΑΛΕΙΟ άλλαξε: το resolve περνά πλέον από το
+ * `getFileFloorScope` (ένα read που απαντά ΚΑΙ «πού γράφω» ΚΑΙ «σε ποιον ανήκει») αντί
+ * για το `getFileStoragePath`, ώστε το ίδιο read να τροφοδοτεί και τον cross-floor
+ * φρουρό. Το latch + skip συμπεριφέρεται ακριβώς όπως πριν.
  */
 
 import { renderHook, act } from '@testing-library/react';
@@ -27,14 +32,15 @@ jest.mock('../../../services/dxf-firestore.service', () => ({
     autoSaveV2: jest.fn().mockResolvedValue(true),
     findExistingFileRecord: jest.fn().mockResolvedValue(null),
     generateFileId: jest.fn().mockReturnValue('file_test_1'),
-    // Orphaned by default: the backing file doc is gone → no storagePath.
-    getFileStoragePath: jest.fn().mockResolvedValue(null),
+    // Orphaned by default: the backing file doc is gone → no scope at all (ADR-714).
+    getFileFloorScope: jest.fn().mockResolvedValue(null),
+    findFloorFloorplanFileRecord: jest.fn().mockResolvedValue(null),
     deriveScenePath: jest.fn().mockReturnValue('scenes/test.json'),
   },
 }));
 
 const mockAutoSaveV2 = DxfFirestoreService.autoSaveV2 as jest.Mock;
-const mockGetFileStoragePath = DxfFirestoreService.getFileStoragePath as jest.Mock;
+const mockGetFileFloorScope = DxfFirestoreService.getFileFloorScope as jest.Mock;
 
 const LEVEL = 'lvl1';
 
@@ -57,8 +63,8 @@ describe('useAutoSaveSceneManager — orphaned-target latch (ADR-469 v1.2)', () 
   beforeEach(() => {
     jest.useFakeTimers();
     mockAutoSaveV2.mockClear();
-    mockGetFileStoragePath.mockClear();
-    mockGetFileStoragePath.mockResolvedValue(null);
+    mockGetFileFloorScope.mockClear();
+    mockGetFileFloorScope.mockResolvedValue(null);
   });
 
   afterEach(() => {
@@ -99,8 +105,8 @@ describe('useAutoSaveSceneManager — orphaned-target latch (ADR-469 v1.2)', () 
 
     await flushDebouncedSave();
 
-    // Resolve hit the dead-end (getFileStoragePath → null) → skip, not throw.
-    expect(mockGetFileStoragePath).toHaveBeenCalledWith('file_gone');
+    // Resolve hit the dead-end (getFileFloorScope → null) → skip, not throw.
+    expect(mockGetFileFloorScope).toHaveBeenCalledWith('file_gone');
     expect(mockAutoSaveV2).not.toHaveBeenCalled();
     // The safety net latched it, so future edits are hard-suppressed by the gate.
     expect(result.current.isFileTargetOrphaned('file_gone')).toBe(true);

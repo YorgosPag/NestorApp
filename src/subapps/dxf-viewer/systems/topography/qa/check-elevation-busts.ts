@@ -60,6 +60,9 @@ export function checkElevationBusts(surface: TinSurface): TopoQaFlag[] {
       kind: 'elevation-bust' as const,
       severity: r.residual >= TOPO_QA_CONFIG.ELEVATION_BUST_HIGH_RESIDUAL_MM ? ('high' as const) : ('medium' as const),
       at: nodeWorld(surface, r.index),
+      // The node's OWN (suspect) Z — the 3D marker must sit where the blunder actually is,
+      // not at the neighbours' expected level, or it would point at the wrong height.
+      atZMm: surface.elevations[r.index]!,
       messageKey: 'topography.qa.flag.elevationBust',
       messageParams: {
         elevation: mmToMetreString(surface.elevations[r.index]!),

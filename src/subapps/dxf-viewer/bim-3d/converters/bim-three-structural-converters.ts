@@ -37,6 +37,9 @@ import type { ColumnTopProfile, ColumnBaseProfile } from '../../bim/geometry/col
 import { sceneUnitsToMeters } from '../../utils/scene-units';
 // ADR-539 Φ3a — Cinema 4D «Polygon Mode» per-face appearance (faced multi-material prism).
 import { buildFacedSolidBody } from './bim-three-faced-prism';
+// ADR-713 — ζώνη έκθεσης: πού σταματά η όψη και αρχίζει το θαμμένο τμήμα (+ τι φοράει).
+import { resolveColumnExposureZones } from '../../bim/geometry/column-exposure-zone';
+import { buriedFaceAppearance, resolveBuriedWaterproofing } from '../../bim/finishes/buried-waterproofing';
 import { shouldRenderFaced } from './should-render-faced';
 import { projectVerticesTo2D } from '../../bim/geometry/shared/polygon-utils';
 
@@ -64,10 +67,39 @@ function buildColumnCoreBody(
   shape: THREE.Shape,
   verts: readonly Point3D[],
   heightM: number,
+  // ADR-713 — ύψος (m) της ΘΑΜΜΕΝΗΣ ζώνης από την κάτω παρειά. `0` → καμία ζώνη (legacy).
+  buriedM = 0,
 ): THREE.Mesh | null {
   const fa = column.faceAppearance;
-  if (shouldRenderFaced(fa)) {
-    const mesh = buildFacedSolidBody(verts, heightM, fa ?? {}, getElementMaterial3D('column'));
+  const hasBuried = buriedM > 0;
+  // ADR-713 — η θαμμένη ζώνη ΕΠΙΒΑΛΛΕΙ faced render ακόμη και σε άβαφη κολώνα: το legacy
+  // single-material extrude δεν μπορεί να δείξει δύο υλικά καθ' ύψος, οπότε η στεγανωτική
+  // επάλειψη θα ήταν αόρατη (και μη-επιμετρήσιμη οπτικά) σε κάθε μη-βαμμένο υποστύλωμα.
+  if (hasBuried || shouldRenderFaced(fa)) {
+    // ADR-714 §2.4 — Η ΣΕΙΡΑ ΕΙΝΑΙ ΣΥΜΒΟΛΑΙΟ: **αυτόματο πρώτα, ρητή βαφή χρήστη τελευταία.**
+    //
+    // Τα `buried:i` πρέπει να δηλώνονται ΡΗΤΑ (αλλιώς ο cascade `appearance[key] ?? appearance['*']`
+    // θα έβαφε το θαμμένο τμήμα με την επένδυση όψης — το αρχικό σφάλμα του ADR-713). Αλλά μπαίνουν
+    // ως **BASELINE**, ΠΡΙΝ το `fa`, ώστε ένα ρητό `fa['buried:i']` του χρήστη να ΚΕΡΔΙΖΕΙ.
+    //
+    // ⚠️ Με την ανάποδη σειρά (buried ΜΕΤΑ το `fa`) το αυτόματο default σκέπαζε ό,τι επέλεγε ο
+    // μηχανικός: διάλεγε τη θαμμένη όψη, της έδινε τσιμεντοειδές/μεμβράνη, και η βαφή **αγνοούνταν
+    // σιωπηλά** — η οθόνη επέστρεφε ασφαλτικό. Το ADR-713 δεν το είχε δει επειδή τότε **δεν υπήρχε
+    // τρόπος** να βάψει ο χρήστης θαμμένη όψη· το κλειδί `buried:i` δεν έφτανε ποτέ στο `fa`.
+    //
+    // Η ασφάλεια του ADR-713 ΔΕΝ χάνεται: το επικίνδυνο κλειδί είναι το base `'*'` (το τούβλο), και
+    // αυτό ΔΕΝ αγγίζει τα `buried:i` — παραμένουν ρητά κλειδιά, άρα ο cascade τα βρίσκει πρώτα. Ό,τι
+    // περνά πλέον είναι **μόνο** ρητή, per-face πρόθεση του χρήστη (Revit «Paint» > type material).
+    const appearance = hasBuried
+      ? {
+          ...buriedFaceAppearance(verts.length, resolveBuriedWaterproofing(column.params.buriedWaterproofing)),
+          ...(fa ?? {}),
+        }
+      : (fa ?? {});
+    const mesh = buildFacedSolidBody(
+      verts, heightM, appearance, getElementMaterial3D('column'),
+      undefined, hasBuried ? buriedM : undefined,
+    );
     // ADR-404 — raking column shear εφαρμόζεται και στο faced geometry (ίδιο local Y span). No-op flat.
     if (mesh) applyColumnTilt(mesh.geometry, flatColumn.params);
     return mesh;
@@ -99,6 +131,10 @@ export function columnToMesh(
   // καλύπτεται από πλάκα οροφής: το ορατό στερεό κόβεται στο soffit της (μηδέν z-fighting). `undefined`/
   // ≥top → καμία αλλαγή. Συνδυάζεται (min) με το υπάρχον `topProfile` (η πλάκα κόβει χαμηλότερα).
   clipTopZmm?: number,
+  // ADR-713 — απόλυτη στάθμη τελειωμένου εδάφους για ΑΥΤΗ την κολώνα (κοινός χάρτης με τον
+  // σοβά, `buildColumnGradeLookup`). Κάτω της: στεγανωτική επάλειψη αντί για επένδυση όψης.
+  // `undefined` → στάθμη στη nominal βάση (default), δηλαδή θαμμένη ζώνη == κοντόστυλο ADR-712.
+  gradeAbsMm?: number,
 ): THREE.Mesh | THREE.Group | null {
   const rawVerts = column.geometry.footprint.vertices;
   if (rawVerts.length < 3) return null;
@@ -172,9 +208,21 @@ export function columnToMesh(
     ? Math.max(0, Math.min(nominalHeightWithDropMm, clipTopZmm - baseAbsMm))
     : nominalHeightWithDropMm;
 
+  // ADR-713 — ο διαχωρισμός εκτεθειμένης/θαμμένης ζώνης. Το local Y του πυρήνα ξεκινά στο
+  // `baseAbsMm` (άνω παρειά πεδίλου), άρα το ύψος της θαμμένης ζώνης μετριέται από εκεί —
+  // ακριβώς η σύμβαση που περιμένει το `buildFacedPrism`. Στάθμη στη βάση → ζώνη 0 → legacy.
+  const exposure = resolveColumnExposureZones({
+    nominalBaseAbsMm,
+    topAbsMm: baseAbsMm + effectiveHeightMm,
+    baseDropMm,
+    gradeAbsMm,
+  });
+
   // ADR-539 Φ3a — faced (per-face paint) core when painted/targeted, else legacy extrude
   // (ADR-413 UVs + ADR-404 tilt baked inside the helper). Same [0, height] span → same position.y.
-  const mesh = buildColumnCoreBody(column, flatColumn, shape, verts, effectiveHeightMm * MM_TO_M);
+  const mesh = buildColumnCoreBody(
+    column, flatColumn, shape, verts, effectiveHeightMm * MM_TO_M, exposure.buriedHeightMm * MM_TO_M,
+  );
   if (!mesh) return null;
   // ADR-402 — `baseOffset` lifts the whole column (vertical move). ONLY on this flat
   // path: the attached-prism path bakes baseOffset into its profile z. baseOffset=0 → no change.
@@ -191,11 +239,18 @@ export function columnToMesh(
   // Ενεργό μόνο όταν η κολόνα έχει ενεργό `finish` ΚΑΙ δόθηκαν walls (απών στο ghost
   // path → πυρήνας-only). ADR-449 Slice 5 — view-level gate `showFinishSkin`.
   // ADR-470 — core gate: κρύβει το σώμα της κολώνας αν ανενεργό (σοβάς/οπλισμός μένουν).
-  // ADR-489 §6.1 — σοβάς/οπλισμός παίρνουν το επιμηκυμένο ύψος ώστε να φτάνουν στο πέδιλο.
+  // ADR-489 §6.1 — ο ΟΠΛΙΣΜΟΣ παίρνει το επιμηκυμένο ύψος (φτάνει μέσα στο πέδιλο — δομική
+  // αγκύρωση, ανεξάρτητη από στάθμες εδάφους).
+  // ADR-713 — ο ΣΟΒΑΣ ΟΧΙ: σταματά στη στάθμη τελειωμένου εδάφους (κάτω της μπαίνει
+  // στεγανωτικό, όχι επίχρισμα) → κάθεται στο `buriedHeight` με ύψος `exposedHeight`.
+  // Στο default (στάθμη = nominal βάση) αυτό ισοδυναμεί με «από το FFL ως την κορυφή»,
+  // δηλαδή ταυτίζεται με τον ενιαίο silhouette — και διορθώνει την **κεκλιμένη** κολώνα,
+  // που ως τώρα (per-element path) σοβατιζόταν ως το πέδιλο.
   const composed = applyStructuralCoreVisibility3D(
     attachColumnRebar(
       composeColumnWithFinish(
-        tagged, column, walls, beams, 0, levelId, effectiveHeightMm, suppressFinishSkin,
+        tagged, column, walls, beams, exposure.buriedHeightMm * MM_TO_M, levelId,
+        exposure.exposedHeightMm, suppressFinishSkin,
       ),
       column, 0, effectiveHeightMm, levelId,
     ),

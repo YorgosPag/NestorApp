@@ -27,6 +27,8 @@ import {
 } from '../ribbon/hooks/bridge/column-command-keys';
 import type { DispatchColumnParams } from '../ribbon/hooks/bridge/useColumnParamsDispatcher';
 import { COLUMN_PROPERTY_GROUPS } from './column-property-fields';
+// ADR-715 — η γέφυρα «επιλογή Τμήματος στο 3Δ» → «ποια section το κυβερνά στο Properties».
+import { useBuriedPartSelectionStore } from '../../bim/parts/buried-part-selection-store';
 import { ColumnPropertyRow } from './ColumnPropertyRow';
 import { EntityWarningsSection } from '../structural-warnings/EntityWarningsSection';
 import { AnalysisForcesSection } from '../structural-analysis/AnalysisForcesSection';
@@ -53,6 +55,9 @@ export function ColumnAdvancedPanel({
 
   const poly = column.params.ushape?.polygon;
   const hasUshapePolygon = !!(poly && poly.length >= 3);
+  // ADR-715 — «έχω μπει μέσα στο Κοντόστυλο αυτής της κολώνας». Low-frequency store (αλλάζει
+  // μόνο σε κλικ/Esc), άρα ασφαλής reactive συνδρομή σε leaf panel — ΟΧΙ high-freq (ADR-040).
+  const buriedPart = useBuriedPartSelectionStore((s) => s.selected);
 
   return (
     <div className={containerClassName ?? 'flex flex-col gap-3 p-2'}>
@@ -67,9 +72,22 @@ export function ColumnAdvancedPanel({
         ) {
           return null;
         }
+        // ADR-715 — όταν ο χρήστης έχει κλικάρει το κοντόστυλο στο 3Δ, το Properties δείχνει
+        // ΠΟΙΑ section το κυβερνά. Χωρίς αυτό, ο μηχανικός επιλέγει Τμήμα και μετά ψάχνει
+        // σε 7 sections «πού είναι η στεγάνωση;» — η επιλογή θα ήταν χωρίς συνέχεια.
+        const isDrilledInto = group.id === 'buriedWaterproofing' && buriedPart?.columnId === column.id;
         return (
           <section key={group.id} className="flex flex-col gap-1">
-            <h4 className="text-xs font-semibold text-foreground">{t(group.titleKey)}</h4>
+            <h4
+              className={
+                isDrilledInto
+                  ? 'rounded-sm bg-[hsl(var(--bg-info)/0.2)] px-1 text-xs font-semibold text-foreground'
+                  : 'text-xs font-semibold text-foreground'
+              }
+              aria-current={isDrilledInto ? 'true' : undefined}
+            >
+              {t(group.titleKey)}
+            </h4>
             {group.fields.map((field) => {
               // ADR-460 — shape-aware options (π.χ. διαμάντι κρυφό σε Γ/Τ/Π).
               const allowed = resolveColumnFieldOptions(field.commandKey, column.params);

@@ -9,13 +9,13 @@
  *
  * Subscribes ONLY to the low-frequency {@link useClashReport} store (ADR-040-safe —
  * it changes on Detect / Clear, never per frame). Each row is clickable → "zoom to
- * clash": in 3D it frames the camera via the clash-focus bus; in 2D it reuses the
+ * clash": in 3D it frames the camera via the shared view-focus bus; in 2D it reuses the
  * existing `canvas-fit-to-view-selected` EventBus SSoT (same path as the Z key), so
  * no zoom logic is duplicated. Severity colours come from the shared SSoT palette.
  *
  * @see ../../../components/ui/floating/FloatingPanel.tsx (centralized draggable panel)
  * @see ../../systems/coordination/clash-report-store.ts
- * @see ../../systems/coordination/clash-focus-bus.ts
+ * @see ../../systems/coordination/view-focus-bus.ts
  * @see ../../systems/coordination/clash-severity-color.ts
  */
 
@@ -26,17 +26,18 @@ import { ShieldAlert } from 'lucide-react';
 import { FloatingPanel } from '@/components/ui/floating';
 import { useClashReport, clashReportStore } from '../../systems/coordination/clash-report-store';
 import { CLASH_SEVERITY_COLOR } from '../../systems/coordination/clash-severity-color';
-import { requestClashFocus } from '../../systems/coordination/clash-focus-bus';
+import { requestViewFocus } from '../../systems/coordination/view-focus-bus';
+import { clashPointToWorld } from '../../bim-3d/coordination/clash-marker-math';
 import type { Clash, ClashSeverity } from '../../systems/coordination/clash-types';
 import { useViewMode3DStore, selectIs3D } from '../../bim-3d/stores/ViewMode3DStore';
 import { sceneUnitsToMeters, type SceneUnits } from '../../utils/scene-units';
 import { EventBus } from '../../systems/events';
 
-/** Half-size (METRES) of the box fitted around a clash in the 2D view — converted to
- *  canvas units per scene at click time, so it is scale-correct for mm OR metre units
- *  (a fixed canvas-unit pad zooms a metre-unit drawing out to nothing). Matches the 3D
- *  focus extent (`CLASH_FOCUS_HALF_EXTENT_M`). */
-const CLASH_2D_FOCUS_PAD_M = 0.6;
+/** Half-size (METRES) of the box fitted around a clash — the ONE extent for both views.
+ *  In 2D it is converted to canvas units per scene at click time, so it is scale-correct for
+ *  mm OR metre units (a fixed canvas-unit pad zooms a metre-unit drawing out to nothing); in
+ *  3D it travels on the view-focus bus. One constant ⇒ the two views cannot drift apart. */
+const CLASH_FOCUS_HALF_EXTENT_M = 0.6;
 const SEVERITY_ORDER: readonly ClashSeverity[] = ['high', 'medium', 'low'];
 /** Panel size — width drives the bounds clamp; height is the max for the scroll list. */
 const CLASH_PANEL_DIMENSIONS = { width: 288, height: 420 };
@@ -135,14 +136,19 @@ function ClashRow({ clash, sceneUnits, t }: ClashRowProps): React.ReactElement {
 
 function focusClash(clash: Clash, sceneUnits: SceneUnits): void {
   if (selectIs3D(useViewMode3DStore.getState())) {
-    requestClashFocus(clash.point);
+    // The bus carries three-world metres — convert HERE, in the clash domain, via the pure
+    // (THREE-free) mapping, so the shared subscriber never has to guess whose frame it got.
+    requestViewFocus({
+      point: clashPointToWorld(clash.point),
+      halfExtentM: CLASH_FOCUS_HALF_EXTENT_M,
+    });
     return;
   }
   // 2D: reuse the canonical fit-to-bounds path (clash point metres → canvas units).
   const toCanvas = 1 / sceneUnitsToMeters(sceneUnits);
   const cx = clash.point.x * toCanvas;
   const cy = clash.point.y * toCanvas;
-  const pad = CLASH_2D_FOCUS_PAD_M * toCanvas; // metres → canvas units (scale-correct)
+  const pad = CLASH_FOCUS_HALF_EXTENT_M * toCanvas; // metres → canvas units (scale-correct)
   EventBus.emit('canvas-fit-to-view-selected', {
     bounds: { min: { x: cx - pad, y: cy - pad }, max: { x: cx + pad, y: cy + pad } },
   });
