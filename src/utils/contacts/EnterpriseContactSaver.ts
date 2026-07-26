@@ -21,6 +21,7 @@ import {
   buildAddressInfoFromFlatFields,
   buildAddressInfoListFromCompanyAddresses,
 } from './address-info-builder';
+import { pruneBlankContactAddresses } from './contact-address-blankness';
 import {
   COMPANY_ONLY_TOP_LEVEL_FIELDS,
   collectCompanyCustomFields,
@@ -155,11 +156,24 @@ export class EnterpriseContactSaver {
     // το `stripTypeExclusiveFields` έσβηνε και το top-level αντίγραφο. Το UI
     // όμως τις δεχόταν κανονικά: **σιωπηλή απώλεια δεδομένων στο save.**
     const contactAddresses = formData.companyAddresses;
-    if (isNonEmptyArray(contactAddresses)) {
-      customFields.companyAddresses = contactAddresses;
+    if (Array.isArray(contactAddresses)) {
+      // ADR-332 D20 — Η ΔΙΚΛΕΙΔΑ. Κενές εγγραφές κλαδεύονται ΕΔΩ, πριν χωρίσουν
+      // οι δρόμοι: η αυθεντική λίστα και το παράγωγο `addresses[]` γεννιούνται
+      // από την ΙΔΙΑ κλαδεμένη πηγή, άρα δεν μπορούν να αποκλίνουν. Κλάδεμα μόνο
+      // στο παράγωγο θα άφηνε την κενή γραμμή στη φόρμα να ξαναγράφεται.
+      // Παλαιά μολυσμένα έγγραφα (π.χ. η κενή έδρα της ALFA) καθαρίζουν έτσι
+      // στο επόμενο save, χωρίς μετάπτωση.
+      const persistableAddresses = pruneBlankContactAddresses(contactAddresses);
+      customFields.companyAddresses = persistableAddresses;
 
       // Το `addresses[]` είναι ΠΑΡΑΓΩΓΟ της αυθεντικής λίστας (ADR-332 D15).
-      enterpriseData.addresses = buildAddressInfoListFromCompanyAddresses(contactAddresses);
+      if (persistableAddresses.length > 0) {
+        enterpriseData.addresses = buildAddressInfoListFromCompanyAddresses(persistableAddresses);
+      } else if (!hasAddressData) {
+        // Καμία διεύθυνση πουθενά — ούτε στα flat πεδία. Χωρίς ρητό κενό πίνακα
+        // το merge του Firestore θα κρατούσε την παλιά κενή εγγραφή για πάντα.
+        enterpriseData.addresses = [];
+      }
     }
     // Η αυθεντική λίστα ζει στα `customFields` — ποτέ top-level, για κανέναν τύπο.
     delete (enterpriseData as Record<string, unknown>).companyAddresses;

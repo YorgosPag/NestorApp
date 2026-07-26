@@ -28,6 +28,7 @@ import { formatContactAddressLine } from '@/utils/address/address-line';
 import { AddressTypeSelector } from '@/components/contacts/addresses/AddressTypeSelector';
 import { resolveContactAddressLabel } from '@/components/contacts/addresses/contactAddressLabel';
 import { cn } from '@/lib/utils';
+import { isBlankContactAddress } from '@/utils/contacts/contact-address-blankness';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { AddressEditor } from '@/components/shared/addresses/editor';
 import type { ResolvedAddressFields } from '@/components/shared/addresses/editor';
@@ -197,20 +198,47 @@ export const CompanyAddressesSection = forwardRef<CompanyAddressesSectionHandle,
   const colors = useSemanticColors();
   const [branchDeleteIndex, setBranchDeleteIndex] = useState<number | null>(null);
   const [editingBranchIndex, setEditingBranchIndex] = useState<number | null>(null);
+  /**
+   * ADR-332 D20 — η νέα γραμμή ζει ΤΟΠΙΚΑ μέχρι να αποκτήσει πρώτη πραγματική τιμή.
+   *
+   * Παλιότερα το «Νέα Διεύθυνση» έγραφε **αμέσως** κενό αντικείμενο στο `formData`·
+   * αν ο χρήστης άλλαζε γνώμη, η κενή εγγραφή έφτανε αυτούσια στη βάση. Τώρα
+   * ακύρωση ή φυγή σημαίνει ότι **δεν υπήρξε ποτέ**.
+   */
+  const [draftBranch, setDraftBranch] = useState<CompanyAddress | null>(null);
 
-  // Close inline form when global edit mode ends
+  // Close inline form when global edit mode ends — ένα κενό προσχέδιο δεν επιβιώνει.
   React.useEffect(() => {
-    if (disabled) setEditingBranchIndex(null);
+    if (disabled) {
+      setEditingBranchIndex(null);
+      setDraftBranch(null);
+    }
   }, [disabled]);
 
   const isEditing = !disabled;
 
   // ADR-319: HQ is always index 0 (positional invariant across contact types).
   const effectiveHqIndex = 0;
-  const branches = addresses.filter((_, i) => i !== effectiveHqIndex);
+  const persistedBranches = addresses.filter((_, i) => i !== effectiveHqIndex);
+  // Το προσχέδιο εμφανίζεται τελευταίο· είναι ορατό αλλά όχι ακόμη δεδομένο.
+  const branches = draftBranch ? [...persistedBranches, draftBranch] : persistedBranches;
+  const draftVisualIndex = persistedBranches.length;
 
   const handleBranchUpdate = useCallback(
     (branchVisualIndex: number, updated: CompanyAddress) => {
+      // Προαγωγή προσχεδίου: μπαίνει στο `formData` μόνο όταν αποκτήσει
+      // πραγματικό περιεχόμενο. Σκέτη αλλαγή τύπου/ετικέτας δεν αρκεί —
+      // αλλιώς θα ξαναγράφαμε την κενή εγγραφή από άλλη πόρτα.
+      if (draftBranch && branchVisualIndex === draftVisualIndex) {
+        if (isBlankContactAddress(updated)) {
+          setDraftBranch(updated);
+        } else {
+          setDraftBranch(null);
+          onChange([...addresses, updated]);
+        }
+        return;
+      }
+
       const newAddresses = [...addresses];
       let branchCount = 0;
       for (let i = 0; i < newAddresses.length; i++) {
@@ -223,20 +251,30 @@ export const CompanyAddressesSection = forwardRef<CompanyAddressesSectionHandle,
         branchCount++;
       }
     },
-    [addresses, effectiveHqIndex, onChange],
+    [addresses, draftBranch, draftVisualIndex, effectiveHqIndex, onChange],
   );
 
   const addBranch = useCallback(() => {
-    const newAddresses = [...addresses, createEmptyBranch(contactType)];
-    onChange(newAddresses);
+    setDraftBranch(createEmptyBranch(contactType));
     // Auto-open inline edit for the new branch
-    setEditingBranchIndex(branches.length);
-  }, [addresses, branches.length, contactType, onChange]);
+    setEditingBranchIndex(draftVisualIndex);
+  }, [contactType, draftVisualIndex]);
 
   useImperativeHandle(ref, () => ({ addBranch }), [addBranch]);
 
+  /** Κλείσιμο της inline φόρμας — ένα μη-προαχθέν προσχέδιο απορρίπτεται. */
+  const closeBranchEditor = useCallback(() => {
+    setEditingBranchIndex(null);
+    setDraftBranch(null);
+  }, []);
+
   const removeBranch = useCallback(
     (branchVisualIndex: number) => {
+      if (draftBranch && branchVisualIndex === draftVisualIndex) {
+        setDraftBranch(null);
+        return;
+      }
+
       const updated = [...addresses];
       let branchCount = 0;
       for (let i = 0; i < updated.length; i++) {
@@ -249,7 +287,7 @@ export const CompanyAddressesSection = forwardRef<CompanyAddressesSectionHandle,
         branchCount++;
       }
     },
-    [addresses, effectiveHqIndex, onChange],
+    [addresses, draftBranch, draftVisualIndex, effectiveHqIndex, onChange],
   );
 
   return (
@@ -303,7 +341,7 @@ export const CompanyAddressesSection = forwardRef<CompanyAddressesSectionHandle,
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={() => setEditingBranchIndex(null)}
+                        onClick={closeBranchEditor}
                       >
                         {tAddr('deleteDialog.cancel')}
                       </Button>

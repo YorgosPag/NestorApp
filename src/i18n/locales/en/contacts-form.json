@@ -263,6 +263,7 @@
     "headquarters": "Headquarters",
     "branchesTitle": "Branches / Additional Addresses",
     "individualTitle": "Addresses",
+    "fullscreenAriaLabel": "Addresses & Branches",
     "addAddress": "Add Address",
     "noBranches": "No additional addresses",
     "branch": "Branch",

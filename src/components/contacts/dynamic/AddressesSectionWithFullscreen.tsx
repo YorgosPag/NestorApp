@@ -31,6 +31,7 @@ import { useDerivedWorkAddresses } from '@/components/contacts/relationships/hoo
 import { AddressTypeSelector } from '@/components/contacts/addresses/AddressTypeSelector';
 import { resolveContactAddressLabel } from '@/components/contacts/addresses/contactAddressLabel';
 import { getPrimaryAddressType, type ContactAddressType } from '@/types/contacts/address-types';
+import { pruneBlankContactAddresses } from '@/utils/contacts/contact-address-blankness';
 import { useNotifications } from '@/providers/NotificationProvider';
 
 interface AddressesSectionWithFullscreenProps {
@@ -251,6 +252,16 @@ export function AddressesSectionWithFullscreen({
   const primaryCustomLabel = formData.primaryAddressCustomLabel;
 
   const currentAddresses: CompanyAddress[] = formData.companyAddresses ?? [];
+  /**
+   * ADR-332 D20 — η τελευταία γραμμή είναι **συνθετική**: υπάρχει μόνο για να έχει
+   * η οθόνη μια θέση έδρας όταν η επαφή δεν έχει καμία διεύθυνση ακόμη.
+   *
+   * ΔΕΝ είναι δεδομένο. Παλιότερα έρρεε αυτούσια στο `onChange` και γραφόταν στη
+   * βάση — αυτή είναι η αιτία της κενής έδρας της «ALFA ΚΑΤΑΣΚΕΥΑΣΤΙΚΗ Α.Ε.».
+   * Κάθε σημείο που γράφει `companyAddresses` περνά πλέον από το
+   * `pruneBlankContactAddresses` (θετική αναλλοίωτη ADR-319: η θέση 0 μένει όσο
+   * υπάρχει έστω ένα υποκατάστημα).
+   */
   const effectiveAddresses: CompanyAddress[] = currentAddresses.length > 0
     ? currentAddresses
     : formData.street
@@ -300,7 +311,7 @@ export function AddressesSectionWithFullscreen({
     <FullscreenOverlay
       isFullscreen={fullscreen.isFullscreen}
       onToggle={fullscreen.toggle}
-      ariaLabel="Διευθύνσεις & Υποκαταστήματα"
+      ariaLabel={tContacts('contacts-form:addressesSection.fullscreenAriaLabel')}
       className="grid grid-cols-1 lg:grid-cols-2 gap-2"
       fullscreenClassName="grid grid-cols-1 lg:grid-cols-2 gap-2 p-2 overflow-auto"
     >
@@ -404,13 +415,15 @@ export function AddressesSectionWithFullscreen({
           contactType={formData.type}
           onChange={(newAddresses) => {
             if (!setFormData) return;
+            // ADR-332 D20: η συνθετική κενή έδρα δεν επιτρέπεται να γίνει δεδομένο.
+            const persistable = pruneBlankContactAddresses(newAddresses);
             // ADR-319: HQ lives at index 0 (positional invariant) — `home` is
             // primary for individuals, `headquarters` for companies/services,
             // so find-by-type cannot match across both scopes.
-            const hq = newAddresses[0];
+            const hq = persistable[0];
             setFormData({
               ...formData,
-              companyAddresses: newAddresses,
+              companyAddresses: persistable,
               street: hq?.street ?? '',
               streetNumber: hq?.number ?? '',
               postalCode: hq?.postalCode ?? '',

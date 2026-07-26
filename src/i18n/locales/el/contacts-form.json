@@ -263,6 +263,7 @@
     "headquarters": "Έδρα",
     "branchesTitle": "Υποκαταστήματα / Επιπλέον Διευθύνσεις",
     "individualTitle": "Διευθύνσεις",
+    "fullscreenAriaLabel": "Διευθύνσεις & Υποκαταστήματα",
     "addAddress": "Προσθήκη Διεύθυνσης",
     "noBranches": "Δεν υπάρχουν επιπλέον διευθύνσεις",
     "branch": "Υποκατάστημα",
