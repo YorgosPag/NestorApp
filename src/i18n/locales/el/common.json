@@ -1437,5 +1437,10 @@
     "selectedCount": "{count} επιλεγμένα",
     "removeChip": "Αφαίρεση",
     "clearAll": "Καθαρισμός"
+  },
+  "chart": {
+    "showDataTable": "Προβολή δεδομένων ως πίνακα",
+    "dataTableCaption": "Τα δεδομένα του γραφήματος σε μορφή πίνακα",
+    "saving": "Αποθήκευση…"
   }
 }

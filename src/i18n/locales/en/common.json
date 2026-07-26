@@ -1437,5 +1437,10 @@
     "selectedCount": "{count} selected",
     "removeChip": "Remove",
     "clearAll": "Clear all"
+  },
+  "chart": {
+    "showDataTable": "Show data as table",
+    "dataTableCaption": "The chart data in table form",
+    "saving": "Saving…"
   }
 }

@@ -201,7 +201,17 @@
     "save": "Save",
     "cancel": "Cancel",
     "entriesTitle": "Entries",
-    "emptyState": "No debt entries. Click \"Add Loan\" to model your debt maturity wall."
+    "emptyState": "No debt entries. Click \"Add Loan\" to model your debt maturity wall.",
+    "year": "Maturity Year",
+    "caption": "Outstanding balance maturing per year, by loan type.",
+    "removeEntry": "Delete loan",
+    "monthsToMaturity": "{count, plural, one {# month} other {# months}}",
+    "types": {
+      "construction": "Construction",
+      "mortgage": "Mortgage",
+      "bridge": "Bridge",
+      "mezzanine": "Mezzanine"
+    }
   },
   "variance": {
     "title": "Budget vs Actual",
@@ -215,7 +225,21 @@
     "save": "Save",
     "totalBudget": "Total Budget",
     "totalActual": "Total Actual",
-    "totalVariance": "Variance"
+    "totalVariance": "Variance",
+    "caption": "Actual against budget per category. A positive value is an overrun.",
+    "emptyState": "Enter budget and actual amounts to render the chart.",
+    "removeRow": "Delete category",
+    "defaultCategories": {
+      "land": "Land Acquisition",
+      "permits": "Permits & Fees",
+      "foundation": "Foundation",
+      "structure": "Structure",
+      "mechanical": "Mechanical",
+      "finishes": "Finishes",
+      "marketing": "Marketing",
+      "legal": "Legal",
+      "contingency": "Contingency"
+    }
   },
   "financialQuery": {
     "title": "Financial Assistant",
@@ -234,6 +258,10 @@
     "assistantBubble": "Assistant",
     "send": "Send",
     "chartTitle": "Results Chart",
+    "chartCaption": "The chart the answer suggested for the query's data.",
+    "chartEmptyState": "The answer carried no data to plot.",
+    "chartCategory": "Category",
+    "chartValue": "Value",
     "clearHistory": "Clear"
   },
   "errors": {

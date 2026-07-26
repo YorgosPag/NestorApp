@@ -1320,7 +1320,8 @@
       "description": "The ONE producer of the derived contact addresses[]. ADR-332 D15 — this conversion existed three times (EnterpriseContactSaver flat, buildAddressesFromCompany, mappers/company buildAddresses); two dropped the whole administrative hierarchy and one also dropped neighborhood. Different function names made it invisible to name-based discovery.",
       "forbiddenPatterns": [
         "function\\s+(buildAddressInfoFromFlatFields|buildAddressInfoListFromCompanyAddresses)\\s*\\(",
-        "buildAddressesFromCompany\\s*\\("
+        "buildAddressesFromCompany\\s*\\(",
+        "function\\s+(buildCompanyAddressFromAddressInfo|buildFlatFieldsFromAddressInfo)\\s*\\("
       ],
       "allowlist": [
         "src/utils/contacts/address-info-builder.ts"
@@ -4668,7 +4669,7 @@
     },
     "numeric-field": {
       "ssotFile": "src/components/ui/numeric-field/NumericField.tsx",
-      "description": "ADR-706 (2026-07-25) — the app's ONE decimal input lives in src/components/ui/numeric-field/. Found during the Projects E2E verify: `<Input type=\"number\">` bound to a NUMBER state silently commits the wrong value for decimals. Typing 2.4 stored 4, 21.5 stored 5, 70.5 stored 5 (reproduced 5/5 across all three Όροι Δόμησης fields). Mechanism: while the user types `2.`, an input of type number reports e.target.value as the EMPTY STRING, so the controlled parse yields 0, re-renders \"0\", and the next keystroke reads back \"04\". A comma survived only because Chrome accepts it as a valid decimal char under an el locale. ADR-576 had already fixed the PARSE layer (parseLocaleNumber handles both `.` and `,`) — the character never reached the parser. The fix is view/model separation at the INPUT layer: type=\"text\" inputMode=\"decimal\", a STRING draft while focused, a NUMBER model, reconciled on commit — the same conclusion React #11877/#17609, Adobe Spectrum, GOV.UK and MDN all reach. Forbidden: re-implementing NumericField / useNumericField / evaluateNumericExpression anywhere else — import from @/components/ui/numeric-field. This module is a THIN CONSUMER of the existing SSoTs and adds no parse or format rule of its own: parsing delegates to lib/number/locale-number.ts (ADR-576), display to lib/intl-formatting.ts formatNumber (ADR-314). ⚠️ DELIBERATELY NOT GUARDED HERE: a blanket `type=\"number\"` pattern would flag all 187 occurrences across 81 files, most of which are INTEGER fields (floor count, piece count) where type=number is perfectly correct — that is the zero-signal trap CLAUDE.md N.12 warns about. The decimal-field migration is tracked in .claude-rules/pending-ratchet-work.md and needs per-site reading, never a blanket sed. NOT A GAP: PriceInputField in features/property-details stays its own component — its model is a NULLABLE STRING (a price can be \"no price\", a building coefficient cannot), so folding it in would produce an over-parameterised factory (the ADR-698/699/702 failure mode); it shares the display semantics and jscpd:diff confirms zero clones. NOT A GAP: the DXF viewer's FormatterRegistry (ADR-082) and dynamic-input normalizeNumber (ADR-397/513) are a different domain with a different contract, exactly as the comma-normalize module already documents.",
+      "description": "ADR-706 (2026-07-25) — the app's ONE decimal input lives in src/components/ui/numeric-field/. Found during the Projects E2E verify: `<Input type=\"number\">` bound to a NUMBER state silently commits the wrong value for decimals. Typing 2.4 stored 4, 21.5 stored 5, 70.5 stored 5 (reproduced 5/5 across all three Όροι Δόμησης fields). Mechanism: while the user types `2.`, an input of type number reports e.target.value as the EMPTY STRING, so the controlled parse yields 0, re-renders \"0\", and the next keystroke reads back \"04\". A comma survived only because Chrome accepts it as a valid decimal char under an el locale. ADR-576 had already fixed the PARSE layer (parseLocaleNumber handles both `.` and `,`) — the character never reached the parser. The fix is view/model separation at the INPUT layer: type=\"text\" inputMode=\"decimal\", a STRING draft while focused, a NUMBER model, reconciled on commit — the same conclusion React #11877/#17609, Adobe Spectrum, GOV.UK and MDN all reach. Forbidden: re-implementing NumericField / useNumericField / evaluateNumericExpression anywhere else — import from @/components/ui/numeric-field. This module is a THIN CONSUMER of the existing SSoTs and adds no parse or format rule of its own: parsing delegates to lib/number/locale-number.ts (ADR-576), display to lib/intl-formatting.ts formatNumber (ADR-314). ⚠️ DELIBERATELY NOT GUARDED HERE: a blanket `type=\"number\"` pattern would flag every remaining occurrence (138 across 69 files as of 2026-07-26, down from 193/85 before the sales migration), most of which are INTEGER fields (floor count, piece count, scenario count, RNG seed) where type=number is perfectly correct — that is the zero-signal trap CLAUDE.md N.12 warns about. The decimal-field migration is tracked in .claude-rules/pending-ratchet-work.md and needs per-site reading, never a blanket sed. Per-domain regression is anchored instead: src/components/sales/__tests__/sales-numeric-fields.test.tsx scans the whole sales tree with an explicit, justified allowlist — the pattern to copy when the next domain migrates. Phase 3 (2026-07-26) added the `blankValue` prop: the empty state of a NUMBER model (emptyValue defaults to it, it is exempt from min/max, and it drops aria-valuenow) — deliberately NOT a `number | null` value contract, which would force every caller state, validator and payload to become nullable for a purely presentational concern. NOT A GAP: PriceInputField in features/property-details stays its own component — its model is a NULLABLE STRING (a price can be \"no price\", a building coefficient cannot), so folding it in would produce an over-parameterised factory (the ADR-698/699/702 failure mode); it shares the display semantics and jscpd:diff confirms zero clones. NOT A GAP: the DXF viewer's FormatterRegistry (ADR-082) and dynamic-input normalizeNumber (ADR-397/513) are a different domain with a different contract, exactly as the comma-normalize module already documents.",
       "forbiddenPatterns": [
         "function useNumericField",
         "function evaluateNumericExpression",
@@ -4682,11 +4683,67 @@
         "src/components/ui/numeric-field/index.ts",
         "src/components/ui/numeric-field/__tests__/NumericField.test.tsx",
         "src/components/ui/numeric-field/__tests__/numeric-expression.test.ts",
-        "src/components/core/FormFields/FormFieldNumericInput.tsx"
+        "src/components/core/FormFields/FormFieldNumericInput.tsx",
+        "src/components/sales/__tests__/sales-numeric-fields.test.tsx"
       ],
       "addedDate": "2026-07-25",
       "addedByAdr": "ADR-706",
       "tier": 3
+    },
+    "contact-addresses-reader": {
+      "ssotFile": "src/utils/contacts/contact-addresses-reader.ts",
+      "description": "The ONE reader of a contact address list. ADR-332 D18 — this was private to companyMapper while individualMapper/serviceMapper had none at all, so extra addresses on individuals and services were written by the UI and then silently dropped on save. The old fallback also hardcoded headquarters/branch, values ADR-319 does not permit on those contact types.",
+      "forbiddenPatterns": [
+        "function\\s+(resolveContactAddresses|resolveCompanyAddresses)\\s*\\("
+      ],
+      "allowlist": [
+        "src/utils/contacts/contact-addresses-reader.ts"
+      ],
+      "tier": 3
+    },
+    "enterprise-contact-arrays": {
+      "ssotFile": "src/utils/contactForm/extractors/arrays.ts",
+      "description": "The ONE conversion of form data to enterprise arrays plus legacy email/phone fallbacks. ADR-332 D18 — this preamble was copied verbatim into all three create mappers (individual/company/service), differing only in the default phone type.",
+      "forbiddenPatterns": [
+        "function\\s+buildEnterpriseContactArrays\\s*\\("
+      ],
+      "allowlist": [
+        "src/utils/contactForm/extractors/arrays.ts"
+      ],
+      "tier": 3
+    },
+    "chart-card-shell": {
+      "ssotFile": "src/components/ui/chart-card/index.ts",
+      "description": "ADR-710 — a chart with a plot is rendered through <ChartCard>, never by wiring recharts' responsive wrapper by hand. 26 of 28 chart files still import it directly, and each one therefore reimplements the card frame, the theming, the legend, the empty state and the accessible data table. That last one is not cosmetic: the measured --chart-* ramp puts two light-mode steps under 3:1 against the card surface and an adjacent pair at CVD dE 6.2 (dark mode fails outright), so the table view and the always-on legend are the relief the palette owes. jscpd never sees this duplication because every chart plots different data — the files share shape, not tokens. Compose ChartCard.Header / .Figure / .Tooltip / .Summary / .Editor instead; the single series description drives theming, legend, table and marks at once.",
+      "forbiddenPatterns": [
+        "^[[:space:]]*ResponsiveContainer,?[[:space:]]*$",
+        "import[^;]*ResponsiveContainer[^;]*from[^;]*recharts"
+      ],
+      "allowlist": [
+        "src/components/ui/chart/ChartContainer.tsx",
+        "src/components/ui/chart-card/index.ts"
+      ],
+      "addedDate": "2026-07-26",
+      "addedByAdr": "ADR-710",
+      "tier": 3
+    },
+    "modal-keyboard-scope": {
+      "ssotFile": "src/subapps/dxf-viewer/keyboard/global-shortcut-listener.ts",
+      "description": "ADR-711 — global accelerators of the DXF viewer register through addGlobalShortcutListener, never with a raw window.addEventListener('keydown'). The wrapper asks shouldGlobalShortcutYield (modal keyboard scope + editable target); a raw listener steals the key from an open modal — the measured root of defects E1/E4 in ADR-364 §10.15: Tab was dead inside every dialog of the viewer (WAI-ARIA APG violation) and the arrows panned the viewport ±80px behind an open lightbox. The guard must stay structural: a per-listener check rots at the 44th listener, and the ten pre-existing copies of the \"is the user typing?\" predicate are exactly how it rotted the first time. Listeners that OWN typing time (Dynamic Input, Command Line, Radial ring) and the escape bus are allowlisted on purpose — gating them would be a regression, not a fix; use opts.allowWhenEditable for the middle case.",
+      "forbiddenPatterns": [
+        "window\.addEventListener\(.keydown."
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/keyboard/global-shortcut-listener.ts",
+        "src/subapps/dxf-viewer/keyboard/createModifierKeyTracker.ts",
+        "src/subapps/dxf-viewer/systems/escape-bus/EscapeCommandBus.ts",
+        "src/subapps/dxf-viewer/systems/escape-bus/escape-dev-audit.ts",
+        "src/subapps/dxf-viewer/systems/dynamic-input/",
+        "src/subapps/dxf-viewer/ui/command-line/"
+      ],
+      "addedDate": "2026-07-26",
+      "addedByAdr": "ADR-711",
+      "tier": 2
     }
   }
 }
