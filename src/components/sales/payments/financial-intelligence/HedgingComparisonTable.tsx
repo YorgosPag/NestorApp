@@ -12,8 +12,8 @@
 
 import React, { useMemo, useState } from 'react';
 import { Info } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { InfoLabel, InfoTableHead } from './InfoLabel';
+import { NumericField } from '@/components/ui/numeric-field';
+import { InfoLabel, InfoTableHead } from '@/components/ui/InfoLabel';
 import {
   Tooltip as RadixTooltip,
   TooltipContent,
@@ -118,11 +118,8 @@ export function HedgingComparisonTable({ salePrice, effectiveRate, t }: HedgingC
     [hedgingInput]
   );
 
-  // --- Helpers ---
-  const parseInput = (value: string): number => {
-    const n = parseFloat(value);
-    return isNaN(n) ? 0 : n;
-  };
+  // ADR-706 — the local `parseInput` helper is gone: parsing is the numeric
+  // SSoT's job now, and it delegates to the locale-number SSoT (ADR-576).
 
   return (
     <article className="space-y-4">
@@ -143,32 +140,39 @@ export function HedgingComparisonTable({ salePrice, effectiveRate, t }: HedgingC
         <fieldset className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div className="space-y-1">
             <InfoLabel label={t('costCalculator.hedging.notional')} tooltip={t('costCalculator.hedging.notionalTooltip')} />
-            <Input
-              type="number"
+            <NumericField
+              min={0}
+              step={0.01}
               value={notional}
-              onChange={(e) => setNotional(parseInput(e.target.value))}
+              onValueChange={setNotional}
               className="text-sm"
+              aria-label={t('costCalculator.hedging.notional')}
             />
           </div>
           <div className="space-y-1">
             <InfoLabel label={t('costCalculator.hedging.termYears')} tooltip={t('costCalculator.hedging.termYearsTooltip')} />
-            <Input
-              type="number"
+            {/* The bounds are applied here too, not only via min/max: the field
+                syncs live while typing and clamps on commit, and a transient 0
+                would divide through the swap maths. */}
+            <NumericField
               min={1}
               max={30}
+              step={1}
               value={termYears}
-              onChange={(e) => setTermYears(Math.max(1, Math.min(30, parseInput(e.target.value))))}
+              onValueChange={(years) => setTermYears(Math.max(1, Math.min(30, years)))}
               className="text-sm"
+              aria-label={t('costCalculator.hedging.termYears')}
             />
           </div>
           <div className="space-y-1">
             <InfoLabel label={t('costCalculator.hedging.swapRate')} tooltip={t('costCalculator.hedging.swapRateTooltip')} />
-            <Input
-              type="number"
-              step="0.01"
+            <NumericField
+              step={0.01}
+              min={0}
               value={swapRate}
-              onChange={(e) => setSwapRate(parseInput(e.target.value))}
+              onValueChange={setSwapRate}
               className="text-sm"
+              aria-label={t('costCalculator.hedging.swapRate')}
             />
           </div>
           <div className="space-y-1">
@@ -189,51 +193,56 @@ export function HedgingComparisonTable({ salePrice, effectiveRate, t }: HedgingC
         <fieldset className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div className="space-y-1">
             <InfoLabel label={t('costCalculator.hedging.capStrike')} tooltip={t('costCalculator.hedging.capStrikeTooltip')} />
-            <Input
-              type="number"
-              step="0.01"
+            <NumericField
+              step={0.01}
+              min={0}
               value={capStrike}
-              onChange={(e) => setCapStrike(parseInput(e.target.value))}
+              onValueChange={setCapStrike}
               className="text-sm"
+              aria-label={t('costCalculator.hedging.capStrike')}
             />
           </div>
           <div className="space-y-1">
             <InfoLabel label={t('costCalculator.hedging.capPremium')} tooltip={t('costCalculator.hedging.capPremiumTooltip')} />
-            <Input
-              type="number"
+            <NumericField
+              min={0}
+              step={0.01}
               value={capPremium}
-              onChange={(e) => setCapPremium(parseInput(e.target.value))}
+              onValueChange={setCapPremium}
               className="text-sm"
+              aria-label={t('costCalculator.hedging.capPremium')}
             />
           </div>
           <div className="space-y-1">
             <InfoLabel label={t('costCalculator.hedging.collarRange')} tooltip={t('costCalculator.hedging.collarRangeTooltip')} />
             <div className="flex gap-1">
-              <Input
-                type="number"
-                step="0.01"
+              <NumericField
+                step={0.01}
+                min={0}
                 value={collarFloor}
-                onChange={(e) => setCollarFloor(parseInput(e.target.value))}
+                onValueChange={setCollarFloor}
                 className="text-sm"
-                placeholder="Floor"
+                aria-label={t('costCalculator.hedging.collarFloor')}
               />
-              <Input
-                type="number"
-                step="0.01"
+              <NumericField
+                step={0.01}
+                min={0}
                 value={collarCap}
-                onChange={(e) => setCollarCap(parseInput(e.target.value))}
+                onValueChange={setCollarCap}
                 className="text-sm"
-                placeholder="Cap"
+                aria-label={t('costCalculator.hedging.collarCap')}
               />
             </div>
           </div>
           <div className="space-y-1">
             <InfoLabel label={t('costCalculator.hedging.collarPremium')} tooltip={t('costCalculator.hedging.collarPremiumTooltip')} />
-            <Input
-              type="number"
+            <NumericField
+              min={0}
+              step={0.01}
               value={collarPremium}
-              onChange={(e) => setCollarPremium(parseInput(e.target.value))}
+              onValueChange={setCollarPremium}
               className="text-sm"
+              aria-label={t('costCalculator.hedging.collarPremium')}
             />
           </div>
         </fieldset>

@@ -18,8 +18,9 @@ import React, { useState, useCallback } from 'react';
 import { Info, Play, Dices } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { NumericField } from '@/components/ui/numeric-field';
 import { Label } from '@/components/ui/label';
-import { InfoLabel } from './InfoLabel';
+import { InfoLabel } from '@/components/ui/InfoLabel';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -194,12 +195,12 @@ export function MonteCarloTab({ input, effectiveRate, result: _result, t }: Mont
                         }}
                       >
                         <Label className="text-xs">{t('costCalculator.monteCarlo.stdDev')}</Label>
-                        <Input
-                          type="number"
-                          step="0.01"
+                        <NumericField
+                          step={0.01}
                           value={variable.stdDev}
-                          onChange={e => handleVariableFieldChange(variable.key, 'stdDev', Number(e.target.value))}
+                          onValueChange={value => handleVariableFieldChange(variable.key, 'stdDev', value)}
                           className="w-20 h-7 text-xs"
+                          aria-label={t('costCalculator.monteCarlo.stdDev')}
                         />
                       </fieldset>
                     )}
@@ -218,12 +219,12 @@ export function MonteCarloTab({ input, effectiveRate, result: _result, t }: Mont
                           }}
                         >
                           <Label className="text-xs">{t('costCalculator.monteCarlo.min')}</Label>
-                          <Input
-                            type="number"
-                            step="0.01"
+                          <NumericField
+                            step={0.01}
                             value={variable.min}
-                            onChange={e => handleVariableFieldChange(variable.key, 'min', Number(e.target.value))}
+                            onValueChange={value => handleVariableFieldChange(variable.key, 'min', value)}
                             className="w-20 h-7 text-xs"
+                            aria-label={t('costCalculator.monteCarlo.min')}
                           />
                         </span>
                         <span
@@ -239,12 +240,12 @@ export function MonteCarloTab({ input, effectiveRate, result: _result, t }: Mont
                           }}
                         >
                           <Label className="text-xs">{t('costCalculator.monteCarlo.max')}</Label>
-                          <Input
-                            type="number"
-                            step="0.01"
+                          <NumericField
+                            step={0.01}
                             value={variable.max}
-                            onChange={e => handleVariableFieldChange(variable.key, 'max', Number(e.target.value))}
+                            onValueChange={value => handleVariableFieldChange(variable.key, 'max', value)}
                             className="w-20 h-7 text-xs"
+                            aria-label={t('costCalculator.monteCarlo.max')}
                           />
                         </span>
                       </fieldset>

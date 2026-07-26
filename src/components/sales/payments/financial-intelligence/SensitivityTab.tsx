@@ -1,29 +1,21 @@
-/* eslint-disable design-system/no-hardcoded-colors */
-/* eslint-disable design-system/enforce-semantic-colors */
-/* eslint-disable custom/no-hardcoded-strings */
 'use client';
 
 /**
- * SensitivityTab — Tornado Chart & 2-Variable Heat Map
+ * SensitivityTab — tornado chart and a two-variable heat map.
  *
- * Shows which variables have the most impact on NPV,
- * plus a 2D heat map for interactive exploration.
+ * Which inputs move NPV the most, and what NPV looks like across a grid of two of
+ * them. The tornado renders through the ADR-710 chart card shell; the heat map is an
+ * HTML table with bucketed cell classes, not a plot, so it stays as it is.
  *
- * @enterprise ADR-242 SPEC-242A - Sensitivity Analysis
+ * The literal red/green pair the bars used to carry is now `chartPolarityColor`: the
+ * sign of a delta is the meaning, and the shell owns the mapping from meaning to ink.
+ *
+ * @enterprise ADR-242 SPEC-242A — Sensitivity Analysis
+ * @enterprise ADR-710 — Chart card shell
  */
 
-import React, { useMemo, useState } from 'react';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ReferenceLine,
-  Cell,
-  ResponsiveContainer,
-} from 'recharts';
+import { useCallback, useMemo, useState } from 'react';
+import { BarChart, Bar, ReferenceLine, Cell } from 'recharts';
 import { Info, HelpCircle } from 'lucide-react';
 import {
   Select,
@@ -38,10 +30,17 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import {
+  CHART_POLARITY_COLORS,
+  ChartCard,
+  chartPolarityColor,
+  chartPolarityTone,
+  type ChartSeries,
+} from '@/components/ui/chart-card';
 
 import { runTornadoAnalysis, buildHeatMap } from '@/lib/sensitivity-engine';
 import { formatCurrencyWhole } from '@/lib/intl-utils';
-import { FinancialTooltip } from './FinancialTooltip';
+import { financialAxisFrame } from './financial-chart-axes';
 import type {
   CostCalculationInput,
   CostCalculationResult,
@@ -95,9 +94,10 @@ interface TornadoChartData {
   variable: string;
   lowDelta: number;
   highDelta: number;
-  lowNPV: number;
-  highNPV: number;
 }
+
+/** More NPV is the good outcome, so a positive delta is the good sign. */
+const NPV_POLARITY = 'higher-is-better';
 
 function TornadoChart({
   input,
@@ -114,85 +114,148 @@ function TornadoChart({
     [input, effectiveRate]
   );
 
-  const chartData: TornadoChartData[] = analysis.entries.map((entry) => ({
-    variable: t(entry.label),
-    lowDelta: entry.lowNPV - analysis.baseNPV,
-    highDelta: entry.highNPV - analysis.baseNPV,
-    lowNPV: entry.lowNPV,
-    highNPV: entry.highNPV,
-  }));
+  const chartData = useMemo<TornadoChartData[]>(
+    () =>
+      analysis.entries.map((entry) => ({
+        variable: t(entry.label),
+        lowDelta: entry.lowNPV - analysis.baseNPV,
+        highDelta: entry.highNPV - analysis.baseNPV,
+      })),
+    [analysis, t],
+  );
+
+  const series = useMemo<ChartSeries<TornadoChartData>[]>(
+    () => [
+      { key: 'lowDelta', label: t('costCalculator.sensitivity.low') },
+      { key: 'highDelta', label: t('costCalculator.sensitivity.high') },
+    ],
+    [t],
+  );
+
+  /** A delta reads as a movement, so it keeps its sign in both directions. */
+  const formatDelta = useCallback(
+    (value: number) => `${value > 0 ? '+' : ''}${formatCurrencyWhole(value)}`,
+    [],
+  );
 
   return (
-    <section className="space-y-2">
-      <h3 className="text-sm font-semibold inline-flex items-center gap-1">
-        {t('costCalculator.sensitivity.tornadoTitle')}
+    <ChartCard
+      series={series}
+      data={chartData}
+      categoryKey="variable"
+      categoryLabel={t('costCalculator.sensitivity.variable')}
+      categoryDescription={t('costCalculator.sensitivity.variableTooltip')}
+      formatValue={formatDelta}
+    >
+      <ChartCard.Header title={t('costCalculator.sensitivity.tornadoTitle')}>
         <RadixTooltip>
           <TooltipTrigger asChild>
-            <HelpCircle className={cn("h-3.5 w-3.5 cursor-help", colors.text.muted)} />
+            <HelpCircle className={cn('h-3.5 w-3.5 cursor-help', colors.text.muted)} />
           </TooltipTrigger>
           <TooltipContent side="top" className="max-w-xs text-xs">
             {t('costCalculator.sensitivity.tornadoTitleTooltip')}
           </TooltipContent>
         </RadixTooltip>
-      </h3>
-      <p className={cn("text-xs", colors.text.muted)}>
-        {t('costCalculator.sensitivity.baseNpv')}: {formatCurrencyWhole(analysis.baseNPV)}
-      </p>
-      <ResponsiveContainer width="100%" height={280}>
-        <BarChart
-          layout="vertical"
-          data={chartData}
-          margin={{ top: 5, right: 30, left: 120, bottom: 5 }}
-        >
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis
-            type="number"
-            tickFormatter={(v: number) => `${v >= 0 ? '+' : ''}${formatCurrencyWhole(v)}`}
+      </ChartCard.Header>
+
+      <ChartCard.Summary>
+        <ChartCard.SummaryItem
+          label={t('costCalculator.sensitivity.baseNpv')}
+          value={formatCurrencyWhole(analysis.baseNPV)}
+          tone={chartPolarityTone(analysis.baseNPV, NPV_POLARITY)}
+        />
+      </ChartCard.Summary>
+
+      <ChartCard.Figure
+        caption={t('costCalculator.sensitivity.tornadoCaption')}
+        emptyMessage={t('costCalculator.sensitivity.tornadoEmptyState')}
+        size="lg"
+      >
+        <BarChart layout="vertical" data={chartData} margin={{ left: 100 }}>
+          {financialAxisFrame({
+            categoryKey: 'variable',
+            layout: 'vertical',
+            formatValueTick: formatDelta,
+          })}
+          <ReferenceLine
+            x={0}
+            stroke={CHART_POLARITY_COLORS.neutral}
+            strokeDasharray="3 3"
           />
-          <YAxis
-            type="category"
-            dataKey="variable"
-            width={110}
-            tick={{ fontSize: 12 }}
-          />
-          <Tooltip
-            content={
-              <FinancialTooltip
-                valueFormatter={(value, name) => [
-                  formatCurrencyWhole(value as number),
-                  name === 'lowDelta'
-                    ? t('costCalculator.sensitivity.low')
-                    : t('costCalculator.sensitivity.high'),
-                ]}
-              />
-            }
-          />
-          <ReferenceLine x={0} stroke="#666" strokeDasharray="3 3" />
-          <Bar dataKey="lowDelta" stackId="a" name="lowDelta">
-            {chartData.map((entry, i) => (
+          <Bar dataKey="lowDelta" stackId="delta">
+            {chartData.map((entry) => (
               <Cell
-                key={`low-${i}`}
-                fill={entry.lowDelta < 0 ? 'hsl(0, 72%, 51%)' : 'hsl(142, 71%, 45%)'}
+                key={`low-${entry.variable}`}
+                fill={chartPolarityColor(entry.lowDelta, NPV_POLARITY)}
               />
             ))}
           </Bar>
-          <Bar dataKey="highDelta" stackId="a" name="highDelta">
-            {chartData.map((entry, i) => (
+          <Bar dataKey="highDelta" stackId="delta">
+            {chartData.map((entry) => (
               <Cell
-                key={`high-${i}`}
-                fill={entry.highDelta < 0 ? 'hsl(0, 72%, 51%)' : 'hsl(142, 71%, 45%)'}
+                key={`high-${entry.variable}`}
+                fill={chartPolarityColor(entry.highDelta, NPV_POLARITY)}
               />
             ))}
           </Bar>
         </BarChart>
-      </ResponsiveContainer>
-    </section>
+      </ChartCard.Figure>
+    </ChartCard>
   );
 }
 
 // =============================================================================
 // HEAT MAP
 // =============================================================================
+
+/**
+ * One axis of the heat map. The two axes are the same control with a different label
+ * and a different variable withheld — the one already taken by the other axis, which
+ * is why `excluded` is a parameter and not a filter each call-site repeats.
+ */
+function VariablePicker({
+  labelKey,
+  value,
+  onChange,
+  excluded,
+  t,
+}: {
+  readonly labelKey: 'rowVariable' | 'colVariable';
+  readonly value: SensitivityVariable;
+  readonly onChange: (next: SensitivityVariable) => void;
+  readonly excluded: SensitivityVariable;
+  readonly t: SensitivityTabProps['t'];
+}) {
+  const colors = useSemanticColors();
+
+  return (
+    <div className="flex-1 space-y-1">
+      <span className="inline-flex items-center gap-1">
+        <Label className="text-xs">{t(`costCalculator.sensitivity.${labelKey}`)}</Label>
+        <RadixTooltip>
+          <TooltipTrigger asChild>
+            <HelpCircle className={cn('h-3 w-3 cursor-help', colors.text.muted)} />
+          </TooltipTrigger>
+          <TooltipContent side="top" className="max-w-xs text-xs">
+            {t(`costCalculator.sensitivity.${labelKey}Tooltip`)}
+          </TooltipContent>
+        </RadixTooltip>
+      </span>
+      <Select value={value} onValueChange={(next) => onChange(next as SensitivityVariable)}>
+        <SelectTrigger className="h-8 text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {VARIABLE_OPTIONS.filter((option) => option !== excluded).map((option) => (
+            <SelectItem key={option} value={option} className="text-xs">
+              {getVariableLabel(option, t)}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
 
 function HeatMap({
   input,
@@ -226,58 +289,22 @@ function HeatMap({
         </RadixTooltip>
       </h3>
 
-      {/* Variable selectors */}
+      {/* Variable selectors — the two axes of the grid, same control both times. */}
       <fieldset className="flex gap-4">
-        <div className="flex-1 space-y-1">
-          <span className="inline-flex items-center gap-1">
-            <Label className="text-xs">{t('costCalculator.sensitivity.rowVariable')}</Label>
-            <RadixTooltip>
-              <TooltipTrigger asChild>
-                <HelpCircle className={cn("h-3 w-3 cursor-help", colors.text.muted)} />
-              </TooltipTrigger>
-              <TooltipContent side="top" className="max-w-xs text-xs">
-                {t('costCalculator.sensitivity.rowVariableTooltip')}
-              </TooltipContent>
-            </RadixTooltip>
-          </span>
-          <Select value={rowVar} onValueChange={(v) => setRowVar(v as SensitivityVariable)}>
-            <SelectTrigger className="h-8 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {VARIABLE_OPTIONS.filter((v) => v !== colVar).map((v) => (
-                <SelectItem key={v} value={v} className="text-xs">
-                  {getVariableLabel(v, t)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex-1 space-y-1">
-          <span className="inline-flex items-center gap-1">
-            <Label className="text-xs">{t('costCalculator.sensitivity.colVariable')}</Label>
-            <RadixTooltip>
-              <TooltipTrigger asChild>
-                <HelpCircle className={cn("h-3 w-3 cursor-help", colors.text.muted)} />
-              </TooltipTrigger>
-              <TooltipContent side="top" className="max-w-xs text-xs">
-                {t('costCalculator.sensitivity.colVariableTooltip')}
-              </TooltipContent>
-            </RadixTooltip>
-          </span>
-          <Select value={colVar} onValueChange={(v) => setColVar(v as SensitivityVariable)}>
-            <SelectTrigger className="h-8 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {VARIABLE_OPTIONS.filter((v) => v !== rowVar).map((v) => (
-                <SelectItem key={v} value={v} className="text-xs">
-                  {getVariableLabel(v, t)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <VariablePicker
+          labelKey="rowVariable"
+          value={rowVar}
+          onChange={setRowVar}
+          excluded={colVar}
+          t={t}
+        />
+        <VariablePicker
+          labelKey="colVariable"
+          value={colVar}
+          onChange={setColVar}
+          excluded={rowVar}
+          t={t}
+        />
       </fieldset>
 
       {/* Heat map table */}
@@ -323,12 +350,11 @@ function HeatMap({
 // =============================================================================
 
 export function SensitivityTab({ input, effectiveRate, result: _result, t }: SensitivityTabProps) {
-  const _colors = useSemanticColors();
   return (
     <article className="space-y-6">
       {/* Info banner */}
       <section className="flex gap-2 rounded-lg border border-primary/30 bg-[hsl(var(--bg-info))]/20 p-3">
-        <Info className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+        <Info className="h-5 w-5 text-primary shrink-0 mt-0.5" aria-hidden="true" />
         <p className="text-sm text-foreground leading-relaxed">
           {t('costCalculator.sensitivity.infoBanner')}
         </p>
