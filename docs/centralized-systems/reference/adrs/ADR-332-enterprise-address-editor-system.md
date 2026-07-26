@@ -1376,6 +1376,151 @@ React)· το hook ζει στο `src/hooks/contacts/`.
 
 ---
 
+### D21 — Η επιλεγμένη επαφή ζει στο URL· ο δεύτερος μηχανισμός καταργήθηκε
+**RESOLVED — 2026-07-26**
+
+#### Το ελάττωμα δεν ήταν bug· ήταν **διπλότυπο αρμοδιότητας**
+
+Το ερώτημα «ποια επαφή είναι ανοιχτή;» απαντιόταν από **δύο** ανεξάρτητους μηχανισμούς:
+
+| # | Μηχανισμός | Ρόλος |
+|---|-----------|-------|
+| A | `?contactId=` στο URL | **μόνο ανάγνωση** — εξωτερικά deep links |
+| B | `contact-selected` σε `sessionStorage` (D20/D20.1) | δικλείδα επιβίωσης σε remount |
+
+Κανένα gate δεν το έβλεπε: δεν είναι διπλότυπο **κώδικα** (το jscpd/CHECK 3.28 δεν το πιάνει),
+είναι διπλότυπο **αρμοδιότητας**. Το Β μπήκε για να καλύψει αδυναμία που το Α δεν έχει — και
+γέννησε τη δική του σειρά ελαττωμάτων, με κορυφαίο το D20.1 (το `null` με δύο σημασίες, η
+δικλείδα που έσβηνε το ίδιο της το κλειδί 325ms πριν φτάσουν τα δεδομένα).
+
+**Το URL δεν χρειάζεται δικλείδα.** Επιβιώνει reload, remount, Fast Refresh, back/forward,
+bookmark, share και restore-tab **δωρεάν**. Άρα ολόκληρη η κατηγορία ελαττωμάτων του Β παύει να
+υπάρχει — δεν διορθώνεται, **εξαφανίζεται**. Επιπλέον η κατάσταση γίνεται μοιράσιμη: το «άνοιξε
+αυτή την επαφή» είναι πλέον σύνδεσμος.
+
+Δεν εφευρέθηκε μοτίβο — **επεκτάθηκε υπάρχον**: το `viewport-persistence.ts` (ADR-400) ήδη κρατά
+το viewport του DXF Viewer στο URL (`/dxf/viewer?s=…&ox=…&oy=…&lvl=…`).
+
+#### 🔴 Το εύρημα που ανέτρεψε τον σχεδιασμό: ο συγχρονισμός του Next ισχύει **μόνο στο production**
+
+Η τεκμηρίωση του Next είναι ρητή:
+
+> «`pushState` and `replaceState` calls integrate into the Next.js Router, allowing you to sync
+> with `usePathname` and `useSearchParams`.» — *Linking and Navigating → Native History API*
+
+**Μετρήθηκε ότι αυτό ισχύει μόνο στο production build** (Next 15.5.22). Το **ίδιο ακριβώς**
+probe — σκέτο `history.replaceState` με `?filter=Δοκ`, χωρίς καθόλου router:
+
+| Περιβάλλον | Αποτέλεσμα |
+|---|---|
+| **production** (`nestorconstruct.gr`) | ✅ banner φίλτρου, λίστα **4→2**, η ανοιχτή καρτέλα + το scroll **επιβίωσαν** |
+| **dev server** (turbopack) | ❌ **καμία** επανασχεδίαση |
+
+Η πρώτη υλοποίηση στηρίχθηκε σε αυτή την υπόσχεση (`useSearchParams()` για ανάγνωση) και
+**έσπασε τοπικά**: ο Giorgio ανέφερε «πατάω πάνω στις κάρτες και δεν ανοίγουν». Το URL γραφόταν
+σωστά, αλλά η ανάγνωση ήταν κουφή· και ο φρουρός ταυτότητας (ίδιο id ⇒ καμία εγγραφή) έκανε το
+κόλλημα μόνιμο.
+
+**Απόφαση: η αντιδραστικότητα δεν ανατίθεται στον router — παράγεται.** Το
+`@/lib/url-query-state` τυλίγει **μία φορά** τα `pushState`/`replaceState` (καλεί πρώτα την
+αρχική, άρα ο Next κάνει ό,τι κάνει) και ακούει `popstate`· ο hook καταναλώνει μέσω
+`useSyncExternalStore`. Έτσι πιάνονται **και** οι δικές μας γραφές **και** οι πλοηγήσεις του
+router. Είναι ο ίδιος μηχανισμός που χρησιμοποιεί εσωτερικά το `nuqs` (MIT) — **χωρίς** την
+εξάρτηση, που δεν εγκρίθηκε.
+
+> ⚠️ Μάθημα γενικής ισχύος: **μια συμπεριφορά που δουλεύει μόνο στο production δεν είναι λύση —
+> είναι παγίδα** για τον επόμενο που θα τη δοκιμάσει τοπικά και θα τη νομίσει σπασμένη.
+
+#### Η δεύτερη σημασιολογική σύγκρουση: το `?contactId=` σήμαινε **δύο** πράγματα
+
+Το `contactsPageFilters.ts` είχε `if (contactIdParam) return true` — δηλαδή η **παρουσία** του
+param απενεργοποιούσε **όλα** τα φίλτρα για **όλες** τις επαφές. Στεκόταν όσο το param έμπαινε
+μόνο από εξωτερικά deep links· από τη στιγμή που το URL έγινε πηγή αλήθειας της επιλογής, **κάθε
+κλικ θα σκότωνε την αναζήτηση**. Η πρόθεση ήταν πάντα η στενή: *μην κρύβεις αυτό που είναι
+ανοιχτό* ⇒ `if (contact.id === selectedContactId) return true`.
+
+Ίδια σύγκρουση στο banner «Προβολή πελάτη X — Επιστροφή»: κρεμόταν από την παρουσία του param,
+οπότε θα εμφανιζόταν σε κάθε κλικ. Το ερώτημα που πραγματικά απαντά δεν ήταν ποτέ «είναι κάτι
+επιλεγμένο;» αλλά «**χρειάζεται ο χρήστης δρόμο επιστροφής;**» ⇒ `arrivedViaDeepLink`.
+
+#### Αρχιτεκτονική
+
+```
+?contactId=<id>                                  ← Η ΜΟΝΗ πηγή αλήθειας
+        │
+        ├─ γραφή ──→ useSelectedEntityUrlState.setSelectedId
+        │                └─ replaceUrlSearchParams  (χωρίς πλοήγηση, διατηρεί άσχετα keys+hash+history.state)
+        │
+        └─ ανάγνωση ─→ useSyncExternalStore(subscribeToUrlQuery, getUrlQuerySnapshot)
+                         │
+                         └─ selectedContact = contacts.find(id) ?? detachedContact   ← ΠΑΡΑΓΩΓΟ
+```
+
+Η **επαφή** δεν αποθηκεύεται πλέον· **παράγεται** από τη λίστα. Αυτό διέγραψε από μόνο του:
+- το effect «Sync selectedContact when contacts list refreshes» (ήταν χειροκίνητος συγχρονισμός),
+- τη δεύτερη εγγραφή στον realtime handler,
+- την εγγραφή επιλογής στο `handleContactUpdatedInPlace` και στο `loadSpecificContact`.
+
+`detachedContact` = η τελευταία γνωστή **μορφή** μιας επαφής που ήρθε από deep link και δεν χωράει
+στη συνδρομή (`limitCount: 1000`). **Δεν** είναι δεύτερη πηγή αλήθειας — το *ποια* επαφή το λέει
+πάντα το URL· αυτό κρατά μόνο το *πώς δείχνει*, ώστε το πάνελ να μην αδειάζει αν το επόμενο
+στιγμιότυπο του Firestore την πετάξει έξω.
+
+#### Το μάθημα του D20.1 μεταφέρθηκε **αυτούσιο**
+
+Το param καθαρίζεται **μόνο** με θετική απόδειξη ανυπαρξίας: λίστα καθισμένη (`!isLoading`)
+**ΚΑΙ** απευθείας ανάκτηση που γύρισε άδεια. Η διαφορά με τη δικλείδα του D20 είναι ότι εδώ μια
+πρόωρη λάθος απόφαση **δεν καταστρέφει τίποτα** — το id ζει στο URL και κανένα μονοπάτι δεν
+μπορεί να το σβήσει κατά λάθος.
+
+#### Τι καταργήθηκε
+
+- `src/utils/contacts/contact-session-storage.ts` + το test του (21 tests)
+- `src/hooks/contacts/useSelectedContactPersistence.ts`
+- 2 registry modules (`contact-session-storage`, `selected-contact-persistence`)
+
+Ο κώδικας του D20.1 έγινε νεκρός — **και σωστά**: ήταν η σωστή διόρθωση ενός λάθους σχεδιασμού,
+όχι λόγος να τον κρατήσουμε. Η απαγόρευση του κλειδιού `contact-selected` **επιβιώνει** ως
+forbidden pattern στο νέο module, ώστε ο μηχανισμός να μην μπορεί να επιστρέψει.
+
+#### Τι προστέθηκε
+
+- `src/lib/url-query-state.ts` — ο **ΕΝΑΣ** γραφέας query state (+ registry module)
+- `src/hooks/useSelectedEntityUrlState.ts` — το **ΕΝΑ** δοχείο επιλογής, γενικό ως προς το
+  param name (+ registry module)
+- `src/components/contacts/page/useSelectedContactAvatarRefresh.ts` — ό,τι απέμεινε από τον
+  καταργημένο συγχρονιστή
+
+#### Παράπλευρες κεντρικοποιήσεις (N.0.2 / N.18)
+
+- `viewport-persistence.ts` (ADR-400) + `camera3d-persistence.ts` **delegate** πλέον στο νέο
+  κοινό primitive αντί να το ξαναγράφουν. Επίσης ενοποιήθηκε το `applyViewportToParams` — οι
+  τέσσερις `set` ήταν δίδυμες σε δύο συναρτήσεις (το jscpd το επιβεβαίωσε).
+- `useReportBuilder.ts` έκανε `replaceState(null, …)` — **έσβηνε το `history.state` του App
+  Router** και το hash. Πέρασε στο `replaceUrlQueryString`.
+- `ContactsPageContent.tsx`: δύο προϋπάρχοντες κλώνοι (props της λίστας ×2, κουμπί διαγραφής ×2).
+
+#### Επαλήθευση
+
+- **Ζωντανά (dev)**: επιλογή ✅ · εναλλαγή ✅ · reload → επιβίωση **με** την ανοιχτή καρτέλα ✅ ·
+  banner εμφανίζεται σε άφιξη και **σβήνει** μετά από κλικ χρήστη ✅ · καμία προειδοποίηση
+  hydration ✅
+- **Ζωντανά (production, Φάση 0)**: **κανένα remount** κατά την επιλογή + εναλλαγή lazy καρτέλας
+  (άγκυρα DOM παρέμεινε συνδεδεμένη). ⇒ Το **Π1 δεν αναπαράγεται στην παραγωγή** και το
+  «στένεμα Suspense» **δεν** χρειάστηκε. Ο ισχυρισμός «το Suspense πετάει τη σελίδα» παραμένει
+  **αναπόδεικτος** (ο παλιός ανιχνευτής HMR ήταν τυφλός στο turbopack).
+- **Tests**: 80/80 στις θιγμένες σουίτες· 25 νέα (13 `url-query-state`, 12 `useSelectedEntityUrlState`)
+  + 7 `useSelectedContactAvatarRefresh` + 3 νέα στο `contactsPageFilters`. `jscpd:diff` καθαρό.
+
+#### Ανοιχτό
+
+- Το `useEntityPageState` (ADR-203: Projects/Buildings/Parking/Storages) **διαβάζει** το
+  `?<entity>Id=` αλλά δεν το **γράφει** ποτέ — ίδιος μισός μηχανισμός με τον προ-D21 κώδικα των
+  Επαφών. Ο νέος hook είναι ήδη γενικός ως προς το param name, οπότε η υιοθέτηση είναι μηχανική.
+  **Δεν** έγινε εδώ: άλλο εύρος, άλλη απόφαση.
+
+---
+
 ### D10 — Phase split granularity
 **RESOLVED — 11 phases, 1 phase per session, handoff-driven**
 - Mandate Giorgio: clean context per session, no noise
