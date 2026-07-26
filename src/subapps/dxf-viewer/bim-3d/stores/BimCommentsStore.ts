@@ -152,3 +152,25 @@ export function selectCommentsByEntityId(
     .filter((c) => c.anchor.type === 'entity' && c.anchor.entityId === entityId)
     .sort((a, b) => compareStrings(b.createdAt, a.createdAt));
 }
+
+/**
+ * Σταθερό «καμία απάντηση» snapshot.
+ *
+ * ⚠️ ΜΗΝ το αντικαταστήσεις με inline `?? []`. Ό,τι επιστρέφει ένας selector **μέσα
+ * στο `useBimCommentsStore(...)`** γίνεται snapshot του `useSyncExternalStore`, και το
+ * zustand τα συγκρίνει με `Object.is`. Ένα φρέσκο `[]` ανά κλήση δεν είναι ποτέ ίσο με
+ * το προηγούμενο ⇒ κάθε κλήση μοιάζει με αλλαγή ⇒ `forceStoreRerender` σε βρόχο ⇒
+ * **«Maximum update depth exceeded»** και ο error boundary ρίχνει ΟΛΟΝ τον DxfViewer.
+ * Μετρημένο 2026-07-26: το `s.replies[commentId] ?? []` του `BimCommentDetailsPanel`
+ * έριχνε τον viewer στο **πρώτο κλικ σε οποιοδήποτε σχόλιο** — γι' αυτό το master-detail
+ * (και μαζί του το lightbox συνημμένων) δεν είχε πατηθεί ποτέ.
+ */
+export const NO_REPLIES: readonly BimCommentReply[] = Object.freeze([]);
+
+/** Referentially-stable replies slice για ένα σχόλιο. Βλ. {@link NO_REPLIES}. */
+export function selectRepliesFor(
+  replies: Record<string, BimCommentReply[]>,
+  commentId: string,
+): readonly BimCommentReply[] {
+  return replies[commentId] ?? NO_REPLIES;
+}

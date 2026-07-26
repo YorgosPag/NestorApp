@@ -22,6 +22,7 @@ import { useTranslation } from 'react-i18next';
 import { Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { noteLocalEscapeOwner } from '../../systems/escape-bus';
 import { CommentMentionsPicker } from './CommentMentionsPicker';
 import { useMentionCandidates } from './use-mention-candidates';
 
@@ -130,6 +131,10 @@ export function CommentReplyInput({
     if (!isPickerOpen) return false;
 
     if (e.key === 'Escape') {
+      // ADR-364 §10.15 — δηλώνουμε τον Κ3 στον έλεγχο. Χωρίς αυτό ο Μηχ. 1 τύπωνε
+      // `SHADOW-OWNER` σε ΚΑΘΕ κλείσιμο της λίστας — θόρυβος πάνω στον ίδιο του τον
+      // θεσμοθετημένο ιδιοκτήτη. Αδήλωτος ωμός ιδιοκτήτης εξακολουθεί να πιάνεται.
+      noteLocalEscapeOwner(e.nativeEvent, 'comment-reply/mention-list');
       setMention(null);
       return true;
     }

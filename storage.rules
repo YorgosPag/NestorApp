@@ -12,6 +12,13 @@ rules_version = '2';
 // /companies/{companyId}/projects/{projectId}/entities/{entityType}/{entityId}/
 //   domains/{domain}/categories/{category}/files/{fileId}.{ext}
 //
+// ⚠️ ΚΡΑΤΑ ΑΥΤΟ ΤΟ ΑΡΧΕΙΟ ΧΩΡΙΣ WARNINGS ΤΟΥ ΜΕΤΑΓΛΩΤΤΙΣΤΗ (π.χ. αχρησιμοποίητες
+//    συναρτήσεις). Ο rules-runtime του Storage emulator επιστρέφει τα warnings ως ΕΝΑ
+//    JSON μήνυμα στο stdout· το firebase-tools το κάνει `JSON.parse` **ανά chunk**
+//    (`lib/emulator/storage/rules/runtime.js`). Στα Windows το pipe κόβει στα **8192
+//    bytes**, οπότε απάντηση >8 KB σπάει, το handshake δεν ολοκληρώνεται ΠΟΤΕ και ο
+//    emulator κρεμάει **χωρίς κανένα μήνυμα σφάλματος** — μαζί του κάθε storage-rules
+//    suite (ADR-301). 25 warnings = ~25 KB. Μετρήθηκε 2026-07-26· βλ. ADR-301 §5.
 //
 // =============================================================================
 
@@ -72,16 +79,6 @@ service firebase.storage {
       return request.resource.size < 50 * 1024 * 1024;
     }
 
-    // Validate image file type
-    function isImageType() {
-      return request.resource.contentType.matches('image/.*');
-    }
-
-    // Validate PDF file type
-    function isPDFType() {
-      return request.resource.contentType == 'application/pdf';
-    }
-
     // Validate allowed content types
     function isAllowedContentType() {
       return request.resource.contentType.matches('image/.*') ||
@@ -91,82 +88,15 @@ service firebase.storage {
     }
 
     // =========================================================================
-    // 🔐 FIRESTORE INTEGRATION HELPERS (Storage Rules v2)
+    // 🔐 FIRESTORE INTEGRATION HELPERS — ΑΦΑΙΡΕΘΗΚΑΝ 2026-07-26
     // =========================================================================
-    // These helpers validate Storage writes against Firestore FileRecord documents
-
-    // Extract fileId from fileName (format: "fileId.ext")
-    // Example: "file_abc123.jpg" → "file_abc123"
-    function extractFileId(fileName) {
-      return fileName.split('.')[0];
-    }
-
-    // Get FileRecord document path for validation
-    function getFileRecordPath(fileId) {
-      return /databases/(default)/documents/files/$(fileId);
-    }
-
-    // Check if FileRecord exists with status 'pending'
-    // ENTERPRISE: Only allow write if pending record exists (Step A must complete before Step B)
-    function hasPendingFileRecord(fileId) {
-      return firestore.exists(getFileRecordPath(fileId)) &&
-             firestore.get(getFileRecordPath(fileId)).data.status == 'pending';
-    }
-
-    // Validate FileRecord fields match storage path segments (WITHOUT projectId)
-    // ENTERPRISE: Ensures file is uploaded to correct location
-    // NOTE: For simplified path (no project), we just check core fields - projectId check removed
-    // because Firestore rules don't reliably support checking for field absence
-    function fileRecordMatchesPathSimple(fileId, companyId, entityType, entityId, domain, category) {
-      let record = firestore.get(getFileRecordPath(fileId)).data;
-      return record.companyId == companyId &&
-             record.entityType == entityType &&
-             record.entityId == entityId &&
-             record.domain == domain &&
-             record.category == category;
-    }
-
-    // Validate FileRecord fields match storage path segments (WITH projectId)
-    // 🏢 ENTERPRISE: STRICT path matching including projectId
-    function fileRecordMatchesPathWithProject(fileId, companyId, projectId, entityType, entityId, domain, category) {
-      let record = firestore.get(getFileRecordPath(fileId)).data;
-      return record.companyId == companyId &&
-             record.projectId == projectId &&
-             record.entityType == entityType &&
-             record.entityId == entityId &&
-             record.domain == domain &&
-             record.category == category;
-    }
-
-    // 🔐 ENTERPRISE: Strict storagePath validation (generic)
-    // Compares FileRecord.storagePath with the expected path
-    // NOTE: expectedPath must be constructed at the rule level due to 7-arg limit
-    function storagePathEquals(fileId, expectedPath) {
-      let record = firestore.get(getFileRecordPath(fileId)).data;
-      return record.storagePath == expectedPath;
-    }
-
-    // Check if FileRecord exists and storagePath matches (for delete operations)
-    // 🏢 ENTERPRISE: Delete requires existing FileRecord with matching storagePath
-    function hasFileRecordWithPath(fileId, companyId, expectedPath) {
-      return firestore.exists(getFileRecordPath(fileId)) &&
-             firestore.get(getFileRecordPath(fileId)).data.companyId == companyId &&
-             firestore.get(getFileRecordPath(fileId)).data.storagePath == expectedPath;
-    }
-
-    // Check if FileRecord status is 'ready' (for secure reads)
-    function hasReadyFileRecord(fileId) {
-      return firestore.exists(getFileRecordPath(fileId)) &&
-             firestore.get(getFileRecordPath(fileId)).data.status == 'ready';
-    }
-
-    // 🏢 ENTERPRISE: Ownership Principle - Creator can ALWAYS access their files
-    // Pattern: SAP / Salesforce / Google Drive / Microsoft OneDrive
-    // If you created it, you can read it - no claims required
-    function isFileCreator(fileId) {
-      return firestore.exists(getFileRecordPath(fileId)) &&
-             firestore.get(getFileRecordPath(fileId)).data.createdBy == request.auth.uid;
-    }
+    // Εδώ ζούσαν 10 helpers (extractFileId, getFileRecordPath, hasPendingFileRecord,
+    // fileRecordMatchesPathSimple/WithProject, storagePathEquals, hasFileRecordWithPath,
+    // hasReadyFileRecord, isFileCreator) που έκαναν cross-service lookups στο Firestore.
+    // Είχαν ήδη εγκαταλειφθεί ρητά για λόγους latency (βλ. τα NOTE στα blocks παρακάτω)
+    // και ο μεταγλωττιστής τους ανέφερε ΟΛΟΥΣ ως «Unused function» — κανένα rule δεν τους
+    // καλούσε. Τα warnings τους ήταν που κρεμούσαν τον emulator (βλ. προειδοποίηση στην
+    // κορυφή του αρχείου). Ιστορικό: git + `storage.rules.enterprise`.
 
     // =========================================================================
     // 🏢 CANONICAL ENTERPRISE PATH (NEW UPLOADS)
@@ -491,9 +421,18 @@ service firebase.storage {
     // @pathId: temp
     match /temp/{userId}/{fileName} {
 
-      // Only owner can access their temp files
-      allow read, write: if isOwner(userId)
-                         && isValidFileSize();
+      // Only owner can access their temp files.
+      //
+      // 🐛 ΔΙΟΡΘΩΣΗ 2026-07-26: ήταν `allow read, write: isOwner() && isValidFileSize()`.
+      // Στο READ το `request.resource` είναι **null**, άρα το `isValidFileSize()`
+      // (`request.resource.size < 50MB`) απέτυχε πάντα ⇒ **ο ιδιοκτήτης δεν μπορούσε
+      // να διαβάσει τα δικά του temp αρχεία**. Το payload gate ανήκει μόνο στο write —
+      // όπως ήδη γίνεται σε κάθε άλλο block αυτού του αρχείου. Βρέθηκε την πρώτη φορά
+      // που έτρεξε πραγματικά το storage-rules suite (ADR-301 §4).
+      allow read: if isOwner(userId);
+
+      allow write: if isOwner(userId)
+                   && isValidFileSize();
 
       allow delete: if isOwner(userId);
     }

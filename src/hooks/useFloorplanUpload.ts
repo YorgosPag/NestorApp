@@ -9,11 +9,18 @@
  * @module hooks/useFloorplanUpload
  * @enterprise ADR-033 - Floorplan Processing Pipeline
  *
- * Security Model (Storage Rules requirements):
- * - belongsToCompany() → User must have companyId custom claim matching path
- * - hasPendingFileRecord() → FileRecord must exist with status='pending'
- * - fileRecordMatchesPathWithProject() → FileRecord fields must match path
- * - storagePathEquals() → FileRecord.storagePath must match exactly
+ * Security Model (τι ΠΡΑΓΜΑΤΙΚΑ επιβάλλει το `storage.rules` στο
+ * `canonical_with_project` path — διορθώθηκε 2026-07-26):
+ * - `belongsToCompany(companyId) || isSuperAdmin()` → tenant isolation από custom claim
+ * - `isValidFileSize()` → < 50 MB
+ * - `isAllowedContentType()`
+ *
+ * ⚠️ **ΚΑΜΙΑ επικύρωση έναντι FileRecord του Firestore.** Το header αυτό απαριθμούσε
+ * `hasPendingFileRecord()` / `fileRecordMatchesPathWithProject()` / `storagePathEquals()`
+ * ως απαιτήσεις — **δεν ίσχυαν**: αφαιρέθηκαν από τους κανόνες στις **2026-01-20** λόγω
+ * cross-service consistency (βλ. τα `NOTE:` στο block), και οι συναρτήσεις έμειναν
+ * ορφανές μέχρι που τις διέγραψε το ADR-301 §5. Οι έλεγχοι εδώ είναι **pre-flight στον
+ * client — δεν είναι όριο ασφαλείας.** Μην τους επικαλεστείς ως τέτοιο.
  */
 
 'use client';

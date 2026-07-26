@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/auth/hooks/useAuth';
 import {
   useBimCommentsStore,
+  selectRepliesFor,
 } from '../stores/BimCommentsStore';
 import { BimCommentsService } from './bim-comments.service';
 import { CommentBadgeIcon } from './CommentBadgeIcon';
@@ -41,7 +42,9 @@ export function BimCommentDetailsPanel({ commentId, companyId }: BimCommentDetai
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   const comment = useBimCommentsStore((s) => s.comments[commentId]);
-  const replies = useBimCommentsStore((s) => s.replies[commentId] ?? []);
+  // ΟΧΙ `s.replies[commentId] ?? []` — φρέσκο array ανά κλήση = άπειρος βρόχος
+  // re-render και κατάρρευση ΟΛΟΥ του viewer. Βλ. `NO_REPLIES` στο store.
+  const replies = useBimCommentsStore((s) => selectRepliesFor(s.replies, commentId));
   const closePanel = useBimCommentsStore((s) => s.selectComment);
 
   useEffect(() => {
