@@ -26,6 +26,16 @@ export type ChartDatum = object;
 export interface ChartCardContextValue {
   /** Stable DOM id of the card — ties `aria-labelledby` to the title. */
   readonly cardId: string;
+  /**
+   * Heading element the card's own title renders as.
+   *
+   * Computed at the shell root from how many section shells enclose it, *before* the
+   * shell deepens the tree for its children — so the title sits at the level of the
+   * region it names. A card on a page is `h3`; the same card inside a `ReportSection`
+   * that already spent the `h3` is `h4`. Slots read it rather than hardcoding, which is
+   * what keeps the document outline intact (WCAG 1.3.1).
+   */
+  readonly headingTag: 'h3' | 'h4' | 'h5' | 'h6';
   /** Plotted series, in canonical order. */
   readonly series: readonly ChartSeriesDescriptor[];
   /** Plotted rows, in plot order. */

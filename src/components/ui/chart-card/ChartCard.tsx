@@ -2,7 +2,7 @@
 
 /**
  * @module chart-card/ChartCard
- * @enterprise ADR-710 — The card shell every chart with a plot is rendered in.
+ * @enterprise ADR-710 — The card shell every chart that owns its section is rendered in.
  *
  * ## What this is, and what it deliberately is not
  *
@@ -20,6 +20,16 @@
  * The rule this file is held to: **the shell never branches on who is calling it.**
  * Every decision it makes is read from the data description — a legend appears
  * because there are two series, not because a caller asked for one.
+ *
+ * ## This file is one line of behaviour
+ *
+ * Everything above is implemented by {@link ChartPlot}. `ChartCard` adds the frame and
+ * refuses to nest — see `surface-context.tsx` for why that refusal is a throw rather
+ * than a silent degrade, and `ChartPlot.tsx` for why the frame is a separate level of
+ * composition rather than a `frame` prop.
+ *
+ * If the enclosing region already draws a card and spends a heading — `ReportSection`
+ * does, in 58 places — reach for `ChartPlot` instead. The throw will say so.
  *
  * ## The single declaration
  *
@@ -41,98 +51,31 @@
  * </ChartCard>
  */
 
-import { useId, useMemo, type ReactNode } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { ChartCardProvider, type ChartCardContextValue } from './chart-card-context';
-import { toChartConfig, type ChartSeries } from './chart-card-series';
-import { ChartCardHeader } from './ChartCardHeader';
-import { ChartCardFigure } from './ChartCardFigure';
-import { ChartCardSummary, ChartCardSummaryItem } from './ChartCardSummary';
-import { ChartCardTooltip } from './ChartCardTooltip';
-import { ChartCardEditor } from './editor/ChartCardEditor';
+import { assertOutsideSurface, useIsInsideSurface } from '@/components/ui/surface-context';
+import { ChartPlotRoot, CHART_SHELL_SLOTS, type ChartPlotProps } from './ChartPlot';
 
-/** Default category renderer — years, labels and ids all read as their own text. */
-function defaultFormatCategory(value: unknown): string {
-  return value == null ? '' : String(value);
-}
+/** Identical to {@link ChartPlotProps} — the frame adds no configuration of its own. */
+export type ChartCardProps<TDatum extends object> = ChartPlotProps<TDatum>;
 
-export interface ChartCardProps<TDatum extends object> {
-  /** The plotted series, in canonical order. Declared once, read by four consumers. */
-  readonly series: readonly ChartSeries<TDatum>[];
-  /** The plotted rows, in plot order. */
-  readonly data: readonly TDatum[];
-  /** Field naming the category (x) of each datum. */
-  readonly categoryKey: Extract<keyof TDatum, string>;
-  /** Translated header for the category column of the data table. */
-  readonly categoryLabel: string;
-  /** Translated sentence explaining the category, shown on its column header. */
-  readonly categoryDescription?: string;
-  /** Renders a series value as text. Axis ticks, tooltip and table all use it. */
-  readonly formatValue: (value: number) => string;
-  /** Renders a category as text. Defaults to `String(value)`. */
-  readonly formatCategory?: (value: unknown) => string;
-  /** Header / figure / summary / editor slots. */
-  readonly children: ReactNode;
-}
-
-function ChartCardRoot<TDatum extends object>({
-  series,
-  data,
-  categoryKey,
-  categoryLabel,
-  categoryDescription,
-  formatValue,
-  formatCategory = defaultFormatCategory,
-  children,
-}: ChartCardProps<TDatum>) {
-  const generatedId = useId();
-  const cardId = `chart-card-${generatedId.replace(/:/g, '')}`;
-
-  const value = useMemo<ChartCardContextValue>(
-    () => ({
-      cardId,
-      series,
-      data,
-      categoryKey,
-      categoryLabel,
-      categoryDescription,
-      formatValue,
-      formatCategory,
-      config: toChartConfig(series),
-    }),
-    [
-      cardId,
-      series,
-      data,
-      categoryKey,
-      categoryLabel,
-      categoryDescription,
-      formatValue,
-      formatCategory,
-    ],
-  );
+function ChartCardRoot<TDatum extends object>(props: ChartCardProps<TDatum>) {
+  const isNested = useIsInsideSurface();
+  if (isNested) {
+    assertOutsideSurface('ChartCard', 'ChartPlot');
+  }
 
   return (
-    <ChartCardProvider value={value}>
-      <Card>
-        <CardContent className="pt-6">
-          <section aria-labelledby={`${cardId}-title`}>{children}</section>
-        </CardContent>
-      </Card>
-    </ChartCardProvider>
+    <Card>
+      <CardContent className="pt-6">
+        <ChartPlotRoot {...props} />
+      </CardContent>
+    </Card>
   );
 }
 
 /**
  * Slots are attached to the root so a call-site reads as one structure. They are the
- * same components exported individually from the barrel — attaching them adds a
- * spelling, not a second implementation.
+ * same components exported individually from the barrel, and the same object `ChartPlot`
+ * carries — attaching them adds a spelling, not a second implementation.
  */
-export const ChartCard = Object.assign(ChartCardRoot, {
-  Header: ChartCardHeader,
-  Figure: ChartCardFigure,
-  Tooltip: ChartCardTooltip,
-  Summary: ChartCardSummary,
-  SummaryItem: ChartCardSummaryItem,
-  Editor: ChartCardEditor,
-});
+export const ChartCard = Object.assign(ChartCardRoot, CHART_SHELL_SLOTS);

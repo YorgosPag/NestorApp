@@ -29,8 +29,15 @@ import { chartSeriesColor } from './chart-card-series';
 import { useChartCard } from './chart-card-context';
 import { ChartCardDataTable } from './ChartCardDataTable';
 
-/** Plot heights. Named steps, not free numbers, so cards line up across screens. */
+/**
+ * Plot heights. Named steps, not free numbers, so cards line up across screens.
+ *
+ * `sm` was added when `reports/` migrated: its 34 charts carried five arbitrary pixel
+ * heights (250/280/300/320/350) that no grid agreed on. They map onto three steps —
+ * which is the point of naming them.
+ */
 const FIGURE_HEIGHT = {
+  sm: 'h-56',
   md: 'h-64',
   lg: 'h-72',
 } as const;

@@ -9,10 +9,16 @@
  * theming, the legend, the empty state and the data table all at once, which is how
  * the codebase ended up with 28 files each drawing its own card.
  *
+ * Two levels, same slots: **`ChartCard`** when the chart owns its section, **`ChartPlot`**
+ * when the enclosing region already draws the card and spends the heading (`ReportSection`
+ * does, in 58 places). Picking wrong is not a judgement call — `ChartCard` throws and
+ * names the fix. See `surface-context.tsx`.
+ *
  * @see chart-card-series.ts — the single series declaration, and the measured palette
  */
 
 export { ChartCard, type ChartCardProps } from './ChartCard';
+export { ChartPlot, type ChartPlotProps } from './ChartPlot';
 export { ChartCardHeader, type ChartCardHeaderProps } from './ChartCardHeader';
 export {
   ChartCardFigure,

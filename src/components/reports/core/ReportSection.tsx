@@ -21,6 +21,7 @@ import {
   CollapsibleContent,
 } from "@/components/ui/collapsible";
 import { Card, CardContent } from "@/components/ui/card";
+import { SurfaceBoundary, useHeadingTag } from "@/components/ui/surface-context";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { EnterpriseErrorBoundary as ErrorBoundary } from "@/components/ui/ErrorBoundary/ErrorBoundary";
 import { cn } from "@/lib/utils";
@@ -68,17 +69,20 @@ export function ReportSection({
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const headingId = useId();
   const sectionId = id ?? headingId;
+  // Read before `SurfaceBoundary` deepens the tree, so the title sits at the level of
+  // the region it names rather than one below it.
+  const Heading = useHeadingTag();
 
   const headerContent = (
     <header className="flex items-center justify-between">
       <div>
         <div className="flex items-center gap-1.5">
-          <h3
+          <Heading
             id={sectionId}
             className={cn(typography.heading.h4, colors.text.primary)}
           >
             {title}
-          </h3>
+          </Heading>
           {tooltip && <InfoTooltip content={tooltip} side="bottom" />}
         </div>
         {description && (
@@ -99,9 +103,14 @@ export function ReportSection({
     </header>
   );
 
+  // `SurfaceBoundary` is what makes the nesting defect unwritable: this section owns a
+  // card and has just spent a heading, so anything inside that would draw its own card
+  // (`ChartCard`) throws and names `ChartPlot` as the fix. See `ui/surface-context.tsx`.
   const content = (
     <ErrorBoundary>
-      <div className="pt-2">{children}</div>
+      <SurfaceBoundary>
+        <div className="pt-2">{children}</div>
+      </SurfaceBoundary>
     </ErrorBoundary>
   );
 
@@ -121,12 +130,12 @@ export function ReportSection({
   const triggerHeader = (
     <header className="flex items-center justify-between">
       <div>
-        <h3
+        <Heading
           id={sectionId}
           className={cn(typography.heading.h4, colors.text.primary)}
         >
           {title}
-        </h3>
+        </Heading>
         {description && (
           <p className={cn("mt-0.5", typography.body.sm, colors.text.muted)}>
             {description}

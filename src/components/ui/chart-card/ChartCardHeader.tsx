@@ -8,6 +8,12 @@
  * points `aria-labelledby` at, so a screen reader announces the region by the same
  * words a sighted reader sees. Actions (a project picker, an "add entry" disclosure,
  * an export button) are children — the header does not know what they are.
+ *
+ * The heading **element** is read from the card context, never hardcoded: the same card
+ * is an `<h3>` on a page and an `<h4>` inside a `ReportSection` that already spent the
+ * `<h3>`. Hardcoding it here is what put an `<h3>` inside an `<h3>` — see
+ * `surface-context.tsx`. The visual size stays fixed regardless of level, because
+ * heading level is document structure and type scale is design.
  */
 
 import type { ReactNode } from 'react';
@@ -21,13 +27,13 @@ export interface ChartCardHeaderProps {
 }
 
 export function ChartCardHeader({ title, children }: ChartCardHeaderProps) {
-  const { cardId } = useChartCard();
+  const { cardId, headingTag: Heading } = useChartCard();
 
   return (
     <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
-      <h3 id={`${cardId}-title`} className="text-lg font-semibold text-foreground">
+      <Heading id={`${cardId}-title`} className="text-lg font-semibold text-foreground">
         {title}
-      </h3>
+      </Heading>
       {children}
     </header>
   );
