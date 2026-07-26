@@ -140,6 +140,22 @@ needs its own focused session + browser repro). The `canvas-fit-to-view {auto}` 
 5. FPS during pan/zoom unchanged (ADR-040 — no re-render regression).
 
 ## Changelog
+- **2026-07-26** — **Το URL primitive βγήκε από το subapp (ADR-332 D21).** Η σελίδα Επαφών
+  υιοθέτησε το ίδιο μοτίβο URL-as-SSoT για την επιλεγμένη επαφή· μια δεύτερη υλοποίηση των
+  `currentSearchParams` / `replaceUrlSearchParams` θα ήταν σχολικό sibling clone (N.18), οπότε
+  **μετακινήθηκαν** στο κοινό `src/lib/url-query-state.ts`. Το `viewport-persistence.ts` τα
+  **re-exports**, άρα `camera3d-persistence.ts`, `useViewportUrlSync`, `LevelsSystem` και τα
+  tests δεν άλλαξαν — **33/33 πράσινα**, καμία αλλαγή συμπεριφοράς.
+  Το κοινό module απέκτησε επίσης: (α) `replaceUrlQueryString` για σελίδες όπου το query string
+  **είναι** ολόκληρη η κατάσταση (report builder) — που διόρθωσε ένα `replaceState(null, …)` που
+  **έσβηνε το `history.state` του App Router** και το hash· (β) συνδρομή
+  (`subscribeToUrlQuery`/`getUrlQuerySnapshot`), επειδή **μετρήθηκε** ότι ο συγχρονισμός
+  `replaceState → useSearchParams` που υπόσχεται η τεκμηρίωση του Next ισχύει **μόνο στο
+  production build**. ⚠️ Ο 2D/3D viewport **δεν** επηρεάζεται από αυτό: διαβάζει
+  `window.location.search` απευθείας κατά ADR-040 και δεν χρησιμοποιεί `useSearchParams`.
+  Παράλληλα ενοποιήθηκε το `applyViewportToParams`: οι τέσσερις `params.set` ήταν **δίδυμες** σε
+  `serializeViewportToParams` και `writeViewportToUrl` (επιβεβαιωμένο από jscpd), οπότε ένα νέο
+  κλειδί ή αλλαγή στρογγυλοποίησης έπρεπε να θυμηθεί κανείς **δύο** φορές.
 - **2026-06-29** — **§3D camera persistence (UNCOMMITTED, Opus 4.8).** Extended the SSoT to the
   3D BIM camera (was ephemeral → reset on every reload AND 2D↔3D toggle). NEW
   `services/camera3d-persistence.ts` (`Camera3DPose`, compact `c3d` URL CSV + per-level
