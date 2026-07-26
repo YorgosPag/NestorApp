@@ -13,6 +13,8 @@ import {
   readSelectedContactId,
   writeSelectedContactId,
   restoreSelectedContact,
+  isSelectionWriteAllowed,
+  resolveLateSelectionRestore,
 } from '../contact-session-storage';
 
 const STORAGE_KEY = 'contact-selected';
@@ -110,6 +112,75 @@ describe('contact-session-storage', () => {
       window.sessionStorage.clear();
 
       expect(restoreSelectedContact(withUndefinedIds)).toBeNull();
+    });
+  });
+
+  describe('isSelectionWriteAllowed — το `null` έχει δύο σημασίες', () => {
+    it('ΑΠΑΓΟΡΕΥΕΙ τη γραφή null πριν καθίσει η λίστα — αλλιώς σβήνει το κλειδί που θα χρειαστεί', () => {
+      expect(isSelectionWriteAllowed(null, false)).toBe(false);
+    });
+
+    it('ΕΠΙΤΡΕΠΕΙ τη γραφή null αφού καθίσει η λίστα — τότε σημαίνει όντως αποεπιλογή', () => {
+      expect(isSelectionWriteAllowed(null, true)).toBe(true);
+    });
+
+    it('επιτρέπει πάντα τη γραφή υπαρκτού id, ακόμη και πριν καθίσει η λίστα', () => {
+      expect(isSelectionWriteAllowed('cont_bbb', false)).toBe(true);
+      expect(isSelectionWriteAllowed('cont_bbb', true)).toBe(true);
+    });
+  });
+
+  describe('resolveLateSelectionRestore — η δεύτερη και τελευταία ευκαιρία', () => {
+    it('επαναφέρει την επαφή όταν το id βρεθεί στη φορτωμένη λίστα', () => {
+      writeSelectedContactId('cont_ccc');
+
+      expect(resolveLateSelectionRestore(CONTACTS)).toEqual({
+        kind: 'restored',
+        contact: { id: 'cont_ccc', name: 'GAMMA' },
+      });
+    });
+
+    it('χαρακτηρίζει σκουπίδι — ΟΧΙ «περίμενε» — όταν η λίστα φόρτωσε και το id λείπει', () => {
+      writeSelectedContactId('cont_deleted');
+
+      expect(resolveLateSelectionRestore(CONTACTS)).toEqual({ kind: 'garbage' });
+    });
+
+    it('δεν κάνει τίποτα χωρίς αποθηκευμένο id', () => {
+      expect(resolveLateSelectionRestore(CONTACTS)).toEqual({ kind: 'nothing' });
+    });
+  });
+
+  describe('🔴 D20.1 — η ακολουθία που κατέστρεφε τη δικλείδα (μετρημένη ζωντανά)', () => {
+    it('κενή λίστα στο mount → η λίστα φτάνει μετά → η επιλογή ΕΠΙΒΙΩΝΕΙ', () => {
+      // Ο χρήστης είχε επιλέξει σε προηγούμενη συνεδρία.
+      writeSelectedContactId('cont_bbb');
+
+      // Φρέσκο φόρτωμα: ο αρχικοποιητής τρέχει με ΚΕΝΟ module cache.
+      expect(restoreSelectedContact([])).toBeNull();
+
+      // Το παλιό effect έγραφε εδώ `null` ⇒ removeItem ⇒ μόνιμη απώλεια.
+      // Η φρουρά το απαγορεύει όσο η λίστα δεν έχει καθίσει.
+      expect(isSelectionWriteAllowed(null, false)).toBe(false);
+      expect(readSelectedContactId()).toBe('cont_bbb');
+
+      // Η λίστα φτάνει 325ms αργότερα — το id είναι ακόμη εκεί, η επαναφορά πετυχαίνει.
+      expect(resolveLateSelectionRestore(CONTACTS)).toEqual({
+        kind: 'restored',
+        contact: { id: 'cont_bbb', name: 'BETA' },
+      });
+    });
+
+    it('κενή λίστα στο mount → η επαφή έχει όντως διαγραφεί → το κλειδί ΣΒΗΝΕΙ', () => {
+      writeSelectedContactId('cont_deleted');
+
+      expect(isSelectionWriteAllowed(null, false)).toBe(false);
+
+      // Μόνο ΤΩΡΑ, με φορτωμένη λίστα, το «δεν υπάρχει» είναι αξιόπιστο.
+      expect(resolveLateSelectionRestore(CONTACTS)).toEqual({ kind: 'garbage' });
+
+      writeSelectedContactId(null);
+      expect(readSelectedContactId()).toBeNull();
     });
   });
 

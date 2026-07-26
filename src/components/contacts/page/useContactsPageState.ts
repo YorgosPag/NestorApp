@@ -14,7 +14,8 @@ import { buildContactDashboardStats } from './contactDashboardStats';
 import { filterContactsForPage } from './contactsPageFilters';
 import { useContactsTrashState } from './useContactsTrashState';
 import { createStaleCache } from '@/lib/stale-cache';
-import { restoreSelectedContact, writeSelectedContactId } from '@/utils/contacts/contact-session-storage';
+import { restoreSelectedContact } from '@/utils/contacts/contact-session-storage';
+import { useSelectedContactPersistence } from '@/hooks/contacts/useSelectedContactPersistence';
 
 const logger = createModuleLogger('ContactsPageContent');
 // SSoT stale-while-revalidate cache (ADR-300) — single-key (one list per session)
@@ -275,13 +276,18 @@ export function useContactsPageState() {
     }
   }, [contacts, selectedContact?.id]); // Intentional: avoid triggering on selectedContact object identity changes
 
-  // ΕΝΑ σημείο γραφής της persisted επιλογής. Κάθε σκόπιμος μηδενισμός (νέα επαφή,
-  // καθαρισμός φίλτρου URL, κάρτα dashboard, διαγραφή, αρχειοθέτηση, κάδος) περνά
-  // από το ίδιο state ⇒ κανένας handler δεν χρειάζεται αλλαγή, και μια διαγραμμένη
-  // επαφή δεν μπορεί να «επανέλθει» στο επόμενο mount.
-  useEffect(() => {
-    writeSelectedContactId(selectedContact?.id ?? null);
-  }, [selectedContact?.id]);
+  // ΕΝΑΣ ιδιοκτήτης της persisted επιλογής — γραφή **και** καθυστερημένη επαναφορά.
+  // Κάθε σκόπιμος μηδενισμός (νέα επαφή, καθαρισμός φίλτρου URL, κάρτα dashboard,
+  // διαγραφή, αρχειοθέτηση, κάδος) περνά από το ίδιο state ⇒ κανένας handler δεν
+  // χρειάζεται αλλαγή. Το `isLoading` είναι το σήμα «κάθισε η λίστα»: πριν από αυτό
+  // το `null` σημαίνει «δεν ξέρω ακόμη» και δεν επιτρέπεται να σβήσει το κλειδί
+  // (ADR-332 D20.1 — αλλιώς η δικλείδα αυτοκαταστρέφεται σε κάθε φρέσκο φόρτωμα).
+  useSelectedContactPersistence({
+    selected: selectedContact,
+    contacts,
+    listSettled: !isLoading,
+    onRestore: setSelectedContact,
+  });
   // ---------------------------------------------------------------------------
   // Handlers: Creation / Deletion / Archive
   // ---------------------------------------------------------------------------
