@@ -69,6 +69,8 @@ interface UseContactDetailsControllerResult {
   setEditedData: React.Dispatch<React.SetStateAction<Partial<ContactFormData>>>;
   validationErrors: Record<string, string>;
   editedData: Partial<ContactFormData>;
+  /** Αυξάνεται σε κάθε **τέλος** συνεδρίας επεξεργασίας (αποθήκευση ή ακύρωση). */
+  viewResetToken: number;
 }
 
 export function useContactDetailsController({
@@ -84,6 +86,11 @@ export function useContactDetailsController({
   const [optimisticPersonas, setOptimisticPersonas] = useState<OptimisticPersonaState | null>(null);
   const [savedPhotoURLs, setSavedPhotoURLs] = useState<{ logoURL?: string; photoURL?: string }>({});
   const [pendingSave, setPendingSave] = useState(false);
+  // Το κλείσιμο της επεξεργασίας αποσυναρμολογεί τους inline editors και ο
+  // πάνακας κονταίνει απότομα· ο DetailsContainer επαναφέρει τότε την κύλιση
+  // ώστε να ξαναφανούν καρτέλες + επικεφαλίδα ενότητας (βλ. `scrollResetToken`).
+  const [viewResetToken, setViewResetToken] = useState(0);
+  const endEditSession = useCallback(() => setViewResetToken(n => n + 1), []);
   const [activeTab, setActiveTab] = useState<string>(() => {
     if (typeof window !== 'undefined' && contact?.id) {
       return sessionStorage.getItem(`contact-tab-${contact.id}`) || 'basicInfo';
@@ -189,20 +196,38 @@ export function useContactDetailsController({
     }
   }, []);
 
+  /**
+   * Μεταφέρει τον χρήστη **στο** πρόβλημα: εστίαση + κύλιση στο πρώτο άκυρο πεδίο.
+   *
+   * Γιατί χρειάζεται αναμονή καρτέλας: το Radix κρατά **όλα** τα panels
+   * προσαρτημένα και κρύβει τα ανενεργά με CSS. Άρα το `querySelector` βρίσκει το
+   * πεδίο ακόμη κι όταν ανήκει σε άλλη καρτέλα — αλλά `focus()` και
+   * `scrollIntoView()` σε κρυμμένο στοιχείο δεν κάνουν **τίποτα**. Πρέπει να
+   * περιμένουμε να εφαρμοστεί η αλλαγή καρτέλας και το στοιχείο να γίνει ορατό
+   * (`offsetParent !== null`), αλλιώς το μήνυμα λάθους μένει το μόνο σήμα.
+   */
   const focusField = useCallback((fieldName?: string) => {
     if (!fieldName || typeof document === 'undefined') {
       return;
     }
 
-    window.setTimeout(() => {
-      const selector = `[name="${fieldName}"], #${fieldName}`;
+    const selector = `[name="${fieldName}"], #${fieldName}`;
+    const MAX_FRAMES = 20; // ~330ms στα 60fps — αρκετά για ένα tab switch
+
+    const attempt = (framesLeft: number) => {
       const element = document.querySelector(selector);
-      if (!(element instanceof HTMLElement)) {
+      const isVisible = element instanceof HTMLElement && element.offsetParent !== null;
+
+      if (!isVisible) {
+        if (framesLeft > 0) window.requestAnimationFrame(() => attempt(framesLeft - 1));
         return;
       }
+
       element.focus();
       element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 0);
+    };
+
+    window.requestAnimationFrame(() => attempt(MAX_FRAMES));
   }, []);
 
   const handleStartEdit = useCallback(() => {
@@ -221,7 +246,8 @@ export function useContactDetailsController({
     setEditedData({});
     setValidationErrors({});
     setPendingSave(false);
-  }, []);
+    endEditSession();
+  }, [endEditSession]);
 
   const handleFieldBlur = useCallback((fieldName: string) => {
     const formData = getEditedFormData();
@@ -317,6 +343,7 @@ export function useContactDetailsController({
         setValidationErrors({});
         setIsEditing(false);
         setEditedData({});
+        endEditSession();
         logger.info('Contact updated successfully with enterprise structure');
         contactNotifications.updateSuccess();
         onContactUpdated?.();
@@ -345,7 +372,7 @@ export function useContactDetailsController({
         contactNotifications.updateError();
       }
     }
-  }, [contact, editedData, focusField, getEditedFormData, getValidationResult, contactNotifications, onContactUpdated, runExistingContactPartialFormUpdate]);
+  }, [contact, editedData, endEditSession, focusField, getEditedFormData, getValidationResult, contactNotifications, onContactUpdated, runExistingContactPartialFormUpdate]);
 
   // 🏢 ENTERPRISE: Deferred save — auto-submit when pending uploads complete (Google-style)
   useEffect(() => {
@@ -445,6 +472,7 @@ export function useContactDetailsController({
     setEditedData,
     validationErrors,
     editedData,
+    viewResetToken,
   };
 }
 

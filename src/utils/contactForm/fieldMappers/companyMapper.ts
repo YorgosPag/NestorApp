@@ -1,8 +1,11 @@
 import type { Contact, CompanyContact, SocialMediaInfo } from '@/types/contacts';
-import type { ContactFormData, KadActivity, CompanyAddress } from '@/types/ContactFormTypes';
+import type { ContactFormData, KadActivity } from '@/types/ContactFormTypes';
 import { initialFormData } from '@/types/ContactFormTypes';
 import { isNonEmptyArray } from '@/lib/type-guards';
 import { getSafeFieldValue } from '../contactMapper';
+// ADR-332 D18: η ανάγνωση της λίστας διευθύνσεων ζει σε ΕΝΑ σημείο και για τα
+// τρία είδη επαφής — ήταν ιδιωτική εδώ, ενώ individual/service δεν είχαν καμία.
+import { resolveContactAddresses } from '@/utils/contacts/contact-addresses-reader';
 
 /** Extended company contact with custom fields access */
 interface ExtendedCompanyContact extends CompanyContact {
@@ -57,40 +60,6 @@ function resolveActivities(contact: ExtendedCompanyContact): KadActivity[] {
   return [];
 }
 
-/**
- * Resolve company addresses from Firestore contact.
- * Reads `customFields.companyAddresses[]` first; falls back to root-level,
- * then Contact.addresses[].
- */
-function resolveCompanyAddresses(contact: ExtendedCompanyContact): CompanyAddress[] {
-  // Primary: customFields.companyAddresses
-  const stored = contact.customFields?.companyAddresses;
-  if (isNonEmptyArray(stored)) {
-    return stored as CompanyAddress[];
-  }
-
-  // Secondary fallback: root-level companyAddresses (legacy data from EnterpriseContactSaver)
-  const rootAddresses = (contact as unknown as Record<string, unknown>).companyAddresses;
-  if (isNonEmptyArray(rootAddresses)) {
-    return rootAddresses as CompanyAddress[];
-  }
-
-  // Tertiary fallback: build from Contact.addresses[]
-  const contactAddresses = contact.addresses;
-  if (isNonEmptyArray(contactAddresses)) {
-    return contactAddresses.map<CompanyAddress>((addr, i) => ({
-      type: i === 0 ? 'headquarters' : 'branch',
-      street: addr.street || '',
-      number: addr.number || '',
-      postalCode: addr.postalCode || '',
-      city: addr.city || '',
-      region: addr.region,
-    }));
-  }
-
-  return [];
-}
-
 // ============================================================================
 // COMPANY CONTACT MAPPER
 // ============================================================================
@@ -112,7 +81,7 @@ export function mapCompanyContactToFormData(contact: Contact): ContactFormData {
     : [];
 
 
-  const companyAddresses = resolveCompanyAddresses(companyContact);
+  const companyAddresses = resolveContactAddresses(contact, 'company');
   // HQ address: prioritize companyAddresses[0] (has hierarchy), fallback to legacy addresses[0]
   const hqAddr = companyAddresses.find(a => a.type === 'headquarters') ?? companyAddresses[0];
   const legacyAddr = contact.addresses?.[0];

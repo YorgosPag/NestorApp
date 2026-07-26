@@ -43,6 +43,8 @@ interface UnifiedContactTabbedSectionProps {
   canonicalUploadContext?: CanonicalUploadContext;
   onActiveTabChange?: (tabId: string) => void;
   initialTab?: string;
+  /** Ελεγχόμενη ενεργή καρτέλα — επιτρέπει αλλαγή καρτέλας **μετά** το mount. */
+  activeTab?: string;
   validationErrors?: Record<string, string>;
   onFieldBlur?: (fieldName: string) => void;
   isContactTrashed?: boolean;
@@ -56,7 +58,7 @@ export function UnifiedContactTabbedSection({
   handleUploadedLogoURL, handleUploadedPhotoURL,
   setFormData, disabled = false, relationshipsMode = 'full',
   onPhotoClick, canonicalUploadContext,
-  onActiveTabChange, initialTab,
+  onActiveTabChange, initialTab, activeTab,
   validationErrors, onFieldBlur,
   isContactTrashed = false,
 }: UnifiedContactTabbedSectionProps) {
@@ -137,6 +139,7 @@ export function UnifiedContactTabbedSection({
       disabled,
       onActiveTabChange,
       initialTab,
+      activeTab,
       customRenderers,
       sectionFooterRenderers: buildSectionFooterRenderers(ctx),
       fieldErrors: validationErrors,
@@ -155,7 +158,7 @@ export function UnifiedContactTabbedSection({
     handleFileChange, unifiedPhotosChange, handleMultiplePhotoUploadComplete,
     handleProfilePhotoSelection, handleLogoChange, handleUploadedLogoURL,
     handleUploadedPhotoURL, setFormData, relationshipsMode, onPhotoClick,
-    canonicalUploadContext, onActiveTabChange,
+    canonicalUploadContext, onActiveTabChange, initialTab, activeTab,
     companyDisplayName, user?.companyId,
     validationErrors, onFieldBlur,
   ]);

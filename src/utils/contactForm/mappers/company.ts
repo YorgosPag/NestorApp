@@ -11,8 +11,7 @@
 import type { ContactFormData, KadActivity, CompanyAddress } from '@/types/ContactFormTypes';
 import type { AddressInfo, EmailInfo, PhoneInfo, WebsiteInfo } from '@/types/contacts';
 import { extractPhotoURL, extractLogoURL, extractMultiplePhotoURLs } from '../extractors/photo-urls';
-import { createEmailsArray, createPhonesArray } from '../extractors/arrays';
-import EnterpriseContactSaver from '@/utils/contacts/EnterpriseContactSaver';
+import { buildEnterpriseContactArrays } from '../extractors/arrays';
 
 /** Custom fields for company contact */
 interface CompanyCustomFields {
@@ -66,13 +65,7 @@ export function mapCompanyFormData(formData: ContactFormData): MappedCompanyCont
   const logoURL = extractLogoURL(formData, 'company');
   const photoURL = extractPhotoURL(formData, 'company representative'); // 🔧 FIX: Εξαγωγή φωτογραφίας εκπροσώπου
   const multiplePhotoURLs = extractMultiplePhotoURLs(formData); // 📸 Multiple photos για companies
-  const enterpriseData = EnterpriseContactSaver.convertToEnterpriseStructure(formData);
-  const emails = enterpriseData.emails && enterpriseData.emails.length > 0
-    ? enterpriseData.emails
-    : createEmailsArray(formData.email);
-  const phones = enterpriseData.phones && enterpriseData.phones.length > 0
-    ? enterpriseData.phones
-    : createPhonesArray(formData.phone, 'work');
+  const { enterpriseData, emails, phones } = buildEnterpriseContactArrays(formData, 'work');
 
   // 🔍 DEBUG: Final mapped object
   const result: MappedCompanyContactData = {

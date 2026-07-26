@@ -11,8 +11,7 @@
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import type { AddressInfo, EmailInfo, PhoneInfo, SocialMediaInfo, WebsiteInfo } from '@/types/contacts';
 import { extractPhotoURL, extractMultiplePhotoURLs } from '../extractors/photo-urls';
-import { createEmailsArray, createPhonesArray } from '../extractors/arrays';
-import EnterpriseContactSaver from '@/utils/contacts/EnterpriseContactSaver';
+import { buildEnterpriseContactArrays } from '../extractors/arrays';
 // 🎭 ENTERPRISE: Contact Persona System (ADR-121)
 import type { PersonaData } from '@/types/contacts/personas';
 import { createDefaultPersonaData } from '@/types/contacts/personas';
@@ -59,6 +58,8 @@ interface MappedIndividualContactData {
   emails?: EmailInfo[];
   phones?: PhoneInfo[];
   addresses?: AddressInfo[];
+  /** Ένθετα πεδία — αυθεντική λίστα διευθύνσεων (ADR-332 D18). */
+  customFields?: Record<string, unknown>;
   isFavorite: boolean;
   status: 'active' | 'inactive' | 'archived';
   notes?: string;
@@ -105,13 +106,7 @@ export function mapActivePersonas(formData: ContactFormData): PersonaData[] {
 export function mapIndividualFormData(formData: ContactFormData): MappedIndividualContactData {
   const multiplePhotoURLs = extractMultiplePhotoURLs(formData);
   const photoURL = extractPhotoURL(formData, 'individual');
-  const enterpriseData = EnterpriseContactSaver.convertToEnterpriseStructure(formData);
-  const emails = enterpriseData.emails && enterpriseData.emails.length > 0
-    ? enterpriseData.emails
-    : createEmailsArray(formData.email);
-  const phones = enterpriseData.phones && enterpriseData.phones.length > 0
-    ? enterpriseData.phones
-    : createPhonesArray(formData.phone, 'mobile');
+  const { enterpriseData, emails, phones } = buildEnterpriseContactArrays(formData, 'mobile');
 
   logger.info('MAP INDIVIDUAL: extractPhotoURL returned', {
     photoURLValue: photoURL,
@@ -166,6 +161,11 @@ export function mapIndividualFormData(formData: ContactFormData): MappedIndividu
     emails,
     phones,
     addresses: enterpriseData.addresses,
+    // ADR-332 D18: η αυθεντική λίστα διευθύνσεων ζει στα `customFields`. Χωρίς
+    // αυτή τη γραμμή, μια νέα επαφή με δεύτερη διεύθυνση αποθηκευόταν με μόνο
+    // την πρώτη — το `addresses[]` είναι παράγωγο και δεν διαβάζεται πίσω ως
+    // λίστα φόρμας παρά μόνο ως έσχατη λύση.
+    ...(enterpriseData.customFields ? { customFields: enterpriseData.customFields } : {}),
     isFavorite: false,
     status: 'active',
     notes: formData.notes,

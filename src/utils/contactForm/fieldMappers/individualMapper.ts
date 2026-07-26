@@ -7,6 +7,8 @@ import { getSafeFieldValue, getSafeArrayValue } from '../contactMapper';
 // 🎭 ENTERPRISE: Contact Persona System (ADR-121)
 import type { PersonaType, PersonaData } from '@/types/contacts/personas';
 import { getPersonaFields } from '@/config/persona-config';
+import { resolveContactAddresses } from '@/utils/contacts/contact-addresses-reader';
+import { buildFlatFieldsFromAddressInfo } from '@/utils/contacts/address-info-builder';
 
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('IndividualMapper');
@@ -147,22 +149,14 @@ export function mapIndividualContactToFormData(contact: Contact): ContactFormDat
     escoSkills: individualContact.escoSkills ?? [],
 
     // 📞 Επικοινωνία - ENTERPRISE Arrays Structure
-    street: contact.addresses?.[0]?.street || '',
-    streetNumber: contact.addresses?.[0]?.number || '',
-    city: contact.addresses?.[0]?.city || '',
-    postalCode: contact.addresses?.[0]?.postalCode || '',
-    // Administrative Hierarchy from addresses[0]
-    municipality: contact.addresses?.[0]?.municipality || '',
-    municipalityId: contact.addresses?.[0]?.municipalityId ?? null,
-    regionalUnit: contact.addresses?.[0]?.regionalUnit || '',
-    region: contact.addresses?.[0]?.region || '',
-    decentAdmin: contact.addresses?.[0]?.decentAdmin || '',
-    majorGeo: contact.addresses?.[0]?.majorGeo || '',
-    settlement: contact.addresses?.[0]?.settlement || '',
-    settlementId: contact.addresses?.[0]?.settlementId ?? null,
-    community: contact.addresses?.[0]?.community || '',
-    municipalUnit: contact.addresses?.[0]?.municipalUnit || '',
-    neighborhood: contact.addresses?.[0]?.neighborhood || '',
+    // Επίπεδα πεδία + διοικητική ιεραρχία από το `addresses[0]` — μία υλοποίηση
+    // κοινή με τον `serviceMapper` (ADR-332 D18· ήταν αντιγραμμένη και είχε ήδη
+    // αποκλίνει στο `neighborhood`).
+    ...buildFlatFieldsFromAddressInfo(contact.addresses?.[0]),
+    // ADR-332 D18: οι επιπλέον διευθύνσεις (`home`/`office`/`vacation`, ADR-319)
+    // δεν διαβάζονταν καθόλου — η φόρμα ξεκινούσε πάντα με άδεια λίστα και το
+    // επόμενο save έσβηνε ό,τι είχε γραφτεί.
+    companyAddresses: resolveContactAddresses(contact, 'individual'),
 
     // 🚀 DYNAMIC ARRAYS: Pass full arrays for dynamic management
     phones: contact.phones || [],

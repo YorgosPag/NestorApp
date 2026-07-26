@@ -50,6 +50,7 @@ export function ContactDetails({
     setEditedData,
     validationErrors,
     editedData,
+    viewResetToken,
   } = useContactDetailsController({
     contact,
     onContactUpdated,
@@ -66,6 +67,7 @@ export function ContactDetails({
     <ContactEditFocusProvider>
       <DetailsContainer
         selectedItem={contact ?? null}
+        scrollResetToken={viewResetToken}
         header={
           <ContactDetailsHeader
             contact={contact!}
@@ -114,6 +116,7 @@ export function ContactDetails({
           relationshipsMode={isEditing ? 'full' : 'summary'}
           onPhotoClick={handlePhotoClick}
           initialTab={activeTab}
+          activeTab={activeTab}
           onActiveTabChange={setActiveTab}
           handleUploadedLogoURL={isEditing ? handleUploadedLogoURL : undefined}
           handleUploadedPhotoURL={isEditing ? handleUploadedPhotoURL : undefined}

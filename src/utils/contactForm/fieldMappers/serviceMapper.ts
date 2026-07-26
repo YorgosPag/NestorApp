@@ -2,6 +2,8 @@ import type { Contact, SocialMediaInfo } from '@/types/contacts';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import { initialFormData } from '@/types/ContactFormTypes';
 import { getSafeFieldValue, getSafeArrayValue, getSafeNestedValue } from '../contactMapper';
+import { resolveContactAddresses } from '@/utils/contacts/contact-addresses-reader';
+import { buildFlatFieldsFromAddressInfo } from '@/utils/contacts/address-info-builder';
 
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('ServiceMapper');
@@ -109,21 +111,15 @@ export function mapServiceContactToFormData(contact: Contact): ContactFormData {
     serviceCategory: getSafeFieldValue(serviceContact, 'serviceCategory'),
     officialWebsite: getSafeFieldValue(serviceContact, 'officialWebsite'),
 
-    street: contact.addresses?.[0]?.street || '',
-    streetNumber: contact.addresses?.[0]?.number || '',
-    city: contact.addresses?.[0]?.city || '',
-    postalCode: contact.addresses?.[0]?.postalCode || '',
-    // Administrative Hierarchy from addresses[0]
-    municipality: contact.addresses?.[0]?.municipality || '',
-    municipalityId: contact.addresses?.[0]?.municipalityId ?? null,
-    regionalUnit: contact.addresses?.[0]?.regionalUnit || '',
-    region: contact.addresses?.[0]?.region || '',
-    decentAdmin: contact.addresses?.[0]?.decentAdmin || '',
-    majorGeo: contact.addresses?.[0]?.majorGeo || '',
-    settlement: contact.addresses?.[0]?.settlement || '',
-    settlementId: contact.addresses?.[0]?.settlementId ?? null,
-    community: contact.addresses?.[0]?.community || '',
-    municipalUnit: contact.addresses?.[0]?.municipalUnit || '',
+    // Επίπεδα πεδία + διοικητική ιεραρχία από το `addresses[0]` — μία υλοποίηση
+    // κοινή με τον `individualMapper` (ADR-332 D18). Η αντιγραμμένη έκδοση εδώ
+    // είχε ξεχάσει το `neighborhood`: η «Περιοχή / Συνοικία» της υπηρεσίας
+    // αποθηκευόταν αλλά δεν ξαναδιαβαζόταν ποτέ.
+    ...buildFlatFieldsFromAddressInfo(contact.addresses?.[0]),
+    // ADR-332 D18: τα υποκαταστήματα υπηρεσίας (`regional_service`/`annex`/
+    // `department`, ADR-319) δεν διαβάζονταν καθόλου — η φόρμα ξεκινούσε πάντα
+    // με άδεια λίστα και το επόμενο save έσβηνε ό,τι είχε γραφτεί.
+    companyAddresses: resolveContactAddresses(contact, 'service'),
     fax: getSafeFieldValue(serviceContact, 'fax'),
     website: contact.websites?.[0]?.url || foundWebsite,
 

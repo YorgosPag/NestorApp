@@ -11,8 +11,7 @@
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import type { AddressInfo, EmailInfo, PhoneInfo, WebsiteInfo } from '@/types/contacts';
 import { extractPhotoURL, extractLogoURL, extractMultiplePhotoURLs } from '../extractors/photo-urls';
-import { createEmailsArray, createPhonesArray } from '../extractors/arrays';
-import EnterpriseContactSaver from '@/utils/contacts/EnterpriseContactSaver';
+import { buildEnterpriseContactArrays } from '../extractors/arrays';
 
 /** Mapped service contact data (partial, without timestamps) */
 interface MappedServiceContactData {
@@ -32,6 +31,8 @@ interface MappedServiceContactData {
   fax?: string;
   websites?: WebsiteInfo[];
   addresses?: AddressInfo[];
+  /** Ένθετα πεδία — αυθεντική λίστα διευθύνσεων (ADR-332 D18). */
+  customFields?: Record<string, unknown>;
   mainResponsibilities?: string;
   citizenServices?: string;
   onlineServices?: string;
@@ -53,13 +54,7 @@ export function mapServiceFormData(formData: ContactFormData): MappedServiceCont
   const logoURL = extractLogoURL(formData, 'service');
   const photoURL = extractPhotoURL(formData, 'service representative');
   const multiplePhotoURLs = extractMultiplePhotoURLs(formData); // 📸 Multiple photos για services
-  const enterpriseData = EnterpriseContactSaver.convertToEnterpriseStructure(formData);
-  const emails = enterpriseData.emails && enterpriseData.emails.length > 0
-    ? enterpriseData.emails
-    : createEmailsArray(formData.email);
-  const phones = enterpriseData.phones && enterpriseData.phones.length > 0
-    ? enterpriseData.phones
-    : createPhonesArray(formData.phone, 'work');
+  const { enterpriseData, emails, phones } = buildEnterpriseContactArrays(formData, 'work');
 
   // 🔧 FIX: Support both serviceName (old) and name (service-config) fields
   const serviceName = formData.serviceName || formData.name || '';
@@ -85,6 +80,9 @@ export function mapServiceFormData(formData: ContactFormData): MappedServiceCont
     fax: formData.fax,
     websites: enterpriseData.websites,
     addresses: enterpriseData.addresses,
+    // ADR-332 D18: η αυθεντική λίστα διευθύνσεων (υποκαταστήματα/παραρτήματα)
+    // ζει στα `customFields` — χωρίς αυτό αποθηκευόταν μόνο η κεντρική υπηρεσία.
+    ...(enterpriseData.customFields ? { customFields: enterpriseData.customFields } : {}),
 
     // Υπηρεσίες Φορέα (Services Section)
     mainResponsibilities: formData.mainResponsibilities,
