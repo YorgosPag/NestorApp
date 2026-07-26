@@ -29,6 +29,9 @@
 import { useEffect, useRef } from 'react';
 import type { ToolType } from '../../ui/toolbar/types';
 import type { DimensionCreateKey } from './useDimensionCreate';
+// ADR-711 — δομικός φύλακας global accelerators (modal keyboard ownership).
+import { addGlobalShortcutListener } from '../../keyboard/global-shortcut-listener';
+import { isEditableTarget } from '@/lib/a11y/keyboard-scope';
 
 interface UseDimensionKeyboardRoutingParams {
   readonly activeTool: ToolType;
@@ -49,7 +52,7 @@ export function useDimensionKeyboardRouting(
       const key = mapKey(e);
       if (!key) return;
 
-      if (isEditableFocus()) {
+      if (isEditableTarget(document.activeElement)) {
         // Dynamic Input has focus: Enter still controls dim creation.
         // Blur the field first so the value is committed, then dispatch.
         if (key === 'Enter') {
@@ -65,8 +68,10 @@ export function useDimensionKeyboardRouting(
       onKeyRef.current(key);
     };
 
-    window.addEventListener('keydown', handler, { capture: true });
-    return () => window.removeEventListener('keydown', handler, { capture: true });
+    // ADR-711 — μόνο ο φύλακας modal: ο handler ΚΑΤΕΧΕΙ τον χρόνο πληκτρολόγησης
+    // (Enter με focus στο Dynamic Input → blur + προώθηση), άρα δεν παραιτείται σε
+    // editable focus. Το Tab όμως ανήκει στο modal όταν υπάρχει ανοιχτό.
+    return addGlobalShortcutListener(handler, { capture: true, allowWhenEditable: true });
   }, [params, params.activeTool, params.isDimTool]);
 }
 
@@ -78,10 +83,3 @@ function mapKey(e: KeyboardEvent): DimensionCreateKey | null {
   return null;
 }
 
-function isEditableFocus(): boolean {
-  const el = document.activeElement;
-  if (!el) return false;
-  const tag = el.tagName;
-  if (tag === 'INPUT' || tag === 'TEXTAREA') return true;
-  return el.getAttribute('contenteditable') === 'true';
-}

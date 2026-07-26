@@ -25,6 +25,8 @@ import { computeFocusOrder2D } from '../../accessibility/focus-2d-order';
 import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { ViewTransform, Viewport } from '../../rendering/types/Types';
 import type { SelectableEntityType } from '../../systems/selection/types';
+// ADR-711 — δομικός φύλακας global accelerators (modal keyboard ownership).
+import { addGlobalShortcutListener } from '../../keyboard/global-shortcut-listener';
 
 export interface Use2DKeyboardFocusConfig {
   /** Lazy getter for current scene — reads at keydown time (getter pattern). */
@@ -42,14 +44,6 @@ export interface Use2DKeyboardFocusConfig {
   readonly enabled?: boolean;
 }
 
-function isInputFocused(): boolean {
-  const focused = document.activeElement;
-  if (!focused) return false;
-  if (focused.tagName === 'INPUT') return true;
-  if (focused.tagName === 'TEXTAREA') return true;
-  return focused.getAttribute('contenteditable') === 'true';
-}
-
 export function use2DKeyboardFocus({
   getScene,
   getTransform,
@@ -63,7 +57,7 @@ export function use2DKeyboardFocus({
     const focusManager = getKeyboardFocus2DManager();
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (isInputFocused()) return;
+      // ADR-711 — ο έλεγχος «γράφει σε πεδίο;» ζει πλέον στο addGlobalShortcutListener.
       const is2D = useViewMode3DStore.getState().mode === '2d';
       if (!is2D) return;
 
@@ -91,8 +85,8 @@ export function use2DKeyboardFocus({
       }
     };
 
-    window.addEventListener('keydown', onKeyDown, { capture: true });
-    return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
+    // ADR-711 — το Tab ανήκει στο modal όταν υπάρχει ανοιχτό (ελάττωμα Ε1).
+    return addGlobalShortcutListener(onKeyDown, { capture: true });
   }, [enabled, getScene, getTransform, getViewport, toggleEntity]);
 
   // Escape — clear focus via the central ESC bus. Priority sits BELOW

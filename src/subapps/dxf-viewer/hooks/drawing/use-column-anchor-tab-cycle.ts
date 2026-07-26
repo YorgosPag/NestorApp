@@ -13,6 +13,8 @@ import { useEffect } from 'react';
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
 import { ANCHOR_CYCLE_ORDER } from '../../bim/types/column-types';
 import type { ColumnToolState } from './useColumnTool';
+// ADR-711 — δομικός φύλακας global accelerators (modal keyboard ownership).
+import { addGlobalShortcutListener } from '../../keyboard/global-shortcut-listener';
 
 /**
  * Bind the Tab / Shift+Tab anchor-cycle keydown listener for the duration of
@@ -28,14 +30,7 @@ export function useColumnAnchorTabCycle(
       if (e.key !== 'Tab') return;
       const s = stateRef.current;
       if (s.phase !== 'awaitingPosition') return;
-      const target = e.target as HTMLElement | null;
-      if (
-        target &&
-        (target.tagName === 'INPUT' ||
-          target.tagName === 'TEXTAREA' ||
-          target.isContentEditable)
-      )
-        return;
+      // ADR-711 — ο έλεγχος «γράφει σε πεδίο;» ζει πλέον στο addGlobalShortcutListener.
       const direction: 1 | -1 = e.shiftKey ? -1 : 1;
       setState((prev) => {
         const idx = ANCHOR_CYCLE_ORDER.indexOf(prev.anchor);
@@ -46,7 +41,7 @@ export function useColumnAnchorTabCycle(
       e.preventDefault();
       e.stopPropagation();
     };
-    window.addEventListener('keydown', onKey, true);
-    return () => window.removeEventListener('keydown', onKey, true);
+    // ADR-711 — δομικός φύλακας (modal + πεδίο κειμένου).
+    return addGlobalShortcutListener(onKey, { capture: true });
   }, [stateRef, setState]);
 }

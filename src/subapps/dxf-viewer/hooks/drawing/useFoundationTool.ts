@@ -66,6 +66,8 @@ import { resolveColumnRotationDeg } from '../../bim/columns/column-rotation';
 import { DEFAULT_PAD_WIDTH_MM, DEFAULT_PAD_LENGTH_MM } from '../../bim/types/foundation-types';
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import { worldPerPixel } from '../../rendering/utils/viewport-scale';
+// ADR-711 — δομικός φύλακας global accelerators (modal keyboard ownership).
+import { addGlobalShortcutListener } from '../../keyboard/global-shortcut-listener';
 
 // ─── State machine types ─────────────────────────────────────────────────────
 
@@ -433,23 +435,17 @@ export function useFoundationTool(options: UseFoundationToolOptions = {}): UseFo
       if (e.key !== 'Tab') return;
       const s = stateRef.current;
       if (s.phase !== 'awaitingPosition') return;
-      const target = e.target as HTMLElement | null;
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
-      const direction: 1 | -1 = e.shiftKey ? -1 : 1;
-      setState((prev) => {
-        const idx = FOUNDATION_ANCHOR_CYCLE_ORDER.indexOf(prev.anchor);
-        const len = FOUNDATION_ANCHOR_CYCLE_ORDER.length;
-        const nextIdx = (idx + direction + len) % len;
-        const anchor = FOUNDATION_ANCHOR_CYCLE_ORDER[nextIdx];
-        syncPreview(prev.kind, prev.placementMode, prev.phase, prev.startPoint, prev.overrides, anchor); // ADR-514 Φ6c
-        return { ...prev, anchor };
-      });
+      // ADR-711 — ο έλεγχος «γράφει σε πεδίο;» ζει πλέον στο addGlobalShortcutListener.
+      // N.18 (jscpd): ο κύκλος αγκύρωσης έχει ΕΝΑΝ ιδιοκτήτη — το `cycleAnchor`. Εδώ ήταν
+      // αντιγραμμένος αυτούσιος (ίδιο modulo, ίδιο syncPreview), δηλαδή δύο σημεία να
+      // ξεσυγχρονιστούν. Ο handler δηλώνει μόνο ΠΟΤΕ και ΠΡΟΣ ΤΑ ΠΟΥ.
+      cycleAnchor(e.shiftKey ? -1 : 1);
       e.preventDefault();
       e.stopPropagation();
     };
-    window.addEventListener('keydown', onKey, true);
-    return () => window.removeEventListener('keydown', onKey, true);
-  }, [syncPreview]);
+    // ADR-711 — δομικός φύλακας (modal + πεδίο κειμένου).
+    return addGlobalShortcutListener(onKey, { capture: true });
+  }, [cycleAnchor]);
 
   return {
     state,

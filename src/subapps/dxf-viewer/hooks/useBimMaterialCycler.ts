@@ -39,6 +39,8 @@ import { UpdateBeamParamsCommand } from '../core/commands/entity-commands/Update
 import { UpdateColumnParamsCommand } from '../core/commands/entity-commands/UpdateColumnParamsCommand';
 import type { LevelSceneWriter } from '../systems/levels/level-scene-accessor';
 import type { useUniversalSelection } from '../systems/selection';
+// ADR-711 — δομικός φύλακας global accelerators (modal keyboard ownership).
+import { addGlobalShortcutListener } from '../keyboard/global-shortcut-listener';
 
 // ─── Material option lists (mirrors contextual ribbon tab order) ──────────────
 
@@ -95,14 +97,7 @@ export function useBimMaterialCycler({
       // anchor cycling) take precedence when their own tool is active.
       if (toolStateStore.get().activeTool !== 'select') return;
 
-      // Do not intercept Tab while the user is typing in a form field.
-      const focused = document.activeElement;
-      if (
-        focused &&
-        (focused.tagName === 'INPUT' ||
-          focused.tagName === 'TEXTAREA' ||
-          focused.getAttribute('contenteditable') === 'true')
-      ) return;
+      // ADR-711 — ο έλεγχος «γράφει σε πεδίο;» ζει πλέον στο addGlobalShortcutListener.
 
       const id = universalSelection.getPrimaryId();
       if (!id || !levelManager.currentLevelId) return;
@@ -181,7 +176,7 @@ export function useBimMaterialCycler({
       }
     };
 
-    window.addEventListener('keydown', onKeyDown, { capture: true });
-    return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
+    // ADR-711 — δομικός φύλακας (modal + πεδίο κειμένου).
+    return addGlobalShortcutListener(onKeyDown, { capture: true });
   }, [executeCommand, levelManager, universalSelection]);
 }
