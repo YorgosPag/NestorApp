@@ -53,6 +53,7 @@ export {
   CHART_SERIES_PALETTE,
   CHART_STACK_SPACER,
   CHART_STATUS_RAMP,
+  chartCategoryColor,
   chartPolarityColor,
   chartPolarityTone,
   chartSeriesColor,

@@ -179,6 +179,44 @@ export function seriesColorVar(key: string): string {
   return `var(--color-${key})`;
 }
 
+/**
+ * Positional color for one **category** — a pie slice, a donut segment, a bar colored
+ * by what it names rather than by which series it belongs to.
+ *
+ * ## Why this is not `chartSeriesColor` with a different argument
+ *
+ * A cartesian chart plots N series over shared categories, so identity lives on the
+ * *series* and there are as many colors as series. A pie plots ONE series (the
+ * quantity) split across N categories, so identity lives on the *category*. Same
+ * palette, same fixed order, different axis — which is why the shell models both and
+ * a chart declares which one it means by passing `categoryOrder` or not.
+ *
+ * ## The index comes from `order`, never from the data array
+ *
+ * This is the whole point of the function and the reason it takes the order instead of
+ * an index. **Color follows the entity, never its rank.** `buildEnergyClassItems` and
+ * its siblings filter zero-count categories out of the data; had color come from the
+ * row's position, an energy class dropping to zero would repaint every class below it,
+ * and a reader comparing two quarters would see the same hue mean two different
+ * things. A declared order is stable under filtering, sorting and re-fetching.
+ *
+ * A category absent from `order` reads as the neutral token — visibly "unassigned"
+ * rather than silently colliding with slot 1, matching `chartSeriesColor` beyond the
+ * palette limit.
+ *
+ * @param order Canonical category sequence — the domain's own vocabulary
+ *              (`['A+','A','B',…]`), declared once by the chart.
+ * @param category The category being drawn.
+ */
+export function chartCategoryColor(
+  order: readonly string[],
+  category: string,
+): string {
+  const index = order.indexOf(category);
+  if (index < 0) return CHART_POLARITY_COLORS.neutral;
+  return CHART_SERIES_PALETTE[index] ?? CHART_POLARITY_COLORS.neutral;
+}
+
 /** Series description → the `ChartConfig` that `ChartContainer` themes from. */
 export function toChartConfig(series: readonly ChartSeriesDescriptor[]): ChartConfig {
   const config: ChartConfig = {};

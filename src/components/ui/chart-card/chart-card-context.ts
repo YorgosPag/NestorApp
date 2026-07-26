@@ -46,6 +46,16 @@ export interface ChartCardContextValue {
   readonly categoryLabel: string;
   /** Translated explanation of the category, shown on its column header. */
   readonly categoryDescription?: string;
+  /**
+   * Canonical category sequence, present only when color encodes **category** identity
+   * instead of series identity — a pie, a donut, bars colored by what they name.
+   *
+   * Its presence is the declaration: there is no `colorBy` flag beside it, because two
+   * fields could disagree about where identity lives. The legend reads it to name the
+   * slices, and `chartCategoryColor` reads it to color them, so the swatch beside a
+   * label is the fill of the mark it names by construction.
+   */
+  readonly categoryOrder?: readonly string[];
   /** Renders a series value as text — axis ticks, tooltip and table share it. */
   readonly formatValue: (value: number) => string;
   /** Renders a category as text. */

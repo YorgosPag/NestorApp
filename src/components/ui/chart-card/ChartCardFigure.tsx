@@ -25,8 +25,8 @@ import type { ReactElement } from 'react';
 import { ChartContainer } from '@/components/ui/chart';
 import { cn } from '@/lib/utils';
 import { layoutUtilities } from '@/styles/design-tokens';
-import { chartSeriesColor } from './chart-card-series';
-import { useChartCard } from './chart-card-context';
+import { chartCategoryColor, chartSeriesColor } from './chart-card-series';
+import { readChartField, useChartCard } from './chart-card-context';
 import { ChartCardDataTable } from './ChartCardDataTable';
 
 /**
@@ -89,27 +89,71 @@ export function ChartCardFigure({
   );
 }
 
+/** One identity the plot draws, as the legend needs it. */
+interface LegendEntry {
+  readonly id: string;
+  readonly label: string;
+  readonly color: string;
+}
+
 /**
- * Series identity as text beside a swatch — so identity is never carried by color
- * alone, which is what the measured CVD separation (ΔE 6.2 deutan) requires.
+ * The identities this plot distinguishes by color.
+ *
+ * Two kinds of chart answer "what does a color mean here?" differently — a cartesian
+ * chart means a series, a pie means a category — and the card already knows which,
+ * because a categorical plot declares `categoryOrder`. Resolving it to one list here
+ * is what lets a single `<ul>` render both: a second legend body with the same markup
+ * would be exactly the sibling clone ADR-584 exists to catch (N.18).
+ */
+function useLegendEntries(): LegendEntry[] {
+  const { series, data, categoryKey, categoryOrder, formatCategory } = useChartCard();
+
+  if (!categoryOrder) {
+    return series.map((entry, index) => ({
+      id: entry.key,
+      label: entry.label,
+      color: chartSeriesColor(entry, index),
+    }));
+  }
+
+  // Walk the DECLARED order and keep what the data holds — not the other way round.
+  // Reading order off the rows would reintroduce rank-based color through the back
+  // door: a filtered-out category would shift every swatch below it.
+  const present = new Set(
+    data.map((datum) => String(readChartField(datum, categoryKey) ?? '')),
+  );
+
+  return categoryOrder
+    .filter((category) => present.has(category))
+    .map((category) => ({
+      id: category,
+      label: formatCategory(category),
+      color: chartCategoryColor(categoryOrder, category),
+    }));
+}
+
+/**
+ * Identity as text beside a swatch — so identity is never carried by color alone,
+ * which is what the measured CVD separation (ΔE 6.2 deutan) requires.
+ *
+ * Below two identities there is nothing to tell apart and the title already names what
+ * is drawn, so the box is noise rather than relief.
  */
 function ChartCardLegend() {
-  const { series } = useChartCard();
+  const entries = useLegendEntries();
 
-  if (series.length < 2) return null;
+  if (entries.length < 2) return null;
 
   return (
     <ul className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-1 text-sm">
-      {series.map((entry, index) => (
-        <li key={entry.key} className="flex items-center gap-1.5 text-muted-foreground">
-          {/* A per-series color cannot be a utility class; this is the same
+      {entries.map((entry) => (
+        <li key={entry.id} className="flex items-center gap-1.5 text-muted-foreground">
+          {/* A per-identity color cannot be a utility class; this is the same
               dynamic-color escape the existing ChartLegendContent uses. */}
           <span
             aria-hidden="true"
             className="size-2.5 shrink-0 rounded-[2px]"
-            style={layoutUtilities.dxf.colors.backgroundColor(
-              chartSeriesColor(entry, index),
-            )}
+            style={layoutUtilities.dxf.colors.backgroundColor(entry.color)}
           />
           {entry.label}
         </li>

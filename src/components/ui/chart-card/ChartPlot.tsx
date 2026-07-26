@@ -60,6 +60,16 @@ export interface ChartPlotProps<TDatum extends object> {
   readonly categoryLabel: string;
   /** Translated sentence explaining the category, shown on its column header. */
   readonly categoryDescription?: string;
+  /**
+   * Canonical category sequence — pass it when the plot colors by category rather than
+   * by series (pie, donut, category-colored bars), and color the marks with
+   * `chartCategoryColor(order, category)`.
+   *
+   * Declaring the order rather than the colors is what makes the reports-shell defect
+   * unwritable: two categories cannot be handed the same slot, because neither the
+   * chart nor the shell picks a slot at all.
+   */
+  readonly categoryOrder?: readonly string[];
   /** Renders a series value as text. Axis ticks, tooltip and table all use it. */
   readonly formatValue: (value: number) => string;
   /** Renders a category as text. Defaults to `String(value)`. */
@@ -74,6 +84,7 @@ export function ChartPlotRoot<TDatum extends object>({
   categoryKey,
   categoryLabel,
   categoryDescription,
+  categoryOrder,
   formatValue,
   formatCategory = defaultFormatCategory,
   children,
@@ -91,6 +102,7 @@ export function ChartPlotRoot<TDatum extends object>({
       categoryKey,
       categoryLabel,
       categoryDescription,
+      categoryOrder,
       formatValue,
       formatCategory,
       config: toChartConfig(series),
@@ -103,6 +115,7 @@ export function ChartPlotRoot<TDatum extends object>({
       categoryKey,
       categoryLabel,
       categoryDescription,
+      categoryOrder,
       formatValue,
       formatCategory,
     ],
