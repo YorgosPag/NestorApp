@@ -1344,11 +1344,23 @@
       "ssotFile": "src/utils/contacts/contact-session-storage.ts",
       "description": "The ONE owner of the Contacts page session-scoped shell state (selected contact id). ADR-332 D20 — the page <Suspense> boundary throws the whole subtree away when any descendant suspends (measured: 51ms, hmr 0), so the selection had to survive remount. A second persistence mechanism would fight this one over when the key is cleared, and a stale key resurrects deleted contacts.",
       "forbiddenPatterns": [
-        "function\\s+(readSelectedContactId|writeSelectedContactId|restoreSelectedContact)\\s*\\(",
+        "function\\s+(readSelectedContactId|writeSelectedContactId|restoreSelectedContact|isSelectionWriteAllowed|resolveLateSelectionRestore)\\s*\\(",
         "sessionStorage\\.(getItem|setItem|removeItem)\\(\\s*['\"]contact-selected"
       ],
       "allowlist": [
         "src/utils/contacts/contact-session-storage.ts"
+      ],
+      "tier": 3
+    },
+    "selected-contact-persistence": {
+      "ssotFile": "src/hooks/contacts/useSelectedContactPersistence.ts",
+      "description": "The ONE lifecycle owner of the persisted contact selection — write AND late restore in a single hook. ADR-332 D20.1: while the two lived apart, the write effect translated a not-yet-loaded list into removeItem and destroyed the key 325ms before the data arrived (measured live). Splitting them again re-opens that race; a second late-restore effect would also resurrect deleted contacts on every list refresh.",
+      "forbiddenPatterns": [
+        "function\\s+useSelectedContactPersistence\\s*\\(",
+        "useEffect\\([^)]*writeSelectedContactId"
+      ],
+      "allowlist": [
+        "src/hooks/contacts/useSelectedContactPersistence.ts"
       ],
       "tier": 3
     },
