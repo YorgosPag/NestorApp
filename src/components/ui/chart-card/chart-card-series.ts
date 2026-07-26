@@ -17,24 +17,30 @@
  *
  * Every migrated chart previously hardcoded hexes (`#3b82f6`, `#ef4444`, …) behind an
  * `eslint-disable design-system/no-hardcoded-colors`, so dark mode rendered the light
- * ramp. The tokens `--chart-1..5` already exist per theme in `globals.css`; a chart that
+ * ramp. The tokens `--chart-1..8` exist per theme in `globals.css`; a chart that
  * names a series gets its color from the fixed order below and never picks one.
  *
- * ## Measured palette state (ADR-710 §4 — `dataviz/scripts/validate_palette.js`)
+ * ## Measured palette state (ADR-710 §10 — `dataviz/scripts/validate_palette.js`)
  *
  * | mode  | surface   | result |
  * |-------|-----------|--------|
- * | light | `#e7f1fe` | PASS, 2 WARN — `--chart-3`↔`--chart-2` CVD ΔE 6.2 (deutan); `--chart-2` 2.02:1 and `--chart-3` 2.44:1 vs surface (< 3:1) |
- * | dark  | `#1d283a` | **FAIL** — all 5 steps above the L 0.77 ceiling; `--chart-3`↔`--chart-2` CVD ΔE 5.4 (deutan), under the 6.0 floor |
+ * | light | `#e7f1fe` | **PASS** — CVD ΔE 10.9 · normal-vision ΔE 22.5 · every mark ≥ 3:1 |
+ * | dark  | `#1d283a` | **PASS** — CVD ΔE 10.3 · normal-vision ΔE 20.4 · every mark ≥ 3:1 |
  *
- * A CVD ΔE in the 6–8 band is legal ONLY with secondary encoding, and a sub-3:1 mark
- * obligates visible labels or a table view. The shell therefore does not treat these as
- * advisory: `ChartCardFigure` always renders a legend and always renders a reachable
- * data table, and `CHART_STACK_SPACER` puts a surface-colored gap between touching
- * fills. The relief is structural, so no chart can opt out of it.
+ * This block previously recorded a light-mode WARN and a dark-mode **FAIL** (all five
+ * steps above the L 0.77 ceiling, CVD ΔE 5.4). Both were repaired at the token layer:
+ * the palette is now eight hues derived by snapping Nestor's own hue families to
+ * passing steps, and the reports shell's separate Okabe-Ito palette was folded into
+ * it — see `globals.css`. Nothing in this module changed to make that true.
  *
- * Repairing the dark `--chart-*` steps themselves is a `globals.css` change that
- * repaints every chart in the app and is deliberately NOT part of this module.
+ * The relief machinery below is kept even though no mark now falls under 3:1: the
+ * shell always renders a legend, always renders a reachable data table, and
+ * `CHART_STACK_SPACER` puts a surface-colored gap between touching fills. Identity is
+ * therefore never carried by hue alone — which is what lets a colour-blind reader,
+ * a greyscale printout, and `forced-colors` mode all still work.
+ *
+ * The palette is gated: `npm run validate:chart-palette` re-derives these numbers from
+ * `globals.css`, and CHECK 3.32 runs it on every commit that touches the tokens.
  */
 
 import type { ChartConfig } from '@/components/ui/chart';
@@ -45,8 +51,16 @@ import type { ChartConfig } from '@/components/ui/chart';
 
 /**
  * Categorical hues in fixed order — assigned by position, never cycled.
- * A 9th series is not a generated hue: fold it into an "other" bucket or facet
- * the chart. Five is the ceiling because `globals.css` defines five steps.
+ *
+ * The ORDER is the colour-blind-safety mechanism, not a cosmetic preference: the
+ * gates measure *adjacent* pairs, so slot 2 was chosen to sit far from slot 1, slot 3
+ * far from slot 2, and so on. Reordering these to "look nicer" silently voids the
+ * guarantee while every test still passes.
+ *
+ * A 9th series is not a generated hue: fold it into an "other" bucket or facet the
+ * chart. Eight is the ceiling because eight is where categorical colour stops working
+ * for humans — for CVD readers and everyone else alike — not because `globals.css`
+ * ran out of steps.
  */
 export const CHART_SERIES_PALETTE = [
   'hsl(var(--chart-1))',
@@ -54,6 +68,9 @@ export const CHART_SERIES_PALETTE = [
   'hsl(var(--chart-3))',
   'hsl(var(--chart-4))',
   'hsl(var(--chart-5))',
+  'hsl(var(--chart-6))',
+  'hsl(var(--chart-7))',
+  'hsl(var(--chart-8))',
 ] as const;
 
 export const CHART_SERIES_LIMIT = CHART_SERIES_PALETTE.length;

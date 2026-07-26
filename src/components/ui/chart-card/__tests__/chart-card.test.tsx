@@ -31,7 +31,7 @@ import { ChartCard } from '../ChartCard';
 import { ChartCardTooltip } from '../ChartCardTooltip';
 import { useEntrySubmit } from '../editor/use-entry-submit';
 import { useRepeatingRows } from '../editor/use-repeating-rows';
-import { chartPolarityTone, chartSeriesColor, toChartConfig } from '../chart-card-series';
+import { CHART_SERIES_LIMIT, chartPolarityTone, chartSeriesColor, toChartConfig } from '../chart-card-series';
 import type { ChartSeries } from '../chart-card-series';
 
 jest.mock('@/i18n/hooks/useTranslation', () => ({
@@ -305,9 +305,19 @@ describe('series description', () => {
   it('assigns categorical hues by position and never cycles', () => {
     const colors = TWO_SERIES.map((series, index) => chartSeriesColor(series, index));
     expect(colors).toEqual(['hsl(var(--chart-1))', 'hsl(var(--chart-2))']);
-    // Past the ramp the palette does not wrap — a 6th series reads as unassigned
-    // rather than silently repeating hue 1.
-    expect(chartSeriesColor({ key: 'x', label: 'X' }, 5)).toBe('hsl(var(--muted-foreground))');
+
+    // Every slot is reachable and in fixed order — asserted positionally, because the
+    // ORDER is the colour-blind-safety mechanism (ADR-710 §10) and a reshuffle that kept
+    // the same set of hues would otherwise pass silently.
+    expect(CHART_SERIES_LIMIT).toBe(8);
+    for (let i = 0; i < CHART_SERIES_LIMIT; i++) {
+      expect(chartSeriesColor({ key: `s${i}`, label: `S${i}` }, i)).toBe(`hsl(var(--chart-${i + 1}))`);
+    }
+
+    // Past the ramp the palette does not wrap — a 9th series reads as unassigned rather
+    // than silently repeating hue 1. Eight is the ceiling because that is where
+    // categorical colour stops working for humans, not because the tokens ran out.
+    expect(chartSeriesColor({ key: 'x', label: 'X' }, CHART_SERIES_LIMIT)).toBe('hsl(var(--muted-foreground))');
   });
 
   it('feeds ChartStyle a config whose keys match the plotted fields', () => {

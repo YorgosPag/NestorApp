@@ -109,6 +109,7 @@
     "seed:ai-inbox": "node scripts/seed-ai-inbox-messages.js",
     "generate:i18n-types": "node scripts/generate-i18n-types.js",
     "extract:strings": "node scripts/extract-strings.js",
+    "validate:chart-palette": "node scripts/validate-chart-palette.js",
     "validate:i18n": "node scripts/validate-translations.js",
     "validate:i18n-config": "node scripts/validate-i18n-config.js",
     "extract:hardcoded": "node scripts/extract-hardcoded-strings.js",

@@ -223,6 +223,38 @@ if [[ -z "${SKIP_BARREL_DEADCODE_SMOKE:-}" ]] && [[ -f "scripts/check-barrel-dea
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 0.9: SYNC — CHECK 3.32 categorical chart palette (ADR-710 §10). ZERO TOL.
+#
+# Fires ONLY when globals.css is staged, and costs ~40ms: it parses one file and
+# does arithmetic on 16 colours. No baseline — a palette either clears the gates
+# or it does not, and "fewer violations than yesterday" is meaningless when the
+# whole point is that every series must be distinguishable.
+#
+# WHY: two palettes shipped for years with the comment "Color-Blind Safe" and
+# neither had ever been measured. On this app's surfaces the reports palette's
+# yellow scored 1.11:1 contrast and its dark orange↔amber pair sat at ΔE 11.8 —
+# below the floor for FULL-colour vision. `--chart-1..5` failed dark mode outright.
+# Every existing gate was blind to it: colours are not strings, imports, or types.
+#
+# If this blocks you: the numbers are measurements, not opinions. Re-step the
+# offending slot (hold the hue, move lightness/chroma) — never relax a threshold,
+# and never reorder slots to "look nicer" (the ORDER is the CVD mechanism).
+# ═══════════════════════════════════════════════════════════════════════════════
+
+if [[ -z "${SKIP_CHART_PALETTE:-}" ]] && [[ -f "scripts/validate-chart-palette.js" ]]; then
+    if echo "$STAGED_FILES" | grep -q '^src/app/globals\.css$'; then
+        node scripts/validate-chart-palette.js
+        if [[ $? -ne 0 ]]; then
+            echo ""
+            echo -e "${RED}  🚫 COMMIT BLOCKED — CHECK 3.32 chart palette (ADR-710 §10)${NC}"
+            echo -e "${YELLOW}  Re-run locally: npm run validate:chart-palette --verbose${NC}"
+            echo -e "${YELLOW}  Emergency skip (justify to Giorgio): SKIP_CHART_PALETTE=1 git commit ...${NC}"
+            exit 1
+        fi
+    fi
+fi
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # PHASE 1: Node.js worker_threads orchestrator
 # — one node process, all checks run in parallel threads (JS) or processes (.sh)
 # ═══════════════════════════════════════════════════════════════════════════════
