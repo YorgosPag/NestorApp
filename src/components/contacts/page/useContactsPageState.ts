@@ -63,10 +63,25 @@ export function useContactsPageState() {
   // Fast Refresh από μόνο του, και η επιλογή γίνεται μοιράσιμος σύνδεσμος.
   const { selectedId: selectedContactId, setSelectedId } = useSelectedEntityUrlState(CONTACT_ID_PARAM);
 
-  const selectedContact = useMemo<Contact | null>(
-    () => (selectedContactId ? contacts.find(c => c.id === selectedContactId) ?? null : null),
-    [contacts, selectedContactId],
-  );
+  /**
+   * Επαφή που ήρθε από deep link και **δεν** χωράει στη λίστα της συνδρομής.
+   *
+   * ⚠️ Δεν είναι δεύτερη πηγή αλήθειας: το **ποια** επαφή είναι ανοιχτή το λέει
+   * αποκλειστικά το URL. Αυτό είναι μόνο η τελευταία γνωστή **μορφή** της, για την
+   * περίπτωση που το επόμενο στιγμιότυπο του Firestore αντικαταστήσει τη λίστα και
+   * την πετάξει έξω (η συνδρομή είναι `limitCount: 1000`). Χωρίς αυτό, το πάνελ θα
+   * άδειαζε μόνο του ενώ το URL θα εξακολουθούσε να δείχνει σωστά.
+   */
+  const [detachedContact, setDetachedContact] = useState<Contact | null>(null);
+
+  const selectedContact = useMemo<Contact | null>(() => {
+    if (!selectedContactId) return null;
+    // Η λίστα προηγείται πάντα — είναι τα φρέσκα δεδομένα.
+    return (
+      contacts.find(c => c.id === selectedContactId)
+      ?? (detachedContact?.id === selectedContactId ? detachedContact : null)
+    );
+  }, [contacts, selectedContactId, detachedContact]);
 
   /**
    * Ο χρήστης άλλαξε ο ίδιος επιλογή σε αυτό το mount;
@@ -136,7 +151,8 @@ export function useContactsPageState() {
       if (contact) {
         logger.info('Contact loaded directly', { name: getContactDisplayName(contact) });
         // Καμία εγγραφή επιλογής εδώ: το id είναι ΗΔΗ στο URL — γι' αυτό ήρθαμε. Αρκεί
-        // να μπει η επαφή στη λίστα και η παραγόμενη επιλογή προκύπτει μόνη της.
+        // να γίνει διαθέσιμη η μορφή της και η παραγόμενη επιλογή προκύπτει μόνη της.
+        setDetachedContact(contact);
         setContacts(prev => {
           const exists = prev.find(c => c.id === contactId);
           return exists ? prev : [contact, ...prev];
@@ -196,7 +212,7 @@ export function useContactsPageState() {
   useEffect(() => {
     if (authLoading || !user || !selectedContactId) return;
     if (isLoading) return;
-    if (contacts.some(c => c.id === selectedContactId)) return;
+    if (selectedContact) return;
     if (fetchAttemptedIdsRef.current.has(selectedContactId)) return;
 
     fetchAttemptedIdsRef.current.add(selectedContactId);
@@ -211,7 +227,7 @@ export function useContactsPageState() {
       logger.warn('Clearing stale contactId from URL', { contactId: selectedContactId });
       setSelectedId(null);
     });
-  }, [authLoading, user, selectedContactId, isLoading, contacts, loadSpecificContact, setSelectedId]);
+  }, [authLoading, user, selectedContactId, isLoading, selectedContact, loadSpecificContact, setSelectedId]);
 
   useEffect(() => {
     if (authLoading || !user || searchParams.get('create') !== 'true') return;
