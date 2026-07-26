@@ -11,6 +11,9 @@ import { INTERACTIVE_PATTERNS } from '@/components/ui/effects'
 import { useIconSizes } from '@/hooks/useIconSizes'
 import { useSemanticColors, type SemanticColors } from '@/ui-adapters/react/useSemanticColors'
 import { useTranslation } from '@/i18n/hooks/useTranslation'
+// ADR-711 — modal keyboard ownership + focus restore (κοινό με το dialog.tsx).
+import { ModalKeyboardScope } from '@/lib/a11y/use-modal-keyboard-scope'
+import { useDialogFocusRestore } from '@/lib/a11y/use-dialog-focus-restore'
 import '@/lib/design-system';
 
 // ╭─────────────────────────────────────────────╮
@@ -93,9 +96,11 @@ interface SheetContentProps
 const SheetContent = React.forwardRef<
   React.ComponentRef<typeof SheetPrimitive.Content>,
   SheetContentProps
->(({ side = "right", className, children, ...props }, ref) => {
+>(({ side = "right", className, children, onOpenAutoFocus, onCloseAutoFocus, ...props }, ref) => {
   const colors = useSemanticColors();
   const sheetVariants = createSheetVariants(colors);
+  // ADR-711 — ίδιο κενό Radix με το Dialog (κοινός hook, όχι αντιγραμμένη λογική).
+  const autoFocusHandlers = useDialogFocusRestore({ onOpenAutoFocus, onCloseAutoFocus });
 
   return (
     <SheetPortal>
@@ -104,7 +109,9 @@ const SheetContent = React.forwardRef<
         ref={ref}
         className={cn(sheetVariants({ side }), className)}
         {...props}
+        {...autoFocusHandlers}
       >
+        <ModalKeyboardScope />
         {children}
         <SheetClose />
       </SheetPrimitive.Content>

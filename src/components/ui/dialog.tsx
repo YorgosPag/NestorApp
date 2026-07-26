@@ -12,6 +12,9 @@ import { useIconSizes } from '@/hooks/useIconSizes'
 import { useBorderTokens } from '@/hooks/useBorderTokens'
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors'
 import { useTranslation } from '@/i18n/hooks/useTranslation'
+// ADR-711 — modal keyboard ownership + focus restore. ΕΝΑ σημείο για 170 αρχεία.
+import { ModalKeyboardScope } from '@/lib/a11y/use-modal-keyboard-scope'
+import { useDialogFocusRestore } from '@/lib/a11y/use-dialog-focus-restore'
 import '@/lib/design-system';
 
 // =============================================================================
@@ -88,9 +91,12 @@ interface DialogContentProps extends
 const DialogContent = React.forwardRef<
   React.ComponentRef<typeof DialogPrimitive.Content>,
   DialogContentProps
->(({ className, children, hideCloseButton = false, size, ...props }, ref) => {
+>(({ className, children, hideCloseButton = false, size, onOpenAutoFocus, onCloseAutoFocus, ...props }, ref) => {
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
+  // ADR-711 Ε2 — ο Radix επαναφέρει το focus ΜΟΝΟ στον <DialogTrigger>· 161/170 αρχεία
+  // δεν έχουν trigger, οπότε το focus κατέληγε στο <body>.
+  const autoFocusHandlers = useDialogFocusRestore({ onOpenAutoFocus, onCloseAutoFocus });
 
   return (
     <DialogPortal>
@@ -103,7 +109,12 @@ const DialogContent = React.forwardRef<
           className
         )}
         {...props}
+        {...autoFocusHandlers}
       >
+        {/* ADR-711 Ε1/Ε4 — μέσα στο Content, ώστε mount === «ανοιχτό». Πιο ψηλά θα
+            κρατούσε το scope μόνιμα πατημένο (η συνάρτηση του DialogContent τρέχει
+            και με open={false}). */}
+        <ModalKeyboardScope />
         {children}
         {!hideCloseButton && <DialogClose />}
       </DialogPrimitive.Content>
