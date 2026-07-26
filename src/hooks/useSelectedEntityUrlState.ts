@@ -31,9 +31,14 @@
  * @see ADR-400 — το ίδιο μοτίβο για το viewport του DXF Viewer
  */
 
-import { useCallback } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { currentSearchParams, replaceUrlSearchParams } from '@/lib/url-query-state';
+import { useCallback, useMemo, useSyncExternalStore } from 'react';
+import {
+  currentSearchParams,
+  getServerUrlQuerySnapshot,
+  getUrlQuerySnapshot,
+  replaceUrlSearchParams,
+  subscribeToUrlQuery,
+} from '@/lib/url-query-state';
 
 export interface SelectedEntityUrlState {
   /** Το id της ανοιχτής οντότητας, ή `null` όταν καμία δεν είναι επιλεγμένη. */
@@ -48,11 +53,18 @@ export interface SelectedEntityUrlState {
  * @param paramName - Το κλειδί του query param (π.χ. `'contactId'`).
  */
 export function useSelectedEntityUrlState(paramName: string): SelectedEntityUrlState {
-  // Ανάγνωση: αντιδραστική. Το `history.replaceState` παρακάτω συγχρονίζεται με το
-  // `useSearchParams` — τεκμηριωμένη συμπεριφορά του App Router, μετρημένη ζωντανά
-  // στην έκδοση που τρέχει η παραγωγή (βλ. `@/lib/url-query-state`).
-  const searchParams = useSearchParams();
-  const selectedId = searchParams.get(paramName);
+  // Ανάγνωση: αντιδραστική **εκ κατασκευής**, όχι κατ' ευγενή παραχώρηση του router.
+  // Το `useSearchParams()` ενημερώνεται από `replaceState` μόνο στο production build
+  // (μετρημένο· βλ. `@/lib/url-query-state`), οπότε δεν στηριζόμαστε σε αυτό.
+  const query = useSyncExternalStore(
+    subscribeToUrlQuery,
+    getUrlQuerySnapshot,
+    getServerUrlQuerySnapshot,
+  );
+  const selectedId = useMemo(
+    () => new URLSearchParams(query).get(paramName),
+    [query, paramName],
+  );
 
   const setSelectedId = useCallback(
     (id: string | null) => {

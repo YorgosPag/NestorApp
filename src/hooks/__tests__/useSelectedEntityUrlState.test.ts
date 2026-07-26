@@ -10,20 +10,17 @@
  *   - ιδεμποτεντικό: ίδιο id ⇒ **καμία** εγγραφή στο ιστορικό,
  *   - ο setter έχει σταθερή ταυτότητα ⇒ δεν σπάει memoized καταναλωτές.
  *
- * Το `useSearchParams` μιμείται τη ζωντανή του συμπεριφορά (διαβάζει το URL του
- * jsdom). Ο πραγματικός συγχρονισμός `replaceState → useSearchParams` ανήκει στον
- * App Router και μετρήθηκε ζωντανά στην παραγωγή — δεν προσποιούμαστε ότι τον
- * αποδεικνύει το jsdom.
+ * 🔴 Το κρίσιμο: η επανασχεδίαση **δεν** ανατίθεται στο `useSearchParams()`. Μετρήθηκε
+ * ότι ο συγχρονισμός `replaceState → useSearchParams` δουλεύει στο production build
+ * αλλά **όχι** στον dev server, κι έτσι οι κάρτες «δεν άνοιγαν» τοπικά. Τα tests
+ * «γράψιμο ⇒ νέα τιμή ΧΩΡΙΣ rerender» καρφώνουν ακριβώς αυτό: αν κάποιος ξαναδέσει
+ * την ανάγνωση στον router, γίνονται κόκκινα.
  *
  * @see src/hooks/useSelectedEntityUrlState.ts
  */
 
 import { renderHook, act } from '@testing-library/react';
 import { useSelectedEntityUrlState } from '../useSelectedEntityUrlState';
-
-jest.mock('next/navigation', () => ({
-  useSearchParams: () => new URLSearchParams(window.location.search),
-}));
 
 /** Φέρνει το jsdom σε γνωστή αφετηρία. */
 function startAt(url: string): void {
@@ -50,14 +47,35 @@ describe('useSelectedEntityUrlState', () => {
     expect(result.current.selectedId).toBeNull();
   });
 
-  it('writes the selection into the URL', () => {
-    const { result, rerender } = renderHook(() => useSelectedEntityUrlState('contactId'));
+  it('writes the selection into the URL and re-renders WITHOUT any rerender() nudge', () => {
+    const { result } = renderHook(() => useSelectedEntityUrlState('contactId'));
 
     act(() => result.current.setSelectedId('cont_2'));
-    rerender();
 
     expect(window.location.search).toBe('?contactId=cont_2');
+    // Καμία χειροκίνητη επανασχεδίαση: αν αυτό περάσει, η ανάγνωση είναι όντως
+    // αντιδραστική — το ελάττωμα «οι κάρτες δεν ανοίγουν» ήταν ακριβώς η αποτυχία του.
     expect(result.current.selectedId).toBe('cont_2');
+  });
+
+  it('re-renders on browser back/forward (popstate)', () => {
+    const { result } = renderHook(() => useSelectedEntityUrlState('contactId'));
+
+    act(() => {
+      window.history.replaceState(null, '', '/contacts?contactId=cont_back');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+
+    expect(result.current.selectedId).toBe('cont_back');
+  });
+
+  it('re-renders when a router navigation replaces the URL (pushState)', () => {
+    const { result } = renderHook(() => useSelectedEntityUrlState('contactId'));
+
+    // Ό,τι κάνει το `router.push('/contacts')` καταλήγει στο ίδιο native API.
+    act(() => { window.history.pushState(null, '', '/contacts'); });
+
+    expect(result.current.selectedId).toBeNull();
   });
 
   it('keeps unrelated query keys when writing', () => {
@@ -75,12 +93,22 @@ describe('useSelectedEntityUrlState', () => {
   it('clears the param on null — deselection leaves no trace', () => {
     startAt('/contacts?contactId=cont_1');
 
-    const { result, rerender } = renderHook(() => useSelectedEntityUrlState('contactId'));
+    const { result } = renderHook(() => useSelectedEntityUrlState('contactId'));
     act(() => result.current.setSelectedId(null));
-    rerender();
 
     expect(window.location.search).toBe('');
     expect(result.current.selectedId).toBeNull();
+  });
+
+  it('switches between two ids in a row — the second click is not swallowed', () => {
+    startAt('/contacts?contactId=cont_1');
+
+    const { result } = renderHook(() => useSelectedEntityUrlState('contactId'));
+    act(() => result.current.setSelectedId('cont_2'));
+    expect(result.current.selectedId).toBe('cont_2');
+
+    act(() => result.current.setSelectedId('cont_3'));
+    expect(result.current.selectedId).toBe('cont_3');
   });
 
   it('does not touch history when the id is unchanged (idempotent)', () => {

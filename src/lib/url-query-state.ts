@@ -40,10 +40,94 @@
  * @see docs/centralized-systems/reference/adrs/ADR-400 — viewport deep-link (2D/3D)
  */
 
+import { createExternalStore } from '@/lib/state/createExternalStore';
+
 /** Τα ζωντανά search params της σελίδας. Κενά στον server. */
 export function currentSearchParams(): URLSearchParams {
   if (typeof window === 'undefined') return new URLSearchParams();
   return new URLSearchParams(window.location.search);
+}
+
+// ─── Συνδρομή στις αλλαγές του query string ─────────────────────────────────
+
+/**
+ * Το pub/sub κελί έρχεται από το SSoT — **δεν** ξαναγράφεται εδώ.
+ *
+ * Σχήμα **version-signal**: η κατάσταση δεν ζει στο store· ζει στο URL. Το store κρατά
+ * μόνο έναν μετρητή που αυξάνεται σε κάθε αλλαγή, και το snapshot διαβάζεται από το
+ * `window.location.search` (βλ. `getUrlQuerySnapshot`). Είναι ακριβώς η χρήση που
+ * περιγράφει το registry για stores που κρατούν αλλού τα δεδομένα τους.
+ */
+const urlQueryVersion = createExternalStore<number>(0);
+
+let historyPatched = false;
+
+function notifyUrlQueryListeners(): void {
+  urlQueryVersion.set(urlQueryVersion.get() + 1);
+}
+
+/**
+ * Κάνει τις αλλαγές του URL **παρατηρήσιμες**, τυλίγοντας μία φορά τα
+ * `pushState`/`replaceState` και ακούγοντας το `popstate`.
+ *
+ * ## 🔴 Γιατί δεν αρκεί το `useSearchParams()`
+ * Η τεκμηρίωση του Next λέει ότι τα `pushState`/`replaceState` «integrate into the
+ * Next.js Router» και συγχρονίζονται με το `useSearchParams`. **Μετρήθηκε ότι αυτό
+ * ισχύει μόνο στο production build** (2026-07-26, Next 15.5.22): το ίδιο ακριβώς
+ * `replaceState('?filter=Δοκ')` στη σελίδα Επαφών
+ *   - στο **production** εμφάνισε το banner και φιλτράρισε τη λίστα 4→2,
+ *   - στον **dev server** δεν προκάλεσε **καμία** επανασχεδίαση.
+ *
+ * Μια επιλογή που δουλεύει μόνο στην παραγωγή δεν είναι λύση — είναι παγίδα για τον
+ * επόμενο που θα τη δοκιμάσει τοπικά και θα τη νομίσει σπασμένη. Γι' αυτό η
+ * αντιδραστικότητα **δεν** ανατίθεται στον router: παράγεται εδώ.
+ *
+ * Το τύλιγμα καλεί **πρώτα** την αρχική συνάρτηση (άρα ο Next κάνει ό,τι κάνει) και
+ * μετά ειδοποιεί — έτσι πιάνονται **και** οι δικές μας γραφές **και** οι πλοηγήσεις
+ * του router (`router.push`), που περνούν από τα ίδια native API.
+ */
+function patchHistoryOnce(): void {
+  if (historyPatched || typeof window === 'undefined') return;
+  historyPatched = true;
+
+  for (const method of ['pushState', 'replaceState'] as const) {
+    const original = window.history[method].bind(window.history);
+    window.history[method] = function patched(
+      data: unknown,
+      unused: string,
+      url?: string | URL | null,
+    ): void {
+      original(data, unused, url);
+      notifyUrlQueryListeners();
+    };
+  }
+
+  window.addEventListener('popstate', notifyUrlQueryListeners);
+}
+
+/**
+ * Εγγράφει ακροατή στις αλλαγές του query string. Σχήμα `useSyncExternalStore`.
+ *
+ * @returns Συνάρτηση διαγραφής της εγγραφής.
+ */
+export function subscribeToUrlQuery(listener: () => void): () => void {
+  patchHistoryOnce();
+  return urlQueryVersion.subscribe(listener);
+}
+
+/**
+ * Το τρέχον query string ως **σταθερή** τιμή (string, όχι αντικείμενο).
+ *
+ * Σκόπιμα string: το `useSyncExternalStore` συγκρίνει με `Object.is`, οπότε ένα
+ * φρέσκο `URLSearchParams` σε κάθε κλήση θα προκαλούσε ατέρμονο βρόχο render.
+ */
+export function getUrlQuerySnapshot(): string {
+  return typeof window === 'undefined' ? '' : window.location.search;
+}
+
+/** Στον server δεν υπάρχει query string· η τιμή έρχεται μετά την ενυδάτωση. */
+export function getServerUrlQuerySnapshot(): string {
+  return '';
 }
 
 /**
