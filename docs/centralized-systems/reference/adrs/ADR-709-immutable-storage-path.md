@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 |----------|-------|
-| **Status** | ✅ IMPLEMENTED (uncommitted — ο Giorgio κάνει commit) · 🔴 migration **δεν έχει εκτελεστεί** |
+| **Status** | ✅ IMPLEMENTED (κώδικας commit `ad76fe39`) · ✅ **MIGRATION ΕΚΤΕΛΕΣΤΗΚΕ & ΕΠΑΛΗΘΕΥΤΗΚΕ** (2026-07-26) |
 | **Date** | 2026-07-26 |
 | **Domain** | Storage · Files/FileRecord · Deletion Guard · Migrations |
 | **Canonical Location** | `src/services/upload/utils/storage-path.ts` (`buildStoragePath`, `buildEntityStoragePrefix`, `buildCategoryStoragePrefix`, `buildLegacyProjectScopedPrefix`, `parseStoragePath`) |
@@ -170,6 +170,19 @@ bytes στον κουβά **χωρίς κανένα εναπομείναν Fires
 | **`/api/storage/file/[...path]`** | Ελέγχει μόνο `segments[0]==='companies'` + `segments[1]===companyId` — path-αγνωστικό, σερβίρει και τα δύο. |
 | **Υπάρχοντα αρχεία** | **Δεν μετακινήθηκε τίποτα.** Βλ. §7. |
 
+### 6.1 Ρητά **εκτός** εμβέλειας: τα special-purpose paths
+
+`storage-path-bim.ts` παράγει `companies/{c}/projects/{p}/imported-meshes/{uploadId}.glb`
+(ADR-683 Φ3) — και **δεν** περνά από το `buildStoragePath`.
+
+Αυτό **δεν** είναι παραβίαση: εκεί το `projectId` είναι η **ταυτότητα του ίδιου του κατόχου**
+του αρχείου, όχι σχέση κάποιας άλλης οντότητας. Δεν εμπλέκεται `entityType`/`entityId`, έχει
+δικό του `storage.rules` block (γρ. 526) και δικό του custody parser στο
+`functions/src/storage/storage-path-custody.ts`.
+
+Ο κανόνας του ADR-709 δεν λέει «ποτέ `projects/` σε path» — λέει **«ποτέ μεταβλητή σχέση σε
+path»**. Ένα flat σχήμα όπου το project *είναι* ο κάτοχος περνά τον κανόνα.
+
 ---
 
 ## 7. 🔴 Migration — ΥΠΑΡΧΕΙ, ΔΕΝ ΕΧΕΙ ΕΚΤΕΛΕΣΤΕΙ
@@ -190,8 +203,27 @@ bytes στον κουβά **χωρίς κανένα εναπομείναν Fires
 | Τα `downloadUrl` δεν σπάνε | Το `copy()` μεταφέρει το `firebaseStorageDownloadTokens` → ξαναγράφεται **μόνο** το encoded path |
 | Δεν χτυπά λάθος αρχεία | Ταξινόμηση με τον **SSoT parser**, όχι `includes('/projects/')` — anchor με εταιρεία ονόματι `projects` |
 
-⚠️ **Ο Giorgio αποφασίζει πότε εκτελείται το POST.** Μέχρι τότε τα legacy αντικείμενα
-παραμένουν πλήρως λειτουργικά (ανάγνωση από Firestore, sweep από το dual-prefix).
+### ✅ ΕΚΤΕΛΕΣΤΗΚΕ — 2026-07-26 (εντολή Giorgio «επίλεξε εσύ»)
+
+**Dry-run πριν:** `legacyRecords: 6` · `alreadyCanonical: 4` · `unparseable: 0`
+**Execute:** `objectsMoved: 5` · `recordsUpdated: 6` · `recordsFailed: 0`
+**Dry-run μετά:** `legacyRecords: 0` · `alreadyCanonical: 10` · `unparseable: 0`
+
+**Ζωντανή απόδειξη end-to-end** μέσω `/api/storage/file/…`:
+
+| Path | HTTP |
+|---|---|
+| canonical `…/entities/project/<p>/…/file_6db8590d….png` | **200** ✅ |
+| legacy `…/projects/<p>/entities/project/<p>/…` | **404** ✅ |
+
+⚠️ **6 records ενημερώθηκαν αλλά 5 objects μετακινήθηκαν.** Ένα FileRecord ήταν **ήδη
+ορφανό** πριν το migration — `storagePath` χωρίς αντίστοιχο object στον κουβά. Ο κώδικας
+το χειρίζεται ρητά (`sources.length === 0` → `movedObjects: 0`, **χωρίς** error) και το
+record δείχνει πλέον στο canonical path. **Δεν χειροτέρεψε**: έδειχνε ήδη σε ανύπαρκτο
+αρχείο. Καταγράφεται ως προϋπάρχον χρέος δεδομένων, όχι ως αστοχία του migration.
+
+Το route παραμένει διαθέσιμο και **επαναλήψιμο** — σε μελλοντικό restore από παλιό backup
+αρκεί μία ακόμη εκτέλεση.
 
 ---
 
@@ -247,4 +279,5 @@ Firestore, τα δύο είδη είναι δυσδιάκριτα. Καταγρ�
 
 | Ημερομηνία | Αλλαγή |
 |---|---|
+| 2026-07-26 | **Migration ΕΚΤΕΛΕΣΤΗΚΕ** (εντολή «επίλεξε εσύ»): 6 legacy records → 5 objects moved, 6 records updated, 0 failed· επαλήθευση dry-run μετά = **0 legacy / 10 canonical**· ζωντανή απόδειξη canonical **200** / legacy **404**. Ένα προϋπάρχον ορφανό record (path χωρίς bytes) καταγράφηκε, δεν χειροτέρεψε. |
 | 2026-07-26 | **Δημιουργία.** Ε-17 → ρίζα ονομασμένη (ταυτολογία + μεταβλητή εξάρτηση). `projectId` αφαιρέθηκε από `StoragePathParams` (type-level enforcement)· `parseStoragePath` → tolerant reader με `legacyProjectId`· νέες SSoT `buildEntityStoragePrefix` / `buildCategoryStoragePrefix` / `buildLegacyProjectScopedPrefix`· 5 writers καθαρίστηκαν· floor-wipe → dual-prefix + πάντα ενεργό· `project` απέκτησε FILES cascade + storageCleanup· cleanup templates παράγονται από την SSoT· `parking`/`storage` clone ενοποιήθηκε· migration route (dry-run έτοιμο, **execute εκκρεμεί εντολή Giorgio**). 46 tests, mutation-verified ×6, jscpd 0. |
