@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import {
   ReportSection,
   ReportCategoryPies,
+  buildCategoryPie,
   ReportEmptyState,
 } from '@/components/reports/core';
 import { PRIORITY_LEVELS } from '@/constants/priority-levels';
@@ -35,17 +36,19 @@ export function TaskDistributionChart({
 
   const charts = useMemo(
     () => [
-      {
+      buildCategoryPie(t, {
         data: statusData,
-        categoryLabel: t('chart.category.status'),
-        categoryOrder: TASK_STATUSES.map((status) => t(`crm.taskStatuses.${status}`)),
-      },
-      {
+        labelKey: 'chart.category.status',
+        keys: TASK_STATUSES,
+        keyPrefix: 'crm.taskStatuses',
+      }),
+      // Priority order from the PRIORITY_LEVELS SSoT — low to critical, never retyped.
+      buildCategoryPie(t, {
         data: priorityData,
-        categoryLabel: t('chart.category.priority'),
-        // Priority order from the PRIORITY_LEVELS SSoT — low to critical, never retyped.
-        categoryOrder: PRIORITY_LEVELS.map((priority) => t(`crm.priorities.${priority}`)),
-      },
+        labelKey: 'chart.category.priority',
+        keys: PRIORITY_LEVELS,
+        keyPrefix: 'crm.priorities',
+      }),
     ],
     [statusData, priorityData, t],
   );

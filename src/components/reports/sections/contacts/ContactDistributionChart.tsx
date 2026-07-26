@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import {
   ReportSection,
   ReportCategoryPies,
+  buildCategoryPie,
   ReportEmptyState,
   type ReportCategorySlice,
 } from '@/components/reports/core';
@@ -35,17 +36,19 @@ export function ContactDistributionChart({
 
   const charts = useMemo(
     () => [
-      {
+      // Type vocabulary from the CONTACT_TYPES SSoT; `unknown` is the aggregator fallback.
+      buildCategoryPie(t, {
         data: typeData,
-        categoryLabel: t('chart.category.type'),
-        // Type vocabulary from the CONTACT_TYPES SSoT; `unknown` is the aggregator fallback.
-        categoryOrder: [...CONTACT_TYPES, 'unknown'].map((type) => t(`contacts.types.${type}`)),
-      },
-      {
+        labelKey: 'chart.category.type',
+        keys: [...CONTACT_TYPES, 'unknown'],
+        keyPrefix: 'contacts.types',
+      }),
+      buildCategoryPie(t, {
         data: statusData,
-        categoryLabel: t('chart.category.status'),
-        categoryOrder: CONTACT_STATUSES.map((status) => t(`contacts.statuses.${status}`)),
-      },
+        labelKey: 'chart.category.status',
+        keys: CONTACT_STATUSES,
+        keyPrefix: 'contacts.statuses',
+      }),
     ],
     [typeData, statusData, t],
   );

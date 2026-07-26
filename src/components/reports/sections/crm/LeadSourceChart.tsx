@@ -16,6 +16,7 @@ import { useTranslation } from 'react-i18next';
 import {
   ReportSection,
   ReportCategoryPies,
+  buildCategoryPie,
   ReportEmptyState,
 } from '@/components/reports/core';
 import type { SourceItem } from './types';
@@ -44,11 +45,12 @@ export function LeadSourceChart({ data, loading }: LeadSourceChartProps) {
 
   const charts = useMemo(
     () => [
-      {
+      buildCategoryPie(t, {
         data,
-        categoryLabel: t('chart.category.source'),
-        categoryOrder: LEAD_SOURCES.map((source) => t(`crm.sources.${source}`)),
-      },
+        labelKey: 'chart.category.source',
+        keys: LEAD_SOURCES,
+        keyPrefix: 'crm.sources',
+      }),
     ],
     [data, t],
   );

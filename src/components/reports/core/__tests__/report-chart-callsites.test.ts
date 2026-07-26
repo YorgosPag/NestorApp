@@ -42,6 +42,9 @@ const REPORTS_ROOT = path.join(process.cwd(), 'src', 'components', 'reports');
 /** A hand-picked step of the categorical palette, in either spelling. */
 const PALETTE_SLOT = /--(?:report-)?chart-\d/;
 
+/** A category label that came from the locale files, in any of its three spellings. */
+const TRANSLATED_CATEGORY_LABEL = /categoryLabel[:=]\s*\{?\s*t\(|labelKey:/;
+
 /** How many charts this domain had when the gate was written (ADR-710 §3.1). */
 const KNOWN_CALL_SITE_COUNT = 34;
 
@@ -60,11 +63,25 @@ function collectTsx(dir: string, found: string[] = []): string[] {
 interface CallSite {
   readonly file: string;
   readonly source: string;
+  /** True when the file composes the chart itself instead of going through a preset. */
+  readonly direct: boolean;
 }
 
+/**
+ * A call site is a section or a builder screen that draws a chart — never `core/`, which
+ * is where the presets themselves live and legitimately name the shell.
+ */
 const callSites: CallSite[] = collectTsx(REPORTS_ROOT)
-  .map((file) => ({ file: path.relative(REPORTS_ROOT, file), source: fs.readFileSync(file, 'utf8') }))
-  .filter((entry) => entry.source.includes('<ReportChart'));
+  .map((file) => ({
+    file: path.relative(REPORTS_ROOT, file).replace(/\\/g, '/'),
+    source: fs.readFileSync(file, 'utf8'),
+  }))
+  .filter((entry) => !entry.file.startsWith('core/'))
+  .filter(
+    (entry) =>
+      entry.source.includes('<ReportChart') || entry.source.includes('<ReportCategoryPies'),
+  )
+  .map((entry) => ({ ...entry, direct: entry.source.includes('<ReportChart') }));
 
 describe('ADR-710 Βήμα 4 — the reports charts do not choose colours', () => {
   it('finds the charts at all — an empty scan is a broken gate, not a clean one', () => {
@@ -85,15 +102,22 @@ describe('ADR-710 Βήμα 4 — the reports charts do not choose colours', () =
 
   it('declares a translated category label on every chart, never a silent default', () => {
     const offenders = callSites
-      .filter((entry) => !entry.source.includes('categoryLabel={t('))
+      // `categoryLabel={t(…)}` as a prop, `categoryLabel: t(…)` in a pie spec, or a
+      // `labelKey` the preset resolves — three spellings of the same declaration.
+      .filter((entry) => !TRANSLATED_CATEGORY_LABEL.test(entry.source))
       .map((entry) => entry.file);
 
     expect(offenders).toEqual([]);
   });
 
-  it('declares a value formatter on every chart, so no raw float reaches a reader', () => {
+  /**
+   * Only the charts that compose the shell directly. A chart that goes through
+   * `ReportCategoryPies` inherits that preset's count formatter, which is a declared
+   * default with a reason written next to it — not a silent one.
+   */
+  it('declares a value formatter wherever the shell is composed directly', () => {
     const offenders = callSites
-      .filter((entry) => !entry.source.includes('formatValue='))
+      .filter((entry) => entry.direct && !entry.source.includes('formatValue='))
       .map((entry) => entry.file);
 
     expect(offenders).toEqual([]);

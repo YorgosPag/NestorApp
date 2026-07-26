@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import {
   ReportSection,
   ReportCategoryPies,
+  buildCategoryPie,
   ReportEmptyState,
   type ReportCategorySlice,
 } from '@/components/reports/core';
@@ -33,13 +34,12 @@ export function ProjectStatusChart({ data, loading }: ProjectStatusChartProps) {
    */
   const charts = useMemo(
     () => [
-      {
+      buildCategoryPie(t, {
         data,
-        categoryLabel: t('chart.category.status'),
-        categoryOrder: ACTIVE_PROJECT_STATUSES.map((status) =>
-          t(`projects.status.statuses.${status}`),
-        ),
-      },
+        labelKey: 'chart.category.status',
+        keys: ACTIVE_PROJECT_STATUSES,
+        keyPrefix: 'projects.status.statuses',
+      }),
     ],
     [data, t],
   );

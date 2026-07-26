@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import {
   ReportSection,
   ReportCategoryPies,
+  buildCategoryPie,
   ReportEmptyState,
   type ReportCategorySlice,
 } from '@/components/reports/core';
@@ -47,11 +48,12 @@ export function ChequeStatusChart({ data, loading }: ChequeStatusChartProps) {
 
   const charts = useMemo(
     () => [
-      {
+      buildCategoryPie(t, {
         data,
-        categoryLabel: t('chart.category.status'),
-        categoryOrder: CHEQUE_STATUSES.map((status) => t(`sales.cheques.statuses.${status}`)),
-      },
+        labelKey: 'chart.category.status',
+        keys: CHEQUE_STATUSES,
+        keyPrefix: 'sales.cheques.statuses',
+      }),
     ],
     [data, t],
   );

@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import {
   ReportSection,
   ReportCategoryPies,
+  buildCategoryPie,
   ReportEmptyState,
   type ReportCategorySlice,
 } from '@/components/reports/core';
@@ -29,11 +30,12 @@ export function AttendanceMethodChart({ data, loading }: AttendanceMethodChartPr
 
   const charts = useMemo(
     () => [
-      {
+      buildCategoryPie(t, {
         data,
-        categoryLabel: t('chart.category.method'),
-        categoryOrder: CHECK_IN_METHODS.map((method) => t(`compliance.methods.${method}`)),
-      },
+        labelKey: 'chart.category.method',
+        keys: CHECK_IN_METHODS,
+        keyPrefix: 'compliance.methods',
+      }),
     ],
     [data, t],
   );

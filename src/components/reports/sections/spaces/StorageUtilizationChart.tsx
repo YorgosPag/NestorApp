@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import {
   ReportSection,
   ReportCategoryPies,
+  buildCategoryPie,
   ReportEmptyState,
   type ReportCategorySlice,
 } from '@/components/reports/core';
@@ -52,16 +53,18 @@ export function StorageUtilizationChart({
 
   const charts = useMemo(
     () => [
-      {
+      buildCategoryPie(t, {
         data: statusData,
-        categoryLabel: t('chart.category.status'),
-        categoryOrder: STORAGE_STATUSES.map((status) => t(`spaces.storage.statuses.${status}`)),
-      },
-      {
+        labelKey: 'chart.category.status',
+        keys: STORAGE_STATUSES,
+        keyPrefix: 'spaces.storage.statuses',
+      }),
+      buildCategoryPie(t, {
         data: typeData,
-        categoryLabel: t('chart.category.type'),
-        categoryOrder: STORAGE_TYPES.map((type) => t(`spaces.storage.types.${type}`)),
-      },
+        labelKey: 'chart.category.type',
+        keys: STORAGE_TYPES,
+        keyPrefix: 'spaces.storage.types',
+      }),
     ],
     [statusData, typeData, t],
   );

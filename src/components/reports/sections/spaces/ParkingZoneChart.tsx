@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import {
   ReportSection,
   ReportCategoryPies,
+  buildCategoryPie,
   ReportEmptyState,
   type ReportCategorySlice,
 } from '@/components/reports/core';
@@ -35,11 +36,12 @@ export function ParkingZoneChart({ data, loading }: ParkingZoneChartProps) {
 
   const charts = useMemo(
     () => [
-      {
+      buildCategoryPie(t, {
         data,
-        categoryLabel: t('chart.category.zone'),
-        categoryOrder: PARKING_ZONES.map((zone) => t(`spaces.parking.zones.${zone}`)),
-      },
+        labelKey: 'chart.category.zone',
+        keys: PARKING_ZONES,
+        keyPrefix: 'spaces.parking.zones',
+      }),
     ],
     [data, t],
   );

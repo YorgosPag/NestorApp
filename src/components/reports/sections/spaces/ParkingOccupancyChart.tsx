@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import {
   ReportSection,
   ReportCategoryPies,
+  buildCategoryPie,
   ReportEmptyState,
   type ReportCategorySlice,
 } from '@/components/reports/core';
@@ -35,16 +36,18 @@ export function ParkingOccupancyChart({
 
   const charts = useMemo(
     () => [
-      {
+      buildCategoryPie(t, {
         data: statusData,
-        categoryLabel: t('chart.category.status'),
-        categoryOrder: PARKING_STATUSES.map((status) => t(`spaces.parking.statuses.${status}`)),
-      },
-      {
+        labelKey: 'chart.category.status',
+        keys: PARKING_STATUSES,
+        keyPrefix: 'spaces.parking.statuses',
+      }),
+      buildCategoryPie(t, {
         data: typeData,
-        categoryLabel: t('chart.category.type'),
-        categoryOrder: PARKING_TYPES.map((type) => t(`spaces.parking.types.${type}`)),
-      },
+        labelKey: 'chart.category.type',
+        keys: PARKING_TYPES,
+        keyPrefix: 'spaces.parking.types',
+      }),
     ],
     [statusData, typeData, t],
   );

@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import {
   ReportSection,
   ReportCategoryPies,
+  buildCategoryPie,
   ReportEmptyState,
   type ReportCategorySlice,
 } from '@/components/reports/core';
@@ -40,13 +41,12 @@ export function MilestoneCompletionChart({ data, loading }: MilestoneCompletionC
 
   const charts = useMemo(
     () => [
-      {
+      buildCategoryPie(t, {
         data,
-        categoryLabel: t('chart.category.status'),
-        categoryOrder: MILESTONE_STATUSES.map((status) =>
-          t(`construction.milestones.statuses.${status}`),
-        ),
-      },
+        labelKey: 'chart.category.status',
+        keys: MILESTONE_STATUSES,
+        keyPrefix: 'construction.milestones.statuses',
+      }),
     ],
     [data, t],
   );

@@ -36,8 +36,9 @@ export type { FunnelStage, ReportFunnelProps } from './ReportFunnel';
 export { ReportChart } from './ReportChart';
 export type { ChartType, ReportChartProps } from './ReportChart';
 
-export { ReportCategoryPies } from './ReportCategoryPies';
+export { ReportCategoryPies, buildCategoryPie } from './ReportCategoryPies';
 export type {
+  CategoryPieSpec,
   ReportCategoryPie,
   ReportCategoryPiesProps,
   ReportCategorySlice,
