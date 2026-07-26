@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { NumericField } from '@/components/ui/numeric-field';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -26,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { formatCurrency } from '@/lib/intl-utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { BankSelector } from '@/components/banking/BankSelector';
@@ -75,7 +77,8 @@ export function RecordPaymentDialog({
   const { success, error: notifyError } = useNotifications();
 
   const remaining = installment.amount - installment.paidAmount;
-  const [amount, setAmount] = useState(remaining.toString());
+  // ADR-706: number model — the field opens on the remaining balance.
+  const [amount, setAmount] = useState(remaining);
   const [method, setMethod] = useState<PaymentMethod>('bank_transfer');
   const [paymentDate, setPaymentDate] = useState(nowISO().split('T')[0]);
   const [bankCode, setBankCode] = useState('');
@@ -118,8 +121,8 @@ export function RecordPaymentDialog({
   }, [method, bankName, referenceNumber, paymentDate, notes]);
 
   const handleSubmit = useCallback(async () => {
-    const numAmount = parseFloat(amount);
-    if (isNaN(numAmount) || numAmount <= 0) {
+    const numAmount = amount;
+    if (numAmount <= 0) {
       notifyError(t('errors.invalidAmount'));
       return;
     }
@@ -137,7 +140,8 @@ export function RecordPaymentDialog({
     setSubmitting(false);
 
     if (result.success) {
-      success(`${t('dialog.paymentRecorded')} €${numAmount.toLocaleString('el-GR')}`);
+      // ADR-314: currency rendering belongs to the Intl SSoT, not a hardcoded el-GR literal.
+      success(`${t('dialog.paymentRecorded')} ${formatCurrency(numAmount)}`);
       onOpenChange(false);
     } else {
       notifyError(result.error ?? t('errors.paymentFailed'));
@@ -162,13 +166,13 @@ export function RecordPaymentDialog({
           {/* Amount */}
           <div className="space-y-1">
             <Label htmlFor="pay-amount">{t('labels.amount')} (€)</Label>
-            <Input
+            <NumericField
               id="pay-amount"
-              type="number"
-              min="0.01"
-              step="0.01"
+              min={0.01}
+              step={0.01}
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              onValueChange={setAmount}
+              blankValue={0}
             />
           </div>
 

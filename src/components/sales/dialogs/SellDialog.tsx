@@ -5,7 +5,6 @@
  * @description Dialog for confirming a unit sale with final price and broker selection
  */
 
-import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { useState, useCallback, useEffect } from 'react';
 import { formatCurrency } from '@/lib/intl-utils';
 import {
@@ -17,18 +16,14 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { CheckCircle, AlertTriangle } from 'lucide-react';
-import { useIconSizes } from '@/hooks/useIconSizes';
-import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { NumericField } from '@/components/ui/numeric-field';
+import { CheckCircle } from 'lucide-react';
 import { OwnersList } from '@/components/shared/owners/OwnersList';
-import { isOwnersValid, formatOwnerNames, getPrimaryBuyerContactId, buildOwnerFields } from '@/lib/ownership/owner-utils';
+import { isOwnersValid } from '@/lib/ownership/owner-utils';
 import { AppurtenancesSection } from './AppurtenancesSection';
 import type { PropertyOwnerEntry } from '@/types/ownership-table';
 import { useLinkedSpacesForSale } from '@/hooks/sales/useLinkedSpacesForSale';
-import { useContactEmailWatch } from '@/hooks/sales/useContactEmailWatch';
-import { usePropertyHierarchyValidation } from '@/hooks/sales/usePropertyHierarchyValidation';
 import {
   Select,
   SelectContent,
@@ -43,44 +38,27 @@ import type { BrokerageAgreement } from '@/types/brokerage';
 import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
 import { cn } from '@/lib/utils';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { resolveSalesUnitProjectId as resolveProjectId, translateServerError } from './sales-dialog-utils';
+import { resolveSalesUnitProjectId as resolveProjectId } from './sales-dialog-utils';
 import type { BaseDialogProps } from './sales-dialog-utils';
-import { useGuardedPropertyMutation } from '@/hooks/useGuardedPropertyMutation';
-import { useNotifications } from '@/providers/NotificationProvider';
-import {
-  dispatchSalesAccountingEventWithPolicy,
-  syncSalesAppurtenancesWithPolicy,
-} from '@/services/sales-mutation-gateway';
+import { buildSalesAccountingEventBase } from './sales-dialog-payloads';
+import { useSalesDialogChrome } from './use-sales-dialog-chrome';
+import { useSalesBuyerOwners } from './use-sales-buyer-owners';
+import { useSalesActionMutation } from './use-sales-action-mutation';
+import { SalesValidationAlert, SalesSaveError, SalesInlineWarning } from './SalesDialogAlerts';
+import { dispatchSalesAccountingEventWithPolicy } from '@/services/sales-mutation-gateway';
 import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('SellDialog');
 
 export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogProps) {
-  const colors = useSemanticColors();
-  const { t } = useTranslation(COMMON_NAMESPACES);
-  const { success, error: notifyError } = useNotifications();
-  const iconSizes = useIconSizes();
-  const [finalPrice, setFinalPrice] = useState<string>(
-    unit.commercial?.askingPrice?.toString() ?? ''
-  );
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string>('');
-  const { checking: previewChecking, runExistingPropertyUpdate, ImpactDialog } = useGuardedPropertyMutation(unit);
+  const { colors, t, success, notifyError, iconSizes } = useSalesDialogChrome();
+  // ADR-706: number model, 0 = "no price entered" (rendered blank).
+  const [finalPrice, setFinalPrice] = useState<number>(unit.commercial?.askingPrice ?? 0);
 
-  const existingOwners = (unit.commercial?.owners as PropertyOwnerEntry[] | null | undefined) ?? null;
-
-  const [owners, setOwners] = useState<PropertyOwnerEntry[]>(() => {
-    if (existingOwners && existingOwners.length > 0) return existingOwners;
-    return [];
-  });
-
-  const buyerContactId = getPrimaryBuyerContactId(owners) ?? '';
-  const buyerName = formatOwnerNames(owners) ?? '';
-  const hasExistingOwners = Boolean(existingOwners?.length);
-
-  const { hasEmail: buyerHasEmail } = useContactEmailWatch(buyerContactId);
-  const hierarchy = usePropertyHierarchyValidation(unit, open);
+  const {
+    owners, setOwners, buyerContactId, buyerName,
+    buyerHasEmail, hasExistingOwners, hierarchy,
+  } = useSalesBuyerOwners(unit, open, { seedFromUnit: true });
 
   const sellNetArea = unit.area ?? 0;
   const sellGrossArea = (unit.areas as Record<string, number> | undefined)?.gross ?? 0;
@@ -91,9 +69,22 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
   const [brokerAgreements, setBrokerAgreements] = useState<BrokerageAgreement[]>([]);
   const [selectedBrokerId, setSelectedBrokerId] = useState<string>('none');
 
+  const mutation = useSalesActionMutation({
+    unit,
+    owners,
+    linkedSpaces,
+    action: 'sell',
+    unknownErrorI18nKey: 'sales.dialogs.sell.unknownError',
+    onOpenChange,
+    onSuccess,
+    t,
+    notifySuccess: success,
+    notifyError,
+  });
+
   useEffect(() => {
     if (open) {
-      setFinalPrice(unit.commercial?.askingPrice?.toString() ?? '');
+      setFinalPrice(unit.commercial?.askingPrice ?? 0);
       setSelectedBrokerId('none');
 
       const propertyOwners = (unit.commercial?.owners as PropertyOwnerEntry[] | null | undefined) ?? null;
@@ -113,48 +104,50 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
     }
   }, [open, companyId, unit.commercial?.askingPrice, unit.commercial?.owners, unit.project, unit.id]);
 
-  const handleSave = useCallback(async () => {
-    const price = Number(finalPrice);
-    if (isNaN(price) || price <= 0 || !buyerContactId) return;
+  /** Καταγραφή προμήθειας μεσίτη — τρέχει μόνο αν επιλέχθηκε συμφωνητικό. */
+  const recordBrokerCommission = useCallback((price: number) => {
+    if (selectedBrokerId === 'none') return;
+    const agreement = brokerAgreements.find((a) => a.id === selectedBrokerId);
+    if (!agreement) return;
 
-    setSaving(true);
-    setSaveError('');
-    try {
-      const propertyName = unit.name ?? unit.propertyName ?? '';
-      const updates = {
-        commercialStatus: 'sold',
-        commercial: {
-          askingPrice: unit.commercial?.askingPrice ?? null,
-          finalPrice: price,
-          reservationDeposit: unit.commercial?.reservationDeposit ?? null,
-          ...buildOwnerFields(owners),
-          reservationDate: unit.commercial?.reservationDate ?? null,
-          saleDate: nowISO(),
-          cancellationDate: unit.commercial?.cancellationDate ?? null,
-          listedDate: unit.commercial?.listedDate ?? null,
-          transactionChainId: unit.commercial?.transactionChainId ?? null,
-        },
-      };
+    BrokerageService.recordCommission(
+      {
+        brokerageAgreementId: agreement.id,
+        agentContactId: agreement.agentContactId,
+        agentName: agreement.agentName,
+        propertyId: unit.id,
+        projectId: resolveProjectId(unit) ?? '',
+        primaryBuyerContactId: buyerContactId || '',
+        salePrice: price,
+        commissionType: agreement.commissionType,
+        commissionPercentage: agreement.commissionPercentage,
+        commissionFixedAmount: agreement.commissionFixedAmount,
+      },
+      'system'
+    ).catch((err: unknown) => {
+      logger.warn('Commission recording failed', { error: err });
+    });
+  }, [brokerAgreements, buyerContactId, selectedBrokerId, unit]);
 
-      await runExistingPropertyUpdate(unit, updates as Record<string, unknown>, async () => {
-        success(t('viewer.messages.updateSuccess', { ns: 'properties' }));
-        onOpenChange(false);
-        onSuccess?.();
+  const handleSave = useCallback(() => {
+    const price = finalPrice;
+    if (price <= 0 || !buyerContactId) return;
 
-        const selectedSpaces = linkedSpaces.getSelectedSpaces();
-        const lineItems = selectedSpaces.length > 0
-          ? linkedSpaces.buildLineItems(price, propertyName)
-          : undefined;
-
+    return mutation.runAction({
+      commercialStatus: 'sold',
+      invoicedAmount: price,
+      commercialChanges: {
+        finalPrice: price,
+        saleDate: nowISO(),
+      },
+      dispatchEvents: ({ propertyName, lineItems }) => {
         dispatchSalesAccountingEventWithPolicy(unit.id, {
+          ...buildSalesAccountingEventBase(unit, {
+            propertyName,
+            buyerContactId: buyerContactId || null,
+            buyerName: buyerName || null,
+          }),
           eventType: 'final_sale_invoice',
-          propertyId: unit.id, propertyName,
-          projectId: resolveProjectId(unit) ?? null,
-          buyerContactId: buyerContactId || null,
-          buyerName: buyerName || null,
-          projectName: null, permitTitle: null, companyName: null,
-          buildingName: null, unitFloor: unit.floor ?? null,
-          projectAddress: null, paymentMethod: 'bank_transfer', notes: null,
           finalPrice: price,
           depositAlreadyInvoiced: unit.commercial?.reservationDeposit ?? 0,
           lineItems,
@@ -162,56 +155,14 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
           logger.warn('Final sale invoice failed', { error: err });
         });
 
-        if (selectedBrokerId !== 'none') {
-          const agreement = brokerAgreements.find((a) => a.id === selectedBrokerId);
-          if (agreement) {
-            BrokerageService.recordCommission(
-              {
-                brokerageAgreementId: agreement.id,
-                agentContactId: agreement.agentContactId,
-                agentName: agreement.agentName,
-                propertyId: unit.id,
-                projectId: resolveProjectId(unit) ?? '',
-                primaryBuyerContactId: buyerContactId || '',
-                salePrice: price,
-                commissionType: agreement.commissionType,
-                commissionPercentage: agreement.commissionPercentage,
-                commissionFixedAmount: agreement.commissionFixedAmount,
-              },
-              'system'
-            ).catch((err: unknown) => {
-              logger.warn('Commission recording failed', { error: err });
-            });
-          }
-        }
-
-        if (selectedSpaces.length > 0) {
-          syncSalesAppurtenancesWithPolicy(unit.id, {
-            action: 'sell',
-            spaces: linkedSpaces.buildSyncPayload('sell'),
-            ...buildOwnerFields(owners),
-          }).catch((err: unknown) => {
-            logger.warn('Appurtenance sync failed', { error: err });
-          });
-        }
-      });
-    } catch (err: unknown) {
-      const errorObj = err as { message?: string; error?: string };
-      const rawMsg = errorObj?.error ?? errorObj?.message ?? '';
-      const msg = rawMsg
-        ? translateServerError(rawMsg, t)
-        : t('sales.dialogs.sell.unknownError');
-      setSaveError(msg);
-      notifyError(msg);
-      logger.warn('Sell failed', { error: rawMsg });
-    } finally {
-      setSaving(false);
-    }
-  }, [brokerAgreements, buyerContactId, buyerName, finalPrice, linkedSpaces, notifyError, onOpenChange, onSuccess, owners, runExistingPropertyUpdate, selectedBrokerId, success, t, unit]);
+        recordBrokerCommission(price);
+      },
+    });
+  }, [buyerContactId, buyerName, finalPrice, mutation, recordBrokerCommission, unit]);
 
   const askingPrice = unit.commercial?.askingPrice;
-  const discount = askingPrice && Number(finalPrice) > 0
-    ? ((askingPrice - Number(finalPrice)) / askingPrice * 100).toFixed(1)
+  const discount = askingPrice && finalPrice > 0
+    ? ((askingPrice - finalPrice) / askingPrice * 100).toFixed(1)
     : null;
 
   return (
@@ -229,12 +180,9 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
         </DialogHeader>
 
         <section className="space-y-3 py-2">
-          <OwnersList owners={owners} onChange={setOwners} defaultRole="buyer" disabled={saving} readOnly={hasExistingOwners} />
+          <OwnersList owners={owners} onChange={setOwners} defaultRole="buyer" disabled={mutation.saving} readOnly={hasExistingOwners} />
           {!hasExistingOwners && buyerContactId && !buyerHasEmail && (
-            <p className={cn("flex items-center gap-1.5 text-xs", colors.text.warning)}>
-              <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-              {t('sales.dialogs.reserve.noEmailWarning')}
-            </p>
+            <SalesInlineWarning i18nKey="sales.dialogs.reserve.noEmailWarning" />
           )}
 
           {askingPrice && (
@@ -244,13 +192,14 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
             </p>
           )}
 
-          <Label className="text-sm font-medium">
-            {t('sales.dialogs.sell.finalPrice')}
-          </Label>
-          <Input
-            type="number" min={0} step={1000}
+          <NumericField
+            id="sell-final-price"
+            label={t('sales.dialogs.sell.finalPrice')}
+            labelClassName="text-sm font-medium"
+            min={0} step={1000}
             value={finalPrice}
-            onChange={(e) => setFinalPrice(e.target.value)}
+            onValueChange={setFinalPrice}
+            blankValue={0}
             placeholder={t('sales.dialogs.sell.finalPricePlaceholder')}
             className="text-right" autoFocus
           />
@@ -287,12 +236,12 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
                   ))}
                 </SelectContent>
               </Select>
-              {selectedBrokerId !== 'none' && Number(finalPrice) > 0 && (() => {
+              {selectedBrokerId !== 'none' && finalPrice > 0 && (() => {
                 const agr = brokerAgreements.find((a) => a.id === selectedBrokerId);
                 if (!agr) return null;
                 const comm = calculateCommission({
                   commissionType: agr.commissionType,
-                  salePrice: Number(finalPrice),
+                  salePrice: finalPrice,
                   commissionPercentage: agr.commissionPercentage,
                   commissionFixedAmount: agr.commissionFixedAmount,
                 });
@@ -318,7 +267,7 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
           {linkedSpaces.hasSpaces && (
             <AppurtenancesSection
               spaces={linkedSpaces.spaces}
-              unitPrice={Number(finalPrice) || 0}
+              unitPrice={finalPrice}
               totalAppurtenancesPrice={linkedSpaces.totalAppurtenancesPrice}
               onToggle={linkedSpaces.toggleSpace}
               onPriceChange={linkedSpaces.setSpacePrice}
@@ -330,50 +279,27 @@ export function SellDialog({ unit, open, onOpenChange, onSuccess }: BaseDialogPr
           </p>
         </section>
 
-        {!sellHasArea && (
-          <aside className="space-y-1.5 rounded-md border border-destructive/30 bg-destructive/5 p-3">
-            <p className="flex items-center gap-1.5 text-sm text-destructive">
-              <AlertTriangle className="h-4 w-4 shrink-0" />
-              {t('sales.errors.noArea')}
-            </p>
-          </aside>
-        )}
-
-        {!hierarchy.loading && hierarchy.errors.length > 0 && (
-          <aside className="space-y-1.5 rounded-md border border-destructive/30 bg-destructive/5 p-3">
-            {hierarchy.errors.map((err) => (
-              <p key={err.i18nKey} className="flex items-center gap-1.5 text-sm text-destructive">
-                <AlertTriangle className="h-4 w-4 shrink-0" />
-                {t(err.i18nKey)}
-              </p>
-            ))}
-          </aside>
-        )}
-
-        {saveError && (
-          <p className="flex items-center gap-1.5 text-sm text-destructive px-1">
-            <AlertTriangle className="h-4 w-4 shrink-0" />
-            {saveError}
-          </p>
-        )}
+        <SalesValidationAlert i18nKeys={sellHasArea ? [] : ['sales.errors.noArea']} />
+        <SalesValidationAlert i18nKeys={hierarchy.errors.map((err) => err.i18nKey)} />
+        <SalesSaveError message={mutation.saveError} />
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={mutation.saving}>
             {t('common.cancel')}
           </Button>
           <Button
             onClick={handleSave}
-            disabled={saving || previewChecking || !finalPrice || Number(finalPrice) <= 0 || !isOwnersValid(owners) || !hierarchy.isValid || !sellHasArea}
+            disabled={mutation.saving || mutation.checking || finalPrice <= 0 || !isOwnersValid(owners) || !hierarchy.isValid || !sellHasArea}
             className={cn(colors.bg.success, "hover:opacity-90 text-white")}
           >
-            {saving
+            {mutation.saving
               ? t('common.saving')
               : t('sales.dialogs.sell.confirm')}
           </Button>
         </DialogFooter>
       </DialogContent>
       </Dialog>
-      {ImpactDialog}
+      {mutation.impactDialog}
     </>
   );
 }

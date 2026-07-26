@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { NumericField } from '@/components/ui/numeric-field';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -110,8 +111,9 @@ export function EditInstallmentDialog({
   // Form state
   const [label, setLabel] = useState('');
   const [type, setType] = useState<InstallmentType>('custom');
-  const [amount, setAmount] = useState('');
-  const [percentage, setPercentage] = useState('');
+  // ADR-706: number models, 0 = "not entered" (rendered blank).
+  const [amount, setAmount] = useState(0);
+  const [percentage, setPercentage] = useState(0);
   const [dueDate, setDueDate] = useState('');
   const [notes, setNotes] = useState('');
   const [insertAtIndex, setInsertAtIndex] = useState<string>('end');
@@ -125,15 +127,15 @@ export function EditInstallmentDialog({
     if (mode === 'edit' && installment) {
       setLabel(installment.label);
       setType(installment.type);
-      setAmount(installment.amount.toString());
-      setPercentage(installment.percentage.toString());
+      setAmount(installment.amount);
+      setPercentage(installment.percentage);
       setDueDate(installment.dueDate.split('T')[0]);
       setNotes(installment.notes ?? '');
     } else {
       setLabel('');
       setType('custom');
-      setAmount('');
-      setPercentage('');
+      setAmount(0);
+      setPercentage(0);
       setDueDate('');
       setNotes('');
       setInsertAtIndex('end');
@@ -160,17 +162,17 @@ export function EditInstallmentDialog({
       }
 
       // Draft/negotiation: full edit
-      const numAmount = parseFloat(amount);
-      const numPercentage = parseFloat(percentage);
-      if (isNaN(numAmount) || numAmount <= 0) {
+      if (amount <= 0) {
         notifyError(t('errors.invalidAmount'));
         return;
       }
 
       const updates: UpdateInstallmentInput = {
         label: label || undefined,
-        amount: numAmount,
-        percentage: isNaN(numPercentage) ? undefined : numPercentage,
+        amount,
+        // A blank percentage stays "unset", exactly as the parseFloat/NaN
+        // branch it replaces did — 0 is not sent as a real 0%.
+        percentage: percentage || undefined,
         dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
         notes: notes || undefined,
       };
@@ -187,13 +189,11 @@ export function EditInstallmentDialog({
       }
     } else {
       // Add mode
-      const numAmount = parseFloat(amount);
-      const numPercentage = parseFloat(percentage);
       if (!label.trim()) {
         notifyError(t('errors.invalidLabel'));
         return;
       }
-      if (isNaN(numAmount) || numAmount <= 0) {
+      if (amount <= 0) {
         notifyError(t('errors.invalidAmount'));
         return;
       }
@@ -205,8 +205,8 @@ export function EditInstallmentDialog({
       const input: CreateInstallmentInput = {
         label: label.trim(),
         type,
-        amount: numAmount,
-        percentage: isNaN(numPercentage) ? 0 : numPercentage,
+        amount,
+        percentage,
         dueDate: new Date(dueDate).toISOString(),
         notes: notes || undefined,
       };
@@ -309,25 +309,25 @@ export function EditInstallmentDialog({
                     <Label htmlFor="inst-amount">
                       {t('labels.amount')} (€)
                     </Label>
-                    <Input
+                    <NumericField
                       id="inst-amount"
-                      type="number"
-                      min="0.01"
-                      step="0.01"
+                      min={0.01}
+                      step={0.01}
                       value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
+                      onValueChange={setAmount}
+                      blankValue={0}
                     />
                   </div>
                   <div className="space-y-1">
                     <Label htmlFor="inst-pct">%</Label>
-                    <Input
+                    <NumericField
                       id="inst-pct"
-                      type="number"
-                      min="0"
-                      max="100"
-                      step="0.01"
+                      min={0}
+                      max={100}
+                      step={0.01}
                       value={percentage}
-                      onChange={(e) => setPercentage(e.target.value)}
+                      onValueChange={setPercentage}
+                      blankValue={0}
                     />
                   </div>
                 </div>
@@ -339,7 +339,7 @@ export function EditInstallmentDialog({
                     })}
                   </p>
                 )}
-                {maxAmount !== undefined && parseFloat(amount) > maxAmount && (
+                {maxAmount !== undefined && amount > maxAmount && (
                   <p className="text-xs text-destructive font-medium">
                     {t('installments.amountExceedsMax')}
                   </p>
