@@ -4,17 +4,17 @@ import { createModuleLogger } from '@/lib/telemetry';
 import type { Contact, IndividualContact } from '@/types/contacts';
 import { getContactDisplayName } from '@/types/contacts';
 import { RealtimeService, type ContactUpdatedPayload } from '@/services/realtime';
-import { normalizeToDate } from '@/lib/date-local';
 import { ContactsService } from '@/services/contacts.service';
-import { CONTACT_TYPES } from '@/constants/contacts';
 import type { ContactType } from '@/constants/contacts';
 import type { ContactFilterState } from '@/components/core/AdvancedFilters';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useAuth } from '@/auth/hooks/useAuth';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { buildContactDashboardStats } from './contactDashboardStats';
+import { filterContactsForPage } from './contactsPageFilters';
 import { useContactsTrashState } from './useContactsTrashState';
 import { createStaleCache } from '@/lib/stale-cache';
+import { restoreSelectedContact, writeSelectedContactId } from '@/utils/contacts/contact-session-storage';
 
 const logger = createModuleLogger('ContactsPageContent');
 // SSoT stale-while-revalidate cache (ADR-300) — single-key (one list per session)
@@ -59,7 +59,12 @@ export function useContactsPageState() {
   // Stale-while-revalidate: if we have cached data, start with loading=false.
   const [isLoading, setIsLoading] = useState(!contactsCache.hasLoaded());
   const [error, setError] = useState<string | null>(null);
-  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+  // Η επιλογή επιβιώνει σε remount: το `<Suspense>` της σελίδας πετάει ολόκληρο το
+  // υποδέντρο όταν οποιοσδήποτε απόγονος κάνει suspend (μετρημένο: 51ms, χωρίς HMR).
+  // Ο αρχικοποιητής ψάχνει ΜΟΝΟ το module cache — καμία ανάκτηση, άρα κανένα flash.
+  const [selectedContact, setSelectedContact] = useState<Contact | null>(
+    () => restoreSelectedContact(contactsCache.get() ?? []),
+  );
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [showDashboard, setShowDashboard] = useState(false);
   const [creationMode, setCreationMode] = useState<null | 'selecting' | ContactType>(null);
@@ -269,6 +274,14 @@ export function useContactsPageState() {
       logger.info('Dispatched force avatar re-render event');
     }
   }, [contacts, selectedContact?.id]); // Intentional: avoid triggering on selectedContact object identity changes
+
+  // ΕΝΑ σημείο γραφής της persisted επιλογής. Κάθε σκόπιμος μηδενισμός (νέα επαφή,
+  // καθαρισμός φίλτρου URL, κάρτα dashboard, διαγραφή, αρχειοθέτηση, κάδος) περνά
+  // από το ίδιο state ⇒ κανένας handler δεν χρειάζεται αλλαγή, και μια διαγραμμένη
+  // επαφή δεν μπορεί να «επανέλθει» στο επόμενο mount.
+  useEffect(() => {
+    writeSelectedContactId(selectedContact?.id ?? null);
+  }, [selectedContact?.id]);
   // ---------------------------------------------------------------------------
   // Handlers: Creation / Deletion / Archive
   // ---------------------------------------------------------------------------
@@ -287,45 +300,51 @@ export function useContactsPageState() {
   const handleSelectContactType = useCallback((type: ContactType) => setCreationMode(type), []);
   const handleBackToTypeSelection = useCallback(() => setCreationMode('selecting'), []);
 
-  const handleDeleteContacts = useCallback((ids?: string[]) => {
-    if (ids && ids.length > 0) {
-      setSelectedContactIds(ids);
-    } else if (selectedContact?.id) {
-      setSelectedContactIds([selectedContact.id]);
-    } else {
-      setSelectedContactIds([]);
-    }
-    setShowDeleteContactDialog(true);
+  /**
+   * Ποιες επαφές αφορά η μαζική ενέργεια: οι ρητά δοσμένες, αλλιώς η επιλεγμένη,
+   * αλλιώς καμία. Ήταν αντιγραμμένη σε διαγραφή και αρχειοθέτηση.
+   */
+  const resolveBulkTargetIds = useCallback((ids?: string[]): string[] => {
+    if (ids && ids.length > 0) return ids;
+    return selectedContact?.id ? [selectedContact.id] : [];
   }, [selectedContact?.id]);
+
+  const handleDeleteContacts = useCallback((ids?: string[]) => {
+    setSelectedContactIds(resolveBulkTargetIds(ids));
+    setShowDeleteContactDialog(true);
+  }, [resolveBulkTargetIds]);
+
+  /**
+   * Η κοινή ουρά κάθε μαζικής ενέργειας: κλείσε τον διάλογο, ξεκόλλα την επιλογή
+   * αν η επιλεγμένη επαφή ήταν μέσα στις επηρεαζόμενες, καθάρισε τα ids, ανανέωσε.
+   *
+   * Ήταν αντιγραμμένη σε διαγραφή και αρχειοθέτηση· μια διόρθωση στη μία (π.χ. να
+   * μη μένει η επιλογή σε αρχειοθετημένη επαφή) δεν έφτανε ποτέ στην άλλη.
+   */
+  const finishBulkContactAction = useCallback(
+    (closeDialog: (open: boolean) => void) => {
+      closeDialog(false);
+      if (selectedContact && selectedContactIds.includes(selectedContact.id!)) {
+        setSelectedContact(null);
+      }
+      setSelectedContactIds([]);
+      refreshContacts();
+    },
+    [selectedContact, selectedContactIds, refreshContacts],
+  );
 
   const handleContactsDeleted = useCallback(async () => {
-    setShowDeleteContactDialog(false);
-    if (selectedContact && selectedContactIds.includes(selectedContact.id!)) {
-      setSelectedContact(null);
-    }
-    setSelectedContactIds([]);
-    refreshContacts();
-  }, [selectedContact, selectedContactIds, refreshContacts]);
+    finishBulkContactAction(setShowDeleteContactDialog);
+  }, [finishBulkContactAction]);
 
   const handleArchiveContacts = useCallback((ids?: string[]) => {
-    if (ids && ids.length > 0) {
-      setSelectedContactIds(ids);
-    } else if (selectedContact?.id) {
-      setSelectedContactIds([selectedContact.id]);
-    } else {
-      setSelectedContactIds([]);
-    }
+    setSelectedContactIds(resolveBulkTargetIds(ids));
     setShowArchiveContactDialog(true);
-  }, [selectedContact?.id]);
+  }, [resolveBulkTargetIds]);
 
   const handleContactsArchived = useCallback(async () => {
-    setShowArchiveContactDialog(false);
-    if (selectedContact && selectedContactIds.includes(selectedContact.id!)) {
-      setSelectedContact(null);
-    }
-    setSelectedContactIds([]);
-    refreshContacts();
-  }, [selectedContact, selectedContactIds, refreshContacts]);
+    finishBulkContactAction(setShowArchiveContactDialog);
+  }, [finishBulkContactAction]);
 
   // ==== TRASH: Delegated to useContactsTrashState ====
   const trash = useContactsTrashState({
@@ -341,79 +360,19 @@ export function useContactsPageState() {
   // ---------------------------------------------------------------------------
   // Filtering
   // ---------------------------------------------------------------------------
-  const filteredContacts = useMemo(() => {
-    const contactIdParam = searchParams.get('contactId');
-
-    // 🗑️ Trash mode: show ONLY deleted contacts
-    if (trash.showTrash) {
-      return contacts.filter(c => c.status === 'deleted');
-    }
-
-    return contacts.filter(contact => {
-      // Exclude soft-deleted contacts from normal view
-      if (contact.status === 'deleted') return false;
-
-      if (contactIdParam) return true;
-
-      // Dashboard card filter
-      if (activeCardFilter) {
-        const totalContactsTitle = t('page.dashboard.totalContacts');
-        const totalPersonnelTitle = t('page.dashboard.totalPersonnel');
-        const legalEntitiesTitle = t('page.dashboard.legalEntities');
-        const activeContactsTitle = t('page.dashboard.activeContacts');
-        const servicesTitle = t('page.dashboard.services');
-        const recentAdditionsTitle = t('page.dashboard.recentAdditions');
-        const favoritesTitle = t('page.dashboard.favorites');
-        const contactsWithRelationsTitle = t('page.dashboard.contactsWithRelations');
-
-        switch (activeCardFilter) {
-          case totalContactsTitle:
-            break;
-          case totalPersonnelTitle:
-            if (contact.type !== 'individual') return false;
-            break;
-          case legalEntitiesTitle:
-            if (contact.type !== 'company') return false;
-            break;
-          case activeContactsTitle:
-            if ((contact as Contact & { status?: string }).status === 'inactive') return false;
-            break;
-          case servicesTitle:
-            if (contact.type !== 'service') return false;
-            break;
-          case recentAdditionsTitle: {
-            const oneMonthAgo = new Date();
-            oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-            const createdDate = normalizeToDate(contact.createdAt);
-            if (!createdDate || createdDate <= oneMonthAgo) return false;
-            break;
-          }
-          case favoritesTitle:
-            if (!contact.isFavorite) return false;
-            break;
-          case contactsWithRelationsTitle:
-            if (contact.type === CONTACT_TYPES.SERVICE) return false;
-            break;
-        }
-      }
-
-      // Text search
-      if (filters.searchTerm) {
-        const searchLower = filters.searchTerm.toLowerCase();
-        const displayName = getContactDisplayName(contact).toLowerCase();
-        if (!displayName.includes(searchLower)) return false;
-      }
-
-      // Contact type (unless overridden by card filter)
-      if (!activeCardFilter && filters.contactType !== 'all' && contact.type !== filters.contactType) {
-        return false;
-      }
-
-      if (filters.isFavorite && !contact.isFavorite) return false;
-
-      return true;
-    });
-  }, [contacts, searchParams, activeCardFilter, filters.searchTerm, filters.contactType, filters.isFavorite, trash.showTrash, t]);
+  const filteredContacts = useMemo(
+    () => filterContactsForPage({
+      contacts,
+      filters,
+      activeCardFilter,
+      contactIdParam: searchParams.get('contactId'),
+      showTrash: trash.showTrash,
+      t,
+    }),
+    // Intentional: only the fields the filter actually reads, not the whole `filters` object.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [contacts, searchParams, activeCardFilter, filters.searchTerm, filters.contactType, filters.isFavorite, trash.showTrash, t],
+  );
 
   // Dashboard stats (extracted to contactDashboardStats.ts — SRP)
   const dashboardStats = useMemo(

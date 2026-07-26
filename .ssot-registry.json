@@ -1328,6 +1328,30 @@
       ],
       "tier": 3
     },
+    "contact-address-blankness": {
+      "ssotFile": "src/utils/contacts/contact-address-blankness.ts",
+      "description": "The ONE predicate for \"is this contact address empty?\" plus the pruning rule that respects the ADR-319 positional invariant (HQ stays at index 0 while any branch survives). ADR-332 D20 — a real record (ALFA ΚΑΤΑΣΚΕΥΑΣΤΙΚΗ Α.Ε.) reached Firestore with a fully blank headquarters in BOTH addresses[] and customFields.companyAddresses[], synthesised by code, never typed by a user. A second local blankness check would silently disagree about whether type/customLabel/country count as content — they do not.",
+      "forbiddenPatterns": [
+        "function\\s+(isBlankContactAddress|pruneBlankContactAddresses)\\s*\\(",
+        "(isEmptyAddress|hasAnyAddressValue|isBlankAddress|addressIsEmpty|isAddressEmpty)\\s*\\("
+      ],
+      "allowlist": [
+        "src/utils/contacts/contact-address-blankness.ts"
+      ],
+      "tier": 3
+    },
+    "contact-session-storage": {
+      "ssotFile": "src/utils/contacts/contact-session-storage.ts",
+      "description": "The ONE owner of the Contacts page session-scoped shell state (selected contact id). ADR-332 D20 — the page <Suspense> boundary throws the whole subtree away when any descendant suspends (measured: 51ms, hmr 0), so the selection had to survive remount. A second persistence mechanism would fight this one over when the key is cleared, and a stale key resurrects deleted contacts.",
+      "forbiddenPatterns": [
+        "function\\s+(readSelectedContactId|writeSelectedContactId|restoreSelectedContact)\\s*\\(",
+        "sessionStorage\\.(getItem|setItem|removeItem)\\(\\s*['\"]contact-selected"
+      ],
+      "allowlist": [
+        "src/utils/contacts/contact-session-storage.ts"
+      ],
+      "tier": 3
+    },
     "company-config": {
       "ssotFile": "src/config/company-config.ts",
       "description": "Company sections must use centralized config — no inline section definitions",
@@ -4726,24 +4750,6 @@
       "addedDate": "2026-07-26",
       "addedByAdr": "ADR-710",
       "tier": 3
-    },
-    "modal-keyboard-scope": {
-      "ssotFile": "src/subapps/dxf-viewer/keyboard/global-shortcut-listener.ts",
-      "description": "ADR-711 — global accelerators of the DXF viewer register through addGlobalShortcutListener, never with a raw window.addEventListener('keydown'). The wrapper asks shouldGlobalShortcutYield (modal keyboard scope + editable target); a raw listener steals the key from an open modal — the measured root of defects E1/E4 in ADR-364 §10.15: Tab was dead inside every dialog of the viewer (WAI-ARIA APG violation) and the arrows panned the viewport ±80px behind an open lightbox. The guard must stay structural: a per-listener check rots at the 44th listener, and the ten pre-existing copies of the \"is the user typing?\" predicate are exactly how it rotted the first time. Listeners that OWN typing time (Dynamic Input, Command Line, Radial ring) and the escape bus are allowlisted on purpose — gating them would be a regression, not a fix; use opts.allowWhenEditable for the middle case.",
-      "forbiddenPatterns": [
-        "window\\.addEventListener\\(.keydown."
-      ],
-      "allowlist": [
-        "src/subapps/dxf-viewer/keyboard/global-shortcut-listener.ts",
-        "src/subapps/dxf-viewer/keyboard/createModifierKeyTracker.ts",
-        "src/subapps/dxf-viewer/systems/escape-bus/EscapeCommandBus.ts",
-        "src/subapps/dxf-viewer/systems/escape-bus/escape-dev-audit.ts",
-        "src/subapps/dxf-viewer/systems/dynamic-input/",
-        "src/subapps/dxf-viewer/ui/command-line/"
-      ],
-      "addedDate": "2026-07-26",
-      "addedByAdr": "ADR-711",
-      "tier": 2
     }
   }
 }
