@@ -458,14 +458,15 @@ export class ThreeJsSceneManager {
 
   cancelFinalRender(): void { if (!this.disposed) this.pathTracerRenderer.cancelFinal(); }
 
-  resize(width: number, height: number): void { if (!this.disposed) { applyViewportResize(this.resizeDeps(), width, height); this.dxfBackdrop.invalidate(); } }
+  resize(width: number, height: number): void { if (!this.disposed) applyViewportResize(this.resizeDeps(), width, height); }
 
   /** ADR-549 Phase 7 / ADR-556 — re-apply dpr after a `devicePixelRatio` CHANGE (logic in scene-manager-resize). */
-  syncDevicePixelRatio(): void { if (!this.disposed) { applyDevicePixelRatioSync(this.resizeDeps()); this.dxfBackdrop.invalidate(); } }
+  syncDevicePixelRatio(): void { if (!this.disposed) applyDevicePixelRatioSync(this.resizeDeps()); }
 
   /** Shared renderer-sizing deps for the resize helpers (scene-manager-resize). */
   private resizeDeps(): SceneResizeDeps {
-    return buildSceneResizeDeps(this.renderer, this.viewport, this.viewCube, this.ssaoModulator, () => this.markSceneDirty());
+    return buildSceneResizeDeps(this.renderer, this.viewport, this.viewCube, this.ssaoModulator, () => this.markSceneDirty(),
+      () => { this.dxfBackdrop.invalidate(); this.hoverBeautyCache.invalidate(); }); // ADR-549 Φ5
   }
 
   dispose(): void {

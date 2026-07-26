@@ -45,7 +45,6 @@ import {
   layerChildBoqId,
   parentBoqId,
   type BuiltBoqRow,
-  type ExistingCreatedAtMap,
 } from './boq-multi-layer-builder';
 import {
   buildFinishBoqPayloads,
@@ -54,8 +53,23 @@ import {
   type FinishBoqContribution,
 } from './structural-finish-boq';
 import { isFrozenBaselineStatus } from '@/types/boq/units';
-import { buildSingleEntityBoqRow } from './boq-base-row';
+import { buildSingleEntityBoqRow, buildGroupParentBoqRow } from './boq-base-row';
 import { deleteManagedBoqRow, recordBaselineDrift } from './boq-firestore-sync';
+import {
+  buildExistingCreatedAtMap,
+  fetchRowStates,
+  upsertRowGroup,
+} from './boq-row-batch-sync';
+// ADR-712 — «κοντόστυλο» θεμελίωσης: δεύτερη πηγή children της ίδιας κολώνας (δίπλα στον σοβά).
+import {
+  buildFoundationStubChild,
+  foundationStubChildBoqId,
+  foundationStubChildBoqIds,
+} from './column-foundation-stub-boq';
+import {
+  hasFoundationStub,
+  type ColumnFoundationStubQuantities,
+} from '../geometry/column-foundation-stub';
 
 const logger = createModuleLogger('BimToBoqBridge');
 
@@ -88,6 +102,14 @@ export interface BimEntityForBoq {
    * στο `column-boq-feed` (έχει πρόσβαση στη σκηνή για ανάλυση γειτνίασης).
    */
   readonly finishContribution?: FinishBoqContribution;
+  /**
+   * ADR-712 — Το «κοντόστυλο» θεμελίωσης μιας κολώνας που εδράζεται σε πέδιλο: ο όγκος από
+   * την άνω παρειά του πεδίλου ως τη nominal βάση της. Όταν υπάρχει, το bridge κρεμάει ένα
+   * επιπλέον child με άρθρο **θεμελίων** (OIK-2.07) — το ΝΕΤ ΟΙΚ τιμολογεί χωριστά θεμέλια
+   * από ανωδομή, άρα λάθος απόδοση = σφάλμα τιμής. Υπολογίζεται upstream στο
+   * `column-boq-feed` (μόνο εκεί είναι γνωστός ο cross-level χάρτης έδρασης).
+   */
+  readonly foundationStub?: ColumnFoundationStubQuantities;
 }
 
 export interface BimBoqContext {
@@ -138,73 +160,6 @@ function isMultiLayerWall(entityType: BimEntityType, entity: BimEntityForBoq): e
   return !!dna && Array.isArray(dna.layers) && dna.layers.length > 1;
 }
 
-interface RowFetchResult {
-  readonly exists: boolean;
-  readonly detached: boolean;
-  readonly createdAt: string | null;
-  /** ADR-674 — πλήρες existing doc data (μόνο όταν `exists`), για frozen-baseline drift. */
-  readonly raw?: Record<string, unknown>;
-}
-
-async function fetchRowStates(
-  ids: readonly string[],
-): Promise<Map<string, RowFetchResult>> {
-  const result = new Map<string, RowFetchResult>();
-  const snaps = await Promise.all(
-    ids.map((id) => getDoc(doc(db, COLLECTIONS.BOQ_ITEMS, id)).catch(() => null)),
-  );
-  for (let i = 0; i < ids.length; i += 1) {
-    const id = ids[i]!;
-    const snap = snaps[i];
-    if (!snap) {
-      result.set(id, { exists: false, detached: false, createdAt: null });
-      continue;
-    }
-    if (!snap.exists()) {
-      result.set(id, { exists: false, detached: false, createdAt: null });
-      continue;
-    }
-    const data = snap.data() as Record<string, unknown>;
-    result.set(id, {
-      exists: true,
-      detached: data.detached === true,
-      createdAt: typeof data.createdAt === 'string' ? data.createdAt : null,
-      raw: data,
-    });
-  }
-  return result;
-}
-
-function buildExistingCreatedAtMap(states: ReadonlyMap<string, RowFetchResult>): ExistingCreatedAtMap {
-  const map = new Map<string, string | null>();
-  for (const [id, state] of states) {
-    map.set(id, state.createdAt);
-  }
-  return map;
-}
-
-async function upsertBoqRow(
-  row: BuiltBoqRow,
-  state: RowFetchResult,
-  action: 'created' | 'updated',
-): Promise<void> {
-  if (action === 'updated' && state.detached) return;
-  // ADR-674 — frozen-baseline guard: υπογεγραμμένο row (status ∉ draft/submitted)
-  // ΠΟΤΕ δεν overwriteάρεται· καταγράφουμε μόνο την απόκλιση του live μοντέλου.
-  if (state.exists && state.raw && isFrozenBaselineStatus(state.raw.status)) {
-    const live = typeof row.payload.estimatedQuantity === 'number' ? row.payload.estimatedQuantity : 0;
-    await recordBaselineDrift(doc(db, COLLECTIONS.BOQ_ITEMS, row.id), state.raw, live, 'BimToBoqBridge');
-    return;
-  }
-  try {
-    await setDoc(doc(db, COLLECTIONS.BOQ_ITEMS, row.id), row.payload);
-  } catch (err) {
-    logger.error('BimToBoqBridge: row upsert failed', { rowId: row.id, err });
-  }
-}
-
-const NO_ROW_STATE: RowFetchResult = { exists: false, detached: false, createdAt: null };
-
 /**
  * Resolve the ATOE mapping for an entity, narrowing the index-typed
  * `sectionKind` (ADR-363 Φ2 beam-steel discriminator) + `classification`
@@ -233,23 +188,6 @@ function resolveEntityAtoeMapping(
   const rawClassification = entity.params?.['classification'];
   const classification = typeof rawClassification === 'string' ? rawClassification : undefined;
   return resolveAtoeMapping(entityType, entity.kind, category, sectionKind, classification) ?? undefined;
-}
-
-/**
- * Upsert a group parent + its per-layer/finish children, each with its own
- * detach guard via the pre-fetched `states` map. Shared tail of the
- * multi-layer-wall and finish paths.
- */
-async function upsertRowGroup(
-  parent: BuiltBoqRow,
-  children: readonly BuiltBoqRow[],
-  states: ReadonlyMap<string, RowFetchResult>,
-  action: 'created' | 'updated',
-): Promise<void> {
-  await upsertBoqRow(parent, states.get(parent.id) ?? NO_ROW_STATE, action);
-  await Promise.all(
-    children.map((child) => upsertBoqRow(child, states.get(child.id) ?? NO_ROW_STATE, action)),
-  );
 }
 
 // ============================================================================
@@ -293,8 +231,8 @@ class BimToBoqBridgeImpl {
       return;
     }
 
-    if (hasFinishContribution(entity.finishContribution)) {
-      await this.upsertWithFinish(entityType, entity, context, action);
+    if (hasFinishContribution(entity.finishContribution) || hasFoundationStub(entity.foundationStub)) {
+      await this.upsertWithChildren(entityType, entity, context, action);
       return;
     }
 
@@ -302,12 +240,20 @@ class BimToBoqBridgeImpl {
   }
 
   /**
-   * ADR-449 — parent (στατικός πυρήνας, π.χ. column OIK-2.03 m³) + finish children
-   * (interior Knauf OIK-4.01 m² / exterior σοβάς OIK-4.03 m²). Mirror του
-   * `upsertMultiLayerWall`: ένα combined fetch των states (detach guard + createdAt
-   * preservation), per-row upsert. Ο πυρήνας ΔΕΝ αλλάζει — ο σοβάς είναι additive.
+   * Group upsert: parent (στατικός πυρήνας, π.χ. column OIK-2.03 m³) + **όλα** τα children
+   * του entity από κάθε πηγή:
+   *   · ADR-449 σοβάς — ένα child ανά υλικό (interior Knauf OIK-7.05 / exterior OIK-4.03 m²).
+   *   · ADR-712 κοντόστυλο θεμελίωσης — ένα child OIK-2.07 m³.
+   *
+   * ADR-712 — **ΓΙΑΤΙ ΕΝΑ pipeline και όχι δύο branches:** μια κολώνα μπορεί κάλλιστα να
+   * έχει ΚΑΙ σοβά ΚΑΙ κοντόστυλο. Με if/else το δεύτερο έχανε σιωπηλά τη γραμμή του. Οι
+   * πηγές children συνθέτουν· ο parent είναι πάντα ένας (ο πυρήνας) και δεν αλλάζει από
+   * καμία τους — και τα δύο children είναι additive.
+   *
+   * Mirror του `upsertMultiLayerWall`: ένα combined fetch των states (detach guard +
+   * createdAt preservation), per-row upsert.
    */
-  private async upsertWithFinish(
+  private async upsertWithChildren(
     entityType: BimEntityType,
     entity: BimEntityForBoq,
     context: BimBoqContext,
@@ -316,18 +262,42 @@ class BimToBoqBridgeImpl {
     const coreMapping = resolveEntityAtoeMapping(entityType, entity);
     if (!coreMapping) return;
     const finish = entity.finishContribution;
-    if (!hasFinishContribution(finish)) return;
+    const stub = entity.foundationStub;
 
     const coreQuantity = deriveAtoeQuantity(coreMapping.unit, entity.geometry);
-    // ADR-449 PART B — υποψήφια ids = parent + ένα child ανά υλικό (group-by-material).
-    const candidateIds = [parentBoqId(entity.id), ...finishChildBoqIds(entity.id, finish)];
+    const parentId = parentBoqId(entity.id);
+    // Υποψήφια ids = parent + ένα child ανά υλικό σοβά + (το πολύ) ένα κοντόστυλο.
+    const candidateIds = [
+      parentId,
+      ...(hasFinishContribution(finish) ? finishChildBoqIds(entity.id, finish) : []),
+      ...foundationStubChildBoqIds(entity.id, stub),
+    ];
     const states = await fetchRowStates(candidateIds);
     const existingCreatedAt = buildExistingCreatedAtMap(states);
 
-    const { parent, children } = buildFinishBoqPayloads(
-      { entityId: entity.id, entityType, coreMapping, coreQuantity, finish, context },
-      existingCreatedAt,
+    const children: BuiltBoqRow[] = [];
+    // Ο σοβάς φέρνει τον δικό του parent builder· χωρίς σοβά χτίζουμε τον ίδιο group parent
+    // απευθείας, ώστε το payload να είναι ταυτόσημο και στις δύο διαδρομές.
+    let parent: BuiltBoqRow;
+    if (hasFinishContribution(finish)) {
+      const built = buildFinishBoqPayloads(
+        { entityId: entity.id, entityType, coreMapping, coreQuantity, finish, context },
+        existingCreatedAt,
+      );
+      parent = built.parent;
+      children.push(...built.children);
+    } else {
+      parent = buildGroupParentBoqRow(
+        parentId, context, entity.id, entityType, coreMapping, coreQuantity,
+        existingCreatedAt.get(parentId) ?? null,
+      );
+    }
+
+    const stubChild = buildFoundationStubChild(
+      entity.id, entityType, parentId, stub, context,
+      existingCreatedAt.get(foundationStubChildBoqId(entity.id)) ?? null,
     );
+    if (stubChild) children.push(stubChild);
 
     await upsertRowGroup(parent, children, states, action);
   }

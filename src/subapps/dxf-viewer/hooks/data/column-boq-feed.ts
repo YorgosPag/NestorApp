@@ -27,6 +27,10 @@ import { buildWallHostInputs } from '../../bim/geometry/wall-host-plan-builder';
 import { projectVerticesTo2D } from '../../bim/geometry/shared/polygon-utils';
 import type { BimEntityForBoq } from '../../bim/services/BimToBoqBridge';
 import { computeColumnFinishContribution } from '../../bim/finishes/structural-finish-scene';
+import {
+  computeColumnFoundationStub,
+  hasFoundationStub,
+} from '../../bim/geometry/column-foundation-stub';
 
 /**
  * ADR-401 F.2 — top + base profiles για `attached` κολώνα (per-corner envelope
@@ -57,8 +61,22 @@ function resolveAttachedColumnProfiles(
  * Build το BOQ-feed entity μιας κολώνας με profile-aware geometry όταν είναι
  * `attached` (ύψος/όγκος από top − base)· αλλιώς reuse του (flat) geometry.
  * Mirror του `wallBoqEntity`.
+ *
+ * ADR-712 — `baseDropMap` (προαιρετικό, `Map<columnId, baseDropMm>` από το
+ * `column-continuity-boq-source`): όταν η κολώνα εδράζεται σε πέδιλο, το τμήμα από την άνω
+ * παρειά του πεδίλου ως τη nominal βάση της («κοντόστυλο») **χρεώνεται χωριστά** — ΝΕΤ ΟΙΚ
+ * τιμολογεί θεμέλια ≠ ανωδομή. Το `geometry.volume` παραμένει ο όγκος **ανωδομής**
+ * (OIK-2.03) και το κοντόστυλο ταξιδεύει ως `foundationStub` (→ child row OIK-2.07).
+ * Χωρίς entry → identity fast-path, byte-for-byte η προηγούμενη επιμέτρηση.
+ *
+ * Το module μένει **pure** (μηδέν store read) — τον χάρτη τον χτίζει ο caller, ώστε να
+ * είναι jest-clean και να μοιράζεται από τις δύο διαδρομές επιμέτρησης.
  */
-export function columnBoqEntity(entity: ColumnEntity, scene: SceneModel | null): BimEntityForBoq {
+export function columnBoqEntity(
+  entity: ColumnEntity,
+  scene: SceneModel | null,
+  baseDropMap?: ReadonlyMap<string, number>,
+): BimEntityForBoq {
   const { top, base } = resolveAttachedColumnProfiles(entity, scene);
   const geometry = top !== null || base !== null
     ? computeColumnGeometry(entity.params, top ?? undefined, base ?? undefined)
@@ -66,11 +84,19 @@ export function columnBoqEntity(entity: ColumnEntity, scene: SceneModel | null):
   // ADR-449 — derived σοβάς contribution (interior/exterior εμβαδά, εξαιρώντας
   // καλυμμένα από τοίχους). `undefined` όταν σοβάς ανενεργός → single-entry path.
   const finishContribution = computeColumnFinishContribution(entity, geometry, scene);
+  // ADR-712 — gross/net split κατά IFC. Ο σοβάς μετριέται στην ΑΝΩΔΟΜΗ (το κοντόστυλο είναι
+  // θαμμένο) → υπολογίζεται πριν από εδώ, πάνω στο ίδιο `geometry`, και μένει αμετάβλητος.
+  const stub = computeColumnFoundationStub(
+    geometry.volume,
+    geometry.area,
+    baseDropMap?.get(entity.id) ?? 0,
+  );
   return {
     id: entity.id,
     kind: entity.kind,
     params: entity.params as unknown as Readonly<{ category?: string; [key: string]: unknown }>,
     geometry,
     ...(finishContribution ? { finishContribution } : {}),
+    ...(hasFoundationStub(stub) ? { foundationStub: stub } : {}),
   };
 }

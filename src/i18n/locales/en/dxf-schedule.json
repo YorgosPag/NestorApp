@@ -158,6 +158,8 @@
     "area": "Area",
     "netArea": "Net area",
     "volume": "Volume",
+    "grossVolume": "Gross volume",
+    "foundationStubVolume": "Foundation stub volume",
     "perimeter": "Perimeter",
     "elevation": "Elevation",
     "rotation": "Rotation",

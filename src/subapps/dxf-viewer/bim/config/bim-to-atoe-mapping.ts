@@ -194,6 +194,20 @@ const FOUNDATION_MAPPING: Readonly<Record<FoundationKind, AtoeMappingEntry>> = {
 };
 
 /**
+ * ADR-712 — «κοντόστυλο» θεμελίωσης: το τμήμα της κολώνας από την άνω παρειά του πεδίλου ως
+ * τη nominal βάση της (ADR-489 §6.1 `baseDropMm`). Το ΝΕΤ ΟΙΚ τιμολογεί **χωριστά**
+ * σκυρόδεμα θεμελίων από ανωδομής (Giorgio 2026-07-26) → δικό του άρθρο, ΟΧΙ προσαύξηση
+ * του OIK-2.03: αλλιώς η ποσότητα γίνεται σωστή αλλά η **τιμή** λάθος.
+ *
+ * `OIK-2.07` = ο επόμενος ελεύθερος της ομάδας OIK-2 Σκυροδέματα (2.01 πλάκα · 2.02
+ * θεμελίωση · 2.03 κολώνα · 2.04 δοκός · 2.05 σκάλα · **2.06 πιασμένο** από το
+ * `system-materials-seed`).
+ */
+const COLUMN_FOUNDATION_STUB_MAPPING: AtoeMappingEntry = {
+  categoryCode: 'OIK-2.07', unit: 'm3', titleEL: 'Κοντό υποστύλωμα θεμελίωσης RC (BIM)',
+};
+
+/**
  * ADR-363 Φ2 — μεταλλικό δοκάρι διατομής Ι/H → OIK-12 Μεταλλικά (kg), ίδιο με τη
  * μεταλλική κολώνα Ι-τομής. Το `BeamKind` (straight/curved/cantilever) είναι
  * δομική μορφή — ΔΕΝ φέρει steel· ο διαχωριστής είναι `params.sectionKind`, οπότε
@@ -399,6 +413,17 @@ export function resolveAtoeMapping(
  */
 export function resolveFoundationMapping(kind: FoundationKind): AtoeMappingEntry | null {
   return FOUNDATION_MAPPING[kind] ?? null;
+}
+
+/**
+ * ADR-712 — το άρθρο του κοντόστυλου θεμελίωσης (child row μιας κολώνας που εδράζεται σε
+ * πέδιλο). Σταθερό — δεν εξαρτάται από `ColumnKind`: το κοντόστυλο έχει την ΙΔΙΑ διατομή με
+ * την κολώνα του, άρα ο διαχωριστής κόστους είναι η **θέση** (θεμέλια vs ανωδομή), όχι το
+ * σχήμα. Έβδομος resolver εκτός του kind-πίνακα (μαζί με beam I-shape / mep-segment /
+ * stair / opening-hardware / foundation / imported-mesh).
+ */
+export function resolveColumnFoundationStubMapping(): AtoeMappingEntry {
+  return COLUMN_FOUNDATION_STUB_MAPPING;
 }
 
 /**

@@ -65,6 +65,42 @@ export function resolveFloorElevationMm(
   return buildActiveStoreyContext(floors, floorId)?.floorElevationMm ?? 0;
 }
 
+/** mm — slack ώστε ίσα FFL (στρογγυλοποιήσεις) να μη μετρούν ως «ενδιάμεσος όροφος». */
+const INTERVENING_LEVEL_EPS_MM = 1;
+
+/**
+ * ADR-712 (κριτήριο ADR-489 §7.1 σε επίπεδο ΟΡΟΦΩΝ) — **πατούν οι κολώνες του ενεργού
+ * ορόφου κατευθείαν στα πέδιλα;**
+ *
+ * Το `footingSupportsColumnBase` του graph είναι **μονόπλευρο**: ρωτά μόνο «κάθεται το
+ * πέδιλο χαμηλότερα και καλύπτει το plan-centroid;», χωρίς μέγιστη κατακόρυφη απόσταση.
+ * Επειδή οι κολώνες στοιβάζονται με ίδιο footprint, ένα πέδιλο «στηρίζει» εξίσου την
+ * κολώνα του Ισογείου ΚΑΙ του 3ου ορόφου. Το `buildColumnBaseContinuityMap` το λύνει
+ * βλέποντας **όλες** τις κολώνες της στοίβας (§7.1) — πολυτέλεια που έχει μόνο ο 3Δ
+ * multi-floor sync. Ο επιμετρητικός καταναλωτής βλέπει **έναν** όροφο τη φορά, οπότε το
+ * ίδιο ερώτημα απαντιέται εδώ, ένα επίπεδο ψηλότερα: **παρεμβάλλεται όροφος** ανάμεσα
+ * στη Θεμελίωση και τον ενεργό; Αν ναι, τότε παρεμβάλλεται και κολώνα — άρα ο ενεργός δεν
+ * εδράζεται στα πέδιλα.
+ *
+ * **Fail-closed** (Giorgio: λάθος επιμέτρηση = σφάλμα ΤΙΜΗΣ): άγνωστη/κενή λίστα ορόφων,
+ * ή ενεργός στο ίδιο/χαμηλότερο επίπεδο από τη Θεμελίωση → `false`. Προτιμότερο να **μη**
+ * χρεωθεί κοντόστυλο (η σημερινή συμπεριφορά) παρά να χρεωθεί προέκταση 4m.
+ */
+export function activeLevelBearsOnFoundation(
+  floors: readonly StoreyFloorRef[],
+  foundationFloorElevationMm: number,
+  activeFloorElevationMm: number,
+): boolean {
+  if (floors.length === 0) return false;
+  if (activeFloorElevationMm <= foundationFloorElevationMm + INTERVENING_LEVEL_EPS_MM) return false;
+  return !floors.some((f) => {
+    const elev = buildActiveStoreyContext(floors, f.id)?.floorElevationMm;
+    if (elev === undefined) return false;
+    return elev > foundationFloorElevationMm + INTERVENING_LEVEL_EPS_MM
+      && elev < activeFloorElevationMm - INTERVENING_LEVEL_EPS_MM;
+  });
+}
+
 /**
  * Βρες — για το κτίριο του ενεργού level — τον όροφο Θεμελίωσης (`Floor.kind ===
  * 'foundation'`) + το DXF Level που τον φιλοξενεί + το απόλυτο FFL του.

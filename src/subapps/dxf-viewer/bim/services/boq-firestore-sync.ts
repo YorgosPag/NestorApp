@@ -19,10 +19,12 @@
  * id, the quantity, and a `buildPayload` closure (invoked only when a write is
  * actually needed).
  *
- * NOTE: `BimToBoqBridge.upsertSingleEntry` intentionally does NOT use
- * `syncManagedBoqRow` — its detach guard is action-scoped (`updated` only), a
- * different contract, so it keeps its bespoke lifecycle.
+ * NOTE: ο `BimToBoqBridge` σκόπιμα ΔΕΝ χρησιμοποιεί το `syncManagedBoqRow` — ο
+ * detach guard του είναι action-scoped (`updated` μόνο) και το group path
+ * χρειάζεται pre-fetch όλων των ids πριν χτιστεί payload. Διαφορετικό συμβόλαιο,
+ * άρα δικό του module: `./boq-row-batch-sync`.
  *
+ * @see ./boq-row-batch-sync.ts (action-scoped batch lifecycle)
  * @see ./boq-base-row.ts (the row-payload SSoT)
  * @see docs/centralized-systems/reference/adrs/ADR-634-boq-base-row-ssot.md
  */

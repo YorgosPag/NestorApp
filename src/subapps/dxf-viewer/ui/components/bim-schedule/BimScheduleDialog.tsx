@@ -70,6 +70,7 @@ import { ScheduleFilterBar, type FilterOption } from './ScheduleFilterBar';
 import { SchedulePreviewTable } from './SchedulePreviewTable';
 import { ScheduleFormatPicker } from './ScheduleFormatPicker';
 import { applyFoundationGridNet } from '@/subapps/dxf-viewer/hooks/data/foundation-boq-feed';
+import { buildColumnFoundationStubLookup } from '@/subapps/dxf-viewer/hooks/data/column-schedule-stub-feed';
 import { nowISO } from '@/lib/date-local';
 
 // ─── Snapshot for region-pick pass-through (M5 hand-off) ─────────────────────
@@ -177,9 +178,18 @@ export function BimScheduleDialog({
   // Build the schedule on every state change — pure, fast (no I/O). ADR-441 Slice 4:
   // foundation grid strips get NET (de-duplicated) geometry so the volume column
   // δεν διπλομετρά τους κόμβους της εσχάρας (safeUnion). No-op για μη-foundation.
+  // ADR-712 — cross-level έδραση κολώνας→πεδίλου: το «κοντόστυλο» (ADR-489 §6.1) ζούσε μόνο
+  // στο 3Δ render· εδώ φτάνει και στην επιμέτρηση. Τα πέδιλα ζουν στον όροφο Θεμελίωσης, τον
+  // οποίο ο pure mapper δεν βλέπει → injected lookup, ίδιο SSoT με το BOQ auto-feed.
+  const columnStubs = React.useMemo(() => buildColumnFoundationStubLookup(entities), [entities]);
+  const scheduleLookups: ScheduleLookups = React.useMemo(
+    () => ({ ...lookups, columnFoundationStub: (id: string) => columnStubs.get(id) }),
+    [lookups, columnStubs],
+  );
+
   const schedule: Schedule = React.useMemo(
-    () => buildSchedule(applyFoundationGridNet(entities), { entityType, filters }, lookups),
-    [entities, entityType, filters, lookups],
+    () => buildSchedule(applyFoundationGridNet(entities), { entityType, filters }, scheduleLookups),
+    [entities, entityType, filters, scheduleLookups],
   );
 
   // ─── Handlers ──────────────────────────────────────────────────────────────

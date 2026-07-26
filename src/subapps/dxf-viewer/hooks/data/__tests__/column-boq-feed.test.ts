@@ -80,3 +80,42 @@ describe('F.2 BOQ — columnBoqEntity', () => {
     expect(boq.geometry?.volume).toBeCloseTo(0.48, 4);
   });
 });
+
+/**
+ * ADR-712 — το «κοντόστυλο» θεμελίωσης. Ο χάρτης `baseDropMm` έρχεται από τον caller
+ * (`column-continuity-boq-source`), οπότε εδώ δίνεται απευθείας: το feed μένει pure.
+ */
+describe('ADR-712 BOQ — κοντόστυλο θεμελίωσης (gross/net)', () => {
+  it('χωρίς χάρτη → identity fast-path: κανένα `foundationStub` (byte-for-byte το παλιό)', () => {
+    const col = makeColumn();
+    const boq = columnBoqEntity(col, makeScene([col]));
+    expect(boq.foundationStub).toBeUndefined();
+    expect(boq.geometry?.volume).toBeCloseTo(0.48, 4);
+  });
+
+  it('κολώνα εκτός χάρτη (δεν πατά σε πέδιλο) → κανένα `foundationStub`', () => {
+    const col = makeColumn();
+    const boq = columnBoqEntity(col, makeScene([col]), new Map([['ΑΛΛΗ-ΚΟΛΩΝΑ', 1000]]));
+    expect(boq.foundationStub).toBeUndefined();
+  });
+
+  it('drop 1000mm → `geometry.volume` μένει ΑΝΩΔΟΜΗ· το stub ταξιδεύει χωριστά, gross = net + stub', () => {
+    const col = makeColumn();
+    const boq = columnBoqEntity(col, makeScene([col]), new Map([['c1', 1000]]));
+    // Η ποσότητα του OIK-2.03 ΔΕΝ φουσκώνει — αλλιώς θα χρεωνόταν θεμέλιο ως ανωδομή.
+    expect(boq.geometry?.volume).toBeCloseTo(0.48, 4);
+    expect(boq.foundationStub?.stubVolumeM3).toBeCloseTo(0.16, 4);
+    expect(boq.foundationStub?.netVolumeM3).toBeCloseTo(0.48, 4);
+    expect(boq.foundationStub?.grossVolumeM3).toBeCloseTo(0.64, 4);
+  });
+
+  it('το stub χτίζεται πάνω στο PROFILE-AWARE geometry, όχι στο flat `params.height`', () => {
+    // Top-attach → effective ύψος 2300mm (net 0,368 m³), + drop 1000mm → stub 0,16.
+    const col = makeColumn({ topBinding: 'attached', attachTopToIds: ['slab1'] });
+    const slab = makeSlab(2500, 200);
+    const boq = columnBoqEntity(col, makeScene([col, slab]), new Map([['c1', 1000]]));
+    expect(boq.foundationStub?.netVolumeM3).toBeCloseTo(0.16 * 2.3, 3);
+    expect(boq.foundationStub?.stubVolumeM3).toBeCloseTo(0.16, 3);
+    expect(boq.foundationStub?.grossVolumeM3).toBeCloseTo(0.16 * 3.3, 3);
+  });
+});

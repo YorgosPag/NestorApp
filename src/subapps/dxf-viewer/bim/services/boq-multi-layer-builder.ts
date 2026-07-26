@@ -21,15 +21,13 @@
  * @see docs/centralized-systems/reference/adrs/SPEC-3D-004D-genarc-geometry-helpers-port-catalog.md §12 Q4
  */
 
-import type { BOQItem } from '@/types/boq';
-import { stripUndefinedDeep } from '@/utils/firestore-sanitize';
 import type { WallDna, WallDnaLayer } from '../types/wall-dna-types';
 import type { AtoeMappingEntry, BimEntityType } from '../config/bim-to-atoe-mapping';
 import {
   resolveMaterialAtoeMapping,
   type MaterialAtoeMapping,
 } from '../config/material-to-atoe-mapping';
-import { buildBoqBaseRow, buildGroupParentBoqRow, type BuiltBoqRow } from './boq-base-row';
+import { buildGroupChildBoqRow, buildGroupParentBoqRow, type BuiltBoqRow } from './boq-base-row';
 
 export type { BuiltBoqRow };
 
@@ -135,22 +133,17 @@ export function buildMultiLayerBoqPayloads(
       continue;
     }
     const childId = layerChildBoqId(entityId, layer.id);
-    const childBase = buildBoqBaseRow(childId, context, entityId, entityType, existingCreatedAt.get(childId) ?? null);
-    const childItem: BOQItem = {
-      ...childBase,
-      categoryCode: matMapping.categoryCode,
-      title: matMapping.titleEL,
-      unit: matMapping.unit,
-      estimatedQuantity: deriveLayerQuantity(layer, wallNetArea, matMapping.quantityKind),
-      parentBoqItemId: parentId,
-      isGroupParent: false,
-      layerIndex,
-      materialId: layer.materialId,
-    };
-    children.push({
-      id: childId,
-      payload: stripUndefinedDeep(childItem as unknown as Record<string, unknown>),
-    });
+    children.push(buildGroupChildBoqRow(
+      childId,
+      context,
+      entityId,
+      entityType,
+      parentId,
+      matMapping,
+      deriveLayerQuantity(layer, wallNetArea, matMapping.quantityKind),
+      existingCreatedAt.get(childId) ?? null,
+      { layerIndex, materialId: layer.materialId },
+    ));
     layerIndex += 1;
   }
 

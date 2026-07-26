@@ -133,6 +133,11 @@ export const COLUMN_COLUMNS: readonly ScheduleColumnDef[] = [
   { key: 'rotation',  i18nKey: 'col.rotation',  valueType: 'number',            align: 'right' },
   { key: 'area',      i18nKey: 'col.area',      valueType: 'area-m2',           align: 'right' },
   { key: 'volume',    i18nKey: 'col.volume',    valueType: 'volume-m3',         align: 'right' },
+  // ─── ADR-712 — gross/net κατά IFC. Το «κοντόστυλο» θεμελίωσης χρεώνεται σε ΑΛΛΟ άρθρο
+  // (OIK-2.07) από την ανωδομή (OIK-2.03) — ο συνολικός όγκος του φυσικού στοιχείου δεν
+  // φαίνεται πουθενά αλλού. Κενά όταν η κολώνα δεν εδράζεται σε πέδιλο. ─────────
+  { key: 'grossVolume',          i18nKey: 'col.grossVolume',          valueType: 'volume-m3', align: 'right' },
+  { key: 'foundationStubVolume', i18nKey: 'col.foundationStubVolume', valueType: 'volume-m3', align: 'right' },
   // ─── ADR-456 — Στατικά: ποσότητες σκυροδέματος + οπλισμός ────────────────────
   { key: 'concreteGrade',    i18nKey: 'col.concreteGrade',    valueType: 'text',   align: 'center' },
   { key: 'concreteWeight',   i18nKey: 'col.concreteWeight',   valueType: 'number', align: 'right'  },

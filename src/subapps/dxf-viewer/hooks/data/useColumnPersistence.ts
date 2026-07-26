@@ -29,6 +29,7 @@ import {
 import { recordColumnChange } from '../../bim/columns/column-audit-client';
 import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
 import { columnBoqEntity } from './column-boq-feed';
+import { buildColumnBaseDropMap } from './column-continuity-boq-source';
 import { isColumn, mergeColumnDocsIntoScene } from './column-persistence-helpers';
 import { createBimEntityPersistenceHook } from './create-bim-entity-persistence-hook';
 import type {
@@ -67,7 +68,14 @@ export interface UseColumnPersistenceResult {
 // HELPERS
 // ============================================================================
 
-/** ADR-401 F.2 — profile-aware BOQ (attached κολώνα → ύψος/όγκος από top−base). */
+/**
+ * ADR-401 F.2 — profile-aware BOQ (attached κολώνα → ύψος/όγκος από top−base).
+ *
+ * ADR-712 — η σκηνή εδώ είναι **μόνο του ενεργού ορόφου**, ενώ τα πέδιλα ζουν στον όροφο
+ * Θεμελίωσης· χωρίς τον cross-level χάρτη έδρασης το «κοντόστυλο» (ADR-489 §6.1
+ * `baseDropMm`) δεν φτάνει ποτέ στην επιμέτρηση. Ο χάρτης χτίζεται on-demand από τον
+ * `column-continuity-boq-source` — καμία global δημοσίευση (ADR-489 §7).
+ */
 function feedColumnBoq(
   entity: ColumnEntity,
   scope: BimPersistenceScope,
@@ -76,9 +84,10 @@ function feedColumnBoq(
   if (!(scope.companyId && scope.projectId && scope.buildingId)) return;
   const levelId = scope.levelManager.currentLevelId;
   const scene = levelId ? scope.levelManager.getLevelScene(levelId) ?? null : null;
+  const baseDropMap = buildColumnBaseDropMap(scene?.entities ?? []);
   void bimToBoqBridge.upsertBoqItemForBim(
     'column',
-    columnBoqEntity(entity, scene),
+    columnBoqEntity(entity, scene, baseDropMap),
     {
       companyId: scope.companyId,
       projectId: scope.projectId,

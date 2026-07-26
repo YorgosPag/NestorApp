@@ -14,6 +14,14 @@ export interface SceneResizeDeps {
   viewCube: ViewCubeEngine;
   ssaoModulator: SSAOModulator;
   markDirty: () => void;
+  /**
+   * ADR-549 Φ5 — «άλλαξε το drawing buffer ⇒ κανένα cached καρέ δεν ισχύει πια». Και οι δύο frame
+   * caches (`DxfBackdropCache`, `HoverBeautyCache`) κρατούν εικόνα σε συγκεκριμένο μέγεθος· χωρίς
+   * αυτό ένα φθηνό overlay καρέ μπορεί να blit-άρει τεντωμένο καρέ άλλης ανάλυσης. Ζει ΕΔΩ και όχι
+   * στα call sites: το resize είναι η μοναδική κατηγορία αλλαγής που ΔΕΝ την καλύπτει το «κάθε FULL
+   * redraw ξανα-πιάνει snapshot», άρα ο κανόνας ανήκει στον ιδιοκτήτη του resize — μία φορά, όχι δύο.
+   */
+  invalidateFrameCaches: () => void;
 }
 
 /** Assemble the renderer-sizing deps bundle from the manager's subsystems (keeps the manager wrapper one line, N.7.1). */
@@ -23,8 +31,9 @@ export function buildSceneResizeDeps(
   viewCube: SceneResizeDeps['viewCube'],
   ssaoModulator: SceneResizeDeps['ssaoModulator'],
   markDirty: () => void,
+  invalidateFrameCaches: () => void,
 ): SceneResizeDeps {
-  return { renderer, viewport, viewCube, ssaoModulator, markDirty };
+  return { renderer, viewport, viewCube, ssaoModulator, markDirty, invalidateFrameCaches };
 }
 
 /** ResizeObserver-driven viewport resize (aspect + renderer + SSAO + ViewCube + edge resolution). */
@@ -36,6 +45,7 @@ export function applyViewportResize(deps: SceneResizeDeps, width: number, height
   deps.viewCube.setVisible(width >= VIEWCUBE_HIDE_WIDTH_PX);
   // ADR-375 Phase C.7 — feed renderer size into BIM edge LineMaterial resolution.
   bimEdgeResolutionStore.setSize(width, height);
+  deps.invalidateFrameCaches();
   deps.markDirty();
 }
 
@@ -51,5 +61,6 @@ export function applyDevicePixelRatioSync(deps: SceneResizeDeps): void {
   const { width, height } = getRendererViewportSize(deps.renderer.domElement);
   deps.renderer.setSize(width, height);
   deps.ssaoModulator.resize(width, height);
+  deps.invalidateFrameCaches();
   deps.markDirty();
 }

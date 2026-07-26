@@ -100,3 +100,37 @@ describe('mapColumn — shape-aware steel weight (ADR-456 §3.3)', () => {
     expect(cells.longitudinalRebar).toBeNull();
   });
 });
+
+/**
+ * ADR-712 — οι δύο νέες στήλες gross/stub. Το κρίσιμο συμβόλαιο: η στήλη «Όγκος»
+ * ΔΕΝ αλλάζει σημασία (μένει ο όγκος ανωδομής = η ποσότητα του OIK-2.03)· το κοντόστυλο
+ * είναι ΕΠΙΠΛΕΟΝ ποσότητα σε άλλο άρθρο, όχι διόρθωσή της.
+ */
+describe('mapColumn — gross/stub στήλες (ADR-712)', () => {
+  const STUB = { baseDropMm: 1000, stubVolumeM3: 0.16, netVolumeM3: 0.48, grossVolumeM3: 0.64 };
+
+  it('χωρίς lookup → κενά κελιά, `volume` αμετάβλητο (μηδέν regression)', () => {
+    const cells = mapColumn(makeColumn('rectangular', 400, 400), lookups);
+    expect(cells.grossVolume).toBeNull();
+    expect(cells.foundationStubVolume).toBeNull();
+    expect(typeof cells.volume).toBe('number');
+  });
+
+  it('κολώνα χωρίς έδραση (lookup επιστρέφει undefined) → κενά κελιά', () => {
+    const cells = mapColumn(makeColumn('rectangular', 400, 400), {
+      ...lookups,
+      columnFoundationStub: () => undefined,
+    });
+    expect(cells.grossVolume).toBeNull();
+    expect(cells.foundationStubVolume).toBeNull();
+  });
+
+  it('με έδραση → gross + stub γεμίζουν· το `volume` (ανωδομή) ΔΕΝ αλλάζει', () => {
+    const col = makeColumn('rectangular', 400, 400);
+    const plain = mapColumn(col, lookups);
+    const withStub = mapColumn(col, { ...lookups, columnFoundationStub: () => STUB });
+    expect(withStub.volume).toBe(plain.volume);
+    expect(withStub.grossVolume).toBeCloseTo(0.64, 6);
+    expect(withStub.foundationStubVolume).toBeCloseTo(0.16, 6);
+  });
+});

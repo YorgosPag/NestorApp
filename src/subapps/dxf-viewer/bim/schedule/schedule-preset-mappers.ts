@@ -280,6 +280,9 @@ export function mapColumn(entity: AnyBimEntity, lookups: ScheduleLookups): Sched
   if (entity.type !== 'column') return {};
   const p = entity.params;
   const g = entity.geometry;
+  // ADR-712 — cross-level έδραση σε πέδιλο· injected (ο mapper είναι pure και δεν βλέπει
+  // τον όροφο Θεμελίωσης). Χωρίς lookup / χωρίς έδραση → undefined → κενά κελιά.
+  const stub = lookups.columnFoundationStub?.(entity.id);
   // ADR-456 — Στατικά: βάρος σκυροδέματος (όγκος × ρ) + παράγωγος οπλισμός.
   const reinforcement = p.reinforcement
     ? computeColumnReinforcementQuantities(
@@ -298,6 +301,11 @@ export function mapColumn(entity: AnyBimEntity, lookups: ScheduleLookups): Sched
     rotation: safeNumber(p.rotation),
     area: safeNumber(g.area),
     volume: safeNumber(g.volume),
+    // ADR-712 — `volume` = όγκος ΑΝΩΔΟΜΗΣ (η ποσότητα του OIK-2.03), αμετάβλητο. Το
+    // κοντόστυλο θεμελίωσης είναι ΕΠΙΠΛΕΟΝ ποσότητα σε άλλο άρθρο (OIK-2.07), όχι διόρθωση
+    // του `volume` — γι' αυτό δύο δικές του στήλες. `null` = δεν πατά σε πέδιλο.
+    grossVolume: stub ? safeNumber(stub.grossVolumeM3) : null,
+    foundationStubVolume: stub ? safeNumber(stub.stubVolumeM3) : null,
     concreteGrade: p.concreteGrade ?? DEFAULT_CONCRETE_GRADE,
     concreteWeight: safeNumber(concreteWeightKg(g.volume)),
     longitudinalRebar: p.reinforcement ? formatLongitudinalLabel(p.reinforcement) : null,

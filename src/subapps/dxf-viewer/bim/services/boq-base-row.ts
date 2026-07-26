@@ -147,6 +147,44 @@ export function buildSingleEntityBoqRow(
 }
 
 /**
+ * Build a **group-child** row (`isGroupParent: false`, anchored to `parentId`) — the
+ * counterpart of {@link buildGroupParentBoqRow}.
+ *
+ * N.0.2 centralization: this exact block was inlined in `boq-multi-layer-builder`
+ * (per-DNA-layer child) and `structural-finish-boq` (per-material finish child); the
+ * ADR-712 foundation-stub child would have been a third copy. The varying parts are the
+ * mapping, the quantity, and the optional `layerIndex` / `materialId` grouping link.
+ */
+export function buildGroupChildBoqRow(
+  childId: string,
+  context: BoqBaseRowContext,
+  entityId: string,
+  entityType: BoqSourceEntityType,
+  parentId: string,
+  mapping: AtoeMappingEntry,
+  quantity: number,
+  existingCreatedAt: string | null,
+  grouping?: { readonly layerIndex?: number; readonly materialId?: string },
+): BuiltBoqRow {
+  const base = buildBoqBaseRow(childId, context, entityId, entityType, existingCreatedAt);
+  const childItem: BOQItem = {
+    ...base,
+    categoryCode: mapping.categoryCode,
+    title: mapping.titleEL,
+    unit: mapping.unit,
+    estimatedQuantity: quantity,
+    parentBoqItemId: parentId,
+    isGroupParent: false,
+    layerIndex: grouping?.layerIndex ?? null,
+    materialId: grouping?.materialId ?? null,
+  };
+  return {
+    id: childId,
+    payload: stripUndefinedDeep(childItem as unknown as Record<string, unknown>),
+  };
+}
+
+/**
  * Build the **group-parent** summary row (`isGroupParent: true`, no material/layer
  * link) shared by the multi-layer wall builder and the structural-finish builder.
  * The parent carries the whole-entity quantity; children are appended by the caller.

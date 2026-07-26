@@ -665,3 +665,101 @@ describe('bimToBoqBridge.getBoqItemBySourceEntity', () => {
     expect(result).toBeNull();
   });
 });
+
+/**
+ * ADR-712 — «κοντόστυλο» θεμελίωσης: δεύτερη πηγή children της ίδιας κολώνας.
+ *
+ * Το κρίσιμο: σοβάς (ADR-449) και κοντόστυλο **συνυπάρχουν** κάτω από τον ίδιο parent.
+ * Με το παλιό if/else (finish Ή single-entry) το δεύτερο έχανε σιωπηλά τη γραμμή του.
+ */
+describe('ADR-712 — foundationStub children', () => {
+  const STUB = { baseDropMm: 1000, stubVolumeM3: 0.16, netVolumeM3: 0.48, grossVolumeM3: 0.64 };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockGetDoc.mockResolvedValue(makeSnap(false));
+    mockSetDoc.mockResolvedValue(undefined);
+  });
+
+  /** Τα payloads που γράφτηκαν, κλειδωμένα στο row id. */
+  function writtenById(): Map<string, Record<string, unknown>> {
+    const out = new Map<string, Record<string, unknown>>();
+    for (const call of mockSetDoc.mock.calls) {
+      const payload = call[1] as Record<string, unknown>;
+      out.set(payload.id as string, payload);
+    }
+    return out;
+  }
+
+  it('χωρίς stub → single-entry, ΕΝΑ row (byte-for-byte το παλιό)', async () => {
+    await bimToBoqBridge.upsertBoqItemForBim(
+      'column',
+      { id: 'col-1', kind: 'rectangular', geometry: { volume: 0.48 } },
+      context,
+      'created',
+    );
+    expect(mockSetDoc).toHaveBeenCalledTimes(1);
+    expect(writtenById().get('boq_bim_col-1')?.isGroupParent).toBeNull();
+  });
+
+  it('μόνο stub → parent (OIK-2.03 ανωδομή) + child κοντόστυλου (OIK-2.07 θεμελίων)', async () => {
+    await bimToBoqBridge.upsertBoqItemForBim(
+      'column',
+      { id: 'col-2', kind: 'rectangular', geometry: { volume: 0.48 }, foundationStub: STUB },
+      context,
+      'created',
+    );
+    const rows = writtenById();
+    expect(mockSetDoc).toHaveBeenCalledTimes(2);
+
+    const parent = rows.get('boq_bim_col-2')!;
+    expect(parent.categoryCode).toBe('OIK-2.03');
+    expect(parent.estimatedQuantity).toBeCloseTo(0.48, 6); // ΑΝΩΔΟΜΗ — δεν φουσκώνει
+    expect(parent.isGroupParent).toBe(true);
+
+    const stub = rows.get('boq_bim_col-2_foundation_stub')!;
+    // Ο διαχωρισμός ΤΙΜΗΣ: θεμέλια ≠ ανωδομή (ΝΕΤ ΟΙΚ).
+    expect(stub.categoryCode).toBe('OIK-2.07');
+    expect(stub.unit).toBe('m3');
+    expect(stub.estimatedQuantity).toBeCloseTo(0.16, 6);
+    expect(stub.parentBoqItemId).toBe('boq_bim_col-2');
+    expect(stub.isGroupParent).toBe(false);
+  });
+
+  it('σοβάς ΚΑΙ κοντόστυλο → parent + finish child + stub child (κανένα δεν χάνεται)', async () => {
+    await bimToBoqBridge.upsertBoqItemForBim(
+      'column',
+      {
+        id: 'col-3',
+        kind: 'rectangular',
+        geometry: { volume: 0.48 },
+        finishContribution: { byMaterial: [{ materialId: 'mat-plaster-int', areaM2: 12 }] },
+        foundationStub: STUB,
+      },
+      context,
+      'created',
+    );
+    const rows = writtenById();
+    expect(rows.has('boq_bim_col-3')).toBe(true);
+    expect(rows.has('boq_bim_col-3_foundation_stub')).toBe(true);
+    // Ένα finish child ανά υλικό — το κοντόστυλο ΔΕΝ το εκτόπισε.
+    expect([...rows.keys()].some((id) => id.includes('_finish_'))).toBe(true);
+    expect(mockSetDoc).toHaveBeenCalledTimes(3);
+  });
+
+  it('detached stub child → δεν ξαναγράφεται σε update (per-row detach guard)', async () => {
+    mockGetDoc.mockImplementation((ref: { id: string }) =>
+      Promise.resolve(ref.id === 'boq_bim_col-4_foundation_stub'
+        ? makeSnap(true, { detached: true })
+        : makeSnap(false)));
+
+    await bimToBoqBridge.upsertBoqItemForBim(
+      'column',
+      { id: 'col-4', kind: 'rectangular', geometry: { volume: 0.48 }, foundationStub: STUB },
+      context,
+      'updated',
+    );
+    expect(writtenById().has('boq_bim_col-4_foundation_stub')).toBe(false);
+    expect(writtenById().has('boq_bim_col-4')).toBe(true);
+  });
+});

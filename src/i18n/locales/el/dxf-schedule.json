@@ -158,6 +158,8 @@
     "area": "Επιφάνεια",
     "netArea": "Καθαρή επιφάνεια",
     "volume": "Όγκος",
+    "grossVolume": "Συνολικός όγκος",
+    "foundationStubVolume": "Όγκος κοντόστυλου θεμελίωσης",
     "perimeter": "Περίμετρος",
     "elevation": "Υψόμετρο",
     "rotation": "Στροφή",

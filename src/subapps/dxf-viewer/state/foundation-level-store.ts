@@ -34,6 +34,17 @@ export interface FoundationLevelState {
   /** Datum-relative απόλυτο FFL του ενεργού ορόφου (mm) — για cross-level Z offset. */
   readonly activeFloorElevationMm: number;
   /**
+   * ADR-712 — **πατούν οι κολώνες του ενεργού ορόφου κατευθείαν στα πέδιλα;** (κριτήριο
+   * ADR-489 §7.1 σε επίπεδο ορόφων). Μόνο ο owner ξέρει τη λίστα ορόφων του κτιρίου, άρα
+   * το ερώτημα απαντιέται εκεί μία φορά και ταξιδεύει εδώ. Οι επιμετρητικοί καταναλωτές
+   * (`column-continuity-boq-source`) βλέπουν έναν όροφο τη φορά και **δεν** μπορούν να
+   * αποκλείσουν μόνοι τους μια υπερκείμενη κολώνα. **Fail-closed default `false`** —
+   * χωρίς owner, καμία χρέωση κοντόστυλου.
+   */
+  readonly activeLevelBearsOnFoundation: boolean;
+  /** Θέτει το ADR-712 flag (owner only· χωριστός setter → μηδέν ripple σε υπάρχοντα callsites). */
+  setActiveLevelBearsOnFoundation(bears: boolean): void;
+  /**
    * ADR-459 Φ7 — tombstones: footing ids που ο writer διέγραψε optimistically αλλά
    * το Firestore delete δεν έχει διαδοθεί ακόμη στο realtime model. Κρατά το πέδιλο
    * **έξω** από τα entities ώστε ένα stale model echo (που ακόμη το περιέχει) να μην
@@ -79,7 +90,11 @@ export const useFoundationLevelStore = create<FoundationLevelState>((set) => ({
   target: null,
   entities: [],
   activeFloorElevationMm: 0,
+  activeLevelBearsOnFoundation: false,
   pendingRemovedIds: EMPTY_REMOVED,
+  setActiveLevelBearsOnFoundation(activeLevelBearsOnFoundation) {
+    set({ activeLevelBearsOnFoundation });
+  },
   setFoundationLevel(target, entities, activeFloorElevationMm) {
     // Owner re-seed (αλλαγή ορόφου/κτιρίου) → καθαρές tombstones.
     set({ target, entities, activeFloorElevationMm, pendingRemovedIds: EMPTY_REMOVED });
@@ -127,6 +142,12 @@ export const useFoundationLevelStore = create<FoundationLevelState>((set) => ({
     }));
   },
   clear() {
-    set({ target: null, entities: [], activeFloorElevationMm: 0, pendingRemovedIds: EMPTY_REMOVED });
+    set({
+      target: null,
+      entities: [],
+      activeFloorElevationMm: 0,
+      activeLevelBearsOnFoundation: false,
+      pendingRemovedIds: EMPTY_REMOVED,
+    });
   },
 }));

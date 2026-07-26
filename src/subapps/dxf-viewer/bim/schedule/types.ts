@@ -19,6 +19,7 @@
 import type { BoundingBox3D } from '../types/bim-base';
 import type { BuildingRef } from '../utils/bim-floor-utils';
 import type { OpeningHardwareComponent } from '../family-types/opening-hardware-set';
+import type { ColumnFoundationStubQuantities } from '../geometry/column-foundation-stub';
 
 // ─── Cell + Column primitives ─────────────────────────────────────────────────
 
@@ -222,6 +223,13 @@ export interface ScheduleLookups {
   readonly translateHardwareComponent?: (component: OpeningHardwareComponent) => string;
   /** ADR-363 §6 Phase 8 — translates raw entity `type` (wall/opening/…) to a singular Greek label. Optional. */
   readonly translateType?: (type: string) => string;
+  /**
+   * ADR-712 — «κοντόστυλο» θεμελίωσης ανά κολώνα (gross/net/stub). Απών → η κολώνα δεν
+   * εδράζεται σε πέδιλο· ο mapper αφήνει κενά τα δύο σχετικά κελιά αντί για παραπλανητικό 0.
+   * Το χτίζει το `column-schedule-stub-feed` (χρειάζεται cross-level πρόσβαση στα πέδιλα,
+   * που ο pure mapper δεν έχει). Optional.
+   */
+  readonly columnFoundationStub?: (columnId: string) => ColumnFoundationStubQuantities | undefined;
 }
 
 // ─── Schedule config (what to build) ─────────────────────────────────────────

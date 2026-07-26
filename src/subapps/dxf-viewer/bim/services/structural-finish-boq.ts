@@ -17,8 +17,6 @@
  * @see boq-multi-layer-builder.ts (wall DNA sibling)
  */
 
-import type { BOQItem } from '@/types/boq';
-import { stripUndefinedDeep } from '@/utils/firestore-sanitize';
 import type { AtoeMappingEntry, BimEntityType } from '../config/bim-to-atoe-mapping';
 import { resolveMaterialAtoeMapping } from '../config/material-to-atoe-mapping';
 // ADR-449 PART B — ο τύπος bucket + το grouping ζουν στο finishes layer (pure), ώστε ο scene
@@ -30,7 +28,7 @@ import {
   type MultiLayerBuildContext,
   type ExistingCreatedAtMap,
 } from './boq-multi-layer-builder';
-import { buildBoqBaseRow, buildGroupParentBoqRow } from './boq-base-row';
+import { buildGroupChildBoqRow, buildGroupParentBoqRow } from './boq-base-row';
 
 export type { FinishMaterialBucket } from '../finishes/structural-finish-area';
 
@@ -89,19 +87,17 @@ function buildFinishChild(
   const mapping = resolveMaterialAtoeMapping(bucket.materialId);
   if (!mapping) return null; // άγνωστο υλικό → skip (parent παραμένει)
   const childId = finishChildBoqId(entityId, bucket.materialId);
-  const base = buildBoqBaseRow(childId, context, entityId, entityType, existingCreatedAt.get(childId) ?? null);
-  const item: BOQItem = {
-    ...base,
-    categoryCode: mapping.categoryCode,
-    title: mapping.titleEL,
-    unit: mapping.unit,
-    estimatedQuantity: bucket.areaM2,
-    parentBoqItemId: parentId,
-    isGroupParent: false,
-    layerIndex,
-    materialId: bucket.materialId,
-  };
-  return { id: childId, payload: stripUndefinedDeep(item as unknown as Record<string, unknown>) };
+  return buildGroupChildBoqRow(
+    childId,
+    context,
+    entityId,
+    entityType,
+    parentId,
+    mapping,
+    bucket.areaM2,
+    existingCreatedAt.get(childId) ?? null,
+    { layerIndex, materialId: bucket.materialId },
+  );
 }
 
 /**

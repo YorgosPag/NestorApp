@@ -46,6 +46,7 @@ import { resolveBimPersistenceScope } from '../bim/persistence/bim-floor-scope';
 // base entities από scene που ανήκει σε άλλον όροφο (legacy shared sceneFileId).
 import { resolveFloorScopedScene } from '../systems/levels/cross-floor-link';
 import {
+  activeLevelBearsOnFoundation,
   resolveBuildingFoundationLevel,
   resolveBuildingIdForLevel,
   resolveFloorElevationMm,
@@ -188,12 +189,19 @@ export function useFoundationLevelSync(props: { levelManager: FoundationSyncLeve
   // ── Publish: base + model footings + pending optimistic ───────────────────────
   useEffect(() => {
     const store = useFoundationLevelStore.getState();
+    // ADR-712 — μόνο εδώ είναι γνωστή η λίστα ορόφων του κτιρίου, άρα μόνο εδώ απαντιέται
+    // αν οι κολώνες του ενεργού ορόφου εδράζονται όντως στα πέδιλα (κριτήριο §7.1 σε
+    // επίπεδο ορόφων). Fail-closed χωρίς target: καμία χρέωση κοντόστυλου.
+    store.setActiveLevelBearsOnFoundation(
+      target !== null
+      && activeLevelBearsOnFoundation(floors, target.floorElevationMm, activeFloorElevationMm),
+    );
     if (!target) {
       store.setFoundationLevel(null, [], activeFloorElevationMm);
       return;
     }
     store.publishFoundationLevel(target, baseEntities, modelFootings, activeFloorElevationMm);
-  }, [target, baseEntities, modelFootings, activeFloorElevationMm]);
+  }, [target, baseEntities, modelFootings, activeFloorElevationMm, floors]);
 
   // Καθαρισμός store στο unmount (single-level / αλλαγή viewer).
   useEffect(() => () => useFoundationLevelStore.getState().clear(), []);

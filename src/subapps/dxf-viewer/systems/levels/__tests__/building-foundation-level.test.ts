@@ -3,6 +3,7 @@
  */
 
 import {
+  activeLevelBearsOnFoundation,
   resolveBuildingFoundationLevel,
   resolveBuildingIdForLevel,
   resolveFloorElevationMm,
@@ -70,5 +71,37 @@ describe('resolveBuildingFoundationLevel', () => {
   it('returns null when the foundation floor has no linked DXF level', () => {
     const noFoundationLevel = levels.filter((l) => l.id !== 'lvl-found');
     expect(resolveBuildingFoundationLevel(noFoundationLevel, 'lvl-ground', floors)).toBeNull();
+  });
+});
+
+/**
+ * ADR-712 — το κριτήριο ADR-489 §7.1 σε επίπεδο ΟΡΟΦΩΝ. Οι επιμετρητικοί καταναλωτές
+ * βλέπουν έναν όροφο τη φορά, οπότε δεν μπορούν να αποκλείσουν μια υπερκείμενη κολώνα
+ * βλέποντας τη στοίβα (όπως ο 3Δ). Το ισοδύναμο ερώτημα: παρεμβάλλεται όροφος;
+ */
+describe('activeLevelBearsOnFoundation (ADR-712)', () => {
+  // floors: Θεμελίωση −1000 · Ισόγειο 0 · 1ος 3000 (mm, datum = ground).
+  it('Ισόγειο (ο αμέσως επόμενος πάνω από τη Θεμελίωση) → true', () => {
+    expect(activeLevelBearsOnFoundation(floors, -1000, 0)).toBe(true);
+  });
+
+  it('1ος όροφος → false: παρεμβάλλεται το Ισόγειο, άρα και η κολώνα του', () => {
+    expect(activeLevelBearsOnFoundation(floors, -1000, 3000)).toBe(false);
+  });
+
+  it('ενεργός = ο ίδιος ο όροφος Θεμελίωσης → false (καμία προέκταση προς τα κάτω)', () => {
+    expect(activeLevelBearsOnFoundation(floors, -1000, -1000)).toBe(false);
+  });
+
+  it('fail-closed: άγνωστη λίστα ορόφων → false (καμία χρέωση κοντόστυλου)', () => {
+    expect(activeLevelBearsOnFoundation([], -1000, 0)).toBe(false);
+  });
+
+  it('ημιώροφος ανάμεσα σε Θεμελίωση και ενεργό → false', () => {
+    const withMezzanine: StoreyFloorRef[] = [
+      ...floors,
+      { id: 'flr-mezz', number: 0.5, elevation: -0.5, kind: 'standard' },
+    ];
+    expect(activeLevelBearsOnFoundation(withMezzanine, -1000, 0)).toBe(false);
   });
 });

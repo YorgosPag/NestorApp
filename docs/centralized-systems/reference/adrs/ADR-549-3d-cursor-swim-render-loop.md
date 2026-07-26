@@ -628,3 +628,74 @@ compositing — αν big-player πρακτική το διαψεύδει, ακο
   ίδιο task ώστε να δουλεύει χωρίς `preserveDrawingBuffer`) + το `dxf-no-render` diag flag (απομονωμένο
   ώστε η αφαίρεση του Φ0 διαγνωστικού να είναι μία διαγραφή). `ThreeJsSceneManager` 510 → **498**.
   CHECK 6D → stage αυτό το ADR + τα 7 αρχεία. 🔴 browser-verify (hover σε κολώνα → κίτρινο περίγραμμα ακαριαία).
+- **2026-07-26** — 🐛 **Φ5 — ΜΑΥΡΗ 3D ΣΚΗΝΗ σε κάθε hover πάνω σε BIM στοιχείο: το snapshot του Φ3 δεν
+  γραφόταν ΠΟΤΕ (MSAA read framebuffer).** Browser-reported Giorgio· browser-proven root cause.
+  **Σύμπτωμα:** μόλις ο κέρσορας μπει στη σκηνή και κάνει hover σε κολώνα/τοιχίο, **όλη η οθόνη
+  μαυρίζει** και μένουν μόνο τα κίτρινα περιγράμματα «φαντάσματα» + ο ViewCube· βγαίνοντας εκτός
+  σκηνής επανέρχεται. Ντετερμινιστικό, σε κάθε όροφο και στο «Όλοι οι όροφοι».
+  **Συσχέτιση:** ΔΕΝ το προκάλεσε το Φ4. Το Φ4 **ενεργοποίησε** τη διαδρομή του Φ3 που **δεν είχε
+  εκτελεστεί ΠΟΤΕ** (το gate ήταν κλειστό ~1 μήνα) και εξέθεσε προϋπάρχον σφάλμα του Φ3.
+  **Root cause (μετρημένο ζωντανά στον browser, ΟΧΙ εικασία):** ο main renderer φτιάχνεται με
+  `antialias: true` (`scene-setup.ts:139`) → το default framebuffer είναι **multisampled**
+  (`gl.SAMPLES = 4`). Το `HoverBeautyCache.capture()` καλούσε `renderer.copyFramebufferToTexture(...)`,
+  δηλαδή `glCopyTexSubImage2D`, που κατά **OpenGL ES 3.0 §3.8.5** παράγει **INVALID_OPERATION όταν το
+  `SAMPLE_BUFFERS` του read framebuffer είναι > 0**. Μετρημένο: `glErrorAfterCopy = 1282` σε **κάθε**
+  κλήση, `SAMPLES = 4`, `FRAMEBUFFER_BINDING = null`. Το `FramebufferTexture` έμενε **μηδενισμένο**, το
+  `capture()` δήλωνε παρ' όλα αυτά επιτυχία (`captured = true` **χωρίς κανέναν έλεγχο**), και το
+  `blit()` ζωγράφιζε **μαύρο** πάνω από το σωστό καρέ. Ο αδελφός `DxfBackdropCache` (ADR-516) δεν
+  έπασχε γιατί **σχεδιάζει μέσα** στον RT αντί να αντιγράφει την οθόνη.
+  **Διάγνωση (πρωτόκολλο handoff §4Α):** η διχοτόμηση beauty-vs-cache έδειξε αμέσως ότι το beauty ήταν
+  υγιές (κέρσορας εκτός canvas → τέλεια σκηνή) και ο cache ένοχος. Επιβεβαίωση με GL instrumentation
+  στο ζωντανό context (patch του `copyTexSubImage2D` + `getError`).
+  **FIX (ο τρόπος που το ορίζει η ίδια η spec):** ένα multisampled framebuffer **δεν αντιγράφεται —
+  αναλύεται (resolve)**. `capture()` πλέον: `renderer.setRenderTarget(rt)` (DRAW = cache RT) →
+  raw `gl.bindFramebuffer(READ_FRAMEBUFFER, null)` (READ = οθόνη) → `gl.blitFramebuffer(1:1, NEAREST)`
+  = **MSAA resolve** → `renderer.setRenderTarget(null)`. Μετρημένο μετά: `blitErr = 0` με πραγματικό
+  περιεχόμενο (avg 128 / max 190 vs 0 πριν).
+  **Τρεις παγίδες που κλειδώθηκαν με σχόλιο + test (όλες browser-measured, όχι θεωρία):**
+  (1) ο RT **ΠΡΕΠΕΙ** να μείνει **γραμμικός RGBA8** — ο multisample resolve απαιτεί **ταυτόσημα**
+  internal formats, και το `SRGBColorSpace` κάνει το three να διαλέξει `SRGB8_ALPHA8` → **1282 + μαύρο
+  ξανά** (μετρημένο). Γι' αυτό το blit-back γίνεται με **pass-through `ShaderMaterial`** (ένα raw
+  shader δεν εφαρμόζει τον sRGB output transfer· τα bytes είναι ήδη screen-encoded → pixel-identical,
+  καμία διπλή μετατροπή). (2) η **αντίστροφη** διαδρομή (blit RT → οθόνη) απαγορεύεται από την
+  ES 3.0 §4.3.2 (multisampled DRAW) — μετρημένο `1282` → η επαναφορά μένει fullscreen quad.
+  (3) το READ **δεν** δένεται μέσω `renderer.state.bindFramebuffer`: η cache του three ενημερώνει μόνο
+  τα FRAMEBUFFER/DRAW κλειδιά, οπότε ο wrapper θα ΠΑΡΕΛΕΙΠΕ το bind και το blit θα διάβαζε τον ΙΔΙΟ
+  τον RT. Το `setRenderTarget(null)` στο τέλος ξανα-συγχρονίζει την cache.
+  **Belt-and-suspenders (N.7.2 §4) — η βελτιστοποίηση δεν κρατά όμηρο την ορθότητα:** το `capture()`
+  **επαληθεύει** το resolve **μία φορά** (`getError()` — sync stall, απαγορευμένο per-frame) και
+  κρατά το αποτέλεσμα. Αποτυχία / WebGL1 → ο cache **αυτο-απενεργοποιείται μόνιμα**, `hasCapture()`
+  μένει `false`, το `renderTickFrame` πέφτει σε πλήρες render. Χειρότερη περίπτωση = πιο αργό hover·
+  **ποτέ ξανά λάθος εικόνα**. Αυτό ακριβώς έλειπε: το παλιό `capture()` **δήλωνε επιτυχία χωρίς να
+  ρωτήσει κανέναν**.
+  **ΔΕΥΤΕΡΟ ΕΥΡΗΜΑ (SSoT ασυμμετρία, από το grep audit):** ο `hoverBeautyCache` **δεν** ακυρωνόταν σε
+  `resize()` / `syncDevicePixelRatio()`, ενώ ο αδελφός `dxfBackdrop` ακυρωνόταν. Ό,τι αλλάζει το
+  **drawing buffer** είναι η μοναδική κατηγορία που δεν καλύπτεται από το «κάθε FULL redraw ξανα-πιάνει
+  snapshot» → ένα hover καρέ μπορούσε να blit-άρει τεντωμένο καρέ άλλου μεγέθους. Νέο ιδιωτικό
+  `invalidateFrameCaches()` = ο ΕΝΑΣ ορισμός του «το drawing buffer άλλαξε ⇒ κανένα cached καρέ δεν ισχύει».
+  **SSoT audit (ΠΡΙΝ τον κώδικα):** `ensureSizedRenderTarget` (`scene/sized-render-target.ts`) είναι ο
+  υπάρχων SSoT για size-managed RTs (4 καταναλωτές) → **χρησιμοποιήθηκε, δεν αντιγράφηκε**· το
+  `renderer.getContext() as WebGL2…` είναι ήδη καθιερωμένο idiom (`section-stencil-renderer`,
+  `section-cut-parity`)· καμία άλλη «screen → texture» βοηθητική δεν υπήρχε → η λογική έμεινε **μέσα
+  στον μοναδικό ιδιοκτήτη** του snapshot, κανένα νέο module. N.18 `jscpd:diff` καθαρό.
+  **Tests — το παλιό suite ήταν ΠΡΑΣΙΝΟ ενώ το feature ήταν 100% σπασμένο:** mock-άριζε το
+  `copyFramebufferToTexture` και μετρούσε ότι *κλήθηκε*, ποτέ ότι *πέτυχε*. Ξαναγράφτηκε σε **11 tests**
+  που κλειδώνουν το συμβόλαιο: σειρά GL κλήσεων του resolve, 1:1 ορθογώνιο + NEAREST, 🔴 «GL σφάλμα ⇒
+  ΠΟΤΕ hit», αυτο-απενεργοποίηση χωρίς retry storm, probe-once, WebGL1 = μόνιμο miss, **anchor ότι ο RT
+  μένει γραμμικός** (αν κάποιος τον κάνει sRGB «για χρωματική ακρίβεια», κοκκινίζει ΠΡΙΝ τον browser).
+  **Mutation test:** αφαίρεση της επαλήθευσης → **2 anchors κόκκινα** (9/11) — δηλαδή πιάνουν ακριβώς
+  το bug. Σύνολο `bim-3d/scene/__tests__`: **25 suites / 189 tests πράσινα**.
+  **Browser-verified 2026-07-26** (1568px viewport, ίδιο URL αναπαραγωγής): hover σε κολώνα → σκηνή
+  **πλήρως ορατή** + κίτρινο περίγραμμα + status «Στύλος · 250mm»· επαληθεύτηκε σε **1ος Όροφος**,
+  **Ισόγειο** (549 στοιχεία) και **«Όλοι οι όροφοι»** (πολυόροφη σκηνή). Το γρήγορο μονοπάτι όντως
+  τρέχει (δεν είναι σιωπηλό fallback): GL counters σε 3 hover → `blitFramebuffer(capture) = 0`
+  (άρα **κανένα** full render — όλα τα καρέ ήταν overlay-only blit), `copyTexSubImage2D = 0`
+  (η σπασμένη κλήση εξαφανίστηκε), `getError = 0` (τηρείται το probe-once).
+  **N.7.1 — ΕΞΑΓΩΓΗ, ΟΧΙ ΨΑΛΙΔΙΣΜΑ:** ο `ThreeJsSceneManager` χτύπησε 507/500. Η ακύρωση δΕΝ
+  έμεινε ως ιδιωτική μέθοδος εκεί: μετακινήθηκε στο `scene-manager-resize.ts` ως νέο dep
+  `invalidateFrameCaches`, που το καλούν **και οι δύο** apply συναρτήσεις. Σωστότερο SSoT
+  (ο κανόνας ανήκει στον ιδιοκτήτη του resize, όχι στα call sites) — μία θέση, όχι δύο. 507 → **499**.
+  **Αρχεία:** `scene/hover-beauty-cache.ts` (ξαναγράφτηκε) · `scene/__tests__/hover-beauty-cache.test.ts`
+  (ξαναγράφτηκε) · `scene/scene-manager-resize.ts` (`invalidateFrameCaches` dep) ·
+  `scene/ThreeJsSceneManager.ts` (περνά το callback).
+  CHECK 6B/6D → stage αυτό το ADR + τα 4 αρχεία. ✅ browser-verified. 🟡 UNCOMMITTED (commit: Giorgio).
