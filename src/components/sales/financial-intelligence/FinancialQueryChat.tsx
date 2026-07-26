@@ -1,58 +1,47 @@
-/* eslint-disable design-system/prefer-design-system-imports */
 'use client';
 
 /**
- * FinancialQueryChat — SPEC-242E D3 NL Financial Query
+ * FinancialQueryChat — chat interface for natural-language financial queries.
  *
- * Chat interface for natural language financial queries.
- * Calls /api/financial-intelligence/query with the user message.
- * Renders AI responses in Greek + optional bar/line charts.
+ * Posts the message to the query route and renders the answer; when the answer comes
+ * with data, the plot is handed to `FinancialQueryChart`, which draws it in the same
+ * card shell as every other chart in the app. This file no longer touches recharts.
  *
  * @enterprise ADR-242 SPEC-242E
+ * @enterprise ADR-710 — Chart card shell
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import {
-  BarChart,
-  Bar,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts';
 import { Send, Bot, User, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
+import '@/lib/design-system';
 import { API_ROUTES } from '@/config/domain-constants';
-import { formatCurrencyWhole } from '@/lib/intl-utils';
+import {
+  FinancialQueryChart,
+  type QueryChartPoint,
+  type QueryChartType,
+} from './FinancialQueryChart';
 
 // =============================================================================
 // TYPES
 // =============================================================================
 
-interface ChartDataPoint {
-  label: string;
-  value: number;
-}
-
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
-  chartData?: ChartDataPoint[];
-  chartType?: 'bar' | 'line';
+  chartData?: QueryChartPoint[];
+  chartType?: QueryChartType;
 }
 
 interface QueryResponse {
   data: {
     answer: string;
-    suggestedChart: 'bar' | 'line' | null;
-    chartData: ChartDataPoint[] | null;
+    suggestedChart: QueryChartType | null;
+    chartData: QueryChartPoint[] | null;
   };
 }
 
@@ -227,31 +216,14 @@ export function FinancialQueryChat() {
               >
                 {msg.content}
               </div>
-              {/* Chart */}
+              {/* Chart — the answer's own plot, in the same card shell as every
+                  other chart in the app (ADR-710). */}
               {msg.chartData && msg.chartData.length > 0 && (
-                <div className={cn('w-full mt-1 p-3 rounded-lg border', colors.border.default, colors.bg.muted)}>
-                  <p className={cn('text-xs font-medium mb-2', colors.text.muted)}>
-                    {t('financialQuery.chartTitle')}
-                  </p>
-                  <ResponsiveContainer width="100%" height={160}>
-                    {msg.chartType === 'line' ? (
-                      <LineChart data={msg.chartData}>
-                        <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                        <XAxis dataKey="label" tick={{ fontSize: 10 }} />
-                        <YAxis tick={{ fontSize: 10 }} tickFormatter={v => formatCurrencyWhole(v as number) ?? String(v)} />
-                        <Tooltip formatter={(v: number) => formatCurrencyWhole(v) ?? v} />
-                        <Line type="monotone" dataKey="value" strokeWidth={2} dot={false} className="stroke-primary" />
-                      </LineChart>
-                    ) : (
-                      <BarChart data={msg.chartData}>
-                        <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                        <XAxis dataKey="label" tick={{ fontSize: 10 }} />
-                        <YAxis tick={{ fontSize: 10 }} tickFormatter={v => formatCurrencyWhole(v as number) ?? String(v)} />
-                        <Tooltip formatter={(v: number) => formatCurrencyWhole(v) ?? v} />
-                        <Bar dataKey="value" className="fill-primary" />
-                      </BarChart>
-                    )}
-                  </ResponsiveContainer>
+                <div className="mt-1 w-full">
+                  <FinancialQueryChart
+                    data={msg.chartData}
+                    type={msg.chartType ?? 'bar'}
+                  />
                 </div>
               )}
             </div>

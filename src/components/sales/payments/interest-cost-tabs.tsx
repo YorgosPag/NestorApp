@@ -1,6 +1,4 @@
 'use client';
-/* eslint-disable custom/no-hardcoded-strings */
-/* eslint-disable design-system/enforce-semantic-colors */
 
 /**
  * interest-cost-tabs.tsx — Core tab components for InterestCostDialog
@@ -19,6 +17,7 @@ import {
 } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
+import { InfoTableHead, InfoUnderlinedTerm } from '@/components/ui/InfoLabel';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   Table,
@@ -66,42 +65,21 @@ export function CashFlowTab({ analysis, salePrice, t }: CashFlowTabProps) {
             <TableHead className="text-sm text-right">{t('costCalculator.cashFlow.amount')}</TableHead>
             <TableHead className="text-sm text-right">{t('costCalculator.cashFlow.date')}</TableHead>
             <TableHead className="text-sm text-right">{t('costCalculator.cashFlow.days')}</TableHead>
-            <TableHead className="text-sm text-right">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="cursor-help border-b border-dashed border-muted-foreground">
-                    {t('costCalculator.cashFlow.df')}
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="max-w-xs">
-                  {t('costCalculator.cashFlow.dfTooltip')}
-                </TooltipContent>
-              </Tooltip>
-            </TableHead>
-            <TableHead className="text-sm text-right">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="cursor-help border-b border-dashed border-muted-foreground">
-                    {t('costCalculator.cashFlow.pv')}
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="max-w-xs">
-                  {t('costCalculator.cashFlow.pvTooltip')}
-                </TooltipContent>
-              </Tooltip>
-            </TableHead>
-            <TableHead className="text-sm text-right">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="cursor-help border-b border-dashed border-muted-foreground">
-                    {t('costCalculator.cashFlow.loss')}
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="max-w-xs">
-                  {t('costCalculator.cashFlow.lossTooltip')}
-                </TooltipContent>
-              </Tooltip>
-            </TableHead>
+            <InfoTableHead
+              className="text-sm text-right"
+              label={t('costCalculator.cashFlow.df')}
+              tooltip={t('costCalculator.cashFlow.dfTooltip')}
+            />
+            <InfoTableHead
+              className="text-sm text-right"
+              label={t('costCalculator.cashFlow.pv')}
+              tooltip={t('costCalculator.cashFlow.pvTooltip')}
+            />
+            <InfoTableHead
+              className="text-sm text-right"
+              label={t('costCalculator.cashFlow.loss')}
+              tooltip={t('costCalculator.cashFlow.lossTooltip')}
+            />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -161,14 +139,12 @@ export function CashFlowTab({ analysis, salePrice, t }: CashFlowTabProps) {
             </TooltipTrigger>
             <TooltipContent>{t('costCalculator.cashFlow.nominalTotalTooltip')}</TooltipContent>
           </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="font-semibold cursor-help border-b border-dashed border-muted-foreground">
-                {t('costCalculator.cashFlow.npv')}: {formatCurrency(totalPV)}
-              </span>
-            </TooltipTrigger>
-            <TooltipContent className="max-w-xs">{t('costCalculator.cashFlow.npvTooltip')}</TooltipContent>
-          </Tooltip>
+          <InfoUnderlinedTerm
+            className="font-semibold"
+            tooltip={t('costCalculator.cashFlow.npvTooltip')}
+          >
+            {t('costCalculator.cashFlow.npv')}: {formatCurrency(totalPV)}
+          </InfoUnderlinedTerm>
         </div>
 
         {/* Loss insight callout */}
@@ -224,42 +200,21 @@ export function ScenarioTab({ comparison, t }: ScenarioTabProps) {
         <TableHeader>
           <TableRow>
             <TableHead className="text-sm">{t('costCalculator.scenarios.scenario')}</TableHead>
-            <TableHead className="text-sm text-right">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="cursor-help border-b border-dashed border-muted-foreground">
-                    {t('costCalculator.scenarios.npv')}
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="max-w-xs">
-                  {t('costCalculator.scenarios.npvTooltip')}
-                </TooltipContent>
-              </Tooltip>
-            </TableHead>
-            <TableHead className="text-sm text-right">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="cursor-help border-b border-dashed border-muted-foreground">
-                    {t('costCalculator.scenarios.cost')}
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="max-w-xs">
-                  {t('costCalculator.scenarios.costTooltip')}
-                </TooltipContent>
-              </Tooltip>
-            </TableHead>
-            <TableHead className="text-sm text-right">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="cursor-help border-b border-dashed border-muted-foreground">
-                    {t('costCalculator.scenarios.wacp')}
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="max-w-xs">
-                  {t('costCalculator.scenarios.wacpTooltip')}
-                </TooltipContent>
-              </Tooltip>
-            </TableHead>
+            <InfoTableHead
+              className="text-sm text-right"
+              label={t('costCalculator.scenarios.npv')}
+              tooltip={t('costCalculator.scenarios.npvTooltip')}
+            />
+            <InfoTableHead
+              className="text-sm text-right"
+              label={t('costCalculator.scenarios.cost')}
+              tooltip={t('costCalculator.scenarios.costTooltip')}
+            />
+            <InfoTableHead
+              className="text-sm text-right"
+              label={t('costCalculator.scenarios.wacp')}
+              tooltip={t('costCalculator.scenarios.wacpTooltip')}
+            />
             <TableHead className="text-sm text-center" />
           </TableRow>
         </TableHeader>

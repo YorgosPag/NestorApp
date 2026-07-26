@@ -1,32 +1,41 @@
 'use client';
-/* eslint-disable custom/no-hardcoded-strings */
-/* eslint-disable design-system/no-hardcoded-colors */
 
 /**
- * BudgetVarianceChart — Waterfall chart for budget vs actual
+ * BudgetVarianceChart — variance of actual against budget, per cost category.
  *
- * Green = under budget, Red = over budget.
- * Includes form for manual data entry per project.
+ * Renders through the ADR-710 chart card shell. Everything this file used to own
+ * about *being a card* — the Card/CardContent frame, the header, the sized figure,
+ * the recharts responsive wrapper, the empty state, the row editor chrome, the
+ * saving flag — now comes from `@/components/ui/chart-card`. What remains here is
+ * what is genuinely about budget variance: the categories, the waterfall points,
+ * and the fields of one budget row.
  *
  * @enterprise SPEC-242C — Portfolio Dashboard
+ * @enterprise ADR-710 — Chart card shell
  */
 
-import React, { useMemo, useState, useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import {
-  BarChart,
   Bar,
-  XAxis,
-  YAxis,
+  BarChart,
   CartesianGrid,
-  Tooltip as RechartsTooltip,
   Cell,
   ReferenceLine,
-  ResponsiveContainer,
+  XAxis,
+  YAxis,
 } from 'recharts';
-import { Plus, Trash2 } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import {
+  CHART_BAR_RADIUS,
+  ChartCard,
+  ChartCardEditor,
+  chartPolarityColor,
+  chartPolarityTone,
+  useEntrySubmit,
+  useRepeatingRows,
+  type ChartSeries,
+} from '@/components/ui/chart-card';
 import { Input } from '@/components/ui/input';
+import { NumericField } from '@/components/ui/numeric-field';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -35,8 +44,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { cn } from '@/lib/utils';
 import { formatCurrencyWhole } from '@/lib/intl-utils';
 import type {
   BudgetVarianceAnalysis,
@@ -55,7 +62,7 @@ interface BudgetVarianceChartProps {
   selectedProjectId: string | null;
   onProjectSelect: (projectId: string) => void;
   onSave: (data: BudgetVarianceSaveData) => Promise<void>;
-  t: (key: string) => string;
+  t: (key: string, options?: Record<string, unknown>) => string;
 }
 
 interface BudgetVarianceSaveData {
@@ -71,107 +78,61 @@ interface CategoryInput {
   actualAmount: number;
 }
 
-// =============================================================================
-// DEFAULT CATEGORIES (Greek construction standard)
-// =============================================================================
-
-const DEFAULT_CATEGORIES: { label: string; key: string }[] = [
-  { label: 'Land Acquisition', key: 'land' },
-  { label: 'Permits & Fees', key: 'permits' },
-  { label: 'Foundation', key: 'foundation' },
-  { label: 'Structure', key: 'structure' },
-  { label: 'Mechanical', key: 'mechanical' },
-  { label: 'Finishes', key: 'finishes' },
-  { label: 'Marketing', key: 'marketing' },
-  { label: 'Legal', key: 'legal' },
-  { label: 'Contingency', key: 'contingency' },
-];
-
-// =============================================================================
-// CHART DATA BUILDER
-// =============================================================================
-
 interface WaterfallPoint {
   name: string;
   variance: number;
-  fill: string;
   budget: number;
   actual: number;
 }
 
+// =============================================================================
+// CONSTANTS
+// =============================================================================
+
+/**
+ * Cost breakdown of a Greek construction project. Keys only — the labels are
+ * translations, so a locale change does not rewrite stored `categoryKey` values.
+ */
+const DEFAULT_CATEGORY_KEYS = [
+  'land',
+  'permits',
+  'foundation',
+  'structure',
+  'mechanical',
+  'finishes',
+  'marketing',
+  'legal',
+  'contingency',
+] as const;
+
+/** Spending above plan is the bad direction — see `chartPolarityTone`. */
+const VARIANCE_POLARITY = 'lower-is-better' as const;
+
+// =============================================================================
+// DERIVATIONS
+// =============================================================================
+
+function toCategoryInput(entry: BudgetVarianceEntry): CategoryInput {
+  return {
+    category: entry.category,
+    categoryKey: entry.categoryKey,
+    budgetAmount: entry.budgetAmount,
+    actualAmount: entry.actualAmount,
+  };
+}
+
 function buildWaterfallData(categories: BudgetVarianceEntry[]): WaterfallPoint[] {
-  return categories.map(cat => ({
-    name: cat.category,
-    variance: cat.variance,
-    fill: cat.variance > 0 ? '#ef4444' : '#10b981',
-    budget: cat.budgetAmount,
-    actual: cat.actualAmount,
+  return categories.map((category) => ({
+    name: category.category,
+    variance: category.variance,
+    budget: category.budgetAmount,
+    actual: category.actualAmount,
   }));
 }
 
-// =============================================================================
-// FORM
-// =============================================================================
-
-function CategoryForm({
-  categories,
-  onChange,
-  onAddRow,
-  onRemoveRow,
-  t,
-}: {
-  categories: CategoryInput[];
-  onChange: (index: number, field: keyof CategoryInput, value: string | number) => void;
-  onAddRow: () => void;
-  onRemoveRow: (index: number) => void;
-  t: (key: string) => string;
-}) {
-  return (
-    <section className="space-y-2">
-      <header className="grid grid-cols-12 gap-2 text-xs font-medium px-1">
-        <span className="col-span-4">{t('variance.category')}</span>
-        <span className="col-span-3">{t('variance.budget')}</span>
-        <span className="col-span-3">{t('variance.actual')}</span>
-        <span className="col-span-2" />
-      </header>
-      {categories.map((cat, idx) => (
-        <fieldset key={idx} className="grid grid-cols-12 gap-2 items-center">
-          <Input
-            className="col-span-4"
-            value={cat.category}
-            onChange={e => onChange(idx, 'category', e.target.value)}
-            placeholder="Category…"
-          />
-          <Input
-            className="col-span-3"
-            type="number"
-            value={cat.budgetAmount || ''}
-            onChange={e => onChange(idx, 'budgetAmount', Number(e.target.value))}
-            placeholder="€ Budget"
-          />
-          <Input
-            className="col-span-3"
-            type="number"
-            value={cat.actualAmount || ''}
-            onChange={e => onChange(idx, 'actualAmount', Number(e.target.value))}
-            placeholder="€ Actual"
-          />
-          <Button
-            variant="ghost"
-            size="sm"
-            className="col-span-2"
-            onClick={() => onRemoveRow(idx)}
-          >
-            <Trash2 className="h-3 w-3" />
-          </Button>
-        </fieldset>
-      ))}
-      <Button variant="outline" size="sm" onClick={onAddRow}>
-        <Plus className="h-4 w-4 mr-1" />
-        {t('variance.addRow')}
-      </Button>
-    </section>
-  );
+/** Stored keys are slugs of the typed label, so a renamed category stays traceable. */
+function toCategoryKey(label: string): string {
+  return label.toLowerCase().replace(/\s+/g, '_');
 }
 
 // =============================================================================
@@ -186,178 +147,195 @@ export function BudgetVarianceChart({
   onSave,
   t,
 }: BudgetVarianceChartProps) {
-  const colors = useSemanticColors();
+  const formatEuro = useCallback((value: number) => formatCurrencyWhole(value) ?? '', []);
 
-  // Form state
-  const [categories, setCategories] = useState<CategoryInput[]>(() => {
-    if (analysis?.categories) {
-      return analysis.categories.map(c => ({
-        category: c.category,
-        categoryKey: c.categoryKey,
-        budgetAmount: c.budgetAmount,
-        actualAmount: c.actualAmount,
-      }));
-    }
-    return DEFAULT_CATEGORIES.map(c => ({
-      category: c.label,
-      categoryKey: c.key,
-      budgetAmount: 0,
-      actualAmount: 0,
-    }));
+  const waterfallData = useMemo(
+    () => (analysis?.categories ? buildWaterfallData(analysis.categories) : []),
+    [analysis],
+  );
+
+  const series = useMemo<ChartSeries<WaterfallPoint>[]>(
+    () => [{ key: 'variance', label: t('variance.totalVariance') }],
+    [t],
+  );
+
+  const rows = useRepeatingRows<CategoryInput>({
+    // Rebuild only when a different project is loaded — never mid-typing.
+    seedKey: selectedProjectId ?? '',
+    seed: () =>
+      analysis?.categories?.length
+        ? analysis.categories.map(toCategoryInput)
+        : DEFAULT_CATEGORY_KEYS.map((key) => ({
+            category: t(`variance.defaultCategories.${key}`),
+            categoryKey: key,
+            budgetAmount: 0,
+            actualAmount: 0,
+          })),
+    createRow: () => ({ category: '', categoryKey: '', budgetAmount: 0, actualAmount: 0 }),
   });
-  const [saving, setSaving] = useState(false);
 
-  // Sync form when analysis changes externally
-  React.useEffect(() => {
-    if (analysis?.categories) {
-      setCategories(analysis.categories.map(c => ({
-        category: c.category,
-        categoryKey: c.categoryKey,
-        budgetAmount: c.budgetAmount,
-        actualAmount: c.actualAmount,
-      })));
-    }
-  }, [analysis]);
-
-  const handleChange = useCallback((idx: number, field: keyof CategoryInput, value: string | number) => {
-    setCategories(prev => {
-      const next = [...prev];
-      next[idx] = { ...next[idx], [field]: value };
-      if (field === 'category') {
-        next[idx].categoryKey = String(value).toLowerCase().replace(/\s+/g, '_');
-      }
-      return next;
-    });
-  }, []);
-
-  const handleAddRow = useCallback(() => {
-    setCategories(prev => [...prev, { category: '', categoryKey: '', budgetAmount: 0, actualAmount: 0 }]);
-  }, []);
-
-  const handleRemoveRow = useCallback((idx: number) => {
-    setCategories(prev => prev.filter((_, i) => i !== idx));
-  }, []);
-
-  const handleSave = useCallback(async () => {
-    const project = projects.find(p => p.projectId === selectedProjectId);
-    if (!selectedProjectId || !project) return;
-    setSaving(true);
-    try {
+  const { submitting, submit } = useEntrySubmit<CategoryInput[]>({
+    isValid: () => Boolean(selectedProjectId),
+    onSubmit: async (categories) => {
+      const project = projects.find((entry) => entry.projectId === selectedProjectId);
+      if (!selectedProjectId || !project) return;
       await onSave({
         projectId: selectedProjectId,
         projectName: project.projectName,
-        categories: categories.filter(c => c.category.trim()),
+        categories: categories.filter((category) => category.category.trim()),
       });
-    } finally {
-      setSaving(false);
-    }
-  }, [selectedProjectId, projects, categories, onSave]);
-
-  const waterfallData = useMemo(() => {
-    if (!analysis?.categories) return [];
-    return buildWaterfallData(analysis.categories);
-  }, [analysis]);
-
-  const euroFormatter = (val: number) => formatCurrencyWhole(val) ?? '';
+    },
+  });
 
   return (
-    <Card>
-      <CardContent className="pt-6">
-        <header className="flex items-center justify-between mb-4 flex-wrap gap-3">
-          <h3 className={cn('text-lg font-semibold', colors.text.primary)}>
-            {t('variance.title')}
-          </h3>
+    <ChartCard
+      series={series}
+      data={waterfallData}
+      categoryKey="name"
+      categoryLabel={t('variance.category')}
+      formatValue={formatEuro}
+    >
+      <ChartCard.Header title={t('variance.title')}>
+        <nav className="flex items-center gap-2">
+          <Label className="text-sm">{t('variance.project')}</Label>
+          <Select value={selectedProjectId ?? ''} onValueChange={onProjectSelect}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder={t('variance.selectProject')} />
+            </SelectTrigger>
+            <SelectContent>
+              {projects.map((project) => (
+                <SelectItem key={project.projectId} value={project.projectId}>
+                  {project.projectName}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </nav>
+      </ChartCard.Header>
 
-          <nav className="flex items-center gap-2">
-            <Label className="text-sm">{t('variance.project')}</Label>
-            <Select
-              value={selectedProjectId ?? ''}
-              onValueChange={onProjectSelect}
-            >
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder={t('variance.selectProject')} />
-              </SelectTrigger>
-              <SelectContent>
-                {projects.map(p => (
-                  <SelectItem key={p.projectId} value={p.projectId}>
-                    {p.projectName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </nav>
-        </header>
+      <ChartCard.Figure
+        caption={t('variance.caption')}
+        emptyMessage={t('variance.emptyState')}
+      >
+        <BarChart data={waterfallData}>
+          <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+          <XAxis dataKey="name" tickLine={false} axisLine={false} />
+          <YAxis tickFormatter={formatEuro} width={100} tickLine={false} axisLine={false} />
+          <ChartCard.Tooltip />
+          <ReferenceLine y={0} stroke="hsl(var(--border))" />
+          <Bar dataKey="variance" radius={CHART_BAR_RADIUS}>
+            {waterfallData.map((point) => (
+              <Cell
+                key={point.name}
+                fill={chartPolarityColor(point.variance, VARIANCE_POLARITY)}
+              />
+            ))}
+          </Bar>
+        </BarChart>
+      </ChartCard.Figure>
 
-        {/* Chart */}
-        {waterfallData.length > 0 && (
-          <figure className="h-64 mb-6">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={waterfallData}>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                <YAxis tickFormatter={euroFormatter} width={100} />
-                <RechartsTooltip
-                  formatter={(value, _name, item) => {
-                    const point = item.payload as WaterfallPoint;
-                    return [
-                      `Variance: ${euroFormatter(Number(value))} | Budget: ${euroFormatter(point.budget)} | Actual: ${euroFormatter(point.actual)}`,
-                      '',
-                    ];
-                  }}
-                />
-                <ReferenceLine y={0} stroke="#888" />
-                <Bar dataKey="variance" name="Variance">
-                  {waterfallData.map((entry, idx) => (
-                    <Cell key={idx} fill={entry.fill} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </figure>
-        )}
+      {analysis ? (
+        <ChartCard.Summary>
+          <ChartCard.SummaryItem
+            label={t('variance.totalBudget')}
+            value={formatEuro(analysis.totalBudget)}
+          />
+          <ChartCard.SummaryItem
+            label={t('variance.totalActual')}
+            value={formatEuro(analysis.totalActual)}
+          />
+          <ChartCard.SummaryItem
+            label={t('variance.totalVariance')}
+            value={`${analysis.totalVariance > 0 ? '+' : ''}${formatEuro(analysis.totalVariance)} (${analysis.totalVariancePercent}%)`}
+            tone={chartPolarityTone(analysis.totalVariance, VARIANCE_POLARITY)}
+          />
+        </ChartCard.Summary>
+      ) : null}
 
-        {/* Summary row */}
-        {analysis && (
-          <section className="flex gap-6 mb-6 text-sm flex-wrap">
-            <dl className="flex gap-2">
-              <dt className={colors.text.muted}>{t('variance.totalBudget')}:</dt>
-              <dd className="font-medium">{euroFormatter(analysis.totalBudget)}</dd>
-            </dl>
-            <dl className="flex gap-2">
-              <dt className={colors.text.muted}>{t('variance.totalActual')}:</dt>
-              <dd className="font-medium">{euroFormatter(analysis.totalActual)}</dd>
-            </dl>
-            <dl className="flex gap-2">
-              <dt className={colors.text.muted}>{t('variance.totalVariance')}:</dt>
-              <dd className="font-medium" style={{ color: analysis.totalVariance > 0 ? '#ef4444' : '#10b981' }}>
-                {analysis.totalVariance > 0 ? '+' : ''}{euroFormatter(analysis.totalVariance)} ({analysis.totalVariancePercent}%)
-              </dd>
-            </dl>
-          </section>
-        )}
-
-        {/* Form */}
-        {selectedProjectId && (
-          <section className="space-y-4">
-            <CategoryForm
-              categories={categories}
-              onChange={handleChange}
-              onAddRow={handleAddRow}
-              onRemoveRow={handleRemoveRow}
-              t={t}
+      {selectedProjectId ? (
+        <ChartCard.Editor>
+          <CategoryRows rows={rows} t={t} />
+          <ChartCardEditor.Actions>
+            <ChartCardEditor.Submit
+              label={t('variance.save')}
+              pending={submitting}
+              onClick={() => void submit([...rows.rows])}
             />
-            <Button onClick={handleSave} disabled={saving} size="sm">
-              {saving ? '…' : t('variance.save')}
-            </Button>
-          </section>
-        )}
+          </ChartCardEditor.Actions>
+        </ChartCard.Editor>
+      ) : (
+        <p className="py-4 text-center text-sm text-muted-foreground">
+          {t('variance.selectProjectPrompt')}
+        </p>
+      )}
+    </ChartCard>
+  );
+}
 
-        {!selectedProjectId && (
-          <p className={cn('text-center py-4 text-sm', colors.text.muted)}>
-            {t('variance.selectProjectPrompt')}
-          </p>
-        )}
-      </CardContent>
-    </Card>
+// =============================================================================
+// ROW EDITOR — the fields of one budget row, and nothing else
+// =============================================================================
+
+interface CategoryRowsProps {
+  rows: ReturnType<typeof useRepeatingRows<CategoryInput>>;
+  t: (key: string, options?: Record<string, unknown>) => string;
+}
+
+function CategoryRows({ rows, t }: CategoryRowsProps) {
+  const { rows: categories, updateRow, addRow, removeRow } = rows;
+
+  const renameCategory = useCallback(
+    (index: number, label: string) =>
+      updateRow(index, { category: label, categoryKey: toCategoryKey(label) }),
+    [updateRow],
+  );
+
+  return (
+    <ChartCardEditor.Rows>
+      <ChartCardEditor.RowHeader>
+        <span className="col-span-4">{t('variance.category')}</span>
+        <span className="col-span-3">{t('variance.budget')}</span>
+        <span className="col-span-3">{t('variance.actual')}</span>
+        <span className="col-span-2" />
+      </ChartCardEditor.RowHeader>
+
+      {categories.map((category, index) => (
+        <ChartCardEditor.Row key={`${category.categoryKey}-${index}`}>
+          {/* The column headers above name these cells — hence aria-label, not a
+              placeholder repeated on every row. */}
+          <Input
+            className="col-span-4"
+            value={category.category}
+            onChange={(event) => renameCategory(index, event.target.value)}
+            aria-label={t('variance.category')}
+          />
+          <NumericField
+            className="col-span-3"
+            value={category.budgetAmount}
+            onValueChange={(budgetAmount) => updateRow(index, { budgetAmount })}
+            blankValue={0}
+            min={0}
+            step={0.01}
+            aria-label={t('variance.budget')}
+          />
+          <NumericField
+            className="col-span-3"
+            value={category.actualAmount}
+            onValueChange={(actualAmount) => updateRow(index, { actualAmount })}
+            blankValue={0}
+            min={0}
+            step={0.01}
+            aria-label={t('variance.actual')}
+          />
+          <ChartCardEditor.Remove
+            className="col-span-2"
+            label={t('variance.removeRow')}
+            onClick={() => removeRow(index)}
+          />
+        </ChartCardEditor.Row>
+      ))}
+
+      <ChartCardEditor.AddRow label={t('variance.addRow')} onClick={addRow} />
+    </ChartCardEditor.Rows>
   );
 }

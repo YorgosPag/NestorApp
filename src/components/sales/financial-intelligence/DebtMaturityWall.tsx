@@ -1,28 +1,30 @@
 'use client';
-/* eslint-disable custom/no-hardcoded-strings */
-/* eslint-disable design-system/no-hardcoded-colors */
 
 /**
- * DebtMaturityWall — Stacked bar chart of debt maturing per year
+ * DebtMaturityWall — outstanding balance maturing per year, stacked by loan type.
+ *
+ * Renders through the ADR-710 chart card shell. The four loan-type hexes this file
+ * used to carry are gone: series colors are positional and come from `--chart-1..5`,
+ * so the chart is finally correct in dark mode, where the hardcoded light-ramp values
+ * were being drawn regardless of theme.
  *
  * @enterprise SPEC-242C — Portfolio Dashboard
+ * @enterprise ADR-710 — Chart card shell
  */
 
-import React, { useMemo, useState, useCallback } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import { BarChart, Bar, CartesianGrid, XAxis, YAxis } from 'recharts';
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip as RechartsTooltip,
-  Legend,
-  ResponsiveContainer,
-} from 'recharts';
-import { Plus, Trash2 } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+  CHART_BAR_RADIUS,
+  CHART_STACK_SPACER,
+  ChartCard,
+  ChartCardEditor,
+  seriesColorVar,
+  useEntrySubmit,
+  type ChartSeries,
+} from '@/components/ui/chart-card';
 import { Input } from '@/components/ui/input';
+import { NumericField } from '@/components/ui/numeric-field';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -32,8 +34,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { cn } from '@/lib/utils';
 import { formatCurrencyWhole } from '@/lib/intl-utils';
 import type {
   DebtMaturityEntry,
@@ -51,7 +51,7 @@ interface DebtMaturityWallProps {
   entries: DebtMaturityEntry[];
   onAdd: (data: DebtMaturityFormData) => Promise<void>;
   onRemove: (loanId: string) => Promise<void>;
-  t: (key: string) => string;
+  t: (key: string, options?: Record<string, unknown>) => string;
 }
 
 export interface DebtMaturityFormData {
@@ -65,65 +65,7 @@ export interface DebtMaturityFormData {
   currentDSCR: number;
 }
 
-// =============================================================================
-// CONSTANTS
-// =============================================================================
-
-const LOAN_TYPE_COLORS: Record<LoanType, string> = {
-  construction: '#3b82f6',
-  mortgage: '#10b981',
-  bridge: '#f59e0b',
-  mezzanine: '#ef4444',
-};
-
-const LOAN_TYPE_OPTIONS: { value: LoanType; label: string }[] = [
-  { value: 'construction', label: 'Construction' },
-  { value: 'mortgage', label: 'Mortgage' },
-  { value: 'bridge', label: 'Bridge' },
-  { value: 'mezzanine', label: 'Mezzanine' },
-];
-
-const RISK_BADGE: Record<HealthStatus, 'success' | 'info' | 'warning' | 'destructive'> = {
-  excellent: 'success',
-  good: 'info',
-  warning: 'warning',
-  critical: 'destructive',
-};
-
-// =============================================================================
-// HELPERS
-// =============================================================================
-
-function buildYearData(entries: DebtMaturityEntry[]): MaturityWallYear[] {
-  const yearMap = new Map<number, DebtMaturityEntry[]>();
-
-  for (const entry of entries) {
-    const year = new Date(entry.maturityDate).getFullYear();
-    const existing = yearMap.get(year) ?? [];
-    existing.push(entry);
-    yearMap.set(year, existing);
-  }
-
-  const years = Array.from(yearMap.entries())
-    .sort(([a], [b]) => a - b)
-    .map(([year, yearEntries]) => {
-      const totalMaturing = yearEntries.reduce((s, e) => s + e.outstandingBalance, 0);
-      const avgRefiGapBps = yearEntries.length > 0
-        ? yearEntries.reduce((s, e) => s + (e.estimatedRefiRate - e.currentRate) * 100, 0) / yearEntries.length
-        : 0;
-
-      return {
-        year,
-        totalMaturing: Math.round(totalMaturing),
-        entries: yearEntries,
-        avgRefiGapBps: Math.round(avgRefiGapBps),
-      };
-    });
-
-  return years;
-}
-
-interface ChartDataPoint {
+interface MaturityYearPoint {
   year: number;
   construction: number;
   mortgage: number;
@@ -132,26 +74,22 @@ interface ChartDataPoint {
   total: number;
 }
 
-function buildChartData(yearData: MaturityWallYear[]): ChartDataPoint[] {
-  return yearData.map(yd => {
-    const byType: Record<LoanType, number> = { construction: 0, mortgage: 0, bridge: 0, mezzanine: 0 };
-    for (const entry of yd.entries) {
-      byType[entry.loanType] += entry.outstandingBalance;
-    }
-    return {
-      year: yd.year,
-      construction: Math.round(byType.construction),
-      mortgage: Math.round(byType.mortgage),
-      bridge: Math.round(byType.bridge),
-      mezzanine: Math.round(byType.mezzanine),
-      total: yd.totalMaturing,
-    };
-  });
-}
+// =============================================================================
+// CONSTANTS
+// =============================================================================
 
-// =============================================================================
-// FORM COMPONENT
-// =============================================================================
+/**
+ * Stack order. It is also the color order: `chartSeriesColor` assigns `--chart-1..4`
+ * by position, so this list is the only place the identity of a loan type is fixed.
+ */
+const LOAN_TYPES: readonly LoanType[] = ['construction', 'mortgage', 'bridge', 'mezzanine'];
+
+const RISK_BADGE: Record<HealthStatus, 'success' | 'info' | 'warning' | 'destructive'> = {
+  excellent: 'success',
+  good: 'info',
+  warning: 'warning',
+  critical: 'destructive',
+};
 
 const INITIAL_FORM: DebtMaturityFormData = {
   projectName: '',
@@ -164,130 +102,54 @@ const INITIAL_FORM: DebtMaturityFormData = {
   currentDSCR: 0,
 };
 
-function AddEntryForm({ onAdd, t }: { onAdd: (d: DebtMaturityFormData) => Promise<void>; t: (k: string) => string }) {
-  const [form, setForm] = useState<DebtMaturityFormData>(INITIAL_FORM);
-  const [submitting, setSubmitting] = useState(false);
-  const [expanded, setExpanded] = useState(false);
+// =============================================================================
+// DERIVATIONS
+// =============================================================================
 
-  const handleSubmit = useCallback(async () => {
-    if (!form.projectName || !form.maturityDate || form.outstandingBalance <= 0) return;
-    setSubmitting(true);
-    try {
-      await onAdd(form);
-      setForm(INITIAL_FORM);
-      setExpanded(false);
-    } finally {
-      setSubmitting(false);
-    }
-  }, [form, onAdd]);
+function buildYearData(entries: DebtMaturityEntry[]): MaturityWallYear[] {
+  const yearMap = new Map<number, DebtMaturityEntry[]>();
 
-  if (!expanded) {
-    return (
-      <Button variant="outline" size="sm" onClick={() => setExpanded(true)}>
-        <Plus className="h-4 w-4 mr-1" />
-        {t('maturity.addEntry')}
-      </Button>
-    );
+  for (const entry of entries) {
+    const year = new Date(entry.maturityDate).getFullYear();
+    const existing = yearMap.get(year) ?? [];
+    existing.push(entry);
+    yearMap.set(year, existing);
   }
 
-  return (
-    <section className="grid grid-cols-2 gap-3 p-4 border rounded-lg md:grid-cols-4">
-      <fieldset className="space-y-1">
-        <Label>{t('maturity.projectName')}</Label>
-        <Input
-          value={form.projectName}
-          onChange={e => setForm(prev => ({ ...prev, projectName: e.target.value }))}
-          placeholder="Project…"
-        />
-      </fieldset>
+  return Array.from(yearMap.entries())
+    .sort(([a], [b]) => a - b)
+    .map(([year, yearEntries]) => {
+      const totalMaturing = yearEntries.reduce((sum, e) => sum + e.outstandingBalance, 0);
+      const avgRefiGapBps = yearEntries.length > 0
+        ? yearEntries.reduce((s, e) => s + (e.estimatedRefiRate - e.currentRate) * 100, 0) / yearEntries.length
+        : 0;
 
-      <fieldset className="space-y-1">
-        <Label>{t('maturity.loanType')}</Label>
-        <Select
-          value={form.loanType}
-          onValueChange={(v: string) => setForm(prev => ({ ...prev, loanType: v as LoanType }))}
-        >
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {LOAN_TYPE_OPTIONS.map(opt => (
-              <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </fieldset>
+      return {
+        year,
+        totalMaturing: Math.round(totalMaturing),
+        entries: yearEntries,
+        avgRefiGapBps: Math.round(avgRefiGapBps),
+      };
+    });
+}
 
-      <fieldset className="space-y-1">
-        <Label>{t('maturity.balance')}</Label>
-        <Input
-          type="number"
-          value={form.outstandingBalance || ''}
-          onChange={e => setForm(prev => ({ ...prev, outstandingBalance: Number(e.target.value) }))}
-          placeholder="€"
-        />
-      </fieldset>
-
-      <fieldset className="space-y-1">
-        <Label>{t('maturity.rate')}</Label>
-        <Input
-          type="number"
-          step="0.01"
-          value={form.currentRate || ''}
-          onChange={e => setForm(prev => ({ ...prev, currentRate: Number(e.target.value) }))}
-          placeholder="%"
-        />
-      </fieldset>
-
-      <fieldset className="space-y-1">
-        <Label>{t('maturity.maturityDate')}</Label>
-        <Input
-          type="date"
-          value={form.maturityDate}
-          onChange={e => setForm(prev => ({ ...prev, maturityDate: e.target.value }))}
-        />
-      </fieldset>
-
-      <fieldset className="space-y-1">
-        <Label>{t('maturity.refiRate')}</Label>
-        <Input
-          type="number"
-          step="0.01"
-          value={form.estimatedRefiRate || ''}
-          onChange={e => setForm(prev => ({ ...prev, estimatedRefiRate: Number(e.target.value) }))}
-          placeholder="%"
-        />
-      </fieldset>
-
-      <fieldset className="space-y-1">
-        <Label>{t('maturity.ltv')}</Label>
-        <Input
-          type="number"
-          value={form.ltvAtMaturity || ''}
-          onChange={e => setForm(prev => ({ ...prev, ltvAtMaturity: Number(e.target.value) }))}
-          placeholder="%"
-        />
-      </fieldset>
-
-      <fieldset className="space-y-1">
-        <Label>{t('maturity.dscr')}</Label>
-        <Input
-          type="number"
-          step="0.01"
-          value={form.currentDSCR || ''}
-          onChange={e => setForm(prev => ({ ...prev, currentDSCR: Number(e.target.value) }))}
-          placeholder="1.25"
-        />
-      </fieldset>
-
-      <fieldset className="col-span-2 flex gap-2 items-end md:col-span-4">
-        <Button onClick={handleSubmit} disabled={submitting} size="sm">
-          {submitting ? '…' : t('maturity.save')}
-        </Button>
-        <Button variant="ghost" size="sm" onClick={() => setExpanded(false)}>
-          {t('maturity.cancel')}
-        </Button>
-      </fieldset>
-    </section>
-  );
+function buildChartData(yearData: MaturityWallYear[]): MaturityYearPoint[] {
+  return yearData.map((yearEntry) => {
+    const byType: Record<LoanType, number> = {
+      construction: 0, mortgage: 0, bridge: 0, mezzanine: 0,
+    };
+    for (const entry of yearEntry.entries) {
+      byType[entry.loanType] += entry.outstandingBalance;
+    }
+    return {
+      year: yearEntry.year,
+      construction: Math.round(byType.construction),
+      mortgage: Math.round(byType.mortgage),
+      bridge: Math.round(byType.bridge),
+      mezzanine: Math.round(byType.mezzanine),
+      total: yearEntry.totalMaturing,
+    };
+  });
 }
 
 // =============================================================================
@@ -295,79 +157,239 @@ function AddEntryForm({ onAdd, t }: { onAdd: (d: DebtMaturityFormData) => Promis
 // =============================================================================
 
 export function DebtMaturityWall({ entries, onAdd, onRemove, t }: DebtMaturityWallProps) {
-  const colors = useSemanticColors();
-  const yearData = useMemo(() => buildYearData(entries), [entries]);
-  const chartData = useMemo(() => buildChartData(yearData), [yearData]);
+  const formatEuro = useCallback((value: number) => formatCurrencyWhole(value) ?? '', []);
 
-  const euroFormatter = (val: number) => formatCurrencyWhole(val) ?? '';
+  const chartData = useMemo(
+    () => buildChartData(buildYearData(entries)),
+    [entries],
+  );
+
+  const series = useMemo<ChartSeries<MaturityYearPoint>[]>(
+    () => LOAN_TYPES.map((type) => ({ key: type, label: t(`maturity.types.${type}`) })),
+    [t],
+  );
 
   return (
-    <Card>
-      <CardContent className="pt-6">
-        <header className="flex items-center justify-between mb-4">
-          <h3 className={cn('text-lg font-semibold', colors.text.primary)}>
-            {t('maturity.title')}
-          </h3>
-          <AddEntryForm onAdd={onAdd} t={t} />
-        </header>
+    <ChartCard
+      series={series}
+      data={chartData}
+      categoryKey="year"
+      categoryLabel={t('maturity.year')}
+      formatValue={formatEuro}
+    >
+      <ChartCard.Header title={t('maturity.title')}>
+        <ChartCardEditor.Disclosure triggerLabel={t('maturity.addEntry')}>
+          {(close) => <AddEntryForm onAdd={onAdd} onDone={close} t={t} />}
+        </ChartCardEditor.Disclosure>
+      </ChartCard.Header>
 
-        {chartData.length > 0 ? (
-          <figure className="h-72 mb-6">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                <XAxis dataKey="year" />
-                <YAxis tickFormatter={euroFormatter} width={100} />
-                <RechartsTooltip
-                  formatter={(value: number, name: string) => [euroFormatter(value), name]}
-                />
-                <Legend />
-                <Bar dataKey="construction" stackId="stack" fill={LOAN_TYPE_COLORS.construction} name="Construction" />
-                <Bar dataKey="mortgage" stackId="stack" fill={LOAN_TYPE_COLORS.mortgage} name="Mortgage" />
-                <Bar dataKey="bridge" stackId="stack" fill={LOAN_TYPE_COLORS.bridge} name="Bridge" />
-                <Bar dataKey="mezzanine" stackId="stack" fill={LOAN_TYPE_COLORS.mezzanine} name="Mezzanine" />
-              </BarChart>
-            </ResponsiveContainer>
-          </figure>
-        ) : (
-          <p className={cn('text-center py-8 text-sm', colors.text.muted)}>
-            {t('maturity.emptyState')}
-          </p>
-        )}
+      <ChartCard.Figure
+        caption={t('maturity.caption')}
+        emptyMessage={t('maturity.emptyState')}
+        size="lg"
+      >
+        <BarChart data={chartData}>
+          <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+          <XAxis dataKey="year" tickLine={false} axisLine={false} />
+          <YAxis tickFormatter={formatEuro} width={100} tickLine={false} axisLine={false} />
+          <ChartCard.Tooltip />
+          {LOAN_TYPES.map((type, index) => (
+            <Bar
+              key={type}
+              dataKey={type}
+              stackId="maturity"
+              fill={seriesColorVar(type)}
+              // Surface gap between touching fills — the secondary encoding the
+              // measured CVD separation requires (ADR-710 §4).
+              {...CHART_STACK_SPACER}
+              radius={index === LOAN_TYPES.length - 1 ? CHART_BAR_RADIUS : undefined}
+            />
+          ))}
+        </BarChart>
+      </ChartCard.Figure>
 
-        {entries.length > 0 && (
-          <section>
-            <h4 className={cn('text-sm font-medium mb-2', colors.text.muted)}>
-              {t('maturity.entriesTitle')} ({entries.length})
-            </h4>
-            <ul className="space-y-2">
-              {entries.map(entry => (
-                <li
-                  key={entry.loanId}
-                  className="flex items-center justify-between p-3 border rounded-md"
-                >
-                  <span className="flex items-center gap-3">
-                    <Badge variant={RISK_BADGE[entry.riskLevel]}>
-                      {entry.loanType}
-                    </Badge>
-                    <span className="text-sm font-medium">{entry.projectName}</span>
-                    <span className={cn('text-sm', colors.text.muted)}>
-                      {euroFormatter(entry.outstandingBalance)} · {entry.currentRate}% · {entry.monthsToMaturity}mo
-                    </span>
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onRemove(entry.loanId)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
-      </CardContent>
-    </Card>
+      {entries.length > 0 ? <EntryList entries={entries} onRemove={onRemove} t={t} /> : null}
+    </ChartCard>
+  );
+}
+
+// =============================================================================
+// ENTRY LIST
+// =============================================================================
+
+interface EntryListProps {
+  entries: DebtMaturityEntry[];
+  onRemove: (loanId: string) => Promise<void>;
+  t: (key: string, options?: Record<string, unknown>) => string;
+}
+
+function EntryList({ entries, onRemove, t }: EntryListProps) {
+  return (
+    <section>
+      <h4 className="mb-2 text-sm font-medium text-muted-foreground">
+        {t('maturity.entriesTitle')} ({entries.length})
+      </h4>
+      <ul className="space-y-2">
+        {entries.map((entry) => (
+          <li
+            key={entry.loanId}
+            className="flex items-center justify-between rounded-md border p-3"
+          >
+            <span className="flex items-center gap-3">
+              <Badge variant={RISK_BADGE[entry.riskLevel]}>
+                {t(`maturity.types.${entry.loanType}`)}
+              </Badge>
+              <span className="text-sm font-medium">{entry.projectName}</span>
+              <span className="text-sm text-muted-foreground">
+                {formatCurrencyWhole(entry.outstandingBalance) ?? ''} · {entry.currentRate}%
+                {' · '}
+                {t('maturity.monthsToMaturity', { count: entry.monthsToMaturity })}
+              </span>
+            </span>
+            <ChartCardEditor.Remove
+              label={t('maturity.removeEntry')}
+              onClick={() => void onRemove(entry.loanId)}
+            />
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+// =============================================================================
+// ADD-ENTRY FORM — the fields of one loan, and nothing else
+// =============================================================================
+
+interface AddEntryFormProps {
+  onAdd: (data: DebtMaturityFormData) => Promise<void>;
+  /** Collapses the disclosure. Called only after the write resolves. */
+  onDone: () => void;
+  t: (key: string, options?: Record<string, unknown>) => string;
+}
+
+function AddEntryForm({ onAdd, onDone, t }: AddEntryFormProps) {
+  const [form, setForm] = useState<DebtMaturityFormData>(INITIAL_FORM);
+
+  const { submitting, submit } = useEntrySubmit<DebtMaturityFormData>({
+    onSubmit: onAdd,
+    isValid: (value) =>
+      Boolean(value.projectName) && Boolean(value.maturityDate) && value.outstandingBalance > 0,
+    onSubmitted: () => {
+      setForm(INITIAL_FORM);
+      onDone();
+    },
+  });
+
+  const patch = useCallback(
+    (changes: Partial<DebtMaturityFormData>) =>
+      setForm((previous) => ({ ...previous, ...changes })),
+    [],
+  );
+
+  return (
+    <ChartCardEditor.Grid>
+      <ChartCardEditor.Field>
+        <Label htmlFor="maturity-project">{t('maturity.projectName')}</Label>
+        <Input
+          id="maturity-project"
+          value={form.projectName}
+          onChange={(event) => patch({ projectName: event.target.value })}
+        />
+      </ChartCardEditor.Field>
+
+      <ChartCardEditor.Field>
+        <Label htmlFor="maturity-type">{t('maturity.loanType')}</Label>
+        <Select
+          value={form.loanType}
+          onValueChange={(value: string) => patch({ loanType: value as LoanType })}
+        >
+          <SelectTrigger id="maturity-type">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {LOAN_TYPES.map((type) => (
+              <SelectItem key={type} value={type}>
+                {t(`maturity.types.${type}`)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </ChartCardEditor.Field>
+
+      <ChartCardEditor.Field>
+        <NumericField
+          id="maturity-balance"
+          label={t('maturity.balance')}
+          value={form.outstandingBalance}
+          onValueChange={(outstandingBalance) => patch({ outstandingBalance })}
+          blankValue={0}
+          step={0.01}
+        />
+      </ChartCardEditor.Field>
+
+      <ChartCardEditor.Field>
+        <NumericField
+          id="maturity-rate"
+          label={t('maturity.rate')}
+          value={form.currentRate}
+          onValueChange={(currentRate) => patch({ currentRate })}
+          blankValue={0}
+          step={0.01}
+        />
+      </ChartCardEditor.Field>
+
+      <ChartCardEditor.Field>
+        <Label htmlFor="maturity-date">{t('maturity.maturityDate')}</Label>
+        <Input
+          id="maturity-date"
+          type="date"
+          value={form.maturityDate}
+          onChange={(event) => patch({ maturityDate: event.target.value })}
+        />
+      </ChartCardEditor.Field>
+
+      <ChartCardEditor.Field>
+        <NumericField
+          id="maturity-refi-rate"
+          label={t('maturity.refiRate')}
+          value={form.estimatedRefiRate}
+          onValueChange={(estimatedRefiRate) => patch({ estimatedRefiRate })}
+          blankValue={0}
+          step={0.01}
+        />
+      </ChartCardEditor.Field>
+
+      <ChartCardEditor.Field>
+        <NumericField
+          id="maturity-ltv"
+          label={t('maturity.ltv')}
+          value={form.ltvAtMaturity}
+          onValueChange={(ltvAtMaturity) => patch({ ltvAtMaturity })}
+          blankValue={0}
+          step={0.01}
+        />
+      </ChartCardEditor.Field>
+
+      <ChartCardEditor.Field>
+        <NumericField
+          id="maturity-dscr"
+          label={t('maturity.dscr')}
+          value={form.currentDSCR}
+          onValueChange={(currentDSCR) => patch({ currentDSCR })}
+          blankValue={0}
+          step={0.01}
+        />
+      </ChartCardEditor.Field>
+
+      <ChartCardEditor.Actions className="col-span-2 md:col-span-4">
+        <ChartCardEditor.Submit
+          label={t('maturity.save')}
+          pending={submitting}
+          onClick={() => void submit(form)}
+        />
+        <ChartCardEditor.Cancel label={t('maturity.cancel')} onClick={onDone} />
+      </ChartCardEditor.Actions>
+    </ChartCardEditor.Grid>
   );
 }

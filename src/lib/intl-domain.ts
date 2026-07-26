@@ -200,24 +200,16 @@ export const formatDateForDisplay = (dateStr?: string): string => {
 /**
  * Format date in Greek short format with validation - Enhanced version
  *
+ * Alias of {@link formatDateShort}: the locale already drives the dd/MM/yyyy order,
+ * so "Greek short" and "short" are the same formatting decision — keeping two bodies
+ * meant one could drift from the other silently.
+ *
  * @param dateInput - Date, string, number, or undefined
  * @returns Greek formatted date with fallback
  *
  * @example formatDateGreek('2025-12-13') // "13/12/2025"
  */
-export const formatDateGreek = (dateInput?: Date | string | number): string => {
-  if (!dateInput) return '-';
-
-  try {
-    return formatDate(dateInput, {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-  } catch {
-    return '-';
-  }
-};
+export const formatDateGreek = formatDateShort;
 
 /**
  * Format currency with zero decimals and null guard
@@ -235,13 +227,20 @@ export const formatCurrencyWhole = (amount: number | null | undefined): string =
  * Format currency in compact notation (€500K / €1.2M)
  * Replaces 2 local formatCurrencyCompact duplicates in sales pages
  *
+ * The magnitude decides the unit, so a negative amount abbreviates exactly like its
+ * positive twin and keeps its sign: an axis that runs through zero — a depleting
+ * interest reserve, a cash-flow gap — reads "-€50K", not "€-50000". Comparing the
+ * signed value against the thresholds silently left every negative amount unabbreviated.
+ *
  * @param value - Numeric amount (must be a valid number)
- * @returns Compact string like "€500K", "€1.2M", or "€800"
+ * @returns Compact string like "€500K", "-€1.2M", or "€800"
  */
 export const formatCurrencyCompact = (value: number): string => {
-  if (value >= 1_000_000) return `€${(value / 1_000_000).toFixed(1)}M`;
-  if (value >= 1_000) return `€${(value / 1_000).toFixed(0)}K`;
-  return `€${value}`;
+  const sign = value < 0 ? '-' : '';
+  const magnitude = Math.abs(value);
+  if (magnitude >= 1_000_000) return `${sign}€${(magnitude / 1_000_000).toFixed(1)}M`;
+  if (magnitude >= 1_000) return `${sign}€${(magnitude / 1_000).toFixed(0)}K`;
+  return `${sign}€${magnitude}`;
 };
 
 /**

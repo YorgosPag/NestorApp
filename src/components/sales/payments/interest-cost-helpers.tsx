@@ -31,7 +31,7 @@ import type {
   WhatIfTabProps,
   LossAlertBannerProps,
 } from './interest-cost-types';
-import { InfoLabel, InfoDt } from './financial-intelligence';
+import { InfoLabel, InfoDt } from '@/components/ui/InfoLabel';
 import '@/lib/design-system';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';

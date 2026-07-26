@@ -1,6 +1,4 @@
 'use client';
-/* eslint-disable custom/no-hardcoded-strings */
-/* eslint-disable design-system/enforce-semantic-colors */
 
 /**
  * interest-cost-pricing-settings.tsx — PricingTab and SettingsTab for InterestCostDialog
@@ -18,8 +16,7 @@ import {
 import { useNotifications } from '@/providers/NotificationProvider';
 
 import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Input } from '@/components/ui/input';
+import { NumericField } from '@/components/ui/numeric-field';
 import {
   Select,
   SelectContent,
@@ -31,7 +28,7 @@ import {
 import type { DiscountRateSource } from '@/types/interest-calculator';
 import type { PricingTabProps, SettingsTabProps } from './interest-cost-types';
 import { formatCurrency, formatPercent, formatDate } from './interest-cost-helpers';
-import { InfoLabel } from './financial-intelligence';
+import { InfoDt, InfoLabel } from '@/components/ui/InfoLabel';
 import '@/lib/design-system';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -86,68 +83,43 @@ export function PricingTab({ result, salePrice, t }: PricingTabProps) {
 
       {/* Breakdown with tooltips */}
       <dl className="grid grid-cols-2 gap-3 text-base">
-        <dt className={colors.text.muted}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="cursor-help border-b border-dashed border-muted-foreground">
-                {t('costCalculator.pricing.nominalPrice')}
-              </span>
-            </TooltipTrigger>
-            <TooltipContent className="max-w-xs">{t('costCalculator.pricing.nominalPriceTooltip')}</TooltipContent>
-          </Tooltip>
-        </dt>
+        <InfoDt
+          className={colors.text.muted}
+          label={t('costCalculator.pricing.nominalPrice')}
+          tooltip={t('costCalculator.pricing.nominalPriceTooltip')}
+        />
         <dd className="text-right font-medium">{formatCurrency(salePrice)}</dd>
 
-        <dt className={colors.text.muted}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="cursor-help border-b border-dashed border-muted-foreground">
-                {t('costCalculator.cashFlow.npv')} ({formatPercent(result.npvPercentage)})
-              </span>
-            </TooltipTrigger>
-            <TooltipContent className="max-w-xs">{t('costCalculator.cashFlow.npvTooltip')}</TooltipContent>
-          </Tooltip>
-        </dt>
+        <InfoDt
+          className={colors.text.muted}
+          label={`${t('costCalculator.cashFlow.npv')} (${formatPercent(result.npvPercentage)})`}
+          tooltip={t('costCalculator.cashFlow.npvTooltip')}
+        />
         <dd className="text-right font-medium">{formatCurrency(result.npv)}</dd>
 
-        <dt className="text-destructive">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="cursor-help border-b border-dashed border-destructive">
-                {t('costCalculator.pricing.timeCost')}
-              </span>
-            </TooltipTrigger>
-            <TooltipContent className="max-w-xs">{t('costCalculator.pricing.timeCostTooltip')}</TooltipContent>
-          </Tooltip>
-        </dt>
+        <InfoDt
+          className="text-destructive"
+          label={t('costCalculator.pricing.timeCost')}
+          tooltip={t('costCalculator.pricing.timeCostTooltip')}
+        />
         <dd className="text-right font-medium text-destructive">
           -{formatCurrency(result.timeCost)}
         </dd>
 
-        <dt className={colors.text.muted}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="cursor-help border-b border-dashed border-muted-foreground">
-                {t('costCalculator.pricing.wacp')}
-              </span>
-            </TooltipTrigger>
-            <TooltipContent className="max-w-xs">{t('costCalculator.pricing.wacpTooltip')}</TooltipContent>
-          </Tooltip>
-        </dt>
+        <InfoDt
+          className={colors.text.muted}
+          label={t('costCalculator.pricing.wacp')}
+          tooltip={t('costCalculator.pricing.wacpTooltip')}
+        />
         <dd className="text-right font-medium">
           {result.weightedAverageDays} {t('costCalculator.scenarios.days')}
         </dd>
 
-        <dt className={colors.text.muted}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="cursor-help border-b border-dashed border-muted-foreground">
-                {t('costCalculator.pricing.effectiveRate')}
-              </span>
-            </TooltipTrigger>
-            <TooltipContent className="max-w-xs">{t('costCalculator.pricing.effectiveRateTooltip')}</TooltipContent>
-          </Tooltip>
-        </dt>
+        <InfoDt
+          className={colors.text.muted}
+          label={t('costCalculator.pricing.effectiveRate')}
+          tooltip={t('costCalculator.pricing.effectiveRateTooltip')}
+        />
         <dd className="text-right font-medium">{formatPercent(result.effectiveRate)}</dd>
       </dl>
 
@@ -278,14 +250,14 @@ export function SettingsTab({
               tooltip={t('costCalculator.settings.manualRateTooltip')}
               className="text-sm"
             />
-            <Input
+            {/* No blankValue: 0% is a real rate the user must be able to see. */}
+            <NumericField
               id="manual-rate"
-              type="number"
-              step="0.01"
-              min="0"
-              max="50"
+              step={0.01}
+              min={0}
+              max={50}
               value={manualRate}
-              onChange={(e) => onManualRateChange(parseFloat(e.target.value) || 0)}
+              onValueChange={onManualRateChange}
               className="text-sm"
             />
           </fieldset>
@@ -301,14 +273,13 @@ export function SettingsTab({
           className="text-sm font-semibold"
         />
         <fieldset className="flex items-center gap-2">
-          <Input
+          <NumericField
             id="bank-spread"
-            type="number"
-            step="0.05"
-            min="0"
-            max="10"
+            step={0.05}
+            min={0}
+            max={10}
             value={localSpread}
-            onChange={(e) => setLocalSpread(parseFloat(e.target.value) || 0)}
+            onValueChange={setLocalSpread}
             className="text-sm flex-1"
           />
           <Button
