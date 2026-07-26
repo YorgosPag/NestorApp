@@ -14,4 +14,5 @@ export { EquityWaterfallDialog } from './EquityWaterfallDialog';
 export { ForwardCurveChart } from './ForwardCurveChart';
 export { HedgingComparisonTable } from './HedgingComparisonTable';
 export { CounterproposalTab } from './CounterproposalTab';
-export { InfoLabel, InfoTableHead, InfoDt } from './InfoLabel';
+// InfoLabel/InfoTableHead/InfoDt moved to `@/components/ui/InfoLabel` (ADR-710 §8 #6):
+// the gesture is app-wide, so it no longer travels through this domain barrel.

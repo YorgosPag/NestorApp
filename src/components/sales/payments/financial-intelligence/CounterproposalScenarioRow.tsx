@@ -1,5 +1,3 @@
-/* eslint-disable design-system/enforce-semantic-colors */
-/* eslint-disable custom/no-hardcoded-strings */
 'use client';
 
 import React from 'react';
@@ -7,24 +5,9 @@ import { Badge } from '@/components/ui/badge';
 import { TableRow, TableCell } from '@/components/ui/table';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
+import { formatCurrencyWhole, formatPercentage } from '@/lib/intl-utils';
 import type { CounterproposalScenario } from '@/types/interest-calculator';
 import '@/lib/design-system';
-
-// =============================================================================
-// HELPERS
-// =============================================================================
-
-export function fmtCurrency(value: number): string {
-  return new Intl.NumberFormat('el-GR', {
-    style: 'currency',
-    currency: 'EUR',
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-
-export function fmtPercent(value: number): string {
-  return `${value.toFixed(2)}%`;
-}
 
 // =============================================================================
 // TYPES
@@ -75,27 +58,27 @@ export function ScenarioRow({ scenario, variant, t }: ScenarioRowProps) {
         )}
       </TableCell>
       <TableCell className="text-right text-xs font-mono tabular-nums">
-        {fmtCurrency(scenario.npv)}
+        {formatCurrencyWhole(scenario.npv)}
       </TableCell>
       <TableCell className="text-right text-xs font-mono tabular-nums text-[hsl(var(--text-success))]">
-        {scenario.timeCostSaved > 0 ? fmtCurrency(scenario.timeCostSaved) : '—'}
+        {scenario.timeCostSaved > 0 ? formatCurrencyWhole(scenario.timeCostSaved) : '—'}
       </TableCell>
       <TableCell className="text-right text-xs font-mono tabular-nums">
         {scenario.maxDiscount > 0
-          ? `${fmtCurrency(scenario.maxDiscount)} (${fmtPercent(scenario.maxDiscountPercent)})`
+          ? `${formatCurrencyWhole(scenario.maxDiscount)} (${formatPercentage(scenario.maxDiscountPercent)})`
           : '—'}
       </TableCell>
       <TableCell className="text-right text-xs font-mono tabular-nums text-[hsl(var(--text-warning))]">
         {scenario.suggestedDiscount > 0
-          ? `${fmtCurrency(scenario.suggestedDiscount)} (${fmtPercent(scenario.suggestedDiscountPercent)})`
+          ? `${formatCurrencyWhole(scenario.suggestedDiscount)} (${formatPercentage(scenario.suggestedDiscountPercent)})`
           : '—'}
       </TableCell>
       <TableCell className="text-right text-xs font-mono tabular-nums font-medium">
-        {fmtCurrency(scenario.finalPrice)}
+        {formatCurrencyWhole(scenario.finalPrice)}
       </TableCell>
       <TableCell className="text-right text-xs font-mono tabular-nums text-primary font-medium">
         {scenario.builderNetGain > 0
-          ? `${fmtCurrency(scenario.builderNetGain)} (${fmtPercent(scenario.builderNetGainPercent)})`
+          ? `${formatCurrencyWhole(scenario.builderNetGain)} (${formatPercentage(scenario.builderNetGainPercent)})`
           : '—'}
       </TableCell>
     </TableRow>

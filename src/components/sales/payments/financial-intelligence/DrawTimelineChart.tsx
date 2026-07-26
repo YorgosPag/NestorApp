@@ -1,51 +1,40 @@
-/* eslint-disable design-system/no-hardcoded-colors */
-/* eslint-disable custom/no-hardcoded-strings */
 'use client';
 
 /**
- * DrawTimelineChart — Construction Draw Timeline Visualization
+ * DrawTimelineChart — draw amounts per month against the cumulative capital drawn.
  *
- * ComposedChart showing draw amounts (bars) and cumulative drawn (stepped line).
- * Color-coded by construction phase for instant visual understanding.
+ * Renders through the ADR-710 chart card shell.
  *
- * @enterprise ADR-242 SPEC-242B - Draw Schedule
+ * ## Why the nine phase colors are gone
+ *
+ * Each bar used to be painted by construction phase from a private table of nine
+ * literal hues, with a swatch list underneath as the only key. Nine is past what the
+ * theme can encode — `globals.css` defines five categorical steps, and the measured
+ * separation of those five is already marginal under deuteranopia (ADR-710 §4). So the
+ * phase was identity carried by color alone, across more categories than the palette
+ * has, in colors that ignored dark mode.
+ *
+ * The phase did not need a color. It names the month, so it goes into
+ * `formatCategory` — which the tooltip heading and the data-table row header both read.
+ * The information is now in two places instead of one, and both survive a theme change.
+ *
+ * @enterprise ADR-242 SPEC-242B — Draw Schedule
+ * @enterprise ADR-710 — Chart card shell
  */
 
-import React from 'react';
+import { useCallback, useMemo } from 'react';
+import { ComposedChart, Bar, Line } from 'recharts';
+
 import {
-  ComposedChart,
-  Bar,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Cell,
-} from 'recharts';
-
+  CHART_BAR_RADIUS,
+  ChartCard,
+  seriesColorVar,
+  type ChartSeries,
+} from '@/components/ui/chart-card';
 import { formatCurrencyWhole } from '@/lib/intl-utils';
-import { FinancialTooltip } from './FinancialTooltip';
-import type { DrawPeriodAnalysis, DrawPhaseType } from '@/types/interest-calculator';
+import { financialAxisFrame } from './financial-chart-axes';
+import type { DrawPeriodAnalysis } from '@/types/interest-calculator';
 import '@/lib/design-system';
-import { cn } from '@/lib/utils';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-
-// =============================================================================
-// CONSTANTS
-// =============================================================================
-
-const PHASE_COLORS: Record<DrawPhaseType, string> = {
-  land_acquisition: 'hsl(25, 95%, 53%)',    // orange
-  permits: 'hsl(280, 68%, 55%)',             // purple
-  foundation: 'hsl(200, 98%, 39%)',          // blue
-  structure: 'hsl(142, 71%, 45%)',           // green
-  masonry: 'hsl(45, 93%, 47%)',              // amber
-  mechanical: 'hsl(340, 82%, 52%)',          // rose
-  finishes: 'hsl(172, 66%, 50%)',            // teal
-  landscaping: 'hsl(84, 81%, 44%)',          // lime
-  custom: 'hsl(262, 83%, 58%)',              // violet
-};
 
 // =============================================================================
 // TYPES
@@ -56,93 +45,94 @@ interface DrawTimelineChartProps {
   t: (key: string, opts?: Record<string, string>) => string;
 }
 
+interface DrawTimelinePoint {
+  month: string;
+  drawAmount: number;
+  cumulativeDrawn: number;
+}
+
+// =============================================================================
+// DERIVATIONS
+// =============================================================================
+
+function monthLabel(monthIndex: number): string {
+  return `M${monthIndex + 1}`;
+}
+
+function buildChartData(periods: DrawPeriodAnalysis[]): DrawTimelinePoint[] {
+  return periods.map((period) => ({
+    month: monthLabel(period.month),
+    drawAmount: period.drawEvent ? period.drawEvent.drawAmount : 0,
+    cumulativeDrawn: period.cumulativeDrawn,
+  }));
+}
+
+/** Months that carry a draw, by the name they are plotted under. */
+function buildDrawLabels(periods: DrawPeriodAnalysis[]): Map<string, string> {
+  const labels = new Map<string, string>();
+  for (const period of periods) {
+    if (period.drawEvent?.label) {
+      labels.set(monthLabel(period.month), period.drawEvent.label);
+    }
+  }
+  return labels;
+}
+
 // =============================================================================
 // COMPONENT
 // =============================================================================
 
 export function DrawTimelineChart({ periods, t }: DrawTimelineChartProps) {
-  const colors = useSemanticColors();
-  // Build chart data — only periods with draw events get bar values
-  const chartData = periods.map((p) => ({
-    month: `M${p.month + 1}`,
-    drawAmount: p.drawEvent ? p.drawEvent.drawAmount : 0,
-    cumulativeDrawn: p.cumulativeDrawn,
-    phase: p.drawEvent?.phase ?? null,
-    label: p.drawEvent?.label ?? '',
-  }));
+  const chartData = useMemo(() => buildChartData(periods), [periods]);
+  const drawLabels = useMemo(() => buildDrawLabels(periods), [periods]);
 
-  // Collect unique phases for legend
-  const activePhases = new Map<DrawPhaseType, string>();
-  for (const p of periods) {
-    if (p.drawEvent) {
-      activePhases.set(p.drawEvent.phase, p.drawEvent.label);
-    }
-  }
+  const series = useMemo<ChartSeries<DrawTimelinePoint>[]>(
+    () => [
+      { key: 'drawAmount', label: t('costCalculator.drawSchedule.drawAmount') },
+      { key: 'cumulativeDrawn', label: t('costCalculator.drawSchedule.cumulativeDrawn') },
+    ],
+    [t],
+  );
+
+  const formatEuro = useCallback((value: number) => formatCurrencyWhole(value), []);
+
+  /** A month that funds a phase is named by it — read by tooltip and data table alike. */
+  const formatMonth = useCallback(
+    (value: unknown) => {
+      const month = value == null ? '' : String(value);
+      const label = drawLabels.get(month);
+      return label ? `${month} · ${label}` : month;
+    },
+    [drawLabels],
+  );
 
   return (
-    <section className="space-y-3">
-      <h4 className="text-sm font-semibold">
-        {t('costCalculator.drawSchedule.timelineTitle')}
-      </h4>
+    <ChartCard
+      series={series}
+      data={chartData}
+      categoryKey="month"
+      categoryLabel={t('costCalculator.drawSchedule.month')}
+      formatValue={formatEuro}
+      formatCategory={formatMonth}
+    >
+      <ChartCard.Header title={t('costCalculator.drawSchedule.timelineTitle')} />
 
-      <figure className="h-64">
-        <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 20 }}>
-            <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-            <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-            <YAxis
-              tick={{ fontSize: 11 }}
-              tickFormatter={(v: number) => `${(v / 1000).toFixed(0)}k`}
-            />
-            <Tooltip
-              content={
-                <FinancialTooltip
-                  labelFormatter={(label) => `${t('costCalculator.drawSchedule.month')} ${label}`}
-                  valueFormatter={(value, name) => [
-                    formatCurrencyWhole(value as number),
-                    name === 'drawAmount'
-                      ? t('costCalculator.drawSchedule.drawAmount')
-                      : t('costCalculator.drawSchedule.cumulativeDrawn'),
-                  ]}
-                />
-              }
-            />
-            <Bar dataKey="drawAmount" name="drawAmount" radius={[4, 4, 0, 0]}>
-              {chartData.map((entry, idx) => (
-                <Cell
-                  key={idx}
-                  fill={entry.phase ? PHASE_COLORS[entry.phase] : 'hsl(220, 14%, 70%)'}
-                  opacity={entry.drawAmount > 0 ? 1 : 0}
-                />
-              ))}
-            </Bar>
-            <Line
-              type="stepAfter"
-              dataKey="cumulativeDrawn"
-              name="cumulativeDrawn"
-              stroke="hsl(220, 70%, 50%)"
-              strokeWidth={2}
-              dot={false}
-            />
-          </ComposedChart>
-        </ResponsiveContainer>
-      </figure>
-
-      {/* Phase legend */}
-      {activePhases.size > 0 && (
-        <ul className={cn("flex flex-wrap gap-3 text-xs", colors.text.muted)}>
-          {Array.from(activePhases.entries()).map(([phase, label]) => (
-            <li key={phase} className="flex items-center gap-1.5">
-              <span
-                className="inline-block h-2.5 w-2.5 rounded-full shrink-0"
-                style={{ backgroundColor: PHASE_COLORS[phase] }}
-                aria-hidden="true"
-              />
-              {label}
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
+      <ChartCard.Figure
+        caption={t('costCalculator.drawSchedule.timelineCaption')}
+        emptyMessage={t('costCalculator.drawSchedule.timelineEmptyState')}
+      >
+        <ComposedChart data={chartData}>
+          {financialAxisFrame({ categoryKey: 'month' })}
+          <Bar dataKey="drawAmount" fill={seriesColorVar('drawAmount')} radius={CHART_BAR_RADIUS} />
+          <Line
+            type="stepAfter"
+            dataKey="cumulativeDrawn"
+            stroke={seriesColorVar('cumulativeDrawn')}
+            strokeWidth={2}
+            dot={false}
+          />
+        </ComposedChart>
+      </ChartCard.Figure>
+    </ChartCard>
   );
 }

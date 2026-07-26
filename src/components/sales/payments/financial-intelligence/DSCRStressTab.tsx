@@ -14,9 +14,9 @@
 
 import React, { useState, useMemo } from 'react';
 import { Info } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import { NumericField } from '@/components/ui/numeric-field';
 import { Badge } from '@/components/ui/badge';
-import { InfoLabel, InfoTableHead, InfoDt } from './InfoLabel';
+import { InfoLabel, InfoTableHead, InfoDt } from '@/components/ui/InfoLabel';
 import {
   Table,
   TableBody,
@@ -193,11 +193,12 @@ export function DSCRStressTab({ salePrice, effectiveRate, t }: DSCRStressTabProp
               label={t('costCalculator.dscr.annualNOI')}
               tooltip={t('costCalculator.dscr.noiTooltip')}
             />
-            <Input
+            <NumericField
               id="dscr-noi"
-              type="number"
+              min={0}
+              step={0.01}
               value={annualNOI}
-              onChange={(e) => setAnnualNOI(Number(e.target.value))}
+              onValueChange={setAnnualNOI}
               className="h-8 text-sm"
             />
           </div>
@@ -208,11 +209,12 @@ export function DSCRStressTab({ salePrice, effectiveRate, t }: DSCRStressTabProp
               label={t('costCalculator.dscr.loanAmount')}
               tooltip={t('costCalculator.dscr.loanAmountTooltip')}
             />
-            <Input
+            <NumericField
               id="dscr-loan"
-              type="number"
+              min={0}
+              step={0.01}
               value={loanAmount}
-              onChange={(e) => setLoanAmount(Number(e.target.value))}
+              onValueChange={setLoanAmount}
               className="h-8 text-sm"
             />
           </div>
@@ -223,12 +225,12 @@ export function DSCRStressTab({ salePrice, effectiveRate, t }: DSCRStressTabProp
               label={t('costCalculator.dscr.annualRate')}
               tooltip={t('costCalculator.dscr.annualRateTooltip')}
             />
-            <Input
+            <NumericField
               id="dscr-rate"
-              type="number"
-              step="0.01"
+              min={0}
+              step={0.01}
               value={annualRate}
-              onChange={(e) => setAnnualRate(Number(e.target.value))}
+              onValueChange={setAnnualRate}
               className="h-8 text-sm"
             />
           </div>
@@ -239,11 +241,14 @@ export function DSCRStressTab({ salePrice, effectiveRate, t }: DSCRStressTabProp
               label={t('costCalculator.dscr.loanTermYears')}
               tooltip={t('costCalculator.dscr.loanTermYearsTooltip')}
             />
-            <Input
+            {/* Whole years in practice; step 1 keeps the nudge sane while the
+                field stays consistent with the three above it. */}
+            <NumericField
               id="dscr-term"
-              type="number"
+              min={1}
+              step={1}
               value={loanTermYears}
-              onChange={(e) => setLoanTermYears(Number(e.target.value))}
+              onValueChange={setLoanTermYears}
               className="h-8 text-sm"
             />
           </div>

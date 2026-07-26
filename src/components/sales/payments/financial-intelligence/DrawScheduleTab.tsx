@@ -13,7 +13,8 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Info, Plus, FileSpreadsheet, Trash2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { InfoLabel, InfoDt } from './InfoLabel';
+import { NumericField } from '@/components/ui/numeric-field';
+import { InfoLabel, InfoDt } from '@/components/ui/InfoLabel';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -51,6 +52,9 @@ import { nowISO } from '@/lib/date-local';
 // =============================================================================
 // TYPES
 // =============================================================================
+
+/** The `LoanTerms` keys the form edits as numbers (ADR-706). */
+type NumericLoanTermKey = 'totalCommitment' | 'annualRate' | 'interestReserve' | 'originationFee';
 
 interface DrawScheduleTabProps {
   salePrice: number;
@@ -119,12 +123,13 @@ export function DrawScheduleTab({ salePrice, effectiveRate, t }: DrawScheduleTab
     []
   );
 
+  /**
+   * ADR-706 — the numeric SSoT hands back a `number`, so this no longer parses
+   * a raw string; it only bridges the numeric keys of `LoanTerms`.
+   */
   const handleNumericChange = useCallback(
-    (key: keyof LoanTerms, rawValue: string) => {
-      const parsed = parseFloat(rawValue);
-      if (!isNaN(parsed)) {
-        updateLoanTerm(key, parsed as LoanTerms[keyof LoanTerms]);
-      }
+    (key: NumericLoanTermKey, value: number) => {
+      updateLoanTerm(key, value as LoanTerms[NumericLoanTermKey]);
     },
     [updateLoanTerm]
   );
@@ -196,34 +201,36 @@ export function DrawScheduleTab({ salePrice, effectiveRate, t }: DrawScheduleTab
           {/* Total Commitment */}
           <div className="space-y-1">
             <InfoLabel htmlFor="ds-commitment" label={t('costCalculator.drawSchedule.totalCommitment')} tooltip={t('costCalculator.drawSchedule.totalCommitmentTooltip')} />
-            <Input
+            <NumericField
               id="ds-commitment"
-              type="number"
+              min={0}
+              step={0.01}
               value={loanTerms.totalCommitment}
-              onChange={(e) => handleNumericChange('totalCommitment', e.target.value)}
+              onValueChange={(value) => handleNumericChange('totalCommitment', value)}
             />
           </div>
 
           {/* Annual Rate */}
           <div className="space-y-1">
             <InfoLabel htmlFor="ds-rate" label={t('costCalculator.drawSchedule.annualRate')} tooltip={t('costCalculator.drawSchedule.annualRateTooltip')} />
-            <Input
+            <NumericField
               id="ds-rate"
-              type="number"
-              step="0.1"
+              min={0}
+              step={0.1}
               value={loanTerms.annualRate}
-              onChange={(e) => handleNumericChange('annualRate', e.target.value)}
+              onValueChange={(value) => handleNumericChange('annualRate', value)}
             />
           </div>
 
           {/* Interest Reserve */}
           <div className="space-y-1">
             <InfoLabel htmlFor="ds-reserve" label={t('costCalculator.drawSchedule.interestReserve')} tooltip={t('costCalculator.drawSchedule.interestReserveTooltip')} />
-            <Input
+            <NumericField
               id="ds-reserve"
-              type="number"
+              min={0}
+              step={0.01}
               value={loanTerms.interestReserve}
-              onChange={(e) => handleNumericChange('interestReserve', e.target.value)}
+              onValueChange={(value) => handleNumericChange('interestReserve', value)}
             />
           </div>
 
@@ -252,12 +259,12 @@ export function DrawScheduleTab({ salePrice, effectiveRate, t }: DrawScheduleTab
           {/* Origination Fee */}
           <div className="space-y-1">
             <InfoLabel htmlFor="ds-origination" label={t('costCalculator.drawSchedule.originationFee')} tooltip={t('costCalculator.drawSchedule.originationFeeTooltip')} />
-            <Input
+            <NumericField
               id="ds-origination"
-              type="number"
-              step="0.1"
+              min={0}
+              step={0.1}
               value={loanTerms.originationFee}
-              onChange={(e) => handleNumericChange('originationFee', e.target.value)}
+              onValueChange={(value) => handleNumericChange('originationFee', value)}
             />
           </div>
         </div>
@@ -343,11 +350,14 @@ export function DrawScheduleTab({ salePrice, effectiveRate, t }: DrawScheduleTab
                     />
                   </TableCell>
                   <TableCell className="p-1">
-                    <Input
+                    <NumericField
                       className="h-8 text-xs text-right"
-                      type="number"
-                      value={draw.drawAmount || ''}
-                      onChange={(e) => updateDraw(idx, 'drawAmount', parseFloat(e.target.value) || 0)}
+                      min={0}
+                      step={0.01}
+                      value={draw.drawAmount}
+                      blankValue={0}
+                      onValueChange={(value) => updateDraw(idx, 'drawAmount', value)}
+                      aria-label={t('costCalculator.drawSchedule.drawAmount')}
                     />
                   </TableCell>
                   <TableCell className="p-1">
@@ -359,13 +369,15 @@ export function DrawScheduleTab({ salePrice, effectiveRate, t }: DrawScheduleTab
                     />
                   </TableCell>
                   <TableCell className="p-1">
-                    <Input
+                    <NumericField
                       className="h-8 text-xs text-right"
-                      type="number"
                       min={0}
                       max={100}
-                      value={draw.completionPercent || ''}
-                      onChange={(e) => updateDraw(idx, 'completionPercent', parseFloat(e.target.value) || 0)}
+                      step={0.01}
+                      value={draw.completionPercent}
+                      blankValue={0}
+                      onValueChange={(value) => updateDraw(idx, 'completionPercent', value)}
+                      aria-label={t('costCalculator.drawSchedule.completion')}
                     />
                   </TableCell>
                   <TableCell className="p-1">

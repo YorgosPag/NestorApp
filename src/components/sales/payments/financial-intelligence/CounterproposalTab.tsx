@@ -1,36 +1,20 @@
-/* eslint-disable design-system/enforce-semantic-colors */
-/* eslint-disable custom/no-hardcoded-strings */
 'use client';
 
 /**
- * CounterproposalTab — Discount-for-Speed Analysis
+ * CounterproposalTab — discount-for-speed analysis.
  *
- * Internal builder tool: "How much discount can I offer for faster payment
- * and still come out ahead vs. the current installment plan?"
+ * "How much discount can I offer for faster payment and still come out ahead of the
+ * current installment plan?" The tab owns the model — retain ratio, slider position,
+ * the analysis — and composes four pieces: the two banners, the scenario table, the
+ * negotiation panel (`counterproposal-negotiation.tsx`) and the savings chart
+ * (`counterproposal-chart.tsx`), which goes through the ADR-710 card shell.
  *
- * Sections:
- *   1. Info Banner — explains what this tab does
- *   2. Key Insight Card — dynamic sweet spot recommendation
- *   3. Comparison Table — baseline + 3 alternatives
- *   4. Negotiation Slider — interactive upfront % / months
- *   5. Bar Chart — savings / discount / gain per scenario
- *   6. Builder Retain Ratio selector
- *
- * @enterprise ADR-234 — Counterproposal Tab (SPEC-234F)
+ * @enterprise ADR-234 SPEC-234F — Counterproposal Tab
+ * @enterprise ADR-710 — Chart card shell
  */
 
-import React, { useState, useMemo, useCallback } from 'react';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts';
-import { Info, Lightbulb, Handshake } from 'lucide-react';
-import { Slider } from '@/components/ui/slider';
+import { useState, useMemo, useCallback } from 'react';
+import { Info, Lightbulb } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -45,43 +29,93 @@ import {
   TableRow,
 } from '@/components/ui/table';
 
-import { InfoLabel, InfoDt, InfoTableHead } from './InfoLabel';
-import { FinancialTooltip } from './FinancialTooltip';
-import { ScenarioRow, fmtCurrency, fmtPercent } from './CounterproposalScenarioRow';
+import { InfoLabel, InfoTableHead } from '@/components/ui/InfoLabel';
+import { ScenarioRow } from './CounterproposalScenarioRow';
+import { CounterproposalNegotiation } from './counterproposal-negotiation';
+import {
+  CounterproposalChart,
+  type CounterproposalScenarioPoint,
+} from './counterproposal-chart';
 import {
   runCounterproposalAnalysis,
   calculateSliderScenario,
 } from '@/lib/counterproposal-engine';
+import { formatCurrencyWhole, formatPercentage } from '@/lib/intl-utils';
 import type {
   CostCalculationInput,
   CostCalculationResult,
   CounterproposalResult,
 } from '@/types/interest-calculator';
 import '@/lib/design-system';
-import { cn } from '@/lib/utils';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // =============================================================================
 // TYPES
 // =============================================================================
 
+type TranslateFn = (key: string, opts?: Record<string, string>) => string;
+
 interface CounterproposalTabProps {
   input: CostCalculationInput;
   effectiveRate: number;
   result: CostCalculationResult;
-  t: (key: string, opts?: Record<string, string>) => string;
+  t: TranslateFn;
 }
 
 // =============================================================================
-// HELPERS
+// CONSTANTS
 // =============================================================================
 
-const RETAIN_OPTIONS = [
-  { value: '0.30', label: '30%' },
-  { value: '0.35', label: '35%' },
-  { value: '0.40', label: '40%' },
-  { value: '0.50', label: '50%' },
+const RETAIN_OPTIONS = ['0.30', '0.35', '0.40', '0.50'] as const;
+
+const DEFAULT_RETAIN_RATIO = 0.35;
+
+/** Columns of the comparison table, in render order — label key implies tooltip key. */
+const TABLE_COLUMNS = [
+  'scenario',
+  'upfront',
+  'npv',
+  'saving',
+  'maxDiscount',
+  'suggestedDiscount',
+  'finalPrice',
+  'netGain',
 ] as const;
+
+const MS_PER_AVERAGE_MONTH = 1000 * 60 * 60 * 24 * 30.44;
+
+const FALLBACK_UPFRONT_PERCENT = 20;
+const FALLBACK_MONTHS = 12;
+
+// =============================================================================
+// DERIVATIONS
+// =============================================================================
+
+/** The upfront share the current plan already asks for. */
+function readCurrentUpfront(input: CostCalculationInput): number {
+  const first = input.cashFlows[0];
+  if (!first) return FALLBACK_UPFRONT_PERCENT;
+  return Math.round((first.amount / input.salePrice) * 100);
+}
+
+/** How long the current plan runs, in months from the reference date. */
+function readCurrentMonths(input: CostCalculationInput): number {
+  if (input.cashFlows.length <= 1) return FALLBACK_MONTHS;
+  const last = input.cashFlows[input.cashFlows.length - 1];
+  const elapsed = new Date(last.date).getTime() - new Date(input.referenceDate).getTime();
+  return Math.max(1, Math.round(elapsed / MS_PER_AVERAGE_MONTH));
+}
+
+function buildChartData(
+  analysis: CounterproposalResult,
+  t: TranslateFn,
+): CounterproposalScenarioPoint[] {
+  return [analysis.baseline, ...analysis.alternatives].map((scenario) => ({
+    name: t(scenario.nameKey),
+    saving: scenario.timeCostSaved,
+    discount: scenario.suggestedDiscount,
+    gain: scenario.builderNetGain,
+  }));
+}
 
 // =============================================================================
 // COMPONENT
@@ -93,37 +127,17 @@ export function CounterproposalTab({
   result: _result,
   t,
 }: CounterproposalTabProps) {
-  const colors = useSemanticColors();
-  // --- State ---
-  const [builderRetainRatio, setBuilderRetainRatio] = useState(0.35);
+  const [builderRetainRatio, setBuilderRetainRatio] = useState(DEFAULT_RETAIN_RATIO);
+  const [sliderUpfront, setSliderUpfront] = useState(() => readCurrentUpfront(input));
+  const [sliderMonths, setSliderMonths] = useState(() => readCurrentMonths(input));
 
-  // Derive initial slider values from current plan
-  const initialUpfront = useMemo(() => {
-    const first = input.cashFlows[0];
-    if (!first) return 20;
-    return Math.round((first.amount / input.salePrice) * 100);
-  }, [input]);
-
-  const initialMonths = useMemo(() => {
-    if (input.cashFlows.length <= 1) return 12;
-    const last = input.cashFlows[input.cashFlows.length - 1];
-    const refMs = new Date(input.referenceDate).getTime();
-    const lastMs = new Date(last.date).getTime();
-    return Math.max(1, Math.round((lastMs - refMs) / (1000 * 60 * 60 * 24 * 30.44)));
-  }, [input]);
-
-  const [sliderUpfront, setSliderUpfront] = useState(initialUpfront);
-  const [sliderMonths, setSliderMonths] = useState(initialMonths);
-
-  // --- Analysis ---
   const analysis: CounterproposalResult = useMemo(
     () => runCounterproposalAnalysis(input, effectiveRate, builderRetainRatio),
-    [input, effectiveRate, builderRetainRatio]
+    [input, effectiveRate, builderRetainRatio],
   );
 
   const sweetSpot = analysis.alternatives[analysis.sweetSpotIndex];
 
-  // --- Slider scenario ---
   const sliderScenario = useMemo(
     () =>
       calculateSliderScenario(
@@ -132,298 +146,108 @@ export function CounterproposalTab({
         effectiveRate,
         { upfrontPercent: sliderUpfront, remainingMonths: sliderMonths },
         analysis.baseline.timeCost,
-        builderRetainRatio
+        builderRetainRatio,
       ),
-    [input, effectiveRate, sliderUpfront, sliderMonths, analysis.baseline.timeCost, builderRetainRatio]
+    [
+      input,
+      effectiveRate,
+      sliderUpfront,
+      sliderMonths,
+      analysis.baseline.timeCost,
+      builderRetainRatio,
+    ],
   );
 
-  // --- Chart data ---
-  const chartData = useMemo(() => {
-    const scenarios = [analysis.baseline, ...analysis.alternatives];
-    return scenarios.map((s, i) => ({
-      name: t(s.nameKey),
-      saving: s.timeCostSaved,
-      discount: s.suggestedDiscount,
-      gain: s.builderNetGain,
-      isSweetSpot: i === analysis.sweetSpotIndex + 1, // +1 because baseline is index 0
-      isBaseline: i === 0,
-    }));
-  }, [analysis, t]);
+  const chartData = useMemo(() => buildChartData(analysis, t), [analysis, t]);
 
-  // --- Handlers ---
   const handleRetainChange = useCallback((value: string) => {
     setBuilderRetainRatio(parseFloat(value));
   }, []);
 
-  const handleUpfrontChange = useCallback((value: number[]) => {
-    setSliderUpfront(value[0]);
-  }, []);
-
-  const handleMonthsChange = useCallback((value: number[]) => {
-    setSliderMonths(value[0]);
-  }, []);
-
-  // ==========================================================================
-  // RENDER
-  // ==========================================================================
-
   return (
     <section className="space-y-5">
-      {/* 1. Info Banner */}
-      <div className="rounded-lg border border-primary/30 bg-[hsl(var(--bg-info))]/20 p-3">
-        <div className="flex gap-2">
-          <Info className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
+      <aside className="flex gap-2 rounded-lg border border-primary/30 bg-[hsl(var(--bg-info))]/20 p-3">
+        <Info className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+        <p className="text-xs text-foreground">
+          {t('costCalculator.counterproposal.infoBanner')}
+        </p>
+      </aside>
+
+      {sweetSpot && sweetSpot.builderNetGain > 0 ? (
+        <aside className="flex gap-2 rounded-lg border border-border bg-[hsl(var(--bg-success))]/10 p-3">
+          <Lightbulb
+            className="mt-0.5 h-4 w-4 shrink-0 text-[hsl(var(--text-success))]"
+            aria-hidden="true"
+          />
           <p className="text-xs text-foreground">
-            {t('costCalculator.counterproposal.infoBanner')}
+            {t('costCalculator.counterproposal.insightCard', {
+              upfront: String(sweetSpot.upfrontPercent),
+              months: String(sweetSpot.remainingMonths),
+              discount: formatCurrencyWhole(sweetSpot.suggestedDiscount),
+              discountPercent: formatPercentage(sweetSpot.suggestedDiscountPercent),
+              gain: formatCurrencyWhole(sweetSpot.builderNetGain),
+            })}
           </p>
-        </div>
-      </div>
+        </aside>
+      ) : null}
 
-      {/* 2. Key Insight Card */}
-      {sweetSpot && sweetSpot.builderNetGain > 0 && (
-        <div className="rounded-lg border border-border bg-[hsl(var(--bg-success))]/10 p-3">
-          <div className="flex gap-2">
-            <Lightbulb className="h-4 w-4 mt-0.5 shrink-0 text-[hsl(var(--text-success))]" />
-            <p className="text-xs text-foreground">
-              {t('costCalculator.counterproposal.insightCard', {
-                upfront: String(sweetSpot.upfrontPercent),
-                months: String(sweetSpot.remainingMonths),
-                discount: fmtCurrency(sweetSpot.suggestedDiscount),
-                discountPercent: fmtPercent(sweetSpot.suggestedDiscountPercent),
-                gain: fmtCurrency(sweetSpot.builderNetGain),
-              })}
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* 6. Builder Retain Ratio — placed near top for easy access */}
-      <div className="flex items-center gap-3">
+      <fieldset className="flex items-center gap-3">
         <InfoLabel
           label={t('costCalculator.counterproposal.retainRatioLabel')}
           tooltip={t('costCalculator.counterproposal.retainRatioTooltip')}
         />
         <Select value={String(builderRetainRatio)} onValueChange={handleRetainChange}>
-          <SelectTrigger className="w-24 h-8 text-xs">
+          <SelectTrigger className="h-8 w-24 text-xs">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {RETAIN_OPTIONS.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value} className="text-xs">
-                {opt.label}
+            {RETAIN_OPTIONS.map((option) => (
+              <SelectItem key={option} value={option} className="text-xs">
+                {formatPercentage(parseFloat(option) * 100)}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
-      </div>
+      </fieldset>
 
-      {/* 3. Comparison Table */}
-      <div className="rounded-lg border">
+      <section className="rounded-lg border">
         <Table>
           <TableHeader>
             <TableRow>
-              <InfoTableHead
-                label={t('costCalculator.counterproposal.table.scenario')}
-                tooltip={t('costCalculator.counterproposal.table.scenarioTooltip')}
-              />
-              <InfoTableHead
-                label={t('costCalculator.counterproposal.table.upfront')}
-                tooltip={t('costCalculator.counterproposal.table.upfrontTooltip')}
-                className="text-right"
-              />
-              <InfoTableHead
-                label={t('costCalculator.counterproposal.table.npv')}
-                tooltip={t('costCalculator.counterproposal.table.npvTooltip')}
-                className="text-right"
-              />
-              <InfoTableHead
-                label={t('costCalculator.counterproposal.table.saving')}
-                tooltip={t('costCalculator.counterproposal.table.savingTooltip')}
-                className="text-right"
-              />
-              <InfoTableHead
-                label={t('costCalculator.counterproposal.table.maxDiscount')}
-                tooltip={t('costCalculator.counterproposal.table.maxDiscountTooltip')}
-                className="text-right"
-              />
-              <InfoTableHead
-                label={t('costCalculator.counterproposal.table.suggestedDiscount')}
-                tooltip={t('costCalculator.counterproposal.table.suggestedDiscountTooltip')}
-                className="text-right"
-              />
-              <InfoTableHead
-                label={t('costCalculator.counterproposal.table.finalPrice')}
-                tooltip={t('costCalculator.counterproposal.table.finalPriceTooltip')}
-                className="text-right"
-              />
-              <InfoTableHead
-                label={t('costCalculator.counterproposal.table.netGain')}
-                tooltip={t('costCalculator.counterproposal.table.netGainTooltip')}
-                className="text-right"
-              />
+              {TABLE_COLUMNS.map((column, index) => (
+                <InfoTableHead
+                  key={column}
+                  label={t(`costCalculator.counterproposal.table.${column}`)}
+                  tooltip={t(`costCalculator.counterproposal.table.${column}Tooltip`)}
+                  className={index === 0 ? undefined : 'text-right'}
+                />
+              ))}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {/* Baseline row */}
-            <ScenarioRow
-              scenario={analysis.baseline}
-              variant="baseline"
-              t={t}
-            />
-            {/* Alternative rows */}
-            {analysis.alternatives.map((alt, i) => (
+            <ScenarioRow scenario={analysis.baseline} variant="baseline" t={t} />
+            {analysis.alternatives.map((alternative, index) => (
               <ScenarioRow
-                key={i}
-                scenario={alt}
-                variant={i === analysis.sweetSpotIndex ? 'sweetSpot' : 'default'}
+                key={alternative.nameKey}
+                scenario={alternative}
+                variant={index === analysis.sweetSpotIndex ? 'sweetSpot' : 'default'}
                 t={t}
               />
             ))}
           </TableBody>
         </Table>
-      </div>
+      </section>
 
-      {/* 4. Negotiation Slider */}
-      <div className="rounded-lg border p-4 space-y-4">
-        <div className="flex items-center gap-2">
-          <Handshake className={cn("h-4 w-4", colors.text.muted)} />
-          <h3 className="text-sm font-medium">
-            {t('costCalculator.counterproposal.slider.title')}
-          </h3>
-        </div>
+      <CounterproposalNegotiation
+        upfrontPercent={sliderUpfront}
+        onUpfrontChange={setSliderUpfront}
+        remainingMonths={sliderMonths}
+        onMonthsChange={setSliderMonths}
+        scenario={sliderScenario}
+        t={t}
+      />
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* Upfront % slider */}
-          <div className="space-y-2">
-            <InfoLabel
-              label={t('costCalculator.counterproposal.slider.upfrontLabel', {
-                value: String(sliderUpfront),
-              })}
-              tooltip={t('costCalculator.counterproposal.slider.upfrontTooltip')}
-            />
-            <Slider
-              value={[sliderUpfront]}
-              onValueChange={handleUpfrontChange}
-              min={10}
-              max={100}
-              step={5}
-              className="w-full"
-            />
-          </div>
-
-          {/* Remaining months slider */}
-          <div className="space-y-2">
-            <InfoLabel
-              label={t('costCalculator.counterproposal.slider.monthsLabel', {
-                value: String(sliderMonths),
-              })}
-              tooltip={t('costCalculator.counterproposal.slider.monthsTooltip')}
-            />
-            <Slider
-              value={[sliderMonths]}
-              onValueChange={handleMonthsChange}
-              min={0}
-              max={24}
-              step={1}
-              className="w-full"
-            />
-          </div>
-        </div>
-
-        {/* Slider results */}
-        <dl className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
-          <div>
-            <InfoDt
-              label={t('costCalculator.counterproposal.slider.npv')}
-              tooltip={t('costCalculator.counterproposal.slider.npvTooltip')}
-              className={cn("text-xs", colors.text.muted)}
-            />
-            <dd className="font-mono font-medium tabular-nums">{fmtCurrency(sliderScenario.npv)}</dd>
-          </div>
-          <div>
-            <InfoDt
-              label={t('costCalculator.counterproposal.slider.saving')}
-              tooltip={t('costCalculator.counterproposal.slider.savingTooltip')}
-              className={cn("text-xs", colors.text.muted)}
-            />
-            <dd className="font-mono font-medium tabular-nums text-[hsl(var(--text-success))]">
-              {fmtCurrency(sliderScenario.timeCostSaved)}
-            </dd>
-          </div>
-          <div>
-            <InfoDt
-              label={t('costCalculator.counterproposal.slider.discount')}
-              tooltip={t('costCalculator.counterproposal.slider.discountTooltip')}
-              className={cn("text-xs", colors.text.muted)}
-            />
-            <dd className="font-mono font-medium tabular-nums text-[hsl(var(--text-warning))]">
-              {fmtCurrency(sliderScenario.suggestedDiscount)} ({fmtPercent(sliderScenario.suggestedDiscountPercent)})
-            </dd>
-          </div>
-          <div>
-            <InfoDt
-              label={t('costCalculator.counterproposal.slider.netGain')}
-              tooltip={t('costCalculator.counterproposal.slider.netGainTooltip')}
-              className={cn("text-xs", colors.text.muted)}
-            />
-            <dd className="font-mono font-medium tabular-nums text-primary">
-              {fmtCurrency(sliderScenario.builderNetGain)}
-            </dd>
-          </div>
-        </dl>
-      </div>
-
-      {/* 5. Bar Chart */}
-      <div className="rounded-lg border p-4 space-y-2">
-        <h3 className="text-sm font-medium">
-          {t('costCalculator.counterproposal.chart.title')}
-        </h3>
-        <div className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={{ top: 10, right: 10, bottom: 5, left: 10 }}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-              <XAxis
-                dataKey="name"
-                tick={{ fontSize: 11 }}
-                className="fill-muted-foreground"
-              />
-              <YAxis
-                tick={{ fontSize: 11 }}
-                className="fill-muted-foreground"
-                tickFormatter={(v: number) => `€${Math.round(v / 1000)}k`}
-              />
-              <Tooltip
-                content={
-                  <FinancialTooltip
-                    valueFormatter={(value, name) => [
-                      fmtCurrency(Number(value)),
-                      name,
-                    ]}
-                  />
-                }
-              />
-              <Bar
-                dataKey="saving"
-                name={t('costCalculator.counterproposal.chart.saving')}
-                fill="hsl(var(--chart-2))"
-                radius={[2, 2, 0, 0]}
-              />
-              <Bar
-                dataKey="discount"
-                name={t('costCalculator.counterproposal.chart.discount')}
-                fill="hsl(var(--chart-4))"
-                radius={[2, 2, 0, 0]}
-              />
-              <Bar
-                dataKey="gain"
-                name={t('costCalculator.counterproposal.chart.gain')}
-                fill="hsl(var(--chart-1))"
-                radius={[2, 2, 0, 0]}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
+      <CounterproposalChart data={chartData} t={t} />
     </section>
   );
 }
