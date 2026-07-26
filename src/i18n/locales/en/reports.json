@@ -590,5 +590,34 @@
       "title": "Title",
       "description": "Description"
     }
+  },
+  "chart": {
+    "category": {
+      "building": "Building",
+      "project": "Project",
+      "status": "Status",
+      "type": "Type",
+      "energyClass": "Energy class",
+      "city": "City",
+      "persona": "Persona",
+      "channel": "Channel",
+      "stage": "Stage",
+      "assignee": "Assignee",
+      "phase": "Phase",
+      "date": "Date",
+      "period": "Period",
+      "category": "Category",
+      "zone": "Zone",
+      "method": "Method",
+      "insuranceClass": "Insurance class",
+      "source": "Source",
+      "priority": "Priority",
+      "milestone": "Milestone"
+    },
+    "series": {
+      "count": "Count",
+      "amount": "Amount",
+      "value": "Value"
+    }
   }
 }

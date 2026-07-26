@@ -590,5 +590,34 @@
       "title": "Αποθήκες",
       "description": "Κατανομή αποθηκών ανά κατάσταση"
     }
+  },
+  "chart": {
+    "category": {
+      "building": "Κτίριο",
+      "project": "Έργο",
+      "status": "Κατάσταση",
+      "type": "Τύπος",
+      "energyClass": "Ενεργειακή κλάση",
+      "city": "Πόλη",
+      "persona": "Προφίλ",
+      "channel": "Κανάλι",
+      "stage": "Στάδιο",
+      "assignee": "Ανάθεση",
+      "phase": "Φάση",
+      "date": "Ημερομηνία",
+      "period": "Περίοδος",
+      "category": "Κατηγορία",
+      "zone": "Ζώνη",
+      "method": "Μέθοδος",
+      "insuranceClass": "Ασφαλιστική κλάση",
+      "source": "Πηγή",
+      "priority": "Προτεραιότητα",
+      "milestone": "Ορόσημο"
+    },
+    "series": {
+      "count": "Πλήθος",
+      "amount": "Ποσό",
+      "value": "Αξία"
+    }
   }
 }
