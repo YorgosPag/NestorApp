@@ -54,6 +54,8 @@ export interface IndividualFormTabRendererProps {
   onPhotoClick?: (index: number) => void;
   /** 🏢 ENTERPRISE: Callback when active tab changes (for parent state management) */
   onActiveTabChange?: (tabId: string) => void;
+  /** Ελεγχόμενη ενεργή καρτέλα (βλ. `FormTabsShell.activeTab`). */
+  activeTab?: string;
   /** 🏢 ENTERPRISE: Initial tab from sessionStorage (survives remounts) */
   initialTab?: string;
 }
@@ -188,7 +190,8 @@ export function IndividualFormTabRenderer({
   onFieldBlur,
   onPhotoClick,
   onActiveTabChange,
-  initialTab
+  initialTab,
+  activeTab
 }: IndividualFormTabRendererProps) {
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
@@ -225,6 +228,7 @@ export function IndividualFormTabRenderer({
     <FormTabsShell
       tabs={tabs}
       initialTab={initialTab}
+      activeTab={activeTab}
       onActiveTabChange={onActiveTabChange}
     />
   );

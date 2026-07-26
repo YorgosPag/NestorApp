@@ -88,6 +88,16 @@ export interface FormTabsShellProps {
   tabs: TabDefinition[];
   /** Initial active tab id (survives remounts via sessionStorage upstream). */
   initialTab?: string;
+  /**
+   * Ελεγχόμενη ενεργή καρτέλα. Όταν δίνεται, ο γονέας **ορίζει** ποια καρτέλα
+   * φαίνεται και μπορεί να την αλλάξει και μετά το mount.
+   *
+   * ΓΙΑΤΙ: το `initialTab` καταλήγει στο `defaultTab` του `StateTabs`, το οποίο
+   * διαβάζεται **μία φορά** στον αρχικοποιητή του `useState`. Κάθε μεταγενέστερη
+   * αλλαγή αγνοείται σιωπηλά — οπότε ένα `setActiveTab('basicInfo')` μετά από
+   * αποτυχία επικύρωσης δεν μετακινούσε ποτέ τον χρήστη στο πρόβλημα.
+   */
+  activeTab?: string;
   /** Notified when the active tab changes (parent state management). */
   onActiveTabChange?: (tabId: string) => void;
   /** className applied to each `TabsContent` panel. */
@@ -101,13 +111,23 @@ export interface FormTabsShellProps {
 export function FormTabsShell({
   tabs,
   initialTab,
+  activeTab,
   onActiveTabChange,
   contentClassName = '',
 }: FormTabsShellProps): React.ReactNode {
+  // Ελεγχόμενη τιμή που δεν αντιστοιχεί σε υπαρκτή καρτέλα θα άφηνε τον πάνακα
+  // **κενό** (το Radix δεν αποδίδει άγνωστο value). Συμβαίνει όταν το
+  // αποθηκευμένο id ανήκει σε άλλον τύπο επαφής — π.χ. `addresses` (εταιρεία)
+  // σε φυσικό πρόσωπο, που χρησιμοποιεί `address`.
+  const controlledTab = activeTab !== undefined && tabs.some(tab => tab.id === activeTab)
+    ? activeTab
+    : undefined;
+
   return (
     <div className="w-full">
       <StateTabs
         tabs={tabs}
+        value={controlledTab}
         defaultTab={initialTab || tabs[0]?.id || 'basicInfo'}
         theme="clean"
         onTabChange={onActiveTabChange}

@@ -55,6 +55,8 @@ export interface ServiceFormTabRendererProps {
   onFieldBlur?: (fieldName: string) => void;
   /** 🏢 ENTERPRISE: Callback when active tab changes (for parent state management) */
   onActiveTabChange?: (tabId: string) => void;
+  /** Ελεγχόμενη ενεργή καρτέλα (βλ. `FormTabsShell.activeTab`). */
+  activeTab?: string;
   initialTab?: string;
 }
 
@@ -201,6 +203,7 @@ export function ServiceFormTabRenderer(props: ServiceFormTabRendererProps) {
     <FormTabsShell
       tabs={tabs}
       initialTab={props.initialTab}
+      activeTab={props.activeTab}
       onActiveTabChange={props.onActiveTabChange}
       contentClassName="mt-4"
     />

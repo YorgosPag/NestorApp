@@ -60,6 +60,21 @@ interface DetailsContainerProps {
   onCreateAction?: () => void;
   /** Optional banner rendered above the empty state (e.g. warning for buildings with no units) */
   warningBanner?: React.ReactNode;
+  /**
+   * Επαναφορά της κύλισης στην κορυφή όποτε αλλάζει η τιμή (ποτέ στο πρώτο mount).
+   *
+   * ΓΙΑΤΙ ΥΠΑΡΧΕΙ: όταν ένας inline editor κλείνει (π.χ. τέλος επεξεργασίας), το
+   * περιεχόμενο **συρρικνώνεται** κατά εκατοντάδες pixel ενώ το `scrollTop` μένει
+   * εκεί που ήταν. Ο χρήστης μένει να κοιτά το κάτω κομμάτι ενός πλέον κοντού
+   * πάνακα — χωρίς επικεφαλίδα ενότητας και χωρίς μπάρα καρτελών — κάτι που
+   * διαβάζεται ως **απώλεια δεδομένων**. Όταν το περιεχόμενο αλλάζει σχήμα, η
+   * σωστή συμπεριφορά είναι re-anchor, όχι διατήρηση ενός άγκυρου που έπαψε να
+   * υπάρχει.
+   *
+   * Το container της κύλισης είναι **ένα** και ζει εδώ, άρα εδώ ζει και η
+   * επαναφορά — καμία σελίδα λεπτομερειών δεν χρειάζεται δικό της αντίγραφο.
+   */
+  scrollResetToken?: number | string;
 }
 
 /**
@@ -88,9 +103,20 @@ export function DetailsContainer({
   emptyStateProps = {},
   onCreateAction,
   warningBanner,
+  scrollResetToken,
 }: DetailsContainerProps) {
   // 🏢 ENTERPRISE: Centralized spacing tokens
   const spacing = useSpacingTokens();
+  const scrollAreaRef = React.useRef<HTMLDivElement>(null);
+  const lastResetTokenRef = React.useRef(scrollResetToken);
+
+  React.useEffect(() => {
+    if (lastResetTokenRef.current === scrollResetToken) return;
+    lastResetTokenRef.current = scrollResetToken;
+    // Ακαριαία, όχι smooth: η μετάβαση ανήκει στην αλλαγή κατάστασης που μόλις
+    // ζήτησε ο χρήστης — μια κίνηση που δεν προκάλεσε ο ίδιος θα αποσπούσε.
+    scrollAreaRef.current?.scrollTo({ top: 0, behavior: 'auto' });
+  }, [scrollResetToken]);
 
   if (!selectedItem) {
     // 🏢 ENTERPRISE: Auto-generate action button if onCreateAction provided and no explicit action
@@ -121,7 +147,7 @@ export function DetailsContainer({
       </div>
 
       {/* Scrollable Content Area */}
-      <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-y-auto overflow-x-hidden">
+      <div ref={scrollAreaRef} className="flex-1 flex flex-col min-h-0 min-w-0 overflow-y-auto overflow-x-hidden">
         {/* Tabs Section (if provided) - flex-1 allows tabs to expand to full height */}
         {tabsRenderer && (
           <div className="flex-1 flex flex-col min-h-0 min-w-0">
