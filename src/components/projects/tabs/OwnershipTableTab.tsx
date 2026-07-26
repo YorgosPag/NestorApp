@@ -7,7 +7,6 @@
  */
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { matchesSearchTerm } from '@/lib/search/search';
 import { useFullscreen } from '@/hooks/useFullscreen';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -17,11 +16,11 @@ import { useAuth } from '@/hooks/useAuth';
 import { useCompanyId } from '@/hooks/useCompanyId';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { InfoLabel } from '@/components/sales/payments/financial-intelligence/InfoLabel';
+import { InfoLabel } from '@/components/ui/InfoLabel';
 import { FullscreenOverlay, FullscreenToggleButton } from '@/core/containers/FullscreenOverlay';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 import { TOTAL_SHARES_TARGET } from '@/types/ownership-table';
-import type { OwnerParty, MutableOwnershipTableRow } from '@/types/ownership-table';
+import type { OwnerParty } from '@/types/ownership-table';
 import { useOwnershipTable } from '@/hooks/ownership/useOwnershipTable';
 import { getBuildingIdsByProject } from '@/services/ownership/ownership-table-service';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -45,7 +44,6 @@ import {
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
-import type { SortDirection } from '@/components/building-management/shared/types';
 import '@/lib/design-system';
 
 // Extracted modules
@@ -55,6 +53,7 @@ import {
   getRowClassName, getCategoryBadgeClass,
 } from '@/components/projects/tabs/ownership-table-config';
 import { useOwnershipTableHandlers } from '@/components/projects/tabs/useOwnershipTableHandlers';
+import { useOwnershipTableRowsView } from '@/components/projects/tabs/useOwnershipTableRowsView';
 import {
   StatusBadge, ValidationIndicator,
   BartexSummary, CategorySummary, RevisionHistory, LinkedSpaceRows,
@@ -103,76 +102,11 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
     setShowUnlockInput, setUnlockReason, unlockReason,
   });
 
-  const groupedRows = useMemo(() => {
-    if (!table?.rows.length) return new Map<string, MutableOwnershipTableRow[]>();
-    const groups = new Map<string, MutableOwnershipTableRow[]>();
-    for (const row of table.rows) {
-      const group = groups.get(row.buildingId);
-      if (group) group.push(row);
-      else groups.set(row.buildingId, [row]);
-    }
-    return groups;
-  }, [table?.rows]);
-
   const columns = useMemo(() => buildColumns(t), [t]);
-  const [columnFilters, setColumnFilters] = useState<Record<string, string>>({});
-  const updateColumnFilter = useCallback((col: string, value: string) => {
-    setColumnFilters(prev => ({ ...prev, [col]: value }));
-  }, []);
-
-  const hasActiveFilters = Object.values(columnFilters).some(v => v.trim() !== '');
-
-  const filteredGroupedRows = useMemo(() => {
-    if (!hasActiveFilters) return groupedRows;
-    const filtered = new Map<string, MutableOwnershipTableRow[]>();
-    for (const [buildingId, rows] of groupedRows) {
-      const matchingRows = rows.filter(row => {
-        for (const col of columns) {
-          const filterValue = columnFilters[col.key];
-          if (!filterValue || !col.filterable || !col.sortValue) continue;
-          if (!matchesSearchTerm([String(col.sortValue(row))], filterValue)) return false;
-        }
-        return true;
-      });
-      if (matchingRows.length > 0) filtered.set(buildingId, matchingRows);
-    }
-    return filtered;
-  }, [groupedRows, columnFilters, hasActiveFilters, columns]);
-
-  const [sortColumn, setSortColumn] = useState<string | null>(null);
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
-
-  const toggleSort = useCallback((col: string) => {
-    setSortColumn(prev => {
-      if (prev === col) {
-        setSortDirection(d => d === 'asc' ? 'desc' : 'asc');
-        return col;
-      }
-      setSortDirection('asc');
-      return col;
-    });
-  }, []);
-
-  const sortedGroupedRows = useMemo(() => {
-    if (!sortColumn) return filteredGroupedRows;
-    const colDef = columns.find(c => c.key === sortColumn);
-    if (!colDef?.sortValue) return filteredGroupedRows;
-    const extractor = colDef.sortValue;
-    const sorted = new Map<string, MutableOwnershipTableRow[]>();
-    for (const [buildingId, rows] of filteredGroupedRows) {
-      const sortedRows = [...rows].sort((a, b) => {
-        const av = extractor(a);
-        const bv = extractor(b);
-        if (typeof av === 'number' && typeof bv === 'number') {
-          return sortDirection === 'asc' ? av - bv : bv - av;
-        }
-        const cmp = String(av).localeCompare(String(bv), 'el');
-        return sortDirection === 'asc' ? cmp : -cmp;
-      });
-      sorted.set(buildingId, sortedRows);
-    }
-    return sorted;
-  }, [filteredGroupedRows, sortColumn, sortDirection, columns]);
+  const {
+    sortedGroupedRows, columnFilters, updateColumnFilter,
+    sortColumn, sortDirection, toggleSort,
+  } = useOwnershipTableRowsView(table?.rows, columns);
 
   if (loading && !table) {
     return (
