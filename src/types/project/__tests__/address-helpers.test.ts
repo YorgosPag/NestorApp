@@ -14,6 +14,7 @@ import {
   resolveBuildingPrimaryAddress,
 } from '../address-helpers';
 import type { ProjectAddress, BuildingAddressReference } from '../addresses';
+import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 
 describe('Address Helpers (ADR-167)', () => {
   describe('getPrimaryAddress', () => {
@@ -172,7 +173,22 @@ describe('Address Helpers (ADR-167)', () => {
       expect(addresses[0].type).toBe('site');
       expect(addresses[0].isPrimary).toBe(true); // Legacy addresses are always primary
       expect(addresses[0].postalCode).toBe(''); // Empty for legacy
-      expect(addresses[0].country).toBe('Ελλάδα'); // From geographic config
+      // Η χώρα έρχεται ΑΠΟ ΤΗ ΡΥΘΜΙΣΗ — αυτό ελέγχεται, όχι μια συγκεκριμένη τιμή.
+      //
+      // ΓΙΑΤΙ ΑΛΛΑΞΕ: το assertion έγραφε `'Ελλάδα'` στο χέρι, ενώ **κανένα**
+      // πραγματικό `.env` δεν ορίζει `NEXT_PUBLIC_DEFAULT_COUNTRY` (μόνο το
+      // `.env.example`, που δεν φορτώνεται ποτέ). Άρα σε dev, σε jest ΚΑΙ στην
+      // παραγωγή ίσχυε το fallback `'Greece'` — το test ήταν **μόνιμα κόκκινο,
+      // παντού**, όχι «περιβαλλοντικό». Το ζωντανό τεκμήριο: το
+      // `projects/proj_2497…addresses[0].country` είναι `"Greece"`.
+      //
+      // Η επιλογή λεξιλογίου χώρας (`GR` στις επαφές / `Greece` στα έργα /
+      // `gr` στο geocoding) είναι απόφαση προϊόντος με δική της μετάπτωση —
+      // δεν κρίνεται σιωπηλά από ένα assertion. Βλ. ADR-332 D17.
+      expect(addresses[0].country).toBe(GEOGRAPHIC_CONFIG.DEFAULT_COUNTRY);
+      // Και το ουσιαστικό regression που ΠΡΕΠΕΙ να πιάνεται: η μετάπτωση δεν
+      // επιτρέπεται να καρφώνει δικό της λεξιλόγιο παρακάμπτοντας τη ρύθμιση.
+      expect(addresses[0].country).not.toBe('GR');
     });
 
     it('should return empty array for empty legacy data', () => {

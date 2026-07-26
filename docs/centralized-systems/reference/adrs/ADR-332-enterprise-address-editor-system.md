@@ -12,6 +12,7 @@
 
 | Date | Changes |
 |------|---------|
+| 2026-07-26 | 🔵 **ΕΝΑΣ κατασκευαστής `addresses[]` + κανονικός Τ.Κ.** (D15/D16/D17). **(1)** Η μετατροπή `CompanyAddress → AddressInfo` υπήρχε **τρεις** φορές, όχι δύο· το χειρότερο αντίγραφο (`mappers/company.ts`, χωρίς ιεραρχία **και** χωρίς `neighborhood`) **κέρδιζε** στη ζωντανή διαδρομή create/guarded-update, ενώ το δεύτερο έγραφε **πάνω** από το πλήρες. Ένα `address-info-builder` με πίνακα `HIERARCHY_PROJECTION`· η τοπική `buildAddresses` **διαγράφηκε** (μηδέν νέος κώδικας — το `enterpriseData.addresses` ήταν ήδη σωστό, όπως στα αδέλφια `individual.ts`/`service.ts`). Το `type:'work'` **δεν** ήταν bug (άλλο λεξιλόγιο· φορέας σημασιολογίας το `label`) αλλά έγινε παράγωγο μέσω `toAddressInfoType()`· το σταθερό `country:'GR'` σέβεται πλέον το `ca.country`. **Μετρημένο Firestore, ίδιο υποκατάστημα ALFA:** πριν 9 πεδία· μετά **+10 πεδία ιεραρχίας + `neighborhood:"Κέντρο"`**, με το `companyAddresses` αμετάβλητο. **(2)** Ο Τ.Κ. αποθηκεύεται **κανονικός** («54624») και μορφοποιείται **μόνο στο render** («546 24»)· η μάσκα εισαγωγής είναι εμφάνιση. Το «546 24» δεν ήταν αλλοίωση αλλά **ασυνέπεια** που έσπαγε ήδη ζωντανά: το `administrative-hierarchy.json` έχει **949 Τ.Κ. / 0 με κενό** ⇒ αναζήτηση οικισμού δεν επέστρεφε ποτέ τίποτα· δύο επικυρωτές απέρριπταν αποθηκευμένες τιμές· το badge «ταιριάζει» ήταν πάντα mismatch. Γεννιόταν σε **τρία** σημεία (input handler, `applyResolvedPath`, πάροχος) — κανονικοποίηση και στα τρία. **Δύο δικλείδες:** ξένοι Τ.Κ. (`SW1A 1AA`, σουηδικό «111 51») μένουν **ανέπαφοι** (μόνο σχήμα `\d{3} \d{2}` + πύλη χώρας — το παλιό `replace(/\D/g,'')` τους ακρωτηρίαζε σιωπηλά)· και `postalCodeAppearsIn` ώστε η κανονικοποίηση να **μη** ρίξει το `postalMatch` του confidence (το `display_name` γράφει με κενό) — αντίστροφα το `buildFieldMatches` **διορθώθηκε**. Μετάπτωση `migrate-postal-codes` μέσω του **`createMigrationRoute` factory** (όχι αντιγραφή wrappers — N.18), πίνακας 4 διαδρομών σε contacts/projects/buildings· **μετρημένο ζωντανά:** dry-run 4 σαρωμένα → 1 επηρεαζόμενο → execute → `"54622"` → **δεύτερο dry-run 0**. **Boy Scout (N.0.2):** το «Οδός, Αριθμός, Πόλη, Τ.Κ.» ήταν γραμμένο **4 φορές** χωρίς καμία να μορφοποιεί Τ.Κ. ⇒ ένα `formatContactAddressLine`· και το «είναι ελληνική;» υπήρχε ως πλήρης χάρτης στον engine **και** ως inline αλυσίδα `\|\|` στο UI ⇒ `@/utils/address/country-codes` (ο engine το εισάγει πλέον από εκεί). **(3) D17 — μόνιμα κόκκινο test στο main διορθώθηκε:** το `address-helpers.test.ts` περίμενε `'Ελλάδα'` ενώ **κανένα** πραγματικό `.env` δεν ορίζει `NEXT_PUBLIC_DEFAULT_COUNTRY` (μόνο το `.env.example`) ⇒ παντού ίσχυε το fallback `'Greece'`. Το assertion ελέγχει πλέον τη **συμπεριφορά** (`DEFAULT_COUNTRY` + `not.toBe('GR')`)· η επιλογή λεξιλογίου χώρας (`GR`/`Greece`/`gr`) **καταγράφεται ρητά ως ανοιχτή απόφαση προϊόντος**, δεν κρίνεται από assertion. 3 νέα modules στο `.ssot-registry.json` (tier 3). Tests **437/437** σε 34 suites· `jscpd:diff` καθαρό σε 12 αρχεία (N.18). Καμία νέα user-facing συμβολοσειρά (N.11). NO push (N.(-1)). |
 | 2026-07-26 | 🔴 **Ο geocoder δεν ήταν νεκρός — έλεγε ψέματα και ρωτούσε λάθος.** Το handoff διέγνωσε «νεκρό geocoder / λείπουν env vars». **Και τα δύο λάθος**, επαληθευμένα ζωντανά: το Nominatim απαντά (HTTP 200, 0,55s), το `/api/geocoding` απαντά, και τα env vars έχουν λειτουργικά defaults. Η οδός «Ονειροπόλων» της δοκιμής **δεν υπάρχει στο OSM** (`[]` σε freeform **και** structured) — και το UI ονόμαζε αυτή την ειλικρινή απάντηση «**Σφάλμα αναζήτησης**». Διορθώσεις: **D11** νέα φάση `not-found` + event `GEOCODE_EMPTY` + `GeocodingOutcome` discriminated union· το `geocodeAddress()` μένει wrapper ώστε να μην αγγιχτούν οι δύο άλλοι καταναλωτές· cache **μόνο** για επιτυχίες· ο νεκρός `classifyError`/`catch` αφαιρέθηκε (το service δεν κάνει ποτέ throw). **D12** ενιαία έξοδος `finishWith()` για τις 8 παραλλαγές (−8 διπλότυπες εκφράσεις) → `enforceCountryIntegrity()`: εκτός δηλωμένης χώρας ⇒ `outOfDeclaredCountry` + `confidence: 0`· και **βαθύτερη αιτία** — το `countryNameToCode()` αστοχούσε σε «ΕΛΛΑΔΑ» και σε **NFD** (macOS/iOS clipboard), ρίχνοντας το `countrycodes` από κάθε παραλλαγή· νέο `COUNTRY_CODE_INDEX` μέσω του **υπάρχοντος** `normalizeGreekText`. **D13** το `postalcode` βγαίνει από τα structured params (μετρημένο: μόνο αφαιρεί)· μένει στα free-form. **D14** ο **αριθμός** φτάνει επιτέλους στον πάροχο μέσω ενός `composeStreet(params, order)` (δύο σειρές, ένας ιδιοκτήτης) + κόμματα στα free-form. **Μετρημένα, πριν/μετά, ίδιο ερώτημα:** «Ονειροπόλων 42, 54624, Ελλάδα» → πριν **Wisconsin, ΗΠΑ @ 0,55**· μετά **404 → «Δεν βρέθηκε»**. «Τσιμισκή 43, Θεσσαλονίκη, 54623, Ελλάδα» → πριν αποτυχία/Μιλάνο· μετά «**Γενικό Προξενείο των ΗΠΑ, 43, Ιωάννη Τσιμισκή, Λαδάδικα, Θεσσαλονίκη**» @ **0,85**. i18n `coordinator.phase.not-found` σε el **και** en (N.11). Tests: 24 νέα (8 query-shape/country + 16 service outcome) — σουίτα διευθύνσεων **183/183 πράσινη**· `jscpd:diff` καθαρό σε 8 αρχεία (N.18). **Ανοιχτό χρέος που καταγράφεται ρητά, με μετρημένους αριθμούς:** (α) `NOMINATIM_RESULT_LIMIT` = **`'1'`** ⇒ το `alternatives` είναι **πάντα άδειο** και το πάνελ προτάσεων δεν μπορεί να προσφέρει τίποτα πέρα από το ήδη ορατό αποτέλεσμα· (β) **ολόκληρο το Phase 9 είναι νεκρός κώδικας** — `autoFillFromPostalCode`, `validateGreekHierarchy`, `loadHierarchyLookup` δεν καλούνται από πουθενά στην παραγωγή (μόνο από τα δικά τους πράσινα tests), και το `administrative-hierarchy.json` έχει 20.721 οντότητες αλλά **μόνο 949 με Τ.Κ. / 78 μοναδικούς** στους ~1.300 — το `54624` **δεν υπάρχει**, ενώ το `isValidGreekPostalCode` (`/^[1-9]\d{4}$/`) **απορρίπτει** τη μορφή «546 24»· (γ) το **δημόσιο** Nominatim έχει όριο 1 req/s και **απαγορεύει** χρήση παραγωγής — απαιτείται μετακόμιση πριν το production. **Μετρήσεις που καθόδησαν την απόφαση παρόχου:** το δημόσιο **Photon** επιστρέφει **μηδέν** αποτελέσματα για κάθε ελληνικό ερώτημα που δοκιμάστηκε (με/χωρίς τόνους, με γεωγραφική προκατάληψη) ⇒ απορρίφθηκε· το **OSM ως δεδομένα επαρκεί** (~9.700 αντικείμενα με `addr:housenumber` στο κέντρο Θεσσαλονίκης) ⇒ **η στενωπός ήταν η δική μας κατασκευή ερωτημάτων, όχι ο πάροχος**. |
 | 2026-07-25 | 🐞 **Τρία bugs συνοχής στην ενσωμάτωση του editor με την καρτέλα Επαφής** (live end-to-end έλεγχος, όχι στατική ανάλυση). **(1) «Διόρθωση» που δεν διόρθωνε.** Το `handleApplyField` του coordinator έκανε σωστά `setUserInput` + `onChange`, αλλά ο καταναλωτής `AddressesSectionWithFullscreen.handleHqChange` έγραφε **μόνο** `formData.city`, ενώ το ορατό combobox «Οικισμός / Πόλη» διαβάζει `settlement \|\| city`. Το apply κατέληγε σε **σκιώδες πεδίο**: η οθόνη έμενε με την παλιά τιμή ενώ το badge γινόταν πράσινο (τεχνικά ειλικρινές — συνέκρινε το `userInput.city` που όντως άλλαξε — αλλά για τον χρήστη ψευδές). Επιπλέον το `formDataToResolvedFields` χρησιμοποιούσε **αντίστροφη** προτεραιότητα (`city \|\| settlement`) από αυτήν που αποδίδει το UI, άρα ο πίνακας «Συμφωνία Πεδίων» συνέκρινε άλλη τιμή από την εμφανιζόμενη. **Διόρθωση:** μία προτεραιότητα παντού (`settlement \|\| city`) και το `handleHqChange` γράφει `city` **και** `settlement` συνεκτικά· όταν το όνομα αλλάζει από πηγή εκτός ιεραρχίας, το `settlementId` μηδενίζεται ώστε ταυτότητα και ετικέτα να μην αποκλίνουν. **Σημείωση:** το `pending` του `useAddressReconciliation` ήταν ήδη data-driven (το `conflicts` είναι memoized στο `inputsKey` που περιλαμβάνει το `userInput`, και το `decisions` μηδενίζεται σε κάθε αλλαγή) — **δεν** χρειάστηκε αλλαγή εκεί· η ροή «Άφησέ το» έμεινε άθικτη. **(2) Σιωπηλή απώλεια «Περιοχή / Συνοικία».** Το πεδίο `neighborhood` υπήρχε στο UI του editor και στο `ResolvedAddressFields`, αλλά **όχι** στο persisted `AddressInfo` ούτε στο `ContactFormData` — και πετιόταν σε τέσσερα σημεία, με χαρακτηριστικότερο το `handleHqDragApplied` που το έθετε **hardcoded σε `''`** τη στιγμή που το reverse-geocoding το είχε γεμίσει σωστά. Πλήρης καλωδίωση round-trip (τύποι → form → persist → read-back) **και για τις εταιρικές διευθύνσεις/υποκαταστήματα**, όπου υπήρχε το ίδιο σφάλμα στα `branchToResolvedFields`/`applyResolvedToBranch`. **(3) City picker που έγραφε άλλη τιμή από την επιλεγμένη.** Ο χρήστης επέλεγε «Θεσσαλονίκη» και αποθηκευόταν «Θεσαλονίκης» (ένα σίγμα, γενική). Ο handler επιλογής ήταν **σωστός** — έγραφε το όνομα από το τοπικό `administrative-hierarchy.json`. Έφταιγε το debounced auto-fill effect του `AddressWithHierarchy`: το `clearTimeout` δεν ακυρώνει fetch που έχει ήδη φύγει, οπότε το καθυστερημένο promise διάβαζε το **closure πριν την επιλογή** — περνούσε τον έλεγχο «δεν υπάρχει οικισμός» και με stale spread πετούσε το μόλις τεθέν `settlementId` και όλη την ιεραρχία, γράφοντας τη Nominatim τιμή (το τυπογραφικό είναι στην **πηγή** OSM, δεν διορθώνεται από εμάς). **Διόρθωση:** epoch guard + ανάγνωση ζωντανής κατάστασης μέσω ref τη στιγμή της άφιξης + ακύρωση κάθε auto-fill σε πτήση μόλις ο χρήστης επιλέξει — η πειθαρχία `buildSelected` του ADR-601: **δεσμεύεται ό,τι είδε ο χρήστης**, οι εξωτερικές πηγές δίνουν μόνο metadata. **Boy Scout (N.18):** εξήχθησαν τα `applyResolvedPath`/`clearHierarchyLevels` στο `AddressWithHierarchy` (ο κανόνας «id και όνομα γράφονται/καθαρίζονται ΜΑΖΙ» ζει πλέον σε ένα σημείο) και το `DRAG_RESOLVED_HIERARCHY_RESET`· `jscpd:diff` καθαρό σε 26 αρχεία. **Γνωστό κενό:** το `AddressWithHierarchy` παραμένει bespoke combobox εκτός του picker SSoT (`src/components/shared/pickers/`, ADR-601) — η μετανάστευση είναι ξεχωριστή εργασία. **Επίσης καταγράφεται:** τα ADR-318/ADR-319 αναφέρονται ονομαστικά σε πολλά σημεία κώδικα ως SSoT της ταξινομίας διευθύνσεων, αλλά **τα αρχεία δεν υπάρχουν** και λείπουν από το `adr-index.md` — φαντάσματα. |
 | 2026-05-06 | ✅ **Phase 10 COMPLETED — Hardening + A11y + Keyboard + Final Lock**. ADR status: `📋 PROPOSED → ✅ IMPLEMENTED`. **Telemetry wiring**: `useAddressTelemetry` fully wired into `AddressEditor` coordinator — `markInputStart()` on first field edit, `markUndoOccurred()` in undo handler, `flush()` on all 3 terminal actions (drag confirm → `'used-drag'`, suggestion select → `'accepted-suggestion'` with rank, reconciliation merge → `'mixed-correction'` / `'kept-user'` based on per-field decisions). Pure helpers extracted to `helpers/coordinatorHelpers.ts` (`extractResult`, `buildFieldActionsMap`, `resolveReconciliationAction`) to keep `AddressEditor.tsx` at exactly 500 lines (N.7.1 ✅). **Keyboard**: `Ctrl+Shift+R` force re-geocode added to `useEditorKeyboard` (calls `editor.triggerGeocode()`). **A11y**: `AddressDragConfirmDialog` confirm button receives `autoFocus` — focus goes to primary action when dialog opens; Radix Dialog restores focus on close (belt-and-suspenders). `AddressSuggestionsPanel` dismiss button `aria-label` fixed from hardcoded `"dismiss"` to `t('editor.suggestions.dismiss')` (N.11 ✅). **Esc to close suggestions**: `onDismiss` wired in coordinator via `dismissedSuggestions` state; resets on new field edit. **i18n**: `"dismiss"` key added under `editor.suggestions` in el + en locale JSONs (N.11). **ContactListCard mini-badges (Phase 8 deferred)**: `AddressInfo` extended with `source?: AddressSourceType` + `verifiedAt?: number` (additive, retro-compat); `ContactListCard` renders `AddressSourceLabel` + `AddressFreshnessIndicator` as `ListCard` children when primary address has enrichment data. NEW file: `helpers/coordinatorHelpers.ts`. MODIFY: `AddressEditor.tsx` (500 lines), `AddressDragConfirmDialog.tsx`, `AddressSuggestionsPanel.tsx`, `contracts.ts` (AddressInfo), `ContactListCard.tsx`, `el/addresses.json`, `en/addresses.json`. ALL files ≤500 lines (N.7.1 ✅). NO push (CLAUDE.md N.(-1)). |
@@ -865,6 +866,122 @@ structured slot του Nominatim θέλει «<αριθμός> <όνομα>», �
 **Μετρημένο αποτέλεσμα:** «Τσιμισκή 43, Θεσσαλονίκη, 54623, Ελλάδα» → «**Γενικό Προξενείο των ΗΠΑ, 43,
 Ιωάννη Τσιμισκή, Λαδάδικα, Θεσσαλονίκη**», βεβαιότητα **0,85**, παραλλαγή 1 — ακρίβεια κτιρίου που
 πριν ήταν αδύνατη.
+
+### D15 — ΕΝΑΣ κατασκευαστής του παράγωγου `addresses[]`
+**RESOLVED — `src/utils/contacts/address-info-builder.ts`**
+
+**Η αρχική διάγνωση ήταν ανακριβής και διορθώνεται εδώ.** Το προηγούμενο handoff περιέγραφε «διπλή &
+ασύμφωνη εγγραφή». Ο κώδικας λέει κάτι διαφορετικό: το `customFields.companyAddresses` είναι η
+**αυθεντική** εγγραφή και το `addresses[]` **παράγωγο** — νόμιμο σχήμα SSoT, όχι διπλή εγγραφή.
+
+Το πραγματικό ελάττωμα ήταν ότι η παραγωγή υπήρχε **τρεις** φορές, όχι δύο:
+
+| # | Πού | Ιεραρχία | `neighborhood` | `country` | `type` |
+|---|---|---|---|---|---|
+| A | `EnterpriseContactSaver` (flat πεδία → έδρα) | ✅ πλήρης | ✅ | σταθερό `'GR'` | από είδος επαφής |
+| B | `EnterpriseContactSaver.buildAddressesFromCompany` | ❌ **καμία** | ✅ | σταθερό `'GR'` | σταθερό `'work'` |
+| C | `mappers/company.ts buildAddresses` | ❌ **καμία** | ❌ **χανόταν** | σταθερό `'GR'` | σταθερό `'work'` |
+
+Το σχόλιο πάνω από το B έλεγε κυριολεκτικά *«Same logic as mappers/company.ts buildAddresses»* —
+**σχόλιο αντί για κοινή συνάρτηση**, και το C είχε ήδη ξεφύγει. Χειρότερα, το B έγραφε **πάνω** από το
+A (`enterpriseData.addresses = buildAddressesFromCompany(...)`), οπότε ο κλάδος εταιρειών πετούσε την
+ιεραρχία που το A μόλις είχε φτιάξει σωστά για την έδρα. Και το **C κέρδιζε** στη ζωντανή διαδρομή:
+`mapFormDataToContact` (create **και** guarded-update) → `mapCompanyFormData` → C.
+
+**Γιατί κανένα gate δεν το έπιασε:** διαφορετικά ονόματα συναρτήσεων ⇒ αόρατο στο name/regex-based
+`ssot:discover` (CHECK 3.18). Η κατηγορία **ADR-584** που βλέπει μόνο το token-based `jscpd`.
+
+**Τι κόστιζε:** κάθε αναγνώστης του `contact.addresses` (λίστα επαφών, `ContactListCard`,
+`building-update.handler`, `hierarchy-resolver`, `report-data-aggregator`, λογιστική, branding) έβλεπε
+διεύθυνση **χωρίς διοικητική ιεραρχία**· και οι `individualMapper`/`serviceMapper` διαβάζουν την
+ιεραρχία **από το `addresses[0]`**, άρα εκεί η απώλεια ήταν και round-trip.
+
+**Η λύση:** ένα module με δύο εισόδους (flat / `CompanyAddress`) και **κοινά** εσωτερικά — πίνακας
+`HIERARCHY_PROJECTION` (μία γραμμή ανά επίπεδο, αντί για τρεις χειρόγραφες αντιστοιχίσεις ονομάτων),
+`projectHierarchy`, `resolveAddressLabel`. Το `mappers/company.ts` **δεν** απέκτησε νέο κώδικα: η
+τοπική `buildAddresses` **διαγράφηκε** και χρησιμοποιείται το `enterpriseData.addresses`, ακριβώς
+όπως έκαναν ήδη τα αδέλφια `individual.ts` / `service.ts`.
+
+**Το `type: 'work'` ΔΕΝ ήταν bug** — ο κώδικας νίκησε: το `AddressInfo['type']` είναι ταχυδρομικό
+είδος (`home|work|billing|shipping|other`), ενώ ο φορέας της σημασιολογίας ADR-319 είναι το `label`.
+Ήταν όμως **σταθερά** εκεί που πρέπει να είναι παράγωγο ⇒ `toAddressInfoType()` δίπλα στο λεξιλόγιο
+που μεταφράζει. Μοναδική αλλαγή συμπεριφοράς: `other → 'other'`.
+
+**Μετρημένο, ίδιο υποκατάστημα ALFA, Firestore πριν/μετά:**
+πριν `{ street, number, city, postalCode, region:"", country:"GR", type:"work", label:"branch" }` —
+μετά τα ίδια **συν** `settlement`, `settlementId`, `community`, `municipalUnit`, `municipality`,
+`municipalityId`, `regionalUnit`, `region`, `decentAdmin`, `majorGeo`, `neighborhood:"Κέντρο"`.
+Το `customFields.companyAddresses` **αμετάβλητο**.
+
+### D16 — Κανονικός Τ.Κ. στη βάση, μάσκα στην οθόνη
+**RESOLVED — `src/utils/address/postal-code.ts`**
+
+**Το «546 24» δεν ήταν αλλοίωση — ήταν ασυνέπεια.** Είναι η **επίσημη** ελληνική μορφή (ΕΛΤΑ). Το
+πρόβλημα ήταν ότι η ίδια τιμή υπήρχε σε δύο μορφές και **κάθε εσωτερική σύγκριση έσπαγε σιωπηλά**:
+
+- `public/data/administrative-hierarchy.json`: **949 οικισμοί με Τ.Κ., 0 με κενό** ⇒ το
+  `findSettlementsByPostalCode("546 24")` δεν επέστρεφε **ποτέ** τίποτα.
+- `isValidGreekPostalCode` (`/^[1-9]\d{4}$/`) και `validateGreekHierarchy` **απέρριπταν** τιμή που
+  ήταν ήδη στη βάση· το `validateAddress` (`/^\d{5}$/`) απέρριπτε το αποθηκευμένο «546 22».
+- Το badge «Τ.Κ. ταιριάζει» συνέκρινε «54624» με «546 24» ⇒ **πάντα** mismatch.
+
+**Πού γεννιόταν** (τρία σημεία, όχι ένα): `AddressWithHierarchy.handleBasicChange` περνούσε **κάθε**
+πληκτρολόγηση από `formatGreekPostalCode` και έβαζε τη **μορφοποιημένη** τιμή στο state·
+`applyResolvedPath` το ίδιο· και ο πάροχος (`extractResolvedFields`, `reverse/route`) επέστρεφε τη
+μορφή του OSM αυτούσια.
+
+**Απόφαση:** κανονική μορφή (5 ψηφία) στη βάση = κλειδί σύγκρισης/αναζήτησης· μορφοποίηση **μόνο στο
+render**. Η μάσκα είναι εμφάνιση — τα σύμβολά της δεν αποθηκεύονται ποτέ.
+
+**Δύο δικλείδες που δεν είχε η προηγούμενη υλοποίηση:**
+1. **Ξένοι Τ.Κ. μένουν ανέπαφοι.** Η κανονικοποίηση αφορά **μόνο** το ακριβές σχήμα `\d{3} \d{2}`, και
+   η μετάπτωση εφαρμόζεται **μόνο σε ελληνική διεύθυνση**. Τυφλό `replace(/\s/g,'')` θα έκανε το
+   `SW1A 1AA` → `SW1A1AA` και το σουηδικό «111 51» → «11151». Το παλιό `replace(/\D/g,'')` στο input
+   έκοβε ήδη σιωπηλά κάθε μη-ελληνικό Τ.Κ. σε ψηφία — διορθώθηκε με πύλη χώρας.
+2. **`postalCodeAppearsIn`.** Το `display_name` του Nominatim γράφει τον Τ.Κ. **με κενό**. Με κανονικό
+   ερώτημα, ένα σκέτο `includes` θα έχανε το `postalMatch` ⇒ **παλινδρόμηση εμπιστοσύνης από τη
+   διόρθωση, όχι από τα δεδομένα**. Αντίστροφα, το `buildFieldMatches` **διορθώθηκε** (συγκρίνει
+   κανονικές μορφές και στις δύο πλευρές).
+
+**Boy Scout (N.0.2):** το «Οδός, Αριθμός, Πόλη, Τ.Κ.» ήταν γραμμένο **τέσσερις** φορές
+(`formatHqStreetLine`, inline στο `AddressesSectionWithFullscreen`, `formatBranchStreetLine`, τοπικό
+δίδυμο στο `AddressCard`) και **καμία** δεν μορφοποιούσε τον Τ.Κ. ⇒ ένα
+`formatContactAddressLine`. Επίσης ενοποιήθηκε το «είναι ελληνική διεύθυνση;»: ο engine είχε πλήρη
+accent-insensitive χάρτη, το UI **inline αλυσίδα `||`** έξι τιμών ⇒ `@/utils/address/country-codes`.
+
+**Μετάπτωση:** `GET /api/admin/migrate-postal-codes` (dry-run) / `POST` (execute), πίνακας στόχων
+`contacts.addresses[]` + `contacts.customFields.companyAddresses[]` + `projects.addresses[]` +
+`buildings.addresses[]`. Χρησιμοποιεί το **`createMigrationRoute` factory** αντί για αντιγραφή των
+wrappers του `migrate-address-labels` (εκείνο τους χρειάστηκε για `?companyId=`· εδώ η
+κανονικοποίηση είναι καθολική) — αλλιώς θα ήταν το sibling clone του N.18.
+**Μετρημένο ζωντανά:** dry-run 4 σαρωμένα / 1 επηρεαζόμενο (`projects…«546 22»`) → execute →
+`"54622"` → **δεύτερο dry-run: 0** (ιδιοτροπία).
+
+### D17 — Τρία λεξιλόγια χώρας: καταγράφεται, ΔΕΝ ενοποιείται σιωπηλά
+**OPEN — απόφαση προϊόντος, όχι τεχνική**
+
+Το έργο κουβαλά **τρεις** διαφορετικές τιμές για την ίδια χώρα:
+
+| Πού | Τιμή |
+|---|---|
+| `contacts.addresses[].country` | `"GR"` |
+| `projects.addresses[].country` | `"Greece"` |
+| `GEOGRAPHIC_CONFIG.DEFAULT_COUNTRY_CODE` | `"gr"` |
+
+**Και το `.env.example` λέει κάτι που δεν ισχύει πουθενά:** ορίζει
+`NEXT_PUBLIC_DEFAULT_COUNTRY=Ελλάδα`, αλλά **κανένα** πραγματικό `.env` δεν την ορίζει ⇒ σε dev, σε
+jest **και** στην παραγωγή ισχύει το fallback `'Greece'`. Ζωντανό τεκμήριο:
+`projects/proj_2497…addresses[0].country === "Greece"`.
+
+**Πώς εκδηλώθηκε:** το `address-helpers.test.ts` έγραφε `expect(country).toBe('Ελλάδα')` με σχόλιο
+*«From geographic config»* — δηλαδή κωδικοποιούσε την **πρόθεση** της ρύθμισης, όχι την τιμή της.
+Ήταν **μόνιμα κόκκινο, παντού** (όχι «περιβαλλοντικό»).
+
+**Τι έγινε:** το assertion ελέγχει πλέον τη **συμπεριφορά** (`toBe(GEOGRAPHIC_CONFIG.DEFAULT_COUNTRY)`
+συν `not.toBe('GR')` για το πραγματικό regression). **Τι ΔΕΝ έγινε:** δεν επιλέχθηκε σιωπηλά «σωστή»
+τιμή — αλλάζει αποθηκευμένα δεδομένα και θέλει δική της μετάπτωση. Ο νέος
+`address-info-builder` κρατά ρητά το υπάρχον `'GR'` των επαφών ως **ονομασμένη σταθερά με σχόλιο**,
+ώστε η ενοποίηση να είναι μία αλλαγή σε ένα σημείο όταν αποφασιστεί.
 
 ### D10 — Phase split granularity
 **RESOLVED — 11 phases, 1 phase per session, handoff-driven**
