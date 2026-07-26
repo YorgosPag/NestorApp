@@ -2,14 +2,37 @@
 
 /**
  * @module reports/sections/crm/LeadSourceChart
- * @enterprise ADR-265 Phase 8 — Leads by source pie chart
+ * @enterprise ADR-265 — Leads by source
+ * @enterprise ADR-710 §11.6
+ *
+ * The slice colour used to be `--report-chart-${(n % 8) + 1}` — the row position, wrapped.
+ * A source that stops producing leads therefore repainted every source below it, and the
+ * wrap meant a ninth source silently took the colour of the first.
  */
 
 import '@/lib/design-system';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ReportSection, ReportChart, ReportEmptyState } from '@/components/reports/core';
-import type { ChartConfig } from '@/components/ui/chart';
+import {
+  ReportSection,
+  ReportCategoryPies,
+  ReportEmptyState,
+} from '@/components/reports/core';
 import type { SourceItem } from './types';
+
+/**
+ * Lead sources, mirroring the `source` union on a CRM opportunity
+ * (`src/types/crm.ts`), plus the aggregator fallback.
+ */
+const LEAD_SOURCES = [
+  'website',
+  'referral',
+  'agent',
+  'social',
+  'phone',
+  'walkin',
+  'unknown',
+] as const;
 
 interface LeadSourceChartProps {
   data: SourceItem[];
@@ -19,13 +42,16 @@ interface LeadSourceChartProps {
 export function LeadSourceChart({ data, loading }: LeadSourceChartProps) {
   const { t } = useTranslation('reports');
 
-  const chartConfig: ChartConfig = {};
-  for (const item of data) {
-    chartConfig[item.name] = {
-      label: item.name,
-      color: `hsl(var(--report-chart-${(Object.keys(chartConfig).length % 8) + 1}))`,
-    };
-  }
+  const charts = useMemo(
+    () => [
+      {
+        data,
+        categoryLabel: t('chart.category.source'),
+        categoryOrder: LEAD_SOURCES.map((source) => t(`crm.sources.${source}`)),
+      },
+    ],
+    [data, t],
+  );
 
   if (!loading && data.length === 0) {
     return (
@@ -41,7 +67,7 @@ export function LeadSourceChart({ data, loading }: LeadSourceChartProps) {
       description={t('crm.leads.description')}
       id="lead-source"
     >
-      <ReportChart type="pie" data={data} config={chartConfig} height={300} />
+      <ReportCategoryPies charts={charts} size="md" />
     </ReportSection>
   );
 }

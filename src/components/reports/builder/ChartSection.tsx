@@ -10,16 +10,15 @@
 'use client';
 
 import '@/lib/design-system';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { BarChart3, LineChart as LineIcon, PieChart as PieIcon, AreaChart as AreaIcon, Layers } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ReportChart, type ChartType } from '@/components/reports/core/ReportChart';
-import type { ChartConfig } from '@/components/ui/chart';
+import type { ChartSeries } from '@/components/ui/chart-card';
+import { formatNumber } from '@/lib/intl-utils';
 import { aggregateKey, UNKNOWN_GROUP_KEY } from '@/services/report-engine/grouping-engine';
 import type {
   GroupByConfig,
@@ -35,6 +34,15 @@ import type {
 interface ChartSectionProps {
   groupByConfig: GroupByConfig;
   filteredGroups: GroupedRow[];
+  /**
+   * Every group of the current grouping, before any cross-filter narrows it.
+   *
+   * The slice colours are read from this order, not from the rows on screen: clicking a
+   * slice to cross-filter must not repaint the groups that survive (ADR-710 §11.6). It is
+   * the same rule the named reports follow, with the grouping standing in for a fixed
+   * domain vocabulary.
+   */
+  allGroups: GroupedRow[];
   activeChartType: BuilderChartType;
   suggestedChartType: BuilderChartType | null;
   onChartTypeChange: (type: BuilderChartType | null) => void;
@@ -64,15 +72,19 @@ const CHART_TYPE_OPTIONS: Array<{
 // Data Transformation
 // ============================================================================
 
+interface BuilderPoint {
+  name: string;
+  value: number;
+  count: number;
+}
+
 function buildChartData(
   groups: GroupedRow[],
-  _config: GroupByConfig,
   unknownLabel: string,
-): { data: Record<string, unknown>[]; config: ChartConfig; primaryMetric: string } {
-  // Find the best metric to display
+): { data: BuilderPoint[]; primaryMetric: string } {
   const firstGroup = groups[0];
   if (!firstGroup) {
-    return { data: [], config: {}, primaryMetric: '' };
+    return { data: [], primaryMetric: '' };
   }
 
   // Pick the first non-COUNT aggregate, fallback to COUNT
@@ -85,13 +97,14 @@ function buildChartData(
     count: group.rowCount,
   }));
 
-  const chartConfig: ChartConfig = {
-    value: {
-      label: primaryMetric.replace(':', ': '),
-    },
-  };
+  return { data, primaryMetric };
+}
 
-  return { data, config: chartConfig, primaryMetric };
+/** The group names, in grouping order — the builder equivalent of a declared vocabulary. */
+function buildCategoryOrder(groups: GroupedRow[], unknownLabel: string): string[] {
+  return groups.map(group =>
+    group.groupKey === UNKNOWN_GROUP_KEY ? unknownLabel : group.groupKey,
+  );
 }
 
 // ============================================================================
@@ -101,6 +114,7 @@ function buildChartData(
 export function ChartSection({
   groupByConfig,
   filteredGroups,
+  allGroups,
   activeChartType,
   suggestedChartType,
   onChartTypeChange,
@@ -109,21 +123,29 @@ export function ChartSection({
   className,
 }: ChartSectionProps) {
   const { t } = useTranslation('report-builder');
-  const [showLegend, setShowLegend] = useState(true);
 
   const unknownLabel = t('grouping.noGrouping');
-  const { data, config } = useMemo(
-    () => buildChartData(filteredGroups, groupByConfig, unknownLabel),
-    [filteredGroups, groupByConfig, unknownLabel],
+  const { data, primaryMetric } = useMemo(
+    () => buildChartData(filteredGroups, unknownLabel),
+    [filteredGroups, unknownLabel],
   );
 
-  const handleElementClick = (payload: Record<string, unknown>) => {
-    const name = payload.name as string | undefined;
-    if (!name) return;
+  const categoryOrder = useMemo(
+    () => buildCategoryOrder(allGroups, unknownLabel),
+    [allGroups, unknownLabel],
+  );
+
+  const series = useMemo<ChartSeries<BuilderPoint>[]>(
+    () => [{ key: 'value', label: primaryMetric.replace(':', ': ') || t('chart.value') }],
+    [primaryMetric, t],
+  );
+
+  const handleElementClick = (point: BuilderPoint) => {
+    if (!point.name) return;
     onCrossFilter({
       fieldKey: groupByConfig.level1,
-      value: name === unknownLabel ? UNKNOWN_GROUP_KEY : name,
-      label: name,
+      value: point.name === unknownLabel ? UNKNOWN_GROUP_KEY : point.name,
+      label: point.name,
     });
   };
 
@@ -137,7 +159,7 @@ export function ChartSection({
       className={cn('space-y-3', className)}
       aria-label={t('chart.title')}
     >
-      {/* Chart type selector + legend toggle */}
+      {/* Chart type selector */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-1" role="radiogroup" aria-label={t('chart.type')}>
           {CHART_TYPE_OPTIONS.map(({ type, icon: Icon, labelKey }) => (
@@ -162,16 +184,6 @@ export function ChartSection({
           ))}
         </div>
 
-        <div className="flex items-center gap-2">
-          <Switch
-            id="legend-toggle"
-            checked={showLegend}
-            onCheckedChange={setShowLegend}
-          />
-          <Label htmlFor="legend-toggle" className="text-xs cursor-pointer">
-            {t('chart.legend')}
-          </Label>
-        </div>
       </div>
 
       {/* Chart */}
@@ -179,9 +191,11 @@ export function ChartSection({
         <ReportChart
           type={chartType}
           data={data}
-          config={config}
-          height={300}
-          showLegend={showLegend}
+          series={series}
+          categoryKey="name"
+          categoryLabel={t('chart.category')}
+          categoryOrder={categoryOrder}
+          formatValue={formatNumber}
           onElementClick={handleElementClick}
         />
       </div>

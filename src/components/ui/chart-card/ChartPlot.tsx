@@ -34,7 +34,7 @@
  * @see surface-context.tsx — why depth is context and not a prop
  */
 
-import { useId, useMemo, type ReactNode } from 'react';
+import { Children, isValidElement, useId, useMemo, type ReactNode } from 'react';
 import { SurfaceBoundary, useHeadingTag } from '@/components/ui/surface-context';
 import { ChartCardProvider, type ChartCardContextValue } from './chart-card-context';
 import { toChartConfig, type ChartSeries } from './chart-card-series';
@@ -47,6 +47,26 @@ import { ChartCardEditor } from './editor/ChartCardEditor';
 /** Default category renderer — years, labels and ids all read as their own text. */
 function defaultFormatCategory(value: unknown): string {
   return value == null ? '' : String(value);
+}
+
+/**
+ * Whether this composition titles itself.
+ *
+ * The shell's accessible name is the heading `ChartCardHeader` renders. A frameless plot
+ * inside a `ReportSection` has no header — the section already spent the heading — so
+ * pointing `aria-labelledby` at that heading's id would reference an element that is never
+ * rendered. A dangling reference is worse than no name: the region loses its name *and*
+ * fails validation, silently.
+ *
+ * Read from the composition rather than from a prop, for the same reason nesting depth is:
+ * "does this shell title itself" is a fact about what was composed, not a caller's
+ * preference. The failure direction is safe — a header the scan cannot see costs a name,
+ * never a broken reference.
+ */
+function titlesItself(children: ReactNode): boolean {
+  return Children.toArray(children).some(
+    (child) => isValidElement(child) && child.type === ChartCardHeader,
+  );
 }
 
 export interface ChartPlotProps<TDatum extends object> {
@@ -124,7 +144,9 @@ export function ChartPlotRoot<TDatum extends object>({
   return (
     <ChartCardProvider value={value}>
       <SurfaceBoundary>
-        <section aria-labelledby={`${cardId}-title`}>{children}</section>
+        <section aria-labelledby={titlesItself(children) ? `${cardId}-title` : undefined}>
+          {children}
+        </section>
       </SurfaceBoundary>
     </ChartCardProvider>
   );

@@ -15,12 +15,20 @@ import {
   ReportEmptyState,
   type AgingRow,
 } from '@/components/reports/core';
-import type { ChartConfig } from '@/components/ui/chart';
+import type { ChartSeries } from '@/components/ui/chart-card';
+import { formatCurrencyWhole } from '@/lib/intl-utils';
 import type { AgingBucketResult } from '@/services/report-engine';
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
+
+/** One plotted row: the portfolio, with the two amounts compared against each other. */
+interface CashFlowPoint {
+  category: string;
+  receivables: number;
+  collected: number;
+}
 
 interface CashFlowForecastProps {
   totalReceivables: number;
@@ -76,18 +84,15 @@ export function CashFlowForecast({
 
   const hasData = totalReceivables > 0 || totalCollected > 0;
 
-  const chartConfig: ChartConfig = {
-    receivables: {
-      label: t('financial.cashFlow.receivables'),
-      color: 'hsl(var(--report-chart-1))',
-    },
-    collected: {
-      label: t('financial.cashFlow.collected'),
-      color: 'hsl(var(--report-chart-3))',
-    },
-  };
+  const series = useMemo<ChartSeries<CashFlowPoint>[]>(
+    () => [
+      { key: 'receivables', label: t('financial.cashFlow.receivables') },
+      { key: 'collected', label: t('financial.cashFlow.collected') },
+    ],
+    [t],
+  );
 
-  const summaryData = [{
+  const summaryData: CashFlowPoint[] = [{
     category: t('financial.cashFlow.receivables'),
     receivables: totalReceivables,
     collected: totalCollected,
@@ -119,9 +124,11 @@ export function CashFlowForecast({
       <ReportChart
         type="bar"
         data={summaryData}
-        config={chartConfig}
-        xAxisKey="category"
-        height={250}
+        series={series}
+        categoryKey="category"
+        categoryLabel={t('chart.category.category')}
+        formatValue={formatCurrencyWhole}
+        size="sm"
       />
 
       {agingRows.length > 0 && (

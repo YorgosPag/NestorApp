@@ -518,6 +518,15 @@
       "tasks": "Tasks",
       "title": "Title",
       "description": "Description"
+    },
+    "sources": {
+      "website": "Website",
+      "referral": "Referral",
+      "agent": "Agent",
+      "social": "Social media",
+      "phone": "Phone",
+      "walkin": "Walk-in",
+      "unknown": "Unknown"
     }
   },
   "spaces": {

@@ -2,28 +2,34 @@
 
 /**
  * @module reports/sections/sales/LegalPhaseChart
- * @enterprise ADR-265 Phase 6 — Legal phase distribution bar chart
+ * @enterprise ADR-265 — Properties per legal phase
+ * @enterprise ADR-710 Φάση Γ
  */
 
 import '@/lib/design-system';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ReportSection, ReportChart, ReportEmptyState } from '@/components/reports/core';
-import type { ChartConfig } from '@/components/ui/chart';
+import type { ChartSeries } from '@/components/ui/chart-card';
+import { formatNumber } from '@/lib/intl-utils';
+
+interface LegalPhaseBar {
+  phase: string;
+  count: number;
+}
 
 interface LegalPhaseChartProps {
-  data: { phase: string; count: number }[];
+  data: LegalPhaseBar[];
   loading?: boolean;
 }
 
 export function LegalPhaseChart({ data, loading }: LegalPhaseChartProps) {
   const { t } = useTranslation('reports');
 
-  const chartConfig: ChartConfig = {
-    count: {
-      label: t('sales.legal.count'),
-      color: 'hsl(var(--report-chart-4))',
-    },
-  };
+  const series = useMemo<ChartSeries<LegalPhaseBar>[]>(
+    () => [{ key: 'count', label: t('sales.legal.count') }],
+    [t],
+  );
 
   if (!loading && data.length === 0) {
     return (
@@ -42,9 +48,11 @@ export function LegalPhaseChart({ data, loading }: LegalPhaseChartProps) {
       <ReportChart
         type="bar"
         data={data}
-        config={chartConfig}
-        xAxisKey="phase"
-        height={280}
+        series={series}
+        categoryKey="phase"
+        categoryLabel={t('chart.category.phase')}
+        formatValue={formatNumber}
+        size="sm"
       />
     </ReportSection>
   );

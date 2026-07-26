@@ -2,28 +2,34 @@
 
 /**
  * @module reports/sections/crm/TeamPerformanceChart
- * @enterprise ADR-265 Phase 8 — Tasks per team member bar chart
+ * @enterprise ADR-265 — Tasks per assignee
+ * @enterprise ADR-710 Φάση Γ
  */
 
 import '@/lib/design-system';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ReportSection, ReportChart, ReportEmptyState } from '@/components/reports/core';
-import type { ChartConfig } from '@/components/ui/chart';
+import type { ChartSeries } from '@/components/ui/chart-card';
+import { formatNumber } from '@/lib/intl-utils';
+
+interface AssigneeBar {
+  assignee: string;
+  tasks: number;
+}
 
 interface TeamPerformanceChartProps {
-  data: { assignee: string; tasks: number }[];
+  data: AssigneeBar[];
   loading?: boolean;
 }
 
 export function TeamPerformanceChart({ data, loading }: TeamPerformanceChartProps) {
   const { t } = useTranslation('reports');
 
-  const chartConfig: ChartConfig = {
-    tasks: {
-      label: t('crm.team.tasks'),
-      color: 'hsl(var(--report-chart-4))',
-    },
-  };
+  const series = useMemo<ChartSeries<AssigneeBar>[]>(
+    () => [{ key: 'tasks', label: t('crm.team.tasks') }],
+    [t],
+  );
 
   if (!loading && data.length === 0) {
     return (
@@ -42,9 +48,10 @@ export function TeamPerformanceChart({ data, loading }: TeamPerformanceChartProp
       <ReportChart
         type="bar"
         data={data}
-        config={chartConfig}
-        xAxisKey="assignee"
-        height={300}
+        series={series}
+        categoryKey="assignee"
+        categoryLabel={t('chart.category.assignee')}
+        formatValue={formatNumber}
       />
     </ReportSection>
   );

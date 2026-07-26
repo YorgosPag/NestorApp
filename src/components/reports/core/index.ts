@@ -36,6 +36,13 @@ export type { FunnelStage, ReportFunnelProps } from './ReportFunnel';
 export { ReportChart } from './ReportChart';
 export type { ChartType, ReportChartProps } from './ReportChart';
 
+export { ReportCategoryPies } from './ReportCategoryPies';
+export type {
+  ReportCategoryPie,
+  ReportCategoryPiesProps,
+  ReportCategorySlice,
+} from './ReportCategoryPies';
+
 export { ReportTable } from './ReportTable';
 export type { ReportColumnDef, SortDirection, ReportTableProps } from './ReportTable';
 

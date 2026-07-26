@@ -2,13 +2,20 @@
 
 /**
  * @module reports/sections/crm/PipelineFunnelChart
- * @enterprise ADR-265 Phase 8 — Opportunity pipeline by stage
+ * @enterprise ADR-265 — Opportunities and value per pipeline stage
+ * @enterprise ADR-710 Φάση Γ
+ *
+ * Two series over one axis: a count and a euro amount. They are plotted together because
+ * the comparison is the point, and they are read apart in the data table, where each has
+ * its own column and its own units.
  */
 
 import '@/lib/design-system';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ReportSection, ReportChart, ReportEmptyState } from '@/components/reports/core';
-import type { ChartConfig } from '@/components/ui/chart';
+import type { ChartSeries } from '@/components/ui/chart-card';
+import { formatNumber } from '@/lib/intl-utils';
 import type { PipelineStageItem } from './types';
 
 interface PipelineFunnelChartProps {
@@ -19,16 +26,13 @@ interface PipelineFunnelChartProps {
 export function PipelineFunnelChart({ data, loading }: PipelineFunnelChartProps) {
   const { t } = useTranslation('reports');
 
-  const chartConfig: ChartConfig = {
-    count: {
-      label: t('crm.pipeline.count'),
-      color: 'hsl(var(--report-chart-1))',
-    },
-    value: {
-      label: t('crm.pipeline.value'),
-      color: 'hsl(var(--report-chart-3))',
-    },
-  };
+  const series = useMemo<ChartSeries<PipelineStageItem>[]>(
+    () => [
+      { key: 'count', label: t('crm.pipeline.count') },
+      { key: 'value', label: t('crm.pipeline.value') },
+    ],
+    [t],
+  );
 
   if (!loading && data.length === 0) {
     return (
@@ -47,9 +51,11 @@ export function PipelineFunnelChart({ data, loading }: PipelineFunnelChartProps)
       <ReportChart
         type="bar"
         data={data}
-        config={chartConfig}
-        xAxisKey="stage"
-        height={350}
+        series={series}
+        categoryKey="stage"
+        categoryLabel={t('chart.category.stage')}
+        formatValue={formatNumber}
+        size="lg"
       />
     </ReportSection>
   );

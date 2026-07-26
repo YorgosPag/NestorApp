@@ -2,28 +2,41 @@
 
 /**
  * @module reports/sections/compliance/AttendanceMethodChart
- * @enterprise ADR-265 Phase 12 — Check-ins by method (QR, geofence, manual, NFC)
+ * @enterprise ADR-265 — Check-ins by method
+ * @enterprise ADR-710 §11.6
  */
 
 import '@/lib/design-system';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ReportSection, ReportChart, ReportEmptyState } from '@/components/reports/core';
-import type { ChartConfig } from '@/components/ui/chart';
+import {
+  ReportSection,
+  ReportCategoryPies,
+  ReportEmptyState,
+  type ReportCategorySlice,
+} from '@/components/reports/core';
+
+/** Check-in methods, as the locale group `compliance.methods` enumerates them. */
+const CHECK_IN_METHODS = ['manual', 'qr', 'geofence', 'nfc', 'unknown'] as const;
 
 interface AttendanceMethodChartProps {
-  data: { name: string; value: number }[];
+  data: ReportCategorySlice[];
   loading?: boolean;
 }
 
 export function AttendanceMethodChart({ data, loading }: AttendanceMethodChartProps) {
   const { t } = useTranslation('reports');
 
-  const config: ChartConfig = {
-    manual: { label: t('compliance.methods.manual'), color: 'hsl(var(--report-chart-1))' },
-    qr: { label: t('compliance.methods.qr'), color: 'hsl(var(--report-chart-2))' },
-    geofence: { label: t('compliance.methods.geofence'), color: 'hsl(var(--report-chart-3))' },
-    nfc: { label: t('compliance.methods.nfc'), color: 'hsl(var(--report-chart-4))' },
-  };
+  const charts = useMemo(
+    () => [
+      {
+        data,
+        categoryLabel: t('chart.category.method'),
+        categoryOrder: CHECK_IN_METHODS.map((method) => t(`compliance.methods.${method}`)),
+      },
+    ],
+    [data, t],
+  );
 
   if (!loading && data.length === 0) {
     return (
@@ -39,7 +52,7 @@ export function AttendanceMethodChart({ data, loading }: AttendanceMethodChartPr
       description={t('compliance.attendance.description')}
       id="attendance-method"
     >
-      <ReportChart type="pie" data={data} config={config} height={280} />
+      <ReportCategoryPies charts={charts} />
     </ReportSection>
   );
 }

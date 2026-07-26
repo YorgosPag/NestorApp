@@ -2,29 +2,54 @@
 
 /**
  * @module reports/sections/construction/MilestoneCompletionChart
- * @enterprise ADR-265 Phase 11 — Milestones by status bar chart
+ * @enterprise ADR-265 — Milestones by status
+ * @enterprise ADR-710 §11.6
  */
 
 import '@/lib/design-system';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ReportSection, ReportChart, ReportEmptyState } from '@/components/reports/core';
-import type { ChartConfig } from '@/components/ui/chart';
+import {
+  ReportSection,
+  ReportCategoryPies,
+  ReportEmptyState,
+  type ReportCategorySlice,
+} from '@/components/reports/core';
+
+/**
+ * Milestone lifecycle, best outcome first. Declared here because the domain has no
+ * constant of its own yet; the locale group `construction.milestones.statuses` is the
+ * only other place that enumerates it, and the two must not drift.
+ */
+const MILESTONE_STATUSES = [
+  'completed',
+  'in_progress',
+  'pending',
+  'overdue',
+  'cancelled',
+  'unknown',
+] as const;
 
 interface MilestoneCompletionChartProps {
-  data: { name: string; value: number }[];
+  data: ReportCategorySlice[];
   loading?: boolean;
 }
 
 export function MilestoneCompletionChart({ data, loading }: MilestoneCompletionChartProps) {
   const { t } = useTranslation('reports');
 
-  const config: ChartConfig = {
-    completed: { label: t('construction.milestones.statuses.completed'), color: 'hsl(var(--report-chart-3))' },
-    in_progress: { label: t('construction.milestones.statuses.in_progress'), color: 'hsl(var(--report-chart-1))' },
-    pending: { label: t('construction.milestones.statuses.pending'), color: 'hsl(var(--report-chart-4))' },
-    overdue: { label: t('construction.milestones.statuses.overdue'), color: 'hsl(var(--report-chart-6))' },
-    cancelled: { label: t('construction.milestones.statuses.cancelled'), color: 'hsl(var(--report-chart-5))' },
-  };
+  const charts = useMemo(
+    () => [
+      {
+        data,
+        categoryLabel: t('chart.category.status'),
+        categoryOrder: MILESTONE_STATUSES.map((status) =>
+          t(`construction.milestones.statuses.${status}`),
+        ),
+      },
+    ],
+    [data, t],
+  );
 
   if (!loading && data.length === 0) {
     return (
@@ -40,7 +65,7 @@ export function MilestoneCompletionChart({ data, loading }: MilestoneCompletionC
       description={t('construction.milestones.description')}
       id="milestone-completion"
     >
-      <ReportChart type="pie" data={data} config={config} height={300} />
+      <ReportCategoryPies charts={charts} size="md" />
     </ReportSection>
   );
 }

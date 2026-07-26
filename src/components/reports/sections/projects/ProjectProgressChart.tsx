@@ -3,12 +3,15 @@
 /**
  * @module reports/sections/projects/ProjectProgressChart
  * @enterprise ADR-265 Phase 7 — Project completion bar chart
+ * @enterprise ADR-710 Φάση Γ
  */
 
 import '@/lib/design-system';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ReportSection, ReportChart, ReportEmptyState } from '@/components/reports/core';
-import type { ChartConfig } from '@/components/ui/chart';
+import type { ChartSeries } from '@/components/ui/chart-card';
+import { formatPercentage } from '@/lib/intl-utils';
 import type { ProjectProgressItem } from './types';
 
 interface ProjectProgressChartProps {
@@ -19,12 +22,10 @@ interface ProjectProgressChartProps {
 export function ProjectProgressChart({ data, loading }: ProjectProgressChartProps) {
   const { t } = useTranslation('reports');
 
-  const chartConfig: ChartConfig = {
-    progress: {
-      label: t('projects.progress.progress'),
-      color: 'hsl(var(--report-chart-2))',
-    },
-  };
+  const series = useMemo<ChartSeries<ProjectProgressItem>[]>(
+    () => [{ key: 'progress', label: t('projects.progress.progress') }],
+    [t],
+  );
 
   if (!loading && data.length === 0) {
     return (
@@ -43,9 +44,10 @@ export function ProjectProgressChart({ data, loading }: ProjectProgressChartProp
       <ReportChart
         type="bar"
         data={data}
-        config={chartConfig}
-        xAxisKey="name"
-        height={300}
+        series={series}
+        categoryKey="name"
+        categoryLabel={t('chart.category.project')}
+        formatValue={formatPercentage}
       />
     </ReportSection>
   );

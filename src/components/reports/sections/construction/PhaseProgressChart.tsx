@@ -2,13 +2,16 @@
 
 /**
  * @module reports/sections/construction/PhaseProgressChart
- * @enterprise ADR-265 Phase 11 — EVM per building (CPI + SPI bars)
+ * @enterprise ADR-265 — CPI / SPI per building
+ * @enterprise ADR-710 Φάση Γ
  */
 
 import '@/lib/design-system';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ReportSection, ReportChart, ReportEmptyState } from '@/components/reports/core';
-import type { ChartConfig } from '@/components/ui/chart';
+import type { ChartSeries } from '@/components/ui/chart-card';
+import { formatNumber } from '@/lib/intl-utils';
 import type { EVMBuildingItem } from './types';
 
 interface PhaseProgressChartProps {
@@ -16,13 +19,26 @@ interface PhaseProgressChartProps {
   loading?: boolean;
 }
 
+/** CPI and SPI are indices around 1.00; two decimals is what makes them readable. */
+const INDEX_FORMAT: Intl.NumberFormatOptions = {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+};
+
+function formatIndex(value: number): string {
+  return formatNumber(value, INDEX_FORMAT);
+}
+
 export function PhaseProgressChart({ data, loading }: PhaseProgressChartProps) {
   const { t } = useTranslation('reports');
 
-  const config: ChartConfig = {
-    cpi: { label: t('construction.evm.cpi'), color: 'hsl(var(--report-chart-1))' },
-    spi: { label: t('construction.evm.spi'), color: 'hsl(var(--report-chart-3))' },
-  };
+  const series = useMemo<ChartSeries<EVMBuildingItem>[]>(
+    () => [
+      { key: 'cpi', label: t('construction.evm.cpi') },
+      { key: 'spi', label: t('construction.evm.spi') },
+    ],
+    [t],
+  );
 
   if (!loading && data.length === 0) {
     return (
@@ -41,9 +57,10 @@ export function PhaseProgressChart({ data, loading }: PhaseProgressChartProps) {
       <ReportChart
         type="bar"
         data={data}
-        config={config}
-        height={320}
-        xAxisKey="building"
+        series={series}
+        categoryKey="building"
+        categoryLabel={t('chart.category.building')}
+        formatValue={formatIndex}
       />
     </ReportSection>
   );

@@ -2,28 +2,34 @@
 
 /**
  * @module reports/sections/contacts/PersonaDistributionChart
- * @enterprise ADR-265 Phase 9 — Contacts by persona type bar chart
+ * @enterprise ADR-265 — Contacts by persona
+ * @enterprise ADR-710 Φάση Γ
  */
 
 import '@/lib/design-system';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ReportSection, ReportChart, ReportEmptyState } from '@/components/reports/core';
-import type { ChartConfig } from '@/components/ui/chart';
+import type { ChartSeries } from '@/components/ui/chart-card';
+import { formatNumber } from '@/lib/intl-utils';
+
+interface PersonaBar {
+  persona: string;
+  count: number;
+}
 
 interface PersonaDistributionChartProps {
-  data: { persona: string; count: number }[];
+  data: PersonaBar[];
   loading?: boolean;
 }
 
 export function PersonaDistributionChart({ data, loading }: PersonaDistributionChartProps) {
   const { t } = useTranslation('reports');
 
-  const chartConfig: ChartConfig = {
-    count: {
-      label: t('contacts.persona.count'),
-      color: 'hsl(var(--report-chart-4))',
-    },
-  };
+  const series = useMemo<ChartSeries<PersonaBar>[]>(
+    () => [{ key: 'count', label: t('contacts.persona.count') }],
+    [t],
+  );
 
   if (!loading && data.length === 0) {
     return (
@@ -42,9 +48,10 @@ export function PersonaDistributionChart({ data, loading }: PersonaDistributionC
       <ReportChart
         type="bar"
         data={data}
-        config={chartConfig}
-        xAxisKey="persona"
-        height={300}
+        series={series}
+        categoryKey="persona"
+        categoryLabel={t('chart.category.persona')}
+        formatValue={formatNumber}
       />
     </ReportSection>
   );

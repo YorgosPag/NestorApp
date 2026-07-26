@@ -3,44 +3,32 @@
 /**
  * @module reports/sections/financial/CostVarianceWaterfall
  * @enterprise ADR-265 Phase 5 — Budget vs Actual grouped bar chart
+ * @enterprise ADR-710 Φάση Γ
  */
 
 import '@/lib/design-system';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  ReportSection,
-  ReportChart,
-  ReportEmptyState,
-} from '@/components/reports/core';
-import type { ChartConfig } from '@/components/ui/chart';
+import { ReportSection, ReportChart, ReportEmptyState } from '@/components/reports/core';
+import type { ChartSeries } from '@/components/ui/chart-card';
+import { formatCurrencyWhole } from '@/lib/intl-utils';
 import type { CostVarianceItem } from './types';
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
 
 interface CostVarianceWaterfallProps {
   data: CostVarianceItem[];
   loading?: boolean;
 }
 
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
-
 export function CostVarianceWaterfall({ data, loading }: CostVarianceWaterfallProps) {
   const { t } = useTranslation('reports');
 
-  const chartConfig: ChartConfig = {
-    estimated: {
-      label: t('financial.costVariance.estimated'),
-      color: 'hsl(var(--report-chart-1))',
-    },
-    actual: {
-      label: t('financial.costVariance.actual'),
-      color: 'hsl(var(--report-chart-6))',
-    },
-  };
+  const series = useMemo<ChartSeries<CostVarianceItem>[]>(
+    () => [
+      { key: 'estimated', label: t('financial.costVariance.estimated') },
+      { key: 'actual', label: t('financial.costVariance.actual') },
+    ],
+    [t],
+  );
 
   if (!loading && data.length === 0) {
     return (
@@ -63,9 +51,10 @@ export function CostVarianceWaterfall({ data, loading }: CostVarianceWaterfallPr
       <ReportChart
         type="bar"
         data={data}
-        config={chartConfig}
-        xAxisKey="building"
-        height={300}
+        series={series}
+        categoryKey="building"
+        categoryLabel={t('chart.category.building')}
+        formatValue={formatCurrencyWhole}
       />
     </ReportSection>
   );

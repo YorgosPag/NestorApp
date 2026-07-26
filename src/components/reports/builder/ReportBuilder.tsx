@@ -308,6 +308,7 @@ export function ReportBuilder() {
               <ChartSection
                 groupByConfig={builder.groupByConfig}
                 filteredGroups={builder.filteredGroups}
+                allGroups={builder.groupingResult.groups}
                 activeChartType={builder.activeChartType}
                 suggestedChartType={builder.suggestedChartType}
                 onChartTypeChange={builder.setChartType}

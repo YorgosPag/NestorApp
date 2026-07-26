@@ -3,12 +3,16 @@
 /**
  * @module reports/sections/projects/PropertyStatusChart
  * @enterprise ADR-265 Phase 7 — Unit commercial status stacked bar per building
+ * @enterprise ADR-710 Φάση Γ
  */
 
 import '@/lib/design-system';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ReportSection, ReportChart, ReportEmptyState } from '@/components/reports/core';
-import type { ChartConfig } from '@/components/ui/chart';
+import type { ChartSeries } from '@/components/ui/chart-card';
+import { COMMERCIAL_STATUSES } from '@/constants/commercial-statuses';
+import { formatNumber } from '@/lib/intl-utils';
 import type { PropertyStatusByBuildingItem } from './types';
 
 interface PropertyStatusChartProps {
@@ -16,34 +20,42 @@ interface PropertyStatusChartProps {
   loading?: boolean;
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  'sold': 'hsl(var(--report-chart-3))',
-  'for-sale': 'hsl(var(--report-chart-1))',
-  'reserved': 'hsl(var(--report-chart-4))',
-  'for-rent': 'hsl(var(--report-chart-2))',
-  'rented': 'hsl(var(--report-chart-5))',
-  'unavailable': 'hsl(var(--report-chart-6))',
-  'for-sale-and-rent': 'hsl(var(--report-chart-7))',
-};
+/** Which statuses the rows actually hold — every key except the building name. */
+function presentStatuses(data: PropertyStatusByBuildingItem[]): Set<string> {
+  const present = new Set<string>();
+  for (const item of data) {
+    for (const key of Object.keys(item)) {
+      if (key !== 'building') present.add(key);
+    }
+  }
+  return present;
+}
 
 export function PropertyStatusChart({ data, loading }: PropertyStatusChartProps) {
   const { t } = useTranslation('reports');
 
-  // Collect all status keys across buildings
-  const allStatuses = new Set<string>();
-  for (const item of data) {
-    for (const key of Object.keys(item)) {
-      if (key !== 'building') allStatuses.add(key);
-    }
-  }
+  /**
+   * Canonical order first, then anything the data holds that the vocabulary does not.
+   *
+   * Reading the order off the rows — which is what the previous Set iteration did — made
+   * the stacking order and every colour depend on which building happened to come first
+   * in the response. Unknown statuses are appended rather than dropped: a value the
+   * vocabulary has not caught up with must still be counted, not silently lost.
+   *
+   * The labels also move from `projects.propertyStatus.statuses.*`, which does not exist
+   * in either locale, to `projects.unitStatus.statuses.*`, which does. Every legend entry
+   * here used to read as its own raw i18n key.
+   */
+  const series = useMemo<ChartSeries<PropertyStatusByBuildingItem>[]>(() => {
+    const present = presentStatuses(data);
+    const known = COMMERCIAL_STATUSES.filter((status) => present.has(status));
+    const unknown = [...present].filter((status) => !known.includes(status)).sort();
 
-  const chartConfig: ChartConfig = {};
-  for (const status of allStatuses) {
-    chartConfig[status] = {
-      label: t(`projects.propertyStatus.statuses.${status}`),
-      color: STATUS_COLORS[status] ?? 'hsl(var(--report-chart-6))',
-    };
-  }
+    return [...known, ...unknown].map((status) => ({
+      key: status,
+      label: t(`projects.unitStatus.statuses.${status}`),
+    }));
+  }, [data, t]);
 
   if (!loading && data.length === 0) {
     return (
@@ -62,9 +74,11 @@ export function PropertyStatusChart({ data, loading }: PropertyStatusChartProps)
       <ReportChart
         type="stacked-bar"
         data={data}
-        config={chartConfig}
-        xAxisKey="building"
-        height={350}
+        series={series}
+        categoryKey="building"
+        categoryLabel={t('chart.category.building')}
+        formatValue={formatNumber}
+        size="lg"
       />
     </ReportSection>
   );

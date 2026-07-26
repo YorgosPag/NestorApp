@@ -3,12 +3,15 @@
 /**
  * @module reports/sections/projects/BOQVarianceChart
  * @enterprise ADR-265 Phase 7 — BOQ estimated vs actual cost by building
+ * @enterprise ADR-710 Φάση Γ — declares its series; it does not choose colours
  */
 
 import '@/lib/design-system';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ReportSection, ReportChart, ReportEmptyState } from '@/components/reports/core';
-import type { ChartConfig } from '@/components/ui/chart';
+import type { ChartSeries } from '@/components/ui/chart-card';
+import { formatCurrencyWhole } from '@/lib/intl-utils';
 import type { BOQVarianceItem } from './types';
 
 interface BOQVarianceChartProps {
@@ -19,16 +22,13 @@ interface BOQVarianceChartProps {
 export function BOQVarianceChart({ data, loading }: BOQVarianceChartProps) {
   const { t } = useTranslation('reports');
 
-  const chartConfig: ChartConfig = {
-    estimated: {
-      label: t('projects.boqVariance.estimated'),
-      color: 'hsl(var(--report-chart-1))',
-    },
-    actual: {
-      label: t('projects.boqVariance.actual'),
-      color: 'hsl(var(--report-chart-6))',
-    },
-  };
+  const series = useMemo<ChartSeries<BOQVarianceItem>[]>(
+    () => [
+      { key: 'estimated', label: t('projects.boqVariance.estimated') },
+      { key: 'actual', label: t('projects.boqVariance.actual') },
+    ],
+    [t],
+  );
 
   if (!loading && data.length === 0) {
     return (
@@ -47,9 +47,11 @@ export function BOQVarianceChart({ data, loading }: BOQVarianceChartProps) {
       <ReportChart
         type="bar"
         data={data}
-        config={chartConfig}
-        xAxisKey="building"
-        height={350}
+        series={series}
+        categoryKey="building"
+        categoryLabel={t('chart.category.building')}
+        formatValue={formatCurrencyWhole}
+        size="lg"
       />
     </ReportSection>
   );

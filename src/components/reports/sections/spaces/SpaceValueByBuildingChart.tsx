@@ -2,13 +2,16 @@
 
 /**
  * @module reports/sections/spaces/SpaceValueByBuildingChart
- * @enterprise ADR-265 Phase 10 — Parking + Storage value per building (grouped bar)
+ * @enterprise ADR-265 — Parking and storage value per building
+ * @enterprise ADR-710 Φάση Γ
  */
 
 import '@/lib/design-system';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ReportSection, ReportChart, ReportEmptyState } from '@/components/reports/core';
-import type { ChartConfig } from '@/components/ui/chart';
+import type { ChartSeries } from '@/components/ui/chart-card';
+import { formatCurrencyWhole } from '@/lib/intl-utils';
 import type { BuildingValueItem } from './types';
 
 interface SpaceValueByBuildingChartProps {
@@ -19,10 +22,13 @@ interface SpaceValueByBuildingChartProps {
 export function SpaceValueByBuildingChart({ data, loading }: SpaceValueByBuildingChartProps) {
   const { t } = useTranslation('reports');
 
-  const config: ChartConfig = {
-    parkingValue: { label: t('spaces.byBuilding.parkingValue'), color: 'hsl(var(--report-chart-1))' },
-    storageValue: { label: t('spaces.byBuilding.storageValue'), color: 'hsl(var(--report-chart-3))' },
-  };
+  const series = useMemo<ChartSeries<BuildingValueItem>[]>(
+    () => [
+      { key: 'parkingValue', label: t('spaces.byBuilding.parkingValue') },
+      { key: 'storageValue', label: t('spaces.byBuilding.storageValue') },
+    ],
+    [t],
+  );
 
   if (!loading && data.length === 0) {
     return (
@@ -41,9 +47,10 @@ export function SpaceValueByBuildingChart({ data, loading }: SpaceValueByBuildin
       <ReportChart
         type="bar"
         data={data}
-        config={config}
-        height={320}
-        xAxisKey="building"
+        series={series}
+        categoryKey="building"
+        categoryLabel={t('chart.category.building')}
+        formatValue={formatCurrencyWhole}
       />
     </ReportSection>
   );

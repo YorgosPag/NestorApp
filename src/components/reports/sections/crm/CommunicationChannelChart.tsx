@@ -2,13 +2,16 @@
 
 /**
  * @module reports/sections/crm/CommunicationChannelChart
- * @enterprise ADR-265 Phase 8 — Communications by channel bar chart
+ * @enterprise ADR-265 — Communications by channel
+ * @enterprise ADR-710 Φάση Γ
  */
 
 import '@/lib/design-system';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ReportSection, ReportChart, ReportEmptyState } from '@/components/reports/core';
-import type { ChartConfig } from '@/components/ui/chart';
+import type { ChartSeries } from '@/components/ui/chart-card';
+import { formatNumber } from '@/lib/intl-utils';
 import type { ChannelItem } from './types';
 
 interface CommunicationChannelChartProps {
@@ -19,12 +22,10 @@ interface CommunicationChannelChartProps {
 export function CommunicationChannelChart({ data, loading }: CommunicationChannelChartProps) {
   const { t } = useTranslation('reports');
 
-  const chartConfig: ChartConfig = {
-    count: {
-      label: t('crm.comms.count'),
-      color: 'hsl(var(--report-chart-2))',
-    },
-  };
+  const series = useMemo<ChartSeries<ChannelItem>[]>(
+    () => [{ key: 'count', label: t('crm.comms.count') }],
+    [t],
+  );
 
   if (!loading && data.length === 0) {
     return (
@@ -43,9 +44,10 @@ export function CommunicationChannelChart({ data, loading }: CommunicationChanne
       <ReportChart
         type="bar"
         data={data}
-        config={chartConfig}
-        xAxisKey="channel"
-        height={300}
+        series={series}
+        categoryKey="channel"
+        categoryLabel={t('chart.category.channel')}
+        formatValue={formatNumber}
       />
     </ReportSection>
   );

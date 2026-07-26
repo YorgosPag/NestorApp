@@ -2,13 +2,16 @@
 
 /**
  * @module reports/sections/contacts/GeographicDistributionChart
- * @enterprise ADR-265 Phase 9 — Contacts by city bar chart
+ * @enterprise ADR-265 — Contacts by city
+ * @enterprise ADR-710 Φάση Γ
  */
 
 import '@/lib/design-system';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ReportSection, ReportChart, ReportEmptyState } from '@/components/reports/core';
-import type { ChartConfig } from '@/components/ui/chart';
+import type { ChartSeries } from '@/components/ui/chart-card';
+import { formatNumber } from '@/lib/intl-utils';
 import type { CityDistributionItem } from './types';
 
 interface GeographicDistributionChartProps {
@@ -16,15 +19,16 @@ interface GeographicDistributionChartProps {
   loading?: boolean;
 }
 
-export function GeographicDistributionChart({ data, loading }: GeographicDistributionChartProps) {
+export function GeographicDistributionChart({
+  data,
+  loading,
+}: GeographicDistributionChartProps) {
   const { t } = useTranslation('reports');
 
-  const chartConfig: ChartConfig = {
-    count: {
-      label: t('contacts.geographic.count'),
-      color: 'hsl(var(--report-chart-5))',
-    },
-  };
+  const series = useMemo<ChartSeries<CityDistributionItem>[]>(
+    () => [{ key: 'count', label: t('contacts.geographic.count') }],
+    [t],
+  );
 
   if (!loading && data.length === 0) {
     return (
@@ -43,9 +47,10 @@ export function GeographicDistributionChart({ data, loading }: GeographicDistrib
       <ReportChart
         type="bar"
         data={data}
-        config={chartConfig}
-        xAxisKey="city"
-        height={300}
+        series={series}
+        categoryKey="city"
+        categoryLabel={t('chart.category.city')}
+        formatValue={formatNumber}
       />
     </ReportSection>
   );

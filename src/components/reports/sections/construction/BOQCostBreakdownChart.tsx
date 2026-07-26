@@ -2,13 +2,16 @@
 
 /**
  * @module reports/sections/construction/BOQCostBreakdownChart
- * @enterprise ADR-265 Phase 11 — BOQ estimated vs actual per building
+ * @enterprise ADR-265 — BOQ estimated vs actual by building
+ * @enterprise ADR-710 Φάση Γ
  */
 
 import '@/lib/design-system';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ReportSection, ReportChart, ReportEmptyState } from '@/components/reports/core';
-import type { ChartConfig } from '@/components/ui/chart';
+import type { ChartSeries } from '@/components/ui/chart-card';
+import { formatCurrencyWhole } from '@/lib/intl-utils';
 import type { BOQComparisonItem } from './types';
 
 interface BOQCostBreakdownChartProps {
@@ -19,10 +22,13 @@ interface BOQCostBreakdownChartProps {
 export function BOQCostBreakdownChart({ data, loading }: BOQCostBreakdownChartProps) {
   const { t } = useTranslation('reports');
 
-  const config: ChartConfig = {
-    estimated: { label: t('construction.boq.estimated'), color: 'hsl(var(--report-chart-1))' },
-    actual: { label: t('construction.boq.actual'), color: 'hsl(var(--report-chart-4))' },
-  };
+  const series = useMemo<ChartSeries<BOQComparisonItem>[]>(
+    () => [
+      { key: 'estimated', label: t('construction.boq.estimated') },
+      { key: 'actual', label: t('construction.boq.actual') },
+    ],
+    [t],
+  );
 
   if (!loading && data.length === 0) {
     return (
@@ -41,9 +47,10 @@ export function BOQCostBreakdownChart({ data, loading }: BOQCostBreakdownChartPr
       <ReportChart
         type="bar"
         data={data}
-        config={config}
-        height={320}
-        xAxisKey="building"
+        series={series}
+        categoryKey="building"
+        categoryLabel={t('chart.category.building')}
+        formatValue={formatCurrencyWhole}
       />
     </ReportSection>
   );

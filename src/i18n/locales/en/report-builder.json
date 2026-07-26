@@ -84,8 +84,9 @@
     "pie": "Pie",
     "area": "Area",
     "stackedBar": "Stacked Bar",
-    "legend": "Show legend",
-    "suggested": "suggested"
+    "suggested": "suggested",
+    "category": "Grouping",
+    "value": "Value"
   },
   "kpis": {
     "title": "Key Metrics"

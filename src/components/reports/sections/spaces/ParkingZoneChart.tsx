@@ -2,29 +2,47 @@
 
 /**
  * @module reports/sections/spaces/ParkingZoneChart
- * @enterprise ADR-265 Phase 10 — Parking by location zone pie chart
+ * @enterprise ADR-265 — Parking spaces by zone
+ * @enterprise ADR-710 §11.6
  */
 
 import '@/lib/design-system';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ReportSection, ReportChart, ReportEmptyState } from '@/components/reports/core';
-import type { ChartConfig } from '@/components/ui/chart';
+import {
+  ReportSection,
+  ReportCategoryPies,
+  ReportEmptyState,
+  type ReportCategorySlice,
+} from '@/components/reports/core';
+
+/** Parking zones, as the locale group `spaces.parking.zones` enumerates them. */
+const PARKING_ZONES = [
+  'pilotis',
+  'underground',
+  'open_space',
+  'rooftop',
+  'covered_outdoor',
+] as const;
 
 interface ParkingZoneChartProps {
-  data: { name: string; value: number }[];
+  data: ReportCategorySlice[];
   loading?: boolean;
 }
 
 export function ParkingZoneChart({ data, loading }: ParkingZoneChartProps) {
   const { t } = useTranslation('reports');
 
-  const config: ChartConfig = {
-    pilotis: { label: t('spaces.parking.zones.pilotis'), color: 'hsl(var(--report-chart-1))' },
-    underground: { label: t('spaces.parking.zones.underground'), color: 'hsl(var(--report-chart-2))' },
-    open_space: { label: t('spaces.parking.zones.open_space'), color: 'hsl(var(--report-chart-3))' },
-    rooftop: { label: t('spaces.parking.zones.rooftop'), color: 'hsl(var(--report-chart-4))' },
-    covered_outdoor: { label: t('spaces.parking.zones.covered_outdoor'), color: 'hsl(var(--report-chart-5))' },
-  };
+  const charts = useMemo(
+    () => [
+      {
+        data,
+        categoryLabel: t('chart.category.zone'),
+        categoryOrder: PARKING_ZONES.map((zone) => t(`spaces.parking.zones.${zone}`)),
+      },
+    ],
+    [data, t],
+  );
 
   if (!loading && data.length === 0) {
     return (
@@ -40,7 +58,7 @@ export function ParkingZoneChart({ data, loading }: ParkingZoneChartProps) {
       description={t('spaces.parking.zoneDescription')}
       id="parking-zone"
     >
-      <ReportChart type="pie" data={data} config={config} height={280} />
+      <ReportCategoryPies charts={charts} />
     </ReportSection>
   );
 }

@@ -2,36 +2,53 @@
 
 /**
  * @module reports/sections/crm/TaskDistributionChart
- * @enterprise ADR-265 Phase 8 — Tasks by status and priority pie charts
+ * @enterprise ADR-265 — Tasks by status and by priority
+ * @enterprise ADR-710 §11.6
  */
 
 import '@/lib/design-system';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ReportSection, ReportChart, ReportEmptyState } from '@/components/reports/core';
-import type { ChartConfig } from '@/components/ui/chart';
+import {
+  ReportSection,
+  ReportCategoryPies,
+  ReportEmptyState,
+} from '@/components/reports/core';
+import { PRIORITY_LEVELS } from '@/constants/priority-levels';
+import type { TaskDistributionItem } from './types';
+
+/** Task lifecycle, as the locale group `crm.taskStatuses` enumerates it. */
+const TASK_STATUSES = ['pending', 'in_progress', 'completed', 'cancelled'] as const;
 
 interface TaskDistributionChartProps {
-  statusData: { name: string; value: number }[];
-  priorityData: { name: string; value: number }[];
+  statusData: TaskDistributionItem[];
+  priorityData: TaskDistributionItem[];
   loading?: boolean;
 }
 
-export function TaskDistributionChart({ statusData, priorityData, loading }: TaskDistributionChartProps) {
+export function TaskDistributionChart({
+  statusData,
+  priorityData,
+  loading,
+}: TaskDistributionChartProps) {
   const { t } = useTranslation('reports');
 
-  const statusConfig: ChartConfig = {
-    pending: { label: t('crm.taskStatuses.pending'), color: 'hsl(var(--report-chart-4))' },
-    in_progress: { label: t('crm.taskStatuses.in_progress'), color: 'hsl(var(--report-chart-1))' },
-    completed: { label: t('crm.taskStatuses.completed'), color: 'hsl(var(--report-chart-3))' },
-    cancelled: { label: t('crm.taskStatuses.cancelled'), color: 'hsl(var(--report-chart-6))' },
-  };
-
-  const priorityConfig: ChartConfig = {
-    low: { label: t('crm.priorities.low'), color: 'hsl(var(--report-chart-2))' },
-    medium: { label: t('crm.priorities.medium'), color: 'hsl(var(--report-chart-4))' },
-    high: { label: t('crm.priorities.high'), color: 'hsl(var(--report-chart-5))' },
-    critical: { label: t('crm.priorities.critical'), color: 'hsl(var(--report-chart-6))' },
-  };
+  const charts = useMemo(
+    () => [
+      {
+        data: statusData,
+        categoryLabel: t('chart.category.status'),
+        categoryOrder: TASK_STATUSES.map((status) => t(`crm.taskStatuses.${status}`)),
+      },
+      {
+        data: priorityData,
+        categoryLabel: t('chart.category.priority'),
+        // Priority order from the PRIORITY_LEVELS SSoT — low to critical, never retyped.
+        categoryOrder: PRIORITY_LEVELS.map((priority) => t(`crm.priorities.${priority}`)),
+      },
+    ],
+    [statusData, priorityData, t],
+  );
 
   const hasData = statusData.length > 0 || priorityData.length > 0;
 
@@ -49,14 +66,7 @@ export function TaskDistributionChart({ statusData, priorityData, loading }: Tas
       description={t('crm.tasks.description')}
       id="task-distribution"
     >
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {statusData.length > 0 && (
-          <ReportChart type="pie" data={statusData} config={statusConfig} height={280} />
-        )}
-        {priorityData.length > 0 && (
-          <ReportChart type="pie" data={priorityData} config={priorityConfig} height={280} />
-        )}
-      </div>
+      <ReportCategoryPies charts={charts} />
     </ReportSection>
   );
 }

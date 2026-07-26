@@ -3,40 +3,29 @@
 /**
  * @module reports/sections/financial/RevenueRecognition
  * @enterprise ADR-265 Phase 5 — Earned Value by building bar chart
+ * @enterprise ADR-710 Φάση Γ
  */
 
 import '@/lib/design-system';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  ReportSection,
-  ReportChart,
-  ReportEmptyState,
-} from '@/components/reports/core';
-import type { ChartConfig } from '@/components/ui/chart';
+import { ReportSection, ReportChart, ReportEmptyState } from '@/components/reports/core';
+import type { ChartSeries } from '@/components/ui/chart-card';
+import { formatCurrencyWhole } from '@/lib/intl-utils';
 import type { RevenueByBuilding } from './types';
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
 
 interface RevenueRecognitionProps {
   data: RevenueByBuilding[];
   loading?: boolean;
 }
 
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
-
 export function RevenueRecognition({ data, loading }: RevenueRecognitionProps) {
   const { t } = useTranslation('reports');
 
-  const chartConfig: ChartConfig = {
-    earnedValue: {
-      label: t('financial.revenue.earnedValue'),
-      color: 'hsl(var(--report-chart-2))',
-    },
-  };
+  const series = useMemo<ChartSeries<RevenueByBuilding>[]>(
+    () => [{ key: 'earnedValue', label: t('financial.revenue.earnedValue') }],
+    [t],
+  );
 
   if (!loading && data.length === 0) {
     return (
@@ -59,9 +48,10 @@ export function RevenueRecognition({ data, loading }: RevenueRecognitionProps) {
       <ReportChart
         type="bar"
         data={data}
-        config={chartConfig}
-        xAxisKey="building"
-        height={300}
+        series={series}
+        categoryKey="building"
+        categoryLabel={t('chart.category.building')}
+        formatValue={formatCurrencyWhole}
       />
     </ReportSection>
   );

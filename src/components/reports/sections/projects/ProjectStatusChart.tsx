@@ -3,28 +3,46 @@
 /**
  * @module reports/sections/projects/ProjectStatusChart
  * @enterprise ADR-265 Phase 7 — Projects by status pie chart
+ * @enterprise ADR-710 §11.6 — colour is the position in the declared vocabulary
  */
 
 import '@/lib/design-system';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ReportSection, ReportChart, ReportEmptyState } from '@/components/reports/core';
-import type { ChartConfig } from '@/components/ui/chart';
+import {
+  ReportSection,
+  ReportCategoryPies,
+  ReportEmptyState,
+  type ReportCategorySlice,
+} from '@/components/reports/core';
+import { ACTIVE_PROJECT_STATUSES } from '@/constants/project-statuses';
 
 interface ProjectStatusChartProps {
-  data: { name: string; value: number }[];
+  data: ReportCategorySlice[];
   loading?: boolean;
 }
 
 export function ProjectStatusChart({ data, loading }: ProjectStatusChartProps) {
   const { t } = useTranslation('reports');
 
-  const chartConfig: ChartConfig = {
-    planning: { label: t('projects.status.statuses.planning'), color: 'hsl(var(--report-chart-1))' },
-    in_progress: { label: t('projects.status.statuses.in_progress'), color: 'hsl(var(--report-chart-2))' },
-    completed: { label: t('projects.status.statuses.completed'), color: 'hsl(var(--report-chart-3))' },
-    on_hold: { label: t('projects.status.statuses.on_hold'), color: 'hsl(var(--report-chart-4))' },
-    cancelled: { label: t('projects.status.statuses.cancelled'), color: 'hsl(var(--report-chart-5))' },
-  };
+  /**
+   * The vocabulary comes from the status SSoT, never from the rows: a status with no
+   * projects is filtered out upstream, and colour taken from the row rank would then
+   * repaint every status below it. It is mapped through `t` because the rows carry the
+   * translated label — the ordering itself stays canonical.
+   */
+  const charts = useMemo(
+    () => [
+      {
+        data,
+        categoryLabel: t('chart.category.status'),
+        categoryOrder: ACTIVE_PROJECT_STATUSES.map((status) =>
+          t(`projects.status.statuses.${status}`),
+        ),
+      },
+    ],
+    [data, t],
+  );
 
   if (!loading && data.length === 0) {
     return (
@@ -40,7 +58,7 @@ export function ProjectStatusChart({ data, loading }: ProjectStatusChartProps) {
       description={t('projects.status.description')}
       id="project-status"
     >
-      <ReportChart type="pie" data={data} config={chartConfig} height={300} />
+      <ReportCategoryPies charts={charts} size="md" />
     </ReportSection>
   );
 }
