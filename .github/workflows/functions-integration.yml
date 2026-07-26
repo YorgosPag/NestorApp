@@ -71,9 +71,6 @@ jobs:
       - name: 📥 Install functions dependencies
         run: npm --prefix functions ci
 
-      - name: 🛠️  Build functions
-        run: npm --prefix functions run build
-
       - name: 📥 Cache Firebase emulator binaries
         uses: actions/cache@v4
         with:
@@ -91,12 +88,24 @@ jobs:
       - name: 📥 Install firebase-tools CLI
         run: npm install -g firebase-tools
 
+      # Invoked through the package script — NOT as an inline `firebase
+      # emulators:exec` block. Two reasons, both learned the hard way:
+      #
+      #   1. PATH. `emulators:exec` spawns its command via `/bin/sh`, which
+      #      inherits the parent's PATH. A raw `run:` step has no
+      #      `node_modules/.bin` on it, so the inner `jest` resolved to
+      #      nothing — `/bin/sh: 1: jest: not found`, exit 127. Going through
+      #      `pnpm run` puts the bin dir on PATH, which is exactly why the two
+      #      sibling emulator workflows have always been green.
+      #   2. One source of truth. The inline block was a second copy of
+      #      `test:functions-integration:emulator` that drifted from it (the
+      #      script was missing `--project`). The script now owns the whole
+      #      invocation, including the `functions` build.
+      #
+      # @see .github/workflows/firestore-rules.yml (same shape)
+      # @see .github/workflows/storage-rules.yml   (same shape)
       - name: 🧪 Run functions integration suite
-        run: |
-          firebase emulators:exec \
-            --only firestore,storage,functions \
-            --project demo-nestor-functions-it \
-            "jest --config jest.config.functions-integration.js"
+        run: pnpm test:functions-integration:emulator
         env:
           CI: 'true'
 

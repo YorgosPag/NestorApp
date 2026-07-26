@@ -189,7 +189,7 @@
     "storage-rules:coverage:audit": "node scripts/check-storage-rules-test-coverage.js --all --verbose",
     "storage-rules:emulator": "firebase emulators:start --only storage --project demo-nestor",
     "test:functions-integration": "jest --config jest.config.functions-integration.js",
-    "test:functions-integration:emulator": "npm --prefix functions run build && firebase emulators:exec --only firestore,storage,functions \"jest --config jest.config.functions-integration.js\"",
+    "test:functions-integration:emulator": "npm --prefix functions run build && firebase emulators:exec --only firestore,storage,functions --project demo-nestor-functions-it \"jest --config jest.config.functions-integration.js\"",
     "enterprise:deps:check": "pnpm audit && pnpm outdated",
     "enterprise:deps:update": "pnpm update --latest",
     "enterprise:workspace:check": "pnpm -r ls --depth=0",
