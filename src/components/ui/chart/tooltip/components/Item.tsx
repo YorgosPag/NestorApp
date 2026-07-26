@@ -9,7 +9,7 @@ import type { ChartTooltipItemProps } from "../types";
 import '@/lib/design-system';
 
 export const ChartTooltipItem = React.memo(function ChartTooltipItemBase({
-  item, index, payload, formatter, hideIndicator, indicator, nameKey, color, nestLabel,
+  item, index, payload, formatter, valueFormatter, hideIndicator, indicator, nameKey, color, nestLabel,
 }: ChartTooltipItemProps) {
   const { config } = useChart();
   const key = `${nameKey || item.name || item.dataKey || "value"}`;
@@ -51,7 +51,9 @@ export const ChartTooltipItem = React.memo(function ChartTooltipItemBase({
             </div>
             {typeof item.value === "number" && (
               <span className="font-mono font-medium tabular-nums text-foreground">
-                {item.value.toLocaleString()}
+                {valueFormatter
+                  ? valueFormatter(item.value, item, index, payloadForFormatter)
+                  : item.value.toLocaleString()}
               </span>
             )}
           </div>

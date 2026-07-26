@@ -32,6 +32,7 @@ export const ChartTooltipContent = React.forwardRef<HTMLDivElement, ChartTooltip
       labelFormatter,
       labelClassName,
       formatter,
+      valueFormatter,
       color,
       nameKey,
       labelKey,
@@ -74,6 +75,7 @@ export const ChartTooltipContent = React.forwardRef<HTMLDivElement, ChartTooltip
               index={index}
               payload={payload}
               formatter={formatter}
+              valueFormatter={valueFormatter}
               hideIndicator={hideIndicator}
               indicator={indicator}
               nameKey={nameKey}
