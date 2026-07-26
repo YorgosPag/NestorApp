@@ -243,16 +243,7 @@ export function ContactsPageContent() {
 
             {/* Mobile list */}
             <section className={`md:hidden w-full ${selectedContact ? 'hidden' : 'block'}`} role="region" aria-label={t('page.views.mobileList')}>
-              <ContactsList
-                contacts={filteredContacts}
-                selectedContact={selectedContact}
-                onSelectContact={c => setSelectedContact(toggleSelect(selectedContact, c))}
-                isLoading={isLoading}
-                onNewContact={handleNewContact}
-                onDeleteContact={handleDeleteContacts}
-                onArchiveContact={handleArchiveContacts}
-                onContactUpdated={handleContactUpdatedInPlace}
-              />
+              <ContactsList {...contactListProps} />
             </section>
 
             {/* Mobile slide-in */}
@@ -264,17 +255,7 @@ export function ContactsPageContent() {
                   ? t('form.addTitle')
                   : selectedContact ? getContactDisplayName(selectedContact) : t('page.details.title')
               }
-              actionButtons={
-                (creationMode || showTrash) ? undefined : (
-                  <button
-                    onClick={() => handleDeleteContacts()}
-                    className={`p-2 rounded-md border ${colors.bg.primary} border-border text-destructive ${INTERACTIVE_PATTERNS.BUTTON_DESTRUCTIVE_GHOST} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
-                    aria-label={t('page.details.deleteContact')}
-                  >
-                    <Trash2 className={iconSizes.sm} />
-                  </button>
-                )
-              }
+              actionButtons={(creationMode || showTrash) ? undefined : deleteActionButton}
             >
               {creationMode === 'selecting' ? (
                 <ContactTypeSelector onSelect={handleSelectContactType} onCancel={handleCancelCreation} />
@@ -321,17 +302,7 @@ export function ContactsPageContent() {
               isOpen={!!selectedContact}
               onClose={() => setSelectedContact(null)}
               title={selectedContact ? getContactDisplayName(selectedContact) : t('page.details.title')}
-              actionButtons={
-                showTrash ? undefined : (
-                  <button
-                    onClick={() => handleDeleteContacts()}
-                    className={`p-2 rounded-md border ${colors.bg.primary} border-border text-destructive ${INTERACTIVE_PATTERNS.BUTTON_DESTRUCTIVE_GHOST} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
-                    aria-label={t('page.details.deleteContact')}
-                  >
-                    <Trash2 className={iconSizes.sm} />
-                  </button>
-                )
-              }
+              actionButtons={showTrash ? undefined : deleteActionButton}
             >
               {selectedContact && (
                 <ContactDetails {...contactDetailProps} />
