@@ -233,10 +233,9 @@ export function installEscapeAuditSentinel(): void {
   sentinelInstalled = true;
 }
 
-/** Test-only — το τελευταίο εύρημα του ελέγχου. */
-export function __getLastAuditFinding(): EscapeAuditFinding | null {
-  return lastFinding;
-}
+// Το τελευταίο εύρημα ΔΕΝ εκτίθεται ως named export: ο κανονικός του δρόμος
+// είναι το dev-console API (`exposeAuditToDevConsole().last()`). Τα tests
+// κρίνουν σύγχρονα μέσω __judgeForTests και δεν περνούν από το lastFinding.
 
 /** Test-only — καθαρισμός κατάστασης μεταξύ tests. */
 export function __resetAuditForTests(): void {
