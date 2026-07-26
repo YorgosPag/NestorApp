@@ -580,6 +580,16 @@ compositing — αν big-player πρακτική το διαψεύδει, ακο
   **Αρχεία:** νέο `scene/scene-redraw-level.ts` + `__tests__/scene-redraw-level.test.ts` · `scene-dirty-state.ts`
   (+test σε exhaustive anchors) · `ThreeJsSceneManager.ts` · `bim3d-perf-diag.ts` · `hover-beauty-cache.ts` (σχόλιο).
   **Tests:** 24 suites / 174 tests πράσινα στο `bim-3d/scene/__tests__` + scheduler 12/12. N.18 `jscpd:diff` καθαρό.
+  **+ `__tests__/scene-manager-tick.test.ts`** (νέο): τα άλλα δύο suites κατοχυρώνουν τη σημασία των
+  επιπέδων και ότι ανοίγουν το gate, αλλά **κανένα δεν απέδειχνε ότι το καρέ σχεδιάζεται στη σωστή
+  διαδρομή** — ίδιο σχήμα με το incident (κάθε κρίκος σωστός, η σύνδεσή τους ανέλεγκτη). Καλύπτει
+  OVERLAY→blit, FULL→beauty, **OVERLAY σε cache MISS→fallback σε full** (χωρίς αυτό ένα hover πάνω σε
+  άδειο cache θα άφηνε το καρέ ΑΣΧΕΔΙΑΣΤΟ — το ίδιο σύμπτωμα από άλλη πόρτα), + exhaustive anchor
+  «κάθε dirty επίπεδο σχεδιάζει πάντα κάτι». **Browser-verified 2026-07-26** (1568px viewport): hover
+  σε κολώνα → κίτρινο ΑΚΑΡΙΑΙΑ· μετακίνηση σε άλλη → ακολουθεί, η προηγούμενη σβήνει· κενός χώρος →
+  καθαρίζει πλήρως· status readout «Στύλος · 500×250mm»· snap glyph αναλλοίωτο. Και τα τρία σκέλη του
+  συμπτώματος (δεν εμφανιζόταν / κολλημένο σε παλιά κολώνα / χρειαζόταν scroll) εξαφανίστηκαν.
+  `ThreeJsSceneManager` 498/500 μετά την εξαγωγή του `scene-manager-tick.ts` (N.7.1).
   CHECK 6B/6D → stage αυτό το ADR + τα 6 αρχεία. 🔴 browser-verify (hover σε κολώνα → κίτρινο ΑΚΑΡΙΑΙΑ· καμία
   οπισθοδρόμηση σε FPS/selection) + commit (Giorgio).
 - **2026-07-26** — 🐛 **Φ4 — το κίτρινο περίγραμμα του Φ3 ΔΕΝ εμφανιζόταν ΠΟΤΕ στα BIM στοιχεία: `RedrawLevel` SSoT.**
