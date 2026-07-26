@@ -519,6 +519,46 @@ register_area "File Display Cascade" \
     "file-mutation-gateway-propagate|property-mutation-gateway|entity-file-display-propagator|propagate-entity-rename|useEntityFiles-realtime" \
     "npx jest --testPathPatterns='file-mutation-gateway-propagate|property-mutation-gateway|entity-file-display-propagator|propagate-entity-rename|useEntityFiles-realtime' --verbose"
 
+# CHECK 5D: Chart shell + reports charts (ADR-710) — BLOCKING
+#
+# WHY: ADR-710 built 71 anchors across the chart shell and the reports charts — the
+# nesting refusal, the heading level, the category-colour rule, the reachable data table,
+# and the Βήμα 4 scan that keeps palette slots out of the 34 call sites. Until this area
+# existed, NOTHING ran any of them: there was no registered area here, `unit.yml` is
+# disabled, and `coverage-ratchet.yml` runs with `continue-on-error` (it gates coverage %,
+# not pass/fail — a failing assertion still executes the code, so coverage never drops).
+#
+# That is the exact shape ADR-587 §6.1 paid for on the DXF side, and the ADR states the
+# rule it produced: an anchor without a gate is not an anchor, it is a comment. These were
+# comments. Cost is ~15s, and only on a commit that touches the shell or the charts.
+register_area "Chart Shell (ADR-710)" \
+    "^src/components/(ui/chart-card|reports)/" \
+    "src/components/(ui/chart-card|reports)/.*__tests__" \
+    "npx jest --testPathPatterns='src/components/(ui/chart-card|reports)/.*__tests__' --verbose"
+
+# ─── Canary: the same failure the CHECK 5C canary guards, on this area ───
+# A renamed or moved __tests__ folder must break the gate loudly rather than turn it into
+# a no-op that reports success. `wc -l` and not `grep -c` — see the note under CHECK 5C.
+if printf '%s\n' "${TEST_AREA_NAMES[@]}" | grep -qx "Chart Shell (ADR-710)"; then
+    CHART_ANCHORS_ON_DISK=$(find src/components/ui/chart-card src/components/reports \
+        -path '*__tests__*' -name '*.test.ts*' 2>/dev/null | wc -l | tr -d '[:space:]')
+    if [[ "$CHART_ANCHORS_ON_DISK" -lt 1 ]]; then
+        echo ""
+        echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
+        echo -e "${RED}  🚫 COMMIT BLOCKED — CHECK 5D canary: anchor pattern matches NOTHING${NC}"
+        echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
+        echo ""
+        echo -e "${YELLOW}  The chart shell is staged, but no test file was found under${NC}"
+        echo -e "${YELLOW}  src/components/ui/chart-card/__tests__ or src/components/reports/**/__tests__.${NC}"
+        echo -e "${YELLOW}  The gate is broken, not satisfied — a green run here means nothing.${NC}"
+        echo ""
+        echo -e "${YELLOW}  Fix the pattern in scripts/git-hooks/pre-commit (CHECK 5D) — do NOT bypass.${NC}"
+        echo -e "${YELLOW}  Reference: ADR-710 §11.8${NC}"
+        echo ""
+        exit 1
+    fi
+fi
+
 # CHECK 5C: DXF Entity Capability Anchors (ADR-587 Φ11) — BLOCKING
 #
 # WHY: the ADR-587 coverage anchors bind the renderable domain SSoT
