@@ -16,13 +16,10 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { NumericField } from '@/components/ui/numeric-field';
 import { DollarSign } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { apiClient } from '@/lib/api/enterprise-api-client';
-import { API_ROUTES } from '@/config/domain-constants';
 import '@/lib/design-system';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -37,22 +34,22 @@ export function ChangePriceDialog({ unit, open, onOpenChange, onSuccess }: BaseD
   const { t } = useTranslation(COMMON_NAMESPACES);
   const iconSizes = useIconSizes();
   const { success, error: notifyError } = useNotifications();
-  const [askingPrice, setAskingPrice] = useState<string>(
-    unit.commercial?.askingPrice?.toString() ?? ''
-  );
+  // ADR-706: the model is a plain number and 0 means "no price yet" — the field
+  // renders blank on 0 so the dialog still opens on its placeholder.
+  const [askingPrice, setAskingPrice] = useState<number>(unit.commercial?.askingPrice ?? 0);
   const [saving, setSaving] = useState(false);
   const { checking: previewChecking, runExistingPropertyUpdate, ImpactDialog } = useGuardedPropertyMutation(unit);
 
   // Sync state when dialog opens or unit data changes
   useEffect(() => {
     if (open) {
-      setAskingPrice(unit.commercial?.askingPrice?.toString() ?? '');
+      setAskingPrice(unit.commercial?.askingPrice ?? 0);
     }
   }, [open, unit.commercial?.askingPrice]);
 
   const handleSave = useCallback(async () => {
-    const price = Number(askingPrice);
-    if (isNaN(price) || price <= 0) return;
+    const price = askingPrice;
+    if (price <= 0) return;
 
     setSaving(true);
     try {
@@ -100,15 +97,15 @@ export function ChangePriceDialog({ unit, open, onOpenChange, onSuccess }: BaseD
         </DialogHeader>
 
         <fieldset className="space-y-3 py-2">
-          <Label className="text-sm font-medium">
-            {t('sales.dialogs.changePrice.askingPrice')}
-          </Label>
-          <Input
-            type="number"
+          <NumericField
+            id="change-price-asking"
+            label={t('sales.dialogs.changePrice.askingPrice')}
+            labelClassName="text-sm font-medium"
             min={0}
             step={1000}
             value={askingPrice}
-            onChange={(e) => setAskingPrice(e.target.value)}
+            onValueChange={setAskingPrice}
+            blankValue={0}
             placeholder={t('sales.dialogs.changePrice.placeholder')}
             className="text-right"
             autoFocus
@@ -124,7 +121,7 @@ export function ChangePriceDialog({ unit, open, onOpenChange, onSuccess }: BaseD
           </Button>
           <Button
             onClick={handleSave}
-            disabled={saving || previewChecking || !askingPrice || Number(askingPrice) <= 0}
+            disabled={saving || previewChecking || askingPrice <= 0}
           >
             {saving ? t('common.saving') : t('common.save')}
           </Button>

@@ -66,3 +66,36 @@ export function translateServerError(
   // Fallback — return original message
   return serverMsg;
 }
+
+// =============================================================================
+// DIALOG ERROR HANDLING
+// =============================================================================
+
+/** Το αποτέλεσμα ενός αποτυχημένου sales mutation, έτοιμο για UI + log. */
+export interface SalesDialogError {
+  /** Μεταφρασμένο μήνυμα — πάει στο UI και στο notification */
+  message: string;
+  /** Ωμό μήνυμα του server — πάει ΜΟΝΟ στο log */
+  rawMessage: string;
+}
+
+/**
+ * Κανονικοποιεί ένα σφάλμα mutation σε μεταφρασμένο μήνυμα + ωμό μήνυμα.
+ *
+ * Κάθε sales dialog έκανε το ίδιο unwrap/translate/fallback χειροκίνητα.
+ *
+ * @param fallbackI18nKey Κλειδί που χρησιμοποιείται όταν ο server δεν έστειλε μήνυμα
+ */
+export function resolveSalesDialogError(
+  err: unknown,
+  t: (key: string, opts?: Record<string, string>) => string,
+  fallbackI18nKey: string,
+): SalesDialogError {
+  const errorObj = err as { message?: string; error?: string };
+  const rawMessage = errorObj?.error ?? errorObj?.message ?? '';
+
+  return {
+    message: rawMessage ? translateServerError(rawMessage, t) : t(fallbackI18nKey),
+    rawMessage,
+  };
+}

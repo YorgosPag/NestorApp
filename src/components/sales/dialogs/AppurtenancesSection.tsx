@@ -10,7 +10,7 @@
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
+import { NumericField } from '@/components/ui/numeric-field';
 import { Label } from '@/components/ui/label';
 import { Car, Package, AlertTriangle, Ban } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -103,15 +103,16 @@ export function AppurtenancesSection({
                     {space.salePrice > 0 ? formatCurrencyWhole(space.salePrice) : '—'}
                   </span>
                 ) : (
-                  <Input
-                    type="number"
+                  <NumericField
                     min={0}
                     step={500}
-                    value={space.salePrice || ''}
-                    onChange={(e) => onPriceChange(space.spaceId, Number(e.target.value) || 0)}
+                    value={space.salePrice}
+                    onValueChange={(price) => onPriceChange(space.spaceId, price)}
+                    blankValue={0}
                     placeholder={t('sales.appurtenances.pricePlaceholder')}
                     className="w-28 text-right text-sm"
                     disabled={!space.checked || hasNoArea}
+                    aria-label={space.displayName}
                   />
                 )}
               </div>
