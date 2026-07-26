@@ -2,6 +2,8 @@
 
 **STATUS: ACTIVE**
 
+- 🟡 **`--report-chart-*` → `--chart-*`: 34 αρχεία, boy-scout μετάπτωση (2026-07-27, ADR-710 §10· UNCOMMITTED).** Οι δύο παλέτες γραφημάτων του app ενοποιήθηκαν σε **μία** SSoT των 8 χρωμάτων· τα `--report-chart-1..8` είναι πλέον **deprecated aliases** (`var(--chart-N)`) στο `globals.css`. Λειτουργικά είναι κλειστό — **τα 86 αρχεία-καταναλωτές δεν άλλαξαν και βάφουν ήδη σωστά**· μένει μόνο η ονοματολογία. Μετάπτωση **όταν αγγίζεις το αρχείο**, όχι με blanket sed. Εντολή μέτρησης: `grep -rlE "report-chart-[0-9]" src/`. Όταν φτάσει 0 → σβήσε τα aliases από το `globals.css`. ⚠️ **ΜΗΝ** προσθέσεις νέες χρήσεις `--report-chart-*`. 📌 ADR-710 §10.4.
+
 - 🔴 **`new Intl.NumberFormat('el-GR', …)` καρφωμένο σε 27 αρχεία (μετρημένο 2026-07-27, κατά N.0.2 στον κύκλο ADR-710).** Κάθε ένα αγνοεί τον language switcher: ο χρήστης γυρίζει σε αγγλικά, τα ποσά μένουν ελληνικά. Το SSoT υπάρχει και δουλεύει — `formatCurrency` / `formatCurrencyWhole` / `formatPercentage` / `formatNumber` στο `@/lib/intl-utils`, όλα διαβάζουν `getCurrentLocale()` τη στιγμή της κλήσης. Κατανομή: **8** `src/hooks/reports/*`, **4** showcase specs (building/parking/project/storage), **4** `src/components/reports/*`, **2** `services/payment-plan-installments`, **2** `report-engine/grouping-engine`, και ×1 σε `overdue-alert.service`, `KPIAlertCard`, `EditInstallmentDialog`, `KpiTotalCommittedSpend`, `subapps/procurement/QuoteList`, `rfq-dashboard-stats`, `lib/number/greek-decimal`, `showcase-email-shared`. Εντολή μέτρησης: `grep -rn "NumberFormat('el-GR'" src/`. **ΜΗΝ blanket sed:** το `greek-decimal.ts` είναι πιθανότατα **σκόπιμα** ελληνικό (ο parser δεκαδικών του ADR-576 — το κόμμα είναι μέρος του συμβολαίου, όχι προτίμηση χρήστη), και τα email templates παράγονται server-side όπου δεν υπάρχει `i18n.language` του χρήστη — χρειάζεται ανάγνωση ανά σημείο. 5+ τομείς ⇒ καταγραφή. 📌 ADR-710 §8 #7.
 
 - 🔴 **`<Input type="number">` σε ΔΕΚΑΔΙΚΑ πεδία → `NumericField` (ADR-706) — ΥΠΟΛΟΙΠΟ: 138 σημεία / 69 αρχεία· εκ των οποίων **46 σημεία / 24 αρχεία** με `step="0.x"` = **βεβαιωμένα δεκαδικά** (μετρημένο 2026-07-26 μετά το `sales`).**
@@ -420,27 +422,46 @@
 
 ## Pending tasks (priority order)
 
-### 🔐 ADR-711 — ratchet `modal-keyboard-scope` ΔΕΝ ΚΑΤΑΧΩΡΗΘΗΚΕ (priorità ΜΕΣΑΙΑ, ~15 λεπτά, 2026-07-26)
+### 🔐 ADR-711 — keyboard scope: ο ratchet ΕΚΛΕΙΣΕ· μένει η μετανάστευση (priorità ΜΕΣΑΙΑ, 2026-07-26)
 
-- [ ] **Πρόσθεσε το module `modal-keyboard-scope` στο `.ssot-registry.json` + `npm run ssot:baseline`.**
-  Το έτοιμο μπλοκ JSON (ssotFile / forbiddenPatterns / allowlist) είναι στο **ADR-711 §5** — αντίγραψέ το,
-  μην το ξαναγράψεις. **Γιατί δεν έγινε**: γράφτηκε μία φορά, αλλά ο παράλληλος agent (ADR-710)
-  έκανε `git add` του ίδιου αρχείου και το commit-άρισε **χωρίς baseline** (`48f0b4e9`/`347d7bd3`) —
-  stage race. Αφαιρέθηκε από το working tree. Το pattern ταιριάζει **38 αρχεία**, κανένα σε baseline
-  ⇒ ενεργό χωρίς baseline = **ΜΠΛΟΚ σε κάθε commit** που τα αγγίζει. Το `ssot:baseline` έτρεξε
-  **>22′ χωρίς έξοδο** σε Windows και ξαναγράφει **κοινό** baseline ⇒ θέλει **ήσυχο δέντρο**. **Χωρίς αυτό, ο 44ος window keydown listener
-  μπορεί να γραφτεί ωμός** και να ξανασπάσει το `Tab` μέσα στα modals (ελάττωμα Ε1, ADR-364 §10.15).
+✅ **DONE — ο ratchet είναι ΕΝΕΡΓΟΣ, σε δύο όργανα (2026-07-26, Opus 5· UNCOMMITTED).** Το ζητούμενο
+επιτεύχθηκε **χωρίς** `ssot:baseline` και **χωρίς** ήσυχο δέντρο, αλλάζοντας ποιο όργανο φυλάει τι:
+**(Α)** registry module `modal-keyboard-scope` (tier 2, `ssotFile: src/lib/a11y/keyboard-scope.ts`)
+που απαγορεύει **re-implementation** των predicates — **μηδέν ευρήματα εκτός allowlist**, άρα καμία
+ανάγκη για κοινό baseline (ίδιο κόλπο με το `impact-guard-hook`/ADR-664· `test:registry-golden`
+**96/96**)· **(Β)** structural jest anchor
+`src/subapps/dxf-viewer/keyboard/__tests__/raw-keydown-listener-ratchet.test.ts` που ratchet-άρει τον
+**πληθυσμό** των ωμών listeners (`BY_DESIGN` 10 με λόγο ανά εγγραφή + `PENDING_MIGRATION` **27**),
+πιάνει **και τις δύο** κατευθύνσεις (νέο αρχείο ονομαστικά / μπαγιάτικη εγγραφή) και έχει φύλακα
+κενής σάρωσης. **Mutation-verified ×2.** ⚠️ **Η αιτία των «22 λεπτών» βρέθηκε**: το
+`scripts/ssot-audit.sh` κάνει ένα full-`src` `grep -rE` **ανά module** × **349 modules** — O(modules ×
+files), όχι κρέμασμα. Πλήρη δεδομένα: **ADR-711 §5**.
 
-- [ ] **Μετανάστευσε τους υπόλοιπους ~23 global accelerators σε `addGlobalShortcutListener`** (Boy-Scout
-  στο άγγιγμα, N.0.2). Μεταναστευμένοι: `use3DShortcuts`, `useKeyboardShortcuts`, `use2DKeyboardFocus`,
-  `useBimMaterialCycler`, `use-column-anchor-tab-cycle`, `useFoundationTool`, `useDimensionKeyboardRouting`.
+- [ ] **Μετανάστευσε τους υπόλοιπους **27** global accelerators σε `addGlobalShortcutListener`**
+  (Boy-Scout στο άγγιγμα, N.0.2). **Η λίστα ζει πλέον στον κώδικα** — `PENDING_MIGRATION` στο
+  `raw-keydown-listener-ratchet.test.ts`· μεταναστεύεις ένα, σβήνεις τη γραμμή του, το test σε
+  αναγκάζει. Μεταναστευμένοι: `use3DShortcuts`, `useKeyboardShortcuts`, `use2DKeyboardFocus`,
+  `useBimMaterialCycler`, `use-column-anchor-tab-cycle`, `useFoundationTool`,
+  `useDimensionKeyboardRouting`, **`useLayerCommandShortcuts` (2026-07-26)**.
   ⚠️ **ΜΗΝ** μεταναστεύσεις listeners που ανήκουν σε input/overlay (Dynamic Input, Command Line, Radial
   ring) ούτε το `escape-bus`: εκεί ο φύλακας θα ήταν **παλινδρόμηση** — βλ. ADR-711 §3.5.
 
-- [ ] **Απομένουν ≥5 αντίγραφα του predicate «γράφω σε πεδίο;»** εκτός εύρους της φάσης:
-  `useLayerCommandShortcuts.ts:47`, `useDimToolRouting.ts:168`, `use-polygon-sketch-chain.ts:217`,
-  `use-wall-tool-event-listeners.ts:152`, `useStairTool.ts:295`, `useGripSpacebarCycle.ts:65`.
-  Αντικατάσταση με `isEditableTarget` από `@/lib/a11y/keyboard-scope`.
+- [ ] **Απομένουν 5 αντίγραφα του predicate «γράφω σε πεδίο;»** (επαληθευμένα ζωντανά 2026-07-26):
+  `useDimToolRouting.ts:168`,
+  `use-polygon-sketch-chain.ts:217`, `use-wall-tool-event-listeners.ts:152`, `useStairTool.ts:295`,
+  `useGripSpacebarCycle.ts:65` (inline μορφές — το CHECK 3.7 πιάνει μόνο τις **ονομασμένες**
+  `function foo(`). Αντικατάσταση με `isEditableTarget` από `@/lib/a11y/keyboard-scope`.
+  ✅ `useLayerCommandShortcuts.ts:47` **έγινε** (2026-07-26): ο τοπικός `isInputFocused` σύγκρινε
+  `contenteditable` με τη συμβολοσειρά `'true'` ⇒ έχανε `contenteditable=""` **και** το κληρονομημένο.
+
+- [ ] 🟡 **`radial-command-ring-helpers.isEditableTarget` — 4η ζωντανή υλοποίηση, allowlisted αντί να
+  ενοποιηθεί, με λόγο (μετρημένο 2026-07-26).** Ελέγχει **και `SELECT`**· το SSoT **όχι** ⇒ η δήλωση
+  «γνήσιο υπερσύνολο όλων» του ADR-711 §2 **ήταν ανακριβής** (διορθώθηκε). Δεν είναι μονόπλευρη
+  απόφαση: (α) σκέτη αντικατάσταση ⇒ το δαχτυλίδι αρχίζει να κλέβει πλήκτρα από focused `<select>`
+  (type-ahead του browser)· (β) προσθήκη `SELECT` **στο SSoT** ⇒ τον ίδιο έλεγχο καταναλώνει ο
+  **escape bus**, οπότε `Escape` με focus σε `<select>` **μέσα σε dialog** παύει να κλείνει τον
+  dialog. 2 τομείς (dynamic-input + escape-bus) ⇒ δικό του πέρασμα, με ζωντανή μέτρηση και στα δύο.
+  📌 ADR-711 §5.6.
 
 - [ ] **ΖΩΝΤΑΝΗ ΜΕΤΡΗΣΗ ΠΟΥ ΕΚΚΡΕΜΕΙ (ADR-364 §10.15.Δ)**: ότι το ESC της λίστας @-mention δεν τυπώνει
   πλέον `SHADOW-OWNER`. Απαιτεί επιλεγμένο έργο· το `ProjectHierarchyContext` μηδενίστηκε **2×** από HMR

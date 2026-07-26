@@ -50,9 +50,17 @@ function asElement(target: EventTarget | Element | null | undefined): Element | 
  * `true` όταν ο στόχος είναι πεδίο κειμένου — INPUT / TEXTAREA / contenteditable.
  *
  * Ο SSoT των **έξι** αντιγράφων που υπήρχαν πριν το ADR-711 (`isTypingInFormField`,
- * `isEditableFocus`, `isInputFocused`, και τρία inline). Είναι **γνήσιο υπερσύνολο**
- * όλων τους: χρησιμοποιεί `isContentEditable`, που πιάνει και το `contenteditable=""`
- * και το **κληρονομημένο** contenteditable — περιπτώσεις που και οι έξι έχαναν.
+ * `isEditableFocus`, `isInputFocused`, και τρία inline). Είναι υπερσύνολο όλων τους **ως
+ * προς το επεξεργάσιμο κείμενο**: χρησιμοποιεί `isContentEditable`, που πιάνει και το
+ * `contenteditable=""` και το **κληρονομημένο** contenteditable — περιπτώσεις που και οι
+ * έξι έχαναν.
+ *
+ * ⚠️ **Μία μετρημένη εξαίρεση (2026-07-26)**: το αντίγραφο στο
+ * `dxf-viewer/systems/dynamic-input/components/radial-command-ring-helpers.ts` επιστρέφει
+ * `true` και για `SELECT`. Εδώ **δεν** το κάνουμε — και η προσθήκη δεν είναι μονόπλευρη:
+ * τον ίδιο έλεγχο καταναλώνει ο **escape bus**, άρα `SELECT` εδώ θα σήμαινε ότι το
+ * `Escape` με focus σε `<select>` **μέσα σε dialog** παύει να κλείνει τον dialog.
+ * Καταγεγραμμένο — ADR-711 §5.6.
  */
 export function isEditableTarget(target: EventTarget | Element | null | undefined): boolean {
   const el = asElement(target);

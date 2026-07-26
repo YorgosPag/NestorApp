@@ -70,8 +70,11 @@ shouldGlobalShortcutYield(event): boolean  // η ΜΙΑ ερώτηση των gl
 - **Σωρός, όχι σημαία**: dialog → ConfirmDialog από πάνω· το κλείσιμο του δεύτερου δεν πρέπει να
   ξεκλειδώνει τους accelerators όσο ζει το πρώτο.
 - **Ιδempotent release**: το διπλό effect του React StrictMode δεν αφήνει αρνητικό βάθος.
-- `isEditableTarget` είναι **γνήσιο υπερσύνολο** των παλιών: πιάνει `isContentEditable`
-  (κληρονομημένο) και `contenteditable=""`, που **και τα δέκα** αντίγραφα έχαναν.
+- `isEditableTarget` είναι υπερσύνολο των παλιών **σε ό,τι αφορά επεξεργάσιμο κείμενο**: πιάνει
+  `isContentEditable` (κληρονομημένο) και `contenteditable=""`, που **και τα δέκα** αντίγραφα έχαναν.
+  ⚠️ **Μία εξαίρεση, μετρημένη 2026-07-26**: το `radial-command-ring-helpers` έλεγχε **και `SELECT`**·
+  το SSoT όχι. Άρα **δεν** είναι γνήσιο υπερσύνολο όλων — βλ. **§5.6** για το γιατί η ενοποίηση
+  εκείνου του ενός δεν είναι μονόπλευρη απόφαση (ο escape bus καταναλώνει το ίδιο predicate).
 - `shouldGlobalShortcutYield` = **belt-and-suspenders** (N.7.2 #4): scope (πρωτεύον, O(1))
   **ή** editable στόχος/`activeElement` (δίχτυ για layers εκτός των κοινών primitives).
 
@@ -126,50 +129,110 @@ shouldGlobalShortcutYield(event): boolean  // η ΜΙΑ ερώτηση των gl
 
 Οι υπόλοιποι ~23 global accelerators μεταναστεύουν **Boy-Scout στο άγγιγμα** (N.0.2).
 
-## 5. Ratchet — ΕΚΚΡΕΜΕΙ (δεν εφαρμόστηκε, με λόγο)
+## 5. Ratchet — ΕΝΕΡΓΟΣ, σε **δύο** όργανα (2026-07-26)
 
-**Κατάσταση: ΑΝΕΝΕΡΓΟ — αφαιρέθηκε από το working tree, με λόγο.**
+**Κατάσταση: 🟢 ΕΝΕΡΓΟΣ.** Η αρχική προσπάθεια απέτυχε με τεκμηριωμένο λόγο· το ζητούμενο
+επιτεύχθηκε αλλάζοντας **ποιο** όργανο φυλάει **τι**.
 
-🔴 **ΠΕΡΙΣΤΑΤΙΚΟ (stage race, 2026-07-26)**: το module γράφτηκε στο `.ssot-registry.json`, και ενώ
-γινόταν ο έλεγχος επιπτώσεων ο **παράλληλος agent (ADR-710) έκανε `git add` του ίδιου αρχείου** και
-το commit-άρισε (`48f0b4e9` / `347d7bd3`) **μαζί με τη δική του δουλειά**. Δηλαδή το module μπήκε στο
-HEAD **χωρίς baseline**. Το working tree το **αφαιρεί**· η δουλειά του άλλου agent
-(`chart-card-shell`, `contact-address-blankness`, `contact-session-storage`) είναι **ανέπαφη**
-(επαληθευμένο: HEAD 384 → WT 385 = −1 δικό μου, +2 δικά του).
+### 5.1 Γιατί το ένα καθολικό pattern ήταν λάθος εργαλείο
 
-**Γιατί δεν μένει ενεργό**: το `forbiddenPatterns` ταιριάζει σε **38 αρχεία** και **κανένα** δεν
-υπάρχει στο `.ssot-violations-baseline.json` ⇒ το CHECK 3.7 θα ΜΠΛΟΚΑΡΕ κάθε επόμενο commit που
-αγγίζει έστω ένα από αυτά. Το `npm run ssot:baseline` που θα το θεράπευε (α) έτρεχε **>22 λεπτά
-χωρίς έξοδο** σε Windows και (β) ξαναγράφει **κοινό** baseline αρχείο, αποτυπώνοντας μέσα του τα
-uncommitted ευρήματα του παράλληλου agent — ακριβώς αυτό που το ίδιο το repo προειδοποιεί να μη
-γίνεται («baseline μόνο μετά από νόμιμο cleanup»). **Ενεργοποίησέ το όταν το δέντρο είναι ήσυχο**:
-πρόσθεσε το μπλοκ, τρέξε `npm run ssot:baseline`, commit τα δύο μαζί.
+Το προφανές μπλοκ ήταν `forbiddenPatterns: ["window\\.addEventListener\\(.keydown."]`. Μετρημένο:
+ταιριάζει **38 αρχεία** (ts/tsx, χωρίς `coverage/`+`reports/`) και **κανένα** δεν υπάρχει στο
+`.ssot-violations-baseline.json` ⇒ ως blocking check θα **μόνο** μπλόκαρε. Το `npm run ssot:baseline`
+που θα το θεράπευε:
 
-Έτοιμο μπλοκ:
+- έτρεχε **>22 λεπτά χωρίς έξοδο** σε Windows. **Η αιτία βρέθηκε**: το `scripts/ssot-audit.sh` κάνει
+  ένα full-`src` `grep -rE` **ανά module**, και τα modules είναι **349** ⇒ 349 σαρώσεις ~12.600
+  αρχείων. Δεν είναι κρέμασμα, είναι O(modules × files).
+- ξαναγράφει **κοινό** αρχείο, αποτυπώνοντας μέσα του τα uncommitted ευρήματα όποιου άλλου πράκτορα
+  δουλεύει στο ίδιο δέντρο — ακριβώς αυτό που το repo προειδοποιεί να μη γίνεται.
 
-```json
-"modal-keyboard-scope": {
-  "ssotFile": "src/subapps/dxf-viewer/keyboard/global-shortcut-listener.ts",
-  "description": "ADR-711 — global accelerators του viewer εγγράφονται μέσω addGlobalShortcutListener, ποτέ με ωμό window.addEventListener('keydown'). Ο wrapper ρωτά shouldGlobalShortcutYield (modal scope + editable target). Ωμός listener = το πλήκτρο κλέβεται από ανοιχτό modal — η ρίζα των Ε1/Ε4 του ADR-364 §10.15.",
-  "forbiddenPatterns": [
-    "window\\.addEventListener\\('keydown'"
-  ],
-  "allowlist": [
-    "src/subapps/dxf-viewer/keyboard/global-shortcut-listener.ts",
-    "src/subapps/dxf-viewer/systems/escape-bus/EscapeCommandBus.ts",
-    "src/subapps/dxf-viewer/systems/escape-bus/escape-dev-audit.ts",
-    "src/subapps/dxf-viewer/keyboard/createModifierKeyTracker.ts",
-    "src/subapps/dxf-viewer/systems/dynamic-input/",
-    "src/subapps/dxf-viewer/ui/command-line/"
-  ],
-  "addedDate": "2026-07-26",
-  "addedByAdr": "ADR-711",
-  "tier": 2
-}
-```
+Είναι το **ίδιο σχήμα με το `numeric-field`** (ADR-706): ένα καθολικό pattern σε 38 σημεία δίνει
+**μηδέν σήμα** (παγίδα N.12). Η διόρθωση δεν ήταν «περίμενε ήσυχο δέντρο» — ήταν **χώρισε την
+ερώτηση στα δύο**.
 
-Μετά την προσθήκη: `npm run ssot:baseline` (οι ~23 μη μεταναστευμένοι μπαίνουν σε baseline και
-**μόνο μειώνονται**).
+### 5.2 Όργανο Α — registry module (CHECK 3.7): φυλάει κατά **re-implementation**
+
+Ενεργό στο `.ssot-registry.json`, `ssotFile: src/lib/a11y/keyboard-scope.ts`, tier 2. Απαγορεύει
+**δεύτερη υλοποίηση** των δύο predicates:
+
+| Pattern | Τι σταματά |
+|---|---|
+| `function\s+(shouldGlobalShortcutYield\|isModalKeyboardScopeActive\|pushModalKeyboardScope\|addGlobalShortcutListener)\s*\(` | δεύτερος σωρός scope / δεύτερος wrapper |
+| `function\s+(isTypingInFormField\|isEditableTarget\|isEditableFocus\|isInputFocused\|isTypingTarget\|isTextInputFocused)\s*\(` | ο **11ος** αντίγραφος του «γράφει ο χρήστης;» |
+
+🟢 **Μηδέν ευρήματα εκτός allowlist** (επαληθευμένο με προσομοίωση της λογικής του `audit.sh`:
+grep → allowlist prefix skip) ⇒ **δεν χρειάζεται καθόλου `ssot:baseline`** ⇒ **ασφαλές σε κοινό
+δέντρο**, που ήταν όλο το εμπόδιο. Ίδιο κόλπο με το `impact-guard-hook` (ADR-664).
+Επαληθεύτηκε από `npm run test:registry-golden` → **96/96** (ERE εγκυρότητα + fixtures).
+
+5 εγγραφές allowlist, κάθε μία με λόγο: το `a11y/` (SSoT), ο wrapper, το
+`bim-3d/ui/is-typing-in-form-field.ts` (λεπτό re-export), ο `EscapeCommandBus` (**delegate-άρει**
+στο SSoT) και το `radial-command-ring-helpers.ts` (**καταγεγραμμένο χρέος** — §5.4).
+
+### 5.3 Όργανο Β — structural jest anchor: ratchet του **πληθυσμού**
+
+`src/subapps/dxf-viewer/keyboard/__tests__/raw-keydown-listener-ratchet.test.ts`
+
+Ο αριθμός ζει σε **δικό μας** αρχείο, όχι σε κοινό baseline: καμία 22-λεπτη regeneration, καμία
+ρύπανση από ξένη δουλειά, και το σήμα είναι **ονομαστικό** — «`hooks/foo.ts`», όχι «+1 violation».
+
+- `BY_DESIGN` — **10** listeners που *οφείλουν* να είναι ωμοί, **με τον λόγο γραμμένο ανά εγγραφή**
+  (wrapper, modifier tracker, escape bus ×2 + tests ×2, dynamic-input ×3, ένα παράδειγμα τεκμηρίωσης).
+- `PENDING_MIGRATION` — **27** μη μεταναστευμένοι· Boy-Scout στο άγγιγμα (§4).
+- Πιάνει **και τις δύο** κατευθύνσεις: νέο αρχείο ⇒ κόκκινο ονομαστικά· μεταναστευμένο που έμεινε
+  στη λίστα ⇒ κόκκινο «βγάλ' το» (ο ratchet **μόνο μικραίνει** — λίστα που δεν αδειάζει είναι σχόλιο).
+- Φύλακας κενής σάρωσης (>500 αρχεία, >10 offenders) ώστε ένα σπασμένο path να μη διαβαστεί ως «καθαρό».
+
+**Mutation-verified ×2**: (α) βγάζοντας το `statusbar/CadStatusBar.tsx` από τη λίστα εμφανίστηκε ως
+ΝΕΟ ⇒ ο έλεγχος όντως διαβάζει τα αρχεία· (β) επαναφέροντας τον ωμό listener στο
+`useLayerCommandShortcuts` έσπασαν **δύο** φύλακες — ο ratchet ονομαστικά **και** το behavioural test
+«ΔΕΝ δρα όσο modal κατέχει το πληκτρολόγιο».
+
+### 5.4 🔴 ΠΕΡΙΣΤΑΤΙΚΟ (stage race) — και η κατάληξή του
+
+Το αρχικό module γράφτηκε στο `.ssot-registry.json` και ενώ γινόταν ο έλεγχος επιπτώσεων ο
+**παράλληλος agent (ADR-710) έκανε `git add` του ίδιου αρχείου** και το commit-άρισε
+(`48f0b4e9` / `347d7bd3`) **μαζί με τη δική του δουλειά** — δηλαδή ενεργό `forbiddenPatterns`
+**χωρίς baseline** στο HEAD. Η αφαίρεση έμεινε στο working tree και **μπήκε στο HEAD με τα
+`1ae7c8e8` / `198d0762` του ίδιου agent** (επαληθευμένο: το `modal-keyboard-scope` δεν υπάρχει πια
+στο HEAD, 349 modules, το αρχείο καθαρό έναντι HEAD). Η δουλειά του άλλου agent ήταν **ανέπαφη** σε
+όλη τη διαδρομή.
+
+**Δίδαγμα (και ο λόγος που το §5.2 είναι στενό):** σε κοινό working tree ένα κοινό αρχείο δεν είναι
+δικό σου να το γράψεις «για λίγο». Ένα module που **δεν χτυπά κανένα υπάρχον αρχείο** είναι ακίνδυνο
+ακόμη κι αν το commit-άρει άλλος κατά λάθος. Ένα με 38 ευρήματα είναι μίνα.
+
+### 5.5 Boy-Scout που έγινε στην ίδια συνεδρία
+
+`hooks/useLayerCommandShortcuts.ts` μετανάστευσε (ratchet **28 → 27**). Έφερε τρία μαζί:
+
+1. **Ενδέκατο αντίγραφο εξαλείφθηκε**: ο τοπικός `isInputFocused()` σύγκρινε `contenteditable` με
+   τη συμβολοσειρά `'true'` ⇒ έχανε `contenteditable=""` **και** το κληρονομημένο.
+2. **N.18**: οι δύο isolate διαδρομές ήταν αντίγραφο η μία της άλλης (**9 γρ. / 57 tokens**,
+   εντοπισμένο από `jscpd:diff`, **προϋπάρχον**) — διέφεραν μόνο στην κλάση εντολής. Έγιναν μία με
+   όρισμα `inverse`, mutation-verified (αντιστροφή πολικότητας ⇒ 2 tests κόκκινα).
+3. **N.7.1**: το `onKeyDown` ήταν **47** γραμμές (προϋπάρχουσα παραβίαση) → **34**, με τον helper
+   έξω από τον handler.
+
+**Νέα κάλυψη** (το hook δεν είχε **καμία**): `hooks/__tests__/useLayerCommandShortcuts.test.ts`,
+**5 tests** — πολικότητα **και προς τις δύο** κατευθύνσεις (ένα test μόνο για το ένα πλήκτρο θα
+περνούσε ακόμη κι αν οι δύο εντολές είχαν ανταλλάξει θέσεις), οι άλλες τρεις διαδρομές, ο φύλακας
+modal, η αποδέσμευση στο unmount.
+
+⚠️ **Παγίδα που κόστισε**: mock του `resolveLayerIsolateSettings` **σβήνει** το `inverseMode` του
+ίδιου module, που ο `LayerIsolateInverseCommand` καλεί στον constructor ⇒ το test έσκαγε **μέσα σε
+listener** και διαβαζόταν ως «η inverse διαδρομή δεν πυροδοτεί». Ο resolver μένει **πραγματικός**.
+
+### 5.6 🟡 Καταγεγραμμένο χρέος — `radial-command-ring-helpers.isEditableTarget`
+
+Τέταρτη ζωντανή υλοποίηση, **allowlisted αντί να ενοποιηθεί**, με λόγο: ελέγχει **και `SELECT`**,
+που το SSoT **δεν** ελέγχει. Άρα το §2 του παρόντος («γνήσιο υπερσύνολο όλων τους») **δεν ισχύει για
+την περίπτωση `SELECT`** — διορθώθηκε εδώ. Βιαστική ενοποίηση θα άλλαζε συμπεριφορά σε δύο σημεία
+ταυτόχρονα: το δαχτυλίδι θα άρχιζε να κλέβει πλήκτρα από focused `<select>` (type-ahead του browser),
+και — αν αντ' αυτού προστεθεί το `SELECT` στο SSoT — ο **escape bus** καταναλώνει το ίδιο predicate,
+οπότε το `Escape` με focus σε `<select>` **μέσα σε dialog** θα έπαυε να κλείνει τον dialog. Δύο
+τομείς ⇒ δικό του πέρασμα. Καταγεγραμμένο στο `.claude-rules/pending-ratchet-work.md`.
 
 ## 6. Tests — και τι ΔΕΝ πιάνουν
 
@@ -179,6 +242,8 @@ uncommitted ευρήματα του παράλληλου agent — ακριβώ�
 | `src/components/ui/__tests__/dialog-focus-restore.test.tsx` | **η αληθινή δικλείδα του Ε2** — χωρίς trigger, με trigger (μη-παλινδρόμηση), opener που χάθηκε |
 | `src/subapps/dxf-viewer/keyboard/__tests__/global-shortcut-listener.test.ts` | το gate, το `allowWhenEditable`, η αποδέσμευση |
 | `systems/escape-bus/__tests__/escape-dev-audit.test.ts` | δηλωμένος Κ3 ⇒ `ok`· **αδήλωτος ⇒ ακόμη `shadow-owner`**· `starved` δεν καλύπτεται από δήλωση |
+| `keyboard/__tests__/raw-keydown-listener-ratchet.test.ts` | **ο ratchet του §5.3** — νέος ωμός listener ονομαστικά· μπαγιάτικη εγγραφή· φύλακας κενής σάρωσης |
+| `hooks/__tests__/useLayerCommandShortcuts.test.ts` | **η μετανάστευση του §5.5** — πολικότητα isolate/inverse (και προς τις δύο), οι άλλες 3 διαδρομές, φύλακας modal, unmount |
 
 **Αρνητικός έλεγχος (εκτελεσμένος)**: με απενεργοποιημένους τους handlers του `dialog.tsx`, πέφτει
 **μόνο** το controlled test· το DialogTrigger test παραμένει πράσινο (διαδρομή Radix). Αυτή η
@@ -212,8 +277,17 @@ uncommitted ευρήματα του παράλληλου agent — ακριβώ�
 (bus, input-owned listeners) με τεκμηριωμένο λόγο· και η διόρθωση των 161 αρχείων ζει σε **ένα**
 αρχείο.
 
-⚠️ **Μερικό σε ένα σημείο**: ο ratchet (§5) είναι **ανενεργός**. Χωρίς αυτόν, ο 44ος listener μπορεί
-να γραφτεί ωμός και να ξανασπάσει το `Tab` μέσα στα modals. Το μπλοκ είναι έτοιμο· χρειάζεται ήσυχο
-δέντρο για το baseline. Το περιστατικό stage race του §5 είναι από μόνο του μάθημα: **σε κοινό
-working tree, ένα αρχείο που ο άλλος agent σκοπεύει να commit-άρει δεν είναι δικό σου να το γράψεις
-— ούτε «για λίγο».**
+✅ **Ο ratchet έκλεισε (2026-07-26, §5)** — ήταν το ένα μερικό σημείο. Ο 44ος listener **πιάνεται
+πλέον ονομαστικά**, από δύο όργανα που φυλάνε διαφορετικά πράγματα: το CHECK 3.7 τη
+**re-implementation** (μηδέν ευρήματα ⇒ χωρίς κοινό baseline ⇒ ασφαλές σε κοινό δέντρο) και ένα
+structural jest anchor τον **πληθυσμό** (27, μόνο μικραίνει). Mutation-verified ×2 — και τα δύο
+όργανα πυροδότησαν όταν ο ωμός listener επανήλθε.
+
+📌 **Το δίδαγμα του §5 δεν ήταν «περίμενε ήσυχο δέντρο»** — ήταν ότι ένα καθολικό pattern σε 38
+σημεία δίνει **μηδέν σήμα** και είναι ταυτόχρονα μίνα σε κοινό δέντρο. Ένα module που δεν χτυπά
+κανένα υπάρχον αρχείο είναι ακίνδυνο ακόμη κι αν το commit-άρει άλλος κατά λάθος. Και, από το
+περιστατικό stage race: **σε κοινό working tree, ένα κοινό αρχείο δεν είναι δικό σου να το γράψεις
+«για λίγο».**
+
+🟡 **Παραμένει εκκρεμές, δικού του περάσματος**: το ένα ζωντανό μισό του Ε3 (§7) και η ενοποίηση του
+`radial-command-ring-helpers.isEditableTarget` (§5.6, αγγίζει τον escape bus).

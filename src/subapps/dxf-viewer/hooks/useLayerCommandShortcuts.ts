@@ -19,6 +19,7 @@
 import { useEffect } from 'react';
 
 import { matchesShortcut } from '../config/keyboard-shortcuts';
+import { addGlobalShortcutListener } from '../keyboard/global-shortcut-listener';
 import { resolveLayerIsolateSettings, type LayerIsolateSettings } from '../services/layer-isolate-resolver';
 import {
   LayerIsolateCommand,
@@ -42,16 +43,6 @@ interface UseLayerCommandShortcutsParams {
   projectIsolateSetting?: Partial<LayerIsolateSettings> | null;
   /** Optional user preference (localStorage). */
   userIsolateSetting?: Partial<LayerIsolateSettings> | null;
-}
-
-function isInputFocused(): boolean {
-  const el = document.activeElement;
-  if (!el) return false;
-  return (
-    el.tagName === 'INPUT' ||
-    el.tagName === 'TEXTAREA' ||
-    el.getAttribute('contenteditable') === 'true'
-  );
 }
 
 /** Resolve which layers to isolate: prefer entity-selection layers; fallback to current layer. */
@@ -83,32 +74,38 @@ export function useLayerCommandShortcuts({
       commandHistory.execute(cmd);
     };
 
+    // N.18 (2026-07-26) — οι δύο isolate διαδρομές ήταν αντίγραφο η μία της άλλης
+    // (9 γραμμές / 57 tokens, εντοπισμένο από `jscpd:diff`): ίδια επίλυση στόχων, ίδιος
+    // φύλακας κενού, ίδια επίλυση ρυθμίσεων — διέφεραν **μόνο** στην κλάση εντολής. Η
+    // κοινή λογική ζει τώρα μία φορά· η διαφορά είναι ένα boolean. Ζει **έξω** από τον
+    // `onKeyDown` ώστε ο handler να μείνει κάτω από το όριο των 40 γραμμών (N.7.1).
+    const isolate = (inverse: boolean, selectedEntityIds: ReadonlyArray<string>): void => {
+      const targetLayerIds = resolveTargetLayerIds(selectedEntityIds, currentScene);
+      if (targetLayerIds.length === 0 && getAllLayers().length === 0) return;
+      const args = {
+        targetLayerIds,
+        settings: resolveLayerIsolateSettings({
+          projectSetting: projectIsolateSetting,
+          userPreference: userIsolateSetting,
+        }),
+        category: null,
+      };
+      dispatch(inverse ? new LayerIsolateInverseCommand(args) : new LayerIsolateCommand(args));
+    };
+
     const onKeyDown = (e: KeyboardEvent): void => {
-      if (isInputFocused()) return;
       // ADR-532 Stage B5 — live selection at event time (no subscription).
       const selectedEntityIds = SelectedEntitiesStore.getSelectedEntityIds();
 
       if (matchesShortcut(e, 'layerIsolate')) {
         e.preventDefault();
-        const targetLayerIds = resolveTargetLayerIds(selectedEntityIds, currentScene);
-        if (targetLayerIds.length === 0 && getAllLayers().length === 0) return;
-        const settings = resolveLayerIsolateSettings({
-          projectSetting: projectIsolateSetting,
-          userPreference: userIsolateSetting,
-        });
-        dispatch(new LayerIsolateCommand({ targetLayerIds, settings, category: null }));
+        isolate(false, selectedEntityIds);
         return;
       }
 
       if (matchesShortcut(e, 'layerIsolateInverse')) {
         e.preventDefault();
-        const targetLayerIds = resolveTargetLayerIds(selectedEntityIds, currentScene);
-        if (targetLayerIds.length === 0 && getAllLayers().length === 0) return;
-        const settings = resolveLayerIsolateSettings({
-          projectSetting: projectIsolateSetting,
-          userPreference: userIsolateSetting,
-        });
-        dispatch(new LayerIsolateInverseCommand({ targetLayerIds, settings, category: null }));
+        isolate(true, selectedEntityIds);
         return;
       }
 
@@ -131,8 +128,10 @@ export function useLayerCommandShortcuts({
       }
     };
 
-    window.addEventListener('keydown', onKeyDown, { capture: true });
-    return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
+    // ADR-711 Boy-Scout — ο wrapper ρωτά «γράφει ο χρήστης;» ΚΑΙ «κατέχει modal το
+    // πληκτρολόγιο;». Ο τοπικός `isInputFocused` που έφυγε από πάνω ρωτούσε μόνο το
+    // πρώτο, και το ρωτούσε ελλιπώς (έχανε `contenteditable=""` και το κληρονομημένο).
+    return addGlobalShortcutListener(onKeyDown);
     // ADR-532 Stage B5 — `selectedEntityIds` removed from deps (read live at event
     // time), so the listener is registered once, not re-bound on every selection.
   }, [commandHistory, currentScene, projectIsolateSetting, userIsolateSetting]);

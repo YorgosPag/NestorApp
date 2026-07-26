@@ -4750,6 +4750,24 @@
       "addedDate": "2026-07-26",
       "addedByAdr": "ADR-710",
       "tier": 3
+    },
+    "modal-keyboard-scope": {
+      "ssotFile": "src/lib/a11y/keyboard-scope.ts",
+      "description": "ADR-711 — the TWO questions a window-level accelerator must ask ('is the user typing?' and 'does a modal own the keyboard?') have one implementation each, in src/lib/a11y/keyboard-scope.ts, consumed through addGlobalShortcutListener. The first question existed in ten copies under four names and every copy got it wrong the same way: comparing contenteditable to the string 'true' misses contenteditable=\"\" and inherited contenteditable. The second question existed nowhere at all — that absence is the measured root of defects E1/E4 in ADR-364 §10.15: Tab was dead inside every dialog of the viewer (WAI-ARIA APG violation) and the arrows panned the viewport ±80px behind an open lightbox. An eleventh copy is how it rots back. NOTE what this module deliberately does NOT forbid: the raw window.addEventListener keydown call itself. That pattern matches 37 files, none of them in .ssot-violations-baseline.json, so as a blocking check it would ONLY block — same trap as a global type=\"number\" pattern (see numeric-field). That population is ratcheted by a structural test instead: src/subapps/dxf-viewer/keyboard/__tests__/raw-keydown-listener-ratchet.test.ts, where the list is named, only shrinks, and needs no shared baseline regeneration.",
+      "forbiddenPatterns": [
+        "function\\s+(shouldGlobalShortcutYield|isModalKeyboardScopeActive|pushModalKeyboardScope|addGlobalShortcutListener)\\s*\\(",
+        "function\\s+(isTypingInFormField|isEditableTarget|isEditableFocus|isInputFocused|isTypingTarget|isTextInputFocused)\\s*\\("
+      ],
+      "allowlist": [
+        "src/lib/a11y/",
+        "src/subapps/dxf-viewer/keyboard/global-shortcut-listener.ts",
+        "src/subapps/dxf-viewer/bim-3d/ui/is-typing-in-form-field.ts",
+        "src/subapps/dxf-viewer/systems/escape-bus/EscapeCommandBus.ts",
+        "src/subapps/dxf-viewer/systems/dynamic-input/components/radial-command-ring-helpers.ts"
+      ],
+      "addedDate": "2026-07-26",
+      "addedByAdr": "ADR-711",
+      "tier": 2
     }
   }
 }
