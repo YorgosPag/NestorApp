@@ -8,6 +8,10 @@
 //
 // ============================================================================
 
+import type { ContactFormData } from '@/types/ContactFormTypes';
+import type { EmailInfo, PhoneInfo } from '@/types/contacts';
+import EnterpriseContactSaver, { type EnterpriseContactData } from '@/utils/contacts/EnterpriseContactSaver';
+
 // ============================================================================
 // TYPES & INTERFACES
 // ============================================================================
@@ -49,4 +53,39 @@ export function createEmailsArray(email: string): EmailEntry[] {
  */
 export function createPhonesArray(phone: string, phoneType: 'mobile' | 'work' = 'mobile'): PhoneEntry[] {
   return phone ? [{ number: phone, type: phoneType, isPrimary: true }] : [];
+}
+
+// ============================================================================
+// ENTERPRISE ARRAYS — ΕΝΑ προοίμιο για τους τρεις create mappers
+// ============================================================================
+
+/**
+ * Μετατροπή φόρμας σε enterprise δομή + οι πίνακες επικοινωνίας με τα legacy
+ * fallback τους.
+ *
+ * Ήταν αντιγραμμένο **τρεις** φορές, αυτούσιο, στους `mappers/individual.ts`,
+ * `mappers/company.ts` και `mappers/service.ts` — με μόνη διαφορά το
+ * προεπιλεγμένο είδος τηλεφώνου. Κάθε αλλαγή στη σειρά «πίνακας ή legacy πεδίο;»
+ * έπρεπε να γίνει σε τρία σημεία (N.18 / ADR-584: ίδιος κώδικας, διαφορετικό
+ * όνομα συνάρτησης-γονέα ⇒ αόρατο στο `ssot:discover`).
+ */
+export function buildEnterpriseContactArrays(
+  formData: ContactFormData,
+  fallbackPhoneType: 'mobile' | 'work' = 'mobile',
+): {
+  enterpriseData: EnterpriseContactData;
+  emails: EmailInfo[];
+  phones: PhoneInfo[];
+} {
+  const enterpriseData = EnterpriseContactSaver.convertToEnterpriseStructure(formData);
+
+  const emails = enterpriseData.emails && enterpriseData.emails.length > 0
+    ? enterpriseData.emails
+    : createEmailsArray(formData.email);
+
+  const phones = enterpriseData.phones && enterpriseData.phones.length > 0
+    ? enterpriseData.phones
+    : createPhonesArray(formData.phone, fallbackPhoneType);
+
+  return { enterpriseData, emails, phones };
 }

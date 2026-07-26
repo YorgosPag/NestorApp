@@ -37,6 +37,7 @@ import type { ContactType } from '@/types/contacts';
 import type { CompanyAddress, ContactFormData } from '@/types/ContactFormTypes';
 import {
   getPrimaryAddressType,
+  isValidContactAddressType,
   toAddressInfoType,
   type ContactAddressType,
 } from '@/types/contacts/address-types';
@@ -123,6 +124,33 @@ function projectHierarchy(
   return projected as Partial<AddressInfo>;
 }
 
+/**
+ * Η **αντίστροφη** διαδρομή: `AddressInfo` ➜ λεξιλόγιο `CompanyAddress`.
+ *
+ * Χρειάζεται όταν διαβάζουμε παλαιά έγγραφα που έχουν μόνο το παράγωγο
+ * `addresses[]` και πρέπει να ξαναστηθεί η λίστα της φόρμας. Ζει **εδώ**, πάνω
+ * στον ίδιο `HIERARCHY_PROJECTION`, ώστε η αντιστοίχιση να μη γραφτεί ποτέ
+ * δεύτερη φορά με το χέρι — ένα νέο διοικητικό επίπεδο προστίθεται σε μία
+ * γραμμή και ισχύει **και στις δύο** κατευθύνσεις (N.18: μια χειρόγραφη
+ * αντίστροφη θα ήταν sibling clone αόρατο στο `ssot:discover`).
+ *
+ * Κανονικός στόχος = το **πρώτο** όνομα της αλυσίδας (π.χ. `region` ➜
+ * `regionName`), γιατί εκεί γράφει η ιεραρχία· τα υπόλοιπα είναι αναγνωστικά
+ * εναλλακτικά παλαιών εγγραφών.
+ */
+function projectHierarchyFrom(
+  addr: Readonly<AddressInfo>,
+  vocabulary: HierarchyVocabulary,
+): Record<string, string> {
+  const projected: Record<string, string> = {};
+  const source = addr as Readonly<Record<string, unknown>>;
+  for (const rule of HIERARCHY_PROJECTION) {
+    const value = source[rule.target];
+    if (typeof value === 'string' && value !== '') projected[rule[vocabulary][0]] = value;
+  }
+  return projected;
+}
+
 // =============================================================================
 // ΚΟΙΝΑ PRIMITIVES
 // =============================================================================
@@ -201,4 +229,90 @@ export function buildAddressInfoListFromCompanyAddresses(
     label: resolveAddressLabel(ca.type, ca.customLabel),
     ...projectHierarchy(ca as Readonly<Record<string, unknown>>, 'company'),
   }));
+}
+
+/**
+ * Ο **αντίστροφος** δρόμος: μια εγγραφή του παράγωγου `addresses[]` ξαναγίνεται
+ * εγγραφή της φόρμας.
+ *
+ * Χρησιμοποιείται μόνο ως **έσχατη** πηγή ανάγνωσης, για έγγραφα γραμμένα πριν
+ * υπάρξει η αυθεντική λίστα. Είναι ακριβώς αντίστροφη της `resolveAddressLabel`:
+ * το `label` κουβαλά το σημασιολογικό slug ADR-319, οπότε ένα έγκυρο slug
+ * επιστρέφει ως `type`, ενώ ελεύθερο κείμενο επιστρέφει ως `other` +
+ * `customLabel` — χωρίς αυτό, ένα «Εξοχικό Πηλίου» θα ξαναγύριζε ως σκέτο
+ * `other` και ο χρήστης θα έβλεπε την ετικέτα του να εξαφανίζεται στο reload.
+ *
+ * @param fallbackType Το slug όταν το `label` λείπει (παλαιά έγγραφα) — ο
+ *   καλών ξέρει τη θέση και το είδος επαφής, αυτή η συνάρτηση όχι.
+ */
+export function buildCompanyAddressFromAddressInfo(
+  addr: Readonly<AddressInfo>,
+  fallbackType: ContactAddressType,
+): CompanyAddress {
+  const label = addr.label?.trim();
+  const isSemanticSlug = !!label && isValidContactAddressType(label);
+
+  return {
+    type: isSemanticSlug ? label : (label ? 'other' : fallbackType),
+    ...(label && !isSemanticSlug ? { customLabel: label } : {}),
+    street: addr.street || '',
+    number: addr.number || '',
+    postalCode: addr.postalCode || '',
+    city: addr.city || '',
+    ...(addr.country?.trim() ? { country: addr.country } : {}),
+    ...(projectHierarchyFrom(addr, 'company') as Partial<CompanyAddress>),
+  };
+}
+
+/** Τα επίπεδα πεδία διεύθυνσης της φόρμας επαφής, όπως τα περιμένουν οι mappers. */
+export interface FlatAddressFormFields {
+  street: string;
+  streetNumber: string;
+  city: string;
+  postalCode: string;
+  settlement: string;
+  settlementId: string | null;
+  community: string;
+  municipalUnit: string;
+  municipality: string;
+  municipalityId: string | null;
+  regionalUnit: string;
+  region: string;
+  decentAdmin: string;
+  majorGeo: string;
+  neighborhood: string;
+}
+
+/**
+ * Η κύρια διεύθυνση του αποθηκευμένου εγγράφου ➜ επίπεδα πεδία φόρμας.
+ *
+ * Ήταν γραμμένη αυτούσια σε `individualMapper` και `serviceMapper` (18 γραμμές
+ * η κάθε μία), με τον δεύτερο να έχει ήδη **ξεχάσει** το `neighborhood` — η
+ * «Περιοχή / Συνοικία» μιας υπηρεσίας αποθηκευόταν κανονικά αλλά δεν
+ * ξαναδιαβαζόταν ποτέ. Ακριβώς το μοτίβο που περιγράφει το ADR-584: δύο
+ * αντίγραφα, το ένα αποκλίνει, κανένα gate ονομάτων δεν το βλέπει.
+ */
+export function buildFlatFieldsFromAddressInfo(
+  addr: Readonly<AddressInfo> | undefined,
+): FlatAddressFormFields {
+  const empty: FlatAddressFormFields = {
+    street: '', streetNumber: '', city: '', postalCode: '',
+    settlement: '', settlementId: null, community: '', municipalUnit: '',
+    municipality: '', municipalityId: null, regionalUnit: '', region: '',
+    decentAdmin: '', majorGeo: '', neighborhood: '',
+  };
+  if (!addr) return empty;
+
+  return {
+    ...empty,
+    street: addr.street || '',
+    streetNumber: addr.number || '', // array: `number` — flat: `streetNumber`
+    city: addr.city || '',
+    postalCode: addr.postalCode || '',
+    ...projectHierarchyFrom(addr, 'flat'),
+    // Οι ταυτότητες είναι `string | null` (ποτέ κενό string) — το `projectHierarchyFrom`
+    // παραλείπει τα κενά, οπότε η ρητή προεπιλογή `null` μένει.
+    settlementId: addr.settlementId ?? null,
+    municipalityId: addr.municipalityId ?? null,
+  };
 }

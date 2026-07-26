@@ -15,6 +15,7 @@
  */
 
 import {
+  sanitizeContactData,
   sanitizeContactForUpdate,
   type ContactDataRecord,
 } from '../data-cleaning';
@@ -167,5 +168,72 @@ describe('sanitizeContactForUpdate', () => {
     const first = sanitizeContactForUpdate(input);
     const second = sanitizeContactForUpdate(first.cleanUpdates);
     expect(second.cleanUpdates).toEqual(first.cleanUpdates);
+  });
+
+  // ─── undefined INSIDE arrays (ADR-332 D18) ───────────────────────────────
+
+  it('strips undefined keys inside array elements', () => {
+    const result = sanitizeContactForUpdate({
+      customFields: {
+        companyAddresses: [
+          { type: 'home', street: 'Αλκμήνος', customLabel: undefined, country: undefined },
+        ],
+      },
+    } as unknown as ContactDataRecord);
+
+    const addresses = (result.cleanUpdates.customFields as ContactDataRecord)
+      .companyAddresses as ContactDataRecord[];
+    // ⚠️ toStrictEqual, ΟΧΙ toEqual: το `toEqual` αγνοεί κλειδιά με τιμή
+    // `undefined`, οπότε θα περνούσε ακόμη και με το bug ζωντανό.
+    expect(addresses[0]).toStrictEqual({ type: 'home', street: 'Αλκμήνος' });
+  });
+});
+
+// ============================================================================
+// sanitizeContactData (CREATE path)
+// ============================================================================
+
+/**
+ * Ζωντανή επαλήθευση 2026-07-27 (ADR-332 D18): η δημιουργία επαφής με
+ * **οποιαδήποτε** διεύθυνση έσκαγε με «setDoc() … Unsupported field value:
+ * undefined». Ο βρόχος του sanitizer ελέγχει τους πίνακες μόνο για μήκος και
+ * δεν κατεβαίνει ποτέ στα στοιχεία τους, οπότε το `customLabel: undefined` και
+ * το `country: undefined` που γράφει η φόρμα διευθύνσεων περνούσαν αυτούσια στο
+ * Firestore. Πιάστηκε μόνο στον browser — τα 280 tests της D18 ήταν πράσινα.
+ */
+describe('sanitizeContactData', () => {
+  it('strips undefined keys nested inside array elements (Firestore rejects them)', () => {
+    const sanitized = sanitizeContactData({
+      type: 'individual',
+      firstName: 'Δοκιμή',
+      customFields: {
+        companyAddresses: [
+          { type: 'home', street: 'Αλκμήνος', number: '10', customLabel: undefined, country: undefined },
+          { type: 'office', street: 'Τσιμισκή', number: '77', customLabel: undefined },
+        ],
+      },
+    } as unknown as ContactDataRecord);
+
+    const addresses = (sanitized.customFields as ContactDataRecord)
+      .companyAddresses as ContactDataRecord[];
+
+    expect(addresses).toHaveLength(2);
+    // ⚠️ toStrictEqual, ΟΧΙ toEqual: το `toEqual` αγνοεί κλειδιά με τιμή
+    // `undefined` — με `toEqual` το test θα ήταν πράσινο ΚΑΙ με το bug ζωντανό,
+    // δηλαδή διακοσμητικό. Το Firestore όμως βλέπει το κλειδί και απορρίπτει.
+    expect(addresses[0]).toStrictEqual({ type: 'home', street: 'Αλκμήνος', number: '10' });
+    expect(addresses[1]).toStrictEqual({ type: 'office', street: 'Τσιμισκή', number: '77' });
+  });
+
+  it('keeps the empty photoURL string that drives photo deletion', () => {
+    const sanitized = sanitizeContactData({
+      type: 'individual',
+      firstName: 'Δοκιμή',
+      photoURL: '',
+      multiplePhotoURLs: [],
+    } as unknown as ContactDataRecord);
+
+    expect(sanitized.photoURL).toBe('');
+    expect(sanitized.multiplePhotoURLs).toEqual([]);
   });
 });

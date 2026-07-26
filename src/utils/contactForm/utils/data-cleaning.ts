@@ -10,6 +10,7 @@
 
 import { isValidEmail } from '@/lib/validation/email-validation';
 import { isValidPhone } from '@/lib/validation/phone-validation';
+import { stripUndefinedDeep } from '@/utils/firestore-sanitize';
 
 // 🏢 ENTERPRISE: i18n support for validation messages
 import i18n from '@/i18n/config';
@@ -275,7 +276,18 @@ export function sanitizeContactData(contactData: ContactDataRecord): ContactData
     contactId: sanitized.id || 'new'
   });
 
-  return sanitized;
+  // ADR-332 D18: το Firestore ΑΠΟΡΡΙΠΤΕΙ `undefined` σε **οποιοδήποτε** βάθος, και
+  // ο βρόχος από πάνω δεν ανοίγει ποτέ πίνακες — μόνο ελέγχει αν είναι κενοί. Έτσι
+  // ένα `companyAddresses[0].customLabel: undefined` (το κλειδί γράφεται πάντα από
+  // τη φόρμα, με τιμή μόνο όταν ο τύπος είναι `other`) περνούσε αυτούσιο και το
+  // `setDoc` έσκαγε με «Unsupported field value: undefined» — η δημιουργία επαφής
+  // με **οποιαδήποτε** διεύθυνση αποτύγχανε ολόκληρη.
+  //
+  // Καθαρίζεται εδώ, στο ΕΝΑ chokepoint πριν τη βάση, με τον υπάρχοντα SSoT
+  // καθαριστή — όχι σε κάθε σημείο που φτιάχνει διεύθυνση, γιατί το επόμενο τέτοιο
+  // σημείο θα ξανάσπαγε το save. Τα FieldValue sentinels (`serverTimestamp()`)
+  // προστίθενται ΜΕΤΑ από αυτό το layer, οπότε δεν κινδυνεύουν από την αναδρομή.
+  return stripUndefinedDeep(sanitized);
 }
 
 /**
@@ -351,7 +363,10 @@ export function sanitizeContactForUpdate(
     cleanUpdates[key] = value;
   });
 
-  return { cleanUpdates, fieldsToDelete };
+  // Ίδιο κενό με το CREATE (ADR-332 D18): ο έλεγχος `value === undefined` παραπάνω
+  // πιάνει κλειδιά αντικειμένων, ποτέ στοιχεία πινάκων. Ένα partial update που
+  // κουβαλά `companyAddresses[]` με ένα `undefined` πεδίο έσκαγε στο `updateDoc`.
+  return { cleanUpdates: stripUndefinedDeep(cleanUpdates), fieldsToDelete };
 }
 
 /**

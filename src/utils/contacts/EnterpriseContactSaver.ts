@@ -21,6 +21,10 @@ import {
   buildAddressInfoFromFlatFields,
   buildAddressInfoListFromCompanyAddresses,
 } from './address-info-builder';
+import {
+  COMPANY_ONLY_TOP_LEVEL_FIELDS,
+  collectCompanyCustomFields,
+} from './enterprise-custom-fields';
 const logger = createModuleLogger('EnterpriseContactSaver');
 
 // ============================================================================
@@ -37,6 +41,12 @@ export interface EnterpriseContactData {
   phones?: PhoneInfo[];
   emails?: EmailInfo[];
   socialMedia?: SocialMediaInfo[];
+
+  /**
+   * Ένθετα πεδία Firestore. Εδώ ζει η **αυθεντική** λίστα διευθύνσεων
+   * (`companyAddresses`) για κάθε είδος επαφής — ADR-332 D18.
+   */
+  customFields?: Record<string, unknown>;
 
   // Remove flat fields - they should not be saved to database
   street?: never;
@@ -135,51 +145,37 @@ export class EnterpriseContactSaver {
     // for Firestore, because the read mapper (companyMapper.ts) reads from there.
     // ========================================================================
 
+    const customFields: Record<string, unknown> = {};
+
+    // ADR-332 D18: η λίστα διευθύνσεων ανήκει σε ΚΑΘΕ είδος επαφής, όχι μόνο σε
+    // εταιρείες. Όσο αυτό το μπλοκ ζούσε μέσα σε `if (type === 'company')`, οι
+    // επιπλέον διευθύνσεις φυσικών προσώπων και υπηρεσιών δεν έφταναν ποτέ σε
+    // κανένα αποθηκευμένο πεδίο — ούτε στα `customFields`, ούτε στο παράγωγο
+    // `addresses[]` (που έμενε η μονή έδρα από τα flat πεδία) — και αμέσως μετά
+    // το `stripTypeExclusiveFields` έσβηνε και το top-level αντίγραφο. Το UI
+    // όμως τις δεχόταν κανονικά: **σιωπηλή απώλεια δεδομένων στο save.**
+    const contactAddresses = formData.companyAddresses;
+    if (isNonEmptyArray(contactAddresses)) {
+      customFields.companyAddresses = contactAddresses;
+
+      // Το `addresses[]` είναι ΠΑΡΑΓΩΓΟ της αυθεντικής λίστας (ADR-332 D15).
+      enterpriseData.addresses = buildAddressInfoListFromCompanyAddresses(contactAddresses);
+    }
+    // Η αυθεντική λίστα ζει στα `customFields` — ποτέ top-level, για κανέναν τύπο.
+    delete (enterpriseData as Record<string, unknown>).companyAddresses;
+
     if (formData.type === 'company') {
-      const customFields: Record<string, unknown> = {};
+      Object.assign(customFields, collectCompanyCustomFields(formData));
 
-      // Multi-address: companyAddresses → customFields + top-level addresses[]
-      const companyAddresses = formData.companyAddresses;
-      if (isNonEmptyArray(companyAddresses)) {
-        customFields.companyAddresses = companyAddresses;
-
-        // Override top-level addresses[] with converted company addresses
-        enterpriseData.addresses = buildAddressInfoListFromCompanyAddresses(companyAddresses);
-      }
-
-      // Multi-KAD activities
-      if (formData.activities !== undefined) {
-        customFields.activities = formData.activities ?? [];
-      }
-
-      // Sync legacy singular KAD + other company fields
-      const companyCustomFieldKeys = [
-        'gemiStatus', 'gemiStatusDate',
-        'activityCodeKAD', 'activityDescription', 'activityType',
-        'chamber', 'capitalAmount', 'currency', 'extraordinaryCapital',
-        'registrationDate', 'lastUpdateDate',
-        'gemiDepartment', 'prefecture', 'municipality',
-      ] as const;
-
-      for (const key of companyCustomFieldKeys) {
-        if (formData[key] !== undefined) {
-          customFields[key] = formData[key];
-        }
-      }
-
-      if (Object.keys(customFields).length > 0) {
-        (enterpriseData as Record<string, unknown>).customFields = customFields;
-        logger.info('ENTERPRISE SAVER: Built company customFields', { keys: Object.keys(customFields) });
-      }
-
-      // Remove company form-only fields from top level (they live in customFields)
-      const companyOnlyFields = [
-        'companyAddresses', 'activities',
-        ...companyCustomFieldKeys,
-      ] as const;
-      for (const field of companyOnlyFields) {
+      // Company form-only πεδία — η κανονική τους θέση είναι στα customFields.
+      for (const field of COMPANY_ONLY_TOP_LEVEL_FIELDS) {
         delete (enterpriseData as Record<string, unknown>)[field];
       }
+    }
+
+    if (Object.keys(customFields).length > 0) {
+      (enterpriseData as Record<string, unknown>).customFields = customFields;
+      logger.info('ENTERPRISE SAVER: Built customFields', { keys: Object.keys(customFields) });
     }
 
     // ========================================================================
