@@ -581,6 +581,7 @@
     "placeholder": "Describe the comment...",
     "searchPlaceholder": "Search comments...",
     "submitFailed": "Could not submit the comment. Please try again.",
+    "noProjectSelected": "Select a project first — otherwise the comment will not appear anywhere.",
     "filter": {
       "all": "All",
       "open": "Open",

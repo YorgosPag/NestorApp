@@ -53,6 +53,8 @@ export interface NewCommentSubmitState {
   readonly submitting: boolean;
   /** i18n key του σφάλματος, ή `null` — ποτέ έτοιμο κείμενο (N.11). */
   readonly errorKey: string | null;
+  /** `false` ⇒ δεν υπάρχει επιλεγμένο έργο· η φόρμα εξηγεί γιατί δεν υποβάλλεται. */
+  readonly hasProject: boolean;
   readonly canSubmit: boolean;
   readonly submit: () => Promise<void>;
 }
@@ -95,7 +97,12 @@ export function useNewCommentSubmit(params: NewCommentSubmitParams): NewCommentS
   const [submitting, setSubmitting] = useState(false);
   const [errorKey, setErrorKey] = useState<string | null>(null);
 
-  const canSubmit = content.trim().length > 0 && !submitting;
+  // Χωρίς έργο, το `subscribeByProject` κάνει early-return σε κενό `projectId` ⇒ το σχόλιο
+  // γράφεται και **καμία οθόνη δεν το δείχνει ποτέ**. Πριν το wiring αυτό κόστιζε ένα άχρηστο
+  // doc· τώρα κοστίζει και ανεβασμένες εικόνες. Το φράγμα ανήκει εδώ, στη μοναδική πύλη
+  // υποβολής, όχι σε έλεγχο μέσα στο JSX.
+  const hasProject = params.projectId.trim().length > 0;
+  const canSubmit = hasProject && content.trim().length > 0 && !submitting;
 
   async function submit(): Promise<void> {
     if (!canSubmit) return;
@@ -120,6 +127,7 @@ export function useNewCommentSubmit(params: NewCommentSubmitParams): NewCommentS
     setStaged,
     submitting,
     errorKey,
+    hasProject,
     canSubmit,
     submit,
   };

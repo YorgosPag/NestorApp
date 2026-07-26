@@ -226,6 +226,12 @@ function NewCommentForm({ companyId, projectId, userId, userName, onClose, t }: 
 
       <CommentAttachmentUploader value={form.staged} onChange={form.setStaged} />
 
+      {!form.hasProject && (
+        <p role="status" className="text-xs text-[hsl(var(--text-warning))]">
+          {t('comments.noProjectSelected')}
+        </p>
+      )}
+
       {form.errorKey && (
         <p role="alert" className="text-xs text-destructive">
           {t(form.errorKey)}
