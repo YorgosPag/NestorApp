@@ -326,6 +326,58 @@ describe('ContactHandler', () => {
       expect(result.success).toBe(false);
       expect(result.error).toContain('τηλέφωνο');
     });
+
+    /**
+     * ADR-332 D20: μια προϋπάρχουσα ΚΕΝΗ εγγραφή διεύθυνσης (γεννημένη από τη
+     * φόρμα πριν μπει η δικλείδα) δεν επιτρέπεται να επιβιώσει στο append ούτε
+     * να κρατήσει το `isPrimary` — αλλιώς η νέα, πραγματική διεύθυνση μένει για
+     * πάντα δευτερεύουσα πίσω από ένα κενό.
+     */
+    test('should drop a pre-existing blank address and make the real one primary', async () => {
+      const ctx = createCustomerContext();
+      mockDb.seedCollection('contacts', {
+        'cont_test_001': {
+          companyId: 'test-company-001',
+          addresses: [
+            { street: '', number: '', city: '', postalCode: '', country: 'GR', type: 'work', isPrimary: true, label: 'headquarters' },
+          ],
+        },
+      });
+
+      const result = await handler.execute('append_contact_info', {
+        fieldType: 'address',
+        value: 'Ορφέως 7, 69100 Κομοτηνή',
+      }, ctx);
+
+      expect(result.success).toBe(true);
+      const updatedDoc = mockDb.getData('contacts', 'cont_test_001');
+      const addresses = updatedDoc?.addresses as Array<Record<string, unknown>>;
+      expect(addresses).toHaveLength(1);
+      expect(addresses[0]).toEqual(expect.objectContaining({ street: 'Ορφέως', isPrimary: true }));
+    });
+
+    test('should keep a real existing address and append the new one as secondary', async () => {
+      const ctx = createCustomerContext();
+      mockDb.seedCollection('contacts', {
+        'cont_test_001': {
+          companyId: 'test-company-001',
+          addresses: [
+            { street: 'Ονειροπόλων', number: '42', city: 'Θεσσαλονίκη', postalCode: '54624', country: 'GR', type: 'work', isPrimary: true },
+          ],
+        },
+      });
+
+      const result = await handler.execute('append_contact_info', {
+        fieldType: 'address',
+        value: 'Ορφέως 7, 69100 Κομοτηνή',
+      }, ctx);
+
+      expect(result.success).toBe(true);
+      const addresses = mockDb.getData('contacts', 'cont_test_001')?.addresses as Array<Record<string, unknown>>;
+      expect(addresses).toHaveLength(2);
+      expect(addresses[0]).toEqual(expect.objectContaining({ street: 'Ονειροπόλων', isPrimary: true }));
+      expect(addresses[1]).toEqual(expect.objectContaining({ street: 'Ορφέως', isPrimary: false }));
+    });
   });
 
   // ==========================================================================
