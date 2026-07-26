@@ -25,6 +25,7 @@
  *     at the call site for the regression this used to cause.
  */
 
+import { isEditableTarget } from '@/lib/a11y/keyboard-scope';
 import { installEscapeAuditSentinel, noteBusDispatch } from './escape-dev-audit';
 import type {
   EscapeBusInspection,
@@ -53,13 +54,17 @@ function isBrowser(): boolean {
   return typeof window !== 'undefined' && typeof document !== 'undefined';
 }
 
+/**
+ * ADR-711 — ο έλεγχος delegate-άρει πλέον στο SSoT predicate.
+ *
+ * ⚠️ Ο bus ρωτά **μόνο** «γράφει ο χρήστης;» και **ΠΟΤΕ** `shouldGlobalShortcutYield`.
+ * Ο bus οφείλει να δουλεύει ΜΕΣΑ στα modals — εκεί ζει το slot
+ * `ESC_PRIORITY.MODAL_DIALOG` (π.χ. το lightbox των σχολίων BIM). Φύλακας modal εδώ θα
+ * σκότωνε το ίδιο το ESC των διαλόγων.
+ */
 function isEditableFocus(): boolean {
   if (!isBrowser()) return false;
-  const el = document.activeElement;
-  if (!el) return false;
-  const tag = el.tagName;
-  if (tag === 'INPUT' || tag === 'TEXTAREA') return true;
-  return el.getAttribute('contenteditable') === 'true';
+  return isEditableTarget(document.activeElement);
 }
 
 function sortBySnapshot(entries: Iterable<EscapeHandler>): EscapeHandler[] {

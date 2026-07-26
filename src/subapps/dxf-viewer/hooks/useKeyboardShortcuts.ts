@@ -47,6 +47,8 @@ import { isInteractiveTool } from '../systems/tools/ToolStateManager';
 // ADR-391 — Ctrl+L opens AdminLayerManager dialog (toggleLayers shortcut SSoT)
 import { AdminLayerManagerDialogStore } from '../stores/AdminLayerManagerDialogStore';
 import { getActiveDragGrip } from '../systems/cursor/GripDragStore';
+// ADR-711 — δομικός φύλακας global accelerators (modal keyboard ownership).
+import { addGlobalShortcutListener } from '../keyboard/global-shortcut-listener';
 
 // Hook parameters interface
 interface KeyboardShortcutsConfig {
@@ -107,11 +109,11 @@ export const useKeyboardShortcuts = ({
     const onKeyDown = (e: KeyboardEvent) => {
       // ADR-532 Stage B: event-time read of the live selection set (no subscription).
       const selectedEntityIds = SelectedEntitiesStore.getSelectedEntityIds();
-      // ✅ GUARD: Skip if typing in input fields
-      const inputFocused = document.activeElement &&
-        (document.activeElement.tagName === 'INPUT' ||
-         document.activeElement.tagName === 'TEXTAREA' ||
-         document.activeElement.getAttribute('contenteditable') === 'true');
+      // ADR-711 — ο φύλακας «γράφει σε πεδίο; / κατέχει modal το πληκτρολόγιο;» ζει
+      // πλέον στο `addGlobalShortcutListener` παρακάτω. Ο inline έλεγχος που ήταν εδώ
+      // ήταν ένα από τα έξι αντίγραφα του `isEditableTarget` — και, κρίσιμα, δεν
+      // ρωτούσε ΠΟΤΕ για modal: γι' αυτό τα βέλη μετακινούσαν το viewport ±80px πίσω
+      // από ανοιχτό lightbox (ελάττωμα Ε4, ADR-364 §10.15).
 
       // ⌨️ SPECIAL SHORTCUTS - Using centralized matchesShortcut()
 
@@ -128,7 +130,6 @@ export const useKeyboardShortcuts = ({
       // we fall through, so 'Z' still opens the command line (AutoCAD ZOOM alias).
       if (
         matchesShortcut(e, 'fitToViewSelected') &&
-        !inputFocused &&
         selectedEntityIds.length > 0 &&
         currentScene
       ) {
@@ -155,7 +156,6 @@ export const useKeyboardShortcuts = ({
       // 3D dispatcher (run later in the same capture phase) would otherwise handle.
       if (
         activeTool === 'select' &&
-        !inputFocused &&
         !selectIs3D(useViewMode3DStore.getState()) &&
         !e.ctrlKey && !e.metaKey && !e.altKey &&
         e.key !== 'j' && e.key !== 'J' &&
@@ -182,7 +182,6 @@ export const useKeyboardShortcuts = ({
 
       // Shift+1 or Home → Fit to view
       if (matchesShortcut(e, 'fitToView') || e.key === 'Home') {
-        if (inputFocused) return;
         e.preventDefault();
         console.log('[useKeyboardShortcuts] Home/Shift+1 → emitting canvas-fit-to-view');
         // 🏢 ENTERPRISE: Unified EventBus — reaches both EventBus.on AND window CustomEvent listeners
@@ -199,7 +198,6 @@ export const useKeyboardShortcuts = ({
 
       // Ctrl+A → Select all DXF entities (e.code = layout-independent)
       if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.code === 'KeyA') {
-        if (inputFocused) return;
         e.preventDefault();
         onSelectAll?.();
         return;
@@ -208,7 +206,6 @@ export const useKeyboardShortcuts = ({
       // ADR-391: Ctrl+L → toggle AdminLayerManager dialog (Revit/AutoCAD parity).
       // Consumes the previously-dead `toggleLayers` shortcut declared in keyboard-shortcuts.ts.
       if (matchesShortcut(e, 'toggleLayers')) {
-        if (inputFocused) return;
         e.preventDefault();
         AdminLayerManagerDialogStore.toggle();
         return;
@@ -220,7 +217,7 @@ export const useKeyboardShortcuts = ({
         const PAN_STEP = 80;   // pixels per keypress
         const PAN_LARGE = 240; // Shift+Arrow — 3× step
         const isArrow = e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'ArrowLeft' || e.key === 'ArrowRight';
-        if (!isArrow || e.ctrlKey || e.metaKey || e.altKey || inputFocused) return;
+        if (!isArrow || e.ctrlKey || e.metaKey || e.altKey) return;
         e.preventDefault();
         const dist = e.shiftKey ? PAN_LARGE : PAN_STEP;
         // Arrow semantics: ↑ = viewport moves up = scene shifts down = dy positive
@@ -280,8 +277,8 @@ export const useKeyboardShortcuts = ({
       }
     };
 
-    window.addEventListener('keydown', onKeyDown, { capture: true });
-    return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
+    // ADR-711 — δομικός φύλακας: παραιτείται όταν modal ή πεδίο κειμένου κατέχει το πληκτρολόγιο.
+    return addGlobalShortcutListener(onKeyDown, { capture: true });
     // ADR-532 Stage B: `selectedEntityIds` removed from deps — read live from the
     // store at event time, so the listener is registered once (not per selection).
   }, [currentScene, onNudgeSelection, activeTool, overlayMode, overlayStore, onColorMenuClose, onSelectAll]);

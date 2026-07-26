@@ -1,19 +1,20 @@
 /**
- * is-typing-in-form-field — SSoT guard για keyboard listeners του 3D viewport.
+ * is-typing-in-form-field — ΔΕΝ είναι πια υλοποίηση· είναι **ονομασία** του SSoT.
  *
- * Επιστρέφει `true` όταν ο χρήστης πληκτρολογεί σε form πεδίο (input / textarea /
- * contenteditable) ώστε οι window-level keydown handlers (shortcuts, polygon-mode
- * clipboard) να ΜΗΝ κλέβουν τα πλήκτρα. Ενιαία υλοποίηση — πριν ήταν inline
- * αντιγραμμένη στο `use3DShortcuts` (Boy-Scout dedupe, N.0.2).
+ * ADR-711: ο έλεγχος «γράφει ο χρήστης σε πεδίο;» υπήρχε σε δέκα και πλέον αντίγραφα
+ * με τέσσερα ονόματα (`isTypingInFormField`, `isEditableFocus`, `isInputFocused`, και
+ * inline παραλλαγές). Η μία υλοποίηση ζει τώρα στο `@/lib/a11y/keyboard-scope`, όπου
+ * κάθεται δίπλα στη **δεύτερη** ερώτηση που έλειπε — «κατέχει modal το πληκτρολόγιο;»
+ * — και η οποία ήταν η ρίζα των ελαττωμάτων Ε1/Ε4 (ADR-364 §10.15).
  *
- * @see bim-3d/shortcuts/use3DShortcuts.ts
- * @see bim-3d/viewport/use-polygon-clipboard-shortcuts.ts
+ * Το αρχείο μένει ως λεπτό re-export ώστε οι υπάρχοντες καταναλωτές να μη σπάσουν.
+ * **Νέος κώδικας: εισάγετε κατευθείαν `isEditableTarget`.**
+ *
+ * @see src/lib/a11y/keyboard-scope.ts
+ * @see src/subapps/dxf-viewer/keyboard/global-shortcut-listener.ts
  */
+import { isEditableTarget } from '@/lib/a11y/keyboard-scope';
+
 export function isTypingInFormField(el: Element | null): boolean {
-  if (!el) return false;
-  return (
-    el.tagName === 'INPUT' ||
-    el.tagName === 'TEXTAREA' ||
-    el.getAttribute('contenteditable') === 'true'
-  );
+  return isEditableTarget(el);
 }

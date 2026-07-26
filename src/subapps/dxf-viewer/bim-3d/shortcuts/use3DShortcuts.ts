@@ -19,7 +19,8 @@ import { useSelection3DStore } from '../stores/Selection3DStore';
 import { useBim3DEditStore } from '../stores/Bim3DEditStore';
 import { useStairSubElementSelectionStore } from '../../bim/stairs/stair-sub-element-selection-store';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
-import { isTypingInFormField } from '../ui/is-typing-in-form-field';
+// ADR-711 — δομικός φύλακας global accelerators (modal keyboard ownership).
+import { addGlobalShortcutListener } from '../../keyboard/global-shortcut-listener';
 // ADR-364 §10.13 (Φ2 Μηχ. 4) — ESC left this dispatcher entirely; the 3D rungs are bus slots
 // now. Mirrors `useCanvasKeyboardShortcuts` → `useCanvasEscapeRegistrations` on the 2D side.
 import { use3DEscapeRegistrations } from './use3DEscapeRegistrations';
@@ -56,8 +57,7 @@ export function use3DShortcuts({ getManager, active, onCropRegionToggle }: Use3D
     if (!active) return undefined;
 
     const onKeyDown = (event: KeyboardEvent) => {
-      // Skip while typing in inputs / textareas / contenteditable elements.
-      if (isTypingInFormField(document.activeElement)) return;
+      // ADR-711 — ο έλεγχος «γράφει σε πεδίο;» ζει πλέον στο addGlobalShortcutListener.
 
       const manager = getManager();
       if (!manager) return;
@@ -109,7 +109,9 @@ export function use3DShortcuts({ getManager, active, onCropRegionToggle }: Use3D
     // Capture phase: claim 3D shortcuts before 2D `useKeyboardShortcuts`
     // (also registered in capture) can react — avoids both handlers firing
     // for shared keys like F.
-    window.addEventListener('keydown', onKeyDown, { capture: true });
-    return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
+    // ADR-711 — ΕΔΩ πέθαινε το Tab κάθε modal: ο dispatcher το αντιστοιχούσε σε
+    // ACTION_FOCUS_NEXT_3D και έκανε preventDefault + stopPropagation, με μόνο φύλακα
+    // τον έλεγχο πεδίου κειμένου (ελάττωμα Ε1, ADR-364 §10.15).
+    return addGlobalShortcutListener(onKeyDown, { capture: true });
   }, [active, getManager, t]);
 }

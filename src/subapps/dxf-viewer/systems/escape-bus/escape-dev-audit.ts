@@ -46,6 +46,11 @@ interface EscapeAuditRecord {
   preemptedAtEntry: boolean;
   /** Ποιος handler του bus κατανάλωσε — `null` αν κανείς. */
   consumedBy: string | null;
+  /**
+   * ADR-364 §10.15 — ο **δηλωμένος** τοπικός ιδιοκτήτης (Κ3), αν υπάρχει.
+   * Βλ. {@link noteLocalEscapeOwner} για το γιατί δεν αρκεί το `consumedBy`.
+   */
+  localOwner: string | null;
   /** Πού βρισκόταν η εστίαση τη στιγμή του πατήματος (διαγνωστικό). */
   focusAt: string;
 }
@@ -81,6 +86,8 @@ function describeFocus(): string {
 function judge(e: KeyboardEvent, rec: EscapeAuditRecord): EscapeAuditVerdict {
   if (!rec.busDispatched) return 'starved';
   if (rec.preemptedAtEntry) return 'preempted';
+  // ADR-364 §10.15 — δηλωμένος Κ3: ιδιοκτήτης εντός SSoT, απλώς όχι slot του bus.
+  if (rec.localOwner !== null) return 'ok';
   if (rec.consumedBy === null && e.defaultPrevented) return 'shadow-owner';
   return 'ok';
 }
@@ -98,6 +105,12 @@ const EXPLAIN: Readonly<Record<Exclude<EscapeAuditVerdict, 'ok'>, string>> = {
     'κατανάλωσε. Υπάρχει ιδιοκτήτης ESC εκτός του SSoT — ανήκει σε slot του ' +
     'ESC_PRIORITY (ADR-364 §10.2).',
 };
+
+/** Ποιος κατανάλωσε — slot του bus ή δηλωμένος τοπικός Κ3. */
+function describeOwner(rec: EscapeAuditRecord): string | null {
+  if (rec.consumedBy !== null) return rec.consumedBy;
+  return rec.localOwner === null ? null : `local:${rec.localOwner}`;
+}
 
 /**
  * Πόσα ευρήματα κρατά το δακτυλιωτό ιστορικό του {@link exposeAuditToDevConsole}.
@@ -139,8 +152,38 @@ function report(finding: EscapeAuditFinding): void {
   if (verdict === 'ok') return;
   console.error(
     `[EscapeBus/audit] ${verdict.toUpperCase()} — ${EXPLAIN[verdict]}`,
-    { focusAt: record.focusAt, consumedBy: record.consumedBy },
+    { focusAt: record.focusAt, consumedBy: describeOwner(record) },
   );
+}
+
+/**
+ * ADR-364 §10.15 — ΔΗΛΩΣΗ ΤΟΠΙΚΟΥ ΙΔΙΟΚΤΗΤΗ ESC (κατηγορία Κ3 του §10.5).
+ *
+ * ── ΤΟ ΠΡΟΒΛΗΜΑ ──
+ *
+ * Το {@link judge} έκρινε `shadow-owner` κάθε ESC που καταναλώθηκε χωρίς slot του bus.
+ * Αλλά το §10.5 **θεσμοθετεί** τον Κ3: τοπικός `onKeyDown` πάνω στο ίδιο το στοιχείο
+ * που κατέχει το πλήκτρο (π.χ. η λίστα @-mention μέσα στο textarea των σχολίων). Ο
+ * νόμιμος αυτός ιδιοκτήτης τύπωνε `console.error` σε **κάθε** χρήση — θόρυβος που
+ * εκπαιδεύει στην αγνόηση του Μηχ. 1, δηλαδή υπονομεύει το ίδιο το ADR-364.
+ *
+ * ── ΓΙΑΤΙ ΔΗΛΩΣΗ ΚΑΙ ΟΧΙ ΣΙΩΠΗ ──
+ *
+ * Η φθηνή «διόρθωση» θα ήταν να μη κρίνεται shadow-owner όταν το focus είναι σε πεδίο
+ * κειμένου. Αυτό θα ευλογούσε **σιωπηλά** και κάθε ωμό, αδήλωτο ιδιοκτήτη στην ίδια
+ * κατάσταση — δηλαδή θα τύφλωνε τον έλεγχο εκεί ακριβώς όπου τον χρειάζεσαι. Εδώ ο
+ * Κ3 γίνεται **ορατός**: το εύρημα αναφέρει `local:<id>` και ο αδήλωτος εξακολουθεί
+ * να βγαίνει `shadow-owner`.
+ *
+ * @param e Το **εγγενές** συμβάν. Από React: `event.nativeEvent` — είναι το ίδιο
+ *          αντικείμενο που είδε η σεντινέλα, άρα η αναζήτηση στο WeakMap πετυχαίνει.
+ * @param id Σταθερό αναγνωριστικό ιδιοκτήτη, ίδια σύμβαση με τα `EscapeHandler.id`.
+ */
+export function noteLocalEscapeOwner(e: KeyboardEvent, id: string): void {
+  if (!AUDIT_ENABLED) return;
+  const rec = records.get(e);
+  if (!rec) return; // Συνθετικό συμβάν ή ESC που η σεντινέλα δεν είδε.
+  rec.localOwner = id;
 }
 
 /**
@@ -166,6 +209,7 @@ function onSentinelKeyDown(e: KeyboardEvent): void {
     busDispatched: false,
     preemptedAtEntry: false,
     consumedBy: null,
+    localOwner: null,
     focusAt: describeFocus(),
   };
   records.set(e, rec);

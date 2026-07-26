@@ -16,6 +16,7 @@ import {
   __judgeForTests,
   __resetAuditForTests,
   installEscapeAuditSentinel,
+  noteLocalEscapeOwner,
 } from '../escape-dev-audit';
 import type { EscapeHandler } from '../types';
 
@@ -146,5 +147,37 @@ describe('ΤΥΦΛΟ ΣΗΜΕΙΟ — καρφωμένο ρητά, ώστε το
     expect(sideEffect).toBe(1);
     expect(__judgeForTests(e)?.verdict).toBe('ok');
     // ⇒ Αυτούς τους πιάνει ΜΟΝΟ ο στατικός ratchet (Μηχανισμός 3).
+  });
+});
+
+describe('ADR-364 §10.15 — δηλωμένος τοπικός ιδιοκτήτης (Κ3)', () => {
+  it('δηλωμένος Κ3 ⇒ ok, ΟΧΙ shadow-owner', () => {
+    registerBusHandler(false); // ο bus δεν διεκδικεί όσο το textarea έχει focus
+    addCompetitor((e) => {
+      // Ακριβώς ό,τι κάνει το CommentReplyInput όταν κλείνει τη λίστα @-mention.
+      noteLocalEscapeOwner(e, 'comment-reply/mention-list');
+      e.preventDefault();
+    });
+    const e = fireEscape();
+    const finding = __judgeForTests(e);
+    expect(finding?.verdict).toBe('ok');
+    expect(finding?.record.localOwner).toBe('comment-reply/mention-list');
+  });
+
+  it('ΘΕΤΙΚΟ CONTROL: αδήλωτος ωμός ιδιοκτήτης ΕΞΑΚΟΛΟΥΘΕΙ να βγαίνει shadow-owner', () => {
+    registerBusHandler(false);
+    addCompetitor((e) => e.preventDefault()); // καμία δήλωση
+    const e = fireEscape();
+    expect(__judgeForTests(e)?.verdict).toBe('shadow-owner');
+  });
+
+  it('η δήλωση ΔΕΝ κρύβει starved — ο λιμοκτονημένος bus παραμένει εύρημα', () => {
+    addCompetitor((e) => {
+      noteLocalEscapeOwner(e, 'test/liar');
+      e.stopImmediatePropagation();
+    });
+    registerBusHandler(true);
+    const e = fireEscape();
+    expect(__judgeForTests(e)?.verdict).toBe('starved');
   });
 });
