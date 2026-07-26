@@ -27,8 +27,20 @@
  *   περνά από το ίδιο state ⇒ **κανένας handler δεν χρειάζεται αλλαγή**. Χωρίς αυτό,
  *   μια διαγραμμένη επαφή θα «επανερχόταν» — χειρότερο από το αρχικό ελάττωμα.
  * - **Καμία ανάκτηση από δίκτυο.** Η επαναφορά ψάχνει τη λίστα που ήδη υπάρχει στη
- *   μνήμη· αν δεν βρεθεί, επιστρέφει `null` (και το κλειδί καθαρίζεται από το effect
- *   γραφής). Ένα fetch εδώ θα προκαλούσε flash.
+ *   μνήμη. Ένα fetch εδώ θα προκαλούσε flash.
+ * - 🔴 **Το `null` έχει ΔΥΟ σημασίες και μόνο η μία δικαιολογεί σβήσιμο.** Μετρήθηκε
+ *   ζωντανά (2026-07-26, ADR-332 D20.1) ότι σε φρέσκο φόρτωμα ο αρχικοποιητής
+ *   τρέχει **πριν** φτάσει η λίστα, οπότε η επαναφορά αποτυγχάνει αν και το id
+ *   είναι σωστό — και το effect γραφής έσβηνε τότε το κλειδί, καταστρέφοντας τη
+ *   δικλείδα 325ms πριν έρθουν τα δεδομένα:
+ *   ```
+ *   INIT  { stored:"cont_54fa…", cacheLen:0, hasLoaded:false, result:null }  @32877
+ *   WRITE { id:null, contactsLen:0 }                                        @33202
+ *   sel: null   ← το κλειδί σβήστηκε, καμία επαναφορά δεν ήταν πια δυνατή
+ *   ```
+ *   Γι' αυτό η γραφή περνά από το {@link isSelectionWriteAllowed} και η διάκριση
+ *   «σκουπίδι» vs «δεν φόρτωσε ακόμη» παίρνεται **όταν υπάρχει η πληροφορία**, μέσω
+ *   του {@link resolveLateSelectionRestore}.
  * - Το `sessionStorage` μπορεί να πετάξει (ιδιωτική περιήγηση Safari, quota,
  *   απενεργοποιημένα cookies) ⇒ **κάθε πρόσβαση είναι φρουρημένη**. Αποτυχία
  *   persistence δεν επιτρέπεται ποτέ να ρίξει τη σελίδα.
@@ -107,4 +119,47 @@ export function restoreSelectedContact<T extends IdentifiableContact>(
   if (!storedId) return null;
 
   return contacts.find(contact => contact.id === storedId) ?? null;
+}
+
+/**
+ * Επιτρέπεται να γραφτεί η τρέχουσα επιλογή στο storage;
+ *
+ * Η μόνη επικίνδυνη περίπτωση είναι `null` **πριν** καθίσει η λίστα: εκεί το `null`
+ * σημαίνει «δεν ξέρω ακόμη» και το σβήσιμο καταστρέφει τη δικλείδα (βλ. το ίχνος
+ * στην κεφαλή του module). Μετά το κάθισμα, `null` σημαίνει όντως «καμία επιλογή»
+ * — αποεπιλογή, διαγραφή, αρχειοθέτηση — και **πρέπει** να σβήσει.
+ *
+ * @param selectedId - Το id της τρέχουσας επιλογής, ή `null`.
+ * @param listSettled - Έχει φορτώσει η λίστα υποψηφίων;
+ */
+export function isSelectionWriteAllowed(selectedId: string | null, listSettled: boolean): boolean {
+  return selectedId !== null || listSettled;
+}
+
+/** Έκβαση της καθυστερημένης επαναφοράς, μόλις η λίστα γίνει διαθέσιμη. */
+export type LateSelectionRestore<T> =
+  /** Το αποθηκευμένο id αντιστοιχεί σε υπαρκτή επαφή ⇒ επανάφερέ την. */
+  | { kind: 'restored'; contact: T }
+  /** Η λίστα φόρτωσε και η επαφή **δεν** υπάρχει ⇒ τώρα ξέρουμε ότι είναι σκουπίδι. */
+  | { kind: 'garbage' }
+  /** Δεν υπάρχει αποθηκευμένο id ⇒ καμία ενέργεια. */
+  | { kind: 'nothing' };
+
+/**
+ * Δεύτερη — και τελευταία — ευκαιρία επαναφοράς, όταν ο αρχικοποιητής έτρεξε με
+ * κενή λίστα.
+ *
+ * Καλείται **μόνο** αφού η λίστα καθίσει· τότε και μόνο τότε η απάντηση «η επαφή
+ * δεν υπάρχει» είναι αξιόπιστη και το κλειδί επιτρέπεται να σβήσει.
+ *
+ * @param contacts - Η φορτωμένη λίστα υποψηφίων.
+ */
+export function resolveLateSelectionRestore<T extends IdentifiableContact>(
+  contacts: readonly T[],
+): LateSelectionRestore<T> {
+  const storedId = readSelectedContactId();
+  if (!storedId) return { kind: 'nothing' };
+
+  const found = contacts.find(contact => contact.id === storedId);
+  return found ? { kind: 'restored', contact: found } : { kind: 'garbage' };
 }
