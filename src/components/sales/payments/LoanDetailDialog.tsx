@@ -18,6 +18,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { NumericField } from '@/components/ui/numeric-field';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
@@ -52,6 +53,15 @@ interface ActionResult {
   success: boolean;
   error?: string;
 }
+
+/** The loan fields the details grid edits as numbers (ADR-706). */
+type NumericLoanField =
+  | 'requestedAmount'
+  | 'approvedAmount'
+  | 'interestRate'
+  | 'termYears'
+  | 'appraisalValue'
+  | 'monthlyPayment';
 
 interface LoanDetailDialogProps {
   open: boolean;
@@ -88,7 +98,8 @@ export function LoanDetailDialog({
   const nextStatuses = getValidNextStatuses(loan.status);
 
   // --- Disbursement State ---
-  const [disbAmount, setDisbAmount] = useState('');
+  // ADR-706: number model, 0 = "not entered" (rendered blank).
+  const [disbAmount, setDisbAmount] = useState(0);
   const [disbMilestone, setDisbMilestone] = useState('');
   const [disbDate, setDisbDate] = useState(nowISO().split('T')[0]);
 
@@ -136,8 +147,8 @@ export function LoanDetailDialog({
 
   // Record disbursement
   const handleDisburse = useCallback(() => {
-    const amount = parseFloat(disbAmount);
-    if (!amount || amount <= 0 || !disbMilestone.trim()) return;
+    const amount = disbAmount;
+    if (amount <= 0 || !disbMilestone.trim()) return;
     handleAction(
       () => onDisburse({
         amount,
@@ -164,6 +175,32 @@ export function LoanDetailDialog({
   const updateField = (field: keyof UpdateLoanInput, value: string | number | null) => {
     setEditFields(prev => ({ ...prev, [field]: value }));
   };
+
+  /**
+   * ADR-706 — these rows moved from uncontrolled `defaultValue` inputs to the
+   * controlled numeric SSoT, so the displayed value has to be resolved here.
+   * `field in editFields` (not `??`) is what distinguishes "no pending edit"
+   * from "the user deliberately cleared it": with `??` a cleared field would
+   * snap back to the stored loan value on the next render.
+   */
+  const numericValue = (field: NumericLoanField): number =>
+    (field in editFields ? editFields[field] : loan[field]) ?? 0;
+
+  /**
+   * The six numeric rows of the details grid. Kept as data so the rows share one
+   * `<NumericField>` call site instead of six near-identical copies (N.18), with
+   * every `t()` key spelled out literally so the i18n gates can still see them.
+   */
+  const numericRows: readonly { field: NumericLoanField; label: string; step: number }[] = [
+    { field: 'requestedAmount', label: t('loanTracking.fields.requestedAmount'), step: 0.01 },
+    { field: 'approvedAmount', label: t('loanTracking.fields.approvedAmount'), step: 0.01 },
+    { field: 'interestRate', label: t('loanTracking.fields.interestRate'), step: 0.01 },
+    // Whole years in practice, but it shares the grid: one step of 1 keeps the
+    // nudge sane while the field behaves identically to its siblings.
+    { field: 'termYears', label: t('loanTracking.fields.termYears'), step: 1 },
+    { field: 'appraisalValue', label: t('loanTracking.fields.appraisalValue'), step: 0.01 },
+    { field: 'monthlyPayment', label: t('loanTracking.fields.monthlyPayment'), step: 0.01 },
+  ];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -237,61 +274,21 @@ export function LoanDetailDialog({
                   onChange={(e) => updateField('bankBranch', e.target.value || null)}
                 />
               </span>
-              <span className="space-y-1">
-                <Label className="text-xs">{t('loanTracking.fields.requestedAmount')}</Label>
-                <Input
-                  type="number"
-                  defaultValue={loan.requestedAmount ?? ''}
-                  className="h-8 text-xs"
-                  onChange={(e) => updateField('requestedAmount', e.target.value ? Number(e.target.value) : null)}
-                />
-              </span>
-              <span className="space-y-1">
-                <Label className="text-xs">{t('loanTracking.fields.approvedAmount')}</Label>
-                <Input
-                  type="number"
-                  defaultValue={loan.approvedAmount ?? ''}
-                  className="h-8 text-xs"
-                  onChange={(e) => updateField('approvedAmount', e.target.value ? Number(e.target.value) : null)}
-                />
-              </span>
-              <span className="space-y-1">
-                <Label className="text-xs">{t('loanTracking.fields.interestRate')}</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  defaultValue={loan.interestRate ?? ''}
-                  className="h-8 text-xs"
-                  onChange={(e) => updateField('interestRate', e.target.value ? Number(e.target.value) : null)}
-                />
-              </span>
-              <span className="space-y-1">
-                <Label className="text-xs">{t('loanTracking.fields.termYears')}</Label>
-                <Input
-                  type="number"
-                  defaultValue={loan.termYears ?? ''}
-                  className="h-8 text-xs"
-                  onChange={(e) => updateField('termYears', e.target.value ? Number(e.target.value) : null)}
-                />
-              </span>
-              <span className="space-y-1">
-                <Label className="text-xs">{t('loanTracking.fields.appraisalValue')}</Label>
-                <Input
-                  type="number"
-                  defaultValue={loan.appraisalValue ?? ''}
-                  className="h-8 text-xs"
-                  onChange={(e) => updateField('appraisalValue', e.target.value ? Number(e.target.value) : null)}
-                />
-              </span>
-              <span className="space-y-1">
-                <Label className="text-xs">{t('loanTracking.fields.monthlyPayment')}</Label>
-                <Input
-                  type="number"
-                  defaultValue={loan.monthlyPayment ?? ''}
-                  className="h-8 text-xs"
-                  onChange={(e) => updateField('monthlyPayment', e.target.value ? Number(e.target.value) : null)}
-                />
-              </span>
+              {numericRows.map(({ field, label, step }) => (
+                <span key={field} className="space-y-1">
+                  <NumericField
+                    id={`loan-${field}`}
+                    label={label}
+                    labelClassName="text-xs"
+                    className="h-8 text-xs"
+                    min={0}
+                    step={step}
+                    value={numericValue(field)}
+                    blankValue={0}
+                    onValueChange={(next) => updateField(field, next || null)}
+                  />
+                </span>
+              ))}
             </fieldset>
 
             <span className="space-y-1">
@@ -347,11 +344,15 @@ export function LoanDetailDialog({
               </legend>
               <span className="grid grid-cols-2 gap-2">
                 <span className="space-y-1">
-                  <Label className="text-xs">{t('labels.amount')}</Label>
-                  <Input
-                    type="number"
+                  <NumericField
+                    id="loan-disbursement-amount"
+                    label={t('labels.amount')}
+                    labelClassName="text-xs"
+                    min={0}
+                    step={0.01}
                     value={disbAmount}
-                    onChange={(e) => setDisbAmount(e.target.value)}
+                    onValueChange={setDisbAmount}
+                    blankValue={0}
                     className="h-8 text-xs"
                     placeholder="€"
                   />
@@ -379,7 +380,7 @@ export function LoanDetailDialog({
                 size="sm"
                 variant="outline"
                 className="w-full gap-1"
-                disabled={isSubmitting || !disbAmount || !disbMilestone.trim()}
+                disabled={isSubmitting || disbAmount <= 0 || !disbMilestone.trim()}
                 onClick={handleDisburse}
               >
                 {isSubmitting && <Loader2 className="h-3 w-3 animate-spin" />}

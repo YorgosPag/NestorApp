@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { NumericField } from '@/components/ui/numeric-field';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -56,7 +57,8 @@ export function AddChequeDialog({
   // Form state
   const [chequeType, setChequeType] = useState<ChequeType>('bank_cheque');
   const [chequeNumber, setChequeNumber] = useState('');
-  const [amount, setAmount] = useState('');
+  // ADR-706: number model, 0 = "not entered" (rendered blank).
+  const [amount, setAmount] = useState(0);
   const [bankCode, setBankCode] = useState('');
   const [bankName, setBankName] = useState('');
   const [bankBranch, setBankBranch] = useState('');
@@ -69,7 +71,7 @@ export function AddChequeDialog({
   const resetForm = useCallback(() => {
     setChequeType('bank_cheque');
     setChequeNumber('');
-    setAmount('');
+    setAmount(0);
     setBankCode('');
     setBankName('');
     setBankBranch('');
@@ -82,7 +84,7 @@ export function AddChequeDialog({
 
   const canSubmit =
     chequeNumber.trim() &&
-    parseFloat(amount) > 0 &&
+    amount > 0 &&
     bankName.trim() &&
     drawerName.trim() &&
     issueDate &&
@@ -96,7 +98,7 @@ export function AddChequeDialog({
       const input: CreateChequeInput = {
         chequeType,
         chequeNumber: chequeNumber.trim(),
-        amount: parseFloat(amount),
+        amount,
         bankName: bankName.trim(),
         ...(bankBranch.trim() ? { bankBranch: bankBranch.trim() } : {}),
         drawerName: drawerName.trim(),
@@ -169,16 +171,16 @@ export function AddChequeDialog({
               />
             </section>
             <section className="space-y-1">
-              <Label className="text-xs">
-                {t('chequeRegistry.fields.amount')}
-              </Label>
-              <Input
+              <NumericField
+                id="cheque-amount"
+                label={t('chequeRegistry.fields.amount')}
+                labelClassName="text-xs"
                 className="h-8 text-xs"
-                type="number"
-                min="0.01"
-                step="0.01"
+                min={0.01}
+                step={0.01}
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                onValueChange={setAmount}
+                blankValue={0}
                 placeholder="10000.00"
               />
             </section>

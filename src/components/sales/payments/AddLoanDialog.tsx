@@ -18,7 +18,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { NumericField } from '@/components/ui/numeric-field';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -60,7 +60,8 @@ export function AddLoanDialog({ open, onOpenChange, onAdd, existingCount }: AddL
   const [bankCode, setBankCode] = useState('');
   const [bankName, setBankName] = useState('');
   const [isPrimary, setIsPrimary] = useState(existingCount === 0);
-  const [requestedAmount, setRequestedAmount] = useState('');
+  // ADR-706: number model, 0 = "not entered" (rendered blank).
+  const [requestedAmount, setRequestedAmount] = useState(0);
   const [disbursementType, setDisbursementType] = useState<DisbursementType>('lump_sum');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -73,7 +74,7 @@ export function AddLoanDialog({ open, onOpenChange, onAdd, existingCount }: AddL
         bankName: bankName.trim(),
         isPrimary,
         disbursementType,
-        ...(requestedAmount ? { requestedAmount: parseFloat(requestedAmount) } : {}),
+        ...(requestedAmount > 0 ? { requestedAmount } : {}),
       };
 
       const result = await onAdd(input);
@@ -123,13 +124,15 @@ export function AddLoanDialog({ open, onOpenChange, onAdd, existingCount }: AddL
 
           {/* Requested Amount */}
           <span className="space-y-1">
-            <Label className="text-xs">
-              {t('loanTracking.fields.requestedAmount')}
-            </Label>
-            <Input
-              type="number"
+            <NumericField
+              id="loan-requested-amount"
+              label={t('loanTracking.fields.requestedAmount')}
+              labelClassName="text-xs"
+              min={0}
+              step={0.01}
               value={requestedAmount}
-              onChange={(e) => setRequestedAmount(e.target.value)}
+              onValueChange={setRequestedAmount}
+              blankValue={0}
               className="h-8 text-xs"
               placeholder="€"
             />

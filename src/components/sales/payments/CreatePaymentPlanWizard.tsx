@@ -15,7 +15,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { NumericField } from '@/components/ui/numeric-field';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -105,7 +105,8 @@ export function CreatePaymentPlanWizard({
 
   const [step, setStep] = useState(0);
   const [selectedTemplateId, setSelectedTemplateId] = useState(PAYMENT_PLAN_TEMPLATES[0].id);
-  const [totalAmount, setTotalAmount] = useState(suggestedAmount.toString());
+  // ADR-706: number model — the wizard opens on the suggested sale price.
+  const [totalAmount, setTotalAmount] = useState(suggestedAmount);
   const [taxRegime, setTaxRegime] = useState<SaleTaxRegime>('vat_24');
   const [installments, setInstallments] = useState<CreateInstallmentInput[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -173,8 +174,8 @@ export function CreatePaymentPlanWizard({
   // When moving to installment config step, compute installments
   const goToInstallmentStep = useCallback(() => {
     if (!selectedTemplate) return;
-    const total = parseFloat(totalAmount);
-    if (isNaN(total) || total <= 0) {
+    const total = totalAmount;
+    if (total <= 0) {
       notifyError(t('errors.invalidAmount'));
       return;
     }
@@ -183,21 +184,17 @@ export function CreatePaymentPlanWizard({
   }, [selectedTemplate, totalAmount, computeInstallments, STEP_INSTALLMENTS, t, notifyError]);
 
   // Update individual installment amount
-  const updateInstallmentAmount = useCallback((idx: number, newAmount: string) => {
+  const updateInstallmentAmount = useCallback((idx: number, amount: number) => {
     setInstallments((prev) => {
       const updated = [...prev];
-      const parsed = parseFloat(newAmount);
-      updated[idx] = {
-        ...updated[idx],
-        amount: isNaN(parsed) ? 0 : parsed,
-      };
+      updated[idx] = { ...updated[idx], amount };
       return updated;
     });
   }, []);
 
   // Submit
   const handleCreate = useCallback(async () => {
-    const total = parseFloat(totalAmount);
+    const total = totalAmount;
     const taxRate = TAX_REGIMES.find((r) => r.value === taxRegime)?.rate ?? 0;
 
     setSubmitting(true);
@@ -239,7 +236,7 @@ export function CreatePaymentPlanWizard({
   }, [totalAmount, taxRegime, installments, buildingId, projectId, ownerContactId, ownerName, planMode, hasMultipleOwners, owners, onCreate, onCreateSplit, onOpenChange, t, success, notifyError]);
 
   const installmentSum = installments.reduce((s, i) => s + i.amount, 0);
-  const total = parseFloat(totalAmount) || 0;
+  const total = totalAmount;
   const sumMatch = Math.abs(installmentSum - total) < 0.02;
 
   return (
@@ -314,13 +311,13 @@ export function CreatePaymentPlanWizard({
               <Label htmlFor="wizard-total">
                 {t('wizard.totalAmount')}
               </Label>
-              <Input
+              <NumericField
                 id="wizard-total"
-                type="number"
-                min="1"
-                step="0.01"
+                min={1}
+                step={0.01}
                 value={totalAmount}
-                onChange={(e) => setTotalAmount(e.target.value)}
+                onValueChange={setTotalAmount}
+                blankValue={0}
               />
             </div>
 
@@ -349,13 +346,13 @@ export function CreatePaymentPlanWizard({
               <fieldset key={idx} className="flex items-center gap-2">
                 <span className={cn("text-xs w-6", colors.text.muted)}>{idx + 1}.</span>
                 <span className="text-sm flex-1 truncate">{inst.label}</span>
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.01"
+                <NumericField
+                  min={0}
+                  step={0.01}
                   value={inst.amount}
-                  onChange={(e) => updateInstallmentAmount(idx, e.target.value)}
+                  onValueChange={(amount) => updateInstallmentAmount(idx, amount)}
                   className="w-28 text-right"
+                  aria-label={inst.label}
                 />
                 <span className={cn("text-xs", colors.text.muted)}>€</span>
               </fieldset>
