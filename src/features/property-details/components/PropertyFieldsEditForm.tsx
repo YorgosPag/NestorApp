@@ -17,7 +17,7 @@
 import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { InfoLabel } from '@/components/sales/payments/financial-intelligence/InfoLabel';
+import { InfoLabel } from '@/components/ui/InfoLabel';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select,

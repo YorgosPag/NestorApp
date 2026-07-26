@@ -150,6 +150,39 @@ src/components/ui/numeric-field/
 Όταν δίνεται `label`, το component εκπέμπει **fragment** (Label + Input), όχι wrapper `<div>` — το
 spacing το ορίζει ο caller, μηδέν div soup (N.4).
 
+### `blankValue` — η κενή κατάσταση ενός `number` μοντέλου (Phase 3)
+
+Η μετανάστευση του `sales` έδειξε ότι **το ελάττωμα δεν ήταν το μόνο εμπόδιο**: 45 από τα ~50 σημεία
+ήταν πεδία **εισαγωγής δεδομένων** που ανοίγουν **κενά** με placeholder (`value={amount || ''}` —
+**58 εμφανίσεις** σε όλο το `src/components`). Χωρίς αντίστοιχη έννοια στο SSoT, κάθε τέτοιο πεδίο θα
+άνοιγε σε ένα `0` που ο χρήστης πρέπει να σβήσει πρώτος — **οπισθοδρόμηση UX**, και ο μόνος τρόπος να
+αποφευχθεί θα ήταν ένα wrapper ανά domain (**ακριβώς η παγίδα N.18**).
+
+```tsx
+<NumericField value={amount} onValueChange={setAmount} blankValue={0} placeholder="€" />
+```
+
+Σημασιολογία:
+
+| Κατάσταση | Συμπεριφορά |
+|---|---|
+| `value === blankValue`, χωρίς focus | display κενό ⇒ φαίνεται το `placeholder` |
+| focus σε blank πεδίο | draft `''` — το πρώτο πλήκτρο δεν αντικαθιστά τίποτα |
+| πεδίο αδειάζει | commit `emptyValue`, που **default-άρει στο `blankValue`** |
+| `value === blankValue` | **εξαιρείται από τα bounds** |
+| a11y | χωρίς `aria-valuenow`/`aria-valuetext` ⇒ WAI-ARIA "indeterminate" spinbutton |
+
+**Η εξαίρεση από τα bounds είναι λειτουργική απαίτηση, όχι λεπτομέρεια:** ένα πεδίο ποσού είναι
+ταυτόχρονα `min={0.01}` **και** blank-στο-0. Αν το clamp εφαρμοζόταν στην κενή κατάσταση, το σβήσιμο
+θα την ανέβαζε στο `0.01` και **ο placeholder δεν θα ξαναγύριζε ποτέ** — τα όρια θα κατέστρεφαν σιωπηλά
+την κενή κατάσταση. Το «δεν συμπληρώθηκε» δεν είναι αριθμός εκτός ορίων.
+
+**Γιατί ΟΧΙ `value: number | null`** (React Aria / Spectrum): θα ανάγκαζε κάθε caller state, validator
+και payload να γίνει nullable για ένα καθαρά **παρουσιαστικό** ζήτημα, και θα έσπαγε τον τύπο του
+`onValueChange` στα δύο (union ή generic component + `forwardRef` cast). Η blank κατάσταση είναι
+**view state** — καταρρέει τη στιγμή που ο χρήστης αλλάζει ενεργά την τιμή (typing / nudge / scrub),
+γι' αυτό την τιμούν **μόνο** το unfocused display και το αρχικό draft του focus.
+
 ---
 
 ## 4. Consumers (migrated)
@@ -195,12 +228,44 @@ prior art του ADR-576. Παραμένει ξεχωριστό component επε
 
 ---
 
+## 5.1 Sales domain — anchors (Phase 3)
+
+`src/components/sales/__tests__/sales-numeric-fields.test.tsx` — **165 tests**, δύο **διαφορετικού
+είδους** anchors:
+
+1. **Behavioural** — το `AppurtenancesSection` οδηγείται πλήκτρο-πλήκτρο με `1250.5` και `1250,5`.
+   **Mutation-verified:** με επαναφορά του `<Input type="number">` το test κοκκίνισε δείχνοντας
+   `1250.5 → 0.5` — **το ελάττωμα αναπαράχθηκε ζωντανά μέσα στο test**, όχι θεωρητικά.
+2. **Structural** — σάρωση όλου του `src/components/sales`: αποτυγχάνει μόλις οποιοδήποτε αρχείο
+   ξαναφέρει δεκαδικό number-typed input. **Γιατί χρειάζεται:** μεταναστεύθηκαν **18 αρχεία**· ένα
+   behavioural test για ένα από αυτά δεν εμποδίζει τα άλλα 17 να παλινδρομήσουν, και το ελάττωμα είναι
+   **σιωπηλό** (κανένα σφάλμα — απλώς λάθος αριθμός στη βάση), άρα η παλινδρόμηση θα έφτανε σε production.
+   Τα επιτρεπόμενα σημεία (2× Recharts `XAxis`, 2× ακέραια Monte Carlo) είναι **ρητό allowlist** με
+   αιτιολόγηση, συν test που κόβει τις μπαγιάτικες εγγραφές του.
+
+⚠️ Και οι δύο markers (`type=…`, fractional `step=…`) **συναρμολογούνται από τμήματα** μέσα στο test —
+γραμμένοι αυτούσιοι, το ίδιο το αρχείο θα απαντούσε σε **κάθε grep με το οποίο μετριέται το ratchet**
+και θα φούσκωνε τον αριθμό του υπόλοιπου χρέους (η παγίδα «το σχόλιο που παραθέτει το pattern **είναι**
+εμφάνιση του pattern»).
+
+---
+
 ## 6. Υπόλοιπο χρέος (ratchet)
 
-`grep 'type="number"' src/ --exclude-dir=dxf-viewer` → **187 σημεία σε 81 αρχεία** (μετρημένο 2026-07-25).
+| Μέτρηση | 2026-07-25 | **2026-07-26 (μετά το sales)** | Δ |
+|---|---|---|---|
+| `type="number"` σημεία (εκτός dxf-viewer) | 193 | **138** | **−55** |
+| αρχεία | 85 | **69** | **−16** |
+| 🎯 `step="0.x"` — **βεβαιωμένα δεκαδικά** | 68 | **46** | **−22** |
+| αρχεία | 36 | **24** | **−12** |
+
+> Οι αριθμοί της 2026-07-25 (187/81) ήταν παλαιότερο μέτρημα· το 193/85 είναι η επαναμέτρηση της
+> 2026-07-26 με τις ίδιες εντολές, ώστε το Δ να είναι συγκρίσιμο.
 
 **ΔΕΝ πάσχουν όλα**: το ελάττωμα χτυπά μόνο εκεί που η τιμή είναι **δεκαδική**. Ακέραια πεδία (αριθμός
-ορόφων, τεμάχια) είναι ασφαλή με `type="number"`. Χρειάζεται ανάγνωση ανά σημείο — **ΟΧΙ blanket sed**.
+ορόφων, τεμάχια, πλήθος σεναρίων, RNG seed) είναι ασφαλή ως number inputs. Χρειάζεται ανάγνωση ανά
+σημείο — **ΟΧΙ blanket sed**. Επόμενα domains κατά προτεραιότητα:
+`building-management` (5 αρχεία) · `projects/ika` (3) · `procurement` (3) · `accounting` (3).
 Καταγράφηκε στο `.claude-rules/pending-ratchet-work.md`.
 
 ---
@@ -223,3 +288,22 @@ prior art του ADR-576. Παραμένει ξεχωριστό component επε
 - **2026-07-26:** Το ESC έγινε **διβάθμιο** (νέο §2 «Το Escape είναι διβάθμιο») μετά από μπλόκο
   του CHECK 3.7 — `stopPropagation` όσο υπάρχει draft, αλλιώς το πλήκτρο φτάνει στον διάλογο.
   Allowlist `escape-command-bus` +1· changelog ADR-364 ενημερώθηκε.
+- **2026-07-26 — Phase 3, domain `sales` (ratchet):**
+  - **SSoT +1 έννοια:** `blankValue` (νέο §3) — η κενή κατάσταση ενός `number` μοντέλου, με
+    `emptyValue` να default-άρει σε αυτήν και **εξαίρεση από τα bounds**. Απαιτήθηκε από 45 από τα ~50
+    σημεία του domain· χωρίς αυτήν η εναλλακτική ήταν wrapper ανά domain (παγίδα N.18).
+    **+9 tests** στο υπάρχον suite (**69 GREEN**), **4 mutations** επαληθευμένα (isBlank, draft του
+    focus, default του `emptyValue`, εξαίρεση bounds — κάθε ένα κοκκίνισε τα σχετικά anchors).
+  - **18 αρχεία μεταναστεύθηκαν** (~45 πεδία): 4 sales dialogs · 2 financial-intelligence ·
+    7 payments · 5 payments/financial-intelligence. Ό,τι είναι γνήσια ακέραιο έμεινε number input
+    (πλήθος σεναρίων, RNG seed) — **καμία blanket αντικατάσταση**.
+  - **Νέο anchor suite** `sales-numeric-fields.test.tsx` (**165 GREEN**, §5.1) — behavioural +
+    structural. Mutation-verified: η επαναφορά του παλιού input αναπαρήγαγε ζωντανά `1250.5 → 0.5`.
+  - **Boy scout (N.0.2 / N.11 / ADR-314):** 5 hardcoded placeholders (`"€ Budget"`, `"€ Actual"`,
+    `"Category…"`, `"Project…"`, `"Tier name…"`, `"Floor"`/`"Cap"`) → `aria-label` με υπάρχοντα
+    κλειδιά· **+2 νέα κλειδιά** `collarFloor`/`collarCap` σε **el ΚΑΙ en**· ένα
+    `toLocaleString('el-GR')` → `formatCurrency` (Intl SSoT)· νεκρός τοπικός `parseInput` διαγράφηκε.
+  - **N.18 (jscpd):** **0 νέα clones**. Τα 8 ευρήματα του `jscpd:diff` επαληθεύτηκαν ένα προς ένα ως
+    **προϋπάρχοντα** — οι εκδόσεις του `HEAD` εξήχθησαν σε ξεχωριστό δέντρο και έδωσαν **τις ίδιες
+    ακριβώς περιοχές γραμμών** (import blocks + dispatch λογική μεταξύ των αδελφών
+    `ReserveDialog`/`SellDialog` και `EditInstallment`/`RecordPayment`).

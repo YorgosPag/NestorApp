@@ -161,7 +161,7 @@ describe('NumericField — keyboard nudge (WAI-ARIA spinbutton)', () => {
     const onDismiss = jest.fn();
     const user = userEvent.setup();
     render(
-      // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- stands in for a dialog's dismiss layer
+      // Stands in for a dialog's dismiss layer.
       <section onKeyDown={onDismiss}>
         <Harness initial={7} />
       </section>,
@@ -217,5 +217,134 @@ describe('NumericField — bounds and empty handling', () => {
     render(<Harness />);
     expect(field()).toHaveAttribute('type', 'text');
     expect(field()).toHaveAttribute('inputmode', 'decimal');
+  });
+});
+
+// ADR-706 Phase 3 — `blankValue` is what lets a data-entry form (an amount, a
+// deposit, a budget line) migrate off `value={amount || ''}` without opening on
+// a 0 the user has to delete first. Without it the sales ratchet would have had
+// to either regress that UX or hand-roll a per-domain wrapper (N.18).
+describe('NumericField — blankValue (empty-looking model value)', () => {
+  it('renders blank while the model sits on blankValue, so the placeholder shows', () => {
+    render(<Harness initial={0} blankValue={0} placeholder="€" />);
+    expect(field()).toHaveValue('');
+    expect(field()).toHaveAttribute('placeholder', '€');
+  });
+
+  // A three-digit value keeps the assertion free of the runner's grouping mark.
+  it('still renders any other value normally', () => {
+    render(<Harness initial={150} blankValue={0} />);
+    expect(field()).toHaveValue('150');
+  });
+
+  it('opens an empty draft on focus, so the first keystroke replaces nothing', async () => {
+    const user = userEvent.setup();
+    render(<Harness initial={0} blankValue={0} />);
+
+    await user.click(field());
+    expect(field()).toHaveValue('');
+
+    await user.type(field(), '2,4');
+    expect(field()).toHaveValue('2,4');
+  });
+
+  it('commits the typed decimal from a blank start', async () => {
+    const onCommit = jest.fn();
+    const user = userEvent.setup();
+    render(<Harness initial={0} blankValue={0} step={0.01} onCommit={onCommit} />);
+
+    await user.click(field());
+    await user.type(field(), '21.5');
+    await user.tab();
+
+    // Asserted on the model, not the rendered text: the display separator is
+    // the runner's locale, the committed number is the contract.
+    expect(onCommit).toHaveBeenLastCalledWith(21.5);
+    expect(field()).not.toHaveValue('');
+  });
+
+  it('falls back to blankValue when the field is cleared and no emptyValue is given', async () => {
+    const onCommit = jest.fn();
+    const user = userEvent.setup();
+    render(<Harness initial={42} blankValue={0} onCommit={onCommit} />);
+
+    await user.click(field());
+    await user.clear(field());
+    await user.tab();
+
+    expect(onCommit).toHaveBeenLastCalledWith(0);
+    expect(field()).toHaveValue('');
+  });
+
+  // Pins the DEFAULT, not the value: with blankValue at 0 this assertion would
+  // pass even if `emptyValue` still hard-defaulted to 0.
+  it('clearing commits blankValue even when it is not zero', async () => {
+    const onCommit = jest.fn();
+    const user = userEvent.setup();
+    render(<Harness initial={42} blankValue={5} onCommit={onCommit} />);
+
+    await user.click(field());
+    await user.clear(field());
+    await user.tab();
+
+    expect(onCommit).toHaveBeenLastCalledWith(5);
+    expect(field()).toHaveValue('');
+  });
+
+  it('reverts to blank on Escape when the field was focused blank', async () => {
+    const user = userEvent.setup();
+    render(<Harness initial={0} blankValue={0} />);
+
+    await user.click(field());
+    await user.type(field(), '99');
+    await user.keyboard('{Escape}');
+
+    expect(field()).toHaveValue('');
+  });
+
+  // An amount field is `min={0.01}` AND blank-on-0 at the same time. If the
+  // bounds applied to the blank state, clearing the field would snap it to 0.01
+  // and the placeholder could never come back.
+  it('exempts the blank state from the bounds', async () => {
+    const onCommit = jest.fn();
+    const user = userEvent.setup();
+    render(<Harness initial={250} blankValue={0} min={0.01} step={0.01} onCommit={onCommit} />);
+
+    await user.click(field());
+    await user.clear(field());
+    await user.tab();
+
+    expect(onCommit).toHaveBeenLastCalledWith(0);
+    expect(field()).toHaveValue('');
+  });
+
+  it('still clamps every non-blank value to the bounds', async () => {
+    const onCommit = jest.fn();
+    const user = userEvent.setup();
+    render(<Harness initial={0} blankValue={0} min={0.01} max={10} step={0.01} onCommit={onCommit} />);
+
+    await user.click(field());
+    await user.type(field(), '99');
+    await user.tab();
+
+    expect(onCommit).toHaveBeenLastCalledWith(10);
+  });
+
+  it('announces no value while blank (WAI-ARIA indeterminate spinbutton)', () => {
+    render(<Harness initial={0} blankValue={0} min={0} max={100} />);
+    expect(field()).not.toHaveAttribute('aria-valuenow');
+    expect(field()).not.toHaveAttribute('aria-valuetext');
+    expect(field()).toHaveAttribute('aria-valuemin', '0');
+  });
+
+  it('announces the value again as soon as it leaves the blank state', async () => {
+    const user = userEvent.setup();
+    render(<Harness initial={0} blankValue={0} step={1} />);
+
+    await user.click(field());
+    await user.keyboard('{ArrowUp}');
+
+    expect(field()).toHaveValue('1');
+    expect(field()).toHaveAttribute('aria-valuenow', '1');
   });
 });

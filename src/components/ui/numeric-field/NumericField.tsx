@@ -29,6 +29,7 @@ import * as React from 'react';
 
 import { Input, type InputProps } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import '@/lib/design-system';
 import { cn } from '@/lib/utils';
 import { useNumericField, type UseNumericFieldOptions } from './use-numeric-field';
 
@@ -57,6 +58,7 @@ export const NumericField = React.forwardRef<HTMLInputElement, NumericFieldProps
     min,
     max,
     step,
+    blankValue,
     emptyValue,
     disabled = false,
     label,
@@ -73,6 +75,7 @@ export const NumericField = React.forwardRef<HTMLInputElement, NumericFieldProps
     min,
     max,
     step,
+    blankValue,
     emptyValue,
     disabled,
   });

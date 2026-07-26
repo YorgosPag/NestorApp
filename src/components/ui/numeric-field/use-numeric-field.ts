@@ -51,7 +51,24 @@ export interface UseNumericFieldOptions extends NumericBounds {
   value: number;
   /** Called with the committed model value. Never called with NaN. */
   onValueChange: (value: number) => void;
-  /** Value committed when the field is cleared. Defaults to 0. */
+  /**
+   * Model value that renders as a BLANK field, letting the caller's
+   * `placeholder` show through — the `number`-model way to say "not filled in".
+   *
+   * Data-entry forms need this: an amount field must open empty, not on `0`
+   * that the user has to delete first. It is the typed contract behind the
+   * `value={amount || ''}` idiom those call sites hand-rolled before ADR-706,
+   * so migrating to the SSoT preserves their behaviour exactly.
+   *
+   * Deliberately NOT a `number | null` model: widening the value contract would
+   * force every caller's state, validator and payload to become nullable for a
+   * concern that is purely presentational, and would split the callback type in
+   * two. The blank state is a VIEW state — it collapses the moment the user
+   * changes the value (nudge, scrub, typing), which is why only the unfocused
+   * display and the initial focus draft honour it.
+   */
+  blankValue?: number;
+  /** Value committed when the field is cleared. Defaults to `blankValue`, else 0. */
   emptyValue?: number;
   disabled?: boolean;
 }
@@ -78,11 +95,25 @@ export function useNumericField({
   min,
   max,
   step,
-  emptyValue = 0,
+  blankValue,
+  emptyValue = blankValue ?? 0,
   disabled = false,
 }: UseNumericFieldOptions): UseNumericFieldResult {
   const bounds = React.useMemo<NumericBounds>(() => ({ min, max, step }), [min, max, step]);
   const decimalSeparator = React.useMemo(() => resolveDecimalSeparator(getCurrentLocale()), []);
+
+  /** True while the model sits on the value the caller renders as blank. */
+  const isBlank = blankValue !== undefined && value === blankValue;
+
+  /**
+   * Text to seed the draft with when editing starts. A blank field opens empty
+   * so the first keystroke replaces nothing — see `blankValue`.
+   */
+  const toEditText = React.useCallback(
+    (candidate: number) =>
+      blankValue !== undefined && candidate === blankValue ? '' : formatForEditing(candidate, decimalSeparator),
+    [blankValue, decimalSeparator],
+  );
 
   /** Non-null only while the user is actively editing the text. */
   const [draft, setDraft] = React.useState<string | null>(null);
@@ -92,17 +123,22 @@ export function useNumericField({
 
   const commit = React.useCallback(
     (next: number) => {
-      const clamped = clampToBounds(stripFloatNoise(next), bounds);
-      if (clamped !== value) onValueChange(clamped);
-      return clamped;
+      // The blank state is exempt from the bounds: "not filled in" is not a
+      // number out of range. Without this, `min={0.01}` on an amount field
+      // would clamp a cleared field to 0.01 and the placeholder could never
+      // come back — the bounds would quietly destroy the empty state.
+      const settled =
+        blankValue !== undefined && next === blankValue ? next : clampToBounds(stripFloatNoise(next), bounds);
+      if (settled !== value) onValueChange(settled);
+      return settled;
     },
-    [bounds, onValueChange, value],
+    [blankValue, bounds, onValueChange, value],
   );
 
   const handleFocus = React.useCallback(() => {
     valueOnFocus.current = value;
-    setDraft(formatForEditing(value, decimalSeparator));
-  }, [value, decimalSeparator]);
+    setDraft(toEditText(value));
+  }, [value, toEditText]);
 
   const handleChange = React.useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -176,7 +212,7 @@ export function useNumericField({
         // press would revert the draft AND close the dialog underneath it.
         // Semantics (Figma / VS Code / Revit): the first press undoes the pending
         // edit, the second — with nothing left to undo — reaches the dialog.
-        const pristine = formatForEditing(valueOnFocus.current, decimalSeparator);
+        const pristine = toEditText(valueOnFocus.current);
         if (draft === null || draft === pristine) return;
         event.preventDefault();
         event.stopPropagation();
@@ -184,7 +220,7 @@ export function useNumericField({
         setDraft(pristine);
       }
     },
-    [applyNudge, commit, decimalSeparator, draft, max, min, value],
+    [applyNudge, commit, decimalSeparator, draft, max, min, toEditText, value],
   );
 
   const handleScrubDown = React.useCallback(
@@ -220,7 +256,7 @@ export function useNumericField({
     [bounds, disabled, onValueChange, value],
   );
 
-  const displayValue = draft ?? formatForDisplay(value);
+  const displayValue = draft ?? (isBlank ? '' : formatForDisplay(value));
 
   return {
     inputProps: {
@@ -229,10 +265,13 @@ export function useNumericField({
       inputMode: 'decimal',
       autoComplete: 'off',
       role: 'spinbutton',
-      'aria-valuenow': Number.isFinite(value) ? value : undefined,
+      // A blank field has no value to announce: `spinbutton` without
+      // `aria-valuenow` is the WAI-ARIA way to say "indeterminate", and it lets
+      // the placeholder be what assistive tech reads instead of a phantom 0.
+      'aria-valuenow': !isBlank && Number.isFinite(value) ? value : undefined,
       'aria-valuemin': min,
       'aria-valuemax': max,
-      'aria-valuetext': formatForDisplay(value),
+      'aria-valuetext': isBlank ? undefined : formatForDisplay(value),
       value: displayValue,
       disabled,
       onFocus: handleFocus,

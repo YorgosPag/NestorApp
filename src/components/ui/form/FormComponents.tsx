@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Label } from '@/components/ui/label';
-import { InfoLabel } from '@/components/sales/payments/financial-intelligence/InfoLabel';
+import { InfoLabel } from '@/components/ui/InfoLabel';
 import { cn } from '@/lib/utils';
 import '@/lib/design-system';
 
