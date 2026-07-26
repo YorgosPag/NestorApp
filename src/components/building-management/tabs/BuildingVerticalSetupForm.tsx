@@ -41,7 +41,7 @@ import {
   DEFAULT_BUILDING_FOUNDATION_DEPTH_AUTO,
   DEFAULT_BUILDING_STAIR_PENTHOUSE_HEIGHT_M,
 } from '@/types/building/elevation.schemas';
-// ADR-488 §6.2 — δυναμικό βάθος θεμελίωσης (shared engine· seed στο bootstrap).
+// ADR-489 §6.2 — δυναμικό βάθος θεμελίωσης (shared engine· seed στο bootstrap).
 import { seedDerivedFoundationDepthMm } from '@/types/building/derived-foundation-depth';
 
 interface FloorMutationResponse {
@@ -79,7 +79,7 @@ export function BuildingVerticalSetupForm({
   const [uppers, setUppers] = useState('2');
   const [typicalHeight, setTypicalHeight] = useState(DEFAULT_TYPICAL_STOREY_HEIGHT_M.toFixed(2));
   const [hasFoundation, setHasFoundation] = useState(true);
-  // ADR-488 §6.2 — το βάθος θεμελίωσης παράγεται δυναμικά (Auto) by default· ο μηχανικός
+  // ADR-489 §6.2 — το βάθος θεμελίωσης παράγεται δυναμικά (Auto) by default· ο μηχανικός
   // μπορεί να κάνει χειροκίνητη υπέρβαση. Στο bootstrap (καθόλου πέδιλα ακόμη) χρησιμοποιούμε
   // το seed του engine (τυπικό πέδιλο + συνδετήριες = 1,20μ) αντί για χειροκίνητη σταθερά.
   const [foundationDepthIsAuto, setFoundationDepthIsAuto] = useState(DEFAULT_BUILDING_FOUNDATION_DEPTH_AUTO);
@@ -160,7 +160,7 @@ export function BuildingVerticalSetupForm({
         updates: {
           hasFoundation,
           foundationDepth: hasFoundation ? effectiveFoundationDepthM : 0,
-          // ADR-488 §6.2 — διατήρησε αν το βάθος είναι Auto (παράγεται) ή χειροκίνητη υπέρβαση.
+          // ADR-489 §6.2 — διατήρησε αν το βάθος είναι Auto (παράγεται) ή χειροκίνητη υπέρβαση.
           foundationDepthAuto: foundationDepthIsAuto,
           hasStairPenthouse,
           stairPenthouseHeight: hasStairPenthouse ? parseFloat(stairPenthouseHeight) || 0 : 0,

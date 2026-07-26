@@ -63,9 +63,6 @@ import { runFeasibilityChecks } from '../bim/structural/organism/feasibility-che
 import { runPracticalSpanChecks } from '../bim/structural/organism/practical-span-checks';
 import { readActiveStoreyContext } from '../systems/levels/storey-creation-defaults';
 import { DEFAULT_STOREY_HEIGHT_MM } from '../systems/levels/active-storey-context';
-// ADR-488 §6.1 — DERIVED effective βάση κολώνας (στατική συνέχεια κολώνα→πέδιλο) → transient store.
-import { buildColumnBaseContinuityMap } from '../bim/structural/organism/derive-column-base-continuity';
-import { ColumnBaseContinuityStore } from '../bim/structural/organism/column-base-continuity-store';
 import { buildOrganismScene } from '../bim/structural/organism/cross-level-organism-scene';
 import { runStructuralAnalyticalModel } from './structural-analytical-core';
 import { makeGuideOffsetLookup } from '../bim/hosting/guide-store-offset-lookup';
@@ -142,7 +139,11 @@ export function runOrganismDiagnostics(
   const ceilingHosts = buildCeilingSlabHosts(entities.filter(isSlabEntity));
   BeamFlangeStore.set(buildBeamFlangeWidthMap(entities, ceilingHosts, beamSupportTypes));
   ColumnSupportMomentStore.set(buildColumnSupportMomentMap(entities, graph)); // ADR-502 §Slice2
-  ColumnBaseContinuityStore.set(buildColumnBaseContinuityMap(graph));
+  // ADR-489 §7 — η column→footing συνέχεια ΔΕΝ δημοσιεύεται πλέον από εδώ. Ο organism pass
+  // βλέπει ΜΟΝΟ τον ενεργό όροφο, ενώ ο 3Δ render path σχεδιάζει όλους τους ορόφους του
+  // stack → ένας χάρτης scoped στον ενεργό, καταναλωμένος καθολικά, έσβηνε τις προεκτάσεις
+  // κάθε φορά που ο ενεργός όροφος δεν ήταν αυτός με τα πέδιλα. Πλέον την παράγει ο
+  // `BimSceneLayer.syncMultiFloor` per-stack, από τον ΙΔΙΟ `buildColumnBaseContinuityMap`.
 
   const settings = useStructuralSettingsStore.getState();
   const provider = resolveStructuralCode(settings.codeId);

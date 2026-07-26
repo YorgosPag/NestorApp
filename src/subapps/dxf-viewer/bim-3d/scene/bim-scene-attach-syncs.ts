@@ -16,8 +16,8 @@ import {
   makeColumnHostResolver,
 } from '../../bim/geometry/column-vertical-profile';
 import { isColumnTilted } from '../../bim/geometry/column-tilt';
-// ADR-488 §6.1 — DERIVED effective βάση κολώνας (στατική συνέχεια κολώνα→πέδιλο).
-import { ColumnBaseContinuityStore } from '../../bim/structural/organism/column-base-continuity-store';
+// ADR-489 §6.1/§7 — DERIVED effective βάση κολώνας (στατική συνέχεια κολώνα→πέδιλο).
+// Πηγή = ο per-stack χάρτης στο `SyncContext` (ΟΧΙ global store) — βλ. §7 rationale.
 import { filterHostedOpenings } from './bim-scene-hosted-opening-filters';
 import { buildWallFootprintRing } from '../../bim/geometry/wall-geometry';
 import { computeWallCrossCutters, type WallCrossInput } from '../../bim/walls/wall-cross-cutback';
@@ -149,10 +149,12 @@ export function syncColumns(
     const clipTopZmm = (footVerts && footVerts.length >= 3 && Number.isFinite(colTopMm) && Number.isFinite(colBaseMm))
       ? resolveMemberTopClipZmm(projectVerticesTo2D(footVerts), colTopMm, colBaseMm, slabHosts)
       : undefined;
-    // ADR-488 §6.1 — DERIVED effective βάση (άνω παρειά στηρίζοντος πεδίλου) ώστε η κολώνα
+    // ADR-489 §6.1 — DERIVED effective βάση (άνω παρειά στηρίζοντος πεδίλου) ώστε η κολώνα
     // να εδραστεί στο πέδιλο (στατική συνέχεια). ΟΧΙ για ρητά base-attached κολώνες (κρατούν
     // τον δικό τους attach profile). undefined → flat path κρατά τη nominal βάση.
-    const effectiveBaseZmm = baseAttached ? undefined : ColumnBaseContinuityStore.get(column.id);
+    // ADR-489 §7 — ο χάρτης έρχεται από το `SyncContext`: per-stack (όλοι οι όροφοι μαζί,
+    // absolute Z) στο multi-floor path, `null` στο single-floor → μηδέν προέκταση εκεί.
+    const effectiveBaseZmm = baseAttached ? undefined : ctx.columnBaseContinuity?.get(column.id);
     const mesh = columnToMesh(
       column, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation, topProfile, baseProfile, nominalHeightMm,
       entities.walls, // ADR-449 Slice 2 — obstacles + exterior classifier για τον σοβά

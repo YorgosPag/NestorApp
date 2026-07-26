@@ -91,7 +91,7 @@ export function columnToMesh(
   // ADR-449 Slice 7 — ο scene-level ενιαίος σοβάς (silhouette) αναλαμβάνει το skin·
   // το per-element path το παραλείπει (ghosts/previews κρατούν per-element = false).
   suppressFinishSkin = false,
-  // ADR-488 §6.1 — DERIVED effective βάση (απόλυτο mm = άνω παρειά στηρίζοντος πεδίλου).
+  // ADR-489 §6.1 — DERIVED effective βάση (απόλυτο mm = άνω παρειά στηρίζοντος πεδίλου).
   // Όταν δοθεί & είναι ΧΑΜΗΛΟΤΕΡΗ από τη nominal βάση, η κολώνα επιμηκύνεται ΠΡΟΣ ΤΑ ΚΑΤΩ
   // ώστε να εδραστεί στο πέδιλο (στατική συνέχεια)· η ΚΟΡΥΦΗ μένει σταθερή. Μόνο flat path.
   effectiveBaseZmm?: number,
@@ -159,7 +159,7 @@ export function columnToMesh(
   const shape = buildShape(verts);
   if (!shape) return null;
 
-  // ADR-488 §6.1 — στατική συνέχεια κολώνα→πέδιλο: όταν δόθηκε DERIVED effective βάση
+  // ADR-489 §6.1 — στατική συνέχεια κολώνα→πέδιλο: όταν δόθηκε DERIVED effective βάση
   // χαμηλότερα από τη nominal, η κολώνα επιμηκύνεται ΠΡΟΣ ΤΑ ΚΑΤΩ ώστε να εδραστεί στην
   // άνω παρειά του πεδίλου — η ΚΟΡΥΦΗ μένει σταθερή. `baseDropMm=0` → byte-for-byte παλιό.
   const nominalBaseAbsMm = floorElevationMm + column.params.baseOffset;
@@ -178,7 +178,7 @@ export function columnToMesh(
   if (!mesh) return null;
   // ADR-402 — `baseOffset` lifts the whole column (vertical move). ONLY on this flat
   // path: the attached-prism path bakes baseOffset into its profile z. baseOffset=0 → no change.
-  // ADR-488 §6.1 — −baseDropMm κατεβάζει τη βάση στο πέδιλο (κορυφή αμετάβλητη).
+  // ADR-489 §6.1 — −baseDropMm κατεβάζει τη βάση στο πέδιλο (κορυφή αμετάβλητη).
   // Το lift μπαίνει στο ΤΕΛΙΚΟ root (πυρήνας + σοβάς + οπλισμός ως ενιαίο): πυρήνας & finish/rebar
   // χτίζονται σε local frame (baseY=0) και ανυψώνονται μαζί από το root — ίδιο pattern με `wallToMesh`.
   // (Αλλιώς το `composeColumnWithFinish` θα τύλιγε τον πυρήνα σε Group@0 «ορφανεύοντας» το lift στο child.)
@@ -191,7 +191,7 @@ export function columnToMesh(
   // Ενεργό μόνο όταν η κολόνα έχει ενεργό `finish` ΚΑΙ δόθηκαν walls (απών στο ghost
   // path → πυρήνας-only). ADR-449 Slice 5 — view-level gate `showFinishSkin`.
   // ADR-470 — core gate: κρύβει το σώμα της κολώνας αν ανενεργό (σοβάς/οπλισμός μένουν).
-  // ADR-488 §6.1 — σοβάς/οπλισμός παίρνουν το επιμηκυμένο ύψος ώστε να φτάνουν στο πέδιλο.
+  // ADR-489 §6.1 — σοβάς/οπλισμός παίρνουν το επιμηκυμένο ύψος ώστε να φτάνουν στο πέδιλο.
   const composed = applyStructuralCoreVisibility3D(
     attachColumnRebar(
       composeColumnWithFinish(

@@ -1,5 +1,5 @@
 /**
- * ADR-488 §6.2 — Δυναμικό βάθος θεμελίωσης (pure engine) tests.
+ * ADR-489 §6.2 — Δυναμικό βάθος θεμελίωσης (pure engine) tests.
  *
  * Επαληθεύει: thickness-driven, όρος συνδετήριας, όρος εδαφόπλακας, γεωτεχνικό ελάχιστο,
  * module στρογγυλοποίηση, seed bootstrap, μη-κυκλικότητα (το input ΔΕΝ έχει elevation).
@@ -13,7 +13,7 @@ import {
   FOUNDATION_SOIL_COVER_MM,
 } from '../derived-foundation-depth';
 
-describe('resolveDerivedFoundationDepthMm (ADR-488 §6.2)', () => {
+describe('resolveDerivedFoundationDepthMm (ADR-489 §6.2)', () => {
   it('seed (τυπικό πέδιλο 500 + συνδετήριες + κάλυψη) = 1200mm', () => {
     expect(seedDerivedFoundationDepthMm()).toBe(1200);
     // 500 (pad) + 500 (tie rise) + 200 (cover) = 1200

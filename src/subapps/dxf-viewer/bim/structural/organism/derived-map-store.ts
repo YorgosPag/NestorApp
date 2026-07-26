@@ -3,8 +3,15 @@
  *
  * ΕΝΑ μόνο boilerplate για όλα τα «transient DERIVED `Map<string, T>`» που γεμίζει ο
  * organism pass (`useStructuralOrganism`) και διαβάζει synchronous το render path —
- * αντί κάθε concern να ξαναγράφει το ίδιο `EMPTY`/`set`/`get` (πρώην duplicate:
- * `beam-support-condition-store` + `column-base-continuity-store`).
+ * αντί κάθε concern να ξαναγράφει το ίδιο `EMPTY`/`set`/`get`.
+ *
+ * ⚠️ **Όριο εφαρμογής (ADR-489 §7):** αυτό το transport είναι έγκυρο ΜΟΝΟ για DERIVED
+ * τιμές που καταναλώνονται στο **ίδιο scope** με αυτό που τις παρήγαγε — δηλαδή τον
+ * **ενεργό όροφο**. Ο 3Δ render path σχεδιάζει και ΑΛΛΟΥΣ ορόφους («Όλοι οι όροφοι»):
+ * εκεί ένας χάρτης scoped στον ενεργό όροφο, καταναλωμένος καθολικά, δίνει σιωπηλά
+ * λάθος αποτέλεσμα (βλ. το πρώην `column-base-continuity-store`, που μεταφέρθηκε σε
+ * per-stack `SyncContext`). Πριν προσθέσεις νέο store εδώ: **ποιος το διαβάζει, και
+ * για ποιον όροφο;**
  *
  * Συμβόλαιο (κοινό σε όλους τους consumers):
  *   · `set(next)` — αντικαθιστά τον χάρτη (κενός → shared EMPTY, μηδέν alloc).
@@ -12,7 +19,6 @@
  * Low-frequency (μόνο organism recompute) → ADR-040 safe. Zero React. DERIVED, ΠΟΤΕ persisted.
  *
  * @see ./beam-support-condition-store.ts — DERIVED τύπος στήριξης δοκαριού (ADR-486)
- * @see ./column-base-continuity-store.ts — DERIVED effective βάση κολώνας (ADR-489)
  */
 
 /** Read/write façade ενός transient DERIVED-map store. */

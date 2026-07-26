@@ -26,9 +26,15 @@ type Slab = Bim3DEntities['slabs'][number];
 type Stair = Bim3DEntities['stairs'][number];
 type SlabOpening = Bim3DEntities['slabOpenings'][number];
 type Opening = Bim3DEntities['openings'][number];
+type Foundation = Bim3DEntities['foundations'][number];
 
 /** A non-degenerate triangle footprint (≥3 verts) for member geometry reads. */
 const TRI = [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }] as const;
+
+/** Axis-aligned square centred on the origin, half-side `half` (plan units). */
+const square = (half: number): { x: number; y: number }[] => [
+  { x: -half, y: -half }, { x: half, y: -half }, { x: half, y: half }, { x: -half, y: half },
+];
 
 /** Spread an optional `layerId` only when provided (the V/G-only tests run layer-less). */
 function withLayer(layerId?: string): { layerId?: string } {
@@ -97,4 +103,45 @@ export function makeMinimalBimEntities(opts: { layerIds?: boolean } = {}): Bim3D
 /** A floor with exactly one wall (other categories empty) for precise per-floor mesh counting. */
 export function makeMinimalWallFloor(wallId: string): Bim3DEntities {
   return { ...EMPTY_BIM_ENTITIES, walls: [minimalWall(wallId)] };
+}
+
+// ── ADR-489 §6.1/§7 — column→footing continuity fixtures ─────────────────────
+// Unlike `minimalColumn` (shape-only), these carry the REAL vertical params + plan
+// footprint that `buildStructuralGraph` needs to emit a `footing-bearing` edge:
+// the footing must cover the column's base centroid in plan and sit BELOW its base.
+
+/** Ground-floor column: `storey-floor` base at its FFL, 300×300 footprint on the origin. */
+export function bearingColumn(id: string, heightMm = 3000): Column {
+  return {
+    id,
+    type: 'column',
+    params: { baseBinding: 'storey-floor', baseOffset: 0, topBinding: 'unconnected', height: heightMm },
+    geometry: { footprint: { vertices: square(150) } },
+  } as unknown as Column;
+}
+
+/**
+ * Pad footing (IfcFooting). `topElevationMm` is **ABSOLUTE** (ADR-484 Slice 4 — the
+ * foundation converter deliberately ignores `floorElevationMm`), so a footing on the
+ * Θεμελίωση level is written as e.g. `-1000`. Its 1200×1200 footprint covers
+ * {@link bearingColumn}'s base centroid.
+ */
+export function padFooting(id: string, topElevationMm: number, thicknessMm = 500): Foundation {
+  return {
+    id,
+    type: 'foundation',
+    params: { topElevationMm, thicknessMm },
+    geometry: { footprint: { vertices: square(600) } },
+  } as unknown as Foundation;
+}
+
+/** A floor carrying exactly the given columns / foundations (all else empty). */
+export function makeStructuralFloor(
+  parts: { columns?: Column[]; foundations?: Foundation[] },
+): Bim3DEntities {
+  return {
+    ...EMPTY_BIM_ENTITIES,
+    columns: parts.columns ?? [],
+    foundations: parts.foundations ?? [],
+  };
 }

@@ -46,6 +46,19 @@ export interface SyncContext {
    */
   readonly nextFloorElevationMm: number | undefined;
   readonly activeLevelId: string | undefined;
+  /**
+   * ADR-489 §6.1/§7 — DERIVED effective βάση κολώνας (`columnId → absolute mm` =
+   * άνω παρειά στηρίζοντος πεδίλου), ώστε η κολώνα να «πατά» στο πέδιλό της αντί
+   * να αιωρείται 1m πάνω του.
+   *
+   * **View-scoped by design (§7):** η συνέχεια είναι ορατή ΜΟΝΟ όταν βλέπεις και
+   * τη Θεμελίωση — δηλαδή στο «Όλοι οι όροφοι» scope. Σε προβολή ενός ορόφου τα
+   * πέδιλα δεν σχεδιάζονται καθόλου, οπότε η προέκταση θα κρεμόταν στο κενό και
+   * θα εμπόδιζε την επιλογή/επεξεργασία της κολώνας στο 3Δ → `null`.
+   *
+   * `null` ⇒ κάθε κολώνα κρατά τη nominal βάση της (byte-for-byte pre-ADR-489).
+   */
+  readonly columnBaseContinuity: ReadonlyMap<string, number> | null;
 }
 
 /**

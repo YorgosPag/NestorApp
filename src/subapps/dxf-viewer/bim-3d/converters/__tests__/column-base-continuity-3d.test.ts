@@ -1,5 +1,5 @@
 /**
- * ADR-488 §6.1 — column→footing base continuity στο 3Δ render (flat path).
+ * ADR-489 §6.1 — column→footing base continuity στο 3Δ render (flat path).
  *
  * Pin: όταν δοθεί DERIVED effective βάση χαμηλότερα από τη nominal, η κολώνα κατεβαίνει
  * (mesh.position.y πέφτει) ΚΑΙ επιμηκύνεται ίσο ποσό (geometry ύψος +drop), ώστε η ΚΟΡΥΦΗ
@@ -33,7 +33,7 @@ function worldTop(mesh: THREE.Mesh): number {
   return mesh.position.y + mesh.geometry.boundingBox!.max.y;
 }
 
-describe('columnToMesh — base continuity (ADR-488 §6.1)', () => {
+describe('columnToMesh — base continuity (ADR-489 §6.1)', () => {
   // (column, floorElevationMm, levelId, buildingBaseElevationM, topProfile, baseProfile,
   //  nominalHeightMm, walls, beams, suppressFinishSkin, effectiveBaseZmm)
   const make = (effectiveBaseZmm?: number): THREE.Mesh =>

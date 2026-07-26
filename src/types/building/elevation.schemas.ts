@@ -76,7 +76,7 @@ export const BuildingElevationPatchSchema = z
     /** ADR-451 — METRES — foundation depth below the lowest storey FFL (≥0). */
     foundationDepth: z.number().finite().min(0).max(99).optional(),
     /**
-     * ADR-488 §6.2 — το `foundationDepth` παράγεται δυναμικά από τον οργανισμό (Auto)
+     * ADR-489 §6.2 — το `foundationDepth` παράγεται δυναμικά από τον οργανισμό (Auto)
      * αντί να δηλώνεται χειροκίνητα (default true). `false` = ρητή χειροκίνητη υπέρβαση
      * του μηχανικού (π.χ. ειδική γεωτεχνική απαίτηση) — το `foundationDepth` διατηρείται ως έχει.
      */
@@ -102,7 +102,7 @@ export const DEFAULT_BUILDING_PHASE: BuildingPhase = 'planned';
 export const DEFAULT_BUILDING_HAS_FOUNDATION = true;
 /** ADR-451 — METRES — default foundation depth below the lowest storey FFL. */
 export const DEFAULT_BUILDING_FOUNDATION_DEPTH_M = 1.0;
-/** ADR-488 §6.2 — το βάθος θεμελίωσης παράγεται δυναμικά (Auto) by default. */
+/** ADR-489 §6.2 — το βάθος θεμελίωσης παράγεται δυναμικά (Auto) by default. */
 export const DEFAULT_BUILDING_FOUNDATION_DEPTH_AUTO = true;
 /** ADR-461 — buildings with ≥1 storey have a stair penthouse by default (Greek norm). */
 export const DEFAULT_BUILDING_HAS_STAIR_PENTHOUSE = true;

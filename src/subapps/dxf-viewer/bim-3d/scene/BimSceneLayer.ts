@@ -25,6 +25,10 @@ import { syncWalls, syncColumns } from './bim-scene-attach-syncs';
 import { syncStructuralFinishSkin } from './bim-scene-structural-finish-sync';
 // ADR-473 — joint rebar post-pass (dowels / laps / anchorages at structural joints).
 import { syncJointRebar, buildStructuralEntitySet } from './bim-scene-joint-rebar-sync';
+// ADR-489 §7 — per-stack στατική συνέχεια κολώνα→πέδιλο. ΕΝΑΣ graph πάνω σε ΟΛΟΥΣ τους
+// ορόφους (absolute Z) → ο ίδιος τροφοδοτεί ΚΑΙ την continuity ΚΑΙ το joint rebar.
+import { buildStructuralGraph } from '../../bim/structural/organism/organism-checks';
+import { buildColumnBaseContinuityMap } from '../../bim/structural/organism/derive-column-base-continuity';
 import { stairToMeshes } from '../converters/StairToThreeConverter';
 import { stairHasSolidWaist } from '../converters/stair-waist-slabs';
 import { mepFixtureToObject3D } from '../converters/mep-fixture-to-mesh';
@@ -111,7 +115,10 @@ export class BimSceneLayer {
     nextFloorElevationMm: number | undefined = undefined,
   ): void {
     this.clearGroup();
-    const ctx = this.buildContext(floorElevationMm, activeLevelId, scope, nextFloorElevationMm);
+    // ADR-489 §7 — single-floor scope: ΚΑΜΙΑ column→footing συνέχεια. Τα πέδιλα ζουν
+    // στον όροφο Θεμελίωσης και δεν σχεδιάζονται εδώ· η προέκταση θα κρεμόταν στο κενό
+    // κάτω από την κάτοψη και θα εμπόδιζε την επιλογή/επεξεργασία της κολώνας.
+    const ctx = this.buildContext(floorElevationMm, activeLevelId, scope, nextFloorElevationMm, null);
     this.syncFloorEntities(entities, ctx);
     // ADR-473 — joint rebar: single-floor path. buildStructuralEntitySet passes the
     // correct floorElevationMm so graph nodes get proper absolute Z coordinates.
@@ -134,17 +141,25 @@ export class BimSceneLayer {
     scope: FloorVisibilityScope = EMPTY_FLOOR_VIS_SCOPE,
   ): void {
     this.clearGroup();
-    for (const floor of stack) {
-      const ctx = this.buildContext(floor.floorElevationMm, floor.levelId, scope, floor.nextFloorElevationMm);
-      this.syncFloorEntities(floor.entities, ctx);
-    }
-    // ADR-473 — joint rebar: multi-floor path. Aggregates ALL floors so the graph
-    // can find cross-floor connections (e.g. footing Θεμελίωσης ↔ column Ισογείου).
+    // ADR-473/489 §7 — ΕΝΑ aggregation pass πάνω σε ΟΛΟΥΣ τους ορόφους, ΠΡΙΝ τον floor
+    // loop. Χωρίς αυτό ο graph βλέπει έναν όροφο τη φορά → ποτέ πέδιλο + κολώνα μαζί →
+    // μηδέν footing-bearing ακμές. Ο ίδιος graph τροφοδοτεί δύο καταναλωτές (μηδέν
+    // διπλός υπολογισμός): την column→footing συνέχεια (§6.1) και το joint rebar.
     const { structural, floorElevationByEntityId } = buildStructuralEntitySet(
       stack.map((f) => f.entities),
       stack.map((f) => f.floorElevationMm),
     );
-    syncJointRebar(this.group, structural, floorElevationByEntityId);
+    const graph = buildStructuralGraph(structural, { floorElevationByEntityId });
+    // ADR-489 §7 — per-stack χάρτης: ΑΝΕΞΑΡΤΗΤΟΣ από το ποιος όροφος είναι ενεργός.
+    // (Ο organism pass καλύπτει μόνο τον ενεργό όροφο — γι' αυτό ΔΕΝ τον χρησιμοποιούμε εδώ.)
+    const columnBaseContinuity = buildColumnBaseContinuityMap(graph);
+    for (const floor of stack) {
+      const ctx = this.buildContext(
+        floor.floorElevationMm, floor.levelId, scope, floor.nextFloorElevationMm, columnBaseContinuity,
+      );
+      this.syncFloorEntities(floor.entities, ctx);
+    }
+    syncJointRebar(this.group, structural, floorElevationByEntityId, graph);
     this.recomputeHasMesh();
   }
 
@@ -154,6 +169,8 @@ export class BimSceneLayer {
     activeLevelId: string | undefined,
     scope: FloorVisibilityScope,
     nextFloorElevationMm: number | undefined,
+    /** ADR-489 §7 — per-stack column→footing συνέχεια· `null` σε single-floor scope. */
+    columnBaseContinuity: ReadonlyMap<string, number> | null,
   ): SyncContext {
     // Defensive per-field normalization (big-player option-bag convention — Three.js
     // `set(options)`, Revit API bags): a partial/absent/mis-typed scope must NEVER crash the
@@ -190,6 +207,7 @@ export class BimSceneLayer {
       objectStyles, disciplineVisibility, systemColorIndex, colorBySystem, floors, buildings, buildingVisModes,
       floorMode, activeBuildingId, useNewSystem,
       floorElevationMm, nextFloorElevationMm, activeLevelId, isolate,
+      columnBaseContinuity,
     };
   }
 

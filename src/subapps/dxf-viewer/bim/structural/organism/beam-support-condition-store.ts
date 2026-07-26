@@ -24,6 +24,6 @@ import { createDerivedMapStore } from './derived-map-store';
 /**
  * `beamId → DERIVED supportType`, ή `undefined` αν δεν έχει υπολογιστεί (δοκάρι εκτός
  * οργανισμού) → ο caller fallback στο stored. Χρησιμοποιεί το ΕΝΑ SSoT
- * `createDerivedMapStore` (N.0.2 — κοινό boilerplate με το `ColumnBaseContinuityStore`).
+ * `createDerivedMapStore` (N.0.2 — κοινό boilerplate των transient DERIVED χαρτών).
  */
 export const BeamSupportConditionStore = createDerivedMapStore<BeamSupportType>();

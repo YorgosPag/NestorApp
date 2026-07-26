@@ -21,6 +21,7 @@ import * as THREE from 'three';
 import type { Entity } from '../../types/entities';
 import type { Bim3DEntities } from '../stores/Bim3DEntitiesStore';
 import { buildStructuralGraph } from '../../bim/structural/organism/organism-checks';
+import type { StructuralGraph } from '../../bim/structural/organism/structural-organism-types';
 import { computeOrganismReinforcementContinuity } from '../../bim/structural/organism/reinforcement-continuity';
 import { resolveStructuralCode } from '../../bim/structural/codes';
 import { useStructuralSettingsStore } from '../../state/structural-settings-store';
@@ -70,16 +71,20 @@ export function buildStructuralEntitySet(
  *
  * @param structural   All structural entities across all floors (from buildStructuralEntitySet).
  * @param floorElevationByEntityId  Absolute floor elevation per entity (for correct node Z).
+ * @param prebuiltGraph  ADR-489 §7 — έτοιμος graph από τον ΙΔΙΟ (structural, elevations)· ο
+ *   multi-floor path τον έχει ήδη χτίσει για την column→footing συνέχεια, οπότε τον
+ *   επαναχρησιμοποιούμε αντί να τον ξαναχτίσουμε. Παράλειψη → χτίζεται εδώ (single-floor path).
  */
 export function syncJointRebar(
   group: THREE.Group,
   structural: readonly Entity[],
   floorElevationByEntityId: ReadonlyMap<string, number>,
+  prebuiltGraph?: StructuralGraph,
 ): void {
   if (!isReinforcementVisible()) return;
   if (structural.length === 0) return;
 
-  const graph = buildStructuralGraph(structural, { floorElevationByEntityId });
+  const graph = prebuiltGraph ?? buildStructuralGraph(structural, { floorElevationByEntityId });
   if (graph.edges.length === 0) return;
 
   const settings = useStructuralSettingsStore.getState();
