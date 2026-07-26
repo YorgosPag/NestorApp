@@ -2,7 +2,7 @@
 
 import * as THREE from 'three';
 import { createPoi } from '../viewport/viewport-poi';
-import { renderSceneFrame, renderHoverOnlyFrame, type RenderFrameContext } from './scene-render-frame';
+import type { RenderFrameContext } from './scene-render-frame';
 import { DxfBackdropCache } from './dxf-backdrop-cache'; import type { HoverBeautyCache } from './hover-beauty-cache';
 import { BimSceneLayer } from './BimSceneLayer';
 import { Cinema4DGridFloor } from './grid/cinema4d-grid-floor'; // ADR-558 — Cinema-4D-style ground grid
@@ -49,8 +49,10 @@ import { WaypointDragHandleRenderer } from '../animation/WaypointDragHandle';
 import { disposeSceneManagerResources } from './scene-dispose';
 import { getWaypointHandlesRoot as wpHandlesRoot, setWaypointHoverState as wpHoverState, setWaypointDragAxisLock as wpAxisLock, pickWaypointAxisArrow as wpPickAxisArrow } from './scene-manager-waypoint';
 import { isSceneDirtyFromState, buildSceneDirtyState } from './scene-dirty-state';
+import { RedrawLevel, escalateRedraw } from './scene-redraw-level';
+import { renderTickFrame, isSceneRenderDisabledByDiagFlag, captureFrameDataURL } from './scene-manager-tick';
 import { tickMeshReveal, isMeshRevealActive, disposeMeshReveal } from '../reveal/mesh-reveal-fade'; // ADR-693 Φ2
-import { recordRender as diagRecordRender, recordMarkDirty as diagRecordMarkDirty } from './bim3d-perf-diag'; // 🔬 ADR-549 Phase 0 (revertible)
+import { recordMarkDirty as diagRecordMarkDirty } from './bim3d-perf-diag'; // 🔬 ADR-549 Phase 0 (revertible)
 import { createSceneRenderingSubsystems } from './scene-rendering-subsystems';
 import { buildSceneManagerParts } from './scene-manager-construct';
 import {
@@ -113,8 +115,12 @@ export class ThreeJsSceneManager {
   private readonly dxfBackdrop: DxfBackdropCache; // ADR-516 Phase 2 — frozen DXF backdrop (armed on entity drag).
   private readonly hoverBeautyCache: HoverBeautyCache; // ADR-549 Φ3 — beauty snapshot for instant hover.
   private readonly frameContext: RenderFrameContext; // ADR-040 XXIII — ctx cached once; dirty flags cleared per tick.
-  private _sceneDirty = true;
-  private _hoverDirty = false; // ADR-549 Φ3 — hover pick sets this (not `markSceneDirty`); hover-only frame blits cache.
+  /**
+   * ADR-549 Φ4 — ΕΝΑ ordered επίπεδο αντί για `_sceneDirty` + `_hoverDirty`. Ξεκινά σε FULL (πρώτο
+   * καρέ). Ο ΜΟΝΟΣ τρόπος να ανέβει είναι `escalateRedraw`, άρα ένα overlay αίτημα δεν μπορεί να
+   * υποβαθμίσει εκκρεμές full render — και το gate βλέπει ΚΑΙ ΤΑ ΔΥΟ επίπεδα από ένα πεδίο.
+   */
+  private _redraw: RedrawLevel = RedrawLevel.FULL;
   private lastTickTime = performance.now();
   private disposed = false;
   private reducedMotionOverride: ReducedMotionOverride = 'auto';
@@ -254,38 +260,34 @@ export class ThreeJsSceneManager {
   /** ADR-040 Phase XXIII — driven by UnifiedFrameScheduler once per rAF tick, ONLY when dirty. */
   tick(now: number, scheduledDelta: number): void {
     if (this.disposed) return;
-    // 🔬 DIAG (UNCOMMITTED) — `dxf-no-render`='1' skips the whole scene render (A/B the render cost).
-    if (typeof window !== 'undefined' && window.localStorage.getItem('dxf-no-render') === '1') {
-      this._sceneDirty = false;
-      return;
-    }
+    if (isSceneRenderDisabledByDiagFlag()) { this._redraw = RedrawLevel.NONE; return; } // 🔬 ADR-549 Φ0
     const delta = scheduledDelta > 0 ? scheduledDelta : now - this.lastTickTime; // deltaTime=0 on first frame → derive.
     this.lastTickTime = now;
     tickMeshReveal(now); // ADR-693 Φ2 — πέπλο αποκάλυψης ΠΡΙΝ το render· κανένα δικό του RAF (ADR-040).
-    // ADR-549 Φ3 — HOVER-ONLY fast path: blit cached beauty + redraw outline (~1-2ms), else full render.
-    if (this._hoverDirty && !this._sceneDirty && renderHoverOnlyFrame(this.frameContext)) {
-      this._hoverDirty = false;
-      return;
-    }
-    const diagSample = { ...this.dirtyState(), ssaoActive: this.ssaoModulator.isSsaoActive() }; // 🔬 ADR-549 Φ0 (revertible) — dirty-reason + time.
-    const diagStart = performance.now();
-    renderSceneFrame(this.frameContext, now, delta);
-    diagRecordRender(performance.now() - diagStart, diagSample);
-    this._sceneDirty = false;
-    this._hoverDirty = false;
+    const diagSample = { ...this.dirtyState(), ssaoActive: this.ssaoModulator.isSsaoActive() }; // 🔬 ADR-549 Φ0 — dirty-reason + time.
+    // ADR-549 Φ4 — CONSUME-BEFORE-RENDER: το επίπεδο μηδενίζεται ΠΡΙΝ σχεδιάσουμε, ώστε ένα
+    // `markSceneDirty` που πυροδοτείται ΜΕΣΑ στο render (subscription/callback) να επιβιώνει για το
+    // επόμενο καρέ αντί να καταπίνεται από ένα reset στο τέλος (η παλιά σειρά το έχανε σιωπηλά).
+    const level = this._redraw;
+    this._redraw = RedrawLevel.NONE;
+    renderTickFrame(this.frameContext, level, now, delta, diagSample);
   }
 
   /** ADR-040 Phase XXIII — render-gating state (SSoT for isSceneDirty + ADR-549 diag sample). */
   private dirtyState() {
-    return buildSceneDirtyState(this.isInteracting, this.viewport, this.animationManager, this.pathTracerRenderer, this._sceneDirty, isMeshRevealActive());
+    return buildSceneDirtyState(this.isInteracting, this.viewport, this.animationManager, this.pathTracerRenderer, this._redraw, isMeshRevealActive());
   }
 
   /** ADR-040 Phase XXIII — true when the scene must be redrawn this frame (on-demand SSoT). */
   isSceneDirty(): boolean { return this.disposed ? false : isSceneDirtyFromState(this.dirtyState()); }
 
-  markSceneDirty(): void { if (!this.disposed) { diagRecordMarkDirty(); this._sceneDirty = true; } } // ADR-040 — flag for redraw. (🔬 ADR-549 Phase 0 trace, revertible)
-  /** ADR-549 Φ3 — flag a HOVER-ONLY redraw (outline changed, beauty unchanged → blit cache + outline). */
-  markHoverDirty(): void { if (!this.disposed) this._hoverDirty = true; }
+  /** ADR-040 — ζήτησε ΠΛΗΡΕΣ redraw (γεωμετρία/υλικά/κάμερα/φώτα). (🔬 ADR-549 Φ0 trace, revertible) */
+  markSceneDirty(): void { if (!this.disposed) { diagRecordMarkDirty(); this._request(RedrawLevel.FULL); } }
+  /** ADR-549 Φ3 — ζήτησε OVERLAY-ONLY redraw (άλλαξε μόνο το outline → blit cache + outline). */
+  markHoverDirty(): void { if (!this.disposed) this._request(RedrawLevel.OVERLAY); }
+
+  /** ADR-549 Φ4 — ο ΜΟΝΟΣ γραφέας του `_redraw`: monotonic, άρα ποτέ υποβάθμιση εκκρεμούς αιτήματος. */
+  private _request(level: RedrawLevel): void { this._redraw = escalateRedraw(this._redraw, level); }
 
   /**
    * ADR-516 — INTERACTION GATE for NON-camera drags (gizmo/grip entity edit). The render
@@ -301,12 +303,9 @@ export class ThreeJsSceneManager {
     if (!this.disposed) { this.isInteracting = active; if (active) this.dxfBackdrop.arm(); else this.dxfBackdrop.disarm(); this.markSceneDirty(); }
   }
 
-  /** ADR-366 §B.5 — capture the frame as a data-URL (HUD screenshot): force ONE sync render + read
-   *  the buffer in the SAME task, so it works WITHOUT `preserveDrawingBuffer`. */
+  /** ADR-366 §B.5 — frame → data-URL (HUD screenshot). Λογική στο `scene-manager-tick`. */
   captureFrameDataURL(type = 'image/png', quality?: number): string {
-    if (this.disposed) return '';
-    renderSceneFrame(this.frameContext, performance.now(), 0);
-    return this.renderer.domElement.toDataURL(type, quality);
+    return this.disposed ? '' : captureFrameDataURL(this.frameContext, this.renderer.domElement, type, quality);
   }
 
   syncBimEntities(

@@ -4,7 +4,7 @@
  * PROBLEM (measured 2026-07-22, weak GPU): with the LIVE hover silhouette, every hover-id change
  * fires a FULL scene render — avg 37-44ms, max 187ms (full raster + shadow-toggle material churn) —
  * to repaint a 2px outline. The BVH raycast pick itself is ~0.5ms; the cost is 100% the beauty
- * re-render (dirty-reason histogram: `explicitDirty`, SSAO off).
+ * re-render (dirty-reason histogram: ρητό αίτημα redraw — σήμερα `requestedRedraw`, SSAO off).
  *
  * SOLUTION (mirror of ADR-516 `DxfBackdropCache` + the 2D bitmap cache of ADR-040): when ONLY the
  * hover changed (camera + geometry + lights + selection all static), the beauty is identical to the
@@ -16,7 +16,7 @@
  * so a hover-only blit can never show a stale beauty. A resize re-allocates the texture (→ miss →
  * full render re-captures), so no explicit resize hook is required.
  *
- * @see docs/centralized-systems/reference/adrs/ADR-549-3d-cursor-swim-perf.md · ADR-516 (backdrop)
+ * @see docs/centralized-systems/reference/adrs/ADR-549-3d-cursor-swim-render-loop.md · ADR-516 (backdrop)
  */
 
 import * as THREE from 'three';

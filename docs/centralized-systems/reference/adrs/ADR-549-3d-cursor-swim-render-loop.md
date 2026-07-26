@@ -537,3 +537,84 @@ compositing — αν big-player πρακτική το διαψεύδει, ακο
   το refine-on-settle path (επιλογή «Α»: dedicated μικρό settle) αν το live αποδειχθεί βαρύ.
   CHECK 6D → stage αυτό το ADR + τα 5 αρχεία. 🔴 browser-verify (hover 60fps, όχι FPS drop σε πυκνά mesh π.χ. σκάλα)
   + commit (Giorgio).
+- **2026-07-26** — ✅ **Φ4 — `RedrawLevel`: το overlay επίπεδο γίνεται πρώτης τάξεως πολίτης του render gate.**
+  **ΤΟ INCIDENT:** ο Giorgio ανέφερε ότι στο 3D οι raw-DXF οντότητες φωτίζονται στο hover, αλλά **οι κολώνες
+  (BIM meshes) ΟΧΙ**. Browser-verified με Chrome (2026-07-26): (α) το **κλικ** σε κολώνα την επιλέγει κανονικά
+  (χρυσό silhouette + grips) → raycast/highlighter/`SelectionOutlinePass` **υγιή**· (β) το κίτρινο hover
+  περίγραμμα εμφανιζόταν **σε κολώνα από την οποία ο κέρσορας είχε ήδη φύγει** (παγωμένο highlight)· (γ) ένα
+  απλό scroll το **ξεκόλλαγε** ακαριαία. Άρα η κατάσταση υπολογιζόταν σωστά — **δεν ζωγραφιζόταν ποτέ καρέ**.
+  **ROOT CAUSE (regression του ΙΔΙΟΥ του Φ3):** το Φ3 πρόσθεσε δεύτερο επίπεδο ακύρωσης (`_hoverDirty` →
+  `markHoverDirty()`), αλλά το gate του scheduler — `isSceneDirtyFromState` (`scene-dirty-state.ts`), που καλείται
+  από `BimViewport3D.tsx:158` — έμεινε με **έξι booleans, κανένα εκ των οποίων το `_hoverDirty`**. Άρα:
+  `markHoverDirty()` → gate=**false** → `tick()` **ποτέ** → η fast path του Φ3 ήταν **κώδικας που δεν εκτελείτο
+  ποτέ από μόνος του**· φαινόταν μόνο όταν κάτι *άλλο* έκανε τη σκηνή dirty. Το raw-DXF glow επιβίωσε επειδή
+  είναι Canvas2D overlay με δικό του RAF (`use-hover-glow-pass`) και δεν ρωτά αυτό το gate — **το ίδιο το
+  σύμπτωμα «DXF ναι / BIM όχι» ήταν η υπογραφή της αιτίας**. Το `🔴 browser-verify` του Φ3 δεν είχε γίνει ποτέ.
+  **ΓΙΑΤΙ ΤΟ ΞΕΦΥΓΕ ΤΟ TEST:** το `scene-dirty-state.test.ts` ήταν **χειρόγραφο ανά πεδίο** — καθρέφτιζε τον
+  κώδικα αντί να τον ελέγχει, οπότε έμεινε πράσινο. Το ίδιο σχήμα με το ADR-693 Φ2, που **σωστά** πρόσθεσε
+  7η είσοδο (`meshRevealActive`) για ακριβώς αυτόν τον λόγο· το hover απλώς ξεχάστηκε.
+  **ΑΠΟΦΑΣΗ (big-player doctrine):** η αιτία δεν ήταν η ξεχασμένη γραμμή αλλά η **αναπαράσταση** — N booleans
+  απαιτούν χειροκίνητο OR σε **δύο** σημεία (`buildSceneDirtyState` + `isSceneDirtyFromState`), άρα κάθε νέο
+  επίπεδο είναι νέα ευκαιρία σιωπηλής αστοχίας. Ο **APS/Forge Viewer** εκθέτει
+  `Viewer3DImpl.invalidate(needsClear, needsRender, overlayDirty)` — το overlay είναι **ρητά** ξεχωριστό επίπεδο
+  ακύρωσης· το three.js `OutlinePass` είναι επίσης ξεχωριστό pass πάνω από το beauty. Πάμε **ένα βήμα παραπέρα**
+  από τα N παράλληλα booleans: **ΕΝΑ ολικά διατεταγμένο επίπεδο** με **monotonic escalation**.
+  **ΛΥΣΗ — νέο SSoT `scene/scene-redraw-level.ts`** (pure, μηδέν THREE/React):
+  `RedrawLevel = { NONE:0, OVERLAY:1, FULL:2 }` (**η σειρά ΕΙΝΑΙ ο μηχανισμός** — συγκρίνεται με `>`) +
+  `escalateRedraw` (max· ένα overlay αίτημα **δεν μπορεί** να υποβαθμίσει εκκρεμές full → εξαφανίζεται δομικά
+  μια κατηγορία race που το Φ3 κάλυπτε ad-hoc με `&& !_sceneDirty`) + `needsRedraw` + `isOverlayOnlyRedraw` +
+  `allDirtyRedrawLevels` (η βάση των anchors).
+  **ΑΛΛΑΓΕΣ:** `scene-dirty-state.ts`: `explicitDirty: boolean` → `requestedRedraw: RedrawLevel`, τελευταίος όρος
+  = `needsRedraw(...)` ώστε **νέο επίπεδο να ανοίγει το gate αυτόματα** · `ThreeJsSceneManager.ts`:
+  `_sceneDirty`+`_hoverDirty` → ΕΝΑ `_redraw: RedrawLevel` με μοναδικό γραφέα το ιδιωτικό `_request()`·
+  `markSceneDirty()`/`markHoverDirty()` **αμετάβλητα ως δημόσιο API** (≈29 call sites δεν αγγίχτηκαν) ·
+  `bim3d-perf-diag.ts`: μετονομασία πεδίου (το `NONE:0` είναι falsy → το reason-histogram μετρά σωστά).
+  **ΒΟΝUS FIX — consume-before-render:** το `tick()` μηδενίζει το επίπεδο **πριν** σχεδιάσει, ώστε ένα
+  `markSceneDirty` που πυροδοτείται *μέσα* στο render να επιβιώνει για το επόμενο καρέ· η παλιά σειρά (reset στο
+  τέλος) το κατάπινε σιωπηλά.
+  **ANCHORS (ADR-587 pattern) — το κομμάτι που είναι αυστηρότερο από τους μεγάλους παίχτες:** τα tests παράγονται
+  από τον **ορισμό** (`it.each(allDirtyRedrawLevels())`), όχι από λίστα γραμμένη στο χέρι → **κάθε νέο
+  `RedrawLevel` μπαίνει αυτόματα υπό έλεγχο και οφείλει να ανοίγει το gate**. Επαληθεύτηκε με **mutation test**:
+  επαναφορά της παλιάς σημασιολογίας (`=== FULL`) → το anchor **κοκκίνισε** (1 failed/12), δηλαδή πιάνει
+  ακριβώς το bug που πέρασε αόρατο επί ~1 μήνα. Επίσης anchors για monotonic/idempotent/commutative-fold.
+  **Αρχεία:** νέο `scene/scene-redraw-level.ts` + `__tests__/scene-redraw-level.test.ts` · `scene-dirty-state.ts`
+  (+test σε exhaustive anchors) · `ThreeJsSceneManager.ts` · `bim3d-perf-diag.ts` · `hover-beauty-cache.ts` (σχόλιο).
+  **Tests:** 24 suites / 174 tests πράσινα στο `bim-3d/scene/__tests__` + scheduler 12/12. N.18 `jscpd:diff` καθαρό.
+  CHECK 6B/6D → stage αυτό το ADR + τα 6 αρχεία. 🔴 browser-verify (hover σε κολώνα → κίτρινο ΑΚΑΡΙΑΙΑ· καμία
+  οπισθοδρόμηση σε FPS/selection) + commit (Giorgio).
+- **2026-07-26** — 🐛 **Φ4 — το κίτρινο περίγραμμα του Φ3 ΔΕΝ εμφανιζόταν ΠΟΤΕ στα BIM στοιχεία: `RedrawLevel` SSoT.**
+  **Σύμπτωμα:** hover σε κολώνα → κανένα silhouette, ενώ ΟΛΗ η αλυσίδα (raycast → highlighter →
+  `SelectionOutlinePass`) δούλευε. Το raw-DXF glow επιβίωνε μόνο επειδή είναι Canvas2D overlay με δικό του RAF
+  (`use-hover-glow-pass`) που δεν ρωτά το gate.
+  **Root cause — Η ΑΝΑΠΑΡΑΣΤΑΣΗ, ΟΧΙ Η ΞΕΧΑΣΜΕΝΗ ΓΡΑΜΜΗ.** Η σκηνή είναι on-demand: ο `UnifiedFrameScheduler`
+  καλεί `tick()` ΜΟΝΟ όταν το gate (`isSceneDirtyFromState`) πει «βρώμικη». Το Φ3 πρόσθεσε δεύτερο επίπεδο
+  ακύρωσης (`_hoverDirty`) αλλά το gate έμεινε με ΕΝΑ boolean (`explicitDirty`) → το hover σήκωνε σημαία που
+  **κανείς δεν διάβαζε** → το `tick()` δεν καλούνταν ποτέ, άρα ούτε το fast-path του Φ3. N ανεξάρτητα booleans
+  απαιτούν χειροκίνητο OR σε **δύο** σημεία (`buildSceneDirtyState` + `isSceneDirtyFromState`) — κάθε νέο επίπεδο
+  είναι μια νέα ευκαιρία να ξεχαστεί, σιωπηλά. Έμεινε αόρατο ~1 μήνα.
+  **FIX — ΕΝΑ ολικά διατεταγμένο επίπεδο** (νέο `scene/scene-redraw-level.ts`, pure): `RedrawLevel`
+  `NONE(0) < OVERLAY(1) < FULL(2)`. Το `explicitDirty: boolean` → `requestedRedraw: RedrawLevel`· το gate κλείνει με
+  `needsRedraw(level)`, άρα **νέο επίπεδο ανοίγει το gate αυτόματα** — το «ξέχασα το OR» γίνεται αδύνατο by
+  construction (δεν υπάρχει δεύτερο πεδίο). `_sceneDirty`+`_hoverDirty` → ένα `_redraw`, με μοναδικό γραφέα το
+  `_request()` = **monotonic escalation**: φθηνό αίτημα δεν υποβαθμίζει ποτέ εκκρεμές ακριβό (έσβησε ολόκληρη
+  κατηγορία race — hover μετά από `markSceneDirty` θα «έτρωγε» τη γεωμετρική αλλαγή για ένα καρέ). Το fast-path
+  guard `_hoverDirty && !_sceneDirty` του Φ3 αντικαταστάθηκε από `isOverlayOnlyRedraw(level)` (ο ίδιος αποκλεισμός,
+  by construction). Επίσης **consume-before-render**: το επίπεδο μηδενίζεται ΠΡΙΝ το render, ώστε ένα `markSceneDirty`
+  που πυροδοτείται ΜΕΣΑ στο render (subscription/callback) να επιβιώνει για το επόμενο καρέ αντί να καταπίνεται.
+  **Σύγκλιση big players:** Autodesk Forge `Viewer3DImpl.invalidate(needsClear, needsRender, overlayDirty)` — το overlay
+  είναι ρητά ξεχωριστό επίπεδο ακύρωσης. Εδώ ένα βήμα παραπέρα: ordered level αντί για N παράλληλα booleans που ο
+  call site πρέπει να συνδυάσει σωστά.
+  **Αρχεία:** νέο `scene/scene-redraw-level.ts` (+colocated test) · `scene-dirty-state.ts` (`requestedRedraw` +
+  ⚠️ σχόλιο-φράχτης «νέα είσοδος → πρόσθεσέ την ΚΑΙ στον predicate») · `ThreeJsSceneManager.ts` · `bim3d-perf-diag.ts` ·
+  `hover-beauty-cache.ts` (διόρθωση σπασμένου `@see` path).
+  **Tests:** `scene-redraw-level.test.ts` + `scene-dirty-state.test.ts` **εξαντλητικό anchor** πάνω στο
+  `allDirtyRedrawLevels()` — κάθε ΝΕΟ `RedrawLevel` μπαίνει αυτόματα στον έλεγχο και οφείλει να ανοίγει το gate,
+  χωρίς να το θυμηθεί κανείς (24/24 green· hover-beauty-cache regression green).
+  **Καθαρίστηκαν:** αναφορές σε ανύπαρκτο `ADR-549-3d-cursor-swim-perf.md` (σωστό: `…-render-loop.md`) σε 2 αρχεία.
+  **N.7.1 split (CHECK 4 μπλόκαρε στις 510/500):** νέο `scene/scene-manager-tick.ts` — **εξαγωγή, όχι
+  ψαλίδισμα σχολίων**. Ο manager κρατά την **κατάσταση** (`_redraw`, `lastTickTime`) και το lifecycle·
+  το module κρατά την **απόφαση διαδρομής** ενός καρέ (`renderTickFrame` = overlay-blit ή full render,
+  με fallback σε cache miss) + το `captureFrameDataURL` (ίδιο concern: σύγχρονο render ενός καρέ, στο
+  ίδιο task ώστε να δουλεύει χωρίς `preserveDrawingBuffer`) + το `dxf-no-render` diag flag (απομονωμένο
+  ώστε η αφαίρεση του Φ0 διαγνωστικού να είναι μία διαγραφή). `ThreeJsSceneManager` 510 → **498**.
+  CHECK 6D → stage αυτό το ADR + τα 7 αρχεία. 🔴 browser-verify (hover σε κολώνα → κίτρινο περίγραμμα ακαριαία).

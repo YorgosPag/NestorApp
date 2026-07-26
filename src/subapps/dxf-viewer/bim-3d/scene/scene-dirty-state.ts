@@ -8,11 +8,20 @@
  * Industry pattern alignment (4/4 convergence — Forge Viewer SDK / Three.js
  * Editor / iModel.js / AutoCAD Web): single master rAF + per-subsystem dirty
  * check + on-demand rendering.
+ *
+ * ADR-549 Φ4 — τα ρητά αιτήματα redraw δεν είναι πια boolean αλλά **ordered επίπεδο**
+ * ({@link RedrawLevel}), ώστε το φθηνό overlay-only καρέ να είναι πρώτης τάξεως πολίτης του gate.
  */
+
+import { needsRedraw, type RedrawLevel } from './scene-redraw-level';
 
 export interface SceneDirtyState {
   /** True while user actively drags/orbits/dollies the camera. */
   readonly isInteracting: boolean;
+  // ⚠️ ΠΡΟΣΘΗΚΗ ΝΕΑΣ ΕΙΣΟΔΟΥ: πρόσθεσέ την ΚΑΙ στο `isSceneDirtyFromState` — αλλιώς η πηγή σηκώνει
+  // σημαία που κανείς δεν διαβάζει και το `tick()` δεν καλείται ΠΟΤΕ (incident 2026-07-26, βλ.
+  // `scene-redraw-level.ts`). Αν η νέα είσοδος είναι ΡΗΤΟ αίτημα redraw, ΜΗΝ προσθέσεις boolean:
+  // πρόσθεσε επίπεδο στο `RedrawLevel` — το `requestedRedraw` το καλύπτει τότε αυτόματα.
   /** True during canonical-view transitions and frame-bounds animations. */
   readonly viewportAnimating: boolean;
   /** True during turntable / render-queue / Bezier animations. */
@@ -25,8 +34,13 @@ export interface SceneDirtyState {
    * μεταβολή δεν θα ζητούσε redraw για τα ~260ms που διαρκεί.
    */
   readonly meshRevealActive: boolean;
-  /** Sticky flag set by mutation paths; cleared after a successful tick. */
-  readonly explicitDirty: boolean;
+  /**
+   * ADR-549 Φ4 — το εκκρεμές ΡΗΤΟ αίτημα redraw ως ΕΝΑ ordered επίπεδο (`markSceneDirty` → FULL,
+   * `markHoverDirty` → OVERLAY), αντί για N ανεξάρτητα booleans. Καθαρίζεται μετά από πετυχημένο tick.
+   * Αντικατέστησε το `explicitDirty: boolean`, που κάλυπτε ΜΟΝΟ το FULL και άφηνε το overlay επίπεδο
+   * αόρατο στο gate → το BIM hover silhouette δεν ζωγραφιζόταν ποτέ.
+   */
+  readonly requestedRedraw: RedrawLevel;
 }
 
 /**
@@ -40,7 +54,7 @@ export function buildSceneDirtyState(
   viewport: { readonly isAnimating: boolean },
   animationManager: { readonly isAnimating: boolean },
   pathTracerRenderer: { readonly isActive: boolean },
-  explicitDirty: boolean,
+  requestedRedraw: RedrawLevel,
   meshRevealActive = false,
 ): SceneDirtyState {
   return {
@@ -49,7 +63,7 @@ export function buildSceneDirtyState(
     animationManagerActive: animationManager.isAnimating,
     pathTracerActive: pathTracerRenderer.isActive,
     meshRevealActive,
-    explicitDirty,
+    requestedRedraw,
   };
 }
 
@@ -57,6 +71,10 @@ export function buildSceneDirtyState(
  * Returns true when the BIM 3D scene must be redrawn this frame.
  * Six-input OR — order chosen for short-circuit evaluation against the
  * most common case (user input). ADR-693 Φ2 added `meshRevealActive`.
+ *
+ * ADR-549 Φ4 — ο τελευταίος όρος καλύπτει ΚΑΘΕ ρητό αίτημα μέσω `needsRedraw`, ώστε ένα νέο
+ * `RedrawLevel` να ανοίγει το gate αυτόματα, χωρίς επέμβαση εδώ (το ακριβώς αντίθετο του
+ * boolean-ανά-επίπεδο σχήματος που άφησε το overlay επίπεδο αόρατο επί ~1 μήνα).
  */
 export function isSceneDirtyFromState(state: SceneDirtyState): boolean {
   return (
@@ -65,6 +83,6 @@ export function isSceneDirtyFromState(state: SceneDirtyState): boolean {
     state.animationManagerActive ||
     state.pathTracerActive ||
     state.meshRevealActive ||
-    state.explicitDirty
+    needsRedraw(state.requestedRedraw)
   );
 }

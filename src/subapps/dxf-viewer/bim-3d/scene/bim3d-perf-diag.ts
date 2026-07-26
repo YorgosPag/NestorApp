@@ -21,6 +21,7 @@
  */
 
 import { snapshotPerfRows, resetPerf } from '../../systems/cursor/mouse-handler-perf';
+import type { RedrawLevel } from './scene-redraw-level';
 import { nowISO } from '@/lib/date-local';
 import { triggerExportDownload } from '@/lib/exports/trigger-export-download';
 
@@ -29,7 +30,8 @@ export interface Bim3DRenderSample {
   readonly viewportAnimating: boolean;
   readonly animationManagerActive: boolean;
   readonly pathTracerActive: boolean;
-  readonly explicitDirty: boolean;
+  /** ADR-549 Φ4 — ordered επίπεδο· `NONE`(0) είναι falsy, άρα το reason-histogram μετρά σωστά. */
+  readonly requestedRedraw: RedrawLevel;
   readonly ssaoActive: boolean;
 }
 
@@ -56,7 +58,7 @@ const isTracingDirty = (): boolean =>
 function emptyReasons(): Record<keyof Bim3DRenderSample, number> {
   return {
     isInteracting: 0, viewportAnimating: 0, animationManagerActive: 0,
-    pathTracerActive: 0, explicitDirty: 0, ssaoActive: 0,
+    pathTracerActive: 0, requestedRedraw: 0, ssaoActive: 0,
   };
 }
 

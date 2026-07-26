@@ -8,6 +8,7 @@
  */
 
 import { isSceneDirtyFromState, type SceneDirtyState } from '../scene-dirty-state';
+import { RedrawLevel, allDirtyRedrawLevels } from '../scene-redraw-level';
 
 const allClean: SceneDirtyState = {
   isInteracting: false,
@@ -15,7 +16,7 @@ const allClean: SceneDirtyState = {
   animationManagerActive: false,
   pathTracerActive: false,
   meshRevealActive: false,
-  explicitDirty: false,
+  requestedRedraw: RedrawLevel.NONE,
 };
 
 describe('isSceneDirtyFromState — ADR-040 Phase XXIII', () => {
@@ -45,8 +46,23 @@ describe('isSceneDirtyFromState — ADR-040 Phase XXIII', () => {
     expect(isSceneDirtyFromState({ ...allClean, meshRevealActive: true })).toBe(true);
   });
 
-  it('returns true on explicit dirty flag (mutation path)', () => {
-    expect(isSceneDirtyFromState({ ...allClean, explicitDirty: true })).toBe(true);
+  it('returns true on an explicit FULL redraw request (mutation path)', () => {
+    expect(isSceneDirtyFromState({ ...allClean, requestedRedraw: RedrawLevel.FULL })).toBe(true);
+  });
+
+  /**
+   * ADR-549 Φ4 — ΤΟ ΑΓΚΙΣΤΡΟ ΤΟΥ INCIDENT (2026-07-26). Το `markHoverDirty` σήκωνε δικό του
+   * boolean που το gate δεν διάβαζε ΠΟΤΕ → το `tick()` δεν καλούνταν → το κίτρινο περίγραμμα των
+   * BIM στοιχείων δεν εμφανιζόταν, με ΟΛΗ την υπόλοιπη αλυσίδα υγιή. Ο έλεγχος είναι εξαντλητικός
+   * πάνω στο `allDirtyRedrawLevels()`: κάθε ΝΕΟ επίπεδο που θα προστεθεί στο `RedrawLevel`
+   * μπαίνει αυτόματα εδώ και οφείλει να ανοίγει το gate — δεν χρειάζεται να το θυμηθεί κανείς.
+   */
+  it.each(allDirtyRedrawLevels())('returns true for EVERY dirty redraw level (level %i)', (level) => {
+    expect(isSceneDirtyFromState({ ...allClean, requestedRedraw: level })).toBe(true);
+  });
+
+  it('returns false ONLY for RedrawLevel.NONE (idle contract)', () => {
+    expect(isSceneDirtyFromState({ ...allClean, requestedRedraw: RedrawLevel.NONE })).toBe(false);
   });
 
   it('returns true when multiple inputs are dirty (logical OR)', () => {
@@ -57,13 +73,13 @@ describe('isSceneDirtyFromState — ADR-040 Phase XXIII', () => {
         animationManagerActive: false,
         pathTracerActive: false,
         meshRevealActive: false,
-        explicitDirty: true,
+        requestedRedraw: RedrawLevel.FULL,
       }),
     ).toBe(true);
   });
 
   it('is referentially pure (same input → same output)', () => {
-    const input: SceneDirtyState = { ...allClean, explicitDirty: true };
+    const input: SceneDirtyState = { ...allClean, requestedRedraw: RedrawLevel.FULL };
     const first = isSceneDirtyFromState(input);
     const second = isSceneDirtyFromState(input);
     expect(first).toBe(second);
