@@ -35,14 +35,6 @@ export function faceAppearanceToFinishOverride(value: FaceAppearance | null): Fi
   return value.colorHex ? { colorOverride: value.colorHex } : { materialId: value.materialId };
 }
 
-/** Κοινό level-scene adapter (current level), ή null όταν δεν υπάρχει ενεργό επίπεδο. */
-function levelAdapter(levels: LevelsHookReturn | null): ISceneManager | null {
-  if (!levels?.currentLevelId) return null;
-  return createLevelSceneManagerAdapter(
-    levels.getLevelScene, levels.setLevelScene, levels.currentLevelId,
-  );
-}
-
 /**
  * Εφαρμόζει την ίδια `value` σε ΟΛΕΣ τις όψεις με ΕΝΑ atomic undo step. Cross-entity OK
  * (per-child `getAffectedEntityIds`). 0 όψεις → no-op· 1 όψη → απλό command· N → `CompositeCommand`.
@@ -52,7 +44,7 @@ export function applyFinishFaceOverrideToFaces(
   faces: readonly SelectedFace3D[],
   value: FinishFaceOverride | null,
 ): void {
-  const adapter = levelAdapter(levels);
+  const adapter = currentLevelAdapter(levels);
   if (!adapter || faces.length === 0) return;
   const children = faces.map(
     (f) => new SetFinishFaceOverrideCommand(f.bimId, f.faceKey, value, adapter),
@@ -74,7 +66,7 @@ export function applyFinishToWholeElement(
   bimId: string,
   value: FinishFaceOverride | null,
 ): void {
-  const adapter = levelAdapter(levels);
+  const adapter = currentLevelAdapter(levels);
   if (!adapter) return;
   const entity = adapter.getEntity(bimId) as unknown as FinishPaintableEntity | undefined;
   if (!entity) return;
