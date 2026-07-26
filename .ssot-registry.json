@@ -4731,7 +4731,7 @@
       "ssotFile": "src/subapps/dxf-viewer/keyboard/global-shortcut-listener.ts",
       "description": "ADR-711 — global accelerators of the DXF viewer register through addGlobalShortcutListener, never with a raw window.addEventListener('keydown'). The wrapper asks shouldGlobalShortcutYield (modal keyboard scope + editable target); a raw listener steals the key from an open modal — the measured root of defects E1/E4 in ADR-364 §10.15: Tab was dead inside every dialog of the viewer (WAI-ARIA APG violation) and the arrows panned the viewport ±80px behind an open lightbox. The guard must stay structural: a per-listener check rots at the 44th listener, and the ten pre-existing copies of the \"is the user typing?\" predicate are exactly how it rotted the first time. Listeners that OWN typing time (Dynamic Input, Command Line, Radial ring) and the escape bus are allowlisted on purpose — gating them would be a regression, not a fix; use opts.allowWhenEditable for the middle case.",
       "forbiddenPatterns": [
-        "window\.addEventListener\(.keydown."
+        "window\\.addEventListener\\(.keydown."
       ],
       "allowlist": [
         "src/subapps/dxf-viewer/keyboard/global-shortcut-listener.ts",
