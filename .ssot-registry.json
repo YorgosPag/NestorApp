@@ -1340,27 +1340,27 @@
       ],
       "tier": 3
     },
-    "contact-session-storage": {
-      "ssotFile": "src/utils/contacts/contact-session-storage.ts",
-      "description": "The ONE owner of the Contacts page session-scoped shell state (selected contact id). ADR-332 D20 — the page <Suspense> boundary throws the whole subtree away when any descendant suspends (measured: 51ms, hmr 0), so the selection had to survive remount. A second persistence mechanism would fight this one over when the key is cleared, and a stale key resurrects deleted contacts.",
+    "url-query-state": {
+      "ssotFile": "src/lib/url-query-state.ts",
+      "description": "The ONE writer of URL query state. The App Router has no shallow routing, so router.replace('?x=1') is a server round trip — wrong tool for per-click state. The native History API is the documented escape hatch and stays reactive ('pushState and replaceState calls integrate into the Next.js Router, allowing you to sync with usePathname and useSearchParams'), measured live on production Next 15.5.22. A hand-rolled call is never equivalent: it drops unrelated query keys, drops the hash, and — passing null as state — silently erases the App Router's own history.state.",
       "forbiddenPatterns": [
-        "function\\s+(readSelectedContactId|writeSelectedContactId|restoreSelectedContact|isSelectionWriteAllowed|resolveLateSelectionRestore)\\s*\\(",
-        "sessionStorage\\.(getItem|setItem|removeItem)\\(\\s*['\"]contact-selected"
+        "window\\.history\\.(replaceState|pushState)\\s*\\("
       ],
       "allowlist": [
-        "src/utils/contacts/contact-session-storage.ts"
+        "src/lib/url-query-state.ts"
       ],
       "tier": 3
     },
-    "selected-contact-persistence": {
-      "ssotFile": "src/hooks/contacts/useSelectedContactPersistence.ts",
-      "description": "The ONE lifecycle owner of the persisted contact selection — write AND late restore in a single hook. ADR-332 D20.1: while the two lived apart, the write effect translated a not-yet-loaded list into removeItem and destroyed the key 325ms before the data arrived (measured live). Splitting them again re-opens that race; a second late-restore effect would also resurrect deleted contacts on every list refresh.",
+    "selected-entity-url-state": {
+      "ssotFile": "src/hooks/useSelectedEntityUrlState.ts",
+      "description": "The ONE container for 'which entity is open': the URL. ADR-332 D21 — the question used to be answered by TWO mechanisms (?contactId= for reading plus a contact-selected sessionStorage key as a remount safety net). That is duplicated responsibility, which no code-clone gate can see. The URL survives reload, remount, Fast Refresh, back/forward, bookmark and share for free, so the safety net and its whole class of defects (D20.1: null meaning both 'nothing selected' and 'not loaded yet', the guard erasing its own key 325ms before the data arrived) simply cease to exist. Re-introducing any second container brings them all back.",
       "forbiddenPatterns": [
-        "function\\s+useSelectedContactPersistence\\s*\\(",
-        "useEffect\\([^)]*writeSelectedContactId"
+        "function\\s+useSelectedEntityUrlState\\s*\\(",
+        "sessionStorage\\.(getItem|setItem|removeItem)\\(\\s*['\"]contact-selected",
+        "function\\s+(readSelectedContactId|writeSelectedContactId|restoreSelectedContact|isSelectionWriteAllowed|resolveLateSelectionRestore|useSelectedContactPersistence)\\s*\\("
       ],
       "allowlist": [
-        "src/hooks/contacts/useSelectedContactPersistence.ts"
+        "src/hooks/useSelectedEntityUrlState.ts"
       ],
       "tier": 3
     },

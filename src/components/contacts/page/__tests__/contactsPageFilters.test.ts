@@ -49,7 +49,7 @@ function run(overrides: Partial<Parameters<typeof filterContactsForPage>[0]> = {
     contacts: ALL,
     filters: NO_FILTERS,
     activeCardFilter: null,
-    contactIdParam: null,
+    selectedContactId: null,
     showTrash: false,
     t,
     ...overrides,
@@ -65,13 +65,34 @@ describe('filterContactsForPage', () => {
     expect(run({ showTrash: true }).map(c => c.id)).toEqual(['c4']);
   });
 
-  it('το deep link παρακάμπτει κάθε άλλο φίλτρο — αλλά όχι τις διαγραμμένες', () => {
+  // ── Η ανοιχτή επαφή (ADR-332 D21) ────────────────────────────────────────
+  // Μέχρι το D21 η συνθήκη ήταν `if (contactIdParam) return true`: η **παρουσία**
+  // του param ξεκλείδωνε **όλες** τις επαφές. Στεκόταν όσο το param έμπαινε μόνο
+  // από εξωτερικά deep links· από τη στιγμή που το URL έγινε η πηγή αλήθειας της
+  // επιλογής, κάθε κλικ θα σκότωνε την αναζήτηση. Τα δύο επόμενα tests καρφώνουν
+  // τη στενή —και πάντα προτιθέμενη— σημασία.
+
+  it('η ανοιχτή επαφή δεν κρύβεται ποτέ, ό,τι κι αν λένε τα φίλτρα', () => {
     const result = run({
-      contactIdParam: 'c2',
+      selectedContactId: 'c2',
       filters: { ...NO_FILTERS, searchTerm: 'ανύπαρκτο', contactType: 'individual' },
     });
 
-    expect(result.map(c => c.id)).toEqual(['c1', 'c2', 'c3', 'c5']);
+    expect(result.map(c => c.id)).toEqual(['c2']);
+  });
+
+  it('η ανοιχτή επαφή ΔΕΝ ξεκλειδώνει τις υπόλοιπες — τα φίλτρα συνεχίζουν να ισχύουν', () => {
+    const result = run({
+      selectedContactId: 'c2',
+      filters: { ...NO_FILTERS, searchTerm: 'αλίκη' },
+    });
+
+    // Η Αλίκη επειδή ταιριάζει, η c2 επειδή είναι ανοιχτή. Τίποτε άλλο.
+    expect(result.map(c => c.id)).toEqual(['c1', 'c2']);
+  });
+
+  it('ούτε η ανοιχτή επαφή ξεφεύγει από τον κανόνα των διαγραμμένων', () => {
+    expect(run({ selectedContactId: 'c4' }).map(c => c.id)).not.toContain('c4');
   });
 
   it.each([
@@ -122,7 +143,7 @@ describe('filterContactsForPage', () => {
       contacts: [recent, stale],
       filters: NO_FILTERS,
       activeCardFilter: 'page.dashboard.recentAdditions',
-      contactIdParam: null,
+      selectedContactId: null,
       showTrash: false,
       t,
     });
@@ -137,7 +158,7 @@ describe('filterContactsForPage', () => {
       contacts: [ALICE, inactive],
       filters: NO_FILTERS,
       activeCardFilter: 'page.dashboard.activeContacts',
-      contactIdParam: null,
+      selectedContactId: null,
       showTrash: false,
       t,
     });

@@ -16,6 +16,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-400-viewport-state-persistence.md
  */
 
+import { currentSearchParams, replaceUrlSearchParams } from '@/lib/url-query-state';
 import type { ViewTransform } from '../rendering/types/Types';
 import {
   STORAGE_KEYS,
@@ -75,6 +76,26 @@ function roundOffset(value: number): number {
 // ─── URL serialization ───────────────────────────────────────────────────────
 
 /**
+ * Write the viewport keys onto an existing params object, in place.
+ *
+ * The ONE place that decides which keys carry the viewport and how each is
+ * rounded. `serializeViewportToParams` (copy) and `writeViewportToUrl` (live URL)
+ * both delegate here — they used to carry line-for-line twins of these four
+ * `set`s, so a new key or a rounding change had to be remembered twice.
+ */
+function applyViewportToParams(
+  params: URLSearchParams,
+  transform: ViewTransform,
+  levelId: string | null,
+): void {
+  params.set(URL_KEYS.scale, String(roundScale(transform.scale)));
+  params.set(URL_KEYS.offsetX, String(roundOffset(transform.offsetX)));
+  params.set(URL_KEYS.offsetY, String(roundOffset(transform.offsetY)));
+  if (levelId) params.set(URL_KEYS.level, levelId);
+  else params.delete(URL_KEYS.level);
+}
+
+/**
  * Merge the viewport state into a (copy of the) base search params, preserving
  * any unrelated query keys already present.
  */
@@ -84,11 +105,7 @@ export function serializeViewportToParams(
   base?: URLSearchParams,
 ): URLSearchParams {
   const params = new URLSearchParams(base ? base.toString() : undefined);
-  params.set(URL_KEYS.scale, String(roundScale(transform.scale)));
-  params.set(URL_KEYS.offsetX, String(roundOffset(transform.offsetX)));
-  params.set(URL_KEYS.offsetY, String(roundOffset(transform.offsetY)));
-  if (levelId) params.set(URL_KEYS.level, levelId);
-  else params.delete(URL_KEYS.level);
+  applyViewportToParams(params, transform, levelId);
   return params;
 }
 
@@ -116,28 +133,16 @@ export function parseViewportFromParams(
   return result;
 }
 
-/** Live URL search params (empty on the server). Shared by the 2D + 3D persistence readers. */
-export function currentSearchParams(): URLSearchParams {
-  if (typeof window === 'undefined') return new URLSearchParams();
-  return new URLSearchParams(window.location.search);
-}
-
 /**
- * SSoT for writing query state to the URL without a navigation/re-render: read the
- * live search params, let `mutate` add/remove keys, then `history.replaceState`
- * preserving pathname + hash + unrelated keys. Shared by the 2D viewport transform
- * and the 3D camera deep-link (`camera3d-persistence.ts`) so there is ONE replaceState
- * path. No-op on the server.
+ * Live URL search params + the no-navigation `replaceState` writer.
+ *
+ * These moved to `@/lib/url-query-state` when the Contacts page adopted the same
+ * URL-as-SSoT pattern for its selected contact (ADR-332 D21): a second copy here
+ * would have been a textbook sibling clone (N.18). They are re-exported so the 2D
+ * transform, the 3D camera deep-link (`camera3d-persistence.ts`) and their tests
+ * keep importing from ONE place.
  */
-export function replaceUrlSearchParams(mutate: (params: URLSearchParams) => void): void {
-  if (typeof window === 'undefined') return;
-  const params = currentSearchParams();
-  mutate(params);
-  const query = params.toString();
-  const { pathname, hash } = window.location;
-  const url = query ? `${pathname}?${query}${hash}` : `${pathname}${hash}`;
-  window.history.replaceState(window.history.state, '', url);
-}
+export { currentSearchParams, replaceUrlSearchParams };
 
 /** Read viewport state from the current page URL. */
 export function readViewportFromUrl(): Partial<PersistedViewport> {
@@ -152,13 +157,7 @@ export function writeViewportToUrl(
   transform: ViewTransform,
   levelId: string | null,
 ): void {
-  replaceUrlSearchParams((params) => {
-    params.set(URL_KEYS.scale, String(roundScale(transform.scale)));
-    params.set(URL_KEYS.offsetX, String(roundOffset(transform.offsetX)));
-    params.set(URL_KEYS.offsetY, String(roundOffset(transform.offsetY)));
-    if (levelId) params.set(URL_KEYS.level, levelId);
-    else params.delete(URL_KEYS.level);
-  });
+  replaceUrlSearchParams((params) => applyViewportToParams(params, transform, levelId));
 }
 
 // ─── localStorage fallback (per FileRecord) ──────────────────────────────────

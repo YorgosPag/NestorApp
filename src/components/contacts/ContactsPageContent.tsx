@@ -54,6 +54,7 @@ export function ContactsPageContent() {
     error,
     selectedContact,
     setSelectedContact,
+    arrivedViaDeepLink,
     viewMode,
     setViewMode,
     showDashboard,
@@ -115,8 +116,33 @@ export function ContactsPageContent() {
         readOnly: false as const,
       };
 
+  // Ίδιο μοτίβο με το `contactDetailProps`: η λίστα εμφανίζεται σε desktop **και** σε
+  // mobile με πανομοιότυπα props — ένα σημείο, ώστε μια νέα prop να μη φτάνει στη μία
+  // όψη και να λείπει από την άλλη.
+  const contactListProps = {
+    contacts: filteredContacts,
+    selectedContact,
+    onSelectContact: (c: Contact) => setSelectedContact(toggleSelect(selectedContact, c)),
+    isLoading,
+    onNewContact: handleNewContact,
+    onDeleteContact: handleDeleteContacts,
+    onArchiveContact: handleArchiveContacts,
+    onContactUpdated: handleContactUpdatedInPlace,
+  };
+
+  // Το ίδιο κουμπί διαγραφής σερβίρεται και από τα δύο mobile slide-in· διαφέρει μόνο
+  // η συνθήκη απόκρυψης, όχι το κουμπί.
+  const deleteActionButton = (
+    <button
+      onClick={() => handleDeleteContacts()}
+      className={`p-2 rounded-md border ${colors.bg.primary} border-border text-destructive ${INTERACTIVE_PATTERNS.BUTTON_DESTRUCTIVE_GHOST} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
+      aria-label={t('page.details.deleteContact')}
+    >
+      <Trash2 className={iconSizes.sm} />
+    </button>
+  );
+
   const filterParam = searchParams.get('filter');
-  const contactIdParam = searchParams.get('contactId');
 
   return (
     <PageContainer ariaLabel={t('page.pageLabel')}>
@@ -135,7 +161,7 @@ export function ContactsPageContent() {
 
       <ContactFilterIndicator
         filterParam={filterParam}
-        contactIdParam={contactIdParam}
+        arrivedViaDeepLink={arrivedViaDeepLink}
         contactName={selectedContact ? getContactDisplayName(selectedContact) : null}
         filteredCount={filteredContacts.length}
         onClear={handleClearURLFilter}
@@ -196,16 +222,7 @@ export function ContactsPageContent() {
           <>
             {/* Desktop split layout */}
             <section className="hidden md:flex flex-1 gap-2 min-h-0 min-w-0 overflow-hidden" role="region" aria-label={t('page.views.desktopView')}>
-              <ContactsList
-                contacts={filteredContacts}
-                selectedContact={selectedContact}
-                onSelectContact={c => setSelectedContact(toggleSelect(selectedContact, c))}
-                isLoading={isLoading}
-                onNewContact={handleNewContact}
-                onDeleteContact={handleDeleteContacts}
-                onArchiveContact={handleArchiveContacts}
-                onContactUpdated={handleContactUpdatedInPlace}
-              />
+              <ContactsList {...contactListProps} />
               {creationMode === 'selecting' ? (
                 <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-card border rounded-lg shadow-sm">
                   <ContactTypeSelector onSelect={handleSelectContactType} onCancel={handleCancelCreation} />

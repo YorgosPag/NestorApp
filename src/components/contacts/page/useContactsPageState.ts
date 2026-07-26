@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { createModuleLogger } from '@/lib/telemetry';
-import type { Contact, IndividualContact } from '@/types/contacts';
+import type { Contact } from '@/types/contacts';
 import { getContactDisplayName } from '@/types/contacts';
 import { RealtimeService, type ContactUpdatedPayload } from '@/services/realtime';
 import { ContactsService } from '@/services/contacts.service';
@@ -14,19 +14,16 @@ import { buildContactDashboardStats } from './contactDashboardStats';
 import { filterContactsForPage } from './contactsPageFilters';
 import { useContactsTrashState } from './useContactsTrashState';
 import { createStaleCache } from '@/lib/stale-cache';
-import { restoreSelectedContact } from '@/utils/contacts/contact-session-storage';
-import { useSelectedContactPersistence } from '@/hooks/contacts/useSelectedContactPersistence';
+import { useSelectedEntityUrlState } from '@/hooks/useSelectedEntityUrlState';
+import { replaceUrlSearchParams } from '@/lib/url-query-state';
+import { useSelectedContactAvatarRefresh } from './useSelectedContactAvatarRefresh';
 
 const logger = createModuleLogger('ContactsPageContent');
 // SSoT stale-while-revalidate cache (ADR-300) — single-key (one list per session)
 const contactsCache = createStaleCache<Contact[]>('contacts');
 
-// Type guard for contacts with multiple photo URLs
-const hasMultiplePhotoURLs = (
-  contact: Contact,
-): contact is IndividualContact & { multiplePhotoURLs: string[] } => {
-  return 'multiplePhotoURLs' in contact && Array.isArray((contact as IndividualContact).multiplePhotoURLs);
-};
+/** Το query param που κρατά την ανοιχτή επαφή — η ΜΟΝΗ πηγή αλήθειας (ADR-332 D21). */
+const CONTACT_ID_PARAM = 'contactId';
 
 const INITIAL_FILTERS: ContactFilterState = {
   searchTerm: '',
@@ -60,12 +57,32 @@ export function useContactsPageState() {
   // Stale-while-revalidate: if we have cached data, start with loading=false.
   const [isLoading, setIsLoading] = useState(!contactsCache.hasLoaded());
   const [error, setError] = useState<string | null>(null);
-  // Η επιλογή επιβιώνει σε remount: το `<Suspense>` της σελίδας πετάει ολόκληρο το
-  // υποδέντρο όταν οποιοσδήποτε απόγονος κάνει suspend (μετρημένο: 51ms, χωρίς HMR).
-  // Ο αρχικοποιητής ψάχνει ΜΟΝΟ το module cache — καμία ανάκτηση, άρα κανένα flash.
-  const [selectedContact, setSelectedContact] = useState<Contact | null>(
-    () => restoreSelectedContact(contactsCache.get() ?? []),
+  // ── Επιλογή: ΜΙΑ πηγή αλήθειας, το URL (ADR-332 D21) ──────────────────────
+  // Το id ζει στο `?contactId=`· η **επαφή** παράγεται από τη λίστα. Κανένα δεύτερο
+  // δοχείο, καμία δικλείδα, κανένας συγχρονισμός: το URL επιβιώνει reload/remount/
+  // Fast Refresh από μόνο του, και η επιλογή γίνεται μοιράσιμος σύνδεσμος.
+  const { selectedId: selectedContactId, setSelectedId } = useSelectedEntityUrlState(CONTACT_ID_PARAM);
+
+  const selectedContact = useMemo<Contact | null>(
+    () => (selectedContactId ? contacts.find(c => c.id === selectedContactId) ?? null : null),
+    [contacts, selectedContactId],
   );
+
+  /**
+   * Ο χρήστης άλλαξε ο ίδιος επιλογή σε αυτό το mount;
+   *
+   * Ξεχωρίζει το «ήρθα εδώ από σύνδεσμο άλλης ενότητας» από το «διάλεξα κάτι στη
+   * λίστα» — μόνο το πρώτο δικαιολογεί το banner επιστροφής. Ref και όχι state:
+   * δεν επηρεάζει render, μόνο τη διάγνωση της προέλευσης.
+   */
+  const userChangedSelectionRef = useRef(false);
+
+  /** Δέχεται `Contact | null` όπως πριν — οι καλούντες δεν ξέρουν ότι από κάτω είναι URL. */
+  const setSelectedContact = useCallback((contact: Contact | null) => {
+    userChangedSelectionRef.current = true;
+    setSelectedId(contact?.id ?? null);
+  }, [setSelectedId]);
+
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [showDashboard, setShowDashboard] = useState(false);
   const [creationMode, setCreationMode] = useState<null | 'selecting' | ContactType>(null);
@@ -118,7 +135,8 @@ export function useContactsPageState() {
 
       if (contact) {
         logger.info('Contact loaded directly', { name: getContactDisplayName(contact) });
-        setSelectedContact(contact);
+        // Καμία εγγραφή επιλογής εδώ: το id είναι ΗΔΗ στο URL — γι' αυτό ήρθαμε. Αρκεί
+        // να μπει η επαφή στη λίστα και η παραγόμενη επιλογή προκύπτει μόνη της.
         setContacts(prev => {
           const exists = prev.find(c => c.id === contactId);
           return exists ? prev : [contact, ...prev];
@@ -153,8 +171,8 @@ export function useContactsPageState() {
         return;
       }
 
+      // Μόνο η λίστα ενημερώνεται — η επιλογή παράγεται από αυτήν.
       setContacts(prev => prev.map(c => (c.id === contactId ? updatedContact : c)));
-      setSelectedContact(updatedContact);
     } catch (err) {
       logger.error('In-place contact update failed, falling back to full refresh', { contactId, error: err });
       refreshContacts();
@@ -163,47 +181,67 @@ export function useContactsPageState() {
   // ---------------------------------------------------------------------------
   // Effects: URL parameters
   // ---------------------------------------------------------------------------
-  const hasLoadedSpecific = useRef(false);
+  /** Ids για τα οποία έγινε ήδη η μία-και-μόνη απευθείας ανάκτηση (ιδεμποτεντικό). */
+  const fetchAttemptedIdsRef = useRef<Set<string>>(new Set());
 
+  /**
+   * Το URL δείχνει επαφή που **δεν** είναι στη φορτωμένη λίστα ⇒ deep link από άλλη
+   * ενότητα. Φέρ' την και βάλ' τη στη λίστα· η επιλογή προκύπτει από εκεί.
+   *
+   * 🔴 Ο φρουρός `isLoading` είναι το μάθημα του D20.1 μεταφερμένο αυτούσιο: όσο η
+   * λίστα δεν έχει καθίσει, το «δεν τη βρίσκω» **δεν** σημαίνει «δεν υπάρχει». Η
+   * διαφορά με τη δικλείδα του D20 είναι ότι εδώ η λάθος απόφαση δεν καταστρέφει
+   * τίποτα: το id ζει στο URL και κανένα μονοπάτι δεν μπορεί να το σβήσει κατά λάθος.
+   */
   useEffect(() => {
-    if (authLoading || !user) return;
-    if (hasLoadedSpecific.current) return;
+    if (authLoading || !user || !selectedContactId) return;
+    if (isLoading) return;
+    if (contacts.some(c => c.id === selectedContactId)) return;
+    if (fetchAttemptedIdsRef.current.has(selectedContactId)) return;
 
-    const contactIdParam = searchParams.get('contactId');
-    if (contactIdParam) {
-      hasLoadedSpecific.current = true;
-      loadSpecificContact(contactIdParam).then(contact => {
-        if (contact) {
-          setFilters(prev => ({ ...prev, searchTerm: '' }));
-          setActiveCardFilter(null);
-        }
-      });
-    }
-  }, [authLoading, user]); // Intentional: run only on auth change, not on every searchParams update
+    fetchAttemptedIdsRef.current.add(selectedContactId);
+    loadSpecificContact(selectedContactId).then(contact => {
+      if (contact) {
+        setFilters(prev => ({ ...prev, searchTerm: '' }));
+        setActiveCardFilter(null);
+        return;
+      }
+      // Θετική απόδειξη ανυπαρξίας — η λίστα έχει καθίσει ΚΑΙ η απευθείας ανάκτηση
+      // γύρισε άδεια. Μόνο τώρα επιτρέπεται να καθαριστεί το param.
+      logger.warn('Clearing stale contactId from URL', { contactId: selectedContactId });
+      setSelectedId(null);
+    });
+  }, [authLoading, user, selectedContactId, isLoading, contacts, loadSpecificContact, setSelectedId]);
 
   useEffect(() => {
     if (authLoading || !user || searchParams.get('create') !== 'true') return;
     setCreationMode('selecting');
-    const params = new URLSearchParams(searchParams.toString());
-    params.delete('create');
-    router.replace(params.size > 0 ? `?${params.toString()}` : window.location.pathname, { scroll: false });
+    // Το `create` είναι εντολή μιας χρήσης: κατανάλωσέ το και σβήσ' το, χωρίς πλοήγηση.
+    // Περνά από τον ίδιο γραφέα URL με την επιλογή — ένα μονοπάτι εγγραφής (D21).
+    replaceUrlSearchParams(params => params.delete('create'));
   }, [authLoading, user]); // Intentional: run only on auth change, same pattern as contactId effect
 
   useEffect(() => {
     const filterParam = searchParams.get('filter');
-    const contactIdParam = searchParams.get('contactId');
 
-    if (filterParam && !contactIdParam) {
+    // Με ανοιχτή επαφή το φίλτρο κειμένου δεν επιβάλλεται — θα έκρυβε τη λίστα γύρω
+    // από αυτό που μόλις άνοιξες.
+    if (filterParam && !selectedContactId) {
       logger.info('Applying URL filter', { filterParam });
       setFilters(prev => ({ ...prev, searchTerm: decodeURIComponent(filterParam) }));
       setActiveCardFilter(null);
     }
   }, [searchParams]);
 
+  /**
+   * «Πίσω στη λίστα»: σκόπιμη πλοήγηση σε καθαρή σελίδα ⇒ `push`, ώστε το κουμπί
+   * «πίσω» του browser να επιστρέφει εκεί από όπου ήρθε ο χρήστης. Καθαρίζει **και**
+   * το `contactId` **και** το `filter` — δεν χρειάζεται ξεχωριστός μηδενισμός
+   * επιλογής, γιατί η επιλογή **είναι** το URL.
+   */
   const handleClearURLFilter = useCallback(() => {
     logger.info('Clearing URL filter and contactId');
     setFilters(prev => ({ ...prev, searchTerm: '' }));
-    setSelectedContact(null);
     router.push('/contacts');
   }, [router]);
   // ---------------------------------------------------------------------------
@@ -238,13 +276,12 @@ export function useContactsPageState() {
         return { ...contact, ...updates };
       };
 
+      // Μόνο η λίστα — η ανοιχτή επαφή είναι παράγωγό της, οπότε ενημερώνεται μαζί.
+      // Πριν το D21 χρειαζόταν δεύτερη, χειροκίνητη εγγραφή εδώ· ήταν ακριβώς το
+      // είδος του διπλού συγχρονισμού που το SSoT καταργεί.
       setContacts(prev => prev.map(contact =>
         contact.id === payload.contactId ? applyContactUpdates(contact) : contact,
       ));
-
-      if (selectedContact?.id === payload.contactId) {
-        setSelectedContact(prev => (prev ? applyContactUpdates(prev) : prev));
-      }
     };
 
     const unsubscribe = RealtimeService.subscribe('CONTACT_UPDATED', handleContactUpdate, {
@@ -252,42 +289,9 @@ export function useContactsPageState() {
     });
 
     return unsubscribe;
-  }, [selectedContact?.id]);
+  }, []);
 
-  // Sync selectedContact when contacts list refreshes
-  useEffect(() => {
-    if (!selectedContact?.id) return;
-
-    const updatedContact = contacts.find(c => c.id === selectedContact.id);
-    if (updatedContact && JSON.stringify(updatedContact) !== JSON.stringify(selectedContact)) {
-      const oldPhotoCount = hasMultiplePhotoURLs(selectedContact) ? selectedContact.multiplePhotoURLs.length : 0;
-      const newPhotoCount = hasMultiplePhotoURLs(updatedContact) ? updatedContact.multiplePhotoURLs.length : 0;
-      logger.info('Updating selectedContact with fresh data', {
-        contactId: selectedContact.id,
-        oldPhotos: oldPhotoCount,
-        newPhotos: newPhotoCount,
-      });
-      setSelectedContact(updatedContact);
-
-      window.dispatchEvent(new CustomEvent('forceAvatarRerender', {
-        detail: { contactId: selectedContact.id, photoCount: newPhotoCount, timestamp: Date.now() },
-      }));
-      logger.info('Dispatched force avatar re-render event');
-    }
-  }, [contacts, selectedContact?.id]); // Intentional: avoid triggering on selectedContact object identity changes
-
-  // ΕΝΑΣ ιδιοκτήτης της persisted επιλογής — γραφή **και** καθυστερημένη επαναφορά.
-  // Κάθε σκόπιμος μηδενισμός (νέα επαφή, καθαρισμός φίλτρου URL, κάρτα dashboard,
-  // διαγραφή, αρχειοθέτηση, κάδος) περνά από το ίδιο state ⇒ κανένας handler δεν
-  // χρειάζεται αλλαγή. Το `isLoading` είναι το σήμα «κάθισε η λίστα»: πριν από αυτό
-  // το `null` σημαίνει «δεν ξέρω ακόμη» και δεν επιτρέπεται να σβήσει το κλειδί
-  // (ADR-332 D20.1 — αλλιώς η δικλείδα αυτοκαταστρέφεται σε κάθε φρέσκο φόρτωμα).
-  useSelectedContactPersistence({
-    selected: selectedContact,
-    contacts,
-    listSettled: !isLoading,
-    onRestore: setSelectedContact,
-  });
+  useSelectedContactAvatarRefresh(selectedContact);
   // ---------------------------------------------------------------------------
   // Handlers: Creation / Deletion / Archive
   // ---------------------------------------------------------------------------
@@ -371,13 +375,13 @@ export function useContactsPageState() {
       contacts,
       filters,
       activeCardFilter,
-      contactIdParam: searchParams.get('contactId'),
+      selectedContactId,
       showTrash: trash.showTrash,
       t,
     }),
     // Intentional: only the fields the filter actually reads, not the whole `filters` object.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [contacts, searchParams, activeCardFilter, filters.searchTerm, filters.contactType, filters.isFavorite, trash.showTrash, t],
+    [contacts, selectedContactId, activeCardFilter, filters.searchTerm, filters.contactType, filters.isFavorite, trash.showTrash, t],
   );
 
   // Dashboard stats (extracted to contactDashboardStats.ts — SRP)
@@ -411,9 +415,18 @@ export function useContactsPageState() {
     filteredContacts,
     isLoading,
     error,
-    // Selection
+    // Selection — SSoT: το URL (ADR-332 D21)
     selectedContact,
     setSelectedContact,
+    /**
+     * Ήρθε ο χρήστης εδώ από σύνδεσμο άλλης ενότητας;
+     *
+     * Μόνο τότε αξίζει το banner «Προβολή επαφής X — Πίσω»: δίνει προσανατολισμό σε
+     * κάποιον που δεν πάτησε ο ίδιος τη λίστα. Πριν το D21 το ερώτημα απαντιόταν με
+     * «υπάρχει `?contactId=`;» — που πλέον ισχύει σε **κάθε** επιλογή και θα έκανε
+     * το banner μόνιμο θόρυβο.
+     */
+    arrivedViaDeepLink: !!selectedContactId && !userChangedSelectionRef.current,
     // UI toggles
     viewMode,
     setViewMode,

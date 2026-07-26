@@ -9,19 +9,27 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface ContactFilterIndicatorProps {
   filterParam: string | null;
-  contactIdParam: string | null;
+  /**
+   * Ο χρήστης ήρθε από σύνδεσμο άλλης ενότητας (και **δεν** έχει αλλάξει επιλογή).
+   *
+   * ⚠️ Ήταν `contactIdParam: string | null`. Από το ADR-332 D21 το `?contactId=`
+   * υπάρχει σε **κάθε** επιλογή — αν το banner κρεμόταν από αυτό, θα εμφανιζόταν σε
+   * κάθε κλικ. Το ερώτημα που πραγματικά απαντά το banner δεν ήταν ποτέ «είναι κάτι
+   * επιλεγμένο;» αλλά «χρειάζεται ο χρήστης δρόμο επιστροφής;».
+   */
+  arrivedViaDeepLink: boolean;
   contactName: string | null;
   filteredCount: number;
   onClear: () => void;
 }
 
 /**
- * Filter indicator banner shown when URL contains ?filter= or ?contactId=.
+ * Filter indicator banner shown on a `?filter=` search or a deep-link arrival.
  * Extracted from ContactsPageContent for SRP compliance (ADR-233).
  */
 export function ContactFilterIndicator({
   filterParam,
-  contactIdParam,
+  arrivedViaDeepLink,
   contactName,
   filteredCount,
   onClear,
@@ -31,10 +39,10 @@ export function ContactFilterIndicator({
   const colors = useSemanticColors();
   const { getDirectionalBorder } = useBorderTokens();
 
-  if (!filterParam && !contactIdParam) return null;
+  if (!filterParam && !arrivedViaDeepLink) return null;
 
-  // Priority: contactId with a resolved contact name
-  if (contactIdParam && contactName) {
+  // Priority: a deep-link arrival whose contact has resolved to a name
+  if (arrivedViaDeepLink && contactName) {
     return (
       <div className={`px-4 py-2 ${colors.bg.success} ${getDirectionalBorder('success', 'bottom')}`}>
         <div className="flex items-center justify-between max-w-full">

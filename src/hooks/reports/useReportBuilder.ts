@@ -12,6 +12,7 @@ import { useState, useCallback, useRef, useMemo, useEffect, type Dispatch, type 
 import { useSearchParams } from 'next/navigation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { getErrorMessage } from '@/lib/error-utils';
+import { replaceUrlQueryString } from '@/lib/url-query-state';
 import {
   getDomainDefinition,
   getDefaultColumns,
@@ -340,7 +341,10 @@ export function useReportBuilder(): UseReportBuilderReturn {
     const qs = encodeBuilderState(
       domain, filters, columns, sortField ?? undefined, sortDirection, limit, grouping.groupByConfig,
     );
-    window.history.replaceState(null, '', `?${qs}`);
+    // Εδώ το query string ΕΙΝΑΙ ολόκληρη η κατάσταση του builder, άρα η αντικατάσταση
+    // είναι η πρόθεση. Περνά από το SSoT ώστε να μη χαθεί το `history.state` του
+    // App Router (το προηγούμενο `replaceState(null, …)` το έσβηνε) ούτε το hash.
+    replaceUrlQueryString(qs);
   }, [domain, filters, columns, sortField, sortDirection, limit, grouping.groupByConfig]);
 
   // ========================================================================

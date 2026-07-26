@@ -24,8 +24,16 @@ export interface ContactFilterInputs {
   filters: ContactFilterState;
   /** Ο τίτλος της ενεργής κάρτας dashboard, ή `null` όταν καμία δεν είναι πατημένη. */
   activeCardFilter: string | null;
-  /** `?contactId=` — deep link· παρακάμπτει κάθε άλλο φίλτρο. */
-  contactIdParam: string | null;
+  /**
+   * Η **ανοιχτή** επαφή (`?contactId=`) — μένει πάντα ορατή, ό,τι κι αν λένε τα φίλτρα.
+   *
+   * ⚠️ Μέχρι το ADR-332 D21 η συνθήκη ήταν `if (contactIdParam) return true`, δηλαδή
+   * η **παρουσία** του param απενεργοποιούσε **όλα** τα φίλτρα για **όλες** τις
+   * επαφές. Αυτό στεκόταν όσο το param έμπαινε μόνο από εξωτερικά deep links· από τη
+   * στιγμή που το URL έγινε η πηγή αλήθειας της επιλογής, κάθε κλικ θα σκότωνε την
+   * αναζήτηση. Η πρόθεση ήταν πάντα η στενή: **μην κρύβεις αυτό που είναι ανοιχτό**.
+   */
+  selectedContactId: string | null;
   showTrash: boolean;
   t: TranslateFn;
 }
@@ -67,14 +75,14 @@ function matchesCardFilter(contact: Contact, activeCardFilter: string, t: Transl
 /**
  * Η ορατή λίστα επαφών για την τρέχουσα κατάσταση της σελίδας.
  *
- * Σειρά προτεραιότητας: κάδος → soft-deleted → deep link → κάρτα dashboard →
- * αναζήτηση κειμένου → τύπος επαφής → αγαπημένα.
+ * Σειρά προτεραιότητας: κάδος → soft-deleted → **η ανοιχτή επαφή** → κάρτα
+ * dashboard → αναζήτηση κειμένου → τύπος επαφής → αγαπημένα.
  */
 export function filterContactsForPage({
   contacts,
   filters,
   activeCardFilter,
-  contactIdParam,
+  selectedContactId,
   showTrash,
   t,
 }: ContactFilterInputs): Contact[] {
@@ -87,7 +95,9 @@ export function filterContactsForPage({
     // Exclude soft-deleted contacts from normal view
     if (contact.status === 'deleted') return false;
 
-    if (contactIdParam) return true;
+    // Η ανοιχτή επαφή δεν κρύβεται ποτέ από φίλτρο — αλλιώς το πάνελ δείχνει κάποιον
+    // που δεν υπάρχει στη λίστα δίπλα του. Ισχύει ΜΟΝΟ γι' αυτήν, όχι για όλες.
+    if (selectedContactId && contact.id === selectedContactId) return true;
 
     if (activeCardFilter && !matchesCardFilter(contact, activeCardFilter, t)) return false;
 
