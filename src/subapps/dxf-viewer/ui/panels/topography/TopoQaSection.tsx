@@ -52,7 +52,19 @@ const SEVERITY_CLASS: Readonly<Record<TopoQaSeverity, string>> = {
  * highlight to a successful zoom would make a click look like it did nothing at all.
  */
 function focusFlag(flag: TopoQaFlag, surfaceId: TopoSurfaceId): void {
+  /**
+   * FIRST jump of this review pass, or a subsequent one? Read BEFORE `select`, which overwrites it.
+   *
+   * The first click has no scale worth keeping — the engineer may be looking at the whole site — so
+   * it frames the finding and establishes one. From then on the scale is THEIRS: every later row
+   * slides the view over at whatever zoom they have since dialled in. Re-fitting each time would
+   * quietly undo their zoom on every click, which is the behaviour Giorgio reported.
+   *
+   * The «pass» resets exactly when the selection does — a fresh Run or Clear (see `topoQaStore`).
+   */
+  const preserveZoom = topoQaStore.getSelectedFlagId() !== null;
   topoQaStore.select(flag.id);
+
   if (selectIs3D(useViewMode3DStore.getState())) {
     // Convert HERE, in the survey domain (the bus carries three-world metres) — the SAME resolver
     // the 3D marker overlay uses, so the row and its own ⊙ can never point at different spots.
@@ -60,8 +72,13 @@ function focusFlag(flag: TopoQaFlag, surfaceId: TopoSurfaceId): void {
     // `null` = no elevation anything can answer for. Framing the camera on an invented height
     // would send the engineer to the wrong place; doing nothing at least does not mislead.
     if (world) {
-      requestViewFocus({ point: world, halfExtentM: TOPO_QA_FOCUS_HALF_EXTENT_M });
+      requestViewFocus({ point: world, halfExtentM: TOPO_QA_FOCUS_HALF_EXTENT_M, preserveZoom });
     }
+    return;
+  }
+
+  if (preserveZoom) {
+    EventBus.emit('canvas-center-on-point', { point: flag.at });
     return;
   }
   EventBus.emit('canvas-fit-to-view-selected', {

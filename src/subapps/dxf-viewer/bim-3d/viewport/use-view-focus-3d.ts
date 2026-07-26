@@ -26,9 +26,14 @@ import { subscribeViewFocus } from '../../systems/coordination/view-focus-bus';
 
 /** Subscribe the live 3D camera to focus requests for as long as the viewport is mounted. */
 export function useViewFocus3D(managerRef: MutableRefObject<ThreeJsSceneManager | null>): void {
-  useEffect(() => subscribeViewFocus(({ point, halfExtentM: h }) => {
+  useEffect(() => subscribeViewFocus(({ point, halfExtentM: h, preserveZoom }) => {
     const manager = managerRef.current;
     if (!manager) return;
+    if (preserveZoom) {
+      // Slide over at the user's own scale — see `ViewFocusRequest.preserveZoom`.
+      manager.viewport.centerOn(new THREE.Vector3(point.x, point.y, point.z));
+      return;
+    }
     manager.viewport.frameBounds(
       new THREE.Vector3(point.x - h, point.y - h, point.z - h),
       new THREE.Vector3(point.x + h, point.y + h, point.z + h),
