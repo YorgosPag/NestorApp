@@ -36,6 +36,7 @@ import {
 } from '../../bim-3d/scene/multi-floor-3d-source';
 import {
   extractBim3DEntities,
+  hasAnyBim3DEntity,
   resolveSnapshotFoundations,
 } from '../../bim-3d/scene/extract-bim3d-entities';
 import {
@@ -170,6 +171,18 @@ export function useFloors3DAggregator(active: boolean): void {
     return out;
   }, [active, levels, currentLevelId, buildingId, buildingFloors]);
 
+  // Το BIM που κάθεται ΗΔΗ στην in-memory σκηνή ενός ορόφου (null όταν δεν υπάρχει
+  // σκηνή). Ένα κοινό σημείο για τους ΔΥΟ καταναλωτές παρακάτω (`resolveEntities` +
+  // το lazy-fetch effect), ώστε να ρωτούν **την ίδια** ερώτηση — αλλιώς ο ένας θα
+  // θεωρούσε τον όροφο γεμάτο και ο άλλος άδειο.
+  const resolveInMemoryBim = useCallback(
+    (t: TargetFloor): Bim3DEntities | null => {
+      const scene = getLevelScene?.(t.levelId);
+      return scene ? extractBim3DEntities(stripForeignFloorBim(scene, t.floorId)) : null;
+    },
+    [getLevelScene],
+  );
+
   // Resolve a floor's entities: live (active) → in-memory scene → loaded snapshot.
   const resolveEntities = useCallback(
     (t: TargetFloor): Bim3DEntities | null => {
@@ -183,27 +196,31 @@ export function useFloors3DAggregator(active: boolean): void {
         }
         return liveActive;
       }
-      const scene = getLevelScene?.(t.levelId);
-      const base =
-        scene && scene.entities.length > 0
-          ? extractBim3DEntities(stripForeignFloorBim(scene, t.floorId))
-          : loaded.get(t.levelId) ?? null;
+      // 🛡️ Η in-memory σκηνή προηγείται ΜΟΝΟ όταν όντως κουβαλάει BIM (φρεσκότερη).
+      // Σκηνή **μόνο-DXF** (κάτοψη χωρίς BIM — ADR-390 Φ4 το πέταξε στο load και τα
+      // per-entity subscriptions αφορούν τον ενεργό όροφο) ΔΕΝ είναι απάντηση: πέφτουμε
+      // στο snapshot / ADR-469 per-entity fallback, αλλιώς ο όροφος μένει χωρίς κολώνες.
+      const inMemory = resolveInMemoryBim(t);
+      const base = hasAnyBim3DEntity(inMemory) ? inMemory : loaded.get(t.levelId) ?? null;
       // ADR-459 Φ7 / ADR-484 Slice 5 — Revit-canonical foundation rule (SSoT, ADR-668):
       // πέδιλα ΜΟΝΟ στον foundation level, με override από τα authoritative model footings.
       return resolveSnapshotFoundations(base, t.levelId, foundationLevelId, modelFootings);
     },
-    [activeLevelId, liveActive, getLevelScene, loaded, foundationLevelId, modelFootings],
+    [activeLevelId, liveActive, resolveInMemoryBim, loaded, foundationLevelId, modelFootings],
   );
 
   // Lazily fetch snapshots for unvisited, file-linked floors.
   useEffect(() => {
     if (!active) return;
     let cancelled = false;
+    // 🛡️ Το κριτήριο είναι «λείπει **BIM**», όχι «λείπει σκηνή». Ένας όροφος με κάτοψη
+    // DXF αλλά χωρίς BIM στη μνήμη πρέπει να φορτώσει snapshot / per-entity (ADR-469)·
+    // ο `loaded` guard κρατά την προσπάθεια one-shot ακόμη κι όταν γυρίσει κενή.
     const missing = targets.filter(
       (t) =>
         t.levelId !== activeLevelId &&
         !loaded.has(t.levelId) &&
-        !((getLevelScene?.(t.levelId)?.entities.length ?? 0) > 0),
+        !hasAnyBim3DEntity(resolveInMemoryBim(t)),
     );
     if (missing.length === 0) return;
 
@@ -253,7 +270,7 @@ export function useFloors3DAggregator(active: boolean): void {
     })();
 
     return () => { cancelled = true; };
-  }, [active, targets, activeLevelId, loaded, getLevelScene, companyId, userId]);
+  }, [active, targets, activeLevelId, loaded, resolveInMemoryBim, companyId, userId]);
 
   // Compose + publish the stack to the SSoT source (skip floors still loading).
   const stack = useMemo<FloorStackEntry[]>(() => {

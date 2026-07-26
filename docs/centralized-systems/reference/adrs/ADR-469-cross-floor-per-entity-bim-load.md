@@ -201,3 +201,23 @@ mep-fitting, mep-manifold, mep-radiator, mep-boiler, mep-water-heater, mep-under
 - **v1.0 (2026-06-17)** — Initial: FIX (Α) anti-vanish load, FIX (Β) ADR-293 suppress, FIX (Γ)
   per-entity cross-floor loader (10 kinds) + both aggregators. 24 jest GREEN (20 policy + 4
   loader) + aggregator regressions. UNCOMMITTED.
+- **v1.3 (2026-07-26)** — 🐛 **Το per-entity fallback δεν έτρεχε ΠΟΤΕ σε ορόφους με κάτοψη DXF.**
+  **Σύμπτωμα:** στο «Όλοι οι όροφοι» έλειπαν οι κολώνες ορόφων που ο χρήστης δεν είχε επισκεφθεί.
+  **Root cause — λάθος ερώτηση, σωστός μηχανισμός.** Ο `useFloors3DAggregator` ρωτούσε δύο φορές
+  `scene.entities.length > 0`, δηλαδή **«έχει κάτι;»**, ενώ οι all-floors καταναλωτές χρειάζονται
+  **«έχει BIM;»**. Μια in-memory σκηνή ορόφου μπορεί να είναι **μόνο-DXF**: το
+  `reconcileLoadedSceneBim(Preserving)` (ADR-390 Φ4) πετά το BIM του snapshot στο load ως παράγωγο
+  cache, και τα per-entity subscriptions που το ξαναγεμίζουν είναι δεμένα στον **ενεργό** όροφο.
+  Άρα ένας όροφος με κάτοψη DXF **έμοιαζε γεμάτος** → ο lazy-fetch τον έκοβε από τη λίστα `missing`
+  ΚΑΙ το `resolveEntities` προτιμούσε την άδεια σκηνή αντί του snapshot → ούτε snapshot ούτε
+  per-entity fallback έτρεχε ποτέ. Οι δύο καταναλωτές ρωτούσαν την ίδια λάθος ερώτηση σε **δύο**
+  σημεία, οπότε καμία ασυμφωνία δεν πρόδιδε το λάθος.
+  **FIX:** νέο `hasAnyBim3DEntity(entities)` στο `extract-bim3d-entities.ts` — pure + total, παράγεται
+  από τα **ίδια κλειδιά** που γεννά το `extractBim3DEntities` (`Object.values`), ΟΧΙ από χειρόγραφη
+  λίστα slices: νέο BIM slice καλύπτεται αυτόματα και δεν μπορεί να ξεχαστεί (ίδια εγγύηση με το
+  `EMPTY_BIM_ENTITIES`). Στον aggregator, ένα `resolveInMemoryBim` callback τροφοδοτεί **και τους δύο**
+  καταναλωτές, ώστε να ρωτούν εξ ορισμού την ίδια ερώτηση. Η in-memory σκηνή προηγείται μόνο όταν
+  όντως κουβαλάει BIM· αλλιώς snapshot → per-entity (ο `loaded` guard κρατά την προσπάθεια one-shot
+  ακόμη κι όταν γυρίσει κενή).
+  **Tests:** νέο `useFloors3DAggregator.bim-source.test.ts` (3): μόνο-DXF σκηνή → ζητά snapshot·
+  in-memory BIM → ΔΕΝ ζητά· χωρίς BIM πουθενά → μία μόνο προσπάθεια. 10/10 GREEN στα δύο suites.

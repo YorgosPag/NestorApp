@@ -60,6 +60,27 @@ export function extractBim3DEntities(scene: SceneModel): Bim3DEntities {
 }
 
 /**
+ * True όταν το partition περιέχει **έστω ένα** BIM entity, σε οποιοδήποτε slice.
+ *
+ * ΓΙΑΤΙ υπάρχει (ADR-399 / ADR-390 Φ4): μια in-memory σκηνή ορόφου μπορεί να είναι
+ * **μόνο-DXF** — το `reconcileLoadedSceneBim(Preserving)` πετά το BIM του snapshot
+ * στο load ως παράγωγο cache, και τα per-entity subscriptions που το ξαναγεμίζουν
+ * είναι δεμένα στον **ενεργό** όροφο. Άρα το `scene.entities.length > 0` απαντά
+ * «έχει κάτι;» ενώ οι all-floors καταναλωτές ρωτούν «**έχει BIM;**». Με το πρώτο,
+ * ένας όροφος με κάτοψη DXF μοιάζει «γεμάτος» και το snapshot / ADR-469 fallback
+ * δεν τρέχει ποτέ → οι κολώνες του λείπουν από το «Όλοι οι όροφοι».
+ *
+ * Παράγεται από τα **ίδια** κλειδιά που γεννά το {@link extractBim3DEntities}
+ * (`Object.values`), όχι από χειρόγραφη λίστα slices — ένα νέο BIM slice καλύπτεται
+ * αυτόματα και δεν μπορεί να ξεχαστεί (ίδια εγγύηση με το `EMPTY_BIM_ENTITIES`).
+ * Pure + total: `null` / `undefined` ⇒ `false`.
+ */
+export function hasAnyBim3DEntity(entities: Bim3DEntities | null | undefined): boolean {
+  if (!entities) return false;
+  return Object.values(entities).some((slice) => slice.length > 0);
+}
+
+/**
  * ADR-459 Φ7 / ADR-484 Slice 5 — Revit-canonical foundation rule for a **snapshot**
  * floor (i.e. one resolved from a persisted scene, not from the live active store).
  *
