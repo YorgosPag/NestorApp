@@ -658,9 +658,10 @@ frameless επίπεδο · **ταυτότητα** αντικειμένου slot
 |---|---|
 | 1 — δύο επίπεδα + surface invariant | ✅ **DONE** (§11.1–11.4) |
 | 2α — κατηγορικό χρώμα στο κέλυφος (το φράγμα των pie) | ✅ **DONE** (§11.6) |
-| 2β — `ReportChart` → preset πάνω στο `ChartPlot`· θάνατος `REPORT_PALETTE` + 7 νεκρών props | ⏸️ **ΕΠΟΜΕΝΟ** — 1 αρχείο |
-| 3 — 33 call sites: `config` → `series`, `+categoryLabel`, `+formatValue`, `+categoryOrder` στα pie | ⏸️ |
-| 4 — gate: **κανένα** `--chart-N` / `--report-chart-N` σε call site | ⏸️ (μπαίνει **μαζί** με το 3· αλλιώς μπλοκάρει 30 αρχεία) |
+| 2β — `ReportChart` → preset πάνω στο `ChartPlot`· θάνατος `REPORT_PALETTE` + 7 νεκρών props | ✅ **DONE** (§11.7) |
+| 3 — 34 call sites: `config` → `series`, `+categoryLabel`, `+formatValue`, `+categoryOrder` στα pie | ✅ **DONE** (§11.7) |
+| 4 — gate: **κανένα** `--chart-N` / `--report-chart-N` σε call site | ✅ **DONE** (§11.7)· η πύλη που το τρέχει: §11.8 |
+| Φάση Δ — τα 12 που μένουν (`ReportFunnel`, `ReportSparkline`, `sections/cash-flow`, …) | ⏸️ |
 
 ### 11.6 Το χρώμα ως ταυτότητα **κατηγορίας** — η απόφαση για τα pie (2026-07-27)
 
