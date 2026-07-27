@@ -105,12 +105,7 @@ function projectContoursToLocal(contours: readonly ContourLine[]): ContourLine[]
  */
 export function regenerateTopoContours(deps: RegenerateTopoDeps): number {
   const scene = deps.getScene(deps.levelId);
-  if (!scene) {
-    // 🔎 TEMP DIAG (2026-07-15). REMOVE after fix.
-    // eslint-disable-next-line no-console
-    console.info('[TOPO-DIAG] regen NO-SCENE', { levelId: deps.levelId });
-    return 0;
-  }
+  if (!scene) return 0;
 
   const { layersById, ids, surfaceLayerId } = ensureLayers(scene);
   const topoDerivedLayerIds = new Set<string>([ids.major, ids.minor, ids.label, surfaceLayerId]);
@@ -141,13 +136,6 @@ export function regenerateTopoContours(deps: RegenerateTopoDeps): number {
       ? [surfaceEntity as unknown as Entity, ...contourEntities]
       : contourEntities;
   }
-
-  // 🔎 TEMP DIAG (2026-07-15). REMOVE after fix.
-  // eslint-disable-next-line no-console
-  console.info('[TOPO-DIAG] regen', {
-    levelId: deps.levelId, sceneEntities: scene.entities.length,
-    tris: surface.triangles.length, kept: kept.length, fresh: fresh.length,
-  });
 
   // ADR-661 — contours are BACKGROUND context: prepend `fresh` (array front = index 0 = drawn
   // FIRST = behind everything), NOT append. This is the DURABLE send-to-back: the survey is the SSoT

@@ -253,3 +253,32 @@
   font-size: 11px;
   color: inherit;
 }
+
+/* ADR-650 §M10e — κάρτα απόδειξης αυτόματης ταύτισης. Semantic <dl>: όρος → τιμή. */
+.proofCard {
+  border-left: 3px solid currentColor;
+  padding-left: 8px;
+  margin-top: 6px;
+}
+
+.proofCardRefused {
+  border-left-color: #c0392b;
+}
+
+.proofList {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 8px;
+  margin: 4px 0 0;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums; /* οι αριθμοί απόδειξης να ευθυγραμμίζονται */
+}
+
+.proofList dt {
+  opacity: 0.8;
+}
+
+.proofList dd {
+  margin: 0;
+  text-align: right;
+}

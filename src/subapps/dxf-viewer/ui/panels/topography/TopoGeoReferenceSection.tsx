@@ -33,6 +33,8 @@ import {
 } from '../../../systems/geo-referencing/geo-transform';
 import { autoAlignByRobustCenters } from '../../../systems/geo-referencing/geo-auto-align';
 import { sceneEntityCenters } from '../../../systems/geo-referencing/geo-ref-scene-points';
+import { autoMatchToSurvey, type GeoMatchResult } from '../../../systems/geo-referencing/geo-auto-match';
+import { TopoGeoMatchResultCard } from './TopoGeoMatchResultCard';
 import {
   persistProjectGeoReference, clearProjectGeoReference,
 } from '../../../systems/geo-referencing/geo-reference-persistence';
@@ -67,6 +69,8 @@ export function TopoGeoReferenceSection(): React.JSX.Element {
 
   const [egsa, setEgsa] = React.useState<[EgsaInput, EgsaInput]>([{ x: '', y: '' }, { x: '', y: '' }]);
   const [status, setStatus] = React.useState<Status | null>(null);
+  /** ADR-650 §M10e — the proposal awaiting the engineer's «Εφαρμογή». Never auto-applied. */
+  const [match, setMatch] = React.useState<GeoMatchResult | null>(null);
 
   const projectId = saveContext?.projectId ?? resolveActiveProjectId(levels) ?? null;
 
@@ -105,6 +109,32 @@ export function TopoGeoReferenceSection(): React.JSX.Element {
     await persist(res.geo);
     setStatus({ text: t('topography.geoRef.status.autoDone'), error: false });
   }, [currentLevelId, getLevelScene, persist, t]);
+
+  const onAutoMatch = React.useCallback(() => {
+    const scene = currentLevelId ? getLevelScene(currentLevelId) : null;
+    const surveyPoints = getTopoState().surfaces.existing.points;
+    if (!scene || scene.entities.length === 0 || surveyPoints.length === 0) {
+      setStatus({ text: t('topography.geoRef.match.noData'), error: true });
+      return;
+    }
+    setMatch(autoMatchToSurvey({
+      entities: scene.entities,
+      layersById: scene.layersById,
+      ...(scene.sourceOrigin ? { sourceOrigin: scene.sourceOrigin } : {}),
+      surveyPoints,
+    }));
+    setStatus(null);
+  }, [currentLevelId, getLevelScene, t]);
+
+  const onApplyMatch = React.useCallback(async () => {
+    if (!match?.geo) return;
+    setGeoReference(match.geo);
+    await persist(match.geo);
+    setMatch(null);
+    setStatus({ text: t('topography.geoRef.match.applied'), error: false });
+  }, [match, persist, t]);
+
+  const onDismissMatch = React.useCallback(() => setMatch(null), []);
 
   const onApply = React.useCallback(async () => {
     const p0 = pick.points[0];
@@ -150,6 +180,17 @@ export function TopoGeoReferenceSection(): React.JSX.Element {
     <section className={styles.field}>
       <h3 className={styles.label}>{t('topography.geoRef.title')}</h3>
       <p className={styles.subtitle}>{t('topography.geoRef.hint')}</p>
+
+      <section className={styles.field}>
+        <h3 className={styles.label}>{t('topography.geoRef.match.title')}</h3>
+        <p className={styles.subtitle}>{t('topography.geoRef.match.hint')}</p>
+        <button type="button" className={styles.generateButton} onClick={onAutoMatch}>
+          {t('topography.geoRef.match.run')}
+        </button>
+        {match && (
+          <TopoGeoMatchResultCard result={match} onApply={onApplyMatch} onDismiss={onDismissMatch} />
+        )}
+      </section>
 
       <button type="button" className={styles.generateButton} onClick={onAutoAlign}>
         {t('topography.geoRef.autoAlign')}

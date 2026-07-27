@@ -1066,6 +1066,48 @@
       "active": "Active: origin {x} , {y} m · rotation {rot}°",
       "inactive": "Not geo-referenced",
       "scaleWarn": "Warning: the two points are not the same distance apart (ratio {ratio}). Check units.",
+      "match": {
+        "title": "Automatic match to the survey",
+        "hint": "Works out on its own how the plan seats on the survey points you imported. It shows the evidence — it applies nothing without you.",
+        "run": "Match automatically",
+        "running": "Matching…",
+        "apply": "Apply this match",
+        "dismiss": "Dismiss",
+        "proofTitle": "Match evidence",
+        "noData": "Both plan and survey points are required.",
+        "applied": "The match has been applied.",
+        "method": {
+          "label": "Method",
+          "identityRestore": "Restored the file's own coordinates",
+          "alreadyAligned": "Already in ΕΓΣΑ",
+          "pointNumber": "Surveyor's point numbering",
+          "congruentPairs": "Geometric match",
+          "unitMismatch": "Different units",
+          "needsManual": "Manual geo-referencing required"
+        },
+        "methodHint": {
+          "identityRestore": "The drawing kept its original coordinates at import — the match is exact, not estimated.",
+          "alreadyAligned": "The drawing is already drawn in ΕΓΣΑ'87 — no translation is needed.",
+          "pointNumber": "Matched from the surveyor's own point numbers — known correspondences, not a guess.",
+          "congruentPairs": "Matched geometrically, without labels. Check the evidence before applying."
+        },
+        "proof": {
+          "layer": "Layer",
+          "inliers": "Points matched",
+          "inliersValue": "{inliers} of {matchable} (required {required})",
+          "rms": "Mean deviation",
+          "rmsValue": "{cm} cm",
+          "rotation": "Rotation",
+          "rotationValue": "{deg}°",
+          "hypotheses": "Hypotheses tested",
+          "hypothesesValue": "{count}"
+        },
+        "failure": {
+          "unitMismatch": "The two files correspond, but at a different scale (×{scale}). A scaled geo-reference is never applied — it would distort the building. Re-import with the correct unit.",
+          "unitMismatchUnknown": "The two files correspond, but at a different scale (×{scale}). A scaled geo-reference is never applied — check the units of both files.",
+          "needsManual": "No reliable match was found. Use a common point below."
+        }
+      },
       "status": {
         "autoDone": "Auto-align done.",
         "autoNoData": "Both plan and survey points are required.",
