@@ -28,6 +28,8 @@ import { assertCanEditLayer } from './CanEditLayerGuard';
 // 🏢 ADR-358 Phase 9D-3: id-first reader SSoT
 import { resolveEntityLayerName } from '../../../stores/LayerStore';
 import { ensureTextNode } from '../../../text-engine/edit/ensure-text-node';
+// ADR-344 Φ-3D — ο flat καθρέφτης `.text` συντηρείται σε κάθε εγγραφή του AST (βλ. `mirrorFlatText`).
+import { extractFlatText } from '../../../utils/text-node-utils';
 import {
   noopAuditRecorder,
   type DxfTextSceneEntity,
@@ -146,6 +148,29 @@ export abstract class DxfTextCommandBase<I extends SingleEntityInput> extends Ba
   }
 }
 
+/**
+ * ADR-344 Φ-3D — κάθε patch που αγγίζει το `textNode` συγχρονίζει ΚΑΙ τον flat καθρέφτη `text`.
+ *
+ * Το `textNode` (AST) είναι το canonical· το flat `.text` είναι **παράγωγος καθρέφτης** που
+ * ο import γεμίζει μία φορά (`dxf-text-converters`: `plainText = extractFlatText(textNode)`)
+ * και μετά κανείς δεν ξαναγγίζει. Κάθε text command έγραφε μόνο το AST, οπότε ο καθρέφτης
+ * έμενε στο ΠΡΟ-ΕΠΕΞΕΡΓΑΣΙΑΣ κείμενο για πάντα (Giorgio 2026-07-28: «ο καμβάς κρατάει το
+ * αρχικό κείμενο»).
+ *
+ * Το render path διορθώθηκε να διαβάζει το canonical (`project-scene-text` →
+ * `resolveEntityText`)· αυτό εδώ είναι το **belt-and-suspenders** (N.7.2 #4) για κάθε
+ * καταναλωτή που διαβάζει το scene `.text` απευθείας — export DXF/TEK, clip, snap — και
+ * για όποιον γραφτεί αύριο. Ένας καθρέφτης που δεν συντηρείται είναι χειρότερος από
+ * ανύπαρκτος: μοιάζει έγκυρος.
+ *
+ * Ισχύει **και στο `undo()`** — αλλιώς η αναίρεση θα επανέφερε το AST αφήνοντας τον
+ * καθρέφτη στο νέο κείμενο, δηλαδή θα δημιουργούσε το ίδιο σφάλμα ανάποδα.
+ */
+function mirrorFlatText(updates: Partial<SceneEntity>): Partial<SceneEntity> {
+  const node = (updates as { textNode?: DxfTextNode }).textNode;
+  return node ? { ...updates, text: extractFlatText(node) } as Partial<SceneEntity> : updates;
+}
+
 /** Outcome of a text-node mutation: the scene patch + the audit changes. */
 export interface TextNodeMutationResult {
   /** Partial scene entity patch applied via `sceneManager.updateEntity`. */
@@ -175,14 +200,14 @@ export abstract class DxfTextNodeMutationCommand<
     if (!this.snapshot) this.snapshot = node;
     const result = this.applyMutation(entity, node, this.snapshot);
     if (!result) return;
-    this.sceneManager.updateEntity(this.entityId, result.updates);
+    this.sceneManager.updateEntity(this.entityId, mirrorFlatText(result.updates));
     this.wasExecuted = true;
     this.recordAudit(result.action ?? 'updated', result.changes);
   }
 
   undo(): void {
     if (!this.snapshot || !this.wasExecuted) return;
-    this.sceneManager.updateEntity(this.entityId, this.restoreUpdates(this.snapshot));
+    this.sceneManager.updateEntity(this.entityId, mirrorFlatText(this.restoreUpdates(this.snapshot)));
   }
 
   /** How to read the working node. Defaults to migration-safe `ensureTextNode`. */

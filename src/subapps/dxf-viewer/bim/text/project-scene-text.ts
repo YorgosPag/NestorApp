@@ -26,7 +26,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { DxfText } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { DxfTextNode } from '../../text-engine/types';
 import { resolveTextHeight, extractFirstRunStyle } from '../../hooks/canvas/dxf-text-style-extractor';
-import { extractFlatText } from '../../utils/text-node-utils';
+import { resolveEntityText } from '../../utils/text-node-utils';
 
 /** Narrow scene shape needed to project a TEXT/MTEXT entity to a flat `DxfText`. */
 export interface TextSceneShape {
@@ -47,7 +47,16 @@ export interface TextSceneShape {
  * real `width`; simple TEXT carries `widthFactor` (the discriminator the adapter reads).
  */
 export function projectSceneTextToDxf(e: TextSceneShape, id: string): DxfText {
-  const text = e.text ?? (e.textNode ? extractFlatText(e.textNode) : '') ?? '';
+  // ⚠️ ADR-344 Φ-3D fix (Giorgio 2026-07-28: «γράφω στο πεδίο, ο καμβάς κρατάει το αρχικό
+  // κείμενο»). Εδώ έγραφε `e.text ?? extractFlatText(e.textNode)` — δηλαδή **ο καθρέφτης
+  // νικούσε το canonical**. Το `textNode` είναι η αλήθεια (ADR-344): κάθε text command
+  // (`ReplaceTextNodeCommand` κ.λπ.) γράφει ΕΚΕΙ. Το flat `.text` συγχρονιζόταν **μία φορά**,
+  // στην εισαγωγή (`dxf-text-converters`: `plainText = extractFlatText(textNode)`) — και μετά
+  // ποτέ. Αποτέλεσμα: κάθε εισαγμένο TEXT/MTEXT αποδιδόταν με το ΠΡΟ-ΕΠΕΞΕΡΓΑΣΙΑΣ κείμενο,
+  // σε 2D **και** 3D, ενώ το AST ήταν σωστό — η επεξεργασία «δεν έπιανε» χωρίς κανένα σφάλμα.
+  // Πλέον διαβάζει το SSoT `resolveEntityText` (textNode πρώτο, flat ως fallback για legacy
+  // οντότητες χωρίς AST) — το ΙΔΙΟ που ήδη χρησιμοποιούσαν hit-test/bounds/click.
+  const text = resolveEntityText(e);
   const height = resolveTextHeight(e);
   // ADR-557 Φ-attachment — carry the derived style (textAlign/textBaseline) so the box
   // SSoT (`resolveTextBox`, via `applyTextGripDrag`) is attachment-aware — i.e. the
