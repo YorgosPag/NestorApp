@@ -22,7 +22,9 @@
 import type { Timestamp } from 'firebase/firestore';
 import type {
   TopoDefinition, TopoBoundary, TopoSurfaceId, CutFillReferenceMode, TerrainSurfaceStyle,
+  TopoCropPrefs,
 } from '../topo-types';
+import { TOPO_CROP_OFF } from '../topo-types';
 import type { ContourConfig, ContourDisplayStyle } from '../contour-config';
 import { DEFAULT_CONTOUR_CONFIG, DEFAULT_CONTOUR_DISPLAY_STYLE } from '../contour-config';
 import type { TopoBakedFrames } from '../topo-baked-frame-store';
@@ -49,6 +51,8 @@ export interface TopoCutFillPrefs {
 export interface TopoPersistedState {
   readonly surfaces: TopoSurfacesDefinition;
   readonly boundary: TopoBoundary | null;
+  /** ADR-718 — whether the boundary also crops the surface. Always present in memory. */
+  readonly crop: TopoCropPrefs;
   readonly contourConfig: ContourConfig;
   readonly contourDisplayStyle: ContourDisplayStyle;
   readonly terrain3d: TopoTerrain3DPrefs;
@@ -77,6 +81,12 @@ export interface TopoSurfaceDoc {
   /** Storage path of the offloaded {@link TopoSurfacesDefinition} blob (large clouds). */
   readonly pointsStoragePath?: string;
   readonly boundary: TopoBoundary | null;
+  /**
+   * ADR-718 — η κοπή στο όριο. **Απούσα σε legacy έγγραφα ⇒ `TOPO_CROP_OFF`**: ένα έργο που
+   * αποθηκεύτηκε πριν το χαρακτηριστικό δεν επιτρέπεται να αποκτήσει κοπή σιωπηλά — θα μίκραινε
+   * η επιφάνεια, θα άλλαζαν οι όγκοι εκσκαφής, και μαζί τους μια τιμή.
+   */
+  readonly crop?: TopoCropPrefs;
   readonly contourConfig: ContourConfig;
   readonly contourDisplayStyle: ContourDisplayStyle;
   readonly terrain3d: TopoTerrain3DPrefs;
@@ -143,6 +153,7 @@ export function isEmptyTopoState(state: TopoPersistedState): boolean {
 /** The settings half of the document (everything except the survey definition). */
 export function topoSettingsDocFields(state: TopoPersistedState): {
   boundary: TopoBoundary | null;
+  crop: TopoCropPrefs;
   contourConfig: ContourConfig;
   contourDisplayStyle: ContourDisplayStyle;
   terrain3d: TopoTerrain3DPrefs;
@@ -151,6 +162,7 @@ export function topoSettingsDocFields(state: TopoPersistedState): {
 } {
   return {
     boundary: state.boundary,
+    crop: state.crop ?? TOPO_CROP_OFF,
     contourConfig: state.contourConfig,
     contourDisplayStyle: state.contourDisplayStyle,
     terrain3d: state.terrain3d,
@@ -171,6 +183,9 @@ export function docToTopoState(doc: TopoSurfaceDoc): TopoPersistedState {
   return {
     surfaces: doc.surfaces ?? { existing: emptyDef, proposed: emptyDef },
     boundary: doc.boundary ?? null,
+    // ADR-718 — legacy έγγραφο: **καμία** κοπή. Το default δεν είναι διακοσμητικό: αν ένα παλιό
+    // έργο ξυπνούσε κομμένο, θα μίκραιναν σιωπηλά οι όγκοι εκσκαφής του.
+    crop: doc.crop ?? TOPO_CROP_OFF,
     contourConfig: doc.contourConfig ?? DEFAULT_CONTOUR_CONFIG,
     contourDisplayStyle: doc.contourDisplayStyle ?? DEFAULT_CONTOUR_DISPLAY_STYLE,
     terrain3d: doc.terrain3d ?? { visible: false, style: 'shaded' },

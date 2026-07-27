@@ -21,7 +21,10 @@
 
 import { createExternalStore } from '../../stores/createExternalStore';
 import { generateEntityId } from '@/services/enterprise-id.service';
-import type { TopoPoint, Breakline, TopoDefinition, TopoSurfaceId, TopoBoundary } from './topo-types';
+import type {
+  TopoPoint, Breakline, TopoDefinition, TopoSurfaceId, TopoBoundary, TopoCropPrefs,
+} from './topo-types';
+import { TOPO_CROP_OFF } from './topo-types';
 
 // ─── State ─────────────────────────────────────────────────────────────────────
 
@@ -29,6 +32,8 @@ export interface TopoPointState {
   readonly surfaces: Readonly<Record<TopoSurfaceId, TopoDefinition>>;
   /** Site boundary (ADR-650 M6 Γ) — earthworks are counted only inside it. `null` = whole survey. */
   readonly boundary: TopoBoundary | null;
+  /** ADR-718 — whether that same boundary also CROPS the surface, and how the outside shows. */
+  readonly crop: TopoCropPrefs;
 }
 
 const EMPTY_DEFINITION: TopoDefinition = { points: [], breaklines: [] };
@@ -36,6 +41,7 @@ const EMPTY_DEFINITION: TopoDefinition = { points: [], breaklines: [] };
 const EMPTY_STATE: TopoPointState = {
   surfaces: { existing: EMPTY_DEFINITION, proposed: EMPTY_DEFINITION },
   boundary: null,
+  crop: TOPO_CROP_OFF,
 };
 
 const store = createExternalStore<TopoPointState>(EMPTY_STATE);
@@ -72,6 +78,24 @@ export function getTopoBreaklines(id: TopoSurfaceId = 'existing'): readonly Brea
 /** The site boundary, or `null` when volumes cover the whole survey. */
 export function getTopoBoundary(): TopoBoundary | null {
   return store.get().boundary;
+}
+
+/** ADR-718 — the crop preferences. Always an object; `TOPO_CROP_OFF` when nothing is set. */
+export function getTopoCrop(): TopoCropPrefs {
+  return store.get().crop;
+}
+
+/**
+ * The ring the surface is actually cropped to, or `null` when it is not cropped at all —
+ * the ONE place that answers «is the crop live right now?».
+ *
+ * Both conditions live here on purpose: crop-on without a picked boundary means the user asked
+ * for a cut and has not said where yet. Each consumer answering that separately is how one of
+ * them ends up cropping to a boundary the others ignore.
+ */
+export function getActiveCropRing(): TopoBoundary | null {
+  const { boundary, crop } = store.get();
+  return crop.enabled && boundary && boundary.vertices.length >= 3 ? boundary : null;
 }
 
 // ─── Writes ────────────────────────────────────────────────────────────────────
@@ -131,6 +155,19 @@ export function findBreaklineBySourceEntity(
 /** Set (or clear, with `null`) the site boundary. Never touches a surface definition. */
 export function setTopoBoundary(boundary: TopoBoundary | null): void {
   store.set({ ...store.get(), boundary });
+}
+
+/**
+ * ADR-718 — patch the crop preferences. Turning the crop OFF also drops `showOutside`, so the
+ * faded backdrop cannot survive as a hidden setting that reappears the next time cropping is
+ * switched on (the user turned the whole feature off; the sub-setting is not theirs to remember).
+ */
+export function setTopoCrop(patch: Partial<TopoCropPrefs>): void {
+  const current = store.get();
+  const merged: TopoCropPrefs = { ...current.crop, ...patch };
+  const next = merged.enabled ? merged : TOPO_CROP_OFF;
+  if (next.enabled === current.crop.enabled && next.showOutside === current.crop.showOutside) return;
+  store.set({ ...current, crop: next });
 }
 
 /** Clear every surface AND the boundary back to empty. */

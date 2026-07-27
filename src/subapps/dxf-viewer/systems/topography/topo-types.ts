@@ -131,6 +131,30 @@ export interface TopoBoundary {
   readonly sourceEntityId?: string;
 }
 
+/**
+ * ADR-718 — whether the surface is CROPPED to the site boundary, and how the discarded ground
+ * is presented (Civil 3D «Surface Boundary → Outer», Revit Toposolid crop).
+ *
+ * `enabled` promotes the boundary from «what the volumes COUNT» (ADR-650 M6) to «what the surface
+ * IS»: plan footprint, contours, 3D terrain, cut cap and areas all shrink with it. The survey
+ * points are never touched — cropping is a derived view, so turning it off restores everything.
+ *
+ * `showOutside` keeps the discarded ground visible as a faded backdrop (the road above, the
+ * neighbour's slope) while it stays out of every measurement. It only means anything when
+ * `enabled` is true.
+ *
+ * ⚠️ Both default to `false`. A legacy document has no crop and must not acquire one silently:
+ * a surface that suddenly covers less ground would change earthwork quantities — and therefore
+ * a price — without anyone asking for it.
+ */
+export interface TopoCropPrefs {
+  readonly enabled: boolean;
+  readonly showOutside: boolean;
+}
+
+/** The no-crop default — legacy documents and fresh surveys alike. */
+export const TOPO_CROP_OFF: TopoCropPrefs = { enabled: false, showOutside: false };
+
 /** Against WHAT the ground is compared — the two roads the big players offer. */
 export type CutFillReferenceMode = 'datum' | 'surface';
 

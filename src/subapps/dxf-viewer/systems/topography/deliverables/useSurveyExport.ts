@@ -23,7 +23,7 @@ import type { Point2D } from '../../../rendering/types/Types';
 import { createTinSampler } from '../tin-sampler';
 import { getCutFillState } from '../cut-fill-store';
 import { getTopoBoundary, getTopoPoints } from '../TopoPointStore';
-import { getTopoSurface } from '../topo-surface';
+import { getTopoSurfaceFull } from '../topo-surface';
 import type { DeclaredPlot } from './greek-survey-rules';
 import {
   buildSurveyDeliverables,
@@ -100,7 +100,11 @@ export function useSurveyExport(): UseSurveyExport {
       const deliverables = buildSurveyDeliverables({
         points,
         boundary: boundary ? boundary.vertices : null,
-        sampler: createTinSampler(getTopoSurface('existing')),
+        // ADR-718 — ΠΑΝΤΑ η πλήρης μετρημένη επιφάνεια, ποτέ η κομμένη: το παραδοτέο είναι το
+        // αρχείο του τι ΜΕΤΡΗΘΗΚΕ. Η κοπή στο όριο είναι εργαλείο μελέτης· αν περνούσε στην
+        // εξαγωγή, ο πελάτης θα έπαιρνε μικρότερη αποτύπωση από αυτή που πλήρωσε, και τα σημεία
+        // εκτός οικοπέδου θα έβγαιναν χωρίς υψόμετρο (ο sampler δεν θα είχε έδαφος εκεί).
+        sampler: createTinSampler(getTopoSurfaceFull('existing')),
         cutFill: getCutFillState().result,
         declared: options.declared,
         titles: {

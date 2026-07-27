@@ -1,5 +1,6 @@
 /**
- * ADR-650 M4 (extended M6) — the derived surfaces. SSoT for «what is the current TIN?».
+ * ADR-650 M4 (extended M6, cropped in ADR-718) — the derived surfaces. SSoT for «what is the
+ * current TIN?».
  *
  * Big-player model (Civil 3D «Surface»): a surface is not stored geometry — it is a
  * DEFINITION (survey points + breaklines, here one entry of `TopoPointStore.surfaces`) plus
@@ -16,32 +17,81 @@
  * M6 note: `existing` and `proposed` are two DIFFERENT definitions, so two TINs is correct
  * and expected. What stays forbidden is triangulating the SAME definition twice.
  *
- * Cheap by construction: no definition change → no rebuild (pointer compare, zero work).
+ * ── ADR-718: two floors, not two engines ────────────────────────────────────────────────────
+ * The site crop must NOT re-triangulate — picking or dragging a boundary is a display/scope
+ * decision, and re-running the CDT on every boundary edit would be both slow and a licence for
+ * the triangulation to drift while the survey stood still. So the memo is two-storey:
+ *
+ *   floor 1  definition → surveyed TIN        (invalidated by survey edits only)
+ *   floor 2  surveyed TIN + ring → cropped TIN (invalidated by boundary/crop edits only)
+ *
+ * `getTopoSurface()` keeps its name and its meaning — «the surface as it currently stands» — so
+ * every existing consumer (plan footprint, contours, 3D terrain, cut cap, areas, volumes) obeys
+ * the crop **without a single line changing in any of them**. That is the whole reason the crop
+ * is implemented here and not in eight places.
+ *
+ * Cheap by construction: no definition change → no rebuild; no boundary change → no re-clip.
  */
 
-import { getTopoDefinition } from './TopoPointStore';
+import { getTopoDefinition, getActiveCropRing } from './TopoPointStore';
 import { buildTin } from './tin-builder';
-import type { TinSurface, TopoDefinition, TopoSurfaceId } from './topo-types';
+import { clipTinToBoundary } from './tin-clip-to-boundary';
+import type { TinSurface, TopoBoundary, TopoDefinition, TopoSurfaceId } from './topo-types';
 
-interface Memo {
+interface BuildMemo {
   readonly input: TopoDefinition;
   readonly surface: TinSurface;
 }
 
-const memos = new Map<TopoSurfaceId, Memo>();
+interface CropMemo {
+  readonly source: TinSurface;
+  readonly ring: TopoBoundary | null;
+  readonly surface: TinSurface;
+}
+
+const buildMemos = new Map<TopoSurfaceId, BuildMemo>();
+const cropMemos = new Map<TopoSurfaceId, CropMemo>();
 
 /**
- * The current derived TIN of a surface. Rebuilt only when THAT surface's definition changed.
- * Fewer than 3 distinct points yields an EMPTY surface (no triangles) — never null, so
- * consumers can read `bounds` / `triangles.length` without a null dance.
+ * The **surveyed** TIN — everything the topographer measured, never cropped.
+ *
+ * Two consumers, both deliberate:
+ *   - the faded «surrounding ground» backdrop (ADR-718 `showOutside`), whose entire job is to
+ *     show what the crop removed;
+ *   - the survey DELIVERABLES (`deliverables/useSurveyExport`) — ⚠️ an export is a record of
+ *     what was measured. Cropping it would hand the client a smaller survey than the one that
+ *     was paid for and surveyed, which is a data-integrity problem, not a display preference.
+ *
+ * Anything else wanting «the surface» wants {@link getTopoSurface}.
  */
-export function getTopoSurface(id: TopoSurfaceId = 'existing'): TinSurface {
+export function getTopoSurfaceFull(id: TopoSurfaceId = 'existing'): TinSurface {
   const input = getTopoDefinition(id);
-  const memo = memos.get(id);
+  const memo = buildMemos.get(id);
   if (memo && memo.input === input) return memo.surface;
 
   const surface = buildTin(input.points, input.breaklines);
-  memos.set(id, { input, surface });
+  buildMemos.set(id, { input, surface });
+  return surface;
+}
+
+/**
+ * The current derived TIN of a surface **as it currently stands** — cropped to the site boundary
+ * when the crop is on, the full surveyed ground otherwise.
+ *
+ * Fewer than 3 distinct points yields an EMPTY surface (no triangles) — never null, so consumers
+ * can read `bounds` / `triangles.length` without a null dance. A crop that intersects nothing
+ * yields an empty surface too, and that is honest: the boundary and the survey do not overlap.
+ */
+export function getTopoSurface(id: TopoSurfaceId = 'existing'): TinSurface {
+  const source = getTopoSurfaceFull(id);
+  const ring = getActiveCropRing();
+  if (!ring) return source;
+
+  const memo = cropMemos.get(id);
+  if (memo && memo.source === source && memo.ring === ring) return memo.surface;
+
+  const surface = clipTinToBoundary(source, ring.vertices);
+  cropMemos.set(id, { source, ring, surface });
   return surface;
 }
 
@@ -50,7 +100,8 @@ export function hasTopoSurface(id: TopoSurfaceId = 'existing'): boolean {
   return getTopoSurface(id).triangles.length > 0;
 }
 
-/** Drop the memo (tests / teardown). The next `getTopoSurface()` rebuilds from the store. */
+/** Drop both memo floors (tests / teardown). The next `getTopoSurface()` rebuilds from the store. */
 export function invalidateTopoSurface(): void {
-  memos.clear();
+  buildMemos.clear();
+  cropMemos.clear();
 }
