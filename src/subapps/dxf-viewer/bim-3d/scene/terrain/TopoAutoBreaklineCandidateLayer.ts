@@ -56,6 +56,7 @@ import {
   getAutoBreaklinePointsMaterial3D,
   type AutoBreaklineLineKind,
 } from '../../materials/auto-breakline-materials-3d';
+import type { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
 import { createFatLineMesh } from '../../lines/scene-fat-line';
 import { disposeObjectTree } from '../dispose-object-tree';
 
@@ -171,7 +172,7 @@ export class TopoAutoBreaklineCandidateLayer extends TopoSceneLayer<CandidateGeo
    */
   private addFatPass(
     positions: Float32Array,
-    material: Parameters<typeof createFatLineMesh>[1],
+    material: LineMaterial,
     renderOrder: number,
     name: string,
   ): void {
