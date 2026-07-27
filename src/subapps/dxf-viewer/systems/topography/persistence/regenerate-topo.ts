@@ -84,11 +84,34 @@ function ensureLayers(
  * Rebuild the plan-view contours for `levelId` from the (already restored) survey stores.
  * Returns the number of contour entities written. A survey with no triangulable ground
  * still runs — it just clears any stale contours (idempotent cleanup) and writes none.
+ *
+ * Thin get→build→commit wrapper over the PURE {@link rebuildTopoDerivedScene}; the ONE
+ * reconciler (ADR-650 §M10g) composes that pure core with the baked-product delta-move so
+ * both land in a SINGLE scene write instead of two.
  */
 export function regenerateTopoContours(deps: RegenerateTopoDeps): number {
   const scene = deps.getScene(deps.levelId);
   if (!scene) return 0;
+  const rebuilt = rebuildTopoDerivedScene(scene);
+  deps.commitScene(rebuilt.scene);
+  return rebuilt.count;
+}
 
+/** The rebuilt scene + how many derived entities it now carries. */
+export interface RebuiltTopoDerived {
+  readonly scene: SceneModel;
+  readonly count: number;
+}
+
+/**
+ * PURE core of the regenerate: scene in → scene out, zero commits.
+ *
+ * Extracted (ADR-650 §M10g) so the reconciler can chain «rebuild derived» and «delta-move the
+ * baked products» into one commit. Everything about the rebuild is unchanged — it still clears
+ * every entity on a topo-derived layer first (idempotent) and seats the fresh ones at the back
+ * (ADR-661). The survey stores are still read here: they ARE the source this rebuilds from.
+ */
+export function rebuildTopoDerivedScene(scene: SceneModel): RebuiltTopoDerived {
   const { layersById, ids, surfaceLayerId } = ensureLayers(scene);
   const topoDerivedLayerIds = new Set<string>([ids.major, ids.minor, ids.label, surfaceLayerId]);
 
@@ -125,10 +148,12 @@ export function regenerateTopoContours(deps: RegenerateTopoDeps): number {
   // on the interactive path would be undone here unless this construction site also seats them at the
   // back. `fresh`'s and `kept`'s internal relative order are each preserved. With the array-order
   // render SSoT (ADR-661 DxfRenderer), array position alone puts the κάτοψη on top — no background pass.
-  deps.commitScene({
-    ...scene,
-    layersById,
-    entities: [...(fresh as unknown as AnySceneEntity[]), ...kept],
-  });
-  return fresh.length;
+  return {
+    scene: {
+      ...scene,
+      layersById,
+      entities: [...(fresh as unknown as AnySceneEntity[]), ...kept],
+    },
+    count: fresh.length,
+  };
 }

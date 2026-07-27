@@ -20,6 +20,8 @@
 import { createExternalStore } from '../../stores/createExternalStore';
 import type { GeoReference, WorldToDisplayProjector } from './geo-transform';
 import { makeWorldToDisplayProjector } from './geo-transform';
+import type { ProjectFrameStamp } from './project-frame';
+import { stampOfGeoReference } from './project-frame';
 
 const store = createExternalStore<GeoReference | null>(null);
 
@@ -47,4 +49,16 @@ export function subscribeGeoReference(listener: () => void): () => void {
  */
 export function getActiveWorldToDisplayProjector(): WorldToDisplayProjector {
   return makeWorldToDisplayProjector(store.get());
+}
+
+/**
+ * ADR-650 §M10g — η **ταυτότητα** του ενεργού πλαισίου (σφραγίδα), όχι ο μετασχηματισμός του.
+ *
+ * Ο δίδυμος του {@link getActiveWorldToDisplayProjector}: εκείνος απαντά «πώς προβάλλω τώρα»,
+ * αυτός «σε ποιο πλαίσιο ψήνω τώρα». Η ίδια αρχή του M10b — μία, και μόνο μία, είσοδος που
+ * διαβάζει store· τα καθαρά modules (`project-frame`, ο reconciler) δέχονται τη σφραγίδα ως
+ * όρισμα και μένουν unit-testable.
+ */
+export function getActiveProjectFrame(): ProjectFrameStamp {
+  return stampOfGeoReference(store.get());
 }
