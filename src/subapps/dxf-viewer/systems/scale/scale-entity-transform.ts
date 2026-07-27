@@ -24,6 +24,9 @@ import { rectangleEntityVertices } from '../../rendering/entities/shared/geometr
 // ADR-647 — an imported hatch's preserved pattern def (inlinePattern) is absolute world geometry, so
 // it MUST scale with the boundary (canonical-mm import ×mmFactor); else it renders/exports 1000× dense.
 import { transformInlinePattern } from '../../data/hatch-pattern-catalog';
+// ADR-716 Φ7 — the dimension branch scales a variant-dependent point list plus cached scalars,
+// so it lives in its own module (N.7.1). It is still part of this ADR-348 SSoT.
+import { scaleDimension } from './scale-dimension';
 
 const TWO_PI = Math.PI * 2;
 const norm2pi = (x: number): number => ((x % TWO_PI) + TWO_PI) % TWO_PI;
@@ -205,14 +208,6 @@ function scalePoint2(e: Entity & { type: 'point' }, base: Point2D, sx: number, s
   return {
     position: scalePoint(e.position, base, sx, sy),
     ...(pdSize !== undefined && pdSize > 0 ? { pdSize: pdSize * Math.abs(sx) } : {}),
-  };
-}
-
-function scaleDimension(e: Entity & { type: 'dimension' }, base: Point2D, sx: number, sy: number) {
-  return {
-    ...(e.startPoint !== undefined && { startPoint: scalePoint(e.startPoint, base, sx, sy) }),
-    ...(e.endPoint !== undefined && { endPoint: scalePoint(e.endPoint, base, sx, sy) }),
-    ...(e.textPosition !== undefined && { textPosition: scalePoint(e.textPosition, base, sx, sy) }),
   };
 }
 
