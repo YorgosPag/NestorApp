@@ -8,21 +8,30 @@
  * draw loop AND the controller's screen-space hit-test, so a grip is drawn and picked at
  * the exact same pixel.
  *
- * Reuses the `dxfPlanToWorld` + `worldToScreen` coordinate SSoT. `worldToScreen` returns
- * CLIENT px (it adds the canvas `rect.left/top`); the overlay canvas covers the viewport,
+ * Reuses the `dxfPlanToWorld` + `createWorldToScreenProjector` coordinate SSoT. The projector
+ * returns CLIENT px (it adds the canvas `rect.left/top`); the overlay canvas covers the viewport,
  * so we subtract its rect to land in CANVAS-LOCAL px (the renderer's draw space). Behind
- * the camera (`worldToScreen` → null) we return an off-canvas sentinel so the batched draw
+ * the near plane (projector → null) we return an off-canvas sentinel so the batched draw
  * simply paints that grip out of view (the renderer can't skip a null position).
+ *
+ * **Δύο συμβάσεις για το ΙΔΙΟ ερώτημα, και γιατί ΔΕΝ ενοποιούνται** (ADR-717 Φ Γ): το
+ * `screen-projection-clip` απαντά `null`, εδώ απαντάμε {@link GRIP_OFFSCREEN}. Το ερώτημα και το
+ * κατώφλι είναι πλέον **κυριολεκτικά τα ίδια** (μία πηγή, `createScreenClipper`) — αυτό που
+ * διαφέρει είναι το ΣΧΗΜΑ της απάντησης, γιατί ο `UnifiedGripRenderer` είναι κοινός με το 2D και
+ * το συμβόλαιό του δέχεται `Point2D`, όχι `Point2D | null`. Ένωση των δύο θα σήμαινε είτε
+ * `null`-checks μέσα στον κοινό renderer (μολύνει το 2D για ανάγκη του 3D) είτε sentinel στο
+ * hit-test (όπου το «μακριά εκτός οθόνης» θα περνούσε για έγκυρη θέση). Ίδια απόφαση, δύο
+ * κωδικοποιήσεις — τεκμηριωμένο, όχι τυχαίο.
  *
  * Pure Three.js + the coordinate SSoT — no React, no store, no scene mutation. Jest-friendly.
  */
 
 import * as THREE from 'three';
 import type { Point2D } from '../../rendering/types/Types';
-import { dxfPlanToWorld, worldToScreen } from '../viewport/coordinate-transforms';
+import { dxfPlanToWorld, createWorldToScreenProjector } from '../viewport/coordinate-transforms';
 import { addPoint3D } from '../../rendering/entities/shared/geometry-vector-utils';
 
-/** Off-canvas sentinel for points behind the camera (drawn out of view, never visible). */
+/** Off-canvas sentinel for points behind the near plane (drawn out of view, never visible). */
 export const GRIP_OFFSCREEN: Point2D = { x: -100000, y: -100000 };
 
 /**
@@ -98,8 +107,12 @@ export function makeGripPlanToCanvas(
   worldOffset?: GripWorldOffset | null,
 ): (p: Point2D) => Point2D {
   const rect = canvas.getBoundingClientRect();
+  // ADR-717 Φ Γ — ο projector χτίζεται ΜΙΑ φορά, όχι ανά σημείο. Πριν, το closure καλούσε το
+  // μονοδρομικό `worldToScreen`, δηλαδή `getBoundingClientRect()` **ανά λαβή ανά frame** — forced
+  // layout flush μέσα στο overlay RAF (ADR-040: με τις twin λαβές είναι 2N flushes στα 60fps).
+  const project = createWorldToScreenProjector(camera, canvas);
   return (p) => {
-    const screen = worldToScreen(liftGripPlanToWorld(p, elevFor(p), worldOffset), camera, canvas);
+    const screen = project(liftGripPlanToWorld(p, elevFor(p), worldOffset));
     if (!screen) return GRIP_OFFSCREEN;
     return { x: screen.x - rect.left, y: screen.y - rect.top };
   };

@@ -12,6 +12,7 @@
 import * as THREE from 'three';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 import { planMmToWorld } from './plan-to-world-math';
+import { createScreenClipper } from './screen-projection-clip';
 
 // ── NDC / Screen ↔ World ──────────────────────────────────────────────────────
 
@@ -37,46 +38,45 @@ export function screenToWorld(
   return ndc.unproject(camera);
 }
 
-/** NDC → client px inside `rect`. The ONE home of the viewport mapping (see below). */
-function ndcToScreenPx(ndc: THREE.Vector3, rect: DOMRect): { x: number; y: number } | null {
-  if (ndc.z > 1) return null; // behind camera
-  return {
-    x: ((ndc.x + 1) / 2) * rect.width + rect.left,
-    y: ((-ndc.y + 1) / 2) * rect.height + rect.top,
-  };
-}
-
-/** Scratch — `worldToScreen` never mutates its input and returns a plain object. */
-const _worldToScreenScratch = new THREE.Vector3();
-
 /**
  * Convert world position to screen pixel coordinates.
- * Returns null if the point is behind the camera.
+ *
+ * Returns null **only** when the point is behind the near plane — never because it is far away.
+ * ADR-717 Φ Γ: the viewport mapping + the projectability test moved WHOLE into
+ * `screen-projection-clip` (ONE home), because the old inline `ndc.z > 1` test conflated
+ * «behind the camera» with «beyond `CAMERA_FAR`» and silently dropped every consumer's geometry
+ * in scenes larger than 1 km. See that file's header for the derivation.
+ *
+ * Prefer {@link createWorldToScreenProjector} in any loop: this one-shot form re-reads the canvas
+ * rect (forced layout flush) and rebuilds the view-projection matrix on every call.
  */
 export function worldToScreen(
   pos: THREE.Vector3,
   camera: THREE.Camera,
   canvas: HTMLElement,
 ): { x: number; y: number } | null {
-  return ndcToScreenPx(_worldToScreenScratch.copy(pos).project(camera), canvas.getBoundingClientRect());
+  return createScreenClipper(camera, canvas).worldToScreenPx(pos);
 }
 
 /**
- * ADR-692 Φ2 — BULK variant of {@link worldToScreen}: capture the canvas rect + a scratch
- * vector ONCE, then project many points through the returned closure.
+ * ADR-692 Φ2 — BULK variant of {@link worldToScreen}: capture the canvas rect + the
+ * view-projection matrix ONCE, then project many points through the returned closure.
  *
- * Same math, same convention (it calls the same `ndcToScreenPx`) — the difference is purely
- * that a one-shot pass over thousands of points (the raw-DXF marquee projects every wireframe
- * vertex on mouseup) must NOT call `getBoundingClientRect()` per point: that is a forced layout
- * flush per vertex. Use this whenever the camera + canvas are fixed for the whole loop.
+ * Same math, same convention (both go through the same {@link createScreenClipper}) — the
+ * difference is purely that a one-shot pass over thousands of points (the raw-DXF marquee
+ * projects every wireframe vertex on mouseup) must NOT call `getBoundingClientRect()` per point:
+ * that is a forced layout flush per vertex. Use this whenever the camera + canvas are fixed for
+ * the whole loop.
+ *
+ * Need the per-segment near-plane clipping (a polyline that crosses behind the camera)? Use
+ * `createScreenClipper` directly — this closure answers only the per-point question.
  */
 export function createWorldToScreenProjector(
   camera: THREE.Camera,
   canvas: HTMLElement,
 ): (pos: THREE.Vector3) => { x: number; y: number } | null {
-  const rect = canvas.getBoundingClientRect();
-  const scratch = new THREE.Vector3();
-  return (pos) => ndcToScreenPx(scratch.copy(pos).project(camera), rect);
+  const clipper = createScreenClipper(camera, canvas);
+  return (pos) => clipper.worldToScreenPx(pos);
 }
 
 /**

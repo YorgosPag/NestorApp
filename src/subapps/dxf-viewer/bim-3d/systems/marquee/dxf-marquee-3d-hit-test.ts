@@ -11,8 +11,11 @@
  *      (`dxfEntityOutlineSegments` — ένας SSoT, μηδέν νέα tessellation)·
  *   2. το ανεβάζουμε στο επίπεδο του ορόφου του (`dxfPlanToWorld` με το floor elevation,
  *      ADR-537 δ «όλοι οι όροφοι») και το προβάλλουμε σε client px·
- *   3. WINDOW  (L→R): ΟΛΟ το προβεβλημένο σχήμα μέσα στο ορθογώνιο·
- *      CROSSING (R→L): το ορθογώνιο αγγίζει έστω ένα τμήμα του.
+ *   3. **near-plane clipping ΑΝΑ ΤΜΗΜΑ** (ADR-717 Φ Γ, `screen-projection-clip`): ό,τι περνά
+ *      πίσω από την κάμερα κόβεται στο επίπεδο, δεν ακυρώνει την οντότητα· η απόσταση
+ *      (`CAMERA_FAR`) ΔΕΝ είναι λόγος απόρριψης·
+ *   4. WINDOW  (L→R): ΟΛΟ το προβεβλημένο σχήμα μέσα στο ορθογώνιο (και τίποτα κομμένο)·
+ *      CROSSING (R→L): το ορθογώνιο αγγίζει έστω ένα ορατό τμήμα του.
  *
  * Ίδια σύμβαση με το BIM: select-through (occlusion-agnostic) — το «μόνο ό,τι φαίνεται»
  * είναι ξεχωριστός άξονας (X-ray toggle), όχι ιδιότητα αυτού του test.
@@ -32,7 +35,8 @@ import { isFullyInsideWithTolerance } from '../../../systems/selection/universal
 import { dxfSceneUnitToMm } from '../../../utils/scene-units';
 import { dxfEntityOutlineSegments } from '../../grips/dxf-entity-outline';
 import type { DxfPickFloor } from '../../grips/dxf-wireframe-hit-test';
-import { dxfPlanToWorld, createWorldToScreenProjector } from '../../viewport/coordinate-transforms';
+import { dxfPlanToWorld } from '../../viewport/coordinate-transforms';
+import { createScreenClipper, type ClipPoint, type ScreenClipper } from '../../viewport/screen-projection-clip';
 import {
   screenBounds,
   polylineIntersectsRect,
@@ -66,39 +70,66 @@ export interface DxfMarqueeHitResult {
   selectionType: MarqueeSelectionType;
 }
 
-/** Οι προβεβλημένες (client px) πολυγραμμές μιας οντότητας, ή null αν κάποιο σημείο είναι πίσω από την κάμερα. */
+/** Το προβεβλημένο περίγραμμα μιας οντότητας, μετά το near-plane clipping. */
+interface ProjectedOutline {
+  /** Οι ΟΡΑΤΕΣ διαδρομές σε client px. Ένα τμήμα πίσω από την κάμερα σπάει το πολύγραμμο σε δύο. */
+  readonly polys: Point2D[][];
+  /** Έπεσε έστω ένα σημείο πίσω από το near plane; (Το WINDOW το χρειάζεται· το CROSSING όχι.) */
+  readonly clipped: boolean;
+}
+
+/**
+ * Οι προβεβλημένες (client px) πολυγραμμές μιας οντότητας, με **near-plane clipping ΑΝΑ ΤΜΗΜΑ**
+ * (ADR-717 Φ Γ). `null` μόνο για τύπο χωρίς γραμμική αναπαράσταση.
+ *
+ * Πριν, ΕΝΑ μη προβαλλόμενο σημείο έριχνε ΟΛΗ την οντότητα (`if (!screen) return null`) — και
+ * επειδή ο κοινός projector απέρριπτε και ό,τι ξεπερνούσε το `CAMERA_FAR` (1 km), ένα τοπογραφικό
+ * 3 km έδινε 4/4 σημεία εκτός ⇒ **μηδέν επιλογή** (μετρημένο). Δύο ανεξάρτητα σφάλματα στη σειρά:
+ * το κατώφλι διορθώθηκε στην πηγή (`screen-projection-clip`), και εδώ φεύγει το «όλα ή τίποτα».
+ */
 function projectEntityOutline(
   entity: DxfEntityUnion,
   unitToMm: number,
   floorElevationMm: number,
-  project: (pos: THREE.Vector3) => Point2D | null,
-): Point2D[][] | null {
+  clipper: ScreenClipper,
+): ProjectedOutline | null {
   const outlines = dxfEntityOutlineSegments(entity, unitToMm);
   if (outlines.length === 0) return null;
-  const screenPolys: Point2D[][] = [];
+  const polys: Point2D[][] = [];
+  let clipped = false;
   for (const poly of outlines) {
-    const pts: Point2D[] = [];
-    for (const p of poly) {
-      const screen = project(dxfPlanToWorld(p.x, p.y, floorElevationMm));
-      if (!screen) return null; // σημείο πίσω από την κάμερα → μη επιλέξιμη σε αυτό το drag
-      pts.push(screen);
-    }
-    if (pts.length > 0) screenPolys.push(pts);
+    const clipPts: ClipPoint[] = poly.map((p) =>
+      clipper.projectToClip(dxfPlanToWorld(p.x, p.y, floorElevationMm)),
+    );
+    const result = clipper.clipPolylineToScreen(clipPts);
+    if (result.clipped) clipped = true;
+    polys.push(...result.runs);
   }
-  return screenPolys.length > 0 ? screenPolys : null;
+  return { polys, clipped };
 }
 
-/** Ικανοποιεί το προβεβλημένο σχήμα το marquee; (window = όλο μέσα, crossing = αγγίζει). */
+/**
+ * Ικανοποιεί το προβεβλημένο σχήμα το marquee; (window = όλο μέσα, crossing = αγγίζει).
+ *
+ * Η ασυμμετρία είναι ΣΚΟΠΙΜΗ και είναι το ίδιο το νόημα των δύο τρόπων (ADR-717 Φ Γ):
+ *
+ *  • **CROSSING** ρωτά «αγγίζει;» — μια θετική απάντηση από ΕΝΑ ορατό τμήμα είναι πλήρης απάντηση.
+ *    Ένα αποκομμένο άκρο δεν ακυρώνει τα υπόλοιπα.
+ *  • **WINDOW** ρωτά «είναι ΟΛΟ μέσα;» — αυτό δεν απαντιέται από τα ορατά τμήματα μόνο. Αν κάτι
+ *    κόπηκε, υπάρχει γεωμετρία που ΔΕΝ προβάλλεται, άρα δεν μπορεί να αποδειχθεί «όλο μέσα».
+ *    Χαλάρωσή του θα έπιανε οντότητες που ξεφεύγουν από το πλαίσιο — δηλαδή θα έλεγε ψέματα.
+ */
 function satisfiesMarquee(
-  screenPolys: readonly Point2D[][],
+  outline: ProjectedOutline,
   rect: ScreenRect,
   isCrossing: boolean,
   tolerance: number,
 ): boolean {
   if (isCrossing) {
-    return screenPolys.some((poly) => polylineIntersectsRect(poly, isClosedPolyline(poly), rect));
+    return outline.polys.some((poly) => polylineIntersectsRect(poly, isClosedPolyline(poly), rect));
   }
-  const bounds = screenBounds(screenPolys.flat());
+  if (outline.clipped) return false;
+  const bounds = screenBounds(outline.polys.flat());
   return bounds !== null && isFullyInsideWithTolerance(bounds, rect, tolerance);
 }
 
@@ -114,17 +145,18 @@ export function collectDxfMarqueeHits(input: DxfMarqueeHitInput): DxfMarqueeHitR
 
   const ids: string[] = [];
   const scopeIds = new Set<string>();
-  // Ένα rect capture για ΟΛΑ τα σημεία — ποτέ getBoundingClientRect ανά κορυφή.
-  const project = createWorldToScreenProjector(camera, canvas);
+  // Ένα rect + ΕΝΑΣ view-projection πίνακας για ΟΛΑ τα σημεία — ποτέ getBoundingClientRect ανά
+  // κορυφή (forced layout flush) και ποτέ ξαναχτίσιμο του P·V ανά κορυφή.
+  const clipper = createScreenClipper(camera, canvas);
 
   for (const floor of floors) {
     const unitToMm = dxfSceneUnitToMm(floor.scene);
     for (const entity of floor.scene.entities) {
       scopeIds.add(entity.id);
       if (entity.visible === false) continue; // ίδιο φίλτρο με το single-click pick
-      const screenPolys = projectEntityOutline(entity, unitToMm, floor.floorElevationMm, project);
-      if (!screenPolys) continue; // μη υποστηριζόμενος τύπος ή σημείο πίσω από την κάμερα
-      if (satisfiesMarquee(screenPolys, rect, isCrossing, tolerance)) ids.push(entity.id);
+      const outline = projectEntityOutline(entity, unitToMm, floor.floorElevationMm, clipper);
+      if (!outline) continue; // μη υποστηριζόμενος τύπος (καμία γραμμική αναπαράσταση)
+      if (satisfiesMarquee(outline, rect, isCrossing, tolerance)) ids.push(entity.id);
     }
   }
 

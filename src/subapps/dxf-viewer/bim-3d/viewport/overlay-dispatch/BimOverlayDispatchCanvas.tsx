@@ -52,9 +52,12 @@ export function BimOverlayDispatchCanvas({ managerRef }: BimOverlayDispatchCanva
   // wall-HUD → placement.
   // ADR-537 — the raw-DXF grip-drag traces + white HUD sit right above the grip squares (traces under
   // their length/angle labels, mirror of the wall tracking↔HUD ordering).
-  // ADR-717 — το selection highlight είναι το ΚΑΤΩΤΕΡΟ στρώμα: είναι η σταθερή κατάσταση («τι
+  // ADR-717 v4 — το selection highlight είναι το ΚΑΤΩΤΕΡΟ στρώμα: είναι η σταθερή κατάσταση («τι
   // κρατάω»), οπότε το στιγμιαίο hover glow ΚΑΙ οι λαβές πρέπει να διαβάζονται πάνω του. Ο
   // αντίστροφος z θα έκρυβε το «τι θα πιάσω» κάτω από το «τι ήδη έχω» σε πυκνή επιλογή.
+  // ⚠️ Η θέση ΕΙΝΑΙ μέρος του συμβολαίου: το pass κλείνει με `destination-out` (τρυπά τον πυρήνα
+  // της λάμψης ώστε να φανεί το χρώμα layer). Αν μετακινηθεί ΠΑΝΩ από άλλο pass, η τρύπα θα
+  // έσβηνε ό,τι ζωγράφισε εκείνο. Πρώτο στη λίστα ⇒ σβήνει μόνο τα δικά του pixel.
   const selection = useSelectionGlowPass();
   const hover = useHoverGlowPass(containerRef);
   const grip = useGripPass();

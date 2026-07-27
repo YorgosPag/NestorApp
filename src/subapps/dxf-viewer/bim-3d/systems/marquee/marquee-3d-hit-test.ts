@@ -26,7 +26,7 @@ import {
   type MarqueeSelectionType,
 } from '../../../systems/selection/marquee-direction';
 import { isFullyInsideWithTolerance } from '../../../systems/selection/universal-marquee-geometry';
-import { worldToScreen } from '../../viewport/coordinate-transforms';
+import { createWorldToScreenProjector } from '../../viewport/coordinate-transforms';
 import { screenBounds, polylineIntersectsRect, screenRectFromPoints } from './marquee-screen-geometry';
 
 export interface MarqueeHitInput {
@@ -110,18 +110,31 @@ const CORNER_SIGNS: ReadonlyArray<readonly [number, number, number]> = [
   [0, 0, 1], [1, 0, 1], [0, 1, 1], [1, 1, 1],
 ];
 
-/** Project the 8 corners of a world AABB to screen px. Returns null if any corner is behind. */
+/**
+ * Project the 8 corners of a world AABB to screen px. Returns null if any corner is behind the
+ * near plane.
+ *
+ * ADR-717 Φ Γ — «behind» now means **behind the near plane** and nothing else. Until then the
+ * shared projector also rejected anything past `CAMERA_FAR` (1 km), so a BIM entity in a
+ * geo-referenced or >1 km site was silently unselectable by marquee — the same measured defect
+ * as the raw-DXF path, from the same single source (`screen-projection-clip`).
+ *
+ * A box that genuinely straddles the near plane is still dropped whole: unlike a polyline, an
+ * AABB's silhouette cannot be clipped by trimming its corner list (the convex hull of the
+ * SURVIVING corners is not the hull of the clipped solid — it under-covers). Bounding the
+ * clipped solid correctly needs the 12 edges clipped and re-hulled; that is a separate,
+ * larger piece of work and is recorded as a known limit in ADR-717 §Γ.4, not fudged here.
+ */
 function projectBoxCorners(
   box: THREE.Box3,
-  camera: THREE.Camera,
-  canvas: HTMLElement,
+  project: (pos: THREE.Vector3) => Point2D | null,
 ): Point2D[] | null {
   const pts: Point2D[] = [];
   const v = new THREE.Vector3();
   for (const [sx, sy, sz] of CORNER_SIGNS) {
     v.set(sx ? box.max.x : box.min.x, sy ? box.max.y : box.min.y, sz ? box.max.z : box.min.z);
-    const screen = worldToScreen(v, camera, canvas);
-    if (!screen) return null; // corner behind camera → not fully projectable
+    const screen = project(v);
+    if (!screen) return null; // corner behind the near plane → not fully projectable
     pts.push(screen);
   }
   return pts;
@@ -161,9 +174,12 @@ export function collectBimMarqueeHits(input: MarqueeHitInput): MarqueeHitResult 
 
   const ids: string[] = [];
   const boxes = collectEntityBoxes(group);
+  // ONE rect + ONE view-projection matrix for every corner of every entity (ADR-717 Φ Γ) —
+  // never `getBoundingClientRect()` per corner.
+  const project = createWorldToScreenProjector(camera, canvas);
   for (const [id, box] of boxes) {
-    const corners = projectBoxCorners(box, camera, canvas);
-    if (!corners) continue; // partially/fully behind camera → not selectable this drag
+    const corners = projectBoxCorners(box, project);
+    if (!corners) continue; // partially/fully behind the near plane → not selectable this drag
     if (isCrossing) {
       // Το κυρτό περίβλημα ΕΙΝΑΙ κλειστό σχήμα → πλήρες polygon-vs-rect (κοινό primitive με το DXF).
       if (polylineIntersectsRect(convexHull(corners), true, marqueeBounds)) ids.push(id);
