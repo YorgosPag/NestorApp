@@ -44,8 +44,14 @@ jest.mock('../../../../systems/levels/useLevels', () => ({
 }));
 
 // ── Mock react-i18next (bridge calls useTranslation for delete confirm) ───────
+// Το mock πρέπει να δίνει ΚΑΙ το `initReactI18next`: το `src/i18n/config.ts` το περνά σε
+// `.use(...)`, και το i18next πετά «You are passing an undefined module!» αν λείπει — σφάλμα
+// **φόρτωσης module**, οπότε η σουίτα πέθαινε πριν φτάσει σε ισχυρισμό (0 tests ran). Ο
+// bridge σέρνει το i18n μέσα από `commands/index → DeleteEntityCommand → associative-geometry-
+// reconcile → area-label`, οπότε το «δεν χρησιμοποιώ i18n εδώ» δεν αρκεί.
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
+  initReactI18next: { type: '3rdParty', init: () => {} },
 }));
 
 // ── Mock UpdateFoundationParamsCommand to capture writes ──────────────────────

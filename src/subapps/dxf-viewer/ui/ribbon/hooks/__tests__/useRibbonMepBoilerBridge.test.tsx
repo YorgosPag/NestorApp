@@ -156,7 +156,10 @@ describe('useRibbonMepBoilerBridge — sizing readouts (ADR-422 L2)', () => {
     // required = 11500, oversize threshold = 17250; installed 24000 > 17250 → oversized.
     const state = result.current.getComboboxState(MEP_BOILER_RIBBON_KEYS.readouts.adequacyStatus);
     expect(state?.disabled).toBe(true);
-    expect(state?.value).toContain('oversized');
+    // Case-insensitive: ο ισχυρισμός ελέγχει ΠΟΙΑ κατάσταση επιλέχθηκε, όχι πώς κεφαλαιοποιεί
+    // η ετικέτα. Η τιμή είναι user-facing συμβολοσειρά («Oversized») — ένα literal με πεζό
+    // αρχικό την κάνει μόνιμα κόκκινη σε κάθε αλλαγή διατύπωσης (μνήμη: env-literal assert).
+    expect(state?.value?.toLowerCase()).toContain('oversized');
   });
 });
 
