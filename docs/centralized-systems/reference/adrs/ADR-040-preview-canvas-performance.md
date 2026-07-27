@@ -4759,3 +4759,23 @@ handle στο click-dispatch (κανόνες 1–4 αμετάβλητοι). Το
 
 Co-staged με ADR-684 (πλήρες Φ3 authoring). `npx jest -- -coverage.test` → 332/332 GREEN,
 `useRibbonCommands` → 17/17, `jscpd:diff` καθαρό (10 νέα αρχεία). ΟΧΙ tsc (N.17). 🔴 verify+commit (Giorgio).
+
+---
+
+### 2026-07-27 — `TopoGridUnderlayCanvas`: μία LOW-freq συνδρομή στη γεωαναφορά (ADR-650 §M10f)
+
+**Αρχείο:** `components/dxf-layout/TopoGridUnderlayCanvas.tsx` (scope CHECK 6D).
+
+Ο ζωντανός κάναβος ΕΓΣΑ ρωτούσε το `buildTopoGrid` **σε λάθος σύστημα**: το `screenToWorld` δίνει
+συντεταγμένες **σκηνής** (= display frame του κτιρίου), όχι ΕΓΣΑ — οπότε σε γεωαναφερμένο έργο
+τύπωνε τοπικές συντεταγμένες με ετικέτα ΕΓΣΑ. Η διόρθωση (ADR-650 §M10f) περνά οθόνη → display →
+WORLD → πίσω σε display, και χρειάζεται να **ξαναβάψει όταν αλλάξει η γεωαναφορά**.
+
+Προστέθηκε **ένα** `useSyncExternalStore(subscribeGeoReference, …)`. Δεν παραβιάζει τους κανόνες
+1–4: η γεωαναφορά είναι **LOW-frequency** (αλλάζει με ενέργεια χρήστη — auto-align / manual pick,
+όχι ανά frame), το component εξακολουθεί να παίρνει `transform`/`viewport` ως **props** από το
+micro-leaf (καμία high-freq συνδρομή), και σχεδιάζει **ένα** canvas. Χωρίς αυτήν ο κάναβος θα
+έμενε στο παλιό σύστημα μέχρι το επόμενο pan — δηλαδή θα έδειχνε λάθος συντεταγμένες σιωπηλά.
+
+`npx jest src/subapps/dxf-viewer/systems/topography src/subapps/dxf-viewer/bim-3d` → 315 suites /
+2836 tests GREEN· `jscpd:diff` καθαρό (9 αρχεία). ΟΧΙ tsc (N.17). 🔴 verify+commit (Giorgio).
