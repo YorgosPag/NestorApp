@@ -98,6 +98,13 @@ interface MatchTally {
  * `index`. Both public scorers are this function with a different map and a different index;
  * writing the loop twice — once per direction — is exactly the structural clone N.18 forbids.
  *
+ * The per-point winner is greedy-nearest-first-come, not a global optimal assignment
+ * (Hungarian). That is intentional: at τ = a few centimetres on a real survey the candidates
+ * are effectively unique, so the two agree — and the greedy version costs one 3×3 cell walk
+ * instead of an O(n³) matching inside a search loop that runs thousands of times. The gates
+ * downstream demand a large inlier count AND a tight RMS, so a rare greedy mis-assignment
+ * cannot promote a wrong transform; it can only cost a real one a single inlier.
+ *
  * @param abandonBelow stop as soon as the tally provably cannot reach this count. `0` disables
  *        it. See {@link countExplainedPoints} for why abandoning is lossless where it is used.
  * @param collect optional sink receiving each (source, matched) pair, in visit order.
@@ -111,6 +118,7 @@ function accumulateMatches(
 ): MatchTally {
   // A target point is consumable exactly once — see the one-to-one rule above.
   const claimed = new Uint8Array(index.points.length);
+  const { grid, points, toleranceMm } = index;
   const n = source.length;
   let inliers = 0;
   let sumSq = 0;
@@ -123,18 +131,42 @@ function accumulateMatches(
     const p = source[i]!;
     const px = mapX(map, p.x, p.y);
     const py = mapY(map, p.x, p.y);
-    const hit = nearestUnclaimed(index, claimed, px, py);
-    if (hit === NO_POINT) continue;
 
-    claimed[hit] = 1;
+    const nearest = nearestUnclaimed(grid, toleranceMm, claimed, px, py);
+    if (nearest === NO_POINT) continue;
+
+    claimed[nearest] = 1;
     inliers++;
 
-    const target = index.points[hit]!;
+    const target = points[nearest]!;
     sumSq += (px - target.x) ** 2 + (py - target.y) ** 2;
     collect?.(p, target);
   }
 
   return { inliers, sumSq };
+}
+
+/** Nearest indexed point to `(px, py)` that no earlier source point has already claimed. */
+function nearestUnclaimed(
+  grid: PointHashGrid,
+  toleranceMm: number,
+  claimed: Uint8Array,
+  px: number,
+  py: number,
+): number {
+  let best = NO_POINT;
+  let bestD2 = Infinity;
+
+  grid.forEachWithin(px, py, toleranceMm, (i, d2) => {
+    if (claimed[i] === 1) return;
+    // `<` (not `<=`) plus ascending-index iteration ⇒ ties resolve to the lower index.
+    if (d2 < bestD2) {
+      bestD2 = d2;
+      best = i;
+    }
+  });
+
+  return best;
 }
 
 /**
@@ -202,28 +234,3 @@ export function countExplainedPoints(
   return accumulateMatches(surveyPoints, inverseRigidMap(geo), drawingIndex, abandonBelow, undefined).inliers;
 }
 
-/**
- * Nearest indexed point to `(px, py)` that no earlier source point has already taken.
- *
- * Note this is greedy-nearest-first-come, not a global optimal assignment (Hungarian). That
- * is intentional: at τ = a few centimetres on a real survey the candidates are effectively
- * unique, so the two agree — and the greedy version costs one 3×3 cell walk instead of an
- * O(n³) matching inside a search loop that runs thousands of times. The gates downstream
- * demand a large inlier count AND a tight RMS, so the rare greedy mis-assignment cannot
- * promote a wrong transform; it can only cost a real one a single inlier.
- */
-function nearestUnclaimed(index: PointSetIndex, claimed: Uint8Array, px: number, py: number): number {
-  let best = NO_POINT;
-  let bestD2 = Infinity;
-
-  index.grid.forEachWithin(px, py, index.toleranceMm, (i, d2) => {
-    if (claimed[i] === 1) return;
-    // `<` (not `<=`) plus ascending-index iteration ⇒ ties resolve to the lower index.
-    if (d2 < bestD2) {
-      bestD2 = d2;
-      best = i;
-    }
-  });
-
-  return best;
-}
