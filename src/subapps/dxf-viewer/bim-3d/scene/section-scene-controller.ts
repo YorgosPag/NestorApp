@@ -317,8 +317,13 @@ export class SectionSceneController {
    * (bypass composer) αντί για την κανονική SSAO pipeline.
    *
    * ADR-665 — reads `combinedPlanes`, which EXCLUDES `terrainPlanes` by design: a terrain-only
-   * level cut must NOT flip the whole scene onto the expensive stencil path. The terrain cut ships
-   * without a cap (the TIN is DoubleSide, so it reads as a shell, not a void) — see ADR-665 §cap.
+   * level cut must NOT flip the whole scene onto the expensive stencil path.
+   *
+   * ADR-665 **M2** — και ΔΕΝ χρειάζεται να το κάνει. Η τομή του εδάφους απέκτησε poché χώματος, αλλά
+   * ως **γεωμετρία** (`TerrainCutCapLayer`), όχι ως stencil pass: η κοπή είναι οριζόντιο επίπεδο πάνω
+   * σε height field, άρα το σχήμα της τομής είναι υπολογίσιμο αναλυτικά. Άρα αυτή η συνάρτηση μένει
+   * **αμετάβλητη** και το SSAO/EffectComposer pipeline δεν υποβαθμίζεται ποτέ από terrain-only τομή.
+   * 🔴 Ο `SectionStencilRenderer` ΔΕΝ πρέπει να ενεργοποιηθεί για το έδαφος — βλ. ADR-665 §M2.0.
    */
   isStencilActive(): boolean {
     if (this.disposed) return false;

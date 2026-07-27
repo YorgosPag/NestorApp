@@ -93,8 +93,9 @@ function withTerrainFaceMode(base: THREE.MeshStandardMaterial): THREE.MeshStanda
  * would look straight through a back-face-culled terrain and see the void — so it renders
  * `DoubleSide`, exactly as Civil 3D 3D-faces and a Revit Toposolid do. The cost is bounded: one
  * surface, not the whole model, so the ADR-366 §B.5 overdraw argument does not apply.
- * (ADR-665 relies on this: the level cut shows the terrain's UNDERSIDE, not a see-through void,
- * which is why v1 ships without a stencil cap.)
+ * (ADR-665 relied on this in v1: the level cut showed the terrain's UNDERSIDE, not a see-through
+ * void. Το **M2** έδωσε στην τομή πραγματικό poché χώματος — βλ. {@link getTerrainCutCapMaterial3D} —
+ * αλλά το `DoubleSide` παραμένει απαραίτητο: η κάμερα εξακολουθεί να μπαίνει κάτω από τον λόφο.)
  *
  * `shaded` (earth) is LIT: there the lighting IS the read — hillshade gives the surface its 3D
  * form — so it belongs in the PBR pipeline like every other solid, and honours the Visual Style
