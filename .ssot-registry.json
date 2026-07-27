@@ -4778,6 +4778,18 @@
       "addedDate": "2026-07-26",
       "addedByAdr": "ADR-711",
       "tier": 2
+    },
+    "point-hash-grid": {
+      "ssotFile": "src/subapps/dxf-viewer/core/spatial/PointHashGrid.ts",
+      "tier": "spatial",
+      "description": "ADR-650 §M10e (2026-07-27) — the app's ONE uniform spatial hash over bare 2D coordinates lives in core/spatial/PointHashGrid.ts. It was centralised only after the M10e SSoT audit found the SAME tolerance-keyed grid hand-rolled in five places (check-duplicate-points, systems/coordination/broad-phase, IntersectionSnapEngine, pointcloud/csf-grid, and GridSpatialIndex itself); the matcher would have been the sixth. SCOPE — read before extending: this guards POINT PROXIMITY hashing («is there a point within τ of (x,y)»), which is what PointHashGrid answers. It deliberately does NOT flag rasterising a triangle or a bounding box into cells (mesh-silhouette, tin-sampler, broad-phase's box sweep) — that is a different question with a different answer, and a rule that cried wolf there would be ignored within a week. Nor does it flag snapping to a drawing grid, which divides by a SPACING. The patterns are narrow ON PURPOSE: they are a regression guard, not a census. Measured 2026-07-27 — pattern[0] matches exactly 2 files (the SSoT + IntersectionSnapEngine), pattern[1] exactly 1 (the SSoT), and grep -E and JS RegExp agree file-for-file, which is the check that the ADR-294 v3.0 `(?:...)` incident existed for.",
+      "forbiddenPatterns": [
+        "Math\\.floor\\([a-zA-Z_.]*\\.[xy] */ *[A-Za-z_.]*[Cc][Ee][Ll][Ll]",
+        "Map<number, *Map<number, *number\\[\\]>>"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/core/spatial/PointHashGrid.ts"
+      ]
     }
   }
 }

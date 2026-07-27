@@ -387,4 +387,43 @@ const type = 'range';
 input.setAttribute('data-kind', 'range');
 element.dataset.type = 'rangefinder';`,
   },
+
+  // ---------------------------------------------------------------------------
+  // point-hash-grid (ADR-650 §M10e) — Tier: spatial
+  //
+  // The two patterns target the ACT, not the vocabulary: bucketing a POINT's own
+  // coordinate into a cell, and re-declaring the nested numeric cell map. The
+  // should-skip block is the important half — it pins the three shapes that
+  // legitimately floor a coordinate and must never be flagged:
+  //   (a) rasterising a TRIANGLE or a BOX into cells (mesh-silhouette, tin-sampler,
+  //       broad-phase) — a different question; PointHashGrid indexes points, not
+  //       areas, so it is not the answer there;
+  //   (b) snapping to a drawing grid, which divides by a SPACING, not a tolerance;
+  //   (c) using the SSoT itself.
+  'point-hash-grid': {
+    shouldMatch: `// (a) bucketing a point's own coordinate by a cell size — a hand-rolled hash:
+const col = Math.floor(p.x / cellSize);
+const row = Math.floor(point.y / GRID_CELL_SIZE);
+const c2 = Math.floor(this.origin.x / this.cellSizeMm);
+// (b) re-declaring the nested numeric cell map the SSoT already owns:
+const cells = new Map<number, Map<number, number[]>>();`,
+    shouldSkip: `// Canonical usage — the SSoT primitive, by import:
+import { PointHashGrid, NO_POINT } from '../../core/spatial/PointHashGrid';
+const grid = new PointHashGrid(points, toleranceMm);
+grid.forEachWithin(x, y, toleranceMm, (i, d2) => visit(i, d2));
+if (grid.nearestWithin(x, y, r) === NO_POINT) return;
+
+// Rasterising an AREA into cells is a different question — must not be flagged:
+const minC = Math.max(0, Math.floor((Math.min(ax, bx, cx) - ox) / cell));
+const r0 = clampCol(Math.floor((Math.min(...ys) - minY) / cellH));
+const maxX = Math.floor((b.max.x + marginM) / cellSizeM);
+
+// Snapping to the drawing grid divides by a SPACING, not a proximity tolerance:
+const gx = Math.floor(pointer.x / gridSpacing) * gridSpacing;
+const step = Math.floor(worldX / majorGridStep);
+
+// Unrelated map shapes:
+const items = new Map<string, SpatialItem>();
+const byId = new Map<number, Point2D>();`,
+  },
 };
