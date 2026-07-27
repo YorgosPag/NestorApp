@@ -15,7 +15,7 @@ import { autoMatchToSurvey } from '../geo-auto-match';
 import { MAX_RMS_MM } from '../geo-match-gates';
 import {
   EGSA_ORIGIN, LAYERS, LAYER_ID, LAYER_NAME,
-  jitter, place, pointEntities, scatter, surveyPoints,
+  insetFrame, jitter, pinnedToSquare, place, pointEntities, scatter, surveyPoints,
 } from './geo-match-fixtures';
 
 describe('autoMatchToSurvey — analytic branches', () => {
@@ -155,6 +155,49 @@ describe('autoMatchToSurvey — ε: unit mismatch', () => {
     expect(result.method).toBe('unit-mismatch');
     expect(result.geo).toBeNull();
     expect(result.suggestedUnitScale).toBe(1000);
+  });
+
+  // ── The two tests below pin the SET the extent is measured over. A drawing routinely holds
+  // more than one coordinate frame, and the distance BETWEEN frames is not a size of anything:
+  // it is empty space. Measuring across it makes the fallback answer a question nobody asked.
+
+  it('still reports the unit mismatch when the drawing also holds a distant inset', () => {
+    // Realistic pairing: the drawing is correct (mm), the survey CSV was imported without the
+    // metre→millimetre conversion, so its numbers are 1000× too small. Measured across BOTH
+    // frames the ratio is 1e-4 — no unit at all — and the user is told «no match found».
+    const site = pinnedToSquare(scatter(70, 150_000, 3_141), 150_000);
+    const world = site.map((p) => ({ x: p.x / 1000 + 407_700, y: p.y / 1000 + 4_502_400 }));
+    const inset = insetFrame({ x: -1_350_000, y: -1_350_000 }, 1_000);
+
+    const result = autoMatchToSurvey({
+      entities: [...pointEntities(site), ...pointEntities(inset, 'lyr_other')],
+      layersById: LAYERS,
+      surveyPoints: surveyPoints(world),
+    });
+
+    expect(result.method).toBe('unit-mismatch');
+    expect(result.geo).toBeNull();
+    expect(result.suggestedUnitScale).toBeCloseTo(0.001, 6);
+  });
+
+  it('does NOT invent a unit mismatch out of the GAP between two coordinate frames', () => {
+    // Two unrelated 150 m files — «needs-manual», as in στ. The drawing additionally holds an
+    // inset 1.35 km away, which is placed so that the extent across both frames is EXACTLY 10×
+    // the survey's. Measured that way the tool would announce «your units are off by ten» about
+    // two files that simply do not match: a confident, actionable, false statement.
+    const site = pinnedToSquare(scatter(70, 150_000, 111), 150_000);
+    const inset = insetFrame({ x: -1_350_000, y: -1_350_000 }, 1_000);
+    const world = pinnedToSquare(scatter(70, 150_000, 999_999), 150_000)
+      .map((p) => place(p, 0, EGSA_ORIGIN));
+
+    const result = autoMatchToSurvey({
+      entities: [...pointEntities(site), ...pointEntities(inset, 'lyr_other')],
+      layersById: LAYERS,
+      surveyPoints: surveyPoints(world),
+    });
+
+    expect(result.method).toBe('needs-manual');
+    expect(result.suggestedUnitScale).toBeNull();
   });
 
   it('does NOT cry unit-mismatch for two merely unrelated files of different sizes', () => {

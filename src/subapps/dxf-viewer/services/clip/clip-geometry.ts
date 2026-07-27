@@ -37,8 +37,16 @@ export function ptEq(a: Point2D, b: Point2D): boolean {
   return Math.abs(a.x - b.x) < 1e-9 && Math.abs(a.y - b.y) < 1e-9;
 }
 
-/** Axis-aligned bounds of a point list (empty → zero-area at origin). */
-export function boundsOfPoints(pts: Array<Point2D | [number, number]>): SpatialBounds {
+/**
+ * Axis-aligned bounds of a point list (empty → zero-area at origin).
+ *
+ * Consumed OUTSIDE the crop pipeline too (`bim/hatch/hatch-area-label`,
+ * `systems/geo-referencing/geo-auto-match`) — it is the repo's SSoT for «bounding box of a
+ * point list», and a second hand-rolled `minX = Infinity` loop is the clone N.18 forbids.
+ * The parameter is `ReadonlyArray` because nothing here mutates: a caller holding a
+ * `readonly Point2D[]` must not have to cast its immutability away to ask a question.
+ */
+export function boundsOfPoints(pts: ReadonlyArray<Point2D | [number, number]>): SpatialBounds {
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   for (const p of pts) {
     const x = Array.isArray(p) ? p[0] : p.x;

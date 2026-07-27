@@ -40,7 +40,8 @@ import {
   collectCandidatePoints, dominantLayerName, selectBasisSample, strideSample,
   type LocalCandidatePoint,
 } from './geo-ref-candidate-points';
-import { splitByCoordinateFrame } from './geo-point-clusters';
+import { splitByCoordinateFrame, type PointCluster } from './geo-point-clusters';
+import { boundsOfPoints } from '../../services/clip/clip-geometry';
 import { matchByPointNumber } from './geo-point-number-match';
 import { matchByCongruentPairs } from './geo-congruent-match';
 import { MAX_PAIR_TABLE_POINTS } from './geo-pair-table';
@@ -298,27 +299,31 @@ function runBranches(input: AutoMatchInput, ctx: MatchContext): GeoMatchResult {
   const numbered = runPointNumberBranch(input, ctx);
   if (numbered) return numbered;
 
-  for (const frame of splitByCoordinateFrame(ctx.all)) {
+  // Split ONCE and hand the same frames to both consumers. A second split would be a second
+  // opinion about what the drawing is, and the fallback must judge exactly the geometry the
+  // search was given — otherwise the explanation describes a drawing nobody tried to match.
+  const frames = splitByCoordinateFrame(ctx.all);
+  for (const frame of frames) {
     const found = tryCongruent(frame.points, ctx);
     // A unit mismatch is a FINDING, not a failed frame: the files do correspond, at a scale.
     // Reporting it beats trying the next frame and ending on the vaguer «needs-manual».
     if (found) return found;
   }
 
-  return explainAsUnitMismatch(ctx)
+  return explainAsUnitMismatch(ctx, frames)
     ?? noMatch('needs-manual', { matchable: ctx.matchable, ...ctx.failures.asResultFields });
 }
 
-/** Diagonal of a point set's bounding box — its size, independent of where it sits. */
+/**
+ * Diagonal of a point set's bounding box — its size, independent of where it sits.
+ *
+ * The box itself comes from the SSoT (`boundsOfPoints`); a local `minX = Infinity` loop here
+ * would be the sibling clone N.18 exists to stop.
+ */
 function extentOf(points: readonly Point2D[]): number {
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  for (const p of points) {
-    if (p.x < minX) minX = p.x;
-    if (p.x > maxX) maxX = p.x;
-    if (p.y < minY) minY = p.y;
-    if (p.y > maxY) maxY = p.y;
-  }
-  return points.length === 0 ? 0 : Math.hypot(maxX - minX, maxY - minY);
+  if (points.length === 0) return 0;
+  const b = boundsOfPoints(points);
+  return Math.hypot(b.maxX - b.minX, b.maxY - b.minY);
 }
 
 /**
@@ -340,9 +345,30 @@ function extentOf(points: readonly Point2D[]): number {
  * known unit ratios (within 0.5 %), not merely «large»; and it produces a MESSAGE, never a
  * transform. A drawing that is genuinely a small detail inside a large survey has an extent
  * ratio too, but it will not land within half a percent of exactly 1000.
+ *
+ * ## 🔴 Measured over ONE frame, not the whole drawing
+ * A DXF routinely carries a legend, a detail or pasted geometry a kilometre or more from the
+ * site. Across all of them the bounding box is dominated by the EMPTY SPACE between frames,
+ * which is the size of nothing. That reading breaks the fallback in both directions, and both
+ * are pinned by tests:
+ *   - it goes SILENT on a genuine mismatch (drawing in mm, survey imported without the
+ *     metre→millimetre conversion: the honest 1/1000 reads as 1e-4, which is no unit at all);
+ *   - and — worse — it SPEAKS on files that merely fail to match, when the inter-frame gap
+ *     happens to put the ratio within half a percent of a real unit. An inset 1.35 km away is
+ *     enough to have it announce «your units are off by ten» about two unrelated files. A
+ *     confident wrong answer is the one failure mode this whole feature is built to avoid.
+ *
+ * So the drawing is the LARGEST frame — the same one, in the same order, the search itself
+ * tried first. Only that one: testing every frame would multiply the chances of landing inside
+ * a 0.5 % window by luck, and this is the branch that speaks when everything else is silent.
+ * No frame survived the three-point minimum ⇒ no defensible notion of «the drawing's size»,
+ * and the honest answer is `needs-manual` rather than a guess drawn from two points.
  */
-function explainAsUnitMismatch(ctx: MatchContext): GeoMatchResult | null {
-  const localExtent = extentOf(ctx.allXY);
+function explainAsUnitMismatch(ctx: MatchContext, frames: readonly PointCluster[]): GeoMatchResult | null {
+  const drawing = frames[0];
+  if (!drawing) return null;
+
+  const localExtent = extentOf(drawing.points);
   if (localExtent <= 0) return null;
 
   const ratio = extentOf(ctx.worldXY) / localExtent;

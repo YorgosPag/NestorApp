@@ -55,6 +55,33 @@ export function jitter(points: readonly Point2D[], amplitudeMm: number, seed: nu
   }));
 }
 
+/**
+ * `points` with its bounding box pinned to exactly `[0, spanMm]²`.
+ *
+ * A scatter of n samples spans slightly less than `spanMm` by an amount that depends on the
+ * seed, so a test that needs an EXACT extent ratio (the unit-mismatch fallback is judged
+ * within half a percent) cannot rely on the scatter alone. Two corner points make the extent
+ * arithmetic exact and seed-independent, which is what turns «it happened to pass» into a
+ * statement about the code.
+ */
+export function pinnedToSquare(points: readonly Point2D[], spanMm: number): Point2D[] {
+  return [...points, { x: 0, y: 0 }, { x: spanMm, y: spanMm }];
+}
+
+/**
+ * A small square of four points at `origin` — a legend, a detail or geometry pasted from
+ * another drawing, i.e. a SECOND coordinate frame. Four (not two) so it survives the
+ * three-point minimum of `splitByCoordinateFrame` and is genuinely tried as a frame.
+ */
+export function insetFrame(origin: Point2D, sizeMm: number): Point2D[] {
+  return [
+    { x: origin.x, y: origin.y },
+    { x: origin.x + sizeMm, y: origin.y },
+    { x: origin.x, y: origin.y + sizeMm },
+    { x: origin.x + sizeMm, y: origin.y + sizeMm },
+  ];
+}
+
 /** A DXF POINT entity at `p`, on `layerId`. */
 export function pointEntity(p: Point2D, i: number, layerId = LAYER_ID): PointEntity {
   return { id: `pt_${layerId}_${i}`, type: 'point', layerId, position: { x: p.x, y: p.y } };
