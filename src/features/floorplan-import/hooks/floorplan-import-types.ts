@@ -4,13 +4,20 @@
  */
 
 import { FLOORPLAN_PURPOSES } from '@/config/domain-constants';
-import type { FloorplanPurpose } from '@/config/domain-constants';
+import type { CadLinkableEntityType, FloorplanPurpose } from '@/config/domain-constants';
 
 // =============================================================================
 // TYPES
 // =============================================================================
 
-export type FloorplanType = 'project' | 'building' | 'floor' | 'property';
+/**
+ * The wizard's selection level. This value travels verbatim into
+ * `WizardCompleteMeta.entityType` → `DxfSaveContext.entityType` → the
+ * `/api/cad-files` payload, so it is the SAME set as {@link CadLinkableEntityType}
+ * — aliased, never re-listed (an independent copy is how 'project' went missing
+ * from the API validator).
+ */
+export type FloorplanType = CadLinkableEntityType;
 
 export interface FloorplanImportSelection {
   companyId: string | null;

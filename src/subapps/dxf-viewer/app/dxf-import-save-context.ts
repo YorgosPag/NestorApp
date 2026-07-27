@@ -25,7 +25,9 @@ export function buildDxfImportSaveContext(meta: WizardCompleteMeta): DxfSaveCont
     // (το `''` δεν είναι nullish). Παραλείπεται το κλειδί — ΕΝΑ σημείο, δύο καταναλωτές.
     ...(meta.entityType === 'floor' && meta.entityId ? { floorId: meta.entityId } : {}),
     ...(meta.entityType === 'building' && meta.entityId ? { buildingId: meta.entityId } : {}),
-    entityType: meta.entityType as DxfSaveContext['entityType'],
+    // Χωρίς cast: το `WizardCompleteMeta.entityType` και το `DxfSaveContext.entityType`
+    // είναι πλέον ΤΟ ΙΔΙΟ `CadLinkableEntityType` — η μία λίστα του domain-constants.
+    entityType: meta.entityType,
     filesCategory: 'floorplans' as const,
     purpose: meta.purpose || undefined,
     entityLabel: meta.entityLabel,

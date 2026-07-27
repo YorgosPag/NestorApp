@@ -19,6 +19,7 @@ import 'server-only';
 import { getAdminFirestore, FieldValue } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import {
+  type CadLinkableEntityType,
   type EntityType,
   type FileDomain,
   type FileCategory,
@@ -33,7 +34,7 @@ export interface DualWriteContext {
   projectId?: string;
   buildingId?: string;
   floorId?: string;
-  entityType?: 'project' | 'building' | 'floor' | 'property';
+  entityType?: CadLinkableEntityType;
   filesCategory?: 'drawings' | 'floorplans';
   purpose?: string;
   entityLabel?: string;
@@ -78,7 +79,7 @@ export interface DualWriteParams {
  * (floor → floorId; property → floorId/buildingId; building → buildingId).
  */
 function resolveEntityId(
-  entityType: 'project' | 'building' | 'floor' | 'property',
+  entityType: CadLinkableEntityType,
   context: DualWriteContext | undefined
 ): string {
   if (entityType === 'project') {
@@ -139,11 +140,7 @@ export async function writeToFilesCollection(params: DualWriteParams): Promise<v
     // Use provided entity context OR fall back to defaults for display-name generation only.
     // CRITICAL: entity-linking fields (entityType/entityId/category/storagePath) are only
     // written when explicitly provided — merge: true preserves wizard-set values on auto-save.
-    const resolvedEntityType = (context?.entityType ?? 'building') as
-      | 'project'
-      | 'building'
-      | 'floor'
-      | 'property';
+    const resolvedEntityType: CadLinkableEntityType = context?.entityType ?? 'building';
     const resolvedEntityId = resolveEntityId(resolvedEntityType, context);
     const resolvedCategory = context?.filesCategory ?? 'drawings';
 

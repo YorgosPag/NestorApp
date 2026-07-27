@@ -9,6 +9,7 @@ import { countDxfEntities, type SceneSaveTicket } from '../../../hooks/scene/sce
 import type { SceneSaveBlockReason } from '../../../hooks/scene/execute-scene-save';
 import { onSuperAdminActiveCompanyChange } from '@/services/firestore/super-admin-active-company';
 import { isCrossFloorSceneLink } from '../cross-floor-link';
+import { isCadLinkableEntityType } from '@/config/domain-constants';
 import {
   reconcileLoadedSceneBim,
   reconcileLoadedSceneBimPreserving,
@@ -323,8 +324,11 @@ export function useLevelSceneLoader({
                 : {}),
               ...(fileRecord.companyId ? { companyId: fileRecord.companyId } : {}),
               ...(fileRecord.projectId ? { projectId: fileRecord.projectId } : {}),
-              ...(fileRecord.entityType
-                ? { entityType: fileRecord.entityType as 'project' | 'building' | 'floor' | 'property' }
+              // Fail-closed: a historical FileRecord may carry an entityType the CAD
+              // pipeline cannot link (e.g. 'unit'). Dropping the key beats casting it
+              // into the save context, where it would 400 the next save.
+              ...(isCadLinkableEntityType(fileRecord.entityType)
+                ? { entityType: fileRecord.entityType }
                 : {}),
               ...(fileRecord.entityType === 'floor' && fileRecord.entityId
                 ? { floorId: fileRecord.entityId }

@@ -1,6 +1,7 @@
 import type { Timestamp } from 'firebase/firestore';
 import type { SceneModel } from '../types/scene';
 import type { SecurityValidationResult } from '../security/DxfSecurityValidator';
+import type { CadLinkableEntityType } from '@/config/domain-constants';
 import type { FileRecord } from '@/types/file-record';
 import type { SceneUnits } from '../utils/scene-units';
 
@@ -23,7 +24,7 @@ export interface DxfSaveContext {
    * When absent, defaults to 'building' (backward compatibility).
    * Set to 'floor' when saving a floor-level DXF (e.g. Wizard import).
    */
-  entityType?: 'project' | 'building' | 'floor' | 'property';
+  entityType?: CadLinkableEntityType;
   /**
    * 🏢 ADR-240: File category for the `files` collection dual-write record.
    * When absent, defaults to 'drawings'. Set to 'floorplans' for floor plans.

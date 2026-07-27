@@ -7,6 +7,8 @@
 
 import { z } from 'zod';
 
+import { CAD_LINKABLE_ENTITY_TYPES } from '@/config/domain-constants';
+
 /** Single security validation result (loose — producer owns the shape) */
 const SecurityValidationResultSchema = z
   .object({
@@ -29,7 +31,9 @@ const FilesContextSchema = z
     projectId: z.string().max(128).optional(),
     buildingId: z.string().max(128).optional(),
     floorId: z.string().max(128).optional(),
-    entityType: z.enum(['building', 'floor', 'property']).optional(),
+    // 🛡️ Derived from the SSoT list — an inline copy here omitted 'project' and
+    // rejected every project-scoped scene save with 400 (ADR-288).
+    entityType: z.enum(CAD_LINKABLE_ENTITY_TYPES).optional(),
     filesCategory: z.enum(['drawings', 'floorplans']).optional(),
     purpose: z.string().max(200).optional(),
     entityLabel: z.string().max(300).optional(),

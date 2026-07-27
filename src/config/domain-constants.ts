@@ -124,6 +124,42 @@ export const ENTITY_TYPES = {
 
 export type EntityType = typeof ENTITY_TYPES[keyof typeof ENTITY_TYPES];
 
+/**
+ * 🏢 SSoT — entity types a CAD/DXF file can be linked to (ADR-288 / ADR-240).
+ *
+ * The DXF save chain (wizard → DxfSaveContext → cad-file-mutation-gateway →
+ * POST /api/cad-files → writeToFilesCollection) had this union written inline in
+ * SIX places, and the zod schema's copy silently omitted `'project'`. Every
+ * project-scoped scene therefore failed validation with 400 while the Storage
+ * upload succeeded — the file survived, its metadata/version/audit trail did not.
+ * One list, imported by all of them; the zod enum is derived from it, so a new
+ * member can never again be added to the types but forgotten in the validator.
+ *
+ * Order is irrelevant; membership is the contract.
+ */
+export const CAD_LINKABLE_ENTITY_TYPES = [
+  ENTITY_TYPES.PROJECT,
+  ENTITY_TYPES.BUILDING,
+  ENTITY_TYPES.FLOOR,
+  ENTITY_TYPES.PROPERTY,
+] as const;
+
+/** Entity type a CAD/DXF FileRecord may be linked to. Subset of {@link EntityType}. */
+export type CadLinkableEntityType = typeof CAD_LINKABLE_ENTITY_TYPES[number];
+
+/**
+ * Fail-closed narrowing for values read back from Firestore (`FileRecord.entityType`
+ * is a plain string there, and historical records may hold any {@link EntityType}).
+ * A blind cast puts an unlinkable value into the save context, where the server
+ * rejects the NEXT save with 400 — long after the bad value was written.
+ */
+export function isCadLinkableEntityType(value: unknown): value is CadLinkableEntityType {
+  return (
+    typeof value === 'string' &&
+    (CAD_LINKABLE_ENTITY_TYPES as readonly string[]).includes(value)
+  );
+}
+
 // ============================================================================
 // FILE STORAGE CONSTANTS - ENTERPRISE CANONICAL
 // ============================================================================

@@ -15,13 +15,14 @@
 
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
+import type { CadLinkableEntityType } from '@/config/domain-constants';
 
 /** Optional entity-link context for the `files` dual-write (ADR-240). */
 export interface CadFileContextPayload {
   projectId?: string;
   buildingId?: string;
   floorId?: string;
-  entityType?: 'project' | 'building' | 'floor' | 'property';
+  entityType?: CadLinkableEntityType;
   filesCategory?: 'drawings' | 'floorplans';
   purpose?: string;
   entityLabel?: string;

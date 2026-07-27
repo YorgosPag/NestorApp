@@ -41,7 +41,7 @@ import { StepUpload } from './components/StepUpload';
 import { StepStoragePicker } from './components/StepStoragePicker';
 import type { FloorplanType } from './hooks/useFloorplanImportState';
 import type { FloorplanFormat } from './hooks/useFloorplanSmartUpload';
-import type { EntityType } from '@/config/domain-constants';
+import type { CadLinkableEntityType } from '@/config/domain-constants';
 import type { SceneUnits } from '@/subapps/dxf-viewer/utils/scene-units';
 import '@/lib/design-system';
 
@@ -53,7 +53,12 @@ import '@/lib/design-system';
 export interface WizardCompleteMeta {
   companyId: string;
   projectId?: string;
-  entityType: EntityType;
+  /**
+   * The wizard's selection level — narrowed to the CAD-linkable subset, because
+   * this value flows verbatim into `DxfSaveContext.entityType` and the
+   * `/api/cad-files` payload, whose validator accepts exactly this set.
+   */
+  entityType: CadLinkableEntityType;
   entityId: string;
   /** ADR-399: building context of the selection (set for floor/building/property
    *  selections) — needed so floor-plan levels carry buildingId for the floor-tab strip. */
