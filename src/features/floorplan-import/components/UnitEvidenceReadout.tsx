@@ -30,7 +30,7 @@ import type { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 interface TFn { (key: string, options?: Record<string, unknown>): string; }
 
 /** Το ίδιο κλειδί ετικέτας που χρησιμοποιούν τα pills — μία ονοματολογία μονάδων στο UI. */
-const UNIT_LABEL_KEY: Readonly<Record<SceneUnits, string>> = {
+export const UNIT_LABEL_KEY: Readonly<Record<SceneUnits, string>> = {
   m: 'floorplanImport.drawingUnits.m',
   cm: 'floorplanImport.drawingUnits.cm',
   mm: 'floorplanImport.drawingUnits.mm',
@@ -42,7 +42,7 @@ const UNIT_LABEL_KEY: Readonly<Record<SceneUnits, string>> = {
  * Διαστάσεις για ανθρώπινο μάτι: ακέραια μέτρα σε οικόπεδα/τοπογραφικά, ένα δεκαδικό σε
  * μικρά σχέδια — ώστε ένα «5,9 m» να μη στρογγυλοποιηθεί σε «6 m» και να χάσει το σήμα.
  */
-function formatMetres(value: number): string {
+export function formatMetres(value: number): string {
   const abs = Math.abs(value);
   return abs >= 100 ? String(Math.round(value)) : value.toFixed(1);
 }
