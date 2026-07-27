@@ -8,11 +8,12 @@
  *
  *   1. `FloorplanBackgroundService` — CRUD round-trip + tenant isolation +
  *      immutables/locked guards.
- *   2. `FloorplanCascadeDeleteService` — Q8 unified cascade across
- *      `floorplan_overlays` AND `dxf_viewer_levels` →
- *      `dxf_overlay_levels/{levelId}/items`. Tenant-scoped count helper.
+ *   2. `FloorplanCascadeDeleteService` — cascade over `floorplan_overlays`.
+ *      Tenant-scoped count helper. (The legacy `dxf_overlay_levels` arm was
+ *      removed post-WIPE in ADR-340 Phase 9 STEP L — this suite no longer
+ *      asserts it.)
  *   3. `CalibrationRemapService.applyCalibration` — atomic single-batch path
- *      (overlay count ≤ 499) writes polygon updates + background transform
+ *      (overlay count ≤ 499) writes geometry updates + background transform
  *      together; world-position invariance preserved.
  *
  * Why this suite lives in `tests/functions-integration/`:
@@ -38,7 +39,7 @@ import {
   clearFirestore,
   teardown,
 } from '../_harness/emulator';
-import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
+import { COLLECTIONS } from '@/config/firestore-collections';
 import type {
   BackgroundTransform,
   CalibrationData,
@@ -46,6 +47,7 @@ import type {
   Point2D,
   ProviderMetadata,
 } from '@/subapps/dxf-viewer/floorplan-background/providers/types';
+import type { OverlayGeometry, OverlayRole } from '@/types/floorplan-overlays';
 
 // ============================================================================
 // FIXTURES
@@ -106,11 +108,23 @@ async function loadServices() {
 // SEED HELPERS
 // ============================================================================
 
+/** Build a polygon geometry — the storage shape since ADR-340 Phase 8. */
+function poly(...vertices: Point2D[]): OverlayGeometry {
+  return { type: 'polygon', vertices };
+}
+
+/** Read back the vertices of a stored polygon overlay (empty if not a polygon). */
+function readVertices(raw: unknown): Point2D[] {
+  const g = raw as OverlayGeometry | undefined;
+  return g?.type === 'polygon' ? g.vertices : [];
+}
+
 async function seedOverlay(args: {
   companyId: string;
   floorId: string;
   backgroundId: string;
-  polygon: Point2D[];
+  geometry: OverlayGeometry;
+  role?: OverlayRole;
 }): Promise<string> {
   const db = getAdminApp().firestore();
   const ref = db.collection(COLLECTIONS.FLOORPLAN_OVERLAYS).doc();
@@ -119,37 +133,13 @@ async function seedOverlay(args: {
     companyId: args.companyId,
     floorId: args.floorId,
     backgroundId: args.backgroundId,
-    polygon: args.polygon,
+    geometry: args.geometry,
+    role: args.role ?? 'auxiliary',
     createdAt: Date.now(),
     updatedAt: Date.now(),
+    createdBy: ACTOR,
   });
   return ref.id;
-}
-
-async function seedDxfLevel(args: {
-  companyId: string;
-  floorId: string;
-  itemCount: number;
-}): Promise<{ levelId: string; itemIds: string[] }> {
-  const db = getAdminApp().firestore();
-  const levelRef = db.collection(COLLECTIONS.DXF_VIEWER_LEVELS).doc();
-  await levelRef.set({
-    id: levelRef.id,
-    companyId: args.companyId,
-    floorId: args.floorId,
-    createdAt: Date.now(),
-  });
-  const itemsCol = db
-    .collection(COLLECTIONS.DXF_OVERLAY_LEVELS)
-    .doc(levelRef.id)
-    .collection(SUBCOLLECTIONS.DXF_OVERLAY_LEVEL_ITEMS);
-  const itemIds: string[] = [];
-  for (let i = 0; i < args.itemCount; i += 1) {
-    const itemRef = itemsCol.doc();
-    await itemRef.set({ id: itemRef.id, idx: i });
-    itemIds.push(itemRef.id);
-  }
-  return { levelId: levelRef.id, itemIds };
 }
 
 // ============================================================================
@@ -315,7 +305,7 @@ describe('FloorplanBackgroundService — Firestore round-trip', () => {
   });
 });
 
-describe('FloorplanCascadeDeleteService — Q8 unified cascade', () => {
+describe('FloorplanCascadeDeleteService — floorplan_overlays cascade', () => {
   beforeAll(() => {
     getAdminApp();
   });
@@ -328,7 +318,7 @@ describe('FloorplanCascadeDeleteService — Q8 unified cascade', () => {
     await clearFirestore();
   });
 
-  it('cascadeAllPolygonsForFloor wipes both polygon systems atomically', async () => {
+  it('cascadeAllPolygonsForFloor wipes every overlay of the floor and is idempotent', async () => {
     const { FloorplanBackgroundService, FloorplanCascadeDeleteService } = await loadServices();
 
     const bg = await FloorplanBackgroundService.create({
@@ -341,45 +331,40 @@ describe('FloorplanCascadeDeleteService — Q8 unified cascade', () => {
       createdBy: ACTOR,
     });
 
-    // Seed 3 floorplan_overlays + 2 DXF levels (5 + 4 items).
+    // Seed 3 floorplan_overlays on the target floor.
     await Promise.all([
       seedOverlay({
         companyId: COMPANY_A,
         floorId: FLOOR_A,
         backgroundId: bg.id,
-        polygon: [{ x: 1, y: 1 }, { x: 2, y: 2 }],
+        geometry: poly({ x: 1, y: 1 }, { x: 2, y: 2 }),
       }),
       seedOverlay({
         companyId: COMPANY_A,
         floorId: FLOOR_A,
         backgroundId: bg.id,
-        polygon: [{ x: 3, y: 3 }, { x: 4, y: 4 }],
+        geometry: poly({ x: 3, y: 3 }, { x: 4, y: 4 }),
       }),
       seedOverlay({
         companyId: COMPANY_A,
         floorId: FLOOR_A,
         backgroundId: bg.id,
-        polygon: [{ x: 5, y: 5 }, { x: 6, y: 6 }],
+        geometry: poly({ x: 5, y: 5 }, { x: 6, y: 6 }),
       }),
     ]);
-    await seedDxfLevel({ companyId: COMPANY_A, floorId: FLOOR_A, itemCount: 5 });
-    await seedDxfLevel({ companyId: COMPANY_A, floorId: FLOOR_A, itemCount: 4 });
 
     const before = await FloorplanCascadeDeleteService.getFloorPolygonState(
       COMPANY_A,
       FLOOR_A,
     );
     expect(before.floorplanOverlayCount).toBe(3);
-    expect(before.dxfOverlayCount).toBe(9);
-    expect(before.total).toBe(12);
+    expect(before.total).toBe(3);
 
     const result = await FloorplanCascadeDeleteService.cascadeAllPolygonsForFloor(
       COMPANY_A,
       FLOOR_A,
     );
     expect(result.floorplanOverlaysDeleted).toBe(3);
-    expect(result.dxfLevelsScanned).toBe(2);
-    expect(result.dxfOverlayItemsDeleted).toBe(9);
 
     const after = await FloorplanCascadeDeleteService.getFloorPolygonState(
       COMPANY_A,
@@ -393,10 +378,9 @@ describe('FloorplanCascadeDeleteService — Q8 unified cascade', () => {
       FLOOR_A,
     );
     expect(replay.floorplanOverlaysDeleted).toBe(0);
-    expect(replay.dxfOverlayItemsDeleted).toBe(0);
   });
 
-  it('cascadeOverlaysForBackground only wipes overlays of one bg, leaves DXF + sibling bg', async () => {
+  it('cascadeOverlaysForBackground wipes one background only — same-floor and sibling-floor overlays survive', async () => {
     const { FloorplanBackgroundService, FloorplanCascadeDeleteService } = await loadServices();
 
     const bgA = await FloorplanBackgroundService.create({
@@ -419,11 +403,24 @@ describe('FloorplanCascadeDeleteService — Q8 unified cascade', () => {
     });
 
     await Promise.all([
-      seedOverlay({ companyId: COMPANY_A, floorId: FLOOR_A, backgroundId: bgA.id, polygon: [] }),
-      seedOverlay({ companyId: COMPANY_A, floorId: FLOOR_A, backgroundId: bgA.id, polygon: [] }),
-      seedOverlay({ companyId: COMPANY_A, floorId: FLOOR_B, backgroundId: bgB.id, polygon: [] }),
+      seedOverlay({
+        companyId: COMPANY_A, floorId: FLOOR_A, backgroundId: bgA.id, geometry: poly({ x: 1, y: 1 }),
+      }),
+      seedOverlay({
+        companyId: COMPANY_A, floorId: FLOOR_A, backgroundId: bgA.id, geometry: poly({ x: 2, y: 2 }),
+      }),
+      seedOverlay({
+        companyId: COMPANY_A, floorId: FLOOR_B, backgroundId: bgB.id, geometry: poly({ x: 3, y: 3 }),
+      }),
     ]);
-    await seedDxfLevel({ companyId: COMPANY_A, floorId: FLOOR_A, itemCount: 2 });
+    // Same floor as bgA, but bound to another background → must survive: the
+    // background-scoped cascade must NOT degrade into a floor-wide wipe.
+    await seedOverlay({
+      companyId: COMPANY_A,
+      floorId: FLOOR_A,
+      backgroundId: 'rbg_unrelated_777',
+      geometry: poly({ x: 4, y: 4 }),
+    });
 
     const deleted = await FloorplanCascadeDeleteService.cascadeOverlaysForBackground(
       COMPANY_A,
@@ -432,9 +429,7 @@ describe('FloorplanCascadeDeleteService — Q8 unified cascade', () => {
     expect(deleted).toBe(2);
 
     const stateA = await FloorplanCascadeDeleteService.getFloorPolygonState(COMPANY_A, FLOOR_A);
-    expect(stateA.floorplanOverlayCount).toBe(0);
-    // DXF subsystem untouched.
-    expect(stateA.dxfOverlayCount).toBe(2);
+    expect(stateA.floorplanOverlayCount).toBe(1); // the unrelated-background overlay
 
     const stateB = await FloorplanCascadeDeleteService.getFloorPolygonState(COMPANY_A, FLOOR_B);
     expect(stateB.floorplanOverlayCount).toBe(1);
@@ -443,8 +438,12 @@ describe('FloorplanCascadeDeleteService — Q8 unified cascade', () => {
   it('cross-tenant cascade only touches matching companyId', async () => {
     const { FloorplanCascadeDeleteService } = await loadServices();
 
-    await seedOverlay({ companyId: COMPANY_A, floorId: FLOOR_A, backgroundId: 'rbg_x', polygon: [] });
-    await seedOverlay({ companyId: COMPANY_B, floorId: FLOOR_A, backgroundId: 'rbg_y', polygon: [] });
+    await seedOverlay({
+      companyId: COMPANY_A, floorId: FLOOR_A, backgroundId: 'rbg_x', geometry: poly({ x: 1, y: 1 }),
+    });
+    await seedOverlay({
+      companyId: COMPANY_B, floorId: FLOOR_A, backgroundId: 'rbg_y', geometry: poly({ x: 2, y: 2 }),
+    });
 
     const result = await FloorplanCascadeDeleteService.cascadeAllPolygonsForFloor(
       COMPANY_A,
@@ -470,7 +469,7 @@ describe('CalibrationRemapService.applyCalibration — atomic remap', () => {
     await clearFirestore();
   });
 
-  it('writes new transform + calibration AND remapped polygons in one batch (≤499 overlays)', async () => {
+  it('writes new transform + calibration AND remapped geometry in one batch (≤499 overlays)', async () => {
     const { FloorplanBackgroundService, CalibrationRemapService } = await loadServices();
 
     const bg = await FloorplanBackgroundService.create({
@@ -490,8 +489,13 @@ describe('CalibrationRemapService.applyCalibration — atomic remap', () => {
       [{ x: -5, y: 5 }],
     ];
     const overlayIds = await Promise.all(
-      polygons.map((polygon) =>
-        seedOverlay({ companyId: COMPANY_A, floorId: FLOOR_A, backgroundId: bg.id, polygon }),
+      polygons.map((vertices) =>
+        seedOverlay({
+          companyId: COMPANY_A,
+          floorId: FLOOR_A,
+          backgroundId: bg.id,
+          geometry: poly(...vertices),
+        }),
       ),
     );
 
@@ -523,6 +527,7 @@ describe('CalibrationRemapService.applyCalibration — atomic remap', () => {
     });
 
     expect(result.overlaysRemapped).toBe(3);
+    expect(result.overlaysSkipped).toBe(0);
     expect(result.atomicWithBackground).toBe(true);
 
     const reread = await FloorplanBackgroundService.getById(bg.id, COMPANY_A);
@@ -536,7 +541,7 @@ describe('CalibrationRemapService.applyCalibration — atomic remap', () => {
     const db = getAdminApp().firestore();
     for (let i = 0; i < overlayIds.length; i += 1) {
       const snap = await db.collection(COLLECTIONS.FLOORPLAN_OVERLAYS).doc(overlayIds[i]).get();
-      const remapped = snap.data()?.polygon as Point2D[];
+      const remapped = readVertices(snap.data()?.geometry);
       expect(remapped).toHaveLength(polygons[i].length);
       // newTransform = scale 2 + translate (100, -50). For a vertex v, world = v.
       // After remap: vertex_new such that newT(vertex_new) = v.
@@ -568,21 +573,21 @@ describe('CalibrationRemapService.applyCalibration — atomic remap', () => {
       companyId: COMPANY_A,
       floorId: FLOOR_A,
       backgroundId: otherBgId,
-      polygon: [{ x: 7, y: 7 }],
+      geometry: poly({ x: 7, y: 7 }),
     });
     // Other tenant, same backgroundId by chance → must NOT be remapped.
     const crossTenant = await seedOverlay({
       companyId: COMPANY_B,
       floorId: FLOOR_A,
       backgroundId: bg.id,
-      polygon: [{ x: 9, y: 9 }],
+      geometry: poly({ x: 9, y: 9 }),
     });
     // Target overlay.
     const target = await seedOverlay({
       companyId: COMPANY_A,
       floorId: FLOOR_A,
       backgroundId: bg.id,
-      polygon: [{ x: 4, y: 4 }],
+      geometry: poly({ x: 4, y: 4 }),
     });
 
     await CalibrationRemapService.applyCalibration({
@@ -605,14 +610,87 @@ describe('CalibrationRemapService.applyCalibration — atomic remap', () => {
 
     const db = getAdminApp().firestore();
     const untouchedDoc = await db.collection(COLLECTIONS.FLOORPLAN_OVERLAYS).doc(untouched).get();
-    expect(untouchedDoc.data()?.polygon).toEqual([{ x: 7, y: 7 }]);
+    expect(readVertices(untouchedDoc.data()?.geometry)).toEqual([{ x: 7, y: 7 }]);
 
     const crossDoc = await db.collection(COLLECTIONS.FLOORPLAN_OVERLAYS).doc(crossTenant).get();
-    expect(crossDoc.data()?.polygon).toEqual([{ x: 9, y: 9 }]);
+    expect(readVertices(crossDoc.data()?.geometry)).toEqual([{ x: 9, y: 9 }]);
 
     const targetDoc = await db.collection(COLLECTIONS.FLOORPLAN_OVERLAYS).doc(target).get();
-    const remappedTarget = targetDoc.data()?.polygon as Point2D[];
+    const remappedTarget = readVertices(targetDoc.data()?.geometry);
     // newT scales by 2 → remapped = (4/2, 4/2) = (2, 2).
     expect(approxPoint(remappedTarget[0], { x: 2, y: 2 })).toBe(true);
+  });
+
+  // Regression anchor: `overlaysRemapped` used to return the number of docs
+  // MATCHED rather than REWRITTEN. A doc with no usable `geometry` is skipped,
+  // yet the result still claimed it had been remapped — so a suite whose seed
+  // wrote the wrong field reported full success while writing nothing at all.
+  // Skipped docs must be counted separately and never inflate the remap count.
+  it('counts docs it actually rewrote — malformed geometry is reported as skipped', async () => {
+    const { FloorplanBackgroundService, CalibrationRemapService } = await loadServices();
+
+    const bg = await FloorplanBackgroundService.create({
+      companyId: COMPANY_A,
+      floorId: FLOOR_A,
+      fileId: 'file_malformed',
+      providerId: 'image',
+      providerMetadata: META_IMG,
+      naturalBounds: NATURAL_BOUNDS,
+      createdBy: ACTOR,
+    });
+
+    const good = await seedOverlay({
+      companyId: COMPANY_A,
+      floorId: FLOOR_A,
+      backgroundId: bg.id,
+      geometry: poly({ x: 8, y: 8 }),
+    });
+
+    // Doc carrying no `geometry` at all — the service cannot remap it.
+    const db = getAdminApp().firestore();
+    const brokenRef = db.collection(COLLECTIONS.FLOORPLAN_OVERLAYS).doc();
+    await brokenRef.set({
+      id: brokenRef.id,
+      companyId: COMPANY_A,
+      floorId: FLOOR_A,
+      backgroundId: bg.id,
+      role: 'auxiliary',
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      createdBy: ACTOR,
+    });
+
+    const result = await CalibrationRemapService.applyCalibration({
+      companyId: COMPANY_A,
+      backgroundId: bg.id,
+      oldTransform: IDENTITY,
+      newTransform: { ...IDENTITY, scaleX: 2, scaleY: 2 },
+      calibration: {
+        method: 'two-point',
+        pointA: { x: 0, y: 0 },
+        pointB: { x: 1, y: 0 },
+        realDistance: 2,
+        unit: 'mm',
+        rotationDerived: false,
+        calibratedAt: Date.now(),
+        calibratedBy: ACTOR,
+      },
+      updatedBy: ACTOR,
+    });
+
+    // 2 docs matched, only 1 was rewritable.
+    expect(result.overlaysRemapped).toBe(1);
+    expect(result.overlaysSkipped).toBe(1);
+
+    const goodDoc = await db.collection(COLLECTIONS.FLOORPLAN_OVERLAYS).doc(good).get();
+    expect(approxPoint(readVertices(goodDoc.data()?.geometry)[0], { x: 4, y: 4 })).toBe(true);
+
+    // The unrewritable doc is left alone — never silently zeroed.
+    const brokenDoc = await brokenRef.get();
+    expect(brokenDoc.data()?.geometry).toBeUndefined();
+
+    // The calibration itself still lands on the background.
+    const reread = await FloorplanBackgroundService.getById(bg.id, COMPANY_A);
+    expect(reread?.transform.scaleX).toBe(2);
   });
 });

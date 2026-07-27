@@ -58,7 +58,14 @@ export interface RemapInput {
 }
 
 export interface RemapResult {
+  /** Overlays whose geometry was actually rewritten. Excludes skipped docs. */
   overlaysRemapped: number;
+  /**
+   * Overlays matched by the query but skipped because their `geometry` was
+   * missing or malformed. Non-zero means data the calibration did NOT move —
+   * those polygons now sit at the wrong real-world position.
+   */
+  overlaysSkipped: number;
   atomicWithBackground: boolean;
 }
 
@@ -277,6 +284,35 @@ function readPolygon(raw: unknown): Point2D[] {
   return raw.filter(isPoint) as Point2D[];
 }
 
+/** Το batch και το doc του Admin SDK, παράγωγα από τον ΗΔΗ εισαγόμενο `Firestore`. */
+type WriteBatch = ReturnType<Firestore['batch']>;
+type OverlayDoc = Awaited<ReturnType<ReturnType<Firestore['collection']>['get']>>['docs'][number];
+
+/**
+ * Βάζει στην ουρά ενός batch τις ενημερώσεις γεωμετρίας για ένα σύνολο overlay docs.
+ *
+ * N.18 — ο ίδιος βρόχος ζούσε δύο φορές: μία στον ατομικό κλάδο (≤500 overlays, ένα
+ * batch μαζί με το background doc) και μία στον τμηματικό. Οι δύο κλάδοι διαφέρουν
+ * **μόνο** στο πώς δεσμεύονται τα batches — όχι στο τι γράφεται σε κάθε overlay.
+ *
+ * @returns πόσα ΟΝΤΩΣ μπήκαν στην ουρά· τα malformed προσπερνιούνται και είναι η
+ *          διαφορά που γίνεται `overlaysSkipped` (ΔΕΝ μετακινήθηκαν στον κόσμο).
+ */
+function queueGeometryRemap(
+  batch: WriteBatch, docs: readonly OverlayDoc[], input: RemapInput, now: number,
+): number {
+  let queued = 0;
+  for (const doc of docs) {
+    const remappedGeometry = remapGeometry(
+      doc.data().geometry, input.oldTransform, input.newTransform,
+    );
+    if (!remappedGeometry) continue;
+    batch.update(doc.ref, { geometry: remappedGeometry, updatedAt: now });
+    queued += 1;
+  }
+  return queued;
+}
+
 // ============================================================================
 // SERVICE
 // ============================================================================
@@ -298,19 +334,11 @@ export class CalibrationRemapService {
       const overlayDocs = overlaysSnap.docs;
       const atomicWithBackground = overlayDocs.length <= ATOMIC_LIMIT;
       const now = Date.now();
+      let overlaysRemapped = 0;
 
       if (atomicWithBackground) {
         const batch = db.batch();
-        for (const doc of overlayDocs) {
-          const data = doc.data();
-          const remappedGeometry = remapGeometry(
-            data.geometry,
-            input.oldTransform,
-            input.newTransform,
-          );
-          if (!remappedGeometry) continue;
-          batch.update(doc.ref, { geometry: remappedGeometry, updatedAt: now });
-        }
+        overlaysRemapped += queueGeometryRemap(batch, overlayDocs, input, now);
         batch.update(backgroundRef(input.backgroundId), {
           transform: input.newTransform,
           calibration: input.calibration,
@@ -323,16 +351,7 @@ export class CalibrationRemapService {
         for (let i = 0; i < overlayDocs.length; i += CHUNK) {
           const chunk = overlayDocs.slice(i, i + CHUNK);
           const batch = db.batch();
-          for (const doc of chunk) {
-            const data = doc.data();
-            const remappedGeometry = remapGeometry(
-              data.geometry,
-              input.oldTransform,
-              input.newTransform,
-            );
-            if (!remappedGeometry) continue;
-            batch.update(doc.ref, { geometry: remappedGeometry, updatedAt: now });
-          }
+          overlaysRemapped += queueGeometryRemap(batch, chunk, input, now);
           await batch.commit();
         }
         await backgroundRef(input.backgroundId).update({
@@ -344,9 +363,18 @@ export class CalibrationRemapService {
       }
 
       const result: RemapResult = {
-        overlaysRemapped: overlayDocs.length,
+        overlaysRemapped,
+        overlaysSkipped: overlayDocs.length - overlaysRemapped,
         atomicWithBackground,
       };
+      if (result.overlaysSkipped > 0) {
+        logger.warn('Calibration remap skipped overlays with malformed geometry', {
+          companyId: input.companyId,
+          backgroundId: input.backgroundId,
+          skipped: result.overlaysSkipped,
+          matched: overlayDocs.length,
+        });
+      }
       logger.info('Calibration remap complete', {
         companyId: input.companyId,
         backgroundId: input.backgroundId,

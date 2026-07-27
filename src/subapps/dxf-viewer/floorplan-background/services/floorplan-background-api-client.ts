@@ -46,7 +46,13 @@ export interface PatchResponse {
 }
 
 export interface PatchCalibrationResponse extends PatchResponse {
-  remap: { overlaysRemapped: number; atomicWithBackground: boolean };
+  /** Mirrors `RemapResult` from the server-only calibration-remap service. */
+  remap: {
+    overlaysRemapped: number;
+    /** >0 ⇒ overlays with malformed geometry were left at stale positions. */
+    overlaysSkipped: number;
+    atomicWithBackground: boolean;
+  };
 }
 
 export interface DeleteResponse {
