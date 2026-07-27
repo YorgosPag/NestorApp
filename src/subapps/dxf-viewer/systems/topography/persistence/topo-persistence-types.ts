@@ -25,6 +25,7 @@ import type {
 } from '../topo-types';
 import type { ContourConfig, ContourDisplayStyle } from '../contour-config';
 import { DEFAULT_CONTOUR_CONFIG, DEFAULT_CONTOUR_DISPLAY_STYLE } from '../contour-config';
+import type { TopoBakedFrames } from '../topo-baked-frame-store';
 
 /** The two named surfaces a floor owns (Civil 3D collection): surveyed vs designed ground. */
 export type TopoSurfacesDefinition = Readonly<Record<TopoSurfaceId, TopoDefinition>>;
@@ -52,6 +53,12 @@ export interface TopoPersistedState {
   readonly contourDisplayStyle: ContourDisplayStyle;
   readonly terrain3d: TopoTerrain3DPrefs;
   readonly cutFill: TopoCutFillPrefs;
+  /**
+   * ADR-650 §M10g — σε ποιο πλαίσιο συντεταγμένων ψήθηκε κάθε ομάδα ψημένων προϊόντων
+   * (κάναβος / ετικέτες / βορράς), ανά επίπεδο. **Απούσα ή άδεια ⇒ legacy**: ο reconciler
+   * δεν μαντεύει πλαίσιο, δεν μετακινεί, και σημαδεύει την ομάδα για ξανα-ψήσιμο.
+   */
+  readonly bakedFrames: TopoBakedFrames;
 }
 
 /**
@@ -74,6 +81,8 @@ export interface TopoSurfaceDoc {
   readonly contourDisplayStyle: ContourDisplayStyle;
   readonly terrain3d: TopoTerrain3DPrefs;
   readonly cutFill: TopoCutFillPrefs;
+  /** ADR-650 §M10g — σφραγίδες πλαισίου ανά επίπεδο/ομάδα. Απούσα σε legacy έγγραφα. */
+  readonly bakedFrames?: TopoBakedFrames;
   /** Monotonic counter — informational (last-write-wins v1). */
   readonly version: number;
   readonly createdAt: Timestamp;
@@ -110,6 +119,7 @@ export function topoStateSignature(state: TopoPersistedState): string {
     contourDisplayStyle: state.contourDisplayStyle,
     terrain3d: state.terrain3d,
     cutFill: state.cutFill,
+    bakedFrames: state.bakedFrames,
   });
 }
 
@@ -137,6 +147,7 @@ export function topoSettingsDocFields(state: TopoPersistedState): {
   contourDisplayStyle: ContourDisplayStyle;
   terrain3d: TopoTerrain3DPrefs;
   cutFill: TopoCutFillPrefs;
+  bakedFrames: TopoBakedFrames;
 } {
   return {
     boundary: state.boundary,
@@ -144,6 +155,9 @@ export function topoSettingsDocFields(state: TopoPersistedState): {
     contourDisplayStyle: state.contourDisplayStyle,
     terrain3d: state.terrain3d,
     cutFill: state.cutFill,
+    // ADR-650 §M10g — γράφεται από την ΙΔΙΑ συνάρτηση με τα υπόλοιπα settings, ώστε create και
+    // update να μη μπορούν να αποκλίνουν (ένα σπίτι για το «τι πάει στο έγγραφο»).
+    bakedFrames: state.bakedFrames,
   };
 }
 
@@ -161,6 +175,9 @@ export function docToTopoState(doc: TopoSurfaceDoc): TopoPersistedState {
     contourDisplayStyle: doc.contourDisplayStyle ?? DEFAULT_CONTOUR_DISPLAY_STYLE,
     terrain3d: doc.terrain3d ?? { visible: false, style: 'shaded' },
     cutFill: doc.cutFill ?? { mode: 'datum', datumZMm: 0 },
+    // ADR-650 §M10g — legacy έγγραφο: **καμία** σφραγίδα. Το `{}` δεν είναι «όλα εντάξει»,
+    // είναι «δεν ξέρω» — και ο reconciler το διαβάζει έτσι (fail-closed).
+    bakedFrames: doc.bakedFrames ?? {},
   };
 }
 

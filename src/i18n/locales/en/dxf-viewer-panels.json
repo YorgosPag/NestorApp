@@ -1399,6 +1399,16 @@
         "allowed": "Tolerance",
         "result": "Result"
       }
+    },
+    "frame": {
+      "title": "Baked products in an unknown frame",
+      "unstamped": "These were baked before the coordinate frame was recorded, so they were NOT moved with the new geo-reference: {groups}. Delete and bake them again to seat them on the drawing.",
+      "unsupported": "These contain an entity type that does not support rotation, so they were left intact in the old frame: {groups}. Delete and bake them again.",
+      "group": {
+        "grid": "ΕΓΣΑ87 grid",
+        "pointLabels": "point labels",
+        "north": "north arrow"
+      }
     }
   }
 }

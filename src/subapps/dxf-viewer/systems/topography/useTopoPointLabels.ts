@@ -12,7 +12,7 @@
 
 import { useCallback } from 'react';
 import { useLevels } from '../levels';
-import { completeEntities } from '../../hooks/drawing/completeEntity';
+import { commitBakedTopoEntities } from './topo-bake-commit';
 import { getTopoPoints, getTopoBoundary } from './TopoPointStore';
 import { getTopoSurface } from './topo-surface';
 import { createTinSampler } from './tin-sampler';
@@ -62,7 +62,10 @@ export function useTopoPointLabels(): UseTopoPointLabels {
         points, boundary?.vertices ?? null, sampler, layers, opts, getTopoDisplayProjector(),
       );
 
-      completeEntities(entities as Entity[], {
+      // ADR-650 §M10g — η ΜΙΑ ραφή: εγγραφή σκηνής + σφραγίδα πλαισίου, αδιαχώριστα.
+      commitBakedTopoEntities({
+        entities: entities as Entity[],
+        group: 'pointLabels',
         tool: 'topo-point-labels',
         levelId,
         getScene: getLevelScene,

@@ -10,7 +10,7 @@
 
 import { useCallback } from 'react';
 import { useLevels } from '../levels';
-import { completeEntities } from '../../hooks/drawing/completeEntity';
+import { commitBakedTopoEntities } from './topo-bake-commit';
 import { getTopoPoints } from './TopoPointStore';
 import { getGeoReference, getActiveWorldToDisplayProjector } from '../geo-referencing/geo-reference-store';
 import { northAngleDeg, surveyCentroidEN } from './north-arrow-model';
@@ -71,7 +71,12 @@ export function useNorthArrow(): UseNorthArrow {
       }
 
       const entities = buildNorthArrowEntities(anchor, angle, layerId);
-      completeEntities(entities as Entity[], {
+      // ADR-650 §M10g — η ΜΙΑ ραφή: εγγραφή σκηνής + σφραγίδα πλαισίου. Χάρη σε αυτήν, ένας
+      // βορράς που ο χρήστης μετακίνησε στη γωνιά του φύλλου **ακολουθεί** την επόμενη αλλαγή
+      // γεωαναφοράς με delta, αντί να ξαναγεννηθεί στη θέση-άγκιστρο.
+      commitBakedTopoEntities({
+        entities: entities as Entity[],
+        group: 'north',
         tool: 'topo-north',
         levelId,
         getScene: getLevelScene,

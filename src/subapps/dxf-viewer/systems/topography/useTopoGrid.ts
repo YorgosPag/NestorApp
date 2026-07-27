@@ -13,7 +13,7 @@
 
 import { useCallback } from 'react';
 import { useLevels } from '../levels';
-import { completeEntities } from '../../hooks/drawing/completeEntity';
+import { commitBakedTopoEntities } from './topo-bake-commit';
 import { realDistanceToModelMm } from '../../utils/scene-units';
 import { getTopoPoints } from './TopoPointStore';
 import { buildTopoGrid, type WorldRectMm } from './topo-grid-model';
@@ -69,7 +69,11 @@ export function useTopoGrid(): UseTopoGrid {
       // ADR-650 §M10f — ο κάναβος υπολογίζεται σε ΕΓΣΑ (εκεί ζουν οι στρογγυλές τιμές) και
       // κάθεται στο σχέδιο προβαλλόμενος· οι ΤΙΜΕΣ των ετικετών μένουν ΕΓΣΑ.
       const entities = buildTopoGridEntities(grid, layerId, getTopoDisplayProjector());
-      completeEntities(entities as Entity[], {
+      // ADR-650 §M10g — η ΜΙΑ ραφή: γράφει τη σκηνή ΚΑΙ σφραγίζει το πλαίσιο του ψησίματος,
+      // ώστε ο reconciler να ξέρει αργότερα από πού να μετακινήσει τον κάναβο.
+      commitBakedTopoEntities({
+        entities: entities as Entity[],
+        group: 'grid',
         tool: 'topo-grid',
         levelId,
         getScene: getLevelScene,

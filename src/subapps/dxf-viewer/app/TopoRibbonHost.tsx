@@ -36,6 +36,8 @@ import { useNorthArrow } from '../systems/topography/useNorthArrow';
 import { useTopoPointLabels } from '../systems/topography/useTopoPointLabels';
 import { useTopoSurfaceEntity } from '../systems/topography/useTopoSurfaceEntity';
 import { TopoGeoReferenceSection } from '../ui/panels/topography/TopoGeoReferenceSection';
+// ADR-650 §M10g — το ορατό μισό του fail-closed: ψημένα προϊόντα άγνωστου πλαισίου.
+import { TopoFrameNotice } from '../ui/panels/topography/TopoFrameNotice';
 import { TopoDeliverablesSection } from '../ui/panels/topography/TopoDeliverablesSection';
 import { TopoImportWizard } from '../ui/panels/topography/TopoImportWizard';
 // ADR-662 Φ4 — τα review sections αποσύρθηκαν από το αριστερό panel → εδώ.
@@ -104,6 +106,7 @@ export function TopoRibbonHost(): React.JSX.Element {
           <DialogHeader>
             <DialogTitle>{t('ribbon.commands.topo.geoRef.dialogTitle')}</DialogTitle>
           </DialogHeader>
+          <TopoFrameNotice />
           <TopoGeoReferenceSection />
         </DialogContent>
       </Dialog>

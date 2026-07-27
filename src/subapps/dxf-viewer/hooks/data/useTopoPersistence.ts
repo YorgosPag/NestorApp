@@ -3,8 +3,9 @@
 /**
  * ADR-650 — Topographic surface-definition Firestore persistence React adapter.
  *
- * Bridges `TopoSurfaceFirestoreService` to the five topo stores (survey / contour
- * config / contour display / 3D / cut-fill). SITE-level (one terrain per project)
+ * Bridges `TopoSurfaceFirestoreService` to the six topo stores (survey / contour
+ * config / contour display / 3D / cut-fill / ADR-650 §M10g baked-frame stamps).
+ * SITE-level (one terrain per project)
  * model — the terrain is an `IfcSite` object visible on every storey, NOT per-floor:
  *   - **Load**: subscribe on `projectId` → hydrate (apply state to stores →
  *     REGENERATE contours onto the active level).
@@ -38,13 +39,14 @@ import {
   type TopoSurfaceDoc, type TopoPersistedState,
 } from '../../systems/topography/persistence/topo-persistence-types';
 import { collectTopoState, applyTopoState } from '../../systems/topography/persistence/topo-state-io';
-import { regenerateTopoContours } from '../../systems/topography/persistence/regenerate-topo';
+import { reconcileTopoFrame } from '../../systems/topography/persistence/topo-frame-reconcile';
 import { subscribeTopo, getTopoState } from '../../systems/topography/TopoPointStore';
 import { subscribeGeoReference } from '../../systems/geo-referencing/geo-reference-store';
 import { subscribeContourConfig } from '../../systems/topography/contour-config-store';
 import { subscribeContourDisplay } from '../../systems/topography/contour-display-store';
 import { subscribeTerrain3D } from '../../systems/topography/terrain-3d-store';
 import { subscribeCutFill } from '../../systems/topography/cut-fill-store';
+import { subscribeBakedFrames } from '../../systems/topography/topo-baked-frame-store';
 
 export type TopoSaveState = 'idle' | 'saving' | 'saved' | 'error';
 
@@ -74,6 +76,7 @@ const EMPTY_TOPO_STATE: TopoPersistedState = {
   contourDisplayStyle: 'exact',
   terrain3d: { visible: false, style: 'shaded' },
   cutFill: { mode: 'datum', datumZMm: 0 },
+  bakedFrames: {},
 };
 
 export function useTopoPersistence(params: UseTopoPersistenceParams): UseTopoPersistenceResult {
@@ -135,7 +138,9 @@ export function useTopoPersistence(params: UseTopoPersistenceParams): UseTopoPer
     versionRef.current = version;
     lastSavedSigRef.current = sig;
     suppressSaveRef.current = false;
-    regenerateTopoContours({ getScene: getLevelScene, commitScene, levelId: levelIdRef.current });
+    // ADR-650 §M10g — φόρτωση: ξαναχτίζει τα παράγωγα ΚΑΙ συμφιλιώνει τα ψημένα προϊόντα με
+    // το ενεργό πλαίσιο (η σφραγίδα μόλις αποκαταστάθηκε από το `applyTopoState`).
+    reconcileTopoFrame({ getScene: getLevelScene, commitScene, levelId: levelIdRef.current });
   }, [getLevelScene, commitScene]);
 
   // Hydrate from a Firestore doc (reads the offloaded blob when present).
@@ -201,19 +206,22 @@ export function useTopoPersistence(params: UseTopoPersistenceParams): UseTopoPer
       console.info('[TOPO-DIAG] effectC SKIP', { levelId, hasScope: !!scopeKey, sceneLoading, pts });
       return;
     }
-    const n = regenerateTopoContours({ getScene: getLevelScene, commitScene, levelId });
+    // ADR-650 §M10g — κάθε επίπεδο συμφιλιώνεται ΟΤΑΝ το επισκεφθείς: οι σφραγίδες είναι ανά
+    // επίπεδο, οπότε ψημένα προϊόντα σε άλλον όροφο δεν μένουν ποτέ σιωπηλά στο παλιό πλαίσιο.
+    const outcome = reconcileTopoFrame({ getScene: getLevelScene, commitScene, levelId });
     // eslint-disable-next-line no-console
-    console.info('[TOPO-DIAG] effectC RAN', { levelId, pts, contours: n });
+    console.info('[TOPO-DIAG] effectC RAN', { levelId, pts, contours: outcome.derivedCount });
   }, [levelId, sceneLoading, scopeKey, getLevelScene, commitScene]);
 
-  // ADR-650 M10 geo-referencing — when the active geo-reference changes (auto-align or
-  // manual common-point pick), re-project the terrain onto the current level so the
-  // contours «κουμπώνουν» live on the plan. Silent (`system-reconcile`) + idempotent
-  // (regenerate clears stale contours first), same as the level-switch effect above.
+  // ADR-650 M10/§M10g geo-referencing — όταν αλλάζει το ενεργό πλαίσιο (auto-align ή
+  // χειροκίνητο κοινό σημείο), ο ΕΝΑΣ reconciler αναλαμβάνει και τις δύο κατηγορίες:
+  // ξαναχτίζει τα παράγωγα (ισοϋψείς + footprint) και μετακινεί με **delta** τα ψημένα
+  // (κάναβος / ετικέτες / βορράς) — ώστε ο βορράς που μετακίνησε ο χρήστης να ΑΚΟΛΟΥΘΕΙ
+  // αντί να αναγεννηθεί στη θέση-άγκιστρο. Silent (`system-reconcile`) + idempotent.
   useEffect(() => {
     return subscribeGeoReference(() => {
       if (sceneLoading) return;
-      regenerateTopoContours({ getScene: getLevelScene, commitScene, levelId: levelIdRef.current });
+      reconcileTopoFrame({ getScene: getLevelScene, commitScene, levelId: levelIdRef.current });
     });
   }, [sceneLoading, getLevelScene, commitScene]);
 
@@ -260,6 +268,10 @@ export function useTopoPersistence(params: UseTopoPersistenceParams): UseTopoPer
       subscribeContourDisplay(scheduleSave),
       subscribeTerrain3D(scheduleSave),
       subscribeCutFill(scheduleSave),
+      // ADR-650 §M10g — το ψήσιμο και ο reconciler γράφουν σφραγίδα· χωρίς αυτή τη συνδρομή η
+      // σφραγίδα θα ζούσε μόνο στη μνήμη και το επόμενο reload θα έβλεπε «legacy» (fail-closed)
+      // ένα προϊόν που μόλις ψήθηκε σωστά.
+      subscribeBakedFrames(scheduleSave),
     ];
     return () => {
       for (const u of unsubs) u();

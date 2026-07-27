@@ -30,6 +30,22 @@ import type { Point2D, BoundingBox } from '../rendering/types/Types';
 export const WORLD_ORIGIN: Readonly<Point2D> = Object.freeze({ x: 0, y: 0 });
 
 /**
+ * 🌐 SCENE_COORD_BAND_MM — η ζώνη μέσα στην οποία ΟΦΕΙΛΕΙ να κάθεται η γεωμετρία της σκηνής
+ * (ADR-635 · ADR-650 §M10f/§M10g).
+ *
+ * Η σκηνή ζει σε **τοπικές** συντεταγμένες γύρω από το 0 (Revit: Internal Origin· Cesium:
+ * `CESIUM_RTC`). Οντότητα με συντεταγμένη έξω από ±1e6 mm (=1 χλμ.) είναι πρακτικά **χαμένη**:
+ * κόβεται από το viewport culling, δεν επιλέγεται, και ο χρήστης βλέπει «δεν έγινε τίποτα».
+ * Αυτό ακριβώς συνέβαινε όταν ένας τοπογραφικός παραγωγός ξεχνούσε τη γέφυρα WORLD→DISPLAY και
+ * έγραφε ωμές ΕΓΣΑ'87 τιμές (4·10⁸ mm) μέσα στη σκηνή.
+ *
+ * Χρήσεις: η dev assertion στη ραφή του ψησίματος (`topo-bake-commit`) και το παραμετρικό
+ * anchor των παραγωγών (`topo-display-frame.test`). ⚠️ Δεν είναι κατώφλι που «χαλαρώνει» για
+ * να γίνει κάτι πράσινο — είναι η διάγνωση ότι λείπει προβολή.
+ */
+export const SCENE_COORD_BAND_MM = 1e6;
+
+/**
  * 📊 ZERO_VECTOR - Generic zero point (immutable)
  *
  * Use for:

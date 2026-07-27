@@ -4790,6 +4790,30 @@
       "allowlist": [
         "src/subapps/dxf-viewer/core/spatial/PointHashGrid.ts"
       ]
+    },
+    "project-coordinate-frame": {
+      "ssotFile": "src/subapps/dxf-viewer/systems/geo-referencing/project-frame.ts",
+      "description": "ADR-650 M10g - project coordinate FRAME identity + delta SSoT: stampOfGeoReference / geoReferenceOfStamp / isSameFrame / isValidFrameStamp / frameDelta. The frame a baked topo product was baked in is DATA, never an assumption; the old->new delta is composed from the geo-transform RigidMap kernel (zero new trigonometry). A second implementation would move baked geometry to the wrong place silently.",
+      "forbiddenPatterns": [
+        "export\\s+(function|const)\\s+(frameDelta|stampOfGeoReference|geoReferenceOfStamp|isSameFrame|isValidFrameStamp)\\b"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/systems/geo-referencing/project-frame.ts"
+      ],
+      "tier": 3
+    },
+    "topo-baked-frame-stamp": {
+      "ssotFile": "src/subapps/dxf-viewer/systems/topography/topo-baked-frame-store.ts",
+      "description": "ADR-650 M10g - where the baked-frame stamp lives (per levelId, per baked group) plus the ONE bake seam that writes it (topo-bake-commit.commitBakedTopoEntities). A producer that writes a stamp on its own, or a second reconciler that moves baked topo products, reopens the M10f error class: the fourth producer is born without it.",
+      "forbiddenPatterns": [
+        "export\\s+(function|const)\\s+(setBakedFrame|getBakedFrame|restoreBakedFrames|commitBakedTopoEntities|reconcileBakedFramesInScene)\\b"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/systems/topography/topo-baked-frame-store.ts",
+        "src/subapps/dxf-viewer/systems/topography/topo-bake-commit.ts",
+        "src/subapps/dxf-viewer/systems/topography/persistence/topo-frame-reconcile.ts"
+      ],
+      "tier": 3
     }
   }
 }

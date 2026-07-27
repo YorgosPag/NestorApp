@@ -27,6 +27,7 @@ import {
   projectWorldRings, unprojectRectToWorld,
 } from '../topo-display-frame';
 import { makeWorldToDisplayProjector, type WorldToDisplayProjector } from '../../geo-referencing/geo-transform';
+import { SCENE_COORD_BAND_MM } from '../../../config/geometry-constants';
 import { getGeoReference, setGeoReference } from '../../geo-referencing/geo-reference-store';
 import type { Point2D } from '../../../rendering/types/Types';
 import type { ContourLine, TopoPoint } from '../topo-types';
@@ -37,8 +38,12 @@ const ORIGIN_WORLD = { x: 407_565_290, y: 4_502_055_670 }; // mm — «Ενερ�
 const GEO = { originWorld: ORIGIN_WORLD, rotationDeg: 0 };
 const GEO_ROTATED = { originWorld: ORIGIN_WORLD, rotationDeg: 17.5 };
 
-/** Η ζώνη της σκηνής (ADR-635): έξω από ±1e6 mm η οντότητα κόβεται και ο χρήστης δεν βλέπει τίποτα. */
-const SCENE_BAND_MM = 1e6;
+/**
+ * Η ζώνη της σκηνής (ADR-635): έξω από ±1e6 mm η οντότητα κόβεται και ο χρήστης δεν βλέπει
+ * τίποτα. ADR-650 §M10g — η σταθερά κεντρικοποιήθηκε (`config/geometry-constants`), ώστε το
+ * anchor και η dev assertion της ραφής του ψησίματος να μιλούν για το ΙΔΙΟ όριο.
+ */
+const SCENE_BAND_MM = SCENE_COORD_BAND_MM;
 
 const WORLD_A: Point2D = { x: 407_723_104, y: 4_502_396_120 }; // η ισοϋψής του screenshot
 const WORLD_B: Point2D = { x: 407_680_000, y: 4_502_300_000 };

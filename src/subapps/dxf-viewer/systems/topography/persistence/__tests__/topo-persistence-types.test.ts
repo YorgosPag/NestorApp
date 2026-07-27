@@ -25,6 +25,7 @@ function baseState(overrides: Partial<TopoPersistedState> = {}): TopoPersistedSt
     contourDisplayStyle: 'exact',
     terrain3d: { visible: false, style: 'shaded' },
     cutFill: { mode: 'datum', datumZMm: 0 },
+    bakedFrames: {},
     ...overrides,
   };
 }
@@ -95,6 +96,9 @@ describe('topo-persistence-types', () => {
       expect(state.contourDisplayStyle).toBe('exact');
       expect(state.terrain3d).toEqual({ visible: false, style: 'shaded' });
       expect(state.cutFill).toEqual({ mode: 'datum', datumZMm: 0 });
+      // ADR-650 §M10g — legacy έγγραφο: ΚΑΜΙΑ σφραγίδα. Το `{}` σημαίνει «δεν ξέρω σε ποιο
+      // πλαίσιο ψήθηκαν», όχι «όλα εντάξει» — ο reconciler θα το διαβάσει ως fail-closed.
+      expect(state.bakedFrames).toEqual({});
     });
 
     it('an offloaded doc yields empty surfaces until the blob is merged via withSurfaces', () => {
