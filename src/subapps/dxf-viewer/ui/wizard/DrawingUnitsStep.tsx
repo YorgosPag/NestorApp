@@ -72,7 +72,7 @@ export function DrawingUnitsStep() {
             <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.warning} mt-0.5`}>
               {t('drawingUnits.mismatch.body', {
                 declared: suggestion.declared ?? '—',
-                suggested: suggestion.suggested,
+                suggested: suggestion.units,
               })}
             </p>
           </div>
@@ -110,7 +110,7 @@ export function DrawingUnitsStep() {
                         {t('drawingUnits.recommended')}
                       </span>
                     )}
-                    {suggestion?.mismatch && suggestion.suggested === opt.value && (
+                    {suggestion?.mismatch && suggestion.units === opt.value && (
                       <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.warningSubtle} ${colors.text.warning} px-1.5 py-0.5 rounded flex items-center gap-1`}>
                         <Wand2 className="w-3 h-3" />
                         {t('drawingUnits.mismatch.badge')}

@@ -9,7 +9,9 @@
 
 import { Ruler } from 'lucide-react';
 import type { SceneUnits } from '@/subapps/dxf-viewer/utils/scene-units';
+import type { UnitDecision } from '@/subapps/dxf-viewer/utils/import-unit-decision';
 import type { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { UnitEvidenceReadout } from './UnitEvidenceReadout';
 
 interface TFn { (key: string, options?: Record<string, unknown>): string; }
 
@@ -27,9 +29,15 @@ export interface DxfUnitsSelectorProps {
   onChange: (v: SceneUnits | 'auto') => void;
   colors: ReturnType<typeof useSemanticColors>;
   t: TFn;
+  /**
+   * ADR-716 §8.1 — the verdict + evidence for the file currently in hand (null until a file
+   * is picked, or when it carries no readable header). Rendered under the pills so the unit
+   * is a VISIBLE decision, never a silent assumption.
+   */
+  decision?: UnitDecision | null;
 }
 
-export function DxfUnitsSelector({ value, onChange, colors, t }: DxfUnitsSelectorProps) {
+export function DxfUnitsSelector({ value, onChange, colors, t, decision }: DxfUnitsSelectorProps) {
   return (
     <fieldset className="rounded-md border border-border p-3 space-y-2">
       <legend className={`flex items-center gap-1.5 px-1 text-xs font-medium ${colors.text.secondary}`}>
@@ -57,6 +65,7 @@ export function DxfUnitsSelector({ value, onChange, colors, t }: DxfUnitsSelecto
           );
         })}
       </div>
+      <UnitEvidenceReadout decision={decision} colors={colors} t={t} />
       <p className={`text-xs ${colors.text.muted}`}>
         {t('floorplanImport.drawingUnits.hint')}
       </p>

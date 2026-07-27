@@ -1,21 +1,26 @@
 'use client';
 
 /**
- * ADR-362 Round 20 — import-wizard units sanity check.
+ * ADR-362 Round 20 / ADR-716 — import-wizard units verdict.
  *
  * Reads ONLY the DXF header (a small top-of-file slice — the `$HEADER` section, with
- * `$INSUNITS` + `$EXTMIN/$EXTMAX`, always sits at the very start) and returns what the
- * auto importer will pick versus what the file declares, so `DrawingUnitsStep` can warn
- * on a mismatch ("declares mm but looks like metres"). Reuses the SAME parser
- * (`DxfEntityParser.parseHeader`) and the SAME resolution SSoT
- * (`computeUnitSuggestion` → `resolveImportSourceUnits`) the real import path uses — no
- * parallel heuristic. Fully ADR-462-safe: it only MIRRORS the auto decision, never
- * overrides it.
+ * `$INSUNITS` + `$EXTMIN/$EXTMAX`, always sits at the very start) and returns the FULL
+ * unit decision the importer will make, **with its evidence** (ADR-716 §8): which rung of
+ * the ladder spoke, and how big the drawing comes out in metres.
+ *
+ * Reuses the SAME parser (`DxfEntityParser.parseHeader`) and the SAME resolution SSoT
+ * (`resolveImportSourceUnitsWithEvidence`) the real import path uses — no parallel
+ * heuristic, so what the screen shows IS what the importer executes, by construction.
+ * Fully ADR-462-safe: it only MIRRORS the decision, never overrides it.
  */
 
 import { useEffect, useState } from 'react';
 import { DxfEntityParser } from '../../utils/dxf-entity-parser';
-import { computeUnitSuggestion, type UnitSuggestion, type DetectionBounds } from '../../utils/scene-units';
+import type { DetectionBounds, SceneUnits } from '../../utils/scene-units';
+import {
+  resolveImportSourceUnitsWithEvidence,
+  type UnitDecision,
+} from '../../utils/import-unit-decision';
 
 // The header is tiny and top-of-file; a generous slice covers it without reading (or
 // decoding) a multi-MB entity section. Numeric header values are pure ASCII, so a plain
@@ -24,12 +29,20 @@ import { computeUnitSuggestion, type UnitSuggestion, type DetectionBounds } from
 // the slice, the extents are simply absent → no false warning (graceful degradation).
 const HEADER_SLICE_BYTES = 256 * 1024;
 
-export function useDxfUnitSuggestion(file: File | null | undefined): UnitSuggestion | null {
-  const [suggestion, setSuggestion] = useState<UnitSuggestion | null>(null);
+/**
+ * @param file          the DXF being imported (header slice is read; entities are not)
+ * @param unitsOverride the engineer's explicit pill choice, so the readout reflects what
+ *                      WILL happen — not what auto would have done and been overridden.
+ */
+export function useDxfUnitSuggestion(
+  file: File | null | undefined,
+  unitsOverride?: SceneUnits,
+): UnitDecision | null {
+  const [decision, setDecision] = useState<UnitDecision | null>(null);
 
   useEffect(() => {
     if (!file) {
-      setSuggestion(null);
+      setDecision(null);
       return;
     }
     let cancelled = false;
@@ -41,15 +54,17 @@ export function useDxfUnitSuggestion(file: File | null | undefined): UnitSuggest
         const header = DxfEntityParser.parseHeader(text.split('\n'));
         const declaredExtents: DetectionBounds | null =
           header.extmin && header.extmax ? { min: header.extmin, max: header.extmax } : null;
-        setSuggestion(computeUnitSuggestion(header.insunits, declaredExtents));
+        setDecision(
+          resolveImportSourceUnitsWithEvidence(header.insunits, declaredExtents, null, unitsOverride),
+        );
       })
       .catch(() => {
-        if (!cancelled) setSuggestion(null);
+        if (!cancelled) setDecision(null);
       });
     return () => {
       cancelled = true;
     };
-  }, [file]);
+  }, [file, unitsOverride]);
 
-  return suggestion;
+  return decision;
 }

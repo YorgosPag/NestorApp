@@ -24,6 +24,8 @@ import { CheckCircle2, AlertCircle, Loader2, Compass } from 'lucide-react';
 import type { SceneUnits } from '@/subapps/dxf-viewer/utils/scene-units';
 import { Button } from '@/components/ui/button';
 import { DxfUnitsSelector } from './DxfUnitsSelector';
+import { UnitEvidenceReadout } from './UnitEvidenceReadout';
+import { useDxfUnitSuggestion } from '@/subapps/dxf-viewer/hooks/common/useDxfUnitSuggestion';
 import { FileUploadZone } from '@/components/shared/files/FileUploadZone';
 import { CalibrateScaleDialog } from '@/components/shared/files/media/CalibrateScaleDialog';
 import { useBackgroundScale } from '@/hooks/useBackgroundScale';
@@ -186,6 +188,13 @@ export function StepUpload({ config, onComplete }: StepUploadProps) {
 
   // ── Confirm dialog state ──
   const [pendingFile, setPendingFile] = useState<File | null>(null);
+
+  // ADR-716 §8.1 — read the header of whichever DXF is in hand and surface the unit VERDICT
+  // with its evidence. Mirrors the importer's own ladder (same SSoT), so the engineer verifies
+  // «587 m × 488 m» with the eye instead of discovering a ×100 error three screens later.
+  const inspectedFile = pendingFile ?? uploadedFile;
+  const explicitUnits = selectedUnits !== 'auto' ? selectedUnits : undefined;
+  const unitDecision = useDxfUnitSuggestion(inspectedFile, explicitUnits);
   const hasBimContent =
     preview !== null && (preview.bimEntityCount > 0 || preview.boqItemCount > 0);
   const wipeRequired = preview !== null && (
@@ -275,6 +284,9 @@ export function StepUpload({ config, onComplete }: StepUploadProps) {
         <div className="flex flex-col items-center justify-center gap-3 py-12">
           <CheckCircle2 className={`${iconSizes.xl3} text-[hsl(var(--text-success))]`} />
           <p className="text-sm font-medium">{t('floorplanImport.success')}</p>
+          {/* ADR-716 §8.1 — the unit verdict stays on screen AFTER the import too: this is the
+              moment the engineer can still catch a ×100 before building on top of it. */}
+          <UnitEvidenceReadout decision={unitDecision} colors={colors} t={t} />
           {showCalibratePrompt && (
             <section className="mt-4 flex flex-col items-center gap-2 rounded-md border border-border bg-muted/30 px-4 py-3 text-sm">
               <p className="font-medium">{t('floorplanImport.calibratePrompt.title')}</p>
@@ -350,6 +362,7 @@ export function StepUpload({ config, onComplete }: StepUploadProps) {
         onChange={setSelectedUnits}
         colors={colors}
         t={t}
+        decision={unitDecision}
       />
 
       {/* ── Upload zone ── */}
