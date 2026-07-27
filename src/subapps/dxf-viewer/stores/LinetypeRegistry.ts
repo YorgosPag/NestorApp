@@ -19,6 +19,8 @@
 import {
   LINETYPE_ISO_NAMES,
   LINETYPE_ISO_CATALOG,
+  LINETYPE_SENTINEL_NAMES,
+  isReservedLinetypeName,
   type LinetypeDef,
 } from '../config/linetype-iso-catalog';
 import type { ComplexLinetypeDef } from '../config/complex-linetype-types';
@@ -189,13 +191,17 @@ export function listLinetypes(): ReadonlyArray<LinetypeDef> {
 }
 
 /** ByLayer sentinel — entity inherits its linetype from the active layer (AutoCAD convention). */
-export const BYLAYER_LINETYPE = 'ByLayer';
+export const BYLAYER_LINETYPE = LINETYPE_SENTINEL_NAMES.BYLAYER;
 
 /**
  * Canonical ordered list of **selectable** linetype names for any picker
  * (ribbon combobox, radial-ring drop-down, …): `ByLayer` + every registered
  * linetype (ISO baseline + custom), live. SSoT for the "ByLayer + registry"
  * enumeration — consumers map this to their own option shape, never re-derive it.
+ *
+ * Δεν χρειάζεται de-dup: οι mutations απορρίπτουν κάθε δεσμευμένο sentinel, άρα το
+ * `BYLAYER_LINETYPE` δεν μπορεί να εμφανιστεί δεύτερη φορά από το registry (ADR-358
+ * §5.3.bis — η invariant που κρατά μοναδικά τα `value`/`key` κάθε picker).
  */
 export function listSelectableLinetypeNames(): readonly string[] {
   return [BYLAYER_LINETYPE, ...store.get().linetypes.map((d) => d.name)];
@@ -205,11 +211,12 @@ export function listSelectableLinetypeNames(): readonly string[] {
 
 /**
  * Register a custom linetype. Skips silently if `name` already exists
- * (AutoCAD convention: first registration wins).
+ * (AutoCAD convention: first registration wins) **ή** αν είναι δεσμευμένο sentinel.
  *
- * @returns true if newly registered, false if name already taken.
+ * @returns true if newly registered, false if the name is taken or reserved.
  */
 export function registerLinetype(def: LinetypeDef): boolean {
+  if (isReservedLinetypeName(def.name)) return false;
   if (definitionsByName.has(def.name)) return false;
   definitionsByName.set(def.name, def);
   insertionOrder.push(def.name);
@@ -225,7 +232,7 @@ export function registerLinetype(def: LinetypeDef): boolean {
  * first (`validateLinePattern`); this still returns false on a name collision
  * (AutoCAD "first registration wins").
  *
- * @returns the registered def, or null if the name was already taken.
+ * @returns the registered def, or null if the name was already taken **ή δεσμευμένο**.
  */
 export function registerUserLinetype(
   name: string,
@@ -245,8 +252,9 @@ export function registerUserLinetype(
     // is not simple-expressible; simple types leave it undefined and keep `pattern` SSoT.
     ...(complex ? { complex } : {}),
   });
-  registerLinetype(def);
-  return def;
+  // Το boolean ΔΕΝ αγνοείται: ένα δεσμευμένο sentinel απορρίπτεται από τον φύλακα του
+  // `registerLinetype`, οπότε ο caller θα κρατούσε def που δεν μπήκε ποτέ στο registry.
+  return registerLinetype(def) ? def : null;
 }
 
 /**
@@ -297,11 +305,18 @@ export function upsertUserLinetype(
 /**
  * Register many definitions atomically — emits a single notify().
  *
- * @returns count of newly added definitions (existing names skipped).
+ * Η κύρια πόρτα του DXF import (`dxf-scene-builder` → `parseLinetypeTable`): ένα αρχείο
+ * AutoCAD κουβαλά ΠΑΝΤΑ `ByLayer`/`ByBlock` records στον πίνακα `LTYPE`, τα οποία εδώ
+ * απορρίπτονται ως δεσμευμένα sentinels (ADR-358 §5.3.bis). Ο round-trip δεν χάνει
+ * τίποτα: ο writer (`dxf-ascii-tables-writer`) τα εκπέμπει ως υποχρεωτικά defaults
+ * ανεξάρτητα από το registry.
+ *
+ * @returns count of newly added definitions (existing/reserved names skipped).
  */
 export function registerLinetypes(defs: ReadonlyArray<LinetypeDef>): number {
   let added = 0;
   for (const def of defs) {
+    if (isReservedLinetypeName(def.name)) continue;
     if (definitionsByName.has(def.name)) continue;
     definitionsByName.set(def.name, def);
     insertionOrder.push(def.name);

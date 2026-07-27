@@ -22,7 +22,9 @@
  * only reshaper the simple fast-path consumes.
  */
 
-import type { LinetypeOrigin } from './linetype-iso-catalog';
+// ADR-358 §5.3.bis — τα δεσμευμένα sentinels (`ByLayer`/`ByBlock`) είναι ΕΝΑ SSoT στο
+// catalog· εδώ μόνο καταναλώνονται από τον validator ονόματος (μηδέν literal διπλότυπο).
+import { isReservedLinetypeName, type LinetypeOrigin } from './linetype-iso-catalog';
 import type {
   ComplexLinetypeDef,
   PatternElement,
@@ -167,9 +169,6 @@ export function hasComplexSegments(segments: readonly LinePatternSegment[]): boo
   return hasTextSegments(segments) || hasSymbolSegments(segments);
 }
 
-/** Reserved names the user may not reuse for a custom pattern (AutoCAD sentinels). */
-export const RESERVED_LINETYPE_NAMES: readonly string[] = ['ByLayer', 'ByBlock'];
-
 /**
  * Suggest a free, unique NAME for a «Duplicate & edit» of `base` — the Revit/ArchiCAD «Duplicate»
  * default (a named copy the user can keep or rename). Appends the smallest numeric suffix that is not
@@ -268,7 +267,7 @@ export function describeSegments(segments: readonly LinePatternSegment[]): strin
 function validateName(name: string, existingNames: readonly string[]): LinePatternErrorCode | null {
   const trimmed = name.trim();
   if (trimmed.length === 0) return 'name.empty';
-  if (RESERVED_LINETYPE_NAMES.includes(trimmed)) return 'name.reserved';
+  if (isReservedLinetypeName(trimmed)) return 'name.reserved';
   if (existingNames.includes(trimmed)) return 'name.taken';
   return null;
 }

@@ -18,12 +18,15 @@ import {
   listLinetypes,
   registerLinetype,
   registerLinetypes,
+  registerUserLinetype,
+  upsertUserLinetype,
   listSelectableLinetypeNames,
   BYLAYER_LINETYPE,
   __resetLinetypeRegistryForTesting,
 } from '../LinetypeRegistry';
 import {
   LINETYPE_ISO_NAMES,
+  RESERVED_LINETYPE_NAMES,
   type LinetypeDef,
 } from '../../config/linetype-iso-catalog';
 
@@ -118,6 +121,64 @@ describe('LinetypeRegistry — registerLinetype', () => {
     const def = resolveLinetype('Continuous');
     expect(def?.origin).toBe('iso-baseline');
     expect(def?.pattern).toEqual([]);
+  });
+});
+
+/**
+ * ADR-358 §5.3.bis — τα δεσμευμένα sentinels ΔΕΝ γίνονται ποτέ ορισμοί.
+ *
+ * Regression: κάθε DXF αρχείο AutoCAD κουβαλά `ByLayer`/`ByBlock` records στον πίνακα
+ * `LTYPE`. Ο `dxf-scene-builder` τα περνούσε στο `registerLinetypes`, το οποίο έκοβε
+ * μόνο ήδη-υπάρχοντα ονόματα — και το `ByLayer` ΔΕΝ είναι στο ISO seed (είναι sentinel).
+ * Αποτέλεσμα: το `listSelectableLinetypeNames()` επέστρεφε `ByLayer` **δύο φορές** →
+ * διπλό `key`/`value` σε κάθε picker (React warning + σπασμένη επιλογή στο Radix Select),
+ * ενώ το `resolveLinetypeDef('ByLayer')` έπαυε να λύνει σε `null` (σπασμένο συμβόλαιο →
+ * ψεύτικο κουμπί «Διπλασιασμός & επεξεργασία» σε γραμμή ByLayer).
+ */
+describe('LinetypeRegistry — reserved sentinels (ByLayer/ByBlock)', () => {
+  const sentinelDef = (name: string): LinetypeDef => ({
+    name,
+    description: 'from the DXF LTYPE table',
+    pattern: [],
+    origin: 'dxf-import',
+  });
+
+  it('registerLinetype refuses a reserved sentinel name', () => {
+    for (const name of RESERVED_LINETYPE_NAMES) {
+      expect(registerLinetype(sentinelDef(name))).toBe(false);
+      expect(resolveLinetype(name)).toBeNull();
+    }
+    expect(getLinetypeRegistrySnapshot().linetypes).toHaveLength(8);
+  });
+
+  it('registerLinetypes (DXF import path) drops sentinels but keeps real customs', () => {
+    const added = registerLinetypes([
+      sentinelDef(BYLAYER_LINETYPE),
+      sentinelDef('ByBlock'),
+      { name: 'GAS_LINE', description: '', pattern: [12, -6], origin: 'dxf-import' },
+    ]);
+    expect(added).toBe(1);
+    expect(resolveLinetype('GAS_LINE')).not.toBeNull();
+    expect(resolveLinetype(BYLAYER_LINETYPE)).toBeNull();
+    expect(resolveLinetype('ByBlock')).toBeNull();
+  });
+
+  it('listSelectableLinetypeNames keeps ByLayer unique after a DXF import', () => {
+    registerLinetypes([sentinelDef(BYLAYER_LINETYPE), sentinelDef('ByBlock')]);
+    const names = listSelectableLinetypeNames();
+    expect(names.filter((n) => n === BYLAYER_LINETYPE)).toHaveLength(1);
+    expect(new Set(names).size).toBe(names.length);
+  });
+
+  it('registerUserLinetype returns null for a sentinel (δεν κρατά αζήτητο def)', () => {
+    expect(registerUserLinetype(BYLAYER_LINETYPE, [5, -5])).toBeNull();
+    expect(upsertUserLinetype('ByBlock', [5, -5])).toBeNull();
+    expect(getLinetypeRegistrySnapshot().linetypes).toHaveLength(8);
+  });
+
+  it('is case-sensitive: `bylayer` is a legitimate custom name', () => {
+    expect(registerLinetype(sentinelDef('bylayer'))).toBe(true);
+    expect(resolveLinetype('bylayer')).not.toBeNull();
   });
 });
 

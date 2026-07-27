@@ -553,6 +553,31 @@ interface DxfProjectSettings {
 
 Confermato Giorgio: **FULL Enterprise + GOL + SSoT**. ISO 8 baseline + custom `.lin` import + roundtrip integrity garantita.
 
+#### Invariant «το registry δεν φιλοξενεί sentinel» (2026-07-28)
+
+`ByLayer`/`ByBlock` **δεν είναι patterns** — είναι sentinels κληρονομικότητας («άντλησε τον
+τύπο από το layer / το block»), γι' αυτό το `resolveLinetypeDef()` τα λύνει σε `null`
+(⇒ συμπαγής γραμμή). Ένα DXF αρχείο όμως τα φέρει **πάντα** ως κανονικά records στον
+πίνακα `LTYPE`, οπότε χωρίς φύλακα ο import τα κατέγραφε ως κανονικούς ορισμούς και το
+`listSelectableLinetypeNames()` έβγαζε **δύο** «ByLayer» — διπλό `value`/`key` σε κάθε
+picker (ribbon combobox, radial ring).
+
+- **SSoT**: `LINETYPE_SENTINEL_NAMES` + `isReservedLinetypeName()` στο
+  `config/linetype-iso-catalog.ts`. Το `BYLAYER_LINETYPE` του registry και το
+  `RESERVED_LINETYPE_NAMES` του `line-pattern-segments` **παράγονται** από εκεί —
+  μηδέν literal διπλότυπο (πριν υπήρχαν τρία ανεξάρτητα `'ByLayer'`).
+- **Ο φύλακας μπαίνει σε ΚΑΘΕ πόρτα**, όχι στον import: `registerLinetype`,
+  `registerLinetypes` (DXF import), `registerUserLinetype`, `.lin` import, editor
+  validator (`name.reserved`). Ένας φύλακας σε μία πόρτα αφήνει τις άλλες τέσσερις.
+- **`registerUserLinetype` επιστρέφει πλέον `null`** όταν το όνομα απορριφθεί: πριν
+  αγνοούσε το boolean του `registerLinetype` και επέστρεφε def που **δεν μπήκε ποτέ**
+  στο registry — ο caller κρατούσε φάντασμα.
+- **Ο round-trip δεν χάνει τίποτα**: ο writer (`dxf-ascii-tables-writer`) εκπέμπει τα
+  `ByLayer`/`ByBlock` ως υποχρεωτικά defaults, ανεξάρτητα από το registry.
+
+⚠️ Case-sensitive, όπως κάθε σύγκριση ονόματος linetype (AutoCAD convention)· τα
+case-insensitive DXF variants τα κανονικοποιεί ο `linetype-aliases` **πριν** φτάσουν εδώ.
+
 **Architettura linetype**:
 
 ```typescript
@@ -617,6 +642,29 @@ Parser:
 - **Import DXF**: per ogni layer riferendo un linetype non-ISO, il parser cerca `LinetypeRegistry.resolve(name)`. Se non trovato → cerca nella sezione `TABLES > LTYPE` del DXF → registra come `origin: 'dxf-import'`. Garantisce roundtrip senza loss.
 - **Export DXF**: include sezione `TABLES > LTYPE` completa con tutti i linetype riferiti, pattern intatti.
 - Integration test obbligatorio (Phase 15): 5 file DXF reference con linetype custom, import → export → re-import → diff zero su `LinetypeRegistry`.
+
+**Δεσμευμένα sentinels — invariant «το registry δεν φιλοξενεί ποτέ sentinel»** (2026-07-28):
+
+Τα `ByLayer` / `ByBlock` **δεν είναι patterns**, είναι εντολές κληρονομιάς («πάρε τον τύπο γραμμής από
+το layer / το block»). Γι' αυτό ο `resolveLinetypeDef()` οφείλει να τα λύνει σε `null` (⇒ συμπαγής
+γραμμή) — αυτό είναι το γραπτό συμβόλαιο του `rendering/linetype-dash-resolver.ts`.
+
+Ένα αρχείο AutoCAD, όμως, κουβαλά **πάντα** `ByLayer`/`ByBlock` records στον πίνακα `TABLES > LTYPE`.
+Ο AutoCAD τα διαβάζει αλλά ο Linetype Manager τα δείχνει ως δεσμευμένα sentinels στην κορυφή, **ποτέ**
+ως επιλέξιμα patterns. Ίδια πρακτική εδώ, με τον έλεγχο στη **μία επιφάνεια mutation** (όχι στον parser):
+
+| Θέση | Ρόλος |
+|---|---|
+| `config/linetype-iso-catalog.ts` | **SSoT**: `LINETYPE_SENTINEL_NAMES`, `RESERVED_LINETYPE_NAMES`, `isReservedLinetypeName()` |
+| `stores/LinetypeRegistry.ts` | `registerLinetype` / `registerLinetypes` απορρίπτουν δεσμευμένο όνομα (⇒ καμία πόρτα: DXF import, `.lin` import, user-created). `BYLAYER_LINETYPE` παράγεται από το SSoT |
+| `config/line-pattern-segments.ts` | ο validator του editor επιστρέφει `name.reserved` — καταναλώνει το ίδιο SSoT |
+
+Συνέπεια της invariant: το `listSelectableLinetypeNames()` (= `ByLayer` + registry) είναι **εξ ορισμού**
+χωρίς διπλότυπα, άρα κάθε picker έχει μοναδικά `value`/`key` χωρίς αμυντικό de-dup.
+
+Ο round-trip **δεν** χάνει τίποτα: ο writer (`export/core/dxf-ascii-tables-writer.ts`) εκπέμπει
+`ByBlock`/`ByLayer`/`Continuous` ως υποχρεωτικά default records ανεξάρτητα από το registry
+(κατοχυρωμένο στο `dxf-r2018-compliance.test.ts` #9d).
 
 **UI**:
 - Linetype dropdown (Layer Properties Manager + ribbon Quick Style): mostra ISO baseline + custom, ordinati per origin (ISO prima, poi user-created, poi imported). Visual preview pattern accanto al name.
@@ -1695,6 +1743,7 @@ LINE tool → completeEntity()
 
 | Date | Change |
 |---|---|
+| 2026-07-28 | **§5.3.bis FIX — το DXF import έγραφε τα sentinels `ByLayer`/`ByBlock` στο registry ⇒ διπλό `ByLayer` σε κάθε picker.** Συμπτώματα (Giorgio, console): `Encountered two children with the same key, "ByLayer"` στο `ui/bim-properties/BimPropertyRow.tsx:116` (Properties palette → «Τύπος Γραμμής»). **Root cause**: κάθε αρχείο AutoCAD φέρει `ByLayer`/`ByBlock` records στον πίνακα `LTYPE`· ο `utils/dxf-linetype-table-parser.ts` τα επέστρεφε (σωστά — είναι πιστός αναγνώστης) και ο `utils/dxf-scene-builder.ts:150` τα περνούσε στο `registerLinetypes`, το οποίο έκοβε **μόνο ήδη-υπάρχοντα ονόματα**. Το `ByLayer` **δεν** είναι στο ISO seed (είναι sentinel, όχι catalog entry) ⇒ εγγραφόταν ως κανονικός τύπος γραμμής. Άρα `listSelectableLinetypeNames()` = `[ByLayer, …ISO…, ByLayer, ByBlock, …]` → διπλό React `key` **και** διπλό Radix `value` (σπασμένη επιλογή, όχι μόνο warning). **Δεύτερο, σιωπηλό σύμπτωμα**: το `resolveLinetypeDef('ByLayer')` έπαυε να επιστρέφει `null` (γραπτό συμβόλαιο του `rendering/linetype-dash-resolver.ts`) ⇒ στο `ui/line-advanced-panel/LinePropertiesTab.tsx:218-223` εμφανιζόταν ψεύτικο κουμπί «Διπλασιασμός & επεξεργασία» σε γραμμή ByLayer. Το render έμενε σωστό (pattern `[]` = solid). **Το SSoT υπήρχε αλλά φύλαγε λάθος πόρτα**: `RESERVED_LINETYPE_NAMES` ζούσε στο `config/line-pattern-segments.ts` με μοναδικό καταναλωτή τον validator ονόματος του editor — το DXF import τον παρέκαμπτε τελείως· παράλληλα το literal `'ByLayer'` ήταν γραμμένο **δεύτερη φορά** στο `LinetypeRegistry.BYLAYER_LINETYPE`. **Fix (SSoT + η μία επιφάνεια mutation, όχι patch στον parser)**: (a) `config/linetype-iso-catalog.ts` — NEW `LINETYPE_SENTINEL_NAMES` + `RESERVED_LINETYPE_NAMES` + `isReservedLinetypeName()` (ΕΝΑ SSoT, μηδέν literal διπλότυπο)· (b) `stores/LinetypeRegistry.ts` — φύλακας σε `registerLinetype` **και** `registerLinetypes` (κλείνει κάθε πόρτα: DXF import, `.lin` import Phase 3+, user-created, μελλοντικό Firestore sync)· `BYLAYER_LINETYPE` παράγεται από το SSoT· `registerUserLinetype` επιστρέφει πλέον `null` όταν το `registerLinetype` απορρίψει (**λανθάνον bug**: αγνοούσε το boolean και επέστρεφε def που δεν μπήκε ποτέ στο registry)· (c) `config/line-pattern-segments.ts` — καταναλώνει το κοινό predicate. **Round-trip ανέπαφο**: ο writer εκπέμπει `ByBlock`/`ByLayer`/`Continuous` ως υποχρεωτικά defaults ανεξάρτητα από το registry (`dxf-r2018-compliance.test.ts` #9d). **Tests**: +6 στο `stores/__tests__/LinetypeRegistry.test.ts` (απόρριψη sentinel και στις 2 mutations, DXF-import batch κρατά τα πραγματικά customs, μοναδικό `ByLayer` στη λίστα επιλογής, `registerUserLinetype`/`upsertUserLinetype` → `null`, case-sensitivity: το `bylayer` μένει νόμιμο όνομα). 3 registry suites 37/37 ✅· 36 συναφή suites linetype (config/render/import/export) 499/500 ✅ — το 1 κόκκινο (`utils/__tests__/dxf-linetype-compound-roundtrip.test.ts`, symbol `scale` 1040 αντί 1.6) **προϋπήρχε** από το commit `fc8049c6` (ADR-642 Φ5-B compound XDATA), εκτός αυτού του diff. ✅ Google-level: YES — proactive (φύλακας στο σημείο εγγραφής, όχι de-dup στο σημείο ανάγνωσης), idempotent, SSoT (ένας ορισμός «δεσμευμένο»), explicit lifecycle (το registry είναι η μόνη επιφάνεια mutation — το λέει και το header του module). 🔴 Εκκρεμεί οπτική επαλήθευση στον browser: re-import DXF → Properties palette → «Τύπος Γραμμής» χωρίς διπλό `ByLayer` + χωρίς κουμπί διπλασιασμού σε γραμμή ByLayer. |
 | 2026-07-04 | **Load-time δίχτυ ασφαλείας — layerless αποθηκευμένο scene → «Επίπεδο» dropdowns κενά (Giorgio browser bug).** Επιλογή γραμμής → contextual tab «Στυλ Γραμμής» → dropdown «Επίπεδο» **άδειο**· ίδιο και ο status-bar `CurrentLayerPicker`. Root cause: ο `LayerStore` γεμίζει από `SceneModel.layersById` (`useDxfSceneConversion.ts:230` → `setLayers(Object.values(layersById))`)· ο μοναδικός load-time reconstructor `parseAndValidateScene` (`services/dxf-scene-json.ts:37`) έκανε `parsed.layersById ?? parsed.layers ?? {}` — **χωρίς fallback**, οπότε ένα αποθηκευμένο blob χωρίς layer table (vintage/exploded DXF χωρίς LAYER table, ή stale layerless auto-save) άφηνε το store κενό ⇒ κανένα επιλέξιμο επίπεδο. Το fresh DXF import ΔΕΝ επηρεαζόταν (`dxf-scene-builder.ts:205` χτίζει σωστά). **Fix (belt-and-suspenders, N.7.2):** NEW `deriveLayersByIdFromEntities(entities)` στο `services/dxf-scene-migration.ts` — ανακατασκευάζει ελάχιστα SceneLayer από τα distinct entity layer references (`layerId` stable id ή legacy `.layer` name), με `id = ref` ώστε να ταιριάζει με το `entity.layerId` που διαβάζει το dropdown (`buildLayerOptions` value = `l.id`)· εγγύηση AutoCAD-parity: πάντα ≥1 επίπεδο (implicit «0» ως έσχατη λύση όταν κανένα entity δεν φέρει reference). Το `parseAndValidateScene` καλεί το δίχτυ **μόνο** όταν το migrated `layersById` βγαίνει κενό (zero regression στο happy path). **Files:** `services/dxf-scene-migration.ts` (+helper), `services/dxf-scene-json.ts` (wire), `services/__tests__/dxf-firestore-storage-parse-scene.test.ts` (updated «empty→{}» expectation + 2 νέα tests: derive-from-layerId / fallback-to-«0»· 11/11 ✅, +22/22 migration). ✅ Google-level: YES — ένα SSoT reconstruction site, load-only fallback, το dropdown δεν βγαίνει ΠΟΤΕ κενό, μηδέν επίπτωση σε scenes με έγκυρα layers. Σημ: το derived name = ref (το πραγματικό όνομα δεν σώθηκε στο entity) — λειτουργικό fallback, όχι κανονική ροή· re-import δίνει πλήρη ονόματα. 🔴 browser-verify (φόρτωση από αποθήκη → dropdown δείχνει επίπεδα) + commit. |
 | 2026-06-12 | **§5.6.bis FIX — right-click over a compact entity now opens the EntityContextMenu (isolate reachability)**: right-clicking a COLUMN (whose body is entirely grip-hit-zone at typical zoom) opened the AutoCAD grip menu (`useGripContextMenuController` window-capture listener `stopPropagation`'d before the container's EntityContextMenu handler), so «Απομόνωση αντικειμένου/κατηγορίας» were unreachable on columns — walls worked only because their long body leaves non-grip gaps. Fix in `hooks/grips/useGripContextMenuController.ts`: on plain `hovering`/`warm` phase (no active drag) the controller now **defers** to the EntityContextMenu when the grip carries only base modes (Stretch/Move/Rotate/Scale/Mirror) — it computes `resolveContextMenuSections` first and only keeps the grip menu (with `stopPropagation`) when a `vertex-ops` section is present (slab/roof add/delete corner) or during an actual drag/`hotGrip`. Aligns with the resolver's own doc rule ("base modes belong to an active grip; entity-specific ops belong to the hover menu"). No 2D/3D render change; grip-drag + slab/roof hover ops unchanged. |
 | 2026-06-12 | **§5.6.bis EXTENSION — Category-scope Isolate (Revit "Isolate Category")**: third isolate scope alongside entity + layer. `IsolateEffectsStore` snapshot + `SetIsolateEffectsInput` gained `isolatedCategories: ReadonlySet<string>` (non-empty ⇒ category-scope; LIVE — newly drawn members appear since visibility is render-time gated). New `core/commands/layer/CategoryIsolateCommand.ts` (default freeze; does NOT mutate layer flags or persisted V/G `objectStyles` — effect lives purely in the store; undo restores prior session or clears; replay-safe; barrel export). New SSoT `bim/visibility/resolve-entity-bim-category.ts` — `resolveEntityBimCategory(entity)` (dispatch: 4 params-driven exceptions mep-fixture/segment/fitting/floorplan-symbol + `entity.type===BimCategory` for the rest + null for raw DXF) and `collectBimCategories(ids, entities)` selection helper. **2D**: the shared `DxfRenderer` gate (`isEntityLayerSkipped` freeze + `applyIsolateAlpha` dim) resolves each entity's category and skips/dims those outside the set (raw DXF → null → hidden, Revit-parity). **3D**: `VisibilityContext.isolate.categories` + a category branch in `resolveIsEntityVisible` (only isolated categories show); `SyncContext.isolate.categories` threaded from the snapshot. **UI**: `EntityContextMenu` new item «Απομόνωση κατηγορίας» (`canIsolateCategory`/`onIsolateCategory`) + `IsolateCategoryIcon`; `CanvasSection` derives the selected entities' categories via `collectBimCategories` and dispatches `CategoryIsolateCommand` (count-based badge label, kept under the 500-line cap via the shared resolver module). Teardown shared with the other scopes (`LayerUnisolateCommand` / status-badge / Ctrl+Shift+U). **i18n** el+en: `layer.isolate.contextMenu.isolateCategory` + `statusBadge.categoryCount` (ICU plural). **Tests**: +3 IsolateEffectsStore, +new `CategoryIsolateCommand.test.ts`, +6 visibility-resolver, +new `resolve-entity-bim-category.test.ts` (91 isolate-suite tests green). **DEFER**: dim-mode for category-isolate via objectStyles 3 renderer gaps (floor-finish/space-separator/thermal-space lack a `resolveIsEntityVisible` guard — covered in 2D by the DxfRenderer gate, but a future V/G-manual fix); keyboard shortcut. |

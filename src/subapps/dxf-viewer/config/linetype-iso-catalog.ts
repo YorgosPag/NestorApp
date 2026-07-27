@@ -71,6 +71,44 @@ export const LINETYPE_ISO_NAMES = Object.freeze([
 export const DEFAULT_LINETYPE_NAME = 'Continuous';
 
 /**
+ * AutoCAD **reserved sentinel** linetype names — ADR-358 §5.3.bis.
+ *
+ * `ByLayer`/`ByBlock` are inheritance sentinels, NOT patterns: they say «άντλησε τον
+ * τύπο γραμμής από το layer / το block», και γι' αυτό `resolveLinetypeDef()` τα λύνει
+ * σε `null` (⇒ συμπαγής γραμμή). Ένα DXF αρχείο **πάντα** τα φέρει ως κανονικά records
+ * στον πίνακα `LTYPE` — ο AutoCAD τα διαβάζει, αλλά ο Linetype Manager τα δείχνει ως
+ * δεσμευμένα sentinels, ποτέ ως επιλέξιμα patterns. Ίδια πρακτική εδώ:
+ *
+ *   - `LinetypeRegistry` ΔΕΝ τα δέχεται ποτέ ως ορισμούς (καμία πόρτα: DXF import,
+ *     `.lin` import, user-created) ⇒ η invariant «το registry δεν φιλοξενεί sentinel».
+ *   - Ο validator του editor τα απορρίπτει ως `name.reserved`.
+ *
+ * SSoT: ΕΔΩ. Το `BYLAYER_LINETYPE` του registry και το `RESERVED_LINETYPE_NAMES` του
+ * `line-pattern-segments` παράγονται από αυτό — μηδέν literal διπλότυπο.
+ */
+export const LINETYPE_SENTINEL_NAMES = Object.freeze({
+  /** Ο τύπος γραμμής κληρονομείται από το layer της οντότητας. */
+  BYLAYER: 'ByLayer',
+  /** Ο τύπος γραμμής κληρονομείται από το block που περιέχει την οντότητα. */
+  BYBLOCK: 'ByBlock',
+} as const);
+
+/** Ordered reserved sentinel names — δεν επιτρέπονται ως ονόματα ορισμού. */
+export const RESERVED_LINETYPE_NAMES: ReadonlyArray<string> = Object.freeze([
+  LINETYPE_SENTINEL_NAMES.BYLAYER,
+  LINETYPE_SENTINEL_NAMES.BYBLOCK,
+]);
+
+/**
+ * True όταν το `name` είναι δεσμευμένο sentinel (`ByLayer`/`ByBlock`). Case-sensitive,
+ * όπως κάθε άλλη σύγκριση ονόματος linetype (AutoCAD convention· τα case-insensitive
+ * DXF variants τα κανονικοποιεί ο `linetype-aliases` πριν φτάσουν εδώ).
+ */
+export function isReservedLinetypeName(name: string): boolean {
+  return RESERVED_LINETYPE_NAMES.includes(name);
+}
+
+/**
  * ISO 8 baseline catalog — immutable. Pattern values in mm.
  * Values cross-referenced with AutoCAD `acadiso.lin` standard distribution.
  */
