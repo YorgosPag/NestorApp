@@ -12,6 +12,7 @@ import {
   restoreHidden,
   withSectionCapRenderState,
 } from '../section-parity-scene';
+import { excludeFromSectionParity, isSectionParityOverlay } from '../section-parity-overlay';
 
 /** Mark a mesh as a section-parity overlay (edge fat-line kind — see `isSectionParityOverlay`). */
 function markOverlay(obj: THREE.Object3D): void {
@@ -117,5 +118,50 @@ describe('withSectionCapRenderState', () => {
 
     expect(renderer.autoClear).toBe(true);
     expect(scene.background).toBe(bg);
+  });
+});
+
+/**
+ * ADR-665 M2.7 — η ρητή εξαίρεση από τα parity passes, που κλείνει το Open Question #2.
+ *
+ * Το κενό που καλύπτει: ένα mesh ΧΩΡΙΣ `bimId` δεν κρυβόταν ΠΟΤΕ (ο έλεγχος `keepMesh` τρέχει μόνο
+ * σε `bimId` meshes). Το ανάγλυφο και ο cap χώματος είναι ακριβώς τέτοια — ανοιχτές, μη-manifold
+ * επιφάνειες που όμως μετρούσαν σε stencil parity σχεδιασμένο για κλειστά στερεά.
+ */
+describe('ADR-665 M2.7 — sectionParityExclude', () => {
+  function plainMesh(): THREE.Mesh {
+    // depthTest ΠΑΡΑΜΕΝΕΙ true: αν κρυβόταν λόγω `depthTest:false` το τεστ θα περνούσε για
+    // λάθος λόγο, και ο cap θα ζωγράφιζε πάνω από το κτίριο.
+    return new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+  }
+
+  it('mesh χωρίς bimId ΚΑΙ χωρίς δείκτη → μένει ορατό (η προϋπάρχουσα συμπεριφορά)', () => {
+    const scene = new THREE.Scene();
+    const terrain = plainMesh();
+    scene.add(terrain);
+    const hidden = hideNonParityMeshes(scene);
+    expect(terrain.visible).toBe(true);
+    restoreHidden(hidden);
+  });
+
+  it('ο δείκτης κρύβει το mesh στο parity pass και το `restoreHidden` το επαναφέρει', () => {
+    const scene = new THREE.Scene();
+    const cap = plainMesh();
+    excludeFromSectionParity(cap);
+    scene.add(cap);
+
+    const hidden = hideNonParityMeshes(scene);
+    expect(cap.visible).toBe(false);
+    expect(hidden).toContain(cap);
+
+    restoreHidden(hidden);
+    expect(cap.visible).toBe(true);
+  });
+
+  it('ο δείκτης λειτουργεί με depthTest = true — δεν βασίζεται στο overlay κριτήριο', () => {
+    const cap = plainMesh();
+    excludeFromSectionParity(cap);
+    expect((cap.material as THREE.MeshBasicMaterial).depthTest).toBe(true);
+    expect(isSectionParityOverlay(cap)).toBe(true);
   });
 });

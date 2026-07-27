@@ -5,7 +5,11 @@
  * floating it.
  */
 
-import { resolveVerticalDatumMm } from '../vertical-datum';
+import {
+  resolveVerticalDatumMm,
+  surfaceElevationAtWorldYMm,
+  TERRAIN_DISPLAY_DROP_MM,
+} from '../vertical-datum';
 import type { TinSurface } from '../topo-types';
 
 const SIDE_MM = 10_000;
@@ -67,5 +71,45 @@ describe('resolveVerticalDatumMm', () => {
 
   it('empty surface → 0 (no datum to acquire)', () => {
     expect(resolveVerticalDatumMm(EMPTY_TIN, 0, 0)).toBe(0);
+  });
+});
+
+/**
+ * ADR-665 M2.3 — η ΑΝΤΙΣΤΡΟΦΗ του κατακόρυφου display frame.
+ *
+ * Ο ευθύς δρόμος έχει ΔΥΟ σκαλοπάτια: το datum (στον converter του TIN) και το display drop
+ * (στην έδραση του topo root). Το δεύτερο είναι αυτό που ξεχνιέται — και η παράλειψή του δεν
+ * φαίνεται ως σφάλμα αριθμού αλλά ως cap ξεκολλημένος 5 cm από την ακμή της τομής, δηλαδή ως
+ * «χαλασμένο render». Γι' αυτό εδώ υπάρχει τεστ που σκάει αν κάποιος βγάλει το drop από τον τύπο.
+ */
+describe('surfaceElevationAtWorldYMm — ADR-665 M2.3', () => {
+  /**
+   * Ο ΕΥΘΥΣ δρόμος, γραμμένος ανεξάρτητα εδώ: ακριβώς ό,τι κάνουν ο converter του αναγλύφου
+   * (υψόμετρο − datum, mm → m) και η έδραση του topo root (μετατόπιση κατά το drop).
+   */
+  const renderedWorldY = (elevMm: number, datumMm: number): number =>
+    (elevMm - datumMm) / 1000 - TERRAIN_DISPLAY_DROP_MM / 1000;
+
+  it('ROUND-TRIP: υψόμετρο → world Y → υψόμετρο, με datum ≠ 0', () => {
+    const datumMm = 106_000;
+    for (const elevMm of [0, 106_000, 107_250, 99_000, -3_000]) {
+      expect(surfaceElevationAtWorldYMm(renderedWorldY(elevMm, datumMm), datumMm))
+        .toBeCloseTo(elevMm, 6);
+    }
+  });
+
+  it('ROUND-TRIP και με datum = 0 (μη γεωαναφερμένο έργο)', () => {
+    expect(surfaceElevationAtWorldYMm(renderedWorldY(2_500, 0), 0)).toBeCloseTo(2_500, 6);
+  });
+
+  it('το DISPLAY DROP ΣΥΜΜΕΤΕΧΕΙ — χωρίς αυτό η στάθμη πέφτει λάθος κατά ακριβώς το drop', () => {
+    const withoutDrop = 0 * 1000 + 106_000; // ο ίδιος τύπος ΧΩΡΙΣ τον όρο του drop
+    expect(surfaceElevationAtWorldYMm(0, 106_000) - withoutDrop)
+      .toBeCloseTo(TERRAIN_DISPLAY_DROP_MM, 9);
+  });
+
+  it('η στάθμη ανεβαίνει γραμμικά με το world Y (1 m → 1000 mm)', () => {
+    expect(surfaceElevationAtWorldYMm(1, 0) - surfaceElevationAtWorldYMm(0, 0))
+      .toBeCloseTo(1000, 9);
   });
 });
