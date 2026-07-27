@@ -28,6 +28,7 @@ import { useRef, useMemo, useCallback, type MutableRefObject } from 'react';
 import type { ThreeJsSceneManager } from '../../scene/ThreeJsSceneManager';
 import { useRafWhile, useCameraMotionGate, useGripDepthOccluder } from '../overlay-raf';
 import { paintBimOverlayFrame, activePassSignature, type BimOverlayPass } from './bim-overlay-pass';
+import { useSelectionGlowPass } from './use-selection-glow-pass';
 import { useHoverGlowPass } from './use-hover-glow-pass';
 import { useGripPass } from './use-grip-pass';
 import { useGripTrackingPass } from './use-grip-tracking-pass';
@@ -47,9 +48,14 @@ export function BimOverlayDispatchCanvas({ managerRef }: BimOverlayDispatchCanva
   const occluderRef = useGripDepthOccluder();
   const isCameraMoving = useCameraMotionGate();
 
-  // z-order bottom→top: hover-glow → grips → grip-tracking → grip-HUD → tracking → wall-HUD → placement.
+  // z-order bottom→top: selection → hover-glow → grips → grip-tracking → grip-HUD → tracking →
+  // wall-HUD → placement.
   // ADR-537 — the raw-DXF grip-drag traces + white HUD sit right above the grip squares (traces under
   // their length/angle labels, mirror of the wall tracking↔HUD ordering).
+  // ADR-717 — το selection highlight είναι το ΚΑΤΩΤΕΡΟ στρώμα: είναι η σταθερή κατάσταση («τι
+  // κρατάω»), οπότε το στιγμιαίο hover glow ΚΑΙ οι λαβές πρέπει να διαβάζονται πάνω του. Ο
+  // αντίστροφος z θα έκρυβε το «τι θα πιάσω» κάτω από το «τι ήδη έχω» σε πυκνή επιλογή.
+  const selection = useSelectionGlowPass();
   const hover = useHoverGlowPass(containerRef);
   const grip = useGripPass();
   const gripTracking = useGripTrackingPass();
@@ -58,8 +64,8 @@ export function BimOverlayDispatchCanvas({ managerRef }: BimOverlayDispatchCanva
   const wallHud = useWallHudPass();
   const placement = usePlacementPass();
   const passes = useMemo<readonly BimOverlayPass[]>(
-    () => [hover, grip, gripTracking, gripHud, tracking, wallHud, placement],
-    [hover, grip, gripTracking, gripHud, tracking, wallHud, placement],
+    () => [selection, hover, grip, gripTracking, gripHud, tracking, wallHud, placement],
+    [selection, hover, grip, gripTracking, gripHud, tracking, wallHud, placement],
   );
 
   // Read the latest passes inside the stable RAF draw without re-subscribing the loop each render.

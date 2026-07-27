@@ -66,21 +66,34 @@ interface EligibleDxfEntity {
  * so an entity on ANY stacked floor is editable, not just the active one (ADR-537 δ). Each
  * carries the floor elevation + scene for unit-correct, elevation-correct grip seating.
  *
- * ADR-543 — multi-select: a single selection keeps the original behavior (any supported
- * type). Two or more entities seat grips ONLY when ALL are lines (the articulated-joint
- * case); any other multi-select returns [] = today's "no 3D grips" behavior (regression-safe).
- * Returns [] when any selected id is not a raw-DXF entity in scope.
+ * ADR-543 — multi-select: a single selection keeps the original behavior (any supported type).
+ *
+ * ADR-717 — ΑΡΣΗ δύο φίλτρων που έκαναν την ΠΟΛΛΑΠΛΗ επιλογή ΑΟΡΑΤΗ στο 3D:
+ *
+ *  1. **«όλες γραμμές, αλλιώς τίποτα»** — το ADR-543 δέχτηκε πολλαπλή επιλογή μόνο όταν ΚΑΘΕ
+ *     οντότητα ήταν `line` (η περίπτωση αρθρωτού κόμβου) και γύριζε `[]` για οτιδήποτε άλλο,
+ *     ρητά ως «regression-safe» — ΟΧΙ ως σχεδιαστική απόφαση. Τότε δεν υπήρχε τρόπος να
+ *     γεννηθεί πολλαπλή επιλογή raw-DXF μέσα στο 3D, οπότε ο περιορισμός ήταν αθέατος. Το
+ *     ADR-692 πρόσθεσε window/crossing marquee — και ο περιορισμός έγινε ΣΙΩΠΗΛΟ κενό: η
+ *     επιλογή γινόταν κανονικά στο `SelectedEntitiesStore`, αλλά ΚΑΝΕΝΑ grip δεν καθόταν, και
+ *     επειδή το raw-DXF wireframe είναι batched `LineSegments` ανά χρώμα (χωρίς per-entity
+ *     υλικό), τα grips είναι η ΜΟΝΗ οπτική ένδειξη επιλογής. Αποτέλεσμα: «το marquee δεν
+ *     επιλέγει τίποτα» — ενώ επέλεγε.
+ *  2. **«όλα ή τίποτα»** (`resolved.length !== ids.length → []`) — μια ΜΕΙΚΤΗ επιλογή, που το
+ *     ADR-692 Φ2 υποστηρίζει ΡΗΤΑ (BIM meshes ΚΑΙ raw DXF σε ένα drag), έριχνε ΟΛΑ τα grips
+ *     επειδή έστω ένα id δεν ήταν raw-DXF στην εμβέλεια. Κρατάμε πλέον ό,τι ΕΙΝΑΙ επεξεργάσιμο
+ *     (Revit/AutoCAD: το εργαλείο δουλεύει στο υποσύνολο που καταλαβαίνει), αντί να σιωπά.
+ *
+ * Το πλήθος παραμένει φραγμένο από το AutoCAD `GRIPOBJLIMIT` στο {@link seatGrips} — ο ΕΝΑΣ
+ * κανόνας «πότε είναι πολλά τα grips», κοινός με το 2D. Εδώ δεν μπαίνει δεύτερο όριο.
  */
 function resolveEligibleDxfEntities(): EligibleDxfEntity[] {
   if (useSelection3DStore.getState().selectedBimIds.length > 0) return [];
   const ids = SelectedEntitiesStore.getSelectedEntityIds();
   if (ids.length === 0) return [];
-  const resolved = ids
+  return ids
     .map((id) => findDxfEntityInScope(id))
     .filter((e): e is EligibleDxfEntity => e !== null);
-  if (resolved.length !== ids.length) return [];
-  if (ids.length === 1) return resolved;
-  return resolved.every((e) => e.entity.type === 'line') ? resolved : [];
 }
 
 /**
