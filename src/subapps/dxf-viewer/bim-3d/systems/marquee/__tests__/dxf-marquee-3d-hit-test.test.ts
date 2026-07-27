@@ -191,23 +191,33 @@ function createStraddlingCamera(): THREE.PerspectiveCamera {
   return camera;
 }
 
-/** Πολυγραμμή 3 km κατά μήκος του άξονα X (plan mm ⇒ world 0…3000 m). */
-const TOPO_3KM = (): DxfScene => scene([line('topo', 0, 0, 3_000_000, 0)]);
+/**
+ * Πολυγραμμή ~3 km (plan mm ⇒ world 0…3000 m). **Λοξή επίτηδες**: μια γραμμή ακριβώς πάνω στον
+ * άξονα βλέμματος προβάλλεται με ΜΗΔΕΝΙΚΟ ύψος bbox, οπότε το WINDOW πέφτει στο tolerance-fallback
+ * του `isFullyInsideWithTolerance` («μικροσκοπική οντότητα» ⇒ intersect) και το test θα μετρούσε
+ * άλλο πράγμα από αυτό που νομίζει.
+ */
+const TOPO_START = { x: 0, y: 0 };
+const TOPO_END = { x: 3_000_000, y: 800_000 };
+/** Παράγωγο, ΠΟΤΕ γραμμένο στο χέρι — αλλιώς μια αλλαγή στα άκρα αφήνει τα tests να στοχεύουν στο κενό. */
+const TOPO_MID = { x: (TOPO_START.x + TOPO_END.x) / 2, y: (TOPO_START.y + TOPO_END.y) / 2 };
+const TOPO_3KM = (): DxfScene =>
+  scene([line('topo', TOPO_START.x, TOPO_START.y, TOPO_END.x, TOPO_END.y)]);
 
 describe('§Γ1 — τοπογραφικό 3 km σε προοπτική κάμερα (πέρα από CAMERA_FAR)', () => {
   const camera = createFarPerspectiveCamera();
   const canvas = createCanvas();
   const clipper = createScreenClipper(camera, canvas);
 
-  const screenOf = (x: number, y: number): { x: number; y: number } => {
-    const p = clipper.worldToScreenPx(dxfPlanToWorld(x, y, 0));
-    if (!p) throw new Error('το σημείο δεν προβάλλεται — το ΙΔΙΟ το σφάλμα του ADR-717 Φ Γ');
-    return p;
+  const screenOf = (p: { x: number; y: number }): { x: number; y: number } => {
+    const s = clipper.worldToScreenPx(dxfPlanToWorld(p.x, p.y, 0));
+    if (!s) throw new Error('το σημείο δεν προβάλλεται — το ΙΔΙΟ το σφάλμα του ADR-717 Φ Γ');
+    return s;
   };
 
   it('WINDOW: ΟΛΟ μέσα ⇒ πιάνεται — πριν επέστρεφε [] επειδή 4/4 σημεία ήταν «εκτός»', () => {
-    const a = screenOf(0, 0);
-    const b = screenOf(3_000_000, 0);
+    const a = screenOf(TOPO_START);
+    const b = screenOf(TOPO_END);
     const pad = 40;
     const res = collectDxfMarqueeHits({
       floors: [{ scene: TOPO_3KM(), floorElevationMm: 0 }],
@@ -220,8 +230,8 @@ describe('§Γ1 — τοπογραφικό 3 km σε προοπτική κάμε
   });
 
   it('WINDOW: ορθογώνιο που ΔΕΝ την περικλείει ⇒ ΔΕΝ πιάνεται (η σημασιολογία μένει αυστηρή)', () => {
-    const a = screenOf(0, 0);
-    const mid = screenOf(1_500_000, 0);
+    const a = screenOf(TOPO_START);
+    const mid = screenOf(TOPO_MID);
     const res = collectDxfMarqueeHits({
       floors: [{ scene: TOPO_3KM(), floorElevationMm: 0 }],
       camera, canvas,
@@ -232,7 +242,7 @@ describe('§Γ1 — τοπογραφικό 3 km σε προοπτική κάμε
   });
 
   it('CROSSING: κουτί που απλώς την τέμνει στη μέση ⇒ πιάνεται', () => {
-    const mid = screenOf(1_500_000, 0);
+    const mid = screenOf(TOPO_MID);
     const res = collectDxfMarqueeHits({
       floors: [{ scene: TOPO_3KM(), floorElevationMm: 0 }],
       camera, canvas,
