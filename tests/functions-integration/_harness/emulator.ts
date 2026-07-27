@@ -53,27 +53,37 @@ export async function teardown(): Promise<void> {
 }
 
 /**
- * Wait for the orphan-cleanup `onStorageFinalize` Cloud Function to fire
- * for a given path. The emulator dispatches finalize events asynchronously
- * — typical latency is 1-3s but can spike to 8s+ on cold start. We poll
- * the audit log instead of sleeping a fixed duration so the suite stays
- * fast on warm runs.
+ * Wait for the orphan-cleanup `onStorageFinalize` Cloud Function to record a
+ * **candidate marker** for a given storage path. The emulator dispatches
+ * finalize events asynchronously — typical latency is 1-3s but can spike to
+ * 8s+ on cold start — so we poll instead of sleeping a fixed duration.
  *
- * Returns the audit row if a deletion was logged for `fileId`, or `null`
- * if the deadline passed without a deletion (the happy path: pre-claim
- * present → no deletion).
+ * Returns the candidate row, or `null` if the deadline passed without one
+ * (the claimed path: a live owner exists → nothing is marked).
+ *
+ * ## Why `storage_orphan_candidates` and not the audit log (ADR-694 Α1)
+ *
+ * Until ADR-694 this polled `audit_log` for `action == 'ORPHAN_FILE_DELETED'`.
+ * That action **no longer exists**: `onStorageFinalize` is now mark-only and
+ * deletes nothing, so the query could only ever return `null` — a helper that
+ * always answers "no" is not a probe, it is a permanently-red assertion.
+ * Deletion moved to `orphanSweeper` (daily, days-long window), which is a
+ * different surface and belongs in a different test.
+ *
+ * Queried by `storagePath` rather than by the internal `candidateDocId()`
+ * hash, so the probe is coupled to the **written contract**, not to the
+ * doc-id derivation — the helper stays correct if that derivation changes.
  */
-export async function waitForCleanupDecision(args: {
-  fileId: string;
+export async function waitForOrphanCandidate(args: {
+  storagePath: string;
   timeoutMs: number;
 }): Promise<admin.firestore.DocumentData | null> {
   const deadline = Date.now() + args.timeoutMs;
   const db = getAdminApp().firestore();
   while (Date.now() < deadline) {
     const snap = await db
-      .collection(COLLECTIONS.CLOUD_FUNCTION_AUDIT_LOG)
-      .where('action', '==', 'ORPHAN_FILE_DELETED')
-      .where('entityId', '==', args.fileId)
+      .collection(COLLECTIONS.STORAGE_ORPHAN_CANDIDATES)
+      .where('storagePath', '==', args.storagePath)
       .limit(1)
       .get();
     if (!snap.empty) return snap.docs[0].data();

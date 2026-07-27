@@ -206,6 +206,12 @@ export const COLLECTIONS = {
   SYSTEM_AUDIT_LOGS: process.env.NEXT_PUBLIC_SYSTEM_AUDIT_LOGS_COLLECTION || 'system_audit_logs',
   /** Cloud Function audit log (orphan cleanup, system events) */
   CLOUD_FUNCTION_AUDIT_LOG: process.env.NEXT_PUBLIC_CLOUD_FUNCTION_AUDIT_LOG_COLLECTION || 'audit_log',
+  /**
+   * Υποψήφιοι προς ανάκτηση χώρου (ADR-694 Α1) — η πλευρά «mark» ενός mark-and-sweep.
+   * Γράφεται από το `onStorageFinalize`, καταναλώνεται από τον `orphanSweeper`.
+   * ⚠️ Το `functions/src/config/firestore-collections.ts` κατοπτρίζει αυτή την τιμή.
+   */
+  STORAGE_ORPHAN_CANDIDATES: process.env.NEXT_PUBLIC_STORAGE_ORPHAN_CANDIDATES_COLLECTION || 'storage_orphan_candidates',
 
   // 🏗️ CONSTRUCTION PHASES, TASKS & BASELINES (ADR-034, ADR-266)
   CONSTRUCTION_PHASES: process.env.NEXT_PUBLIC_CONSTRUCTION_PHASES_COLLECTION || 'construction_phases',
