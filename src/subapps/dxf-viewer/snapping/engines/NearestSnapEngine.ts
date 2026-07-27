@@ -22,6 +22,10 @@ import { projectPointOnSlabEdge } from '../../bim/slabs/slab-edge-projection';
 import { projectPointOnOpeningOutline } from '../../bim/walls/opening-outline-projection';
 // ADR-398 §Column→Beam axis snap — beam axis projection (clamped NEAREST, parity με τοίχο/πλάκα).
 import { projectPointOnBeamAxis } from '../../bim/beams/beam-axis-projection';
+// ADR-507 + ADR-662 — ring-bounded οντότητες (γραμμοσκίαση / τοπογραφική επιφάνεια):
+// «ποια rings» από το ένα SSoT, «πού πέφτει ο cursor πάνω τους» από το projection SSoT.
+import { entityClosedRings } from '../shared/entity-closed-rings';
+import { nearestFootOnClosedRings } from '../shared/polyline-perpendicular-feet';
 
 export class NearestSnapEngine extends BaseSnapEngine {
 
@@ -110,6 +114,15 @@ export class NearestSnapEngine extends BaseSnapEngine {
     // `axisPolyline.points`· straight/curved uniform). Parity με τοίχο/πλάκα.
     if (isBeamEntity(entity)) {
       return projectPointOnBeamAxis(entity, point);
+    }
+    // ADR-507 + ADR-662 — γραμμοσκίαση / τοπογραφική επιφάνεια: clamped foot στην
+    // κοντινότερη ακμή ΟΠΟΙΟΥΔΗΠΟΤΕ κλειστού ring του ορίου (η ακμή κλεισίματος
+    // last→first συμμετέχει). Ίδια σημασιολογία NEAREST με τοίχο/πλάκα/άνοιγμα, μέσω
+    // του ΙΔΙΟΥ `polyline-perpendicular-feet` SSoT — μηδέν νέα projection math.
+    // ΕΝΑΣ κλάδος για όλους τους ring-bounded τύπους (N.18 — όχι clone ανά τύπο).
+    const rings = entityClosedRings(entity);
+    if (rings.length > 0) {
+      return nearestFootOnClosedRings(rings, point);
     }
 
     const entityType = entity.type.toLowerCase();

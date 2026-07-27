@@ -37,10 +37,18 @@ export interface TopoSurfaceEntity extends BaseEntity {
   surfaceId: TopoSurfaceId;
 
   /**
-   * Το περίγραμμα της TIN σε **world canonical mm** — ένα ή περισσότερα κλειστά
-   * rings (perimeter edges των triangles ή το picked `TopoBoundary`). Δίνει την
-   * clickable/hit-test περιοχή στην κάτοψη· κάθε ring implicitly κλειστό
-   * (last→first χωρίς διπλή κορυφή). Recompute από το `getTopoSurface`.
+   * Το περίγραμμα της TIN — ένα ή περισσότερα κλειστά rings (perimeter edges των
+   * triangles ή το picked `TopoBoundary`). Δίνει την clickable/hit-test περιοχή
+   * στην κάτοψη· κάθε ring implicitly κλειστό (last→first χωρίς διπλή κορυφή).
+   * Recompute από το `getTopoSurface`.
+   *
+   * ⚠️ **ΠΛΑΙΣΙΟ = ενεργό display frame, ΟΧΙ world/ΕΓΣΑ.** Ο builder
+   * (`buildTopoSurfaceEntity`) παίρνει world canonical mm από το
+   * `topoSurfacePerimeter` και **προβάλλει** μέσω `getActiveWorldToDisplayProjector`
+   * (ίδιος projector με ισοϋψείς/βορρά· identity όταν δεν υπάρχει geo-reference).
+   * Άρα renderer, hit-test και έλξεις διαβάζουν το `footprint` **ΩΜΟ** — καμία
+   * `mmToSceneUnits`, κανένας δεύτερος projector. (Μέχρι 2026-07-27 αυτό το σχόλιο
+   * έλεγε «world canonical mm» — λάθος· ο κώδικας νικά.)
    */
   footprint: Point2D[][];
 }

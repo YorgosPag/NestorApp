@@ -2,7 +2,8 @@
  * TopoSurfaceRenderer — ADR-662 Φάση 2β (Δρόμος Γ).
  *
  * 2Δ renderer για το thin/derived `TopoSurfaceEntity`: σχεδιάζει το **footprint**
- * (περίγραμμα της TIN, ένα ή περισσότερα κλειστά rings σε world canonical mm) ως
+ * (περίγραμμα της TIN, ένα ή περισσότερα κλειστά rings στο **ενεργό display frame** —
+ * ο builder έχει ήδη προβάλει, βλ. `types/topo-surface.ts`) ως
  * διακριτικό outline στην κάτοψη. Δεν κατέχει γεωμετρία — το footprint δίνει μόνο
  * την clickable/hover περιοχή ώστε η επιφάνεια να γίνεται first-class selectable
  * αντικείμενο (contextual tab + object-bound Properties). Το 3D mesh το κρατά ο

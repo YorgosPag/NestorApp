@@ -37,6 +37,9 @@ import { getWallAxisPerpendicularFeet } from '../../bim/walls/wall-axis-projecti
 import { getSlabEdgePerpendicularFeet } from '../../bim/slabs/slab-edge-projection';
 // ADR-363 Phase 5.5g — opening outline perpendicular feet (unclamped per-edge).
 import { getOpeningOutlinePerpendicularFeet } from '../../bim/walls/opening-outline-projection';
+// ADR-507 + ADR-662 — ring-bounded οντότητες (γραμμοσκίαση / τοπογραφική επιφάνεια).
+import { entityClosedRings } from '../shared/entity-closed-rings';
+import { perpendicularFeetOverClosedRings } from '../shared/polyline-perpendicular-feet';
 
 export class PerpendicularSnapEngine extends BaseSnapEngine {
 
@@ -210,6 +213,18 @@ export class PerpendicularSnapEngine extends BaseSnapEngine {
             perpendicularPoints.push({ point: foot, type: 'Ray' });
           }
         }
+      }
+    } else {
+      // ADR-507 + ADR-662 — γραμμοσκίαση / τοπογραφική επιφάνεια: unclamped foot ανά ακμή
+      // κάθε κλειστού ring (η ακμή κλεισίματος last→first συμπεριλαμβάνεται), μέσω του
+      // ΙΔΙΟΥ `polyline-perpendicular-feet` SSoT — parity με πλάκα/άνοιγμα (AutoCAD
+      // PERPENDICULAR: το foot επιτρέπεται και στην ΠΡΟΕΚΤΑΣΗ της ακμής).
+      // Οντότητες χωρίς όριο → κενό ⇒ καμία αλλαγή συμπεριφοράς.
+      // Το `type` είναι ΕΣΩΤΕΡΙΚΟ διαγνωστικό: ο caller κρατά μόνο το `.point` και το
+      // ορατό label το δίνει το `displayName: 'Perpendicular'` — άρα εκτός i18n/N.11.
+      const feet = perpendicularFeetOverClosedRings(entityClosedRings(entity), cursorPoint, maxDistance);
+      for (const f of feet) {
+        perpendicularPoints.push({ point: f.point, type: `Boundary Ring ${f.ringIndex + 1} Edge ${f.segmentIndex + 1}` });
       }
     }
 

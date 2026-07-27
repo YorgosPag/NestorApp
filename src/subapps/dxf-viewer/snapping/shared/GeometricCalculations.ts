@@ -37,10 +37,13 @@ import {
   isSlabOpeningEntity,
   isOpeningEntity,
   isFoundationEntity,
-  isHatchEntity,
   isRoofEntity,
   isImageEntity,
 } from '../../types/entities';
+// ADR-507 + ADR-662 — «ποια κλειστά δαχτυλίδια ορίου έχει αυτή η οντότητα;» SSoT.
+// ΕΝΑΣ κλάδος καλύπτει γραμμοσκίαση (`boundaryPaths`) ΚΑΙ τοπογραφική επιφάνεια
+// (`footprint`) — μηδέν per-type clone (N.18). Νέος ring-bounded τύπος → μόνο εκεί.
+import { entityClosedRings } from './entity-closed-rings';
 import type { RoofEntity } from '../../bim/types/roof-types';
 // ADR-651/654 — raster image / 2D furniture entourage rotated-rectangle vertices SSoT
 // (same 4 corners the renderer / bounds / hit-test use → snap agrees with what's drawn).
@@ -113,12 +116,6 @@ export class GeometricCalculations {
       endpoints.push(...getBimEntityKeyPoints2D(entity));
     } else if (isRayEntity(entity)) {
       endpoints.push(entity.basePoint);
-    } else if (isHatchEntity(entity)) {
-      // ADR-507 — γραμμοσκίαση: κάθε κορυφή κάθε ring του ορίου (`boundaryPaths`)
-      // είναι λαβή (`hatch-vertex-*`) → ENDPOINT έλξη, όπως στην κλειστή πολυγραμμή.
-      for (const ring of entity.boundaryPaths) {
-        endpoints.push(...ring);
-      }
     } else if (isRoofEntity(entity)) {
       // ADR-417 — στέγη: κορυφές footprint (γραμμή τοίχου/pivot) + εξωτερικό mitered
       // δαχτυλίδι γείσου (SSoT `roofEaveOuterRing` — ό,τι ζωγραφίζεται) + άκρα
@@ -128,8 +125,14 @@ export class GeometricCalculations {
       for (const r of entity.geometry?.ridges ?? []) {
         endpoints.push({ x: r.a.x, y: r.a.y }, { x: r.b.x, y: r.b.y });
       }
+    } else {
+      // ADR-507 (γραμμοσκίαση) + ADR-662 (τοπογραφική επιφάνεια) — οντότητες που ΟΡΙΖΟΝΤΑΙ
+      // από κλειστά δαχτυλίδια ορίου: κάθε κορυφή κάθε ring είναι ENDPOINT, ακριβώς όπως
+      // στην κλειστή πολυγραμμή (AutoCAD/Revit σημασιολογία — κορυφή = άκρο δύο ακμών).
+      // Αυτές είναι οι κόκκινα κυκλωμένες κορυφές του Giorgio στο λαδί περίγραμμα.
+      // Οντότητες χωρίς όριο (XLine, κείμενο, …) → κενό ⇒ καμία έλξη, όπως και πριν.
+      for (const ring of entityClosedRings(entity)) endpoints.push(...ring);
     }
-    // XLine: infinite in both directions → no endpoints
 
     return endpoints;
   }
@@ -169,11 +172,6 @@ export class GeometricCalculations {
     } else if (isPolylineEntity(entity) || isLWPolylineEntity(entity)) {
       // Edge midpoints (+ closing edge when closed) via shared SSoT helper.
       midpoints.push(...GeometricCalculations.ringEdgeMidpoints(entity.vertices, entity.closed || false));
-    } else if (isHatchEntity(entity)) {
-      // ADR-507 — γραμμοσκίαση: μέσα ακμών κάθε ring (κλειστός βρόχος) του ορίου.
-      for (const ring of entity.boundaryPaths) {
-        midpoints.push(...GeometricCalculations.ringEdgeMidpoints(ring, true));
-      }
     } else if (isRoofEntity(entity)) {
       // ADR-417 — στέγη: μέσα ακμών footprint + εξωτερικού δαχτυλιδιού γείσου + κορφιάδων/hips.
       midpoints.push(...GeometricCalculations.ringEdgeMidpoints(entity.params?.outline?.vertices ?? [], true));
@@ -188,6 +186,13 @@ export class GeometricCalculations {
       // ADR-651/654 — edge midpoints of the rotated image rectangle (closed ring).
       const corners = imageEntityRectVertices(entity);
       if (corners) midpoints.push(...GeometricCalculations.ringEdgeMidpoints(corners, true));
+    } else {
+      // ADR-507 + ADR-662 — ring-bounded: μέσα ακμών κάθε ring ως ΚΛΕΙΣΤΟΥ βρόχου. Το
+      // `closed=true` είναι κρίσιμο — τα rings δεν επαναλαμβάνουν την πρώτη κορυφή, άρα
+      // χωρίς αυτό χάνεται το μέσο της ακμής κλεισίματος (last→first).
+      for (const ring of entityClosedRings(entity)) {
+        midpoints.push(...GeometricCalculations.ringEdgeMidpoints(ring, true));
+      }
     }
 
     return midpoints;
@@ -272,15 +277,19 @@ export class GeometricCalculations {
           y: centerY / 4
         };
       }
-    } else if (isHatchEntity(entity)) {
-      // ADR-507 — γραμμοσκίαση: CENTER έλξη = κέντρο bbox του ορίου. Επαναχρήση του
-      // `hatchBoundsCenter` SSoT (ίδιο math με τον gradient origin default) → μηδέν διπλότυπο.
-      return hatchBoundsCenter(entity.boundaryPaths);
     } else if (isRoofEntity(entity)) {
       // ADR-417 — στέγη: CENTER = κέντρο bbox footprint (derived `geometry.bbox` SSoT).
       const b = entity.geometry?.bbox;
       return b ? { x: (b.min.x + b.max.x) / 2, y: (b.min.y + b.max.y) / 2 } : null;
     }
+
+    // ADR-507 + ADR-662 — ring-bounded οντότητες: CENTER = κέντρο bbox ΟΛΩΝ των rings.
+    // Τα rings είναι διακριτές συμπαγείς περιοχές (TIN perimeter + νησίδες), όχι
+    // outer-minus-holes, άρα ένα κέντρο για ΟΛΟ το όριο — όχι ένα ανά ring.
+    // Ο `hatchBoundsCenter` είναι καθαρό bbox-center πάνω σε ring arrays (το όνομα είναι
+    // ιστορικό, από τον gradient origin του ADR-507) → μηδέν δεύτερη bbox math.
+    const rings = entityClosedRings(entity);
+    if (rings.length > 0) return hatchBoundsCenter(rings);
 
     return null;
   }

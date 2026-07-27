@@ -225,6 +225,57 @@ TOPOGRAPHY_TAB (id: 'topography', labelKey: 'ribbon.tabs.topography')
 
 ---
 
+## 11. Έλξεις (OSNAP) στο περίγραμμα της επιφάνειας
+
+**Αίτημα Giorgio (2026-07-27):** «όταν κάνω hover πάνω στο περίγραμμα μιας τοπογραφικής επιφάνειας να φαίνονται τα σημάδια των έλξεων — κυρίως στις κορυφές — και να με έλκουν». Στο στιγμιότυπο ο Giorgio κύκλωσε **τις κορυφές** του λαδί περιγράμματος (layer `TOPO-SURFACE`) ⇒ καρδιά του αιτήματος = **ENDPOINT**.
+
+### 11.1 Αιτία — το `topo-surface` ήταν ΑΟΡΑΤΟ στη μηχανή έλξης
+
+Το entity έφτανε κανονικά στη μηχανή (`useGlobalSnapSceneSync` → `initialize(allEntities)`), περνούσε το φίλτρο ορατότητας, και το hover/hit-test **δούλευε ήδη**. Έλειπε **μόνο** η παραγωγή υποψηφίων σημείων: `grep -rl "topo-surface" snapping/` → **κανένα αρχείο**. Κανένας κλάδος στα `getEntityEndpoints` / `getEntityMidpoints` / `getEntityCenter` / `NearestSnapEngine` / `PerpendicularSnapEngine` ⇒ μηδέν fux, μηδέν έλξη. Δεν ήταν πρόβλημα overlay/rendering/plumbing.
+
+### 11.2 Big-player evidence (web-research 2026-07-27)
+
+| Εργαλείο | Πρακτική | Συνέπεια για εμάς |
+|---|---|---|
+| **Civil 3D** | Το OSNAP πιάνει **ό,τι εμφανίζει** το surface style (triangles/contours/border). Οι χρήστες «ξεφεύγουν» κρύβοντας το TIN σε layer (`DEFPOINTS`) — δηλαδή ο διακόπτης είναι η **ορατότητα**, όχι μια ρύθμιση έλξης. | Δόγμα **«ό,τι ζωγραφίζεται, ελκύει»**. Ο διακόπτης υπάρχει ήδη: layer/`visible`. |
+| **Revit Toposolid** | Το snap μέσα στο toposolid είναι **περιορισμένο**· η επίσημη σύσταση είναι βοηθητικές γραμμές/reference planes. | Χαμηλός πήχης — δεν τον αντιγράφουμε. |
+| **AutoCAD** | `OSOPTIONS` **default 7** (bit 1) = **καταστολή** osnap σε γραμμοσκίαση. | Απόκλιση **συνειδητή**: η δική μας γραμμοσκίαση είναι first-class σχέδιο με λαβές (ADR-507), όχι σκέτο γέμισμα. |
+
+**Απόφαση Giorgio (AskUserQuestion 2026-07-27):** NEAREST + PERPENDICULAR **και στα δύο** (τοπογραφική επιφάνεια **και** γραμμοσκίαση) — ένας type-driven κλάδος, μηδέν φράχτης. Λόγος: το ADR-507 έδωσε ήδη ENDPOINT/MIDPOINT/CENTER στη γραμμοσκίαση· «έλξη στην κορυφή αλλά όχι πάνω στη γραμμή» είναι ασυνέπεια που ο χρήστης τη νιώθει.
+
+### 11.3 Λύση — ΕΝΑ SSoT, ανακαλωδίωση αντί για προσθήκη
+
+Ο πρόχειρος δρόμος ήταν 5 νέοι κλάδοι `isTopoSurfaceEntity(e) → e.footprint` δίπλα στους 5 υπάρχοντες `isHatchEntity(e) → e.boundaryPaths`: **sibling clone** (N.18) που το name-based `ssot:discover` (CHECK 3.18) **δεν** πιάνει.
+
+Αντ' αυτού, η παρατήρηση: **τα δύο πεδία κρατούν ταυτόσημο σχήμα δεδομένων** (`Point2D[][]`, implicitly κλειστά rings) κάτω από διαφορετικό όνομα. Άρα:
+
+**`snapping/shared/entity-closed-rings.ts`** (νέο) απαντά **ένα** ερώτημα — «ποια κλειστά δαχτυλίδια ορίου έχει αυτή η οντότητα;» (`hatch → boundaryPaths`, `topo-surface → footprint`, οτιδήποτε άλλο → κενό). Οι **υπάρχοντες** hatch κλάδοι **αντικαταστάθηκαν** από έναν ring-driven κλάδο ⇒ το topo μπήκε **δωρεάν** και τα διπλότυπα **μειώθηκαν** αντί να αυξηθούν.
+
+Το πλαίσιο συντεταγμένων: τα rings διαβάζονται **ΩΜΑ**. Το `buildTopoSurfaceEntity` **έχει ήδη** προβάλει σε display frame μέσω `getActiveWorldToDisplayProjector` — καμία `mmToSceneUnits`, κανένας δεύτερος projector (αλλιώς οι fux εμφανίζονται αλλού από τη γραμμή). Το σχόλιο του `TopoSurfaceEntity.footprint` έλεγε λανθασμένα «world canonical mm» — **διορθώθηκε** (boy-scout N.0.2· ο κώδικας νικά).
+
+| Έλξη | Πηγή σημείων | Αποτέλεσμα στο περίγραμμα |
+|---|---|---|
+| **ENDPOINT** | `entityClosedRings` → κάθε κορυφή κάθε ring | οι κόκκινα κυκλωμένες κορυφές |
+| **MIDPOINT** | `ringEdgeMidpoints(ring, closed=true)` (υπάρχον SSoT) | μέσα ακμών **+ ακμή κλεισίματος** |
+| **CENTER** | `hatchBoundsCenter(rings)` (υπάρχον SSoT) | κέντρο bbox **όλων** των rings |
+| **NEAREST** | `nearestFootOnClosedRings` (νέο, πάνω στο `polyline-perpendicular-feet`) | clamped foot στην κοντινότερη ακμή |
+| **PERPENDICULAR** | `perpendicularFeetOverClosedRings` (νέο, ίδιο SSoT) | unclamped foot ανά ακμή (και σε προέκταση) |
+
+**Μηδέν νέα γεωμετρικά μαθηματικά**: τα δύο ring-set helpers είναι fan-out πάνω στα υπάρχοντα `nearestFootOnPolyline` / `perpendicularFeetOverPolyline` (ADR-363 Φ5.5e/f/g) — η διάσχιση ακμών ζει **μία** φορά.
+
+### 11.4 Πυκνότητα — γιατί ΔΕΝ μπήκε throttling
+
+Ένα TIN perimeter μπορεί να έχει εκατοντάδες κορυφές. Και οι τρεις engines (ENDPOINT/MIDPOINT/CENTER) χτίζουν **spatial index** (`BaseSnapEngine.initializeSpatialIndex`) και ερωτούν με ακτίνα ⇒ επιστρέφονται **μόνο** τα σημεία κοντά στον κέρσορα. Αυτό είναι ήδη το «snap only near cursor» των μεγάλων. Καμία προσθήκη LOD/throttling **χωρίς μετρημένο πρόβλημα**.
+
+### 11.5 Τι ΔΕΝ έγινε (καταγραφή, όχι εκκρεμότητα)
+
+- **TIN vertices/triangles**: ο Giorgio ζήτησε **περίγραμμα** ⇒ μόνο `footprint`. Αν ποτέ ζητηθεί Civil-3D parity σε εμφανιζόμενα τρίγωνα, η πηγή είναι `getTopoSurface(surfaceId)`, όχι το footprint.
+- **NODE osnap σε survey points**: τα τοπογραφικά σημεία **είναι ήδη** `PointEntity` (`topo-point-labels.ts` → `type: 'point'`) ⇒ ο `NodeSnapEngine` τα καλύπτει· **καμία εργασία**.
+- **Label στην έλξη**: το NEAREST candidate κρατά το γενικό `'Nearest'` ⇒ το overlay δείχνει σκέτο glyph (ADR-597 req #4). Δικό του i18n key θα απαιτούσε `snap-description-keys` + el/en (N.11) — **δεν** ζητήθηκε.
+- **Ιδέα πέρα από τους μεγάλους (πρόταση, μη υλοποιημένη):** η fux σε τοπογραφική επιφάνεια να δείχνει **το υψόμετρο** στο σημείο έλξης (υπάρχει SSoT `systems/topography/grade-at-plan-point.ts`). Ένας μηχανικός που ελκύεται σε κορυφή και βλέπει «+12.47» παίρνει πληροφορία που το AutoCAD **δεν** δίνει. Απαιτεί i18n key + απόφαση Giorgio.
+
+---
+
 ## Changelog
 - **2026-07-15** — Δημιουργία (PROPOSED). Research-first: web-research 5 big players (Revit/Civil 3D/ArchiCAD/C4D/Figma) + πραγματικό SSoT audit. Απόφαση: μεταφορά τοπογραφικού σε μόνιμο Ribbon tab + Properties palette + (Φάση 3) contextual tab. Κρίσιμο εύρημα §5 (topo = baked native entities, όχι δικοί types).
 - **2026-07-15 — Φάση 1 ΥΛΟΠΟΙΗΘΗΚΕ** (permanent «Τοπογραφικό» ribbon tab). Το αριστερό `TopographyPanel` **μένει** (dual access, μηδέν regression).
@@ -289,8 +340,24 @@ TOPOGRAPHY_TAB (id: 'topography', labelKey: 'ribbon.tabs.topography')
   - **Fix (data-only, μηδέν νέο CSS/component)**: split των panels σε **ομοιογενείς** σειρές μέσω τοπικού `row()` helper. Οι σειρές μπαίνουν side-by-side μέσα στο panel body → «large tools │ στοίβα ρυθμίσεων │ large actions» = Revit/Civil 3D panel grammar. `topo-data`: [Εισαγωγή] │ [Νέφος visible + Νέφος σημείων…]· `topo-surface`: [Ασυνέχειες + Καθαρισμός] │ [Ισοδιάσταση + Κύριες ανά + Στυλ] │ [Δημιουργία + Αυτόματες]· `topo-presentation`: [Κάναβος + Βήμα] │ [Αποτύπωμα] │ [Βορράς + Mode] │ [Αποτύπωση + Ετικέτες]· `topo-analysis`: [Όριο] │ [Αναφορά cut/fill] │ [Όγκοι + QA].
   - **Guard**: νέο test «κάθε row είναι ομοιογενής» στο `topography-tab.test.ts` (καμία mixed/κενή σειρά) + `ROW_LAYOUT` σχόλιο στην κεφαλίδα του data file που εξηγεί ΓΙΑΤΙ δεν είναι κοσμητικό. jest 8/8 πράσινα· N.18 jscpd καθαρό.
   - **Αρχεία**: MODIFY `ui/ribbon/data/topography-tab.ts`, `ui/ribbon/data/__tests__/topography-tab.test.ts`. **Μηδέν** αλλαγή σε components/CSS/i18n/stores → **ADR-040 άθικτο**.
+- **2026-07-27 — §11 Έλξεις (OSNAP) στο περίγραμμα ΥΛΟΠΟΙΗΘΗΚΕ.** Το `topo-surface` ήταν **αόρατο** στο υποσύστημα έλξεων (`grep -rl "topo-surface" snapping/` → κενό): hover/hit-test δούλευαν, αλλά καμία μηχανή δεν παρήγαγε υποψήφιο σημείο. Πλέον ENDPOINT/MIDPOINT/CENTER/NEAREST/PERPENDICULAR στο περίγραμμα (βλ. §11).
+  - **Έρευνα (§11.2)**: Civil 3D = «ό,τι εμφανίζεται, ελκύει» (διακόπτης = ορατότητα/layer)· Revit Toposolid = περιορισμένο snap (χαμηλός πήχης)· AutoCAD `OSOPTIONS` default 7 ⇒ **καταστολή** osnap σε γραμμοσκίαση (συνειδητή απόκλιση — η δική μας γραμμοσκίαση έχει λαβές, ADR-507).
+  - **Απόφαση Giorgio**: NEAREST/PERPENDICULAR **και** στη γραμμοσκίαση (ένας type-driven κλάδος, μηδέν φράχτης) — αίρεται η ασυνέπεια «κορυφή ναι, γραμμή όχι».
+  - **SSoT (N.18) — ανακαλωδίωση, ΟΧΙ προσθήκη**: νέο `snapping/shared/entity-closed-rings.ts` (ΕΝΑ ερώτημα: «ποια κλειστά rings ορίου;»· `hatch→boundaryPaths`, `topo-surface→footprint`). Οι **5 υπάρχοντες hatch κλάδοι αντικαταστάθηκαν** από ring-driven κλάδο ⇒ το topo μπήκε δωρεάν, διπλότυπα **μειώθηκαν**. Reuse `ringEdgeMidpoints` + `hatchBoundsCenter` + `polyline-perpendicular-feet` — **μηδέν νέα γεωμετρικά μαθηματικά**. `jscpd:diff` **καθαρό**.
+  - **Boy-scout (N.0.2)**: το σχόλιο του `TopoSurfaceEntity.footprint` έλεγε «world canonical mm» ενώ ο builder **προβάλλει** σε display frame — διορθώθηκε σε `types/topo-surface.ts` + `TopoSurfaceRenderer.ts`. Το λάθος σχόλιο είχε ήδη παραπλανήσει· η έλξη διαβάζει τα rings **ΩΜΑ**, όπως renderer/hit-test.
+  - **Ολοκλήρωση ημιτελούς εξαγωγής**: το `polyline-perpendicular-feet.ts` είχε ιδιωτικό `forEachSegmentFoot` (extraction μετά από CHECK 3.28) **χωρίς** ανακαλωδίωση των δύο δημόσιων συναρτήσεων — ο helper ήταν αχρησιμοποίητος και οι δύο βρόχοι-δίδυμα ζωντανοί. Πλέον και οι δύο περνούν από αυτόν (η διάσχιση ακμών + το modulo της ακμής κλεισίματος ζουν **μία** φορά).
+  - **Αρχεία**: NEW `snapping/shared/entity-closed-rings.ts`, `snapping/shared/__tests__/entity-closed-rings.test.ts`. MODIFY `snapping/shared/polyline-perpendicular-feet.ts`, `snapping/shared/GeometricCalculations.ts`, `snapping/engines/NearestSnapEngine.ts`, `snapping/engines/PerpendicularSnapEngine.ts`, `types/topo-surface.ts`, `rendering/entities/TopoSurfaceRenderer.ts`.
+  - **Tests**: νέο lock 18 tests (`describe.each` πάνω και στους δύο ring-bounded τύπους — αν κάποιος ξαναγράψει per-type κλάδο και αποκλίνει, σπάει)· το ADR-507 lock της γραμμοσκίασης μένει **άθικτο**. Συνολικά **87 suites / 1014 tests πράσινα** (`snapping/` + `bim/walls` + `bim/slabs`).
+  - **ADR-040**: καμία αλλαγή σε orchestrators/leaves/stores — μόνο pure υπολογισμός σημείων εντός των engines. Οι τρεις engines χρησιμοποιούν **spatial index** ⇒ radius query, άρα η πυκνότητα του TIN perimeter **δεν** είναι perf θέμα (§11.4) και δεν μπήκε throttling.
 
 ---
+
+### Πηγές (web-research 2026-07-27, §11 έλξεις)
+- Autodesk — [OSOPTIONS (System Variable)](https://help.autodesk.com/cloudhelp/2021/ENU/AutoCAD-Core/files/GUID-0D05BECE-0DC3-454D-999A-208C6DBC3C3E.htm) · default **7** ⇒ bit 1 = suppress osnaps on hatch objects.
+- Autodesk — [Object Snap does not work on hatch objects in AutoCAD](https://www.autodesk.com/support/technical/article/caas/sfdcarticles/sfdcarticles/Object-Snap-does-not-work-on-hatch-objects-in-AutoCAD.html)
+- WisDOT Civil 3D KB — [Object snaps](https://c3dkb.dot.wi.gov/Content/c3d/acad/acad-objct-snp.htm) · `OSNAPZ` και συμπεριφορά έλξης σε Civil 3D αντικείμενα.
+- Autodesk Community — [Snap to Surface](https://forums.autodesk.com/t5/civil-3d-forum/snap-to-surface/td-p/8297659) · η έλξη στο εμφανιζόμενο TIN απενεργοποιείται μέσω **layer**, όχι ρύθμισης έλξης.
+- Autodesk — [Is it possible to snap to geometry when adding toposolid points in Revit?](https://www.autodesk.com/support/technical/article/caas/sfdcarticles/sfdcarticles/Is-it-possible-to-snap-to-geometry-when-adding-toposolid-points-in-Revit.html) · περιορισμένο snap· σύσταση βοηθητικών γραμμών/reference planes.
 
 ### Πηγές (web-research 2026-07-15)
 - Revit Toposolid / Massing & Site / Modify contextual / Properties: [BIM Pure — Toposolid](https://www.bimpure.com/blog/toposolid) · [Micrographics — Excavate](https://mgfx.co.za/blog/building-architectural-design/the-new-revit-2025-massing-and-site-tools-addition-excavate/) · [Autodesk Help — Toposolid Enhancements](https://help.autodesk.com/cloudhelp/2025/ENU/Revit-WhatsNew/files/GUID-50FB6EAF-5308-487B-9BF0-A59C36126B96.htm)
