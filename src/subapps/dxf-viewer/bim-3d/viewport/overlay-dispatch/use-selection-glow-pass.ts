@@ -120,8 +120,30 @@ function strokeFloor(
 }
 
 /** Ταυτότητα της τρέχουσας επιλογής — αλλάζει ⇔ πρέπει να ξαναχτιστούν τα περιγράμματα. */
-function selectionSignature(ids: readonly string[]): string {
+export function selectionSignature(ids: readonly string[]): string {
   return ids.join('|');
+}
+
+/**
+ * Ο ΚΑΝΟΝΑΣ «πότε μιλά το highlight», ως καθαρή συνάρτηση (ADR-717 v3).
+ *
+ * Εξάγεται επίτηδες: αυτή η μία γραμμή άλλαξε ΤΡΕΙΣ φορές μέσα σε μία συνεδρία (πάντα-αναμμένο →
+ * πρόβλεψη κατωφλίου → κατάσταση λαβών) και κάθε λάθος εκδοχή ήταν ΟΡΑΤΗ στον χρήστη ως αλλοιωμένο
+ * χρώμα οντότητας. Ένας κανόνας με τέτοιο ιστορικό δεν μένει θαμμένος μέσα σε hook όπου μόνο ένα
+ * DOM test θα τον έπιανε — γίνεται ρητός και ελέγχεται κατευθείαν.
+ *
+ * @param dxfCount        επιλεγμένες `dxf-entity` (0 ⇒ δεν υπάρχει τίποτα να δείξουμε)
+ * @param bimCount        επιλεγμένα BIM ids (>0 ⇒ εκείνα έχουν WebGL silhouette· δύο highlight
+ *                        ταυτόχρονα θα διάβαζαν ως ένα ασαφές)
+ * @param seatedGripCount raw-DXF οντότητες που έχουν ΤΩΡΑ λαβές (>0 ⇒ οι λαβές μιλούν, το χρώμα
+ *                        της οντότητας μένει ανέπαφο — ισοτιμία με το 2D)
+ */
+export function shouldShowSelectionHighlight(
+  dxfCount: number,
+  bimCount: number,
+  seatedGripCount: number,
+): boolean {
+  return dxfCount > 0 && bimCount === 0 && seatedGripCount === 0;
 }
 
 /**
@@ -164,7 +186,7 @@ export function useSelectionGlowPass(): BimOverlayPass {
   const bimCount = useSelection3DStore((s) => s.selectedBimIds.length);
   // Η ΚΑΤΑΣΤΑΣΗ των λαβών, όχι πρόβλεψη του κατωφλίου (βλ. §v3 παραπάνω).
   const seatedGripCount = useGrip3DOverlayStore((s) => s.dxfGhostEntityIds.length);
-  const active = dxfCount > 0 && bimCount === 0 && seatedGripCount === 0;
+  const active = shouldShowSelectionHighlight(dxfCount, bimCount, seatedGripCount);
 
   const cacheRef = useRef<OutlineCache | null>(null);
 

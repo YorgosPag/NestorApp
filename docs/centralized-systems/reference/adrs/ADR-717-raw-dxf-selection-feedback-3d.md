@@ -119,10 +119,15 @@ clipping. Probe: τοπογραφικό 3 km με `CAMERA_FAR=1000` → 4/4 ση
 | `bim-3d/scene/dxf-3d-floor-scope.ts` | `findDxfEntitiesInScope` (bulk SSoT) + per-id wrapper |
 | `bim-3d/viewport/overlay-dispatch/use-selection-glow-pass.ts` | **ΝΕΟ** — το κανάλι highlight |
 | `bim-3d/viewport/overlay-dispatch/BimOverlayDispatchCanvas.tsx` | Εγγραφή pass στο κατώτερο z |
-| `bim-3d/scene/__tests__/dxf-entities-in-scope.test.ts` | **ΝΕΟ** — 8 anchors |
+| `bim-3d/scene/__tests__/dxf-entities-in-scope.test.ts` | **ΝΕΟ** — 8 anchors (bulk resolver) |
+| `bim-3d/viewport/overlay-dispatch/__tests__/selection-highlight-rule.test.ts` | **ΝΕΟ** — 9 anchors (ο κανόνας `active` + invalidation cache) |
 
 ## 8. Changelog
 
+- **2026-07-28 — v3.1.** Ο κανόνας `active` **εξήχθη** ως καθαρή `shouldShowSelectionHighlight()` +
+  9 anchors. Μια απόφαση που άλλαξε τρεις φορές σε μία συνεδρία, με **κάθε** λάθος εκδοχή ορατή
+  στον χρήστη, δεν μένει θαμμένη μέσα σε hook όπου μόνο DOM test θα την έπιανε. Σύνολο:
+  **61 σουίτες / 492 tests πράσινα**, jscpd καθαρό.
 - **2026-07-28 — v3.** Το `active` ρωτά την **ΚΑΤΑΣΤΑΣΗ** των λαβών (`Grip3DOverlayStore.
   dxfGhostEntityIds` — «ποιες έχουν ΤΩΡΑ λαβές»), όχι το κατώφλι. Η v2 **προέβλεπε** την απόφαση
   του `seatGrips` καλώντας ξεχωριστά το `isGripObjLimitExceeded` — δύο υπολογισμοί του ίδιου
