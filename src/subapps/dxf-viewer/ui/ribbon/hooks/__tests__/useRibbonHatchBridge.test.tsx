@@ -33,6 +33,15 @@ jest.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 
+// ADR-649 §associative — ο `core/commands` barrel σέρνει πλέον τον universal cascade
+// (DeleteEntityCommand → associative-geometry-reconcile → area-label-cascade → area-label),
+// και η σύνθεση του κειμένου της ετικέτας είναι εξ ορισμού i18n. Το suite αυτό κρατά
+// σκόπιμα το i18n runtime εκτός γραφήματος (βλ. mocks παρακάτω) — ίδια στρατηγική, ένα
+// mock παραπάνω. Καμία δήλωση του test δεν εξαρτάται από πραγματικές μεταφράσεις.
+jest.mock('@/i18n', () => ({
+  i18n: { t: (key: string) => key, exists: () => false },
+}));
+
 // Capture τα patches χωρίς να εκτελείται πραγματικό scene mutation.
 jest.mock('../../../../core/commands/entity-commands/UpdateEntityCommand', () => ({
   UpdateEntityCommand: jest.fn().mockImplementation((id, patch) => ({

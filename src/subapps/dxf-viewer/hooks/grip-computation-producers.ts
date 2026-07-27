@@ -24,6 +24,12 @@
 
 import type { DxfEntityUnion } from '../canvas-v2/dxf-canvas/dxf-types';
 import type { GripInfo } from './useGripMovement';
+import type { TopoSurfaceEntity } from '../types/topo-surface';
+// ADR-662 §13 — παραγωγή λαβών τοπογραφικής επιφάνειας (κοινό SSoT με τον renderer).
+import {
+  topoSurfaceVertexGrips,
+  topoVertexGripKind,
+} from '../systems/topography/topo-surface-grips';
 import type { WallEntity } from '../bim/types/wall-types';
 import type { BeamEntity } from '../bim/types/beam-types';
 import type { ColumnEntity } from '../bim/types/column-types';
@@ -407,7 +413,29 @@ export const GRIP_PRODUCERS: Partial<Record<DxfEntityUnion['type'], (e: DxfEntit
   // Το ΙΔΙΟ `getImageGrips` SSoT ζωγραφίζει ο `ImageRenderer.getGrips` → render ≡ interaction.
   // (Πριν: κανένας producer → `[]` → οι λαβές φαίνονταν αλλά δεν έπιαναν ποτέ.)
   image: (e) => getImageGrips(e as unknown as ImageEntity),
+
+  // ADR-662 §13 — τοπογραφική επιφάνεια: μία λαβή ανά κορυφή περιγράμματος **που αντιστοιχεί
+  // σε survey point**. Το ΙΔΙΟ `topoSurfaceVertexGrips` SSoT ζωγραφίζει ο
+  // `TopoSurfaceRenderer.getGrips` → ορατό ≡ πιάσιμο (και το φιλτράρισμα των μη-επιλύσιμων
+  // κορυφών γίνεται εκεί μία φορά, ώστε οι δείκτες να μη ξεφύγουν μεταξύ των δύο).
+  'topo-surface': (e) => buildTopoSurfaceGrips(e as unknown as TopoSurfaceEntity),
 };
+
+/**
+ * ADR-662 §13 — οι λαβές κορυφών της τοπογραφικής επιφάνειας. Λεπτή συναρμολόγηση `GripInfo`
+ * πάνω στο γεωμετρικό SSoT· καμία απόφαση εδώ (ποιες κορυφές δίνουν λαβή το κρίνει το
+ * `topoSurfaceVertexGrips`, γιατί την ίδια κρίση χρειάζεται και ο renderer).
+ */
+function buildTopoSurfaceGrips(entity: TopoSurfaceEntity): GripInfo[] {
+  return topoSurfaceVertexGrips(entity).map((g, gripIndex) => ({
+    entityId: entity.id,
+    gripIndex,
+    type: 'vertex' as const,
+    position: { x: g.point.x, y: g.point.y },
+    movesEntity: false,
+    gripKind: { on: 'topo-surface' as const, kind: topoVertexGripKind(g.ringIdx, g.vertexIdx) },
+  }));
+}
 
 /**
  * Types with an explicit grip producer (keys of {@link GRIP_PRODUCERS}) — bound to

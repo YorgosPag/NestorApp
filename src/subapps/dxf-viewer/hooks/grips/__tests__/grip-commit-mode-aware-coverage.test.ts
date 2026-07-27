@@ -83,6 +83,10 @@ const SEAM_B_PARAMETRIC = [
   // ADR-684 Φ2/Φ3 — παραμετρικό στερεό: Seam B parametric (commitGenericSolidGripDrag),
   // χωρίς ρητό Seam-C gate (όπως furniture / imported-mesh).
   'generic-solid',
+  // ADR-662 §13 — τοπογραφική επιφάνεια: Seam B parametric (`commitTopoSurfaceGripDrag`),
+  // χωρίς ρητό Seam-C gate. Η λαβή γράφει στο survey point αντί να κάνει patch την οντότητα,
+  // αλλά αυτό αφορά ΤΟ ΤΙ κάνει ο handler — η ΔΡΟΜΟΛΟΓΗΣΗ είναι η ίδια με κάθε parametric.
+  'topo-surface',
 ] as const;
 
 /**
@@ -169,11 +173,11 @@ const domainSet = new Set<string>(GRIP_KIND_ENTITIES);
 
 describe('Mode-aware grip-commit routing coverage — Seam C ↔ grip discriminator domain (ADR-587 Φ7)', () => {
   // ── Domain closure & disjointness ─────────────────────────────────────────
-  it('(A)∪(B)∪(C) === GRIP_KIND_ENTITIES (domain closure, 9 + 27 + 1 = 37)', () => {
+  it('(A)∪(B)∪(C) === GRIP_KIND_ENTITIES (domain closure, 9 + 28 + 1 = 38)', () => {
     const union = [...SEAM_C_GATED, ...SEAM_B_PARAMETRIC, ...GENERIC_DISPATCH_ONLY];
     expect(asSorted(union)).toEqual(asSorted([...GRIP_KIND_ENTITIES]));
-    expect(GRIP_KIND_ENTITIES).toHaveLength(37);
-    expect(union).toHaveLength(37); // καμία επικάλυψη → κάθε entity σε ΑΚΡΙΒΩΣ 1 partition
+    expect(GRIP_KIND_ENTITIES).toHaveLength(38);
+    expect(union).toHaveLength(38); // καμία επικάλυψη → κάθε entity σε ΑΚΡΙΒΩΣ 1 partition
   });
 
   it('οι 3 partitions είναι pairwise disjoint', () => {
@@ -201,8 +205,8 @@ describe('Mode-aware grip-commit routing coverage — Seam C ↔ grip discrimina
     expect(SEAM_C_GATED).toHaveLength(9);
   });
 
-  it('(B) SEAM_B_PARAMETRIC = 27 (οι 29 Seam-B ΜΕΙΟΝ opening + mep-manifold)', () => {
-    expect(SEAM_B_PARAMETRIC).toHaveLength(27);
+  it('(B) SEAM_B_PARAMETRIC = 28 (οι 30 Seam-B ΜΕΙΟΝ opening + mep-manifold)', () => {
+    expect(SEAM_B_PARAMETRIC).toHaveLength(28);
     // opening + mep-manifold ΔΕΝ ανήκουν εδώ — ανεβαίνουν στο (A) λόγω action gates
     expect(SEAM_B_PARAMETRIC).not.toContain('opening');
     expect(SEAM_B_PARAMETRIC).not.toContain('mep-manifold');

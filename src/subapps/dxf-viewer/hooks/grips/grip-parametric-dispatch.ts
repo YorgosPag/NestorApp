@@ -51,6 +51,7 @@ import {
   commitScaleBarGripDrag,
   commitOpeningInfoTagGripDrag,
   commitImageGripDrag,
+  commitTopoSurfaceGripDrag,
 } from './grip-parametric-commits';
 
 /** Commit-handler shape shared by every parametric kind (behavior-preserving). */
@@ -133,6 +134,10 @@ export const PARAMETRIC_COMMIT_HANDLERS: Partial<
   'opening-info-tag': commitOpeningInfoTagGripDrag,
   // ADR-654 — raster image (move / rotation / 4 corner resize; flat params, no geometry cache).
   image: commitImageGripDrag,
+  // ADR-662 §13 — τοπογραφική επιφάνεια. Ο ΜΟΝΑΔΙΚΟΣ commit που δεν κάνει patch την οντότητα
+  // της λαβής: γράφει στο survey point (`MoveTopoSurveyPointCommand`) και το derived footprint
+  // ξαναπαράγεται από την TIN — patch στο περίγραμμα θα εξατμιζόταν στην αναδημιουργία.
+  'topo-surface': commitTopoSurfaceGripDrag,
 };
 
 /**

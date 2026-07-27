@@ -139,6 +139,11 @@ export {
   commitHatchGripDrag,
 } from './grip-parametric-footprint-commits';
 
+// ADR-662 §13 — η λαβή τοπογραφικής επιφάνειας ζει στο grip-topo-surface-commits.ts
+// (N.7.1 file-size split· και σημασιολογικά ξεχωριστή — γράφει στην ΠΗΓΗ, όχι στην
+// οντότητα της λαβής). Re-exported εδώ ώστε το commit API να μείνει ένα import.
+export { commitTopoSurfaceGripDrag } from './grip-topo-surface-commits';
+
 // ADR-510 Φ3c — polyline arc-apex bulge drag lives in grip-polyline-bulge-commit.ts
 // (N.7.1 file-size split). Re-exported so the commit API stays one import.
 export { commitPolylineBulgeGripDrag } from './grip-polyline-bulge-commit';

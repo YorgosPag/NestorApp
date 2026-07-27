@@ -49,10 +49,10 @@ describe('Parametric-commit dispatch coverage — ζωντανό seam ↔ grip d
     expect(asSorted(PARAMETRIC_COMMIT_SUPPORTED_KINDS)).toEqual(
       asSorted(Object.keys(PARAMETRIC_COMMIT_HANDLERS)),
     );
-    expect(PARAMETRIC_COMMIT_SUPPORTED_KINDS).toHaveLength(29);
+    expect(PARAMETRIC_COMMIT_SUPPORTED_KINDS).toHaveLength(30);
   });
 
-  it('grip kinds με parametric commit = καρφωμένο golden set (29)', () => {
+  it('grip kinds με parametric commit = καρφωμένο golden set (30)', () => {
     expect(asSorted(PARAMETRIC_COMMIT_SUPPORTED_KINDS)).toEqual(
       asSorted([
         'stair', 'dimension', 'wall', 'opening', 'slab', 'slab-opening', 'roof',
@@ -68,6 +68,11 @@ describe('Parametric-commit dispatch coverage — ζωντανό seam ↔ grip d
         // ADR-684 Φ2/Φ3 — παραμετρικό στερεό: params-driven μέσω UpdateGenericSolidParamsCommand
         // (position/rotationDeg· box corner resize επεξεργάζεται shape.widthMm/depthMm).
         'generic-solid',
+        // ADR-662 §13 — τοπογραφική επιφάνεια. Ο ΜΟΝΑΔΙΚΟΣ parametric commit που ΔΕΝ κάνει
+        // patch την οντότητα της λαβής: γράφει στο survey point (`MoveTopoSurveyPointCommand`)
+        // και το derived footprint ξαναπαράγεται από την TIN. Ανήκει εδώ γιατί δρομολογείται
+        // από το ΙΔΙΟ seam — «parametric» εδώ σημαίνει «παρακάμπτει το generic vertex-stretch».
+        'topo-surface',
       ]),
     );
   });
@@ -77,10 +82,10 @@ describe('Parametric-commit dispatch coverage — ζωντανό seam ↔ grip d
     expect(asSorted(noParametric)).toEqual(asSorted([...NON_PARAMETRIC_KINDS]));
   });
 
-  it('golden ∪ complement === GRIP_KIND_ENTITIES (domain closure, 29 + 8 = 37)', () => {
+  it('golden ∪ complement === GRIP_KIND_ENTITIES (domain closure, 30 + 8 = 38)', () => {
     const union = [...PARAMETRIC_COMMIT_SUPPORTED_KINDS, ...NON_PARAMETRIC_KINDS];
     expect(asSorted(union)).toEqual(asSorted([...GRIP_KIND_ENTITIES]));
-    expect(GRIP_KIND_ENTITIES).toHaveLength(37);
+    expect(GRIP_KIND_ENTITIES).toHaveLength(38);
   });
 
   it('κανένα supported kind δεν είναι εκτός domain (seam ⊆ discriminator)', () => {

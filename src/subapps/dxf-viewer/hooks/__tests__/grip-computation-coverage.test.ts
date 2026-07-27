@@ -78,6 +78,11 @@ describe('Grip-producer capability coverage — ζωντανό seam ↔ descript
         // ADR-684 Φ2/Φ3 — παραμετρικό στερεό: ΕΧΕΙ producer. move + rotation πάντα·
         // 4 corners ΜΟΝΟ για box (per-shape reshape → Φ4).
         'generic-solid',
+        // ADR-662 §13 — τοπογραφική επιφάνεια: ΕΧΕΙ producer από 2026-07-27. Μία λαβή ανά
+        // κορυφή περιγράμματος **που αντιστοιχεί σε survey point** — οι κορυφές που ήρθαν
+        // από γραμμή ασυνέχειας ΔΕΝ παίρνουν λαβή (δεν έχουν πού να γράψουν· το μάθημα
+        // ADR-654). Καμία λαβή μέσου ακμής: θα επινοούσε υψόμετρο σε τοπογραφικό.
+        'topo-surface',
       ]),
     );
   });
@@ -96,10 +101,13 @@ describe('Grip-producer capability coverage — ζωντανό seam ↔ descript
         // (ίδια οικογένεια με το ADR-654 image bug): το callout ζωγραφίζεται και επιλέγεται, αλλά
         // δεν έχει λαβές ούτε move → ο χρήστης δεν μπορεί να το επεξεργαστεί. Pin εδώ = ορατό.
         'leader',
-        // ADR-662 Φ2β — topo-surface: Stage A plumbing, κανένα producer. Η επιφάνεια είναι
-        // derived (TIN/point-cloud) → η επεξεργασία γίνεται από το topography subsystem, ΟΧΙ με
-        // λαβές πάνω στο footprint outline — σωστό no-op για το Stage A συμβόλαιο.
-        'topo-surface',
+        // (ADR-662 §13: το `topo-surface` ΕΦΥΓΕ από εδώ 2026-07-27. Μέχρι τότε το σχόλιο εδώ
+        // έλεγε «derived → η επεξεργασία γίνεται από το topography subsystem, ΟΧΙ με λαβές
+        // πάνω στο footprint» — ήταν ρητή απόφαση, όχι bug, και **άλλαξε το συμβόλαιο**: η
+        // επιφάνεια παραμένει derived, αλλά η λαβή γράφει στο **survey point** και το
+        // footprint ξαναπαράγεται από την TIN, οπότε η αλλαγή επιβιώνει της αναδημιουργίας.
+        // Μοντέλο Revit «Modify Sub Elements»· το Civil 3D δεν δίνει λαβές στο Surface Border
+        // επειδή δεν κρατά δείκτη πίσω στην πηγή — εμείς τον κρατάμε.)
         // renderable BIM ΧΩΡΙΣ interactive grips
         'railing', 'wall-covering', 'thermal-space', 'space-separator', 'mep-fitting',
       ]),

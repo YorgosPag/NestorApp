@@ -15,9 +15,12 @@
  * phase-resolved strokeStyle, άρα hover/selection τονίζουν ομοιόμορφα το περίγραμμα.
  *
  * Hit-test = **point-in-polygon** σε οποιοδήποτε ring (mirror `ImageRenderer` /
- * `HatchRenderer`): κλικ οπουδήποτε μέσα στην επιφάνεια την επιλέγει. Καμία λαβή
- * (derived entity — δεν μετακινείται/αλλάζει μέγεθος με grips· ξαναχτίζεται από το
- * `getTopoSurface`).
+ * `HatchRenderer`): κλικ οπουδήποτε μέσα στην επιφάνεια την επιλέγει.
+ *
+ * **Λαβές (ADR-662 §13, από 2026-07-27):** μία ανά κορυφή περιγράμματος που αντιστοιχεί σε
+ * survey point. Η επιφάνεια παραμένει derived — η λαβή **δεν** επεξεργάζεται το footprint,
+ * γράφει στο survey point και το footprint ξαναπαράγεται από την TIN (μοντέλο Revit «Modify
+ * Sub Elements»). Μέχρι τότε ο renderer επέστρεφε ρητά `[]`· άλλαξε το **συμβόλαιο**.
  *
  * @see types/topo-surface.ts — TopoSurfaceEntity contract
  * @see rendering/entities/ImageRenderer.ts — το non-BIM polygon-fill precedent
@@ -30,6 +33,9 @@ import type { Entity } from '../../types/entities';
 import type { TopoSurfaceEntity } from '../../types/topo-surface';
 import { isTopoSurfaceEntity } from '../../types/topo-surface';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
+import { createVertexGrip } from './shared/grip-utils';
+// ADR-662 §13 — το ΙΔΙΟ SSoT που τροφοδοτεί το interaction registry (ορατό ≡ πιάσιμο).
+import { topoSurfaceVertexGrips } from '../../systems/topography/topo-surface-grips';
 
 export class TopoSurfaceRenderer extends BaseEntityRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
@@ -52,9 +58,25 @@ export class TopoSurfaceRenderer extends BaseEntityRenderer {
     }
   }
 
-  /** Derived entity — ξαναχτίζεται από το `getTopoSurface`, καμία grip επεξεργασία. */
-  getGrips(_entity: EntityModel): GripInfo[] {
-    return [];
+  /**
+   * ADR-662 §13 — μία **ορατή** λαβή ανά κορυφή περιγράμματος που αντιστοιχεί σε survey
+   * point, από το **ΙΔΙΟ** `topoSurfaceVertexGrips` SSoT που τροφοδοτεί το interaction
+   * registry (`computeDxfEntityGrips`) → ορατό ≡ πιάσιμο, χωρίς δυνατότητα απόκλισης.
+   *
+   * Η σειρά του array **είναι** ο `gripIndex` και στους δύο καταναλωτές· γι' αυτό και το
+   * φιλτράρισμα των μη-επιλύσιμων (breakline) κορυφών ζει μέσα στο SSoT και όχι εδώ — αν
+   * φιλτράραμε τοπικά, οι δείκτες θα ξέφευγαν και θα έσερνες άλλη κορυφή από αυτή που
+   * έπιασες (η ίδια οικογένεια αστοχίας με το ADR-507 «visible ≠ pickable»).
+   *
+   * (Μέχρι 2026-07-27 εδώ επέστρεφε `[]` — «derived entity, καμία grip επεξεργασία».
+   * Αυτό ήταν **ρητή απόφαση**, όχι bug· άλλαξε το συμβόλαιο, όχι η υλοποίηση.)
+   */
+  getGrips(entity: EntityModel): GripInfo[] {
+    if (!isTopoSurfaceEntity(entity as Entity)) return [];
+    const e = entity as unknown as TopoSurfaceEntity;
+    return topoSurfaceVertexGrips(e).map((g, gripIndex) =>
+      createVertexGrip(e.id, { x: g.point.x, y: g.point.y }, gripIndex),
+    );
   }
 
   /** Fill hit-test — κλικ μέσα σε οποιοδήποτε ring επιλέγει την επιφάνεια (mirror hatch/image). */

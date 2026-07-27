@@ -55,8 +55,10 @@ describe('ADR-602 grip discriminator SSoT — coverage', () => {
   it('runtime: 37 grip-producer entities, μηδέν διπλότυπα', () => {
     // 35 → 36: +imported-mesh (ADR-683 Φ3 — move + rotation ΜΟΝΟ, καμία λαβή σχήματος).
     // 36 → 37: +generic-solid (ADR-684 Φ2/Φ3 — move + rotation· 4 corners ΜΟΝΟ για box).
-    expect(GRIP_KIND_ENTITIES).toHaveLength(37);
-    expect(new Set(GRIP_KIND_ENTITIES).size).toBe(37);
+    // 37 → 38: +topo-surface (ADR-662 §13 — κορυφές περιγράμματος που γράφουν στο survey
+    //          point· η επιφάνεια ήταν ρητά grip-less μέχρι 2026-07-27, άλλαξε το συμβόλαιο).
+    expect(GRIP_KIND_ENTITIES).toHaveLength(38);
+    expect(new Set(GRIP_KIND_ENTITIES).size).toBe(38);
   });
 
   it('runtime: περιλαμβάνει τα editor-only `group` + `block` (domain ≠ RENDERABLE)', () => {

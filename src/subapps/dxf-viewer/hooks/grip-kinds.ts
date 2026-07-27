@@ -48,6 +48,8 @@ import type {
   ImageGripKind,
 } from './grip-kinds-primitives';
 import type { TextGripKind } from './grip-kinds-text';
+// ADR-662 §13 — τοπογραφική επιφάνεια (το kind ζει δίπλα στη σημασιολογία του).
+import type { TopoSurfaceGripKind } from '../systems/topography/topo-surface-grips';
 import type {
   MepRadiatorGripKind,
   MepBoilerGripKind,
@@ -334,6 +336,12 @@ export type {
 // compatibility (existing `import { TextGripKind } from '../grip-kinds'`).
 export type { TextGripKind } from './grip-kinds-text';
 
+// ADR-662 §13 — η τοπογραφική επιφάνεια. Το kind ζει ΔΙΠΛΑ στη σημασιολογία του
+// (`systems/topography/topo-surface-grips.ts`, μαζί με encode/decode/preview), όπως τα
+// structural/primitive kinds ζουν στα δικά τους sibling modules — εδώ μόνο το re-export
+// ώστε το `GripKindByEntity` παρακάτω να μείνει η ΜΙΑ λίστα του domain.
+export type { TopoSurfaceGripKind } from '../systems/topography/topo-surface-grips';
+
 // ADR-406/408/410/415/359 — placeable-object + linear-element grip kinds live in
 // the sibling module `grip-kinds-placeable.ts` (SRP / N.7.1) and are re-exported
 // here for backward compatibility (existing `import { … } from '../grip-kinds'`).
@@ -415,6 +423,9 @@ export interface GripKindByEntity {
   'opening-info-tag': OpeningInfoTagGripKind;
   image: ImageGripKind;
   text: TextGripKind;
+  // ADR-662 §13 — η επιφάνεια είναι derived: η λαβή γράφει στο survey point, όχι στο
+  // περίγραμμα. Μόνο κορυφές (καμία λαβή μέσου ακμής — θα επινοούσε υψόμετρο).
+  'topo-surface': TopoSurfaceGripKind;
 }
 
 /**
@@ -459,4 +470,7 @@ export const GRIP_KIND_ENTITIES = [
   'imported-mesh',
   // ADR-684 Φ2/Φ3 — παραμετρικό στερεό: move + rotation πάντα· 4 corners ΜΟΝΟ για box.
   'generic-solid',
+  // ADR-662 §13 — τοπογραφική επιφάνεια: κορυφές περιγράμματος που επεξεργάζονται την ΠΗΓΗ
+  // (survey points). Ήταν ρητά grip-less μέχρι 2026-07-27 — αλλαγή συμβολαίου, όχι bugfix.
+  'topo-surface',
 ] as const satisfies readonly (keyof GripKindByEntity)[];

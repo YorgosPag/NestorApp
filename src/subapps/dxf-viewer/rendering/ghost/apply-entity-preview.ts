@@ -80,6 +80,9 @@ import type { HatchEntity } from '../../types/entities';
 import { ShiftKeyTracker } from '../../keyboard/ShiftKeyTracker';
 import type { EntityPreviewTransform, ApplyEntityPreviewContext } from './entity-preview-types';
 import { gripKindOf } from '../../hooks/grip-kinds';
+import type { TopoSurfaceEntity } from '../../types/topo-surface';
+// ADR-662 §13 — preview της συρόμενης κορυφής περιγράμματος (ghost μόνο· βλ. σχόλιο κάτω).
+import { applyTopoSurfaceGripDrag } from '../../systems/topography/topo-surface-grips';
 import { unwrapStair, applyClassicEntityPreview, rotationGhost } from './apply-entity-preview-helpers';
 import { applyParametricBoxPreview } from './apply-parametric-box-preview';
 // ADR-615/363 — opening live ghosts (self-hosted + hosted Alt-move) extracted (N.7.1).
@@ -261,6 +264,21 @@ export function applyEntityPreview(
     const newBoundaryPaths = applyHatchGripDrag(hatchGripKind, { originalBoundaryPaths: hatch.boundaryPaths, delta });
     if (newBoundaryPaths === hatch.boundaryPaths) return entity;
     return { ...(entity as object), boundaryPaths: newBoundaryPaths } as unknown as DxfEntityUnion;
+  }
+
+  // ── ADR-662 §13 — τοπογραφική επιφάνεια: ζωντανό preview της συρόμενης κορυφής ──
+  // ⚠️ Εδώ preview ≠ commit, **σκόπιμα**. Το commit γράφει στο survey point και το
+  // περίγραμμα ξαναπαράγεται από την TIN — η επανατριγωνοποίηση μπορεί να δώσει άλλο
+  // περίβλημα από αυτό που δείχνει το ghost. Το preview απαντά «πού πάει η λαβή» (άμεση
+  // ανάδραση 60fps), όχι «πώς θα καταλήξει η επιφάνεια»· η αλήθεια έρχεται με το commit,
+  // ένα καρέ μετά. Το εναλλακτικό (rebuild της TIN ανά καρέ σε χιλιάδες σημεία) θα
+  // αντάλλασσε τη ρευστότητα με ακρίβεια που ο χρήστης δεν προλαβαίνει να διαβάσει.
+  const topoGripKind = gripKindOf(preview, 'topo-surface');
+  if (topoGripKind && entity.type === 'topo-surface') {
+    const surface = entity as unknown as TopoSurfaceEntity;
+    const newFootprint = applyTopoSurfaceGripDrag(topoGripKind, surface.footprint, delta);
+    if (newFootprint === surface.footprint) return entity;
+    return { ...(entity as object), footprint: newFootprint } as unknown as DxfEntityUnion;
   }
 
   // ── ADR-557 — text/mtext rect-box live preview (move / rotation / resize) ──
