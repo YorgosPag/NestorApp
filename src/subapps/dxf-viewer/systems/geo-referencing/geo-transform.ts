@@ -173,15 +173,37 @@ export interface WorldToDisplayProjector {
   readonly isIdentity: boolean;
   /** Planimetric WORLD (ΕΓΣΑ, mm) → building-DISPLAY (DXF local, mm). Z/elevation is never touched. */
   readonly project: (worldX: number, worldY: number) => Point2D;
+  /**
+   * ADR-662 §13 — the EXACT inverse of {@link project}: building-DISPLAY (DXF local, mm) →
+   * planimetric WORLD (ΕΓΣΑ, mm).
+   *
+   * Needed the moment a DISPLAY-frame interaction has to reach a WORLD-frame source of truth:
+   * a grip sits on the topo footprint (display, already projected), but the survey point it
+   * edits lives in `TopoPointStore` in WORLD mm. Without the round trip the drag would look
+   * right and write the point to the wrong coordinates on any geo-referenced project.
+   *
+   * Prepared like `project` — the trig is computed ONCE here — and it reuses the SAME
+   * {@link forwardRigidMap} kernel, so the two directions can never drift apart.
+   */
+  readonly unproject: (displayX: number, displayY: number) => Point2D;
 }
 
 /** Build a {@link WorldToDisplayProjector} for `geo` (`null`/identity → a no-op projector). */
 export function makeWorldToDisplayProjector(geo: GeoReference | null | undefined): WorldToDisplayProjector {
   if (isIdentityGeoReference(geo)) {
-    return { isIdentity: true, project: (worldX, worldY) => ({ x: worldX, y: worldY }) };
+    return {
+      isIdentity: true,
+      project: (worldX, worldY) => ({ x: worldX, y: worldY }),
+      unproject: (displayX, displayY) => ({ x: displayX, y: displayY }),
+    };
   }
   const map = inverseRigidMap(geo!);
-  return { isIdentity: false, project: (worldX, worldY) => ({ x: mapX(map, worldX, worldY), y: mapY(map, worldX, worldY) }) };
+  const back = forwardRigidMap(geo!);
+  return {
+    isIdentity: false,
+    project: (worldX, worldY) => ({ x: mapX(map, worldX, worldY), y: mapY(map, worldX, worldY) }),
+    unproject: (displayX, displayY) => ({ x: mapX(back, displayX, displayY), y: mapY(back, displayX, displayY) }),
+  };
 }
 
 /**

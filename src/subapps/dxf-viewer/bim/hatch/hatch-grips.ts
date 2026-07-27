@@ -21,12 +21,16 @@ import { constrainDeltaToDominantAxis } from '../grips/ortho-delta';
 import { projectVerticesTo2D } from '../geometry/shared/polygon-utils';
 import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import { normalizeAngleDeg } from '../../rendering/entities/shared/geometry-angle-utils';
+// ADR-662 §13 / N.18 — «πού κάθονται οι λαβές ενός κλειστού ring» απαντιέται ΚΕΝΤΡΙΚΑ πλέον
+// (η τοπογραφική επιφάνεια ρωτά το ΙΔΙΟ). Εδώ μένει μόνο η σημασιολογία της γραμμοσκίασης.
+import {
+  closedRingVertexGrips,
+  closedRingEdgeMidpointGrips,
+  MIN_RING_VERTICES,
+} from '../../systems/grip/closed-ring-grips';
 
 const VERTEX_PREFIX = 'hatch-vertex-';
 const EDGE_MIDPOINT_PREFIX = 'hatch-edge-midpoint-';
-
-/** Minimum vertices a boundary ring must keep (a polygon degenerates below a triangle). */
-const MIN_RING_VERTICES = 3;
 
 /** A boundary-vertex grip target: ring + vertex indices (→ `hatch-vertex-${pathIdx}-${vertexIdx}`) + world point. */
 export interface HatchBoundaryGrip {
@@ -54,13 +58,13 @@ export interface HatchEdgeMidpointGrip {
 export function getHatchBoundaryGrips(
   boundaryPaths: ReadonlyArray<ReadonlyArray<Point2D>>,
 ): HatchBoundaryGrip[] {
-  const grips: HatchBoundaryGrip[] = [];
-  boundaryPaths.forEach((path, pathIdx) => {
-    path.forEach((v, vertexIdx) => {
-      grips.push({ pathIdx, vertexIdx, point: { x: v.x, y: v.y } });
-    });
-  });
-  return grips;
+  // Λεπτός προσαρμογέας πάνω στο ring SSoT (ADR-662 §13): ίδια γεωμετρία, ίδια σειρά —
+  // μόνο το όνομα του δείκτη είναι της γραμμοσκίασης (`pathIdx` = «ring»).
+  return closedRingVertexGrips(boundaryPaths).map((g) => ({
+    pathIdx: g.ringIdx,
+    vertexIdx: g.vertexIdx,
+    point: g.point,
+  }));
 }
 
 /**
@@ -74,15 +78,13 @@ export function getHatchBoundaryGrips(
 export function getHatchEdgeMidpointGrips(
   boundaryPaths: ReadonlyArray<ReadonlyArray<Point2D>>,
 ): HatchEdgeMidpointGrip[] {
-  const grips: HatchEdgeMidpointGrip[] = [];
-  boundaryPaths.forEach((ring, pathIdx) => {
-    if (ring.length < MIN_RING_VERTICES) return;
-    ring.forEach((a, edgeIdx) => {
-      const b = ring[(edgeIdx + 1) % ring.length];
-      grips.push({ pathIdx, edgeIdx, point: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 } });
-    });
-  });
-  return grips;
+  // Λεπτός προσαρμογέας πάνω στο ring SSoT (ADR-662 §13) — ο πήχης των εκφυλισμένων
+  // rings (< 3 κορυφές) ζει πλέον κι αυτός εκεί, μία φορά.
+  return closedRingEdgeMidpointGrips(boundaryPaths).map((g) => ({
+    pathIdx: g.ringIdx,
+    edgeIdx: g.edgeIdx,
+    point: g.point,
+  }));
 }
 
 /** Grip kind για το gradient origin/seed (ADR-507 Φ5 A3). */
