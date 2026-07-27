@@ -21,6 +21,14 @@
  * over 160 k rows on typed arrays, and it needs no permutation array (which would add another
  * 4 MB and another thing to keep consistent). Sorting wins only when queries outnumber log n.
  *
+ * ## `Math.sqrt`, not `Math.hypot` — a measured 473 ms
+ * `Math.hypot` earns its cost by rescaling so that `dx²` cannot overflow or underflow. Our
+ * coordinates are canonical millimetres: even a full ΕΓΣΑ ordinate (~4.5·10⁹) squares to
+ * ~2·10¹⁹, nineteen orders of magnitude below where a float64 stops being able to hold it.
+ * The protection is therefore unbuyable here, while the bill was real — 1.12 M calls building
+ * one table for the reference file. Same value, same precision at this range, a fraction of
+ * the time.
+ *
  * ## Typed arrays, not objects
  * 160 k `{a, b, d}` objects is 160 k allocations the GC must trace during an interactive
  * action. Three parallel typed arrays are one allocation each and stay in cache during the
@@ -80,7 +88,9 @@ export function buildPairTable(points: readonly Point2D[]): PairTable {
     const pi = points[i]!;
     for (let j = i + 1; j < n; j++) {
       const pj = points[j]!;
-      distance[k] = Math.hypot(pj.x - pi.x, pj.y - pi.y);
+      const dx = pj.x - pi.x;
+      const dy = pj.y - pi.y;
+      distance[k] = Math.sqrt(dx * dx + dy * dy);
       indexA[k] = i;
       indexB[k] = j;
       k++;

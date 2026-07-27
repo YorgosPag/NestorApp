@@ -35,7 +35,7 @@ import type { Entity } from '../../types/entities';
 import type { SceneLayer } from '../../types/scene-types';
 import type { TopoPoint } from '../topography/topo-types';
 import { fromOnePointPair, IDENTITY_GEO_REFERENCE, type GeoReference } from './geo-transform';
-import { buildWorldPointIndex, scoreGeoReference, type GeoMatchScore, type WorldPointIndex } from './geo-point-index';
+import { buildPointSetIndex, scoreGeoReference, type GeoMatchScore, type PointSetIndex } from './geo-point-index';
 import {
   collectCandidatePoints, dominantLayerName, selectBasisSample, strideSample,
   type LocalCandidatePoint,
@@ -145,7 +145,7 @@ function accepted(
 interface MatchContext {
   readonly all: readonly LocalCandidatePoint[];
   readonly allXY: readonly Point2D[];
-  readonly index: WorldPointIndex;
+  readonly index: PointSetIndex;
   readonly worldXY: readonly Point2D[];
   readonly matchable: number;
   readonly toleranceMm: number;
@@ -275,7 +275,7 @@ export function autoMatchToSurvey(input: AutoMatchInput): GeoMatchResult {
   const ctx: MatchContext = {
     all,
     allXY: all.map(toPoint2D),
-    index: buildWorldPointIndex(worldXY, toleranceMm),
+    index: buildPointSetIndex(worldXY, toleranceMm),
     worldXY,
     matchable: matchableTotal(all.length, worldXY.length),
     toleranceMm,

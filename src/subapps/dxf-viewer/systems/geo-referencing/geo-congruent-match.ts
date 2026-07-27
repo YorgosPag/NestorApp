@@ -33,6 +33,17 @@
  * by the ratio of the two sets for no extra discrimination; verifying over everything is what
  * makes the reported inlier count honest. Never the other way round.
  *
+ * ## Cost (ADR-650 §M10e v23 — measured, not assumed)
+ * The enumeration is cheap; SCORING its output was not. 2 456 hypotheses × 1 500 probes each
+ * froze the tab for 6.7 s. Two changes, neither of which alters a single answer:
+ *   1. the search asks the question from the SURVEY side against an index of the drawing
+ *      (`countExplainedPoints`) — 93 probes instead of 1 500, because the one-to-one rule
+ *      already capped the answer at 93;
+ *   2. a candidate is abandoned the moment it provably cannot reach
+ *      `leader / UNIQUENESS_FACTOR`, below which it can influence neither the winner nor the
+ *      uniqueness gate. The literature's version of this (preemptive RANSAC, T_{d,d}) drops
+ *      candidates on a SAMPLE and accepts losing the true one; ours drops them on a proof.
+ *
  * Pure module — zero React/DOM/store deps, zero randomness, fully deterministic.
  *
  * @see ./geo-pair-table.ts — the invariant table and the basis selection
@@ -42,7 +53,11 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import { fromTwoPointPairs, localToWorld, type GeoReference } from './geo-transform';
-import { scoreGeoReference, type GeoMatchScore, type WorldPointIndex } from './geo-point-index';
+import {
+  buildPointSetIndex, countExplainedPoints, scoreGeoReference,
+  type GeoMatchScore, type PointSetIndex,
+} from './geo-point-index';
+import { UNIQUENESS_FACTOR } from './geo-match-gates';
 import { solveRigid2D, type PointPair } from './geo-similarity-solve';
 import { buildPairTable, forEachPairNear, selectLongestBases, type PairTable } from './geo-pair-table';
 
@@ -126,6 +141,19 @@ interface Leader {
 }
 
 /**
+ * The count below which a candidate can no longer influence ANY outcome, so scoring it to the
+ * end is wasted work.
+ *
+ * Below `leader/UNIQUENESS_FACTOR` a candidate can neither win (that is strictly under the
+ * leader, which only grows) nor trip the uniqueness gate (which asks precisely whether a rival
+ * comes within that factor). Full argument — and why this is a proof rather than a heuristic —
+ * on `countExplainedPoints`.
+ */
+function irrelevantBelow(leader: Leader): number {
+  return leader.inliers / UNIQUENESS_FACTOR;
+}
+
+/**
  * Fold one hypothesis into the leader board.
  *
  * A displaced champion becomes the runner-up only when it is a MATERIALLY different answer:
@@ -152,28 +180,36 @@ function considerBothOrders(
   localB: Point2D,
   worldA: Point2D,
   worldB: Point2D,
-  searchPoints: readonly Point2D[],
-  index: WorldPointIndex,
+  surveyPoints: readonly Point2D[],
+  drawingIndex: PointSetIndex,
 ): void {
   const forward = fromTwoPointPairs(localA, localB, worldA, worldB);
-  consider(leader, forward, scoreGeoReference(searchPoints, index, forward).inliers);
+  consider(leader, forward, countExplainedPoints(surveyPoints, drawingIndex, forward, irrelevantBelow(leader)));
 
   const reversed = fromTwoPointPairs(localB, localA, worldA, worldB);
-  consider(leader, reversed, scoreGeoReference(searchPoints, index, reversed).inliers);
+  consider(leader, reversed, countExplainedPoints(surveyPoints, drawingIndex, reversed, irrelevantBelow(leader)));
 }
 
-/** Enumerate every drawing segment congruent to each survey basis, scoring as we go. */
+/**
+ * Enumerate every drawing segment congruent to each survey basis, scoring as we go.
+ *
+ * The drawing index is built ONCE here and probed by every hypothesis: the drawing does not
+ * move between hypotheses — the survey does, in the drawing's frame. Indexing the moving side
+ * instead would mean rebuilding the grid 2 456 times to ask the same question.
+ */
 function enumerateHypotheses(
   worldTable: PairTable,
   localTable: PairTable,
   searchPoints: readonly Point2D[],
-  index: WorldPointIndex,
+  index: PointSetIndex,
   options: CongruentMatchOptions,
 ): Leader {
   const leader: Leader = {
     geo: null, inliers: 0, secondBest: 0, hypotheses: 0,
     probe: farthestFromOrigin(searchPoints), toleranceMm: options.toleranceMm,
   };
+  const drawingIndex = buildPointSetIndex(searchPoints, options.toleranceMm);
+  const surveyPoints = index.points;
   const bases = selectLongestBases(worldTable, options.maxBases ?? DEFAULT_MAX_BASES);
   // Both endpoints carry the point tolerance, so the segment band is twice it.
   const bandMm = options.toleranceMm * 2;
@@ -182,7 +218,7 @@ function enumerateHypotheses(
     const worldA = worldTable.points[basis.a]!;
     const worldB = worldTable.points[basis.b]!;
     forEachPairNear(localTable, basis.lengthMm, bandMm, (a, b) => {
-      considerBothOrders(leader, localTable.points[a]!, localTable.points[b]!, worldA, worldB, searchPoints, index);
+      considerBothOrders(leader, localTable.points[a]!, localTable.points[b]!, worldA, worldB, surveyPoints, drawingIndex);
     });
   }
 
@@ -207,7 +243,7 @@ export function matchByCongruentPairs(
   allPoints: readonly Point2D[],
   searchPoints: readonly Point2D[],
   worldBasisPoints: readonly Point2D[],
-  index: WorldPointIndex,
+  index: PointSetIndex,
   options: CongruentMatchOptions,
 ): CongruentMatch | null {
   if (searchPoints.length < 2 || worldBasisPoints.length < 2) return null;

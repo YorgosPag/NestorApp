@@ -32,8 +32,8 @@ export { autoAlignByRobustCenters } from './geo-auto-align';
 // point a consumer needs; the stages below it are exported for tests and diagnostics.
 export type { GeoMatchMethod, GeoMatchResult, AutoMatchInput } from './geo-auto-match';
 export { autoMatchToSurvey } from './geo-auto-match';
-export type { GeoMatchScore, WorldPointIndex } from './geo-point-index';
-export { buildWorldPointIndex, scoreGeoReference } from './geo-point-index';
+export type { GeoMatchScore, PointSetIndex } from './geo-point-index';
+export { buildPointSetIndex, countExplainedPoints, scoreGeoReference } from './geo-point-index';
 export type { PointPair, SimilaritySolution } from './geo-similarity-solve';
 export { solveRigid2D } from './geo-similarity-solve';
 export type { LocalCandidatePoint, CandidateKind } from './geo-ref-candidate-points';

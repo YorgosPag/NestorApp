@@ -14,7 +14,7 @@
  *     geo-reference in front of the engineer wearing a green badge, so it gets its own test.
  */
 
-import { buildWorldPointIndex, scoreGeoReference } from '../geo-point-index';
+import { buildPointSetIndex, scoreGeoReference } from '../geo-point-index';
 import { fromOnePointPair, type GeoReference } from '../geo-transform';
 import type { PointPair } from '../geo-similarity-solve';
 import type { Point2D } from '../../../rendering/types/Types';
@@ -41,7 +41,7 @@ const TOLERANCE_MM = 50;
 describe('scoreGeoReference — identity-restore (ADR-650 §M10e Σκέλος Α)', () => {
   test('a kept sourceOrigin re-seats all 93 points with a sub-millimetre residual', () => {
     const locals = makeLocalSurvey();
-    const index = buildWorldPointIndex(toWorld(locals, SOURCE_ORIGIN), TOLERANCE_MM);
+    const index = buildPointSetIndex(toWorld(locals, SOURCE_ORIGIN), TOLERANCE_MM);
 
     // The whole of Σκέλος Α, in one line: the restore IS `fromOnePointPair` of the offset.
     const geo = fromOnePointPair({ x: 0, y: 0 }, SOURCE_ORIGIN);
@@ -55,18 +55,18 @@ describe('scoreGeoReference — identity-restore (ADR-650 §M10e Σκέλος Α
 
   test('the restore is exact, not merely inside tolerance', () => {
     const locals = makeLocalSurvey();
-    const index = buildWorldPointIndex(toWorld(locals, SOURCE_ORIGIN), TOLERANCE_MM);
+    const index = buildPointSetIndex(toWorld(locals, SOURCE_ORIGIN), TOLERANCE_MM);
     const geo = fromOnePointPair({ x: 0, y: 0 }, SOURCE_ORIGIN);
 
     // Re-score at a tolerance far tighter than any real survey noise. An approximate
     // restore would collapse here; the analytic one does not care.
-    const strict = buildWorldPointIndex(index.points, 0.001);
+    const strict = buildPointSetIndex(index.points, 0.001);
     expect(scoreGeoReference(locals, strict, geo).inliers).toBe(93);
   });
 
   test('WITHOUT the offset (the pre-M10e behaviour) nothing matches at all', () => {
     const locals = makeLocalSurvey();
-    const index = buildWorldPointIndex(toWorld(locals, SOURCE_ORIGIN), TOLERANCE_MM);
+    const index = buildPointSetIndex(toWorld(locals, SOURCE_ORIGIN), TOLERANCE_MM);
 
     // Identity == what the app did before: drawing at (0,0), survey at ~4.5e9 mm.
     const identity: GeoReference = { originWorld: { x: 0, y: 0 }, rotationDeg: 0 };
@@ -78,7 +78,7 @@ describe('scoreGeoReference — the one-to-one rule stops inflated scores', () =
   test('ten drawing points crowding ONE survey point score 1, not 10', () => {
     // A single survey point; ten drawing points all within tolerance of it after transform.
     const worldPoints: Point2D[] = [{ x: 1_000_000, y: 1_000_000 }];
-    const index = buildWorldPointIndex(worldPoints, TOLERANCE_MM);
+    const index = buildPointSetIndex(worldPoints, TOLERANCE_MM);
 
     const locals: Point2D[] = [];
     for (let i = 0; i < 10; i++) locals.push({ x: i * 2, y: -i * 2 }); // all within 30 mm of (0,0)
@@ -94,7 +94,7 @@ describe('scoreGeoReference — the one-to-one rule stops inflated scores', () =
 
   test('each survey point is consumed once, so a duplicated drawing point cannot double-count', () => {
     const worldPoints: Point2D[] = [{ x: 0, y: 0 }, { x: 10_000, y: 0 }];
-    const index = buildWorldPointIndex(worldPoints, TOLERANCE_MM);
+    const index = buildPointSetIndex(worldPoints, TOLERANCE_MM);
 
     // The same local point twice + one genuine partner.
     const locals: Point2D[] = [{ x: 0, y: 0 }, { x: 0, y: 0 }, { x: 10_000, y: 0 }];
@@ -107,7 +107,7 @@ describe('scoreGeoReference — the one-to-one rule stops inflated scores', () =
 describe('scoreGeoReference — rejects what it should reject', () => {
   test('a wrong rotation scores essentially nothing', () => {
     const locals = makeLocalSurvey();
-    const index = buildWorldPointIndex(toWorld(locals, SOURCE_ORIGIN), TOLERANCE_MM);
+    const index = buildPointSetIndex(toWorld(locals, SOURCE_ORIGIN), TOLERANCE_MM);
 
     const wrong: GeoReference = { originWorld: SOURCE_ORIGIN, rotationDeg: 17 };
     const score = scoreGeoReference(locals, index, wrong);
@@ -117,7 +117,7 @@ describe('scoreGeoReference — rejects what it should reject', () => {
   });
 
   test('empty inputs are answered, not thrown at', () => {
-    const index = buildWorldPointIndex([], TOLERANCE_MM);
+    const index = buildPointSetIndex([], TOLERANCE_MM);
     const geo: GeoReference = { originWorld: { x: 0, y: 0 }, rotationDeg: 0 };
 
     expect(scoreGeoReference([], index, geo)).toEqual({ inliers: 0, total: 0, rmsMm: 0, inlierRatio: 0 });
@@ -128,7 +128,7 @@ describe('scoreGeoReference — rejects what it should reject', () => {
 describe('scoreGeoReference — the collector feeds the refine step', () => {
   test('collected pairs are the actual inliers and are usable by solveRigid2D', () => {
     const locals = makeLocalSurvey(20);
-    const index = buildWorldPointIndex(toWorld(locals, SOURCE_ORIGIN), TOLERANCE_MM);
+    const index = buildPointSetIndex(toWorld(locals, SOURCE_ORIGIN), TOLERANCE_MM);
     const geo = fromOnePointPair({ x: 0, y: 0 }, SOURCE_ORIGIN);
 
     const collected: PointPair[] = [];
