@@ -59,7 +59,9 @@ import {
 } from './geo-point-index';
 import { UNIQUENESS_FACTOR } from './geo-match-gates';
 import { solveRigid2D, type PointPair } from './geo-similarity-solve';
-import { buildPairTable, forEachPairNear, selectLongestBases, type PairTable } from './geo-pair-table';
+import {
+  buildPairTable, forEachPairNear, selectLongestBases, toFlatCoords, type PairTable,
+} from './geo-pair-table';
 
 export interface CongruentMatchOptions {
   /** Point acceptance radius, canonical mm. The segment band is twice this — both ends err. */
@@ -199,7 +201,7 @@ function considerBothOrders(
  */
 function enumerateHypotheses(
   worldTable: PairTable,
-  localTable: PairTable,
+  localCoords: Float64Array,
   searchPoints: readonly Point2D[],
   index: PointSetIndex,
   options: CongruentMatchOptions,
@@ -217,8 +219,8 @@ function enumerateHypotheses(
   for (const basis of bases) {
     const worldA = worldTable.points[basis.a]!;
     const worldB = worldTable.points[basis.b]!;
-    forEachPairNear(localTable, basis.lengthMm, bandMm, (a, b) => {
-      considerBothOrders(leader, localTable.points[a]!, localTable.points[b]!, worldA, worldB, surveyPoints, drawingIndex);
+    forEachPairNear(localCoords, basis.lengthMm, bandMm, (a, b) => {
+      considerBothOrders(leader, searchPoints[a]!, searchPoints[b]!, worldA, worldB, surveyPoints, drawingIndex);
     });
   }
 
@@ -248,9 +250,11 @@ export function matchByCongruentPairs(
 ): CongruentMatch | null {
   if (searchPoints.length < 2 || worldBasisPoints.length < 2) return null;
 
+  // The survey side is materialised because its pairs must be RANKED; the drawing side is
+  // only ever streamed, so it never becomes 1.12 M rows in memory. See `geo-pair-table`.
   const worldTable = buildPairTable(worldBasisPoints);
-  const localTable = buildPairTable(searchPoints);
-  const leader = enumerateHypotheses(worldTable, localTable, searchPoints, index, options);
+  const localCoords = toFlatCoords(searchPoints);
+  const leader = enumerateHypotheses(worldTable, localCoords, searchPoints, index, options);
   if (!leader.geo) return null;
 
   // The winner is re-measured against EVERYTHING, and the pairs it collects there are what

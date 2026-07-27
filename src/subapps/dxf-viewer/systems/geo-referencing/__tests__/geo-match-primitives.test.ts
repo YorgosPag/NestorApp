@@ -10,7 +10,9 @@ import {
   collectCandidatePoints, dominantLayerName, selectBasisSample, strideSample,
 } from '../geo-ref-candidate-points';
 import { splitByCoordinateFrame } from '../geo-point-clusters';
-import { buildPairTable, forEachPairNear, selectLongestBases, MAX_PAIR_TABLE_POINTS } from '../geo-pair-table';
+import {
+  buildPairTable, forEachPairNear, selectLongestBases, toFlatCoords, MAX_PAIR_TABLE_POINTS,
+} from '../geo-pair-table';
 import {
   applyAcceptanceGates, matchableTotal, requiredInliers, suggestUnitScale, isUnitMismatch,
 } from '../geo-match-gates';
@@ -135,10 +137,42 @@ describe('geo-pair-table', () => {
   });
 
   it('finds the pairs inside a tolerance band and nothing else', () => {
-    const table = buildPairTable(square);
     const found: number[] = [];
-    forEachPairNear(table, 500, 1, (_a, _b, d) => found.push(d));
+    forEachPairNear(toFlatCoords(square), 500, 1, (_a, _b, d) => found.push(d));
     expect(found).toEqual([500, 500]); // the two diagonals
+  });
+
+  it('streams the SAME pairs a materialised table would have, in the same order', () => {
+    // The drawing side stopped being materialised in v23. That is only safe if the stream is
+    // order-for-order identical: the hypothesis sequence is what decides ties in the search.
+    const lattice: Array<{ x: number; y: number }> = [];
+    for (let i = 0; i < 5; i++) for (let j = 0; j < 5; j++) lattice.push({ x: i * 400, y: j * 400 });
+
+    const table = buildPairTable(lattice);
+    const fromTable: Array<[number, number]> = [];
+    for (let k = 0; k < table.count; k++) {
+      const d = table.distance[k]!;
+      if (d >= 399 && d <= 401) fromTable.push([table.indexA[k]!, table.indexB[k]!]);
+    }
+
+    const streamed: Array<[number, number]> = [];
+    forEachPairNear(toFlatCoords(lattice), 400, 1, (a, b) => streamed.push([a, b]));
+
+    // 2 × (4 steps × 5 rows) adjacent pairs on a 5×5 lattice.
+    expect(fromTable).toHaveLength(40);
+    expect(streamed).toEqual(fromTable);
+  });
+
+  it('admits short pairs when the band is wider than the target length', () => {
+    // (L−τ)² with τ > L squares back into a POSITIVE floor — here 250 mm. Squaring an
+    // unclamped lower bound would silently reject exactly the short pairs the wide band admits.
+    const withShortPairs = [...square, { x: 100, y: 0 }];
+    const found: number[] = [];
+    forEachPairNear(toFlatCoords(withShortPairs), 100, 350, (_a, _b, d) => found.push(d));
+
+    expect(found).toContain(100); // 0→4 — dropped by an unclamped floor
+    expect(found).toContain(200); // 1→4 — likewise
+    expect(found).not.toContain(500); // the diagonals are genuinely outside the band
   });
 
   it('picks the longest, endpoint-disjoint bases', () => {
