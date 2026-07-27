@@ -151,6 +151,69 @@ config update.
 
 ---
 
+## Changelog
+
+### v1.1 — 2026-07-27 · `entityType` γίνεται ΜΙΑ λίστα (το 400 σε project-scoped save)
+
+**Σύμπτωμα.** Κάθε σκηνή που ανήκει σε **έργο** — δηλαδή το τυπικό τοπογραφικό —
+απαντούσε `POST /api/cad-files → 400 "Validation failed"`, με κόκκινο «Error» στο
+status bar. Το Storage upload είχε ήδη πετύχει, οπότε το scene JSON **ανέβαινε και
+επιβίωνε σε reload**· αυτό που σταματούσε σιωπηλά ήταν το metadata upsert:
+**version, checksum και audit trail δεν προχωρούσαν ποτέ**. Μετρημένο στο πραγματικό
+request (fetch hook): `entityType="project"`, `checksumLen=16` — το checksum ήταν αθώο.
+
+**Αιτία — δεύτερη πηγή αλήθειας, όχι λάθος τιμή.** Η ένωση
+`'project' | 'building' | 'floor' | 'property'` ήταν γραμμένη **inline σε έξι σημεία**
+της αλυσίδας save, και το αντίγραφο του validator παρέλειπε το `'project'`:
+
+| Σημείο | Είχε `'project'`; |
+|---|---|
+| `features/floorplan-import/hooks/floorplan-import-types.ts` (`FloorplanType`) | ναι |
+| `features/floorplan-import/FloorplanImportWizard.tsx` (`WizardCompleteMeta`) | ναι (ως ευρύ `EntityType`) |
+| `subapps/dxf-viewer/services/dxf-firestore.types.ts` (`DxfSaveContext`) | ναι |
+| `services/cad-file-mutation-gateway.ts` (`CadFileContextPayload`) | ναι |
+| `api/cad-files/dual-write-to-files.ts` (×2, incl. `resolveEntityId`) | ναι — **με ρητό χειρισμό `projectId`** |
+| **`api/cad-files/cad-files.schemas.ts` (zod)** | **ΟΧΙ** ← το 400 |
+
+Ο writer ήξερε ήδη να λύσει το `entityId` για `'project'`· μόνο ο θυρωρός δεν το
+γνώριζε. Το ADR-240 πρόσθεσε το `'project'` στους τύπους και ξέχασε τον validator.
+
+**Απόφαση.** Όχι μπάλωμα του enum. **Μία** λίστα στο SSoT των entity types:
+
+```ts
+// src/config/domain-constants.ts
+export const CAD_LINKABLE_ENTITY_TYPES = [
+  ENTITY_TYPES.PROJECT, ENTITY_TYPES.BUILDING, ENTITY_TYPES.FLOOR, ENTITY_TYPES.PROPERTY,
+] as const;
+export type CadLinkableEntityType = typeof CAD_LINKABLE_ENTITY_TYPES[number];
+export function isCadLinkableEntityType(value: unknown): value is CadLinkableEntityType;
+```
+
+- Το zod enum **παράγεται** από τη λίστα (`z.enum(CAD_LINKABLE_ENTITY_TYPES)`) ⇒ νέο
+  μέλος δεν μπορεί πια να προστεθεί στους τύπους και να ξεχαστεί στον validator.
+- Και τα έξι inline αντίγραφα αντικαταστάθηκαν από τον έναν τύπο· το `FloorplanType`
+  του wizard έγινε **alias**, όχι δεύτερη λίστα.
+- `WizardCompleteMeta.entityType` **στένεψε** από το ευρύ `EntityType` (14 τιμές,
+  incl. `lead`/`contact`/`quote`) στο CAD-linkable υποσύνολο — ήταν η ρίζα των casts.
+  Το cast στο `buildDxfImportSaveContext` έφυγε: τα δύο άκρα είναι πλέον ο ίδιος τύπος.
+- `useLevelSceneLoader` **fail-closed**: το `FileRecord.entityType` έρχεται από τη
+  βάση ως σκέτο string και ιστορικές εγγραφές μπορεί να κρατούν μη-linkable τιμή
+  (π.χ. `'unit'`). Τυφλό cast την έβαζε στο save context, όπου θα 400-άριζε τo
+  **επόμενο** save — μακριά από την αιτία. Τώρα το κλειδί απλώς παραλείπεται.
+
+**Επαλήθευση — παραμετρική πάνω στην κλάση, όχι στο δείγμα `'project'`.**
+`api/cad-files/__tests__/cad-linkable-entity-type.contract.test.ts` (17 tests):
+κάθε μέλος του `CAD_LINKABLE_ENTITY_TYPES` (α) περνά τον validator, (β) λύνει
+πραγματικό `entityId` στον writer — ποτέ `'standalone'`, (γ) είναι υποσύνολο του
+`ENTITY_TYPES`· και κάθε **μη**-μέλος απορρίπτεται και από τα δύο (με guard ώστε
+το τεστ να μην περνά κενό αν τα σύνολα ταυτιστούν). Πύλες: 29/29 στα cad-files,
+62/62 σε floorplan-import + dxf app, `jscpd:diff` καθαρό στα 10 αρχεία.
+
+**Δεν άλλαξε**: το API contract προς τα έξω (μόνο *διευρύνθηκε* το αποδεκτό σύνολο),
+η write-once ταυτότητα του ADR-420, το `merge: true` του dual-write.
+
+---
+
 ## Related Documents (Upload Architecture)
 
 | Document | Relationship | Context |
