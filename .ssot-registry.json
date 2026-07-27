@@ -2,7 +2,7 @@
   "_meta": {
     "description": "SSoT Ratchet Registry — centralized module patterns (ADR-294)",
     "version": "2.0.0",
-    "lastUpdated": "2026-07-25",
+    "lastUpdated": "2026-07-28",
     "howToAdd": "Add module entry under 'modules', then run: npm run ssot:baseline"
   },
   "exemptPatterns": "(__tests__/|\\.test\\.|\\.spec\\.|\\.d\\.ts$|\\.config\\.|\\.stories\\.|\\.qa\\.|^docs/|/docs/|^adrs/|/adrs/|^scripts/|/scripts/|/i18n/locales/|node_modules/|^functions/|^tests/firestore-rules/)",
@@ -4812,6 +4812,30 @@
         "src/subapps/dxf-viewer/systems/topography/topo-baked-frame-store.ts",
         "src/subapps/dxf-viewer/systems/topography/topo-bake-commit.ts",
         "src/subapps/dxf-viewer/systems/topography/persistence/topo-frame-reconcile.ts"
+      ],
+      "tier": 3
+    },
+    "planar-scalar-clip": {
+      "ssotFile": "src/subapps/dxf-viewer/systems/topography/planar-scalar-clip.ts",
+      "description": "ADR-665 M2.2 - the ONE half-plane clip on a SCALAR FIELD (Sutherland-Hodgman's inner step on the field, not on a clip edge). Two unrelated fields ask it: cut/fill's daylight line (dz) and the terrain cut cap (z - levelZ). A second copy is the exact structural clone CHECK 3.28 exists to stop - and, worse, two copies of the numeric detail that decides who survives at f == 0, which must agree or the pieces stop being watertight (volumes understate silently, the cap area anchor breaks). cut-fill-geometry.ts is allowlisted because its clipToSign is a THIN ADAPTER that names the dz field and delegates - not a second implementation.",
+      "forbiddenPatterns": [
+        "(function|const)\\s+clip(Polygon)?(To|At)(Sign|Scalar|Zero|Half)\\w*\\s*[(<=]"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/systems/topography/planar-scalar-clip.ts",
+        "src/subapps/dxf-viewer/systems/topography/cut-fill-geometry.ts"
+      ],
+      "tier": 3
+    },
+    "terrain-cut-cap": {
+      "ssotFile": "src/subapps/dxf-viewer/systems/topography/terrain-cut-cap-geometry.ts",
+      "description": "ADR-665 M2 - the ONE derivation of the terrain's cut surface (per-triangle half-space clip of the TIN at the active level, projected to that level). The alternative anyone reaches for first - extract the contour, close it against the perimeter, CDT it - is wrong in three independent ways (open rings at the TIN border, holes vs islands unresolvable from undirected chaining, a third triangulation) and MUST NOT be reintroduced. The three-world seating of the result belongs to bim-3d/converters/terrain-cap-to-three.ts; nothing else builds cap geometry.",
+      "forbiddenPatterns": [
+        "(function|const)\\s+\\w*(CutCapPlan|CutCapGeometry|CutCapMesh|terrainCapToBuffer)\\w*\\s*[(<=]"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/systems/topography/terrain-cut-cap-geometry.ts",
+        "src/subapps/dxf-viewer/bim-3d/converters/terrain-cap-to-three.ts"
       ],
       "tier": 3
     }
