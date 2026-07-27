@@ -27,6 +27,9 @@ import type {
   FileLifecycleState,
 } from '@/config/domain-constants';
 import type { DocumentClassifyAnalysis } from '@/schemas/ai-analysis';
+// ADR-716 Φ5 — ΜΙΑ ονοματολογία μονάδων (SSoT: `utils/scene-units`). Type-only ⇒ το
+// «NO SDK DEPENDENCIES» συμβόλαιο αυτού του module μένει άθικτο (μηδέν runtime import).
+import type { SceneUnits } from '@/subapps/dxf-viewer/utils/scene-units';
 import {
   FILE_STATUS,
   FILE_LIFECYCLE_STATES,
@@ -141,6 +144,9 @@ export interface BuildPendingFileRecordInput {
   // Ingestion state (for quarantine pipeline)
   ingestion?: IngestionState;
 
+  // ADR-716 Φ5 — ρητή επιλογή μονάδων DXF (μόνο όταν ο χρήστης την έκανε)
+  userDrawingUnits?: SceneUnits;
+
   // Language for display name
   language?: 'el' | 'en';
 
@@ -192,6 +198,9 @@ export interface FileRecordBase {
 
   // Display name of uploader (denormalized at creation time)
   uploaderName?: string;
+
+  // ADR-716 Φ5 — ρητή ετυμηγορία μονάδων· ιδιότητα του ΣΥΝΔΕΣΜΟΥ, όχι της στιγμής
+  userDrawingUnits?: SceneUnits;
 }
 
 /**
@@ -361,6 +370,11 @@ export function buildPendingFileRecordData(
   }
   if (input.uploaderName) {
     recordBase.uploaderName = input.uploaderName;
+  }
+  // ADR-716 Φ5 — γράφεται ΜΟΝΟ όταν υπάρχει ρητή επιλογή· η απουσία σημαίνει
+  // «αποφασίζει η σκάλα τεκμηρίων», όχι «άγνωστο».
+  if (input.userDrawingUnits) {
+    recordBase.userDrawingUnits = input.userDrawingUnits;
   }
 
   return {

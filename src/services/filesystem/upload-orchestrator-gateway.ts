@@ -32,6 +32,7 @@ import {
 } from '@/components/shared/files/utils/generate-upload-thumbnail';
 import type { EntityType, FileDomain, FileCategory } from '@/config/domain-constants';
 import type { FileRecord } from '@/types/file-record';
+import type { SceneUnits } from '@/subapps/dxf-viewer/utils/scene-units';
 import { getErrorMessage } from '@/lib/error-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -60,6 +61,11 @@ export interface UploadFileConfig {
   descriptors?: string[];
   revision?: number;
   linkedTo?: Array<{ entityType: EntityType; entityId: string }>;
+  /**
+   * ADR-716 Φ5 — ρητή επιλογή μονάδων DXF του μηχανικού. Απόν ⇒ αποφασίζει η σκάλα
+   * τεκμηρίων στο parse. @see FileRecord.userDrawingUnits
+   */
+  userDrawingUnits?: SceneUnits;
 
   // Optional: upload behavior
   firestoreDelayMs?: number;
@@ -131,6 +137,10 @@ export async function uploadFileWithPolicy(
     ext: config.ext,
     contentType: config.contentType,
     createdBy: config.createdBy,
+    // ADR-716 Φ5 — γράφεται ΤΩΡΑ, στη δημιουργία του FileRecord: πριν ξεκινήσει το
+    // ανέβασμα και πριν πυροδοτηθεί το fire-and-forget server processing, ώστε το
+    // route να το βρίσκει πάντα γραμμένο (μηδέν race, N.7.2 #1/#2).
+    userDrawingUnits: config.userDrawingUnits,
   });
 
   onProgress?.({ percent: 10, phase: 'creating' });

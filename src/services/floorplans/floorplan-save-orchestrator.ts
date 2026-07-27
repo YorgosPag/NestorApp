@@ -30,6 +30,7 @@ import { FileRecordService } from '@/services/file-record.service';
 import type { EntityType, FileDomain, FileCategory } from '@/config/domain-constants';
 import { FILE_DOMAINS, FILE_CATEGORIES } from '@/config/domain-constants';
 import type { SceneModel } from '@/subapps/dxf-viewer/types/scene';
+import type { SceneUnits } from '@/subapps/dxf-viewer/utils/scene-units';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 
@@ -86,6 +87,12 @@ export interface FloorplanSaveInput {
   /** MIME type */
   contentType: string;
 
+  /**
+   * ADR-716 Φ5 — ρητή επιλογή μονάδων DXF του μηχανικού (απόν ⇒ αποφασίζει η σκάλα
+   * τεκμηρίων στο parse). Γράφεται στο FileRecord ⇒ επιβιώνει σε κάθε re-parse.
+   */
+  userDrawingUnits?: SceneUnits;
+
   /** File data — discriminated union */
   payload: FloorplanPayload;
 
@@ -138,6 +145,8 @@ export class FloorplanSaveOrchestrator {
       purpose: input.purpose,
       ext: input.ext,
       descriptors: input.descriptors,
+      // ADR-716 Φ5 — η ρητή επιλογή μονάδων γίνεται ιδιότητα του αποθηκευμένου αρχείου.
+      userDrawingUnits: input.userDrawingUnits,
     });
 
     // ─── Step 2: Upload to Firebase Storage ───

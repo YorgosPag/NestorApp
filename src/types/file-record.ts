@@ -31,6 +31,9 @@ import type {
   CdeState,
   SuitabilityCode,
 } from '@/config/iso19650-constants';
+// ADR-716 Φ5 — ΜΙΑ ονοματολογία μονάδων σε όλο το έργο (SSoT: `utils/scene-units`).
+// Type-only import ⇒ μηδέν runtime εξάρτηση από το subapp (το ίδιο κάνει ήδη το StepUpload).
+import type { SceneUnits } from '@/subapps/dxf-viewer/utils/scene-units';
 
 // ============================================================================
 // 🏢 ENTERPRISE: FLOORPLAN PROCESSED DATA TYPES (ADR-033)
@@ -517,6 +520,27 @@ export interface FileRecord {
    */
   processingStatus?: 'idle' | 'processing' | 'done' | 'error';
 
+  /**
+   * ADR-716 Φ5 — Η **ρητή** ετυμηγορία του μηχανικού για τις μονάδες αυτού του σχεδίου.
+   *
+   * Η μονάδα δεν είναι γεγονός της στιγμής εισαγωγής — είναι **ιδιότητα του συνδέσμου**:
+   * τρεις από τις πέντε διαδρομές ανάγνωσης ξανα-διαβάζουν το DXF από το Storage πολύ
+   * αργότερα (άλλη συνεδρία, άλλο μηχάνημα, ακόμη και ο server), όπου δεν υπάρχει κανείς
+   * να ρωτηθεί. Ίδιο δίδαγμα με το `UnitFactor` του xref στον AutoCAD και το CAD Link
+   * instance του Revit.
+   *
+   * Γράφεται **μόνο** όταν ο χρήστης επέλεξε ρητά (σκαλί 0 «explicit» της σκάλας
+   * τεκμηρίων). Ό,τι αποφασίζει αυτόματα η σκάλα είναι ντετερμινιστικά επαναπαραγώγιμο
+   * από το ίδιο το αρχείο, άρα ΔΕΝ αποθηκεύεται — η **ύπαρξη** του πεδίου ΕΙΝΑΙ η
+   * βεβαιότητα. Απόν = «αποφάσισε η σκάλα τεκμηρίων».
+   *
+   * Καταναλώνεται στο **parse-time** ως `unitsOverride` (→ `applyCanonicalMmScale`),
+   * ΠΟΤΕ στο render-time: μετά το ADR-462 η γεωμετρία είναι ήδη ψημένη σε mm.
+   *
+   * @see docs/centralized-systems/reference/adrs/ADR-716-geodetic-unit-identification-dxf-import.md §7
+   */
+  userDrawingUnits?: SceneUnits;
+
   // =========================================================================
   // 🔗 ENTITY LINKING - Cross-entity file references (ADR file-linking)
   // =========================================================================
@@ -803,6 +827,13 @@ export interface CreateFileRecordInput {
    * Enables a unit floorplan to appear in floor/building views via getLinkedFiles()
    */
   linkedTo?: string[];
+
+  /**
+   * ADR-716 Φ5 — η **ρητή** επιλογή μονάδων του μηχανικού για αυτό το DXF.
+   * Δίνεται ΜΟΝΟ όταν ο χρήστης επέλεξε ρητά· απόν ⇒ αποφασίζει η σκάλα τεκμηρίων.
+   * @see FileRecord.userDrawingUnits
+   */
+  userDrawingUnits?: SceneUnits;
 
   // =========================================================================
   // FILE METADATA

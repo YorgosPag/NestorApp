@@ -205,7 +205,14 @@ export function StepUpload({ config, onComplete }: StepUploadProps) {
   );
 
   const performUpload = useCallback(async (file: File, opts?: SmartUploadOptions) => {
-    const result: SmartUploadResult = await smart.uploadSmart(file, opts);
+    // ADR-368: pass unit override only when user made an explicit choice.
+    // ADR-716 Φ5 — ΤΟ ΙΔΙΟ `explicitUnits` πηγαίνει και στο FileRecord (μόνιμη ιδιότητα του
+    // συνδέσμου, διαβάζεται σε κάθε μελλοντικό re-parse) και στο `onComplete` (η ζωντανή
+    // εισαγωγή αυτής της στιγμής). ΕΝΑ σημείο απόφασης, δύο καταναλωτές — όχι δύο επιλογές.
+    const result: SmartUploadResult = await smart.uploadSmart(file, {
+      ...opts,
+      userDrawingUnits: explicitUnits,
+    });
     if (result.success) {
       // Trash legacy non-floor file if replacing (best-effort)
       if (!floorId && existingFile) {
@@ -218,11 +225,9 @@ export function StepUpload({ config, onComplete }: StepUploadProps) {
       setUploadedFile(file);
       setUploadedFormat(result.format ?? null);
       setUploadSuccess(true);
-      // ADR-368: pass unit override only when user made an explicit choice
-      const unitOverride = selectedUnits !== 'auto' ? selectedUnits : undefined;
-      onComplete(file, result.fileId, result.format, unitOverride);
+      onComplete(file, result.fileId, result.format, explicitUnits);
     }
-  }, [smart, floorId, existingFile, config.userId, onComplete, selectedUnits]);
+  }, [smart, floorId, existingFile, config.userId, onComplete, explicitUnits]);
 
   const handleUpload = useCallback(async (files: File[]) => {
     if (files.length === 0) return;

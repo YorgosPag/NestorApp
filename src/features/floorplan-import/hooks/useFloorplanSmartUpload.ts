@@ -42,6 +42,7 @@ import type {
 } from '@/hooks/useFloorplanUpload';
 // ADR-526 Φ4 — reuse the Tekton filename SSoT (no duplicate ext check).
 import { isTekFileName } from '@/subapps/dxf-viewer/io/tek/tek-filename';
+import type { SceneUnits } from '@/subapps/dxf-viewer/utils/scene-units';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 
@@ -70,6 +71,13 @@ export interface FloorWipePreview {
 export interface SmartUploadOptions {
   /** When true, the pre-flight wipe ALSO deletes the floor's BIM + auto-BOQ. */
   wipeBim?: boolean;
+  /**
+   * ADR-716 Φ5 — ρητή επιλογή μονάδων DXF του μηχανικού (απόν όταν «Αυτόματα» ή raster).
+   * Γράφεται στο FileRecord τη στιγμή της δημιουργίας του, ώστε να είναι ΙΔΙΟΤΗΤΑ ΤΟΥ
+   * ΣΥΝΔΕΣΜΟΥ και όχι εφήμερο state: κάθε μελλοντικό re-parse (συλλογή αρχείων, server
+   * route) διαβάζει την ΙΔΙΑ τιμή, σε κάθε συνεδρία και συσκευή.
+   */
+  userDrawingUnits?: SceneUnits;
 }
 
 export interface SmartUploadResult {
@@ -255,7 +263,8 @@ export function useFloorplanSmartUpload(
 
       // ── DXF branch (legacy pipeline) ────────────────────────────────────
       if (format === 'dxf') {
-        const r: FloorplanUploadResult = await legacy.uploadFloorplan(file);
+        // ADR-716 Φ5 — μόνο το DXF έχει μονάδες σχεδίου· raster/Tekton δεν περνούν τιμή.
+        const r: FloorplanUploadResult = await legacy.uploadFloorplan(file, opts?.userDrawingUnits);
         return {
           success: r.success,
           fileId: r.fileRecord?.id,

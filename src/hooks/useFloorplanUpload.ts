@@ -31,6 +31,7 @@ import { isFloorplanFile } from '@/services/floorplans/FloorplanProcessor';
 import { isTekFileName } from '@/subapps/dxf-viewer/io/tek/tek-filename';
 import { processFloorplanWithPolicy } from '@/services/floorplans/floorplan-processing-mutation-gateway';
 import type { FileRecord } from '@/types/file-record';
+import type { SceneUnits } from '@/subapps/dxf-viewer/utils/scene-units';
 import type { EntityType, FileDomain, FileCategory } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -76,7 +77,11 @@ export type UploadErrorCode =
   | 'UNKNOWN_ERROR';
 
 export interface UseFloorplanUploadReturn {
-  uploadFloorplan: (file: File) => Promise<FloorplanUploadResult>;
+  /**
+   * @param userDrawingUnits ADR-716 Φ5 — ρητή επιλογή μονάδων DXF (μόνο όταν ο χρήστης
+   *        την έκανε). Γράφεται στο FileRecord ⇒ επιβιώνει σε κάθε μελλοντικό re-parse.
+   */
+  uploadFloorplan: (file: File, userDrawingUnits?: SceneUnits) => Promise<FloorplanUploadResult>;
   isUploading: boolean;
   progress: number;
   error: string | null;
@@ -147,7 +152,10 @@ export function useFloorplanUpload(config: FloorplanUploadConfig): UseFloorplanU
     setErrorCode(null);
   }, []);
 
-  const uploadFloorplan = useCallback(async (file: File): Promise<FloorplanUploadResult> => {
+  const uploadFloorplan = useCallback(async (
+    file: File,
+    userDrawingUnits?: SceneUnits,
+  ): Promise<FloorplanUploadResult> => {
     setIsUploading(true);
     setProgress(0);
     setError(null);
@@ -184,6 +192,9 @@ export function useFloorplanUpload(config: FloorplanUploadConfig): UseFloorplanU
             return et && id ? [{ entityType: et as EntityType, entityId: id }] : [];
           }),
         } : {}),
+        // ADR-716 Φ5 — η ρητή επιλογή μονάδων γίνεται ιδιότητα του αποθηκευμένου αρχείου,
+        // ώστε κάθε μεταγενέστερο re-parse (συλλογή αρχείων, server route) να την τιμά.
+        userDrawingUnits,
         firestoreDelayMs: 2000,
         onProgress: (p) => setProgress(p.percent),
       });

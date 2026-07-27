@@ -123,6 +123,8 @@ export class FileRecordService {
       levelFloorId: input.levelFloorId,
       language: 'el',
       uploaderName: input.uploaderName,
+      // ADR-716 Φ5 — η ρητή ετυμηγορία μονάδων ταξιδεύει μαζί με το αρχείο.
+      userDrawingUnits: input.userDrawingUnits,
       // Idempotent upload: όταν ο caller δίνει ντετερμινιστικό id, η δεύτερη
       // κλήση γράφει στο ίδιο doc/path αντί να δημιουργήσει διπλότυπο.
       fileId: input.fileId,
