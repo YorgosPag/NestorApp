@@ -1,6 +1,6 @@
 # ADR-650 — Τοπογραφικές Αποτυπώσεις & Ισοϋψείς Γραμμές (Έρευνα Αγοράς + Αρχιτεκτονικό Blueprint)
 
-- **Status**: 🟡 IN PROGRESS — **M1 IMPLEMENTED** (πυρήνας σημεία→CDT/TIN→ισοϋψείς· v4) · **M2 IMPLEMENTED** (μέρος Α import wizard· v5 — μέρος Β breakline picking· v6) · **M4 IMPLEMENTED** (3Δ όψη εδάφους: μοναδικό derived TIN → `BufferGeometry` mesh + hypsometric· v7) · **M6 IMPLEMENTED** (όγκοι cut/fill: prisms + daylight split + στάθμη/επιφάνεια/όριο + cross-check + 3Δ cut/fill style· v8, §12.4) · **M7 IMPLEMENTED** (ελληνικό export «ένα κουμπί → φάκελος»: πίνακες στο σχέδιο + ZIP με DXF/PDF/CSV/XLSX + auto tolerance-check §10· v9, §12.5) · **M3 IMPLEMENTED** (ισοϋψείς ακριβείς↔όμορφες + LOD· v10) · **M5α IMPLEMENTED** (AI «καμπανάκι» = deterministic QA rules engine + inline flags, χωρίς LLM· v11 — **M5α.2**: ⊙ markers + zoom-to **και στο 3Δ** + non-modal panel· v19) · **M5β IMPLEMENTED** («μίλα στο σχέδιο» = NL editing με LLM tool-calling πάνω στα υπάρχοντα topo commands· 8 tools + destructive spike-removal με confirm· v12 — **M5 ΠΛΗΡΕΣ**) · **M8α IMPLEMENTED** (point-cloud ingestion: LAS + bulk ASCII → in-house CSF bare-earth filter → voxel decimation → ΥΠΑΡΧΟΝ `TopoPointStore`· μηδέν νέα dependency· v13) · **M8β/Α IMPLEMENTED** (**LAZ decode** — ο δρόμος των drones: `laz-perf` **Apache-2.0** (επαληθευμένο, εγκεκριμένο) → ασυμπίεστα records → **ο ΙΔΙΟΣ** `decodeLasRecords` του LAS· lazy WASM πίσω από dynamic import· v14) · **M8β/Γ IMPLEMENTED** (**auto-breakline detection** — differentiator §9 #3: ο ΥΠΑΡΧΩΝ M5α ανιχνευτής dihedral fold εξήχθη σε SSoT· το νέο είναι το **chaining** ακμών σε ordered πολυγραμμές με **stop-at-junction** + φίλτρα θορύβου· preview στον καμβά + **ρητό confirm** πριν το `addBreakline` — καμία αυτόματη εγγραφή· deterministic, μηδέν LLM· v15) · **M8β/Β IMPLEMENTED** (**3Δ point-cloud layer** — το νέφος ζει ως `THREE.Points` πάνω από το έδαφος αντί να πεθαίνει με τον wizard· ο builder υπήρχε ήδη από το M8α, γράφτηκε **μόνο ο καταναλωτής**· κοινό `writeDxfPlanToWorld` με το TIN· **§6 επιβεβλημένο στον κώδικα**: `raycast = () => {}` → ΟΨΗ, ποτέ γεωμετρία μέτρησης· 48 MB μετρημένα + ρητό «Αφαίρεση νέφους»· καμία νέα dependency· v16) · **M8β/Δ IMPLEMENTED** (**id-aware ASCII cloud** — ο reader του νέφους μαθαίνει το `ColumnMapping` που ο δρόμος CSV ήδη ήξερε (M2)· **deterministic sniffer** προτείνει τις στήλες από τα δεδομένα, ο μηχανικός τις πιστοποιεί σε grid **πριν** το φίλτρο· ένα PENZD αρχείο δεν διαβάζεται πια με X = id σημείου· **χωρίς mapping ⇒ σημερινή συμπεριφορά**· καμία νέα dependency· v17) · **M8β/Ε IMPLEMENTED** (**unit-aware binary cloud** — το LAS/LAZ **δεν** δηλώνει μονάδα στο header· ο dropdown μονάδας γίνεται ορατός & επεξεργάσιμος **για ΚΑΘΕ** μορφή νέφους (όχι μόνο ASCII, όπως μετά το M8β/Δ), με **readout έκτασης** ανά μονάδα ώστε η επιλογή να επαληθεύεται με τα μάτια — **καμία σιωπηλή μαντεψιά** (m/ft διαφέρουν ×3.28, όπως PDAL/CloudCompare)· + belt-and-suspenders sanity warning για εξωπραγματικό span σε **όλες** τις μορφές· default `m` αμετάβλητο· καμία νέα dependency· v18). **Εκκρεμεί**: multiplayer, Gaussian-Splat, COPC streaming. Έρευνα §1–§11 & roadmap §12.2 παραμένουν το blueprint.
+- **Status**: 🟡 IN PROGRESS — **M1 IMPLEMENTED** (πυρήνας σημεία→CDT/TIN→ισοϋψείς· v4) · **M2 IMPLEMENTED** (μέρος Α import wizard· v5 — μέρος Β breakline picking· v6) · **M4 IMPLEMENTED** (3Δ όψη εδάφους: μοναδικό derived TIN → `BufferGeometry` mesh + hypsometric· v7) · **M6 IMPLEMENTED** (όγκοι cut/fill: prisms + daylight split + στάθμη/επιφάνεια/όριο + cross-check + 3Δ cut/fill style· v8, §12.4) · **M7 IMPLEMENTED** (ελληνικό export «ένα κουμπί → φάκελος»: πίνακες στο σχέδιο + ZIP με DXF/PDF/CSV/XLSX + auto tolerance-check §10· v9, §12.5) · **M3 IMPLEMENTED** (ισοϋψείς ακριβείς↔όμορφες + LOD· v10) · **M5α IMPLEMENTED** (AI «καμπανάκι» = deterministic QA rules engine + inline flags, χωρίς LLM· v11 — **M5α.2**: ⊙ markers + zoom-to **και στο 3Δ** + non-modal panel· v19) · **M5β IMPLEMENTED** («μίλα στο σχέδιο» = NL editing με LLM tool-calling πάνω στα υπάρχοντα topo commands· 8 tools + destructive spike-removal με confirm· v12 — **M5 ΠΛΗΡΕΣ**) · **M8α IMPLEMENTED** (point-cloud ingestion: LAS + bulk ASCII → in-house CSF bare-earth filter → voxel decimation → ΥΠΑΡΧΟΝ `TopoPointStore`· μηδέν νέα dependency· v13) · **M8β/Α IMPLEMENTED** (**LAZ decode** — ο δρόμος των drones: `laz-perf` **Apache-2.0** (επαληθευμένο, εγκεκριμένο) → ασυμπίεστα records → **ο ΙΔΙΟΣ** `decodeLasRecords` του LAS· lazy WASM πίσω από dynamic import· v14) · **M8β/Γ IMPLEMENTED** (**auto-breakline detection** — differentiator §9 #3: ο ΥΠΑΡΧΩΝ M5α ανιχνευτής dihedral fold εξήχθη σε SSoT· το νέο είναι το **chaining** ακμών σε ordered πολυγραμμές με **stop-at-junction** + φίλτρα θορύβου· preview στον καμβά + **ρητό confirm** πριν το `addBreakline` — καμία αυτόματη εγγραφή· deterministic, μηδέν LLM· v15) · **M8β/Β IMPLEMENTED** (**3Δ point-cloud layer** — το νέφος ζει ως `THREE.Points` πάνω από το έδαφος αντί να πεθαίνει με τον wizard· ο builder υπήρχε ήδη από το M8α, γράφτηκε **μόνο ο καταναλωτής**· κοινό `writeDxfPlanToWorld` με το TIN· **§6 επιβεβλημένο στον κώδικα**: `raycast = () => {}` → ΟΨΗ, ποτέ γεωμετρία μέτρησης· 48 MB μετρημένα + ρητό «Αφαίρεση νέφους»· καμία νέα dependency· v16) · **M8β/Δ IMPLEMENTED** (**id-aware ASCII cloud** — ο reader του νέφους μαθαίνει το `ColumnMapping` που ο δρόμος CSV ήδη ήξερε (M2)· **deterministic sniffer** προτείνει τις στήλες από τα δεδομένα, ο μηχανικός τις πιστοποιεί σε grid **πριν** το φίλτρο· ένα PENZD αρχείο δεν διαβάζεται πια με X = id σημείου· **χωρίς mapping ⇒ σημερινή συμπεριφορά**· καμία νέα dependency· v17) · **M8β/Ε IMPLEMENTED** (**unit-aware binary cloud** — το LAS/LAZ **δεν** δηλώνει μονάδα στο header· ο dropdown μονάδας γίνεται ορατός & επεξεργάσιμος **για ΚΑΘΕ** μορφή νέφους (όχι μόνο ASCII, όπως μετά το M8β/Δ), με **readout έκτασης** ανά μονάδα ώστε η επιλογή να επαληθεύεται με τα μάτια — **καμία σιωπηλή μαντεψιά** (m/ft διαφέρουν ×3.28, όπως PDAL/CloudCompare)· + belt-and-suspenders sanity warning για εξωπραγματικό span σε **όλες** τις μορφές· default `m` αμετάβλητο· καμία νέα dependency· v18). **M10e BLUEPRINT** (αυτόματη ταύτιση σχεδίου↔τοπογραφικού· v20 — **καμία υλοποίηση**: μετρημένη αιτία = το DXF import πετάει το offset της κανονικοποίησης, `bounds-entity.ts:304-312`· σχέδιο 2 σκελών `sourceOrigin` + blind RANSAC/Umeyama με πύλες αποδοχής). **Εκκρεμεί**: M10e υλοποίηση, multiplayer, Gaussian-Splat, COPC streaming. Έρευνα §1–§11 & roadmap §12.2 παραμένουν το blueprint.
 - **Date**: 2026-07-13
 - **Category**: DXF Viewer / Topography / Research
 - **Σχετικά**: ADR-635 (culling gap σε geo-referenced συντεταγμένες ±1e6), ADR-462 (canonical mm),
@@ -1628,6 +1628,14 @@ technologismiki (Ν.4495/2017), xyz.gr/geodimetro.gr/greenbuilding.gr/cityengine
 
   **Status: M10 geo-referencing — IMPLEMENTED.**
 
+  > ⚠️ **ΜΗΝ διαβάσεις το M10 ως πλήρη απάντηση στο «ταύτισε το σχέδιο με το τοπογραφικό».** Το M10
+  > παρέχει τον **μηχανισμό** (`GeoReference`, χειροκίνητο pick 1-2 σημείων) αλλά είναι **identity
+  > μέχρι να το ορίσει ο χρήστης**, και το `autoAlignByRobustCenters` είναι **translation-only,
+  > χωρίς στροφή και χωρίς καμία επαλήθευση** — δευτερεύουσα γρήγορη εκτίμηση, όχι λύση. Επιπλέον το
+  > DXF import **πετάει** το offset της κανονικοποίησης (`bounds-entity.ts:304-312`), οπότε η
+  > πληροφορία που θα έκανε την ταύτιση αναλυτική **χάνεται πριν καν φτάσει εδώ**.
+  > → **βλ. §M10e (v20)** για τη μετρημένη αιτία και το σχέδιο αυτόματης ταύτισης.
+
 - **2026-07-15 (v23)** — **M10b ΥΛΟΠΟΙΗΘΗΚΕ — GEO-REFERENCING στην 3D όψη + point cloud** (Phase 1–3, N.0.1).
 
   **Πρόβλημα (ζωντανά, Giorgio):** στο 3D panel «Απόκρυψη εδάφους» + «Υψομετρικός χρωματισμός» **έδειχναν
@@ -2007,3 +2015,134 @@ technologismiki (Ν.4495/2017), xyz.gr/geodimetro.gr/greenbuilding.gr/cityengine
   `TopoAutoBreaklinePreviewOverlay.test.tsx` (5) — **επαληθεύτηκε ότι πέφτει κόκκινο** με την
   εστίαση ξαναβγαλμένη (3/5 fail), αλλιώς θα ήταν διακοσμητικό. `jscpd --diff`: καθαρό σε 3 γύρους
   (panels/converters · scene layers vs τα αδέλφια τους · tests μεταξύ τους).
+
+- **v20 (2026-07-27) — M10e BLUEPRINT: αυτόματη ταύτιση σχεδίου ↔ τοπογραφικού (blind point-set registration).**
+  **Status: BLUEPRINT — καμία γραμμή κώδικα δεν γράφτηκε.** Εντολή Giorgio: «μόνο το σχέδιο».
+  Ονομασία **M10e** (όχι M11): το `M11` είναι δεσμευμένο στο **ADR-656** (κάναβος ΕΓΣΑ87) και είναι
+  επίσης topo· το M10e συνεχίζει σωστά τη σειρά geo-referencing M10 → M10b → M10c → M10d.
+
+  ### Αφορμή (πραγματικό περιστατικό, 2026-07-27)
+  Ο Giorgio ζήτησε αυτόματη ταύτιση του DXF τοπογραφικού με το τοπογραφικό που παράγεται από
+  εισαγωγή κορυφών CSV/TXT, με το σκεπτικό «οι τοπογράφοι μετακινούν το σχέδιο στο CAD για ευκολία
+  και τα δύο αρχεία δεν ταυτίζονται».
+
+  ### ΜΕΤΡΗΜΕΝΟ GROUND TRUTH — η υπόθεση ήταν λάθος
+  Αρχεία: `47_ergasia.dxf` (1.24 MB) + `EYOSMOS47_shm (1).csv` (93 σημεία, delimiter `;`, ΕΓΣΑ87).
+  - **93/93 CSV σημεία βρέθηκαν μέσα στα DXF `POINT` entities με ακρίβεια < 1 mm** (median απόσταση
+    0.0000). Τα δύο αρχεία **ήδη ταυτίζονται bit-perfect στον δίσκο**.
+  - Layers: `Point_Tax_2019`=284, `VT_POINT`=156, `VT_ELEV`=41, `Defpoints`=27, `Survey`=14,
+    `VT_STASH`/`VT_ELEV_STASH`=10, `kryfo`=9, `dianomi_YG`=2 (σύνολο 562 POINT· 242 LWPOLYLINE· 1127 TEXT).
+  - **Και τα 93 CSV σημεία ζουν στο `VT_POINT`.** ⚠️ **Το `VT_POINT` έχει `Z = 0`** — τα πραγματικά
+    υψόμετρα ζουν σε **διπλότυπα** σημεία στο `VT_ELEV` (33 από τα 93). Όποιος consumer διαβάσει το
+    `VT_POINT` παίρνει **επίπεδο** τοπογραφικό. **Ανοιχτό, χωριστό από το M10e.**
+  - 52 `TEXT` entities έχουν περιεχόμενο **ακριβώς το CSV id** τους εντός 2 m — υπάρχει **δεύτερο
+    κανάλι ταύτισης μέσω αρίθμησης**, αναξιοποίητο (open item).
+  - Το layer `pl` έχει **28** κλειστές πολυγραμμές (γειτονικά οικόπεδα/ΚΤΗΜΑΤΟΛΟΓΙΟ). Το οικόπεδο
+    βγαίνει καθαρά ως η μοναδική **100% από CSV κορυφές**: `pl` 89.70 m², κορυφές `49-53-54-55-56-57-65-70-52-50`
+    (ταυτόσημο με το `bld`). **Το «ποιο από τα 28 είναι το δικό μου» απαντιέται από το CSV.**
+  - Μόνο **2** POINT σε τοπικές συντεταγμένες (`dianomi_YG`, X≈−13.127) — τα «μεικτά συστήματα»
+    υπάρχουν αλλά είναι **αμελητέα εδώ· ΔΕΝ είναι η αιτία**.
+
+  ### ΑΙΤΙΑ — επαληθευμένη στον κώδικα, όχι υπόθεση
+  **Το πρόβλημα είναι της εφαρμογής, 100%.** Το DXF import καταστρέφει τη γεωαναφορά:
+  - `systems/zoom/utils/bounds-entity.ts:304-312` — `offsetX = -bounds.minX; offsetY = -bounds.minY;`
+    → `normalizeEntityPositions(...)` μετακινεί **in-place** όλα τα entities στο (0,0) και επιστρέφει
+    bounds που ξεκινούν από το μηδέν. **Το `(minX, minY)` είναι τοπική μεταβλητή και δεν επιστρέφεται
+    ποτέ.** Η μετατόπιση των ~4.077e8 / 4.5024e9 mm χάνεται **μόνιμα**.
+  - Και τα δύο import paths το εκτελούν: `io/dxf-import.ts:175` (worker, `calculateTightBounds(…, true)`)
+    και `io/dxf-import.ts:236` (direct, `normalizeBounds: true`).
+  - `types/scene-types.ts:164-216` — `SceneModel`/`DxfImportResult` **δεν έχουν κανένα πεδίο origin/offset**.
+  - Αντίθετα το CSV μονοπάτι **δεν κανονικοποιείται**: `topo-column-mapping.ts:100-117` κάνει μόνο
+    `× TOPO_UNIT_SCALE_TO_MM` και γράφει **απόλυτα ΕΓΣΑ mm** στο `TopoPointStore.setTopoPoints`.
+  - Η μόνη γέφυρα, το geo-reference, είναι **identity μέχρι να το ορίσει ο χρήστης**
+    (`geo-transform.ts:53-66` → `regenerate-topo.ts:93-94` early-return). Αποτέλεσμα: DXF γύρω από το
+    (0,0), τοπογραφικό στα ~4.5e9 mm — απόσταση ~4.500 km, **και εκτός του culling ±1e6 του ADR-635**.
+  - Ο μόνος σημερινός αυτόματος μηχανισμός, `geo-auto-align.ts:44-58`, είναι **translation-only robust
+    center** και τρέφεται από `sceneEntityCenters` (`geo-ref-scene-points.ts:22-30`) = **bbox centers
+    ανά entity, ΟΧΙ κορυφές τοπογράφου**. Χωρίς στροφή, χωρίς καμία επαλήθευση.
+
+  ### ⚠️ ΔΕΥΤΕΡΗ ΕΠΑΛΗΘΕΥΜΕΝΗ ΠΑΓΙΔΑ — σιωπηλό whitelist
+  `services/dxf-scene-json.ts:46-51` χτίζει το scene με **χειροκίνητο whitelist 4 πεδίων**
+  (`entities / layersById / bounds / units`). **Κάθε νέο πεδίο γράφεται σωστά και εξαφανίζεται
+  σιωπηλά στο reload** — μηδενικό type error, το βλέπει μόνο ο χρήστης. Το write side είναι ασφαλές
+  (`JSON.stringify(scene)`, `dxf-firestore-storage.impl.ts:169`). Ίδιο μοτίβο με το ADR-650 M5α.2
+  («χειροκίνητη λίστα props σε κοινό layer = σιωπηλό drop»).
+
+  ### ΣΧΕΔΙΟ — δύο σκέλη, ένας βαθμολογητής
+  Και τα δύο σκέλη παράγουν το **υπάρχον** `GeoReference{originWorld, rotationDeg}` και γράφουν μέσω
+  του **υπάρχοντος** `setGeoReference` + `persistProjectGeoReference` → `Project.basePoint`/`northRotation`.
+  **Καμία νέα διαδρομή αποθήκευσης, κανένα παράλληλο μοντέλο, κανένα πεδίο scale.**
+
+  **Σκέλος Α — σταματάμε την απώλεια (αναλυτικό, μηδέν heuristic).** Το import καταγράφει το offset
+  που **ήδη υπολογίζει**: `SceneModel.sourceOrigin`, συμβόλαιο **`world_αρχείου = local + sourceOrigin`**
+  (canonical mm). Τότε `geo = {originWorld: sourceOrigin, rotationDeg: 0}` επαναφέρει **ακριβώς** τις
+  συντεταγμένες του αρχείου, με μηδενικό υπόλοιπο. Αυτό μόνο του λύνει την περίπτωση του Giorgio.
+
+  **Σκέλος Β — μετακινημένο/στραμμένο DXF, χωρίς γνωστές αντιστοιχίες.** Εξαγωγή υποψηφίων ανά layer →
+  διαχωρισμός coordinate-frame clusters → **RANSAC σε ζεύγη σημείων με αναλλοίωτη την απόσταση** →
+  refine με **Umeyama/Kabsch** στους inliers.
+
+  **Ροή:** `identity-restore` → `already-aligned` → per-cluster `ransac` → `unit-mismatch` → `needs-manual`.
+
+  **Πύλες αποδοχής (ΣΥΜΒΟΛΑΙΟ — μη χαλαρώσεις κατώφλι για να γίνει πράσινο):**
+  `inliers ≥ max(8, 30% του συνόλου)` **ΚΑΙ** `RMS ≤ 50 mm` **ΚΑΙ** uniqueness
+  (`best.inliers ≥ 1.5 × secondBest` ή ταύτιση των δύο εντός 1 mm / 0,01°).
+  **Ποτέ auto-apply** — το UI δείχνει απόδειξη (μέθοδος, layer, inliers/σύνολο, RMS σε cm, στροφή,
+  κλίμακα) και ο μηχανικός πατά «Εφαρμογή».
+
+  ### Δέκα βήματα υλοποίησης
+  | # | Τι | Αρχεία |
+  |---|-----|--------|
+  | 1 | **Η ρίζα**: `normalizeEntitiesToOrigin()` επιστρέφει `sourceOrigin`· `calculateTightBounds` **delegates** (N.18)· `+readonly sourceOrigin?: Point2D` σε `SceneModel`+`DxfImportResult`· **ΥΠΟΧΡΕΩΤΙΚΟ** το πεδίο στο whitelist | `bounds-entity.ts` (304-319), `scene-types.ts` (164-216), `dxf-import.ts` (175, 236), `run-dxf-parse.ts` (34-77), **`dxf-scene-json.ts` (46-51)** |
+  | 2 | Υποψήφια σημεία ανά layer (POINT/INSERT/vertices)· cap 20k με **ντετερμινιστικό stride**, όχι `Math.random` | **ΝΕΟ** `geo-ref-candidate-points.ts` |
+  | 3 | `splitByCoordinateFrame()` — σπάσιμο όπου κενό > `max(1 km, 50×MAD)`· **boy-scout**: `median`/`mad` βγαίνουν σε `robust-stats.ts` | **ΝΕΟ** `geo-point-clusters.ts`, **ΝΕΟ** `zoom/utils/robust-stats.ts`, `robust-bounds.ts` (53-64) |
+  | 4 | `solveSimilarity2D` / `solveRigid2D` κλειστού τύπου· `toGeoReference()` 1:1 με `localToWorld` | **ΝΕΟ** `geo-similarity-solve.ts` |
+  | 5 | **Ο ΕΠΑΛΗΘΕΥΤΗΣ**: uniform grid + `scoreGeoReference()` — μία μονάδα μέτρησης για Α **και** Β | **ΝΕΟ** `geo-point-index.ts` |
+  | 6 | Pair table σε αποστάσεις (invariant) + RANSAC με **seeded mulberry32**· καλεί το **ΥΠΑΡΧΟΝ** `fromTwoPointPairs` | **ΝΕΟ** `geo-pair-table.ts`, `geo-ransac-match.ts` |
+  | 7 | Orchestrator `autoMatchToSurvey()` + πύλες + `GeoMatchMethod` | **ΝΕΟ** `geo-auto-match.ts`, `index.ts` |
+  | 8 | UI «Αυτόματη ταύτιση» + κάρτα απόδειξης (semantic `<section>`/`<dl>`)· i18n **el+en ΠΡΙΝ** τον κώδικα | `TopoGeoReferenceSection.tsx` (223 γρ. — η κάρτα **χωριστό αρχείο**), **ΝΕΟ** `TopoGeoMatchResultCard.tsx`, `dxf-viewer-panels.json` ×2 |
+  | 9 | Tests: Umeyama exact · identity-restore 93/93 · blind θ=37,4° +θόρυβος+decoys · μεικτά clusters · unit-mismatch · **ψευδώς θετικό ⇒ `needs-manual`** · **round-trip `sourceOrigin`** | **ΝΕΟ** `__tests__/` ×3 |
+  | 10 | ADR-650 §M10e (αυτό) + M10 pointer· **ADR-635/ADR-369 changelog ΜΟΝΟ όταν γραφτεί ο κώδικας** | αυτό το αρχείο |
+
+  ### SSoT — τι επαναχρησιμοποιείται αυτούσιο
+  `GeoReference` (geo-transform.ts:47-50) · **`fromTwoPointPairs` (156-176) = ήδη ο rigid solver 2
+  αντιστοιχιών** — ο RANSAC τον καλεί αντί να ξαναγράψει atan2+normalise (αλλιώς sibling clone, N.18) ·
+  `fromOnePointPair` (140-145) — το identity-restore είναι κυριολεκτικά `fromOnePointPair({0,0}, sourceOrigin)` ·
+  `localToWorld` (69-77) — ο μόνος τρόπος προβολής · `setGeoReference` + `persistProjectGeoReference` ·
+  `computeRobustCenter` · `TopoPointStore.getTopoState().surfaces.existing.points` ·
+  `resolveImportSourceUnits`/`unitsOverride` (η **υπάρχουσα** διέξοδος για unit-mismatch).
+  **Το rendering path δεν αγγίζεται καθόλου**: μόλις γραφτεί το geo, ισοϋψείς + 3D έδαφος + point
+  cloud κουμπώνουν μόνα τους.
+
+  ### Απαγορεύσεις
+  - **ΠΟΤΕ scale στο `GeoReference`** — θα παραμόρφωνε το κτίριο (geo-transform.ts:7-8, δόγμα
+    Revit/Civil 3D). Το `scaleEstimate` είναι **μόνο διαγνωστικό**· αν `|s−1| > 0,002` → `unit-mismatch`
+    + προτεινόμενη μονάδα (1000 / 304,8 / 25,4 / 10) και **κανένα geo**.
+  - **ΠΟΤΕ μετακίνηση των DXF entities στο ΕΓΣΑ** — θα έσκαγε το culling ±1e6 (ADR-635). Διατηρείται
+    η φορά **world→local** του `regenerate-topo.ts:90-99`.
+  - **ΠΟΤΕ `Math.random`** στο RANSAC — flaky tests, διαφορετικό αποτέλεσμα ανά κλικ.
+
+  ### Ρίσκα
+  1. **Το whitelist** (§ παραπάνω) — χωρίς το βήμα 1 στο `dxf-scene-json.ts` όλο το σκέλος Α είναι
+     **διακοσμητικό**. Φράχτης: round-trip test (9ζ).
+  2. **Ψευδώς θετική ταύτιση** — 93 σχεδόν-συγγραμμικά ή κανναβωτά σημεία «ταιριάζουν» σε στροφή
+     90°/180°. Μετριασμός: πύλες + υποχρεωτική ανθρώπινη «Εφαρμογή». Test (στ) το φυλάει.
+  3. **🔴 Τα ήδη αποθηκευμένα DXF έχουν χάσει το offset για πάντα** — δεν ανακτάται. Η ακριβής λύση
+     ισχύει **από το επόμενο import**· τα υπάρχοντα θέλουν **re-import** ή πέφτουν στο RANSAC (heuristic).
+  4. Απόδοση σε point cloud (2M σημεία × pair table) — cap 20k + ζώνη αποδοχής αποστάσεων. Στο
+     πραγματικό αρχείο (562 × 93) ο χρόνος είναι **μονοψήφια ms** — δεν χρειάζεται worker.
+  5. Pre-commit: N.11 (κλειδιά `topography.geoRef.match.*` σε **el+en πριν** τον κώδικα· ωμά ελληνικά
+     σε JSX **δεν** πιάνονται από κανέναν scanner — μόνο pseudo locale, ADR-666) · N.7.1 (χωριστό
+     αρχείο για την κάρτα) · **N.18 `jscpd:diff`** στα 6 νέα modules (point-index/pair-table/ransac
+     έχουν υψηλό ρίσκο sibling clone μεταξύ τους — 2-3 γύροι φυσιολογικοί) · N.17 (κανένα tsc).
+  6. **Το M10e είναι αυστηρά επίπεδο (planimetric).** Κατακόρυφη ταύτιση / vertical datum (ADR-713)
+     **δεν καλύπτεται**.
+  7. Boy scout: τα temp diagnostics στο `regenerate-topo.ts:109-111, 145-150` («REMOVE after fix»,
+     2026-07-15) τυπώνουν ακόμη σε κάθε load — καθάρισέ τα στο ίδιο commit, μην τα αντιγράψεις.
+
+  ### Ανοιχτά (εκτός M10e)
+  - **`VT_POINT` Z = 0 vs `VT_ELEV`** — επίπεδο τοπογραφικό αν διαβαστεί το λάθος layer. Χωριστή δουλειά.
+  - **Ταύτιση μέσω αρίθμησης** (52 TEXT = CSV id) — τρίτο, ντετερμινιστικό κανάλι που θα έκανε το
+    RANSAC περιττό όταν υπάρχουν ετικέτες.
+
+  **Status: M10e — BLUEPRINT. Καμία υλοποίηση. Αναγνώριση (N.0.1 Φάση 1) ολοκληρωμένη σε κώδικα.**
