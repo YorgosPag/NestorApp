@@ -64,6 +64,20 @@ describe('projectSceneTextToDxf — το AST νικά τον καθρέφτη', 
     expect(projectSceneTextToDxf(sceneText({}), 't1').text).toBe('');
   });
 
+  /**
+   * Κάποια μονοπάτια (ghost preview / grip fixtures) φτιάχνουν textNode **μόνο** για να
+   * δηλώσουν στοίχιση: `{ attachment: 'BR' }`, χωρίς `paragraphs`. Αυτό λέει «δεν ξέρω το
+   * κείμενο», ΟΧΙ «κενό κείμενο» — άρα το flat πεδίο εξακολουθεί να απαντά.
+   */
+  it('ημιτελές AST (μόνο attachment, χωρίς paragraphs) → πέφτει στο flat, δεν σκάει', () => {
+    const partial = { attachment: 'BR' } as unknown as DxfTextNode;
+    const projected = projectSceneTextToDxf(
+      sceneText({ text: 'ΜΕ ΣΤΟΙΧΙΣΗ', textNode: partial }),
+      't1',
+    );
+    expect(projected.text).toBe('ΜΕ ΣΤΟΙΧΙΣΗ');
+  });
+
   it('πολυγραμμικό AST (MTEXT) ενώνεται με \\n', () => {
     const node = nodeWith('ΓΡΑΜΜΗ Α');
     const multi = {

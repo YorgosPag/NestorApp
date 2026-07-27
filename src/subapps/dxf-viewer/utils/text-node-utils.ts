@@ -42,7 +42,9 @@ export function scaleTextNodeRunHeights(node: DxfTextNode, ratio: number): DxfTe
  * Paragraphs are joined with newlines to preserve multiline structure.
  */
 export function extractFlatText(textNode: DxfTextNode): string {
-  return textNode.paragraphs
+  // `paragraphs ?? []` — ποτέ throw σε ημιτελές AST. Καλείται από hit-test / bounds / render:
+  // ένα crash εδώ ρίχνει ολόκληρο τον καμβά για μία κακοσχηματισμένη οντότητα.
+  return (textNode.paragraphs ?? [])
     .map(p => (p.runs ?? [])
       .filter(r => !('top' in r))
       .map(r => (r as TextRun).text)
@@ -51,9 +53,17 @@ export function extractFlatText(textNode: DxfTextNode): string {
 }
 
 /**
- * Extract plain text from a textNode-capable entity.
- * Falls back to the legacy flat `text` field when `textNode` is absent.
+ * Το κείμενο μιας οντότητας. **Το AST είναι το canonical** — εκεί γράφει κάθε text command
+ * (ADR-344)· το flat `.text` είναι παράγωγος καθρέφτης που ο DXF import γεμίζει μία φορά.
+ *
+ * ⚠️ Ο έλεγχος είναι σε `paragraphs`, ΟΧΙ απλώς στην ύπαρξη του `textNode`. Ένα **ημιτελές**
+ * AST (π.χ. `{ attachment: 'BR' }` — μερικά μονοπάτια φτιάχνουν τέτοιο μόνο για να δηλώσουν
+ * στοίχιση) δεν φέρει περιεχόμενο· απαντά «δεν ξέρω», όχι «κενό κείμενο». Χωρίς αυτόν τον
+ * διαχωρισμό το ghost preview έχανε το κείμενό του. Κενό AST **με** `paragraphs` είναι
+ * γνήσια απάντηση: ο χρήστης έσβησε τα πάντα, και ΔΕΝ επαναφέρουμε τον παλιό καθρέφτη.
  */
 export function resolveEntityText(entity: { textNode?: DxfTextNode; text?: string }): string {
-  return entity.textNode ? extractFlatText(entity.textNode) : (entity.text ?? '');
+  const node = entity.textNode;
+  if (node?.paragraphs) return extractFlatText(node);
+  return entity.text ?? '';
 }
