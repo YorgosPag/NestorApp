@@ -12,6 +12,7 @@
  */
 
 import * as THREE from 'three';
+import { noteClipScopeLeak, readClipScopeLock } from './clip-scope-guard';
 
 /**
  * ADR-665 — clip SCOPE. Το three.js clipping είναι PER-MATERIAL, οπότε δύο ομάδες αντικειμένων
@@ -122,13 +123,30 @@ function scopeOf(obj: THREE.Object3D, inherited: ClipScope): ClipScope {
   return obj.userData['topoClipScope'] === true ? 'topo' : inherited;
 }
 
-/** Recursive walk carrying the inherited scope. O(n), no ancestor lookups per object. */
-function walk(obj: THREE.Object3D, planes: ScopeClipPlanes, inherited: ClipScope): void {
+/**
+ * Recursive walk carrying the inherited scope. O(n), no ancestor lookups per object.
+ *
+ * ADR-665 Φ2 — carries a SECOND inherited value next to the scope: the {@link readClipScopeLock}
+ * of the nearest ancestor that declared one. A subtree that locked `'default'` but resolved to
+ * `'topo'` has been re-parented under a terrain root and is now silently clipped by the terrain's
+ * cut — the failure mode the DXF underlay is exposed to (see `clip-scope-guard.ts`). Observed and
+ * recorded ONLY: the resolved scope still governs, so behaviour is byte-for-byte unchanged.
+ */
+function walk(
+  obj: THREE.Object3D,
+  planes: ScopeClipPlanes,
+  inherited: ClipScope,
+  inheritedLock: ClipScope | null,
+): void {
   if (isSectionBoxPart(obj)) return; // the box must not clip itself (nor its children)
   const scope = scopeOf(obj, inherited);
+  const lock = readClipScopeLock(obj) ?? inheritedLock;
   const isDrawable = (obj as THREE.Mesh).isMesh === true || (obj as THREE.Line).isLine === true;
-  if (isDrawable) applyToObject(obj, planes[scope], scope);
-  for (const child of obj.children) walk(child, planes, scope);
+  if (isDrawable) {
+    if (lock !== null && lock !== scope) noteClipScopeLeak(obj, lock, scope, planes[scope]);
+    applyToObject(obj, planes[scope], scope);
+  }
+  for (const child of obj.children) walk(child, planes, scope, lock);
 }
 
 /**
@@ -141,7 +159,7 @@ function walk(obj: THREE.Object3D, planes: ScopeClipPlanes, inherited: ClipScope
  * (otherwise its faces would clip themselves).
  */
 export function applyClippingPlanes(root: THREE.Object3D, planes: ScopeClipPlanes): void {
-  walk(root, planes, 'default');
+  walk(root, planes, 'default', null);
 }
 
 /**

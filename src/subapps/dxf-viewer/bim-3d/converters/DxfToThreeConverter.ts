@@ -32,6 +32,8 @@ import { GlyphAtlas } from './glyph-atlas';
 import { AtlasTextMeshBuilder, countTextGlyphCapacity } from './glyph-atlas-text-mesh';
 import { registerPostFxOverlay } from '../scene/post-fx-overlay-pass';
 import { finiteBox3FromObject } from '../scene/finite-bounds';
+// ADR-665 Φ2 — δηλώνει ρητά ότι το υπόστρωμα DXF ανήκει στο scope `'default'` (βλ. seat παρακάτω).
+import { lockClipScope } from '../systems/section/clip-scope-guard';
 // ADR-645 Φάση A — time-sliced text streaming (freeze fix) + its progress SSoT.
 import { runIncrementalBuild, type IncrementalBuildHandle } from '../scene/incremental-scene-builder';
 import { setDxf3dStreamProgress, clearDxf3dStreamProgress } from '../stores/Dxf3dStreamProgressStore';
@@ -303,6 +305,13 @@ export class DxfToThreeConverter {
 
     const group = new THREE.Group();
     group.name = 'dxf-wireframe-floor';
+    // ADR-665 Φ2 — το υπόστρωμα DXF ανήκει ΠΑΝΤΑ στο scope `'default'`. Τα υλικά του είναι
+    // `LineBasicMaterial`, που είναι clippable ΜΟΝΟ στο `'topo'`: αν αυτό το υποδέντρο βρεθεί ποτέ
+    // κάτω από topo root, ολόκληρο το 2Δ σχέδιο αρχίζει να κόβεται από την κοπή του εδάφους —
+    // σιωπηλά, ενώ τα Canvas2D overlays συνεχίζουν να σχεδιάζονται (δεν περνούν από GPU clipping).
+    // Το κλείδωμα δεν αλλάζει συμπεριφορά· κάνει τη διαρροή ΟΡΑΤΗ. Μπαίνει εδώ (και όχι στα δύο
+    // call sites) γιατί ΚΑΘΕ διαδρομή — single-floor και stacked multi-floor — περνά από εδώ.
+    lockClipScope(group, 'default');
 
     for (const [color, positions] of colorBuckets) {
       if (positions.length === 0) continue;
