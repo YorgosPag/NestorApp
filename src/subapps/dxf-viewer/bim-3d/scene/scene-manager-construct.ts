@@ -44,6 +44,7 @@ import { WaypointDragHandleRenderer } from '../animation/WaypointDragHandle';
 import { TerrainSceneLayer } from './terrain/TerrainSceneLayer'; // ADR-650 M4 — topographic surface
 import { TerrainContourLayer } from './terrain/TerrainContourLayer'; // ADR-650 M10d — draped 3D contours
 import { PointCloudSceneLayer } from './terrain/PointCloudSceneLayer'; // ADR-650 M8β/Β — point cloud (display-only)
+import { TopoAutoBreaklineCandidateLayer } from './terrain/TopoAutoBreaklineCandidateLayer'; // ADR-650 M8β/Γ — υποψήφιες ασυνέχειες
 
 export interface SceneManagerConstructDeps {
   readonly container: HTMLElement;
@@ -83,6 +84,8 @@ export interface SceneManagerParts {
   readonly terrainLayer: TerrainSceneLayer; // ADR-650 M4 — topographic surface (TIN → mesh)
   readonly terrainContourLayer: TerrainContourLayer; // ADR-650 M10d — draped contour lines (once, real z)
   readonly pointCloudLayer: PointCloudSceneLayer; // ADR-650 M8β/Β — display-only cloud (never geometry)
+  /** ADR-650 M8β/Γ — auto-breakline proposals under review (never the survey until approved). */
+  readonly autoBreaklineLayer: TopoAutoBreaklineCandidateLayer;
   readonly animationManager: AnimationManager;
   readonly canonicalViewService: CanonicalViewService;
   readonly keyboardFocusManager: KeyboardFocusManagerApi;
@@ -188,6 +191,11 @@ export function buildSceneManagerParts(deps: SceneManagerConstructDeps): SceneMa
   // βγαίνουν ανεξάρτητα, και το νέφος δεν συμμετέχει ποτέ σε raycast/snap.
   const pointCloudLayer = new PointCloudSceneLayer(scene, markDirty);
 
+  // ADR-650 M8β/Γ — οι ΠΡΟΤΕΙΝΟΜΕΝΕΣ γραμμές ασυνέχειας υπό έγκριση, ως draped γραμμές πάνω στο έδαφος.
+  // Ξεχωριστό layer από τις ισοϋψείς: οι ισοϋψείς είναι ΠΡΟΪΟΝ της αποτύπωσης, οι υποψήφιες είναι
+  // ΠΡΟΤΑΣΗ που ζει όσο κρατάει ο έλεγχος (§9) — μπαίνουν και βγαίνουν με το review store, όχι με το TIN.
+  const autoBreaklineLayer = new TopoAutoBreaklineCandidateLayer(scene, markDirty, (root) => reapplyTopoClip(root));
+
   // Phase 4.2 — single animation manager (ADR-040 — ticked by the main RAF).
   const animationManager = createAnimationManager();
   // Phase 4.4 — instantiated once, shared by ViewCube and keyboard dispatcher.
@@ -248,7 +256,8 @@ export function buildSceneManagerParts(deps: SceneManagerConstructDeps): SceneMa
     selectionHighlighter, hoverHighlighter, faceHighlighter, faceHoverHighlighter,
     stairSubElementHighlighter, stairSubUnsub,
     buriedPartHighlighter, buriedPartUnsub,
-    poi, gridFloor, terrainLayer, terrainContourLayer, pointCloudLayer, animationManager, canonicalViewService,
+    poi, gridFloor, terrainLayer, terrainContourLayer, pointCloudLayer, autoBreaklineLayer,
+    animationManager, canonicalViewService,
     keyboardFocusManager, focusOutlineRenderer, focusUnsub, viewCube,
     envStoreUnsub, bgModeUnsub, sectionController, waypointDragHandleRenderer,
     dxfBackdrop, hoverBeautyCache, frameContext,

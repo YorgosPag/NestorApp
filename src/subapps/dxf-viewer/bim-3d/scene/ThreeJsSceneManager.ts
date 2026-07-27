@@ -9,6 +9,7 @@ import { Cinema4DGridFloor } from './grid/cinema4d-grid-floor'; // ADR-558 — C
 import type { TerrainSceneLayer } from './terrain/TerrainSceneLayer'; // ADR-650 M4 — topographic surface
 import type { TerrainContourLayer } from './terrain/TerrainContourLayer'; // ADR-650 M10d — draped 3D contours
 import type { PointCloudSceneLayer } from './terrain/PointCloudSceneLayer'; // ADR-650 M8β/Β — point cloud
+import type { TopoAutoBreaklineCandidateLayer } from './terrain/TopoAutoBreaklineCandidateLayer'; // ADR-650 M8β/Γ
 import type { PerformanceCollector } from '../performance/PerformanceCollector'; import type { IdleDetector } from '../lighting/idle-detector';
 import type { QualityModulator } from '../lighting/quality-modulator'; import type { SSAOModulator } from '../lighting/ssao-modulator';
 import type { ShadowModulator } from '../lighting/shadow-modulator';
@@ -80,6 +81,7 @@ export class ThreeJsSceneManager {
   private readonly terrainLayer: TerrainSceneLayer; // ADR-650 M4 — topographic surface (TIN → mesh)
   private readonly terrainContourLayer: TerrainContourLayer; // ADR-650 M10d — draped 3D contour lines
   private readonly pointCloudLayer: PointCloudSceneLayer; // ADR-650 M8β/Β — display-only point cloud
+  private readonly autoBreaklineLayer: TopoAutoBreaklineCandidateLayer; // ADR-650 M8β/Γ — υποψήφιες υπό έγκριση
   readonly dxfConverter: DxfToThreeConverter;
   readonly selectionHighlighter: BimSelectionHighlighter;
   // ADR-538 hover silhouette / ADR-539 per-face overlays (Cinema4D «Polygon Mode»).
@@ -198,6 +200,7 @@ export class ThreeJsSceneManager {
     this.poi = parts.poi; this.gridFloor = parts.gridFloor; this.terrainLayer = parts.terrainLayer;
     this.terrainContourLayer = parts.terrainContourLayer;
     this.pointCloudLayer = parts.pointCloudLayer;
+    this.autoBreaklineLayer = parts.autoBreaklineLayer;
     this.animationManager = parts.animationManager; this.canonicalViewService = parts.canonicalViewService;
     this.keyboardFocusManager = parts.keyboardFocusManager; this.focusOutlineRenderer = parts.focusOutlineRenderer;
     this.focusUnsub = parts.focusUnsub; this.viewCube = parts.viewCube;
@@ -469,6 +472,7 @@ export class ThreeJsSceneManager {
     this.terrainLayer.dispose(); // ADR-650 M4 — drop store subs + free the terrain mesh geometry.
     this.terrainContourLayer.dispose(); // ADR-650 M10d — drop store subs + free the contour line geometry.
     this.pointCloudLayer.dispose(); // ADR-650 M8β/Β — drop store sub + free the cloud buffers + material.
+    this.autoBreaklineLayer.dispose(); // ADR-650 M8β/Γ — drop the review sub + free the candidate lines.
     disposeMeshReveal(); // ADR-693 Φ2 — free any in-flight reveal veil (per-instance material + geometry).
     // ADR-040 Phase XXIII — no rafHandle: BimViewport3D unregisters the scheduler BEFORE dispose(), so no in-flight tick races teardown.
     disposeSceneManagerResources({
