@@ -36,7 +36,7 @@ import { registerImportedDimStyles } from '../../systems/dimensions/dim-style-im
 // (scene.units=undefined) get the correct 'm'/'cm' label instead of falling
 // back to DxfRenderer's `?? 'mm'` default, which makes DimensionRenderer apply
 // no mmToSceneUnits conversion and render dim text at 2.5 world-units (= 2.5m).
-import { resolveSceneUnits, mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
+import { resolveRenderUnits, mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 import { immediateSceneScale } from '../../systems/cursor/ImmediateSceneScaleStore';
 // Pure per-entity projection SSoT (extracted to keep this file ≤500 LOC).
 // convertEntities = shared "expand → convert each → drop nulls" loop (no per-branch twins).
@@ -53,9 +53,14 @@ import { applyWallWallCrossCutback2D } from './dxf-scene-wall-wall-cutback';
 
 export interface UseDxfSceneConversionParams {
   currentScene: SceneModel | null;
-  /** ADR-368 — per-file user override for DXF drawing units. When provided,
-   *  takes precedence over resolveSceneUnits() so Greek DXF files (declared mm,
-   *  actual meters) render correctly without heuristic patches. */
+  /**
+   * ADR-368 — per-file user label for DXF drawing units.
+   *
+   * ⚠️ ADR-716 Φ6: this is **no longer** an unconditional override. A scene that DECLARES
+   * its units is already canonical-mm (ADR-462 bakes the parse-time `unitsOverride` into
+   * the coordinates), so re-applying the label here would be a ×1000 double interpretation.
+   * The label now survives ONLY for legacy, undeclared scenes — see `resolveRenderUnits`.
+   */
   userDrawingUnits?: SceneUnits;
 }
 
@@ -165,10 +170,11 @@ function convertSceneToDxfWithCache(
     // ADR-358 Phase 9E-5 — id-first primary; name-keyed layers as legacy fallback.
     layersById: scene?.layersById,
     bounds: scene?.bounds ?? null,
-    // ADR-368 — user-specified drawing units take priority (set in import wizard).
-    // Falls back to R12 resolveSceneUnits() heuristic for files imported before
-    // ADR-368 or when user left the selection on 'auto'.
-    units: userDrawingUnits ?? resolveSceneUnits(scene),
+    // ADR-716 Φ6 — ΕΝΑ σημείο απόφασης για τη μονάδα ΑΠΟΔΟΣΗΣ. Σκηνή που ΔΗΛΩΝΕΙ μονάδα
+    // είναι ήδη canonical-mm (ADR-462): η ετικέτα του ADR-368 ΔΕΝ την ξαναερμηνεύει, αλλιώς
+    // ύψη κειμένων/διαστάσεων και βήμα grip-drag βγαίνουν ×1000 λάθος. Το `userDrawingUnits`
+    // επιβιώνει ΜΟΝΟ για legacy αδήλωτες σκηνές.
+    units: resolveRenderUnits(scene, userDrawingUnits),
   };
 }
 

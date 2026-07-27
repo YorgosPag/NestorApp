@@ -28,6 +28,13 @@ import { getSelectStyles, getEncodingOptions } from '../config/modal-select';
 import { PANEL_LAYOUT } from '../config/panel-tokens';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+// ADR-716 Φ5 — Ο ίδιος επιλογέας μονάδων με το wizard — ΈΝΑ component, ΈΝΑ σύνολο κλειδιών
+// (`floorplanImport.drawingUnits.*` στο namespace `files-media`), ΈΝΑ μονοπάτι απόφασης.
+// Η μονάδα είναι απόφαση με απόδειξη («587 m × 488 m») και ΕΔΩ, όχι μόνο στο wizard.
+import { DxfUnitsSelector } from '@/features/floorplan-import/components/DxfUnitsSelector';
+import { useDxfUnitSuggestion } from '../hooks/common/useDxfUnitSuggestion';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import type { SceneUnits } from '../utils/scene-units';
 
 // 🏢 ENTERPRISE: File type detection
 type ImportFileType = 'dxf' | 'pdf' | null;
@@ -35,8 +42,11 @@ type ImportFileType = 'dxf' | 'pdf' | null;
 interface DxfImportModalProps {
     isOpen: boolean;
     onClose: () => void;
-    /** Handler for DXF file import */
-    onImport: (file: File, encoding: string) => Promise<void>;
+    /**
+     * Handler for DXF file import.
+     * @param userDrawingUnits ADR-716 Φ5 — ρητή επιλογή μονάδων (απόν όταν «Αυτόματα»).
+     */
+    onImport: (file: File, encoding: string, userDrawingUnits?: SceneUnits) => Promise<void>;
     /** Handler for PDF file import (optional - if not provided, PDF option is hidden) */
     onPdfImport?: (file: File) => Promise<void>;
     /** Whether to show PDF option (default: true if onPdfImport is provided) */
@@ -51,12 +61,22 @@ const DxfImportModal: React.FC<DxfImportModalProps> = ({
     allowPdf = true
 }) => {
     // 🏢 ENTERPRISE: i18n hook
-    const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
+    // `files-media` προστέθηκε για τα ήδη υπάρχοντα κλειδιά `floorplanImport.drawingUnits.*`
+    // (el + en) — κανένα νέο κλειδί, καμία αντιγραφή κειμένου (N.11).
+    const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell', 'files-media']);
+    const colors = useSemanticColors();
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [fileType, setFileType] = useState<ImportFileType>(null);
     const [encoding, setEncoding] = useState('windows-1253');
+    // ADR-368/716 — οι μονάδες του σχεδίου: 'auto' = αποφασίζει η σκάλα τεκμηρίων.
+    const [selectedUnits, setSelectedUnits] = useState<SceneUnits | 'auto'>('auto');
     const [isLoading, setIsLoading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const explicitUnits = selectedUnits !== 'auto' ? selectedUnits : undefined;
+    // Διαβάζει ΜΟΝΟ την κεφαλίδα του DXF και καθρεφτίζει την ΙΔΙΑ απόφαση που θα
+    // εκτελέσει ο importer — όχι δεύτερη, παράλληλη ευρετική.
+    const unitDecision = useDxfUnitSuggestion(fileType === 'dxf' ? selectedFile : null, explicitUnits);
 
     // 🏢 ENTERPRISE: Detect file type from extension
     const detectFileType = (file: File): ImportFileType => {
@@ -103,8 +123,8 @@ const DxfImportModal: React.FC<DxfImportModalProps> = ({
                 await onPdfImport(selectedFile);
             } else if (fileType === 'dxf') {
                 // 🏢 ENTERPRISE: Handle DXF import (existing logic)
-                console.log('📐 [DxfImportModal] Importing DXF:', selectedFile.name, encoding);
-                await onImport(selectedFile, encoding);
+                console.log('📐 [DxfImportModal] Importing DXF:', selectedFile.name, encoding, selectedUnits);
+                await onImport(selectedFile, encoding, explicitUnits);
             }
             onClose();
             setSelectedFile(null);
@@ -120,6 +140,7 @@ const DxfImportModal: React.FC<DxfImportModalProps> = ({
         setSelectedFile(null);
         setFileType(null);
         setEncoding('windows-1253');
+        setSelectedUnits('auto');
         setIsLoading(false);
         onClose();
     };
@@ -227,6 +248,18 @@ const DxfImportModal: React.FC<DxfImportModalProps> = ({
                                     </SelectContent>
                                 </Select>
                             </ModalField>
+                        )}
+
+                        {/* ADR-716 Φ5 — Μονάδες σχεδίου: η επιλογή φτάνει στο parse (κλιμακώνει
+                            τη γεωμετρία) και γράφεται στο FileRecord (επιβιώνει σε κάθε re-parse). */}
+                        {(fileType === 'dxf' || !selectedFile) && (
+                            <DxfUnitsSelector
+                                value={selectedUnits}
+                                onChange={setSelectedUnits}
+                                colors={colors}
+                                t={t}
+                                decision={unitDecision}
+                            />
                         )}
                     </ModalFormSection>
                 </form>

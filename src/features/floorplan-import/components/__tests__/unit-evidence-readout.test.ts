@@ -54,6 +54,27 @@ describe('ADR-716 Φ4 — κάθε δυναμικό κλειδί του readout 
     expect(String(extent)).not.toContain('{{');
   });
 
+  // ADR-716 Φ6 — «Αυτόματα → Μέτρα» πάνω από «Ρητή επιλογή σας» ήταν αντιφατικό: η
+  // επικεφαλίδα πρέπει να λέει ΠΟΙΟΣ αποφάσισε. Το κλειδί είναι δυναμικά επιλεγμένο
+  // ⇒ πάλι αόρατο στο CHECK 3.8, πάλι εδώ ο μόνος φύλακας.
+  it.each(LOCALES)('%s: η ΡΗΤΗ ετυμηγορία έχει δική της επικεφαλίδα σε αυτή τη γλώσσα', (_lang, bundle) => {
+    const explicit = lookup(bundle, 'floorplanImport.drawingUnits.resolvedExplicit');
+    const auto = lookup(bundle, 'floorplanImport.drawingUnits.resolved');
+    expect(typeof explicit).toBe('string');
+    expect(String(explicit)).toContain('{unit}');
+    expect(String(explicit)).not.toContain('{{');
+    // Αν οι δύο ταυτίζονταν, το κλειδί θα ήταν διακοσμητικό.
+    expect(explicit).not.toBe(auto);
+  });
+
+  it.each(LOCALES)('%s: το extent παραμένει ICU-έγκυρο', (_lang, bundle) => {
+    const extent = lookup(bundle, 'floorplanImport.drawingUnits.extent');
+    expect(String(extent)).toContain('{width}');
+    expect(String(extent)).toContain('{height}');
+    // CHECK 3.9 — ICU θέλει ΜΟΝΑ άγκιστρα· `{{var}}` δεν αντικαθίσταται ποτέ.
+    expect(String(extent)).not.toContain('{{');
+  });
+
   it('κάθε confidence έχει ΔΙΚΟ του κλειδί — καμία σιωπηλή επικάλυψη τεκμηρίων', () => {
     const keys = ALL_CONFIDENCES.map(c => UNIT_EVIDENCE_KEYS[c]);
     expect(new Set(keys).size).toBe(keys.length);

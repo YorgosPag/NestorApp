@@ -5,6 +5,7 @@ import type { AnyMeasurement } from './measurements';
 import type { GripSettings } from './gripSettings';
 import type { DrawingState } from '../hooks/drawing/useUnifiedDrawing';
 import type { DxfCanvasRef } from '../canvas-v2';
+import type { SceneUnits } from '../utils/scene-units';
 import type { RefObject } from 'react';
 
 declare module './ui/toolbar/EnhancedDXFToolbar' {
@@ -139,9 +140,12 @@ declare module './snapping/context/SnapContext' {
   export const SnapProvider: FC<SnapProviderProps>;
 }
 
+// ⚠️ ΕΥΡΗΜΑ (grep 2026-07-27): ο φάκελος `canvas-v2/shared/` **δεν υπάρχει** — η δήλωση
+// είναι νεκρή· ο ζωντανός hook είναι το `hooks/useDxfImport.ts`. Η υπογραφή κρατιέται
+// συγχρονισμένη ώστε να μη γίνει παγίδα αν ποτέ αναβιώσει (ADR-716 §7 «ΠΑΓΙΔΑ»).
 declare module './canvas-v2/shared/useDxfImport' {
   export function useDxfImport(): {
-    importDxfFile: (file: File) => Promise<SceneModel | null>;
+    importDxfFile: (file: File, userDrawingUnits?: SceneUnits) => Promise<SceneModel | null>;
     isLoading: boolean;
     error: string | null;
     clearError: () => void;

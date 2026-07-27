@@ -218,7 +218,10 @@ export function useSceneState() {
         return;
       }
 
-      const scene = await importDxfFile(file);
+      // ADR-716 Φ5 — Η επιλογή του wizard ήταν ΕΔΩ όλη την ώρα (`saveContext.userDrawingUnits`,
+      // ADR-368) και δεν έφτανε ποτέ στην κλίμακα. Τώρα οδηγεί το σκαλί 0 «explicit» της σκάλας
+      // τεκμηρίων ⇒ η γεωμετρία ψήνεται σε mm με τη ΣΩΣΤΗ πηγαία μονάδα, μία φορά, μόνιμα.
+      const scene = await importDxfFile(file, saveContext?.userDrawingUnits);
       if (scene) {
         commitImported(scene);
       } else {

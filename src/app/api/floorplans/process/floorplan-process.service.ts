@@ -9,12 +9,8 @@
 import { gunzipSync, gzipSync } from 'zlib';
 import type { Bucket } from '@google-cloud/storage';
 import { createModuleLogger } from '@/lib/telemetry';
-import type {
-  FloorplanProcessedData,
-  DxfSceneData,
-  DxfSceneEntity,
-  DxfSceneLayer,
-} from '@/types/file-record';
+import type { FloorplanProcessedData, DxfSceneData } from '@/types/file-record';
+import { toDxfSceneData } from '@/services/floorplans/dxf-scene-data-projection';
 import type { FileRecordData } from './floorplan-process.types';
 
 const logger = createModuleLogger('FloorplanProcessService');
@@ -89,18 +85,18 @@ export async function processDxf(
     '@/subapps/dxf-viewer/utils/dxf-import-diagnostics'
   );
 
-  const { scene, diagnostics } = DxfSceneBuilder.buildSceneWithDiagnostics(content);
+  // ADR-716 Φ5 — ο server δεν βλέπει ΠΟΤΕ το wizard· διαβάζει τη ρητή ετυμηγορία από το
+  // ίδιο το FileRecord που ήδη κατέβασε το route. Ίδια είσοδος ⇒ ίδια κλίμακα με τον client.
+  const { scene, diagnostics } = DxfSceneBuilder.buildSceneWithDiagnostics(
+    content,
+    fileData.userDrawingUnits,
+  );
   const warnings = summarizeDiagnostics(diagnostics);
   const parseTimeMs = Date.now() - parseStart;
 
-  const dxfSceneData: DxfSceneData = {
-    entities: scene.entities.map((entity) => ({
-      ...entity,
-      layer: scene.layersById[entity.layerId]?.name ?? '0',
-    } as unknown as DxfSceneEntity)),
-    layers: Object.fromEntries(Object.values(scene.layersById).map((l) => [l.name, l])) as Record<string, DxfSceneLayer>,
-    bounds: scene.bounds,
-  };
+  // N.0.2/N.18 — ΜΙΑ προβολή SceneModel → DxfSceneData, ίδια με τον client. Αν οι δύο
+  // απέκλιναν, ο viewer θα έδειχνε άλλα layers από ό,τι σέρβιρε ο server.
+  const dxfSceneData: DxfSceneData = toDxfSceneData(scene);
 
   const stats = {
     entityCount: dxfSceneData.entities.length,

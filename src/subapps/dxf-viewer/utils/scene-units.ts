@@ -278,6 +278,43 @@ export function resolveSceneUnits(scene: {
 }
 
 /**
+ * ADR-716 Φ6 — Η μονάδα **ΑΠΟΔΟΣΗΣ** μιας σκηνής: ΕΝΑ σημείο απόφασης για όλο το
+ * render/print/title-block.
+ *
+ * ## Το κριτήριο, ρητά — όχι σιωπηλά
+ *
+ * Το `userDrawingUnits` (ADR-368) γεννήθηκε **πριν** από το canonical-mm. Ήταν πάντα
+ * **parse-time** μηχανισμός: «σε ποια μονάδα γράφτηκε το DXF». Μετά το ADR-462 η κλίμακα
+ * εφαρμόζεται **μία φορά, στο parse** (`applyCanonicalMmScale`) και ο builder δηλώνει
+ * `units: 'mm'`. Από εκείνη τη στιγμή οι αριθμοί **είναι** χιλιοστά.
+ *
+ * Αν το ίδιο `userDrawingUnits` εφαρμοστεί **ξανά** στο render, επιβάλλει **δεύτερη
+ * ερμηνεία** πάνω σε ήδη κανονικοποιημένους αριθμούς: ο χρήστης διαλέγει «Μέτρα» →
+ * `mmToSceneUnits('m') = 0,001` σε γεωμετρία που είναι ήδη mm → ύψη κειμένων/διαστάσεων
+ * και βήμα grip-drag **×1000 λάθος** (ADR-716 §7 Εύρημα Β).
+ *
+ * Άρα ο κανόνας είναι μία γραμμή, και είναι **δομικός**:
+ *
+ * > **Σκηνή που ΔΗΛΩΝΕΙ μονάδα είναι ήδη canonical ⇒ η ετικέτα του χρήστη ΔΕΝ την αγγίζει.**
+ * > Η ετικέτα επιβιώνει ΜΟΝΟ για legacy σκηνές χωρίς δήλωση (blobs πριν το ADR-462).
+ *
+ * @param scene             η σκηνή (μπορεί να είναι `null` — τότε `'mm'` back-compat)
+ * @param userDrawingUnits  η ετικέτα του ADR-368· τιμάται μόνο σε ΑΔΗΛΩΤΗ σκηνή
+ * @see docs/centralized-systems/reference/adrs/ADR-716-geodetic-unit-identification-dxf-import.md §7
+ */
+export function resolveRenderUnits(
+  scene: {
+    units?: string | null;
+    bounds?: { min: { x: number; y: number }; max: { x: number; y: number } } | null;
+  } | null | undefined,
+  userDrawingUnits?: SceneUnits,
+): SceneUnits {
+  // Η ΔΗΛΩΣΗ είναι το κριτήριο — όχι το «μοιάζει canonical», όχι το μέγεθος των bounds.
+  if (normalizeDeclaredUnits(scene?.units)) return resolveSceneUnits(scene);
+  return userDrawingUnits ?? resolveSceneUnits(scene);
+}
+
+/**
  * Map the free-form `scene.units` string to our enum, or `null` when the
  * value is missing / unrecognized. Accepts the canonical short form
  * (`'mm'`, `'cm'`, `'m'`, `'in'`, `'ft'`) plus a couple of long-form

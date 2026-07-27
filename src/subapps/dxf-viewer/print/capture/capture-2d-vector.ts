@@ -91,7 +91,11 @@ export async function captureCurrent2dViewVector(input: Capture2dInput): Promise
   // pre-pass the emitter's `default` case silently drops them from the vector PDF.
   // Annotative sizing needs the live drawing scale (1:N) + the scene's units.
   const drawingScale = useDrawingScaleStore.getState().drawingScale;
-  const sceneUnits = input.userDrawingUnits ?? resolveSceneUnits({ units: dxfScene.units });
+  // ADR-716 Φ6 — η απόφαση μονάδας ΕΧΕΙ ΗΔΗ παρθεί από το `convertSceneToDxf`
+  // (→ `resolveRenderUnits`) και ζει στο `dxfScene.units`. Το παλιό
+  // `input.userDrawingUnits ?? …` την εφάρμοζε ΔΕΥΤΕΡΗ φορά: το vector PDF έβγαινε με
+  // άλλη κλίμακα σχολιασμών από την οθόνη. Ένα σημείο απόφασης, ένας καταναλωτής εδώ.
+  const sceneUnits = resolveSceneUnits({ units: dxfScene.units });
   const entities = expandAnnotationsToPrimitives(flat, { drawingScale, sceneUnits });
 
   const colorPolicy: PrintColorPolicy = {

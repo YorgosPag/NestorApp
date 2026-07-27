@@ -39,15 +39,16 @@ import type { AnnotationSymbolEntity } from '../../types/annotation-symbol';
 import { useAnnotationSymbolSelectionStore } from '../../state/annotation-symbol-selection-store';
 import { getAnnotationSymbol } from '../../config/annotation-symbol-catalog';
 import type { ToolType } from '../../ui/toolbar/types';
-// ADR-649 — «Ετικέτα Εμβαδού Γραμμοσκίασης» (2 κλικ: pick hatch → place label).
-import { isHatchEntity, type Entity } from '../../types/entities';
-import { pickTopHatchAt } from '../../bim/hatch/hatch-pick-at';
-import { buildHatchAreaLabelEntity } from '../../bim/hatch/hatch-area-label';
+// ADR-649 / ADR-662 §12 — «Ετικέτα Εμβαδού» (2 κλικ: pick οντότητας → place label).
+import { type Entity } from '../../types/entities';
+import { pickTopEntityAt } from '../../rendering/hitTesting/pick-top-entity-at';
+import { hasMeasurableArea } from '../../systems/measure/entity-area-facts';
+import { buildAreaLabelEntity } from '../../systems/measure/area-label';
 import {
-  getHatchAreaLabelState,
-  armHatchAreaLabelPlacement,
-  resetHatchAreaLabel,
-} from '../../bim/hatch/hatch-area-label-store';
+  getAreaLabelState,
+  armAreaLabelPlacement,
+  resetAreaLabel,
+} from '../../systems/measure/area-label-store';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import { i18n } from '@/i18n';
 // ADR-650 M2-Β — «Γραμμές ασυνέχειας»: pick υπάρχουσας γραμμής → constraint στο CDT.
@@ -293,59 +294,68 @@ export function handleAnnotationSymbolClick(
 }
 
 // ============================================================================
-// HATCH AREA LABEL (ADR-649 — 2 κλικ: pick hatch → place area label)
+// AREA LABEL (ADR-649 / ADR-662 §12 — 2 κλικ: pick οντότητας → place area label)
 // ============================================================================
-const HATCH_AREA_LABEL_NS = 'dxf-viewer-shell';
+const AREA_LABEL_NS = 'dxf-viewer-shell';
+
+/** Επαναφορά στη φάση 1 + το αντίστοιχο status-prompt (μία διατύπωση, τρία σημεία). */
+function resetAreaLabelToPickPhase(): void {
+  resetAreaLabel();
+  toolHintOverrideStore.setOverride(i18n.t('areaLabel.status.awaitingEntity', { ns: AREA_LABEL_NS }));
+}
 
 /**
- * ΦΑΣΗ 1: διάλεξε τη γραμμοσκίαση κάτω από το κλικ (even-odd `pickTopHatchAt`
- * SSoT), κλείδωσέ την στην FSM + highlight την, και προχώρα σε αναμονή
- * τοποθέτησης. Καμία γραμμοσκίαση → κατανάλωσε το κλικ, μείνε στη φάση 1
- * (forgiving — ξαναδοκιμάζεις).
+ * ΦΑΣΗ 1: διάλεξε την οντότητα κάτω από το κλικ, κλείδωσέ την στην FSM + highlight
+ * την, και προχώρα σε αναμονή τοποθέτησης. Καμία οντότητα → κατανάλωσε το κλικ, μείνε
+ * στη φάση 1 (forgiving — ξαναδοκιμάζεις).
+ *
+ * Το `pickTopEntityAt` + `hasMeasurableArea` δίνει **ένα** pick για ΟΛΟΥΣ τους τύπους με
+ * εμβαδόν, και κάθε τύπος κρατά τη ΔΙΚΗ του σημασιολογία hit-test (γραμμοσκίαση even-odd,
+ * τοπογραφική επιφάνεια «οποιοδήποτε ring»). Νέος τύπος ⇒ καμία αλλαγή εδώ.
  */
-function armHatchAreaLabelFromClick(
+function armAreaLabelFromClick(
   worldPoint: Point2D,
   entities: readonly Entity[],
   p: UseCanvasClickHandlerParams,
 ): boolean {
-  const hatchId = pickTopHatchAt(worldPoint, entities);
-  if (!hatchId) return true;
-  armHatchAreaLabelPlacement(hatchId);
-  p.universalSelection.replaceEntitySelection([hatchId]);
-  toolHintOverrideStore.setOverride(i18n.t('hatchAreaLabel.status.awaitingPlacement', { ns: HATCH_AREA_LABEL_NS }));
+  const entityId = pickTopEntityAt(worldPoint, entities, hasMeasurableArea);
+  if (!entityId) return true;
+  armAreaLabelPlacement(entityId);
+  p.universalSelection.replaceEntitySelection([entityId]);
+  toolHintOverrideStore.setOverride(i18n.t('areaLabel.status.awaitingPlacement', { ns: AREA_LABEL_NS }));
   return true;
 }
 
 /**
- * ADR-649 — 2-κλικ dispatcher. ΦΑΣΗ 1 → pick γραμμοσκίασης· ΦΑΣΗ 2 → χτίσε το
- * `TextEntity` εμβαδού και commit μέσω `completeEntity` (undo + persistence +
- * `drawing:complete`). Θέση: centroid όταν το 2ο κλικ πέφτει ΜΕΣΑ στην ίδια
- * γραμμοσκίαση, αλλιώς στο σημείο του κλικ (`resolveHatchLabelAnchor`). Μετά το
- * commit επανέρχεται στη φάση 1 (συνεχής χρήση, AutoCAD-style).
+ * ADR-649 / ADR-662 §12 — 2-κλικ dispatcher. ΦΑΣΗ 1 → pick οντότητας με εμβαδόν·
+ * ΦΑΣΗ 2 → χτίσε το `TextEntity` εμβαδού και commit μέσω `completeEntity` (undo +
+ * persistence + `drawing:complete`). Θέση: centroid όταν το 2ο κλικ πέφτει ΜΕΣΑ στην
+ * ίδια οντότητα, αλλιώς στο σημείο του κλικ (`resolveAreaLabelAnchor`). Μετά το commit
+ * επανέρχεται στη φάση 1 (συνεχής χρήση, AutoCAD-style).
  */
-export function handleHatchAreaLabelClick(
+export function handleAreaLabelClick(
   worldPoint: Point2D,
   p: UseCanvasClickHandlerParams,
 ): boolean {
   const ctx = resolveActiveLevelContext(p);
   if (!ctx) return false;
   const { levelId, setScene, scene, entities } = ctx;
-  const st = getHatchAreaLabelState();
+  const st = getAreaLabelState();
 
-  if (st.phase === 'awaitingHatch' || !st.hatchId) {
-    return armHatchAreaLabelFromClick(worldPoint, entities, p);
+  if (st.phase === 'awaitingEntity' || !st.entityId) {
+    return armAreaLabelFromClick(worldPoint, entities, p);
   }
 
-  const hatch = entities.find((e) => e.id === st.hatchId);
-  if (!scene || !hatch || !isHatchEntity(hatch)) {
-    resetHatchAreaLabel();
-    toolHintOverrideStore.setOverride(i18n.t('hatchAreaLabel.status.awaitingHatch', { ns: HATCH_AREA_LABEL_NS }));
+  // Η οντότητα μπορεί να έχει σβηστεί/αλλάξει ανάμεσα στα δύο κλικ (undo, άλλος χρήστης,
+  // επαναδημιουργία topo) — ο builder επιστρέφει `null` και ξαναρχίζουμε, ποτέ crash.
+  const picked = entities.find((e) => e.id === st.entityId);
+  const entity = scene && picked ? buildAreaLabelEntity(picked, worldPoint) : null;
+  if (!entity) {
+    resetAreaLabelToPickPhase();
     return true;
   }
-  const entity = buildHatchAreaLabelEntity(hatch, worldPoint);
   completeEntity(entity, { tool: 'hatch-area-label', levelId, getScene: p.levelManager.getLevelScene, setScene });
-  resetHatchAreaLabel();
-  toolHintOverrideStore.setOverride(i18n.t('hatchAreaLabel.status.awaitingHatch', { ns: HATCH_AREA_LABEL_NS }));
+  resetAreaLabelToPickPhase();
   return true;
 }
 

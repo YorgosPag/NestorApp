@@ -21,7 +21,8 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import { API_ROUTES } from '@/config/domain-constants';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import type { FileRecord, DxfSceneData, DxfSceneEntity, DxfSceneLayer } from '@/types/file-record';
+import type { FileRecord, DxfSceneData } from '@/types/file-record';
+import { toDxfSceneData } from '@/services/floorplans/dxf-scene-data-projection';
 
 // ============================================================================
 // TYPES
@@ -173,21 +174,21 @@ export function useFloorplanSceneLoader(
         const file = new File([blob], currentFile.originalFilename || 'plan.dxf');
 
         const { dxfImportService } = await import('@/subapps/dxf-viewer/io/dxf-import');
-        const result = await dxfImportService.importDxfFile(file);
+        // ADR-716 Φ5 — αυτό εδώ είναι re-parse ΠΟΛΥ μετά την εισαγωγή: άλλη συνεδρία, ίσως
+        // άλλο μηχάνημα. Δεν υπάρχει κανείς να ρωτηθεί για τη μονάδα — γι' αυτό η ρητή
+        // ετυμηγορία ζει στο ίδιο το FileRecord και διαβάζεται από εκεί.
+        const result = await dxfImportService.importDxfFile(
+          file,
+          undefined,
+          currentFile.userDrawingUnits,
+        );
         if (cancelled) return;
         if (!result.success || !result.scene) throw new Error(result.error || 'Parse failed');
         const importedScene = result.scene;
 
-        const scene: DxfSceneData = {
-          entities: importedScene.entities.map((entity) => ({
-            ...entity,
-            layer: importedScene.layersById[entity.layerId]?.name ?? '0',
-          } as unknown as DxfSceneEntity)),
-          layers: Object.fromEntries(
-            Object.values(importedScene.layersById).map((l) => [l.name, l])
-          ) as Record<string, DxfSceneLayer>,
-          bounds: importedScene.bounds,
-        };
+        // N.0.2/N.18 — ΜΙΑ προβολή SceneModel → DxfSceneData, κοινή με τον
+        // FloorplanProcessor και το server route (ήταν τρία πανομοιότυπα αντίγραφα).
+        const scene: DxfSceneData = toDxfSceneData(importedScene);
 
         if (!cancelled) setLoadedScene(scene);
       } catch (err) {
@@ -202,9 +203,11 @@ export function useFloorplanSceneLoader(
 
     loadScene();
     return () => { cancelled = true; };
+    // ADR-716 Φ5 — το `userDrawingUnits` ΕΙΝΑΙ είσοδος του parse: αν αλλάξει, η σκηνή
+    // πρέπει να ξαναχτιστεί, αλλιώς η οθόνη δείχνει την παλιά κλίμακα.
   }, [currentFile?.id, currentFile?.processedData, currentFile?.downloadUrl,
-      currentFile?.status, currentFile?.originalFilename, isDxf, fileExt, t,
-      refetchToken]);
+      currentFile?.status, currentFile?.originalFilename, currentFile?.userDrawingUnits,
+      isDxf, fileExt, t, refetchToken]);
 
   return { loadedScene, isLoading, sceneError };
 }

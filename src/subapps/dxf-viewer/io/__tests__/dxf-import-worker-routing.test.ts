@@ -25,8 +25,18 @@ jest.mock('../../utils/run-dxf-parse', () => ({
   runDxfParse: (...args: unknown[]) => mockRunDxfParse(...args),
 }));
 
+// 🩹 Το `jest.mock` με factory ΑΝΤΙΚΑΘΙΣΤΑ ΟΛΟ το module: ό,τι δεν δηλωθεί εδώ γίνεται
+// `undefined` — όχι λάθος import, αλλά σιωπηλά κενό. Το ADR-650 §M10e (commit `1d745dc4`)
+// πρόσθεσε την `normalizeEntitiesToOrigin` στο worker path χωρίς να ενημερώσει αυτό το
+// mock, άρα η σουίτα ήταν κόκκινη έκτοτε με `is not a function`. Κρατάμε το offset (0,0)
+// ώστε τα bounds του `SUCCESS_SCENE` να μένουν ως έχουν.
 jest.mock('../../utils/bounds-utils', () => ({
   calculateTightBounds: () => ({ minX: 0, minY: 0, maxX: 1, maxY: 1 }),
+  normalizeEntitiesToOrigin: (entities: unknown[]) => ({
+    entities,
+    bounds: { minX: 0, minY: 0, maxX: 1, maxY: 1 },
+    sourceOrigin: { x: 0, y: 0 },
+  }),
 }));
 
 // Fake Worker that records construction + postMessage, and lets a test drive onmessage/onerror.

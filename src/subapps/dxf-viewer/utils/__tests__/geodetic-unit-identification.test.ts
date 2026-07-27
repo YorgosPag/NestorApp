@@ -26,29 +26,15 @@ import { detectSceneUnits } from '../scene-units';
 import { resolveSourceUnits } from '../dxf-canonical-mm-scale';
 import { DxfSceneBuilder } from '../dxf-scene-builder';
 import type { DxfHeaderData } from '../dxf-parser-types';
-
-/** Το ΠΡΑΓΜΑΤΙΚΟ header του `47_ergasia.dxf` ($CANNOSCALEVALUE απουσιάζει ⇒ default 1). */
-const ERGASIA_47_HEADER: DxfHeaderData = {
-  insunits: 0,
-  measurement: 0,
-  dimscale: 1.0,
-  dimtxt: 0.5,
-  annoScale: 1,
-  pdmode: 0,
-  pdsize: 0.1,
-  ltscale: 1.0,
-  extmin: { x: 407565.2907102597, y: 4502055.67106188 },
-  extmax: { x: 408152.0910632098, y: 4502543.611061878 },
-};
-
-const ERGASIA_47_EXTENTS = {
-  min: ERGASIA_47_HEADER.extmin as { x: number; y: number },
-  max: ERGASIA_47_HEADER.extmax as { x: number; y: number },
-};
-
-/** Πλάτος/ύψος σε μέτρα, από το αρχείο: 586.80 m × 487.94 m. */
-const ERGASIA_47_WIDTH_M = 586.8003529501;
-const ERGASIA_47_HEIGHT_M = 487.939999998;
+// ADR-716 Φ5 — το ground truth του αρχείου ζει σε ΕΝΑ σημείο· το μοιράζεται και η σουίτα
+// idempotency του ρητού override (N.18: όχι δεύτερο αντίγραφο των ίδιων συντεταγμένων).
+import {
+  ERGASIA_47_HEADER,
+  ERGASIA_47_EXTENTS,
+  ERGASIA_47_WIDTH_M,
+  ERGASIA_47_HEIGHT_M,
+  makeErgasia47Dxf,
+} from './fixtures/ergasia47-dxf';
 
 describe('ADR-716 §2 — η ευρετική διαγωνίου (ΑΜΕΤΑΒΛΗΤΗ) πέφτει έξω στο τοπογραφικό', () => {
   it('detectSceneUnits λέει "cm" για ένα ΜΕΤΡΙΚΟ τοπογραφικό 587 m × 488 m', () => {
@@ -93,28 +79,6 @@ describe('ADR-716 §5.6 — fail-closed: μηδέν regression στα μη-γε�
     expect(resolveSourceUnits(header, bounds)).toBe('mm');
   });
 });
-
-/**
- * End-to-end: το πραγματικό header + μία γραμμή στη διαγώνιο του extent. Μετά το canonical-mm
- * (ADR-462) το σχέδιο πρέπει να βγαίνει 586 800 mm πλάτος — δηλαδή 587 m, όσο λέει το αρχείο.
- * Με το σημερινό `cm` βγαίνει 58 680 mm = 58,7 m: ×100 μικρότερο.
- */
-function makeErgasia47Dxf(): string {
-  const { min, max } = ERGASIA_47_EXTENTS;
-  return [
-    '0', 'SECTION', '2', 'HEADER',
-    '9', '$INSUNITS', '70', '0',
-    '9', '$MEASUREMENT', '70', '0',
-    '9', '$EXTMIN', '10', String(min.x), '20', String(min.y),
-    '9', '$EXTMAX', '10', String(max.x), '20', String(max.y),
-    '0', 'ENDSEC',
-    '0', 'SECTION', '2', 'ENTITIES',
-    '0', 'LINE', '8', '0',
-    '10', String(min.x), '20', String(min.y),
-    '11', String(max.x), '21', String(max.y),
-    '0', 'ENDSEC', '0', 'EOF',
-  ].join('\n');
-}
 
 describe('ADR-716 §11.2 — end-to-end: το τοπογραφικό βγαίνει 587 m × 488 m', () => {
   it('DxfSceneBuilder κλιμακώνει ×1000 (μέτρα → canonical mm)', () => {

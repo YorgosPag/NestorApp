@@ -13,6 +13,9 @@ import { getHatchDrawDefaults } from '../../bim/hatch/hatch-draw-defaults-store'
 // ADR-507 — armed «Επιλογή γραμμοσκίασης»: ΟΧΙ create-ghost· hover-highlight αντί γι' αυτό.
 import { isHatchSelectArmed } from '../../bim/hatch/hatch-select-mode-store';
 import { pickTopHatchAt } from '../../bim/hatch/hatch-pick-at';
+// ADR-662 §12 — «ό,τι έχει μετρήσιμο εμβαδόν» pick για την Ετικέτα Εμβαδού.
+import { pickTopEntityAt } from '../../rendering/hitTesting/pick-top-entity-at';
+import { hasMeasurableArea } from '../../systems/measure/entity-area-facts';
 import { setHoveredEntity } from '../../systems/hover/HoverStore';
 import type { Entity } from '../../types/entities';
 
@@ -53,8 +56,8 @@ export function useAutoAreaMouseMove(params: UseAutoAreaMouseMoveParams) {
       // αν είναι ενεργό το hatch tool· αλλιώς το μπλε διακεκομμένο φάντασμα μπέρδευε
       // τον χρήστη σαν να ζητάει δημιουργία).
       const armed = isHatchSelectArmed();
-      // ADR-649 — «Ετικέτα Εμβαδού Γραμμοσκίασης»: ΙΔΙΟ hover-highlight με το armed
-      // «Επιλογή γραμμοσκίασης» (φώτισε τη hatch κάτω από τον κέρσορα, ΟΧΙ create-ghost).
+      // ADR-649 / ADR-662 §12 — «Ετικέτα Εμβαδού»: ΙΔΙΟ hover-highlight με το armed
+      // «Επιλογή γραμμοσκίασης» (φώτισε την οντότητα κάτω από τον κέρσορα, ΟΧΙ create-ghost).
       const isAreaLabel = toolRef.current === 'hatch-area-label';
       const isHatchPick = isHatchPickPointActive(toolRef.current);
       if (!armed && !isAreaLabel && toolRef.current !== 'auto-measure-area' && !isHatchPick) return;
@@ -67,12 +70,20 @@ export function useAutoAreaMouseMove(params: UseAutoAreaMouseMoveParams) {
       const scene = lm.currentLevelId ? lm.getLevelScene(lm.currentLevelId) : null;
       const entities = scene?.entities ?? [];
 
-      // Armed «Επιλογή» Ή «Ετικέτα Εμβαδού»: σβήσε το create-ghost και φώτισε τη
-      // γραμμοσκίαση κάτω από τον κέρσορα (hover highlight = HoverStore SSoT) ώστε ο
+      // Armed «Επιλογή» Ή «Ετικέτα Εμβαδού»: σβήσε το create-ghost και φώτισε την
+      // οντότητα κάτω από τον κέρσορα (hover highlight = HoverStore SSoT) ώστε ο
       // χρήστης να δει τι θα επιλέξει — ίδια συμπεριφορά με το εργαλείο «Επιλογή».
+      //
+      // ⚠️ ΔΥΟ ΔΙΑΦΟΡΕΤΙΚΑ pick, σκόπιμα: το armed «Επιλογή γραμμοσκίασης» φωτίζει
+      // ΜΟΝΟ γραμμοσκιάσεις (hatch-only SSoT)· η «Ετικέτα Εμβαδού» φωτίζει ό,τι έχει
+      // μετρήσιμο εμβαδόν (γραμμοσκίαση Ή τοπογραφική επιφάνεια, ADR-662 §12) — αλλιώς
+      // το hover θα υποσχόταν λιγότερα από όσα δέχεται το κλικ.
       if (armed || isAreaLabel) {
         setAutoAreaPreview(null);
-        setHoveredEntity(pickTopHatchAt(worldPos, entities as unknown as Entity[]));
+        const list = entities as unknown as Entity[];
+        setHoveredEntity(
+          armed ? pickTopHatchAt(worldPos, list) : pickTopEntityAt(worldPos, list, hasMeasurableArea),
+        );
         return;
       }
 

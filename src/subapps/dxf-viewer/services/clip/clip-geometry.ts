@@ -40,7 +40,7 @@ export function ptEq(a: Point2D, b: Point2D): boolean {
 /**
  * Axis-aligned bounds of a point list (empty → zero-area at origin).
  *
- * Consumed OUTSIDE the crop pipeline too (`bim/hatch/hatch-area-label`,
+ * Consumed OUTSIDE the crop pipeline too (`systems/measure/area-label`,
  * `systems/geo-referencing/geo-auto-match`) — it is the repo's SSoT for «bounding box of a
  * point list», and a second hand-rolled `minX = Infinity` loop is the clone N.18 forbids.
  * The parameter is `ReadonlyArray` because nothing here mutates: a caller holding a

@@ -152,6 +152,7 @@
       "ft": "Feet (ft)",
       "in": "Inches (in)",
       "resolved": "Auto → {unit}",
+      "resolvedExplicit": "Your choice → {unit}",
       "extent": "The drawing comes out {width} m × {height} m",
       "evidence": {
         "explicit": "Your explicit choice",

@@ -152,6 +152,7 @@
       "ft": "Πόδια (ft)",
       "in": "Ίντσες (in)",
       "resolved": "Αυτόματα → {unit}",
+      "resolvedExplicit": "Επιλογή σας → {unit}",
       "extent": "Το σχέδιο βγαίνει {width} m × {height} m",
       "evidence": {
         "explicit": "Ρητή επιλογή σας",

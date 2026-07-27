@@ -53,9 +53,22 @@ export interface UnitEvidenceReadoutProps {
   t: TFn;
 }
 
+/**
+ * ADR-716 Φ6 — Η επικεφαλίδα λέει ΠΟΙΟΣ αποφάσισε, όχι μόνο ΤΙ.
+ *
+ * Το «Αυτόματα → Μέτρα» πάνω από ένα «Ρητή επιλογή σας» ήταν αντιφατικό: ο μηχανικός
+ * διάβαζε ότι μάντεψε η μηχανή ενώ είχε αποφασίσει ο ίδιος. Το κλειδί είναι **στατικό**
+ * και στις δύο περιπτώσεις (N.11) — η επιλογή γίνεται εδώ, όχι με σύνθεση ονόματος.
+ */
+const RESOLVED_KEY = {
+  explicit: 'floorplanImport.drawingUnits.resolvedExplicit',
+  auto: 'floorplanImport.drawingUnits.resolved',
+} as const;
+
 export function UnitEvidenceReadout({ decision, colors, t }: UnitEvidenceReadoutProps) {
   if (!decision) return null;
-  const { units, evidenceKey, resultingExtentM } = decision;
+  const { units, confidence, evidenceKey, resultingExtentM } = decision;
+  const resolvedKey = confidence === 'explicit' ? RESOLVED_KEY.explicit : RESOLVED_KEY.auto;
 
   return (
     <section
@@ -65,7 +78,7 @@ export function UnitEvidenceReadout({ decision, colors, t }: UnitEvidenceReadout
       <ScanSearch className={`w-3.5 h-3.5 mt-0.5 flex-shrink-0 ${colors.text.info}`} aria-hidden="true" />
       <div className="min-w-0">
         <p className={`text-xs font-medium ${colors.text.primary}`}>
-          {t('floorplanImport.drawingUnits.resolved', { unit: t(UNIT_LABEL_KEY[units]) })}
+          {t(resolvedKey, { unit: t(UNIT_LABEL_KEY[units]) })}
         </p>
         <p className={`text-xs ${colors.text.muted}`}>{t(evidenceKey)}</p>
         {resultingExtentM && (

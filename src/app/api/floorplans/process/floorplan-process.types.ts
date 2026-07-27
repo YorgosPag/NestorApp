@@ -4,6 +4,7 @@
  */
 
 import type { FloorplanProcessedData } from '@/types/file-record';
+import type { SceneUnits } from '@/subapps/dxf-viewer/utils/scene-units';
 
 export interface ProcessFloorplanRequest {
   fileId: string;
@@ -52,6 +53,12 @@ export interface FileRecordData {
   processedData?: FloorplanProcessedData;
   companyId?: string;
   processingStatus?: 'idle' | 'processing' | 'done' | 'error';
+  /**
+   * ADR-716 Φ5 — η ρητή ετυμηγορία μονάδων του μηχανικού, γραμμένη στο FileRecord τη
+   * στιγμή του ανεβάσματος. Το route ήδη κατεβάζει το έγγραφο ⇒ καμία αλλαγή στο
+   * request schema, καμία δεύτερη πηγή αλήθειας.
+   */
+  userDrawingUnits?: SceneUnits;
 }
 
 export interface FirebaseAdminError {

@@ -91,6 +91,22 @@ export const CONTEXTUAL_TOPO_SURFACE_TAB: RibbonTab = {
               'topoSurfaceTools.pointLabels', `${K}.pointLabels.label`,
               'topo-labels', 'topo.pointLabels.generate', 'topo.pointLabels.generate',
             ),
+            {
+              // ADR-662 §12 — «Ετικέτα Εμβαδού» (2-κλικ: pick επιφάνειας → place TextEntity
+              // με εμβαδόν προβολής + πραγματική επιφάνεια εδάφους). Απλό tool-change
+              // (commandKey = ToolType, χωρίς action → onToolChange). ΤΟ ΙΔΙΟ εργαλείο με το
+              // contextual tab της γραμμοσκίασης και το Annotate→Measure panel — ένα κουμπί,
+              // ένα FSM, ένας builder (η γενίκευση ζει στο `entity-area-facts`, όχι εδώ).
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'topoSurfaceTools.areaLabel',
+                labelKey: 'ribbon.commands.hatchAreaLabel',
+                tooltipKey: 'ribbon.tooltips.hatchAreaLabel',
+                icon: 'measure-area',
+                commandKey: 'hatch-area-label',
+              },
+            },
           ],
         },
       ],

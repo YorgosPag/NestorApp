@@ -276,6 +276,57 @@ TOPOGRAPHY_TAB (id: 'topography', labelKey: 'ribbon.tabs.topography')
 
 ---
 
+## 12. Ετικέτα Εμβαδού στην τοπογραφική επιφάνεια
+
+**Αίτημα Giorgio (2026-07-27):** «κλικ πάνω στην τοπογραφική επιφάνεια, δεύτερο κλικ → να εμφανίζεται εκεί το εμβαδόν της».
+
+### 12.1 SSoT audit — υπήρχε ήδη το εργαλείο
+
+Το ζητούμενο 2-κλικ μοτίβο υπήρχε **αυτούσιο** ως **ADR-649 «Ετικέτα Εμβαδού Γραμμοσκίασης»**: FSM store, pure builders, click dispatcher, lifecycle hook, ribbon κουμπί. Ήταν όμως δεμένο στη γραμμοσκίαση σε **πέντε** σημεία (pick, hover-highlight, FSM field, κείμενο, entity builder). Προσθήκη `isTopoSurfaceEntity` σε καθένα = **πέντε sibling clones** (N.18). **Απόφαση Giorgio: γενίκευση του υπάρχοντος, ΟΧΙ δεύτερο εργαλείο.**
+
+### 12.2 ⚠️ Το εύρημα που καθόρισε τη λύση — τα rings ΔΕΝ δίνουν εμβαδόν
+
+Το `topoSurfacePerimeter` τεκμηριώνει ρητά: *«A surface with interior holes yields multiple rings (**outer + hole loops**)»*. Δηλαδή ένα επιπλέον ring μπορεί να είναι **τρύπα**, όχι νησίδα. Και επειδή η αλυσοποίηση γίνεται σε **μη-προσανατολισμένες** ακμές (`chainUndirectedEdges`), **το πρόσημο του shoelace δεν μπορεί να τα ξεχωρίσει**:
+
+| Πράξη πάνω στα rings | Αποτέλεσμα |
+|---|---|
+| Άθροισμα όλων | **υπερεκτίμηση** όταν υπάρχει τρύπα |
+| outer − υπόλοιπα | **υποεκτίμηση** όταν υπάρχει γνήσια νησίδα |
+
+Και τα δύο δίνουν **λάθος αριθμό**, σιωπηλά. (Το `hitTestTopoSurface` χρησιμοποιεί `.some` — σωστό για *επιλογή*, άσχετο με το εμβαδόν.)
+
+**Λύση: το εμβαδόν βγαίνει από τα ΤΡΙΓΩΝΑ του TIN, όχι από τα rings.** Αθροίζεις ό,τι υπάρχει· οι τρύπες αποκλείονται εξ ορισμού (δεν υπάρχει τρίγωνο εκεί). Ίδια πηγή που αναφέρει το Civil 3D, μηδέν αμφισημία τοπολογίας.
+
+### 12.3 Δύο εμβαδά (απόφαση Giorgio — Civil 3D «2D Area» / «3D Area»)
+
+| Μέγεθος | Τι είναι | Ποιος το χρειάζεται |
+|---|---|---|
+| **Εμβαδόν** (`plan2DMm2`) | προβολή σε κάτοψη | το «νομικό» εμβαδόν οικοπέδου — τίτλος, τοπογραφικό διάγραμμα |
+| **Επιφάνεια εδάφους** (`surface3DMm2`) | πραγματική επιφάνεια κατά μήκος των κλίσεων | εκσκαφή / επένδυση / φύτευση επικλινούς — αυτό τιμολογείται |
+
+Πάντα `3D ≥ 2D`· ίσα **μόνο** σε οριζόντιο έδαφος. Η ετικέτα γράφει **δύο γραμμές** όταν η οντότητα έχει ανάγλυφο, **μία** όταν είναι επίπεδη (γραμμοσκίαση) — `surface3DMm2: null` σημαίνει «δεν υπάρχει η έννοια», **ΟΧΙ** `0` (που θα ήταν ισχυρισμός για μηδενική επιφάνεια).
+
+### 12.4 Δομή — δύο νέα SSoT, μία γενίκευση
+
+| Module | Ερώτημα που απαντά |
+|---|---|
+| **NEW** `systems/topography/topo-surface-area.ts` | «πόσο είναι το εμβαδόν αυτής της TIN;» — pure, ένα πέρασμα, δύο απαντήσεις (η z-συνιστώσα του `u × v` δίνει την προβολή, το πλήρες μέτρο την επιφάνεια) |
+| **NEW** `systems/measure/entity-area-facts.ts` | «τι εμβαδόν δίνει **αυτή η οντότητα**;» — ο ΕΝΑΣ dispatcher· νέος τύπος ⇒ αλλαγή **μόνο** εδώ |
+| **MOVED** `bim/hatch/hatch-area-label{,-store}.ts` → `systems/measure/area-label{,-store}.ts` | το εργαλείο δεν είναι πια hatch-only· `hatchId` → `entityId` |
+
+**Σκόπιμα διαφορετική γεωμετρία ανά τύπο — μην την ενοποιήσεις:** γραμμοσκίαση → `computeHatchAreaMm2` (outer **−** islands, even-odd· τα `boundaryPaths` **είναι** outer-minus-holes εξ ορισμού)· τοπογραφική → άθροισμα τριγώνων.
+
+**Το pick έγινε δωρεάν:** `pickTopEntityAt(point, entities, hasMeasurableArea)` — το `performDetailedHitTest` εφαρμόζει ήδη **το σωστό ανά τύπο** hit-test (γραμμοσκίαση even-odd, τοπογραφική «οποιοδήποτε ring»), άρα δεν χρειάστηκε δεύτερος picker. Το ίδιο predicate οδηγεί και το hover-highlight, ώστε το hover να **μην** υπόσχεται λιγότερα από όσα δέχεται το κλικ.
+
+**Το όριο για αγκύρωση/μέγεθος** το δίνει το `entityClosedRings` (§11) — το ΙΔΙΟ SSoT με τις έλξεις. Αγκύρωση = centroid του **μεγαλύτερου** ring, **ΟΧΙ** του `rings[0]`: στη γραμμοσκίαση το `[0]` είναι εξ ορισμού το outer, στην τοπογραφική είναι **αυθαίρετο** (μπορεί να είναι τρύπα).
+
+### 12.5 Τι ΔΕΝ έγινε
+
+- **Tool id `hatch-area-label`**: παρέμεινε — εσωτερικό αναγνωριστικό σε 9 σημεία, μηδέν όφελος για τον χρήστη από τη μετονομασία (το ορατό label ήταν ήδη γενικό, «Ετικέτα Εμβαδού»). Τεκμηριώθηκε ως ιστορικό σε `tool-definitions.ts` + `ui/toolbar/types.ts`.
+- **Ζωντανή ετικέτα**: το κείμενο είναι `TextEntity` — **στιγμιότυπο**, όχι δεσμευμένο πεδίο. Αν αλλάξει η επιφάνεια, ο αριθμός δεν ενημερώνεται μόνος (ίδια συμπεριφορά με ADR-649). Πραγματικό associative field = ξεχωριστή απόφαση.
+
+---
+
 ## Changelog
 - **2026-07-15** — Δημιουργία (PROPOSED). Research-first: web-research 5 big players (Revit/Civil 3D/ArchiCAD/C4D/Figma) + πραγματικό SSoT audit. Απόφαση: μεταφορά τοπογραφικού σε μόνιμο Ribbon tab + Properties palette + (Φάση 3) contextual tab. Κρίσιμο εύρημα §5 (topo = baked native entities, όχι δικοί types).
 - **2026-07-15 — Φάση 1 ΥΛΟΠΟΙΗΘΗΚΕ** (permanent «Τοπογραφικό» ribbon tab). Το αριστερό `TopographyPanel` **μένει** (dual access, μηδέν regression).
@@ -349,6 +400,14 @@ TOPOGRAPHY_TAB (id: 'topography', labelKey: 'ribbon.tabs.topography')
   - **Αρχεία**: NEW `snapping/shared/entity-closed-rings.ts`, `snapping/shared/__tests__/entity-closed-rings.test.ts`. MODIFY `snapping/shared/polyline-perpendicular-feet.ts`, `snapping/shared/GeometricCalculations.ts`, `snapping/engines/NearestSnapEngine.ts`, `snapping/engines/PerpendicularSnapEngine.ts`, `types/topo-surface.ts`, `rendering/entities/TopoSurfaceRenderer.ts`.
   - **Tests**: νέο lock 18 tests (`describe.each` πάνω και στους δύο ring-bounded τύπους — αν κάποιος ξαναγράψει per-type κλάδο και αποκλίνει, σπάει)· το ADR-507 lock της γραμμοσκίασης μένει **άθικτο**. Συνολικά **87 suites / 1014 tests πράσινα** (`snapping/` + `bim/walls` + `bim/slabs`).
   - **ADR-040**: καμία αλλαγή σε orchestrators/leaves/stores — μόνο pure υπολογισμός σημείων εντός των engines. Οι τρεις engines χρησιμοποιούν **spatial index** ⇒ radius query, άρα η πυκνότητα του TIN perimeter **δεν** είναι perf θέμα (§11.4) και δεν μπήκε throttling.
+- **2026-07-27 — §12 Ετικέτα Εμβαδού στην τοπογραφική επιφάνεια ΥΛΟΠΟΙΗΘΗΚΕ.** Κλικ στην επιφάνεια → δεύτερο κλικ ρίχνει ετικέτα με **εμβαδόν προβολής + πραγματική επιφάνεια εδάφους**. Απόφαση Giorgio: **γενίκευση** του ADR-649, ΟΧΙ δεύτερο εργαλείο (βλ. §12).
+  - **SSoT audit**: το 2-κλικ εργαλείο υπήρχε ήδη (ADR-649) αλλά ήταν hatch-only σε **5 σημεία** — pick, hover, FSM field, κείμενο, entity builder. Πέντε `isTopoSurfaceEntity` κλάδοι = πέντε sibling clones (N.18)· αντ' αυτού **ένας** dispatcher (`entity-area-facts`).
+  - **⚠️ Κρίσιμο εύρημα (§12.2)**: τα footprint rings είναι «outer + hole loops» **χωρίς αξιόπιστο προσανατολισμό** (`chainUndirectedEdges` σε μη-προσανατολισμένες ακμές) ⇒ ούτε άθροισμα ούτε outer−rest δίνει σωστό εμβαδόν. Το εμβαδόν βγαίνει από τα **τρίγωνα του TIN** — ακριβές, ανοσοποιημένο σε τρύπες, ίδια πηγή με το Civil 3D.
+  - **Δύο εμβαδά (§12.3)**: `plan2DMm2` (νομικό εμβαδόν οικοπέδου) + `surface3DMm2` (πραγματική επιφάνεια κατά μήκος κλίσεων· αυτό τιμολογείται σε εκσκαφή/επένδυση/φύτευση). Επίπεδη οντότητα → `surface3DMm2: null` («δεν υπάρχει η έννοια», **ΟΧΙ** 0) → μία γραμμή αντί για δύο.
+  - **Αρχεία**: NEW `systems/topography/topo-surface-area.ts`, `systems/measure/entity-area-facts.ts` + 2 test files. MOVED (git mv, ιστορικό διατηρήθηκε) `bim/hatch/hatch-area-label{,-store}.ts` → `systems/measure/area-label{,-store}.ts`, `hooks/drawing/useHatchAreaLabelTool.ts` → `useAreaLabelTool.ts`. MODIFY `canvas-click-tool-handlers.ts`, `useAutoAreaMouseMove.ts`, `useCanvasClickHandler.ts`, `useSpecialTools-placement-tools.ts`, `contextual-topo-surface-tab.ts`, `tool-definitions.ts`, `ui/toolbar/types.ts`, i18n el+en (namespace `hatchAreaLabel` → `areaLabel` + νέο `surfacePrefix`, N.11).
+  - **Δωρεάν από τη §11**: το pick/hover έγινε `pickTopEntityAt(…, hasMeasurableArea)` — το `performDetailedHitTest` δίνει ήδη τη σωστή ανά τύπο σημασιολογία· το όριο για αγκύρωση/μέγεθος το δίνει το `entityClosedRings` της §11. Αγκύρωση = centroid του **μεγαλύτερου** ring (το `rings[0]` είναι αυθαίρετο στο TIN).
+  - **Tests**: 2 νέα αρχεία. Το `topo-surface-area.test.ts` κλειδώνει τη σχέση που κάνει τον δεύτερο αριθμό να αξίζει (επίπεδο ⇒ 3D=2D· κλίση 45° ⇒ 3D = 2D×√2) — αν κάποιος «απλοποιήσει» το 3D σε shoelace, κοκκινίζει. Το `area-label.test.ts` τρέχει **και τους δύο** τύπους μέσα από τον ΙΔΙΟ builder (`it.each`) ώστε απόκλιση ανά τύπο να σπάει. Συνολικά **129 suites / 1288 tests πράσινα** (hatch + ribbon + tools + toolbar + topography) + `i18n:audit` καθαρό + `jscpd:diff` καθαρό σε 10/10 αρχεία.
+  - **ADR-040**: καμία αλλαγή σε orchestrators/leaves — το εργαλείο είναι event-time (click/hover) πάνω σε vanilla store, μηδέν νέα subscription.
 
 ---
 

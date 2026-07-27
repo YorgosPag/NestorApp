@@ -188,7 +188,16 @@ export function DxfViewerDialogs(props: DxfViewerDialogsProps): React.JSX.Elemen
           <DxfImportModal
             isOpen={ui.showLegacyImport}
             onClose={() => ui.setShowLegacyImport(false)}
-            onImport={async (file, encoding) => { await handleFileImportWithEncoding(file, encoding); }}
+            /* ADR-716 Φ5 — η ρητή επιλογή μονάδων ταξιδεύει ως `DxfSaveContext.userDrawingUnits`,
+               το ΙΔΙΟ πεδίο που χρησιμοποιεί ο wizard: ΕΝΑ λεξιλόγιο, ένας δρόμος. Χωρίς ρητή
+               επιλογή μένει `undefined` ⇒ ακριβώς η προηγούμενη συμπεριφορά (setSaveContext(null)). */
+            onImport={async (file, encoding, userDrawingUnits) => {
+              await handleFileImportWithEncoding(
+                file,
+                encoding,
+                userDrawingUnits ? { userDrawingUnits } : undefined,
+              );
+            }}
           />
         </React.Suspense>
       )}

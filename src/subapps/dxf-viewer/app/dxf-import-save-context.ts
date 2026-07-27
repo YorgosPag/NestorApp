@@ -20,8 +20,11 @@ export function buildDxfImportSaveContext(meta: WizardCompleteMeta): DxfSaveCont
   return {
     companyId: meta.companyId || undefined,
     projectId: meta.projectId || undefined,
-    ...(meta.entityType === 'floor' ? { floorId: meta.entityId } : {}),
-    ...(meta.entityType === 'building' ? { buildingId: meta.entityId } : {}),
+    // Το κενό `entityId` ΔΕΝ είναι ταυτότητα ορόφου: αν γραφτεί ως `floorId: ''`, τα
+    // downstream `saveContext?.floorId ?? level?.floorId` σταματούν να πέφτουν στο fallback
+    // (το `''` δεν είναι nullish). Παραλείπεται το κλειδί — ΕΝΑ σημείο, δύο καταναλωτές.
+    ...(meta.entityType === 'floor' && meta.entityId ? { floorId: meta.entityId } : {}),
+    ...(meta.entityType === 'building' && meta.entityId ? { buildingId: meta.entityId } : {}),
     entityType: meta.entityType as DxfSaveContext['entityType'],
     filesCategory: 'floorplans' as const,
     purpose: meta.purpose || undefined,

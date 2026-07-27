@@ -312,7 +312,9 @@ export const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   // ADR-612: Opening info tag — SINGLE-CLICK placement (mirror annotation-symbol's
   // click-count), NOT the scale-bar 2-click drag. allowsContinuous: place several in a row.
   'opening-info-tag':  { id: 'opening-info-tag',  category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
-  // ADR-649: «Ετικέτα Εμβαδού Γραμμοσκίασης» — 2-κλικ (pick hatch → place TextEntity).
+  // ADR-649 / ADR-662 §12: «Ετικέτα Εμβαδού» — 2-κλικ (pick οντότητας με εμβαδόν →
+  // place TextEntity). Το id είναι ΙΣΤΟΡΙΚΟ: το εργαλείο δέχεται πλέον ΚΑΙ τοπογραφική
+  // επιφάνεια — ποιοι τύποι, το λέει ΜΟΝΟ το `systems/measure/entity-area-facts`.
   // category:'drawing' ⇒ isInDrawingMode=true, ώστε το mouse-up select block να ΜΗΝ τρέχει
   // παράλληλα με τον click handler (κανένα διπλό select). allowsContinuous: πολλές στη σειρά.
   'hatch-area-label':  { id: 'hatch-area-label',  category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
@@ -389,7 +391,7 @@ export const TOOL_CREATES_ENTITY: Partial<Record<ToolType, RenderableEntityType>
   'arc-3p': 'arc', 'arc-cse': 'arc', 'arc-sce': 'arc',
   'hatch': 'hatch',
   'text': 'text', 'mtext': 'mtext',
-  // ADR-649 — «Ετικέτα Εμβαδού Γραμμοσκίασης» δημιουργεί κανονικό TEXT entity.
+  // ADR-649 / ADR-662 §12 — «Ετικέτα Εμβαδού» δημιουργεί κανονικό TEXT entity.
   'hatch-area-label': 'text',
   'xline': 'xline', 'ray': 'ray',
   // ── BIM structural ──

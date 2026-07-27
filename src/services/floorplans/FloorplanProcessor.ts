@@ -25,10 +25,10 @@ import type {
   FileRecord,
   FloorplanProcessedData,
   DxfSceneData,
-  DxfSceneEntity,
-  DxfSceneLayer,
   FloorplanFileType,
 } from '@/types/file-record';
+import { toDxfSceneData } from '@/services/floorplans/dxf-scene-data-projection';
+import type { SceneUnits } from '@/subapps/dxf-viewer/utils/scene-units';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 
@@ -213,8 +213,12 @@ export class FloorplanProcessor {
    *
    * Uses existing dxfImportService - NO duplicate parsing logic!
    */
+  // ⚠️ ΕΥΡΗΜΑ (grep 2026-07-27): αυτή η ιδιωτική μέθοδος **δεν καλείται από πουθενά** — το
+  // `processFloorplan` αναθέτει στο server route (`processFloorplanWithPolicy`). Διορθώνεται
+  // εδώ για ορθότητα αν ποτέ αναβιώσει· η διαγραφή της είναι απόφαση του Giorgio (dead-code).
   private static async processDxfFile(
-    file: File
+    file: File,
+    userDrawingUnits?: SceneUnits,
   ): Promise<FloorplanProcessedData> {
     logger.info('Processing DXF file', { fileName: file.name });
 
@@ -223,8 +227,9 @@ export class FloorplanProcessor {
       '@/subapps/dxf-viewer/io/dxf-import'
     );
 
-    // Parse DXF using centralized service
-    const result = await dxfImportService.importDxfFile(file);
+    // Parse DXF using centralized service.
+    // ADR-716 Φ5 — η ρητή ετυμηγορία μονάδων του FileRecord οδηγεί την κλίμακα (σκαλί 0).
+    const result = await dxfImportService.importDxfFile(file, undefined, userDrawingUnits);
 
     if (!result.success || !result.scene) {
       throw new Error(result.error || 'DXF parsing failed');
@@ -236,17 +241,9 @@ export class FloorplanProcessor {
       layers: Object.keys(importedScene.layersById).length,
     });
 
-    // Convert to our DxfSceneData type
-    const scene: DxfSceneData = {
-      entities: importedScene.entities.map((entity) => ({
-        ...entity,
-        layer: importedScene.layersById[entity.layerId]?.name ?? '0',
-      } as unknown as DxfSceneEntity)),
-      layers: Object.fromEntries(
-        Object.values(importedScene.layersById).map((l) => [l.name, l])
-      ) as Record<string, DxfSceneLayer>,
-      bounds: importedScene.bounds,
-    };
+    // N.0.2/N.18 — ΜΙΑ προβολή SceneModel → DxfSceneData (κοινή με τον scene loader
+    // και το server route).
+    const scene: DxfSceneData = toDxfSceneData(importedScene);
 
     // Calculate sizes for stats
     const sceneJson = JSON.stringify(scene);

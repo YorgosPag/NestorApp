@@ -17,6 +17,7 @@ import { ensureLevelsForBuilding } from '../../systems/levels/ensure-levels-for-
 import { useFloorsByBuilding } from '@/components/properties/shared/useFloorsByBuilding';
 import { FileRecordService } from '@/services/file-record.service';
 import type { DxfSaveContext } from '../../services/dxf-firestore.service';
+import { buildDxfImportSaveContext } from '../../app/dxf-import-save-context';
 import type { WizardCompleteMeta } from '@/features/floorplan-import';
 
 /** Fire-and-forget trigger: pass the building id to backfill all its storeys. */
@@ -101,18 +102,10 @@ export function useFloorplanImportComplete(deps: FloorplanImportCompleteDeps) {
   return useCallback(
     async (file: File, meta: WizardCompleteMeta) => {
       if (!onSceneImported) return;
-      const entityType = meta.entityType as DxfSaveContext['entityType'];
-      const saveContext: DxfSaveContext = {
-        companyId: meta.companyId,
-        projectId: meta.projectId,
-        ...(entityType === 'building' && meta.entityId ? { buildingId: meta.entityId } : {}),
-        ...(entityType === 'floor' && meta.entityId ? { floorId: meta.entityId } : {}),
-        entityType,
-        filesCategory: 'floorplans',
-        purpose: meta.purpose || undefined,
-        entityLabel: meta.entityLabel,
-        fileRecordId: meta.fileId,
-      };
+      // ADR-716 Φ5 / N.18 — ΕΝΑΣ builder για το `DxfSaveContext` του wizard. Εδώ ζούσε ένα
+      // sibling clone του `buildDxfImportSaveContext` που παρέλειπε το `userDrawingUnits`:
+      // ο ίδιος wizard, δύο μονοπάτια, το ένα έχανε σιωπηλά τη ρητή επιλογή του μηχανικού.
+      const saveContext: DxfSaveContext = buildDxfImportSaveContext(meta);
       // ADR-420 — resolve the Level that OWNS the selected floor (find-or-create
       // + switch), so the import targets that floor's own level rather than the
       // active level. Falls back to the active level for project/building imports.

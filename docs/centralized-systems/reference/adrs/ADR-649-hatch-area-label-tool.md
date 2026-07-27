@@ -96,3 +96,25 @@ MISS → fallback στο σκέτο «Εμβαδόν: …». (EN: `of grass`/`of
 - **2026-07-13 (feedback Giorgio)** — Δεύτερο σημείο εισόδου: κουμπί «Ετικέτα Εμβαδού» και στο
   **contextual tab της γραμμοσκίασης** (`contextual-hatch-tab.ts`, panel `hatch-actions`). Ίδιο
   `commandKey: 'hatch-area-label'` → κανένα νέο wiring.
+- **2026-07-27 — ΓΕΝΙΚΕΥΘΗΚΕ: το εργαλείο δεν είναι πια hatch-only** (πλήρες σκεπτικό:
+  **ADR-662 §12**). Ο Giorgio ζήτησε το ΙΔΙΟ 2-κλικ πάνω σε **τοπογραφική επιφάνεια**·
+  απόφασή του: γενίκευση αυτού του εργαλείου, ΟΧΙ δεύτερο δίδυμο.
+  - **Πού ζει πλέον ο κώδικας**: `bim/hatch/hatch-area-label{,-store}.ts` →
+    **`systems/measure/area-label{,-store}.ts`**· `hooks/drawing/useHatchAreaLabelTool.ts` →
+    **`useAreaLabelTool.ts`** (git mv — το ιστορικό διατηρήθηκε). Το FSM κρατά `entityId`
+    (ήταν `hatchId`) και η φάση 1 λέγεται `awaitingEntity` (ήταν `awaitingHatch`).
+  - **Ποιοι τύποι επιτρέπονται**: το λέει **ΜΟΝΟ** το νέο `systems/measure/entity-area-facts.ts`.
+    Νέος τύπος με εμβαδόν ⇒ αλλαγή **μόνο εκεί** — μηδέν κλάδος σε pick/hover/FSM/κείμενο/builder.
+  - **Το εμβαδόν της γραμμοσκίασης ΔΕΝ άλλαξε**: ίδιο `computeHatchAreaMm2` (outer − islands).
+    Η τοπογραφική επιφάνεια χρησιμοποιεί **τρίγωνα TIN**, γιατί τα rings της δεν έχουν
+    αξιόπιστο προσανατολισμό (ADR-662 §12.2) — **σκόπιμα διαφορετική γεωμετρία ανά τύπο**.
+  - **Δεύτερη γραμμή** στην ετικέτα («Επιφάνεια εδάφους») **μόνο** για οντότητες με ανάγλυφο·
+    η γραμμοσκίαση παραμένει μονόγραμμη (`surface3DMm2: null`).
+  - **i18n**: namespace `hatchAreaLabel.*` → **`areaLabel.*`** (el+en) + νέο `surfacePrefix`·
+    `status.awaitingHatch` → `status.awaitingEntity` με ενημερωμένη διατύπωση. Τα
+    `ribbon.commands/tooltips.hatchAreaLabel` **έμειναν** (το ορατό label ήταν ήδη γενικό).
+  - **Tool id `hatch-area-label` ΔΕΝ μετονομάστηκε** — εσωτερικό αναγνωριστικό σε 9 σημεία,
+    μηδέν όφελος χρήστη. Τεκμηριωμένο ως ιστορικό σε `tool-definitions.ts` + `ui/toolbar/types.ts`.
+  - **Τρίτο σημείο εισόδου**: κουμπί «Ετικέτα Εμβαδού» και στο **contextual tab της
+    τοπογραφικής επιφάνειας** (`contextual-topo-surface-tab.ts`). Ίδιο `commandKey` → μηδέν wiring.
+  - Το ⚠️ «στιγμιότυπο, όχι associative» των Consequences **ισχύει ακέραιο** και για την επιφάνεια.

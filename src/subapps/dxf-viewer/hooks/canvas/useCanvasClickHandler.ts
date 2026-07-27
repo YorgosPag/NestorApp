@@ -31,7 +31,7 @@ import {
   handleLineParallelPick,
 } from './entity-pick-handlers';
 import type { EntityPickContext } from './entity-pick-handlers';
-import { handleRotationEntitySelection, handleAutoAreaClick, handleHatchPickPointClick, handleOverlayDrawClick, handleAnnotationSymbolClick, handleHatchAreaLabelClick, handleTopoBreaklineClick } from './canvas-click-tool-handlers';
+import { handleRotationEntitySelection, handleAutoAreaClick, handleHatchPickPointClick, handleOverlayDrawClick, handleAnnotationSymbolClick, handleAreaLabelClick, handleTopoBreaklineClick } from './canvas-click-tool-handlers';
 import { handleTopoBoundaryClick } from './canvas-click-topo-boundary'; // ADR-650 M6 (Γ)
 import { handleGeoRefAnchorClick } from './canvas-click-geo-ref'; // ADR-650 M10
 import { handlePickBasePointClick } from './canvas-click-pick-base-point'; // ADR-652 M6
@@ -301,10 +301,10 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       handleAutoAreaClick(worldPoint, params);
       return;
     }
-    // PRIORITY 1.72: ADR-649 — «Ετικέτα Εμβαδού Γραμμοσκίασης» (2 κλικ: pick hatch →
+    // PRIORITY 1.72: ADR-649 / ADR-662 §12 — «Ετικέτα Εμβαδού» (2 κλικ: pick οντότητας →
     // place area label). Καταναλώνει το κλικ (FSM store αποφασίζει φάση 1 vs 2).
     if (activeTool === 'hatch-area-label') {
-      handleHatchAreaLabelClick(worldPoint, params);
+      handleAreaLabelClick(worldPoint, params);
       return;
     }
     // PRIORITY 1.73: ADR-650 M2-Β — «Γραμμές ασυνέχειας» (topo breakline picking).

@@ -11,6 +11,7 @@
 
 import { useState } from 'react';
 import type { SceneModel } from '../types/scene';
+import type { SceneUnits } from '../utils/scene-units';
 import {
   dxfImportService,
   processDxfImportResult,
@@ -24,12 +25,20 @@ export function useDxfImport() {
   const [error, setError] = useState<string | null>(null);
   const dxfImportNotifications = useDxfImportNotifications();
 
-  const importDxfFile = async (file: File): Promise<SceneModel | null> => {
+  /**
+    * @param userDrawingUnits ADR-716 Φ5 — η ρητή ετυμηγορία μονάδων του μηχανικού. Χωρίς
+    *        αυτήν, ο ΜΟΝΟΣ δρόμος που είχε πρόσβαση στην επιλογή του wizard την πετούσε
+    *        στα σκουπίδια και το parse ξαναμάντευε (Εύρημα Α, ADR-716 §7).
+    */
+  const importDxfFile = async (
+    file: File,
+    userDrawingUnits?: SceneUnits,
+  ): Promise<SceneModel | null> => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const result = await dxfImportService.importDxfFile(file);
+      const result = await dxfImportService.importDxfFile(file, undefined, userDrawingUnits);
 
       // ADR-635 Φ3 — surface partial-import warnings (skipped/failed/clamped entities).
       dxfImportNotifications.importedWithWarnings(result.warnings);

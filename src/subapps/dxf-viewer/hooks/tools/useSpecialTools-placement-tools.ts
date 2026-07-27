@@ -34,7 +34,7 @@ import { useMepWaterHeaterTool } from '../drawing/useMepWaterHeaterTool';
 import { useMepSegmentTool } from '../drawing/useMepSegmentTool';
 import { useMepRiserTool } from '../drawing/useMepRiserTool';
 import { useRailingTool } from '../drawing/useRailingTool';
-import { useHatchAreaLabelTool } from '../drawing/useHatchAreaLabelTool';
+import { useAreaLabelTool } from '../drawing/useAreaLabelTool';
 import { useTopoBreaklineTool, useTopoBoundaryTool } from '../drawing/useTopoBreaklineTool';
 import { useToolLifecycle } from './useToolLifecycle';
 import { resolveSceneUnits } from '../../utils/scene-units';
@@ -423,9 +423,9 @@ export function useSpecialToolsPlacementTools(
   useToolLifecycle(activeTool === 'mep-drain-riser', mepRiserTool.activate, mepRiserTool.deactivate);
 
   // ADR-649 — «Ετικέτα Εμβαδού Γραμμοσκίασης»: lifecycle-only (reset FSM + status hint).
-  // Το κλικ το χειρίζεται το `handleHatchAreaLabelClick` πάνω στο vanilla store (ADR-040
+  // Το κλικ το χειρίζεται το `handleAreaLabelClick` πάνω στο vanilla store (ADR-040
   // event-time read), οπότε δεν επιστρέφεται tool object — μόνο activate/deactivate reset.
-  useHatchAreaLabelTool(activeTool === 'hatch-area-label');
+  useAreaLabelTool(activeTool === 'hatch-area-label');
 
   // ADR-650 M2-Β — «Γραμμές ασυνέχειας»: lifecycle-only (status hint + hover cleanup).
   // Το κλικ το χειρίζεται το `handleTopoBreaklineClick` πάνω στο vanilla `TopoPointStore`.

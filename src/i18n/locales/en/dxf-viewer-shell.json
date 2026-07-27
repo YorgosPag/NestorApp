@@ -69,10 +69,11 @@
       "captured": "Point captured — enter its ΕΓΣΑ coordinate in the panel"
     }
   },
-  "hatchAreaLabel": {
+  "areaLabel": {
     "areaPrefix": "Area",
+    "surfacePrefix": "Ground surface",
     "status": {
-      "awaitingHatch": "Pick a hatch",
+      "awaitingEntity": "Pick a hatch or a topographic surface",
       "awaitingPlacement": "Place the label"
     },
     "materials": {
@@ -5416,7 +5417,7 @@
     },
     "tooltips": {
       "bimSchedule": "Open BIM Schedule — export structural elements",
-      "hatchAreaLabel": "Hatch area label — click a hatch, then click to place the text",
+      "hatchAreaLabel": "Area label — click a hatch or a topographic surface, then click to place the text. On a surface it reports both the projected area and the true ground surface",
       "thermalEnvelope": "Apply a unified external thermal envelope (ETICS) to the floor",
       "print": "Print the drawing to PDF, printer or plotter (from 2D or 3D)",
       "export": "Export DXF & BIM entities to a file (DXF / IFC / PDF) — DXF only, BIM only or both, per floor or all together",

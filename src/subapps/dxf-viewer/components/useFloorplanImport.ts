@@ -6,7 +6,7 @@ import { dxfImportService } from '../io/dxf-import';
 import { FloorplanService, type FloorplanData } from '../../../services/floorplans/FloorplanService';
 import { BuildingFloorplanService } from '../../../services/floorplans/BuildingFloorplanService';
 import { PropertyFloorplanService, type PropertyFloorplanData } from '../../../services/floorplans/PropertyFloorplanService';
-import { FloorFloorplanService } from '../../../services/floorplans/FloorFloorplanService';
+import { FloorFloorplanService, type FloorFloorplanData } from '../../../services/floorplans/FloorFloorplanService';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { resolveCompanyIdForBuilding } from '@/services/company-id-resolver';
 import { PdfRenderer } from '../pdf-background/services/PdfRenderer';
@@ -16,6 +16,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import type { SceneModel } from '../types/scene';
+import type { SceneUnits } from '../utils/scene-units';
 
 type DialogStep = 'company' | 'project' | 'building' | 'property';
 type FloorplanType = 'project' | 'parking' | 'building' | 'storage' | 'property' | 'floor';
@@ -59,12 +60,20 @@ export function useFloorplanImport(params: UseFloorplanImportParams) {
     encoding: string;
     type: FloorplanType;
     typeLabel: string;
+    /** ADR-716 Φ5 — η επιλογή δεν επιβιώνει μόνη της στον διάλογο επιβεβαίωσης. */
+    userDrawingUnits?: SceneUnits;
   } | null>(null);
 
   // ── DXF Parsing ──────────────────────────────────────────────
-  const parseDxfForProjectTab = async (file: File, encoding?: string): Promise<SceneModel | null> => {
+  // ADR-716 Φ5 — η ρητή επιλογή του μηχανικού φτάνει ΣΤΗΝ ΚΛΙΜΑΚΑ (σκαλί 0 «explicit»
+  // της σκάλας τεκμηρίων → applyCanonicalMmScale), όχι απλώς σε μια ετικέτα.
+  const parseDxfForProjectTab = async (
+    file: File,
+    encoding?: string,
+    userDrawingUnits?: SceneUnits,
+  ): Promise<SceneModel | null> => {
     try {
-      const result = await dxfImportService.importDxfFile(file, encoding);
+      const result = await dxfImportService.importDxfFile(file, encoding, userDrawingUnits);
       if (result.success && result.scene) {
         return result.scene;
       }
@@ -112,9 +121,42 @@ export function useFloorplanImport(params: UseFloorplanImportParams) {
       buildingId: selectedBuildingId, buildings, user, selectedCompanyId,
     });
 
+  /**
+   * 🏢 SSoT — αποθήκευση κάτοψης **ορόφου**, ανεξαρτήτως τύπου αρχείου.
+   *
+   * N.0.2/N.18: ο κλάδος «όροφος» ήταν γραμμένος **δύο φορές** — μία στη διαδρομή DXF και
+   * μία στη διαδρομή PDF — με πανομοιότυπη δρομολόγηση (εύρεση ορόφου → resolveCompanyId →
+   * φύλαξη) και μόνη διαφορά το ωφέλιμο φορτίο. Το `jscpd` (CHECK 3.28) τα έβλεπε ως δίδυμα.
+   * Ο κίνδυνος δεν είναι αισθητικός: αν αλλάξει ο κανόνας δρομολόγησης (π.χ. νέο πεδίο στα
+   * `SaveFloorplanParams`), το ένα αντίγραφο θα το πάρει και το άλλο **σιωπηλά όχι**.
+   *
+   * Ό,τι διαφέρει ανά τύπο αρχείου περνά ως `media` — η δρομολόγηση είναι **μία**.
+   */
+  const saveFloorScopedFloorplan = async (
+    media: Pick<FloorFloorplanData, 'fileType' | 'scene' | 'pdfImageUrl' | 'pdfDimensions'>,
+    fileName: string,
+    originalFile?: File,
+  ): Promise<boolean> => {
+    const { companyId } = resolveCompanyId();
+    const createdBy = user?.uid;
+    if (!companyId || !createdBy) return false;
+
+    const floorNumber = floors.find(f => f.id === selectedFloorId)?.number;
+    return FloorFloorplanService.saveFloorplan({
+      companyId, projectId: selectedProjectId || undefined,
+      buildingId: selectedBuildingId, floorId: selectedFloorId, floorNumber,
+      data: {
+        buildingId: selectedBuildingId, floorId: selectedFloorId,
+        floorNumber: floorNumber || 0, type: 'floor',
+        ...media, fileName, timestamp: Date.now(),
+      },
+      createdBy, originalFile,
+    });
+  };
+
   // ── DXF Import ───────────────────────────────────────────────
   const performFloorplanImport = async (
-    file: File, encoding: string, type: FloorplanType
+    file: File, encoding: string, type: FloorplanType, userDrawingUnits?: SceneUnits
   ) => {
     if (onFileImport) {
       await onFileImport(file);
@@ -122,7 +164,7 @@ export function useFloorplanImport(params: UseFloorplanImportParams) {
       dwarn('ProjectDialog', '🔺 onFileImport callback not provided!');
     }
 
-    const scene = await parseDxfForProjectTab(file, encoding);
+    const scene = await parseDxfForProjectTab(file, encoding, userDrawingUnits);
     if (!scene) {
       dwarn('ProjectDialog', '⚠️ Could not parse DXF for project tab - no scene data');
       setShowDxfModal(false);
@@ -156,6 +198,9 @@ export function useFloorplanImport(params: UseFloorplanImportParams) {
         companyId, projectId: selectedProjectId || undefined,
         buildingId: selectedBuildingId, propertyId: selectedUnitId,
         data: unitData, createdBy: createdBy || '', originalFile: file,
+        // ADR-716 Φ5 — ιδιότητα του συνδέσμου: το re-parse του ωμού DXF από τη
+        // συλλογή αρχείων θα δώσει την ΙΔΙΑ κλίμακα, σε κάθε συνεδρία/συσκευή.
+        userDrawingUnits,
       });
       if (saved) {
         apiClient.post(API_ROUTES.PROPERTIES.ACTIVITY(selectedUnitId), {
@@ -164,20 +209,7 @@ export function useFloorplanImport(params: UseFloorplanImportParams) {
         }).catch(() => { /* fire-and-forget */ });
       }
     } else if (currentStep === 'building' && type === 'floor' && selectedFloorId) {
-      const selectedFloorData = floors.find(f => f.id === selectedFloorId);
-      const floorData = {
-        buildingId: selectedBuildingId, floorId: selectedFloorId,
-        floorNumber: selectedFloorData?.number || 0, type: 'floor' as const,
-        scene, fileName: file.name, timestamp: Date.now(),
-      };
-      const { companyId } = resolveCompanyId();
-      if (companyId && createdBy) {
-        saved = await FloorFloorplanService.saveFloorplan({
-          companyId, projectId: selectedProjectId || undefined,
-          buildingId: selectedBuildingId, floorId: selectedFloorId,
-          floorNumber: selectedFloorData?.number, data: floorData, createdBy,
-        });
-      }
+      saved = await saveFloorScopedFloorplan({ scene }, file.name);
     } else if (currentStep === 'building' && (type === 'building' || type === 'storage')) {
       const buildingData = {
         buildingId: selectedBuildingId, type: type as 'building' | 'storage',
@@ -185,7 +217,7 @@ export function useFloorplanImport(params: UseFloorplanImportParams) {
       };
       const { companyId } = resolveCompanyId();
       const fileRecordOptions = companyId && createdBy
-        ? { companyId, projectId: selectedProjectId || undefined, createdBy, originalFile: file }
+        ? { companyId, projectId: selectedProjectId || undefined, createdBy, originalFile: file, userDrawingUnits }
         : undefined;
       saved = await BuildingFloorplanService.saveFloorplan(
         selectedBuildingId, type as 'building' | 'storage', buildingData, fileRecordOptions
@@ -247,22 +279,11 @@ export function useFloorplanImport(params: UseFloorplanImportParams) {
     const createdBy = user?.uid;
 
     if (currentStep === 'building' && type === 'floor' && selectedFloorId) {
-      const selectedFloorData = floors.find(f => f.id === selectedFloorId);
-      const floorData = {
-        buildingId: selectedBuildingId, floorId: selectedFloorId,
-        floorNumber: selectedFloorData?.number || 0, type: 'floor' as const,
-        fileType: 'pdf' as const, scene: null, pdfImageUrl, pdfDimensions,
-        fileName: file.name, timestamp: Date.now(),
-      };
-      const { companyId } = resolveCompanyId();
-      if (companyId && createdBy) {
-        saved = await FloorFloorplanService.saveFloorplan({
-          companyId, projectId: selectedProjectId || undefined,
-          buildingId: selectedBuildingId, floorId: selectedFloorId,
-          floorNumber: selectedFloorData?.number, data: floorData, createdBy,
-          originalFile: file,
-        });
-      }
+      saved = await saveFloorScopedFloorplan(
+        { fileType: 'pdf', scene: null, pdfImageUrl, pdfDimensions },
+        file.name,
+        file,
+      );
     } else if (currentStep === 'building' && (type === 'building' || type === 'storage')) {
       const buildingData = {
         buildingId: selectedBuildingId, type: type as 'building' | 'storage',
@@ -328,16 +349,16 @@ export function useFloorplanImport(params: UseFloorplanImportParams) {
     setShowDxfModal(true);
   };
 
-  const handleDxfImportFromModal = async (file: File, encoding: string) => {
+  const handleDxfImportFromModal = async (file: File, encoding: string, userDrawingUnits?: SceneUnits) => {
     const type = currentFloorplanType;
     try {
       const hasExisting = await checkExistingFloorplan(type);
       if (hasExisting) {
-        setPendingImportData({ file, encoding, type, typeLabel: getTypeLabel(type) });
+        setPendingImportData({ file, encoding, type, typeLabel: getTypeLabel(type), userDrawingUnits });
         setShowReplaceConfirm(true);
         return;
       }
-      await performFloorplanImport(file, encoding, type);
+      await performFloorplanImport(file, encoding, type, userDrawingUnits);
     } catch (error) {
       derr('ProjectDialog', `❌ Failed to load ${type} floorplan:`, error);
     }
@@ -365,7 +386,12 @@ export function useFloorplanImport(params: UseFloorplanImportParams) {
       if (pendingImportData.encoding === 'pdf') {
         await performPdfFloorplanImport(pendingImportData.file, pendingImportData.type);
       } else {
-        await performFloorplanImport(pendingImportData.file, pendingImportData.encoding, pendingImportData.type);
+        await performFloorplanImport(
+          pendingImportData.file,
+          pendingImportData.encoding,
+          pendingImportData.type,
+          pendingImportData.userDrawingUnits,
+        );
       }
     } catch (error) {
       derr('ProjectDialog', '❌ Failed to import floorplan after confirmation:', error);
