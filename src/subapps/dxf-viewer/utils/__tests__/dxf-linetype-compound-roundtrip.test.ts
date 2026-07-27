@@ -96,7 +96,13 @@ describe('DXF compound-linetype round-trip (Φ5-B — railway, symbol in a sub-l
     const tick = tie.elements[1] as SymbolElement;
     expect(tick.glyphId).toBe('tick');
     expect(tick.role).toBe('side');
-    expect(tick.scale).toBeCloseTo(1.6, 6);
+    // ⚠️ ΠΑΡΑΓΩΓΟ από το preset, ΠΟΤΕ καρφωμένο. Το fixture έρχεται από το shipped
+    // `railway` preset, άρα μια αλλαγή εκεί (π.χ. `TIE_SCALE = 2600 / 2.5` αντί για
+    // την παλιά τιμή) πρέπει να ταξιδεύει μόνη της. Ένα literal εδώ έκανε το test να
+    // ελέγχει τη ΜΙΑ τιμή που ήξερε ο συγγραφέας, όχι το round-trip — και έμεινε
+    // κόκκινο, μετρώντας απόκλιση preset↔test αντί για απώλεια στο DXF.
+    const sourceTick = railway.layers[2].elements[1] as SymbolElement;
+    expect(tick.scale).toBeCloseTo(sourceTick.scale, 6);
   });
 });
 
