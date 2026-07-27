@@ -6,7 +6,8 @@
  */
 import { useMemo } from 'react';
 import { pointToSegmentDistance, GUIDE_HIT_TOLERANCE_PX } from '../../systems/guides/guide-types';
-import type { Guide, Point2D } from '../../systems/guides/guide-types';
+import type { Guide } from '../../systems/guides/guide-types';
+import type { Point2D } from '../../rendering/types/Types';
 import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
 import { useCursorWorldPosition } from '../../systems/cursor/useCursor';
 // ADR-189 §3.13 — WYSIWYG φάντασμα: όσο πληκτρολογείται απόσταση, το φάντασμα

@@ -19,6 +19,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { MaterialSwatch } from '../../components/shared/MaterialSwatch';
+// Type-only: the sections receive the resolved palette as a prop (`ReturnType<…>`);
+// they never call the hook themselves, so no runtime dependency is pulled in.
+import type { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type {
   BimMaterialCategory,
   BimMaterialFireRating,

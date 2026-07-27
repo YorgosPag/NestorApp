@@ -37,6 +37,7 @@ import { SafeHTMLContent } from '@/components/shared/email/EmailContentRenderer'
 import { CALENDAR_EVENT_COLORS } from './calendar-event-colors';
 import '@/lib/design-system';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useDateFnsLocale } from '@/i18n/date-fns-locale';
 
 // ============================================================================
 // PROPS

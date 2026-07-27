@@ -16,6 +16,7 @@
 import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
 import i18next from 'i18next';
 import type { Point2D } from '../../rendering/types/Types';
+import type { Entity } from '../../types/entities';
 import type { ICommand } from '../../core/commands/interfaces';
 import { ExtendEntityCommand } from '../../core/commands/entity-commands/ExtendEntityCommand';
 import { TrimEntityCommand } from '../../core/commands/entity-commands/TrimEntityCommand';

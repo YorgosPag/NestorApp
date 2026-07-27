@@ -29,6 +29,7 @@ import {
   DimensionsSection,
   MetadataSection,
   ThumbnailSection,
+  type FormState,
 } from './MaterialEditorSections';
 import { AppearancePreviewSection, AppearanceColorSection } from './MaterialEditorAppearanceSections';
 import { PbrTexturesSection } from './MaterialPbrTexturesSection';

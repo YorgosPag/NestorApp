@@ -9,6 +9,7 @@
 // 5. TOPOLOGICAL INTEGRITY: Grid-Canvas-Context integration
 
 import { UI_COLORS } from '../config/color-config';
+import { deriveMajorGridWeight } from '../config/grid-emphasis';
 import type { GridSettings } from '../systems/rulers-grid/config';
 import { nowISO } from '@/lib/date-local';
 

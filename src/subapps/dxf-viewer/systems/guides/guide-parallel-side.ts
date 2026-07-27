@@ -5,7 +5,8 @@
  * @since 2026-07-17
  */
 
-import type { Guide, Point2D } from './guide-types';
+import type { Guide } from './guide-types';
+import type { Point2D } from '../../rendering/types/Types';
 
 /**
  * Το πρόσημο που δίνει `CreateParallelGuideCommand` για να τοποθετηθεί ο νέος

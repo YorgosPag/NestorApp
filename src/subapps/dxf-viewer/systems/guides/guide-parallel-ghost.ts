@@ -21,7 +21,8 @@
  */
 
 import { resolveParallelSide } from './guide-parallel-side';
-import type { Guide, Point2D } from './guide-types';
+import type { Guide } from './guide-types';
+import type { Point2D } from '../../rendering/types/Types';
 
 /** Το κάθετο μοναδιαίο διάνυσμα ενός διαγώνιου οδηγού· `null` αν είναι εκφυλισμένος. */
 export function perpendicularNormal(startPoint: Point2D, endPoint: Point2D): Point2D | null {

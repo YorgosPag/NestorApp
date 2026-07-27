@@ -11,7 +11,7 @@ import type { AlertRuleType, AlertSeverity } from '@/types/building/construction
 import type { BuildingMilestone } from '@/types/building/milestone';
 import type { EVMResult } from '@/services/report-engine/evm-calculator';
 import type { WeatherForecast } from '@/services/weather/open-meteo.service';
-import { nowISO } from '@/lib/date-local';
+import { normalizeToDate, nowISO } from '@/lib/date-local';
 
 // ─── Shared helpers ───────────────────────────────────────────────────────
 

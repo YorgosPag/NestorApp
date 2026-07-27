@@ -40,7 +40,7 @@ interface SyncSpacePayload {
   salePrice: number | null;
 }
 
-interface UseLinkedSpacesForSaleResult {
+export interface UseLinkedSpacesForSaleResult {
   spaces: ResolvedLinkedSpace[];
   loading: boolean;
   hasSpaces: boolean;

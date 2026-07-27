@@ -169,7 +169,7 @@ export interface PropertyShowcasePDFLabels {
 }
 
 export function loadShowcasePdfLabels(locale: EnumLocale = 'el'): PropertyShowcasePDFLabels {
-  const c = CATALOGS[locale];
+  const c = getShowcaseCatalog(locale);
   const raw = c as unknown as Record<string, Record<string, unknown>>;
   const fb = createLocaleFallback(locale);
 

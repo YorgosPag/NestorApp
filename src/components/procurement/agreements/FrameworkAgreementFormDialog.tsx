@@ -25,7 +25,7 @@ import type { ComboboxOption } from '@/components/ui/searchable-combobox-types';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { usePOSupplierContacts } from '@/hooks/procurement/usePOSupplierContacts';
 import { getContactDisplayName } from '@/types/contacts/helpers';
-import { nowISO } from '@/lib/date-local';
+import { normalizeToDate, nowISO } from '@/lib/date-local';
 import { BreakpointsEditor } from './BreakpointsEditor';
 import {
   FRAMEWORK_AGREEMENT_STATUSES,

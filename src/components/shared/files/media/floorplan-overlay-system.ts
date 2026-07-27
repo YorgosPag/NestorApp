@@ -32,7 +32,7 @@ import {
 } from './overlay-hit-test';
 
 export { OVERLAY_FALLBACK } from './overlay-polygon-renderer';
-export type { OverlayLabel } from './overlay-polygon-renderer';
+export type { OverlayLabel, SceneBounds } from './overlay-polygon-renderer';
 
 // ============================================================================
 // TYPES

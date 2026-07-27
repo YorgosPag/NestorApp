@@ -2574,3 +2574,20 @@ technologismiki (Ν.4495/2017), xyz.gr/geodimetro.gr/greenbuilding.gr/cityengine
   - **Διακεκομμένη απορριφθείσα σε 3Δ** (το 2Δ την έχει) — `computeLineDistances` + dash σε world
     units· χαμηλή αξία όσο οι γραμμές μένουν 1 px.
   - **Οπτική επαλήθευση της νέας έμφασης στον browser** — **δεν έχει γίνει** (§7 του handoff).
+
+- **2026-07-27 (v29)** — **Το `cdt2d.d.ts` ήταν αόρατο στο root TypeScript program** (εκστρατεία
+  εξάλειψης σφαλμάτων, Φάση 1). **Σύμπτωμα:** TS7016 «could not find a declaration file for module
+  `cdt2d`» στο `tin-builder.ts:17` — ενώ η ambient δήλωση **υπήρχε ήδη** και ήταν σωστή, από το v4.
+  **Ρίζα:** το root `tsconfig.json` έχει `include` για κάθε `.d.ts` του `src/`, αλλά και
+  `exclude: "src/subapps/dxf-viewer/**"` — και το `exclude` **φιλτράρει** το `include`. Τα κανονικά
+  αρχεία του subapp μπαίνουν παρ' όλα αυτά στο program γιατί τα τραβά το import-chain από το
+  `src/app/**`· οι **ambient** δηλώσεις όμως δεν εισάγονται ποτέ από κανέναν, άρα μένουν οριστικά έξω.
+  **Λύση:** νέο `src/types/dxf-viewer-ambient.d.ts` — μηδέν τύποι, μόνο ένα
+  `/// <reference path="…/topography/cdt2d.d.ts" />` που προσθέτει το **πραγματικό** αρχείο στο program
+  παρακάμπτοντας το `exclude`. Καμία αντιγραφή τύπου, καμία αλλαγή στο `tsconfig.json` (το tree
+  μοιραζόταν με άλλον πράκτορα). Η άδεια παραμένει MIT — **κανένα νέο dependency**.
+  **Γιατί όχι αντίγραφο:** το `src/types/` περιέχει ήδη **4 χειρόγραφα αντίγραφα** ambient δηλώσεων
+  του subapp (`opentype.d.ts` — byte-ίδιο με το `text-engine/fonts/opentype.d.ts` —, `utif.d.ts`,
+  `google-cloud-storage.d.ts`, `jest-globals.d.ts`). Το μοτίβο «αντίγραψέ το» εφαρμόστηκε 4 φορές·
+  το `cdt2d` θα ήταν το 5ο. Η εξάλειψη των 4 αντιγράφων υπέρ του ίδιου `reference` μηχανισμού
+  καταγράφηκε ως εκκρεμότητα στο `.claude-rules/pending-ratchet-work.md`.

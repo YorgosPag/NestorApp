@@ -68,7 +68,7 @@ interface CoverInterval {
 }
 
 /** Covering intervals μιας ακμής πάνω στο seg: collinear override-edges → [t0,t1] clamped στο [0,1]. */
-function coverIntervals(seg: FinishFaceSegment, u: UnitAxis, edges: readonly FinishOverrideEdge[], tol: number): CoverInterval[] {
+function coverIntervals(seg: FinishFaceSegment, u: SegAxis, edges: readonly FinishOverrideEdge[], tol: number): CoverInterval[] {
   // ADR-449 PART B Fix A — παραμετρική ανοχή = canvas tol / μήκος seg: σύνορο override που πέφτει
   // εντός αυτής από πραγματικό άκρο snap-άρει στο ΑΚΡΙΒΩΣ 0/1. Ρίζα: το override-edge χτίζεται από
   // τα ΑΝΕΠΕΞΕΡΓΑΣΤΑ element vertices, το blanket segment από τη WELDED union (drift ~quantum/2) →
