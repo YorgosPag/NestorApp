@@ -28,7 +28,7 @@
  * @see ../../components/dxf-layout/clash-markers/ClashMarkerLayer.tsx — the DOM half
  */
 
-import { useCallback, type MutableRefObject } from 'react';
+import { useCallback, useMemo, type MutableRefObject } from 'react';
 import * as THREE from 'three';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 import type { WorldTriple } from '../viewport/plan-to-world-math';
@@ -56,6 +56,46 @@ function cameraSignature(cam: THREE.Camera): string {
 }
 
 /**
+ * ADR-344 Φ-3D — ΤΟ tick «η κάμερα κουνήθηκε → ξαναπροβάλε», ως αυτόνομο SSoT.
+ *
+ * Ήταν inline μέσα στο {@link useCameraProjectedMarkers}. Εξάχθηκε όταν ο in-place text
+ * editor χρειάστηκε ΑΚΡΙΒΩΣ αυτό το tick αλλά με δική του `project` (λύνει την οντότητα από
+ * id τη στιγμή του tick, αντί να προβάλλει προϋπολογισμένο πίνακα σημείων). Χωρίς την
+ * εξαγωγή, ο editor θα ξανάγραφε το camera-signature diffing + την εγγραφή στον scheduler —
+ * το κλασικό δίδυμο που το ένα αντίγραφο μαθαίνει το ortho zoom και το άλλο όχι (N.18).
+ *
+ * LOW priority: τρέχει ΜΕΤΑ το `bim-3d-scene`, οπότε η κάμερα είναι ήδη ενημερωμένη αυτό το
+ * frame → μηδέν καθυστέρηση. Καρέ χωρίς κίνηση κάμερας δεν κοστίζουν τίποτα.
+ *
+ * `subsystemId` πρέπει να είναι μοναδικό ανά καταναλωτή — ονομάζει το subsystem του scheduler.
+ */
+export function subscribeToCameraMoves(
+  getCamera: () => THREE.Camera | null,
+  subsystemId: string,
+  subsystemLabel: string,
+): (reproject: () => void) => () => void {
+  return (reproject) => {
+    let lastSig = '';
+    const unregister = UnifiedFrameScheduler.register(
+      subsystemId,
+      subsystemLabel,
+      RENDER_PRIORITIES.LOW,
+      () => reproject(),
+      () => {
+        const camera = getCamera();
+        if (!camera) return false;
+        const sig = cameraSignature(camera);
+        if (sig === lastSig) return false;
+        lastSig = sig;
+        return true;
+      },
+    );
+    reproject();
+    return unregister;
+  };
+}
+
+/**
  * Project `worlds` through the live camera and reproject them whenever it moves.
  *
  * `worlds` must be a stable reference (memoise it on the report), and `subsystemId` /
@@ -80,25 +120,14 @@ export function useCameraProjectedMarkers(
     };
   }, [worlds, managerRef]);
 
-  const subscribe = useCallback((reproject: () => void) => {
-    let lastSig = '';
-    const unregister = UnifiedFrameScheduler.register(
+  const subscribe = useMemo(
+    () => subscribeToCameraMoves(
+      () => managerRef.current?.getCamera() ?? null,
       subsystemId,
       subsystemLabel,
-      RENDER_PRIORITIES.LOW,
-      () => reproject(),
-      () => {
-        const manager = managerRef.current;
-        if (!manager) return false;
-        const sig = cameraSignature(manager.getCamera());
-        if (sig === lastSig) return false;
-        lastSig = sig;
-        return true;
-      },
-    );
-    reproject();
-    return unregister;
-  }, [managerRef, subsystemId, subsystemLabel]);
+    ),
+    [managerRef, subsystemId, subsystemLabel],
+  );
 
   return { project, subscribe };
 }

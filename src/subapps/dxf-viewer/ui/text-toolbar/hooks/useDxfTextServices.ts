@@ -25,6 +25,7 @@
 
 import { useMemo } from 'react';
 import { useLevels } from '../../../systems/levels';
+import type { LevelsHookReturn } from '../../../systems/levels/useLevels';
 import { useCanEditText } from '../../../hooks/useCanEditText';
 import { useCurrentSceneModel } from './useCurrentSceneModel';
 import { LevelSceneManagerAdapter, createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
@@ -57,20 +58,46 @@ function makeLayerProvider(
   };
 }
 
+/**
+ * Η συναρμολόγηση των services για **ρητά δηλωμένο** level.
+ *
+ * ADR-344 Φ-3D — εξάχθηκε από το hook παρακάτω επειδή το 3D χρειάζεται τα ΙΔΙΑ services
+ * αλλά για level που **δεν είναι απαραίτητα το ενεργό**: με «Όλοι οι όροφοι»
+ * (`floor3DScope: 'all'`, ADR-537 δ) βλέπεις — και άρα μπορείς να διορθώσεις — κείμενο
+ * άλλου ορόφου. Καρφώνοντας το `currentLevelId`, το commit θα έγραφε στον ΕΝΕΡΓΟ όροφο:
+ * σιωπηλή καταστροφή δεδομένων, όχι σφάλμα. Ο 3D καταναλωτής περνά εδώ το level που
+ * επιστρέφει το `resolveEntityLevelId`.
+ *
+ * Καθαρή: μηδέν hooks — καλέσιμη μέσα σε event handler (ADR-040 event-time read).
+ */
+export function buildDxfTextServices(params: {
+  readonly levelId: string | null;
+  readonly getLevelScene: LevelsHookReturn['getLevelScene'];
+  readonly setLevelScene: LevelsHookReturn['setLevelScene'];
+  readonly scene: SceneModel | null;
+  readonly canUnlockLayer: boolean;
+}): DxfTextServices | null {
+  const { levelId, getLevelScene, setLevelScene, scene, canUnlockLayer } = params;
+  if (!levelId) return null;
+  const sceneManager = createLevelSceneManagerAdapter(getLevelScene, setLevelScene, levelId);
+  const layerProvider = makeLayerProvider(scene, canUnlockLayer);
+  const auditRecorder: IDxfTextAuditRecorder = noopAuditRecorder;
+  return { sceneManager, layerProvider, auditRecorder };
+}
+
 export function useDxfTextServices(): DxfTextServices | null {
   const { currentLevelId, getLevelScene, setLevelScene } = useLevels();
   const scene = useCurrentSceneModel();
   const caps = useCanEditText();
 
-  return useMemo(() => {
-    if (!currentLevelId) return null;
-    const sceneManager = createLevelSceneManagerAdapter(
+  return useMemo(
+    () => buildDxfTextServices({
+      levelId: currentLevelId,
       getLevelScene,
       setLevelScene,
-      currentLevelId,
-    );
-    const layerProvider = makeLayerProvider(scene, caps.canUnlockLayer);
-    const auditRecorder: IDxfTextAuditRecorder = noopAuditRecorder;
-    return { sceneManager, layerProvider, auditRecorder };
-  }, [currentLevelId, getLevelScene, setLevelScene, scene, caps.canUnlockLayer]);
+      scene,
+      canUnlockLayer: caps.canUnlockLayer,
+    }),
+    [currentLevelId, getLevelScene, setLevelScene, scene, caps.canUnlockLayer],
+  );
 }

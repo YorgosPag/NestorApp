@@ -4779,3 +4779,86 @@ micro-leaf (καμία high-freq συνδρομή), και σχεδιάζει **
 
 `npx jest src/subapps/dxf-viewer/systems/topography src/subapps/dxf-viewer/bim-3d` → 315 suites /
 2836 tests GREEN· `jscpd:diff` καθαρό (9 αρχεία). ΟΧΙ tsc (N.17). 🔴 verify+commit (Giorgio).
+
+---
+
+### 2026-07-28 — `CanvasSection`: το άγκυρο του in-place text editor έγινε **scene anchor**, όχι screen rect (ADR-344 Φ-3D, CHECK 6B stage)
+
+**Καμία αρχιτεκτονική αλλαγή στο `CanvasSection`.** Άλλαξε **μόνο** το σχήμα δύο props που
+περνά ως pass-through: `textEditorOverlay` / `textCreationOverlay` έδιναν `anchorRect`
+(στιγμιότυπο **οθόνης**) και δίνουν πλέον `anchor` (αγκύρωση **σκηνής**). Το component
+εξακολουθεί να **μην** καλεί `useSyncExternalStore` (κανόνας 1) και δεν απέκτησε καμία
+συνδρομή — η γραμμή 4 του header παραμένει ο κανόνας, όχι κλήση.
+
+**Γιατί άλλαξε το σχήμα.** Το άγκυρο υπολογιζόταν **μία φορά**, τη στιγμή του διπλού κλικ,
+από στιγμιότυπο του transform (`transformRef.current`), και έμενε καρφωμένο. Pan ή zoom με
+ανοιχτό τον editor τον άφηνε πίσω: το κουτί σε ένα σημείο της οθόνης, τα γράμματα που
+επεξεργάζεσαι σε άλλο. Είναι **ακριβώς** η παγίδα του κανόνα 2 (snapshot αντί για getter),
+σε DOM overlay αντί σε event handler.
+
+**Πού ζει τώρα η υψίσυχνη ανάγνωση.** Στο νέο `TextEditorAnchorLayer` — ακριβές αδελφάκι του
+`ClashMarkerLayer` (ADR-435 Slice 1b): το παιδί αποδίδεται **μία** φορά από τον React και μετά
+μετακινείται **επιτακτικά** (ref + CSS `translate`) σε κάθε tick του `subscribe` του καλούντος.
+Η θέση διαβάζεται στον χρόνο του tick από το `ImmediateTransformStore` (κανόνας 2: event-time
+read μέσω getter). **Μηδέν re-render σε pan / zoom / orbit.**
+
+Ό,τι διαφέρει ανά προβολή είναι **μόνο** η προβολή και εγχέεται: 2D → άμεσο transform,
+3D → κάμερα (CSS2D-style). Το `contenteditable` πάνω σε `matrix3d` απορρίφθηκε τεκμηριωμένα —
+σε πλάγια γωνία το κείμενο γίνεται δυσανάγνωστο τη στιγμή που το διορθώνεις και σπάνε τα
+caret/selection hit-boxes· η AutoCAD απαντά το ίδιο με `MTEXTFIXED = 2`.
+
+🔴 **Καμία ζωντανή επαλήθευση στον browser** — εκκρεμεί pan/zoom με ανοιχτό editor σε 2D και
+orbit σε 3D.
+
+---
+
+## 2026-07-28: ADR-344 Φ-3D — `TextEditorAnchorLayer`, ο κοινός imperative τοποθετητής του in-place editor (CHECK 6B/6D stage)
+
+**Το αίτημα** (Giorgio): «γιατί στον καμβά 3Δ δεν μπορώ να κάνω επεξεργασία κειμένου με διπλό
+κλικ όπως στο 2Δ;». Η πλήρης απόφαση + η έρευνα προτύπων ζουν στο **ADR-344 (Changelog
+2026-07-28)**· εδώ καταγράφεται μόνο η **αρχιτεκτονική διάσταση ADR-040**.
+
+**Το πρόβλημα που έλυσε αυτό το ADR.** Ένας DOM editor αγκυρωμένος σε προβολή κάμερας πρέπει
+να μετακινείται σε **κάθε** orbit/zoom/pan — δηλαδή δυνητικά στα 60fps. Η προφανής υλοποίηση
+(`anchorRect` ως prop → `setState` σε κάθε tick) είναι ακριβώς το anti-pattern που αυτό το ADR
+απαγορεύει: 60 re-renders/δευτερόλεπτο ενός TipTap subtree, με τον χρήστη να πληκτρολογεί μέσα του.
+
+**Η λύση — ένα, κοινό, imperative layer.** NEW `ui/text-toolbar/TextEditorAnchorLayer.tsx`:
+ακριβές αδελφάκι του `ClashMarkerLayer` (ADR-435 Slice 1b), που είχε ήδη λύσει το ίδιο πρόβλημα
+για τους δείκτες συγκρούσεων. Το παιδί αποδίδεται **μία φορά** από τον React· η θέση γράφεται
+με `ref.style.transform` μέσα σε callback που δηλώνει ο καλών (`project` + `subscribe`).
+**Μηδέν render σε κίνηση κάμερας ή καμβά.**
+
+**Η μόνη διαφορά 2D↔3D είναι η προβολή, και εγχέεται:**
+- 2D → `text-editor-anchor-2d.ts` (NEW) — `getImmediateTransform()` στον χρόνο του tick
+- 3D → `bim-3d/text/text-edit-anchor-3d.ts` (NEW) — προβολή κάμερας
+
+**Παρεμπιπτόντως διορθώθηκε ένα πραγματικό ADR-040 σφάλμα στο 2D.** Ο editor διάβαζε το
+transform **μία φορά**, από στιγμιότυπο `transformRef.current`, τη στιγμή του διπλού κλικ, και
+έμενε καρφωμένος εκεί — η κλασική παραβίαση του **κανόνα 2** (event handlers παίρνουν getter,
+ποτέ snapshot· ένα snapshot μπαγιατεύει μόλις ο orchestrator παραλείψει re-render). Αποτέλεσμα
+ορατό στον χρήστη: pan/zoom με ανοιχτό τον editor τον άφηνε πίσω. Πλέον η θέση διαβάζεται
+ζωντανά, μέσα στο tick, από το `ImmediateTransformStore`. Το ίδιο ίσχυε και για το πεδίο
+**δημιουργίας** κειμένου (`useTextCreationTool`), που είχε αντιγράψει τον υπολογισμό αυτούσιο.
+
+**Εξαγωγή `subscribeToCameraMoves`** από το `use-camera-projected-markers.ts`: το camera-signature
+diffing + η εγγραφή σε LOW-priority `UnifiedFrameScheduler` slot (τρέχει **μετά** το
+`bim-3d-scene`, άρα η κάμερα είναι ήδη ενημερωμένη αυτό το frame → μηδέν καθυστέρηση) ήταν
+inline μέσα στο hook. Ο editor το **χρησιμοποιεί** αντί να το ξαναγράψει (N.18· `jscpd:diff`
+καθαρό σε 11 αρχεία).
+
+**Συμμόρφωση με τους 4 κανόνες:**
+1. **Κανένα `useSyncExternalStore` σε orchestrator.** Το `BimViewport3D` δεν απέκτησε ούτε
+   συνδρομή ούτε γραμμή: το leaf δένει **μόνο του** native `dblclick` στον renderer canvas
+   (`addEventListener` + `AbortController`, ίδιο pattern με τον raw-DXF grip editor του ADR-537).
+   Το React `stopPropagation` της γρ. 399 δεν σταματά τη διάδοση στο DOM — ο ίδιος λόγος για τον
+   οποίο το OrbitControls συνεχίζει να λαμβάνει γεγονότα. Το αρχείο έμεινε στις **499/500** (N.7.1).
+2. **Getters, όχι snapshots.** Και οι δύο resolvers διαβάζουν στον χρόνο του tick — βλ. παραπάνω
+   για το σφάλμα που αυτό διόρθωσε.
+3. **Bitmap cache ανέγγιχτο.** Καμία αλλαγή στο cache key.
+4. **Το leaf σχεδιάζει 0 canvas και κάνει 0 υψίσυχνες συνδρομές.** Το μοναδικό React state είναι
+   η ανοιχτή συνεδρία επεξεργασίας — αλλάζει δύο φορές ανά διόρθωση (άνοιγμα, commit), όχι ανά frame.
+
+`npx jest --testPathPatterns="(bim-3d|dxf-layout|canvas-layer)"` → **316 suites / 2789 tests GREEN**·
++33 νέα tests (`text-edit-session`, `text-edit-anchor-3d`, `use-bim3d-text-double-click-editor`)·
+`jscpd:diff` καθαρό (11 αρχεία). ΟΧΙ tsc (N.17). 🔴 verify+commit (Giorgio).

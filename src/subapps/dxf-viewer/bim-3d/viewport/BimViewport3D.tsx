@@ -441,8 +441,8 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
       {/* ADR-452 — cut-plane slider (3D mount); drives the horizontal section clip. */}
       <CutPlaneSlider3DLeaf />
 
-      {/* ADR-435/483 — camera-projected DOM overlays (clash + proposal ghost + M/V/N diagrams). */}
-      <BimViewport3DProjectedOverlays managerRef={managerRef} />
+      {/* ADR-435/483/344 — camera-projected DOM overlays (clash + ghost + M/V/N + text editor). */}
+      <BimViewport3DProjectedOverlays managerRef={managerRef} canvasEl={canvasEl} />
 
       {/* ADR-366 §A.3 Q3 Phase 7.0B — 2D Live Section Panel (bottom strip, toggle from Section tab) */}
       <Section2DPanel />

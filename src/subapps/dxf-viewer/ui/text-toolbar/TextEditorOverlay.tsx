@@ -35,7 +35,10 @@ import { dxfTextExtensions } from '../../text-engine/edit';
 import { tipTapToDxfText, dxfTextToTipTap } from '../../text-engine/edit';
 import { createYjsTipTapExtension } from '../../text-engine/collab';
 import { useTextEditingStore } from '../../state/text-toolbar';
-import { useVisualViewport } from './responsive';
+// ADR-344 Φ-3D — η ΤΟΠΟΘΕΤΗΣΗ βγήκε από εδώ: την κάνει επιτακτικά το κοινό
+// `TextEditorAnchorLayer` (2D + 3D), ώστε ο editor να ακολουθεί pan/zoom/orbit χωρίς
+// re-render (ADR-040) και να μη γίνει το 3D positioning δίδυμο του 2D (N.18).
+import { TextEditorAnchorLayer, type TextEditorAnchor } from './TextEditorAnchorLayer';
 // ADR-364 — Escape Command Bus SSoT (no inline ESC key comparison in this file)
 import { useEscapeHandler, ESC_PRIORITY } from '../../systems/escape-bus';
 import type { DxfTextNode } from '../../text-engine/types';
@@ -46,8 +49,13 @@ interface TextEditorOverlayProps {
   readonly initial: DxfTextNode;
   /** Optional collaborative Y.Doc — when supplied, multi-user editing is live. */
   readonly yDoc?: YDoc;
-  /** Pixel rectangle on the canvas where the overlay should appear. */
-  readonly anchorRect: { readonly left: number; readonly top: number; readonly width: number; readonly height: number };
+  /**
+   * ΠΟΥ κάθεται ο editor. Δεν είναι στατικό ορθογώνιο: είναι ζωντανή αγκύρωση
+   * (`project` + `subscribe`), ώστε το κουτί να ακολουθεί τον καμβά στο 2D και την κάμερα
+   * στο 3D. Ο 2D resolver είναι το `text-editor-anchor-2d.ts`, ο 3D το
+   * `bim-3d/text/text-edit-anchor-3d.ts`.
+   */
+  readonly anchor: TextEditorAnchor;
   /** Called when the user commits (Enter+Ctrl, blur, etc.) with the resulting DxfTextNode. */
   readonly onCommit: (next: DxfTextNode) => void;
   readonly onCancel: () => void;
@@ -57,14 +65,13 @@ export function TextEditorOverlay({
   entityId,
   initial,
   yDoc,
-  anchorRect,
+  anchor,
   onCommit,
   onCancel,
 }: TextEditorOverlayProps) {
   const updateDraft = useTextEditingStore((s) => s.updateDraft);
   const beginEdit = useTextEditingStore((s) => s.beginEdit);
   const endEdit = useTextEditingStore((s) => s.endEdit);
-  const { keyboardInset } = useVisualViewport();
   const committedRef = useRef(false);
 
   const extensions = useMemo(() => {
@@ -170,29 +177,22 @@ export function TextEditorOverlay({
   });
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      onKeyDown={onKeyDown}
-      onContextMenu={(e) => e.preventDefault()}
-      onBlur={(e) => {
-        // Commit only when focus genuinely leaves the overlay subtree.
-        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
-          commit();
-        }
-      }}
-      className={cn(
-        'fixed z-40',
-        'touch-pan-x touch-pan-y',
-      )}
-      style={{
-        left: anchorRect.left,
-        top: keyboardInset > 0 ? Math.min(anchorRect.top, window.innerHeight - keyboardInset - 120) : anchorRect.top,
-        minWidth: anchorRect.width,
-        minHeight: anchorRect.height,
-      }}
-    >
-      <EditorContent editor={editor} />
-    </div>
+    <TextEditorAnchorLayer {...anchor}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        onKeyDown={onKeyDown}
+        onContextMenu={(e) => e.preventDefault()}
+        onBlur={(e) => {
+          // Commit only when focus genuinely leaves the overlay subtree.
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+            commit();
+          }
+        }}
+        className={cn('touch-pan-x touch-pan-y')}
+      >
+        <EditorContent editor={editor} />
+      </div>
+    </TextEditorAnchorLayer>
   );
 }

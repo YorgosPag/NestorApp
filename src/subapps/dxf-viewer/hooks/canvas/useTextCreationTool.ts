@@ -20,6 +20,9 @@ import type { ICommand } from '../../core/commands';
 import { generateEntityId } from '../../systems/entity-creation/utils';
 import { CreateTextCommand } from '../../core/commands/text/CreateTextCommand';
 import { useDxfTextServices } from '../../ui/text-toolbar/hooks/useDxfTextServices';
+// ADR-344 Φ-3D — ΚΟΙΝΟΣ 2D anchor resolver (ίδιος με τον editor διπλού κλικ· ήταν δίδυμο εδώ).
+import { createTextEditorAnchor2D, textEditorBoxHeightPx } from '../../ui/text-toolbar/text-editor-anchor-2d';
+import type { TextEditorAnchor } from '../../ui/text-toolbar/TextEditorAnchorLayer';
 import { DXF_DEFAULT_LAYER } from '../../config/layer-config';
 import { DXF_COLOR_BY_LAYER } from '../../text-engine/types/text-toolbar.types';
 import type { DxfTextNode } from '../../text-engine/types';
@@ -46,12 +49,11 @@ interface CreatingState {
   readonly entityId: string;
   readonly position: Point2D;
   readonly initial: DxfTextNode;
-  readonly anchorRect: {
-    readonly left: number;
-    readonly top: number;
-    readonly width: number;
-    readonly height: number;
-  };
+  /**
+   * ADR-344 Φ-3D — ζωντανή αγκύρωση (όχι στατικό ορθογώνιο): το πεδίο δημιουργίας
+   * ακολουθεί pan/zoom όσο πληκτρολογείς, όπως και ο editor επεξεργασίας.
+   */
+  readonly anchor: TextEditorAnchor;
   /** World-space width for MTEXT bounding box. Undefined for TEXT. */
   readonly worldWidth?: number;
   /** Force MTEXT type on commit (mtext tool mode). */
@@ -172,21 +174,28 @@ function mtextOverlayWidth(containerWidth: number): number {
   return Math.min(600, Math.max(280, Math.round(containerWidth * 0.4)));
 }
 
-function computeAnchorRect(
+/**
+ * ADR-344 Φ-3D — η προβολή δεν υπολογίζεται πια εδώ: παράγεται ζωντανή αγκύρωση από τον
+ * ΚΟΙΝΟ 2D resolver (`createTextEditorAnchor2D`), τον ίδιο που χρησιμοποιεί ο editor
+ * επεξεργασίας. Πριν, αυτή η συνάρτηση ξανάγραφε το `worldToScreen` του διπλού κλικ
+ * («Same Y-flip as useTextDoubleClickEditor.computeAnchorRect» — σχόλιο που ομολογούσε
+ * το δίδυμο). Το ΜΕΓΕΘΟΣ μένει στιγμιότυπο: το κουτί δεν ζουμάρει μαζί με τον καμβά
+ * (AutoCAD MTEXTFIXED — μένει ευανάγνωστο).
+ */
+function computeAnchor(
   worldPoint: Point2D,
   transform: CanvasTransform,
   container: HTMLDivElement,
+  getContainer: () => HTMLElement | null,
   isMText: boolean,
-): CreatingState['anchorRect'] & { worldWidth: number } {
-  const containerRect = container.getBoundingClientRect();
-  // Same Y-flip as useTextDoubleClickEditor.computeAnchorRect (ADR-040 worldToScreen parity).
-  const left = containerRect.left + worldPoint.x * transform.scale + transform.offsetX;
-  const canvasY = container.clientHeight - worldPoint.y * transform.scale - transform.offsetY;
-  const top = containerRect.top + canvasY;
-  const height = Math.max(24, 2.5 * transform.scale * 4);
+): { anchor: TextEditorAnchor; worldWidth: number } {
   const screenWidth = isMText ? mtextOverlayWidth(container.clientWidth) : TEXT_OVERLAY_WIDTH_PX;
-  const worldWidth = screenWidth / transform.scale;
-  return { left, top, width: screenWidth, height, worldWidth };
+  const anchor = createTextEditorAnchor2D({
+    worldPoint,
+    getContainer,
+    size: { width: screenWidth, height: textEditorBoxHeightPx(2.5, transform.scale) },
+  });
+  return { anchor, worldWidth: screenWidth / transform.scale };
 }
 
 export function useTextCreationTool(
@@ -223,7 +232,9 @@ export function useTextCreationTool(
           snapped.y - rotatingState.insertionPoint.y,
           snapped.x - rotatingState.insertionPoint.x,
         ) * 180) / Math.PI;
-        const { worldWidth, ...anchorRect } = computeAnchorRect(rotatingState.insertionPoint, transform, container, isMText);
+        const { worldWidth, anchor } = computeAnchor(
+          rotatingState.insertionPoint, transform, container, () => containerRef.current, isMText,
+        );
         setRotatingState(null);
         clearTextRotationOrigin();
         setTextEditingActive(true); // πεδίο ανοιχτό → καμία stray φάντασμα-λέξη στο hover
@@ -231,7 +242,7 @@ export function useTextCreationTool(
           entityId: generateEntityId(),
           position: rotatingState.insertionPoint,
           initial: makeEmptyTextNode(rotatingState.units, drawingScale),
-          anchorRect,
+          anchor,
           worldWidth,
           forceMText: isMText,
           rotation: rotationDeg,
