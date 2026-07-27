@@ -23,6 +23,8 @@ import { findEntitiesAttachedToHosts } from '../../../bim/cascade/bim-cascade-re
 import { isColumnEntity, isWallEntity } from '../../../types/entities';
 import { DetachColumnsCommand, type ColumnDetachTarget } from './DetachColumnsCommand';
 import { DetachWallsCommand, type WallDetachTarget } from './DetachWallsCommand';
+// ADR-649 §associative — delete-time lifecycle hook (ορφανή ετικέτα εμβαδού + un-orphan στο undo).
+import { reconcileAssociativeGeometryOnDelete } from '../../../bim/cascade/associative-geometry-reconcile';
 import type { EntityAttachSide } from '../../../bim/entities/entity-attach-detach';
 import type { Entity } from '../../../types/entities';
 import type { ColumnKind } from '../../../bim/types/column-types';
@@ -175,6 +177,10 @@ export class DeleteEntityCommand implements ICommand {
         ...detachColumnsOnHostDeletion([this.entityId], this.sceneManager),
         ...detachWallsOnHostDeletion([this.entityId], this.sceneManager),
       ];
+      // ADR-649 §associative — η ετικέτα εμβαδού που δείχνει σε ΑΥΤΗ την οντότητα γίνεται
+      // ορφανή και το δηλώνει («####»). Χωρίς αυτό θα συνέχιζε να δείχνει έναν αριθμό που
+      // δεν αντιστοιχεί πια σε τίποτα — σιωπηλό ψέμα στο σχέδιο.
+      reconcileAssociativeGeometryOnDelete([this.entityId], this.sceneManager);
     }
   }
 
@@ -192,6 +198,9 @@ export class DeleteEntityCommand implements ICommand {
       emitBimRestoreIfApplicable(this.entitySnapshot);
       // ADR-401 — re-attach the columns AFTER the host is back in the scene.
       for (const c of this.hostDeletionDetaches) c.undo();
+      // ADR-649 §associative — η πηγή επέστρεψε: ο ΙΔΙΟΣ reconciler ξανα-γράφει τον
+      // πραγματικό αριθμό (διαβάζει την τρέχουσα σκηνή → καμία ξεχωριστή «un-orphan» διαδρομή).
+      reconcileAssociativeGeometryOnDelete([this.entityId], this.sceneManager);
     }
   }
 
@@ -202,6 +211,8 @@ export class DeleteEntityCommand implements ICommand {
     if (this.entitySnapshot) {
       this.sceneManager.removeEntity(this.entitySnapshot.id);
       for (const c of this.hostDeletionDetaches) c.redo();
+      // ADR-649 §associative — ίδιο μονοπάτι με το execute (η πηγή ξαναχάθηκε).
+      reconcileAssociativeGeometryOnDelete([this.entityId], this.sceneManager);
     }
   }
 
@@ -303,6 +314,10 @@ export class DeleteMultipleEntitiesCommand implements ICommand {
         ...detachColumnsOnHostDeletion(this.entityIds, this.sceneManager),
         ...detachWallsOnHostDeletion(this.entityIds, this.sceneManager),
       ];
+      // ADR-649 §associative — ίδιο lifecycle hook με το single delete. ΠΡΕΠΕΙ να είναι και
+      // εδώ: αλλιώς «σβήνω μία πηγή → ένδειξη· σβήνω δύο μαζί → σιωπηλά μπαγιάτικος αριθμός»,
+      // δηλαδή η συμπεριφορά θα εξαρτιόταν από το πόσα διάλεξε ο χρήστης.
+      reconcileAssociativeGeometryOnDelete(this.entityIds, this.sceneManager);
     }
   }
 
@@ -320,6 +335,9 @@ export class DeleteMultipleEntitiesCommand implements ICommand {
       }
       // ADR-401 — re-attach the columns AFTER the hosts are back in the scene.
       for (const c of this.hostDeletionDetaches) c.undo();
+      // ADR-649 §associative — οι πηγές επέστρεψαν: ο ίδιος reconciler ξανα-γράφει τους
+      // πραγματικούς αριθμούς (scene-derived → καμία ξεχωριστή διαδρομή «un-orphan»).
+      reconcileAssociativeGeometryOnDelete(this.entityIds, this.sceneManager);
     }
   }
 
@@ -331,6 +349,8 @@ export class DeleteMultipleEntitiesCommand implements ICommand {
       this.sceneManager.removeEntity(entity.id);
     }
     for (const c of this.hostDeletionDetaches) c.redo();
+    // ADR-649 §associative — ίδιο μονοπάτι με το execute (οι πηγές ξαναχάθηκαν).
+    reconcileAssociativeGeometryOnDelete(this.entityIds, this.sceneManager);
   }
 
   /**

@@ -174,5 +174,81 @@ export function buildAreaLabelEntity(entity: Entity, clickPoint: Point2D): TextE
     text: lines.join('\n'),
     textNode: buildAreaLabelTextNode(lines, height),
     rotation: 0,
+    // ADR-649 §associative — ΕΔΩ γεννιέται ο σύνδεσμος που κάνει την ετικέτα ζωντανή.
+    // Χωρίς αυτό το πεδίο η ετικέτα είναι στιγμιότυπο: ο αριθμός μένει παγωμένος όσο η
+    // πηγή αλλάζει, και το σχέδιο λέει ψέματα χωρίς καμία ένδειξη.
+    areaSourceId: entity.id,
   };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ADR-649 §associative — επανυπολογισμός & ορφανή αναφορά
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Η ένδειξη «η αναφορά δεν λύνεται». Η σύμβαση των μεγάλων, και οι δύο συγκλίνουν:
+ * το AutoCAD FIELD δείχνει `####` όταν σβηστεί το αντικείμενο αναφοράς, και η Revit
+ * αφήνει την ετικέτα *orphaned* με `?` αντί για τιμή. **Καμία από τις δύο δεν σβήνει
+ * την ετικέτα και καμία δεν κρατά σιωπηλά τον παλιό αριθμό** — γιατί ένας αριθμός που
+ * δεν αντιστοιχεί πια σε τίποτα είναι χειρότερος από κανέναν αριθμό.
+ *
+ * Κρατάμε το `####` (σύμβαση DXF, και το έργο είναι DXF-native), με το **πρόθεμα άθικτο**:
+ * «Εμβαδόν: ####» λέει ταυτόχρονα τι έλειπε και ότι λείπει.
+ */
+export const INVALID_AREA_REFERENCE = '####';
+
+/**
+ * Οι γραμμές μιας ετικέτας με **σβησμένη πηγή**: κάθε τιμή μετά την τελευταία άνω-κάτω
+ * τελεία αντικαθίσταται από το {@link INVALID_AREA_REFERENCE}, το πρόθεμα μένει.
+ *
+ * **Ιδεμποτεντικό by construction** (N.7.2 #3): δεύτερη εφαρμογή δίνει το ίδιο κείμενο,
+ * άρα ο cascade δεν παράγει ατέρμονες αλλαγές σε κάθε πέρασμα. Γραμμή χωρίς `:` μένει
+ * ως έχει — δεν μαντεύουμε δομή που δεν φτιάξαμε εμείς.
+ */
+export function orphanAreaLabelLines(lines: readonly string[]): string[] {
+  return lines.map((line) => {
+    const at = line.lastIndexOf(':');
+    return at < 0 ? line : `${line.slice(0, at + 1)} ${INVALID_AREA_REFERENCE}`;
+  });
+}
+
+/**
+ * Το ύψος κειμένου **που ήδη έχει** η ετικέτα, διαβασμένο από το πρώτο της run.
+ *
+ * Ο επανυπολογισμός **ΔΕΝ** ξανα-εφαρμόζει το `fitAreaLabelHeight`: το μέγεθος της
+ * ετικέτας είναι **στυλ που βλέπει και ρυθμίζει ο χρήστης**, όχι παράγωγο μέγεθος. Αν το
+ * ξανα-προσαρμόζαμε σε κάθε αλλαγή της πηγής, η ετικέτα θα αναπηδούσε σε κάθε σύρσιμο
+ * λαβής — και η Revit ακριβώς το αντίθετο κάνει (το tag κρατά το μέγεθος του τύπου του,
+ * μόνο η **τιμή** ενημερώνεται). Απόν ⇒ 1 (ο ίδιος degenerate πήχης με το fit).
+ */
+export function currentAreaLabelHeight(label: TextEntity): number {
+  const run = label.textNode?.paragraphs?.[0]?.runs?.[0];
+  const height = run?.style?.height;
+  return typeof height === 'number' && height > 0 ? height : 1;
+}
+
+/**
+ * Το **patch** που πρέπει να πάρει η ετικέτα ώστε να δείχνει την τρέχουσα αλήθεια της
+ * πηγής της, ή `null` όταν **τίποτα δεν άλλαξε**.
+ *
+ * Το `null` είναι το idempotency σήμα που κρατά τον cascade ήσυχο: αμετάβλητο ⇒ καμία
+ * εγγραφή, κανένα emit, μηδέν persist churn (ADR-540 / ADR-492 §4). Χωρίς αυτό, κάθε
+ * μετακίνηση οποιασδήποτε οντότητας θα ξαναέγραφε κάθε ετικέτα.
+ *
+ * `source === null` ⇒ η πηγή σβήστηκε ⇒ ορφανή ένδειξη. Πηγή που **έπαψε** να έχει
+ * μετρήσιμο εμβαδόν (π.χ. εκφυλίστηκε η τριγωνοποίηση) αντιμετωπίζεται το ίδιο: δεν
+ * υπάρχει αριθμός να δειχθεί, και η σιωπή θα ήταν ψέμα.
+ *
+ * ⚠️ Η **θέση** δεν αγγίζεται ποτέ: ο χρήστης μπορεί να έχει σύρει την ετικέτα εκεί που
+ * τη θέλει, και ένα associative recompute δεν είναι άδεια να του τη μετακινήσουμε.
+ */
+export function areaLabelRefreshPatch(
+  label: TextEntity,
+  source: Entity | null,
+): Pick<TextEntity, 'text' | 'textNode'> | null {
+  const fresh = source ? buildAreaLabelLines(source) : [];
+  const lines = fresh.length > 0 ? fresh : orphanAreaLabelLines(label.text.split('\n'));
+  const text = lines.join('\n');
+  if (text === label.text) return null;
+  return { text, textNode: buildAreaLabelTextNode(lines, currentAreaLabelHeight(label)) };
 }

@@ -214,6 +214,24 @@ export interface TextEntity extends BaseEntity {
    * so the identity survives without a cast (N.2). Plain TEXT/MTEXT leave it undefined.
    */
   attributeTag?: string;
+  /**
+   * ADR-649 §associative — **ο σύνδεσμος που κάνει την ετικέτα εμβαδού ζωντανή**: η
+   * οντότητα από την οποία μετρήθηκε το εμβαδόν (γραμμοσκίαση / τοπογραφική επιφάνεια).
+   *
+   * Παρών ⇒ η ετικέτα είναι **associative**: μετά από κάθε αλλαγή της πηγής ο
+   * `cascadeAreaLabels` ξανα-υπολογίζει το κείμενο **μέσα στην εντολή** (command-time,
+   * ποτέ reactive effect — ADR-492 §4: ένα effect που άκουγε geometry events και
+   * ξανα-εξέπεμπε γεωμετρία έκανε βρόχο → storm/freeze).
+   *
+   * Απών ⇒ σκέτο κείμενο (χειροκίνητο, ή ετικέτα φτιαγμένη πριν το associative). Η
+   * απουσία είναι **έγκυρη κατάσταση, όχι σφάλμα**: παλιές ετικέτες παραμένουν
+   * στιγμιότυπα και δεν μεταλλάσσονται αναδρομικά.
+   *
+   * Το id μπορεί να δείχνει σε **σβησμένη** οντότητα — τότε η ετικέτα είναι *orphaned*
+   * και το δηλώνει (Revit «?» / AutoCAD FIELD «####»). Δεν καθαρίζεται ποτέ αυτόματα:
+   * το undo της διαγραφής πρέπει να μπορεί να την ξανα-συνδέσει.
+   */
+  areaSourceId?: string;
 }
 
 export interface MTextEntity extends BaseEntity {

@@ -16,6 +16,9 @@
  *  1. **Scene-derived reconcilers** (idempotent, διαβάζουν την ΤΡΕΧΟΥΣΑ σκηνή, ΧΩΡΙΣ delta):
  *     - openings → wall  (`cascadeHostedOpeningsForWalls`)
  *     - beams → column faces (`cascadeBeamReframe`)
+ *     - **ετικέτα εμβαδού → πηγή** (`cascadeAreaLabels`, ADR-649 §associative): το εμβαδόν
+ *       ξαναμετριέται, δεν «ακολουθεί» delta — γι' αυτό ανήκει εδώ και όχι στους followers.
+ *       Καλύπτει γραμμοσκίαση ΚΑΙ τοπογραφική επιφάνεια με ΕΝΑΝ μηχανισμό.
  *     Αυτά ανήκουν εδώ: τρέχουν μετά από **οποιαδήποτε** αλλαγή host (transform Ή params).
  *  2. **Delta-followers** (χρειάζονται το transform delta dx,dy): connected pipes + slab-openings.
  *     ΔΕΝ ζουν εδώ — ένα params-edit δεν παράγει delta γι' αυτά· μένουν transform-only μέσα
@@ -44,6 +47,7 @@ import { cascadeHostedOpeningsForWalls } from '../walls/wall-opening-coordinator
 import { cascadeBeamReframe } from '../beams/beam-column-reframe-cascade';
 import { cascadeStairwellOpenings } from '../stairs/stairwell-opening-coordinator';
 import { cascadeStairRailings } from '../stairs/stair-railing-coordinator';
+import { cascadeAreaLabels } from '../../systems/measure/area-label-cascade';
 import { EventBus } from '../../systems/events/EventBus';
 
 /**
@@ -53,7 +57,7 @@ import { EventBus } from '../../systems/events/EventBus';
  */
 type CascadeSceneManager = Pick<
   ISceneManager,
-  'getEntity' | 'updateEntities' | 'addEntity' | 'removeEntity'
+  'getEntity' | 'updateEntities' | 'addEntity' | 'removeEntity' | 'updateEntity'
 > & {
   getEntities?(): readonly SceneEntity[];
 };
@@ -102,12 +106,20 @@ export function reconcileAssociativeGeometry(
   //     ταξιδέψουν σε `bim:entities-moved` (per-entity Firestore persist + organism re-derive).
   const reframed = cascadeBeamReframe(changedIds, sceneManager);
 
+  // (2b) ζωντανή ετικέτα εμβαδού → πηγή (ADR-649 §associative): το εμβαδόν ΞΑΝΑΜΕΤΡΙΕΤΑΙ από
+  //      την τρέχουσα σκηνή (scene-derived, χωρίς delta) και το κείμενο της ετικέτας
+  //      ενημερώνεται. Καλύπτει με ΕΝΑΝ μηχανισμό και τη γραμμοσκίαση (grip/μετασχηματισμός
+  //      μέσω των δύο υπαρχόντων call sites) και την τοπογραφική επιφάνεια. Ιδεμποτεντικό:
+  //      αμετάβλητο κείμενο → κανένα patch, άρα κανένα emit (ADR-492 §4 zero-loop).
+  const relabelled = cascadeAreaLabels(changedIds, sceneManager);
+
   // (3) ΕΝΑ emit: announceEntities (transform hosts + followers) + reframed δοκάρια, dedup ανά id
   //     (το reframed νικά — όταν το ίδιο το δοκάρι μετασχηματίστηκε ΚΑΙ ξανα-κόπηκε, στέλνεται μία
   //     φορά με την τελική framed γεωμετρία).
   const byId = new Map<string, SceneEntity>();
   for (const e of options.announceEntities ?? []) byId.set(e.id, e);
   for (const b of reframed) byId.set(b.id, b as unknown as SceneEntity);
+  for (const l of relabelled) byId.set(l.id, l);
   if (byId.size === 0) return;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -156,4 +168,36 @@ export function reconcileAssociativeGeometryOnCreate(
   // ADR-407 Φ7 — μια νέα σκάλα γεννά αυτόματα το/τα hosted κάγκελό της on-creation (Revit parity:
   // το Railing δημιουργείται μαζί με τη σκάλα, όχι μόνο on host-change). Type-gated στη σκάλα.
   if (isStairEntity(createdEntity)) cascadeStairRailings(sceneManager);
+}
+
+/**
+ * ADR-649 §associative — **DELETE-time** associative trigger (SSoT).
+ *
+ * Το {@link reconcileAssociativeGeometry} τρέχει σε **αλλαγή** host, το
+ * {@link reconcileAssociativeGeometryOnCreate} σε **δημιουργία** — η **διαγραφή** ήταν το
+ * τρίτο, ακάλυπτο σκέλος του κύκλου ζωής. Χωρίς αυτό, σβήνοντας μια γραμμοσκίαση η ετικέτα
+ * της έμενε να δείχνει έναν αριθμό που **δεν αντιστοιχούσε πια σε τίποτα**, χωρίς καμία
+ * ένδειξη — ακριβώς το ψέμα που το associative υποτίθεται ότι εξαλείφει.
+ *
+ * ⚠️ **Τρέχει ΜΟΝΟ τον area-label reconciler, ΟΧΙ ολόκληρο τον geometry cascade** — και αυτό
+ * είναι σκόπιμο, με το ίδιο σκεπτικό που το create path τρέχει υποσύνολο: οι geometry
+ * cascades (ανοίγματα/δοκάρια/κλιμακοστάσιο/κάγκελα) έχουν τη δική τους διαδρομή διαγραφής
+ * και το να τους καλέσουμε εδώ θα άλλαζε σιωπηλά συμπεριφορά τοίχων/σκαλών που καμία ανάγκη
+ * δεν το ζήτησε. Ένα lifecycle hook αγγίζει ό,τι ξέρει ότι σπάει, όχι ό,τι μπορεί.
+ *
+ * **Συμμετρικό στο undo:** ο ίδιος reconciler καλείται και όταν η οντότητα **επιστρέφει** —
+ * διαβάζει την τρέχουσα σκηνή, βρίσκει την πηγή ζωντανή και ξανα-γράφει τον πραγματικό
+ * αριθμό. Καμία ξεχωριστή διαδρομή «un-orphan», καμία κατάσταση να ξεσυγχρονιστεί.
+ *
+ * @see core/commands/entity-commands/DeleteEntityCommand.ts — execute / undo / redo call site
+ * @see systems/measure/area-label-cascade.ts — `cascadeAreaLabels` (ο ίδιος, reused)
+ */
+export function reconcileAssociativeGeometryOnDelete(
+  affectedIds: readonly string[],
+  sceneManager: CascadeSceneManager,
+): void {
+  const relabelled = cascadeAreaLabels(affectedIds, sceneManager);
+  if (relabelled.length === 0) return;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  EventBus.emit('bim:entities-moved', { movedEntities: relabelled as any });
 }

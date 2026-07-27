@@ -30,6 +30,8 @@ import { DeleteEntityCommand } from '../../core/commands/entity-commands/DeleteE
 import { CompoundCommand } from '../../core/commands/CompoundCommand';
 import type { ICommand, SceneEntity } from '../../core/commands/interfaces';
 import { ensureTopoLayer } from './ensure-topo-layer';
+// ADR-649 §associative — ξαναμέτρηση των ζωντανών ετικετών μετά την αναδημιουργία.
+import { reconcileAssociativeGeometry } from '../../bim/cascade/associative-geometry-reconcile';
 import {
   buildTopoSurfaceEntity, topoSurfaceEntityId,
   TOPO_SURFACE_LAYER_NAME, TOPO_SURFACE_COLOR,
@@ -85,6 +87,12 @@ export function useTopoSurfaceEntity(): UseTopoSurfaceEntity {
       getGlobalCommandHistory().execute(
         commands.length > 1 ? new CompoundCommand('topo-surface generate', commands) : commands[0],
       );
+
+      // ADR-649 §associative — η «Αναδημιουργία» είναι ο ΤΡΙΤΟΣ trigger αλλαγής επιφάνειας
+      // (δίπλα στο σύρσιμο λαβής και στη διαγραφή). Το id είναι σταθερό, οπότε οι ετικέτες
+      // μένουν συνδεδεμένες — αλλά το εμβαδόν άλλαξε και πρέπει να ξαναμετρηθεί ΤΩΡΑ, μέσα
+      // στην ίδια αλληλεπίδραση. Ιδεμποτεντικό: αν το κείμενο βγει ίδιο, καμία εγγραφή.
+      reconcileAssociativeGeometry([id], adapter);
 
       return { ok: true, replaced };
     },
