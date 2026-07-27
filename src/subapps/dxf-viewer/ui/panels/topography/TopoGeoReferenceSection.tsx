@@ -71,6 +71,8 @@ export function TopoGeoReferenceSection(): React.JSX.Element {
   const [status, setStatus] = React.useState<Status | null>(null);
   /** ADR-650 §M10e — the proposal awaiting the engineer's «Εφαρμογή». Never auto-applied. */
   const [match, setMatch] = React.useState<GeoMatchResult | null>(null);
+  /** ADR-650 §M10e v23 — the matcher is a few hundred ms of blocking work· see `onAutoMatch`. */
+  const [matching, setMatching] = React.useState(false);
 
   const projectId = saveContext?.projectId ?? resolveActiveProjectId(levels) ?? null;
 
@@ -117,13 +119,29 @@ export function TopoGeoReferenceSection(): React.JSX.Element {
       setStatus({ text: t('topography.geoRef.match.noData'), error: true });
       return;
     }
-    setMatch(autoMatchToSurvey({
-      entities: scene.entities,
-      layersById: scene.layersById,
-      ...(scene.sourceOrigin ? { sourceOrigin: scene.sourceOrigin } : {}),
-      surveyPoints,
-    }));
     setStatus(null);
+    setMatching(true);
+
+    // ADR-650 §M10e v23 — the match is SYNCHRONOUS and, measured on a 1 900-entity drawing,
+    // ~250 ms when it finds an answer and ~570 ms when it proves there is none. React does not
+    // paint between `setMatching(true)` and a blocking call in the same tick, so without this
+    // the button would sit silent for the whole run and the user would read that as «nothing
+    // happened» and click again. Two frames is the idiom that guarantees the busy label has
+    // actually reached the screen. `startTransition` cannot help: there is no interruptible
+    // render here, only one long call.
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      try {
+        setMatch(autoMatchToSurvey({
+          entities: scene.entities,
+          layersById: scene.layersById,
+          ...(scene.sourceOrigin ? { sourceOrigin: scene.sourceOrigin } : {}),
+          surveyPoints,
+        }));
+      } finally {
+        // `finally`, so a throw inside the matcher cannot leave the panel permanently busy.
+        setMatching(false);
+      }
+    }));
   }, [currentLevelId, getLevelScene, t]);
 
   const onApplyMatch = React.useCallback(async () => {
@@ -184,8 +202,14 @@ export function TopoGeoReferenceSection(): React.JSX.Element {
       <section className={styles.field}>
         <h3 className={styles.label}>{t('topography.geoRef.match.title')}</h3>
         <p className={styles.subtitle}>{t('topography.geoRef.match.hint')}</p>
-        <button type="button" className={styles.generateButton} onClick={onAutoMatch}>
-          {t('topography.geoRef.match.run')}
+        <button
+          type="button"
+          className={styles.generateButton}
+          onClick={onAutoMatch}
+          disabled={matching}
+          aria-busy={matching}
+        >
+          {t(matching ? 'topography.geoRef.match.running' : 'topography.geoRef.match.run')}
         </button>
         {match && (
           <TopoGeoMatchResultCard result={match} onApply={onApplyMatch} onDismiss={onDismissMatch} />
