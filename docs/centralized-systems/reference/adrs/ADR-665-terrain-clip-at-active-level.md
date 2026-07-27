@@ -224,9 +224,11 @@ warn **μία φορά ανά υπογραφή** (ένα drag του slider ξα
 
 ---
 
-# M2 — Poché χώματος στην τομή του εδάφους (BLUEPRINT, 2026-07-28)
+# M2 — Poché χώματος στην τομή του εδάφους
 
-**Status M2:** 🔵 BLUEPRINT — γραμμένο πριν τον κώδικα (N.0.1 Φάση 1).
+**Status M2:** 🟢 **IMPLEMENTED — 2026-07-28**. Το blueprint γράφτηκε πρώτο (N.0.1 Φάση 1) και
+υλοποιήθηκε **χωρίς απόκλιση** από τις αποφάσεις του· τα δύο σημεία που άλλαξαν στην πορεία (και τα
+δύο προς το αυστηρότερο) είναι σημειωμένα στο M2.12.
 
 Η v1 έστειλε κούφια τομή. Ο μηχανικός βλέπει την **κάτω επιφάνεια** του TIN, δηλαδή κέλυφος —
 όχι **χώμα**. Το M2 κλείνει αυτό, **χωρίς** να χαλαρώσει καμία από τις τρεις ενστάσεις της v1.
@@ -476,6 +478,48 @@ stencil και μπορεί να αλλοιώσει τα caps του κτιρί�
   αληθινό στερεό. Ρητά εκτός.
 - **Οι ισοϋψείς δεν αποτυπώνονται στον cap** (Civil 3D δεν το κάνει ούτε αυτό).
 
+## M2.12 — Τι υλοποιήθηκε, και τα δύο σημεία που η υλοποίηση **έσφιξε**
+
+| Αρχείο | Ρόλος |
+|---|---|
+| `systems/topography/planar-scalar-clip.ts` **(ΝΕΟ)** | Ο **ΕΝΑΣ** κόφτης ημιεπιπέδου σε βαθμωτό πεδίο. |
+| `systems/topography/cut-fill-geometry.ts` | Το `clipToSign` έγινε **thin adapter** (πεδίο `Δz`). Το `cut-fill.test.ts` πέρασε **αμετάβλητο** ⇒ μηδενική αλλαγή συμπεριφοράς. |
+| `systems/topography/terrain-cut-cap-geometry.ts` **(ΝΕΟ)** | TIN + `levelElevMm` → τρίγωνα του cap σε WORLD mm + `planAreaMm2` (το anchor) + το συμπληρωματικό `terrainBelowLevelPlanAreaMm2`. |
+| `systems/topography/vertical-datum.ts` | `surfaceElevationAtWorldYMm()` — η αντιστροφή του M2.3 (datum **+ drop**). |
+| `bim-3d/converters/terrain-cap-to-three.ts` **(ΝΕΟ)** | WORLD mm → `BufferGeometry` στη στάθμη, με **ψημένα world-space UV**. |
+| `bim-3d/systems/section/section-hatch-cap.ts` | Key **`earth`** + `getSectionHatchTexture()` + `SECTION_HATCH_TILE_M`. |
+| `bim-3d/materials/terrain-materials-3d.ts` | `getTerrainCutCapMaterial3D(opacity)` — άφωτο, DoubleSide, ίδιο `applyTerrainOpacity`. |
+| `bim-3d/scene/terrain/topo-scene-layer-support.ts` | `TopoLayerSeating` (drop + clip scope) · `CUT_CAP_SEATING` · **`SingleMeshTopoLayer`** (βλ. παρακάτω). |
+| `bim-3d/scene/terrain/TerrainCutCapLayer.ts` **(ΝΕΟ)** | Το τρίτο αδερφάκι. |
+| `bim-3d/systems/section/section-clip-applicator.ts` | Ο marker έγινε **τρικατάστατος**. |
+| `bim-3d/systems/section/section-parity-overlay.ts` | `SECTION_PARITY_EXCLUDE_KEY` + `excludeFromSectionParity()`. |
+| `scene-manager-construct.ts` / `ThreeJsSceneManager.ts` | Κατασκευή + `dispose()`, καθρέφτης του contour layer. |
+| `.ssot-registry.json` | Δύο νέα modules (tier 3): `planar-scalar-clip`, `terrain-cut-cap`. |
+
+### Απόκλιση 1 — μη-πεπερασμένο πεδίο **απορρίπτει ολόκληρο το πολύγωνο**
+
+Το blueprint υπέθετε ότι αρκεί να θεωρηθεί «έξω» μια κορυφή με μη-πεπερασμένο `f`. **Λάθος, και το
+έπιασε το τεστ:** η ΑΚΜΗ που την ακουμπά ζητά παρεμβολή μεταξύ πεπερασμένου και NaN, που δίνει NaN
+**συντεταγμένη** — δηλαδή το σφάλμα μεταναστεύει από το πεδίο στη ΓΕΩΜΕΤΡΙΑ, και μία NaN κορυφή
+αρκεί για να γίνει NaN το `Box3` της σκηνής και να σβήσει όλο το 3Δ (ADR-537). Ο κόφτης πλέον
+προϋπολογίζει τα πεδία και **απορρίπτει ολόκληρο το πολύγωνο** αν έστω ένα δεν είναι πεπερασμένο.
+Οι όγκοι cut/fill δεν επηρεάζονται (εκεί το `dz` είναι εγγυημένα πεπερασμένο· η παλιά διαδρομή
+κατέληγε ούτως ή άλλως σε μηδενική συνεισφορά, μέσω του φίλτρου εμβαδού).
+
+### Απόκλιση 2 — `SingleMeshTopoLayer` (το CHECK 3.28 είχε δίκιο)
+
+Το `TerrainCutCapLayer` γεννήθηκε **δίδυμο** του `TerrainSceneLayer`: ίδιο πεδίο `mesh`, ίδια έδραση
+(add + parity-exclude + σκιές + bookkeeping), ίδιο `clearContent`. Ο κανονικός τρόπος με τον οποίο
+γεννιέται sibling clone — αντιγράφεις τον αδερφό «επειδή κάνει ήδη το σωστό». Εξήχθη σε κοινή βάση
+`SingleMeshTopoLayer`, με μοναδική παράμετρο ό,τι γνήσια διαφέρει (**σκιές**: το ανάγλυφο τις θέλει,
+το poché όχι). Κέρδος πέρα από το anti-clone: το `excludeFromSectionParity` ζει τώρα **στη βάση**,
+οπότε ένας μελλοντικός τρίτος καταναλωτής — που θα έχει ακριβώς το ίδιο σχήμα — δεν χρειάζεται να το
+θυμηθεί μόνος του.
+
+Ίδιο μοτίβο με το Δ4 (2026-07-17), όπου το `onRebuilt` είχε γραφτεί ως twin και το ίδιο check το
+έκοψε. **Δεύτερη φορά στο ίδιο ADR** — τα topo layers είναι δομικά αδέρφια, και το προεπιλεγμένο
+λάθος εκεί είναι πάντα η αντιγραφή.
+
 ---
 
 ## Επιπτώσεις — τι αλλάζει ορατά
@@ -491,13 +535,23 @@ stencil και μπορεί να αλλοιώσει τα caps του κτιρί�
 ## Out of scope
 
 - **Point cloud (`topo-pointcloud`) δεν κόβεται** — δεν καλεί `seatTopoLayerRoot` (θέτει μόνο του `root.name`) → κανένας marker· και το `PointsMaterial` δεν είναι σε κανένα allowlist. Σκόπιμο: το νέφος είναι display-only τεκμήριο (ADR-650 §6).
-- **Poché / διαγράμμιση χώματος στην τομή** → M2.
+- **Poché / διαγράμμιση χώματος στην τομή** → M2. ✅ **Έγινε (2026-07-28)** — και **χωρίς** stencil:
+  βλ. §M2, όπου και οι τρεις ενστάσεις της v1 καταρρέουν επειδή η τομή υπολογίζεται αναλυτικά.
 - **Κατακόρυφη κοπή εδάφους** (X/Y) — τα axis cuts του ADR-455 ήδη το κόβουν μέσω του `topo` scope· δεν προστίθεται ξεχωριστός έλεγχος.
 
 ## Open Questions
 
 1. **Το `faceMode` δεν κάνει rebuild το terrain.** Τα topo layers ακούν `TopoPointStore` / `terrain-3d-store` / cut-fill / geo-ref — **όχι** `bim-render-settings`. Άρα μια αλλαγή faceMode αφήνει το terrain με stale material instance μέχρι κάποιο άλλο rebuild. **Προϋπάρχον** (ισχύει και σήμερα, χωρίς αυτό το ADR) και εκτός scope — καταγράφεται εδώ γιατί το `withTerrainFaceMode` το κάνει πιο ορατό.
-2. **Stencil parity + terrain.** Το `hideNonParityMeshes` (`section-parity-scene.ts:51`) δεν εξαιρεί το terrain mesh (δεν έχει `bimId`) και το `mainScene` που περνά στα cap passes είναι όλο το `deps.scene`, όχι το `getBimGroup()`. Ένα ανοιχτό DoubleSide TIN που συμμετέχει σε stencil parity counting (σχεδιασμένο για κλειστά manifold στερεά) μπορεί να αλλοιώσει caps όταν section geometry τέμνει το έδαφος. **Προϋπάρχον** (το terrain είναι ήδη στο scene) — το `isStencilActive()` μένει αμετάβλητο ώστε terrain-only τομή να μην ανοίγει καν αυτό το path.
+2. ~~**Stencil parity + terrain.**~~ ✅ **ΕΚΛΕΙΣΕ (2026-07-28, §M2.7) — για meshes.** Το
+   `hideNonParityMeshes` δεν εξαιρούσε το terrain mesh (δεν έχει `bimId`), οπότε ένα ανοιχτό
+   `DoubleSide` TIN συμμετείχε σε parity counting σχεδιασμένο για κλειστά manifold στερεά και
+   μπορούσε να αλλοιώσει caps όταν section geometry τέμνει το έδαφος. Το M2 έφερε το mesh του cap
+   στο **ίδιο** μονοπάτι, άρα το θέμα έπαψε να είναι θεωρητικό — και λύθηκε με ρητό δείκτη
+   `sectionParityExclude`, που τον αναγνωρίζει το υπάρχον `isSectionParityOverlay` και τον
+   σφραγίζει η `SingleMeshTopoLayer` **στη βάση**, σε ανάγλυφο και cap μαζί.
+   ⚠️ **Μένει ανοιχτό για γραμμές:** οι ισοϋψείς είναι `LineSegments`, που δεν φτάνουν καν στο
+   `isSectionParityOverlay` (θέλει `Mesh`/`Sprite`). Δεν εντοπίστηκε ζημιά από αυτές· καταγράφεται
+   ώστε να μη θεωρηθεί ότι το OQ#2 έκλεισε ολόκληρο.
 
 ---
 
