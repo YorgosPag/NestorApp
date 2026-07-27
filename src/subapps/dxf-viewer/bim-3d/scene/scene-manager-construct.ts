@@ -43,6 +43,7 @@ import { initBackgroundModeSubscription } from './scene-manager-actions';
 import { WaypointDragHandleRenderer } from '../animation/WaypointDragHandle';
 import { TerrainSceneLayer } from './terrain/TerrainSceneLayer'; // ADR-650 M4 — topographic surface
 import { TerrainContourLayer } from './terrain/TerrainContourLayer'; // ADR-650 M10d — draped 3D contours
+import { TerrainCutCapLayer } from './terrain/TerrainCutCapLayer'; // ADR-665 M2 — poché χώματος στην τομή
 import { PointCloudSceneLayer } from './terrain/PointCloudSceneLayer'; // ADR-650 M8β/Β — point cloud (display-only)
 import { TopoAutoBreaklineCandidateLayer } from './terrain/TopoAutoBreaklineCandidateLayer'; // ADR-650 M8β/Γ — υποψήφιες ασυνέχειες
 
@@ -83,6 +84,7 @@ export interface SceneManagerParts {
   readonly gridFloor: Cinema4DGridFloor;
   readonly terrainLayer: TerrainSceneLayer; // ADR-650 M4 — topographic surface (TIN → mesh)
   readonly terrainContourLayer: TerrainContourLayer; // ADR-650 M10d — draped contour lines (once, real z)
+  readonly terrainCutCapLayer: TerrainCutCapLayer; // ADR-665 M2 — earth poche on the level cut
   readonly pointCloudLayer: PointCloudSceneLayer; // ADR-650 M8β/Β — display-only cloud (never geometry)
   /** ADR-650 M8β/Γ — auto-breakline proposals under review (never the survey until approved). */
   readonly autoBreaklineLayer: TopoAutoBreaklineCandidateLayer;
@@ -186,6 +188,13 @@ export function buildSceneManagerParts(deps: SceneManagerConstructDeps): SceneMa
   // είναι γραμμές (Revit Toposurface contours), ανεξάρτητο από το floor scope.
   const terrainContourLayer = new TerrainContourLayer(scene, markDirty, (root) => reapplyTopoClip(root));
 
+  // ADR-665 M2 — η ΕΠΙΦΑΝΕΙΑ της τομής του εδάφους: poché χώματος αντί για κούφιο κέλυφος. Τρίτο
+  // αδερφάκι και όχι περιεχόμενο του terrain layer, γιατί ακούει τη ΣΤΑΘΜΗ (ενεργός όροφος +
+  // floor scope) που τα άλλα δύο δεν ακούν — και κάθεται σε άλλο clip scope (M2.6): η κοπή που τον
+  // γέννησε δεν τον τρώει, οι τομές του κτιρίου τον κόβουν. Ίδιο `reapplyTopoClip` καλλάκι: ένα
+  // φρέσκο υλικό ξεκινά με `clippingPlanes = null` και μόνο ο controller τα ξαναβάζει.
+  const terrainCutCapLayer = new TerrainCutCapLayer(scene, markDirty, (root) => reapplyTopoClip(root));
+
   // ADR-650 M8β/Β — το νέφος σημείων του τελευταίου import. Ξεχωριστό layer από το έδαφος: το
   // έδαφος είναι η ΜΕΤΡΗΜΕΝΗ επιφάνεια, το νέφος είναι display-only τεκμήριο (§6) — μπαίνουν και
   // βγαίνουν ανεξάρτητα, και το νέφος δεν συμμετέχει ποτέ σε raycast/snap.
@@ -256,7 +265,7 @@ export function buildSceneManagerParts(deps: SceneManagerConstructDeps): SceneMa
     selectionHighlighter, hoverHighlighter, faceHighlighter, faceHoverHighlighter,
     stairSubElementHighlighter, stairSubUnsub,
     buriedPartHighlighter, buriedPartUnsub,
-    poi, gridFloor, terrainLayer, terrainContourLayer, pointCloudLayer, autoBreaklineLayer,
+    poi, gridFloor, terrainLayer, terrainContourLayer, terrainCutCapLayer, pointCloudLayer, autoBreaklineLayer,
     animationManager, canonicalViewService,
     keyboardFocusManager, focusOutlineRenderer, focusUnsub, viewCube,
     envStoreUnsub, bgModeUnsub, sectionController, waypointDragHandleRenderer,

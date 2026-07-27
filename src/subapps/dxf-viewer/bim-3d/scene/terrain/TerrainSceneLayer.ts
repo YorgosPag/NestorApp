@@ -31,13 +31,12 @@ import {
   getGeoReference,
 } from '../../../systems/geo-referencing/geo-reference-store';
 import { getActiveVerticalDatumMm } from '../../../systems/topography/vertical-datum';
-import { TopoSceneLayer } from './topo-scene-layer-support';
+import { SingleMeshTopoLayer } from './topo-scene-layer-support';
 import type { TinSurface, TerrainSurfaceStyle } from '../../../systems/topography/topo-types';
 import type { GeoReference } from '../../../systems/geo-referencing/geo-transform';
 import type { ElevationReference } from '../../../systems/topography/cut-fill';
 import { tinToBufferGeometry } from '../../converters/tin-to-three';
 import { getTerrainMaterial3D } from '../../materials/terrain-materials-3d';
-import { disposeObjectTree } from '../dispose-object-tree';
 
 /** ADR-650 M10d — geometry inputs that force a re-triangulation (opacity is NOT one of them). */
 interface TerrainGeoInputs {
@@ -48,9 +47,7 @@ interface TerrainGeoInputs {
   readonly geoRef: GeoReference | null;
 }
 
-export class TerrainSceneLayer extends TopoSceneLayer<TerrainGeoInputs> {
-  private mesh: THREE.Mesh | null = null;
-
+export class TerrainSceneLayer extends SingleMeshTopoLayer<TerrainGeoInputs> {
   constructor(
     scene: THREE.Object3D,
     markDirty: () => void,
@@ -112,19 +109,11 @@ export class TerrainSceneLayer extends TopoSceneLayer<TerrainGeoInputs> {
     const lit = style === 'shaded';
     const mesh = new THREE.Mesh(geometry, getTerrainMaterial3D(style, opacity));
     mesh.name = 'topo-terrain-mesh';
-    mesh.castShadow = lit;
-    mesh.receiveShadow = lit; // the building must cast onto the earth ground, or it reads as floating
-    this.root.add(mesh);
-    this.mesh = mesh;
-    this.lastInputs = inputs;
-    this.markDirty();
-  }
-
-  /** Remove + free the current mesh. Geometry only — the material is a catalog singleton. */
-  protected clearContent(): void {
-    if (!this.mesh) return;
-    this.root.remove(this.mesh);
-    disposeObjectTree(this.mesh);
-    this.mesh = null;
+    // ADR-665 M2.7 (κλείνει το Open Question #2) — το TIN είναι ΑΝΟΙΧΤΗ επιφάνεια χωρίς `bimId`,
+    // οπότε περνούσε άθικτο μέσα από το `hideNonParityMeshes` και συμμετείχε σε stencil parity
+    // counting σχεδιασμένο για κλειστά στερεά → αδέσποτο stencil → αλλοιωμένα caps του κτιρίου
+    // όταν section geometry τέμνει το έδαφος. Δεν αγγίζει το κανονικό render· αφορά μόνο τα passes.
+    // `lit` → σκιές: το κτίριο πρέπει να ρίχνει πάνω στο χώμα, αλλιώς διαβάζεται σαν να αιωρείται.
+    this.seatMesh(mesh, inputs, lit);
   }
 }

@@ -8,6 +8,7 @@ import { BimSceneLayer } from './BimSceneLayer';
 import { Cinema4DGridFloor } from './grid/cinema4d-grid-floor'; // ADR-558 — Cinema-4D-style ground grid
 import type { TerrainSceneLayer } from './terrain/TerrainSceneLayer'; // ADR-650 M4 — topographic surface
 import type { TerrainContourLayer } from './terrain/TerrainContourLayer'; // ADR-650 M10d — draped 3D contours
+import type { TerrainCutCapLayer } from './terrain/TerrainCutCapLayer'; // ADR-665 M2 — earth poche cap
 import type { PointCloudSceneLayer } from './terrain/PointCloudSceneLayer'; // ADR-650 M8β/Β — point cloud
 import type { TopoAutoBreaklineCandidateLayer } from './terrain/TopoAutoBreaklineCandidateLayer'; // ADR-650 M8β/Γ
 import type { PerformanceCollector } from '../performance/PerformanceCollector'; import type { IdleDetector } from '../lighting/idle-detector';
@@ -80,6 +81,7 @@ export class ThreeJsSceneManager {
   private readonly gridFloor: Cinema4DGridFloor; // ADR-558 — Cinema-4D-style ground grid (post-FX underlay)
   private readonly terrainLayer: TerrainSceneLayer; // ADR-650 M4 — topographic surface (TIN → mesh)
   private readonly terrainContourLayer: TerrainContourLayer; // ADR-650 M10d — draped 3D contour lines
+  private readonly terrainCutCapLayer: TerrainCutCapLayer; // ADR-665 M2 — earth poche on the level cut
   private readonly pointCloudLayer: PointCloudSceneLayer; // ADR-650 M8β/Β — display-only point cloud
   private readonly autoBreaklineLayer: TopoAutoBreaklineCandidateLayer; // ADR-650 M8β/Γ — υποψήφιες υπό έγκριση
   readonly dxfConverter: DxfToThreeConverter;
@@ -199,6 +201,7 @@ export class ThreeJsSceneManager {
     this.buriedPartHighlighter = parts.buriedPartHighlighter; this.buriedPartUnsub = parts.buriedPartUnsub;
     this.poi = parts.poi; this.gridFloor = parts.gridFloor; this.terrainLayer = parts.terrainLayer;
     this.terrainContourLayer = parts.terrainContourLayer;
+    this.terrainCutCapLayer = parts.terrainCutCapLayer;
     this.pointCloudLayer = parts.pointCloudLayer;
     this.autoBreaklineLayer = parts.autoBreaklineLayer;
     this.animationManager = parts.animationManager; this.canonicalViewService = parts.canonicalViewService;
@@ -471,6 +474,7 @@ export class ThreeJsSceneManager {
     this.gridFloor.dispose(); // ADR-558 — unregister overlay + free grid geometry/material.
     this.terrainLayer.dispose(); // ADR-650 M4 — drop store subs + free the terrain mesh geometry.
     this.terrainContourLayer.dispose(); // ADR-650 M10d — drop store subs + free the contour line geometry.
+    this.terrainCutCapLayer.dispose(); // ADR-665 M2 — drop the storey/scope subs + free the cap geometry.
     this.pointCloudLayer.dispose(); // ADR-650 M8β/Β — drop store sub + free the cloud buffers + material.
     this.autoBreaklineLayer.dispose(); // ADR-650 M8β/Γ — drop the review sub + free the candidate lines.
     disposeMeshReveal(); // ADR-693 Φ2 — free any in-flight reveal veil (per-instance material + geometry).

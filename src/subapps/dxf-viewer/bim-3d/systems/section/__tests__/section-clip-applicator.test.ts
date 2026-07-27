@@ -200,3 +200,61 @@ describe('ADR-665 — per-scope routing', () => {
     expect((contour.material as THREE.LineBasicMaterial).clippingPlanes).toBeNull();
   });
 });
+
+/**
+ * ADR-665 M2.6 — ο marker είναι ΤΡΙΚΑΤΑΣΤΑΤΟΣ. Το `false` δεν είναι «απουσία»: είναι ΡΗΤΗ
+ * επαναφορά σε `'default'`, και υπάρχει για τον cap χώματος — την επιφάνεια που παρήγαγε η κοπή
+ * του εδάφους και που δεν επιτρέπεται να κοπεί από αυτήν (θα αυτοεξαφανιζόταν στο `dot ≈ 0`),
+ * ενώ πρέπει να κόβεται από κάθε τομή του κτιρίου.
+ */
+describe('ADR-665 M2 — τρικατάστατος clip-scope marker', () => {
+  const planes: ScopeClipPlanes = { default: [PLANE], topo: [TOPO_PLANE] };
+
+  function meshUnder(parent: THREE.Object3D): THREE.Mesh {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial());
+    parent.add(mesh);
+    return mesh;
+  }
+
+  it('marker `false` σε root του scene → planes του `default` (ο cap της τομής)', () => {
+    const scene = new THREE.Scene();
+    const capRoot = new THREE.Group();
+    capRoot.userData['topoClipScope'] = false;
+    const cap = meshUnder(capRoot);
+    scene.add(capRoot);
+
+    applyClippingPlanes(scene, planes);
+    expect((cap.material as THREE.MeshStandardMaterial).clippingPlanes).toEqual([PLANE]);
+  });
+
+  it('marker `false` ΜΕΣΑ σε topo root → ΕΠΑΝΑΦΕΡΕΙ σε `default`, δεν κληρονομεί', () => {
+    // Η δικλείδα: αν κάποιος αύριο ξανα-κρεμάσει τον cap κάτω από topo root, η δρομολόγηση
+    // ΔΕΝ αλλάζει σιωπηλά — ο cap συνεχίζει να μην κόβεται από την κοπή που τον γέννησε.
+    const scene = new THREE.Scene();
+    const topoRoot = new THREE.Group();
+    topoRoot.userData['topoClipScope'] = true;
+    const terrain = meshUnder(topoRoot);
+    const capRoot = new THREE.Group();
+    capRoot.userData['topoClipScope'] = false;
+    const cap = meshUnder(capRoot);
+    topoRoot.add(capRoot);
+    scene.add(topoRoot);
+
+    applyClippingPlanes(scene, planes);
+    expect((terrain.material as THREE.MeshStandardMaterial).clippingPlanes).toEqual([TOPO_PLANE]);
+    expect((cap.material as THREE.MeshStandardMaterial).clippingPlanes).toEqual([PLANE]);
+  });
+
+  it('ΑΠΩΝ marker → κληρονομιά (η προ-M2 συμπεριφορά μένει άθικτη)', () => {
+    const scene = new THREE.Scene();
+    const topoRoot = new THREE.Group();
+    topoRoot.userData['topoClipScope'] = true;
+    const plain = new THREE.Group(); // κανένας marker
+    const inherited = meshUnder(plain);
+    topoRoot.add(plain);
+    scene.add(topoRoot);
+
+    applyClippingPlanes(scene, planes);
+    expect((inherited.material as THREE.MeshStandardMaterial).clippingPlanes).toEqual([TOPO_PLANE]);
+  });
+});

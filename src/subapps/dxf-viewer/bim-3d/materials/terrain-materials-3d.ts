@@ -16,6 +16,7 @@ import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store
 import type { TerrainSurfaceStyle } from '../../systems/topography/topo-types'; // ADR-650 M4 (types only)
 import { TOPO_MAJOR_COLOR, TOPO_MINOR_COLOR } from '../../systems/topography/contour-config'; // ADR-650 M10d
 import { disposeAutoBreaklineMaterials3D } from './auto-breakline-materials-3d'; // ADR-650 M8β/Γ v2
+import { getSectionHatchTexture } from '../systems/section/section-hatch-cap'; // ADR-665 M2 — earth poché
 import { buildMat } from './pbr-material-builder';
 import {
   buildHiddenLineFaceMaterial,
@@ -34,6 +35,14 @@ const TERRAIN_CONTOUR_CACHE = new Map<string, THREE.LineBasicMaterial>();
 
 /** ADR-665 — the terrain's OWN faces-hidden / hidden-line instances, cached per mode. */
 const TERRAIN_FACE_CACHE = new Map<'none' | 'hidden-line', THREE.MeshStandardMaterial>();
+
+/**
+ * ADR-665 M2 — το υλικό του poché χώματος στην τομή. Ένα και μόνο, αλλά σε Map (όχι σε
+ * `let`) ώστε να το ελευθερώνει ο ίδιος βρόχος με τα υπόλοιπα στο {@link disposeTerrainMaterials3D}
+ * — ένα `let` θα ήταν η μία περίπτωση που ξεχνιέται στο teardown.
+ */
+const TERRAIN_CUT_CAP_CACHE = new Map<string, THREE.MeshBasicMaterial>();
+const CUT_CAP_KEY = 'elem-terrain:cut-cap';
 
 /**
  * ADR-650 M10d — apply a 0..1 transparency to a terrain-exclusive material IN PLACE (Civil 3D
@@ -132,6 +141,41 @@ export function getTerrainMaterial3D(style: TerrainSurfaceStyle, opacity = 1): T
 }
 
 /**
+ * ADR-665 M2.4 — το υλικό του **poché χώματος** στην τομή του αναγλύφου.
+ *
+ * ΑΦΩΤΟ (`MeshBasicMaterial`), για τους ΔΥΟ λόγους που αυτό το αρχείο έχει **ήδη** αποφασίσει για
+ * τις styles ανάλυσης — δεν ξανακρίνονται εδώ:
+ *   (α) το poché είναι **σχεδιαστική σύμβαση**, όχι φυσική επιφάνεια· πρέπει να διαβάζεται αληθινά
+ *       ανεξάρτητα από φωτισμό και σκιές, όπως ακριβώς η υψομετρική ράμπα·
+ *   (β) η τεκμηριωμένη παγίδα M10c — φωτισμένο υλικό πάνω στην επιφάνεια αποτύπωσης βγήκε
+ *       **κατάμαυρο** έξω από το frustum του σκιόφωτος, άρα αόρατο.
+ *
+ * `DoubleSide` επειδή η κάμερα κατεβαίνει κάτω από την τομή (ίδιο επιχείρημα με το ανοιχτό TIN).
+ * `depthTest` **μένει true**: με `false` ο cap θα ζωγράφιζε πάνω από το κτίριο, και επιπλέον θα
+ * ταξινομούνταν ως parity overlay από το `isSectionParityOverlay` — δηλαδή θα «περνούσε» το
+ * M2.7 για λάθος λόγο.
+ *
+ * Η υφή έρχεται από το **υπάρχον** σύστημα hatch (`section-hatch-cap`, key `earth`) — κανένας
+ * δεύτερος μηχανισμός διαγράμμισης. Το `repeat` της **δεν** αγγίζεται: ο cap ψήνει world-space UV
+ * στη γεωμετρία του (ADR-665 M2.4), ώστε η διαγράμμιση να μην κολυμπά στο zoom.
+ *
+ * Η διαφάνεια ακολουθεί το `surfaceOpacity` του εδάφους μέσω του ίδιου {@link applyTerrainOpacity}:
+ * διάφανος λόφος με αδιαφανή τομή διαβάζεται σαν δύο διαφορετικά αντικείμενα.
+ */
+export function getTerrainCutCapMaterial3D(opacity = 1): THREE.MeshBasicMaterial {
+  let mat = TERRAIN_CUT_CAP_CACHE.get(CUT_CAP_KEY);
+  if (!mat) {
+    mat = new THREE.MeshBasicMaterial({
+      map: getSectionHatchTexture('earth'),
+      side: THREE.DoubleSide,
+    });
+    TERRAIN_CUT_CAP_CACHE.set(CUT_CAP_KEY, mat);
+  }
+  applyTerrainOpacity(mat, opacity);
+  return mat;
+}
+
+/**
  * ADR-650 M10d — the 3D topographic CONTOUR line material (major index vs minor intermediate).
  *
  * Unlit `LineBasicMaterial` in the AutoCAD/Civil 3D brown family (the SAME palette the 2D plan
@@ -176,4 +220,8 @@ export function disposeTerrainMaterials3D(): void {
   TERRAIN_CONTOUR_CACHE.clear();
   for (const mat of TERRAIN_FACE_CACHE.values()) mat.dispose();
   TERRAIN_FACE_CACHE.clear();
+  // ADR-665 M2 — το υλικό του cap. Η ΥΦΗ του ανήκει στο `section-hatch-cap` (κοινό cache) και
+  // ελευθερώνεται από το `disposeHatchCap()` — δεν την κατέχουμε, δεν την κάνουμε dispose εδώ.
+  for (const mat of TERRAIN_CUT_CAP_CACHE.values()) mat.dispose();
+  TERRAIN_CUT_CAP_CACHE.clear();
 }

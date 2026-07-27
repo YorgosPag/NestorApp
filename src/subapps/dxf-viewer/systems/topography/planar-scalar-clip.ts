@@ -61,14 +61,28 @@ export function clipPolygonAtScalarZero<TVertex>(
   const n = polygon.length;
   if (n < 3) return [];
 
+  // Τα πεδία υπολογίζονται ΜΙΑ φορά, πριν από οτιδήποτε άλλο, για δύο λόγους. Ο δεύτερος είναι
+  // ο σοβαρός: αν έστω μία κορυφή έχει μη-πεπερασμένο πεδίο, **ολόκληρο** το πολύγωνο
+  // απορρίπτεται. Δεν αρκεί να τη θεωρήσουμε «έξω» — η ΑΚΜΗ που την ακουμπά θα ζητούσε
+  // παρεμβολή μεταξύ πεπερασμένου και NaN, που δίνει NaN **συντεταγμένη**, δηλαδή διαρροή του
+  // σφάλματος από το πεδίο στη ΓΕΩΜΕΤΡΙΑ. Και μία NaN κορυφή αρκεί για να γίνει NaN το `Box3`
+  // της σκηνής και να σβήσει όλο το 3Δ (ADR-537). Άρνηση > σιωπηλή μόλυνση.
+  const fields = new Array<number>(n);
+  for (let i = 0; i < n; i++) {
+    const field = fieldOf(polygon[i]!);
+    if (!Number.isFinite(field)) return [];
+    fields[i] = field;
+  }
+
   const out: TVertex[] = [];
   for (let i = 0; i < n; i++) {
+    const previousIndex = (i + n - 1) % n;
     const current = polygon[i]!;
-    const previous = polygon[(i + n - 1) % n]!;
-    const currentField = fieldOf(current);
-    const previousField = fieldOf(previous);
-    const currentInside = isInside(currentField, sign);
-    const previousInside = isInside(previousField, sign);
+    const previous = polygon[previousIndex]!;
+    const currentField = fields[i]!;
+    const previousField = fields[previousIndex]!;
+    const currentInside = sign * currentField >= 0;
+    const previousInside = sign * previousField >= 0;
 
     if (currentInside !== previousInside) {
       out.push(atCrossing(zeroCrossing(previous, previousField, current, currentField), previous, current));
@@ -100,14 +114,4 @@ function zeroCrossing<TVertex>(
 function toPoint<TVertex>(vertex: TVertex): Point2D {
   const { x, y } = vertex as unknown as Point2D;
   return { x, y };
-}
-
-/**
- * «Μέσα» = `sign · f ≥ 0`. Μη-πεπερασμένο πεδίο (NaN από εκφυλισμένο επίπεδο, ±Infinity από
- * αλλοιωμένη είσοδο) είναι **έξω** και στα δύο πρόσημα: μια κορυφή για την οποία δεν ξέρουμε
- * απάντηση δεν επιτρέπεται να μπει σιωπηλά σε κομμάτι — θα δηλητηρίαζε το bounding box όλης της
- * σκηνής (ADR-537, «ένα NaN μηδενίζει το 3Δ»).
- */
-function isInside(field: number, sign: 1 | -1): boolean {
-  return Number.isFinite(field) && sign * field >= 0;
 }

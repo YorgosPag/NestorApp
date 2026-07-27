@@ -118,9 +118,29 @@ function isSectionBoxPart(obj: THREE.Object3D): boolean {
   return obj.userData['sectionBoxPart'] === true;
 }
 
-/** ADR-665 — a topo layer root re-scopes itself and its whole subtree. */
+/**
+ * ADR-665 — a topo layer root re-scopes itself and its whole subtree.
+ *
+ * ADR-665 M2 — ο marker είναι **τρικατάστατος**, όχι boolean flag:
+ *   `true`      → `'topo'`   (ανάγλυφο + ισοϋψείς: παίρνουν την κοπή στη στάθμη ορόφου)
+ *   `false`     → `'default'` (ΡΗΤΗ επαναφορά)
+ *   `undefined` → κληρονομιά από τον γονέα
+ *
+ * Το ρητό `false` υπάρχει για τον **cap χώματος**: είναι η επιφάνεια που *παρήγαγε* η κοπή του
+ * εδάφους, οπότε η κοπή που τον έφτιαξε δεν επιτρέπεται να τον φάει (κάθεται πάνω στο επίπεδο ⇒
+ * `dot ≈ 0` ⇒ θα αυτοεξαφανιζόταν), ενώ **κάθε** τομή του κτιρίου (section box / axis cut / crop)
+ * πρέπει να τον κόβει — δηλαδή ακριβώς το σύνολο `'default'`.
+ *
+ * Γιατί ρητό `false` και όχι «απλώς μη σφραγίσεις»: το «χωρίς marker» δίνει σήμερα το ίδιο
+ * αποτέλεσμα μόνο επειδή τα topo roots κρέμονται απευθείας στο `scene`. Αν κάποιος αύριο
+ * ξανα-κρεμάσει τον cap κάτω από topo root, η δρομολόγηση θα άλλαζε **σιωπηλά** — και η σιωπή
+ * είναι το πρόβλημα, όχι η θέση.
+ */
 function scopeOf(obj: THREE.Object3D, inherited: ClipScope): ClipScope {
-  return obj.userData['topoClipScope'] === true ? 'topo' : inherited;
+  const marker = obj.userData['topoClipScope'];
+  if (marker === true) return 'topo';
+  if (marker === false) return 'default';
+  return inherited;
 }
 
 /**
