@@ -18,6 +18,7 @@ import type { ColumnEntity } from '../../types/column-types';
 import type { BeamEntity } from '../../types/beam-types';
 import type { StairEntity } from '../../types/stair-types';
 import type { GenericSolidEntity } from '../../entities/generic-solid/generic-solid-types';
+import type { ImportedMeshEntity } from '../../entities/imported-mesh/imported-mesh-types';
 import type { Point2D } from '../../../rendering/types/Types';
 
 const ORIGIN: Point2D = { x: 0, y: 0 };
@@ -230,6 +231,43 @@ function makeGenericSolid(): GenericSolidEntity {
     },
     validation: { hasCodeViolations: false, violationKeys: [], lastValidatedAt: null },
   } as unknown as GenericSolidEntity;
+}
+
+/**
+ * ADR-683 Φ3α — εισαγόμενο ψημένο πλέγμα. Δίδυμος του `generic-solid` ως προς την
+ * ΤΟΠΟΘΕΤΗΣΗ (`position` + `rotationDeg`)· διαφέρει στο ότι το σχήμα δεν είναι
+ * παραμετρικό αλλά μετρημένο bbox από τα τρίγωνα του `.glb`.
+ */
+function makeImportedMesh(): ImportedMeshEntity {
+  return {
+    id: 'imesh_1',
+    type: 'imported-mesh',
+    kind: 'imported',
+    ifcType: 'IfcBuildingElementProxy',
+    layerId: 'L',
+    params: {
+      kind: 'imported',
+      uploadId: 'imesh_upload_1',
+      nodeName: 'HBFrmEdg',
+      storagePath: 'companies/c1/bim-imports/imesh_upload_1.glb',
+      sourceFileName: 'railing.glb',
+      position: { x: 1000, y: 0, z: 0 },
+      rotationDeg: 30,
+      measuredWidthMm: 500,
+      measuredDepthMm: 500,
+      measuredHeightMm: 900,
+      measuredSurfaceAreaM2: 1.8,
+      measuredVolumeM3: null,
+      mountingElevationMm: 0,
+    },
+    geometry: {
+      footprint: { vertices: [] },
+      bbox: { min: { x: 0, y: 0, z: 0 }, max: { x: 0, y: 0, z: 0 } },
+      area: 0,
+      height: 900,
+    },
+    validation: { hasCodeViolations: false, violationKeys: [], lastValidatedAt: null },
+  } as unknown as ImportedMeshEntity;
 }
 
 // ─── Tests ─────────────────────────────────────────────────────────────────
@@ -454,6 +492,47 @@ describe('ADR-363 Phase 7.2 — calculateBimRotatedGeometry', () => {
       params: { rotationDeg: number };
     };
     expect(patch.params.rotationDeg).toBeCloseTo(20, 4);
+  });
+
+  // ── ADR-683 Φ3α — imported mesh rotate. Το ADR §10.1 απαντούσε «Περιστρέφεται; ✅ Ναι»
+  //    ενώ ο dispatcher ΔΕΝ είχε case → patch `{}` → το `rotationDeg` δεν άλλαζε ποτέ →
+  //    το re-sync ξανάχτιζε το αρχικό (φαινόταν σαν «επαναφορά»). Ίδιο bug με το ADR-684.
+  it('imported-mesh: rotates position around pivot AND accumulates rotationDeg', () => {
+    const patch = calculateBimRotatedGeometry(makeImportedMesh() as unknown as Entity, ORIGIN, 60) as {
+      params: { position: { x: number; y: number; z: number }; rotationDeg: number };
+    };
+    // position (1000, 0) rotated by 60° CCW ≈ (500, 866).
+    expect(patch.params.position.x).toBeCloseTo(500, 0);
+    expect(patch.params.position.y).toBeCloseTo(866, 0);
+    expect(patch.params.position.z).toBe(0); // planar rotation preserves z
+    // rotationDeg field 30° + 60° = 90°.
+    expect(patch.params.rotationDeg).toBeCloseTo(90, 4);
+  });
+
+  it('imported-mesh: rotationDeg normalizes past 360° (350 + 30 = 20)', () => {
+    const mesh = makeImportedMesh();
+    (mesh.params as { rotationDeg: number }).rotationDeg = 350;
+    const patch = calculateBimRotatedGeometry(mesh as unknown as Entity, ORIGIN, 30) as {
+      params: { rotationDeg: number };
+    };
+    expect(patch.params.rotationDeg).toBeCloseTo(20, 4);
+  });
+
+  // Ο ΠΡΑΓΜΑΤΙΚΟΣ πείρος: το patch δεν φτάνει να διορθώσει μόνο τα params — η γεωμετρία
+  // (ίχνος/bbox) πρέπει να ξαναϋπολογιστεί, αλλιώς renderer/converter διαβάζουν την παλιά
+  // θέση και το mesh «γυρίζει πίσω» οπτικά παρότι τα params άλλαξαν.
+  it('imported-mesh: το ίχνος ξαναϋπολογίζεται και ακολουθεί τη νέα θέση', () => {
+    const patch = calculateBimRotatedGeometry(makeImportedMesh() as unknown as Entity, ORIGIN, 60) as {
+      params: { position: { x: number; y: number } };
+      geometry: { footprint: { vertices: readonly { x: number; y: number }[] } };
+    };
+    const vertices = patch.geometry.footprint.vertices;
+    expect(vertices.length).toBeGreaterThan(0); // το αρχικό fixture είχε κενό ίχνος
+    // Το ίχνος είναι κεντραρισμένο στο σημείο εισαγωγής → κεντροειδές == νέα θέση.
+    const centroidX = vertices.reduce((sum, v) => sum + v.x, 0) / vertices.length;
+    const centroidY = vertices.reduce((sum, v) => sum + v.y, 0) / vertices.length;
+    expect(centroidX).toBeCloseTo(patch.params.position.x, 6);
+    expect(centroidY).toBeCloseTo(patch.params.position.y, 6);
   });
 
   it('returns null for non-BIM types', () => {

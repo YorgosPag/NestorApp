@@ -33,6 +33,12 @@
  *     accumulates by `+angleDeg`. Treads/stringers/walkline derive from
  *     these two fields via `computeStairGeometry`.
  *
+ *   - Oriented solid hosts (ADR-684 `generic-solid`, ADR-683 Φ3α
+ *     `imported-mesh`): `position` rotated around the pivot, intrinsic
+ *     `rotationDeg` accumulated. Shape is never touched — for the imported
+ *     mesh it is baked, for the generic solid it is parametric-but-invariant
+ *     under rotation. One generic helper serves both (`rotateOrientedSolidHost`).
+ *
  * Pure function — no React, no store reads, no IO.
  *
  * @see bim/transforms/bim-mirror-geometry.ts — sibling SSoT, Phase 7.2
@@ -58,7 +64,6 @@ import type {
 import type { BeamEntity, BeamParams } from '../types/beam-types';
 import type { StairEntity, StairParams } from '../types/stair-types';
 import type { MepSegmentEntity, MepSegmentParams } from '../types/mep-segment-types';
-import type { GenericSolidEntity, GenericSolidParams } from '../entities/generic-solid/generic-solid-types';
 import type { Polygon3D as BimPolygon3D, Point3D as BimPoint3D } from '../types/bim-base';
 import type { Point3D as RenderPoint3D } from '../../rendering/types/Types';
 import { computeWallGeometry } from '../geometry/wall-geometry';
@@ -75,6 +80,7 @@ import { computeMepRadiatorGeometry } from '../mep-radiators/mep-radiator-geomet
 import { computeMepBoilerGeometry } from '../mep-boilers/mep-boiler-geometry';
 import { computeMepWaterHeaterGeometry } from '../mep-water-heaters/mep-water-heater-geometry';
 import { computeGenericSolidGeometry } from '../entities/generic-solid/generic-solid-geometry';
+import { computeImportedMeshGeometry } from '../entities/imported-mesh/imported-mesh-geometry';
 import { rotatePoint } from '../../utils/rotation-math';
 import { normalizeAngleDeg } from '../../rendering/entities/shared/geometry-utils';
 
@@ -181,26 +187,34 @@ function rotateColumn(
 }
 
 /**
- * ADR-684 (generic solid «Στερεό») — 3D gizmo rotate. Mirror του `rotateColumn`
- * + `moveGenericSolid`: το σημείο εισαγωγής (`position`) περιστρέφεται γύρω από το
- * pivot και το intrinsic `rotationDeg` (CCW περί τον κατακόρυφο άξονα) συσσωρεύεται
- * κατά `+angleDeg`. Το σχήμα (`shape`) δεν αλλάζει· η γεωμετρία (ίχνος/bbox)
- * ξαναϋπολογίζεται από το SSoT ώστε ο renderer/converter να διαβάζει συνεπή τιμή.
- * ΧΩΡΙΣ αυτό το case ο rotate patch έβγαινε `{}` (fallback non-BIM) → το `rotationDeg`
- * δεν άλλαζε ποτέ → το re-sync ξαναέχτιζε το αρχικό (φαινόταν σαν «επαναφορά»).
+ * Rotate ενός **ψημένου/παραμετρικού στερεού που κρατά τον προσανατολισμό του σε
+ * `rotationDeg`** (ADR-684 «Στερεό» + ADR-683 Φ3α εισαγόμενο πλέγμα). Mirror του
+ * `rotateColumn` + `move*`: το σημείο εισαγωγής (`position`) περιστρέφεται γύρω από
+ * το pivot και το intrinsic `rotationDeg` (CCW περί τον κατακόρυφο άξονα)
+ * συσσωρεύεται κατά `+angleDeg`. Το **σχήμα δεν αλλάζει** — η περιστροφή είναι
+ * μετασχηματισμός, όχι reshape· η γεωμετρία (ίχνος/bbox) ξαναϋπολογίζεται από το
+ * SSoT ώστε renderer/converter να διαβάζουν συνεπή τιμή.
+ *
+ * ΧΩΡΙΣ case σε αυτόν τον dispatcher ο rotate patch βγαίνει `{}` (το `rotateEntity`
+ * καρφώνει ΟΛΑ τα BIM types ως no-op, ADR-587 §4.6) → το `rotationDeg` δεν αλλάζει
+ * ποτέ → το re-sync ξαναχτίζει το αρχικό (φαίνεται σαν «επαναφορά»).
+ *
+ * Generic ώστε ο δεύτερος τύπος να μπαίνει με **μία γραμμή switch** αντί για
+ * sibling clone (αδελφός του `rotateMepPointHost`, που καλύπτει την οικογένεια
+ * `{position, rotation?}` των MEP hosts — εδώ η οικογένεια είναι `{position, rotationDeg}`).
  */
-function rotateGenericSolid(
-  entity: GenericSolidEntity,
+function rotateOrientedSolidHost<P extends { position: BimPoint3D; rotationDeg: number }>(
+  params: P,
   pivot: Point2D,
   angleDeg: number,
+  computeGeometry: (p: P) => unknown,
 ): Partial<SceneEntity> {
-  const newParams: GenericSolidParams = {
-    ...entity.params,
-    position: rotatePoint3D(entity.params.position, pivot, angleDeg),
-    rotationDeg: normalizeAngleDeg(entity.params.rotationDeg + angleDeg),
+  const newParams: P = {
+    ...params,
+    position: rotatePoint3D(params.position, pivot, angleDeg),
+    rotationDeg: normalizeAngleDeg(params.rotationDeg + angleDeg),
   };
-  const geometry = computeGenericSolidGeometry(newParams);
-  return { params: newParams, geometry } as unknown as Partial<SceneEntity>;
+  return { params: newParams, geometry: computeGeometry(newParams) } as unknown as Partial<SceneEntity>;
 }
 
 function rotateBeam(
@@ -318,7 +332,13 @@ export function calculateBimRotatedGeometry(
       return rotateStair(entity, pivot, angleDeg);
     // ADR-684 (3D gizmo) — παραμετρικό στερεό: position rotate + rotationDeg accumulate.
     case 'generic-solid':
-      return rotateGenericSolid(entity, pivot, angleDeg);
+      return rotateOrientedSolidHost(entity.params, pivot, angleDeg, computeGenericSolidGeometry);
+    // ADR-683 Φ3α (3D gizmo) — εισαγόμενο ψημένο πλέγμα: ΙΔΙΟΣ μετασχηματισμός με το
+    // παραμετρικό στερεό (§10.1 «Περιστρέφεται; ✅ Ναι»). Το ψήσιμο αφορά το ΣΧΗΜΑ —
+    // η τοποθέτηση παραμένει παραμετρική (`position` + `rotationDeg`), όπως ακριβώς το
+    // `IfcBuildingElementProxy` κρατά placement χωρίς σημασιολογία στοιχείου.
+    case 'imported-mesh':
+      return rotateOrientedSolidHost(entity.params, pivot, angleDeg, computeImportedMeshGeometry);
     // ADR-408 Φ-C (3D gizmo) — MEP entities. Segment rotates its two endpoints;
     // the point hosts rotate position + accumulate `rotation` (connectors follow).
     case 'mep-segment':

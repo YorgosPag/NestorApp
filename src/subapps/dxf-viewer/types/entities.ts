@@ -906,38 +906,19 @@ export interface GroupEntity extends BaseEntity {
   readonly members: Entity[];
 }
 
-// Union type for all entities
-// ✅ ENTERPRISE FIX: Explicit intersection with BaseEntity to ensure name property is available
-export type Entity = (
-  | LineEntity
-  | PolylineEntity
-  | LWPolylineEntity          // ✅ ENTERPRISE: AutoCAD lightweight polyline support
-  | CircleEntity
-  | ArcEntity
-  | EllipseEntity            // ✅ ENTERPRISE: AutoCAD ellipse entity support
-  | RectangleEntity
-  | RectEntity               // ✅ ENTERPRISE: Alternative rectangle entity naming convention
-  | PointEntity
-  | TextEntity
-  | MTextEntity              // ✅ ENTERPRISE: AutoCAD multiline text entity support
-  | SplineEntity             // ✅ ENTERPRISE: AutoCAD spline curve entity support
-  | DimensionEntity
-  | BlockEntity
-  | AngleMeasurementEntity
-  | LeaderEntity             // ✅ ENTERPRISE: AutoCAD leader/annotation entity support
-  | HatchEntity              // ✅ ENTERPRISE: AutoCAD hatch pattern entity support
-  | XLineEntity              // ✅ ENTERPRISE: AutoCAD construction line (infinite) support
-  | RayEntity                // ✅ ENTERPRISE: AutoCAD ray (semi-infinite line) support
-  | ArrayEntity              // ADR-353: Associative array (rect/polar/path)
-  | GroupEntity              // ADR-575: composite GROUP «Ομαδοποίηση» (in-place container)
-  | StairEntity              // ADR-358: Parametric stair (11 kinds)
-  | CenterMarkEntity         // ADR-362 Phase A1: standalone center mark (D13)
-  | CenterLineEntity         // ADR-362 Phase A1: standalone centerline (D13)
-  | AnnotationSymbolEntity   // ADR-583: standalone annotation symbol (North arrow first)
-  | ScaleBarEntity           // ADR-583 Φ2: standalone graphic scale-bar
-  | OpeningInfoTagEntity     // ADR-612: standalone opening info tag (3 editable numeric cells)
-  | ImageEntity              // ADR-651 Φάση Ε: standalone raster image (rectangle + rotation)
-  | TopoSurfaceEntity        // ADR-662 Φ2β: τοπογραφική επιφάνεια (first-class selectable, thin/derived)
+/**
+ * Οι BIM παραμετρικές οντότητες — **μία** λίστα, δύο καταναλωτές.
+ *
+ * Το `Entity` union και το type predicate του `isBimEntity` απαντούν στο **ίδιο** ερώτημα
+ * («ποιοι είναι οι BIM πολίτες;») και μέχρι το ADR-683 Φ3α την απαντούσαν με δύο χειρόγραφες
+ * λίστες. Κάθε νέος τύπος έπρεπε να γραφτεί δύο φορές· ο ξεχασμένος δεύτερος γράφος δεν
+ * έσπαγε τίποτα ορατά — απλώς το `isBimEntity` σταματούσε να στενεύει σωστά, σιωπηλά.
+ * Το CHECK 3.28 (jscpd) το εντόπισε ως κλώνο 47 γραμμών **εντός** του αρχείου.
+ *
+ * Νέος BIM τύπος → **μία** γραμμή εδώ (και ο αντίστοιχος `type === '…'` στο
+ * `isBimEntityType`, που είναι runtime έλεγχος και δεν μπορεί να παραχθεί από τύπους).
+ */
+export type BimParametricEntity =
   // ADR-363 BIM Drawing Mode (Phase 0 — renderers/tools Phase 1+):
   | WallEntity
   | OpeningEntity
@@ -980,8 +961,47 @@ export type Entity = (
   | ThermalSpaceEntity
   // ADR-437 — space separator (IfcVirtualElement).
   | SpaceSeparatorEntity
+  // ADR-683 Φ3α — εισαγόμενο ψημένο πλέγμα συνεργάτη (IfcBuildingElementProxy).
+  // Δίδυμος του `GenericSolidEntity`: ίδιο `BimEntity<Kind,Params,Geometry>` + `IfcEntityMixin`,
+  // ίδιο `ifcType`. Μετακινείται/περιστρέφεται· ΠΟΤΕ δεν αλλάζει σχήμα (ADR-683 §10.1).
+  | ImportedMeshEntity
   // ADR-684 — παραμετρικό γεωμετρικό στερεό (κουτί/σφαίρα/…/torus/πυραμίδα).
-  | GenericSolidEntity
+  | GenericSolidEntity;
+
+// Union type for all entities
+// ✅ ENTERPRISE FIX: Explicit intersection with BaseEntity to ensure name property is available
+export type Entity = (
+  | LineEntity
+  | PolylineEntity
+  | LWPolylineEntity          // ✅ ENTERPRISE: AutoCAD lightweight polyline support
+  | CircleEntity
+  | ArcEntity
+  | EllipseEntity            // ✅ ENTERPRISE: AutoCAD ellipse entity support
+  | RectangleEntity
+  | RectEntity               // ✅ ENTERPRISE: Alternative rectangle entity naming convention
+  | PointEntity
+  | TextEntity
+  | MTextEntity              // ✅ ENTERPRISE: AutoCAD multiline text entity support
+  | SplineEntity             // ✅ ENTERPRISE: AutoCAD spline curve entity support
+  | DimensionEntity
+  | BlockEntity
+  | AngleMeasurementEntity
+  | LeaderEntity             // ✅ ENTERPRISE: AutoCAD leader/annotation entity support
+  | HatchEntity              // ✅ ENTERPRISE: AutoCAD hatch pattern entity support
+  | XLineEntity              // ✅ ENTERPRISE: AutoCAD construction line (infinite) support
+  | RayEntity                // ✅ ENTERPRISE: AutoCAD ray (semi-infinite line) support
+  | ArrayEntity              // ADR-353: Associative array (rect/polar/path)
+  | GroupEntity              // ADR-575: composite GROUP «Ομαδοποίηση» (in-place container)
+  | StairEntity              // ADR-358: Parametric stair (11 kinds)
+  | CenterMarkEntity         // ADR-362 Phase A1: standalone center mark (D13)
+  | CenterLineEntity         // ADR-362 Phase A1: standalone centerline (D13)
+  | AnnotationSymbolEntity   // ADR-583: standalone annotation symbol (North arrow first)
+  | ScaleBarEntity           // ADR-583 Φ2: standalone graphic scale-bar
+  | OpeningInfoTagEntity     // ADR-612: standalone opening info tag (3 editable numeric cells)
+  | ImageEntity              // ADR-651 Φάση Ε: standalone raster image (rectangle + rotation)
+  | TopoSurfaceEntity        // ADR-662 Φ2β: τοπογραφική επιφάνεια (first-class selectable, thin/derived)
+  // Οι BIM παραμετρικοί τύποι — η λίστα ζει ΜΙΑ φορά, στο `BimParametricEntity` παραπάνω.
+  | BimParametricEntity
 ) & Pick<BaseEntity,
   // Required identifiers — needed everywhere (ADR-363 fix: BIM entities now in union)
   'id' | 'name' | 'layerId' |
@@ -1228,7 +1248,7 @@ export const isBimEntityType = (type: string): boolean =>
   type === 'generic-solid';
 
 /** True for any ADR-363/406/407/408/410/415/417/419/422/437 BIM parametric entity */
-export const isBimEntity = (entity: Entity): entity is WallEntity | OpeningEntity | SlabEntity | SlabOpeningEntity | ColumnEntity | BeamEntity | FoundationEntity | MepFixtureEntity | ElectricalPanelEntity | MepManifoldEntity | MepRadiatorEntity | MepBoilerEntity | MepWaterHeaterEntity | MepUnderfloorEntity | RailingEntity | FurnitureEntity | MepSegmentEntity | MepFittingEntity | FloorplanSymbolEntity | RoofEntity | FloorFinishEntity | WallCoveringEntity | ThermalSpaceEntity | SpaceSeparatorEntity | ImportedMeshEntity | GenericSolidEntity =>
+export const isBimEntity = (entity: Entity): entity is Extract<Entity, BimParametricEntity> =>
   isBimEntityType(entity.type);
 
 // ✅ ENTERPRISE MIGRATION: generateEntityId moved to systems/entity-creation/utils.ts
