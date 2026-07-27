@@ -94,9 +94,6 @@ export interface RigidMap {
   readonly ty: number;
 }
 
-/** The map that changes nothing — `p′ = p`. */
-export const IDENTITY_RIGID_MAP: RigidMap = { c: 1, s: 0, tx: 0, ty: 0 };
-
 /** LOCAL (DXF) → WORLD (ΕΓΣΑ) as a prepared map: `R(rot)·p + originWorld`. */
 export function forwardRigidMap(geo: GeoReference): RigidMap {
   const rad = geo.rotationDeg * DEG_TO_RAD;
@@ -129,8 +126,11 @@ export function mapY(m: RigidMap, x: number, y: number): number {
   return m.s * x + m.c * y + m.ty;
 }
 
-/** `p` under `m`, as a point. Allocates — a per-vertex loop should use {@link mapX}/{@link mapY}. */
-export function applyRigidMap(m: RigidMap, p: Point2D): Point2D {
+/**
+ * `p` under `m`, as a point. Allocates, so a per-vertex loop uses {@link mapX}/{@link mapY}
+ * instead — which is why this stays module-private: nothing outside needs the allocating form.
+ */
+function applyRigidMap(m: RigidMap, p: Point2D): Point2D {
   return { x: mapX(m, p.x, p.y), y: mapY(m, p.x, p.y) };
 }
 

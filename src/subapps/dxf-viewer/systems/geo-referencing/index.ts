@@ -33,7 +33,10 @@ export { autoAlignByRobustCenters } from './geo-auto-align';
 export type { GeoMatchMethod, GeoMatchResult, AutoMatchInput } from './geo-auto-match';
 export { autoMatchToSurvey } from './geo-auto-match';
 export type { GeoMatchScore, PointSetIndex } from './geo-point-index';
-export { buildPointSetIndex, countExplainedPoints, scoreGeoReference } from './geo-point-index';
+// `countExplainedPoints` is deliberately NOT re-exported: it is the search's internal scorer,
+// consumed only by `geo-congruent-match`. A barrel export nobody imports is dead weight the
+// ADR-700 ratchet counts, and «export it in case someone needs it» is how barrels rot.
+export { buildPointSetIndex, scoreGeoReference } from './geo-point-index';
 export type { PointPair, SimilaritySolution } from './geo-similarity-solve';
 export { solveRigid2D } from './geo-similarity-solve';
 export type { LocalCandidatePoint, CandidateKind } from './geo-ref-candidate-points';

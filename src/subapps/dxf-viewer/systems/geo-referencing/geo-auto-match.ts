@@ -97,9 +97,12 @@ export interface GeoMatchResult {
 
 const DEFAULT_TOLERANCE_MM = 50;
 /**
- * Ceiling on the drawing points fed to the pairwise table. Well under
- * {@link MAX_PAIR_TABLE_POINTS} because the table is quadratic: 1 500 points is ~1.1 M rows,
- * which builds and scans in milliseconds, while 3 000 is 4.5 M and starts to be felt.
+ * Ceiling on the drawing points the blind search enumerates over.
+ *
+ * The bound is TIME, not memory: since v24 the drawing side is streamed rather than
+ * materialised, so no table is allocated for it — but the scan is still quadratic in this
+ * number. 1 500 points is ~1.1 M candidate pairs per basis, which streams in tens of
+ * milliseconds; 3 000 is 4.5 M and starts to be felt on every one of the ~10 bases.
  */
 const BASIS_SAMPLE_CAP = 1_500;
 /** Ceiling on the survey points bases are drawn from — a decimated point cloud can be huge. */

@@ -46,7 +46,7 @@
  *
  * Pure module — zero React/DOM/store deps, zero randomness, fully deterministic.
  *
- * @see ./geo-pair-table.ts — the invariant table and the basis selection
+ * @see ./geo-pair-table.ts — the distance invariant: a table for the survey, a stream for the drawing
  * @see ./geo-point-index.ts — the verifier (and its one-to-one rule)
  * @see ./geo-similarity-solve.ts — the least-squares refinement
  */
