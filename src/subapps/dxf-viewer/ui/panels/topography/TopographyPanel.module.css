@@ -224,8 +224,24 @@
   background: color-mix(in srgb, currentColor 8%, transparent);
 }
 
-/* Ξετσεκαρισμένη = θα αγνοηθεί (ίδιο γκρι με το overlay). */
+/* Ξετσεκαρισμένη = θα αγνοηθεί.
+   ⚠️ Τα δύο χρώματα εδώ είναι η CSS όψη του SSoT `UI_COLORS.TOPO_BREAKLINE_APPROVED/REJECTED`
+   (config/color-config.ts), απ' όπου διαβάζουν το 2Δ overlay και το 3Δ layer. Ένα CSS module δεν
+   μπορεί να κάνει import TypeScript· αν αλλάξει το ένα, άλλαξε ΚΑΙ το άλλο. */
 .abRejected { border-left-color: #94a3b8; }
+
+/* ADR-650 M8β/Γ — η υποψήφια που κοιτάει ο μηχανικός: ξεχωρίζει ΚΑΙ σε χρώμα ΚΑΙ σε μέγεθος, την
+   ίδια στιγμή που η γραμμή της παχαίνει στον καμβά — λίστα και σχέδιο λένε πάντα το ΙΔΙΟ «εδώ
+   είμαι». Το πράσινο/γκρι border-left ΜΕΝΕΙ: η εστίαση δεν κρύβει το αν θα προστεθεί ή όχι — είναι
+   δύο ανεξάρτητες ερωτήσεις και η γραμμή οφείλει να απαντά και στις δύο. Δυνατότερο από το :hover,
+   αλλιώς το ποντίκι θα «έσβηνε» την εστίαση περνώντας από πάνω. */
+.abItemFocused,
+.abItemFocused:hover {
+  background: color-mix(in srgb, currentColor 18%, transparent);
+  border-left-width: 6px;
+  padding-left: 3px; /* αντισταθμίζει τα +3px του border ώστε το κείμενο να μη χοροπηδά */
+  font-weight: 600;
+}
 
 .abFocus {
   flex: 1;

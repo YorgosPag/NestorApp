@@ -7,10 +7,11 @@
  * this panel LISTS it (severity-sorted) and the sibling overlays drop a ⊙ marker per flag in
  * BOTH views. Nothing here edits the survey: the engineer certifies.
  *
- * Clicking a row zooms to the flag in whichever view is active (ADR-650 M5α.2) — 3D frames the
- * camera through the shared view-focus bus, 2D reuses the canonical `canvas-fit-to-view-selected`
- * SSoT (same path as the Z key). Mirror of `ClashReportPanel.focusClash`, and for the same reason:
- * a report row that silently does nothing in one of the two views reads as a broken report.
+ * Clicking a row zooms to the flag in whichever view is active (ADR-650 M5α.2) — the routing
+ * itself is the shared {@link focusReviewTarget} SSoT (3D camera via the view-focus bus, 2D via
+ * the canonical `canvas-*` EventBus events, same path as the Z key). Mirror of
+ * `ClashReportPanel.focusClash`, and for the same reason: a report row that silently does nothing
+ * in one of the two views reads as a broken report.
  *
  * i18n: every string via `t()` (N.11). Styles: shared CSS module (N.3). Semantic (N.4).
  */
@@ -21,21 +22,18 @@ import { runTopoQa } from '../../../systems/topography/qa/run-topo-qa';
 import { topoQaStore, useTopoQaReport, useTopoQaSelectedFlagId } from '../../../systems/topography/qa/topo-qa-store';
 import type { TopoQaFlag, TopoQaSeverity } from '../../../systems/topography/qa/topo-qa-types';
 import type { TopoSurfaceId } from '../../../systems/topography/topo-types';
-import { EventBus } from '../../../systems/events';
-import { useViewMode3DStore, selectIs3D } from '../../../bim-3d/stores/ViewMode3DStore';
-import { requestViewFocus } from '../../../systems/coordination/view-focus-bus';
+import { focusReviewTarget, reviewFocusExtent } from '../../../systems/coordination/review-focus';
 import { resolveTopoQaFlagWorld } from '../../../bim-3d/coordination/topo-qa-flag-world';
 import styles from './TopographyPanel.module.css';
 
 /**
- * Half-size (METRES) of the neighbourhood framed around a clicked flag — the ONE extent for both
- * views, so «zoom to» lands equally close whether you are in plan or orbiting. A survey blunder is
- * only legible next to its neighbours (that is what makes it a blunder), hence metres, not the
- * centimetres a clash needs.
+ * Padding (canonical mm) around a clicked flag — a survey blunder is only legible next to its
+ * neighbours (that is what makes it a blunder), hence 15 m, not the centimetres a clash needs.
+ *
+ * `flag.at` is a single WORLD-mm point, so the padded box is 30 m square and the derived 3D
+ * half-extent is exactly the 15 m this panel used to carry as a second, hand-synced constant.
  */
-const TOPO_QA_FOCUS_HALF_EXTENT_M = 15;
-/** The same extent in canonical mm — `flag.at` is WORLD canonical mm, which IS the 2D canvas frame. */
-const FOCUS_PAD_MM = TOPO_QA_FOCUS_HALF_EXTENT_M * 1000;
+const TOPO_QA_FOCUS_PAD_MM = 15_000;
 
 const SEVERITY_CLASS: Readonly<Record<TopoQaSeverity, string>> = {
   high: styles.qaHigh!,
@@ -65,28 +63,13 @@ function focusFlag(flag: TopoQaFlag, surfaceId: TopoSurfaceId): void {
   const preserveZoom = topoQaStore.getSelectedFlagId() !== null;
   topoQaStore.select(flag.id);
 
-  if (selectIs3D(useViewMode3DStore.getState())) {
-    // Convert HERE, in the survey domain (the bus carries three-world metres) — the SAME resolver
-    // the 3D marker overlay uses, so the row and its own ⊙ can never point at different spots.
-    const world = resolveTopoQaFlagWorld(flag, surfaceId);
-    // `null` = no elevation anything can answer for. Framing the camera on an invented height
-    // would send the engineer to the wrong place; doing nothing at least does not mislead.
-    if (world) {
-      requestViewFocus({ point: world, halfExtentM: TOPO_QA_FOCUS_HALF_EXTENT_M, preserveZoom });
-    }
-    return;
-  }
+  const extent = reviewFocusExtent([flag.at], TOPO_QA_FOCUS_PAD_MM);
+  if (!extent) return; // non-finite flag coordinates — highlight the row, move nothing
 
-  if (preserveZoom) {
-    EventBus.emit('canvas-center-on-point', { point: flag.at });
-    return;
-  }
-  EventBus.emit('canvas-fit-to-view-selected', {
-    bounds: {
-      min: { x: flag.at.x - FOCUS_PAD_MM, y: flag.at.y - FOCUS_PAD_MM },
-      max: { x: flag.at.x + FOCUS_PAD_MM, y: flag.at.y + FOCUS_PAD_MM },
-    },
-  });
+  // The 3D conversion is a thunk: it samples the TIN, and in plan view that work is pure waste.
+  // It is the SAME resolver the 3D marker overlay uses, so the row and its own ⊙ can never point
+  // at different spots.
+  focusReviewTarget(extent, () => resolveTopoQaFlagWorld(flag, surfaceId), preserveZoom);
 }
 
 interface QaFlagRowProps {

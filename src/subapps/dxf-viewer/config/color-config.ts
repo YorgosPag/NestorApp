@@ -171,6 +171,13 @@ export const UI_COLORS_BASE = {
   THERMAL_HOT: '#FF3B30',
   THERMAL_CONTOUR: '#000000',
   
+  // ADR-650 M8β/Γ — auto-breakline REVIEW colours (proposals under approval, never the survey).
+  // One vocabulary read by all three surfaces that draw a proposal — the 2D preview overlay
+  // (SVG), the 3D candidate layer (LineBasicMaterial) and the panel list (via the CSS module) —
+  // because «πράσινη στο σχέδιο» in the panel's own text is a promise the 3D view must keep too.
+  TOPO_BREAKLINE_APPROVED: '#22c55e', // ticked → will be written on «Προσθήκη»
+  TOPO_BREAKLINE_REJECTED: '#94a3b8', // unticked → shown, but will be ignored
+
   // Selection colors
   SELECTION_HIGHLIGHT: '#ffffff',
   EDIT_EDGE_HIGHLIGHT: '#00b8d4',   // Cyan — η ακμή υπό επεξεργασία (per-edge edit· ADR-417 roof «Κλίση ανά νερό»)

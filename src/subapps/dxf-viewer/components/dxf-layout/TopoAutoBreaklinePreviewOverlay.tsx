@@ -5,6 +5,7 @@ import {
   useAutoBreaklineState,
 } from '../../systems/topography/auto-breaklines/auto-breakline-store';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
+import { UI_COLORS } from '../../config/color-config';
 import type { ViewTransform, Viewport } from '../../rendering/types/Types';
 import type { AutoBreaklineCandidate } from '../../systems/topography/auto-breaklines/auto-breakline-types';
 
@@ -13,9 +14,15 @@ interface Props {
   readonly viewport: Viewport;
 }
 
-/** Ticked = will be added on confirm. Unticked = shown, but rejected. */
-const APPROVED_COLOR = '#22c55e';
-const REJECTED_COLOR = '#94a3b8';
+/**
+ * Πάχη γραμμής (px οθόνης) ανά κατάσταση. Η εστιασμένη είναι ΚΑΙ πιο χοντρή ΚΑΙ φοράει άλως στο
+ * χρώμα επιλογής της εφαρμογής — «χρώμα ΚΑΙ μέγεθος», γιατί μόνο το χρώμα χάνεται σε ένα σχέδιο
+ * γεμάτο πράσινες υποψήφιες, και μόνο το πάχος χάνεται σε μια πυκνή δέσμη.
+ */
+const STROKE_WIDTH = { rejected: 2, approved: 3, focused: 5, halo: 10 } as const;
+
+/** Διαφάνεια της άλω — αρκετή για να «λάμπει», όχι τόση ώστε να σβήνει ό,τι είναι από κάτω. */
+const HALO_OPACITY = 0.55;
 
 /**
  * ADR-650 M8β/Γ — προεπισκόπηση των ΠΡΟΤΕΙΝΟΜΕΝΩΝ γραμμών ασυνέχειας (auto-breaklines).
@@ -26,11 +33,18 @@ const REJECTED_COLOR = '#94a3b8';
  * γκρι διακεκομμένο = ξετσεκαρισμένη (θα αγνοηθεί). Οι κορυφές είναι ήδη WORLD canonical mm
  * (ADR-462) = canvas units, όπως και οι ισοϋψείς — καμία μετατροπή.
  *
+ * Η ΕΣΤΙΑΣΜΕΝΗ (αυτή που μόλις πάτησε στη λίστα) σχεδιάζεται ΤΕΛΕΥΤΑΙΑ, με άλως: σε ένα σχέδιο με
+ * 30 πράσινες υποψήφιες, το «σε ποια με πήγε το κλικ;» είναι ακριβώς η ερώτηση που δεν πρέπει να
+ * μένει αναπάντητη — και μια άλως που σχεδιάζεται πρώτη θα κρυβόταν κάτω από τη διπλανή γραμμή.
+ * Η κατάσταση έγκρισης (πράσινο/γκρι) ΔΕΝ αντικαθίσταται: εστίαση και έγκριση είναι δύο
+ * ανεξάρτητες ερωτήσεις και το σχέδιο απαντά και στις δύο (ίδιο συμβόλαιο με το ⊙ του QA, όπου το
+ * severity μένει ορατό κάτω από την επιλογή).
+ *
  * ADR-040 compliant: standalone subscriber leaf (`useSyncExternalStore` εδώ, ΟΧΙ στο shell),
  * LOW-frequency store (γράφεται μόνο σε κλικ). Mirror του `RegionPerimeterPreviewOverlay`.
  */
 export function TopoAutoBreaklinePreviewOverlay({ transform, viewport }: Props) {
-  const { report, selected } = useAutoBreaklineState();
+  const { report, selected, focusedId } = useAutoBreaklineState();
 
   if (report === null || report.candidates.length === 0) return null;
 
@@ -42,24 +56,46 @@ export function TopoAutoBreaklinePreviewOverlay({ transform, viewport }: Props) 
     return candidate.closed ? `${d} Z` : d;
   };
 
+  // Η εστιασμένη τελευταία στη σειρά ζωγραφικής (SVG = painter's order) → πάντα από πάνω.
+  const ordered = [
+    ...report.candidates.filter((c) => c.id !== focusedId),
+    ...report.candidates.filter((c) => c.id === focusedId),
+  ];
+
   return (
     <svg
       className="absolute inset-0 size-full pointer-events-none z-10"
       xmlns="http://www.w3.org/2000/svg"
     >
-      {report.candidates.map((candidate) => {
+      {ordered.map((candidate) => {
         const approved = selected.has(candidate.id);
+        const focused = candidate.id === focusedId;
+        const d = toPath(candidate);
         return (
-          <path
-            key={candidate.id}
-            d={toPath(candidate)}
-            fill="none"
-            stroke={approved ? APPROVED_COLOR : REJECTED_COLOR}
-            strokeWidth={approved ? 3 : 2}
-            strokeDasharray={approved ? undefined : '6 4'}
-            strokeLinejoin="round"
-            strokeLinecap="round"
-          />
+          <g key={candidate.id}>
+            {focused && (
+              <path
+                d={d}
+                fill="none"
+                stroke={UI_COLORS.SELECTION_HIGHLIGHT}
+                strokeWidth={STROKE_WIDTH.halo}
+                strokeOpacity={HALO_OPACITY}
+                strokeLinejoin="round"
+                strokeLinecap="round"
+              />
+            )}
+            <path
+              d={d}
+              fill="none"
+              stroke={approved ? UI_COLORS.TOPO_BREAKLINE_APPROVED : UI_COLORS.TOPO_BREAKLINE_REJECTED}
+              strokeWidth={focused ? STROKE_WIDTH.focused : (approved ? STROKE_WIDTH.approved : STROKE_WIDTH.rejected)}
+              // Η εστιασμένη μένει συμπαγής ακόμη κι αν είναι απορριφθείσα: η διακεκομμένη «σβήνει»
+              // οπτικά και θα ακύρωνε την ίδια την έμφαση που μόλις ζήτησε ο μηχανικός.
+              strokeDasharray={approved || focused ? undefined : '6 4'}
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+          </g>
         );
       })}
     </svg>

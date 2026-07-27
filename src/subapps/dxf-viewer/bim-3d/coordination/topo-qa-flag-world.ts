@@ -7,7 +7,7 @@
  * the failure mode is invisible in code review and obvious only to the surveyor on screen.
  *
  * It is the impure half of the pure/impure split `TerrainSceneLayer` uses: the store reads live
- * HERE, the math lives in {@link topoQaFlagToWorld}, and both read the SAME SSoTs the terrain mesh
+ * HERE, the math lives in {@link topoWorldPointToThree}, and both read the SAME SSoTs the terrain mesh
  * reads (`getActiveWorldToDisplayProjector`, `getActiveVerticalDatumMm`) — so a marker cannot seat
  * differently from the hill it is flagging.
  *
@@ -20,7 +20,7 @@
  * marker parked on the datum plane would send the engineer to inspect the wrong place entirely —
  * the same fail-closed discipline as `resolveFinishedGradeAtWorldMm` (ADR-713).
  *
- * @see ./topo-qa-marker-math.ts — the pure transform chain
+ * @see ./topo-world-point-math.ts — the pure transform chain (shared with the breakline review)
  * @see ../../systems/topography/tin-sampler.ts — barycentric elevation lookup
  */
 
@@ -30,7 +30,7 @@ import { getTopoSurface } from '../../systems/topography/topo-surface';
 import { getTinSampler } from '../../systems/topography/tin-sampler';
 import { getActiveVerticalDatumMm } from '../../systems/topography/vertical-datum';
 import { getActiveWorldToDisplayProjector } from '../../systems/geo-referencing/geo-reference-store';
-import { topoQaFlagToWorld } from './topo-qa-marker-math';
+import { topoWorldPointToThree } from './topo-world-point-math';
 import type { WorldTriple } from '../viewport/plan-to-world-math';
 
 /** The flag's real WORLD elevation (canonical mm), or `null` when nothing can answer for it. */
@@ -50,7 +50,7 @@ export function resolveTopoQaFlagWorld(
 ): WorldTriple | null {
   const elevationMm = resolveElevationMm(flag, surfaceId);
   if (elevationMm === null) return null;
-  return topoQaFlagToWorld(flag.at, elevationMm, {
+  return topoWorldPointToThree(flag.at, elevationMm, {
     projector: getActiveWorldToDisplayProjector(),
     datumMm: getActiveVerticalDatumMm(),
   });

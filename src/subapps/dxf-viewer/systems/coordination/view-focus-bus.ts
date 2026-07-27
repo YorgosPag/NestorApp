@@ -14,7 +14,7 @@
  * BOTH — silently framing the camera on empty space for the other.
  *
  * So the contract is deliberately narrow: **each producer converts to three-world metres itself**
- * (via its own pure math module — `clashPointToWorld` / `topoQaFlagToWorld`) and the bus carries the
+ * (via its own pure math module — `clashPointToWorld` / `topoWorldPointToThree`) and the bus carries the
  * finished point. That keeps the panels free of any viewport import (they call a pure function, not
  * a camera) while making the frame unambiguous — the one thing two producers cannot disagree about.
  *
@@ -26,7 +26,7 @@
  *
  * @see ../../bim-3d/viewport/use-view-focus-3d.ts (the sole subscriber — frames the camera)
  * @see ../../bim-3d/coordination/clash-marker-math.ts (clash producer's conversion)
- * @see ../../bim-3d/coordination/topo-qa-marker-math.ts (topo QA producer's conversion)
+ * @see ../../bim-3d/coordination/topo-world-point-math.ts (survey producers' conversion)
  */
 
 import type { Point3D } from '../../bim/types/bim-base';

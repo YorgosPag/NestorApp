@@ -12,21 +12,29 @@
  * `getActiveVerticalDatumMm`) and passes them IN, so the contours and the mesh can never seat
  * differently. Major/minor split into two geometries so each takes its own layer colour.
  *
- * The three transforms that MUST happen exactly once, and happen here (mirror of `tin-to-three`):
+ * The three transforms that MUST happen exactly once, and happen in the shared packer
+ * {@link appendTopoPolylineSegments} (mirror of `tin-to-three`):
  *   1. WORLD → building-DISPLAY  — `ContourLine.vertices` are already WORLD mm (unlike the TIN's
  *      LOCAL positions), so the projector applies directly.
  *   2. real WORLD Z − datum      — `z = level − datumMm`, the vertical mirror of the planar project.
  *   3. plan-mm → three world (m, Y-up) — via `writeDxfPlanToWorld`, the SAME convention the grips /
  *      ghosts / snap markers / terrain mesh use. Never re-inlined here.
  *
+ * What is left in THIS module is the one thing a contour does differently from every other topo
+ * polyline: its elevation is CONSTANT along the line (`level`), because a contour is by definition
+ * the surface's intersection with a horizontal plane — the drape needs no per-vertex TIN sampling.
+ *
  * @module bim-3d/converters/contour-to-three
  */
 
-import * as THREE from 'three';
-import type { Point2D } from '../../rendering/types/Types';
+import type * as THREE from 'three';
 import type { ContourLine } from '../../systems/topography/topo-types';
 import type { WorldToDisplayProjector } from '../../systems/geo-referencing/geo-transform';
-import { writeDxfPlanToWorld } from '../viewport/coordinate-transforms';
+import {
+  activeProjector,
+  appendTopoPolylineSegments,
+  toTopoLineGeometry,
+} from './topo-polyline-to-three';
 
 /** The per-build display inputs, resolved by the impure caller (mirror of `TinShadingOptions`). */
 export interface ContourLineOptions {
@@ -42,27 +50,6 @@ export interface ContourLineGeometries {
   readonly minor: THREE.BufferGeometry | null;
 }
 
-/** Scratch vertex buffer — reused across every vertex so the hot loop allocates nothing. */
-const SCRATCH = new Float32Array(3);
-
-/**
- * Project ONE world-mm contour vertex into three-world metres, written into {@link SCRATCH}.
- * Returns false when any coordinate is non-finite (the segment is then dropped by the caller —
- * a single NaN would poison the geometry's `Box3` and blank the whole 3D scene, ADR-537).
- */
-function projectVertex(
-  v: Point2D,
-  elevMm: number,
-  project: WorldToDisplayProjector | null,
-): boolean {
-  const plan = project ? project.project(v.x, v.y) : null;
-  const planX = plan ? plan.x : v.x;
-  const planY = plan ? plan.y : v.y;
-  if (!Number.isFinite(planX) || !Number.isFinite(planY) || !Number.isFinite(elevMm)) return false;
-  writeDxfPlanToWorld(SCRATCH, 0, planX, planY, elevMm);
-  return true;
-}
-
 /** Append one contour line's segments (as consecutive XYZ pairs) into `buf`. */
 function appendContourSegments(
   buf: number[],
@@ -70,27 +57,8 @@ function appendContourSegments(
   datumMm: number,
   project: WorldToDisplayProjector | null,
 ): void {
-  const verts = line.vertices;
-  if (verts.length < 2) return;
-  const elevMm = line.level - datumMm;
-  const count = line.closed ? verts.length : verts.length - 1;
-  for (let i = 0; i < count; i++) {
-    if (!projectVertex(verts[i]!, elevMm, project)) continue;
-    const ax = SCRATCH[0]!, ay = SCRATCH[1]!, az = SCRATCH[2]!;
-    if (!projectVertex(verts[(i + 1) % verts.length]!, elevMm, project)) continue;
-    buf.push(ax, ay, az, SCRATCH[0]!, SCRATCH[1]!, SCRATCH[2]!);
-  }
-}
-
-/** Build a LineSegments geometry from a flat XYZ-pair buffer, or `null` when empty. */
-function toGeometry(buf: number[]): THREE.BufferGeometry | null {
-  if (buf.length === 0) return null;
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(buf), 3));
-  // Static line bounds → compute the bounding sphere once so three's native frustum culling can
-  // skip an off-screen contour set deterministically (same reasoning as the DXF wireframe buckets).
-  geo.computeBoundingSphere();
-  return geo;
+  const elevMm = line.level - datumMm; // constant along the whole line — that IS what a contour is
+  appendTopoPolylineSegments(buf, line.vertices, () => elevMm, line.closed, project);
 }
 
 /**
@@ -102,13 +70,12 @@ export function contourLinesToGeometries(
   options?: ContourLineOptions,
 ): ContourLineGeometries {
   const datumMm = options?.datumMm ?? 0;
-  const projector = options?.projector ?? null;
-  const project = projector && !projector.isIdentity ? projector : null; // fast path when unset/identity
+  const project = activeProjector(options?.projector);
 
   const major: number[] = [];
   const minor: number[] = [];
   for (const line of lines) {
     appendContourSegments(line.isMajor ? major : minor, line, datumMm, project);
   }
-  return { major: toGeometry(major), minor: toGeometry(minor) };
+  return { major: toTopoLineGeometry(major), minor: toTopoLineGeometry(minor) };
 }

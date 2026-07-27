@@ -18,7 +18,7 @@
  *
  * @see ./coordinate-transforms.ts — the three-typed callers (`dxfPlanToWorld`, `writeDxfPlanToWorld`)
  * @see ../coordination/clash-marker-math.ts — clash points (already metres)
- * @see ../coordination/topo-qa-marker-math.ts — topography QA flags (ΕΓΣΑ mm + datum)
+ * @see ../coordination/topo-world-point-math.ts — survey points: QA flags + breakline candidates (ΕΓΣΑ mm + datum)
  */
 
 /** A three-world position in metres, Y-up. Plain tuple — no `THREE.Vector3` allocation. */

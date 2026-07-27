@@ -27,30 +27,55 @@ import {
 } from '../../../systems/topography/auto-breaklines/auto-breakline-store';
 import type { AutoBreaklineCandidate } from '../../../systems/topography/auto-breaklines/auto-breakline-types';
 import { mmToMetreString } from '../../../systems/topography/qa/topo-qa-format';
-import { EventBus } from '../../../systems/events';
+import { focusReviewTarget, reviewFocusExtent } from '../../../systems/coordination/review-focus';
+import { resolveAutoBreaklineCandidateWorld } from '../../../bim-3d/coordination/auto-breakline-world';
 import styles from './TopographyPanel.module.css';
 
-/** Περιθώριο (canonical mm) γύρω από την υποψήφια όταν εστιάζει η 2Δ όψη (~5 μ). */
+/**
+ * Περιθώριο (canonical mm) γύρω από την υποψήφια όταν εστιάζει η όψη (~5 μ).
+ *
+ * Μικρότερο από το 15 μ του QA με λόγο: το QA δείχνει ένα ΣΗΜΕΙΟ και χρειάζεται γείτονες για να
+ * κριθεί· η υποψήφια είναι ολόκληρη ΓΡΑΜΜΗ — το πλαίσιό της ορίζεται από το ίδιο της το μήκος και
+ * το περιθώριο απλώς την ξεκολλάει από την άκρη της οθόνης.
+ */
 const FOCUS_PAD_MM = 5_000;
 
-/** Ζουμ της 2Δ όψης στην υποψήφια — κανονικό fit-to-bounds (ίδιος δρόμος με το πλήκτρο Z). */
+/**
+ * Πήγαινε την ενεργή όψη στην υποψήφια και σημείωσέ την ως «αυτήν κοιτάω» (ADR-650 M8β/Γ).
+ *
+ * Η σήμανση γίνεται ΠΡΩΤΗ και ανεπιφύλακτα: ακόμη κι όταν η 3Δ δεν μπορεί να λύσει υψόμετρο (άρα
+ * η κάμερα δεν κουνιέται), ο μηχανικός πάτησε αυτή τη γραμμή και η λίστα οφείλει να το λέει.
+ * Δένοντας τη σήμανση σε ένα επιτυχημένο ζουμ, το κλικ θα έμοιαζε να μην έκανε απολύτως τίποτα.
+ */
 function focusCandidate(candidate: AutoBreaklineCandidate): void {
-  const xs = candidate.vertices.map((v) => v.x);
-  const ys = candidate.vertices.map((v) => v.y);
-  EventBus.emit('canvas-fit-to-view-selected', {
-    bounds: {
-      min: { x: Math.min(...xs) - FOCUS_PAD_MM, y: Math.min(...ys) - FOCUS_PAD_MM },
-      max: { x: Math.max(...xs) + FOCUS_PAD_MM, y: Math.max(...ys) + FOCUS_PAD_MM },
-    },
-  });
+  /**
+   * ΠΡΩΤΟ άλμα αυτού του πάσου ή επόμενο; Διαβάζεται ΠΡΙΝ το `focus`, που το επικαλύπτει.
+   *
+   * Το πρώτο κλικ δεν έχει κλίμακα άξια διατήρησης (ο μηχανικός μπορεί να βλέπει όλο το οικόπεδο)
+   * → πλαισιώνει την υποψήφια και ΟΡΙΖΕΙ κλίμακα. Από εκεί και πέρα η κλίμακα είναι ΔΙΚΗ ΤΟΥ: κάθε
+   * επόμενη γραμμή απλώς μετατοπίζει την όψη στο ζουμ που έχει επιλέξει. Το πάσο μηδενίζεται
+   * ακριβώς όταν μηδενίζεται και η σήμανση — νέα «Ανίχνευση» ή «Καθαρισμός».
+   */
+  const preserveZoom = autoBreaklineStore.getFocusedId() !== null;
+  autoBreaklineStore.focus(candidate.id);
+
+  const extent = reviewFocusExtent(candidate.vertices, FOCUS_PAD_MM);
+  if (!extent) return; // μη πεπερασμένες συντεταγμένες — φώτισε τη γραμμή, μη μετακινήσεις τίποτα
+
+  // Thunk: η 3Δ μετατροπή διαβάζει projector + datum και σε κάτοψη είναι καθαρή σπατάλη. Είναι ο
+  // ΙΔΙΟΣ resolver που χρησιμοποιεί το 3Δ layer, ώστε η γραμμή της λίστας και η γραμμή στο έδαφος
+  // να μη δείχνουν ποτέ διαφορετικό σημείο.
+  focusReviewTarget(extent, () => resolveAutoBreaklineCandidateWorld(candidate, extent.centre), preserveZoom);
 }
 
 interface RowProps {
   readonly candidate: AutoBreaklineCandidate;
   readonly approved: boolean;
+  /** Η υποψήφια που κοιτάει τώρα ο μηχανικός — ξεχωρίζει ταυτόχρονα εδώ ΚΑΙ στον καμβά. */
+  readonly focused: boolean;
 }
 
-function CandidateRow({ candidate, approved }: RowProps): React.JSX.Element {
+function CandidateRow({ candidate, approved, focused }: RowProps): React.JSX.Element {
   const { t } = useTranslation('dxf-viewer-panels');
   const label = t('topography.autoBreakline.candidate', {
     length: mmToMetreString(candidate.lengthMm, 1),
@@ -59,7 +84,10 @@ function CandidateRow({ candidate, approved }: RowProps): React.JSX.Element {
   });
 
   return (
-    <div className={`${styles.abItem} ${approved ? '' : styles.abRejected}`}>
+    <div
+      className={`${styles.abItem} ${approved ? '' : styles.abRejected} ${focused ? styles.abItemFocused : ''}`}
+      aria-current={focused ? 'true' : undefined}
+    >
       <input
         type="checkbox"
         checked={approved}
@@ -85,7 +113,7 @@ function CandidateRow({ candidate, approved }: RowProps): React.JSX.Element {
 
 export function TopoAutoBreaklineSection(): React.JSX.Element {
   const { t } = useTranslation('dxf-viewer-panels');
-  const { report, selected } = useAutoBreaklineState();
+  const { report, selected, focusedId } = useAutoBreaklineState();
   const [addedCount, setAddedCount] = React.useState<number | null>(null);
 
   const onRun = React.useCallback(() => {
@@ -157,7 +185,11 @@ export function TopoAutoBreaklineSection(): React.JSX.Element {
           <ul className={styles.qaList}>
             {report.candidates.map((candidate) => (
               <li key={candidate.id}>
-                <CandidateRow candidate={candidate} approved={selected.has(candidate.id)} />
+                <CandidateRow
+                  candidate={candidate}
+                  approved={selected.has(candidate.id)}
+                  focused={candidate.id === focusedId}
+                />
               </li>
             ))}
           </ul>

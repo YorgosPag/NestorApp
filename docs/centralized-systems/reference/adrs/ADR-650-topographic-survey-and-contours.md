@@ -1922,6 +1922,24 @@ technologismiki (Ν.4495/2017), xyz.gr/geodimetro.gr/greenbuilding.gr/cityengine
   Έγινε spread (`{...m}`) + **test στο seam** (`clash-marker-layer-props.test.tsx`) που επαληθεύτηκε
   ότι πέφτει κόκκινο με το bug ξαναβαλμένο — αλλιώς θα ήταν διακοσμητικό.
 
-  **Παρατήρηση για μετά (ΔΕΝ έγινε):** το `TopoAutoBreaklineSection` έχει την ΙΔΙΑ σημασιολογία
-  (κλικ → `canvas-fit-to-view-selected`) και είναι ακόμη modal dialog στο `TopoRibbonHost`. Θέλει την
-  ίδια μετατροπή (FloatingPanel + center-on-point)· δεν μπήκε εδώ γιατί δεν ζητήθηκε.
+  **Παρατήρηση για μετά — ΕΓΙΝΕ αμέσως μετά (2026-07-27):** το `TopoAutoBreaklineSection` είχε την
+  ΙΔΙΑ σημασιολογία και ήταν ακόμη modal dialog στο `TopoRibbonHost`. Μετατράπηκε — αλλά **όχι με
+  αντιγραφή**: το δεύτερο αντίγραφο θα το είχε πιάσει το `jscpd --diff` μέσα στο ίδιο commit (N.18),
+  οπότε προηγήθηκε κεντρικοποίηση.
+  - **NEW `systems/coordination/review-focus.ts`** — «πήγαινέ με σε αυτό το εύρημα», **μία φορά για
+    κάθε review panel**. Η κίνηση δεν είναι μία συμπεριφορά αλλά τέσσερις (ποια όψη ζει· πρώτη vs
+    επόμενη μεταπήδηση· 2Δ fit vs center· 3Δ bus με `preserveZoom`) και θα γράφονταν όλες ξανά.
+    **Το εύρος ΠΑΡΑΓΕΤΑΙ**: το padded bbox της ίδιας της γεωμετρίας του ευρήματος δίνει ΚΑΙ το 2Δ
+    κουτί ΚΑΙ το 3Δ `halfExtentM` — το χειροκίνητο `TOPO_QA_FOCUS_HALF_EXTENT_M = 15` (δύο αριθμοί
+    που έπρεπε να μένουν ίσοι με το χέρι) καταργήθηκε. Σημείο με padding 15 m δίνει πάλι 15·
+    ακμή δρόμου 200 m πλαισιώνεται **ολόκληρη** αντί για αυθαίρετο παράθυρο 30 m στη μέση της.
+  - **NEW `ui/panels/topography/TopoReviewPanel.tsx`** — το κέλυφος `FloatingPanel` που θα
+    επαναλάμβαναν και οι τέσσερις επιφάνειες review. **Γιατί ΟΧΙ modal**: ένα review panel είναι
+    **σύντροφος του καμβά, όχι παράκαμψή του** — σκουραίνει το σχέδιο, παγιδεύει το πληκτρολόγιο,
+    και (ακόμη και με `modal={false}`) κλείνει στο πρώτο κλικ έξω, δηλαδή τη στιγμή που αγγίζεις
+    ακριβώς το σχέδιο για το οποίο μιλά. Για το pick ορίου cut/fill είναι απαγορευτικό.
+  - **NEW `bim-3d/converters/topo-polyline-to-three.ts`** + `auto-breakline-to-three.ts` /
+    `coordination/auto-breakline-world.ts`: το `contour-to-three` κράτησε ΜΟΝΟ τη σημασιολογία
+    ισοϋψούς· η κοινή «τοπογραφική πολυγραμμή → three» έγινε ένα module. Το
+    `topo-qa-marker-math` μετονομάστηκε σε **`topo-world-point-math`** — το όνομα έλεγε «QA marker»
+    ενώ ο μετασχηματισμός αφορά **κάθε** σημείο τοπογραφικού κόσμου (τώρα και breaklines).
