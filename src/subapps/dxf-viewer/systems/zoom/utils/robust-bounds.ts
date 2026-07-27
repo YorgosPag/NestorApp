@@ -25,6 +25,10 @@
 
 import type { Point2D } from '../../../rendering/types/Types';
 import type { BoundingBox2D } from '../../../rendering/hitTesting/entity-bounds-ssot';
+// ADR-650 §M10e boy-scout — `median`/`mad` were private twins here (and a third in
+// `bim-3d/performance/baseline-tracker`). One SSoT; both sort internally, so callers no
+// longer pre-sort.
+import { median, mad } from '../../../utils/statistics';
 
 /** An entity is an outlier when its center is > this many MADs from the median. */
 const MAD_K = 12;
@@ -48,19 +52,6 @@ export interface RobustBoundsResult {
   bounds: { min: Point2D; max: Point2D } | null;
   /** How many entities were rejected as flyaways (0 ⇒ full union used as-is). */
   dropped: number;
-}
-
-function median(sorted: number[]): number {
-  const n = sorted.length;
-  if (n === 0) return 0;
-  const mid = n >> 1;
-  return n % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
-}
-
-/** Median absolute deviation about `med` (robust spread; 0 ⇒ axis is degenerate). */
-function mad(values: number[], med: number): number {
-  const dev = values.map((v) => Math.abs(v - med)).sort((a, b) => a - b);
-  return median(dev);
 }
 
 function unionOf(boxes: BoundingBox2D[]): { min: Point2D; max: Point2D } | null {
@@ -91,8 +82,8 @@ export function computeRobustBounds(boxes: BoundingBox2D[]): RobustBoundsResult 
   // Per-entity centers → robust center + spread on each axis.
   const cxs = boxes.map((b) => (b.minX + b.maxX) / 2);
   const cys = boxes.map((b) => (b.minY + b.maxY) / 2);
-  const medX = median([...cxs].sort((a, b) => a - b));
-  const medY = median([...cys].sort((a, b) => a - b));
+  const medX = median(cxs);
+  const medY = median(cys);
   const madX = mad(cxs, medX);
   const madY = mad(cys, medY);
   // Both axes degenerate (all centers coincident) ⇒ nothing to reject.
@@ -167,8 +158,8 @@ export function computeRobustCenter(
 
   const xs = points.map((p) => p.x);
   const ys = points.map((p) => p.y);
-  const medX = median([...xs].sort((a, b) => a - b));
-  const medY = median([...ys].sort((a, b) => a - b));
+  const medX = median(xs);
+  const medY = median(ys);
   const madX = mad(xs, medX);
   const madY = mad(ys, medY);
   const thrX = madX > 0 ? madK * madX : Infinity;
@@ -192,8 +183,8 @@ export function computeRobustCenter(
     if (p.y > maY) maY = p.y;
   }
   const center: Point2D = {
-    x: median(kxs.sort((a, b) => a - b)),
-    y: median(kys.sort((a, b) => a - b)),
+    x: median(kxs),
+    y: median(kys),
   };
   return {
     center,

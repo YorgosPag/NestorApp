@@ -61,6 +61,18 @@ export {
 } from './SpatialIndexFactory';
 
 // ========================================
+// BARE-COORDINATE INDEXING (different abstraction — see the class doc)
+// ========================================
+
+/**
+ * ADR-650 §M10e — `PointHashGrid` indexes COORDINATES (no id, no bounds, no result
+ * objects), for "is there a point within τ of (x,y)" asked in a hot loop. The
+ * `ISpatialIndex` family above indexes ITEMS. Reach for this one before hand-rolling
+ * yet another `Map` keyed on `Math.floor(x / tolerance)` — five of those already existed.
+ */
+export { PointHashGrid, NO_POINT } from './PointHashGrid';
+
+// ========================================
 // TYPE GUARDS
 // ========================================
 

@@ -10,7 +10,7 @@
  */
 
 import type { HudRenderMode } from './hud-render-mode';
-import { median } from '../../utils/statistics';
+import { median, mad } from '../../utils/statistics';
 import { storageGet, storageSet, storageRemove } from '../../utils/storage-utils';
 
 export const ROLLING_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
@@ -40,15 +40,6 @@ function readStored(mode: HudRenderMode): StoredSamples {
 
 function writeStored(mode: HudRenderMode, data: StoredSamples): void {
   storageSet(lsKey(mode), data);
-}
-
-/** Tukey 1977 median absolute deviation — robust outlier-resistant spread. */
-function mad(values: readonly number[]): number {
-  if (values.length === 0) return 0;
-  const sorted = [...values].sort((a, b) => a - b);
-  const m = median(sorted);
-  const deviations = values.map((v) => Math.abs(v - m)).sort((a, b) => a - b);
-  return median(deviations);
 }
 
 function pruneOld(samples: { t: number; fps: number }[], now: number): { t: number; fps: number }[] {

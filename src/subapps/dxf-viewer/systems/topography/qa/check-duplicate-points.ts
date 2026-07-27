@@ -15,60 +15,43 @@ import type { TopoPoint } from '../topo-types';
 import type { TopoQaFlag, TopoQaSeverity } from './topo-qa-types';
 import { TOPO_QA_CONFIG } from './topo-qa-config';
 import { mmToMetreString } from './topo-qa-format';
+import { PointHashGrid } from '../../../core/spatial/PointHashGrid';
 
 const { DUPLICATE_XY_TOLERANCE_MM, DUPLICATE_Z_INCOMPATIBLE_MM, DUPLICATE_Z_HIGH_MM } = TOPO_QA_CONFIG;
 
-/** Grid cell (tolerance-sized) → indices of the points falling in it. */
-function buildCellIndex(points: readonly TopoPoint[]): Map<string, number[]> {
-  const cells = new Map<string, number[]>();
-  points.forEach((p, i) => {
-    const key = `${Math.floor(p.x / DUPLICATE_XY_TOLERANCE_MM)}:${Math.floor(p.y / DUPLICATE_XY_TOLERANCE_MM)}`;
-    const bucket = cells.get(key);
-    if (bucket) bucket.push(i);
-    else cells.set(key, [i]);
-  });
-  return cells;
-}
-
-/** Candidate partners of point `i`: everything in its cell + the 8 neighbours, with j > i. */
-function neighbourIndices(cells: Map<string, number[]>, points: readonly TopoPoint[], i: number): number[] {
-  const cx = Math.floor(points[i]!.x / DUPLICATE_XY_TOLERANCE_MM);
-  const cy = Math.floor(points[i]!.y / DUPLICATE_XY_TOLERANCE_MM);
-  const out: number[] = [];
-  for (let dx = -1; dx <= 1; dx++) {
-    for (let dy = -1; dy <= 1; dy++) {
-      for (const j of cells.get(`${cx + dx}:${cy + dy}`) ?? []) if (j > i) out.push(j);
-    }
-  }
-  return out;
-}
-
-function coincides(a: TopoPoint, b: TopoPoint): boolean {
-  return Math.hypot(a.x - b.x, a.y - b.y) <= DUPLICATE_XY_TOLERANCE_MM;
+/** The flag for one confirmed coincident-XY / incompatible-Z pair (`i` is the kept shot). */
+function duplicateFlag(points: readonly TopoPoint[], i: number, j: number, dz: number): TopoQaFlag & { readonly dz: number } {
+  const severity: TopoQaSeverity = dz >= DUPLICATE_Z_HIGH_MM ? 'high' : 'medium';
+  return {
+    id: `duplicate-point:${i}:${j}`,
+    kind: 'duplicate-point',
+    severity,
+    at: { x: points[i]!.x, y: points[i]!.y },
+    // The FIRST shot's Z — the one the TIN dedup kept, so the 3D marker lands on the
+    // surface the engineer is actually looking at (the partner's Z is in the message).
+    atZMm: points[i]!.z,
+    messageKey: 'topography.qa.flag.duplicatePoint',
+    messageParams: { a: i + 1, b: j + 1, deviation: mmToMetreString(dz) },
+    dz,
+  };
 }
 
 /** All coincident-XY pairs whose Z disagrees beyond tolerance, most-severe first. */
 export function checkDuplicatePoints(points: readonly TopoPoint[]): TopoQaFlag[] {
-  const cells = buildCellIndex(points);
+  // ADR-650 §M10e boy-scout: the tolerance-keyed cell index + 3×3 neighbour walk used to be
+  // hand-rolled here (one of FIVE such grids in the subapp). Same algorithm, one owner.
+  const grid = new PointHashGrid(points, DUPLICATE_XY_TOLERANCE_MM);
   const flags: Array<TopoQaFlag & { readonly dz: number }> = [];
+
   for (let i = 0; i < points.length; i++) {
-    for (const j of neighbourIndices(cells, points, i)) {
-      const dz = Math.abs(points[i]!.z - points[j]!.z);
-      if (dz <= DUPLICATE_Z_INCOMPATIBLE_MM || !coincides(points[i]!, points[j]!)) continue;
-      const severity: TopoQaSeverity = dz >= DUPLICATE_Z_HIGH_MM ? 'high' : 'medium';
-      flags.push({
-        id: `duplicate-point:${i}:${j}`,
-        kind: 'duplicate-point',
-        severity,
-        at: { x: points[i]!.x, y: points[i]!.y },
-        // The FIRST shot's Z — the one the TIN dedup kept, so the 3D marker lands on the
-        // surface the engineer is actually looking at (the partner's Z is in the message).
-        atZMm: points[i]!.z,
-        messageKey: 'topography.qa.flag.duplicatePoint',
-        messageParams: { a: i + 1, b: j + 1, deviation: mmToMetreString(dz) },
-        dz,
-      });
-    }
+    const a = points[i]!;
+    grid.forEachWithin(a.x, a.y, DUPLICATE_XY_TOLERANCE_MM, (j) => {
+      if (j <= i) return; // each unordered pair once (and never a point against itself)
+      const dz = Math.abs(a.z - points[j]!.z);
+      if (dz <= DUPLICATE_Z_INCOMPATIBLE_MM) return;
+      flags.push(duplicateFlag(points, i, j, dz));
+    });
   }
+
   return flags.sort((a, b) => b.dz - a.dz).map(({ dz: _dz, ...flag }) => flag);
 }
