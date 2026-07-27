@@ -33,6 +33,7 @@ import { RealtimeService } from '@/services/realtime';
 import { ENTITY_TYPES, FILE_DOMAINS, FILE_CATEGORIES, FLOORPLAN_PURPOSES } from '@/config/domain-constants';
 import { Logger, LogLevel, DevNullOutput } from '@/subapps/dxf-viewer/settings/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
+import type { SceneUnits } from '@/subapps/dxf-viewer/utils/scene-units';
 
 // =============================================================================
 // 🏢 ENTERPRISE LOGGER CONFIGURATION
@@ -84,6 +85,11 @@ export interface SavePropertyFloorplanParams {
   createdBy: string;
   /** Original file for direct upload (DXF/PDF) */
   originalFile?: File;
+  /**
+   * ADR-716 Φ5 — ρητή επιλογή μονάδων DXF του μηχανικού. Γράφεται στο FileRecord
+   * ώστε το re-parse του ωμού DXF από τη συλλογή αρχείων να δίνει την ΙΔΙΑ κλίμακα.
+   */
+  userDrawingUnits?: SceneUnits;
 }
 
 /**
@@ -115,7 +121,7 @@ export class PropertyFloorplanService {
    * NOTE: Does NOT write to legacy `unit_floorplans` collection.
    */
   static async saveFloorplan(params: SavePropertyFloorplanParams): Promise<boolean> {
-    const { companyId, projectId, buildingId, propertyId, data, createdBy, originalFile } = params;
+    const { companyId, projectId, buildingId, propertyId, data, createdBy, originalFile, userDrawingUnits } = params;
 
     try {
       logger.debug('Saving property floorplan via Enterprise storage', { propertyId, companyId });
@@ -149,6 +155,8 @@ export class PropertyFloorplanService {
         contentType,
         payload,
         generateThumbnail: true,
+        // ADR-716 Φ5 — η μονάδα ταξιδεύει μαζί με το αρχείο, όχι με τη στιγμή.
+        userDrawingUnits,
       });
 
       logger.info('Enterprise save complete for property', {

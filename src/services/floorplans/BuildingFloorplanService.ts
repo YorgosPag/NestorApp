@@ -22,6 +22,7 @@ import { FILE_DOMAINS, FILE_CATEGORIES } from '@/config/domain-constants';
 import { DxfFirestoreService } from '@/subapps/dxf-viewer/services/dxf-firestore.service';
 import { FloorplanSaveOrchestrator } from '@/services/floorplans/floorplan-save-orchestrator';
 import type { SceneModel } from '@/subapps/dxf-viewer/types/scene';
+import type { SceneUnits } from '@/subapps/dxf-viewer/utils/scene-units';
 import { Logger, LogLevel, DevNullOutput } from '@/subapps/dxf-viewer/settings/telemetry/Logger';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
@@ -100,6 +101,11 @@ export interface BuildingFloorplanSaveOptions {
   createdBy: string;
   /** Original DXF file — stored as FileRecord for FloorplanGallery rendering */
   originalFile?: File;
+  /**
+   * ADR-716 Φ5 — ρητή επιλογή μονάδων DXF του μηχανικού. Γράφεται στο FileRecord
+   * ώστε το re-parse του ωμού DXF από τη συλλογή αρχείων να δίνει την ΙΔΙΑ κλίμακα.
+   */
+  userDrawingUnits?: SceneUnits;
 }
 
 /**
@@ -287,6 +293,8 @@ export class BuildingFloorplanService {
         contentType,
         payload,
         generateThumbnail: true,
+        // ADR-716 Φ5 — η μονάδα ταξιδεύει μαζί με το αρχείο, όχι με τη στιγμή.
+        userDrawingUnits: options.userDrawingUnits,
       });
 
       floorplanLogger.info(`FileRecord created: ${result.fileId}`, {
