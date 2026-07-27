@@ -1105,7 +1105,10 @@
         "failure": {
           "unitMismatch": "The two files correspond, but at a different scale (×{scale}). A scaled geo-reference is never applied — it would distort the building. Re-import with the correct unit.",
           "unitMismatchUnknown": "The two files correspond, but at a different scale (×{scale}). A scaled geo-reference is never applied — check the units of both files.",
-          "needsManual": "No reliable match was found. Use a common point below."
+          "needsManual": "No reliable match was found. Use a common point below.",
+          "tooFewInliers": "Too few points matched ({inliers}, where {required} are needed). The plan and the survey probably do not overlap enough. Use a common point below.",
+          "residualTooLarge": "A match was found but it is too loose (deviation {cm} cm). Check that both files belong to the same project. Use a common point below.",
+          "ambiguous": "More than one position fits equally well — the geometry is symmetric and no algorithm can choose. Use a common point below."
         }
       },
       "status": {

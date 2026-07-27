@@ -138,6 +138,37 @@ describe('autoMatchToSurvey — ε: unit mismatch', () => {
     expect(result.scaleEstimate).toBeGreaterThan(900);
     expect(result.suggestedUnitScale).toBe(1000);
   });
+
+  it('reports a 1000× scale even with NO labels, where the blind search is structurally blind', () => {
+    // The congruent search matches on distance invariance: at 1000× no drawing segment has a
+    // survey counterpart of any length, so it forms no hypothesis and computes no scale. Without
+    // the extent fallback this case produced «no match found» — true, and useless.
+    const local = scatter(70, 150, 2_468);
+    const world = local.map((p) => place({ x: p.x * 1000, y: p.y * 1000 }, 0, EGSA_ORIGIN));
+
+    const result = autoMatchToSurvey({
+      entities: pointEntities(local),
+      layersById: LAYERS,
+      surveyPoints: surveyPoints(world), // unnumbered — the identity channel cannot help
+    });
+
+    expect(result.method).toBe('unit-mismatch');
+    expect(result.geo).toBeNull();
+    expect(result.suggestedUnitScale).toBe(1000);
+  });
+
+  it('does NOT cry unit-mismatch for two merely unrelated files of different sizes', () => {
+    // A big survey and a small unrelated drawing have an extent ratio too — but not one that
+    // lands within half a percent of a real unit ratio. This must stay «needs-manual».
+    const local = scatter(60, 7_000, 5);
+    const world = scatter(60, 150_000, 6).map((p) => place(p, 0, EGSA_ORIGIN));
+
+    const result = autoMatchToSurvey({
+      entities: pointEntities(local), layersById: LAYERS, surveyPoints: surveyPoints(world),
+    });
+
+    expect(result.method).toBe('needs-manual');
+  });
 });
 
 describe('autoMatchToSurvey — στ: the false-positive guard', () => {
@@ -171,6 +202,55 @@ describe('autoMatchToSurvey — στ: the false-positive guard', () => {
 
     expect(result.method).toBe('needs-manual');
     expect(result.geo).toBeNull();
+  });
+
+  it('SAYS WHY it refused — a bare «no match» names no next action', () => {
+    // A drawing that overlaps the survey only slightly: a handful of points land, far below
+    // the required count. The user needs to be told THAT, not just «nothing found».
+    const shared = scatter(6, 40_000, 4242);
+    const drawingOnly = scatter(80, 150_000, 313);
+    const surveyOnly = scatter(80, 150_000, 717);
+
+    const result = autoMatchToSurvey({
+      entities: pointEntities([...shared, ...drawingOnly]),
+      layersById: LAYERS,
+      surveyPoints: surveyPoints([...shared, ...surveyOnly].map((p) => place(p, 0, EGSA_ORIGIN))),
+      sourceOrigin: EGSA_ORIGIN,
+    });
+
+    expect(result.method).toBe('needs-manual');
+    expect(result.failure).toBe('too-few-inliers');
+    // The numbers behind the refusal survive into the result — the card renders them.
+    expect(result.inliers).toBeGreaterThan(0);
+    expect(result.required).toBeGreaterThan(result.inliers);
+  });
+
+  it('claims no gate refused it when no hypothesis was ever formed', () => {
+    // A 3 m drawing against a 150 m survey: the bases are the survey's LONGEST segments
+    // (~180 m) and the drawing has nothing remotely that long, so distance invariance yields
+    // no congruent pair at all. Nothing was judged, so nothing may be reported as judged —
+    // naming a gate here would be diagnosis theatre.
+    const result = autoMatchToSurvey({
+      entities: pointEntities(scatter(40, 3_000, 111)),
+      layersById: LAYERS,
+      surveyPoints: surveyPoints(scatter(90, 150_000, 999_999).map((p) => place(p, 0, EGSA_ORIGIN))),
+    });
+
+    expect(result.method).toBe('needs-manual');
+    expect(result.failure).toBeNull();
+  });
+
+  it('two unrelated files of the SAME size are refused with a reason, not silently', () => {
+    const result = autoMatchToSurvey({
+      entities: pointEntities(scatter(90, 150_000, 111)),
+      layersById: LAYERS,
+      surveyPoints: surveyPoints(scatter(90, 150_000, 999_999).map((p) => place(p, 0, EGSA_ORIGIN))),
+    });
+
+    expect(result.method).toBe('needs-manual');
+    // Coincidental landings DO happen at 90 points / 150 m / 50 mm — and the gate refusing
+    // them is exactly the guard working. What matters is that it says so.
+    expect(result.failure).toBe('too-few-inliers');
   });
 
   it('returns needs-manual for empty inputs instead of inventing a reference', () => {

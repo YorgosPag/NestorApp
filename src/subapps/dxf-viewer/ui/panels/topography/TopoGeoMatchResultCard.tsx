@@ -22,6 +22,7 @@
 import * as React from 'react';
 import { useTranslation } from '@/i18n';
 import type { GeoMatchMethod, GeoMatchResult } from '../../../systems/geo-referencing/geo-auto-match';
+import type { GateFailure } from '../../../systems/geo-referencing/geo-match-gates';
 import styles from './TopographyPanel.module.css';
 
 const MM_TO_CM = 0.1;
@@ -69,14 +70,38 @@ function ProofRow(props: { readonly term: string; readonly value: string }): Rea
   );
 }
 
-/** The refusal text for a result that carries no reference, with its cause spelled out. */
-function refusalText(result: GeoMatchResult, t: TFn): string {
-  if (result.method !== 'unit-mismatch') return t('topography.geoRef.match.failure.needsManual');
+/**
+ * Which gate refused → its explanation key. Written out for the same reason as the method
+ * keys: a template-literal key is invisible to the static i18n checks.
+ */
+const FAILURE_KEY: Readonly<Record<GateFailure, string>> = {
+  'too-few-inliers': 'topography.geoRef.match.failure.tooFewInliers',
+  'residual-too-large': 'topography.geoRef.match.failure.residualTooLarge',
+  ambiguous: 'topography.geoRef.match.failure.ambiguous',
+};
 
-  const scale = result.scaleEstimate.toFixed(result.scaleEstimate >= 100 ? 0 : 4);
-  return result.suggestedUnitScale !== null
-    ? t('topography.geoRef.match.failure.unitMismatch', { scale })
-    : t('topography.geoRef.match.failure.unitMismatchUnknown', { scale });
+/**
+ * The refusal text, as specific as the result allows.
+ *
+ * «Δεν βρέθηκε ταύτιση» names no next action. When a gate actually refused a candidate, its
+ * numbers are shown instead — «12 points where 28 are needed» tells the engineer the two files
+ * barely overlap, «ambiguous» tells them the geometry is symmetric and no algorithm can decide
+ * for them. The generic text is the fallback for when nothing even got close.
+ */
+function refusalText(result: GeoMatchResult, t: TFn): string {
+  if (result.method === 'unit-mismatch') {
+    const scale = result.scaleEstimate.toFixed(result.scaleEstimate >= 100 ? 0 : 4);
+    return result.suggestedUnitScale !== null
+      ? t('topography.geoRef.match.failure.unitMismatch', { scale })
+      : t('topography.geoRef.match.failure.unitMismatchUnknown', { scale });
+  }
+
+  if (result.failure === null) return t('topography.geoRef.match.failure.needsManual');
+  return t(FAILURE_KEY[result.failure], {
+    inliers: result.inliers,
+    required: result.required,
+    cm: (result.rmsMm * MM_TO_CM).toFixed(1),
+  });
 }
 
 /** The measured evidence behind an accepted proposal. */

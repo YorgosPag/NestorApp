@@ -45,7 +45,8 @@ import { matchByPointNumber } from './geo-point-number-match';
 import { matchByCongruentPairs } from './geo-congruent-match';
 import { MAX_PAIR_TABLE_POINTS } from './geo-pair-table';
 import {
-  applyAcceptanceGates, isUnitMismatch, matchableTotal, suggestUnitScale, type GateFailure,
+  applyAcceptanceGates, isUnitMismatch, matchableTotal, suggestUnitScale,
+  type GateFailure, type GateVerdict,
 } from './geo-match-gates';
 
 /** How the reference was arrived at — or why there is none. */
@@ -148,26 +149,75 @@ interface MatchContext {
   readonly matchable: number;
   readonly toleranceMm: number;
   readonly layersById: Readonly<Record<string, SceneLayer>>;
+  /** Collects WHY the branches refused, so «needs-manual» can say something useful. */
+  readonly failures: FailureLog;
 }
 
 /**
- * Score an analytic candidate (branches 1 and 2) and accept it if the gates allow.
+ * The most informative refusal seen while the branches ran.
  *
- * `secondBestInliers: 0` is correct rather than lenient: these branches do not search, so
- * there IS no rival hypothesis. The uniqueness gate exists to catch a search that could not
- * decide, and an offset the importer wrote down did not have to decide anything.
+ * «Nothing matched» is a useless thing to tell an engineer — it names no next action. «12
+ * points of the 28 required» tells them the drawing and the survey barely overlap; «ambiguous»
+ * tells them the geometry is symmetric and no algorithm can decide for them.
+ *
+ * Only refusals of candidates that actually LANDED something are recorded. A branch that
+ * scored zero inliers did not fail a gate in any meaningful sense — it simply does not apply
+ * (the identity transform on a drawing 4 500 km away), and reporting its verdict would be
+ * noise dressed as diagnosis. First meaningful refusal wins: branches run in descending order
+ * of certainty and frames in descending order of size, so the first is the most relevant.
  */
-function tryAnalytic(method: 'identity-restore' | 'already-aligned', geo: GeoReference, ctx: MatchContext): GeoMatchResult | null {
+class FailureLog {
+  private recorded: Partial<GeoMatchResult> | null = null;
+
+  record(verdict: GateVerdict, score: { inliers: number; rmsMm: number }): void {
+    if (this.recorded !== null || verdict.accepted || score.inliers === 0) return;
+    this.recorded = {
+      failure: verdict.reason,
+      inliers: score.inliers,
+      required: verdict.required,
+      rmsMm: score.rmsMm,
+    };
+  }
+
+  /** The recorded refusal as result fields, or an empty patch when nothing meaningful failed. */
+  get asResultFields(): Partial<GeoMatchResult> {
+    return this.recorded ?? {};
+  }
+}
+
+/**
+ * The shared tail of every NON-SEARCHING branch: score the candidate, run the gates, and either
+ * accept it or log why it was refused. The three such branches differ only in what they attach to
+ * an acceptance (layer, scale estimate) — never in how they judge, so judging lives here once.
+ *
+ * `secondBestInliers: 0` is correct rather than lenient: none of these branches search, so there
+ * IS no rival hypothesis. The uniqueness gate exists to catch a search that could not decide, and
+ * an offset the importer wrote down did not have to decide anything.
+ */
+function scoreAndAccept(
+  method: GeoMatchMethod,
+  geo: GeoReference,
+  ctx: MatchContext,
+  extra: { scaleEstimate: number; layerName: string | null },
+): GeoMatchResult | null {
   const score = scoreGeoReference(ctx.allXY, ctx.index, geo);
   const verdict = applyAcceptanceGates({
     inliers: score.inliers, matchable: ctx.matchable, rmsMm: score.rmsMm, secondBestInliers: 0,
   });
-  if (!verdict.accepted) return null;
+  if (!verdict.accepted) {
+    ctx.failures.record(verdict, score);
+    return null;
+  }
 
   return accepted(method, geo, score, {
-    matchable: ctx.matchable, required: verdict.required, scaleEstimate: 1,
-    layerName: null, hypotheses: 0,
+    matchable: ctx.matchable, required: verdict.required,
+    scaleEstimate: extra.scaleEstimate, layerName: extra.layerName, hypotheses: 0,
   });
+}
+
+/** Branches 1 and 2 — an analytic candidate: no search, no layer, unit scale by construction. */
+function tryAnalytic(method: 'identity-restore' | 'already-aligned', geo: GeoReference, ctx: MatchContext): GeoMatchResult | null {
+  return scoreAndAccept(method, geo, ctx, { scaleEstimate: 1, layerName: null });
 }
 
 /**
@@ -197,7 +247,10 @@ function tryCongruent(frame: readonly LocalCandidatePoint[], ctx: MatchContext):
     inliers: match.score.inliers, matchable, rmsMm: match.score.rmsMm,
     secondBestInliers: match.secondBestInliers,
   });
-  if (!verdict.accepted) return null;
+  if (!verdict.accepted) {
+    ctx.failures.record(verdict, match.score);
+    return null;
+  }
 
   return accepted('congruent-pairs', match.geo, match.score, {
     matchable, required: verdict.required, scaleEstimate: match.scaleEstimate,
@@ -226,6 +279,7 @@ export function autoMatchToSurvey(input: AutoMatchInput): GeoMatchResult {
     matchable: matchableTotal(all.length, worldXY.length),
     toleranceMm,
     layersById: input.layersById,
+    failures: new FailureLog(),
   };
 
   return runBranches(input, ctx);
@@ -251,7 +305,55 @@ function runBranches(input: AutoMatchInput, ctx: MatchContext): GeoMatchResult {
     if (found) return found;
   }
 
-  return noMatch('needs-manual', { matchable: ctx.matchable });
+  return explainAsUnitMismatch(ctx)
+    ?? noMatch('needs-manual', { matchable: ctx.matchable, ...ctx.failures.asResultFields });
+}
+
+/** Diagonal of a point set's bounding box — its size, independent of where it sits. */
+function extentOf(points: readonly Point2D[]): number {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const p of points) {
+    if (p.x < minX) minX = p.x;
+    if (p.x > maxX) maxX = p.x;
+    if (p.y < minY) minY = p.y;
+    if (p.y > maxY) maxY = p.y;
+  }
+  return points.length === 0 ? 0 : Math.hypot(maxX - minX, maxY - minY);
+}
+
+/**
+ * LAST RESORT — explain a total failure as a unit problem, when the sizes say so.
+ *
+ * 🔴 This exists because the blind search is STRUCTURALLY BLIND to a large unit mismatch, and
+ * that is worth stating plainly: `congruent-pairs` matches on distance invariance, so at 1000×
+ * no drawing segment has a survey counterpart of the same length, no hypothesis is ever
+ * formed, and `scaleEstimate` is never computed. The scale check inside the search can only
+ * catch SMALL errors (a fit that came out at 1.003). Without this fallback a drawing authored
+ * in metres and read as millimetres produced «no match found» — technically true, and useless:
+ * it names no action, while «your units are off by 1000» names exactly one.
+ *
+ * The numbering channel does not need this — it matches by IDENTITY, so it measures the scale
+ * directly however large it is. This only covers the unlabelled case.
+ *
+ * Deliberately conservative, in three ways: it runs ONLY after everything else has failed, so
+ * it can never override a real match; it fires only when the ratio is recognisably one of the
+ * known unit ratios (within 0.5 %), not merely «large»; and it produces a MESSAGE, never a
+ * transform. A drawing that is genuinely a small detail inside a large survey has an extent
+ * ratio too, but it will not land within half a percent of exactly 1000.
+ */
+function explainAsUnitMismatch(ctx: MatchContext): GeoMatchResult | null {
+  const localExtent = extentOf(ctx.allXY);
+  if (localExtent <= 0) return null;
+
+  const ratio = extentOf(ctx.worldXY) / localExtent;
+  const suggested = suggestUnitScale(ratio);
+  if (suggested === null || !isUnitMismatch(ratio)) return null;
+
+  return noMatch('unit-mismatch', {
+    matchable: ctx.matchable,
+    scaleEstimate: ratio,
+    suggestedUnitScale: suggested,
+  });
 }
 
 /** Branch 3 — known correspondences from the surveyor's point numbers. */
@@ -267,15 +369,8 @@ function runPointNumberBranch(input: AutoMatchInput, ctx: MatchContext): GeoMatc
     });
   }
 
-  const score = scoreGeoReference(ctx.allXY, ctx.index, match.solution.geo);
-  const verdict = applyAcceptanceGates({
-    inliers: score.inliers, matchable: ctx.matchable, rmsMm: score.rmsMm, secondBestInliers: 0,
-  });
-  if (!verdict.accepted) return null;
-
-  return accepted('point-number', match.solution.geo, score, {
-    matchable: ctx.matchable, required: verdict.required,
+  return scoreAndAccept('point-number', match.solution.geo, ctx, {
     scaleEstimate: match.solution.scaleEstimate,
-    layerName: dominantLayerName(nodes, ctx.layersById), hypotheses: 0,
+    layerName: dominantLayerName(nodes, ctx.layersById),
   });
 }
