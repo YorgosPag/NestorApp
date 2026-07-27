@@ -57,6 +57,28 @@ export function resolveVerticalDatumMm(
 }
 
 /**
+ * ADR-665 M2.3 — Η **ΑΝΤΙΣΤΡΟΦΗ** του κατακόρυφου display frame: ποιο υψόμετρο αποτύπωσης
+ * (WORLD canonical mm) αποδίδεται σε δεδομένο three-world Y (μέτρα);
+ *
+ * Ο ευθύς δρόμος έχει **δύο** σκαλοπάτια, όχι ένα (`tin-to-three.buildPositions` +
+ * `seatTopoLayerRoot`):
+ *
+ *     worldY(m) = (elevMm − datumMm)/1000 − TERRAIN_DISPLAY_DROP_MM/1000
+ *
+ * ⚠️ Το **drop συμμετέχει** και είναι ακριβώς αυτό που ξεχνιέται: ο λόφος σχεδιάζεται 5 cm
+ * χαμηλότερα από το datum του, άρα ένα επίπεδο σε σταθερό world-Y τον κόβει 5 cm **ψηλότερα** σε
+ * όρους αποτύπωσης. Παράλειψή του δεν φαίνεται ως σφάλμα — φαίνεται ως cap που έχει ξεκολλήσει
+ * από την ακμή της τομής, δηλαδή ως «χαλασμένο render».
+ *
+ * Ζει εδώ και όχι στο `terrain-clip-math`: αυτό το module κατέχει **και τα δύο** μεγέθη της
+ * αντιστροφής (το datum και το drop), ενώ το `terrain-clip-math` είναι σκόπιμα καθαρό από κάθε
+ * store και δεν επιτρέπεται να τα τραβήξει. Καθαρή συνάρτηση — το `datumMm` το δίνει ο καλών.
+ */
+export function surfaceElevationAtWorldYMm(worldYM: number, datumMm: number): number {
+  return worldYM * 1000 + TERRAIN_DISPLAY_DROP_MM + datumMm;
+}
+
+/**
  * The ACTIVE project vertical datum (WORLD canonical mm) for the current survey + geo-reference.
  * The ONE impure entry the 3D survey layers share (mirror of `getActiveWorldToDisplayProjector`),
  * so the terrain and the point cloud re-seat by the SAME datum and never split vertically.
