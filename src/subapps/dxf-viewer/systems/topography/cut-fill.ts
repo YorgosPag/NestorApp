@@ -25,7 +25,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import { clipPolygonBySH, shoelaceArea } from '../../bim/geometry/shared/polygon-utils';
+import { clipPolygonByConvex2D } from '../../bim/geometry/shared/polygon-utils';
 import type { TinSurface, TopoBoundary, CutFillResult } from './topo-types';
 import { createTinSampler } from './tin-sampler';
 import {
@@ -173,17 +173,14 @@ function boundaryVertices(boundary: TopoBoundary | null | undefined): readonly P
  * Triangle ∩ boundary, planimetric. The TRIANGLE is the clipper because S-H requires a CONVEX
  * clip — that way the οικόπεδο may be as concave as it likes (Γ-shaped plots are the norm).
  *
- * The CCW re-winding is not defensive noise: S-H reads «inside = left of the directed edge», so
- * a clockwise clip triangle rejects EVERY point and the triangle's earth vanishes from the
- * report without a word. cdt2d hands us CCW triangles today; this makes the contract explicit
- * rather than load-bearing-by-luck.
+ * ADR-718 — the lift/re-wind/project boilerplate (including WHY the CCW re-winding is load-bearing)
+ * now lives once in `clipPolygonByConvex2D`, because the surface-crop asks this identical question
+ * on the identical shapes. Two copies of a silent-failure rule is exactly the sibling clone N.18
+ * exists to stop.
  */
 function clipToBoundary(
   triangle: readonly [DzVertex, DzVertex, DzVertex],
   boundary: readonly Point2D[],
 ): Point2D[] {
-  const subject = boundary.map((p) => ({ x: p.x, y: p.y, z: 0 }));
-  const clip = triangle.map((v) => ({ x: v.x, y: v.y, z: 0 }));
-  const ccwClip = shoelaceArea(clip) >= 0 ? clip : [...clip].reverse();
-  return clipPolygonBySH(subject, ccwClip).map((p) => ({ x: p.x, y: p.y }));
+  return clipPolygonByConvex2D(boundary, triangle);
 }

@@ -248,6 +248,7 @@ export function projectVerticesTo2D(
 
 export {
   clipPolygonBySH,
+  clipPolygonByConvex2D,
   polygonIntersectionAreaMm2,
 } from './polygon-clip-utils';
 
