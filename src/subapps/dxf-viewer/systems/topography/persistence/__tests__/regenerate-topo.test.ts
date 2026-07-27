@@ -1,8 +1,14 @@
 /**
  * ADR-650 — silent contour regenerate: idempotent cleanup + no undo/autosave side effects.
+ *
+ * ADR-650 §M10g — τo rebuild έγινε καθαρό (`rebuildTopoDerivedScene`) και ο μοναδικός πλέον
+ * ιδιοκτήτης του get→commit είναι ο reconciler. Οι έλεγχοι οδηγούν από ΕΚΕΙ, ώστε να μένουν
+ * έλεγχοι της **συμπεριφοράς που βλέπει ο χρήστης** και όχι μιας συνάρτησης που άλλαξε σπίτι.
  */
 
-import { regenerateTopoContours } from '../regenerate-topo';
+import { reconcileTopoFrame } from '../topo-frame-reconcile';
+import { resetBakedFramesForTest } from '../../topo-baked-frame-store';
+import { resetTopoFrameStatusForTest } from '../../topo-frame-status-store';
 import { clearTopo, setTopoPoints } from '../../TopoPointStore';
 import { createSceneLayer } from '../../../../types/scene-types';
 import { TOPO_MINOR_LAYER_NAME } from '../../contour-config';
@@ -30,9 +36,20 @@ function contourVertices(scene: SceneModel): { x: number; y: number }[] {
   return out;
 }
 
-describe('regenerateTopoContours', () => {
-  beforeEach(() => { clearTopo(); setGeoReference(null); });
-  afterEach(() => { clearTopo(); setGeoReference(null); });
+/** Το «πόσα παράγωγα γράφτηκαν» — ό,τι επέστρεφε πριν το `regenerateTopoContours`. */
+function regenerate(deps: Parameters<typeof reconcileTopoFrame>[0]): number {
+  return reconcileTopoFrame(deps).derivedCount;
+}
+
+describe('regenerate topo derived products (via the ADR-650 §M10g reconciler)', () => {
+  beforeEach(() => {
+    clearTopo(); setGeoReference(null);
+    resetBakedFramesForTest(); resetTopoFrameStatusForTest();
+  });
+  afterEach(() => {
+    clearTopo(); setGeoReference(null);
+    resetBakedFramesForTest(); resetTopoFrameStatusForTest();
+  });
 
   it('removes stale entities on contour layers before rebuilding (idempotent cleanup)', () => {
     const minorLayer = createSceneLayer({ name: TOPO_MINOR_LAYER_NAME, color: '#B5651D', visible: true, locked: false });
@@ -41,7 +58,7 @@ describe('regenerateTopoContours', () => {
 
     let scene = makeScene([staleContour, keeper], [minorLayer]);
     // No survey points → no fresh contours, but the stale one must still be dropped.
-    const count = regenerateTopoContours({
+    const count = regenerate({
       getScene: () => scene,
       commitScene: (s) => { scene = s; },
       levelId: '0',
@@ -62,9 +79,9 @@ describe('regenerateTopoContours', () => {
     let scene = makeScene([], []);
     const commit = (s: SceneModel) => { scene = s; };
 
-    const first = regenerateTopoContours({ getScene: () => scene, commitScene: commit, levelId: '0' });
+    const first = regenerate({ getScene: () => scene, commitScene: commit, levelId: '0' });
     const afterFirst = scene.entities.length;
-    const second = regenerateTopoContours({ getScene: () => scene, commitScene: commit, levelId: '0' });
+    const second = regenerate({ getScene: () => scene, commitScene: commit, levelId: '0' });
 
     expect(second).toBe(first);                 // same contour count both runs
     expect(scene.entities.length).toBe(afterFirst); // no accumulation
@@ -82,14 +99,14 @@ describe('regenerateTopoContours', () => {
     const commit = (s: SceneModel) => { scene = s; };
 
     // Without a geo-reference the contours stay in ΕΓΣΑ world (huge magnitudes).
-    regenerateTopoContours({ getScene: () => scene, commitScene: commit, levelId: '0' });
+    regenerate({ getScene: () => scene, commitScene: commit, levelId: '0' });
     const worldVerts = contourVertices(scene);
     expect(worldVerts.length).toBeGreaterThan(0);
     expect(worldVerts.every((v) => v.x > 1e8)).toBe(true);
 
     // With the geo-reference (local origin at the survey corner) they land near 0 — on the plan.
     setGeoReference({ originWorld: { x: ox, y: oy }, rotationDeg: 0 });
-    regenerateTopoContours({ getScene: () => scene, commitScene: commit, levelId: '0' });
+    regenerate({ getScene: () => scene, commitScene: commit, levelId: '0' });
     const localVerts = contourVertices(scene);
     expect(localVerts.length).toBeGreaterThan(0);
     expect(localVerts.every((v) => v.x >= -1 && v.x <= 1001)).toBe(true);

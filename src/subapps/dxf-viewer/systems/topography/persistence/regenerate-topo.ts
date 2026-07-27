@@ -10,15 +10,20 @@
  *
  * Two invariants separate this from the user's «Generate» button
  * (`useTopoContours.generate`):
- *   1. **Silent** — writes the scene through the caller's `commitScene` with a NON
- *      `local-edit` origin, and does NOT go through `CommandHistory`. So the load
- *      neither pushes an undo entry nor schedules a DXF autosave loop.
+ *   1. **Silent** — the caller (`topo-frame-reconcile`) writes the returned scene with a NON
+ *      `local-edit` origin, and does NOT go through `CommandHistory`. So the load neither
+ *      pushes an undo entry nor schedules a DXF autosave loop.
  *   2. **Idempotent** — every existing entity on the three TOPO-CONTOUR-* layers is
  *      dropped before the new ones are added, so repeated loads / level switches never
  *      duplicate the contours.
  *
+ * ADR-650 §M10g — this module is now PURE (scene in → scene out). The get→commit half moved to
+ * the ONE reconciler, which chains this rebuild with the baked-product delta-move into a SINGLE
+ * scene write. Two owners of «what happens when the frame changes» was exactly the gap §M10g
+ * closed, so there is deliberately no second commit path back here.
+ *
  * @see ../useTopoContours.ts — the interactive (undoable) generate path
- * @see ./useTopoPersistence.ts — the caller (inside `hydrate`)
+ * @see ./topo-frame-reconcile.ts — the ONE caller (rebuild + delta-move + commit)
  */
 
 import type { SceneModel, AnySceneEntity } from '../../../types/scene';
@@ -38,14 +43,6 @@ import {
   TOPO_MAJOR_LAYER_NAME, TOPO_MINOR_LAYER_NAME, TOPO_LABEL_LAYER_NAME,
   TOPO_MAJOR_COLOR, TOPO_MINOR_COLOR, TOPO_LABEL_COLOR,
 } from '../contour-config';
-
-export interface RegenerateTopoDeps {
-  /** Read the current scene of the target level. */
-  readonly getScene: (levelId: string) => SceneModel | null;
-  /** Write the scene back with a SILENT origin (`system-reconcile`/`load` — no autosave/undo). */
-  readonly commitScene: (scene: SceneModel) => void;
-  readonly levelId: string;
-}
 
 interface LayerSpec { readonly name: string; readonly color: string }
 const LAYER_SPECS: readonly LayerSpec[] = [
@@ -78,23 +75,6 @@ function ensureLayers(
     },
     surfaceLayerId: idByName[TOPO_SURFACE_LAYER_NAME],
   };
-}
-
-/**
- * Rebuild the plan-view contours for `levelId` from the (already restored) survey stores.
- * Returns the number of contour entities written. A survey with no triangulable ground
- * still runs — it just clears any stale contours (idempotent cleanup) and writes none.
- *
- * Thin get→build→commit wrapper over the PURE {@link rebuildTopoDerivedScene}; the ONE
- * reconciler (ADR-650 §M10g) composes that pure core with the baked-product delta-move so
- * both land in a SINGLE scene write instead of two.
- */
-export function regenerateTopoContours(deps: RegenerateTopoDeps): number {
-  const scene = deps.getScene(deps.levelId);
-  if (!scene) return 0;
-  const rebuilt = rebuildTopoDerivedScene(scene);
-  deps.commitScene(rebuilt.scene);
-  return rebuilt.count;
 }
 
 /** The rebuilt scene + how many derived entities it now carries. */

@@ -19,7 +19,6 @@ import { createTinSampler } from './tin-sampler';
 import { buildSurveyPointLabelEntities } from './topo-point-labels';
 import { getTopoDisplayProjector } from './topo-display-frame';
 import { ensurePointLabelLayers } from './ensure-point-label-layers';
-import { getPointLabelOptions } from './topo-point-label-store';
 import { DEFAULT_POINT_LABEL_OPTS, type PointLabelOptions } from './topo-point-label-config';
 import type { Entity } from '../../types/entities';
 
