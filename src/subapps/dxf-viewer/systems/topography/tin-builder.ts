@@ -28,14 +28,26 @@ export function localVertexKey(localX: number, localY: number): string {
   return `${Math.round(localX * 1000)}:${Math.round(localY * 1000)}`;
 }
 
-interface CollectedVertices {
+/**
+ * The growing vertex table of a TIN under construction. Exported (with its factory and
+ * {@link pushVertex}) because ADR-718's surface crop assembles a SECOND TIN from clipped triangle
+ * pieces and must dedup on the **same** micrometre grid — two dedup rules would let the crop merge
+ * vertices the builder kept apart (or the reverse), and the two surfaces would disagree about
+ * where a shared edge is.
+ */
+export interface CollectedVertices {
   readonly positions: Cdt2dPoint[];
   readonly elevations: number[];
   readonly keyToIndex: Map<string, number>;
 }
 
+/** An empty vertex table. */
+export function createVertexAccumulator(): CollectedVertices {
+  return { positions: [], elevations: [], keyToIndex: new Map() };
+}
+
 /** Add one LOCAL vertex (deduped by grid key), returning its index. */
-function pushVertex(acc: CollectedVertices, localX: number, localY: number, z: number): number {
+export function pushVertex(acc: CollectedVertices, localX: number, localY: number, z: number): number {
   const key = localVertexKey(localX, localY);
   const existing = acc.keyToIndex.get(key);
   if (existing !== undefined) return existing;
@@ -52,7 +64,7 @@ function collectVertices(
   breaklines: readonly Breakline[],
   origin: LocalOrigin,
 ): CollectedVertices {
-  const acc: CollectedVertices = { positions: [], elevations: [], keyToIndex: new Map() };
+  const acc = createVertexAccumulator();
   for (const p of points) pushVertex(acc, p.x - origin.x, p.y - origin.y, p.z);
   for (const bl of breaklines) {
     for (const v of bl.vertices) pushVertex(acc, v.x - origin.x, v.y - origin.y, v.z);
@@ -85,8 +97,12 @@ function buildConstraintEdges(
   return edges;
 }
 
-/** Local-frame planimetric bounds + world-frame vertical bounds. */
-function computeBounds(positions: readonly Cdt2dPoint[], elevations: readonly number[]): TopoBounds {
+/**
+ * Local-frame planimetric bounds + world-frame vertical bounds. Exported for ADR-718: a cropped
+ * surface has DIFFERENT bounds from the surveyed one, and stale bounds are not a cosmetic bug —
+ * they drive camera fit and the ADR-635 culling window (ADR-537: one bad number blanks the 3D).
+ */
+export function computeBounds(positions: readonly Cdt2dPoint[], elevations: readonly number[]): TopoBounds {
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   let minZ = Infinity, maxZ = -Infinity;
   for (const [x, y] of positions) {
@@ -98,7 +114,7 @@ function computeBounds(positions: readonly Cdt2dPoint[], elevations: readonly nu
 }
 
 /** Count triangles whose three vertices share one elevation (false flats, §5). */
-function countFlatTriangles(
+export function countFlatTriangles(
   triangles: ReadonlyArray<readonly [number, number, number]>,
   elevations: readonly number[],
 ): number {
