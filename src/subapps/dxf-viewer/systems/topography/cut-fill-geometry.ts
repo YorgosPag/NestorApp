@@ -15,13 +15,15 @@
  * a boundary/daylight cut leaves behind. That is why the pieces need no re-triangulation.
  *
  * Reuse (N.18 — nothing re-derived): `shoelaceArea`/`polygonArea`/`polygonAreaCentroid` from the
- * polygon SSoT, and `crossEdge` from `marching-triangles` for the zero crossing (the same
- * linear-interpolation question the contour extractor asks, on a Δz field instead of a Z one).
+ * polygon SSoT, and the half-plane clip itself from `planar-scalar-clip` (ADR-665 M2.2), which in
+ * turn asks `marching-triangles.crossEdge` for the zero crossing — the same linear-interpolation
+ * question the contour extractor asks, on a Δz field instead of a Z one. The terrain cut cap runs
+ * that SAME clip on a `z − levelZ` field, which is why it is one module and not two.
  */
 
 import type { Point2D } from '../../rendering/types/Types';
 import { polygonArea, polygonAreaCentroid } from '../../bim/geometry/shared/polygon-utils';
-import { crossEdge } from './marching-triangles';
+import { clipPolygonAtScalarZero } from './planar-scalar-clip';
 
 /** A polygon vertex carrying the Δz (surface − reference) of the surface at that point. */
 export interface DzVertex {
@@ -112,25 +114,24 @@ export function pieceVolumeMm3(piece: readonly DzVertex[], plane: DzPlane): {
 
 // ─── internals ─────────────────────────────────────────────────────────────────
 
-/** Keep the part of the polygon where `sign · Δz ≥ 0`, interpolating new vertices on Δz = 0. */
+/**
+ * Keep the part of the polygon where `sign · Δz ≥ 0`, interpolating new vertices on Δz = 0.
+ *
+ * ADR-665 M2.2 — the half-plane clip itself now lives in `planar-scalar-clip` (ONE copy), because
+ * the terrain cut cap asks the identical question on a DIFFERENT field (`z − levelZ`). This
+ * function is the Δz **adapter**: it names the field and rebuilds a `DzVertex` on the zero line.
+ * A crossing vertex sits exactly ON the daylight line, so its Δz is 0 by construction — it is not
+ * re-evaluated from the plane (that would re-introduce float noise on the very line whose exactness
+ * keeps `cut` + `fill` watertight).
+ */
 function clipToSign(polygon: readonly DzVertex[], sign: 1 | -1): DzVertex[] {
-  const out: DzVertex[] = [];
-  const n = polygon.length;
-
-  for (let i = 0; i < n; i++) {
-    const current = polygon[i]!;
-    const previous = polygon[(i + n - 1) % n]!;
-    const currentInside = sign * current.dz >= 0;
-    const previousInside = sign * previous.dz >= 0;
-
-    if (currentInside !== previousInside) out.push(zeroCrossing(previous, current));
-    if (currentInside) out.push(current);
-  }
-  return out.length >= 3 ? out : [];
+  return clipPolygonAtScalarZero(polygon, sign, fieldOfDz, dzVertexAtCrossing);
 }
 
-/** The point on edge a→b where Δz = 0 — via the contour extractor's linear crossing (SSoT). */
-function zeroCrossing(a: DzVertex, b: DzVertex): DzVertex {
-  const p = crossEdge({ x: a.x, y: a.y }, a.dz, { x: b.x, y: b.y }, b.dz, 0);
-  return { x: p.x, y: p.y, dz: 0 };
+function fieldOfDz(vertex: DzVertex): number {
+  return vertex.dz;
+}
+
+function dzVertexAtCrossing(point: Point2D): DzVertex {
+  return { x: point.x, y: point.y, dz: 0 };
 }
