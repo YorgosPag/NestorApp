@@ -18,6 +18,8 @@
  * @see run-dxf-parse.ts       - threads it into DxfImportResult.warnings
  */
 
+import type { UnitDecision } from './import-unit-decision';
+
 /** A single import issue (skipped/failed entity or an expansion clamp). */
 export interface ImportIssue {
   /** DXF entity type or subsystem (e.g. 'LINE', 'INSERT', 'MINSERT'). */
@@ -36,6 +38,14 @@ export interface ImportDiagnostics {
   clamps: ImportIssue[];
   /** True when a detail list hit its cap — counts stay exact, detail is partial. */
   truncated: boolean;
+  /**
+   * ADR-716 — WHICH unit the import scaled from, and on WHAT EVIDENCE. A unit decision is the
+   * single highest-leverage number of the whole import (it multiplies every coordinate, area,
+   * volume and BOQ line), so it must never be an unrecorded side effect: it travels with the
+   * diagnostics to the wizard readout, the server log and telemetry. Absent only when the scale
+   * pass never ran (empty scene).
+   */
+  unitDecision?: UnitDecision;
 }
 
 /** Detail-list cap. Counts (parsedByType/skippedByType) are never capped. */
@@ -58,6 +68,11 @@ export function recordSkipped(d: ImportDiagnostics, type: string): void {
 export function recordError(d: ImportDiagnostics, issue: ImportIssue): void {
   if (d.errors.length < MAX_ISSUE_LIST) d.errors.push(issue);
   else d.truncated = true;
+}
+
+/** ADR-716 — record the unit verdict + its evidence for this import run. */
+export function recordUnitDecision(d: ImportDiagnostics, decision: UnitDecision): void {
+  d.unitDecision = decision;
 }
 
 export function recordClamp(d: ImportDiagnostics, issue: ImportIssue): void {

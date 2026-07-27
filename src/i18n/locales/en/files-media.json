@@ -150,7 +150,16 @@
       "cm": "Centimeters (cm)",
       "mm": "Millimeters (mm)",
       "ft": "Feet (ft)",
-      "in": "Inches (in)"
+      "in": "Inches (in)",
+      "resolved": "Auto → {unit}",
+      "extent": "The drawing comes out {width} m × {height} m",
+      "evidence": {
+        "explicit": "Your explicit choice",
+        "geodetic": "Geo-referenced drawing (Greek projected grid)",
+        "declared": "Declared by the file ($INSUNITS)",
+        "magnitude": "Estimated from coordinate magnitude",
+        "fallback": "Default — the file declares no units"
+      }
     },
     "noItems": "No items found",
     "autoSelected": "Auto-selected",

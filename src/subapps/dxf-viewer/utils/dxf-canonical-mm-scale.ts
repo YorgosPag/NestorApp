@@ -15,14 +15,12 @@
 import type { AnySceneEntity } from '../types/scene';
 import type { Entity } from '../types/entities';
 import type { DxfHeaderData } from './dxf-parser-types';
-import { recordError, type ImportDiagnostics } from './dxf-import-diagnostics';
+import { recordError, recordUnitDecision, type ImportDiagnostics } from './dxf-import-diagnostics';
+import { mmToSceneUnits, type SceneUnits } from './scene-units';
 import {
-  insunitsCodeToSceneUnits,
-  mmToSceneUnits,
-  resolveImportSourceUnits,
-  resolveUnitDetectionBounds,
-  type SceneUnits,
-} from './scene-units';
+  resolveImportSourceUnitsWithEvidence,
+  type UnitDecision,
+} from './import-unit-decision';
 // ADR-348 SSoT — per-entity scale transform (reused for the import unit-scale pass).
 import { scaleEntity } from '../systems/scale/scale-entity-transform';
 
@@ -54,28 +52,39 @@ export interface CanonicalMmScaleResult {
 }
 
 /**
- * Resolve the drawing's SOURCE unit from the three authoritative inputs.
+ * Resolve the drawing's SOURCE unit **with its evidence** — the full ADR-716 §8 ladder:
+ * explicit override → geodetic identification → `$INSUNITS` → bounds heuristic → `'mm'`.
  *
- * ADR-362 Round 20 — the heuristic is fed the junk-free STORED extents (`$EXTMIN`/`$EXTMAX`)
- * when the header carries them, else the computed entity bounds. Without this, geo-referenced
- * metre surveys whose stray origin entities (legacy ASHADE blocks at 0,0, degenerate spline
- * control points) inflate the bounds diagonal into the mm bucket → `$INSUNITS=4` (mm) trusted
- * → geometry left un-scaled → the whole survey shrinks ×1000.
+ * ADR-362 Round 20 — every rung is fed the junk-free STORED extents (`$EXTMIN`/`$EXTMAX`) when
+ * the header carries them, else the computed entity bounds. Without this, geo-referenced metre
+ * surveys whose stray origin entities (legacy ASHADE blocks at 0,0, degenerate spline control
+ * points) inflate the bounds diagonal into the mm bucket → `$INSUNITS=4` (mm) trusted → geometry
+ * left un-scaled → the whole survey shrinks ×1000.
+ *
+ * ADR-716 — the diagonal heuristic alone answers «how BIG?», a mathematically ambiguous question.
+ * A Greek survey that also maps the neighbouring plots (normal professional practice) crosses the
+ * 500-unit threshold and is read as centimetres → ×100. The geodetic rung answers «WHERE?»
+ * instead, which is unambiguous by construction, and it abstains on everything that is not
+ * geo-referenced — so ordinary floorplans are untouched.
  */
+export function resolveSourceUnitsWithEvidence(
+  header: DxfHeaderData,
+  bounds: SceneEntityBounds,
+  unitsOverride?: SceneUnits,
+): UnitDecision {
+  const declaredExtents = header.extmin && header.extmax
+    ? { min: header.extmin, max: header.extmax }
+    : null;
+  return resolveImportSourceUnitsWithEvidence(header.insunits, declaredExtents, bounds, unitsOverride);
+}
+
+/** Units-only view of {@link resolveSourceUnitsWithEvidence} (unchanged signature for callers). */
 export function resolveSourceUnits(
   header: DxfHeaderData,
   bounds: SceneEntityBounds,
   unitsOverride?: SceneUnits,
 ): SceneUnits {
-  if (unitsOverride) return unitsOverride;
-
-  const fromInsunits = insunitsCodeToSceneUnits(header.insunits);
-  const declaredExtents = header.extmin && header.extmax
-    ? { min: header.extmin, max: header.extmax }
-    : null;
-  const detectionBounds = resolveUnitDetectionBounds(declaredExtents, bounds);
-
-  return resolveImportSourceUnits(fromInsunits, detectionBounds);
+  return resolveSourceUnitsWithEvidence(header, bounds, unitsOverride).units;
 }
 
 /**
@@ -85,7 +94,10 @@ export function resolveSourceUnits(
 export function applyCanonicalMmScale(input: CanonicalMmScaleInput): CanonicalMmScaleResult {
   const { entities, bounds, header, unitsOverride, diagnostics, recomputeBounds } = input;
 
-  const sourceUnits = resolveSourceUnits(header, bounds, unitsOverride);
+  const decision = resolveSourceUnitsWithEvidence(header, bounds, unitsOverride);
+  const sourceUnits = decision.units;
+  // ADR-716 — the verdict AND its evidence travel with the import, never as a silent side effect.
+  recordUnitDecision(diagnostics, decision);
 
   // mmToSceneUnits('m') = 0.001 → a value in metres × (1/0.001)=1000 becomes mm.
   const mmFactor = 1 / mmToSceneUnits(sourceUnits);
