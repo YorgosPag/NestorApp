@@ -34,7 +34,7 @@ import {
   ERGASIA_47_WIDTH_M,
   ERGASIA_47_HEIGHT_M,
   makeErgasia47Dxf,
-} from './fixtures/ergasia47-dxf';
+} from './fixtures/dxf-fixtures';
 
 describe('ADR-716 §2 — η ευρετική διαγωνίου (ΑΜΕΤΑΒΛΗΤΗ) πέφτει έξω στο τοπογραφικό', () => {
   it('detectSceneUnits λέει "cm" για ένα ΜΕΤΡΙΚΟ τοπογραφικό 587 m × 488 m', () => {

@@ -40,8 +40,8 @@ import { useAnnotationSymbolSelectionStore } from '../../state/annotation-symbol
 import { getAnnotationSymbol } from '../../config/annotation-symbol-catalog';
 import type { ToolType } from '../../ui/toolbar/types';
 // ADR-649 / ADR-662 §12 — «Ετικέτα Εμβαδού» (2 κλικ: pick οντότητας → place label).
+// Το `pickTopEntityAt` δηλώνεται ΜΙΑ φορά παρακάτω (κοινό με τις «Γραμμές ασυνέχειας»).
 import { type Entity } from '../../types/entities';
-import { pickTopEntityAt } from '../../rendering/hitTesting/pick-top-entity-at';
 import { hasMeasurableArea } from '../../systems/measure/entity-area-facts';
 import { buildAreaLabelEntity } from '../../systems/measure/area-label';
 import {
@@ -51,7 +51,8 @@ import {
 } from '../../systems/measure/area-label-store';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import { i18n } from '@/i18n';
-// ADR-650 M2-Β — «Γραμμές ασυνέχειας»: pick υπάρχουσας γραμμής → constraint στο CDT.
+// Κοινό SSoT pick (predicate-driven): «Ετικέτα Εμβαδού» (ADR-662 §12) + «Γραμμές
+// ασυνέχειας» (ADR-650 M2-Β: pick υπάρχουσας γραμμής → constraint στο CDT).
 import { pickTopEntityAt } from '../../rendering/hitTesting/pick-top-entity-at';
 import {
   buildBreaklineFromEntity,

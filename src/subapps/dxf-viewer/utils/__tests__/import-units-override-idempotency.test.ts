@@ -24,7 +24,7 @@ import {
   ERGASIA_47_WIDTH_M,
   ERGASIA_47_HEIGHT_M,
   makeErgasia47Dxf,
-} from './fixtures/ergasia47-dxf';
+} from './fixtures/dxf-fixtures';
 
 /** Πλάτος/ύψος της σκηνής σε canonical mm — ό,τι «βλέπει» κάθε downstream καταναλωτής. */
 function extentMm(scene: { bounds: { min: { x: number; y: number }; max: { x: number; y: number } } }) {
