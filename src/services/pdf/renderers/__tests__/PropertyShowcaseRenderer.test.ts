@@ -1,5 +1,13 @@
 /**
+ * @jest-environment node
+ *
  * Unit tests for PropertyShowcaseRenderer's photo-embedding path.
+ *
+ * Runs on `node`, not jsdom: the renderer reaches `showcase-core/index.ts`,
+ * which pulls in `next/server` — and that module needs the Web `Request`
+ * global, which jsdom does not provide. The suite died at import time with
+ * `ReferenceError: Request is not defined` before reaching an assertion.
+ * Nothing here touches the DOM, so `node` is the honest environment.
  *
  * Pins the contract between the renderer and `IPDFDoc.addImage`:
  * when `data.photos` is non-empty, the renderer MUST add a photo page and

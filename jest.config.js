@@ -103,8 +103,13 @@ const config = {
   // (three/examples/jsm/lines/*). pnpm structure nests at
   // node_modules/.pnpm/three@VER/node_modules/three/... so the negative
   // lookahead must allow both shallow and pnpm-nested paths.
+  //
+  // `jose` is ESM-only and is pulled in transitively by firebase-admin
+  // (firebase-admin → jwks-rsa → jose). Any suite that imports a service
+  // touching `@/lib/firebaseAdmin` died at parse time on jose's bare
+  // `export {}` before reaching a single assertion. Same nesting rules.
   transformIgnorePatterns: [
-    'node_modules/(?!(?:\\.pnpm/[^/]+/node_modules/)?three/)'
+    'node_modules/(?!(?:\\.pnpm/[^/]+/node_modules/)?(?:three|jose)/)'
   ],
   moduleDirectories: ['node_modules', '<rootDir>'],
   testTimeout: 10000,

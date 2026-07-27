@@ -55,17 +55,18 @@ describe('generateUniqueFileName', () => {
     expect(result1).not.toBe(result2);
   });
 
-  it('includes timestamp in the filename', () => {
-    const before = Date.now();
+  // ADR-293 replaced the old `Date.now()` infix with a canonical enterprise ID
+  // (`generateFileId()` → `file_<uuid>`, no timestamp). The previous version of
+  // this test still searched the filename for a 13-digit millisecond stamp and
+  // had been red ever since — asserting a behaviour the code no longer has.
+  // What the function actually guarantees is the enterprise ID, so assert that.
+  it('embeds a canonical enterprise file ID (ADR-293 — not a raw timestamp)', () => {
     const result = generateUniqueFileName('photo.jpg');
-    const after = Date.now();
-    // Extract timestamp — it's between the base name and the unique ID
-    const parts = result.split('_');
-    const timestamps = parts.filter(p => /^\d{13}$/.test(p));
-    expect(timestamps.length).toBe(1);
-    const ts = Number(timestamps[0]);
-    expect(ts).toBeGreaterThanOrEqual(before);
-    expect(ts).toBeLessThanOrEqual(after);
+
+    expect(result).toMatch(/_file_[0-9a-f-]{36}\.jpg$/i);
+    // The legacy 13-digit millisecond stamp must NOT come back: raw Date.now()
+    // in an identifier is exactly what SOS N.6 forbids.
+    expect(result.split('_').some((p) => /^\d{13}$/.test(p))).toBe(false);
   });
 });
 
