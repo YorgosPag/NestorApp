@@ -42,7 +42,7 @@ import type { ToolType } from '../../ui/toolbar/types';
 // ADR-649 / ADR-662 §12 — «Ετικέτα Εμβαδού» (2 κλικ: pick οντότητας → place label).
 // Το `pickTopEntityAt` δηλώνεται ΜΙΑ φορά παρακάτω (κοινό με τις «Γραμμές ασυνέχειας»).
 import { type Entity } from '../../types/entities';
-import { hasMeasurableArea } from '../../systems/measure/entity-area-facts';
+import { hasMeasurableArea } from '../../systems/measure/entity-measurement-facts';
 import { buildAreaLabelEntity } from '../../systems/measure/area-label';
 import {
   getAreaLabelState,

@@ -5164,7 +5164,9 @@
         "endX": "Τέλος X",
         "endY": "Τέλος Y",
         "deltaX": "ΔX",
-        "deltaY": "ΔY"
+        "deltaY": "ΔY",
+        "perimeter": "Περίμετρος",
+        "area": "Εμβαδόν"
       },
       "lineStyleNames": {
         "thin": "Λεπτή",

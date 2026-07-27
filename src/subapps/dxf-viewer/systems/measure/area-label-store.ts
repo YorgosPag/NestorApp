@@ -7,7 +7,7 @@
  *   - `awaitingPlacement` → 2ο κλικ: τοποθέτησε την ετικέτα (κρατά το picked id).
  *
  * **Αγνωστικό ως προς τον τύπο** (ADR-662 §12): κρατά σκέτο `entityId`, όχι `hatchId`.
- * Ποιοι τύποι επιτρέπονται το αποφασίζει **αποκλειστικά** το `entity-area-facts`
+ * Ποιοι τύποι επιτρέπονται το αποφασίζει **αποκλειστικά** το `entity-measurement-facts`
  * (γραμμοσκίαση, τοπογραφική επιφάνεια, ό,τι έρθει μετά) — αυτό εδώ δεν ξέρει τύπους.
  * Ήταν `bim/hatch/hatch-area-label-store.ts` όσο το εργαλείο ήταν hatch-only.
  *
@@ -16,7 +16,7 @@
  * deactivate (`useAreaLabelTool`) ώστε καμία stale φάση να μη μεταφέρεται.
  *
  * @see ./area-label — pure builders (κείμενο/θέση/entity)
- * @see ./entity-area-facts — ποιοι τύποι έχουν εμβαδόν
+ * @see ./entity-measurement-facts — ποιοι τύποι έχουν εμβαδόν
  * @see docs/centralized-systems/reference/adrs/ADR-649-hatch-area-label-tool.md
  */
 

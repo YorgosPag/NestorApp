@@ -359,7 +359,8 @@
           "sections": {
             "general": "Γενικά",
             "geometry": "Γεωμετρία",
-            "polyline": "Πολυγραμμή"
+            "polyline": "Πολυγραμμή",
+            "measurements": "Μετρήσεις"
           }
         },
         "title": "Νέος τύπος γραμμής",

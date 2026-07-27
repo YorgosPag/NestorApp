@@ -77,6 +77,7 @@ import { useEntityPatchCommand } from '../../../hooks/commands/useEntityPatchCom
 import type { RibbonComboboxState } from '../context/RibbonCommandContext';
 import {
   LINE_TOOL_RIBBON_KEYS,
+  LINE_TOOL_READOUT_KEYS,
   isLineToolRibbonKey,
 } from './bridge/line-tool-command-keys';
 // ADR-510 Φ4e — FILLET radius field routes to the FilletToolStore (tool state, not
@@ -212,6 +213,13 @@ export function useRibbonLineToolBridge(
       ) {
         return null;
       }
+
+      // ADR-649 §measure-facts — «Περίμετρος»/«Εμβαδόν» είναι READ-ONLY μετρήσεις που τις
+      // σερβίρει το `line-measurement-readout` (αλυσιδωμένο ΠΡΙΝ από αυτό το bridge στο
+      // `LinePropertiesTab`), επειδή διαβάζει τη σκηνή που ΔΕΙΧΝΕΙ το panel — όχι την ωμή
+      // που λύνει το `resolveSelected` εδώ. Ίδιο early-return με τους launchers παραπάνω:
+      // χωρίς αυτό θα έπεφταν στο color fallthrough και θα ζωγράφιζαν picker χρώματος.
+      if (LINE_TOOL_READOUT_KEYS.has(commandKey)) return null;
 
       // ADR-510 Φ4e — FILLET radius: tool state, independent of any selection.
       if (commandKey === LINE_TOOL_RIBBON_KEYS.filletRadius) {

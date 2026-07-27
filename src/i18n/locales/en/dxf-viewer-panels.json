@@ -359,7 +359,8 @@
           "sections": {
             "general": "General",
             "geometry": "Geometry",
-            "polyline": "Polyline"
+            "polyline": "Polyline",
+            "measurements": "Measurements"
           }
         },
         "title": "New line type",

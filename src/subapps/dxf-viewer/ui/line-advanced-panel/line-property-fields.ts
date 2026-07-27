@@ -18,6 +18,7 @@ import {
   LINE_TOOL_RIBBON_KEYS,
   LINE_TOOL_PANEL_VISIBILITY_KEYS,
 } from '../ribbon/hooks/bridge/line-tool-command-keys';
+// ADR-649 §measure-facts — «Μετρήσεις» (Περίμετρος / Εμβαδόν), read-only.
 // ADR-507 Φ2 — κοινό ByLayer + ISO subset lineweight list (ίδιο με το ribbon).
 import { LINEWEIGHT_RIBBON_OPTIONS } from '../ribbon/data/lineweight-ribbon-options';
 // ADR-583 SSoT builder για numeric-literal option ladders (kill το hand-written clone).
@@ -50,6 +51,19 @@ const L = (k: keyof typeof LINE_TOOL_RIBBON_KEYS, control: LinePropertyControl, 
   control,
   options: [],
   ...extra,
+});
+
+/**
+ * ADR-649 §measure-facts — read-only readout πεδίο. Ξεχωριστός builder από τον {@link L}
+ * επειδή το labelKey ΔΕΝ παράγεται από το όνομα του key: τα readout keys λέγονται
+ * `readoutPerimeter`/`readoutArea` (flat namespace του command-keys αρχείου) ενώ οι
+ * ετικέτες είναι `perimeter`/`area` — το `L` θα ζητούσε ανύπαρκτα i18n keys (N.11).
+ */
+const MEASURE = (commandKey: string, labelKey: string): LinePropertyField => ({
+  commandKey,
+  labelKey,
+  control: 'readout',
+  options: [],
 });
 
 // ── Groups (κατανομή: full appearance + geometry → panel) ──────────────────────
@@ -94,6 +108,20 @@ export const LINE_PROPERTY_GROUPS: readonly LinePropertyGroup[] = [
     visibilityKey: LINE_TOOL_PANEL_VISIBILITY_KEYS.widthApplicable,
     fields: [
       L('width', 'numeric', { options: WIDTH_OPTIONS, numericInput: { editable: true, min: 0 } }),
+    ],
+  },
+  {
+    // ADR-649 §measure-facts — AutoCAD «Geometry → Area / Length» για κλειστό περίγραμμα.
+    // ΤΕΛΕΥΤΑΙΑ ομάδα: είναι αποτέλεσμα, όχι ρύθμιση — διαβάζεται αφού ο χρήστης έχει δει
+    // την ταυτότητα/εμφάνιση (ίδια θέση με το `info` της γραμμοσκίασης).
+    // `readout` control ⇒ read-only· στο AutoCAD τα Area/Length είναι grayed-out (δεν
+    // «θέτεις» εμβαδόν). Self-hides όταν η επιλογή δεν μετριέται (π.χ. απλή γραμμή).
+    id: 'measurements',
+    titleKey: 'panels.dimensions.linePatternEditor.inlineTab.sections.measurements',
+    visibilityKey: LINE_TOOL_PANEL_VISIBILITY_KEYS.measurable,
+    fields: [
+      MEASURE(LINE_TOOL_RIBBON_KEYS.readoutPerimeter, 'ribbon.commands.quickStyle.perimeter'),
+      MEASURE(LINE_TOOL_RIBBON_KEYS.readoutArea, 'ribbon.commands.quickStyle.area'),
     ],
   },
 ];

@@ -62,6 +62,8 @@ import { Button } from '@/components/ui/button';
 // ADR-510 Φ2E #5 — full per-object fields (Γενικά/Γεωμετρία) via the shared bridge.
 import { useRibbonLineToolBridge } from '../ribbon/hooks/useRibbonLineToolBridge';
 import { LINE_PROPERTY_GROUPS, LINE_SELECTION_ONLY_KEYS } from './line-property-fields';
+// ADR-649 §measure-facts — read-only «Περίμετρος»/«Εμβαδόν» από τον ΕΝΑ dispatcher.
+import { lineMeasurementReadout, lineMeasurementVisibility } from './line-measurement-readout';
 import { LinePropertySection } from './LinePropertyRow';
 import type { LinePropertyGroup } from './line-property-fields';
 import type { SceneModel } from '../../types/scene';
@@ -103,6 +105,12 @@ export function LinePropertiesTab({
   );
   const bridge = useRibbonLineToolBridge({ levelManager, universalSelection });
 
+  // ADR-649 §measure-facts — «Μετρήσεις» (Περίμετρος/Εμβαδόν) αλυσιδώνονται ΠΡΙΝ από το
+  // bridge: διαβάζονται από την οντότητα που ΑΥΤΟ το tab έλυσε (η σκηνή που δείχνει),
+  // ενώ το bridge λύνει την επιλογή στην ΩΜΗ σκηνή — οι δύο διαφωνούν όποτε παίζουν
+  // containers. Και τα δύο κάνουν passthrough (`?? bridge…`) για κάθε άλλο key, οπότε
+  // καμία υπάρχουσα συμπεριφορά δεν αλλάζει. Βλ. `line-measurement-readout.ts`.
+
   // Low-frequency reactivity to registry PATTERN edits: a same-name COW upsert
   // notifies here so the shown segments re-derive (the entity ref is unchanged).
   const registrySnapshot = React.useSyncExternalStore(
@@ -120,6 +128,17 @@ export function LinePropertiesTab({
     const found = currentScene.entities.find((x) => x.id === primarySelectedId);
     return found && isStyleEditablePrimitiveType(found.type) ? found : null;
   }, [primarySelectedId, currentScene]);
+
+  // ADR-649 §measure-facts — τα δύο readout keys απαντιούνται εδώ, ό,τι άλλο πέφτει στο
+  // bridge αυτούσιο (`?? bridge…`) ⇒ μηδέν αλλαγή στην υπάρχουσα συμπεριφορά.
+  const getComboboxState = React.useCallback(
+    (key: string) => lineMeasurementReadout(key, entity) ?? bridge.getComboboxState(key),
+    [entity, bridge],
+  );
+  const getPanelVisibility = React.useCallback(
+    (key: string) => lineMeasurementVisibility(key, entity) ?? bridge.getPanelVisibility(key),
+    [entity, bridge],
+  );
 
   // Resolve the FULL def once (pattern + optional `complex`). registrySnapshot is a dep so a
   // same-name COW upsert re-derives (entity ref stable).
@@ -190,7 +209,7 @@ export function LinePropertiesTab({
   // for a real selection: geometry has no draw-default meaning (Revit/AutoCAD parity).
   const gatedGroups = entity
     ? LINE_PROPERTY_GROUPS.filter(
-        (g) => g.id !== 'general' && (!g.visibilityKey || bridge.getPanelVisibility(g.visibilityKey)),
+        (g) => g.id !== 'general' && (!g.visibilityKey || getPanelVisibility(g.visibilityKey)),
       )
     : [];
 
@@ -209,7 +228,7 @@ export function LinePropertiesTab({
         <LinePropertySection
           title={t(generalGroup.titleKey)}
           group={generalGroup}
-          getComboboxState={bridge.getComboboxState}
+          getComboboxState={getComboboxState}
           onComboboxChange={bridge.onComboboxChange}
         />
       )}
@@ -254,7 +273,7 @@ export function LinePropertiesTab({
           key={g.id}
           title={t(g.titleKey)}
           group={g}
-          getComboboxState={bridge.getComboboxState}
+          getComboboxState={getComboboxState}
           onComboboxChange={bridge.onComboboxChange}
         />
       ))}

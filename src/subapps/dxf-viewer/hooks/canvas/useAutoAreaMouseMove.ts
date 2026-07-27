@@ -15,7 +15,7 @@ import { isHatchSelectArmed } from '../../bim/hatch/hatch-select-mode-store';
 import { pickTopHatchAt } from '../../bim/hatch/hatch-pick-at';
 // ADR-662 §12 — «ό,τι έχει μετρήσιμο εμβαδόν» pick για την Ετικέτα Εμβαδού.
 import { pickTopEntityAt } from '../../rendering/hitTesting/pick-top-entity-at';
-import { hasMeasurableArea } from '../../systems/measure/entity-area-facts';
+import { hasMeasurableArea } from '../../systems/measure/entity-measurement-facts';
 import { setHoveredEntity } from '../../systems/hover/HoverStore';
 import type { Entity } from '../../types/entities';
 

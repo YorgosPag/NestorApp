@@ -3,7 +3,7 @@
  *
  * SSoT για ΤΟ ΚΕΙΜΕΝΟ + ΤΗ ΘΕΣΗ + ΤΟ ΜΕΓΕΘΟΣ + ΤΟ text-entity της ετικέτας που ρίχνει
  * το 2-κλικ εργαλείο (`handleAreaLabelClick`). Μηδέν re-implementation:
- *   - εμβαδά    → `entityAreaFacts` (ανά τύπο· γραμμοσκίαση = outer−islands, TIN = τρίγωνα)
+ *   - εμβαδά    → `entityMeasurementFacts` (ανά τύπο· γραμμοσκίαση = outer−islands, TIN = τρίγωνα)
  *   - όριο      → `entityClosedRings` (ΙΔΙΟ SSoT με τις έλξεις, ADR-662 §11)
  *   - μορφή     → `formatAreaForDisplay` (ενεργή display-μονάδα, «25,00 m²»)
  *   - κέντρο    → `polygon2DAreaCentroid` (area-weighted, σωστό σε κοίλα L/T/U)
@@ -24,7 +24,7 @@
  *
  * Ήταν `bim/hatch/hatch-area-label.ts` όσο το εργαλείο ήταν hatch-only.
  *
- * @see ./entity-area-facts — «τι εμβαδόν δίνει αυτή η οντότητα;»
+ * @see ./entity-measurement-facts — «τι εμβαδόν δίνει αυτή η οντότητα;»
  * @see ../../snapping/shared/entity-closed-rings — «ποιο είναι το κλειστό όριό της;»
  * @see docs/centralized-systems/reference/adrs/ADR-649-hatch-area-label-tool.md
  */
@@ -34,7 +34,7 @@ import type { Entity, TextEntity } from '../../types/entities';
 import { isHatchEntity } from '../../types/entities';
 import type { DxfTextNode } from '../../text-engine/types/text-ast.types';
 import { i18n } from '@/i18n';
-import { entityAreaFacts } from './entity-area-facts';
+import { entityMeasurementFacts } from './entity-measurement-facts';
 import { entityClosedRings, type ClosedRings } from '../../snapping/shared/entity-closed-rings';
 import { performDetailedHitTest } from '../../rendering/hitTesting/hit-test-entity-tests';
 import { formatAreaForDisplay } from '../../config/display-length-format';
@@ -102,7 +102,7 @@ export function resolveHatchMaterialGenitive(patternName?: string): string | nul
  * Κενό array όταν η οντότητα δεν έχει μετρήσιμο εμβαδόν — ο καλών δεν φτιάχνει ετικέτα.
  */
 export function buildAreaLabelLines(entity: Entity): string[] {
-  const facts = entityAreaFacts(entity);
+  const facts = entityMeasurementFacts(entity);
   if (!facts) return [];
 
   const prefix = i18n.t('areaLabel.areaPrefix', { ns: NS });

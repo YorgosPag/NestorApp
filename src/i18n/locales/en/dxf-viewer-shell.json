@@ -5164,7 +5164,9 @@
         "endX": "End X",
         "endY": "End Y",
         "deltaX": "Delta X",
-        "deltaY": "Delta Y"
+        "deltaY": "Delta Y",
+        "perimeter": "Perimeter",
+        "area": "Area"
       },
       "lineStyleNames": {
         "thin": "Thin",

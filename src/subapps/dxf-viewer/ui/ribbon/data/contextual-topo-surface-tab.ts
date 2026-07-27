@@ -96,7 +96,7 @@ export const CONTEXTUAL_TOPO_SURFACE_TAB: RibbonTab = {
               // με εμβαδόν προβολής + πραγματική επιφάνεια εδάφους). Απλό tool-change
               // (commandKey = ToolType, χωρίς action → onToolChange). ΤΟ ΙΔΙΟ εργαλείο με το
               // contextual tab της γραμμοσκίασης και το Annotate→Measure panel — ένα κουμπί,
-              // ένα FSM, ένας builder (η γενίκευση ζει στο `entity-area-facts`, όχι εδώ).
+              // ένα FSM, ένας builder (η γενίκευση ζει στο `entity-measurement-facts`, όχι εδώ).
               type: 'simple',
               size: 'small',
               command: {

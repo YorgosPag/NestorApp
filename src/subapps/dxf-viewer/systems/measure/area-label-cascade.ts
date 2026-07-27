@@ -19,12 +19,12 @@
  * emit) εγγυάται ότι ο κύκλος συγκλίνει στο δεύτερο πέρασμα.
  *
  * **ΕΝΑΣ μηχανισμός, ΟΛΟΙ οι τύποι.** Ο cascade δεν ξέρει τι είναι η πηγή — ρωτά το
- * `entityAreaFacts` μέσω του `areaLabelRefreshPatch`. Γραμμοσκίαση, τοπογραφική επιφάνεια
+ * `entityMeasurementFacts` μέσω του `areaLabelRefreshPatch`. Γραμμοσκίαση, τοπογραφική επιφάνεια
  * και ό,τι αποκτήσει εμβαδόν αύριο περνούν από **εδώ**· δεν υπάρχει topo-only δίδυμο.
  *
  * @see ../../bim/cascade/associative-geometry-reconcile — η universal SSoT (ADR-540)
  * @see ./area-label — `areaLabelRefreshPatch` (τι κείμενο· ιδεμποτεντικό σήμα `null`)
- * @see ./entity-area-facts — «τι εμβαδόν δίνει αυτή η οντότητα;»
+ * @see ./entity-measurement-facts — «τι εμβαδόν δίνει αυτή η οντότητα;»
  * @see docs/centralized-systems/reference/adrs/ADR-649-hatch-area-label-tool.md
  */
 

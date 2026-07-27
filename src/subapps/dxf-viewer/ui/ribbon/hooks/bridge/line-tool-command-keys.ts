@@ -45,7 +45,24 @@ export const LINE_TOOL_RIBBON_KEYS = Object.freeze({
   chamferDist1: 'lineToolStyle.chamferDist1',
   chamferDist2: 'lineToolStyle.chamferDist2',
   chamferAngle: 'lineToolStyle.chamferAngle',
+  // ── ADR-649 §measure-facts — READ-ONLY μετρήσεις περιγράμματος ───────────────
+  // Μοτίβο-καθρέφτης του `HATCH_RIBBON_KEYS.readouts.area` (γραμμοσκίαση), σε ΕΠΙΠΕΔΗ
+  // μορφή όπως όλο το υπόλοιπο αρχείο — φώλιασμα θα έσπαγε τον `LineToolRibbonKey`
+  // mapped type + τον `isLineToolRibbonKey` guard από κάτω.
+  //
+  // Υπολογισμένες τιμές, ΠΟΤΕ editable: στο AutoCAD τα Area/Length είναι grayed-out στο
+  // Properties — δεν «θέτεις» εμβαδόν, το εμβαδόν προκύπτει. Τις σερβίρει το
+  // `line-measurement-readout.ts`· το bridge τις early-return-άρει (μοτίβο `newLineType`)
+  // ώστε να μη διαρρεύσουν ποτέ στο color fallthrough.
+  readoutPerimeter: 'lineToolStyle.readout.perimeter',
+  readoutArea:      'lineToolStyle.readout.area',
 } as const);
+
+/** ADR-649 §measure-facts — οι read-only μετρήσεις (χωρίς write path στο bridge). */
+export const LINE_TOOL_READOUT_KEYS: ReadonlySet<string> = new Set<string>([
+  LINE_TOOL_RIBBON_KEYS.readoutPerimeter,
+  LINE_TOOL_RIBBON_KEYS.readoutArea,
+]);
 
 export type LineToolRibbonKey =
   (typeof LINE_TOOL_RIBBON_KEYS)[keyof typeof LINE_TOOL_RIBBON_KEYS];
@@ -74,6 +91,10 @@ export const LINE_TOOL_PANEL_VISIBILITY_KEYS = Object.freeze({
   // the write silently skips it — the panel self-hides for non-polyline selections
   // (AutoCAD/Revit parity: Global Width shows ONLY on a polyline).
   widthApplicable: 'lineTool.panel.widthApplicable',
+  // ADR-649 §measure-facts — «Μετρήσεις» ορατό μόνο όταν η επιλογή ΟΝΤΩΣ μετριέται
+  // (`entityMeasurementFacts !== null`). Μια απλή ΓΡΑΜΜΗ δεν το δείχνει: το μήκος της
+  // ζει ήδη στη «Γεωμετρία» — δύο θέσεις για τον ίδιο αριθμό θα ήταν διπλότυπο UI.
+  measurable: 'lineTool.panel.measurable',
 } as const);
 
 export type LineToolPanelVisibilityKey =

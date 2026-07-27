@@ -314,7 +314,7 @@ export const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   'opening-info-tag':  { id: 'opening-info-tag',  category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   // ADR-649 / ADR-662 §12: «Ετικέτα Εμβαδού» — 2-κλικ (pick οντότητας με εμβαδόν →
   // place TextEntity). Το id είναι ΙΣΤΟΡΙΚΟ: το εργαλείο δέχεται πλέον ΚΑΙ τοπογραφική
-  // επιφάνεια — ποιοι τύποι, το λέει ΜΟΝΟ το `systems/measure/entity-area-facts`.
+  // επιφάνεια — ποιοι τύποι, το λέει ΜΟΝΟ το `systems/measure/entity-measurement-facts`.
   // category:'drawing' ⇒ isInDrawingMode=true, ώστε το mouse-up select block να ΜΗΝ τρέχει
   // παράλληλα με τον click handler (κανένα διπλό select). allowsContinuous: πολλές στη σειρά.
   'hatch-area-label':  { id: 'hatch-area-label',  category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },

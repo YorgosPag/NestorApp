@@ -28,7 +28,7 @@
  *
  * @see ./topo-types.ts — TinSurface (positions/elevations/triangles)
  * @see ./topo-surface-perimeter.ts — γιατί τα rings ΔΕΝ είναι αξιόπιστη πηγή εμβαδού
- * @see ../measure/entity-area-facts.ts — ο καταναλωτής («τι εμβαδόν δίνει αυτή η οντότητα;»)
+ * @see ../measure/entity-measurement-facts.ts — ο καταναλωτής («τι εμβαδόν δίνει αυτή η οντότητα;»)
  */
 
 import type { TinSurface } from './topo-types';
