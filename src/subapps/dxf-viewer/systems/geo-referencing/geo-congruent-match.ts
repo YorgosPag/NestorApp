@@ -41,7 +41,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import { fromTwoPointPairs, type GeoReference } from './geo-transform';
+import { fromTwoPointPairs, localToWorld, type GeoReference } from './geo-transform';
 import { scoreGeoReference, type GeoMatchScore, type WorldPointIndex } from './geo-point-index';
 import { solveRigid2D, type PointPair } from './geo-similarity-solve';
 import { buildPairTable, forEachPairNear, selectLongestBases, type PairTable } from './geo-pair-table';
@@ -54,10 +54,6 @@ export interface CongruentMatchOptions {
 }
 
 const DEFAULT_MAX_BASES = 12;
-
-/** Two references are «the same answer» within this much translation / rotation. */
-const SAME_GEO_POSITION_MM = 1;
-const SAME_GEO_ROTATION_DEG = 0.01;
 
 export interface CongruentMatch {
   /** The refined reference — least squares over the winner's inliers, never the raw hypothesis. */
@@ -77,13 +73,45 @@ export interface CongruentMatch {
   readonly hypotheses: number;
 }
 
-/** `true` when two references would put the drawing in the same place, to within a millimetre. */
-function sameGeoReference(a: GeoReference, b: GeoReference): boolean {
-  return (
-    Math.abs(a.originWorld.x - b.originWorld.x) <= SAME_GEO_POSITION_MM &&
-    Math.abs(a.originWorld.y - b.originWorld.y) <= SAME_GEO_POSITION_MM &&
-    Math.abs(a.rotationDeg - b.rotationDeg) <= SAME_GEO_ROTATION_DEG
-  );
+/**
+ * `true` when two references put the drawing in the SAME PLACE — measured, not compared
+ * parameter by parameter.
+ *
+ * Comparing `rotationDeg` against a fixed epsilon is scale-dependent and therefore wrong in
+ * both directions: 0.01° is 17 mm of displacement 100 m from the origin but 17 µm at 100 mm.
+ * What matters is where the drawing LANDS, so both references are applied — through the SSoT
+ * projection — to the origin and to a far probe point, and the larger disagreement is
+ * compared against the same tolerance the verifier uses to accept a point.
+ *
+ * This is what makes the uniqueness gate mean what it says. Real data is noisy, so the same
+ * answer re-derived from a different basis differs by a few millimetres. Treating those as
+ * rival answers would make the gate reject precisely the matches that several independent
+ * bases agree on — the best-evidenced ones.
+ */
+function sameAnswer(a: GeoReference, b: GeoReference, probe: Point2D, toleranceMm: number): boolean {
+  const originGap = Math.hypot(a.originWorld.x - b.originWorld.x, a.originWorld.y - b.originWorld.y);
+  if (originGap > toleranceMm) return false;
+
+  const pa = localToWorld(probe, a);
+  const pb = localToWorld(probe, b);
+  return Math.hypot(pa.x - pb.x, pa.y - pb.y) <= toleranceMm;
+}
+
+/**
+ * The local point that best exposes a rotation difference — the one farthest from the local
+ * origin, where a given angular error produces the largest displacement.
+ */
+function farthestFromOrigin(points: readonly Point2D[]): Point2D {
+  let best = points[0] ?? { x: 0, y: 0 };
+  let bestD2 = best.x * best.x + best.y * best.y;
+  for (const p of points) {
+    const d2 = p.x * p.x + p.y * p.y;
+    if (d2 > bestD2) {
+      bestD2 = d2;
+      best = p;
+    }
+  }
+  return best;
 }
 
 /** Running best/runner-up over the hypothesis stream. */
@@ -92,6 +120,9 @@ interface Leader {
   inliers: number;
   secondBest: number;
   hypotheses: number;
+  /** Probe + tolerance used by {@link sameAnswer} — fixed for the whole stream. */
+  readonly probe: Point2D;
+  readonly toleranceMm: number;
 }
 
 /**
@@ -103,17 +134,15 @@ interface Leader {
  */
 function consider(leader: Leader, geo: GeoReference, inliers: number): void {
   leader.hypotheses++;
+  const rival = leader.geo !== null && !sameAnswer(leader.geo, geo, leader.probe, leader.toleranceMm);
+
   if (inliers > leader.inliers) {
-    if (leader.geo && !sameGeoReference(leader.geo, geo)) {
-      leader.secondBest = Math.max(leader.secondBest, leader.inliers);
-    }
+    if (rival) leader.secondBest = Math.max(leader.secondBest, leader.inliers);
     leader.geo = geo;
     leader.inliers = inliers;
     return;
   }
-  if (leader.geo && !sameGeoReference(leader.geo, geo)) {
-    leader.secondBest = Math.max(leader.secondBest, inliers);
-  }
+  if (rival) leader.secondBest = Math.max(leader.secondBest, inliers);
 }
 
 /** Score both endpoint orderings of one congruent segment pair. */
@@ -141,7 +170,10 @@ function enumerateHypotheses(
   index: WorldPointIndex,
   options: CongruentMatchOptions,
 ): Leader {
-  const leader: Leader = { geo: null, inliers: 0, secondBest: 0, hypotheses: 0 };
+  const leader: Leader = {
+    geo: null, inliers: 0, secondBest: 0, hypotheses: 0,
+    probe: farthestFromOrigin(searchPoints), toleranceMm: options.toleranceMm,
+  };
   const bases = selectLongestBases(worldTable, options.maxBases ?? DEFAULT_MAX_BASES);
   // Both endpoints carry the point tolerance, so the segment band is twice it.
   const bandMm = options.toleranceMm * 2;

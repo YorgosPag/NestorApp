@@ -28,6 +28,19 @@ export {
 export type { AutoAlignResult } from './geo-auto-align';
 export { autoAlignByRobustCenters } from './geo-auto-align';
 
+// ADR-650 §M10e — automatic drawing↔survey matching. `autoMatchToSurvey` is the ONLY entry
+// point a consumer needs; the stages below it are exported for tests and diagnostics.
+export type { GeoMatchMethod, GeoMatchResult, AutoMatchInput } from './geo-auto-match';
+export { autoMatchToSurvey } from './geo-auto-match';
+export type { GeoMatchScore, WorldPointIndex } from './geo-point-index';
+export { buildWorldPointIndex, scoreGeoReference } from './geo-point-index';
+export type { PointPair, SimilaritySolution } from './geo-similarity-solve';
+export { solveRigid2D } from './geo-similarity-solve';
+export type { LocalCandidatePoint, CandidateKind } from './geo-ref-candidate-points';
+export { collectCandidatePoints } from './geo-ref-candidate-points';
+export type { PointNumberMatch } from './geo-point-number-match';
+export { matchByPointNumber } from './geo-point-number-match';
+
 export {
   getGeoReference,
   setGeoReference,

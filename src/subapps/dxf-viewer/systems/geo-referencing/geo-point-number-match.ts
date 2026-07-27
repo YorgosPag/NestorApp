@@ -34,6 +34,8 @@
 import type { Entity } from '../../types/entities';
 import type { TopoPoint } from '../topography/topo-types';
 import { PointHashGrid, NO_POINT } from '../../core/spatial/PointHashGrid';
+import { median, mad } from '../../utils/statistics';
+import { localToWorld } from './geo-transform';
 import { solveRigid2D, type PointPair, type SimilaritySolution } from './geo-similarity-solve';
 import type { LocalCandidatePoint } from './geo-ref-candidate-points';
 
@@ -48,6 +50,19 @@ export interface PointNumberMatchOptions {
 
 const DEFAULT_LABEL_RADIUS_MM = 3_000;
 
+/** Multiple of the residual MAD beyond which a correspondence is a blunder, not noise. */
+const BLUNDER_MAD_FACTOR = 4;
+/**
+ * Residual below which nothing is ever rejected, however tight the rest of the fit. Without a
+ * floor a PERFECT fit (median ≈ 0, MAD ≈ 0) would have a threshold of zero and would throw
+ * away correspondences for a micron of float noise.
+ */
+const BLUNDER_FLOOR_MM = 250;
+/** Below this many correspondences a robust spread is meaningless — reject nothing. */
+const MIN_PAIRS_FOR_BLUNDER_TEST = 5;
+/** Rejection passes. Two is enough: the first removes the blunders that hid the second's. */
+const BLUNDER_PASSES = 2;
+
 /** The outcome of the numbering channel — the fit plus the counts the proof card shows. */
 export interface PointNumberMatch {
   readonly solution: SimilaritySolution;
@@ -57,6 +72,8 @@ export interface PointNumberMatch {
   readonly labelled: number;
   /** Correspondences discarded as ambiguous — duplicate numbers, or two labels on one node. */
   readonly ambiguous: number;
+  /** Correspondences dropped as blunders by the robust refit — see {@link refitWithoutBlunders}. */
+  readonly rejected: number;
 }
 
 /**
@@ -159,6 +176,59 @@ function snapLabelsToNodes(
   return { pairs, ambiguous };
 }
 
+/** Residual of each correspondence under `solution`, measured through the SSoT projection. */
+function residualsOf(pairs: readonly PointPair[], geo: SimilaritySolution['geo']): number[] {
+  return pairs.map(({ local, world }) => {
+    const projected = localToWorld(local, geo);
+    return Math.hypot(projected.x - world.x, projected.y - world.y);
+  });
+}
+
+/**
+ * Re-fit after discarding correspondences that cannot be explained by the rest.
+ *
+ * A label is DRAUGHTING: it sits beside its point, and where two survey points are closer
+ * together than a label is to its own, the nearest-node snap can pick the neighbour. One such
+ * blunder is enough to drag a least-squares fit off by hundreds of millimetres — least
+ * squares has no defence against a gross error, it distributes it over every correspondence.
+ *
+ * So the fit is used to police its own inputs: residuals far outside `median + k·MAD` are
+ * removed and the fit is repeated. MAD rather than σ because a blunder inflates σ and thereby
+ * hides inside it — the same reasoning as every other robust gate in this app (see
+ * `utils/statistics.ts`). Two passes, because removing the worst blunder tightens the spread
+ * enough to expose a second one.
+ *
+ * This is standard survey adjustment practice (blunder detection before the final network
+ * solution), not a fudge: the discarded pairs are REPORTED, and a fit that loses most of its
+ * correspondences will fail the acceptance gates on count anyway.
+ */
+function refitWithoutBlunders(pairs: readonly PointPair[], initial: SimilaritySolution): {
+  solution: SimilaritySolution;
+  pairs: readonly PointPair[];
+} {
+  let solution = initial;
+  let kept: readonly PointPair[] = pairs;
+
+  for (let pass = 0; pass < BLUNDER_PASSES; pass++) {
+    if (kept.length < MIN_PAIRS_FOR_BLUNDER_TEST) break;
+
+    const residuals = residualsOf(kept, solution.geo);
+    const centre = median(residuals);
+    const threshold = Math.max(BLUNDER_FLOOR_MM, centre + BLUNDER_MAD_FACTOR * mad(residuals, centre));
+
+    const survivors = kept.filter((_, i) => residuals[i]! <= threshold);
+    if (survivors.length === kept.length) break;
+    if (survivors.length < MIN_PAIRS_FOR_BLUNDER_TEST) break;
+
+    const refitted = solveRigid2D(survivors);
+    if (!refitted) break;
+    solution = refitted;
+    kept = survivors;
+  }
+
+  return { solution, pairs: kept };
+}
+
 /**
  * Fit the drawing to the survey using the surveyor's own point numbers.
  *
@@ -185,8 +255,15 @@ export function matchByPointNumber(
   if (hits.length === 0) return null;
 
   const { pairs, ambiguous } = snapLabelsToNodes(hits, nodes, options.labelRadiusMm ?? DEFAULT_LABEL_RADIUS_MM);
-  const solution = solveRigid2D(pairs);
-  if (!solution) return null;
+  const initial = solveRigid2D(pairs);
+  if (!initial) return null;
 
-  return { solution, pairs, labelled: hits.length, ambiguous };
+  const robust = refitWithoutBlunders(pairs, initial);
+  return {
+    solution: robust.solution,
+    pairs: robust.pairs,
+    labelled: hits.length,
+    ambiguous,
+    rejected: pairs.length - robust.pairs.length,
+  };
 }

@@ -170,13 +170,6 @@ function tryAnalytic(method: 'identity-restore' | 'already-aligned', geo: GeoRef
   });
 }
 
-/** Branch 3 — the surveyor's numbering. Returns a refusal too, when the numbers reveal a unit problem. */
-function tryPointNumber(entities: readonly Entity[], ctx: MatchContext): GeoMatchResult | null {
-  const nodes = ctx.all.filter((p) => p.kind === 'node' || p.kind === 'insert');
-  const match = matchByPointNumber(entities, nodes, [], { });
-  return match ? null : null; // replaced below — see `runPointNumberBranch`
-}
-
 /**
  * Branch 4 — blind registration over one coordinate frame.
  *
@@ -251,13 +244,14 @@ function runBranches(input: AutoMatchInput, ctx: MatchContext): GeoMatchResult {
   const numbered = runPointNumberBranch(input, ctx);
   if (numbered) return numbered;
 
-  let lastFailure: GateFailure | null = null;
   for (const frame of splitByCoordinateFrame(ctx.all)) {
     const found = tryCongruent(frame.points, ctx);
+    // A unit mismatch is a FINDING, not a failed frame: the files do correspond, at a scale.
+    // Reporting it beats trying the next frame and ending on the vaguer «needs-manual».
     if (found) return found;
   }
 
-  return noMatch('needs-manual', { matchable: ctx.matchable, failure: lastFailure });
+  return noMatch('needs-manual', { matchable: ctx.matchable });
 }
 
 /** Branch 3 — known correspondences from the surveyor's point numbers. */
