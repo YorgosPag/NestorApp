@@ -15,7 +15,7 @@ import type { DxfImportResult } from '../types/scene';
 import type { SceneUnits } from './scene-units';
 import { DxfSceneBuilder } from './dxf-scene-builder';
 import { countSceneLayers } from './scene-entity-count';
-import { calculateTightBounds } from './bounds-utils';
+import { normalizeEntitiesToOrigin } from './bounds-utils';
 import { summarizeDiagnostics } from './dxf-import-diagnostics';
 
 export interface RunDxfParseOptions {
@@ -42,8 +42,12 @@ export function runDxfParse(
     const { scene, diagnostics } = DxfSceneBuilder.buildSceneWithDiagnostics(content, unitsOverride);
 
     if (options.normalizeBounds && scene.entities.length > 0) {
-      // Normalize to positive quadrant: bottom-left corner → (0,0)
-      scene.bounds = calculateTightBounds(scene.entities, true);
+      // Normalize to positive quadrant: bottom-left corner → (0,0). ADR-650 §M10e: the applied
+      // offset is the drawing's own world origin — keep it (`sourceOrigin`) instead of dropping
+      // it, so the geo-reference can be restored analytically instead of guessed.
+      const normalized = normalizeEntitiesToOrigin(scene.entities);
+      scene.bounds = normalized.bounds;
+      scene.sourceOrigin = normalized.sourceOrigin;
     }
 
     if (!DxfSceneBuilder.validateScene(scene)) {

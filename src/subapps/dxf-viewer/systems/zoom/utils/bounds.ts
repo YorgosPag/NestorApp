@@ -339,10 +339,13 @@ export {
   calculateTightBounds,
   calculateTightBoundsNormalized,
   normalizeEntityPositions,
+  // ADR-650 §M10e — the offset-preserving normalizer the import paths use.
+  normalizeEntitiesToOrigin,
 } from './bounds-entity';
 
 export type {
   BoundsEntity,
   LegacyBounds,
   MutableBoundsEntity,
+  NormalizedSceneBounds,
 } from './bounds-entity';

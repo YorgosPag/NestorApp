@@ -11,7 +11,7 @@
 import type { DxfImportResult, SceneModel } from '../types/scene';
 import type { SceneUnits } from '../utils/scene-units';
 import { encodingService, type SupportedEncoding } from './encoding-service';
-import { calculateTightBounds } from '../utils/bounds-utils';
+import { normalizeEntitiesToOrigin } from '../utils/bounds-utils';
 import { DXF_IMPORT_THRESHOLDS } from '../config/dxf-import-thresholds';
 
 /** ADR-639 Στάδιο 1 — empty stats used by every early-return failure result. */
@@ -171,9 +171,12 @@ export class DxfImportService {
         const result = data as DxfImportResult;
         if (result.success && result.scene) {
           // Worker parses with normalizeBounds:false → finish normalization here
-          // (move bottom-left corner → (0,0), positive quadrant).
-          const perfectBounds = calculateTightBounds(result.scene.entities, true);
-          result.scene.bounds = perfectBounds;
+          // (move bottom-left corner → (0,0), positive quadrant). ADR-650 §M10e: keep the
+          // applied offset as `sourceOrigin` — it IS the drawing's geo-reference and used to
+          // be discarded here, stranding an ΕΓΣΑ'87 survey ~4.500 km from the imported plan.
+          const normalized = normalizeEntitiesToOrigin(result.scene.entities);
+          result.scene.bounds = normalized.bounds;
+          result.scene.sourceOrigin = normalized.sourceOrigin;
         }
         finish(result);
       };

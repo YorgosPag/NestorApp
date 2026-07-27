@@ -266,19 +266,55 @@ export function modernToLegacyBounds(modern: Bounds): LegacyBounds {
 // SCENE BOUNDS NORMALIZATION
 // ============================================================================
 
+/** Result of {@link normalizeEntitiesToOrigin} — the (0,0)-based bounds plus the applied offset. */
+export interface NormalizedSceneBounds {
+  /** Tight bounds of the normalized entities (always starts at (0,0)). */
+  readonly bounds: Bounds;
+  /**
+   * ADR-650 §M10e — the source file's WORLD coords of the new local origin, i.e. the
+   * `(minX, minY)` that was subtracted: `world_of_source_file = local + sourceOrigin`.
+   * `(0,0)` when the drawing was already origin-based or had no usable bounds.
+   */
+  readonly sourceOrigin: Point2D;
+}
+
 /**
  * Calculate tight bounds from entity array.
  *
  * Calculates precise bounds from all entities and optionally normalizes
  * positions so that bottom-left corner is at (0,0).
+ *
+ * ⚠️ The `normalize: true` form DISCARDS the applied offset. Callers that must keep the
+ * drawing's geo-reference (every import path) use {@link normalizeEntitiesToOrigin} instead.
  */
 export function calculateTightBounds(
   entities: BoundsEntity[],
   normalize: boolean = false
 ): Bounds {
-  if (entities.length === 0) {
-    return { ...DEFAULT_BOUNDS };
+  // The normalizing path is OWNED by normalizeEntitiesToOrigin (which additionally reports the
+  // discarded offset); delegate instead of carrying a second copy of the same arithmetic (N.18).
+  if (normalize) {
+    return normalizeEntitiesToOrigin(entities).bounds;
   }
+
+  const raw = accumulateEntityBounds(entities);
+  if (!raw) return { ...DEFAULT_BOUNDS };
+
+  return {
+    min: { x: raw.minX, y: raw.minY },
+    max: { x: raw.maxX, y: raw.maxY }
+  };
+}
+
+/**
+ * The raw min/max accumulation shared by {@link calculateTightBounds} and
+ * {@link normalizeEntitiesToOrigin} — ONE loop, no structural twin (N.18).
+ * `null` ⇒ nothing contributed a usable box; the caller falls back to {@link DEFAULT_BOUNDS}.
+ */
+function accumulateEntityBounds(
+  entities: readonly BoundsEntity[]
+): ReturnType<typeof createInfinityBounds> | null {
+  if (entities.length === 0) return null;
 
   const bounds = createInfinityBounds();
 
@@ -298,23 +334,53 @@ export function calculateTightBounds(
 
   if (isInfinityBounds(bounds)) {
     console.warn('Invalid bounds calculated, using defaults');
-    return { ...DEFAULT_BOUNDS };
+    return null;
   }
 
-  if (normalize) {
-    const offsetX = -bounds.minX;
-    const offsetY = -bounds.minY;
-    normalizeEntityPositions(entities as MutableBoundsEntity[], offsetX, offsetY);
+  return bounds;
+}
 
-    return {
-      min: { x: 0, y: 0 },
-      max: { x: bounds.maxX - bounds.minX, y: bounds.maxY - bounds.minY }
-    };
+/**
+ * ADR-650 §M10e Σκέλος Α — normalize entities to a (0,0)-based local frame AND REPORT the
+ * offset that was applied.
+ *
+ * The import has always moved every entity so the tight bbox starts at (0,0) — that part is
+ * deliberate and stays (the renderer's ±1e6 culling budget, ADR-635, cannot hold raw ΕΓΣΑ'87
+ * values ~4.5e9 mm). What was WRONG is that `(minX, minY)` lived in a local variable and died
+ * there, permanently destroying the drawing's geo-reference: the DXF ended up around (0,0)
+ * while the CSV survey kept absolute ΕΓΣΑ, ~4.500 km apart.
+ *
+ * `sourceOrigin` is that offset, kept. It defines the contract
+ *
+ *     world_of_source_file = local + sourceOrigin      (canonical mm)
+ *
+ * so `{ originWorld: sourceOrigin, rotationDeg: 0 }` restores the file's own coordinates
+ * EXACTLY, with zero residual and zero heuristic — the analytic counterpart of Revit's
+ * «Acquire Coordinates» (which likewise only re-labels the origin, never moves the geometry).
+ *
+ * ⚠️ MUTATES `entities` in place, exactly as before — the ONLY behavioural change is that the
+ * offset is now returned instead of discarded. (Takes `BoundsEntity[]` and narrows internally,
+ * mirroring `calculateTightBounds(…, true)` so existing call sites are unchanged.)
+ *
+ * @see ../../geo-referencing/geo-transform.ts — fromOnePointPair({0,0}, sourceOrigin)
+ * @see ../../../services/dxf-scene-json.ts — the persisted-scene whitelist that must carry it
+ */
+export function normalizeEntitiesToOrigin(entities: BoundsEntity[]): NormalizedSceneBounds {
+  const raw = accumulateEntityBounds(entities);
+  if (!raw) {
+    return { bounds: { ...DEFAULT_BOUNDS }, sourceOrigin: { x: 0, y: 0 } };
   }
+
+  // Captured BEFORE the mutation — this is the whole point of the function.
+  const sourceOrigin: Point2D = { x: raw.minX, y: raw.minY };
+  normalizeEntityPositions(entities as MutableBoundsEntity[], -raw.minX, -raw.minY);
 
   return {
-    min: { x: bounds.minX, y: bounds.minY },
-    max: { x: bounds.maxX, y: bounds.maxY }
+    bounds: {
+      min: { x: 0, y: 0 },
+      max: { x: raw.maxX - raw.minX, y: raw.maxY - raw.minY }
+    },
+    sourceOrigin
   };
 }
 

@@ -43,12 +43,25 @@ export function parseAndValidateScene(text: string): SceneModel | null {
       ? migratedLayers
       : deriveLayersByIdFromEntities(entities);
 
+    // ADR-650 §M10e — CARRY EVERY PERSISTED FIELD, then override only the four this loader
+    // validates/migrates. This was a hand-picked whitelist of exactly those four, so every
+    // OTHER SceneModel field was written correctly by `JSON.stringify(scene)` and vanished
+    // silently on reload — no type error, no warning, visible only to the user. It was
+    // already eating `dimStyles` (ADR-362), `headerDimscale` (ADR-362 R10), `linetypeScale`
+    // (ADR-510 Φ2H) and `version`, and it would have eaten `sourceOrigin` too, making the
+    // whole M10e Σκέλος Α decorative. Spread-then-override so no FUTURE field can regress
+    // this way either. Fenced by the round-trip test.
+    // (`layers` is the pre-ADR-358 legacy key — consumed into `layersById` above, so it is
+    // dropped here rather than carried as dead weight.)
+    const { layers: _legacyLayers, ...carried } = parsed;
+
     return {
+      ...carried,
       entities: entities as SceneModel['entities'],
       layersById,
       bounds: (parsed.bounds ?? { minX: 0, minY: 0, maxX: 0, maxY: 0 }) as SceneModel['bounds'],
       units: (parsed.units ?? 'mm') as SceneModel['units'],
-    };
+    } as SceneModel;
   } catch {
     return null;
   }

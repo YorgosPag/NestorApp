@@ -177,3 +177,67 @@ describe('parseAndValidateScene — Phase 9E-6f layersById hydration', () => {
     expect(result?.layersById['lyr_abc']).toEqual(v2Layer);
   });
 });
+
+// ─── ADR-650 §M10e — the persisted-field fence ──────────────────────────────
+//
+// `parseAndValidateScene` used to rebuild the scene from a HAND-PICKED whitelist of four
+// fields, so every other SceneModel field was written correctly by `JSON.stringify(scene)`
+// and silently disappeared on reload — zero type error, visible only to the user.
+//
+// `sourceOrigin` (the drawing's own world origin, ADR-650 §M10e) is the field that made this
+// load-bearing: without it the analytic geo-reference restore is decorative, because the
+// value survives the write and dies on the read. These tests are the fence — if someone
+// reverts to an explicit field list, the round-trip breaks here instead of in production.
+
+describe('parseAndValidateScene — persisted-field round-trip (ADR-650 §M10e)', () => {
+  const baseScene = {
+    entities: [{ id: 'ent_1', type: 'line', layerId: 'lyr_a' }],
+    layersById: { lyr_a: { id: 'lyr_a', name: 'VT_POINT', color: '#000' } },
+    bounds: { minX: 0, minY: 0, maxX: 100, maxY: 100 },
+    units: 'mm' as const,
+  };
+
+  test('sourceOrigin survives the JSON round-trip EXACTLY (no precision loss)', () => {
+    // The real ΕΓΣΑ'87 offset measured on 47_ergasia.dxf, in canonical mm.
+    const sourceOrigin = { x: 407_700_000, y: 4_502_400_000 };
+    const result = parseAndValidateScene(JSON.stringify({ ...baseScene, sourceOrigin }));
+
+    expect(result?.sourceOrigin).toEqual(sourceOrigin);
+    // Exact, not "close" — a lost mm here is a lost mm on every survey point.
+    expect(result?.sourceOrigin?.x).toBe(407_700_000);
+    expect(result?.sourceOrigin?.y).toBe(4_502_400_000);
+  });
+
+  test('a scene with no sourceOrigin stays undefined (pre-M10e scenes are not invented)', () => {
+    const result = parseAndValidateScene(JSON.stringify(baseScene));
+    expect(result?.sourceOrigin).toBeUndefined();
+  });
+
+  test('the OTHER optional fields the whitelist was eating also survive', () => {
+    // Each of these was already being dropped before M10e — same defect, different feature.
+    const rich = {
+      ...baseScene,
+      headerDimscale: 50,        // ADR-362 R10
+      linetypeScale: 2.5,        // ADR-510 Φ2H
+      version: '1.4.0',
+      dimStyles: { ISO_129: { name: 'ISO_129', dimtxt: 2.5 } },
+    };
+    const result = parseAndValidateScene(JSON.stringify(rich));
+
+    expect(result?.headerDimscale).toBe(50);
+    expect(result?.linetypeScale).toBe(2.5);
+    expect(result?.version).toBe('1.4.0');
+    expect(result?.dimStyles).toEqual({ ISO_129: { name: 'ISO_129', dimtxt: 2.5 } });
+  });
+
+  test('the validated fields still win over whatever the blob carried', () => {
+    // Spread-then-override must not let a stale persisted value shadow the migration.
+    const result = parseAndValidateScene(JSON.stringify({
+      ...baseScene,
+      layers: { OLD: { name: 'OLD', color: '#000' } }, // legacy key must NOT be carried
+    }));
+
+    expect(result?.layersById['lyr_a']).toBeDefined();
+    expect((result as unknown as Record<string, unknown>).layers).toBeUndefined();
+  });
+});

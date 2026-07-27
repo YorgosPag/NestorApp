@@ -19,6 +19,7 @@ export {
   type BoundsEntity,
   type MutableBoundsEntity,
   type LegacyBounds,
+  type NormalizedSceneBounds,
 
   // Bounds Creation
   createCombinedBounds,
@@ -57,7 +58,9 @@ export {
   // Scene Normalization
   calculateTightBounds,
   calculateTightBoundsNormalized,
-  normalizeEntityPositions
+  normalizeEntityPositions,
+  // ADR-650 §M10e — normalizes AND reports the offset (import paths must keep it).
+  normalizeEntitiesToOrigin
 } from '../systems/zoom/utils/bounds';
 
 // ============================================================================

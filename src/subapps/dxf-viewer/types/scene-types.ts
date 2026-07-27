@@ -197,6 +197,25 @@ export interface SceneModel {
    * `LinetypeScaleStore` knob (status-bar control) via `getEffectiveLinetypeScale()`.
    */
   linetypeScale?: number;
+  /**
+   * ADR-650 §M10e Σκέλος Α — the drawing's own WORLD origin, i.e. the offset the import
+   * subtracted when it normalized every entity to a (0,0)-based frame:
+   *
+   *     world_of_source_file = local + sourceOrigin       (canonical mm)
+   *
+   * For a survey DXF authored in ΕΓΣΑ'87 this is the ~(4.077e8, 4.5024e9) mm that used to be
+   * computed and thrown away (`bounds-entity.ts`), which is precisely why an imported plan
+   * landed ~4.500 km from the CSV-imported survey. Kept, it makes the geo-reference
+   * ANALYTIC: `{ originWorld: sourceOrigin, rotationDeg: 0 }` restores the file's own
+   * coordinates with zero residual — no matching, no heuristic, no thresholds.
+   *
+   * Optional: absent on scenes imported before M10e (the offset is unrecoverable for those —
+   * they need a re-import or the geometric matcher) and on drawings already at the origin.
+   *
+   * ⚠️ Persisted: it MUST stay in the `parseAndValidateScene` whitelist (`dxf-scene-json.ts`),
+   * otherwise it is written correctly and silently vanishes on reload.
+   */
+  sourceOrigin?: Point2D;
   version?: string;
 }
 
