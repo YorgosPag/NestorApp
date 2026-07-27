@@ -25,7 +25,22 @@
  *     at the call site for the regression this used to cause.
  */
 
-import { isEditableTarget } from '@/lib/a11y/keyboard-scope';
+/**
+ * ADR-711 §5.6 — ο bus ρωτά την **ερώτηση 1** («γράφει ο χρήστης κείμενο;») και **ΠΟΤΕ**
+ * την ερώτηση 2 ούτε το `shouldGlobalShortcutYield`. Δύο λόγοι, και οι δύο δεσμευτικοί:
+ *
+ *  1. Το `Escape` **δεν είναι εκτυπώσιμος χαρακτήρας**, άρα το «θα καταναλώσει κάποιος τον
+ *     χαρακτήρα;» (type-ahead) δεν τον αφορά. Ένα κλειστό `<select>` / combobox δεν κατέχει
+ *     το `Escape`· ένα ανοιχτό το κλείνει μόνο του. Αν ο bus ρωτούσε την ερώτηση 2, το
+ *     `Escape` με focus σε dropdown **μέσα σε dialog** θα έπαυε να κλείνει τον dialog.
+ *  2. Ο bus οφείλει να δουλεύει ΜΕΣΑ στα modals — εκεί ζει το slot
+ *     `ESC_PRIORITY.MODAL_DIALOG` (π.χ. το lightbox των σχολίων BIM). Φύλακας modal εδώ θα
+ *     σκότωνε το ίδιο το ESC των διαλόγων.
+ *
+ * Ο τοπικός `isEditableFocus()` wrapper έφυγε: ήταν το πέμπτο αντίγραφο του σχήματος
+ * `predicate(document.activeElement)` + SSR guard. Ζει τώρα ως `isTextEntryFocused()`.
+ */
+import { isTextEntryFocused } from '@/lib/a11y/keyboard-scope';
 import { installEscapeAuditSentinel, noteBusDispatch } from './escape-dev-audit';
 import type {
   EscapeBusInspection,
@@ -54,19 +69,6 @@ function isBrowser(): boolean {
   return typeof window !== 'undefined' && typeof document !== 'undefined';
 }
 
-/**
- * ADR-711 — ο έλεγχος delegate-άρει πλέον στο SSoT predicate.
- *
- * ⚠️ Ο bus ρωτά **μόνο** «γράφει ο χρήστης;» και **ΠΟΤΕ** `shouldGlobalShortcutYield`.
- * Ο bus οφείλει να δουλεύει ΜΕΣΑ στα modals — εκεί ζει το slot
- * `ESC_PRIORITY.MODAL_DIALOG` (π.χ. το lightbox των σχολίων BIM). Φύλακας modal εδώ θα
- * σκότωνε το ίδιο το ESC των διαλόγων.
- */
-function isEditableFocus(): boolean {
-  if (!isBrowser()) return false;
-  return isEditableTarget(document.activeElement);
-}
-
 function sortBySnapshot(entries: Iterable<EscapeHandler>): EscapeHandler[] {
   const arr = Array.from(entries);
   // Stable sort: higher priority first; ties preserve insertion order.
@@ -82,7 +84,7 @@ function runHandlerChain(snapshot: readonly EscapeHandler[]): EscapeDispatchResu
   // Industry parallel: AutoCAD command system re-evaluates context per
   // command; Revit modal stack re-checks editable state on each pop.
   for (const handler of snapshot) {
-    if (isEditableFocus() && !handler.allowWhenEditable) continue;
+    if (isTextEntryFocused() && !handler.allowWhenEditable) continue;
     if (!safeCanHandle(handler)) continue;
     if (safeHandle(handler)) {
       return { consumed: true, consumedBy: handler.id };

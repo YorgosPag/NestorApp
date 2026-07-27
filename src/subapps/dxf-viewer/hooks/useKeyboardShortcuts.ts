@@ -109,9 +109,9 @@ export const useKeyboardShortcuts = ({
     const onKeyDown = (e: KeyboardEvent) => {
       // ADR-532 Stage B: event-time read of the live selection set (no subscription).
       const selectedEntityIds = SelectedEntitiesStore.getSelectedEntityIds();
-      // ADR-711 — ο φύλακας «γράφει σε πεδίο; / κατέχει modal το πληκτρολόγιο;» ζει
-      // πλέον στο `addGlobalShortcutListener` παρακάτω. Ο inline έλεγχος που ήταν εδώ
-      // ήταν ένα από τα έξι αντίγραφα του `isEditableTarget` — και, κρίσιμα, δεν
+      // ADR-711 — ο φύλακας «θα καταναλώσει κάποιος τον χαρακτήρα; / κατέχει modal το
+      // πληκτρολόγιο;» ζει πλέον στο `addGlobalShortcutListener` παρακάτω. Ο inline
+      // έλεγχος που ήταν εδώ ήταν ένα από τα αντίγραφα του predicate — και, κρίσιμα, δεν
       // ρωτούσε ΠΟΤΕ για modal: γι' αυτό τα βέλη μετακινούσαν το viewport ±80px πίσω
       // από ανοιχτό lightbox (ελάττωμα Ε4, ADR-364 §10.15).
 
@@ -150,6 +150,14 @@ export const useKeyboardShortcuts = ({
 
       // ADR-357 Phase 14-B: letter/digit in select mode → open command line.
       // Gate: select tool, no input focused, no modifier keys.
+      // ⚠️ ADR-711 §5.6 — ΑΥΤΟ ΕΙΝΑΙ ΤΟ ΣΗΜΕΙΟ ΤΟΥ ΜΕΤΡΗΜΕΝΟΥ ΕΛΑΤΤΩΜΑΤΟΣ (2026-07-27).
+      // Ο φύλακας του wrapper ρωτούσε «γράφει ο χρήστης κείμενο;», όπου το canonical Radix
+      // dropdown (`<button role="combobox">`) απαντά `false`. Μετρημένο ζωντανά: με focus
+      // στο dropdown «Μονάδα εμφάνισης μετρήσεων» και πάτημα `m`, το type-ahead του Radix
+      // **δεν έτρεχε** και αντ' αυτού άνοιγε ΕΔΩ η γραμμή εντολών με "M" (το
+      // `preventDefault` παρακάτω σκότωνε το bubble-phase `onKeyDown` του Radix). Ο
+      // wrapper ρωτά πλέον `consumesTypedCharacters` — role-based. **Μη βάλεις τοπικό
+      // έλεγχο εδώ**: ο φύλακας είναι δομικός, στο `addGlobalShortcutListener`.
       // Exclusion: 'J' is reserved for entity Join (useCanvasKeyboardShortcuts).
       // ADR-402 §Sub-Phase 2: NEVER in 3D view — the command line is a 2D feature,
       // and opening it steals focus from the 3D edit-gizmo keys (G/X/Z), which the

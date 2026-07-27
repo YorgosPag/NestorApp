@@ -71,7 +71,10 @@ const BY_DESIGN: ReadonlyMap<string, string> = new Map([
     'το πεδίο ΕΙΝΑΙ ο ιδιοκτήτης του πλήκτρου — gate εδώ θα το σκότωνε (ADR-711 §3)',
   ],
   [
-    'systems/dynamic-input/components/RadialCommandRing.tsx',
+    // ADR-711 §5.6 (2026-07-27) — μετακόμισε από το `RadialCommandRing.tsx` (N.7.1 SRP split).
+    // Ο ratchet το έπιασε και προς τις **δύο** κατευθύνσεις: νέο αρχείο με ωμό listener ΚΑΙ
+    // μπαγιάτικη εγγραφή για το παλιό. Αυτό είναι το test να κάνει τη δουλειά του.
+    'systems/dynamic-input/components/use-ring-heads-up-key.ts',
     'δαχτυλίδι εντολών: κατέχει τον χρόνο πληκτρολόγησης (ADR-513 direct distance entry)',
   ],
   [

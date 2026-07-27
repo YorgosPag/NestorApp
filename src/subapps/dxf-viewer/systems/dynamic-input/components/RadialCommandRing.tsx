@@ -52,7 +52,9 @@ import {
   nextFieldKeyInOrder,
 } from '../radial-ring-logic';
 // File-size SRP split (N.7.1) — pure predicates + inline style builders.
-import { isHeadsUpNumericKey, isEditableTarget, boxStyle, anchorStyle } from './radial-command-ring-helpers';
+import { isHeadsUpNumericKey, boxStyle, anchorStyle } from './radial-command-ring-helpers';
+// ADR-513 heads-up accelerator (μαζί με το ADR-711 §5.6 «ρώτα ρόλο» SSoT ερώτημα).
+import { useRingHeadsUpKey } from './use-ring-heads-up-key';
 
 export interface RadialCommandRingProps {
   /** Διάταξη πεδίων ανά εργαλείο (τοίχος / γραμμή). */
@@ -152,29 +154,14 @@ export function RadialCommandRing({
     return () => window.removeEventListener('mousemove', onMove);
   }, []);
 
-  // ADR-513 §direct-distance-entry (AutoCAD heads-up) — με το δαχτυλίδι mounted και ΚΑΝΕΝΑ popup
-  // ανοιχτό, ένα ψηφίο/δεκαδικό/πρόσημο ΑΝΟΙΓΕΙ αυτόματα το «Μήκος» με seed το πλήκτρο (το 1ο ψηφίο
-  // αντικαθιστά). Capture-phase + stopPropagation → κερδίζει τα υπόλοιπα keyboard listeners. Δεν
-  // κλέβει πληκτρολόγηση από άλλο editable element (ribbon combobox κ.λπ.).
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (openField !== null) return; // popup ανοιχτό → το input χειρίζεται την πληκτρολόγηση
-      if (!isHeadsUpNumericKey(e)) return;
-      if (isEditableTarget(typeof document !== 'undefined' ? document.activeElement : null)) return;
-      // ADR-513 §rectangle — το heads-up πεδίο είναι tool-agnostic (γραμμή/τοίχος → «Μήκος»,
-      // ορθογώνιο → «Πλάτος»), μέσω `config.headsUpFieldKey` (default 'length').
-      const headsUpKey = config.headsUpFieldKey ?? 'length';
-      const headsUpField = fieldByKey.get(headsUpKey);
-      if (!headsUpField || headsUpField.kind !== 'numeric') return; // δεν υπάρχει numeric heads-up → no-op
-      e.preventDefault();
-      e.stopPropagation();
-      setOpenField(headsUpKey);
-      setDraft(e.key);
-      setTimeout(() => { inputRef.current?.focus(); }, 0);
-    };
-    window.addEventListener('keydown', onKeyDown, true);
-    return () => window.removeEventListener('keydown', onKeyDown, true);
-  }, [fieldByKey, openField, config.headsUpFieldKey]);
+  // ADR-513 §direct-distance-entry (AutoCAD heads-up) — λογική στο `use-ring-heads-up-key`
+  // (N.7.1 split)· εκεί ζει και το ADR-711 §5.6 «ρώτα ρόλο, όχι tagName».
+  const openHeadsUpField = useCallback((key: string, seed: string) => {
+    setOpenField(key);
+    setDraft(seed);
+    setTimeout(() => { inputRef.current?.focus(); }, 0);
+  }, []);
+  useRingHeadsUpKey({ openField, headsUpFieldKey: config.headsUpFieldKey, fieldByKey, onOpen: openHeadsUpField });
 
   // Νέο segment → re-init κέντρο δαχτυλιδιού στον τρέχοντα κέρσορα, κλείσε popup.
   useEffect(() => {

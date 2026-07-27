@@ -31,7 +31,10 @@ import type { ToolType } from '../../ui/toolbar/types';
 import type { DimensionCreateKey } from './useDimensionCreate';
 // ADR-711 — δομικός φύλακας global accelerators (modal keyboard ownership).
 import { addGlobalShortcutListener } from '../../keyboard/global-shortcut-listener';
-import { isEditableTarget } from '@/lib/a11y/keyboard-scope';
+// ADR-711 §5.6 — ερώτηση 1 («γράφει ο χρήστης κείμενο;»). ΟΧΙ η ερώτηση 2: εδώ κρίνεται
+// αν το Dynamic Input **κατέχει τον χρόνο πληκτρολόγησης** ώστε το Enter να θέλει blur
+// πρώτα — ένα combobox με type-ahead δεν κατέχει τίποτα τέτοιο.
+import { isTextEntryFocused } from '@/lib/a11y/keyboard-scope';
 
 interface UseDimensionKeyboardRoutingParams {
   readonly activeTool: ToolType;
@@ -52,7 +55,7 @@ export function useDimensionKeyboardRouting(
       const key = mapKey(e);
       if (!key) return;
 
-      if (isEditableTarget(document.activeElement)) {
+      if (isTextEntryFocused()) {
         // Dynamic Input has focus: Enter still controls dim creation.
         // Blur the field first so the value is committed, then dispatch.
         if (key === 'Enter') {

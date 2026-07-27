@@ -2,11 +2,20 @@
  * RadialCommandRing — pure helpers (predicates + inline style builders).
  *
  * Εξήχθησαν από το `RadialCommandRing.tsx` (file-size SRP, N.7.1, 2026-07-06): stateless
- * predicates (heads-up numeric key, editable target) + inline cursor-follow/anchor style
- * builders. Testable χωρίς DOM/React· το component τα καταναλώνει, δεν κρατούν state.
+ * predicates (heads-up numeric key) + inline cursor-follow/anchor style builders. Testable
+ * χωρίς DOM/React· το component τα καταναλώνει, δεν κρατούν state.
+ *
+ * ⚠️ **ADR-711 §5.6 (2026-07-27)** — εδώ ζούσε δεύτερο `isEditableTarget` με **ίδιο όνομα
+ * και άλλο σώμα** από το SSoT (`@/lib/a11y/keyboard-scope`): πρόσθετε `SELECT`, έχανε το
+ * `contenteditable=""`. Έφυγε. Το δαχτυλίδι ρωτά πλέον την **ερώτηση 2**
+ * (`focusConsumesTypedCharacters`) — «θα καταναλώσει κάποιος άλλος τον χαρακτήρα;» — που
+ * είναι η σωστή ερώτηση όταν κλέβεις ψηφίο. **Μην ξαναγράψεις τοπικό predicate εδώ**:
+ * το κενό που έκλεισε ήταν το canonical Radix dropdown (`<button role="combobox">`), που
+ * ένας έλεγχος `tagName` δεν μπορεί να δει.
  *
  * @see ./RadialCommandRing — the consuming component
  * @see ADR-513 — Δαχτυλίδι Εντολών
+ * @see src/lib/a11y/keyboard-scope.ts — οι δύο ερωτήσεις
  */
 
 import type React from 'react';
@@ -22,14 +31,6 @@ export function isHeadsUpNumericKey(
 ): boolean {
   if (e.ctrlKey || e.altKey || e.metaKey) return false;
   return /^[0-9.,-]$/.test(e.key);
-}
-
-/** `true` αν το element δέχεται πληκτρολόγηση (input/textarea/select/contentEditable) → μη το κλέψεις. */
-export function isEditableTarget(el: Element | null): boolean {
-  if (!el) return false;
-  const tag = el.tagName;
-  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
-  return (el as HTMLElement).isContentEditable === true;
 }
 
 /** Inline cursor-follow box (px). Κεντραρισμένο στο δαχτυλίδι. */
