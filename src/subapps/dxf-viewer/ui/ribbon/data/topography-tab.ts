@@ -144,6 +144,12 @@ export const TOPOGRAPHY_TAB: RibbonTab = {
       labelKey: 'ribbon.panels.topoAnalysis',
       rows: [
         row([toolBtn('topoTab.boundary', `${K}.boundary.label`, 'topo-boundary', 'topo-boundary')]),
+        // ADR-718 — το ίδιο όριο, δεύτερος ρόλος: κόβει την ΕΠΙΦΑΝΕΙΑ, όχι μόνο τους όγκους.
+        // Κάθονται αμέσως κάτω από το εργαλείο που τα τροφοδοτεί (Civil 3D «Surface Boundaries»).
+        row([
+          topoWidget('topoTab.cropToBoundary', `${K}.cropToBoundary.label`, 'topo-crop-boundary'),
+          topoWidget('topoTab.cropShowOutside', `${K}.cropShowOutside.label`, 'topo-crop-outside'),
+        ]),
         row([topoWidget('topoTab.cutFillMode', `${K}.cutFillMode.label`, 'topo-cutfill-mode')]),
         // ADR-662 Φ4 — «Όγκοι εκσκαφών»/«Έλεγχος ποιότητας»: ανοίγουν dialog με πλήρη ροή
         // (mode/όγκοι· run/review/zoom-to-flag). Το mode quick-toggle widget μένει δίπλα.

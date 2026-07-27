@@ -14,12 +14,13 @@ import type { RibbonButton } from '../../types/ribbon-types';
 /** Live ToolStateStore tools reused by the tab (toolBtn → onToolChange, no action). */
 const TOOL_KEYS = new Set(['topo-breakline', 'topo-boundary']);
 
-/** widgetIds wired in RibbonPanel.renderButton (6 toggles + 1 manage button + 3 numeric).
+/** widgetIds wired in RibbonPanel.renderButton (8 toggles + 1 manage button + 3 numeric).
  *  ADR-662 Φάση 1b (toggles/fields) + Φ4 (`topo-cloud-manage` — store-subscribed disabled-
- *  capable button που ανοίγει τον cloud manager dialog). */
+ *  capable button που ανοίγει τον cloud manager dialog) + ADR-718 (κοπή στο όριο). */
 const WIDGET_IDS = new Set([
   'topo-grid-visible', 'topo-north-visible', 'topo-cloud-visible', 'topo-cloud-manage',
   'topo-contour-style', 'topo-north-mode', 'topo-cutfill-mode',
+  'topo-crop-boundary', 'topo-crop-outside',
   'topo-contour-interval', 'topo-contour-index', 'topo-grid-step',
 ]);
 
@@ -72,8 +73,8 @@ describe('TOPOGRAPHY_TAB (ADR-662 Φάση 1 + 1b)', () => {
 
   it('τα widget buttons (Φάση 1b) έχουν έγκυρο widgetId, χωρίς action', () => {
     const widgets = allButtons().filter(isWidget);
-    // 6 toggles + 1 manage button (topo-cloud-manage) + 3 numeric fields.
-    expect(widgets).toHaveLength(10);
+    // 8 toggles (6 + ADR-718 crop/outside) + 1 manage button (topo-cloud-manage) + 3 numeric fields.
+    expect(widgets).toHaveLength(12);
     for (const b of widgets) {
       expect(b.widgetId).toBeDefined();
       expect(WIDGET_IDS.has(b.widgetId as string)).toBe(true);

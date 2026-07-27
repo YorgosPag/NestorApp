@@ -40,7 +40,8 @@ import {
 } from '../../systems/topography/persistence/topo-persistence-types';
 import { collectTopoState, applyTopoState } from '../../systems/topography/persistence/topo-state-io';
 import { reconcileTopoFrame } from '../../systems/topography/persistence/topo-frame-reconcile';
-import { subscribeTopo, getTopoState } from '../../systems/topography/TopoPointStore';
+import { subscribeTopo, getTopoState, getActiveCropRing } from '../../systems/topography/TopoPointStore';
+import type { TopoBoundary } from '../../systems/topography/topo-types';
 import { subscribeGeoReference } from '../../systems/geo-referencing/geo-reference-store';
 import { subscribeContourConfig } from '../../systems/topography/contour-config-store';
 import { subscribeContourDisplay } from '../../systems/topography/contour-display-store';
@@ -221,6 +222,25 @@ export function useTopoPersistence(params: UseTopoPersistenceParams): UseTopoPer
   useEffect(() => {
     return subscribeGeoReference(() => {
       if (sceneLoading) return;
+      reconcileTopoFrame({ getScene: getLevelScene, commitScene, levelId: levelIdRef.current });
+    });
+  }, [sceneLoading, getLevelScene, commitScene]);
+
+  // ADR-718 — η κοπή στο όριο αλλάζει την ΙΔΙΑ την επιφάνεια, άρα και τα παράγωγά της στην
+  // κάτοψη (ισοϋψείς + footprint), που είναι **ψημένες οντότητες** και δεν ανανεώνονται μόνες
+  // τους. Ο ΙΔΙΟΣ reconciler του geo-reference το κάνει — μηδέν δεύτερος δρόμος ξαναχτισίματος.
+  //
+  // Το κριτήριο είναι ο **ενεργός δακτύλιος**, όχι «άλλαξε το TopoPointStore»: εκείνο αλλάζει και
+  // σε κάθε εισαγωγή σημείου, όπου η αναγέννηση ισοϋψών παραμένει σκόπιμα ΧΕΙΡΟΚΙΝΗΤΗ («Παραγωγή
+  // ισοϋψών»). Ένα κριτήριο καλύπτει και τις δύο αιτίες — άναμμα/σβήσιμο της κοπής ΚΑΙ αλλαγή του
+  // ίδιου του ορίου — γιατί και οι δύο αλλάζουν την ταυτότητα του δακτυλίου.
+  const lastCropRingRef = useRef<TopoBoundary | null>(getActiveCropRing());
+  useEffect(() => {
+    return subscribeTopo(() => {
+      if (sceneLoading) return;
+      const ring = getActiveCropRing();
+      if (ring === lastCropRingRef.current) return;
+      lastCropRingRef.current = ring;
       reconcileTopoFrame({ getScene: getLevelScene, commitScene, levelId: levelIdRef.current });
     });
   }, [sceneLoading, getLevelScene, commitScene]);
