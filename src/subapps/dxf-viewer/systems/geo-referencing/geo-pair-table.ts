@@ -14,7 +14,7 @@
  * and TWO correspondences determine the transform exactly — so the four-point machinery buys
  * nothing here and costs a great deal. Same insight, correct minimal form.
  *
- * ## 🔴 The two sides are NOT symmetric, and the code reflects that (v23)
+ * ## 🔴 The two sides are NOT symmetric, and the code reflects that (v24)
  * The SURVEY side is small (93 points ⇒ 4 278 pairs) and needs its pairs RANKED, so it is
  * materialised as a table ({@link buildPairTable} → {@link selectLongestBases}).
  * The DRAWING side is large (1 500 points ⇒ 1.12 M pairs) and is only ever STREAMED — asked

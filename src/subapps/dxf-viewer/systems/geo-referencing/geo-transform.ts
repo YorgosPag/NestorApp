@@ -72,7 +72,7 @@ export function isIdentityGeoReference(geo: GeoReference | null | undefined): bo
  *     x′ = c·x − s·y + tx
  *     y′ = s·x + c·y + ty
  *
- * ## Why this type exists (ADR-650 §M10e v23)
+ * ## Why this type exists (ADR-650 §M10e v24)
  * BOTH directions of a `GeoReference` are instances of this one shape — the inverse of a
  * rigid map is just another rigid map. Naming that fact buys two things that were previously
  * paid for over and over:

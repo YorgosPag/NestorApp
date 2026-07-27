@@ -33,7 +33,7 @@
  * by the ratio of the two sets for no extra discrimination; verifying over everything is what
  * makes the reported inlier count honest. Never the other way round.
  *
- * ## Cost (ADR-650 §M10e v23 — measured, not assumed)
+ * ## Cost (ADR-650 §M10e v24 — measured, not assumed)
  * The enumeration is cheap; SCORING its output was not. 2 456 hypotheses × 1 500 probes each
  * froze the tab for 6.7 s. Two changes, neither of which alters a single answer:
  *   1. the search asks the question from the SURVEY side against an index of the drawing

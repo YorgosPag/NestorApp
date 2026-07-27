@@ -19,7 +19,7 @@
  * This is the same reasoning behind the mutual/one-to-one filters in modern registration
  * (TEASER++, FGR) and it is not optional.
  *
- * ## 🔴 The index is built over EITHER side — and which one matters enormously (v23)
+ * ## 🔴 The index is built over EITHER side — and which one matters enormously (v24)
  * The one-to-one rule caps the score at `min(|drawing|, |survey|)`. On the reference file that
  * is `min(1500, 93) = 93` — so asking the question drawing-first performs 1 500 lookups to
  * discover at most 93 facts, and does it once per hypothesis, 2 456 times. Asking it
