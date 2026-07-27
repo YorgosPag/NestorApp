@@ -60,23 +60,38 @@ DialogContent ΧΩΡΙΣ DialogTrigger  : 161   ← triggerRef === null ⇒ ?.fo
 ### 3.1 `src/lib/a11y/keyboard-scope.ts` — framework-free SSoT
 
 ```ts
-isEditableTarget(target): boolean          // η ΜΙΑ υλοποίηση των 10+ αντιγράφων
-pushModalKeyboardScope(): () => void       // σωρός· ιδempotent release
+// ── ΟΙ ΔΥΟ ΕΡΩΤΗΣΕΙΣ (§5.6, 2026-07-27) — μία υλοποίηση η καθεμία ──
+isTextEntryTarget(target): boolean            // Ε1: «γράφει ο χρήστης ΚΕΙΜΕΝΟ;»
+consumesTypedCharacters(target): boolean      // Ε2: «θα ΚΑΤΑΝΑΛΩΣΕΙ τον χαρακτήρα;» ⊃ Ε1
+isTextEntryFocused(): boolean                 // Ε1 πάνω στο activeElement, SSR-safe
+focusConsumesTypedCharacters(): boolean       // Ε2 πάνω στο activeElement, SSR-safe
+// ── ο σωρός ──
+pushModalKeyboardScope(): () => void          // σωρός· ιδempotent release
 isModalKeyboardScopeActive(): boolean
-inspectModalKeyboardScope(): { depth }     // dev/test — το ανάλογο του escapeBus.inspect()
-shouldGlobalShortcutYield(event): boolean  // η ΜΙΑ ερώτηση των global accelerators
+inspectModalKeyboardScope(): { depth }        // dev/test — το ανάλογο του escapeBus.inspect()
+shouldGlobalShortcutYield(event): boolean     // η ΜΙΑ ερώτηση των global accelerators (ρωτά Ε2)
 ```
 
 - **Σωρός, όχι σημαία**: dialog → ConfirmDialog από πάνω· το κλείσιμο του δεύτερου δεν πρέπει να
   ξεκλειδώνει τους accelerators όσο ζει το πρώτο.
 - **Ιδempotent release**: το διπλό effect του React StrictMode δεν αφήνει αρνητικό βάθος.
-- `isEditableTarget` είναι υπερσύνολο των παλιών **σε ό,τι αφορά επεξεργάσιμο κείμενο**: πιάνει
-  `isContentEditable` (κληρονομημένο) και `contenteditable=""`, που **και τα δέκα** αντίγραφα έχαναν.
-  ⚠️ **Μία εξαίρεση, μετρημένη 2026-07-26**: το `radial-command-ring-helpers` έλεγχε **και `SELECT`**·
-  το SSoT όχι. Άρα **δεν** είναι γνήσιο υπερσύνολο όλων — βλ. **§5.6** για το γιατί η ενοποίηση
-  εκείνου του ενός δεν είναι μονόπλευρη απόφαση (ο escape bus καταναλώνει το ίδιο predicate).
+- **Ε1 ⊂ Ε2, και η διαφορά τους είναι ο λόγος ύπαρξης δύο ονομάτων** (§5.6): `<select>` /
+  `role="combobox"` απαντούν **ΝΑΙ** στην Ε2 (type-ahead) και **ΟΧΙ** στην Ε1 (το `Escape` σε
+  dropdown πρέπει να κλείνει τον dialog, ADR-364). Το `isEditableTarget` — που ήταν εδώ ως «η ΜΙΑ
+  υλοποίηση» — ρωτούσε **μόνο** την Ε1 με όνομα που υπονοούσε και τις δύο· γι' αυτό ένα δεύτερο,
+  ομώνυμο και **διαφορετικό** σώμα ζούσε allowlisted στο `radial-command-ring-helpers`.
+  ⚠️ Η προηγούμενη διατύπωση εδώ («δεν είναι γνήσιο υπερσύνολο όλων») ήταν **σωστή περιγραφή λάθους
+  μοντέλου**: η επιδιόρθωση δεν ήταν να γίνει το ένα υπερσύνολο, αλλά να **χωριστούν οι ερωτήσεις**.
+- **Ε1 πιάνει ό,τι έχαναν τα δέκα**: `isContentEditable` (κληρονομημένο) και `contenteditable=""`.
+- **Ε2 είναι ΡΟΛΟΥ, όχι `tagName`**: το canonical dropdown (ADR-001, **237 αρχεία**) είναι
+  `<button role="combobox">`. Κάλυψη κατά WAI-ARIA APG + `FORM_TAGS_AND_ROLES` του
+  react-hotkeys-hook, **συν** τα item-level roles (`option`, `menuitem*`, `treeitem`) γιατί όσο ένα
+  Radix Select είναι **ανοιχτό** το focus κάθεται στο `option` ενώ ο handler ζει στον πρόγονο
+  `listbox` — έλεγχος μόνο του widget ρόλου θα το έχανε. **Εκτός επίτηδες**: `slider`, `radio`,
+  `tab`, `grid` — πλοηγούνται με **βέλη**, άρα θα σκότωναν accelerators χωρίς λόγο.
 - `shouldGlobalShortcutYield` = **belt-and-suspenders** (N.7.2 #4): scope (πρωτεύον, O(1))
-  **ή** editable στόχος/`activeElement` (δίχτυ για layers εκτός των κοινών primitives).
+  **ή** στόχος/`activeElement` που καταναλώνει τον χαρακτήρα (δίχτυ για layers εκτός των κοινών
+  primitives).
 
 ### 3.2 Τροφοδοσία — ΕΝΑ σημείο, 170 καταναλωτές
 
@@ -265,7 +280,8 @@ guards — και σε ένα, **κανένα**. Οι δύο readers το κλε
 
 | Αρχείο | Τι κλειδώνει |
 |---|---|
-| `src/lib/a11y/__tests__/keyboard-scope.test.ts` | nesting σωρού, ιδempotent release, predicate, υπερσύνολο έναντι των παλιών αντιγράφων |
+| `src/lib/a11y/__tests__/keyboard-scope.test.ts` | nesting σωρού, ιδempotent release, **και τα δύο** predicates (§5.6) + οι δύο readers· ρητά: `role="combobox"` ⇒ Ε1 **false** / Ε2 **true**, και `slider`/`radio`/`tab`/`grid` ⇒ Ε2 **false** (πήχης υπερδιόρθωσης) |
+| `src/lib/a11y/__tests__/inline-editable-predicate-ratchet.test.ts` | **δεύτερη εμφάνιση του Οργάνου Β** (§5.3): ratchet του **ανώνυμου** πληθυσμού — 12 inline `tagName === 'INPUT'` αντίγραφα, ονομαστικά, **μόνο μικραίνει**. Το registry (Όργανο Α) πιάνει re-implementation **με όνομα** και σε αυτά είναι τυφλό |
 | `src/components/ui/__tests__/dialog-focus-restore.test.tsx` | **η αληθινή δικλείδα του Ε2** — χωρίς trigger, με trigger (μη-παλινδρόμηση), opener που χάθηκε |
 | `src/subapps/dxf-viewer/keyboard/__tests__/global-shortcut-listener.test.ts` | το gate, το `allowWhenEditable`, η αποδέσμευση |
 | `systems/escape-bus/__tests__/escape-dev-audit.test.ts` | δηλωμένος Κ3 ⇒ `ok`· **αδήλωτος ⇒ ακόμη `shadow-owner`**· `starved` δεν καλύπτεται από δήλωση |
