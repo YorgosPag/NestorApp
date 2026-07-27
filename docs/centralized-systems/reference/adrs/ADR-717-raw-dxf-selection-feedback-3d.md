@@ -181,10 +181,10 @@ pipeline κάνει clipping πριν το perspective divide. Το far plane **
 |---|---|
 | `bim-3d/animation/use-bim3d-dxf-edit-interaction.ts` | Φάση Α — άρση των δύο φίλτρων |
 | `bim-3d/scene/dxf-3d-floor-scope.ts` | `findDxfEntitiesInScope` (bulk SSoT) + per-id wrapper |
-| `bim-3d/viewport/overlay-dispatch/use-selection-glow-pass.ts` | **ΝΕΟ** — το κανάλι highlight |
-| `bim-3d/viewport/overlay-dispatch/BimOverlayDispatchCanvas.tsx` | Εγγραφή pass στο κατώτερο z |
+| `bim-3d/viewport/overlay-dispatch/use-selection-glow-pass.ts` | **ΝΕΟ** — το κανάλι highlight· **v4**: φωτοστέφανο με `destination-out` τρύπα, χωρίς gate |
+| `bim-3d/viewport/overlay-dispatch/BimOverlayDispatchCanvas.tsx` | Εγγραφή pass στο κατώτερο z (**v4**: η θέση είναι συμβόλαιο — βλ. §4) |
 | `bim-3d/scene/__tests__/dxf-entities-in-scope.test.ts` | **ΝΕΟ** — 8 anchors (bulk resolver) |
-| `bim-3d/viewport/overlay-dispatch/__tests__/selection-highlight-rule.test.ts` | **ΝΕΟ** — 9 anchors (ο κανόνας `active` + invalidation cache) |
+| `bim-3d/viewport/overlay-dispatch/__tests__/selection-highlight-rule.test.ts` | **ΝΕΟ** — **17 anchors** (v4): ο κανόνας ΧΩΡΙΣ gate (arity = 1), το προφίλ της λάμψης, η **απόδειξη** ότι ο πυρήνας τρυπιέται, invalidation cache |
 | `bim-3d/viewport/screen-projection-clip.ts` | **ΝΕΟ (Φ-Γ)** — η ΜΙΑ κατοικία της ομογενούς προβολής + near-plane clipping ανά τμήμα |
 | `bim-3d/viewport/__tests__/screen-projection-clip.test.ts` | **ΝΕΟ (Φ-Γ)** — 22 anchors |
 | `bim-3d/viewport/coordinate-transforms.ts` | Φ-Γ — το `ndcToScreenPx` παύει να είναι η απάντηση· delegate στον clipper |
@@ -194,6 +194,16 @@ pipeline κάνει clipping πριν το perspective divide. Το far plane **
 
 ## 8. Changelog
 
+- **2026-07-28 — v4 / Φάση Β ξαναγράφεται: λάμψη ΓΥΡΩ, όχι βαφή ΠΑΝΩ.** Μετά από **τρεις**
+  αποτυχημένες εκδοχές του `active`, η έρευνα στους μεγάλους παίκτες (§3) έδειξε ότι το ερώτημα
+  που κυνηγούσαν και οι τρεις — «κάθισαν λαβές;» — **δεν υπάρχει σε καμία** από τις τέσσερις
+  εφαρμογές αναφοράς: το highlight είναι πάντα αναμμένο και πάντα **προστίθεται γύρω**. Το gate
+  καταργείται (`shouldShowSelectionHighlight(dxfCount)`, arity **1**, καρφωμένο σε anchor ώστε
+  κάθε νέο κριτήριο να σπάει θορυβωδώς) και η βαφή αντικαθίσταται από φωτοστέφανο τριών στρώσεων
+  + `destination-out` τρύπα — η γραμμή του WebGL φαίνεται από μέσα με **το δικό της χρώμα layer**.
+  Το anchor δεν ισχυρίζεται ότι το χρώμα επιβιώνει· **το αποδεικνύει** (τελευταία πινελιά =
+  `destination-out`, alpha 1, πλάτος = πυρήνας). Καταργείται και η ασυμμετρία 1↔N που ο Giorgio
+  ανέφερε ως το σύμπτωμα. Σύνολο: **308 σουίτες / 2790 tests πράσινα** στο `bim-3d`, jscpd καθαρό.
 - **2026-07-28 — v4 / Φάση Γ: το §6 κλείνει.** Ομογενές (clip-space) near-plane clipping **ανά
   τμήμα** σε νέο SSoT `screen-projection-clip.ts`. Το σφάλμα δεν ήταν «λάθος κατώφλι» — ήταν ότι
   **δύο διαφορετικές καταστάσεις έδιναν το ίδιο `ndc.z > 1`** και η μία απορριπτόταν άδικα· τις
