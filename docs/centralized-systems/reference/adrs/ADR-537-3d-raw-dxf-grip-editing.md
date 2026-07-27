@@ -155,6 +155,15 @@ raycastable ανά-οντότητα και δεν τους σταθεροποι�
   ghost/drag/snap ριζώνουν στο σωστό επίπεδο)· commit via `resolveEntityLevelId` (βρίσκει το σωστό level
   cross-floor ήδη). **Όριο:** edit ορόφου που ΔΕΝ είναι στη μνήμη (μόνο Firestore snapshot) → ο commit
   πέφτει στον active level (rare).
+- **§text-edit (ADR-344 Φ-3D, 2026-07-28):** το text στο 3D δεν είναι πλέον μόνο επιλέξιμο/μετακινήσιμο —
+  **διπλό κλικ ανοίγει τον ΙΔΙΟ in-place TipTap editor με το 2D**. Ίδια αρχή με τις λαβές αυτού του ADR
+  («τα ΙΔΙΑ grips + το ΙΔΙΟ commit»): κοινός πυρήνας (`ui/text-toolbar/text-edit-session.ts`), διαφορετική
+  **μόνο** η αγκύρωση (`bim-3d/text/text-edit-anchor-3d.ts`, που καταναλώνει το `findDxfEntityInScope` +
+  `dxfSceneUnitToMm` αυτού του ADR). Ο editor μένει **οριζόντιος + ευανάγνωστος** σε screen-space (AutoCAD
+  `MTEXTFIXED=2`) και **ακολουθεί** την κάμερα, χωρίς να παγώνει τα OrbitControls. Το commit λύνει το level
+  με `resolveEntityLevelId` — άρα το «Όριο» για ορόφους εκτός μνήμης (παρακάτω) ισχύει **αυτούσιο** και εδώ.
+  ⚠️ Καλύπτει **και MTEXT**: ο `convertTextEntity` το κανονικοποιεί σε `type:'text'` πριν το `DxfScene`, οπότε
+  ήταν ήδη ορατό/επιλέξιμο· ο editor το αναγνωρίζει επειδή ψάχνει στο `SceneModel`, όπου ο τύπος επιβιώνει.
 - **single-select** (mirror BIM 3D).
 - **ΟΛΕΣ οι μονάδες (✅ γ):** mm/cm/m/in/ft. Ο κοινός projector `dxfPlanToWorld` είναι mm-based ενώ το
   wireframe (`DxfToThreeConverter`) ζωγραφίζει raw entity coords scaled ×`sceneUnitsToMeters`. ΕΝΑ factor
@@ -189,6 +198,13 @@ raycastable ανά-οντότητα και δεν τους σταθεροποι�
 
 ## Changelog
 
+- **2026-07-28 — §text-edit: διπλό κλικ σε κείμενο στο 3D ανοίγει τον ΙΔΙΟ editor με το 2D (ADR-344 Φ-3D).**
+  Η πλήρης απόφαση, η έρευνα προτύπων (AutoCAD `MTEXTFIXED=2` / Revit / Blender / η **απόρριψη** του
+  CSS3DRenderer) και το αρχείο-προς-αρχείο changelog ζουν στο **ADR-344 (Changelog 2026-07-28)** — εδώ
+  καταγράφεται μόνο ό,τι αγγίζει ΑΥΤΟ το ADR: η αγκύρωση καταναλώνει αυτούσια τα `findDxfEntityInScope`
+  (§δ scope SSoT) + `dxfSceneUnitToMm` (§γ units) + `dxfPlanToWorld`, και το commit λύνει το level με
+  `resolveEntityLevelId` — άρα κληρονομεί **και** το documented όριο του §δ (όροφος εκτός μνήμης → active level).
+  Το §6 «Εύρος / Όρια» απέκτησε το αντίστοιχο bullet. Μηδέν αλλαγή σε pick/hit-test/converter.
 - **2026-07-15 (Opus 4.8) — «Z»/«F» frame-to-selection πιάνει πλέον ΚΑΙ raw DXF (Giorgio, UNCOMMITTED, 🔴 browser verify).** Αίτημα: στο 3D, με μία ή περισσότερες επιλεγμένες οντότητες, το **«Z»** να κάνει fit-to-view των **επιλεγμένων κρατώντας τη γωνία κάμερας** (dolly εμπρός, ΟΧΙ top view), για DXF/BIM/MEP. **Δύο κενά:** (1) το framing math **υπήρχε ήδη** (`viewport.frameBounds` διαβάζει το τρέχον viewDir → κρατά τη γωνία· `frameSelectionOrFitExtents` δεμένο στο **F**) αλλά **μόνο** στο πλήκτρο F. (2) Το `frameSelectionOrFitExtents` διάβαζε μόνο `Selection3DStore.selectedBimIds` (BIM) — τα **raw DXF** picks ζουν στο **universal** `SelectedEntitiesStore` (ADR-532/402), οπότε επιλεγμένη πολυγραμμή αγνοούνταν → έπεφτε σε full-extents. **Fix (full SSoT, ΜΗΔΕΝ νέα μηχανή):** (α) νέο πλήκτρο **«Z»** (`VIEW_3D_FRAME_SELECTION_SHORTCUT`, `3D-only`, alias του υπάρχοντος `ACTION_FIT_FRAME_3D` → reuse description key, μηδέν νέο i18n)· το **F μένει** ως έχει. (β) νέος **pure** helper `computeDxfSelectionWorldBounds` (`dxf-selection-framing-bounds.ts`) που επαναχρησιμοποιεί ΑΥΤΟΥΣΙΟ: `findDxfEntityInScope` (ίδιο scope SSoT με το pick) → `getEntityBBox` (2D bbox) → `dxfSceneUnitToMm` (units→mm) → `dxfPlanToWorld` (ίδιος projector με wireframe/grips/ghosts), NaN-safe. (γ) `ThreeJsSceneManager.frameSelectionOrFitExtents` κάνει **union** BIM-selection (`computeBimSelectionUnionBounds`, εξήχθη από το `computeFramingTargetBounds` — behavior αμετάβλητο) **∪** DXF-selection, αλλιώς fit-extents. Ωφελεί **και** τα δύο πλήκτρα (F+Z). BIM ids στο universal resolve-άρουν σε null στο DXF scope (skip· χωρίς διπλομέτρηση). Αρχεία: `keyboard-shortcuts-3d.ts`, `dxf-selection-framing-bounds.ts` (ΝΕΟ), `scene-framing-bounds.ts`, `ThreeJsSceneManager.ts` + test `dxf-selection-framing-bounds.test.ts` (7/7 PASS· projection+union+NaN-skip+empty)· regression scene-framing/shortcuts 56/56 PASS. **Documented limitation:** MEP meshes φέρουν `userData.entityId` (όχι `bimId`) → το `computeBimSelectionBounds` δεν τα πιάνει· follow-up αν χρειαστεί MEP frame-to-selection. 1 domain (3D framing). Cross-ref ADR-366 A.6.Q4 (F/framing owner). 🔴 browser verify: 3D → επίλεξε πολυγραμμή(ές)/BIM → **Z** → έρχονται μπροστά με ίδια γωνία.
 - **2026-07-06 — Φ2: ίχνη ευθυγράμμισης + λευκές ενδείξεις (HUD) στο 3D grip drag (parity με 2D, full SSoT).**
   Στο 3D raw-DXF grip drag εμφανίζονται πλέον τα **ΙΔΙΑ** λευκά/Polar AutoAlign ίχνη + intersection halos +
