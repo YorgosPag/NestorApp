@@ -28,6 +28,7 @@ import {
   Layers,
   Palette,
   Scissors,
+  Eye,
   type LucideIcon,
 } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -63,6 +64,12 @@ import {
   setTerrainAutoClipAtActiveLevel,
   subscribeTerrain3D,
 } from '../../../systems/topography/terrain-3d-store';
+import {
+  getTopoState,
+  getTopoCrop,
+  setTopoCrop,
+  subscribeTopo,
+} from '../../../systems/topography/TopoPointStore';
 import { useContourDisplay } from '../../../systems/topography/useContourDisplay';
 
 /** i18n key group + on/off/tooltip suffixes for one toggle. */
@@ -204,7 +211,40 @@ const TERRAIN_AUTOCLIP = toggleConfig(
   Scissors, Layers, keys('terrainAutoClip'),
 );
 
+// ── ADR-718 — crop the surface to the site boundary ─────────────────────────
+// Το ΙΔΙΟ όριο που ήδη περιορίζει τους όγκους (ADR-650 M6) προάγεται σε όριο της ΕΠΙΦΑΝΕΙΑΣ:
+// κάτοψη, ισοϋψείς, 3Δ, cap, εμβαδά. Χωρίς επιλεγμένο όριο η εντολή είναι greyed με τον λόγο —
+// ίδιο big-player μοτίβο με το CLOUD_VISIBLE («εντολή με ανεκπλήρωτη προϋπόθεση λέει γιατί»).
+const CROP_TO_BOUNDARY = toggleConfig(
+  () => {
+    const st = React.useSyncExternalStore(subscribeTopo, getTopoState, getTopoState);
+    const hasBoundary = (st.boundary?.vertices.length ?? 0) >= 3;
+    return {
+      value: st.crop.enabled,
+      toggle: () => setTopoCrop({ enabled: !getTopoCrop().enabled }),
+      disabled: !hasBoundary,
+      disabledReasonKey: hasBoundary ? undefined : `${K}.cropToBoundary.noBoundaryTip`,
+    };
+  },
+  Scissors, Mountain, keys('cropToBoundary'),
+);
+
+const CROP_SHOW_OUTSIDE = toggleConfig(
+  () => {
+    const st = React.useSyncExternalStore(subscribeTopo, getTopoState, getTopoState);
+    return {
+      value: st.crop.showOutside,
+      toggle: () => setTopoCrop({ showOutside: !getTopoCrop().showOutside }),
+      disabled: !st.crop.enabled,
+      disabledReasonKey: st.crop.enabled ? undefined : `${K}.cropShowOutside.cropOffTip`,
+    };
+  },
+  Eye, EyeOff, keys('cropShowOutside'),
+);
+
 export const TopoGridVisibleToggle: React.FC = () => <RibbonToggleWidget config={GRID_VISIBLE} />;
+export const TopoCropToBoundaryToggle: React.FC = () => <RibbonToggleWidget config={CROP_TO_BOUNDARY} />;
+export const TopoCropShowOutsideToggle: React.FC = () => <RibbonToggleWidget config={CROP_SHOW_OUTSIDE} />;
 export const NorthArrowVisibleToggle: React.FC = () => <RibbonToggleWidget config={NORTH_VISIBLE} />;
 export const PointCloud3DVisibleToggle: React.FC = () => <RibbonToggleWidget config={CLOUD_VISIBLE} />;
 export const ContourStyleToggle: React.FC = () => <RibbonToggleWidget config={CONTOUR_STYLE} />;

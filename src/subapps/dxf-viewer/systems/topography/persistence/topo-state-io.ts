@@ -15,7 +15,10 @@
  * touches — so the restored mode/datum survive.
  */
 
-import { getTopoState, setTopoPoints, setTopoBreaklines, setTopoBoundary } from '../TopoPointStore';
+import {
+  getTopoState, setTopoPoints, setTopoBreaklines, setTopoBoundary, setTopoCrop,
+} from '../TopoPointStore';
+import { TOPO_CROP_OFF } from '../topo-types';
 import { getContourConfig, restoreContourConfig } from '../contour-config-store';
 import { getContourDisplayStyle, setContourDisplayStyle } from '../contour-display-store';
 import { getTerrain3DState, setTerrain3DVisible, setTerrain3DStyle } from '../terrain-3d-store';
@@ -31,6 +34,7 @@ export function collectTopoState(): TopoPersistedState {
   return {
     surfaces: topo.surfaces,
     boundary: topo.boundary,
+    crop: topo.crop,
     contourConfig: getContourConfig(),
     contourDisplayStyle: getContourDisplayStyle(),
     terrain3d: { visible: terrain.visible, style: terrain.style },
@@ -47,6 +51,9 @@ export function applyTopoState(state: TopoPersistedState): void {
   setTopoPoints(state.surfaces.proposed.points, 'proposed');
   setTopoBreaklines(state.surfaces.proposed.breaklines, 'proposed');
   setTopoBoundary(state.boundary);
+  // ADR-718 — η κοπή ΜΕΤΑ το όριο (διαβάζει και τα δύο), και **πάντα** ρητά: ένα έγγραφο χωρίς
+  // `crop` πρέπει να ΣΒΗΣΕΙ την κοπή του προηγούμενου ορόφου/έργου, όχι να την κληρονομήσει.
+  setTopoCrop(state.crop ?? TOPO_CROP_OFF);
   // 2) Settings (view state).
   restoreContourConfig(state.contourConfig);
   setContourDisplayStyle(state.contourDisplayStyle);

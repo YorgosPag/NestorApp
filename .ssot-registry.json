@@ -3863,7 +3863,7 @@
     },
     "current-layer-picker": {
       "ssotFile": "src/subapps/dxf-viewer/ui/components/layer-picker/CurrentLayerPicker.tsx",
-      "description": "ADR-358 §5.5.bis Q8 Phase 7 (+ ADR-510 Φ4): the user-initiated current-layer change flow (permission gate + toast + recent FIFO + per-project/per-level persistence) is owned by a single SSoT — the effect-free `useCurrentLayerChange` action hook (the ONE code path, shared by the `CurrentLayerPicker` popover AND the ribbon line-tool «Επίπεδο» combobox) plus the `useCurrentLayerPickerState` host hook. Direct calls to `setCurrentLayerId` / `pushRecentLayer` / `setRecentLayerIds` outside the LayerStore SSoT and these two hooks fragment that flow. Component imports outside the two ratcheted host mount points (CadStatusBar status-bar variant, RibbonPanel ribbon variant) duplicate the picker UI. Zero-tolerance baseline at landing.",
+      "description": "ADR-358 §5.5.bis Q8 Phase 7 (+ ADR-510 Φ4): the user-initiated current-layer change flow (permission gate + toast + recent FIFO + per-project/per-level persistence) is owned by a single SSoT — the effect-free `useCurrentLayerChange` action hook (the ONE code path, shared by the `CurrentLayerPicker` popover AND the ribbon line-tool «Επίπεδο» combobox) plus the `useCurrentLayerPickerState` host hook. Direct calls to `setCurrentLayerId` / `pushRecentLayer` / `setRecentLayerIds` outside the LayerStore SSoT and these two hooks fragment that flow. Component imports outside the two ratcheted host mount points (CadStatusBar status-bar variant, ribbon-widget-registry ribbon variant — was RibbonPanel until the ADR-718 split moved the whole widgetId→widget map out of it) duplicate the picker UI. Zero-tolerance baseline at landing.",
       "forbiddenPatterns": [
         "\\b(setCurrentLayerId|pushRecentLayer|setRecentLayerIds)\\s*\\(",
         "\\bCurrentLayerPicker\\b"
@@ -3881,7 +3881,7 @@
         "src/subapps/dxf-viewer/ui/components/layer-manager/useLayerManagerState.ts",
         "src/subapps/dxf-viewer/ui/components/layer-manager/__tests__/useLayerManagerState.test.ts",
         "src/subapps/dxf-viewer/statusbar/CadStatusBar.tsx",
-        "src/subapps/dxf-viewer/ui/ribbon/components/RibbonPanel.tsx"
+        "src/subapps/dxf-viewer/ui/ribbon/components/ribbon-widget-registry.tsx"
       ],
       "addedDate": "2026-05-16",
       "addedByAdr": "ADR-358",

@@ -4775,6 +4775,22 @@
         "boundary": {
           "label": "Excavation boundary"
         },
+        "cropToBoundary": {
+          "label": "Crop to boundary",
+          "on": "Cropped to boundary",
+          "off": "Crop to boundary",
+          "tooltipOn": "The terrain is cropped to the site boundary — click to restore the whole surveyed area",
+          "tooltipOff": "Cut the terrain vertically at the site boundary. Elevations stay exactly the same and the surface can never grow beyond the surveyed area",
+          "noBoundaryTip": "Pick the site boundary first with «Excavation boundary»"
+        },
+        "cropShowOutside": {
+          "label": "Surrounding ground",
+          "on": "Surrounding ground faded",
+          "off": "Site only",
+          "tooltipOn": "The ground outside the site is shown faded — click to hide it",
+          "tooltipOff": "Show the ground around the site faded (road, neighbours, slopes). It never enters volume or area calculations",
+          "cropOffTip": "Enable «Crop to boundary» first"
+        },
         "cutFill": {
           "label": "Cut/Fill volumes",
           "dialogTitle": "Earthwork Volumes"
