@@ -1329,3 +1329,27 @@ DXF writer ΚΑΙ τα live measurements/preview, μέσω κεντρικών pu
   effective (4), `dxf-import-dashed-linetype-density.test.ts` (2 — meters→visible density + explicit `$LTSCALE` faithful).
   ⚠️ **CHECK 6B/6D** (τροποποίηση `DxfRenderer` micro-leaf) → stage ADR-040 + ADR-510. tsc SKIP (N.17). 🔴 browser-verify
   (import → ορατά διακεκομμένη ~20+ παύλες· status-bar LinetypeScaleControl αλλάζει πυκνότητα ζωντανά) + commit → Giorgio.
+
+---
+
+## Φ2E #7 — «Μετρήσεις» στο αριστερό Properties palette (2026-07-28)
+
+Το `LINE_PROPERTY_GROUPS` απέκτησε **τέταρτη** ομάδα: «**Μετρήσεις**» (Περίμετρος / Εμβαδόν),
+read-only, αυτο-κρυπτόμενη. Είναι AutoCAD «Geometry → Area / Length» για περίγραμμα.
+
+- **Ιδιοκτησία λογικής: ADR-649 §measure-facts** — εκεί ζει ο ΕΝΑΣ dispatcher
+  (`systems/measure/entity-measurement-facts.ts`), ο κανόνας AutoCAD για ανοιχτή πολυγραμμή,
+  και το γιατί ο resolver δεν μπήκε στο bridge. **Μην αντιγράψεις το σκεπτικό εδώ.**
+- Εδώ κρατάμε **μόνο** ό,τι αφορά αυτό το ADR:
+  - Νέο `control: 'readout'` πεδίο στο descriptor SSoT — **υπάρχον** control
+    (`EntityPropertyRow.tsx:82`), μηδέν νέο renderer.
+  - Νέος builder `MEASURE(...)` δίπλα στον `L(...)`: **ξεχωριστός επίτηδες**, επειδή το
+    `labelKey` ΔΕΝ παράγεται από το όνομα του key (τα keys λέγονται `readoutPerimeter`/
+    `readoutArea`, οι ετικέτες `perimeter`/`area`) — ο `L` θα ζητούσε ανύπαρκτα i18n keys (N.11).
+  - Νέο visibility key `LINE_TOOL_PANEL_VISIBILITY_KEYS.measurable`. Απλή **ΓΡΑΜΜΗ δεν το
+    δείχνει**: το μήκος της ζει ήδη στη «Γεωμετρία» — δύο θέσεις για τον ίδιο αριθμό = διπλότυπο UI.
+  - Το `LinePropertiesTab` **αλυσιδώνει** `getComboboxState`/`getPanelVisibility`
+    (`readout ?? bridge`). Κάθε άλλο key περνά αυτούσιο στο bridge ⇒ **μηδέν** αλλαγή στην
+    υπάρχουσα συμπεριφορά ribbon/panel.
+  - Το `useRibbonLineToolBridge` early-return-άρει τα δύο readout keys
+    (`LINE_TOOL_READOUT_KEYS`, μοτίβο `newLineType`) ώστε να μη διαρρεύσουν στο color fallthrough.
