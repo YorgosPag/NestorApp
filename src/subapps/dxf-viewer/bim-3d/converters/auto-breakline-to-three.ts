@@ -29,9 +29,12 @@ import type { AutoBreaklineCandidate } from '../../systems/topography/auto-break
 import type { WorldToDisplayProjector } from '../../systems/geo-referencing/geo-transform';
 import {
   activeProjector,
+  appendProjectedPolylineSegments,
   appendTopoPolylineSegments,
+  projectTopoPolylineVertices,
   toTopoLineGeometry,
 } from './topo-polyline-to-three';
+import { selectPolylineCornerIndices } from './polyline-corner-vertices';
 
 /** The per-build display inputs, resolved by the impure caller (mirror of `ContourLineOptions`). */
 export interface AutoBreaklineConvertOptions {
@@ -41,25 +44,40 @@ export interface AutoBreaklineConvertOptions {
   readonly datumMm?: number;
 }
 
-/** One geometry per review state. `null` = that bucket is empty. */
+/**
+ * One bucket per review state. `null` = that bucket is empty.
+ *
+ * The two approval buckets are `BufferGeometry` (thin `THREE.LineSegments`, one draw call each);
+ * the focused ones are raw POSITION BUFFERS because they feed the fat-line pipeline, whose
+ * `LineSegmentsGeometry.setPositions` takes the flat array directly. The asymmetry is the
+ * pipelines', not this module's — and it is deliberate that it shows in the type instead of being
+ * hidden behind a geometry that the caller would immediately have to unpack again.
+ */
 export interface AutoBreaklineCandidateGeometries {
   readonly approved: THREE.BufferGeometry | null;
   readonly rejected: THREE.BufferGeometry | null;
-  readonly focused: THREE.BufferGeometry | null;
   /**
-   * The focused candidate's vertices, as a positions buffer to draw with `THREE.Points`.
+   * The focused candidate as flat segment-pair positions, for `LineSegments2`.
    *
-   * This is how the focused line gets its «μέγεθος» in 3D: `LineBasicMaterial.linewidth` is
-   * IGNORED by WebGL (the OpenGL core profile / ANGLE caps it at 1 px), so a thicker line is simply
-   * not expressible without the fat-line pipeline and its per-resize `resolution` plumbing. Screen-
-   * sized vertex dots give the emphasis honestly and cost one extra draw call.
-   *
-   * It is the SAME buffer as {@link focused} — every vertex appears twice (once per adjoining
-   * segment) and the duplicates draw exactly on top of each other, which is invisible. Re-projecting
-   * the vertices into a second, deduplicated buffer would be a second copy of the transform chain
-   * for zero visual difference, which is precisely what this module set out not to have.
+   * ADR-650 M8β/Γ v2 — this replaced a thin `LineSegments`. The v1 note («thickness is not
+   * expressible, the fat-line path would need per-resize `resolution` plumbing the scene layer does
+   * not have») was **wrong on the second half**: `bimEdgeResolutionStore` has published that
+   * resolution scene-wide since ADR-375 Phase C.7, written by the scene manager on every resize.
+   * The emphasis therefore reads as a LINE with width — the same sentence the 2D preview says —
+   * instead of leaning entirely on vertex dots.
    */
-  readonly focusedVertices: THREE.BufferGeometry | null;
+  readonly focused: Float32Array | null;
+  /**
+   * The focused candidate's SIGNIFICANT vertices — ends + real corners — one XYZ each, for
+   * `THREE.Points`.
+   *
+   * Deduplicated and thinned, unlike v1, where this was literally the same buffer as {@link
+   * focused} (each vertex twice, once per adjoining segment). That was harmless while the dots were
+   * carrying the whole emphasis on a 9-vertex synthetic ridge; on a surveyed boundary with 50+
+   * vertices it is a stipple band, and it double-blends every dot the moment the material becomes
+   * translucent. See `polyline-corner-vertices` for the selection rule.
+   */
+  readonly focusedVertices: Float32Array | null;
 }
 
 /**
@@ -81,23 +99,43 @@ export function autoBreaklineCandidatesToGeometries(
   const approved: number[] = [];
   const rejected: number[] = [];
   const focused: number[] = [];
+  let focusedVertices: Float32Array | null = null;
 
   for (const candidate of candidates) {
-    const buf = candidate.id === focusedId ? focused : (selected.has(candidate.id) ? approved : rejected);
     const { vertices } = candidate;
-    appendTopoPolylineSegments(
-      buf,
-      vertices,
-      (i) => vertices[i]!.z - datumMm, // per-vertex: a feature line climbs, a contour does not
-      candidate.closed,
-      project,
-    );
+    // per-vertex: a feature line climbs, a contour does not
+    const elevationMmAt = (i: number): number => vertices[i]!.z - datumMm;
+
+    if (candidate.id !== focusedId) {
+      const buf = selected.has(candidate.id) ? approved : rejected;
+      appendTopoPolylineSegments(buf, vertices, elevationMmAt, candidate.closed, project);
+      continue;
+    }
+
+    // The focused candidate is projected ONCE and read twice — the line's segments and the corner
+    // markers address the SAME vertices, so a second projection would be a second chance to drift.
+    const points = projectTopoPolylineVertices(vertices, elevationMmAt, project);
+    appendProjectedPolylineSegments(focused, points, candidate.closed);
+    focusedVertices = collectCornerPositions(points, candidate.closed);
   }
 
   return {
     approved: toTopoLineGeometry(approved),
     rejected: toTopoLineGeometry(rejected),
-    focused: toTopoLineGeometry(focused),
-    focusedVertices: toTopoLineGeometry(focused),
+    focused: focused.length === 0 ? null : new Float32Array(focused),
+    focusedVertices,
   };
+}
+
+/** Pack the selected corner vertices of a projected chain into their own positions buffer. */
+function collectCornerPositions(points: Float32Array, closed: boolean): Float32Array | null {
+  const indices = selectPolylineCornerIndices(points, closed);
+  if (indices.length === 0) return null;
+  const out = new Float32Array(indices.length * 3);
+  indices.forEach((vertex, slot) => {
+    out[slot * 3] = points[vertex * 3]!;
+    out[slot * 3 + 1] = points[vertex * 3 + 1]!;
+    out[slot * 3 + 2] = points[vertex * 3 + 2]!;
+  });
+  return out;
 }

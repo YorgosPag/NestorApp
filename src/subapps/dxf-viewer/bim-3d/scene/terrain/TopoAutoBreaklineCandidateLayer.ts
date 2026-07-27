@@ -9,10 +9,14 @@
  * numbers exactly when the engineer was best placed to judge them (§9, human-certifier).
  *
  * ### What it draws
- * Three line sets, from {@link autoBreaklineCandidatesToGeometries}: approved (green), rejected
- * (grey), and the FOCUSED one — the row last clicked in the panel — in the app's selection colour,
- * drawn last, through the hill, with vertex dots. Same vocabulary as the 2D preview, from the same
- * `UI_COLORS` SSoT, so the two views describe the review identically.
+ * Two thin line sets from {@link autoBreaklineCandidatesToGeometries} — approved (green), rejected
+ * (grey) — and then the FOCUSED one, the row last clicked in the panel, as a three-pass selection:
+ * a translucent CASING in the selection colour, a solid CORE in the candidate's own approval
+ * colour, and CORNER MARKERS on top, all drawn last and through the hill. Same vocabulary as the 2D
+ * preview, from the same `UI_COLORS` + `auto-breakline-review-style` SSoTs, so the two views
+ * describe the review identically — including its thickness (ADR-650 M8β/Γ v2; before that the 3D
+ * focus was a 1 px line that WebGL cannot widen, so the emphasis fell entirely on its dots and read
+ * as «a row of dots» rather than «this line»).
  *
  * ### Why it hides with the terrain
  * The base gates every topo layer on `getTerrain3DState().visible`, and that is right here rather
@@ -41,12 +45,18 @@ import {
 import { getActiveVerticalDatumMm } from '../../../systems/topography/vertical-datum';
 import type { GeoReference } from '../../../systems/geo-referencing/geo-transform';
 import { TopoSceneLayer } from './topo-scene-layer-support';
-import { autoBreaklineCandidatesToGeometries } from '../../converters/auto-breakline-to-three';
 import {
+  autoBreaklineCandidatesToGeometries,
+  type AutoBreaklineCandidateGeometries,
+} from '../../converters/auto-breakline-to-three';
+import {
+  getAutoBreaklineFocusCoreMaterial3D,
+  getAutoBreaklineFocusHaloMaterial3D,
   getAutoBreaklineMaterial3D,
   getAutoBreaklinePointsMaterial3D,
   type AutoBreaklineLineKind,
-} from '../../materials/terrain-materials-3d';
+} from '../../materials/auto-breakline-materials-3d';
+import { createFatLineMesh } from '../../lines/scene-fat-line';
 import { disposeObjectTree } from '../dispose-object-tree';
 
 /** Everything that changes what this layer draws. Compared by identity — see `sameInputs`. */
@@ -62,8 +72,12 @@ interface CandidateGeoInputs {
  * Draw order for the depth-test-free focused set. Without it the focused line would be composited
  * against whatever happened to render after it; with it, the one thing the engineer asked to see
  * is unconditionally last.
+ *
+ * The three values are the selection sentence in order: the casing lies under the core (a casing
+ * drawn on top would erase the very line it exists to make legible), and the corner markers sit
+ * over both. Same painter's order as the 2D preview's `<g>`, for the same reason.
  */
-const FOCUS_RENDER_ORDER = { line: 1, points: 2 } as const;
+const FOCUS_RENDER_ORDER = { halo: 1, core: 2, corners: 3 } as const;
 
 export class TopoAutoBreaklineCandidateLayer extends TopoSceneLayer<CandidateGeoInputs> {
   constructor(
@@ -114,28 +128,67 @@ export class TopoAutoBreaklineCandidateLayer extends TopoSceneLayer<CandidateGeo
     // focused material, so «which one did my click take me to» is never ambiguous.
     this.addLines(geometries.rejected, 'rejected');
     this.addLines(geometries.approved, 'approved');
-    this.addLines(geometries.focused, 'focused');
-    this.addFocusVertices(geometries.focusedVertices);
+    this.addFocus(geometries, focusedId !== null && selected.has(focusedId));
 
     this.lastInputs = inputs;
     this.markDirty();
   }
 
-  /** Add one LineSegments set with its shared (catalog singleton) review material. */
+  /** Add one thin LineSegments set with its shared (catalog singleton) approval material. */
   private addLines(geometry: THREE.BufferGeometry | null, kind: AutoBreaklineLineKind): void {
     if (!geometry) return;
     const lines = new THREE.LineSegments(geometry, getAutoBreaklineMaterial3D(kind));
     lines.name = `topo-auto-breaklines-${kind}`;
-    if (kind === 'focused') lines.renderOrder = FOCUS_RENDER_ORDER.line;
     this.root.add(lines);
   }
 
-  /** Add the focused candidate's vertex dots — the 3D «bigger» (see the converter's docblock). */
-  private addFocusVertices(geometry: THREE.BufferGeometry | null): void {
-    if (!geometry) return;
+  /**
+   * Add the focused candidate: selection casing, approval-coloured core, corner markers.
+   *
+   * `approved` is read from the review store rather than baked into the geometry because focus and
+   * approval are INDEPENDENT signals — the same focused chain is drawn green or grey depending on
+   * its checkbox, exactly as in the 2D preview, and a click to look at a candidate must never
+   * disguise what will be written.
+   */
+  private addFocus(geometries: AutoBreaklineCandidateGeometries, approved: boolean): void {
+    const { focused, focusedVertices } = geometries;
+    if (focused) {
+      this.addFatPass(focused, getAutoBreaklineFocusHaloMaterial3D(), FOCUS_RENDER_ORDER.halo, 'halo');
+      this.addFatPass(
+        focused,
+        getAutoBreaklineFocusCoreMaterial3D(approved ? 'approved' : 'rejected'),
+        FOCUS_RENDER_ORDER.core,
+        'core',
+      );
+    }
+    if (focusedVertices) this.addCornerMarkers(focusedVertices);
+  }
+
+  /**
+   * One fat-line pass over the focused positions. Each pass gets its OWN `LineSegmentsGeometry`
+   * (two uploads of one candidate's segments): sharing it between casing and core would leave two
+   * meshes owning one buffer, and `clearContent`'s geometry walk would free it twice.
+   */
+  private addFatPass(
+    positions: Float32Array,
+    material: Parameters<typeof createFatLineMesh>[1],
+    renderOrder: number,
+    name: string,
+  ): void {
+    const mesh = createFatLineMesh(positions, material);
+    mesh.name = `topo-auto-breaklines-focus-${name}`;
+    mesh.renderOrder = renderOrder;
+    this.root.add(mesh);
+  }
+
+  /** Add the focused candidate's corner markers (ends + real turns — see `polyline-corner-vertices`). */
+  private addCornerMarkers(positions: Float32Array): void {
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.computeBoundingSphere();
     const points = new THREE.Points(geometry, getAutoBreaklinePointsMaterial3D());
-    points.name = 'topo-auto-breaklines-focus-vertices';
-    points.renderOrder = FOCUS_RENDER_ORDER.points;
+    points.name = 'topo-auto-breaklines-focus-corners';
+    points.renderOrder = FOCUS_RENDER_ORDER.corners;
     this.root.add(points);
   }
 

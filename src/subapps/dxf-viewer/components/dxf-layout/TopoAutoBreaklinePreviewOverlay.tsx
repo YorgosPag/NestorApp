@@ -6,6 +6,14 @@ import {
 } from '../../systems/topography/auto-breaklines/auto-breakline-store';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { UI_COLORS } from '../../config/color-config';
+// Πάχη γραμμής (px οθόνης) ανά κατάσταση: η εστιασμένη είναι ΚΑΙ πιο χοντρή ΚΑΙ φοράει άλως στο
+// χρώμα επιλογής — «χρώμα ΚΑΙ μέγεθος», γιατί μόνο το χρώμα χάνεται σε ένα σχέδιο γεμάτο πράσινες
+// υποψήφιες, και μόνο το πάχος χάνεται σε μια πυκνή δέσμη. ADR-650 M8β/Γ v2: κοινό SSoT με το 3Δ —
+// από τότε που το 3Δ μπορεί να εκφράσει πάχος, δύο αντίγραφα των ίδιων αριθμών θα απόκλιναν.
+import {
+  AUTO_BREAKLINE_HALO_OPACITY as HALO_OPACITY,
+  AUTO_BREAKLINE_STROKE_PX as STROKE_WIDTH,
+} from '../../systems/topography/auto-breaklines/auto-breakline-review-style';
 import type { ViewTransform, Viewport } from '../../rendering/types/Types';
 import type { AutoBreaklineCandidate } from '../../systems/topography/auto-breaklines/auto-breakline-types';
 
@@ -13,16 +21,6 @@ interface Props {
   readonly transform: ViewTransform;
   readonly viewport: Viewport;
 }
-
-/**
- * Πάχη γραμμής (px οθόνης) ανά κατάσταση. Η εστιασμένη είναι ΚΑΙ πιο χοντρή ΚΑΙ φοράει άλως στο
- * χρώμα επιλογής της εφαρμογής — «χρώμα ΚΑΙ μέγεθος», γιατί μόνο το χρώμα χάνεται σε ένα σχέδιο
- * γεμάτο πράσινες υποψήφιες, και μόνο το πάχος χάνεται σε μια πυκνή δέσμη.
- */
-const STROKE_WIDTH = { rejected: 2, approved: 3, focused: 5, halo: 10 } as const;
-
-/** Διαφάνεια της άλω — αρκετή για να «λάμπει», όχι τόση ώστε να σβήνει ό,τι είναι από κάτω. */
-const HALO_OPACITY = 0.55;
 
 /**
  * ADR-650 M8β/Γ — προεπισκόπηση των ΠΡΟΤΕΙΝΟΜΕΝΩΝ γραμμών ασυνέχειας (auto-breaklines).

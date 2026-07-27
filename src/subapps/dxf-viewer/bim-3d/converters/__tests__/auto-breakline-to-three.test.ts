@@ -33,6 +33,20 @@ function positions(geometry: { getAttribute(name: string): { array: ArrayLike<nu
   return geometry ? Array.from(geometry.getAttribute('position').array) : [];
 }
 
+/** Οι εστιασμένοι κάδοι είναι ωμά buffers (τροφή του fat-line pipeline), όχι geometries. */
+function flat(buffer: Float32Array | null): number[] {
+  return buffer ? Array.from(buffer) : [];
+}
+
+/** Ανοιχτή αλυσίδα από κορυφές σε κάτοψη (z=0), για τους ελέγχους των γωνιακών σημαδιών. */
+function chain(id: string, plan: readonly (readonly [number, number])[]): AutoBreaklineCandidate {
+  return {
+    ...candidate(id),
+    vertices: plan.map(([x, y]) => ({ x, y, z: 0 })),
+    edgeCount: plan.length - 1,
+  };
+}
+
 describe('autoBreaklineCandidatesToGeometries', () => {
   it('splits candidates by approval', () => {
     const result = autoBreaklineCandidatesToGeometries(
@@ -49,20 +63,40 @@ describe('autoBreaklineCandidatesToGeometries', () => {
       [candidate('a'), candidate('b')], new Set(['a', 'b']), 'a',
     );
     expect(positions(result.approved)).toHaveLength(6); // μόνο η «b»
-    expect(positions(result.focused)).toHaveLength(6);  // μόνο η «a»
+    expect(flat(result.focused)).toHaveLength(6);       // μόνο η «a»
     expect(result.rejected).toBeNull();
   });
 
   it('focuses a REJECTED candidate too — έγκριση και εστίαση είναι ανεξάρτητες', () => {
     const result = autoBreaklineCandidatesToGeometries([candidate('a')], new Set(), 'a');
-    expect(positions(result.focused)).toHaveLength(6);
+    expect(flat(result.focused)).toHaveLength(6);
     expect(result.rejected).toBeNull();
   });
 
-  it('emits the focused vertices for the Points overlay, from the same positions', () => {
+  it('δίνει την εστιασμένη ως ΩΜΟ Float32Array — τροφή του LineSegmentsGeometry.setPositions', () => {
+    // Αν ξαναγίνει BufferGeometry, ο layer θα το περάσει άθικτο και η fat line θα βγει άδεια:
+    // το `setPositions` δέχεται πίνακα, όχι geometry — και δεν παραπονιέται, απλώς δεν σχεδιάζει.
     const result = autoBreaklineCandidatesToGeometries([candidate('a')], new Set(), 'a');
-    expect(positions(result.focusedVertices)).toEqual(positions(result.focused));
-    expect(result.focusedVertices).not.toBe(result.focused); // ξεχωριστά geometries → ξεχωριστό dispose
+    expect(result.focused).toBeInstanceOf(Float32Array);
+    expect(result.focusedVertices).toBeInstanceOf(Float32Array);
+  });
+
+  it('σημαδεύει ΜΟΝΟ τα άκρα σε ευθεία αλυσίδα — όχι κάθε κορυφή τριγωνοποίησης', () => {
+    // Πέντε συνευθειακές κορυφές: οι τρεις ενδιάμεσες είναι αρθρώσεις του TIN, όχι γωνίες του
+    // εδάφους. Πριν το v2 σχεδιάζονταν και οι πέντε (και δύο φορές η καθεμιά) — σε πραγματική
+    // οριογραμμή 50+ κορυφών αυτό είναι ταινία θορύβου, όχι έμφαση.
+    const straight = chain('a', [[0, 0], [1_000, 0], [2_000, 0], [3_000, 0], [4_000, 0]]);
+    const result = autoBreaklineCandidatesToGeometries([straight], new Set(), 'a');
+    expect(flat(result.focusedVertices)).toHaveLength(6);        // 2 άκρα × XYZ
+    expect(flat(result.focused)).toHaveLength(4 * 6);            // 4 τμήματα × 2 κορυφές × XYZ
+  });
+
+  it('προσθέτει σημάδι εκεί που η αλυσίδα ΟΝΤΩΣ στρίβει', () => {
+    const dogLeg = chain('a', [[0, 0], [1_000, 0], [2_000, 0], [2_000, 2_000], [2_000, 3_000]]);
+    // Άκρα (0, 4) + η στροφή 90° στην κορυφή 2 — η κορυφή 1 και η 3 είναι ευθείες.
+    // (east→x, elev→y, north→−z, μέτρα — ίδιος άξονας με τους υπόλοιπους ελέγχους παρακάτω.)
+    expect(flat(autoBreaklineCandidatesToGeometries([dogLeg], new Set(), 'a').focusedVertices))
+      .toEqual([0, 0, 0, 2, 0, 0, 2, 0, -3]);
   });
 
   it('carries a REAL elevation per vertex (east→x, elev→y, north→−z, metres)', () => {

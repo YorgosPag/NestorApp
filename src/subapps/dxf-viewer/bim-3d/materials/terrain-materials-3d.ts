@@ -15,7 +15,7 @@ import { MATERIAL_DEFS } from '../../bim/materials/material-catalog-defs';
 import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
 import type { TerrainSurfaceStyle } from '../../systems/topography/topo-types'; // ADR-650 M4 (types only)
 import { TOPO_MAJOR_COLOR, TOPO_MINOR_COLOR } from '../../systems/topography/contour-config'; // ADR-650 M10d
-import { UI_COLORS } from '../../config/color-config'; // ADR-650 M8β/Γ — review palette SSoT
+import { disposeAutoBreaklineMaterials3D } from './auto-breakline-materials-3d'; // ADR-650 M8β/Γ v2
 import { buildMat } from './pbr-material-builder';
 import {
   buildHiddenLineFaceMaterial,
@@ -34,15 +34,6 @@ const TERRAIN_CONTOUR_CACHE = new Map<string, THREE.LineBasicMaterial>();
 
 /** ADR-665 — the terrain's OWN faces-hidden / hidden-line instances, cached per mode. */
 const TERRAIN_FACE_CACHE = new Map<'none' | 'hidden-line', THREE.MeshStandardMaterial>();
-
-/** ADR-650 M8β/Γ — auto-breakline candidate line materials (approval + focus), cached per state. */
-const AUTO_BREAKLINE_CACHE = new Map<AutoBreaklineLineKind, THREE.LineBasicMaterial>();
-
-/** ADR-650 M8β/Γ — the focused candidate's vertex dots. One material, one focused candidate. */
-const AUTO_BREAKLINE_POINTS_CACHE = new Map<'focused', THREE.PointsMaterial>();
-
-/** On-screen diameter (px) of a focused candidate's vertex dot — see {@link getAutoBreaklinePointsMaterial3D}. */
-const AUTO_BREAKLINE_POINT_PX = 7;
 
 /**
  * ADR-650 M10d — apply a 0..1 transparency to a terrain-exclusive material IN PLACE (Civil 3D
@@ -166,75 +157,17 @@ export function getTopoContourMaterial3D(isMajor: boolean, opacity = 1): THREE.L
   return mat;
 }
 
-/** ADR-650 M8β/Γ — which review state a candidate line is drawn in. */
-export type AutoBreaklineLineKind = 'approved' | 'rejected' | 'focused';
-
-/**
- * ADR-650 M8β/Γ — the 3D auto-breakline CANDIDATE line material (proposal under review).
- *
- * Colours come from the same `UI_COLORS` SSoT the 2D preview overlay reads, so «πράσινη στο σχέδιο»
- * — which the panel says in words — is true in plan AND in 3D. Unlit for the same reason the
- * contours are: lighting is meaningless on a 1-px line, and the survey's floating far-depth would
- * darken it into oblivion (the M10c trap).
- *
- * The FOCUSED variant additionally disables depth testing, so the candidate the engineer just
- * clicked stays visible THROUGH the hill. That is deliberate and it is the standard viewer answer
- * to «where did my click take me» on an occluding surface: the alternative — hunting for a line
- * hidden behind a ridge — is the exact failure the selection highlight exists to prevent. It costs
- * nothing structurally, because exactly one candidate is ever focused. Note this is also why the
- * emphasis cannot be «a thicker line»: `linewidth` is ignored by WebGL (see
- * `AutoBreaklineCandidateGeometries.focusedVertices`).
- */
-export function getAutoBreaklineMaterial3D(kind: AutoBreaklineLineKind): THREE.LineBasicMaterial {
-  let mat = AUTO_BREAKLINE_CACHE.get(kind);
-  if (!mat) {
-    const focused = kind === 'focused';
-    mat = new THREE.LineBasicMaterial({
-      color: new THREE.Color(autoBreaklineColor(kind)).getHex(),
-      depthTest: !focused,
-    });
-    AUTO_BREAKLINE_CACHE.set(kind, mat);
-  }
-  return mat;
-}
-
-/** The review palette, resolved in one place so line and dots can never disagree. */
-function autoBreaklineColor(kind: AutoBreaklineLineKind): string {
-  if (kind === 'focused') return UI_COLORS.SELECTION_HIGHLIGHT;
-  return kind === 'approved' ? UI_COLORS.TOPO_BREAKLINE_APPROVED : UI_COLORS.TOPO_BREAKLINE_REJECTED;
-}
-
-/**
- * ADR-650 M8β/Γ — vertex dots along the FOCUSED candidate: the 3D half of «ξεχωρίζει σε μέγεθος».
- *
- * `sizeAttenuation: false` makes the dots a constant on-screen size at any camera distance, exactly
- * like the ⊙ marker and the 2D grips — an emphasis that shrank as you pulled back would disappear
- * at precisely the zoom where the engineer is trying to find it. Depth-test off for the same reason
- * as the focused line.
- */
-export function getAutoBreaklinePointsMaterial3D(): THREE.PointsMaterial {
-  let mat = AUTO_BREAKLINE_POINTS_CACHE.get('focused');
-  if (!mat) {
-    mat = new THREE.PointsMaterial({
-      color: new THREE.Color(UI_COLORS.SELECTION_HIGHLIGHT).getHex(),
-      size: AUTO_BREAKLINE_POINT_PX,
-      sizeAttenuation: false,
-      depthTest: false,
-    });
-    AUTO_BREAKLINE_POINTS_CACHE.set('focused', mat);
-  }
-  return mat;
-}
-
 /**
  * ADR-650 M10c/M10d + ADR-665 — dispose every terrain-exclusive material. Called by
  * `disposeMaterialCatalog3D` on full app teardown only.
+ *
+ * ADR-650 M8β/Γ v2 — the auto-breakline REVIEW materials moved to `auto-breakline-materials-3d`
+ * (they grew a viewport subscription of their own); they are freed through the same single entry
+ * point so no caller has to learn that the split happened. N.18 — this delegates, it does NOT
+ * re-export: one import path per symbol.
  */
 export function disposeTerrainMaterials3D(): void {
-  for (const mat of AUTO_BREAKLINE_CACHE.values()) mat.dispose();
-  AUTO_BREAKLINE_CACHE.clear();
-  for (const mat of AUTO_BREAKLINE_POINTS_CACHE.values()) mat.dispose();
-  AUTO_BREAKLINE_POINTS_CACHE.clear();
+  disposeAutoBreaklineMaterials3D();
   for (const mat of TERRAIN_ANALYSIS_CACHE.values()) mat.dispose();
   TERRAIN_ANALYSIS_CACHE.clear();
   for (const mat of TERRAIN_SHADED_CACHE.values()) mat.dispose();

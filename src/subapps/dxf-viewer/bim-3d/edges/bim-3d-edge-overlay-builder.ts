@@ -10,20 +10,24 @@
  *     ignored by WebGL/OpenGL ES → always 1px → not industry-grade.
  *   - EdgesGeometry(geo, 30°) silhouette filter — Revit / ArchiCAD default.
  *     Hides internal triangulation edges, keeps hard corners.
- *   - linewidth × devicePixelRatio for crisp High-DPI output.
  *   - depthTest:true + depthWrite:false: edges visible without z-fighting.
  *   - alphaToCoverage:true: MSAA edge smoothing.
+ *
+ * ADR-650 M8β/Γ v2 — the `LineSegments2` + `LineMaterial` + resolution-subscription block moved to
+ * `bim-3d/lines/scene-fat-line`, the scene's ONE fat-line primitive (N.18): the topo review layer
+ * became the second fat-line user, and a hand-written twin is precisely the sibling clone the rule
+ * forbids. **Behaviour change in the same move**: `linewidth` used to be scaled by
+ * `devicePixelRatio` while `resolution` stayed in CSS px — but `LineMaterial` measures both in the
+ * SAME unit, so every 3D edge was drawn `dpr×` too thick on a HiDPI screen (invisible at dpr 1,
+ * which is where it was tuned). The primitive derives both from one snapshot; see its docblock.
  *
  * Lifecycle: callers attach the returned overlay to the parent mesh via
  * `mesh.add(overlay)`. BimSceneLayer.clearGroup() already traverses children
  * recursively, so disposal is automatic.
  */
 import * as THREE from 'three';
-import { Line2 } from 'three/examples/jsm/lines/Line2.js';
-import { LineSegments2 } from 'three/examples/jsm/lines/LineSegments2.js';
-import { LineSegmentsGeometry } from 'three/examples/jsm/lines/LineSegmentsGeometry.js';
-import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
-import { bimEdgeResolutionStore } from './bim-edge-resolution-store';
+import type { LineSegments2 } from 'three/examples/jsm/lines/LineSegments2.js';
+import { createFatLineMesh, createSceneFatLineMaterial } from '../lines/scene-fat-line';
 import { type LinePatternKey } from '../../config/bim-line-patterns';
 // ADR-510 Φ2C — 3D edges read the SAME unified mm catalog as 2D (SSoT), via the alias bridge.
 import { bimDashMm } from '../../config/bim-dash-resolver';
@@ -89,7 +93,7 @@ export interface EdgeOverlayOptions {
    * — the «all» edge mode used by Wireframe, where there are no occluding faces).
    */
   occlude?: boolean;
-  /** Pre-resolved devicePixelRatio (test injection). Default: window.devicePixelRatio. */
+  /** Pin the pixel ratio instead of tracking the viewport store's (test injection). */
   devicePixelRatio?: number;
 }
 
@@ -148,44 +152,25 @@ export function buildEdgeOverlay(
   }
 
   const positions = new Float32Array(posAttr.array as ArrayLike<number>);
-  const lineGeo = new LineSegmentsGeometry();
-  lineGeo.setPositions(positions);
   edges.dispose();
-
-  const dpr = opts.devicePixelRatio ?? (
-    typeof window !== 'undefined' && typeof window.devicePixelRatio === 'number'
-      ? window.devicePixelRatio
-      : 1
-  );
 
   // ADR-446 — EDGES axis: `occlude` (default true) drives depthTest. false ⇒ x-ray
   // (all edges visible through faces, e.g. Wireframe style).
   const occlude = opts.occlude ?? true;
   const dash = resolveWorldDash(opts.linePattern);
-  const material = new LineMaterial({
+  const { material, unsubscribe } = createSceneFatLineMaterial({
+    widthPx: opts.lineWidthPx,
     color: new THREE.Color(opts.color ?? DEFAULT_EDGE_COLOR).getHex(),
-    linewidth: opts.lineWidthPx * dpr,
     depthTest: occlude,
-    depthWrite: false,
-    transparent: false,
-    alphaToCoverage: true,
     // v2.22 — pull edges forward so they win depth against their own faces.
-    polygonOffset: true,
-    polygonOffsetFactor: EDGE_POLYGON_OFFSET_FACTOR,
-    polygonOffsetUnits: EDGE_POLYGON_OFFSET_UNITS,
+    polygonOffset: { factor: EDGE_POLYGON_OFFSET_FACTOR, units: EDGE_POLYGON_OFFSET_UNITS },
     // ADR-377 Phase E — dashed edges (gaps discarded in the shader via USE_DASH).
     // computeLineDistances() below provides the along-edge distance the dash reads.
-    ...(dash ? { dashed: true, dashSize: dash.dashSize, gapSize: dash.gapSize } : null),
+    dash,
+    ...(opts.devicePixelRatio === undefined ? null : { devicePixelRatio: opts.devicePixelRatio }),
   });
 
-  const { width, height } = bimEdgeResolutionStore.getSize();
-  material.resolution.set(width, height);
-
-  const unsubscribe = bimEdgeResolutionStore.subscribe((w, h) => {
-    material.resolution.set(w, h);
-  });
-
-  const overlay = new LineSegments2(lineGeo, material);
+  const overlay = createFatLineMesh(positions, material);
   overlay.userData['bimEdgeOverlay'] = true;
   overlay.userData['bimEdgeUnsubscribe'] = unsubscribe;
   // ADR-375 Phase C.7 (v2.21) — "Shaded with Edges" depth-correct draw order.

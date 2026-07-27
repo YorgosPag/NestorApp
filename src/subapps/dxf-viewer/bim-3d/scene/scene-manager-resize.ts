@@ -43,8 +43,8 @@ export function applyViewportResize(deps: SceneResizeDeps, width: number, height
   deps.renderer.setSize(width, height);
   deps.ssaoModulator.resize(width, height);
   deps.viewCube.setVisible(width >= VIEWCUBE_HIDE_WIDTH_PX);
-  // ADR-375 Phase C.7 — feed renderer size into BIM edge LineMaterial resolution.
-  bimEdgeResolutionStore.setSize(width, height);
+  // ADR-375 Phase C.7 — feed renderer size + pixel ratio into every fat-line `LineMaterial`.
+  bimEdgeResolutionStore.setSize(width, height, bimPixelRatio());
   deps.invalidateFrameCaches();
   deps.markDirty();
 }
@@ -55,12 +55,19 @@ export function applyViewportResize(deps: SceneResizeDeps, width: number, height
  * ResizeObserver fires then, so the drawing buffer would stay sized for the old dpr → a
  * stale/blurry region. Re-setting pixelRatio + size re-rasterizes the buffer at the new
  * ratio. Driven by the `subscribeDevicePixelRatio` SSoT from `BimViewport3D`.
+ *
+ * ADR-650 M8β/Γ v2 — it must ALSO re-publish the resolution store. No `ResizeObserver` fires on a
+ * pure dpr change and the CSS size is unchanged, so the store's identity guard would swallow a
+ * `setSize(width, height)` call: the ratio is the only field that moved, and every fat-line
+ * `linewidth`/`resolution` in the scene is derived from it. Without this line the whole 3D view
+ * kept the OLD screen's line widths after a monitor change — silently, and only on HiDPI.
  */
 export function applyDevicePixelRatioSync(deps: SceneResizeDeps): void {
   deps.renderer.setPixelRatio(bimPixelRatio());
   const { width, height } = getRendererViewportSize(deps.renderer.domElement);
   deps.renderer.setSize(width, height);
   deps.ssaoModulator.resize(width, height);
+  bimEdgeResolutionStore.setSize(width, height, bimPixelRatio());
   deps.invalidateFrameCaches();
   deps.markDirty();
 }
