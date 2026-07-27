@@ -21,6 +21,7 @@ import { getTopoPoints } from './TopoPointStore';
 import { getTopoSurface } from './topo-surface';
 import { generateContoursFromSurface } from './contour-generator';
 import { buildContourEntities } from './topo-to-entities';
+import { getTopoDisplayProjector, projectContourLines } from './topo-display-frame';
 import { ensureContourLayers } from './ensure-contour-layers';
 import { getContourDisplayStyle } from './contour-display-store';
 import { DEFAULT_CONTOUR_CONFIG, type ContourConfig } from './contour-config';
@@ -61,7 +62,12 @@ export function useTopoContours(): UseTopoContours {
       // ADR-650 M3 — new contours inherit the current display style (exact/smooth);
       // their vertices are the EXACT surveyed crossings either way.
       const smoothDisplay = getContourDisplayStyle() === 'smooth';
-      const entities = buildContourEntities(contours, config, layers, smoothDisplay);
+      // ADR-650 §M10f — οι ισοϋψείς γεννιούνται σε ΕΓΣΑ WORLD· κάθονται στο σχέδιο μόνο αφού
+      // περάσουν τη ΜΙΑ γέφυρα. Ο δίδυμος (silent) δρόμος `regenerate-topo` το έκανε ήδη· εδώ
+      // έλειπε — άρα ο χρήστης έβλεπε τις φρέσκες ισοϋψείς σε ΕΓΣΑ μέχρι το επόμενο reload.
+      const entities = buildContourEntities(
+        projectContourLines(contours, getTopoDisplayProjector()), config, layers, smoothDisplay,
+      );
       // ADR-661 — create through the ADR-057 SSoT (ids preserved via `existingId`), THEN seat the
       // whole contour set at the BACK in ONE atomic reorder so the κάτοψη reads on top. Reuses
       // `completeEntities` (no create-logic clone — N.18); the DURABLE back-seat for every

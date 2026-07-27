@@ -17,6 +17,7 @@ import { getTopoPoints, getTopoBoundary } from './TopoPointStore';
 import { getTopoSurface } from './topo-surface';
 import { createTinSampler } from './tin-sampler';
 import { buildSurveyPointLabelEntities } from './topo-point-labels';
+import { getTopoDisplayProjector } from './topo-display-frame';
 import { ensurePointLabelLayers } from './ensure-point-label-layers';
 import { getPointLabelOptions } from './topo-point-label-store';
 import { DEFAULT_POINT_LABEL_OPTS, type PointLabelOptions } from './topo-point-label-config';
@@ -55,8 +56,10 @@ export function useTopoPointLabels(): UseTopoPointLabels {
       // contours and volumes read), never a second triangulation.
       const sampler = createTinSampler(getTopoSurface());
       const boundary = getTopoBoundary();
+      // ADR-650 §M10f — ο sampler ρωτιέται σε WORLD (η επιφάνεια ζει εκεί)· η ΘΕΣΗ των ετικετών
+      // προβάλλεται στο display frame. Η τιμή X,Y στο κείμενο μένει ΕΓΣΑ (νομικό μέγεθος).
       const entities = buildSurveyPointLabelEntities(
-        points, boundary?.vertices ?? null, sampler, layers, opts,
+        points, boundary?.vertices ?? null, sampler, layers, opts, getTopoDisplayProjector(),
       );
 
       completeEntities(entities as Entity[], {

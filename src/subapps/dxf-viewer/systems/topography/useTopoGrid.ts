@@ -18,6 +18,7 @@ import { realDistanceToModelMm } from '../../utils/scene-units';
 import { getTopoPoints } from './TopoPointStore';
 import { buildTopoGrid, type WorldRectMm } from './topo-grid-model';
 import { buildTopoGridEntities } from './topo-grid-entities';
+import { getTopoDisplayProjector } from './topo-display-frame';
 import { ensureGridLayer } from './ensure-grid-layers';
 import { getGridDisplayOptions } from './topo-grid-store';
 import type { Entity } from '../../types/entities';
@@ -65,7 +66,9 @@ export function useTopoGrid(): UseTopoGrid {
       const layerId = ensureGridLayer(getLevelScene, setLevelScene, levelId);
       if (!layerId) return { ...EMPTY, reason: 'no-layers' };
 
-      const entities = buildTopoGridEntities(grid, layerId);
+      // ADR-650 §M10f — ο κάναβος υπολογίζεται σε ΕΓΣΑ (εκεί ζουν οι στρογγυλές τιμές) και
+      // κάθεται στο σχέδιο προβαλλόμενος· οι ΤΙΜΕΣ των ετικετών μένουν ΕΓΣΑ.
+      const entities = buildTopoGridEntities(grid, layerId, getTopoDisplayProjector());
       completeEntities(entities as Entity[], {
         tool: 'topo-grid',
         levelId,

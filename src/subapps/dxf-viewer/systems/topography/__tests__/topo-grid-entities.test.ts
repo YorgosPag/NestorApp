@@ -12,7 +12,7 @@ const LAYER = 'layer-topo-grid';
 
 describe('buildTopoGridEntities', () => {
   const grid = buildTopoGrid(rect, STEP);
-  const entities = buildTopoGridEntities(grid, LAYER);
+  const entities = buildTopoGridEntities(grid, LAYER, null);
 
   it('emits two line segments per cross plus one text per perimeter label', () => {
     const lines = entities.filter((e) => e.type === 'line');
@@ -37,7 +37,7 @@ describe('buildTopoGridEntities', () => {
 
   it('returns no entities for an empty grid (no round lines in the rectangle)', () => {
     const empty = buildTopoGrid({ minX: 10, minY: 10, maxX: 5, maxY: 5 }, STEP);
-    expect(buildTopoGridEntities(empty, LAYER)).toEqual([]);
+    expect(buildTopoGridEntities(empty, LAYER, null)).toEqual([]);
   });
 
   it('uses the canonical grid layer name constant for minting (parity check)', () => {

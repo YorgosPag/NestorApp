@@ -16,11 +16,17 @@
 
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useSyncExternalStore } from 'react';
 import { CoordinateTransforms as CT } from '../../rendering/core/CoordinateTransforms';
 import { CanvasUtils } from '../../rendering/canvas/utils/CanvasUtils';
 import { buildTopoGrid, pickSurveyGridStepMm, type WorldRectMm } from '../../systems/topography/topo-grid-model';
 import { formatGridCoordinate } from '../../systems/topography/topo-grid-entities';
+import {
+  getGeoReference, subscribeGeoReference,
+} from '../../systems/geo-referencing/geo-reference-store';
+import {
+  getTopoDisplayProjector, projectWorldPoint, projectWorldPoints, unprojectRectToWorld,
+} from '../../systems/topography/topo-display-frame';
 import {
   TOPO_GRID_COLOR, TOPO_GRID_LABEL_COLOR, TOPO_GRID_CROSS_SCREEN_PX, TOPO_GRID_LABEL_FONT,
 } from '../../systems/topography/topo-grid-config';
@@ -38,8 +44,15 @@ export interface TopoGridUnderlayCanvasProps {
 /** Padding (px) from the frame edge to the coordinate numbering. */
 const LABEL_EDGE_PAD = 4;
 
-/** The world rectangle currently visible, derived from the two opposite screen corners. */
-function visibleWorldRect(transform: ViewTransform, viewport: { width: number; height: number }): WorldRectMm {
+/**
+ * The **DISPLAY** rectangle currently visible, derived from the two opposite screen corners.
+ *
+ * ⚠️ ADR-650 §M10f — αυτό ΔΕΝ είναι WORLD: το `screenToWorld` κάνει screen→**σκηνή**, και η σκηνή
+ * είναι το display frame του κτιρίου. Σε γεωαναφερμένο έργο τα δύο απέχουν ~4·10⁸ mm. Το ότι
+ * λεγόταν «world» ήταν ακριβώς η αιτία που ο κάναβος τύπωνε τοπικές συντεταγμένες με ετικέτα
+ * ΕΓΣΑ: το `buildTopoGrid` ρωτιόταν σε λάθος σύστημα.
+ */
+function visibleDisplayRect(transform: ViewTransform, viewport: { width: number; height: number }): WorldRectMm {
   const a = CT.screenToWorld({ x: 0, y: 0 }, transform, viewport);
   const b = CT.screenToWorld({ x: viewport.width, y: viewport.height }, transform, viewport);
   return {
@@ -48,7 +61,7 @@ function visibleWorldRect(transform: ViewTransform, viewport: { width: number; h
   };
 }
 
-/** Draw a small «+» at every round grid intersection. */
+/** Draw a small «+» at every round grid intersection (τα `crosses` έρχονται ήδη σε display frame). */
 function drawCrosses(
   ctx: CanvasRenderingContext2D, crosses: readonly { x: number; y: number }[],
   transform: ViewTransform, viewport: { width: number; height: number },
@@ -65,23 +78,33 @@ function drawCrosses(
   ctx.stroke();
 }
 
-/** Easting numbering along the top edge; Northing numbering along the right edge. */
+/**
+ * Easting numbering along the top edge; Northing numbering along the right edge.
+ *
+ * Το άγκιστρο κάθε ετικέτας είναι το σημείο της γραμμής ΕΓΣΑ στο **κέντρο** του ορατού world
+ * ορθογωνίου, προβαλλόμενο. Χωρίς στροφή αυτό είναι ακριβές (η γραμμή είναι κατακόρυφη στην
+ * οθόνη, άρα ένα x αρκεί)· με στροφή η γραμμή είναι λοξή και η ετικέτα δείχνει το σημείο της
+ * στο μέσο της οθόνης — η ΤΙΜΗ μένει σωστή σε κάθε περίπτωση, που είναι το ζητούμενο.
+ */
 function drawEdgeLabels(
-  ctx: CanvasRenderingContext2D, eastings: readonly number[], northings: readonly number[],
+  ctx: CanvasRenderingContext2D, world: WorldRectMm, grid: { eastings: readonly number[]; northings: readonly number[] },
+  projector: ReturnType<typeof getTopoDisplayProjector>,
   transform: ViewTransform, viewport: { width: number; height: number },
 ): void {
+  const midY = (world.minY + world.maxY) / 2;
+  const midX = (world.minX + world.maxX) / 2;
   ctx.fillStyle = TOPO_GRID_LABEL_COLOR;
   ctx.font = TOPO_GRID_LABEL_FONT;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
-  for (const e of eastings) {
-    const s = CT.worldToScreen({ x: e, y: 0 }, transform, viewport);
+  for (const e of grid.eastings) {
+    const s = CT.worldToScreen(projectWorldPoint({ x: e, y: midY }, projector), transform, viewport);
     ctx.fillText(formatGridCoordinate(e), s.x, LABEL_EDGE_PAD);
   }
   ctx.textAlign = 'right';
   ctx.textBaseline = 'middle';
-  for (const n of northings) {
-    const s = CT.worldToScreen({ x: 0, y: n }, transform, viewport);
+  for (const n of grid.northings) {
+    const s = CT.worldToScreen(projectWorldPoint({ x: midX, y: n }, projector), transform, viewport);
     ctx.fillText(formatGridCoordinate(n), viewport.width - LABEL_EDGE_PAD, s.y);
   }
 }
@@ -90,6 +113,10 @@ export function TopoGridUnderlayCanvas({
   transform, viewport, visible, className,
 }: TopoGridUnderlayCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  // ADR-040: LOW-frequency store (η γεωαναφορά αλλάζει με ενέργεια χρήστη, όχι ανά frame) — δεν
+  // παραβιάζει τον κανόνα των micro-leaves· χωρίς αυτό ο κάναβος θα έμενε στο παλιό σύστημα μέχρι
+  // το επόμενο pan.
+  const geoRef = useSyncExternalStore(subscribeGeoReference, getGeoReference, getGeoReference);
 
   // DPR-aware backing store via the SAME primitive as the sibling canvases (ADR-040).
   useEffect(() => {
@@ -108,12 +135,17 @@ export function TopoGridUnderlayCanvas({
     ctx.clearRect(0, 0, viewport.width, viewport.height);
     if (!visible || viewport.width === 0 || viewport.height === 0) return;
 
-    const rect = visibleWorldRect(transform, viewport);
+    // ADR-650 §M10f — τρία συστήματα, με τη σειρά: οθόνη → display (screenToWorld) → WORLD ΕΓΣΑ
+    // (unproject) όπου ΜΟΝΟ εκεί έχει νόημα η ερώτηση «ποιες στρογγυλές γραμμές ΕΓΣΑ πέφτουν
+    // μέσα;» → πίσω σε display (project) για να σχεδιαστούν. Το βήμα (`scale`) είναι αναλλοίωτο:
+    // ο rigid μετασχηματισμός δεν έχει κλίμακα.
+    const projector = getTopoDisplayProjector();
+    const world = unprojectRectToWorld(visibleDisplayRect(transform, viewport), projector);
     const stepMm = pickSurveyGridStepMm(transform.scale);
-    const grid = buildTopoGrid(rect, stepMm);
-    drawCrosses(ctx, grid.crosses, transform, viewport);
-    drawEdgeLabels(ctx, grid.eastings, grid.northings, transform, viewport);
-  }, [transform, viewport, visible]);
+    const grid = buildTopoGrid(world, stepMm);
+    drawCrosses(ctx, projectWorldPoints(grid.crosses, projector), transform, viewport);
+    drawEdgeLabels(ctx, world, grid, projector, transform, viewport);
+  }, [transform, viewport, visible, geoRef]);
 
   return <canvas ref={canvasRef} className={className} aria-hidden />;
 }

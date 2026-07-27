@@ -45,7 +45,7 @@ const nodes = (es: (TextEntity | PointEntity)[]): PointEntity[] =>
 
 describe('buildSurveyPointLabelEntities — ADR-656 M10', () => {
   it('default (only Ζ): a dot node + a metre elevation per point, and NO X,Y anywhere', () => {
-    const es = buildSurveyPointLabelEntities(POINTS, BOUNDARY, SAMPLER, LAYERS, opts({ showElevation: true }));
+    const es = buildSurveyPointLabelEntities(POINTS, BOUNDARY, SAMPLER, LAYERS, opts({ showElevation: true }), null);
 
     // one node + one text per point.
     expect(nodes(es)).toHaveLength(POINTS.length);
@@ -58,7 +58,7 @@ describe('buildSurveyPointLabelEntities — ADR-656 M10', () => {
   });
 
   it('boundary X,Y toggle writes X,Y(+Z) ONLY at boundary vertices, on the boundary layer', () => {
-    const es = buildSurveyPointLabelEntities(POINTS, BOUNDARY, SAMPLER, LAYERS, opts({ showBoundaryXy: true }));
+    const es = buildSurveyPointLabelEntities(POINTS, BOUNDARY, SAMPLER, LAYERS, opts({ showBoundaryXy: true }), null);
 
     // No ground-point entities at all (elevation/number/code all off).
     expect(nodes(es)).toHaveLength(0);
@@ -74,13 +74,13 @@ describe('buildSurveyPointLabelEntities — ADR-656 M10', () => {
 
   it('omits Ζ from a boundary label when the vertex is outside the surface', () => {
     const nullSampler: TinSampler = { zAtMm: () => null };
-    const es = buildSurveyPointLabelEntities(POINTS, BOUNDARY, nullSampler, LAYERS, opts({ showBoundaryXy: true }));
+    const es = buildSurveyPointLabelEntities(POINTS, BOUNDARY, nullSampler, LAYERS, opts({ showBoundaryXy: true }), null);
 
     expect(texts(es)[0].text).not.toContain('Ζ');
   });
 
   it('number/code toggle emits the point number and feature code, each on its own layer', () => {
-    const es = buildSurveyPointLabelEntities(POINTS, null, SAMPLER, LAYERS, opts({ showPointNumberCode: true }));
+    const es = buildSurveyPointLabelEntities(POINTS, null, SAMPLER, LAYERS, opts({ showPointNumberCode: true }), null);
     const t = texts(es);
 
     // Point 1 has both number (101) and code (TREE); point 2 has neither.
@@ -92,7 +92,7 @@ describe('buildSurveyPointLabelEntities — ADR-656 M10', () => {
   it('never emits X,Y for a ground point even with every toggle on', () => {
     const es = buildSurveyPointLabelEntities(
       POINTS, BOUNDARY, SAMPLER, LAYERS,
-      { showElevation: true, showPointNumberCode: true, showBoundaryXy: true },
+      { showElevation: true, showPointNumberCode: true, showBoundaryXy: true }, null,
     );
     const groundTexts = texts(es).filter((e) => e.layerId !== LAYERS.boundary);
 
@@ -100,7 +100,7 @@ describe('buildSurveyPointLabelEntities — ADR-656 M10', () => {
   });
 
   it('emits nothing when boundary is null but boundary toggle is on', () => {
-    const es = buildSurveyPointLabelEntities(POINTS, null, SAMPLER, LAYERS, opts({ showBoundaryXy: true }));
+    const es = buildSurveyPointLabelEntities(POINTS, null, SAMPLER, LAYERS, opts({ showBoundaryXy: true }), null);
     expect(es).toHaveLength(0);
   });
 });

@@ -7,7 +7,7 @@
  *
  * Frame (mirror ισοϋψών): το `topoSurfacePerimeter` δίνει WORLD (ΕΓΣΑ) canonical mm·
  * μετά προβάλλεται στο ενεργό **display frame** μέσω του ΙΔΙΟΥ projector που κινεί τις
- * ισοϋψείς + τον βορρά (`getActiveWorldToDisplayProjector`, ADR-650 M10). Identity/unset
+ * ισοϋψείς + τον βορρά (`topo-display-frame`, ADR-650 M10/M10f). Identity/unset
  * geo-reference → no-op (backward compatible — μη-geo-referenced survey μένει ως έχει).
  * Έτσι το footprint «κάθεται» πάνω στην κάτοψη ακριβώς εκεί που κάθονται οι ισοϋψείς →
  * το hit-test (Stage A) πέφτει στο σωστό σημείο.
@@ -20,12 +20,11 @@
  * @see ../../types/topo-surface.ts — TopoSurfaceEntity contract
  */
 
-import type { Point2D } from '../../rendering/types/Types';
 import type { TopoSurfaceEntity } from '../../types/topo-surface';
 import type { TopoSurfaceId } from './topo-types';
 import { getTopoSurface } from './topo-surface';
 import { topoSurfacePerimeter } from './topo-surface-perimeter';
-import { getActiveWorldToDisplayProjector } from '../geo-referencing/geo-reference-store';
+import { getTopoDisplayProjector, projectWorldRings } from './topo-display-frame';
 
 /** DXF layer name for the topo surface footprint — structural id, not UI copy (mirror TOPO_CONTOUR_*). */
 export const TOPO_SURFACE_LAYER_NAME = 'TOPO-SURFACE' as const;
@@ -43,26 +42,21 @@ export function topoSurfaceEntityId(surfaceId: TopoSurfaceId): string {
 }
 
 /**
- * Project WORLD (ΕΓΣΑ) footprint ring(s) into the active display frame. Identity/unset
- * geo-reference → returns the rings verbatim (the `isIdentity` fast path). SSoT sibling of
- * `regenerate-topo`'s `projectContoursToLocal`, but over `Point2D[][]` (footprint) not lines.
- */
-function projectFootprintToDisplay(rings: Point2D[][]): Point2D[][] {
-  const projector = getActiveWorldToDisplayProjector();
-  if (projector.isIdentity) return rings;
-  return rings.map((ring) => ring.map((v) => projector.project(v.x, v.y)));
-}
-
-/**
  * Build the `TopoSurfaceEntity` for `surfaceId` on `layerId`, in the display frame. Returns
  * `null` when the surface has no triangulable ground (empty footprint) — the caller then
  * commits nothing (mirror ισοϋψών on an empty survey).
+ *
+ * ADR-650 §M10f — η προβολή WORLD→display γίνεται από το ΕΝΑ σπίτι (`topo-display-frame`)·
+ * παλιότερα ζούσε εδώ ως τοπικό αντίγραφο δίπλα στο δίδυμό του στο `regenerate-topo`.
  */
 export function buildTopoSurfaceEntity(
   surfaceId: TopoSurfaceId,
   layerId: string,
 ): TopoSurfaceEntity | null {
-  const footprint = projectFootprintToDisplay(topoSurfacePerimeter(getTopoSurface(surfaceId)));
+  const footprint = projectWorldRings(
+    topoSurfacePerimeter(getTopoSurface(surfaceId)),
+    getTopoDisplayProjector(),
+  );
   if (footprint.length === 0) return null;
   return {
     id: topoSurfaceEntityId(surfaceId),
