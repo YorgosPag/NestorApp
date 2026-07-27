@@ -1248,7 +1248,7 @@ export const isBimEntityType = (type: string): boolean =>
   type === 'generic-solid';
 
 /** True for any ADR-363/406/407/408/410/415/417/419/422/437 BIM parametric entity */
-export const isBimEntity = (entity: Entity): entity is Extract<Entity, BimParametricEntity> =>
+export const isBimEntity = (entity: Entity): entity is BimParametricEntity =>
   isBimEntityType(entity.type);
 
 // ✅ ENTERPRISE MIGRATION: generateEntityId moved to systems/entity-creation/utils.ts

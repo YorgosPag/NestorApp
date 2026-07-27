@@ -1,6 +1,6 @@
 # ADR-683 — Συνεργατικό round-trip: παράδοση project σε εξωτερικό μηχανικό και επιστροφή
 
-**Status:** 🟡 IN PROGRESS — Φ1 (ADR-678) DONE · **Φ2 DONE** (glTF import + geometry fingerprint + manifest + **UI καλωδίωση**) · **per-face round-trip (ADR-678 Φ3, ΜΟΝΟ glTF) DONE 2026-07-21** (κλείνει το «🔴 ΓΝΩΣΤΟ ΟΡΙΟ» του Φ2 hotfix, βλ. §11) · **Φ3α DONE** (τύπος `imported-mesh`: 2Δ+3Δ+move/rotate, 20 anchors) · **Φ3β DONE** (καλωδίωση εισαγωγής) · **Φ3.1α DONE** (μοντέλο κοστολόγησης) · **Φ3.1β DONE** (διεπαφή ανάθεσης — ⚠️ **καμία επαλήθευση στον browser**) · **§units DONE** (ρητή μονάδα εισαγωγής glTF, §10.5 — ⚠️ **καμία επαλήθευση στον browser**) · **§render-gate DONE** · **§project-scope DONE** · **§mesh-load DONE** (register ανά αρχείο) · **§mesh-load-nesting DONE** (κοινός deep walker parse↔index· η καρέκλα σμιλεύεται — ⚠️ **εκκρεμεί τελική επαλήθευση browser**, βλ. §11) · **§properties-panel-sync DONE 2026-07-24** (imported-mesh selection → Properties palette branch + contextual ribbon params panel, mirror railing Φ9 — 🔴 καμία επαλήθευση στον browser) · Φ3.1γ (μνήμη κανόνων) / Φ4 TODO
+**Status:** 🟡 IN PROGRESS — Φ1 (ADR-678) DONE · **Φ2 DONE** (glTF import + geometry fingerprint + manifest + **UI καλωδίωση**) · **per-face round-trip (ADR-678 Φ3, ΜΟΝΟ glTF) DONE 2026-07-21** (κλείνει το «🔴 ΓΝΩΣΤΟ ΟΡΙΟ» του Φ2 hotfix, βλ. §11) · **Φ3α DONE** (τύπος `imported-mesh`: 2Δ+3Δ+move/rotate, 20 anchors — ⚠️ **το «rotate» ήταν ανακριβές μέχρι τις 2026-07-27**: έλειπε το μέλος του `Entity` union ΚΑΙ το `case` του rotate dispatcher, βλ. §union-membership στο §11) · **Φ3β DONE** (καλωδίωση εισαγωγής) · **Φ3.1α DONE** (μοντέλο κοστολόγησης) · **Φ3.1β DONE** (διεπαφή ανάθεσης — ⚠️ **καμία επαλήθευση στον browser**) · **§units DONE** (ρητή μονάδα εισαγωγής glTF, §10.5 — ⚠️ **καμία επαλήθευση στον browser**) · **§render-gate DONE** · **§project-scope DONE** · **§mesh-load DONE** (register ανά αρχείο) · **§mesh-load-nesting DONE** (κοινός deep walker parse↔index· η καρέκλα σμιλεύεται — ⚠️ **εκκρεμεί τελική επαλήθευση browser**, βλ. §11) · **§properties-panel-sync DONE 2026-07-24** (imported-mesh selection → Properties palette branch + contextual ribbon params panel, mirror railing Φ9 — 🔴 καμία επαλήθευση στον browser) · Φ3.1γ (μνήμη κανόνων) / Φ4 TODO
 **Date:** 2026-07-20
 **Owner:** Giorgio
 **Σχετικά:** ADR-678 (C4D material round-trip — **γίνεται η Φ1 αυτού του σχεδίου**) · **ADR-679 (PBR full parity — ιδιοκτήτης όλου του PBR/υφών· αυτό το ADR ΔΕΝ το επαναλαμβάνει)** · ADR-668 (mesh3d export OBJ/glTF) · ADR-413 (BimMaterial library + PBR textures) · ADR-539 (per-face appearance) · ADR-449 (structural finish skin) · ADR-511 (material catalog SSoT)
@@ -304,7 +304,7 @@ render). Αυτό το ADR κατέχει **πώς ταξιδεύει** ένα �
 |---|---|---|
 | Σχεδιάζεται 2Δ; | ✅ Ναι — **προβολή περιγράμματος** στο επίπεδο κοπής | Το ζήτησε ρητά ο Giorgio |
 | Μετακινείται; | ✅ Ναι | Ο Giorgio πρέπει να διορθώσει θέση χωρίς νέο γύρο στον συνεργάτη |
-| Περιστρέφεται; | ✅ Ναι | ίδιος λόγος |
+| Περιστρέφεται; | ✅ Ναι | ίδιος λόγος. ⚠️ **Η απάντηση ήταν σωστή ως απόφαση αλλά ΑΚΑΛΩΔΙΩΤΗ στον κώδικα μέχρι τις 2026-07-27** — ο `bim-rotate-geometry.ts` δεν είχε `case 'imported-mesh'`, οπότε η περιστροφή έβγαινε no-op και το mesh «επανερχόταν». Βλ. §union-membership (§11). |
 | Εξάγεται; | ✅ Ναι — σε OBJ/glTF | Αλλιώς χάνεται στον επόμενο γύρο συνεργασίας |
 | Έχει λαβές reshape; | ❌ **ΟΧΙ** | Είναι ψημένο πλέγμα, όχι παραμετρικό. Μετακίνηση/περιστροφή = μετασχηματισμός (νόμιμος)· αλλαγή σχήματος = θα απαιτούσε παραμετρικότητα που **δεν υπάρχει** (§3). |
 
@@ -646,6 +646,57 @@ embedded/textured/anonymous → `side === DoubleSide` + look preserved· overrid
 **✅ Browser-verified (Giorgio, 2026-07-23):** Aeron 3Δ perspective → καμία τρύπα από καμία γωνία.
 
 ## 11. Changelog
+
+- **2026-07-27 (§union-membership — 🐛 Το Φ3α ΞΕΧΑΣΕ τη μία γραμμή του `Entity` union· η περιστροφή
+  ΔΕΝ δούλευε ποτέ. IMPLEMENTED UNCOMMITTED, 🔴 browser verify).**
+  **Εύρημα 1 — ο τύπος δεν ήταν πολίτης της σκηνής.** Το Φ3α πρόσθεσε το `'imported-mesh'` στο
+  `EntityType` (`types/base-entity.ts:102`), έγραψε το `ImportedMeshEntity` interface, το **εισήγαγε**
+  στο `types/entities.ts:476` και το χρησιμοποίησε σε **δύο** type-guards (`isImportedMeshEntity`,
+  `isBimEntity`) — αλλά **δεν το πρόσθεσε ποτέ στο `Entity` union**. Ο δίδυμός του `GenericSolidEntity`
+  (ADR-684, μεταγενέστερος) ήταν μέσα. Συνέπεια: το `isImportedMeshEntity` ήταν **νεκρός κώδικας**
+  (`entity.type === 'imported-mesh'` δεν μπορούσε ΠΟΤΕ να γίνει true — TS2367) και κάθε ανάθεση
+  `ImportedMeshEntity → Entity` ήταν σφάλμα τύπου. **Fix:** μία γραμμή στο union.
+  ⚠️ Το προηγούμενο audit είχε διαγνώσει «λείπει από το `EntityType`» — **λάθος**· το `EntityType` το
+  είχε από την πρώτη μέρα. Η ρίζα ήταν αποκλειστικά το union.
+
+  **Εύρημα 2 (το σοβαρό) — 🐛 τα εισαγόμενα πλέγματα ΔΕΝ ΠΕΡΙΣΤΡΕΦΟΝΤΑΝ.** Το §10.1 απαντά ρητά
+  «Περιστρέφεται; ✅ Ναι» και το `ImportedMeshParams.rotationDeg` υπάρχει από το Φ3α — αλλά ο
+  dispatcher `bim/transforms/bim-rotate-geometry.ts` **δεν είχε `case 'imported-mesh'`** (είχε
+  `case 'generic-solid'`, που το ADR-684 πρόσθεσε σωστά). Επιστρέφοντας `null`, ο κώδικας έπεφτε στο
+  `rotateEntity`, όπου το ADR-587 anchor καρφώνει **όλα** τα BIM types ως no-op `{}` (per-site default,
+  §4.6). Άρα σε **κάθε** διαδρομή περιστροφής — `RotateEntityCommand` (`transform-patch-builders.ts:62`),
+  3Δ gizmo, `useRotationPreview`, `bim-copy-builder` — το `rotationDeg` δεν άλλαζε ποτέ και το επόμενο
+  re-sync ξανάχτιζε το αρχικό: **φαινόταν σαν «επαναφορά»**. Είναι **ακριβώς** το bug που περιγράφει
+  το docblock του `rotateGenericSolid`· το ADR-684 το διόρθωσε για τον δίδυμο, το ADR-683 όχι.
+  Το `move` δούλευε κανονικά (`bim-move-geometry.ts:439`) — γι' αυτό η ασυμμετρία περνούσε απαρατήρητη.
+  **Fix χωρίς sibling clone (N.18):** αντί για αντιγραφή του `rotateGenericSolid`, εξήχθη **ένας**
+  generic `rotateOrientedSolidHost<P extends {position, rotationDeg}>` που εξυπηρετεί **και τους δύο**
+  τύπους — αδελφός του υπάρχοντος `rotateMepPointHost` (οικογένεια `{position, rotation?}`). Ο
+  `generic-solid` μετακινήθηκε στον ίδιο helper· καθαρό κέρδος −1 συνάρτηση.
+
+  **Εύρημα 3 (ανακαλύφθηκε από το jscpd, N.18) — η λίστα BIM τύπων γραφόταν ΔΥΟ φορές.** Η προσθήκη
+  του 26ου τύπου έσπρωξε τον λανθάνοντα κλώνο πάνω από το κατώφλι: το CHECK 3.28 τον εντόπισε ως
+  **47 γραμμές / 51 tokens εντός του ίδιου αρχείου** — το BIM τμήμα του `Entity` union και η inline
+  λίστα επιστροφής του `isBimEntity`. Κάθε νέος BIM τύπος έπρεπε να γραφτεί δύο φορές, και ο
+  ξεχασμένος δεύτερος γράφος **δεν έσπαγε τίποτα ορατά** (το `isBimEntity` απλώς σταματούσε να
+  στενεύει σωστά). **Fix:** νέος exported alias `BimParametricEntity` (26 τύποι) — μία λίστα, δύο
+  καταναλωτές. Δεν είναι ο `AnyBimEntity` του `bim/schedule/` (8 τύποι, περιλαμβάνει `stair`):
+  διαφορετικό ερώτημα, σωστά ξεχωριστός.
+
+  **Έλεγχος του §2.2 «τι ξέρει ο δίδυμος και δεν ξέρει το imported-mesh»** (86 vs 95 αρχεία): από τις
+  14 διαφορές, **13 είναι νόμιμες** — 7 ανήκουν στο domain σχεδίασης/εργαλείου (το `generic-solid`
+  **σχεδιάζεται**, το `imported-mesh` **εισάγεται**), 1 είναι η τεκμηριωμένη εξαίρεση του
+  `bim-object-styles.ts` (βλ. `resolve-entity-bim-category.ts:33-37` — σύνθετο mesh, per-node ανάλυση),
+  5 είναι tests που είτε είναι δυναμικά πάνω στο `RENDERABLE_ENTITY_TYPES` είτε χρησιμοποιούν το
+  `generic-solid` ως δείγμα. **Μόνο η περιστροφή ήταν πραγματικό κενό.**
+
+  **Αρχεία:** `types/entities.ts` (union + `BimParametricEntity`), `bim/transforms/bim-rotate-geometry.ts`,
+  `bim/transforms/__tests__/bim-rotate-geometry.test.ts` (+3 tests).
+  **Tests:** rotate 22/22 · transforms+commands 88 suites / 794 · **CHECK 5C capability anchors 21/21
+  suites, 336 tests GREEN χωρίς καμία αλλαγή golden set** (η ζωντανή συμπεριφορά χαρακτηρίστηκε, δεν
+  προσαρμόστηκε η σημασιολογία). jscpd καθαρό. tsc SKIP (N.17).
+  🔴 **browser verify:** επίλεξε εισαγόμενο mesh → Rotate 90° → **μένει** στραμμένο μετά από refresh·
+  Ctrl+Z επαναφέρει.
 
 - **2026-07-24 (§2d-silhouette-no-3d-roundtrip — φρέσκια εισαγωγή δείχνει σμιλεμένο 2Δ **αμέσως**, χωρίς
   3Δ roundtrip — IMPLEMENTED UNCOMMITTED, 🔴 browser verify).** **Bug:** μετά την εισαγωγή ενός `.glb`
