@@ -72,6 +72,12 @@ const PREVIEW_GHOST_MAIN_TYPES = [
   // ADR-654 — raster image: ρητό ghost branch (apply-parametric-annotation-preview) ώστε το
   // live preview της περιστροφής/κλιμάκωσης να τρέχει τον ΙΔΙΟ transform με το commit.
   'image',
+  // ADR-662 §13 — τοπογραφική επιφάνεια: ρητό ghost branch για τη συρόμενη κορυφή περιγράμματος.
+  // ⚠️ Ο ΜΟΝΑΔΙΚΟΣ τύπος όπου **preview ≠ commit σκόπιμα**: το ghost μετακινεί την κορυφή του
+  // footprint (άμεση ανάδραση), ενώ το commit γράφει στο survey point και η επανατριγωνοποίηση
+  // μπορεί να δώσει άλλο περίβλημα. Το preview απαντά «πού πάει η λαβή», όχι «πώς θα καταλήξει
+  // η επιφάνεια» — rebuild TIN ανά καρέ θα αντάλλασσε ρευστότητα με ακρίβεια που δεν διαβάζεται.
+  'topo-surface',
 ] as const;
 /** `apply-parametric-box-preview.ts` branches (9) — box-like BIM (asymmetry α). */
 const PREVIEW_GHOST_BOX_TYPES = [
@@ -98,9 +104,10 @@ const PREVIEW_GHOST_OFF_PATH_TYPES = [
   'dimension', 'angle-measurement', 'xline', 'ray', 'lwpolyline',
   // ADR-635 Φ B — leader: κανένα ρητό ghost branch. Δεν έχει grip producer (βλ. grip-computation
   // coverage) → κανένα parametric drag να κάνει preview· classic path αρκεί.
-  // ADR-662 Φ2β — topo-surface: Stage A plumbing, κανένα ρητό branch (καμία grip/move capability
-  // να χρειάζεται ghost). Όταν καλωδιωθεί, μετακινείται στο PREVIEW_GHOST_MAIN_TYPES.
-  'leader', 'topo-surface',
+  // (ADR-662 §13: το `topo-surface` ΕΦΥΓΕ από εδώ 2026-07-27 — καλωδιώθηκαν λαβές, άρα
+  // απέκτησε ρητό ghost branch· μετακινήθηκε στο PREVIEW_GHOST_MAIN_TYPES όπως προδιέγραφε
+  // το ίδιο το pin. Το αυτο-διορθούμενο συμβόλαιο του ADR-587 λειτούργησε.)
+  'leader',
   // BIM (10) — μη-box, μη-footprint parametric → BIM-whole-entity move / classic.
   // Το `floorplan-symbol` έγινε renderable (ADR-415/635 ghost) χωρίς ρητό branch εδώ → off-path.
   'railing', 'wall-covering', 'thermal-space', 'space-separator',

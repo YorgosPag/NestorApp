@@ -52,7 +52,7 @@ describe('ADR-602 grip discriminator SSoT — coverage', () => {
   });
 
   // ── 2. Runtime completeness ────────────────────────────────────────────────
-  it('runtime: 37 grip-producer entities, μηδέν διπλότυπα', () => {
+  it('runtime: 38 grip-producer entities, μηδέν διπλότυπα', () => {
     // 35 → 36: +imported-mesh (ADR-683 Φ3 — move + rotation ΜΟΝΟ, καμία λαβή σχήματος).
     // 36 → 37: +generic-solid (ADR-684 Φ2/Φ3 — move + rotation· 4 corners ΜΟΝΟ για box).
     // 37 → 38: +topo-surface (ADR-662 §13 — κορυφές περιγράμματος που γράφουν στο survey
