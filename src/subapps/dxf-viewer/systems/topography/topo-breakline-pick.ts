@@ -104,7 +104,7 @@ export function buildBreaklineFromEntity(
   if (!poly || poly.vertices.length < 2) return null;
 
   // Η ΜΙΑ μετάβαση πλαισίου, πριν από κάθε ανάγνωση των κορυφών (ADR-718 §Α).
-  const vertices = [...poly.vertices]; // MUTATION-TEST: η διόρθωση αφαιρέθηκε προσωρινά
+  const vertices = unprojectDisplayPoints(poly.vertices, projector);
 
   // (1) standard breakline — η γραμμή κουβαλά το δικό της, ρητό υψόμετρο.
   // Το `elevation` είναι **Z** και ο μετασχηματισμός είναι επίπεδος (M10b: «Z is never touched»),

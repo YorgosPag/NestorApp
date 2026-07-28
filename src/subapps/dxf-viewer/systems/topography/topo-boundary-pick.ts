@@ -70,7 +70,7 @@ export function buildBoundaryFromEntity(
   const displayVertices = closedRingVerticesOf(entity);
   if (!displayVertices) return null;
   return {
-    vertices: [...displayVertices], // MUTATION-TEST: η διόρθωση αφαιρέθηκε προσωρινά
+    vertices: unprojectDisplayPoints(displayVertices, projector),
     sourceEntityId: entity.id,
   };
 }
