@@ -730,37 +730,6 @@
       "ltscaleDesc": "Linetype scale (whole drawing)",
       "lineweight": "LWT",
       "lineweightDesc": "Show lineweights — fixed on screen regardless of zoom"
-    },
-    "panels": {
-      "objectSnap": "Object Snap",
-      "layers": "Layers",
-      "properties": "Properties",
-      "commands": "Commands"
-    },
-    "snapModes": {
-      "title": "Object Snap",
-      "description": "Click to toggle snap modes"
-    },
-    "layers": {
-      "default": "0 - Default",
-      "geometry": "Geometry",
-      "dimensions": "Dimensions"
-    },
-    "properties": {
-      "layer": "Layer:",
-      "color": "Color:"
-    },
-    "history": {
-      "title": "Command History",
-      "commands": {
-        "fit": "Command: FIT",
-        "zoomWindow": "Command: ZOOM Window",
-        "line": "Command: LINE"
-      },
-      "ready": "Ready for command..."
-    },
-    "accessibility": {
-      "layerList": "Layer list"
     }
   },
   "layerManager": {

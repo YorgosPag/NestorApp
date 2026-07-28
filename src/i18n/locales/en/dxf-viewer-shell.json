@@ -947,7 +947,6 @@
     "viewScaleInputPlaceholder": "N for 1:N"
   },
   "overlayToolbar": {
-    "objectSnap": "Enable/Disable Object Snap (F3)",
     "basicFunctions": "Enable basic functions",
     "drawingTools": "Drawing Tools"
   },

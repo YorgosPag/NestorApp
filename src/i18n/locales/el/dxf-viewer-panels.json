@@ -730,37 +730,6 @@
       "ltscaleDesc": "Κλίμακα τύπων γραμμής (όλο το σχέδιο)",
       "lineweight": "ΠΑΧΟΣ",
       "lineweightDesc": "Εμφάνιση πάχους γραμμών — σταθερό στην οθόνη ανεξάρτητα από το ζουμ"
-    },
-    "panels": {
-      "objectSnap": "Σημεία Πρόσδεσης",
-      "layers": "Επίπεδα",
-      "properties": "Ιδιότητες",
-      "commands": "Εντολές"
-    },
-    "snapModes": {
-      "title": "Σημεία Πρόσδεσης",
-      "description": "Κλικ για εναλλαγή λειτουργιών πρόσδεσης"
-    },
-    "layers": {
-      "default": "0 - Προεπιλογή",
-      "geometry": "Γεωμετρία",
-      "dimensions": "Διαστάσεις"
-    },
-    "properties": {
-      "layer": "Επίπεδο:",
-      "color": "Χρώμα:"
-    },
-    "history": {
-      "title": "Ιστορικό Εντολών",
-      "commands": {
-        "fit": "Εντολή: FIT",
-        "zoomWindow": "Εντολή: ZOOM Παράθυρο",
-        "line": "Εντολή: LINE"
-      },
-      "ready": "Έτοιμο για εντολή..."
-    },
-    "accessibility": {
-      "layerList": "Λίστα επιπέδων"
     }
   },
   "layerManager": {

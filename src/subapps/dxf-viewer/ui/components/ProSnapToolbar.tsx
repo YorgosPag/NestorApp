@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useMemo } from 'react';
-import { Target, ChevronDown, ChevronUp, Settings } from 'lucide-react';
+import { ChevronDown, ChevronUp, Settings } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -147,9 +147,6 @@ const BIM_MODES = [
 interface ProSnapToolbarProps {
   enabledModes: Set<ExtendedSnapType>;
   onToggleMode: (mode: ExtendedSnapType, enabled: boolean) => void;
-  /** If omitted, the master SNAP toggle button is hidden (CadStatusBar OSNAP is the canonical toggle). */
-  snapEnabled?: boolean;
-  onToggleSnap?: (enabled: boolean) => void;
   /**
    * Κατ. 1β — εμφάνιση/απόκρυψη των κυανών «Αποστάσεων» (listening dimensions) του line-tool ghost
    * (ADR-508 §line-cyan). ΔΕΝ είναι snap-mode → ξεχωριστό κουμπί, όχι μέλος των CORE/ADVANCED/BIM.
@@ -165,8 +162,6 @@ interface ProSnapToolbarProps {
 export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
   enabledModes,
   onToggleMode,
-  snapEnabled,
-  onToggleSnap,
   listeningDimOn,
   onToggleListeningDim,
   className = '',
@@ -178,10 +173,6 @@ export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
   // 🌐 i18n
   const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
   const [showAdvanced, setShowAdvanced] = useState(false);
-
-  const handleMasterToggle = useCallback(() => {
-    if (onToggleSnap !== undefined) onToggleSnap(!(snapEnabled ?? false));
-  }, [snapEnabled, onToggleSnap]);
 
   const handleModeToggle = useCallback((mode: ExtendedSnapType) => {
     onToggleMode(mode, !(enabledModes?.has(mode) || false));
@@ -199,7 +190,6 @@ export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
     });
   }, [enabledModes, onToggleMode]);
 
-  const enabledCount = useMemo(() => enabledModes?.size || 0, [enabledModes]);
   const advancedEnabledCount = useMemo(
     () => [...ADVANCED_MODES, ...BIM_MODES].filter(mode => enabledModes?.has(mode)).length,
     [enabledModes],
@@ -226,28 +216,14 @@ export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
 
   return (
     <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM} ${PANEL_LAYOUT.SPACING.SM} ${colors.bg.primary} ${quick.card} ${className}`}>
-      {/* Master SNAP toggle — shown only when caller passes snapEnabled/onToggleSnap (e.g. CadDock panel) */}
-      {onToggleSnap !== undefined && (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant={(snapEnabled ?? false) ? 'default' : 'ghost'}
-              size="sm"
-              onClick={handleMasterToggle}
-              className={`${PANEL_LAYOUT.GAP.XS} ${(snapEnabled ?? false) ? HOVER_TEXT_EFFECTS.CYAN : ''}`}
-            >
-              <Target className={`${iconSizes.sm} ${HOVER_TEXT_EFFECTS.CYAN}`} />
-              <span className={PANEL_LAYOUT.FONT_WEIGHT.BOLD}>SNAP</span>
-              {enabledCount > 0 && (
-                <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.OPACITY['80']}`}>
-                  ({enabledCount})
-                </span>
-              )}
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>{t('overlayToolbar.objectSnap')}</TooltipContent>
-        </Tooltip>
-      )}
+      {/*
+        ⛔ ΔΕΝ υπάρχει master SNAP toggle εδώ. Ο κανονικός είναι το **OSNAP της CadStatusBar**
+        (ADR-341 SSoT — συγχρονίζεται με το `cadToggles.osnap` στο `SnapContext`). Υπήρχε
+        προαιρετικός κλάδος `onToggleSnap` για το `CadDock.tsx`· με τη διαγραφή εκείνου
+        (ADR-724 §14.4γ) ο μοναδικός καταναλωτής δεν τον περνά, οπότε ο κλάδος έγινε
+        απροσπέλαστος και αφαιρέθηκε. Δεύτερος master toggle = δεύτερος ιδιοκτήτης της ίδιας
+        κατάστασης — μην τον ξαναφέρεις.
+      */}
 
       {/* 🏢 ENTERPRISE: Core snap modes */}
       <div className={`flex ${PANEL_LAYOUT.GAP.XS}`}>
