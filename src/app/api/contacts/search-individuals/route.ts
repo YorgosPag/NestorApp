@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { requireAdminFirestore } from '@/lib/api/admin-db';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -43,10 +43,7 @@ export const GET = withStandardRateLimit(
         throw new ApiError(400, 'Search term must be at least 2 characters', 'VALIDATION_ERROR');
       }
 
-      const adminDb = getAdminFirestore();
-      if (!adminDb) {
-        throw new ApiError(503, 'Database connection not available', 'DB_UNAVAILABLE');
-      }
+      const adminDb = requireAdminFirestore();
 
       // 🔒 SECURITY: Tenant-scoped query via Admin SDK
       // Query 1: Contacts with matching companyId (tenant isolation)
