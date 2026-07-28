@@ -9,7 +9,7 @@
 
 import { NextResponse } from 'next/server';
 import { MigrationPhase, type MigrationStats } from '@/services/enterprise-id-migration.service';
-import { ENTITY_TYPES, type EntityType } from '@/config/domain-constants';
+import { ENTITY_TYPES, isPlatformEntityType, type EntityType } from '@/config/domain-constants';
 import { MigrationController, type MigrationConfig } from './migration-controller';
 import { withAuth } from '@/lib/auth/middleware';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -75,7 +75,7 @@ export const POST = withAuth<MigrationExecutionResponse>(
       const body = await req.json();
       const config: MigrationConfig = {
         phase: body.phase || MigrationPhase.DUAL_SUPPORT,
-        entityTypes: validateEntityTypes(body.entityTypes || ['company', 'project', 'building', 'unit', 'contact']),
+        entityTypes: validateEntityTypes(body.entityTypes || DEFAULT_MIGRATION_ENTITY_TYPES),
         dryRun: body.dryRun || false,
         batchSize: body.batchSize || 10
       };
@@ -93,10 +93,23 @@ export const POST = withAuth<MigrationExecutionResponse>(
   { requiredGlobalRoles: 'super_admin' }
 );
 
-function isValidEntityType(type: string): type is EntityType {
-  return Object.values(ENTITY_TYPES).includes(type as EntityType);
-}
+/**
+ * Default set migrated when the caller sends no `entityTypes`.
+ *
+ * ⚠️ This used to be a literal array containing `'unit'` — a spelling that has
+ * never been an {@link ENTITY_TYPES} member. `validateEntityTypes` filters
+ * unknown values SILENTLY, so the default migration quietly skipped properties
+ * entirely and reported success over four types instead of five. Built from the
+ * constants now, so an invented spelling cannot compile.
+ */
+const DEFAULT_MIGRATION_ENTITY_TYPES: readonly EntityType[] = [
+  ENTITY_TYPES.COMPANY,
+  ENTITY_TYPES.PROJECT,
+  ENTITY_TYPES.BUILDING,
+  ENTITY_TYPES.PROPERTY,
+  ENTITY_TYPES.CONTACT,
+];
 
 function validateEntityTypes(types: readonly string[]): readonly EntityType[] {
-  return types.filter((type): type is EntityType => isValidEntityType(type));
+  return types.filter(isPlatformEntityType);
 }

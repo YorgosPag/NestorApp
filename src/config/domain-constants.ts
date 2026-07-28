@@ -125,6 +125,34 @@ export const ENTITY_TYPES = {
 export type EntityType = typeof ENTITY_TYPES[keyof typeof ENTITY_TYPES];
 
 /**
+ * 🏢 SSoT narrowing for {@link ENTITY_TYPES}. The list lives here, so the
+ * predicate over it lives here too — it was previously re-implemented, byte for
+ * byte, in THREE places (storage path validation + both enterprise-id migration
+ * entry points). Three copies of `Object.values(ENTITY_TYPES).includes(...)`
+ * cannot disagree today, but the fourth one written next month can.
+ *
+ * ⚠️ **This is not "is this a valid entity type" in the abstract.** It answers
+ * exactly one question: *is this one of the platform's storage/ID entity types?*
+ * The deletion guard governs a DIFFERENT, narrower set with a different spelling
+ * (`parking` there vs `parking_spot` here) — see `isDeletableEntityType` in
+ * `config/deletion-registry.ts`. Do not swap one for the other: each is a
+ * security-relevant gate on its own surface (uploads vs deletions).
+ *
+ * The `Platform` in the name is doing real work, not decoration: the repo holds
+ * THREE unrelated things called `EntityType` — this one, the deletion guard's,
+ * and the DXF viewer's drawing primitives (`settings-core/types/state.ts`,
+ * LINE/CIRCLE/…) — plus a TEK XML `isEntityType(record, expected)` that shares
+ * only the letters. A guard named for its set is a guard that cannot be
+ * imported by accident.
+ */
+export function isPlatformEntityType(value: unknown): value is EntityType {
+  return (
+    typeof value === 'string' &&
+    (Object.values(ENTITY_TYPES) as readonly string[]).includes(value)
+  );
+}
+
+/**
  * 🏢 SSoT — entity types a CAD/DXF file can be linked to (ADR-288 / ADR-240).
  *
  * The DXF save chain (wizard → DxfSaveContext → cad-file-mutation-gateway →

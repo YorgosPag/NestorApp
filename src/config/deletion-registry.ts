@@ -608,7 +608,28 @@ export function getEntityCollection(entityType: EntityType): string {
   return map[entityType];
 }
 
-/** Validate that a string is a known EntityType */
-export function isValidEntityType(value: string): value is EntityType {
+/**
+ * Validate that a string is an entity type the deletion guard governs.
+ *
+ * ⚠️ **Deliberately NOT named `isValidEntityType`, and deliberately not merged
+ * with `isPlatformEntityType` in `config/domain-constants`.** The two answer different
+ * questions over two genuinely different sets, and the difference is not
+ * cosmetic:
+ *
+ * - here (8): contact, property, floor, project, building, company, **parking**, storage
+ * - there (14): …, **parking_spot**, storage_unit, lead, conversation, quote, material, …
+ *
+ * The same physical thing is spelled `parking` in the deletion domain and
+ * `parking_spot` in the storage/ID domain, and seven storage types have no
+ * deletion rules at all. Merging them would silently widen a security gate:
+ * whichever side inherited the other's list would start accepting entity types
+ * it has no rules for — a deletion route that lets through a type with no
+ * dependency checks, or a storage path built for a type that cannot be swept.
+ *
+ * The relationship is pinned by anchors in
+ * `config/__tests__/deletion-registry-storage.test.ts`; change the sets there
+ * first, on purpose, or not at all.
+ */
+export function isDeletableEntityType(value: string): value is EntityType {
   return value in DELETION_REGISTRY;
 }

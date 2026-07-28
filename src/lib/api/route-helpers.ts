@@ -28,6 +28,29 @@ export function extractIdFromUrl(url: string): string | null {
 }
 
 // =============================================================================
+// extractSegmentFromEnd — Nth segment counting back from the end
+// =============================================================================
+
+/**
+ * Extract a path segment by its distance from the END of the path.
+ *
+ * `fromEnd = 0` is the last segment (equivalent to {@link extractIdFromUrl}),
+ * `1` the one before it, and so on.
+ *
+ * Example: `/api/deletion-guard/property/prop_abc123`
+ *   → `extractSegmentFromEnd(url, 0)` → `"prop_abc123"`
+ *   → `extractSegmentFromEnd(url, 1)` → `"property"`
+ *
+ * ⚠️ Counts from the end **on purpose**, not from a named anchor: `[entityType]`
+ * routes have no fixed literal to anchor on — the segment IS the variable. Empty
+ * segments are dropped first, so a trailing slash does not shift the count.
+ */
+export function extractSegmentFromEnd(url: string, fromEnd: number): string | null {
+  const segments = new URL(url).pathname.split('/').filter(Boolean);
+  return segments[segments.length - 1 - fromEnd] || null;
+}
+
+// =============================================================================
 // extractNestedIdFromUrl — ID before a trailing sub-resource segment
 // =============================================================================
 

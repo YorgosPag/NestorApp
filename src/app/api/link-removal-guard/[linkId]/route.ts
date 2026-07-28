@@ -15,9 +15,10 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { hasPermission } from '@/lib/auth/permissions';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { requireAdminFirestore } from '@/lib/api/admin-db';
+import { extractIdFromUrl } from '@/lib/api/route-helpers';
 import { checkLinkRemovalDependencies } from '@/lib/firestore/deletion-link-guard';
-import { isValidEntityType, type DependencyCheckResult } from '@/config/deletion-registry';
+import { isDeletableEntityType, type DependencyCheckResult } from '@/config/deletion-registry';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
@@ -32,15 +33,10 @@ export const GET = withStandardRateLimit(
       ctx: AuthContext,
       cache: PermissionCache
     ) => {
-      const db = getAdminFirestore();
-      if (!db) {
-        throw new ApiError(503, 'Firestore not available', 'DB_UNAVAILABLE');
-      }
+      const db = requireAdminFirestore();
 
       // ── Extract linkId from URL ──
-      const url = new URL(request.url);
-      const segments = url.pathname.split('/').filter(Boolean);
-      const linkId = segments[segments.length - 1];
+      const linkId = extractIdFromUrl(request.url);
 
       if (!linkId) {
         throw new ApiError(400, 'Missing linkId', 'INVALID_PARAMS');
@@ -70,7 +66,7 @@ export const GET = withStandardRateLimit(
         });
       }
 
-      if (!isValidEntityType(targetEntityType)) {
+      if (!isDeletableEntityType(targetEntityType)) {
         // Unknown entity type — allow removal (no registry config)
         return apiSuccess<DependencyCheckResult>({
           allowed: true, dependencies: [], totalDependents: 0, message: 'Η αφαίρεση επιτρέπεται.',

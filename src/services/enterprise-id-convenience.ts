@@ -330,6 +330,13 @@ export const generateOpaqueToken = () => enterpriseIdService.generateOpaqueToken
 
 // Validation & Utility
 export const validateEnterpriseId = (id: string) => enterpriseIdService.validateId(id);
-export const parseEnterpriseId = (id: string) => enterpriseIdService.parseId(id);
 export const getIdType = (id: string) => enterpriseIdService.getIdType(id);
 export const isLegacyId = (id: string) => enterpriseIdService.isLegacyId(id);
+
+// Re-exported straight from the pure parser instead of being re-declared as a
+// thin arrow over `enterpriseIdService.parseId`. That method is itself a
+// one-line delegation to this exact function, so the old shape was a three-hop
+// trip to the same code AND a second declaration of an exported name that
+// already existed — flagged as a duplicate export by CHECK 3.18 (2026-07-28).
+// Reading an id needs no instance state; see the header of ./enterprise-id-parse.
+export { parseEnterpriseId } from './enterprise-id-parse';

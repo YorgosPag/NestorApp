@@ -18,12 +18,12 @@
  */
 
 import {
-  type EntityType,
   type FileDomain,
   type FileCategory,
   ENTITY_TYPES,
   FILE_DOMAINS,
   FILE_CATEGORIES,
+  isPlatformEntityType,
 } from '@/config/domain-constants';
 import type { StoragePathParams } from './storage-path';
 
@@ -57,12 +57,11 @@ export function isValidExtension(ext: string): boolean {
   return /^[a-zA-Z0-9]+$/.test(cleanExt);
 }
 
-/**
- * Validates entityType against ENTITY_TYPES enum
- */
-export function isValidEntityType(value: string): value is EntityType {
-  return Object.values(ENTITY_TYPES).includes(value as EntityType);
-}
+// entityType narrowing is NOT defined here: the ENTITY_TYPES list lives in
+// `config/domain-constants`, so `isPlatformEntityType` lives next to it and is imported
+// (SSoT — this file used to hold a byte-identical copy). `isValidDomain` /
+// `isValidCategory` below stay local on purpose: FILE_DOMAINS/FILE_CATEGORIES
+// are consumed by the storage path surface only, so this file IS their owner.
 
 /**
  * Validates domain against FILE_DOMAINS enum
@@ -88,7 +87,7 @@ export function validateStoragePathParams(
   const errors: StoragePathValidationError[] = [];
 
   // Required fields validation
-  if (!isValidEntityType(params.entityType)) {
+  if (!isPlatformEntityType(params.entityType)) {
     errors.push({
       field: 'entityType',
       message: `Invalid entityType. Must be one of: ${Object.values(ENTITY_TYPES).join(', ')}`,

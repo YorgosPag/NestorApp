@@ -14,7 +14,7 @@
 import 'server-only';
 
 import { NextRequest } from 'next/server';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { requireAdminFirestore } from '@/lib/api/admin-db';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { FIELDS } from '@/config/firestore-field-constants';
@@ -143,10 +143,7 @@ export const POST = withSensitiveRateLimit(
       const body = await request.json().catch(() => null);
       const data = validateRequest(body);
 
-      const db = getAdminFirestore();
-      if (!db) {
-        throw new ApiError(503, 'Database connection not available', 'DB_UNAVAILABLE');
-      }
+      const db = requireAdminFirestore();
 
       // Verify contact exists + tenant isolation
       const contactDoc = await db.collection(COLLECTIONS.CONTACTS).doc(data.contactId).get();

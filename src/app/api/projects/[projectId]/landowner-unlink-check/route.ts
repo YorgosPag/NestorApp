@@ -18,7 +18,7 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { hasPermission } from '@/lib/auth/permissions';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { requireAdminFirestore } from '@/lib/api/admin-db';
 import { checkLandownerUnlink, type LandownerUnlinkResult } from '@/lib/firestore/landowner-unlink-guard';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -45,10 +45,7 @@ export const GET = withStandardRateLimit(
         throw new ApiError(403, 'Insufficient permissions', 'FORBIDDEN');
       }
 
-      const db = getAdminFirestore();
-      if (!db) {
-        throw new ApiError(503, 'Firestore not available', 'DB_UNAVAILABLE');
-      }
+      const db = requireAdminFirestore();
 
       const url = new URL(request.url);
       const contactId = url.searchParams.get('contactId');

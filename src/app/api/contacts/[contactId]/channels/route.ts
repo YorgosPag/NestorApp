@@ -12,7 +12,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { requireAdminFirestore } from '@/lib/api/admin-db';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -29,6 +29,7 @@ import {
   type LinkingHint,
 } from '@/components/ui/channel-sharing/types';
 import { isValidTelegramChatId } from '@/lib/telegram/chat-id-validator';
+import { extractContactDisplayName, extractContactEmails } from '@/server/lib/contact-doc-fields';
 
 const logger = createModuleLogger('ContactChannelsRoute');
 
@@ -36,31 +37,16 @@ const logger = createModuleLogger('ContactChannelsRoute');
 // HELPERS
 // ============================================================================
 
-function extractDisplayName(data: FirebaseFirestore.DocumentData): string {
-  if (data.type === 'company') {
-    return String(data.companyName ?? data.tradeName ?? '');
-  }
-  if (data.type === 'service') {
-    return String(data.serviceName ?? data.companyName ?? '');
-  }
-  const first = String(data.firstName ?? '');
-  const last = String(data.lastName ?? '');
-  return `${first} ${last}`.trim();
-}
-
 function extractEmailChannels(data: FirebaseFirestore.DocumentData): AvailableChannel[] {
-  const emails = data.emails;
-  if (!Array.isArray(emails)) return [];
-
-  return emails
-    .filter((e: Record<string, unknown>) => typeof e?.email === 'string' && e.email.length > 0)
-    .map((e: Record<string, unknown>) => ({
-      provider: 'email' as ChannelProvider,
-      externalUserId: String(e.email),
-      displayName: String(e.email),
-      verified: true,
-      capabilities: CHANNEL_CAPABILITIES.email,
-    }));
+  // Η σάρωση/φιλτράρισμα των email είναι SSoT (contact-doc-fields)· εδώ μένει
+  // μόνο η χαρτογράφηση στο σχήμα καναλιού, που είναι όντως τοπικό ερώτημα.
+  return extractContactEmails(data).map((entry) => ({
+    provider: 'email' as ChannelProvider,
+    externalUserId: entry.email,
+    displayName: entry.email,
+    verified: true,
+    capabilities: CHANNEL_CAPABILITIES.email,
+  }));
 }
 
 // Platforms stored in `contact.socialMedia[]` that map 1:1 onto a shareable
@@ -169,10 +155,7 @@ async function handleGet(
         throw new ApiError(400, 'Invalid contactId', 'VALIDATION_ERROR');
       }
 
-      const db = getAdminFirestore();
-      if (!db) {
-        throw new ApiError(503, 'Database connection not available', 'DB_UNAVAILABLE');
-      }
+      const db = requireAdminFirestore();
 
       // 1. Load contact doc — verify tenant isolation
       const contactDoc = await db.collection(COLLECTIONS.CONTACTS).doc(contactId).get();
@@ -185,7 +168,7 @@ async function handleGet(
         throw new ApiError(403, 'Access denied', 'FORBIDDEN');
       }
 
-      const contactName = extractDisplayName(contactData);
+      const contactName = extractContactDisplayName(contactData);
 
       // 2. Query external_identities WHERE contactId matches
       const identitiesSnap = await db

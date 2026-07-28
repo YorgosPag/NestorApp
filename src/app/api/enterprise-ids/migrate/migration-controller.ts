@@ -11,11 +11,7 @@ import {
   MigrationPhase,
   type MigrationStats
 } from '@/services/enterprise-id-migration.service';
-import { ENTITY_TYPES, type EntityType } from '@/config/domain-constants';
-
-function isValidEntityType(type: string): type is EntityType {
-  return Object.values(ENTITY_TYPES).includes(type as EntityType);
-}
+import { isPlatformEntityType, type EntityType } from '@/config/domain-constants';
 import { getErrorMessage } from '@/lib/error-utils';
 
 // ============================================================================
@@ -95,7 +91,7 @@ export class MigrationController {
     const errors: string[] = [];
 
     for (const entityType of config.entityTypes) {
-      if (!isValidEntityType(entityType)) {
+      if (!isPlatformEntityType(entityType)) {
         errors.push(`Invalid entity type: ${entityType}`);
       }
     }

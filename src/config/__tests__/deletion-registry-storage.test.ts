@@ -13,10 +13,15 @@
  * @enterprise ADR-709 — Immutable Storage Path
  */
 
-import { DELETION_REGISTRY } from '@/config/deletion-registry';
+import { DELETION_REGISTRY, isDeletableEntityType } from '@/config/deletion-registry';
 import { buildEntityStoragePrefix, buildStoragePath } from '@/services/upload/utils/storage-path';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { ENTITY_TYPES, FILE_DOMAINS, FILE_CATEGORIES } from '@/config/domain-constants';
+import {
+  ENTITY_TYPES,
+  FILE_DOMAINS,
+  FILE_CATEGORIES,
+  isPlatformEntityType,
+} from '@/config/domain-constants';
 
 describe('deletion registry ↔ storage path (ADR-709)', () => {
   describe('every cleanup template is derived from the path SSoT', () => {
@@ -82,6 +87,65 @@ describe('deletion registry ↔ storage path (ADR-709)', () => {
       }).path;
 
       expect(attendancePhoto.startsWith(prefix)).toBe(true);
+    });
+  });
+
+  /**
+   * Until 2026-07-28 both sides exported a function called `isValidEntityType`,
+   * over two different sets, and CHECK 3.18 flagged them as a duplicate export.
+   * They are NOT duplicates — merging them would widen a security gate. These
+   * anchors pin the relationship so the next reader is told that, rather than
+   * "helpfully" unifying two names that were never the same question.
+   */
+  describe('the two entity-type universes are distinct ON PURPOSE', () => {
+    const deletable = Object.keys(DELETION_REGISTRY);
+    const storage = Object.values(ENTITY_TYPES) as readonly string[];
+
+    it('ANCHOR: neither set contains the other — a shared predicate would widen a gate', () => {
+      const deletableOnly = deletable.filter((t) => !storage.includes(t));
+      const storageOnly = storage.filter((t) => !deletable.includes(t));
+
+      // Both non-empty ⇒ no merge direction is safe. If one of these ever
+      // becomes empty, the sets converged and unification can be RE-EVALUATED —
+      // deliberately, not by a rename.
+      expect(deletableOnly.length).toBeGreaterThan(0);
+      expect(storageOnly.length).toBeGreaterThan(0);
+    });
+
+    it('ANCHOR: the same physical thing is spelled differently on each side', () => {
+      // A parking spot is `parking` to the deletion guard and `parking_spot` to
+      // storage paths / enterprise IDs. Passing one where the other is expected
+      // silently builds a prefix that sweeps nothing.
+      expect(isDeletableEntityType('parking')).toBe(true);
+      expect(isPlatformEntityType('parking')).toBe(false);
+
+      expect(isPlatformEntityType(ENTITY_TYPES.PARKING_SPOT)).toBe(true);
+      expect(isDeletableEntityType(ENTITY_TYPES.PARKING_SPOT)).toBe(false);
+    });
+
+    it('ANCHOR: every entity that sweeps Storage is spelled the STORAGE way', () => {
+      // This is the invariant that actually protects data: a cleanup template is
+      // built by `buildEntityStoragePrefix`, which only understands ENTITY_TYPES
+      // spellings. A deletion type that sweeps storage under a spelling storage
+      // never wrote is a prefix matching zero objects — deletion reports success,
+      // the binaries stay, and nothing anywhere goes red.
+      for (const entityType of deletable) {
+        if (!DELETION_REGISTRY[entityType as keyof typeof DELETION_REGISTRY].storageCleanup?.length) {
+          continue;
+        }
+        expect(isPlatformEntityType(entityType)).toBe(true);
+      }
+    });
+
+    it('guards reject junk on both sides (fail-closed)', () => {
+      for (const junk of ['', 'Contact', 'unit', 'nope']) {
+        expect(isDeletableEntityType(junk)).toBe(false);
+        expect(isPlatformEntityType(junk)).toBe(false);
+      }
+      // Non-strings reach `isPlatformEntityType` from Firestore reads; it must not throw.
+      for (const junk of [null, undefined, 42, {}]) {
+        expect(isPlatformEntityType(junk)).toBe(false);
+      }
     });
   });
 

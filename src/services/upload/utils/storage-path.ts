@@ -38,20 +38,23 @@ import {
   type FileDomain,
   type FileCategory,
   STORAGE_PATH_SEGMENTS,
+  isPlatformEntityType,
 } from '@/config/domain-constants';
 import {
   isValidCategory,
   isValidDomain,
-  isValidEntityType,
   validateStoragePathParams,
 } from './storage-path-validation';
 
 // Validation lives in `storage-path-validation.ts` (N.7.1 split) — re-exported
 // so every existing importer of this module keeps working unchanged.
+// `isPlatformEntityType` is deliberately NOT re-exported here: it belongs to
+// `config/domain-constants` (where ENTITY_TYPES lives) and is used well beyond
+// the storage surface, so a second import path for it would be the start of the
+// next divergence rather than a convenience.
 export {
   isValidCategory,
   isValidDomain,
-  isValidEntityType,
   isValidExtension,
   isValidPathSegment,
   validateStoragePathParams,
@@ -385,7 +388,7 @@ export function parseStoragePath(
     const ext = filename.substring(lastDotIndex + 1);
 
     // Validate parsed values
-    if (!isValidEntityType(entityType)) return null;
+    if (!isPlatformEntityType(entityType)) return null;
     if (!isValidDomain(domain)) return null;
     if (!isValidCategory(category)) return null;
 
