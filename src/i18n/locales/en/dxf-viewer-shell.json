@@ -63,6 +63,14 @@
       "needsPoints": "Load survey points first — a 2D line carries no elevation"
     }
   },
+  "topoBoundary": {
+    "status": {
+      "awaitingEntity": "Pick a closed drawing line to use as the site boundary",
+      "added": "Boundary set — volumes and the crop now count only inside it",
+      "removed": "Boundary removed — volumes cover the whole survey again",
+      "notClosed": "That line is not closed — a boundary needs a closed outline"
+    }
+  },
   "geoRef": {
     "status": {
       "armSlot": "Press “Pick on the plan” in the Geo-referencing panel first",
