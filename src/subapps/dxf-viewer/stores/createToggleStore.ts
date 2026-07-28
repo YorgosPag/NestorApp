@@ -4,7 +4,7 @@
  *
  * Αντικαθιστά το copy-paste boilerplate (`_state`/`_snapshot`/`_subs`/`_notify` +
  * open/close/toggle/isOpen/subscribe/getSnapshot) που επαναλαμβανόταν αυτούσιο σε
- * πολλά απλά dialog stores (AdminLayerManagerDialogStore, CommandLine, κ.λπ.). Νέα
+ * πολλά απλά dialog stores (`LayerManagerPaletteStore`, CommandLine, κ.λπ.). Νέα
  * απλά toggle stores → `createToggleStore()` (μία γραμμή), όχι νέο boilerplate.
  *
  * Καλύπτει ΜΟΝΟ stores με κατάσταση `{ isOpen: boolean }`. Stores με payload ή

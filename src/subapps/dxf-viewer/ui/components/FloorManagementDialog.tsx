@@ -14,7 +14,7 @@
  * ανανεώνονται αυτόματα. Το `Building` έρχεται ζωντανά από `useBuildingById`.
  *
  * Uses centralized `@/components/ui/dialog` (Radix Dialog SSoT, ADR-001). Mounts
- * via Suspense host στο DxfViewerDialogs (mirror του AdminLayerManagerDialog).
+ * via Suspense host στο DxfViewerDialogs.
  */
 
 import React, { useSyncExternalStore, useCallback } from 'react';

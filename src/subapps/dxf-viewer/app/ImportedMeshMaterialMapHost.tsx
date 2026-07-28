@@ -19,6 +19,7 @@
 
 import React, { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
+import { compareByLocale } from '@/lib/intl-formatting';
 import type { LevelSceneWriter } from '../systems/levels/level-scene-accessor';
 import { ImportedMeshMaterialMapDialogStore } from '../stores/ImportedMeshMaterialMapDialogStore';
 import { useMaterialLibrary } from '../ui/panels/materials/hooks/useMaterialLibrary';
@@ -83,7 +84,9 @@ function collectSiblings(
       currentMaterialId: currentMaterialId(entity),
     });
   }
-  rows.sort((a, b) => a.nodeName.localeCompare(b.nodeName, 'el'));
+  // Was `localeCompare(…, 'el')` — a hardcoded locale that ignored the language
+  // switcher, so an English session got Greek collation for a list it reads.
+  rows.sort((a, b) => compareByLocale(a.nodeName, b.nodeName));
   return { rows, sourceFileName: anchorParams.sourceFileName };
 }
 

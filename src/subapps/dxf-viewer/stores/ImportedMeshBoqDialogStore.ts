@@ -1,5 +1,5 @@
 // ADR-683 Φ3.1β — ορατότητα του dialog ανάθεσης προμέτρησης (εισαγόμενο πλέγμα).
-// Singleton, zero React. Pattern: AdminLayerManagerDialogStore.
+// Singleton, zero React. Pattern: `createToggleStore` (ο SSoT factory των toggle stores).
 //
 // Κρατά ΚΑΙ το `entityId`: το dialog ανοίγει από ribbon action πάνω στην τρέχουσα επιλογή, και το
 // αντικείμενο της επεξεργασίας πρέπει να μείνει καρφωμένο όσο είναι ανοιχτό. Χωρίς αυτό, μια αλλαγή

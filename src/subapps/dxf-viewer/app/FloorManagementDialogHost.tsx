@@ -6,7 +6,7 @@
  * Ζει στο DxfViewerDialogs ώστε να αντλεί το ενεργό `buildingId` από τα levels του
  * level manager (ίδια πηγή με το `projectId`). Visibility owned by
  * FloorManagementDialogStore (zero React state εδώ). Mirror του
- * AdminLayerManagerDialogHost.
+ * των υπόλοιπων Suspense hosts του `DxfViewerDialogs`.
  */
 
 import React from 'react';

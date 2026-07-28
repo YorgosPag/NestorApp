@@ -34,8 +34,8 @@ import {
 } from '../bim-3d/animation/animation-action-handlers';
 // ADR-366 §B.5.U — unified Performance HUD store (one toggle source for 2D + 3D).
 import { usePerformanceHUDStore } from '../bim-3d/performance/PerformanceHUDStore';
-// ADR-391 — open AdminLayerManager dialog via store SSoT
-import { AdminLayerManagerDialogStore } from '../stores/AdminLayerManagerDialogStore';
+// ADR-723 — άνοιγμα της παλέτας «Διαχειριστής Στρώσεων» μέσω του store SSoT
+import { LayerManagerPaletteStore } from '../stores/LayerManagerPaletteStore';
 import { ImportedMeshBoqDialogStore } from '../stores/ImportedMeshBoqDialogStore';
 import { ImportedMeshMaterialMapDialogStore } from '../stores/ImportedMeshMaterialMapDialogStore';
 import {
@@ -134,9 +134,9 @@ export function dispatchDxfSpecialAction(action: string, deps: DxfSpecialActionD
     if (importedMeshId) ImportedMeshMaterialMapDialogStore.open(importedMeshId);
     return true;
   }
-  // ADR-391: Open AdminLayerManager modal dialog (Revit View > Layer Manager pattern)
+  // ADR-723: άνοιγμα της modeless παλέτας Στρώσεων (AutoCAD `LAYER` / Revit View > Layer Manager)
   if (action === 'open-layer-manager') {
-    AdminLayerManagerDialogStore.open();
+    LayerManagerPaletteStore.open();
     return true;
   }
   // ADR-563: «Αυτόματη Διαστασιολόγηση» — open options dialog, then auto-place
