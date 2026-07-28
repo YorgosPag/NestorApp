@@ -660,6 +660,16 @@ export interface DxfHatch extends DxfEntity {
    */
   backgroundColor?: HatchEntity['backgroundColor'];
   drawOrder?: HatchEntity['drawOrder'];
+  /** ADR-507 Φ2 — AutoCAD LWT πάχος γραμμών μοτίβου (mm)· ο renderer πέφτει σε default χωρίς αυτό. */
+  lineweightMm?: HatchEntity['lineweightMm'];
+  /**
+   * ADR-644 #7d / ADR-647 Φ1 — ο **ΠΡΩΤΟΤΥΠΟΣ** ορισμός μοτίβου του πηγαίου DXF (groups
+   * `78`/`53`/`43-46`/`79`/`49`). Ο `buildHatchEntitySegments` τον προτιμά έναντι του catalog.
+   * Έλειπε από αυτόν τον τύπο ⇒ κάθε εισαγόμενη γραμμοσκίαση αποδιδόταν με το μοτίβο **του
+   * catalog** και όχι του AutoCAD (βήμα 6–63 m αντί 250 mm ⇒ πρακτικά αόρατη).
+   * ⚠️ Τα πεδία εδώ πρέπει να καλύπτουν το `HATCH_RENDER_FIELDS` — ο contract test το επιβάλλει.
+   */
+  inlinePattern?: HatchEntity['inlinePattern'];
 }
 
 /** ADR-359 Phase 11 — XLine wrapper for grip computation pipeline. */

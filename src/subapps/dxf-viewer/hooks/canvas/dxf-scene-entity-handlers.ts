@@ -21,6 +21,8 @@
  */
 
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
+// ADR-507 — HATCH_RENDER_FIELDS passthrough SSoT (anti-drift· βλ. bim/hatch/hatch-render-fields.ts).
+import { pickHatchRenderFields } from '../../bim/hatch/hatch-render-fields';
 // ADR-363 — SSoT sub-entity wrapping (slab/slab-opening/opening/stair/dimension →
 // nested payload field). Shared with the drag-preview wrapper (draw-real-entity-preview).
 import { dxfSubEntityPayload } from '../../canvas-v2/dxf-canvas/dxf-types';
@@ -428,34 +430,14 @@ export const TO_DXF_HANDLERS: Partial<Record<EntityType, ToDxfHandler>> = {
     // αόρατο στον 2D καμβά (το S1 είχε καταχωρήσει μόνο τον HatchRenderer).
     if (!isHatchEntity(entity)) return null;
     const h = entity as HatchEntity;
+    // ADR-507 (anti-drift) — ΕΝΑ SSoT αντί για χειρόγραφη απαρίθμηση. Η προηγούμενη λίστα ήταν
+    // το κάτοπτρο εκείνης του `buildEntityModelFromDxf`: κάθε νέα ιδιότητα έπρεπε να προστεθεί
+    // και στις δύο, και όποια ξεχνιόταν χανόταν σιωπηλά πριν φτάσει στον καμβά (έξι φορές —
+    // τελευταία το `inlinePattern`). Βλ. `bim/hatch/hatch-render-fields.ts`.
     return {
       ...base,
       type: 'hatch' as const,
-      boundaryPaths: h.boundaryPaths,
-      fillType: h.fillType,
-      fillColor: h.fillColor,
-      patternType: h.patternType,
-      patternName: h.patternName,
-      patternScale: h.patternScale,
-      patternAngle: h.patternAngle,
-      patternOrigin: h.patternOrigin,
-      lineAngle: h.lineAngle,
-      lineSpacing: h.lineSpacing,
-      doubleCrossHatch: h.doubleCrossHatch,
-      // ADR-531 Φ5b.6 — raster/screen-space μοτίβο (σταθερή πυκνότητα px, zoom-independent).
-      patternSpace: h.patternSpace,
-      islandStyle: h.islandStyle,
-      // ADR-507 Φ5 — gradient γέμισμα· χωρίς αυτό ο HatchRenderer βλέπει gradient:undefined
-      // και πέφτει σε solid (το gradient δεν φτάνει ποτέ στον καμβά).
-      gradient: h.gradient,
-      // ADR-643 Φ1 — image fill· ίδιο μονοπάτι με gradient (αλλιώς σιωπηλό drop → η
-      // εικόνα δεν φτάνει ποτέ στον HatchRenderer).
-      imageFill: h.imageFill,
-      // ADR-531 Φ5b.6 — background color (AutoCAD DXF 63· ο Τέκτων raster_bgcolor). Χωρίς
-      // αυτόν τον κρίκο το committed hatch έχανε το λευκό φόντο (φαινόταν μόνο σε grip-drag
-      // ghost, που διαβάζει το ζωντανό scene entity). Ίδιο μονοπάτι με fillColor/gradient.
-      backgroundColor: h.backgroundColor,
-      drawOrder: h.drawOrder,
+      ...pickHatchRenderFields(h),
     } as DxfEntityUnion;
   },
   xline: (entity, base) => {

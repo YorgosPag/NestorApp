@@ -2,6 +2,8 @@ import type { DxfEntityUnion, DxfText, DxfOpening } from './dxf-types';
 import type { Entity } from '../../types/entities';
 // ADR-557 — the single TEXT_RENDER_FIELDS passthrough SSoT (anti-drift; see text-render-fields.ts).
 import { pickTextRenderFields } from '../../bim/text/text-render-fields';
+// ADR-507 — ο αδελφός HATCH_RENDER_FIELDS passthrough SSoT (anti-drift· βλ. hatch-render-fields.ts).
+import { pickHatchRenderFields } from '../../bim/hatch/hatch-render-fields';
 // ADR-642 Φ2-B — complex linetype (embedded text) def carried onto the EntityModel so the
 // per-entity render seam (`strokeStyledEntityPolyline`) can draw `──GAS──` along the geometry.
 import type { ComplexLinetypeDef } from '../../config/complex-linetype-types';
@@ -235,38 +237,18 @@ export function buildEntityModelFromDxf(
     case 'ray':
       return { ...base, type: 'ray', basePoint: entity.rayEntity.basePoint, direction: entity.rayEntity.direction } as unknown as Entity;
     case 'hatch':
-      // ADR-507 S2 — direct entity· HatchRenderer reads boundaryPaths + fill/pattern
-      // fields at top level (μέσω isHatchEntity cast).
+      // ADR-507 S2 — direct entity· ο HatchRenderer διαβάζει boundaryPaths + fill/pattern πεδία
+      // στο top level (μέσω isHatchEntity cast).
+      //
+      // ADR-507 (anti-drift) — τα πεδία ΔΕΝ απαριθμούνται πλέον εδώ. Ήταν χειρόγραφη λίστα που
+      // είχε ήδη ρίξει σιωπηλά ΕΞΙ ιδιότητες σε βάθος χρόνου (backgroundColor / patternSpace /
+      // gradient / imageFill / lineweightMm / inlinePattern) — η τελευταία άφηνε κάθε εισαγόμενη
+      // γραμμοσκίαση να αποδίδεται από τον catalog αντί από τον πρωτότυπο ορισμό AutoCAD.
+      // ΕΝΑ SSoT, ίδιο ιδίωμα με το `pickTextRenderFields` (ADR-557).
       return {
         ...base,
         type: 'hatch',
-        boundaryPaths: entity.boundaryPaths,
-        fillType: entity.fillType,
-        fillColor: entity.fillColor,
-        patternType: entity.patternType,
-        patternName: entity.patternName,
-        patternScale: entity.patternScale,
-        patternAngle: entity.patternAngle,
-        patternOrigin: entity.patternOrigin,
-        // ADR-531 Φ5b.6 — background color (AutoCAD DXF 63· ο Τέκτων raster_bgcolor, π.χ. λευκό).
-        // Χωρίς αυτό το passthrough ο HatchRenderer βλέπει backgroundColor:undefined → μόνο γραμμές.
-        backgroundColor: entity.backgroundColor,
-        lineAngle: entity.lineAngle,
-        lineSpacing: entity.lineSpacing,
-        doubleCrossHatch: entity.doubleCrossHatch,
-        // ADR-531 Φ5b.6 — raster/screen-space μοτίβο (σταθερή πυκνότητα px). Χωρίς αυτό το
-        // passthrough ο HatchRenderer βλέπει patternSpace:undefined → πέφτει σε world-space.
-        patternSpace: entity.patternSpace,
-        islandStyle: entity.islandStyle,
-        // ADR-507 Φ5 — gradient γέμισμα (αλλιώς ο HatchRenderer πέφτει σε solid).
-        gradient: entity.gradient,
-        // ADR-643 Φ1 — image fill (αλλιώς ο HatchRenderer βλέπει imageFill:undefined → solid).
-        imageFill: entity.imageFill,
-        // ADR-507 Φ2 — AutoCAD LWT πάχος γραμμών hatch. Το `base` εδώ προωθεί μόνο
-        // `lineweight` (resolved px)· χωρίς αυτό το passthrough ο HatchRenderer βλέπει
-        // lineweightMm:undefined και πέφτει στο DEFAULT_HATCH_LINE_WIDTH_PX.
-        lineweightMm: entity.lineweightMm,
-        drawOrder: entity.drawOrder,
+        ...pickHatchRenderFields(entity),
       } as unknown as Entity;
     default: {
       const exhaustiveCheck: never = entity;

@@ -34,6 +34,7 @@ import type { Point2D } from '../rendering/types/Types';
 import type { EntityData } from './dxf-converter-helpers';
 import { buildHatchSceneEntity, makeInlinePattern } from './dxf-hatch-converter';
 import type { PatternLine } from '../data/hatch-pattern-catalog';
+import { patternDeltaFromWorld } from '../data/hatch-pattern-delta-frame';
 import { radToDeg } from '../rendering/entities/shared/geometry-angle-utils';
 import { hasAnyBulge, expandPolyline } from '../rendering/entities/shared/geometry-bulge-utils';
 
@@ -287,11 +288,16 @@ function parseR14PatternLines(pairs: DxfPairs): PatternLine[] {
     if (!dashOk) break;
 
     // Un-rotate the world-delta into line-local [along-stagger, perpendicular-spacing] (ADR-647 §3.2).
-    const c = Math.cos(angleRad);
-    const s = Math.sin(angleRad);
-    const localDx = deltaWx * c + deltaWy * s;
-    const localDy = -deltaWx * s + deltaWy * c;
-    lines.push({ angle: radToDeg(angleRad), origin: [baseX, baseY], delta: [localDx, localDy], dashes });
+    // ⚠️ Η μαθηματική πράξη ζει πλέον στο `patternDeltaFromWorld` SSoT — ΤΟ ΙΔΙΟ που καλεί ο native
+    // `convertHatch`. Ήταν inline εδώ και ΑΠΟΥΣΙΑΖΕ εκεί: ο ένας importer τιμούσε τη σύμβαση της
+    // `PatternLine`, ο άλλος όχι (N.18 — sibling divergence με μετρημένο κόστος, βλ. το module doc).
+    const angleDeg = radToDeg(angleRad);
+    lines.push({
+      angle: angleDeg,
+      origin: [baseX, baseY],
+      delta: patternDeltaFromWorld([deltaWx, deltaWy], angleDeg),
+      dashes,
+    });
   }
   return lines;
 }

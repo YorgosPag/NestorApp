@@ -20,6 +20,10 @@ import type { HatchEntity } from '../../types/entities';
 import type { Point2D } from '../../rendering/types/Types';
 import { buildHatchEntitySegments } from '../../bim/geometry/shared/hatch-pattern-geometry';
 import { getHatchPattern, resolveEffectiveHatchScale } from '../../data/hatch-pattern-catalog';
+// ADR-507 — PAT (τοπικό) ↔ DXF (world) frame του `PatternLine.delta`. Το ΙΔΙΟ ζεύγος που
+// χρησιμοποιούν οι δύο importers· εδώ η κατεύθυνση εξόδου (local → `45`/`46`).
+import { patternDeltaToWorld } from '../../data/hatch-pattern-delta-frame';
+import { rotateVector } from '../../bim/grips/grip-math';
 import { isSolidHatch, islandStyleToDxf75 } from '../../bim/hatch/hatch-properties';
 import { degToRad } from '../../rendering/entities/shared/geometry-angle-utils';
 import { hexToTrueColor } from '../../utils/dxf-true-color';
@@ -115,15 +119,17 @@ export function emitHatch(
     // × `s` converts it to OUTPUT units so the pattern density matches the (× s) boundary. Without
     // it a mm-scene / m-output export (s=0.001) spaced the lines 1000× too far apart → invisible.
     const spacing = (e.lineSpacing ?? e.patternScale ?? 1) * s;
-    const r = degToRad(angle);
     pair(52, angle);                              // pattern angle
     pair(41, spacing);                            // pattern scale / spacing (output units)
     pair(77, e.doubleCrossHatch ? 1 : 0);         // double flag
     pair(78, 1);                                  // number of pattern definition lines
     pair(53, angle);                              // line angle
     pair(43, 0); pair(44, 0);                     // base point
-    pair(45, -Math.sin(r) * spacing);             // offset x (κάθετο)
-    pair(46, Math.cos(r) * spacing);              // offset y (κάθετο)
+    // Μία οικογένεια χωρίς stagger ⇒ τοπικό delta `[0, spacing]` → world (SSoT· ήταν ήδη σωστό
+    // ως χειρόγραφο `-sin/cos`, αλλά ήταν η ΤΡΙΤΗ αντιγραφή της ίδιας περιστροφής στο αρχείο).
+    const [udx, udy] = patternDeltaToWorld([0, spacing], angle);
+    pair(45, udx);                                // offset x (world)
+    pair(46, udy);                                // offset y (world)
     pair(79, 0);                                  // dash items
   }
   // ADR-644 (#6) — ΟΧΙ `47 0.0` (pixel size). Το pixel-size 0 είναι άκυρο σε non-associative
@@ -155,7 +161,11 @@ function emitPredefinedPattern(e: HatchEntity, pair: Pair, s: number): void {
     for (const pl of inline.lines) {
       pair(53, pl.angle);                         // final line angle (verbatim)
       pair(43, pl.origin[0] * s); pair(44, pl.origin[1] * s); // base point (× s, like boundary)
-      pair(45, pl.delta[0] * s); pair(46, pl.delta[1] * s);   // offset (× s)
+      // Το `delta` είναι σε ΤΟΠΙΚΟ frame (σύμβαση `PatternLine`)· τα `45`/`46` θέλουν WORLD.
+      // Χωρίς αυτή τη στροφή το export έγραφε το τοπικό ωμό — λάθος που ΑΚΥΡΩΝΕ το κατοπτρικό
+      // λάθος του import, οπότε το round-trip έβγαινε «σωστό» ενώ η σκηνή ήταν λάθος.
+      const [wdx, wdy] = patternDeltaToWorld([pl.delta[0] * s, pl.delta[1] * s], pl.angle);
+      pair(45, wdx); pair(46, wdy);               // offset (world, × s)
       pair(79, pl.dashes.length);
       for (const d of pl.dashes) pair(49, d * s); // dash lengths (× s)
     }
@@ -186,16 +196,20 @@ function emitPredefinedPattern(e: HatchEntity, pair: Pair, s: number): void {
   // vs ezdxf: angle 30° rotates the ANSI31 offset from 135°→165°). Our writer previously rotated only
   // the line angle → the perpendicular spacing pointed the wrong way for angled patterns (≠ canvas,
   // which rotates the whole pattern via `buildPatternLineSegments`). 52 stays the metadata angle.
-  const rad = degToRad(angle);
-  const c = Math.cos(rad), sn = Math.sin(rad);
-  const rotX = (x: number, y: number): number => x * c - y * sn;
-  const rotY = (x: number, y: number): number => x * sn + y * c;
   for (const pl of lines) {
     pair(53, pl.angle + angle);                   // line angle (pattern-line angle + overall angle)
-    pair(43, rotX(pl.origin[0] * eff, pl.origin[1] * eff)); // base point X (rotated)
-    pair(44, rotY(pl.origin[0] * eff, pl.origin[1] * eff)); // base point Y (rotated)
-    pair(45, rotX(pl.delta[0] * eff, pl.delta[1] * eff));   // offset (delta) X (rotated)
-    pair(46, rotY(pl.delta[0] * eff, pl.delta[1] * eff));   // offset (delta) Y (rotated)
+    // Reuse του rotation SSoT (→ `rotatePoint`, ADR-188) αντί για τοπική μήτρα cos/sin.
+    const base = rotateVector({ x: pl.origin[0] * eff, y: pl.origin[1] * eff }, angle);
+    pair(43, base.x);                             // base point X (rotated)
+    pair(44, base.y);                             // base point Y (rotated)
+    // ⚠️ Το offset στρέφεται κατά την **ΤΕΛΙΚΗ** γωνία της γραμμής (`pl.angle + angle`), ΟΧΙ μόνο
+    // κατά τη γενική `angle`. Το σχόλιο από πάνω το έλεγε ήδη σωστά («ANSI31 offset 135°→165°» για
+    // angle=30°) αλλά ο κώδικας έστριβε μόνο κατά 30° ⇒ 90°→120°, δηλαδή κάθετη απόσταση
+    // σμικρυμένη κατά `cos(pl.angle)` (√2 για ANSI31). Το `43/44` μένει ως έχει: ο καμβάς
+    // (`buildPredefinedHatchLines`) ΔΕΝ στρέφει το origin — μόνο φάση, ορατή μόνο με dashes.
+    const [wdx, wdy] = patternDeltaToWorld([pl.delta[0] * eff, pl.delta[1] * eff], pl.angle + angle);
+    pair(45, wdx);                                // offset (delta) X (world)
+    pair(46, wdy);                                // offset (delta) Y (world)
     pair(79, pl.dashes.length);                   // number of dash lengths
     for (const d of pl.dashes) pair(49, d * eff); // dash length
   }

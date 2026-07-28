@@ -233,7 +233,12 @@ describe('convertHatch — predefined scale idempotency + inline pattern (ADR-50
     expect(r!.inlinePattern).toBeDefined();
     expect(r!.inlinePattern!.lines).toHaveLength(2);
     const v = r!.inlinePattern!.lines.find((l) => l.angle === 90)!;
-    expect(v.delta).toEqual([0, 6.35]);
+    // ⚠️ `toBeCloseTo`, ΟΧΙ `toEqual`: το delta ταξιδεύει πλέον από ΤΟΠΙΚΟ → world (`45`/`46`, όπως
+    // το γράφει το AutoCAD) → ΤΟΠΙΚΟ. Για γωνία 90° αυτό είναι στροφή ±90° με cos(90°)=6.1e-17 ⇒ το
+    // «κατά μήκος» σκέλος επιστρέφει ως ~4e-16 αντί για ακριβές 0. Το παλιό `toEqual` περνούσε ΜΟΝΟ
+    // επειδή καμία στροφή δεν γινόταν σε καμία από τις δύο κατευθύνσεις (τα δύο λάθη αλληλοαναιρούνταν).
+    expect(v.delta[0]).toBeCloseTo(0, 9);        // κανένα stagger κατά μήκος
+    expect(v.delta[1]).toBeCloseTo(6.35, 9);     // κάθετο βήμα — αυτούσιο
     expect(v.dashes).toEqual([3.175, -3.175]);   // dash = ΜΙΣΟ spacing (acad squares) — verbatim
     const h = r!.inlinePattern!.lines.find((l) => l.angle === 0)!;
     expect(h.origin[1]).toBeCloseTo(3.175);       // phase offset preserved (κλείνει τα τετράγωνα)

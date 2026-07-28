@@ -21,6 +21,7 @@ import {
   type HatchPattern,
   type PatternLine,
 } from '../data/hatch-pattern-catalog';
+import { patternDeltaFromWorld } from '../data/hatch-pattern-delta-frame';
 import { normalizeGradientType, type HatchGradient } from '../bim/hatch/hatch-gradient';
 import { trueColorToHex } from './dxf-true-color';
 import { radToDeg } from '../rendering/entities/shared/geometry-angle-utils';
@@ -136,10 +137,19 @@ export function makeInlinePattern(
 /**
  * Διαβάζει τις inline pattern definition lines ενός HATCH (group `78` = πλήθος, ανά
  * γραμμή `53` γωνία / `43,44` origin / `45,46` delta / `79` πλήθος dash / `49×` dash)
- * → `PatternLine[]`. Οι τιμές μένουν **απόλυτες** (όπως γράφτηκαν, σε world mm) ώστε
- * το round-trip να αναπαράγει 1:1 το μοτίβο για third-party DXF εκτός catalog.
+ * → `PatternLine[]`.
+ *
+ * Οι **γωνίες/μήκη** μένουν απόλυτα (όπως γράφτηκαν: το `53` είναι η τελική γωνία, τα `49`
+ * είναι world μήκη) ώστε το round-trip να αναπαράγει 1:1 το μοτίβο για third-party DXF εκτός
+ * catalog. Το **`delta` όμως ΔΕΝ είναι απόλυτο διάνυσμα για τον πυρήνα**: τα `45`/`46` είναι
+ * world-στραμμένα, ενώ η `PatternLine` ορίζεται σε **τοπικό** frame `[stagger, κάθετο βήμα]`.
+ * Η μετατροπή γίνεται στο **όριο εισαγωγής** μέσω του {@link patternDeltaFromWorld} — ίδιο
+ * SSoT με το R12/R14 μονοπάτι (`dxf-hatch-xdata-converter`), ώστε οι δύο importers να μην
+ * μπορούν να αποκλίνουν (N.18). Χωρίς αυτό ο πυρήνας διάβαζε `|delta[1]|` ως βήμα και έβγαζε
+ * **λάθος πυκνότητα ανάλογη της γωνίας** — έως και μηδέν γραμμές όταν η γωνία πλησίαζε 45°.
  *
  * @see AutoCAD DXF Reference: HATCH pattern data (codes 53/43/44/45/46/79/49)
+ * @see data/hatch-pattern-delta-frame.ts — η απόδειξη της σύμβασης (ezdxf + πραγματικό αρχείο)
  */
 function parseInlinePatternLines(pairs: DxfPairs, idx78: number): PatternLine[] {
   const n = parseInt(pairs[idx78]?.[1] ?? '0', 10) || 0;
@@ -171,7 +181,8 @@ function parseInlinePatternLines(pairs: DxfPairs, idx78: number): PatternLine[] 
       }
       i += 1;
     }
-    lines.push({ angle, origin: [ox, oy], delta: [dx, dy], dashes });
+    // `45`/`46` = world offset ⇒ ξε-στρέψε το στο τοπικό frame που ορίζει η `PatternLine`.
+    lines.push({ angle, origin: [ox, oy], delta: patternDeltaFromWorld([dx, dy], angle), dashes });
   }
   return lines;
 }
