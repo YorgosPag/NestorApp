@@ -2457,6 +2457,40 @@
       ],
       "tier": 3
     },
+    "audit-entity-collection-map": {
+      "ssotFile": "src/config/audit-entity-collection-map.ts",
+      "description": "Audit entity routing SSoT (ADR-195) — ENTITY_COLLECTION_MAP, VALID_ENTITY_TYPES, SUBCOLLECTION_ENTITY_TYPES. The map entityType→Firestore collection used by /api/audit-trail/record for ownership verification. VALID_ENTITY_TYPES is DERIVED from the map's keys, so a type can never be 'valid' without a collection to verify it against — a second, hand-written validity list would re-open the exact desync that silently 400'd every mep-fitting/foundation and (ADR-684) imported-mesh/furniture audit POST: fire-and-forget, so nothing surfaced and the history was simply never written. Add a new auditable entity HERE, in one place. Registered 2026-07-28 (CHECK 3.18 registry gap).",
+      "forbiddenPatterns": [
+        "export\\s+const\\s+(SUBCOLLECTION_ENTITY_TYPES|ENTITY_COLLECTION_MAP|VALID_ENTITY_TYPES)\\b"
+      ],
+      "allowlist": [
+        "src/config/audit-entity-collection-map.ts"
+      ],
+      "tier": 3
+    },
+    "audit-cdc-coverage": {
+      "ssotFile": "src/config/audit-cdc-coverage.ts",
+      "description": "CDC audit coverage SSoT (ADR-195 Phase 3) — CDC_COVERED_ENTITY_TYPES, CDC_EQUIVALENT_ACTIONS, isCdcAuditDuplicate. The single answer to 'is the CDC trigger already writing this audit row, so the shared service-layer engine must stay silent?'. Both directions of a wrong answer are silent and opposite: a stray entry suppresses the service writer with no trigger behind it (history lost forever), a missing one duplicates every contact soft-delete. A second copy of this predicate guarantees the two disagree. Note 'deleted' is deliberately NOT a CDC-equivalent action — the service row carries _snapshot/_cascade_deletions/_storage_cleanup that a document trigger cannot see, so there the two rows are complementary, not duplicate. Registered 2026-07-28 (CHECK 3.18 registry gap).",
+      "forbiddenPatterns": [
+        "export\\s+const\\s+(CDC_COVERED_ENTITY_TYPES|CDC_EQUIVALENT_ACTIONS)\\b",
+        "export\\s+function\\s+isCdcAuditDuplicate\\b"
+      ],
+      "allowlist": [
+        "src/config/audit-cdc-coverage.ts"
+      ],
+      "tier": 3
+    },
+    "admin-firestore-route-guard": {
+      "ssotFile": "src/lib/api/admin-db.ts",
+      "description": "Route-handler access to Admin Firestore (ADR-245) — requireAdminFirestore(). The ONE place that turns a Firebase Admin initialization failure into ApiError 503 DB_UNAVAILABLE. Registered 2026-07-28 after finding `const db = getAdminFirestore(); if (!db) throw new ApiError(503, …)` written at NINE sites across EIGHT routes with THREE different messages — and never executing: getAdminFirestore() returns `Firestore`, not `Firestore | null`, so on failure it THROWS and the real error escaped past the guard as a 500 while the line right next to it promised 503. ⚠️ The forbidden pattern guards only against a SECOND declaration of the helper. It deliberately does NOT forbid the inline `if (!db) throw 503` shape: 28 further sites across 18 files still carry it (measured 2026-07-28, tracked in .claude-rules/pending-ratchet-work.md) and encoding it here today would force a baseline INCREASE — a ratchet that only moves down cannot be opened by adding a rule it already violates. Add the shape here when the count reaches zero.",
+      "forbiddenPatterns": [
+        "export\\s+function\\s+requireAdminFirestore\\b"
+      ],
+      "allowlist": [
+        "src/lib/api/admin-db.ts"
+      ],
+      "tier": 3
+    },
     "building-ids-config": {
       "ssotFile": "src/config/building-ids-config.ts",
       "description": "Building IDs configuration — BUILDING_IDS, BuildingIdUtils. Canonical SSoT for multi-tenant building identifier management sourced from env vars (zero hardcoded values). ADR-314 Phase D.3k.",
@@ -4819,13 +4853,16 @@
     },
     "topo-baked-frame-stamp": {
       "ssotFile": "src/subapps/dxf-viewer/systems/topography/topo-baked-frame-store.ts",
-      "description": "ADR-650 M10g - where the baked-frame stamp lives (per levelId, per baked group) plus the ONE bake seam that writes it (topo-bake-commit.commitBakedTopoEntities). A producer that writes a stamp on its own, or a second reconciler that moves baked topo products, reopens the M10f error class: the fourth producer is born without it.",
+      "description": "ADR-650 M10g + ADR-722 - where the baked-frame stamp lives (per levelId, per baked group), the ONE bake seam that writes it (topo-bake-commit.commitBakedTopoEntities), the ONE scan that answers 'which entities belong to which baked group' (topo-baked-scan) and the ONE re-bake planner (topo-bake-upsert.planBakedUpsert). A producer that writes a stamp on its own, or a second reconciler that moves baked topo products, reopens the M10f error class: the fourth producer is born without it. A second scan is worse than duplication: the red 'unknown frame' notice and the move/don't-touch decision would be free to disagree. A second re-bake path re-opens ADR-722 (stacked duplicates + a stamp that lies about the group it claims to describe).",
       "forbiddenPatterns": [
-        "export\\s+(function|const)\\s+(setBakedFrame|getBakedFrame|restoreBakedFrames|commitBakedTopoEntities|reconcileBakedFramesInScene)\\b"
+        "export\\s+(function|const)\\s+(setBakedFrame|getBakedFrame|restoreBakedFrames|clearAllBakedFrames|commitBakedTopoEntities|reconcileBakedFramesInScene|planBakedUpsert|indexBakedGroups|unstampedBakedGroups|recordBakeInTopoFrameStatus)\\b"
       ],
       "allowlist": [
         "src/subapps/dxf-viewer/systems/topography/topo-baked-frame-store.ts",
+        "src/subapps/dxf-viewer/systems/topography/topo-baked-scan.ts",
+        "src/subapps/dxf-viewer/systems/topography/topo-bake-upsert.ts",
         "src/subapps/dxf-viewer/systems/topography/topo-bake-commit.ts",
+        "src/subapps/dxf-viewer/systems/topography/topo-frame-status-store.ts",
         "src/subapps/dxf-viewer/systems/topography/persistence/topo-frame-reconcile.ts"
       ],
       "tier": 3

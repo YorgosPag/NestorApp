@@ -1,0 +1,442 @@
+# ADR-724 — Ο **Χώρος Εργασίας** του DXF Viewer: αγκύρωση, αλλαγή μεγέθους, αιώρηση της κύριας παλέτας
+
+| Πεδίο | Τιμή |
+|---|---|
+| **Status** | 🔵 **RESEARCHED / NOT IMPLEMENTED** 2026-07-28 — πλήρες SSoT audit + έρευνα κλάδου· καμία γραμμή κώδικα ακόμη |
+| **Date** | 2026-07-28 |
+| **Category** | DXF Viewer — Layout / Workspace· Shared UI primitives (`components/ui/floating`, `components/ui/resizable`) |
+| **Author** | Claude Opus 5 + Γιώργος Παγώνης |
+| **Trigger** | Giorgio: «ΤΟ CONTAINER ΝΑ ΜΕΓΑΛΩΝΕΙ/ΜΙΚΡΑΙΝΕΙ ΔΕΞΙΑ-ΑΡΙΣΤΕΡΑ ΚΑΙ ΝΑ ΑΚΟΛΟΥΘΟΥΝ ΟΙ ΚΑΜΒΑΔΕΣ 2Δ ΚΑΙ 3Δ· ΝΑ ΜΠΟΡΕΙ ΝΑ ΕΙΝΑΙ FLOATING Ή ΝΑ ΑΓΚΥΡΩΝΕΙ ΑΡΙΣΤΕΡΑ Ή ΔΕΞΙΑ» |
+| **Συνεχίζει** | **ADR-723** — που δήλωσε ρητά *«⛔ εκτός σκοπού: docking, keyboard resize»*. Αυτό το ADR είναι ακριβώς αυτό το εκτός-σκοπού |
+| **Companions** | ADR-040 (micro-leaf· ο καμβάς)· ADR-176 (responsive + pointer events)· ADR-241 (fullscreen)· ADR-418 (πραγματική κλίμακα 1:N)· ADR-549 (dpr)· ADR-092 (storage SSoT)· ADR-013 (panel tokens)· ADR-002 (z-index) |
+| **Industry alignment** | Revit *Dockable Windows* · ArchiCAD palettes · Cinema 4D Layout Manager · Figma right panel · VS Code sash · WAI-ARIA `separator` (window splitter) |
+| **Risk** | **High** — αγγίζει τη ρίζα διάταξης του viewer **και** τον κανόνα resize του καμβά (ADR-040 CHECK 6B/6D). Μετριάζεται με φασεολόγηση: Φ1 δίνει το 80% της αξίας αγγίζοντας 3 αρχεία |
+
+---
+
+## 0. Πώς διαβάζεται αυτό το έγγραφο
+
+Είναι **ερευνητικό ADR**: γράφτηκε πριν από τον κώδικα, όπως ορίζει ο κανόνας N.0.1 Φάση 1.
+Τα §1–§4 είναι **μετρημένα ευρήματα** στον σημερινό κώδικα (με αρχείο:γραμμή — επαληθεύσιμα).
+Τα §5–§9 είναι **αποφάσεις** και §10 το σχέδιο υλοποίησης. Όπου δεν είμαι σίγουρος, το λέω ρητά
+αντί να το κρύψω πίσω από βεβαιότητα (§11 «Ανοιχτά ερωτήματα»).
+
+---
+
+## 1. Τι ζητήθηκε
+
+Η κύρια παλέτα του viewer (καρτέλες *Επίπεδα / Ρυθμίσεις DXF / Ιδιότητες / Διαστάσεις / Υλικά /
+BIM 3D / Διατομές Κάσας / Εισαγόμενα*) — σήμερα καρφωμένη αριστερά σε **384px** — πρέπει να αποκτήσει:
+
+1. **Αλλαγή πλάτους** με σύρσιμο, και οι δύο καμβάδες (2D & 3D) να προσαρμόζονται ταυτόχρονα.
+2. **Τρεις τρόπους**: αγκυρωμένη αριστερά (σημερινή θέση), αγκυρωμένη **δεξιά**, ή **αιωρούμενη**
+   πάνω από τους καμβάδες.
+
+---
+
+## 2. SSoT AUDIT — τι **υπάρχει ήδη** (grep, όχι εικασία)
+
+### 2.1 Ώριμη υποδομή που **πρέπει** να χρησιμοποιηθεί
+
+| Υπάρχον SSoT | Αρχείο | Τι λύνει ήδη |
+|---|---|---|
+| **Floating γεωμετρία** (ADR-723) | `src/components/ui/floating/*` | σύρσιμο, **8 λαβές** αλλαγής μεγέθους, κανόνας ορίων, μνήμη ανά χρήστη, διάσωση από «χαμένη εκτός οθόνης» |
+| `useFloatingPanelGeometry` | `…/floating/useFloatingPanelGeometry.ts` | ο **ένας** κάτοχος θέσης+μεγέθους μιας παλέτας· rAF-coalesced `window.resize`· persist στο **τέλος** χειρονομίας |
+| `useResizable` / `useDraggable` | `src/hooks/` | pointer events (ADR-176), pointer capture, 8 ακμές, ελεγχόμενα (controlled) — **αποθήκη = ο καλών** |
+| `floating-panel-persistence` | `…/floating/` | `nestor:floating-panel-geometry:v1:` πάνω από `@/lib/storage` (SSR/quota-safe) |
+| **Split panes** | `src/components/ui/resizable.tsx` | shadcn wrapper του **`react-resizable-panels@4.7.2`** (MIT) — ήδη σε **3** σελίδες |
+| Καμβάς 2D | `hooks/canvas/useCanvasSizeObserver.ts:83`, `useCanvasResize.ts` | `ResizeObserver` + dpr sync (ADR-549) |
+| Καμβάς 3D | `bim-3d/scene/scene-manager-resize.ts:40` | `applyViewportResize()` → aspect + `setSize` + SSAO + ViewCube + `bimEdgeResolutionStore` + invalidate caches |
+| Pointer rect | `rendering/core/pointer-rect-cache.ts:58` | `ResizeObserver` στο ίδιο το canvas ⇒ **αυτο-ακυρώνεται** σε κάθε αλλαγή πλάτους |
+| Z-index | `styles/DxfZIndexSystem.styles.ts:113` | `dxfZIndex.overlays.sidebar` = `sticky + 10` |
+| Responsive | `useResponsiveLayout` + `constants/layout.ts` | `desktop ≥ 1024` / `tablet ≥ 768` / `mobile` |
+
+**Συμπέρασμα Α:** το ~80% υπάρχει. Το ζητούμενο είναι **σύνθεση**, όχι νέος μηχανισμός.
+
+### 2.2 Το **μοναδικό** εμπόδιο σήμερα
+
+`src/subapps/dxf-viewer/layout/SidebarSection.tsx:56-60`
+
+```ts
+WIDTH:     PANEL_LAYOUT.WIDTH.PANEL_LG                       // w-96      = 384px
+MIN_WIDTH: PANEL_LAYOUT.LAYOUT_DIMENSIONS.SIDEBAR_MIN_WIDTH  // min-w-[384px]
+MAX_WIDTH: PANEL_LAYOUT.LAYOUT_DIMENSIONS.SIDEBAR_MAX_WIDTH  // max-w-[384px]
+```
+
+`min = max = 384` + `flex-shrink-0`. **Δεν υπάρχει άλλη σκληρή παραδοχή πλάτους** πουθενά στη
+διάταξη: το `MainContentSection.tsx:124` έχει ήδη `min-w-0 overflow-hidden` και
+`getMainContentSectionStyles()` έχει `flex: 1`. Δηλαδή **η flexbox είναι ήδη σωστή** — το
+`min-w-0` (η κλασική αιτία του «δεν συρρικνώνεται») υπάρχει.
+
+### 2.3 ⚠️ Δύο **νεκρά** συστήματα docking — ΜΗΝ τα αναστήσεις
+
+| Αρχείο | Κατάσταση | Απόδειξη |
+|---|---|---|
+| `layout/CadDock.tsx` | **ΝΕΚΡΟ + ΣΠΑΣΜΕΝΟ** | κάνει `import { DockviewReact } from 'dockview'` — το **`dockview` ΔΕΝ είναι στο `package.json` και ΔΕΝ είναι εγκατεστημένο**. Δεν το εισάγει κανείς. Περνά απαρατήρητο επειδή το subapp εξαιρείται από το root `tsconfig` (ADR-663/ADR-719) |
+| `systems/toolbars/ToolbarsContext.types.ts:33` | **ΝΕΚΡΟ** | έχει `docked: boolean` + `isToolbarDocked()`, αλλά `grep -rn "ToolbarsProvider" src` → **0 αποτελέσματα** |
+
+> **Κανόνας μνήμης**: «feature σε unmounted container = ΝΕΚΡΟ». Και τα δύο είναι *σχόλια που
+> μοιάζουν με αρχιτεκτονική*. Η ύπαρξή τους **δεν** αποτελεί επιχείρημα υπέρ του `dockview`.
+> **Ενέργεια**: το `CadDock.tsx` προτείνεται προς **διαγραφή** (ξεχωριστό commit, εκτός αυτής της
+> εργασίας — το working tree μοιράζεται με άλλον πράκτορα).
+
+---
+
+## 3. Τι κάνουν οι μεγάλοι παίχτες (τεκμηριωμένο)
+
+| Εφαρμογή | Αγκύρωση | Αιώρηση | Πλάτος | Ιδιαιτερότητα |
+|---|---|---|---|---|
+| **Revit** | Project Browser + Properties σε **οποιαδήποτε άκρη**, στοιβαζόμενες ή δίπλα-δίπλα | ναι, ακόμη και **σε δεύτερη οθόνη** | ελεύθερο | **διπλό κλικ στη γραμμή τίτλου = dock/undock**· περίγραμμα-προεπισκόπηση κατά το σύρσιμο |
+| **ArchiCAD** | παλέτες σε dock zones | ναι | ελεύθερο | *Work Environment* profiles = ονομασμένες διατάξεις |
+| **Cinema 4D** | κάθε manager σε οποιαδήποτε άκρη ή ξεχωριστό παράθυρο | ναι | ελεύθερο | ονομασμένα **Layouts** με εναλλαγή |
+| **Figma** | δεξί panel **σταθερό** (canvas-first) | όχι | πρόσφατα resizable | συνειδητή **αντίθετη** επιλογή |
+| **VS Code** | primary/secondary sidebar | όχι | sash | **διπλό κλικ στο sash → «optimal width»** (όπως Sublime/Atom)· **δεν** έχει keyboard resize (ανοιχτό issue) |
+
+**Συμπέρασμα Β:** το «resizable + dockable» **είναι** η πρακτική του κλάδου για CAD/BIM — δεν είναι
+προσωπική προτίμηση. Το «σκέτο floating» **δεν** είναι: είναι επιλογή του χρήστη *πάνω* σε ένα
+dock model. Άρα υλοποιούμε **και τα τρία**, με το docked ως προεπιλογή.
+
+**Συμπέρασμα Γ (πού τους ξεπερνάμε):** το VS Code **δεν** έχει keyboard resize· εμείς το παίρνουμε
+**δωρεάν** (§5.2). Καμία CAD εφαρμογή δεν προσαρμόζει το *περιεχόμενο* της παλέτας στο πλάτος της —
+εμείς μπορούμε (§9.1).
+
+---
+
+## 4. Τι θα σπάσει αν το κάνουμε αφελώς (τα δύσκολα)
+
+Το σύρσιμο είναι η εύκολη μισή ώρα. Αυτά είναι που ξεχωρίζουν το επαγγελματικό εργαλείο:
+
+### 4.1 Ο κανόνας αγκύρωσης του 2D — υπάρχει για το **ύψος**, λείπει για το **πλάτος**
+
+`hooks/canvas/useViewportManager.ts:134-142`:
+
+```ts
+const deltaHeight = height - oldHeight;
+if (oldHeight > 0 && Math.abs(deltaHeight) > 0.5) {
+  const newOffsetY = currentTransform.offsetY + deltaHeight;   // ⇐ αγκύρωση ΚΑΤΩ ακμής
+}
+```
+
+Δηλαδή σε αλλαγή ύψους το σχέδιο μένει κολλημένο στην **κάτω** ακμή — συνεπές με τον χάρακα του
+app (0.000m κάτω-αριστερά). Για το **πλάτος δεν υπάρχει αντίστοιχη γραμμή** — γιατί μέχρι σήμερα το
+πλάτος **δεν άλλαζε ποτέ**. Συνέπεια, ακριβώς:
+
+- **Αγκύρωση ΔΕΞΙΑ**: η αριστερή ακμή του καμβά δεν κουνιέται ⇒ το σχέδιο μένει **απόλυτα ακίνητο**. ✅
+- **Αγκύρωση ΑΡΙΣΤΕΡΑ**: η αριστερή ακμή του καμβά μετακινείται κατά Δ ⇒ **το σχέδιο σέρνεται μαζί
+  με την παλέτα**. Οπτικά λάθος για CAD.
+
+**Απόφαση**: αντιστάθμιση με βάση τη μετατόπιση της **οθονο-χωρικής** αριστερής ακμής του
+container (`offsetX -= Δ(rect.left)`), όχι με βάση το Δ πλάτους. Έτσι και οι δύο πλευρές
+συμπεριφέρονται ίδια, και ο κανόνας παραμένει **ένας**. Αγγίζει `useViewportManager` ⇒
+**ADR-040 CHECK 6B/6D: το ADR-040 πρέπει να μπει staged στο ίδιο commit.**
+
+### 4.2 Η κλίμακα **απαγορεύεται** να αλλάξει
+
+Το app εμφανίζει πραγματική κλίμακα σχεδίου `1:N` (ADR-418, `SidebarZoomLeaf`). Οποιοδήποτε
+zoom-to-fit κατά το resize θα άλλαζε **εμφανιζόμενο αριθμό** χωρίς εντολή χρήστη. Ο κανόνας είναι
+απόλυτος: **resize ⇒ αλλάζει μόνο η ορατή περιοχή, ποτέ το `scale`.**
+
+### 4.3 Καταιγίδα resize κατά το σύρσιμο
+
+Κάθε pixel κίνησης → `ResizeObserver` → (2D) πιθανό full-scene bitmap rebuild + (3D)
+`renderer.setSize` + SSAO resize + `invalidateFrameCaches`. Με **3.107 στοιχεία** αυτό είναι το #1
+ρίσκο αίσθησης. Τρεις στρατηγικές, κατά σειρά προτίμησης:
+
+1. **Live + rAF coalescing** (Figma/C4D): μία ενημέρωση ανά frame. Το `ResizeObserver` *ήδη*
+   παραδίδει μία φορά ανά frame — άρα ίσως αρκεί. **Μέτρησέ το πρώτα** με 3.107 οντότητες.
+2. **Cheap-path κατά τη χειρονομία**: όσο `[data-resize-handle-active]`, ο 2D blit-άρει το
+   υπάρχον bitmap τεντωμένο και κάνει **ένα** full redraw στο `pointerup`.
+3. **Ghost splitter** (γραμμή κατά το σύρσιμο, ένα resize στο τέλος) — σίγουρο αλλά λιγότερο
+   «ζωντανό». Εφεδρεία, όχι πρώτη επιλογή.
+
+⛔ **ΜΗΝ** επιλέξεις (2) ή (3) «προληπτικά». Χωρίς μέτρηση είναι πρόωρη βελτιστοποίηση που
+θυσιάζει την αίσθηση.
+
+### 4.4 ADR-040 — πού **δεν** επιτρέπεται να ζήσει το πλάτος
+
+Το πλάτος αλλάζει ~60 φορές/δευτ. κατά το σύρσιμο. **Απαγορεύεται** να μπει σε store στον οποίο
+συνδρομούν οι orchestrators (`CanvasSection`, `CanvasLayerStack`) — θα ξαναρενδάριζε ~426 fibers ανά
+pixel (τεκμηριωμένο ADR-040 Φ XXII.B). Το πλάτος ζει στο DOM (η βιβλιοθήκη γράφει `flex-grow`) και
+στο store **μόνο** στο τέλος της χειρονομίας.
+
+### 4.5 Το mobile drawer δεν αγγίζεται
+
+`DxfViewerContent.tsx:373` → `layoutMode === 'desktop' ? <SidebarSection/> : <MobileSidebarDrawer/>`.
+Το dock system είναι **desktop-only** (`≥1024px`). Σε tablet/mobile τίποτα δεν αλλάζει.
+
+### 4.6 Fullscreen (ADR-241)
+
+Ο `FullscreenOverlay` τυλίγει **μόνο** το `MainContentSection` — άρα σε fullscreen η παλέτα μένει
+εκτός. Πρέπει να επιβεβαιωθεί ότι το `Group`/`Panel` δεν καταρρέει όταν το ένα του παιδί φεύγει σε
+`position: fixed`. **Δοκίμασέ το ρητά** (§10 Φ1 checklist).
+
+### 4.7 Δομικός περιορισμός της βιβλιοθήκης
+
+> *«Separator elements must be direct DOM children of their parent Group elements.»*
+
+Το σημερινό `<section className="flex flex-1 min-h-0">` (`DxfViewerContent.tsx:368`) γίνεται το
+`Group`. Παιδιά του πρέπει να είναι **ακριβώς**: `Panel`(sidebar) · `Separator` · `Panel`(canvas).
+Το `FullscreenOverlay` + `Suspense` μπαίνουν **μέσα** στο δεύτερο `Panel`.
+
+---
+
+## 5. Η βιβλιοθήκη: `react-resizable-panels@4.7.2` — τι μας δίνει **δωρεάν**
+
+Ήδη εξάρτηση (MIT ✅ κανόνας N.5 δεν ενεργοποιείται), ήδη σε 3 σελίδες μέσω
+`src/components/ui/resizable.tsx`.
+
+### 5.1 ⚠️ API v4 ≠ API v2 — μην αντιγράψεις παλιά docs
+
+| v2 (παλιά docs, παντού στο διαδίκτυο) | **v4.7.2 (αυτό που έχουμε)** |
+|---|---|
+| `PanelGroup` / `PanelResizeHandle` | **`Group`** / **`Separator`** |
+| `direction="horizontal"` | **`orientation="horizontal"`** |
+| ποσοστά μόνο | **αριθμός = pixels**, string χωρίς μονάδα = ποσοστό |
+
+### 5.2 Οι ιδιότητες που κάνουν τη διαφορά
+
+| Ιδιότητα | Γιατί την **χρειαζόμαστε** |
+|---|---|
+| `minSize={280}` / `maxSize={720}` (px) | CAD θέλει **pixel** όρια, όχι ποσοστά |
+| `groupResizeBehavior="preserve-pixel-size"` | μεγαλώνει το παράθυρο ⇒ **ο καμβάς** παίρνει τον χώρο, η παλέτα κρατά τα px της. Ακριβώς Revit/VS Code |
+| `collapsible` + `collapsedSize` | σύμπτυξη σε λωρίδα με ένα σύρσιμο (VS Code) |
+| `Separator` | `role="separator"` + `aria-valuenow/min/max` + **πληκτρολόγιο** (`ArrowLeft/Right`, `Home`, `End`) — επαληθευμένο στο bundle. **Ξεπερνά το VS Code**, που δεν έχει keyboard resize |
+| `onLayoutChanged` | καλείται **μετά** την απελευθέρωση του δείκτη ⇒ **μία** εγγραφή ανά χειρονομία. Ίδιο δόγμα με το `onResizeEnd` του ADR-723 |
+| `Panel.onResize(size)` | δίνει **και px και %** ⇒ αποθηκεύουμε px |
+
+### 5.3 ⛔ ΜΗΝ χρησιμοποιήσεις `useDefaultLayout`
+
+Η βιβλιοθήκη προσφέρει `useDefaultLayout({ storage })` για persistence. **Το απορρίπτουμε**: θα
+γινόταν **δεύτερος ιδιοκτήτης** του πλάτους, δίπλα στο δικό μας store — δηλαδή δύο αλήθειες τη
+στιγμή της επαναφοράς. Ακριβώς το σχήμα που παράγει «η παλέτα πήδηξε πίσω» (το ίδιο λάθος που
+απέφυγε ρητά το ADR-723 §useFloatingPanelGeometry). **Ένας** κάτοχος: το δικό μας store, μέσω
+`defaultSize` (ανάγνωση) + `onResize`/`onLayoutChanged` (εγγραφή).
+
+Επιπλέον, το `Layout` της βιβλιοθήκης είναι `{ [panelId]: number }` σε **ποσοστά** — μια
+αποθηκευμένη διάταξη 25% δίνει άλλο πλάτος σε άλλη οθόνη. Τα CAD θυμούνται **px**.
+
+---
+
+## 6. Η αρχιτεκτονική
+
+### 6.1 Δύο μηχανισμοί, **ένα** SSoT κατάστασης
+
+Αγκυρωμένο και αιωρούμενο είναι **γεωμετρικά διαφορετικά προβλήματα** (μέσα στη ροή vs
+`position: fixed`). Ένα ενιαίο engine θα ήταν χειρότερο και από τα δύο. Άρα:
+
+```
+                    ┌──────────────────────────────────────┐
+                    │   workspace-dock-store  (ΤΟ SSoT)    │
+                    │   { mode, dockedWidth }              │
+                    └───────────┬──────────────┬───────────┘
+                     mode=docked│              │mode=floating
+                                ▼              ▼
+              react-resizable-panels    ADR-723 FloatingPanel
+              Group/Panel/Separator     useFloatingPanelGeometry
+              (px, a11y, keyboard)      (drag, 8 λαβές, clamp)
+              ↑ πλάτος                  ↑ {x,y,w,h}
+              persist: το store μας     persist: ADR-723 v1 key
+```
+
+**Γιατί δύο κλειδιά persistence και όχι ένα**: τα πεδία **δεν επικαλύπτονται**. Το store μας κατέχει
+«σε ποια λειτουργία είμαι + πόσο πλατιά είμαι όταν είμαι αγκυρωμένη». Το ADR-723 κατέχει «πού και
+πόσο μεγάλη είμαι όταν αιωρούμαι» — και το κάνει ήδη σωστά (clamp σε κάθε ανάγνωση, διάσωση από
+χαμένη-εκτός-οθόνης). Δεύτερη υλοποίηση του ίδιου clamp θα ήταν **διπλότυπο** (N.18/jscpd).
+
+### 6.2 Νέα αρχεία
+
+| Αρχείο | Ρόλος | Όριο |
+|---|---|---|
+| `systems/workspace/workspace-dock-geometry.ts` | **Καθαρές συναρτήσεις**, μηδέν React/DOM: `clampDockWidth`, `dockToFloatGeometry`, `floatToDockWidth`, `resolveDropTarget`. Πλήρως ελέγξιμο με jest χωρίς jsdom (καθρέφτης του `floating-panel-geometry.ts`) | ~150 |
+| `systems/workspace/workspace-dock-store.ts` | Imperative store (zero React state) + persistence πάνω από `@/lib/storage`· `subscribe`/`getSnapshot` για **leaf** χρήση | ~120 |
+| `systems/workspace/useWorkspaceDock.ts` | Το leaf hook (`useSyncExternalStore`) — **ΜΟΝΟ** σε components που επιτρέπεται να ξαναρενδάρουν | ~40 |
+| `layout/WorkspaceSplitLayout.tsx` | Ο **μοναδικός** τόπος στο subapp που γνωρίζει `react-resizable-panels`. Σειρά παιδιών ανά `mode` | ~150 |
+| `layout/WorkspaceDockMenu.tsx` | «Αγκύρωση αριστερά / δεξιά / Αιωρούμενο / Επαναφορά» | ~90 |
+
+### 6.3 Τροποποιούμενα
+
+| Αρχείο | Αλλαγή | Προσοχή |
+|---|---|---|
+| `layout/SidebarSection.tsx` | αφαίρεση `MIN/MAX_WIDTH`· `variant: 'inline' \| 'drawer' \| 'floating'` | το `w-96` γίνεται προεπιλογή του Panel, όχι κλείδωμα |
+| `app/DxfViewerContent.tsx:368-399` | το `<section>` → `WorkspaceSplitLayout` | §4.7 direct-child |
+| `hooks/canvas/useViewportManager.ts` | αντιστάθμιση `offsetX` (§4.1) | **ADR-040 staged** (CHECK 6B) |
+| `config/panel-tokens.ts` | νέα `WORKSPACE_DOCK` όρια | τα `SIDEBAR_MIN/MAX_WIDTH` **μένουν** (τα χρησιμοποιεί το drawer) |
+| `i18n/locales/{el,en}/dxf-viewer-shell.json` | `workspaceDock.*` | **πρώτα τα κλειδιά, μετά ο κώδικας** (N.11) |
+
+### 6.4 Οι τιμές
+
+| Σταθερά | Τιμή | Αιτιολόγηση |
+|---|---|---|
+| `DOCK_WIDTH_DEFAULT` | **384** | το σημερινό ⇒ **μηδενική οπτική αλλαγή** στην πρώτη φόρτωση |
+| `DOCK_WIDTH_MIN` | **280** | ίδιο με `DEFAULT_MIN_PANEL_SIZE.width` του ADR-723 — **μία** έννοια «στενότερο λειτουργικό πλάτος» σε όλη την εφαρμογή |
+| `DOCK_WIDTH_MAX` | **720** | πάνω από αυτό ο καμβάς παύει να είναι ο πρωταγωνιστής |
+| `CANVAS_MIN_WIDTH` | **320** | ο καμβάς **ποτέ** κάτω από αυτό· υπερισχύει του `DOCK_WIDTH_MAX` σε στενές οθόνες |
+
+---
+
+## 7. Ο κανόνας μετάβασης (το κομμάτι που ξεχνιέται)
+
+Ζει **αποκλειστικά** στο `workspace-dock-geometry.ts`, ως καθαρές συναρτήσεις:
+
+| Μετάβαση | Κανόνας |
+|---|---|
+| **docked → floating** | Αν υπάρχει αποθηκευμένη floating γεωμετρία (ADR-723) ⇒ **αυτή νικά** (επιστρέφει εκεί που την άφησες — συμπεριφορά Revit). Αλλιώς: `{x,y,w,h}` = το **τρέχον** rect της αγκυρωμένης παλέτας, ελαφρώς μετατοπισμένο ⇒ η μετάβαση φαίνεται **φυσική**, όχι τηλεμεταφορά |
+| **floating → docked** | `dockedWidth = clampDockWidth(floatingWidth)`· η πλευρά προκύπτει από το **πού αφέθηκε** (§7.1) |
+| **αλλαγή πλευράς** | το `dockedWidth` **δεν** αλλάζει |
+| **επαναφορά** | `clearPanelGeometry()` (ADR-723) + `DOCK_WIDTH_DEFAULT` + `docked-left` = «Reset palette locations» του AutoCAD |
+
+### 7.1 Πού «πέφτει» η παλέτα (κανόνας Revit)
+
+Κατά το σύρσιμο μιας **αιωρούμενης** παλέτας, αν ο δείκτης μπει σε ζώνη **64px** από την αριστερή ή
+δεξιά ακμή του χώρου εργασίας ⇒ εμφανίζεται **περίγραμμα-προεπισκόπηση** της αγκύρωσης· στο
+`pointerup` αγκυρώνει. Αλλιώς μένει αιωρούμενη. Καθαρή συνάρτηση: `resolveDropTarget(pointerX, rect)`.
+
+---
+
+## 8. Χειρονομίες & προσβασιμότητα
+
+| Χειρονομία | Αποτέλεσμα | Πηγή |
+|---|---|---|
+| Σύρσιμο διαχωριστικού | αλλαγή πλάτους, live | κλάδος |
+| **Διπλό κλικ διαχωριστικού** | επαναφορά στο `DOCK_WIDTH_DEFAULT` | VS Code / Sublime / Atom |
+| **Διπλό κλικ επικεφαλίδας** | dock ⇄ float | **Revit** |
+| `ArrowLeft/Right`, `Home`, `End` στο διαχωριστικό | αλλαγή πλάτους από πληκτρολόγιο | **δωρεάν από τη βιβλιοθήκη· το VS Code ΔΕΝ το έχει** |
+| Δεξί κλικ επικεφαλίδας | μενού: αριστερά / δεξιά / αιωρούμενο / επαναφορά | Revit / C4D |
+
+⚠️ Το πληκτρολόγιο **δεν** πρέπει να συγκρουστεί με τον Escape bus / `keyboard-scope` (ADR-364 /
+ADR-711): το διαχωριστικό είναι εστιάσιμο στοιχείο — τα βελάκια το αφορούν **μόνο όσο έχει εστίαση**.
+
+---
+
+## 9. Πάνω από τον κλάδο (τι **δεν** κάνει κανείς τους)
+
+### 9.1 Container queries στο περιεχόμενο της παλέτας — **η πραγματικά προηγμένη ιδέα**
+
+Σε Revit/ArchiCAD/C4D, όταν στενεύεις μια παλέτα το περιεχόμενο απλώς **κόβεται ή κυλά**. Με
+`container-type: inline-size` στο `<aside>` και `@container` κανόνες, το περιεχόμενο **προσαρμόζεται
+στο δικό του πλάτος** (όχι του viewport):
+
+- `< 320px` → οι καρτέλες γίνονται **μόνο εικονίδια**
+- `320–520px` → η σημερινή μονόστηλη μορφή
+- `> 520px` → οι λίστες ιδιοτήτων σε **δύο στήλες**
+
+Αυτό είναι το αναγνωρισμένο killer use case των container queries και έχει **καθολική** υποστήριξη
+browser από το 2026. ⚠️ Tailwind **v3.4** εδώ ⇒ δεν υπάρχει built-in `@container`. **Πρώτη επιλογή:
+σκέτο CSS** στο υπάρχον stylesheet του subapp — **μηδέν νέα εξάρτηση** (ο N.5 δεν ενεργοποιείται).
+Το `@tailwindcss/container-queries` (MIT) είναι εφεδρεία, όχι προτίμηση.
+
+### 9.2 View Transitions για τη μετάβαση dock ⇄ float
+
+`document.startViewTransition()` με κοινό `view-transition-name` ⇒ η παλέτα **μεταμορφώνεται**
+αντί να εξαφανίζεται και να εμφανίζεται αλλού. Καμία CAD εφαρμογή δεν το κάνει (είναι native
+δυνατότητα browser). Progressive enhancement: όπου δεν υποστηρίζεται, απλή εναλλαγή.
+⚠️ **Υποχρεωτικός** φύλακας `prefers-reduced-motion` — υπάρχει ήδη πρότυπο στο
+`bim-3d/accessibility/use-reduced-motion.ts` (αν χρειαστεί σε κοινό επίπεδο, **μετακόμισε** το, μην
+το αντιγράψεις — N.18).
+
+### 9.3 Διπλό κλικ = «βέλτιστο πλάτος»
+
+Το VS Code κάνει reset· Sublime/Atom υπολογίζουν το **ελάχιστο πλάτος που χωρά όλο το περιεχόμενο**
+(`scrollWidth` του περιεχομένου, clamped). Το δεύτερο είναι σαφώς καλύτερο και μετρήσιμο.
+
+**Ιεράρχηση:** το §9 είναι **Φάση 4**. Δεν μπαίνει τίποτα από αυτά πριν δουλέψουν σωστά τα §5–§7.
+
+---
+
+## 10. Σχέδιο υλοποίησης (φάσεις — κάθε μία αποστέλλεται μόνη της)
+
+### Φ0 — Θεμέλια (καμία οπτική αλλαγή)
+1. i18n κλειδιά `workspaceDock.*` σε **el + en** (N.11: πρώτα τα κλειδιά).
+2. `workspace-dock-geometry.ts` + jest suite (καθαρές συναρτήσεις, χωρίς jsdom).
+3. `workspace-dock-store.ts` + persistence + jest.
+4. Σταθερές στο `panel-tokens.ts`.
+> **Έξοδος**: πράσινα tests, μηδέν αλλαγή στο UI.
+
+### Φ1 — Αγκυρωμένη αριστερά, **με αλλαγή πλάτους** ← *το 80% της αξίας*
+1. `WorkspaceSplitLayout.tsx` (Group / Panel / Separator, px όρια, `preserve-pixel-size`).
+2. Ξεκλείδωμα `SidebarSection` (αφαίρεση `MIN/MAX`).
+3. Σύνδεση στο `DxfViewerContent` (§4.7 direct-child).
+4. Αντιστάθμιση `offsetX` στο `useViewportManager` (§4.1) — **ADR-040 staged**.
+5. **Μέτρηση** FPS κατά το σύρσιμο με `47_ergasia.dxf` (3.107 στοιχεία) ⇒ απόφαση §4.3.
+6. Έλεγχος: fullscreen (§4.6), mobile drawer (§4.5), 3D viewport, χάρακες, crosshair, hit-test.
+> **Έξοδος**: ο Giorgio σέρνει το διαχωριστικό και οι δύο καμβάδες ακολουθούν.
+
+### Φ2 — Αγκύρωση δεξιά
+Αντιστροφή σειράς παιδιών + μενού + persistence. Μικρή, χαμηλού ρίσκου.
+
+### Φ3 — Αιωρούμενη
+`FloatingPanel` (ADR-723) με `resizable` + `persistenceKey="dxf.workspace-sidebar"` + κανόνες
+μετάβασης §7 + drop zones §7.1 + z-index `dxfZIndex.overlays.sidebar`.
+
+### Φ4 — Πάνω από τον κλάδο
+§9.1 container queries → §9.3 βέλτιστο πλάτος → §9.2 view transitions.
+
+---
+
+## 11. Ανοιχτά ερωτήματα (ειλικρινώς: δεν τα ξέρω ακόμη)
+
+1. **Απόδοση §4.3** — δεν έχω μετρήσει FPS κατά το σύρσιμο με 3.107 οντότητες. Η επιλογή
+   στρατηγικής γίνεται **μετά** τη μέτρηση στη Φ1, όχι τώρα.
+2. **Fullscreen × Group** (§4.6) — δεν έχω επαληθεύσει τη συμπεριφορά του `Group` όταν ένα `Panel`
+   φεύγει σε `position: fixed`. Απαιτεί ζωντανή δοκιμή.
+3. **Πλάτος ανά λειτουργία;** Ο χρήστης ίσως θέλει διαφορετικό πλάτος ανά καρτέλα (Επίπεδα στενή,
+   Ιδιότητες πλατιά). Το Revit **δεν** το κάνει. Προτείνω **όχι** — αλλά είναι απόφαση του Giorgio.
+4. **Ανά χρήστη ή ανά έργο;** Το ADR-723 απάντησε **ανά χρήστη** (localStorage) με τεκμηρίωση
+   (Revit/AutoCAD/Photoshop αποθηκεύουν διάταξη στο προφίλ, ποτέ στο αρχείο). Το ίδιο εδώ, εκτός αν
+   ο Giorgio θέλει «Work Environment profiles» τύπου ArchiCAD (μελλοντικό ADR).
+5. **Σχόλιο τεκμηρίωσης προς έλεγχο**: το `floating-panel-geometry.ts:59` αποδίδει το «Minimum
+   Visible Header» στο **ADR-030**, αλλά το `ADR-030-unified-frame-scheduler.md` αφορά άλλο θέμα.
+   Πιθανό λάθος παραπομπής του ADR-723 — να επαληθευτεί και να διορθωθεί (χαμηλή προτεραιότητα).
+
+---
+
+## 12. Πύλες (gates) που πρέπει να περάσουν
+
+| Πύλη | Τι απαιτεί |
+|---|---|
+| **ADR-040 CHECK 6B/6D** | αγγίζοντας `useViewportManager` / canvas ⇒ **υποχρεωτικά staged το ADR-040** αλλιώς μπλοκάρει το commit |
+| **N.11 / CHECK 3.8** | κάθε νέο `t('…')` έχει κλειδί σε **el + en** πριν τον κώδικα |
+| **N.7.1** | κανένα αρχείο >500 γρ., καμία συνάρτηση >40 γρ. |
+| **N.3** | καμία inline style — **εξαίρεση** η δυναμική γεωμετρία (προηγούμενο ADR-723) |
+| **N.18 / CHECK 3.28** | `npm run jscpd:diff <staged>` πριν πεις «τελείωσα». Ο κίνδυνος εδώ είναι **αντιγραφή του clamp** του ADR-723 |
+| **N.17** | ❌ **κανένα `tsc`** από τον πράκτορα |
+| **N.(-1)** | ❌ **κανένα commit/push** χωρίς εντολή Giorgio |
+| **N.2 / N.5** | μηδέν `any`· καμία νέα εξάρτηση (η μόνη υποψήφια, `@tailwindcss/container-queries`, είναι MIT αλλά **αποφεύγεται**) |
+
+---
+
+## 13. Απόφαση
+
+**Υιοθετούμε το μοντέλο τριών λειτουργιών** (`docked-left` / `docked-right` / `floating`) με
+**δύο μηχανισμούς και ένα SSoT κατάστασης**:
+
+- **αγκυρωμένη** → `react-resizable-panels@4.7.2` (υπάρχουσα MIT εξάρτηση· px όρια· WAI-ARIA
+  splitter με πληκτρολόγιο· `preserve-pixel-size`),
+- **αιωρούμενη** → `FloatingPanel` / `useFloatingPanelGeometry` (ADR-723, αναλλοίωτο),
+- **κατάσταση** → `workspace-dock-store` (ένας κάτοχος· `useDefaultLayout` απορρίπτεται ρητά).
+
+Οι καμβάδες **δεν χρειάζονται νέα υποδομή** — ο `ResizeObserver` τους είναι ήδη σωστός. Χρειάζονται
+**έναν** νέο κανόνα: αντιστάθμιση `offsetX` (§4.1), ώστε η αριστερή αγκύρωση να είναι οπτικά τόσο
+σταθερή όσο η δεξιά.
+
+---
+
+## 14. Changelog
+
+| Ημ/νία | Αλλαγή |
+|---|---|
+| 2026-07-28 | **Δημιουργία** — SSoT audit (grep) + έρευνα κλάδου. Κατάσταση: **RESEARCHED, NOT IMPLEMENTED**. Ευρήματα: (α) το μόνο εμπόδιο είναι `min=max=384` στο `SidebarSection.tsx:56-60`· (β) και οι δύο καμβάδες ακολουθούν **ήδη** αυτόματα· (γ) δύο **νεκρά** συστήματα docking (`CadDock`+ακατάστατο `dockview`, `ToolbarsContext`) — να μην αναστηθούν· (δ) το `react-resizable-panels` v4 δίνει px όρια + keyboard splitter δωρεάν· (ε) ο κανόνας αγκύρωσης του 2D υπάρχει για το **ύψος** και λείπει για το **πλάτος** |
+
+---
+
+## 15. Πηγές
+
+- [Revit — Dockable Windows (Autodesk Help)](https://help.autodesk.com/cloudhelp/2023/ENU/Revit-GetStarted/files/GUID-2FCA3097-36CC-4EED-B6BB-BAF431EC9475.htm)
+- [Revit — Video: Dockable Windows](https://help.autodesk.com/view/RVT/2024/ENU/?guid=GUID-DAEAAE9B-EEC0-4948-9E42-C573B6DFDE18)
+- [VS Code — Custom Layout](https://code.visualstudio.com/docs/configure/custom-layout)
+- [VS Code issue #4660 — double-click border to optimal width](https://github.com/Microsoft/vscode/issues/4660)
+- [VS Code issue #300121 — keyboard shortcut to resize secondary sidebar](https://github.com/microsoft/vscode/issues/300121)
+- [react-resizable-panels (MIT)](https://github.com/bvaughn/react-resizable-panels)
+- [MDN — CSS container queries](https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Containment/Container_queries)
+- [Container queries in 2026: powerful, but not a silver bullet — LogRocket](https://blog.logrocket.com/container-queries-2026/)
+- [MDN — View Transition API](https://developer.mozilla.org/en-US/docs/Web/API/View_Transition_API)
