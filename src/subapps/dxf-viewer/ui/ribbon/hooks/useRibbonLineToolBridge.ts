@@ -47,10 +47,8 @@ import {
 import { buildLineStyleRibbonOptions } from '../data/line-style-ribbon-options';
 import { LINE_STYLE_BYLAYER_LWT } from '../../../systems/line-styles/line-style-types';
 // ADR-510 Φ4 — per-object layer list (AutoCAD «General» → Layer) from the SSoT store.
-import {
-  getLayerStoreSnapshot,
-  subscribeLayerStore,
-} from '../../../stores/LayerStore';
+// ADR-721 §5 — ΕΝΑ leaf πάνω στο LayerStore, όχι χειρόγραφο useSyncExternalStore ανά καταναλωτή.
+import { useLayerStoreSnapshot } from '../../../stores/useLayerStore';
 import { useCurrentLayerChange } from '../../components/layer-picker/useCurrentLayerChange';
 import type { LineweightMm, AnySceneEntity } from '../../../types/entities';
 // ADR-510 Φ4b — το «Χρώμα» πεδίο χρησιμοποιεί τον κεντρικό dxf-color picker (HEX in/out,
@@ -61,7 +59,8 @@ import { useLevelLayersById } from '../../../hooks/tools/useLevelLayersById';
 import { findClosestAci } from '../../../settings/standards/aci';
 import { hexToTrueColor } from '../../../utils/dxf-true-color';
 import { LINEWEIGHT_SPECIAL } from '../../../config/lineweight-iso-catalog';
-import { isStyleEditablePrimitiveType } from '../../../types/style-editable-primitives';
+import { isStyleEditablePrimitive } from '../../../types/style-editable-primitives';
+import { useResolveSelectedEntity } from './ribbon-entity-bridge-shared';
 // ADR-510 Φ4 — pure line geometry read/edit helpers (reuse geometry-vector-utils SSoT).
 import {
   lineLength,
@@ -143,9 +142,7 @@ export function useRibbonLineToolBridge(
     subscribeLinetypeRegistry, getLinetypeRegistrySnapshot, getLinetypeRegistrySnapshot,
   );
   // ADR-510 Φ4 — live layer catalog for the «Επίπεδο» dropdown (low-frequency).
-  const layerSnapshot = useSyncExternalStore(
-    subscribeLayerStore, getLayerStoreSnapshot, getLayerStoreSnapshot,
-  );
+  const layerSnapshot = useLayerStoreSnapshot();
   // ADR-358/510 Φ4 — the «Επίπεδο» default (no-selection) change routes through
   // the shared current-layer SSoT action (permission gate + toast + recent FIFO),
   // the SAME path as the CurrentLayerPicker popover (Revit-grade parity).
@@ -184,15 +181,13 @@ export function useRibbonLineToolBridge(
     toolStateStore.subscribe, () => toolStateStore.get().activeTool,
   );
 
+  // N.18 — ίδιο SSoT με τους ~10 αδελφούς γεφυρωτές· ήταν ξαναγραμμένο στο χέρι
+  // (κλώνος με το dim bridge) μαζί με ένα `as AnySceneEntity` που δεν στένευε
+  // τίποτα — `AnySceneEntity` ΕΙΝΑΙ το `Entity`.
   /** The selected style-editable primitive, or null (→ draw-defaults mode). */
-  const resolveSelected = useCallback((): AnySceneEntity | null => {
-    const id = universalSelection.getPrimaryId();
-    if (!id || !levelManager.currentLevelId) return null;
-    const scene = levelManager.getLevelScene(levelManager.currentLevelId);
-    const e = scene?.entities.find((x) => x.id === id);
-    if (!e || !isStyleEditablePrimitiveType(e.type)) return null;
-    return e as AnySceneEntity;
-  }, [levelManager, universalSelection]);
+  const resolveSelected = useResolveSelectedEntity(
+    levelManager, universalSelection, isStyleEditablePrimitive,
+  );
 
   const patchEntity = useCallback(
     (entity: AnySceneEntity, patch: Record<string, unknown>): void => {

@@ -34,3 +34,17 @@ export const STYLE_EDITABLE_PRIMITIVE_TYPES: ReadonlySet<EntityType> = new Set<E
 export function isStyleEditablePrimitiveType(type: string): boolean {
   return STYLE_EDITABLE_PRIMITIVE_TYPES.has(type as EntityType);
 }
+
+/**
+ * Η ίδια ερώτηση με φύλακα τύπου, για καταναλωτές που κρατούν **οντότητα** αντί
+ * για σκέτο `type` — π.χ. το SSoT `useResolveSelectedEntity`, που δέχεται
+ * `(entity) => entity is T`.
+ *
+ * Είναι generic πάνω στο δομικό σχήμα (`{ type: string }`) ώστε να μη σύρει εδώ
+ * την εξάρτηση από το `types/entities`: το σύνολο των τύπων ορίζεται σε αυτό το
+ * αρχείο, και ένα αρχείο ορισμού συνόλου δεν χρειάζεται να ξέρει την πλήρη ένωση
+ * οντοτήτων για να απαντήσει «ανήκει;».
+ */
+export function isStyleEditablePrimitive<T extends { type: string }>(entity: T): entity is T {
+  return isStyleEditablePrimitiveType(entity.type);
+}

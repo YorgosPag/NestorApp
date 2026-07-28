@@ -19,6 +19,7 @@ import type {
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateEntityCommand } from '../../../core/commands/entity-commands/UpdateEntityCommand';
 import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
+import { findGuardedEntity } from '../../../systems/selection/resolve-selected-entity';
 import { mmToSceneUnits, resolveSceneUnits } from '../../../utils/scene-units';
 
 /**
@@ -76,13 +77,15 @@ export function useResolveSelectedEntity<T extends Entity>(
   guard: (entity: Entity) => entity is T,
 ): () => T | null {
   return useCallback((): T | null => {
-    const id = universalSelection.getPrimaryId();
-    if (!id || !levelManager.currentLevelId) return null;
-    const scene = levelManager.getLevelScene(levelManager.currentLevelId);
-    if (!scene) return null;
-    const entity = scene.entities.find((x) => x.id === id);
-    if (!entity || !guard(entity)) return null;
-    return entity;
+    if (!levelManager.currentLevelId) return null;
+    // Το «βρες το id στη σκηνή + πέρασέ το από φύλακα» ζει στο pure SSoT
+    // (systems/selection/resolve-selected-entity) — εδώ μένει μόνο το κομμάτι
+    // που είναι όντως ribbon: ΠΟΙΑ σκηνή και ΠΟΙΟ id.
+    return findGuardedEntity(
+      levelManager.getLevelScene(levelManager.currentLevelId),
+      universalSelection.getPrimaryId(),
+      guard,
+    );
   }, [levelManager, universalSelection, guard]);
 }
 

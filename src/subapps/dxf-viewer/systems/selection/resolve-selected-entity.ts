@@ -40,3 +40,32 @@ export function resolveSelectedEntityFrom(
   if (inScene) return inScene;
   return crossLevelEntities.find((e) => e.id === primarySelectedId) ?? null;
 }
+
+/**
+ * «Δώσε μου την οντότητα με αυτό το id **μέσα σε αυτή τη σκηνή**, αν περνά αυτόν
+ * τον φύλακα τύπου» — αλλιώς `null`.
+ *
+ * ⚠️ Το ίδιο ερώτημα ήταν γραμμένο **τέσσερις** φορές (μετρημένο 2026-07-28 από
+ * `jscpd:diff`, δύο ζεύγη κλώνων): στις δύο παλέτες ιδιοτήτων και στους δύο
+ * γεφυρωτές του ribbon. Και στα τέσσερα, το μόνο που άλλαζε ήταν ο **τελικός
+ * φύλακας** (`'line'` / `isDimensionEntity` / `isStyleEditablePrimitiveType`) —
+ * δηλαδή ζητούσε παράμετρο, όχι αντίγραφο.
+ *
+ * Ο φύλακας είναι παράμετρος **και** στενεύει τον τύπο επιστροφής: γι' αυτό οι
+ * καλούντες δεν χρειάζονται πια `as DxfLine` μετά τον έλεγχο. Ένα cast μετά από
+ * χειροκίνητο `if (type !== 'line')` είναι διπλή δουλειά όπου η δεύτερη φορά
+ * είναι ανέλεγκτη — αν αλλάξει ο έλεγχος, το cast δεν το μαθαίνει ποτέ.
+ *
+ * Καθαρή συνάρτηση: καμία εξάρτηση από React/store. Ο δρόμος «ποια είναι η
+ * ενεργή σκηνή» ανήκει στον καλούντα, επειδή ακριβώς εκεί διαφέρουν οι τέσσερις
+ * (prop `dxfScene` vs `levelManager.getLevelScene(currentLevelId)`).
+ */
+export function findGuardedEntity<TEntity extends { id: string }, TNarrow extends TEntity>(
+  scene: { readonly entities: readonly TEntity[] } | null | undefined,
+  entityId: string | null | undefined,
+  guard: (entity: TEntity) => entity is TNarrow,
+): TNarrow | null {
+  if (!entityId || !scene) return null;
+  const found = scene.entities.find((entity) => entity.id === entityId);
+  return found && guard(found) ? found : null;
+}

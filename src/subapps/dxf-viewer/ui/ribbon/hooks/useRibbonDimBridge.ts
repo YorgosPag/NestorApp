@@ -46,9 +46,11 @@ import { listArrowheadBlockNames, resolveArrowBlockNames } from '../../../system
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateEntityCommand } from '../../../core/commands/entity-commands/UpdateEntityCommand';
 import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
+import { useResolveSelectedEntity } from './ribbon-entity-bridge-shared';
 // ADR-362 §7 — «Επίπεδο» (layer) wiring reuses the SSoT LayerStore + the line
 // bridge's `buildLayerOptions` (value=id, label=name) — μηδέν διπλή λίστα layers.
-import { getLayerStoreSnapshot, subscribeLayerStore } from '../../../stores/LayerStore';
+// ADR-721 §5 — ΕΝΑ leaf πάνω στο LayerStore, όχι χειρόγραφο useSyncExternalStore ανά καταναλωτή.
+import { useLayerStoreSnapshot } from '../../../stores/useLayerStore';
 import { buildLayerOptions } from './useRibbonLineToolBridge.helpers';
 import type {
   RibbonComboboxState,
@@ -285,22 +287,19 @@ export function useRibbonDimBridge(props: UseRibbonDimBridgeProps): RibbonDimBri
 
   // ADR-362 §7 — live layer catalog for the «Επίπεδο» dropdown (SSoT LayerStore,
   // ίδιο store & option builder με το line bridge· low-frequency). value=id, label=name.
-  const layerSnapshot = useSyncExternalStore(
-    subscribeLayerStore, getLayerStoreSnapshot, getLayerStoreSnapshot,
-  );
+  const layerSnapshot = useLayerStoreSnapshot();
   const layerOptions = useMemo<readonly RibbonComboboxOption[]>(
     () => buildLayerOptions(layerSnapshot.layers),
     [layerSnapshot],
   );
 
+  // N.18 — το «πρωτεύουσα επιλεγμένη οντότητα του ενεργού επιπέδου, αν περνά τον
+  // φύλακα» είναι το SSoT `useResolveSelectedEntity`, που ήδη χρησιμοποιούν ~10
+  // αδελφοί γεφυρωτές· εδώ ήταν ξαναγραμμένο στο χέρι (κλώνος με το line bridge).
   /** The selected dimension entity, or null. */
-  const resolveSelectedDim = useCallback((): DimensionEntity | null => {
-    const id = universalSelection.getPrimaryId();
-    if (!id || !levelManager.currentLevelId) return null;
-    const scene = levelManager.getLevelScene(levelManager.currentLevelId);
-    const e = scene?.entities.find((x) => x.id === id);
-    return e && isDimensionEntity(e) ? e : null;
-  }, [levelManager, universalSelection]);
+  const resolveSelectedDim = useResolveSelectedEntity(
+    levelManager, universalSelection, isDimensionEntity,
+  );
 
   /** Undoable patch of arbitrary fields on the selected dim (overrides / styleId). */
   const patchEntity = useCallback(

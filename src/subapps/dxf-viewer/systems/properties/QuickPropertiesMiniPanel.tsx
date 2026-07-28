@@ -26,13 +26,14 @@ import { useEscapeHandler, ESC_PRIORITY } from '@/subapps/dxf-viewer/systems/esc
 import { QuickPropertiesMiniPanelStore } from './QuickPropertiesMiniPanelStore';
 import { UpdateEntityCommand } from '../../core/commands/entity-commands/UpdateEntityCommand';
 import { createLevelSceneManagerAdapter } from '../entity-creation/LevelSceneManagerAdapter';
-import {
-  getLayerStoreSnapshot,
-  subscribeLayerStore,
-} from '../../stores/LayerStore';
+// ADR-721 §5 — ΕΝΑ leaf πάνω στο LayerStore, όχι χειρόγραφο useSyncExternalStore ανά καταναλωτή.
+import { useLayerStoreSnapshot } from '../../stores/useLayerStore';
 import { useDisplayUnit } from '../../hooks/common/useDisplayUnit';
 import { formatDisplayValue, fromDisplay, DISPLAY_UNIT_LABELS, type DisplayUnit } from '../../config/units';
 import type { DxfScene, DxfLine } from '../../canvas-v2/dxf-canvas/dxf-types';
+// N.18 — ΕΝΑΣ resolver «id + φύλακας τύπου → οντότητα», κοινός με το PropertiesPalette.
+import { findGuardedEntity } from '../selection/resolve-selected-entity';
+import { isDxfLine } from '../../canvas-v2/dxf-canvas/dxf-entity-guards';
 import type { ICommand } from '../../core/commands/interfaces';
 import styles from './QuickPropertiesMiniPanel.module.css';
 import type { LevelSceneWriter } from '../levels/level-scene-accessor';
@@ -84,11 +85,7 @@ export function QuickPropertiesMiniPanel({
     QuickPropertiesMiniPanelStore.getSnapshot,
     QuickPropertiesMiniPanelStore.getSnapshot,
   );
-  const layerStoreSnap = useSyncExternalStore(
-    subscribeLayerStore,
-    getLayerStoreSnapshot,
-    getLayerStoreSnapshot,
-  );
+  const layerStoreSnap = useLayerStoreSnapshot();
   const { t } = useTranslation('dxf-viewer-shell');
   const { displayUnit } = useDisplayUnit();
   const panelRef = useRef<HTMLDivElement | null>(null);
@@ -101,10 +98,9 @@ export function QuickPropertiesMiniPanel({
 
   // Reinit form when entityId changes
   useEffect(() => {
-    if (!entityId || !open || !dxfScene) return;
-    const entity = dxfScene.entities.find(e => e.id === entityId);
-    if (!entity || entity.type !== 'line') return;
-    setForm(buildInitialFormState(entity as DxfLine, displayUnit));
+    if (!open) return;
+    const line = findGuardedEntity(dxfScene, entityId, isDxfLine);
+    if (line) setForm(buildInitialFormState(line, displayUnit));
   }, [entityId, open, dxfScene, displayUnit]);
 
   // Close when activeTool leaves 'select'
@@ -146,16 +142,18 @@ export function QuickPropertiesMiniPanel({
   }, [open]);
 
   const handleApply = useCallback(() => {
-    if (!entityId || !dxfScene || !levelManager.currentLevelId) return;
-    const entity = dxfScene.entities.find(e => e.id === entityId);
-    if (!entity || entity.type !== 'line') return;
-    const line = entity as DxfLine;
+    if (!levelManager.currentLevelId) return;
+    // N.18 — ΕΝΑΣ resolver «id + φύλακας τύπου» (κοινός με το PropertiesPalette)· ο
+    // φύλακας στενεύει, οπότε δεν ακολουθεί `as DxfLine`. Και ό,τι διάβαζε παρακάτω
+    // από το `entity` το διαβάζει τώρα από το `line`: ΕΝΑ όνομα για ΕΝΑ πράγμα.
+    const line = findGuardedEntity(dxfScene, entityId, isDxfLine);
+    if (!line) return;
 
     const patch: Record<string, unknown> = {};
 
     // Layer
     const newLayerId = form.layerId;
-    if (newLayerId && newLayerId !== (entity.layerId ?? '')) {
+    if (newLayerId && newLayerId !== (line.layerId ?? '')) {
       patch.layerId = newLayerId;
       const layerObj = layerStoreSnap.layers.find(l => l.id === newLayerId);
       if (layerObj) patch.layer = layerObj.name;
@@ -163,7 +161,7 @@ export function QuickPropertiesMiniPanel({
 
     // Color
     const colorTrimmed = form.color.trim();
-    const originalColor = entity.colorMode === 'Concrete' ? (entity.color ?? '') : '';
+    const originalColor = line.colorMode === 'Concrete' ? (line.color ?? '') : '';
     if (colorTrimmed !== originalColor) {
       if (colorTrimmed === '') {
         patch.colorMode = 'ByLayer';
@@ -176,7 +174,7 @@ export function QuickPropertiesMiniPanel({
 
     // Linetype
     const newLinetype = form.linetype;
-    const origLinetype = entity.linetypeName ?? 'ByLayer';
+    const origLinetype = line.linetypeName ?? 'ByLayer';
     if (newLinetype !== origLinetype) {
       patch.linetypeName = newLinetype === 'ByLayer' ? undefined : newLinetype;
     }
@@ -214,15 +212,15 @@ export function QuickPropertiesMiniPanel({
       levelManager.setLevelScene,
       levelManager.currentLevelId,
     );
-    const cmd = new UpdateEntityCommand(entityId, patch, sceneManager, t('quickProperties.miniPanel.title'));
+    const cmd = new UpdateEntityCommand(line.id, patch, sceneManager, t('quickProperties.miniPanel.title'));
     executeCommand(cmd);
     QuickPropertiesMiniPanelStore.close();
   }, [entityId, dxfScene, form, layerStoreSnap, levelManager, displayUnit, executeCommand, t]);
 
-  if (!open || !entityId || !position || activeTool !== 'select' || !dxfScene) return null;
+  if (!open || !position || activeTool !== 'select') return null;
 
-  const entity = dxfScene.entities.find(e => e.id === entityId);
-  if (!entity || entity.type !== 'line') return null;
+  const entity = findGuardedEntity(dxfScene, entityId, isDxfLine);
+  if (!entity) return null;
 
   const unitLabel = DISPLAY_UNIT_LABELS[displayUnit];
 

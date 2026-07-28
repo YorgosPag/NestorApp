@@ -25,10 +25,8 @@ import { useEscapeHandler, ESC_PRIORITY } from '@/subapps/dxf-viewer/systems/esc
 import { PropertiesPaletteStore } from './PropertiesPaletteStore';
 import { UpdateEntityCommand } from '../../core/commands/entity-commands/UpdateEntityCommand';
 import { createLevelSceneManagerAdapter } from '../entity-creation/LevelSceneManagerAdapter';
-import {
-  getLayerStoreSnapshot,
-  subscribeLayerStore,
-} from '../../stores/LayerStore';
+// ADR-721 §5 — ΕΝΑ leaf πάνω στο LayerStore, όχι χειρόγραφο useSyncExternalStore ανά καταναλωτή.
+import { useLayerStoreSnapshot } from '../../stores/useLayerStore';
 import { useDisplayUnit } from '../../hooks/common/useDisplayUnit';
 // ADR-532 B4 — this micro-leaf self-subscribes to the selection set so the
 // CanvasSection orchestrator no longer re-renders to feed it selectedEntityIds.
@@ -49,7 +47,11 @@ import { buildLinePatch } from './line-property-model';
 import { PropertyGroupRows, type PropertySelectOption } from './PropertyGroupRows';
 import { NumberInputRow, ReadonlyInputRow, PaletteFooter } from './PropertiesPaletteRows';
 import { listArrowheadBlockNames } from '../dimensions/dim-arrowhead-blocks';
-import type { DxfScene, DxfLine, DxfDimension } from '../../canvas-v2/dxf-canvas/dxf-types';
+import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
+// N.18 — ΕΝΑΣ resolver «id + φύλακας τύπου → οντότητα», κοινός με το QuickProperties
+// και τους γεφυρωτές του ribbon· οι φύλακες στενεύουν, οπότε κανένα `as Dxf*` εδώ.
+import { findGuardedEntity } from '../selection/resolve-selected-entity';
+import { isDxfDimension, isDxfLine } from '../../canvas-v2/dxf-canvas/dxf-entity-guards';
 import type { ICommand } from '../../core/commands/interfaces';
 import styles from './PropertiesPalette.module.css';
 import type { LevelSceneWriter } from '../levels/level-scene-accessor';
@@ -78,11 +80,7 @@ export function PropertiesPalette({
     PropertiesPaletteStore.getSnapshot,
     PropertiesPaletteStore.getSnapshot,
   );
-  const layerStoreSnap = useSyncExternalStore(
-    subscribeLayerStore,
-    getLayerStoreSnapshot,
-    getLayerStoreSnapshot,
-  );
+  const layerStoreSnap = useLayerStoreSnapshot();
   const { t } = useTranslation('dxf-viewer-shell');
   const { displayUnit } = useDisplayUnit();
   const unitLabel = DISPLAY_UNIT_LABELS[displayUnit];
@@ -103,14 +101,15 @@ export function PropertiesPalette({
 
   // Reinit form when entity changes
   useEffect(() => {
-    if (!entityId || !dxfScene) return;
-    const entity = dxfScene.entities.find(e => e.id === entityId);
-    if (!entity) return;
-    if (entity.type === 'line') {
-      setForm(buildLineFormState(entity as DxfLine, displayUnit));
-    } else if (entity.type === 'dimension') {
+    const line = findGuardedEntity(dxfScene, entityId, isDxfLine);
+    if (line) {
+      setForm(buildLineFormState(line, displayUnit));
+      return;
+    }
+    const dimension = findGuardedEntity(dxfScene, entityId, isDxfDimension);
+    if (dimension) {
       // canvas-v2 wraps the dimension → read the flat DimensionEntity from `.dimensionEntity`.
-      const next = buildDimensionFormState((entity as DxfDimension).dimensionEntity, displayUnit);
+      const next = buildDimensionFormState(dimension.dimensionEntity, displayUnit);
       // Localise the read-only variant token (model stays pure — no i18n inside it).
       next.dimType = t(`propertiesPalette.dimTypes.${next.dimType}`);
       setDimForm(next);
@@ -130,10 +129,11 @@ export function PropertiesPalette({
   });
 
   const handleApply = useCallback(() => {
-    if (!entityId || !dxfScene || !levelManager.currentLevelId) return;
-    const entity = dxfScene.entities.find(e => e.id === entityId);
-    if (!entity || entity.type !== 'line') return;
-    const line = entity as DxfLine;
+    if (!levelManager.currentLevelId) return;
+    // N.18 — «βρες το id στη σκηνή + φύλακας τύπου» = ΕΝΑ SSoT· ο φύλακας στενεύει
+    // τον τύπο, οπότε δεν ακολουθεί `as DxfLine` (ανέλεγκτη επανάληψη του ίδιου if).
+    const line = findGuardedEntity(dxfScene, entityId, isDxfLine);
+    if (!line) return;
 
     const patch = buildLinePatch(line, form, layerStoreSnap.layers, displayUnit);
     if (Object.keys(patch).length === 0) return;
@@ -144,7 +144,9 @@ export function PropertiesPalette({
       levelManager.currentLevelId,
     );
     const cmd = new UpdateEntityCommand(
-      entityId,
+      // `line.id` και όχι `entityId`: μετά τον φύλακα, η ταυτότητα που γράφεται είναι
+      // αυτή της οντότητας που ΒΡΕΘΗΚΕ — μία ανάγνωση, όχι δύο που μπορούν να διαφέρουν.
+      line.id,
       patch,
       sceneManager,
       t('propertiesPalette.cmdLabel'),
@@ -155,17 +157,17 @@ export function PropertiesPalette({
   // ADR-362 §7 — apply the edited DIMENSION form (entity-root fields + nested
   // `overrides`) as ONE undoable UpdateEntityCommand (mirror of the line path).
   const handleApplyDimension = useCallback(() => {
-    if (!entityId || !dxfScene || !levelManager.currentLevelId) return;
-    const entity = dxfScene.entities.find(e => e.id === entityId);
-    if (!entity || entity.type !== 'dimension') return;
-    const patch = buildDimensionPatch((entity as DxfDimension).dimensionEntity, dimForm);
+    if (!levelManager.currentLevelId) return;
+    const dimension = findGuardedEntity(dxfScene, entityId, isDxfDimension);
+    if (!dimension) return;
+    const patch = buildDimensionPatch(dimension.dimensionEntity, dimForm);
     if (Object.keys(patch).length === 0) return;
     const sceneManager = createLevelSceneManagerAdapter(
       levelManager.getLevelScene,
       levelManager.setLevelScene,
       levelManager.currentLevelId,
     );
-    executeCommand(new UpdateEntityCommand(entityId, patch, sceneManager, t('propertiesPalette.cmdLabel')));
+    executeCommand(new UpdateEntityCommand(dimension.id, patch, sceneManager, t('propertiesPalette.cmdLabel')));
   }, [entityId, dxfScene, dimForm, levelManager, executeCommand, t]);
 
   // Dynamic + enum option resolver for the dimension select rows (layers / lineweights /
@@ -196,10 +198,10 @@ export function PropertiesPalette({
 
   if (!paletteSnap.open) return null;
 
-  const entity = entityId ? dxfScene?.entities.find(e => e.id === entityId) : null;
-  const isLine = entity?.type === 'line';
-  const isDimension = entity?.type === 'dimension';
-  const derived = isLine ? deriveEndPoint(form, entity as DxfLine, displayUnit) : null;
+  const line = findGuardedEntity(dxfScene, entityId, isDxfLine);
+  const isLine = line !== null;
+  const isDimension = findGuardedEntity(dxfScene, entityId, isDxfDimension) !== null;
+  const derived = line ? deriveEndPoint(form, line, displayUnit) : null;
 
   return (
     <div
