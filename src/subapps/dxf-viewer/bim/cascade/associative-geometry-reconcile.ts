@@ -48,6 +48,7 @@ import { cascadeBeamReframe } from '../beams/beam-column-reframe-cascade';
 import { cascadeStairwellOpenings } from '../stairs/stairwell-opening-coordinator';
 import { cascadeStairRailings } from '../stairs/stair-railing-coordinator';
 import { cascadeAreaLabels } from '../../systems/measure/area-label-cascade';
+import { cascadeTopoSourceGeometry } from '../../systems/topography/topo-source-cascade';
 import { EventBus } from '../../systems/events/EventBus';
 
 /**
@@ -112,6 +113,15 @@ export function reconcileAssociativeGeometry(
   //      μέσω των δύο υπαρχόντων call sites) και την τοπογραφική επιφάνεια. Ιδεμποτεντικό:
   //      αμετάβλητο κείμενο → κανένα patch, άρα κανένα emit (ADR-492 §4 zero-loop).
   const relabelled = cascadeAreaLabels(changedIds, sceneManager);
+
+  // (2c) τοπογραφικοί ορισμοί → γραμμή του σχεδίου (ADR-718 Μ3): το όριο οικοπέδου και οι
+  //      ασυνέχειες κρατούσαν snapshot κορυφών με ένα `sourceEntityId` που **κανείς δεν
+  //      παρακολουθούσε** — σύρσιμο λαβής της πολυγραμμής άφηνε την κοπή στο παλιό σχήμα
+  //      (ακριβώς η «λαβή που δεν κάνει τίποτα» του ADR-654). Scene-derived και ιδεμποτεντικό
+  //      σαν τους υπόλοιπους. Γράφει σε **store** (TopoPointStore), όχι σε entities, άρα δεν
+  //      συμμετέχει στο ενιαίο emit παρακάτω· τα παράγωγα της κάτοψης τα αναλαμβάνει ο
+  //      υπάρχων crop reconciler του `useTopoPersistence` (ταυτότητα `getActiveCropRing()`).
+  cascadeTopoSourceGeometry(changedIds, sceneManager);
 
   // (3) ΕΝΑ emit: announceEntities (transform hosts + followers) + reframed δοκάρια, dedup ανά id
   //     (το reframed νικά — όταν το ίδιο το δοκάρι μετασχηματίστηκε ΚΑΙ ξανα-κόπηκε, στέλνεται μία
@@ -179,8 +189,9 @@ export function reconcileAssociativeGeometryOnCreate(
  * της έμενε να δείχνει έναν αριθμό που **δεν αντιστοιχούσε πια σε τίποτα**, χωρίς καμία
  * ένδειξη — ακριβώς το ψέμα που το associative υποτίθεται ότι εξαλείφει.
  *
- * ⚠️ **Τρέχει ΜΟΝΟ τον area-label reconciler, ΟΧΙ ολόκληρο τον geometry cascade** — και αυτό
- * είναι σκόπιμο, με το ίδιο σκεπτικό που το create path τρέχει υποσύνολο: οι geometry
+ * ⚠️ **Τρέχει ΜΟΝΟ τους δύο link-based reconcilers (ετικέτα εμβαδού + τοπογραφικοί ορισμοί),
+ * ΟΧΙ ολόκληρο τον geometry cascade** — και αυτό είναι σκόπιμο, με το ίδιο σκεπτικό που το
+ * create path τρέχει υποσύνολο: οι geometry
  * cascades (ανοίγματα/δοκάρια/κλιμακοστάσιο/κάγκελα) έχουν τη δική τους διαδρομή διαγραφής
  * και το να τους καλέσουμε εδώ θα άλλαζε σιωπηλά συμπεριφορά τοίχων/σκαλών που καμία ανάγκη
  * δεν το ζήτησε. Ένα lifecycle hook αγγίζει ό,τι ξέρει ότι σπάει, όχι ό,τι μπορεί.
@@ -191,11 +202,20 @@ export function reconcileAssociativeGeometryOnCreate(
  *
  * @see core/commands/entity-commands/DeleteEntityCommand.ts — execute / undo / redo call site
  * @see systems/measure/area-label-cascade.ts — `cascadeAreaLabels` (ο ίδιος, reused)
+ * @see systems/topography/topo-source-cascade.ts — `cascadeTopoSourceGeometry` (ο ίδιος, reused)
  */
 export function reconcileAssociativeGeometryOnDelete(
   affectedIds: readonly string[],
   sceneManager: CascadeSceneManager,
 ): void {
+  // ADR-718 Μ3 — η διαγραφή της πολυγραμμής-ορίου (ή μιας γραμμής-ασυνέχειας) είναι ο ΤΡΙΤΟΣ
+  // τρόπος να σπάσει ο δεσμός, δίπλα στο σύρσιμο λαβής και στο άνοιγμα του περιγράμματος. Ο
+  // ΙΔΙΟΣ reconciler τη διαβάζει: κρατά το τελευταίο έγκυρο σχήμα (η κοπή ΔΕΝ εξαφανίζεται
+  // σιωπηλά — θα άλλαζαν οι όγκοι εκσκαφής) και σημειώνει τον δεσμό ως `missing`, ώστε το
+  // ribbon να το πει. Στο **undo** το ίδιο πέρασμα βρίσκει την οντότητα ζωντανή και ο δεσμός
+  // επανέρχεται μόνος του — καμία ξεχωριστή διαδρομή «re-link» να ξεσυγχρονιστεί.
+  cascadeTopoSourceGeometry(affectedIds, sceneManager);
+
   const relabelled = cascadeAreaLabels(affectedIds, sceneManager);
   if (relabelled.length === 0) return;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
