@@ -1200,7 +1200,74 @@ alignElementId?: string;         // host· η γωνία μοτίβου = εφα
 
 ## 8. Changelog
 
-- **2026-07-28** — **POINTER → ADR-667 Φ3.2 / Απόφαση 15: το LOD της ΟΘΟΝΗΣ απενεργοποιήθηκε
+- **2026-07-29** — **ΔΥΟ ΝΕΟΙ SSoT + ΤΟ FRAME CONTRACT ΤΟΥ `PatternLine.delta`. Η ρίζα της
+  αορατότητας ΗΤΑΝ ΕΔΩ — το entry της 28/07 παρακάτω κατηγορούσε λάθος ένοχο.** (commit `0d5d7d94`)
+
+  **① ΑΙΤΙΑ Α — τριπλότυπο ΣΥΜΒΟΛΑΙΟΥ (όχι κώδικα).** Το `inlinePattern` έφτανε σωστά στη σκηνή
+  **και** στο Firestore, αλλά χανόταν στο **τελευταίο** σκαλοπάτι πριν τον καμβά: τρία σημεία
+  ξανα-δήλωναν το καθένα μόνο του «ποια πεδία έχει μια γραμμοσκίαση» —
+  `hooks/canvas/dxf-scene-entity-handlers.ts` (χειρόγραφη λίστα 17 πεδίων),
+  `canvas-v2/dxf-canvas/dxf-types.ts` (`DxfHatch` — δεν το δήλωνε καν),
+  `canvas-v2/dxf-canvas/dxf-renderer-entity-model.ts` (δεύτερη χειρόγραφη λίστα).
+  ⇒ `HatchRenderer` έβλεπε `inlinePattern: undefined` ⇒ `buildHatchEntitySegments` έπεφτε στον
+  **catalog** ⇒ βήμα **6–63 μέτρα** ⇒ 0–1 γραμμή ⇒ **αόρατο**.
+
+  **Ήταν ΚΛΑΣΗ, όχι δείγμα** — τα σχόλια των ίδιων αρχείων κατέγραφαν **πέντε** προηγούμενα θύματα
+  της ίδιας μηχανικής: `backgroundColor` (χαμένο λευκό φόντο στον Τέκτονα), `patternSpace` (raster
+  σε world-space), `gradient` **και** `imageFill` (αποδίδονταν **solid**), `lineweightMm` (πάντα
+  DEFAULT). Το `inlinePattern` ήταν το **έκτο**.
+  **Η λύση δεν ήταν έκτο μπάλωμα:** το repo είχε **ήδη** λύσει αυτή ακριβώς την κλάση για το TEXT
+  (**ADR-557**, `bim/text/text-render-fields.ts` — *«single passthrough SSoT, anti-drift»*). Το HATCH
+  δεν το είχε υιοθετήσει ποτέ. Δημιουργήθηκε ο αδελφός SSoT:
+  🆕 **`bim/hatch/hatch-render-fields.ts`** — `HATCH_RENDER_FIELDS` + `pickHatchRenderFields()`, με
+  **contract test** (`bim/hatch/__tests__/hatch-render-fields.test.ts`) που κοκκινίζει αν
+  **οποιαδήποτε** προβολή ρίξει πεδίο της λίστας. **Κάθε νέο πεδίο απόδοσης hatch μπαίνει ΕΔΩ.**
+
+  **② ΝΕΟ BUG — το `PatternLine.delta` ζούσε σε ΔΥΟ ασύμβατες συμβάσεις.** Ο τύπος ορίζει
+  `delta = [stagger ΚΑΤΑ ΜΗΚΟΣ, ΚΑΘΕΤΗ απόσταση]` σε **τοπικό** frame (σύμβαση αρχείου `.pat`· το
+  `transformInlinePattern` το τεκμηριώνει και στρέφει με `angle + angleDeg` **χωρίς** να πειράξει το
+  `delta` — σωστό **μόνο** τοπικά). **Το DXF όμως γράφει τα `45/46` σε WORLD** (ήδη στραμμένα κατά
+  το `53`). Ο native `convertHatch` δεν έκανε την αντιστροφή.
+  🆕 **`data/hatch-pattern-delta-frame.ts`** — ο SSoT της μετατροπής PAT↔DXF frame, με 8 tests πάνω
+  σε **πραγματικά bytes** (`utils/__tests__/dxf-hatch-delta-frame.test.ts`).
+  Καταναλωτές: `dxf-hatch-converter.ts` (world→local στο import), `dxf-ascii-hatch-writer.ts`
+  (local→world, 3 κλάδοι), `dxf-hatch-xdata-converter.ts` (είχε **inline** τη σωστή μαθηματική —
+  κλασικό N.18 sibling divergence, τώρα καλεί τον κοινό SSoT).
+
+  **Τρεις ανεξάρτητες αποδείξεις:** (α) **ezdxf** `render/hatching.py` (MIT, ήδη στο repo):
+  *«The hatch pattern parameters are already scaled and rotated for direct use»* — χειρίζεται το
+  `offset` **ως διάνυσμα**, κάθετη απόσταση από **cross product**, ΟΧΙ από `offset.y`. (β) **Τα bytes**
+  (`47_ergasia.dxf`, ANSI31 @ `41=0.4`): `45=-0.0353553, 46=0.0353553` ⇒ `|delta| = 0,05 = 0.125″ × 0.4`
+  σε διεύθυνση **135°** (κάθετη στις 45°) ⇒ τοπικά `(0, 0.05)`. (γ) **Ο άλλος μας importer το έκανε
+  ήδη σωστά** (R12/R14 μονοπάτι).
+  **Κόστος του bug:** λάθος πυκνότητα **εξαρτώμενη από τη γωνία** (γι' αυτό «άλλες φαίνονταν, άλλες
+  όχι»), λάθος density-LOD, σιωπηλή καταστροφή σε rotate/block-placement, και για γωνία ≈45°/225°
+  το `delta[1]→0` ⇒ `dy < EPS` ⇒ **καμία γραμμή**.
+
+  > ⚠️ **ΓΙΑΤΙ ΚΑΝΕΝΑ TEST ΔΕΝ ΤΟ ΕΠΙΑΣΕ ΕΠΙ ΜΗΝΕΣ:** ο **writer έκανε το ΚΑΤΟΠΤΡΙΚΟ λάθος** του
+  > reader ⇒ τα δύο σφάλματα **αλληλοακυρώνονταν στο αρχείο** ⇒ το round-trip έβγαινε **byte-ίδιο**
+  > ενώ η **σκηνή** ήταν λάθος. **Ένα round-trip test δεν μπορεί να δει ζεύγος αντίθετων σφαλμάτων.
+  > Μέτρα την ΕΝΔΙΑΜΕΣΗ τιμή, όχι τα άκρα.**
+
+  **Επαλήθευση:** ζωντανή σκηνή **53/53 hatches ΜΕ `inlinePattern`** (πριν: **0**)· πυκνότητες
+  **250 / 500 / 625 mm** = ακριβώς `0.125″ × fileScale 2/4/5 × 1000` ✓ AutoCAD·
+  `npx jest --testPathPatterns="(hatch|Hatch|entity-model|scene-entity)"` → **524/524 σε 52 suites**·
+  τα νέα tests **επαληθεύτηκε ότι δαγκώνουν** (αναίρεση fix ⇒ 2 κόκκινα)· `jscpd:diff` καθαρό.
+  📌 Το `toEqual([0, 6.35])` → `toBeCloseTo` στο `dxf-roundtrip-hatch.test.ts` **δεν είναι χαλάρωση**:
+  το delta ταξιδεύει πλέον τοπικό→world→τοπικό και για 90° το `cos(90°)=6.1e-17` αφήνει ~4e-16· το
+  παλιό `toEqual` περνούσε **μόνο** επειδή καμία στροφή δεν γινόταν σε καμία κατεύθυνση.
+  ⚠️ **ΜΕΤΑΝΑΣΤΕΥΣΗ:** η διόρθωση πιάνει **μόνο νέες εισαγωγές**. Τα ήδη αποθηκευμένα έγγραφα
+  κρατούν **world** delta (1,87× πυκνότερο). Απαιτείται **φρέσκια εισαγωγή** — δεν είναι ασφαλώς
+  διακρίσιμο ποιο έγγραφο έχει ήδη τη νέα σύμβαση.
+
+- **2026-07-28** — ⚠️ **Η ΑΙΤΙΟΛΟΓΗΣΗ ΑΥΤΟΥ ΤΟΥ ENTRY ΑΝΑΘΕΩΡΗΘΗΚΕ — ΔΙΑΒΑΣΕ ΠΡΩΤΑ ΤΟ ENTRY ΤΗΣ
+  29/07 ΠΑΡΑΠΑΝΩ.** Το «ο import και το `inlinePattern` ήταν **σωστά και επαληθευμένα byte-ίδια**»
+  **δεν ισχύει** — το byte-ίδιο round-trip έκρυβε **ζεύγος αντίθετων σφαλμάτων**, και η ρίζα της
+  αορατότητας ήταν **όντως εδώ** (drop του `inlinePattern` πριν τον renderer). Τα «140–210 mm»,
+  «0,23–0,43 px», «44/49» **δεν ισχύουν** (buggy delta· τα σωστά: 250/500/625 mm ⇒ 0,51–1,28 px).
+  Η απόφαση `HATCH_MIN_LINE_SPACING_PX 3 → 0` **ισχύει**. Διατηρείται ως ιστορικό:
+
+  **POINTER → ADR-667 Φ3.2 / Απόφαση 15: το LOD της ΟΘΟΝΗΣ απενεργοποιήθηκε
   (AutoCAD parity).** Ανήκει εδώ γιατί **το σύμπτωμα εμφανίζεται σε αυτό το σύστημα**: εισαγόμενες
   γραμμοσκιάσεις που **δεν φαίνονται καθόλου** στον καμβά. **Η ρίζα ΔΕΝ είναι εδώ** — ο import και
   το `inlinePattern` (ADR-644 #7d) ήταν **σωστά και επαληθευμένα byte-ίδια** στο round-trip· έφταιγε
@@ -1209,8 +1276,15 @@ alignElementId?: string;         // host· η γωνία μοτίβου = εφα
   γραμμοσκιάσεις σε tint. Τώρα `0` = κάθε γραμμή ζωγραφίζεται σε κάθε zoom· **το χαρτί μένει στα
   0,8 mm** (ISO 128-2). Άγγιξε επίσης το `hatchSegmentSignature` του `HatchRenderer` (πρόσθεσε
   `patternOrigin` + `inlinePattern` — stale cache στο `UpdateHatchOriginCommand`).
-  ⚠️ **Αν ψάχνεις «γιατί δεν φαίνεται η γραμμοσκίασή μου», μέτρα ΠΡΩΤΑ `spacing × scale` σε px —
-  μην υποθέσεις ότι ο import έφταιξε.**
+  ~~⚠️ *«Αν ψάχνεις «γιατί δεν φαίνεται η γραμμοσκίασή μου», μέτρα ΠΡΩΤΑ `spacing × scale` σε px —
+  μην υποθέσεις ότι ο import έφταιξε.»*~~ ← **ΑΠΟΣΥΡΘΗΚΕ 2026-07-29: αυτή η συμβουλή έστειλε ΔΥΟ
+  συνεδρίες σε λάθος κατεύθυνση.** Ο import **όντως** έφταιγε. Η σωστή οδηγία:
+
+  > 🧭 **Αν δεν φαίνεται μια γραμμοσκίαση, ξεκίνα από τον ΚΑΤΑΝΑΛΩΤΗ και πήγαινε ανάποδα:** ρώτα
+  > «**ποιος** διαβάζει το `inlinePattern` τελευταίος και **τι βλέπει**;» — όχι «πού χάνεται;».
+  > Μια αλυσίδα δεν σπάει εκεί που την κοιτάς. Πρακτικά: μέτρα το `inlinePattern` **στα props του
+  > `DxfCanvas`** (η ζωντανή σκηνή), όχι στον parser και όχι στο Firestore — και τα δύο ήταν σωστά
+  > όλη την ώρα. Συνταγή στο §7 του handoff `2026-07-28_ADR-507_hatch-parity_SESSION-2`.
 - **2026-07-17** — **Το copy ΒΓΗΚΕ από τα transform commands → `CloneWithTransformCommand` (Revit `CopyElements`). Το §8 decision gate ΕΠΙΒΕΒΑΙΩΝΕΤΑΙ, δεν ανατρέπεται. UNCOMMITTED· 1588 jest GREEN· jscpd:diff καθαρό.**
   - **Αφορμή:** jscpd **t222** (39 γρ.) `RotateEntityCommand:64-102` ⇔ `ScaleEntityCommand:56-93` — τα copy branches, byte-identical.
   - **Το εύρημα ήταν μεγαλύτερο: ΤΡΙΔΥΜΟ, όχι δίδυμο.** Το `MirrorEntityCommand.execute()` (`keepOriginals`) κάνει δομικά το ΙΔΙΟ (`για κάθε source → {...entity, ...computeUpdates(entity), id: newId} → addEntity → track`). Το jscpd δεν το έβλεπε **μόνο** επειδή διαφέρουν τα ονόματα (`copyMode` vs `keepOriginals`, `createdEntityIds` vs `createdEntities`) — ακριβώς το τυφλό σημείο που το token-based check υποτίθεται ότι καλύπτει, αλλά εδώ η απόσταση των ονομάτων ξεπέρασε το min-tokens.

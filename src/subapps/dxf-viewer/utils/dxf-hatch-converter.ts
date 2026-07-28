@@ -22,12 +22,13 @@ import {
   type PatternLine,
 } from '../data/hatch-pattern-catalog';
 import { patternDeltaFromWorld } from '../data/hatch-pattern-delta-frame';
+import { parseHatchBoundaryPaths, type DxfPairs } from './dxf-hatch-boundary-parser';
 import { normalizeGradientType, type HatchGradient } from '../bim/hatch/hatch-gradient';
 import { trueColorToHex } from './dxf-true-color';
 import { radToDeg } from '../rendering/entities/shared/geometry-angle-utils';
 import { dwarn } from '../debug';
 
-type DxfPairs = ReadonlyArray<readonly [string, string]>;
+// `DxfPairs` = SSoT στο `dxf-hatch-boundary-parser` (ήταν τριπλότυπο σε 3 converters).
 
 /**
  * Normalized inputs for assembling a `type:'hatch'` scene entity, shared by BOTH hatch
@@ -191,9 +192,9 @@ function parseInlinePatternLines(pairs: DxfPairs, idx78: number): PatternLine[] 
  * Convert HATCH entity (ADR-507 Φ1a).
  *
  * Δουλεύει πάνω σε ORDERED pairs (όχι flat `Record`) γιατί τα boundary loops έχουν
- * επαναλαμβανόμενα 10/20 που το flat data χάνει. State machine: από τον κωδικό 91
- * (πλήθος ορίων) → ανά path διαβάζει 93 (πλήθος κορυφών) + τόσα ζεύγη 10/20. Τα
- * 10/20 του elevation point (πριν το 91) και των seed points (μετά) δεν μπερδεύονται.
+ * επαναλαμβανόμενα 10/20 που το flat data χάνει. Τα boundary paths τα διαβάζει ο SSoT
+ * {@link parseHatchBoundaryPaths} (τόξα/ελλείψεις/splines + η διπλή σημασία του `93`).
+ * Τα 10/20 του elevation point (πριν το 91) και των seed points (μετά) δεν μπερδεύονται.
  *
  * @see AutoCAD DXF Reference: HATCH entity (boundary path data)
  */
@@ -249,32 +250,10 @@ export function convertHatch(
     return null;
   }
 
-  // ── Boundary paths (state machine από το 91) ────────────────────────────────
-  // ⚠️ `pairs` = array από [code,value] tuples → η τιμή του 91 είναι pairs[idx][1].
-  const nPaths = parseInt(pairs[path91Index][1] ?? '0', 10) || 0;
-  const boundaryPaths: Point2D[][] = [];
-  let k = path91Index + 1;
-  for (let p = 0; p < nPaths && k < pairs.length; p += 1) {
-    while (k < pairs.length && pairs[k][0] !== '92') k += 1; // βρες αρχή path
-    while (k < pairs.length && pairs[k][0] !== '93') k += 1; // βρες πλήθος κορυφών
-    if (k >= pairs.length) break;
-    const vCount = parseInt(pairs[k][1], 10) || 0;
-    k += 1;
-    const verts: Point2D[] = [];
-    while (verts.length < vCount && k < pairs.length) {
-      if (pairs[k][0] === '10') {
-        const x = parseFloat(pairs[k][1]);
-        const next = pairs[k + 1];
-        if (next && next[0] === '20') {
-          verts.push({ x, y: parseFloat(next[1]) });
-          k += 2;
-          continue;
-        }
-      }
-      k += 1;
-    }
-    if (verts.length >= 3) boundaryPaths.push(verts);
-  }
+  // ── Boundary paths → SSoT parser (ADR-507) ──────────────────────────────────
+  // ⚠️ ΜΗΝ ξαναγράψεις εδώ state machine: το `93` σημαίνει ΚΟΡΥΦΕΣ ή ΑΚΜΕΣ ανάλογα με
+  // το flag `92`, και σε ακμή τόξου το `10/20` είναι ΚΕΝΤΡΟ, όχι κορυφή. Βλ. το module.
+  const boundaryPaths = parseHatchBoundaryPaths(pairs, path91Index);
 
   if (!boundaryPaths.length) {
     dwarn('EntityConverter', `⚠️ Skipping HATCH ${index}: no usable boundary vertices`);
