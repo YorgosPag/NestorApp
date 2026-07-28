@@ -160,6 +160,26 @@
   opacity: 1;
 }
 
+/*
+ * ADR-720 — the planimetric-points note.
+ *
+ * Deliberately NOT `.hint` (opacity 0.75): what this note says is that part of the file will
+ * NOT define the surface, which changes what the engineer gets and therefore what the earthworks
+ * are computed over. Fine grey print is where that fact goes to be missed. Full opacity, a rule
+ * down the side, and a faint tint mark it as something to read, without shouting like an error —
+ * because it is not one.
+ */
+.note {
+  margin: 0;
+  padding: 6px 9px;
+  border-left: 2px solid rgb(255 255 255 / 45%);
+  border-radius: 2px;
+  background: rgb(255 255 255 / 7%);
+  font-size: 11px;
+  line-height: 1.45;
+  opacity: 1;
+}
+
 .footer {
   display: flex;
   justify-content: space-between;

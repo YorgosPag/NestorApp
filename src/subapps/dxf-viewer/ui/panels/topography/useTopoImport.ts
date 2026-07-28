@@ -26,7 +26,9 @@ import { setPointCloud3D } from '../../../systems/topography/pointcloud-3d-store
 import { detectDelimiter, readDelimitedText } from '../../../systems/topography/topo-delimited-reader';
 import { readExcelToTable } from '../../../systems/topography/topo-excel-reader';
 import { extractTopoPointsFromDxf } from '../../../systems/topography/topo-dxf-points';
-import { applyColumnMapping, isMappingComplete, suggestMappingFromHeaders } from '../../../systems/topography/topo-column-mapping';
+import { applyColumnMapping, hasPositionMapping, isMappingComplete, suggestMappingFromHeaders } from '../../../systems/topography/topo-column-mapping';
+import { describeElevationCoverage } from '../../../systems/topography/topo-point-elevation';
+import type { ElevationCoverage } from '../../../systems/topography/topo-point-elevation';
 import { suggestMappingFromRows } from '../../../systems/topography/topo-column-sniffer';
 import { fieldSplitterFor, sampleTopoLines } from '../../../systems/topography/topo-text-lines';
 import { getOrderPresetMapping } from '../../../systems/topography/topo-order-presets';
@@ -76,8 +78,20 @@ export interface UseTopoImport {
   readonly unit: TopoUnit;
   /** Points the CURRENT mapping/unit (or cloud filter result) would import — live preview. */
   readonly points: readonly TopoPoint[];
-  /** Rows that would be dropped (unparseable X/Y/Z). Always 0 on the cloud road. */
+  /**
+   * Rows that would be dropped because they are **not survey points at all** (no readable X/Y).
+   * Always 0 on the cloud road.
+   *
+   * ⚠️ ADR-720 — a row with no ELEVATION is no longer counted here; it is imported as a
+   * planimetric point and reported through {@link coverage} instead.
+   */
   readonly skippedCount: number;
+  /**
+   * ADR-720 — how the previewed points split between measured elevations and positions only, so
+   * the wizard can state it BEFORE the engineer commits rather than after a surface rebuild finds
+   * nothing to triangulate (which is when Civil 3D tells you).
+   */
+  readonly coverage: ElevationCoverage;
   readonly error: string | null;
   readonly busy: boolean;
   readonly canProceed: boolean;
@@ -305,8 +319,14 @@ export function useTopoImport(surface: TopoSurfaceId = 'existing'): UseTopoImpor
     return applyColumnMapping(table, mapping, unit);
   }, [cloudResult, dxfPoints, table, mapping, unit]);
 
+  const coverage = React.useMemo(() => describeElevationCoverage(mapped.points), [mapped.points]);
+
+  // ADR-720 — the table road needs a POSITION mapping, not an elevation-bearing one: a point file
+  // with no Ζ column at all is a foreseen deliverable (a parcel-corner export), not a broken file.
+  // The cloud road below keeps the stricter `isMappingComplete` — a cloud without elevations is
+  // not a terrain sample.
   const canProceed = step === 'mapping'
-    ? isMappingComplete(mapping) && mapped.points.length > 0
+    ? hasPositionMapping(mapping) && mapped.points.length > 0
     : step === 'cloud'
       ? cloudResult !== null && cloudResult.points.length > 0
       : mapped.points.length > 0;
@@ -335,6 +355,7 @@ export function useTopoImport(surface: TopoSurfaceId = 'existing'): UseTopoImpor
     step, fileName, table, mapping, unit,
     points: mapped.points,
     skippedCount: mapped.skipped.length,
+    coverage,
     error, busy, canProceed,
     loadFile, setRole, applyPreset, setUnit: changeUnit, back, next, commit, reset,
     csf, decimate, forceCsf, cloudSample, cloudMapping, cloudSourceExtent,

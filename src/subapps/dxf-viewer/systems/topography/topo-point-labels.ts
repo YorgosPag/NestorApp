@@ -22,9 +22,11 @@ import type { TinSampler } from './tin-sampler';
 import type { WorldToDisplayProjector } from '../geo-referencing/geo-transform';
 import { projectWorldPoint } from './topo-display-frame';
 import { formatElevationLabel } from './topo-to-entities';
+import { hasElevation } from './topo-point-elevation';
 import {
   TOPO_POINT_ELEV_COLOR, TOPO_POINT_CODE_COLOR, TOPO_POINT_NUM_COLOR, TOPO_BOUNDARY_XY_COLOR,
   TOPO_POINT_TEXT_HEIGHT_MM, TOPO_POINT_LABEL_OFFSET_MM, TOPO_POINT_ELEV_DECIMALS,
+  TOPO_ELEVATION_ABSENT_LABEL, TOPO_POINT_MEASURED_STYLE, TOPO_POINT_PLANIMETRIC_STYLE,
   type PointLabelOptions,
 } from './topo-point-label-config';
 
@@ -56,22 +58,35 @@ function textAt(position: Point2D, text: string, layerId: string, color: string)
 /**
  * Spot height: a `point` NODE at the surveyed location (the κουκίδα) plus its elevation in
  * metres, offset to the right so the glyphs sit beside the node — the Civil 3D spot-height pair.
+ *
+ * 🔴 **ADR-720 — the node is emitted for a planimetric point too, and that is the entire point of
+ * the milestone.** A survey point without an elevation is invisible until something draws it, and
+ * an invisible parcel corner cannot be snapped to — so this node is what turns «we no longer throw
+ * the corner away» into «the user can trace the boundary onto it». Because it is a real scene
+ * `point` entity flowing through `completeEntity` (ADR-057), it inherits rendering, selection,
+ * undo, persistence, export **and OSNAP** with no snapping code written anywhere.
+ *
+ * The two kinds are told apart by glyph (filled vs hollow) and by label («12.47» vs «—»). Neither
+ * substitutes a number: an unmeasured elevation stays unmeasured all the way to the paper.
  */
 function toSpotEntities(
   p: TopoPoint, layers: PointLabelLayerIds, projector: WorldToDisplayProjector | null,
 ): LabelEntity[] {
   const at = projectWorldPoint({ x: p.x, y: p.y }, projector);
+  const measured = hasElevation(p);
   const node: PointEntity = {
     id: generateEntityId(),
     type: 'point',
     layerId: layers.elevation,
     color: TOPO_POINT_ELEV_COLOR,
     position: at,
-    style: 'dot',
+    style: measured ? TOPO_POINT_MEASURED_STYLE : TOPO_POINT_PLANIMETRIC_STYLE,
   };
   const label = textAt(
     { x: at.x + TOPO_POINT_LABEL_OFFSET_MM, y: at.y },
-    formatElevationLabel(p.z, TOPO_POINT_ELEV_DECIMALS),
+    measured
+      ? formatElevationLabel(p.z, TOPO_POINT_ELEV_DECIMALS)
+      : TOPO_ELEVATION_ABSENT_LABEL,
     layers.elevation,
     TOPO_POINT_ELEV_COLOR,
   );

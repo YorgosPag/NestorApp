@@ -22,6 +22,10 @@ import { useTranslation } from '@/i18n';
 import { getSceneLayerByName } from '../../../utils/scene-layer-utils';
 import { validateLayerName, type LayerNameValidationResult } from '../../../services/layer-name-validator';
 import { useUniversalSelection } from '../../../systems/selection';
+// ADR-719 §5 — το εικονίδιο ορατότητας διαβάζει τον ΙΔΙΟ SSoT με τον renderer (LayerStore),
+// όχι το prop `scene`. Αλλιώς UI και καμβάς μπορούν να αποκλίνουν σιωπηλά (§2 incident).
+import { useIsLayerOn } from '../../../stores/useLayerStore';
+import { nextLayerOnState } from '../../../config/layer-visibility';
 
 export interface LayerItemProps {
   layerName: string;
@@ -124,6 +128,11 @@ export function LayerItem({
   // ADR-358 Phase 9E-4: compat bridge — name-keyed lookup (Phase 9E-6 will switch to id-keyed).
   // Non-null: LayerItem is only rendered for layers that exist in the scene.
   const layer = getSceneLayerByName(scene, layerName)!;
+  // ADR-719 §5 — ο διακόπτης ON/OFF έρχεται από τον runtime SSoT (LayerStore), ΟΧΙ από το
+  // `layer.visible` του prop. Το `layer` μένει ως πηγή για name/color/id (document data).
+  // Σημασιολογία `visible !== false` (§1): το παλιό `layer.visible ? Eye : EyeOff` έδειχνε
+  // ΟΛΑ τα layers ως κρυμμένα σε φρέσκο DXF, όπου το flag είναι `undefined`.
+  const isOn = useIsLayerOn(layer.id);
   const isSystemLayer = layer.name === '0';
   const isEditing = editingLayer === layerName;
   const [renameValidation, setRenameValidation] =

@@ -1152,6 +1152,8 @@
       "confirmHint": "Τα σημεία θα αντικαταστήσουν τα ήδη φορτωμένα.",
       "confirmCount": "{count, plural, one {# σημείο έτοιμο για εισαγωγή} other {# σημεία έτοιμα για εισαγωγή}}",
       "previewCount": "{count, plural, one {# σημείο} other {# σημεία}}",
+      "previewElevationSplit": "({withElevation} με υψόμετρο / {planimetric} δισδιάστατα)",
+      "planimetricNote": "{planimetric, plural, one {# σημείο δεν έχει υψόμετρο} other {# σημεία δεν έχουν υψόμετρο}}: εισάγονται κανονικά — ορατά και με έλξη — αλλά δεν συμμετέχουν στην επιφάνεια. Την επιφάνεια την ορίζουν {withElevation, plural, one {το # σημείο με υψόμετρο} other {τα # σημεία με υψόμετρο}}.",
       "previewSkipped": "{count, plural, one {# γραμμή θα παραλειφθεί} other {# γραμμές θα παραλειφθούν}}",
       "presetLabel": "Σειρά στηλών",
       "presetPlaceholder": "Επίλεξε μορφή…",

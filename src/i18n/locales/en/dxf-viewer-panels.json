@@ -1152,6 +1152,8 @@
       "confirmHint": "These points will replace the ones currently loaded.",
       "confirmCount": "{count, plural, one {# point ready to import} other {# points ready to import}}",
       "previewCount": "{count, plural, one {# point} other {# points}}",
+      "previewElevationSplit": "({withElevation} with elevation / {planimetric} planimetric)",
+      "planimetricNote": "{planimetric, plural, one {# point has no elevation} other {# points have no elevation}}: they are imported normally — visible and snappable — but take no part in the surface. The surface is defined by {withElevation, plural, one {the # point with an elevation} other {the # points with elevations}}.",
       "previewSkipped": "{count, plural, one {# row will be skipped} other {# rows will be skipped}}",
       "presetLabel": "Column order",
       "presetPlaceholder": "Choose a format…",

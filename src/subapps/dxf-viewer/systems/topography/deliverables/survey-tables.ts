@@ -51,9 +51,17 @@ export const COORDINATE_COLUMNS: readonly ScheduleColumnDef[] = [
   col('code', 'text', 'left'),
 ];
 
+/**
+ * ⚠️ ADR-720 — a point measured in plan only writes `null` in the Ζ column, i.e. an EMPTY cell —
+ * never `0`. The convention is already the file's own, three functions down: `buildPlotMeasurements`
+ * writes `null` for a corner outside the survey, «ποτέ 0, που θα διαβαζόταν ως πραγματικό υψόμετρο».
+ * The same reasoning applies with more force here, because this table is the coordinate schedule
+ * that goes into the legal deliverable: a fabricated `0.000` in it is a stated measurement that
+ * nobody took.
+ */
 export function buildCoordinateTable(points: readonly TopoPoint[]): ExportableTable {
   const rows: ExportableTableRow[] = points.map((p, i) => ({
-    cells: { index: i + 1, x: p.x, y: p.y, z: p.z, code: p.code ?? '' },
+    cells: { index: i + 1, x: p.x, y: p.y, z: p.z ?? null, code: p.code ?? '' },
   }));
   return { columns: COORDINATE_COLUMNS, rows };
 }
