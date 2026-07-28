@@ -157,9 +157,7 @@ export const WorkspaceSplitLayout = React.memo<WorkspaceSplitLayoutProps>(({
    * `UnifiedFrameScheduler` (ADR-040) κατέχει τα καρέ **του καμβά** — ένα layout component
    * δεν έχει δουλειά να μπει στην ουρά απόδοσης.
    */
-  const handleLayoutChanged = useCallback((): void => {
-    if (!userIntentRef.current) return;
-    userIntentRef.current = false;
+  const schedulePersist = useCallback((): void => {
     if (persistFrameRef.current !== null) cancelAnimationFrame(persistFrameRef.current);
     persistFrameRef.current = requestAnimationFrame(() => {
       persistFrameRef.current = null;
@@ -169,6 +167,12 @@ export const WorkspaceSplitLayout = React.memo<WorkspaceSplitLayoutProps>(({
       setDockedWidth(element ? element.getBoundingClientRect().width : measuredWidthRef.current);
     });
   }, []);
+
+  const handleLayoutChanged = useCallback((): void => {
+    if (!userIntentRef.current) return;
+    userIntentRef.current = false;
+    schedulePersist();
+  }, [schedulePersist]);
 
   // Η αναβολή δεν επιτρέπεται να επιζήσει του component: ένα `setDockedWidth` μετά την
   // αποπροσάρτηση θα έγραφε το πλάτος μιας διάταξης που δεν υπάρχει πια.
@@ -194,10 +198,26 @@ export const WorkspaceSplitLayout = React.memo<WorkspaceSplitLayoutProps>(({
     userIntentRef.current = true;
   }, []);
 
+  /**
+   * ⚠️ ΤΟ ΠΛΗΚΤΡΟΛΟΓΙΟ ΓΡΑΦΕΙ **ΜΟΝΟ ΤΟΥ** — δεν περιμένει το `onLayoutChanged`.
+   *
+   * Μετρημένο ζωντανά 2026-07-28 σε καθαρό build: με **σύρσιμο** το store γράφει σωστά· με
+   * **πλήκτρο** το πλάτος άλλαζε (531,1 → 647,5) και το σχέδιο έμενε ακίνητο, αλλά η εγγραφή
+   * **δεν γινόταν ποτέ** ⇒ το keyboard resize ξεχνιόταν στο επόμενο άνοιγμα.
+   *
+   * Η βιβλιοθήκη τεκμηριώνει το `onLayoutChanged` ως «μετά την απελευθέρωση του δείκτη» — και
+   * η χειρονομία του πληκτρολογίου **δεν έχει** απελευθέρωση δείκτη. Αντί να στοιχηματίσουμε
+   * σε *πότε* (ή *αν*) το καλεί, η εγγραφή σκανδαλίζεται **και** από εδώ: μία συνάρτηση
+   * ({@link schedulePersist}), δύο σκανδάλες. Το `requestAnimationFrame` μέσα της είναι
+   * ιδempotent (ακυρώνει την προηγούμενη), οπότε αν πυροδοτηθούν **και τα δύο** μονοπάτια η
+   * εγγραφή γίνεται **μία** φορά — belt-and-suspenders χωρίς διπλή εγγραφή (N.7.2 #3/#4).
+   */
   const handleSeparatorKeyDown = useCallback((event: React.KeyboardEvent<HTMLDivElement>): void => {
     // Μόνο τα πλήκτρα αλλαγής μεγέθους μετρούν ως πρόθεση — ένα `Tab` δεν είναι χειρονομία.
-    if (RESIZE_KEYS.has(event.key)) userIntentRef.current = true;
-  }, []);
+    if (!RESIZE_KEYS.has(event.key)) return;
+    userIntentRef.current = true;
+    schedulePersist();
+  }, [schedulePersist]);
 
   if (!split) {
     return <>{sidebar}{children}</>;

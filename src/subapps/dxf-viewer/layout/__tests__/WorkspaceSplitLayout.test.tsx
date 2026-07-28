@@ -8,7 +8,7 @@
  */
 
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 
 // Ο `t()` επιστρέφει το κλειδί ⇒ ένα hardcoded string θα φαινόταν αμέσως στα assertions.
 jest.mock('@/i18n/hooks/useTranslation', () => ({
@@ -147,6 +147,64 @@ describe('ADR-724 Φ1 — WorkspaceSplitLayout', () => {
     // η βιβλιοθήκη πέφτει σε ισομερή κατανομή (`flex-grow: 50` και στα δύο) και κάθε assertion
     // σε pixels θα επιβεβαίωνε τεχνούργημα του περιβάλλοντος, όχι συμπεριφορά. Το ίδιο ισχύει
     // για το «μετά το διπλό κλικ το store ακολουθεί τη βιβλιοθήκη». Επαληθεύονται ζωντανά.
+  });
+
+  // ── ADR-724 §14.2 Ε3 — Η ΕΓΓΡΑΦΗ ΤΟΥ ΠΛΗΚΤΡΟΛΟΓΙΟΥ ──
+  //
+  // Μετρημένο ζωντανά 2026-07-28 σε καθαρό build: με **σύρσιμο** το store έγραφε σωστά· με
+  // **πλήκτρο** το πλάτος άλλαζε (531,1 → 647,5) αλλά η εγγραφή **δεν γινόταν ποτέ** ⇒ το
+  // keyboard resize ξεχνιόταν στο επόμενο άνοιγμα. Η βιβλιοθήκη τεκμηριώνει το
+  // `onLayoutChanged` ως «μετά την απελευθέρωση του δείκτη» — και το πληκτρολόγιο **δεν έχει**
+  // απελευθέρωση δείκτη. Γι' αυτό η εγγραφή σκανδαλίζεται ΚΑΙ από το `onKeyDown`.
+  //
+  // ⚠️ Το jsdom δεν κάνει διάταξη, οπότε το `getBoundingClientRect().width` του panel είναι
+  // mock-αρισμένο: εδώ κλειδώνεται **ότι η εγγραφή πυροδοτείται** και **με ποια τιμή**, όχι το
+  // πόσα pixel υπολόγισε η βιβλιοθήκη (αυτό μετριέται ζωντανά).
+  describe('το πλήκτρο αποθηκεύει το πλάτος (δεν περιμένει `onLayoutChanged`)', () => {
+    /**
+     * Η εγγραφή αναβάλλεται ΕΝΑ καρέ (το layout δεν έχει γίνει flush τη στιγμή του keydown).
+     * ⚠️ Σε **κρυφή** καρτέλα το `requestAnimationFrame` παγώνει — γι' αυτό η ζωντανή
+     * επαλήθευση απαιτεί ενεργή καρτέλα (ADR-711 §7.2, ίδια παγίδα).
+     */
+    async function flushFrame(): Promise<void> {
+      await act(async () => {
+        await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+      });
+    }
+
+    /** Οι εγγραφές **του δικού μας κλειδιού** — το jsdom localStorage το μοιράζονται όλοι. */
+    function dockWrites(spy: jest.SpyInstance): unknown[] {
+      return spy.mock.calls.filter(([key]) => String(key).includes('workspace-dock'));
+    }
+
+    // ⚠️⚠️ ΤΙ **ΔΕΝ** ΜΠΟΡΕΙ ΝΑ ΕΛΕΓΧΘΕΙ ΕΔΩ — ΚΑΙ ΓΙΑΤΙ ΔΕΝ ΓΡΑΦΤΗΚΕ ΨΕΥΤΙΚΟ TEST
+    //
+    // Το «`ArrowLeft` ⇒ γίνεται εγγραφή» **είναι** το ελάττωμα που διορθώθηκε, αλλά είναι
+    // **αδύνατο** να ελεγχθεί σε jsdom: ο **native** keydown listener της βιβλιοθήκης τρέχει
+    // πριν από τον δικό μας (React delegated) και πετά «Previous layout not found» — δεν
+    // υπάρχει πραγματική διάταξη να μεταβάλει. Μετρημένο: όταν πετάει, ο δικός μας handler
+    // **δεν τρέχει καθόλου**, ούτε με `try/catch` γύρω από το `fireEvent`.
+    //
+    // Άρα κάθε assertion εδώ θα μετρούσε **το jsdom**, όχι τον κώδικά μας — και ένα test που
+    // περνά για λάθος λόγο είναι χειρότερο από κανένα (βλ. το ξαναγραμμένο test παραπάνω).
+    // ➜ Επαληθεύεται **ζωντανά**, σε **ενεργή** καρτέλα: σε κρυφή καρτέλα το
+    //   `requestAnimationFrame` παγώνει και η εγγραφή δεν προλαβαίνει ποτέ να τρέξει.
+    //
+    // Ό,τι ΜΠΟΡΕΙ να ελεγχθεί ελέγχεται: ότι ένα **μη**-resize πλήκτρο δεν γράφει (η
+    // βιβλιοθήκη δεν το αγγίζει, άρα δεν πετά, άρα ο handler μας τρέχει κανονικά).
+
+    it('πλήκτρο που ΔΕΝ αλλάζει πλάτος (Tab) δεν γράφει τίποτα', async () => {
+      renderLayout(true);
+      const spy = jest.spyOn(Storage.prototype, 'setItem');
+
+      fireEvent.keyDown(screen.getByRole('separator'), { key: 'Tab' });
+      await flushFrame();
+
+      // Αλλιώς κάθε πλοήγηση με Tab πάνω από το διαχωριστικό θα ξανάγραφε την προτίμηση.
+      expect(dockWrites(spy)).toHaveLength(0);
+      spy.mockRestore();
+    });
+
   });
 
   describe('ADR-040 — το αρχικό πλάτος διαβάζεται ΜΙΑ φορά', () => {
