@@ -17,6 +17,10 @@
  *   • label   → `activeLabelKey` (the "turn-off" action) when on, else `inactiveLabelKey`
  *   • tooltip → `activeTooltipKey` when on, else `inactiveTooltipKey`
  *
+ * Two override channels sit on top of that ramp (ADR-662 Φ4 / ADR-718 Μ3):
+ *   • `disabled` + `disabledReasonKey` → greyed, the reason owns aria-label + tooltip
+ *   • `noticeKey` (enabled only)       → `warning` colour, the notice owns aria-label + tooltip
+ *
  * Visibility-style toggles (Show/Hide) model `value` as "visible", so the same
  * on=info / off=secondary ramp and the same active=turn-off-action mapping hold.
  * The genuinely divergent multi-chip `DisciplineVisibilityToggle` is NOT a
@@ -48,6 +52,18 @@ export interface RibbonToggleConfig {
     readonly disabled?: boolean;
     /** i18n key for the "why disabled" reason (aria-label + hover tooltip). */
     readonly disabledReasonKey?: string;
+    /**
+     * ADR-718 Μ3 — «ενεργό, αλλά **υποβαθμισμένο**»: η εντολή δουλεύει, όμως κάτι που ο
+     * χρήστης πρέπει να ξέρει έχει αλλάξει κάτω από αυτήν (π.χ. η κοπή τρέχει με το τελευταίο
+     * έγκυρο όριο επειδή η πολυγραμμή-πηγή άνοιξε ή διαγράφηκε).
+     *
+     * Ξεχωριστό κανάλι από το `disabledReasonKey`, γιατί είναι **άλλη** κατάσταση: το disabled
+     * λέει «δεν μπορείς ακόμη», αυτό λέει «γίνεται, αλλά όχι με ό,τι νομίζεις». Να το
+     * γκριζάρουμε θα ήταν ψέμα (η κοπή ΟΝΤΩΣ ισχύει), να σιωπήσουμε επίσης. Το widget το
+     * δείχνει με **προειδοποιητικό χρώμα + tooltip**: το παθητικό, μη-modal σήμα του κίτρινου
+     * θυρεού του Civil 3D, στο σημείο όπου ο χρήστης ήδη κοιτάζει.
+     */
+    readonly noticeKey?: string;
   };
   /** Constant row label key. */
   readonly labelKey: string;
@@ -72,7 +88,7 @@ interface RibbonToggleWidgetProps {
 export const RibbonToggleWidget: React.FC<RibbonToggleWidgetProps> = ({ config }) => {
   const { t } = useTranslation('dxf-viewer-shell');
   const colors = useSemanticColors();
-  const { value, toggle, disabled, disabledReasonKey } = config.useToggleState();
+  const { value, toggle, disabled, disabledReasonKey, noticeKey } = config.useToggleState();
 
   const ActiveIcon = config.activeIcon;
   const InactiveIcon = config.inactiveIcon;
@@ -85,7 +101,11 @@ export const RibbonToggleWidget: React.FC<RibbonToggleWidgetProps> = ({ config }
   // When disabled the "why" reason owns both the aria-label (screen readers) and
   // the hover tooltip (mirror of PointCloud3DManageButton). Otherwise the normal
   // active/inactive tooltip text applies.
-  const reason = disabled && disabledReasonKey ? t(disabledReasonKey) : undefined;
+  // ADR-718 Μ3 — το notice ισχύει ΜΟΝΟ όσο η εντολή είναι ενεργή· όταν είναι γκρίζα, ο λόγος
+  // του disabled είναι το πιο επείγον πράγμα να πει κανείς (δύο tooltips δεν χωράνε σε ένα
+  // κουμπί, και «γιατί δεν πατιέται» προηγείται του «γιατί είναι υποβαθμισμένο»).
+  const notice = !disabled && noticeKey ? t(noticeKey) : undefined;
+  const reason = disabled && disabledReasonKey ? t(disabledReasonKey) : notice;
   const button = (
     <RibbonInlineToggleButton
       pressed={value}
@@ -94,7 +114,9 @@ export const RibbonToggleWidget: React.FC<RibbonToggleWidgetProps> = ({ config }
       ariaLabel={reason ?? (value ? t(config.activeTooltipKey) : t(config.inactiveTooltipKey))}
       icon={icon}
       label={value ? t(config.activeLabelKey) : t(config.inactiveLabelKey)}
-      colorClass={value ? colors.text.info : colors.text.secondary}
+      colorClass={
+        notice ? colors.text.warning : value ? colors.text.info : colors.text.secondary
+      }
     />
   );
 

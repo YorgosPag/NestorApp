@@ -70,6 +70,7 @@ import {
   setTopoCrop,
   subscribeTopo,
 } from '../../../systems/topography/TopoPointStore';
+import type { TopoBoundaryLink } from '../../../systems/topography/topo-types';
 import { useContourDisplay } from '../../../systems/topography/useContourDisplay';
 
 /** i18n key group + on/off/tooltip suffixes for one toggle. */
@@ -215,6 +216,22 @@ const TERRAIN_AUTOCLIP = toggleConfig(
 // Το ΙΔΙΟ όριο που ήδη περιορίζει τους όγκους (ADR-650 M6) προάγεται σε όριο της ΕΠΙΦΑΝΕΙΑΣ:
 // κάτοψη, ισοϋψείς, 3Δ, cap, εμβαδά. Χωρίς επιλεγμένο όριο η εντολή είναι greyed με τον λόγο —
 // ίδιο big-player μοτίβο με το CLOUD_VISIBLE («εντολή με ανεκπλήρωτη προϋπόθεση λέει γιατί»).
+/**
+ * ADR-718 Μ3 — τι λέει το κουμπί όταν ο ζωντανός δεσμός με την πολυγραμμή-πηγή έχει σπάσει.
+ *
+ * `live` δεν έχει μήνυμα: το φυσιολογικό δεν ανακοινώνεται. Στις άλλες δύο η κοπή **εξακολουθεί
+ * να ισχύει** με το τελευταίο έγκυρο σχήμα (δες `TopoBoundaryLink`) — γι' αυτό το κουμπί μένει
+ * πατήσιμο και απλώς προειδοποιεί· γκριζάρισμα θα έλεγε ψέματα για το τι βλέπει ο χρήστης.
+ *
+ * Χάρτης αντί για αλυσίδα `if`: εξαντλητικός ανά `TopoBoundaryLink` (νέα κατάσταση αύριο ⇒ ο
+ * μεταγλωττιστής ζητά το μήνυμά της, δεν την αφήνει να περάσει σιωπηλά ως «κανένα μήνυμα»).
+ */
+const BOUNDARY_LINK_NOTICE: Record<TopoBoundaryLink, string | undefined> = {
+  live: undefined,
+  invalid: `${K}.cropToBoundary.linkInvalidTip`,
+  missing: `${K}.cropToBoundary.linkMissingTip`,
+};
+
 const CROP_TO_BOUNDARY = toggleConfig(
   () => {
     const st = React.useSyncExternalStore(subscribeTopo, getTopoState, getTopoState);
@@ -224,6 +241,7 @@ const CROP_TO_BOUNDARY = toggleConfig(
       toggle: () => setTopoCrop({ enabled: !getTopoCrop().enabled }),
       disabled: !hasBoundary,
       disabledReasonKey: hasBoundary ? undefined : `${K}.cropToBoundary.noBoundaryTip`,
+      noticeKey: BOUNDARY_LINK_NOTICE[st.boundaryLink],
     };
   },
   Scissors, Mountain, keys('cropToBoundary'),

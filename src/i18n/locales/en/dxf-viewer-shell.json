@@ -4781,7 +4781,9 @@
           "off": "Crop to boundary",
           "tooltipOn": "The terrain is cropped to the site boundary — click to restore the whole surveyed area",
           "tooltipOff": "Cut the terrain vertically at the site boundary. Elevations stay exactly the same and the surface can never grow beyond the surveyed area",
-          "noBoundaryTip": "Pick the site boundary first with «Excavation boundary»"
+          "noBoundaryTip": "Pick the site boundary first with «Excavation boundary»",
+          "linkInvalidTip": "The boundary polyline is no longer closed. The crop continues with the last valid shape — close the polyline again to relink it",
+          "linkMissingTip": "The boundary polyline was deleted. The crop continues with the last valid shape — undoing the deletion relinks it"
         },
         "cropShowOutside": {
           "label": "Surrounding ground",
