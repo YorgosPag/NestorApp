@@ -21,7 +21,11 @@ export type ColumnRole = 'x' | 'y' | 'z' | 'code' | 'pointId' | 'ignore';
 
 /**
  * Column index → role. Index is the 0-based position in `RawTable.rows[i]`.
- * A role may appear at most once; `x`, `y` and `z` are required for a usable import.
+ *
+ * A role may appear at most once. **X and Y are required** for a usable import; ADR-720 made `z`
+ * optional, because «this file carries no elevations» is a foreseen case (Civil 3D's `<unused>`
+ * column value, LandXML's 2D `CgPoint`) rather than a malformed one. The bulk point-cloud road
+ * still demands all three — see `topo-column-mapping`'s two gates.
  */
 export type ColumnMapping = readonly ColumnRole[];
 
@@ -60,6 +64,13 @@ export interface OrderPreset {
 /** Outcome of interpreting a `RawTable` through a `ColumnMapping`. */
 export interface MappedPointsResult {
   readonly points: readonly import('./topo-types').TopoPoint[];
-  /** 1-based row numbers (within `rows`) that yielded no finite X/Y/Z. */
+  /**
+   * 1-based row numbers (within `rows`) that yielded no finite X/Y — i.e. **rows that are not
+   * survey points at all** (a trailing total, a legend line, a blank).
+   *
+   * ⚠️ ADR-720 — a row whose ELEVATION cell is empty is not skipped: it becomes a planimetric
+   * point and appears in `points`. `skipped` counts what could not be read, never what was not
+   * measured.
+   */
   readonly skipped: readonly number[];
 }

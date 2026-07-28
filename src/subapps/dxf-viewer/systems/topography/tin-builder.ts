@@ -15,8 +15,9 @@
  */
 
 import cdt2d, { type Cdt2dPoint, type Cdt2dEdge } from 'cdt2d';
-import type { TopoPoint, Breakline, LocalOrigin, TinSurface, TopoBounds } from './topo-types';
+import type { TopoPoint, TopoPoint3D, Breakline, LocalOrigin, TinSurface, TopoBounds } from './topo-types';
 import { computeLocalOrigin, ZERO_ORIGIN } from './topo-local-origin';
+import { surfacePointsOf } from './topo-point-elevation';
 
 /**
  * Micrometre-grid key so coincident survey/breakline vertices merge to one TIN node.
@@ -58,9 +59,15 @@ export function pushVertex(acc: CollectedVertices, localX: number, localY: numbe
   return index;
 }
 
-/** Collect survey points + breakline vertices into deduped LOCAL positions + Z. */
+/**
+ * Collect survey points + breakline vertices into deduped LOCAL positions + Z.
+ *
+ * Takes {@link TopoPoint3D}, not `TopoPoint`: by the time a vertex reaches the accumulator the
+ * question «was this elevation measured?» must already be settled (ADR-720). `buildTin` settles
+ * it, once, at the door.
+ */
 function collectVertices(
-  points: readonly TopoPoint[],
+  points: readonly TopoPoint3D[],
   breaklines: readonly Breakline[],
   origin: LocalOrigin,
 ): CollectedVertices {
@@ -128,14 +135,29 @@ export function countFlatTriangles(
 /**
  * Build a Constrained Delaunay {@link TinSurface} from survey points + breaklines.
  * Returns an empty surface (no triangles) when there are fewer than 3 distinct points.
+ *
+ * 🔴 **ADR-720 — this is THE elevation filter, and the only one.** Survey points without a
+ * measured Ζ are dropped here, at the single door into the triangulation, so every derived
+ * product — contours, 3D terrain, cut/fill volumes, the plan footprint, the cut cap, the
+ * deliverable tables — excludes them **without a line changing in any of those eight consumers**.
+ * That is the same reason the ADR-718 crop lives in `topo-surface` and not in its consumers.
+ *
+ * This is Carlson's «Non-Surface» point and Civil 3D's elevation-less COGO point, with one
+ * difference in our favour: they need the shot to be tagged by hand or discovered at rebuild
+ * time, whereas the absence of Ζ **is** the tag, so nothing can be forgotten.
+ *
+ * The origin is computed from the FILTERED set for the same reason the rest of the geometry is:
+ * it exists to shrink the magnitudes actually being triangulated (ADR-635), and a planimetric
+ * point that contributes no vertex should not move the frame the vertices live in.
  */
 export function buildTin(
   points: readonly TopoPoint[],
   breaklines: readonly Breakline[] = [],
   originArg?: LocalOrigin,
 ): TinSurface {
-  const origin = originArg ?? computeLocalOrigin(points, breaklines);
-  const acc = collectVertices(points, breaklines, origin);
+  const surfacePoints = surfacePointsOf(points);
+  const origin = originArg ?? computeLocalOrigin(surfacePoints, breaklines);
+  const acc = collectVertices(surfacePoints, breaklines, origin);
 
   if (acc.positions.length < 3) {
     return {

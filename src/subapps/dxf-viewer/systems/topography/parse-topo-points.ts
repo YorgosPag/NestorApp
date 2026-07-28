@@ -27,13 +27,21 @@ const XYZ_CODE_MAPPING: ColumnMapping = ['x', 'y', 'z', 'code'];
 
 export interface ParseTopoResult {
   readonly points: TopoPoint[];
-  /** Line numbers (1-based, in the ORIGINAL text) that could not be parsed as X Y Z. */
+  /**
+   * Line numbers (1-based, in the ORIGINAL text) that carried no readable POSITION.
+   *
+   * ⚠️ ADR-720 — a line with only `X Y` is no longer skipped; it yields a planimetric point.
+   */
   readonly skipped: number[];
 }
 
 /**
- * Parse survey points from raw text. Each non-comment line must yield at least three
- * finite numbers (X, Y, Z); an optional 4th field becomes the feature `code`.
+ * Parse survey points from raw text. Each non-comment line must yield at least two finite
+ * numbers (X, Y); a third becomes the elevation and a 4th field the feature `code`.
+ *
+ * ADR-720 — a line without the third number is a **2D survey point**, not a parse failure. The
+ * rule lives in the shared `mapRowToPoint`, so this lenient road and the wizard's table road
+ * cannot come to disagree about what «no elevation» means.
  */
 export function parseTopoPoints(text: string, unitScaleToMm = 1000): ParseTopoResult {
   const points: TopoPoint[] = [];

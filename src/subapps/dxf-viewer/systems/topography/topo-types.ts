@@ -22,7 +22,28 @@ import type { Point2D } from '../../rendering/types/Types';
 export interface TopoPoint {
   readonly x: number;
   readonly y: number;
-  readonly z: number;
+  /**
+   * ADR-720 — the measured elevation, **or `undefined` when the surveyor measured position only**.
+   *
+   * A point without Z is NOT broken data and is NOT an import error. It is the ordinary way a
+   * property corner, a fence post or a manhole rim is recorded, and every reference model in the
+   * field says so: LandXML 1.2 defines `CgPoint` as «a 2D **or** 3D Point»; OGC Simple Features /
+   * ISO 19125 make `Point` and `PointZ` two equally valid types; Civil 3D treats the COGO point's
+   * elevation as an OPTIONAL property (`*PROPERTY NOT SET*`) and its Point File Format has an
+   * `<unused>` column value for exactly «this file carries no elevations»; Carlson marks such
+   * shots «Non-Surface» — its own manual's examples are *fire hydrants, **property corners**,
+   * manhole inverts*.
+   *
+   * 🔴 **Why this is optional and not `0`.** In the survey that forced this change, **7 of the 9
+   * parcel corners were CSV points and NOT ONE carried an elevation**. Defaulting them to `0` (or
+   * interpolating one from the surface) would invent a measurement — and that invented number
+   * flows straight into the cut/fill volumes, i.e. into a **price**. Absent elevation must stay
+   * absent all the way to the label, which prints «—» rather than a digit nobody measured.
+   *
+   * ⚠️ Anything that FEEDS THE SURFACE must narrow to {@link TopoPoint3D} first — never read `z`
+   * with a `?? 0`. The one filter is `surfacePointsOf` in `topo-point-elevation.ts`.
+   */
+  readonly z?: number;
   /** Optional feature code (e.g. `EDGE`, `TREE`) — carried through, unused in Milestone 1. */
   readonly code?: string;
   /**
@@ -36,13 +57,38 @@ export interface TopoPoint {
 }
 
 /**
+ * ADR-720 — a survey point whose elevation **was measured**: the only kind that may define a
+ * surface, be sampled, be compared vertically, or be written into a Ζ column.
+ *
+ * This exists so the distinction is enforced by the COMPILER rather than by everyone remembering.
+ * `TopoPoint.z` is `number | undefined`, so arithmetic on it does not type-check; the only way
+ * through is to narrow — `hasElevation(p)` for one, `surfacePointsOf(points)` for many, both in
+ * `topo-point-elevation.ts`. A new consumer therefore cannot *silently* inherit the 2D case: it
+ * is made to answer «what do I do when the elevation is missing?» before it compiles.
+ *
+ * The alternative — a boolean flag beside a `z: number` that is 0 when absent — is what Carlson's
+ * manual «Non-Surface» tagging really is, and it fails the same way every time: the flag is
+ * checked in four places out of five, and the fifth silently reads the 0.
+ */
+export interface TopoPoint3D extends TopoPoint {
+  readonly z: number;
+}
+
+/**
  * A constraint polyline (breakline) in WORLD canonical mm — road edge, ridge, ditch,
  * retaining wall. Q6: breakline-aware from the start. Its vertices become constrained
  * edges in the CDT so the TIN keeps the hard break instead of smoothing across it.
+ *
+ * ⚠️ ADR-720 — vertices are {@link TopoPoint3D}, **not** `TopoPoint`: a breakline is a statement
+ * about where the ground BREAKS, so a vertex without an elevation is not a weaker breakline — it
+ * is a meaningless one. Both builders already guarantee it (`buildBreaklineFromEntity`: explicit
+ * `lwpolyline.elevation`, else borrowed from the nearest **measured** point; `chain-feature-edges`:
+ * straight off the TIN), so the type is documenting a property the code already has — and pinning
+ * it, so the third builder cannot quietly arrive without one.
  */
 export interface Breakline {
   readonly id: string;
-  readonly vertices: readonly TopoPoint[];
+  readonly vertices: readonly TopoPoint3D[];
   /** When true, the first and last vertices are also joined by a constrained edge. */
   readonly closed?: boolean;
   /**

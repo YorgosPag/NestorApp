@@ -39,14 +39,15 @@ import { isLineEntity, isPolylineEntity, isLWPolylineEntity } from '../../types/
 import type { Point2D } from '../../rendering/types/Types';
 import type { WorldToDisplayProjector } from '../geo-referencing/geo-transform';
 import { unprojectDisplayPoints } from './topo-display-frame';
-import type { TopoPoint } from './topo-types';
+import { surfacePointsOf } from './topo-point-elevation';
+import type { TopoPoint, TopoPoint3D } from './topo-types';
 
 /** Από πού προέκυψε το z της breakline (για μήνυμα/QA — Civil 3D ορολογία). */
 export type BreaklineSource = 'elevation' | 'proximity';
 
 /** Χτισμένη breakline, έτοιμη για `addBreakline`. */
 export interface BuiltBreakline {
-  readonly vertices: readonly TopoPoint[];
+  readonly vertices: readonly TopoPoint3D[];
   readonly closed: boolean;
   readonly source: BreaklineSource;
 }
@@ -69,9 +70,17 @@ function extractPolyline(entity: Entity): { vertices: readonly Point2D[]; closed
   return null;
 }
 
-/** Το z του πλησιέστερου μετρημένου σημείου (squared distance — καμία ρίζα). */
-function nearestElevation(vertex: Point2D, points: readonly TopoPoint[]): number {
-  let bestZ = points[0].z;
+/**
+ * Το z του πλησιέστερου **μετρημένου** σημείου (squared distance — καμία ρίζα).
+ *
+ * ⚠️ ADR-720 — δέχεται {@link TopoPoint3D}, γιατί ένα σημείο **χωρίς** υψόμετρο δεν έχει τίποτα
+ * να δανείσει. Αν περνούσαν και τα δισδιάστατα, το πλησιέστερο σημείο μιας κορυφής θα μπορούσε να
+ * είναι ακριβώς μια κορυφή οικοπέδου (που είναι ό,τι πιο κοντινό υπάρχει σε μια γραμμή ορίου) και
+ * η ασυνέχεια θα έμπαινε στο CDT με `undefined` υψόμετρο — δηλαδή `NaN` κόμβο, δηλαδή σκουπίδια
+ * τρίγωνα, **χωρίς κανένα ορατό σύμπτωμα**. Το φιλτράρισμα γίνεται στον καλούντα, μία φορά.
+ */
+function nearestElevation(vertex: Point2D, points: readonly TopoPoint3D[]): number {
+  let bestZ = points[0]!.z;
   let bestD2 = Infinity;
   for (const p of points) {
     const dx = p.x - vertex.x;
@@ -89,7 +98,9 @@ function nearestElevation(vertex: Point2D, points: readonly TopoPoint[]): number
  * Χτίζει breakline από μια γραμμική οντότητα του σχεδίου.
  *
  * Επιστρέφει `null` όταν: δεν είναι γραμμική οντότητα · έχει < 2 κορυφές · είναι 2D
- * (proximity) αλλά ΔΕΝ υπάρχουν φορτωμένα σημεία για να δώσουν υψόμετρο.
+ * (proximity) αλλά ΔΕΝ υπάρχει **κανένα μετρημένο** σημείο για να δώσει υψόμετρο (ADR-720: μια
+ * αποτύπωση μπορεί πλέον να είναι εξ ολοκλήρου δισδιάστατη — π.χ. αρχείο μόνο με κορυφές
+ * οικοπέδου — και τότε δεν υπάρχει υψόμετρο να δανειστεί, ούτε επιφάνεια να το δώσει).
  *
  * @param projector ο ενεργός WORLD→DISPLAY (`getTopoDisplayProjector()`), ή `null` σε
  *   μη-γεωαναφερμένο έργο. Οι κορυφές ανεβαίνουν σε WORLD **πριν** ρωτηθεί το `nearestElevation`,
@@ -119,9 +130,13 @@ export function buildBreaklineFromEntity(
   }
 
   // (2) proximity breakline — το z δανείζεται από την ίδια την αποτύπωση.
-  if (points.length === 0) return null;
+  // ADR-720: δανείζεται μόνο από τα **μετρημένα** σημεία. Χωρίς κανένα τέτοιο, η proximity
+  // ασυνέχεια δεν χτίζεται — ίδιος fail-closed κανόνας με το «καθόλου φορτωμένα σημεία», και
+  // για τον ίδιο λόγο: υψόμετρο που δεν υπάρχει δεν το εφευρίσκουμε, ο caller το λέει.
+  const measured = surfacePointsOf(points);
+  if (measured.length === 0) return null;
   return {
-    vertices: vertices.map((v) => ({ x: v.x, y: v.y, z: nearestElevation(v, points) })),
+    vertices: vertices.map((v) => ({ x: v.x, y: v.y, z: nearestElevation(v, measured) })),
     closed: poly.closed,
     source: 'proximity',
   };

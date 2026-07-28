@@ -38,6 +38,7 @@ import type { TopoDefinition, TopoPoint, TopoSurfaceId } from './topo-types';
 import { getTopoDefinition } from './TopoPointStore';
 import { getTopoSurface } from './topo-surface';
 import { localVertexKey } from './tin-builder';
+import { hasElevation } from './topo-point-elevation';
 import { worldToLocal } from './topo-local-origin';
 import { getActiveWorldToDisplayProjector } from '../geo-referencing/geo-reference-store';
 
@@ -65,6 +66,13 @@ function surveyKeyIndex(surfaceId: TopoSurfaceId): SurveyKeyIndex {
   const { origin } = getTopoSurface(surfaceId);
   const keyToPointIndex = new Map<string, number>();
   definition.points.forEach((p, i) => {
+    // ADR-720 — μόνο τα ΜΕΤΡΗΜΕΝΑ σημεία, γιατί μόνο αυτά έγιναν κόμβοι (ο `buildTin` φιλτράρει).
+    // Ο δείκτης `i` παραμένει δείκτης στον ΑΡΧΙΚΟ πίνακα (skip, όχι pre-filter): το `moveSurveyPoint`
+    // γράφει σε αυτόν. Χωρίς αυτόν τον έλεγχο, ένα δισδιάστατο σημείο που πέφτει στο ίδιο κελί
+    // πλέγματος με έναν κόμβο θα κέρδιζε τον κανόνα «ο πρώτος κρατά τη θέση» και η λαβή θα
+    // μετακινούσε **άλλο** σημείο από αυτό που ο χρήστης βλέπει — ακριβώς σε μια κορυφή οικοπέδου,
+    // όπου το δισδιάστατο και το μετρημένο σημείο συνήθως συμπίπτουν.
+    if (!hasElevation(p)) return;
     const key = localVertexKey(p.x - origin.x, p.y - origin.y);
     if (!keyToPointIndex.has(key)) keyToPointIndex.set(key, i);
   });

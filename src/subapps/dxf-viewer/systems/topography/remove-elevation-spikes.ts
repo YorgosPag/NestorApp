@@ -20,6 +20,7 @@
 import { getTopoPoints, setTopoPoints } from './TopoPointStore';
 import { getTopoSurface } from './topo-surface';
 import { localVertexKey } from './tin-builder';
+import { hasElevation } from './topo-point-elevation';
 import { checkElevationBusts } from './qa/check-elevation-busts';
 import type { TopoSurfaceId } from './topo-types';
 
@@ -36,6 +37,11 @@ function collectSpikePointIndices(surfaceId: TopoSurfaceId): number[] {
 
   const indices: number[] = [];
   getTopoPoints(surfaceId).forEach((p, i) => {
+    // ADR-720 — ένα δισδιάστατο σημείο ΔΕΝ είναι κόμβος της TIN, άρα δεν μπορεί να είναι
+    // elevation bust. Χωρίς αυτόν τον έλεγχο θα διαγραφόταν επειδή απλώς **μοιράζεται κελί
+    // πλέγματος** με έναν σημαδεμένο κόμβο — δηλαδή η «διαγραφή υψομετρικών σφαλμάτων» θα
+    // έσβηνε κορυφές οικοπέδου που δεν έχουν καν υψόμετρο για να είναι λάθος.
+    if (!hasElevation(p)) return;
     if (bustKeys.has(localVertexKey(p.x - origin.x, p.y - origin.y))) indices.push(i);
   });
   return indices;

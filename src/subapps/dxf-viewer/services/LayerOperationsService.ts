@@ -8,12 +8,13 @@ import { getLayerNameOrDefault } from '../config/layer-config';
 import {
   validateLayerExists,
   updateLayerProperties,
-  updateEntitiesForLayer,
   // ADR-129: Centralized entity layer filtering
   getEntityIdsByLayer,
   getEntityIdsByLayers,
   getEntitiesNotInLayers
 } from './shared/layer-operation-utils';
+// ADR-719 §4 — name→layer lookup για το runtime projection write (LayerStore).
+import { getSceneLayerByName } from '../utils/scene-layer-utils';
 // ADR-358 Phase 8.5: SSoT-based property setters
 // ADR-358 Phase 9D-3: id-first reader SSoT
 import { getLayer, upsertLayer, resolveEntityLayerName } from '../stores/LayerStore';

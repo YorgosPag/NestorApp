@@ -63,25 +63,18 @@ export function updateLayerProperties(
   };
 }
 
-/**
- * Update entities when layer properties change
- */
-export function updateEntitiesForLayer(
-  scene: SceneModel,
-  layerName: string,
-  entityUpdates: Partial<{ visible: boolean; color: string }>
-): SceneModel {
-  return {
-    ...scene,
-    entities: scene.entities.map(entity => {
-      // ADR-358 Phase 9D-3: id-first match via LayerStore, name fallback
-      if (resolveEntityLayerName(entity) === layerName) {
-        return { ...entity, ...entityUpdates };
-      }
-      return entity;
-    })
-  };
-}
+// ADR-719 §4 — Ο `updateEntitiesForLayer(scene, layerName, { visible | color })` ΑΦΑΙΡΕΘΗΚΕ.
+//
+// Ήταν ο μηχανισμός που στάμπαρε ιδιότητες του LAYER πάνω σε κάθε οντότητά του. Μοναδικός
+// caller ήταν το `LayerOperationsService.toggleLayerVisibility`, και η κλήση αυτή ήταν το
+// ίδιο το bug: το ON/OFF ενός layer είναι ιδιότητα του LAYER table (DXF/DWG doctrine) — μια
+// οντότητα σε σβηστό layer παραμένει αμετάβλητη, απλώς δεν ζωγραφίζεται. Το γράψιμο στα
+// entities έκανε την πράξη μη ιδεμποτική και απωλεστική (το «εμφάνιση» ξανα-άναβε και όσα ο
+// χρήστης είχε κρύψει ατομικά από το EntityCard).
+//
+// Αν ποτέ χρειαστεί ξανά bulk per-entity mutation, ΜΗΝ την ξαναφτιάξεις εδώ ως «layer
+// property cascade»: γράψε ρητή εντολή με δικό της undo, ώστε ο χρήστης να ξέρει ότι
+// άλλαξαν οι οντότητες και όχι ο διακόπτης του layer.
 
 // ============================================================================
 // ADR-129: ENTITY LAYER FILTERING UTILITIES
