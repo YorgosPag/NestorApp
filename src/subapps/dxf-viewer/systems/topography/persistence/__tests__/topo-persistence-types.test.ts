@@ -14,6 +14,7 @@ import {
   type TopoSurfaceDoc,
 } from '../topo-persistence-types';
 import type { TopoSurfacesDefinition } from '../topo-persistence-types';
+import { TOPO_CROP_OFF } from '../../topo-types';
 
 const EMPTY_DEF = { points: [], breaklines: [] } as const;
 
@@ -21,6 +22,7 @@ function baseState(overrides: Partial<TopoPersistedState> = {}): TopoPersistedSt
   return {
     surfaces: { existing: EMPTY_DEF, proposed: EMPTY_DEF },
     boundary: null,
+    crop: TOPO_CROP_OFF,
     contourConfig: { intervalMm: 500, majorEvery: 5, baseElevationMm: 0, labelMajors: true, labelDecimals: 2 },
     contourDisplayStyle: 'exact',
     terrain3d: { visible: false, style: 'shaded' },

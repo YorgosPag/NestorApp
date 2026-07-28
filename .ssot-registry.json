@@ -4802,6 +4802,21 @@
       ],
       "tier": 3
     },
+    "topo-source-cascade": {
+      "ssotFile": "src/subapps/dxf-viewer/systems/topography/topo-source-cascade.ts",
+      "description": "ADR-718 M3 - the ONE reconciler that re-derives every topographic definition hanging off a drawing entity by `sourceEntityId`: the site boundary (ADR-650 M6) AND the breaklines (ADR-650 M2-B). Both kept a vertex snapshot plus a source id that NOBODY watched, so dragging a grip of the source polyline left the crop on the old shape - the `handle that does nothing` of ADR-654. It is NOT a new mechanism: it is a scene-derived reconciler of the existing ADR-540 universal cascade, so it inherits every command-time call site for free. The regression this guards is a SECOND road: an ad-hoc listener (or effect) that rebuilds the boundary on its own reopens both the N.18 twin problem and the ADR-492 reactive-loop freeze. GUARD PATTERNS: a re-declaration of the cascade entry point, and any call to the atomic ring+link writer `setTopoBoundaryFromSource(` - that door belongs to the reconciler alone, because a caller that writes the ring without the link health (or vice versa) publishes an intermediate state to the crop reconciler and the debounced save. `setTopoBoundary(` stays free: that is the PICK path (user chose a boundary), a different act. ALLOWLIST = the SSoT itself plus the store that declares the writer.",
+      "forbiddenPatterns": [
+        "export\\s+(function|const)\\s+cascadeTopoSourceGeometry\\b",
+        "setTopoBoundaryFromSource\\s*\\("
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/systems/topography/topo-source-cascade.ts",
+        "src/subapps/dxf-viewer/systems/topography/TopoPointStore.ts"
+      ],
+      "addedDate": "2026-07-28",
+      "addedByAdr": "ADR-718",
+      "tier": 3
+    },
     "topo-baked-frame-stamp": {
       "ssotFile": "src/subapps/dxf-viewer/systems/topography/topo-baked-frame-store.ts",
       "description": "ADR-650 M10g - where the baked-frame stamp lives (per levelId, per baked group) plus the ONE bake seam that writes it (topo-bake-commit.commitBakedTopoEntities). A producer that writes a stamp on its own, or a second reconciler that moves baked topo products, reopens the M10f error class: the fourth producer is born without it.",
@@ -4836,6 +4851,26 @@
       "allowlist": [
         "src/subapps/dxf-viewer/systems/topography/terrain-cut-cap-geometry.ts",
         "src/subapps/dxf-viewer/bim-3d/converters/terrain-cap-to-three.ts"
+      ],
+      "tier": 3
+    },
+    "ambient-declaration-ssot": {
+      "ssotFile": "src/types/dxf-viewer-ambient.d.ts",
+      "description": "ADR-719 - ONE ambient declaration per untyped package, in ONE file, owned by the closest common point of its consumers. The repo has TWO overlapping TypeScript programs (root excludes src/subapps/dxf-viewer/** but pulls its production files in via import-chain; the subapp tsconfig sees only its own folder but pulls src/lib and src/services in the same way). A declare module never travels with an import-chain, so visibility must be granted explicitly - by a triple-slash reference from one of the two bridge files (src/types/dxf-viewer-ambient.d.ts for root->subapp, src/subapps/dxf-viewer/types/root-ambient.d.ts for subapp->root), NEVER by copying the declaration. Copies diverge silently and invisibly, because the two versions never meet in one program: before ADR-719 the subapp compiled 9 production files against a fake @google-cloud/storage whose Bucket.file() returned unknown. Also forbidden: re-bundling several vendors into one .d.ts - a reference pulls in a WHOLE file, so a bundle makes copying the only way to share one of its declarations. Structural guard: src/types/__tests__/ambient-declaration-ssot.test.ts.",
+      "forbiddenPatterns": [
+        "declare module .(utif|opentype\\.js|nspell|cdt2d|three-gpu-pathtracer|pako|vitest|@jest/globals|@google-cloud/storage)."
+      ],
+      "allowlist": [
+        "src/types/google-cloud-storage.d.ts",
+        "src/types/jest-globals.d.ts",
+        "src/types/vitest.d.ts",
+        "src/types/pako.d.ts",
+        "src/types/__tests__/ambient-declaration-ssot.test.ts",
+        "src/subapps/dxf-viewer/systems/topography/cdt2d.d.ts",
+        "src/subapps/dxf-viewer/text-engine/fonts/opentype.d.ts",
+        "src/subapps/dxf-viewer/text-engine/spell/nspell.d.ts",
+        "src/subapps/dxf-viewer/floorplan-background/providers/utif.d.ts",
+        "src/subapps/dxf-viewer/types/three-gpu-pathtracer.d.ts"
       ],
       "tier": 3
     }

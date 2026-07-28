@@ -55,14 +55,20 @@ const cropMemos = new Map<TopoSurfaceId, CropMemo>();
 /**
  * The **surveyed** TIN — everything the topographer measured, never cropped.
  *
- * Two consumers, both deliberate:
- *   - the faded «surrounding ground» backdrop (ADR-718 `showOutside`), whose entire job is to
- *     show what the crop removed;
+ * Consumers:
  *   - the survey DELIVERABLES (`deliverables/useSurveyExport`) — ⚠️ an export is a record of
  *     what was measured. Cropping it would hand the client a smaller survey than the one that
  *     was paid for and surveyed, which is a data-integrity problem, not a display preference.
  *
+ * ⏳ Μ5 will add a second one — the faded «surrounding ground» backdrop (`crop.showOutside`),
+ * whose entire job is to show what the crop removed. The preference is already stored and
+ * toggleable; **nothing renders it yet**, so do not read that flag as «a backdrop is on screen».
+ *
  * Anything else wanting «the surface» wants {@link getTopoSurface}.
+ *
+ * The deliverables' exclusive use of this door is anchored in
+ * `deliverables/__tests__/deliverables-use-full-surface.test.ts` (import-level, so the NEXT
+ * deliverable producer is covered too, not just today's).
  */
 export function getTopoSurfaceFull(id: TopoSurfaceId = 'existing'): TinSurface {
   const input = getTopoDefinition(id);

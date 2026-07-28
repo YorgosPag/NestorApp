@@ -120,11 +120,25 @@ function stableStringify(value: unknown): string {
   return `{${body}}`;
 }
 
-/** Stable string signature for no-op / anti-echo comparison (key-order independent). */
+/**
+ * Stable string signature for no-op / anti-echo comparison (key-order independent).
+ *
+ * ⚠️ **Κάθε πεδίο που γράφεται στο έγγραφο ΠΡΕΠΕΙ να είναι εδώ.** Η υπογραφή είναι το κριτήριο
+ * δύο αποφάσεων και στις δύο κατευθύνσεις: το debounced save κάνει early-return όταν η υπογραφή
+ * δεν άλλαξε, και το `hydrate` απορρίπτει ως «δικό μας ηχώ» ένα εισερχόμενο έγγραφο με ίδια
+ * υπογραφή. Πεδίο που περσιστάρεται αλλά λείπει από εδώ **δεν αποθηκεύεται ποτέ** (καμία άλλη
+ * αλλαγή δεν το συνοδεύει) ΚΑΙ **δεν φορτώνεται ποτέ** από απομακρυσμένη αλλαγή — σιωπηλά, χωρίς
+ * σφάλμα. Το `crop` έλειπε ακριβώς έτσι μέχρι το ADR-718: ο χρήστης άναβε την κοπή, το save
+ * θεωρούσε ότι δεν άλλαξε τίποτα, και το reload επανέφερε ακομμάτιαστη επιφάνεια — δηλαδή
+ * άλλους όγκους εκσκαφής από αυτούς που είδε στην οθόνη.
+ *
+ * `boundaryLink` **δεν** ανήκει εδώ: είναι εφήμερη παρατήρηση για τη σκηνή, δεν περσιστάρεται.
+ */
 export function topoStateSignature(state: TopoPersistedState): string {
   return stableStringify({
     surfaces: state.surfaces,
     boundary: state.boundary,
+    crop: state.crop ?? TOPO_CROP_OFF,
     contourConfig: state.contourConfig,
     contourDisplayStyle: state.contourDisplayStyle,
     terrain3d: state.terrain3d,

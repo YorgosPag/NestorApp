@@ -8,7 +8,8 @@
     "**/*.tsx",
     "../types/dxf-window.d.ts",
     "../types/dxf-modules.d.ts",
-    "../../../types/utif.d.ts"
+    "../../../types/dxf-viewer-ambient.d.ts",
+    "../types/root-ambient.d.ts"
   ],
   "exclude": [
     "node_modules"

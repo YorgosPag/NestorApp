@@ -42,6 +42,7 @@ import { collectTopoState, applyTopoState } from '../../systems/topography/persi
 import { reconcileTopoFrame } from '../../systems/topography/persistence/topo-frame-reconcile';
 import { subscribeTopo, getTopoState, getActiveCropRing } from '../../systems/topography/TopoPointStore';
 import type { TopoBoundary } from '../../systems/topography/topo-types';
+import { TOPO_CROP_OFF } from '../../systems/topography/topo-types';
 import { subscribeGeoReference } from '../../systems/geo-referencing/geo-reference-store';
 import { subscribeContourConfig } from '../../systems/topography/contour-config-store';
 import { subscribeContourDisplay } from '../../systems/topography/contour-display-store';
@@ -73,6 +74,9 @@ const SAVE_DEBOUNCE_MS = DXF_TIMING.persist.TOPO_SURFACE;
 const EMPTY_TOPO_STATE: TopoPersistedState = {
   surfaces: { existing: { points: [], breaklines: [] }, proposed: { points: [], breaklines: [] } },
   boundary: null,
+  // ADR-718 — το «άδειο» έργο είναι ΑΚΟΜΜΑΤΙΑΣΤΟ, ρητά. Χωρίς αυτό, το per-project reset δεν θα
+  // έσβηνε την κοπή του προηγούμενου έργου και η επόμενη αποτύπωση θα ξυπνούσε κομμένη.
+  crop: TOPO_CROP_OFF,
   contourConfig: { intervalMm: 500, majorEvery: 5, baseElevationMm: 0, labelMajors: true, labelDecimals: 2 },
   contourDisplayStyle: 'exact',
   terrain3d: { visible: false, style: 'shaded' },

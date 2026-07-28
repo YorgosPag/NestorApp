@@ -908,6 +908,18 @@ Singolo componente, due varianti visuali:
 - Vieta lettura/scrittura diretta di `currentLayerId` fuori da `LayerStore`.
 - Vieta duplicazione del componente picker (un solo `CurrentLayerPicker.tsx`, due `variant`).
 
+**Capability anchor** (2026-07-28) — `ui/components/layer-picker/__tests__/current-layer-picker-mount-points.test.ts`:
+σαρώνει **όλα** τα `.tsx` του subapp και απαιτεί **ακριβώς δύο προσαρτήσεις, μία ανά variant**.
+
+Γιατί χρειάστηκε: το ADR-718 split μετακίνησε το ribbon mount point από το `RibbonPanel.tsx`
+(168 γραμμές, μία ευθύνη, σχεδόν ακίνητο) στο `ribbon-widget-registry.tsx` — αρχείο που μεγαλώνει
+με **κάθε** νέο widget. Ο αριθμός των mount points έμεινε δύο (αντικατάσταση, όχι διεύρυνση), αλλά
+το allowlist του CHECK 3.7 δουλεύει **ανά αρχείο, ολόκληρο**: μια δεύτερη προσάρτηση **μέσα** στο
+πλέον allowlisted registry περνά αόρατη. Το anchor μετρά **προσαρτήσεις**, όχι διαδρομές αρχείων —
+οπότε ισχύει ακέραιο όπου κι αν μετακομίσει αύριο το mount point, και το επόμενο split δεν
+ξαναγεννά τη συζήτηση. (Επαληθεύτηκε με προσωρινή εισαγωγή δεύτερης καταχώρισης στο registry:
+2 κόκκινα.) Ένα allowlist απαντά «ποιος επιτρέπεται» — ποτέ «πόσες φορές».
+
 ### 5.6 Comandi
 - `LayerIsolate`, `LayerUnisolate`, `LayerDim`, `LayerOff` in `CommandRegistry` (G12).
 

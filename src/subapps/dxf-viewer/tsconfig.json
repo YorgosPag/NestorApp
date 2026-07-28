@@ -9,7 +9,7 @@
     "**/*.tsx",
     "types/dxf-modules.d.ts",
     "types/dxf-window.d.ts",
-    "types/test-modules.d.ts"
+    "types/root-ambient.d.ts"
   ],
   "exclude": [
     "node_modules",
