@@ -241,8 +241,43 @@ export function getEffectiveTransparency(layerId: string): number {
 
 // ─── Mutations ───────────────────────────────────────────────────────────────
 
-/** Replace the entire layer set (DXF scene load, project switch). */
+/**
+ * TRUE όταν το εισερχόμενο σύνολο είναι **στοιχείο-προς-στοιχείο ταυτόσημο** με το τρέχον
+ * (ίδιο πλήθος, ίδια σειρά κλειδιών, ίδιες ΑΝΑΦΟΡΕΣ layer objects).
+ *
+ * ADR-719 §3. Δεν είναι μικρο-βελτιστοποίηση — είναι **προϋπόθεση ορθότητας για το perf**:
+ * το hydration `setLayers(Object.values(scene.layersById))` (`useDxfSceneConversion`) τρέχει
+ * σε **κάθε** αλλαγή σκηνής, και κάθε `rebuildSnapshot()` ειδοποιεί τον
+ * `useDxfCanvasCacheInvalidation` → `bitmapCache.invalidate()` → **πλήρες ξαναχτίσιμο σκηνής**.
+ * Χωρίς αυτόν τον φρουρό, μόλις το `useCurrentLevelScene` έγινε reactive (§2), κάθε drag frame
+ * θα πετούσε το bitmap cache — δηλαδή η διόρθωση του bug θα είχε πληρωθεί με 60fps full rebuild.
+ *
+ * Ο έλεγχος είναι αναφορικός επίτηδες: ο `LevelSceneManagerAdapter` κρατά τα αμετάβλητα
+ * αντικείμενα ref-stable (ADR-547 §2 «reference-stability invariant»), άρα μια αλλαγή entity
+ * αφήνει ΟΛΑ τα layer objects ίδια → bail. Μια πραγματική αλλαγή layer αλλάζει ένα object → pass.
+ * Deep-equal εδώ θα ήταν O(n·πεδία) σε hot path χωρίς να πιάνει τίποτα παραπάνω.
+ *
+ * Το σχόλιο του ADR-547 («Idempotent — `setLayers` no-ops on identical input») περιέγραφε ΑΥΤΟ
+ * το συμβόλαιο· ο κώδικας δεν το τηρούσε. Τώρα το τηρεί.
+ */
+function isSameLayerSet(next: ReadonlyArray<SceneLayer>): boolean {
+  if (next.length !== layerOrder.length) return false;
+  for (let i = 0; i < next.length; i++) {
+    const key = getLayerKey(next[i]);
+    if (layerOrder[i] !== key) return false;
+    if (layersById.get(key) !== next[i]) return false;
+  }
+  return true;
+}
+
+/**
+ * Replace the entire layer set (DXF scene load, project switch, scene→runtime hydration).
+ *
+ * Idempotent: ταυτόσημο σύνολο ⇒ **καμία** ειδοποίηση (βλ. {@link isSameLayerSet}).
+ */
 export function setLayers(next: ReadonlyArray<SceneLayer>): void {
+  if (isSameLayerSet(next)) return;
+
   layersById = new Map();
   layerOrder = [];
   for (const layer of next) {
@@ -258,9 +293,17 @@ export function setLayers(next: ReadonlyArray<SceneLayer>): void {
   rebuildSnapshot();
 }
 
-/** Upsert a single layer. Inserts at end if new; replaces if key matches. */
+/**
+ * Upsert a single layer. Inserts at end if new; replaces if key matches.
+ *
+ * ADR-719 §3 — ιδεμποτικό: γραφή της ΙΔΙΑΣ αναφοράς δεν ειδοποιεί (ίδιο συμβόλαιο με το
+ * {@link setLayers}). Οι callers που κάνουν `upsertLayer({ ...layer, flag: value })` παράγουν
+ * πάντα νέο object, άρα περνούν κανονικά· ο φρουρός πιάνει μόνο τα πραγματικά no-op re-writes
+ * (π.χ. ένα reconcile που ξαναγράφει ό,τι ήδη ισχύει).
+ */
 export function upsertLayer(layer: SceneLayer): void {
   const key = getLayerKey(layer);
+  if (layersById.get(key) === layer) return;
   if (!layersById.has(key)) layerOrder.push(key);
   layersById.set(key, layer);
   rebuildSnapshot();
