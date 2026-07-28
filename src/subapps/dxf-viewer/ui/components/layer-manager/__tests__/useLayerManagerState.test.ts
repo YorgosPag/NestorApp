@@ -21,11 +21,23 @@ import {
   __resetLayerStoreForTesting,
 } from '../../../../stores/LayerStore';
 import { createSceneLayer } from '../../../../types/entities';
+import { SceneStore } from '../../../../systems/scene/SceneStore';
+// ADR-719 §9 — στήσιμο ΕΓΓΡΑΦΟΥ + runtime προβολής (ο writer είναι fail-closed χωρίς έγγραφο).
+import {
+  setupActiveDocument,
+  teardownActiveDocument,
+  TEST_LEVEL_ID,
+} from '../../../../systems/levels/__tests__/active-document-test-harness';
 import type { SceneModel } from '../../../../types/entities';
 
-// Mock useLevels to avoid Firebase import. The hook reads `getLevelScene(levelId)`
-// (ADR-358 Phase 9D-5b — Level interface has no `scene` field; scene access is via
-// the SSoT action). Element counts below drive the "elements: 2/1" assertions.
+// Mock useLevels to avoid Firebase import.
+//
+// ADR-719 §2 — το `useCurrentLevelScene` δεν καλεί πλέον το `getLevelScene` του context:
+// κάνει **συνδρομή** στο `SceneStore` με κλειδί το `currentLevelId`. Άρα το mock αρκεί να
+// δώσει το σωστό level id, και η σκηνή στήνεται στο store από τον harness. (Το
+// `getLevelScene` μένει στο mock γιατί άλλοι καταναλωτές του hook το ζητούν.)
+//
+// Element counts below drive the "elements: 2/1" assertions.
 // Entities keyed by layerId — `resolveEntityLayerName` (LayerStore SSoT) resolves
 // strictly via `layersById` lookup (no entity.layer name fallback), so the ids MUST
 // match the layers the "element count" test registers (lyr_e ×2, lyr_p ×1).
@@ -43,11 +55,11 @@ const mockGetLevelScene = jest.fn(() => MOCK_SCENE);
 // calls `useLevelsOptional`. Mock BOTH exports of this module (same shape) so the SSoT resolves.
 jest.mock('../../../../systems/levels/useLevels', () => ({
   useLevels: () => ({
-    currentLevelId: 'level_1',
+    currentLevelId: TEST_LEVEL_ID,
     getLevelScene: mockGetLevelScene,
   }),
   useLevelsOptional: () => ({
-    currentLevelId: 'level_1',
+    currentLevelId: TEST_LEVEL_ID,
     getLevelScene: mockGetLevelScene,
   }),
 }));
@@ -72,6 +84,21 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
+afterEach(() => {
+  teardownActiveDocument();
+});
+
+/**
+ * Στήνει έγγραφο + προβολή με τα δοσμένα layers ΚΑΙ τις οντότητες του `MOCK_SCENE`, ώστε οι
+ * μετρήσεις «elements: 2/1» να παραμένουν έγκυρες τώρα που η σκηνή διαβάζεται από το
+ * `SceneStore` και όχι από το mock του context (ADR-719 §2).
+ */
+function seedDocument(layers: Parameters<typeof setupActiveDocument>[0]): void {
+  setupActiveDocument(layers);
+  const scene = SceneStore.getLevelScene(TEST_LEVEL_ID)!;
+  SceneStore.setLevelScene(TEST_LEVEL_ID, { ...scene, entities: MOCK_SCENE.entities });
+}
+
 describe('useLayerManagerState — empty store', () => {
   it('returns empty layers when store has no layers', () => {
     const { result } = renderHook(() => useLayerManagerState());
@@ -94,7 +121,7 @@ describe('useLayerManagerState — populated store', () => {
       name: 'Plumbing',
       category: 'plumbing',
     });
-    setLayers([elec, plumb]);
+    seedDocument([elec, plumb]);
 
     const { result } = renderHook(() => useLayerManagerState());
 
@@ -115,7 +142,7 @@ describe('useLayerManagerState — populated store', () => {
 
   it('sets isCurrent flag on matching currentLayerId', () => {
     const lyr = createSceneLayer({ id: 'lyr_a', name: 'A' });
-    setLayers([lyr]);
+    seedDocument([lyr]);
     setCurrentLayerId('lyr_a');
 
     const { result } = renderHook(() => useLayerManagerState());
@@ -134,7 +161,7 @@ describe('useLayerManagerState — populated store', () => {
       name: 'P',
       category: 'plumbing',
     });
-    setLayers([lyr1, lyr2]);
+    seedDocument([lyr1, lyr2]);
 
     const { result } = renderHook(() => useLayerManagerState());
 
@@ -149,7 +176,7 @@ describe('useLayerManagerState — populated store', () => {
 describe('useLayerManagerState — setCurrentLayer action', () => {
   it('calls LayerStore.setCurrentLayerId on setCurrentLayer action', () => {
     const lyr = createSceneLayer({ id: 'lyr_a', name: 'A' });
-    setLayers([lyr]);
+    seedDocument([lyr]);
 
     const { result } = renderHook(() => useLayerManagerState());
 
@@ -168,7 +195,7 @@ describe('useLayerManagerState — toggleLayerVisibility action', () => {
       name: 'A',
       visible: true,
     });
-    setLayers([lyr]);
+    seedDocument([lyr]);
 
     const { result } = renderHook(() => useLayerManagerState());
 

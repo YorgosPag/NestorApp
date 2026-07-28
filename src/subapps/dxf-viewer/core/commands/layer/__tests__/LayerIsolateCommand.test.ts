@@ -6,11 +6,11 @@
  * isolate, freeze mode mutates non-isolated layer.frozen, dim mode does not.
  */
 
-import { describe, it, expect, beforeEach } from '@jest/globals';
+import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
 import { LayerIsolateCommand } from '../LayerIsolateCommand';
 import {
   __resetLayerStoreForTesting,
-  setLayers,
+
   getLayer,
   getUnisolateSnapshot,
 } from '../../../../stores/LayerStore';
@@ -19,17 +19,28 @@ import {
   getIsolateEffectsSnapshot,
 } from '../../../../systems/isolate/IsolateEffectsStore';
 import { createSceneLayer } from '../../../../types/entities';
+// ADR-721 §9 — οι εντολές layer γράφουν πλέον στο ΕΓΓΡΑΦΟ (ο writer είναι fail-closed χωρίς
+// αυτό), οπότε το setup στήνει έγγραφο + runtime προβολή. Το σκέτο `setLayers` έστηνε ακριβώς
+// τη μισή αρχιτεκτονική που παρήγαγε το bug: «η προβολή άλλαξε» χωρίς να ρωτά «και το έγγραφο;».
+import {
+  setupActiveDocument,
+  teardownActiveDocument,
+} from '../../../../systems/levels/__tests__/active-document-test-harness';
 
 beforeEach(() => {
   __resetLayerStoreForTesting();
   __resetIsolateEffectsForTesting();
 });
 
+afterEach(() => {
+  teardownActiveDocument();
+});
+
 function seed() {
   const A = createSceneLayer({ id: 'lyr_a', name: 'A' });
   const B = createSceneLayer({ id: 'lyr_b', name: 'B' });
   const C = createSceneLayer({ id: 'lyr_c', name: 'C' });
-  setLayers([A, B, C]);
+  setupActiveDocument([A, B, C]);
 }
 
 describe('LayerIsolateCommand — execute', () => {

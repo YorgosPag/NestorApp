@@ -6,24 +6,35 @@
  * undo restores per-layer, replay safety.
  */
 
-import { describe, it, expect, beforeEach } from '@jest/globals';
+import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
 import { LayerThawAllCommand } from '../LayerThawAllCommand';
 import {
   __resetLayerStoreForTesting,
-  setLayers,
+
   getLayer,
 } from '../../../../stores/LayerStore';
 import { createSceneLayer } from '../../../../types/entities';
+// ADR-721 §9 — οι εντολές layer γράφουν πλέον στο ΕΓΓΡΑΦΟ (ο writer είναι fail-closed χωρίς
+// αυτό), οπότε το setup στήνει έγγραφο + runtime προβολή. Το σκέτο `setLayers` έστηνε ακριβώς
+// τη μισή αρχιτεκτονική που παρήγαγε το bug: «η προβολή άλλαξε» χωρίς να ρωτά «και το έγγραφο;».
+import {
+  setupActiveDocument,
+  teardownActiveDocument,
+} from '../../../../systems/levels/__tests__/active-document-test-harness';
 
 beforeEach(() => {
   __resetLayerStoreForTesting();
+});
+
+afterEach(() => {
+  teardownActiveDocument();
 });
 
 function seedMixed() {
   const A = createSceneLayer({ id: 'lyr_a', name: 'A', frozen: true });
   const B = createSceneLayer({ id: 'lyr_b', name: 'B', frozen: false });
   const C = createSceneLayer({ id: 'lyr_c', name: 'C', frozen: true });
-  setLayers([A, B, C]);
+  setupActiveDocument([A, B, C]);
 }
 
 describe('LayerThawAllCommand', () => {
@@ -48,7 +59,7 @@ describe('LayerThawAllCommand', () => {
 
   it('idempotent on already-thawed state (empty snapshot)', () => {
     const A = createSceneLayer({ id: 'lyr_a', name: 'A', frozen: false });
-    setLayers([A]);
+    setupActiveDocument([A]);
     const cmd = new LayerThawAllCommand();
     cmd.execute();
     cmd.undo();

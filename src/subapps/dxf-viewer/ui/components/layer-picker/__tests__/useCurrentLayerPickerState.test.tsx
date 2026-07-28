@@ -64,13 +64,20 @@ import {
   getLayer,
 } from '../../../../stores/LayerStore';
 import { createSceneLayer } from '../../../../types/entities';
+// ADR-719 §9 — οι διακόπτες του picker γράφουν πλέον στο ΕΓΓΡΑΦΟ (fail-closed χωρίς αυτό),
+// οπότε το setup στήνει έγγραφο + runtime προβολή αντί για μόνο τη δεύτερη.
+import {
+  setupActiveDocument,
+  teardownActiveDocument,
+  TEST_LEVEL_ID,
+} from '../../../../systems/levels/__tests__/active-document-test-harness';
 import {
   useCurrentLayerPickerState,
   pickInitialLayerId,
 } from '../useCurrentLayerPickerState';
 
 const PROJECT_ID = 'proj_test';
-const LEVEL_ID = 'lvl_a';
+const LEVEL_ID = TEST_LEVEL_ID;
 
 beforeEach(() => {
   __resetLayerStoreForTesting();
@@ -87,8 +94,12 @@ beforeEach(() => {
   if (typeof window !== 'undefined') window.localStorage.clear();
 });
 
+afterEach(() => {
+  teardownActiveDocument();
+});
+
 function seedScene(): void {
-  setLayers([
+  setupActiveDocument([
     createSceneLayer({ id: 'lyr_walls', name: 'Walls', category: 'architectural' }),
     createSceneLayer({ id: 'lyr_doors', name: 'Doors', category: 'architectural' }),
     createSceneLayer({ id: 'lyr_columns', name: 'Columns', category: 'structural' }),
@@ -150,7 +161,7 @@ describe('useCurrentLayerPickerState — derivation', () => {
 
 describe('useCurrentLayerPickerState — initial seed (Q8 line 863)', () => {
   it('seeds Layer "0" on first scene load when no persisted current', () => {
-    setLayers([
+    setupActiveDocument([
       createSceneLayer({ id: 'lyr_zero', name: '0' }),
       createSceneLayer({ id: 'lyr_walls', name: 'Walls', category: 'architectural' }),
     ]);
@@ -184,7 +195,7 @@ describe('useCurrentLayerPickerState — recent + alpha fallback (Q8 line 858)',
   });
 
   it('caps recent display at 5 entries even when store holds more', () => {
-    setLayers(
+    setupActiveDocument(
       Array.from({ length: 7 }, (_, i) =>
         createSceneLayer({ id: `lyr_${i}`, name: `L${i}`, category: 'general' }),
       ),
@@ -233,7 +244,7 @@ describe('useCurrentLayerPickerState — selectLayer', () => {
   });
 
   it('blocks frozen layer selection with warning toast (Q8 line 846)', () => {
-    setLayers([
+    setupActiveDocument([
       createSceneLayer({ id: 'lyr_w', name: 'Walls', category: 'architectural' }),
       createSceneLayer({ id: 'lyr_f', name: 'Frozen', frozen: true }),
     ]);

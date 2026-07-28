@@ -5,23 +5,34 @@
  * no-op on already-invisible layers, missing-layer no-op.
  */
 
-import { describe, it, expect, beforeEach } from '@jest/globals';
+import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
 import { LayerOffCommand } from '../LayerOffCommand';
 import {
   __resetLayerStoreForTesting,
-  setLayers,
+
   getLayer,
   upsertLayer,
 } from '../../../../stores/LayerStore';
 import { createSceneLayer } from '../../../../types/entities';
+// ADR-721 §9 — οι εντολές layer γράφουν πλέον στο ΕΓΓΡΑΦΟ (ο writer είναι fail-closed χωρίς
+// αυτό), οπότε το setup στήνει έγγραφο + runtime προβολή. Το σκέτο `setLayers` έστηνε ακριβώς
+// τη μισή αρχιτεκτονική που παρήγαγε το bug: «η προβολή άλλαξε» χωρίς να ρωτά «και το έγγραφο;».
+import {
+  setupActiveDocument,
+  teardownActiveDocument,
+} from '../../../../systems/levels/__tests__/active-document-test-harness';
 
 beforeEach(() => {
   __resetLayerStoreForTesting();
 });
 
+afterEach(() => {
+  teardownActiveDocument();
+});
+
 function seed() {
   const A = createSceneLayer({ id: 'lyr_a', name: 'A', visible: true });
-  setLayers([A]);
+  setupActiveDocument([A]);
 }
 
 describe('LayerOffCommand', () => {
@@ -42,7 +53,7 @@ describe('LayerOffCommand', () => {
 
   it('idempotent no-op when layer is already invisible', () => {
     const A = createSceneLayer({ id: 'lyr_a', name: 'A', visible: false });
-    setLayers([A]);
+    setupActiveDocument([A]);
     const cmd = new LayerOffCommand({ layerId: 'lyr_a' });
     cmd.execute();
     // undo should NOT flip visible (was a no-op)
