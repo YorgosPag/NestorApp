@@ -18,7 +18,11 @@
 
 import { useEffect, useRef, useSyncExternalStore } from 'react';
 import { CoordinateTransforms as CT } from '../../rendering/core/CoordinateTransforms';
-import { CanvasUtils } from '../../rendering/canvas/utils/CanvasUtils';
+// ADR-726 Φ2 — sizing + πύλη + clear ζουν στο ΕΝΑ primitive· εδώ δηλώνεται μόνο «painter ή null».
+import {
+  paintOverlayDispatchFrame,
+  type OverlayDispatchPainter,
+} from './overlay-dispatch/overlay-dispatch-frame';
 import { buildTopoGrid, pickSurveyGridStepMm, type WorldRectMm } from '../../systems/topography/topo-grid-model';
 import { formatGridCoordinate } from '../../systems/topography/topo-grid-entities';
 import {
@@ -118,33 +122,36 @@ export function TopoGridUnderlayCanvas({
   // το επόμενο pan.
   const geoRef = useSyncExternalStore(subscribeGeoReference, getGeoReference, getGeoReference);
 
-  // DPR-aware backing store via the SAME primitive as the sibling canvases (ADR-040).
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    CanvasUtils.sizeCanvasToViewport(canvas, viewport);
-  }, [viewport.width, viewport.height]);
-
   // Repaint only when the transform / viewport / visibility change (no continuous RAF).
+  //
+  // DPR-aware backing store via the SAME primitive as the sibling canvases (ADR-040) — το κάνει
+  // πλέον το ΕΝΑ `paintOverlayDispatchFrame`, πριν την πύλη, σε κάθε κλήση.
+  //
+  // ADR-726 Φ2 — με τον graticule κρυμμένο (η συνήθης κατάσταση εκτός τοπογραφίας) ο καμβάς δεν
+  // αγγίζεται καθόλου, αντί για ένα clearRect ανά καρέ που ακύρωνε ολόκληρο compositor layer.
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
 
-    ctx.clearRect(0, 0, viewport.width, viewport.height);
-    if (!visible || viewport.width === 0 || viewport.height === 0) return;
+    const active = visible && viewport.width > 0 && viewport.height > 0;
+    const painter: OverlayDispatchPainter | null = active
+      ? (ctx, t, vp) => {
+          // ADR-650 §M10f — τρία συστήματα, με τη σειρά: οθόνη → display (screenToWorld) → WORLD
+          // ΕΓΣΑ (unproject) όπου ΜΟΝΟ εκεί έχει νόημα η ερώτηση «ποιες στρογγυλές γραμμές ΕΓΣΑ
+          // πέφτουν μέσα;» → πίσω σε display (project) για να σχεδιαστούν. Το βήμα (`scale`) είναι
+          // αναλλοίωτο: ο rigid μετασχηματισμός δεν έχει κλίμακα.
+          const projector = getTopoDisplayProjector();
+          const world = unprojectRectToWorld(visibleDisplayRect(t, vp), projector);
+          const stepMm = pickSurveyGridStepMm(t.scale);
+          const grid = buildTopoGrid(world, stepMm);
+          drawCrosses(ctx, projectWorldPoints(grid.crosses, projector), t, vp);
+          drawEdgeLabels(ctx, world, grid, projector, t, vp);
+        }
+      : null;
 
-    // ADR-650 §M10f — τρία συστήματα, με τη σειρά: οθόνη → display (screenToWorld) → WORLD ΕΓΣΑ
-    // (unproject) όπου ΜΟΝΟ εκεί έχει νόημα η ερώτηση «ποιες στρογγυλές γραμμές ΕΓΣΑ πέφτουν
-    // μέσα;» → πίσω σε display (project) για να σχεδιαστούν. Το βήμα (`scale`) είναι αναλλοίωτο:
-    // ο rigid μετασχηματισμός δεν έχει κλίμακα.
-    const projector = getTopoDisplayProjector();
-    const world = unprojectRectToWorld(visibleDisplayRect(transform, viewport), projector);
-    const stepMm = pickSurveyGridStepMm(transform.scale);
-    const grid = buildTopoGrid(world, stepMm);
-    drawCrosses(ctx, projectWorldPoints(grid.crosses, projector), transform, viewport);
-    drawEdgeLabels(ctx, world, grid, projector, transform, viewport);
+    paintOverlayDispatchFrame(canvas, [painter], transform, viewport);
+    // `geoRef` δεν διαβάζεται εδώ αλλά μέσα στον projector — μένει dependency ώστε η αλλαγή
+    // γεωαναφοράς να ξαναζωγραφίζει (ADR-656 M11).
   }, [transform, viewport, visible, geoRef]);
 
   return <canvas ref={canvasRef} className={className} aria-hidden />;

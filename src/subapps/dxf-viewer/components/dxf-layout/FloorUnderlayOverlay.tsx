@@ -26,7 +26,11 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { DxfRenderer } from '../../canvas-v2/dxf-canvas/DxfRenderer';
 import { getDevicePixelRatio } from '../../systems/cursor/utils';
-import { CanvasUtils } from '../../rendering/canvas/utils/CanvasUtils';
+// ADR-726 Φ2 — sizing + πύλη + clear ζουν στο ΕΝΑ primitive· εδώ δηλώνεται μόνο «painter ή null».
+import {
+  paintOverlayDispatchFrame,
+  type OverlayDispatchPainter,
+} from './overlay-dispatch/overlay-dispatch-frame';
 import { useViewMode3DStore } from '../../bim-3d/stores/ViewMode3DStore';
 import { useFloors2DUnderlay } from '../../hooks/data/useFloors2DUnderlay';
 import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
@@ -73,36 +77,38 @@ export function FloorUnderlayOverlay({ transform, viewport }: FloorUnderlayOverl
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
 
-    // 🏢 SSoT sizing — DPR-aware backing store from the authoritative viewport, via the SAME
-    // primitive as DxfCanvas/LayerCanvas/Preview (no getBoundingClientRect → no size desync).
-    CanvasUtils.sizeCanvasToViewport(canvas, viewport);
-    const dpr = getDevicePixelRatio();
-    ctx.clearRect(0, 0, viewport.width, viewport.height);
+    // ADR-726 Φ2 — «painter ή null» είναι ΟΛΗ η δήλωση περιεχομένου· το DPR sizing, η πύλη και το
+    // clear ζουν στο ΕΝΑ primitive. Όταν το underlay είναι ανενεργό (ο κανόνας, όχι η εξαίρεση:
+    // μόνο σε 2D «Όλοι οι όροφοι» ζωγραφίζει) ο καμβάς δεν αγγίζεται καθόλου, αντί να ακυρώνει
+    // ολόκληρο compositor layer 131–148 φορές για μηδέν ορατό pixel.
+    const painter: OverlayDispatchPainter | null =
+      active && merged
+        ? (ctx, t, vp) => {
+            if (!rendererRef.current) rendererRef.current = new DxfRenderer(canvas);
+            rendererRef.current.render(merged, t, vp, {
+              showGrid: false,
+              showLayerNames: false,
+              wireframeMode: false,
+              selectedEntityIds: [],
+              skipInteractive: true,
+            });
 
-    if (!active || !merged) return;
+            // AutoCAD xref fade — uniform alpha reduction that preserves colours and keeps
+            // empty areas transparent (destination-out) so the active floor (above) and the
+            // floorplan background (below) composite correctly.
+            const dpr = getDevicePixelRatio();
+            ctx.save();
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.globalAlpha = UNDERLAY_FADE;
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, vp.width, vp.height);
+            ctx.restore();
+          }
+        : null;
 
-    if (!rendererRef.current) rendererRef.current = new DxfRenderer(canvas);
-    rendererRef.current.render(merged, transform, viewport, {
-      showGrid: false,
-      showLayerNames: false,
-      wireframeMode: false,
-      selectedEntityIds: [],
-      skipInteractive: true,
-    });
-
-    // AutoCAD xref fade — uniform alpha reduction that preserves colours and keeps
-    // empty areas transparent (destination-out) so the active floor (above) and the
-    // floorplan background (below) composite correctly.
-    ctx.save();
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.globalCompositeOperation = 'destination-out';
-    ctx.globalAlpha = UNDERLAY_FADE;
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, viewport.width, viewport.height);
-    ctx.restore();
+    paintOverlayDispatchFrame(canvas, [painter], transform, viewport);
   }, [active, merged, transform, viewport]);
 
   return (

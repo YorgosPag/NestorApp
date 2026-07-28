@@ -59,9 +59,27 @@ describe('paintAnalyticalFrame (ADR-552)', () => {
     expect(last).toHaveBeenCalledTimes(1);
   });
 
-  it('paints nothing (just clears) when every painter is null — e.g. 3D mode', () => {
+  /**
+   * ADR-726 Φ2 — **ΑΛΛΑΓΜΕΝΟ ΣΥΜΒΟΛΑΙΟ.** Μέχρι 2026-07-29 αυτό το test κωδικοποιούσε
+   * «paints nothing (just clears) when every painter is null», δηλαδή **ένα clear σε κάθε καρέ**
+   * ακόμη και σε 3D mode, όπου και οι 7 analytical painters είναι `null` για όση ώρα ο χρήστης
+   * δουλεύει στο 3D. Μετρήθηκε ότι αυτό ακριβώς κόστιζε: ο καμβάς `overlay:analytical` έβγαλε
+   * 131–148 `clearRect` **με μηδέν draw ops**, και κάθε ένα ακυρώνει ολόκληρο compositor layer
+   * (Blink `HTMLCanvasElement::DidDraw` ενώνει το rect στο `dirty_rect_` χωρίς να κοιτάξει pixels).
+   *
+   * Νέο συμβόλαιο: **μία** φορά καθαρίζει (για να φύγει ό,τι είχε μείνει), μετά ο καμβάς μένει
+   * ανέγγιχτος όσο δεν υπάρχει περιεχόμενο.
+   */
+  it('καθαρίζει ΜΙΑ φορά όταν όλοι οι painters είναι null, μετά δεν ξανα-αγγίζει τον καμβά (3D mode)', () => {
     const { canvas, ctx } = makeCanvas();
-    paintAnalyticalFrame(canvas, [null, null, null, null, null, null, null], TRANSFORM, VIEWPORT);
+    const allNull = [null, null, null, null, null, null, null];
+
+    paintAnalyticalFrame(canvas, allNull, TRANSFORM, VIEWPORT);
+    expect(ctx.clearRect).toHaveBeenCalledTimes(1);
+
+    // Όσα καρέ κι αν περάσουν σε 3D mode, ο analytical καμβάς δεν ακυρώνει layer ξανά.
+    paintAnalyticalFrame(canvas, allNull, TRANSFORM, VIEWPORT);
+    paintAnalyticalFrame(canvas, allNull, TRANSFORM, VIEWPORT);
     expect(ctx.clearRect).toHaveBeenCalledTimes(1);
   });
 

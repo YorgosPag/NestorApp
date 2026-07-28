@@ -1,0 +1,485 @@
+# ADR-726 — Frame budget: έγκυρη μέτρηση, attribution και ο πραγματικός ένοχος του DXF Viewer
+
+**Status:** Phase 1 (ΑΝΑΓΝΩΡΙΣΗ) — ΟΛΟΚΛΗΡΩΜΕΝΗ ·
+**Phase 2: Φ1 + Φ2 ΥΛΟΠΟΙΗΜΕΝΕΣ (2026-07-29)** · Φ3–Φ5 ΕΚΚΡΕΜΟΥΝ
+**Ημερομηνία:** 2026-07-29
+**Σχετικά:** ADR-040 (micro-leaf / preview-canvas-performance· εκεί το changelog της υλοποίησης) ·
+ADR-552/554 (overlay dispatch canvases) · ADR-118 (geometry constants SSoT) ·
+ADR-639 Στάδιο 5 (WebGL line layer) · ADR-663 (DXF tsc ratchet) · CLAUDE.md N.0.2 / N.7.2 / N.17 / N.18
+**Αντικαθιστά ως πηγή αλήθειας:** `HANDOFFS/2026-07-29_dxf-viewer-perf_ADR-726_handoff.md` §2-§4
+**Κώδικας που γράφτηκε σε Phase 1:** **ΚΑΝΕΝΑΣ.** Όλα τα όργανα έζησαν στο page context.
+
+> ⚠️ **Τα νούμερα του §4/§5 είναι ΠΡΙΝ τη Φ1/Φ2 και δεν έχουν ξαναμετρηθεί.** Η Φ2 αφαιρεί
+> αποδεδειγμένα πράξεις ακύρωσης layer, αλλά **καμία δήλωση «διορθώθηκε» δεν ισχύει χωρίς
+> επαναμέτρηση σε production build** (Φ5). Βλ. §10.
+
+---
+
+## 1. Γιατί υπάρχει αυτό το ADR — τρεις διαδοχικά λανθασμένες διαγνώσεις
+
+Το πρόβλημα («ο viewer κολλάει») αναφέρθηκε από τον χρήστη και είναι **πραγματικό** (§4).
+Διαγνώστηκε όμως τρεις φορές λάθος, και κάθε φορά το λάθος ήταν στο **όργανο**, όχι στην ανάλυση.
+
+| # | Ισχυρισμός | Γιατί ήταν λάθος |
+|---|---|---|
+| **Δ1** | «22 FPS σε ηρεμία· ο HomeRunWiresOverlay κοστίζει +11,5ms» | Μετρήθηκε με rAF loop σε **κρυμμένο tab** |
+| **Δ2** | «Ο Chrome δεν παράγει καρέ όταν τίποτα δεν αλλάζει· τα κενά ερμηνεύτηκαν ως lag» | Σωστή γενική αρχή, **λάθος αιτία εδώ** — βλ. §1.1 |
+| **Δ3** | «`PerformanceObserver('longtask')` → 0 entries ⇒ δεν υπάρχει blocking» | Ίδιο κρυμμένο tab· και το `longtask` δεν δίνει attribution |
+
+### 1.1 Η πραγματική αιτία των «7 καρέ σε 24 δευτερόλεπτα»
+
+Η Δ2 απέδωσε τα κενά στο ότι «ο Chrome δεν έχει λόγο να ζωγραφίσει». **Για αυτό το app δεν ισχύει**,
+και ο κώδικας το αποδεικνύει:
+
+> `rendering/core/UnifiedFrameScheduler.ts:190-299` — η `processFrame()` καλεί **πάντα**
+> `this.scheduleFrame()` στη γραμμή 298, χωρίς καμία συνθήκη. Όσο υπάρχει ≥1 εγγεγραμμένο σύστημα,
+> τρέχει **αδιάκοπο rAF loop**. Το `isDirty` γλιτώνει τη *ζωγραφική*, **όχι το καρέ**.
+
+Άρα σε **ορατό** tab το rAF **οφείλει** να χτυπάει ~60×/δευτ. ακόμα και σε απόλυτη ηρεμία.
+Το μετρημένο αίτιο, από το ίδιο το tab:
+
+```
+document.visibilityState === "hidden"
+document.hasFocus()      === false
+```
+
+Ο Chrome **παγώνει το rAF σε hidden tabs**. Grep επιβεβαίωσε ότι ο DXF Viewer **δεν έχει κανέναν δικό του
+χειρισμό** `visibilitychange` / `visibilityState` — δεν είναι δική του λογική, είναι ο browser.
+Και οι τρεις μετρήσεις έγιναν μέσω CDP ενώ ο χρήστης κοιτούσε αλλού.
+
+### 1.2 Κανόνας που προκύπτει (δεσμευτικός για κάθε μελλοντική μέτρηση)
+
+> **Καμία μέτρηση απόδοσης δεν είναι έγκυρη χωρίς να καταγράφεται `visibilityState` ανά δείγμα.**
+> Καρέ με `visibilityState !== 'visible'` **απορρίπτονται**, δεν μετριούνται.
+> Ο ίδιος κανόνας ισχύει για `document.hasFocus()` σε Windows (occlusion tracking: ο Chrome
+> throttle-άρει και **καλυμμένο** παράθυρο, όχι μόνο ελαχιστοποιημένο).
+
+---
+
+## 2. Το όργανο — τι μετράει το καθένα, και τι **δεν** μετράει
+
+Τρία ανεξάρτητα όργανα, γιατί κανένα δεν αρκεί μόνο του.
+
+| Όργανο | Απαντά | Δεν απαντά |
+|---|---|---|
+| **rAF + `visibilityState` + `sinceInput`** | Πόσο κοστίζει ένα καρέ **υπό input** — κατανομή, όχι median | Ποιος φταίει |
+| **LoAF** (`long-animation-frame`) | Ποιο **script/συνάρτηση/invoker** τρώει τα ms· `blockingDuration`· `renderStart` | Ποιο *σύστημα* — όλα καλούνται από το ίδιο σημείο |
+| **Event Timing** (`event`, INP) | Πού πάει ο χρόνος μιας αλληλεπίδρασης: `inputDelay` / `processing` / `presentation` | Το εσωτερικό του presentation |
+| **Per-canvas op counts** | **Πόσες** πράξεις ζωγραφικής, σε **ποιον** καμβά | ⚠️ **ΟΧΙ πόσο κοστίζουν** — βλ. §2.1 |
+
+### 2.1 ⚠️ Γιατί το per-canvas **timing** είναι άκυρο (και το κρατάμε μόνο ως counts)
+
+Στήθηκε probe που τυλίγει `CanvasRenderingContext2D.prototype.{stroke,fill,fillText,drawImage,…}`
+με `performance.now()`. Αποτέλεσμα: **28.399 πράξεις → 52,6ms**, δηλαδή 0,0019ms ανά `stroke()`.
+
+Αυτό είναι **αδύνατο** ως πραγματικό κόστος. Η εξήγηση: **το Canvas2D είναι deferred** — η `stroke()`
+γράφει μια εντολή στην ουρά και **επιστρέφει αμέσως**· η ρασταροποίηση γίνεται αργότερα στον
+raster/GPU thread. Άρα ένα wrapper με `performance.now()` μετράει **τον χρόνο εγγραφής στην ουρά**,
+όχι τη ζωγραφική.
+
+> **Κανόνας:** τα per-canvas **counts** είναι έγκυρα και αποκαλυπτικά (§4.Β/Γ).
+> Τα per-canvas **ms** από τέτοιο wrapper **απαγορεύεται** να αναφερθούν ως κόστος.
+> Το πραγματικό κόστος ζωγραφικής φαίνεται **μόνο** στο `renderStart→end` του LoAF και στα
+> LoAF χωρίς scripts.
+
+### 2.2 Ρητή επιφύλαξη: το ίδιο το probe αλλοιώνει τη μέτρηση
+
+Πέρασμα 2 (με ενεργό probe) έδωσε χειρότερα νούμερα από το Πέρασμα 1 (χωρίς):
+throughput 18,1 vs 29,2 FPS· p50 22,2 vs 16,8ms. Αναμενόμενο — ~36.000 επιπλέον ζεύγη
+`performance.now()`. **Τα απόλυτα του Περάσματος 2 δεν συγκρίνονται με του Περάσματος 1.**
+Έγκυρη είναι μόνο η **σχετική κατάταξη** μεταξύ καμβάδων.
+
+---
+
+## 3. Συνθήκες μέτρησης (για αναπαραγωγιμότητα)
+
+| | |
+|---|---|
+| Σχέδιο | `47_ergasia.dxf` — 2.910 στοιχεία, 54 DXF layers |
+| Καμβάδες | **13** (12× Canvas2D + 1× three.js WebGL) |
+| Μέγεθος | backing 1345×697 · CSS 1681×871 · `devicePixelRatio` **0,8** |
+| Build | **dev** (React StrictMode = διπλό render) ⚠️ |
+| GPU | AMD Radeon HD 5450 (2010) μέσω ANGLE/D3D11 — μετά το `#ignore-gpu-blocklist` |
+| Είσοδος | ανθρώπινο pan/zoom. Πέρασμα 1: 331 pointermove / 33 wheel σε 49s |
+| Ενεργά καρέ | `sinceInput < 150ms` |
+
+⚠️ **Synthetic events δεν λειτουργούν**: ο viewer απορρίπτει μη-`isTrusted` wheel· CDP
+`left_click_drag` παράγει 6 pointermove, CDP scroll ×10 παράγει 1 wheel.
+**Ο ανθρώπινος χειρισμός είναι υποχρεωτικός.**
+
+---
+
+## 4. Τα ευρήματα (Πέρασμα 1, 49s, χωρίς probe overhead)
+
+### Χρόνος καρέ υπό input
+
+| median | p75 | **p90** | p99 | max |
+|---|---|---|---|---|
+| 16,8ms | 36,4ms | **80,0ms** | 134,8ms | 576,5ms |
+
+**Κατανομή:** `<20ms: 296 (56%)` · `20–35ms: 96 (18%)` · `35–70ms: 49 (9%)` · **`>70ms: 84 (16%)`**
+
+> Η κατανομή **είναι** η διάγνωση: το μισό υλικό τρέχει στα 60fps, αλλά **1 στα 6 καρέ κοστίζει
+> >70ms**. Δεν είναι σταθερά αργό — είναι **σπασμωδικό**. Το median (16,8ms) θα έλεγε «τέλεια».
+> Γι' αυτό το median μόνο του απαγορεύεται.
+
+### LoAF attribution — 113 μεγάλα καρέ, 10.096ms σε 49s (**20,6% του χρόνου**)
+
+| # | Πηγή | Κλήσεις | Σύνολο | Μέσος | Max |
+|---|---|---|---|---|---|
+| **1** | `rendering/core/…` rAF callback = **`UnifiedFrameScheduler.processFrame`** | 97 | **3.183ms (74%)** | **32,8ms** | 174,5ms |
+| 2 | keydown listener (μεμονωμένο συμβάν) | 1 | 415ms | — | 415ms |
+| 3 | `useCentralizedMouseHandlers[applyPendingTransform]` | 54 | 355ms | 6,6ms | 13,7ms |
+| 4 | React `dispatchContinuousEvent` ← `onmousemove` | 29 | 268ms | 9,2ms | **+28,3ms forced layout** |
+| 5 | `WebglLineLayerSubscriber.useEffect` | 1 | 27ms | — | — |
+
+### Event Timing — 210 interactions >16ms
+
+`pointerenter/leave/over/out`: `avgProcessing ≈ **0,0ms**` αλλά `avgPresentation **20–34ms**`.
+
+> **Οι event handlers είναι σχεδόν δωρεάν. Ο χρόνος πάει στο presentation — στο ζωγράφισμα.**
+> Αυτό μόνο του ακυρώνει κάθε στρατηγική «κάνε τους handlers πιο γρήγορους».
+
+---
+
+### Α. Ο κύριος όγκος είναι το ίδιο το καρέ
+
+Το rAF callback κοστίζει **32,8ms κατά μέσο όρο στα αργά καρέ** — διπλάσιο από το budget των 16,7ms.
+Είναι το **άθροισμα των `system.render()`** (`UnifiedFrameScheduler.ts:246-268`).
+Δεν είναι «ένα overlay που τρέχει ενώ δεν χρειάζεται».
+
+### Β. Το bitmap cache πληρώνεται αλλά **δεν κερδίζεται** (137 καρέ ζωγραφικής σε 45s)
+
+| Καμβάς | Πράξεις ανά καρέ |
+|---|---|
+| **`canvas:dxf`** (ορατός) | `stroke` **19.607** (=143/καρέ) · `fillText` **7.496** (=**54,7/καρέ**) · `fillRect` 503 · `strokeRect` 503 · `clearRect` 137 · **`drawImage` 137** ← blit του cache |
+| **offscreen `#-1`** (αποσπασμένος από DOM = το bitmap cache) | `stroke` 6.897 · `fill` 1.619 · `clearRect` **131** |
+
+**131 από τα 137 καρέ ξαναχτίζουν ολόκληρο το bitmap cache** — hit rate ~**4%**.
+Σε pan/zoom το cache ακυρώνεται σχεδόν πάντα, οπότε το κόστος διπλασιάζεται:
+ζωγραφίζουμε 6.897 stroke offscreen → κάνουμε blit → και ζωγραφίζουμε **άλλα 19.607 stroke από πάνω**.
+
+### Γ. Εννέα καμβάδες κάνουν **μόνο `clearRect`** — μηδέν ζωγραφική
+
+`overlay:floor-underlay` · `overlay:analytical` · `overlay:mep-wires` · `overlay:envelope` ·
+`overlay:proposal-dispatch` · `canvas:layer` · `unnamed z0/#0` · `unnamed z0/#1` · `unnamed z20/#6` ·
+`unnamed z18/#10` → **131–148 `clearRect`, μηδέν draw ops.**
+
+Το μοτίβο επιβεβαιώθηκε στον κώδικα — `clearRect` **άνευ όρων** μέσα σε `useEffect`, **πριν** τον
+έλεγχο αν υπάρχει κάτι να ζωγραφιστεί:
+
+- `EnvelopeOverlay.tsx:159` · `FloorUnderlayOverlay.tsx:83` · `HomeRunWiresOverlay.tsx:155`
+- `GridUnderlayCanvas.tsx:66` · `TopoGridUnderlayCanvas.tsx:135` · `ContainerGizmoLayer.tsx:119`
+- `analytical-overlays/` — **τεκμηριωμένο by design**:
+  `__tests__/analytical-painter.test.ts:62` → *«paints nothing (just clears) when every painter is null»*
+
+**Γιατί κοστίζει:** κάθε `clearRect` σε καμβά 1345×697 σημαδεύει το layer βρώμικο ⇒ ο compositor
+ξανα-ανεβάζει texture και ξανασυνθέτει. **12,2 megapixel σύνθεσης ανά καρέ, χωρίς κανένα οπτικό
+αποτέλεσμα.**
+
+**Ανεξάρτητη επιβεβαίωση:** στο Πέρασμα 1 μετρήθηκαν **16 LoAF entries με μηδέν scripts,
+σύνολο 1.084ms, median 62,9ms** — καθαρό browser work (layout/paint/composite) χωρίς καθόλου JS.
+Δύο ανεξάρτητα όργανα, ίδιο συμπέρασμα.
+
+> Αυτό είναι το πρόβλημα που το προηγούμενο handoff υποψιάστηκε ως `<GatedOverlayCanvas>` (§7.2)
+> — **σωστό μοτίβο, λάθος αιτιολογία**. Δεν είναι «+11,5ms JS στο HomeRunWiresOverlay».
+> Είναι «9 layers ακυρώνονται τζάμπα σε κάθε καρέ».
+
+### Δ. Ενεργό three.js WebGL context μέσα σε 2D προβολή
+
+`webgl:three(three.js r170)` — **132 `gl.clear()`, μηδέν draw calls**. Ένα clear ανά καρέ,
+πλήρες WebGL context + compositor layer ζωντανά χωρίς να ζωγραφίζουν τίποτα.
+
+### Ε. 54,7 `fillText` ανά καρέ, χωρίς cache
+
+Το `fillText` είναι η ακριβότερη πράξη Canvas2D (text shaping + glyph rasterization ανά κλήση).
+
+---
+
+## 5. Frame budget — τα κατώφλια (ΝΕΟ SSoT)
+
+Αντικαθιστά το «median» ως κριτήριο αποδοχής. Κάθε perf αλλαγή κρίνεται σε **ορατό tab, υπό input**:
+
+| Μετρικό | Στόχος | Κόκκινο |
+|---|---|---|
+| p90 χρόνου καρέ υπό input | **≤ 16,7ms** | > 33ms |
+| p99 χρόνου καρέ υπό input | ≤ 33ms | > 50ms |
+| Ποσοστό καρέ > 70ms | **≤ 1%** | > 5% |
+| LoAF συνολικός χρόνος / διάρκεια | ≤ 5% | > 10% |
+| INP (p90 `presentation`) | ≤ 16,7ms | > 33ms |
+| Καρέ ζωγραφικής χωρίς οπτική αλλαγή | **0** | > 0 |
+
+**Τρέχουσα κατάσταση (dev): p90 = 80ms, καρέ >70ms = 16%, LoAF = 20,6%. Και τα τρία κόκκινα.**
+
+---
+
+## 6. Αποφάσεις — τι θα γίνει (Phase 2, με σειρά απόδοσης ανά κόπο)
+
+**Φ1 και Φ2 ΥΛΟΠΟΙΗΘΗΚΑΝ στις 2026-07-29** (λεπτομέρειες υλοποίησης: ADR-040 changelog
+«2026-07-29: ADR-726 Φ1+Φ2»). Φ3–Φ5 εκκρεμούν και απαιτούν ρητή εντολή.
+
+### Φ1 — Έκθεση των per-system metrics που **ήδη υπάρχουν** (ΜΗΔΕΝ νέο σύστημα) ✅ **ΕΓΙΝΕ**
+
+Ο `UnifiedFrameScheduler` **ήδη μετράει** `lastRenderTime / averageRenderTime / renderCount /
+skipCount` ανά σύστημα (γρ. 255-261), με `collectMetrics: true` by default, και τα εκθέτει σε
+`FrameMetrics.systemMetrics`. **Δεν τα διαβάζει κανείς** — ούτε window, ούτε UI, ούτε log.
+**Μετράμε και πετάμε.**
+
+⇒ Γέφυρα προς το **υπάρχον** SSoT `systems/cursor/mouse-handler-perf.ts` (`recordSample` /
+`snapshotPerfRows`, ADR-040 Phase A), πίσω από το **υπάρχον** flag `localStorage['dxf-perf-trace']`.
+Ίδιος aggregator, ίδιο `console.table`, ίδιο flag. **Κανένα διπλότυπο, κανένα νέο global.**
+Αυτό δίνει το attribution **ανά σύστημα** που το LoAF δομικά δεν μπορεί να δώσει.
+
+**Υλοποιήθηκε ως** `rendering/core/frame-scheduler-perf-bridge.ts` (γέφυρα, ~40 γραμμές λογικής),
+με ιδιοκτήτη κύκλου ζωής μία γραμμή στο `app/useDxfViewerEffects.ts`. Ο **κανόνας εγκυρότητας του
+§1.2 επιβάλλεται μέσα στο όργανο**: καρέ με `visibilityState !== 'visible'` απορρίπτονται πριν
+καταγραφούν — δεν αφήνεται σε σχόλιο που ο επόμενος θα προσπεράσει, όπως έγινε τρεις φορές.
+
+**Πώς διαβάζεται:** `localStorage.setItem('dxf-perf-trace','1')` → reload (ή `__dxfPerfRefresh()`)
+→ ανθρώπινο pan/zoom 15-20΄΄ → `window.__dxfPerfReport()`. Οι γραμμές `frame:<systemId>` δείχνουν
+count/avg/p95/total ανά σύστημα· η `frame:TOTAL` είναι ο παρονομαστής. Λόγος
+`count(frame:X) / count(frame:TOTAL)` = πόσο συχνά ζωγραφίζει το X.
+
+### Φ2 — Πύλη πριν το `clearRect` (§4.Γ) ✅ **ΕΓΙΝΕ**
+
+Κάθε overlay ελέγχει **πρώτα** αν έχει κάτι να ζωγραφίσει· αν όχι, **δεν αγγίζει τον καμβά**.
+Επιπλέον: αν ήταν ήδη άδειος στο προηγούμενο καρέ, ούτε καν clear. Στόχος: **9 layers σταματούν
+να ακυρώνονται τζάμπα**. Απαιτεί κοινό primitive (SSoT) — **όχι** αντιγραφή της πύλης σε 9 αρχεία
+(N.0.2 / N.18: ίδιο λάθος με το `if (options.grips) renderGrips()` σε 7 renderers).
+
+**Υλοποιήθηκε ως ΕΝΑ primitive**: το ήδη υπάρχον `overlay-dispatch/overlay-dispatch-frame.ts`
+απέκτησε την πύλη, με μνήμη σε νέο `overlay-canvas-clear-state.ts` (`WeakSet` ledger· άγνωστος
+καμβάς ⇒ ΟΧΙ καθαρός ⇒ το πρώτο καρέ καθαρίζει πάντα). **10 καμβάδες** πέρασαν από αυτό.
+`jscpd:diff` σε 14 αρχεία: **μηδέν clones** — η πύλη δεν αντιγράφηκε πουθενά.
+
+**Η αιτιολόγηση έπαψε να είναι υπόθεση.** Ο πηγαίος κώδικας του Blink επιβεβαιώνει ότι η
+`HTMLCanvasElement::DidDraw(rect)` ενώνει άνευ όρων το rect στο `dirty_rect_`, θέτει
+`canvas_is_clear_ = false` και προγραμματίζει paint invalidation — **χωρίς καμία σύγκριση pixel**.
+Άρα `clearRect` σε ήδη-διαφανή καμβά **είναι** πλήρης ακύρωση layer, όπως έδειχναν τα 16 LoAF
+entries με μηδέν scripts.
+
+**Εκκρεμεί από τους 9:** ο `canvas:layer` (`canvas-v2/layer-canvas/LayerRenderer.ts:189`). Δεν είναι
+React overlay με «painter ή null» αλλά imperative renderer με δύο διαδρομές (unified/legacy), όπου
+το «έχω περιεχόμενο;» εξαρτάται από layers + 6 ομάδες ρυθμίσεων. Θέλει δικό του predicate — **δεν**
+πιέστηκε στο ίδιο primitive για να «κλείσει το 9/9».
+
+### Φ2.1 — ο 9ος καμβάς που βρέθηκε **μόνο** στον browser (`Focus2DOverlay`)
+
+Ο «unnamed z18/#10» της λίστας των 9 ταυτοποιήθηκε στην επαλήθευση (§12) ως
+`accessibility/Focus2DOverlay.tsx`. Είχε **ξεφύγει** από την πρώτη σάρωση: το `clearRect` του δεν
+είναι στο ίδιο το component αλλά κρυμμένο πίσω από τον helper `clearFocus2DOverlay(canvas)` — άρα
+δεν εμφανιζόταν στο `grep -rn "clearRect" components/dxf-layout/`, το grep από το οποίο βγήκε ο
+πίνακας των 6 αρχείων του handoff.
+
+Το μοτίβο ήταν ταυτόσημο: `useEffect` με `transform` στα deps ⇒ σε **κάθε** pan/zoom, και χωρίς
+εστιασμένη οντότητα (η συνήθης κατάσταση — η εστίαση πληκτρολογίου είναι σπάνια) καθάριζε άνευ
+όρων. Πέρασε στο ίδιο primitive· ο helper `clearFocus2DOverlay` έμεινε ανέγγιχτος (έχει δικά του
+tests στο `cross-mode-shortcuts.test.ts` και χρησιμοποιείται ακόμη στο inactive-teardown, όπου
+είναι clear-only ⇒ δεν μπορεί να δημιουργήσει φάντασμα).
+
+> **Μάθημα για την επόμενη σάρωση:** ένα `grep clearRect` βρίσκει **call sites**, όχι
+> **wrappers**. Ο πίνακας των 6 αρχείων του handoff ήταν σωστός και ελλιπής ταυτόχρονα.
+
+### Φ3 — Το bitmap cache που δεν κερδίζεται (§4.Β)
+
+Hit rate 4% σε pan/zoom. Δύο δρόμοι, θέλει απόφαση **μετά** τα δεδομένα της Φ1:
+**(α)** να κερδίζεται — αναβάθμιση της στρατηγικής ακύρωσης ώστε το pan να μη σβήνει το cache
+(offset blit αντί για rebuild)· **(β)** να μην πληρώνεται — παράκαμψη του cache όσο διαρκεί η
+συνεχής κίνηση, ενεργοποίηση μόλις ηρεμήσει.
+
+### Φ4 — `fillText` cache (§4.Ε) και three.js teardown σε 2D (§4.Δ)
+
+### Φ5 — Επαναμέτρηση σε **production build**
+
+⚠️ **Όλα τα παραπάνω είναι dev build** (StrictMode = διπλό render). **Ο μόνος τίμιος αριθμός είναι
+της production.** Καμία δήλωση «διορθώθηκε» δεν γίνεται δεκτή χωρίς production μέτρηση με τα
+κατώφλια §5.
+
+---
+
+## 7. Τι **δεν** θα γίνει
+
+1. **Καμία μηχανή WebGL/WebGPU «Render Core».** Η HD 5450 δεν έχει D3D12/Vulkan. Μήνες δουλειάς,
+   αβέβαιο κέρδος. Το `WEBGL_LINE_LAYER_MIN_ENTITIES: 50_000` (ADR-639 Στάδιο 5) κρατά το WebGL layer
+   **ανενεργό** στα 2.910 στοιχεία — σωστά.
+2. **Καμία βελτιστοποίηση event handler.** Μετρήθηκε `avgProcessing ≈ 0ms`. Δεν υπάρχει τι να κερδηθεί.
+3. **Καμία αναφορά per-canvas ms** ως κόστος (§2.1).
+4. **Κανένα νούμερο από hidden tab, από dev build χωρίς δήλωση, ή σκέτο median.**
+5. **Καμία επίκληση των αριθμών των Δ1/Δ2/Δ3** (§1) — είναι άκυροι.
+
+---
+
+## 8. SSoT — τι υπάρχει ήδη (grep-verified 2026-07-29)
+
+| Σύστημα | Αρχείο | Ρόλος |
+|---|---|---|
+| RAF orchestrator | `rendering/core/UnifiedFrameScheduler.ts` | **Ο μοναδικός.** Έχει ήδη per-system metrics — αχρησιμοποίητα |
+| Perf sampling | `systems/cursor/mouse-handler-perf.ts` | **Ο μοναδικός aggregator** (`withPerf`/`recordSample`/`snapshotPerfRows`), flag `dxf-perf-trace` |
+| Auto-optimizer | `performance/DxfPerformanceOptimizer.ts` | Καταναλωτής του `UnifiedFrameScheduler.onFrame` — alerts/thresholds |
+| Κατώφλια | `core/performance/components/utils/performance-utils` → `PERFORMANCE_THRESHOLDS` | Υπάρχον SSoT κατωφλίων |
+| Canvas sizing | `CanvasUtils.sizeCanvasToViewport` | Το μοναδικό primitive DPR-aware sizing |
+| 3D perf | `bim-3d/performance/{PerformanceCollector,baseline-tracker}.ts` | Ξεχωριστό, για το 3D |
+
+⚠️ **Δεν υπάρχει** `web-vitals`, LoAF observer, ή User Timing στο repo. Δεν προτείνεται νέα
+εξάρτηση: το LoAF/Event-Timing χρησιμοποιήθηκαν ως **διαγνωστικά page-context**, όχι ως κώδικας
+προϊόντος. Αν χρειαστεί μόνιμη τηλεμετρία, μπαίνει **πίσω από το υπάρχον flag**, στο υπάρχον module.
+
+---
+
+## 9. Έρευνα — πώς το κάνουν οι μεγάλοι (2026-07-29, πριν την υλοποίηση)
+
+### 9.1 Το εύρημα που έκρινε τη Φ2 — πηγαίος κώδικας Blink, όχι blog
+
+```cpp
+// third_party/blink/renderer/core/html/canvas/html_canvas_element.cc
+void HTMLCanvasElement::DidDraw(const gfx::Rect& rect) {
+  if (rect.IsEmpty()) return;
+  if (dirty_rect_.IsEmpty()) {
+    if (LayoutObject* layout_object = GetLayoutObject()) {
+      if (layout_object->PreviousVisibilityVisible() && GetDocument().GetPage())
+        GetDocument().GetPage()->Animator().SetHasCanvasInvalidation();
+      if (!LowLatencyEnabled()) layout_object->SetShouldCheckForPaintInvalidation();
+    }
+  }
+  canvas_is_clear_ = false;
+  dirty_rect_.Union(rect);
+}
+```
+
+Η μόνη προϋπόθεση είναι **μη-κενό rect**. Ο browser **δεν διαβάζει pixels** για να δει αν κάτι
+άλλαξε. Δύο συνέπειες που κατευθύνουν τον σχεδιασμό:
+
+1. **Το «άδειο clear» δεν υπάρχει.** Η μόνη φθηνή πράξη είναι **η πράξη που δεν εκδόθηκε** — άρα η
+   πύλη πρέπει να ζει στον κώδικά μας, γιατί ο browser δεν πρόκειται να τη βάλει για εμάς.
+2. **Το `canvas_is_clear_` είναι δικό του σχήμα.** Η ονοματολογία του ledger μας
+   (`isOverlayCanvasClear` / `markOverlayCanvasCleared` / `markOverlayCanvasPainted`) το καθρεφτίζει
+   σκόπιμα: όποιος διαβάσει το ένα, αναγνωρίζει το άλλο.
+
+### 9.2 Damage / dirty-rect rendering — γιατί **δεν** μπήκε τώρα
+
+Η κλασική τεχνική (Piccolo2D, ScummVM, tkinter Canvas, Apache ECharts PR #13170, terminals,
+editors): κράτα τι άλλαξε, ξαναζωγράφισε **μόνο** εκείνο το ορθογώνιο. Τυπικό κέρδος 70-80% όταν
+αλλάζει 10-20% της επιφάνειας ανά καρέ.
+
+**Δεν ταιριάζει στο μονοπάτι που μετρήθηκε.** Το κυρίαρχο σενάριο εδώ είναι **pan/zoom**, όπου
+αλλάζει **100%** της επιφάνειας — το damage rect γίνεται ολόκληρος ο καμβάς και η τεχνική
+εκφυλίζεται σε full redraw + λογιστική. Η Φ2 είναι το **υποσύνολο** του damage tracking που
+πραγματικά αποδίδει εδώ: damage στο **επίπεδο layer** («αυτό το layer δεν άλλαξε καθόλου»), όχι
+στο επίπεδο ορθογωνίου. Ίδια ιδέα, σωστή κοκκομετρία για τα δεδομένα μας.
+
+Το dirty-rect έχει νόημα στο **hover/selection**, όπου αλλάζει ένα μικρό ορθογώνιο — υποψήφιο για
+μελλοντική φάση, **όχι** εδώ.
+
+### 9.3 Blit-and-fill pan — η σωστή απάντηση στο εύρημα §4.Β, **αλλά ανήκει στη Φ3**
+
+Το πρότυπο (matplotlib `copy_from_bbox`/`restore_region`, MDN «Optimizing canvas», κάθε 2D
+compositor): σε pan, **μετακίνησε** το ήδη ζωγραφισμένο bitmap κατά το delta και ξαναζωγράφισε
+**μόνο τη λωρίδα που αποκαλύφθηκε**. Αυτό ακριβώς λείπει από το bitmap cache με hit rate 4%.
+
+**Δεν έγινε τώρα, σκόπιμα:** η επιλογή μεταξύ (α) «να κερδίζεται» (offset blit) και (β) «να μην
+πληρώνεται» (παράκαμψη cache όσο κινείται) εξαρτάται από **το πόσο κοστίζει πραγματικά η
+ανακατασκευή** — αριθμός που **μόνο τώρα** μπορεί να δοθεί, από τη γραμμή `frame:dxf-canvas` της Φ1.
+Χωρίς αυτόν, η Φ3 είναι εικασία. Αυτή είναι η ολόκληρη αιτιολόγηση της σειράς Φ1 → Φ3.
+
+### 9.4 Retained-mode scene graph — γιατί **όχι** ως απάντηση εδώ
+
+Οι CAD viewers κρατούν scene graph μεταξύ καρέ επειδή το μοντέλο είναι μεγάλο και **στατικό**:
+πληρώνεις μνήμη για να αποφύγεις ανακατασκευή. Ο DXF viewer **ήδη** κρατά scene + bitmap cache· το
+πρόβλημα δεν είναι ότι λείπει retention, αλλά ότι η **ακύρωση** του υπάρχοντος cache χτυπά στο 96%
+των καρέ (§4.Β). Αλλαγή παραδείγματος δεν λύνει λάθος στρατηγική ακύρωσης.
+
+Το Figma δεν είναι εφαρμόσιμο πρότυπο εδώ: δικός του compositor + tile-based WebGL μηχανή σε
+C++/WASM. Στο μηχάνημα-στόχο (AMD HD 5450, 2010, χωρίς D3D12/Vulkan) η κατεύθυνση αυτή
+απαγορεύεται ρητά — §7.1.
+
+### 9.5 Ό,τι έμεινε ανοιχτό από την έρευνα (τροφοδοτεί Φ3/Φ4)
+
+- **Glyph atlas / `Path2D` reuse** για τα 54,7 `fillText`/καρέ (§4.Ε) — η ακριβότερη πράξη Canvas2D,
+  και η μόνη που ξαναπληρώνει text shaping σε **κάθε** κλήση. Φ4.
+- **`OffscreenCanvas` + worker.** Σε 2.910 στοιχεία είναι πιθανότατα υπερβολή: μεταφέρει τον χρόνο
+  σε άλλο νήμα αντί να τον εξαλείψει, και προσθέτει sync κόστος. Επανεξέταση **μόνο** αν η Φ1
+  δείξει ότι ο χρόνος είναι πράγματι μέσα στο `frame:dxf-canvas` και δεν συμπιέζεται αλλιώς.
+- **`will-change` / `contain: paint` / `content-visibility`.** Με 13 layers × 12,2 Mpx, η προώθηση
+  layer είναι **κόστος**, όχι κέρδος· η Φ2 μειώνει τις ακυρώσεις χωρίς να αγγίξει τη σύνθεση.
+  Καμία αλλαγή CSS δεν έγινε.
+
+**Καμία νέα εξάρτηση δεν προστέθηκε** (N.5 δεν ενεργοποιήθηκε).
+
+---
+
+## 10. Επόμενο βήμα — τι ΔΕΝ έχει αποδειχθεί ακόμη
+
+Η Φ2 αφαιρεί πράξεις που **αποδεδειγμένα** ακυρώνουν compositor layers (§9.1) και η Φ1 δίνει το
+attribution που έλειπε. **Κανένα από τα δύο δεν έχει ξαναμετρηθεί.**
+
+| Μετρικό | Στόχος | Τελευταία μέτρηση (dev, **πριν** Φ1/Φ2) |
+|---|---|---|
+| p90 χρόνου καρέ υπό input | ≤ 16,7ms | 80,0ms 🔴 |
+| p99 | ≤ 33ms | 134,8ms 🔴 |
+| Καρέ > 70ms | ≤ 1% | 16% 🔴 |
+| LoAF χρόνος / διάρκεια | ≤ 5% | 20,6% 🔴 |
+| Καρέ ζωγραφικής χωρίς οπτική αλλαγή | 0 | 9 καμβάδες × ~140 🔴 |
+
+Η επαναμέτρηση απαιτεί το πρωτόκολλο του §3 (**ορατό tab**, ανθρώπινο pan/zoom 15-20΄΄, synthetic
+events δεν πιάνουν) και, για τίμιο νούμερο, **production build** (Φ5).
+
+---
+
+## 12. Επαλήθευση στον browser (2026-07-29, dev build, ορατό tab)
+
+Δεν είναι μέτρηση απόδοσης — είναι έλεγχος **ορθότητας**. Τα κριτήρια του §10 παραμένουν αμέτρητα.
+
+**Συνθήκες:** `47_ergasia.dxf` (2.910 στοιχεία), **13 καμβάδες** (12× Canvas2D + 1× WebGL) —
+ταυτίζεται με το §3. `visibilityState: "visible"`, `hasFocus: true` κατά τη λήψη.
+Έναυσμα: zoom-to-fit (HOME) ⇒ πραγματική αλλαγή transform ⇒ ξανατρέχουν **όλα** τα overlay effects.
+Το probe μετρά **counts** `clearRect` ανά καμβά — έγκυρο κατά §2.1 (τα ms θα ήταν άκυρα).
+
+### Α. Φ1 λειτουργεί end-to-end
+
+`__dxfPerfReport()` επέστρεψε **7 γραμμές `frame:*`** μέσα στον υπάρχοντα aggregator, μέσω του
+υπάρχοντος flag. Τα jest tests είχαν **mock** τον aggregator — απέδειξαν τη λογική, όχι τη σύνδεση·
+αυτό απέδειξε τη σύνδεση.
+
+Και έδωσε αμέσως το attribution που το LoAF δομικά δεν μπορούσε: σε 420 καρέ, ο `frame:dxf-canvas`
+ζωγράφισε **9 φορές** αλλά κατανάλωσε **351 από τα 368ms** του συνόλου (avg 39ms, max 329ms).
+⚠️ Είναι **load-time** καρέ, όχι pan/zoom — **δεν** αντικαθιστά τη μέτρηση της Φ5· δείχνει όμως ότι
+το όργανο απαντά ακριβώς στην ερώτηση της Φ3 («πόσο κοστίζει η ανακατασκευή του cache;»).
+
+### Β. Φ2 — η πύλη λειτουργεί στην πραγματική εφαρμογή
+
+Σε πλήρη κύκλο επανασχεδίασης, οι μόνοι καμβάδες που άγγιξαν το bitmap τους:
+
+| Καμβάς | clears | Ερμηνεία |
+|---|---|---|
+| `z10/#5` (main dxf) | 2 | **Ζωγραφίζει** — σωστό |
+| offscreen bitmap-cache | 2 | Το cache της Φ3 — άθικτο, εκτός σκοπού |
+| `z0/#3` = **`layer-canvas`** | 2 | Ο **ένας** που τεκμηριώθηκε ως εκκρεμής (§6) |
+| `z18/#10` = `Focus2DOverlay` | 3 | **Ο 9ος — μου είχε ξεφύγει** (§Φ2.1)· διορθώθηκε μετά |
+
+**Μηδέν clears** για: `floor-underlay` · `analytical` · `proposal-dispatch` · `envelope` ·
+`mep-wires` · `z0/#0` · `z0/#1` · `z20/#6` · `z15/#7`.
+
+### Γ. Μηδέν φαντάσματα
+
+Απογραφή alpha ανά καμβά: **11 από τους 12** Canvas2D πραγματικά κενοί, ο 1 με μελάνι είναι ο
+κύριος. Το σχέδιο αποδίδεται σωστά (χρώματα, επίπεδα, γεωμετρία). Μηδέν console errors.
+Η πύλη **δεν** παρέλειψε αναγκαίο clear.
+
+### Δ. Τι ΔΕΝ επαληθεύτηκε
+
+- **Η ίδια η διόρθωση του `Focus2DOverlay`** έγινε *μετά* τη μέτρηση: καλύπτεται από eslint + 38
+  jest tests + ταυτότητα σχήματος με τους άλλους 8, **όχι** από νέα μέτρηση στον browser.
+- **Το μονοπάτι pointermove/hover.** Το έναυσμα ήταν αλλαγή transform (=το μονοπάτι του pan/zoom),
+  όχι κίνηση δείκτη.
+- **Οτιδήποτε αριθμητικό του §10.** Synthetic events δεν πιάνουν· χρειάζεται ανθρώπινο pan/zoom σε
+  production build.
+
+---
+
+## 11. Changelog
+
+| Ημ/νία | Αλλαγή |
+|---|---|
+| 2026-07-29 | **Δημιουργία.** Phase 1 ολοκληρωμένη: ακύρωση τριών διαγνώσεων (§1), ορισμός έγκυρου οργάνου (§2), μέτρηση με ανθρώπινο input σε ορατό tab (§4), frame budget (§5), σχέδιο Φ1-Φ5 (§6). **Μηδέν κώδικας.** |
+| 2026-07-29 (γ) | **Επαλήθευση στον browser (§12).** Φ1 επιβεβαιώθηκε end-to-end (7 γραμμές `frame:*` στον πραγματικό aggregator). Φ2: μηδέν clears σε 9 overlays σε πλήρη κύκλο επανασχεδίασης, μηδέν φαντάσματα. **Βρέθηκε ένας 9ος καμβάς που είχε ξεφύγει** — `Focus2DOverlay` (§Φ2.1): το `clearRect` του κρυβόταν πίσω από τον helper `clearFocus2DOverlay`, άρα ήταν αόρατο στο grep του handoff. Διορθώθηκε (11 καμβάδες συνολικά στο primitive). Εκκρεμής μένει **μόνο** ο `layer-canvas`. |
+| 2026-07-29 (β) | **Phase 2 — Φ1 + Φ2 υλοποιημένες.** Φ1: `frame-scheduler-perf-bridge.ts` γεφυρώνει τα ΥΠΑΡΧΟΝΤΑ per-system metrics προς τον ΥΠΑΡΧΟΝΤΑ aggregator, πίσω από το ΥΠΑΡΧΟΝ flag· ο κανόνας εγκυρότητας §1.2 (visibilityState) επιβάλλεται **μέσα** στο όργανο. Φ2: η πύλη πριν το `clearRect` μπήκε στο **ΕΝΑ** `overlay-dispatch-frame.ts` + νέο `overlay-canvas-clear-state.ts` ledger· **10 καμβάδες** πέρασαν από αυτό, `jscpd:diff` μηδέν clones. Προστέθηκε §9 (έρευνα, με τον πηγαίο κώδικα Blink που τεκμηριώνει το κόστος) και §10 (τι δεν αποδείχθηκε). Boy-scout (N.0.2): `ContainerGizmoLayer` έπαψε να έχει χειρόγραφα μαθηματικά DPR· `IDENTITY_VIEW_TRANSFORM` κεντρικοποιήθηκε στο ADR-118 SSoT. **Εκκρεμεί** ο `canvas:layer` (LayerRenderer) — άλλη αρχιτεκτονική, δηλωμένο ρητά στο §6. Λεπτομέρειες υλοποίησης: ADR-040 changelog 2026-07-29. |

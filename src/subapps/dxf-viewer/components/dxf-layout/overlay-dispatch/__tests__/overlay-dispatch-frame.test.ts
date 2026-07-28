@@ -1,9 +1,15 @@
 /**
- * ADR-554 — shared overlay dispatch frame renderer (`paintOverlayDispatchFrame`).
+ * ADR-554 / ADR-726 Φ2 — shared overlay frame renderer (`paintOverlayDispatchFrame`).
  *
- * The ONE pull-model frame renderer behind both the analytical (ADR-552) and proposal (ADR-554)
- * dispatch canvases: size+clear ONCE, then paint active painters in z-order, skipping `null`.
+ * The ONE pull-model frame renderer behind every 2D overlay canvas — both the multi-painter
+ * dispatch canvases (analytical ADR-552, proposal ADR-554) and the single-painter overlays
+ * (envelope / floor-underlay / mep-wires / grid / topo-grid / gizmo / …, ADR-726 Φ2):
+ * size → **πύλη** → clear ONCE → paint active painters in z-order, skipping `null`.
  * Mock canvas/ctx — zero DOM/React.
+ *
+ * ⚠️ Το clear-state ledger είναι **per canvas element** (WeakSet). Κάθε `makeCanvas()` φτιάχνει
+ * ΝΕΟ αντικείμενο ⇒ άγνωστο ⇒ «μπορεί να έχει μελάνι» ⇒ το πρώτο καρέ καθαρίζει πάντα. Τα tests
+ * που ελέγχουν την πύλη ΠΡΕΠΕΙ να ζωγραφίζουν δύο διαδοχικά καρέ στον ΙΔΙΟ καμβά.
  */
 
 import { paintOverlayDispatchFrame } from '../overlay-dispatch-frame';
@@ -60,10 +66,67 @@ describe('paintOverlayDispatchFrame (ADR-554)', () => {
     expect(last).toHaveBeenCalledTimes(1);
   });
 
-  it('paints nothing (just clears) when every painter is null — e.g. no proposal under review', () => {
+  // ── ADR-726 Φ2 — η πύλη πριν το clear ────────────────────────────────────────────────────
+  //
+  // Το συμβόλαιο ΑΛΛΑΞΕ: παλιά «μηδέν painters ⇒ ένα clear, πάντα». Τώρα «μηδέν painters ⇒ ένα
+  // clear ΜΟΝΟ αν ο καμβάς μπορεί να έχει μελάνι· αλλιώς ΚΑΜΙΑ επαφή». Ένα clearRect σε ήδη-άδειο
+  // καμβά ακυρώνει ολόκληρο compositor layer (Blink `HTMLCanvasElement::DidDraw` — δεν συγκρίνει
+  // pixels), και μετρήθηκαν 9 καμβάδες × 131–148 τέτοια clears ανά συνεδρία (ADR-726 §4.Γ).
+
+  const ALL_NULL = [null, null, null, null, null, null, null];
+
+  it('clears ONCE on the first empty frame of an unseen canvas (safe seed — μπορεί να έχει μελάνι)', () => {
     const { canvas, ctx } = makeCanvas();
-    paintOverlayDispatchFrame(canvas, [null, null, null, null, null, null, null], TRANSFORM, VIEWPORT);
+    paintOverlayDispatchFrame(canvas, ALL_NULL, TRANSFORM, VIEWPORT);
     expect(ctx.clearRect).toHaveBeenCalledTimes(1);
+  });
+
+  it('does NOT touch the canvas on a SECOND empty frame — μηδέν clearRect, μηδέν ακύρωση layer', () => {
+    const { canvas, ctx } = makeCanvas();
+    paintOverlayDispatchFrame(canvas, ALL_NULL, TRANSFORM, VIEWPORT);
+    ctx.clearRect.mockClear();
+
+    paintOverlayDispatchFrame(canvas, ALL_NULL, TRANSFORM, VIEWPORT);
+    paintOverlayDispatchFrame(canvas, ALL_NULL, TRANSFORM, VIEWPORT);
+    paintOverlayDispatchFrame(canvas, ALL_NULL, TRANSFORM, VIEWPORT);
+
+    expect(ctx.clearRect).not.toHaveBeenCalled();
+  });
+
+  it('clears again as soon as content appeared and then went away (μηδέν φάντασμα)', () => {
+    const { canvas, ctx } = makeCanvas();
+    paintOverlayDispatchFrame(canvas, ALL_NULL, TRANSFORM, VIEWPORT); // seed → clear + «καθαρός»
+    paintOverlayDispatchFrame(canvas, [jest.fn()], TRANSFORM, VIEWPORT); // ζωγράφισε → «με μελάνι»
+    ctx.clearRect.mockClear();
+
+    paintOverlayDispatchFrame(canvas, ALL_NULL, TRANSFORM, VIEWPORT);
+    expect(ctx.clearRect).toHaveBeenCalledTimes(1); // σβήνει το προηγούμενο περιεχόμενο
+    ctx.clearRect.mockClear();
+
+    paintOverlayDispatchFrame(canvas, ALL_NULL, TRANSFORM, VIEWPORT);
+    expect(ctx.clearRect).not.toHaveBeenCalled(); // …και μετά ησυχάζει ξανά
+  });
+
+  it('τα ξανα-καθαρίζει αν ένας painter πέταξε — ο καμβάς μπορεί να έμεινε μισο-ζωγραφισμένος', () => {
+    const { canvas, ctx } = makeCanvas();
+    const exploding: OverlayDispatchPainter = () => {
+      throw new Error('painter blew up');
+    };
+    expect(() => paintOverlayDispatchFrame(canvas, [exploding], TRANSFORM, VIEWPORT)).toThrow();
+    ctx.clearRect.mockClear();
+
+    paintOverlayDispatchFrame(canvas, ALL_NULL, TRANSFORM, VIEWPORT);
+    expect(ctx.clearRect).toHaveBeenCalledTimes(1);
+  });
+
+  it('sizes the backing store even when the gate skips the paint (κρυφός καμβάς μένει έτοιμος)', () => {
+    const { canvas, ctx } = makeCanvas();
+    paintOverlayDispatchFrame(canvas, ALL_NULL, TRANSFORM, VIEWPORT); // seed
+    ctx.setTransform.mockClear();
+
+    paintOverlayDispatchFrame(canvas, ALL_NULL, TRANSFORM, VIEWPORT);
+    expect(ctx.setTransform).toHaveBeenCalledTimes(1); // sizing έτρεξε· clear ΟΧΙ
+    expect(ctx.clearRect).toHaveBeenCalledTimes(1); // μόνο το seed
   });
 
   it('resizes the DPR-aware backing store only when the size changes', () => {

@@ -19,8 +19,13 @@ import {
   subscribeMissingFontReport,
   getMissingFontReport,
 } from '../../text-engine/fonts/missing-font-store';
-// 🏢 SSoT canvas sizing — same core primitive as every 2D layer (DPR-aware, no JSX-attr own-sizing).
-import { CanvasUtils } from '../canvas/utils/CanvasUtils';
+// 🏢 SSoT overlay frame — DPR-aware sizing + πύλη + clear + paint σε ΕΝΑ primitive (ADR-726 Φ2).
+import {
+  paintOverlayDispatchFrame,
+  type OverlayDispatchPainter,
+} from '../../components/dxf-layout/overlay-dispatch/overlay-dispatch-frame';
+// 🏢 ADR-118 SSoT — ο ουδέτερος μετασχηματισμός· αυτό το overlay ζωγραφίζει ήδη σε screen-space.
+import { IDENTITY_VIEW_TRANSFORM } from '../../config/geometry-constants';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -72,31 +77,35 @@ export const MissingFontHighlightLeaf = React.memo(
       // 🏢 SSoT sizing (ADR-040) — DPR-aware backing store from the authoritative viewport via the
       // ONE core (was JSX `width={viewport.width}` attrs, NO dpr → blurry + buffer desync). The ctx
       // is DPR-scaled → the screen-space `entityBounds` strokeRects stay in CSS coords, unchanged.
-      const ctx = CanvasUtils.sizeCanvasToViewport(canvas, viewport);
-      if (!ctx) return;
+      //
+      // ADR-726 Φ2 — το highlight είναι σπάνιο (μόνο μετά από «Προβολή επηρεαζόμενων»): χωρίς
+      // αναφορά ο καμβάς μένει ανέγγιχτος αντί να ακυρώνει compositor layer σε κάθε repaint.
+      const active = highlightActive && !!report && report.affectedEntityIds.length > 0;
+      const painter: OverlayDispatchPainter | null = active
+        ? (ctx) => {
+            ctx.save();
+            ctx.strokeStyle = HIGHLIGHT_COLOR;
+            ctx.lineWidth = LINE_WIDTH;
+            ctx.setLineDash(DASH_PATTERN as unknown as number[]);
 
-      ctx.clearRect(0, 0, viewport.width, viewport.height);
+            for (const entityId of report.affectedEntityIds) {
+              const bounds = entityBounds.get(entityId);
+              if (!bounds) continue;
 
-      if (!highlightActive || !report || report.affectedEntityIds.length === 0) return;
+              ctx.strokeRect(
+                bounds.x - PADDING,
+                bounds.y - PADDING,
+                bounds.width + PADDING * 2,
+                bounds.height + PADDING * 2,
+              );
+            }
 
-      ctx.save();
-      ctx.strokeStyle = HIGHLIGHT_COLOR;
-      ctx.lineWidth = LINE_WIDTH;
-      ctx.setLineDash(DASH_PATTERN as unknown as number[]);
+            ctx.restore();
+          }
+        : null;
 
-      for (const entityId of report.affectedEntityIds) {
-        const bounds = entityBounds.get(entityId);
-        if (!bounds) continue;
-
-        ctx.strokeRect(
-          bounds.x - PADDING,
-          bounds.y - PADDING,
-          bounds.width + PADDING * 2,
-          bounds.height + PADDING * 2,
-        );
-      }
-
-      ctx.restore();
+      // Το overlay ζωγραφίζει σε screen-space bounds — δεν χρειάζεται world transform.
+      paintOverlayDispatchFrame(canvas, [painter], IDENTITY_VIEW_TRANSFORM, viewport);
     }, [report, highlightActive, entityBounds, viewport.width, viewport.height]);
 
     return (

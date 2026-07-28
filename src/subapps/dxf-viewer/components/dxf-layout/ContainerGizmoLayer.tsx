@@ -38,7 +38,14 @@ import { isGripTypeVisible } from '../../hooks/grips/grip-type-visibility';
 import { useGripStyle } from '../../stores/GripStyleStore';
 import { UnifiedGripRenderer } from '../../rendering/grips/UnifiedGripRenderer';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
-import { getDevicePixelRatio } from '../../systems/cursor/utils';
+// ADR-726 Φ2 / N.0.2 — sizing + πύλη + clear στο ΕΝΑ primitive. Πριν: χειρόγραφα μαθηματικά DPR
+// (`canvas.width = round(w*dpr)` + `setTransform`) — τρίτο αντίγραφο του
+// `CanvasUtils.sizeCanvasToViewport`, ΚΑΙ άνευ όρων επαναδέσμευση backing store ανά repaint
+// (η ανάθεση `canvas.width` σβήνει τον καμβά ακόμη κι όταν το μέγεθος δεν άλλαξε).
+import {
+  paintOverlayDispatchFrame,
+  type OverlayDispatchPainter,
+} from './overlay-dispatch/overlay-dispatch-frame';
 import type { Entity } from '../../types/entities';
 import type { GripInfo } from '../../hooks/grip-types';
 import type { GripRenderConfig, GripTemperature } from '../../rendering/grips/types';
@@ -107,35 +114,34 @@ export const ContainerGizmoLayer = React.memo(function ContainerGizmoLayer({
   useLayoutEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const { width, height } = viewport;
-    const dpr = getDevicePixelRatio();
-    // Bitmap size = viewport × DPR; the CSS box size comes from the `w-full h-full`
-    // className (the SAME positioning every sibling overlay uses — no inline style, N.3).
-    canvas.width = Math.max(1, Math.round(width * dpr));
-    canvas.height = Math.max(1, Math.round(height * dpr));
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, width, height);
-    if (grips.length === 0) return;
 
-    const t2 = transform as { scale: number; offsetX: number; offsetY: number };
-    const worldToScreen = (p: Point2D): Point2D =>
-      CoordinateTransforms.worldToScreen(p, t2, viewport);
-    const renderer = new UnifiedGripRenderer(ctx, worldToScreen);
-    const configs: GripRenderConfig[] = grips.map((g) => ({
-      position: g.position,
-      type: g.type,
-      // Entity-agnostic glyph: the grip's tagged `gripKind.kind` (`group-*` / `block-*`)
-      // resolves to its glyph via the ONE registry, no container branch (mirror hotGripKindOf).
-      shape: gripGlyphShape(g.gripKind?.kind),
-      temperature: resolveGizmoTemperature(g, gripInteractionState),
-      entityId: g.entityId,
-      gripIndex: g.gripIndex,
-    }));
-    // dpiScale = 1: the ctx is already DPR-transformed, so sizes stay in CSS px (parity
-    // with the main grip pass, which resolves the SAME `gripSize` base).
-    renderer.renderGripSetBatched(configs, gripSize != null ? { gripSize } : undefined);
+    // Bitmap size = viewport × DPR (μέσω του ΕΝΟΣ primitive)· the CSS box size comes from the
+    // `w-full h-full` className (the SAME positioning every sibling overlay uses — no inline
+    // style, N.3). ADR-726 Φ2: χωρίς λαβές, ο καμβάς δεν αγγίζεται καθόλου.
+    const painter: OverlayDispatchPainter | null =
+      grips.length > 0
+        ? (ctx, t, vp) => {
+            const worldToScreen = (p: Point2D): Point2D =>
+              CoordinateTransforms.worldToScreen(p, t, vp);
+            const renderer = new UnifiedGripRenderer(ctx, worldToScreen);
+            const configs: GripRenderConfig[] = grips.map((g) => ({
+              position: g.position,
+              type: g.type,
+              // Entity-agnostic glyph: the grip's tagged `gripKind.kind` (`group-*` / `block-*`)
+              // resolves to its glyph via the ONE registry, no container branch (mirror
+              // hotGripKindOf).
+              shape: gripGlyphShape(g.gripKind?.kind),
+              temperature: resolveGizmoTemperature(g, gripInteractionState),
+              entityId: g.entityId,
+              gripIndex: g.gripIndex,
+            }));
+            // dpiScale = 1: the ctx is already DPR-transformed, so sizes stay in CSS px (parity
+            // with the main grip pass, which resolves the SAME `gripSize` base).
+            renderer.renderGripSetBatched(configs, gripSize != null ? { gripSize } : undefined);
+          }
+        : null;
+
+    paintOverlayDispatchFrame(canvas, [painter], transform, viewport);
   }, [grips, transform, viewport, gripInteractionState, gripSize]);
 
   if (grips.length === 0) return null;

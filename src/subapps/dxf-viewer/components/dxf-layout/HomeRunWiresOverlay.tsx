@@ -26,7 +26,11 @@ import type { DxfEntityUnion, DxfScene } from '../../canvas-v2/dxf-canvas/dxf-ty
 import type { ViewTransform, Viewport } from '../../rendering/types/Types';
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import { subscribeImmediateTransformFrame } from '../../rendering/core/immediate-transform-frame';
-import { CanvasUtils } from '../../rendering/canvas/utils/CanvasUtils';
+// ADR-726 Φ2 — sizing + πύλη + clear ζουν στο ΕΝΑ primitive· εδώ δηλώνεται μόνο «painter ή null».
+import {
+  paintOverlayDispatchFrame,
+  type OverlayDispatchPainter,
+} from './overlay-dispatch/overlay-dispatch-frame';
 import { useMepSystemStore } from '../../bim/mep-systems/mep-system-store';
 import {
   computeCircuitWirePaths,
@@ -100,6 +104,64 @@ export function buildResolver(scene: DxfScene, dragPreview: DxfGripDragPreview |
   return resolverFromHosts(hosts);
 }
 
+/**
+ * Ό,τι ορίζει **ΤΙ** ζωγραφίζεται· το `transform`/`viewport` της ζωγραφικής τα δίνει το primitive
+ * ανά καρέ. Οι τύποι παράγονται από τα SSoT (`computeCircuitWirePaths` / `getWireWaypointHover`)
+ * αντί να ξανα-δηλωθούν εδώ — μηδέν κάτοπτρο τύπων που μπορεί να ξεσυγχρονιστεί.
+ */
+interface WirePaintInputs {
+  readonly scene: DxfScene | null;
+  readonly viewport: Viewport;
+  readonly systems: Parameters<typeof computeCircuitWirePaths>[0];
+  readonly visible: boolean;
+  readonly gripDragPreview: DxfGripDragPreview | null;
+  readonly selectedSystemIds: ReadonlySet<string>;
+  readonly waypointHover: ReturnType<typeof getWireWaypointHover>;
+  readonly colorBySystem: boolean;
+}
+
+/**
+ * ADR-726 Φ2 — «τι θα ζωγραφιστεί» ως **μία** απόφαση: ένας painter, ή `null` όταν δεν υπάρχει
+ * ούτε μία διαδρομή καλωδίου. Η δρομολόγηση (`computeCircuitWirePaths`) τρέχει **πριν** αγγιχτεί
+ * ο καμβάς, ώστε και η περίπτωση «συστήματα υπάρχουν αλλά καμία διαδρομή» να μην ακυρώνει layer.
+ */
+function buildHomeRunWirePainter(input: WirePaintInputs): OverlayDispatchPainter | null {
+  const {
+    scene, systems, visible, gripDragPreview, selectedSystemIds, waypointHover, colorBySystem,
+  } = input;
+  if (!visible || !scene || systems.length === 0) return null;
+
+  const resolve = buildResolver(scene, gripDragPreview);
+  const paths = computeCircuitWirePaths(systems, resolve);
+  if (paths.length === 0) return null;
+
+  return (ctx, t, vp) => {
+    // Hovering the active circuit's wire lights up the whole run (mirror of the
+    // 2D DXF entity hover): pass the hovered systemId so its path strokes a halo.
+    drawCircuitWires(ctx, paths, t, vp, waypointHover?.systemId ?? null, colorBySystem);
+    if (selectedSystemIds.size === 0) return;
+
+    // ADR-408 Φ7 FU#3 + Revit multi-select — editable grips appear on EVERY selected wire
+    // (window/crossing can select several circuits). Drawn on top of the wires so the user
+    // can grab existing vertices or insert a new one. The hover/insert affordance is scoped
+    // to the circuit actually hovered (its own systemId), so only that wire reacts.
+    for (const sy of systems) {
+      if (!selectedSystemIds.has(sy.id) || !isElectricalSystemParams(sy.params)) continue;
+      const segments = computeCircuitHostSegments([sy], resolve);
+      const path = paths.find((p) => p.systemId === sy.id);
+      drawWaypointHandles(
+        ctx,
+        segments,
+        sy.params.wireWaypoints,
+        colorBySystem ? (path?.colorHex ?? '#1e88e5') : DEFAULT_WIRE_COLOR,
+        waypointHover?.systemId === sy.id ? waypointHover : null,
+        t,
+        vp,
+      );
+    }
+  };
+}
+
 export function HomeRunWiresOverlay({
   scene,
   viewport,
@@ -141,53 +203,21 @@ export function HomeRunWiresOverlay({
   const repaint = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    const state = drawStateRef.current;
 
-    const {
-      scene: s, viewport: vp, systems: sys, visible: vis,
-      gripDragPreview: drag, selectedSystemIds: selectedIds, waypointHover: hover, colorBySystem: colorOn,
-    } = drawStateRef.current;
+    // ADR-408 Φ7 perf guard: skip everything — including the DPR sizing — when the overlay canvas
+    // has no usable size (idle 0×0 viewport / collapsed shell).
+    if (state.viewport.width <= 0 || state.viewport.height <= 0) return;
 
-    // 🏢 SSoT sizing (ADR-040) — DPR-aware backing store via the shared primitive (before:
-    // `width={viewport.width}` JSX attribute, NO dpr → blurry + inconsistent buffer with siblings).
-    // ctx is DPR-scaled → the MepWireRenderer draws stay in CSS/world coords unchanged.
-    const ctx = CanvasUtils.sizeCanvasToViewport(canvas, vp);
-    if (!ctx) return;
-    ctx.clearRect(0, 0, vp.width, vp.height);
-
-    // ADR-408 Φ7 perf guard: skip the (non-trivial) routing recompute + draw when the
-    // overlay canvas has no usable size (idle 0×0 viewport / collapsed shell).
-    if (vp.width <= 0 || vp.height <= 0) return;
-    if (!vis || !s || sys.length === 0) return;
-
+    // ADR-726 Φ2 — το DPR sizing, η πύλη και το clear ζουν στο ΕΝΑ primitive (ο ctx είναι
+    // DPR-scaled, οπότε ο MepWireRenderer ζωγραφίζει σε CSS/world coords όπως πριν).
     // Zero-lag: project through the IMMEDIATE transform, read at draw time (not the prop).
-    const t = getImmediateTransform();
-    const resolve = buildResolver(s, drag);
-    const paths = computeCircuitWirePaths(sys, resolve);
-    if (paths.length === 0) return;
-    // Hovering the active circuit's wire lights up the whole run (mirror of the
-    // 2D DXF entity hover): pass the hovered systemId so its path strokes a halo.
-    drawCircuitWires(ctx, paths, t, vp, hover?.systemId ?? null, colorOn);
-
-    // ADR-408 Φ7 FU#3 + Revit multi-select — editable grips appear on EVERY selected wire
-    // (window/crossing can select several circuits). Drawn on top of the wires so the user
-    // can grab existing vertices or insert a new one. The hover/insert affordance is scoped
-    // to the circuit actually hovered (its own systemId), so only that wire reacts.
-    if (selectedIds.size > 0) {
-      for (const sy of sys) {
-        if (!selectedIds.has(sy.id) || !isElectricalSystemParams(sy.params)) continue;
-        const segments = computeCircuitHostSegments([sy], resolve);
-        const path = paths.find((p) => p.systemId === sy.id);
-        drawWaypointHandles(
-          ctx,
-          segments,
-          sy.params.wireWaypoints,
-          colorOn ? (path?.colorHex ?? '#1e88e5') : DEFAULT_WIRE_COLOR,
-          hover?.systemId === sy.id ? hover : null,
-          t,
-          vp,
-        );
-      }
-    }
+    paintOverlayDispatchFrame(
+      canvas,
+      [buildHomeRunWirePainter(state)],
+      getImmediateTransform(),
+      state.viewport,
+    );
   }, []);
 
   // Repaint on content change (systems / scene / viewport / visibility / hover / live

@@ -2,7 +2,12 @@
 
 import { useCallback, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
-import { CanvasUtils } from '../../rendering/canvas/utils/CanvasUtils';
+// ADR-726 Φ2 — sizing + πύλη + clear ζουν στο ΕΝΑ primitive· εδώ δηλώνεται μόνο «painter ή null».
+import {
+  paintOverlayDispatchFrame,
+  type OverlayDispatchPainter,
+} from '../../components/dxf-layout/overlay-dispatch/overlay-dispatch-frame';
+import { IDENTITY_VIEW_TRANSFORM } from '../../config/geometry-constants';
 import { useFloorplanBackground } from '../hooks/useFloorplanBackground';
 import { useFloorplanBackgroundStore } from '../stores/floorplanBackgroundStore';
 import type { CadCoordinateAdaptation, ViewTransform } from '../providers/types';
@@ -35,37 +40,43 @@ export function FloorplanBackgroundCanvas({
   const calibrationSession = useFloorplanBackgroundStore((s) => s.calibrationSession);
   const isCalibrating = calibrationSession?.floorId === floorId;
 
-  // 🏢 SSoT sizing (ADR-040) — DPR-aware backing store from the authoritative viewport, via the
-  // SAME primitive as dxf/layer/preview. Before: `canvas.width = viewport.width` (NO dpr) → the
-  // κάτοψη buffer was CSS-sized (a primary half of the size desync + blurry on HiDPI). The ctx is
-  // now dpr-scaled, so all drawing below works in CSS coords.
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    CanvasUtils.sizeCanvasToViewport(canvas, viewport);
-  }, [viewport.width, viewport.height]);
-
   // Render only when inputs change — Phase G: eliminated continuous 60fps RAF loop.
   // Previous implementation re-rendered every frame even in idle (~6s/11s per trace 2026-05-09).
+  //
+  // 🏢 SSoT sizing (ADR-040) — το DPR-aware backing store από το authoritative viewport το κάνει
+  // πλέον το ΕΝΑ primitive, πριν την πύλη. Before: `canvas.width = viewport.width` (NO dpr) → the
+  // κάτοψη buffer was CSS-sized (a primary half of the size desync + blurry on HiDPI). Ο ctx μένει
+  // dpr-scaled, οπότε όλη η ζωγραφική δουλεύει σε CSS coords όπως πριν.
+  //
+  // ADR-726 Φ2 — χωρίς ορατή κάτοψη ΚΑΙ χωρίς σημάδια βαθμονόμησης ο καμβάς δεν αγγίζεται καθόλου.
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
 
-    ctx.clearRect(0, 0, viewport.width, viewport.height);
+    // `const` bindings ⇒ το narrowing επιβιώνει μέσα στο closure του painter (χωρίς `!`, N.2).
+    const visibleBackground = background?.visible ? background : null;
+    const activeProvider = visibleBackground ? provider : null;
+    const showsMarkers = hasCalibrationMarkers(calibrationSession, floorId);
 
-    if (background?.visible && provider) {
-      provider.render(ctx, {
-        transform: background.transform,
-        worldToCanvas,
-        viewport,
-        opacity: background.opacity,
-        cad,
-      });
-    }
+    const painter: OverlayDispatchPainter | null =
+      (visibleBackground && activeProvider) || showsMarkers
+        ? (ctx, _t, vp) => {
+            if (visibleBackground && activeProvider) {
+              activeProvider.render(ctx, {
+                transform: visibleBackground.transform,
+                worldToCanvas,
+                viewport: vp,
+                opacity: visibleBackground.opacity,
+                cad,
+              });
+            }
+            _drawCalibrationMarkers(ctx, calibrationSession, floorId);
+          }
+        : null;
 
-    _drawCalibrationMarkers(ctx, calibrationSession, floorId);
+    // Ο μετασχηματισμός της κάτοψης ταξιδεύει μέσα στο `worldToCanvas` (τύπος του
+    // floorplan-background domain) — το primitive δεν τον χρειάζεται, άρα ουδέτερος.
+    paintOverlayDispatchFrame(canvas, [painter], IDENTITY_VIEW_TRANSFORM, viewport);
   }, [
     background,
     provider,
@@ -110,12 +121,25 @@ export function FloorplanBackgroundCanvas({
 
 // ── Canvas drawing helpers (module-level, no closure captures) ────────────────
 
+/**
+ * ADR-726 Φ2 — ΜΙΑ πηγή για την ερώτηση «θα ζωγραφιστεί σημάδι βαθμονόμησης;». Την ρωτά και η
+ * πύλη (για να αποφασίσει αν θα αγγίξει τον καμβά) και ο ίδιος ο painter, ώστε οι δύο απαντήσεις
+ * να μην μπορούν να ξεσυγχρονιστούν και να αφήσουν φάντασμα ή κενό.
+ */
+function hasCalibrationMarkers(
+  session: CalibrationSession | null,
+  floorId: string,
+): session is CalibrationSession {
+  if (!session || session.floorId !== floorId) return false;
+  return !!session.pointA || !!session.pointB;
+}
+
 function _drawCalibrationMarkers(
   ctx: CanvasRenderingContext2D,
   session: CalibrationSession | null,
   floorId: string,
 ): void {
-  if (!session || session.floorId !== floorId) return;
+  if (!hasCalibrationMarkers(session, floorId)) return;
   ctx.save();
   if (session.pointA && session.pointB) _drawCalibrationLine(ctx, session.pointA, session.pointB);
   if (session.pointA) _drawCrosshair(ctx, session.pointA, '#00D4FF');

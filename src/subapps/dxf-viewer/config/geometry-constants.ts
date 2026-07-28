@@ -8,7 +8,7 @@
  * @see docs/centralized-systems/reference/adr-index.md#adr-118
  */
 
-import type { Point2D, BoundingBox } from '../rendering/types/Types';
+import type { Point2D, BoundingBox, ViewTransform } from '../rendering/types/Types';
 
 // ============================================================================
 // 🌍 ZERO POINTS - Semantic Constants
@@ -61,6 +61,22 @@ export const SCENE_COORD_BAND_MM = 1e6;
  * }
  */
 export const ZERO_VECTOR: Readonly<Point2D> = Object.freeze({ x: 0, y: 0 });
+
+/**
+ * 🧭 IDENTITY_VIEW_TRANSFORM — ο ουδέτερος μετασχηματισμός προβολής (world ≡ screen).
+ *
+ * Χρήση: renderer/overlay που ζωγραφίζει **ήδη σε screen-space** και άρα δεν έχει world transform
+ * να δώσει (π.χ. `MissingFontHighlightLeaf`, που στοιβάζει έτοιμα `entityBounds` οθόνης), καθώς και
+ * ως fallback όταν ένα fit δεν παράγει transform (`print/capture/capture-2d`).
+ *
+ * N.0.2 — ήταν γραμμένο ως τοπικό literal σε δύο σημεία· εδώ έχει ΜΙΑ πηγή, immutable, ώστε
+ * κανείς να μη «διορθώσει» τη μία εκδοχή και να αφήσει την άλλη.
+ */
+export const IDENTITY_VIEW_TRANSFORM: Readonly<ViewTransform> = Object.freeze({
+  scale: 1,
+  offsetX: 0,
+  offsetY: 0,
+});
 
 /**
  * 🚀 ZERO_DELTA - Zero movement/displacement vector

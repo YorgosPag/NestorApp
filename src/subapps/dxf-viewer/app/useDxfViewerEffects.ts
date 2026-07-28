@@ -14,6 +14,9 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { PERFORMANCE_THRESHOLDS } from '../../../core/performance/components/utils/performance-utils';
 import { matchesShortcut } from '../config/keyboard-shortcuts';
 import { dxfPerformanceOptimizer } from '../performance/DxfPerformanceOptimizer';
+// ADR-726 Φ1 — γέφυρα των ΥΠΑΡΧΟΝΤΩΝ per-system metrics του UnifiedFrameScheduler προς τον
+// ΥΠΑΡΧΟΝΤΑ perf aggregator, πίσω από το ΥΠΑΡΧΟΝ flag `dxf-perf-trace`. Μηδέν νέο σύστημα.
+import { installFrameSchedulerPerfBridge } from '../rendering/core/frame-scheduler-perf-bridge';
 import { useEventBus, EventBus } from '../systems/events/EventBus';
 import type { DrawingEventPayload } from '../systems/events/EventBus';
 import { preservesOverlayMode } from '../systems/tools/ToolStateManager';
@@ -153,6 +156,10 @@ export function useDxfViewerEffects(params: DxfViewerEffectsParams): void {
     dxfPerformanceOptimizer.applyOptimizationById('canvas_buffer');
     dxfPerformanceOptimizer.applyOptimizationById('viewport_culling');
   }, []);
+
+  // ADR-726 Φ1 — ΕΝΑΣ ιδιοκτήτης του κύκλου ζωής της γέφυρας attribution (N.7.2 #7). Κόστος με
+  // κλειστό το flag: μία boolean σύγκριση ανά καρέ, όπως ήδη κάνει το `withPerf`.
+  React.useEffect(() => installFrameSchedulerPerfBridge(), []);
 
   // Expose showCopyableNotification to window for debug overlays
   React.useEffect(() => {

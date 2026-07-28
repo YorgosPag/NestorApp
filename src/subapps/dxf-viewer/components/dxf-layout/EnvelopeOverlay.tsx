@@ -24,7 +24,11 @@
 import { useEffect, useRef, useSyncExternalStore } from 'react';
 import type { DxfScene, DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { ViewTransform, Viewport } from '../../rendering/types/Types';
-import { CanvasUtils } from '../../rendering/canvas/utils/CanvasUtils';
+// ADR-726 Φ2 — sizing + πύλη + clear ζουν στο ΕΝΑ primitive· εδώ δηλώνεται μόνο «painter ή null».
+import {
+  paintOverlayDispatchFrame,
+  type OverlayDispatchPainter,
+} from './overlay-dispatch/overlay-dispatch-frame';
 import { computeEnvelopeShell, collectEnvelopeOverrides } from '../../bim/geometry/envelope-shell';
 import { computeEnvelopeOpeningCuts } from '../../bim/geometry/envelope-opening-cuts';
 import { isWallHostedOpening } from '../../bim/types/opening-types';
@@ -115,6 +119,88 @@ function drawOpeningReveals(
   }
 }
 
+/** Τα low-freq δεδομένα που ορίζουν ΤΙ ζωγραφίζεται· το `transform`/`viewport` έρχονται ανά καρέ. */
+interface EnvelopePaintInputs {
+  readonly scene: DxfScene;
+  // Οι τύποι διαβάζονται από τα stores (SSoT) αντί να ξανα-δηλωθούν εδώ — μηδέν κάτοπτρο τύπων.
+  readonly spec: NonNullable<ReturnType<typeof getEnvelopeSpec>>;
+  readonly floorSlabs: ReturnType<typeof getEnvelopeFloorSlabs>;
+  readonly viewRange: ViewRange;
+}
+
+/**
+ * Z1 — κατακόρυφο κέλυφος (footprint-driven shell, spec-driven): band μόνωσης ανά chain,
+ * τρύπημα ανοιγμάτων, κάθετες απολήξεις.
+ */
+function drawEnvelopeShellBands(
+  renderer: EnvelopeRenderer,
+  { scene, spec, floorSlabs }: EnvelopePaintInputs,
+  transform: ViewTransform,
+  viewport: Viewport,
+  spacingScale: number,
+): void {
+  // DxfWall (direct entity, ADR-363 §1B) έχει kind+params → structurally satisfies
+  // WallForEnvelope. Filter μέσω του type discriminator (το `isWallEntity` είναι
+  // typed για το Entity union, όχι για το DxfEntityUnion του render scene).
+  const walls = scene.entities.filter(
+    (e): e is Extract<DxfEntityUnion, { type: 'wall' }> => e.type === 'wall',
+  );
+  // ADR-396 v2 (Φ5B): κολώνες + δοκάρια συμμετέχουν first-class στο footprint
+  // union (προεξοχές τυλίγονται «ίδια με τοίχους») — όχι απλώς bridge κενών.
+  const columns = scene.entities
+    .filter((e): e is Extract<DxfEntityUnion, { type: 'column' }> => e.type === 'column')
+    .map((c) => ({ id: c.id, params: c.params }));
+  const beams = scene.entities
+    .filter((e): e is Extract<DxfEntityUnion, { type: 'beam' }> => e.type === 'beam')
+    .map((b) => ({ id: b.id, params: b.params }));
+  if (walls.length === 0 && columns.length === 0 && beams.length === 0) return;
+
+  // ADR-396 — ανοίγματα για cutouts στο band μόνωσης (η Z1 δεν σκεπάζει κουφώματα).
+  // ADR-615 — μόνο τα wall-hosted: ένα self-hosted κούφωμα δεν κρέμεται σε τοίχο
+  // του κελύφους, άρα δεν τρυπά κανένα band.
+  const openings = scene.entities
+    .filter((e): e is Extract<DxfEntityUnion, { type: 'opening' }> => e.type === 'opening')
+    .map((o) => o.openingEntity)
+    .filter(isWallHostedOpening);
+
+  // ADR-396 v2 (Φ5B): πηγή = `computeEnvelopeShell` (footprint union + hole-gate + per-element
+  // override). Ο engine επιστρέφει ΜΟΝΟ ό,τι μονώνεται (το hole-gate ζει στον classifier), οπότε
+  // ΟΛΑ τα chains ζωγραφίζονται — δεν φιλτράρουμε `enclosesRegion` (θα έκοβε τα ανοιχτά runs από
+  // 'interior' override). Φ5C — πλάκες ψηλότερων ορόφων του ενεργού floor (αίθριο vs δωμάτιο).
+  const overrides = collectEnvelopeOverrides([...walls, ...columns, ...beams]);
+  const slabsAbove = resolveSlabsAboveForLevel(
+    floorSlabs.slabs, floorSlabs.floors, floorSlabs.activeFloorId,
+  );
+  const { chains } = computeEnvelopeShell(
+    walls, columns, beams, spec, overrides, slabsAbove, { sceneUnits: scene.units },
+  );
+  for (const chain of chains) {
+    const plan = buildEnvelopeRenderPlan(chain, spec.materialId, spacingScale);
+    if (plan) renderer.render(plan, transform, viewport);
+    // Τρύπησε τα ανοίγματα ΜΕΤΑ το band του ίδιου chain (πριν τα Z4 reveals).
+    const cuts = computeEnvelopeOpeningCuts(chain, openings, scene.units ?? 'mm');
+    renderer.renderOpeningCuts(cuts, transform, viewport);
+    // Κλείσε το προφίλ μόνωσης στα άκρα κάθε cut με τις κάθετες απολήξεις
+    // (ΜΕΤΑ το destination-out ώστε να μη σβηστούν).
+    renderer.strokeOpeningCutCaps(cuts, transform, viewport);
+  }
+}
+
+/** Z1→Z4 σε ΕΝΑ πέρασμα. Ο painter ΔΕΝ κάνει clear/resize — αυτά ανήκουν στο primitive. */
+function makeEnvelopePainter(inputs: EnvelopePaintInputs): OverlayDispatchPainter {
+  return (ctx, transform, viewport) => {
+    const renderer = new EnvelopeRenderer(ctx);
+    // Hatch spacing (mm) → scene units· σε meter scenes 80mm θα γινόταν 80m
+    // (καμία γραμμή) — βλ. computeWallHatchPlan.
+    const spacingScale = mmToSceneUnits(inputs.scene.units ?? 'mm');
+    drawEnvelopeShellBands(renderer, inputs, transform, viewport, spacingScale);
+    // Z2/Z3 — εκτεθειμένες πλάκες· Z4 — περβάζια. Pure read των per-element
+    // δεδομένων (envelopeLayer / revealInsulation) — ΟΧΙ re-classify εδώ.
+    drawExposedSlabHatch(renderer, inputs.scene, transform, viewport, spacingScale);
+    drawOpeningReveals(renderer, inputs.scene, transform, viewport, inputs.viewRange);
+  };
+}
+
 export function EnvelopeOverlay({
   scene,
   transform,
@@ -151,72 +237,14 @@ export function EnvelopeOverlay({
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    // 🏢 SSoT sizing (ADR-040) — DPR-aware backing store via the shared primitive (before:
-    // `width={viewport.width}` JSX attribute, NO dpr → blurry + inconsistent buffer with siblings).
-    // ctx is DPR-scaled → all EnvelopeRenderer draws stay in CSS/world coords unchanged.
-    const ctx = CanvasUtils.sizeCanvasToViewport(canvas, viewport);
-    if (!ctx) return;
-    ctx.clearRect(0, 0, viewport.width, viewport.height);
-
-    if (!visible || !spec || !scene) return;
-    // DxfWall (direct entity, ADR-363 §1B) έχει kind+params → structurally satisfies
-    // WallForEnvelope. Filter μέσω του type discriminator (το `isWallEntity` είναι
-    // typed για το Entity union, όχι για το DxfEntityUnion του render scene).
-    const walls = scene.entities.filter(
-      (e): e is Extract<DxfEntityUnion, { type: 'wall' }> => e.type === 'wall',
-    );
-    // ADR-396 v2 (Φ5B): κολώνες + δοκάρια συμμετέχουν first-class στο footprint
-    // union (προεξοχές τυλίγονται «ίδια με τοίχους») — όχι απλώς bridge κενών.
-    const columns = scene.entities
-      .filter((e): e is Extract<DxfEntityUnion, { type: 'column' }> => e.type === 'column')
-      .map((c) => ({ id: c.id, params: c.params }));
-    const beams = scene.entities
-      .filter((e): e is Extract<DxfEntityUnion, { type: 'beam' }> => e.type === 'beam')
-      .map((b) => ({ id: b.id, params: b.params }));
-    // ADR-396 — ανοίγματα για cutouts στο band μόνωσης (η Z1 δεν σκεπάζει κουφώματα).
-    // ADR-615 — μόνο τα wall-hosted: ένα self-hosted κούφωμα δεν κρέμεται σε τοίχο
-    // του κελύφους, άρα δεν τρυπά κανένα band.
-    const openings = scene.entities
-      .filter((e): e is Extract<DxfEntityUnion, { type: 'opening' }> => e.type === 'opening')
-      .map((o) => o.openingEntity)
-      .filter(isWallHostedOpening);
-
-    const renderer = new EnvelopeRenderer(ctx);
-    // Hatch spacing (mm) → scene units· σε meter scenes 80mm θα γινόταν 80m
-    // (καμία γραμμή) — βλ. computeWallHatchPlan.
-    const spacingScale = mmToSceneUnits(scene.units ?? 'mm');
-
-    // Z1 — κατακόρυφο κέλυφος (footprint-driven shell, spec-driven).
-    if (walls.length > 0 || columns.length > 0 || beams.length > 0) {
-      // ADR-396 v2 (Φ5B): πηγή = `computeEnvelopeShell` (footprint union + hole-gate
-      // + per-element override). Ο engine επιστρέφει ΜΟΝΟ ό,τι μονώνεται (το
-      // hole-gate ζει στον classifier), οπότε ΟΛΑ τα chains ζωγραφίζονται — δεν
-      // φιλτράρουμε `enclosesRegion` (θα έκοβε τα ανοιχτά runs από 'interior' override).
-      const overrides = collectEnvelopeOverrides([...walls, ...columns, ...beams]);
-      // Φ5C — πλάκες ψηλότερων ορόφων του ενεργού floor (αίθριο vs δωμάτιο). Κενό
-      // snapshot → όλες οι τρύπες = δωμάτια (μηδέν regression, safe default).
-      const slabsAbove = resolveSlabsAboveForLevel(
-        floorSlabs.slabs, floorSlabs.floors, floorSlabs.activeFloorId,
-      );
-      const { chains } = computeEnvelopeShell(
-        walls, columns, beams, spec, overrides, slabsAbove, { sceneUnits: scene.units },
-      );
-      for (const chain of chains) {
-        const plan = buildEnvelopeRenderPlan(chain, spec.materialId, spacingScale);
-        if (plan) renderer.render(plan, transform, viewport);
-        // Τρύπησε τα ανοίγματα ΜΕΤΑ το band του ίδιου chain (πριν τα Z4 reveals).
-        const cuts = computeEnvelopeOpeningCuts(chain, openings, scene.units ?? 'mm');
-        renderer.renderOpeningCuts(cuts, transform, viewport);
-        // Κλείσε το προφίλ μόνωσης στα άκρα κάθε cut με τις κάθετες απολήξεις
-        // (ΜΕΤΑ το destination-out ώστε να μη σβηστούν).
-        renderer.strokeOpeningCutCaps(cuts, transform, viewport);
-      }
-    }
-
-    // Z2/Z3 — εκτεθειμένες πλάκες· Z4 — περβάζια. Pure read των per-element
-    // δεδομένων (envelopeLayer / revealInsulation) — ΟΧΙ re-classify εδώ.
-    drawExposedSlabHatch(renderer, scene, transform, viewport, spacingScale);
-    drawOpeningReveals(renderer, scene, transform, viewport, viewRange);
+    // ADR-726 Φ2 — ολόκληρη η δήλωση περιεχομένου είναι «painter ή null». Το DPR sizing, η πύλη
+    // και το clear ζουν στο ΕΝΑ primitive (`paintOverlayDispatchFrame`) — κανένα clearRect εδώ.
+    // Χωρίς spec/scene/ορατότητα ο καμβάς μένει ανέγγιχτος αντί να ακυρώνει layer ανά καρέ.
+    const painter =
+      visible && spec && scene
+        ? makeEnvelopePainter({ scene, spec, floorSlabs, viewRange })
+        : null;
+    paintOverlayDispatchFrame(canvas, [painter], transform, viewport);
   }, [scene, transform, viewport, spec, visible, viewRange, floorSlabs]);
 
   return (

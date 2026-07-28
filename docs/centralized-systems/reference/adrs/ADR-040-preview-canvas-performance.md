@@ -4944,3 +4944,160 @@ frame. Το να περάσει σε τρίτο καταναλωτή δεν πρ
   από `null`.
 
 📘 Πλήρες σκεπτικό, όρια και φάσεις: `ADR-724-workspace-sidebar-dock-and-resize.md`.
+
+---
+
+### 2026-07-29 — `useViewportManager`: το **γεγονός διάταξης που δεν παράγει `ResizeObserver`** (ADR-724 Φ2, CHECK 6B stage)
+
+**Ένα αρχείο, μία συνδρομή, μηδέν νέα λογική αγκύρωσης** — αλλά κλείνει τρία σιωπηλά ελαττώματα.
+
+**Η αιτία.** Το ADR-724 Φ2 έδωσε στην κύρια παλέτα πλευρά αγκύρωσης. Μια αλλαγή πλευράς
+**μετακινεί** τον καμβά χωρίς να τον **αλλάζει σε μέγεθος**: ίδιο πλάτος, άλλη θέση. Ο
+`ResizeObserver` πυροδοτείται **μόνο** σε αλλαγή μεγέθους — σε καθαρή μετατόπιση **σιωπά**. Άρα:
+
+1. το `containerLeftRef` (η βάση του κανόνα `offsetX -= Δleft`) μένει στην παλιά ακμή ⇒ το
+   **επόμενο** σύρσιμο πετάει το σχέδιο κατά όλο το πλάτος της παλέτας. Μετρημένο σε test:
+   `offsetX` **100 → 492** (άλμα 392px = το πλάτος του dock)·
+2. το `CanvasBoundsService` ακυρώνει cache μόνο σε window-resize/scroll/λήξη 5s ⇒ **hit-test και
+   snap με λάθος origin** για έως 5 δευτερόλεπτα.
+
+**Το προηγούμενο.** Ακριβώς το ίδιο σχήμα υπήρχε ήδη σε αυτό το αρχείο: **ADR-549 Φ7** — «αλλαγή
+DPR δεν πυροδοτεί `ResizeObserver` ⇒ ρητή συνδρομή». Δεύτερη περίπτωση της ίδιας κατηγορίας.
+Γενικός κανόνας για το μέλλον: **κάθε γεγονός που αλλάζει τη θέση ή την κλίμακα του container
+χωρίς να αλλάξει το μέγεθός του χρειάζεται ρητή συνδρομή** — ο observer δεν θα σε σώσει.
+
+**Η λύση — ξαναμέτρηση, ΟΧΙ αντιστάθμιση.** Imperative συνδρομή στο `subscribeDockMode`
+(ADR-724 Φ2): άμεσο `canvasBoundsService.clearCache()`, και στο επόμενο καρέ μέσω
+`UnifiedFrameScheduler.scheduleOnce` (ο SSoT των καρέ, ADR-030 — **όχι** νέο `requestAnimationFrame`)
+ξανά `clearCache()` + το **προϋπάρχον** `measureAndApply()`. Εκείνο ξανασπέρνει την ακμή χωρίς να
+αγγίξει το `transform`, οπότε το σχέδιο μένει ακίνητο **μέσα** στον καμβά — η συμπεριφορά
+Revit/AutoCAD: μια παλέτα που μετακόμισε δεν αλλάζει την κάμερα.
+
+**Γιατί imperative και όχι `useSyncExternalStore`.** Ο `useViewportManager` καλείται από το
+`CanvasSection` — orchestrator. Ο καμβάς **δεν** χρειάζεται να ξέρει *ποια* είναι η πλευρά, μόνο
+ότι κάτι μετακινήθηκε. Έτσι δεν υπάρχει `if (mode === …)` πουθενά στο μονοπάτι απόδοσης και δεν
+προστίθεται συνδρομητής σε orchestrator (CHECK 6C).
+
+**Δικλείδα**: `hooks/canvas/__tests__/useViewportManager-dock-reflow.test.tsx` (3 tests). Το
+κρίσιμο επαληθεύτηκε ότι **κοκκινίζει** με τεχνητή αφαίρεση της συνδρομής.
+
+📘 Πλήρες σκεπτικό: `ADR-724-workspace-sidebar-dock-and-resize.md` §14.5.
+
+---
+
+## 2026-07-29: ADR-726 Φ1+Φ2 — attribution ανά σύστημα + **πύλη πριν το `clearRect`** (CHECK 6B/6D stage)
+
+📘 Πλήρες σκεπτικό, μετρήσεις και έρευνα: **`ADR-726-frame-budget-instrumentation-and-attribution.md`**.
+Εδώ καταγράφεται μόνο ό,τι αλλάζει στην αρχιτεκτονική των καμβάδων που στεγάζει αυτό το ADR.
+
+### Φ1 — ο `UnifiedFrameScheduler` μετρούσε per-system και **κανείς δεν διάβαζε**
+
+`UnifiedFrameScheduler.ts:255-261` γράφει ήδη `lastRenderTime / averageRenderTime / renderCount /
+skipCount` ανά σύστημα, με `collectMetrics: true` by default, και τα εκθέτει στο
+`FrameMetrics.systemMetrics`. Grep επιβεβαίωσε **μηδέν καταναλωτές**: ούτε window, ούτε UI, ούτε
+log. Μετρούσαμε και πετούσαμε — ενώ το LoAF έδειχνε το rAF callback στο **74%** του script χρόνου
+χωρίς να μπορεί να πει *ποιο* σύστημα φταίει (όλα καλούνται από το ίδιο σημείο του stack).
+
+**Νέο αρχείο:** `rendering/core/frame-scheduler-perf-bridge.ts` — **γέφυρα, όχι σύστημα**. Στέλνει
+τα υπάρχοντα metrics στον **υπάρχοντα** aggregator `systems/cursor/mouse-handler-perf.ts`
+(`recordSample`), πίσω από το **υπάρχον** flag `localStorage['dxf-perf-trace']`. Ίδιο flag, ίδιο
+`console.table`. Μηδέν νέο global, μηδέν νέα εξάρτηση.
+
+Τρία σημεία που **δεν** είναι διακοσμητικά:
+- **Κόστος με κλειστό flag = ένα boolean** (ίδιο σχήμα με το `withPerf`).
+- **Ο κανόνας εγκυρότητας ζει ΜΕΣΑ στο όργανο:** καρέ με `document.visibilityState !== 'visible'`
+  **απορρίπτονται πριν καταγραφούν** (ADR-726 §1.2). Τρεις διαδοχικές διαγνώσεις της Phase 1 ήταν
+  άκυρες ακριβώς επειδή μετρήθηκαν σε κρυμμένο tab· ο κανόνας δεν αφήνεται σε σχόλιο.
+- **Τα `skipped` συστήματα δεν καταγράφονται** — 0ms θα αραίωναν τον μέσο όρο και θα έκρυβαν τον
+  ένοχο. Η συχνότητα διαβάζεται από το `count` κάθε γραμμής έναντι του `count` του `frame:TOTAL`.
+
+Ιδιοκτήτης κύκλου ζωής: **μία** γραμμή στο `app/useDxfViewerEffects.ts` (N.7.2 #7). Ο ρυθμός
+αναφοράς μένει στον υπάρχοντα ιδιοκτήτη (`mouse-handler-move.ts` → `perfTick`)· on demand
+`window.__dxfPerfReport()`.
+
+### Φ2 — 9 καμβάδες ακύρωναν compositor layer **χωρίς να ζωγραφίζουν τίποτα**
+
+Μετρήθηκε (ADR-726 §4.Γ): `overlay:floor-underlay`, `overlay:analytical`, `overlay:mep-wires`,
+`overlay:envelope`, `overlay:proposal-dispatch`, `canvas:layer` + 4 ανώνυμοι → **131–148 `clearRect`
+ο καθένας, μηδέν draw ops**. Ανεξάρτητη επιβεβαίωση: **16 LoAF entries με μηδέν scripts, 1.084ms**
+— καθαρό browser work.
+
+**Γιατί κοστίζει — τεκμηριωμένο, όχι υπόθεση.** Στο Blink:
+
+```cpp
+void HTMLCanvasElement::DidDraw(const gfx::Rect& rect) {
+  if (rect.IsEmpty()) return;
+  if (dirty_rect_.IsEmpty()) { … layout_object->SetShouldCheckForPaintInvalidation(); }
+  canvas_is_clear_ = false;
+  dirty_rect_.Union(rect);
+}
+```
+
+**Καμία σύγκριση pixel.** Ένα `clearRect` σε ήδη-διαφανή καμβά σημαδεύει το layer βρώμικο ⇒
+re-upload texture + recomposite. Στη διάταξη της μέτρησης: **12,2 megapixel σύνθεσης ανά καρέ για
+το τίποτα**.
+
+**Η λύση είναι ΕΝΑ primitive**, όχι πύλη σε 9 αρχεία. Το ακριβώς αντίστοιχο λάθος έχει ήδη γίνει
+εδώ (`if (options.grips) renderGrips()` σε **7** BIM renderers αντί για
+`BaseEntityRenderer.finalizeRender()` — N.0.2).
+
+| Αρχείο | Ρόλος |
+|---|---|
+| `components/dxf-layout/overlay-dispatch/overlay-dispatch-frame.ts` | **Ο ΕΝΑΣ overlay frame renderer.** Ήταν ήδη SSoT για τους dispatch καμβάδες (ADR-552/554)· τώρα στεγάζει και την πύλη, και τον χρησιμοποιούν **και** τα single-painter overlays |
+| `components/dxf-layout/overlay-dispatch/overlay-canvas-clear-state.ts` | **ΝΕΟ** — `WeakSet` ledger «ποιος καμβάς είναι γνωστά καθαρός». Άγνωστος ⇒ ΟΧΙ καθαρός (συντηρητικό). Χωρίς εκκαθάριση στο unmount (WeakSet) |
+
+**Το συμβόλαιο:**
+
+| Κατάσταση | Πράξεις στον καμβά |
+|---|---|
+| ≥1 ενεργός painter | `clearRect` **μία** φορά, μετά οι painters (αμετάβλητο) |
+| μηδέν painters, καμβάς **με** μελάνι | `clearRect` **μία** φορά· τίποτα άλλο |
+| μηδέν painters, καμβάς ήδη **καθαρός** | **ΚΑΜΙΑ** — ο καμβάς δεν αγγίζεται |
+
+Το sizing (`CanvasUtils.sizeCanvasToViewport`) τρέχει **πάντα**, και όταν η πύλη κλείνει: είναι
+idempotent (γράφει `canvas.width/height` μόνο σε πραγματική αλλαγή) και το `setTransform` είναι
+state, **όχι** draw op — δεν καλεί `DidDraw`, δεν ακυρώνει layer. Έτσι ένας «κρυφός» καμβάς μένει
+σωστά διαστασιολογημένος για τη στιγμή που θα αποκτήσει περιεχόμενο.
+
+**Καμβάδες που πέρασαν στο ΕΝΑ primitive (10):** analytical + proposal dispatch (δωρεάν, ήδη το
+χρησιμοποιούσαν) · `EnvelopeOverlay` · `FloorUnderlayOverlay` · `HomeRunWiresOverlay` ·
+`GridUnderlayCanvas` · `TopoGridUnderlayCanvas` · `ContainerGizmoLayer` · `MissingFontHighlightLeaf` ·
+`FloorplanBackgroundCanvas` · **`accessibility/Focus2DOverlay`**.
+
+> ⚠️ Ο `Focus2DOverlay` (ο «unnamed z18/#10» των 9) προστέθηκε **μετά** από επαλήθευση στον
+> browser. Είχε ξεφύγει επειδή το `clearRect` του δεν είναι στο component αλλά πίσω από τον
+> helper `clearFocus2DOverlay(canvas)` — **αόρατο σε `grep clearRect`**. Ίδιο μοτίβο: `useEffect`
+> με `transform` στα deps ⇒ clear σε κάθε pan/zoom χωρίς εστιασμένη οντότητα. Ο helper έμεινε
+> ανέγγιχτος (δικά του tests· clear-only ⇒ δεν παράγει φάντασμα).
+> **Κανόνας:** ένα `grep clearRect` βρίσκει call sites, **όχι wrappers**.
+
+Καθένα εκφράζει «έχω περιεχόμενο;» με το μόνο που ήδη ξέρει — **έναν painter ή `null`** — και δεν
+ξέρει τίποτα για clear, DPR sizing ή ledger. `npm run jscpd:diff` σε **14 αρχεία: μηδέν clones**.
+
+**Δύο ξεχωριστά κέρδη που προέκυψαν διαδρομικά (N.0.2):**
+- `ContainerGizmoLayer` είχε **χειρόγραφα** μαθηματικά DPR (`canvas.width = round(w*dpr)` +
+  `setTransform`) — τρίτο αντίγραφο του `sizeCanvasToViewport`, **και** άνευ όρων επαναδέσμευση
+  backing store ανά repaint (η ανάθεση `canvas.width` σβήνει τον καμβά ακόμη κι όταν το μέγεθος
+  δεν άλλαξε). Πλέον περνά από το ΕΝΑ primitive.
+- `HomeRunWiresOverlay`: η δρομολόγηση (`computeCircuitWirePaths`) τρέχει **πριν** αγγιχτεί ο
+  καμβάς, ώστε και το «συστήματα υπάρχουν αλλά καμία διαδρομή» να μην ακυρώνει layer.
+- `IDENTITY_VIEW_TRANSFORM` κεντρικοποιήθηκε στο `config/geometry-constants.ts` (ADR-118) — ήταν
+  τοπικό literal σε δύο σημεία.
+
+### Τι **δεν** μπήκε στην πύλη, και γιατί (χωρίς σιωπηλή περικοπή)
+
+`canvas-v2/layer-canvas/LayerRenderer.ts:189` (`canvas:layer`, ένας από τους 9). Δεν είναι React
+overlay με painter-ή-null: είναι imperative renderer με δύο διαδρομές (unified/legacy) όπου το «έχω
+περιεχόμενο;» εξαρτάται από layers + 6 ομάδες ρυθμίσεων. Χρειάζεται δικό του predicate, όχι το ίδιο
+primitive — **εκκρεμεί**, καταγεγραμμένο στο ADR-726 §6.
+
+### Δικλείδες
+
+| Suite | Τι καρφώνει |
+|---|---|
+| `overlay-dispatch/__tests__/overlay-dispatch-frame.test.ts` | Το νέο συμβόλαιο της πύλης: seed clear, σιωπή στο 2ο άδειο καρέ, ξανα-clear μετά από περιεχόμενο, ξανα-clear αν painter πέταξε, sizing και με κλειστή πύλη |
+| `overlay-dispatch/__tests__/overlay-canvas-clear-state.test.ts` | **ΝΕΟ** — συντηρητικό default, per-element απομόνωση, idempotency |
+| `analytical-overlays/__tests__/analytical-painter.test.ts` | **ΑΛΛΑΞΕ** το test «paints nothing (just clears)»: κωδικοποιούσε την **παλιά** συμπεριφορά (ένα clear ανά καρέ σε 3D mode). Δεν διαγράφηκε — ξαναγράφτηκε ώστε να χαρακτηρίζει τη νέα |
+| `rendering/core/__tests__/frame-scheduler-perf-bridge.test.ts` | **ΝΕΟ** — κλειστό flag ⇒ σιωπή, hidden tab ⇒ απόρριψη, skipped ⇒ μη καταγραφή, `frame:TOTAL` ως παρονομαστής |
+
+**28 tests πράσινα** στα 4 suites· **66 tests** στα 6 γειτονικά suites παλινδρόμησης.

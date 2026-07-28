@@ -19,7 +19,11 @@
 
 import { useEffect, useRef } from 'react';
 import { GridRenderer } from '../../rendering/ui/grid/GridRenderer';
-import { CanvasUtils } from '../../rendering/canvas/utils/CanvasUtils';
+// ADR-726 Φ2 — sizing + πύλη + clear ζουν στο ΕΝΑ primitive· εδώ δηλώνεται μόνο «painter ή null».
+import {
+  paintOverlayDispatchFrame,
+  type OverlayDispatchPainter,
+} from './overlay-dispatch/overlay-dispatch-frame';
 import type { GridSettings as GridRendererSettings } from '../../rendering/ui/grid/GridTypes';
 // Same GridSettings type the rest of the canvas stack passes around (layer-types).
 // The runtime object carries the full GridTypes shape (built by useCanvasSettings),
@@ -46,36 +50,32 @@ export function GridUnderlayCanvas({
   const rendererRef = useRef<GridRenderer | null>(null);
   if (!rendererRef.current) rendererRef.current = new GridRenderer();
 
-  // 🏢 SSoT sizing (ADR-040) — DPR-aware backing store from the authoritative viewport, via the
-  // SAME primitive as dxf/layer/preview. Before: `canvas.width = viewport.width` (NO dpr) → the
-  // buffer was CSS-sized (the DOM «grid 670×1011» while sibling layers were 670×0.8=536) → the
-  // exact size desync that produced the right-side «dead zone» (this was a primary culprit).
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    CanvasUtils.sizeCanvasToViewport(canvas, viewport);
-  }, [viewport.width, viewport.height]);
-
   // Repaint only when inputs change (no continuous RAF — same as FloorplanBackgroundCanvas).
+  //
+  // 🏢 SSoT sizing (ADR-040) — το DPR-aware backing store από το authoritative viewport το κάνει
+  // πλέον το ΕΝΑ primitive, σε κάθε κλήση και **πριν** την πύλη (idempotent: γράφει
+  // `canvas.width/height` μόνο σε πραγματική αλλαγή). Before: `canvas.width = viewport.width`
+  // (NO dpr) → the buffer was CSS-sized (the DOM «grid 670×1011» while sibling layers were
+  // 670×0.8=536) → the exact size desync that produced the right-side «dead zone».
+  //
+  // ADR-726 Φ2 — με τον κάναβο σβηστό ο καμβάς δεν αγγίζεται καθόλου, αντί για ένα clearRect ανά
+  // αλλαγή transform που ακύρωνε ολόκληρο compositor layer χωρίς να ζωγραφίζει ούτε pixel.
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
 
-    ctx.clearRect(0, 0, viewport.width, viewport.height);
-    if (!gridSettings.enabled) return;
+    const painter: OverlayDispatchPainter | null = gridSettings.enabled
+      ? (ctx, t, vp) => {
+          rendererRef.current?.renderDirect(
+            ctx,
+            vp,
+            gridSettings as unknown as GridRendererSettings,
+            { scale: t.scale, offsetX: t.offsetX, offsetY: t.offsetY },
+          );
+        }
+      : null;
 
-    rendererRef.current?.renderDirect(
-      ctx,
-      viewport,
-      gridSettings as unknown as GridRendererSettings,
-      {
-        scale: transform.scale,
-        offsetX: transform.offsetX,
-        offsetY: transform.offsetY,
-      },
-    );
+    paintOverlayDispatchFrame(canvas, [painter], transform, viewport);
   }, [gridSettings, transform, viewport]);
 
   return (

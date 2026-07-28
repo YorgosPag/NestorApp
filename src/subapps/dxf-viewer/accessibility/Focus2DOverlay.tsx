@@ -23,8 +23,11 @@ import { findFocusedEntityData2D } from './focus-2d-order';
 import { entityTypeLabel } from '../bim-3d/accessibility/status-bar-text-generator';
 import type { DxfScene } from '../canvas-v2/dxf-canvas/dxf-types';
 import type { ViewTransform, Viewport } from '../rendering/types/Types';
-// 🏢 SSoT canvas sizing — same core primitive as every 2D layer (DPR-aware, no JSX-attr own-sizing).
-import { CanvasUtils } from '../rendering/canvas/utils/CanvasUtils';
+// 🏢 SSoT overlay frame — DPR-aware sizing + πύλη + clear + paint σε ΕΝΑ primitive (ADR-726 Φ2).
+import {
+  paintOverlayDispatchFrame,
+  type OverlayDispatchPainter,
+} from '../components/dxf-layout/overlay-dispatch/overlay-dispatch-frame';
 
 export interface Focus2DOverlayProps {
   readonly scene: DxfScene | null;
@@ -54,22 +57,23 @@ export function Focus2DOverlay({
 
   // Paint on focus/transform/scene change. Outline anchors to the entity's
   // world bbox, so pan/zoom requires a repaint at the new screen position.
+  //
+  // 🏢 SSoT sizing (ADR-040) — DPR-aware backing store from the authoritative viewport via the ONE
+  // core (was JSX `width={viewport.width}` attrs, NO dpr → blurry + buffer desync with siblings).
+  // Το κάνει πλέον το `paintOverlayDispatchFrame`, πριν την πύλη.
+  //
+  // ADR-726 Φ2 — **αυτός ήταν ο «unnamed z18/#10»** των 9 καμβάδων του §4.Γ. Χωρίς εστιασμένη
+  // οντότητα (η συνήθης κατάσταση: η εστίαση πληκτρολογίου είναι σπάνια) το overlay καθάριζε
+  // άνευ όρων σε **κάθε αλλαγή transform**, δηλαδή σε κάθε pan/zoom — ακυρώνοντας ολόκληρο
+  // compositor layer για μηδέν pixel. Τώρα δηλώνει «painter ή null» και η πύλη το σιωπά.
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    // 🏢 SSoT sizing (ADR-040) — DPR-aware backing store from the authoritative viewport via the ONE
-    // core (was JSX `width={viewport.width}` attrs, NO dpr → blurry + buffer desync with siblings).
-    CanvasUtils.sizeCanvasToViewport(canvas, viewport);
-    if (!active || !focusedId) {
-      clearFocus2DOverlay(canvas);
-      return;
-    }
-    const data = findFocusedEntityData2D(scene, focusedId);
-    if (!data) {
-      clearFocus2DOverlay(canvas);
-      return;
-    }
-    paintFocus2DOutline(canvas, data.bbox, transform, viewport);
+    const data = active && focusedId ? findFocusedEntityData2D(scene, focusedId) : null;
+    const painter: OverlayDispatchPainter | null = data
+      ? (_ctx, t, vp) => paintFocus2DOutline(canvas, data.bbox, t, vp)
+      : null;
+    paintOverlayDispatchFrame(canvas, [painter], transform, viewport);
   }, [active, focusedId, scene, transform, viewport]);
 
   // Clear when going inactive (mode flip to 3D) so stale outline never lingers.
