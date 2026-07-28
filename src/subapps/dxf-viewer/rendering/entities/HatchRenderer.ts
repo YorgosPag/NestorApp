@@ -82,9 +82,19 @@ function hatchSegmentSignature(h: HatchEntity): string {
     counts += `${p.length},`;
     for (const v of p) cs += v.x * 31.1 + v.y * 7.3;
   }
+  // ADR-667 Φ3.2 — `patternOrigin` + `inlinePattern` ΕΙΝΑΙ είσοδοι του `buildHatchEntitySegments`
+  // (βλ. τον predefined κλάδο του: inline μοτίβο ΠΡΙΝ το catalog, origin ως phase shift). Έλειπαν
+  // από τη signature ⇒ το cache επέστρεφε **παλιά** segments όταν άλλαζε μόνο ένα από τα δύο χωρίς
+  // να κουνηθεί κορυφή — το ακριβές σενάριο του `UpdateHatchOriginCommand` (grip drag του origin).
+  // Το inline μοτίβο συνοψίζεται με τα ΓΕΩΜΕΤΡΙΚΑ του μεγέθη (πλήθος + πρώτη οικογένεια), όχι με
+  // JSON.stringify: η signature τρέχει ανά frame ανά hatch (ADR-040 — μένει φθηνή).
+  const ip = h.inlinePattern?.lines;
+  const ipSig = ip?.length ? `${ip.length}:${ip[0].angle}:${ip[0].delta[0]},${ip[0].delta[1]}` : '';
   return [
     h.fillType, h.patternName, h.patternScale, h.patternAngle, h.islandStyle,
-    h.lineAngle, h.lineSpacing, h.doubleCrossHatch, counts, cs.toFixed(2),
+    h.lineAngle, h.lineSpacing, h.doubleCrossHatch,
+    h.patternOrigin?.x, h.patternOrigin?.y, ipSig,
+    counts, cs.toFixed(2),
   ].join('|');
 }
 
@@ -224,7 +234,13 @@ export class HatchRenderer extends BaseEntityRenderer {
     } else if (isHatchDensityTooHighOnScreen(hatch, this.transform.scale)) {
       // Density-LOD (SSoT, ADR-667 Φ3.1): γραμμές sub-pixel → ελαφρύ solid tint (1 op αντί για
       // χιλιάδες γραμμές). Παραλείπει ΚΑΙ την παραγωγή segments (μηδέν cost σε zoom-out).
-      // Το ΙΔΙΟ ερώτημα ρωτά το vector PDF με `isHatchDensityTooHighOnPaper(hatch, mm/world)`.
+      //
+      // ⚠️ ADR-667 Φ3.2 — στην ΟΘΟΝΗ αυτός ο κλάδος είναι πλέον **ανενεργός**:
+      // `HATCH_MIN_LINE_SPACING_PX = 0` ⇒ AutoCAD parity (ζωγραφίζουμε κάθε γραμμή σε κάθε zoom).
+      // Ο κλάδος ΜΕΝΕΙ γιατί ο διακόπτης είναι μία σταθερά — γύρνα τη σε `3` και ξαναζωντανεύει
+      // χωρίς καμία άλλη αλλαγή. **ΜΗΝ τον σβήσεις ως «νεκρό κώδικα».**
+      // Το ΙΔΙΟ ερώτημα ρωτά το vector PDF με `isHatchDensityTooHighOnPaper(hatch, mm/world)` —
+      // εκεί το κατώφλι είναι ΕΝΕΡΓΟ (0,8 mm, ISO 128-2) και **δεν** αλλάζει μαζί με την οθόνη.
       this.fillBoundary(paths, color, HATCH_COLLAPSE_ALPHA);
     } else {
       // SSoT: ίδια segments με τον DXF writer· cached (transform-independent, ADR-040).

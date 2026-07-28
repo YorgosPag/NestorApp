@@ -1200,6 +1200,17 @@ alignElementId?: string;         // host· η γωνία μοτίβου = εφα
 
 ## 8. Changelog
 
+- **2026-07-28** — **POINTER → ADR-667 Φ3.2 / Απόφαση 15: το LOD της ΟΘΟΝΗΣ απενεργοποιήθηκε
+  (AutoCAD parity).** Ανήκει εδώ γιατί **το σύμπτωμα εμφανίζεται σε αυτό το σύστημα**: εισαγόμενες
+  γραμμοσκιάσεις που **δεν φαίνονται καθόλου** στον καμβά. **Η ρίζα ΔΕΝ είναι εδώ** — ο import και
+  το `inlinePattern` (ADR-644 #7d) ήταν **σωστά και επαληθευμένα byte-ίδια** στο round-trip· έφταιγε
+  το κατώφλι `HATCH_MIN_LINE_SPACING_PX = 3` του `hatch-density-lod.ts`, που σε πραγματικό
+  τοπογραφικό (spacing 140–210 mm world @ 0,00204 px/mm ⇒ **0,23–0,43 px**) κατέρρεε **44/49**
+  γραμμοσκιάσεις σε tint. Τώρα `0` = κάθε γραμμή ζωγραφίζεται σε κάθε zoom· **το χαρτί μένει στα
+  0,8 mm** (ISO 128-2). Άγγιξε επίσης το `hatchSegmentSignature` του `HatchRenderer` (πρόσθεσε
+  `patternOrigin` + `inlinePattern` — stale cache στο `UpdateHatchOriginCommand`).
+  ⚠️ **Αν ψάχνεις «γιατί δεν φαίνεται η γραμμοσκίασή μου», μέτρα ΠΡΩΤΑ `spacing × scale` σε px —
+  μην υποθέσεις ότι ο import έφταιξε.**
 - **2026-07-17** — **Το copy ΒΓΗΚΕ από τα transform commands → `CloneWithTransformCommand` (Revit `CopyElements`). Το §8 decision gate ΕΠΙΒΕΒΑΙΩΝΕΤΑΙ, δεν ανατρέπεται. UNCOMMITTED· 1588 jest GREEN· jscpd:diff καθαρό.**
   - **Αφορμή:** jscpd **t222** (39 γρ.) `RotateEntityCommand:64-102` ⇔ `ScaleEntityCommand:56-93` — τα copy branches, byte-identical.
   - **Το εύρημα ήταν μεγαλύτερο: ΤΡΙΔΥΜΟ, όχι δίδυμο.** Το `MirrorEntityCommand.execute()` (`keepOriginals`) κάνει δομικά το ΙΔΙΟ (`για κάθε source → {...entity, ...computeUpdates(entity), id: newId} → addEntity → track`). Το jscpd δεν το έβλεπε **μόνο** επειδή διαφέρουν τα ονόματα (`copyMode` vs `keepOriginals`, `createdEntityIds` vs `createdEntities`) — ακριβώς το τυφλό σημείο που το token-based check υποτίθεται ότι καλύπτει, αλλά εδώ η απόσταση των ονομάτων ξεπέρασε το min-tokens.
