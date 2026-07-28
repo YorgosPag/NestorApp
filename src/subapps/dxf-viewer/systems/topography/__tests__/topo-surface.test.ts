@@ -9,9 +9,10 @@
 
 import { setTopoPoints, addBreakline, clearTopo } from '../TopoPointStore';
 import { getTopoSurface, hasTopoSurface, invalidateTopoSurface } from '../topo-surface';
-import type { TopoPoint } from '../topo-types';
+import type { TopoPoint3D } from '../topo-types';
 
-const HILL: readonly TopoPoint[] = [
+// ADR-720 — `TopoPoint3D`: these feed `addBreakline`, which now requires elevations.
+const HILL: readonly TopoPoint3D[] = [
   { x: 0, y: 0, z: 0 },
   { x: 10_000, y: 0, z: 0 },
   { x: 10_000, y: 10_000, z: 5_000 },

@@ -15,7 +15,7 @@
  * longest first; nothing is written anywhere (§9 — the panel's explicit confirm does that).
  */
 
-import type { TinSurface, TopoPoint } from '../topo-types';
+import type { TinSurface, TopoPoint3D } from '../topo-types';
 import type { SteepEdge } from './detect-feature-edges';
 import type { AutoBreaklineCandidate } from './auto-breakline-types';
 import type { ChainedPath } from '../graph-chain';
@@ -25,8 +25,14 @@ import { nodeWorld } from '../qa/topo-qa-format';
 import { calculatePolylineLength } from '../../../rendering/entities/shared/geometry-polyline-utils';
 import { AUTO_BREAKLINE_CONFIG } from './auto-breakline-config';
 
-/** TIN vertex index → its WORLD survey point (`nodeWorld` SSoT + the node's world elevation). */
-function toWorld(surface: TinSurface, node: number): TopoPoint {
+/**
+ * TIN vertex index → its WORLD survey point (`nodeWorld` SSoT + the node's world elevation).
+ *
+ * Returns {@link TopoPoint3D} (ADR-720): every TIN node has an elevation by construction — the
+ * builder only admits measured points — so a breakline chained off the surface is elevated for
+ * free. The type says so rather than leaving the next reader to re-derive it.
+ */
+function toWorld(surface: TinSurface, node: number): TopoPoint3D {
   const { x, y } = nodeWorld(surface, node);
   return { x, y, z: surface.elevations[node]! };
 }

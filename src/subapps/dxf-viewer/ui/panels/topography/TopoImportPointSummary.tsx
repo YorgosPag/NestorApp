@@ -46,12 +46,16 @@ interface Props {
 export function TopoImportPointSummary({ coverage, skippedCount, tone }: Props): React.JSX.Element {
   const { t } = useTranslation('dxf-viewer-panels');
   const isConfirm = tone === 'confirm';
-  const countKey = isConfirm ? 'topography.import.confirmCount' : 'topography.import.previewCount';
 
   return (
     <>
       <p className={isConfirm ? styles.summary : styles.status}>
-        {t(countKey, { count: coverage.total })}
+        {/* Και τα δύο κλειδιά μένουν ΛΕΚΤΙΚΑ (όχι `t(variableKey)`): ένα δυναμικό κλειδί είναι
+            αόρατο στους στατικούς ελέγχους i18n (CHECK 3.8/3.13) και σε κάθε grep — δηλαδή θα
+            μπορούσε να μείνει χωρίς μετάφραση χωρίς να το πει κανείς. */}
+        {isConfirm
+          ? t('topography.import.confirmCount', { count: coverage.total })
+          : t('topography.import.previewCount', { count: coverage.total })}
         {coverage.planimetricOnly > 0 && (
           ` ${t('topography.import.previewElevationSplit', {
             withElevation: coverage.withElevation,

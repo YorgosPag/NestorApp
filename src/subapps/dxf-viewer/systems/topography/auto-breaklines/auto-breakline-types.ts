@@ -10,14 +10,19 @@
  * Types file (no logic) — exempt from the 500-line rule.
  */
 
-import type { TopoPoint, TopoSurfaceId } from '../topo-types';
+import type { TopoPoint3D, TopoSurfaceId } from '../topo-types';
 
 /** One proposed feature line: an ordered WORLD polyline chained from steep TIN folds. */
 export interface AutoBreaklineCandidate {
   /** Transient review key (stable within one report). The stored id is minted on accept. */
   readonly id: string;
-  /** Ordered vertices in WORLD canonical mm. When `closed`, the first is NOT repeated. */
-  readonly vertices: readonly TopoPoint[];
+  /**
+   * Ordered vertices in WORLD canonical mm. When `closed`, the first is NOT repeated.
+   *
+   * ADR-720 — {@link TopoPoint3D}: these come straight off TIN nodes, which are elevated by
+   * construction, and they feed `addBreakline`, which requires elevations.
+   */
+  readonly vertices: readonly TopoPoint3D[];
   /** True when the chain returns to its start (a ring — e.g. the rim of a pond). */
   readonly closed: boolean;
   /** Planimetric length of the chain (canonical mm) — the «is this worth it?» number. */

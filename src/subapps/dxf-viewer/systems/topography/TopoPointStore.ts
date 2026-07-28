@@ -22,7 +22,7 @@
 import { createExternalStore } from '../../stores/createExternalStore';
 import { generateEntityId } from '@/services/enterprise-id.service';
 import type {
-  TopoPoint, Breakline, TopoDefinition, TopoSurfaceId, TopoBoundary, TopoBoundaryLink,
+  TopoPoint, TopoPoint3D, Breakline, TopoDefinition, TopoSurfaceId, TopoBoundary, TopoBoundaryLink,
   TopoCropPrefs,
 } from './topo-types';
 import { TOPO_CROP_OFF } from './topo-types';
@@ -136,9 +136,14 @@ export function setTopoBreaklines(breaklines: readonly Breakline[], id: TopoSurf
  *
  * ADR-650 M2-Β: `sourceEntityId` records the scene entity the breakline was picked from,
  * so the tool can toggle it off on a second click and highlight it back.
+ *
+ * ⚠️ ADR-720 — vertices are {@link TopoPoint3D}: a breakline states where the ground BREAKS, so a
+ * vertex without an elevation is not a weaker constraint, it is a meaningless one. Both builders
+ * already guarantee it (`buildBreaklineFromEntity`, `chain-feature-edges`); the signature pins it
+ * so the third one cannot arrive without one.
  */
 export function addBreakline(
-  vertices: readonly TopoPoint[],
+  vertices: readonly TopoPoint3D[],
   closed = false,
   sourceEntityId?: string,
   id: TopoSurfaceId = 'existing',
