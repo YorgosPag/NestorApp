@@ -65,15 +65,20 @@ export function unregisterActiveDocument(): void {
   sceneWriter = null;
 }
 
-/** Το id του ενεργού level, ή `null`. Ασφαλές από οποιοδήποτε context. */
-export function getActiveLevelId(): string | null {
-  return activeLevelId;
-}
-
-/** Η σκηνή του ενεργού level, ή `null`. */
-export function getActiveScene(): SceneModel | null {
-  return activeLevelId ? getSceneForLevel(activeLevelId) : null;
-}
+// ADR-721 §9 — Οι γυμνοί getters `getActiveLevelId()` / `getActiveScene()` ΑΦΑΙΡΕΘΗΚΑΝ (CHECK 3.30).
+//
+// Δεν τους κάλεσε ποτέ κανείς, και αυτό **δεν** είναι σύμπτωση: κάθε πραγματικός καταναλωτής
+// θέλει read-modify-write πάνω στο ενεργό έγγραφο, δηλαδή ακριβώς το `withActiveDocument`.
+//
+// Η διαγραφή τους δεν είναι μόνο υγιεινή νεκρού κώδικα — είναι **ενίσχυση του συμβολαίου**. Ένας
+// γυμνός `getActiveScene()` είναι η μοναδική διαδρομή που επιτρέπει σε καλούντα να διαβάσει τη
+// σκηνή εδώ και να τη γράψει αλλού (π.χ. κατευθείαν στο `SceneStore`), παρακάμπτοντας τον
+// auto-save-aware writer — δηλαδή να αναστήσει ακριβώς το bug που έκλεισε αυτή η θύρα: αλλαγή
+// που φαίνεται στην οθόνη και δεν αποθηκεύεται ποτέ. Χωρίς τους getters, το fail-closed
+// `withActiveDocument` είναι η ΜΟΝΗ πόρτα, εξ ορισμού και όχι κατά συμφωνία.
+//
+// Κώδικας που χρειάζεται τη σκηνή **συγκεκριμένου** επιπέδου έχει ήδη σπίτι: `getSceneForLevel`
+// (SceneStore) με ρητό `levelId`, ή `useCurrentLevelScene` μέσα σε React.
 
 /**
  * Εκτελεί μια read-modify-write πάνω στο ενεργό έγγραφο, μέσα από τον auto-save-aware writer.

@@ -29,14 +29,13 @@ import {
   useMemo,
   useRef,
   useState,
-  useSyncExternalStore,
 } from 'react';
 import {
-  getLayerStoreSnapshot,
   setCurrentLayerId,
   setRecentLayerIds,
-  subscribeLayerStore,
 } from '../../../stores/LayerStore';
+// ADR-721 §5 — ΕΝΑ leaf πάνω στο LayerStore, όχι χειρόγραφο useSyncExternalStore ανά καταναλωτή.
+import { useLayerStoreSnapshot } from '../../../stores/useLayerStore';
 // ADR-721 §7 — μόνιμη αλλαγή flag = μία πόρτα (έγγραφο + runtime προβολή).
 import { toggleLayerFlag } from '../../../services/layer-flags-writer';
 import { useCurrentLayerChange } from './useCurrentLayerChange';
@@ -133,11 +132,7 @@ export function useCurrentLayerPickerState(): {
   state: LayerPickerState;
   actions: LayerPickerActions;
 } {
-  const snapshot = useSyncExternalStore(
-    subscribeLayerStore,
-    getLayerStoreSnapshot,
-    getLayerStoreSnapshot,
-  );
+  const snapshot = useLayerStoreSnapshot();
 
   const levels = useLevels();
   const currentLevelId = levels.currentLevelId;

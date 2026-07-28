@@ -20,13 +20,13 @@
  * effects (which would otherwise race and reset the current layer).
  */
 
-import { useCallback, useMemo, useSyncExternalStore } from 'react';
+import { useCallback, useMemo } from 'react';
 import {
-  getLayerStoreSnapshot,
   pushRecentLayer,
   setCurrentLayerId,
-  subscribeLayerStore,
 } from '../../../stores/LayerStore';
+// ADR-721 §5 — ΕΝΑ leaf πάνω στο LayerStore, όχι χειρόγραφο useSyncExternalStore ανά καταναλωτή.
+import { useLayerStoreSnapshot } from '../../../stores/useLayerStore';
 import { useNotifications } from '../../../../../providers/NotificationProvider';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useCanEditText } from '../../../hooks/useCanEditText';
@@ -51,11 +51,7 @@ export interface UseCurrentLayerChange {
 }
 
 export function useCurrentLayerChange(): UseCurrentLayerChange {
-  const snapshot = useSyncExternalStore(
-    subscribeLayerStore,
-    getLayerStoreSnapshot,
-    getLayerStoreSnapshot,
-  );
+  const snapshot = useLayerStoreSnapshot();
   const { success: notifySuccess, warning: notifyWarning } = useNotifications();
   const { t } = useTranslation('dxf-viewer-shell');
   const { canUnlockLayer } = useCanEditText();

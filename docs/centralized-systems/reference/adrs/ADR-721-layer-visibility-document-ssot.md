@@ -102,6 +102,7 @@ layer κρατά τα αντικείμενά του **επιλέξιμα**. Revi
 | 7 | `services/layer-flags-writer.ts` **(νέο)** | `setLayerFlags` / `setLayerFlagsBatch` / `toggleLayerFlag`. **Και τα 16 σημεία** μετανάστευσαν εδώ |
 | 8 | `dxf-entity-layer-skip.ts` · `LayerIsolateCommand` · `layer-command-utils` | Layer-scope isolate ελέγχεται στον **renderer**· `freezeNonIsolatedLayers` **αφαιρέθηκε** |
 | 5 | `stores/useLayerStore.ts` **(νέο)** · `LayerItem` · `ColorGroupItem` | Τα panels διαβάζουν τα flags από τον **ίδιο SSoT με τον καμβά** |
+| 9 | 6 αρχεία-πηγές + 12 καταναλωτές (βλ. §9) | **Εκκαθάριση CHECK 3.30**: 4 νεκρές εξαγωγές διαγράφηκαν, 3 συνδέθηκαν με τον καταναλωτή που τις παρέκαμπτε, 1 έγινε πεδίο snapshot |
 
 ### Λεπτομέρειες που δάγκωσαν
 
@@ -147,8 +148,44 @@ toggle (μέρος και από τις δοκιμές αυτής της συν�
 είναι δεδομένα του χρήστη και το `visible: false` είναι διφορούμενο (ατομική απόκρυψη vs αποτύπωμα).
 Χρειάζεται ρητή απόφαση/εργαλείο.
 
+## 9. Νεκρές εξαγωγές (CHECK 3.30) — τι ήταν πραγματικά
+
+Το push `e4ec333a..d5f320db` άφησε **9 νέες νεκρές εξαγωγές** (ADR-700· στο `e4ec333a` το gate ήταν
+πράσινο). Καμία δεν ήταν «ψευδώς νεκρή»: **το gate είχε δίκιο και στις 9**. Δεν έγινε rebaseline.
+
+Η διάγνωση ανά σύμβολο έδωσε **δύο διαφορετικές ασθένειες**, και αυτό είναι το χρήσιμο εύρημα:
+
+**(α) Τέσσερα «πλήρη API» χωρίς καταναλωτή** — γεννήθηκαν επειδή ένα module «πρέπει» να εκθέτει
+συμμετρικό σύνολο, όχι επειδή τα ζήτησε κάποιος. Διαγράφηκαν:
+
+| Σύμβολο | Γιατί διαγραφή |
+|---|---|
+| `layer-visibility#isSceneLayerRenderable` | Καθαρό συνώνυμο του `isLayerRenderable`. Ο `SceneLayer` είναι **δομικά** συμβατός με το `LayerVisibilityFlags` — η TS δεν χρειάζεται «τυποποιημένο» wrapper. Δεύτερο όνομα για το ίδιο ερώτημα = ακριβώς η ασθένεια του §1 |
+| `layer-operation-utils#getEntityIdsByLayer` | Ο μόνος caller (`affectedEntityIds` στο `toggleLayerVisibility`) έφυγε στο §4 — και ήταν ούτως ή άλλως πληροφοριακός. **ΟΧΙ** ενοποίηση με το ομώνυμο του `useEnhancedSelection`: εκείνο είναι id-first με legacy name fallback πάνω στη σκηνή του επιπέδου — άλλο ερώτημα, ίδιο όνομα |
+| `useLayerStore#useSceneLayer` | Θα έσπαγε τη ρητή γραμμή του §5 (flags ⇒ store, name/color/id ⇒ έγγραφο). Ο επόμενος καταναλωτής θα τραβούσε από εκεί και το `color` και θα ξαναγεννιόταν η διπλή πηγή. Για νέο flag: **στενό** leaf (`useIsLayerFrozen`), όχι γενικός getter |
+| `active-document-gateway#getActiveLevelId` / `#getActiveScene` | Δεν είναι μόνο νεκρός κώδικας: ένας γυμνός `getActiveScene()` είναι η **μόνη** διαδρομή που επιτρέπει «διάβασε εδώ, γράψε αλλού», παρακάμπτοντας τον auto-save-aware writer — δηλαδή ανασταίνει το bug που έκλεισε η θύρα. Χωρίς αυτούς, το fail-closed `withActiveDocument` είναι η ΜΟΝΗ πόρτα **εξ ορισμού** |
+
+**(β) Τέσσερα SSoT που γράφτηκαν και δεν συνδέθηκαν ΠΟΤΕ** — η επικίνδυνη κατηγορία: το κεντρικό
+σπίτι υπάρχει, ο καταναλωτής συνεχίζει στο δικό του αντίγραφο, και το docblock **λέει ψέματα**.
+
+| Σύμβολο | Ποιος το παρέκαμπτε | Θεραπεία |
+|---|---|---|
+| `useLayerStore#useLayerStoreSnapshot` | **9 αρχεία** κρατούσαν αυτούσιο το `useSyncExternalStore(subscribeLayerStore, getLayerStoreSnapshot, getLayerStoreSnapshot)` — δηλαδή **κανένας** από τους 4 που ονομάτιζε το ίδιο του το docblock δεν είχε μεταναστεύσει | Μετανάστευσαν και τα 9 (properties ×2, layer-manager ×2, layer-picker ×2, ribbon bridges ×3) |
+| `topo-display-frame#unprojectDisplayPoint` | `topo-survey-point-resolve` καλούσε ωμό `getActiveWorldToDisplayProjector().unproject(...)` — δηλαδή η **εισερχόμενη** πύλη του ADR-718 §Α παρακάμπτονταν από τον ίδιο τον κώδικα λαβών | 2 σημεία περνούν πλέον από τη γέφυρα (και το `displayDeltaToWorld`) |
+| `topo-surface-grips#topoSurfaceGripsOf` | **Και οι δύο** καταναλωτές (`TopoSurfaceRenderer.getGrips`, `GRIP_PRODUCERS`) ξανάγραφαν `e as unknown as TopoSurfaceEntity` — **ανέλεγκτο** cast, ενώ ο φύλακας υπήρχε | Υπογραφή `{ type: string }` (mirror `isTopoSurfaceEntity`) ⇒ δέχεται `EntityModel` **και** `DxfEntityUnion` **χωρίς κανένα cast**, με πραγματικό έλεγχο τύπου |
+| `topo-frame-status-store#getTopoFrameStatusLevelId` | Κανείς — και γι' αυτό ο φρουρός «το μήνυμα δεν ζει πέρα από την οθόνη που το γέννησε» ήταν **γραμμένος αλλά ασύνδετος** | Το `levelId` μπήκε **μέσα** στο snapshot (+ στο `equals`) και το `TopoFrameNotice` το τιμά· ο getter διαγράφηκε |
+
+**Γιατί το `levelId` δεν έμεινε getter:** τιμή που συμμετέχει στο render **πρέπει** να ζει στο
+snapshot. Εκτός αυτού το `useSyncExternalStore` δεν τη βλέπει (tearing σε concurrent render), και
+δύο όροφοι με ταυτόσημο εύρημα δεν θα ξυπνούσαν καν τον αναγνώστη — το μήνυμα θα κολλούσε κρυφό.
+
+**Το πραγματικό μάθημα:** το CHECK 3.30 δεν είναι απλώς μετρητής νεκρού κώδικα. **Μια εξαγωγή που
+δεν την καλεί κανείς είναι το πρώτο ορατό σημάδι ότι ένα SSoT δεν συνδέθηκε ποτέ** — και το
+docblock που περιγράφει τους «καταναλωτές» του δεν είναι απόδειξη ότι υπάρχουν. Το grep είναι.
+
 ## Changelog
 
 | Ημ/νία | Αλλαγή |
 |---|---|
+| 2026-07-28 | §9 — εκκαθάριση CHECK 3.30 (9 νέες νεκρές εξαγωγές, κανένα rebaseline): 4+1 διαγραφές, 4 συνδέσεις. Τα 9 χειρόγραφα αντίγραφα του layer-store subscription μετανάστευσαν στο `useLayerStoreSnapshot`· η εισερχόμενη πύλη `unprojectDisplayPoint` συνδέθηκε στο `topo-survey-point-resolve`· το `topoSurfaceGripsOf` αντικατέστησε δύο ανέλεγκτα casts· το `levelId` του `topo-frame-status-store` έγινε πεδίο snapshot και το `TopoFrameNotice` το τιμά (**διόρθωση συμπεριφοράς**: το μήνυμα δεν εμφανίζεται πια για άλλον όροφο). Gate: `✅ CHECK 3.30 OK`. Jest: 193/193 στις 19 σχετικές σουίτες |
 | 2026-07-28 | Αρχική έκδοση. Ρίζα εντοπισμένη με browser probe· §1-8 IMPLEMENTED· 218/218 jest· browser-verified. Κώδικας: `9b6b80c3` (SSoT γραφής + gateway), `e1391324` (κάλυψη), `58bf78b8` (ανα-αρίθμηση 719→721 — το 719 ήταν πιασμένο από το ambient-declaration-ssot) |

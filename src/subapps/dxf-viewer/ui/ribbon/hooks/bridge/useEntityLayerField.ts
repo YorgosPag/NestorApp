@@ -12,8 +12,9 @@
  * (μηδέν clone, N.18· κρατά και τον hatch bridge κάτω από το 500-line budget).
  */
 
-import { useCallback, useMemo, useSyncExternalStore } from 'react';
-import { getLayerStoreSnapshot, subscribeLayerStore } from '../../../../stores/LayerStore';
+import { useCallback, useMemo } from 'react';
+// ADR-721 §5 — ΕΝΑ leaf πάνω στο LayerStore, όχι χειρόγραφο useSyncExternalStore ανά καταναλωτή.
+import { useLayerStoreSnapshot } from '../../../../stores/useLayerStore';
 import { buildLayerOptions, entityLayerValue } from '../useRibbonLineToolBridge.helpers';
 import { useCurrentLayerChange } from '../../../components/layer-picker/useCurrentLayerChange';
 import { useEntityPatchCommand } from '../../../../hooks/commands/useEntityPatchCommand';
@@ -29,9 +30,7 @@ export interface EntityLayerField {
 }
 
 export function useEntityLayerField(levelManager: SceneAdapterLevelManager): EntityLayerField {
-  const layerSnapshot = useSyncExternalStore(
-    subscribeLayerStore, getLayerStoreSnapshot, getLayerStoreSnapshot,
-  );
+  const layerSnapshot = useLayerStoreSnapshot();
   const { changeCurrentLayer } = useCurrentLayerChange();
   const patchEntity = useEntityPatchCommand(levelManager);
 

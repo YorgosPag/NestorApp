@@ -1,12 +1,12 @@
-import { useState, useCallback, useSyncExternalStore, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useTranslation } from '@/i18n';
 import {
-  subscribeLayerStore,
-  getLayerStoreSnapshot,
   setCurrentLayerId,
   // ADR-358 Phase 9D-5a: id-first reader SSoT (LayerStore lookup + legacy name fallback).
   resolveEntityLayerName,
 } from '../../../stores/LayerStore';
+// ADR-721 §5 — ΕΝΑ leaf πάνω στο LayerStore, όχι χειρόγραφο useSyncExternalStore ανά καταναλωτή.
+import { useLayerStoreSnapshot } from '../../../stores/useLayerStore';
 // ADR-721 §7 — μόνιμη αλλαγή flag = μία πόρτα (έγγραφο + runtime προβολή).
 import { toggleLayerFlag } from '../../../services/layer-flags-writer';
 // ADR-557 — live current-level scene via the `useCurrentLevelScene()` SSoT hook (Level interface has no `scene` field; storage lives in `LevelsSystem.sceneManagerRef`).
@@ -48,11 +48,7 @@ export function useLayerManagerState(): LayerManagerStateHook {
   const [isConnected, setIsConnected] = useState(true);
   const [lastSyncTime] = useState(new Date());
 
-  const storeSnapshot = useSyncExternalStore(
-    subscribeLayerStore,
-    getLayerStoreSnapshot,
-    getLayerStoreSnapshot,
-  );
+  const storeSnapshot = useLayerStoreSnapshot();
 
   const scene = useCurrentLevelScene();
 

@@ -124,20 +124,18 @@ export function getEntitiesByLayer(
   return entities.filter(entity => entityBelongsToLayer(entity, layerName));
 }
 
-/**
- * Get entity IDs belonging to a specific layer
- * @param entities - Array of scene entities
- * @param layerName - Target layer name
- * @returns Entity IDs in the specified layer
- */
-export function getEntityIdsByLayer(
-  entities: AnySceneEntity[],
-  layerName: string
-): string[] {
-  return entities
-    .filter(entity => entityBelongsToLayer(entity, layerName))
-    .map(entity => entity.id);
-}
+// ADR-721 §9 — Το `getEntityIdsByLayer(entities, layerName)` ΑΦΑΙΡΕΘΗΚΕ (CHECK 3.30).
+//
+// Μοναδικός caller ήταν το `affectedEntityIds` του `LayerOperationsService.toggleLayerVisibility`,
+// που έφυγε μαζί με τη μέθοδο στο ίδιο ADR (§4/§7). Το πεδίο ήταν ούτως ή άλλως **πληροφοριακό**:
+// καμία από τις οντότητες δεν μεταλλασσόταν — ακριβώς επειδή το ON/OFF είναι ιδιότητα του LAYER
+// table, όχι των οντοτήτων.
+//
+// ⚠️ ΜΗΝ το ξαναφτιάξεις για να καλύψεις το `useEnhancedSelection.getEntityIdsByLayer`: εκείνο
+// είναι **άλλο ερώτημα** παρά το ίδιο όνομα — λύνει id-first (LayerStore) με legacy name fallback
+// πάνω στη σκηνή του τρέχοντος επιπέδου, ενώ αυτό εδώ ήταν αποκλειστικά name-based πάνω σε
+// δοσμένο πίνακα οντοτήτων. Η «ενοποίησή» τους θα άλλαζε σιωπηλά σημασιολογία επιλογής.
+// Για name-based φιλτράρισμα υπάρχει ήδη το `getEntitiesByLayer` + `.map(e => e.id)`.
 
 /**
  * Count entities in a layer

@@ -8,7 +8,7 @@
  * list filtered by an inline search box. Reuses LayerStore snapshot.
  */
 
-import React, { useMemo, useState, useSyncExternalStore } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useTranslation } from '@/i18n';
 import { nowISO } from '@/lib/date-local';
 import { BaseModal } from '../../../components/shared/BaseModal';
@@ -17,10 +17,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { PANEL_LAYOUT } from '../../../config/panel-tokens';
 import { generateLayerFilterGroupId } from '@/services/enterprise-id.service';
-import {
-  getLayerStoreSnapshot,
-  subscribeLayerStore,
-} from '../../../stores/LayerStore';
+// ADR-721 §5 — ΕΝΑ leaf πάνω στο LayerStore, όχι χειρόγραφο useSyncExternalStore ανά καταναλωτή.
+import { useLayerStoreSnapshot } from '../../../stores/useLayerStore';
 import type { LayerGroupFilter } from '../../../types/layer-filters';
 
 export interface LayerGroupFilterEditorProps {
@@ -37,7 +35,7 @@ export function LayerGroupFilterEditor({
   const colors = useSemanticColors();
   const { getStatusBorder } = useBorderTokens();
 
-  const snapshot = useSyncExternalStore(subscribeLayerStore, getLayerStoreSnapshot, getLayerStoreSnapshot);
+  const snapshot = useLayerStoreSnapshot();
 
   const [name, setName] = useState(initial?.name ?? '');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set(initial?.layerIds ?? []));

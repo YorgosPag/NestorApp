@@ -45,7 +45,6 @@ import {
   resolveLayerGroupOnState,
   type LayerGroupOnState,
 } from '../config/layer-visibility';
-import type { SceneLayer } from '../types/entities';
 
 /**
  * Ολόκληρο το snapshot του store (layers + currentLayerId + recent + version).
@@ -60,19 +59,17 @@ export function useLayerStoreSnapshot(): LayerStoreSnapshot {
   return useSyncExternalStore(subscribeLayerStore, getLayerStoreSnapshot, getLayerStoreSnapshot);
 }
 
-/**
- * Ένα layer από τον runtime SSoT, με κλειδί id **ή** όνομα (`getLayerKey` δέχεται και τα δύο).
- *
- * Επιστρέφει την αναφορά που κρατά το store — σταθερή μέχρι πραγματική μετάλλαξη ΑΥΤΟΥ του
- * layer, άρα το leaf δεν ξανα-render-άρει όταν αλλάξει άλλο layer.
- */
-export function useSceneLayer(idOrName: string | null | undefined): SceneLayer | null {
-  const getSnapshot = useCallback(
-    (): SceneLayer | null => (idOrName ? getLayer(idOrName) : null),
-    [idOrName],
-  );
-  return useSyncExternalStore(subscribeLayerStore, getSnapshot, getSnapshot);
-}
+// ADR-721 §9 — Το leaf `useSceneLayer(idOrName): SceneLayer | null` ΑΦΑΙΡΕΘΗΚΕ (CHECK 3.30).
+//
+// Γεννήθηκε ως «πλήρες API» χωρίς καταναλωτή. Ο διαχωρισμός του §5 είναι **ρητή απόφαση**, όχι
+// παράλειψη: από τον runtime SSoT έρχονται τα **flags** (ο διακόπτης — `useIsLayerOn`), ενώ
+// name/color/id παραμένουν **δεδομένα εγγράφου** και διαβάζονται από τη σκηνή (βλ. σχόλιο στο
+// `LayerItem`). Ένα leaf που επιστρέφει ΟΛΟΚΛΗΡΟ το layer σβήνει αυτή τη γραμμή: ο επόμενος
+// καταναλωτής θα τραβούσε από εδώ και το `color`, και θα ξαναγεννιόταν η διπλή πηγή αλήθειας
+// που έκλεισε το ADR-721.
+//
+// Αν ΠΟΤΕ χρειαστεί επιπλέον flag αντιδραστικά (π.χ. `frozen`/`locked` σε εικονίδιο panel),
+// πρόσθεσε **στενό** leaf με το όνομα του ερωτήματος (`useIsLayerFrozen`), όχι γενικό getter.
 
 /**
  * «Είναι αναμμένος ο διακόπτης αυτού του layer;» — AutoCAD `LAYON` (βλ. {@link isLayerOn}).

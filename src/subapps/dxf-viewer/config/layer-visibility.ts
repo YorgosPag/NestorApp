@@ -39,9 +39,15 @@
  * @see stores/LayerStore.ts — ο runtime SSoT που κρατά τα flags
  */
 
-import type { SceneLayer } from '../types/entities';
-
-/** Το ελάχιστο σχήμα που χρειάζονται τα κατηγορήματα (δέχεται και μερικά DTO). */
+/**
+ * Το ελάχιστο σχήμα που χρειάζονται τα κατηγορήματα (δέχεται και μερικά DTO).
+ *
+ * ⚠️ **Μην προσθέσεις «τυποποιημένο» wrapper για `SceneLayer`.** Ο `SceneLayer` είναι δομικά
+ * συμβατός με αυτό το interface (`visible: boolean` ⊑ `visible?: boolean`), οπότε περνά
+ * κατευθείαν στα κατηγορήματα. Ένας δεύτερος τύπος-φύλακας με άλλο όνομα για το ίδιο ερώτημα
+ * είναι ακριβώς η ασθένεια που θεραπεύει αυτό το αρχείο — ένα ερώτημα, ένα όνομα.
+ * (Υπήρξε ως `isSceneLayerRenderable`· διαγράφηκε στο ADR-721 §9 χωρίς ποτέ να κληθεί.)
+ */
 export interface LayerVisibilityFlags {
   readonly visible?: boolean;
   readonly frozen?: boolean;
@@ -104,9 +110,4 @@ export function resolveLayerGroupOnState(
   for (const layer of layers) if (isLayerOn(layer)) on++;
   if (on === layers.length) return 'all';
   return on === 0 ? 'none' : 'some';
-}
-
-/** Type-narrowing βοηθός για τα σημεία που κρατούν πλήρη `SceneLayer`. */
-export function isSceneLayerRenderable(layer: SceneLayer | null | undefined): boolean {
-  return isLayerRenderable(layer);
 }
