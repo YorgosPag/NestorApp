@@ -24,6 +24,7 @@
  *   STAGED_AUDIT_CATALOGS_TRIGGER  audit-value-catalog changes
  *   SSOT_DISCOVER_FULL             '1' = run full ssot-discover scan
  *   SKIP_NATIVE_TOOLTIP / SKIP_TABS_IMPORT / SKIP_NO_FLASH  bypass specific checks
+ *   SKIP_I18N_TYPES                '1' = bypass CHECK 3.33 (generated-types freshness)
  *   CHECK_WORKER_TIMEOUT_MS        per-worker timeout ms (default 60000)
  *
  * Exit: 0 = all pass, 1 = any fail.
@@ -68,6 +69,7 @@ const notifLocaleTriggers = parseList(process.env.STAGED_NOTIF_LOCALE_TRIGGERS);
 const auditCatalogsTrigger = parseList(process.env.STAGED_AUDIT_CATALOGS_TRIGGER);
 
 const ssotFull    = process.env.SSOT_DISCOVER_FULL === '1';
+const skipI18nTypes = !!process.env.SKIP_I18N_TYPES;
 const skipTooltip = !!process.env.SKIP_NATIVE_TOOLTIP;
 const skipTabs    = !!process.env.SKIP_TABS_IMPORT;
 const skipFlash   = !!process.env.SKIP_NO_FLASH;
@@ -107,6 +109,13 @@ if (tsFiles.length > 0) {
 
 if (localeFiles.length > 0)
   addBash('3.9', 'ICU interpolation', 'scripts/check-icu-interpolation.sh', localeFiles);
+
+// CHECK 3.33 (ADR-727) — src/types/i18n.ts is generated from the locale JSONs.
+// Trigger on either side of that dependency: a locale change that forgot the
+// regeneration, or an edit to the generated file itself. Pure in-memory Node
+// (no spawn), so it belongs here in Phase 1 rather than a sequential 0.x phase.
+if (!skipI18nTypes && (localeFiles.length > 0 || allFiles.includes('src/types/i18n.ts')))
+  addThread('3.33', 'i18n types freshness', 'scripts/check-i18n-types-freshness.js');
 
 if (queryFiles.length > 0)
   addBash('3.10', 'Firestore companyId', 'scripts/check-firestore-companyid.sh', queryFiles);

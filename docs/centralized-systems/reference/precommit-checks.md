@@ -2,10 +2,12 @@
 
 **Status:** Active
 **Owner:** Γιώργος Παγώνης
-**Last updated:** 2026-04-19
+**Last updated:** 2026-07-29 (ADR-727 — προστέθηκε η CHECK 3.33)
 **Referenced from:** `CLAUDE.md` SOS N.11
 
-Full details for pre-commit checks CHECK 3.13 – CHECK 3.18. These checks are enforced by the pre-commit hook and block commits that violate the baselines or introduce new violations.
+Full details for pre-commit checks CHECK 3.13 – CHECK 3.18, plus CHECK 3.22–3.25, 3.30 and **3.33**. These checks are enforced by the pre-commit hook and block commits that violate the baselines or introduce new violations.
+
+⚠️ **Το hook είναι η αλήθεια, όχι αυτό το αρχείο.** Οι CHECK 3.26–3.29, 3.31 και 3.32 **λείπουν** από εδώ (ζουν στον πίνακα του `CLAUDE.md` N.11 και στο `scripts/git-hooks/pre-commit`). Πριν επικαλεστείς «ποιοι αριθμοί είναι πιασμένοι», άνοιξε το hook.
 
 | CHECK | Goal | Mode | Baseline |
 |-------|------|------|----------|
@@ -553,6 +555,95 @@ export, οπότε ο skip δεν θα σκίπαρε ποτέ.
   οικογένεια dead-code, όχι μία ανά script (N.18)
 
 **⚠️ Μια λίστα είναι αποδεικτικό υλικό, όχι άδεια διαγραφής.**
+
+---
+
+## CHECK 3.33 — i18n Generated-Types Freshness (ADR-727)
+
+### Rule
+Το `src/types/i18n.ts` είναι **παραγόμενο** αρχείο και πρέπει ανά πάσα στιγμή να ταυτίζεται με ό,τι θα
+παρήγαγε **τώρα** ο `scripts/generate-i18n-types.js` από τα 100 `*.json` του `src/i18n/locales/el/`.
+**ZERO TOLERANCE — δεν είναι ratchet, δεν υπάρχει baseline αρχείο και δεν πρέπει να δημιουργηθεί ποτέ.**
+Η φρεσκάδα είναι δυαδική: το αρχείο είναι αναπαραγμένο ή δεν είναι.
+
+### Why
+Το αρχείο έμεινε **μπαγιάτικο τέσσερις μήνες** (2026-04-03 → 2026-07-29), απόκλιση **+39.920 / −16.368
+γραμμές**, ενώ **και οι 30+ CHECK ήταν πράσινες**. Το `validate:i18n` έδειχνε 30016/30016 ✅ — ελέγχει
+πληρότητα EL↔EN, εντελώς άλλο ερώτημα. Το `validate-i18n-manifest.js` διαβάζει το αρχείο αλλά **μόνο**
+την ένωση `TranslationNamespace` ⇒ τυφλό σε αλλαγή κλειδιών, και δεν είναι συνδεδεμένο πουθενά.
+**Κανείς δεν ρωτούσε αν το παραγόμενο αρχείο ταιριάζει ακόμη με τις εισόδους του.** Ίδιο σχήμα με τα
+`0` του N.11/N.12: πράσινο = «κανείς δεν κοίταξε».
+
+### ⚠️ Δύο δομικές παγίδες — μην τις «απλοποιήσεις»
+1. **Η έξοδος ΗΤΑΝ μη-ντετερμινιστική.** Ο γεννήτορας ενσωμάτωνε `new Date().toISOString()` στο header
+   ⇒ «αναπαρήγαγε και σύγκρινε bytes» **δεν μπορούσε ΠΟΤΕ να περάσει**. Το ADR-727 το αντικατέστησε με
+   `Generated from: sha256:<hash των εισόδων>`. **Μην ξαναβάλεις ρολόι σε παραγόμενο αρχείο.**
+2. **Line endings.** `core.autocrlf=true` χωρίς `.gitattributes` ⇒ working tree = CRLF, γεννήτορας = LF.
+   Σύγκριση ωμών bytes θα ήταν **μονίμως κόκκινη σε κάθε Windows checkout**. Η `normalize()` κανονικοποιεί
+   **και τις δύο** πλευρές (CRLF→LF, BOM, trailing newline). **Μην την αφαιρέσεις** — καλύπτεται από
+   δική της ομάδα tests γιατί η αφαίρεσή της μοιάζει με πραγματικό εύρημα.
+
+Το **`mtime` δεν είναι σήμα**: το μπαγιάτικο αρχείο είχε mtime *σημερινό* με περιεχόμενο Απριλίου.
+
+### Enforcement (Defense in Depth)
+
+| Layer | Where | Mode | Speed |
+|-------|-------|------|-------|
+| **Layer 1 — pre-commit** | `scripts/run-checks-parallel.js` CHECK 3.33 (**Phase 1**, worker thread) | **full** — trigger-scoped | ~137ms, παράλληλα |
+| **Layer 2 — CI** | `.github/workflows/i18n-governance.yml` | **full, άνευ όρων** | ~1s |
+| **Layer 3 — on demand** | `npm run i18n-types:check` | **full** | ~137ms |
+
+**Γιατί Phase 1 και όχι 0.x**: οι υπο-φάσεις 0.5–0.9 υπάρχουν επειδή εκείνες οι CHECK κάνουν `spawn()`
+που κάνει deadlock στο worker pool. Η 3.33 είναι καθαρή in-memory Node ⇒ ανήκει στην Phase 1.
+**Γιατί χρειάζεται το Layer 2**: το Layer 1 είναι trigger-scoped· `--no-verify` ή μηχάνημα χωρίς
+`core.hooksPath` το παρακάμπτει ολόκληρο.
+
+### Scope (pre-commit)
+- Script: `scripts/check-i18n-types-freshness.js`
+- Triggers: staged `src/i18n/locales/**/*.json` **ή** staged `src/types/i18n.ts` (χρησιμοποιεί το
+  υπάρχον `LOCALE_FILES` του hook — δεν γράφτηκε τρίτο glob)
+- Escape hatch: `SKIP_I18N_TYPES=1` — ελεγμένο πριν την καταχώριση **και** επαναλαμβανόμενο μέσα στο
+  μήνυμα αποτυχίας
+
+### Οι πέντε ετυμηγορίες
+| Verdict | Σημασία |
+|---|---|
+| `fresh` | ταιριάζει — exit 0 |
+| `missing` | το παραγόμενο αρχείο λείπει |
+| `legacy-header` | φτιαγμένο από τον προ-ADR-727 γεννήτορα (header με timestamp) |
+| `stale-inputs` | **τα locale προχώρησαν, ο γεννήτορας δεν ξανάτρεξε** — το τετράμηνο σφάλμα |
+| `hand-edited` | fingerprint ταιριάζει, σώμα όχι — κάποιος πείραξε μηχανική έξοδο στο χέρι |
+
+Η διάκριση των δύο τελευταίων είναι δυνατή **μόνο** χάρη στο fingerprint· ένα σκέτο «τα αρχεία
+διαφέρουν» θα άφηνε τον αναγνώστη να μαντεύει.
+
+### Commands
+- `npm run generate:i18n-types` — **η διόρθωση**
+- `npm run i18n-types:check` — χειροκίνητη εκτέλεση της πύλης
+- `npm run test:i18n-types-freshness` — 56 tests
+
+### Remediation flow
+1. `npm run generate:i18n-types`
+2. `git add src/types/i18n.ts` — **μαζί** με την αλλαγή locale, στο ίδιο commit
+3. **Ποτέ** χειροκίνητη επεξεργασία του αρχείου — είναι μηχανική έξοδος
+
+### Relationship with other checks
+- **CHECK 3.8** (missing keys) → κώδικας→locale· δεν βλέπει τύπους
+- **CHECK 3.13** (resolver reachability) → runtime προσπελασιμότητα namespace
+- **`validate:i18n`** (ADR-666) → πληρότητα EL↔EN· έδειχνε 30016/30016 όσο οι τύποι σάπιζαν
+- **CHECK 3.33** (αυτό) → **παραγόμενο αρχείο ↔ είσοδοί του**. Καμία άλλη CHECK δεν ρωτά αυτό
+
+### Test suite (Google presubmit-grade)
+`scripts/__tests__/check-i18n-types-freshness.test.js` — **56 tests / 10 ομάδες**: `normalize`,
+`readFingerprint`, `firstDifference`, `classify` (και οι 5 ετυμηγορίες), **ντετερμινισμός**,
+**πραγματική ανίχνευση**, **line endings**, `parseArgs`/`printHelp`, `runCheck` in-process με
+`process.exit` stub, αληθινό CLI μέσω `spawnSync`, και invariant στο πραγματικό repo.
+Fixtures χτίζονται προγραμματιστικά σε tempdir. Env overrides: `I18N_TYPES_LOCALE_DIR`,
+`I18N_TYPES_OUTPUT_FILE`.
+
+**Mutation-verified (4/4)**: επαναφορά ρολογιού → 18 κόκκινα· αφαίρεση CRLF normalization → 2·
+`classify` πάντα `fresh` → 11· fingerprint αγνοεί περιεχόμενο → 6. **Πράσινο test δεν αποδεικνύει
+τίποτα μέχρι να δεις ότι μπορεί να κοκκινίσει.**
 
 ---
 

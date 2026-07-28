@@ -36,7 +36,9 @@ on:
       - 'src/config/**'
       - 'src/app/**/service-config.ts'
       - 'src/app/**/individual-config.ts'
+      - 'src/types/i18n.ts'
       - 'scripts/check-i18n-*.js'
+      - 'scripts/generate-i18n-types.js'
       - 'scripts/check-audit-value-catalogs.js'
       - 'scripts/validate-translations.js'
       - 'scripts/_shared/i18n-governance.js'
@@ -48,7 +50,9 @@ on:
       - 'src/i18n/**'
       - 'src/components/generic/i18n/**'
       - 'src/config/**'
+      - 'src/types/i18n.ts'
       - 'scripts/check-i18n-*.js'
+      - 'scripts/generate-i18n-types.js'
       - 'scripts/check-audit-value-catalogs.js'
       - 'scripts/validate-translations.js'
       - 'scripts/_shared/i18n-governance.js'
@@ -75,6 +79,23 @@ jobs:
       # We do not need a full dependency install — every governance script is
       # pure Node.js (no runtime deps) that walks the repo filesystem. This
       # keeps the workflow under 30s and independent of pnpm-lock churn.
+
+      # ADR-727 — CHECK 3.33. src/types/i18n.ts is generated from the el locale
+      # JSONs and went four months stale (+39.920/−16.368 lines) while every
+      # pre-commit CHECK stayed green, because none of them asked whether a
+      # generated file still matches its inputs.
+      #
+      # This is the canonical "regenerate and fail on a non-empty diff" gate
+      # (`go generate` + `git diff --exit-code`, Bazel diff_test). It became
+      # possible only after ADR-727 removed `new Date()` from the generated
+      # header — with a clock in the output no such check can ever pass.
+      #
+      # Layer 2 matters here specifically because Layer 1 is trigger-scoped: the
+      # hook only fires CHECK 3.33 when a locale JSON or the generated file is
+      # staged. A commit made with --no-verify, or on a machine without
+      # core.hooksPath, bypasses it entirely. This step is unconditional.
+      - name: 🔍 CHECK 3.33 — i18n generated-types freshness (ADR-727)
+        run: node scripts/check-i18n-types-freshness.js
 
       - name: 🔍 CHECK 3.13 — i18n runtime resolver reachability (full scan)
         run: node scripts/check-i18n-resolver-reachability.js --all
@@ -106,6 +127,7 @@ jobs:
         if: success()
         run: |
           echo "::notice title=i18n Governance::All ratchet checks passed"
+          echo "CHECK 3.33 (generated-types freshness): PASS"
           echo "CHECK 3.13 (resolver reachability): PASS"
           echo "CHECK 3.14 (audit catalogs parity): PASS"
           echo "validate:i18n (EL/EN completeness): PASS"

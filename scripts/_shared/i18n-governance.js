@@ -25,16 +25,22 @@ function getLocaleDir(locale) {
   return path.join(LOCALES_DIR, locale);
 }
 
-function getLocaleFiles(locale) {
-  const localeDir = getLocaleDir(locale);
-
-  if (!fs.existsSync(localeDir)) {
+// ADR-727: the "which JSON files feed a namespace set" rule lives here alone.
+// getLocaleFiles() resolves a locale name; listJsonFiles() takes an arbitrary
+// directory so tooling can point at a fixture dir without re-deriving the
+// filter+sort (that sort order IS part of the generated-types contract).
+function listJsonFiles(dirPath) {
+  if (!fs.existsSync(dirPath)) {
     return [];
   }
 
-  return fs.readdirSync(localeDir)
+  return fs.readdirSync(dirPath)
     .filter((name) => name.endsWith('.json'))
     .sort();
+}
+
+function getLocaleFiles(locale) {
+  return listJsonFiles(getLocaleDir(locale));
 }
 
 function getNamespacesForLocale(locale) {
@@ -242,6 +248,7 @@ module.exports = {
   getLocaleFiles,
   getNamespacesForLocale,
   getSourceFiles,
+  listJsonFiles,
   parseConstArray,
   parseTranslationNamespaceUnion,
   readJson,
