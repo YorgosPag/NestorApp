@@ -18,6 +18,7 @@ import type { Point2D } from '../../../rendering/types/Types';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { deepClone } from '../../../utils/clone-utils';
 import { geometryFromSnapshot } from './snapshot-geometry';
+import { reconcileAssociativeGeometry } from '../../../bim/cascade/associative-geometry-reconcile';
 import type { PolylineEntity, LWPolylineEntity } from '../../../types/entities';
 
 export type PolylineVertexOp =
@@ -93,6 +94,19 @@ export class PolylineVertexCommand implements ICommand {
     return patch as Partial<SceneEntity>;
   }
 
+  /**
+   * ADR-540 / ADR-718 §Β — τα scene-derived εξαρτημένα, **αφού** η κορυφή έχει κάτσει στη σκηνή.
+   *
+   * ⚠️ **Έλειπε μέχρι το §Β.** Ο δίδυμος `AddVertexCommand` (οικογένεια `EntityVertexCommand`)
+   * το είχε από το Μ3 — αλλά είναι **νεκρός**: η ζωντανή διαδρομή της πολυγραμμής («Προσθήκη /
+   * Αφαίρεση κορυφής» του multifunctional grip menu) περνά από **εδώ**. Άρα ένα όριο οικοπέδου
+   * ακολουθούσε το σύρσιμο λαβής (ADR-718 Μ3) αλλά **όχι** την προσθήκη κορυφής — η κοπή έμενε
+   * στο παλιό σχήμα, σιωπηλά. Ίδιο κενό, άλλη πόρτα.
+   */
+  private reconcileDependents(): void {
+    reconcileAssociativeGeometry(this.getAffectedEntityIds(), this.sceneManager);
+  }
+
   execute(): void {
     const entity = this.sceneManager.getEntity(this.params.entityId);
     if (!entity) return;
@@ -102,19 +116,23 @@ export class PolylineVertexCommand implements ICommand {
     if (!patch) return;
     this.snapshot = deepClone(entity);
     this.sceneManager.updateEntity(this.params.entityId, patch);
+    this.reconcileDependents();
   }
 
   undo(): void {
     if (!this.snapshot) return;
     const geometry = geometryFromSnapshot(this.snapshot);
     this.sceneManager.updateEntity(this.params.entityId, geometry);
+    this.reconcileDependents();
   }
 
   redo(): void {
     if (!this.snapshot) return;
     const poly = this.snapshot as unknown as PolyEntity;
     const patch = this.applyOp(poly);
-    if (patch) this.sceneManager.updateEntity(this.params.entityId, patch);
+    if (!patch) return;
+    this.sceneManager.updateEntity(this.params.entityId, patch);
+    this.reconcileDependents();
   }
 
   getDescription(): string {

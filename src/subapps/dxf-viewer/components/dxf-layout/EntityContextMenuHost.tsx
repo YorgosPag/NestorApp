@@ -20,9 +20,11 @@ import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { useEntityJoin } from '../../hooks/useEntityJoin';
 import { useSelectedEntityIds } from '../../systems/selection/useSelectedEntities';
 import { useEntityLayerCommands } from '../../hooks/canvas/useEntityLayerCommands';
+import { usePolylineClosureCommands } from '../../hooks/canvas/usePolylineClosureCommands';
 import { computeEntityJoinState } from '../../hooks/canvas/entity-join-state';
 import { buildEntityContextMenuProps } from './canvas-section-entity-menu';
 import type { ICommand } from '../../core/commands/interfaces';
+import type { LevelSceneWriter } from '../../systems/levels/level-scene-accessor';
 
 export interface EntityContextMenuHostProps {
   entityMenuRef: React.RefObject<EntityContextMenuHandle | null>;
@@ -35,12 +37,14 @@ export interface EntityContextMenuHostProps {
   onToolChange: ((tool: string) => void) | undefined;
   replaceEntitySelection: (ids: string[]) => void;
   executeCommand: (command: ICommand) => void;
+  /** ADR-718 §Β — ο γράφων της σκηνής ορόφου· από αυτόν φτιάχνεται ο `ISceneManager` της εντολής. */
+  levelManager: Pick<LevelSceneWriter, 'currentLevelId' | 'getLevelScene' | 'setLevelScene'>;
   t: (key: string, opts?: { count?: number }) => string;
 }
 
 const EntityContextMenuHostInner: React.FC<EntityContextMenuHostProps> = ({
   entityMenuRef, currentScene, dxfScene, entityJoinHook, handleSmartDelete, handleReorderEntity,
-  onToolChange, replaceEntitySelection, executeCommand, t,
+  onToolChange, replaceEntitySelection, executeCommand, levelManager, t,
 }) => {
   // ADR-532 B4 — selection-set leaf subscription (reference-stable per dxf change).
   const selectedEntityIds = useSelectedEntityIds();
@@ -49,15 +53,24 @@ const EntityContextMenuHostInner: React.FC<EntityContextMenuHostProps> = ({
     [entityJoinHook, selectedEntityIds],
   );
   const entityLayerCommands = useEntityLayerCommands(selectedEntityIds, dxfScene, executeCommand);
+  // ADR-718 §Β — AutoCAD PEDIT Close/Open. Διαβάζει το `currentScene` (SceneModel entities: εκεί
+  // ζει το `closed`), ΟΧΙ το `dxfScene` — το τελευταίο είναι η μορφή του renderer.
+  const polylineClosure = usePolylineClosureCommands(
+    selectedEntityIds, currentScene?.entities, levelManager, executeCommand,
+  );
   // 🚀 PERF (2026-06-28, ADR-040): memoize the props build. `canIsolateCategory`/`canSplit` do
   // O(k×n) entity scans (`collectBimCategories`, `entities.find`); previously they re-ran on EVERY
   // parent re-render (incl. the now-fixed cursor cascade). Now only on a real selection/scene change.
-  const entityMenuProps = useMemo(() => buildEntityContextMenuProps({
-    selectedEntityIds, currentScene, dxfScene, entityJoinState, entityJoinHook,
-    handleSmartDelete, handleReorderEntity, entityMenuRef, onToolChange, replaceEntitySelection,
-    executeCommand, t, entityLayerCommands,
+  const entityMenuProps = useMemo(() => ({
+    ...buildEntityContextMenuProps({
+      selectedEntityIds, currentScene, dxfScene, entityJoinState, entityJoinHook,
+      handleSmartDelete, handleReorderEntity, entityMenuRef, onToolChange, replaceEntitySelection,
+      executeCommand, t, entityLayerCommands,
+    }),
+    ...polylineClosure,
   }), [selectedEntityIds, currentScene, dxfScene, entityJoinState, entityJoinHook,
-    handleSmartDelete, handleReorderEntity, entityMenuRef, onToolChange, replaceEntitySelection, executeCommand, t, entityLayerCommands]);
+    handleSmartDelete, handleReorderEntity, entityMenuRef, onToolChange, replaceEntitySelection,
+    executeCommand, t, entityLayerCommands, polylineClosure]);
   return <EntityContextMenu ref={entityMenuRef as React.Ref<EntityContextMenuHandle>} {...entityMenuProps} />;
 };
 

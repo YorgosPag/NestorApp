@@ -136,6 +136,8 @@
     "flipArc": "Αντιστροφή",
     "entity": {
       "splitWall": "Χωρισμός Τοίχου",
+      "closePolyline": "Κλείσιμο πολυγραμμής",
+      "openPolyline": "Άνοιγμα πολυγραμμής",
       "selectSimilarColor": "Επιλογή όμοιων (ίδιο χρώμα)",
       "bringToFront": "Μεταφορά μπροστά",
       "sendToBack": "Μεταφορά πίσω"

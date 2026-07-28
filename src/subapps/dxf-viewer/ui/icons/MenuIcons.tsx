@@ -354,3 +354,34 @@ export function IsolateCategoryIcon({ className, color }: IconProps) {
     </SvgWrapper>
   );
 }
+
+/**
+ * Close-polyline icon — an open chain whose missing last segment is drawn dashed
+ * (AutoCAD `PEDIT → Close`). Used in: EntityContextMenu (ADR-718 §Β).
+ */
+export function ClosePolylineIcon({ className, color }: IconProps) {
+  return (
+    <SvgWrapper className={className} color={color}>
+      {/* The drawn chain: three solid segments of a quadrilateral */}
+      <polyline points="5,18 4,8 12,3 20,8" fill="none" />
+      {/* The segment the command adds — dashed until it exists */}
+      <line x1="20" y1="8" x2="5" y2="18" strokeDasharray="2,2" opacity="0.55" />
+    </SvgWrapper>
+  );
+}
+
+/**
+ * Open-polyline icon — a closed ring with one segment removed, the two freed
+ * ends marked (AutoCAD `PEDIT → Open`). Used in: EntityContextMenu (ADR-718 §Β).
+ */
+export function OpenPolylineIcon({ className, color }: IconProps) {
+  return (
+    <SvgWrapper className={className} color={color}>
+      {/* What survives the edit — the same chain, still solid */}
+      <polyline points="5,18 4,8 12,3 20,8" fill="none" />
+      {/* The two ends the open leaves behind */}
+      <circle cx="5" cy="18" r="1.6" />
+      <circle cx="20" cy="8" r="1.6" />
+    </SvgWrapper>
+  );
+}

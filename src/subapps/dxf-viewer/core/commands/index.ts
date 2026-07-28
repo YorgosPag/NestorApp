@@ -133,6 +133,9 @@ export { PolylineVertexCommand } from './entity-commands/PolylineVertexCommand';
 export type { PolylineVertexParams, PolylineVertexOp } from './entity-commands/PolylineVertexCommand';
 // ADR-510 Φ3c — polyline segment bulge (Convert-to-Arc / Convert-to-Line / drag).
 export { SetBulgeCommand } from './entity-commands/SetBulgeCommand';
+// ADR-718 §Β — AutoCAD PEDIT Close / Open / Open-at-edge (τοπολογία, όχι σημαία εμφάνισης).
+export { SetPolylineClosureCommand } from './entity-commands/SetPolylineClosureCommand';
+export type { PolylineClosureParams, PolylineClosureOp } from './entity-commands/SetPolylineClosureCommand';
 
 // Vertex Commands
 export { MoveVertexCommand } from './vertex-commands/MoveVertexCommand';

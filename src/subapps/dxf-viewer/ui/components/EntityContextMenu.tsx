@@ -30,7 +30,8 @@ import {
   DxfMenuLabel,
   DxfMenuShortcut,
 } from './dxf-context-menu';
-import { JoinIcon, DeleteIcon, CancelIcon, SplitWallIcon, SelectSimilarColorIcon, IsolateEntityIcon, IsolateCategoryIcon, BringToFrontIcon, SendToBackIcon } from '../icons/MenuIcons';
+import { JoinIcon, DeleteIcon, CancelIcon, SplitWallIcon, SelectSimilarColorIcon, IsolateEntityIcon, IsolateCategoryIcon, BringToFrontIcon, SendToBackIcon, ClosePolylineIcon, OpenPolylineIcon } from '../icons/MenuIcons';
+import type { PolylineClosureMenuProps } from '../../hooks/canvas/usePolylineClosureCommands';
 
 // ===== TYPES =====
 
@@ -97,9 +98,15 @@ interface EntityContextMenuProps {
   onSendToBack?: () => void;
 }
 
+/**
+ * ADR-718 §Β — AutoCAD `PEDIT → Close / Open` σε **μία** επιλεγμένη πολυγραμμή. Ο τύπος έρχεται
+ * αυτούσιος από τον `usePolylineClosureCommands`, ώστε «τι επιτρέπεται» να ζει σε ένα σημείο.
+ */
+type EntityContextMenuAllProps = EntityContextMenuProps & PolylineClosureMenuProps;
+
 // ===== MAIN COMPONENT =====
 
-const EntityContextMenuInner = forwardRef<EntityContextMenuHandle, EntityContextMenuProps>(({
+const EntityContextMenuInner = forwardRef<EntityContextMenuHandle, EntityContextMenuAllProps>(({
   selectedCount,
   canJoin,
   joinResultLabel,
@@ -122,6 +129,7 @@ const EntityContextMenuInner = forwardRef<EntityContextMenuHandle, EntityContext
   canReorder,
   onBringToFront,
   onSendToBack,
+  polylineClosure,
 }, ref) => {
   const { t } = useTranslation('dxf-viewer');
   const triggerRef = useRef<HTMLSpanElement>(null);
@@ -151,6 +159,8 @@ const EntityContextMenuInner = forwardRef<EntityContextMenuHandle, EntityContext
   const handleIsolateCategory = useCallback(() => { onIsolateCategory?.(); setIsOpen(false); }, [onIsolateCategory]);
   const handleBringToFront = useCallback(() => { onBringToFront?.(); setIsOpen(false); }, [onBringToFront]);
   const handleSendToBack = useCallback(() => { onSendToBack?.(); setIsOpen(false); }, [onSendToBack]);
+  const runPolylineClosure = polylineClosure?.run;
+  const handlePolylineClosure = useCallback(() => { runPolylineClosure?.(); setIsOpen(false); }, [runPolylineClosure]);
 
   const showLayerCommands = !!(canApplyLayerCommands && (onLayerOff || onLayerFreeze || onLayerLock));
   const layerCommandsDisabled = !!isSystemLayer;
@@ -173,6 +183,23 @@ const EntityContextMenuInner = forwardRef<EntityContextMenuHandle, EntityContext
             <DxfMenuItem onClick={handleSplit}>
               <DxfMenuIcon><SplitWallIcon /></DxfMenuIcon>
               <DxfMenuLabel>{t('contextMenu.entity.splitWall')}</DxfMenuLabel>
+            </DxfMenuItem>
+          </>
+        )}
+
+        {/* ADR-718 §Β — AutoCAD PEDIT: Close σε ανοιχτή, Open σε κλειστή. Ποτέ και τα δύο. */}
+        {polylineClosure && (
+          <>
+            <DxfMenuSeparator />
+            <DxfMenuItem onClick={handlePolylineClosure}>
+              <DxfMenuIcon>
+                {polylineClosure.action === 'close' ? <ClosePolylineIcon /> : <OpenPolylineIcon />}
+              </DxfMenuIcon>
+              <DxfMenuLabel>
+                {t(polylineClosure.action === 'close'
+                  ? 'contextMenu.entity.closePolyline'
+                  : 'contextMenu.entity.openPolyline')}
+              </DxfMenuLabel>
             </DxfMenuItem>
           </>
         )}
@@ -268,4 +295,4 @@ EntityContextMenuInner.displayName = 'EntityContextMenu';
 
 export default EntityContextMenuInner;
 export { EntityContextMenuInner as EntityContextMenu };
-export type { EntityContextMenuProps };
+export type { EntityContextMenuProps, EntityContextMenuAllProps };

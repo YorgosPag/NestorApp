@@ -898,6 +898,7 @@
     "removeVertex": "Remove vertex",
     "convertToArc": "Convert to arc",
     "convertToLine": "Convert to line",
+    "openHere": "Open here",
     "section": {
       "modes": "Mode",
       "extras": "Extras",

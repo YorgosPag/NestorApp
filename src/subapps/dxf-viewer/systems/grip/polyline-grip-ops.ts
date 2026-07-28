@@ -6,6 +6,7 @@
  *   - remove-vertex   → `PolylineVertexCommand` (remove vertex N).
  *   - convert-to-arc  → `SetBulgeCommand` (segment N → `DEFAULT_ARC_BULGE`).
  *   - convert-to-line → `SetBulgeCommand` (segment N → 0).
+ *   - open-at-edge    → `SetPolylineClosureCommand` (ADR-718 §Β, μέσω `buildPolylineClosureCommand`).
  *
  * Pure: returns the command (or null) — the controller owns `history.execute`.
  * Both the menu (here) and the live drag (`commitPolylineBulgeGripDrag`) share
@@ -20,6 +21,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { UnifiedGripInfo } from '../../hooks/grips/unified-grip-types';
 import { PolylineVertexCommand } from '../../core/commands/entity-commands/PolylineVertexCommand';
 import { SetBulgeCommand } from '../../core/commands/entity-commands/SetBulgeCommand';
+import { buildPolylineClosureCommand } from '../polyline/polyline-closure-ops';
 import { calculateMidpoint } from '../../rendering/entities/shared/geometry-utils';
 import { parseGripKindIndex } from './grip-kind-index';
 import { gripKindOf } from '../../hooks/grip-kinds';
@@ -38,7 +40,10 @@ export type PolylineVertexMenuOp =
   | 'add-vertex'
   | 'remove-vertex'
   | 'convert-to-arc'
-  | 'convert-to-line';
+  | 'convert-to-line'
+  // ADR-718 §Β — AutoCAD PEDIT «Open» με ακμή: αφαιρεί ΑΥΤΟ το τμήμα και αναδιατάσσει τις
+  // κορυφές ώστε τα δύο άκρα του να γίνουν αρχή/τέλος της ανοιχτής πια πολυγραμμής.
+  | 'open-at-edge';
 
 type PolyReadView = { readonly type?: string } & Pick<
   PolylineEntity | LWPolylineEntity,
@@ -75,6 +80,16 @@ export function buildPolylineVertexOpCommand(
   if (segIdx == null) return null;
   const vLen = vertices.length;
 
+  // ADR-718 §Β — ο δείκτης της λαβής ακμής ΕΙΝΑΙ το `edgeIndex`: σε κλειστή πολυγραμμή ο
+  // παραγωγός λαβών φτιάχνει N λαβές ακμών (`i = 0 … N−1`), άρα καλύπτεται **και η ακμή
+  // κλεισίματος**. Το «μπορεί να ανοίξει;» το κρίνει ο shared builder, όχι εδώ.
+  if (op === 'open-at-edge') {
+    return buildPolylineClosureCommand(
+      grip.entityId,
+      { kind: 'open-at-edge', edgeIndex: segIdx },
+      sceneManager,
+    );
+  }
   if (op === 'remove-vertex') {
     return new PolylineVertexCommand(
       { entityId: grip.entityId, op: { kind: 'remove', index: segIdx } },

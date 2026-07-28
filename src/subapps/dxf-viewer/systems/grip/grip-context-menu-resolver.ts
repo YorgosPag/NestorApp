@@ -30,6 +30,8 @@
 import type { UnifiedGripInfo } from '../../hooks/grips/unified-grip-types';
 import { gripKindOf } from '../../hooks/grip-kinds';
 import type { Entity } from '../../types/entities';
+// ADR-718 §Β — «μπορεί να ανοίξει;» έχει ΕΝΑ σπίτι· το μενού το ρωτά, δεν το ξαναγράφει.
+import { canOpenPolyline } from '../polyline/polyline-closure-ops';
 import type { GripMode } from './grip-mode-cycle';
 import { gripModeMeta } from './grip-mode-cycle';
 
@@ -58,6 +60,9 @@ export type GripContextActionId =
   | 'polyline-ops:removeVertex'
   | 'polyline-ops:convertToArc'
   | 'polyline-ops:convertToLine'
+  // ADR-718 §Β — AutoCAD PEDIT «Open» με ΑΚΜΗ: η λαβή μέσου ακμής ΕΙΝΑΙ η ακμή, οπότε ο
+  // δείκτης της είναι ήδη το `edgeIndex` — χωρίς ανοχή, χωρίς αμφισημία. Μόνο σε ΚΛΕΙΣΤΗ.
+  | 'polyline-ops:openAtEdge'
   // ADR-507 (Giorgio 2026-07-07) — hatch boundary vertex ops (add on edge-midpoint,
   // remove on vertex). Multi-ring/island-safe via the `hatchGripKind` discriminator.
   | 'hatch-ops:addVertex'
@@ -166,15 +171,25 @@ function buildVertexOpsSection(grip: UnifiedGripInfo): GripContextSectionMeta | 
 /**
  * ADR-510 Φ3c — multifunctional polyline grip ops, keyed by `polylineGripKind`:
  *   - vertex            → Add Vertex / Remove Vertex / Convert to Arc
- *   - segment-midpoint  → Add Vertex / Convert to Arc
- *   - arc-midpoint      → Convert to Line
+ *   - segment-midpoint  → Add Vertex / Convert to Arc [+ Open Here]
+ *   - arc-midpoint      → Convert to Line            [+ Open Here]
  * Lives in the right-click menu (mirror of `buildVertexOpsSection` slab/roof) so a
  * single menu carries every grip action; the hover menu skips polyline entirely.
+ *
+ * ADR-718 §Β — «Άνοιγμα εδώ» προσφέρεται **μόνο σε λαβή ακμής ΚΛΕΙΣΤΗΣ** πολυγραμμής: σε
+ * ανοιχτή δεν υπάρχει τι να αφαιρεθεί, και το κατηγόρημα ζει στο `polyline-closure-ops` ώστε
+ * το μενού να μην μπορεί ποτέ να προσφέρει πράξη που ο command θα αρνηθεί.
  */
-function buildPolylineOpsSection(grip: UnifiedGripInfo): GripContextSectionMeta | null {
+function buildPolylineOpsSection(
+  entity: Entity,
+  grip: UnifiedGripInfo,
+): GripContextSectionMeta | null {
   const kind = gripKindOf(grip, 'polyline');
   if (!kind) return null;
   const titleKey = 'gripContextMenu.section.polylineOps';
+  const openHere: ReadonlyArray<GripContextActionMeta> = canOpenPolyline(entity)
+    ? [{ id: 'polyline-ops:openAtEdge', labelKey: 'gripContextMenu.openHere' }]
+    : [];
   if (kind.startsWith('polyline-vertex-')) {
     return {
       id: 'polyline-ops',
@@ -193,6 +208,7 @@ function buildPolylineOpsSection(grip: UnifiedGripInfo): GripContextSectionMeta 
       items: [
         { id: 'polyline-ops:addVertex', labelKey: 'gripContextMenu.addVertex' },
         { id: 'polyline-ops:convertToArc', labelKey: 'gripContextMenu.convertToArc' },
+        ...openHere,
       ],
     };
   }
@@ -202,6 +218,7 @@ function buildPolylineOpsSection(grip: UnifiedGripInfo): GripContextSectionMeta 
       titleKey,
       items: [
         { id: 'polyline-ops:convertToLine', labelKey: 'gripContextMenu.convertToLine' },
+        ...openHere,
       ],
     };
   }
@@ -249,12 +266,12 @@ function buildHatchOpsSection(grip: UnifiedGripInfo): GripContextSectionMeta | n
  * corner grips ("Delete corner") and slab edge-midpoint grips ("Add corner here").
  */
 export function resolveContextMenuSections(
-  _entity: Entity,
+  entity: Entity,
   grip: UnifiedGripInfo,
 ): ReadonlyArray<GripContextSectionMeta> {
   // slab/roof vertex-ops OR polyline-ops OR hatch-ops (mutually exclusive per entity type).
   const opsSection =
-    buildVertexOpsSection(grip) ?? buildPolylineOpsSection(grip) ?? buildHatchOpsSection(grip);
+    buildVertexOpsSection(grip) ?? buildPolylineOpsSection(entity, grip) ?? buildHatchOpsSection(grip);
   if (!opsSection) return BASE_SECTIONS;
   return [
     BASE_SECTIONS[0],

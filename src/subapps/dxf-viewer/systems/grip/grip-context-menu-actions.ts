@@ -29,6 +29,9 @@ import { GripBasePointStore } from './GripBasePointStore';
 import { GripCopyModeStore } from './GripCopyModeStore';
 import { GripReferenceStore } from './GripReferenceStore';
 import type { UnifiedGripInfo } from '../../hooks/grips/unified-grip-types';
+// Η υπογραφή του callback διαβάζει τον ΤΥΠΟ του builder αντί για χειρόγραφο αντίγραφο της
+// ένωσης: μια νέα πράξη (ADR-718 §Β `open-at-edge`) δεν μπορεί να ξεχαστεί εδώ.
+import type { PolylineVertexMenuOp } from './polyline-grip-ops';
 import type {
   GripContextActionId,
   GripContextActionMeta,
@@ -52,10 +55,7 @@ export interface GripContextActionBindContext {
    * Provided by `useGripContextMenuController`; builds the right command via the
    * shared `buildPolylineVertexOpCommand` SSoT and runs it through global history.
    */
-  readonly onPolylineVertexOp?: (
-    grip: UnifiedGripInfo,
-    op: 'add-vertex' | 'remove-vertex' | 'convert-to-arc' | 'convert-to-line',
-  ) => void;
+  readonly onPolylineVertexOp?: (grip: UnifiedGripInfo, op: PolylineVertexMenuOp) => void;
   /**
    * ADR-507 (Giorgio 2026-07-07) — hatch boundary vertex ops (add on edge-midpoint,
    * remove on vertex). Provided by `useGripContextMenuController`; builds the command via
@@ -173,6 +173,9 @@ export function bindContextMenuAction(
     case 'polyline-ops:convertToLine':
       if (!grip || !ctx.onPolylineVertexOp) return null;
       return () => { ctx.onPolylineVertexOp!(grip, 'convert-to-line'); ctx.onAfterDispatch(); };
+    case 'polyline-ops:openAtEdge':
+      if (!grip || !ctx.onPolylineVertexOp) return null;
+      return () => { ctx.onPolylineVertexOp!(grip, 'open-at-edge'); ctx.onAfterDispatch(); };
     case 'hatch-ops:addVertex':
       if (!grip || !ctx.onHatchVertexOp) return null;
       return () => { ctx.onHatchVertexOp!(grip, 'add-vertex'); ctx.onAfterDispatch(); };

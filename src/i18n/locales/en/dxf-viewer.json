@@ -136,6 +136,8 @@
     "flipArc": "Reverse",
     "entity": {
       "splitWall": "Split Wall",
+      "closePolyline": "Close Polyline",
+      "openPolyline": "Open Polyline",
       "selectSimilarColor": "Select Similar (Same Color)",
       "bringToFront": "Bring to Front",
       "sendToBack": "Send to Back"

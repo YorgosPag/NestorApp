@@ -98,6 +98,66 @@ export function isPointNearLineSegment(
   return distance <= tolerance;
 }
 
+/** Πού μπαίνει μια νέα κορυφή: σε ποια ακμή, σε ποιο σημείο, σε ποια θέση της λίστας. */
+export interface EdgeGripInsertion {
+  edgeIndex: number;
+  insertPoint: Point2D;
+  insertIndex: number;
+}
+
+/**
+ * Η ΜΙΑ αναζήτηση «σε ποια ακμή θα έμπαινε μια νέα κορυφή» — ADR-718 §Β (N.18 de-duplication).
+ *
+ * Υπήρχαν **δύο ταυτόσημα σώματα** (`findPolylineEdgeForGrip` για οντότητες,
+ * {@link findOverlayEdgeForGrip} για overlays): ίδιο φίλτρο ανοχής, ίδιος φύλακας «όχι πολύ
+ * κοντά σε υπάρχουσα κορυφή», ίδια επιλογή ελάχιστης απόστασης — και **μία** πραγματική
+ * διαφορά: αν μετριέται και η ακμή **κλεισίματος**. Το jscpd τα έπιασε (133 tokens) όταν το
+ * αρχείο ξαναγράφτηκε· τα δύο αντίγραφα θα απέκλιναν στην πρώτη διόρθωση του ενός.
+ *
+ * Η διαφορά γίνεται **παράμετρος**, ίδιο idiom με το `calculatePolylineLength(points, isClosed)`.
+ *
+ * ⚠️ Ο φύλακας `tolerance * 2` **δεν** είναι το ίδιο με «η πλησιέστερη ακμή»: μια ακμή που
+ * αποτυγχάνει στον φύλακα αποκλείεται και κερδίζει η επόμενη. Γι' αυτό η αναζήτηση φιλτράρει
+ * **και μετά** ελαχιστοποιεί, όχι το αντίστροφο — και γι' αυτό ΔΕΝ είναι το ίδιο εργαλείο με
+ * το «σε ποια ακμή έκανε δεξί κλικ ο χρήστης» (εκεί δεν υπάρχει υποψηφιότητα, μόνο εγγύτητα).
+ */
+function findEdgeForGripInsertion(
+  point: Point2D,
+  vertices: readonly Point2D[],
+  tolerance: number,
+  isClosed: boolean,
+): EdgeGripInsertion | null {
+  if (vertices.length < 2) return null;
+
+  let closestEdge: (EdgeGripInsertion & { distance: number }) | null = null;
+  // Κλειστό ⇒ μετρά και η ακμή που γυρίζει στην πρώτη κορυφή· ανοιχτό ⇒ μία λιγότερη.
+  const edgeCount = isClosed ? vertices.length : vertices.length - 1;
+
+  for (let i = 0; i < edgeCount; i++) {
+    const start = vertices[i];
+    const end = vertices[(i + 1) % vertices.length];
+
+    if (!isPointNearLineSegment(point, start, end, tolerance)) continue;
+
+    const insertPoint = getClosestPointOnLineSegment(point, start, end);
+    // 🏢 ADR-065: Use centralized distance calculation
+    const distance = calculateDistance(point, insertPoint);
+
+    // Don't allow insertion too close to existing vertices
+    const startDist = calculateDistance(insertPoint, start);
+    const endDist = calculateDistance(insertPoint, end);
+    if (startDist <= tolerance * 2 || endDist <= tolerance * 2) continue;
+
+    if (!closestEdge || distance < closestEdge.distance) {
+      closestEdge = { edgeIndex: i, insertPoint, insertIndex: i + 1, distance };
+    }
+  }
+
+  if (!closestEdge) return null;
+  const { edgeIndex, insertPoint, insertIndex } = closestEdge;
+  return { edgeIndex, insertPoint, insertIndex };
+}
+
 /**
  * Find which edge of a polyline is closest to a point and return info for adding a grip
  * @param point - The point to test
@@ -109,52 +169,30 @@ export function findPolylineEdgeForGrip(
   point: Point2D,
   polyline: PolylineEntity,
   tolerance: number
-): { edgeIndex: number; insertPoint: Point2D; insertIndex: number } | null {
-  const vertices = polyline.vertices;
-  if (vertices.length < 2) return null;
+): EdgeGripInsertion | null {
+  // Ιστορική συμπεριφορά: η ακμή κλεισίματος ΔΕΝ μετριέται εδώ (ο μοναδικός καλών ήταν πάντα
+  // διαδρομή ανοιχτής πολυγραμμής). Διατηρείται αυτούσια — η ενοποίηση δεν αλλάζει σημασιολογία.
+  return findEdgeForGripInsertion(point, polyline.vertices, tolerance, false);
+}
 
-  let closestEdge: { edgeIndex: number; insertPoint: Point2D; insertIndex: number; distance: number } | null = null;
-
-  // Check each edge of the polyline
-  for (let i = 0; i < vertices.length - 1; i++) {
-    const start = vertices[i];
-    const end = vertices[i + 1];
-
-    if (isPointNearLineSegment(point, start, end, tolerance)) {
-      const insertPoint = getClosestPointOnLineSegment(point, start, end);
-      // 🏢 ADR-065: Use centralized distance calculation
-      const distance = calculateDistance(point, insertPoint);
-
-      // Don't allow insertion too close to existing vertices
-      const startDist = calculateDistance(insertPoint, start);
-      const endDist = calculateDistance(insertPoint, end);
-      
-      if (startDist > tolerance * 2 && endDist > tolerance * 2) {
-        if (!closestEdge || distance < closestEdge.distance) {
-          closestEdge = {
-            edgeIndex: i,
-            insertPoint,
-            insertIndex: i + 1, // Insert after vertex i
-            distance
-          };
-        }
-      }
-    }
-  }
-
-  return closestEdge ? {
-    edgeIndex: closestEdge.edgeIndex,
-    insertPoint: closestEdge.insertPoint,
-    insertIndex: closestEdge.insertIndex
-  } : null;
+/**
+ * ADR-718 §Β — η ελάχιστη μορφή που διαβάζουν/γράφουν οι τρεις επεξεργασίες κλεισίματος:
+ * κορυφές + η σημαία. **ΚΑΙ** το `polyline` **ΚΑΙ** το `lwpolyline` την ικανοποιούν δομικά,
+ * οπότε ο ΕΝΑΣ command (`SetPolylineClosureCommand`) εξυπηρετεί και τους δύο τύπους **χωρίς
+ * cast** ανάμεσα στα μέλη της ένωσης — ένα cast εκεί θα ήταν `as unknown as`, δηλαδή ακριβώς
+ * το είδος της σιωπηλής παραδοχής που ο τύπος υπάρχει για να αποτρέψει.
+ */
+export interface PolylineRing {
+  readonly vertices: readonly Point2D[];
+  readonly closed?: boolean;
 }
 
 /**
  * Close a polyline by setting its closed flag to true
- * @param polyline - The polyline entity to close
- * @returns The polyline with closed set to true
+ * @param polyline - The polyline (or lwpolyline) ring to close
+ * @returns The ring with closed set to true
  */
-export function closePolyline(polyline: PolylineEntity): PolylineEntity {
+export function closePolyline<T extends PolylineRing>(polyline: T): T {
   return {
     ...polyline,
     closed: true
@@ -180,10 +218,10 @@ export function arePointsConnectable(
 
 /**
  * Open a polygon by setting its closed flag to false
- * @param polyline - The polygon entity to open
- * @returns The polyline with closed set to false
+ * @param polyline - The polygon ring to open
+ * @returns The ring with closed set to false
  */
-export function openPolyline(polyline: PolylineEntity): PolylineEntity {
+export function openPolyline<T extends PolylineRing>(polyline: T): T {
   return {
     ...polyline,
     closed: false
@@ -192,11 +230,17 @@ export function openPolyline(polyline: PolylineEntity): PolylineEntity {
 
 /**
  * Open a polygon at a specific edge, reordering vertices so the break point becomes the start/end
- * @param polyline - The polygon entity to open 
+ *
+ * Ακμή `edgeIndex` = το τμήμα `vertices[edgeIndex] → vertices[(edgeIndex + 1) % N]`. Μετά το
+ * άνοιγμα η λίστα ξεκινά από το ΔΕΥΤΕΡΟ άκρο της ακμής, οπότε **αυτή ακριβώς η ακμή** είναι η
+ * μία που λείπει. Η τελευταία ακμή (`N-1`, το κλείσιμο) δίνει την ταυτοτική αναδιάταξη, δηλαδή
+ * ταυτίζεται με το σκέτο {@link openPolyline} — το ίδιο μαθηματικό, μία συμπεριφορά.
+ *
+ * @param polyline - The polygon ring to open
  * @param edgeIndex - The index of the edge where to break the polygon (0-based)
- * @returns The polyline with vertices reordered and closed set to false
+ * @returns The ring with vertices reordered and closed set to false
  */
-export function openPolylineAtEdge(polyline: PolylineEntity, edgeIndex: number): PolylineEntity {
+export function openPolylineAtEdge<T extends PolylineRing>(polyline: T, edgeIndex: number): T {
   if (!polyline.closed || polyline.vertices.length < 3) {
     return polyline; // Cannot break if not closed or insufficient vertices
   }
@@ -273,55 +317,10 @@ export function findOverlayEdgeForGrip(
   point: Point2D,
   polygon: Array<[number, number]>,
   tolerance: number
-): { edgeIndex: number; insertPoint: Point2D; insertIndex: number } | null {
-  if (polygon.length < 2) return null;
-
-  let closestEdge: {
-    edgeIndex: number;
-    insertPoint: Point2D;
-    insertIndex: number;
-    distance: number
-  } | null = null;
-
-  // Check each edge of the polygon (including closing edge for closed polygons)
-  const edgeCount = polygon.length; // For closed polygons, last edge connects last→first
-
-  for (let i = 0; i < edgeCount; i++) {
-    const startVertex = polygon[i];
-    const endVertex = polygon[(i + 1) % polygon.length]; // Wrap around for closed polygon
-
-    const start = overlayVertexToPoint2D(startVertex);
-    const end = overlayVertexToPoint2D(endVertex);
-
-    // Use existing utility for edge detection
-    if (isPointNearLineSegment(point, start, end, tolerance)) {
-      const insertPoint = getClosestPointOnLineSegment(point, start, end);
-      // 🏢 ADR-065: Use centralized distance calculation
-      const distance = calculateDistance(point, insertPoint);
-
-      // Don't allow insertion too close to existing vertices
-      const startDist = calculateDistance(insertPoint, start);
-      const endDist = calculateDistance(insertPoint, end);
-
-      // Minimum distance from existing vertices (2x tolerance)
-      if (startDist > tolerance * 2 && endDist > tolerance * 2) {
-        if (!closestEdge || distance < closestEdge.distance) {
-          closestEdge = {
-            edgeIndex: i,
-            insertPoint,
-            insertIndex: i + 1, // Insert after vertex i
-            distance
-          };
-        }
-      }
-    }
-  }
-
-  return closestEdge ? {
-    edgeIndex: closestEdge.edgeIndex,
-    insertPoint: closestEdge.insertPoint,
-    insertIndex: closestEdge.insertIndex
-  } : null;
+): EdgeGripInsertion | null {
+  // Τα overlays είναι ΠΑΝΤΑ κλειστά πολύγωνα → μετρά και η ακμή τελευταία→πρώτη. Η μόνη άλλη
+  // δουλειά εδώ είναι η μετατροπή μορφής· η αναζήτηση είναι η ΙΔΙΑ (N.18).
+  return findEdgeForGripInsertion(point, polygon.map(overlayVertexToPoint2D), tolerance, true);
 }
 
 /**

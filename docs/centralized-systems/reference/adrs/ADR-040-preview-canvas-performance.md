@@ -4862,3 +4862,24 @@ inline μέσα στο hook. Ο editor το **χρησιμοποιεί** αντ�
 `npx jest --testPathPatterns="(bim-3d|dxf-layout|canvas-layer)"` → **316 suites / 2789 tests GREEN**·
 +33 νέα tests (`text-edit-session`, `text-edit-anchor-3d`, `use-bim3d-text-double-click-editor`)·
 `jscpd:diff` καθαρό (11 αρχεία). ΟΧΙ tsc (N.17). 🔴 verify+commit (Giorgio).
+
+---
+
+### 2026-07-28 (b) — `CanvasSection`: threading του `levelManager` στο `entityMenuHost` (ADR-718 §Β, CHECK 6B stage, μηδέν αρχιτεκτονική αλλαγή)
+
+**Καμία αρχιτεκτονική αλλαγή στο `CanvasSection`.** Μία γραμμή, ένα prop παραπάνω στο
+pass-through object του `entityMenuHost`: `levelManager` — το ίδιο στιγμιότυπο που ήδη περνά
+αυτούσιο σε `quickMini` και `propertiesPalette` στην **αμέσως επόμενη** γραμμή. Καμία νέα
+συνδρομή, κανένα `useSyncExternalStore` (κανόνας 1), κανένα άγγιγμα στο bitmap cache key
+(κανόνας 3).
+
+**Γιατί χρειάστηκε.** Το `PEDIT Close / Open` (ADR-718 §Β) εκτελείται μέσω
+`SetPolylineClosureCommand`, που —σε αντίθεση με ένα σκέτο `UpdateEntityCommand`— τρέχει το
+universal `reconcileAssociativeGeometry` σε execute/undo/redo. Ο reconciler χρειάζεται τον
+`levelManager` για να φτάσει στη σκηνή του τρέχοντος ορόφου· χωρίς αυτόν το μενού οντότητας
+θα καλούσε τον command με μισό context και ο cascade θα έμενε σιωπηλά ανενεργός — δηλαδή
+**ακριβώς** το σφάλμα που το ίδιο το §Β διόρθωσε στον `PolylineVertexCommand`.
+
+**Ο `levelManager` δεν είναι υψίσυχνο store.** Είναι το ίδιο αντικείμενο-manager που το
+`CanvasSection` ήδη κρατά και διανέμει· η ταυτότητά του αλλάζει σε αλλαγή ορόφου, όχι ανά
+frame. Το να περάσει σε τρίτο καταναλωτή δεν προσθέτει καμία υψίσυχνη διαδρομή.
