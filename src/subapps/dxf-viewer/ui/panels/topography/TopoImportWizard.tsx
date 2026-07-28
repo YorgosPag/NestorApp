@@ -23,6 +23,7 @@ import { X } from 'lucide-react';
 import { WizardProgress } from '../../components/WizardProgress';
 import { TopoColumnMapStep } from './TopoColumnMapStep';
 import { TopoCloudStep } from './TopoCloudStep';
+import { TopoImportPointSummary } from './TopoImportPointSummary';
 import { useTopoImport } from './useTopoImport';
 import type { TopoSurfaceId } from '../../../systems/topography/topo-types';
 import styles from './TopoImportWizard.module.css';
@@ -95,10 +96,11 @@ export function TopoImportWizard({ onClose, onImported, surface = 'existing' }: 
 
           {step === 'confirm' && (
             <section className={styles.step}>
-              <p className={styles.summary}>{t('topography.import.confirmCount', { count: wizard.points.length })}</p>
-              {wizard.skippedCount > 0 && (
-                <p className={styles.status}>{t('topography.import.previewSkipped', { count: wizard.skippedCount })}</p>
-              )}
+              <TopoImportPointSummary
+                coverage={wizard.coverage}
+                skippedCount={wizard.skippedCount}
+                tone="confirm"
+              />
               <p className={styles.hint}>{t('topography.import.confirmHint')}</p>
             </section>
           )}

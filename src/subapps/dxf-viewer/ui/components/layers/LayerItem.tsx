@@ -25,6 +25,7 @@ import { useUniversalSelection } from '../../../systems/selection';
 // ADR-719 §5 — το εικονίδιο ορατότητας διαβάζει τον ΙΔΙΟ SSoT με τον renderer (LayerStore),
 // όχι το prop `scene`. Αλλιώς UI και καμβάς μπορούν να αποκλίνουν σιωπηλά (§2 incident).
 import { useIsLayerOn } from '../../../stores/useLayerStore';
+import { getLayer } from '../../../stores/LayerStore';
 import { nextLayerOnState } from '../../../config/layer-visibility';
 
 export interface LayerItemProps {
@@ -231,7 +232,14 @@ export function LayerItem({
 
   const handleVisibilityToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onLayerToggle?.(layerName, !layer.visible);
+    // ADR-719 §1 — `nextLayerOnState` αντί για `!layer.visible`: με `visible: undefined` το
+    // `!undefined` έδινε `true`, δηλαδή «κάν' το ορατό» ενώ ΗΔΗ ήταν ορατό. Το πρώτο κλικ δεν
+    // έκανε τίποτα και ο χρήστης χρειαζόταν δεύτερο για να δει αλλαγή.
+    //
+    // Event-time read από τον store (ADR-040 δόγμα: getter τη στιγμή του γεγονότος, όχι
+    // snapshot από το render) — έτσι το toggle παραμένει σωστό ακόμη κι αν ένα μελλοντικό
+    // `React.memo` παγώσει αυτό το render.
+    onLayerToggle?.(layerName, nextLayerOnState(getLayer(layer.id)));
   };
 
   const handleEditClick = (e: React.MouseEvent) => {
@@ -250,7 +258,7 @@ export function LayerItem({
     <>
       <div
         className={`flex items-center justify-between ${PANEL_LAYOUT.SPACING.SM} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.CURSOR.POINTER} ${PANEL_LAYOUT.TRANSITION.ALL} ${getDirectionalBorder('muted', 'left')} ${
-          layer.visible ? `${colors.bg.secondary} ${HOVER_BACKGROUND_EFFECTS.LIGHT}` : `${colors.bg.primary} ${PANEL_LAYOUT.OPACITY['60']}`
+          isOn ? `${colors.bg.secondary} ${HOVER_BACKGROUND_EFFECTS.LIGHT}` : `${colors.bg.primary} ${PANEL_LAYOUT.OPACITY['60']}`
         } ${selectedLayersForMerge.has(layerName) ? `ring-2 ${colors.ring.info} ${colors.bg.selection}` : ''}`}
         onClick={handleLayerClick}
       >
@@ -357,13 +365,13 @@ export function LayerItem({
             <TooltipTrigger asChild>
               <button
                 onClick={handleVisibilityToggle}
-                aria-label={layer.visible ? t('layerActions.hide') : t('layerActions.show')}
+                aria-label={isOn ? t('layerActions.hide') : t('layerActions.show')}
                 className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
               >
-                {layer.visible ? <Eye className={iconSizes.xs} /> : <EyeOff className={iconSizes.xs} />}
+                {isOn ? <Eye className={iconSizes.xs} /> : <EyeOff className={iconSizes.xs} />}
               </button>
             </TooltipTrigger>
-            <TooltipContent>{layer.visible ? t('layerActions.hide') : t('layerActions.show')}</TooltipContent>
+            <TooltipContent>{isOn ? t('layerActions.hide') : t('layerActions.show')}</TooltipContent>
           </Tooltip>
 
           {/* Edit Button — hidden for system layer "0" */}

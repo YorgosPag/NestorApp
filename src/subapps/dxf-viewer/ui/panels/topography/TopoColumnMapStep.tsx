@@ -8,12 +8,14 @@
  *
  * The grid itself is `TopoColumnMapTable` — shared with the ASCII point-cloud step since M8β/Δ,
  * because both roads ask the surveyor the same question and take the same `ColumnMapping` answer.
- * What stays HERE is what is specific to the table road: the live «N points / M skipped» count.
+ * What stays HERE is what is specific to the table road: the live count underneath, which since
+ * ADR-720 is `TopoImportPointSummary` — the same component the confirm step renders, so the two
+ * screens cannot drift into describing the same file differently.
  */
 
 import * as React from 'react';
-import { useTranslation } from '@/i18n';
 import { TopoColumnMapTable } from './TopoColumnMapTable';
+import { TopoImportPointSummary } from './TopoImportPointSummary';
 import type { UseTopoImport } from './useTopoImport';
 import styles from './TopoImportWizard.module.css';
 
@@ -22,7 +24,6 @@ interface Props {
 }
 
 export function TopoColumnMapStep({ wizard }: Props): React.JSX.Element | null {
-  const { t } = useTranslation('dxf-viewer-panels');
   const { table, mapping, unit } = wizard;
 
   if (!table) return null;
@@ -39,10 +40,11 @@ export function TopoColumnMapStep({ wizard }: Props): React.JSX.Element | null {
         onUnit={wizard.setUnit}
       />
 
-      <p className={styles.status}>
-        {t('topography.import.previewCount', { count: wizard.points.length })}
-        {wizard.skippedCount > 0 ? ` · ${t('topography.import.previewSkipped', { count: wizard.skippedCount })}` : ''}
-      </p>
+      <TopoImportPointSummary
+        coverage={wizard.coverage}
+        skippedCount={wizard.skippedCount}
+        tone="preview"
+      />
     </section>
   );
 }

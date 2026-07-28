@@ -26,6 +26,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { useTranslation } from '@/i18n';
 // ADR-358 Phase 9E-4: compat bridge for name-keyed layer lookup.
 import { getSceneLayerByName } from '../../../utils/scene-layer-utils';
+// ADR-719 §5 — ομαδικός διακόπτης από τον runtime SSoT (ίδια πηγή με τον renderer).
+import { useLayerGroupOnState } from '../../../stores/useLayerStore';
 
 interface ColorGroupItemProps extends Pick<ColorGroupCommonProps, 
   'setExpandedColorGroups' | 'setColorPickerColorGroup' | 'setEditingColorGroup' | 
@@ -92,9 +94,20 @@ export function ColorGroupItem({
     },
   });
 
-  // undefined treated as visible (canvas defaults entity.visible ?? true)
-  const allVisible = layerNames.every((layerName: string) => getSceneLayerByName(scene, layerName)?.visible !== false);
-  const someVisible = layerNames.some((layerName: string) => getSceneLayerByName(scene, layerName)?.visible !== false);
+  // ADR-358 name→id γέφυρα: ο `LayerStore` είναι **id-keyed** (`getLayerKey = layer.id ?? name`,
+  // και κάθε layer φέρει `lyr_<uuid>`), άρα ένα `getLayer(<όνομα>)` θα επέστρεφε πάντα `null`.
+  // Η ομάδα κρατά ονόματα (legacy συμβόλαιο του panel) — τα μεταφράζουμε εδώ, μία φορά.
+  const layerIds = layerNames
+    .map((layerName: string) => getSceneLayerByName(scene, layerName)?.id)
+    .filter((id): id is string => !!id);
+
+  // ADR-719 §5 — ο ομαδικός διακόπτης διαβάζει τον runtime SSoT (LayerStore), τον ΙΔΙΟ που
+  // συμβουλεύεται ο renderer, αντί για το prop `scene`. Το κατηγόρημα (`visible !== false`)
+  // ζει πλέον μία φορά στο `config/layer-visibility` — ήταν σωστό εδώ αλλά λάθος στο
+  // `LayerItem`, δηλαδή δύο αδελφά components απαντούσαν διαφορετικά στο ίδιο ερώτημα.
+  const groupOnState = useLayerGroupOnState(layerIds);
+  const allVisible = groupOnState === 'all';
+  const someVisible = groupOnState !== 'none';
 
   const handleExpandToggle = (e: React.MouseEvent) => {
     e.stopPropagation();

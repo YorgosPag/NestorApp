@@ -6,10 +6,10 @@
  * by accident.
  */
 
-import { applyColumnMapping, isMappingComplete, suggestMappingFromHeaders } from '../topo-column-mapping';
+import { applyColumnMapping, hasPositionMapping, isMappingComplete, suggestMappingFromHeaders } from '../topo-column-mapping';
 import { getOrderPresetMapping } from '../topo-order-presets';
 import { readDelimitedText } from '../topo-delimited-reader';
-import type { RawTable } from '../topo-import-types';
+import type { ColumnRole, RawTable } from '../topo-import-types';
 import type { TopoPoint } from '../topo-types';
 
 const table = (rows: string[][], headers: string[] = []): RawTable => ({ headers, rows });
@@ -72,9 +72,61 @@ describe('applyColumnMapping — resilience', () => {
     expect(skipped).toEqual([2]);
   });
 
-  it('yields nothing when X/Y/Z are not all mapped (mapping is incomplete)', () => {
-    expect(isMappingComplete(['x', 'y', 'ignore'])).toBe(false);
-    expect(applyColumnMapping(table([['10', '20', '5']]), ['x', 'y', 'ignore']).points).toEqual([]);
+  it('yields nothing when the POSITION is not mapped', () => {
+    expect(hasPositionMapping(['x', 'ignore', 'z'])).toBe(false);
+    expect(applyColumnMapping(table([['10', '20', '5']]), ['x', 'ignore', 'z']).points).toEqual([]);
+  });
+});
+
+/**
+ * ADR-720 — a survey point without an elevation is data, not an error.
+ *
+ * Measured 2026-07-28 on the survey that forced this: 7 of the 9 parcel corners were CSV points
+ * matching the boundary polyline to 2–6 mm, and NOT ONE carried an elevation. The importer's
+ * `z === null → return null` therefore deleted precisely the parcel and kept the neighbours'
+ * spot heights — which is why the corners appeared to «fall outside the plot».
+ */
+describe('applyColumnMapping — points measured in plan only (ADR-720)', () => {
+  const xyz = () => getOrderPresetMapping('XYZ')!;
+
+  it('imports a row with an EMPTY elevation cell instead of skipping it', () => {
+    const { points, skipped } = applyColumnMapping(
+      table([['10', '20', '5'], ['11', '21', ''], ['12', '22', '7']]),
+      xyz(),
+    );
+    expect(skipped).toEqual([]);
+    expect(points).toHaveLength(3);
+    expect(points[1]).toEqual({ x: 11000, y: 21000 });
+  });
+
+  it('omits the `z` KEY rather than storing `undefined` (one shape for "no elevation")', () => {
+    const { points } = applyColumnMapping(table([['11', '21', '']]), xyz());
+    expect(Object.prototype.hasOwnProperty.call(points[0]!, 'z')).toBe(false);
+  });
+
+  it('still refuses a row with no POSITION — an empty Z is not an empty X', () => {
+    const { points, skipped } = applyColumnMapping(table([['', '21', '6']]), xyz());
+    expect(points).toEqual([]);
+    expect(skipped).toEqual([1]);
+  });
+
+  it('imports a file with NO elevation column at all (Civil 3D `<unused>` / LandXML 2D CgPoint)', () => {
+    // The parcel-corner export a surveyor sends when you asked for the boundary: X and Y only.
+    const mapping: ColumnRole[] = ['x', 'y'];
+    expect(hasPositionMapping(mapping)).toBe(true);
+    expect(isMappingComplete(mapping)).toBe(false); // the CLOUD road's stricter gate still says no
+
+    const { points, skipped } = applyColumnMapping(table([['10', '20'], ['11', '21']]), mapping);
+    expect(skipped).toEqual([]);
+    expect(points).toEqual([{ x: 10000, y: 20000 }, { x: 11000, y: 21000 }]);
+  });
+
+  it('keeps the code and point number on a planimetric point (identity is not elevation)', () => {
+    const { points } = applyColumnMapping(
+      table([['52', '10', '20', '', 'CORNER']]),
+      ['pointId', 'x', 'y', 'z', 'code'],
+    );
+    expect(points[0]).toEqual({ x: 10000, y: 20000, pointNumber: '52', code: 'CORNER' });
   });
 });
 
