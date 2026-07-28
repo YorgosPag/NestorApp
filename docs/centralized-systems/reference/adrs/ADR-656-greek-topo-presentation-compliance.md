@@ -117,10 +117,23 @@
 (`adaptEntityColorForCanvas`). Πρέπει να επιβεβαιωθεί ότι το καφέ φτάνει στον καμβά κατά την υλοποίηση M9.
 
 ### 3.2 Έλλειψη 2 — Labels σημείων — GREENFIELD
-- **Τα raw survey points ΔΕΝ ζωγραφίζονται καθόλου** σήμερα· **κανένα** point-label rendering δεν υπάρχει.
-- Μοντέλο `systems/topography/topo-types.ts:22` `TopoPoint {x,y,z,code?}` — **δεν έχει `pointNumber`**. Το
-  `pointId` αναγνωρίζεται στο mapping (`topo-column-mapping.ts HEADER_HINTS`) αλλά **απορρίπτεται** στο
-  `mapRowToPoint:100-113` (κρατά μόνο x,y,z,code).
+
+> ⚠️ **ΙΣΤΟΡΙΚΟ ΣΤΙΓΜΙΟΤΥΠΟ (2026-07-15, ΠΡΙΝ το M10).** Το §3 καταγράφει τι **έλειπε** τη στιγμή της
+> έρευνας. Το M10 υλοποιήθηκε (v3) και το έκλεισε. Διορθώθηκε 2026-07-28 (N.0.1 Φάση 1) γιατί οι
+> προτάσεις ήταν σε **ενεστώτα** και διάβαζαν ως ζωντανοί ισχυρισμοί — δηλαδή έλεγαν ψέματα για τον
+> τρέχοντα κώδικα. **Ο κώδικας είναι η αλήθεια.** Τι ισχύει σήμερα:
+> - `TopoPoint` **ΕΧΕΙ** `pointNumber?` (`topo-types.ts`) και το `mapRowToPoint` **το διαδίδει**
+>   (`topo-column-mapping.ts`, «carry the surveyor's point number/name through, verbatim»).
+> - Τα survey points **ζωγραφίζονται** — ως ψημένες οντότητες `point`+`text` μέσω του
+>   `buildSurveyPointLabelEntities` / `useTopoPointLabels`. Παραμένει σωστό ότι **δεν** υπάρχει
+>   αφιερωμένο canvas layer: η επιλογή ήταν ρητή (ADR-057 ⇒ undo/persist/render/export/OSNAP δωρεάν).
+> - `TopoPoint.z` έγινε **προαιρετικό** στο **ADR-720**: σημείο χωρίς υψόμετρο μπαίνει ως δισδιάστατο
+>   και εξαιρείται από την επιφάνεια. Η ετικέτα του γράφει «—».
+
+- **Τα raw survey points ΔΕΝ ζωγραφίζονταν καθόλου** τότε· **κανένα** point-label rendering δεν υπήρχε.
+- Μοντέλο `systems/topography/topo-types.ts:22` `TopoPoint {x,y,z,code?}` — **δεν είχε `pointNumber`**. Το
+  `pointId` αναγνωριζόταν στο mapping (`topo-column-mapping.ts HEADER_HINTS`) αλλά **απορριπτόταν** στο
+  `mapRowToPoint` (κρατούσε μόνο x,y,z,code).
 - Οι **κορυφές ορίου με Χ/Υ/Ζ υπάρχουν ήδη** (μόνο για export tables): `deliverables/survey-tables.ts:94`
   `buildPlotMeasurements` (Z sampled από TIN via `sampler.zAtMm`). Boundary στο `TopoPointStore`
   (`setTopoBoundary:132`, τύπος `TopoBoundary:120`). Pick handler `hooks/canvas/canvas-click-topo-boundary.ts:38`.
@@ -209,6 +222,18 @@
 ---
 
 ## Changelog
+- **v6** (2026-07-28): **M10 ετικέτες — η περίπτωση «χωρίς υψόμετρο» (→ [ADR-720](./ADR-720-survey-points-without-elevation.md)).**
+  Το `TopoPoint.z` έγινε προαιρετικό, οπότε το `buildSurveyPointLabelEntities` απέκτησε **δεύτερη
+  παρουσίαση**: γεμάτη κουκκίδα (`dot`) + δεκαδικό για μετρημένο σημείο· **ανοιχτός κύκλος** (`circle`)
+  + «**—**» για σημείο μετρημένο μόνο σε θέση. Δύο νέες σταθερές στο `topo-point-label-config`
+  (`TOPO_ELEVATION_ABSENT_LABEL`, `TOPO_POINT_MEASURED_STYLE` / `TOPO_POINT_PLANIMETRIC_STYLE`) — **όχι**
+  i18n keys: σημεία στίξης και glyphs είναι **περιεχόμενο σχεδίου**, που πρέπει να διαβάζεται ίδιο σε
+  κάθε γλώσσα, ακριβώς όπως το υπάρχον `TOPO_SPOT_BULLET`.
+  🔴 **Ο κόμβος εκπέμπεται ΚΑΙ για το δισδιάστατο σημείο** — εκεί είναι όλη του η αξία: επειδή είναι
+  πραγματική οντότητα `point` μέσω `completeEntity` (ADR-057), η κορυφή του οικοπέδου γίνεται ορατή
+  **και ελκτή (OSNAP) χωρίς καμία γραμμή κώδικα έλξης**, ώστε ο χρήστης να χαράξει πάνω της το όριο.
+  Επίσης: το §3.2 σημάνθηκε ρητά ως **ιστορικό στιγμιότυπο** (N.0.1 Φάση 1) — οι προτάσεις του σε
+  ενεστώτα («ο `TopoPoint` δεν έχει `pointNumber`») είχαν πάψει να ισχύουν από το ίδιο το M10.
 - **v5** (2026-07-15): **M12 ΥΛΟΠΟΙΗΘΗΚΕ — Βέλος Βορρά (Κανάβου / Πραγματικός, επιλογή UI).** Απάντηση στο
   ερώτημα «ξέρουμε τον Βορρά από τις συντεταγμένες;» → **ναι**: Βορράς Κανάβου = +Northing (γνωστός με βεβαιότητα
   σε ΕΓΣΑ87)· Πραγματικός = + **σύγκλιση μεσημβρινών γ** (υπολογίσιμη). Απόφαση Giorgio: **και τα δύο, default

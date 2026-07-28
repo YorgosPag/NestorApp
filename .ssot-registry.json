@@ -4873,6 +4873,20 @@
         "src/subapps/dxf-viewer/types/three-gpu-pathtracer.d.ts"
       ],
       "tier": 3
+    },
+    "topo-point-elevation": {
+      "ssotFile": "src/subapps/dxf-viewer/systems/topography/topo-point-elevation.ts",
+      "description": "ADR-720 - the ONE owner of `does this survey point carry a measured elevation, and what follows from the answer?`. `TopoPoint.z` is OPTIONAL: a shot with a position but no Z is ordinary survey data (LandXML `CgPoint` = a 2D or 3D Point; OGC SF `Point` vs `PointZ`; Civil 3D elevation = optional property with an `<unused>` column value; Carlson `Non-Surface`). Measured 2026-07-28 on a real survey: 7 of the 9 parcel corners were CSV points matching the boundary to 2-6 mm and NOT ONE had an elevation, so the importer's `z === null -> return null` deleted the parcel itself and kept the neighbours' spot heights. The regression this guards is a SECOND answer to the question. `surfacePointsOf` is THE surface filter and is called at the top of `buildTin`, the single door into the triangulation, so eight derived products (contours, 3D terrain, cut/fill volumes, plan footprint, cut cap, areas, deliverable tables, QA) inherit the exclusion without a line changing in any of them - the same reasoning that puts the ADR-718 crop in `topo-surface` and not in its consumers. A private re-implementation in one consumer makes that consumer disagree with the other seven about what the ground IS. NOT GUARDED BY REGEX, GUARDED BY REVIEW: `point.z ?? 0` / `point.z || 0` on a TopoPoint. A fabricated 0 is indistinguishable from a measured sea-level shot, triangulates into a crater, and the crater is priced as excavation. It is deliberately NOT a forbiddenPattern because `.z ?? 0` is a legitimate 2D->3D promotion idiom with 125 valid occurrences elsewhere in the repo; blocking it globally would be ~125 false positives and would fail Google's <=10% false-positive bar for a blocking check (same trap as the N.12 note on CHECK 3.18). Use `hasElevation` to narrow to `TopoPoint3D`; NEVER substitute a value.",
+      "forbiddenPatterns": [
+        "export\\s+(function|const)\\s+hasElevation\b",
+        "(function|const)\\s+\\w*(surfacePointsOf|describeElevationCoverage)\\w*\\s*[(<=]"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/systems/topography/topo-point-elevation.ts"
+      ],
+      "addedDate": "2026-07-28",
+      "addedByAdr": "ADR-720",
+      "tier": 3
     }
   }
 }
