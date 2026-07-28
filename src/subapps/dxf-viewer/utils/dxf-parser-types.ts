@@ -348,8 +348,17 @@ export interface LayerColorEntry {
   colorIndex: number;
   /** Resolved hex color from ACI palette */
   color: string;
-  /** Layer visibility (code 62 negative = frozen) */
+  /**
+   * AutoCAD `LAYON` — ο **διακόπτης** του layer (code 62 **αρνητικό** ⇒ σβηστό).
+   *
+   * ⚠️ Το παλιό σχόλιο εδώ έλεγε «code 62 negative = frozen» και **ταύτιζε δύο διαφορετικά
+   * πράγματα**. Το AutoCAD κρύβει ένα layer με **δύο ανεξάρτητους** μηχανισμούς: OFF (62<0)
+   * και FROZEN (group 70 bit 0). Η σύγχυση στο σχόλιο αντικατόπτριζε σύγχυση στον κώδικα:
+   * το `frozen` δεν διαβαζόταν καθόλου ⇒ παγωμένα layers **εμφανίζονταν**.
+   */
   visible: boolean;
+  /** AutoCAD `LAYFRZ` — group 70 bit 0. Ανεξάρτητο από το `visible`· βλ. `isLayerRenderable`. */
+  frozen: boolean;
 }
 
 /** Map of layer names to their color properties */

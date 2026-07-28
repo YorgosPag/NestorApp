@@ -10,7 +10,9 @@ import type { HitTestOptions } from './hit-tester-types';
 import { BoundingBox, BoundsCalculator } from './Bounds';
 import { getLayerNameOrDefault } from '../../config/layer-config';
 // 🏢 ADR-358 Phase 9D-5b-i: id-first resolver SSoT (collapsed in 9D-5b-i — id-only).
-import { resolveEntityLayerName } from '../../stores/LayerStore';
+// ADR-721 — `isLayerIdPickable` = ο SSoT του «μπορεί να πιαστεί οντότητα αυτού του layer;»
+// (ζωντανή ανάγνωση store + `isLayerRenderable`). Ο renderer ρωτά το ίδιο· τώρα και το picking.
+import { isLayerIdPickable, resolveEntityLayerName } from '../../stores/LayerStore';
 import { createInfinityBounds, isInfinityBounds, isFiniteBounds } from '../../config/geometry-constants';
 
 /** Calculate bounds from an array of entities */
@@ -88,6 +90,19 @@ export function calculatePriority(entity: Entity): number {
 export function passesFilters(entity: Entity, options: HitTestOptions): boolean {
   const entityWithVisibility = entity as { visible?: boolean };
   if (!options.includeInvisible && entityWithVisibility.visible === false) return false;
+
+  // 🔴 ΑΝ ΔΕΝ ΖΩΓΡΑΦΙΖΕΤΑΙ, Ο ΚΕΡΣΟΡΑΣ ΔΕΝ ΤΟ ΒΡΙΣΚΕΙ (2026-07-29).
+  //
+  // Ο έλεγχος από πάνω ρωτά την **οντότητα** («entity.visible»)· κανείς δεν ρωτούσε το
+  // **layer** της. Αποτέλεσμα: οντότητες σε παγωμένο/σβηστό layer ήταν αόρατες αλλά
+  // **hover-άρονταν, φωτίζονταν και επιλέγονταν** — ο χρήστης «έπιανε» πράγματα που δεν
+  // έβλεπε. Το ίδιο ερώτημα («ζωγραφίζεται αυτό το layer;») το απαντά ο SSoT
+  // `isLayerRenderable` (ADR-721), τον οποίο ήδη ρωτά ο renderer.
+  //
+  // AutoCAD doctrine: το `LAYFRZ` βγάζει το αντικείμενο από regen/επιλογή. Fail-open όταν
+  // το layer δεν βρίσκεται στο store — ίδια στάση με τον renderer: σπασμένο `layerId` δεν
+  // πρέπει να εξαφανίζει σιωπηλά τη δυνατότητα επιλογής.
+  if (!options.includeInvisible && !isLayerIdPickable(entity.layerId)) return false;
 
   // ADR-358 Phase 9D-5b-i: id-only resolver SSoT — layerFilter matches by display name.
   const entityLayer = resolveEntityLayerName(entity);

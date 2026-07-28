@@ -119,6 +119,14 @@ describe('block-expander ATTDEF guard (ADR-635 Φάση B Batch 2)', () => {
     expect(texts[0].text).toBe('REAL');
     expect(texts.some(t => t.text === 'N/A')).toBe(false);
     // Η geometry του block πρέπει να παραμένει (guard δεν σκοτώνει το block).
-    expect(es.some(e => e.type === 'line')).toBe(true);
+    //
+    // ⚠️ **Η ΜΟΡΦΗ ΑΛΛΑΞΕ, Η ΑΠΑΙΤΗΣΗ ΟΧΙ** (ADR-639 block system): το INSERT δεν εκρήγνυται
+    // πλέον σε χύμα top-level entities — παράγει **μία** οντότητα `block` που κρατά τα παιδιά
+    // της. Το παλιό `es.some(e => e.type === 'line')` έψαχνε στη ρίζα και κοκκίνιζε, ενώ η
+    // γραμμή ήταν μια χαρά μέσα στο block. Ελέγχουμε τώρα **εκεί που ζει**, όχι ασθενέστερα.
+    const block = es.find(e => e.type === 'block') as unknown as
+      { entities?: Array<{ type: string }> } | undefined;
+    expect(block).toBeDefined();
+    expect(block!.entities?.some(child => child.type === 'line')).toBe(true);
   });
 });

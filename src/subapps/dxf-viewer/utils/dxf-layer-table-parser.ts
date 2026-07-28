@@ -31,6 +31,7 @@
 
 import { getAciColor } from '../settings/standards/aci';
 import { trueColorToHex } from './dxf-true-color';
+import { isFrozenFlag, isLockedFlag } from './dxf-layer-flags';
 import {
   parseDxfCode370,
 } from '../config/lineweight-iso-catalog';
@@ -198,9 +199,11 @@ function buildSceneLayer(draft: MutableLayerDraft, warnings: ParseLayerWarning[]
   const aciRaw = draft.colorAci ?? 7;
   const visible = aciRaw >= 0;
   const aci = Math.abs(aciRaw) || 7;
+  // Bit semantics = SSoT στο `dxf-layer-flags` (ο legacy reader ρωτά το ΙΔΙΟ — αλλιώς ο ένας
+  // parser αποφασίζει «παγωμένο» και ο άλλος όχι, για το ίδιο αρχείο).
   const flag = draft.flag ?? 0;
-  const frozen = (flag & 1) !== 0;
-  const locked = (flag & 4) !== 0;
+  const frozen = isFrozenFlag(flag);
+  const locked = isLockedFlag(flag);
 
   const linetypeRequested = draft.linetypeName ?? DEFAULT_LINETYPE_NAME;
   const resolved = resolveLinetype(linetypeRequested);

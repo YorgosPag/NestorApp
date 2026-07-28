@@ -77,6 +77,19 @@ function noteUnsupportedType(diagnostics: ImportDiagnostics | undefined, value: 
   recordSkipped(diagnostics, value);
 }
 
+/**
+ * Ακέραιο DXF sysvar (group 70) που **κρατά το νόμιμο μηδέν**: `null` σημαίνει «δεν διαβάστηκε
+ * αριθμός», ώστε ο caller να βάλει το δικό του default με `??` αντί για `||`.
+ *
+ * Υπάρχει επειδή το `parseInt(v) || DEFAULT` συγχέει το `0` με την αποτυχία — και στα sysvars
+ * που διαβάζουμε το `0` είναι **σημαίνουσα τιμή** (`$INSUNITS 0` = unitless, `$MEASUREMENT 0` =
+ * English). Βλ. το σχόλιο στο `switch` του `parseHeader`.
+ */
+function parseIntSysvar(value: string): number | null {
+  const n = parseInt(value, 10);
+  return Number.isFinite(n) ? n : null;
+}
+
 // ============================================================================
 // 🏢 ENTERPRISE: DXF ENTITY PARSER CLASS
 // ============================================================================
@@ -133,8 +146,20 @@ export class DxfEntityParser {
       }
 
       switch (currentVariable) {
+        // 🔴 ΤΟ ΜΗΔΕΝ ΕΙΝΑΙ ΤΙΜΗ, ΟΧΙ ΑΠΟΥΣΙΑ (2026-07-29). Το ιδίωμα `parseInt(v) || DEFAULT`
+        // δεν ξεχωρίζει «απόν/άκυρο» από «νόμιμο 0» — και **τα δύο** επόμενα sysvars έχουν
+        // σημαίνον 0, οπότε το `||` τα κατάπινε σιωπηλά:
+        //   • `$INSUNITS 0` = **unitless**. Η σκάλα τεκμηρίων (ADR-716 σκαλί 2) απαιτεί ρητά
+        //     `≠ 0` για να **απέχει** και να πέσει στην ευρετική — και το
+        //     `insunitsCodeToSceneUnits` επιστρέφει `null` στο 0 «ώστε ο caller να πέσει στο
+        //     `detectSceneUnits`» (`scene-units.ts:427`). Με `0 → 4` το unitless γινόταν
+        //     **«δηλωμένα χιλιοστά»**: ο κλάδος abstain ήταν αναλλοίωτα νεκρός.
+        //   • `$MEASUREMENT 0` = **English** ⇒ `acad.pat` (ορισμοί μοτίβου σε ίντσες). Με
+        //     `0 → 1` κάθε imperial αρχείο διαβαζόταν ως metric.
+        // Απουσία της μεταβλητής κρατά τα defaults του αρχικοποιητή (μηδέν regression) — αλλάζει
+        // **μόνο** η συμπεριφορά για αρχεία που δηλώνουν ρητά 0.
         case '$INSUNITS':
-          if (code === '70') header.insunits = parseInt(value) || 4;
+          if (code === '70') header.insunits = parseIntSysvar(value) ?? 4;
           break;
         case '$DIMSCALE':
           if (code === '40') header.dimscale = parseFloat(value) || 1;
@@ -146,7 +171,7 @@ export class DxfEntityParser {
           if (code === '40') header.annoScale = parseFloat(value) || 1;
           break;
         case '$MEASUREMENT':
-          if (code === '70') header.measurement = parseInt(value) || 1;
+          if (code === '70') header.measurement = parseIntSysvar(value) ?? 1;
           break;
         // ADR-635 Φάση C — point display sysvars (drawing-wide glyph mode + size).
         case '$PDMODE':

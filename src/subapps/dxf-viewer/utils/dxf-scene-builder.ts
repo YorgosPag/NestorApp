@@ -433,6 +433,10 @@ export class DxfSceneBuilder {
 
       // Try 1+2: LAYER table → COLOR_X name (shared SSoT). Try 3: hash-based fallback.
       const visible = layerColors[layerName]?.visible ?? true;
+      // AutoCAD κρύβει με ΔΥΟ ανεξάρτητους μηχανισμούς — OFF (62<0) **και** FROZEN (70 bit 0).
+      // Το δεύτερο δεν περνούσε ποτέ ⇒ παγωμένα layers εμφανίζονταν (μετρημένο: 8 layers /
+      // ~700 οντότητες στο `47_ergasia.dxf`). Ο συνδυασμός γίνεται στο `isLayerRenderable`.
+      const frozen = layerColors[layerName]?.frozen ?? false;
       const resolvedColor = resolveLayerColor(layerName, layerColors) ?? getLayerColor(layerName);
 
       // ADR-358 Phase 9C/9D-2 — factory auto-gens stable `lyr_<UUID-v4>` id.
@@ -444,6 +448,7 @@ export class DxfSceneBuilder {
         sourceName: layerName,
         color: resolvedColor,
         visible,
+        frozen,
         locked: false,
       });
     }

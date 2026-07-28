@@ -10,6 +10,7 @@
 
 import { getAciColor } from '../settings/standards/aci';
 import { DXF_DEFAULT_LAYER } from '../config/layer-config';
+import { isFrozenFlag } from './dxf-layer-flags';
 import type { DimStyleEntry, DimStyleMap, LayerColorEntry, LayerColorMap } from './dxf-parser-types';
 import { DEFAULT_DIMSTYLE, STANDARD_DIMSTYLE_NAME } from './dxf-parser-types';
 
@@ -21,6 +22,7 @@ import { DEFAULT_DIMSTYLE, STANDARD_DIMSTYLE_NAME } from './dxf-parser-types';
  * Commit a partially-parsed LAYER entry into the colour map (N.18 — this ran
  * verbatim at both `ENDTAB` and the next `0/LAYER`). A negative ACI colour index
  * is AutoCAD's "layer off" encoding: magnitude is the colour, sign is visibility.
+ * Το **πάγωμα** (group 70 bit 0) είναι ΞΕΧΩΡΙΣΤΟΣ μηχανισμός απόκρυψης — βλ. `dxf-layer-flags`.
  */
 function flushLayerEntry(
   entry: Partial<LayerColorEntry>,
@@ -32,7 +34,11 @@ function flushLayerEntry(
     name: entry.name,
     colorIndex: Math.abs(colorIndex),
     color: getAciColor(Math.abs(colorIndex)),
+    // ΔΥΟ ανεξάρτητοι μηχανισμοί απόκρυψης — τα κρατάμε χωριστά, τα συνδυάζει ο
+    // `isLayerRenderable` (config/layer-visibility). Folding τους σε ένα boolean θα έκρυβε
+    // το layer αλλά θα εμφάνιζε λάθος εικονίδιο/κατάσταση στο panel και θα έσπαγε το LAYTHW.
     visible: colorIndex >= 0,
+    frozen: entry.frozen ?? false,
   };
 }
 
@@ -256,7 +262,8 @@ export function parseLayerColors(lines: string[]): LayerColorMap {
     name: DXF_DEFAULT_LAYER,
     colorIndex: 7,
     color: getAciColor(7),
-    visible: true
+    visible: true,
+    frozen: false,
   };
 
   let inTablesSection = false;
@@ -327,6 +334,14 @@ export function parseLayerColors(lines: string[]): LayerColorMap {
         break;
       case '62':
         currentLayer.colorIndex = parseInt(value, 10) || 7;
+        break;
+      // 🔴 Ο ΔΕΥΤΕΡΟΣ ΜΗΧΑΝΙΣΜΟΣ ΑΠΟΚΡΥΨΗΣ (2026-07-29). Ο reader διάβαζε **μόνο** `2` και `62`,
+      // οπότε κάθε **παγωμένο** layer περνούσε ως ορατό. Μετρημένο στο `47_ergasia.dxf`:
+      // 8 παγωμένα layers / ~700 οντότητες που το AutoCAD **δεν δείχνει** — μεταξύ τους το
+      // `pl` (60 οντότητες), που είναι frozen αλλά με **θετικό** χρώμα ⇒ ο έλεγχος του 62
+      // δεν το έπιανε ποτέ.
+      case '70':
+        currentLayer.frozen = isFrozenFlag(parseInt(value, 10));
         break;
     }
 
