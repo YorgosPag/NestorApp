@@ -346,6 +346,26 @@ export const performanceMonitorUtilities = {
   getOverlayHeaderClasses: () => 'flex items-center justify-between p-2 border-b border-border cursor-grab pointer-events-auto',
   // ✅ ENTERPRISE FIX: Removed inline backgroundColor - using Tailwind classes for consistency
   getOverlayHeaderStyles: () => ({}),
+  /**
+   * ADR-723 — Θέση + δρομέας για καθεμία από τις 8 λαβές αλλαγής μεγέθους μιας αιωρούμενης
+   * παλέτας. Ζει δίπλα στα `getOverlayContainerClasses` / `getOverlayHeaderClasses` επειδή
+   * ανήκει στην **ίδια** οικογένεια tokens: είναι η γεωμετρία του ίδιου panel.
+   *
+   * Οι πλευρές είναι λωρίδες 6px (`*-1.5`): κάτω από ~5px η αστοχία του χρήστη γίνεται
+   * αισθητή (νόμος του Fitts· τα native περιγράμματα των Windows είναι ~4-8px). Οι γωνίες
+   * είναι 12×12 και **δηλώνονται μετά** τις πλευρές, ώστε να κερδίζουν στην επικάλυψη χωρίς
+   * z-index (σειρά στο DOM = σειρά στοίβαξης για αδέλφια με ίδιο z).
+   */
+  getOverlayResizeHandleClasses: (): Readonly<Record<string, string>> => ({
+    n: 'inset-x-0 top-0 h-1.5 cursor-ns-resize',
+    s: 'inset-x-0 bottom-0 h-1.5 cursor-ns-resize',
+    e: 'inset-y-0 right-0 w-1.5 cursor-ew-resize',
+    w: 'inset-y-0 left-0 w-1.5 cursor-ew-resize',
+    ne: 'top-0 right-0 size-3 cursor-nesw-resize',
+    nw: 'top-0 left-0 size-3 cursor-nwse-resize',
+    se: 'bottom-0 right-0 size-3 cursor-nwse-resize',
+    sw: 'bottom-0 left-0 size-3 cursor-nesw-resize',
+  }),
   // ✅ ENTERPRISE FIX: Return empty objects - use Tailwind classes in components for theme-aware colors
   getOverlayIconStyles: (type: string) => ({}),
   getOverlayTitleStyles: () => ({}),

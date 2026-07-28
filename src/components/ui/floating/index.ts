@@ -36,6 +36,47 @@ export type {
 } from './FloatingPanel';
 
 // ============================================================================
+// ADR-723 — ΓΕΩΜΕΤΡΙΑ: κανόνας ορίων + μόνιμη θέση/μέγεθος
+// ============================================================================
+//
+// Ο κανόνας «πού επιτρέπεται να κάθεται μια παλέτα» είναι ΕΝΑΣ και ζει στο
+// `floating-panel-geometry`. Τον μοιράζονται το σύρσιμο, η αλλαγή μεγέθους και η επαναφορά
+// από localStorage — ώστε να μην μπορεί μια αποθηκευμένη θέση να επαναφέρει panel εκτός οθόνης
+// (το τεκμηριωμένο «palette lost off-screen» του AutoCAD).
+
+export {
+  MINIMUM_VISIBLE_HEADER,
+  DEFAULT_MIN_PANEL_SIZE,
+  panelDragBounds,
+  clampPanelSize,
+  clampPanelPosition,
+  clampPanelGeometry,
+  isPanelGeometryWithinBounds,
+  parsePanelGeometry,
+} from './floating-panel-geometry';
+
+export type {
+  PanelPosition,
+  PanelSize,
+  PanelGeometry,
+  ViewportSize,
+} from './floating-panel-geometry';
+
+export {
+  readPanelGeometry,
+  writePanelGeometry,
+  clearPanelGeometry,
+} from './floating-panel-persistence';
+
+export type { FloatingPanelId } from './floating-panel-persistence';
+
+export { useFloatingPanelGeometry } from './useFloatingPanelGeometry';
+export type {
+  UseFloatingPanelGeometryOptions,
+  FloatingPanelGeometryState,
+} from './useFloatingPanelGeometry';
+
+// ============================================================================
 // LEGACY COMPONENT EXPORTS - REMOVED (FloatingCardHeader.tsx.OLD)
 // ============================================================================
 // 🗑️ FloatingCardHeader was orphan code - not used anywhere
