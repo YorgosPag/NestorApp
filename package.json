@@ -21,7 +21,7 @@
     "dev:webpack": "pnpm run build:tokens && next dev",
     "dev:fast": "pnpm run build:tokens && next dev --turbopack",
     "dev:clean": "pnpm run clear-cache && pnpm run build:tokens && next dev --turbopack",
-    "build": "pnpm run build:tokens && next build",
+    "build": "pnpm run build:tokens && cross-env NODE_OPTIONS=--max-old-space-size=8192 next build",
     "build:clean": "node scripts/clear-cache.js && pnpm run build",
     "start": "next start",
     "lint": "next lint",
