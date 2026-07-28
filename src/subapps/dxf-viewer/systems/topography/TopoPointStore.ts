@@ -22,7 +22,8 @@
 import { createExternalStore } from '../../stores/createExternalStore';
 import { generateEntityId } from '@/services/enterprise-id.service';
 import type {
-  TopoPoint, Breakline, TopoDefinition, TopoSurfaceId, TopoBoundary, TopoCropPrefs,
+  TopoPoint, Breakline, TopoDefinition, TopoSurfaceId, TopoBoundary, TopoBoundaryLink,
+  TopoCropPrefs,
 } from './topo-types';
 import { TOPO_CROP_OFF } from './topo-types';
 
@@ -34,6 +35,11 @@ export interface TopoPointState {
   readonly boundary: TopoBoundary | null;
   /** ADR-718 — whether that same boundary also CROPS the surface, and how the outside shows. */
   readonly crop: TopoCropPrefs;
+  /**
+   * ADR-718 Μ3 — health of the link to `boundary.sourceEntityId`. EPHEMERAL: an observation
+   * about the current scene, never persisted (see {@link TopoBoundaryLink}).
+   */
+  readonly boundaryLink: TopoBoundaryLink;
 }
 
 const EMPTY_DEFINITION: TopoDefinition = { points: [], breaklines: [] };
@@ -42,6 +48,7 @@ const EMPTY_STATE: TopoPointState = {
   surfaces: { existing: EMPTY_DEFINITION, proposed: EMPTY_DEFINITION },
   boundary: null,
   crop: TOPO_CROP_OFF,
+  boundaryLink: 'live',
 };
 
 const store = createExternalStore<TopoPointState>(EMPTY_STATE);
@@ -78,6 +85,14 @@ export function getTopoBreaklines(id: TopoSurfaceId = 'existing'): readonly Brea
 /** The site boundary, or `null` when volumes cover the whole survey. */
 export function getTopoBoundary(): TopoBoundary | null {
   return store.get().boundary;
+}
+
+/**
+ * ADR-718 Μ3 — health of the boundary's link to its source polyline. `'live'` whenever there
+ * is nothing to report (including «no boundary at all»), so consumers never special-case null.
+ */
+export function getTopoBoundaryLink(): TopoBoundaryLink {
+  return store.get().boundaryLink;
 }
 
 /** ADR-718 — the crop preferences. Always an object; `TOPO_CROP_OFF` when nothing is set. */
@@ -152,9 +167,37 @@ export function findBreaklineBySourceEntity(
   return getTopoBreaklines(id).find((b) => b.sourceEntityId === entityId);
 }
 
-/** Set (or clear, with `null`) the site boundary. Never touches a surface definition. */
+/**
+ * Set (or clear, with `null`) the site boundary. Never touches a surface definition.
+ *
+ * ADR-718 Μ3 — a boundary the user just PICKED (or cleared) is by definition in step with the
+ * drawing, so the link health resets to `'live'`. A stale `'invalid'` surviving a fresh pick
+ * would keep warning about a polyline the user already replaced.
+ */
 export function setTopoBoundary(boundary: TopoBoundary | null): void {
-  store.set({ ...store.get(), boundary });
+  store.set({ ...store.get(), boundary, boundaryLink: 'live' });
+}
+
+/**
+ * ADR-718 Μ3 — the reconciler's ATOMIC write: the rebuilt ring and the health of the link that
+ * produced it land in ONE `store.set`.
+ *
+ * Two separate writes would publish an intermediate state (new ring + old health, or the
+ * reverse) to every subscriber — including the crop reconciler, which would rebuild the plan
+ * derivatives twice per grip drag, and the debounced save.
+ *
+ * Idempotent by contract: identical ring reference AND identical health ⇒ no write at all. The
+ * reconciler runs after EVERY geometry command in the document, so «nothing changed» is by far
+ * the common case; a write there would mean contours rebuilt and a Firestore save scheduled
+ * every time the user nudges an unrelated line.
+ */
+export function setTopoBoundaryFromSource(
+  boundary: TopoBoundary | null,
+  boundaryLink: TopoBoundaryLink,
+): void {
+  const current = store.get();
+  if (current.boundary === boundary && current.boundaryLink === boundaryLink) return;
+  store.set({ ...current, boundary, boundaryLink });
 }
 
 /**

@@ -114,6 +114,14 @@ export type TerrainSurfaceStyle = 'shaded' | 'hypsometric' | 'cutfill';
  */
 export type TopoSurfaceId = 'existing' | 'proposed';
 
+/**
+ * ΚΑΘΕ named surface, μία φορά (ADR-718 Μ3). Ένας reconciler που πρέπει να περάσει από όλες
+ * τις επιφάνειες δεν επιτρέπεται να κουβαλά δικό του `['existing', 'proposed']`: τη μέρα που
+ * προστεθεί τρίτη, ο κώδικας που την ξεχνά αποτυγχάνει **σιωπηλά** (οι ασυνέχειές της απλώς
+ * παύουν να ακολουθούν) — ακριβώς το είδος αστοχίας που δεν εμφανίζεται σε κανένα test.
+ */
+export const TOPO_SURFACE_IDS: readonly TopoSurfaceId[] = ['existing', 'proposed'];
+
 /** The raw definition of one surface: what the user supplied, never what we derived. */
 export interface TopoDefinition {
   readonly points: readonly TopoPoint[];
@@ -130,6 +138,31 @@ export interface TopoBoundary {
   /** The scene entity the boundary was picked from (toggle off on a second click). */
   readonly sourceEntityId?: string;
 }
+
+/**
+ * ADR-718 Μ3 — the HEALTH of the live link between the boundary and its `sourceEntityId`.
+ *
+ * The ring is rebuilt from the source polyline after every geometry-mutating command, so
+ * normally it is simply current (`live`). The other two states record the two ways that link
+ * can break — and in BOTH the last valid ring is kept, never dropped:
+ *
+ *  - `invalid` — the entity is still there but is no longer a usable closed ring (the user
+ *    opened it, or took it below three vertices).
+ *  - `missing` — the entity is gone from the scene (deleted).
+ *
+ * Keeping the ring is Civil 3D's «Copy Deleted Dependent Objects = Yes» (default): the surface
+ * converts the reference into a stored coordinate list rather than losing the definition.
+ * Silently un-cropping would change earthwork volumes — and therefore a price — because of an
+ * edit the user made somewhere else entirely. What we add on top of Civil 3D is that the state
+ * is SAID: Civil 3D switches the mode silently on a setting buried in a properties dialog.
+ *
+ * ⚠️ EPHEMERAL — deliberately NOT persisted (`collectTopoState` does not read it). It is an
+ * observation about the current scene, not a property of the survey. On document load it starts
+ * at `live`: we have not observed a break, and claiming one we did not see would be its own lie.
+ * The first edit of the polyline establishes the truth. Same model as Civil 3D, which marks a
+ * surface out-of-date on an EDIT, never proactively on file open.
+ */
+export type TopoBoundaryLink = 'live' | 'invalid' | 'missing';
 
 /**
  * ADR-718 — whether the surface is CROPPED to the site boundary, and how the discarded ground
