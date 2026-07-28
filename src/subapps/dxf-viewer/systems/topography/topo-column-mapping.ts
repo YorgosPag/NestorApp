@@ -146,9 +146,9 @@ function cellFor(row: readonly string[], mapping: ColumnMapping, role: ColumnRol
 export function mapRowToPoint(row: readonly string[], mapping: ColumnMapping, scale: number): TopoPoint | null {
   const x = parseLocaleNumber(cellFor(row, mapping, 'x') ?? '');
   const y = parseLocaleNumber(cellFor(row, mapping, 'y') ?? '');
-  const z = parseLocaleNumber(cellFor(row, mapping, 'z') ?? '');
-  if (x === null || y === null || z === null) return null; // MUTATION-TEST: old behaviour
+  if (x === null || y === null) return null;
 
+  const z = parseLocaleNumber(cellFor(row, mapping, 'z') ?? '');
   const code = (cellFor(row, mapping, 'code') ?? '').trim();
   // ADR-656 M10 — carry the surveyor's point number/name through (verbatim, no scaling): it
   // is an identifier, not a measurement. Was recognised by HEADER_HINTS but dropped until now.
