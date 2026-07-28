@@ -9,7 +9,7 @@
 
 import {
   __resetLayerStoreForTesting,
-  setLayers,
+
   getLayer,
   subscribeLayerStore,
 } from '../../stores/LayerStore';
@@ -17,12 +17,19 @@ import { __resetLinetypeRegistryForTesting, registerLinetype } from '../../store
 import { createSceneLayer } from '../../types/entities';
 import { LayerOperationsService } from '../LayerOperationsService';
 import type { LineweightMm } from '../../types/entities';
+// ADR-719 §9 — οι μόνιμες αλλαγές flag γράφουν πλέον στο ΕΓΓΡΑΦΟ (fail-closed χωρίς αυτό),
+// οπότε το setup στήνει έγγραφο + runtime προβολή αντί για μόνο τη δεύτερη. Το `setLayers`
+// μόνο του έστηνε ακριβώς τη μισή αρχιτεκτονική που παρήγαγε το bug.
+import {
+  setupActiveDocument,
+  teardownActiveDocument,
+} from '../../systems/levels/__tests__/active-document-test-harness';
 
 const LAYER_ID = 'lyr_test_01';
 const OTHER_ID = 'lyr_test_02';
 
 function seed(): void {
-  setLayers([
+  setupActiveDocument([
     createSceneLayer({
       id: LAYER_ID,
       name: 'TEST',

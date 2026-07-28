@@ -8,7 +8,7 @@
  * IsolateEffectsStore. Complements the per-command behaviour suites.
  */
 
-import { describe, it, expect, beforeEach } from '@jest/globals';
+import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
 import { LayerFreezeCommand } from '../LayerFreezeCommand';
 import { LayerLockCommand } from '../LayerLockCommand';
 import { LayerOnAllCommand } from '../LayerOnAllCommand';
@@ -16,7 +16,6 @@ import { EntityIsolateCommand } from '../EntityIsolateCommand';
 import { LayerDimCommand } from '../LayerDimCommand';
 import {
   __resetLayerStoreForTesting,
-  setLayers,
   getLayer,
 } from '../../../../stores/LayerStore';
 import {
@@ -24,14 +23,25 @@ import {
   getIsolateEffectsSnapshot,
 } from '../../../../systems/isolate/IsolateEffectsStore';
 import { createSceneLayer } from '../../../../types/entities';
+// ADR-719 §9 — οι εντολές γράφουν πλέον στο ΕΓΓΡΑΦΟ (fail-closed χωρίς αυτό), οπότε το
+// setup στήνει έγγραφο + runtime προβολή, όχι μόνο τη δεύτερη.
+import {
+  setupActiveDocument,
+  teardownActiveDocument,
+  expectPersisted,
+} from '../../../../systems/levels/__tests__/active-document-test-harness';
 
 beforeEach(() => {
   __resetIsolateEffectsForTesting();
   __resetLayerStoreForTesting();
 });
 
+afterEach(() => {
+  teardownActiveDocument();
+});
+
 const seedLayer = (over: Partial<Parameters<typeof createSceneLayer>[0]> = {}) =>
-  setLayers([createSceneLayer({ id: 'lyr_a', name: 'A', visible: true, ...over })]);
+  setupActiveDocument([createSceneLayer({ id: 'lyr_a', name: 'A', visible: true, ...over })]);
 
 describe('ADR-616 layer command SSoT', () => {
   describe('BaseCommand envelope + injected id (makeLayerCommandKey)', () => {
@@ -82,17 +92,20 @@ describe('ADR-616 layer command SSoT', () => {
   });
 
   describe('MutateAllLayersCommand', () => {
-    it('OnAll turns on every invisible layer; undo restores', () => {
-      setLayers([
+    it('OnAll turns on every invisible layer; undo restores — σε ΕΓΓΡΑΦΟ και προβολή', () => {
+      setupActiveDocument([
         createSceneLayer({ id: 'lyr_a', name: 'A', visible: false }),
         createSceneLayer({ id: 'lyr_b', name: 'B', visible: true }),
       ]);
       const cmd = new LayerOnAllCommand();
       cmd.execute();
-      expect(getLayer('lyr_a')?.visible).toBe(true);
-      expect(getLayer('lyr_b')?.visible).toBe(true);
+      // ADR-719 §9 — το `expectPersisted` ρωτά ΚΑΙ τις δύο πηγές. Το παλιό
+      // `expect(getLayer(...))` ρωτούσε μόνο την προβολή, άρα περνούσε και με
+      // runtime-only γραφή — δηλαδή με τη συμπεριφορά που έχανε την αλλαγή.
+      expectPersisted('lyr_a', 'visible', true);
+      expectPersisted('lyr_b', 'visible', true);
       cmd.undo();
-      expect(getLayer('lyr_a')?.visible).toBe(false);
+      expectPersisted('lyr_a', 'visible', false);
     });
   });
 

@@ -13,16 +13,16 @@
 import {
   getAllLayers,
   getLayer,
-  upsertLayer,
   setUnisolateSnapshot,
   clearUnisolateSnapshot,
   getUnisolateSnapshot
 } from '../../../stores/LayerStore';
+// ADR-719 §7 — μόνιμες αλλαγές flag = μία πόρτα (έγγραφο + runtime προβολή).
+import { setLayerFlags, setLayerFlagsBatch } from '../../../services/layer-flags-writer';
 import type {
   UnisolateSnapshot,
   UnisolateSnapshotEntry
 } from '../../../stores/LayerStore';
-import type { SceneLayer } from '../../../types/entities';
 
 export type { UnisolateSnapshot, UnisolateSnapshotEntry };
 
@@ -59,20 +59,30 @@ export function captureLayerSnapshot(layerId: string): UnisolateSnapshotEntry | 
   };
 }
 
-/** Restore a single layer to its snapshot state. No-op if layer no longer exists. */
+/**
+ * Restore a single layer to its snapshot state. No-op if layer no longer exists.
+ *
+ * ADR-719 §7 — γράφει στο **έγγραφο** (μαζί με τη runtime προβολή). Το undo ΠΡΕΠΕΙ να
+ * φτάνει όσο μακριά έφτασε το execute: αν η εντολή περσιστάρει και το undo όχι, το
+ * «ακύρωση» θα φαινόταν στην οθόνη αλλά το αρχείο θα κρατούσε την αλλαγή — σιωπηλή
+ * απόκλιση χειρότερη από το αρχικό bug.
+ */
 export function restoreLayerEntry(entry: UnisolateSnapshotEntry): void {
-  const layer = getLayer(entry.layerId);
-  if (!layer) return;
-  upsertLayer({
-    ...layer,
+  setLayerFlags(entry.layerId, {
     visible: entry.visible,
     frozen: entry.frozen,
     locked: entry.locked,
-    transparency: entry.transparency
+    transparency: entry.transparency,
   });
 }
 
-/** Restore every entry of a snapshot to LayerStore. Safe on partial deletion. */
+/**
+ * Restore every entry of a snapshot. Safe on partial deletion.
+ *
+ * Μία εγγραφή εγγράφου για ΟΛΟ το snapshot (`setLayerFlagsBatch` ανά ομάδα ίδιων τιμών δεν
+ * εφαρμόζεται εδώ — κάθε entry έχει δικές του τιμές), οπότε ο βρόχος είναι αναπόφευκτος.
+ * Δεν είναι hot path: τρέχει μόνο σε undo/unisolate.
+ */
 export function restoreLayersSnapshot(snapshot: ReadonlyArray<UnisolateSnapshotEntry>): void {
   for (const entry of snapshot) {
     restoreLayerEntry(entry);
@@ -94,36 +104,49 @@ export function dropUnisolateSnapshot(): void {
   clearUnisolateSnapshot();
 }
 
-/**
- * Apply `frozen: true` to every layer NOT in `keepIds`. Used by freeze-mode
- * isolate to enable the AutoCAD render skip-path.
- */
-export function freezeNonIsolatedLayers(layers: ReadonlyArray<SceneLayer>, keepIds: ReadonlySet<string>): void {
-  for (const layer of layers) {
-    const key = layer.id ?? layer.name;
-    if (keepIds.has(key)) continue;
-    if (layer.frozen) continue;
-    upsertLayer({ ...layer, frozen: true });
-  }
-}
+// ADR-719 §8 — Η `freezeNonIsolatedLayers` ΑΦΑΙΡΕΘΗΚΕ.
+//
+// Έγραφε `frozen: true` σε κάθε μη-απομονωμένο layer «για να ενεργοποιήσει το AutoCAD render
+// skip-path» — δηλαδή έβαζε **κατάσταση συνεδρίας** σε **μόνιμο πεδίο του εγγράφου**. Το
+// layer-scope της απομόνωσης ελέγχεται πλέον απευθείας στον renderer
+// (`dxf-entity-layer-skip.ts`, από το `IsolateEffectsStore`), όπως ήδη γινόταν για τα
+// entity-scope και category-scope. Η απομόνωση δεν αφήνει πια αποτύπωμα στο αρχείο.
+//
+// ΜΗΝ την επαναφέρεις για «να φαίνεται πιο γρήγορα»: ο έλεγχος στον renderer είναι ένα
+// `Set.has` ανά οντότητα, ίδιας τάξης με τους δύο διπλανούς του.
 
-/** Mutate every layer flag matching the predicate. Used by ThawAll / OnAll. */
+/**
+ * Mutate one flag on every layer that doesn't already match. Used by ThawAll / OnAll.
+ *
+ * ADR-719 §7 — μία **ατομική** εγγραφή εγγράφου για όλα τα layers (`setLayerFlagsBatch`):
+ * το «άναψε όλα τα επίπεδα» είναι μία ενέργεια χρήστη, άρα ένα βήμα undo και ένα auto-save,
+ * όχι 58. Το snapshot επιστρέφεται όπως πριν, ώστε το undo να ξέρει τι να επαναφέρει.
+ *
+ * Ο `?? false` στο `frozen` κρατά τη σημασιολογία του §1 (undefined ⇒ μη παγωμένο)· το
+ * `visible` περνά ωμό γιατί το snapshot καταγράφει την **ακριβή** προηγούμενη τιμή, ώστε
+ * ένα undo να μη «γεννήσει» explicit `true` εκεί που υπήρχε `undefined`.
+ */
 export function mutateAllLayersFlag(
   flag: 'frozen' | 'visible',
   targetValue: boolean
 ): ReadonlyArray<UnisolateSnapshotEntry> {
   const captured: UnisolateSnapshotEntry[] = [];
+  const toChange: string[] = [];
+
   for (const layer of getAllLayers()) {
     const current = flag === 'frozen' ? (layer.frozen ?? false) : layer.visible;
     if (current === targetValue) continue;
+    const layerId = layer.id ?? layer.name;
     captured.push({
-      layerId: layer.id ?? layer.name,
+      layerId,
       visible: layer.visible,
       frozen: layer.frozen ?? false,
       locked: layer.locked,
       transparency: layer.transparency ?? 0
     });
-    upsertLayer({ ...layer, [flag]: targetValue });
+    toChange.push(layerId);
   }
+
+  if (toChange.length > 0) setLayerFlagsBatch(toChange, { [flag]: targetValue });
   return captured;
 }

@@ -14,6 +14,9 @@ import { publishHighlight } from '../../events/selection-bus';
 import { handleLayerServiceResult } from '../utils/selection-update-utils';
 // ADR-129: Centralized entity layer filtering
 import { countEntitiesInLayer } from '../../services/shared/layer-operation-utils';
+// ADR-719 §7 — η ΜΙΑ πόρτα για μόνιμες ιδιότητες layer (έγγραφο + runtime προβολή).
+import { setLayerFlags, setLayerFlagsBatch } from '../../services/layer-flags-writer';
+import { getSceneLayerByName } from '../../utils/scene-layer-utils';
 // ADR-532 Stage 5b — non-reactive facade. The selection is read/written ONLY
 // inside the layer/entity callbacks below (event-time `getSelectedEntityIds()` +
 // `replaceEntitySelection`), never during render. The reactive
@@ -72,12 +75,22 @@ export function useLayerOperations({
 
   // ===== LAYER OPERATIONS =====
 
+  /**
+   * ADR-719 §7 — περνά από τη ΜΙΑ πόρτα (`setLayerFlags`), που γράφει έγγραφο **και**
+   * runtime προβολή ατομικά.
+   *
+   * Πριν: `service.toggleLayerVisibility(...)` → `setLevelScene(...)`. Δύο βήματα, με
+   * παράθυρο ανάμεσά τους — αν το δεύτερο δεν εκτελούνταν (π.χ. `!currentLevelId`), η
+   * προβολή είχε ήδη αλλάξει και οι δύο πηγές απέκλιναν. Τώρα είναι μία πράξη.
+   *
+   * Το panel μιλά ακόμη με **ονόματα** (legacy συμβόλαιο των props)· η μετάφραση σε
+   * σταθερό `lyr_*` id γίνεται εδώ, στο σύνορο.
+   */
   const handleLayerToggle = (layerName: string, visible: boolean) => {
-    if (!scene || !currentLevelId) return;
-    const result = layerService.toggleLayerVisibility(layerName, visible, scene);
-    if (result.success) {
-      setLevelScene(currentLevelId, result.updatedScene);
-    }
+    if (!scene) return;
+    const layerId = getSceneLayerByName(scene, layerName)?.id;
+    if (!layerId) return;
+    setLayerFlags(layerId, { visible });
   };
 
   const handleLayerDelete = async (layerName: string) => {
@@ -292,12 +305,18 @@ export function useLayerOperations({
 
   // ===== COLOR GROUP OPERATIONS =====
 
+  /**
+   * ADR-719 §7 — μία ατομική εγγραφή για ολόκληρη την ομάδα (`setLayerFlagsBatch`), όχι
+   * βρόχος: «κρύψε αυτά τα 27 layers» είναι **μία** ενέργεια χρήστη, άρα ένα βήμα undo και
+   * ένα auto-save, όχι 27.
+   */
   const handleColorGroupToggle = (colorGroupName: string, layersInGroup: string[], visible: boolean) => {
-    if (!scene || !currentLevelId) return;
-    const result = layerService.toggleColorGroup(colorGroupName, layersInGroup, visible, scene);
-    if (result.success) {
-      setLevelScene(currentLevelId, result.updatedScene);
-    }
+    if (!scene) return;
+    const layerIds = layersInGroup
+      .map((name) => getSceneLayerByName(scene, name)?.id)
+      .filter((id): id is string => !!id);
+    if (layerIds.length === 0) return;
+    setLayerFlagsBatch(layerIds, { visible });
   };
 
   const handleColorGroupDelete = (colorGroupName: string, layersInGroup: string[]) => {

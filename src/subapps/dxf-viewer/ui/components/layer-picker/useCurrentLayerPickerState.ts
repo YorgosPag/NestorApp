@@ -36,8 +36,9 @@ import {
   setCurrentLayerId,
   setRecentLayerIds,
   subscribeLayerStore,
-  upsertLayer,
 } from '../../../stores/LayerStore';
+// ADR-719 §7 — μόνιμη αλλαγή flag = μία πόρτα (έγγραφο + runtime προβολή).
+import { toggleLayerFlag } from '../../../services/layer-flags-writer';
 import { useCurrentLayerChange } from './useCurrentLayerChange';
 import { compareByLocale } from '@/lib/intl-formatting';
 import { useLevels } from '../../../systems/levels/useLevels';
@@ -343,14 +344,14 @@ export function useCurrentLayerPickerState(): {
     [changeCurrentLayer],
   );
 
-  const toggleVisibility = useCallback(
-    (layerId: string) => {
-      const target = layerById.get(layerId);
-      if (!target) return;
-      upsertLayer({ ...target, visible: !target.visible });
-    },
-    [layerById],
-  );
+  // ADR-719 §7 — και οι τρεις διακόπτες γράφουν πλέον στο **έγγραφο** (μαζί με τη runtime
+  // προβολή, ατομικά) αντί για σκέτο `upsertLayer`, που έχανε την αλλαγή στο επόμενο
+  // hydration. Το τρίτο όρισμα κωδικοποιεί τι σημαίνει `undefined` ανά flag (§1):
+  // `visible` ⇒ αναμμένο, `locked`/`frozen` ⇒ όχι.
+
+  const toggleVisibility = useCallback((layerId: string) => {
+    toggleLayerFlag(layerId, 'visible', true);
+  }, []);
 
   const toggleLock = useCallback(
     (layerId: string) => {
@@ -360,19 +361,14 @@ export function useCurrentLayerPickerState(): {
         notifyWarning(t('layerPicker.toastLocked', { name: target.name }));
         return;
       }
-      upsertLayer({ ...target, locked: !target.locked });
+      toggleLayerFlag(layerId, 'locked', false);
     },
     [layerById, canUnlockLayer, notifyWarning, t],
   );
 
-  const toggleFreeze = useCallback(
-    (layerId: string) => {
-      const target = layerById.get(layerId);
-      if (!target) return;
-      upsertLayer({ ...target, frozen: target.frozen !== true });
-    },
-    [layerById],
-  );
+  const toggleFreeze = useCallback((layerId: string) => {
+    toggleLayerFlag(layerId, 'frozen', false);
+  }, []);
 
   const openManager = useCallback(() => {
     window.dispatchEvent(new CustomEvent('dxf:open-layer-manager'));

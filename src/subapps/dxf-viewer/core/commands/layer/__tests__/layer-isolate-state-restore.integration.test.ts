@@ -13,13 +13,13 @@
  *   5. Undo of isolate re-freezes; redo of unisolate clears again.
  */
 
-import { describe, it, expect, beforeEach } from '@jest/globals';
+import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
 import { LayerIsolateCommand } from '../LayerIsolateCommand';
 import { LayerUnisolateCommand } from '../LayerUnisolateCommand';
 import { RestoreLayerStateCommand } from '../RestoreLayerStateCommand';
 import {
   __resetLayerStoreForTesting,
-  setLayers,
+
   getLayer,
   getAllLayers,
   getUnisolateSnapshot,
@@ -37,6 +37,15 @@ import {
 } from '../../../../stores/LayerStateStore';
 import { __resetLayerStatePersistenceForTesting } from '../../../../services/layer-state-persistence';
 import { createSceneLayer } from '../../../../types/entities';
+// ADR-719 §8 — ο render-side έλεγχος που ΑΝΤΙΚΑΤΕΣΤΗΣΕ το layer-flag μόλυσμα της απομόνωσης.
+import { isEntityLayerSkipped } from '../../../../canvas-v2/dxf-canvas/dxf-entity-layer-skip';
+// ADR-719 §9 — οι μόνιμες αλλαγές flag γράφουν πλέον στο ΕΓΓΡΑΦΟ (fail-closed χωρίς αυτό),
+// οπότε το setup στήνει έγγραφο + runtime προβολή αντί για μόνο τη δεύτερη. Το `setLayers`
+// μόνο του έστηνε ακριβώς τη μισή αρχιτεκτονική που παρήγαγε το bug.
+import {
+  setupActiveDocument,
+  teardownActiveDocument,
+} from '../../../../systems/levels/__tests__/active-document-test-harness';
 
 function reset() {
   __resetLayerStoreForTesting();
@@ -48,12 +57,29 @@ function reset() {
 
 beforeEach(reset);
 
+afterEach(() => {
+  teardownActiveDocument();
+});
+
 function seedLayers() {
   const A = createSceneLayer({ id: 'lyr_a', name: 'A', visible: true });
   const B = createSceneLayer({ id: 'lyr_b', name: 'B', visible: true });
   const C = createSceneLayer({ id: 'lyr_c', name: 'C', visible: true });
-  setLayers([A, B, C]);
+  setupActiveDocument([A, B, C]);
   return { A, B, C };
+}
+
+/**
+ * ADR-719 §8 — «κρύβεται από την απομόνωση;» ρωτημένο εκεί που ΕΚΤΕΛΕΙΤΑΙ η χειρονομία.
+ *
+ * Η απομόνωση δεν γράφει πλέον `frozen: true` στα μη-απομονωμένα layers (ήταν κατάσταση
+ * συνεδρίας σε μόνιμο πεδίο εγγράφου). Άρα ένα `expect(getLayer('lyr_b')?.frozen)` πλέον
+ * ελέγχει **νεκρό** σημείο: θα ήταν πράσινο μόνο αν επαναφέραμε το bug. Το ουσιαστικό
+ * ερώτημα — και το μόνο που νοιάζει τον χρήστη — είναι αν ο renderer παραλείπει την
+ * οντότητα, κι αυτό το απαντά ο ΙΔΙΟΣ κώδικας που τρέχει σε κάθε frame.
+ */
+function isHiddenByIsolate(layerId: string): boolean {
+  return isEntityLayerSkipped({ id: 'ent_probe', type: 'line', layerId } as never);
 }
 
 // ─── Part 1: Isolate → unisolate full flow ───────────────────────────────────
@@ -69,9 +95,13 @@ describe('Integration: LayerIsolateCommand → LayerUnisolateCommand full flow',
     });
     isolate.execute();
 
-    expect(getLayer('lyr_b')?.frozen).toBe(true);
-    expect(getLayer('lyr_c')?.frozen).toBe(true);
-    expect(getLayer('lyr_a')?.frozen).toBeFalsy();
+    // Η απομόνωση κρύβει μέσω του IsolateEffectsStore, ΧΩΡΙΣ να αγγίζει το έγγραφο (§8).
+    expect(isHiddenByIsolate('lyr_b')).toBe(true);
+    expect(isHiddenByIsolate('lyr_c')).toBe(true);
+    expect(isHiddenByIsolate('lyr_a')).toBe(false);
+    // …και το μόνιμο flag μένει ΚΑΘΑΡΟ — αυτό είναι το κέρδος: τίποτα δεν περνά στο αρχείο.
+    expect(getLayer('lyr_b')?.frozen ?? false).toBe(false);
+    expect(getLayer('lyr_c')?.frozen ?? false).toBe(false);
     expect(getIsolateEffectsSnapshot().active).toBe(true);
     expect(getUnisolateSnapshot()).not.toBeNull();
     expect(getUnisolateSnapshot()!.length).toBe(3);
@@ -80,8 +110,8 @@ describe('Integration: LayerIsolateCommand → LayerUnisolateCommand full flow',
     const unisolate = new LayerUnisolateCommand();
     unisolate.execute();
 
-    expect(getLayer('lyr_b')?.frozen).toBe(false);
-    expect(getLayer('lyr_c')?.frozen).toBe(false);
+    expect(isHiddenByIsolate('lyr_b')).toBe(false);
+    expect(isHiddenByIsolate('lyr_c')).toBe(false);
     expect(getIsolateEffectsSnapshot().active).toBe(false);
     expect(getUnisolateSnapshot()).toBeNull();
   });
@@ -96,16 +126,16 @@ describe('Integration: LayerIsolateCommand → LayerUnisolateCommand full flow',
 
     const unisolate = new LayerUnisolateCommand();
     unisolate.execute();
-    expect(getLayer('lyr_b')?.frozen).toBe(false);
+    expect(isHiddenByIsolate('lyr_b')).toBe(false);
 
-    // Undo unisolate → B/C get frozen again
+    // Undo unisolate → B/C κρύβονται ξανά (μέσω effects, όχι flags)
     unisolate.undo();
-    expect(getLayer('lyr_b')?.frozen).toBe(true);
+    expect(isHiddenByIsolate('lyr_b')).toBe(true);
     expect(getIsolateEffectsSnapshot().active).toBe(true);
 
     // Redo unisolate → clears again
     unisolate.redo();
-    expect(getLayer('lyr_b')?.frozen).toBe(false);
+    expect(isHiddenByIsolate('lyr_b')).toBe(false);
     expect(getIsolateEffectsSnapshot().active).toBe(false);
   });
 
@@ -137,7 +167,7 @@ describe('Integration: saveCurrentLayerState → mutate → RestoreLayerStateCom
     expect(baseline).not.toBeNull();
 
     // Mutate: hide B, freeze C
-    setLayers([
+    setupActiveDocument([
       createSceneLayer({ id: 'lyr_a', name: 'A', visible: true }),
       createSceneLayer({ id: 'lyr_b', name: 'B', visible: false }),
       createSceneLayer({ id: 'lyr_c', name: 'C', visible: true, frozen: true }),
@@ -158,13 +188,13 @@ describe('Integration: saveCurrentLayerState → mutate → RestoreLayerStateCom
     setProjectId('proj_test_2');
     const A = createSceneLayer({ id: 'lyr_a', name: 'A', visible: true });
     const B = createSceneLayer({ id: 'lyr_b', name: 'B', visible: true });
-    setLayers([A, B]);
+    setupActiveDocument([A, B]);
 
     const stateOn = saveCurrentLayerState({ name: 'All On' })!;
     markCurrentLayerState(stateOn.id);
 
     // Hide B, save as stateOff
-    setLayers([
+    setupActiveDocument([
       { ...A, visible: true },
       { ...B, visible: false },
     ]);
@@ -185,29 +215,48 @@ describe('Integration: saveCurrentLayerState → mutate → RestoreLayerStateCom
 // ─── Part 3: Isolate + save state + unisolate + restore state ───────────────
 
 describe('Integration: full isolate → save state → unisolate → restore state', () => {
-  it('layer state saved mid-isolate restores correctly after unisolate', () => {
+  /**
+   * ADR-719 §8 — **ΑΛΛΑΓΗ ΣΥΜΠΕΡΙΦΟΡΑΣ, σκόπιμη.**
+   *
+   * Παλιά: η απομόνωση έγραφε `frozen: true` στα μη-απομονωμένα layers, άρα μια
+   * «Κατάσταση Επιπέδων» που αποθηκευόταν ΚΑΤΑ ΤΗ ΔΙΑΡΚΕΙΑ απομόνωσης απαθανάτιζε το
+   * πάγωμα — και η επαναφορά της το ξανάφερνε. Αυτό είναι η σημασιολογία του AutoCAD
+   * `LAYISO` (μεταλλάσσει τα πραγματικά layer states· γι' αυτό υπάρχει το `LAYUNISO`).
+   *
+   * Τώρα ακολουθούμε το μοντέλο **Revit / Cinema 4D**: η απομόνωση είναι *προσωρινή* και
+   * δεν αφήνει αποτύπωμα. Συνέπεια: μια αποθηκευμένη Κατάσταση Επιπέδων καταγράφει τα
+   * **μόνιμα** flags — καθαρά — άρα η επαναφορά της ΔΕΝ ξαναπαγώνει τα B/C.
+   *
+   * Αυτό είναι το σωστό: μια αποθηκευμένη κατάσταση πρέπει να περιγράφει πώς είναι
+   * στημένο το σχέδιο, όχι τι κοίταζε στιγμιαία ο χρήστης. Η προηγούμενη συμπεριφορά
+   * σήμαινε ότι κάθε αποθηκευμένη κατάσταση μπορούσε σιωπηλά να «ψήσει» μια στιγμιαία
+   * απομόνωση και να την επαναφέρει μέρες αργότερα.
+   */
+  it('κατάσταση αποθηκευμένη ΚΑΤΑ την απομόνωση δεν απαθανατίζει το προσωρινό πάγωμα', () => {
     setProjectId('proj_test_3');
     seedLayers();
 
-    // Step 1: Isolate (freeze B + C)
+    // Step 1: Isolate — τα B + C κρύβονται, ΧΩΡΙΣ να αλλάξει το έγγραφο
     new LayerIsolateCommand({
       targetLayerIds: ['lyr_a'],
       settings: { mode: 'freeze', dimOpacityPercent: 30 },
     }).execute();
-    expect(getLayer('lyr_b')?.frozen).toBe(true);
+    expect(isHiddenByIsolate('lyr_b')).toBe(true);
+    expect(getLayer('lyr_b')?.frozen ?? false).toBe(false);
 
-    // Step 2: Save this "mid-isolate" state
+    // Step 2: Save this "mid-isolate" state — καταγράφει τα ΜΟΝΙΜΑ flags (καθαρά)
     const midIsolateState = saveCurrentLayerState({ name: 'Mid-Isolate' })!;
 
-    // Step 3: Unisolate → B + C unfrozen
+    // Step 3: Unisolate → τίποτα δεν κρύβεται πια
     new LayerUnisolateCommand().execute();
-    expect(getLayer('lyr_b')?.frozen).toBe(false);
+    expect(isHiddenByIsolate('lyr_b')).toBe(false);
 
-    // Step 4: Restore mid-isolate state → B + C should freeze again
+    // Step 4: Restore → επαναφέρει την ΚΑΘΑΡΗ κατάσταση, δεν ανασταίνει την απομόνωση
     new RestoreLayerStateCommand({ stateId: midIsolateState.id }).execute();
-    expect(getLayer('lyr_b')?.frozen).toBe(true);
-    expect(getLayer('lyr_c')?.frozen).toBe(true);
+    expect(getLayer('lyr_b')?.frozen ?? false).toBe(false);
+    expect(getLayer('lyr_c')?.frozen ?? false).toBe(false);
     expect(getLayer('lyr_a')?.frozen).toBeFalsy();
+    expect(isHiddenByIsolate('lyr_b')).toBe(false);
   });
 
   it('undo of isolate after unisolate is a no-op (snapshot already consumed)', () => {
@@ -236,7 +285,7 @@ describe('Integration: unisolate snapshot exact content', () => {
     const A = createSceneLayer({ id: 'lyr_a', name: 'A', visible: true,  frozen: false });
     const B = createSceneLayer({ id: 'lyr_b', name: 'B', visible: false, frozen: false });
     const C = createSceneLayer({ id: 'lyr_c', name: 'C', visible: true,  frozen: true  });
-    setLayers([A, B, C]);
+    setupActiveDocument([A, B, C]);
 
     new LayerIsolateCommand({
       targetLayerIds: ['lyr_a'],

@@ -9,15 +9,13 @@ import {
   validateLayerExists,
   updateLayerProperties,
   // ADR-129: Centralized entity layer filtering
-  getEntityIdsByLayer,
   getEntityIdsByLayers,
   getEntitiesNotInLayers
 } from './shared/layer-operation-utils';
-// ADR-719 §4 — name→layer lookup για το runtime projection write (LayerStore).
-import { getSceneLayerByName } from '../utils/scene-layer-utils';
-// ADR-358 Phase 8.5: SSoT-based property setters
 // ADR-358 Phase 9D-3: id-first reader SSoT
-import { getLayer, upsertLayer, resolveEntityLayerName } from '../stores/LayerStore';
+import { resolveEntityLayerName } from '../stores/LayerStore';
+// ADR-719 §7 — η ΜΙΑ πόρτα για μόνιμες ιδιότητες layer (έγγραφο + runtime προβολή).
+import { setLayerFlags } from './layer-flags-writer';
 import {
   isConcreteLineweight,
   parseDxfCode370,
@@ -111,57 +109,18 @@ export class LayerOperationsService {
       message: `Layer renamed from "${oldName}" to "${newName}"`
     };
   }
-  /**
-   * Toggle layer visibility — **η ΜΙΑ πόρτα** για το AutoCAD `LAYON`/`LAYOFF` του layer.
-   *
-   * ADR-719 §4. Δύο πράγματα άλλαξαν εδώ, και τα δύο είναι σημασιολογικά, όχι καλλωπιστικά:
-   *
-   * **(α) Δεν γράφει ΠΟΤΕ `entity.visible`.** Πριν, το toggle έκανε επιπλέον
-   * `updateEntitiesForLayer(scene, layerName, { visible })`, δηλαδή στάμπαρε το flag του
-   * layer πάνω σε **κάθε** entity του. Αυτό αντιβαίνει σε ολόκληρη τη βιομηχανία: στο DXF/DWG
-   * το ON/OFF ζει στο **LAYER table**, ποτέ στην οντότητα (γι' αυτό ένα σβηστό layer κρατά τα
-   * αντικείμενά του επιλέξιμα — δεν τα «σβήνει»). Πρακτικά ήταν και **μη ιδεμποτικό και
-   * απωλεστικό** (N.7.2 #3): κρύβεις το layer → κρύβονται τα 176 entities του· το ξανα-ανοίγεις
-   * → γίνονται ΟΛΑ ορατά, συμπεριλαμβανομένων εκείνων που ο χρήστης είχε κρύψει **ατομικά** από
-   * το `EntityCard`. Η ατομική απόκρυψη ήταν ανακτήσιμη μόνο με undo.
-   *
-   * **(β) Γράφει και στο runtime SSoT.** Το `LayerStore` είναι ο owner των layer flags κατά
-   * το ADR-382 §1.2 — από εκεί διαβάζουν ο 2Δ renderer (`isEntityLayerSkipped`), ο BIM resolver
-   * και ο WebGL line layer, και εκεί είναι καρφωμένη η ακύρωση του bitmap cache
-   * (`useDxfCanvasCacheInvalidation`). Το document write από μόνο του φτάνει στον renderer μόνο
-   * έμμεσα (μέσω του hydration effect, δηλαδή έναν κύκλο React αργότερα)· το `upsertLayer` εδώ
-   * κάνει την αλλαγή ορατή **στο ίδιο tick**, όπως ένα retained-mode CAD. Το hydration παραμένει
-   * ως ιδεμποτικός reconciler (§3) — γράφει το ίδιο πράγμα, άρα κάνει bail.
-   *
-   * Το `SceneModel` παραμένει το **document** (αυτό που περσιστάρει)· το `LayerStore` η
-   * **runtime προβολή** του. Γράφουμε και στα δύο εδώ ώστε να μην υπάρχει παράθυρο απόκλισης.
-   */
-  public toggleLayerVisibility(
-    layerName: string,
-    visible: boolean,
-    scene: SceneModel
-  ): LayerOperationResult {
-    const validationError = validateLayerExists(layerName, scene);
-    if (validationError) return validationError;
+  // ADR-719 §7 — Τα `toggleLayerVisibility` / `toggleColorGroup` ΑΦΑΙΡΕΘΗΚΑΝ από εδώ.
+  //
+  // Ήταν functional API (`(…, scene) => updatedScene`) που ο caller έπρεπε ΜΕΤΑ να γράψει με
+  // `setLevelScene`. Δύο βήματα για μία πράξη, με παράθυρο απόκλισης ανάμεσα (η runtime
+  // προβολή είχε ήδη ενημερωθεί όταν το δεύτερο βήμα δεν εκτελούνταν). Η ορατότητα layer
+  // περνά πλέον από τη ΜΙΑ πόρτα `services/layer-flags-writer` (`setLayerFlags` /
+  // `setLayerFlagsBatch`), που γράφει έγγραφο + προβολή **ατομικά** και δουλεύει και εκτός
+  // React (εντολές, υπηρεσίες) μέσω της `active-document-gateway`.
+  //
+  // Οι υπόλοιπες μέθοδοι εδώ (rename/merge/delete/color) μένουν functional: μεταλλάσσουν
+  // ΟΝΤΟΤΗΤΕΣ μαζί με layers, οπότε ανήκουν στη ροή σκηνής του caller.
 
-    // (α) Document write — ΜΟΝΟ το layer. Καμία μετάλλαξη οντοτήτων.
-    const updatedScene = updateLayerProperties(layerName, { visible }, scene);
-
-    // (β) Runtime projection write — ίδιο tick, ώστε renderer/hit-test/UI να συμφωνούν αμέσως.
-    const updatedLayer = getSceneLayerByName(updatedScene, layerName);
-    if (updatedLayer) upsertLayer(updatedLayer);
-
-    // ADR-129: Centralized entity filtering — ποιες οντότητες ΕΠΗΡΕΑΖΟΝΤΑΙ οπτικά
-    // (πληροφοριακό για τους callers· καμία από αυτές ΔΕΝ μεταλλάχθηκε).
-    const affectedEntityIds = getEntityIdsByLayer(scene.entities, layerName);
-
-    return {
-      updatedScene,
-      affectedEntityIds,
-      success: true,
-      message: `Layer visibility set to ${visible}`
-    };
-  }
   /**
    * Delete a layer and all its entities
    */
@@ -300,41 +259,6 @@ export class LayerOperationsService {
   }
   
   /**
-   * Toggle visibility for all layers in a color group
-   */
-  public toggleColorGroup(
-    colorGroupName: string,
-    layersInGroup: string[],
-    visible: boolean,
-    scene: SceneModel
-  ): LayerOperationResult {
-    // ADR-719 §4 — ίδιο συμβόλαιο με το `toggleLayerVisibility`: το flag ζει ΜΟΝΟ στα layers.
-    // Η παλιά μορφή έκανε επιπλέον `entities.map(... { ...entity, visible })`, δηλαδή στάμπαρε
-    // το group flag πάνω σε κάθε οντότητα των 27 layers — απωλεστικό για τις ατομικές αποκρύψεις
-    // και ξένο προς το DXF μοντέλο (ON/OFF = ιδιότητα του LAYER table).
-    const layerUpdates: Record<string, SceneLayer> = {};
-    for (const [id, l] of Object.entries(scene.layersById)) {
-      if (layersInGroup.includes(l.name)) layerUpdates[id] = { ...l, visible };
-    }
-    const updatedScene = {
-      ...scene,
-      layersById: { ...scene.layersById, ...layerUpdates },
-    };
-
-    // Runtime projection — ένα upsert ανά αλλαγμένο layer, ίδιο tick (βλ. §4β).
-    for (const layer of Object.values(layerUpdates)) upsertLayer(layer);
-
-    const affectedEntityIds = getEntityIdsByLayers(scene.entities, layersInGroup);
-
-    return {
-      updatedScene,
-      affectedEntityIds,
-      success: true,
-      message: `Color group visibility set to ${visible}`
-    };
-  }
-
-  /**
    * Delete all layers in a color group
    */
   public deleteColorGroup(
@@ -397,40 +321,28 @@ export class LayerOperationsService {
     };
   }
 
-  // ─── ADR-358 Phase 8.5 — SSoT-based property setters (LayerStore.upsertLayer) ─
+  // ─── ADR-358 Phase 8.5 property setters — ADR-719 §7: γράφουν έγγραφο + προβολή ────
+  //
+  // Πριν, και οι πέντε έκαναν σκέτο `upsertLayer(...)`: η αλλαγή φαινόταν αμέσως αλλά ΔΕΝ
+  // αποθηκευόταν, και σβηνόταν στο επόμενο hydration από το έγγραφο. Ο χρήστης έβλεπε το
+  // πάχος/τύπο γραμμής να «επιστρέφει μόνο του». Τώρα περνούν από τη μία πόρτα
+  // (`setLayerFlags`), που γράφει και στα δύο και κάνει από μόνη της τον έλεγχο no-op —
+  // γι' αυτό έφυγαν και οι χειροκίνητοι φρουροί ισότητας από κάθε setter.
 
   public setLineweight(layerId: string, lineweight: LineweightMm): void {
-    const target = getLayer(layerId);
-    if (!target) return;
-    const validated = this.validateLineweight(lineweight);
-    if (target.lineweight === validated) return;
-    upsertLayer({ ...target, lineweight: validated });
+    setLayerFlags(layerId, { lineweight: this.validateLineweight(lineweight) });
   }
   public setLinetype(layerId: string, linetypeName: string): void {
-    const target = getLayer(layerId);
-    if (!target) return;
-    const validated = this.validateLinetype(linetypeName);
-    if (target.linetype === validated) return;
-    upsertLayer({ ...target, linetype: validated });
+    setLayerFlags(layerId, { linetype: this.validateLinetype(linetypeName) });
   }
   public setTransparency(layerId: string, value: number): void {
-    const target = getLayer(layerId);
-    if (!target) return;
-    const clamped = Math.max(0, Math.min(90, value));
-    if (target.transparency === clamped) return;
-    upsertLayer({ ...target, transparency: clamped });
+    setLayerFlags(layerId, { transparency: Math.max(0, Math.min(90, value)) });
   }
   public setPlottable(layerId: string, value: boolean): void {
-    const target = getLayer(layerId);
-    if (!target) return;
-    if (target.plottable === value) return;
-    upsertLayer({ ...target, plottable: value });
+    setLayerFlags(layerId, { plottable: value });
   }
   public setFrozen(layerId: string, value: boolean): void {
-    const target = getLayer(layerId);
-    if (!target) return;
-    if ((target.frozen ?? false) === value) return;
-    upsertLayer({ ...target, frozen: value });
+    setLayerFlags(layerId, { frozen: value });
   }
   private validateLineweight(lw: LineweightMm): LineweightMm {
     if ((LINEWEIGHT_SPECIAL_VALUES as ReadonlyArray<number>).includes(lw)) return lw;

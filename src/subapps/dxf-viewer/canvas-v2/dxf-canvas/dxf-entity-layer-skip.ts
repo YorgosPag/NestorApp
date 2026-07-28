@@ -63,6 +63,20 @@ export function isEntityLayerSkipped(
     const cat = resolveEntityBimCategory(entity);
     return cat === null || !isolate.isolatedCategories.has(cat);
   }
+  // ADR-719 §8 — Layer-scope freeze. Τρίτο και τελευταίο scope, στη σειρά που ορίζει ο
+  // `IsolateEffectsStore`: entity ⇒ category ⇒ layer.
+  //
+  // Πριν, αυτό το scope ΔΕΝ ελεγχόταν εδώ. Αντ' αυτού, το `LayerIsolateCommand` έγραφε
+  // `frozen: true` σε κάθε μη-απομονωμένο layer «για να ενεργοποιήσει το AutoCAD render
+  // skip-path» — δηλαδή **προσωρινή** κατάσταση συνεδρίας γραφόταν πάνω σε **μόνιμο** flag
+  // του εγγράφου. Με το ADR-719 §2 (η σκηνή έγινε reactive) αυτό θα γινόταν ενεργά
+  // επιβλαβές: το hydration θα έσβηνε το πάγωμα μέσα στη συνεδρία, ενώ η αποθήκευση θα
+  // μπορούσε να το κάνει μόνιμο στο αρχείο του χρήστη. Οι μεγάλοι παίκτες το κρατούν
+  // ξεχωριστό (Revit *Temporary* Hide/Isolate, Cinema 4D *Viewport* Solo) — άρα το scope
+  // ελέγχεται εδώ, στο render, και το command δεν αγγίζει πλέον flags.
+  if (isolate.active && isolate.mode === 'freeze' && isolate.isolatedLayerIds.size > 0) {
+    return !entity.layerId || !isolate.isolatedLayerIds.has(entity.layerId);
+  }
   if (!entity.layerId && !layersById) return false;
   const storeLayer = entity.layerId ? getLayerStoreLayer(entity.layerId) : null;
   if (storeLayer) {

@@ -25,11 +25,9 @@ import {
   setIsolateEffects,
   clearIsolateEffects,
 } from '../../../systems/isolate/IsolateEffectsStore';
-import { getAllLayers } from '../../../stores/LayerStore';
 import {
   captureAllLayersSnapshot,
   dropUnisolateSnapshot,
-  freezeNonIsolatedLayers,
   persistUnisolateSnapshot,
   readUnisolateSnapshot,
   restoreLayersSnapshot,
@@ -105,11 +103,22 @@ export class LayerIsolateCommand extends LayerCommandBase {
     return serializeLayerIsolateInput(this.input);
   }
 
+  /**
+   * ADR-719 §8 — η απομόνωση είναι **κατάσταση συνεδρίας**, δεν αγγίζει το έγγραφο.
+   *
+   * Πριν, το freeze mode καλούσε `freezeNonIsolatedLayers(...)`, που έγραφε `frozen: true`
+   * σε κάθε μη-απομονωμένο layer, ώστε να πιάσει ο render skip-path. Αυτό έβαζε προσωρινή
+   * κατάσταση σε μόνιμο πεδίο: με reactive σκηνή (§2) το hydration θα το έσβηνε μέσα στη
+   * συνεδρία, και το auto-save θα μπορούσε να το κάνει μόνιμο στο αρχείο. Πλέον το μόνο
+   * που γράφεται είναι το `IsolateEffectsStore` — και ο renderer ελέγχει το layer-scope
+   * κατευθείαν από εκεί (`isEntityLayerSkipped`, §8).
+   *
+   * Ίδια συμπεριφορά για τον χρήστη, μη-καταστροφική αποθήκευση — το μοντέλο Revit/C4D
+   * αντί για το AutoCAD `LAYISO` (που όντως μεταλλάσσει τα layer states και γι' αυτό
+   * χρειάζεται το `LAYUNISO`).
+   */
   private applyEffects(): void {
     const keepSet = new Set(this.input.targetLayerIds);
-    if (this.input.settings.mode === 'freeze') {
-      freezeNonIsolatedLayers(getAllLayers(), keepSet);
-    }
     setIsolateEffects({
       mode: this.input.settings.mode,
       isolatedLayerIds: keepSet,

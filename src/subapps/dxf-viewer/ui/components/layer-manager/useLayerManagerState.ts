@@ -3,11 +3,12 @@ import { useTranslation } from '@/i18n';
 import {
   subscribeLayerStore,
   getLayerStoreSnapshot,
-  upsertLayer,
   setCurrentLayerId,
   // ADR-358 Phase 9D-5a: id-first reader SSoT (LayerStore lookup + legacy name fallback).
   resolveEntityLayerName,
 } from '../../../stores/LayerStore';
+// ADR-719 §7 — μόνιμη αλλαγή flag = μία πόρτα (έγγραφο + runtime προβολή).
+import { toggleLayerFlag } from '../../../services/layer-flags-writer';
 // ADR-557 — live current-level scene via the `useCurrentLevelScene()` SSoT hook (Level interface has no `scene` field; storage lives in `LevelsSystem.sceneManagerRef`).
 import { useCurrentLevelScene } from '../../../systems/levels/useCurrentLevelScene';
 import type { SceneLayer, AecLayerCategory, AnySceneEntity } from '../../../types/entities';
@@ -80,16 +81,20 @@ export function useLayerManagerState(): LayerManagerStateHook {
     return result;
   }, [storeSnapshot.layers, t]);
 
-  const toggleLayerVisibility = useCallback(
-    (layerId: string) => {
-      const target = storeSnapshot.layers.find(
-        (l) => (l.id ?? l.name) === layerId,
-      );
-      if (!target) return;
-      upsertLayer({ ...target, visible: !target.visible });
-    },
-    [storeSnapshot.layers],
-  );
+  /**
+   * ADR-719 §7 — γράφει στο **έγγραφο** (και, ατομικά, στη runtime προβολή) αντί για σκέτο
+   * `upsertLayer`.
+   *
+   * Πριν, το κουμπί έκρυβε το layer αλλά τίποτα δεν αποθηκευόταν: το επόμενο hydration από
+   * το έγγραφο το επανέφερε. Πρακτικά «κρύψε → σχεδίασε οτιδήποτε → το layer ξαναφάνηκε».
+   *
+   * Το `fallbackWhenUnset: true` κωδικοποιεί ότι `visible: undefined` σημαίνει **αναμμένο**
+   * (§1) — το παλιό `!target.visible` έδινε `!undefined === true`, δηλαδή ζητούσε «άναψέ το»
+   * ενώ ήταν ήδη αναμμένο, και το πρώτο κλικ έμοιαζε νεκρό.
+   */
+  const toggleLayerVisibility = useCallback((layerId: string) => {
+    toggleLayerFlag(layerId, 'visible', true);
+  }, []);
 
   const setCurrentLayer = useCallback(
     (layerId: string) => {

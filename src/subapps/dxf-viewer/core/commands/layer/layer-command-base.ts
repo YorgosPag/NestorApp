@@ -25,7 +25,9 @@
 
 import type { ICommand } from '../interfaces';
 import { BaseCommand } from '../base-command';
-import { getLayer, upsertLayer, getAllLayers } from '../../../stores/LayerStore';
+import { getLayer, getAllLayers } from '../../../stores/LayerStore';
+// ADR-719 §7 — μόνιμες αλλαγές flag = μία πόρτα (έγγραφο + runtime προβολή).
+import { setLayerFlags, setLayerFlagsBatch } from '../../../services/layer-flags-writer';
 import {
   clearIsolateEffects,
   getIsolateEffectsSnapshot,
@@ -113,10 +115,9 @@ export abstract class SingleLayerFlagCommand extends LayerCommandBase {
     return { layerId: this.input.layerId };
   }
 
+  /** ADR-719 §7 — μόνιμη εντολή χρήστη (Off/Freeze/Lock) ⇒ γράφει στο έγγραφο. */
   private applyFlag(): void {
-    const layer = getLayer(this.input.layerId);
-    if (!layer) return;
-    upsertLayer({ ...layer, [this.flag]: this.targetValue });
+    setLayerFlags(this.input.layerId, { [this.flag]: this.targetValue });
   }
 }
 
@@ -154,12 +155,15 @@ export abstract class MutateAllLayersCommand extends LayerCommandBase {
     return {};
   }
 
+  /** ADR-719 §7 — μία ατομική εγγραφή εγγράφου για όλα τα layers (όχι N ξεχωριστές). */
   private replayExecute(): void {
-    for (const layer of getAllLayers()) {
-      const current = this.flag === 'frozen' ? (layer.frozen ?? false) : layer.visible;
-      if (current === this.targetValue) continue;
-      upsertLayer({ ...layer, [this.flag]: this.targetValue });
-    }
+    const toChange = getAllLayers()
+      .filter((layer) => {
+        const current = this.flag === 'frozen' ? (layer.frozen ?? false) : layer.visible;
+        return current !== this.targetValue;
+      })
+      .map((layer) => layer.id ?? layer.name);
+    if (toChange.length > 0) setLayerFlagsBatch(toChange, { [this.flag]: this.targetValue });
   }
 }
 
