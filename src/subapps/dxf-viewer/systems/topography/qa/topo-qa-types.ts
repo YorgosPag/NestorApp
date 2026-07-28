@@ -30,7 +30,8 @@ export type TopoQaKind =
   | 'duplicate-point'   // two survey points at (almost) the same XY with incompatible Z
   | 'boundary-closure'  // a closed ring that is degenerate / does not form a valid loop
   | 'self-intersection' // a closed ring whose edges cross themselves
-  | 'missing-breakline'; // a steep TIN edge with no breakline constraint (ridge/ditch?)
+  | 'missing-breakline' // a steep TIN edge with no breakline constraint (ridge/ditch?)
+  | 'boundary-coverage'; // the plot is not backed by measurement: a hole, or interpolation from afar
 
 /**
  * One QA finding. `at` is WORLD canonical mm (ADR-462) — the same frame the contour

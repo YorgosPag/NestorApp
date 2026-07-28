@@ -1314,7 +1314,9 @@
         "selfIntersectionBreakline": "Closed breakline #{ring} crosses itself.",
         "degenerateBoundary": "The boundary is degenerate (area {area}m²) — likely a pick mistake.",
         "degenerateBreakline": "Closed breakline #{ring} is degenerate (area {area}m²).",
-        "missingBreakline": "Steep {angle}° fold with no constraint — a ridge/ditch breakline may be missing."
+        "missingBreakline": "Steep {angle}° fold with no constraint — a ridge/ditch breakline may be missing.",
+        "coverageGap": "{percent}% of the plot is not covered by the surface — earthwork volumes there count as zero.",
+        "interpolatedSupport": "{percent}% of the plot rests on interpolation from distant points ({points, plural, one {# measured point} other {# measured points}} inside the boundary) — excavation volumes there are guesswork."
       }
     },
     "autoBreakline": {

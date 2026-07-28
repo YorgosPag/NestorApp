@@ -31,6 +31,46 @@ export function buildVertexAdjacency(surface: TinSurface): ReadonlyArray<Readonl
   return adjacency;
 }
 
+/**
+ * The planimetric length (LOCAL mm) of every UNIQUE TIN edge — the raw material for «how far
+ * apart was this survey shot?», which is what `check-boundary-elevation-coverage` calibrates its
+ * bridge threshold against (ADR-725).
+ *
+ * Unique, not per-triangle: an interior edge belongs to two triangles, and counting it twice
+ * would weight the interior of the survey against its border for no reason. Planimetric on
+ * purpose — the question is shot SPACING, and a slope must not make a shot look further away
+ * than the surveyor actually walked.
+ *
+ * Lives here rather than in the check because it is the same family as the two adjacency
+ * products above: a derivation the raw {@link TinSurface} does not carry, useful to any QA rule
+ * that needs to know the survey's own scale.
+ */
+export function tinEdgeLengths(surface: TinSurface): number[] {
+  const seen = new Set<string>();
+  const lengths: number[] = [];
+  const add = (a: number, b: number): void => {
+    const key = edgeKey(a, b);
+    if (seen.has(key)) return;
+    seen.add(key);
+    const length = tinEdgeLength(surface, a, b);
+    if (Number.isFinite(length)) lengths.push(length);
+  };
+  for (const [i, j, k] of surface.triangles) { add(i, j); add(j, k); add(k, i); }
+  return lengths;
+}
+
+/**
+ * Planimetric length (LOCAL mm) of the edge between two TIN vertices, or `NaN` when either
+ * index is out of range. One owner of the measurement, so the population {@link tinEdgeLengths}
+ * calibrates against and the per-triangle test that compares to it can never drift apart.
+ */
+export function tinEdgeLength(surface: TinSurface, a: number, b: number): number {
+  const pa = surface.positions[a];
+  const pb = surface.positions[b];
+  if (!pa || !pb) return NaN;
+  return Math.hypot(pb[0] - pa[0], pb[1] - pa[1]);
+}
+
 /** One interior TIN edge and the two triangle indices that share it. */
 export interface EdgeFaces {
   readonly a: number;

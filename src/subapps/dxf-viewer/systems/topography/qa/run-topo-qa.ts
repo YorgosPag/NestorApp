@@ -17,10 +17,12 @@ import { checkElevationBusts } from './check-elevation-busts';
 import { checkDuplicatePoints } from './check-duplicate-points';
 import { checkBoundaryClosure } from './check-boundary-closure';
 import { checkMissingBreaklines } from './check-missing-breaklines';
+import { checkBoundaryElevationCoverage } from './check-boundary-elevation-coverage';
 
 const SEVERITY_RANK: Readonly<Record<TopoQaSeverity, number>> = { high: 0, medium: 1, low: 2 };
 const ALL_KINDS: readonly TopoQaKind[] = [
   'elevation-bust', 'duplicate-point', 'boundary-closure', 'self-intersection', 'missing-breakline',
+  'boundary-coverage',
 ];
 
 /** Keep at most `MAX_FLAGS_PER_KIND` of each kind; return the survivors + how many were dropped. */
@@ -52,6 +54,10 @@ export function runTopoQa(surfaceId: TopoSurfaceId = 'existing'): TopoQaReport {
     ...checkDuplicatePoints(definition.points),
     ...checkBoundaryClosure(boundary, definition.breaklines),
     ...checkMissingBreaklines(surface, definition.breaklines, surface.origin),
+    // ADR-725 — ο μόνος έλεγχος που ρωτά «πόσο του ΟΙΚΟΠΕΔΟΥ στηρίζεται σε μέτρηση», δηλαδή ο
+    // μόνος που κοιτά ταυτόχρονα την επιφάνεια, το όριο ΚΑΙ τα raw σημεία (τα δισδιάστατα του
+    // ADR-720 δεν φτάνουν ποτέ στο TIN, οπότε η επιφάνεια μόνη της δεν μπορεί να τα μετρήσει).
+    ...checkBoundaryElevationCoverage(surface, boundary, definition.points),
   ];
 
   const { kept, dropped } = applyCap(raw);

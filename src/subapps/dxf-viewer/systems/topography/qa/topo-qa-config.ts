@@ -47,6 +47,43 @@ export const TOPO_QA_CONFIG = {
   /** ≥ 60° fold with no constraint ⇒ `high` (a cliff the surface is almost certainly wrong about). */
   MISSING_BREAKLINE_HIGH_ANGLE_DEG: 60,
 
+  // ── Boundary elevation coverage (ADR-725) ───────────────────────────────────
+  /**
+   * Below 2% of the plot area, an uncovered sliver is the float/clipping noise of the
+   * triangle∩boundary intersection itself — not missing ground. Above it, there is genuinely
+   * no surface over part of the parcel, and the earthworks table silently counts zero there.
+   */
+  COVERAGE_GAP_MIN_FRACTION: 0.02,
+  /** A fifth of the plot with no ground at all ⇒ `high`: the volume table is wrong, not optimistic. */
+  COVERAGE_GAP_HIGH_FRACTION: 0.2,
+  /**
+   * A triangle is a BRIDGE — it spans a hole in the survey rather than describing measured
+   * ground — when its longest edge exceeds `k ×` the MEDIAN edge length of the same surface.
+   *
+   * Self-calibrating on purpose, and this is the whole point: ESRI's «Delineate TIN Data Area»
+   * (the industry answer to exactly this question) derives its Maximum Edge Length from the
+   * average node spacing of the data — «provide a value larger than the average spacing» — and
+   * refuses to name an absolute metre value, because a survey shot every 2 m and one shot every
+   * 40 m are both valid, merely at different scales. An absolute threshold here would flag every
+   * rural survey and stay blind on every dense urban one.
+   *
+   * MEDIAN, not mean — the same reason `ELEVATION_BUST_MAD_MULTIPLIER` above uses median+MAD: a
+   * handful of huge bridges must not be allowed to raise their own threshold.
+   *
+   * `3`: Delaunay already maximises the minimum interior angle, so on an evenly-shot survey the
+   * edge lengths cluster tightly around the median. 3× stays quiet through that natural spread
+   * and fires only when a triangle genuinely JUMPS across a gap.
+   */
+  BRIDGING_EDGE_MEDIAN_MULTIPLIER: 3,
+  /**
+   * Below a quarter, the bridged area is the perimeter ring every survey has — the triangles
+   * that reach from the last shot inside to the first shot outside. Flagging that would fire on
+   * every correctly surveyed small plot, and a QA rule that cries wolf stops being read.
+   */
+  INTERPOLATED_MIN_FRACTION: 0.25,
+  /** More than half the plot resting on interpolation ⇒ `high`: the volume is mostly guesswork. */
+  INTERPOLATED_HIGH_FRACTION: 0.5,
+
   // ── Report-wide cap ─────────────────────────────────────────────────────────
   /**
    * Max flags PER KIND kept in the report (most-severe first); the rest are counted into
