@@ -24,10 +24,9 @@
 
 import type { DxfEntityUnion } from '../canvas-v2/dxf-canvas/dxf-types';
 import type { GripInfo } from './useGripMovement';
-import type { TopoSurfaceEntity } from '../types/topo-surface';
 // ADR-662 §13 — παραγωγή λαβών τοπογραφικής επιφάνειας (κοινό SSoT με τον renderer).
 import {
-  topoSurfaceVertexGrips,
+  topoSurfaceGripsOf,
   topoVertexGripKind,
 } from '../systems/topography/topo-surface-grips';
 import type { WallEntity } from '../bim/types/wall-types';
@@ -418,7 +417,7 @@ export const GRIP_PRODUCERS: Partial<Record<DxfEntityUnion['type'], (e: DxfEntit
   // σε survey point**. Το ΙΔΙΟ `topoSurfaceVertexGrips` SSoT ζωγραφίζει ο
   // `TopoSurfaceRenderer.getGrips` → ορατό ≡ πιάσιμο (και το φιλτράρισμα των μη-επιλύσιμων
   // κορυφών γίνεται εκεί μία φορά, ώστε οι δείκτες να μη ξεφύγουν μεταξύ των δύο).
-  'topo-surface': (e) => buildTopoSurfaceGrips(e as unknown as TopoSurfaceEntity),
+  'topo-surface': (e) => buildTopoSurfaceGrips(e),
 };
 
 /**
@@ -426,8 +425,8 @@ export const GRIP_PRODUCERS: Partial<Record<DxfEntityUnion['type'], (e: DxfEntit
  * πάνω στο γεωμετρικό SSoT· καμία απόφαση εδώ (ποιες κορυφές δίνουν λαβή το κρίνει το
  * `topoSurfaceVertexGrips`, γιατί την ίδια κρίση χρειάζεται και ο renderer).
  */
-function buildTopoSurfaceGrips(entity: TopoSurfaceEntity): GripInfo[] {
-  return topoSurfaceVertexGrips(entity).map((g, gripIndex) => ({
+function buildTopoSurfaceGrips(entity: DxfEntityUnion): GripInfo[] {
+  return topoSurfaceGripsOf(entity).map((g, gripIndex) => ({
     entityId: entity.id,
     gripIndex,
     type: 'vertex' as const,

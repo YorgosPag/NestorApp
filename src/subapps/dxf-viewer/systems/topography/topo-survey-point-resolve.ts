@@ -40,7 +40,10 @@ import { getTopoSurface } from './topo-surface';
 import { localVertexKey } from './tin-builder';
 import { hasElevation } from './topo-point-elevation';
 import { worldToLocal } from './topo-local-origin';
-import { getActiveWorldToDisplayProjector } from '../geo-referencing/geo-reference-store';
+// ADR-650 §M10f / ADR-718 §Α — η ΕΙΣΕΡΧΟΜΕΝΗ πύλη. Ό,τι ΜΠΑΙΝΕΙ από το χαρτί περνά από εδώ·
+// ποτέ ωμό `getActiveWorldToDisplayProjector().unproject(...)`, αλλιώς η κανονικοποίηση του
+// identity (fast path) ξαναγράφεται ανά καλούντα και οι δύο κατευθύνσεις της γέφυρας αποκλίνουν.
+import { getTopoDisplayProjector, unprojectDisplayPoint } from './topo-display-frame';
 
 /** Ευρετήριο «κλειδί πλέγματος TIN → δείκτης survey point», για μία επιφάνεια. */
 interface SurveyKeyIndex {
@@ -103,7 +106,7 @@ export function resolveSurveyPointIndexAt(
   displayVertex: Point2D,
 ): number | null {
   const { origin } = getTopoSurface(surfaceId);
-  const world = getActiveWorldToDisplayProjector().unproject(displayVertex.x, displayVertex.y);
+  const world = unprojectDisplayPoint(displayVertex, getTopoDisplayProjector());
   const local = worldToLocal(world, origin);
   const found = surveyKeyIndex(surfaceId).keyToPointIndex.get(localVertexKey(local.x, local.y));
   return found ?? null;
@@ -140,9 +143,9 @@ export function moveSurveyPoint(
  * περνά **μόνο** η στροφή. Ένα σημείο αναφοράς αρκεί (η απεικόνιση είναι rigid).
  */
 export function displayDeltaToWorld(displayDelta: Point2D): Point2D {
-  const projector = getActiveWorldToDisplayProjector();
-  if (projector.isIdentity) return displayDelta;
-  const origin = projector.unproject(0, 0);
-  const moved = projector.unproject(displayDelta.x, displayDelta.y);
+  const projector = getTopoDisplayProjector();
+  if (!projector) return displayDelta;
+  const origin = unprojectDisplayPoint({ x: 0, y: 0 }, projector);
+  const moved = unprojectDisplayPoint(displayDelta, projector);
   return { x: moved.x - origin.x, y: moved.y - origin.y };
 }

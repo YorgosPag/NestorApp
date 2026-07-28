@@ -35,7 +35,7 @@ import { isTopoSurfaceEntity } from '../../types/topo-surface';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { createVertexGrip } from './shared/grip-utils';
 // ADR-662 §13 — το ΙΔΙΟ SSoT που τροφοδοτεί το interaction registry (ορατό ≡ πιάσιμο).
-import { topoSurfaceVertexGrips } from '../../systems/topography/topo-surface-grips';
+import { topoSurfaceGripsOf } from '../../systems/topography/topo-surface-grips';
 
 export class TopoSurfaceRenderer extends BaseEntityRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
@@ -72,10 +72,8 @@ export class TopoSurfaceRenderer extends BaseEntityRenderer {
    * Αυτό ήταν **ρητή απόφαση**, όχι bug· άλλαξε το συμβόλαιο, όχι η υλοποίηση.)
    */
   getGrips(entity: EntityModel): GripInfo[] {
-    if (!isTopoSurfaceEntity(entity as Entity)) return [];
-    const e = entity as unknown as TopoSurfaceEntity;
-    return topoSurfaceVertexGrips(e).map((g, gripIndex) =>
-      createVertexGrip(e.id, { x: g.point.x, y: g.point.y }, gripIndex),
+    return topoSurfaceGripsOf(entity).map((g, gripIndex) =>
+      createVertexGrip(entity.id, { x: g.point.x, y: g.point.y }, gripIndex),
     );
   }
 

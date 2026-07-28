@@ -40,8 +40,8 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { Entity } from '../../types/entities';
 import type { TopoSurfaceEntity } from '../../types/topo-surface';
+import { isTopoSurfaceEntity } from '../../types/topo-surface';
 import { entityClosedRings } from '../../snapping/shared/entity-closed-rings';
 import { closedRingVertexGrips } from '../grip/closed-ring-grips';
 import { resolveSurveyPointIndexAt } from './topo-survey-point-resolve';
@@ -107,11 +107,19 @@ export function topoSurfaceVertexGrips(entity: TopoSurfaceEntity): TopoSurfaceVe
   return grips;
 }
 
-/** Ο τύπος-φύλακας ως `Entity` overload, ώστε οι καταναλωτές να μη ξαναγράφουν το cast. */
-export function topoSurfaceGripsOf(entity: Entity): TopoSurfaceVertexGrip[] {
-  return entity.type === 'topo-surface'
-    ? topoSurfaceVertexGrips(entity as TopoSurfaceEntity)
-    : [];
+/**
+ * Η **ελεγμένη** είσοδος για καταναλωτές που κρατούν οντότητα άγνωστου τύπου — ο ορατός
+ * renderer (`TopoSurfaceRenderer.getGrips`) και το interaction registry (`GRIP_PRODUCERS`).
+ *
+ * Το όρισμα είναι σκόπιμα το ελάχιστο δομικό σχήμα (`{ type: string }`), ακριβώς όπως στο
+ * `isTopoSurfaceEntity`: έτσι δέχεται **και** `EntityModel` **και** `DxfEntityUnion` χωρίς να
+ * χρειαστεί κανένας από τους δύο καταναλωτές να γράψει cast. Αυτό δεν είναι καλλωπισμός — ο
+ * κώδικας που αντικατέστησε έγραφε `e as unknown as TopoSurfaceEntity`, δηλαδή **ανέλεγκτο**
+ * cast: αν το κλειδί του registry ξέφευγε ποτέ, θα διαβάζαμε `footprint` από γραμμή. Εδώ ο
+ * έλεγχος τύπου είναι πραγματικός, μία φορά, από τον ΙΔΙΟ φύλακα που χρησιμοποιεί ο renderer.
+ */
+export function topoSurfaceGripsOf(entity: { type: string }): TopoSurfaceVertexGrip[] {
+  return isTopoSurfaceEntity(entity) ? topoSurfaceVertexGrips(entity) : [];
 }
 
 /**
