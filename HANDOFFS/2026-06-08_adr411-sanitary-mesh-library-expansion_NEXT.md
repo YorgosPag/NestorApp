@@ -91,7 +91,7 @@ DOC  local_ΕΚΚΡΕΜΟΤΗΤΕΣ.txt
 ---
 
 ## 🔧 TOOLING (επιβεβαιωμένο αυτό το session)
-- **Sketchfab API token:** `4f345c0954ac49178a955ed13acdd300` (αν έληξε → Giorgio: Sketchfab → Settings → Password & API → API Token → regenerate).
+- **Sketchfab API token:** `<redacted — see docs/security/secret-rotation-runbook.md §3>` (αν έληξε → Giorgio: Sketchfab → Settings → Password & API → API Token → regenerate).
 - **Measure script (three σε node):** χρειάζεται `globalThis.self = globalThis;` ΠΡΙΝ + dynamic `import('three')` + `import('three/examples/jsm/loaders/GLTFLoader.js')` + `.parse(arrayBuffer, '', onLoad, onErr)`. Τρέξε από το project root (resolve node_modules). Αγνόησε τα «Couldn't load texture blob» warnings.
 - **gcloud:** project `pagonis-87766`· bucket `pagonis-87766.firebasestorage.app`· path `bim-mesh-library/sanitary/`. (MCP storage tool = ΑΛΛΟ bucket μόνο `companies/` — μη το χρησιμοποιείς.)
 - **PowerShell μέσω Bash:** ΟΧΙ `-ExecutionPolicy Bypass` (blocked). Για process-check χρησιμοποίησε `wmic process where "name='node.exe'" get commandline`.

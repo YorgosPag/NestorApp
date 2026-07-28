@@ -81,4 +81,4 @@
 - Sanitary template (mirror): `bim/sanitary/sanitary-symbol-spec.ts` · `sanitary-fixture-connectors.ts` · `sanitary-fixture-mesh-catalog.ts` · `ui/ribbon/data/contextual-mep-sanitary-fixture-tab.ts`.
 - Connectors SSoT: `bim/types/mep-connector-types.ts` (`buildSanitaryColdWaterConnector`/`buildSanitaryDrainConnector`, `PlumbingSystemClassification`).
 - Mesh converter: `bim-3d/converters/mep-fixture-to-mesh.ts` + `mesh-to-object3d.ts` (anchor base=bbox min.y).
-- Credits: `bim/licensing/asset-credits.ts`. Sketchfab token: `4f345c0954ac49178a955ed13acdd300`.
+- Credits: `bim/licensing/asset-credits.ts`. Sketchfab API token: `<redacted — see docs/security/secret-rotation-runbook.md §3>`.
