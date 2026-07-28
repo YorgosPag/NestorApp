@@ -6190,9 +6190,8 @@
       "failed": "Αποτυχία εξαγωγής IFC"
     }
   },
-  "layerManagerDialog": {
-    "title": "Διαχειριστής Στρώσεων",
-    "description": "Διαχείριση ορατότητας, χρώματος και ιδιοτήτων κάθε στρώσης (Ctrl+L)."
+  "layerManagerPalette": {
+    "title": "Διαχειριστής Στρώσεων"
   },
   "floorManagementDialog": {
     "title": "Όροφοι Κτιρίου",

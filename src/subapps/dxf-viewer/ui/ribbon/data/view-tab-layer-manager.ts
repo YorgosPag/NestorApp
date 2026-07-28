@@ -1,8 +1,10 @@
 /**
- * ADR-391 — View tab, LAYER MANAGER panel.
+ * ADR-391 / ADR-723 — View tab, LAYER MANAGER panel.
  *
- * Industry: AutoCAD "Layer Properties Manager" button on View tab.
- * Click dispatches `open-layer-manager` action → AdminLayerManagerDialog opens.
+ * Industry: AutoCAD "Layer Properties Manager" button on View tab — **modeless palette**,
+ * changes apply immediately, no OK button.
+ * Click dispatches `open-layer-manager` → `AdminLayerManagerPalette` opens (ADR-723: παλέτα,
+ * όχι modal — ο καμβάς παραμένει πλήρως λειτουργικός όσο είναι ανοιχτή).
  * Keyboard fallback: Ctrl+L (centralized `toggleLayers` shortcut SSoT).
  */
 

@@ -44,8 +44,10 @@ import { useBlockEditorExitEscape } from '../systems/block/useBlockEditorExitEsc
 // DIM_TOOL slot (priority 550) sits above the DRAW_TOOL slot (priority 500)
 // and consumes ESC first, so this remains correct.
 import { isInteractiveTool } from '../systems/tools/ToolStateManager';
-// ADR-391 — Ctrl+L opens AdminLayerManager dialog (toggleLayers shortcut SSoT)
-import { AdminLayerManagerDialogStore } from '../stores/AdminLayerManagerDialogStore';
+// ADR-723 — Ctrl+L εναλλάσσει την παλέτα «Διαχειριστής Στρώσεων» (toggleLayers shortcut SSoT).
+// Ήταν modal dialog (ADR-391)· τώρα είναι modeless παλέτα, άρα το Ctrl+L είναι πραγματικό
+// toggle: πατάς ξανά και κλείνει, χωρίς να χάνεις ό,τι κάνεις στον καμβά.
+import { LayerManagerPaletteStore } from '../stores/LayerManagerPaletteStore';
 import { getActiveDragGrip } from '../systems/cursor/GripDragStore';
 // ADR-711 — δομικός φύλακας global accelerators (modal keyboard ownership).
 import { addGlobalShortcutListener } from '../keyboard/global-shortcut-listener';
@@ -211,11 +213,11 @@ export const useKeyboardShortcuts = ({
         return;
       }
 
-      // ADR-391: Ctrl+L → toggle AdminLayerManager dialog (Revit/AutoCAD parity).
+      // ADR-723: Ctrl+L → εναλλαγή της παλέτας Στρώσεων (AutoCAD `LAYER` / Revit parity).
       // Consumes the previously-dead `toggleLayers` shortcut declared in keyboard-shortcuts.ts.
       if (matchesShortcut(e, 'toggleLayers')) {
         e.preventDefault();
-        AdminLayerManagerDialogStore.toggle();
+        LayerManagerPaletteStore.toggle();
         return;
       }
 

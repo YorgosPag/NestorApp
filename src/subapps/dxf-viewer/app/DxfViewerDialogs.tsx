@@ -34,7 +34,7 @@ import {
   TestsModal, CreditsDialog, FloorplanBackgroundPanel, ReplaceConfirmDialog, CalibrationDialog,
   DxfImportModal, SimpleProjectDialog, FloorplanImportWizard, ConstructionLayerScaffoldDialog,
   DxfFindReplaceHost, DxfSymbolPickerHost, RenumberOpeningsHost, OpeningTagStyleHost,
-  OpeningSchedulePdfHost, ThermalEnvelopeHost, BimScheduleHost, TopoRibbonHost, AdminLayerManagerDialogHost,
+  OpeningSchedulePdfHost, ThermalEnvelopeHost, BimScheduleHost, TopoRibbonHost, AdminLayerManagerPalette,
   ImportedMeshBoqHost,
   ImportedMeshMaterialMapHost,
   DxfAiChatPanel, ColumnPerimeterConfirmDialog, GapCloseConfirmDialog, ColumnAdoptSizeDialog, ColumnBecomesWallDialog, ShearWallExtentDialog, SectionRelationshipDialog, ColumnBatchFillConfirmDialog, AutoDimensionOptionsDialog, DxfSymbolDetectConfirmDialog, ColumnPromoteConfirmDialog, HatchOverlapConfirmDialog, PrintHost, ExportHost, StampHost, AiTitleBlockHost, RevisionsHost, TitleBlockLibraryDialogHost, ColumnDetailHost, FoundationDetailHost, BeamDetailHost,
@@ -259,8 +259,9 @@ export function DxfViewerDialogs(props: DxfViewerDialogsProps): React.JSX.Elemen
       <React.Suspense fallback={hiddenFallback}><BeamDetailHost levelManager={levelManager} /></React.Suspense>
       {/* ADR-476 — Slab Reinforcement Detail Sheet (opened via slab contextual tab). */}
       <React.Suspense fallback={hiddenFallback}><SlabDetailHost levelManager={levelManager} /></React.Suspense>
-      {/* ADR-391 — AdminLayerManager modal (opened via View tab button or Ctrl+L). */}
-      <React.Suspense fallback={hiddenFallback}><AdminLayerManagerDialogHost projectId={levelManager.saveContext?.projectId ?? null} /></React.Suspense>
+      {/* ADR-723 — «Διαχειριστής Στρώσεων» ως modeless palette (View tab ή Ctrl+L).
+          Μένει ανοιχτή ΕΝΩ ο χρήστης δουλεύει στον καμβά — δεν είναι dialog. */}
+      <React.Suspense fallback={hiddenFallback}><AdminLayerManagerPalette projectId={levelManager.saveContext?.projectId ?? null} /></React.Suspense>
       {/* ADR-683 Φ3.1β — «Ανάθεση προμέτρησης» modal (opened from the imported-mesh contextual tab). */}
       <React.Suspense fallback={hiddenFallback}><ImportedMeshBoqHost levelManager={levelManager} projectId={projectId} /></React.Suspense>
       {/* ADR-686 Φ5 — «Αντιστοίχιση Υλικών» modal (opened from the imported-mesh contextual tab). */}

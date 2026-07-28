@@ -6190,9 +6190,8 @@
       "failed": "IFC export failed"
     }
   },
-  "layerManagerDialog": {
-    "title": "Layer Manager",
-    "description": "Manage layer visibility, color and properties (Ctrl+L)."
+  "layerManagerPalette": {
+    "title": "Layer Manager"
   },
   "floorManagementDialog": {
     "title": "Building Floors",

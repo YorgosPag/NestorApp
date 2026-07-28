@@ -45,8 +45,9 @@ export const FoundationDetailHost = React.lazy(() => import('../ui/components/fo
 export const BeamDetailHost = React.lazy(() => import('../ui/components/beam-detail/BeamDetailHost').then(mod => ({ default: mod.BeamDetailHost })));
 // ADR-476 — Slab Reinforcement Detail Sheet («Λεπτομέρεια Οπλισμού») dialog host
 export const SlabDetailHost = React.lazy(() => import('../ui/components/slab-detail/SlabDetailHost').then(mod => ({ default: mod.SlabDetailHost })));
-// ADR-391 — AdminLayerManager dialog host
-export const AdminLayerManagerDialogHost = React.lazy(() => import('./AdminLayerManagerDialogHost').then(mod => ({ default: mod.AdminLayerManagerDialogHost })));
+// ADR-723 — «Διαχειριστής Στρώσεων» ως modeless palette (ήταν modal dialog, ADR-391).
+// Το ενδιάμεσο `AdminLayerManagerDialogHost` καταργήθηκε: ήταν καθαρό pass-through των props.
+export const AdminLayerManagerPalette = React.lazy(() => import('../ui/components/AdminLayerManagerPalette').then(mod => ({ default: mod.AdminLayerManagerPalette })));
 // ADR-683 Φ3.1β — «Ανάθεση προμέτρησης» dialog host (εισαγόμενο πλέγμα → άρθρο ΑΤΟΕ + μονάδα)
 export const ImportedMeshBoqHost = React.lazy(() => import('./ImportedMeshBoqHost').then(mod => ({ default: mod.ImportedMeshBoqHost })));
 export const ImportedMeshMaterialMapHost = React.lazy(() => import('./ImportedMeshMaterialMapHost').then(mod => ({ default: mod.ImportedMeshMaterialMapHost })));

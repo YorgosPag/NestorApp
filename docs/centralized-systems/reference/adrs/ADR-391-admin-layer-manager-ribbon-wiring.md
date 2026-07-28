@@ -153,4 +153,12 @@ $ rg "<LazyAdminLayerManager"         src/subapps/dxf-viewer          → 0 matc
 
 ## 8. Changelog
 
+- **2026-07-28 — Το ΚΕΛΥΦΟΣ αντικαταστάθηκε από το ADR-723· η ενσύρματη σύνδεση αυτού του ADR ΜΕΝΕΙ.**
+  Ο διαχειριστής δεν είναι πια Radix Dialog αλλά **modeless παλέτα** πάνω στο κοινό `FloatingPanel`.
+  Πρακτικά για το παρόν έγγραφο: το `AdminLayerManagerDialogStore` έγινε `LayerManagerPaletteStore`
+  και ό,τι λέει το §3 για dialog host / backdrop / focus trap **δεν ισχύει πλέον**. Ό,τι λέει για
+  **ποιος** ανοίγει τον διαχειριστή (ribbon «Στρώσεις» + `Ctrl+L` μέσω του `toggleLayers` SSoT)
+  ισχύει ακέραιο — απλώς το `Ctrl+L` έγινε **πραγματικό toggle**: πατάς ξανά και κλείνει, χωρίς να
+  χάνεις ό,τι κάνεις στον καμβά, που ήταν αδύνατο όσο το πλαίσιο ήταν modal. 📌 ADR-723.
+
 - **2026-05-27** (Sonnet 4.6 + Γιώργος): Phase 1 Recognition + Q1-Q4 locked + Phase 2 implementation (5 NEW + 7 MODIFIED) + Phase 3 doc + index/ΕΚΚΡΕΜΟΤΗΤΕΣ/pending-ratchet/MEMORY updates.
