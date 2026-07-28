@@ -17,7 +17,7 @@ import {
   clearUnisolateSnapshot,
   getUnisolateSnapshot
 } from '../../../stores/LayerStore';
-// ADR-719 §7 — μόνιμες αλλαγές flag = μία πόρτα (έγγραφο + runtime προβολή).
+// ADR-721 §7 — μόνιμες αλλαγές flag = μία πόρτα (έγγραφο + runtime προβολή).
 import { setLayerFlags, setLayerFlagsBatch } from '../../../services/layer-flags-writer';
 import type {
   UnisolateSnapshot,
@@ -62,7 +62,7 @@ export function captureLayerSnapshot(layerId: string): UnisolateSnapshotEntry | 
 /**
  * Restore a single layer to its snapshot state. No-op if layer no longer exists.
  *
- * ADR-719 §7 — γράφει στο **έγγραφο** (μαζί με τη runtime προβολή). Το undo ΠΡΕΠΕΙ να
+ * ADR-721 §7 — γράφει στο **έγγραφο** (μαζί με τη runtime προβολή). Το undo ΠΡΕΠΕΙ να
  * φτάνει όσο μακριά έφτασε το execute: αν η εντολή περσιστάρει και το undo όχι, το
  * «ακύρωση» θα φαινόταν στην οθόνη αλλά το αρχείο θα κρατούσε την αλλαγή — σιωπηλή
  * απόκλιση χειρότερη από το αρχικό bug.
@@ -104,7 +104,7 @@ export function dropUnisolateSnapshot(): void {
   clearUnisolateSnapshot();
 }
 
-// ADR-719 §8 — Η `freezeNonIsolatedLayers` ΑΦΑΙΡΕΘΗΚΕ.
+// ADR-721 §8 — Η `freezeNonIsolatedLayers` ΑΦΑΙΡΕΘΗΚΕ.
 //
 // Έγραφε `frozen: true` σε κάθε μη-απομονωμένο layer «για να ενεργοποιήσει το AutoCAD render
 // skip-path» — δηλαδή έβαζε **κατάσταση συνεδρίας** σε **μόνιμο πεδίο του εγγράφου**. Το
@@ -118,7 +118,7 @@ export function dropUnisolateSnapshot(): void {
 /**
  * Mutate one flag on every layer that doesn't already match. Used by ThawAll / OnAll.
  *
- * ADR-719 §7 — μία **ατομική** εγγραφή εγγράφου για όλα τα layers (`setLayerFlagsBatch`):
+ * ADR-721 §7 — μία **ατομική** εγγραφή εγγράφου για όλα τα layers (`setLayerFlagsBatch`):
  * το «άναψε όλα τα επίπεδα» είναι μία ενέργεια χρήστη, άρα ένα βήμα undo και ένα auto-save,
  * όχι 58. Το snapshot επιστρέφεται όπως πριν, ώστε το undo να ξέρει τι να επαναφέρει.
  *

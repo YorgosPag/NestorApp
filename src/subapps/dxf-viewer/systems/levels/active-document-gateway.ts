@@ -3,7 +3,7 @@
 /**
  * active-document-gateway — η **μία θύρα** προς το ενεργό έγγραφο από κώδικα εκτός React.
  *
- * ADR-719 §6. Zero-React module singleton: **ΕΝΑΣ γραφέας** (το `LevelsSystem` κατά το mount)
+ * ADR-721 §6. Zero-React module singleton: **ΕΝΑΣ γραφέας** (το `LevelsSystem` κατά το mount)
  * → **ΠΟΛΛΟΙ αναγνώστες** (commands, services, stores). Ίδιο μοτίβο με το
  * `active-storey-store` και το `Bim3DEntitiesStore.activeLevelId`.
  *
@@ -36,7 +36,7 @@
  *
  * @module systems/levels/active-document-gateway
  * @see systems/scene/SceneStore — το κατώτερο στρώμα κατάστασης
- * @see docs/centralized-systems/reference/adrs/ADR-719
+ * @see docs/centralized-systems/reference/adrs/ADR-721
  */
 
 import type { SceneModel } from '../../types/scene';

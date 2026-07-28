@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * ADR-557 / **ADR-719 §2** — `useCurrentLevelScene`: THE single source of truth for "the LIVE
+ * ADR-557 / **ADR-721 §2** — `useCurrentLevelScene`: THE single source of truth for "the LIVE
  * `SceneModel` of the currently active level" as a React render-time value.
  *
  * WHY it exists (Giorgio 2026-07-08): the derivation `currentLevelId ? getLevelScene(currentLevelId)
@@ -12,7 +12,7 @@
  * mutations → the text ribbon looked the selection up in a stale scene → `selectedIds: []` → every
  * edit silently no-op'd. Collapsing the derivation here fixes that class of bug in ONE place.
  *
- * ## ADR-719 — γιατί ΔΕΝ αρκούσε ο σκέτος getter (η ρίζα του «τα ματάκια δεν κάνουν τίποτα»)
+ * ## ADR-721 — γιατί ΔΕΝ αρκούσε ο σκέτος getter (η ρίζα του «τα ματάκια δεν κάνουν τίποτα»)
  *
  * Μέχρι τις 2026-07-28 αυτό το hook έκανε **σκέτη κλήση getter κατά το render**, χωρίς καμία
  * συνδρομή. Πριν το ADR-547 Stage 0 αυτό ήταν ανεκτό: η σκηνή ζούσε σε `useState` μέσα στο
@@ -53,7 +53,7 @@
  *
  * @module systems/levels/useCurrentLevelScene
  * @see systems/scene/SceneStore — ο SSoT· §Caching rule εξηγεί τη σταθερότητα αναφοράς
- * @see docs/centralized-systems/reference/adrs/ADR-719 — root cause + απόδειξη από browser
+ * @see docs/centralized-systems/reference/adrs/ADR-721 — root cause + απόδειξη από browser
  */
 
 import { useCallback, useSyncExternalStore } from 'react';

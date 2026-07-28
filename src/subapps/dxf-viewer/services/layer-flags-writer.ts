@@ -1,7 +1,7 @@
 /**
  * layer-flags-writer — η **ΜΙΑ πόρτα** για κάθε μόνιμη αλλαγή ιδιότητας επιπέδου.
  *
- * ADR-719 §7.
+ * ADR-721 §7.
  *
  * ## Το πρόβλημα που λύνει
  *
@@ -37,7 +37,7 @@
  * @module services/layer-flags-writer
  * @see systems/levels/active-document-gateway — η θύρα προς το ενεργό έγγραφο
  * @see systems/isolate/IsolateEffectsStore — το ΞΕΧΩΡΙΣΤΟ κανάλι των προσωρινών
- * @see docs/centralized-systems/reference/adrs/ADR-719
+ * @see docs/centralized-systems/reference/adrs/ADR-721
  */
 
 import type { SceneLayer } from '../types/entities';

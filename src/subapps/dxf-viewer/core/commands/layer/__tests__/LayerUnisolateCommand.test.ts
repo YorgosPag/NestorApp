@@ -26,6 +26,24 @@ import {
   setupActiveDocument,
   teardownActiveDocument,
 } from '../../../../systems/levels/__tests__/active-document-test-harness';
+// ADR-721 §8 — ο render-side έλεγχος που ΑΝΤΙΚΑΤΕΣΤΗΣΕ το layer-flag μόλυσμα.
+import { isEntityLayerSkipped } from '../../../../canvas-v2/dxf-canvas/dxf-entity-layer-skip';
+
+/**
+ * ADR-721 §8 — «κρύβεται από την απομόνωση;» ρωτημένο εκεί που ΕΚΤΕΛΕΙΤΑΙ η χειρονομία.
+ *
+ * Η απομόνωση δεν γράφει πλέον `frozen: true` στα μη-απομονωμένα layers: ήταν κατάσταση
+ * συνεδρίας σε μόνιμο πεδίο εγγράφου, που το auto-save μπορούσε να κάνει μόνιμη στο αρχείο
+ * του χρήστη. Το layer-scope ελέγχεται τώρα στον renderer, από το `IsolateEffectsStore`.
+ *
+ * Άρα ένα `expect(getLayer('lyr_b')?.frozen)` θα έλεγχε **νεκρό** σημείο — θα ήταν πράσινο
+ * μόνο αν επαναφέραμε το bug. Το ουσιαστικό ερώτημα, και το μόνο που βλέπει ο χρήστης,
+ * είναι αν ο renderer παραλείπει την οντότητα· κι αυτό το απαντά ο ΙΔΙΟΣ κώδικας που
+ * τρέχει σε κάθε frame.
+ */
+function isHiddenByIsolate(layerId: string): boolean {
+  return isEntityLayerSkipped({ id: 'ent_probe', type: 'line', layerId } as never);
+}
 
 beforeEach(() => {
   __resetLayerStoreForTesting();
@@ -49,12 +67,12 @@ function isolateFreeze(targetId: string) {
 describe('LayerUnisolateCommand — execute', () => {
   it('restores frozen flag + clears effects + clears snapshot', () => {
     isolateFreeze('lyr_a');
-    expect(getLayer('lyr_b')?.frozen).toBe(true);
+    expect(isHiddenByIsolate('lyr_b')).toBe(true);
 
     const cmd = new LayerUnisolateCommand();
     cmd.execute();
 
-    expect(getLayer('lyr_b')?.frozen).toBe(false);
+    expect(isHiddenByIsolate('lyr_b')).toBe(false);
     expect(getIsolateEffectsSnapshot().active).toBe(false);
     expect(getUnisolateSnapshot()).toBeNull();
   });
@@ -71,10 +89,10 @@ describe('LayerUnisolateCommand — undo + redo', () => {
     isolateFreeze('lyr_a');
     const cmd = new LayerUnisolateCommand();
     cmd.execute();
-    expect(getLayer('lyr_b')?.frozen).toBe(false);
+    expect(isHiddenByIsolate('lyr_b')).toBe(false);
 
     cmd.undo();
-    expect(getLayer('lyr_b')?.frozen).toBe(true);
+    expect(isHiddenByIsolate('lyr_b')).toBe(true);
     expect(getIsolateEffectsSnapshot().active).toBe(true);
   });
 
@@ -84,7 +102,7 @@ describe('LayerUnisolateCommand — undo + redo', () => {
     cmd.execute();
     cmd.undo();
     cmd.redo();
-    expect(getLayer('lyr_b')?.frozen).toBe(false);
+    expect(isHiddenByIsolate('lyr_b')).toBe(false);
     expect(getIsolateEffectsSnapshot().active).toBe(false);
   });
 });

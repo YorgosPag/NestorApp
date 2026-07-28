@@ -37,7 +37,7 @@ import {
   setRecentLayerIds,
   subscribeLayerStore,
 } from '../../../stores/LayerStore';
-// ADR-719 §7 — μόνιμη αλλαγή flag = μία πόρτα (έγγραφο + runtime προβολή).
+// ADR-721 §7 — μόνιμη αλλαγή flag = μία πόρτα (έγγραφο + runtime προβολή).
 import { toggleLayerFlag } from '../../../services/layer-flags-writer';
 import { useCurrentLayerChange } from './useCurrentLayerChange';
 import { compareByLocale } from '@/lib/intl-formatting';
@@ -344,7 +344,7 @@ export function useCurrentLayerPickerState(): {
     [changeCurrentLayer],
   );
 
-  // ADR-719 §7 — και οι τρεις διακόπτες γράφουν πλέον στο **έγγραφο** (μαζί με τη runtime
+  // ADR-721 §7 — και οι τρεις διακόπτες γράφουν πλέον στο **έγγραφο** (μαζί με τη runtime
   // προβολή, ατομικά) αντί για σκέτο `upsertLayer`, που έχανε την αλλαγή στο επόμενο
   // hydration. Το τρίτο όρισμα κωδικοποιεί τι σημαίνει `undefined` ανά flag (§1):
   // `visible` ⇒ αναμμένο, `locked`/`frozen` ⇒ όχι.

@@ -37,9 +37,9 @@ import {
 } from '../../../../stores/LayerStateStore';
 import { __resetLayerStatePersistenceForTesting } from '../../../../services/layer-state-persistence';
 import { createSceneLayer } from '../../../../types/entities';
-// ADR-719 §8 — ο render-side έλεγχος που ΑΝΤΙΚΑΤΕΣΤΗΣΕ το layer-flag μόλυσμα της απομόνωσης.
+// ADR-721 §8 — ο render-side έλεγχος που ΑΝΤΙΚΑΤΕΣΤΗΣΕ το layer-flag μόλυσμα της απομόνωσης.
 import { isEntityLayerSkipped } from '../../../../canvas-v2/dxf-canvas/dxf-entity-layer-skip';
-// ADR-719 §9 — οι μόνιμες αλλαγές flag γράφουν πλέον στο ΕΓΓΡΑΦΟ (fail-closed χωρίς αυτό),
+// ADR-721 §9 — οι μόνιμες αλλαγές flag γράφουν πλέον στο ΕΓΓΡΑΦΟ (fail-closed χωρίς αυτό),
 // οπότε το setup στήνει έγγραφο + runtime προβολή αντί για μόνο τη δεύτερη. Το `setLayers`
 // μόνο του έστηνε ακριβώς τη μισή αρχιτεκτονική που παρήγαγε το bug.
 import {
@@ -70,7 +70,7 @@ function seedLayers() {
 }
 
 /**
- * ADR-719 §8 — «κρύβεται από την απομόνωση;» ρωτημένο εκεί που ΕΚΤΕΛΕΙΤΑΙ η χειρονομία.
+ * ADR-721 §8 — «κρύβεται από την απομόνωση;» ρωτημένο εκεί που ΕΚΤΕΛΕΙΤΑΙ η χειρονομία.
  *
  * Η απομόνωση δεν γράφει πλέον `frozen: true` στα μη-απομονωμένα layers (ήταν κατάσταση
  * συνεδρίας σε μόνιμο πεδίο εγγράφου). Άρα ένα `expect(getLayer('lyr_b')?.frozen)` πλέον
@@ -216,7 +216,7 @@ describe('Integration: saveCurrentLayerState → mutate → RestoreLayerStateCom
 
 describe('Integration: full isolate → save state → unisolate → restore state', () => {
   /**
-   * ADR-719 §8 — **ΑΛΛΑΓΗ ΣΥΜΠΕΡΙΦΟΡΑΣ, σκόπιμη.**
+   * ADR-721 §8 — **ΑΛΛΑΓΗ ΣΥΜΠΕΡΙΦΟΡΑΣ, σκόπιμη.**
    *
    * Παλιά: η απομόνωση έγραφε `frozen: true` στα μη-απομονωμένα layers, άρα μια
    * «Κατάσταση Επιπέδων» που αποθηκευόταν ΚΑΤΑ ΤΗ ΔΙΑΡΚΕΙΑ απομόνωσης απαθανάτιζε το

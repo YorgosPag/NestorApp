@@ -26,6 +26,24 @@ import {
   setupActiveDocument,
   teardownActiveDocument,
 } from '../../../../systems/levels/__tests__/active-document-test-harness';
+// ADR-721 §8 — ο render-side έλεγχος που ΑΝΤΙΚΑΤΕΣΤΗΣΕ το layer-flag μόλυσμα.
+import { isEntityLayerSkipped } from '../../../../canvas-v2/dxf-canvas/dxf-entity-layer-skip';
+
+/**
+ * ADR-721 §8 — «κρύβεται από την απομόνωση;» ρωτημένο εκεί που ΕΚΤΕΛΕΙΤΑΙ η χειρονομία.
+ *
+ * Η απομόνωση δεν γράφει πλέον `frozen: true` στα μη-απομονωμένα layers: ήταν κατάσταση
+ * συνεδρίας σε μόνιμο πεδίο εγγράφου, που το auto-save μπορούσε να κάνει μόνιμη στο αρχείο
+ * του χρήστη. Το layer-scope ελέγχεται τώρα στον renderer, από το `IsolateEffectsStore`.
+ *
+ * Άρα ένα `expect(getLayer('lyr_b')?.frozen)` θα έλεγχε **νεκρό** σημείο — θα ήταν πράσινο
+ * μόνο αν επαναφέραμε το bug. Το ουσιαστικό ερώτημα, και το μόνο που βλέπει ο χρήστης,
+ * είναι αν ο renderer παραλείπει την οντότητα· κι αυτό το απαντά ο ΙΔΙΟΣ κώδικας που
+ * τρέχει σε κάθε frame.
+ */
+function isHiddenByIsolate(layerId: string): boolean {
+  return isEntityLayerSkipped({ id: 'ent_probe', type: 'line', layerId } as never);
+}
 
 beforeEach(() => {
   __resetLayerStoreForTesting();
@@ -70,8 +88,8 @@ describe('LayerIsolateCommand — execute', () => {
       targetLayerIds: ['lyr_a'],
       settings: { mode: 'dim', dimOpacityPercent: 30 },
     }).execute();
-    expect(getLayer('lyr_b')?.frozen).toBeFalsy();
-    expect(getLayer('lyr_c')?.frozen).toBeFalsy();
+    expect(isHiddenByIsolate('lyr_b')).toBe(false);
+    expect(isHiddenByIsolate('lyr_c')).toBe(false);
   });
 
   it('freeze mode mutates layer.frozen on non-isolated layers', () => {
@@ -80,9 +98,9 @@ describe('LayerIsolateCommand — execute', () => {
       targetLayerIds: ['lyr_a'],
       settings: { mode: 'freeze', dimOpacityPercent: 30 },
     }).execute();
-    expect(getLayer('lyr_a')?.frozen).toBeFalsy();
-    expect(getLayer('lyr_b')?.frozen).toBe(true);
-    expect(getLayer('lyr_c')?.frozen).toBe(true);
+    expect(isHiddenByIsolate('lyr_a')).toBe(false);
+    expect(isHiddenByIsolate('lyr_b')).toBe(true);
+    expect(isHiddenByIsolate('lyr_c')).toBe(true);
   });
 });
 
@@ -94,10 +112,10 @@ describe('LayerIsolateCommand — undo + redo', () => {
       settings: { mode: 'freeze', dimOpacityPercent: 30 },
     });
     cmd.execute();
-    expect(getLayer('lyr_b')?.frozen).toBe(true);
+    expect(isHiddenByIsolate('lyr_b')).toBe(true);
 
     cmd.undo();
-    expect(getLayer('lyr_b')?.frozen).toBe(false);
+    expect(isHiddenByIsolate('lyr_b')).toBe(false);
     expect(getIsolateEffectsSnapshot().active).toBe(false);
     expect(getUnisolateSnapshot()).toBeNull();
   });
@@ -111,7 +129,7 @@ describe('LayerIsolateCommand — undo + redo', () => {
     cmd.execute();
     cmd.undo();
     cmd.redo();
-    expect(getLayer('lyr_b')?.frozen).toBe(true);
+    expect(isHiddenByIsolate('lyr_b')).toBe(true);
     expect(getIsolateEffectsSnapshot().active).toBe(true);
   });
 });

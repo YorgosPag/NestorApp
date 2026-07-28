@@ -7,7 +7,7 @@ import {
   // ADR-358 Phase 9D-5a: id-first reader SSoT (LayerStore lookup + legacy name fallback).
   resolveEntityLayerName,
 } from '../../../stores/LayerStore';
-// ADR-719 §7 — μόνιμη αλλαγή flag = μία πόρτα (έγγραφο + runtime προβολή).
+// ADR-721 §7 — μόνιμη αλλαγή flag = μία πόρτα (έγγραφο + runtime προβολή).
 import { toggleLayerFlag } from '../../../services/layer-flags-writer';
 // ADR-557 — live current-level scene via the `useCurrentLevelScene()` SSoT hook (Level interface has no `scene` field; storage lives in `LevelsSystem.sceneManagerRef`).
 import { useCurrentLevelScene } from '../../../systems/levels/useCurrentLevelScene';
@@ -82,7 +82,7 @@ export function useLayerManagerState(): LayerManagerStateHook {
   }, [storeSnapshot.layers, t]);
 
   /**
-   * ADR-719 §7 — γράφει στο **έγγραφο** (και, ατομικά, στη runtime προβολή) αντί για σκέτο
+   * ADR-721 §7 — γράφει στο **έγγραφο** (και, ατομικά, στη runtime προβολή) αντί για σκέτο
    * `upsertLayer`.
    *
    * Πριν, το κουμπί έκρυβε το layer αλλά τίποτα δεν αποθηκευόταν: το επόμενο hydration από

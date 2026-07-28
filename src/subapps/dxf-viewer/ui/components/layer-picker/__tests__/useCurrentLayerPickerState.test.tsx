@@ -64,7 +64,7 @@ import {
   getLayer,
 } from '../../../../stores/LayerStore';
 import { createSceneLayer } from '../../../../types/entities';
-// ADR-719 §9 — οι διακόπτες του picker γράφουν πλέον στο ΕΓΓΡΑΦΟ (fail-closed χωρίς αυτό),
+// ADR-721 §9 — οι διακόπτες του picker γράφουν πλέον στο ΕΓΓΡΑΦΟ (fail-closed χωρίς αυτό),
 // οπότε το setup στήνει έγγραφο + runtime προβολή αντί για μόνο τη δεύτερη.
 import {
   setupActiveDocument,

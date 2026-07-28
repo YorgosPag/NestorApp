@@ -3,9 +3,9 @@
 /**
  * useLayerStore — τα React leaves πάνω στο {@link module:stores/LayerStore} SSoT.
  *
- * ADR-719 §5. Ο `LayerStore` είναι ο **runtime owner** των layer flags (ADR-382 §1.2): από
+ * ADR-721 §5. Ο `LayerStore` είναι ο **runtime owner** των layer flags (ADR-382 §1.2): από
  * εκεί διαβάζουν ο 2Δ renderer (`isEntityLayerSkipped`), ο BIM visibility resolver, ο WebGL
- * line layer και η ακύρωση του bitmap cache. Μέχρι το ADR-719, τα panels ορατότητας
+ * line layer και η ακύρωση του bitmap cache. Μέχρι το ADR-721, τα panels ορατότητας
  * (`LayerItem` / `ColorGroupItem`) διάβαζαν τα ΙΔΙΑ flags από **άλλη** πηγή — το prop
  * `SceneModel.layersById` — οπότε UI και καμβάς μπορούσαν να διαφωνούν επ' αόριστον. Ακριβώς
  * αυτό μετρήθηκε ζωντανά: store `visible: true`, panel `visible: false`, εικονίδιο 👁̸.
@@ -30,7 +30,7 @@
  *
  * @module stores/useLayerStore
  * @see config/layer-visibility — τα κατηγορήματα που ερμηνεύουν τα flags
- * @see docs/centralized-systems/reference/adrs/ADR-719
+ * @see docs/centralized-systems/reference/adrs/ADR-721
  */
 
 import { useCallback, useSyncExternalStore } from 'react';

@@ -22,7 +22,7 @@ import {
 } from '../../../../stores/LayerStore';
 import { createSceneLayer } from '../../../../types/entities';
 import { SceneStore } from '../../../../systems/scene/SceneStore';
-// ADR-719 §9 — στήσιμο ΕΓΓΡΑΦΟΥ + runtime προβολής (ο writer είναι fail-closed χωρίς έγγραφο).
+// ADR-721 §9 — στήσιμο ΕΓΓΡΑΦΟΥ + runtime προβολής (ο writer είναι fail-closed χωρίς έγγραφο).
 import {
   setupActiveDocument,
   teardownActiveDocument,
@@ -32,7 +32,7 @@ import type { SceneModel } from '../../../../types/entities';
 
 // Mock useLevels to avoid Firebase import.
 //
-// ADR-719 §2 — το `useCurrentLevelScene` δεν καλεί πλέον το `getLevelScene` του context:
+// ADR-721 §2 — το `useCurrentLevelScene` δεν καλεί πλέον το `getLevelScene` του context:
 // κάνει **συνδρομή** στο `SceneStore` με κλειδί το `currentLevelId`. Άρα το mock αρκεί να
 // δώσει το σωστό level id, και η σκηνή στήνεται στο store από τον harness. (Το
 // `getLevelScene` μένει στο mock γιατί άλλοι καταναλωτές του hook το ζητούν.)
@@ -91,7 +91,7 @@ afterEach(() => {
 /**
  * Στήνει έγγραφο + προβολή με τα δοσμένα layers ΚΑΙ τις οντότητες του `MOCK_SCENE`, ώστε οι
  * μετρήσεις «elements: 2/1» να παραμένουν έγκυρες τώρα που η σκηνή διαβάζεται από το
- * `SceneStore` και όχι από το mock του context (ADR-719 §2).
+ * `SceneStore` και όχι από το mock του context (ADR-721 §2).
  */
 function seedDocument(layers: Parameters<typeof setupActiveDocument>[0]): void {
   setupActiveDocument(layers);

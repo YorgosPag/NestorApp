@@ -26,7 +26,7 @@
 import type { ICommand } from '../interfaces';
 import { BaseCommand } from '../base-command';
 import { getLayer, getAllLayers } from '../../../stores/LayerStore';
-// ADR-719 §7 — μόνιμες αλλαγές flag = μία πόρτα (έγγραφο + runtime προβολή).
+// ADR-721 §7 — μόνιμες αλλαγές flag = μία πόρτα (έγγραφο + runtime προβολή).
 import { setLayerFlags, setLayerFlagsBatch } from '../../../services/layer-flags-writer';
 import {
   clearIsolateEffects,
@@ -115,7 +115,7 @@ export abstract class SingleLayerFlagCommand extends LayerCommandBase {
     return { layerId: this.input.layerId };
   }
 
-  /** ADR-719 §7 — μόνιμη εντολή χρήστη (Off/Freeze/Lock) ⇒ γράφει στο έγγραφο. */
+  /** ADR-721 §7 — μόνιμη εντολή χρήστη (Off/Freeze/Lock) ⇒ γράφει στο έγγραφο. */
   private applyFlag(): void {
     setLayerFlags(this.input.layerId, { [this.flag]: this.targetValue });
   }
@@ -155,7 +155,7 @@ export abstract class MutateAllLayersCommand extends LayerCommandBase {
     return {};
   }
 
-  /** ADR-719 §7 — μία ατομική εγγραφή εγγράφου για όλα τα layers (όχι N ξεχωριστές). */
+  /** ADR-721 §7 — μία ατομική εγγραφή εγγράφου για όλα τα layers (όχι N ξεχωριστές). */
   private replayExecute(): void {
     const toChange = getAllLayers()
       .filter((layer) => {

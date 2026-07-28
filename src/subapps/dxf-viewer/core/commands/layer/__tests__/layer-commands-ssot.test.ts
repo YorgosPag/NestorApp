@@ -23,7 +23,7 @@ import {
   getIsolateEffectsSnapshot,
 } from '../../../../systems/isolate/IsolateEffectsStore';
 import { createSceneLayer } from '../../../../types/entities';
-// ADR-719 §9 — οι εντολές γράφουν πλέον στο ΕΓΓΡΑΦΟ (fail-closed χωρίς αυτό), οπότε το
+// ADR-721 §9 — οι εντολές γράφουν πλέον στο ΕΓΓΡΑΦΟ (fail-closed χωρίς αυτό), οπότε το
 // setup στήνει έγγραφο + runtime προβολή, όχι μόνο τη δεύτερη.
 import {
   setupActiveDocument,
@@ -99,7 +99,7 @@ describe('ADR-616 layer command SSoT', () => {
       ]);
       const cmd = new LayerOnAllCommand();
       cmd.execute();
-      // ADR-719 §9 — το `expectPersisted` ρωτά ΚΑΙ τις δύο πηγές. Το παλιό
+      // ADR-721 §9 — το `expectPersisted` ρωτά ΚΑΙ τις δύο πηγές. Το παλιό
       // `expect(getLayer(...))` ρωτούσε μόνο την προβολή, άρα περνούσε και με
       // runtime-only γραφή — δηλαδή με τη συμπεριφορά που έχανε την αλλαγή.
       expectPersisted('lyr_a', 'visible', true);

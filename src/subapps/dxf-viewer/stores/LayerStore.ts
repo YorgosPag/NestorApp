@@ -245,7 +245,7 @@ export function getEffectiveTransparency(layerId: string): number {
  * TRUE όταν το εισερχόμενο σύνολο είναι **στοιχείο-προς-στοιχείο ταυτόσημο** με το τρέχον
  * (ίδιο πλήθος, ίδια σειρά κλειδιών, ίδιες ΑΝΑΦΟΡΕΣ layer objects).
  *
- * ADR-719 §3. Δεν είναι μικρο-βελτιστοποίηση — είναι **προϋπόθεση ορθότητας για το perf**:
+ * ADR-721 §3. Δεν είναι μικρο-βελτιστοποίηση — είναι **προϋπόθεση ορθότητας για το perf**:
  * το hydration `setLayers(Object.values(scene.layersById))` (`useDxfSceneConversion`) τρέχει
  * σε **κάθε** αλλαγή σκηνής, και κάθε `rebuildSnapshot()` ειδοποιεί τον
  * `useDxfCanvasCacheInvalidation` → `bitmapCache.invalidate()` → **πλήρες ξαναχτίσιμο σκηνής**.
@@ -296,7 +296,7 @@ export function setLayers(next: ReadonlyArray<SceneLayer>): void {
 /**
  * Upsert a single layer. Inserts at end if new; replaces if key matches.
  *
- * ADR-719 §3 — ιδεμποτικό: γραφή της ΙΔΙΑΣ αναφοράς δεν ειδοποιεί (ίδιο συμβόλαιο με το
+ * ADR-721 §3 — ιδεμποτικό: γραφή της ΙΔΙΑΣ αναφοράς δεν ειδοποιεί (ίδιο συμβόλαιο με το
  * {@link setLayers}). Οι callers που κάνουν `upsertLayer({ ...layer, flag: value })` παράγουν
  * πάντα νέο object, άρα περνούν κανονικά· ο φρουρός πιάνει μόνο τα πραγματικά no-op re-writes
  * (π.χ. ένα reconcile που ξαναγράφει ό,τι ήδη ισχύει).

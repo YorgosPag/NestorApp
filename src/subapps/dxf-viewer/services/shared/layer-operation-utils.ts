@@ -63,7 +63,7 @@ export function updateLayerProperties(
   };
 }
 
-// ADR-719 §4 — Ο `updateEntitiesForLayer(scene, layerName, { visible | color })` ΑΦΑΙΡΕΘΗΚΕ.
+// ADR-721 §4 — Ο `updateEntitiesForLayer(scene, layerName, { visible | color })` ΑΦΑΙΡΕΘΗΚΕ.
 //
 // Ήταν ο μηχανισμός που στάμπαρε ιδιότητες του LAYER πάνω σε κάθε οντότητά του. Μοναδικός
 // caller ήταν το `LayerOperationsService.toggleLayerVisibility`, και η κλήση αυτή ήταν το

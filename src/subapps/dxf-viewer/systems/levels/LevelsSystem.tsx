@@ -29,7 +29,7 @@ import { useLevelFloorplanSync } from './hooks/useLevelFloorplanSync';
 import { useLevelImportWizardOps } from './hooks/useLevelImportWizardOps';
 import { useAuth } from '@/auth';
 import { readViewportFromUrl } from '../../services/viewport-persistence';
-// ADR-719 §6 — zero-React θύρα προς το ενεργό έγγραφο (ΕΝΑΣ γραφέας: αυτό το component).
+// ADR-721 §6 — zero-React θύρα προς το ενεργό έγγραφο (ΕΝΑΣ γραφέας: αυτό το component).
 import { registerActiveDocument, unregisterActiveDocument } from './active-document-gateway';
 
 // ============================================================================
@@ -276,7 +276,7 @@ function useLevelsSystemState({
     }
   }, [levels, currentLevelId, setCurrentLevelId]);
 
-  // ADR-719 §6 — Καταχώρηση του ενεργού εγγράφου στη zero-React θύρα, ώστε οι εντολές και
+  // ADR-721 §6 — Καταχώρηση του ενεργού εγγράφου στη zero-React θύρα, ώστε οι εντολές και
   // οι υπηρεσίες που τρέχουν ΕΚΤΟΣ React (core/commands/layer/**, LayerOperationsService)
   // να μπορούν να γράψουν στο έγγραφο μέσα από τον **auto-save-aware** writer. Χωρίς αυτό
   // ο μόνος τους δρόμος ήταν το `LayerStore` — runtime προβολή, άρα η αλλαγή χανόταν στο

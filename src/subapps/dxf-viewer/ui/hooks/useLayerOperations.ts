@@ -14,7 +14,7 @@ import { publishHighlight } from '../../events/selection-bus';
 import { handleLayerServiceResult } from '../utils/selection-update-utils';
 // ADR-129: Centralized entity layer filtering
 import { countEntitiesInLayer } from '../../services/shared/layer-operation-utils';
-// ADR-719 §7 — η ΜΙΑ πόρτα για μόνιμες ιδιότητες layer (έγγραφο + runtime προβολή).
+// ADR-721 §7 — η ΜΙΑ πόρτα για μόνιμες ιδιότητες layer (έγγραφο + runtime προβολή).
 import { setLayerFlags, setLayerFlagsBatch } from '../../services/layer-flags-writer';
 import { getSceneLayerByName } from '../../utils/scene-layer-utils';
 // ADR-532 Stage 5b — non-reactive facade. The selection is read/written ONLY
@@ -76,7 +76,7 @@ export function useLayerOperations({
   // ===== LAYER OPERATIONS =====
 
   /**
-   * ADR-719 §7 — περνά από τη ΜΙΑ πόρτα (`setLayerFlags`), που γράφει έγγραφο **και**
+   * ADR-721 §7 — περνά από τη ΜΙΑ πόρτα (`setLayerFlags`), που γράφει έγγραφο **και**
    * runtime προβολή ατομικά.
    *
    * Πριν: `service.toggleLayerVisibility(...)` → `setLevelScene(...)`. Δύο βήματα, με
@@ -306,7 +306,7 @@ export function useLayerOperations({
   // ===== COLOR GROUP OPERATIONS =====
 
   /**
-   * ADR-719 §7 — μία ατομική εγγραφή για ολόκληρη την ομάδα (`setLayerFlagsBatch`), όχι
+   * ADR-721 §7 — μία ατομική εγγραφή για ολόκληρη την ομάδα (`setLayerFlagsBatch`), όχι
    * βρόχος: «κρύψε αυτά τα 27 layers» είναι **μία** ενέργεια χρήστη, άρα ένα βήμα undo και
    * ένα auto-save, όχι 27.
    */

@@ -14,7 +14,7 @@ import {
 } from './shared/layer-operation-utils';
 // ADR-358 Phase 9D-3: id-first reader SSoT
 import { resolveEntityLayerName } from '../stores/LayerStore';
-// ADR-719 §7 — η ΜΙΑ πόρτα για μόνιμες ιδιότητες layer (έγγραφο + runtime προβολή).
+// ADR-721 §7 — η ΜΙΑ πόρτα για μόνιμες ιδιότητες layer (έγγραφο + runtime προβολή).
 import { setLayerFlags } from './layer-flags-writer';
 import {
   isConcreteLineweight,
@@ -109,7 +109,7 @@ export class LayerOperationsService {
       message: `Layer renamed from "${oldName}" to "${newName}"`
     };
   }
-  // ADR-719 §7 — Τα `toggleLayerVisibility` / `toggleColorGroup` ΑΦΑΙΡΕΘΗΚΑΝ από εδώ.
+  // ADR-721 §7 — Τα `toggleLayerVisibility` / `toggleColorGroup` ΑΦΑΙΡΕΘΗΚΑΝ από εδώ.
   //
   // Ήταν functional API (`(…, scene) => updatedScene`) που ο caller έπρεπε ΜΕΤΑ να γράψει με
   // `setLevelScene`. Δύο βήματα για μία πράξη, με παράθυρο απόκλισης ανάμεσα (η runtime
@@ -321,7 +321,7 @@ export class LayerOperationsService {
     };
   }
 
-  // ─── ADR-358 Phase 8.5 property setters — ADR-719 §7: γράφουν έγγραφο + προβολή ────
+  // ─── ADR-358 Phase 8.5 property setters — ADR-721 §7: γράφουν έγγραφο + προβολή ────
   //
   // Πριν, και οι πέντε έκαναν σκέτο `upsertLayer(...)`: η αλλαγή φαινόταν αμέσως αλλά ΔΕΝ
   // αποθηκευόταν, και σβηνόταν στο επόμενο hydration από το έγγραφο. Ο χρήστης έβλεπε το

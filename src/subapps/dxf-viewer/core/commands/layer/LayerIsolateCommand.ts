@@ -104,7 +104,7 @@ export class LayerIsolateCommand extends LayerCommandBase {
   }
 
   /**
-   * ADR-719 §8 — η απομόνωση είναι **κατάσταση συνεδρίας**, δεν αγγίζει το έγγραφο.
+   * ADR-721 §8 — η απομόνωση είναι **κατάσταση συνεδρίας**, δεν αγγίζει το έγγραφο.
    *
    * Πριν, το freeze mode καλούσε `freezeNonIsolatedLayers(...)`, που έγραφε `frozen: true`
    * σε κάθε μη-απομονωμένο layer, ώστε να πιάσει ο render skip-path. Αυτό έβαζε προσωρινή

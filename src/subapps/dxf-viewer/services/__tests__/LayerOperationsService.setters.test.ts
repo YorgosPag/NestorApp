@@ -17,7 +17,7 @@ import { __resetLinetypeRegistryForTesting, registerLinetype } from '../../store
 import { createSceneLayer } from '../../types/entities';
 import { LayerOperationsService } from '../LayerOperationsService';
 import type { LineweightMm } from '../../types/entities';
-// ADR-719 §9 — οι μόνιμες αλλαγές flag γράφουν πλέον στο ΕΓΓΡΑΦΟ (fail-closed χωρίς αυτό),
+// ADR-721 §9 — οι μόνιμες αλλαγές flag γράφουν πλέον στο ΕΓΓΡΑΦΟ (fail-closed χωρίς αυτό),
 // οπότε το setup στήνει έγγραφο + runtime προβολή αντί για μόνο τη δεύτερη. Το `setLayers`
 // μόνο του έστηνε ακριβώς τη μισή αρχιτεκτονική που παρήγαγε το bug.
 import {

@@ -72,7 +72,7 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
-### 2026-07-28 — 🧊 Layer-scope freeze: το isolate σταματά να γράφει στο έγγραφο (ADR-719 §8)
+### 2026-07-28 — 🧊 Layer-scope freeze: το isolate σταματά να γράφει στο έγγραφο (ADR-721 §8)
 
 Το `dxf-entity-layer-skip.ts` — το SSoT κατηγόρημα «παραλείπεται αυτή η οντότητα;», κοινό για τον
 `DxfRenderer` και τον WebGL buffer builder — απέκτησε **τρίτο και τελευταίο scope**, στη σειρά που
@@ -81,7 +81,7 @@ Mouse Event → DxfCanvas.onMouseMove
 **Γιατί:** πριν, το layer scope δεν ελεγχόταν στο render. Αντ' αυτού το `LayerIsolateCommand` έγραφε
 `frozen: true` σε κάθε μη-απομονωμένο layer, «για να ενεργοποιήσει το AutoCAD render skip-path» —
 δηλαδή **προσωρινή κατάσταση συνεδρίας** γραφόταν πάνω σε **μόνιμο flag του εγγράφου**. Όσο η σκηνή
-ήταν runtime-only αυτό περνούσε απαρατήρητο· με το ADR-719 §2 (η σκηνή έγινε reactive) γίνεται ενεργά
+ήταν runtime-only αυτό περνούσε απαρατήρητο· με το ADR-721 §2 (η σκηνή έγινε reactive) γίνεται ενεργά
 επιβλαβές και **προς τις δύο κατευθύνσεις**: το hydration σβήνει το πάγωμα μέσα στη συνεδρία, ενώ η
 αποθήκευση μπορεί να το κάνει **μόνιμο στο αρχείο του χρήστη**. Οι μεγάλοι παίκτες κρατούν τα δύο
 ξεχωριστά (Revit *Temporary* Hide/Isolate, Cinema 4D *Viewport* Solo). Άρα: το scope απαντιέται στο
@@ -93,7 +93,7 @@ snapshot στο σημείο κλήσης — δεν προστίθεται `use
 
 Αρχεία: `canvas-v2/dxf-canvas/dxf-entity-layer-skip.ts` · `core/commands/layer/**` (το command έπαψε να
 γράφει flags) · νέος `services/layer-flags-writer.ts` + `systems/levels/active-document-gateway.ts`
-(auto-save-aware εγγραφή για τους καταναλωτές **εκτός** React). Πλήρες σκεπτικό: **ADR-719 §6/§8**.
+(auto-save-aware εγγραφή για τους καταναλωτές **εκτός** React). Πλήρες σκεπτικό: **ADR-721 §6/§8**.
 
 ### 2026-07-25 (β) — 🎨 WebGL line color transfer: εκτελεστό αμετάβλητο, όχι σχόλιο (ADR-694 Φ10)
 
