@@ -32,6 +32,9 @@ jest.mock('../../systems/workspace/workspace-dock-store', () => {
 
 import { WorkspaceSplitLayout } from '../WorkspaceSplitLayout';
 import { getDockedWidth, setDockedWidth } from '../../systems/workspace/workspace-dock-store';
+// ADR-724 §5.2 — το πληκτρολόγιο του splitter ΔΕΝ ζει σε αυτό το αρχείο· ζει στον φύλακα
+// ιδιοκτησίας πλήκτρων (ADR-711). Το test το ρωτά εκεί ακριβώς επειδή εκεί είναι η αιτία.
+import { shouldGlobalShortcutYield } from '@/lib/a11y/keyboard-scope';
 
 const SIDEBAR = <aside data-testid="sidebar">παλέτα</aside>;
 const CANVAS = <section data-testid="canvas">καμβάς</section>;
@@ -79,9 +82,36 @@ describe('ADR-724 Φ1 — WorkspaceSplitLayout', () => {
       expect(separator).toHaveAccessibleName('workspaceDock.separatorLabel');
     });
 
-    it('το διαχωριστικό είναι εστιάσιμο ⇒ αλλαγή πλάτους με πληκτρολόγιο (το VS Code ΔΕΝ το έχει)', () => {
+    it('το διαχωριστικό είναι εστιάσιμο (WAI-ARIA window splitter)', () => {
       renderLayout(true);
       expect(screen.getByRole('separator')).toHaveAttribute('tabindex', '0');
+    });
+
+    // ── ADR-724 §5.2 — Ο ΛΟΓΟΣ ΠΟΥ ΑΥΤΟ ΤΟ TEST ΞΑΝΑΓΡΑΦΤΗΚΕ ──
+    //
+    // Εδώ ζούσε ένα test με όνομα «αλλαγή πλάτους από πληκτρολόγιο (το VS Code ΔΕΝ το
+    // έχει)» που έλεγχε **μόνο** `tabIndex === 0`. Ήταν πράσινο ενώ η δυνατότητα ήταν
+    // νεκρή: μετρημένο ζωντανά, 3× ArrowLeft με εστίαση στο διαχωριστικό άφηναν το
+    // πλάτος 670→670 και μετακινούσαν το ΣΧΕΔΙΟ (offsetX 3883→4123).
+    //
+    // Η εστιασιμότητα δεν αποδεικνύει ιδιοκτησία πλήκτρου. Η αιτία ήταν ότι οι global
+    // accelerators (window **capture**) έτρεχαν πριν τον handler της βιβλιοθήκης
+    // (element-level **bubble**, `if (e.defaultPrevented) return;`). Άρα το πραγματικό
+    // συμβόλαιο είναι: **ο accelerator παραιτείται**. Αυτό ελέγχεται εδώ.
+    it('ο ρόλος του διαχωριστικού κάνει τους global accelerators να παραιτούνται από τα βέλη', () => {
+      renderLayout(true);
+      const separator = screen.getByRole('separator');
+
+      expect(shouldGlobalShortcutYield({ target: separator, key: 'ArrowLeft' })).toBe(true);
+      expect(shouldGlobalShortcutYield({ target: separator, key: 'End' })).toBe(true);
+    });
+
+    it('…αλλά ΟΧΙ από τα γράμματα — οι εντολές του viewer μένουν ζωντανές', () => {
+      // Ο πήχης της υπερδιόρθωσης: με εστίαση στο διαχωριστικό, το «Z» (zoom) πρέπει να
+      // φτάνει κανονικά. Μόνο τα πλοηγικά πλήκτρα ανήκουν στο splitter.
+      renderLayout(true);
+      expect(shouldGlobalShortcutYield({ target: screen.getByRole('separator'), key: 'z' }))
+        .toBe(false);
     });
 
     it('εκθέτει τις τιμές του splitter (aria-valuenow/min/max) για αναγνώστες οθόνης', () => {

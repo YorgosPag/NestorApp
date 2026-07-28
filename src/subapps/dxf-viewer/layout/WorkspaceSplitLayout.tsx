@@ -25,6 +25,23 @@
  * παράθυρο — και δεν θα επανερχόταν ποτέ. Γράφουμε μόνο όταν προηγήθηκε πραγματική χειρονομία
  * (δείκτης ή πλήκτρο) πάνω στο διαχωριστικό.
  *
+ * ── ΓΙΑΤΙ ΔΟΥΛΕΥΕΙ ΤΟ ΠΛΗΚΤΡΟΛΟΓΙΟ (ADR-724 §5.2 — μη το χαλάσεις κατά λάθος) ──
+ *
+ * Το splitter είναι εστιάσιμο και η βιβλιοθήκη υλοποιεί τα βέλη. Αυτό **δεν αρκούσε**: ο
+ * handler της (`Te`) είναι element-level, φάση **bubble**, και ξεκινά με
+ * `if (e.defaultPrevented) return;` — ενώ οι global accelerators του viewer τρέχουν σε
+ * **window capture**, δηλαδή πρώτοι. Μετρημένο ζωντανά: τα βέλη έκαναν pan στον καμβά
+ * (~80px/πάτημα) και `preventDefault()`, οπότε το splitter δεν έβλεπε ποτέ το συμβάν.
+ *
+ * Η ιδιοκτησία λύνεται στον **ΕΝΑΝ** τόπο της, το `@/lib/a11y/keyboard-scope`
+ * (ADR-711/ADR-364): ο ρόλος `separator` ανήκει στο `ARROW_NAVIGATION_ROLES`, οπότε το
+ * `shouldGlobalShortcutYield` κάνει τους accelerators να **παραιτούνται** από τα πλοηγικά
+ * πλήκτρα όσο το διαχωριστικό έχει την εστίαση.
+ *
+ * ⛔ **Καμία τοπική άμυνα εδώ** — ούτε `stopPropagation`, ούτε δεύτερος έλεγχος ρόλου. Ένα
+ * `stopPropagation` στο διαχωριστικό δεν θα έλυνε τίποτα: ο accelerator έχει ήδη τρέξει
+ * (capture) πριν φτάσει το συμβάν σε αυτό το element.
+ *
  * ── FULLSCREEN (ADR-241) ──
  *
  * Ο `FullscreenOverlay` κάνει `createPortal` στο `document.body`: μετακινείται το **περιεχόμενο**
@@ -37,7 +54,7 @@
 
 'use client';
 
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import {
   ResizablePanelGroup,
@@ -54,7 +71,16 @@ const { WIDTH_MIN, WIDTH_MAX, CANVAS_MIN_WIDTH } = PANEL_LAYOUT.WORKSPACE_DOCK;
 const SIDEBAR_PANEL_ID = 'dxf-workspace-sidebar';
 const CANVAS_PANEL_ID = 'dxf-workspace-canvas';
 
-/** Τα πλήκτρα που το WAI-ARIA splitter της βιβλιοθήκης μεταφράζει ΟΝΤΩΣ σε αλλαγή πλάτους. */
+/**
+ * Τα πλήκτρα που το WAI-ARIA splitter της βιβλιοθήκης μεταφράζει ΟΝΤΩΣ σε αλλαγή πλάτους —
+ * επαληθευμένα στον handler `Te` του `react-resizable-panels@4.7.2`.
+ *
+ * ⚠️ **Υποσύνολο** του `isDirectionalKey` (ADR-724 §5.2), όχι αντίγραφό του: εκεί η ερώτηση
+ * είναι «ποιος κατέχει το πλήκτρο;» και περιλαμβάνει `PageUp`/`PageDown`· εδώ είναι «ήταν
+ * αυτό πρόθεση αλλαγής πλάτους, άρα αξίζει εγγραφή στο store;» — και η βιβλιοθήκη **δεν**
+ * χειρίζεται `PageUp`/`PageDown`. Το `F6` (μετακίνηση εστίασης) και το `Enter` (σύμπτυξη —
+ * ανενεργό, δεν δηλώνουμε `collapsible`) επίσης δεν αλλάζουν πλάτος.
+ */
 const RESIZE_KEYS: ReadonlySet<string> = new Set([
   'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End',
 ]);
@@ -99,16 +125,55 @@ export const WorkspaceSplitLayout = React.memo<WorkspaceSplitLayoutProps>(({
 
   const measuredWidthRef = useRef<number>(initialWidth);
   const userIntentRef = useRef<boolean>(false);
+  /** Το ίδιο το στοιχείο του panel — η **αλήθεια** για το πλάτος (βλ. `handleLayoutChanged`). */
+  const sidebarElementRef = useRef<HTMLDivElement | null>(null);
+  /** Η εκκρεμής αναβολή εγγραφής· `null` = καμία (βλ. `handleLayoutChanged`). */
+  const persistFrameRef = useRef<number | null>(null);
 
   // ~60 κλήσεις/δευτ. κατά το σύρσιμο — εγγραφή σε ref μόνο, μηδέν render, μηδέν localStorage.
   const handleSidebarResize = useCallback((size: PanelSize): void => {
     measuredWidthRef.current = size.inPixels;
   }, []);
 
+  /**
+   * ⚠️ Η ΕΓΓΡΑΦΗ ΑΝΑΒΑΛΛΕΤΑΙ ΕΝΑ ΚΑΡΕ — μετρημένο, όχι προληπτικό.
+   *
+   * Το `onLayoutChanged` καλείται **πριν** εφαρμοστεί το νέο layout: εκείνη τη στιγμή
+   * **και** το `measuredWidthRef` (το `onResize` δεν έχει τρέξει ακόμη) **και** το ίδιο το
+   * DOM είναι **ένα βήμα πίσω**. Μετρημένο ζωντανά 2026-07-28 με προσωρινό diagnostic:
+   * `getBoundingClientRect().width` = **487.2** ενώ το τελικό πλάτος ήταν **603.6**.
+   *
+   * Στο **σύρσιμο** το ελάττωμα ήταν αόρατο — το `onResize` έχει ήδη τρέξει ~60 φορές πριν
+   * σηκωθεί ο δείκτης, άρα η προηγούμενη τιμή τύχαινε να είναι η σωστή. Με το
+   * **πληκτρολόγιο** κάθε πάτημα είναι μία διακριτή αλλαγή, οπότε το σφάλμα γίνεται γυμνό:
+   * ο χρήστης ρύθμιζε την παλέτα και μετά το reload έπαιρνε το **προτελευταίο** πλάτος.
+   *
+   * ⛔ Δεν διορθώνεται με «διάβασε από αλλού»: **καμία** πηγή δεν είναι ενημερωμένη τη
+   * στιγμή της κλήσης. Χρειάζεται ο browser να κάνει flush τη διάταξη — γι' αυτό ένα
+   * `requestAnimationFrame`. **Ένα** ανά χειρονομία (το `onLayoutChanged` καλείται μετά την
+   * απελευθέρωση του δείκτη, εξ ορισμού), άρα μηδέν κόστος στο ζεστό μονοπάτι.
+   *
+   * ⛔ Και **δεν** είναι δεύτερος scheduler: είναι μία αναβολή, όχι βρόχος καρέ. Ο
+   * `UnifiedFrameScheduler` (ADR-040) κατέχει τα καρέ **του καμβά** — ένα layout component
+   * δεν έχει δουλειά να μπει στην ουρά απόδοσης.
+   */
   const handleLayoutChanged = useCallback((): void => {
     if (!userIntentRef.current) return;
     userIntentRef.current = false;
-    setDockedWidth(measuredWidthRef.current);
+    if (persistFrameRef.current !== null) cancelAnimationFrame(persistFrameRef.current);
+    persistFrameRef.current = requestAnimationFrame(() => {
+      persistFrameRef.current = null;
+      // Μετά το flush, το DOM είναι η αλήθεια· το ref μένει εφεδρεία για αποπροσαρτημένο
+      // στοιχείο (N.7.2 #4 — δύο ανεξάρτητα μονοπάτια για την ίδια τιμή).
+      const element = sidebarElementRef.current;
+      setDockedWidth(element ? element.getBoundingClientRect().width : measuredWidthRef.current);
+    });
+  }, []);
+
+  // Η αναβολή δεν επιτρέπεται να επιζήσει του component: ένα `setDockedWidth` μετά την
+  // αποπροσάρτηση θα έγραφε το πλάτος μιας διάταξης που δεν υπάρχει πια.
+  useEffect(() => () => {
+    if (persistFrameRef.current !== null) cancelAnimationFrame(persistFrameRef.current);
   }, []);
 
   /**
@@ -146,6 +211,7 @@ export const WorkspaceSplitLayout = React.memo<WorkspaceSplitLayoutProps>(({
     >
       <ResizablePanel
         id={SIDEBAR_PANEL_ID}
+        elementRef={sidebarElementRef}
         // Διπλή σημασία by design (βλ. handleSeparatorDoubleClick): αρχικό πλάτος **και**
         // στόχος του διπλού κλικ στο διαχωριστικό.
         defaultSize={initialWidth}
