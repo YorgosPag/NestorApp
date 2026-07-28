@@ -27,7 +27,28 @@
  * drag — ίδια σύμβαση με Civil 3D (rebuild) και Revit (regenerate on release). Το σύρσιμο δεν
  * ξανα-τριγωνοποιεί δεκάδες φορές το δευτερόλεπτο.
  *
+ * ── ΔΥΟ ΑΙΤΙΕΣ, ΕΝΑΣ ΜΗΧΑΝΙΣΜΟΣ (ADR-718 §Α) ────────────────────────────────────────────────
+ * Ένας ορισμός που κρέμεται από οντότητα του σχεδίου παλιώνει με **δύο** τρόπους:
+ *
+ *   1. **άλλαξε η ΟΝΤΟΤΗΤΑ** — ο χρήστης έσυρε λαβή· ξαναχτίζουμε όσους δείχνουν στις
+ *      `changedIds` ({@link cascadeTopoSourceGeometry}).
+ *   2. **άλλαξε το ΠΛΑΙΣΙΟ** — auto-align, χειροκίνητο κοινό σημείο, «Καθαρισμός γεωαναφοράς».
+ *      Η οντότητα δεν κουνήθηκε ούτε χιλιοστό, αλλά οι **ίδιες** DISPLAY κορυφές αντιστοιχούν
+ *      πλέον σε **άλλες** WORLD — άρα κάθε αποθηκευμένος ορισμός είναι μπαγιάτικος
+ *      ({@link cascadeTopoSourceFrame}).
+ *
+ * Και οι δύο απαντώνται με **ξαναχτίσιμο από την πηγή**, όχι με delta μετακίνηση: ο ορισμός
+ * είναι παράγωγο, και η πηγή του (η πολυγραμμή) είναι πάντα εκεί με την τελευταία αλήθεια. Αυτή
+ * είναι ακριβώς η διάκριση που κάνει ο `topo-frame-reconcile`: παράγωγα **ξαναχτίζονται**, μόνο
+ * τα ψημένα προϊόντα (κάναβος, βορράς) delta-μετακινούνται γιατί περιέχουν δουλειά του χρήστη.
+ *
+ * ⚠️ **Χαμένη πηγή ⇒ ΔΕΝ μαντεύουμε** (fail-closed, §M10g). Δακτύλιος του οποίου η πολυγραμμή
+ * διαγράφηκε μένει παγωμένος στο παλιό πλαίσιο και σημαδεύεται `'missing'` — το ribbon ήδη τον
+ * βάφει πορτοκαλί (Μ3). Ένα rigid delta θα τον μετακινούσε «σωστά» χωρίς να μπορεί κανείς να το
+ * επαληθεύσει· η σιωπηλή εικασία σε γεωμετρία που τιμολογείται είναι το ίδιο το σφάλμα.
+ *
  * @see ../../bim/cascade/associative-geometry-reconcile — η universal SSoT (ADR-540)
+ * @see ./persistence/topo-frame-reconcile — ο ΕΝΑΣ ιδιοκτήτης του «το πλαίσιο άλλαξε»
  * @see ../measure/area-label-cascade — το αδελφό idiom (ADR-649 §associative)
  * @see ./topo-boundary-pick — `buildBoundaryFromEntity` (ο ΙΔΙΟΣ builder με το εργαλείο επιλογής)
  * @see ./topo-breakline-pick — `buildBreaklineFromEntity` (ομοίως)
@@ -37,8 +58,10 @@
 import type { Entity } from '../../types/entities';
 import type { ISceneManager } from '../../core/commands/interfaces';
 import type { Point2D } from '../../rendering/types/Types';
+import type { WorldToDisplayProjector } from '../geo-referencing/geo-transform';
 import { buildBoundaryFromEntity } from './topo-boundary-pick';
 import { buildBreaklineFromEntity } from './topo-breakline-pick';
+import { getTopoDisplayProjector } from './topo-display-frame';
 import {
   getTopoState, getTopoPoints, getTopoBreaklines,
   setTopoBoundaryFromSource, setTopoBreaklines,
@@ -48,6 +71,32 @@ import type { Breakline, TopoPoint, TopoSurfaceId } from './topo-types';
 
 /** Το ελάχιστο scene surface που χρειάζεται ο cascade (mirror `AreaLabelSceneManager`). */
 type TopoSourceSceneManager = Pick<ISceneManager, 'getEntity'>;
+
+/**
+ * Ποιες πηγές αφορά αυτό το πέρασμα: ένα σύνολο ids, ή **`null` = ΟΛΕΣ**.
+ *
+ * Το `null` δεν είναι «παράλειψη της πύλης κόστους» — είναι η άλλη ερώτηση. Στην αλλαγή
+ * πλαισίου δεν υπάρχει «ποια οντότητα άλλαξε»: άλλαξε η **αντιστοίχιση**, οπότε κάθε ορισμός
+ * που κρέμεται από οντότητα είναι εξίσου μπαγιάτικος.
+ */
+type SourceFilter = ReadonlySet<string> | null;
+
+/** Τα δεδομένα που κουβαλά **ένα** πέρασμα του cascade — μαζεμένα μία φορά, όχι ανά οντότητα. */
+interface CascadePass {
+  readonly sources: SourceFilter;
+  readonly sceneManager: TopoSourceSceneManager;
+  /**
+   * Ο ενεργός WORLD→DISPLAY, διαβασμένος **μία φορά ανά πέρασμα**. Το
+   * `getActiveWorldToDisplayProjector()` φτιάχνει νέο αντικείμενο σε κάθε κλήση, οπότε ανά
+   * οντότητα θα σήμαινε μια περιττή προετοιμασία τριγωνομετρίας για κάθε ασυνέχεια.
+   */
+  readonly projector: WorldToDisplayProjector | null;
+}
+
+/** Αφορά αυτό το πέρασμα την πηγή `sourceId`; (`null` φίλτρο ⇒ ναι, όποια κι αν είναι.) */
+function affects(pass: CascadePass, sourceId: string): boolean {
+  return pass.sources === null || pass.sources.has(sourceId);
+}
 
 // ─── Σύγκριση (ΕΝΑΣ συγκριτής, δύο κατηγορήματα — όχι δίδυμες `sameXxxList`) ────
 
@@ -82,15 +131,15 @@ const sameTopoPoint = (x: TopoPoint, y: TopoPoint): boolean =>
  * (undo διαγραφής, ξανακλείσιμο της πολυγραμμής), το επόμενο πέρασμα τη βρίσκει και ο δεσμός
  * επιστρέφει σε `live` μόνος του.
  */
-function reconcileBoundary(changed: ReadonlySet<string>, sceneManager: TopoSourceSceneManager): void {
+function reconcileBoundary(pass: CascadePass): void {
   const { boundary } = getTopoState();
   const sourceId = boundary?.sourceEntityId;
-  if (!boundary || !sourceId || !changed.has(sourceId)) return;
+  if (!boundary || !sourceId || !affects(pass, sourceId)) return;
 
-  const entity = sceneManager.getEntity(sourceId) as Entity | undefined;
+  const entity = pass.sceneManager.getEntity(sourceId) as Entity | undefined;
   if (!entity) return setTopoBoundaryFromSource(boundary, 'missing');
 
-  const rebuilt = buildBoundaryFromEntity(entity);
+  const rebuilt = buildBoundaryFromEntity(entity, pass.projector);
   if (!rebuilt) return setTopoBoundaryFromSource(boundary, 'invalid');
 
   // Ίδιο σχήμα ⇒ κρατάμε το ΥΠΑΡΧΟΝ αντικείμενο: το `getActiveCropRing()` συγκρίνεται με
@@ -114,17 +163,16 @@ function reconcileBoundary(changed: ReadonlySet<string>, sceneManager: TopoSourc
  */
 function rebuiltBreakline(
   breakline: Breakline,
-  changed: ReadonlySet<string>,
-  sceneManager: TopoSourceSceneManager,
+  pass: CascadePass,
   surfaceId: TopoSurfaceId,
 ): Breakline {
   const sourceId = breakline.sourceEntityId;
-  if (!sourceId || !changed.has(sourceId)) return breakline;
+  if (!sourceId || !affects(pass, sourceId)) return breakline;
 
-  const entity = sceneManager.getEntity(sourceId) as Entity | undefined;
+  const entity = pass.sceneManager.getEntity(sourceId) as Entity | undefined;
   if (!entity) return breakline;
 
-  const built = buildBreaklineFromEntity(entity, getTopoPoints(surfaceId));
+  const built = buildBreaklineFromEntity(entity, getTopoPoints(surfaceId), pass.projector);
   if (!built) return breakline;
 
   const unchanged =
@@ -142,19 +190,26 @@ function rebuiltBreakline(
  * ορισμό, άρα ακυρώνει το memo του TIN → **ξανατρέχει ο CDT**. Αυτό είναι σωστό (η ασυνέχεια
  * είναι μέρος του ορισμού, όχι της εμβέλειας) αλλά ακριβό — γι' αυτό η πύλη.
  */
-function reconcileBreaklines(changed: ReadonlySet<string>, sceneManager: TopoSourceSceneManager): void {
+function reconcileBreaklines(pass: CascadePass): void {
   for (const surfaceId of TOPO_SURFACE_IDS) {
     const current = getTopoBreaklines(surfaceId);
     if (current.length === 0) continue;
 
     let dirty = false;
     const next = current.map((b) => {
-      const rebuilt = rebuiltBreakline(b, changed, sceneManager, surfaceId);
+      const rebuilt = rebuiltBreakline(b, pass, surfaceId);
       if (rebuilt !== b) dirty = true;
       return rebuilt;
     });
     if (dirty) setTopoBreaklines(next, surfaceId);
   }
+}
+
+/** Το ΕΝΑ σώμα του cascade — και οι δύο δημόσιες είσοδοι το εκτελούν με άλλο φίλτρο. */
+function runCascade(sources: SourceFilter, sceneManager: TopoSourceSceneManager): void {
+  const pass: CascadePass = { sources, sceneManager, projector: getTopoDisplayProjector() };
+  reconcileBoundary(pass);
+  reconcileBreaklines(pass);
 }
 
 // ─── Η μία είσοδος ─────────────────────────────────────────────────────────────
@@ -177,7 +232,27 @@ export function cascadeTopoSourceGeometry(
   sceneManager: TopoSourceSceneManager,
 ): void {
   if (changedIds.length === 0) return;
-  const changed = new Set(changedIds);
-  reconcileBoundary(changed, sceneManager);
-  reconcileBreaklines(changed, sceneManager);
+  runCascade(new Set(changedIds), sceneManager);
+}
+
+/**
+ * ADR-718 §Α — ξανα-derive-άρει **κάθε** τοπογραφικό ορισμό επειδή άλλαξε το **πλαίσιο**, όχι
+ * κάποια οντότητα.
+ *
+ * Τρέχει από τον ΕΝΑ ιδιοκτήτη του κύκλου ζωής (`reconcileTopoFrame`), δηλαδή στις **τρεις**
+ * στιγμές που το πλαίσιο μπορεί να έχει αλλάξει: φόρτωση εγγράφου, αλλαγή ορόφου, αλλαγή
+ * γεωαναφοράς. Καμία δεύτερη συνδρομή στο `subscribeGeoReference` — η ερώτηση «το πλαίσιο
+ * άλλαξε, ποιος μετακινείται;» έχει ήδη ιδιοκτήτη (§M10g) και δεν αποκτά δεύτερο.
+ *
+ * **Η φόρτωση δεν είναι μπόνους, είναι το migration.** Ένα έγγραφο αποθηκευμένο πριν από αυτή
+ * τη διόρθωση κουβαλά δακτύλιο σε DISPLAY. Επειδή το πέρασμα ξαναχτίζει από το `sourceEntityId`,
+ * ο δακτύλιος διορθώνεται **στο άνοιγμα** — όχι «στην πρώτη επεξεργασία της πολυγραμμής». Γι'
+ * αυτό η αλλαγή πλαισίου **δεν** απαιτεί ούτε σφραγίδα στο έγγραφο, ούτε version bump, ούτε
+ * script μετάπτωσης: η πηγή είναι η αλήθεια, και είναι πάντα εκεί.
+ *
+ * Ιδεμποτεντικό όπως και ο δίδυμός του: ίδιο σχήμα ⇒ καμία εγγραφή, άρα το επαναλαμβανόμενο
+ * πέρασμα σε κάθε επίσκεψη ορόφου δεν ξαναχτίζει ισοϋψείς και δεν προγραμματίζει save.
+ */
+export function cascadeTopoSourceFrame(sceneManager: TopoSourceSceneManager): void {
+  runCascade(null, sceneManager);
 }

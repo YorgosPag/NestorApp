@@ -10,8 +10,9 @@
  * υπεύθυνος γι' αυτά, γιατί κανείς δεν ήξερε σε ποιο πλαίσιο ψήθηκαν (§M10g, σφραγίδα).
  *
  * ── Οι δύο κατηγορίες, και γιατί ΔΕΝ αντιμετωπίζονται το ίδιο ────────────────────────────
- *   • **Παράγωγα της πηγής** (ισοϋψείς, footprint) → **ξαναχτίζονται**. Δεν υπάρχει τίποτα
- *     του χρήστη μέσα τους· η αναγέννηση είναι ακριβώς σωστή και ήδη idempotent.
+ *   • **Παράγωγα της πηγής** (ισοϋψείς, footprint, **και οι store-side ορισμοί του ADR-718 §Α**:
+ *     όριο οικοπέδου + ασυνέχειες που κρέμονται από `sourceEntityId`) → **ξαναχτίζονται**. Δεν
+ *     υπάρχει τίποτα του χρήστη μέσα τους· η αναγέννηση είναι ακριβώς σωστή και ήδη idempotent.
  *   • **Προϊόντα που ο χρήστης πειράζει** (κάναβος, ετικέτες, βορράς) → **μετακινούνται με
  *     delta rigid transform**. Η αναγέννηση εδώ θα ήταν **καταστροφική**: ο βορράς που ο
  *     χρήστης μετακίνησε στη γωνιά του φύλλου θα ξαναγεννιόταν στη θέση-άγκιστρο, δηλαδή η
@@ -50,6 +51,7 @@ import { TOPO_BAKED_GROUPS, bakedGroupOfLayerName } from '../topo-baked-groups';
 import type { TopoLevelBakedFrames } from '../topo-baked-frame-store';
 import { getLevelBakedFrames, setLevelBakedFrames } from '../topo-baked-frame-store';
 import { setTopoFrameStatus } from '../topo-frame-status-store';
+import { cascadeTopoSourceFrame } from '../topo-source-cascade';
 import { rebuildTopoDerivedScene } from './regenerate-topo';
 
 /** Το delta εκφράζεται ως «στροφή γύρω από την αρχή, μετά μετατόπιση» — αυτή είναι η αρχή. */
@@ -214,6 +216,18 @@ function withPaperGlyphRotation(original: AnySceneEntity, rotated: AnySceneEntit
   return { ...rotated, rotation: previous } as AnySceneEntity;
 }
 
+/**
+ * Ο `SceneModel` ως το ελάχιστο `getEntity` surface που ζητά ο cascade (ADR-718 §Α).
+ *
+ * Ευρετήριο, όχι `find` ανά κλήση: ο cascade ρωτά μία φορά για το όριο και μία ανά ασυνέχεια,
+ * και μια αποτύπωση με 50 ασυνέχειες πάνω σε σκηνή 10.000 οντοτήτων θα ήταν μισό εκατομμύριο
+ * συγκρίσεις — για μια διαδρομή που τρέχει σε κάθε επίσκεψη ορόφου.
+ */
+function sceneEntityLookup(scene: SceneModel): { getEntity: (id: string) => Entity | undefined } {
+  const byId = new Map(scene.entities.map((e) => [e.id, e]));
+  return { getEntity: (id) => byId.get(id) as unknown as Entity | undefined };
+}
+
 export interface TopoFrameReconcileDeps {
   readonly getScene: (levelId: string) => SceneModel | null;
   /** Silent write (`system-reconcile`) — μηδέν autosave, μηδέν undo entry. */
@@ -241,6 +255,12 @@ export function reconcileTopoFrame(deps: TopoFrameReconcileDeps): TopoFrameRecon
   if (!scene) {
     return { derivedCount: 0, movedByGroup: {}, unstampedGroups: [], unsupportedGroups: [] };
   }
+
+  // ADR-718 §Α — ΠΡΩΤΑ οι store-side ορισμοί, ΜΕΤΑ τα παράγωγα της σκηνής. Η σειρά είναι
+  // φέρουσα: το `rebuildTopoDerivedScene` διαβάζει `getTopoSurface()`, που κόβει στον ενεργό
+  // δακτύλιο. Με ανάποδη σειρά οι ισοϋψείς θα χτίζονταν με το ΠΑΛΙΟ όριο και θα διορθώνονταν
+  // μόλις στο επόμενο πέρασμα — δηλαδή ο χρήστης θα έβλεπε ένα λάθος καρέ σε κάθε αλλαγή.
+  cascadeTopoSourceFrame(sceneEntityLookup(scene));
 
   const rebuilt = rebuildTopoDerivedScene(scene);
   const reconciled = reconcileBakedFramesInScene({

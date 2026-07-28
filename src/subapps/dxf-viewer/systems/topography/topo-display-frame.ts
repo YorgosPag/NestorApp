@@ -23,6 +23,19 @@
  *      πάνω στην κουκίδα σε στραμμένο έργο. Η ΓΕΩΜΕΤΡΙΑ του καννάβου (οι βραχίονες του
  *      σταυρού) όμως στρίβει — δείχνει τη διεύθυνση των γραμμών ΕΓΣΑ.
  *
+ * ## Η ΔΕΥΤΕΡΗ κατεύθυνση — η ΕΙΣΕΡΧΟΜΕΝΗ πύλη (ADR-718 §Α)
+ * Το M10f έχτισε τη μισή γέφυρα. Η άλλη μισή έλειπε, και κόστισε το blocker του ADR-718: ένας
+ * **καταναλωτής** του σχεδίου που τροφοδοτεί το τοπογραφικό υποσύστημα (πολυγραμμή → όριο
+ * οικοπέδου, γραμμή → ασυνέχεια) διαβάζει κορυφές σε **DISPLAY** και τις παρέδιδε στο
+ * `TopoPointStore`, που είναι **WORLD**. Σε μη-γεωαναφερμένο έργο τα δύο ταυτίζονται, οπότε το
+ * κενό ήταν αόρατο σε 489 tests — και μοιραίο σε **κάθε** αληθινό έργο, όπου η αποτύπωση είναι
+ * ΕΓΣΑ. Άρα ο κανόνας είναι συμμετρικός:
+ *
+ *   > Ό,τι ΒΓΑΙΝΕΙ στο χαρτί περνά από `project`. Ό,τι ΜΠΑΙΝΕΙ από το χαρτί περνά από `unproject`.
+ *
+ * Και οι δύο κατευθύνσεις ζουν εδώ **επίτηδες**: η μέρα που θα ζούσαν σε δύο modules είναι η
+ * μέρα που η μία θα διορθωνόταν και η άλλη όχι.
+ *
  * Καθαρό module: οι helpers δέχονται τον projector (unit-testable, store-free). Η **μία**
  * είσοδος που διαβάζει store είναι το {@link getTopoDisplayProjector}.
  *
@@ -51,13 +64,34 @@ export function projectWorldPoint(p: Point2D, projector: WorldToDisplayProjector
   return projector ? projector.project(p.x, p.y) : p;
 }
 
+/**
+ * Ο κοινός πυρήνας **και των δύο** κατευθύνσεων. Το `project` και το `unproject` έχουν την ίδια
+ * υπογραφή (`(x, y) => Point2D`), άρα η ακολουθία κορυφών μεταφέρεται με τον ίδιο βρόχο και η
+ * κατεύθυνση είναι **δεδομένο**, όχι δεύτερο σώμα συνάρτησης.
+ *
+ * Δύο δίδυμοι βρόχοι εδώ ήταν ακριβώς ο κλώνος που έπιασε το CHECK 3.28 (N.18) — και η βλάβη που
+ * φυλάει δεν είναι αισθητική: ο ένας βρόχος θα αποκτούσε κάποτε fast path ή guard, ο άλλος όχι,
+ * και οι δύο κατευθύνσεις της ίδιας γέφυρας θα απέκλιναν σιωπηλά. Ίδιο σκεπτικό με το να ζουν
+ * `project`/`unproject` στο ίδιο module.
+ *
+ * `null` projector ⇒ **αντίγραφα**, ποτέ η ίδια αναφορά (βλ. {@link unprojectDisplayPoints}).
+ */
+function mapPointSequence(
+  points: readonly Point2D[],
+  projector: WorldToDisplayProjector | null,
+  direction: 'project' | 'unproject',
+): Point2D[] {
+  if (!projector) return points.map((p) => ({ x: p.x, y: p.y }));
+  const map = projector[direction];
+  return points.map((p) => map(p.x, p.y));
+}
+
 /** Το ίδιο για μια ακολουθία κορυφών (πολυγραμμή, δακτύλιος, σταυρός καννάβου). */
 export function projectWorldPoints(
   points: readonly Point2D[],
   projector: WorldToDisplayProjector | null,
 ): Point2D[] {
-  if (!projector) return points.map((p) => ({ x: p.x, y: p.y }));
-  return points.map((p) => projector.project(p.x, p.y));
+  return mapPointSequence(points, projector, 'project');
 }
 
 /** Το ίδιο για δακτυλίους (footprint επιφάνειας). */
@@ -80,6 +114,33 @@ export function projectContourLines(
 ): ContourLine[] {
   if (!projector) return contours as ContourLine[];
   return contours.map((c) => ({ ...c, vertices: projectWorldPoints(c.vertices, projector) }));
+}
+
+/**
+ * DISPLAY (τοπικά mm) → WORLD (ΕΓΣΑ mm) για **μία** κορυφή. `null` projector ⇒ αντίγραφο.
+ *
+ * Ο ακριβής αντίστροφος του {@link projectWorldPoint} — ίδιος πυρήνας `RigidMap`, οπότε οι δύο
+ * κατευθύνσεις δεν μπορούν να αποκλίνουν (ADR-650 M10b).
+ */
+export function unprojectDisplayPoint(p: Point2D, projector: WorldToDisplayProjector | null): Point2D {
+  return projector ? projector.unproject(p.x, p.y) : { x: p.x, y: p.y };
+}
+
+/**
+ * Το ίδιο για μια ακολουθία κορυφών **που ήρθε από οντότητα του σχεδίου** — δακτύλιος ορίου
+ * οικοπέδου, πολυγραμμή ασυνέχειας.
+ *
+ * ⚠️ Επιστρέφει **πάντα νέα** αντικείμενα, ακόμη και σε `null` projector. Δεν είναι σπατάλη:
+ * ο δακτύλιος αποθηκεύεται στο store και συγκρίνεται με **ταυτότητα** (`topo-surface.ts` memo),
+ * ενώ οι κορυφές της οντότητας ανήκουν στη σκηνή και μπορούν να μεταλλαχθούν από κάτω του.
+ * Κοινή αναφορά μεταξύ σκηνής και store θα ήταν aliasing που καμία από τις δύο πλευρές δεν
+ * δηλώνει.
+ */
+export function unprojectDisplayPoints(
+  points: readonly Point2D[],
+  projector: WorldToDisplayProjector | null,
+): Point2D[] {
+  return mapPointSequence(points, projector, 'unproject');
 }
 
 /**

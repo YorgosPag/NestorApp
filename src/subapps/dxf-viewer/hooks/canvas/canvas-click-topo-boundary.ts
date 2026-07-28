@@ -18,6 +18,7 @@ import {
   buildBoundaryFromEntity,
   isBoundaryCandidate,
 } from '../../systems/topography/topo-boundary-pick';
+import { getTopoDisplayProjector } from '../../systems/topography/topo-display-frame';
 import { getTopoBoundary, setTopoBoundary } from '../../systems/topography/TopoPointStore';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import { i18n } from '@/i18n';
@@ -64,8 +65,10 @@ export function handleTopoBoundaryClick(
     return true;
   }
 
+  // ADR-718 §Α — η οντότητα δίνει DISPLAY κορυφές· ο δακτύλιος πρέπει να γεννηθεί σε WORLD,
+  // γιατί εκεί ζουν η αποτύπωση, η κοπή του TIN και οι όγκοι.
   const entity = entities.find((e) => e.id === entityId);
-  const boundary = entity ? buildBoundaryFromEntity(entity) : null;
+  const boundary = entity ? buildBoundaryFromEntity(entity, getTopoDisplayProjector()) : null;
   if (!boundary) {
     setTopoBoundaryHint('notClosed');
     return true;

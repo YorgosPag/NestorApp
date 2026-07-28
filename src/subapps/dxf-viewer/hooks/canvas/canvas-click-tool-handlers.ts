@@ -58,6 +58,7 @@ import {
   buildBreaklineFromEntity,
   isBreaklineCandidate,
 } from '../../systems/topography/topo-breakline-pick';
+import { getTopoDisplayProjector } from '../../systems/topography/topo-display-frame';
 import {
   addBreakline,
   removeBreakline,
@@ -408,8 +409,11 @@ export function handleTopoBreaklineClick(
     return true;
   }
 
+  // ADR-718 §Α — DISPLAY κορυφές → WORLD πριν συγκριθούν με τα (WORLD) σημεία της αποτύπωσης.
   const entity = entities.find((e) => e.id === entityId);
-  const built = entity ? buildBreaklineFromEntity(entity, getTopoPoints()) : null;
+  const built = entity
+    ? buildBreaklineFromEntity(entity, getTopoPoints(), getTopoDisplayProjector())
+    : null;
   if (!built) {
     setTopoBreaklineHint('needsPoints');
     return true;
