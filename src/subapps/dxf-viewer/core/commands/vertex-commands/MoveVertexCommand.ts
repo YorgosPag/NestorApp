@@ -41,6 +41,10 @@ export class MoveVertexCommand extends EntityVertexCommand {
    */
   execute(): void {
     this.sceneManager.updateVertex(this.entityId, this.vertexIndex, this.newPosition);
+    // ADR-718 Μ3 — τα scene-derived εξαρτημένα ακολουθούν την κορυφή. Ασφαλές να τρέχει
+    // ανεπιφύλακτα: η εντολή κατασκευάζεται **μόνο στο τέλος** του drag (`endGripDrag`), ποτέ
+    // ανά καρέ — το `isDragging: true` υπάρχει για το coalescing του undo, όχι ως ζωντανή ροή.
+    this.reconcileDependents();
   }
 
   /**
@@ -48,6 +52,7 @@ export class MoveVertexCommand extends EntityVertexCommand {
    */
   undo(): void {
     this.sceneManager.updateVertex(this.entityId, this.vertexIndex, this.oldPosition);
+    this.reconcileDependents();
   }
 
   /**

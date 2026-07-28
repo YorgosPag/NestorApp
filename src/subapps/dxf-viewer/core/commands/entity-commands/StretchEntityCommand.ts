@@ -8,7 +8,16 @@
  * Single undo step reverses the entire stretch (Q11: 1 audit entry / command
  * via IDxfTextAuditRecorder — noopAuditRecorder until Phase 7 Firestore persist).
  *
+ * ADR-718 Μ3 — **αυτή η εντολή είναι το κοινό μονοπάτι κάθε σύρσιματος λαβής κορυφής**
+ * (`commitDxfGripDragViaStretchCommand`) και του εργαλείου «Έκταση». Έλειπε από τα call sites
+ * του universal associative cascade (ADR-540), σε αντίθεση με τις άλλες δύο οικογένειες
+ * (`MergeableUpdateCommand` για params-edits, `SnapshotTransformCommand` για μετασχηματισμούς)
+ * — δηλαδή η **πιο άμεση** αλλαγή γεωμετρίας που κάνει ο χρήστης ήταν η μόνη που δεν
+ * ενημέρωνε κανένα εξαρτημένο παράγωγο. Το κενό έκλεισε: εδώ ξανα-derive-άρονται τα σχήματα
+ * που κρέμονται από τις κορυφές (τοπογραφικό όριο/ασυνέχειες, ζωντανές ετικέτες εμβαδού).
+ *
  * @see ADR-349 §Command Registration
+ * @see bim/cascade/associative-geometry-reconcile — universal reconcile SSoT (ADR-540, reused)
  */
 
 import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '../interfaces';
@@ -22,6 +31,7 @@ import {
 } from '../../../systems/stretch/stretch-entity-transform';
 import type { VertexRef } from '../../../systems/stretch/stretch-vertex-classifier';
 import type { Entity } from '../../../types/entities';
+import { reconcileAssociativeGeometry } from '../../../bim/cascade/associative-geometry-reconcile';
 import { noopAuditRecorder, type IDxfTextAuditRecorder } from '../text/types';
 
 type ReplacedEntry = { readonly oldEntity: SceneEntity; readonly newEntity: SceneEntity };
@@ -89,21 +99,46 @@ export class StretchEntityCommand implements ICommand {
     }
 
     this.wasExecuted = this.entitySnapshots.size > 0;
-    if (this.wasExecuted) {
-      const { x, y } = this.params.displacement;
-      this.auditRecorder.record({
-        entityId: this.id,
-        action: 'updated',
-        changes: [
-          { field: 'op', oldValue: null, newValue: 'stretch' },
-          { field: 'displacement', oldValue: { x: 0, y: 0 }, newValue: { x, y } },
-          { field: 'affectedEntityIds', oldValue: null, newValue: this.getAffectedEntityIds() },
-          { field: 'affectedEntityCount', oldValue: null, newValue: this.entitySnapshots.size },
-        ],
-        commandName: this.name,
-        timestamp: Date.now(),
-      });
-    }
+    if (this.wasExecuted) this.recordForwardAndReconcile();
+  }
+
+  /**
+   * Το κλείσιμο της «προς τα εμπρός» εφαρμογής: το audit της + το reconcile που την ακολουθεί.
+   *
+   * Κοινό σε `execute` και `redo` επειδή είναι **η ίδια πράξη** — το redo δεν είναι «άλλη»
+   * μετακίνηση, είναι η αρχική ξανά, οπότε οφείλει να αφήσει ταυτόσημο ίχνος. Όσο ζούσε σε δύο
+   * αντίγραφα, ένα νέο πεδίο στο audit (ή μια αλλαγή στη σειρά reconcile/record) έμπαινε στο ένα
+   * και ξεχνιόταν στο άλλο — και η απόκλιση θα φαινόταν μόνο σε undo/redo, εκεί που κανείς δεν
+   * κοιτά το audit trail.
+   */
+  private recordForwardAndReconcile(): void {
+    const { x, y } = this.params.displacement;
+    this.auditRecorder.record({
+      entityId: this.id,
+      action: 'updated',
+      changes: [
+        { field: 'op', oldValue: null, newValue: 'stretch' },
+        { field: 'displacement', oldValue: { x: 0, y: 0 }, newValue: { x, y } },
+        { field: 'affectedEntityIds', oldValue: null, newValue: this.getAffectedEntityIds() },
+        { field: 'affectedEntityCount', oldValue: null, newValue: this.entitySnapshots.size },
+      ],
+      commandName: this.name,
+      timestamp: Date.now(),
+    });
+    this.reconcileDependents();
+  }
+
+  /**
+   * ADR-540 / ADR-718 Μ3 — τα scene-derived εξαρτημένα, **αφού** οι κορυφές έχουν κάτσει στη
+   * σκηνή (οι reconcilers διαβάζουν την τρέχουσα γεωμετρία).
+   *
+   * Η ΙΔΙΑ κλήση σε execute / undo / redo, χωρίς αντίστροφη διαδρομή: οι scene-derived
+   * reconcilers δεν «ακολουθούν» delta — ξαναδιαβάζουν τη σκηνή. Άρα η αναίρεση επαναφέρει τα
+   * παράγωγα με τον ίδιο ακριβώς κώδικα που τα προώθησε. Ιδεμποτεντικοί: αμετάβλητο ⇒ καμία
+   * εγγραφή, κανένα emit (ADR-492 §4 zero-loop).
+   */
+  private reconcileDependents(): void {
+    reconcileAssociativeGeometry(this.getAffectedEntityIds(), this.sceneManager);
   }
 
   undo(): void {
@@ -130,6 +165,7 @@ export class StretchEntityCommand implements ICommand {
       commandName: this.name,
       timestamp: Date.now(),
     });
+    this.reconcileDependents();
   }
 
   redo(): void {
@@ -151,19 +187,7 @@ export class StretchEntityCommand implements ICommand {
       const updates = translateEntityByAnchor(snapshot as unknown as Entity, displacement);
       if (Object.keys(updates).length > 0) this.sceneManager.updateEntity(entityId, updates);
     }
-    const { x, y } = displacement;
-    this.auditRecorder.record({
-      entityId: this.id,
-      action: 'updated',
-      changes: [
-        { field: 'op', oldValue: null, newValue: 'stretch' },
-        { field: 'displacement', oldValue: { x: 0, y: 0 }, newValue: { x, y } },
-        { field: 'affectedEntityIds', oldValue: null, newValue: this.getAffectedEntityIds() },
-        { field: 'affectedEntityCount', oldValue: null, newValue: this.entitySnapshots.size },
-      ],
-      commandName: this.name,
-      timestamp: Date.now(),
-    });
+    this.recordForwardAndReconcile();
   }
 
   getDescription(): string {

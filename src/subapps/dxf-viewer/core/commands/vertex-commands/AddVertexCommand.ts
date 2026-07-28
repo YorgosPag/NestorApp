@@ -3,36 +3,46 @@
  *
  * 🏢 ENTERPRISE (2026-01-25): Command for adding vertices to polylines/polygons
  * Used when clicking on edge midpoint grips to insert new vertices.
+ *
+ * ADR-718 Μ3 — extends {@link EntityVertexCommand} like its `Remove`/`Move` siblings. It
+ * always had the same target surface (`entityId` + index + `ISceneManager`) and re-declared
+ * `getAffectedEntityIds()` + `validate()` by hand; adopting the family base drops both copies
+ * and inherits the associative reconcile in ONE place instead of a third paste of it (N.0.2).
+ *
+ * @see ../entity-vertex-command.ts — family base (target surface + reconcileDependents)
  */
 
 import type { ISceneManager } from '../interfaces';
 import type { Point2D } from '../../../rendering/types/Types';
-import { BaseCommand } from '../base-command';
+import { EntityVertexCommand } from '../entity-vertex-command';
 
 /**
  * Command for adding a vertex to an entity
  */
-export class AddVertexCommand extends BaseCommand {
+export class AddVertexCommand extends EntityVertexCommand {
   readonly name = 'AddVertex';
   readonly type = 'add-vertex';
 
   private wasExecuted = false;
 
   constructor(
-    private readonly entityId: string,
-    private readonly insertIndex: number,
+    entityId: string,
+    insertIndex: number,
     private readonly position: Point2D,
-    private readonly sceneManager: ISceneManager
+    sceneManager: ISceneManager
   ) {
-    super();
+    super(entityId, insertIndex, sceneManager);
   }
 
   /**
    * Execute: Insert new vertex at specified index
    */
   execute(): void {
-    this.sceneManager.insertVertex(this.entityId, this.insertIndex, this.position);
+    this.sceneManager.insertVertex(this.entityId, this.vertexIndex, this.position);
     this.wasExecuted = true;
+    // ADR-718 Μ3 — μια νέα κορυφή αλλάζει το σχήμα του πολυγώνου· ό,τι κρέμεται από αυτό
+    // (τοπογραφικό όριο / ασυνέχεια, ετικέτα εμβαδού) ξανα-derive-άρεται τώρα.
+    this.reconcileDependents();
   }
 
   /**
@@ -40,15 +50,9 @@ export class AddVertexCommand extends BaseCommand {
    */
   undo(): void {
     if (this.wasExecuted) {
-      this.sceneManager.removeVertex(this.entityId, this.insertIndex);
+      this.sceneManager.removeVertex(this.entityId, this.vertexIndex);
+      this.reconcileDependents();
     }
-  }
-
-  /**
-   * Get description for UI
-   */
-  getDescription(): string {
-    return `Add vertex at index ${this.insertIndex}`;
   }
 
   /**
@@ -62,7 +66,7 @@ export class AddVertexCommand extends BaseCommand {
    * Get the insert index
    */
   getInsertIndex(): number {
-    return this.insertIndex;
+    return this.vertexIndex;
   }
 
   /**
@@ -73,30 +77,17 @@ export class AddVertexCommand extends BaseCommand {
   }
 
   /**
-   * 🏢 ENTERPRISE: Get affected entity IDs
+   * Get description for UI
    */
-  getAffectedEntityIds(): string[] {
-    return [this.entityId];
-  }
-
-  /**
-   * Validate command can be executed
-   */
-  validate(): string | null {
-    if (!this.entityId) {
-      return 'Entity ID is required';
-    }
-    if (this.insertIndex < 0) {
-      return 'Insert index must be non-negative';
-    }
-    return null;
+  getDescription(): string {
+    return `Add vertex at index ${this.vertexIndex}`;
   }
 
   /** 🏢 ENTERPRISE: Serialized `data` payload. */
   protected serializeData(): Record<string, unknown> {
     return {
       entityId: this.entityId,
-      insertIndex: this.insertIndex,
+      insertIndex: this.vertexIndex,
       position: this.position,
     };
   }

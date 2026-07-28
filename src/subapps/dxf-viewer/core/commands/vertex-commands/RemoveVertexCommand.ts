@@ -33,6 +33,7 @@ export class RemoveVertexCommand extends EntityVertexCommand {
       this.removedPosition = { ...vertices[this.vertexIndex] };
       this.sceneManager.removeVertex(this.entityId, this.vertexIndex);
       this.wasExecuted = true;
+      this.reconcileDependents();
     }
   }
 
@@ -42,6 +43,7 @@ export class RemoveVertexCommand extends EntityVertexCommand {
   undo(): void {
     if (this.removedPosition && this.wasExecuted) {
       this.sceneManager.insertVertex(this.entityId, this.vertexIndex, this.removedPosition);
+      this.reconcileDependents();
     }
   }
 
@@ -51,6 +53,7 @@ export class RemoveVertexCommand extends EntityVertexCommand {
   redo(): void {
     if (this.removedPosition) {
       this.sceneManager.removeVertex(this.entityId, this.vertexIndex);
+      this.reconcileDependents();
     }
   }
 
