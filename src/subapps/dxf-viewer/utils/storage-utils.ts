@@ -11,6 +11,7 @@
  * @since 2026-01-31
  */
 
+import { isStorageAvailable } from '@/lib/storage';
 import { dwarn, derr } from '../debug';
 
 // ============================================================================
@@ -66,6 +67,13 @@ export const STORAGE_KEYS = {
   // ως προς έργο/όροφο — η διάταξη είναι ιδιότητα του χώρου εργασίας, όχι του σχεδίου.
   // Το `:v1` επιτρέπει σιωπηλή απόρριψη παλιού σχήματος όταν η Φ2/Φ3 προσθέσει `mode`.
   WORKSPACE_DOCK_WIDTH: 'dxf-viewer:workspace-dock-width:v1',
+
+  // Πλευρά αγκύρωσης της ίδιας παλέτας (ADR-724 Φ2). **Ξεχωριστό κλειδί** από το πλάτος, όχι
+  // αντικείμενο `{mode,width}`: τα δύο πεδία γράφονται από τελείως διαφορετικές χειρονομίες
+  // (το πλάτος στο τέλος κάθε συρσίματος, η πλευρά μία φορά στους μήνες) και έχουν διαφορετικό
+  // προφίλ συνδρομητών (το πλάτος **δεν** έχει, η πλευρά έχει). Κοινό record θα σήμαινε ότι
+  // κάθε σύρσιμο ειδοποιεί τους συνδρομητές της πλευράς — ακριβώς το ADR-040 πρόβλημα.
+  WORKSPACE_DOCK_MODE: 'dxf-viewer:workspace-dock-mode:v1',
 } as const;
 
 export type StorageKey = typeof STORAGE_KEYS[keyof typeof STORAGE_KEYS] | string;
@@ -75,19 +83,19 @@ export type StorageKey = typeof STORAGE_KEYS[keyof typeof STORAGE_KEYS] | string
 // ============================================================================
 
 /**
- * 🏢 SSR-safe check for localStorage availability
+ * 🏢 SSR-safe check for localStorage availability.
+ *
+ * ⚠️ **Δεν υλοποιείται εδώ** — εισάγεται από το κοινό `@/lib/storage` (2026-07-29, N.18/CHECK
+ * 3.28). Ήταν byte-identical αντίγραφο: δύο probes για μία αλήθεια. Η φορά εξάρτησης είναι η
+ * σωστή (subapp → common)· το αντίστροφο θα ήταν αντιστροφή επιπέδων.
+ *
+ * ⓘ Το **υπόλοιπο** αυτού του module ΔΕΝ είναι διπλότυπο του `@/lib/storage`: εκεί τα strings
+ * αποθηκεύονται ωμά, εδώ περνούν πάντα από `JSON.stringify`. Δύο **ασύμβατα συμβόλαια**, όχι
+ * δύο αντίγραφα — ενοποίησή τους αλλάζει τη μορφή στον δίσκο και χάνει σιωπηλά αποθηκευμένες
+ * προτιμήσεις. Βλ. `.claude-rules/pending-ratchet-work.md`.
+ *
+ * @see {@link isStorageAvailable} — εισάγεται στην κορυφή του αρχείου.
  */
-function isStorageAvailable(): boolean {
-  if (typeof window === 'undefined') return false;
-  try {
-    const test = '__storage_test__';
-    localStorage.setItem(test, test);
-    localStorage.removeItem(test);
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 /**
  * 🏢 Get value from localStorage with type safety

@@ -481,6 +481,23 @@ files), όχι κρέμασμα. Πλήρη δεδομένα: **ADR-711 §5**.
   remount του παράλληλου agent. Επανάλαβε όταν δεν τρέχει άλλος agent.
 
 
+### 💾 `@/lib/storage` vs `dxf-viewer/utils/storage-utils` — **ασύμβατα συμβόλαια** JSON vs raw (priorità media, cross-cutting, 2026-07-29 via CHECK 3.28 στο ADR-724 Φ2)
+
+**✅ Το διπλότυπο ΔΙΟΡΘΩΘΗΚΕ επιτόπου (N.0.2, ίδιο commit).** Το `isStorageAvailable()` ήταν
+byte-identical στα δύο αρχεία — δύο write-probes για μία αλήθεια. Πλέον εξάγεται από το
+`src/lib/storage/safe-storage.ts` και το `storage-utils.ts` το **εισάγει**. Το `jscpd:diff` στα
+δύο αρχεία **μαζί** είναι πράσινο. Ήταν 10 γραμμές / 2 αρχεία ⇒ ανήκε στο «διόρθωσέ το τώρα».
+
+- [ ] **Ό,τι ΑΠΟΜΕΝΕΙ δεν είναι διπλότυπο — είναι δύο ασύμβατα συμβόλαια, και είναι παγίδα:**
+  - `storageSet` (subapp) κάνει **πάντα** `JSON.stringify` ⇒ το `'mm'` γράφεται `"mm"`.
+  - `safeSetItem` (κοινό) αποθηκεύει τα strings **ωμά** ⇒ το `'mm'` γράφεται `mm`.
+  - Άρα «ας ενοποιήσουμε τα δύο modules» **αλλάζει τη μορφή στον δίσκο**: το `storageGet` κάνει
+    `JSON.parse('mm')` → throw → σιωπηλή επιστροφή στην προεπιλογή. **Κάθε αποθηκευμένη
+    προτίμηση-string κάθε χρήστη χάνεται**, χωρίς σφάλμα, σε 32 αρχεία που εισάγουν το module.
+  ⛔ **ΜΗΝ το «κεντρικοποιήσεις» ως μηχανική εργασία.** Χρειάζεται απόφαση μετανάστευσης
+  (dual-read: δοκίμασε JSON, πέσε πίσω σε raw) + έκδοση κλειδιών. Cross-cutting, >4 αρχεία,
+  2 domains ⇒ **ΟΧΙ inline** (N.0.2). Το κοινό επίσης **δεν** έχει `storageHas`/`storageGetString`.
+
 ### 🔧 Global `sha256Hex(bytes)` browser SSoT — ~6 duplicate call sites (priorità bassa, ~1h, discovered 2026-07-21 via ADR-678 Βήμα 3)
 
 - [ ] **~6 σημεία επαναλαμβάνουν `crypto.subtle.digest('SHA-256', data)` → hex χωρίς κοινό SSoT:** `services/two-factor/two-factor-helpers.ts:69`, `services/sharing/unified-sharing.service.ts:75`, `services/session/session-device-detection.ts:137`, `services/obligations/obligation-transmittal-operations.ts:38` (`sha256Hex`), `services/file-share.service.ts:117`, `subapps/dxf-viewer/bim-3d/telemetry/session-id-generator.ts:72`. **Πρόταση:** shared `sha256Hex(bytes: BufferSource): Promise<string>` σε `src/lib/hash/` (ή reuse του `obligation` helper αν γενικευτεί) + migrate-on-touch. Το ADR-678 Βήμα 3 έφτιαξε **dxf-viewer-scoped** `texture-content-hash.ts` (`sha256HexOfFile`) — όταν γίνει το global SSoT, να καταναλώνει από εκεί. Cross-cutting sweep (>4 αρχεία, 2 domains) → **ΟΧΙ inline** (N.0.2).

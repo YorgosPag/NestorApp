@@ -1,6 +1,7 @@
 /**
- * ADR-724 Φ1 — Ο **χώρος εργασίας** του viewer: παλέτα αριστερά, καμβάδες δεξιά, διαχωριστικό
- * που αλλάζει το πλάτος και τους σέρνει και τους δύο μαζί.
+ * ADR-724 Φ1/Φ2 — Ο **χώρος εργασίας** του viewer: παλέτα και καμβάδες εκατέρωθεν ενός
+ * διαχωριστικού που αλλάζει το πλάτος και τους σέρνει και τους δύο μαζί. Η πλευρά της παλέτας
+ * (Φ2) είναι το **μόνο** πράγμα που αλλάζει τη σειρά των παιδιών — δες τα `key` παρακάτω.
  *
  * ── ΤΟ ΜΟΝΑΔΙΚΟ ΣΗΜΕΙΟ ΤΟΥ SUBAPP ΠΟΥ ΞΕΡΕΙ ΑΠΟ SPLIT PANES ──
  *
@@ -64,6 +65,8 @@ import {
 } from '@/components/ui/resizable';
 import { PANEL_LAYOUT } from '../config/panel-tokens';
 import { getDockedWidth, setDockedWidth } from '../systems/workspace/workspace-dock-store';
+import { useDockMode } from '../systems/workspace/useWorkspaceDock';
+import { isDockedRight } from '../systems/workspace/workspace-dock-mode';
 
 const { WIDTH_MIN, WIDTH_MAX, CANVAS_MIN_WIDTH } = PANEL_LAYOUT.WORKSPACE_DOCK;
 
@@ -118,6 +121,10 @@ export const WorkspaceSplitLayout = React.memo<WorkspaceSplitLayoutProps>(({
   children,
 }) => {
   const { t } = useTranslation('dxf-viewer-shell');
+
+  // Η ΜΟΝΑΔΙΚΗ αντιδραστική συνδρομή αυτού του component — χαμηλής συχνότητας (κλικ μενού).
+  // Το πλάτος σκόπιμα ΔΕΝ έχει αντίστοιχη (ADR-040): ζει στο DOM κατά τη χειρονομία.
+  const mode = useDockMode();
 
   // Διαβάζεται ΜΙΑ φορά: το `defaultSize` είναι αρχική τιμή, όχι ελεγχόμενη ιδιότητα. Αν
   // άλλαζε ανά render, κάθε render θα ξαναέστηνε τη διάταξη πάνω από τον χρήστη.
@@ -223,42 +230,75 @@ export const WorkspaceSplitLayout = React.memo<WorkspaceSplitLayoutProps>(({
     return <>{sidebar}{children}</>;
   }
 
+  /*
+    ⚠️ ΤΑ `key` ΕΙΝΑΙ ΛΕΙΤΟΥΡΓΙΚΑ, ΟΧΙ ΤΥΠΙΚΟΤΗΤΑ (ADR-724 Φ2).
+
+    Η αλλαγή πλευράς αντιστρέφει τη σειρά αυτού του πίνακα. Χωρίς σταθερά `key`, ο React
+    ταιριάζει τα παιδιά **κατά θέση**: το πρώτο παιδί ήταν η παλέτα και τώρα είναι ο καμβάς
+    ⇒ ξαναφτιάχνει και τα δύο υποδέντρα. Για τον καμβά αυτό σημαίνει **απώλεια του WebGL
+    context**, πλήρες ξαναχτίσιμο σκηνής και ακύρωση του bitmap cache — δηλαδή δευτερόλεπτα
+    παγώματος για μια εντολή που οφείλει να είναι ακαριαία.
+
+    Με `key`, ο React **μετακινεί** τους ίδιους κόμβους (`insertBefore`). Ένας μετακινούμενος
+    `<canvas>` κρατά το περιεχόμενο και το context του — μόνο η επανεκχώρηση `width`/`height`
+    τα σβήνει, και αυτή δεν συμβαίνει εδώ. Καλύπτεται από test ταυτότητας.
+  */
+  const sidebarPanel = (
+    <ResizablePanel
+      key={SIDEBAR_PANEL_ID}
+      id={SIDEBAR_PANEL_ID}
+      elementRef={sidebarElementRef}
+      // Διπλή σημασία by design (βλ. markUserIntent): αρχικό πλάτος **και**
+      // στόχος του διπλού κλικ στο διαχωριστικό.
+      defaultSize={initialWidth}
+      minSize={WIDTH_MIN}
+      maxSize={WIDTH_MAX}
+      // Μεγαλώνει το παράθυρο ⇒ τον χώρο τον παίρνει ο ΚΑΜΒΑΣ· η παλέτα κρατά τα pixels της.
+      // Ακριβώς η συμπεριφορά Revit / VS Code — και ο λόγος που τα όρια είναι σε px, όχι %.
+      // Ισχύει αναλλοίωτο και στις δύο πλευρές: η ιδιότητα ακολουθεί την παλέτα, όχι τη θέση.
+      groupResizeBehavior="preserve-pixel-size"
+      onResize={handleSidebarResize}
+      className={PANEL_CLASS}
+    >
+      {sidebar}
+    </ResizablePanel>
+  );
+
+  const separator = (
+    <ResizableHandle
+      key="workspace-separator"
+      aria-label={t('workspaceDock.separatorLabel')}
+      className={SEPARATOR_CLASS}
+      onPointerDown={markUserIntent}
+      onKeyDown={handleSeparatorKeyDown}
+      onDoubleClick={markUserIntent}
+    />
+  );
+
+  /*
+    Το κάτω όριο του καμβά ζει ΕΔΩ και μόνο εδώ: είναι το μόνο σημείο που γνωρίζει το
+    διαθέσιμο πλάτος τη στιγμή του συρσίματος. Υπερισχύει του `WIDTH_MAX` σε στενές οθόνες.
+  */
+  const canvasPanel = (
+    <ResizablePanel
+      key={CANVAS_PANEL_ID}
+      id={CANVAS_PANEL_ID}
+      minSize={CANVAS_MIN_WIDTH}
+      className={PANEL_CLASS}
+    >
+      {children}
+    </ResizablePanel>
+  );
+
   return (
     <ResizablePanelGroup
       orientation="horizontal"
       className={GROUP_CLASS}
       onLayoutChanged={handleLayoutChanged}
     >
-      <ResizablePanel
-        id={SIDEBAR_PANEL_ID}
-        elementRef={sidebarElementRef}
-        // Διπλή σημασία by design (βλ. handleSeparatorDoubleClick): αρχικό πλάτος **και**
-        // στόχος του διπλού κλικ στο διαχωριστικό.
-        defaultSize={initialWidth}
-        minSize={WIDTH_MIN}
-        maxSize={WIDTH_MAX}
-        // Μεγαλώνει το παράθυρο ⇒ τον χώρο τον παίρνει ο ΚΑΜΒΑΣ· η παλέτα κρατά τα pixels της.
-        // Ακριβώς η συμπεριφορά Revit / VS Code — και ο λόγος που τα όρια είναι σε px, όχι %.
-        groupResizeBehavior="preserve-pixel-size"
-        onResize={handleSidebarResize}
-        className={PANEL_CLASS}
-      >
-        {sidebar}
-      </ResizablePanel>
-      <ResizableHandle
-        aria-label={t('workspaceDock.separatorLabel')}
-        className={SEPARATOR_CLASS}
-        onPointerDown={markUserIntent}
-        onKeyDown={handleSeparatorKeyDown}
-        onDoubleClick={markUserIntent}
-      />
-      {/*
-        Το κάτω όριο του καμβά ζει ΕΔΩ και μόνο εδώ: είναι το μόνο σημείο που γνωρίζει το
-        διαθέσιμο πλάτος τη στιγμή του συρσίματος. Υπερισχύει του `WIDTH_MAX` σε στενές οθόνες.
-      */}
-      <ResizablePanel id={CANVAS_PANEL_ID} minSize={CANVAS_MIN_WIDTH} className={PANEL_CLASS}>
-        {children}
-      </ResizablePanel>
+      {isDockedRight(mode)
+        ? [canvasPanel, separator, sidebarPanel]
+        : [sidebarPanel, separator, canvasPanel]}
     </ResizablePanelGroup>
   );
 });

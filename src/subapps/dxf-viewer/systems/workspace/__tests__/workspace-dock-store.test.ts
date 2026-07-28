@@ -8,6 +8,7 @@
  */
 
 const STORAGE_KEY = 'dxf-viewer:workspace-dock-width:v1';
+const MODE_KEY = 'dxf-viewer:workspace-dock-mode:v1';
 const DEFAULT_WIDTH = 384;
 const MIN_WIDTH = 280;
 const MAX_WIDTH = 720;
@@ -98,11 +99,121 @@ describe('ADR-724 — workspace-dock-store', () => {
     });
   });
 
-  describe('ADR-040 — το store ΔΕΝ εκθέτει συνδρομή στο πλάτος', () => {
-    it('καμία `subscribe*` επιφάνεια: το πλάτος ζει στο DOM κατά τη χειρονομία', async () => {
+  describe('ADR-040 — συνδρομή ΜΟΝΟ εκεί που η συχνότητα το επιτρέπει', () => {
+    /**
+     * ⚠️ Ο έλεγχος είναι **ονομαστικός επί σκοπού**. Μέχρι τη Φ2 έλεγε «καμία `subscribe*`
+     * επιφάνεια». Η Φ2 πρόσθεσε συνδρομή για την **πλευρά** — και το test κοκκίνισε, όπως
+     * όφειλε. Δεν χαλαρώνει σε «τουλάχιστον μία»: ο κίνδυνος που φυλά είναι να προστεθεί
+     * κάποτε `subscribeDockedWidth` και να ξαναρενδάρει ο viewer ~60 φορές/δευτ. κατά το
+     * σύρσιμο (ADR-040 Φ XXII.B). Άρα η λίστα είναι **ακριβής**, όχι κατώτατο όριο.
+     */
+    it('συνδρομή υπάρχει για την ΠΛΕΥΡΑ και μόνο — ποτέ για το πλάτος', async () => {
       const store = await freshStore();
       const surface = Object.keys(store).filter((key) => key.toLowerCase().includes('subscribe'));
-      expect(surface).toEqual([]);
+      expect(surface).toEqual(['subscribeDockMode']);
+    });
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // ADR-724 Φ2 — πλευρά αγκύρωσης + επαναφορά
+  // ══════════════════════════════════════════════════════════════════════════
+
+  describe('Φ2 — η πλευρά αγκύρωσης', () => {
+    it('χωρίς εγγραφή ⇒ αριστερά (η σημερινή συμπεριφορά)', async () => {
+      const store = await freshStore();
+      expect(store.getDockMode()).toBe('docked-left');
+    });
+
+    it('έγκυρη αποθηκευμένη τιμή ⇒ επιστρέφεται', async () => {
+      localStorage.setItem(MODE_KEY, JSON.stringify('docked-right'));
+      const store = await freshStore();
+      expect(store.getDockMode()).toBe('docked-right');
+    });
+
+    it('αλλοιωμένη τιμή ⇒ προεπιλογή, ΟΧΙ άγνωστη κατάσταση στη διάταξη', async () => {
+      localStorage.setItem(MODE_KEY, JSON.stringify('sideways'));
+      const store = await freshStore();
+      expect(store.getDockMode()).toBe('docked-left');
+    });
+
+    it('γράφει την πλευρά και επιμένει σε νέα συνεδρία', async () => {
+      const first = await freshStore();
+      first.setDockMode('docked-right');
+      const second = await freshStore();
+      expect(second.getDockMode()).toBe('docked-right');
+    });
+
+    it('η προεπιλογή αποθηκεύεται ΣΙΩΠΗΡΑ (removeOnDefault) ⇒ η εγγραφή σβήνεται', async () => {
+      const store = await freshStore();
+      store.setDockMode('docked-right');
+      store.setDockMode('docked-left');
+      expect(localStorage.getItem(MODE_KEY)).toBeNull();
+    });
+
+    it('ειδοποιεί τους συνδρομητές ΜΟΝΟ σε πραγματική αλλαγή', async () => {
+      const store = await freshStore();
+      const listener = jest.fn();
+      store.subscribeDockMode(listener);
+
+      store.setDockMode('docked-right');
+      expect(listener).toHaveBeenCalledTimes(1);
+
+      store.setDockMode('docked-right'); // ίδια τιμή ⇒ πλήρες no-op
+      expect(listener).toHaveBeenCalledTimes(1);
+    });
+
+    it('η αλλαγή πλευράς ΔΕΝ αγγίζει το πλάτος (ADR-724 §7)', async () => {
+      const store = await freshStore();
+      store.setDockedWidth(512);
+      store.setDockMode('docked-right');
+      expect(store.getDockedWidth()).toBe(512);
+    });
+  });
+
+  describe('Φ2 — resetDockLayout («Reset palette locations»)', () => {
+    /** Το πρόθεμα του ADR-723 — ό,τι έγραψε το `writePanelGeometry` το φέρει. */
+    const FLOATING_PREFIX = 'nestor:floating-panel-geometry:v1:';
+
+    it('επαναφέρει πλάτος ΚΑΙ πλευρά σε μία πράξη', async () => {
+      const store = await freshStore();
+      store.setDockedWidth(700);
+      store.setDockMode('docked-right');
+
+      store.resetDockLayout();
+
+      expect(store.getDockedWidth()).toBe(DEFAULT_WIDTH);
+      expect(store.getDockMode()).toBe('docked-left');
+    });
+
+    it('σβήνει ΚΑΙ τις αιωρούμενες γεωμετρίες — μερική επαναφορά είναι χειρότερη από καμία', async () => {
+      localStorage.setItem(`${FLOATING_PREFIX}dxf.layer-manager`, '{"x":10,"y":10,"w":300,"h":400}');
+      localStorage.setItem(`${FLOATING_PREFIX}dxf.properties`, '{"x":20,"y":20,"w":300,"h":400}');
+      const store = await freshStore();
+
+      store.resetDockLayout();
+
+      expect(localStorage.getItem(`${FLOATING_PREFIX}dxf.layer-manager`)).toBeNull();
+      expect(localStorage.getItem(`${FLOATING_PREFIX}dxf.properties`)).toBeNull();
+    });
+
+    it('ΔΕΝ αγγίζει ξένα κλειδιά — η επαναφορά διάταξης δεν είναι «καθάρισε τα πάντα»', async () => {
+      localStorage.setItem('nestor:some-other-feature', 'κρατήσου');
+      const store = await freshStore();
+
+      store.resetDockLayout();
+
+      expect(localStorage.getItem('nestor:some-other-feature')).toBe('κρατήσου');
+    });
+
+    it('είναι ιδεμποτεντικό (N.7.2 #3) — δεύτερη κλήση δεν αλλάζει τίποτα', async () => {
+      const store = await freshStore();
+      store.setDockMode('docked-right');
+
+      store.resetDockLayout();
+      const after = { width: store.getDockedWidth(), mode: store.getDockMode() };
+      store.resetDockLayout();
+
+      expect({ width: store.getDockedWidth(), mode: store.getDockMode() }).toEqual(after);
     });
   });
 });

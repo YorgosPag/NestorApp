@@ -56,6 +56,7 @@ import type { DxfSaveContext } from '../services/dxf-firestore.service';
 import { FloatingPanelContainer, type FloatingPanelHandle } from '../ui/FloatingPanelContainer';
 import { AutoSaveStatus } from '../ui/components/AutoSaveStatus';
 import { CentralizedAutoSaveStatus } from '../ui/components/CentralizedAutoSaveStatus';
+import { WorkspacePaletteHeader } from './WorkspacePaletteHeader';
 import { useBorderTokens } from '../../../hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -150,6 +151,13 @@ export const SidebarSection = React.memo<SidebarSectionProps>(({
         `}
       >
         {/*
+          ADR-724 Φ2 — Γραμμή τίτλου: ονομάζει την παλέτα, φιλοξενεί το μενού αγκύρωσης, και
+          θα είναι η λαβή του dock⇄float στη Φ3. Πρώτο παιδί του `<section>`, όπως σε κάθε
+          παλέτα Revit/ArchiCAD/C4D.
+        */}
+        <WorkspacePaletteHeader />
+
+        {/*
           MAIN CONTENT AREA - Scrollable
           - flex-1: Take remaining space
           - min-h-0: CRITICAL for Flexbox scroll (allows shrinking below content height)
@@ -185,7 +193,7 @@ export const SidebarSection = React.memo<SidebarSectionProps>(({
           <CentralizedAutoSaveStatus />
 
           <div className={`flex justify-between items-center ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>
-            <span>Sidebar Status</span>
+            <span>{t('workspaceDock.statusLabel')}</span>
             <SidebarZoomLeaf />
           </div>
         </footer>

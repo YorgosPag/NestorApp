@@ -7274,6 +7274,12 @@
   },
   "workspaceDock": {
     "sidebarLabel": "Drawing sidebar palette",
-    "separatorLabel": "Resize sidebar width"
+    "separatorLabel": "Resize sidebar width",
+    "title": "Drawing palette",
+    "menuLabel": "Palette options",
+    "dockLeft": "Dock left",
+    "dockRight": "Dock right",
+    "resetLayout": "Reset palette layout",
+    "statusLabel": "Palette status"
   }
 }

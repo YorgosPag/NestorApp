@@ -49,7 +49,19 @@ export type StorageKeyValue = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];
 // SSR-SAFE HELPERS
 // ============================================================================
 
-function isStorageAvailable(): boolean {
+/**
+ * Is `localStorage` usable right now? (SSR, private mode, disabled storage, locked quota.)
+ *
+ * Exported because it is the ONE question every storage wrapper must ask first, and the answer
+ * cannot differ per wrapper. It used to exist as a byte-identical private copy in
+ * `src/subapps/dxf-viewer/utils/storage-utils.ts` — two probes, one truth (surfaced by CHECK
+ * 3.28 / N.18 on 2026-07-29).
+ *
+ * ⓘ The probe is a real write+remove, not a feature check: Safari private mode exposes
+ * `localStorage` and throws only on write. That is why this cannot be reduced to
+ * `typeof localStorage !== 'undefined'`.
+ */
+export function isStorageAvailable(): boolean {
   if (typeof window === 'undefined') return false;
   try {
     const test = '__storage_test__';
@@ -113,5 +125,31 @@ export function safeRemoveItem(key: string): boolean {
     return true;
   } catch {
     return false;
+  }
+}
+
+/**
+ * SSR-safe bulk removal of every key sharing a prefix. Returns how many were removed.
+ *
+ * Exists so that "forget an entire namespace" (a versioned key family such as
+ * `nestor:floating-panel-geometry:v1:*`) does not require raw `localStorage` enumeration at
+ * the call site — this module is the ONE place allowed to touch `localStorage` directly, and
+ * a second access path would be exactly the duplication the module exists to prevent.
+ *
+ * ⚠️ Iterates over a **snapshot** of the key list: removing while walking `localStorage.key(i)`
+ * shifts the remaining indices, which silently skips every other match.
+ */
+export function safeRemoveItemsByPrefix(prefix: string): number {
+  if (!isStorageAvailable() || prefix.length === 0) return 0;
+  try {
+    const matches: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key !== null && key.startsWith(prefix)) matches.push(key);
+    }
+    for (const key of matches) localStorage.removeItem(key);
+    return matches.length;
+  } catch {
+    return 0;
   }
 }

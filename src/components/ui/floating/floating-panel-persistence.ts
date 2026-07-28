@@ -25,7 +25,7 @@
  * viewport. Εδώ γίνεται μόνο ο έλεγχος **σχήματος**.
  */
 
-import { safeGetItem, safeSetItem, safeRemoveItem } from '@/lib/storage';
+import { safeGetItem, safeSetItem, safeRemoveItem, safeRemoveItemsByPrefix } from '@/lib/storage';
 import { parsePanelGeometry, type PanelGeometry } from './floating-panel-geometry';
 
 /**
@@ -80,4 +80,25 @@ export function writePanelGeometry(panelId: FloatingPanelId, geometry: PanelGeom
  */
 export function clearPanelGeometry(panelId: FloatingPanelId): void {
   safeRemoveItem(keyFor(panelId));
+}
+
+/**
+ * Σβήνει τη γεωμετρία **ΟΛΩΝ** των παλετών ⇒ η επόμενη εμφάνιση καθεμιάς χρησιμοποιεί τις
+ * προεπιλογές της. Επιστρέφει πόσες καθαρίστηκαν.
+ *
+ * ── ΓΙΑΤΙ ΧΡΕΙΑΖΕΤΑΙ ΞΕΧΩΡΙΣΤΗ ΣΥΝΑΡΤΗΣΗ ──
+ *
+ * Το {@link clearPanelGeometry} απαιτεί `panelId`. Ο καλών της «Επαναφοράς» (ADR-724 §7) **δεν
+ * μπορεί να ξέρει** τη λίστα: τα ids δηλώνονται από 17 ανεξάρτητους καταναλωτές, ένας από τους
+ * οποίους ζει εκτός του DXF subapp. Ένα χειρόγραφο μητρώο ids στο call site θα ξεχνούσε σιωπηλά
+ * κάθε νέα παλέτα — και η σιωπή είναι ακριβώς ο τρόπος που «Επαναφορά» γίνεται ψέμα.
+ *
+ * Το πρόθεμα **είναι** ήδη το μητρώο: ό,τι έγραψε το {@link writePanelGeometry} το φέρει. Άρα
+ * η ερώτηση απαντιέται εκεί που ζει το πρόθεμα — εδώ — και όχι στον καλούντα.
+ *
+ * ⓘ Σβήνει μόνο το τρέχον `:v1` namespace: εγγραφές παλαιότερου σχήματος είναι ήδη νεκρές
+ * (κανείς δεν τις διαβάζει) και δεν αξίζει να μαντέψουμε προθέματα που δεν ελέγχουμε.
+ */
+export function clearAllPanelGeometry(): number {
+  return safeRemoveItemsByPrefix(GEOMETRY_KEY_PREFIX);
 }

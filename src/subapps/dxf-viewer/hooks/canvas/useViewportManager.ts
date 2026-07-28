@@ -34,6 +34,7 @@ import { UnifiedFrameScheduler } from '../../rendering/core/UnifiedFrameSchedule
 import { updateImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import { canvasBoundsService } from '../../services/CanvasBoundsService';
 import { subscribeDevicePixelRatio } from '../../systems/cursor/device-pixel-ratio'; // ADR-549 Phase 7
+import { subscribeDockMode } from '../../systems/workspace/workspace-dock-store'; // ADR-724 Φ2
 import { dlog, dwarn } from '../../debug';
 
 // ============================================================================
@@ -257,6 +258,42 @@ export function useViewportManager({
   // NEW viewport object so viewport-prop consumers keyed on the object (e.g. FloorUnderlayOverlay)
   // re-run their DPR-aware sizing. (DxfCanvas/LayerCanvas/Preview re-size via their own DPR hooks.)
   useEffect(() => subscribeDevicePixelRatio(() => applyViewport({ ...viewportRef.current })), [applyViewport]);
+
+  // ── ADR-724 Φ2: αλλαγή πλευράς αγκύρωσης → ξαναμέτρηση θέσης (ΟΧΙ αντιστάθμιση) ────────
+  //
+  // ⚠️ ΓΙΑΤΙ ΥΠΑΡΧΕΙ ΑΥΤΟ — η παγίδα που κάνει τη Φ2 να ΜΗΝ είναι «απλή αντιστροφή σειράς».
+  //
+  // Όταν η παλέτα αλλάζει πλευρά, ο καμβάς **μετακινείται χωρίς να αλλάξει μέγεθος**: το panel
+  // του κρατά ακριβώς το ίδιο πλάτος, απλώς βρίσκεται αλλού. Το `ResizeObserver` πυροδοτείται
+  // **μόνο** σε αλλαγή μεγέθους — σε καθαρή μετατόπιση σιωπά. Δύο συνέπειες, και οι δύο σιωπηλές:
+  //
+  // 1. Το `containerLeftRef` μένει στην παλιά ακμή (π.χ. 392) ενώ η πραγματική είναι 0. Το
+  //    **επόμενο** πραγματικό σύρσιμο υπολογίζει `Δleft = 0 − 392` και ο κανόνας του §4.1
+  //    πετάει το σχέδιο ~392px — μια χειρονομία **μετά** την ενέργεια που το προκάλεσε.
+  // 2. Το `CanvasBoundsService` ακυρώνει cache μόνο σε window-resize/scroll/λήξη 5s. Μια
+  //    μετατόπιση δεν είναι τίποτα από αυτά ⇒ hit-test και snap δουλεύουν με λάθος origin.
+  //
+  // Η θεραπεία είναι **ξαναμέτρηση, όχι αντιστάθμιση**: το `measureAndApply` ξανασπέρνει την
+  // ακμή χωρίς να αγγίξει το `transform`, άρα το σχέδιο μένει ακίνητο **μέσα** στον καμβά —
+  // η συμπεριφορά Revit/AutoCAD (η κάμερα δεν αλλάζει επειδή μετακόμισε μια παλέτα).
+  //
+  // Ίδιο ακριβώς σχήμα με το ADR-549 Φ7 από πάνω: «γεγονός διάταξης που δεν παράγει
+  // ResizeObserver ⇒ ρητή συνδρομή». Το ίδιο κάνουν οι docking managers των Revit/C4D —
+  // ειδοποιούν τα viewports μετά από κάθε πράξη διάταξης αντί να περιμένουν observer.
+  //
+  // ⓘ Η συνδρομή είναι **imperative** (μηδέν `useSyncExternalStore`): ο καμβάς δεν χρειάζεται
+  // να ξέρει *ποια* είναι η πλευρά — μόνο ότι κάτι μετακινήθηκε. Έτσι δεν υπάρχει
+  // `if (mode === …)` πουθενά στο μονοπάτι απόδοσης (ADR-040 / ADR-724 §4.1).
+  useEffect(() => subscribeDockMode(() => {
+    // Άμεσα: κανένας αναγνώστης δεν πρέπει να προλάβει να διαβάσει το παλιό origin.
+    canvasBoundsService.clearCache();
+    // Και στο επόμενο καρέ, όταν ο browser έχει κάνει flush τη νέα διάταξη — μέχρι τότε κάθε
+    // μέτρηση θα έδινε την προηγούμενη θέση (N.7.2 #4: δύο ανεξάρτητα μονοπάτια).
+    UnifiedFrameScheduler.scheduleOnce('viewport-dock-reflow-remeasure', () => {
+      canvasBoundsService.clearCache();
+      measureAndApply();
+    });
+  }), [measureAndApply]);
 
   // ── RAF-delayed initial measurement ────────────────────────────────────
   // Ensures correct dimensions after browser layout stabilization (server restart edge case)

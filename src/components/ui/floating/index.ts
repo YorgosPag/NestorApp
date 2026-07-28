@@ -66,6 +66,7 @@ export {
   readPanelGeometry,
   writePanelGeometry,
   clearPanelGeometry,
+  clearAllPanelGeometry,
 } from './floating-panel-persistence';
 
 export type { FloatingPanelId } from './floating-panel-persistence';

@@ -15,12 +15,16 @@
  * factory (συνθέτει `createExternalStore` + `storage-utils`/ADR-092). Δεύτερη υλοποίηση θα
  * ήταν ακριβώς το boilerplate που ο factory υπάρχει για να εξαλείψει (N.12 / N.18).
  *
- * ── ΓΙΑΤΙ ΔΕΝ ΕΚΤΙΘΕΤΑΙ `subscribe` ──
+ * ── ΓΙΑΤΙ ΤΟ ΠΛΑΤΟΣ ΔΕΝ ΕΚΤΙΘΕΤΕΙ `subscribe` ΚΑΙ Η ΠΛΕΥΡΑ ΝΑΙ ──
  *
  * ADR-040: το πλάτος αλλάζει ~60 φορές/δευτ. κατά το σύρσιμο. Αν υπήρχε συνδρομητής, κάθε
  * pixel θα ξαναρενδάριζε υποδέντρο του viewer. Κατά τη χειρονομία το πλάτος ζει **στο DOM**
- * (η βιβλιοθήκη γράφει `flex-grow`)· το store το μαθαίνει **μία φορά**, στο τέλος. Όταν η Φ2
- * χρειαστεί αντιδραστικό `mode`, ο subscriber θα προστεθεί για το `mode` — **όχι** για το πλάτος.
+ * (η βιβλιοθήκη γράφει `flex-grow`)· το store το μαθαίνει **μία φορά**, στο τέλος.
+ *
+ * Η **πλευρά** (Φ2) είναι το ακριβώς αντίθετο προφίλ: αλλάζει με ένα κλικ στο μενού, ίσως
+ * μία φορά στους μήνες, και **πρέπει** να ξαναρενδάρει τη διάταξη. Άρα εκτίθεται
+ * {@link subscribeDockMode}. Δύο πεδία, δύο κλειδιά, δύο προφίλ — γι' αυτό **δεν** είναι ένα
+ * κοινό record: θα σήμαινε ότι κάθε σύρσιμο ειδοποιεί τους συνδρομητές της πλευράς.
  *
  * ── ΓΙΑΤΙ ΑΝΑ ΧΡΗΣΤΗ ΚΑΙ ΟΧΙ ΑΝΑ ΕΡΓΟ ──
  *
@@ -28,16 +32,15 @@
  * οθόνης, συνήθεια), όχι του σχεδίου. Revit / AutoCAD / Photoshop αποθηκεύουν διάταξη παλετών
  * στο προφίλ — ποτέ στο αρχείο.
  *
- * ⚠️ **Πεδίο `mode` (αγκύρωση αριστερά/δεξιά/αιώρηση): ΔΕΝ υπάρχει ακόμη.** Το ADR-724 §6.1 το
- * περιγράφει ως μέρος αυτού του store, αλλά η Φ1 έχει **μία** δυνατή τιμή (`docked-left`) — ένα
- * πεδίο με μία τιμή είναι νεκρός κώδικας, όχι αρχιτεκτονική. Μπαίνει στη Φ2, μαζί με τον
- * πρώτο πραγματικό αναγνώστη του.
+ * ⓘ Το `'floating'` (Φ3) **δεν** είναι ακόμη δυνατή τιμή του `mode` — βλ. `workspace-dock-mode.ts`.
  */
 
+import { clearAllPanelGeometry } from '@/components/ui/floating';
 import { createPersistedValue } from '../../stores/createPersistedValue';
 import { STORAGE_KEYS } from '../../utils/storage-utils';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { clampDockWidth, parseDockWidth } from './workspace-dock-geometry';
+import { DOCK_MODE_DEFAULT, parseDockMode, type WorkspaceDockMode } from './workspace-dock-mode';
 
 const { WIDTH_DEFAULT } = PANEL_LAYOUT.WORKSPACE_DOCK;
 
@@ -73,7 +76,63 @@ export function setDockedWidth(width: number): void {
   dockedWidthStore.set(clampDockWidth(width));
 }
 
-// ⓘ Δεν υπάρχει `resetDockedWidth`: στη Φ1 η επαναφορά είναι **χειρονομία της βιβλιοθήκης**
-// (διπλό κλικ στο διαχωριστικό → `defaultSize`), και το store απλώς ακολουθεί μέσω
-// `setDockedWidth`. Ρητή εντολή «Επαναφορά» αποκτά νόημα στη Φ2, μαζί με το μενού αγκύρωσης
-// (ADR-724 §7) — τότε προστίθεται μαζί με τον πρώτο καλούντα της, όχι πριν.
+// ============================================================================
+// ΠΛΕΥΡΑ ΑΓΚΥΡΩΣΗΣ (ADR-724 Φ2)
+// ============================================================================
+
+const dockModeStore = createPersistedValue<WorkspaceDockMode>(
+  STORAGE_KEYS.WORKSPACE_DOCK_MODE,
+  DOCK_MODE_DEFAULT,
+  {
+    equals: Object.is,
+    // Ίδιο σκεπτικό με το πλάτος: όποιος δεν άλλαξε ποτέ πλευρά δεν έχει καθόλου εγγραφή.
+    removeOnDefault: true,
+    validate: (hydrated): WorkspaceDockMode => parseDockMode(hydrated) ?? DOCK_MODE_DEFAULT,
+  },
+);
+
+/** Η τρέχουσα πλευρά αγκύρωσης. Ασφαλές σε SSR (επιστρέφει την προεπιλογή). */
+export function getDockMode(): WorkspaceDockMode {
+  return dockModeStore.get();
+}
+
+/**
+ * Αλλάζει πλευρά. Ίδια τιμή ⇒ πλήρες no-op (ούτε notify ούτε εγγραφή).
+ *
+ * ⚠️ Το **πλάτος δεν αλλάζει** (ADR-724 §7): αλλάζοντας πλευρά ο χρήστης δεν ζήτησε άλλο
+ * μέγεθος. Αυτό είναι και ο λόγος που τα δύο πεδία είναι ανεξάρτητα.
+ */
+export function setDockMode(mode: WorkspaceDockMode): void {
+  dockModeStore.set(mode);
+}
+
+/**
+ * Συνδρομή στην πλευρά — **χαμηλής συχνότητας** (κλικ μενού), σε αντίθεση με το πλάτος.
+ *
+ * Δύο κατηγορίες συνδρομητών, και οι δύο νόμιμες:
+ * 1. **leaf components** μέσω `useWorkspaceDock` (`useSyncExternalStore`)·
+ * 2. **imperative** ακροατές που ΔΕΝ ξαναρενδάρουν — π.χ. ο καμβάς, που πρέπει απλώς να
+ *    ξαναμετρήσει τη θέση του (`useViewportManager`, ADR-724 §4.1 / Α.0).
+ */
+export const subscribeDockMode = dockModeStore.subscribe;
+
+/**
+ * «Εργοστασιακές ρυθμίσεις» της διάταξης — το ισοδύναμο του «Reset palette locations»
+ * (AutoCAD) / «Reset Essentials» (Photoshop). ADR-724 §7.
+ *
+ * Επαναφέρει **και τους δύο** μηχανισμούς του ADR-724 §6.1 σε μία πράξη: την αγκυρωμένη
+ * παλέτα (πλάτος + πλευρά) **και** κάθε αιωρούμενη παλέτα (ADR-723). Μερική επαναφορά θα
+ * ήταν χειρότερη από καμία: ο χρήστης που «τα έκανε θάλασσα» δεν ξέρει *ποιο* από τα δύο
+ * συστήματα του χάλασε τη διάταξη — γι' αυτό η εντολή είναι **μία**.
+ *
+ * Ιδεμποτεντικό (N.7.2 #3): δεύτερη κλήση δεν αλλάζει τίποτα.
+ *
+ * ⓘ Οι **ήδη προσαρτημένες** αιωρούμενες παλέτες κρατούν τη θέση τους μέχρι να ξαναστηθούν —
+ * το ADR-723 διαβάζει τη γεωμετρία στην αρχικοποίηση, όχι σε κάθε καρέ. Η αγκυρωμένη, που
+ * είναι το ορατό 95% της διάταξης, επανέρχεται **αμέσως** (έχει συνδρομητές).
+ */
+export function resetDockLayout(): void {
+  setDockedWidth(WIDTH_DEFAULT);
+  setDockMode(DOCK_MODE_DEFAULT);
+  clearAllPanelGeometry();
+}

@@ -8,5 +8,12 @@
  * @module lib/storage
  */
 
-export { STORAGE_KEYS, safeGetItem, safeSetItem, safeRemoveItem } from './safe-storage';
+export {
+  STORAGE_KEYS,
+  isStorageAvailable,
+  safeGetItem,
+  safeSetItem,
+  safeRemoveItem,
+  safeRemoveItemsByPrefix,
+} from './safe-storage';
 export type { StorageKeyValue } from './safe-storage';

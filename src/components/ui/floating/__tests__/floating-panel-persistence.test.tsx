@@ -16,6 +16,7 @@ import {
   readPanelGeometry,
   writePanelGeometry,
   clearPanelGeometry,
+  clearAllPanelGeometry,
 } from '../floating-panel-persistence';
 import { FloatingPanel } from '../FloatingPanel';
 
@@ -49,6 +50,55 @@ describe('round trip', () => {
     writePanelGeometry(PANEL_ID, { x: 1, y: 2, width: 3, height: 4 });
     clearPanelGeometry(PANEL_ID);
     expect(readPanelGeometry(PANEL_ID)).toBeNull();
+  });
+
+  /**
+   * ADR-724 §7 — «Reset palette locations» (AutoCAD) / «Reset Essentials» (Photoshop).
+   *
+   * Ο καλών (το μενού της αγκυρωμένης παλέτας) **δεν μπορεί να ξέρει** τη λίστα των ids: τα
+   * δηλώνουν 17 ανεξάρτητοι καταναλωτές, ένας εκτός του DXF subapp. Άρα η ερώτηση απαντιέται
+   * από το **πρόθεμα** — και ο κίνδυνος είναι το πρόθεμα να πιάσει παραπάνω απ' όσα πρέπει.
+   */
+  describe('clearAllPanelGeometry — μαζική επαναφορά διάταξης', () => {
+    it('σβήνει ΚΑΘΕ αποθηκευμένη παλέτα, όχι μόνο μία', () => {
+      writePanelGeometry('dxf.layer-manager', { x: 1, y: 2, width: 3, height: 4 });
+      writePanelGeometry('dxf.properties', { x: 5, y: 6, width: 7, height: 8 });
+      writePanelGeometry('global.performance-dashboard', { x: 9, y: 9, width: 9, height: 9 });
+
+      expect(clearAllPanelGeometry()).toBe(3);
+
+      expect(readPanelGeometry('dxf.layer-manager')).toBeNull();
+      expect(readPanelGeometry('dxf.properties')).toBeNull();
+      expect(readPanelGeometry('global.performance-dashboard')).toBeNull();
+    });
+
+    it('ΔΕΝ αγγίζει κλειδιά εκτός του namespace του — δεν είναι «καθάρισε τα πάντα»', () => {
+      window.localStorage.setItem('nestor:theme', 'dark');
+      window.localStorage.setItem('dxf-viewer:workspace-dock-width:v1', '512');
+      writePanelGeometry(PANEL_ID, { x: 1, y: 2, width: 3, height: 4 });
+
+      clearAllPanelGeometry();
+
+      expect(window.localStorage.getItem('nestor:theme')).toBe('dark');
+      expect(window.localStorage.getItem('dxf-viewer:workspace-dock-width:v1')).toBe('512');
+    });
+
+    it('σβήνει ΟΛΕΣ ακόμη κι όταν είναι πολλές — η απαρίθμηση δεν παραλείπει μία στις δύο', () => {
+      // ⚠️ Παγίδα: διαγραφή ΚΑΤΑ τη διάσχιση του `localStorage.key(i)` μετατοπίζει τους
+      // δείκτες και αφήνει πίσω τις μισές. Με 10 κλειδιά το ελάττωμα γίνεται ορατό.
+      for (let i = 0; i < 10; i++) {
+        writePanelGeometry(`bulk.panel-${i}`, { x: i, y: i, width: 100, height: 100 });
+      }
+      expect(clearAllPanelGeometry()).toBe(10);
+      for (let i = 0; i < 10; i++) {
+        expect(readPanelGeometry(`bulk.panel-${i}`)).toBeNull();
+      }
+    });
+
+    it('χωρίς καμία αποθηκευμένη παλέτα ⇒ 0, χωρίς exception (ιδεμποτεντικό)', () => {
+      expect(clearAllPanelGeometry()).toBe(0);
+      expect(clearAllPanelGeometry()).toBe(0);
+    });
   });
 
   it('κατεστραμμένο JSON ⇒ null, χωρίς exception', () => {

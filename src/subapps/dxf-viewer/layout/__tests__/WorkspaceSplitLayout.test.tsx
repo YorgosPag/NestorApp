@@ -31,7 +31,7 @@ jest.mock('../../systems/workspace/workspace-dock-store', () => {
 });
 
 import { WorkspaceSplitLayout } from '../WorkspaceSplitLayout';
-import { getDockedWidth, setDockedWidth } from '../../systems/workspace/workspace-dock-store';
+import { getDockedWidth, setDockedWidth, setDockMode } from '../../systems/workspace/workspace-dock-store';
 // ADR-724 §5.2 — το πληκτρολόγιο του splitter ΔΕΝ ζει σε αυτό το αρχείο· ζει στον φύλακα
 // ιδιοκτησίας πλήκτρων (ADR-711). Το test το ρωτά εκεί ακριβώς επειδή εκεί είναι η αιτία.
 import { shouldGlobalShortcutYield } from '@/lib/a11y/keyboard-scope';
@@ -50,6 +50,7 @@ function renderLayout(split: boolean) {
 beforeEach(() => {
   localStorage.clear();
   setDockedWidth(384);
+  setDockMode('docked-left'); // το store είναι module singleton — η πλευρά επιζεί των tests
 });
 
 describe('ADR-724 Φ1 — WorkspaceSplitLayout', () => {
@@ -205,6 +206,84 @@ describe('ADR-724 Φ1 — WorkspaceSplitLayout', () => {
       spy.mockRestore();
     });
 
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // ADR-724 Φ2 — αγκύρωση δεξιά
+  // ══════════════════════════════════════════════════════════════════════════
+
+  describe('Φ2 — η πλευρά αλλάζει τη ΣΕΙΡΑ, όχι τη σύσταση', () => {
+    /** Τα άμεσα παιδιά του group, χαρακτηρισμένα με το τι περιέχουν. */
+    function groupOrder(container: HTMLElement): string[] {
+      const group = container.querySelector('[data-group]');
+      return Array.from(group?.children ?? []).map((child) => {
+        if (child.hasAttribute('data-separator')) return 'separator';
+        if (child.querySelector('[data-testid="sidebar"]')) return 'sidebar';
+        if (child.querySelector('[data-testid="canvas"]')) return 'canvas';
+        return child.tagName;
+      });
+    }
+
+    it('αριστερά (προεπιλογή) ⇒ παλέτα · διαχωριστικό · καμβάς', () => {
+      const { container } = renderLayout(true);
+      expect(groupOrder(container)).toEqual(['sidebar', 'separator', 'canvas']);
+    });
+
+    it('δεξιά ⇒ καμβάς · διαχωριστικό · παλέτα', () => {
+      setDockMode('docked-right');
+      const { container } = renderLayout(true);
+      expect(groupOrder(container)).toEqual(['canvas', 'separator', 'sidebar']);
+    });
+
+    it('ο δομικός περιορισμός §4.7 (panel·separator·panel) ισχύει ΚΑΙ δεξιά', () => {
+      setDockMode('docked-right');
+      const { container } = renderLayout(true);
+      const group = container.querySelector('[data-group]');
+      const roles = Array.from(group?.children ?? []).map((child) =>
+        child.hasAttribute('data-panel') ? 'panel'
+          : child.hasAttribute('data-separator') ? 'separator'
+            : child.tagName,
+      );
+      expect(roles).toEqual(['panel', 'separator', 'panel']);
+    });
+
+    /**
+     * ⚠️⚠️ ΤΟ ΣΗΜΑΝΤΙΚΟΤΕΡΟ TEST ΑΥΤΟΥ ΤΟΥ ΑΡΧΕΙΟΥ.
+     *
+     * Η αντιστροφή σειράς είναι μία γραμμή· το **κόστος** της είναι ολόκληρο το υποδέντρο του
+     * καμβά. Χωρίς σταθερά `key`, ο React ταιριάζει τα παιδιά **κατά θέση** και ξαναφτιάχνει
+     * και τα δύο panel ⇒ ο πραγματικός `<canvas>` **χάνει το WebGL context του**, η σκηνή
+     * ξαναχτίζεται και το bitmap cache ακυρώνεται — δευτερόλεπτα παγώματος για μια εντολή
+     * μενού. Στο jsdom δεν υπάρχει WebGL για να χαθεί, γι' αυτό ο έλεγχος γίνεται στο **μόνο**
+     * παρατηρήσιμο ίχνος: την **ταυτότητα του κόμβου**.
+     *
+     * `toBe` (ταυτότητα αντικειμένου), **όχι** `toBeInTheDocument`: ένας νέος κόμβος με ίδιο
+     * περιεχόμενο θα περνούσε το δεύτερο και θα έκρυβε ακριβώς την παλινδρόμηση.
+     */
+    it('η αλλαγή πλευράς ΜΕΤΑΚΙΝΕΙ τους κόμβους — δεν τους ξαναφτιάχνει', () => {
+      renderLayout(true);
+      const canvasBefore = screen.getByTestId('canvas');
+      const sidebarBefore = screen.getByTestId('sidebar');
+
+      act(() => { setDockMode('docked-right'); });
+
+      expect(screen.getByTestId('canvas')).toBe(canvasBefore);
+      expect(screen.getByTestId('sidebar')).toBe(sidebarBefore);
+    });
+
+    it('η αλλαγή πλευράς ΔΕΝ γράφει πλάτος (το `onLayoutChanged` δεν είναι πρόθεση χρήστη)', () => {
+      renderLayout(true);
+      const spy = jest.spyOn(Storage.prototype, 'setItem');
+
+      act(() => { setDockMode('docked-right'); });
+
+      // Ο φύλακας «πρόθεσης χρήστη» πρέπει να κρατήσει: αλλιώς η αναδιάταξη θα κατέγραφε ως
+      // «προτίμηση» ό,τι πλάτος έτυχε να μετρήσει η βιβλιοθήκη κατά την αναδιάταξη.
+      const widthWrites = spy.mock.calls
+        .filter(([key]) => String(key).includes('workspace-dock-width'));
+      expect(widthWrites).toHaveLength(0);
+      spy.mockRestore();
+    });
   });
 
   describe('ADR-040 — το αρχικό πλάτος διαβάζεται ΜΙΑ φορά', () => {
