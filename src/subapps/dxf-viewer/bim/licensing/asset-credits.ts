@@ -22,6 +22,7 @@ import { SANITARY_MESH_CATALOG } from '../mep-fixtures/sanitary-fixture-mesh-cat
 import { APPLIANCE_MESH_CATALOG } from '../mep-fixtures/appliance-fixture-mesh-catalog';
 import { TEXTURE_SET_DEFS } from '../materials/bim-texture-registry';
 import { HDRI_PRESETS } from '../../bim-3d/lighting/hdri-environment';
+import { compareByLocale } from '@/lib/intl-formatting';
 
 export type AssetLicense = 'CC0' | 'CC-BY';
 
@@ -84,9 +85,13 @@ function collectSourceStrings(): readonly string[] {
 export function collectAssetCredits(): readonly AssetCredit[] {
   const parsed = collectSourceStrings().map(parseSourceString);
 
+  // Credits are read by a human in the credits dialog, so the order follows the
+  // active UI language (compareByLocale) rather than the runtime's ambient one:
+  // a bare `localeCompare()` sorts by whatever locale the machine happens to
+  // have, which is not the one the reader picked in the language switcher.
   const ccBy = parsed
     .filter((c) => c.license === 'CC-BY')
-    .sort((a, b) => a.title.localeCompare(b.title));
+    .sort((a, b) => compareByLocale(a.title, b.title));
 
   const cc0Counts = new Map<string, number>();
   for (const c of parsed) {
@@ -95,7 +100,7 @@ export function collectAssetCredits(): readonly AssetCredit[] {
     }
   }
   const cc0 = [...cc0Counts.entries()]
-    .sort((a, b) => a[0].localeCompare(b[0]))
+    .sort((a, b) => compareByLocale(a[0], b[0]))
     .map(([author, count]): AssetCredit => ({ title: author, author, license: 'CC0', count }));
 
   return [...ccBy, ...cc0];

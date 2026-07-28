@@ -25,6 +25,7 @@ import { resolveFixtureSpecs } from './sanitary-clearance-spec';
 import { buildFixtureRects, segmentRoomWalls, type PlacedRects, type RoomWall } from './room-walls';
 import { allCornersInside, areaOf, lift, rectOverlapMm2 } from './layout-geometry';
 import { scoreLayout } from './bathroom-layout-scoring';
+import { compareStrings } from '@/lib/array-utils';
 
 /** Resolved defaults (all mm except counts). */
 interface ResolvedOpts {
@@ -236,6 +237,9 @@ export function solveBathroomLayout(
       warnings: unplaced.length ? [`unplaced:${unplaced.join(',')}`] : [],
     });
   }
-  solutions.sort((a, b) => b.score - a.score || a.id.localeCompare(b.id));
+  // Score first; `id` only breaks ties. Deterministic on purpose — this decides
+  // WHICH solutions survive `slice(0, maxSolutions)`, so a locale-dependent
+  // tie-break would silently return a different set of layouts per language.
+  solutions.sort((a, b) => b.score - a.score || compareStrings(a.id, b.id));
   return solutions.slice(0, opts.maxSolutions);
 }

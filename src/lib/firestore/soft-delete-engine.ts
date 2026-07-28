@@ -19,6 +19,7 @@ import { SOFT_DELETE_CONFIG, TRASHED_STATUS } from "./soft-delete-config";
 import type { SoftDeleteEntityConfig } from "./soft-delete-config";
 import { executeDeletion } from "./deletion-guard";
 import { FIELDS } from "@/config/firestore-field-constants";
+import { compareStrings } from "@/lib/array-utils";
 import { EntityAuditService, resolveUserDisplayName } from "@/services/entity-audit.service";
 import { isCdcAuditDuplicate } from "@/config/audit-cdc-coverage";
 // Imported from its defining module rather than through `ApiErrorHandler`,
@@ -304,9 +305,17 @@ export async function listTrashed(
     .where(FIELDS.STATUS, "==", TRASHED_STATUS)
     .get();
 
+  // Deterministic, NOT locale-aware. This module is `server-only`, so there is no
+  // active UI language here to collate against: `compareByLocale` resolves
+  // through the i18n instance, which on the server always answers with the
+  // fallback regardless of who is asking — locale-aware in name only, while
+  // dragging the i18n surface into a server module. A bare `localeCompare()` was
+  // worse still: it sorted by the SERVER's ambient locale, so the same trash list
+  // could come back in a different order after a host change. Presentation-order
+  // by language belongs to the client that renders the rows.
   return snapshot.docs
     .map(doc => ({ id: doc.id, ...doc.data() }))
-    .sort((a, b) => readSortKey(a, trashList.sortField).localeCompare(readSortKey(b, trashList.sortField)));
+    .sort((a, b) => compareStrings(readSortKey(a, trashList.sortField), readSortKey(b, trashList.sortField)));
 }
 
 /**

@@ -24,6 +24,7 @@
 import { SANITARY_SPEC, isSanitaryKind } from '../../bim/sanitary/sanitary-symbol-spec';
 import { APPLIANCE_SPEC } from '../../bim/appliances/appliance-symbol-spec';
 import type { FixtureFootprintSpec, LayoutFixtureKind } from './bathroom-layout-types';
+import { compareStrings } from '@/lib/array-utils';
 
 /** The extra (non-dimensional) layout rules per fixture kind. */
 interface ClearanceRule {
@@ -93,7 +94,14 @@ export function resolveFixtureSpecs(
   kinds: readonly LayoutFixtureKind[],
 ): FixtureFootprintSpec[] {
   const unique = Array.from(new Set(kinds));
+  // `kind` is a machine identifier and this order feeds the layout solver, so the
+  // tie-break must be DETERMINISTIC, not locale-aware. The previous bare
+  // `localeCompare()` resolved against the runtime's ambient locale, which means
+  // the same bathroom could be solved in a different fixture order on the server
+  // (en-US) than in the browser (el-GR) — a reproducibility hole, not a display
+  // preference. `compareStrings` is the SSoT for exactly this (see its doc:
+  // "Do NOT use this for user-facing text").
   return unique
     .map(resolveFixtureSpec)
-    .sort((a, b) => a.priority - b.priority || a.kind.localeCompare(b.kind));
+    .sort((a, b) => a.priority - b.priority || compareStrings(a.kind, b.kind));
 }
