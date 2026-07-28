@@ -19,7 +19,10 @@
  *   node scripts/memory-health.js --list-unreachable   # ονόματα, για αρχειοθέτηση
  */
 
+const fs = require('fs');
+const path = require('path');
 const store = require('./lib/memory/memory-store');
+const vocab = require('./lib/memory/memory-vocabulary');
 const {
   DEPTH_PRACTICAL,
   normalizeId,
@@ -137,6 +140,46 @@ function auditIndexShape(rootSlugs) {
   return [...rootSlugs].filter((s) => !isHub(s) && !INDEX_SHAPE_EXEMPT.has(s)).sort();
 }
 
+/**
+ * ΕΠΕΙΣΟΔΙΑΚΟ ΧΡΕΟΣ — memories που αφηγούνται πορεία αντί να δηλώνουν κανόνα.
+ *
+ * Ο κανόνας 3 του συμβολαίου το λέει από την αρχή («implementation state → ADR + git»)
+ * αλλά **κανένα όργανο δεν το μετρούσε**: το `memory-distill --all` κοίταζε μόνο >10 KB
+ * → έδειχνε 2 αρχεία ενώ το χρέος ήταν 43. Ένας κανόνας χωρίς μέτρηση είναι ευχή.
+ *
+ * ΓΙΑΤΙ RATCHET ΚΑΙ ΟΧΙ ZERO-TOL: 43 κόκκινα από την πρώτη μέρα = θόρυβος, και ο
+ * θόρυβος παρακάμπτεται μόνιμα (ο ≤10% false-positive πήχης της Google για blocking
+ * checks). Το ratchet μπλοκάρει **μόνο την αύξηση** — νέο ημερολόγιο σε memory δεν
+ * περνά, ενώ το υπάρχον χρέος ξεπληρώνεται με Boy Scout όποτε αγγίζεις το αρχείο.
+ *
+ * ΘΕΡΑΠΕΙΑ (consolidation, ΟΧΙ compaction — Hindsight/Vectorize): `memory:archive
+ * --split` στέλνει το πλήρες κείμενο στο tier 2 (`archive/`, μηδέν κόστος context,
+ * ανακτήσιμο με grep) και ξαναγράφεις **μόνο** τον διαχρονικό πυρήνα. Τίποτα δεν
+ * χάνεται — γι' αυτό δεν είναι «summarize-then-drop».
+ */
+function auditEpisodicDebt(files) {
+  const debt = [];
+  for (const slug of files) {
+    const bytes = sizeOf(slug);
+    if (bytes <= vocab.DEBT_MIN_BYTES) continue;
+    const raw = readFile(slug);
+    const fm = store.splitFrontmatter(raw);
+    const score = vocab.scoreEpisodic(fm ? raw.slice(fm.end + 4) : raw);
+    if (vocab.isEpisodicDebt(bytes, score, slug)) debt.push({ slug, bytes, ...score });
+  }
+  return debt.sort((a, b) => b.bytes - a.bytes);
+}
+
+/** Ratchet: το baseline ζει στο repo (ο φάκελος memory ΔΕΝ είναι git-tracked). */
+function readDebtBaseline() {
+  const p = path.join(__dirname, '..', '.memory-episodic-baseline.json');
+  try {
+    return JSON.parse(fs.readFileSync(p, 'utf8')).count;
+  } catch {
+    return null; // χωρίς baseline → αναφορά μόνο, ποτέ μπλόκο
+  }
+}
+
 function classifySizes(files) {
   const bloated = [];
   const archive = [];
@@ -210,6 +253,8 @@ function analyze() {
     broken,
     brokenKind: splitBrokenLinks(broken, files),
     identity: auditIdentity(files),
+    episodicDebt: auditEpisodicDebt(files),
+    debtBaseline: readDebtBaseline(),
     ...classifySizes(files),
   };
 }
@@ -321,6 +366,19 @@ function reportSizeAndIdentity(r) {
   for (const { slug, size } of r.archive.slice(0, 5)) {
     console.log(`     ${kb(size).padStart(9)}  ${slug}`);
   }
+
+  // Το «φουσκωμένο» μετρά ΟΓΚΟ· αυτό μετρά ΕΙΔΟΣ — ημερολόγιο αντί για κανόνα.
+  // Ο όγκος μόνος του δεν λέει αν αξίζει παρέμβαση: ένα πυκνό 5 KB memory είναι μια χαρά.
+  const d = r.episodicDebt;
+  const base = r.debtBaseline;
+  console.log('\nΕΠΕΙΣΟΔΙΑΚΟ ΧΡΕΟΣ (ημερολόγιο σε memory → ανήκει σε ADR + git)');
+  const vs = base === null ? '(χωρίς baseline)' : `baseline ${base}`;
+  const mark = base === null ? 'ⓘ' : d.length > base ? '🔴' : d.length < base ? '⬇️' : '✅';
+  console.log(`  ${mark} ${d.length} αρχεία >${vocab.DEBT_MIN_BYTES / 1024}KB με ≥${vocab.DEBT_MIN_MARKERS} σημάδια ημερολογίου — ${vs}`);
+  for (const { slug, bytes, markers } of d.slice(0, 5)) {
+    console.log(`     ${kb(bytes).padStart(9)}  ${markers} σημάδια  ${slug}`);
+  }
+  if (d.length) console.log('     Θεραπεία: npm run memory:distill <slug> → κράτα τον κανόνα, --split το υπόλοιπο.');
 
   const id = r.identity;
   console.log('\nΤΑΥΤΟΤΗΤΑ (ρίζα-αίτιο· χωρίς σταθερά ids ο γράφος είναι τύχη)');
@@ -465,7 +523,21 @@ if (process.argv.includes('--verify')) {
   process.exit(v.failed.length ? 1 : 0);
 }
 
-if (process.argv.includes('--list-deep')) {
+if (process.argv.includes('--debt-baseline')) {
+  // Κλείδωμα προόδου ΠΡΟΣ ΤΑ ΚΑΤΩ. Ανεβάζει μόνο αν το ζητήσεις ρητά (--force):
+  // ένα baseline που ανεβαίνει σιωπηλά είναι ratchet που γύρισε ανάποδα.
+  const cur = result.episodicDebt.length;
+  const prev = result.debtBaseline;
+  if (prev !== null && cur > prev && !process.argv.includes('--force')) {
+    console.error(`✖ ΑΥΞΗΣΗ: ${cur} > baseline ${prev}. Ξεπλήρωσε το χρέος ή δώσε --force.`);
+    process.exit(1);
+  }
+  const p = path.join(__dirname, '..', '.memory-episodic-baseline.json');
+  const json = JSON.parse(fs.readFileSync(p, 'utf8'));
+  fs.writeFileSync(p, `${JSON.stringify({ ...json, count: cur }, null, 2)}\n`, 'utf8');
+  console.log(`✅ baseline: ${prev} → ${cur}`);
+  process.exit(0);
+} else if (process.argv.includes('--list-deep')) {
   // Βάθος + εισερχόμενοι δείκτες + μέγεθος: αρκετά για να κριθεί «ανέβασέ το ή άσ' το».
   console.log('βάθος  inbound  μέγεθος  slug');
   for (const slug of result.deepOnly) {
@@ -499,6 +571,12 @@ const dead = pct(result.unreachable.length, result.total);
 const failures = [];
 if (dead > 25) failures.push(`απρόσιτα ${dead}% > 25%`);
 if (result.brokenKind.typos.length > 0) failures.push(`${result.brokenKind.typos.length} typo δείκτες`);
+// Ratchet: μπλοκάρει ΜΟΝΟ την αύξηση. Χωρίς baseline → ποτέ μπλόκο (αναφορά μόνο).
+if (result.debtBaseline !== null && result.episodicDebt.length > result.debtBaseline) {
+  failures.push(
+    `επεισοδιακό χρέος ${result.episodicDebt.length} > baseline ${result.debtBaseline}`,
+  );
+}
 if (result.indexNonHub.length > 0) {
   failures.push(`${result.indexNonHub.length} μεμονωμένα memories στο ευρετήριο (μόνο hubs)`);
 }

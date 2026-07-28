@@ -65,6 +65,8 @@
     "memory:ids:write": "node scripts/memory-normalize-ids.js --write",
     "memory:deep": "node scripts/memory-health.js --list-deep",
     "memory:distill": "node scripts/memory-distill.js",
+    "memory:debt": "node scripts/memory-distill.js --all --debt",
+    "memory:debt:baseline": "node scripts/memory-health.js --debt-baseline",
     "memory:archive": "node scripts/memory-archive.js",
     "memory:manifest": "node scripts/memory-archive.js --manifest",
     "ssot:audit": "bash scripts/ssot-audit.sh",

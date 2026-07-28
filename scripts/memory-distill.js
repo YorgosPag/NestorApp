@@ -30,20 +30,10 @@
 const store = require('./lib/memory/memory-store');
 
 /** Δείκτες διαχρονικότητας — το λεξιλόγιο με το οποίο γράφεται ένας κανόνας. */
-const TIMELESS = [
-  'ΜΑΘΗΜΑ', 'ΡΙΖΑ', 'ROOT CAUSE', 'ΕΥΡΗΜΑ', 'ΚΛΕΙΔΙ', 'ΠΑΓΙΔΑ', 'ΚΡΙΣΙΜΟ',
-  'ΠΡΟΣΟΧΗ', 'ΑΠΟΦΑΣΗ', 'ΑΠΟΦΑΣΕΙΣ', 'LOCKED', 'SSoT', 'SSOT', 'ΚΑΝΟΝΑΣ',
-  'ΠΟΤΕ', 'ΠΑΝΤΑ', 'ΜΗΝ ', 'ΑΠΑΓΟΡΕΥ', 'canonical', 'CANONICAL', 'ΔΙΟΡΘΩΣΗ',
-  'ΓΙΑΤΙ', 'WHY', 'ΥΠΑΡΧΕΙ ΗΔΗ', 'ΘΥΜΗΣΟΥ', 'ΣΗΜΕΙΩΣΗ', 'ΠΡΕΠΕΙ',
-];
-
-/** Δείκτες κατάστασης εργασίας — λήγουν. Κερδίζουν μόνο αν ΔΕΝ υπάρχει δείκτης πάνω. */
-const EPISODIC = [
-  'DONE', 'browser-verify', 'browser verify', 'commit', 'UNCOMMITTED', 'jest',
-  'pending', 'DEFER', 'DEPLOYED', 'tsc καθαρό', 'regression', 'Slice',
-];
-
-const has = (text, words) => words.some((w) => text.includes(w));
+// SSoT: το λεξιλόγιο ζούσε εδώ και ήταν αόρατο στη μέτρηση υγείας — γι' αυτό το
+// επεισοδιακό χρέος έμεινε αμέτρητο. Τώρα ένα module, δύο καταναλωτές.
+const vocab = require('./lib/memory/memory-vocabulary');
+const { TIMELESS, EPISODIC, hasAny: has } = vocab;
 
 /** Κόβει σε προτάσεις. Ο συγγραφέας χωρίζει με `·`, `.`, νέα γραμμή — όλα μετράνε. */
 function toSentences(body) {
@@ -75,6 +65,7 @@ function distill(slug) {
   }
   return {
     slug,
+    body,
     bytes: raw.length,
     description: store.readField(raw, 'description'),
     adrs: [...new Set([...raw.matchAll(/ADR-(\d{1,4})/g)].map((m) => `ADR-${m[1]}`))].sort(),
@@ -114,13 +105,21 @@ function printOne(d, showDropped) {
 function main() {
   const argv = process.argv.slice(2);
   if (argv.includes('--all')) {
+    // ΚΑΤΩΦΛΙ 4 KB, όχι 10 KB: με 10 KB φαίνονταν **2** αρχεία ενώ το πραγματικό
+    // χρέος ήταν 69 στη ζώνη 4-10 KB. Ένα εργαλείο που δείχνει 2 από τα 69 δεν
+    // «είναι εντάξει» — είναι τυφλό, και η σιωπή του διαβάζεται ως καθαρότητα.
+    const debtOnly = argv.includes('--debt');
     for (const slug of [...store.listSlugs()].sort()) {
-      if (store.sizeOf(slug) < 10_000) continue;
+      const bytes = store.sizeOf(slug);
+      if (bytes < vocab.DEBT_MIN_BYTES) continue;
       const d = distill(slug);
+      const score = vocab.scoreEpisodic(d.body);
+      const debt = vocab.isEpisodicDebt(bytes, score, slug);
+      if (debtOnly && !debt) continue;
       const pct = Math.round((100 * d.kept.join('').length) / d.bytes);
       console.log(
-        `${(d.bytes / 1024).toFixed(1).padStart(6)} KB → ${String(pct).padStart(3)}% ` +
-          `(${String(d.kept.length).padStart(3)} προτ.)  ${d.slug}`,
+        `${(bytes / 1024).toFixed(1).padStart(6)} KB → ${String(pct).padStart(3)}% ` +
+          `(${String(d.kept.length).padStart(3)} προτ.)  ${debt ? '📓' : '  '} ${d.slug}`,
       );
     }
     return 0;

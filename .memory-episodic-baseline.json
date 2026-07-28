@@ -1,0 +1,8 @@
+{
+  "_comment": "RATCHET επεισοδιακού χρέους — memories >4KB με >=2 σημάδια ημερολογίου (UNCOMMITTED / Φάση N / Slice N / N jest / changelog / DONE <ημερομηνία>). Ο κανόνας 3 του συμβολαίου τα στέλνει σε ADR + git· αυτό το αρχείο μετρά πόσα δεν πήγαν ακόμα.",
+  "_why_ratchet": "41 κόκκινα από την πρώτη μέρα θα ήταν θόρυβος και θα παρακάμπτονταν μόνιμα. Το ratchet μπλοκάρει ΜΟΝΟ την αύξηση: νέο ημερολόγιο σε memory δεν περνά, το υπάρχον ξεπληρώνεται με Boy Scout.",
+  "_therapy": "npm run memory:debt (λίστα) -> npm run memory:distill <slug> (πυρήνας) -> npm run memory:archive -- --split <slug> (το πλήρες στο tier 2). ΠΟΤΕ σκέτη διαγραφή: consolidation, όχι compaction.",
+  "_lower_it": "Μετά από νόμιμο ξεκαθάρισμα: npm run memory:debt:baseline",
+  "count": 41,
+  "measuredAt": "2026-07-28"
+}
