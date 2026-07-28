@@ -43,7 +43,7 @@
  */
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 1. ΟΙ ΔΥΟ ΕΡΩΤΗΣΕΙΣ — μία υλοποίηση η καθεμία, ονομασμένες
+// 1. ΟΙ ΤΡΕΙΣ ΕΡΩΤΗΣΕΙΣ — μία υλοποίηση η καθεμία, ονομασμένες
 //
 // ⚠️ Μέχρι το ADR-711 §5.6 (2026-07-27) εδώ ζούσε **ένα** predicate ονόματι
 // `isEditableTarget`, και ένα δεύτερο με το **ίδιο όνομα** και **άλλο σώμα** στο
@@ -56,6 +56,34 @@
 // Γι' αυτό και οι δύο μονόπλευρες «διορθώσεις» έσπαγαν κάτι: προσθήκη `SELECT` στο
 // ένα σκότωνε το Escape των dialogs· αφαίρεσή του από το άλλο σκότωνε το type-ahead.
 // Η λύση δεν ήταν να νικήσει το ένα — ήταν να **ονομαστούν και τα δύο**.
+//
+// ⚠️ ADR-724 §5.2 (2026-07-28) — **ΤΡΙΤΗ ερώτηση**, από την ίδια ακριβώς ρίζα.
+//
+//   3. «Θα καταναλώσει το **πλήκτρο πλοήγησης**;»  → `role=separator`: **ΝΑΙ**
+//
+// Το σχόλιο του {@link TYPEAHEAD_ROLES} («τι εξαιρείται επίτηδες») είχε **ήδη**
+// αναγνωρίσει τον πληθυσμό — `slider`, `radio`, `tab`, `grid` πλοηγούνται με βέλη —
+// αλλά δεν υπήρχε ερώτηση να τον στεγάσει, οπότε έμεινε ως προειδοποίηση. Η τρίτη
+// ερώτηση **είναι** αυτή η στέγη· δεν είναι νέα ιδέα, είναι η ολοκλήρωση της §5.6.
+//
+// ── ΤΟ ΜΕΤΡΗΜΕΝΟ ΕΛΑΤΤΩΜΑ ΠΟΥ ΚΛΕΙΝΕΙ (ADR-724 Φ1, ζωντανά, 3.107 οντότητες) ──
+//
+// Με το `document.activeElement` επιβεβαιωμένα στο `DIV[role=separator]` του χώρου
+// εργασίας και 3× `ArrowLeft`: το πλάτος της παλέτας έμεινε **670 → 670** (καμία
+// αλλαγή) και το `offsetX` του καμβά πήγε **3883 → 4123** — δηλαδή τα βέλη
+// **πάναραν το σχέδιο** ~80px/πάτημα αντί να ρυθμίσουν την παλέτα.
+//
+// Αιτία, επαληθευμένη στο ίδιο το bundle (`react-resizable-panels@4.7.2`, ο handler
+// `Te`): ο listener του splitter είναι **element-level, φάση bubble**, και ξεκινά με
+// `if (e.defaultPrevented) return;`. Ο global accelerator του viewer τρέχει σε
+// **window capture** — δηλαδή **πρώτος** — έκανε το pan και `preventDefault()`, οπότε
+// όταν το συμβάν έφτανε στο splitter είχε ήδη «καταναλωθεί». Ο χρήστης νόμιζε ότι
+// ρυθμίζει την παλέτα και του έφευγε το σχέδιο.
+//
+// ⛔ Η διόρθωση **δεν** είναι δεύτερος μηχανισμός ιδιοκτησίας πλήκτρων μέσα στο
+// subapp, ούτε `stopPropagation` στο διαχωριστικό: ο global accelerator οφείλει να
+// **παραιτείται**, όπως ήδη παραιτείται μπροστά σε πεδίο κειμένου. Ίδιο σχήμα, τρίτη
+// ερώτηση.
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
@@ -104,6 +132,10 @@ const TEXT_ENTRY_ROLES: ReadonlySet<string> = new Set(['textbox', 'searchbox']);
  * πεθαίνουν με focus πάνω τους — παλινδρόμηση, όχι διόρθωση. (Το react-hotkeys-hook
  * περιλαμβάνει `slider`/`radio`· εδώ **δεν** το ακολουθούμε, γιατί εκείνο απαντά «είναι
  * πεδίο φόρμας;» και εμείς «θα καταναλώσει τον χαρακτήρα;».)
+ *
+ * 📌 ADR-724: αυτοί **δεν** χάθηκαν — μετακόμισαν στην ερώτηση 3
+ * ({@link ARROW_NAVIGATION_ROLES}), όπου ανήκαν εξαρχής. Η εξαίρεση εδώ παραμένει σωστή:
+ * ένας global accelerator που κλέβει **γράμμα** επιτρέπεται να τρέξει με focus σε slider.
  */
 const TYPEAHEAD_ROLES: ReadonlySet<string> = new Set([
   // Widget-level — APG: type-ahead συνιστάται ρητά για listbox/combobox/tree/menu.
@@ -193,6 +225,85 @@ export function consumesTypedCharacters(
   return isTextEntryTarget(el);
 }
 
+/**
+ * ADR-724 §5.2 — ΡΟΛΟΙ ΠΟΥ ΚΑΤΑΝΑΛΩΝΟΥΝ **ΠΛΗΚΤΡΑ ΠΛΟΗΓΗΣΗΣ** (βέλη / Home / End / Page*).
+ *
+ * Συμπλήρωμα του {@link TYPEAHEAD_ROLES}, όχι αντικαταστάτης: η ερώτηση 3 είναι η ένωση
+ * των δύο συνόλων (δες {@link consumesDirectionalKeys}). Ένα `<input>` καταναλώνει **και**
+ * χαρακτήρες **και** βέλη (κέρσορας)· ένας `slider` **μόνο** βέλη.
+ *
+ * ── ΚΡΙΤΗΡΙΟ ΕΙΣΟΔΟΥ ──
+ *
+ * Ο ρόλος μπαίνει μόνο αν (α) κατά WAI-ARIA APG τα βέλη είναι η **κύρια** αλληλεπίδρασή
+ * του **και** (β) στην πράξη γίνεται `document.activeElement` / `event.target`. Το (β)
+ * είναι που κρατά τη λίστα ειλικρινή: ένας ρόλος που δεν παίρνει ποτέ focus θα ήταν
+ * **νεκρή εγγραφή** που δίνει ψεύτικη αίσθηση κάλυψης.
+ *
+ * ── ΓΙΑΤΙ ΤΟ `toolbar` ΔΕΝ ΕΙΝΑΙ ΕΔΩ (μετρημένο, όχι παράλειψη) ──
+ *
+ * Κατά APG το toolbar έχει **roving tabindex**: το focus κάθεται στο *κουμπί* μέσα του,
+ * ποτέ στο ίδιο το toolbar. Και οι **12** `role="toolbar"` του repo είναι `<nav>` χωρίς
+ * `tabIndex`. Θα ήταν εγγραφή που δεν πυροδοτείται ποτέ.
+ *
+ * ── ΓΙΑΤΙ ΤΟ ΔΙΑΚΟΣΜΗΤΙΚΟ `separator` ΕΙΝΑΙ ΑΒΛΑΒΕΣ ──
+ *
+ * Τα `role="separator"` χωρίς `tabIndex` (διαχωριστικές γραμμές μενού — `PenTablePanel`,
+ * `GanttPortals`, `PickerResultsList`) **δεν** μπαίνουν ποτέ στη σειρά εστίασης, άρα δεν
+ * γίνονται ούτε `activeElement` ούτε στόχος `keydown`. Μόνο το **focusable** splitter
+ * (ADR-724) φτάνει εδώ — ακριβώς αυτό που θέλουμε.
+ */
+const ARROW_NAVIGATION_ROLES: ReadonlySet<string> = new Set([
+  // Window splitter (ADR-724) — ArrowLeft/Right/Up/Down + Home/End αλλάζουν το πλάτος.
+  'separator',
+  // APG: βέλη = η ΜΟΝΗ αλληλεπίδρασή τους.
+  'slider', 'scrollbar',
+  // Composite widgets με roving tabindex — και τα δύο επίπεδα, ίδιο σκεπτικό με τους
+  // item-level ρόλους του TYPEAHEAD_ROLES (το focus μπορεί να κάθεται σε οποιοδήποτε).
+  'radio', 'radiogroup',
+  'tab', 'tablist',
+  'grid', 'gridcell', 'row', 'columnheader', 'rowheader',
+]);
+
+/**
+ * ADR-724 §5.2 — Τα πλήκτρα που η ερώτηση 3 αφορά.
+ *
+ * `PageUp`/`PageDown` περιλαμβάνονται: κατά APG τα καταναλώνουν `slider` και `grid`, και
+ * το ίδιο το `react-resizable-panels` τα προωθεί στον splitter. Το `Tab` **δεν** είναι
+ * εδώ — είναι πλοήγηση εστίασης του browser, όχι πλήκτρο widget, και κανένας global
+ * accelerator δεν επιτρέπεται να το διεκδικεί (ADR-711, ελάττωμα Ε1).
+ */
+const DIRECTIONAL_KEYS: ReadonlySet<string> = new Set([
+  'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
+  'Home', 'End', 'PageUp', 'PageDown',
+]);
+
+/** `true` όταν το πλήκτρο είναι πλοηγικό — δες {@link DIRECTIONAL_KEYS}. */
+export function isDirectionalKey(key: string): boolean {
+  return DIRECTIONAL_KEYS.has(key);
+}
+
+/**
+ * ΕΡΩΤΗΣΗ 3 — «**θα καταναλώσει αυτό το element το πλήκτρο πλοήγησης** που πάω να
+ * κλέψω;» Γνήσιο υπερσύνολο της ερώτησης 2.
+ *
+ * = ό,τι καταναλώνει χαρακτήρες **+** APG widget που πλοηγείται με βέλη
+ * ({@link ARROW_NAVIGATION_ROLES}).
+ *
+ * ⚠️ Ρωτιέται **μόνο** για πλοηγικά πλήκτρα ({@link isDirectionalKey}). Αν ρωτιόταν για
+ * κάθε πλήκτρο, ένα `role="tab"` με εστίαση θα σκότωνε και τους accelerators γραμμάτων —
+ * ακριβώς η παλινδρόμηση που προειδοποιεί το {@link TYPEAHEAD_ROLES}.
+ *
+ * Καταναλωτής: {@link shouldGlobalShortcutYield}.
+ */
+export function consumesDirectionalKeys(
+  target: EventTarget | Element | null | undefined,
+): boolean {
+  const el = asElement(target);
+  if (!el) return false;
+  if (ARROW_NAVIGATION_ROLES.has(roleOf(el))) return true;
+  return consumesTypedCharacters(el);
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // 2. «Κατέχει modal το πληκτρολόγιο;» — ο σωρός
 // ─────────────────────────────────────────────────────────────────────────────
@@ -252,9 +363,22 @@ export function inspectModalKeyboardScope(): { readonly depth: number } {
  * ζει το slot `ESC_PRIORITY.MODAL_DIALOG` (ADR-364). Ο bus καταναλώνει μόνο το
  * {@link isTextEntryTarget}: το `Escape` **δεν** είναι εκτυπώσιμος χαρακτήρας, άρα η
  * ερώτηση 2 δεν τον αφορά.
+ *
+ * ── ADR-724 §5.2: Η ΕΡΩΤΗΣΗ ΕΞΑΡΤΑΤΑΙ ΑΠΟ ΤΟ ΠΛΗΚΤΡΟ ──
+ *
+ * Ένας accelerator που κλέβει **γράμμα** και ένας που κλέβει **βέλος** δεν ανταγωνίζονται
+ * τους ίδιους ιδιοκτήτες. Γι' αυτό το πλήκτρο επιλέγει την ερώτηση: πλοηγικό ⇒ ερώτηση 3
+ * ({@link consumesDirectionalKeys})· οτιδήποτε άλλο ⇒ ερώτηση 2. Ένα ενιαίο, πιο πλατύ
+ * predicate θα σκότωνε τους accelerators γραμμάτων με εστίαση σε slider/tab· ένα πιο στενό
+ * αφήνει τα βέλη να δραπετεύσουν στον καμβά (το μετρημένο ελάττωμα του ADR-724).
  */
-export function shouldGlobalShortcutYield(event: Pick<KeyboardEvent, 'target'>): boolean {
+export function shouldGlobalShortcutYield(
+  event: Pick<KeyboardEvent, 'target' | 'key'>,
+): boolean {
   if (isModalKeyboardScopeActive()) return true;
+  if (isDirectionalKey(event.key)) {
+    return consumesDirectionalKeys(event.target) || focusConsumesDirectionalKeys();
+  }
   if (consumesTypedCharacters(event.target)) return true;
   return focusConsumesTypedCharacters();
 }
@@ -285,6 +409,17 @@ export function isTextEntryFocused(): boolean {
 /** Ερώτηση 2 πάνω στο τρέχον focus. Δες {@link consumesTypedCharacters}. */
 export function focusConsumesTypedCharacters(): boolean {
   return consumesTypedCharacters(activeElementOrNull());
+}
+
+/**
+ * Ερώτηση 3 πάνω στο τρέχον focus. Δες {@link consumesDirectionalKeys}.
+ *
+ * Το **δίχτυ** του {@link shouldGlobalShortcutYield} για τα πλοηγικά πλήκτρα: όταν ο
+ * splitter έχει την εστίαση αλλά το `keydown` αναφέρει άλλον στόχο (π.χ. έχει ήδη
+ * αναδυθεί στο `window`), η ιδιοκτησία διαβάζεται από το `document.activeElement`.
+ */
+export function focusConsumesDirectionalKeys(): boolean {
+  return consumesDirectionalKeys(activeElementOrNull());
 }
 
 /** Test-only — μηδενισμός του σωρού μεταξύ tests. Ο κώδικας παραγωγής ΔΕΝ το καλεί. */

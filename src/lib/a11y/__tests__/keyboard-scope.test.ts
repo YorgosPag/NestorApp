@@ -9,9 +9,12 @@
 
 import {
   __resetModalKeyboardScopeForTests,
+  consumesDirectionalKeys,
   consumesTypedCharacters,
+  focusConsumesDirectionalKeys,
   focusConsumesTypedCharacters,
   inspectModalKeyboardScope,
+  isDirectionalKey,
   isModalKeyboardScopeActive,
   isTextEntryFocused,
   isTextEntryTarget,
@@ -19,8 +22,13 @@ import {
   shouldGlobalShortcutYield,
 } from '../keyboard-scope';
 
-function keyEvent(target: EventTarget | null): Pick<KeyboardEvent, 'target'> {
-  return { target };
+/**
+ * Προεπιλογή `'a'` — **εκτυπώσιμος** χαρακτήρας, δηλαδή η ερώτηση 2. Έτσι κάθε
+ * προϋπάρχον assertion κρατά ακριβώς το νόημα που είχε πριν την ερώτηση 3, και τα
+ * πλοηγικά πλήκτρα δηλώνονται **ρητά** εκεί που τα αφορά.
+ */
+function keyEvent(target: EventTarget | null, key = 'a'): Pick<KeyboardEvent, 'target' | 'key'> {
+  return { target, key };
 }
 
 /** Φτιάχνει element με ρόλο και το προσαρτά, ώστε το `focus()` να πιάνει. */
@@ -139,6 +147,71 @@ describe('consumesTypedCharacters — ερώτηση 2: «θα καταναλώ�
   });
 });
 
+describe('consumesDirectionalKeys — ερώτηση 3: «θα καταναλώσει το βέλος;» (ADR-724)', () => {
+  it('γνήσιο υπερσύνολο της ερώτησης 2', () => {
+    // Ό,τι καταναλώνει χαρακτήρα καταναλώνει και βέλος (ο κέρσορας μέσα στο πεδίο).
+    for (const el of [
+      document.createElement('input'),
+      document.createElement('select'),
+      withRole('button', 'combobox'),
+    ]) {
+      expect(consumesTypedCharacters(el)).toBe(true);
+      expect(consumesDirectionalKeys(el)).toBe(true);
+    }
+  });
+
+  it('role="separator" → true — ΤΟ ΜΕΤΡΗΜΕΝΟ ΕΛΑΤΤΩΜΑ ΤΟΥ ADR-724', () => {
+    // Ζωντανά: focus στο DIV[role=separator], 3× ArrowLeft → πλάτος 670→670 (τίποτα)
+    // και offsetX 3883→4123, δηλαδή τα βέλη πάναραν το ΣΧΕΔΙΟ ~80px/πάτημα.
+    expect(consumesDirectionalKeys(withRole('div', 'separator'))).toBe(true);
+  });
+
+  it.each(['slider', 'scrollbar', 'radio', 'radiogroup', 'tab', 'tablist', 'grid'])(
+    'role="%s" → true στην ερώτηση 3, αλλά ΠΑΡΑΜΕΝΕΙ false στην ερώτηση 2',
+    (role) => {
+      const el = withRole('div', role);
+      expect(consumesDirectionalKeys(el)).toBe(true);
+      // Ο πήχης της υπερδιόρθωσης: ένας accelerator ΓΡΑΜΜΑΤΟΣ επιτρέπεται να τρέξει
+      // με focus σε slider. Αν αυτό γίνει `true`, το §TYPEAHEAD_ROLES προειδοποιεί
+      // ρητά ότι πεθαίνουν οι accelerators του viewer.
+      expect(consumesTypedCharacters(el)).toBe(false);
+    },
+  );
+
+  it('role="toolbar" → false — roving tabindex, το focus κάθεται στο ΚΟΥΜΠΙ', () => {
+    // Και οι 12 `role="toolbar"` του repo είναι <nav> χωρίς tabIndex. Εγγραφή που δεν
+    // πυροδοτείται ποτέ = ψεύτικη αίσθηση κάλυψης.
+    expect(consumesDirectionalKeys(withRole('nav', 'toolbar'))).toBe(false);
+  });
+
+  it('σκέτο <button> / <div> → false (αλλιώς τα βέλη δεν παnάρουν ποτέ τον καμβά)', () => {
+    expect(consumesDirectionalKeys(document.createElement('button'))).toBe(false);
+    expect(consumesDirectionalKeys(document.createElement('div'))).toBe(false);
+  });
+
+  it('null / non-element → false', () => {
+    expect(consumesDirectionalKeys(null)).toBe(false);
+    expect(consumesDirectionalKeys(undefined)).toBe(false);
+    expect(consumesDirectionalKeys(window)).toBe(false);
+  });
+});
+
+describe('isDirectionalKey — ποιο πλήκτρο επιλέγει την ερώτηση 3', () => {
+  it.each(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown'])(
+    '%s → true',
+    (key) => expect(isDirectionalKey(key)).toBe(true),
+  );
+
+  it.each(['a', 'Escape', 'Enter', ' ', 'F6'])('%s → false', (key) => {
+    expect(isDirectionalKey(key)).toBe(false);
+  });
+
+  it('Tab → false — πλοήγηση εστίασης του browser, ΟΧΙ πλήκτρο widget', () => {
+    // Το ελάττωμα Ε1 του ADR-711 ήταν ακριβώς ότι κάποιος διεκδίκησε το Tab.
+    expect(isDirectionalKey('Tab')).toBe(false);
+  });
+});
+
 describe('οι δύο αναγνώστες του activeElement — SSoT του πέμπτου αντιγράφου', () => {
   it('χωρίς focus → και οι δύο false', () => {
     expect(isTextEntryFocused()).toBe(false);
@@ -231,5 +304,58 @@ describe('shouldGlobalShortcutYield — η μία ερώτηση των global a
   it('ΔΕΝ παραιτείται σε σκέτο <button> — αλλιώς κάθε accelerator του viewer θα ήταν νεκρός', () => {
     // Ο πήχης της υπερδιόρθωσης: role-based κάλυψη ΔΕΝ σημαίνει «κάθε button».
     expect(shouldGlobalShortcutYield(keyEvent(document.createElement('button')))).toBe(false);
+  });
+
+  // ── ADR-724 §5.2 — REGRESSION GUARD ΤΟΥ ΜΕΤΡΗΜΕΝΟΥ ΕΛΑΤΤΩΜΑΤΟΣ (Φ1, 2026-07-28) ──
+  //
+  // Πριν: ο φύλακας ρωτούσε **μόνο** την ερώτηση 2 ⇒ `role="separator"` → `false` ⇒ ο
+  // accelerator του viewer έκανε pan ±80px **και** `preventDefault()`, οπότε ο
+  // element-level handler του `react-resizable-panels` (φάση bubble, ξεκινά με
+  // `if (e.defaultPrevented) return;`) παραιτούνταν. Δηλαδή το πλάτος δεν άλλαζε ΚΑΙ
+  // το σχέδιο έφευγε — με μία μόνο αιτία.
+  //
+  // ⚠️ Το jsdom δεν κάνει διάταξη, άρα εδώ κλειδώνεται **η απόφαση του φύλακα**, που
+  // είναι η αιτία. Το ορατό αποτέλεσμα (πλάτος αλλάζει, σχέδιο ακίνητο) μετριέται ζωντανά.
+  describe('πλοηγικά πλήκτρα — η ερώτηση εξαρτάται από το πλήκτρο', () => {
+    it('παραιτείται σε ArrowLeft με στόχο τον splitter (το ελάττωμα ADR-724)', () => {
+      const separator = withRole('div', 'separator');
+      expect(shouldGlobalShortcutYield(keyEvent(separator, 'ArrowLeft'))).toBe(true);
+    });
+
+    it('δίχτυ: παραιτείται όταν ο splitter έχει την ΕΣΤΙΑΣΗ, ό,τι κι αν λέει ο στόχος', () => {
+      const separator = withRole('div', 'separator');
+      separator.tabIndex = 0;
+      separator.focus();
+      expect(document.activeElement).toBe(separator);
+      expect(shouldGlobalShortcutYield(keyEvent(document.body, 'ArrowLeft'))).toBe(true);
+      expect(focusConsumesDirectionalKeys()).toBe(true);
+    });
+
+    it.each(['ArrowUp', 'ArrowDown', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown'])(
+      'παραιτείται και σε %s — ο splitter τα δέχεται όλα',
+      (key) => {
+        expect(shouldGlobalShortcutYield(keyEvent(withRole('div', 'separator'), key))).toBe(true);
+      },
+    );
+
+    it('ΔΕΝ παραιτείται σε ΓΡΑΜΜΑ πάνω στον splitter — μόνο τα βέλη του ανήκουν', () => {
+      // Ο πήχης της υπερδιόρθωσης προς την άλλη κατεύθυνση: με εστίαση στο διαχωριστικό,
+      // το «Z» (zoom) ή το «L» (γραμμή) πρέπει να φτάνουν κανονικά στον viewer.
+      expect(shouldGlobalShortcutYield(keyEvent(withRole('div', 'separator'), 'z'))).toBe(false);
+    });
+
+    it('ΔΕΝ παραιτείται σε ArrowLeft πάνω στον καμβά — το pan παραμένει ζωντανό', () => {
+      // Η μισή διόρθωση θα ήταν να παραιτείται ο accelerator από ΚΑΘΕ βέλος. Τότε δεν
+      // θα υπήρχε ποτέ pan με πληκτρολόγιο — παλινδρόμηση, όχι διόρθωση.
+      expect(shouldGlobalShortcutYield(keyEvent(document.createElement('canvas'), 'ArrowLeft')))
+        .toBe(false);
+    });
+
+    it('το modal scope υπερισχύει και στα πλοηγικά πλήκτρα', () => {
+      const release = pushModalKeyboardScope();
+      expect(shouldGlobalShortcutYield(keyEvent(document.createElement('canvas'), 'ArrowLeft')))
+        .toBe(true);
+      release();
+    });
   });
 });
