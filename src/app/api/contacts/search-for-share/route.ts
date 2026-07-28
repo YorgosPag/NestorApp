@@ -12,7 +12,7 @@
  */
 
 import { NextRequest } from 'next/server';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { requireAdminFirestore } from '@/lib/api/admin-db';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -20,6 +20,11 @@ import { FIELDS } from '@/config/firestore-field-constants';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { createModuleLogger } from '@/lib/telemetry';
+import {
+  extractContactDisplayName,
+  extractContactEmails,
+  type ContactEmailEntry,
+} from '@/server/lib/contact-doc-fields';
 
 const logger = createModuleLogger('SearchForShareRoute');
 
@@ -27,11 +32,9 @@ const logger = createModuleLogger('SearchForShareRoute');
 // TYPES
 // ============================================================================
 
-interface ShareableEmail {
-  email: string;
-  type: string;
-  isPrimary: boolean;
-}
+// Το σχήμα του email στην απάντηση ΕΙΝΑΙ αυτό που διαβάζει το SSoT — ψευδώνυμο,
+// όχι δεύτερη δήλωση: δύο ταυτόσημα interfaces αποκλίνουν στην πρώτη προσθήκη πεδίου.
+type ShareableEmail = ContactEmailEntry;
 
 interface ShareablePhone {
   number: string;
@@ -43,7 +46,7 @@ interface ShareableContact {
   id: string;
   name: string;
   type: 'individual' | 'company' | 'service';
-  emails: ShareableEmail[];
+  emails: readonly ShareableEmail[];
   phones: ShareablePhone[];
 }
 
@@ -56,28 +59,10 @@ interface SearchForShareResponse {
 // HELPERS
 // ============================================================================
 
-function extractDisplayName(data: FirebaseFirestore.DocumentData): string {
-  if (data.type === 'company') {
-    return String(data.companyName ?? data.tradeName ?? '');
-  }
-  if (data.type === 'service') {
-    return String(data.serviceName ?? data.companyName ?? '');
-  }
-  const first = String(data.firstName ?? '');
-  const last = String(data.lastName ?? '');
-  return `${first} ${last}`.trim();
-}
-
-function extractEmails(data: FirebaseFirestore.DocumentData): ShareableEmail[] {
-  const emails = data.emails;
-  if (!Array.isArray(emails)) return [];
-  return emails
-    .filter((e: Record<string, unknown>) => typeof e?.email === 'string' && e.email.length > 0)
-    .map((e: Record<string, unknown>) => ({
-      email: String(e.email),
-      type: String(e.type ?? 'other'),
-      isPrimary: Boolean(e.isPrimary),
-    }));
+// `ShareableEmail` ΕΙΝΑΙ ήδη το σχήμα που επιστρέφει το SSoT — καμία χαρτογράφηση,
+// μόνο αναμετάδοση (η σάρωση/φιλτράρισμα ζει στο contact-doc-fields).
+function extractEmails(data: FirebaseFirestore.DocumentData): readonly ShareableEmail[] {
+  return extractContactEmails(data);
 }
 
 function extractPhones(data: FirebaseFirestore.DocumentData): ShareablePhone[] {
@@ -134,10 +119,7 @@ export const GET = withStandardRateLimit(
         throw new ApiError(400, 'Search term must be at least 2 characters', 'VALIDATION_ERROR');
       }
 
-      const db = getAdminFirestore();
-      if (!db) {
-        throw new ApiError(503, 'Database connection not available', 'DB_UNAVAILABLE');
-      }
+      const db = requireAdminFirestore();
 
       // Tenant-scoped query — all contact types
       const snapshot = await db
@@ -153,7 +135,7 @@ export const GET = withStandardRateLimit(
 
         if (!matchesSearch(data, searchTerm)) continue;
 
-        const name = extractDisplayName(data);
+        const name = extractContactDisplayName(data);
         if (!name) continue;
 
         results.push({
