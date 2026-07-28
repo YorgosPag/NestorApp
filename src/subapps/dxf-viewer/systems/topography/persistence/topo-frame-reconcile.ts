@@ -47,7 +47,8 @@ import type { FrameDelta, ProjectFrameStamp } from '../../geo-referencing/projec
 import { frameDelta } from '../../geo-referencing/project-frame';
 import { getActiveProjectFrame } from '../../geo-referencing/geo-reference-store';
 import type { GlyphOrientation, TopoBakedGroup } from '../topo-baked-groups';
-import { TOPO_BAKED_GROUPS, bakedGroupOfLayerName } from '../topo-baked-groups';
+import { TOPO_BAKED_GROUPS } from '../topo-baked-groups';
+import { bakedGroupIndices, indexBakedGroups } from '../topo-baked-scan';
 import type { TopoLevelBakedFrames } from '../topo-baked-frame-store';
 import { getLevelBakedFrames, setLevelBakedFrames } from '../topo-baked-frame-store';
 import { setTopoFrameStatus } from '../topo-frame-status-store';
@@ -96,7 +97,9 @@ export function reconcileBakedFramesInScene(
   input: BakedFrameReconcileInput,
 ): BakedFrameReconcileResult {
   const { scene, currentFrame, bakedFrames } = input;
-  const groupByLayerId = mapLayerIdsToGroups(scene);
+  // ADR-722 — ΕΝΑ πέρασμα για όλες τις ομάδες, από τη ΜΙΑ ανάγνωση σκηνής που μοιράζεται με
+  // τη ραφή του ψησίματος. Πριν, το ευρετήριο χτιζόταν εδώ και η σάρωση γινόταν ανά ομάδα.
+  const groupIndex = indexBakedGroups(scene);
 
   const movedByGroup: Partial<Record<TopoBakedGroup, number>> = {};
   const unstampedGroups: TopoBakedGroup[] = [];
@@ -107,7 +110,7 @@ export function reconcileBakedFramesInScene(
   let nextEntities: AnySceneEntity[] | null = null;
 
   for (const spec of TOPO_BAKED_GROUPS) {
-    const indices = entityIndicesOfGroup(scene, groupByLayerId, spec.group);
+    const indices = bakedGroupIndices(groupIndex, spec.group);
     const stamp = bakedFrames[spec.group] ?? null;
 
     // Άδεια ομάδα: η σφραγίδα δεν περιγράφει τίποτα πια — αποσύρεται (ο χρήστης τα έσβησε).
@@ -148,29 +151,6 @@ export function reconcileBakedFramesInScene(
     unstampedGroups,
     unsupportedGroups,
   };
-}
-
-/** layerId → ομάδα, μέσω του ΟΝΟΜΑΤΟΣ του layer (τα ids γεννιούνται εκ νέου ανά σκηνή). */
-function mapLayerIdsToGroups(scene: SceneModel): ReadonlyMap<string, TopoBakedGroup> {
-  const out = new Map<string, TopoBakedGroup>();
-  for (const layer of Object.values(scene.layersById)) {
-    const group = bakedGroupOfLayerName(layer.name);
-    if (group) out.set(layer.id, group);
-  }
-  return out;
-}
-
-/** Οι θέσεις των οντοτήτων της ομάδας μέσα στον πίνακα `scene.entities` (θέση = z-order, ADR-661). */
-function entityIndicesOfGroup(
-  scene: SceneModel,
-  groupByLayerId: ReadonlyMap<string, TopoBakedGroup>,
-  group: TopoBakedGroup,
-): number[] {
-  const out: number[] = [];
-  scene.entities.forEach((entity, index) => {
-    if (entity.layerId !== undefined && groupByLayerId.get(entity.layerId) === group) out.push(index);
-  });
-  return out;
 }
 
 /**

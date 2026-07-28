@@ -1,6 +1,6 @@
 # ADR-650 — Τοπογραφικές Αποτυπώσεις & Ισοϋψείς Γραμμές (Έρευνα Αγοράς + Αρχιτεκτονικό Blueprint)
 
-- **Status**: 🟡 IN PROGRESS — **M1 IMPLEMENTED** (πυρήνας σημεία→CDT/TIN→ισοϋψείς· v4) · **M2 IMPLEMENTED** (μέρος Α import wizard· v5 — μέρος Β breakline picking· v6) · **M4 IMPLEMENTED** (3Δ όψη εδάφους: μοναδικό derived TIN → `BufferGeometry` mesh + hypsometric· v7) · **M6 IMPLEMENTED** (όγκοι cut/fill: prisms + daylight split + στάθμη/επιφάνεια/όριο + cross-check + 3Δ cut/fill style· v8, §12.4) · **M7 IMPLEMENTED** (ελληνικό export «ένα κουμπί → φάκελος»: πίνακες στο σχέδιο + ZIP με DXF/PDF/CSV/XLSX + auto tolerance-check §10· v9, §12.5) · **M3 IMPLEMENTED** (ισοϋψείς ακριβείς↔όμορφες + LOD· v10) · **M5α IMPLEMENTED** (AI «καμπανάκι» = deterministic QA rules engine + inline flags, χωρίς LLM· v11 — **M5α.2**: ⊙ markers + zoom-to **και στο 3Δ** + non-modal panel· v19) · **M5β IMPLEMENTED** («μίλα στο σχέδιο» = NL editing με LLM tool-calling πάνω στα υπάρχοντα topo commands· 8 tools + destructive spike-removal με confirm· v12 — **M5 ΠΛΗΡΕΣ**) · **M8α IMPLEMENTED** (point-cloud ingestion: LAS + bulk ASCII → in-house CSF bare-earth filter → voxel decimation → ΥΠΑΡΧΟΝ `TopoPointStore`· μηδέν νέα dependency· v13) · **M8β/Α IMPLEMENTED** (**LAZ decode** — ο δρόμος των drones: `laz-perf` **Apache-2.0** (επαληθευμένο, εγκεκριμένο) → ασυμπίεστα records → **ο ΙΔΙΟΣ** `decodeLasRecords` του LAS· lazy WASM πίσω από dynamic import· v14) · **M8β/Γ IMPLEMENTED** (**auto-breakline detection** — differentiator §9 #3: ο ΥΠΑΡΧΩΝ M5α ανιχνευτής dihedral fold εξήχθη σε SSoT· το νέο είναι το **chaining** ακμών σε ordered πολυγραμμές με **stop-at-junction** + φίλτρα θορύβου· preview στον καμβά + **ρητό confirm** πριν το `addBreakline` — καμία αυτόματη εγγραφή· deterministic, μηδέν LLM· v15) · **M8β/Β IMPLEMENTED** (**3Δ point-cloud layer** — το νέφος ζει ως `THREE.Points` πάνω από το έδαφος αντί να πεθαίνει με τον wizard· ο builder υπήρχε ήδη από το M8α, γράφτηκε **μόνο ο καταναλωτής**· κοινό `writeDxfPlanToWorld` με το TIN· **§6 επιβεβλημένο στον κώδικα**: `raycast = () => {}` → ΟΨΗ, ποτέ γεωμετρία μέτρησης· 48 MB μετρημένα + ρητό «Αφαίρεση νέφους»· καμία νέα dependency· v16) · **M8β/Δ IMPLEMENTED** (**id-aware ASCII cloud** — ο reader του νέφους μαθαίνει το `ColumnMapping` που ο δρόμος CSV ήδη ήξερε (M2)· **deterministic sniffer** προτείνει τις στήλες από τα δεδομένα, ο μηχανικός τις πιστοποιεί σε grid **πριν** το φίλτρο· ένα PENZD αρχείο δεν διαβάζεται πια με X = id σημείου· **χωρίς mapping ⇒ σημερινή συμπεριφορά**· καμία νέα dependency· v17) · **M8β/Ε IMPLEMENTED** (**unit-aware binary cloud** — το LAS/LAZ **δεν** δηλώνει μονάδα στο header· ο dropdown μονάδας γίνεται ορατός & επεξεργάσιμος **για ΚΑΘΕ** μορφή νέφους (όχι μόνο ASCII, όπως μετά το M8β/Δ), με **readout έκτασης** ανά μονάδα ώστε η επιλογή να επαληθεύεται με τα μάτια — **καμία σιωπηλή μαντεψιά** (m/ft διαφέρουν ×3.28, όπως PDAL/CloudCompare)· + belt-and-suspenders sanity warning για εξωπραγματικό span σε **όλες** τις μορφές· default `m` αμετάβλητο· καμία νέα dependency· v18). **M10e IMPLEMENTED** (**αυτόματη ταύτιση σχεδίου↔τοπογραφικού**· v20 blueprint → **v21 υλοποίηση**: μετρημένη αιτία = το DXF import πετούσε το offset της κανονικοποίησης (`bounds-entity.ts`) — πλέον κρατιέται ως `SceneModel.sourceOrigin`· **τέσσερα κανάλια** με μία μονάδα μέτρησης και ένα συμβόλαιο αποδοχής: `identity-restore` (αναλυτικό) → `already-aligned` → **`point-number`** (η αρίθμηση του τοπογράφου = γνωστές αντιστοιχίες) → `congruent-pairs` (**ντετερμινιστική απαρίθμηση συμμόρφων βάσεων, ΟΧΙ RANSAC** — Super4PCS smart-indexing στη 2Δ-rigid ελάχιστη μορφή του)· **ποτέ auto-apply**, ποτέ κλίμακα· 78/78 tests). **Εκκρεμεί**: multiplayer, Gaussian-Splat, COPC streaming. Έρευνα §1–§11 & roadmap §12.2 παραμένουν το blueprint.
+- **Status**: 🟡 IN PROGRESS — **M1 IMPLEMENTED** (πυρήνας σημεία→CDT/TIN→ισοϋψείς· v4) · **M2 IMPLEMENTED** (μέρος Α import wizard· v5 — μέρος Β breakline picking· v6) · **M4 IMPLEMENTED** (3Δ όψη εδάφους: μοναδικό derived TIN → `BufferGeometry` mesh + hypsometric· v7) · **M6 IMPLEMENTED** (όγκοι cut/fill: prisms + daylight split + στάθμη/επιφάνεια/όριο + cross-check + 3Δ cut/fill style· v8, §12.4) · **M7 IMPLEMENTED** (ελληνικό export «ένα κουμπί → φάκελος»: πίνακες στο σχέδιο + ZIP με DXF/PDF/CSV/XLSX + auto tolerance-check §10· v9, §12.5) · **M3 IMPLEMENTED** (ισοϋψείς ακριβείς↔όμορφες + LOD· v10) · **M5α IMPLEMENTED** (AI «καμπανάκι» = deterministic QA rules engine + inline flags, χωρίς LLM· v11 — **M5α.2**: ⊙ markers + zoom-to **και στο 3Δ** + non-modal panel· v19 — **M5α.3**: κάλυψη της επιφάνειας **μέσα στο όριο** = πόσο του οικοπέδου είναι μέτρηση και πόσο παρεμβολή, με κατώφλι αυτο-βαθμονομούμενο στη διάμεσο ακμή· **[ADR-725](./ADR-725-boundary-elevation-coverage.md)**· v34) · **M5β IMPLEMENTED** («μίλα στο σχέδιο» = NL editing με LLM tool-calling πάνω στα υπάρχοντα topo commands· 8 tools + destructive spike-removal με confirm· v12 — **M5 ΠΛΗΡΕΣ**) · **M8α IMPLEMENTED** (point-cloud ingestion: LAS + bulk ASCII → in-house CSF bare-earth filter → voxel decimation → ΥΠΑΡΧΟΝ `TopoPointStore`· μηδέν νέα dependency· v13) · **M8β/Α IMPLEMENTED** (**LAZ decode** — ο δρόμος των drones: `laz-perf` **Apache-2.0** (επαληθευμένο, εγκεκριμένο) → ασυμπίεστα records → **ο ΙΔΙΟΣ** `decodeLasRecords` του LAS· lazy WASM πίσω από dynamic import· v14) · **M8β/Γ IMPLEMENTED** (**auto-breakline detection** — differentiator §9 #3: ο ΥΠΑΡΧΩΝ M5α ανιχνευτής dihedral fold εξήχθη σε SSoT· το νέο είναι το **chaining** ακμών σε ordered πολυγραμμές με **stop-at-junction** + φίλτρα θορύβου· preview στον καμβά + **ρητό confirm** πριν το `addBreakline` — καμία αυτόματη εγγραφή· deterministic, μηδέν LLM· v15) · **M8β/Β IMPLEMENTED** (**3Δ point-cloud layer** — το νέφος ζει ως `THREE.Points` πάνω από το έδαφος αντί να πεθαίνει με τον wizard· ο builder υπήρχε ήδη από το M8α, γράφτηκε **μόνο ο καταναλωτής**· κοινό `writeDxfPlanToWorld` με το TIN· **§6 επιβεβλημένο στον κώδικα**: `raycast = () => {}` → ΟΨΗ, ποτέ γεωμετρία μέτρησης· 48 MB μετρημένα + ρητό «Αφαίρεση νέφους»· καμία νέα dependency· v16) · **M8β/Δ IMPLEMENTED** (**id-aware ASCII cloud** — ο reader του νέφους μαθαίνει το `ColumnMapping` που ο δρόμος CSV ήδη ήξερε (M2)· **deterministic sniffer** προτείνει τις στήλες από τα δεδομένα, ο μηχανικός τις πιστοποιεί σε grid **πριν** το φίλτρο· ένα PENZD αρχείο δεν διαβάζεται πια με X = id σημείου· **χωρίς mapping ⇒ σημερινή συμπεριφορά**· καμία νέα dependency· v17) · **M8β/Ε IMPLEMENTED** (**unit-aware binary cloud** — το LAS/LAZ **δεν** δηλώνει μονάδα στο header· ο dropdown μονάδας γίνεται ορατός & επεξεργάσιμος **για ΚΑΘΕ** μορφή νέφους (όχι μόνο ASCII, όπως μετά το M8β/Δ), με **readout έκτασης** ανά μονάδα ώστε η επιλογή να επαληθεύεται με τα μάτια — **καμία σιωπηλή μαντεψιά** (m/ft διαφέρουν ×3.28, όπως PDAL/CloudCompare)· + belt-and-suspenders sanity warning για εξωπραγματικό span σε **όλες** τις μορφές· default `m` αμετάβλητο· καμία νέα dependency· v18). **M10e IMPLEMENTED** (**αυτόματη ταύτιση σχεδίου↔τοπογραφικού**· v20 blueprint → **v21 υλοποίηση**: μετρημένη αιτία = το DXF import πετούσε το offset της κανονικοποίησης (`bounds-entity.ts`) — πλέον κρατιέται ως `SceneModel.sourceOrigin`· **τέσσερα κανάλια** με μία μονάδα μέτρησης και ένα συμβόλαιο αποδοχής: `identity-restore` (αναλυτικό) → `already-aligned` → **`point-number`** (η αρίθμηση του τοπογράφου = γνωστές αντιστοιχίες) → `congruent-pairs` (**ντετερμινιστική απαρίθμηση συμμόρφων βάσεων, ΟΧΙ RANSAC** — Super4PCS smart-indexing στη 2Δ-rigid ελάχιστη μορφή του)· **ποτέ auto-apply**, ποτέ κλίμακα· 78/78 tests). **Εκκρεμεί**: multiplayer, Gaussian-Splat, COPC streaming. Έρευνα §1–§11 & roadmap §12.2 παραμένουν το blueprint.
 - **Date**: 2026-07-13
 - **Category**: DXF Viewer / Topography / Research
 - **Σχετικά**: ADR-635 (culling gap σε geo-referenced συντεταγμένες ±1e6), ADR-462 (canonical mm),
@@ -2900,3 +2900,64 @@ technologismiki (Ν.4495/2017), xyz.gr/geodimetro.gr/greenbuilding.gr/cityengine
   γεωαναφορά με ψημένο, **μετακινημένο** βορρά και δες τον να ακολουθεί.
 
   **Status: §M10g — IMPLEMENTED & GREEN.**
+
+- **2026-07-28 (v33)** — **§M10g: η ραφή που έλειπε — το ξανα-ψήσιμο έγινε ΘΕΡΑΠΕΙΑ.**
+  *(Πλήρες σκεπτικό, έρευνα και tests: **[ADR-722](./ADR-722-idempotent-bake-of-topo-products.md)**.)*
+
+  Το §M10g έλεγε στον χρήστη «ψημένα προϊόντα σε άγνωστο πλαίσιο — **η θεραπεία είναι ένα
+  ξανα-ψήσιμο**». Μετρήθηκε (2026-07-28) ότι **το ξανα-ψήσιμο δεν θεράπευε τίποτα**: οι τρεις
+  παραγωγοί ήταν **add-only** ενώ η σφραγίδα μπαίνει **ανά ομάδα**, οπότε το δεύτερο πάτημα
+  (α) στοίβαζε διπλότυπα — τα μισά στο **παλιό** πλαίσιο, δηλαδή αόρατα (ADR-635)· (β) σφράγιζε
+  την ομάδα ισχυριζόμενο ψευδώς ότι τα περιγράφει **όλα**, κλείνοντας **οριστικά** τον δρόμο της
+  αυτο-ίασης (ο reconciler είναι fail-closed μόνο όταν **λείπει** σφραγίδα)· και (γ) δεν
+  ξαναρωτούσε κανέναν, οπότε το κόκκινο μήνυμα **έμενε στην οθόνη**.
+
+  Το ADR-722 κάνει τη ραφή **ιδεμποτεντική** (η ομάδα αντικαθίσταται, με δηλωτικό `placement`
+  ώστε ο μετακινημένος βορράς να μη χαθεί — αλλιώς θα ξανάφερνε από την μπροστινή πόρτα ακριβώς
+  την καταστροφή που το §M10g απέτρεψε), **ξαναμετρά το σήμα** στη στιγμή του ψησίματος, και
+  κλείνει ένα υπαρκτό race όπου ένα **legacy** έγγραφο έσβηνε σφραγίδα που μόλις είχε γραφτεί
+  (`restoreBakedFrames` πλέον **συγχωνεύει ανά επίπεδο**· ο μηδενισμός έγινε ρητός).
+
+  Επίσης εδώ: ο reconciler έπαψε να σαρώνει τη σκηνή **μία φορά ανά ομάδα** — η ανάγνωση
+  εξήχθη στο κοινό `topo-baked-scan` που μοιράζεται με τη ραφή, ώστε το κόκκινο μήνυμα και η
+  απόφαση «μετακινώ / δεν αγγίζω» να μην μπορούν να διαφωνήσουν (N.18).
+
+  **Φάση 1 (N.0.1)**: το §M10g βρέθηκε να **συμφωνεί** με τον κώδικα — δεν ήταν λάθος, ήταν
+  **ελλιπές**: δεν έθεσε ποτέ την ερώτηση «τι γίνεται στο **δεύτερο** ψήσιμο».
+
+  **Status: §M10g — IMPLEMENTED & GREEN (61 suites / 576 tests).**
+
+- **2026-07-28 (v34)** — **§M5α: ο έλεγχος που ρωτά «πόσο του ΟΙΚΟΠΕΔΟΥ είναι μέτρηση;»**
+  *(Πλήρες σκεπτικό, έρευνα και tests: **[ADR-725](./ADR-725-boundary-elevation-coverage.md)**.)*
+
+  Η μηχανή QA είχε τέσσερις ελέγχους και **κανένας** δεν ρωτούσε το μόνο ερώτημα με χρηματική
+  συνέπεια: η επιφάνεια πάνω από το **όριο του οικοπέδου** — τη μόνη περιοχή που το §M6 τιμολογεί
+  ως όγκο εκσκαφής — στηρίζεται σε μέτρηση ή σε παρεμβολή; Μετρημένο στο εργοτάξιο (ADR-720 §1):
+  **29 σημεία εντός/επί του ορίου, μόνο 6 με υψόμετρο** ⇒ σχεδόν όλη παρεμβολή από βολές των
+  **όμορων**. Η τριγωνοποίηση δεν παραπονιέται ποτέ γι' αυτό.
+
+  Νέο `kind` `boundary-coverage` με **δύο** ευρήματα, γιατί είναι δύο διαφορετικές αστοχίες:
+  `coverageGap` (το οικόπεδο ξεπερνά την επιφάνεια ⇒ ο όγκος μετράει σιωπηλά **0**) και
+  `interpolatedSupport` (καλύπτεται, αλλά από **τρίγωνα-γέφυρες** ⇒ ο όγκος βγαίνει και είναι
+  εικασία). Το UI δεν άλλαξε ούτε γραμμή: ο `TopoQaSection`, τα ⊙ markers 2Δ/3Δ και το zoom-to
+  ήταν ήδη **kind-agnostic** από το M5α.2 — σχεδιαστική πρόβλεψη που εδώ εξαργυρώθηκε.
+
+  ⚠️ **Το κριτήριο ΔΕΝ είναι «τρίγωνα με 3 κορυφές εντός του ορίου»** (η προφανής πρώτη ιδέα):
+  έχει δομική μεροληψία `P·d/2` που για το πραγματικό οικόπεδο (223 m², P=61,4 m) δίνει **41%
+  έλλειμμα με μηδέν σφάλμα στην αποτύπωση** ⇒ θα άναβε σε κάθε μικρό αστικό οικόπεδο. Το ερώτημα
+  που μετριέται είναι **πόσο μακριά έγινε η μέτρηση**, με κατώφλι **αυτο-βαθμονομούμενο στη
+  διάμεσο ακμή** της ίδιας της αποτύπωσης — το πρότυπο του ESRI «Delineate TIN Data Area».
+  Διάμεσος και όχι μέσος όρος, όπως ήδη το MAD fence των elevation busts: μετρημένα, ο μέσος όρος
+  ανεβάζει το κατώφλι στα 103 m και **καμία** γέφυρα δεν πιάνεται· η διάμεσος το κρατά στα 8,5 m.
+
+  Μηδέν νέα γεωμετρία: το «τρίγωνο ∩ όριο» καλείται από το `tin-clip-to-boundary` (δύο φορές) και
+  τα εμβαδά από το `topo-surface-area` — τρίτο αντίγραφο θα ήταν sibling clone του `cut-fill`
+  (N.18). Boy-scout: η μέτρηση μήκους ακμής απέκτησε **έναν** ιδιοκτήτη (`tinEdgeLength` /
+  `tinEdgeLengths` στο `topo-qa-topology`), ώστε ο πληθυσμός βαθμονόμησης και ο ανά-τρίγωνο
+  έλεγχος να μην μπορούν να αποκλίνουν.
+
+  **Φάση 1 (N.0.1)**: το ADR-720 §5 δήλωνε το ⏳ ανοιχτό και **προέβλεπε σωστά** τη θέση («νέος
+  έλεγχος στη μηχανή QA, υπάρχων μηχανισμός») — ενημερώθηκε σε ✅ με ρητή σημείωση ότι το κριτήριο
+  βγήκε διαφορετικό από το αναμενόμενο.
+
+  **Status: §M5α — IMPLEMENTED & GREEN (62 suites / 594 tests).**

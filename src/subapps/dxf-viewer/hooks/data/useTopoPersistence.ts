@@ -48,7 +48,7 @@ import { subscribeContourConfig } from '../../systems/topography/contour-config-
 import { subscribeContourDisplay } from '../../systems/topography/contour-display-store';
 import { subscribeTerrain3D } from '../../systems/topography/terrain-3d-store';
 import { subscribeCutFill } from '../../systems/topography/cut-fill-store';
-import { subscribeBakedFrames } from '../../systems/topography/topo-baked-frame-store';
+import { clearAllBakedFrames, subscribeBakedFrames } from '../../systems/topography/topo-baked-frame-store';
 
 export type TopoSaveState = 'idle' | 'saving' | 'saved' | 'error';
 
@@ -176,6 +176,10 @@ export function useTopoPersistence(params: UseTopoPersistenceParams): UseTopoPer
     const hasPending = !isEmptyTopoState(pending);
 
     // Per-project reset — start from a clean survey for the new project/site.
+    // ADR-722 — οι σφραγίδες πλαισίου καθαρίζονται **ρητά**: το `restoreBakedFrames` πλέον
+    // ΣΥΓΧΩΝΕΥΕΙ ανά επίπεδο (ένα έγγραφο που δεν αναφέρει επίπεδο δεν το σβήνει), οπότε ένα
+    // άδειο state δεν σημαίνει πια «μηδένισε». Εδώ η πρόθεση ΕΙΝΑΙ ο μηδενισμός: αλλάζει έργο.
+    clearAllBakedFrames();
     applyAndRegenerate(EMPTY_TOPO_STATE, null, 0, topoStateSignature(EMPTY_TOPO_STATE));
 
     let settled = false;

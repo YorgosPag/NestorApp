@@ -17,6 +17,7 @@
 
 import * as React from 'react';
 import { useTranslation } from '@/i18n';
+import { useLevels } from '../../../systems/levels';
 import {
   getTopoFrameStatus, subscribeTopoFrameStatus,
 } from '../../../systems/topography/topo-frame-status-store';
@@ -29,6 +30,7 @@ export function TopoFrameNotice(): React.JSX.Element | null {
   const status = React.useSyncExternalStore(
     subscribeTopoFrameStatus, getTopoFrameStatus, getTopoFrameStatus,
   );
+  const { currentLevelId } = useLevels();
 
   const groupNames = React.useCallback(
     (groups: readonly TopoBakedGroup[]): string =>
@@ -36,6 +38,12 @@ export function TopoFrameNotice(): React.JSX.Element | null {
     [t],
   );
 
+  // ADR-721 §9 — το μήνυμα αφορά **τον όροφο που το γέννησε**. Οι σφραγίδες είναι ανά επίπεδο και
+  // ο reconciler παραλείπει το πέρασμα όσο φορτώνει η σκηνή (`sceneLoading`) ή λείπει scope: σε
+  // εκείνο το παράθυρο η κατάσταση στο store ανήκει ακόμη στον ΠΡΟΗΓΟΥΜΕΝΟ όροφο. Χωρίς αυτόν τον
+  // έλεγχο ο χρήστης διαβάζει «ο κάναβός σου κάθεται σε ξεπερασμένο σύστημα» για σχέδιο που δεν
+  // κοιτά — δηλαδή fail-closed που παραπληροφορεί, χειρότερο από σιωπή.
+  if (status.levelId !== currentLevelId) return null;
   if (status.unstampedGroups.length === 0 && status.unsupportedGroups.length === 0) return null;
 
   return (

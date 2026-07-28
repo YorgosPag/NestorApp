@@ -1,7 +1,8 @@
 'use client';
 
 /**
- * ADR-650 §M10g — Η ΜΙΑ ΡΑΦΗ ΤΟΥ ΨΗΣΙΜΑΤΟΣ: γράψε τη σκηνή, σφράγισε το πλαίσιο, έλεγξε το όριο.
+ * ADR-650 §M10g + ADR-722 — Η ΜΙΑ ΡΑΦΗ ΤΟΥ ΨΗΣΙΜΑΤΟΣ: έλεγξε το όριο, **αντικατάστησε** την
+ * ομάδα, σφράγισε το πλαίσιο, ξαναπαρατήρησε το σήμα.
  *
  * ── Γιατί υπάρχει ─────────────────────────────────────────────────────────────────────────
  * Οι τρεις παραγωγοί ψημένων προϊόντων (`useTopoGrid`, `useTopoPointLabels`, `useNorthArrow`)
@@ -16,7 +17,22 @@
  * τρέχει **πριν** γραφτεί η σκηνή, σε dev, και **σκάει** (DCHECK semantics): μια ψημένη οντότητα
  * σε ωμές ΕΓΣΑ είναι αόρατη, άπιαστη και σιωπηλή — δηλαδή το χειρότερο είδος σφάλματος.
  *
- * @see ./topo-baked-groups.ts — οι ομάδες
+ * ── Οι ΤΕΣΣΕΡΙΣ πράξεις, και γιατί καμία δεν μπορεί να λείψει (ADR-722) ────────────────────
+ * Το ψήσιμο **δεν** είναι «γράψε οντότητες». Είναι μια αλλαγή κατάστασης με τέσσερα αδιαίρετα
+ * σκέλη, και το §M10g είχε υλοποιήσει μόνο τα δύο μεσαία:
+ *
+ *   1. **έλεγχος** — η γεωμετρία είναι όντως στο display frame (§M10g.4.1)·
+ *   2. **αντικατάσταση** — η ομάδα περιέχει *ακριβώς* τα φρέσκα προϊόντα (ADR-722)· χωρίς αυτό
+ *      το δεύτερο πάτημα στοίβαζε διπλότυπα και η σφραγίδα από κάτω γινόταν **ψέμα**·
+ *   3. **σφραγίδα** — σε ποιο πλαίσιο ψήθηκε (§M10g)·
+ *   4. **σήμα** — το «ποιος είναι σε άγνωστο πλαίσιο» άλλαξε, άρα ξαναμετριέται (ADR-722)·
+ *      χωρίς αυτό το κόκκινο μήνυμα έμενε στην οθόνη μετά από σωστό ξανα-ψήσιμο.
+ *
+ * Και τα τέσσερα ζουν **εδώ**, στη ΜΙΑ ραφή, για τον ίδιο λόγο που ζει εδώ η σφραγίδα: ο
+ * τέταρτος παραγωγός τα κληρονομεί χωρίς να τα ξέρει.
+ *
+ * @see ./topo-baked-groups.ts — οι ομάδες + `placement` (ποιος κατέχει τη θέση)
+ * @see ./topo-bake-upsert.ts — ο καθαρός σχεδιαστής της αντικατάστασης
  * @see ./topo-baked-frame-store.ts — πού πάει η σφραγίδα
  * @see ./persistence/topo-frame-reconcile.ts — τι κάνει η σφραγίδα αργότερα
  */
@@ -29,8 +45,14 @@ import { SCENE_COORD_BAND_MM } from '../../config/geometry-constants';
 import { resolveEntityBounds } from '../../rendering/hitTesting/entity-bounds-ssot';
 import { getActiveProjectFrame } from '../geo-referencing/geo-reference-store';
 import type { ProjectFrameStamp } from '../geo-referencing/project-frame';
+import { getGlobalCommandHistory } from '../../core/commands/CommandHistory';
+import { DeleteMultipleEntitiesCommand } from '../../core/commands/entity-commands/DeleteEntityCommand';
+import { createLevelSceneManagerAdapter } from '../entity-creation/LevelSceneManagerAdapter';
 import type { TopoBakedGroup } from './topo-baked-groups';
-import { setBakedFrame } from './topo-baked-frame-store';
+import { getLevelBakedFrames, setBakedFrame } from './topo-baked-frame-store';
+import { planBakedUpsert } from './topo-bake-upsert';
+import { unstampedBakedGroups } from './topo-baked-scan';
+import { recordBakeInTopoFrameStatus } from './topo-frame-status-store';
 
 export interface CommitBakedTopoInput {
   /** Τα έτοιμα προϊόντα του παραγωγού — ήδη περασμένα από τη γέφυρα WORLD→DISPLAY. */
@@ -44,17 +66,39 @@ export interface CommitBakedTopoInput {
 }
 
 /**
- * Γράψε τα ψημένα προϊόντα στη σκηνή (μέσω `completeEntities` — undo / persistence / render /
- * export ως έχει) και **σφράγισε** την ομάδα με το ενεργό πλαίσιο.
+ * Ψήσε μια ομάδα: **αντικατάστησε** ό,τι υπάρχει ήδη σ' αυτήν με τα φρέσκα προϊόντα (μέσω
+ * `completeEntities` — undo / persistence / render / export ως έχει), **σφράγισε** την ομάδα με
+ * το ενεργό πλαίσιο, και **ξαναπαρατήρησε** ποιος έμεινε σε άγνωστο πλαίσιο.
  *
- * Η σφραγίδα γράφεται ΜΕΤΑ την επιτυχή εγγραφή: αν το `completeEntities` πετάξει, δεν μένει
- * σφραγίδα που να ισχυρίζεται ότι κάτι ψήθηκε.
+ * ## Η σειρά είναι φέρουσα
+ * Η **διαγραφή προηγείται** της εγγραφής: αν γινόταν μετά, το ενδιάμεσο καρέ θα περιείχε και τα
+ * δύο σύνολα, και μια εγγραφή που πετάει στη μέση θα άφηνε τον χρήστη με διπλότυπα — δηλαδή
+ * ακριβώς το σφάλμα που το ADR-722 κλείνει.
+ *
+ * Η **σφραγίδα γράφεται ΤΕΛΕΥΤΑΙΑ**, μετά την επιτυχή εγγραφή: αν το `completeEntities` πετάξει,
+ * δεν μένει πίσω σφραγίδα που να ισχυρίζεται ότι κάτι ψήθηκε — και το ίδιο για το σήμα, που
+ * διαβάζει τις σφραγίδες.
+ *
+ * ⚠️ **Δύο βήματα undo** (διαγραφή· δημιουργία), όχι ένα. Η δημιουργία **πρέπει** να περάσει από
+ * το `completeEntities` (ADR-057 SSoT — και το capability anchor του §M10g το επιβάλλει), το
+ * οποίο σπρώχνει μόνο του στο `CommandHistory`· τύλιγμα και των δύο σε ένα `CompoundCommand` θα
+ * απαιτούσε παράκαμψη της SSoT. **Κανένα από τα δύο βήματα δεν χάνει δεδομένα**: η διαγραφή
+ * είναι πλήρως αναστρέψιμη (`DeleteMultipleEntitiesCommand` κρατά snapshots). Καταγεγραμμένο
+ * ρητά στο ADR-722 ως επόμενο βήμα, όχι ως παράλειψη.
  */
 export function commitBakedTopoEntities(input: CommitBakedTopoInput): void {
   const frame = getActiveProjectFrame();
   assertBakedInDisplayFrame(input.entities, input.group, frame);
 
-  completeEntities(input.entities as Entity[], {
+  const plan = planBakedUpsert(input.getScene(input.levelId), input.group, input.entities);
+  if (plan.replacedIds.length > 0) {
+    getGlobalCommandHistory().execute(new DeleteMultipleEntitiesCommand(
+      [...plan.replacedIds],
+      createLevelSceneManagerAdapter(input.getScene, input.setScene, input.levelId),
+    ));
+  }
+
+  completeEntities(plan.entities as Entity[], {
     tool: input.tool,
     levelId: input.levelId,
     getScene: input.getScene,
@@ -62,6 +106,27 @@ export function commitBakedTopoEntities(input: CommitBakedTopoInput): void {
   });
 
   setBakedFrame(input.levelId, input.group, frame);
+  refreshFrameStatusAfterBake(input);
+}
+
+/**
+ * Το σήμα «άγνωστο πλαίσιο» είναι **παράγωγο** (σκηνή · σφραγίδες), και το ψήσιμο μόλις άλλαξε
+ * και τα δύο. Ξαναμετριέται εδώ, από τη ΜΙΑ ανάγνωση σκηνής (`topo-baked-scan`) που χρησιμοποιεί
+ * και ο reconciler — ώστε το κόκκινο μήνυμα και η απόφαση «μετακινώ / δεν αγγίζω» να μην
+ * μπορούν να διαφωνήσουν.
+ *
+ * **Δεν** καλείται ο reconciler: εκείνος είναι ο ιδιοκτήτης της *συμφιλίωσης* (ξαναχτίζει
+ * ισοϋψείς, μετακινεί με delta, γράφει σκηνή) και δεν έχει καμία δουλειά να τρέξει επειδή ο
+ * χρήστης πάτησε «Ετικέτες σημείων». Εδώ δεν συμφιλιώνουμε — απλώς **ξανακοιτάμε**.
+ */
+function refreshFrameStatusAfterBake(input: CommitBakedTopoInput): void {
+  const scene = input.getScene(input.levelId);
+  if (!scene) return; // δεν υπάρχει σκηνή να παρατηρηθεί — το επόμενο πέρασμα θα το πει
+  recordBakeInTopoFrameStatus(
+    input.levelId,
+    input.group,
+    unstampedBakedGroups(scene, getLevelBakedFrames(input.levelId)),
+  );
 }
 
 /**

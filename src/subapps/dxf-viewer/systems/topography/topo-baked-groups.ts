@@ -50,11 +50,36 @@ export type TopoBakedGroup = 'grid' | 'pointLabels' | 'north';
  */
 export type GlyphOrientation = 'paper' | 'world';
 
+/**
+ * ADR-722 — **ΠΟΙΟΣ ΚΑΤΕΧΕΙ ΤΟ «ΠΟΥ»**: ο παραγωγός ή ο χρήστης.
+ *
+ * Η ερώτηση γεννιέται στο **ξανα-ψήσιμο**, και είναι ακριβώς ίδιου είδους με το
+ * {@link GlyphOrientation}: δεν συμπεραίνεται, δηλώνεται.
+ *
+ *   • `derived` — η θέση είναι **παράγωγο της πηγής** (ο σταυρός του καννάβου κάθεται στη
+ *     διασταύρωση· η ετικέτα κάθεται δίπλα στο σημείο της). Αν το σημείο μετακινηθεί, η ετικέτα
+ *     **πρέπει** να το ακολουθήσει — άρα το ξανα-ψήσιμο γράφει τη νέα θέση. Ένα σύρσιμο του
+ *     χρήστη εδώ είναι διακοσμητικό και δεν επιβιώνει· ο Civil 3D κάνει το ίδιο (η ετικέτα
+ *     ενός COGO point ακολουθεί το σημείο, με ρητό «Reset» για την προεπιλεγμένη θέση).
+ *   • `user` — **ο χρήστης** την τοποθετεί (ο βορράς πάει στη γωνιά του φύλλου, εκεί που τον
+ *     θέλει ο μηχανικός). Το ξανα-ψήσιμο ενημερώνει το **περιεχόμενο** (π.χ. τη νέα γωνία) και
+ *     **σέβεται τη θέση**. Ο Revit κάνει ακριβώς αυτό: το «Tag All Not Tagged» δεν αγγίζει
+ *     ποτέ tag που υπάρχει ήδη, οπότε το σύρσιμο του χρήστη επιβιώνει κάθε επανάληψη.
+ *
+ * 🔴 Η διάκριση **δεν είναι αισθητική**: ο ίδιος ο reconciler (§M10g) γεννήθηκε επειδή
+ * «ο βορράς που ο χρήστης έσυρε στη γωνιά θα ξαναγεννιόταν στη θέση-άγκιστρο, δηλαδή η αλλαγή
+ * γεωαναφοράς θα **έσβηνε δουλειά**». Ένα ιδεμποτεντικό ψήσιμο που αγνοούσε αυτή τη δήλωση θα
+ * ξανάφερνε την ίδια ακριβώς καταστροφή από την μπροστινή πόρτα.
+ */
+export type BakedPlacement = 'derived' | 'user';
+
 export interface TopoBakedGroupSpec {
   readonly group: TopoBakedGroup;
   /** Τα layers που ψήνει ο παραγωγός της ομάδας (canonical ονόματα από τα configs). */
   readonly layerNames: readonly string[];
   readonly glyphOrientation: GlyphOrientation;
+  /** ADR-722 — ποιος κατέχει τη θέση στο ξανα-ψήσιμο. Βλ. {@link BakedPlacement}. */
+  readonly placement: BakedPlacement;
 }
 
 /** Ο πίνακας — μία γραμμή ανά παραγωγό ψημένου προϊόντος. */
@@ -64,6 +89,8 @@ export const TOPO_BAKED_GROUPS: readonly TopoBakedGroupSpec[] = [
     layerNames: [TOPO_GRID_LAYER_NAME],
     // Οι σταυροί (γεωμετρία) στρίβουν· οι αριθμοί του υπομνήματος μένουν οριζόντιοι.
     glyphOrientation: 'paper',
+    // Ο σταυρός κάθεται ΣΤΗ διασταύρωση· άλλο βήμα καννάβου ⇒ άλλες διασταυρώσεις.
+    placement: 'derived',
   },
   {
     group: 'pointLabels',
@@ -72,12 +99,16 @@ export const TOPO_BAKED_GROUPS: readonly TopoBakedGroupSpec[] = [
       TOPO_POINT_NUM_LAYER_NAME, TOPO_BOUNDARY_XY_LAYER_NAME,
     ],
     glyphOrientation: 'paper',
+    // Η ετικέτα ανήκει στο σημείο της: αν το σημείο μετακινηθεί, οφείλει να το ακολουθήσει.
+    placement: 'derived',
   },
   {
     group: 'north',
     layerNames: [TOPO_NORTH_LAYER_NAME],
     // Το «Β» διαβάζεται κατά μήκος του βέλους — μέγεθος του κόσμου, στρίβει μαζί του.
     glyphOrientation: 'world',
+    // Ο χρήστης τον σέρνει στη γωνιά του φύλλου. Το ξανα-ψήσιμο σέβεται τη θέση του.
+    placement: 'user',
   },
 ];
 
