@@ -41,11 +41,19 @@
 
 ```
 reconcileAssociativeGeometry(changedIds, sm, options):
-  (1) cascadeHostedOpeningsForWalls(changedIds, sm)   // derived geometry only → no emit
-  (2) reframed = cascadeBeamReframe(changedIds, sm)    // persisted params change → must emit
-  (3) byId = merge(options.announceEntities, reframed) // reframed wins by id (dedup)
-      if byId non-empty → EventBus.emit('bim:entities-moved', { movedEntities: byId })
+  (1)  cascadeHostedOpeningsForWalls(changedIds, sm)   // derived geometry only → no emit
+  (1b) cascadeStairwellOpenings(sm, {changedIds})      // ADR-632 Φ4 — lifecycle, emits its own
+  (1c) cascadeStairRailings(sm, {changedIds})          // ADR-407 Φ7 — lifecycle, emits its own
+  (2)  reframed   = cascadeBeamReframe(changedIds, sm) // persisted params change → must emit
+  (2b) relabelled = cascadeAreaLabels(changedIds, sm)  // ADR-649 — εμβαδόν ξαναμετριέται
+  (2c) cascadeTopoSourceGeometry(changedIds, sm)       // ADR-718 Μ3 — γράφει σε STORE, όχι entities
+  (3)  byId = merge(options.announceEntities, reframed, relabelled)  // reframed/relabelled win by id
+       if byId non-empty → EventBus.emit('bim:entities-moved', { movedEntities: byId })
 ```
+
+⚠️ Η σειρά **είναι** συμβόλαιο (dependency order), όχι στιλ. Το (2c) γράφει σε store αντί για
+entities, γι' αυτό δεν συνεισφέρει στο ΕΝΑ emit — ο καταναλωτής του είναι ο crop reconciler του
+ADR-718 Μ2, που ακούει την ταυτότητα του `getActiveCropRing()`.
 
 - **Dependency order:** openings πρώτα (καθαρά derived), beams μετά.
 - **Idempotent:** αμετάβλητα εξαρτημένα + κανένα `announceEntities` → **κανένα emit** (μηδέν persist churn).
@@ -61,6 +69,10 @@ reconcileAssociativeGeometry(changedIds, sm, options):
 - **`SnapshotTransformCommand`** (transform family): αντικατέστησε τα δύο inline calls (`cascadeHostedOpeningsForWalls` + `reframeBeamsAndEmit`/`AfterRestore`) με `reconcileAssociativeGeometry`. Οι delta-followers + το undo race-guard (`emitRestoredEntities` **πρώτο**) παραμένουν αμετάβλητα.
 - **`UpdateWallParamsCommand`**: αφαιρέθηκε το inline `cascadeHostedOpeningsForWalls` (καλύπτεται πλέον από το base reconcile).
 - **`useColumnBeamPromote` (ADR-529 §reframe)**: αφαιρέθηκε το ad-hoc reframe block. Η προαγωγή (`UpdateColumnParamsCommand`) reframe-άρει πλέον το δοκάρι **αυτόματα** μέσω του base reconcile → **ΕΝΑ** undo step αντί δύο.
+- **`StretchEntityCommand`** (ADR-718 Μ3): το κοινό μονοπάτι του **σύρσιματος λαβής κορυφής** (`commitDxfGripDragViaStretchCommand`) και του εργαλείου «Έκταση». `reconcileDependents()` σε execute/undo/redo (το forward σκέλος μοιράζεται με το redo μέσω `recordForwardAndReconcile`).
+- **`EntityVertexCommand` base** (ADR-718 Μ3): `reconcileDependents()` κληρονομείται από `MoveVertexCommand`, `RemoveVertexCommand` και — μετά την υιοθέτηση της βάσης — `AddVertexCommand`. Ασφαλές ανεπιφύλακτα: οι εντολές κατασκευάζονται στο **τέλος** της χειρονομίας (`endGripDrag`), ποτέ ανά καρέ.
+
+⚠️ **Το κενό που έμεινε ανοιχτό επί ~1 μήνα (2026-06-27 → 2026-07-28):** οι δύο πρώτες οικογένειες (params + transform) κάλυπταν τα BIM entities, αλλά **η πιο άμεση αλλαγή γεωμετρίας που κάνει ο χρήστης — το σύρσιμο λαβής κορυφής σε πρωτογενή οντότητα — δεν καλούσε ΤΙΠΟΤΑ**. Δεν φάνηκε επειδή τα BIM grips εκτρέπονται νωρίτερα (`tryCommitParametricGripDrag`), οπότε η stretch διαδρομή σέρνει μόνο line/polyline/spline/arc — και μέχρι το ADR-649 κανένα παράγωγο δεν κρεμόταν από εκείνες. **Μάθημα:** «ποιες εντολές αλλάζουν γεωμετρία;» δεν απαντιέται από τη λίστα των BIM commands.
 
 ## 6. Grip refresh (auto — μηδέν νέος κώδικας)
 
@@ -87,3 +99,4 @@ reconcileAssociativeGeometry(changedIds, sm, options):
 |--------|--------|
 | 2026-06-27 | Αρχική υλοποίηση. NEW `reconcileAssociativeGeometry` SSoT (delegate openings + beam-reframe + ΕΝΑ emit, idempotent). Κλήση από `MergeableUpdateCommand` base (κλείνει το params-family κενό) + `SnapshotTransformCommand` (delegate). Absorbed `reframeBeamsAndEmit`/`AfterRestore`. Αφαιρέθηκε το ad-hoc promote reframe (ADR-529 §reframe). 8 suites / 83 + 5 reconcile jest GREEN. tsc SKIP (N.17). UNCOMMITTED — browser-verify pending. |
 | 2026-07-27 | **+3ος scene-derived reconciler: `cascadeAreaLabels`** (ADR-649 §associative) — η ζωντανή ετικέτα εμβαδού. Επιβεβαίωση ότι το API είναι όντως extensible όπως έλεγε το §8: **μία γραμμή** στη dependency order + merge στο ΕΝΑ emit· η **γραμμοσκίαση δούλεψε με μηδέν νέα καλωδίωση**, γιατί το `UpdateHatchBoundaryCommand` **είναι** `MergeableUpdateCommand`. Ανήκει στην κατηγορία **scene-derived** (το εμβαδόν ξαναμετριέται, δεν ακολουθεί delta). Το `CascadeSceneManager` απέκτησε `updateEntity`. **+ΝΕΟ lifecycle hook `reconcileAssociativeGeometryOnDelete`** — το delete ήταν το **τρίτο, ακάλυπτο** σκέλος του κύκλου ζωής (είχαμε change + create)· τρέχει **ΜΟΝΟ** τον area-label reconciler, ΟΧΙ ολόκληρο τον geometry cascade, με το ίδιο σκεπτικό που το create path τρέχει υποσύνολο (οι geometry cascades έχουν δική τους διαδρομή διαγραφής· κλήση τους εδώ θα άλλαζε σιωπηλά συμπεριφορά τοίχων/σκαλών). Κλήσεις: `DeleteEntityCommand` + `DeleteMultipleEntitiesCommand`, execute/undo/redo. |
+| 2026-07-28 | **+4ος scene-derived reconciler: `cascadeTopoSourceGeometry`** (ADR-718 Μ3) — το τοπογραφικό **όριο οικοπέδου** και οι **ασυνέχειες** ακολουθούν πλέον τη γραμμή του σχεδίου από την οποία επιλέχθηκαν. ΕΝΑΣ μηχανισμός για τους δύο ρόλους (και τα δύο κρατούσαν snapshot κορυφών + `sourceEntityId` που κανείς δεν παρακολουθούσε — δύο listeners θα ήταν N.18 παράβαση). Γράφει σε **store**, όχι σε entities, άρα δεν συμμετέχει στο ΕΝΑ emit· τα παράγωγα της κάτοψης τα αναλαμβάνει ο crop reconciler του ADR-718 Μ2. **+ Κλείσιμο κενού κάλυψης:** μπήκαν 4 εντολές που έλειπαν από τα call sites — `StretchEntityCommand` (σύρσιμο λαβής κορυφής + «Έκταση»), `MoveVertexCommand`, `AddVertexCommand`, `RemoveVertexCommand` (βλ. προειδοποίηση §5). Παράπλευρη διόρθωση **χωρίς νέα γραμμή**: η ζωντανή ετικέτα εμβαδού σε απλή πολυγραμμή ακολουθεί επιτέλους το σύρσιμο λαβής. Το `reconcileAssociativeGeometryOnDelete` τρέχει πλέον **δύο** link-based reconcilers (ετικέτα + τοπογραφικοί ορισμοί), όχι έναν. NEW `StretchEntityCommand.associative.test.ts` (καλωδίωση σε execute/undo/redo). |
