@@ -38,6 +38,7 @@ import { MainContentSection, FloatingPanelsSection } from './dxf-viewer-lazy-com
 // Layout Components - Canvas V2
 import { SidebarSection } from '../layout/SidebarSection';
 import { MobileSidebarDrawer } from '../layout/MobileSidebarDrawer';
+import { WorkspaceSplitLayout } from '../layout/WorkspaceSplitLayout'; // ADR-724 Φ1
 import { useResponsiveLayout } from '@/components/contacts/dynamic/hooks/useResponsiveLayout';
 // ADR-040 Phase XXII.C: TransformContext duplicate SSoT removed. ImmediateTransformStore
 // (Phase XIII) is the sole transform SSoT. Legacy React Context Provider deleted to kill
@@ -368,27 +369,32 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
       <section
         className={`flex flex-1 min-h-0 ${PANEL_LAYOUT.SPACING.SM} ${PANEL_LAYOUT.GAP.SM} ${colors.bg.primary} ${rootPointerEventsClass}`}
       >
-      {/* ✅ PHASE 5: Sidebar Section — ADR-176: Responsive */}
-      {/* ADR-309 Phase 2: handleFileImportWithEncoding passed so LevelPanel can show wizard */}
-      {layoutMode === 'desktop' ? (
-        <SidebarSection
-          floatingRef={floatingRef}
-          currentScene={currentScene}
-          activeTool={activeTool}
-          onSceneImported={handleFileImportWithEncoding}
-          projectId={levelManager.saveContext?.projectId ?? undefined}
-          floorplanId={levelManager.fileRecordId ?? undefined}
-        />
-      ) : (
-        <MobileSidebarDrawer
-          open={ui.sidebarOpen}
-          onOpenChange={ui.setSidebarOpen}
-          floatingRef={floatingRef}
-          currentScene={currentScene}
-          activeTool={activeTool}
-          onSceneImported={handleFileImportWithEncoding}
-        />
-      )}
+      {/* 🏢 ADR-724 Φ1: desktop ⇒ παλέτα+καμβάδες = τα δύο panel ενός splitter· tablet/mobile
+          (`split={false}`) ⇒ η διάταξη μένει γράμμα προς γράμμα η σημερινή (§4.5).
+          ⚠️ §4.7: παιδιά του Group = Panel·Separator·Panel ⇒ τα Dialogs μένουν ΕΞΩ.
+          ✅ ADR-176 responsive · ADR-309 Φ2 wizard import */}
+      <WorkspaceSplitLayout
+        split={layoutMode === 'desktop'}
+        sidebar={layoutMode === 'desktop' ? (
+          <SidebarSection
+            floatingRef={floatingRef}
+            currentScene={currentScene}
+            activeTool={activeTool}
+            onSceneImported={handleFileImportWithEncoding}
+            projectId={levelManager.saveContext?.projectId ?? undefined}
+            floorplanId={levelManager.fileRecordId ?? undefined}
+          />
+        ) : (
+          <MobileSidebarDrawer
+            open={ui.sidebarOpen}
+            onOpenChange={ui.setSidebarOpen}
+            floatingRef={floatingRef}
+            currentScene={currentScene}
+            activeTool={activeTool}
+            onSceneImported={handleFileImportWithEncoding}
+          />
+        )}
+      >
       {/* 🏢 ADR-241: FullscreenOverlay */}
       <FullscreenOverlay
         isFullscreen={fullscreen.isFullscreen}
@@ -470,6 +476,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
           />
         </React.Suspense>
       </FullscreenOverlay>
+      </WorkspaceSplitLayout>
       <DxfViewerDialogs
         ui={ui}
         levelManager={levelManager}

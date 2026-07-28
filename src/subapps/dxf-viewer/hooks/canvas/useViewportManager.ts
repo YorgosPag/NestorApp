@@ -57,6 +57,51 @@ export interface UseViewportManagerParams {
   onViewportChange?: (viewport: Viewport) => void;
 }
 
+/**
+ * Κάτω από αυτό το κατώφλι (CSS px) η μεταβολή θεωρείται θόρυβος στρογγυλοποίησης του
+ * `ResizeObserver` και **δεν** μετακινεί το σχέδιο.
+ */
+const RESIZE_EPSILON_PX = 0.5;
+
+/**
+ * 🏢 ADR-724 §4.1 — Ο **ΕΝΑΣ** κανόνας αγκύρωσης του σχεδίου όταν αλλάζει ο καμβάς.
+ *
+ * ── ΥΨΟΣ (προϋπήρχε) ──
+ * `offsetY += Δh` ⇒ το σχέδιο μένει κολλημένο στην **κάτω** ακμή, συνεπές με τον χάρακα του
+ * app (0.000m κάτω-αριστερά).
+ *
+ * ── ΠΛΑΤΟΣ (νέο) ──
+ * Μέχρι το ADR-724 το πλάτος του καμβά **δεν άλλαζε ποτέ**, οπότε ο κανόνας απλώς δεν υπήρχε.
+ * Με το αγκυρωμένο panel που αλλάζει μέγεθος, εμφανίζεται μια ασυμμετρία: όταν η παλέτα είναι
+ * **δεξιά**, η αριστερή ακμή του καμβά δεν κουνιέται και το σχέδιο μένει ακίνητο· όταν είναι
+ * **αριστερά**, η ακμή μετακινείται κατά Δ και το σχέδιο **σέρνεται μαζί με την παλέτα** —
+ * οπτικά λάθος για CAD.
+ *
+ * Η αντιστάθμιση γίνεται με τη μετατόπιση της **οθονο-χωρικής** αριστερής ακμής του container
+ * (`offsetX -= Δleft`), **όχι** με τη μεταβολή πλάτους. Έτσι και οι δύο πλευρές αγκύρωσης
+ * περιγράφονται από τον ίδιο κανόνα, χωρίς `if (dockSide === …)` πουθενά στον καμβά.
+ *
+ * ⛔ Η **κλίμακα δεν αγγίζεται ποτέ** (ADR-418): το app εμφανίζει πραγματικό `1:N` — ένα
+ * zoom-to-fit σε resize θα άλλαζε εμφανιζόμενο αριθμό χωρίς εντολή χρήστη.
+ *
+ * Καθαρή συνάρτηση: επιστρέφει το **ίδιο** αντικείμενο όταν δεν χρειάζεται αλλαγή, ώστε ο
+ * καλών να μπορεί να ελέγξει με ταυτότητα (`!==`) αντί για σύγκριση πεδίων.
+ */
+export function anchorTransformOnResize(
+  transform: ViewTransform,
+  deltaHeight: number,
+  deltaLeft: number,
+): ViewTransform {
+  const adjustY = Math.abs(deltaHeight) > RESIZE_EPSILON_PX;
+  const adjustX = Math.abs(deltaLeft) > RESIZE_EPSILON_PX;
+  if (!adjustY && !adjustX) return transform;
+  return {
+    ...transform,
+    offsetX: adjustX ? transform.offsetX - deltaLeft : transform.offsetX,
+    offsetY: adjustY ? transform.offsetY + deltaHeight : transform.offsetY,
+  };
+}
+
 export interface UseViewportManagerReturn {
   /** Current viewport dimensions (React state — triggers re-renders) */
   viewport: Viewport;
@@ -88,6 +133,9 @@ export function useViewportManager({
   const viewportRef = useRef<Viewport>({ width: 0, height: 0 });
   const transformRef = useRef<ViewTransform>(transform);
   const resizeDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // ADR-724 §4.1: η τελευταία γνωστή **οθονο-χωρική** αριστερή ακμή του container. `null` =
+  // δεν έχει μετρηθεί ακόμη ⇒ η πρώτη μέτρηση δεν παράγει ψεύτικη μετατόπιση.
+  const containerLeftRef = useRef<number | null>(null);
 
   // Keep transformRef in sync every render (for ResizeObserver callback)
   transformRef.current = transform;
@@ -106,19 +154,26 @@ export function useViewportManager({
     onViewportChange?.(newViewport);
   }, [onViewportChange]);
 
+  // ── Internal: measure the container and publish it ─────────────────────
+  // ONE measurement path for all three call sites (initial, window resize, RAF-delayed
+  // stabilization) — they used to be three copies of the same six lines. Also the place
+  // where the container's screen-space left edge is seeded (ADR-724 §4.1), so the first
+  // ResizeObserver delta is measured against a real baseline instead of `null`.
+  const measureAndApply = useCallback(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return;
+    containerLeftRef.current = rect.left;
+    applyViewport({ width: rect.width, height: rect.height });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [applyViewport]);
+
   // ── ResizeObserver lifecycle ────────────────────────────────────────────
   useEffect(() => {
     let resizeObserver: ResizeObserver | null = null;
 
-    const updateViewport = () => {
-      const container = containerRef.current;
-      if (container) {
-        const rect = container.getBoundingClientRect();
-        if (rect.width > 0 && rect.height > 0) {
-          applyViewport({ width: rect.width, height: rect.height });
-        }
-      }
-    };
+    const updateViewport = measureAndApply;
 
     const setupObserver = () => {
       const container = containerRef.current;
@@ -131,17 +186,27 @@ export function useViewportManager({
 
           // ── Update refs synchronously — canvas reads these immediately ──
           const oldHeight = viewportRef.current.height;
-          const deltaHeight = height - oldHeight;
+          const deltaHeight = oldHeight > 0 ? height - oldHeight : 0;
+
+          // ADR-724 §4.1 — the screen-space left edge, read AFTER layout (the observer
+          // fires post-layout, so this rect is current). Measured, never derived from the
+          // width delta: that is what makes left-dock and right-dock share ONE rule.
+          const measuredLeft = containerRef.current?.getBoundingClientRect().left;
+          const previousLeft = containerLeftRef.current;
+          const deltaLeft = measuredLeft !== undefined && previousLeft !== null
+            ? measuredLeft - previousLeft
+            : 0;
+          if (measuredLeft !== undefined) containerLeftRef.current = measuredLeft;
+
           viewportRef.current = { width, height };
           canvasBoundsService.clearCache();
 
-          if (oldHeight > 0 && Math.abs(deltaHeight) > 0.5) {
-            const currentTransform = transformRef.current;
-            const newOffsetY = currentTransform.offsetY + deltaHeight;
-            transformRef.current = { ...currentTransform, offsetY: newOffsetY };
-            dlog('Canvas', `[ResizeObserver] deltaHeight=${deltaHeight.toFixed(1)} offsetY ${currentTransform.offsetY.toFixed(1)}→${newOffsetY.toFixed(1)}`);
+          const anchored = anchorTransformOnResize(transformRef.current, deltaHeight, deltaLeft);
+          if (anchored !== transformRef.current) {
+            dlog('Canvas', `[ResizeObserver] Δh=${deltaHeight.toFixed(1)} Δleft=${deltaLeft.toFixed(1)} offset ${transformRef.current.offsetX.toFixed(1)},${transformRef.current.offsetY.toFixed(1)}→${anchored.offsetX.toFixed(1)},${anchored.offsetY.toFixed(1)}`);
+            transformRef.current = anchored;
           } else {
-            dlog('Canvas', `[ResizeObserver] SKIP adjust: deltaHeight=${deltaHeight.toFixed(1)}`);
+            dlog('Canvas', `[ResizeObserver] SKIP adjust: Δh=${deltaHeight.toFixed(1)} Δleft=${deltaLeft.toFixed(1)}`);
           }
 
           // ── Debounce React state updates — prevents 60fps re-renders during window drag ──
@@ -196,19 +261,9 @@ export function useViewportManager({
   // ── RAF-delayed initial measurement ────────────────────────────────────
   // Ensures correct dimensions after browser layout stabilization (server restart edge case)
   useEffect(() => {
-    const forceViewportUpdate = () => {
-      const container = containerRef.current;
-      if (container) {
-        const rect = container.getBoundingClientRect();
-        if (rect.width > 0 && rect.height > 0) {
-          applyViewport({ width: rect.width, height: rect.height });
-        }
-      }
-    };
-
     const cancelScheduled = UnifiedFrameScheduler.scheduleOnceDelayed(
       'canvas-section-viewport-layout',
-      forceViewportUpdate,
+      measureAndApply,
       PANEL_LAYOUT.TIMING.VIEWPORT_LAYOUT_STABILIZATION,
     );
 

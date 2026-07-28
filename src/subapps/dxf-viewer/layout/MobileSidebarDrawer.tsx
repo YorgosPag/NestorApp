@@ -52,8 +52,11 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
           <SheetDescription>Panel navigation and layers</SheetDescription>
         </SheetHeader>
         <nav role="navigation" className="h-full">
+          {/*
+            ADR-724 Φ1: το `variant` prop έφυγε — η παλέτα γεμίζει πλέον ό,τι της δώσει ο
+            γονέας της, και εδώ ο γονέας είναι το `SheetContent` (`w-[85vw] max-w-[384px]`).
+          */}
           <SidebarSection
-            variant="drawer"
             floatingRef={floatingRef}
             currentScene={currentScene}
             activeTool={activeTool}

@@ -65,3 +65,10 @@ const ResizableHandle = ({
 );
 
 export { ResizablePanelGroup, ResizablePanel, ResizableHandle };
+
+/**
+ * Το μέγεθος που παραδίδει το `onResize` (σε pixels **και** ποσοστό) — εκτίθεται εδώ ώστε ο
+ * καταναλωτής να μην εισάγει το ίδιο το `react-resizable-panels`. Ένα σημείο επαφής με τη
+ * βιβλιοθήκη, όχι Ν.
+ */
+export type { PanelSize } from 'react-resizable-panels';

@@ -61,6 +61,11 @@ export const STORAGE_KEYS = {
 
   // Match/Transfer Properties habit stats (ADR-581) — default checklist ανά (sourceType,targetType)
   MATCH_PROPERTIES_HABIT: 'dxf-viewer:match-properties-habit:v1',
+
+  // Πλάτος της αγκυρωμένης κύριας παλέτας (ADR-724). Ανά χρήστη/περιηγητή, ουδέτερο
+  // ως προς έργο/όροφο — η διάταξη είναι ιδιότητα του χώρου εργασίας, όχι του σχεδίου.
+  // Το `:v1` επιτρέπει σιωπηλή απόρριψη παλιού σχήματος όταν η Φ2/Φ3 προσθέσει `mode`.
+  WORKSPACE_DOCK_WIDTH: 'dxf-viewer:workspace-dock-width:v1',
 } as const;
 
 export type StorageKey = typeof STORAGE_KEYS[keyof typeof STORAGE_KEYS] | string;

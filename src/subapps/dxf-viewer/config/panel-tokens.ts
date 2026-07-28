@@ -930,6 +930,32 @@ export const PANEL_LAYOUT = {
   },
 
   // ============================================================================
+  // 🧭 WORKSPACE_DOCK — όρια πλάτους της αγκυρωμένης κύριας παλέτας (ADR-724 §6.4)
+  //
+  // ΣΕ PIXELS, όχι Tailwind classes: τα καταναλώνει το `react-resizable-panels`
+  // (`minSize`/`maxSize`/`defaultSize` δέχονται αριθμό = px) και οι καθαρές
+  // συναρτήσεις του `systems/workspace/workspace-dock-geometry.ts`. Τα παλιά
+  // `LAYOUT_DIMENSIONS.SIDEBAR_MIN/MAX_WIDTH` ΜΕΝΟΥΝ — τα χρησιμοποιεί ακόμη το
+  // mobile drawer· δεν είναι διπλότυπο, είναι άλλος καταναλωτής (άλλη διάταξη).
+  // ============================================================================
+  WORKSPACE_DOCK: {
+    /** Το σημερινό πλάτος (w-96) ⇒ μηδενική οπτική αλλαγή στην πρώτη φόρτωση. */
+    WIDTH_DEFAULT: 384,
+    /**
+     * Ίδιο με το `DEFAULT_MIN_PANEL_SIZE.width` του ADR-723: **μία** έννοια
+     * «στενότερο λειτουργικό πλάτος παλέτας» σε ολόκληρη την εφαρμογή.
+     */
+    WIDTH_MIN: 280,
+    /** Πάνω από αυτό ο καμβάς παύει να είναι ο πρωταγωνιστής. */
+    WIDTH_MAX: 720,
+    /**
+     * Ο καμβάς **ποτέ** στενότερος από αυτό. Υπερισχύει του `WIDTH_MAX` σε στενές
+     * οθόνες — γι' αυτό το πραγματικό μέγιστο υπολογίζεται, δεν είναι σταθερά.
+     */
+    CANVAS_MIN_WIDTH: 320,
+  },
+
+  // ============================================================================
   // ⏱️ TIMING — FACADE over DXF_TIMING (ADR-516 SSoT, 2026-06-24)
   // Every value below references config/dxf-timing.ts → DXF_TIMING. No raw
   // timing literal is defined here anymore; keys are kept stable for consumers.

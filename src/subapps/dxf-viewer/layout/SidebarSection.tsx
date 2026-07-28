@@ -26,7 +26,24 @@
  * - ✅ Centralized design tokens
  * - ✅ Type-safe props
  *
+ * ============================================================================
+ * ADR-724 Φ1 — ΤΟ ΠΛΑΤΟΣ ΔΕΝ ΑΝΗΚΕΙ ΠΛΕΟΝ ΕΔΩ
+ * ============================================================================
+ *
+ * Μέχρι το ADR-724 αυτό το αρχείο κλείδωνε το πλάτος σε `min = max = 384` + `flex-shrink-0`.
+ * Ήταν το **μοναδικό** εμπόδιο για την αλλαγή μεγέθους: η υπόλοιπη flexbox ήταν ήδη σωστή
+ * (`min-w-0` στο `MainContentSection`). Τώρα η παλέτα γεμίζει ό,τι της δώσει ο γονέας της:
+ *
+ * - **desktop** → `WorkspaceSplitLayout` (panel με όρια σε pixels, διαχωριστικό, πληκτρολόγιο)
+ * - **tablet/mobile** → `MobileSidebarDrawer` (Sheet, `w-[85vw] max-w-[384px]`)
+ *
+ * Δύο γονείς, **ένας** κανόνας εδώ: «γέμισε τον χώρο σου». Γι' αυτό έφυγε και το `variant`
+ * prop — μετά την απελευθέρωση του πλάτους οι δύο κλάδοι του παρήγαγαν **ταυτόσημο** markup,
+ * δηλαδή θα ήταν διακόπτης που δεν ανάβει τίποτα. Επιστρέφει στη Φ3, όταν η αιωρούμενη
+ * λειτουργία του δώσει πραγματικό νόημα.
+ *
  * @see https://developer.mozilla.org/en-US/docs/Web/HTML/Element/aside
+ * @see ./WorkspaceSplitLayout — ο κάτοχος του πλάτους στο desktop
  * ============================================================================
  */
 
@@ -41,6 +58,7 @@ import { AutoSaveStatus } from '../ui/components/AutoSaveStatus';
 import { CentralizedAutoSaveStatus } from '../ui/components/CentralizedAutoSaveStatus';
 import { useBorderTokens } from '../../../hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { PANEL_LAYOUT } from '../config/panel-tokens';  // ✅ ENTERPRISE: Centralized spacing tokens
 // ADR-040 Phase XXII.B: ZoomStore subscription lives in a 1-fiber leaf (SidebarZoomLeaf),
 // NOT in the SidebarSection orchestrator. Subscribing in the orchestrator re-rendered the
@@ -49,27 +67,11 @@ import { PANEL_LAYOUT } from '../config/panel-tokens';  // ✅ ENTERPRISE: Centr
 import { useViewScale } from '../systems/zoom/hooks/useViewScale';
 
 // ============================================================================
-// 🎯 LAYOUT CONSTANTS - Centralized, maintainable
-// ============================================================================
-
-/** Sidebar width tokens - uses PANEL_LAYOUT.LAYOUT_DIMENSIONS (ENTERPRISE) */
-const SIDEBAR_LAYOUT = {
-  WIDTH: PANEL_LAYOUT.WIDTH.PANEL_LG,                        // w-96 (384px)
-  MIN_WIDTH: PANEL_LAYOUT.LAYOUT_DIMENSIONS.SIDEBAR_MIN_WIDTH, // min-w-[384px]
-  MAX_WIDTH: PANEL_LAYOUT.LAYOUT_DIMENSIONS.SIDEBAR_MAX_WIDTH, // max-w-[384px]
-} as const;
-
-// ============================================================================
 // 📋 TYPE DEFINITIONS
 // ============================================================================
 
-/** ADR-176: Sidebar display variant */
-type SidebarVariant = 'inline' | 'drawer';
-
 /** Props interface for SidebarSection component */
 interface SidebarSectionProps {
-  /** ADR-176: 'inline' (default desktop) or 'drawer' (mobile Sheet) */
-  variant?: SidebarVariant;
   floatingRef: React.RefObject<FloatingPanelHandle>;
   currentScene: SceneModel | null;
   activeTool: string;
@@ -111,7 +113,6 @@ SidebarZoomLeaf.displayName = 'SidebarZoomLeaf';
  * The main content area scrolls while the status bar stays fixed at bottom.
  */
 export const SidebarSection = React.memo<SidebarSectionProps>(({
-  variant = 'inline',
   floatingRef,
   currentScene,
   activeTool,
@@ -121,25 +122,16 @@ export const SidebarSection = React.memo<SidebarSectionProps>(({
 }) => {
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
+  const { t } = useTranslation('dxf-viewer-shell');
   // ADR-532 Stage C — SidebarSection no longer subscribes to the selection set.
   // The Properties palette (BimPropertiesShell) self-subscribes via
   // usePrimarySelectedId(), so this orchestrator-level sidebar stops re-rendering
   // (and re-rendering FloatingPanelContainer) on every click.
 
-  // ADR-176: Drawer variant uses full width, inline uses fixed 384px
-  const isDrawer = variant === 'drawer';
-
   return (
     <aside
-      className={`
-        ${isDrawer ? 'w-full' : SIDEBAR_LAYOUT.WIDTH}
-        ${isDrawer ? '' : SIDEBAR_LAYOUT.MIN_WIDTH}
-        ${isDrawer ? '' : SIDEBAR_LAYOUT.MAX_WIDTH}
-        h-full
-        ${isDrawer ? '' : 'flex-shrink-0'}
-        ${PANEL_LAYOUT.POINTER_EVENTS.AUTO}
-      `}
-      aria-label="DXF Viewer Sidebar"
+      className={`w-full h-full ${PANEL_LAYOUT.POINTER_EVENTS.AUTO}`}
+      aria-label={t('workspaceDock.sidebarLabel')}
     >
       {/*
         Inner container with Flexbox column layout
