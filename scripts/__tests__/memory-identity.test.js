@@ -299,8 +299,9 @@ describe('όριο μεγέθους ευρετηρίου', () => {
   it('το verdict γίνεται 🔴 ακόμα κι όταν ΟΛΑ τα άλλα είναι τέλεια', () => {
     // Το memory είναι ΣΥΝΔΕΔΕΜΕΝΟ από το ευρετήριο: 100% προσβάσιμα, 0 typos.
     // Χωρίς αυτό, το 🔴 θα ερχόταν από τα απρόσιτα και το test δεν θα απεδείκνυε τίποτα.
-    writeMemory('reference_solo', { name: 'reference-solo' });
-    writeIndex(SOFT + 1, '# Index\n- [[reference_solo]]\n');
+    // Και είναι **hub**: αλλιώς κοκκινίζει και το σχήμα, και το «ΜΟΝΗ αιτία» πέφτει.
+    writeMemory('reference_solo_hub', { name: 'reference-solo-hub' });
+    writeIndex(SOFT + 1, '# Index\n- [[reference_solo_hub]]\n');
     const { code, out } = run(HEALTH, []);
     expect(out).toContain('Προσβάσιμα (BFS)       : 1  (100%)');
     expect(out).toContain('🔴 ΝΟΣΕΙ');
@@ -311,6 +312,57 @@ describe('όριο μεγέθους ευρετηρίου', () => {
 });
 
 // ── 7. presubmit gate (CHECK 3.31) ──────────────────────────────────────────
+
+/**
+ * ΣΧΗΜΑ ευρετηρίου — γιατί χωριστό gate από το ΜΕΓΕΘΟΣ:
+ * το μέγεθος χτυπά αφού γεμίσει (και σε στέλνει σε νέο γύρο συμπύκνωσης)· το σχήμα
+ * δεν το αφήνει να γεμίσει. Ένα ευρετήριο 1 KB με 40 μεμονωμένα memories περνά κάθε
+ * έλεγχο όγκου και είναι ήδη στον δρόμο προς το όριο — γι' αυτό ελέγχεται ΞΕΧΩΡΙΣΤΑ.
+ */
+describe('σχήμα ευρετηρίου — μόνο hubs', () => {
+  const index = (...links) =>
+    fs.writeFileSync(
+      path.join(dir, 'MEMORY.md'),
+      `# Index\n${links.map((l) => `- [x](${l}.md)\n`).join('')}`,
+      'utf8',
+    );
+
+  it('✅ ΠΡΑΣΙΝΟ: μόνο hubs → exit 0 + το δηλώνει ρητά', () => {
+    writeMemory('reference_alpha_hub', { name: 'reference-alpha-hub' });
+    writeMemory('feedback_beta_hub', { name: 'feedback-beta-hub' });
+    index('reference_alpha_hub', 'feedback_beta_hub');
+    const { code, out } = run(HEALTH, []);
+    expect(code).toBe(0);
+    expect(out).toContain('σχήμα: μόνο hubs');
+    expect(out).not.toContain('ΜΠΛΟΚ');
+  });
+
+  it('🔴 ΚΟΚΚΙΝΟ: ΕΝΑ μεμονωμένο memory στη ρίζα → exit 1 + το κατονομάζει', () => {
+    writeMemory('reference_alpha_hub', { name: 'reference-alpha-hub' });
+    writeMemory('reference_loose_fact', { name: 'reference-loose-fact' });
+    index('reference_alpha_hub', 'reference_loose_fact');
+    const { code, out } = run(HEALTH, []);
+    expect(code).toBe(1);
+    expect(out).toContain('reference_loose_fact');
+    expect(out).toMatch(/ΜΠΛΟΚ.*μεμονωμένα/);
+  });
+
+  it('🔴 μικρό ευρετήριο ΔΕΝ αθωώνει το σχήμα (το μέγεθος περνά, το σχήμα κόβει)', () => {
+    writeMemory('reference_loose_fact', { name: 'reference-loose-fact' });
+    index('reference_loose_fact');
+    const { code, out } = run(HEALTH, []);
+    expect(fs.statSync(path.join(dir, 'MEMORY.md')).size).toBeLessThan(store.INDEX_SOFT_LIMIT);
+    expect(code).toBe(1);
+    expect(out).not.toContain('ΥΠΕΡΒΑΣΗ'); // δεν είναι θέμα όγκου
+  });
+
+  it('οι δύο εξαιρέσεις (συμβόλαιο + WIP) δεν κοκκινίζουν — είναι by design', () => {
+    writeMemory('reference_memory_health_contract', { name: 'reference-memory-health-contract' });
+    writeMemory('project_active_handoff_state', { name: 'project-active-handoff-state' });
+    index('reference_memory_health_contract', 'project_active_handoff_state');
+    expect(run(HEALTH, []).code).toBe(0);
+  });
+});
 
 describe('--gate (presubmit, CHECK 3.31)', () => {
   const { INDEX_SOFT_LIMIT: SOFT, INDEX_HARD_LIMIT: HARD } = store;
@@ -338,6 +390,22 @@ describe('--gate (presubmit, CHECK 3.31)', () => {
     const { code, out } = run(HEALTH, ['--gate']);
     expect(code).toBe(1);
     expect(out).toContain('ΑΠΟΚΟΠΤΕΤΑΙ ΗΔΗ');
+  });
+
+  it('🔴 ΚΟΚΚΙΝΟ: μεμονωμένο memory στη ρίζα → exit 1 ΚΑΙ στο presubmit', () => {
+    // Το ευρετήριο είναι μικρό: αν το gate κοίταζε μόνο bytes, θα περνούσε.
+    fs.writeFileSync(path.join(dir, 'MEMORY.md'), '# Index\n- [x](reference_loose_fact.md)\n', 'utf8');
+    writeMemory('reference_loose_fact', { name: 'reference-loose-fact' });
+    const { code, out } = run(HEALTH, ['--gate']);
+    expect(code).toBe(1);
+    expect(out).toContain('🚫 ΣΧΗΜΑ ΕΥΡΕΤΗΡΙΟΥ');
+    expect(out).toContain('reference_loose_fact');
+  });
+
+  it('✅ το ίδιο ευρετήριο με hub αντί για μεμονωμένο → exit 0', () => {
+    fs.writeFileSync(path.join(dir, 'MEMORY.md'), '# Index\n- [x](reference_alpha_hub.md)\n', 'utf8');
+    writeMemory('reference_alpha_hub', { name: 'reference-alpha-hub' });
+    expect(run(HEALTH, ['--gate']).code).toBe(0);
   });
 
   /**
@@ -384,11 +452,11 @@ describe('--gate (presubmit, CHECK 3.31)', () => {
   /** Presubmit ΔΕΝ εκτελεί εντολές του χρήστη. Ούτε σε --full. */
   it('🔒 ΠΟΤΕ δεν εκτελεί `verify:` — ούτε ψευδές assertion δεν το κοκκινίζει', () => {
     fs.writeFileSync(
-      path.join(dir, 'reference_liar.md'),
-      ['---', 'name: reference-liar', 'description: fixture με επαρκές μήκος περιγραφής', 'verify: "node -e \\"process.exit(3)\\""', 'type: reference', '---', '', 'σώμα', ''].join('\n'),
+      path.join(dir, 'reference_liar_hub.md'),
+      ['---', 'name: reference-liar-hub', 'description: fixture με επαρκές μήκος περιγραφής', 'verify: "node -e \\"process.exit(3)\\""', 'type: reference', '---', '', 'σώμα', ''].join('\n'),
       'utf8',
     );
-    fs.writeFileSync(path.join(dir, 'MEMORY.md'), '# Index\n- [[reference_liar]]\n', 'utf8');
+    fs.writeFileSync(path.join(dir, 'MEMORY.md'), '# Index\n- [[reference_liar_hub]]\n', 'utf8');
     expect(run(HEALTH, ['--gate', '--full']).code).toBe(0);
     expect(run(HEALTH, ['--verify']).code).toBe(1); // το ίδιο fixture, με ρητό --verify
   });

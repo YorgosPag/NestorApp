@@ -110,6 +110,33 @@ function auditIdentity(files) {
   return { mismatched, missing, notSlug };
 }
 
+/**
+ * ΣΧΗΜΑ ΕΥΡΕΤΗΡΙΟΥ — ο λόγος που το ευρετήριο έπαψε να μεγαλώνει (28/07).
+ *
+ * Το όριο των 17.510 bytes δεν παραβιάζεται από τον ΟΓΚΟ της μνήμης (3.5 MB, κανείς
+ * δεν τα μετρά) αλλά από τη ΜΟΡΦΗ του ευρετηρίου: κάθε μεμονωμένο memory που παίρνει
+ * δική του γραμμή κάνει το κόστος O(memories). Με hubs γίνεται O(τομείς) — σταθερό.
+ * Μέτρηση 28/07: 158 δείκτες, από τους οποίους 132 μεμονωμένοι κατανάλωναν τον χώρο
+ * για να καλύψουν 132· τα 26 hubs κάλυπταν 300+ σε 26 γραμμές (~12x πυκνότερα).
+ *
+ * Γι' αυτό ο κανόνας είναι ΣΧΗΜΑ, όχι μέγεθος: ένα μέγεθος-gate χτυπά αφού γεμίσει
+ * και σε στέλνει σε άλλον έναν γύρο συμπύκνωσης· ένα σχήμα-gate δεν το αφήνει να
+ * γεμίσει ποτέ. Νέο memory → μπαίνει σε hub → το ευρετήριο ΔΕΝ αλλάζει.
+ *
+ * Εξαιρέσεις (by design, όχι χαλάρωση):
+ *  • το ίδιο το συμβόλαιο — ζει στην κεφαλίδα ως κανόνας, όχι ως γνώση τομέα
+ *  • ο δείκτης WIP — μοναδικός, εξ ορισμού εκτός θεματικής ταξινόμησης
+ */
+const INDEX_SHAPE_EXEMPT = new Set([
+  'reference_memory_health_contract',
+  'project_active_handoff_state',
+]);
+const isHub = (slug) => slug.endsWith('_hub');
+
+function auditIndexShape(rootSlugs) {
+  return [...rootSlugs].filter((s) => !isHub(s) && !INDEX_SHAPE_EXEMPT.has(s)).sort();
+}
+
 function classifySizes(files) {
   const bloated = [];
   const archive = [];
@@ -171,6 +198,7 @@ function analyze() {
     index: store.classifyIndexSize(indexBytes),
     total: files.size,
     indexed: rootSlugs.size,
+    indexNonHub: auditIndexShape(rootSlugs),
     reachable: depth.size,
     unreachable,
     deepOnly,
@@ -237,7 +265,7 @@ function verdict(r) {
   const dead = pct(r.unreachable.length, r.total);
   // Το ευρετήριο πάνω από το όριο υπερισχύει κάθε άλλης μετρικής: αν αποκοπεί,
   // το 100% προσβασιμότητας δεν σημαίνει τίποτα — κανείς δεν θα το διαβάσει.
-  if (r.index.blocking) return ['🔴', 'ΝΟΣΕΙ'];
+  if (r.index.blocking || r.indexNonHub.length > 0) return ['🔴', 'ΝΟΣΕΙ'];
   if (dead <= 10 && r.brokenKind.typos.length === 0) return ['✅', 'ΥΓΙΕΣ'];
   if (dead <= 25) return ['⚠️', 'ΟΡΙΑΚΟ'];
   return ['🔴', 'ΝΟΣΕΙ'];
@@ -259,6 +287,17 @@ function reportIndex(idx) {
   } else {
     console.log(`  ✅ ${of} — περιθώριο ${idx.margin} bytes.`);
   }
+}
+
+/** Το σχήμα είναι ο λόγος που το μέγεθος μένει σταθερό — γι' αυτό αναφέρεται δίπλα του. */
+function reportIndexShape(nonHub) {
+  if (nonHub.length === 0) {
+    console.log('  ✅ σχήμα: μόνο hubs — το ευρετήριο δεν μεγαλώνει με νέα memories.');
+    return;
+  }
+  console.log(`  🔴 σχήμα: ${nonHub.length} μεμονωμένα memories στη ρίζα — στέγασέ τα σε hub:`);
+  for (const slug of nonHub.slice(0, 12)) console.log(`       ${slug}`);
+  if (nonHub.length > 12) console.log(`       … +${nonHub.length - 12}`);
 }
 
 function reportRecall(r) {
@@ -312,6 +351,7 @@ function report(r) {
   console.log(`   ${r.memoryDir}\n`);
   reportRecall(r);
   reportIndex(r.index);
+  reportIndexShape(r.indexNonHub);
   reportSizeAndIdentity(r);
   reportBrokenLinks(r.brokenKind);
 
@@ -368,6 +408,19 @@ function runGate() {
     );
     console.error('   Θεραπεία: πρόζα WIP → memory ή HANDOFFS/· τομέας >6 γραμμών → hub.');
     console.error('   ΠΟΤΕ διαγραφή εγγραφής για να χωρέσει.\n');
+    process.exit(1);
+  }
+  // ΣΧΗΜΑ — φθηνό όσο και το statSync (ένα readFile + regex, χωρίς BFS) και είναι η
+  // ΑΙΤΙΑ που το μέγεθος ξεφεύγει. Ελέγχεται εδώ, όχι μόνο στην πλήρη αναφορά: ένας
+  // κανόνας που τρέχει μόνο όταν κάποιος θυμηθεί να τον τρέξει δεν είναι gate.
+  const rootSlugs = [...extractLinks(store.readIndex())].filter((l) => /^[a-z0-9_]+$/.test(l));
+  const nonHub = auditIndexShape(new Set(rootSlugs));
+  if (nonHub.length > 0) {
+    console.error(`\n🚫 ΣΧΗΜΑ ΕΥΡΕΤΗΡΙΟΥ: ${nonHub.length} μεμονωμένα memories στη ρίζα.`);
+    console.error('   Το ευρετήριο δείχνει ΜΟΝΟ σε hubs — αλλιώς μεγαλώνει O(memories).');
+    for (const slug of nonHub.slice(0, 12)) console.error(`     ${slug}`);
+    if (nonHub.length > 12) console.error(`     … +${nonHub.length - 12}`);
+    console.error('   Θεραπεία: στέγασέ τα σε hub (bullet στο hub) ΚΑΙ σβήσε τη γραμμή εδώ.\n');
     process.exit(1);
   }
   const warn = idx.level === 'warn' ? `  ⚠️ περιθώριο ${idx.margin} bytes` : '';
@@ -446,6 +499,9 @@ const dead = pct(result.unreachable.length, result.total);
 const failures = [];
 if (dead > 25) failures.push(`απρόσιτα ${dead}% > 25%`);
 if (result.brokenKind.typos.length > 0) failures.push(`${result.brokenKind.typos.length} typo δείκτες`);
+if (result.indexNonHub.length > 0) {
+  failures.push(`${result.indexNonHub.length} μεμονωμένα memories στο ευρετήριο (μόνο hubs)`);
+}
 if (result.index.blocking) {
   failures.push(
     `ευρετήριο ${result.index.bytes} bytes > όριο ${store.INDEX_SOFT_LIMIT}` +
