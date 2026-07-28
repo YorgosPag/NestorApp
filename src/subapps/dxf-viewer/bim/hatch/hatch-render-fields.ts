@@ -72,6 +72,10 @@ export const HATCH_RENDER_FIELDS = [
   // `buildHatchEntitySegments` τον προτιμά έναντι του catalog· χωρίς αυτόν τον κρίκο κάθε
   // εισαγόμενη γραμμοσκίαση αποδίδεται με **άλλο μοτίβο και άλλη πυκνότητα** από το AutoCAD.
   'inlinePattern',
+  // ADR-507 — contour pen (ArchiCAD). Χωρίς αυτόν τον κρίκο, κάθε εισαγόμενη γραμμοσκίαση θα
+  // ξανα-αποκτούσε το **διπλό** περίγραμμά της μόλις έφτανε στον renderer — δηλαδή ακριβώς το
+  // **έβδομο** περιστατικό της κλάσης που αυτό το module υπάρχει για να σταματήσει.
+  'contourPen',
 ] as const satisfies readonly (keyof HatchEntity)[];
 
 export type HatchRenderField = (typeof HATCH_RENDER_FIELDS)[number];

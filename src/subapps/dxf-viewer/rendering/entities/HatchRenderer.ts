@@ -250,12 +250,21 @@ export class HatchRenderer extends BaseEntityRenderer {
       );
     }
 
-    // Boundary outline.
-    this.ctx.strokeStyle = color;
-    this.ctx.lineWidth = 1;
-    this.ctx.setLineDash([]);
-    this.drawBoundaryPath(paths);
-    this.ctx.stroke();
+    // ADR-507 — CONTOUR PEN (ArchiCAD). Το περίγραμμα είναι **ιδιότητα της γραμμοσκίασης**, όχι
+    // σιωπηρή συμπεριφορά του renderer. Στο AutoCAD το HATCH ΔΕΝ έχει δικό του περίγραμμα: το
+    // όριο είναι ξεχωριστή οντότητα που ζωγραφίζεται μόνη της ⇒ ζωγραφίζοντας κι εμείς ένα
+    // δεύτερο, κάθε εισαγόμενο σχέδιο έβγαινε με **διπλή γραμμή**.
+    // `undefined` ⇒ ορατό (backward-compat για ήδη αποθηκευμένα)· ο import γράφει ρητά `false`.
+    const contour = hatch.contourPen;
+    if (contour?.visible !== false) {
+      this.ctx.strokeStyle = contour?.color ?? color;
+      this.ctx.lineWidth = contour?.lineweightMm !== undefined
+        ? resolveHatchLineWidthPx(contour.lineweightMm)
+        : 1;
+      this.ctx.setLineDash([]);
+      this.drawBoundaryPath(paths);
+      this.ctx.stroke();
+    }
 
     this.ctx.restore();
     this.finalizeRender(entity, options);

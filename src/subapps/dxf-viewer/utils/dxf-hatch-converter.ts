@@ -106,6 +106,12 @@ export function buildHatchSceneEntity(input: HatchAssemblyInput): AnySceneEntity
     ...(gradient && { gradient }),
     ...(seedPoints.length > 0 && { seedPoints }),
     ...(color && { color }),
+    // ADR-507 — CONTOUR PEN: **imported ⇒ ΧΩΡΙΣ δικό του περίγραμμα** (AutoCAD parity). Στο
+    // AutoCAD το όριο είναι ξεχωριστή οντότητα (POLYLINE/LINE) που έρχεται με το ίδιο DXF και
+    // ζωγραφίζεται μόνη της· αν ζωγραφίσουμε κι εμείς ένα δεύτερο ⇒ **διπλή γραμμή**.
+    // Γράφεται **ρητά** εδώ (στη γέννηση), δεν εξάγεται από τον renderer: ο χρήστης μπορεί να το
+    // ανάψει ανά γραμμοσκίαση, και οι user-created αφήνουν το πεδίο απόν ⇒ ορατό.
+    contourPen: { visible: false },
   };
 }
 

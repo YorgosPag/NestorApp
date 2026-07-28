@@ -834,6 +834,36 @@ export interface HatchEntity extends BaseEntity {
    * με τα `dxfFaces`/`dxfMlineSource`). Απών → γνήσιο image fill (render) ή solid-downgrade (export).
    */
   dxfImageExport?: DxfImageExportMarker;
+  /**
+   * ADR-507 — **CONTOUR PEN** (μοντέλο ArchiCAD «fill contour pen»).
+   *
+   * Το περίγραμμα της γραμμοσκίασης ως **ρητή ιδιότητα**, όχι ως σιωπηρή συμπεριφορά του
+   * renderer. **Γιατί:** στο AutoCAD το HATCH **δεν** έχει δικό του περίγραμμα — το όριο είναι
+   * ξεχωριστή οντότητα (POLYLINE/LINE) που ζωγραφίζεται μόνη της. Ο renderer μας ζωγράφιζε
+   * **πάντα** και το δικό του ⇒ **διπλή γραμμή** σε κάθε εισαγόμενο σχέδιο.
+   *
+   * **Προεπιλογές κατά την ΓΕΝΝΗΣΗ (γράφονται ρητά, δεν εξάγονται):**
+   *   - **imported** (`convertHatch` / xdata / quad-fill) → `{ visible: false }` = AutoCAD parity
+   *   - **user-created** (μέσα στον Νέστορα) → αφήνεται **απόν** ⇒ ορατό
+   *
+   * ⚠️ `undefined` ⇒ **ΟΡΑΤΟ**. Σκόπιμο: τα ήδη αποθηκευμένα έγγραφα (που δεν έχουν το πεδίο)
+   * κρατούν τη σημερινή τους εμφάνιση αντί να χάσουν σιωπηλά το όριό τους. Τα imported
+   * καθαρίζουν με **φρέσκια εισαγωγή** — ίδιο μονοπάτι με τη μετανάστευση του `delta` frame.
+   */
+  contourPen?: HatchContourPen;
+}
+
+/**
+ * ADR-507 — ρυθμίσεις περιγράμματος γραμμοσκίασης (contour pen, ιδίωμα ArchiCAD).
+ * Απόντα `color`/`lineweightMm` ⇒ κληρονομούν το χρώμα/πάχος της ίδιας της γραμμοσκίασης.
+ */
+export interface HatchContourPen {
+  /** Ζωγραφίζεται το περίγραμμα; (`false` = AutoCAD parity για imported) */
+  visible: boolean;
+  /** Χρώμα περιγράμματος· απόν ⇒ το `fillColor`/`color` της γραμμοσκίασης. */
+  color?: string;
+  /** Πάχος σε mm (AutoCAD LWT, zoom-independent)· απόν ⇒ 1px hairline. */
+  lineweightMm?: number;
 }
 
 /**

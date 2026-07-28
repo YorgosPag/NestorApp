@@ -47,6 +47,7 @@ const FULL_HATCH = {
     name: 'ANSI31', labelKey: 'k', category: 'special',
     lines: [{ angle: 45, origin: [0, 0], delta: [0, 250], dashes: [] }],
   },
+  contourPen: { visible: false, color: '#abcdef', lineweightMm: 0.5 },
 } as unknown as HatchEntity;
 
 describe('HATCH_RENDER_FIELDS — το συμβόλαιο', () => {

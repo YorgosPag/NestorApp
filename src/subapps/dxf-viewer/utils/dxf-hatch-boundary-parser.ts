@@ -242,6 +242,15 @@ export function parseHatchBoundaryPaths(pairs: DxfPairs, path91Index: number): P
       ? parsePolylinePath(pairs, k + 1, pathEnd)
       : parseEdgePath(pairs, k + 1, pathEnd, count);
 
+    // Το συμβόλαιο του `boundaryPaths` σε όλο το repo είναι **IMPLICIT CLOSING**: ένα τρίγωνο
+    // είναι 3 κορυφές, όχι 4. Οι ακμές δίνουν ρητά το τελικό σημείο (`11/21`), οπότε κόβουμε
+    // την επανάληψη — αλλιώς κάθε καταναλωτής θα έβλεπε μια μηδενικού μήκους πλευρά.
+    if (verts.length >= 2) {
+      const first = verts[0];
+      const last = verts[verts.length - 1];
+      if (first.x === last.x && first.y === last.y) verts.pop();
+    }
+
     if (verts.length >= 3) boundaryPaths.push(verts);
     k = pathEnd;
   }

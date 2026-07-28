@@ -36,7 +36,7 @@ import { firestoreQueryService } from '@/services/firestore';
 import { buildBimScopeConstraints, bimScopeWriteFields } from '../persistence/bim-floor-scope';
 import { projectVerticesTo2D } from '../geometry/shared/polygon-utils';
 import type { Point2D } from '../../rendering/types/Types';
-import type { HatchEntity, HatchImageFill } from '../../types/entities';
+import type { HatchEntity, HatchImageFill, HatchContourPen } from '../../types/entities';
 import type { HatchGradient } from './hatch-gradient';
 import type { HatchPattern } from '../../data/hatch-pattern-catalog';
 
@@ -99,6 +99,13 @@ export interface HatchDocData {
    * το μοτίβο της στο reload γιατί το `patternName` δεν υπάρχει στον catalog.
    */
   readonly inlinePattern?: HatchPattern;
+  /**
+   * ADR-507 — contour pen (ArchiCAD «fill contour pen»): ζωγραφίζεται δικό μας περίγραμμα;
+   * Flat map → Firestore-legal αυτούσιο. Οι **imported** το φέρουν `{ visible:false }` (στο
+   * AutoCAD το όριο είναι ξεχωριστή οντότητα ⇒ δικό μας περίγραμμα = **διπλή γραμμή**)· οι
+   * user-created το αφήνουν **απόν** ⇒ ορατό.
+   */
+  readonly contourPen?: HatchContourPen;
 }
 
 export interface HatchDoc {
@@ -158,6 +165,10 @@ const HATCH_SCALAR_KEYS: readonly (keyof HatchDocData)[] = [
   // στο reload. Firestore-legal: `lines` = array-of-maps (τα nested `origin`/`delta`/
   // `dashes` arrays ζουν κάτω από map key, ποτέ array-μέσα-σε-array).
   'inlinePattern',
+  // ADR-507 — contour pen (ArchiCAD): flat map `{ visible, color?, lineweightMm? }` → ίδιος
+  // μηχανισμός με το `gradient`. **Χωρίς αυτό** μια εισαγόμενη γραμμοσκίαση ξαναποκτούσε το
+  // διπλό περίγραμμά της στο πρώτο reload (το `visible:false` του import δεν επιβίωνε).
+  'contourPen',
 ];
 
 /** Runtime hatch shape consumed on the write side (boundaryPaths = Point2D[][]). */

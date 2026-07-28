@@ -670,6 +670,8 @@ export interface DxfHatch extends DxfEntity {
    * ⚠️ Τα πεδία εδώ πρέπει να καλύπτουν το `HATCH_RENDER_FIELDS` — ο contract test το επιβάλλει.
    */
   inlinePattern?: HatchEntity['inlinePattern'];
+  /** ADR-507 — contour pen· απόν ⇒ ορατό περίγραμμα (βλ. `HatchEntity.contourPen`). */
+  contourPen?: HatchEntity['contourPen'];
 }
 
 /** ADR-359 Phase 11 — XLine wrapper for grip computation pipeline. */
