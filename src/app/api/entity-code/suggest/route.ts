@@ -12,7 +12,7 @@
  */
 
 import { NextRequest } from 'next/server';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { requireAdminFirestore } from '@/lib/api/admin-db';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { withAuth } from '@/lib/auth';
@@ -51,10 +51,7 @@ interface SuggestResponse {
 export const GET = withStandardRateLimit(
   withAuth<ApiSuccessResponse<SuggestResponse>>(
     async (request: NextRequest, _ctx: AuthContext, _cache: PermissionCache) => {
-      const adminDb = getAdminFirestore();
-      if (!adminDb) {
-        throw new ApiError(503, 'Database unavailable');
-      }
+      const adminDb = requireAdminFirestore();
 
       const { searchParams } = new URL(request.url);
       const entityType = searchParams.get('entityType') as 'property' | 'parking' | 'storage';
