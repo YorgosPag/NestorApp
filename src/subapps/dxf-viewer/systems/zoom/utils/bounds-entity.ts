@@ -16,7 +16,7 @@ import type { Point2D } from '../../../rendering/types/Types';
 import { textBoxAABB } from '../../../bim/text/text-box';
 import { projectSceneTextToDxf } from '../../../bim/text/project-scene-text';
 import { DEFAULT_BOUNDS } from '../../../config/geometry-constants';
-import { createInfinityBounds, isInfinityBounds, expandInfinityBounds } from '../../../config/geometry-constants';
+import { createInfinityBounds, isInfinityBounds, expandInfinityBounds, isFinitePoint } from '../../../config/geometry-constants';
 import { isValidPoint } from '../../../rendering/entities/shared/entity-validation-utils';
 import type { Bounds } from './bounds';
 // ADR-640 — a BLOCK instance (preserved DXF INSERT) must contribute its placed members' real
@@ -317,20 +317,31 @@ function accumulateEntityBounds(
   if (entities.length === 0) return null;
 
   const bounds = createInfinityBounds();
+  let unmeasurable = 0;
 
   for (const entity of entities) {
     try {
       const entityBounds = getEntityBounds(entity);
       if (entityBounds) {
-        bounds.minX = Math.min(bounds.minX, entityBounds.min.x);
-        bounds.minY = Math.min(bounds.minY, entityBounds.min.y);
-        bounds.maxX = Math.max(bounds.maxX, entityBounds.max.x);
-        bounds.maxY = Math.max(bounds.maxY, entityBounds.max.y);
+        // 🔴 ADR-635 Φ C.23 — ένα κουτί που ΔΕΝ μετριέται συνεισφέρει ΤΙΠΟΤΑ, δεν μολύνει:
+        // `Math.min(x, NaN) === NaN` ⇒ 1 σπασμένη οντότητα → 2.903 (πλήρες περιστατικό:
+        // `utils/dxf-nonfinite-entity-filter.ts`). Πιάνει και NaN παραγόμενο από το ίδιο το
+        // `getEntityBounds`, που το φίλτρο εισαγωγής (πεδία οντότητας) δεν μπορεί να δει.
+        if (isFinitePoint(entityBounds.min) && isFinitePoint(entityBounds.max)) {
+          bounds.minX = Math.min(bounds.minX, entityBounds.min.x);
+          bounds.minY = Math.min(bounds.minY, entityBounds.min.y);
+          bounds.maxX = Math.max(bounds.maxX, entityBounds.max.x);
+          bounds.maxY = Math.max(bounds.maxY, entityBounds.max.y);
+        } else {
+          unmeasurable++;
+        }
       }
     } catch (error) {
       console.warn('Error processing entity bounds:', entity, error);
     }
   }
+
+  if (unmeasurable > 0) console.warn(`Bounds: ignored ${unmeasurable} entities with non-finite extents`);
 
   if (isInfinityBounds(bounds)) {
     console.warn('Invalid bounds calculated, using defaults');
@@ -373,6 +384,15 @@ export function normalizeEntitiesToOrigin(entities: BoundsEntity[]): NormalizedS
 
   // Captured BEFORE the mutation — this is the whole point of the function.
   const sourceOrigin: Point2D = { x: raw.minX, y: raw.minY };
+
+  // 🔴 ADR-635 Φ C.23 — ΠΟΤΕ μετατόπιση κατά μη-πεπερασμένο offset: μεταφράζει **κάθε**
+  // οντότητα σε NaN και πνίγει τον ένα ένοχο σε χιλιάδες θύματα. Δεύτερο, ανεξάρτητο φρένο
+  // από το `isFinitePoint` παραπάνω — εδώ φυλάει και τους ΑΛΛΟΥΣ καλούντες της συνάρτησης.
+  if (!isFinitePoint({ x: raw.minX, y: raw.minY })) {
+    console.warn('normalizeEntitiesToOrigin: non-finite bounds origin — skipping translation', sourceOrigin);
+    return { bounds: { min: { x: raw.minX, y: raw.minY }, max: { x: raw.maxX, y: raw.maxY } }, sourceOrigin };
+  }
+
   normalizeEntityPositions(entities as MutableBoundsEntity[], -raw.minX, -raw.minY);
 
   return {

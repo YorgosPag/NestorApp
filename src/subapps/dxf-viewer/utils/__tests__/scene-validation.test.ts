@@ -11,6 +11,7 @@
 import {
   validateSceneModel,
   describeSceneValidationFailure,
+  findNonFiniteCoordinate,
   type SceneValidationFailure,
 } from '../scene-validation';
 import type { SceneModel } from '../../types/scene';
@@ -118,6 +119,22 @@ describe('validateSceneModel — #3 οντότητα χωρίς ταυτότητ
     if (failure.code !== 'unattributed-entity') throw new Error('λάθος κλάδος');
     expect(failure.affectedByType).toEqual({ UNKNOWN: 1 });
     expect(failure.first.missing).toEqual(['type']);
+  });
+});
+
+describe('findNonFiniteCoordinate — το φίλτρο της ΕΙΣΑΓΩΓΗΣ (αυστηρότερο του validator)', () => {
+  it('βρίσκει το NaN με τη διαδρομή του μέσα σε φωλιασμένη δομή', () => {
+    expect(findNonFiniteCoordinate({ vertices: [{ x: 1, y: 2 }, { x: NaN, y: 4 }] }))
+      .toEqual({ path: 'vertices[1].x', value: NaN });
+  });
+
+  it('απορρίπτει ΚΑΙ το ±Infinity — το `Infinity − Infinity` ξαναγεννά NaN στα bounds', () => {
+    expect(findNonFiniteCoordinate({ position: { x: Infinity, y: 0 } })).toMatchObject({ path: 'position.x' });
+    expect(findNonFiniteCoordinate({ radius: -Infinity })).toMatchObject({ path: 'radius' });
+  });
+
+  it('υγιής οντότητα → null (καμία ποινή στη γρήγορη διαδρομή)', () => {
+    expect(findNonFiniteCoordinate(ok({ position: { x: 0, y: 0 }, radius: 5 }))).toBeNull();
   });
 });
 

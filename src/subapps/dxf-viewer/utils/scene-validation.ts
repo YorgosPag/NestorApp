@@ -113,10 +113,29 @@ function findNonFiniteNumber(value: unknown, path: string, depth: number): { pat
   return null;
 }
 
+/** Ένα εύρημα μη-πεπερασμένης τιμής: πού βρίσκεται μέσα στην οντότητα και τι είναι. */
+export interface NonFiniteHit {
+  readonly path: string;
+  readonly value: number;
+}
+
+/**
+ * Η πρώτη μη-πεπερασμένη (NaN **ή** ±Infinity) αριθμητική τιμή μιας οντότητας, ή `null`.
+ *
+ * 🔴 **Γιατί το χρειάζεται η ΕΙΣΑΓΩΓΗ και όχι μόνο η επικύρωση** (μετρημένο 2026-07-29):
+ * το `Math.min(x, NaN)` είναι `NaN`, οπότε **μία** οντότητα με NaN μολύνει το bbox ολόκληρης
+ * της σκηνής· και μετά το `normalizeEntitiesToOrigin` μεταφράζει **κάθε** οντότητα κατά αυτό το
+ * NaN ⇒ **1 σπασμένη οντότητα → 2.903 σπασμένες**. Άρα ο έλεγχος πρέπει να γίνει **πριν** από
+ * τον υπολογισμό των bounds, όχι μετά.
+ */
+export function findNonFiniteCoordinate(entity: unknown): NonFiniteHit | null {
+  return findNonFiniteNumber(entity, '', 0);
+}
+
 function findFirstNonFiniteEntity(entities: readonly Entity[]): NonFiniteCoordinate | undefined {
   for (let index = 0; index < entities.length; index++) {
     const entity = entities[index];
-    const hit = findNonFiniteNumber(entity, '', 0);
+    const hit = findNonFiniteCoordinate(entity);
     if (hit) {
       return { index, id: entity.id, type: entity.type, path: hit.path, value: hit.value };
     }

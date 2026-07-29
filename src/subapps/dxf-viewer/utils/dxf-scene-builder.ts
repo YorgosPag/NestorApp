@@ -34,6 +34,8 @@ import {
   recordError,
   type ImportDiagnostics,
 } from './dxf-import-diagnostics';
+// ADR-635 Φ C.23 — μια οντότητα με NaN/±Infinity φεύγει & αναφέρεται· δεν ρίχνει το αρχείο.
+import { dropNonFiniteEntities } from './dxf-nonfinite-entity-filter';
 import { DEFAULT_LAYER_COLOR, getLayerColor } from '../config/color-config';
 import { getAciColor } from '../settings/standards/aci';
 // ADR-130: Centralized Default Layer Name
@@ -347,6 +349,13 @@ export class DxfSceneBuilder {
       sampleLayers
     });
 
+    // ADR-635 Φ C.23 — ΜΙΑ σπασμένη οντότητα ΔΕΝ ρίχνει την εισαγωγή: φεύγει και αναφέρεται.
+    // Τρέχει ΠΡΙΝ από τα bounds — μετά η μόλυνση από NaN είναι καθολική (1 → 2.903).
+    const { kept: finiteEntities, dropped: nonFiniteCount } = dropNonFiniteEntities(entities, diagnostics);
+    if (nonFiniteCount > 0) {
+      console.debug(`🧯 Dropped ${nonFiniteCount} entities with non-finite geometry`);
+    }
+
     // ADR-462 Round 21 — drop far-flung off-drawing junk (legacy ASHADE blocks / orphan
     // ATTRIBs parked at the origin while the drawing is geo-referenced far away). Left in,
     // they anchor the scene bbox from 0 to the geo magnitude → the viewport frames a giant
@@ -354,7 +363,7 @@ export class DxfSceneBuilder {
     // exclude them from $EXTMIN/$EXTMAX + Zoom-Extents; we do the same. No-op when extents
     // are absent or nothing lies entirely outside them (normal drawings untouched).
     const { kept: drawingEntities, dropped: offDrawingCount } = dropOutOfExtentsEntities(
-      entities, header.extmin, header.extmax,
+      finiteEntities, header.extmin, header.extmax,
     );
     if (offDrawingCount > 0) {
       console.debug(`🧹 Dropped ${offDrawingCount} off-drawing entities (outside $EXTMIN/$EXTMAX)`);
