@@ -15,17 +15,26 @@ import type { DxfText, DxfTextStyle } from '../../../canvas-v2/dxf-canvas/dxf-ty
 import { resolveTextBox, resolveTextEmBox, textBoxToPosition, isTextBoxFrameConstrained } from '../text-box';
 import { applyTextGripDrag } from '../text-grips';
 import { splitTextLines, textLineCount, resolveLineSpacingRatio, resolveMultilineExtents } from '../text-lines';
-import { installStubFont } from '../../../text-engine/fonts/__tests__/_stub-font';
+import { installStubFont, stubAdvanceWorld, stubEmSize } from '../../../text-engine/fonts/__tests__/_stub-font';
 import { CHARACTER_METRICS } from '../../../config/text-rendering-config';
 
 /** Το μονό διάστιχο του AutoCAD, από το SSoT. */
 const LS = CHARACTER_METRICS.LINE_HEIGHT_RATIO;
-/** Μισό ύψος κουτιού 2 γραμμών σε ύψος 10: (1 + LS)·10 / 2. */
-const HALF_2LINES = (1 + LS) * 10 / 2;
 
 let __cleanup: () => void;
 beforeAll(() => { __cleanup = installStubFont(0.6, 'arial'); });
 afterAll(() => __cleanup());
+
+// ADR-635 Φ C.22 — ΔΥΟ ΔΙΑΦΟΡΕΤΙΚΕΣ ΜΟΝΑΔΕΣ στο ίδιο κουτί, μη τις μπερδέψεις:
+//   - το ΣΩΜΑ μιας γραμμής είναι ένα **em** (`stubEmSize(h)`, default stub: ink ≡ μετρικά),
+//     γιατί ο κανόνας ύψους→em διαλέγει το em· ενώ
+//   - το ΔΙΑΣΤΙΧΟ είναι πολλαπλάσιο του **ύψους κειμένου** (LS·h) — έτσι το ορίζει ο DXF
+//     κωδ. 44 του AutoCAD, και έτσι το εφαρμόζει ο renderer (σύμβαση ισοτιμίας ADR-557).
+// Άρα: ύψος κουτιού N γραμμών = em + (N−1)·LS·h. Γραμμένο ως literal, θα πάγωνε ΚΑΙ τις δύο.
+/** Μισό ύψος κουτιού `n` γραμμών σε ύψος κειμένου `h` — καλείται ΜΕΣΑ στο `it()`. */
+const halfLines = (n: number, h = 10) => (stubEmSize(h) + (n - 1) * LS * h) / 2;
+/** Advance του «CDE» (3 χαρακτήρες, η φαρδύτερη γραμμή) σε ύψος κειμένου `h`. */
+const advCDE = (h = 10) => stubAdvanceWorld(3, h);
 
 function text(extra: Partial<DxfText> = {}): DxfText {
   return { id: 't1', type: 'text', visible: true, position: { x: 0, y: 0 }, text: 'CDE', height: 10, ...extra };
@@ -79,15 +88,15 @@ describe('VISUAL box — 2 lines, height 10, TL', () => {
 
   it('width = widest line, height = stacked block, top pinned at position', () => {
     const f = resolveTextBox(t);
-    expect(f.halfWidth).toBeCloseTo(9, 6);   // widest line 'CDE' = 3 × 0.6 × 10 = 18
-    expect(f.halfLength).toBeCloseTo(HALF_2LINES, 6); // (1 + LS)·10 / 2
+    expect(f.halfWidth).toBeCloseTo(advCDE() / 2, 6);   // widest line 'CDE'
+    expect(f.halfLength).toBeCloseTo(halfLines(2), 6); // em + 1 × διάστιχο
     expect(near(f.center.y + f.halfLength, 0)).toBe(true);   // block top = position.y (TL)
-    expect(near(f.center.y - f.halfLength, -2 * HALF_2LINES)).toBe(true); // block bottom
+    expect(near(f.center.y - f.halfLength, -2 * halfLines(2))).toBe(true); // block bottom
   });
 
   it('is taller than the single-line box (parity: grips/hover/hit follow)', () => {
     const single = resolveTextBox(text({ text: 'CDE', textStyle: style('TL') }));
-    expect(single.halfLength).toBeCloseTo(5, 6);
+    expect(single.halfLength).toBeCloseTo(halfLines(1), 6);
     expect(resolveTextBox(t).halfLength).toBeGreaterThan(single.halfLength);
   });
 });
@@ -96,14 +105,16 @@ describe('VISUAL box — M attachment stays centred on position', () => {
   it('2 lines centre symmetrically about position.y', () => {
     const f = resolveTextBox(text({ text: 'AB\nCDE', textStyle: style('MC') }));
     expect(near(f.center.y, 0)).toBe(true);   // centred anchor unchanged by line count
-    expect(f.halfLength).toBeCloseTo(HALF_2LINES, 6); // (1 + LS)·10 / 2
+    expect(f.halfLength).toBeCloseTo(halfLines(2), 6);
   });
 });
 
 describe('NOMINAL em box (3D plane + culling) is multi-line aware', () => {
   it('em box height grows with the line count', () => {
     const em = resolveTextEmBox(text({ text: 'AB\nCDE', textStyle: style('TL') }));
-    expect(em.halfLength).toBeCloseTo(HALF_2LINES, 6); // matches the visual box (stub: ink == em)
+    // ⚠️ Το ΟΝΟΜΑΣΤΙΚΟ κουτί κρατά το σώμα γραμμής στο **ύψος κειμένου** (δεν ακολουθεί τον
+    // κανόνα ύψους→em — σχεδίαση, βλ. `text-box.ts`), οπότε είναι ΚΟΝΤΥΤΕΡΟ από το οπτικό.
+    expect(em.halfLength).toBeCloseTo((10 + LS * 10) / 2, 6);
     expect(near(em.center.y + em.halfLength, 0)).toBe(true);
   });
 });
@@ -113,14 +124,14 @@ describe('MTEXT box HUGS the glyphs when the frame is wider than the text (Giorg
     // Reported case: MTEXT with a 100-unit frame but a 18-unit line → box = content, not frame.
     const t = text({ text: 'CDE', width: 100, textStyle: style('TL') });
     expect(isTextBoxFrameConstrained(t)).toBe(false);
-    expect(resolveTextBox(t).halfWidth).toBeCloseTo(9, 6); // content 'CDE' 18 / 2, NOT 50
+    expect(resolveTextBox(t).halfWidth).toBeCloseTo(advCDE() / 2, 6); // content 'CDE', NOT 50
   });
 
   it('multi-line wide-frame MTEXT: width = widest line, height = stacked block', () => {
     const t = text({ text: 'AB\nCDE', width: 100, textStyle: style('TL') });
     const f = resolveTextBox(t);
-    expect(f.halfWidth).toBeCloseTo(9, 6);   // widest line 'CDE'
-    expect(f.halfLength).toBeCloseTo(HALF_2LINES, 6); // stack unaffected by the frame
+    expect(f.halfWidth).toBeCloseTo(advCDE() / 2, 6);   // widest line 'CDE'
+    expect(f.halfLength).toBeCloseTo(halfLines(2), 6); // stack unaffected by the frame
   });
 
   it('a NARROW frame still wins (text wraps to the column)', () => {
@@ -137,7 +148,7 @@ describe('wide-frame MTEXT width-resize holds (no snap-back to content)', () => 
     expect(patch.width).toBeUndefined();          // NOT a frame resize
     expect(typeof patch.widthFactor).toBe('number'); // stretches like TEXT
     const t1 = { ...t0, ...patch } as DxfText;
-    expect(resolveTextBox(t1).halfWidth).toBeCloseTo(15, 6); // 9 + 12/2 held — no jump on release
+    expect(resolveTextBox(t1).halfWidth).toBeCloseTo(advCDE() / 2 + 6, 6); // +12/2 held — no jump
   });
 });
 

@@ -73,11 +73,12 @@ describe('E-edge resize round-trips with no jump (visual width → widthFactor �
     const f0 = resolveTextBox(t0);
     const westEdge = f0.center.x - f0.halfWidth; // must stay pinned
 
-    // Grow the east edge by +4 world → visual width 9.6 → 13.6 (halfWidth 4.8 → 6.8).
+    // Grow the east edge by +4 world → visual width + 4.
+    const grownHalf = (advDD() * INK_FRAC + 4) / 2;
     const patch = applyTextGripDrag('text-edge-e', { entity: t0, delta: { x: 4, y: 0 } });
     const t1 = { ...t0, ...patch } as DxfText;
     const f1 = resolveTextBox(t1);
-    expect(f1.halfWidth).toBeCloseTo(6.8, 6);                        // dragged width held — no jump
+    expect(f1.halfWidth).toBeCloseTo(grownHalf, 6);                  // dragged width held — no jump
     expect(near(f1.center.x - f1.halfWidth, westEdge)).toBe(true);   // west edge pinned
     expect(patch.width).toBeUndefined();                            // TEXT patches widthFactor
   });
