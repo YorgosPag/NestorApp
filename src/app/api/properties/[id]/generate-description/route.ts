@@ -18,7 +18,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { requireAdminFirestore } from '@/lib/api/admin-db';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
@@ -79,10 +79,7 @@ export async function POST(
 
         const locale = body.locale ?? 'el';
 
-        const adminDb = getAdminFirestore();
-        if (!adminDb) {
-          throw new ApiError(503, 'Database connection not available');
-        }
+        const adminDb = requireAdminFirestore();
 
         const propertyDoc = await adminDb
           .collection(COLLECTIONS.PROPERTIES)

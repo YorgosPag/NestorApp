@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { requireAdminFirestore } from '@/lib/api/admin-db';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
@@ -29,11 +29,7 @@ export const DELETE = withStandardRateLimit(
       ctx: AuthContext,
       _cache: PermissionCache,
     ) => {
-      const adminDb = getAdminFirestore();
-      if (!adminDb) {
-        logger.error('Firebase Admin not initialized');
-        throw new ApiError(503, 'Database unavailable');
-      }
+      const adminDb = requireAdminFirestore();
 
       // Extract buildingId from URL path: /api/buildings/[buildingId]
       const url = new URL(request.url);

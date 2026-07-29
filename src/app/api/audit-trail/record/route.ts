@@ -18,7 +18,7 @@ import { NextRequest } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { requireAdminFirestore } from '@/lib/api/admin-db';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { EntityAuditService } from '@/services/entity-audit.service';
@@ -66,8 +66,7 @@ interface RecordAuditResult {
 export const POST = withStandardRateLimit(
   withAuth<ApiSuccessResponse<RecordAuditResult>>(
     async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-      const db = getAdminFirestore();
-      if (!db) throw new ApiError(503, 'Database unavailable');
+      const db = requireAdminFirestore();
 
       // Parse and validate payload
       const body: RecordAuditPayload = await request.json();

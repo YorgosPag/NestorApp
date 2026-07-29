@@ -14,7 +14,7 @@ import { NextRequest } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { requireAdminFirestore } from '@/lib/api/admin-db';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
@@ -49,8 +49,7 @@ const VALID_ACTIONS: ReadonlySet<string> = new Set<AuditAction>([
 export const POST = withStandardRateLimit(
   withAuth<ApiSuccessResponse<{ recorded: boolean }>>(
     async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-      const db = getAdminFirestore();
-      if (!db) throw new ApiError(503, 'Database unavailable');
+      const db = requireAdminFirestore();
 
       const id = extractNestedIdFromUrl(request.url, 'properties');
       if (!id) throw new ApiError(400, 'Property ID is required');

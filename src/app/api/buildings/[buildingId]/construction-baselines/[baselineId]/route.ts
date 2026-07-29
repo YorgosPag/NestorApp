@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { requireAdminFirestore } from '@/lib/api/admin-db';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { withAuth, requireBuildingInTenant } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
@@ -32,8 +32,7 @@ export async function GET(
 
   const handler = withStandardRateLimit(withAuth<BaselineDetailResponse>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-      const adminDb = getAdminFirestore();
-      if (!adminDb) throw new ApiError(503, 'Database unavailable');
+      const adminDb = requireAdminFirestore();
 
       await requireBuildingInTenant({ ctx, buildingId, path: `/api/buildings/${buildingId}/construction-baselines/${baselineId}` });
 

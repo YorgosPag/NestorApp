@@ -12,7 +12,8 @@
  * reads, Storage uploads, share-record lifecycle) — no business logic.
  */
 
-import { getAdminBucket, getAdminFirestore } from '@/lib/firebaseAdmin';
+import { getAdminBucket } from '@/lib/firebaseAdmin';
+import { requireAdminFirestore } from '@/lib/api/admin-db';
 import { ApiError } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { ENTITY_TYPES, FILE_CATEGORIES } from '@/config/domain-constants';
@@ -56,8 +57,7 @@ export async function loadShowcaseSources(
   propertyId: string,
   companyId: string,
 ): Promise<ShowcaseSources> {
-  const adminDb = getAdminFirestore();
-  if (!adminDb) throw new ApiError(503, 'Database connection not available');
+  const adminDb = requireAdminFirestore();
 
   const propertyDoc = await adminDb.collection(COLLECTIONS.PROPERTIES).doc(propertyId).get();
   if (!propertyDoc.exists) throw new ApiError(404, 'Property not found');
@@ -375,7 +375,7 @@ export async function uploadPdfToStorage(
  * Idempotent: deleting a non-existent doc is a no-op in Admin SDK.
  */
 export async function deleteShowcaseShareRecord(shareId: string): Promise<void> {
-  const adminDb = getAdminFirestore();
+  const adminDb = requireAdminFirestore();
   if (!adminDb) return;
   await adminDb.collection(COLLECTIONS.FILE_SHARES).doc(shareId).delete();
 }
@@ -396,8 +396,7 @@ export async function regeneratePdfForShare(params: {
   pdfStoragePath: string;
   regeneratedAt: Date;
 }> {
-  const adminDb = getAdminFirestore();
-  if (!adminDb) throw new ApiError(503, 'Database connection not available');
+  const adminDb = requireAdminFirestore();
 
   const shareRef = adminDb.collection(COLLECTIONS.FILE_SHARES).doc(params.shareId);
   const shareSnap = await shareRef.get();
@@ -481,8 +480,7 @@ export async function deactivateShowcaseShares(
   propertyId: string,
   companyId: string,
 ): Promise<string[]> {
-  const adminDb = getAdminFirestore();
-  if (!adminDb) throw new ApiError(503, 'Database connection not available');
+  const adminDb = requireAdminFirestore();
   const snap = await adminDb
     .collection(COLLECTIONS.FILE_SHARES)
     .where('companyId', '==', companyId)

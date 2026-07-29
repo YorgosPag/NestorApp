@@ -17,7 +17,7 @@ import { z } from 'zod';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { requireAdminFirestore } from '@/lib/api/admin-db';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { ENTERPRISE_ID_PREFIXES } from '@/services/enterprise-id.service';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
@@ -106,8 +106,7 @@ async function fetchCollection(
 export const POST = withStandardRateLimit(
   withAuth<ApiSuccessResponse<BatchResolveResponse>>(
     async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-      const adminDb = getAdminFirestore();
-      if (!adminDb) throw new ApiError(503, 'Database unavailable');
+      const adminDb = requireAdminFirestore();
 
       const parsed = await safeJsonBody(BatchResolveSchema, request);
       if (parsed.error) throw new ApiError(400, 'Validation failed');

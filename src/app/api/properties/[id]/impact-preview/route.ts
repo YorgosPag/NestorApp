@@ -3,7 +3,7 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { apiSuccess, ApiError, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { requireAdminFirestore } from '@/lib/api/admin-db';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { extractNestedIdFromUrl } from '@/lib/api/route-helpers';
 import { requirePropertyInTenantScope } from '@/lib/auth/tenant-isolation';
@@ -15,10 +15,7 @@ import type { PropertyMutationImpactPreview } from '@/types/property-mutation-im
 export const POST = withStandardRateLimit(
   withAuth<ApiSuccessResponse<PropertyMutationImpactPreview>>(
     async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-      const adminDb = getAdminFirestore();
-      if (!adminDb) {
-        throw new ApiError(503, 'Database unavailable');
-      }
+      const adminDb = requireAdminFirestore();
 
       const propertyId = extractNestedIdFromUrl(request.url, 'properties');
       if (!propertyId) {

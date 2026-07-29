@@ -21,7 +21,7 @@
 
 import { z } from 'zod';
 import { NextRequest } from 'next/server';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { requireAdminFirestore } from '@/lib/api/admin-db';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
@@ -76,11 +76,7 @@ export async function POST(
           throw new ApiError(400, 'Building ID is required');
         }
 
-        const adminDb = getAdminFirestore();
-        if (!adminDb) {
-          logger.error('Firebase Admin not initialized');
-          throw new ApiError(503, 'Database unavailable');
-        }
+        const adminDb = requireAdminFirestore();
 
         const parsed = safeParseBody(LinkProjectBodySchema, await req.json());
         if (parsed.error) {

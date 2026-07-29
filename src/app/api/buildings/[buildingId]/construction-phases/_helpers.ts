@@ -6,7 +6,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { requireAdminFirestore } from '@/lib/api/admin-db';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { requireBuildingInTenant, logAuditEvent } from '@/lib/auth';
@@ -61,8 +61,7 @@ export async function handleCreate(
   buildingId: string,
   ctx: AuthContext,
 ): Promise<NextResponse> {
-  const adminDb = getAdminFirestore();
-  if (!adminDb) throw new ApiError(503, 'Database unavailable');
+  const adminDb = requireAdminFirestore();
 
   await requireBuildingInTenant({ ctx, buildingId, path: `/api/buildings/${buildingId}/construction-phases` });
 
@@ -129,8 +128,7 @@ export async function handleDelete(
   buildingId: string,
   ctx: AuthContext,
 ): Promise<NextResponse> {
-  const adminDb = getAdminFirestore();
-  if (!adminDb) throw new ApiError(503, 'Database unavailable');
+  const adminDb = requireAdminFirestore();
 
   await requireBuildingInTenant({ ctx, buildingId, path: `/api/buildings/${buildingId}/construction-phases` });
 
