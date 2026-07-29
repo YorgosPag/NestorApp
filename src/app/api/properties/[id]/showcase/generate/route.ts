@@ -18,13 +18,12 @@
  * @module app/api/properties/[id]/showcase/generate/route
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { requireAdminFirestore } from '@/lib/api/admin-db';
+import type { AuthContext } from '@/lib/auth';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
-import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { segmentIdRoute } from '@/lib/api/entity-id-route';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { ENTITY_TYPES, FILE_DOMAINS, FILE_CATEGORIES } from '@/config/domain-constants';
 import { buildStoragePath } from '@/services/upload/utils/storage-path';
@@ -110,8 +109,7 @@ async function writeShowcaseShareRecord(args: {
   storagePath: string;
   expiresAt: Date;
 }): Promise<void> {
-  const adminDb = getAdminFirestore();
-  if (!adminDb) throw new ApiError(503, 'Database connection not available');
+  const adminDb = requireAdminFirestore();
   await adminDb.collection(COLLECTIONS.FILE_SHARES).doc(args.shareId).set({
     fileId: args.shareId,
     token: args.token,
@@ -230,48 +228,26 @@ async function handleGenerate(
   );
 }
 
-export async function POST(
-  request: NextRequest,
-  segmentData: { params: Promise<{ id: string }> }
-) {
-  const { id } = await segmentData.params;
-  if (!id || id.trim().length === 0) {
-    return NextResponse.json({ error: 'Property ID is required' }, { status: 400 });
-  }
-  const handler = withStandardRateLimit(
-    withAuth<ApiSuccessResponse<ShowcaseGenerateResponse>>(
-      async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-        return handleGenerate(req, ctx, id);
-      },
-      { permissions: 'properties:properties:update' }
-    )
-  );
-  return handler(request);
-}
+export const POST = segmentIdRoute<ApiSuccessResponse<ShowcaseGenerateResponse>>({
+  permissions: 'properties:properties:update',
+  missingIdMessage: 'Property ID is required',
+  handler: async ({ req, ctx, id }) => handleGenerate(req, ctx, id),
+});
 
-export async function DELETE(
-  request: NextRequest,
-  segmentData: { params: Promise<{ id: string }> }
-) {
-  const { id } = await segmentData.params;
-  if (!id || id.trim().length === 0) {
-    return NextResponse.json({ error: 'Property ID is required' }, { status: 400 });
-  }
-  const handler = withStandardRateLimit(
-    withAuth<ApiSuccessResponse<ShowcaseRevokeResponse>>(
-      async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-        if (!ctx.companyId) throw new ApiError(403, 'Missing company context');
-        const shareIds = await deactivateShowcaseShares(id, ctx.companyId);
-        logger.info('Property showcase revoked', {
-          propertyId: id, revokedCount: shareIds.length, companyId: ctx.companyId, uid: ctx.uid,
-        });
-        return apiSuccess<ShowcaseRevokeResponse>(
-          { revoked: true, shareIds },
-          'Property showcase share revoked'
-        );
-      },
-      { permissions: 'properties:properties:update' }
-    )
-  );
-  return handler(request);
-}
+export const DELETE = segmentIdRoute<ApiSuccessResponse<ShowcaseRevokeResponse>>({
+  permissions: 'properties:properties:update',
+  missingIdMessage: 'Property ID is required',
+  handler: async ({ ctx, id }) => {
+    if (!ctx.companyId) throw new ApiError(403, 'Missing company context');
+
+    const shareIds = await deactivateShowcaseShares(id, ctx.companyId);
+    logger.info('Property showcase revoked', {
+      propertyId: id, revokedCount: shareIds.length, companyId: ctx.companyId, uid: ctx.uid,
+    });
+
+    return apiSuccess<ShowcaseRevokeResponse>(
+      { revoked: true, shareIds },
+      'Property showcase share revoked'
+    );
+  },
+});

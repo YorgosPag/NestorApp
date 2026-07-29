@@ -1,10 +1,10 @@
 /** Property PATCH / DELETE / GET endpoint — ADR-184, ADR-249, ADR-247. Rate: STANDARD 60/min. */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { withAuth, logAuditEvent } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { NextResponse } from 'next/server';
+import { logAuditEvent } from '@/lib/auth';
+import type { AuthContext } from '@/lib/auth';
+import { entityIdRoute } from '@/lib/api/entity-id-route';
+import type { AdminFirestore } from '@/lib/api/guarded-route';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
@@ -18,7 +18,6 @@ import { PaymentPlanService } from '@/services/payment-plan.service';
 import type { PropertyOwnerRole } from '@/types/ownership-table';
 import { getErrorMessage } from '@/lib/error-utils';
 import { requirePropertyInTenantScope } from '@/lib/auth/tenant-isolation';
-import { extractIdFromUrl } from '@/lib/api/route-helpers';
 import { withVersionCheck, ConflictError } from '@/lib/firestore/version-check';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 import {
@@ -39,27 +38,42 @@ import {
 
 const logger = createModuleLogger('PropertyIdRoute');
 
+/**
+ * Φέρνει το ακίνητο και επιβεβαιώνει ότι ο χρήστης το δικαιούται.
+ *
+ * Η **σειρά** είναι το ουσιώδες και ήταν αντιγραμμένη σε PATCH + DELETE: 404 πρώτα
+ * (ανύπαρκτο), tenant scope μετά. Αντίστροφα, ο έλεγχος εμβέλειας θα διέρρεε την
+ * ύπαρξη ξένων ακινήτων μέσω διαφορετικού status.
+ */
+async function requirePropertyInScope(
+  adminDb: AdminFirestore,
+  id: string,
+  ctx: AuthContext,
+): Promise<{
+  docRef: FirebaseFirestore.DocumentReference;
+  existing: Record<string, unknown>;
+}> {
+  const docRef = adminDb.collection(COLLECTIONS.PROPERTIES).doc(id);
+  const doc = await docRef.get();
+  if (!doc.exists) throw new ApiError(404, 'Property not found');
+
+  await requirePropertyInTenantScope({ ctx, propertyId: id, path: '/api/properties/[id]' });
+
+  return { docRef, existing: doc.data() as Record<string, unknown> };
+}
+
 // ============================================================================
 // PATCH — Update Property
 // ============================================================================
 
-export const PATCH = withStandardRateLimit(
-  withAuth<ApiSuccessResponse<PropertyMutationResult>>(
-    async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-      const adminDb = getAdminFirestore();
-      if (!adminDb) throw new ApiError(503, 'Database unavailable');
-
-      const id = extractIdFromUrl(request.url);
-      if (!id) throw new ApiError(400, 'Property ID is required');
+export const PATCH = entityIdRoute<ApiSuccessResponse<PropertyMutationResult>>({
+  permissions: 'properties:properties:update',
+  missingIdMessage: 'Property ID is required',
+  handler: async ({ req: request, ctx, adminDb, id }) => {
       if (id === '__new__') throw new ApiError(400, 'Cannot update placeholder property — save it first');
 
       try {
-        const docRef = adminDb.collection(COLLECTIONS.PROPERTIES).doc(id);
-        const doc = await docRef.get();
-        if (!doc.exists) throw new ApiError(404, 'Property not found');
-
-        await requirePropertyInTenantScope({ ctx, propertyId: id, path: '/api/properties/[id]' });
-        const existing = doc.data() as Record<string, unknown>;
+        const { docRef, existing } = await requirePropertyInScope(adminDb, id, ctx);
 
         const parsed = safeParseBody(PropertyPatchSchema, await request.json());
         if (parsed.error) throw new ApiError(400, 'Validation failed');
@@ -222,31 +236,19 @@ export const PATCH = withStandardRateLimit(
         logger.error('Error updating property', { id, error: getErrorMessage(error) });
         throw new ApiError(500, getErrorMessage(error, 'Failed to update property'));
       }
-    },
-    { permissions: 'properties:properties:update' }
-  )
-);
+  },
+});
 
 // ============================================================================
 // DELETE — Delete Property
 // ============================================================================
 
-export const DELETE = withStandardRateLimit(
-  withAuth<ApiSuccessResponse<PropertyMutationResult>>(
-    async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-      const adminDb = getAdminFirestore();
-      if (!adminDb) throw new ApiError(503, 'Database unavailable');
-
-      const id = extractIdFromUrl(request.url);
-      if (!id) throw new ApiError(400, 'Property ID is required');
-
+export const DELETE = entityIdRoute<ApiSuccessResponse<PropertyMutationResult>>({
+  permissions: 'properties:properties:delete',
+  missingIdMessage: 'Property ID is required',
+  handler: async ({ ctx, adminDb, id }) => {
       try {
-        const docRef = adminDb.collection(COLLECTIONS.PROPERTIES).doc(id);
-        const doc = await docRef.get();
-        if (!doc.exists) throw new ApiError(404, 'Property not found');
-
-        await requirePropertyInTenantScope({ ctx, propertyId: id, path: '/api/properties/[id]' });
-        const existing = doc.data() as Record<string, unknown>;
+        const { existing } = await requirePropertyInScope(adminDb, id, ctx);
 
         // 🗑️ ADR-281: Soft-delete — move to trash (status='deleted')
         await softDelete(adminDb, 'property', id, ctx.uid, ctx.companyId, ctx.email ?? undefined);
@@ -264,32 +266,24 @@ export const DELETE = withStandardRateLimit(
         logger.error('Error deleting property', { id, error: getErrorMessage(error) });
         throw new ApiError(500, getErrorMessage(error, 'Failed to delete property'));
       }
-    },
-    { permissions: 'properties:properties:delete' }
-  )
-);
+  },
+});
 
 // ============================================================================
 // GET — Fetch Single Property
 // ============================================================================
 
-export const GET = withStandardRateLimit(
-  withAuth<ApiSuccessResponse<Record<string, unknown>>>(
-    async (request: NextRequest, ctx: AuthContext) => {
-      const adminDb = getAdminFirestore();
-      if (!adminDb) throw new ApiError(503, 'Database unavailable');
+export const GET = entityIdRoute<ApiSuccessResponse<Record<string, unknown>>>({
+  permissions: 'properties:properties:view',
+  missingIdMessage: 'Property ID is required',
+  handler: async ({ ctx, adminDb, id }) => {
+    // ⚠️ Εδώ ο έλεγχος εμβέλειας προηγείται του 404 — αντίθετα από PATCH/DELETE.
+    // Είναι σκόπιμο: το GET δεν επιβεβαιώνει ύπαρξη ακινήτου εκτός εμβέλειας.
+    await requirePropertyInTenantScope({ ctx, propertyId: id, path: '/api/properties/[id]' });
 
-      const id = extractIdFromUrl(request.url);
-      if (!id) throw new ApiError(400, 'Property ID is required');
+    const doc = await adminDb.collection(COLLECTIONS.PROPERTIES).doc(id).get();
+    if (!doc.exists) throw new ApiError(404, 'Property not found');
 
-      await requirePropertyInTenantScope({ ctx, propertyId: id, path: '/api/properties/[id]' });
-
-      const docRef = adminDb.collection(COLLECTIONS.PROPERTIES).doc(id);
-      const doc = await docRef.get();
-      if (!doc.exists) throw new ApiError(404, 'Property not found');
-
-      return apiSuccess({ id: doc.id, ...doc.data() }, 'Property loaded');
-    },
-    { permissions: 'properties:properties:view' }
-  )
-);
+    return apiSuccess({ id: doc.id, ...doc.data() }, 'Property loaded');
+  },
+});

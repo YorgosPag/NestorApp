@@ -8,28 +8,20 @@
  * ο λόγος που το CHECK 3.28 τα μπλόκαρε ακόμα και σε χωριστά commits: ο κλώνος
  * ήταν *εντός* του κάθε αρχείου, ανάμεσα στα verbs του.
  *
- * ⚠️ **Δεν κρύβει ποιο HTTP verb κάνει τι** — το `export async function POST(...)`
- * μένει ορατό στο route και ο χειριστής του γράφεται εκεί. Εδώ ζει μόνο η αλυσίδα
- * εξουσιοδότησης. Αυτή είναι η διαφορά από ένα HOF που θα τύλιγε το ίδιο το verb
- * (το οποίο, κατά ADR-245, **δεν** πρέπει να γίνει).
+ * Τα τρία πρώτα βήματα ζουν στο {@link runGuarded}· εδώ προστίθεται **μόνο** ο
+ * έλεγχος κτηρίου, που είναι και ο λόγος ύπαρξης αυτού του module.
  *
  * @module lib/api/building-scoped-route
  */
 
 import type { NextRequest, NextResponse } from 'next/server';
-import { withAuth, requireBuildingInTenant } from '@/lib/auth';
-import type { AuthContext, PermissionId } from '@/lib/auth';
-import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
-import { requireAdminFirestore } from '@/lib/api/admin-db';
+import { requireBuildingInTenant } from '@/lib/auth';
+import type { PermissionId } from '@/lib/auth';
+import { runGuarded, type AdminFirestore, type GuardedRouteArgs } from '@/lib/api/guarded-route';
 
-/** Ο τύπος του Admin Firestore, χωρίς να σέρνει κανείς εξάρτηση από το firebase-admin. */
-export type AdminFirestore = ReturnType<typeof requireAdminFirestore>;
+export type { AdminFirestore };
 
-export interface BuildingScopedArgs {
-  readonly req: NextRequest;
-  readonly ctx: AuthContext;
-  /** Ήδη αρχικοποιημένο — αν αποτύγχανε, ο φύλακας θα είχε πετάξει πριν φτάσει εδώ. */
-  readonly adminDb: AdminFirestore;
+export interface BuildingScopedArgs extends GuardedRouteArgs {
   readonly buildingId: string;
 }
 
@@ -58,17 +50,9 @@ export function buildingScopedRoute<T>(
   return async (request: NextRequest, segmentData: BuildingSegment): Promise<Response> => {
     const { buildingId } = await segmentData.params;
 
-    const guarded = withStandardRateLimit(
-      withAuth<T>(
-        async (req: NextRequest, ctx: AuthContext) => {
-          const adminDb = requireAdminFirestore();
-          await requireBuildingInTenant({ ctx, buildingId, path: routePath(buildingId) });
-          return handler({ req, ctx, adminDb, buildingId });
-        },
-        { permissions },
-      ),
-    );
-
-    return guarded(request);
+    return runGuarded<T>(request, permissions, async ({ req, ctx, adminDb }) => {
+      await requireBuildingInTenant({ ctx, buildingId, path: routePath(buildingId) });
+      return handler({ req, ctx, adminDb, buildingId });
+    });
   };
 }
