@@ -4,18 +4,24 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { requireBuildingInTenant, TenantIsolationError } from '@/lib/auth/tenant-isolation';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
+import { requireAdminFirestore } from '@/lib/api/admin-db';
 import { createModuleLogger } from '@/lib/telemetry';
 import { createEntity } from '@/lib/firestore/entity-creation.service';
-import { mapParkingDoc } from '@/lib/firestore-mappers';
 import type { ParkingSpot as CanonicalParkingSpot } from '@/types/parking';
 import { getErrorMessage } from '@/lib/error-utils';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 import type { ParkingApiData } from '@/types/api/building-spaces.api.types';
+// Οι αναγνώστες Firestore ζουν δίπλα (N.7.1 — το route έφτασε το όριο των 300 γραμμών).
+import {
+  fetchParkingSpotsWhere,
+  fetchAuthorizedBuildingIds,
+  fetchCompanyParkingSpots,
+  type ParkingAPIResponse,
+} from './_helpers';
 
 const logger = createModuleLogger('ParkingRoute');
 
@@ -35,21 +41,6 @@ const CreateParkingSchema = z.object({
   description: z.string().max(2000).optional(),
   notes: z.string().max(5000).optional(),
 });
-
-interface ParkingData {
-  parkingSpots: CanonicalParkingSpot[];
-  count: number;
-  cached: boolean;
-  buildingId?: string;
-  projectId?: string;
-}
-
-interface ParkingAPIResponse {
-  success: boolean;
-  data?: ParkingData;
-  error?: string;
-  details?: string;
-}
 
 const getHandler = async (request: NextRequest) => {
   const handler = withAuth<ParkingAPIResponse>(
@@ -98,8 +89,7 @@ export const POST = withStandardRateLimit(
         const resolvedProjectId = body.projectId?.trim() || null;
         // ADR-191: Open space parking (no buildingId) — verify project belongs to tenant
         if (!buildingId && resolvedProjectId) {
-          const adminDb = getAdminFirestore();
-          if (!adminDb) throw new ApiError(503, 'Database unavailable');
+          const adminDb = requireAdminFirestore();
           const projectDoc = await adminDb.collection(COLLECTIONS.PROJECTS).doc(resolvedProjectId).get();
           if (!projectDoc.exists) {
             throw new ApiError(404, 'Project not found');
@@ -201,15 +191,7 @@ async function handleGetParking(request: NextRequest, ctx: AuthContext): Promise
       logger.info('Building authorized via direct verification', { buildingId: requestedBuildingId });
 
       // Query parking spots for this building
-      const snapshot = await getAdminFirestore()
-        .collection(COLLECTIONS.PARKING_SPACES)
-        .where(FIELDS.BUILDING_ID, '==', requestedBuildingId)
-        .get();
-
-      // ADR-281: Exclude soft-deleted records from normal list
-      const parkingSpots = snapshot.docs
-        .map(doc => mapParkingDoc(doc.id, doc.data() as Record<string, unknown>))
-        .filter(spot => spot.status !== 'deleted');
+      const parkingSpots = await fetchParkingSpotsWhere(FIELDS.BUILDING_ID, requestedBuildingId);
       logger.info('Found parking spots for building', { buildingId: requestedBuildingId, count: parkingSpots.length });
 
       return NextResponse.json({
@@ -224,7 +206,7 @@ async function handleGetParking(request: NextRequest, ctx: AuthContext): Promise
 
     if (requestedProjectId) {
       // Verify project belongs to tenant
-      const projectDoc = await getAdminFirestore().collection(COLLECTIONS.PROJECTS).doc(requestedProjectId).get();
+      const projectDoc = await requireAdminFirestore().collection(COLLECTIONS.PROJECTS).doc(requestedProjectId).get();
       if (!projectDoc.exists) {
         return NextResponse.json({ success: false, error: 'Project not found' }, { status: 404 });
       }
@@ -234,15 +216,7 @@ async function handleGetParking(request: NextRequest, ctx: AuthContext): Promise
       }
 
       // Get all parking with this projectId
-      const snapshot = await getAdminFirestore()
-        .collection(COLLECTIONS.PARKING_SPACES)
-        .where(FIELDS.PROJECT_ID, '==', requestedProjectId)
-        .get();
-
-      // ADR-281: Exclude soft-deleted records from normal list
-      const parkingSpots = snapshot.docs
-        .map(doc => mapParkingDoc(doc.id, doc.data() as Record<string, unknown>))
-        .filter(spot => spot.status !== 'deleted');
+      const parkingSpots = await fetchParkingSpotsWhere(FIELDS.PROJECT_ID, requestedProjectId);
       logger.info('Found parking spots for project', { projectId: requestedProjectId, count: parkingSpots.length });
 
       return NextResponse.json({
@@ -258,23 +232,11 @@ async function handleGetParking(request: NextRequest, ctx: AuthContext): Promise
     // 🏢 ADR-232: Super admin sees all, regular users filtered by companyId
     const isSuperAdmin = ctx.globalRole === 'super_admin';
 
-    const buildingsSnapshot = await (isSuperAdmin
-      ? getAdminFirestore().collection(COLLECTIONS.BUILDINGS).get()
-      : getAdminFirestore().collection(COLLECTIONS.BUILDINGS)
-          .where(FIELDS.COMPANY_ID, '==', ctx.companyId).get());
-
-    const authorizedBuildingIds = new Set(buildingsSnapshot.docs.map(doc => doc.id));
+    const authorizedBuildingIds = await fetchAuthorizedBuildingIds(isSuperAdmin, ctx.companyId);
     logger.info('Found authorized buildings', { buildingCount: authorizedBuildingIds.size, companyId: ctx.companyId });
 
-    const snapshot = await (isSuperAdmin
-      ? getAdminFirestore().collection(COLLECTIONS.PARKING_SPACES).get()
-      : getAdminFirestore().collection(COLLECTIONS.PARKING_SPACES)
-          .where(FIELDS.COMPANY_ID, '==', ctx.companyId).get());
-
     // ADR-281: Exclude soft-deleted records from normal list
-    const parkingSpots = snapshot.docs
-      .map(doc => mapParkingDoc(doc.id, doc.data() as Record<string, unknown>))
-      .filter(spot => spot.status !== 'deleted');
+    const parkingSpots = await fetchCompanyParkingSpots(isSuperAdmin, ctx.companyId);
     logger.info('Found parking spots for company', { count: parkingSpots.length });
 
     return NextResponse.json({
